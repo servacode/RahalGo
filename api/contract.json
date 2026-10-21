@@ -3456,6 +3456,20 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/ops-map/landmark-suggestions",
+      "handler": "requirePerm",
+      "auth": true,
+      "capability": "orders.read"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/ops-map/landmark-suggestions/{id}/decide",
+      "handler": "requirePerm",
+      "auth": true,
+      "capability": "settings.general.manage"
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/ops-map/merchants",
       "handler": "requirePerm",
       "auth": true,
@@ -3495,6 +3509,20 @@
       "handler": "requirePerm",
       "auth": true,
       "capability": "merchants.manage"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ops-map/road-closures",
+      "handler": "requirePerm",
+      "auth": true,
+      "capability": "orders.read"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/ops-map/road-closures/{id}",
+      "handler": "requirePerm",
+      "auth": true,
+      "capability": "settings.general.manage"
     },
     {
       "method": "GET",
@@ -6316,6 +6344,39 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/auth/client-report",
+      "handler": "handleClientLogoutReport",
+      "auth": false,
+      "request": [
+        {
+          "name": "code",
+          "type": "string"
+        },
+        {
+          "name": "path",
+          "type": "string"
+        },
+        {
+          "name": "detail",
+          "type": "string"
+        },
+        {
+          "name": "refresh_token",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "ok",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/auth/handoff",
       "handler": "notStaff",
       "auth": true
@@ -6965,6 +7026,46 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/driver/landmarks",
+      "handler": "handleDriverLandmark",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "request": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "kind",
+          "type": "string"
+        },
+        {
+          "name": "lat",
+          "type": "float64"
+        },
+        {
+          "name": "lng",
+          "type": "float64"
+        }
+      ],
+      "response": [
+        {
+          "name": "id",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "string"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/driver/location",
       "handler": "handleDriverLocation",
       "auth": true,
@@ -7241,6 +7342,38 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/driver/orders/{id}/entrance",
+      "handler": "handleDriverEntrance",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "request": [
+        {
+          "name": "lat",
+          "type": "float64"
+        },
+        {
+          "name": "lng",
+          "type": "float64"
+        }
+      ],
+      "response": [
+        {
+          "name": "saved",
+          "type": "unknown"
+        },
+        {
+          "name": "suggested",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/driver/orders/{id}/fetch-amount",
       "handler": "handleDriverFetchAmount",
       "auth": true,
@@ -7508,6 +7641,42 @@
       "auth": true,
       "roles": [
         "driver"
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/driver/road-closures",
+      "handler": "handleDriverRoadClosure",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "request": [
+        {
+          "name": "lat",
+          "type": "float64"
+        },
+        {
+          "name": "lng",
+          "type": "float64"
+        },
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "confirmed",
+          "type": "unknown"
+        },
+        {
+          "name": "id",
+          "type": "unknown"
+        }
       ],
       "statuses": [
         "StatusOK"
@@ -9258,6 +9427,36 @@
       ]
     },
     {
+      "method": "DELETE",
+      "path": "/api/v1/orders/{id}/accept-dropoff-fix",
+      "handler": "handleDismissDropoffSuggestion",
+      "auth": true,
+      "response": [
+        {
+          "name": "dismissed",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/orders/{id}/accept-dropoff-fix",
+      "handler": "handleAcceptDropoffSuggestion",
+      "auth": true,
+      "response": [
+        {
+          "name": "updated",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "POST",
       "path": "/api/v1/orders/{id}/cancel",
       "handler": "handleCustomerCancelOrder",
@@ -9759,6 +9958,21 @@
       "path": "/api/v1/public/map-style.json",
       "handler": "handleMapStyle",
       "auth": false
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/public/map/stores",
+      "handler": "handlePublicMapStores",
+      "auth": false,
+      "response": [
+        {
+          "name": "stores",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
     },
     {
       "method": "GET",

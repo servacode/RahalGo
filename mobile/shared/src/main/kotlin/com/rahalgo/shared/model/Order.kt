@@ -172,6 +172,9 @@ data class DriverOrder(
      */
     @SerialName("nav_lat") val navLat: Double? = null,
     @SerialName("nav_lng") val navLng: Double? = null,
+    /** **بابُ البناية** (قرارُ المالك ٢٠٢٦-١٠-٢١) — حفظه سائقٌ سابق، فالتوجيهُ إليه. */
+    @SerialName("entrance_lat") val entranceLat: Double? = null,
+    @SerialName("entrance_lng") val entranceLng: Double? = null,
 
     val total: Long = 0,
     /** **ما يقبضه نقدا من الزبون** — وصفر يعني مدفوع سلفا. */

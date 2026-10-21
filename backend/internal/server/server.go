@@ -262,8 +262,12 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 	// **والمحرّكُ يُختار بالإعداد** — طلبُ المالك ٢٠٢٦-١٠-٠٢: الموتور
 	// يدخل كلّ الطرق مو سيارة.
 	var routeClient routing.Backend = osrmClient
+	// **والطرقُ المسكَّرةُ يتجنّبها Valhalla** (قرارُ المالك ٢٠٢٦-١٠-٢١) — والمصدرُ يُوصَل
+	// بعد بناء الخادم (`activeClosures`). وOSRM لا يعرف التجنّب.
+	var valhallaClient *routing.Valhalla
 	if cfg.RoutingEngine == "valhalla" {
-		routeClient = routing.NewValhalla(cfg.ValhallaURL)
+		valhallaClient = routing.NewValhalla(cfg.ValhallaURL)
+		routeClient = valhallaClient
 	}
 	if !routeClient.Enabled() {
 		logger.Warn("المسارات: لا محرّك — المسافةُ بخطٍّ مستقيم", "engine", cfg.RoutingEngine)
@@ -333,6 +337,9 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 	// تُبلغ المحاولاتِ الغلطَ والقفلَ وحدَّ الرموز. انظر `monitoring_security.go`.
 	if identitySvc != nil {
 		identitySvc.SetSecurityHook(srv.noteIdentitySecurity)
+	}
+	if valhallaClient != nil {
+		valhallaClient.SetExcluder(srv.activeClosures)
 	}
 	return srv
 }
@@ -451,6 +458,8 @@ func (s *Server) Router() http.Handler {
 			r.Post("/otp/verify", s.handleOTPVerify)
 			r.Post("/login", s.handlePasswordLogin)
 			r.Post("/refresh", s.handleRefresh)
+			// **التطبيقُ يُبلغ قبل أن يُخرج صاحبَه** (قرارُ المالك ٢٠٢٦-١٠-٢١) — بلا توثيق.
+			r.Post("/client-report", s.handleClientLogoutReport)
 			r.Post("/logout", s.handleLogout)
 			r.Post("/sso", s.handleSSO) // استبدال رمز التسليم بجلسة (عام)
 			r.Post("/password/reset/request", s.handleResetRequest)
@@ -669,6 +678,8 @@ func (s *Server) Router() http.Handler {
 		// **«يُطلب معه»** — مشروبٌ ومقبّلاتٌ تُعرض على من ملأ سلّته.
 		// (طلبُ المالك ٢٠٢٦-٠٨-٢٢. انظر `suggest_handlers.go`.)
 		r.Get("/public/suggest", s.handleSuggestWith)
+		// **متاجرُنا نقاطٌ على الخريطة** (قرارُ المالك ٢٠٢٦-١٠-٢١) — الجديدُ يظهر وحدَه.
+		r.Get("/public/map/stores", s.handlePublicMapStores)
 		r.Get("/public/search/items", s.handleSearchItems)
 		r.Get("/public/search", s.handlePublicSearch)
 		// ══════════════════════════════════════════════════════════
@@ -753,6 +764,9 @@ func (s *Server) Router() http.Handler {
 			// **الزبونُ يؤكّد عرضَ الطلب المخصَّص ويختار الدفع** — Batch 2a:
 			// **يُقفَل السعرُ قبل أن يبدأ السائقُ الشراء.**
 			r.Post("/orders/{id}/confirm-quote", s.handleConfirmQuote)
+			// **«موقعك الصح هون؟»** — بعد أن حفظ السائقُ بابَ بنايته (٢٠٢٦-١٠-٢١).
+			r.Post("/orders/{id}/accept-dropoff-fix", s.handleAcceptDropoffSuggestion)
+			r.Delete("/orders/{id}/accept-dropoff-fix", s.handleDismissDropoffSuggestion)
 			// **ويرفض السعرَ الجديدَ إن رفعه المكتب** (قرارُ المالك ٢٠٢٦-١٠-١٥) — الطلبُ
 			// يبقى حيث هو، **والمكتبُ يرى العلامةَ ويقرّر.**
 			r.Post("/orders/{id}/reject-quote", s.handleRejectQuote)
@@ -1005,6 +1019,10 @@ func (s *Server) Router() http.Handler {
 			r.Post("/orders/{id}/release", s.handleDriverRelease)
 			// **«اطلب موقع الزبون المباشر»** (قرارُ المالك ٢٠٢٦-١٠-٢١، live_request.go).
 			r.Post("/orders/{id}/request-live-location", s.handleDriverRequestLiveLocation)
+			// **ما يضيفه السائقُ للخريطة** (قرارات المالك ٢٠٢٦-١٠-٢١، map_contrib_handlers.go).
+			r.Post("/orders/{id}/entrance", s.handleDriverEntrance)
+			r.Post("/road-closures", s.handleDriverRoadClosure)
+			r.Post("/landmarks", s.handleDriverLandmark)
 			r.Get("/cash", s.handleDriverCash)
 			// **هدفُه وما ناله** — ومكافأةٌ لا يراها صاحبُها لم تُصرف في نظره.
 			r.Get("/incentives", s.handleMyIncentives)
@@ -1199,6 +1217,13 @@ func (s *Server) Router() http.Handler {
 				r.Get("/summary", s.requirePerm(opsmap.PermViewMap, s.handleOpsMapSummary))
 				r.Get("/customers", s.requirePerm(opsmap.PermViewOrders, s.handleOpsMapCustomers))
 				r.Get("/office", s.requirePerm(opsmap.PermViewMap, s.handleOpsMapOffice))
+
+				// **بلاغاتُ السائقين للخريطة** (قرارات المالك ٢٠٢٦-١٠-٢١) — الطرقُ المسكَّرة
+				// والمعالمُ المقترحة: تُقرأ لمن يفتح الخريطة، وتُقرَّر لمن يملك التغطية.
+				r.Get("/road-closures", s.requirePerm(opsmap.PermViewMap, s.handleAdminRoadClosures))
+				r.Delete("/road-closures/{id}", s.requirePerm(opsmap.PermManageCoverage, s.handleAdminClearRoadClosure))
+				r.Get("/landmark-suggestions", s.requirePerm(opsmap.PermViewMap, s.handleAdminLandmarkSuggestions))
+				r.Post("/landmark-suggestions/{id}/decide", s.requirePerm(opsmap.PermManageCoverage, s.handleAdminDecideLandmark))
 
 				// **والتغطيةُ تُقرأ لمن يفتح الخريطة، وتُكتب لمن
 				// يملكها** — **رسمُ مضلَّعٍ يبدّل من تصله المنصّة.**

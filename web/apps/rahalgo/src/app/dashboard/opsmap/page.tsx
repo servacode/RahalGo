@@ -326,6 +326,29 @@ interface Office {
   staff: Array<{ name: string; roles: string[] }>;
 }
 
+/** **طريقٌ مسكّرٌ بلّغ عنه سائق** (قرارُ المالك ٢٠٢٦-١٠-٢١). */
+interface Closure {
+  id: number;
+  lat: number;
+  lng: number;
+  reason: string;
+  reports: number;
+  created_at: string;
+  expires_at: string;
+  reported_by_name: string;
+}
+
+/** **معلمٌ اقترحه سائقٌ وينتظر الموافقة** (قرارُ المالك ٢٠٢٦-١٠-٢١). */
+interface LandmarkSugg {
+  id: number;
+  name: string;
+  kind: string;
+  lat: number;
+  lng: number;
+  created_at: string;
+  suggested_by_name: string;
+}
+
 /** **ما هو المُحدَّد؟** — واللوحةُ الجانبيّةُ واحدةٌ لكلّ الطبقات. */
 type Picked =
   | { kind: "driver"; v: Driver }
@@ -334,6 +357,8 @@ type Picked =
   | { kind: "zone"; v: Zone }
   | { kind: "request"; v: CovRequest }
   | { kind: "branch"; v: BranchPin }
+  | { kind: "closure"; v: Closure }
+  | { kind: "landmark"; v: LandmarkSugg }
   | { kind: "opportunity"; v: OpportunityCell }
   | { kind: "customers"; v: DemandCell }
   | { kind: "rep"; v: RepRow }
@@ -682,6 +707,45 @@ export default function OpsMapPage() {
         : Promise.resolve({ branches: [], count: 0 }),
     ["catalog"],
     [visible.branches, meta.data],
+  );
+
+  // **بلاغاتُ السائقين للخريطة** (قرارات المالك ٢٠٢٦-١٠-٢١) — المسكَّرُ الآن والمعالمُ المنتظِرة.
+  const closures = useLiveData<{ closures: Closure[]; count: number }>(
+    () =>
+      visible.closures
+        ? api<{ closures: Closure[]; count: number }>("/api/v1/admin/ops-map/road-closures")
+        : Promise.resolve({ closures: [], count: 0 }),
+    ["road_closure"],
+    [visible.closures, meta.data],
+  );
+  const landmarks = useLiveData<{ suggestions: LandmarkSugg[]; count: number }>(
+    () =>
+      visible.landmarks
+        ? api<{ suggestions: LandmarkSugg[]; count: number }>("/api/v1/admin/ops-map/landmark-suggestions")
+        : Promise.resolve({ suggestions: [], count: 0 }),
+    ["landmark"],
+    [visible.landmarks, meta.data],
+  );
+
+  // **انفتح الطريق · وقبولُ المعلم أو رفضُه** (قرارات المالك ٢٠٢٦-١٠-٢١).
+  const clearClosure = useCallback(
+    async (id: number) => {
+      await api(`/api/v1/admin/ops-map/road-closures/${id}`, { method: "DELETE" });
+      closures.reload();
+      setSelected(null);
+    },
+    [closures],
+  );
+  const decideLandmark = useCallback(
+    async (id: number, approve: boolean) => {
+      await api(`/api/v1/admin/ops-map/landmark-suggestions/${id}/decide`, {
+        method: "POST",
+        body: JSON.stringify({ approve }),
+      });
+      landmarks.reload();
+      setSelected(null);
+    },
+    [landmarks],
   );
 
   const areas = useLiveData<{ areas: AreaRow[]; count: number }>(
@@ -1126,6 +1190,22 @@ export default function OpsMapPage() {
     // **والرئيسيُّ يُميَّز عن الفرعيّ** — **ومن رأى عشرَ نقاطٍ متشابهةٍ
     // لم يعرف أيُّها مركزُ المدينة.**
     out.push({
+      id: "closures",
+      kind: "point",
+      order: 21,
+      visible: !!visible.closures,
+      color: themeColor("danger"),
+      data: fc((closures.data?.closures ?? []).map((c) => pt(c.lng, c.lat, { id: c.id }))),
+    });
+    out.push({
+      id: "landmarks",
+      kind: "point",
+      order: 21,
+      visible: !!visible.landmarks,
+      color: themeColor("accent"),
+      data: fc((landmarks.data?.suggestions ?? []).map((l) => pt(l.lng, l.lat, { id: l.id, name: l.name }))),
+    });
+    out.push({
       id: "branches",
       kind: "point",
       order: 20,
@@ -1217,7 +1297,7 @@ export default function OpsMapPage() {
     return out;
   }, [drivers.data, zones.data, requests.data, focused,
       branches.data, reps.data, demand.data, opportunities.data, customers.data,
-      visible, current, draft, drawing, emergencies.data]);
+      visible, current, draft, drawing, emergencies.data, closures.data, landmarks.data]);
 
   // ── المكتبُ علامةٌ بشعار المنصّة ─────────────────────────────
   const markers = useMemo<MapMarker[]>(() => {
@@ -1273,6 +1353,14 @@ export default function OpsMapPage() {
         const b = branches.data?.branches.find((y) => y.id === props.id);
         if (b) setSelected({ kind: "branch", v: b });
       }
+      if (layerID === "closures") {
+        const c = closures.data?.closures.find((y) => y.id === props.id);
+        if (c) setSelected({ kind: "closure", v: c });
+      }
+      if (layerID === "landmarks") {
+        const l = landmarks.data?.suggestions.find((y) => y.id === props.id);
+        if (l) setSelected({ kind: "landmark", v: l });
+      }
       if (layerID === "opportunities") {
         const o = (opportunities.data?.opportunities ?? []).find(
           (y) => y.lat === props.lat && y.lng === props.lng,
@@ -1281,7 +1369,8 @@ export default function OpsMapPage() {
       }
     },
     [drivers.data, merchants.data, orders.data, customers.data, reps.data, zones.data,
-     requests.data, branches.data, opportunities.data, router, drawing],
+     requests.data, branches.data, opportunities.data, router, drawing,
+     closures.data, landmarks.data],
   );
 
   // ── نقرُ الأرض ───────────────────────────────────────────────
@@ -1694,6 +1783,20 @@ export default function OpsMapPage() {
                         </>
                       )}
                       <LayerToggle
+                        id="closures"
+                        label={T.layer.closures}
+                        on={!!visible.closures}
+                        count={closures.data?.count}
+                        onToggle={toggle}
+                      />
+                      <LayerToggle
+                        id="landmarks"
+                        label={T.layer.landmarks}
+                        on={!!visible.landmarks}
+                        count={landmarks.data?.count}
+                        onToggle={toggle}
+                      />
+                      <LayerToggle
                         id="branches"
                         label={T.layer.branches}
                         on={!!visible.branches}
@@ -1798,6 +1901,8 @@ export default function OpsMapPage() {
                   {current.kind === "zone" && current.v.name}
                   {current.kind === "request" && T.request.title}
                   {current.kind === "branch" && current.v.name}
+                  {current.kind === "closure" && T.closure.title}
+                  {current.kind === "landmark" && current.v.name}
                   {current.kind === "opportunity" && T.opportunity.title}
                   {current.kind === "customers" && T.customerCard.title}
                   {current.kind === "rep" && current.v.name}
@@ -2071,6 +2176,46 @@ export default function OpsMapPage() {
                     <Row k={T.layer.areas} v={String(current.v.areas)} />
                   </dl>
                   <p className="mt-3 text-xs text-ink-muted">{T.branch.onePrimary}</p>
+                </>
+              )}
+              {current.kind === "closure" && (
+                <>
+                  <dl className="flex flex-col gap-2 text-sm">
+                    <Row
+                      k={T.closure.reason}
+                      v={T.closure.reasons[current.v.reason as keyof typeof T.closure.reasons] ?? current.v.reason}
+                    />
+                    <Row k={T.closure.reports} v={String(current.v.reports)} />
+                    <Row k={T.closure.by} v={current.v.reported_by_name || "—"} />
+                    <Row k={T.closure.until} v={fmtDateTime(current.v.expires_at)} />
+                  </dl>
+                  {can("MANAGE_COVERAGE") && (
+                    <Button className="mt-3 w-full" onClick={() => void clearClosure(current.v.id)}>
+                      {T.closure.clear}
+                    </Button>
+                  )}
+                </>
+              )}
+              {current.kind === "landmark" && (
+                <>
+                  <dl className="flex flex-col gap-2 text-sm">
+                    <Row
+                      k={T.landmark.kind}
+                      v={T.landmark.kinds[current.v.kind as keyof typeof T.landmark.kinds] ?? current.v.kind}
+                    />
+                    <Row k={T.landmark.by} v={current.v.suggested_by_name || "—"} />
+                    <Row k={T.landmark.at} v={fmtDateTime(current.v.created_at)} />
+                  </dl>
+                  {can("MANAGE_COVERAGE") && (
+                    <div className="mt-3 flex gap-2">
+                      <Button className="flex-1" onClick={() => void decideLandmark(current.v.id, true)}>
+                        {T.landmark.approve}
+                      </Button>
+                      <Button className="flex-1" onClick={() => void decideLandmark(current.v.id, false)}>
+                        {T.landmark.reject}
+                      </Button>
+                    </div>
+                  )}
                 </>
               )}
               {current.kind === "opportunity" && (

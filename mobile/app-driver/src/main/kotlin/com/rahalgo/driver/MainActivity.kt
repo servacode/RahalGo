@@ -1026,6 +1026,9 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                                     LaunchedEffect(Unit) { goalsVm.load() }
                                     IncentivesScreen(goalsVm)
                                 }
+                                MenuItem.AddLandmark -> com.rahalgo.driver.menu.AddLandmarkScreen(
+                                    onSend = { name, kind -> orders.suggestLandmark(name, kind) { overlay.clear() } },
+                                )
                                 else -> MenuScreen(vm = sectionsVm, item = item)
                             }
                         }
@@ -1034,6 +1037,17 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                 return@Box
             }
 
+            // **«انت عند باب البناية؟»** بعد التسليم (قرارُ المالك ٢٠٢٦-١٠-٢١).
+            if (orders.askEntranceFor != null) {
+                com.rahalgo.ui.ConfirmDialog(
+                    title = stringResource(R.string.entrance_title),
+                    body = stringResource(R.string.entrance_body),
+                    confirm = stringResource(R.string.entrance_yes),
+                    onConfirm = orders::saveEntrance,
+                    onDismiss = orders::skipEntrance,
+                    danger = false,
+                )
+            }
             when {
                 tab == 0 -> TripScreen(
                     routeSource = orders.routeSource,
@@ -1057,6 +1071,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                         step = orders::step,
                         handGoods = orders::handGoods,
                         requestLive = orders::requestLive,
+                        reportClosure = orders::reportRoadClosure,
                         setDeliveryCode = { orders.deliveryCode = it },
                         capture = {
                             // **والإذن يُطلب عند الحاجة لا عند الدخول** —

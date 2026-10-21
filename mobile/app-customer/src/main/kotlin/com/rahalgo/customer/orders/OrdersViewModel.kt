@@ -276,6 +276,34 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
      * الشاشة تخالفه بعد أوّل تعديلِ إعداد.**
      */
     /** **رفضُ السعر الجديد** — الطلبُ باقٍ، والمكتبُ يقرّر (قرارُ المالك ٢٠٢٦-١٠-١٥). */
+    // ══════════════════════════════════════════════════════════════════
+    // **«موقعك الصح هون؟»** (قرارُ المالك ٢٠٢٦-١٠-٢١)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **حفظ السائقُ بابَ بنايته فوجده بعيداً عن نقطته** — يُسأل مرّةً: نعم ⇒ نقطةُ عنوانه
+    // تصير الباب؛ لا ⇒ لا يُسأل ثانيةً. **ولا تتغيّر بلا موافقته.**
+    val pendingDropoffFix: MyOrder?
+        get() = (open + history).firstOrNull { it.dropoffSuggestLat != null && it.id !in fixAnswered }
+
+    private var fixAnswered by mutableStateOf(setOf<String>())
+
+    fun answerDropoffFix(order: MyOrder, accept: Boolean) {
+        fixAnswered = fixAnswered + order.id
+        viewModelScope.launch {
+            try {
+                if (accept) {
+                    api.acceptDropoffFix(order.id)
+                    Flash.ok(getApplication<Application>().getString(R.string.dropoff_fix_done))
+                } else {
+                    api.dismissDropoffFix(order.id)
+                }
+            } catch (e: Exception) {
+                Flash.fail(apiError(getApplication(), e))
+            }
+            load()
+        }
+    }
+
     fun rejectQuote(orderId: String) {
         if (busy) return
         busy = true

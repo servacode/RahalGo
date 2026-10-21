@@ -290,6 +290,11 @@
     <string name="live_channel">مشاركة الموقع مع الكابتن</string>
     <string name="live_card_sharing">عم تشارك موقعك المباشر مع الكابتن</string>
     <string name="live_denied">ما فينا نشارك موقعك بدون إذن الموقع</string>
+    <!-- **«موقعك الصح هون؟»** (قرارُ المالك ٢٠٢٦-١٠-٢١). -->
+    <string name="dropoff_fix_title">موقعك الصح هون؟</string>
+    <string name="dropoff_fix_body">السائق حدّد باب بنايتك، وطلع بعيد عن النقطة يلي حاططها بعنوانك. بدك نعدّل نقطة عنوانك لمكان الباب، مشان يوصلك السائق المرة الجاية بالضبط؟</string>
+    <string name="dropoff_fix_yes">إي، عدّلها</string>
+    <string name="dropoff_fix_done">تعدّلت نقطة عنوانك — شكراً</string>
     <!-- **«في نسخة جديدة — حدّث»** (قرارُ المالك ٢٠٢٦-١٠-٢١). -->
     <string name="update_offer">في نسخة جديدة من رحّال غو (%1$s) — اضغط لتحدّث</string>
     <string name="update_play_unreachable">ما قدرنا نوصل لغوغل بلاي — شغّل VPN وجرّب مرة تانية</string>

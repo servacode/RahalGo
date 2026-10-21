@@ -1231,6 +1231,18 @@ private fun SignedIn(
                     }
                 }
                 val pendingLive = if (!guest && pendingQuote == null) ordersVm.pendingLiveShare else null
+                // **«موقعك الصح هون؟»** (قرارُ المالك ٢٠٢٦-١٠-٢١) — بعد السعر والمشاركة، لا فوقهما.
+                val pendingFix = if (!guest && pendingQuote == null && pendingLive == null) ordersVm.pendingDropoffFix else null
+                pendingFix?.let { o ->
+                    com.rahalgo.ui.ConfirmDialog(
+                        title = stringResource(R.string.dropoff_fix_title),
+                        body = stringResource(R.string.dropoff_fix_body),
+                        confirm = stringResource(R.string.dropoff_fix_yes),
+                        onConfirm = { ordersVm.answerDropoffFix(o, accept = true) },
+                        onDismiss = { ordersVm.answerDropoffFix(o, accept = false) },
+                        danger = false,
+                    )
+                }
                 pendingLive?.let { o ->
                     com.rahalgo.customer.live.LiveShareDialog(
                         onShare = {

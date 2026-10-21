@@ -255,6 +255,10 @@ var OrderPrivacy = map[string]FieldRule{
 	"quote_rejected_at":       {Ref: "متى رفض الزبونُ السعرَ الجديد", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"live_requested_at":       {Ref: "live_request.go · السائقُ طلب موقعَ الزبون المباشر (٢٠٢٦-١٠-٢١)", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"live_request_count":      {Ref: "live_request.go · كم طلبه السائقُ من ثلاث", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"entrance_lat":            {Ref: "0470 · بابُ البناية للسائق", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"entrance_lng":            {Ref: "0470 · بابُ البناية للسائق", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"dropoff_suggest_lat":     {Ref: "0470 · «موقعك الصح هون؟» للزبون", Vis: v(VisAllowed, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	"dropoff_suggest_lng":     {Ref: "0470 · «موقعك الصح هون؟» للزبون", Vis: v(VisAllowed, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
 
 	// ── الحجزُ ولقطةُ سياسة الأجرة (Batch 2b/2c) ────────────────────
 	// **الحجزُ مالُ الزبون** — يراه هو والأدمن. **ولقطةُ السياسة** يراها

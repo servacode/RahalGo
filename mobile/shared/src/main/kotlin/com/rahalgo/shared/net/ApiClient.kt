@@ -224,7 +224,10 @@ class ApiClient(
                 //
                 // **والشرطُ ٤٠١ وحدَها**: خروجٌ قسريٌّ على انقطاعٍ لحظيٍّ أسوأُ
                 // من رسالة — **يجد نفسَه خارجاً والطلبُ في يده.**
-                if (e.status == 401) onSessionRejected?.invoke(e.body.code)
+                if (e.status == 401) {
+                    reportSessionEnd(e.body.code, path, "no_refresh")
+                    onSessionRejected?.invoke(e.body.code)
+                }
                 throw e
             }
             val firstCode = e.body.code
@@ -244,6 +247,7 @@ class ApiClient(
                 // يُخرج — ٥٠٣ و٥٠٠ و٤٢٩ معها. **وبابُ التجديد يتعثّر كما يتعثّر
                 // غيرُه**، والجلسةُ سليمة. **فالمصنِّفُ واحدٌ** (`SessionFailure`).
                 if (SessionFailure.endsSession(re.status, re.body.code)) {
+                    reportSessionEnd(re.body.code, path, "refresh_failed:" + firstCode)
                     onSessionRejected?.invoke(SessionFailure.reason(firstCode, re.body.code))
                 }
                 throw re
@@ -255,9 +259,31 @@ class ApiClient(
                 // بين التجديد والإعادة. **كانت تُرمى صامتةً** فتبقى الشاشةُ
                 // «داخلةً» على بياناتٍ قديمة.
                 if (again.status == 401 && SessionFailure.endsSession(again.status, again.body.code)) {
+                    reportSessionEnd(again.body.code, path, "after_refresh")
                     onSessionRejected?.invoke(again.body.code)
                 }
                 throw again
+            }
+        }
+    }
+
+    /**
+     * **التطبيقُ يُبلغ قبل أن يُخرج صاحبَه** (قرارُ المالك ٢٠٢٦-١٠-٢١) — الرمزُ والمسارُ
+     * والحال، **ورمزُ التجديد ليُعرف صاحبُ الجلسة** (لا يُحفظ). **ولا ينتظره الخروج**:
+     * مهلةُ ثلاث ثوانٍ وتعثّرُه صمت.
+     */
+    @PublishedApi
+    internal suspend fun reportSessionEnd(code: String, path: String, detail: String) {
+        runCatching {
+            kotlinx.coroutines.withTimeout(3_000) {
+                raw<Ack>(
+                    "/api/v1/auth/client-report", HttpMethod.Post,
+                    mapOf(
+                        "code" to code, "path" to path, "detail" to detail,
+                        "refresh_token" to session.refreshToken(),
+                    ),
+                    null, "",
+                )
             }
         }
     }

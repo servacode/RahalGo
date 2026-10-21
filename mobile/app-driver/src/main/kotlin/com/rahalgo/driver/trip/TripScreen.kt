@@ -877,6 +877,8 @@ fun TripScreen(
             // **تحوّل الطريقُ إليه؟ يُقال لماذا** — ومن تبع خطّاً لا يذهب إلى الدبّوس بلا
             // سببٍ يظنّ الملاحةَ معطوبة. **وشاخ موقعُه فعاد إلى الدبّوس؟ يُقال كذلك.**
             if (state.step >= TripStep.PICKED_UP) LiveCustomerNotice(state, actions.requestLive)
+            // **«الطريق مسكّر؟»** (قرارُ المالك ٢٠٢٦-١٠-٢١) — من موقعه، فيتجنّبه التوجيهُ لكلّ السائقين.
+            if (state.order != null) RoadClosureButton(actions.reportClosure)
             // ══════════════════════════════════════════════════════════
             // **وخطأُ الخطوة يُرى ولو طُويت البطاقة** (٢٠٢٦-١٠-٠٢)
             // ══════════════════════════════════════════════════════════
@@ -1278,6 +1280,64 @@ private fun StopsRow(stops: List<Stop>, current: String, onPick: (String) -> Uni
 
 /** محطّة في قائمة من يحمل أكثر من طلب. */
 data class Stop(val id: String, val number: Long)
+
+/**
+ * **«الطريق مسكّر؟»** — زرٌّ صغيرٌ ونافذةُ السبب. **والموقعُ من الجهاز**: هو واقفٌ عند المسكَّر.
+ */
+@Composable
+private fun RoadClosureButton(onReport: (String) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Text(
+        text = stringResource(R.string.closure_button),
+        color = Rahal.colors.ink,
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.Bold,
+        modifier = Modifier
+            .padding(vertical = 4.dp)
+            .clip(Rahal.shape.sm)
+            .background(Rahal.colors.warnTint)
+            .clickable { open = true }
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+    )
+    if (open) {
+        val reasons = listOf(
+            "works" to R.string.closure_works,
+            "barrier" to R.string.closure_barrier,
+            "market" to R.string.closure_market,
+            "traffic" to R.string.closure_traffic,
+            "other" to R.string.closure_other,
+        )
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { open = false },
+            title = { Text(stringResource(R.string.closure_title), fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    reasons.forEach { (key, label) ->
+                        Text(
+                            text = stringResource(label),
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(Rahal.shape.sm)
+                                .background(Rahal.colors.field)
+                                .clickable {
+                                    open = false
+                                    onReport(key)
+                                }
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                        )
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                com.rahalgo.ui.RahalTextButton(onClick = { open = false }) {
+                    Text(stringResource(com.rahalgo.ui.R.string.act_cancel))
+                }
+            },
+        )
+    }
+}
 
 /** **سطرُ خبرٍ فوق الخريطة** — يُقرأ ولو طُويت البطاقة. */
 /**

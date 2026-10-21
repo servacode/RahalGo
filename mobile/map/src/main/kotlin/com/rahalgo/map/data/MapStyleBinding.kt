@@ -122,6 +122,8 @@ object MapStyleBinding {
         metadata.put("rahalgo:binding", binding)
         style.put("metadata", metadata)
 
+        addStores(style, sources)
+
         return Bound(
             json = style.toString(),
             binding = binding,
@@ -130,6 +132,66 @@ object MapStyleBinding {
             spriteUri = sprite,
             fontstacks = fontstacksOf(style),
             attribution = attribution,
+        )
+    }
+
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **متاجرُنا نقاطٌ على كلّ خريطة** (قرارُ المالك ٢٠٢٦-١٠-٢١)
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * **من الخادم لا من ملفّ الخريطة** — فالمتجرُ الجديدُ يظهر بلا إعادةِ بناء. **ويُحقن
+     * هنا مرّةً** فيظهر في كلّ تطبيقٍ وكلّ شاشة، **وفوقَ كلّ الطبقات**: دائرةٌ برتقاليّةٌ
+     * واسمٌ من التقريب ١٥. **وبلا عنوانٍ لا شيء** (`MapStores.url` فارغ)، **وبلا اتّصالٍ
+     * يفشل المصدرُ صامتاً** والخريطةُ كما هي.
+     */
+    private fun addStores(style: JSONObject, sources: JSONObject) {
+        val url = MapStores.url
+        if (url.isBlank()) return
+        sources.put(
+            "rahalgo-stores",
+            JSONObject().put("type", "geojson").put("data", url),
+        )
+        val layers = style.optJSONArray("layers") ?: return
+        layers.put(
+            JSONObject()
+                .put("id", "rahalgo-stores-dot")
+                .put("type", "circle")
+                .put("source", "rahalgo-stores")
+                .put("minzoom", 12)
+                .put(
+                    "paint",
+                    JSONObject()
+                        .put("circle-radius", 5)
+                        .put("circle-color", "#F28C28")
+                        .put("circle-stroke-color", "#FFFFFF")
+                        .put("circle-stroke-width", 1.5),
+                ),
+        )
+        val font = fontstacksOf(style).firstOrNull() ?: return
+        layers.put(
+            JSONObject()
+                .put("id", "rahalgo-stores-name")
+                .put("type", "symbol")
+                .put("source", "rahalgo-stores")
+                .put("minzoom", 15)
+                .put(
+                    "layout",
+                    JSONObject()
+                        .put("text-field", org.json.JSONArray().put("get").put("name"))
+                        .put("text-font", org.json.JSONArray().put(font))
+                        .put("text-size", 12)
+                        .put("text-offset", org.json.JSONArray().put(0).put(1.1))
+                        .put("text-anchor", "top")
+                        .put("text-optional", true),
+                )
+                .put(
+                    "paint",
+                    JSONObject()
+                        .put("text-color", "#B45309")
+                        .put("text-halo-color", "#FFFFFF")
+                        .put("text-halo-width", 1.2),
+                ),
         )
     }
 

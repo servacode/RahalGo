@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 555,
+    "routes": 566,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 102,
-    "notify_targeted": 45,
+    "notify_sites": 103,
+    "notify_targeted": 46,
     "publish_rooms": [
       "customer",
       "driver",
@@ -32,9 +32,9 @@
     ],
     "setting_defs": 250,
     "behaviour_settings": 205,
-    "order_fields": 114,
-    "test_files": 640,
-    "test_funcs": 2480
+    "order_fields": 118,
+    "test_files": 642,
+    "test_funcs": 2485
   },
   "flows": [
     {
@@ -18092,6 +18092,30 @@
       "orphan": false
     },
     {
+      "name": "TestEntrance_SavedOnAddressAndSuggestedToCustomer",
+      "file": "internal/qa/map_contrib_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLandmark_SuggestApproveEntersNearLandmark",
+      "file": "internal/qa/map_contrib_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMapStoresAndClientReport",
+      "file": "internal/qa/map_contrib_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRoadClosure_ReportConfirmAndClear",
+      "file": "internal/qa/map_contrib_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestMapTrace_KeepsOnlyWorthyAnonymousPoints",
       "file": "internal/qa/map_trace_test.go",
       "package": "qa",
@@ -26209,6 +26233,12 @@
     {
       "name": "TestROUTE_042_ContractSerializesWithoutNavWhenAbsent",
       "file": "internal/routing/steps_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestValhalla_ExcludesClosedRoads",
+      "file": "internal/routing/valhalla_exclude_test.go",
       "package": "routing",
       "orphan": true
     },

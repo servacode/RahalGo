@@ -54,6 +54,9 @@ class DriverApplication : Application() {
         // الحالة التي نحتاجها.**
         com.rahalgo.ui.PushChannels.ensure(this)
 
+        // **ومتاجرُنا نقاطٌ على الخريطة** (قرارُ المالك ٢٠٢٦-١٠-٢١) — قبل أوّل ربطٍ للنمط.
+        com.rahalgo.map.data.MapStores.url =
+            com.rahalgo.driver.data.Backend.BASE_URL + "/api/v1/public/map/stores?format=geojson"
         MapStyleRepository.init(
             this,
                 // **والثقبُ مشروطٌ بشرطين معاً**: بناءٌ تجريبيّ،

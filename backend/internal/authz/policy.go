@@ -452,6 +452,12 @@ var adminPolicy = []Rule{
 	{"GET", "/ops-map/customers", OrdersRead},
 	{"GET", "/ops-map/office", OrdersRead},
 	{"GET", "/ops-map/search", OrdersRead},
+	// **بلاغاتُ السائقين للخريطة** (قرارات المالك ٢٠٢٦-١٠-٢١) — تُقرأ قراءةَ تشغيل، **ويُقرَّر
+	// فيها كما تُرسم المناطق**: إزالةُ مسكَّرٍ وقبولُ معلمٍ يبدّلان ما يراه السائقون.
+	{"GET", "/ops-map/road-closures", OrdersRead},
+	{"DELETE", "/ops-map/road-closures/{id}", SettingsGeneralManage},
+	{"GET", "/ops-map/landmark-suggestions", OrdersRead},
+	{"POST", "/ops-map/landmark-suggestions/{id}/decide", SettingsGeneralManage},
 
 	// ── الحوافز ─────────────────────────────────────────────────
 	{"GET", "/incentives/{role}", FinanceRead},

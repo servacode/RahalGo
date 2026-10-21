@@ -122,8 +122,18 @@ const orderSelect = `
 	       -- **وأقربُ معلمٍ للتسليم** (قرارُ المالك ٢٠٢٦-١٠-٢١) — للسائق وحدَه.
 	       COALESCE(o.near_landmark, ''),
 	       -- **وطلبُ السائق لموقع الزبون المباشر** (٢٠٢٦-١٠-٢١).
-	       o.live_requested_at, o.live_request_count
+	       o.live_requested_at, o.live_request_count,
+	       -- **وبابُ البناية من عنوان الزبون** (٢٠٢٦-١٠-٢١) — والعنوانُ ما نُسخت منه نقطةُ الطلب.
+	       ent.lat, ent.lng,
+	       ST_Y(o.dropoff_suggest::geometry), ST_X(o.dropoff_suggest::geometry)
 	FROM orders o
+	LEFT JOIN LATERAL (
+		SELECT ST_Y(a.entrance::geometry) AS lat, ST_X(a.entrance::geometry) AS lng
+		  FROM user_addresses a
+		 WHERE a.user_id = o.customer_id AND a.entrance IS NOT NULL
+		   AND ST_DWithin(a.location, o.dropoff, 30)
+		 ORDER BY a.entrance_set_at DESC LIMIT 1
+	) ent ON true
 	-- **والزبونُ يُضمّ يساراً** — التوصيلةُ لا زبونَ لها (customer_id فارغ).
 	-- **وضمٌّ صلبٌ يُسقطها من كلّ قراءة** — وهي علّةُ الخاصِّ مع المتجر بعينها.
 	LEFT JOIN users cu ON cu.id = o.customer_id
@@ -167,7 +177,8 @@ func scanOrder(row pgx.Row) (*Order, error) {
 		&o.ReturnTo, &o.GoodsHandedAt, &o.DriverSeenAt,
 		&o.DeliveryMode, &o.CollectAmount,
 		&o.FetchAmount, &o.FetchAmountVersion, &o.FetchAmountStatus,
-		&o.AmountCurrency, &o.NearLandmark, &o.LiveRequestedAt, &o.LiveRequestCount)
+		&o.AmountCurrency, &o.NearLandmark, &o.LiveRequestedAt, &o.LiveRequestCount,
+		&o.EntranceLat, &o.EntranceLng, &o.DropoffSuggestLat, &o.DropoffSuggestLng)
 	if err != nil {
 		return nil, err
 	}

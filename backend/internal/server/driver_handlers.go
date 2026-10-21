@@ -349,6 +349,10 @@ type driverOrder struct {
 	// ويغيب في الشائعة.**
 	NavLat *float64 `json:"nav_lat"`
 	NavLng *float64 `json:"nav_lng"`
+	// EntranceLat/Lng **بابُ البناية** (قرارُ المالك ٢٠٢٦-١٠-٢١) — حفظه سائقٌ سابقٌ لعنوان
+	// الزبون، **فالتوجيهُ إلى الباب لا إلى الدبّوس.**
+	EntranceLat *float64 `json:"entrance_lat"`
+	EntranceLng *float64 `json:"entrance_lng"`
 	// Kind **نوعُ الطلب** — `custom` يشتريه السائقُ بنفسه ويستردّ عند التسليم.
 	Kind string `json:"kind"`
 	// CustomRequest ما طلبه الزبونُ بلفظه — **وهو كلُّ ما يعرفه السائقُ قبل
@@ -563,7 +567,14 @@ const driverOrderSelect = `
 	       o.collect_amount,
 	       -- **ومبلغُ الإحضار الحقيقيُّ وموافقةُ المتجر** (قرارُ المالك ٢٠٢٦-١٠-١٦).
 	       o.fetch_amount, o.fetch_amount_version, COALESCE(o.fetch_amount_status, ''),
-	       o.amount_currency
+	       o.amount_currency,
+	       -- **وبابُ البناية من عنوان الزبون** (٢٠٢٦-١٠-٢١).
+	       (SELECT ST_Y(a.entrance::geometry) FROM user_addresses a
+	         WHERE a.user_id = o.customer_id AND a.entrance IS NOT NULL AND ST_DWithin(a.location, o.dropoff, 30)
+	         ORDER BY a.entrance_set_at DESC LIMIT 1),
+	       (SELECT ST_X(a.entrance::geometry) FROM user_addresses a
+	         WHERE a.user_id = o.customer_id AND a.entrance IS NOT NULL AND ST_DWithin(a.location, o.dropoff, 30)
+	         ORDER BY a.entrance_set_at DESC LIMIT 1)
 	FROM orders o
 	LEFT JOIN merchants m ON m.id = o.merchant_id
 	-- **والتوصيلةُ بلا زبون** — ضمٌّ صلبٌ يُخفيها عن السائق فلا يراها أبداً.
@@ -608,7 +619,7 @@ func (s *Server) loadDriverOrders(r *http.Request, sql string, args ...any) ([]d
 			&o.DeliveryCodeRequired, &o.PartnerMerchantName,
 			&o.DeliveryMode, &o.CollectAmount,
 			&o.FetchAmount, &o.FetchAmountVersion, &o.FetchAmountStatus,
-			&o.AmountCurrency); err != nil {
+			&o.AmountCurrency, &o.EntranceLat, &o.EntranceLng); err != nil {
 			return nil, err
 		}
 		if o.ReturnTo != "" {

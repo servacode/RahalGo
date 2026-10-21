@@ -320,6 +320,36 @@ class DriverApi(private val api: ApiClient) {
      * إشعار. **ويردّ كم بقي** (ثلاثٌ للطلب). والردُّ `live_request_too_soon` بـ`retry_after_sec`،
      * و`live_request_limit` حين تنفد.
      */
+    /**
+     * **«أنا عند باب البناية»** بعد التسليم (قرارُ المالك ٢٠٢٦-١٠-٢١) — يُحفظ مع عنوان الزبون.
+     * والردُّ `entrance_too_far` إن بعُد أكثرَ من ١٥٠ م عن نقطته.
+     */
+    suspend fun saveEntrance(orderId: String, lat: Double, lng: Double) {
+        api.call<Ack>(
+            "/api/v1/driver/orders/" + orderId + "/entrance",
+            HttpMethod.Post,
+            mapOf("lat" to lat, "lng" to lng),
+        )
+    }
+
+    /** **«الطريق مسكّر هون»** (٢٠٢٦-١٠-٢١) — `reason`: works · barrier · market · traffic · other. */
+    suspend fun reportRoadClosure(lat: Double, lng: Double, reason: String) {
+        api.call<Ack>(
+            "/api/v1/driver/road-closures",
+            HttpMethod.Post,
+            mapOf("lat" to lat, "lng" to lng, "reason" to reason),
+        )
+    }
+
+    /** **«أضف معلم»** (٢٠٢٦-١٠-٢١) — بانتظار الإدارة. `kind`: mosque · pharmacy · school · hospital · shop · roundabout · other. */
+    suspend fun suggestLandmark(name: String, kind: String, lat: Double, lng: Double) {
+        api.call<Ack>(
+            "/api/v1/driver/landmarks",
+            HttpMethod.Post,
+            mapOf("name" to name, "kind" to kind, "lat" to lat, "lng" to lng),
+        )
+    }
+
     suspend fun requestLiveLocation(orderId: String): Int =
         api.call<LiveRequestResult>(
             "/api/v1/driver/orders/" + orderId + "/request-live-location",

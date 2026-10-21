@@ -28,7 +28,13 @@ type Valhalla struct {
 	base string
 	http *http.Client
 	snap SnapPolicy
+	// excluder **الطرقُ المسكَّرةُ قربَ الرحلة** (قرارُ المالك ٢٠٢٦-١٠-٢١) — يتجنّبها
+	// المحرّكُ (`exclude_locations`). **وفارغُه لا يغيّر شيئاً.**
+	excluder func(ctx context.Context, from, to Point) []Point
 }
+
+// SetExcluder **مصدرُ الطرق المسكَّرة** — يُوصَل بعد بناء الخادم.
+func (v *Valhalla) SetExcluder(f func(ctx context.Context, from, to Point) []Point) { v.excluder = f }
 
 var _ Backend = (*Valhalla)(nil)
 
@@ -106,6 +112,8 @@ type valhallaRequest struct {
 	// ShapeFormat `geojson` — **فقارئُ OSRM ينتظر إحداثيّاتٍ لا خطّاً مرمَّزاً.**
 	ShapeFormat string `json:"shape_format"`
 	Alternates  int    `json:"alternates,omitempty"`
+	// ExcludeLocations **طرقٌ مسكَّرةٌ يتجنّبها** — بلاغاتُ السائقين (٢٠٢٦-١٠-٢١).
+	ExcludeLocations []valhallaLocation `json:"exclude_locations,omitempty"`
 }
 
 func (v *Valhalla) buildRequest(from, to Point, alternatives int) valhallaRequest {
@@ -145,7 +153,13 @@ func (v *Valhalla) fetch(ctx context.Context, from, to Point, alternatives int) 
 }
 
 func (v *Valhalla) request(ctx context.Context, from, to Point, alternatives int) ([]*Route, error) {
-	raw, err := json.Marshal(v.buildRequest(from, to, alternatives))
+	body := v.buildRequest(from, to, alternatives)
+	if v.excluder != nil {
+		for _, p := range v.excluder(ctx, from, to) {
+			body.ExcludeLocations = append(body.ExcludeLocations, valhallaLocation{Lat: p.Lat, Lon: p.Lng})
+		}
+	}
+	raw, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}

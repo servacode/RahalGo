@@ -343,6 +343,16 @@ private val CODES: Map<String, Int> = mapOf(
     "payload_unsafe" to R.string.err_internal,
     "too_many_requests" to R.string.err_rate_limited,
     "rate_limited" to R.string.err_rate_limited,
+    // **ما يضيفه السائقُ للخريطة، و«موقعك الصح هون؟»** (قرارات المالك ٢٠٢٦-١٠-٢١).
+    "entrance_not_delivered" to R.string.err_entrance_not_delivered,
+    "entrance_too_far" to R.string.err_entrance_too_far,
+    "closure_reason" to R.string.err_validation,
+    "landmark_name" to R.string.err_landmark_name,
+    "landmark_kind" to R.string.err_landmark_kind,
+    "no_dropoff_suggestion" to R.string.err_no_dropoff_suggestion,
+    "live_request_too_soon" to R.string.err_rate_limited,
+    "live_request_limit" to R.string.err_rate_limited,
+    "live_request_stage" to R.string.err_live_request_stage,
     "too_many_attempts" to R.string.err_rate_limited,
     "validation" to R.string.err_validation,
     // ══════════════════════════════════════════════════════════════════

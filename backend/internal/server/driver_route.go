@@ -166,7 +166,9 @@ func (s *Server) handleDriverOrderRoute(w http.ResponseWriter, r *http.Request) 
 		       -- طارئ) — فيُمشى إليها لا إلى المتجر.
 		       ST_Y(COALESCE(o.pickup_override, m.location)::geometry),
 		       ST_X(COALESCE(o.pickup_override, m.location)::geometry),
-		       ST_Y(o.dropoff::geometry), ST_X(o.dropoff::geometry),
+		       -- **وبابُ البناية أوّلاً إن حفظه سائقٌ سابق** (قرارُ المالك ٢٠٢٦-١٠-٢١) — والدبّوسُ
+		       -- تقريبيّ. والعنوانُ ما نُسخت منه نقطةُ الطلب (٣٠ م).
+		       ST_Y(COALESCE(ent.entrance, o.dropoff)::geometry), ST_X(COALESCE(ent.entrance, o.dropoff)::geometry),
 		       o.dropoff_known,
 		       CASE WHEN o.status = 'failed' AND o.goods_handed_at IS NULL
 		            THEN COALESCE(o.return_to, '') ELSE '' END,
@@ -174,6 +176,12 @@ func (s *Server) handleDriverOrderRoute(w http.ResponseWriter, r *http.Request) 
 		FROM orders o
 		LEFT JOIN merchants m ON m.id = o.merchant_id
 		LEFT JOIN users du ON du.id = o.driver_id
+		LEFT JOIN LATERAL (
+			SELECT a.entrance FROM user_addresses a
+			 WHERE a.user_id = o.customer_id AND a.entrance IS NOT NULL
+			   AND ST_DWithin(a.location, o.dropoff, 30)
+			 ORDER BY a.entrance_set_at DESC LIMIT 1
+		) ent ON true
 		WHERE o.id = $1::uuid AND o.driver_id = $2::uuid`,
 		chi.URLParam(r, "id"), userIDFrom(r)).
 		Scan(&status, &fromLat, &fromLng, &pickLat, &pickLng, &dropLat, &dropLng, &dropKnown,

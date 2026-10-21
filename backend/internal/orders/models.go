@@ -319,16 +319,23 @@ type Order struct {
 	// الزبونُ يُسأل ثانيةً حين يتبدّل الوقت، والسائقُ يرى كم بقي له.
 	LiveRequestedAt  *time.Time `json:"live_requested_at"`
 	LiveRequestCount int        `json:"live_request_count"`
-	Lat              float64    `json:"lat"`
-	Lng              float64    `json:"lng"`
-	ZoneID           *string    `json:"zone_id"`
-	ZoneName         *string    `json:"zone_name"`
-	PaymentMethod    string     `json:"payment_method"`
-	Subtotal         int64      `json:"subtotal"`
-	DeliveryFee      int64      `json:"delivery_fee"`
-	Discount         int64      `json:"discount"`
-	Total            int64      `json:"total"`
-	WalletPaid       int64      `json:"wallet_paid"`
+	// EntranceLat/Lng **بابُ البناية** (٢٠٢٦-١٠-٢١، هجرة ٠٤٧٠) — حفظه سائقٌ سابقٌ لعنوان
+	// الزبون، فيوصل السائقُ إليه. **للسائق والمكتب لا للزبون.**
+	EntranceLat *float64 `json:"entrance_lat"`
+	EntranceLng *float64 `json:"entrance_lng"`
+	// DropoffSuggestLat/Lng **«موقعك الصح هون؟»** — يُقترَح على الزبون تعديلُ نقطته.
+	DropoffSuggestLat *float64 `json:"dropoff_suggest_lat"`
+	DropoffSuggestLng *float64 `json:"dropoff_suggest_lng"`
+	Lat               float64  `json:"lat"`
+	Lng               float64  `json:"lng"`
+	ZoneID            *string  `json:"zone_id"`
+	ZoneName          *string  `json:"zone_name"`
+	PaymentMethod     string   `json:"payment_method"`
+	Subtotal          int64    `json:"subtotal"`
+	DeliveryFee       int64    `json:"delivery_fee"`
+	Discount          int64    `json:"discount"`
+	Total             int64    `json:"total"`
+	WalletPaid        int64    `json:"wallet_paid"`
 
 	// ══════════════════════════════════════════════════════════════════
 	// **شفافيّةُ المتجر — كم بِيع وكم أخذت المنصّة**

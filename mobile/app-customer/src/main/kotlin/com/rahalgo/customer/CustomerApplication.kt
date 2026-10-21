@@ -54,6 +54,8 @@ class CustomerApplication : Application() {
         // المقدّمة (الرسالةُ الداخليّةُ تكفي) ويُعرَض في الخلفيّة وحدَها.
         com.rahalgo.ui.AppForeground.install(this)
 
+        // **ومتاجرُنا نقاطٌ على الخريطة** (قرارُ المالك ٢٠٢٦-١٠-٢١) — قبل أوّل ربطٍ للنمط.
+        com.rahalgo.map.data.MapStores.url = Backend.BASE_URL + "/api/v1/public/map/stores?format=geojson"
         MapStyleRepository.init(this, MapConfig(baseUrl = Backend.MAPS_BASE_URL))
     }
 

@@ -293,6 +293,8 @@ data class TripActions(
     val handGoods: () -> Unit = {},
     /** **«اطلب موقع الزبون المباشر»** (قرارُ المالك ٢٠٢٦-١٠-٢١). */
     val requestLive: () -> Unit = {},
+    /** **«الطريق مسكّر هون»** بسببه (قرارُ المالك ٢٠٢٦-١٠-٢١). */
+    val reportClosure: (String) -> Unit = {},
     /** **كودُ التسليم** من نافذة التأكيد — يُحفظ قبل `step`/`capture`. */
     val setDeliveryCode: (String) -> Unit = {},
     /** يفتح الكاميرا لصورة التسليم. */
@@ -494,8 +496,13 @@ fun tripStepOf(order: DriverOrder): TripStep =
  * **نقطةُ الباب على الخريطة** — وفارغةٌ حين لا تُعرف: **لا دبّوسَ ولا خطَّ إلى
  * موقع المتجر على أنّه بابُ المستلِم.**
  */
-fun dropoffPoint(order: DriverOrder): Pair<Double, Double>? =
-    if (order.dropoffKnown) order.lat to order.lng else null
+fun dropoffPoint(order: DriverOrder): Pair<Double, Double>? = when {
+    !order.dropoffKnown -> null
+    // **وبابُ البناية أوّلاً إن حفظه سائقٌ سابق** (قرارُ المالك ٢٠٢٦-١٠-٢١) — الدبّوسُ
+    // تقريبيٌّ والبابُ حيث وقف من سلّم.
+    order.entranceLat != null && order.entranceLng != null -> order.entranceLat!! to order.entranceLng!!
+    else -> order.lat to order.lng
+}
 
 /**
  * ══════════════════════════════════════════════════════════════════════

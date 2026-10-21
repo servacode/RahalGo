@@ -1236,6 +1236,9 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             // طلب لم يعد له وجود فيها.
             if (to == "delivered") {
                 openId = null
+                // **«انت عند باب البناية؟»** (قرارُ المالك ٢٠٢٦-١٠-٢١) — لطلبٍ له زبونٌ وعنوان.
+                val delivered = state.mine.firstOrNull { it.id == id }
+                if (delivered != null && delivered.kind != "merchant_delivery") askEntranceFor = id
             }
             detail = detail.copy(busy = false)
             reload()
@@ -1270,6 +1273,90 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             state = state.copy(mine = state.mine.filterNot { it.id == id })
             detail = detail.copy(busy = false)
             reload()
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **ما يضيفه السائقُ للخريطة** (قرارات المالك ٢٠٢٦-١٠-٢١)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **كلُّها من موقعه الآن** — هو واقفٌ عند الباب أو الطريق أو المعلم، **وموقعُه أدقُّ من
+    // إصبعٍ على خريطة.** والنتيجةُ تُقال له بسطرٍ قصير.
+
+    /** **بعد التسليم: «انت عند باب البناية؟»** — فارغٌ لا سؤال. */
+    var askEntranceFor by mutableStateOf<String?>(null)
+        private set
+
+    private fun hereNow(): Pair<Double, Double>? =
+        navSession.lastGoodFix?.let { it.lat to it.lng } ?: LastPoint.value?.let { it.lat to it.lng }
+
+    fun saveEntrance() {
+        val id = askEntranceFor ?: return
+        askEntranceFor = null
+        val at = hereNow()
+        val app = getApplication<Application>()
+        if (at == null) {
+            com.rahalgo.ui.Flash.fail(app.getString(R.string.map_need_location))
+            return
+        }
+        viewModelScope.launch {
+            try {
+                backend.driver.saveEntrance(id, at.first, at.second)
+                com.rahalgo.ui.Flash.ok(app.getString(R.string.entrance_saved))
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: com.rahalgo.shared.net.ApiClient.ApiException) {
+                com.rahalgo.ui.Flash.fail(
+                    if (e.body.code == "entrance_too_far") app.getString(R.string.entrance_too_far) else describe(e),
+                )
+            } catch (e: Exception) {
+                com.rahalgo.ui.Flash.fail(describe(e))
+            }
+        }
+    }
+
+    fun skipEntrance() {
+        askEntranceFor = null
+    }
+
+    /** **«الطريق مسكّر هون»** — من موقعه. */
+    fun reportRoadClosure(reason: String) {
+        val at = hereNow()
+        val app = getApplication<Application>()
+        if (at == null) {
+            com.rahalgo.ui.Flash.fail(app.getString(R.string.map_need_location))
+            return
+        }
+        viewModelScope.launch {
+            try {
+                backend.driver.reportRoadClosure(at.first, at.second, reason)
+                com.rahalgo.ui.Flash.ok(app.getString(R.string.closure_sent))
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                com.rahalgo.ui.Flash.fail(describe(e))
+            }
+        }
+    }
+
+    /** **«أضف معلم»** — من موقعه، بانتظار الإدارة. */
+    fun suggestLandmark(name: String, kind: String, done: () -> Unit) {
+        val at = hereNow()
+        val app = getApplication<Application>()
+        if (at == null) {
+            com.rahalgo.ui.Flash.fail(app.getString(R.string.map_need_location))
+            return
+        }
+        viewModelScope.launch {
+            try {
+                backend.driver.suggestLandmark(name.trim(), kind, at.first, at.second)
+                com.rahalgo.ui.Flash.ok(app.getString(R.string.landmark_sent))
+                done()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                com.rahalgo.ui.Flash.fail(describe(e))
+            }
         }
     }
 

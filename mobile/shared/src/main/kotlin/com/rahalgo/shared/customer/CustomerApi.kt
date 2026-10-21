@@ -273,6 +273,22 @@ class CustomerApi(private val api: ApiClient) {
      * **رفضُ السعر الجديد** (قرارُ المالك ٢٠٢٦-١٠-١٥) — حين رفعه المكتبُ بعد
      * الاستلام. **الطلبُ يبقى حيث هو، والمكتبُ يتّصل ويقرّر.**
      */
+    /**
+     * **«موقعك الصح هون؟»** (قرارُ المالك ٢٠٢٦-١٠-٢١) — نقطةُ عنوانه تصير البابَ الذي حفظه
+     * السائق، أو **«لا، نقطتي صحيحة»** فلا يُسأل ثانيةً.
+     */
+    suspend fun acceptDropoffFix(orderId: String) {
+        api.call<com.rahalgo.shared.net.Ack>(
+            "/api/v1/orders/$orderId/accept-dropoff-fix", HttpMethod.Post, mapOf<String, String>(),
+        )
+    }
+
+    suspend fun dismissDropoffFix(orderId: String) {
+        api.call<com.rahalgo.shared.net.Ack>(
+            "/api/v1/orders/$orderId/accept-dropoff-fix", HttpMethod.Delete, mapOf<String, String>(),
+        )
+    }
+
     suspend fun rejectQuote(orderId: String): MyOrder =
         api.call(
             "/api/v1/orders/$orderId/reject-quote",
@@ -676,6 +692,9 @@ data class MyOrder(
     @SerialName("quote_rejected_at") val quoteRejectedAt: String? = null,
     /** **السائقُ طلب موقعك المباشر** (٢٠٢٦-١٠-٢١) — وقتٌ جديدٌ يعيد السؤال وإن رُفض من قبل. */
     @SerialName("live_requested_at") val liveRequestedAt: String? = null,
+    /** **«موقعك الصح هون؟»** — البابُ الذي حفظه السائق، ويُقترَح نقطةً لعنوانه. */
+    @SerialName("dropoff_suggest_lat") val dropoffSuggestLat: Double? = null,
+    @SerialName("dropoff_suggest_lng") val dropoffSuggestLng: Double? = null,
     @SerialName("custom_reserved_amount") val customReservedAmount: Long = 0,
     @SerialName("created_at") val createdAt: String = "",
     @SerialName("delivered_at") val deliveredAt: String? = null,

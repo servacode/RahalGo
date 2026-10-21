@@ -102,7 +102,7 @@ class SectionsViewModel(app: Application) : AndroidViewModel(app) {
             // **والأهدافُ والدردشاتُ والسجلُّ لها عقولُها** — رُفعت
             // الأهدافُ إلى `:ui` (٢٠٢٦-٠٨-١٤): **السائقُ له هدفٌ
             // والمندوبُ له هدف**، والمقياسُ يختلف والمعنى واحد.
-            MenuItem.Rewards, MenuItem.Chats, MenuItem.History -> Unit
+            MenuItem.Rewards, MenuItem.Chats, MenuItem.History, MenuItem.AddLandmark -> Unit
         }
     }
 

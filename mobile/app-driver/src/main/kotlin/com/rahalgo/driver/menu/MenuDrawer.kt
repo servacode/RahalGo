@@ -103,7 +103,10 @@ enum class MenuItem(val group: Int, val label: Int, val icon: Int) {
     // **والهديّةُ تُعطى والهدفُ يُبلَغ** — ومن قرأ «هدايا» انتظر عطاءً
     // لا يجيء، **ومن قرأ «أهدافي» عرف أنّ عليه عملا.**
     Rewards(R.string.menu_mine, R.string.menu_rewards, R.drawable.ic_star),
-    Tickets(R.string.menu_mine, R.string.menu_tickets, R.drawable.ic_warning);
+    Tickets(R.string.menu_mine, R.string.menu_tickets, R.drawable.ic_warning),
+
+    // **«أضف معلم»** (قرارُ المالك ٢٠٢٦-١٠-٢١) — من مكانه، بانتظار الإدارة.
+    AddLandmark(R.string.menu_mine, R.string.menu_add_landmark, R.drawable.ic_pin);
 
     fun asDrawerItem(): DrawerItem = DrawerItem(name, group, label, icon)
 }
@@ -128,7 +131,7 @@ fun MenuScreen(vm: SectionsViewModel, item: MenuItem) {
         MenuItem.Tickets -> ComplaintsScreen(vm)
         // **والسجلُّ والدردشاتُ يُعرَضان من نموذجيهما** — تُمرّرهما
         // الشاشةُ الأمّ.
-        MenuItem.Rewards, MenuItem.Chats, MenuItem.History -> Unit
+        MenuItem.Rewards, MenuItem.Chats, MenuItem.History, MenuItem.AddLandmark -> Unit
     }
 }
 

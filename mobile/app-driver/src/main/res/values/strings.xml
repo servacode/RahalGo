@@ -600,6 +600,35 @@
     <string name="trip_p_fixed_purchase">اشترِ المطلوب ووثّق ثمنه</string>
     <!-- **موقعُ الزبون المباشر** (قرارُ المالك ٢٠٢٦-١٠-١٦) — `trip/DoorTarget.kt`. -->
     <string name="trip_live_switched">الزبون مو عند العنوان — الطريق تحوّل لموقعه الحالي</string>
+    <!-- **ما يضيفه السائقُ للخريطة** (قرارات المالك ٢٠٢٦-١٠-٢١). -->
+    <string name="map_need_location">ما عم نعرف موقعك هلق — استنى لحظة وجرّب</string>
+    <string name="entrance_title">انت هلق عند باب البناية؟</string>
+    <string name="entrance_body">إذا حفظت الباب، أي سائق بيوصل لهالعنوان المرة الجاية بيوصل للباب بالضبط.</string>
+    <string name="entrance_yes">إي، احفظ الباب</string>
+    <string name="entrance_no">لا</string>
+    <string name="entrance_saved">انحفظ باب البناية — شكراً إلك</string>
+    <string name="entrance_too_far">انت بعيد عن نقطة الزبون كتير — ما انحفظ الباب</string>
+    <string name="closure_button">الطريق مسكّر؟</string>
+    <string name="closure_title">شو مسكّر الطريق هون؟</string>
+    <string name="closure_works">حفريات</string>
+    <string name="closure_barrier">حاجز</string>
+    <string name="closure_market">سوق</string>
+    <string name="closure_traffic">زحمة كتير</string>
+    <string name="closure_other">غيره</string>
+    <string name="closure_sent">وصل البلاغ — رح نبعد السائقين عن هالطريق</string>
+    <string name="menu_add_landmark">أضف معلم</string>
+    <string name="landmark_title">أضف معلم من مكانك هلق</string>
+    <string name="landmark_hint">وقّف عند المعلم واكتب اسمه، مثلاً: صيدلية الشفاء</string>
+    <string name="landmark_name">اسم المعلم</string>
+    <string name="landmark_send">أضف المعلم</string>
+    <string name="landmark_sent">وصل المعلم — بيبيّن بعد ما توافق الإدارة</string>
+    <string name="lm_mosque">جامع</string>
+    <string name="lm_pharmacy">صيدلية</string>
+    <string name="lm_school">مدرسة</string>
+    <string name="lm_hospital">مشفى</string>
+    <string name="lm_shop">محل</string>
+    <string name="lm_roundabout">دوّار</string>
+    <string name="lm_other">غيره</string>
     <!-- **«اطلب موقع الزبون المباشر»** (قرارُ المالك ٢٠٢٦-١٠-٢١). -->
     <string name="trip_live_request">اطلب موقع الزبون المباشر</string>
     <string name="trip_live_requested">انبعت الطلب للزبون — بقيلك %1$d مرات</string>

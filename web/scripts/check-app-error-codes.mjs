@@ -92,10 +92,20 @@ const SERVER_MOBILE = new Set([
   "store_suspended",
   // **ولا دوامَ بعد حادثٍ قبل «السائقُ بخير»** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — يبلغ تطبيقَ السائق.
   "accident_check_required",
+  // **ما يضيفه السائقُ للخريطة، و«موقعك الصح هون؟»** (قرارات المالك ٢٠٢٦-١٠-٢١) — تطبيقا
+  // السائق والزبون.
+  "entrance_not_delivered",
+  "entrance_too_far",
+  "closure_reason",
+  "landmark_name",
+  "landmark_kind",
+  "no_dropoff_suggestion",
 ]);
 
 /** **ما لا يبلغ هاتفاً** — أبوابُ الإدارة واللوحات. */
 const SERVER_ADMIN = new Set([
+  // **قرارُ معلمٍ قُرّر من قبل** — لوحةُ العمليّات (٢٠٢٦-١٠-٢١).
+  "landmark_decided",
   // **مزامنةُ الأمين** — تحميلُ البرنامج من لوحة الويب، وسطرُ القراءة من الإدارة (٢٠٢٦-١٠-١٩).
   "price_sync_agent_missing",
   "price_sync_query",
