@@ -119,8 +119,8 @@ func (s *Server) handleDriverEntrance(w http.ResponseWriter, r *http.Request) {
 			suggested = true
 			s.notify.Notify(ctx, notifications.Input{
 				UserID: *customer, Kind: notifications.KindOrder,
-				Title:  "موقعك الصح هون؟ — نقطة عنوانك بعيدة عن باب بنايتك",
-				Body:   "اضغط لتعدّل نقطة عنوانك فيوصلك السائق المرة الجاية بالضبط",
+				Title:  "هل هذا عنوانك الصحيح؟",
+				Body:   "تم تسليم طلبك في موقع يختلف عن عنوانك المحفوظ. اضغط لاعتماده لطلباتك القادمة.",
 				Entity: "order", EntityID: orderID, Href: "/portal/orders",
 				Apps: []string{notifications.AppCustomer},
 			})
@@ -171,8 +171,8 @@ func (s *Server) suggestFromDelivery(ctx context.Context, orderID string) {
 	}
 	s.notify.Notify(ctx, notifications.Input{
 		UserID: customer, Kind: notifications.KindOrder,
-		Title:  "هون عنوانك الصح؟ — استلمت طلبك بعيد عن نقطة عنوانك",
-		Body:   "اضغط لتعدّل نقطة عنوانك فيوصلك السائق المرة الجاية بالضبط",
+		Title:  "هل هذا عنوانك الصحيح؟",
+		Body:   "تم تسليم طلبك في موقع يختلف عن عنوانك المحفوظ. اضغط لاعتماده لطلباتك القادمة.",
 		Entity: "order", EntityID: orderID, Href: "/portal/orders",
 		Apps: []string{notifications.AppCustomer},
 	})

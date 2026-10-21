@@ -1335,7 +1335,14 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun skipEntrance() {
-        askEntranceFor = null
+        // **وزرُّ «إي، احفظ الباب» يُغلق النافذةَ قبل الحفظ** (`ConfirmDialog`: onDismiss ثمّ
+        // onConfirm) — فكان الحفظُ لا يجد طلباً ولا يُرسَل شيء (شُهد على الجهاز ٢٠٢٦-١٠-٢١).
+        // **فالتراجعُ ينتظر دورةً**: إن تبعه حفظٌ في الضغطة نفسها أخذ الطلبَ قبله.
+        val id = askEntranceFor ?: return
+        viewModelScope.launch {
+            kotlinx.coroutines.yield()
+            if (askEntranceFor == id) askEntranceFor = null
+        }
     }
 
     /** **«الطريق مسكّر هون»** — من موقعه. */

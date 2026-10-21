@@ -63,9 +63,12 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.RahalGo.Splash">
+        <!-- نسخةٌ واحدةٌ من الشاشة (٢٠٢٦-١٠-٢١): نقرُ إشعار الدوام أو الطلب كان يفتح نسخةً فوق
+             القديمة، فتبقى الأولى تحتها بنوافذَ عالقةٍ على مقاس النافذة الطافية. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTask"
             android:resizeableActivity="true"
             android:supportsPictureInPicture="true"
             android:configChanges="screenSize|smallestScreenSize|screenLayout|orientation|keyboardHidden|keyboard|navigation|uiMode|density">

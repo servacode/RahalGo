@@ -286,10 +286,19 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         get() = (open + history).firstOrNull { it.dropoffSuggestLat != null && it.id !in fixAnswered }
 
     private var fixAnswered by mutableStateOf(setOf<String>())
+    private var fixAccepted = setOf<String>()
 
     fun answerDropoffFix(order: MyOrder, accept: Boolean) {
         fixAnswered = fixAnswered + order.id
+        if (accept) fixAccepted = fixAccepted + order.id
         viewModelScope.launch {
+            // **وزرُّ الموافقة يُغلق النافذةَ قبلها** (`ConfirmDialog`: onDismiss ثمّ onConfirm) — فكان
+            // «لا» يصل الخادمَ أوّلاً فيمحو الاقتراح وتردّ الموافقةُ ٤٠٩ (شُهد على الجهاز ٢٠٢٦-١٠-٢١).
+            // **فالرفضُ ينتظر دورةً**: إن تبعته موافقةٌ في الضغطة نفسها تُرك.
+            if (!accept) {
+                kotlinx.coroutines.yield()
+                if (order.id in fixAccepted) return@launch
+            }
             try {
                 if (accept) {
                     api.acceptDropoffFix(order.id)

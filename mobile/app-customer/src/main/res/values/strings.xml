@@ -291,10 +291,10 @@
     <string name="live_card_sharing">عم تشارك موقعك المباشر مع الكابتن</string>
     <string name="live_denied">ما فينا نشارك موقعك بدون إذن الموقع</string>
     <!-- **«موقعك الصح هون؟»** (قرارُ المالك ٢٠٢٦-١٠-٢١). -->
-    <string name="dropoff_fix_title">موقعك الصح هون؟</string>
-    <string name="dropoff_fix_body">استلمت طلبك بمكان بعيد عن النقطة يلي حاططها بعنوانك. إذا هاد عنوان بيتك الصح، منعدّل نقطة عنوانك لهون مشان يوصلك السائق المرة الجاية بالضبط.</string>
-    <string name="dropoff_fix_yes">إي، عدّلها</string>
-    <string name="dropoff_fix_done">تعدّلت نقطة عنوانك — شكراً</string>
+    <string name="dropoff_fix_title">هل هذا عنوانك الصحيح؟</string>
+    <string name="dropoff_fix_body">تم تسليم طلبك في موقع يختلف عن عنوانك المحفوظ. هل تريد اعتماده لطلباتك القادمة؟</string>
+    <string name="dropoff_fix_yes">نعم، اعتمده</string>
+    <string name="dropoff_fix_done">تم تحديث عنوانك</string>
     <!-- **«في نسخة جديدة — حدّث»** (قرارُ المالك ٢٠٢٦-١٠-٢١). -->
     <string name="update_offer">في نسخة جديدة من رحّال غو (%1$s) — اضغط لتحدّث</string>
     <string name="update_play_unreachable">ما قدرنا نوصل لغوغل بلاي — شغّل VPN وجرّب مرة تانية</string>
