@@ -130,6 +130,55 @@ func (s *Server) handleDriverEntrance(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"saved": saved > 0, "suggested": suggested})
 }
 
+// suggestFromDelivery **«موقعك الصح هون؟» من مكان التسليم** (قرارُ المالك ٢٠٢٦-١٠-٢١: «نسأل
+// الزبون إذا هذا عنوان بيتك الصحيح») — شُهد على الجهاز طلبٌ سُلّم على بُعد ٦٣٣ م من دبّوسه
+// فلم يُسأل أحد، لأنّ «باب البناية» لا يُقبل أبعدَ من ١٥٠ م.
+//
+// **مكانُ التسليم موقعُ السائق لحظتَه** (قرارُ المالك: «السائق والزبون اجتمعو وسلم — هي أصحّ
+// نقطة») — آخرُ نقطةٍ له في الدقيقتين، وإلّا موقعُ الزبون المباشر في الدقائق الثلاث؛
+// **وكلاهما بدقّةٍ لا تتجاوز ٥٠ م**. وأبعدُ من ١٠٠ م عن الدبّوس وأقربُ من
+// ٥ كم ⇒ اقتراحٌ وإشعار. **ولا يُغيَّر شيءٌ بلا موافقته**: ربّما استلم في شغله.
+func (s *Server) suggestFromDelivery(ctx context.Context, orderID string) {
+	var customer string
+	var lat, lng float64
+	err := s.pg.QueryRow(ctx, `
+		WITH o AS (
+			SELECT id, customer_id, driver_id, dropoff FROM orders
+			 WHERE id = $1 AND status = 'delivered' AND dropoff IS NOT NULL
+			   AND customer_id IS NOT NULL AND dropoff_suggest IS NULL
+		), here AS (
+			SELECT point, 2 AS pri FROM order_live_locations l, o
+			 WHERE l.order_id = o.id AND l.at > now() - interval '3 minutes'
+			   AND COALESCE(l.accuracy_m, 0) <= 50
+			UNION ALL
+			SELECT * FROM (SELECT t.at AS point, 1 AS pri FROM driver_track t, o
+			 WHERE t.driver_id = o.driver_id AND t.created_at > now() - interval '2 minutes'
+			   AND COALESCE(t.accuracy_m, 0) <= 50
+			 ORDER BY t.created_at DESC LIMIT 1) d
+		)
+		SELECT o.customer_id::text, ST_Y(h.point::geometry), ST_X(h.point::geometry)
+		  FROM o, (SELECT point FROM here ORDER BY pri LIMIT 1) h
+		 WHERE ST_Distance(h.point, o.dropoff) BETWEEN $2 AND 5000
+		   AND EXISTS (SELECT 1 FROM user_addresses a
+		                WHERE a.user_id = o.customer_id AND ST_DWithin(a.location, o.dropoff, $3))`,
+		orderID, dropoffSuggestMinM, entranceMatchAddressM).Scan(&customer, &lat, &lng)
+	if err != nil {
+		return
+	}
+	if _, err := s.pg.Exec(ctx, `UPDATE orders SET dropoff_suggest = ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography
+		WHERE id = $1 AND dropoff_suggest IS NULL`, orderID, lng, lat); err != nil {
+		return
+	}
+	s.notify.Notify(ctx, notifications.Input{
+		UserID: customer, Kind: notifications.KindOrder,
+		Title:  "هون عنوانك الصح؟ — استلمت طلبك بعيد عن نقطة عنوانك",
+		Body:   "اضغط لتعدّل نقطة عنوانك فيوصلك السائق المرة الجاية بالضبط",
+		Entity: "order", EntityID: orderID, Href: "/portal/orders",
+		Apps: []string{notifications.AppCustomer},
+	})
+	s.touch("order", "customer:"+customer)
+}
+
 // handleAcceptDropoffSuggestion **الزبونُ وافق: نقطةُ عنوانه تصير البابَ.**
 // POST /orders/{id}/accept-dropoff-fix
 func (s *Server) handleAcceptDropoffSuggestion(w http.ResponseWriter, r *http.Request) {
@@ -233,7 +282,10 @@ func (s *Server) activeClosures(ctx context.Context, a, b routing.Point) []routi
 		SELECT ST_Y(point::geometry), ST_X(point::geometry) FROM road_closures
 		 WHERE cleared_at IS NULL AND expires_at > now()
 		   AND ST_Intersects(point, ST_MakeEnvelope($1, $2, $3, $4, 4326)::geography)
-		 LIMIT 50`, minLng-pad, minLat-pad, maxLng+pad, maxLat+pad)
+		   -- **ولا يُتجنَّب شارعٌ يقف عليه السائقُ أو الزبون** (٢٠٢٦-١٠-٢١) — منه يبدأ وإليه يصل.
+		   AND NOT ST_DWithin(point, ST_SetSRID(ST_MakePoint($6, $5), 4326)::geography, 60)
+		   AND NOT ST_DWithin(point, ST_SetSRID(ST_MakePoint($8, $7), 4326)::geography, 60)
+		 LIMIT 50`, minLng-pad, minLat-pad, maxLng+pad, maxLat+pad, a.Lat, a.Lng, b.Lat, b.Lng)
 	if err != nil {
 		return nil
 	}

@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 103,
-    "notify_targeted": 46,
+    "notify_sites": 104,
+    "notify_targeted": 47,
     "publish_rooms": [
       "customer",
       "driver",
@@ -34,7 +34,7 @@
     "behaviour_settings": 205,
     "order_fields": 118,
     "test_files": 642,
-    "test_funcs": 2485
+    "test_funcs": 2487
   },
   "flows": [
     {
@@ -18092,6 +18092,12 @@
       "orphan": false
     },
     {
+      "name": "TestDelivery_FarFromPinAsksCustomer",
+      "file": "internal/qa/map_contrib_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestEntrance_SavedOnAddressAndSuggestedToCustomer",
       "file": "internal/qa/map_contrib_test.go",
       "package": "qa",
@@ -26233,6 +26239,12 @@
     {
       "name": "TestROUTE_042_ContractSerializesWithoutNavWhenAbsent",
       "file": "internal/routing/steps_test.go",
+      "package": "routing",
+      "orphan": true
+    },
+    {
+      "name": "TestValhalla_ClosureNeverKillsRouting",
+      "file": "internal/routing/valhalla_exclude_test.go",
       "package": "routing",
       "orphan": true
     },

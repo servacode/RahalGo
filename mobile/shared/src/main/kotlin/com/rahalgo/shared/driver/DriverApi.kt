@@ -337,7 +337,7 @@ class DriverApi(private val api: ApiClient) {
         api.call<Ack>(
             "/api/v1/driver/road-closures",
             HttpMethod.Post,
-            mapOf("lat" to lat, "lng" to lng, "reason" to reason),
+            ClosureInput(lat, lng, reason),
         )
     }
 
@@ -346,7 +346,7 @@ class DriverApi(private val api: ApiClient) {
         api.call<Ack>(
             "/api/v1/driver/landmarks",
             HttpMethod.Post,
-            mapOf("name" to name, "kind" to kind, "lat" to lat, "lng" to lng),
+            LandmarkInput(name, kind, lat, lng),
         )
     }
 
@@ -635,3 +635,10 @@ class DriverApi(private val api: ApiClient) {
 /** **ردُّ «اطلب موقع الزبون»** — كم بقي من الثلاث. */
 @kotlinx.serialization.Serializable
 data class LiveRequestResult(val remaining: Int = 0)
+
+/** **جسمٌ مختلطُ الأنواع يحتاج صنفاً** — `mapOf` بنصٍّ ورقمٍ لا يُسلسَل (شُهد على الجهاز ٢٠٢٦-١٠-٢١). */
+@Serializable
+internal data class ClosureInput(val lat: Double, val lng: Double, val reason: String)
+
+@Serializable
+internal data class LandmarkInput(val name: String, val kind: String, val lat: Double, val lng: Double)

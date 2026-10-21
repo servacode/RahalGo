@@ -1202,6 +1202,10 @@ func (s *Server) handleDriverTransition(w http.ResponseWriter, r *http.Request) 
 		s.respondErr(w, err)
 		return
 	}
+	// **«هون عنوانك الصح؟»** (٢٠٢٦-١٠-٢١) — سُلّم بعيداً عن دبّوسه فيُسأل الزبون.
+	if req.To == orders.StDelivered {
+		s.suggestFromDelivery(r.Context(), orderID)
+	}
 	// **وحمولةُ السائق لا الطلبُ الخامّ** (٢٠٢٦-١٠-٠٦: كان الردُّ يحمل رقمَ الزبون).
 	httpx.JSON(w, http.StatusOK, orders.ViewFor(orders.AudienceDriver, o))
 }

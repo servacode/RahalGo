@@ -1073,13 +1073,14 @@ fun TripScreen(
         }
     }
 
-    if (state.agreeOpen) {
+    if (state.agreeOpen && roomyWindow()) {
         AgreeDialog(
             // **سلطةُ الأجرة من لقطة الطلب** (Batch 2c) — لا من إعدادٍ عامّ.
             feeSource = order.customFeeSource,
             feeSnapshot = order.customFeeSnapshot,
             driverMayChange = order.customDriverMayChangeFee,
-            currentGoods = order.customGoods,
+            // **وثمنٌ ينتظر الشراء ليس ثمناً** — فلا تظهر خانتُه في تعديل الأجرة بعد الرفض.
+            currentGoods = order.customGoods.takeUnless { order.customGoodsPending },
             currentFee = order.customFee,
             // **وبعد رفض الزبون: الاثنان معاً** (قرارُ المالك ٢٠٢٦-١٠-٢١).
             step = when {
@@ -1094,7 +1095,7 @@ fun TripScreen(
         )
     }
 
-    if (state.emergencyOpen) {
+    if (state.emergencyOpen && roomyWindow()) {
         EmergencyDialog(
             busy = state.emergencyBusy,
             error = state.emergencyError,
@@ -1114,7 +1115,7 @@ fun TripScreen(
             com.rahalgo.ui.Flash.ok(stageChanged)
         }
     }
-    if (state.failReasons != null) {
+    if (state.failReasons != null && roomyWindow()) {
         FailDialog(
             reasons = state.failReasons,
             status = state.problemStatus,
@@ -1292,14 +1293,15 @@ private fun RoadClosureButton(onReport: (String) -> Unit) {
         color = Rahal.colors.ink,
         style = MaterialTheme.typography.labelMedium,
         fontWeight = FontWeight.Bold,
+        // **ومسافةٌ فوقه** — كان لاصقاً بزرّ «اطلب موقع الزبون» (شُهد على الجهاز ٢٠٢٦-١٠-٢١).
         modifier = Modifier
-            .padding(vertical = 4.dp)
+            .padding(top = 10.dp, bottom = 4.dp)
             .clip(Rahal.shape.sm)
             .background(Rahal.colors.warnTint)
             .clickable { open = true }
             .padding(horizontal = 12.dp, vertical = 8.dp),
     )
-    if (open) {
+    if (open && roomyWindow()) {
         val reasons = listOf(
             "works" to R.string.closure_works,
             "barrier" to R.string.closure_barrier,
@@ -1518,7 +1520,7 @@ private fun TripCard(
         val fetchStep = fetchAmountStep(order)
         val fetchBlocked = next?.status == "picked_up" && fetchBlocksPickup(order)
         var fetchOpen by remember(order.id) { mutableStateOf(false) }
-        if (fetchOpen) {
+        if (fetchOpen && roomyWindow()) {
             FetchAmountDialog(
                 estimate = order.collectAmount,
                 current = order.fetchAmount.takeIf { fetchStep == FetchAmountStep.REJECTED },
@@ -1557,7 +1559,7 @@ private fun TripCard(
                 }
             }
         }
-        farArrive?.let { to ->
+        if (roomyWindow()) farArrive?.let { to ->
             com.rahalgo.ui.ConfirmDialog(
                 title = stringResource(R.string.arrive_far_title),
                 body = stringResource(R.string.arrive_far_body, dist(state.remainingM)),
@@ -1570,7 +1572,7 @@ private fun TripCard(
                 danger = false,
             )
         }
-        if (confirmDeliver) {
+        if (confirmDeliver && roomyWindow()) {
             val due = cashFrom(order, true) == CashFrom.RECIPIENT
             DeliverConfirmDialog(
                 due = due,
@@ -2236,6 +2238,14 @@ private fun ReturnCard(
         }
     }
 }
+
+/**
+ * **النافذةُ لا تُرسم في النافذة الطافية** (شُهد على الجهاز ٢٠٢٦-١٠-٢١) — من خرج من التطبيق
+ * و«هل قبضت المبلغ؟» مفتوحة صارت الرحلةُ نافذةً طافية، **فقيست النافذةُ على ضيقها وبقيت ضيّقةً
+ * بعد الرجوع** وغاب منها المبلغُ وخانةُ الكود. **فتُؤجَّل حتّى يعود العرض** — وحالُها محفوظ.
+ */
+@Composable
+internal fun roomyWindow(): Boolean = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 300
 
 /** **عنوانُ مشوار الإرجاع** — «أرجِع البضاعة إلى المكتب» أو «… إلى {المتجر}». */
 @Composable

@@ -169,3 +169,41 @@ func TestMapStoresAndClientReport(t *testing.T) {
 		t.Fatalf("بلاغُ التطبيق لم يُسجَّل (%d)", n)
 	}
 }
+
+// TestDelivery_FarFromPinAsksCustomer **«هون عنوانك الصح؟» من مكان التسليم** (قرارُ المالك
+// ٢٠٢٦-١٠-٢١) — شُهد طلبٌ سُلّم على ٦٣٣ م من دبّوسه فلم يُسأل أحد. **ومكانُ التسليم موقعُ
+// السائق لحظتَه**: هناك اجتمعا.
+func TestDelivery_FarFromPinAsksCustomer(t *testing.T) {
+	h := New(t)
+	cust := h.Customer()
+	item := h.NewItem(1000)
+	made := h.POSTKey("/api/v1/orders", cust.Token, uniq("k"), orderBody(item, 1))
+	if made.Code >= 400 {
+		t.Fatalf("إنشاءُ الطلب: %s", made)
+	}
+	oid, _ := made.JSON()["id"].(string)
+	var lat, lng float64
+	if err := h.Pool.QueryRow(ctxBG(), `SELECT ST_Y(dropoff::geometry), ST_X(dropoff::geometry)
+		FROM orders WHERE id = $1::uuid`, oid).Scan(&lat, &lng); err != nil {
+		t.Fatal(err)
+	}
+	if res := h.POST("/api/v1/my/addresses", cust.Token, map[string]any{
+		"area_building": "الرقة — بيت الاختبار", "kind": "home", "lat": lat, "lng": lng,
+	}); res.Code >= 300 {
+		t.Fatalf("العنوان: %s", res)
+	}
+	drv := h.driverOf(oid)
+	// **السائقُ سلّم على بُعد ~٣٠٠ م من الدبّوس.**
+	if _, err := h.Pool.Exec(ctxBG(), `INSERT INTO driver_track (driver_id, at, recorded_at, accuracy_m)
+		VALUES ($1::uuid, ST_SetSRID(ST_MakePoint($2, $3), 4326)::geography, now(), 10)`,
+		drv.ID, lng, lat+0.0027); err != nil {
+		t.Fatal(err)
+	}
+	deliverOrder(t, h, oid, drv)
+
+	mine := h.GET("/api/v1/my/orders/"+oid, cust.Token)
+	got, _ := mine.JSON()["dropoff_suggest_lat"].(float64)
+	if got < lat+0.0026 || got > lat+0.0028 {
+		t.Fatalf("الزبونُ لم يُسأل عن مكان التسليم (%.5f): %s", got, mine)
+	}
+}

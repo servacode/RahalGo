@@ -1290,16 +1290,35 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     private fun hereNow(): Pair<Double, Double>? =
         navSession.lastGoodFix?.let { it.lat to it.lng } ?: LastPoint.value?.let { it.lat to it.lng }
 
+    /**
+     * **وموضعٌ جديدٌ من النظام إن لم يكن عندنا** — خارجَ الورديّة لا يُتتبَّع السائق (شُهد
+     * على الجهاز ٢٠٢٦-١٠-٢١: «أضف معلم» لم يُرسَل). **عشرُ ثوانٍ ثمّ لا شيء.**
+     */
+    @android.annotation.SuppressLint("MissingPermission")
+    private suspend fun hereFresh(): Pair<Double, Double>? = hereNow() ?: runCatching {
+        kotlinx.coroutines.withTimeoutOrNull(10_000) {
+            kotlinx.coroutines.suspendCancellableCoroutine<android.location.Location?> { cont ->
+                val cancel = com.google.android.gms.tasks.CancellationTokenSource()
+                cont.invokeOnCancellation { cancel.cancel() }
+                com.google.android.gms.location.LocationServices.getFusedLocationProviderClient(getApplication<Application>())
+                    .getCurrentLocation(com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY, cancel.token)
+                    .addOnCompleteListener { t ->
+                        if (cont.isActive) cont.resumeWith(Result.success(if (t.isSuccessful) t.result else null))
+                    }
+            }
+        }?.let { it.latitude to it.longitude }
+    }.getOrNull()
+
     fun saveEntrance() {
         val id = askEntranceFor ?: return
         askEntranceFor = null
-        val at = hereNow()
         val app = getApplication<Application>()
-        if (at == null) {
-            com.rahalgo.ui.Flash.fail(app.getString(R.string.map_need_location))
-            return
-        }
         viewModelScope.launch {
+            val at = hereFresh()
+            if (at == null) {
+                com.rahalgo.ui.Flash.fail(app.getString(R.string.map_need_location))
+                return@launch
+            }
             try {
                 backend.driver.saveEntrance(id, at.first, at.second)
                 com.rahalgo.ui.Flash.ok(app.getString(R.string.entrance_saved))
@@ -1321,13 +1340,13 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
 
     /** **«الطريق مسكّر هون»** — من موقعه. */
     fun reportRoadClosure(reason: String) {
-        val at = hereNow()
         val app = getApplication<Application>()
-        if (at == null) {
-            com.rahalgo.ui.Flash.fail(app.getString(R.string.map_need_location))
-            return
-        }
         viewModelScope.launch {
+            val at = hereFresh()
+            if (at == null) {
+                com.rahalgo.ui.Flash.fail(app.getString(R.string.map_need_location))
+                return@launch
+            }
             try {
                 backend.driver.reportRoadClosure(at.first, at.second, reason)
                 com.rahalgo.ui.Flash.ok(app.getString(R.string.closure_sent))
@@ -1341,13 +1360,13 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
 
     /** **«أضف معلم»** — من موقعه، بانتظار الإدارة. */
     fun suggestLandmark(name: String, kind: String, done: () -> Unit) {
-        val at = hereNow()
         val app = getApplication<Application>()
-        if (at == null) {
-            com.rahalgo.ui.Flash.fail(app.getString(R.string.map_need_location))
-            return
-        }
         viewModelScope.launch {
+            val at = hereFresh()
+            if (at == null) {
+                com.rahalgo.ui.Flash.fail(app.getString(R.string.map_need_location))
+                return@launch
+            }
             try {
                 backend.driver.suggestLandmark(name.trim(), kind, at.first, at.second)
                 com.rahalgo.ui.Flash.ok(app.getString(R.string.landmark_sent))
@@ -2340,7 +2359,15 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         agreeError = ""
         // **والخطوةُ من حال الطلب** (قرارُ المالك ٢٠٢٦-١٠-٠٣): الأجرةُ أوّلاً، ثمّ ثمنُ البضاعة.
         val order = state.mine.firstOrNull { it.id == id }
-        val step = if (order?.customFee == null) "fee" else if (order.customGoodsPending) "goods" else ""
+        // **وبعد رفض الزبون يُعدَّل السعر** (شُهد على الجهاز ٢٠٢٦-١٠-٢١: كان يُرسَل «goods» فيُهمَل
+        // الرقمُ الجديد) — الأجرةُ وحدَها إن لم يُشترَ بعد، والاثنان معاً بعد الشراء.
+        val rejected = order?.quoteRejectedAt != null && order.quoteConfirmedVersion != order.quoteVersion
+        val step = when {
+            order?.customFee == null -> "fee"
+            rejected -> if (order.customGoodsPending) "fee" else ""
+            order.customGoodsPending -> "goods"
+            else -> ""
+        }
         detail = detail.copy(busy = true, error = "")
         viewModelScope.launch {
             try {

@@ -144,17 +144,24 @@ func (v *Valhalla) fetch(ctx context.Context, from, to Point, alternatives int) 
 	if !v.Enabled() {
 		return nil, ErrNoEngine
 	}
-	out, err := v.request(ctx, from, to, alternatives)
+	out, err := v.request(ctx, from, to, alternatives, true)
 	if retryWithoutBearing(err, from) {
 		from.Bearing = nil
-		out, err = v.request(ctx, from, to, alternatives)
+		out, err = v.request(ctx, from, to, alternatives, true)
+	}
+	// **والطريقُ المسكَّرُ لا يقتل التوجيه** (شُهد على الجهاز ٢٠٢٦-١٠-٢١: بلاغٌ عند السائق
+	// جعل كلَّ رحلةٍ منه «لا طريق» فرُسم خطٌّ مستقيم) — إن لم يُوجد طريقٌ يتجنّبه أُعيد بدونه.
+	if err != nil && ctx.Err() == nil && v.excluder != nil {
+		if again, err2 := v.request(ctx, from, to, alternatives, false); err2 == nil {
+			return again, nil
+		}
 	}
 	return out, err
 }
 
-func (v *Valhalla) request(ctx context.Context, from, to Point, alternatives int) ([]*Route, error) {
+func (v *Valhalla) request(ctx context.Context, from, to Point, alternatives int, exclude bool) ([]*Route, error) {
 	body := v.buildRequest(from, to, alternatives)
-	if v.excluder != nil {
+	if exclude && v.excluder != nil {
 		for _, p := range v.excluder(ctx, from, to) {
 			body.ExcludeLocations = append(body.ExcludeLocations, valhallaLocation{Lat: p.Lat, Lon: p.Lng})
 		}
