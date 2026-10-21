@@ -572,10 +572,20 @@ private fun SignedIn(
                 ) {
                     Here.refresh(context, locating)
                 }
+                // **ومن عاد من الإعدادات وقد شغّل الموقع** (قرارُ المالك ٢٠٢٦-١٠-٢١) — كان
+                // الإذنُ وحده يُلتقَط، **فيبقى أمام «الموقع مطفأ» حتّى يغلق التطبيق.**
+                if (p == Locating.Problem.SERVICE_OFF && com.rahalgo.ui.locationServiceEnabled(context)) {
+                    Here.refresh(context, locating)
+                }
             }
         }
         owner.lifecycle.addObserver(obs)
         onDispose { owner.lifecycle.removeObserver(obs) }
+    }
+    // **ومن شغّل الموقعَ من الشريط العلويّ وهو في أيّ شاشة** (قرارُ المالك ٢٠٢٦-١٠-٢١) —
+    // لا يمرّ بـ`ON_RESUME`، **فيُسمَع مفتاحُ الموقع نفسُه** ويُعاد التحديدُ مرّة.
+    com.rahalgo.map.LocationServiceEffect {
+        if (locating.problem == Locating.Problem.SERVICE_OFF) Here.refresh(context, locating)
     }
 
     // **إشارةُ اللوحة اللحظيّة وعودةُ الوصلة تُصحّحان حالَ المنصّة** (Batch 3b):
@@ -1181,13 +1191,33 @@ private fun SignedIn(
                 // **وبلا إذنٍ يُطلب الإذن** — فإن رُفض قيل له لماذا لم تبدأ المشاركة.
                 val liveCtx = androidx.compose.ui.platform.LocalContext.current
                 var liveAsking by remember { mutableStateOf<String?>(null) }
+                // **والموقعُ المطفأُ يُشغَّل قبل المشاركة** (قرارُ المالك ٢٠٢٦-١٠-٢١) — نافذةُ
+                // غوغل «موافق» من داخل التطبيق، **ثمّ تبدأ وحدَها.** وإن رفض قيل له لماذا.
+                var liveEnabling by remember { mutableStateOf<String?>(null) }
+                val enableForLive = com.rahalgo.map.rememberLocationEnabler { on ->
+                    val id = liveEnabling
+                    liveEnabling = null
+                    if (id != null && on) {
+                        com.rahalgo.customer.live.LiveShare.start(liveCtx, id)
+                    } else if (id != null) {
+                        com.rahalgo.ui.Flash.fail(liveCtx.getString(R.string.live_needs_location_on))
+                    }
+                }
+                val startLive: (String) -> Unit = { id ->
+                    if (com.rahalgo.ui.locationServiceEnabled(liveCtx)) {
+                        com.rahalgo.customer.live.LiveShare.start(liveCtx, id)
+                    } else {
+                        liveEnabling = id
+                        enableForLive()
+                    }
+                }
                 val askLive = rememberLauncherForActivityResult(
                     ActivityResultContracts.RequestMultiplePermissions(),
                 ) { _ ->
                     val id = liveAsking
                     liveAsking = null
                     if (id != null && com.rahalgo.map.Here.granted(liveCtx)) {
-                        com.rahalgo.customer.live.LiveShare.start(liveCtx, id)
+                        startLive(id)
                     } else if (id != null) {
                         com.rahalgo.ui.Flash.fail(liveCtx.getString(R.string.live_denied))
                     }
@@ -1198,7 +1228,7 @@ private fun SignedIn(
                         onShare = {
                             ordersVm.decideLiveShare(o)
                             if (com.rahalgo.map.Here.granted(liveCtx)) {
-                                com.rahalgo.customer.live.LiveShare.start(liveCtx, o.id)
+                                startLive(o.id)
                             } else {
                                 liveAsking = o.id
                                 askLive.launch(

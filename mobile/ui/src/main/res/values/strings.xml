@@ -924,7 +924,7 @@
     <string name="loc_fail_denied_fix">اسمح بالموقع</string>
     <string name="loc_fail_permanent">الإذن مرفوض — افتحه من إعدادات التطبيق</string>
     <string name="loc_fail_permanent_fix">إعدادات التطبيق</string>
-    <string name="loc_fail_service_off">خدمة الموقع مطفأة في الجهاز — شغّلها من الإعدادات</string>
+    <string name="loc_fail_service_off">خدمة الموقع مطفأة في الجهاز — شغّلها لنحدد موقعك</string>
     <string name="loc_fail_service_off_fix">شغّل خدمة الموقع</string>
     <string name="loc_fail_timeout">طال الانتظار ولم يصل موقع — جرّب في مكان مكشوف</string>
     <string name="loc_fail_timeout_fix">حاول ثانية</string>

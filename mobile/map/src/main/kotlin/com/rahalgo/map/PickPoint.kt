@@ -368,6 +368,16 @@ fun PickPoint(
             }
         }
 
+        // **ومن شغّل الموقعَ وهو هنا يُكمَل له** (قرارُ المالك ٢٠٢٦-١٠-٢١) — من نافذة
+        // غوغل أو من الشريط العلويّ، **بلا إغلاقٍ للتطبيق.**
+        val retryWhenOn = {
+            if (locating?.problem == Locating.Problem.SERVICE_OFF) {
+                vm.wantHere()
+                onLocate()
+            }
+        }
+        LocationServiceEffect(onEnabled = retryWhenOn)
+        val enableLocation = rememberLocationEnabler { on -> if (on) retryWhenOn() }
         locating?.problem?.let { why ->
             val ctx = androidx.compose.ui.platform.LocalContext.current
             Column(
@@ -388,7 +398,9 @@ fun PickPoint(
                     onClick = {
                         // **والعلاجُ فعلٌ لا «حسناً»** — **ففاتحُ
                         // الإعدادات يفتحها، والمحاولةُ تعيد النداء.**
-                        if (com.rahalgo.ui.fixProblem(ctx, why)) {
+                        if (why == Locating.Problem.SERVICE_OFF) {
+                            enableLocation()
+                        } else if (com.rahalgo.ui.fixProblem(ctx, why)) {
                             vm.wantHere()
                             onLocate()
                         }

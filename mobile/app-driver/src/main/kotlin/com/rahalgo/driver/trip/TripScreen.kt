@@ -962,6 +962,12 @@ fun TripScreen(
             // **ومن ضغط «موقعي» فاتّسعت الخريطةُ إلى مكانٍ ليس هو
             // ظنّها معطوبة** — **والسببُ أنّ موضعَه لم يصل**، **وأكثرُ
             // ما يكون ذلك بخدمةٍ مطفأة.**
+            // **وتشغيلُ الموقع من داخل التطبيق** (قرارُ المالك ٢٠٢٦-١٠-٢١) — نافذةُ غوغل
+            // «موافق»، **ومن شغّله من الشريط العلويّ يُلتقَط وحده.**
+            com.rahalgo.map.LocationServiceEffect {
+                if (locating.problem == com.rahalgo.ui.Locating.Problem.SERVICE_OFF) locating.reset()
+            }
+            val enableLocation = com.rahalgo.map.rememberLocationEnabler { on -> if (on) locating.reset() }
             locating.problem?.let { why ->
                 androidx.compose.material3.Text(
                     text = com.rahalgo.ui.LocatingText.message(hereContext, why),
@@ -974,7 +980,11 @@ fun TripScreen(
                         .clickable {
                             // **والعلاجُ فعلٌ** — **وخدمةٌ مطفأةٌ
                             // تُفتح صفحتُها، ولا تُفتح صفحةُ التطبيق.**
-                            if (com.rahalgo.ui.fixProblem(hereContext, why)) locating.reset()
+                            if (why == com.rahalgo.ui.Locating.Problem.SERVICE_OFF) {
+                                enableLocation()
+                            } else if (com.rahalgo.ui.fixProblem(hereContext, why)) {
+                                locating.reset()
+                            }
                         }
                         .padding(12.dp),
                 )

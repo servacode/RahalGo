@@ -290,6 +290,7 @@
     <string name="live_channel">مشاركة الموقع مع الكابتن</string>
     <string name="live_card_sharing">عم تشارك موقعك المباشر مع الكابتن</string>
     <string name="live_denied">ما فينا نشارك موقعك بدون إذن الموقع</string>
+    <string name="live_needs_location_on">المشاركة بتحتاج تشغيل الموقع — اضغط «شارك» مرة تانية وشغّله</string>
 
     <!-- **متاجر مميّزة وصفحة المتجر** (قرارُ المالك ٢٠٢٦-١٠-١٨) — ألفاظُ الويب نفسُها. -->
     <string name="shop_featured_stores">متاجر مميّزة</string>
