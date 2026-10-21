@@ -1107,6 +1107,19 @@ func (s *Service) Refresh(ctx context.Context, rawRefresh, userAgent, ip string)
 	return s.issueSession(ctx, user, userAgent, ip, "auth.refresh", sessionID)
 }
 
+// RefreshTokenOwner **لمن هذا الرمزُ وما سببُ إبطاله** — لسجلّ الخروج وحدَه
+// (قرارُ المالك ٢٠٢٦-١٠-٢١). **وفراغٌ** إن لم يُعرف.
+func (s *Service) RefreshTokenOwner(ctx context.Context, rawRefresh string) (userID, sessionID, reason string) {
+	if rawRefresh == "" {
+		return "", "", ""
+	}
+	uid, sid, why, err := s.repo.TokenOwner(ctx, auth.HashToken(rawRefresh))
+	if err != nil {
+		return "", "", ""
+	}
+	return uid, sid, why
+}
+
 // sessionRevokedKey مفتاح إبطال جلسة في Redis.
 func sessionRevokedKey(sid string) string { return "sess:revoked:" + sid }
 

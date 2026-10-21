@@ -33,8 +33,8 @@
     "setting_defs": 250,
     "behaviour_settings": 205,
     "order_fields": 112,
-    "test_files": 637,
-    "test_funcs": 2474
+    "test_files": 638,
+    "test_funcs": 2476
   },
   "flows": [
     {
@@ -12477,6 +12477,18 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestAuthFailures_MidRotationIsNotLogout",
+      "file": "internal/qa/auth_failures_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAuthFailures_RefreshAndRequestAreRecorded",
+      "file": "internal/qa/auth_failures_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestAUTH_ExpiredToken",

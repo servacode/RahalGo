@@ -173,6 +173,13 @@ func (s *Server) handleRefresh(w http.ResponseWriter, r *http.Request) {
 	}
 	res, err := s.identity.Refresh(r.Context(), req.RefreshToken, r.UserAgent(), clientIP(r))
 	if err != nil {
+		// **وكلُّ تجديدٍ فشل يُسجَّل بصاحبه وسببه** (قرارُ المالك ٢٠٢٦-١٠-٢١) — هو ما
+		// يُخرج الحسابَ من التطبيق. **ورمزٌ لا صفَّ له** يُسمّى «unknown_token».
+		uid, sid, why := s.identity.RefreshTokenOwner(r.Context(), req.RefreshToken)
+		if uid == "" {
+			why = "unknown_token"
+		}
+		s.recordAuthFailure(r, "refresh", authErrCode(err), uid, sid, why)
 		s.respondErr(w, err)
 		return
 	}

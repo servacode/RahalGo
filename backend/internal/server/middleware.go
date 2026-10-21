@@ -131,11 +131,17 @@ func (s *Server) RequireAuth(next http.Handler) http.Handler {
 			// **والسببُ يُقرأ في فرعِ الرفض وحدَه** (Obs 3) — Redis أوّلاً ثمّ
 			// القاعدة، فيعرف الجهازُ القديمُ أنّه «جهازٌ آخر» لا انتهاءٌ عامّ.
 			// **وكلُّ سببٍ يُسمّى** (قرارُ المالك ٢٠٢٦-١٠-١٩) — كلمةٌ تبدّلت · الإدارة · موقوف.
-			if e := identity.SessionEndError(s.identity.RevokeReason(r.Context(), claims.SID)); e != nil {
-				httpx.Error(w, e)
-			} else {
-				httpx.Error(w, errUnauthorized)
+			why := s.identity.RevokeReason(r.Context(), claims.SID)
+			e := identity.SessionEndError(why)
+			if e == nil {
+				e = errUnauthorized
 			}
+			// **وكلُّ رفضٍ لجلسةٍ انتهت يُسجَّل** (قرارُ المالك ٢٠٢٦-١٠-٢١، auth_failures.go).
+			if why == "" {
+				why = "no_live_token"
+			}
+			s.recordAuthFailure(r, "request", e.Code, claims.Subject, claims.SID, why)
+			httpx.Error(w, e)
 			return
 		}
 		// ══════════════════════════════════════════════════════════

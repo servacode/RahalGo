@@ -1253,6 +1253,18 @@ func (r *Repo) RecoverRotated(ctx context.Context, tokenHash string) (userID, se
 
 // RevokedReasonOfToken **سببُ إبطالِ توكنِ تجديدٍ بعينه** — للمسار الذي يعود فيه
 // الجهازُ القديمُ متأخّراً فيجدّد برمزٍ مُبطَل (رمزُ الوصول انتهى وRedis زالت).
+// TokenOwner **صاحبُ رمز التحديث وجلستُه وسببُ إبطاله** — لسجلّ الخروج (٠٤٦٨).
+// **ورمزٌ لا صفَّ له** يردّ فراغاً بلا خطأ: لم يُصدَر هنا أو قُلِّم.
+func (r *Repo) TokenOwner(ctx context.Context, tokenHash string) (userID, sessionID, reason string, err error) {
+	err = r.db.QueryRow(ctx, `
+		SELECT user_id::text, COALESCE(session_id::text, ''), COALESCE(revoked_reason, '')
+		  FROM refresh_tokens WHERE token_hash = $1`, tokenHash).Scan(&userID, &sessionID, &reason)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", "", "", nil
+	}
+	return
+}
+
 func (r *Repo) RevokedReasonOfToken(ctx context.Context, tokenHash string) (string, error) {
 	var reason string
 	err := r.db.QueryRow(ctx,
@@ -1359,9 +1371,19 @@ func (r *Repo) SessionRows(ctx context.Context, sessionID string) (live, total i
 	// `users` ويُقرأ العلَمُ معها.**
 	err = r.db.QueryRow(ctx, `
 		WITH fam AS (
+			-- **وجلسةٌ في منتصف التدوير حيّة** (قرارُ المالك ٢٠٢٦-١٠-٢١): بين إبطال
+			-- القديم وكتابة الخلف لا رمزَ حيٌّ، فنداءٌ متزامنٌ كان يُرفض ويُخرج الحساب.
+			-- **فرمزٌ دُوِّر قبل أقلَّ من ثلاثين ثانيةً يُعدّ حيّاً** — ما لم يُنهِ
+			-- الجلسةَ سببٌ آخر (خروجٌ أو إزاحةٌ أو كلمةٌ تبدّلت).
 			SELECT user_id,
 			       count(*) FILTER (WHERE revoked_at IS NULL
-			                          AND expires_at > now()) AS live,
+			                          AND expires_at > now())
+			       + CASE WHEN count(*) FILTER (WHERE revoked_reason IS NOT NULL
+			                                      AND revoked_reason <> 'rotated') = 0
+			              THEN count(*) FILTER (WHERE revoked_reason = 'rotated'
+			                                      AND revoked_at > now() - interval '30 seconds'
+			                                      AND expires_at > now())
+			              ELSE 0 END AS live,
 			       count(*) AS total
 			  FROM refresh_tokens WHERE session_id = $1::uuid
 			 GROUP BY user_id
