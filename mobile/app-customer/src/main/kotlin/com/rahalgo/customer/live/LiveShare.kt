@@ -44,10 +44,26 @@ object LiveSharePolicy {
     /** **أوّلُ طلبٍ يُسأل عنه الآن** — بالطريق ولم يُقرَّر فيه. و`null`: لا سؤال. */
     fun pending(open: List<MyOrder>, decided: List<String>): MyOrder? =
         open.firstOrNull { it.status == ASK_STATUS && it.id !in decided }
+            // **وطلبُ السائق يعيد السؤال** (قرارُ المالك ٢٠٢٦-١٠-٢١: «ممكن يرفض اول مرة
+            // بالغلط») — كلُّ طلبٍ وقتُه مفتاحٌ جديد، **ومن يشارك الآن لا يُسأل.**
+            ?: open.firstOrNull {
+                it.liveRequestedAt != null && it.status in SHARE_STATUSES &&
+                    requestKey(it) !in decided && LiveShare.activeOrderId != it.id
+            }
+
+    /** **مفتاحُ طلبِ السائق** — الطلبُ ووقتُ طلبه. */
+    fun requestKey(o: MyOrder): String = o.id + "@" + o.liveRequestedAt.orEmpty()
 
     /** **يُذكر قرارُه** — شارك أو رفض، فلا يُسأل عن الطلب نفسِه ثانيةً. */
     fun remember(decided: List<String>, orderId: String): List<String> =
         (decided - orderId + orderId).takeLast(MAX_REMEMBERED)
+
+    /** **ويُذكر الجوابُ على طلب السائق أيضاً** — فلا يُسأل عنه مرّتين. */
+    fun remember(decided: List<String>, order: MyOrder): List<String> {
+        var d = remember(decided, order.id)
+        if (order.liveRequestedAt != null) d = remember(d, requestKey(order))
+        return d
+    }
 
     /** **أتبقى المشاركةُ قائمة؟** — طلبُها جارٍ وفي طريقه. */
     fun keepSharing(sharingId: String, open: List<MyOrder>): Boolean =

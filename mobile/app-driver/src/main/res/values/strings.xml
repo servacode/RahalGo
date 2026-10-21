@@ -321,6 +321,10 @@
     <string name="recipient_call">اتّصل</string>
     <string name="recipient_whatsapp">واتساب</string>
     <string name="recipient_wa_message">مرحباً بك، أنا كابتن من فريق رحّال غو. لقد قام متجر %1$s بإرسال طلبيّة لك، هل يمكنك إرسال موقعك إليّ؟</string>
+    <!-- **رفض الزبونُ السعر** (قرارُ المالك ٢٠٢٦-١٠-٢١). -->
+    <string name="drv_quote_rejected">رفض الزبون السعر — احكي معه بالدردشة وعدّل السعر</string>
+    <string name="agree_edit_button">تعديل السعر</string>
+    <string name="agree_edit_title">عدّل السعر وابعته للزبون</string>
     <string name="drv_awaiting_customer">بانتظار تأكيد الزبون للتكلفة</string>
     <string name="drv_customer_confirmed">الزبون أكّد الطلب — قم بالشراء</string>
     <string name="drv_customer_confirmed_amanah">الزبون أكّد الطلب — استلم الأمانة</string>
@@ -596,6 +600,11 @@
     <string name="trip_p_fixed_purchase">اشترِ المطلوب ووثّق ثمنه</string>
     <!-- **موقعُ الزبون المباشر** (قرارُ المالك ٢٠٢٦-١٠-١٦) — `trip/DoorTarget.kt`. -->
     <string name="trip_live_switched">الزبون مو عند العنوان — الطريق تحوّل لموقعه الحالي</string>
+    <!-- **«اطلب موقع الزبون المباشر»** (قرارُ المالك ٢٠٢٦-١٠-٢١). -->
+    <string name="trip_live_request">اطلب موقع الزبون المباشر</string>
+    <string name="trip_live_requested">انبعت الطلب للزبون — بقيلك %1$d مرات</string>
+    <string name="trip_live_request_wait">طلبته من شوي — استنى دقيقتين قبل ما تطلبه مرة تانية</string>
+    <string name="trip_live_request_limit">طلبته ٣ مرات — احكي مع الزبون بالدردشة</string>
     <string name="trip_live_stale">موقع الزبون المباشر صار قديم — رجعنا للعنوان</string>
     <string name="trip_live_now">الزبون الآن · قبل %1$s</string>
     <!-- **ودقّتُه ونوعُه** (قرارُ المالك ٢٠٢٦-١٠-١٦) — `TripScreen.LiveCustomerNotice`. -->

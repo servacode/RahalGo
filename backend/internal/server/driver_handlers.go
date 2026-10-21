@@ -367,6 +367,9 @@ type driverOrder struct {
 	CustomGoodsPending    bool   `json:"custom_goods_pending"`
 	QuoteVersion          int64  `json:"quote_version"`
 	QuoteConfirmedVersion *int64 `json:"quote_confirmed_version"`
+	// QuoteRejectedAt **رفض الزبونُ السعر** (قرارُ المالك ٢٠٢٦-١٠-٢١) — فيرى السائقُ
+	// «تعديل السعر» مكانَ الانتظار.
+	QuoteRejectedAt *time.Time `json:"quote_rejected_at"`
 	// ══════════════════════════════════════════════════════════════════
 	// **«لدي توصيلة» كما يحتاجها من يحملها** (٢٠٢٦-١٠-٠٢)
 	// ══════════════════════════════════════════════════════════════════
@@ -508,7 +511,7 @@ const driverOrderSelect = `
 	       -- **لقطةُ سياسة الأجرة وعرضُ السعر** (Batch 2c) — سلطةُ الأجرة وحالُ التأكيد.
 	       o.custom_fee_source, o.custom_fee_snapshot, o.custom_driver_may_change_fee,
 	       o.custom_mode, o.custom_goods_pending,
-	       o.quote_version, o.quote_confirmed_version,
+	       o.quote_version, o.quote_confirmed_version, o.quote_rejected_at,
 	       -- ══════════════════════════════════════════════════════════
 	       -- **ما تقوله البطاقةُ قبل أن يقرّر**
 	       -- ══════════════════════════════════════════════════════════
@@ -597,7 +600,7 @@ func (s *Server) loadDriverOrders(r *http.Request, sql string, args ...any) ([]d
 			&o.Kind, &o.CustomRequest, &o.CustomGoodsAmount, &o.CustomFee,
 			&o.CustomFeeSource, &o.CustomFeeSnapshot, &o.CustomDriverMayChangeFee,
 			&o.CustomMode, &o.CustomGoodsPending,
-			&o.QuoteVersion, &o.QuoteConfirmedVersion,
+			&o.QuoteVersion, &o.QuoteConfirmedVersion, &o.QuoteRejectedAt,
 			&o.DeliveryFee, &o.PickupAddress,
 			&o.DropoffKnown, &o.ParcelNote, &o.FeePayer, &o.DriverNote,
 			&o.DoorInstruction, &o.DoorNote,

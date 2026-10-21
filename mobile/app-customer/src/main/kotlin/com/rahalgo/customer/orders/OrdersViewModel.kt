@@ -477,7 +477,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
      * **يُذكر جوابُه** — والمشاركةُ نفسُها تبدأ من الغلاف بعد الإذن (`MainActivity`).
      */
     fun decideLiveShare(order: MyOrder) {
-        liveDecided = com.rahalgo.customer.live.LiveSharePolicy.remember(liveDecided, order.id)
+        liveDecided = com.rahalgo.customer.live.LiveSharePolicy.remember(liveDecided, order)
         runCatching {
             livePrefs.edit().putString(
                 KEY_LIVE_DECIDED, com.rahalgo.customer.live.LiveSharePolicy.encode(liveDecided),

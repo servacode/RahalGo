@@ -291,6 +291,8 @@ data class TripActions(
     val step: (String) -> Unit,
     /** **«سلّمت البضاعة» — نهايةُ مشوار الإرجاع** (قرارُ المالك ٢٠٢٦-١٠-٠٣). */
     val handGoods: () -> Unit = {},
+    /** **«اطلب موقع الزبون المباشر»** (قرارُ المالك ٢٠٢٦-١٠-٢١). */
+    val requestLive: () -> Unit = {},
     /** **كودُ التسليم** من نافذة التأكيد — يُحفظ قبل `step`/`capture`. */
     val setDeliveryCode: (String) -> Unit = {},
     /** يفتح الكاميرا لصورة التسليم. */

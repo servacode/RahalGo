@@ -314,17 +314,21 @@ type Order struct {
 	// NearLandmark **«حي X · قرب جامع Y (١٢٠ م)»** — يحسبه مُطلِقٌ في القاعدة عند
 	// الإنشاء (هجرة ٠٤٦٧). **لا يُرسَل بحقله**: السائقُ وحدَه يراه ملصقاً بالعنوان
 	// (`ViewFor`) — فتعرضه نسختُه الحاليّة بلا تحديث.
-	NearLandmark  string  `json:"-"`
-	Lat           float64 `json:"lat"`
-	Lng           float64 `json:"lng"`
-	ZoneID        *string `json:"zone_id"`
-	ZoneName      *string `json:"zone_name"`
-	PaymentMethod string  `json:"payment_method"`
-	Subtotal      int64   `json:"subtotal"`
-	DeliveryFee   int64   `json:"delivery_fee"`
-	Discount      int64   `json:"discount"`
-	Total         int64   `json:"total"`
-	WalletPaid    int64   `json:"wallet_paid"`
+	NearLandmark string `json:"-"`
+	// LiveRequestedAt/LiveRequestCount **«اطلب موقع الزبون المباشر»** (٢٠٢٦-١٠-٢١، هجرة ٠٤٦٩) —
+	// الزبونُ يُسأل ثانيةً حين يتبدّل الوقت، والسائقُ يرى كم بقي له.
+	LiveRequestedAt  *time.Time `json:"live_requested_at"`
+	LiveRequestCount int        `json:"live_request_count"`
+	Lat              float64    `json:"lat"`
+	Lng              float64    `json:"lng"`
+	ZoneID           *string    `json:"zone_id"`
+	ZoneName         *string    `json:"zone_name"`
+	PaymentMethod    string     `json:"payment_method"`
+	Subtotal         int64      `json:"subtotal"`
+	DeliveryFee      int64      `json:"delivery_fee"`
+	Discount         int64      `json:"discount"`
+	Total            int64      `json:"total"`
+	WalletPaid       int64      `json:"wallet_paid"`
 
 	// ══════════════════════════════════════════════════════════════════
 	// **شفافيّةُ المتجر — كم بِيع وكم أخذت المنصّة**

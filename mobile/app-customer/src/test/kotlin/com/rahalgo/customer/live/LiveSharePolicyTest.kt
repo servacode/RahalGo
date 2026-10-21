@@ -70,4 +70,23 @@ class LiveSharePolicyTest {
         // **وطلبٌ خرج من الجاري كلِّه انتهى.**
         assertFalse(LiveSharePolicy.keepSharing("a", emptyList()))
     }
+
+    /**
+     * **طلبُ السائق يعيد السؤال** (قرارُ المالك ٢٠٢٦-١٠-٢١: «ممكن يرفض اول مرة بالغلط») —
+     * ولو قال «لا» من قبل؛ **والجوابُ عليه يُذكر**، **وطلبٌ جديدٌ يسأل ثانيةً.**
+     */
+    @Test
+    fun `a driver request asks again even after a no`() {
+        val first = o("a")
+        var decided = LiveSharePolicy.remember(emptyList(), first)
+        assertNull(LiveSharePolicy.pending(listOf(first), decided))
+        val asked = first.copy(liveRequestedAt = "2026-10-21T10:00:00Z")
+        assertEquals("a", LiveSharePolicy.pending(listOf(asked), decided)?.id)
+        decided = LiveSharePolicy.remember(decided, asked)
+        assertNull(LiveSharePolicy.pending(listOf(asked), decided))
+        val again = asked.copy(liveRequestedAt = "2026-10-21T10:03:00Z")
+        assertEquals("a", LiveSharePolicy.pending(listOf(again), decided)?.id)
+        // **وبعد التسليم لا يُسأل.**
+        assertNull(LiveSharePolicy.pending(listOf(again.copy(status = "delivered")), decided))
+    }
 }

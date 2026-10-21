@@ -24,6 +24,10 @@ func TestQuoteReject_DriverIsNotified(t *testing.T) {
 	if res := h.POST("/api/v1/orders/"+id+"/reject-quote", cust.Token, map[string]any{}); res.Code >= 300 {
 		t.Fatalf("رفضُ الزبون: %s", res)
 	}
+	// **وقائمةُ السائق تحمل وقتَ الرفض** — فيرى «تعديل السعر» مكانَ الانتظار.
+	if list := h.GET("/api/v1/driver/orders", drv.Token); !strings.Contains(string(list.Body), `"quote_rejected_at":"20`) {
+		t.Fatalf("قائمةُ السائق بلا وقتِ الرفض: %s", list)
+	}
 	want := "رفض الزبون السعر — تواصل معه بالدردشة وعدّل السعر"
 	deadline := time.Now().Add(5 * time.Second)
 	for {

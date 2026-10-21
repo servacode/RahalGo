@@ -253,6 +253,8 @@ var OrderPrivacy = map[string]FieldRule{
 	"quote_confirmed_total":   {Ref: "المبلغُ الذي أكّده", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"quote_confirmed_version": {Ref: "أيَّ نسخةٍ أكّد", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"quote_rejected_at":       {Ref: "متى رفض الزبونُ السعرَ الجديد", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"live_requested_at":       {Ref: "live_request.go · السائقُ طلب موقعَ الزبون المباشر (٢٠٢٦-١٠-٢١)", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"live_request_count":      {Ref: "live_request.go · كم طلبه السائقُ من ثلاث", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 
 	// ── الحجزُ ولقطةُ سياسة الأجرة (Batch 2b/2c) ────────────────────
 	// **الحجزُ مالُ الزبون** — يراه هو والأدمن. **ولقطةُ السياسة** يراها

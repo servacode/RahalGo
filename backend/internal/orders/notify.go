@@ -36,6 +36,8 @@ var t = struct {
 	// customQuoteRejectedDriver **ورفضُ الزبون يصل السائقَ أيضاً** (قرارُ المالك ٢٠٢٦-١٠-٢١) —
 	// هو من يتّفق معه فيعدّل ويُرسل ثانيةً.
 	customQuoteRejectedDriver string
+	// liveLocationRequested **السائقُ طلب موقعَ الزبون المباشر** (٢٠٢٦-١٠-٢١).
+	liveLocationRequested string
 	// **صنفٌ غيرُ متوفّر** (قرارُ المالك ٢٠٢٦-١٠-١٥).
 	itemUnavailable                       string
 	rejected, cancelled, failed, refunded string
@@ -71,6 +73,7 @@ var t = struct {
 	customPriceRaisedDriver:   "تغيّر سعر الطلب — لا تسليم قبل تأكيد الزبون",
 	customQuoteRejected:       "رفض الزبون السعر الجديد",
 	customQuoteRejectedDriver: "رفض الزبون السعر — تواصل معه بالدردشة وعدّل السعر",
+	liveLocationRequested:     "الكابتن طالب موقعك المباشر ليوصلك بالضبط — افتح التطبيق وشارك موقعك",
 	itemUnavailable:           "صنف غير متوفر في طلبك",
 	driverAssignedToCustomer:  "أُسند سائقٌ لطلبك",
 	rejected:                  "اعتذر المتجر عن طلبك",

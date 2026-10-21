@@ -7392,6 +7392,28 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/driver/orders/{id}/request-live-location",
+      "handler": "handleDriverRequestLiveLocation",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "response": [
+        {
+          "name": "order",
+          "type": "unknown"
+        },
+        {
+          "name": "remaining",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/driver/orders/{id}/return",
       "handler": "handleDriverReturn",
       "auth": true,

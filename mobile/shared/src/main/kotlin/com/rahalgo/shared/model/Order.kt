@@ -146,6 +146,8 @@ data class DriverOrder(
     @SerialName("custom_goods_pending") val customGoodsPending: Boolean = false,
     @SerialName("quote_version") val quoteVersion: Long = 0,
     @SerialName("quote_confirmed_version") val quoteConfirmedVersion: Long? = null,
+    /** **رفض الزبونُ السعر** (قرارُ المالك ٢٠٢٦-١٠-٢١) — فيعدّله السائقُ ويرسله ثانيةً. */
+    @SerialName("quote_rejected_at") val quoteRejectedAt: String? = null,
     /** **يلزم كودُ التسليم من الزبون** (قرارُ المالك ٢٠٢٦-١٠-٠٦) — والكودُ نفسُه لا يصل السائقَ أبداً. */
     @SerialName("delivery_code_required") val deliveryCodeRequired: Boolean = false,
 

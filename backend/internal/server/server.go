@@ -1003,6 +1003,8 @@ func (s *Server) Router() http.Handler {
 			// **«إحضار»: ما دفعه بمكان الاستلام** — والمتجرُ يوافق (قرارُ المالك ٢٠٢٦-١٠-١٦).
 			r.Post("/orders/{id}/fetch-amount", s.handleDriverFetchAmount)
 			r.Post("/orders/{id}/release", s.handleDriverRelease)
+			// **«اطلب موقع الزبون المباشر»** (قرارُ المالك ٢٠٢٦-١٠-٢١، live_request.go).
+			r.Post("/orders/{id}/request-live-location", s.handleDriverRequestLiveLocation)
 			r.Get("/cash", s.handleDriverCash)
 			// **هدفُه وما ناله** — ومكافأةٌ لا يراها صاحبُها لم تُصرف في نظره.
 			r.Get("/incentives", s.handleMyIncentives)

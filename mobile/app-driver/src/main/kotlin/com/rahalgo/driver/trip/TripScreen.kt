@@ -876,7 +876,7 @@ fun TripScreen(
             //
             // **تحوّل الطريقُ إليه؟ يُقال لماذا** — ومن تبع خطّاً لا يذهب إلى الدبّوس بلا
             // سببٍ يظنّ الملاحةَ معطوبة. **وشاخ موقعُه فعاد إلى الدبّوس؟ يُقال كذلك.**
-            if (state.step >= TripStep.PICKED_UP) LiveCustomerNotice(state)
+            if (state.step >= TripStep.PICKED_UP) LiveCustomerNotice(state, actions.requestLive)
             // ══════════════════════════════════════════════════════════
             // **وخطأُ الخطوة يُرى ولو طُويت البطاقة** (٢٠٢٦-١٠-٠٢)
             // ══════════════════════════════════════════════════════════
@@ -1079,7 +1079,12 @@ fun TripScreen(
             driverMayChange = order.customDriverMayChangeFee,
             currentGoods = order.customGoods,
             currentFee = order.customFee,
-            step = if (order.customFee == null) "fee" else "goods",
+            // **وبعد رفض الزبون: الاثنان معاً** (قرارُ المالك ٢٠٢٦-١٠-٢١).
+            step = when {
+                order.customFee == null -> "fee"
+                order.quoteRejectedAt != null && order.quoteConfirmedVersion != order.quoteVersion -> "both"
+                else -> "goods"
+            },
             error = state.agreeError,
             busy = state.busy,
             onConfirm = actions.agree,
@@ -1279,7 +1284,23 @@ data class Stop(val id: String, val number: Long)
  * **لافتةُ موقع الزبون المباشر** — تحوّلٌ إليه أو عودةٌ إلى الدبّوس، **وكم عمرُ نقطته.**
  */
 @Composable
-private fun LiveCustomerNotice(state: TripState) {
+private fun LiveCustomerNotice(state: TripState, onRequest: () -> Unit) {
+    // **«اطلب موقع الزبون المباشر»** (قرارُ المالك ٢٠٢٦-١٠-٢١) — حين لا موقعَ حيٌّ منه:
+    // يُسأل الزبونُ ثانيةً وإن رفض أوّلَ مرّة. **والخادمُ يحدّه** (ثلاثٌ ودقيقتان).
+    if (state.customerLive == null || state.liveStale) {
+        Text(
+            text = stringResource(R.string.trip_live_request),
+            color = Rahal.colors.onBrand,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier
+                .padding(vertical = 4.dp)
+                .clip(Rahal.shape.sm)
+                .background(Rahal.colors.brand)
+                .clickable(onClick = onRequest)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+        )
+    }
     when {
         state.liveSwitched -> TopNotice(stringResource(R.string.trip_live_switched), Rahal.colors.success)
         state.liveStale -> TopNotice(stringResource(R.string.trip_live_stale), Rahal.colors.ink)
@@ -1803,7 +1824,19 @@ private fun TripCard(
                     }
                 }
                 val awaitingConfirm = customOpen && feeDone && !quoteOk
+                // **رفض الزبونُ السعر** (قرارُ المالك ٢٠٢٦-١٠-٢١) — يُقال له بالأحمر، **وزرُّ
+                // «تعديل السعر» مكانَ الانتظار**: يتّفق معه بالدردشة ثمّ يرسله ثانيةً.
+                val rejected = awaitingConfirm && order.quoteRejectedAt != null
+                if (rejected) {
+                    InfoBox(
+                        icon = R.drawable.ic_warning,
+                        text = stringResource(R.string.drv_quote_rejected),
+                        tint = Rahal.colors.danger,
+                        bold = true,
+                    )
+                }
                 val customHint = when {
+                    rejected -> ""
                     customOpen && quoteOk && !needGoods -> stringResource(
                         if (order.customMode == "amanah") R.string.drv_customer_confirmed_amanah
                         else R.string.drv_customer_confirmed,
@@ -1871,6 +1904,13 @@ private fun TripCard(
                     // **التوثيقُ هو الفعلُ الوحيدُ الذي يُقدّم الطلبَ الآن.**
                     TripPrimary(
                         label = if (!feeDone) R.string.agree_fee_button else R.string.agree_goods_button,
+                        onClick = actions.askAgree,
+                        enabled = !state.busy,
+                        busy = false,
+                    )
+                } else if (rejected) {
+                    TripPrimary(
+                        label = R.string.agree_edit_button,
                         onClick = actions.askAgree,
                         enabled = !state.busy,
                         busy = false,

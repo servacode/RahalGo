@@ -674,6 +674,8 @@ data class MyOrder(
     @SerialName("quote_confirmed_version") val quoteConfirmedVersion: Long? = null,
     /** **رفض الزبونُ السعرَ الجديد** (قرارُ المالك ٢٠٢٦-١٠-١٥) — والمكتبُ يقرّر. */
     @SerialName("quote_rejected_at") val quoteRejectedAt: String? = null,
+    /** **السائقُ طلب موقعك المباشر** (٢٠٢٦-١٠-٢١) — وقتٌ جديدٌ يعيد السؤال وإن رُفض من قبل. */
+    @SerialName("live_requested_at") val liveRequestedAt: String? = null,
     @SerialName("custom_reserved_amount") val customReservedAmount: Long = 0,
     @SerialName("created_at") val createdAt: String = "",
     @SerialName("delivered_at") val deliveredAt: String? = null,

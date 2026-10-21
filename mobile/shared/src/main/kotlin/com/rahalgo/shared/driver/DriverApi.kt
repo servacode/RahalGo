@@ -315,6 +315,18 @@ class DriverApi(private val api: ApiClient) {
         )
     }
 
+    /**
+     * **«اطلب موقع الزبون المباشر»** (قرارُ المالك ٢٠٢٦-١٠-٢١) — يُسأل الزبونُ ثانيةً ويصله
+     * إشعار. **ويردّ كم بقي** (ثلاثٌ للطلب). والردُّ `live_request_too_soon` بـ`retry_after_sec`،
+     * و`live_request_limit` حين تنفد.
+     */
+    suspend fun requestLiveLocation(orderId: String): Int =
+        api.call<LiveRequestResult>(
+            "/api/v1/driver/orders/" + orderId + "/request-live-location",
+            HttpMethod.Post,
+            emptyMap<String, String>(),
+        ).remaining
+
     /** أسباب التعذّر المسموحة في حال بعينه — **يقولها المحرّك.** */
     suspend fun failReasons(at: String, orderId: String? = null): List<FailReasonItem> =
         api.call<FailReasons>(
@@ -589,3 +601,7 @@ class DriverApi(private val api: ApiClient) {
             mapOf("on" to on),
         )["on_shift"] ?: on
 }
+
+/** **ردُّ «اطلب موقع الزبون»** — كم بقي من الثلاث. */
+@kotlinx.serialization.Serializable
+data class LiveRequestResult(val remaining: Int = 0)

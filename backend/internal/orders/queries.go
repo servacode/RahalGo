@@ -120,7 +120,9 @@ const orderSelect = `
 	       o.fetch_amount, o.fetch_amount_version, COALESCE(o.fetch_amount_status, ''),
 	       o.amount_currency,
 	       -- **وأقربُ معلمٍ للتسليم** (قرارُ المالك ٢٠٢٦-١٠-٢١) — للسائق وحدَه.
-	       COALESCE(o.near_landmark, '')
+	       COALESCE(o.near_landmark, ''),
+	       -- **وطلبُ السائق لموقع الزبون المباشر** (٢٠٢٦-١٠-٢١).
+	       o.live_requested_at, o.live_request_count
 	FROM orders o
 	-- **والزبونُ يُضمّ يساراً** — التوصيلةُ لا زبونَ لها (customer_id فارغ).
 	-- **وضمٌّ صلبٌ يُسقطها من كلّ قراءة** — وهي علّةُ الخاصِّ مع المتجر بعينها.
@@ -165,7 +167,7 @@ func scanOrder(row pgx.Row) (*Order, error) {
 		&o.ReturnTo, &o.GoodsHandedAt, &o.DriverSeenAt,
 		&o.DeliveryMode, &o.CollectAmount,
 		&o.FetchAmount, &o.FetchAmountVersion, &o.FetchAmountStatus,
-		&o.AmountCurrency, &o.NearLandmark)
+		&o.AmountCurrency, &o.NearLandmark, &o.LiveRequestedAt, &o.LiveRequestCount)
 	if err != nil {
 		return nil, err
 	}

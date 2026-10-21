@@ -140,7 +140,13 @@ internal fun AgreeDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                stringResource(if (step == "goods") R.string.agree_goods_title else R.string.agree_fee_title),
+                stringResource(
+                    when (step) {
+                        "goods" -> R.string.agree_goods_title
+                        "both" -> R.string.agree_edit_title
+                        else -> R.string.agree_fee_title
+                    },
+                ),
                 fontWeight = FontWeight.Bold,
             )
         },
@@ -153,7 +159,8 @@ internal fun AgreeDialog(
                     color = Rahal.colors.inkMuted,
                 )
                 Spacer(Modifier.height(10.dp))
-                if (step == "goods") OutlinedTextField(
+                // **و«both» بعد رفض الزبون** (٢٠٢٦-١٠-٢١) — الأجرةُ والبضاعةُ معاً، والأمانةُ بلا بضاعة.
+                if (step == "goods" || (step == "both" && currentGoods != null)) OutlinedTextField(
                     value = goods,
                     onValueChange = { goods = it.filter { c -> c.isDigit() } },
                     label = { Text(stringResource(R.string.agree_goods)) },

@@ -1273,6 +1273,35 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    // **«اطلب موقع الزبون المباشر»** (قرارُ المالك ٢٠٢٦-١٠-٢١)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **يُسأل الزبونُ ثانيةً ويصله إشعار** — وإن رفض أوّلَ مرّةٍ بالخطأ. **ويُقال للسائق
+    // كم بقي له**، **ولماذا رُدّ** (انتظرْ دقيقتين · نفدت الثلاث).
+    fun requestLive() {
+        val id = currentId() ?: return
+        viewModelScope.launch {
+            val app = getApplication<Application>()
+            try {
+                val left = backend.driver.requestLiveLocation(id)
+                com.rahalgo.ui.Flash.ok(app.getString(R.string.trip_live_requested, left))
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: com.rahalgo.shared.net.ApiClient.ApiException) {
+                com.rahalgo.ui.Flash.fail(
+                    when (e.body.code) {
+                        "live_request_too_soon" -> app.getString(R.string.trip_live_request_wait)
+                        "live_request_limit" -> app.getString(R.string.trip_live_request_limit)
+                        else -> describe(e)
+                    },
+                )
+            } catch (e: Exception) {
+                com.rahalgo.ui.Flash.fail(describe(e))
+            }
+        }
+    }
+
     /** يسأل المحرّك أيّ الأسباب تصلح في هذا الحال. */
     fun askFail() {
         val order = state.mine.firstOrNull { it.id == openId }

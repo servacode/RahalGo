@@ -1056,6 +1056,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                     actions = TripActions(
                         step = orders::step,
                         handGoods = orders::handGoods,
+                        requestLive = orders::requestLive,
                         setDeliveryCode = { orders.deliveryCode = it },
                         capture = {
                             // **والإذن يُطلب عند الحاجة لا عند الدخول** —
