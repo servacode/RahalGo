@@ -33,6 +33,9 @@ var t = struct {
 	// بعد الاستلام تنتظر تأكيدَ الزبون، **ورفضُه يصل المكتب.**
 	customPriceLowered, customPriceRaised, customReconfirmed string
 	customPriceRaisedDriver, customQuoteRejected             string
+	// customQuoteRejectedDriver **ورفضُ الزبون يصل السائقَ أيضاً** (قرارُ المالك ٢٠٢٦-١٠-٢١) —
+	// هو من يتّفق معه فيعدّل ويُرسل ثانيةً.
+	customQuoteRejectedDriver string
 	// **صنفٌ غيرُ متوفّر** (قرارُ المالك ٢٠٢٦-١٠-١٥).
 	itemUnavailable                       string
 	rejected, cancelled, failed, refunded string
@@ -59,38 +62,39 @@ var t = struct {
 	delivered:        "تم تسليم طلبك",
 	// **ونصٌّ يقول الفعلَ المطلوبَ لا الخبرَ وحدَه** — «سعرٌ جاهز» تُقرأ
 	// خبراً فيُؤجَّل، **و«أكّده ليبدأ» تُقرأ طلباً فيُفتح التطبيق.**
-	customQuoted:             "سعر طلبك جاهز — أكّده ليبدأ الشراء",
-	customConfirmed:          "أكّد الزبون السعر — ابدأ الشراء",
-	customConfirmedAmanah:    "أكّد الزبون الأجرة — استلم الأمانة",
-	customPriceLowered:       "عدّل المكتب سعر طلبك",
-	customPriceRaised:        "تغيّر سعر طلبك — أكّده ليُسلَّم إليك",
-	customReconfirmed:        "أكّد الزبون السعر الجديد — يمكنك التسليم",
-	customPriceRaisedDriver:  "تغيّر سعر الطلب — لا تسليم قبل تأكيد الزبون",
-	customQuoteRejected:      "رفض الزبون السعر الجديد",
-	itemUnavailable:          "صنف غير متوفر في طلبك",
-	driverAssignedToCustomer: "أُسند سائقٌ لطلبك",
-	rejected:                 "اعتذر المتجر عن طلبك",
-	cancelled:                "أُلغي طلبك",
-	failed:                   "تعذّر تسليم طلبك",
-	refunded:                 "استُرجع مبلغ طلبك",
-	merchantDelivered:        "سُلّم طلب من متجرك",
-	commission:               "عمولة جديدة في محفظتك",
-	targetReached:            "أنجزت هدف الشهر — نالتك مكافأته",
-	violationsWarn:           "متجرٌ بلغ حدّ المخالفات",
-	violationsBanned:         "حُظر متجرٌ لكثرة الإلغاء",
-	endedOps:                 "انتهى طلبٌ قبل تسليمه",
-	warningIssued:            "إنذارٌ على متجرك",
-	driverEarned:             "أجر توصيل في محفظتك",
-	merchantEarned:           "مستحق مبيعاتك في محفظتك",
-	refunded2:                "أُعيد المبلغ إلى محفظتك",
-	compensated:              "تعويض في محفظتك",
-	driverLost:               "طلبٌ لم يعد معك",
-	mdNewOps:                 "توصيلة جديدة من متجر",
-	mdAccepted:               "وافقت المنصة على توصيلتك",
-	mdRejected:               "اعتذرت المنصة عن توصيلتك",
-	mdCancelled:              "أُلغيت توصيلتك",
-	mdAssigned:               "سائق في طريقه لاستلام توصيلتك",
-	mdPickedUp:               "استلم السائق التوصيلة",
+	customQuoted:              "سعر طلبك جاهز — أكّده ليبدأ الشراء",
+	customConfirmed:           "أكّد الزبون السعر — ابدأ الشراء",
+	customConfirmedAmanah:     "أكّد الزبون الأجرة — استلم الأمانة",
+	customPriceLowered:        "عدّل المكتب سعر طلبك",
+	customPriceRaised:         "تغيّر سعر طلبك — أكّده ليُسلَّم إليك",
+	customReconfirmed:         "أكّد الزبون السعر الجديد — يمكنك التسليم",
+	customPriceRaisedDriver:   "تغيّر سعر الطلب — لا تسليم قبل تأكيد الزبون",
+	customQuoteRejected:       "رفض الزبون السعر الجديد",
+	customQuoteRejectedDriver: "رفض الزبون السعر — تواصل معه بالدردشة وعدّل السعر",
+	itemUnavailable:           "صنف غير متوفر في طلبك",
+	driverAssignedToCustomer:  "أُسند سائقٌ لطلبك",
+	rejected:                  "اعتذر المتجر عن طلبك",
+	cancelled:                 "أُلغي طلبك",
+	failed:                    "تعذّر تسليم طلبك",
+	refunded:                  "استُرجع مبلغ طلبك",
+	merchantDelivered:         "سُلّم طلب من متجرك",
+	commission:                "عمولة جديدة في محفظتك",
+	targetReached:             "أنجزت هدف الشهر — نالتك مكافأته",
+	violationsWarn:            "متجرٌ بلغ حدّ المخالفات",
+	violationsBanned:          "حُظر متجرٌ لكثرة الإلغاء",
+	endedOps:                  "انتهى طلبٌ قبل تسليمه",
+	warningIssued:             "إنذارٌ على متجرك",
+	driverEarned:              "أجر توصيل في محفظتك",
+	merchantEarned:            "مستحق مبيعاتك في محفظتك",
+	refunded2:                 "أُعيد المبلغ إلى محفظتك",
+	compensated:               "تعويض في محفظتك",
+	driverLost:                "طلبٌ لم يعد معك",
+	mdNewOps:                  "توصيلة جديدة من متجر",
+	mdAccepted:                "وافقت المنصة على توصيلتك",
+	mdRejected:                "اعتذرت المنصة عن توصيلتك",
+	mdCancelled:               "أُلغيت توصيلتك",
+	mdAssigned:                "سائق في طريقه لاستلام توصيلتك",
+	mdPickedUp:                "استلم السائق التوصيلة",
 }
 
 // endedByLabel من أنهى الطلب — بلفظٍ يُقرأ لا برمزٍ يُفكّ.

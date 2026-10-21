@@ -236,10 +236,9 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 	// **يُفصَل السياقُ ولا يُنتظَر** فلا يعرقل الدخولَ ولا يُرجعه إن سقط. حمولةٌ
 	// بيانيّةٌ خالصةٌ فيرسمها التطبيقُ في الخلفيّة والمقتول، **ويكتمها في المقدّمة**
 	// (`kind=session_superseded`، `RahalPushService`). **ولا يُعاد إدراجُ الرمز.**
-	// **جلستا الأدمن على التجهيز وحدَه** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — المالكُ والتجاربُ الآليّة.
-	if cfg.Env == "staging" {
-		identitySvc.SetAdminWebSessions(2)
-	}
+	// **جلستا الأدمن في كلّ بيئة** — كانت للتجهيز وحدَه (٢٠٢٦-١٠-٠٣)، **ثمّ قرّرها المالكُ
+	// للإنتاج** (٢٠٢٦-١٠-٢١: «اي حساب الادمن نخليه يشتغل على جهازين»).
+	identitySvc.SetAdminWebSessions(2)
 	identitySvc.SetLogoutNotifier(func(_ context.Context, tokens []string) {
 		go func() {
 			// **ويُنتظر قليلاً قبل التحذير** (٢٠٢٦-١٠-١٩) — فإن كان الداخلُ الهاتفَ نفسَه

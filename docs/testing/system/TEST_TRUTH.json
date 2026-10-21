@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 100,
-    "notify_targeted": 43,
+    "notify_sites": 101,
+    "notify_targeted": 44,
     "publish_rooms": [
       "customer",
       "driver",
@@ -33,8 +33,8 @@
     "setting_defs": 250,
     "behaviour_settings": 205,
     "order_fields": 112,
-    "test_files": 638,
-    "test_funcs": 2476
+    "test_files": 639,
+    "test_funcs": 2479
   },
   "flows": [
     {
@@ -23125,6 +23125,24 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestAdmin_TwoWebSessionsInEveryEnv",
+      "file": "internal/qa/server_batch_1021_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestQuoteReject_DriverIsNotified",
+      "file": "internal/qa/server_batch_1021_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSearch_EmptyStoreIsHidden",
+      "file": "internal/qa/server_batch_1021_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestSRV10_ValidOrderStillWorks",

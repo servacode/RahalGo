@@ -39,6 +39,9 @@ func (s *Server) handlePublicSearch(w http.ResponseWriter, r *http.Request) {
 		JOIN categories c ON c.id = m.category_id
 		LEFT JOIN media lm ON lm.id = m.logo_media_id
 		WHERE m.status = 'active'
+		  -- **ومتجرٌ بلا صنفٍ متوفّرٍ لا يظهر** (قرارُ المالك ٢٠٢٦-١٠-٢١) — الزبونُ يفتحه فيجده
+		  -- فارغاً؛ والتصفّحُ أصلاً بالأصناف فلا يظهر فيه.
+		  AND EXISTS (SELECT 1 FROM menu_items ai WHERE ai.merchant_id = m.id AND ai.available)
 		  AND (m.name ILIKE '%'||$1||'%'
 		       OR EXISTS (SELECT 1 FROM menu_items i
 		                  WHERE i.merchant_id = m.id AND i.available

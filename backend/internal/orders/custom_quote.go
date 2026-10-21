@@ -622,6 +622,17 @@ func (s *Service) RejectQuote(ctx context.Context, orderID, customerID string) (
 				Body:   fmt.Sprintf("#%d — %s ل.س", o.Number, groupDigits(o.Total)),
 				Entity: "order", EntityID: orderID, Href: "/dashboard/orders",
 			})
+			// **والسائقُ يُخبَر أيضاً** (قرارُ المالك ٢٠٢٦-١٠-٢١) — كان المكتبُ وحدَه يعلم،
+			// والسائقُ ينتظر تأكيداً لن يأتي. **فيتواصل مع الزبون ويعدّل ويُرسل ثانيةً.**
+			if o.DriverID != nil {
+				s.notify.Notify(ctx, notifications.Input{
+					UserID: *o.DriverID, Kind: notifications.KindOrder,
+					Title:  t.customQuoteRejectedDriver,
+					Body:   fmt.Sprintf("#%d — %s ل.س", o.Number, groupDigits(o.Total)),
+					Entity: "order", EntityID: orderID, Href: "/portal",
+					Apps: []string{notifications.AppDriver},
+				})
+			}
 		}
 	}
 	return o, err
