@@ -290,6 +290,9 @@
     <string name="live_channel">مشاركة الموقع مع الكابتن</string>
     <string name="live_card_sharing">عم تشارك موقعك المباشر مع الكابتن</string>
     <string name="live_denied">ما فينا نشارك موقعك بدون إذن الموقع</string>
+    <!-- **«في نسخة جديدة — حدّث»** (قرارُ المالك ٢٠٢٦-١٠-٢١). -->
+    <string name="update_offer">في نسخة جديدة من رحّال غو (%1$s) — اضغط لتحدّث</string>
+    <string name="update_play_unreachable">ما قدرنا نوصل لغوغل بلاي — شغّل VPN وجرّب مرة تانية</string>
     <!-- **ظهرُ صورة الصنف حين لا وصف** (قرارُ المالك ٢٠٢٦-١٠-٢١). -->
     <string name="shop_no_description">لا يوجد وصف لهذا الصنف</string>
     <string name="live_needs_location_on">المشاركة بتحتاج تشغيل الموقع — اضغط «شارك» مرة تانية وشغّله</string>

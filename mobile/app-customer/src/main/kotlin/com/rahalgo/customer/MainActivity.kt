@@ -290,6 +290,10 @@ private fun Signed(theme: ThemeState, dark: Boolean) {
     AuthGate(
         vm = vm,
         signup = true,
+        // **وشاشةُ التحديث الإجباريّ من حيث ثُبِّت** (قرارُ المالك ٢٠٢٦-١٠-٢١): زرُّ غوغل بلاي
+        // لمن ثبّت منه، **وصفحةُ تنزيلنا للجميع** — لا صفحةَ «/app» العامّة.
+        updateShowPlay = com.rahalgo.ui.installedFromPlay(androidx.compose.ui.platform.LocalContext.current),
+        updateFallbackUrl = com.rahalgo.customer.update.UpdateOffer.DOWNLOAD_PAGE,
         asking = asking,
         // **ونماذجُه تعبر الدخول** — يتصفّح ضيفاً ثمّ يدخل فيجد ما كان فيه.
         // **وجلسةٌ ماتت تُسقطه ضيفاً** (`SessionEnd`) وسلّتُه ووصلتُه تُمسحان في
@@ -732,6 +736,7 @@ private fun SignedIn(
 
         Scaffold(
             topBar = {
+              androidx.compose.foundation.layout.Column {
                 // **والشريطُ العلويُّ من الوحدة** — الجرسُ والسمةُ
                 // والمحفظة. **ولا رقاقةَ تقييمٍ للزبون**: هو لا يُحاسَب
                 // على رقمٍ، **ورقاقةٌ لا معنى لها ازدحامٌ لا خبر.**
@@ -785,6 +790,9 @@ private fun SignedIn(
                         ?.let { stringResource(addressKindLabel(it.kind)) }
                         .orEmpty(),
                 )
+                // **«في نسخة جديدة — حدّث»** (قرارُ المالك ٢٠٢٦-١٠-٢١) — من حيث ثُبِّت.
+                com.rahalgo.customer.update.UpdateStrip()
+              }
             },
             bottomBar = {
                 // ══════════════════════════════════════════════════════
