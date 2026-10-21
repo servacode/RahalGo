@@ -87,6 +87,26 @@ type DemandFilter struct {
 	Since  *time.Time
 	Until  *time.Time
 	CityID string
+	// HourFrom/HourTo **ساعاتُ اليوم بتوقيت سوريا** (قرارُ المالك ٢٠٢٦-١٠-٢١:
+	// «وين الطلبات بين ٨ و١٠ المسا») — من HourFrom (٠–٢٣) حتّى قبل HourTo
+	// (١–٢٤). **وإن كان «حتّى» أصغرَ من «من» عَبَرَ منتصفَ الليل** (٢٢ ← ٢).
+	// **وللطلبات وطلبات التغطية وحدها** — المتجرُ لا يُقاس بساعة إنشائه.
+	HourFrom *int
+	HourTo   *int
+}
+
+// hours **شرطُ ساعات اليوم** على عمود وقت.
+func (f DemandFilter) hours(col string, args *[]any) []string {
+	if f.HourFrom == nil || f.HourTo == nil {
+		return nil
+	}
+	*args = append(*args, *f.HourFrom, *f.HourTo)
+	h := fmt.Sprintf("EXTRACT(hour FROM (%s AT TIME ZONE 'Asia/Damascus'))::int", col)
+	a, b := len(*args)-1, len(*args)
+	if *f.HourFrom < *f.HourTo {
+		return []string{fmt.Sprintf("(%s >= $%d AND %s < $%d)", h, a, h, b)}
+	}
+	return []string{fmt.Sprintf("(%s >= $%d OR %s < $%d)", h, a, h, b)}
 }
 
 func (f DemandFilter) clause(col, cityCol string, args *[]any) []string {
@@ -110,6 +130,7 @@ func (f DemandFilter) clause(col, cityCol string, args *[]any) []string {
 func OrderDemand(ctx context.Context, q Querier, f DemandFilter) ([]Cell, error) {
 	var args []any
 	w := append([]string{"dropoff IS NOT NULL"}, f.clause("created_at", "", &args)...)
+	w = append(w, f.hours("created_at", &args)...)
 	return scanCells(ctx, q, gridSQL("orders", "dropoff", w, len(args)), args...)
 }
 
@@ -117,6 +138,7 @@ func OrderDemand(ctx context.Context, q Querier, f DemandFilter) ([]Cell, error)
 func RequestDemand(ctx context.Context, q Querier, f DemandFilter) ([]Cell, error) {
 	var args []any
 	w := f.clause("created_at", "city_id", &args)
+	w = append(w, f.hours("created_at", &args)...)
 	return scanCells(ctx, q, gridSQL("coverage_requests", "at", w, len(args)), args...)
 }
 
@@ -161,6 +183,7 @@ func UnservedDemand(ctx context.Context, q Querier, f DemandFilter) ([]Cell, err
 		     (z.shape = 'radius' AND ST_DWithin(z.center, coverage_requests.at, z.radius_m))
 		  OR (z.shape = 'polygon' AND z.area IS NOT NULL AND ST_Covers(z.area, coverage_requests.at))
 		 ))`}, f.clause("created_at", "city_id", &args)...)
+	w = append(w, f.hours("created_at", &args)...)
 	return scanCells(ctx, q, gridSQL("coverage_requests", "at", w, len(args)), args...)
 }
 

@@ -106,6 +106,14 @@ const OpsMapCanvas = dynamic(
 const m = getMessages(defaultLocale);
 const T = m.admin.opsMap;
 
+/** **أجزاءُ اليوم بساعاتها** — من الأولى حتّى قبل الثانية، والليلُ يعبر منتصفَ الليل. */
+const DAY_PARTS = {
+  morning: [6, 12],
+  noon: [12, 17],
+  evening: [17, 22],
+  night: [22, 6],
+} as const;
+
 // ══════════════════════════════════════════════════════════════════════
 // **الأنواع**
 // ══════════════════════════════════════════════════════════════════════
@@ -466,6 +474,11 @@ export default function OpsMapPage() {
   // **وثلاثون يوماً افتراضاً** — **ومدىً مفتوحٌ على كلّ التاريخ يقول
   // «هنا عملٌ» عن حيٍّ مات فيه العملُ منذ سنة.**
   const [range, setRange] = useState<"today" | "7d" | "30d">("30d");
+  // **وساعاتُ اليوم** (قرارُ المالك ٢٠٢٦-١٠-٢١: «وين الطلبات بين ٨ و١٠ المسا») —
+  // بتوقيت سوريا، **والليلُ يعبر منتصفَ الليل** (١٠ ← ٦). للكثافة والفرص وحدهما.
+  const [dayPart, setDayPart] = useState<keyof typeof DAY_PARTS | "all">("all");
+  const hoursQ =
+    dayPart === "all" ? "" : `&hour_from=${DAY_PARTS[dayPart][0]}&hour_to=${DAY_PARTS[dayPart][1]}`;
 
   // ── البحثُ في الخريطة (البند ٣٦) ──────────────────────────
   //
@@ -699,24 +712,24 @@ export default function OpsMapPage() {
   const demand = useLiveData<DemandOut>(
     () =>
       can("VIEW_DEMAND_ANALYTICS") && (visible.demand || visible.opportunities)
-        ? api<DemandOut>(`/api/v1/admin/ops-map/demand?range=${range}`)
+        ? api<DemandOut>(`/api/v1/admin/ops-map/demand?range=${range}${hoursQ}`)
         : Promise.resolve({
             orders: [], requests: [], merchants: [], drivers: [],
             unserved: [], cell_deg: 0.01,
           }),
     [],
-    [visible.demand, visible.opportunities, range, meta.data],
+    [visible.demand, visible.opportunities, range, hoursQ, meta.data],
   );
 
   const opportunities = useLiveData<{ opportunities: OpportunityCell[]; count: number }>(
     () =>
       can("VIEW_DEMAND_ANALYTICS") && visible.opportunities
         ? api<{ opportunities: OpportunityCell[]; count: number }>(
-            `/api/v1/admin/ops-map/opportunities?range=${range}`,
+            `/api/v1/admin/ops-map/opportunities?range=${range}${hoursQ}`,
           )
         : Promise.resolve({ opportunities: [], count: 0 }),
     [],
-    [visible.opportunities, range, meta.data],
+    [visible.opportunities, range, hoursQ, meta.data],
   );
 
   const hits = useLiveData<{ hits: SearchHit[]; count: number }>(
@@ -1652,6 +1665,32 @@ export default function OpsMapPage() {
                             count={requests.data?.count}
                             onToggle={toggle}
                           />
+                          {(visible.demand || visible.opportunities) && (
+                            <div className="flex flex-wrap gap-2 ps-6">
+                              <Select
+                                aria-label={T.demandWhen.range}
+                                className="!w-auto"
+                                value={range}
+                                onChange={(e) => setRange(e.target.value as typeof range)}
+                              >
+                                <option value="today">{T.demandWhen.today}</option>
+                                <option value="7d">{T.demandWhen.d7}</option>
+                                <option value="30d">{T.demandWhen.d30}</option>
+                              </Select>
+                              <Select
+                                aria-label={T.demandWhen.hours}
+                                className="!w-auto"
+                                value={dayPart}
+                                onChange={(e) => setDayPart(e.target.value as typeof dayPart)}
+                              >
+                                <option value="all">{T.demandWhen.all}</option>
+                                <option value="morning">{T.demandWhen.morning}</option>
+                                <option value="noon">{T.demandWhen.noon}</option>
+                                <option value="evening">{T.demandWhen.evening}</option>
+                                <option value="night">{T.demandWhen.night}</option>
+                              </Select>
+                            </div>
+                          )}
                         </>
                       )}
                       <LayerToggle

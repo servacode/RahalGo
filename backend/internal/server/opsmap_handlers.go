@@ -317,6 +317,24 @@ func (s *Server) handleCoverageRequestCreate(w http.ResponseWriter, r *http.Requ
 // rangeFrom مدىً زمنيٌّ من الاستعلام (البند ٢٩).
 //
 // **و`range=today|7d|30d` أو `from`/`to` صريحان.**
+// demandFilterFrom **مرشِّحُ الكثافة من النداء** — المدينةُ والمدّةُ وساعاتُ اليوم.
+//
+// **والساعتان معاً أو لا شيء**: hour_from (٠–٢٣) وhour_to (١–٢٤)، **وغيرُ
+// الصالح يُهمَل** فتُعرض الساعاتُ كلُّها — لا خطأَ يُبيّض الخريطة.
+func demandFilterFrom(r *http.Request) opsmap.DemandFilter {
+	q := r.URL.Query()
+	f := opsmap.DemandFilter{CityID: q.Get("city_id")}
+	if from, to, ok := rangeFrom(r); ok {
+		f.Since, f.Until = &from, &to
+	}
+	hf, e1 := strconv.Atoi(q.Get("hour_from"))
+	ht, e2 := strconv.Atoi(q.Get("hour_to"))
+	if e1 == nil && e2 == nil && hf >= 0 && hf <= 23 && ht >= 1 && ht <= 24 && hf != ht%24 {
+		f.HourFrom, f.HourTo = &hf, &ht
+	}
+	return f
+}
+
 func rangeFrom(r *http.Request) (from, to time.Time, ok bool) {
 	q := r.URL.Query()
 	now := time.Now()
@@ -452,10 +470,7 @@ func (s *Server) handleOpsMapReps(w http.ResponseWriter, r *http.Request) {
 // **والطبقاتُ منفصلةٌ في الردّ** — **ولا تُخلَط كثافتان في رقم**
 // (البند ١٨).
 func (s *Server) handleOpsMapDemand(w http.ResponseWriter, r *http.Request) {
-	f := opsmap.DemandFilter{CityID: r.URL.Query().Get("city_id")}
-	if from, to, ok := rangeFrom(r); ok {
-		f.Since, f.Until = &from, &to
-	}
+	f := demandFilterFrom(r)
 	ctx := r.Context()
 
 	orders, err := opsmap.OrderDemand(ctx, s.pg, f)
@@ -491,10 +506,7 @@ func (s *Server) handleOpsMapDemand(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleOpsMapOpportunities(w http.ResponseWriter, r *http.Request) {
-	f := opsmap.DemandFilter{CityID: r.URL.Query().Get("city_id")}
-	if from, to, ok := rangeFrom(r); ok {
-		f.Since, f.Until = &from, &to
-	}
+	f := demandFilterFrom(r)
 	out, err := opsmap.Opportunities(r.Context(), s.pg, f)
 	if err != nil {
 		s.respondErr(w, err)
