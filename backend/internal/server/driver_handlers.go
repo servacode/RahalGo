@@ -453,7 +453,10 @@ const driverOrderSelect = `
 	       -- **والعمودُ باقٍ في القاعدة ولا يُقرأ** — وحذفُ عمودٍ فيه
 	       -- بياناتٌ قرارُ مالكٍ لا تنظيفُ شيفرة.
 	       NULLIF(mo.phone::text, ''),
-	       o.address_text, ST_Y(o.dropoff::geometry), ST_X(o.dropoff::geometry),
+	       -- **وأقربُ معلمٍ ملصقاً بالعنوان** (قرارُ المالك ٢٠٢٦-١٠-٢١، هجرة ٠٤٦٧) —
+	       -- كما في orders.ViewFor للسائق: الحقلُ نفسُه فلا تحديثَ للتطبيق.
+	       concat_ws(' · ', NULLIF(o.address_text, ''), NULLIF(o.near_landmark, '')),
+	       ST_Y(o.dropoff::geometry), ST_X(o.dropoff::geometry),
 	       COALESCE(cu.full_name, o.recipient_name, ''),
 	       CASE WHEN o.kind = 'merchant_delivery' THEN COALESCE(o.recipient_phone, '') ELSE '' END,
 	       o.total, o.cash_due,

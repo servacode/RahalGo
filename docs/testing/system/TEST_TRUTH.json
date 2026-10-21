@@ -33,8 +33,8 @@
     "setting_defs": 250,
     "behaviour_settings": 205,
     "order_fields": 112,
-    "test_files": 635,
-    "test_funcs": 2472
+    "test_files": 636,
+    "test_funcs": 2473
   },
   "flows": [
     {
@@ -18792,6 +18792,12 @@
     {
       "name": "TestNAVB_042_LegacyQueueLineStillWorks",
       "file": "internal/qa/nav_bearing_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNearLandmark_DriverSeesItCustomerDoesNot",
+      "file": "internal/qa/near_landmark_test.go",
       "package": "qa",
       "orphan": true
     },

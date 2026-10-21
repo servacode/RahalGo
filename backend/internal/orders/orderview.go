@@ -448,6 +448,18 @@ func ViewFor(a Audience, o *Order) map[string]any {
 			out["driver_name"] = CustomerDriverLabel
 		}
 	}
+	// **والسائقُ يرى أقربَ معلمٍ ملصقاً بالعنوان** (قرارُ المالك ٢٠٢٦-١٠-٢١) — في
+	// الحقل الذي تعرضه نسختُه الحاليّة، **فلا تحديثَ للتطبيق**. وللزبون والمتجر
+	// والمكتب عنوانُه كما كتبه.
+	if a == AudienceDriver && o.NearLandmark != "" {
+		if addr, ok := out["address_text"].(string); ok {
+			if addr == "" {
+				out["address_text"] = o.NearLandmark
+			} else {
+				out["address_text"] = addr + " · " + o.NearLandmark
+			}
+		}
+	}
 	return out
 }
 
