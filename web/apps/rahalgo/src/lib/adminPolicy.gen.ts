@@ -118,6 +118,8 @@ export const ADMIN_POLICY: ReadonlyArray<readonly [string, string, string]> = [
   ["DELETE", "/merchants/{id}", "merchants.manage"],
   ["GET", "/merchants/{id}", "merchants.read"],
   ["PATCH", "/merchants/{id}", "merchants.manage"],
+  ["GET", "/merchants/{id}/announce", "merchants.read"],
+  ["PATCH", "/merchants/{id}/announce", "merchants.manage"],
   ["GET", "/merchants/{id}/cash-settlements", "finance.read"],
   ["POST", "/merchants/{id}/clear-violations", "safety.manage"],
   ["GET", "/merchants/{id}/delivery-credit", "finance.read"],

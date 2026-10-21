@@ -187,6 +187,7 @@ var adminPolicy = []Rule{
 	{"POST", "/merchants/{id}/setup-reminder", MerchantsManage},
 	// **تسويةُ مستحقّات المتجر — صلاحيّةٌ ماليّة لا إدارةُ متجر.**
 	{"PATCH", "/merchants/{id}/settlement-method", SettingsFinancialManage},
+	{"PATCH", "/merchants/{id}/announce", MerchantsManage},
 	// **وسقفُ دينِ التوصيلة كذلك** — رقمٌ يُدين به المتجرُ المنصّة (الخطوة ١٨).
 	{"GET", "/merchants/{id}/delivery-credit", FinanceRead},
 	{"PATCH", "/merchants/{id}/delivery-credit", SettingsFinancialManage},
@@ -212,6 +213,7 @@ var adminPolicy = []Rule{
 	// `read` في الهجرة، **فلا أحدَ فقد ما كان يراه.**
 	{"GET", "/merchants", MerchantsRead},
 	{"GET", "/merchants/{id}", MerchantsRead},
+	{"GET", "/merchants/{id}/announce", MerchantsRead},
 	{"GET", "/merchants/{id}/price-sync", MerchantsRead},
 	{"GET", "/merchants/{id}/staff", MerchantsRead},
 	{"GET", "/merchants/{id}/order-phones", MerchantsRead},

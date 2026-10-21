@@ -1784,6 +1784,9 @@ func (s *Server) Router() http.Handler {
 				r.Patch("/merchants/{id}/exchange-rate", s.handleAdminExchangeRate)
 				// **تسويةُ مستحقّات المتجر نقداً/محفظةً** — merchant_settlement_handlers.go
 				r.Patch("/merchants/{id}/settlement-method", s.handleSetMerchantSettlementMethod)
+				// **«انضمّ متجر جديد» — و«لا ترسل» لمتجرٍ بعينه** — store_announce.go (٢٠٢٦-١٠-٢١).
+				r.Get("/merchants/{id}/announce", s.handleAdminStoreAnnounce)
+				r.Patch("/merchants/{id}/announce", s.handleAdminSetStoreAnnounce)
 				// **إعدادُ المتاجر — مَن ضبط ومَن لم يضبط** — merchant_setup.go
 				r.Get("/merchants-setup", s.handleMerchantSetupStatus)
 				r.Post("/merchants/{id}/setup-reminder", s.handleMerchantSetupReminder)

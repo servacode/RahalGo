@@ -143,10 +143,13 @@ func Cancellable(status string) bool {
 const (
 	DestHome  = "home"
 	DestOffer = "offer"
+	// DestMerchant **صفحةُ المتجر** — عادت وجهةً (قرارُ المالك ٢٠٢٦-١٠-٢١، «انضمّ متجر جديد»):
+	// صار للزبون صفحةُ متجر منذ ٢٠٢٦-١٠-١٨ (`/public/stores/{id}`)، فوعدُها يُوفى.
+	DestMerchant = "merchant"
 )
 
 // ══════════════════════════════════════════════════════════════════════
-// **و«المتجر» لم تعد وجهةً** (قرارُ المالك ٢٠٢٦-٠٩-١٥)
+// **و«المتجر» لم تعد وجهةً** (قرارُ المالك ٢٠٢٦-٠٩-١٥) — **وعادت ٢٠٢٦-١٠-٢١** (`DestMerchant`)
 // ══════════════════════════════════════════════════════════════════════
 //
 // **ولا شاشةَ متجرٍ عند الزبون** — **قرارُه ٢٠٢٦-٠٨-٠٥**: «المتاجرُ
@@ -174,7 +177,7 @@ func ValidDest(destType, destID string) bool {
 	switch destType {
 	case "", DestHome:
 		return strings.TrimSpace(destID) == ""
-	case DestOffer:
+	case DestOffer, DestMerchant:
 		return strings.TrimSpace(destID) != ""
 	default:
 		return false

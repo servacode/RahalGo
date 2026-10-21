@@ -67,9 +67,11 @@ class DeepLinkTest {
      * لا وجودَ لها.**
      */
     @Test
-    fun `وجهةُ المتجر تسقط إلى البيت`() {
+    fun `تهجئةٌ أخرى للمتجر تسقط إلى البيت`() {
+        // **و«merchant» نفسُها عادت وجهةً** (٢٠٢٦-١٠-٢١) — وغيرُها مجهول.
         val id = "6f1c8f31-0b2e-4a77-9d31-2f5e6a1c9b04"
-        for (t in listOf("merchant", "MERCHANT", "merchants", " merchant ", "store", "shop")) {
+        assertEquals(id, Engagement.route("merchant", id).id)
+        for (t in listOf("MERCHANT", "merchants", "store", "shop")) {
             val d = Engagement.route(t, id)
             assertTrue("**فُتحت وجهةُ متجر**: " + t, d.isHome)
             assertEquals("", d.id)
@@ -82,19 +84,13 @@ class DeepLinkTest {
      * **ولا فرعَ لها في المستهلِك** — **ولا معرّفَ يبقى معلّقاً.**
      */
     @Test
-    fun `خبرٌ قديمٌ بوجهة متجرٍ لا يفتح شيئاً`() {
+    fun `خبرُ متجرٍ جديدٍ يفتح صفحتَه`() {
+        // **«انضمّ متجر جديد»** (قرارُ المالك ٢٠٢٦-١٠-٢١) — فرعٌ في المستهلِك يفتح المتجر.
         val src = read(main)
-        assertFalse(
-            "**بقي فرعُ المتجر** — **ووجهةٌ رُفعت من التنقية لا تبلغه أصلاً**",
-            src.contains("Engagement.DEST_MERCHANT"),
-        )
-        assertFalse(
-            "**بقي ثابتُ المتجر في التنقية**",
-            read("ui/src/main/kotlin/com/rahalgo/ui/Engagement.kt").contains("DEST_MERCHANT"),
-        )
-        // **والبيتُ لا معرّفَ له** — **فلا يُفتَح بمعرّفِ متجرٍ سابق.**
-        assertTrue(Engagement.route("merchant", "any-old-id").isHome)
-        assertEquals("", Engagement.route("merchant", "any-old-id").id)
+        assertTrue("**لا فرعَ لوجهة المتجر**", src.contains("Engagement.DEST_MERCHANT"))
+        assertTrue("**الفرعُ لا يفتح صفحةَ المتجر**", src.contains("shopVm.openStore(id)"))
+        // **وبلا معرّفٍ يسقط إلى البيت.**
+        assertTrue(Engagement.route("merchant", "").isHome)
     }
 
     // ═════════════ DLINK-03 · العرض ═════════════
@@ -163,11 +159,13 @@ class DeepLinkTest {
         )
         assertFalse("**بقي لفظُ وجهةِ المتجر**", src.contains("destMerchant"))
 
+        // **والمحرّكُ يعرفها للإعلان الآليّ وحدَه** (قرارُ المالك ٢٠٢٦-١٠-٢١، «انضمّ متجر
+        // جديد») — واللوحةُ لا تعرضها اختياراً، كما فوق.
         val policy = File(mobileRoot().parentFile,
             "backend/internal/campaigns/policy.go")
         assertTrue("**سياسةُ الحملات غائبة**", policy.exists())
-        assertFalse(
-            "**عادت `DestMerchant` إلى عقد المحرّك**",
+        assertTrue(
+            "**غابت `DestMerchant` عن عقد المحرّك** — والإعلانُ يحتاجها",
             policy.readText().contains("DestMerchant"),
         )
     }
@@ -336,8 +334,7 @@ class DeepLinkTest {
         val id = "8b0a8a71-d186-4647-ae3b-9cd3898508bf"
         assertEquals(Engagement.DEST_OFFER, Engagement.route("offer", id).type)
         assertEquals(Engagement.DEST_ORDER_CHAT, Engagement.route("order_chat", id).type)
-        // **والمرفوعةُ لا تصير نوعاً بمعرّفٍ يشبه غيرَه.**
-        assertTrue(Engagement.route("merchant", id).isHome)
+        assertEquals(Engagement.DEST_MERCHANT, Engagement.route("merchant", id).type)
         // **ولا نوعَ يُشتقّ من شكل المعرّف.**
         assertTrue(Engagement.route("", id).isHome)
     }

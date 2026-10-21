@@ -53,6 +53,7 @@ import { storeStatusVariant } from "@/components/admin/StoreActions";
 import { commissionText } from "@/components/admin/ProfileRoleTabs";
 import { NotAllowed } from "@/components/admin/accounts/ProfileParts";
 import { useCanCall } from "@/lib/policy";
+import { MerchantAnnounce } from "@/components/admin/MerchantAnnounce";
 
 const m = getMessages(defaultLocale);
 const P = m.admin.merchantProfile;
@@ -295,6 +296,8 @@ export default function MerchantProfilePage() {
           </div>
         </dl>
         <MerchantSettlement merchantId={mr.id} method={mr.settlement_method} onChanged={load} />
+        {/* **«انضمّ متجر جديد» — و«لا ترسل»** (قرارُ المالك ٢٠٢٦-١٠-٢١). */}
+        <MerchantAnnounce merchantId={mr.id} canManage={canCall("PATCH", "/merchants/{id}/announce")} />
         {/* **مزامنةُ الأمين — فنيّ** (٢٠٢٦-١٠-١٩). */}
         {/* **موظّفو المتجر ورقمُ الطلبات بحسب الدوام** (قرارُ المالك ٢٠٢٦-١٠-٢٠). */}
         <StoreStaffAdmin merchantId={mr.id} canManage={canCall("POST", "/merchants/{id}/staff")} />

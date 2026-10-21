@@ -374,6 +374,8 @@ func run(logger *slog.Logger) error {
 			go srv.RunMonitoring(ctx, time.Minute)
 			// **وسلسلةُ تعريف المتجر بالإشعارات** — merchant_onboarding.go (طلبُ المالك ٢٠٢٦-١٠-١٢).
 			go srv.RunMerchantOnboarding(ctx, time.Minute)
+			// **و«انضمّ متجر جديد» للزبائن** — store_announce.go (قرارُ المالك ٢٠٢٦-١٠-٢١).
+			go srv.RunStoreAnnounce(ctx, 10*time.Minute)
 			if waBot != nil {
 				waBot.SetSelfCommand(srv.ReportForSelf)
 				waBot.SetInbound(func(c context.Context, from, text string) string {

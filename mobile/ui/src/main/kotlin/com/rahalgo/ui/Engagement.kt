@@ -78,6 +78,12 @@ object Engagement {
     const val DEST_HOME = "home"
 
     /**
+     * **وصفحةُ المتجر عادت وجهةً** (قرارُ المالك ٢٠٢٦-١٠-٢١: «انضمّ متجر جديد») — صار للزبون
+     * صفحةُ متجر منذ ٢٠٢٦-١٠-١٨. **وتطبيقٌ لا يعرفها يسقط إلى البيت** كأيّ مجهول.
+     */
+    const val DEST_MERCHANT = "merchant"
+
+    /**
      * **الوجهةُ بعد التنقية** — **نوعٌ ومعرّف.**
      *
      * **و`Home` ليست فشلاً** — **هي الجوابُ الصحيحُ لِما لا وجهةَ له
@@ -99,7 +105,7 @@ object Engagement {
         val type = entity?.trim().orEmpty()
         val id = entityId?.trim().orEmpty()
         return when (type) {
-            DEST_OFFER, DEST_ORDER_CHAT, DEST_ORDER ->
+            DEST_OFFER, DEST_ORDER_CHAT, DEST_ORDER, DEST_MERCHANT ->
                 if (id.isEmpty()) HOME else Dest(type, id)
             else -> HOME
         }

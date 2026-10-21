@@ -235,37 +235,29 @@ func TestMD_MerchantDestinationIsRefusedAtTheDoor(t *testing.T) {
 		return b
 	}
 
-	// **MD-03 · نداءٌ مصنوعٌ بيدٍ يقصد المتجر.**
+	// **MD-03 · تهجئةٌ أخرى للمتجر ليست وجهة** — و«merchant» نفسُها عادت وجهةً
+	// (قرارُ المالك ٢٠٢٦-١٠-٢١: «انضمّ متجر جديد»، وللزبون صفحةُ متجر).
 	id := "8b0a8a71-d186-4647-ae3b-9cd3898508bf"
-	for _, dest := range []string{"merchant", "MERCHANT", "merchants", " merchant "} {
+	for _, dest := range []string{"MERCHANT", "merchants", " merchant "} {
 		r := mkCampaign(t, hh, tok, body(map[string]any{"dest_type": dest, "dest_id": id}))
 		if r.Code != http.StatusBadRequest {
 			t.Fatalf("**قُبلت وجهةُ متجرٍ**: %q ⇒ %d", dest, r.Code)
 		}
 	}
 
-	// **MD-07 · ونسخةٌ قديمةٌ من اللوحة ترسلها كما كانت ترسلها** —
-	// **بمعرّفِ متجرٍ قائمٍ في القاعدة**: **والوجودُ لا يجعلها وجهة.**
+	// **MD-07 · ووجهةُ متجرٍ بمعرّفه تُقبل** (٢٠٢٦-١٠-٢١) — وبلا معرّفٍ تُردّ.
+	if r := mkCampaign(t, hh, tok, body(map[string]any{"dest_type": "merchant"})); r.Code != http.StatusBadRequest {
+		t.Fatalf("**قُبلت وجهةُ متجرٍ بلا معرّف**: %d", r.Code)
+	}
 	var merchantID string
 	_ = hh.Pool.QueryRow(ctxBG(), `SELECT id::text FROM merchants LIMIT 1`).Scan(&merchantID)
 	if merchantID != "" {
 		r := mkCampaign(t, hh, tok, body(map[string]any{
 			"dest_type": "merchant", "dest_id": merchantID,
 		}))
-		if r.Code != http.StatusBadRequest {
-			t.Fatalf("**قُبلت وجهةُ متجرٍ قائمٍ فعلاً**: %d", r.Code)
+		if r.Code >= 300 {
+			t.Fatalf("**رُدّت وجهةُ متجرٍ قائم**: %s", r)
 		}
-	}
-
-	// **ولا صفَّ كُتب** — **والردُّ وحدَه لا يكفي**: **حملةٌ محفوظةٌ
-	// بوجهةٍ لا تُفتَح تنتظر من يرسلها.**
-	var rows int
-	if err := hh.Pool.QueryRow(ctxBG(),
-		`SELECT count(*) FROM campaigns WHERE dest_type = 'merchant'`).Scan(&rows); err != nil {
-		t.Fatalf("عدُّ الحملات: %v", err)
-	}
-	if rows != 0 {
-		t.Fatalf("**حُفظت حملةٌ بوجهة متجر**: %d", rows)
 	}
 
 	// **MD-04 · والعرضُ يبقى مقبولاً** — **وحارسٌ يمنع كلَّ شيءٍ ليس

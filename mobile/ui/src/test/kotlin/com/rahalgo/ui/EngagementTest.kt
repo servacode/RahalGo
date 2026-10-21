@@ -33,9 +33,8 @@ class EngagementTest {
         assertEquals("3df913ef-3c56-484f-b19d-031364df6726", order.id)
         assertFalse(order.isHome)
 
-        // **و«المتجر» رُفعت** (قرارُ المالك ٢٠٢٦-٠٩-١٥) — **ولا شاشةَ
-        // لها عند الزبون**: **فتسقط إلى البيت** (`MD-08`).
-        assertTrue(Engagement.route("merchant", "abc").isHome)
+        // **و«المتجر» عادت وجهةً** (قرارُ المالك ٢٠٢٦-١٠-٢١) — صار للزبون صفحةُ متجر.
+        assertEquals(Engagement.DEST_MERCHANT, Engagement.route("merchant", "abc").type)
     }
 
     // ═════════════════ AN-03 ═════════════════

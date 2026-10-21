@@ -2693,6 +2693,39 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/merchants/{id}/announce",
+      "handler": "handleAdminStoreAnnounce",
+      "auth": true,
+      "capability": "merchants.read",
+      "response": [
+        {
+          "name": "announced_at",
+          "type": "unknown"
+        },
+        {
+          "name": "skip",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/merchants/{id}/announce",
+      "handler": "handleAdminSetStoreAnnounce",
+      "auth": true,
+      "capability": "merchants.manage",
+      "request": [
+        {
+          "name": "skip",
+          "type": "?bool"
+        }
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/merchants/{id}/cash-settlements",
       "handler": "handleMerchantCashSettlements",
       "auth": true,
