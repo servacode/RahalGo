@@ -119,98 +119,53 @@ export function OrderTrackV({
   const last = stages.length - 1;
 
   return (
-    /* **والعمودُ يملأ طولَ ما بجانبه** — `flex-1` على كلّ مرحلةٍ يوزّع
-       المراحلَ على الطول كلِّه، **فتطول البطاقةُ فيتباعد ما فيه ولا
-       يتكدّس في أعلاه.** */
-    <ul className={`flex h-full flex-col text-2xs leading-tight ${className}`}>
+    /* **والخطُّ في وسط العمود والمرحلةُ سطرٌ واحدٌ عليه** (المالك ٢٠٢٦-١٠-٢٢: «نخلي الخط
+       بوسط الكتابة فيصير واضح انه حاليا نحن وين والكتابة تصير بسطر واحد») — كلُّ مرحلةٍ
+       شارةٌ على الخطّ، **والحاليّةُ مملوءةٌ بلونها**، وما مضى بإطارٍ ملوّن، وما بقي باهت.
+       **و`flex-1` على كلّ مرحلةٍ إلا الأخيرة** يوزّعها على طول البطاقة. */
+    <ul className={`flex h-full flex-col items-center text-2xs leading-tight ${className}`}>
       {stages.map((s, i) => {
         const done = !ended && i < current;
         const now = !ended && i === current;
-        // **والخطُّ تحت هذه المرحلة هو الانتقالُ إلى التي تليها** —
-        // فوقتُه ووصفُه يُؤخذان منها لا منها هي.
         const next = stages[i + 1];
         const crossed = !ended && i + 1 <= current;
         return (
-          <li
-            key={s.id}
-            /* **وكلُّ مرحلةٍ تنمو بالتساوي إلّا الأخيرة** — فتقف نقطتُها
-               عند القاع بالضبط، **ولو نمت لَبقي تحتها فراغٌ بقدر سطر.** */
-            className={`flex flex-col ${i < last ? "flex-1" : ""}`}
-          >
-            <div className="flex items-start gap-1.5">
-              <span
-                aria-hidden
-                className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full border-2 transition-colors ${
-                  done
-                    ? "border-accent bg-accent"
-                    : now
-                      ? "border-accent bg-surface ring-2 ring-accent-fill"
-                      : "border-line bg-surface"
-                }`}
-              />
-              <span
-                className={
-                  now
-                    ? "font-bold text-accent-text"
-                    : done
-                      ? "text-ink-muted"
-                      : "text-ink-muted opacity-50"
-                }
-              >
-                {s.label}
-              </span>
-            </div>
-            {now && currentAside && <div className="mt-1 ps-4">{currentAside}</div>}
+          <li key={s.id} className={`flex w-full flex-col items-center ${i < last ? "flex-1" : ""}`}>
+            <span
+              className={`relative z-10 whitespace-nowrap rounded-control border px-1.5 py-0.5 transition-colors ${
+                now
+                  ? "border-accent bg-accent font-bold text-on-bright"
+                  : done
+                    ? "border-accent-edge bg-surface text-ink-muted"
+                    : "border-line-soft bg-surface text-ink-muted opacity-60"
+              }`}
+            >
+              {s.label}
+            </span>
+            {now && currentAside && <div className="mt-1 text-center">{currentAside}</div>}
 
-            {/* ══════════════════════════════════════════════════════
-                **والواصلُ يُرسم تحت النقطة لا خلف العمود**
-                ══════════════════════════════════════════════════════
-
-                **خطٌّ واحدٌ بطول العمود** يحتاج أن يعرف أين أوّلُ نقطةٍ
-                وأين آخرُها — **وهو ما لا يُعرف قبل الرسم.**
-
-                **فكلُّ مرحلةٍ تحمل واصلَها**: من تحت نقطتها إلى قاع
-                صفِّها — **وقاعُ صفِّها هو نقطةُ التي تليها.**
-
-                **و`items-center` تضع الوقتَ في منتصفه** بلا حسابِ
-                نسبٍ — والصندوقُ ينمو بطول ما تحته فيبقى الوقتُ في
-                وسطه مهما طالت البطاقة. */}
+            {/* **وبين مرحلتين خطٌّ في الوسط** يمتدّ بطول ما بينهما، **والمدّةُ شارةٌ عليه** —
+                والساعةُ الدقيقةُ في التلميح، حجّةٌ تُطلب في شكوى. */}
             {i < last && (
-              <div className="relative flex flex-1 items-center">
+              <div className="relative flex w-full flex-1 items-center justify-center">
                 <span
                   aria-hidden
-                  className={`absolute -top-1 bottom-0 w-px ${done ? "bg-accent" : "bg-line"}`}
-                  /* **موضعُه مركزُ النقطة** — والنقطةُ عشرةُ بكسلاتٍ،
-                     فمركزُها خمسةٌ من طرف العمود. **والطرفُ يمينٌ في
-                     واجهةٍ عربيّة.** */
-                  style={{ insetInlineStart: "4.5px" }}
+                  className={`absolute bottom-0 top-0 w-0.5 -translate-x-1/2 ${done ? "bg-accent" : "bg-line"}`}
+                  style={{ left: "50%" }}
                 />
                 {crossed && (next?.span || next?.note) && (
                   <span
-                    className="ps-4 text-ink-dim"
-                    /* **والساعةُ الدقيقةُ هنا** — حجّةٌ تُطلب في شكوى
-                       ولا تُزاحم المدّةَ في العمود. */
+                    className="relative z-10 rounded-badge bg-surface px-1 text-center text-ink-dim"
                     title={next.at ?? undefined}
                   >
                     {next.span && (
                       <span className="inline-flex items-center gap-0.5">
                         <span className="tabular-nums">{next.span}</span>
-                        {/* **والعلامةُ بعد الرقم لا قبله** — الرقمُ هو
-                            الخبر، **والعلامةُ حكمٌ عليه** فتتلوه. */}
-                        {next.late === true && (
-                          <IconClose size={11} className="text-danger" />
-                        )}
-                        {next.late === false && (
-                          <IconCheck size={11} className="text-success" />
-                        )}
+                        {next.late === true && <IconClose size={11} className="text-danger" />}
+                        {next.late === false && <IconCheck size={11} className="text-success" />}
                       </span>
                     )}
-                    {next.note && (
-                      /* **والاسمُ سطراً تحت المدّة** — عمودٌ بعرض أربعةٍ
-                         وعشرين لا يسع مدّةً واسماً في سطر، **وواحدٌ
-                         يزحف على الآخر فيُقرآن كلمةً واحدة.** */
-                      <span className="block">{next.note}</span>
-                    )}
+                    {next.note && <span className="block">{next.note}</span>}
                   </span>
                 )}
               </div>

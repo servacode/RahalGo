@@ -470,7 +470,7 @@ export function DataView<T>({
                 {/* **وعلى الجوّال يُطوى العمود** (قرارُ المالك ٢٠٢٦-١٠-٠٤، الطلبات ١٥):
                   ستّةٌ وتسعون بكسلاً من شاشةٍ عرضُها ثلاثُمئةٍ وستّون تُضيّق المحتوى
                   حتّى يلتفّ كلُّ سطر — **ومن احتاج المرحلةَ هناك يكتبها سطراً.** */}
-                {side && <div className="hidden w-24 shrink-0 sm:block">{side}</div>}
+                {side && <div className="hidden w-28 shrink-0 sm:block">{side}</div>}
               </div>
 
               {actions && (
