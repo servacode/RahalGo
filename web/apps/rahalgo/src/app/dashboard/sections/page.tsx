@@ -19,7 +19,7 @@
 
 import { useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { PageContainer, PageHeader, StatGrid, StatCard, IconStore, IconGrid, IconBag, IconList, IconWarning } from "@rahalgo/ui";
+import { PageContainer, PageHeader, StatCard, IconStore } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import SectionsTab from "@/components/admin/market/SectionsTab";
 import ItemsTab from "@/components/admin/market/ItemsTab";
@@ -41,7 +41,8 @@ export default function MarketPage() {
 
   useEffect(() => {
     const total = (r: unknown) => (r as { total?: number })?.total ?? 0;
-    const len = (r: unknown) => (Array.isArray(r) ? r.length : 0);
+    const len = (r: unknown) =>
+      Array.isArray(r) ? r.length : ((r as { sections?: unknown[] })?.sections?.length ?? 0);
     void Promise.allSettled([
       api("/api/v1/admin/sections"),
       api("/api/v1/admin/market/items?per_page=1"),
@@ -79,21 +80,20 @@ export default function MarketPage() {
   return (
     <PageContainer>
       <PageHeader icon={IconStore} title={S.title} subtitle={S.hint} />
-      <div className="mb-4">
-        <StatGrid>
+      {/* **سطرٌ واحدٌ صغير** (طلبُ المالك ٢٠٢٦-١٠-٢٢) — ستّةٌ على الشاشة العريضة، وثلاثةٌ على الجوّال. */}
+      <div className="mb-4 grid grid-cols-3 gap-2 lg:grid-cols-6">
           {(
             [
-              ["sections", T.sections, IconGrid],
-              ["items", T.items, IconBag],
-              ["stores", T.stores, IconStore],
-              ["categories", T.categories, IconList],
-              ["setup", T.setup, IconWarning],
-              ["quality", T.quality, IconWarning],
+              ["sections", T.sections],
+              ["items", T.items],
+              ["stores", T.stores],
+              ["categories", T.categories],
+              ["setup", T.setup],
+              ["quality", T.quality],
             ] as const
-          ).map(([key, label, icon]) => (
+          ).map(([key, label]) => (
             <StatCard
               key={key}
-              icon={icon}
               label={label}
               value={counts[key] ?? "…"}
               tone={(key === "setup" || key === "quality") && (counts[key] ?? 0) > 0 ? "warning" : "default"}
@@ -101,7 +101,6 @@ export default function MarketPage() {
               onClick={() => setTab(key)}
             />
           ))}
-        </StatGrid>
       </div>
       {tab === "sections" && <SectionsTab />}
       {tab === "items" && <ItemsTab />}
