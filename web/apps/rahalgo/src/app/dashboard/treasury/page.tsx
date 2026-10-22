@@ -14,7 +14,6 @@
  */
 
 import { Suspense, useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   PageContainer,
@@ -71,31 +70,32 @@ function TreasuryHub() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fromUrl]);
 
-  function go(k: Tab) {
-    setTab(k);
+  // **سطرٌ واحد** (طلبُ المالك ٢٠٢٦-١٠-٢٣): تبويباتُ الخزينة وروابطُ صفحات المال
+  // في صفٍّ واحد — والرابطُ مفتاحُه مسارُه، فيُفتح بابُه بدل أن يُبدَّل التبويب.
+  function go(k: Tab | string) {
+    if (k.startsWith("/")) {
+      router.push(k);
+      return;
+    }
+    if (!TABS.includes(k as Tab)) return;
+    setTab(k as Tab);
     router.replace(`/dashboard/treasury?tab=${k}`);
   }
 
-  const items: TabDef<Tab>[] = [
+  const items: TabDef<string>[] = [
     { key: "overview", label: T.tabs.overview, icon: IconWallet },
     { key: "statement", label: T.tabs.statement, icon: IconStatus },
     { key: "cashbox", label: T.tabs.cashbox, icon: IconBalance },
     { key: "approvals", label: T.tabs.approvals, icon: IconCheck },
     ...(canTopup ? [{ key: "topup" as const, label: T.topup.tab, icon: IconWallet }] : []),
     { key: "health", label: T.tabs.health, icon: IconShieldCheck },
+    ...LINKS.map((l) => ({ key: l.href, label: l.label })),
   ];
 
   return (
     <PageContainer>
       <PageHeader icon={IconWallet} title={T.title} subtitle={T.subtitle} />
-      <nav aria-label={T.links.title} className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
-        {LINKS.map((l) => (
-          <Link key={l.href} href={l.href} className="text-primary underline">
-            {l.label}
-          </Link>
-        ))}
-      </nav>
-      <Tabs items={items} value={tab} onChange={go} className="mb-4" />
+      <Tabs<string> items={items} value={tab} onChange={go} className="mb-4" />
       {tab === "overview" && <OverviewTab onTab={go} />}
       {tab === "statement" && <StatementTab />}
       {tab === "cashbox" && <CashboxTab />}
