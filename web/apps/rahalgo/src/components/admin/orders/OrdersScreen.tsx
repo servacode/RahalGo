@@ -3587,11 +3587,9 @@ function PartnerStoreBox({
             </p>
           )}
           <div className="flex gap-1.5">
-            <Button
-              variant={o.sent_to_merchant_at ? "secondary" : "primary"}
-              disabled={busy || working}
-              onClick={onSend}
-            >
+            {/* **بشكل الأزرار الثانويّة** (المالك ٢٠٢٦-١٠-٢٢: «كل زر شكله مختلف») — المملوءُ
+                للخطوة الأساسيّة وحدَها، والأحمرُ للرفض. */}
+            <Button variant="secondary" disabled={busy || working} onClick={onSend}>
               <span className="flex items-center gap-1.5">
                 <IconWhatsApp size={15} />
                 {o.sent_to_merchant_at ? OP.partnerSent : OP.partnerSend}
