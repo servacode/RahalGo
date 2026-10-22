@@ -335,7 +335,7 @@ const SEC_LOOK = {
 function SectionHead({ role }: { role: keyof typeof SEC_LOOK }) {
   const { tone, Icon } = SEC_LOOK[role];
   return (
-    <span className={`mt-1 flex items-center gap-1.5 border-t border-line-soft pt-2 text-xs font-bold ${tone}`}>
+    <span className={`flex items-center gap-1.5 pt-1 text-xs font-bold ${tone}`}>
       <Icon size={13} />
       {SEC[role]}
     </span>
@@ -1486,7 +1486,6 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       id: "sec_customer",
       header: SEC.customer,
       noLabel: true,
-      block: true,
       only: "cards",
       cell: () => <SectionHead role="customer" />,
     },
@@ -1586,7 +1585,6 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       id: "sec_driver",
       header: SEC.driver,
       noLabel: true,
-      block: true,
       only: "cards",
       hide: (o: OrderRow) =>
         !o.driver_name &&
@@ -1633,7 +1631,6 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       id: "sec_merchant",
       header: SEC.merchant,
       noLabel: true,
-      block: true,
       only: "cards",
       hide: (o: OrderRow) => o.kind === "custom",
       cell: () => <SectionHead role="merchant" />,
@@ -1649,15 +1646,6 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       // أضاع الاسمُ أم لم يكن؟
       hide: (o: OrderRow) => o.kind === "custom",
       cell: (o) => o.merchant_name,
-    },
-    {
-      // **قسمٌ بعنوانه** (ملاحظةُ المالك ٢٠٢٦-١٠-٢٢: «نفصل بين الزبون والسائق والتفاصيل»).
-      id: "sec_details",
-      header: SEC.details,
-      noLabel: true,
-      block: true,
-      only: "cards",
-      cell: () => <SectionHead role="details" />,
     },
     {
       // ══════════════════════════════════════════════════════════════
@@ -3612,19 +3600,21 @@ function PartnerStoreBox({
  * والأحمرُ للمشاكل** فلا يلتبس.
  */
 function KindBadge({ o }: { o: OrderRow }) {
+  // **تعبئةٌ صلبةٌ والنصُّ والأيقونةُ أبيضان** (المالك ٢٠٢٦-١٠-٢٢: «لون ابيض والايقونة وخلفية
+  // البطاقة ملونة»).
   const look =
     o.kind === "merchant_delivery"
-      ? { v: "accent" as const, Icon: IconStore }
+      ? { bg: "bg-info", Icon: IconStore }
       : o.kind === "custom"
         ? o.custom_mode === "amanah"
-          ? { v: "violet" as const, Icon: IconCatOther }
-          : { v: "warning" as const, Icon: IconBag }
-        : { v: "primary" as const, Icon: IconCart };
+          ? { bg: "bg-violet", Icon: IconCatOther }
+          : { bg: "bg-warning", Icon: IconBag }
+        : { bg: "bg-primary", Icon: IconCart };
   return (
-    <Badge variant={look.v} className="gap-1 px-2.5 py-1 text-sm font-bold">
+    <span className={`inline-flex items-center gap-1 rounded-badge px-2.5 py-1 text-sm font-bold text-on-solid ${look.bg}`}>
       <look.Icon size={14} />
       {kindLabel(o)}
-    </Badge>
+    </span>
   );
 }
 
