@@ -3710,9 +3710,11 @@ function kindLabel(o: OrderRow): string {
  * **الأجرةُ مقسومة: للسائق وللمنصّة** (٢٠٢٦-١٠-١٣) — صار لكلّ نوعٍ حصّتُه، **فيُرى أين ذهبت.**
  * ولا يُعرض قبل أن يُعرف أجرُ السائق.
  */
-function FeeSplit({ fee, driver }: { fee: number; driver?: number }) {
+function FeeSplit({ fee, driver, assigned }: { fee: number; driver?: number; assigned: boolean }) {
   const OP = m.admin.ordersPage;
-  if (driver == null || fee <= 0) return null;
+  // **وقبل الإسناد لا عمولة** (المالك ٢٠٢٦-١٠-٢٢: «اجرة التوصيل 100 عمولة المنصة 100 مافي
+  // هيك شي») — أجرُ السائق صفرٌ قبل أن يُسنَد فيُقرأ الفرقُ كلُّه عمولة.
+  if (!assigned || driver == null || fee <= 0) return null;
   const platform = Math.max(0, fee - driver);
   // **«عمولة المنصة» سطرٌ والرقمُ يساراً** (المالك ٢٠٢٦-١٠-٢٢) — و«للسائق» حُذف: «التوصيل»
   // فوقه يقولها، **وما يبقى للسائق هو الأجرةُ ناقصَ هذا السطر.**
@@ -3842,7 +3844,7 @@ function InvoiceList({
           <span className="text-ink-muted">{OP.mdFee}</span>
           <Money value={o.delivery_fee} small />
         </li>
-        <FeeSplit fee={o.delivery_fee} driver={o.driver_fee} />
+        <FeeSplit fee={o.delivery_fee} driver={o.driver_fee} assigned={!!o.driver_name} />
         {/* **وما يقبضه من المستلِم للمتجر** — خارجَ الحساب، يُعرض وحدَه. **وفي «إحضار» تقديرُ
             المتجر** (٢٠٢٦-١٠-١٦) والمبلغُ الحقيقيُّ تحته بحال موافقته. */}
         {o.collect_amount ? (
@@ -3936,7 +3938,7 @@ function InvoiceList({
               <span className="text-xs text-ink-muted">{OP.feeAwaitDriver}</span>
             )}
           </li>
-          {fee != null && <FeeSplit fee={fee} driver={o.driver_fee} />}
+          {fee != null && <FeeSplit fee={fee} driver={o.driver_fee} assigned={!!o.driver_name} />}
           {fee != null && (amanah || (goods != null && goods > 0)) && (
             <li className={`${row} border-t border-line-soft pt-1.5 font-bold`}>
               <span>{amanah ? OP.collectTotal : OP.customTotal}</span>
@@ -4103,7 +4105,7 @@ function InvoiceList({
         <span className="text-ink-muted">{m.admin.ordersPage.deliveryFee}</span>
         <Money value={o.delivery_fee} small />
       </li>
-      <FeeSplit fee={o.delivery_fee} driver={o.driver_fee} />
+      <FeeSplit fee={o.delivery_fee} driver={o.driver_fee} assigned={!!o.driver_name} />
       {o.discount > 0 && (
         <li className="flex items-center justify-between text-sm text-success">
           <span>{m.admin.ordersPage.discount}</span>
