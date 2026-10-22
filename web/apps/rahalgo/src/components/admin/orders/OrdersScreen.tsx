@@ -345,6 +345,8 @@ const SEC_BOX = {
  */
 function boxSections(cols: DataColumn<OrderRow>[]): DataColumn<OrderRow>[] {
   const out: DataColumn<OrderRow>[] = [];
+  const boxes: { role: "customer" | "driver" | "merchant"; head: DataColumn<OrderRow>; members: DataColumn<OrderRow>[] }[] = [];
+  let at = -1;
   for (let i = 0; i < cols.length; i++) {
     const c = cols[i]!;
     const m0 = /^sec_(customer|driver|merchant)$/.exec(c.id);
@@ -352,34 +354,53 @@ function boxSections(cols: DataColumn<OrderRow>[]): DataColumn<OrderRow>[] {
       out.push(c);
       continue;
     }
-    const role = m0[1] as "customer" | "driver" | "merchant";
     const members: DataColumn<OrderRow>[] = [];
     for (let next = cols[i + 1]; next && !next.block && !next.id.startsWith("sec_"); next = cols[i + 1]) {
       members.push(next);
       i++;
     }
-    out.push({
-      ...c,
-      id: "box_" + role,
-      hide: (o) => !!c.hide?.(o) || members.every((x) => !!x.hide?.(o)),
+    if (at < 0) at = out.length;
+    boxes.push({ role: m0[1] as "customer" | "driver" | "merchant", head: c, members });
+  }
+  const shown = (b: (typeof boxes)[number], o: OrderRow) =>
+    !b.head.hide?.(o) && !b.members.every((x) => !!x.hide?.(o));
+  const box = (b: (typeof boxes)[number], o: OrderRow) => (
+    <div key={b.role} className={`flex flex-col gap-1.5 rounded-control border p-2.5 ${SEC_BOX[b.role]}`}>
+      <SectionHead role={b.role} o={o} />
+      {b.members
+        .filter((x) => !x.hide?.(o))
+        .map((x) =>
+          x.noLabel || x.header === SEC[b.role] ? (
+            <div key={x.id} className="font-medium">{x.cell(o)}</div>
+          ) : (
+            <div key={x.id} className="flex items-start justify-between gap-3">
+              <span className="inline-flex shrink-0 items-center gap-1.5 text-ink-muted [&>svg]:h-4 [&>svg]:w-4">
+                {x.icon}
+                {x.header}
+              </span>
+              <span className="min-w-0 text-end">{x.cell(o)}</span>
+            </div>
+          ),
+        )}
+    </div>
+  );
+  // **والترتيبُ ترتيبُ الطريق** (المالك ٢٠٢٦-١٠-٢٢: «اذا الزبون اول شي معناها نجيب من الزبون،
+  // واذا المتجر اول شي ناخذ من المتجر») — من نأخذ منه أوّلاً، ثمّ من نوصّل له، ثمّ السائق.
+  const sequence = (o: OrderRow): ("customer" | "driver" | "merchant")[] =>
+    o.kind === "merchant_delivery" && o.delivery_mode === "fetch"
+      ? ["customer", "merchant", "driver"]
+      : ["merchant", "customer", "driver"];
+  if (at >= 0) {
+    out.splice(at, 0, {
+      id: "boxes",
+      header: SEC.details,
+      noLabel: true,
       cell: (o) => (
-        <div className={`flex flex-col gap-1.5 rounded-control border p-2.5 ${SEC_BOX[role]}`}>
-          <SectionHead role={role} o={o} />
-          {members
-            .filter((x) => !x.hide?.(o))
-            .map((x) =>
-              x.noLabel || x.header === SEC[role] ? (
-                <div key={x.id} className="font-medium">{x.cell(o)}</div>
-              ) : (
-                <div key={x.id} className="flex items-start justify-between gap-3">
-                  <span className="inline-flex shrink-0 items-center gap-1.5 text-ink-muted [&>svg]:h-4 [&>svg]:w-4">
-                    {x.icon}
-                    {x.header}
-                  </span>
-                  <span className="min-w-0 text-end">{x.cell(o)}</span>
-                </div>
-              ),
-            )}
+        <div className="flex flex-col gap-2">
+          {sequence(o)
+            .map((r) => boxes.find((b) => b.role === r))
+            .filter((b): b is (typeof boxes)[number] => !!b && shown(b, o))
+            .map((b) => box(b, o))}
         </div>
       ),
     });
