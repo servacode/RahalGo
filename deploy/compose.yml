@@ -97,6 +97,11 @@ services:
       UPLOADS_DIR: /app/uploads
       # **ومحرّكُ المسارات في الشبكة الداخليّة** — لا يناديه أحدٌ سواه.
       OSRM_URL: http://osrm:5000
+      # **ومحرّكُ التوجيه** (قرارُ المالك ٢٠٢٦-١٠-٢٢: الحاراتُ الجديدة والطرقُ المسكّرة) —
+      # `valhalla` يوجّه بالخريطة الجديدة، وOSRM باقٍ لمطابقة الطريق. **والرجوعُ سطرٌ في
+      # `.env`**: `ROUTING_ENGINE=osrm` ثمّ إعادةُ تشغيل المحرّك.
+      ROUTING_ENGINE: ${ROUTING_ENGINE:-osrm}
+      VALHALLA_URL: http://valhalla:8002
       GEOCODER_URL: https://nominatim.openstreetmap.org
       # **ورموزُ الدخول بواتساب** — و`dev` تطبعها في السجلّ،
       # **والمحرّكُ يرفض الإقلاع بها في الإنتاج** ومحقٌّ: **سجلٌّ فيه
@@ -206,6 +211,22 @@ services:
     build:
       context: ../routing
     restart: unless-stopped
+
+  # **Valhalla — بلاطاتُ الرقة بالحارات مبنيّةٌ مسبقاً** في `/srv/rahalgo/valhalla`
+  # (منسوخةٌ من التجهيز حيث جُرّبت ٢٠٢٦-١٠-٢١) — **لا تُبنى على هذا الصندوق**،
+  # **وسقفُ ذاكرةٍ صريح** فلا يُسقط القاعدة.
+  valhalla:
+    image: ghcr.io/valhalla/valhalla:3.9.0
+    restart: unless-stopped
+    entrypoint: ["valhalla_service", "/data/valhalla.json", "1"]
+    volumes:
+      - /srv/rahalgo/valhalla:/data:ro
+    mem_limit: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 volumes:
   pgdata:
