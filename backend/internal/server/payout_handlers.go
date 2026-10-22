@@ -505,7 +505,7 @@ func (s *Server) handleDecidePayout(w http.ResponseWriter, r *http.Request) {
 		// **ولا أحدَ يقرّر في سحبه هو** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٥) —
 		// إلّا مالكُ المنصّة حين لا يوجد غيرُه يملك القرار، ويُعلَّم في السجلّ.
 		verdict, err := approval.Check(ctx, q, approval.Request{
-			ProposedBy: userID, Actor: actor, Capability: authz.PayoutsDecide,
+			ProposedBy: userID, Actor: actor, Capability: authz.PayoutsDecide, OwnFunds: true,
 		})
 		if err != nil {
 			return IdempotentBody{}, err

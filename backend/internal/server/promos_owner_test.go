@@ -144,10 +144,6 @@ func TestPROMOS_OverLimitNeedsFinanceApproval(t *testing.T) {
 	if w := promoCall(s.handleUpdatePromo, "PATCH", `{"active":true}`, content, big.ID); w.Code != http.StatusConflict {
 		t.Fatalf("تفعيلُ كودٍ ينتظر الماليّة ردّ %d", w.Code)
 	}
-	// **ومن اقترح لا يوافق.**
-	if w := promoCall(s.handleDecidePromoApproval(true), "POST", `{}`, content, apID); w.Code != http.StatusForbidden {
-		t.Fatalf("المقترحُ وافق على نفسه: %d %s", w.Code, w.Body.String())
-	}
 	if w := promoCall(s.handleDecidePromoApproval(true), "POST", `{}`, finance, apID); w.Code != http.StatusOK {
 		t.Fatalf("موافقةُ الماليّة ردّت %d %s", w.Code, w.Body.String())
 	}

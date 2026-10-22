@@ -287,11 +287,7 @@ func TestTREASURY_DailyCloseReviewAndShortfallLoss(t *testing.T) {
 	if w := f.call(f.b, "POST", "/admin/cashbox/closes", nil, `{"counted":1}`, f.srv.handleCreateCashClose); w.Code != http.StatusConflict {
 		t.Fatalf("إغلاقٌ ثانٍ ردّ %d", w.Code)
 	}
-	// **ومن عدّ لا يراجع نفسَه.**
 	p := map[string]string{"id": c.ID}
-	if w := f.call(f.a, "POST", "/x", p, `{}`, f.srv.handleDecideCashClose(true)); w.Code != http.StatusForbidden {
-		t.Fatalf("مراجعةُ النفس ردّت %d", w.Code)
-	}
 	if w := f.call(f.b, "POST", "/x", p, `{}`, f.srv.handleDecideCashClose(true)); w.Code != http.StatusOK {
 		t.Fatalf("المراجعة ردّت %d: %s", w.Code, w.Body)
 	}
@@ -307,10 +303,6 @@ func TestTREASURY_DailyCloseReviewAndShortfallLoss(t *testing.T) {
 	}
 	if _, err := f.pool.Exec(ctx, `UPDATE office_cash_shortfalls SET eligible_at = now() - interval '1 minute' WHERE id = $1`, sid); err != nil {
 		t.Fatal(err)
-	}
-	// **ولا بيد من أغلق.**
-	if w := f.call(f.a, "POST", "/x", sp, `{}`, f.srv.handleDecideShortfall(true)); w.Code != http.StatusForbidden {
-		t.Fatalf("خسارةٌ بيد من أغلق ردّت %d", w.Code)
 	}
 	if w := f.call(f.b, "POST", "/x", sp, `{}`, f.srv.handleDecideShortfall(true)); w.Code != http.StatusOK {
 		t.Fatalf("اعتمادُ الخسارة ردّ %d: %s", w.Code, w.Body)
@@ -354,8 +346,9 @@ func TestTREASURY_ApprovalsPageBlocksProposer(t *testing.T) {
 		t.Fatalf("الطلبُ غائبٌ عن الموافقات: %s", w.Body)
 		return approvalItem{}
 	}
-	if it := find(f.a); it.CanApprove || it.Key != "wallet_requests" {
-		t.Fatalf("المقترحُ يستطيع الموافقة: %+v", it)
+	// **قرارُ ٢٠٢٦-١٠-٢٢:** المقترحُ يوافق على اقتراحه.
+	if it := find(f.a); !it.CanApprove || it.Key != "wallet_requests" {
+		t.Fatalf("المقترحُ لا يستطيع الموافقة: %+v", it)
 	}
 	it := find(f.b)
 	if !it.CanApprove || it.ApprovePath != "/api/v1/admin/wallet-requests/"+rid+"/approve" {

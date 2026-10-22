@@ -216,12 +216,6 @@ func TestINC_ManualGrantIsARequestApprovedByAnother(t *testing.T) {
 		t.Fatalf("لا معرّفَ طلب: %s", w.Body.String())
 	}
 
-	self := f.call(f.proposer, http.MethodPost, "/admin/incentive-requests/x/approve",
-		map[string]string{"id": res.Data.RequestID}, `{}`, f.srv.handleDecideIncentiveRequest(true))
-	if self.Code != http.StatusForbidden {
-		t.Fatalf("وافق صاحبُ الاقتراح على نفسه برمز %d", self.Code)
-	}
-
 	ok := f.call(f.approver, http.MethodPost, "/admin/incentive-requests/x/approve",
 		map[string]string{"id": res.Data.RequestID}, `{}`, f.srv.handleDecideIncentiveRequest(true))
 	if ok.Code != http.StatusOK {

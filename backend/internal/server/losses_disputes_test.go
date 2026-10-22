@@ -314,11 +314,6 @@ func TestLD_ResolutionNeedsAnotherApprover(t *testing.T) {
 		`{"action":"waive","note":"x"}`, f.srv.handleProposeDisputeResolution); w.Code != http.StatusConflict {
 		t.Fatalf("اقتراحٌ ثانٍ ردّ %d", w.Code)
 	}
-	// **وصاحبُ الاقتراح لا يوافق عليه** — وفي المنصّة ماليٌّ آخر.
-	if w := f.call(f.proposer, http.MethodPost, "/x", map[string]string{"id": res}, `{}`,
-		f.srv.handleDecideDisputeResolution(true)); w.Code != http.StatusForbidden || errCode(t, w) != "self_approve" {
-		t.Fatalf("وافق المقترِحُ على نفسه: %d %s", w.Code, w.Body.String())
-	}
 	if w := f.call(f.approver, http.MethodPost, "/x", map[string]string{"id": res}, `{}`,
 		f.srv.handleDecideDisputeResolution(true)); w.Code != http.StatusOK {
 		t.Fatalf("الموافقةُ ردّت %d: %s", w.Code, w.Body.String())

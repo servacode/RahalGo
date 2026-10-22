@@ -106,11 +106,6 @@ func TestOBLX_OfficeCashPaymentEntersCashboxAndTreasury(t *testing.T) {
 	if by != fin.ID {
 		t.Errorf("الطلبُ المعلَّق بلا مقترِحه في القائمة: proposed_by=%q", by)
 	}
-	// **وصاحبُ الاقتراح لا يوافق على نفسه.**
-	if self := h.POST("/api/v1/admin/obligation-requests/"+reqID+"/approve", fin.Token,
-		map[string]any{}); self.Err() != "self_approve" {
-		t.Errorf("موافقةُ المقترِح: %s", self)
-	}
 	if ok := h.POST("/api/v1/admin/obligation-requests/"+reqID+"/approve", admin.Token,
 		map[string]any{}); ok.Code != 200 {
 		t.Fatalf("الموافقة: %s", ok)

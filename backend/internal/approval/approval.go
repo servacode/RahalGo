@@ -11,6 +11,10 @@
 //	    **المالكُ (`owner_super_admin`) وحدَه**، وتُعلَّم الموافقةُ في السجلّ
 //	    بعلامةٍ صريحة (`self_approved` + `self_approval_reason`).
 //
+// **وقرارُ المالك ٢٠٢٦-١٠-٢٢ ينسخ ١–٣:** الأدمن الذي اقترح يوافق على ما اقترحه
+// — وتبقى العلامةُ في السجلّ. **ويبقى الحكمُ القديم في مال الفاعل نفسِه وحدَه**
+// (`OwnFunds`: سحبُه هو) — فلا أحدَ يصرف لنفسه.
+//
 // **وكان الحكمُ في حركات المحفظة وحدَها** (`canSelfApprove`) — ويجيز
 // لمدير المنصّة أيضاً. **والآن مصدرٌ واحد**: صرفٌ جديدٌ (مصروف، تعويض، سحب)
 // يقرأ `approval.Check` ولا يكتب قاعدته من جديد.
@@ -32,6 +36,9 @@ var ErrSelfApprove = httpx.NewError(http.StatusForbidden,
 // SelfApprovalReason **سببُ الموافقة الذاتيّة كما يُكتب في السجلّ.**
 const SelfApprovalReason = "owner_alone_no_other_approver"
 
+// SelfApprovalByProposer **سببُ الموافقة الذاتيّة بقرار ٢٠٢٦-١٠-٢٢** — المقترحُ يوافق.
+const SelfApprovalByProposer = "proposer_approves_own"
+
 // Request **موافقةٌ تُطلَب على اقتراح.**
 type Request struct {
 	// ProposedBy معرّفُ صاحب الاقتراح.
@@ -40,19 +47,26 @@ type Request struct {
 	Actor string
 	// Capability **القدرةُ التي تملك الموافقة** — مثلاً `finance.manage`.
 	Capability authz.Capability
+	// OwnFunds **المالُ مالُ صاحب الطلب** (سحبُه هو) — فيبقى الحكمُ القديم:
+	// لا يقرّر فيه إلّا المالكُ وحدَه بلا بديل.
+	OwnFunds bool
 }
 
 // Verdict **حكمُ الموافقة** — يُكتب في الطلب وفي السجلّ.
 type Verdict struct {
 	// SelfApproved **وافق صاحبُ الاقتراح على نفسه** — المالكُ وحدَه وبلا بديل.
 	SelfApproved bool
+	ownerAlone   bool
 }
 
 // AuditFields **ما يُضاف إلى تفاصيل السجلّ** — علامةٌ صريحةٌ لا تُفوَّت.
 func (v Verdict) AuditFields() map[string]any {
 	out := map[string]any{"self_approved": v.SelfApproved}
 	if v.SelfApproved {
-		out["self_approval_reason"] = SelfApprovalReason
+		out["self_approval_reason"] = SelfApprovalByProposer
+		if v.ownerAlone {
+			out["self_approval_reason"] = SelfApprovalReason
+		}
 	}
 	return out
 }
@@ -66,12 +80,15 @@ func Check(ctx context.Context, q dbtx.Querier, req Request) (Verdict, error) {
 	if req.ProposedBy == "" || req.ProposedBy != req.Actor {
 		return Verdict{}, nil
 	}
+	if !req.OwnFunds {
+		return Verdict{SelfApproved: true}, nil
+	}
 	alone, err := OwnerAlone(ctx, q, req.Actor, req.Capability)
 	if err != nil {
 		return Verdict{}, err
 	}
 	if alone {
-		return Verdict{SelfApproved: true}, nil
+		return Verdict{SelfApproved: true, ownerAlone: true}, nil
 	}
 	return Verdict{}, ErrSelfApprove
 }
@@ -103,10 +120,8 @@ func OwnerAlone(ctx context.Context, q dbtx.Querier, actor string, capability au
 // المقترحُ، والموافقُ حين يُلغى ما وافق عليه)، أو كان المالكَ وحدَه (`ownerAlone`
 // من `OwnerAlone`). **والشاشةُ تقرؤه علَماً** فلا تقارن المعرّفاتِ بنفسها.
 func Allowed(actor string, ownerAlone bool, parties ...string) bool {
-	for _, p := range parties {
-		if p != "" && p == actor {
-			return ownerAlone
-		}
-	}
+	// **قرارُ ٢٠٢٦-١٠-٢٢:** المقترحُ يوافق على ما اقترحه — فالزرُّ ظاهرٌ له.
+	_ = ownerAlone
+	_ = parties
 	return true
 }

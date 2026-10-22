@@ -7374,13 +7374,13 @@
       "orphan": true
     },
     {
-      "name": "TestAPR_AdminAloneCannotSelfApprove",
+      "name": "TestAPR_OtherApproverPasses",
       "file": "internal/approval/approval_test.go",
       "package": "approval",
       "orphan": true
     },
     {
-      "name": "TestAPR_OtherApproverPasses",
+      "name": "TestAPR_OwnFundsRefusedWhenAnotherExists",
       "file": "internal/approval/approval_test.go",
       "package": "approval",
       "orphan": true
@@ -7392,7 +7392,7 @@
       "orphan": true
     },
     {
-      "name": "TestAPR_SelfApproveRefusedWhenAnotherExists",
+      "name": "TestAPR_ProposerApprovesOwnFlagged",
       "file": "internal/approval/approval_test.go",
       "package": "approval",
       "orphan": true

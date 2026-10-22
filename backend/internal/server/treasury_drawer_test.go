@@ -103,8 +103,9 @@ func TestTREASURY_CashCloseCanApproveFlag(t *testing.T) {
 		pc, _ := raw(t, w.Body.Bytes())["pending_close"].(map[string]any)
 		return pc["can_approve"]
 	}
-	if flag(f.a) != false {
-		t.Fatal("من أغلق يرى زرَّ مراجعة نفسِه وغيرُه موجود")
+	// **قرارُ ٢٠٢٦-١٠-٢٢:** من أغلق يراجع نفسَه.
+	if flag(f.a) != true {
+		t.Fatal("من أغلق لا يرى زرَّ مراجعة نفسِه")
 	}
 	if flag(f.b) != true {
 		t.Fatal("غيرُ من أغلق لا يرى زرَّ المراجعة")

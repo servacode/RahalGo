@@ -202,39 +202,30 @@ func TestEXP1015_CanVoidCanApproveFlags(t *testing.T) {
 	reqID, _ := d["id"].(string)
 
 	asClerk, asBoss := x.listRaw(t, clerk, q), x.listRaw(t, boss, q)
-	if r := rowByID(asClerk, direct); r == nil || r["can_void"] != false {
-		t.Fatalf("**من سجّل يرى «إلغاء»**: %v", r)
+	// **قرارُ ٢٠٢٦-١٠-٢٢:** من سجّل أو اقترح أو وافق يقرّر بنفسه — فالأزرارُ للجميع.
+	for _, r := range []map[string]any{rowByID(asClerk, direct), rowByID(asBoss, direct)} {
+		if r == nil || r["can_void"] != true {
+			t.Fatalf("«إلغاء» غائب: %v", r)
+		}
 	}
-	if r := rowByID(asBoss, direct); r == nil || r["can_void"] != true {
-		t.Fatalf("غيرُه لا يرى «إلغاء»: %v", r)
+	for _, r := range []map[string]any{rowByID(asClerk, reqID), rowByID(asBoss, reqID)} {
+		if r == nil || r["can_approve"] != true {
+			t.Fatalf("«موافقة» غائبة: %v", r)
+		}
 	}
-	if r := rowByID(asClerk, reqID); r == nil || r["can_approve"] != false {
-		t.Fatalf("**صاحبُ الاقتراح يرى «موافقة»**: %v", r)
-	}
-	if r := rowByID(asBoss, reqID); r == nil || r["can_approve"] != true {
-		t.Fatalf("غيرُه لا يرى «موافقة»: %v", r)
-	}
-
-	// **والموافقُ لا يلغي ما وافق عليه وحدَه.**
-	w := x.call(t, s.handleApproveExpenseRequest, boss, "POST", "/x", `{}`, reqID)
+	w := x.call(t, s.handleApproveExpenseRequest, clerk, "POST", "/x", `{}`, reqID)
 	if w.Code != 200 {
-		t.Fatalf("الموافقة: %d %s", w.Code, w.Body.String())
+		t.Fatalf("موافقةُ المقترح على اقتراحه: %d %s", w.Code, w.Body.String())
 	}
 	expID, _ := expData(t, w)["expense_id"].(string)
 	x.ids = append(x.ids, expID)
-	if r := rowByID(x.listRaw(t, boss, q), expID); r == nil || r["can_void"] != false {
-		t.Fatalf("**الموافقُ يرى «إلغاء» على ما وافق عليه**: %v", r)
+	if r := rowByID(x.listRaw(t, clerk, q), expID); r == nil || r["can_void"] != true {
+		t.Fatalf("الموافقُ لا يرى «إلغاء»: %v", r)
 	}
-	if w := x.call(t, s.handleVoidExpense, boss, "POST", "/x", `{"reason":"خطأ"}`, expID); w.Code != 403 ||
-		expErrCode(w) != "expense_void_self" {
-		t.Fatalf("**ألغى الموافقُ ما وافق عليه**: %d %s", w.Code, w.Body.String())
+	if w := x.call(t, s.handleVoidExpense, clerk, "POST", "/x", `{"reason":"خطأ"}`, expID); w.Code != 200 {
+		t.Fatalf("الموافقُ لم يلغِ ما وافق عليه: %d %s", w.Code, w.Body.String())
 	}
-	if r := rowByID(x.listRaw(t, third, q), expID); r == nil || r["can_void"] != true {
-		t.Fatalf("الثالثُ لا يرى «إلغاء»: %v", r)
-	}
-	if w := x.call(t, s.handleVoidExpense, third, "POST", "/x", `{"reason":"خطأ"}`, expID); w.Code != 200 {
-		t.Fatalf("الثالثُ لم يلغِ: %d %s", w.Code, w.Body.String())
-	}
+	_ = third
 }
 
 // TestEXP1015_CardsFollowCategoryAndSearch **بطاقاتُ الشهر تتبع البابَ والبحث.**

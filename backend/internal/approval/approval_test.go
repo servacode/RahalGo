@@ -67,26 +67,33 @@ func TestAPR_OtherApproverPasses(t *testing.T) {
 	}
 }
 
-// TestAPR_SelfApproveRefusedWhenAnotherExists **يوجد غيرُه ⇒ لا يوافق على نفسه ولو كان المالك.**
-func TestAPR_SelfApproveRefusedWhenAnotherExists(t *testing.T) {
+// TestAPR_ProposerApprovesOwnFlagged **قرارُ المالك ٢٠٢٦-١٠-٢٢: المقترحُ يوافق على ما
+// اقترحه ولو وُجد غيرُه — وتُعلَّم في السجلّ.**
+func TestAPR_ProposerApprovesOwnFlagged(t *testing.T) {
+	pool := testdb.Pool(t)
+	admin := testdb.NewUser(t, pool, "admin")
+	fin := testdb.NewUser(t, pool, "finance")
+	ctx, tx := isolated(t, admin, fin)
+	v, err := Check(ctx, tx, req(admin, admin))
+	if err != nil || !v.SelfApproved {
+		t.Fatalf("**المقترحُ لم يوافق على اقتراحه**: %v · %v", v, err)
+	}
+	if f := v.AuditFields(); f["self_approved"] != true || f["self_approval_reason"] != SelfApprovalByProposer {
+		t.Fatalf("**الموافقةُ الذاتيّةُ بلا علامةٍ في السجلّ**: %v", f)
+	}
+}
+
+// TestAPR_OwnFundsRefusedWhenAnotherExists **مالُ الفاعل نفسِه (سحبُه) ⇒ لا يقرّر فيه
+// ويوجد غيرُه — ولو كان المالك.**
+func TestAPR_OwnFundsRefusedWhenAnotherExists(t *testing.T) {
 	pool := testdb.Pool(t)
 	owner := testdb.NewUser(t, pool, authz.RoleOwnerSuperAdmin)
 	fin := testdb.NewUser(t, pool, "finance")
 	ctx, tx := isolated(t, owner, fin)
-	if _, err := Check(ctx, tx, req(owner, owner)); !errors.Is(err, ErrSelfApprove) {
-		t.Fatalf("**المالكُ وافق على نفسه وفي المنصّة غيرُه**: %v", err)
-	}
-}
-
-// TestAPR_AdminAloneCannotSelfApprove **مديرُ المنصّة وحدَه لا يوافق على نفسه — المالكُ وحدَه.**
-//
-// **وكان `canSelfApprove` يجيزها لمدير المنصّة** — وقرارُ المالك: للمالك وحدَه.
-func TestAPR_AdminAloneCannotSelfApprove(t *testing.T) {
-	pool := testdb.Pool(t)
-	admin := testdb.NewUser(t, pool, "admin")
-	ctx, tx := isolated(t, admin)
-	if _, err := Check(ctx, tx, req(admin, admin)); !errors.Is(err, ErrSelfApprove) {
-		t.Fatalf("**مديرُ المنصّة وافق على نفسه**: %v", err)
+	r := req(owner, owner)
+	r.OwnFunds = true
+	if _, err := Check(ctx, tx, r); !errors.Is(err, ErrSelfApprove) {
+		t.Fatalf("**قرّر في سحبه وفي المنصّة غيرُه**: %v", err)
 	}
 }
 
@@ -95,7 +102,9 @@ func TestAPR_OwnerAloneSelfApprovesFlagged(t *testing.T) {
 	pool := testdb.Pool(t)
 	owner := testdb.NewUser(t, pool, authz.RoleOwnerSuperAdmin)
 	ctx, tx := isolated(t, owner)
-	v, err := Check(ctx, tx, req(owner, owner))
+	r := req(owner, owner)
+	r.OwnFunds = true
+	v, err := Check(ctx, tx, r)
 	if err != nil || !v.SelfApproved {
 		t.Fatalf("**المالكُ وحدَه لم يوافق على نفسه**: %v · %v", v, err)
 	}

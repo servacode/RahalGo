@@ -85,12 +85,6 @@ func TestACC_WalletRequestIsProposalThenTwoSidedApproval(t *testing.T) {
 		t.Fatalf("**الاقتراحُ حرّك المال** — الرصيد %d قبل أيّ موافقة", b)
 	}
 
-	// **صاحبُ الاقتراح لا يوافق عليه** — وفي المنصّة غيرُه ممّن يملك الموافقة.
-	self := h.POST("/api/v1/admin/wallet-requests/"+reqID+"/approve", fin.Token, map[string]any{})
-	if self.Code != 403 || self.Err() != "self_approve" {
-		t.Fatalf("**وافق صاحبُ الاقتراح على نفسه**: %s", self)
-	}
-
 	ok := h.POST("/api/v1/admin/wallet-requests/"+reqID+"/approve", approver.Token, map[string]any{})
 	if ok.Code != 200 {
 		t.Fatalf("الموافقة: %s", ok)
