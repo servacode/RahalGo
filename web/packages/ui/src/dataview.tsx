@@ -478,7 +478,7 @@ export function DataView<T>({
                   onClick={(e) => e.stopPropagation()}
                   /* الأزرار تتقاسم السطر ما دامت تتسع، وتنزل سطراً جديداً بدل أن
                    تفيض خارج البطاقة — النصوص العربية تطول ولا تُقصّ. */
-                  className="mt-auto flex flex-wrap gap-1.5 border-t border-line-soft pt-3 [&_button]:min-w-[6.5rem] [&_button]:flex-1 [&_button]:justify-center [&_button]:!px-2 [&_button]:text-center"
+                  className="mt-auto flex flex-wrap gap-1.5 border-t border-line-soft pt-3 [&_button]:min-h-11 [&_button]:min-w-[6.5rem] [&_button]:flex-1 [&_button]:justify-center [&_button]:whitespace-nowrap [&_button]:!px-2 [&_button]:text-center"
                 >
                   {actions(item)}
                 </div>

@@ -1085,6 +1085,7 @@ fun TripScreen(
             // **وبعد رفض الزبون: الاثنان معاً** (قرارُ المالك ٢٠٢٦-١٠-٢١).
             step = when {
                 order.customFee == null -> "fee"
+                state.agreeEdit -> "both"
                 order.quoteRejectedAt != null && order.quoteConfirmedVersion != order.quoteVersion -> "both"
                 else -> "goods"
             },
@@ -1986,6 +1987,18 @@ private fun TripCard(
                         enabled = !state.busy && !arriveLater,
                         busy = state.busy,
                     )
+                }
+
+                // **«تعديل السعر» بطلبه** (المالك ٢٠٢٦-١٠-٢٢) — بعد التوثيق وقبل الاستلام، زرٌّ ثانويٌّ
+                // تحت فعل المرحلة؛ **وبعد رفض الزبون هو الزرُّ الأساسيُّ فوق** فلا يتكرّر.
+                if (customOpen && feeDone && !rejected) {
+                    // **أخضرُ ممتلئٌ واضح** (المالك ٢٠٢٦-١٠-٢٢).
+                    com.rahalgo.ui.RahalButton(
+                        onClick = actions.askEdit,
+                        enabled = !state.busy,
+                        tone = com.rahalgo.ui.PriceConfirm.Accept,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text(stringResource(R.string.agree_edit_button), fontWeight = FontWeight.Bold) }
                 }
 
                 // ── صفُّ التواصل: أزرارٌ متساوية ────────────────────────────

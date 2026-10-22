@@ -3563,8 +3563,10 @@ function PartnerStoreBox({
   }
 
   if (!linked && goodsDone) return null;
+  // **سطرٌ كاملٌ فوق الأزرار** (المالك ٢٠٢٦-١٠-٢٢: «الأزرار يخرب شكلها، لازم يظل الشكل نفسه»)
+  // — كان صندوقاً بعرض زرٍّ بين الأزرار، فيلتفّ ما فيه ويصغر.
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="order-first flex basis-full flex-col gap-1.5">
       {!linked ? (
         <Button variant="secondary" disabled={busy || working} onClick={() => void openPicker()}>
           <span className="flex items-center gap-1.5">
@@ -3584,7 +3586,7 @@ function PartnerStoreBox({
               {OP.partnerStorePaid}: <Money value={o.custom_store_paid} />
             </p>
           )}
-          <div className="flex flex-wrap gap-2">
+          <div className="flex gap-1.5">
             <Button
               variant={o.sent_to_merchant_at ? "secondary" : "primary"}
               disabled={busy || working}

@@ -1090,6 +1090,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                             if (orders.chat != null) orders.closeChat() else orders.openChat()
                         },
                         askAgree = orders::askAgree,
+                        askEdit = orders::askEdit,
                         agree = orders::agree,
                         fetchAmount = orders::fetchAmount,
                         dismissAgree = orders::dismissAgree,

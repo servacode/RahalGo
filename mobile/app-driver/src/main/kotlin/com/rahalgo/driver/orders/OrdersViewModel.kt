@@ -1591,6 +1591,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             avgSpeedKmh = state.me?.avgSpeedKmh ?: 0,
             requirePhoto = state.me?.requirePhoto ?: false,
             agreeOpen = agreeOpen,
+            agreeEdit = agreeEdit,
             agreeError = agreeError,
             emergencyOpen = emergencyOpen,
             emergencyBusy = emergencyBusy,
@@ -2352,12 +2353,27 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
 
     fun askAgree() {
         agreeError = ""
+        agreeEdit = false
+        agreeOpen = true
+    }
+
+    /**
+     * **«تعديل السعر» بطلبه** (المالك ٢٠٢٦-١٠-٢٢: «السائق لازم يطلعله زر تعديل السعر») — بعد
+     * التوثيق وقبل الاستلام: غلطةٌ في رقمٍ أو اتّفاقٌ جديدٌ مع الزبون، **ويُرسَل له ليؤكّده ثانيةً.**
+     */
+    var agreeEdit by mutableStateOf(false)
+        private set
+
+    fun askEdit() {
+        agreeError = ""
+        agreeEdit = true
         agreeOpen = true
     }
 
     fun dismissAgree() {
         agreeError = ""
         agreeOpen = false
+        agreeEdit = false
     }
 
     /** **يوثّق ما اتُّفق عليه** — ثمّ يعيد قراءة الطلب بسعره الجديد. */
@@ -2371,7 +2387,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         val rejected = order?.quoteRejectedAt != null && order.quoteConfirmedVersion != order.quoteVersion
         val step = when {
             order?.customFee == null -> "fee"
-            rejected -> if (order.customGoodsPending) "fee" else ""
+            rejected || agreeEdit -> if (order.customGoodsPending) "fee" else ""
             order.customGoodsPending -> "goods"
             else -> ""
         }
@@ -2388,6 +2404,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 return@launch
             }
             agreeOpen = false
+            agreeEdit = false
             detail = detail.copy(busy = false)
             reload()
         }
