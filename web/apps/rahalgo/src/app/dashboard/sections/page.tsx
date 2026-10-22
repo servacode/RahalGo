@@ -19,7 +19,7 @@
 
 import { useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { PageContainer, PageHeader, Tabs, IconStore } from "@rahalgo/ui";
+import { PageContainer, PageHeader, StatGrid, StatCard, IconStore, IconGrid, IconBag, IconList, IconWarning } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import SectionsTab from "@/components/admin/market/SectionsTab";
 import ItemsTab from "@/components/admin/market/ItemsTab";
@@ -36,6 +36,39 @@ type TabKey = "sections" | "items" | "stores" | "categories" | "setup" | "qualit
 
 export default function MarketPage() {
   const [tab, setTab] = useState<TabKey>("sections");
+  // **مربّعاتُ العدد بدل التبويبات** (طلبُ المالك ٢٠٢٦-١٠-٢٢) — العددُ وحدَه، والكبسُ يفتح قسمَه.
+  const [counts, setCounts] = useState<Partial<Record<TabKey, number>>>({});
+
+  useEffect(() => {
+    const total = (r: unknown) => (r as { total?: number })?.total ?? 0;
+    const len = (r: unknown) => (Array.isArray(r) ? r.length : 0);
+    void Promise.allSettled([
+      api("/api/v1/admin/sections"),
+      api("/api/v1/admin/market/items?per_page=1"),
+      api("/api/v1/admin/market/stores?per_page=1"),
+      api("/api/v1/admin/categories"),
+      api<{ stores: { missing: string[] }[] }>("/api/v1/admin/merchants-setup"),
+      api<{ items_without_image_count?: number; stores_without_hours?: unknown[]; test_stores?: unknown[]; test_items_count?: number }>(
+        "/api/v1/admin/market/quality",
+      ),
+    ]).then(([sec, items, stores, cats, setup, quality]) => {
+      const v = <T,>(r: PromiseSettledResult<T>) => (r.status === "fulfilled" ? r.value : undefined);
+      setCounts({
+        sections: len(v(sec)),
+        items: total(v(items)),
+        stores: total(v(stores)),
+        categories: len(v(cats)),
+        setup: (v(setup)?.stores ?? []).filter((x) => x.missing.length > 0).length,
+        quality: (() => {
+          const q = v(quality);
+          return q
+            ? (q.items_without_image_count ?? 0) + (q.stores_without_hours?.length ?? 0) +
+                (q.test_stores?.length ?? 0) + (q.test_items_count ?? 0)
+            : undefined;
+        })(),
+      });
+    });
+  }, []);
 
   // **فُتح السوق** — فيُصفَّر عدّادُ الجديد لهذا الموظّف. **وتعثّرُه لا يمنع
   // الصفحة**: العدّادُ يبقى كما هو، وهو أهونُ من شاشةٍ لا تُفتح.
@@ -46,19 +79,30 @@ export default function MarketPage() {
   return (
     <PageContainer>
       <PageHeader icon={IconStore} title={S.title} subtitle={S.hint} />
-      <Tabs<TabKey>
-        className="mb-4"
-        value={tab}
-        onChange={setTab}
-        items={[
-          { key: "sections", label: T.sections },
-          { key: "items", label: T.items },
-          { key: "stores", label: T.stores },
-          { key: "categories", label: T.categories },
-          { key: "setup", label: T.setup },
-          { key: "quality", label: T.quality },
-        ]}
-      />
+      <div className="mb-4">
+        <StatGrid>
+          {(
+            [
+              ["sections", T.sections, IconGrid],
+              ["items", T.items, IconBag],
+              ["stores", T.stores, IconStore],
+              ["categories", T.categories, IconList],
+              ["setup", T.setup, IconWarning],
+              ["quality", T.quality, IconWarning],
+            ] as const
+          ).map(([key, label, icon]) => (
+            <StatCard
+              key={key}
+              icon={icon}
+              label={label}
+              value={counts[key] ?? "…"}
+              tone={(key === "setup" || key === "quality") && (counts[key] ?? 0) > 0 ? "warning" : "default"}
+              selected={tab === key}
+              onClick={() => setTab(key)}
+            />
+          ))}
+        </StatGrid>
+      </div>
       {tab === "sections" && <SectionsTab />}
       {tab === "items" && <ItemsTab />}
       {tab === "stores" && <StoresTab />}

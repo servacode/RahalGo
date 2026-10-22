@@ -289,6 +289,8 @@ func run(logger *slog.Logger) error {
 		Handler: func() http.Handler {
 			srv := server.New(cfg, logger, pg, rdb, tokens, identitySvc, catalogSvc,
 				settingsStore, walletSvc, ordersSvc, cashboxSvc, supportSvc, mediaSvc, hub, otpStatus, otpUnpair, otpPair)
+			// **لا كلمةَ سرٍّ على كلّ فعل** — قرارُ المالك ٢٠٢٦-١٠-٢٢ «شيلها كلياً».
+			srv.DisableStepUp()
 			// **إبلاغُ المتاجر برسالةٍ نصّية لا ببوت واتساب**: البوت غيرُ رسميّ
 			// ويُحظَر إن أكثر من الإرسال الآليّ. وواتساب الرسميّ لاحقاً — يدخل
 			// من الواجهة نفسها (`notify.TextSender`) بلا تغييرٍ فيمن يستعملها.

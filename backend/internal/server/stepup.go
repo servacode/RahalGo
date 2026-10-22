@@ -54,9 +54,17 @@ func sessionIDFrom(r *http.Request) string {
 	return sid
 }
 
+// DisableStepUp **يرفع التأكيدَ بالكلمة عن كلّ الأفعال** — قرارُ المالك
+// ٢٠٢٦-١٠-٢٢: «مابدي كل شغلة يطلب مني باسوردي». الجلسةُ والقدرةُ باقيتان.
+func (s *Server) DisableStepUp() { s.stepUpOff = true }
+
 // requireStepUp يمنع فعلاً حسّاساً بلا إثباتٍ لهذا النداء بعينه.
 func (s *Server) requireStepUp(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if s.stepUpOff {
+			next.ServeHTTP(w, r)
+			return
+		}
 		pattern := adminPattern(r.URL.Path)
 		act, ok := authz.LookupSensitive(r.Method, pattern)
 		if !ok {

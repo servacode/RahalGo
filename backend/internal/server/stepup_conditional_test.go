@@ -7,6 +7,9 @@ package server
 // الانتقالات تشغيليّةٌ تمضي بلا تأكيد.
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/servacode/rahalgo/backend/internal/authz"
@@ -47,5 +50,26 @@ func TestSensitiveNow_StatusStrong(t *testing.T) {
 		if got := s.sensitiveNow("/users/x", act, []byte(body)); got != want {
 			t.Errorf("جسمٌ %q ⇒ %v، والمتوقّع %v", body, got, want)
 		}
+	}
+}
+
+// TestStepUp_DisabledPassesSensitive **قرارُ المالك ٢٠٢٦-١٠-٢٢: لا كلمةَ على أيّ فعل** —
+// المحرّكُ يُقلع بـ`DisableStepUp`، فالفعلُ الحسّاسُ يمضي بلا إثبات. وبدونه يُردّ.
+func TestStepUp_DisabledPassesSensitive(t *testing.T) {
+	hit := false
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { hit = true })
+	call := func(s *Server) int {
+		hit = false
+		w := httptest.NewRecorder()
+		s.requireStepUp(next).ServeHTTP(w, httptest.NewRequest("POST", "/api/v1/admin/roles", strings.NewReader(`{}`)))
+		return w.Code
+	}
+	if code := call(&Server{}); hit || code != http.StatusForbidden {
+		t.Fatalf("التأكيدُ قائمٌ ولم يُطلب: %d · %v", code, hit)
+	}
+	off := &Server{}
+	off.DisableStepUp()
+	if call(off); !hit {
+		t.Fatal("**التأكيدُ مرفوعٌ والفعلُ الحسّاسُ لم يمضِ**")
 	}
 }

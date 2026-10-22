@@ -43,14 +43,18 @@ import (
 )
 
 type Server struct {
-	cfg      *config.Config
-	logger   *slog.Logger
-	pg       *pgxpool.Pool
-	rdb      *redis.Client
-	tokens   *auth.TokenIssuer
-	identity *identity.Service
-	catalog  *catalog.Service
-	settings *settings.Store
+	// stepUpOff **لا تأكيدَ بالكلمة على الأفعال الحسّاسة** — قرارُ المالك
+	// ٢٠٢٦-١٠-٢٢. يضبطه المحرّكُ عند الإقلاع (`DisableStepUp`)، والاختباراتُ
+	// تبقيه قائماً لتحرس الباب إن أُعيد.
+	stepUpOff bool
+	cfg       *config.Config
+	logger    *slog.Logger
+	pg        *pgxpool.Pool
+	rdb       *redis.Client
+	tokens    *auth.TokenIssuer
+	identity  *identity.Service
+	catalog   *catalog.Service
+	settings  *settings.Store
 	// platform **دوامُ المنصّة وإيقافُها المؤقّت** — `PH`.
 	platform *platform.Service
 	// comms **حديثُ الطلب** — قناةٌ واحدةٌ لطرفيه بلا رقمٍ بينهما.

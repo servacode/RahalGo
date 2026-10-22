@@ -34,7 +34,7 @@
     "behaviour_settings": 205,
     "order_fields": 118,
     "test_files": 644,
-    "test_funcs": 2492
+    "test_funcs": 2493
   },
   "flows": [
     {
@@ -29041,6 +29041,12 @@
     },
     {
       "name": "TestSensitiveNow_TransitionRefundNeedsStepUp",
+      "file": "internal/server/stepup_conditional_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestStepUp_DisabledPassesSensitive",
       "file": "internal/server/stepup_conditional_test.go",
       "package": "server",
       "orphan": true
