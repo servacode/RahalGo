@@ -1991,7 +1991,12 @@ private fun TripCard(
 
                 // **«تعديل السعر» بطلبه** (المالك ٢٠٢٦-١٠-٢٢) — بعد التوثيق وقبل الاستلام، زرٌّ ثانويٌّ
                 // تحت فعل المرحلة؛ **وبعد رفض الزبون هو الزرُّ الأساسيُّ فوق** فلا يتكرّر.
-                if (customOpen && feeDone && !rejected) {
+                // **وما لا يُعدَّل لا زرَّ له** (المالك ٢٠٢٦-١٠-٢٢: «بالأمانة مافي سعر بضاعة،
+                // وسعر التوصيلة محدد من المنصة مايقدر يبدله السائق») — الأجرةُ تُعدَّل إن لم
+                // تفرضها المنصّة، والثمنُ في المشتريات بعد توثيقه.
+                val feeEditable = !(order.customFeeSource == "admin_defined" && !order.customDriverMayChangeFee)
+                val goodsEditable = order.customMode != "amanah" && !order.customGoodsPending
+                if (customOpen && feeDone && !rejected && (feeEditable || goodsEditable)) {
                     // **أخضرُ ممتلئٌ واضح** (المالك ٢٠٢٦-١٠-٢٢).
                     com.rahalgo.ui.RahalButton(
                         onClick = actions.askEdit,
