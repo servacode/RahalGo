@@ -107,12 +107,14 @@ func (s *Service) CreateBanner(ctx context.Context, actorID string, in BannerInp
 	place := "home"
 	var id string
 	err := s.db.QueryRow(ctx, `
-		INSERT INTO banners (title, image_media_id, target, sort_order, placement)
+		INSERT INTO banners (title, image_media_id, target, sort_order, placement, active)
 		VALUES ($1, NULLIF(COALESCE($2,''), '')::uuid, COALESCE($3,''),
 		        COALESCE($4, (SELECT COALESCE(max(sort_order)+1,1)
-		                      FROM banners WHERE placement = $5)), $5)
+		                      FROM banners WHERE placement = $5)), $5,
+		        -- **و«موقوفة» عند الإنشاء تُحترم** (شُهد ٢٠٢٦-١٠-٢٢: كانت تُحفظ مفعّلةً فتظهر للزبائن فوراً).
+		        COALESCE($6, true))
 		RETURNING id`,
-		*in.Title, in.ImageMediaID, in.Target, in.SortOrder, place).Scan(&id)
+		*in.Title, in.ImageMediaID, in.Target, in.SortOrder, place, in.Active).Scan(&id)
 	if err != nil {
 		return nil, err
 	}

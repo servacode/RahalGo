@@ -34,7 +34,7 @@
     "behaviour_settings": 205,
     "order_fields": 118,
     "test_files": 643,
-    "test_funcs": 2489
+    "test_funcs": 2490
   },
   "flows": [
     {
@@ -12236,6 +12236,12 @@
     },
     {
       "name": "TestBANNER01_DisabledSliderReturnsEmptyList",
+      "file": "internal/qa/app_text_banner_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestBANNER02_InactiveOnCreateStaysInactive",
       "file": "internal/qa/app_text_banner_test.go",
       "package": "qa",
       "orphan": true

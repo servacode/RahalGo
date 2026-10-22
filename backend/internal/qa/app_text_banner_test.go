@@ -70,3 +70,18 @@ func TestBANNER01_DisabledSliderReturnsEmptyList(t *testing.T) {
 		t.Error("**مشعولٌ ولا قائمة**")
 	}
 }
+
+// TestBANNER02_InactiveOnCreateStaysInactive **«موقوفة» عند الإنشاء تُحترم** (شُهد ٢٠٢٦-١٠-٢٢):
+// كانت تُحفظ مفعّلةً فتظهر للزبائن فوراً. وبلا قيمةٍ تبقى مفعّلةً كما كانت.
+func TestBANNER02_InactiveOnCreateStaysInactive(t *testing.T) {
+	h := New(t)
+	admin := h.NewUser("admin")
+	off := h.POST("/api/v1/admin/banners", admin.Token, map[string]any{"title": "QA off", "active": false})
+	if off.Code != 201 || off.JSON()["active"] != false {
+		t.Fatalf("**لافتةٌ موقوفةٌ حُفظت مفعّلة**: %s", off)
+	}
+	on := h.POST("/api/v1/admin/banners", admin.Token, map[string]any{"title": "QA on"})
+	if on.Code != 201 || on.JSON()["active"] != true {
+		t.Fatalf("بلا قيمةٍ تبقى مفعّلة: %s", on)
+	}
+}
