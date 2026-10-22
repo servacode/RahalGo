@@ -36,6 +36,7 @@ import {
   Button,
   Input,
   Select,
+  Modal,
   Badge,
   FormActions,
   LoadingState,
@@ -72,7 +73,23 @@ function distanceText(d: number | null): string {
   return t.transferKm.replace("{n}", fmtNum(Math.round(d / 100) / 10));
 }
 
-export function TransferPanel({
+/**
+ * **في نافذةٍ منبثقة** (المالك ٢٠٢٦-١٠-٢٢: «تبديل المتجر لازم تطلع كل متاجرنا… بنافذة منبثقة
+ * ونختار المتجر») — كانت قائمةً تنفرد داخل البطاقة فتطولها وتزاحم ما حولها.
+ */
+export function TransferPanel(props: {
+  orderId: string;
+  onDone: () => void;
+  onClose: () => void;
+}) {
+  return (
+    <Modal open onClose={props.onClose} title={m.admin.ordersPage.transferTitle}>
+      <TransferBody {...props} />
+    </Modal>
+  );
+}
+
+function TransferBody({
   orderId,
   onDone,
   onClose,
@@ -238,7 +255,7 @@ export function TransferPanel({
   // ── الخطوةُ الأولى: المتاجرُ المرشّحة ─────────────────────────────
   return (
     <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
-      <p className="text-xs font-medium text-primary-dark">{t.transferTitle}</p>
+      {/* **والعنوانُ في رأس النافذة** — فلا يتكرّر هنا. */}
       <p className="text-xs text-ink-muted">{t.transferHint}</p>
       {data?.distance_from === "driver" && (
         <p className="text-xs text-ink-muted">{t.transferFromDriver}</p>
