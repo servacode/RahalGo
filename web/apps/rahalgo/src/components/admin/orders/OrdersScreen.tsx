@@ -332,10 +332,65 @@ const SEC_LOOK = {
   merchant: { tone: "text-warning", Icon: IconStore },
   details: { tone: "text-ink-muted", Icon: IconOrder },
 } as const;
+const SEC_BOX = {
+  customer: "bg-accent-tint border-accent-edge",
+  driver: "bg-success-tint border-success-edge",
+  merchant: "bg-warning-tint border-warning-edge",
+  details: "bg-ink-faint border-line-soft",
+} as const;
+
+/**
+ * **يجمع رأسَ كلِّ قسمٍ وسطورَه في عمودٍ واحدٍ يُرسم صندوقاً ملوّناً.** والسطرُ المسمّى
+ * (العنوان والمسافة) يبقى بتسميته داخل الصندوق. **وما ليس في قسمٍ يبقى كما هو.**
+ */
+function boxSections(cols: DataColumn<OrderRow>[]): DataColumn<OrderRow>[] {
+  const out: DataColumn<OrderRow>[] = [];
+  for (let i = 0; i < cols.length; i++) {
+    const c = cols[i]!;
+    const m0 = /^sec_(customer|driver|merchant)$/.exec(c.id);
+    if (!m0) {
+      out.push(c);
+      continue;
+    }
+    const role = m0[1] as "customer" | "driver" | "merchant";
+    const members: DataColumn<OrderRow>[] = [];
+    for (let next = cols[i + 1]; next && !next.block && !next.id.startsWith("sec_"); next = cols[i + 1]) {
+      members.push(next);
+      i++;
+    }
+    out.push({
+      ...c,
+      id: "box_" + role,
+      hide: (o) => !!c.hide?.(o) || members.every((x) => !!x.hide?.(o)),
+      cell: (o) => (
+        <div className={`flex flex-col gap-1.5 rounded-control border p-2.5 ${SEC_BOX[role]}`}>
+          <SectionHead role={role} />
+          {members
+            .filter((x) => !x.hide?.(o))
+            .map((x) =>
+              x.noLabel ? (
+                <div key={x.id}>{x.cell(o)}</div>
+              ) : (
+                <div key={x.id} className="flex items-start justify-between gap-3">
+                  <span className="inline-flex shrink-0 items-center gap-1.5 text-ink-muted [&>svg]:h-4 [&>svg]:w-4">
+                    {x.icon}
+                    {x.header}
+                  </span>
+                  <span className="min-w-0 text-end">{x.cell(o)}</span>
+                </div>
+              ),
+            )}
+        </div>
+      ),
+    });
+  }
+  return out;
+}
+
 function SectionHead({ role }: { role: keyof typeof SEC_LOOK }) {
   const { tone, Icon } = SEC_LOOK[role];
   return (
-    <span className={`flex items-center gap-1.5 pt-1 text-xs font-bold ${tone}`}>
+    <span className={`flex items-center gap-1.5 text-xs font-bold ${tone}`}>
       <Icon size={13} />
       {SEC[role]}
     </span>
@@ -1818,6 +1873,10 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
     },
   ];
 
+  // **وكلُّ قسمٍ مربّعٌ بلونه** (المالك ٢٠٢٦-١٠-٢٢: «معلومات الزبون ضمن مربع بلون مختلف وايضا
+  // معلومات السائق») — رأسُ القسم وسطورُه في صندوقٍ واحد، لا سطورٌ متتاليةٌ بخطوطٍ بينها.
+  const cardColumns = boxSections(columns);
+
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -2332,7 +2391,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         items={!live && loading ? [] : (data?.orders ?? [])}
         loading={live ? data === null && !error : loading}
         getKey={(o) => o.id}
-        columns={columns}
+        columns={cardColumns}
         // **والبطاقاتُ وحدَها** — (قرارُ المالك ٢٠٢٦-٠٨-١٢: «ألغِ عرضَ
         // الجدول من قسم الطلبات وسجلّه»).
         view="cards"
