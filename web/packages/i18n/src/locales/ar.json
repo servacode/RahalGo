@@ -1951,10 +1951,16 @@
         "customer": "الزبون",
         "driver": "السائق",
         "merchant": "المتجر",
-        "details": "تفاصيل الطلب"
+        "details": "تفاصيل الطلب",
+        "mdRecipient": "المستلم — نوصّل له",
+        "mdSender": "نأخذ منه",
+        "mdStoreFrom": "المتجر — نأخذ منه",
+        "mdStoreTo": "المتجر — نوصّل له"
       },
       "platformCommission": "عمولة المنصة",
-      "proofByCode": "✓ سُلّم بكود التسليم من الزبون"
+      "proofByCode": "✓ سُلّم بكود التسليم من الزبون",
+      "kindMdSend": "توصيل من المتجر",
+      "kindMdFetch": "إحضار للمتجر"
     },
     "customers": {
       "title": "الزبائن",

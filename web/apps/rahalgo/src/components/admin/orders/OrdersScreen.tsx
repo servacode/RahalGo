@@ -364,7 +364,7 @@ function boxSections(cols: DataColumn<OrderRow>[]): DataColumn<OrderRow>[] {
       hide: (o) => !!c.hide?.(o) || members.every((x) => !!x.hide?.(o)),
       cell: (o) => (
         <div className={`flex flex-col gap-1.5 rounded-control border p-2.5 ${SEC_BOX[role]}`}>
-          <SectionHead role={role} />
+          <SectionHead role={role} o={o} />
           {members
             .filter((x) => !x.hide?.(o))
             .map((x) =>
@@ -387,12 +387,23 @@ function boxSections(cols: DataColumn<OrderRow>[]): DataColumn<OrderRow>[] {
   return out;
 }
 
-function SectionHead({ role }: { role: keyof typeof SEC_LOOK }) {
+function SectionHead({ role, o }: { role: keyof typeof SEC_LOOK; o?: OrderRow }) {
   const { tone, Icon } = SEC_LOOK[role];
+  // **«لدي توصيلة» تقول اتّجاهها** (المالك ٢٠٢٦-١٠-٢٢: «مو مبين اذا بدنا نجيب للمتجر او
+  // بدنا ناخذ من المتجر») — من نأخذ منه ولمن نوصّل.
+  const md = o?.kind === "merchant_delivery";
+  const fetchMode = md && o?.delivery_mode === "fetch";
+  const title = !md
+    ? SEC[role]
+    : role === "customer"
+      ? fetchMode ? SEC.mdSender : SEC.mdRecipient
+      : role === "merchant"
+        ? fetchMode ? SEC.mdStoreTo : SEC.mdStoreFrom
+        : SEC[role];
   return (
     <span className={`flex items-center gap-1.5 text-xs font-bold ${tone}`}>
       <Icon size={13} />
-      {SEC[role]}
+      {title}
     </span>
   );
 }
@@ -3651,7 +3662,9 @@ function KindBadge({ o }: { o: OrderRow }) {
   // البطاقة ملونة»).
   const look =
     o.kind === "merchant_delivery"
-      ? { bg: "bg-info", Icon: IconStore }
+      ? o.delivery_mode === "fetch"
+        ? { bg: "bg-accent", Icon: IconSwap }
+        : { bg: "bg-info", Icon: IconStore }
       : o.kind === "custom"
         ? o.custom_mode === "amanah"
           ? { bg: "bg-violet", Icon: IconCatOther }
@@ -3667,7 +3680,7 @@ function KindBadge({ o }: { o: OrderRow }) {
 
 function kindLabel(o: OrderRow): string {
   const OP = m.admin.ordersPage;
-  if (o.kind === "merchant_delivery") return OP.kindMd;
+  if (o.kind === "merchant_delivery") return o.delivery_mode === "fetch" ? OP.kindMdFetch : OP.kindMdSend;
   if (o.kind === "custom") return o.custom_mode === "amanah" ? OP.kindAmanah : OP.kindPurchase;
   return OP.kindStd;
 }
