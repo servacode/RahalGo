@@ -848,6 +848,7 @@ function translateKey(key: string): string {
 // ---------- الشاشة الرئيسية ----------
 
 export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
+  const delivery = useDeliveryFlags();
   const params = useSearchParams();
   const initialQ = params.get("q") ?? "";
   const [data, setData] = useState<OrderPage | null>(null);
@@ -1757,8 +1758,15 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       header: m.admin.ordersPage.proof,
       icon: <IconCamera />,
       block: true,
-      hide: (o: OrderRow) => !PROOF_STATUSES.has(o.status),
+      // **ويظهر بما وقع لا فارغاً** (المالك ٢٠٢٦-١٠-٢٢): صورةٌ إن صُوّر، أو «بكود التسليم»
+      // إن كان الكودُ مُلزَماً، أو سببُ الإعفاء — **وبلا شيءٍ من ذلك لا قسمَ أصلاً.**
+      hide: (o: OrderRow) =>
+        !PROOF_STATUSES.has(o.status) ||
+        (!o.proof_url && !o.proof_skip_reason && !(delivery.code && o.status === "delivered")),
       cell: (o) => {
+        if (!o.proof_url && !o.proof_skip_reason && delivery.code) {
+          return <span className="text-xs font-medium text-success">{m.admin.ordersPage.proofByCode}</span>;
+        }
         if (o.proof_skip_reason) {
           return (
             <span className="text-xs text-warning">
@@ -2477,26 +2485,33 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
  *
  * **وإسنادُ السائق يبقى في التفاصيل**: يحتاج قائمةَ اختيارٍ لا زرّاً.
  */
-/** **أتُلزَم صورةُ التسليم؟** (`drivers.require_delivery_photo`) — تُقرأ مرّةً للشاشة كلّها. */
-let photoSetting: Promise<boolean> | null = null;
-function useRequireDeliveryPhoto(): boolean {
-  const [on, setOn] = useState(false);
+/**
+ * **إعدادا التسليم** — `drivers.require_delivery_photo` و`delivery.code_required`، يُقرآن مرّةً
+ * للشاشة كلّها. **ومن لا يقرأ الإعدادات يرى كما كان** (صورةٌ مُلزَمة، بلا كود).
+ */
+let deliveryFlags: Promise<{ photo: boolean; code: boolean }> | null = null;
+function useDeliveryFlags(): { photo: boolean; code: boolean } {
+  const [flags, setFlags] = useState({ photo: false, code: false });
   useEffect(() => {
-    photoSetting ??= api<{ settings: { key: string; value: unknown }[] }>("/api/v1/admin/settings")
+    deliveryFlags ??= api<{ settings: { key: string; value: unknown }[] }>("/api/v1/admin/settings")
       .then((r) => {
-        const v = r.settings.find((x) => x.key === "drivers.require_delivery_photo")?.value;
-        return v === true || v === "true";
+        const on = (k: string) => {
+          const v = r.settings.find((x) => x.key === k)?.value;
+          return v === true || v === "true";
+        };
+        return { photo: on("drivers.require_delivery_photo"), code: on("delivery.code_required") };
       })
-      // **ومن لا يقرأ الإعدادات يرى الزرَّ كما كان** — موظّفُ عملياتٍ بلا `settings.read`
-      // لا يُحرَم إذناً يحتاجه حين تُلزَم الصورة.
-      .catch(() => true);
+      .catch(() => ({ photo: true, code: false }));
     let live = true;
-    void photoSetting.then((v) => live && setOn(v));
+    void deliveryFlags.then((v) => live && setFlags(v));
     return () => {
       live = false;
     };
   }, []);
-  return on;
+  return flags;
+}
+function useRequireDeliveryPhoto(): boolean {
+  return useDeliveryFlags().photo;
 }
 
 function OrderActions({

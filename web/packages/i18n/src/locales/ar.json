@@ -1953,7 +1953,8 @@
         "merchant": "المتجر",
         "details": "تفاصيل الطلب"
       },
-      "platformCommission": "عمولة المنصة"
+      "platformCommission": "عمولة المنصة",
+      "proofByCode": "✓ سُلّم بكود التسليم من الزبون"
     },
     "customers": {
       "title": "الزبائن",
