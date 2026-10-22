@@ -1442,14 +1442,18 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
               {/* **والمسلَّمُ مكتملٌ أخضر ومعه مدّتُه** (ملاحظةُ المالك ٢٠٢٦-١٠-٢٢: «أنهاه السائق
                   شكله بشع… لازم يكون مكتمل وأخضر» و«كم دقيقة استغرق من أول الطلب للتسليم»).
                   **والأحمرُ لما انتهى قبل أن يصل** — ألغاه الزبون أو المتجر أو العمليات. */}
+              {/* **مملوءةٌ والكتابةُ بيضاء** (المالك ٢٠٢٦-١٠-٢٢: «الخط ابيض والخلفية حمرا
+                  بالالغاء… والمكتمل ابيض بخلفية خضرا») — كشارة النوع. */}
               {o.status === "delivered" ? (
-                <Badge variant="success">
+                <span className="rounded-badge bg-success-solid px-2.5 py-1 text-xs font-bold text-on-solid">
                   {O_DONE.done}
                   {o.closed_at && ` · ${tookText(o.created_at, o.closed_at)}`}
-                </Badge>
+                </span>
               ) : (
                 o.ended_by && ENDED_BY[o.ended_by] && (
-                  <Badge variant="danger">{ENDED_BY[o.ended_by]}</Badge>
+                  <span className="rounded-badge bg-danger-solid px-2.5 py-1 text-xs font-bold text-on-solid">
+                    {ENDED_BY[o.ended_by]}
+                  </span>
                 )
               )}
               {/* **والطلبُ الذي فُتح بالرابط يُعلَّم** (المشكلة ٢١). */}
@@ -3684,13 +3688,13 @@ function KindBadge({ o }: { o: OrderRow }) {
   const look =
     o.kind === "merchant_delivery"
       ? o.delivery_mode === "fetch"
-        ? { bg: "bg-accent", Icon: IconSwap }
-        : { bg: "bg-info", Icon: IconStore }
+        ? { bg: "bg-primary-solid", Icon: IconSwap }
+        : { bg: "bg-sky-solid", Icon: IconStore }
       : o.kind === "custom"
         ? o.custom_mode === "amanah"
-          ? { bg: "bg-violet", Icon: IconCatOther }
-          : { bg: "bg-warning", Icon: IconBag }
-        : { bg: "bg-primary", Icon: IconCart };
+          ? { bg: "bg-violet-solid", Icon: IconCatOther }
+          : { bg: "bg-warning-solid", Icon: IconBag }
+        : { bg: "bg-info-solid", Icon: IconCart };
   return (
     <span className={`inline-flex items-center gap-1 rounded-badge px-2.5 py-1 text-sm font-bold text-on-solid ${look.bg}`}>
       <look.Icon size={14} />
