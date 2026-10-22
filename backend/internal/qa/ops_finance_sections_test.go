@@ -442,8 +442,9 @@ func TestFinSections_WalletTopupFromTreasury(t *testing.T) {
 		WHERE user_id = $1::uuid AND status = 'pending'`, target.ID).Scan(&reqID); err != nil {
 		t.Fatalf("الطلبُ المعلَّق: %v", err)
 	}
-	if r := hh.POST(a+"/wallet-requests/"+reqID+"/approve", fin.Token, map[string]any{}); r.Code < 400 {
-		t.Errorf("**المقترحُ وافق على اقتراحه**: %s", r)
+	// **قرارُ ٢٠٢٦-١٠-٢٢:** المقترحُ يوافق على اقتراحه.
+	if r := hh.POST(a+"/wallet-requests/"+reqID+"/approve", fin.Token, map[string]any{}); r.Code != 200 {
+		t.Errorf("**المقترحُ لم يوافق على اقتراحه**: %s", r)
 	}
 }
 
