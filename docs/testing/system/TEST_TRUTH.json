@@ -33,8 +33,8 @@
     "setting_defs": 250,
     "behaviour_settings": 205,
     "order_fields": 118,
-    "test_files": 643,
-    "test_funcs": 2490
+    "test_files": 644,
+    "test_funcs": 2492
   },
   "flows": [
     {
@@ -15911,6 +15911,18 @@
     {
       "name": "TestCUST07033_DemandByPlaceCountsUniquePeople",
       "file": "internal/qa/demand_unique_people_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDoor_NoDeliveryWhileReportOpen",
+      "file": "internal/qa/door_pending_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDoor_ReturnWithReasonNeedsNoNote",
+      "file": "internal/qa/door_pending_test.go",
       "package": "qa",
       "orphan": true
     },

@@ -226,7 +226,9 @@ export function DoorPanel({
         setErr(D.faultMissing);
         return;
       }
-      if (note.trim() === "") {
+      // **والكلمةُ اختياريّةٌ مع سبب** (المالك ٢٠٢٦-١٠-٢٢: «اسباب جاهزة او الملاحظة مو اجبارية»)
+      // — السببُ المختار، أو بلاغُ السائق الأخير.
+      if (note.trim() === "" && !reason && !door?.report_code) {
         setErr(D.noteMissing);
         return;
       }

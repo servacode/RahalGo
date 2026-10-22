@@ -96,6 +96,7 @@ const SERVER_MOBILE = new Set([
   // السائق والزبون.
   "entrance_not_delivered",
   "entrance_too_far",
+  "door_report_pending",
   "closure_reason",
   "landmark_name",
   "landmark_kind",

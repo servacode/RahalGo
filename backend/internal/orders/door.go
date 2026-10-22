@@ -248,15 +248,17 @@ func (s *Service) ResolveDoor(ctx context.Context, actorID string, actorRoles []
 		if !IsFault(in.Fault) {
 			return nil, ErrDoorBadFault
 		}
-		if in.Note == "" {
-			return nil, ErrDoorNeedsNote
-		}
 		if err := doorChoices(&in); err != nil {
 			return nil, err
 		}
 		reason := strings.TrimSpace(in.Reason)
 		if reason == "" {
 			reason = s.lastDoorReport(ctx, orderID)
+		}
+		// **والكلمةُ اختياريّةٌ مع سببٍ من القائمة** (المالك ٢٠٢٦-١٠-٢٢: «نخلي اسباب جاهزة
+		// او الملاحظة مو اجبارية») — كُتب «1» ليمرّ. **وبلا سببٍ ولا كلمةٍ لا عودة.**
+		if in.Note == "" && reason == "" {
+			return nil, ErrDoorNeedsNote
 		}
 		var status, driverID string
 		if err := s.db.QueryRow(ctx,

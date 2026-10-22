@@ -1182,6 +1182,14 @@ func (s *Server) handleDriverTransition(w http.ResponseWriter, r *http.Request) 
 	// قاعدتُنا أنّ الزبونَ يُصدَّق أوّلَ مرّة — **وقاعدةٌ بلا دليلٍ تكلفةٌ بلا
 	// سقف.** والإثباتُ صورةٌ بموقعٍ ووقت، **أو كلمةٌ تقول لماذا تعذّرت.**
 	if req.To == orders.StDelivered {
+		// **ولا تسليمَ والبلاغُ مفتوح** (المالك ٢٠٢٦-١٠-٢٢: «السائق مايقدر يسلم والبلاغ
+		// مفتوح») — بلّغ عند الباب فالقرارُ للإدارة: «سلّم الآن» أو العودة. **وبلاغٌ بعد أمرٍ
+		// سابقٍ يعيد الانتظار.**
+		if v := s.orders.DoorViewOf(r.Context(), orderID); v.ReportCode != "" && v.ReportAt != nil &&
+			(v.InstructionAt == nil || v.ReportAt.After(*v.InstructionAt)) {
+			s.respondErr(w, errDoorReportPending)
+			return
+		}
 		if err := s.requireProofBeforeDelivery(r, orderID); err != nil {
 			s.respondErr(w, err)
 			return
@@ -1209,6 +1217,9 @@ func (s *Server) handleDriverTransition(w http.ResponseWriter, r *http.Request) 
 	// **وحمولةُ السائق لا الطلبُ الخامّ** (٢٠٢٦-١٠-٠٦: كان الردُّ يحمل رقمَ الزبون).
 	httpx.JSON(w, http.StatusOK, orders.ViewFor(orders.AudienceDriver, o))
 }
+
+// errDoorReportPending **بلاغُ الباب ينتظر قرار الإدارة** — فلا يُسلَّم قبله.
+var errDoorReportPending = httpx.NewError(http.StatusConflict, "door_report_pending", "errors.door_report_pending")
 
 // replayOwnTransition **إعادةُ خطوةٍ ثبتت وضاع ردُّها** (٢٠٢٦-١٠-٠٢).
 //

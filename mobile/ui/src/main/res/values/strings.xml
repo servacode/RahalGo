@@ -82,6 +82,7 @@
     <string name="err_proof_required">يلزم صورة تسليم — وهي لم تبن بعد</string>
     <string name="err_proof_not_at_door">صورة التسليم تلتقط عند باب الزبون فقط</string>
     <string name="err_entrance_not_delivered">بتحفظ الباب بعد ما تسلّم الطلب</string>
+    <string name="err_door_report_pending">بلاغك عند الإدارة — استنّى قرارها قبل ما تسلّم الطلب</string>
     <string name="err_entrance_too_far">انت بعيد كتير عن نقطة الزبون — ما انحفظ الباب</string>
     <string name="err_landmark_name">اكتب اسم المعلم (حرفين على الأقل)</string>
     <string name="err_landmark_kind">اختار نوع المعلم</string>

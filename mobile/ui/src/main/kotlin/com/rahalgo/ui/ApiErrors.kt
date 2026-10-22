@@ -346,6 +346,7 @@ private val CODES: Map<String, Int> = mapOf(
     // **ما يضيفه السائقُ للخريطة، و«موقعك الصح هون؟»** (قرارات المالك ٢٠٢٦-١٠-٢١).
     "entrance_not_delivered" to R.string.err_entrance_not_delivered,
     "entrance_too_far" to R.string.err_entrance_too_far,
+    "door_report_pending" to R.string.err_door_report_pending,
     "closure_reason" to R.string.err_validation,
     "landmark_name" to R.string.err_landmark_name,
     "landmark_kind" to R.string.err_landmark_kind,
