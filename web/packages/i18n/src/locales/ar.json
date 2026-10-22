@@ -1952,7 +1952,8 @@
         "driver": "السائق",
         "merchant": "المتجر",
         "details": "تفاصيل الطلب"
-      }
+      },
+      "platformCommission": "عمولة المنصة"
     },
     "customers": {
       "title": "الزبائن",

@@ -3695,14 +3695,12 @@ function FeeSplit({ fee, driver }: { fee: number; driver?: number }) {
   const OP = m.admin.ordersPage;
   if (driver == null || fee <= 0) return null;
   const platform = Math.max(0, fee - driver);
+  // **«عمولة المنصة» سطرٌ والرقمُ يساراً** (المالك ٢٠٢٦-١٠-٢٢) — و«للسائق» حُذف: «التوصيل»
+  // فوقه يقولها، **وما يبقى للسائق هو الأجرةُ ناقصَ هذا السطر.**
   return (
-    <li className="flex items-center justify-between gap-2 ps-3 text-xs text-ink-muted">
-      <span>
-        {OP.feeForDriver} <Money value={driver} small />
-      </span>
-      <span>
-        {OP.feeForPlatform} <Money value={platform} small />
-      </span>
+    <li className="flex items-center justify-between gap-2 text-ink-muted">
+      <span>{OP.platformCommission}</span>
+      <Money value={platform} small />
     </li>
   );
 }
