@@ -1783,8 +1783,11 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       // **ولا زرَّ فاتورةٍ** — (قرارُ المالك ٢٠٢٦-٠٨-١٢: «الفاتورة ألغِها
       // من الكرت الخاصّ بالطلبات»). **والقائمةُ تحته تقول ما فيه**،
       // **وزرٌّ يفتح ما هو مفتوحٌ فوقه** ضغطةٌ بلا خبرٍ جديد.
+      // **والفاتورةُ صندوقٌ بلونها** (المالك ٢٠٢٦-١٠-٢٢) — كالزبون والسائق والمتجر.
       cell: (o) => (
-        <InvoiceList o={o} onChanged={load} canEdit={can("orders.intervene")} />
+        <div className="rounded-control border border-violet-edge bg-violet-tint p-2.5">
+          <InvoiceList o={o} onChanged={load} canEdit={can("orders.intervene")} />
+        </div>
       ),
     },
     {
