@@ -231,7 +231,11 @@ export function NewOrdersBar({
           <li key={o.id} className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => onOpen(o)}
+              onClick={() => {
+                // **وفتحُ الطلب يُسكت رنينَه** — بلا زرِّ «استلمتها» (المالك ٢٠٢٦-١٠-٢٢).
+                if (canAck) void ack([o.id], o.id);
+                onOpen(o);
+              }}
               className="font-bold text-accent-text underline-offset-2 hover:underline"
             >
               #{o.number}
@@ -240,15 +244,6 @@ export function NewOrdersBar({
             <span className="text-xs text-ink-muted">
               {B.since.replace("{n}", fmtNum(minutesSince(o.created_at, now) ?? 0))}
             </span>
-            {canAck && (
-              <Button
-                variant="primary"
-                disabled={busy !== ""}
-                onClick={() => void ack([o.id], o.id)}
-              >
-                {B.newAck}
-              </Button>
-            )}
           </li>
         ))}
       </ul>

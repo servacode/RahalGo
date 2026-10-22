@@ -1940,6 +1940,18 @@
           "order_unknown": "المتجر لا يعرف الطلب",
           "merchant_not_ready": "الطلب غير جاهز"
         }
+      },
+      "completed": {
+        "done": "✓ مكتمل",
+        "took": "خلال {t}",
+        "m": "{m} د",
+        "hm": "{h} س {m} د"
+      },
+      "sections": {
+        "customer": "الزبون",
+        "driver": "السائق",
+        "merchant": "المتجر",
+        "details": "تفاصيل الطلب"
       }
     },
     "customers": {

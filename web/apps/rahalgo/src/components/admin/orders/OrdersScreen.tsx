@@ -33,6 +33,10 @@ import {
   IconPrint,
   IconSearch,
   IconUser,
+  IconMoto,
+  IconCart,
+  IconBag,
+  IconCatOther,
   IconLocation,
   IconStore,
   IconCamera,
@@ -306,6 +310,37 @@ interface Alert {
 
 const STATUS_LABELS: Record<string, string> = m.orders.status;
 const ENDED_BY: Record<string, string> = m.admin.ordersPage.endedBy;
+const O_DONE = m.admin.ordersPage.completed;
+
+/** **كم استغرق الطلبُ** من إنشائه إلى تسليمه — «٣٢ د» أو «١ س ١٥ د». */
+function tookText(from: string, to: string): string {
+  const mins = Math.max(0, Math.round((new Date(to).getTime() - new Date(from).getTime()) / 60000));
+  const h = Math.floor(mins / 60);
+  const text = h > 0 ? O_DONE.hm.replace("{h}", fmtNum(h)).replace("{m}", fmtNum(mins % 60)) : O_DONE.m.replace("{m}", fmtNum(mins));
+  return O_DONE.took.replace("{t}", text);
+}
+
+/**
+ * **رأسُ قسمٍ في بطاقة الطلب** (ملاحظةُ المالك ٢٠٢٦-١٠-٢٢: «لازم يكون بالكرت فصل بين معلومات
+ * الزبون والسائق… والتفاصيل») — خطٌّ فاصلٌ وعنوانٌ بلونه وأيقونته. **وينسخ قرارَ ٢٠٢٦-٠٨-١٢**
+ * («لا كلمة الزبون في البطاقة»): صار فيها سطران بالشكل نفسه فالتبسا.
+ */
+const SEC = m.admin.ordersPage.sections;
+const SEC_LOOK = {
+  customer: { tone: "text-accent-text", Icon: IconUser },
+  driver: { tone: "text-success", Icon: IconMoto },
+  merchant: { tone: "text-warning", Icon: IconStore },
+  details: { tone: "text-ink-muted", Icon: IconOrder },
+} as const;
+function SectionHead({ role }: { role: keyof typeof SEC_LOOK }) {
+  const { tone, Icon } = SEC_LOOK[role];
+  return (
+    <span className={`mt-1 flex items-center gap-1.5 border-t border-line-soft pt-2 text-xs font-bold ${tone}`}>
+      <Icon size={13} />
+      {SEC[role]}
+    </span>
+  );
+}
 const ACTION_LABELS: Record<string, string> = m.admin.ordersPage.actions;
 const PAYMENT_LABELS: Record<string, string> = m.orders.payment;
 
@@ -1342,8 +1377,18 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
                 **وما انتهى قبل أن يصل يبقى شارةً**: لا مسارَ له —
                 **وشريطٌ يقف في منتصفه يُقرأ «عالق» لا «انتهى».** */}
             <span className="inline-flex flex-wrap items-center gap-1">
-              {o.ended_by && ENDED_BY[o.ended_by] && (
-                <Badge variant="danger">{ENDED_BY[o.ended_by]}</Badge>
+              {/* **والمسلَّمُ مكتملٌ أخضر ومعه مدّتُه** (ملاحظةُ المالك ٢٠٢٦-١٠-٢٢: «أنهاه السائق
+                  شكله بشع… لازم يكون مكتمل وأخضر» و«كم دقيقة استغرق من أول الطلب للتسليم»).
+                  **والأحمرُ لما انتهى قبل أن يصل** — ألغاه الزبون أو المتجر أو العمليات. */}
+              {o.status === "delivered" ? (
+                <Badge variant="success">
+                  {O_DONE.done}
+                  {o.closed_at && ` · ${tookText(o.created_at, o.closed_at)}`}
+                </Badge>
+              ) : (
+                o.ended_by && ENDED_BY[o.ended_by] && (
+                  <Badge variant="danger">{ENDED_BY[o.ended_by]}</Badge>
+                )
               )}
               {/* **والطلبُ الذي فُتح بالرابط يُعلَّم** (المشكلة ٢١). */}
               {focusId === o.id && <Badge variant="accent">{BOARD.focused}</Badge>}
@@ -1384,7 +1429,17 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
                 أزراراً تنفع الآن. */}
             <span className="ms-auto flex items-center gap-2">
               {!live && (
-                <Button variant="secondary" onClick={() => setPanelId(o.id)}>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    // **وفتحُ التفاصيل يُسكت رنينَ الطلب الجديد** — بلا زرِّ «استلمتها»
+                    // (المالك ٢٠٢٦-١٠-٢٢: «مابدي هالزر اصلا»).
+                    if (o.status === "pending" && o.board && !o.board.seen_at) {
+                      void api(`/api/v1/admin/orders/${o.id}/seen`, { method: "POST", body: "{}" }).catch(() => {});
+                    }
+                    setPanelId(o.id);
+                  }}
+                >
                   {H.openDetails}
                 </Button>
               )}
@@ -1392,46 +1447,12 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
                 <InvoiceButton order={o} />
               )}
               {/* **ونوعُ الطلب بجانب رقمه** (ملاحظةُ المالك ٢٠٢٦-١٠-١٣ على #1003). */}
-              <Badge variant={o.kind === "standard" ? "neutral" : "accent"}>{kindLabel(o)}</Badge>
+              <KindBadge o={o} />
               <OrderRef number={o.number} at={o.created_at} />
             </span>
           </span>
         </span>
       ),
-    },
-    {
-      // ══════════════════════════════════════════════════════════════
-      // **سطرُ السائق تحت الترويسة** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٤)
-      // ══════════════════════════════════════════════════════════════
-      //
-      // **كان شارةً تحت المرحلة في عمودٍ عرضُه ستّةٌ وتسعون بكسلاً** — تلتفّ على
-      // ثلاثة أسطر، والاسمُ مكرّرٌ على خطّ المرحلة فوقها. **وفي الطابور يقول
-      // لمن معروضٌ الطلبُ الآن وكم بقي** (المشكلة ٢٤).
-      id: "driverLine",
-      header: BOARD.driverLine,
-      icon: <IconUser />,
-      noLabel: true,
-      hide: (o: OrderRow) =>
-        !o.driver_name &&
-        !(o.status === "dispatching" &&
-          (o.offered_driver_name || (o.board?.offer_passed ?? 0) > 0)),
-      cell: (o) =>
-        o.driver_name ? (
-          <DriverLine
-            name={o.driver_name}
-            phone={o.driver_phone}
-            seenAt={o.driver_seen_at}
-            now={now}
-            staleMin={staleMin}
-            hideSeen={!!o.closed_at}
-          />
-        ) : (
-          <OfferLine
-            name={o.offered_driver_name}
-            expiresAt={o.board?.offer_expires_at}
-            passed={o.board?.offer_passed ?? 0}
-          />
-        ),
     },
     {
       // **وعلى الجوّال مرحلةُ الطلب سطراً** (البند ١٥) — العمودُ الجانبيُّ يُطوى هناك.
@@ -1459,6 +1480,15 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           </span>
         );
       },
+    },
+    {
+      // **قسمٌ بعنوانه** (ملاحظةُ المالك ٢٠٢٦-١٠-٢٢: «نفصل بين الزبون والسائق والتفاصيل»).
+      id: "sec_customer",
+      header: SEC.customer,
+      noLabel: true,
+      block: true,
+      only: "cards",
+      cell: () => <SectionHead role="customer" />,
     },
     {
       id: "customer",
@@ -1536,6 +1566,78 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         );
       },
     },
+    /* **ولا حديثَ في البطاقة** — (قرارُ المالك ٢٠٢٦-٠٨-١٢: «دردشاتي
+       السابقة احذفها من الكرت الخاصّ بالطلبات»). **والمحادثةُ تُراجَع حين
+       تُطلب**، ولا تُفتح مع كلّ صفٍّ يُقرأ. */
+    {
+      id: "note",
+      header: m.admin.ordersPage.customerNote,
+      icon: <IconNote />,
+      block: true,
+      cell: (o) =>
+        o.notes ? (
+          <span className="text-xs text-accent-dark">{o.notes}</span>
+        ) : (
+          <span className="text-ink-muted">—</span>
+        ),
+    },
+    {
+      // **قسمٌ بعنوانه** (ملاحظةُ المالك ٢٠٢٦-١٠-٢٢: «نفصل بين الزبون والسائق والتفاصيل»).
+      id: "sec_driver",
+      header: SEC.driver,
+      noLabel: true,
+      block: true,
+      only: "cards",
+      hide: (o: OrderRow) =>
+        !o.driver_name &&
+        !(o.status === "dispatching" &&
+          (o.offered_driver_name || (o.board?.offer_passed ?? 0) > 0)),
+      cell: () => <SectionHead role="driver" />,
+    },
+    {
+      // ══════════════════════════════════════════════════════════════
+      // **سطرُ السائق تحت الترويسة** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٤)
+      // ══════════════════════════════════════════════════════════════
+      //
+      // **كان شارةً تحت المرحلة في عمودٍ عرضُه ستّةٌ وتسعون بكسلاً** — تلتفّ على
+      // ثلاثة أسطر، والاسمُ مكرّرٌ على خطّ المرحلة فوقها. **وفي الطابور يقول
+      // لمن معروضٌ الطلبُ الآن وكم بقي** (المشكلة ٢٤).
+      id: "driverLine",
+      header: BOARD.driverLine,
+      icon: <IconUser />,
+      noLabel: true,
+      hide: (o: OrderRow) =>
+        !o.driver_name &&
+        !(o.status === "dispatching" &&
+          (o.offered_driver_name || (o.board?.offer_passed ?? 0) > 0)),
+      cell: (o) =>
+        o.driver_name ? (
+          <DriverLine
+            name={o.driver_name}
+            phone={o.driver_phone}
+            seenAt={o.driver_seen_at}
+            now={now}
+            staleMin={staleMin}
+            hideSeen={!!o.closed_at}
+          />
+        ) : (
+          <OfferLine
+            name={o.offered_driver_name}
+            expiresAt={o.board?.offer_expires_at}
+            passed={o.board?.offer_passed ?? 0}
+          />
+        ),
+    },
+    {
+      // **قسمٌ بعنوانه** (ملاحظةُ المالك ٢٠٢٦-١٠-٢٢: «نفصل بين الزبون والسائق والتفاصيل»).
+      id: "sec_merchant",
+      header: SEC.merchant,
+      noLabel: true,
+      block: true,
+      only: "cards",
+      hide: (o: OrderRow) => o.kind === "custom",
+      cell: () => <SectionHead role="merchant" />,
+    },
     {
       id: "merchant",
       header: m.admin.ordersPage.merchant,
@@ -1547,6 +1649,15 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       // أضاع الاسمُ أم لم يكن؟
       hide: (o: OrderRow) => o.kind === "custom",
       cell: (o) => o.merchant_name,
+    },
+    {
+      // **قسمٌ بعنوانه** (ملاحظةُ المالك ٢٠٢٦-١٠-٢٢: «نفصل بين الزبون والسائق والتفاصيل»).
+      id: "sec_details",
+      header: SEC.details,
+      noLabel: true,
+      block: true,
+      only: "cards",
+      cell: () => <SectionHead role="details" />,
     },
     {
       // ══════════════════════════════════════════════════════════════
@@ -1716,21 +1827,6 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           </span>
         );
       },
-    },
-    /* **ولا حديثَ في البطاقة** — (قرارُ المالك ٢٠٢٦-٠٨-١٢: «دردشاتي
-       السابقة احذفها من الكرت الخاصّ بالطلبات»). **والمحادثةُ تُراجَع حين
-       تُطلب**، ولا تُفتح مع كلّ صفٍّ يُقرأ. */
-    {
-      id: "note",
-      header: m.admin.ordersPage.customerNote,
-      icon: <IconNote />,
-      block: true,
-      cell: (o) =>
-        o.notes ? (
-          <span className="text-xs text-accent-dark">{o.notes}</span>
-        ) : (
-          <span className="text-ink-muted">—</span>
-        ),
     },
   ];
 
@@ -2752,20 +2848,6 @@ function OrderActions({
     }
   }
 
-  // **«استلمتها» على طلبٍ جديد** — يُسكت رنينَه عند المكتب كلِّه (البند ٥).
-  async function markSeen() {
-    setBusy("seen");
-    setErr("");
-    try {
-      await api(`/api/v1/admin/orders/${o.id}/seen`, { method: "POST", body: "{}" });
-      onChanged();
-    } catch (e) {
-      setErr(errorText(e));
-    } finally {
-      setBusy("");
-    }
-  }
-
   // **السببُ بدل الضغطتين العمياوين.**
   //
   // كانت الضغطةُ الثانية تحرس من الإصبع الزالّ وحده. والسببُ يحرس منه **ويُبقي
@@ -3097,8 +3179,12 @@ function OrderActions({
 
           **ولا يُعرض إلّا على خاصٍّ قائم**: الخادمُ يردّ `custom_locked` على
           طلبٍ أُغلق، **وزرٌّ يُعرض ولا يفعل أسوأُ من زرٍّ غائب.** */}
+      {/* **وبعد توثيق الأجرة وقبل الاستلام وحدَهما** (المالك ٢٠٢٦-١٠-٢٢) — قبلها لا سعرَ
+          يُعدَّل، وبعدها يقفله الخادم (`custom_locked`). */}
       {o.kind === "custom" &&
         canIntervene &&
+        o.custom_fee != null &&
+        !o.picked_up_at &&
         !CLOSED_STATUSES.has(o.status) && (
           <Button
             variant="secondary"
@@ -3362,11 +3448,6 @@ function OrderActions({
             {BOARD.release.button}
           </Button>
         )}
-      {canIntervene && o.status === "pending" && o.board && !o.board.seen_at && (
-        <Button variant="primary" disabled={busy !== ""} onClick={() => void markSeen()}>
-          {BOARD.newAck}
-        </Button>
-      )}
       {err && <p className="w-full text-xs text-danger">{err}</p>}
       {note && <p className="w-full text-xs text-muted">{note}</p>}
     </>
@@ -3402,6 +3483,7 @@ function PartnerStoreBox({
 }) {
   const OP = m.admin.ordersPage;
   const [picking, setPicking] = useState(false);
+  const [pickQuery, setPickQuery] = useState("");
   const [stores, setStores] = useState<{ id: string; name: string; number: number }[]>([]);
   const [working, setWorking] = useState(false);
   const [err, setErr] = useState("");
@@ -3488,16 +3570,32 @@ function PartnerStoreBox({
       )}
       {err && <p className="text-xs text-danger">{err}</p>}
       <Modal open={picking} onClose={() => setPicking(false)} title={OP.partnerPickTitle}>
-        <div className="mb-3">
-          <SearchSelect
-            ariaLabel={OP.partnerSearch}
-            allLabel={OP.partnerSearch}
-            value=""
-            options={stores.map((x) => ({ value: x.id, label: storeLabel(x.name, x.number) }))}
-            onChange={(v) => {
-              if (v) void change(v);
-            }}
+        {/* **بحثٌ وتحتَه القائمةُ ظاهرة** (المالك ٢٠٢٦-١٠-٢٢) — كانت قائمةً منسدلةً تنقصّ
+            داخل النافذة فلا يُرى منها إلا حقلُ البحث. */}
+        <div className="mb-3 flex flex-col gap-2">
+          <Input
+            aria-label={OP.partnerSearch}
+            placeholder={OP.partnerSearch}
+            value={pickQuery}
+            onChange={(e) => setPickQuery(e.target.value)}
           />
+          <ul className="max-h-72 overflow-y-auto rounded-control border border-line">
+            {stores
+              .filter((x) => !pickQuery.trim() || storeLabel(x.name, x.number).includes(pickQuery.trim()))
+              .map((x) => (
+                <li key={x.id}>
+                  <button
+                    type="button"
+                    disabled={working}
+                    onClick={() => void change(x.id)}
+                    className="flex w-full items-center gap-2 border-b border-line-soft px-3 py-2 text-start text-sm last:border-b-0 hover:bg-accent-tint"
+                  >
+                    <IconStore size={14} className="shrink-0 text-ink-dim" />
+                    {storeLabel(x.name, x.number)}
+                  </button>
+                </li>
+              ))}
+          </ul>
         </div>
         {stores.length === 0 && !err && (
           <p className="mb-3 text-xs text-ink-muted">{OP.partnerNoResults}</p>
@@ -3505,6 +3603,28 @@ function PartnerStoreBox({
         {err && <p className="mb-3 text-xs text-danger">{err}</p>}
       </Modal>
     </div>
+  );
+}
+
+/**
+ * **نوعُ الطلب بلونه وأيقونته** (ملاحظةُ المالك ٢٠٢٦-١٠-٢٢: «لازم يكون بشكل مرتب واضح أكثر»)
+ * — عاديٌّ أزرق · مشترياتٌ برتقاليّ · أمانةٌ بنفسجيّ · «لدي توصيلة» سماويّ. **والأخضرُ للمكتمل
+ * والأحمرُ للمشاكل** فلا يلتبس.
+ */
+function KindBadge({ o }: { o: OrderRow }) {
+  const look =
+    o.kind === "merchant_delivery"
+      ? { v: "accent" as const, Icon: IconStore }
+      : o.kind === "custom"
+        ? o.custom_mode === "amanah"
+          ? { v: "violet" as const, Icon: IconCatOther }
+          : { v: "warning" as const, Icon: IconBag }
+        : { v: "primary" as const, Icon: IconCart };
+  return (
+    <Badge variant={look.v} className="gap-1 px-2.5 py-1 text-sm font-bold">
+      <look.Icon size={14} />
+      {kindLabel(o)}
+    </Badge>
   );
 }
 
