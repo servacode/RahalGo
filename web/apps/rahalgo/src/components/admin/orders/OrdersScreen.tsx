@@ -3813,20 +3813,24 @@ function InvoiceList({
             المتجر** (٢٠٢٦-١٠-١٦) والمبلغُ الحقيقيُّ تحته بحال موافقته. */}
         {o.collect_amount ? (
           <li className="flex items-start justify-between gap-2 border-t border-line-soft pt-1.5">
-            <span className="shrink-0 text-ink-muted">
+            {/* **والشرحُ يلتفّ والمبلغُ ثابتٌ يساراً** (المالك ٢٠٢٦-١٠-٢٢: «رقم 250 متخبي ورا
+                المربع») — كان النصُّ لا ينكمش فيدفع الرقمَ خارج الصندوق. */}
+            <span className="min-w-0 flex-1 text-ink-muted">
               {fetch ? OP.mdFetchEstimate : OP.mdCollect}
               <span className="block text-xs">{fetch ? OP.mdFetchEstimateHint : OP.mdCollectHint}</span>
             </span>
-            {o.amount_currency === "USD" ? (
-              <span className="text-sm font-bold" dir="ltr">{amountText(o.collect_amount, "USD")}</span>
-            ) : (
-              <Money value={o.collect_amount} small />
-            )}
+            <span className="shrink-0 whitespace-nowrap">
+              {o.amount_currency === "USD" ? (
+                <span className="text-sm font-bold" dir="ltr">{amountText(o.collect_amount, "USD")}</span>
+              ) : (
+                <Money value={o.collect_amount} small />
+              )}
+            </span>
           </li>
         ) : null}
         {fetch && o.fetch_amount != null ? (
           <li className="flex items-start justify-between gap-2">
-            <span className="shrink-0 text-ink-muted">
+            <span className="min-w-0 flex-1 text-ink-muted">
               {OP.mdFetchAmount}
               <span
                 className={`block text-xs font-bold ${
@@ -3844,11 +3848,13 @@ function InvoiceList({
                     : OP.mdFetchPending}
               </span>
             </span>
-            {o.amount_currency === "USD" ? (
-              <span className="text-sm font-bold" dir="ltr">{amountText(o.fetch_amount, "USD")}</span>
-            ) : (
-              <Money value={o.fetch_amount} small />
-            )}
+            <span className="shrink-0 whitespace-nowrap">
+              {o.amount_currency === "USD" ? (
+                <span className="text-sm font-bold" dir="ltr">{amountText(o.fetch_amount, "USD")}</span>
+              ) : (
+                <Money value={o.fetch_amount} small />
+              )}
+            </span>
           </li>
         ) : null}
       </ul>
