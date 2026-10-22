@@ -2532,6 +2532,28 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
  *
  * **وإسنادُ السائق يبقى في التفاصيل**: يحتاج قائمةَ اختيارٍ لا زرّاً.
  */
+/** **أتُلزَم صورةُ التسليم؟** (`drivers.require_delivery_photo`) — تُقرأ مرّةً للشاشة كلّها. */
+let photoSetting: Promise<boolean> | null = null;
+function useRequireDeliveryPhoto(): boolean {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    photoSetting ??= api<{ settings: { key: string; value: unknown }[] }>("/api/v1/admin/settings")
+      .then((r) => {
+        const v = r.settings.find((x) => x.key === "drivers.require_delivery_photo")?.value;
+        return v === true || v === "true";
+      })
+      // **ومن لا يقرأ الإعدادات يرى الزرَّ كما كان** — موظّفُ عملياتٍ بلا `settings.read`
+      // لا يُحرَم إذناً يحتاجه حين تُلزَم الصورة.
+      .catch(() => true);
+    let live = true;
+    void photoSetting.then((v) => live && setOn(v));
+    return () => {
+      live = false;
+    };
+  }, []);
+  return on;
+}
+
 function OrderActions({
   o,
   onChanged,
@@ -2554,6 +2576,9 @@ function OrderActions({
   /** كم سائقاً في الدوام — **و`null` مجهولٌ لا صفر** */
   onShift: number | null;
 }) {
+  // **و«إذن تسليم بلا صورة» حين تُلزَم الصورةُ وحدَه** (المالك ٢٠٢٦-١٠-٢٢) — وبلا إلزامٍ
+  // يُسلَّم بلا صورةٍ أصلاً، فالزرُّ لا يفعل شيئاً.
+  const requirePhoto = useRequireDeliveryPhoto();
   const [busy, setBusy] = useState("");
   /** خبرٌ يُقال بعد فعلٍ نجح — **وكم صُحِّح** في إعادة الحساب. */
   const [notice, setNotice] = useState("");
@@ -3306,7 +3331,7 @@ function OrderActions({
         * **يظهر عند «وصل إلى العنوان» بلا صورةٍ بعد** — كاميرا السائق
         * معطّلةٌ فيأذن العملياتُ (قدرةُ `orders.intervene`) بالتسليم بلا
         * صورة بسببٍ إلزاميٍّ ومُدقَّق. **والسائقُ لا يأذن لنفسه.** */}
-      {o.status === "at_dropoff" && !o.proof_url && canIntervene && (
+      {o.status === "at_dropoff" && !o.proof_url && canIntervene && requirePhoto && (
         <Button
           variant="secondary"
           disabled={busy !== ""}
