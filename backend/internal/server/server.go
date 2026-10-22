@@ -6,6 +6,7 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -239,6 +240,11 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 	// **جلستا الأدمن في كلّ بيئة** — كانت للتجهيز وحدَه (٢٠٢٦-١٠-٠٣)، **ثمّ قرّرها المالكُ
 	// للإنتاج** (٢٠٢٦-١٠-٢١: «اي حساب الادمن نخليه يشتغل على جهازين»).
 	identitySvc.SetAdminWebSessions(2)
+	// **وعلى التجهيز أربع** (٢٠٢٦-١٠-٢٢) — المالكُ يراجع اللوحة من جهازين وأدواتي تعمل معه،
+	// **فلا تطرده جلسةٌ آليّة**. والإنتاجُ يبقى على اثنتين كما قرّر.
+	if cfg.Env == "staging" && os.Getenv("RAHALGO_STAGING") == "1" {
+		identitySvc.SetAdminWebSessions(4)
+	}
 	identitySvc.SetLogoutNotifier(func(_ context.Context, tokens []string) {
 		go func() {
 			// **ويُنتظر قليلاً قبل التحذير** (٢٠٢٦-١٠-١٩) — فإن كان الداخلُ الهاتفَ نفسَه
