@@ -288,8 +288,9 @@ export function DoorPanel({
 
   return (
     // **وضغطُ اللوحة لا يصل البطاقةَ تحتها** — ولا ما في نوافذها.
+    // **وأحمرُ لا برتقاليّ** (المالك ٢٠٢٦-١٠-٢٢: «مربع الابلاغ لازم احمر لنعرف انها مشكلة بدها حل»).
     <div
-      className="w-full space-y-3 rounded-control border border-warning-edge bg-warning-tint p-3"
+      className="w-full space-y-3 rounded-control border-2 border-danger-edge bg-danger-tint p-3"
       onClick={(e) => e.stopPropagation()}
     >
       {/* **والعنوانُ تسميةُ الحقل فوق اللوحة** (`header` في البطاقة) —
