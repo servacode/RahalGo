@@ -460,6 +460,11 @@ func ViewFor(a Audience, o *Order) map[string]any {
 		if n, ok := out["driver_name"].(string); ok && n != "" {
 			out["driver_name"] = CustomerDriverLabel
 		}
+		// **والتوصيلُ المجانيّ يُرى أجرةً مخفَّضة** (٢٠٢٦-١٠-٢٣) — نسختُه الحاليّة تعرض
+		// `custom_fee` أجرةً، **فتُقال له ما يدفعه** لا ما يأخذه السائق.
+		if _, ok := out["custom_fee"]; ok && o.CustomFee != nil && o.DeliveryFee < *o.CustomFee {
+			out["custom_fee"] = o.DeliveryFee
+		}
 	}
 	// **والسائقُ يرى أقربَ معلمٍ ملصقاً بالعنوان** (قرارُ المالك ٢٠٢٦-١٠-٢١) — في
 	// الحقل الذي تعرضه نسختُه الحاليّة، **فلا تحديثَ للتطبيق**. وللزبون والمتجر

@@ -49,6 +49,7 @@ type customQuoteRow struct {
 	paymentMethod      string
 	goods              int64 // custom_goods_amount الحاليّة (0 إن لم يُتَّفق بعد)
 	fee                int64 // custom_fee الحاليّة
+	waived             int64 // promo_delivery_waived — التوصيلُ المجانيّ (٢٠٢٦-١٠-٢٣)
 	hasGoods           bool  // أاتُّفق مرّةً على الأقلّ؟
 	hasFee             bool  // أوُثّقت الأجرةُ عموداً؟ — شرطُ خطوة الثمن
 	quoteVersion       int64
@@ -72,13 +73,13 @@ func (s *Service) lockCustomRow(ctx context.Context, q wallet.Querier, orderID s
 		       custom_goods_amount, custom_fee, quote_version,
 		       quote_confirmed_at, quote_confirmed_total, quote_confirmed_version,
 		       custom_reserved_amount, custom_fee_source, custom_fee_snapshot,
-		       custom_driver_may_change_fee, picked_up_at
+		       custom_driver_may_change_fee, picked_up_at, promo_delivery_waived
 		FROM orders WHERE id = $1 FOR UPDATE`, orderID).
 		Scan(&r.customerID, &r.driverID, &r.kind, &r.status, &r.paymentMethod,
 			&goods, &fee, &r.quoteVersion,
 			&r.confirmedAt, &r.confirmedTotal, &r.confirmedVersion,
 			&r.reserved, &r.feeSource, &r.feeSnapshot,
-			&r.driverMayChangeFee, &r.pickedUpAt)
+			&r.driverMayChangeFee, &r.pickedUpAt, &r.waived)
 	if err != nil {
 		return customQuoteRow{}, err
 	}
@@ -157,7 +158,22 @@ func (s *Service) applyCustomQuoteTx(ctx context.Context, q wallet.Querier, row 
 	if row.hasGoods && row.goods == newGoods && row.fee == newFee {
 		return false, nil
 	}
-	newTotal := newGoods + newFee
+	// **والتوصيلُ المجانيّ بعرضه** (قرارُ المالك ٢٠٢٦-١٠-٢٣) — يُحسب قبل المجموع: الزبونُ
+	// يؤكّد ما يدفعه فعلاً. **و`custom_fee` يبقى الأجرةَ المتّفقَ عليها** (أجرُ السائق
+	// منها)، و`delivery_fee` ما يدفعه الزبون، والفرقُ في `promo_delivery_waived`.
+	var mode string
+	if err := q.QueryRow(ctx, `SELECT custom_mode FROM orders WHERE id = $1`, row.id).Scan(&mode); err != nil {
+		return false, err
+	}
+	freeKind := FreeKindPurchase
+	if mode == CustomModeAmanah {
+		freeKind = FreeKindAmanah
+	}
+	waive, err := s.freeDeliveryForQuote(ctx, q, row.id, row.customerID, freeKind, newFee)
+	if err != nil {
+		return false, err
+	}
+	newTotal := newGoods + newFee - waive
 	newVersion := row.quoteVersion + 1
 
 	// ── سياسةُ التأكيد والحجز — لا تنطبق إلّا على تأكيدٍ حيّ ──────────────
@@ -231,10 +247,6 @@ func (s *Service) applyCustomQuoteTx(ctx context.Context, q wallet.Querier, row 
 	// **ويُعاد الحسابُ مع كلّ تعديلِ اتّفاق** — فالأجرةُ تتبدّل، **ونصيبٌ
 	// محسوبٌ على أجرةٍ قديمةٍ يكذب.**
 	// **ولكلّ نوعٍ حصّتُه** (٢٠٢٦-١٠-١٣) — الأمانةُ غيرُ المشتريات.
-	var mode string
-	if err := q.QueryRow(ctx, `SELECT custom_mode FROM orders WHERE id = $1`, row.id).Scan(&mode); err != nil {
-		return false, err
-	}
 	shareKind := SharePurchase
 	if mode == CustomModeAmanah {
 		shareKind = ShareAmanah
@@ -243,14 +255,15 @@ func (s *Service) applyCustomQuoteTx(ctx context.Context, q wallet.Querier, row 
 	driverFee := DriverFeeWithShare(newFee, pct, fixed)
 
 	set := `custom_goods_amount = $2, custom_fee = $3,
-	        subtotal = $2, delivery_fee = $3, driver_fee = $5,
+	        subtotal = $2, delivery_fee = $3::bigint - $8::bigint, driver_fee = $5,
+	        promo_delivery_waived = $8,
 	        snap_platform_delivery_percent = $6, snap_platform_delivery_fixed = $7,
-	        total = $2::bigint + $3::bigint,
+	        total = $2::bigint + $3::bigint - $8::bigint,
 	        quote_version = $4, custom_agreed_at = now(), updated_at = now(),
 	        quote_rejected_at = NULL`
 	// **والثابتان يُضافان قبل الشرطيّ** — **ورقمُ وسيطٍ يتزحزح بحسب فرعٍ
 	// يُنفَّذ أو لا يُنفَّذ يكتب قيمةً في عمودٍ آخر بصمت.**
-	args := []any{row.id, newGoods, newFee, newVersion, driverFee, pct, fixed}
+	args := []any{row.id, newGoods, newFee, newVersion, driverFee, pct, fixed, waive}
 	switch {
 	case invalidate:
 		set += `, quote_confirmed_at = NULL, quote_confirmed_total = NULL, quote_confirmed_version = NULL`
@@ -259,8 +272,8 @@ func (s *Service) applyCustomQuoteTx(ctx context.Context, q wallet.Querier, row 
 	case row.confirmedAt != nil: // نقصٌ مع تأكيدٍ باقٍ: يُحدَّث المبلغُ والنسخة
 		// **والمستحقُّ النقديُّ يتبع المبلغ** — كان يبقى على المؤكَّد القديم فيقبض
 		// السائقُ ما لم يعُد مستحقّاً. (والمحفظةُ صفرٌ فيها، فلا يُمَسّ.)
-		set += `, quote_confirmed_total = $8, quote_confirmed_version = $4,
-		        cash_due = CASE WHEN payment_method = 'cash' THEN $8 ELSE cash_due END`
+		set += `, quote_confirmed_total = $9, quote_confirmed_version = $4,
+		        cash_due = CASE WHEN payment_method = 'cash' THEN $9 ELSE cash_due END`
 		args = append(args, newTotal)
 	}
 	if _, err := q.Exec(ctx, `UPDATE orders SET `+set+` WHERE id = $1`, args...); err != nil {
@@ -269,7 +282,7 @@ func (s *Service) applyCustomQuoteTx(ctx context.Context, q wallet.Querier, row 
 
 	// ── التدقيق: العرضُ القديمُ والجديد، والفاعل، والدور، والمصدر، والسبب ──
 	if err := s.auditQuoteTx(ctx, q, &m.actorID, "order.custom_quote_changed", row.id, map[string]any{
-		"old_goods": row.goods, "old_fee": row.fee, "old_total": row.goods + row.fee,
+		"old_goods": row.goods, "old_fee": row.fee, "old_total": row.goods + row.fee - row.waived,
 		"new_goods": newGoods, "new_fee": newFee, "new_total": newTotal,
 		"quote_version": newVersion, "actor_role": m.role, "source": m.source,
 		"reason": m.reason, "invalidated_confirmation": invalidate,
@@ -326,7 +339,7 @@ func (s *Service) confirmQuote(ctx context.Context, orderID, customerID, payment
 		return nil, ErrCustomLocked
 	}
 	// **العرضُ الذي يؤكّده هو الحاليُّ نفسُه** — نسخةً ومبلغاً، وإلّا فليقرأ الجديد.
-	current := row.goods + row.fee
+	current := row.goods + row.fee - row.waived
 	if expectedVersion != row.quoteVersion || expectedTotal != current {
 		return nil, ErrQuoteChanged
 	}
@@ -604,7 +617,7 @@ func (s *Service) RejectQuote(ctx context.Context, orderID, customerID string) (
 		return nil, err
 	}
 	if err := s.auditQuoteTx(ctx, tx, &customerID, "order.custom_quote_rejected", orderID, map[string]any{
-		"total": row.goods + row.fee, "quote_version": row.quoteVersion,
+		"total": row.goods + row.fee - row.waived, "quote_version": row.quoteVersion,
 		"actor_role": "customer", "source": "customer_reject",
 	}); err != nil {
 		return nil, err

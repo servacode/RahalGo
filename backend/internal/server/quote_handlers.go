@@ -119,6 +119,13 @@ func (s *Server) handleQuote(w http.ResponseWriter, r *http.Request) {
 	//
 	// **والمحرّكُ يعرف أيَّ صنفٍ نفد وأيَّ سعرٍ تبدّل** — **فلا يُردّ
 	// رمزٌ واحدٌ لا يقول أيَّها.**
+	// **والتوصيلُ المجانيّ يُرى في السلّة** (قرارُ المالك ٢٠٢٦-١٠-٢٣) — بحساب الإنشاء نفسِه،
+	// فالسلّةُ تقول ما سيُدفع. **ونسخةُ التطبيق الحاليّة تقرأ `delivery_fee` فتراه صفراً.**
+	if w := s.orders.FreeDeliveryPreview(r.Context(), s.optionalUser(r), orders.FreeKindStandard, q.DeliveryFee); w > 0 {
+		q.DeliveryFee -= w
+		q.Total -= w
+		q.FreeWaived = w
+	}
 	if exp.Has {
 		q.Changes = append(q.Changes, s.orders.CartChanges(r.Context(), s.pg, req.Items, exp)...)
 		q.Changes = append(q.Changes, orders.FeeChange(exp, q.DeliveryFee)...)
@@ -263,4 +270,21 @@ func (s *Server) changesFor(
 		return nil
 	}
 	return s.orders.CartChanges(ctx, s.pg, items, exp)
+}
+
+// optionalUser **صاحبُ النداء إن حمل رمزاً صالحاً** — والبابُ عامٌّ فلا يُشترط.
+// **التسعيرةُ تُخبر ولا تمنع**: رمزٌ فاسدٌ يُقرأ زائراً لا خطأً.
+func (s *Server) optionalUser(r *http.Request) string {
+	if uid := userIDFrom(r); uid != "" {
+		return uid
+	}
+	token, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
+	if !ok || token == "" {
+		return ""
+	}
+	claims, err := s.tokens.VerifyAccess(token)
+	if err != nil {
+		return ""
+	}
+	return claims.Subject
 }

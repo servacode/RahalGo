@@ -32,6 +32,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import DiscountsTab from "@/components/admin/DiscountsTab";
 import PromoReferralsTab from "@/components/admin/PromoReferralsTab";
+import FreeDeliveryTab from "@/components/admin/FreeDeliveryTab";
 
 const m = getMessages(defaultLocale);
 const O = m.admin.promosOwner;
@@ -92,7 +93,7 @@ export default function PromosPage() {
   // **وإنشاءُ الأكواد وتحريرُها بقدرة العروض** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — لا المحتوى.
   const isAdmin = can("offers.manage");
   const isFinance = can("finance.read");
-  const [tab, setTab] = useState<"codes" | "discounts" | "referrals">("codes");
+  const [tab, setTab] = useState<"codes" | "discounts" | "referrals" | "free">("codes");
   const [summary, setSummary] = useState<Summary | null>(null);
 
   const loadSummary = useCallback(() => {
@@ -107,6 +108,7 @@ export default function PromosPage() {
     { key: "codes" as const, label: m.admin.promos.tabCodes },
     { key: "discounts" as const, label: m.admin.promos.tabDiscounts },
     { key: "referrals" as const, label: O.tabReferrals },
+    { key: "free" as const, label: m.admin.promos.tabFreeDelivery },
   ];
 
   return (
@@ -157,6 +159,7 @@ export default function PromosPage() {
       {tab === "codes" && <CodesTab isAdmin={isAdmin} onChanged={loadSummary} />}
       {tab === "discounts" && <DiscountsTab onChanged={loadSummary} />}
       {tab === "referrals" && <PromoReferralsTab />}
+      {tab === "free" && <FreeDeliveryTab />}
     </div>
   );
 }

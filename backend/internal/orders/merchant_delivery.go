@@ -211,6 +211,14 @@ func (s *Service) CreateMerchantDeliveryIn(ctx context.Context, tx dbtx.Querier,
 	pct, fixed := s.platformShare(ctx, tx, ShareMerchant)
 	driverFee := DriverFeeWithShare(fee, pct, fixed)
 
+	// **والتوصيلُ المجانيّ بعرضه** (قرارُ المالك ٢٠٢٦-١٠-٢٣) — مرّةً لكلّ متجرٍ بكلّ عرض.
+	// السائقُ أخذ أجرَه أعلاه من الأجرة كاملة، **ومن يدفع يدفع ما بقي** (`charge`).
+	free, err := s.freeDeliveryOffer(ctx, tx, FreeKindMerchant, merchantClaimant(merchantID), fee, true)
+	if err != nil {
+		return "", err
+	}
+	charge := fee - free.waive
+
 	snap, err := s.snapshotNow(ctx, tx)
 	if err != nil {
 		return "", err
@@ -225,7 +233,7 @@ func (s *Service) CreateMerchantDeliveryIn(ctx context.Context, tx dbtx.Querier,
 	// **ولا دينَ أبداً** (قرارُ المالك ٢٠٢٦-١٠-١٥): «المتجر يدفع» بمحفظةٍ تكفي وإلّا
 	// يختار النقد — **لا سقفَ ولا دينٌ مفتوح.**
 	if in.FeePayer == FeePayerMerchant {
-		can, err := s.merchantCanPay(ctx, tx, merchantID, fee)
+		can, err := s.merchantCanPay(ctx, tx, merchantID, charge)
 		if err != nil {
 			return "", err
 		}
@@ -240,7 +248,7 @@ func (s *Service) CreateMerchantDeliveryIn(ctx context.Context, tx dbtx.Querier,
 	// الاستلام («أنا نقداً»). **ولا خصمَ ولا دينَ في الحالين.**
 	var cashDue int64
 	if in.FeePayer == FeePayerRecipient || in.FeePayer == FeePayerMerchantCash {
-		cashDue = fee
+		cashDue = charge
 	}
 
 	var id string
@@ -252,21 +260,24 @@ func (s *Service) CreateMerchantDeliveryIn(ctx context.Context, tx dbtx.Querier,
 		                    snap_merchant_commission_percent, snap_rep_commission_percent,
 		                    snap_commission_source, snap_activation_orders,
 		                    snap_platform_delivery_percent, dropoff_known, snap_platform_delivery_fixed,
-		                    delivery_mode, collect_amount, amount_currency)
+		                    delivery_mode, collect_amount, amount_currency, promo_delivery_waived)
 		VALUES ('merchant_delivery', $1, $2,
 		        ST_SetSRID(ST_MakePoint($4, $3), 4326)::geography,
 		        $5, $6, $7, $8,
 		        'pending', 'cash', 0, $9, $10,
 		        $9, $11, $12,
-		        $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+		        $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
 		RETURNING id::text`,
 		merchantID, in.AddressText, in.Lat, in.Lng,
 		in.RecipientName, in.RecipientPhone, nullIfEmpty(in.ParcelNote), in.FeePayer,
-		fee, driverFee, cashDue, strings.TrimSpace(in.DriverNote), // **و`notes` NOT NULL** — فراغٌ لا NULL
+		charge, driverFee, cashDue, strings.TrimSpace(in.DriverNote), // **و`notes` NOT NULL** — فراغٌ لا NULL
 		snap.MerchantCommission, snap.RepCommissionPercent,
 		snap.CommissionSource, snap.ActivationOrders, pct, dropoffKnown, fixed,
-		mode, in.CollectAmount, in.Currency).Scan(&id)
+		mode, in.CollectAmount, in.Currency, free.waive).Scan(&id)
 	if err != nil {
+		return "", err
+	}
+	if err := free.claim(ctx, tx, id, FreeKindMerchant); err != nil {
 		return "", err
 	}
 
@@ -424,6 +435,8 @@ type MerchantDeliveryQuote struct {
 	// MerchantCanPay **أيكفي المتاحُ في محفظته الأجرة؟** — وإلّا يُعطَّل خيارُ «من محفظتي».
 	// **ويُحسب بقاعدة `chargeMerchantDelivery` نفسِها** لا بتقديرٍ ثانٍ. **ولا دين.**
 	MerchantCanPay bool `json:"merchant_can_pay"`
+	// FreeWaived **ما يُعفى منه بعرض التوصيل المجانيّ** (٢٠٢٦-١٠-٢٣) — و`Fee` بعده.
+	FreeWaived int64 `json:"free_waived"`
 }
 
 // QuoteMerchantDelivery **أجرةُ النقطة ومقدرةُ المتجر** — بحرّاس الإنشاء نفسِها.
@@ -461,8 +474,13 @@ func (s *Service) QuoteMerchantDelivery(ctx context.Context, merchantID string,
 	if err != nil {
 		return nil, err
 	}
-	q := &MerchantDeliveryQuote{Fee: fee, ZoneName: zone.Name, FeeBasis: basis,
-		DistanceM: int64(dist), Mode: mode}
+	// **والتوصيلُ المجانيّ يُرى قبل الطلب** — `Fee` ما سيُدفع فعلاً.
+	off, err := s.freeDeliveryOffer(ctx, s.db, FreeKindMerchant, merchantClaimant(merchantID), fee, false)
+	if err != nil {
+		return nil, err
+	}
+	q := &MerchantDeliveryQuote{Fee: fee - off.waive, ZoneName: zone.Name, FeeBasis: basis,
+		DistanceM: int64(dist), Mode: mode, FreeWaived: off.waive}
 	if q.WalletBalance, q.AvailableBalance, err = merchantWallet(ctx, s.db, merchantID, false); err != nil {
 		return nil, err
 	}

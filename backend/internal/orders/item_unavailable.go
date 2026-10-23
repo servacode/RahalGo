@@ -237,6 +237,13 @@ func (s *Service) MarkItemUnavailable(ctx context.Context, actorID, orderID, ite
 			}
 		}
 	}
+	// **والتوصيلُ المجانيّ يبقى وعداً** — يُعاد على الأجرة الجديدة بسقف عرضه.
+	if fw, err := s.freeDeliveryReapply(ctx, tx, orderID, deliveryFee); err != nil {
+		return nil, res, err
+	} else if fw > 0 {
+		deliveryFee -= fw
+		waived += fw
+	}
 	total := subtotal - discount + deliveryFee
 	if total < 0 {
 		total = 0

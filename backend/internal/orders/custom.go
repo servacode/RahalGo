@@ -758,20 +758,30 @@ func (s *Service) settleCustomWallet(ctx context.Context, q wallet.Querier,
 		return nil
 	}
 	var method string
-	var reserved int64
+	var reserved, waived int64
 	var paidAt *time.Time
 	if err := q.QueryRow(ctx, `
-		SELECT payment_method, custom_reserved_amount, custom_paid_at
+		SELECT payment_method, custom_reserved_amount, custom_paid_at, promo_delivery_waived
 		FROM orders WHERE id = $1 FOR UPDATE`, in.orderID).
-		Scan(&method, &reserved, &paidAt); err != nil {
+		Scan(&method, &reserved, &paidAt, &waived); err != nil {
 		return err
 	}
 	// **دفعٌ من محفظة، ولم يُدفع قبلُ** — والعلامةُ (`custom_paid_at`) تمنع
 	// التكرار: **التسليمُ قد يُنادى مرّتين**، فيُخصم مرّتين لولاها.
-	if method != "wallet" || paidAt != nil {
+	if paidAt != nil {
 		return nil
 	}
-	if reserved <= 0 {
+	// **ونقدٌ صفرٌ لأنّ المنصّةَ أعفت الأجرةَ كلَّها** (توصيلٌ مجانيّ، ٢٠٢٦-١٠-٢٣) — يُوجَّه
+	// إلى مسار النقد فيُدفع أجرُ السائق من المنصّة؛ **وبلا هذا لقاد بلا أجر.**
+	if method != "wallet" {
+		if waived > 0 {
+			return s.settleCustomCash(ctx, q, in, out)
+		}
+		return nil
+	}
+	// **والتوصيلُ المجانيّ** (٢٠٢٦-١٠-٢٣): أمانةٌ معفاةٌ كلُّها لا حجزَ لها — والسائقُ
+	// يُدفع أجرُه من المنصّة.
+	if reserved <= 0 && waived <= 0 {
 		s.logger.Warn("الطلب الخاصّ: تسليمٌ بمحفظةٍ بلا حجزٍ حيّ — لا خصم",
 			"order", in.orderID)
 		return nil
@@ -799,17 +809,20 @@ func (s *Service) settleCustomWallet(ctx context.Context, q wallet.Querier,
 	}
 	driverGets := goods + driverFee
 	// **ولا يُعطى أكثرَ من المحجوز** — **لقطةٌ شاخت أو تعديلُ أدمنٍ قد يجعل
-	// المجموعَ غيرَ المحجوز، وقيدٌ يتجاوزه يخلق مالاً من عدم.**
-	if driverGets > reserved {
+	// المجموعَ غيرَ المحجوز، وقيدٌ يتجاوزه يخلق مالاً من عدم.** **وما أعفته المنصّةُ
+	// بعرض التوصيل المجانيّ يُضاف** — تدفعه هي (٢٠٢٦-١٠-٢٣).
+	if driverGets > reserved+waived {
 		s.logger.Warn("الطلب الخاصّ: نصيبُ السائق يتجاوز المحجوز — يُقصَر عليه",
 			"order", in.orderID, "driver", driverGets, "reserved", reserved)
-		driverGets = reserved
+		driverGets = reserved + waived
 	}
 
 	// **يُفكّ الحجزُ ويُخصَم معاً** — فعلٌ واحدٌ لا يفترق (`SettleReservedTx`).
-	if _, err := s.wallet.SettleReservedTx(ctx, q, in.customerID, reserved, "order_payment",
-		in.orderID, "طلبٌ خاصّ — دفعٌ من المحفظة", &in.actorID); err != nil {
-		return err
+	if reserved > 0 {
+		if _, err := s.wallet.SettleReservedTx(ctx, q, in.customerID, reserved, "order_payment",
+			in.orderID, "طلبٌ خاصّ — دفعٌ من المحفظة", &in.actorID); err != nil {
+			return err
+		}
 	}
 	if err := s.payCustomDriver(ctx, q, in, driverGets, goods); err != nil {
 		return err
@@ -884,20 +897,22 @@ func (s *Service) payCustomDriver(ctx context.Context, q wallet.Querier, in sett
 // **دفع نقداً بيده** — **وقيدُ `order_payment` هنا يخصم مرّتين**: مرّةً من
 // جيبه ومرّةً من محفظة لا علاقةَ لها.
 func (s *Service) settleCustomCash(ctx context.Context, q wallet.Querier, in settlement, out *settled) error {
-	if in.driverID == nil || in.cashDue <= 0 {
+	if in.driverID == nil {
 		return nil
 	}
 	// **وعلامةُ الدفعِ تحرس التكرار** — كما في المحفظة: **التسليمُ قد
 	// يُنادى مرّتين، فيُقيَّد مرّتين لولاها.**
 	var paidAt *time.Time
-	var goods, driverFee int64
+	var goods, driverFee, waived int64
 	if err := q.QueryRow(ctx, `
-		SELECT custom_paid_at, COALESCE(custom_goods_amount, 0), driver_fee
+		SELECT custom_paid_at, COALESCE(custom_goods_amount, 0), driver_fee, promo_delivery_waived
 		FROM orders WHERE id = $1 FOR UPDATE`, in.orderID).
-		Scan(&paidAt, &goods, &driverFee); err != nil {
+		Scan(&paidAt, &goods, &driverFee, &waived); err != nil {
 		return err
 	}
-	if paidAt != nil {
+	// **والتوصيلُ المجانيّ** (٢٠٢٦-١٠-٢٣): أمانةٌ معفاةٌ كلُّها لا نقدَ فيها — والسائقُ
+	// يُدفع أجرُه من المنصّة.
+	if paidAt != nil || (in.cashDue <= 0 && waived <= 0) {
 		return nil
 	}
 
@@ -907,10 +922,11 @@ func (s *Service) settleCustomCash(ctx context.Context, q wallet.Querier, in set
 		return err
 	}
 	driverGets := goods + driverFee
-	if driverGets > in.cashDue {
+	// **وما أعفته المنصّةُ يُضاف للمقبوض** — تدفعه هي لا الزبون (٢٠٢٦-١٠-٢٣).
+	if driverGets > in.cashDue+waived {
 		s.logger.Warn("الطلب الخاصّ نقداً: نصيبُ السائق يتجاوز المقبوض — يُقصَر عليه",
 			"order", in.orderID, "driver", driverGets, "cash", in.cashDue)
-		driverGets = in.cashDue
+		driverGets = in.cashDue + waived
 	}
 	if err := s.payCustomDriver(ctx, q, in, driverGets, goods); err != nil {
 		return err

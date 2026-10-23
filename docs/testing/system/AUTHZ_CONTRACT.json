@@ -97,7 +97,7 @@
   {
    "code": "offers.manage",
    "description": "العروض والخصومات: الأكواد والخصومات والدعوات",
-   "guards_routes": 7
+   "guards_routes": 9
   },
   {
    "code": "orders.communications.read",
@@ -249,7 +249,7 @@
   }
  ],
  "route_policy": {
-  "rules": 301,
+  "rules": 303,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",

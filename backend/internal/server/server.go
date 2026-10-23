@@ -1371,6 +1371,8 @@ func (s *Server) Router() http.Handler {
 			r.Get("/merchants/{id}/warnings", s.handleAdminMerchantWarnings)
 			r.Get("/zones", s.handleListZones)
 			r.Get("/promos", s.handleListPromos)
+			// **«التوصيل المجاني»** — عرضٌ بفترة (قرارُ المالك ٢٠٢٦-١٠-٢٣).
+			r.Get("/free-delivery", s.handleGetFreeDelivery)
 			// **ملخّصُ العروض وموافقاتُها وجدولُ الدعوات** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
 			r.Get("/promos/summary", s.handlePromoSummary)
 			r.Get("/promo-approvals", s.handleListPromoApprovals)
@@ -1833,6 +1835,8 @@ func (s *Server) Router() http.Handler {
 				r.Patch("/zones/{id}", s.handleUpdateZone)
 				r.Delete("/zones/{id}", s.handleDeleteZone)
 				r.Post("/promos", s.handleCreatePromo)
+				r.Post("/free-delivery", s.handleCreateFreeDelivery)
+				r.Patch("/free-delivery/{id}", s.handleUpdateFreeDelivery)
 				r.Patch("/promos/{id}", s.handleUpdatePromo)
 				r.Post("/banners", s.handleCreateBanner)
 				r.Patch("/banners/{id}", s.handleUpdateBanner)

@@ -201,6 +201,8 @@ type QuoteResult struct {
 	// SourcesFee ما زِيد لأجل المصادر الإضافية — وصفرٌ حين لا يكلّف.
 	SourcesFee int64 `json:"sources_fee"`
 	Total      int64 `json:"total"`
+	// FreeWaived **ما أُعفي منه بعرض التوصيل المجانيّ** (٢٠٢٦-١٠-٢٣) — و`DeliveryFee` بعده.
+	FreeWaived int64 `json:"free_waived,omitempty"`
 
 	// ══════════════════════════════════════════════════════════════
 	// **وأيُوصَّل إلى هذه النقطة؟** (٢٠٢٦-٠٩-١٣)

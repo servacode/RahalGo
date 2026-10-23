@@ -630,6 +630,14 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 			deliveryWaived = feeBefore - deliveryFee
 		}
 	}
+	// **والتوصيلُ المجانيّ بعرضه** (قرارُ المالك ٢٠٢٦-١٠-٢٣) — بعد الكود، على ما بقي
+	// من الأجرة. والسائقُ أخذ أجرَه أعلاه (`driverFee`)، والخزينةُ تتحمّل المعفى.
+	free, err := s.freeDeliveryOffer(ctx, tx, FreeKindStandard, customerClaimant(ctx, tx, customerID), deliveryFee, true)
+	if err != nil {
+		return nil, nil, err
+	}
+	deliveryFee -= free.waive
+	deliveryWaived += free.waive
 
 	total := subtotal - discount + deliveryFee
 	if total < 0 {
@@ -692,6 +700,9 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 		snap.CommissionSource, snap.ActivationOrders, driverFee,
 		deliveryWaived, platformPct, platformFixed, sourcesFee).Scan(&orderID)
 	if err != nil {
+		return nil, nil, err
+	}
+	if err := free.claim(ctx, tx, orderID, FreeKindStandard); err != nil {
 		return nil, nil, err
 	}
 

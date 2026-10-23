@@ -328,6 +328,8 @@ var adminPolicy = []Rule{
 	// **ملخّصُ العروض** — قبل `/promos/{id}` (الأخصُّ أوّلاً).
 	{"GET", "/promos/summary", OffersManage},
 	{"", "/promos", OffersManage},
+	{"", "/free-delivery", OffersManage},
+	{"", "/free-delivery/{id}", OffersManage},
 	{"", "/promos/{id}", OffersManage},
 	{"", "/banners", ContentManage},
 	{"", "/banners/{id}", ContentManage},

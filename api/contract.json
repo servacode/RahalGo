@@ -1928,6 +1928,54 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/free-delivery",
+      "handler": "handleGetFreeDelivery",
+      "auth": true,
+      "capability": "offers.manage",
+      "response": [
+        {
+          "name": "campaign",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/free-delivery",
+      "handler": "handleCreateFreeDelivery",
+      "auth": true,
+      "capability": "offers.manage",
+      "response": [
+        {
+          "name": "campaign",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/free-delivery/{id}",
+      "handler": "handleUpdateFreeDelivery",
+      "auth": true,
+      "capability": "offers.manage",
+      "response": [
+        {
+          "name": "campaign",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/governorates",
       "handler": "handleAdminGovernorates",
       "auth": true,
