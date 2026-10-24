@@ -181,7 +181,6 @@ func customStoreCut(ctx context.Context, q dbtx.Querier, orderID string) (storeP
 	return goods - commission, commission, nil
 }
 
-
 // RefreshPartnerCommission **عمولةُ المتجر التابع تتبع نسبتَه الحاليّة حتّى التسليم** (قرارُ المالك
 // ٢٠٢٦-١٠-٢٥: «لازم ياخذ العمولة مباشر») — كانت تُلقَط لحظةَ الربط فلا يرى الطلبُ تعديلاً بعده.
 // تُنادى بعد تعديل عمولة متجرٍ (`merchantID`) أو العمولةِ العامّة (`merchantID` فارغ ⇒ كلُّ متجرٍ
