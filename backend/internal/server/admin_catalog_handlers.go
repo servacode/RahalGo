@@ -199,6 +199,12 @@ func (s *Server) handleUpdateMerchant(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// **وعمولتُه الجديدةُ تصل طلباتِ المشتريات المربوطة به التي لم تُسلَّم** (قرارُ المالك ٢٠٢٦-١٠-٢٥).
+	if req.CommissionPct != nil {
+		if _, err := s.orders.RefreshPartnerCommission(r.Context(), chi.URLParam(r, "id")); err != nil {
+			s.logger.Error("تحديثُ عمولة المتجر التابع على طلباته المفتوحة", "err", err)
+		}
+	}
 	httpx.JSON(w, http.StatusOK, m)
 }
 

@@ -217,9 +217,84 @@ func TestPartnerLink_RefusedAfterGoods(t *testing.T) {
 	if !errors.Is(err, orders.ErrPartnerTooLate) {
 		t.Fatalf("الربطُ بعد التوثيق=%v — المنتظَر partner_goods_documented", err)
 	}
-	// **والفكُّ كذلك.**
+	// **والفكُّ مسموحٌ حتّى التسليم** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — اختبارُه في `TestPartnerUnlink_AfterGoods_NoCommission`.
+}
+
+// ── و · فكُّ الربط بعد توثيق الثمن ⇒ لا عمولة (المالك ٢٠٢٦-١٠-٢٥) ───────────────────
+func TestPartnerUnlink_AfterGoods_NoCommission(t *testing.T) {
+	svc, _, customer, driver, rep, orderID := ptFixture(t, "cash")
+	ctx := context.Background()
+	merchant := ptMerchant(t, 10, rep)
+	if _, _, err := svc.LinkPartner(ctx, customer, orderID, merchant, nil); err != nil {
+		t.Fatalf("الربط: %v", err)
+	}
+	if err := svc.AgreeCustom(ctx, orderID, driver, 500, 100); err != nil {
+		t.Fatalf("الاتّفاق: %v", err)
+	}
+	if _, err := svc.ConfirmQuote(ctx, orderID, customer, "cash", 600, 1); err != nil {
+		t.Fatalf("التأكيد: %v", err)
+	}
+	// **الزبونُ غيّر متجرَه إلى غير تابع** — الفكُّ بعد التوثيق وقبل التسليم.
+	if _, _, err := svc.LinkPartner(ctx, customer, orderID, "", nil); err != nil {
+		t.Fatalf("الفكُّ بعد التوثيق رُدّ: %v", err)
+	}
+	// **وسطرُ «ادفع للمتجر التابع» يسقط** — يرى السائقُ ثمنَ البضاعة كاملاً كأيّ مشتريات.
+	o, _ := svc.GetByID(ctx, orderID)
+	if o.PayMerchant != 0 || o.PartnerMerchantID != "" {
+		t.Fatalf("بعد الفكّ: ادفع للتابع=%d والتابع=%v — المنتظَر لا شيء", o.PayMerchant, o.PartnerMerchantID)
+	}
+	heldBefore := cqHeld(t, driver)
+	ptDeliver(t, svc, driver, orderID)
+	if got := cqHeld(t, driver) - heldBefore; got != 100 {
+		t.Fatalf("صندوقُ السائق=%d — المنتظَر 100 (الأجرة وحدَها)", got)
+	}
+	var commission, storePaid int64
+	_ = testdb.Pool(t).QueryRow(ctx, `SELECT platform_commission, custom_store_paid FROM orders WHERE id = $1`, orderID).Scan(&commission, &storePaid)
+	if commission != 0 || storePaid != 500 {
+		t.Fatalf("العمولة=%d والمدفوعُ للمتجر=%d — المنتظَر 0 و500", commission, storePaid)
+	}
+	// **وبعد التسليم لا فكّ.**
 	if _, _, err := svc.LinkPartner(ctx, customer, orderID, "", nil); !errors.Is(err, orders.ErrPartnerTooLate) {
-		t.Fatalf("الفكُّ بعد التوثيق=%v — المنتظَر partner_goods_documented", err)
+		t.Fatalf("الفكُّ بعد التسليم=%v — المنتظَر partner_goods_documented", err)
+	}
+}
+
+// ── ز · عمولةُ المتجر تُعدَّل إلى صفرٍ بعد الربط ⇒ لا عمولة عند التسليم ─────────────────
+func TestPartnerCommission_FollowsStoreUntilDelivery(t *testing.T) {
+	svc, _, customer, driver, rep, orderID := ptFixture(t, "cash")
+	ctx := context.Background()
+	merchant := ptMerchant(t, 10, rep)
+	if _, _, err := svc.LinkPartner(ctx, customer, orderID, merchant, nil); err != nil {
+		t.Fatalf("الربط: %v", err)
+	}
+	if _, err := testdb.Pool(t).Exec(ctx, `UPDATE merchants SET commission_percent = 0 WHERE id = $1`, merchant); err != nil {
+		t.Fatal(err)
+	}
+	if n, err := svc.RefreshPartnerCommission(ctx, merchant); err != nil || n != 1 {
+		t.Fatalf("تحديثُ الطلب المربوط: %d · %v — المنتظَر طلبٌ واحد", n, err)
+	}
+	if err := svc.AgreeCustom(ctx, orderID, driver, 500, 100); err != nil {
+		t.Fatalf("الاتّفاق: %v", err)
+	}
+	if _, err := svc.ConfirmQuote(ctx, orderID, customer, "cash", 600, 1); err != nil {
+		t.Fatalf("التأكيد: %v", err)
+	}
+	heldBefore := cqHeld(t, driver)
+	ptDeliver(t, svc, driver, orderID)
+	if got := cqHeld(t, driver) - heldBefore; got != 100 {
+		t.Fatalf("صندوقُ السائق=%d — المنتظَر 100: **العمولةُ صفرٌ ولم تُطبَّق**", got)
+	}
+	var commission int64
+	_ = testdb.Pool(t).QueryRow(ctx, `SELECT platform_commission FROM orders WHERE id = $1`, orderID).Scan(&commission)
+	if commission != 0 {
+		t.Fatalf("العمولة=%d — المنتظَر 0", commission)
+	}
+	// **وبعد التسليم لا يُمسّ** — عمولتُه قُيّدت.
+	if _, err := testdb.Pool(t).Exec(ctx, `UPDATE merchants SET commission_percent = 20 WHERE id = $1`, merchant); err != nil {
+		t.Fatal(err)
+	}
+	if n, _ := svc.RefreshPartnerCommission(ctx, merchant); n != 0 {
+		t.Fatalf("حُدّث طلبٌ مسلَّم (%d)", n)
 	}
 }
 

@@ -3558,8 +3558,10 @@ function PartnerStoreBox({
   const [stores, setStores] = useState<{ id: string; name: string; number: number }[]>([]);
   const [working, setWorking] = useState(false);
   const [err, setErr] = useState("");
-  // **وبعد توثيق الثمن لا ربطَ ولا فكّ** — السائقُ دفع للمتجر (`partner_goods_documented`).
+  // **والربطُ قبل توثيق الثمن وحدَه، والفكُّ حتّى التسليم** (المالك ٢٠٢٦-١٠-٢٥: «خيار الإلغاء
+  // يظل موجود بالكرت لآخر لحظة») — والعمولةُ تُحسب عند التسليم من الربط القائم.
   const goodsDone = o.custom_goods_amount != null && !o.custom_goods_pending;
+  const ended = ["delivered", "cancelled", "rejected", "failed", "refunded"].includes(o.status);
   const linked = !!o.partner_merchant_id;
 
   async function openPicker() {
@@ -3631,7 +3633,7 @@ function PartnerStoreBox({
                 {o.sent_to_merchant_at ? OP.partnerSent : OP.partnerSend}
               </span>
             </Button>
-            {!goodsDone && (
+            {!ended && (
               <Button variant="secondary" disabled={busy || working} onClick={() => void change("")}>
                 {OP.partnerUnlink}
               </Button>

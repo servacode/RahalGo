@@ -99,7 +99,11 @@ func (s *Service) LinkPartner(ctx context.Context, actorID, orderID, merchantID 
 	}
 	// **والثمنُ موثَّقٌ حين يُكتب ولا ينتظر** — صفرُ الانتظار (`custom_goods_pending`)
 	// يُكتب مع الأجرة وليس ثمناً. **وما بعد الاستلام أو النهاية مغلقٌ كذلك.**
-	if (goods != nil && !pending) || pickedUp || terminal(status) {
+	// **والربطُ قبل توثيق الثمن وحدَه** — الثمنُ يُكتب من متجرٍ بعينه. **والفكُّ حتّى التسليم**
+	// (قرارُ المالك ٢٠٢٦-١٠-٢٥: «خيار الإلغاء يظل موجود بالكرت لآخر لحظة»): زبونٌ غيّر متجرَه
+	// إلى غير تابعٍ بعد الشراء ⇒ تسقط العمولة، **والعمولةُ تُحسب عند التسليم من الربط القائم.**
+	linkTooLate := (goods != nil && !pending) || pickedUp
+	if terminal(status) || (merchantID != "" && linkTooLate) {
 		return nil, ch, ErrPartnerTooLate
 	}
 	ch.PreviousMerchantID = prev
@@ -175,4 +179,53 @@ func customStoreCut(ctx context.Context, q dbtx.Querier, orderID string) (storeP
 		commission = pricing.Amount{Mode: pricing.ModePercent2, Value: int64(*pct)}.Of(goods)
 	}
 	return goods - commission, commission, nil
+}
+
+
+// RefreshPartnerCommission **عمولةُ المتجر التابع تتبع نسبتَه الحاليّة حتّى التسليم** (قرارُ المالك
+// ٢٠٢٦-١٠-٢٥: «لازم ياخذ العمولة مباشر») — كانت تُلقَط لحظةَ الربط فلا يرى الطلبُ تعديلاً بعده.
+// تُنادى بعد تعديل عمولة متجرٍ (`merchantID`) أو العمولةِ العامّة (`merchantID` فارغ ⇒ كلُّ متجرٍ
+// بلا نسبةٍ خاصّة). **والطلبُ المسلَّمُ أو المنتهي لا يُمسّ** — عمولتُه قُيّدت.
+func (s *Service) RefreshPartnerCommission(ctx context.Context, merchantID string) (int64, error) {
+	where := `m.commission_percent IS NULL`
+	args := []any{}
+	if merchantID != "" {
+		where = `m.id = $1`
+		args = append(args, merchantID)
+	}
+	rows, err := s.db.Query(ctx, `SELECT m.id::text, m.commission_percent FROM merchants m WHERE `+where, args...)
+	if err != nil {
+		return 0, err
+	}
+	type mc struct {
+		id  string
+		pct *pricing.Percent2
+	}
+	var list []mc
+	for rows.Next() {
+		var x mc
+		if err := rows.Scan(&x.id, &x.pct); err != nil {
+			rows.Close()
+			return 0, err
+		}
+		list = append(list, x)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return 0, err
+	}
+	var n int64
+	for _, x := range list {
+		pct := pricing.MerchantCommission(ctx, s.settings, x.pct).Percent()
+		tag, err := s.db.Exec(ctx, `
+			UPDATE orders SET partner_commission_percent = $2, updated_at = now()
+			 WHERE partner_merchant_id = $1 AND custom_store_paid IS NULL
+			   AND status NOT IN ('delivered', 'cancelled', 'rejected', 'failed', 'refunded')
+			   AND partner_commission_percent IS DISTINCT FROM $2`, x.id, pct)
+		if err != nil {
+			return n, err
+		}
+		n += tag.RowsAffected()
+	}
+	return n, nil
 }

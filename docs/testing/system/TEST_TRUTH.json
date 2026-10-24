@@ -34,7 +34,7 @@
     "behaviour_settings": 205,
     "order_fields": 118,
     "test_files": 646,
-    "test_funcs": 2499
+    "test_funcs": 2501
   },
   "flows": [
     {
@@ -10587,6 +10587,12 @@
       "orphan": true
     },
     {
+      "name": "TestPartnerCommission_FollowsStoreUntilDelivery",
+      "file": "internal/orders/partner_store_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
       "name": "TestPartnerLink_InactiveRefused",
       "file": "internal/orders/partner_store_test.go",
       "package": "orders_test",
@@ -10606,6 +10612,12 @@
     },
     {
       "name": "TestPartnerPurchase_Wallet_AdvanceReturn",
+      "file": "internal/orders/partner_store_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestPartnerUnlink_AfterGoods_NoCommission",
       "file": "internal/orders/partner_store_test.go",
       "package": "orders_test",
       "orphan": true

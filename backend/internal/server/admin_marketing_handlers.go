@@ -346,5 +346,11 @@ func (s *Server) handleSetSetting(w http.ResponseWriter, r *http.Request) {
 	s.touch("settings", "ops")
 	// **وهدفٌ أو مرحلةٌ خُفّضت يُصرف لمن صار مؤهَّلاً فوراً** (قرارُ المالك ٢٠٢٦-١٠-١٥).
 	s.sweepTargetsAfterSetting(r.Context(), key)
+	// **والعمولةُ العامّةُ تصل طلباتِ المتاجر التابعة بلا نسبةٍ خاصّة** (٢٠٢٦-١٠-٢٥).
+	if key == "merchants.commission_percent" {
+		if _, err := s.orders.RefreshPartnerCommission(r.Context(), ""); err != nil {
+			s.logger.Error("تحديثُ العمولة العامّة على طلبات المتاجر التابعة", "err", err)
+		}
+	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})
 }
