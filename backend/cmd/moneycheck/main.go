@@ -42,7 +42,14 @@ func main() {
 		os.Exit(2)
 	}
 	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, url)
+	// **قراءةٌ فقط بأمر القاعدة نفسِها** — يُشغَّل على الإنتاج، فلا يقدر حتّى خطأٌ في فحصٍ أن يكتب.
+	cfg, err := pgxpool.ParseConfig(url)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "اتّصال:", err)
+		os.Exit(2)
+	}
+	cfg.ConnConfig.RuntimeParams["default_transaction_read_only"] = "on"
+	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "اتّصال:", err)
 		os.Exit(2)
