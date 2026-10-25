@@ -161,6 +161,17 @@ export default function StoresTab() {
               className="surface flex flex-col gap-3 p-3 transition-shadow hover:elev-2"
             >
               <div className="flex items-center gap-3">
+              {/* **نجمةُ «متجر مميّز» في الزاوية العلويّة يميناً** (قرارُ المالك ٢٠٢٦-١٠-٢٥). */}
+              <Button
+                variant="ghost"
+                disabled={busy === s.id}
+                onClick={() => toggleFeatured(s)}
+                title={s.featured ? T.unfeature : T.makeFeatured}
+                aria-label={s.featured ? T.unfeature : T.makeFeatured}
+                className={`!h-10 !w-10 !min-w-0 !p-0 shrink-0 rounded-full ${s.featured ? "!text-warning" : "text-ink-muted hover:text-ink"}`}
+              >
+                <IconStar size={19} className={s.featured ? "fill-current" : ""} />
+              </Button>
               {/* **اللوغو يُبدَّل بضغطةٍ عليه** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — بلا فتح نافذة التعديل. */}
               <button
                 type="button"
@@ -232,16 +243,6 @@ export default function StoresTab() {
               </div>
               {/* **أيقوناتٌ بلا كتابة** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — النجمةُ للتمييز، والباقي أفعالُ المتجر. */}
               <div className="flex items-center gap-1 border-t border-line-soft pt-3">
-                <Button
-                  variant="ghost"
-                  disabled={busy === s.id}
-                  onClick={() => toggleFeatured(s)}
-                  title={s.featured ? T.unfeature : T.makeFeatured}
-                  aria-label={s.featured ? T.unfeature : T.makeFeatured}
-                  className={`!h-10 !w-10 !min-w-0 !p-0 shrink-0 rounded-full ${s.featured ? "!text-warning" : "text-ink-muted hover:text-ink"}`}
-                >
-                  <IconStar size={19} className={s.featured ? "fill-current" : ""} />
-                </Button>
                 <div className="min-w-0 flex-1">
                   <StoreControl id={s.id} onChanged={reload} />
                 </div>
