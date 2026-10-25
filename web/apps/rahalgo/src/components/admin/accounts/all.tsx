@@ -307,17 +307,8 @@ export default function AllAccountsTable() {
               round
             />
           </span>
-          <span className="flex items-start justify-between gap-3">
-            <span className="min-w-0">
-              <span className="block truncate text-base font-bold">{u.full_name || "—"}</span>
-              {/* **واسمُ متجره تحت اسمه** (قرار ٧). */}
-              {u.store_names && u.store_names.length > 0 && (
-                <span className="flex items-center gap-1 truncate text-xs text-ink-muted">
-                  <IconStore size={11} />
-                  {u.store_names.join(" · ")}
-                </span>
-              )}
-            </span>
+          <span className="flex items-center justify-between gap-3">
+            <span className="min-w-0 truncate text-base font-bold">{u.full_name || "—"}</span>
             {u.phone ? (
               <span dir="ltr" className="shrink-0 font-medium">
                 {u.phone}
@@ -326,6 +317,13 @@ export default function AllAccountsTable() {
               <span className="shrink-0 text-xs text-ink-muted">{A.phoneHidden}</span>
             )}
           </span>
+          {/* **واسمُ متجره بسطرٍ ثانٍ في الوسط** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — لصاحب المتجر وحدَه. */}
+          {u.store_names && u.store_names.length > 0 && (
+            <span className="flex items-center justify-center gap-1.5 truncate text-sm font-medium text-ink-muted">
+              <IconStore size={14} />
+              {u.store_names.join(" · ")}
+            </span>
+          )}
         </span>
       ),
     },
