@@ -3379,6 +3379,22 @@ function OrderActions({
         </Button>
       )}
 
+      {/* **«أعد الإرسال على واتساب» بعد التحويل وقبل الاستلام** (المالك ٢٠٢٦-١٠-٢٥: «لازم يطلع لأنّ
+          أحياناً تفشل») — الرسالةُ لم تصل أو ضاعت عند المتجر. **ولا يُعيد الإنزالَ ولا يفكّ السائق**
+          (يحرسه المحرّك: الإنزالُ من «مقبول/تحضير» وحدَهما). */}
+      {canIntervene &&
+        !!o.sent_to_merchant_at &&
+        o.kind !== "custom" &&
+        o.kind !== "merchant_delivery" &&
+        (o.status === "dispatching" || o.status === "assigned" || o.status === "at_pickup") && (
+          <Button variant="secondary" disabled={busy !== ""} onClick={() => void forwardToMerchant()}>
+            <span className="flex items-center gap-1.5">
+              <IconWhatsApp size={15} />
+              {m.admin.ordersPage.resendWhatsApp}
+            </span>
+          </Button>
+        )}
+
       <Modal
         open={noDriverWarn}
         onClose={() => setNoDriverWarn(false)}

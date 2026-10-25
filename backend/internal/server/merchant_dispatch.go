@@ -327,7 +327,12 @@ func (s *Server) handleSendOrderToMerchant(w http.ResponseWriter, r *http.Reques
 	//
 	// **والطلبُ الخاصُّ لا يُنزَل** (المشترياتُ من متجرٍ تابع، ٢٠٢٦-١٠-١٥) — سائقُه معه
 	// قبل أن يُرسَل للمتجر شيء، **والإرسالُ خبرٌ للمتجر لا خطوةٌ في التوزيع.**
-	if !msg.Custom {
+	// **وإعادةُ الإرسال لا تُعيد الإنزال** (المالك ٢٠٢٦-١٠-٢٥: زرُّ «أعد الإرسال» لأنّ الرسالةَ
+	// تفشل أحياناً) — الإنزالُ من «مقبول/تحضير» وحدَهما؛ **وطلبٌ أخذه سائقٌ لا يُفكّ عنه
+	// لأنّ المتجرَ احتاج الرسالةَ مرّةً ثانية** (`assigned → dispatching` يُفرّغ الإسناد).
+	var curStatus string
+	_ = s.pg.QueryRow(r.Context(), `SELECT status FROM orders WHERE id = $1`, orderID).Scan(&curStatus)
+	if !msg.Custom && (curStatus == "accepted" || curStatus == "preparing") {
 		if err := s.orders.AutoDispatch(r.Context(), userIDFrom(r), orderID); err != nil {
 			s.logger.Warn("الإنزال بعد الإبلاغ تعثّر — ينتظر إسناداً يدوياً",
 				"order", orderID, "error", err)

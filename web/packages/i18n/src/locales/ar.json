@@ -1963,7 +1963,8 @@
       "proofByCode": "✓ سُلّم بكود التسليم من الزبون",
       "kindMdSend": "توصيل من المتجر",
       "kindMdFetch": "إحضار للمتجر",
-      "driverToCustomerDist": "من السائق للزبون {d}"
+      "driverToCustomerDist": "من السائق للزبون {d}",
+      "resendWhatsApp": "أعد الإرسال للمتجر"
     },
     "customers": {
       "title": "الزبائن",
