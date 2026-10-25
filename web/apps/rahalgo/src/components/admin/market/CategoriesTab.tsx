@@ -10,7 +10,7 @@
  * **ولا حذف**: متجرٌ قائمٌ يحمل تصنيفه — **فالتصنيفُ يُوقَف** فيختفي من الاختيار.
  */
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
 import {
   Badge,
@@ -22,8 +22,13 @@ import {
   useLiveData,
   useToast,
   FormActions,
-  Switch,
   Confirm,
+  CategoryIcon,
+  IconEdit,
+  IconDelete,
+  IconCheck,
+  IconBlock,
+  IconAdd,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
@@ -78,34 +83,38 @@ export default function CategoriesTab() {
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
         <p className="text-sm text-ink-muted">{C.hint}</p>
-        <Button onClick={() => setEditing("new")}>{C.add}</Button>
+        <Button onClick={() => setEditing("new")} className="inline-flex items-center gap-1.5">
+          <IconAdd size={16} />
+          {C.add}
+        </Button>
       </div>
       {cats.length === 0 ? (
         <EmptyState title={C.empty} />
       ) : (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+        // **بطاقاتٌ والخياراتُ أيقونات** (قرارُ المالك ٢٠٢٦-١٠-٢٥).
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
           {cats.map((c) => (
-            <div
-              key={c.id}
-              className="flex items-center justify-between gap-3 surface p-4"
-            >
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold">{c.name}</span>
-                  {!c.active && <Badge variant="warning">{C.stopped}</Badge>}
-                </div>
-                <span className="text-xs text-ink-muted">
-                  {C.order.replace("{n}", String(c.sort_order))}
-                </span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Switch checked={c.active} onChange={(v: boolean) => void toggle(c, v)} label={C.active} />
-                <Button variant="secondary" onClick={() => setEditing(c)}>
-                  {C.edit}
-                </Button>
-                <Button variant="danger" onClick={() => setRemoving(c)}>
-                  {C.remove}
-                </Button>
+            <div key={c.id} className={`surface flex flex-col items-center gap-2 p-4 text-center ${c.active ? "" : "opacity-70"}`}>
+              <span className="flex h-14 w-14 items-center justify-center rounded-full bg-field text-accent">
+                <CategoryIcon name={c.icon} size={26} />
+              </span>
+              <span className="line-clamp-2 font-bold">{c.name}</span>
+              <span className="text-2xs text-ink-muted">{C.order.replace("{n}", String(c.sort_order))}</span>
+              {!c.active && <Badge variant="warning">{C.stopped}</Badge>}
+              <div className="mt-auto flex items-center justify-center gap-1 pt-1">
+                <IconBtn
+                  title={c.active ? C.stop : C.activate}
+                  className={c.active ? "!text-success" : "!text-warning"}
+                  onClick={() => void toggle(c, !c.active)}
+                >
+                  {c.active ? <IconCheck size={18} /> : <IconBlock size={18} />}
+                </IconBtn>
+                <IconBtn title={C.edit} onClick={() => setEditing(c)}>
+                  <IconEdit size={17} />
+                </IconBtn>
+                <IconBtn title={C.remove} className="!text-danger" onClick={() => setRemoving(c)}>
+                  <IconDelete size={17} />
+                </IconBtn>
               </div>
             </div>
           ))}
@@ -189,5 +198,30 @@ function CategoryModal({
         <FormActions onSave={submit} onCancel={onClose} busy={busy} />
       </div>
     </Modal>
+  );
+}
+
+/** **زرُّ أيقونةٍ دائريّ** — الأيقونةُ في وسط ظلّها. */
+function IconBtn({
+  title,
+  className = "",
+  onClick,
+  children,
+}: {
+  title: string;
+  className?: string;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <Button
+      variant="ghost"
+      title={title}
+      aria-label={title}
+      onClick={onClick}
+      className={`!h-9 !w-9 inline-flex items-center justify-center !min-h-0 !min-w-0 !p-0 rounded-full text-ink-muted hover:text-ink ${className}`}
+    >
+      {children}
+    </Button>
   );
 }

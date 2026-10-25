@@ -32,13 +32,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum, errorText, storeLabel } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, errorText } from "@rahalgo/i18n";
 import {
   Badge,
-  Button,
   Input,
   Select,
-  Modal,
   PageContainer,
   Pagination,
   PageHeader,
@@ -52,18 +50,11 @@ import {
   IconOrder,
   IconWarning,
   IconCamera,
-  FormActions,
 } from "@rahalgo/ui";
-import { api, ApiError, mediaUrl } from "@/lib/api";
-import ImageUpload from "@/components/admin/ImageUpload";
+import { api, mediaUrl } from "@/lib/api";
+import StateBadge from "@/components/admin/market/StateBadge";
 import { NotAllowed } from "@/components/admin/accounts/ProfileParts";
 import { useCanCall } from "@/lib/policy";
-
-/** **صورُ السوق من بابها** — بقدرة السوق لا المحتوى (قرارُ المالك ٢٠٢٦-١٠-٠٥). */
-const MARKET_MEDIA = "/api/v1/admin/market/media";
-/** **وصنفُ السوق يُعدَّل ويُطفأ من بابه** — بقدرة السوق لا بقدرة إدارة المتاجر
- *  (قرارُ المالك ٢٠٢٦-١٠-٠٥): موظّفُ العمليّات كان يرى الزرَّ ويُردّ ٤٠٣. */
-const MARKET_ITEMS = "/api/v1/admin/market/items";
 
 const m = getMessages(defaultLocale);
 const S = m.admin.sections;
@@ -88,7 +79,8 @@ interface SectionItem {
   thumb_url: string | null;
   image_url: string | null;
   /**
-   * **الحسبتان — واحدةٌ تنزل وأخرى تصعد.**
+   * **الحسبتان — واحدةٌ تنزل وأخرى تصعد.** (والقسمُ صار عرضاً بلا أسعار — قرارُ المالك ٢٠٢٦-١٠-٢٥؛
+   * الحقولُ باقيةٌ في العقد لا تُعرض هنا.)
    *
    *	عمولةُ المنصة  ←  تُقتطع من المتجر   ←  `merchant_net` ما يقبضه
    *	هامشُ المنصة   ←  يُضاف على الزبون   ←  `sale_price`  ما يدفعه
@@ -138,8 +130,6 @@ export default function SectionPage() {
   /** **وعددا القسم كلِّه من المحرّك** — لا من طول الصفحة. */
   const [all, setAll] = useState(0);
   const [live, setLive] = useState(0);
-  const [adding, setAdding] = useState(false);
-  const [editing, setEditing] = useState<SectionItem | null>(null);
   const [error, setError] = useState("");
   // **ومن لا يملك السوقَ لا يُنادي أبوابَه** (فحصُ المتصفّح ٢٠٢٦-١٠-٠٥):
   // المالية تفتح رابطَ قسمٍ فتُردّ ٤٠٣ وتُعرض رسالةُ الخطأ حمراء.
@@ -181,21 +171,6 @@ export default function SectionPage() {
       setError(errorText(err));
     }
   }, [id, page, q, state, canRead]);
-
-  /**
-   * **قلبُ الإتاحة — زرٌّ واحدٌ يقول الحال.**
-   *
-   * **ولا يُخفى حين يكون المتجرُ مُطفأً**: «نفد» قرارُ مطبخٍ في صنفه،
-   * **وإطفاءُ المتجر حالٌ أخرى** — ومن خلطهما وجد صنفاً لا يستطيع إعادتَه
-   * حتى يُفتح متجرُه.
-   */
-  async function toggle(it: SectionItem) {
-    await api(`${MARKET_ITEMS}/${it.id}`, {
-      method: "PATCH",
-      body: JSON.stringify({ available: !it.available }),
-    });
-    await load();
-  }
 
   useEffect(() => {
     void load();
@@ -241,7 +216,6 @@ export default function SectionPage() {
         <Badge variant={sec.active ? "success" : "neutral"}>
           {sec.active ? S.available : S.unavailable}
         </Badge>
-        <Button onClick={() => setAdding(true)}>{S.addItem}</Button>
       </div>
 
       <StatGrid>
@@ -303,7 +277,7 @@ export default function SectionPage() {
                   st.variant === "success" ? "" : "opacity-70"
                 }`}
               >
-                <div className="relative flex aspect-[4/3] items-center justify-center bg-field">
+                <div className="relative flex aspect-square items-center justify-center bg-field">
                   {it.image_url || it.thumb_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -321,7 +295,7 @@ export default function SectionPage() {
                   )}
                   {/* **الحالُ فوق الصورة** — تُقرأ قبل الاسم، وهي أوّلُ ما يُسأل عنه. */}
                   <span className="absolute end-1.5 top-1.5">
-                    <Badge variant={st.variant}>{st.label}</Badge>
+                    <StateBadge label={st.label} variant={st.variant} />
                   </span>
                 </div>
 
@@ -333,45 +307,6 @@ export default function SectionPage() {
                         لا ترى مصدرَه.** */}
                     <p className="truncate text-xs text-ink-muted">{it.merchant_name}</p>
                   </div>
-
-                  {/* **الحسبتان مفصولتان — واحدةٌ تنزل وأخرى تصعد.**
-
-                      (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «عمولة المنصة والسعر بعد
-                      العمولة · هامش الربح والسعر بعد الهامش».)
-
-                      **والعمولةُ تُقتطع من المتجر ولا تُضاف على الزبون**: هي
-                      حصّتُنا من سعر الشراء. **والهامشُ يُضاف فوقه** فيصير سعرَ
-                      البيع. **ولا تُجمعان في رقمٍ واحد**: من رأى «ربحُ المنصة»
-                      مجموعاً لا يعرف أيَّهما يُعدّل حين يشتكي أحدُ الطرفين. */}
-                  <dl className="space-y-1 border-t border-line-soft pt-2 text-xs tabular-nums">
-                    <Row label={S.buyPrice} value={fmtNum(it.merchant_price)} />
-                    <Row
-                      label={S.commission.replace("{n}", fmtNum(it.commission_percent_exact ?? it.commission_percent))}
-                      value={"−" + fmtNum(it.commission)}
-                      tone="muted"
-                    />
-                    <Row label={S.afterCommission} value={fmtNum(it.merchant_net)} strong />
-                    <Row
-                      label={S.marginFixed}
-                      value={"+" + fmtNum(it.margin)}
-                      tone="muted"
-                    />
-                    <Row label={S.afterMargin} value={fmtNum(it.sale_price)} strong />
-                  </dl>
-
-                  <div className="mt-auto flex gap-1.5 pt-1 [&_button]:flex-1 [&_button]:!px-2 [&_button]:text-xs">
-                    <Button variant="secondary" onClick={() => setEditing(it)}>
-                      {m.common.edit}
-                    </Button>
-                    {/* **زرٌّ واحدٌ يقلب الحال** — كزرّ القسم، لا زرّان أحدُهما
-                        معطّلٌ دائماً. */}
-                    <Button
-                      variant={it.available ? "ghost" : "primary"}
-                      onClick={() => void toggle(it)}
-                    >
-                      {it.available ? S.makeUnavailable : S.makeAvailable}
-                    </Button>
-                  </div>
                 </div>
               </div>
             );
@@ -379,27 +314,6 @@ export default function SectionPage() {
         </div>
       )}
 
-      {adding && (
-        <AddItemModal
-          sectionID={id}
-          sectionName={sec.name}
-          onClose={() => setAdding(false)}
-          onSaved={() => {
-            setAdding(false);
-            void load();
-          }}
-        />
-      )}
-      {editing && (
-        <EditItemModal
-          item={editing}
-          onClose={() => setEditing(null)}
-          onSaved={() => {
-            setEditing(null);
-            void load();
-          }}
-        />
-      )}
       {/* **والترقيمُ من المكوّن المشترك** — ولا يظهر لصفحةٍ واحدة. */}
       {count > perPage && (
         <div className="mt-4 flex justify-center">
@@ -407,279 +321,5 @@ export default function SectionPage() {
         </div>
       )}
     </PageContainer>
-  );
-}
-
-/** سطرُ حسبة — **اللفظُ يميناً والرقمُ يساراً**، فالعينُ تمسح عموداً واحداً. */
-function Row({
-  label,
-  value,
-  strong,
-  tone,
-}: {
-  label: string;
-  value: string;
-  strong?: boolean;
-  tone?: "muted";
-}) {
-  return (
-    <div className="flex items-baseline justify-between gap-2">
-      <dt className={tone === "muted" ? "text-ink-muted" : ""}>{label}</dt>
-      <dd dir="ltr" className={strong ? "font-bold" : tone === "muted" ? "text-ink-muted" : ""}>
-        {value}
-      </dd>
-    </div>
-  );
-}
-
-interface MerchantRow {
-  id: string;
-  name: string;
-  /** **رقمُه** — متجران باسمٍ واحدٍ في القائمة يُفرَّقان به. */
-  number: number;
-}
-interface MenuSectionRow {
-  id: string;
-  name: string;
-}
-
-/**
- * **إضافةُ صنفٍ من بابِ السوق — والمتجرُ يُسأل عنه أوّلاً.**
- *
- * # ولماذا قسمُ المتجر أيضاً
- *
- * الصنفُ يعيش في قائمة متجره (`section_id`) **ويُعرض في قسم السوق**
- * (`platform_section_id`) — **موضعان لا واحد**: الأوّلُ ترتيبُ المطبخ يراه
- * صاحبُه، والثاني بابُ الزبون. **ولا يُنشأ صنفٌ بلا موضعٍ في قائمة صاحبه**:
- * يصير يتيماً لا يجده من يملكه.
- *
- * **وقسمُ السوق مثبَّتٌ هنا** — هو الصفحةُ التي فُتح منها، فلا يُسأل عنه.
- */
-function AddItemModal({
-  sectionID,
-  sectionName,
-  onClose,
-  onSaved,
-}: {
-  sectionID: string;
-  sectionName: string;
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const [merchants, setMerchants] = useState<MerchantRow[]>([]);
-  const [merchantID, setMerchantID] = useState("");
-  const [menuSections, setMenuSections] = useState<MenuSectionRow[] | null>(null);
-  const [menuSectionID, setMenuSectionID] = useState("");
-  const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
-  const [imageID, setImageID] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    // **وقائمةُ الاختيار كاملةٌ** — (كشفه فحصُ المالك ٢٠٢٦-٠٨-١٦).
-    //
-    // **كانت تُنادى بلا حدٍّ فيردّ المحرّكُ عشرين** — **وهي قائمةُ اختيار**:
-    // فمن عنده خمسةٌ وعشرون متجراً **لا يستطيع أن يضيف صنفاً لخمسةٍ منها**،
-    // **ولا شيءَ يقول إنّها قُصّت** — إنّما لا يجد المتجرَ فيظنّه غيرَ مسجَّل.
-    api<{ merchants: MerchantRow[] }>("/api/v1/admin/merchants?per_page=100")
-      .then((r) => setMerchants(r.merchants ?? []))
-      .catch((err) => setError(errorText(err)));
-  }, []);
-
-  // **وقائمةُ المتجر تُقرأ حين يُختار** — لا قبله: أقسامُ متجرٍ لم يُختر
-  // بعدُ لا معنى لها، **وقراءةُ قوائم كلّ المتاجر سلفاً حملٌ بلا سبب.**
-  useEffect(() => {
-    if (!merchantID) {
-      setMenuSections(null);
-      setMenuSectionID("");
-      return;
-    }
-    setMenuSections(null);
-    api<MenuSectionRow[]>(`/api/v1/admin/merchants/${merchantID}/menu`)
-      .then((r) => {
-        const list = r ?? [];
-        setMenuSections(list);
-        setMenuSectionID(list[0]?.id ?? "");
-      })
-      .catch((err) => setError(errorText(err)));
-  }, [merchantID]);
-
-  async function submit() {
-    if (!merchantID) return setError(S.pickMerchant);
-    if (!menuSectionID) return setError(S.pickMenuSection);
-    if (!name.trim()) return setError(S.itemNameRequired);
-    setBusy(true);
-    setError("");
-    try {
-      await api(`/api/v1/admin/market/stores/${merchantID}/items`, {
-        method: "POST",
-        body: JSON.stringify({
-          section_id: menuSectionID,
-          name: name.trim(),
-          price: Number(price) || 0,
-          platform_section_id: sectionID,
-          ...(imageID !== null ? { image_media_id: imageID } : {}),
-        }),
-      });
-      onSaved();
-    } catch (err) {
-      const key = err instanceof ApiError ? (err.body.message_key.split(".").pop() ?? "") : "";
-      setError((m.errors as Record<string, string>)[key] ?? m.errors.internal);
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Modal open title={S.addItemTo.replace("{s}", sectionName)} onClose={onClose}>
-      <div className="space-y-3">
-        <Select
-          label={S.merchant}
-          value={merchantID}
-          onChange={(e) => setMerchantID(e.target.value)}
-        >
-          <option value="">{S.pickMerchant}</option>
-          {merchants.map((x) => (
-            <option key={x.id} value={x.id}>
-              {storeLabel(x.name, x.number)}
-            </option>
-          ))}
-        </Select>
-
-        {/* **وقسمُ المطبخ لا يُسأل عنه قبل المتجر** — حقلٌ فارغٌ معطَّلٌ يُقرأ
-            عطباً، **وغيابُه يقول «اختر المتجر أوّلاً» بلا كلمة.** */}
-        {merchantID &&
-          (menuSections === null ? (
-            <LoadingState variant="inline" />
-          ) : menuSections.length === 0 ? (
-            <p className="text-sm text-danger">{S.merchantHasNoSections}</p>
-          ) : (
-            <Select
-              label={S.menuSection}
-              value={menuSectionID}
-              onChange={(e) => setMenuSectionID(e.target.value)}
-            >
-              {menuSections.map((x) => (
-                <option key={x.id} value={x.id}>
-                  {x.name}
-                </option>
-              ))}
-            </Select>
-          ))}
-
-        <ImageUpload path={MARKET_MEDIA} kind="menu_item" label={S.itemImage} onChange={setImageID} />
-        <Input label={S.itemName} value={name} onChange={(e) => setName(e.target.value)} />
-        {/* **سعرُ الشراء لا سعرُ البيع** — ما يقبضه المتجر، **والمنصةُ تحسب
-            الهامشَ فوقه.** واللفظُ يقول أيَّهما، فـ«السعر» وحدَها تحتمل الاثنين. */}
-        <Input
-          label={S.itemPrice}
-          type="number"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-        />
-        {error && <p className="text-sm text-danger">{error}</p>}
-        <FormActions onSave={submit} onCancel={onClose} busy={busy} />
-      </div>
-    </Modal>
-  );
-}
-
-/**
- * **تعديلُ الصنف من بابِ السوق.**
- *
- * # وما يُعدَّل هنا وما لا يُعدَّل
- *
- * **سعرُ الشراء وهامشُ الصنف** — لأنّهما الرقمان اللذان تعرضهما البطاقة،
- * **وعرضُ رقمٍ لا يُمسّ من موضعه يجعل الشاشةَ تقريراً لا لوحةَ تحكّم.**
- *
- * **والعمولةُ لا تُعدَّل هنا**: هي على المتجر كلِّه لا على صنفه — **ورقمٌ
- * يُغيَّر من شاشة صنفٍ ويقع على مئة صنفٍ آخر خللٌ ينتظر.** موضعُها صفحةُ
- * المتجر.
- *
- * **والمتجرُ لا يُنقل**: صنفٌ يُنقل من متجرٍ إلى متجرٍ يترك طلباتِ الأمس تشير
- * إلى مصدرٍ لم يحضّرها. **من أراد صنفاً عند غيره أنشأه عنده.**
- */
-function EditItemModal({
-  item,
-  onClose,
-  onSaved,
-}: {
-  item: SectionItem;
-  onClose: () => void;
-  onSaved: () => void;
-}) {
-  const [name, setName] = useState(item.name);
-  const [price, setPrice] = useState(String(item.merchant_price));
-  /**
-   * **تجاوزُ هامش الصنف — والفراغُ «اتبع قسمَك» لا «بلا هامش».**
-   *
-   * الصفرُ قرارٌ («لا هامشَ على هذا») والفراغُ غيابُ قرار. **ومن خلط بينهما
-   * جعل كلَّ صنفٍ لم يُلمس بلا هامش** — فبِيع كلُّ شيءٍ بسعر شرائه.
-   */
-  const [margin, setMargin] = useState(
-    item.margin_override === null ? "" : String(item.margin_override),
-  );
-  const [imageID, setImageID] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-
-  async function submit() {
-    if (!name.trim()) return setError(S.itemNameRequired);
-    setBusy(true);
-    setError("");
-    try {
-      await api(`${MARKET_ITEMS}/${item.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          name: name.trim(),
-          price: Number(price) || 0,
-          // **وسالبُ الواحد يمحو التجاوز** — هو ما يقرؤه الخادمُ «اتبع قسمَك»،
-          // **وفراغٌ يُقرأ «بلا تغيير»** فلا يملك أحدٌ إعادةَ صنفٍ إلى وراثته.
-          margin_override: margin.trim() === "" ? -1 : Number(margin) || 0,
-          ...(imageID !== null ? { image_media_id: imageID } : {}),
-        }),
-      });
-      onSaved();
-    } catch (err) {
-      const key = err instanceof ApiError ? (err.body.message_key.split(".").pop() ?? "") : "";
-      setError((m.errors as Record<string, string>)[key] ?? m.errors.internal);
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Modal open title={S.editItem} onClose={onClose}>
-      <div className="space-y-3">
-        {/* **واسمُ المتجر يُقال ولا يُغيَّر** — من فتح النافذة يعرف على مالِ من
-            يعمل، **وحقلٌ معطَّلٌ يُغري بمحاولةٍ تفشل.** */}
-        <p className="text-sm text-ink-muted">
-          {S.merchant}: <span className="font-medium text-ink">{item.merchant_name}</span>
-        </p>
-        <ImageUpload
-          path={MARKET_MEDIA}
-          kind="menu_item"
-          label={S.itemImage}
-          initialUrl={item.image_url}
-          onChange={setImageID}
-        />
-        <Input label={S.itemName} value={name} onChange={(e) => setName(e.target.value)} />
-        <Input
-          label={S.itemPrice}
-          type="number"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-        />
-        <Input
-          label={S.marginFieldFixed}
-          type="number"
-          placeholder={S.marginInheritHint}
-          value={margin}
-          onChange={(e) => setMargin(e.target.value)}
-        />
-        <p className="text-xs text-ink-muted">{S.marginHintItem}</p>
-        {error && <p className="text-sm text-danger">{error}</p>}
-        <FormActions onSave={submit} onCancel={onClose} busy={busy} />
-      </div>
-    </Modal>
   );
 }

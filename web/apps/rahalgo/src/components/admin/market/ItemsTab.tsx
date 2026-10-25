@@ -13,7 +13,7 @@
  * جماعيّاً**: صنفُ المتجر عملُه.
  */
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { getMessages, defaultLocale, fmtNum, fmtDateTime, errorText } from "@rahalgo/i18n";
 import {
@@ -32,6 +32,7 @@ import {
   IconEdit,
   IconCheck,
   IconBlock,
+  IconAdd,
   MenuItemEditor,
   type MenuItem,
   type MenuPaths,
@@ -40,6 +41,8 @@ import { api, mediaUrl } from "@/lib/api";
 import { useCanCall } from "@/lib/policy";
 import ImageUpload, { MediaThumb } from "@/components/admin/ImageUpload";
 import type { Section } from "./SectionsTab";
+import AddItemModal from "./AddItemModal";
+import StateBadge from "./StateBadge";
 
 const m = getMessages(defaultLocale);
 const S = m.admin.sections;
@@ -66,6 +69,10 @@ interface MarketItem {
   thumb_url: string | null;
   created_at: string;
   is_new: boolean;
+  /** **سعرُ الزبون والعمولةُ الفعليّةُ وصافي المتجر** — من المحرّك بقاعدة التسعير نفسِها. */
+  price: number;
+  commission_percent: number;
+  store_net: number;
 }
 
 interface ItemsPage {
@@ -87,6 +94,7 @@ export default function ItemsTab() {
   const canEdit = useCanCall()("PATCH", "/menu/items/{itemID}");
   const [editing, setEditing] = useState<{ merchantID: string; item: MenuItem } | null>(null);
   const [opening, setOpening] = useState("");
+  const [adding, setAdding] = useState(false);
   async function openEdit(it: MarketItem) {
     setOpening(it.id);
     try {
@@ -219,11 +227,13 @@ export default function ItemsTab() {
         </div>
       </div>
 
-      {data && (
-        <p className="text-xs text-ink-muted">
-          {I.newHint.replace("{h}", fmtNum(data.new_hours))}
-        </p>
-      )}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        {data && <p className="text-xs text-ink-muted">{I.newHint.replace("{h}", fmtNum(data.new_hours))}</p>}
+        <Button onClick={() => setAdding(true)} className="inline-flex items-center gap-1.5">
+          <IconAdd size={16} />
+          {I.addItem}
+        </Button>
+      </div>
 
       {/* **شريطُ الإجراء الجماعيّ** — يظهر حين يُحدَّد شيء. */}
       {picked.size > 0 && (
@@ -290,7 +300,7 @@ export default function ItemsTab() {
                       />
                     </span>
                     <span className="absolute end-2 top-2 flex flex-col items-end gap-1">
-                      <Badge variant={st.variant}>{st.label}</Badge>
+                      <StateBadge label={st.label} variant={st.variant} />
                       {it.is_new && <Badge variant="accent">{I.new}</Badge>}
                     </span>
                   </div>
@@ -300,10 +310,20 @@ export default function ItemsTab() {
                       {it.merchant_name}
                     </Link>
                     <p className="truncate text-2xs text-ink-muted">{it.section_name}</p>
-                    <div className="mt-auto flex items-center justify-between gap-2 pt-1.5">
-                      <span className="text-sm font-bold">
-                        <Money value={it.merchant_price} />
-                      </span>
+                    {/* **السعرُ مفصّلاً** (قرارُ المالك ٢٠٢٦-١٠-٢٥): سعرُ الصنف، وعمولةُ المتجر، وما يبقى له. */}
+                    <dl className="mt-1 space-y-0.5 border-t border-line-soft pt-1.5 text-xs tabular-nums">
+                      <PriceRow label={I.price} value={<Money value={it.merchant_price} />} />
+                      <PriceRow
+                        muted
+                        label={I.commission.replace("{n}", fmtNum(it.commission_percent))}
+                        value={<>−<Money value={it.merchant_price - it.store_net} /></>}
+                      />
+                      <PriceRow strong label={I.storeNet} value={<Money value={it.store_net} />} />
+                      {it.price !== it.merchant_price && (
+                        <PriceRow muted label={I.salePrice} value={<Money value={it.price} />} />
+                      )}
+                    </dl>
+                    <div className="mt-auto flex items-center justify-end gap-2 pt-1.5">
                       <span className="flex items-center gap-0.5">
                       {/* **متوفر / غير متوفر بضغطة** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — بباب الإجراء الجماعيّ نفسِه. */}
                       <Button
@@ -349,6 +369,16 @@ export default function ItemsTab() {
           }}
         />
       )}
+      {adding && (
+        <AddItemModal
+          sections={sections}
+          onClose={() => setAdding(false)}
+          onSaved={() => {
+            setAdding(false);
+            reload();
+          }}
+        />
+      )}
       {editing && (
         <MenuItemEditor
           api={api}
@@ -367,6 +397,18 @@ export default function ItemsTab() {
         />
       )}
       <Toaster />
+    </div>
+  );
+}
+
+/** سطرُ حسبة — **اللفظُ يميناً والرقمُ يساراً**. */
+function PriceRow({ label, value, strong, muted }: { label: string; value: ReactNode; strong?: boolean; muted?: boolean }) {
+  return (
+    <div className="flex items-baseline justify-between gap-2">
+      <dt className={muted ? "text-ink-muted" : ""}>{label}</dt>
+      <dd dir="ltr" className={strong ? "font-bold" : muted ? "text-ink-muted" : ""}>
+        {value}
+      </dd>
     </div>
   );
 }

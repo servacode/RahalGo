@@ -30,6 +30,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/catalog"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/media"
+	"github.com/servacode/rahalgo/backend/internal/pricing"
 )
 
 // marketNewHours **عمرُ علامة «جديد»** — ثلاثةُ أيّام.
@@ -63,6 +64,12 @@ type marketItem struct {
 	CreatedAt      time.Time `json:"created_at"`
 	// IsNew **أُضيف في آخر `marketNewHours` ساعة** — علامةُ «جديد».
 	IsNew bool `json:"is_new"`
+	// **والسعرُ مفصّلاً على البطاقة** (قرارُ المالك ٢٠٢٦-١٠-٢٥): سعرُ البيع للزبون، ونسبةُ عمولة المتجر
+	// الفعليّة (خاصّةٌ أو عامّة)، **وما يبقى للمتجر بعدها** — بقاعدة `pricing` نفسِها.
+	Price         int64             `json:"price"`
+	CommissionPct pricing.Percent2  `json:"commission_percent"`
+	StoreNet      int64             `json:"store_net"`
+	override      *pricing.Percent2 `json:"-"`
 }
 
 // handleMarketItems **أصنافُ كلّ المتاجر — الأحدثُ أوّلاً.**
@@ -106,7 +113,7 @@ func (s *Server) handleMarketItems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rows, err := s.pg.Query(r.Context(), `
-		SELECT i.id::text, i.name, i.merchant_price, i.available,
+		SELECT i.id::text, i.name, i.merchant_price, i.available, i.price, m.commission_percent,
 		       m.id::text, m.name, m.status, ps.id::text, ps.name,
 		       (SELECT im.thumb_path FROM media im WHERE im.id = i.image_media_id),
 		       i.created_at,
@@ -121,13 +128,16 @@ func (s *Server) handleMarketItems(w http.ResponseWriter, r *http.Request) {
 	out := []marketItem{}
 	for rows.Next() {
 		var x marketItem
-		if err := rows.Scan(&x.ID, &x.Name, &x.MerchantPrice, &x.Available,
+		if err := rows.Scan(&x.ID, &x.Name, &x.MerchantPrice, &x.Available, &x.Price, &x.override,
 			&x.MerchantID, &x.MerchantName, &x.MerchantStatus,
 			&x.SectionID, &x.SectionName, &x.ThumbURL, &x.CreatedAt, &x.IsNew); err != nil {
 			s.respondErr(w, err)
 			return
 		}
 		x.ThumbURL = media.URLForPtr(x.ThumbURL)
+		com := pricing.MerchantCommission(r.Context(), s.settings, x.override)
+		x.CommissionPct = pricing.Percent2(com.Value)
+		x.StoreNet = x.MerchantPrice - com.Of(x.MerchantPrice)
 		out = append(out, x)
 	}
 	if err := rows.Err(); err != nil {
