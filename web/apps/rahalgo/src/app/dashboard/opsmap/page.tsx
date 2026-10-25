@@ -103,8 +103,6 @@ const OpsMapCanvas = dynamic(
   { ssr: false },
 );
 
-/** **طلباتُ التغطية خارج الخريطة** (قرارُ المالك ٢٠٢٦-١٠-٢٥: «نتركها لحالها بقسم») — بابُها `/dashboard/expansion`. */
-const REQUESTS_ON_MAP = false;
 const m = getMessages(defaultLocale);
 const T = m.admin.opsMap;
 
@@ -689,7 +687,7 @@ export default function OpsMapPage() {
   // ── طلباتُ التغطية ──────────────────────────────────────────
   const requests = useLiveData<{ requests: CovRequest[]; count: number }>(
     () =>
-      REQUESTS_ON_MAP && can("VIEW_DEMAND_ANALYTICS") && visible.requests
+      can("VIEW_DEMAND_ANALYTICS") && visible.requests
         ? api<{ requests: CovRequest[]; count: number }>(
             `/api/v1/admin/ops-map/coverage-requests${reqStatus ? `?status=${reqStatus}` : ""}`,
           )
@@ -1170,7 +1168,7 @@ export default function OpsMapPage() {
       kind: "point",
       cluster: true,
       order: 30,
-      visible: REQUESTS_ON_MAP && !!visible.requests,
+      visible: !!visible.requests,
       color: [
         "match",
         ["get", "state"],
@@ -1749,8 +1747,13 @@ export default function OpsMapPage() {
                             count={opportunities.data?.count}
                             onToggle={toggle}
                           />
-                          {/* **ولا «طلبات التغطية» على الخريطة** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — لها قسمُها
-                              «طلبات التوسّع» وحدَه. */}
+                          <LayerToggle
+                            id="requests"
+                            label={T.layer.coverageRequests}
+                            on={!!visible.requests}
+                            count={requests.data?.count}
+                            onToggle={toggle}
+                          />
                           {(visible.demand || visible.opportunities) && (
                             <div className="flex flex-wrap gap-2 ps-6">
                               <Select
