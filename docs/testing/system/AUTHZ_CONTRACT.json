@@ -166,7 +166,7 @@
   {
    "code": "support.manage",
    "description": "التذاكر والنزاعات والتقييمات",
-   "guards_routes": 6
+   "guards_routes": 7
   },
   {
    "code": "treasury.manage",
@@ -249,7 +249,7 @@
   }
  ],
  "route_policy": {
-  "rules": 303,
+  "rules": 304,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",
