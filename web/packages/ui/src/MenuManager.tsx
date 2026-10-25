@@ -39,8 +39,13 @@ function fill(t: string, v: Record<string, string | number>): string {
 type ApiFn = <T>(path: string, init?: RequestInit) => Promise<T>;
 
 export interface ModifierOption {
+  id?: string;
   name: string;
   price_delta: number;
+  /** **فرقُ الخيار بالدولار** لصنفٍ دولاريّ — والليرةُ يحسبها الخادمُ بسعر الصرف. */
+  price_delta_usd?: number | null;
+  /** نصُّ الدولار وهو يُكتب — للمحرّر وحدَه، لا يُرسَل. */
+  _usd?: string;
 }
 export interface ModifierGroup {
   name: string;
@@ -85,6 +90,9 @@ export interface MenuItem {
   image_thumb_url: string | null;
   available: boolean;
   modifiers: ModifierGroup[];
+  /** **عملةُ الصنف** «SYP» أو «USD» — وبالدولار سعرُه `merchant_price_usd`. */
+  price_currency?: string;
+  merchant_price_usd?: number | null;
 }
 /** قسمُ منصةٍ كما تراه شاشةُ التحرير — الاسمُ وحدَه يلزم. */
 export interface PlatformSection {
@@ -128,6 +136,29 @@ export interface MenuPaths {
    * **ومكوّنٌ مشتركٌ لا يعرف بوابتَه**: يأخذها كما يأخذ بقيّة مساراته.
    */
   platformSections: () => string;
+  /** **بياناتُ المتجر لسعر صرفه** — اختياريّ؛ بلاه يُحفظ الدولارُ ولا يُعرض ما يساويه بالليرة. */
+  merchant?: (merchantID: string) => string;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   **الدولارُ كتطبيق المتجر حرفاً** — مرآةُ `lib/store/usd.ts` و`ItemDraft.kt`.
+   والخادمُ هو الحَكَم (`catalog.USDToSYP`): ما يُعرض هنا معاينة.
+   ══════════════════════════════════════════════════════════════════ */
+function usdToSyp(usd: number, rate: number): number {
+  return Math.round((usd * 100 * rate) / 100 / 5) * 5;
+}
+function parseUsd(text: string): number | null {
+  const t = text.trim();
+  if (!t) return null;
+  const v = Number(t.replace("\u066B", ".").replace(",", "."));
+  return Number.isFinite(v) && v >= 0 ? v : null;
+}
+function usdText(v: number | null | undefined): string {
+  if (v == null) return "";
+  return String(Math.round(v * 100) / 100);
+}
+function usdInput(v: string, max = 10): string {
+  return v.replace(/[^\d.,\u066B]/g, "").slice(0, max);
 }
 
 export function MenuManager({
@@ -531,6 +562,18 @@ export function ItemModal({
   // فيرى ١٢٬٠٠٠ (وسعرُه ١٠٬٠٠٠)، **فيحفظ فيصير سعرُ شرائه اثني عشر** ويُضاف
   // عليه الهامشُ من جديد — **ورقمٌ يرتفع بكلّ فتحةٍ للنافذة.**
   const [price, setPrice] = useState(item ? String(item.merchant_price || item.price) : "");
+  // **وعملةُ الصنف كتطبيق المتجر** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «لازم يكون كلّ شي مثل المتجر بالضبط»).
+  const [currency, setCurrency] = useState<"SYP" | "USD">(item?.price_currency === "USD" ? "USD" : "SYP");
+  const usd = currency === "USD";
+  const [priceUsd, setPriceUsd] = useState(usdText(item?.merchant_price_usd ?? null));
+  const usdValue = parseUsd(priceUsd);
+  const [rate, setRate] = useState<number | null>(null);
+  useEffect(() => {
+    if (!paths.merchant) return;
+    api<{ exchange_rate?: number | null }>(paths.merchant(merchantID))
+      .then((r) => setRate(r.exchange_rate ?? null))
+      .catch(() => setRate(null)); // @empty-ok — بلا سعرٍ يُحفظ الدولارُ ويقول الخادمُ إن لزم.
+  }, [api, paths, merchantID]);
   /* ══════════════════════════════════════════════════════════════════
      **قسمٌ واحدٌ لا اثنان — والثاني كان يردّ ٤٠٣**
      ══════════════════════════════════════════════════════════════════
@@ -551,7 +594,7 @@ export function ItemModal({
      السوق** فلا يعيد المتجرُ اختيارَ ما هو فيه. */
   const [psID, setPsID] = useState(item?.platform_section_id ?? editing.sectionId ?? "");
   const [groups, setGroups] = useState<ModifierGroup[]>(
-    item?.modifiers.map((g) => ({ ...g, options: [...g.options] })) ?? [],
+    item?.modifiers.map((g) => ({ ...g, options: g.options.map((o) => ({ ...o, _usd: usdText(o.price_delta_usd ?? null) })) })) ?? [],
   );
   // null = لم تُلمس (لا تُرسل)، "" = إزالة، معرف = صورة جديدة
   const [imageID, setImageID] = useState<string | null>(null);
@@ -575,15 +618,23 @@ export function ItemModal({
     e.preventDefault();
     // **وما تجاوز الحدَّ لا يُرسَل** — الخطأُ ظاهرٌ تحت الحقل.
     if (name.trim().length > ITEM_NAME_MAX) return;
+    if (usd && (usdValue == null || usdValue <= 0)) return setError(IT.vPrice);
     setBusy(true);
     setError("");
     const body = {
       name,
       description,
-      price: Number(price) || 0,
+      price_currency: currency,
+      ...(usd ? { price_usd: usdValue } : { price: Number(price) || 0 }),
       // **والفراغُ الصريح يرفع التصنيف** — يقرؤه الخادمُ «ارفع» لا «بلا تغيير».
       platform_section_id: psID,
-      modifiers: groups,
+      modifiers: groups.map((g) => ({
+        ...g,
+        options: g.options.map(({ _usd, price_delta_usd: _old, ...rest }) => {
+          void _old;
+          return usd ? { ...rest, price_delta_usd: parseUsd(_usd ?? "") ?? 0 } : rest;
+        }),
+      })),
       ...(imageID !== null ? { image_media_id: imageID } : {}),
     };
     try {
@@ -640,15 +691,56 @@ export function ItemModal({
               «السعر» وحدَها تحتمل الاثنين، **وصاحبُ المتجر يقرؤها سعرَ البيع**
               فيضع فيها ما يريد أن يدفعه الزبون — **فيُضاف عليه هامشُنا فيصير
               الصنفُ أغلى ممّا قصد**، ويشكو من رقمٍ لم يضعه. */}
-          <Input
-            id="i-price"
-            label={`${L.price} (${m.common.currency})`}
-            type="number"
-            min="0"
-            required
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-          />
+          {/* **ليرة أو دولار — كتطبيق المتجر** (٢٠٢٦-١٠-٢٦). */}
+          <div role="radiogroup" aria-label={IT.currency} className="mb-1 inline-flex w-fit overflow-hidden rounded-control border border-line">
+            {(
+              [
+                ["SYP", IT.currencySyp],
+                ["USD", IT.currencyUsd],
+              ] as const
+            ).map(([code, label]) => (
+              <button
+                key={code}
+                type="button"
+                role="radio"
+                aria-checked={currency === code}
+                onClick={() => setCurrency(code)}
+                className={`px-4 py-1 text-xs font-bold ${currency === code ? "bg-accent text-on-bright" : "bg-field text-ink"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {usd ? (
+            <>
+              <Input
+                id="i-price-usd"
+                label={IT.priceUsd}
+                inputMode="decimal"
+                dir="ltr"
+                required
+                value={priceUsd}
+                onChange={(e) => setPriceUsd(usdInput(e.target.value))}
+              />
+              <p className={`mt-1 text-2xs ${rate != null && rate > 0 ? "text-ink-muted" : "text-danger"}`}>
+                {rate == null || rate <= 0
+                  ? IT.usdNeedRate
+                  : usdValue == null
+                    ? fill(IT.usdRateIs, { rate: usdText(rate) })
+                    : fill(IT.usdEquals, { syp: fmtNum(usdToSyp(usdValue, rate)), rate: usdText(rate) })}
+              </p>
+            </>
+          ) : (
+            <Input
+              id="i-price"
+              label={`${L.price} (${m.common.currency})`}
+              type="number"
+              min="0"
+              required
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+            />
+          )}
           </div>
 
         {/* **وبلا قسمِ منصةٍ لا يظهر الصنفُ في التصفّح.**
@@ -752,11 +844,14 @@ export function ItemModal({
                       <div className="w-32">
                         <Input
                           id={`o-delta-${gi}-${oi}`}
-                          placeholder={L.priceDelta}
-                          type="number"
-                          value={o.price_delta}
+                          placeholder={usd ? IT.optPriceUsd : L.priceDelta}
+                          inputMode={usd ? "decimal" : "numeric"}
+                          dir="ltr"
+                          value={usd ? (o._usd ?? "") : o.price_delta}
                           onChange={(e) =>
-                            updateOption(gi, oi, { price_delta: Number(e.target.value) })
+                            usd
+                              ? updateOption(gi, oi, { _usd: usdInput(e.target.value, 8) })
+                              : updateOption(gi, oi, { price_delta: Number(e.target.value) || 0 })
                           }
                         />
                       </div>

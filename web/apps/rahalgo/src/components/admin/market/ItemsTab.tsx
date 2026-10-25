@@ -54,6 +54,7 @@ const PATHS: MenuPaths = {
   items: (id) => `/api/v1/admin/merchants/${id}/menu/items`,
   item: (id) => `/api/v1/admin/menu/items/${id}`,
   platformSections: () => `/api/v1/admin/sections`,
+  merchant: (id) => `/api/v1/admin/merchants/${id}`,
 };
 
 interface MarketItem {

@@ -225,11 +225,18 @@ func (s *Server) handleAdminGetMerchant(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	general := s.generalCommission(r.Context())
+	// **وسعرُ صرف المتجر** (٢٠٢٦-١٠-٢٦) — محرّرُ الصنف في اللوحة يعرض الدولارَ بالليرة كتطبيق المتجر.
+	var rate *float64
+	if err := s.pg.QueryRow(r.Context(), `SELECT exchange_rate::float8 FROM merchants WHERE id = $1`, id).Scan(&rate); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	httpx.JSON(w, http.StatusOK, struct {
 		*catalog.Merchant
 		General      int64            `json:"general_commission_percent"`
 		GeneralExact pricing.Percent2 `json:"general_commission_percent_exact"`
-	}{mr, general.RoundedPercent(), general})
+		ExchangeRate *float64         `json:"exchange_rate"`
+	}{mr, general.RoundedPercent(), general, rate})
 }
 
 // generalCommission **عمولةُ المنصّة العامّةُ بمنزلتين** — من المصدر الذي تحسب به التسوية.
