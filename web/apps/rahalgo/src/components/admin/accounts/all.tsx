@@ -328,22 +328,9 @@ export default function AllAccountsTable() {
         </span>
       ),
     },
-    {
-      id: "orders_count",
-      header: m.admin.customers.ordersCount,
-      icon: <IconOrder />,
-      hide: (u) => !u.orders_count,
-      cell: (u) => fmtNum(u.orders_count ?? 0),
-    },
+    // **لا عددَ طلباتٍ ولا إنفاقَ ولا آخرَ طلبٍ في البطاقة** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — في ملفّ الحساب.
     ...(money
       ? ([
-          {
-            id: "orders_spent",
-            header: `${m.admin.customers.totalSpent} (${m.common.currency})`,
-            icon: <IconOrder />,
-            hide: (u: Row) => !u.orders_count,
-            cell: (u: Row) => fmtNum(u.orders_spent ?? 0),
-          },
           {
             id: "balance",
             header: `${m.admin.customers.balance} (${m.common.currency})`,
@@ -352,13 +339,6 @@ export default function AllAccountsTable() {
           },
         ] as DataColumn<Row>[])
       : []),
-    {
-      id: "last_order",
-      header: m.admin.customers.lastOrder,
-      icon: <IconStatus />,
-      hide: (u) => !u.last_order_at,
-      cell: (u) => (u.last_order_at ? fmtDate(u.last_order_at) : "—"),
-    },
     {
       id: "rep_stores",
       header: A.storesBroughtCol,
