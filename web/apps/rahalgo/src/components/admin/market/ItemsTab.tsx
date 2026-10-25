@@ -33,6 +33,8 @@ import {
   IconCheck,
   IconBlock,
   IconAdd,
+  IconCamera,
+  Modal,
   MenuItemEditor,
   type MenuItem,
   type MenuPaths,
@@ -96,6 +98,18 @@ export default function ItemsTab() {
   const [editing, setEditing] = useState<{ merchantID: string; item: MenuItem } | null>(null);
   const [opening, setOpening] = useState("");
   const [adding, setAdding] = useState(false);
+  // **تبديلُ الصورة من البطاقة مباشرةً** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — بلا فتح نافذة التعديل.
+  const [imageFor, setImageFor] = useState<MarketItem | null>(null);
+  async function saveImage(id: string, mediaID: string | null) {
+    if (!mediaID) return;
+    try {
+      await api(`/api/v1/admin/market/items/${id}`, { method: "PATCH", body: JSON.stringify({ image_media_id: mediaID }) });
+      setImageFor(null);
+      reload();
+    } catch (err) {
+      push(errorText(err), "error");
+    }
+  }
   async function openEdit(it: MarketItem) {
     setOpening(it.id);
     try {
@@ -286,12 +300,26 @@ export default function ItemsTab() {
               return (
                 <div key={it.id} className="surface flex flex-col overflow-hidden">
                   <div className="relative aspect-square bg-field">
+                    <button
+                      type="button"
+                      title={I.changeImage}
+                      aria-label={I.changeImage}
+                      disabled={!canEdit}
+                      onClick={() => setImageFor(it)}
+                      className="group absolute inset-0 flex items-center justify-center"
+                    >
                     {it.thumb_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={mediaUrl(it.thumb_url) ?? ""} alt={it.name} className="h-full w-full object-cover" />
                     ) : (
                       <span className="flex h-full items-center justify-center text-xs text-ink-muted">{S.noImage}</span>
                     )}
+                      {canEdit && (
+                        <span className="absolute bottom-2 start-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-surface text-ink elev-1 opacity-80 group-hover:opacity-100">
+                          <IconCamera size={16} />
+                        </span>
+                      )}
+                    </button>
                     <span className="absolute start-2 top-2 rounded-control bg-surface p-0.5">
                       <Checkbox
                         id={`mkt-${it.id}`}
@@ -374,6 +402,17 @@ export default function ItemsTab() {
             setPicked(new Set());
           }}
         />
+      )}
+      {imageFor && (
+        <Modal open onClose={() => setImageFor(null)} title={`${I.changeImage}: ${imageFor.name}`}>
+          <ImageUpload
+            path="/api/v1/admin/market/media"
+            kind="menu_item"
+            label={I.changeImage}
+            initialUrl={imageFor.thumb_url}
+            onChange={(id) => void saveImage(imageFor.id, id)}
+          />
+        </Modal>
       )}
       {adding && (
         <AddItemModal

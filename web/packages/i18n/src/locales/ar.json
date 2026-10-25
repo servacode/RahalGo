@@ -6237,7 +6237,8 @@
         "pickSection": "اختر قسم السوق",
         "commission": "عمولة المتجر {n}٪",
         "storeNet": "يبقى للمتجر",
-        "salePrice": "سعر الزبون"
+        "salePrice": "سعر الزبون",
+        "changeImage": "تبديل الصورة"
       },
       "stores": {
         "search": "ابحث باسم المتجر",
