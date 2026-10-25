@@ -13,7 +13,7 @@
  * واحدةٌ تميّزه أو تشيل تمييزَه، بلا فتح نافذة التعديل.
  */
 
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   getMessages,
@@ -234,36 +234,29 @@ export default function StoresTab() {
  */
 function StoreControl({ id, onChanged }: { id: string; onChanged: () => void }) {
   const [store, setStore] = useState<Merchant | null>(null);
-  const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const load = async () => {
-    setBusy(true);
+  // **تُجلب بياناتُ المتجر مع البطاقة** — فتظهر الأزرارُ مباشرةً بلا ضغطة «تحكّم» (٢٠٢٦-١٠-٢٥).
+  const load = useCallback(async () => {
     try {
       setStore(await api<Merchant>(`/api/v1/admin/merchants/${id}`));
       setErr("");
     } catch (e) {
       setErr(errorText(e));
-    } finally {
-      setBusy(false);
     }
-  };
-  if (store) {
-    return (
-      <StoreActions
-        store={store}
-        onChanged={() => {
-          onChanged();
-          void load();
-        }}
-      />
-    );
-  }
+  }, [id]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+  if (err) return <span className="text-xs text-danger">{err}</span>;
+  if (!store) return <LoadingState variant="inline" />;
   return (
-    <>
-      <Button variant="secondary" disabled={busy} onClick={() => void load()}>
-        {T.control}
-      </Button>
-      {err && <span className="text-xs text-danger">{err}</span>}
-    </>
+    <StoreActions
+      direct
+      store={store}
+      onChanged={() => {
+        onChanged();
+        void load();
+      }}
+    />
   );
 }

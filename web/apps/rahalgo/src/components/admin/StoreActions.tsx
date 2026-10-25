@@ -65,8 +65,14 @@ export function storeStatusVariant(status: string): "success" | "neutral" | "dan
 export function StoreActions({
   store,
   onChanged,
+  direct = false,
 }: {
   store: StoreTarget;
+  /**
+   * **أزرارٌ مباشرةٌ بلا قائمة** (قرارُ المالك ٢٠٢٦-١٠-٢٥: «شيل تحكّم وحط الأزرار مباشر») — أيقوناتٌ
+   * بصفٍّ واحدٍ في بطاقة السوق؛ والاسمُ في التلميح ولقارئ الشاشة.
+   */
+  direct?: boolean;
   /** **ويُعاد الجلبُ بعد كلّ فعل** — وإلّا بقي السطرُ يقول ما بطل. */
   onChanged: () => void;
 }) {
@@ -132,8 +138,35 @@ export function StoreActions({
     });
   }
 
+  const iconBtn = (key: string, label: string, Icon: typeof IconEdit, onClick: () => void, tone = "") => (
+    <Button
+      key={key}
+      variant="ghost"
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      className={`!h-10 !w-10 !min-w-0 !p-0 rounded-full ${tone || "text-ink-muted hover:text-ink"}`}
+    >
+      <Icon size={19} />
+    </Button>
+  );
+
   return (
     <>
+      {direct ? (
+        <div className="flex w-full items-center justify-around">
+          {canEdit && iconBtn("edit", M.edit, IconEdit, () => setEdit(true))}
+          {items.map((it) =>
+            iconBtn(
+              it.key,
+              typeof it.label === "string" ? it.label : it.key,
+              (it.icon ?? IconStore) as typeof IconEdit,
+              it.onSelect,
+              it.key === "ban" ? "!text-danger" : it.key === "open" ? "!text-success" : it.key === "close" ? "!text-warning" : "",
+            ),
+          )}
+        </div>
+      ) : (
       <div className="flex flex-wrap items-center gap-1.5">
         {/* **والملفُّ انتقالٌ لا نافذة** — شاشةٌ كاملةٌ فيها أصنافُه. */}
         <Button
@@ -152,6 +185,7 @@ export function StoreActions({
         )}
         <ActionMenu label={A.more} variant="ghost" items={items} ariaLabel={A.more} />
       </div>
+      )}
       {error && <Alert className="mt-1">{error}</Alert>}
 
       <Confirm
