@@ -35,8 +35,6 @@ import {
   Confirm,
   Checkbox,
   DataView,
-  ViewToggle,
-  useViewMode,
   ActionMenu,
   type ActionMenuItem,
   type DataColumn,
@@ -118,7 +116,6 @@ export default function AllAccountsTable() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkMsg, setBulkMsg] = useState("");
   const [busy, setBusy] = useState(false);
-  const [view, setView] = useViewMode("users");
 
   // **والإحصاءاتُ مرّةً لا مع كلّ حرف** — كانت تُعاد مع كلّ ضغطةٍ في البحث.
   const loadStats = useCallback(() => {
@@ -566,9 +563,6 @@ export default function AllAccountsTable() {
             <option value="blocked">{m.admin.users.statusFilter.blocked}</option>
           </Select>
         </div>
-        <div className="ms-auto">
-          <ViewToggle view={view} onChange={setView} tableLabel={m.common.viewTable} cardsLabel={m.common.viewCards} />
-        </div>
       </div>
 
       {/* ══════════════════════════════════════════════════════════════
@@ -647,7 +641,8 @@ export default function AllAccountsTable() {
         loading={data === null && !error}
         getKey={(u) => u.id}
         columns={columns}
-        view={view}
+        // **بطاقاتٌ وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٢٥: «الغي نظام الجداول من الصفحة نخليه بس بطاقات»).
+        view="cards"
         // **و«لا نتائج» لا تُكتب تحت رسالة خطأ** — كانت تقول «لا أحد» والسببُ عطب.
         empty={error ? "" : m.admin.users.noResults}
         onRowClick={(u) => router.push(`/dashboard/users/${u.id}`)}
