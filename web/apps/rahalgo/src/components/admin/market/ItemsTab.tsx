@@ -29,13 +29,27 @@ import {
   useLiveData,
   useToast,
   IconStatus,
+  IconEdit,
+  MenuItemEditor,
+  type MenuItem,
+  type MenuPaths,
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
+import { useCanCall } from "@/lib/policy";
+import ImageUpload, { MediaThumb } from "@/components/admin/ImageUpload";
 import type { Section } from "./SectionsTab";
 
 const m = getMessages(defaultLocale);
 const S = m.admin.sections;
 const I = m.admin.market.items;
+
+/** **مساراتُ الإدارة لتحرير الصنف** — نفسُها التي في صفحة المتجر. */
+const PATHS: MenuPaths = {
+  menu: (id) => `/api/v1/admin/merchants/${id}/menu`,
+  items: (id) => `/api/v1/admin/merchants/${id}/menu/items`,
+  item: (id) => `/api/v1/admin/menu/items/${id}`,
+  platformSections: () => `/api/v1/admin/sections`,
+};
 
 interface MarketItem {
   id: string;
@@ -67,6 +81,23 @@ function stateOf(it: MarketItem): { label: string; variant: "success" | "warning
 }
 
 export default function ItemsTab() {
+  // **تحريرُ الصنف من بطاقته** (قرارُ المالك ٢٠٢٦-١٠-٢٥: «الأدمن يقدر يعدّل الصنف ويغيّر الصورة والسعر»).
+  const canEdit = useCanCall()("PATCH", "/menu/items/{itemID}");
+  const [editing, setEditing] = useState<{ merchantID: string; item: MenuItem } | null>(null);
+  const [opening, setOpening] = useState("");
+  async function openEdit(it: MarketItem) {
+    setOpening(it.id);
+    try {
+      const res = await api<{ sections?: { items: MenuItem[] }[] } | { items: MenuItem[] }[]>(PATHS.menu(it.merchant_id));
+      const secs = Array.isArray(res) ? res : (res.sections ?? []);
+      const full = secs.flatMap((x) => x.items).find((x) => x.id === it.id);
+      if (full) setEditing({ merchantID: it.merchant_id, item: full });
+    } catch {
+      // @empty-ok — **تعذّرُ الجلب يُبقي البطاقة كما هي**، وتُعاد الضغطة.
+    } finally {
+      setOpening("");
+    }
+  }
   const [q, setQ] = useState("");
   const [section, setSection] = useState("");
   const [state, setState] = useState("");
@@ -216,64 +247,67 @@ export default function ItemsTab() {
       ) : rows.length === 0 ? (
         <EmptyState icon={IconStatus} title={I.empty} />
       ) : (
-        <div className="surface divide-y divide-line-soft">
-          <div className="flex items-center gap-3 px-3 py-2">
-            <Checkbox
-              id="mkt-all"
-              label={I.selectAll}
-              checked={allPicked}
-              onChange={() =>
-                setPicked(allPicked ? new Set() : new Set(rows.map((r) => r.id)))
-              }
-            />
-          </div>
-          {rows.map((it) => {
-            const st = stateOf(it);
-            return (
-              <div key={it.id} className="flex items-center gap-3 px-3 py-2.5">
-                <Checkbox
-                  id={`mkt-${it.id}`}
-                  label={<span className="sr-only">{it.name}</span>}
-                  className="shrink-0"
-                  checked={picked.has(it.id)}
-                  onChange={() => toggle(it.id)}
-                />
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-control bg-field">
-                  {it.thumb_url ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={mediaUrl(it.thumb_url) ?? ""}
-                      alt={it.name}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-2xs text-ink-muted">{S.noImage}</span>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="flex items-center gap-2 truncate font-bold">
-                    <span className="truncate">{it.name}</span>
-                    {it.is_new && <Badge variant="accent">{I.new}</Badge>}
-                  </p>
-                  <p className="truncate text-xs text-ink-muted">
-                    <Link className="hover:text-ink" href={`/dashboard/merchants/${it.merchant_id}`}>
+        // **بطاقاتٌ لا قائمة** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — والتعديلُ (الاسم والسعر والصورة) من البطاقة.
+        <div className="space-y-3">
+          <Checkbox
+            id="mkt-all"
+            label={I.selectAll}
+            checked={allPicked}
+            onChange={() => setPicked(allPicked ? new Set() : new Set(rows.map((r) => r.id)))}
+          />
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            {rows.map((it) => {
+              const st = stateOf(it);
+              return (
+                <div key={it.id} className="surface flex flex-col overflow-hidden">
+                  <div className="relative aspect-square bg-field">
+                    {it.thumb_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={mediaUrl(it.thumb_url) ?? ""} alt={it.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="flex h-full items-center justify-center text-xs text-ink-muted">{S.noImage}</span>
+                    )}
+                    <span className="absolute start-2 top-2 rounded-control bg-surface p-0.5">
+                      <Checkbox
+                        id={`mkt-${it.id}`}
+                        label={<span className="sr-only">{it.name}</span>}
+                        checked={picked.has(it.id)}
+                        onChange={() => toggle(it.id)}
+                      />
+                    </span>
+                    <span className="absolute end-2 top-2 flex flex-col items-end gap-1">
+                      <Badge variant={st.variant}>{st.label}</Badge>
+                      {it.is_new && <Badge variant="accent">{I.new}</Badge>}
+                    </span>
+                  </div>
+                  <div className="flex flex-1 flex-col gap-1 p-2.5">
+                    <p className="line-clamp-2 text-sm font-bold">{it.name}</p>
+                    <Link className="truncate text-xs text-ink-muted hover:text-ink" href={`/dashboard/merchants/${it.merchant_id}`}>
                       {it.merchant_name}
                     </Link>
-                    {" · "}
-                    {it.section_name}
-                    {" · "}
-                    {I.addedAt.replace("{t}", fmtDateTime(it.created_at))}
-                  </p>
+                    <p className="truncate text-2xs text-ink-muted">{it.section_name}</p>
+                    <div className="mt-auto flex items-center justify-between gap-2 pt-1.5">
+                      <span className="text-sm font-bold">
+                        <Money value={it.merchant_price} />
+                      </span>
+                      {canEdit && (
+                        <Button
+                          variant="ghost"
+                          title={I.edit}
+                          aria-label={I.edit}
+                          disabled={opening === it.id}
+                          onClick={() => void openEdit(it)}
+                          className="!h-9 !w-9 !min-w-0 !p-0 rounded-full text-ink-muted hover:text-ink"
+                        >
+                          <IconEdit size={17} />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <span className="shrink-0 text-sm">
-                  <Money value={it.merchant_price} />
-                </span>
-                <span className="shrink-0">
-                  <Badge variant={st.variant}>{st.label}</Badge>
-                </span>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       )}
 
@@ -285,6 +319,23 @@ export default function ItemsTab() {
           onChange={(p) => {
             setPage(p);
             setPicked(new Set());
+          }}
+        />
+      )}
+      {editing && (
+        <MenuItemEditor
+          api={api}
+          paths={PATHS}
+          merchantID={editing.merchantID}
+          platformSections={sections}
+          editing={{ item: editing.item, sectionId: editing.item.platform_section_id ?? "" }}
+          imageUpload={(initialUrl, onChange) => (
+            <ImageUpload kind="menu_item" label={m.shared.menuEditor.itemImage} initialUrl={initialUrl} onChange={onChange} />
+          )}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            reload();
           }}
         />
       )}

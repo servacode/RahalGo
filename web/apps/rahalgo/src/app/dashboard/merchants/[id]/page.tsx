@@ -43,6 +43,7 @@ import {
   IconTile,
   IconEdit,
 } from "@rahalgo/ui";
+import ImageUpload, { MediaThumb } from "@/components/admin/ImageUpload";
 import { api, mediaUrl } from "@/lib/api";
 import ViolationsModal from "@/components/admin/ViolationsModal";
 import { MerchantModal, type Merchant as EditableMerchant } from "@/components/admin/MerchantModal";
@@ -308,7 +309,21 @@ export default function MerchantProfilePage() {
         )}
         </>
       )}
-      {tab === "menu" &&<MenuManager api={api} paths={PATHS} merchantID={mr.id} mediaUrl={mediaUrl} showSalePrice readOnly={!canEditMenu} />}
+      {tab === "menu" && (
+        <MenuManager
+          api={api}
+          paths={PATHS}
+          merchantID={mr.id}
+          mediaUrl={mediaUrl}
+          showSalePrice
+          readOnly={!canEditMenu}
+          // **وصورةُ الصنف تُبدَّل من هنا** (قرارُ المالك ٢٠٢٦-١٠-٢٥: «الأدمن يقدر يغيّر الصورة»).
+          imageUpload={(initialUrl, onChange) => (
+            <ImageUpload kind="menu_item" label={m.shared.menuEditor.itemImage} initialUrl={initialUrl} onChange={onChange} />
+          )}
+          thumb={(url, alt) => <MediaThumb url={url} alt={alt} fallback={alt} size={48} />}
+        />
+      )}
       {tab === "hours" && (
         <div className="surface p-4">
           <StoreHours

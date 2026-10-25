@@ -61,6 +61,7 @@ export { AddressBook, type SavedAddress } from "./AddressBook";
 export { Invoice, type InvoiceOrder, type InvoiceItem } from "./Invoice";
 export {
   MenuManager,
+  ItemModal as MenuItemEditor,
   type MenuPaths,
   type MenuSection,
   type MenuItem,

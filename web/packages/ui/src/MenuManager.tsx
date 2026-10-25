@@ -477,7 +477,8 @@ export function MenuManager({
   );
 }
 
-function ItemModal({
+/** **محرّرُ الصنف وحدَه** — يُفتح من خارج القائمة أيضاً (أصنافُ السوق، ٢٠٢٦-١٠-٢٥). */
+export function ItemModal({
   api,
   paths,
   merchantID,
