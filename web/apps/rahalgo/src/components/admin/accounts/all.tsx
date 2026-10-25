@@ -68,7 +68,7 @@ import StatusReasonModal from "@/components/admin/StatusReasonModal";
 import RoleBadge, { ROLE_STYLES } from "@/components/admin/RoleBadge";
 import { MediaThumb } from "@/components/admin/ImageUpload";
 import { TempPasswordNote } from "@/components/admin/accounts/TempPasswordNote";
-import { ResetPasswordModal } from "@/components/admin/accounts/ProfileParts";
+import { ResetPasswordModal, ChangePhoneModal } from "@/components/admin/accounts/ProfileParts";
 
 const m = getMessages(defaultLocale);
 const A = m.admin.acc;
@@ -95,6 +95,8 @@ export default function AllAccountsTable() {
   // **وكلمةُ المرور زرٌّ سريعٌ في البطاقة** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — بلا فتح الملف.
   const canReset = canCall("POST", "/users/{id}/password");
   const [resetUser, setResetUser] = useState<{ id: string; hours: number } | null>(null);
+  /** **تبديلُ الرقم من البطاقة** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — النافذةُ نفسُها التي في الملفّ. */
+  const [phoneUser, setPhoneUser] = useState<Row | null>(null);
   const openReset = (u: Row) => {
     // **مهلةُ الكلمة المؤقّتة من المحرّك** — تُقرأ من ملفّه، والافتراضُ إن تعذّر.
     api<{ temp_password_hours?: number }>(`/api/v1/admin/users/${u.id}`)
@@ -631,6 +633,17 @@ export default function AllAccountsTable() {
                         <IconLock size={20} />
                       </Button>
                     )}
+                    {canStatus && u.id !== me?.id && (
+                      <Button
+                        variant="ghost"
+                        onClick={() => setPhoneUser(u)}
+                        title={m.admin.users.profile.changePhone}
+                        aria-label={m.admin.users.profile.changePhone}
+                        className="!w-11 !min-w-0 !flex-none !p-0 rounded-full text-ink-muted hover:text-ink"
+                      >
+                        <IconPhone size={20} />
+                      </Button>
+                    )}
                     {canStatus &&
                       u.id !== me?.id &&
                       (u.status === "active" ? (
@@ -684,6 +697,18 @@ export default function AllAccountsTable() {
           allRoles={allRoles}
           onClose={() => setCreateKind(null)}
           onCreated={() => refresh()}
+        />
+      )}
+      {phoneUser && (
+        <ChangePhoneModal
+          userID={phoneUser.id}
+          current={phoneUser.phone ?? ""}
+          onClose={() => setPhoneUser(null)}
+          onDone={(msg) => {
+            setPhoneUser(null);
+            setBulkMsg(msg);
+            void load();
+          }}
         />
       )}
       {resetUser && (
