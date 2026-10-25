@@ -101,6 +101,8 @@ const OpsMapCanvas = dynamic(
   { ssr: false },
 );
 
+/** **لوحةُ المندوبين الجانبيّة مطويّة** (قرارُ المالك ٢٠٢٦-١٠-٢٥). */
+const REP_PANEL = false;
 const m = getMessages(defaultLocale);
 const T = m.admin.opsMap;
 
@@ -1508,7 +1510,7 @@ export default function OpsMapPage() {
   // **أفي العمود الجانبيّ ما يُعرض؟** — وإلّا أخذت الخريطةُ العرضَ كلَّه.
   const hasSide =
     (can("MANAGE_COVERAGE") && drawing) ||
-    (can("VIEW_REP_ACTIVITY") && !!visible.reps) ||
+    // **ولا لوحةَ مندوبين جانبيّة** (قرارُ المالك ٢٠٢٦-١٠-٢٥: «ما بتلزم») — المندوبون على الخريطة نفسِها.
     noLoc.length > 0;
   const S = summary.data;
 
@@ -2317,7 +2319,7 @@ export default function OpsMapPage() {
           )}
 
           {/* ── المندوبون (البند ٢٦) ─────────────────────────── */}
-          {can("VIEW_REP_ACTIVITY") && visible.reps && (
+          {REP_PANEL && can("VIEW_REP_ACTIVITY") && visible.reps && (
             <Card>
               <h3 className="mb-1 text-sm font-bold">{T.layer.reps}</h3>
               <p className="mb-2 text-xs text-ink-muted">{T.rep.noTerritory}</p>
