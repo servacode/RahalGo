@@ -350,25 +350,8 @@ export default function AllAccountsTable() {
           },
         ] as DataColumn<Row>[])
       : []),
-    {
-      id: "rep_stores",
-      header: A.storesBroughtCol,
-      icon: <IconStore />,
-      hide: (u) => !u.rep_stores,
-      cell: (u) => fmtNum(u.rep_stores ?? 0),
-    },
-    ...(money
-      ? ([
-          {
-            id: "commissions",
-            header: `${m.admin.sales.totalCommissions} (${m.common.currency})`,
-            icon: <IconWallet />,
-            hide: (u: Row) => !u.commissions,
-            cell: (u: Row) => fmtNum(u.commissions ?? 0),
-          },
-        ] as DataColumn<Row>[])
-      : []),
-    // **ولا «طلبات جارية» في البطاقة** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — فيبقى شكلُ البطاقات موحّداً.
+    // **ولا «طلبات جارية» ولا متاجرُ المندوب وعمولاتُه في البطاقة** (قرارُ المالك ٢٠٢٦-١٠-٢٥) —
+    // فيبقى شكلُ البطاقات موحّداً؛ وكلُّها في ملفّ الحساب.
   ];
 
   // ── «إضافة ▾» ─────────────────────────────────────────────────────────
