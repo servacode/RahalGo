@@ -51,6 +51,8 @@ import {
   IconLink,
   IconZones,
   IconStatus,
+  IconCheck,
+  IconChevronDown,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { roleLabelByCode } from "@/lib/rolemeta";
@@ -347,7 +349,10 @@ export default function DashboardPage() {
       {/* **زرُّ الدوام أوّلُ ما يُرى** — فاتحين أو مسكّرين بضغطة (طلبُ المالك ٢٠٢٦-١٠-١٨). */}
       <PlatformSwitch />
       <div className="flex flex-wrap items-center gap-3">
-        <h1 className="heading-page flex-1">{H.title}</h1>
+        <div className="min-w-0 flex-1">
+          <h1 className="heading-page">{H.title}</h1>
+          <p className="mt-1 text-sm text-ink-muted">{H.greeting}</p>
+        </div>
         <span className="text-xs text-ink-muted">{ago}</span>
         <Button variant="secondary" onClick={load} disabled={busy}>
           {H.refresh}
@@ -358,29 +363,82 @@ export default function DashboardPage() {
       {/* **بياناتُ التواصل التجريبيّة** — قرارُ المالك ٢٠٢٦-١٠-٠٤ (الإعدادات ١٥). */}
       <ContactTestAlert />
 
-      {/* ── ١ · بانتظار قرارك ── */}
-      <Section title={H.awaiting} note={H.awaitingHint}>
+      {/* ── ١ · بدها شغلك هلّق — **ما فوق الصفر وحدَه** (تصميمُ اللوحة ٢٠٢٦-١٠-٢٥) ──
+          كانت ثلاثَ عشرةَ بطاقةً تُرسم ولو كانت أصفاراً، **فتضيع الواحدةُ الحمراءُ بين اثنتي
+          عشرةَ رماديّة.** والمجهولُ يبقى ظاهراً — لا يُقرأ صفراً. */}
+      {(() => {
+        const due = AWAITING.filter((c) => !known(a[c.key]) || (a[c.key] as number) > 0);
+        return (
+          <Section
+            title={H.awaitingNow}
+            note={due.length ? H.awaitingCount.replace("{n}", fmtNum(due.length)) : undefined}
+          >
+            {due.length === 0 ? (
+              <Card>
+                <p className="flex items-center gap-2 text-sm font-bold text-success">
+                  <IconCheck size={18} />
+                  {H.allClear}
+                </p>
+              </Card>
+            ) : (
+              <StatGrid>
+                {due.map((c) => {
+                  const n = a[c.key];
+                  const tone = toneOf(n, c.urgent);
+                  return (
+                    <StatCard
+                      key={c.key}
+                      icon={c.icon}
+                      label={c.key === "tickets_late" ? H.ticketsLate.replace("{h}", fmtNum(lateHours.current)) : c.label}
+                      value={show(n)}
+                      tone={tone}
+                      emphasis={tone === "danger" || tone === "warning"}
+                      onClick={go(c.href)}
+                    />
+                  );
+                })}
+              </StatGrid>
+            )}
+          </Section>
+        );
+      })()}
+
+      {/* ── اليوم بلمحة — أربعةُ أرقامٍ تُقرأ أوّلاً ── */}
+      <Section title={H.glance} note={H.todayNote}>
         <StatGrid>
-          {AWAITING.map((c) => {
-            const n = a[c.key];
-            const tone = toneOf(n, c.urgent);
-            return (
-              <StatCard
-                key={c.key}
-                icon={c.icon}
-                label={c.key === "tickets_late" ? H.ticketsLate.replace("{h}", fmtNum(lateHours.current)) : c.label}
-                value={show(n)}
-                tone={tone}
-                emphasis={tone === "danger" || tone === "warning"}
-                onClick={go(c.href)}
-              />
-            );
-          })}
+          <StatCard
+            icon={IconOrder}
+            label={H.glanceOrders}
+            value={show(t.orders)}
+            sub={known(y.orders) ? H.glanceVsYesterday.replace("{n}", fmtNum(y.orders)) : undefined}
+            onClick={go("/dashboard/history?from=" + data.today + "&to=" + data.today)}
+          />
+          <StatCard icon={IconBalance} label={H.sales} value={show(data.money.sales, fmtMoney)} onClick={go("/dashboard/profits")} />
+          <StatCard
+            icon={IconWallet}
+            label={H.net}
+            value={show(data.money.net, fmtMoney)}
+            sub={H.netHint}
+            tone="accent"
+            emphasis
+            onClick={go("/dashboard/profits")}
+          />
+          <StatCard
+            icon={IconDriver}
+            label={H.glanceDrivers}
+            value={show(lv.drivers_on_shift)}
+            sub={
+              known(lv.drivers_free) && known(lv.drivers_busy)
+                ? H.glanceDriversSub.replace("{free}", fmtNum(lv.drivers_free)).replace("{busy}", fmtNum(lv.drivers_busy))
+                : undefined
+            }
+            onClick={go("/dashboard/opsmap?on_shift=true&status=active")}
+          />
         </StatGrid>
       </Section>
 
       {/* ── ٢ · الآن ── */}
-      <Section title={H.now}>
+      <Section title={H.ordersNow}>
         <StatGrid>
           {STAGES.map((s) => (
             <StatCard
@@ -400,28 +458,6 @@ export default function DashboardPage() {
             tone={toneOf(lv.orders_stuck, true)}
             emphasis={known(lv.orders_stuck) && lv.orders_stuck > 0}
             onClick={go("/dashboard/orders")}
-          />
-          <StatCard
-            icon={IconDriver}
-            label={H.driversOnShift}
-            value={show(lv.drivers_on_shift)}
-            sub={H.driversNote}
-            tone={known(lv.drivers_on_shift) && lv.drivers_on_shift === 0 ? "muted" : "default"}
-            onClick={go("/dashboard/opsmap?on_shift=true&status=active")}
-          />
-          <StatCard
-            icon={IconDriver}
-            label={H.driversFree}
-            value={show(lv.drivers_free)}
-            tone={known(lv.drivers_free) && lv.drivers_free === 0 ? "muted" : "default"}
-            onClick={go("/dashboard/opsmap?on_shift=true&status=active&has_active=false")}
-          />
-          <StatCard
-            icon={IconDriver}
-            label={H.driversBusy}
-            value={show(lv.drivers_busy)}
-            tone={known(lv.drivers_busy) && lv.drivers_busy === 0 ? "muted" : "default"}
-            onClick={go("/dashboard/opsmap?on_shift=true&status=active&has_active=true")}
           />
           <StatCard
             icon={IconStore}
@@ -505,15 +541,6 @@ export default function DashboardPage() {
       {/* ── ٤ · المال اليوم ── */}
       <Section title={H.money} note={H.todayNote}>
         <StatGrid>
-          <StatCard icon={IconBalance} label={H.sales} value={show(data.money.sales, fmtMoney)} onClick={go("/dashboard/profits")} />
-          <StatCard
-            icon={IconWallet}
-            label={H.net}
-            value={show(data.money.net, fmtMoney)}
-            sub={H.netHint}
-            tone="accent"
-            onClick={go("/dashboard/profits")}
-          />
           <StatCard icon={IconWallet} label={H.treasury} value={show(data.money.treasury_balance, fmtMoney)} onClick={go("/dashboard/treasury?tab=statement")} />
           <StatCard icon={IconBalance} label={H.cashHeld} value={show(data.money.cash_held, fmtMoney)} onClick={go("/dashboard/cash")} />
           <StatCard
@@ -573,7 +600,14 @@ export default function DashboardPage() {
         </Card>
       </Section>
 
-      {/* ── ٦ · المنصّة بالأرقام ── */}
+      {/* ── ٦ · المنصّة بالأرقام — **مطويّةٌ لا محذوفة** (تصميمُ اللوحة ٢٠٢٦-١٠-٢٥):
+          تُقرأ مرّةً في الأسبوع لا كلَّ ساعة، فلا تزاحم ما يُعمل عليه. ── */}
+      <details className="group rounded-card border border-line-soft p-4 [&_summary::-webkit-details-marker]:hidden">
+        <summary className="flex cursor-pointer list-none items-center gap-2 font-bold">
+          <IconChevronDown size={18} className="transition-transform group-open:rotate-180" />
+          {H.platform}
+        </summary>
+        <div className="mt-4 space-y-6">
       <Section title={H.platform}>
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           <Card>
@@ -658,6 +692,8 @@ export default function DashboardPage() {
 
       {/* ── زوّارُ الموقع والتحميلات (طلبُ المالك ٢٠٢٦-١٠-٠٧) ── */}
       <SiteStatsSection />
+        </div>
+      </details>
     </div>
   );
 }

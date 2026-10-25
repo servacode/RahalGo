@@ -296,6 +296,10 @@
    "reason": "**حالُ الخادم بكلمات لكلّ موظّف** — الشريطُ الأحمرُ أعلى اللوحة؛ يكفيه `RequireAnyCapability`، **ولا رقمَ ولا سببَ تقنيّاً في ردّه.**"
   },
   {
+   "pattern": "/search",
+   "reason": "**البحثُ العامّ أعلى اللوحة** — يكفيه `RequireAnyCapability`، **وكلُّ قسمٍ في ردّه بقدرته** (`orders.read` · `users.read` · `merchants.read`) **تُقاس في المعالِج** (`handleAdminSearch`)؛ ومن لا يملك قسماً لا يُرسَل له."
+  },
+  {
    "pattern": "/settings/{key}",
    "reason": "**القدرةُ تتبع المفتاحَ لا المسار** — عامٌّ أو ماليٌّ أو أمنيّ. **وتُحسَم في المعالِج** (`settingCapability`)."
   },

@@ -101,13 +101,25 @@ export default function AllAccountsTable() {
   const urlParam = (k: string) =>
     typeof window === "undefined" ? "" : (new URLSearchParams(window.location.search).get(k) ?? "");
   const [data, setData] = useState<UserPage | null>(null);
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(() => urlParam("q"));
   const [role, setRole] = useState(() => urlParam("role"));
-  const [onlineOnly, setOnlineOnly] = useState(false);
+  const [onlineOnly, setOnlineOnly] = useState(() => urlParam("online") === "1");
   const [statusFilter, setStatusFilter] = useState(() => urlParam("status"));
   const [roleCounts, setRoleCounts] = useState<{ total: number; roles: Record<string, number> } | null>(null);
   const [allRoles, setAllRoles] = useState<Role[]>([]);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(() => Math.max(1, Number(urlParam("page")) || 1));
+  // **والبحثُ والفلاترُ في الرابط** (تصميمُ اللوحة ٢٠٢٦-١٠-٢٥) — كانت تضيع بالرجوع من ملفّ
+  // حساب، فيُعاد البحثُ من أوّله. `replaceState` لا يصنع صفحةً في السجلّ لكلّ حرف.
+  useEffect(() => {
+    const qs = new URLSearchParams();
+    if (query.trim()) qs.set("q", query.trim());
+    if (role) qs.set("role", role);
+    if (statusFilter) qs.set("status", statusFilter);
+    if (onlineOnly) qs.set("online", "1");
+    if (page > 1) qs.set("page", String(page));
+    const next = qs.toString();
+    window.history.replaceState(null, "", next ? `?${next}` : window.location.pathname);
+  }, [query, role, statusFilter, onlineOnly, page]);
   const [error, setError] = useState("");
   const [createKind, setCreateKind] = useState<NewKind | null>(null);
   const [walletUser, setWalletUser] = useState<Row | null>(null);

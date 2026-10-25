@@ -208,6 +208,7 @@ export function DataView<T>({
   card,
   rail,
   loading = false,
+  single = false,
 }: {
   items: T[];
   getKey: (item: T) => string;
@@ -253,6 +254,11 @@ export function DataView<T>({
    * **زرٌّ يخصّ الطلبَ كلَّه لا نصفَه.**
    */
   rail?: (item: T) => ReactNode;
+  /**
+   * **بطاقةٌ واحدةٌ بعرض حاويتها** — للدرج والنوافذ (تصميمُ اللوحة ٢٠٢٦-١٠-٢٥). الشبكةُ تُقاس
+   * بالشاشة لا بالحاوية، **فبطاقةٌ في درجٍ ضيّقٍ كانت تأخذ ثلثَه.**
+   */
+  single?: boolean;
   /**
    * **ما زال يُحمَّل — فلا «لا يوجد»** (تدقيقُ اللوحة ٢٠٢٦-١٠-٠٣، الحالاتُ الأربع في
    * `GROUND-RULES` §٧): كانت كلُّ قائمةٍ تقول «لا طلبات» لحظةَ الفتح، **وعلى خطٍّ بطيءٍ يظنّ
@@ -303,8 +309,8 @@ export function DataView<T>({
 
          **ومن لا عمودَ له يبقى على أربع** — لا شيءَ يأكل عرضَه. */
       <div
-        className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${
-          rail ? "xl:grid-cols-3" : "lg:grid-cols-3 xl:grid-cols-4"
+        className={`grid grid-cols-1 gap-4 ${
+          single ? "" : `sm:grid-cols-2 ${rail ? "xl:grid-cols-3" : "lg:grid-cols-3 xl:grid-cols-4"}`
         }`}
       >
         {items.map((item) => {

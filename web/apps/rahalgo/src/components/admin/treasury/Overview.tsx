@@ -11,7 +11,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { fmtMoney, fmtDateTime, errorText } from "@rahalgo/i18n";
+import { fmtMoney, fmtDateTime, fmtNum, errorText, damascusDay } from "@rahalgo/i18n";
 import {
   Alert,
   Badge,
@@ -62,6 +62,12 @@ interface Overview {
   last_close: CashClose | null;
   approvals: ApprovalItem[];
 }
+interface TodayMoney {
+  orders: number;
+  sales: number;
+  net: number;
+  lines: { key: string; amount: number }[];
+}
 interface ProfitCard {
   period: "day" | "week" | "month" | "all";
   from: string;
@@ -87,6 +93,18 @@ export function OverviewTab({ onTab }: { onTab: (tab: "approvals" | "cashbox") =
   const canWithdraw = canCall("POST", "/treasury/withdrawals");
   const ov = useLiveData<Overview>(() => api(`/api/v1/admin/treasury/overview`), ["wallet"]);
   const wd = useLiveData<{ withdrawals: Withdrawal[] }>(() => api(`/api/v1/admin/treasury/withdrawals`), ["wallet"]);
+  // **مالُ اليوم من حساب الأرباح نفسِه** (تصميمُ اللوحة ٢٠٢٦-١٠-٢٥) — فلا يقول رقمٌ هنا غيرَ
+  // ما تقوله صفحةُ الأرباح. ومن لا يقرأ الأرباحَ لا يرى القسم.
+  const canProfits = canCall("GET", "/profits");
+  const today = damascusDay();
+  const td = useLiveData<TodayMoney>(
+    () =>
+      canProfits
+        ? api(`/api/v1/admin/profits?tab=platform&from=${today}&to=${today}`)
+        : Promise.resolve(null as unknown as TodayMoney),
+    ["wallet", "order"],
+    [canProfits, today],
+  );
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
@@ -132,6 +150,41 @@ export function OverviewTab({ onTab }: { onTab: (tab: "approvals" | "cashbox") =
         </Alert>
       )}
       {!d.has_treasury && <Alert tone="warning">{O.noTreasury}</Alert>}
+      {td.data && (
+        <section className="space-y-2">
+          <h3 className="font-bold">{O.todayTitle}</h3>
+          <StatGrid>
+            <StatCard
+              label={O.todaySales}
+              value={fmtMoney(td.data.sales)}
+              sub={O.todayOrders.replace("{n}", fmtNum(td.data.orders))}
+              icon={IconBalance}
+              onClick={() => router.push("/dashboard/profits")}
+            />
+            <StatCard
+              label={O.todayCommission}
+              value={fmtMoney(td.data.lines.find((l) => l.key === "commission")?.amount ?? 0)}
+              icon={IconStore}
+              onClick={() => router.push("/dashboard/profits")}
+            />
+            <StatCard
+              label={O.todayDelivery}
+              value={fmtMoney(td.data.lines.find((l) => l.key === "delivery_share")?.amount ?? 0)}
+              icon={IconDriver}
+              onClick={() => router.push("/dashboard/profits")}
+            />
+            <StatCard
+              label={O.todayNet}
+              value={fmtMoney(td.data.net)}
+              icon={IconTrendUp}
+              tone={td.data.net > 0 ? "success" : td.data.net < 0 ? "danger" : "muted"}
+              emphasis
+              onClick={() => router.push("/dashboard/profits")}
+            />
+          </StatGrid>
+          <p className="text-xs text-ink-muted">{O.todayHint}</p>
+        </section>
+      )}
       {(d.profit_cards ?? []).length > 0 && (
         <section className="space-y-2">
           <h3 className="font-bold">{O.profitTitle}</h3>
@@ -150,6 +203,7 @@ export function OverviewTab({ onTab }: { onTab: (tab: "approvals" | "cashbox") =
           <p className="text-xs text-ink-muted">{O.profitHint}</p>
         </section>
       )}
+      <h3 className="font-bold">{O.whereTitle}</h3>
       <StatGrid>
         <StatCard
           label={O.treasuryBalance}
@@ -165,11 +219,28 @@ export function OverviewTab({ onTab }: { onTab: (tab: "approvals" | "cashbox") =
           tone={d.cashbox.expected < 0 ? "danger" : undefined}
           onClick={() => onTab("cashbox")}
         />
+        <StatCard
+          label={O.cashInStreet}
+          value={fmtMoney(d.cash_in_street)}
+          icon={IconDriver}
+          onClick={() => router.push("/dashboard/cash")}
+        />
+        <StatCard
+          label={O.merchantCashDue}
+          value={fmtMoney(d.merchant_cash_due)}
+          icon={IconStore}
+          onClick={() => router.push("/dashboard/cash?tab=stores")}
+        />
+      </StatGrid>
+      <h3 className="font-bold">{O.flowTitle}</h3>
+      <StatGrid>
         <StatCard label={O.todayIn} value={fmtMoney(d.today_in)} tone="success" />
         <StatCard label={O.todayOut} value={fmtMoney(d.today_out)} tone="danger" />
-        <StatCard label={O.cashInStreet} value={fmtMoney(d.cash_in_street)} icon={IconDriver} />
-        <StatCard label={O.merchantCashDue} value={fmtMoney(d.merchant_cash_due)} icon={IconStore} />
-        <StatCard label={O.pendingPayouts} value={fmtMoney(d.pending_payouts)} />
+        <StatCard
+          label={O.pendingPayouts}
+          value={fmtMoney(d.pending_payouts)}
+          onClick={() => router.push("/dashboard/payouts?status=pending")}
+        />
         <StatCard label={O.withdrawalsMonth} value={fmtMoney(d.withdrawals_month)} />
         <StatCard
           label={O.openShortfalls}

@@ -23,6 +23,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { getMessages, defaultLocale, fmtNum, fmtMoney, fmtDate, errorText } from "@rahalgo/i18n";
 import {
   Alert,
@@ -78,6 +79,9 @@ interface Holder {
   overdue: boolean;
   last_settled_at: string | null;
   on_shift: boolean;
+  /** **ديونُه المفتوحة والمطلوبُ منه بالإجمالي** (تصميمُ اللوحة ٢٠٢٦-١٠-٢٥). */
+  debt?: number;
+  owed?: number;
 }
 
 interface CashData {
@@ -238,6 +242,27 @@ function DriversCash({ filter, setFilter }: { filter: Filter; setFilter: (f: Fil
       header: C.held,
       icon: <IconWallet />,
       cell: (h) => <Money value={h.held} small />,
+    },
+    {
+      id: "debt",
+      header: C.debt,
+      cell: (h) =>
+        (h.debt ?? 0) > 0 ? (
+          <Link href={`/dashboard/obligations?party_kind=driver&party_id=${h.driver_id}`} className="hover:underline">
+            <Money value={h.debt ?? 0} small />
+          </Link>
+        ) : (
+          <span className="text-ink-muted">—</span>
+        ),
+    },
+    {
+      id: "owed",
+      header: C.owed,
+      cell: (h) => (
+        <span title={C.owedHint} className="font-bold">
+          <Money value={h.owed ?? h.held} small />
+        </span>
+      ),
     },
     {
       id: "open",

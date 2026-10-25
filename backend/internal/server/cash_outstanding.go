@@ -59,6 +59,11 @@ type cashHolder struct {
 	Overdue       bool       `json:"overdue"`
 	LastSettledAt *time.Time `json:"last_settled_at"`
 	OnShift       bool       `json:"on_shift"`
+	// Debt **ديونُه المفتوحة** (تصميمُ اللوحة ٢٠٢٦-١٠-٢٥) — كانت في صفحة الديون وحدَها،
+	// **فلا يُعرف «شو عليه بالإجمالي» إلّا بجمع شاشتين.**
+	Debt int64 `json:"debt"`
+	// Owed **المطلوبُ منه بالإجمالي** = ما بيده + ديونُه.
+	Owed int64 `json:"owed"`
 }
 
 // cashOverview كشفُ النقد كلُّه بمجاميعه — مصدرٌ واحدٌ للصفحة وللرئيسيّة.
@@ -110,7 +115,10 @@ func (s *Server) cashOverviewOf(ctx context.Context) (cashOverview, error) {
 		       COALESCE(x.oldest_at <= now() - make_interval(days => $2::int), false),
 		       (SELECT max(e.created_at) FROM driver_cash_entries e
 		         WHERE e.driver_id = u.id AND e.kind = 'settlement'),
-		       COALESCE(u.on_shift, false)
+		       COALESCE(u.on_shift, false),
+		       COALESCE((SELECT sum(fo.amount - fo.settled) FROM financial_obligations fo
+		                  WHERE fo.party_kind = 'driver' AND fo.party_id = u.id
+		                    AND fo.closed_at IS NULL), 0) AS debt
 		FROM users u
 		LEFT JOIN driver_cash_boxes b ON b.driver_id = u.id
 		CROSS JOIN LATERAL (SELECT driver_cash_oldest_unpaid(u.id) AS oldest_at) x
@@ -132,10 +140,11 @@ func (s *Server) cashOverviewOf(ctx context.Context) (cashOverview, error) {
 	for rows.Next() {
 		var x cashHolder
 		if err := rows.Scan(&x.DriverID, &x.Name, &x.Phone, &x.Held, &x.OpenCash,
-			&x.Limit, &x.OldestAt, &x.Overdue, &x.LastSettledAt, &x.OnShift); err != nil {
+			&x.Limit, &x.OldestAt, &x.Overdue, &x.LastSettledAt, &x.OnShift, &x.Debt); err != nil {
 			return ov, err
 		}
 		x.Exposure = x.Held + x.OpenCash
+		x.Owed = x.Held + x.Debt
 		// **فوق السقف = أكبرُ منه** — حدُّ الحارس نفسُه (`current+incoming > limit`).
 		x.OverLimit = x.Exposure > x.Limit
 		x.AtLimit = x.Exposure == x.Limit && x.Exposure > 0

@@ -233,6 +233,8 @@ export function CashboxTab() {
   const [depositKey, setDepositKey] = useState(newKey);
   const [done, setDone] = useState("");
   const [rejectClose, setRejectClose] = useState<CashClose | null>(null);
+  /** **مراجعةُ الإغلاق بتأكيدٍ يقول الأرقام** (تصميمُ اللوحة ٢٠٢٦-١٠-٢٥). */
+  const [approveClose, setApproveClose] = useState<CashClose | null>(null);
   const [resolve, setResolve] = useState<CashClose | null>(null);
   const [reason, setReason] = useState("");
 
@@ -330,7 +332,7 @@ export function CashboxTab() {
             <div className="flex flex-wrap gap-2">
               {pending.can_approve ? (
                 <>
-                  <Button disabled={busy} onClick={() => void post(`/api/v1/admin/cashbox/closes/${pending.id}/approve`, {})}>
+                  <Button disabled={busy} onClick={() => setApproveClose(pending)}>
                     {C.approveClose}
                   </Button>
                   {pending.self_approval && <span className="text-xs text-warning">{C.selfReview}</span>}
@@ -575,6 +577,26 @@ export function CashboxTab() {
         </div>
       </Modal>
 
+      <Confirm
+        open={approveClose !== null}
+        tone="primary"
+        title={C.approveCloseTitle}
+        body={
+          approveClose &&
+          C.approveCloseBody
+            .replace("{expected}", fmtMoney(approveClose.expected))
+            .replace("{counted}", fmtMoney(approveClose.counted))
+            .replace("{diff}", fmtMoney(approveClose.difference))
+        }
+        confirmLabel={C.approveClose}
+        busy={busy}
+        onConfirm={() => {
+          const c = approveClose;
+          setApproveClose(null);
+          if (c) void post(`/api/v1/admin/cashbox/closes/${c.id}/approve`, {});
+        }}
+        onCancel={() => setApproveClose(null)}
+      />
       <Confirm
         open={rejectClose !== null}
         title={C.rejectClose}

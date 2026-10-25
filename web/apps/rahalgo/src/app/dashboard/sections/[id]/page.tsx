@@ -53,6 +53,7 @@ import {
   IconWarning,
   IconCamera,
   FormActions,
+  ReloadState,
 } from "@rahalgo/ui";
 import { api, ApiError, mediaUrl } from "@/lib/api";
 import ImageUpload from "@/components/admin/ImageUpload";
@@ -202,7 +203,8 @@ export default function SectionPage() {
   }, [load]);
 
   if (!canRead) return <NotAllowed />;
-  if (error) return <p className="py-10 text-center text-danger">{error}</p>;
+  // **والخطأُ بزرّ إعادة** (تصميمُ اللوحة ٢٠٢٦-١٠-٢٥) — لا سطرٌ أحمرُ بلا مخرج.
+  if (error) return <ReloadState label={error} onRetry={() => void load()} />;
   if (!rows || !sec) return <LoadingState />;
 
   // **ولا ترشيحَ هنا** — المحرّكُ رشّح وعدّ، **وترشيحٌ فوق ترشيحٍ يُنقص

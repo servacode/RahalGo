@@ -41,6 +41,7 @@ import {
   Confirm,
   ActionMenu,
   type ActionMenuItem,
+  ReloadState,
 } from "@rahalgo/ui";
 import { api, type AuthUser } from "@/lib/api";
 import { WarningsSection } from "@/components/admin/accounts/WarningsSection";
@@ -224,6 +225,20 @@ interface Tx {
 }
 
 
+const PROFILE_TABS = [
+  "overview",
+  "orders",
+  "addresses",
+  "cashbox",
+  "stores",
+  "wallet",
+  "financials",
+  "feedback",
+  "chats",
+  "activity",
+] as const;
+type ProfileTab = (typeof PROFILE_TABS)[number];
+
 export default function UserProfilePage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -292,18 +307,20 @@ export default function UserProfilePage() {
   const [phoneOpen, setPhoneOpen] = useState(false);
   const [statusModal, setStatusModal] = useState<string | null>(null);
   const [fin, setFin] = useState<FinData | null>(null);
-  const [tab, setTab] = useState<
-    | "overview"
-    | "orders"
-    | "addresses"
-    | "cashbox"
-    | "stores"
-    | "wallet"
-    | "financials"
-    | "feedback"
-    | "chats"
-    | "activity"
-  >("overview");
+  // **والتبويبُ في الرابط** (تصميمُ اللوحة ٢٠٢٦-١٠-٢٥) — فالتحديثُ والرجوعُ يعودان إليه.
+  const [tab, setTabState] = useState<ProfileTab>(() => {
+    if (typeof window === "undefined") return "overview";
+    const t = new URLSearchParams(window.location.search).get("tab") as ProfileTab | null;
+    return t && PROFILE_TABS.includes(t) ? t : "overview";
+  });
+  const setTab = (t: ProfileTab) => {
+    setTabState(t);
+    const qs = new URLSearchParams(window.location.search);
+    if (t === "overview") qs.delete("tab");
+    else qs.set("tab", t);
+    const next = qs.toString();
+    window.history.replaceState(null, "", next ? `?${next}` : window.location.pathname);
+  };
   const [notice, setNotice] = useState("");
   const [feedbackError, setFeedbackError] = useState("");
   const [walletError, setWalletError] = useState("");
@@ -445,7 +462,8 @@ export default function UserProfilePage() {
       });
   }, [id, tab, canFinance]);
 
-  if (error) return <p className="py-10 text-center text-danger">{error}</p>;
+  // **والخطأُ بزرّ إعادة** (تصميمُ اللوحة ٢٠٢٦-١٠-٢٥) — لا سطرٌ أحمرُ بلا مخرج.
+  if (error) return <ReloadState label={error} onRetry={() => void load()} />;
   if (!p) return <LoadingState variant="text" />;
 
   const has = (r: string) => p.roles.includes(r);

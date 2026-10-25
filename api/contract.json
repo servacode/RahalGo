@@ -5088,6 +5088,22 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/search",
+      "handler": "handleAdminSearch",
+      "auth": true,
+      "capability": "«بحسب المفتاح»",
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/sections",
       "handler": "handleListPlatformSections",
       "auth": true,

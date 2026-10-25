@@ -667,7 +667,9 @@ function SettingRow({
       setTimeout(() => setNote(""), 1500);
       return;
     }
-    if (s.risk === "money" || gate) {
+    // **والأمنيُّ بتأكيدٍ أيضاً** (تصميمُ اللوحة ٢٠٢٦-١٠-٢٥) — كان يُحفظ لحظةَ لمس المفتاح، وهو
+    // ما يفتح بابَ الدخول أو يغلقه.
+    if (s.risk === "money" || s.risk === "security" || gate) {
       setPending({ raw });
       return;
     }
@@ -929,7 +931,9 @@ function SettingRow({
                   .replace("{from}", valueText(s, s.value))
                   .replace("{to}", valueText(s, pending?.raw))}
               </p>
-              <p className="mt-1 text-sm text-ink-muted">{U.confirmNote}</p>
+              <p className="mt-1 text-sm text-ink-muted">
+                {s.risk === "security" ? U.confirmNoteSecurity : U.confirmNote}
+              </p>
             </>
           )
         }

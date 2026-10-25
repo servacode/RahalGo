@@ -42,6 +42,7 @@ import {
   IconDate,
   IconTile,
   IconEdit,
+  ReloadState,
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import ViolationsModal from "@/components/admin/ViolationsModal";
@@ -111,7 +112,20 @@ export default function MerchantProfilePage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const [mr, setMr] = useState<Merchant | null>(null);
-  const [tab, setTab] = useState<Tab>("overview");
+  // **والتبويبُ في الرابط** (تصميمُ اللوحة ٢٠٢٦-١٠-٢٥) — فالتحديثُ والرجوعُ يعودان إليه.
+  const [tab, setTabState] = useState<Tab>(() => {
+    if (typeof window === "undefined") return "overview";
+    const t = new URLSearchParams(window.location.search).get("tab");
+    return t === "menu" || t === "hours" || t === "orders" ? t : "overview";
+  });
+  const setTab = (t: Tab) => {
+    setTabState(t);
+    const qs = new URLSearchParams(window.location.search);
+    if (t === "overview") qs.delete("tab");
+    else qs.set("tab", t);
+    const next = qs.toString();
+    window.history.replaceState(null, "", next ? `?${next}` : window.location.pathname);
+  };
   const [violationsOpen, setViolationsOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [error, setError] = useState("");
@@ -160,7 +174,8 @@ export default function MerchantProfilePage() {
   }, [load]);
 
   if (!canRead) return <NotAllowed />;
-  if (error) return <p className="py-10 text-center text-danger">{error}</p>;
+  // **والخطأُ بزرّ إعادة** (تصميمُ اللوحة ٢٠٢٦-١٠-٢٥) — لا سطرٌ أحمرُ بلا مخرج.
+  if (error) return <ReloadState label={error} onRetry={() => void load()} />;
   if (!mr) return <LoadingState />;
 
   const TABS: TabDef<Tab>[] = [
@@ -173,7 +188,9 @@ export default function MerchantProfilePage() {
   return (
     <div>
       <button
-        onClick={() => router.push("/dashboard/users")}
+        // **والرجوعُ إلى حيث جاء** (تصميمُ اللوحة ٢٠٢٦-١٠-٢٥) — من الحسابات أو السوق أو البحث؛
+        // ومن فتحه برابطٍ مباشرٍ يعود إلى قائمة المتاجر.
+        onClick={() => (window.history.length > 1 ? router.back() : router.push("/dashboard/sections?tab=stores"))}
         className="mb-3 flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink"
       >
         <IconPrev size={15} />
@@ -221,8 +238,15 @@ export default function MerchantProfilePage() {
             mr.general_commission_percent_exact ?? mr.general_commission_percent,
           )}
           icon={IconBalance}
+          // **العمولةُ بضغطةٍ من مربّعها** (تصميمُ اللوحة ٢٠٢٦-١٠-٢٥) — تفتح نافذةَ التعديل نفسَها.
+          onClick={canEdit ? () => setEditOpen(true) : undefined}
         />
-        <StatCard label={P.violations} value={fmtNum(mr.violations)} icon={IconWarning} />
+        <StatCard
+          label={P.violations}
+          value={fmtNum(mr.violations)}
+          icon={IconWarning}
+          onClick={canViolations ? () => setViolationsOpen(true) : undefined}
+        />
         <StatCard label={P.joined} value={fmtDate(mr.created_at)} icon={IconDate} />
       </StatGrid>
 
@@ -304,7 +328,7 @@ export default function MerchantProfilePage() {
         <OrderPhonesAdmin merchantId={mr.id} canManage={canCall("PUT", "/merchants/{id}/order-phones")} />
         {canEditMenu && <PriceSyncAdmin merchantId={mr.id} />}
         {canCall("DELETE", "/merchants/{id}") && (
-          <DeleteMerchantButton merchantId={mr.id} name={mr.name} onDeleted={() => router.push("/dashboard/merchants")} />
+          <DeleteMerchantButton merchantId={mr.id} name={mr.name} onDeleted={() => router.push("/dashboard/sections?tab=stores")} />
         )}
         </>
       )}

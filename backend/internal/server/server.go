@@ -1196,6 +1196,8 @@ func (s *Server) Router() http.Handler {
 			// (قرارُ المالك ٢٠٢٦-١٠-٠٤ — «مراقبة التشغيل»، البندان ٢ و٣).
 			r.Get("/ops/monitor", s.handleOpsMonitor)
 			r.Get("/ops/status", s.handleOpsStatus)
+			// **والبحثُ العامّ أعلى كلّ صفحة** (تصميمُ اللوحة ٢٠٢٦-١٠-٢٥) — كلُّ قسمٍ بقدرته.
+			r.Get("/search", s.handleAdminSearch)
 			// **وأخطاءُ الخادم مجمَّعةً** — بقدرة الرصد (مراقبةُ المنصّة ٢٠٢٦-١٠-٠٩).
 			r.Get("/monitoring/errors", s.handleMonitoringErrors)
 			// **وزرُّ «تلقائي/يدوي» لشاشتي الطلبات والانضمام** — `auto_mode.go`.

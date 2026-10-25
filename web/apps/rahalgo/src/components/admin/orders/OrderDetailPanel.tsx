@@ -14,7 +14,7 @@
  * **وكلُّ قسمٍ يُحمَّل وحدَه ويفشل وحدَه** — المحادثةُ الساقطةُ لا تُخفي المسار.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   getMessages,
   defaultLocale,
@@ -101,19 +101,22 @@ interface MoneyBreakdown {
 
 type Load<T> = T | null | "failed";
 
-function useLoad<T>(path: string | null): Load<T> {
+function useLoad<T>(path: string | null, refreshKey = 0): Load<T> {
   const [v, setV] = useState<Load<T>>(null);
+  const shown = useRef("");
   useEffect(() => {
     if (!path) return;
     let alive = true;
-    setV(null);
+    // **والتحديثُ لا يُفرغ ما يُقرأ** — الفراغُ عند تبدّل الطلب وحدَه.
+    if (shown.current !== path) setV(null);
+    shown.current = path;
     api<T>(path)
       .then((r) => alive && setV(r))
       .catch(() => alive && setV("failed"));
     return () => {
       alive = false;
     };
-  }, [path]);
+  }, [path, refreshKey]);
   return v;
 }
 
@@ -124,14 +127,7 @@ export function OrderDetailPanel({
   orderId: string;
   onClose: () => void;
 }) {
-  const { can } = useAuth();
   const order = useLoad<Detail>(`/api/v1/admin/orders/${orderId}`);
-  const chat = useLoad<{ lines: ChatLine[] }>(
-    can("orders.communications.read") ? `/api/v1/admin/orders/${orderId}/chat` : null,
-  );
-  const money = useLoad<MoneyBreakdown>(
-    can("finance.read") ? `/api/v1/admin/orders/${orderId}/breakdown` : null,
-  );
   const [copied, setCopied] = useState(false);
   const [copyErr, setCopyErr] = useState("");
 
@@ -160,10 +156,43 @@ export function OrderDetailPanel({
       }
     >
       {copyErr && <Alert tone="warning" className="mb-3">{copyErr}</Alert>}
+      <OrderDetailBody orderId={orderId} />
+    </Drawer>
+  );
+}
+
+/**
+ * **محتوى التفاصيل وحدَه** — المسارُ والمحادثةُ والقيود. **يُرسم في درج السجلّ وفي درج
+ * شاشة العمل** (تصميمُ اللوحة ٢٠٢٦-١٠-٢٥) فلا تُكتب التفاصيلُ مرّتين. `summary=false`
+ * يُخفي سطورَ الرأس حين تكون بطاقةُ الطلب فوقها أصلاً.
+ */
+export function OrderDetailBody({
+  orderId,
+  summary = true,
+  refreshKey = 0,
+}: {
+  orderId: string;
+  summary?: boolean;
+  /** **يتغيّر مع كلّ حدثٍ على الطلب** — فيُعاد الجلبُ ولا يشيخ المسار. */
+  refreshKey?: number;
+}) {
+  const { can } = useAuth();
+  const order = useLoad<Detail>(`/api/v1/admin/orders/${orderId}`, refreshKey);
+  const chat = useLoad<{ lines: ChatLine[] }>(
+    can("orders.communications.read") ? `/api/v1/admin/orders/${orderId}/chat` : null,
+    refreshKey,
+  );
+  const money = useLoad<MoneyBreakdown>(
+    can("finance.read") ? `/api/v1/admin/orders/${orderId}/breakdown` : null,
+    refreshKey,
+  );
+  return (
+    <>
       {order === null && <LoadingState variant="text" />}
       {order === "failed" && <Alert tone="warning">{H.panelFailed}</Alert>}
       {order && order !== "failed" && (
         <div className="space-y-5">
+          {summary && (
           <div className="space-y-1 text-sm">
             <p className="flex flex-wrap items-center gap-2">
               <Badge variant="neutral">{OFFICE_STATUS[order.status] ?? order.status}</Badge>
@@ -187,6 +216,7 @@ export function OrderDetailPanel({
               <Money value={order.total} />
             </p>
           </div>
+          )}
 
           <section>
             <h3 className="mb-2 text-sm font-bold">{H.timeline}</h3>
@@ -263,6 +293,6 @@ export function OrderDetailPanel({
           )}
         </div>
       )}
-    </Drawer>
+    </>
   );
 }

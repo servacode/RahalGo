@@ -25,7 +25,7 @@
 
 import { useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { TabCards } from "@rahalgo/ui";
+import { TabCards, PageContainer, PageHeader, IconTrendDown } from "@rahalgo/ui";
 import { useAuth } from "@/lib/auth";
 import { useCanCall } from "@/lib/policy";
 import { LossesView } from "@/components/admin/money/losses";
@@ -55,13 +55,17 @@ export default function MoneyLostPage() {
   const active = tabs.some((t) => t.key === tab) ? tab : (tabs[0]?.key ?? "");
 
   return (
-    <div className="space-y-5">
+    <PageContainer>
+      {/* **وللصفحة عنوانُها كأخواتها** (تصميمُ اللوحة ٢٠٢٦-١٠-٢٥) — كانت تبدأ بالتبويبات. */}
+      <PageHeader icon={IconTrendDown} title={m.admin.nav.moneyLost} subtitle={m.admin.losses.pageHint} />
+      <div className="space-y-5">
       {/* **وتبويبٌ واحدٌ ليس تبويباً** — من لا خيارَ له لا يُعرض عليه صفٌّ
           فيه زرٌّ واحدٌ مضغوطٌ أبداً. */}
       {tabs.length > 1 && <TabCards items={tabs} active={active} onChange={setTab} />}
       {active === "losses" && <LossesView />}
       {active === "disputes" && <DisputesView />}
       {active === "goods" && <GoodsCompensationView />}
-    </div>
+      </div>
+    </PageContainer>
   );
 }

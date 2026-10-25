@@ -35,7 +35,13 @@ const T = m.admin.market.tabs;
 type TabKey = "sections" | "items" | "stores" | "categories" | "setup" | "quality";
 
 export default function MarketPage() {
-  const [tab, setTab] = useState<TabKey>("sections");
+  // **والتبويبُ من الرابط** (`?tab=stores`) — حذفُ متجرٍ أو رجوعٌ من صفحته يعود إلى قائمة المتاجر
+  // (تصميمُ اللوحة ٢٠٢٦-١٠-٢٥؛ كان الحذفُ يرمي إلى `/dashboard/merchants` وهي غيرُ موجودة).
+  const [tab, setTab] = useState<TabKey>(() => {
+    if (typeof window === "undefined") return "sections";
+    const t = new URLSearchParams(window.location.search).get("tab") as TabKey | null;
+    return t && ["sections", "items", "stores", "categories", "setup", "quality"].includes(t) ? t : "sections";
+  });
   // **مربّعاتُ العدد بدل التبويبات** (طلبُ المالك ٢٠٢٦-١٠-٢٢) — العددُ وحدَه، والكبسُ يفتح قسمَه.
   const [counts, setCounts] = useState<Partial<Record<TabKey, number>>>({});
 

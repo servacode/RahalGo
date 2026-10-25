@@ -230,6 +230,12 @@ var financeOwnerSections = []string{
 	"/dashboard/losses",      // الخسائر والنزاعات
 	"/dashboard/incentives",  // الأهداف والمكافآت
 	"/dashboard/promos",      // العروض والخصومات
+	// **وصفحاتُ الخزينة اليوميّة صار لها بندُها** (تصميمُ اللوحة ٢٠٢٦-١٠-٢٥، بقرار المالك
+	// «نفّذ اللوحة») — كانت تُفتح من شريط الخزينة وحدَه، **وبابُها للماليّة أصلاً**
+	// (`TestFinSections_EveryButtonWorks`)، فلا قدرةَ اتّسعت.
+	"/dashboard/cash",    // نقد السائقين
+	"/dashboard/payouts", // طلبات سحب الرصيد
+	"/dashboard/profits", // الأرباح والخسائر
 }
 
 // TestFinSections_NavEqualsOwnerList **ما تراه الماليّةُ في القائمة = قائمةُ المالك.**

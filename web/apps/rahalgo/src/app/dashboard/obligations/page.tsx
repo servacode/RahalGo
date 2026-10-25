@@ -46,6 +46,7 @@ import {
   IconOrder,
   IconStatus,
   IconDate,
+  Confirm,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -232,6 +233,10 @@ export default function ObligationsPage() {
   const [open, setOpen] = useState<string | null>(null);
   /** **نافذةُ الفعل** — دفعٌ أو شطبٌ على دينٍ بعينه. */
   const [act, setAct] = useState<{ o: Obligation; kind: "office_cash" | "write_off" } | null>(null);
+  /** **قرارٌ ينتظر تأكيداً** — الموافقةُ بنافذةٍ تقول أثرَها، والرفضُ بسببٍ إلزاميّ (تصميمُ اللوحة ٢٠٢٦-١٠-٢٥). */
+  const [deciding, setDeciding] = useState<{ o: Obligation; approve: boolean } | null>(null);
+  const [rejectNote, setRejectNote] = useState("");
+  const [decideBusy, setDecideBusy] = useState(false);
   const [notice, setNotice] = useState("");
   const [exporting, setExporting] = useState(false);
   /** **بحثٌ يُكتب ثمّ يُرسَل** — لا نداءَ مع كلّ حرف. */
@@ -297,17 +302,22 @@ export default function ObligationsPage() {
     }
   }
 
-  async function decide(p: Pending, approve: boolean) {
+  async function decide(p: Pending, approve: boolean, note = "") {
     setNotice("");
+    setDecideBusy(true);
     try {
       await api(`/api/v1/admin/obligation-requests/${p.id}/${approve ? "approve" : "reject"}`, {
         method: "POST",
-        body: JSON.stringify({}),
+        body: JSON.stringify({ note }),
       });
       setNotice(O.decided);
+      setDeciding(null);
+      setRejectNote("");
       reload();
     } catch (err) {
       setNotice(errorText(err));
+    } finally {
+      setDecideBusy(false);
     }
   }
 
@@ -542,13 +552,20 @@ export default function ObligationsPage() {
                           : O.pendingWriteOff}
                         <span className="block text-xs text-ink-muted">{o.pending.note}</span>
                       </span>
+                      {/* **والمقترحُ يوافق على اقتراحه** (قرارُ المالك ٢٠٢٦-١٠-٢٢) — والخادمُ يسجّلها
+                          `proposer_approves_own`. **وكلا القرارين بتأكيد** (تصميمُ اللوحة ٢٠٢٦-١٠-٢٥). */}
                       {data?.can_manage &&
-                        me?.id !== o.pending.proposed_by &&
                         (o.pending.kind === "office_cash" || data.can_approve_writeoff) && (
-                          <Button onClick={() => decide(o.pending!, true)}>{O.approve}</Button>
+                          <Button onClick={() => setDeciding({ o, approve: true })}>{O.approve}</Button>
                         )}
                       {data?.can_manage && (
-                        <Button variant="secondary" onClick={() => decide(o.pending!, false)}>
+                        <Button
+                          variant="secondary"
+                          onClick={() => {
+                            setRejectNote("");
+                            setDeciding({ o, approve: false });
+                          }}
+                        >
                           {O.reject}
                         </Button>
                       )}
@@ -623,6 +640,46 @@ export default function ObligationsPage() {
           }}
         />
       )}
+      <Confirm
+        open={deciding?.approve === true}
+        tone="primary"
+        title={O.approveTitle}
+        body={
+          deciding?.o.pending && (
+            <div className="space-y-2">
+              <p>
+                {(deciding.o.pending.kind === "office_cash" ? O.approveCashBody : O.approveWriteOffBody)
+                  .replace("{amount}", fmtMoney(deciding.o.pending.kind === "office_cash" ? deciding.o.pending.amount : deciding.o.outstanding))
+                  .replace("{name}", deciding.o.party_name)}
+              </p>
+              {me?.id === deciding.o.pending.proposed_by && <Alert tone="warning">{O.selfNote}</Alert>}
+            </div>
+          )
+        }
+        confirmLabel={O.approve}
+        busy={decideBusy}
+        onConfirm={() => deciding?.o.pending && void decide(deciding.o.pending, true)}
+        onCancel={() => setDeciding(null)}
+      />
+      <Confirm
+        open={deciding?.approve === false}
+        title={O.rejectTitle}
+        body={
+          <div className="space-y-2">
+            <p>{O.rejectBody}</p>
+            <Input
+              id="obl-reject-note"
+              label={O.rejectReason}
+              value={rejectNote}
+              onChange={(e) => setRejectNote(e.target.value)}
+            />
+          </div>
+        }
+        confirmLabel={O.reject}
+        busy={decideBusy || rejectNote.trim() === ""}
+        onConfirm={() => deciding?.o.pending && void decide(deciding.o.pending, false, rejectNote.trim())}
+        onCancel={() => setDeciding(null)}
+      />
     </PageContainer>
   );
 }

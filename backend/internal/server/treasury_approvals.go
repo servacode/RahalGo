@@ -126,6 +126,13 @@ var approvalSources = []approvalSource{
 		PartyExpr: `(SELECT COALESCE((SELECT m.name FROM merchants m WHERE m.id = d.merchant_id),
 		                             ` + partyUser("d.party_user_id") + `)
 		               FROM disputes d WHERE d.id = x.dispute_id)`},
+	// **طلباتُ سحب الرصيد** (تصميمُ اللوحة ٢٠٢٦-١٠-٢٥) — كانت غائبةً عن القائمة الموحّدة
+	// فلا تُرى إلّا بفتح صفحتها. **وقرارُها في صفحتها** (الصرفُ بمراحله وأثرِه قبل التأكيد)،
+	// فلا بابَ موافقةٍ هنا — السطرُ يفتحها. **ولا مقترحَ لها**: صاحبُ الرصيد طلبها.
+	{Key: "payouts", Table: "payout_requests", Section: "payouts",
+		Capability: authz.FinanceManage, ProposerCol: "-",
+		Href:     "/dashboard/payouts?status=pending",
+		PartyCol: "user_id", PartyExpr: partyUser("x.user_id")},
 	// **العروضُ فوق حدّ المحتوى** (فوق ٢٠٪ أو ٥٠ استخداماً) — موافقةُ الماليّة (هجرة 0390).
 	// والمبلغُ أقصى كلفةٍ متوقّعة، وصفرُه «بلا سقفٍ معروف».
 	{Key: "promos", Table: "promo_approvals", Section: "promos",
