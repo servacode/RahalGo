@@ -13,7 +13,7 @@
  * جماعيّاً**: صنفُ المتجر عملُه.
  */
 
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { getMessages, defaultLocale, fmtNum, fmtDateTime, errorText } from "@rahalgo/i18n";
 import {
@@ -41,7 +41,7 @@ import {
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useCanCall } from "@/lib/policy";
-import ImageUpload, { MediaThumb } from "@/components/admin/ImageUpload";
+import ImageUpload, { MediaThumb, useImagePicker } from "@/components/admin/ImageUpload";
 import type { Section } from "./SectionsTab";
 import AddItemModal from "./AddItemModal";
 import StateBadge from "./StateBadge";
@@ -98,18 +98,19 @@ export default function ItemsTab() {
   const [editing, setEditing] = useState<{ merchantID: string; item: MenuItem } | null>(null);
   const [opening, setOpening] = useState("");
   const [adding, setAdding] = useState(false);
-  // **تبديلُ الصورة من البطاقة مباشرةً** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — بلا فتح نافذة التعديل.
-  const [imageFor, setImageFor] = useState<MarketItem | null>(null);
-  async function saveImage(id: string, mediaID: string | null) {
-    if (!mediaID) return;
-    try {
+  // **تبديلُ الصورة من البطاقة مباشرةً** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — الضغطةُ تفتح ملفّات الجهاز فوراً.
+  const imageTarget = useRef<string | null>(null);
+  const picker = useImagePicker({
+    kind: "menu_item",
+    path: "/api/v1/admin/market/media",
+    onUploaded: async (mediaID) => {
+      const id = imageTarget.current;
+      if (!id) return;
       await api(`/api/v1/admin/market/items/${id}`, { method: "PATCH", body: JSON.stringify({ image_media_id: mediaID }) });
-      setImageFor(null);
       reload();
-    } catch (err) {
-      push(errorText(err), "error");
-    }
-  }
+    },
+    onError: (msg) => push(msg, "error"),
+  });
   async function openEdit(it: MarketItem) {
     setOpening(it.id);
     try {
@@ -304,8 +305,11 @@ export default function ItemsTab() {
                       type="button"
                       title={I.changeImage}
                       aria-label={I.changeImage}
-                      disabled={!canEdit}
-                      onClick={() => setImageFor(it)}
+                      disabled={!canEdit || picker.busy}
+                      onClick={() => {
+                        imageTarget.current = it.id;
+                        picker.open();
+                      }}
                       className="group absolute inset-0 flex items-center justify-center"
                     >
                     {it.thumb_url ? (
@@ -403,17 +407,7 @@ export default function ItemsTab() {
           }}
         />
       )}
-      {imageFor && (
-        <Modal open onClose={() => setImageFor(null)} title={`${I.changeImage}: ${imageFor.name}`}>
-          <ImageUpload
-            path="/api/v1/admin/market/media"
-            kind="menu_item"
-            label={I.changeImage}
-            initialUrl={imageFor.thumb_url}
-            onChange={(id) => void saveImage(imageFor.id, id)}
-          />
-        </Modal>
-      )}
+      {picker.input}
       {adding && (
         <AddItemModal
           sections={sections}

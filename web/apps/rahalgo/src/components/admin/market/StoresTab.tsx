@@ -13,7 +13,7 @@
  * واحدةٌ تميّزه أو تشيل تمييزَه، بلا فتح نافذة التعديل.
  */
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
   getMessages,
@@ -40,7 +40,7 @@ import {
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useCanCall } from "@/lib/policy";
-import ImageUpload from "@/components/admin/ImageUpload";
+import { useImagePicker } from "@/components/admin/ImageUpload";
 import { StoreActions } from "@/components/admin/StoreActions";
 import { MerchantModal, type Merchant } from "@/components/admin/MerchantModal";
 import StateBadge from "./StateBadge";
@@ -76,16 +76,18 @@ export default function StoresTab() {
   // هنيك صار أصحاب المتاجر بس»): إضافةٌ من هنا، وأفعالُ كلِّ متجرٍ تحت بطاقته.
   const canCreate = useCanCall()("POST", "/merchants");
   const [creating, setCreating] = useState(false);
-  const [logoFor, setLogoFor] = useState<MarketStore | null>(null);
-  async function saveLogo(id: string, mediaID: string) {
-    try {
+  // **الضغطُ على اللوغو يفتح ملفّات الجهاز فوراً** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — بلا نافذةٍ وسيطة.
+  const logoTarget = useRef<string | null>(null);
+  const logoPicker = useImagePicker({
+    kind: "merchant_logo",
+    onUploaded: async (mediaID) => {
+      const id = logoTarget.current;
+      if (!id) return;
       await api(`/api/v1/admin/merchants/${id}`, { method: "PATCH", body: JSON.stringify({ logo_media_id: mediaID }) });
-      setLogoFor(null);
       reload();
-    } catch (err) {
-      setError(errorText(err));
-    }
-  }
+    },
+    onError: (msg) => setError(msg),
+  });
   const { data, reload } = useLiveData<{
     stores: MarketStore[];
     total: number;
@@ -132,16 +134,7 @@ export default function StoresTab() {
           </Button>
         )}
       </div>
-      {logoFor && (
-        <Modal open onClose={() => setLogoFor(null)} title={`${T.changeLogo}: ${logoFor.name}`}>
-          <ImageUpload
-            kind="merchant_logo"
-            label={T.changeLogo}
-            initialUrl={logoFor.logo_url}
-            onChange={(id) => void saveLogo(logoFor.id, id)}
-          />
-        </Modal>
-      )}
+      {logoPicker.input}
       {creating && (
         <MerchantModal
           merchant={null}
@@ -181,7 +174,11 @@ export default function StoresTab() {
                 type="button"
                 title={T.changeLogo}
                 aria-label={T.changeLogo}
-                onClick={() => setLogoFor(s)}
+                disabled={logoPicker.busy}
+                onClick={() => {
+                  logoTarget.current = s.id;
+                  logoPicker.open();
+                }}
                 className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-field ring-1 ring-line hover:ring-primary"
               >
                   {s.logo_url ? (
