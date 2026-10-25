@@ -1964,7 +1964,11 @@
       "kindMdSend": "توصيل من المتجر",
       "kindMdFetch": "إحضار للمتجر",
       "driverToCustomerDist": "من السائق للزبون {d}",
-      "resendWhatsApp": "أعد الإرسال للمتجر"
+      "resendWhatsApp": "أعد الإرسال للمتجر",
+      "partnerCommissionAmount": "عمولة المنصة",
+      "partnerCommissionOf": "(من ثمن البضاعة {goods})",
+      "partnerCommissionLater": "العمولة بتنحسب لما يتوثّق ثمن البضاعة",
+      "partnerNoCommission": "بدون عمولة على هالمتجر"
     },
     "customers": {
       "title": "الزبائن",

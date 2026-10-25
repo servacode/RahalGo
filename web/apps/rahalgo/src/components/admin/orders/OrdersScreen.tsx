@@ -3641,6 +3641,24 @@ function PartnerStoreBox({
               .replace("{name}", o.partner_merchant_name ?? "")
               .replace("{pct}", fmtNum(o.partner_commission_percent_exact ?? o.partner_commission_percent ?? 0))}
           </p>
+          {/* **عمولةُ المنصّة بمبلغها** (المالك ٢٠٢٦-١٠-٢٥) — بقاعدة المحرّك نفسِها (`customStoreCut`:
+              ثمنُ البضاعة × النسبة بمنزلتين، بترٌ لا تقريب)، وقبل توثيق الثمن تُقال النسبةُ وحدَها. */}
+          {(() => {
+            const pct = o.partner_commission_percent_exact ?? o.partner_commission_percent ?? 0;
+            if (pct <= 0) return <p className="text-xs text-ink-muted">{OP.partnerNoCommission}</p>;
+            if (!goodsDone) return <p className="text-xs text-ink-muted">{OP.partnerCommissionLater}</p>;
+            const goods = o.custom_goods_amount ?? 0;
+            const cut = Math.min(goods, Math.floor((goods * Math.round(pct * 100)) / 10000));
+            return (
+              <p className="text-xs font-bold text-success">
+                {OP.partnerCommissionAmount}: <Money value={cut} />
+                <span className="font-normal text-ink-muted">
+                  {" "}
+                  {OP.partnerCommissionOf.replace("{goods}", fmtNum(goods))}
+                </span>
+              </p>
+            );
+          })()}
           {o.custom_store_paid != null && (
             <p className="text-xs text-ink-muted">
               {OP.partnerStorePaid}: <Money value={o.custom_store_paid} />
