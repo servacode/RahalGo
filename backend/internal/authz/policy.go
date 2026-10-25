@@ -321,6 +321,7 @@ var adminPolicy = []Rule{
 	{"POST", "/dispute-resolutions/{id}/approve", FinanceManage},
 	{"POST", "/dispute-resolutions/{id}/reject", FinanceManage},
 	{"GET", "/ratings", SupportManage},
+	{"GET", "/ratings/list", SupportManage},
 
 	// ── المحتوى والتسويق ────────────────────────────────────────
 	// **«العروض والخصومات» بقدرتها لا بقدرة المحتوى** (قرارُ المالك ٢٠٢٦-١٠-٠٥):

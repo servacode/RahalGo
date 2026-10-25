@@ -4708,6 +4708,34 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/ratings/list",
+      "handler": "handleAdminRatingsList",
+      "auth": true,
+      "capability": "support.manage",
+      "response": [
+        {
+          "name": "page",
+          "type": "unknown"
+        },
+        {
+          "name": "per_page",
+          "type": "unknown"
+        },
+        {
+          "name": "ratings",
+          "type": "unknown"
+        },
+        {
+          "name": "total",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/referrals",
       "handler": "handleAdminReferrals",
       "auth": true,

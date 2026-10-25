@@ -42,6 +42,7 @@ import {
   IconOrder,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
+import { RatingsList } from "./RatingsList";
 
 const m = getMessages(defaultLocale);
 const R = m.admin.ratingsPage;
@@ -122,6 +123,9 @@ export function RatingsView() {
         />
         <StatCard label={R.lowCount} value={fmtNum(data.low)} icon={IconWarning} />
       </StatGrid>
+
+      {/* **كلُّ تقييمٍ بسطره أوّلاً** (المالك ٢٠٢٦-١٠-٢٥) — ثمّ المعدّلاتُ بالسائق وبالمتجر. */}
+      <RatingsList canProfile={canProfile} />
 
       <section>
         <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
