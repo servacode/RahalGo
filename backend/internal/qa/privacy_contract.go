@@ -318,6 +318,7 @@ var OrderPrivacy = map[string]FieldRule{
 	"to_door_eta_sec":    {Ref: "زمنُ الوصول للباب", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
 	"leg_m":              {Ref: "طولُ المرحلة — تشغيليٌّ للسائق", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"driver_to_pickup_m": {Ref: "بُعدُ السائق — موضعُه ضمناً", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"driver_to_drop_m":   {Ref: "بُعدُ السائق عن الزبون — موضعُه ضمناً", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	// **موقعُ الزبون المباشر** (قرارُ المالك ٢٠٢٦-١٠-١٦) — **للسائق المُسنَد وحدَه والمكتب.**
 	//
 	// **و«المُسنَد وحدَه» شرطٌ في الباب لا في الدور**: `attachDriverLive` يشترط أنّ الطلبَ
