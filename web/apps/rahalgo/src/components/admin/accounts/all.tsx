@@ -368,13 +368,7 @@ export default function AllAccountsTable() {
           },
         ] as DataColumn<Row>[])
       : []),
-    {
-      id: "open_orders",
-      header: m.admin.drivers.openOrders,
-      icon: <IconOrder />,
-      hide: (u) => !u.open_orders,
-      cell: (u) => <Badge variant="primary">{fmtNum(u.open_orders ?? 0)}</Badge>,
-    },
+    // **ولا «طلبات جارية» في البطاقة** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — فيبقى شكلُ البطاقات موحّداً.
   ];
 
   // ── «إضافة ▾» ─────────────────────────────────────────────────────────
