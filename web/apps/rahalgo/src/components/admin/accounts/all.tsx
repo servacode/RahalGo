@@ -61,7 +61,7 @@ import { api, apiFile, type AuthUser } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useCanCall } from "@/lib/policy";
 import WalletModal from "@/components/admin/WalletModal";
-import { MerchantModal, CategoriesModal } from "@/components/admin/MerchantModal";
+import { MerchantModal } from "@/components/admin/MerchantModal";
 import StatusReasonModal from "@/components/admin/StatusReasonModal";
 import RoleBadge, { ROLE_STYLES } from "@/components/admin/RoleBadge";
 import { MediaThumb } from "@/components/admin/ImageUpload";
@@ -89,7 +89,6 @@ export default function AllAccountsTable() {
   const canCreateUser = canCall("POST", "/users");
   const canGrant = canCall("POST", "/users/{id}/roles");
   const canCreateStore = canCall("POST", "/merchants");
-  const canCategories = canCall("POST", "/categories");
   const canStatus = canCall("PATCH", "/users/{id}");
   const canWallet = canCall("POST", "/users/{id}/wallet");
   // **والتصديرُ لمديرِ المنصّة وحدَه** — الزرُّ يُخفى عن غيره (قرار ١١).
@@ -110,7 +109,6 @@ export default function AllAccountsTable() {
   const [createKind, setCreateKind] = useState<NewKind | null>(null);
   const [walletUser, setWalletUser] = useState<Row | null>(null);
   const [storeOpen, setStoreOpen] = useState(false);
-  const [catsOpen, setCatsOpen] = useState(false);
   const [statusModal, setStatusModal] = useState<{ users: Row[]; status: string } | null>(null);
   const [activateRows, setActivateRows] = useState<Row[] | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -433,12 +431,7 @@ export default function AllAccountsTable() {
               </Button>
             </div>
           )}
-          {canCategories && (
-            <Button variant="secondary" onClick={() => setCatsOpen(true)} className="flex items-center gap-1.5">
-              <IconGrid size={16} />
-              {A.categories}
-            </Button>
-          )}
+          {/* **ولا زرَّ تصنيفاتٍ هنا** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — بابُها السوق (تبويبُ التصنيفات). */}
           <ActionMenu label={A.add} icon={IconAdd} variant="primary" items={addItems} width={200} />
         </div>
       </div>
@@ -705,7 +698,6 @@ export default function AllAccountsTable() {
           onCreated={() => refresh()}
         />
       )}
-      <CategoriesModal open={catsOpen} onClose={() => setCatsOpen(false)} />
       {storeOpen && (
         <MerchantModal
           merchant={null}
