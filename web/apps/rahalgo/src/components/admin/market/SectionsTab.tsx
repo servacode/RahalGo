@@ -16,7 +16,7 @@
  * يُدار من الإعدادات.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, fmtNum, errorText } from "@rahalgo/i18n";
 import {
@@ -38,7 +38,7 @@ import {
   IconBlock,
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
-import ImageUpload from "@/components/admin/ImageUpload";
+import ImageUpload, { useImagePicker } from "@/components/admin/ImageUpload";
 import StateBadge from "./StateBadge";
 
 /** **صورُ السوق من بابها** — بقدرة السوق لا المحتوى (قرارُ المالك ٢٠٢٦-١٠-٠٥). */
@@ -73,6 +73,22 @@ export default function SectionsTab() {
   const [dragID, setDragID] = useState<string | null>(null);
   const router = useRouter();
   const { push, Toaster } = useToast();
+  // **الضغطُ على صورة القسم يفتح ملفّات الجهاز فوراً** (قرارُ المالك ٢٠٢٦-١٠-٢٦).
+  const imageTarget = useRef<Section | null>(null);
+  const picker = useImagePicker({
+    kind: "banner",
+    path: MARKET_MEDIA,
+    onUploaded: async (mediaID) => {
+      const sec = imageTarget.current;
+      if (!sec) return;
+      await api(`/api/v1/admin/sections/${sec.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ name: sec.name, image_media_id: mediaID }),
+      });
+      reload();
+    },
+    onError: (msg) => push(msg, "error"),
+  });
 
   useEffect(() => {
     if (data) setOrder(data.sections ?? []);
@@ -145,6 +161,18 @@ export default function SectionsTab() {
               {/* **الصورةُ أوّلاً — وهي هويّةُ القسم لا زينتُه.** ولا أيقونةَ
                   بديلاً: يُقال صراحةً «أضف صورة» — نقصٌ يُرى يُعالَج. */}
               <div className="relative flex aspect-[4/3] items-center justify-center bg-field">
+                <button
+                  type="button"
+                  title={S.image}
+                  aria-label={S.image}
+                  disabled={picker.busy}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    imageTarget.current = sec;
+                    picker.open();
+                  }}
+                  className="group absolute inset-0 flex items-center justify-center"
+                >
                 {sec.image_url || sec.image_thumb_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -154,17 +182,15 @@ export default function SectionsTab() {
                     className="h-full w-full object-cover"
                   />
                 ) : (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setEditing(sec);
-                    }}
-                    className="flex flex-col items-center gap-1 text-xs text-ink-muted hover:text-ink"
-                  >
+                  <span className="flex flex-col items-center gap-1 text-xs text-ink-muted">
                     <IconCamera size={20} />
                     {S.addImage}
-                  </button>
+                  </span>
                 )}
+                  <span className="absolute bottom-2 start-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-surface text-ink elev-1 opacity-80 group-hover:opacity-100">
+                    <IconCamera size={16} />
+                  </span>
+                </button>
                 <span className="absolute end-1.5 top-1.5">
                   <StateBadge label={sec.active ? S.available : S.unavailable} variant={sec.active ? "success" : "warning"} />
                 </span>
@@ -239,6 +265,7 @@ export default function SectionsTab() {
           }}
         />
       )}
+      {picker.input}
       <Toaster />
     </div>
   );

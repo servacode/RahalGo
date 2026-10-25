@@ -40,11 +40,11 @@ import {
   IconOrder,
   IconBalance,
   IconDate,
-  IconTile,
+  IconCamera,
   IconEdit,
 } from "@rahalgo/ui";
 import DrinksAdmin from "@/components/admin/market/DrinksAdmin";
-import ImageUpload, { MediaThumb } from "@/components/admin/ImageUpload";
+import ImageUpload, { MediaThumb, useImagePicker } from "@/components/admin/ImageUpload";
 import { api, mediaUrl } from "@/lib/api";
 import ViolationsModal from "@/components/admin/ViolationsModal";
 import { MerchantModal, type Merchant as EditableMerchant } from "@/components/admin/MerchantModal";
@@ -129,6 +129,16 @@ export default function MerchantProfilePage() {
   const canEditHours = canCall("PUT", "/merchants/{id}/hours");
   const canViolations = canCall("GET", "/merchants/{id}/violations");
 
+  // **الضغطُ على اللوغو يفتح ملفّات الجهاز فوراً** (قرارُ المالك ٢٠٢٦-١٠-٢٦).
+  const logoPicker = useImagePicker({
+    kind: "merchant_logo",
+    onUploaded: async (mediaID) => {
+      await api(`/api/v1/admin/merchants/${id}`, { method: "PATCH", body: JSON.stringify({ logo_media_id: mediaID }) });
+      await load();
+    },
+    onError: (msg) => setError(msg),
+  });
+
   const load = useCallback(async () => {
     if (!canRead) return;
     try {
@@ -184,16 +194,29 @@ export default function MerchantProfilePage() {
       </button>
 
       <div className="mb-4 flex flex-wrap items-start gap-3">
-        {mr.logo_thumb_url || mr.logo_url ? (
-          <div className="h-14 w-14 shrink-0 overflow-hidden rounded-card bg-field">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
+        <button
+          type="button"
+          title={m.admin.market.stores.changeLogo}
+          aria-label={m.admin.market.stores.changeLogo}
+          disabled={!canEdit || logoPicker.busy}
+          onClick={logoPicker.open}
+          className="group relative h-14 w-14 shrink-0 overflow-hidden rounded-card bg-field ring-1 ring-line enabled:hover:ring-primary"
+        >
+          {mr.logo_thumb_url || mr.logo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
             <img src={mediaUrl(mr.logo_thumb_url ?? mr.logo_url) ?? ""} alt={mr.name} className="h-full w-full object-cover" />
-          </div>
-        ) : (
-          <IconTile size="lg">
-            <IconStore size={26} className="text-primary-dark" />
-          </IconTile>
-        )}
+          ) : (
+            <span className="flex h-full items-center justify-center">
+              <IconStore size={26} className="text-primary-dark" />
+            </span>
+          )}
+          {canEdit && (
+            <span className="absolute bottom-0.5 start-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full bg-surface text-ink elev-1">
+              <IconCamera size={11} />
+            </span>
+          )}
+        </button>
+        {logoPicker.input}
         <div className="min-w-0 flex-1">
           <h1 className="heading-page">
             {mr.name}{" "}
