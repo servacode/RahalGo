@@ -24,7 +24,6 @@ import {
   IconStar,
   IconSettings,
   IconLink,
-  IconBalance,
   IconWallet,
   BootScreen,
   IconShieldCheck,
@@ -140,8 +139,7 @@ const ALL_NAV: NavItem[] = [
   // المصروفاتُ والأرباحُ والنقدُ والسحوباتُ والتعويضاتُ لم تعد بنوداً في القائمة.
   { href: "/dashboard/treasury", label: m.admin.treasury.title, icon: IconWallet,
     caps: ["finance.read"] },
-  { href: "/dashboard/obligations", label: m.admin.nav.obligations, icon: IconBalance,
-    caps: ["finance.read"] },
+  // **والديونُ من الخزينة وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٢٥: «موجود بالقائمة وبالخزينة… نخلّيه بالخزينة»).
   // **والخسائرُ والنزاعاتُ وتعويضُ البضاعة صارت تبويباتٍ في «المشاكل والتعويضات»** (٢٠٢٦-١٠-٢٥).
   { href: "/dashboard/audit", label: m.admin.audit.title, icon: IconShieldCheck,
     caps: ["audit.read"] },

@@ -225,11 +225,10 @@ func TestOpsSections_EveryButtonWorks(t *testing.T) {
 
 // financeOwnerSections **أقسامُ الماليّة كما سمّاها المالك** — بأبوابها في اللوحة.
 var financeOwnerSections = []string{
-	"/dashboard/treasury",    // الخزينة
-	"/dashboard/obligations", // الديون
-	"/dashboard/tickets",     // المشاكل والتعويضات — الخسائرُ والنزاعاتُ فيها (٢٠٢٦-١٠-٢٥)
-	"/dashboard/incentives",  // الأهداف والمكافآت
-	"/dashboard/promos",      // العروض والخصومات
+	"/dashboard/treasury",   // الخزينة
+	"/dashboard/tickets",    // المشاكل والتعويضات — الخسائرُ والنزاعاتُ فيها (٢٠٢٦-١٠-٢٥)
+	"/dashboard/incentives", // الأهداف والمكافآت
+	"/dashboard/promos",     // العروض والخصومات
 }
 
 // TestFinSections_NavEqualsOwnerList **ما تراه الماليّةُ في القائمة = قائمةُ المالك.**
