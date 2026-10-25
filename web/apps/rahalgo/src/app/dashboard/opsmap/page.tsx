@@ -67,7 +67,6 @@ import {
   themeColor,
   useLiveEvent,
 } from "@rahalgo/ui";
-import PlaceDemandPanel from "@/components/admin/PlaceDemandPanel";
 import { AssignDialog } from "@/components/admin/orders/AssignDialog";
 import { api, mediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -2351,20 +2350,7 @@ export default function OpsMapPage() {
         />
       )}
 
-      {/* ══════════════════════════════════════════════════════════════
-          **وطلبُ التوسّع بالمكان الإداريّ** (`CR`، ٢٠٢٦-٠٩-١٤)
-          ══════════════════════════════════════════════════════════════
-
-          **والخريطةُ فوقُ تقول «أين» بالخلايا** — **وهذا يقول «في أيّ
-          مدينةٍ ومحافظة»**، وهو سؤالُ التوسّع الأوّل.
-
-          **وبالقدرة عينِها التي تحرس طلباتِ التغطية** — ولا قدرةَ
-          جديدة. */}
-      {can("VIEW_DEMAND_ANALYTICS") && (
-        <div className="mt-4">
-          <PlaceDemandPanel />
-        </div>
-      )}
+      {/* **«طلبُ التوسّع بالمكان» انتقل لقسم «طلبات التوسّع»** (قرارُ المالك ٢٠٢٦-١٠-٢٥). */}
     </PageContainer>
   );
 }

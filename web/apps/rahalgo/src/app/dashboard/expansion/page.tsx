@@ -41,6 +41,8 @@ import {
   IconSend,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
+import { useCanCall } from "@/lib/policy";
+import PlaceDemandPanel from "@/components/admin/PlaceDemandPanel";
 
 const m = getMessages(defaultLocale);
 const T = m.admin.expansion;
@@ -98,6 +100,7 @@ const n = (tpl: string, v: number, p?: number) =>
   tpl.replace("{n}", fmtNum(v)).replace("{p}", fmtNum(p ?? 0));
 
 export default function ExpansionPage() {
+  const canPlaces = useCanCall()("GET", "/ops-map/coverage-demand/places");
   const [view, setView] = useViewMode("expansion");
   const [filter, setFilter] = useState<Filter>(initialFilter);
   const [asking, setAsking] = useState<Row | null>(null);
@@ -325,6 +328,14 @@ export default function ExpansionPage() {
           </>
         )}
       />
+
+      {/* **وطلبُ التوسّع بالمكان — مدينةً ومحافظةً** (قرارُ المالك ٢٠٢٦-١٠-٢٥: نُقل من خريطة العمليّات
+          إلى قسمه). وبقدرة بابه. */}
+      {canPlaces && (
+        <div className="mt-4">
+          <PlaceDemandPanel />
+        </div>
+      )}
 
       <Confirm
         open={!!asking}
