@@ -600,7 +600,8 @@ export default function AllAccountsTable() {
             ? (u) =>
                 u.is_system ? null : (
                   <>
-                    {/* **أيقوناتٌ بلا كلمات** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — والاسمُ في التلميح ولقارئ الشاشة.
+                    {/* **أيقوناتٌ بلا كلمات، بصفٍّ واحد** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — `!min-w-0` يلغي حدَّ
+                        عرض أزرار البطاقة (٦٫٥rem) الذي كان يُنزلها سطرين؛ والاسمُ في التلميح ولقارئ الشاشة.
                         **والمحفظةُ بقدرة المال وحدَها** — كانت مربوطةً بالإيقاف أيضاً فلا تراها الماليّة. */}
                     {canWallet && (
                       <Button
@@ -608,7 +609,7 @@ export default function AllAccountsTable() {
                         onClick={() => setWalletUser(u)}
                         title={m.admin.users.wallet}
                         aria-label={m.admin.users.wallet}
-                        className="!px-3"
+                        className="!min-w-0 !px-3"
                       >
                         <IconWallet size={18} />
                       </Button>
@@ -619,7 +620,7 @@ export default function AllAccountsTable() {
                         onClick={() => openReset(u)}
                         title={m.admin.users.profile.passwordBtn}
                         aria-label={m.admin.users.profile.passwordBtn}
-                        className="!px-3"
+                        className="!min-w-0 !px-3"
                       >
                         <IconLock size={18} />
                       </Button>
@@ -633,7 +634,7 @@ export default function AllAccountsTable() {
                             onClick={() => setStatusModal({ users: [u], status: "suspended" })}
                             title={m.admin.users.suspend}
                             aria-label={m.admin.users.suspend}
-                            className="!px-3 !text-warning"
+                            className="!min-w-0 !px-3 !text-warning"
                           >
                             <IconHourglass size={18} />
                           </Button>
@@ -642,7 +643,7 @@ export default function AllAccountsTable() {
                             onClick={() => setStatusModal({ users: [u], status: "blocked" })}
                             title={m.admin.users.block}
                             aria-label={m.admin.users.block}
-                            className="!px-3"
+                            className="!min-w-0 !px-3"
                           >
                             <IconBlock size={18} />
                           </Button>
@@ -653,7 +654,7 @@ export default function AllAccountsTable() {
                           onClick={() => setActivateRows([u])}
                           title={m.admin.users.activate}
                           aria-label={m.admin.users.activate}
-                          className="!px-3 !text-success"
+                          className="!min-w-0 !px-3 !text-success"
                         >
                           <IconUnblock size={18} />
                         </Button>
