@@ -42,6 +42,13 @@ func TestAdminRatingsList_ShowsEachRating(t *testing.T) {
 	if find("/api/v1/admin/ratings/list?low=1") == nil {
 		t.Fatal("تقييمٌ بنجمتين غائبٌ عن «الضعيفة بس»")
 	}
+	// **والفلترُ بالنوع**: تقييمٌ للطلب والسائق يظهر فيهما، ولا يظهر في «المتجر» (لا تقييمَ سائقٍ للمتجر).
+	if find("/api/v1/admin/ratings/list?kind=platform") == nil || find("/api/v1/admin/ratings/list?kind=driver") == nil {
+		t.Fatal("التقييمُ غائبٌ عن فلتر الطلب أو السائق")
+	}
+	if find("/api/v1/admin/ratings/list?kind=store") != nil {
+		t.Fatal("تقييمٌ بلا تقييمِ متجرٍ ظهر في فلتر «المتجر»")
+	}
 	if got := h.GET("/api/v1/admin/ratings/list", cust.Token).Code; got != http.StatusForbidden {
 		t.Fatalf("الزبونُ بلغ قائمةَ التقييمات: %d — والمنتظَر 403", got)
 	}
