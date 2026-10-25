@@ -18,7 +18,6 @@
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { roleLabelByCode } from "@/lib/rolemeta";
 import {
-  Badge,
   IconRoles,
   IconStatus,
   IconWallet,
@@ -36,27 +35,29 @@ interface RoleStyle {
   variant: "neutral" | "primary" | "accent" | "success" | "warning" | "danger" | "info" | "violet";
   /** لونُ النصِّ وحدَه — لمن أراد الرقمَ بلون الدور بلا شارة. */
   text: string;
+  /** **تعبئةٌ صلبةٌ بلون الدور** — والنصُّ والأيقونةُ أبيضان (قرارُ المالك ٢٠٢٦-١٠-٢٥). */
+  solid: string;
   Icon: React.ComponentType<{ size?: number }>;
 }
 
-const FALLBACK: RoleStyle = { variant: "neutral", text: "text-ink-muted", Icon: IconUser };
+const FALLBACK: RoleStyle = { variant: "neutral", text: "text-ink-muted", solid: "bg-info-solid", Icon: IconUser };
 
 export const ROLE_STYLES: Record<string, RoleStyle> = {
-  admin: { variant: "danger", text: "text-danger", Icon: IconRoles },
-  ops: { variant: "info", text: "text-info", Icon: IconStatus },
-  finance: { variant: "success", text: "text-success", Icon: IconWallet },
-  merchant: { variant: "accent", text: "text-accent", Icon: IconStore },
-  driver: { variant: "primary", text: "text-primary", Icon: IconDriver },
-  sales: { variant: "violet", text: "text-violet", Icon: IconUsers },
-  customer: { variant: "neutral", text: "text-ink-muted", Icon: IconUser },
+  admin: { variant: "danger", text: "text-danger", solid: "bg-danger-solid", Icon: IconRoles },
+  ops: { variant: "info", text: "text-info", solid: "bg-info-solid", Icon: IconStatus },
+  finance: { variant: "success", text: "text-success", solid: "bg-success-solid", Icon: IconWallet },
+  merchant: { variant: "accent", text: "text-accent", solid: "bg-warning-solid", Icon: IconStore },
+  driver: { variant: "primary", text: "text-primary", solid: "bg-primary-solid", Icon: IconDriver },
+  sales: { variant: "violet", text: "text-violet", solid: "bg-violet-solid", Icon: IconUsers },
+  customer: { variant: "neutral", text: "text-ink-muted", solid: "bg-sky-solid", Icon: IconUser },
 };
 
 export default function RoleBadge({ role }: { role: string }) {
   const s = ROLE_STYLES[role] ?? FALLBACK;
   return (
-    <Badge variant={s.variant} className="gap-1 px-2">
-      <s.Icon size={12} />
+    <span className={`inline-flex items-center gap-1 rounded-badge px-2.5 py-1 text-xs font-bold text-on-solid ${s.solid}`}>
+      <s.Icon size={13} />
       {roleLabelByCode(role)}
-    </Badge>
+    </span>
   );
 }
