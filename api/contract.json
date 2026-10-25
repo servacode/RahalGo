@@ -2847,6 +2847,20 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/v1/admin/merchants/{id}/drinks",
+      "handler": "handleAdminGetDrinks",
+      "auth": true,
+      "capability": "merchants.read"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/merchants/{id}/drinks",
+      "handler": "handleAdminSetDrinks",
+      "auth": true,
+      "capability": "merchants.manage"
+    },
+    {
       "method": "PATCH",
       "path": "/api/v1/admin/merchants/{id}/exchange-rate",
       "handler": "handleAdminExchangeRate",

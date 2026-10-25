@@ -1367,6 +1367,8 @@ func (s *Server) Router() http.Handler {
 			// **ومتجران متشابها الاسم يُخلطان.**
 			r.Get("/merchants/{id}", s.handleAdminGetMerchant)
 			r.Get("/merchants/{id}/menu", s.handleGetMenu)
+			// **ومشروباتُ المتجر للإدارة** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — المنطقُ نفسُه الذي للمتجر والمندوب.
+			r.Get("/merchants/{id}/drinks", s.handleAdminGetDrinks)
 			r.Get("/merchants/{id}/hours", s.handleGetHours)
 			r.Get("/merchants/{id}/warnings", s.handleAdminMerchantWarnings)
 			r.Get("/zones", s.handleListZones)
@@ -1820,6 +1822,7 @@ func (s *Server) Router() http.Handler {
 				r.Patch("/menu/sections/{sectionID}", s.handleUpdateSection)
 				r.Delete("/menu/sections/{sectionID}", s.handleDeleteSection)
 				r.Post("/merchants/{id}/menu/items", s.handleCreateItem)
+				r.Put("/merchants/{id}/drinks", s.handleAdminSetDrinks)
 				r.Patch("/menu/items/{itemID}", s.handleUpdateItem)
 				r.Delete("/menu/items/{itemID}", s.handleDeleteItem)
 				r.Put("/merchants/{id}/hours", s.handleSetHours)

@@ -4592,8 +4592,8 @@
       "addImage": "أضف صورة",
       "backToMarket": "عودة إلى السوق",
       "statAll": "كل الأصناف",
-      "statLive": "معروض الآن",
-      "statHidden": "لا يظهر",
+      "statLive": "متوفر",
+      "statHidden": "غير متوفر",
       "searchItems": "ابحث في أصناف القسم",
       "allStates": "كل الحالات",
       "noImage": "بلا صورة",
@@ -6290,7 +6290,8 @@
         "showing": "المعروض {n} من {all}",
         "clean": "لا شيء هنا",
         "openStore": "صفحة المتجر"
-      }
+      },
+      "drinksSaved": "✓ انحفظت المشروبات وانضافت لكل أصناف المتجر"
     },
     "acc": {
       "add": "إضافة",

@@ -43,6 +43,7 @@ import {
   IconTile,
   IconEdit,
 } from "@rahalgo/ui";
+import DrinksAdmin from "@/components/admin/market/DrinksAdmin";
 import ImageUpload, { MediaThumb } from "@/components/admin/ImageUpload";
 import { api, mediaUrl } from "@/lib/api";
 import ViolationsModal from "@/components/admin/ViolationsModal";
@@ -309,6 +310,7 @@ export default function MerchantProfilePage() {
         )}
         </>
       )}
+      {tab === "menu" && <DrinksAdmin merchantId={mr.id} canEdit={canEditMenu} />}
       {tab === "menu" && (
         <MenuManager
           api={api}

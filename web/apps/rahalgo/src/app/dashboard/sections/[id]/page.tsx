@@ -34,16 +34,12 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getMessages, defaultLocale, fmtNum, errorText } from "@rahalgo/i18n";
 import {
-  Badge,
   Input,
   Select,
   PageContainer,
   Pagination,
-  PageHeader,
   EmptyState,
   LoadingState,
-  StatGrid,
-  StatCard,
   IconStore,
   IconPrev,
   IconSearch,
@@ -194,9 +190,10 @@ export default function SectionPage() {
         {S.backToMarket}
       </button>
 
-      <div className="mb-4 flex flex-wrap items-start gap-3">
-        {/* **صورةُ القسم في ترويسته** — هي ما يعرفه بها من يفتحها. */}
-        <span className="h-20 w-28 shrink-0 overflow-hidden rounded-card bg-field">
+      {/* **رأسُ القسم بطاقةٌ واحدة** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «بطريقة احترافية»): الصورة، والاسم،
+          والحالة، والأعداد — بدل شريطٍ فارغٍ وشارةٍ طائرةٍ وثلاث مربّعاتٍ كبيرة. */}
+      <div className="surface mb-4 flex flex-wrap items-center gap-4 p-4">
+        <span className="h-24 w-24 shrink-0 overflow-hidden rounded-card bg-field ring-1 ring-line sm:h-28 sm:w-28">
           {sec.image_url || sec.image_thumb_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -206,27 +203,27 @@ export default function SectionPage() {
             />
           ) : (
             <span className="flex h-full items-center justify-center">
-              <IconStore size={22} className="text-ink-muted" />
+              <IconStore size={26} className="text-ink-muted" />
             </span>
           )}
         </span>
-        <div className="min-w-0 flex-1">
-          <PageHeader icon={IconStore} title={sec.name} />
+        <div className="min-w-0 flex-1 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="truncate text-2xl font-bold">{sec.name}</h1>
+            <StateBadge
+              label={sec.active ? S.available : S.unavailable}
+              variant={sec.active ? "success" : "danger"}
+            />
+          </div>
+          <div className="flex flex-wrap gap-2 text-sm tabular-nums">
+            <Count icon={IconOrder} label={S.statAll} value={all} />
+            <Count icon={IconStore} label={S.statLive} value={live} tone="text-success" />
+            <Count icon={IconWarning} label={S.statHidden} value={all - live} tone={all - live > 0 ? "text-warning" : ""} />
+          </div>
         </div>
-        <Badge variant={sec.active ? "success" : "neutral"}>
-          {sec.active ? S.available : S.unavailable}
-        </Badge>
       </div>
 
-      <StatGrid>
-        <StatCard label={S.statAll} value={fmtNum(all)} icon={IconOrder} />
-        {/* **والمعروضُ فعلاً لا المسجَّل** — قسمٌ فيه اثنا عشر ويُعرض منه ثلاثةٌ
-            حالةٌ تُعالَج، **ورقمٌ واحدٌ يخفيها.** */}
-        <StatCard label={S.statLive} value={fmtNum(live)} icon={IconStore} />
-        <StatCard label={S.statHidden} value={fmtNum(all - live)} icon={IconWarning} />
-      </StatGrid>
-
-      <div className="mb-4 mt-4 flex flex-wrap items-end gap-3">
+      <div className="mb-4 flex flex-wrap items-end gap-3">
         <div className="w-64">
           <Input
             id="sec-q"
@@ -321,5 +318,26 @@ export default function SectionPage() {
         </div>
       )}
     </PageContainer>
+  );
+}
+
+/** **عدٌّ صغيرٌ في رأس القسم** — أيقونةٌ ورقمٌ ولفظ. */
+function Count({
+  icon: Icon,
+  label,
+  value,
+  tone = "",
+}: {
+  icon: typeof IconStore;
+  label: string;
+  value: number;
+  tone?: string;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-field px-3 py-1">
+      <Icon size={15} className={tone || "text-ink-muted"} />
+      <b className={tone}>{fmtNum(value)}</b>
+      <span className="text-ink-muted">{label}</span>
+    </span>
   );
 }

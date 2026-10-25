@@ -78,3 +78,14 @@ func (s *Server) writeDrinks(w http.ResponseWriter, r *http.Request, merchantID 
 	s.touch("menu", "merchant:"+merchantID)
 	httpx.JSON(w, http.StatusOK, map[string]any{"drinks": drinks})
 }
+
+// handleAdminGetDrinks **قائمةُ مشروبات المتجر للإدارة** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «المجموعات بتطبيق
+// المتجر نفسهن لازم يكونو باللوحة»).
+func (s *Server) handleAdminGetDrinks(w http.ResponseWriter, r *http.Request) {
+	s.handleRepGetDrinks(w, r)
+}
+
+// handleAdminSetDrinks **تكتبها الإدارةُ كما يكتبها صاحبُ المتجر** — والكتابةُ نفسُها.
+func (s *Server) handleAdminSetDrinks(w http.ResponseWriter, r *http.Request) {
+	s.writeDrinks(w, r, chi.URLParam(r, "id"))
+}

@@ -195,6 +195,7 @@ var adminPolicy = []Rule{
 	{"POST", "/merchant-cash-settlements/{id}/pay", FinanceManage},
 	{"POST", "/merchants/{id}/menu/sections", MerchantsManage},
 	{"POST", "/merchants/{id}/menu/items", MerchantsManage},
+	{"PUT", "/merchants/{id}/drinks", MerchantsManage},
 	{"PATCH", "/menu/sections/{sectionID}", MerchantsManage},
 	{"DELETE", "/menu/sections/{sectionID}", MerchantsManage},
 	{"PATCH", "/menu/items/{itemID}", MerchantsManage},
@@ -218,6 +219,7 @@ var adminPolicy = []Rule{
 	{"GET", "/merchants/{id}/staff", MerchantsRead},
 	{"GET", "/merchants/{id}/order-phones", MerchantsRead},
 	{"GET", "/merchants/{id}/menu", MerchantsRead},
+	{"GET", "/merchants/{id}/drinks", MerchantsRead},
 	{"GET", "/merchants/{id}/hours", MerchantsRead},
 
 	// ── السائقون ────────────────────────────────────────────────
