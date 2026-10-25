@@ -228,7 +228,8 @@ if (keysOnLabels.length > 0) {
 }
 // **وشاشةُ الأدوارِ ونافذةُ الإسناد تقرآن المحرّكَ** — وإلّا عاد العطب.
 for (const [p, why] of [
-  [join(web, "apps", "rahalgo", "src", "app", "dashboard", "roles", "page.tsx"), "شاشةُ الأدوار"],
+  // **والشاشةُ نُقلت إلى الإعدادات** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — والبابُ القديمُ يعيد تصديرَها.
+  [join(web, "apps", "rahalgo", "src", "components", "admin", "roles", "RolesScreen.tsx"), "شاشةُ الأدوار"],
   [join(web, "apps", "rahalgo", "src", "components", "admin", "ManageRolesModal.tsx"), "نافذةُ إسناد الأدوار"],
 ]) {
   const body = read(p)
@@ -261,7 +262,7 @@ if (!Array.isArray(STAFF_ASSIGNABLE_CODES) || STAFF_ASSIGNABLE_CODES.length === 
 // **ومن يمنح قدرةً يحتاج أن يرى ما يمنحه بالضبط** — **فالاسمُ العربيُّ
 // للقراءة والرمزُ للدقّة، ولا يُحجَب.** (طلبُ المالك.)
 {
-  const page = read(join(web, "apps", "rahalgo", "src", "app", "dashboard", "roles", "page.tsx"))
+  const page = read(join(web, "apps", "rahalgo", "src", "components", "admin", "roles", "RolesScreen.tsx"))
     .replace(/\/\*[\s\S]*?\*\//g, "")
     .replace(/\/\/.*$/gm, "");
   // **والنمطُ يطابق نصّاً معروضاً لا خاصّيّةً** — **و`{r.code}` وحدَه

@@ -27,7 +27,6 @@ import {
   IconBalance,
   IconWallet,
   BootScreen,
-  IconRoles,
   IconShieldCheck,
   wsBase,
   useLiveData,
@@ -93,12 +92,8 @@ const ALL_NAV: NavItem[] = [
   // والمندوبون تبويباتٌ فيه — بجداولهم كما هي.
   { href: "/dashboard/users", label: m.terms.accounts, icon: IconUsers,
     caps: ["users.read"] },
-  // **والأدوارُ تحت الحسابات** — **هي من يملك ماذا، لا من هو** (٧٠ب-و١).
-  //
-  // **والمنعُ في المحرّك** (`roles.manage` في جدول السياسة) — **وهذا
-  // البندُ يُخفي ما لا يخصّ صاحبَه لطفاً بالعين لا حراسةً.**
-  { href: "/dashboard/roles", label: m.admin.roles.navTitle, icon: IconRoles,
-    caps: ["roles.manage"] },
+  // **والأدوارُ والصلاحيّاتُ في الإعدادات لا هنا** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — تُضبط مرّةً
+  // وتُترك، **وبابُها `/dashboard/roles` باقٍ** (موضوعُ «الأدوار والصلاحيات» في الإعدادات).
   // **والسوقُ يليها** — ما يُعرض وما نفد وما ينتظر المراجعة.
   // **وبقدرته لا بقدرة المحتوى** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — موظّفُ العمليّات يرتّبه.
   { href: "/dashboard/sections", label: m.admin.nav.sections, icon: IconStore,

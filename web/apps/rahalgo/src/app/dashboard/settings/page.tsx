@@ -47,6 +47,7 @@ import ReleasePanel from "@/components/admin/settings/release";
 import BroadcastPanel from "@/components/admin/BroadcastPanel";
 import CampaignsPanel from "@/components/admin/CampaignsPanel";
 import BannersPanel from "@/components/admin/settings/banners";
+import RolesScreen from "@/components/admin/roles/RolesScreen";
 
 /** **«عرض,طول» ← رقمان** — وفارغٌ أو مشوَّهٌ يعني «لا موقع». */
 function geoOf(v: string): [number, number] | null {
@@ -207,6 +208,8 @@ function groupBy(items: Setting[], f: (s: Setting) => string): { name: string; i
 export default function SettingsPage() {
   const { can } = useAuth();
   const isAdmin = can("settings.general.manage");
+  // **والأدوارُ والصلاحيّاتُ موضوعٌ هنا** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — لمن يملك إدارتَها وحدَه.
+  const canRoles = can("roles.manage");
   const [list, setList] = useState<Setting[] | null>(null);
   const [topics, setTopics] = useState<string[]>([]);
   const [error, setError] = useState("");
@@ -242,8 +245,8 @@ export default function SettingsPage() {
   // ترى صفحةَ الإعدادات بمفاتيحها الماليّة، **وكانت التغطيةُ وواتساب وساعاتُ المنصّة
   // تُفتح لها فتُردّ ٤٠٣** — لوحاتُها تنادي أبواباً بـ`settings.general.manage`.
   const allTopics = useMemo(
-    () => [...topics, ...(isAdmin ? PANEL_TOPICS : [])],
-    [topics, isAdmin],
+    () => [...topics, ...(isAdmin ? PANEL_TOPICS : []), ...(canRoles ? ["roles"] : [])],
+    [topics, isAdmin, canRoles],
   );
 
   const found = useMemo(() => {
@@ -409,6 +412,8 @@ function TopicBody({
   );
   // **والسلايدرُ بابُه `content.manage`** — لا مفتاحُ الإعدادات.
   const canContent = useAuth().can("content.manage");
+
+  if (topic === "roles") return <RolesScreen />;
 
   if (topic === "coverage") {
     const tabs = PANELS.filter((p) => p.topic === "coverage");
