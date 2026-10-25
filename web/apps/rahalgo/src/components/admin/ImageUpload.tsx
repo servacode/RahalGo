@@ -27,6 +27,6 @@ export default function ImageUpload(props: {
   return <Central {...props} api={api} mediaUrl={mediaUrl} errorText={errorText} />;
 }
 
-export function MediaThumb(props: { url?: string | null; alt: string; fallback: string; size?: number }) {
+export function MediaThumb(props: { url?: string | null; alt: string; fallback: string; size?: number; round?: boolean }) {
   return <CentralThumb {...props} mediaUrl={mediaUrl} />;
 }

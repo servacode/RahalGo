@@ -204,18 +204,21 @@ export function MediaThumb({
   fallback,
   size = 40,
   mediaUrl,
+  round = false,
 }: {
   url?: string | null;
   alt: string;
   fallback: string;
   size?: number;
+  /** **دائرةٌ لا مربّع** — صورةُ حسابٍ في بطاقته (قرارُ المالك ٢٠٢٦-١٠-٢٥). */
+  round?: boolean;
   mediaUrl: (url?: string | null) => string | null;
 }) {
   const src = mediaUrl(url);
   if (!src) {
     return (
       <span
-        className="flex shrink-0 items-center justify-center rounded-control bg-primary-tint font-bold text-primary"
+        className={`flex shrink-0 items-center justify-center bg-primary-tint font-bold text-primary ${round ? "rounded-full" : "rounded-control"}`}
         style={{ width: size, height: size, fontSize: size * 0.42 }}
       >
         {fallback.trim().charAt(0) || m.terms.avatarFallback}
@@ -229,7 +232,7 @@ export function MediaThumb({
       alt={alt}
       width={size}
       height={size}
-      className="shrink-0 rounded-control object-cover"
+      className={`shrink-0 object-cover ${round ? "rounded-full" : "rounded-control"}`}
       style={{ width: size, height: size }}
     />
   );

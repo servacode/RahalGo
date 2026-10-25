@@ -255,32 +255,62 @@ export default function AllAccountsTable() {
 
   const columns: DataColumn<Row>[] = [
     {
+      // ══════════════════════════════════════════════════════════════
+      // **رأسُ البطاقة** (قرارُ المالك ٢٠٢٦-١٠-٢٥): الدورُ فوق، والصورةُ دائرةٌ في
+      // الوسط، وتحتها الاسمُ يميناً والرقمُ يساراً.
+      // ══════════════════════════════════════════════════════════════
       id: "name",
       header: m.admin.users.table.name,
       icon: <IconUser />,
       primary: true,
       cell: (u) => (
-        <span className="flex w-full items-center justify-between gap-2">
-          <span className="inline-flex min-w-0 items-center gap-2">
-            {selectable && !u.is_system && u.id !== me?.id && (
-              <span onClick={(e) => e.stopPropagation()}>
-                <Checkbox
-                  id={`sel-${u.id}`}
-                  label={<span className="sr-only">{A.selectRow}</span>}
-                  checked={selected.has(u.id)}
-                  onChange={() => toggle(u.id)}
-                />
-              </span>
-            )}
-            <MediaThumb url={u.avatar_thumb_url} alt="" fallback={u.full_name || m.terms.avatarFallback} size={32} />
+        <span className="flex w-full flex-col gap-3">
+          <span className="flex items-center justify-between gap-2">
+            <span className="flex flex-wrap gap-1">
+              {u.roles.map((r) => (
+                <RoleBadge key={r} role={r} />
+              ))}
+              {/* **شارةٌ صغيرةٌ للموقوف والمحظور وحدَهما** (قرار ٨). */}
+              {u.status === "suspended" && <Badge variant="warning">{m.admin.users.suspended}</Badge>}
+              {u.status === "blocked" && <Badge variant="danger">{m.admin.users.blocked}</Badge>}
+              {u.is_system ? <Badge variant="neutral">{m.admin.users.systemAccount}</Badge> : null}
+            </span>
+            <span className="flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                title={m.admin.users.viewProfile}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  router.push(`/dashboard/users/${u.id}`);
+                }}
+                className="rounded-control p-1 text-ink-muted transition-colors hover:bg-primary-tint hover:text-primary"
+              >
+                <IconView size={17} />
+              </button>
+              {selectable && !u.is_system && u.id !== me?.id && (
+                <span onClick={(e) => e.stopPropagation()}>
+                  <Checkbox
+                    id={`sel-${u.id}`}
+                    label={<span className="sr-only">{A.selectRow}</span>}
+                    checked={selected.has(u.id)}
+                    onChange={() => toggle(u.id)}
+                  />
+                </span>
+              )}
+            </span>
+          </span>
+          <span className="flex justify-center">
+            <MediaThumb
+              url={u.avatar_thumb_url}
+              alt=""
+              fallback={u.full_name || m.terms.avatarFallback}
+              size={72}
+              round
+            />
+          </span>
+          <span className="flex items-start justify-between gap-3">
             <span className="min-w-0">
-              <span className="flex items-center gap-1.5">
-                <span className="truncate">{u.full_name || "—"}</span>
-                {/* **شارةٌ صغيرةٌ للموقوف والمحظور وحدَهما** (قرار ٨). */}
-                {u.status === "suspended" && <Badge variant="warning">{m.admin.users.suspended}</Badge>}
-                {u.status === "blocked" && <Badge variant="danger">{m.admin.users.blocked}</Badge>}
-                {u.is_system ? <Badge variant="neutral">{m.admin.users.systemAccount}</Badge> : null}
-              </span>
+              <span className="block truncate text-base font-bold">{u.full_name || "—"}</span>
               {/* **واسمُ متجره تحت اسمه** (قرار ٧). */}
               {u.store_names && u.store_names.length > 0 && (
                 <span className="flex items-center gap-1 truncate text-xs text-ink-muted">
@@ -289,45 +319,15 @@ export default function AllAccountsTable() {
                 </span>
               )}
             </span>
+            {u.phone ? (
+              <span dir="ltr" className="shrink-0 font-medium">
+                {u.phone}
+              </span>
+            ) : (
+              <span className="shrink-0 text-xs text-ink-muted">{A.phoneHidden}</span>
+            )}
           </span>
-          <button
-            type="button"
-            title={m.admin.users.viewProfile}
-            onClick={(e) => {
-              e.stopPropagation();
-              router.push(`/dashboard/users/${u.id}`);
-            }}
-            className="shrink-0 rounded-control p-1 text-ink-muted transition-colors hover:bg-primary-tint hover:text-primary"
-          >
-            <IconView size={17} />
-          </button>
         </span>
-      ),
-    },
-    {
-      id: "phone",
-      header: m.admin.users.table.phone,
-      icon: <IconPhone />,
-      primary: true,
-      cell: (u) =>
-        u.phone ? (
-          <span dir="ltr" className="font-medium">
-            {u.phone}
-          </span>
-        ) : (
-          <span className="text-ink-muted">{A.phoneHidden}</span>
-        ),
-    },
-    {
-      id: "roles",
-      header: m.admin.users.table.roles,
-      icon: <IconRoles />,
-      cell: (u) => (
-        <div className="flex flex-wrap justify-end gap-1 sm:justify-start">
-          {u.roles.map((r) => (
-            <RoleBadge key={r} role={r} />
-          ))}
-        </div>
       ),
     },
     {
