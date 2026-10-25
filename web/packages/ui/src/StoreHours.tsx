@@ -66,6 +66,9 @@ export function StoreHours({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
+  /** **دوامٌ واحدٌ لكلّ الأيام** (المالك ٢٠٢٦-١٠-٢٥: «ما فينا نحدّد ساعة فتح وإغلاق ونطبّقها ع كل»). */
+  const [allOpen, setAllOpen] = useState("10:00");
+  const [allClose, setAllClose] = useState("23:00");
 
   useEffect(() => {
     api<DayHours[]>(path)
@@ -76,6 +79,12 @@ export function StoreHours({
   useEffect(() => {
     setClosed(emergency?.value ?? false);
   }, [emergency?.value]);
+
+  /** **يطبّق الساعتين على الأيام السبعة كلّها ويفتحها** — ثمّ يُعدَّل يومٌ بعينه أو يُغلَق. */
+  function applyAll() {
+    setDays((ds) => ds && ds.map((d) => ({ ...d, closed: false, open_time: allOpen, close_time: allClose })));
+    setSaved(false);
+  }
 
   function updateDay(i: number, patch: Partial<DayHours>) {
     setDays((ds) => ds && ds.map((d, di) => (di === i ? { ...d, ...patch } : d)));
@@ -126,6 +135,29 @@ export function StoreHours({
         <LoadingState variant="inline" />
       ) : (
         <div className="space-y-2">
+          {!readOnly && (
+            <div className="mb-3 flex flex-wrap items-center gap-2 rounded-control border border-primary-edge bg-primary-tint p-2.5 text-sm">
+              <span className="font-medium">{H.allDays}</span>
+              <input
+                type="time"
+                aria-label={H.allOpen}
+                value={allOpen}
+                onChange={(e) => setAllOpen(e.target.value)}
+                className="surface-inset min-w-0 px-2 py-1"
+              />
+              <IconPrev size={14} className="shrink-0 text-ink-muted" />
+              <input
+                type="time"
+                aria-label={H.allClose}
+                value={allClose}
+                onChange={(e) => setAllClose(e.target.value)}
+                className="surface-inset min-w-0 px-2 py-1"
+              />
+              <Button variant="secondary" onClick={applyAll} disabled={!allOpen || !allClose}>
+                {H.applyAll}
+              </Button>
+            </div>
+          )}
           {days.map((d, i) => (
             /* ══════════════════════════════════════════════════════════
                **واليومُ صندوقٌ على الجوّال لا صفٌّ يلتفّ**
