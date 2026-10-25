@@ -101,8 +101,10 @@ const ALL_NAV: NavItem[] = [
   // **الشكاوى والتقييماتُ بابٌ واحد** — جوابان لسؤالٍ واحد: «ما رأيُ الناس
   // بنا؟». ومن رأى سائقاً هبط تقييمُه يقرأ شكاواه في المكان نفسِه.
   // (قرارُ المالك ٢٠٢٦-٠٨-٠٨.)
-  { href: "/dashboard/tickets", label: m.admin.nav.support, icon: IconSupport,
-    caps: ["support.manage"] },
+  // **«المشاكل والتعويضات» — الشكاوى والتقييمات والخسائر والنزاعات وتعويض البضاعة بقسمٍ واحد**
+  // (قرارُ المالك ٢٠٢٦-١٠-٢٥). وكلُّ تبويبٍ فيه بقدرته.
+  { href: "/dashboard/tickets", label: m.admin.nav.problems, icon: IconSupport,
+    caps: ["support.manage", "finance.read", "disputes.manage"] },
   // **الطارئُ يبقى ظاهراً حتى يُغلقه إنسان** — والوقتُ لا يطمئنّ على أحد.
   { href: "/dashboard/emergencies", label: m.admin.nav.emergencies, icon: IconWarning,
     caps: ["emergencies.manage"] },
@@ -140,14 +142,7 @@ const ALL_NAV: NavItem[] = [
     caps: ["finance.read"] },
   { href: "/dashboard/obligations", label: m.admin.nav.obligations, icon: IconBalance,
     caps: ["finance.read"] },
-  // **الخسارةُ والمطالبةُ وجها واقعةٍ واحدة** — طلبٌ يفشل فيُعوَّض السائقُ
-  // (خسارة) ثمّ يُفتح نزاعٌ مع المتجر (مطالبة). (قرارُ المالك ٢٠٢٦-٠٨-٠٨:
-  // «النزاعات تكون مع الخسائر لأنّها هي بسبب الخسائر».)
-  //
-  // **والصلاحيّةُ أوسعُهما** — وتبويبُ الخسائر لا يُرسَم إلّا لمن يملكه،
-  // فلا يوسّع البابُ على أحدٍ ما كان يراه.
-  { href: "/dashboard/losses", label: m.admin.nav.moneyLost, icon: IconBalance,
-    caps: ["finance.read", "disputes.manage"] },
+  // **والخسائرُ والنزاعاتُ وتعويضُ البضاعة صارت تبويباتٍ في «المشاكل والتعويضات»** (٢٠٢٦-١٠-٢٥).
   { href: "/dashboard/audit", label: m.admin.audit.title, icon: IconShieldCheck,
     caps: ["audit.read"] },
   { href: "/dashboard/reports", label: m.terms.reports, icon: IconStatus,

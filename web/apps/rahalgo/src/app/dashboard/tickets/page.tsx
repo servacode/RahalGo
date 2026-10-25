@@ -1,52 +1,69 @@
 "use client";
 
 /**
- * **ما يقوله الناس — في بابٍ واحد.**
+ * ══════════════════════════════════════════════════════════════════════
+ * **«المشاكل والتعويضات» — قسمٌ واحد** (قرارُ المالك ٢٠٢٦-١٠-٢٥)
+ * ══════════════════════════════════════════════════════════════════════
  *
- * (قرارُ المالك ٢٠٢٦-٠٨-٠٨: «نجمع النزاعات والشكاوى والتقييم بصفحةٍ واحدة
- *  بأزرار تبويب».)
+ * «الشكاوى والتقييمات، والخسائر والنزاعات وتعويض البضاعة — كلّهن بقسمٍ واحد». **خمسةُ أوجهٍ
+ * لسؤالٍ واحد: شو صار غلط وكيف انحلّ** — الشكوى تبدأه، والتقييمُ الضعيفُ يكشفه، والخسارةُ
+ * والنزاعُ والتعويضُ آخرُه بالمال.
  *
- * # لماذا الشكوى والتقييم معاً
- *
- * **جوابان لسؤالٍ واحد**: «ما رأيُ الناس بنا؟». والطريقُ الطبيعيّ أن يُرى
- * سائقٌ هبط تقييمُه **فتُقرأ شكاواه** — وكان ذلك رابطين في القائمة وصفحتين
- * لا يعرف الواحدةُ منهما بالأخرى.
- *
- * **والتقييماتُ بلا زرٍّ واحد** — جدولُ قراءةٍ يشغل باباً في قائمةٍ من عشرين
- * باباً. **وتبويبٌ أليقُ بها.**
- *
- * # ولماذا لم تدخل النزاعات
- *
- * **هي مالٌ لا رأي**: موضعُها بين الخزينة والخسائر حيث يعمل الماليّ، وصلاحيّتُها
- * أضيق. **وقد جُمعت مع الخسائر** — فالخسارةُ هي التي تُنشئ النزاع: المنصّةُ
- * تعوّض السائقَ ثمّ تطالب المتجر. (`/dashboard/losses`)
- *
- * # والعرضان يبقيان كما هما
- *
- * **لكلّ تبويبٍ عنوانُه وأزرارُه** — فالشكاوى تحمل «شكوى جديدة» ومبدّلَ
- * الجدول والبطاقات، والتقييماتُ ترشيحَها. **وصفحةٌ جامعةٌ تسلب الأزرارَ
- * أماكنها تُفسد بابين لتجمعهما.**
+ * **وكلُّ تبويبٍ بقدرة بابه** كما كان في قسمَيه: الدعمُ يرى الشكاوى والتقييمات، والماليّةُ الخسائرَ
+ * والنزاعاتِ والتعويض، والمالكُ الكلّ. **والتبويبُ في الرابط** (`?tab=`) — ومنه يفتح
+ * `/dashboard/losses` القديمُ تبويبَه.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { TabCards } from "@rahalgo/ui";
+import { PageContainer, PageHeader, TabCards, IconSupport } from "@rahalgo/ui";
+import { useAuth } from "@/lib/auth";
+import { useCanCall } from "@/lib/policy";
 import { TicketsView } from "@/components/admin/support/tickets";
 import { RatingsView } from "@/components/admin/support/ratings";
+import { LossesView } from "@/components/admin/money/losses";
+import { DisputesView } from "@/components/admin/money/disputes";
+import { GoodsCompensationView } from "@/components/admin/money/goodsCompensation";
 
 const m = getMessages(defaultLocale);
 
-const TABS = [
-  { key: "tickets", label: m.terms.complaints },
-  { key: "ratings", label: m.admin.nav.ratings },
-] as const;
+type Tab = "tickets" | "ratings" | "losses" | "disputes" | "goods";
 
-export default function SupportPage() {
-  const [tab, setTab] = useState<string>("tickets");
+export default function ProblemsPage() {
+  useAuth();
+  const canCall = useCanCall();
+  const tabs: { key: Tab; label: string }[] = [
+    ...(canCall("GET", "/tickets") ? [{ key: "tickets" as const, label: m.terms.complaints }] : []),
+    ...(canCall("GET", "/ratings") ? [{ key: "ratings" as const, label: m.admin.nav.ratings }] : []),
+    ...(canCall("GET", "/reports/losses") ? [{ key: "losses" as const, label: m.admin.nav.losses }] : []),
+    ...(canCall("GET", "/disputes") ? [{ key: "disputes" as const, label: m.admin.nav.claims }] : []),
+    ...(canCall("GET", "/losses/goods-compensations")
+      ? [{ key: "goods" as const, label: m.admin.losses.goodsTab }]
+      : []),
+  ];
+  const [tab, setTab] = useState<Tab | "">("");
+  useEffect(() => {
+    const t = new URLSearchParams(window.location.search).get("tab") as Tab | null;
+    if (t) setTab(t);
+  }, []);
+  // **والصلاحيّةُ تصل بعد أوّل رسم** — فتبويبٌ غيرُ موجودٍ يُصحَّح إلى أوّل ما يملك.
+  const active = tabs.some((t) => t.key === tab) ? tab : (tabs[0]?.key ?? "");
+  const pick = (k: string) => {
+    setTab(k as Tab);
+    window.history.replaceState(null, "", `?tab=${k}`);
+  };
+
   return (
-    <div className="space-y-5">
-      <TabCards items={TABS.map((t) => ({ key: t.key, label: t.label }))} active={tab} onChange={setTab} />
-      {tab === "tickets" ? <TicketsView /> : <RatingsView />}
-    </div>
+    <PageContainer>
+      <PageHeader icon={IconSupport} title={m.admin.nav.problems} subtitle={m.admin.nav.problemsHint} />
+      <div className="space-y-5">
+        {tabs.length > 1 && <TabCards items={tabs} active={active} onChange={pick} />}
+        {active === "tickets" && <TicketsView />}
+        {active === "ratings" && <RatingsView />}
+        {active === "losses" && <LossesView />}
+        {active === "disputes" && <DisputesView />}
+        {active === "goods" && <GoodsCompensationView />}
+      </div>
+    </PageContainer>
   );
 }

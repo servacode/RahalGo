@@ -227,7 +227,7 @@ func TestOpsSections_EveryButtonWorks(t *testing.T) {
 var financeOwnerSections = []string{
 	"/dashboard/treasury",    // الخزينة
 	"/dashboard/obligations", // الديون
-	"/dashboard/losses",      // الخسائر والنزاعات
+	"/dashboard/tickets",     // المشاكل والتعويضات — الخسائرُ والنزاعاتُ فيها (٢٠٢٦-١٠-٢٥)
 	"/dashboard/incentives",  // الأهداف والمكافآت
 	"/dashboard/promos",      // العروض والخصومات
 }

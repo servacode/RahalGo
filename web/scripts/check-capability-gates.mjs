@@ -181,7 +181,7 @@ const walk = (d, out = []) => {
 {
   const MUST = [
     ["app/dashboard/cash/page.tsx", 'can("finance.manage")', "تسويةُ نقد السائق"],
-    ["app/dashboard/losses/page.tsx", 'canCall("GET", "/reports/losses")', "تبويبُ الخسائر"],
+    ["app/dashboard/tickets/page.tsx", 'canCall("GET", "/reports/losses")', "تبويبُ الخسائر"], // نُقل إلى «المشاكل والتعويضات» (٢٠٢٦-١٠-٢٥)
     ["app/dashboard/payouts/page.tsx", 'can("payouts.decide")', "قرارُ السحب"],
     ["app/dashboard/compensations/page.tsx", 'can("finance.manage")', "قرارُ التعويض المعلَّق"],
     // **والنزاعاتُ من جدول المحرّك نفسِه** (قرارُ المالك ٢٠٢٦-١٠-٠٤): اقتراحُ الحسم والموافقةُ عليه.
