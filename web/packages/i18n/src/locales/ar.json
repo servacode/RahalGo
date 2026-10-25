@@ -6260,7 +6260,14 @@
         "commissionSpecial": "نسبة خاصة",
         "commissionPct": "النسبة الخاصة ٪",
         "changeCommission": "تغيير العمولة",
-        "owner": "صاحب المتجر"
+        "owner": "صاحب المتجر",
+        "phone": "الهاتف",
+        "itemsLabel": "الأصناف",
+        "noLocation": "بلا موقع على الخريطة",
+        "noLogo": "بلا لوغو",
+        "noItems": "بلا أصناف",
+        "complete": "مكتمل ✓",
+        "missing": "ناقصه"
       },
       "quality": {
         "noImageTitle": "أصناف بلا صورة",

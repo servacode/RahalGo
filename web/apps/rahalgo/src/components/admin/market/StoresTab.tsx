@@ -13,7 +13,7 @@
  * واحدةٌ تميّزه أو تشيل تمييزَه، بلا فتح نافذة التعديل.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
   getMessages,
@@ -43,6 +43,7 @@ import { useCanCall } from "@/lib/policy";
 import ImageUpload from "@/components/admin/ImageUpload";
 import { StoreActions } from "@/components/admin/StoreActions";
 import { MerchantModal, type Merchant } from "@/components/admin/MerchantModal";
+import StateBadge from "./StateBadge";
 
 const m = getMessages(defaultLocale);
 const T = m.admin.market.stores;
@@ -194,60 +195,23 @@ export default function StoresTab() {
                     <IconStore size={20} />
                   )}
               </button>
-              <Link
-                href={`/dashboard/merchants/${s.id}`}
-                className="flex min-w-0 flex-1 items-center gap-3"
-              >
-                <div className="min-w-0 flex-1 space-y-1">
-                  <p className="truncate font-bold">
-                    {s.name}{" "}
-                    <span className="text-xs font-normal text-ink-muted">
-                      {fmtStoreNo(s.number)}
-                    </span>
-                  </p>
-                  <p className="text-xs text-ink-muted">
-                    {T.items.replace("{n}", fmtNum(s.items))}
-                    {" · "}
-                    {T.live.replace("{n}", fmtNum(s.live_items))}
-                  </p>
-                  <div className="flex flex-wrap gap-1">
-                    <Badge
-                      variant={s.status === "active" ? "success" : "neutral"}
-                    >
-                      {(m.admin.merchants as unknown as Record<string, string>)[
-                        s.status
-                      ] ?? s.status}
-                    </Badge>
-                    {s.emergency_closed && (
-                      <Badge variant="danger">{T.emergency}</Badge>
-                    )}
-                    {s.featured && (
-                      <Badge variant="accent">{`${m.admin.merchants.featuredBadge} · ${fmtNum(s.featured_order ?? 0)}`}</Badge>
-                    )}
-                    {s.new_items > 0 && (
-                      <Badge variant="accent">
-                        {T.newItems.replace("{n}", fmtNum(s.new_items))}
-                      </Badge>
-                    )}
-                    {s.no_image_items > 0 && (
-                      <Badge variant="warning">
-                        {T.noImageItems.replace(
-                          "{n}",
-                          fmtNum(s.no_image_items),
-                        )}
-                      </Badge>
-                    )}
-                    {!s.has_hours && (
-                      <Badge variant="warning">{T.noHours}</Badge>
-                    )}
-                  </div>
-                </div>
+              {/* **الاسمُ والكودُ أوّلاً** — والبطاقةُ تفتح ملفَّ المتجر. */}
+              <Link href={`/dashboard/merchants/${s.id}`} className="min-w-0 flex-1">
+                <p className="truncate font-bold">{s.name}</p>
+                <p className="text-xs text-ink-muted" dir="ltr">{fmtStoreNo(s.number)}</p>
               </Link>
+              <span className="flex shrink-0 flex-col items-end gap-1">
+                <StateBadge
+                  variant={s.status === "active" ? "success" : "danger"}
+                  label={(m.admin.merchants as unknown as Record<string, string>)[s.status] ?? s.status}
+                />
+                {s.emergency_closed && <StateBadge variant="warning" label={T.emergency} />}
+              </span>
               </div>
               {/* **أيقوناتٌ بلا كتابة** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — النجمةُ للتمييز، والباقي أفعالُ المتجر. */}
               <div className="flex items-center gap-1 border-t border-line-soft pt-3">
                 <div className="min-w-0 flex-1">
-                  <StoreControl id={s.id} onChanged={reload} />
+                  <StoreControl id={s.id} summary={s} onChanged={reload} />
                 </div>
               </div>
             </div>
@@ -271,7 +235,7 @@ export default function StoresTab() {
  * بطاقة)، ثمّ تُرسم `StoreActions` نفسُها التي كانت في الحسابات: التعديل والدوام والفتحُ والإغلاق
  * والمخالفاتُ والحظر.
  */
-function StoreControl({ id, onChanged }: { id: string; onChanged: () => void }) {
+function StoreControl({ id, summary, onChanged }: { id: string; summary: MarketStore; onChanged: () => void }) {
   const [store, setStore] = useState<Merchant | null>(null);
   const [err, setErr] = useState("");
   // **تُجلب بياناتُ المتجر مع البطاقة** — فتظهر الأزرارُ مباشرةً بلا ضغطة «تحكّم» (٢٠٢٦-١٠-٢٥).
@@ -290,16 +254,22 @@ function StoreControl({ id, onChanged }: { id: string; onChanged: () => void }) 
   if (!store) return <LoadingState variant="inline" />;
   return (
     <div className="flex flex-col gap-2">
-      {/* **صاحبُ المتجر ورقمُه على البطاقة** (قرارُ المالك ٢٠٢٦-١٠-٢٥). */}
-      <div className="flex items-center justify-between gap-2 text-sm">
-        <span className="min-w-0 truncate">
-          <span className="text-ink-muted">{T.owner}: </span>
-          <b>{store.owner_name || "—"}</b>
-        </span>
-        <span dir="ltr" className="shrink-0 font-medium">
-          {store.owner_phone || store.phone || "—"}
-        </span>
-      </div>
+      {/* **بطاقةٌ مرتّبة** (قرارُ المالك ٢٠٢٦-١٠-٢٥): صاحبُ المتجر ورقمُه، وأصنافُه، **وما ينقصه ليكتمل**. */}
+      <dl className="space-y-1 text-sm">
+        <InfoRow label={T.owner} value={<b>{store.owner_name || "—"}</b>} />
+        <InfoRow label={T.phone} value={<span dir="ltr" className="font-medium">{store.owner_phone || store.phone || "—"}</span>} />
+        <InfoRow
+          label={T.itemsLabel}
+          value={
+            <span>
+              <b>{fmtNum(summary.items)}</b>
+              <span className="text-ink-muted">{" · "}{T.live.replace("{n}", fmtNum(summary.live_items))}</span>
+              {summary.new_items > 0 && <span className="text-accent">{" · "}{T.newItems.replace("{n}", fmtNum(summary.new_items))}</span>}
+            </span>
+          }
+        />
+      </dl>
+      <Missing summary={summary} store={store} />
       <CommissionLine store={store} onSaved={() => { onChanged(); void load(); }} />
       <StoreActions
         direct
@@ -392,6 +362,36 @@ function CommissionLine({ store, onSaved }: { store: Merchant; onSaved: () => vo
           </div>
         </Modal>
       )}
+    </div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="flex items-baseline justify-between gap-2">
+      <dt className="shrink-0 text-ink-muted">{label}</dt>
+      <dd className="min-w-0 truncate">{value}</dd>
+    </div>
+  );
+}
+
+/** **ما ينقص المتجرَ ليكتمل** — دوامٌ وموقعٌ على الخريطة ولوغو وأصنافٌ وصورُها؛ وإلّا «مكتمل». */
+function Missing({ summary, store }: { summary: MarketStore; store: Merchant }) {
+  const gaps: string[] = [];
+  if (!summary.has_hours) gaps.push(T.noHours);
+  if (store.lat == null || store.lng == null) gaps.push(T.noLocation);
+  if (!summary.logo_url) gaps.push(T.noLogo);
+  if (summary.items === 0) gaps.push(T.noItems);
+  else if (summary.no_image_items > 0) gaps.push(T.noImageItems.replace("{n}", fmtNum(summary.no_image_items)));
+  if (gaps.length === 0) {
+    return <p className="text-xs font-bold text-success">{T.complete}</p>;
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      <span className="text-xs text-ink-muted">{T.missing}:</span>
+      {gaps.map((g) => (
+        <Badge key={g} variant="warning">{g}</Badge>
+      ))}
     </div>
   );
 }
