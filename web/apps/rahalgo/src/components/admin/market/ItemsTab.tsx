@@ -317,26 +317,31 @@ export default function ItemsTab() {
                       <PriceRow
                         muted
                         label={I.commission.replace("{n}", fmtNum(it.commission_percent))}
-                        value={<>−<Money value={it.merchant_price - it.store_net} /></>}
+                        value={<><span dir="ltr">−</span><Money value={it.merchant_price - it.store_net} /></>}
                       />
                       <PriceRow strong label={I.storeNet} value={<Money value={it.store_net} />} />
                       {it.price !== it.merchant_price && (
                         <PriceRow muted label={I.salePrice} value={<Money value={it.price} />} />
                       )}
                     </dl>
-                    <div className="mt-auto flex items-center justify-end gap-2 pt-1.5">
-                      <span className="flex items-center gap-0.5">
+                    <div className="mt-auto flex items-center gap-2 pt-1.5">
+                      <span className="flex w-full items-center justify-between gap-1">
                       {/* **متوفر / غير متوفر بضغطة** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — بباب الإجراء الجماعيّ نفسِه. */}
-                      <Button
-                        variant="ghost"
+                      {/* **زرٌّ ذكيٌّ للتوفّر** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — يقول الحالَ بلونه ويقلبها بضغطة. */}
+                      <button
+                        type="button"
+                        role="switch"
+                        aria-checked={it.available}
                         title={it.available ? I.makeUnavailable : I.makeAvailable}
-                        aria-label={it.available ? I.makeUnavailable : I.makeAvailable}
                         disabled={busy}
                         onClick={() => void setOne(it.id, it.available ? "unavailable" : "available")}
-                        className={`!h-9 !w-9 inline-flex items-center justify-center !min-h-0 !min-w-0 !p-0 rounded-full ${it.available ? "!text-success" : "!text-warning"}`}
+                        className={`inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-bold text-on-solid transition-colors disabled:opacity-60 ${
+                          it.available ? "bg-success-solid" : "bg-warning-solid"
+                        }`}
                       >
-                        {it.available ? <IconCheck size={18} /> : <IconBlock size={18} />}
-                      </Button>
+                        {it.available ? <IconCheck size={14} /> : <IconBlock size={14} />}
+                        {it.available ? S.itemLive : S.itemOut}
+                      </button>
                       {canEdit && (
                         <Button
                           variant="ghost"
@@ -407,7 +412,7 @@ function PriceRow({ label, value, strong, muted }: { label: string; value: React
   return (
     <div className="flex items-baseline justify-between gap-2">
       <dt className={muted ? "text-ink-muted" : ""}>{label}</dt>
-      <dd dir="ltr" className={strong ? "font-bold" : muted ? "text-ink-muted" : ""}>
+      <dd className={strong ? "font-bold" : muted ? "text-ink-muted" : ""}>
         {value}
       </dd>
     </div>
