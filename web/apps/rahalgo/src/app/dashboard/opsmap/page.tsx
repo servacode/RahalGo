@@ -51,7 +51,6 @@ import {
   LoadingState,
   Alert,
   Checkbox,
-  Chips,
   CountBadge,
   Input,
   Select,
@@ -371,6 +370,22 @@ const DEFAULT_VISIBLE: Record<string, boolean> = {
   drivers: true,
   orders: true,
   merchants: true,
+  customers: true,
+  reps: true,
+  office: true,
+};
+
+/**
+ * **الطبقاتُ الستُّ دائماً على الخريطة** (قرارُ المالك ٢٠٢٦-١٠-٢٥: «لازم تكون خريطة عمليّات بالحقيقة…
+ * السائقين والمتاجر والطلبات والزبائن والمناديب والمكتب دايماً موجودين — هالشريط ما بيلزم»).
+ * **ولا شريطَ حبّاتٍ يطفئها** — ويبقى لكلٍّ قدرتُه (من لا يملك طبقةً لا تُجلَب له).
+ */
+const ALWAYS_ON: Record<string, boolean> = {
+  drivers: true,
+  orders: true,
+  merchants: true,
+  customers: true,
+  reps: true,
   office: true,
 };
 
@@ -414,7 +429,7 @@ export default function OpsMapPage() {
     try {
       const raw =
         window.localStorage.getItem(storeKey) ?? window.localStorage.getItem("opsmap.layers");
-      setVisible(raw ? (JSON.parse(raw) as Record<string, boolean>) : DEFAULT_VISIBLE);
+      setVisible({ ...(raw ? (JSON.parse(raw) as Record<string, boolean>) : DEFAULT_VISIBLE), ...ALWAYS_ON });
     } catch {
       /* تخزينٌ ممنوعٌ في نافذةٍ خاصّة — والافتراضُ يكفي */
     }
@@ -422,7 +437,7 @@ export default function OpsMapPage() {
   const toggle = useCallback(
     (id: string) => {
       setVisible((prev) => {
-        const next = { ...prev, [id]: !prev[id] };
+        const next = { ...prev, [id]: !prev[id], ...ALWAYS_ON };
         try {
           window.localStorage.setItem(storeKey, JSON.stringify(next));
         } catch {
@@ -1509,6 +1524,32 @@ export default function OpsMapPage() {
 
   const stuckN = S?.orders?.stuck ?? 0;
 
+  // **حدودُ التغطية** (قرارُ المالك ٢٠٢٦-١٠-٢٥: «الخريطة تطلع بس منطقة تغطيتنا») — من المناطق الفعّالة:
+  // المضلَّعُ بنقاطه، والدائرةُ بمركزها ونصف قطرها. وبلا مناطق لا حدود.
+  const coverageBounds = (() => {
+    let w = Infinity, so = Infinity, e = -Infinity, n = -Infinity;
+    const add = (lng: number, lat: number) => {
+      if (!Number.isFinite(lng) || !Number.isFinite(lat)) return;
+      w = Math.min(w, lng); e = Math.max(e, lng); so = Math.min(so, lat); n = Math.max(n, lat);
+    };
+    const walk = (c: unknown) => {
+      if (Array.isArray(c) && c.length >= 2 && typeof c[0] === "number" && typeof c[1] === "number") {
+        add(c[0], c[1]);
+      } else if (Array.isArray(c)) c.forEach(walk);
+    };
+    for (const z of zones.data?.zones ?? []) {
+      if (!z.active) continue;
+      if (z.shape === "polygon" && z.area) walk(z.area.coordinates);
+      else if (z.radius_m > 0) {
+        const dLat = z.radius_m / 111_320;
+        const dLng = z.radius_m / (111_320 * Math.cos((z.lat * Math.PI) / 180) || 1);
+        add(z.lng - dLng, z.lat - dLat);
+        add(z.lng + dLng, z.lat + dLat);
+      }
+    }
+    return Number.isFinite(w) ? ([w, so, e, n] as [number, number, number, number]) : undefined;
+  })();
+
   // ── الطبقةُ الفارغةُ تُقال لا تُسكَت ───────────────────────────────
   //
   // **خريطةٌ فارغةٌ بلا كلمةٍ تُقرأ عطلاً** — «لا سائقين على الدوام الآن»
@@ -1541,7 +1582,9 @@ export default function OpsMapPage() {
       <div className={full ? "fixed inset-0 z-40" : ""}>
       <div className={full ? "surface-raised flex h-full flex-col gap-2 overflow-hidden rounded-none p-2" : ""}>
       {/* ══ الشريطُ العلويّ — عدّاداتٌ حيّة وحبّاتُ الطبقات ══════════ */}
-      <div className={`surface flex flex-col gap-2 p-2 ${full ? "shrink-0" : "mb-3"}`}>
+      {/* **فوقَ الخريطة** (المالك ٢٠٢٦-١٠-٢٥: «طبقات إضافية تطلع تحت الخريطة») — `relative z-30` يرفع
+          قوائمَ الشريط فوق لوح الخريطة الذي يليه. */}
+      <div className={`surface relative z-30 flex flex-col gap-2 p-2 ${full ? "shrink-0" : "mb-3"}`}>
         {/* ── العدّادات — «N سائق متاح · N طلب ماشي · N عالق · N متجر مفتوح» ── */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-1 text-sm">
           {S?.drivers && (
@@ -1670,25 +1713,8 @@ export default function OpsMapPage() {
 
         {/* ── الحبّات — تلتفّ على الحاسوب وتنزلق على الجوّال ── */}
         <div className="flex items-center gap-2">
-          <Chips
-            className="min-w-0 flex-1 sm:flex-wrap"
-            items={chips
-              .filter((c) => c.show)
-              .map((c) => ({
-                id: c.id,
-                label: (
-                  <span className="inline-flex items-center gap-1.5">
-                    {c.tone ? <Dot tone={c.tone} /> : <OfficeDot />}
-                    {c.label}
-                    {c.count != null && (
-                      <CountBadge count={c.count} on={!!visible[c.id]} max={99999} />
-                    )}
-                  </span>
-                ),
-              }))}
-            value={chips.filter((c) => c.show && visible[c.id]).map((c) => c.id)}
-            onChange={(id) => toggle(id)}
-          />
+          {/* **ولا شريطَ حبّاتٍ** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — الطبقاتُ الستُّ دائماً ظاهرة (`ALWAYS_ON`). */}
+          <span className="flex-1" />
 
           {/* ── طبقاتٌ إضافيّةٌ ودليلُ الألوان ── */}
           <div className="relative flex shrink-0 items-center gap-1.5">
@@ -1861,6 +1887,7 @@ export default function OpsMapPage() {
             onMapClick={onGround}
             unavailableLabel={T.unavailable}
             focus={focus}
+            bounds={coverageBounds}
           />
 
           {/* ── أدواتُ الخريطة — ملءُ الشاشة والرجوعُ إلى المكتب ── */}

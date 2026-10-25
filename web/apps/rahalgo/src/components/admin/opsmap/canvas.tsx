@@ -218,6 +218,7 @@ export function OpsMapCanvas({
   height = "h-full",
   unavailableLabel,
   focus,
+  bounds,
 }: {
   layers: LayerSpec[];
   /** **صورُ الرموز** — تُرسم مرّةً عند الإقلاع قبل أوّل طبقة. */
@@ -235,6 +236,11 @@ export function OpsMapCanvas({
   unavailableLabel: string;
   /** **موضعٌ تُفتح عليه الخريطة** — من «اعرض على الخريطة» في «طلبات التوسّع». */
   focus?: { lng: number; lat: number; zoom?: number };
+  /**
+   * **منطقةُ التغطية وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٢٥: «الخريطة لازم تطلع بس منطقة تغطيتنا») —
+   * `[غرب، جنوب، شرق، شمال]`. تُفتح عليها الخريطةُ ولا تُسحَب خارجها (هامشٌ صغيرٌ حولها).
+   */
+  bounds?: [number, number, number, number];
 }) {
   const box = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
@@ -258,6 +264,32 @@ export function OpsMapCanvas({
   moveRef.current = onMoveEnd;
   const mapClickRef = useRef(onMapClick);
   mapClickRef.current = onMapClick;
+  // **والحدودُ تُطبَّق حين تصل** — المناطقُ تُجلب بعد إقلاع الخريطة.
+  const boundsKey = bounds ? bounds.map((x) => x.toFixed(4)).join(",") : "";
+  const fittedRef = useRef(false);
+  useEffect(() => {
+    const m = map.current;
+    if (!m || !ready || !bounds) return;
+    const [w, s0, e, n] = bounds;
+    // **هامشٌ حول التغطية** — لا تُقصّ نقطةٌ على الحافّة، ولا يُرى العالمُ كلُّه.
+    const padLng = Math.max((e - w) * 0.35, 0.05);
+    const padLat = Math.max((n - s0) * 0.35, 0.05);
+    m.setMaxBounds([
+      [w - padLng, s0 - padLat],
+      [e + padLng, n + padLat],
+    ]);
+    if (!fittedRef.current && !focus) {
+      fittedRef.current = true;
+      m.fitBounds(
+        [
+          [w, s0],
+          [e, n],
+        ],
+        { padding: 40, duration: 0 },
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [boundsKey, ready]);
   const iconsRef = useRef(icons);
   iconsRef.current = icons;
 
