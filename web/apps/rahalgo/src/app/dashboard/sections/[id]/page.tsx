@@ -209,7 +209,7 @@ export default function SectionPage() {
         </span>
         <div className="min-w-0 flex-1 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="truncate text-2xl font-bold">{sec.name}</h1>
+            <h1 className="heading-page truncate">{sec.name}</h1>
             <StateBadge
               label={sec.active ? S.available : S.unavailable}
               variant={sec.active ? "success" : "danger"}
