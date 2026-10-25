@@ -56,6 +56,7 @@ import {
   IconReceipt,
   IconUsers,
   FormActions,
+  IconLock,
 } from "@rahalgo/ui";
 import { api, apiFile, type AuthUser } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -66,6 +67,7 @@ import StatusReasonModal from "@/components/admin/StatusReasonModal";
 import RoleBadge, { ROLE_STYLES } from "@/components/admin/RoleBadge";
 import { MediaThumb } from "@/components/admin/ImageUpload";
 import { TempPasswordNote } from "@/components/admin/accounts/TempPasswordNote";
+import { ResetPasswordModal } from "@/components/admin/accounts/ProfileParts";
 
 const m = getMessages(defaultLocale);
 const A = m.admin.acc;
@@ -89,6 +91,15 @@ export default function AllAccountsTable() {
   const canCreateUser = canCall("POST", "/users");
   const canGrant = canCall("POST", "/users/{id}/roles");
   const canCreateStore = canCall("POST", "/merchants");
+  // **وكلمةُ المرور زرٌّ سريعٌ في البطاقة** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — بلا فتح الملف.
+  const canReset = canCall("POST", "/users/{id}/password");
+  const [resetUser, setResetUser] = useState<{ id: string; hours: number } | null>(null);
+  const openReset = (u: Row) => {
+    // **مهلةُ الكلمة المؤقّتة من المحرّك** — تُقرأ من ملفّه، والافتراضُ إن تعذّر.
+    api<{ temp_password_hours?: number }>(`/api/v1/admin/users/${u.id}`)
+      .then((p) => setResetUser({ id: u.id, hours: p.temp_password_hours ?? 24 }))
+      .catch(() => setResetUser({ id: u.id, hours: 24 }));
+  };
   const canStatus = canCall("PATCH", "/users/{id}");
   const canWallet = canCall("POST", "/users/{id}/wallet");
   // **والتصديرُ لمديرِ المنصّة وحدَه** — الزرُّ يُخفى عن غيره (قرار ١١).
@@ -620,7 +631,7 @@ export default function AllAccountsTable() {
         empty={error ? "" : m.admin.users.noResults}
         onRowClick={(u) => router.push(`/dashboard/users/${u.id}`)}
         actions={
-          canWallet || canStatus
+          canWallet || canStatus || canReset
             ? (u) =>
                 u.is_system ? null : (
                   <>
@@ -629,6 +640,12 @@ export default function AllAccountsTable() {
                       <Button variant="secondary" onClick={() => setWalletUser(u)} className="flex items-center gap-1.5">
                         <IconWallet size={15} />
                         {m.admin.users.wallet}
+                      </Button>
+                    )}
+                    {canReset && u.id !== me?.id && (
+                      <Button variant="secondary" onClick={() => openReset(u)} className="flex items-center gap-1.5">
+                        <IconLock size={15} />
+                        {m.admin.users.profile.passwordBtn}
                       </Button>
                     )}
                     {canStatus &&
@@ -676,6 +693,14 @@ export default function AllAccountsTable() {
           allRoles={allRoles}
           onClose={() => setCreateKind(null)}
           onCreated={() => refresh()}
+        />
+      )}
+      {resetUser && (
+        <ResetPasswordModal
+          userID={resetUser.id}
+          hours={resetUser.hours}
+          onClose={() => setResetUser(null)}
+          onDone={() => void load()}
         />
       )}
       {storeOpen && (
