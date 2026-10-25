@@ -202,6 +202,8 @@ interface OrderRow {
   leg_m?: number;
   /** كم كان بين السائق ونقطة الاستلام — **جوابُ «لماذا هذا السائق؟»**. */
   driver_to_pickup_m?: number;
+  /** **كم بين السائق وباب الزبون الآن** — بعد الاستلام أو حين لا متجرَ معروف. */
+  driver_to_drop_m?: number;
   proof_skip_reason?: string;
   proof_mocked?: boolean;
   /** متى حُوِّل الطلب إلى المتجر — فارغٌ يعني لم يُحوَّل بعد */
@@ -1593,6 +1595,9 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         const parts = [
           dist(o.leg_m) && P.legDist.replace("{d}", dist(o.leg_m)),
           o.driver_name && !o.picked_up_at && dist(o.driver_to_pickup_m) && P.driverDist.replace("{d}", dist(o.driver_to_pickup_m)),
+          // **وبُعدُ السائق عن الزبون** (المالك ٢٠٢٦-١٠-٢٥) — بعد الاستلام، أو حين لا نقطةَ استلامٍ معروفة.
+          o.driver_name && !o.closed_at && (o.picked_up_at || !dist(o.driver_to_pickup_m)) && dist(o.driver_to_drop_m) &&
+            P.driverToCustomerDist.replace("{d}", dist(o.driver_to_drop_m)),
         ].filter(Boolean);
         return (
           <span className="flex flex-col gap-0.5">

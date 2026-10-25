@@ -62,12 +62,19 @@ const orderSelect = `
 	       o.to_store_eta_sec, o.to_door_eta_sec,
 	       -- **طولُ المشوار وبُعدُ السائق** — جوابُ «لماذا تأخّر» و«لماذا هو».
 	       -- وسالبٌ يعني «لا يُعرف»: **الجهلُ ليس قرباً.**
-	       COALESCE(ST_Distance(COALESCE(o.pickup_override, mr.location), o.dropoff), -1),
+	       -- **ونقطةُ الاستلام تشمل المتجرَ التابعَ في المشتريات** (المالك ٢٠٢٦-١٠-٢٥).
+	       COALESCE(ST_Distance(COALESCE(o.pickup_override, mr.location, ptn.location), o.dropoff), -1),
 	       COALESCE(ST_Distance(
 	           (SELECT du.last_location FROM users du
 	            WHERE du.id = o.driver_id
 	              AND du.last_location_at > now() - interval '15 minutes'),
-	           COALESCE(o.pickup_override, mr.location)), -1),
+	           COALESCE(o.pickup_override, mr.location, ptn.location)), -1),
+	       -- **وبُعدُ السائق عن الزبون** — بعد الاستلام، أو حين لا نقطةَ استلامٍ معروفة (الخاصّ).
+	       COALESCE(ST_Distance(
+	           (SELECT du.last_location FROM users du
+	            WHERE du.id = o.driver_id
+	              AND du.last_location_at > now() - interval '15 minutes'),
+	           o.dropoff), -1),
 	       -- **أيستردّ كلُّ مصدرٍ في هذا الطلب؟** — bool_and لا bool_or:
 	       -- الزرُّ يسترجع من الجميع، **ومن لا يستردّ لا يُسترجع منه.**
 	       COALESCE((SELECT bool_and(m2.accepts_returns) FROM merchants m2
@@ -169,7 +176,7 @@ func scanOrder(row pgx.Row) (*Order, error) {
 		&o.ProofURL, &o.ProofTakenAt, &o.ProofMeters, &o.ProofSkipReason, &o.ProofMocked,
 		&o.EndedBy, &o.Fault, &o.FailReason, &o.ReturnedAt, &o.GoodsSettledTo,
 		&o.ToStoreETASec, &o.ToDoorETASec,
-		&o.LegM, &o.DriverToPickupM,
+		&o.LegM, &o.DriverToPickupM, &o.DriverToDropM,
 		&o.AcceptsReturns,
 		&o.PrepMinutes, &o.ReadyAt, &o.AcceptedAt, &o.PickedUpAt, &o.DeliveredAt, &o.ClosedAt,
 		&o.MerchantLogoThumb, &o.ItemsCount, &o.ItemsPreview, &items,

@@ -1445,7 +1445,7 @@
       "merchant": "المتجر",
       "where": "العنوان والمسافة",
       "legDist": "من المتجر للزبون {d}",
-      "driverDist": "السائق عن الاستلام {d}",
+      "driverDist": "من السائق للمتجر {d}",
       "meters": "{n} م",
       "km": "{n} كم",
       "total": "الإجمالي",
@@ -1962,7 +1962,8 @@
       "platformCommission": "عمولة المنصة",
       "proofByCode": "✓ سُلّم بكود التسليم من الزبون",
       "kindMdSend": "توصيل من المتجر",
-      "kindMdFetch": "إحضار للمتجر"
+      "kindMdFetch": "إحضار للمتجر",
+      "driverToCustomerDist": "من السائق للزبون {d}"
     },
     "customers": {
       "title": "الزبائن",
