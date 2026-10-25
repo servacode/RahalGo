@@ -57,6 +57,7 @@ import {
   IconUsers,
   FormActions,
   IconLock,
+  IconHourglass,
 } from "@rahalgo/ui";
 import { api, apiFile, type AuthUser } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -601,17 +602,28 @@ export default function AllAccountsTable() {
             ? (u) =>
                 u.is_system ? null : (
                   <>
-                    {/* **والمحفظةُ بقدرة المال وحدَها** — كانت مربوطةً بالإيقاف أيضاً فلا تراها الماليّة. */}
+                    {/* **أيقوناتٌ بلا كلمات** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — والاسمُ في التلميح ولقارئ الشاشة.
+                        **والمحفظةُ بقدرة المال وحدَها** — كانت مربوطةً بالإيقاف أيضاً فلا تراها الماليّة. */}
                     {canWallet && (
-                      <Button variant="secondary" onClick={() => setWalletUser(u)} className="flex items-center gap-1.5">
-                        <IconWallet size={15} />
-                        {m.admin.users.wallet}
+                      <Button
+                        variant="secondary"
+                        onClick={() => setWalletUser(u)}
+                        title={m.admin.users.wallet}
+                        aria-label={m.admin.users.wallet}
+                        className="!px-3"
+                      >
+                        <IconWallet size={18} />
                       </Button>
                     )}
                     {canReset && u.id !== me?.id && (
-                      <Button variant="secondary" onClick={() => openReset(u)} className="flex items-center gap-1.5">
-                        <IconLock size={15} />
-                        {m.admin.users.profile.passwordBtn}
+                      <Button
+                        variant="secondary"
+                        onClick={() => openReset(u)}
+                        title={m.admin.users.profile.passwordBtn}
+                        aria-label={m.admin.users.profile.passwordBtn}
+                        className="!px-3"
+                      >
+                        <IconLock size={18} />
                       </Button>
                     )}
                     {canStatus &&
@@ -621,24 +633,31 @@ export default function AllAccountsTable() {
                           <Button
                             variant="secondary"
                             onClick={() => setStatusModal({ users: [u], status: "suspended" })}
-                            className="flex items-center gap-1.5 !text-warning"
+                            title={m.admin.users.suspend}
+                            aria-label={m.admin.users.suspend}
+                            className="!px-3 !text-warning"
                           >
-                            <IconBlock size={15} />
-                            {m.admin.users.suspend}
+                            <IconHourglass size={18} />
                           </Button>
                           <Button
                             variant="danger"
                             onClick={() => setStatusModal({ users: [u], status: "blocked" })}
-                            className="flex items-center gap-1.5"
+                            title={m.admin.users.block}
+                            aria-label={m.admin.users.block}
+                            className="!px-3"
                           >
-                            <IconBlock size={15} />
-                            {m.admin.users.block}
+                            <IconBlock size={18} />
                           </Button>
                         </>
                       ) : (
-                        <Button variant="secondary" onClick={() => setActivateRows([u])} className="flex items-center gap-1.5">
-                          <IconUnblock size={15} />
-                          {m.admin.users.activate}
+                        <Button
+                          variant="secondary"
+                          onClick={() => setActivateRows([u])}
+                          title={m.admin.users.activate}
+                          aria-label={m.admin.users.activate}
+                          className="!px-3 !text-success"
+                        >
+                          <IconUnblock size={18} />
                         </Button>
                       ))}
                   </>
