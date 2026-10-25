@@ -60,7 +60,7 @@
     "roleNames": {
       "customer": "الزبون",
       "driver": "السائق",
-      "merchant": "المتجر",
+      "merchant": "صاحب متجر",
       "sales": "المندوب",
       "ops": "العمليات",
       "finance": "المالية",
