@@ -58,6 +58,7 @@ export function RatingsList({ canProfile }: { canProfile: boolean }) {
       "/api/v1/admin/drivers",
     )
       .then((r) => setDrivers(Array.isArray(r) ? r : r.drivers))
+      // @empty-ok — **مرشِّحُ السائق يختفي لمن لا يقرأ السائقين**، والقائمةُ تعمل بلا فلتر.
       .catch(() => setDrivers([]));
     void (async () => {
       try {
@@ -71,6 +72,7 @@ export function RatingsList({ canProfile }: { canProfile: boolean }) {
         }
         setStores(all);
       } catch {
+        // @empty-ok — **مرشِّحُ المتجر يختفي لمن لا يقرأ المتاجر**، والقائمةُ تعمل بلا فلتر.
         setStores([]);
       }
     })();
