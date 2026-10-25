@@ -694,6 +694,11 @@ const OPS_NEXT: Record<string, string[]> = {
  */
 const CUSTOM_NEXT: Record<string, string[]> = {
   pending: ["dispatching", "rejected"],
+  // **وإلغاءٌ من الإدارة ما لم يُشترَ بعد** (المالك ٢٠٢٦-١٠-٢٥: «نقدر نلغي الطلب في حال ما اتّفقنا
+  // مع الزبون… ويقدر يطلب طلب جديد») — مرآةُ `customTransitions` في المحرّك، **وبسببٍ إلزاميّ**
+  // (`cancelled` في `DESTRUCTIVE`). وبعد «اشتريت» لا إلغاء: البضاعةُ بمال السائق.
+  dispatching: ["cancelled"],
+  assigned: ["cancelled"],
 };
 
 /**
