@@ -318,12 +318,17 @@ export default function AllAccountsTable() {
             )}
           </span>
           {/* **واسمُ متجره بسطرٍ ثانٍ في الوسط** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — لصاحب المتجر وحدَه. */}
-          {u.store_names && u.store_names.length > 0 && (
-            <span className="flex items-center justify-center gap-1.5 truncate text-sm font-medium text-ink-muted">
-              <IconStore size={14} />
-              {u.store_names.join(" · ")}
-            </span>
-          )}
+          {/* **وسطرُه محجوزٌ ولو فارغاً** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — فيبقى الرصيدُ والأزرارُ على مستوًى
+              واحدٍ في كلّ البطاقات؛ الفراغُ مكانُ المتجر لا تحته. */}
+          <span
+            aria-hidden={!(u.store_names && u.store_names.length > 0)}
+            className={`flex h-5 items-center justify-center gap-1.5 truncate text-sm font-medium text-ink-muted ${
+              u.store_names && u.store_names.length > 0 ? "" : "invisible"
+            }`}
+          >
+            <IconStore size={14} />
+            {u.store_names && u.store_names.length > 0 ? u.store_names.join(" · ") : "—"}
+          </span>
         </span>
       ),
     },
