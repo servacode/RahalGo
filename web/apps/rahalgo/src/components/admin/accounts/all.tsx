@@ -600,29 +600,29 @@ export default function AllAccountsTable() {
             ? (u) =>
                 u.is_system ? null : (
                   <>
-                    {/* **أيقوناتٌ بلا كلمات، بصفٍّ واحد** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — `!min-w-0` يلغي حدَّ
+                    {/* **أيقوناتٌ عاريةٌ بلا مربّعات، بصفٍّ واحد** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — شفّافةٌ بلون فعلها — `!min-w-0` يلغي حدَّ
                         عرض أزرار البطاقة (٦٫٥rem) الذي كان يُنزلها سطرين؛ والاسمُ في التلميح ولقارئ الشاشة.
                         **والمحفظةُ بقدرة المال وحدَها** — كانت مربوطةً بالإيقاف أيضاً فلا تراها الماليّة. */}
                     {canWallet && (
                       <Button
-                        variant="secondary"
+                        variant="ghost"
                         onClick={() => setWalletUser(u)}
                         title={m.admin.users.wallet}
                         aria-label={m.admin.users.wallet}
-                        className="!min-w-0 !px-3"
+                        className="!min-w-0 !px-3 rounded-full text-ink-muted hover:text-ink"
                       >
-                        <IconWallet size={18} />
+                        <IconWallet size={20} />
                       </Button>
                     )}
                     {canReset && u.id !== me?.id && (
                       <Button
-                        variant="secondary"
+                        variant="ghost"
                         onClick={() => openReset(u)}
                         title={m.admin.users.profile.passwordBtn}
                         aria-label={m.admin.users.profile.passwordBtn}
-                        className="!min-w-0 !px-3"
+                        className="!min-w-0 !px-3 rounded-full text-ink-muted hover:text-ink"
                       >
-                        <IconLock size={18} />
+                        <IconLock size={20} />
                       </Button>
                     )}
                     {canStatus &&
@@ -630,33 +630,33 @@ export default function AllAccountsTable() {
                       (u.status === "active" ? (
                         <>
                           <Button
-                            variant="secondary"
+                            variant="ghost"
                             onClick={() => setStatusModal({ users: [u], status: "suspended" })}
                             title={m.admin.users.suspend}
                             aria-label={m.admin.users.suspend}
-                            className="!min-w-0 !px-3 !text-warning"
+                            className="!min-w-0 !px-3 rounded-full !text-warning"
                           >
-                            <IconHourglass size={18} />
+                            <IconHourglass size={20} />
                           </Button>
                           <Button
-                            variant="danger"
+                            variant="ghost"
                             onClick={() => setStatusModal({ users: [u], status: "blocked" })}
                             title={m.admin.users.block}
                             aria-label={m.admin.users.block}
-                            className="!min-w-0 !px-3"
+                            className="!min-w-0 !px-3 rounded-full !text-danger"
                           >
-                            <IconBlock size={18} />
+                            <IconBlock size={20} />
                           </Button>
                         </>
                       ) : (
                         <Button
-                          variant="secondary"
+                          variant="ghost"
                           onClick={() => setActivateRows([u])}
                           title={m.admin.users.activate}
                           aria-label={m.admin.users.activate}
-                          className="!min-w-0 !px-3 !text-success"
+                          className="!min-w-0 !px-3 rounded-full !text-success"
                         >
-                          <IconUnblock size={18} />
+                          <IconUnblock size={20} />
                         </Button>
                       ))}
                   </>
