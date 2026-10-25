@@ -19,7 +19,15 @@
 
 import { useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { PageContainer, PageHeader, StatCard, IconStore } from "@rahalgo/ui";
+import {
+  PageContainer,
+  IconStore,
+  IconGrid,
+  IconList,
+  IconOrder,
+  IconSettings,
+  IconShieldCheck,
+} from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import SectionsTab from "@/components/admin/market/SectionsTab";
 import ItemsTab from "@/components/admin/market/ItemsTab";
@@ -79,29 +87,58 @@ export default function MarketPage() {
 
   return (
     <PageContainer>
-      <PageHeader icon={IconStore} title={S.title} subtitle={S.hint} />
-      {/* **سطرٌ واحدٌ صغير** (طلبُ المالك ٢٠٢٦-١٠-٢٢) — ستّةٌ على الشاشة العريضة، وثلاثةٌ على الجوّال. */}
-      <div className="mb-4 grid grid-cols-3 gap-2 lg:grid-cols-6">
+      {/* **رأسٌ واحدٌ مرتّب** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «تصميم احترافي»): العنوانُ بأيقونته، وتحته
+          التبويباتُ بسطرٍ واحد — أيقونةٌ واسمٌ وعدٌّ — **والناقصُ يُلوَّن تنبيهاً**. */}
+      <section className="surface mb-4 overflow-hidden">
+        <div className="flex items-center gap-3 p-4">
+          <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-on-bright">
+            <IconStore size={22} />
+          </span>
+          <div className="min-w-0">
+            <h1 className="heading-page">{S.title}</h1>
+            <p className="truncate text-xs text-ink-muted">{S.hint}</p>
+          </div>
+        </div>
+        <nav className="flex gap-1 overflow-x-auto border-t border-line-soft px-2" role="tablist">
           {(
             [
-              ["sections", T.sections],
-              ["items", T.items],
-              ["stores", T.stores],
-              ["categories", T.categories],
-              ["setup", T.setup],
-              ["quality", T.quality],
+              ["sections", T.sections, IconGrid],
+              ["items", T.items, IconOrder],
+              ["stores", T.stores, IconStore],
+              ["categories", T.categories, IconList],
+              ["setup", T.setup, IconSettings],
+              ["quality", T.quality, IconShieldCheck],
             ] as const
-          ).map(([key, label]) => (
-            <StatCard
-              key={key}
-              label={label}
-              value={counts[key] ?? "…"}
-              tone={(key === "setup" || key === "quality") && (counts[key] ?? 0) > 0 ? "warning" : "default"}
-              selected={tab === key}
-              onClick={() => setTab(key)}
-            />
-          ))}
-      </div>
+          ).map(([key, label, Icon]) => {
+            const on = tab === key;
+            const n = counts[key];
+            const warn = (key === "setup" || key === "quality") && (n ?? 0) > 0;
+            return (
+              <button
+                key={key}
+                type="button"
+                role="tab"
+                aria-selected={on}
+                onClick={() => setTab(key)}
+                className={`relative inline-flex shrink-0 items-center gap-2 px-3 py-3 text-sm font-bold transition-colors ${
+                  on ? "text-ink" : "text-ink-muted hover:text-ink"
+                }`}
+              >
+                <Icon size={17} />
+                {label}
+                <span
+                  className={`min-w-[1.5rem] rounded-full px-1.5 py-0.5 text-center text-2xs tabular-nums ${
+                    warn ? "bg-warning-solid text-on-solid" : on ? "bg-accent text-on-bright" : "bg-field text-ink-muted"
+                  }`}
+                >
+                  {n ?? "…"}
+                </span>
+                {on && <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-accent" />}
+              </button>
+            );
+          })}
+        </nav>
+      </section>
       {tab === "sections" && <SectionsTab />}
       {tab === "items" && <ItemsTab />}
       {tab === "stores" && <StoresTab />}
