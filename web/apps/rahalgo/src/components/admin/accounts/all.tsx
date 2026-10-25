@@ -357,7 +357,7 @@ export default function AllAccountsTable() {
       { key: "sales", label: A.addRep, icon: IconUsers, onSelect: () => setCreateKind("sales") },
     );
   }
-  if (canCreateStore) addItems.push({ key: "store", label: A.addStore, icon: IconStore, onSelect: () => setStoreOpen(true) });
+  // **ولا «متجر جديد» هنا** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — المتاجرُ تُضاف وتُدار من السوق (تبويبُ المتاجر).
   if (canCreateUser && canGrant) addItems.push({ key: "staff", label: A.addStaff, icon: IconRoles, onSelect: () => setCreateKind("staff") });
 
   const cards = [

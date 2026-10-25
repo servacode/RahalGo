@@ -6240,7 +6240,9 @@
         "makeFeatured": "متجر مميّز",
         "unfeature": "شيل التمييز",
         "open": "صفحة المتجر",
-        "empty": "لا متاجر"
+        "empty": "لا متاجر",
+        "addStore": "متجر جديد",
+        "control": "تحكّم"
       },
       "quality": {
         "noImageTitle": "أصناف بلا صورة",

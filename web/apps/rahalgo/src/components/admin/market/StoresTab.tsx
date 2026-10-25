@@ -34,6 +34,9 @@ import {
   IconStore,
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
+import { useCanCall } from "@/lib/policy";
+import { StoreActions } from "@/components/admin/StoreActions";
+import { MerchantModal, type Merchant } from "@/components/admin/MerchantModal";
 
 const m = getMessages(defaultLocale);
 const T = m.admin.market.stores;
@@ -62,6 +65,10 @@ export default function StoresTab() {
   const query = new URLSearchParams({ q, page: String(page) }).toString();
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
+  // **والمتجرُ يُدار من السوق** (قرارُ المالك ٢٠٢٦-١٠-٢٥: «التحكّم بالمتاجر من السوق أسهل من الحسابات —
+  // هنيك صار أصحاب المتاجر بس»): إضافةٌ من هنا، وأفعالُ كلِّ متجرٍ تحت بطاقته.
+  const canCreate = useCanCall()("POST", "/merchants");
+  const [creating, setCreating] = useState(false);
   const { data, reload } = useLiveData<{
     stores: MarketStore[];
     total: number;
@@ -90,14 +97,34 @@ export default function StoresTab() {
 
   return (
     <div className="space-y-3">
-      <Input
-        placeholder={T.search}
-        value={q}
-        onChange={(e) => {
-          setQ(e.target.value);
-          setPage(1);
-        }}
-      />
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <Input
+            placeholder={T.search}
+            value={q}
+            onChange={(e) => {
+              setQ(e.target.value);
+              setPage(1);
+            }}
+          />
+        </div>
+        {canCreate && (
+          <Button onClick={() => setCreating(true)} className="flex shrink-0 items-center gap-1.5">
+            <IconStore size={16} />
+            {T.addStore}
+          </Button>
+        )}
+      </div>
+      {creating && (
+        <MerchantModal
+          merchant={null}
+          onClose={() => setCreating(false)}
+          onSaved={() => {
+            setCreating(false);
+            reload();
+          }}
+        />
+      )}
       {error && <Alert tone="error">{error}</Alert>}
       {!data ? (
         <LoadingState />
@@ -108,8 +135,9 @@ export default function StoresTab() {
           {data.stores.map((s) => (
             <div
               key={s.id}
-              className="surface flex items-center gap-3 p-3 transition-shadow hover:elev-2"
+              className="surface flex flex-col gap-3 p-3 transition-shadow hover:elev-2"
             >
+              <div className="flex items-center gap-3">
               <Link
                 href={`/dashboard/merchants/${s.id}`}
                 className="flex min-w-0 flex-1 items-center gap-3"
@@ -171,14 +199,18 @@ export default function StoresTab() {
                   </div>
                 </div>
               </Link>
-              <Button
-                variant={s.featured ? "secondary" : "primary"}
-                disabled={busy === s.id}
-                onClick={() => toggleFeatured(s)}
-                className="shrink-0"
-              >
-                {s.featured ? T.unfeature : T.makeFeatured}
-              </Button>
+              </div>
+              <div className="flex flex-wrap items-center gap-2 border-t border-line-soft pt-3">
+                <Button
+                  variant={s.featured ? "secondary" : "primary"}
+                  disabled={busy === s.id}
+                  onClick={() => toggleFeatured(s)}
+                  className="shrink-0"
+                >
+                  {s.featured ? T.unfeature : T.makeFeatured}
+                </Button>
+                <StoreControl id={s.id} onChanged={reload} />
+              </div>
             </div>
           ))}
         </div>
@@ -192,5 +224,46 @@ export default function StoresTab() {
         />
       )}
     </div>
+  );
+}
+
+/**
+ * **أفعالُ المتجر تحت بطاقته في السوق** — تُجلب بيانات المتجر الكاملة عند الطلب وحدَه (لا مع كلّ
+ * بطاقة)، ثمّ تُرسم `StoreActions` نفسُها التي كانت في الحسابات: التعديل والدوام والفتحُ والإغلاق
+ * والمخالفاتُ والحظر.
+ */
+function StoreControl({ id, onChanged }: { id: string; onChanged: () => void }) {
+  const [store, setStore] = useState<Merchant | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const load = async () => {
+    setBusy(true);
+    try {
+      setStore(await api<Merchant>(`/api/v1/admin/merchants/${id}`));
+      setErr("");
+    } catch (e) {
+      setErr(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  if (store) {
+    return (
+      <StoreActions
+        store={store}
+        onChanged={() => {
+          onChanged();
+          void load();
+        }}
+      />
+    );
+  }
+  return (
+    <>
+      <Button variant="secondary" disabled={busy} onClick={() => void load()}>
+        {T.control}
+      </Button>
+      {err && <span className="text-xs text-danger">{err}</span>}
+    </>
   );
 }
