@@ -20,13 +20,14 @@ import { FormActions } from "./FormActions";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { Money } from "./money";
 import { getMessages, defaultLocale, fmtNum, errorText } from "@rahalgo/i18n";
-import { Button, Input, Select, Badge, Modal } from "./components";
+import { Button, Input, Select, Badge, Modal, Checkbox } from "./components";
 import { Confirm, Alert } from "./feedback";
 import { EmptyState } from "./layout";
 import { IconAdd, IconEdit, IconDelete, IconStore, IconPrev } from "./icons";
 
 const m = getMessages(defaultLocale);
 const L = m.shared.menuEditor;
+const IT = m.store.item;
 
 /** **حدُّ اسم الصنف** — مثلُ `catalog.item_name_max` في المحرّك (٢٠٢٦-١٠-١٤). */
 const ITEM_NAME_MAX = 30;
@@ -47,6 +48,27 @@ export interface ModifierGroup {
   max_select: number;
   options: ModifierOption[];
 }
+/**
+ * **مجموعاتٌ جاهزةٌ بمربّع صح — كتطبيق المتجر حرفاً** (قرارُ المالك ٢٠٢٦-١٠-١٩، واللوحةُ ٢٠٢٦-١٠-٢٦:
+ * «المجموعات بتطبيق المتجر نفسهن لازم يكونو باللوحة»). الحجمُ والوزنُ خيارٌ واحدٌ إلزاميّ، والإضافاتُ
+ * اختياريّةٌ بلا حدّ، **وتُعرف المجموعةُ باسمها** كما في `ItemEditor.kt`. والمشروباتُ من قائمتها.
+ */
+type Preset = "size" | "weight" | "extras";
+function presetOf(g: ModifierGroup): Preset {
+  const IT = getMessages(defaultLocale).store.item;
+  const n = g.name.trim();
+  if (n === IT.presetSize) return "size";
+  if (n === IT.presetWeight) return "weight";
+  return "extras";
+}
+function presetGroup(p: Preset): ModifierGroup {
+  const IT = getMessages(defaultLocale).store.item;
+  const opt = (name: string): ModifierOption => ({ name, price_delta: 0 });
+  if (p === "size") return { name: IT.presetSize, min_select: 1, max_select: 1, options: [opt(IT.optNormal), opt(IT.optDouble)] };
+  if (p === "weight") return { name: IT.presetWeight, min_select: 1, max_select: 1, options: [opt(IT.optHalfKg), opt(IT.optKg)] };
+  return { name: IT.extrasName, min_select: 0, max_select: 99, options: [] };
+}
+
 export interface MenuItem {
   id: string;
   section_id: string;
@@ -667,19 +689,23 @@ export function ItemModal({
         {imageUpload?.(item?.image_thumb_url, setImageID)}
 
         <div>
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-sm font-medium">{L.modifiers}</span>
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={() =>
-                setGroups((gs) => [...gs, { name: "", min_select: 0, max_select: 1, options: [] }])
-              }
-              className="flex items-center gap-1"
-            >
-              <IconAdd size={14} />
-              {L.addGroup}
-            </Button>
+          <span className="mb-1 block text-sm font-medium">{L.modifiers}</span>
+          <p className="mb-2 text-xs text-ink-muted">{IT.modHint}</p>
+          {/* **مربّعُ صحٍّ لكلّ مجموعةٍ جاهزة** — يفتحها بخياراتها أو يشيلها، كتطبيق المتجر. */}
+          <div className="mb-3 flex flex-wrap gap-4">
+            {(["size", "weight", "extras"] as const).map((p) => (
+              <Checkbox
+                key={p}
+                id={`preset-${p}`}
+                checked={groups.some((g) => presetOf(g) === p)}
+                onChange={(e) =>
+                  setGroups((gs) =>
+                    e.target.checked ? [...gs, presetGroup(p)] : gs.filter((g) => presetOf(g) !== p),
+                  )
+                }
+                label={p === "size" ? IT.presetSize : p === "weight" ? IT.presetWeight : IT.presetExtras}
+              />
+            ))}
           </div>
 
           <div className="space-y-3">
@@ -687,46 +713,31 @@ export function ItemModal({
               <div key={gi} className="rounded-control border border-line bg-field p-3">
                 <div className="mb-2 flex items-end gap-2">
                   <div className="flex-1">
-                    <Input
-                      id={`g-name-${gi}`}
-                      label={L.groupName}
-                      required
-                      value={g.name}
-                      onChange={(e) => updateGroup(gi, { name: e.target.value })}
-                    />
-                  </div>
-                  <div className="w-20">
-                    <Input
-                      id={`g-min-${gi}`}
-                      label={L.minSelect}
-                      type="number"
-                      min="0"
-                      value={g.min_select}
-                      onChange={(e) => updateGroup(gi, { min_select: Number(e.target.value) })}
-                    />
-                  </div>
-                  <div className="w-20">
-                    <Input
-                      id={`g-max-${gi}`}
-                      label={L.maxSelect}
-                      type="number"
-                      min="1"
-                      value={g.max_select}
-                      onChange={(e) => updateGroup(gi, { max_select: Number(e.target.value) })}
-                    />
+                    {presetOf(g) === "extras" ? (
+                      <Input
+                        id={`g-name-${gi}`}
+                        label={L.groupName}
+                        required
+                        value={g.name}
+                        onChange={(e) => updateGroup(gi, { name: e.target.value })}
+                      />
+                    ) : (
+                      <h4 className="font-bold">{g.name}</h4>
+                    )}
                   </div>
                   <Button
                     type="button"
                     variant="ghost"
+                    title={m.common.delete}
+                    aria-label={m.common.delete}
                     onClick={() => setGroups((gs) => gs.filter((_, i) => i !== gi))}
+                    className="!h-9 !w-9 inline-flex items-center justify-center !min-h-0 !min-w-0 !p-0 rounded-full"
                   >
                     <IconDelete size={15} className="text-danger" />
                   </Button>
                 </div>
                 {/* «إلزامية» تُشتق من الحدّ الأدنى لا تُكتب: رقمٌ واحد لا حقلان يتناقضان */}
-                <Badge variant={g.min_select > 0 ? "warning" : "neutral"}>
-                  {g.min_select > 0 ? L.required : L.optional}
-                </Badge>
+                <p className="text-xs text-ink-muted">{g.min_select > 0 ? IT.sizeRule : IT.extrasRule}</p>
 
                 <div className="mt-2 space-y-2">
                   {g.options.map((o, oi) => (
