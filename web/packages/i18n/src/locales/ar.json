@@ -1968,7 +1968,8 @@
       "partnerCommissionAmount": "عمولة المنصة",
       "partnerCommissionOf": "(من ثمن البضاعة {goods})",
       "partnerCommissionLater": "العمولة بتنحسب لما يتوثّق ثمن البضاعة",
-      "partnerNoCommission": "بدون عمولة على هالمتجر"
+      "partnerNoCommission": "بدون عمولة على هالمتجر",
+      "transferSearch": "ابحث باسم المتجر أو رقمه…"
     },
     "customers": {
       "title": "الزبائن",

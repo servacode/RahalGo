@@ -35,6 +35,7 @@ import {
   Alert,
   Button,
   Input,
+  IconSearch,
   Select,
   Modal,
   Badge,
@@ -83,7 +84,7 @@ export function TransferPanel(props: {
   onClose: () => void;
 }) {
   return (
-    <Modal open onClose={props.onClose} title={m.admin.ordersPage.transferTitle}>
+    <Modal open onClose={props.onClose} title={m.admin.ordersPage.transferTitle} size="lg">
       <TransferBody {...props} />
     </Modal>
   );
@@ -107,6 +108,8 @@ function TransferBody({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [unmatched, setUnmatched] = useState<string[]>([]);
+  /** **بحثٌ بالاسم أو الرقم** (المالك ٢٠٢٦-١٠-٢٥: «لازم النافذة أكبر وفي مربّع بحث»). */
+  const [q, setQ] = useState("");
 
   useEffect(() => {
     let live = true;
@@ -268,8 +271,22 @@ function TransferBody({
         <p className="text-xs text-ink-muted">{t.transferNoStores}</p>
       )}
       {data && data.stores.length > 0 && (
-        <div className="flex max-h-72 flex-col gap-1.5 overflow-y-auto">
-          {data.stores.map((s) => (
+        <Input
+          id="transfer-search"
+          icon={<IconSearch />}
+          placeholder={t.transferSearch}
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+        />
+      )}
+      {data && data.stores.length > 0 && (
+        <div className="flex max-h-[60vh] flex-col gap-1.5 overflow-y-auto">
+          {data.stores
+            .filter((s) => {
+              const n = q.trim().toLowerCase();
+              return !n || s.name.toLowerCase().includes(n) || String(s.number).includes(n);
+            })
+            .map((s) => (
             <Button
               key={s.merchant_id}
               variant="secondary"
