@@ -1596,7 +1596,8 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         ].filter(Boolean);
         return (
           <span className="flex flex-col gap-0.5">
-            <span className="line-clamp-2">{o.address_text || "—"}</span>
+            {/* **العنوانُ كاملاً** (المالك ٢٠٢٦-١٠-٢٥: «العنوان ناقص») — كان يُقصّ على سطرين. */}
+            <span className="whitespace-pre-line break-words">{o.address_text || "—"}</span>
             {parts.length > 0 && <span className="text-xs text-ink-muted">{parts.join(" · ")}</span>}
           </span>
         );
