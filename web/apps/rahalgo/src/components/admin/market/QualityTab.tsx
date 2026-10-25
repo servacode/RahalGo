@@ -2,30 +2,37 @@
 
 /**
  * **تبويبُ جودة البيانات** — أصنافٌ بلا صورة · متاجرُ بلا دوام · البياناتُ
- * التجريبيّةُ وحذفُها. (قرارُ المالك ٢٠٢٦-١٠-٠٤.)
+ * التجريبيّةُ وحذفُها. (قرارُ المالك ٢٠٢٦-١٠-٠٤، وشكلُه ٢٠٢٦-١٠-٢٦: «تصميم احترافي».)
  *
  * **ولا حذفَ آليّاً أبداً**: يختار الموظّفُ ما يُحذف، **ثمّ تأكيدٌ يسرد كلَّ
  * ما سيُحذف بالاسم**، والمحرّكُ يعيد فحصَ كلِّ معرّفٍ قبل الحذف.
  * **ومتجرٌ عليه طلباتٌ لا يُحذف من هنا** — الطلبُ أثرُ مالٍ في الدفتر.
  */
 
-import { useState } from "react";
+import { useState, type ComponentType, type ReactNode } from "react";
 import Link from "next/link";
 import { getMessages, defaultLocale, fmtNum, fmtDateTime, errorText } from "@rahalgo/i18n";
 import {
-  Badge,
   Button,
-  Card,
   Checkbox,
   Confirm,
   LoadingState,
   useLiveData,
   useToast,
+  IconCamera,
+  IconHourglass,
+  IconWarning,
+  IconCheck,
+  IconStore,
+  IconOrder,
+  IconDelete,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
 const Q = m.admin.market.quality;
+
+type IconT = ComponentType<{ size?: number; className?: string }>;
 
 interface QItem {
   id: string;
@@ -54,6 +61,10 @@ interface Quality {
   limit: number;
 }
 
+const openBtn =
+  "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-muted hover:bg-row-hover hover:text-ink";
+const row = "flex items-center gap-3 rounded-card border border-line-soft p-2.5";
+
 export default function QualityTab() {
   const { data, reload } = useLiveData<Quality>(
     () => api("/api/v1/admin/market/quality"),
@@ -75,6 +86,7 @@ export default function QualityTab() {
   };
   const pickedStores = data.test_stores.filter((s) => stores.has(s.id));
   const pickedItems = data.test_items.filter((i) => items.has(i.id));
+  const picked = pickedStores.length + pickedItems.length;
 
   async function remove() {
     setBusy(true);
@@ -108,124 +120,174 @@ export default function QualityTab() {
   const showing = (n: number, all: number) =>
     all > n ? Q.showing.replace("{n}", fmtNum(n)).replace("{all}", fmtNum(all)) : "";
 
+  const testCount = data.test_stores.length + data.test_items_count;
+  const tiles: { label: string; n: number; Icon: IconT; href: string }[] = [
+    { label: Q.noImageTitle, n: data.items_without_image_count, Icon: IconCamera, href: "#q-img" },
+    { label: Q.noHoursTitle, n: data.stores_without_hours.length, Icon: IconHourglass, href: "#q-hours" },
+    { label: Q.testTitle, n: testCount, Icon: IconWarning, href: "#q-test" },
+  ];
+  const imgMore = showing(data.items_without_image.length, data.items_without_image_count);
+  const testMore = showing(data.test_items.length, data.test_items_count);
+
   return (
     <div className="space-y-4">
+      {/* **ملخّصٌ بثلاث بطاقات** — الأخضرُ نظيف، والبرتقاليُّ فيه شغل، والضغطُ ينزل لقسمه. */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        {tiles.map(({ label, n, Icon, href }) => (
+          <a key={href} href={href} className="surface flex items-center gap-3 p-4 transition-shadow hover:elev-2">
+            <span
+              className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-on-solid ${
+                n > 0 ? "bg-warning-solid" : "bg-success-solid"
+              }`}
+            >
+              {n > 0 ? <Icon size={20} /> : <IconCheck size={20} />}
+            </span>
+            <span className="min-w-0">
+              <span className="figure block leading-none">{fmtNum(n)}</span>
+              <span className="block truncate text-sm text-ink-muted">{label}</span>
+            </span>
+          </a>
+        ))}
+      </div>
+
       {/* ── أصنافٌ بلا صورة ── */}
-      <Card title={`${Q.noImageTitle} (${fmtNum(data.items_without_image_count)})`}>
-        <p className="mb-2 text-xs text-ink-muted">{Q.noImageHint}</p>
+      <Block id="q-img" Icon={IconCamera} title={Q.noImageTitle} n={data.items_without_image_count} hint={Q.noImageHint}>
         {data.items_without_image.length === 0 ? (
-          <p className="text-sm text-ink-muted">{Q.clean}</p>
+          <Clean />
         ) : (
-          <ul className="divide-y divide-line-soft text-sm">
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
             {data.items_without_image.map((it) => (
-              <li key={it.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
-                <span className="min-w-0 truncate">
-                  <b>{it.name}</b>
-                  <span className="text-ink-muted">
-                    {" · "}
-                    {it.merchant_name}
-                    {" · "}
-                    {it.section_name}
-                    {" · "}
-                    {fmtDateTime(it.created_at)}
-                  </span>
+              <div key={it.id} className={row}>
+                <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-control bg-field text-ink-muted">
+                  <IconCamera size={18} />
                 </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold">{it.name}</p>
+                  <p className="truncate text-xs text-ink-muted">
+                    {it.merchant_name} · {it.section_name}
+                  </p>
+                  <p className="text-2xs text-ink-muted">{fmtDateTime(it.created_at)}</p>
+                </div>
                 <Link
-                  className="text-xs text-primary hover:underline"
                   href={`/dashboard/merchants/${it.merchant_id}`}
+                  title={Q.openStore}
+                  aria-label={Q.openStore}
+                  className={openBtn}
                 >
-                  {Q.openStore}
+                  <IconStore size={17} />
                 </Link>
-              </li>
+              </div>
             ))}
-          </ul>
+          </div>
         )}
-        <p className="mt-2 text-xs text-ink-muted">
-          {showing(data.items_without_image.length, data.items_without_image_count)}
-        </p>
-      </Card>
+        {imgMore && <p className="text-xs text-ink-muted">{imgMore}</p>}
+      </Block>
 
       {/* ── متاجرُ بلا دوام ── */}
-      <Card title={`${Q.noHoursTitle} (${fmtNum(data.stores_without_hours.length)})`}>
-        <p className="mb-2 text-xs text-ink-muted">{Q.noHoursHint}</p>
+      <Block
+        id="q-hours"
+        Icon={IconHourglass}
+        title={Q.noHoursTitle}
+        n={data.stores_without_hours.length}
+        hint={Q.noHoursHint}
+      >
         {data.stores_without_hours.length === 0 ? (
-          <p className="text-sm text-ink-muted">{Q.clean}</p>
+          <Clean />
         ) : (
-          <ul className="divide-y divide-line-soft text-sm">
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-2 xl:grid-cols-3">
             {data.stores_without_hours.map((s) => (
-              <li key={s.id} className="flex items-center justify-between gap-2 py-2">
-                <span className="truncate font-bold">{s.name}</span>
-                <Link
-                  className="text-xs text-primary hover:underline"
-                  href={`/dashboard/merchants/${s.id}`}
-                >
-                  {Q.openStore}
+              <div key={s.id} className={row}>
+                <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-field text-ink-muted">
+                  <IconStore size={17} />
+                </span>
+                <span className="min-w-0 flex-1 truncate text-sm font-bold">{s.name}</span>
+                <Link href={`/dashboard/merchants/${s.id}`} title={Q.openStore} aria-label={Q.openStore} className={openBtn}>
+                  <IconHourglass size={17} />
                 </Link>
-              </li>
+              </div>
             ))}
-          </ul>
+          </div>
         )}
-      </Card>
+      </Block>
 
       {/* ── البياناتُ التجريبيّة ── */}
-      <Card title={Q.testTitle}>
-        <p className="mb-3 text-xs text-ink-muted">{Q.testHint}</p>
-
-        <p className="mb-1 text-sm font-bold">{Q.testStores}</p>
-        {data.test_stores.length === 0 ? (
-          <p className="mb-3 text-sm text-ink-muted">{Q.clean}</p>
-        ) : (
-          <ul className="mb-3 divide-y divide-line-soft text-sm">
-            {data.test_stores.map((s) => (
-              <li key={s.id} className="flex flex-wrap items-center gap-2 py-2">
-                <Checkbox
-                  id={`tq-s-${s.id}`}
-                  label={s.name}
-                  disabled={s.orders > 0}
-                  checked={stores.has(s.id)}
-                  onChange={() => setStores(flip(stores, s.id))}
-                />
-                <span className="text-xs text-ink-muted">
-                  {Q.storeLine.replace("{n}", fmtNum(s.items)).replace("{o}", fmtNum(s.orders))}
-                </span>
-                {s.orders > 0 && <Badge variant="warning">{Q.hasOrders}</Badge>}
-              </li>
-            ))}
-          </ul>
-        )}
-
-        <p className="mb-1 text-sm font-bold">{Q.testItems}</p>
-        {data.test_items.length === 0 ? (
-          <p className="text-sm text-ink-muted">{Q.clean}</p>
-        ) : (
-          <ul className="divide-y divide-line-soft text-sm">
-            {data.test_items.map((it) => (
-              <li key={it.id} className="flex flex-wrap items-center gap-2 py-2">
-                <Checkbox
-                  id={`tq-i-${it.id}`}
-                  label={it.name}
-                  checked={items.has(it.id)}
-                  onChange={() => setItems(flip(items, it.id))}
-                />
-                <span className="text-xs text-ink-muted">{it.merchant_name}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-        <p className="mt-2 text-xs text-ink-muted">
-          {showing(data.test_items.length, data.test_items_count)}
-        </p>
-
-        <div className="mt-3 flex justify-end">
+      <Block
+        id="q-test"
+        Icon={IconWarning}
+        title={Q.testTitle}
+        n={testCount}
+        hint={Q.testHint}
+        action={
           <Button
             variant="danger"
-            disabled={pickedStores.length + pickedItems.length === 0}
+            disabled={picked === 0}
             onClick={() => setConfirming(true)}
+            className="inline-flex items-center gap-1.5"
           >
+            <IconDelete size={15} />
             {Q.deleteSelected}
+            {picked > 0 && ` (${fmtNum(picked)})`}
           </Button>
+        }
+      >
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div>
+            <p className="mb-2 flex items-center gap-1.5 text-sm font-bold">
+              <IconStore size={15} className="text-ink-muted" />
+              {Q.testStores}
+            </p>
+            {data.test_stores.length === 0 ? (
+              <Clean />
+            ) : (
+              <div className="space-y-2">
+                {data.test_stores.map((s) => (
+                  <div key={s.id} className={`${row} flex-wrap`}>
+                    <Checkbox
+                      id={`tq-s-${s.id}`}
+                      label={<b>{s.name}</b>}
+                      disabled={s.orders > 0}
+                      checked={stores.has(s.id)}
+                      onChange={() => setStores(flip(stores, s.id))}
+                    />
+                    <span className="text-xs text-ink-muted">
+                      {Q.storeLine.replace("{n}", fmtNum(s.items)).replace("{o}", fmtNum(s.orders))}
+                    </span>
+                    {s.orders > 0 && (
+                      <span className="ms-auto rounded-full bg-warning-solid px-2 py-0.5 text-2xs font-bold text-on-solid">
+                        {Q.hasOrders}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          <div>
+            <p className="mb-2 flex items-center gap-1.5 text-sm font-bold">
+              <IconOrder size={15} className="text-ink-muted" />
+              {Q.testItems}
+            </p>
+            {data.test_items.length === 0 ? (
+              <Clean />
+            ) : (
+              <div className="space-y-2">
+                {data.test_items.map((it) => (
+                  <div key={it.id} className={`${row} flex-wrap`}>
+                    <Checkbox
+                      id={`tq-i-${it.id}`}
+                      label={<b>{it.name}</b>}
+                      checked={items.has(it.id)}
+                      onChange={() => setItems(flip(items, it.id))}
+                    />
+                    <span className="text-xs text-ink-muted">{it.merchant_name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {testMore && <p className="mt-2 text-xs text-ink-muted">{testMore}</p>}
+          </div>
         </div>
-      </Card>
+      </Block>
 
       {/* **التأكيدُ يسرد ما سيُحذف بالاسم** — وعمومُ الكلام يجعل الضغطَ عادة. */}
       <Confirm
@@ -271,5 +333,58 @@ export default function QualityTab() {
       />
       <Toaster />
     </div>
+  );
+}
+
+/** **قسمٌ من الجودة** — رأسٌ بأيقونةٍ ملوّنةٍ وعدّ، وشرحٌ قصير، ثمّ المحتوى. */
+function Block({
+  id,
+  Icon,
+  title,
+  n,
+  hint,
+  action,
+  children,
+}: {
+  id: string;
+  Icon: IconT;
+  title: string;
+  n: number;
+  hint: string;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section id={id} className="surface scroll-mt-4 space-y-3 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-3">
+          <span
+            className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-on-solid ${
+              n > 0 ? "bg-warning-solid" : "bg-success-solid"
+            }`}
+          >
+            <Icon size={18} />
+          </span>
+          <div className="min-w-0">
+            <h3 className="heading-card flex items-center gap-2">
+              {title}
+              <span className="rounded-full bg-field px-2 py-0.5 text-xs tabular-nums text-ink-muted">{fmtNum(n)}</span>
+            </h3>
+            <p className="text-xs text-ink-muted">{hint}</p>
+          </div>
+        </div>
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Clean() {
+  return (
+    <p className="flex items-center gap-1.5 text-sm font-bold text-success">
+      <IconCheck size={16} />
+      {Q.clean}
+    </p>
   );
 }
