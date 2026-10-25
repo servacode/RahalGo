@@ -274,7 +274,19 @@ export default function AllAccountsTable() {
       primary: true,
       cell: (u) => (
         <span className="flex w-full flex-col gap-3">
-          <span className="flex items-center justify-between gap-2">
+          {/* **مربّعُ التحديد يميناً قبل الدور، ولا عينَ** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — الكبسةُ على
+              البطاقة تفتح الملفَّ أصلاً. */}
+          <span className="flex items-center gap-2">
+            {selectable && !u.is_system && u.id !== me?.id && (
+              <span onClick={(e) => e.stopPropagation()}>
+                <Checkbox
+                  id={`sel-${u.id}`}
+                  label={<span className="sr-only">{A.selectRow}</span>}
+                  checked={selected.has(u.id)}
+                  onChange={() => toggle(u.id)}
+                />
+              </span>
+            )}
             <span className="flex flex-wrap gap-1">
               {u.roles.map((r) => (
                 <RoleBadge key={r} role={r} />
@@ -283,29 +295,6 @@ export default function AllAccountsTable() {
               {u.status === "suspended" && <Badge variant="warning">{m.admin.users.suspended}</Badge>}
               {u.status === "blocked" && <Badge variant="danger">{m.admin.users.blocked}</Badge>}
               {u.is_system ? <Badge variant="neutral">{m.admin.users.systemAccount}</Badge> : null}
-            </span>
-            <span className="flex shrink-0 items-center gap-1">
-              <button
-                type="button"
-                title={m.admin.users.viewProfile}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  router.push(`/dashboard/users/${u.id}`);
-                }}
-                className="rounded-control p-1 text-ink-muted transition-colors hover:bg-primary-tint hover:text-primary"
-              >
-                <IconView size={17} />
-              </button>
-              {selectable && !u.is_system && u.id !== me?.id && (
-                <span onClick={(e) => e.stopPropagation()}>
-                  <Checkbox
-                    id={`sel-${u.id}`}
-                    label={<span className="sr-only">{A.selectRow}</span>}
-                    checked={selected.has(u.id)}
-                    onChange={() => toggle(u.id)}
-                  />
-                </span>
-              )}
             </span>
           </span>
           <span className="flex justify-center">
