@@ -64,6 +64,21 @@ export function HoursModal({
       .catch((err) => setError(errorText(err)));
   }, [merchant.id]);
 
+  // **دوامٌ واحدٌ لكلّ الأيام، أو ٢٤ ساعة للكلّ** (قرارُ المالك ٢٠٢٦-١٠-٢٥).
+  const [allOpen, setAllOpen] = useState("10:00");
+  const [allClose, setAllClose] = useState("23:00");
+  function applyAll(h24: boolean) {
+    setDays(
+      (ds) =>
+        ds &&
+        ds.map((d) =>
+          h24
+            ? { ...d, closed: false, open_24h: true, open_time: "00:00", close_time: "00:00" }
+            : { ...d, closed: false, open_24h: false, open_time: allOpen, close_time: allClose },
+        ),
+    );
+  }
+
   function updateDay(i: number, patch: Partial<DayHours>) {
     setDays((ds) => ds && ds.map((d, di) => (di === i ? { ...d, ...patch } : d)));
   }
@@ -93,7 +108,7 @@ export function HoursModal({
   }
 
   return (
-    <Modal open onClose={onClose} title={`${m.admin.hours.title}: ${merchant.name}`}>
+    <Modal open onClose={onClose} title={`${m.admin.hours.title}: ${merchant.name}`} size="lg">
       <Checkbox
         id="mr-hours-emergency"
         checked={emergency}
@@ -113,6 +128,30 @@ export function HoursModal({
         <LoadingState variant="inline" />
       ) : (
         <div className="space-y-2">
+          <div className="mb-3 flex flex-wrap items-center gap-2 rounded-control border border-primary-edge bg-primary-tint p-2.5 text-sm">
+            <span className="font-medium">{m.admin.hours.allDays}</span>
+            <input
+              type="time"
+              aria-label={m.admin.hours.allOpen}
+              value={allOpen}
+              onChange={(e) => setAllOpen(e.target.value)}
+              className="rounded-control border border-line px-2 py-1"
+            />
+            <IconPrev size={14} className="text-ink-muted" />
+            <input
+              type="time"
+              aria-label={m.admin.hours.allClose}
+              value={allClose}
+              onChange={(e) => setAllClose(e.target.value)}
+              className="rounded-control border border-line px-2 py-1"
+            />
+            <Button variant="secondary" onClick={() => applyAll(false)} disabled={!allOpen || !allClose}>
+              {m.admin.hours.applyAll}
+            </Button>
+            <Button variant="secondary" onClick={() => applyAll(true)}>
+              {m.admin.hours.all24}
+            </Button>
+          </div>
           {days.map((d, i) => (
             <div key={d.day_of_week} className="flex flex-wrap items-center gap-3 text-sm">
               <span className="w-16 shrink-0 font-medium">{m.admin.hours.days[i]}</span>

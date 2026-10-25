@@ -32,9 +32,12 @@ import {
   LoadingState,
   useLiveData,
   IconStore,
+  IconStar,
+  Modal,
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useCanCall } from "@/lib/policy";
+import ImageUpload from "@/components/admin/ImageUpload";
 import { StoreActions } from "@/components/admin/StoreActions";
 import { MerchantModal, type Merchant } from "@/components/admin/MerchantModal";
 
@@ -69,6 +72,16 @@ export default function StoresTab() {
   // هنيك صار أصحاب المتاجر بس»): إضافةٌ من هنا، وأفعالُ كلِّ متجرٍ تحت بطاقته.
   const canCreate = useCanCall()("POST", "/merchants");
   const [creating, setCreating] = useState(false);
+  const [logoFor, setLogoFor] = useState<MarketStore | null>(null);
+  async function saveLogo(id: string, mediaID: string) {
+    try {
+      await api(`/api/v1/admin/merchants/${id}`, { method: "PATCH", body: JSON.stringify({ logo_media_id: mediaID }) });
+      setLogoFor(null);
+      reload();
+    } catch (err) {
+      setError(errorText(err));
+    }
+  }
   const { data, reload } = useLiveData<{
     stores: MarketStore[];
     total: number;
@@ -115,6 +128,16 @@ export default function StoresTab() {
           </Button>
         )}
       </div>
+      {logoFor && (
+        <Modal open onClose={() => setLogoFor(null)} title={`${T.changeLogo}: ${logoFor.name}`}>
+          <ImageUpload
+            kind="merchant_logo"
+            label={T.changeLogo}
+            initialUrl={logoFor.logo_url}
+            onChange={(id) => void saveLogo(logoFor.id, id)}
+          />
+        </Modal>
+      )}
       {creating && (
         <MerchantModal
           merchant={null}
@@ -138,11 +161,14 @@ export default function StoresTab() {
               className="surface flex flex-col gap-3 p-3 transition-shadow hover:elev-2"
             >
               <div className="flex items-center gap-3">
-              <Link
-                href={`/dashboard/merchants/${s.id}`}
-                className="flex min-w-0 flex-1 items-center gap-3"
+              {/* **اللوغو يُبدَّل بضغطةٍ عليه** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — بلا فتح نافذة التعديل. */}
+              <button
+                type="button"
+                title={T.changeLogo}
+                aria-label={T.changeLogo}
+                onClick={() => setLogoFor(s)}
+                className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-field ring-1 ring-line hover:ring-primary"
               >
-                <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-control bg-field">
                   {s.logo_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -153,7 +179,11 @@ export default function StoresTab() {
                   ) : (
                     <IconStore size={20} />
                   )}
-                </div>
+              </button>
+              <Link
+                href={`/dashboard/merchants/${s.id}`}
+                className="flex min-w-0 flex-1 items-center gap-3"
+              >
                 <div className="min-w-0 flex-1 space-y-1">
                   <p className="truncate font-bold">
                     {s.name}{" "}
@@ -200,16 +230,21 @@ export default function StoresTab() {
                 </div>
               </Link>
               </div>
-              <div className="flex flex-wrap items-center gap-2 border-t border-line-soft pt-3">
+              {/* **أيقوناتٌ بلا كتابة** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — النجمةُ للتمييز، والباقي أفعالُ المتجر. */}
+              <div className="flex items-center gap-1 border-t border-line-soft pt-3">
                 <Button
-                  variant={s.featured ? "secondary" : "primary"}
+                  variant="ghost"
                   disabled={busy === s.id}
                   onClick={() => toggleFeatured(s)}
-                  className="shrink-0"
+                  title={s.featured ? T.unfeature : T.makeFeatured}
+                  aria-label={s.featured ? T.unfeature : T.makeFeatured}
+                  className={`!h-10 !w-10 !min-w-0 !p-0 shrink-0 rounded-full ${s.featured ? "!text-warning" : "text-ink-muted hover:text-ink"}`}
                 >
-                  {s.featured ? T.unfeature : T.makeFeatured}
+                  <IconStar size={19} className={s.featured ? "fill-current" : ""} />
                 </Button>
-                <StoreControl id={s.id} onChanged={reload} />
+                <div className="min-w-0 flex-1">
+                  <StoreControl id={s.id} onChanged={reload} />
+                </div>
               </div>
             </div>
           ))}
