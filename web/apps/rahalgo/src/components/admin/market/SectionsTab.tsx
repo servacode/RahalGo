@@ -20,7 +20,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, fmtNum, errorText } from "@rahalgo/i18n";
 import {
-  Badge,
   Button,
   Input,
   Modal,
@@ -33,9 +32,14 @@ import {
   IconCamera,
   FormActions,
   Confirm,
+  IconEdit,
+  IconDelete,
+  IconCheck,
+  IconBlock,
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import ImageUpload from "@/components/admin/ImageUpload";
+import StateBadge from "./StateBadge";
 
 /** **صورُ السوق من بابها** — بقدرة السوق لا المحتوى (قرارُ المالك ٢٠٢٦-١٠-٠٥). */
 const MARKET_MEDIA = "/api/v1/admin/market/media";
@@ -132,7 +136,9 @@ export default function SectionsTab() {
               onDragOver={(e) => e.preventDefault()}
               onDrop={() => void drop(sec.id)}
               onDragEnd={() => setDragID(null)}
-              className={`flex cursor-grab flex-col overflow-hidden surface transition-shadow hover:elev-2 ${
+              // **البطاقةُ كلُّها تفتح القسم** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — بلا زرّ «عرض القسم».
+              onClick={() => router.push(`/dashboard/sections/${sec.id}`)}
+              className={`flex cursor-pointer flex-col overflow-hidden surface transition-shadow hover:elev-2 ${
                 sec.active ? "" : "opacity-60"
               } ${dragID === sec.id ? "ring-2 ring-primary" : ""}`}
             >
@@ -149,7 +155,10 @@ export default function SectionsTab() {
                   />
                 ) : (
                   <button
-                    onClick={() => setEditing(sec)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditing(sec);
+                    }}
                     className="flex flex-col items-center gap-1 text-xs text-ink-muted hover:text-ink"
                   >
                     <IconCamera size={20} />
@@ -157,9 +166,7 @@ export default function SectionsTab() {
                   </button>
                 )}
                 <span className="absolute end-1.5 top-1.5">
-                  <Badge variant={sec.active ? "success" : "neutral"}>
-                    {sec.active ? S.available : S.unavailable}
-                  </Badge>
+                  <StateBadge label={sec.active ? S.available : S.unavailable} variant={sec.active ? "success" : "warning"} />
                 </span>
               </div>
 
@@ -171,24 +178,38 @@ export default function SectionsTab() {
                   </p>
                 </div>
 
-                <div className="flex flex-wrap gap-1.5 [&_button]:flex-1 [&_button]:!px-2 [&_button]:text-xs">
-                  <Button
-                    variant="secondary"
-                    onClick={() => router.push(`/dashboard/sections/${sec.id}`)}
-                  >
-                    {S.view}
-                  </Button>
-                  <Button variant="secondary" onClick={() => setEditing(sec)}>
-                    {m.common.edit}
-                  </Button>
-                  <Button
-                    variant={sec.active ? "ghost" : "primary"}
+                {/* **زرٌّ ذكيٌّ للتوفّر** يقول الحالَ بلونه ويقلبها بضغطة، **والتعديلُ والحذفُ أيقونات**. */}
+                <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={sec.active}
+                    title={sec.active ? S.makeUnavailable : S.makeAvailable}
                     onClick={() => void toggle(sec)}
+                    className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-on-solid transition-colors ${
+                      sec.active ? "bg-success-solid" : "bg-warning-solid"
+                    }`}
                   >
-                    {sec.active ? S.makeUnavailable : S.makeAvailable}
+                    {sec.active ? <IconCheck size={14} /> : <IconBlock size={14} />}
+                    {sec.active ? S.available : S.unavailable}
+                  </button>
+                  <Button
+                    variant="ghost"
+                    title={m.common.edit}
+                    aria-label={m.common.edit}
+                    onClick={() => setEditing(sec)}
+                    className="!h-9 !w-9 inline-flex items-center justify-center !min-h-0 !min-w-0 !p-0 rounded-full text-ink-muted hover:text-ink"
+                  >
+                    <IconEdit size={17} />
                   </Button>
-                  <Button variant="ghost" onClick={() => setDeleting(sec)}>
-                    {S.delete}
+                  <Button
+                    variant="ghost"
+                    title={S.delete}
+                    aria-label={S.delete}
+                    onClick={() => setDeleting(sec)}
+                    className="!h-9 !w-9 inline-flex items-center justify-center !min-h-0 !min-w-0 !p-0 rounded-full !text-danger"
+                  >
+                    <IconDelete size={17} />
                   </Button>
                 </div>
               </div>
