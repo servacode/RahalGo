@@ -69,6 +69,13 @@ const orderSelect = `
 	            WHERE du.id = o.driver_id
 	              AND du.last_location_at > now() - interval '15 minutes'),
 	           COALESCE(o.pickup_override, mr.location, ptn.location)), -1),
+	       -- **والنقطتان خاماً** — للمسافة على الطريق في اللوحة (٢٠٢٦-١٠-٢٥).
+	       ST_Y(COALESCE(o.pickup_override, mr.location, ptn.location)::geometry),
+	       ST_X(COALESCE(o.pickup_override, mr.location, ptn.location)::geometry),
+	       (SELECT ST_Y(du.last_location::geometry) FROM users du WHERE du.id = o.driver_id
+	          AND du.last_location_at > now() - interval '15 minutes'),
+	       (SELECT ST_X(du.last_location::geometry) FROM users du WHERE du.id = o.driver_id
+	          AND du.last_location_at > now() - interval '15 minutes'),
 	       -- **وبُعدُ السائق عن الزبون** — بعد الاستلام، أو حين لا نقطةَ استلامٍ معروفة (الخاصّ).
 	       COALESCE(ST_Distance(
 	           (SELECT du.last_location FROM users du
@@ -160,6 +167,7 @@ const orderSelect = `
 func scanOrder(row pgx.Row) (*Order, error) {
 	var o Order
 	var items []byte
+	var pkLat, pkLng, drLat, drLng *float64
 	err := row.Scan(&o.ID, &o.Number, &o.CustomerID, &o.CustomerPhone, &o.CustomerName,
 		&o.Kind, &o.CustomRequest, &o.CustomAgreedAt, &o.CustomGoodsAmount, &o.CustomFee,
 		&o.QuoteVersion, &o.QuoteConfirmedAt, &o.QuoteConfirmedTotal, &o.QuoteConfirmedVersion,
@@ -176,7 +184,7 @@ func scanOrder(row pgx.Row) (*Order, error) {
 		&o.ProofURL, &o.ProofTakenAt, &o.ProofMeters, &o.ProofSkipReason, &o.ProofMocked,
 		&o.EndedBy, &o.Fault, &o.FailReason, &o.ReturnedAt, &o.GoodsSettledTo,
 		&o.ToStoreETASec, &o.ToDoorETASec,
-		&o.LegM, &o.DriverToPickupM, &o.DriverToDropM,
+		&o.LegM, &o.DriverToPickupM, &pkLat, &pkLng, &drLat, &drLng, &o.DriverToDropM,
 		&o.AcceptsReturns,
 		&o.PrepMinutes, &o.ReadyAt, &o.AcceptedAt, &o.PickedUpAt, &o.DeliveredAt, &o.ClosedAt,
 		&o.MerchantLogoThumb, &o.ItemsCount, &o.ItemsPreview, &items,
@@ -190,6 +198,12 @@ func scanOrder(row pgx.Row) (*Order, error) {
 		return nil, err
 	}
 	// أصنافٌ لا تُفكّ لا تُسقط الطلب: البطاقة تعرض ما بقي وتُخفي القائمة وحدها.
+	if pkLat != nil && pkLng != nil {
+		o.PickupPt = &[2]float64{*pkLat, *pkLng}
+	}
+	if drLat != nil && drLng != nil {
+		o.DriverPt = &[2]float64{*drLat, *drLng}
+	}
 	_ = json.Unmarshal(items, &o.Items)
 	// **والنسبةُ الصحيحةُ للعرض القديم من الدقيقة** — لا تُقرأ مرّتين.
 	o.PartnerCommissionPercent = pricing.RoundedPtr(o.PartnerCommission)

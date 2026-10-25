@@ -456,6 +456,10 @@ type Order struct {
 	DriverToPickupM float64 `json:"driver_to_pickup_m"`
 	// DriverToDropM **كم بين السائق وباب الزبون الآن** — وسالبٌ لا يُعرف (المالك ٢٠٢٦-١٠-٢٥).
 	DriverToDropM float64 `json:"driver_to_drop_m"`
+	// PickupPt · DriverPt **إحداثيّاتُ الاستلام وآخرُ موضعٍ حديثٍ للسائق** — داخليّةٌ لا تُرسَل
+	// (`json:"-"`)؛ تقرؤها اللوحةُ لتحسب المسافاتِ **على الطريق** (المالك ٢٠٢٦-١٠-٢٥).
+	PickupPt *[2]float64 `json:"-"`
+	DriverPt *[2]float64 `json:"-"`
 	// AcceptsReturns أيستردّ كلُّ متاجر هذا الطلب بضاعتَهم؟
 	//
 	// **سياسةُ متجرٍ لا قاعدةُ منصة** — وعليها يظهر زرُّ «رُدّت للمتجر». وفي

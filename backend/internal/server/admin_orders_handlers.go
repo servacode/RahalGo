@@ -149,6 +149,8 @@ func (s *Server) handleListOrders(w http.ResponseWriter, r *http.Request) {
 	// **وما يحتاجه المكتبُ وحدَه** — سببُ العلوق والعرضُ الحيّ وسقفُ التعويض،
 	// **في رحلةٍ واحدةٍ للصفحة كلِّها.**
 	s.fillBoard(r, res.Orders)
+	// **والمسافاتُ على الطريق لا بالهواء** (المالك ٢٠٢٦-١٠-٢٥) — للطلبات الجارية وحدَها.
+	s.fillRoadDistances(r.Context(), res.Orders)
 	// **وتفاصيلُ الزبون لثلاثةٍ وحدَهم** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٣).
 	s.writeOrdersJSON(w, s.maskOrderDetails(r, res.Orders), res)
 }
