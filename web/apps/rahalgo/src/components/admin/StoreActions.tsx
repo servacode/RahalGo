@@ -145,7 +145,7 @@ export function StoreActions({
       onClick={onClick}
       title={label}
       aria-label={label}
-      className={`!h-10 !w-10 !min-w-0 !p-0 rounded-full ${tone || "text-ink-muted hover:text-ink"}`}
+      className={`!h-10 !w-10 inline-flex items-center justify-center !min-h-0 !min-w-0 !p-0 rounded-full ${tone || "text-ink-muted hover:text-ink"}`}
     >
       <Icon size={19} />
     </Button>

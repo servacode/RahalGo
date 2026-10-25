@@ -297,7 +297,7 @@ export default function ItemsTab() {
                           aria-label={I.edit}
                           disabled={opening === it.id}
                           onClick={() => void openEdit(it)}
-                          className="!h-9 !w-9 !min-w-0 !p-0 rounded-full text-ink-muted hover:text-ink"
+                          className="!h-9 !w-9 inline-flex items-center justify-center !min-h-0 !min-w-0 !p-0 rounded-full text-ink-muted hover:text-ink"
                         >
                           <IconEdit size={17} />
                         </Button>

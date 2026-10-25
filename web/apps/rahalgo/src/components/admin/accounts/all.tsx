@@ -617,7 +617,7 @@ export default function AllAccountsTable() {
                         onClick={() => setWalletUser(u)}
                         title={m.admin.users.wallet}
                         aria-label={m.admin.users.wallet}
-                        className="!w-11 !min-w-0 !flex-none !p-0 rounded-full text-ink-muted hover:text-ink"
+                        className="!h-11 !w-11 inline-flex items-center justify-center !min-h-0 !min-w-0 !flex-none !p-0 rounded-full text-ink-muted hover:text-ink"
                       >
                         <IconWallet size={20} />
                       </Button>
@@ -628,7 +628,7 @@ export default function AllAccountsTable() {
                         onClick={() => openReset(u)}
                         title={m.admin.users.profile.passwordBtn}
                         aria-label={m.admin.users.profile.passwordBtn}
-                        className="!w-11 !min-w-0 !flex-none !p-0 rounded-full text-ink-muted hover:text-ink"
+                        className="!h-11 !w-11 inline-flex items-center justify-center !min-h-0 !min-w-0 !flex-none !p-0 rounded-full text-ink-muted hover:text-ink"
                       >
                         <IconLock size={20} />
                       </Button>
@@ -639,7 +639,7 @@ export default function AllAccountsTable() {
                         onClick={() => setPhoneUser(u)}
                         title={m.admin.users.profile.changePhone}
                         aria-label={m.admin.users.profile.changePhone}
-                        className="!w-11 !min-w-0 !flex-none !p-0 rounded-full text-ink-muted hover:text-ink"
+                        className="!h-11 !w-11 inline-flex items-center justify-center !min-h-0 !min-w-0 !flex-none !p-0 rounded-full text-ink-muted hover:text-ink"
                       >
                         <IconPhone size={20} />
                       </Button>
@@ -653,7 +653,7 @@ export default function AllAccountsTable() {
                             onClick={() => setStatusModal({ users: [u], status: "suspended" })}
                             title={m.admin.users.suspend}
                             aria-label={m.admin.users.suspend}
-                            className="!w-11 !min-w-0 !flex-none !p-0 rounded-full !text-warning"
+                            className="!h-11 !w-11 inline-flex items-center justify-center !min-h-0 !min-w-0 !flex-none !p-0 rounded-full !text-warning"
                           >
                             <IconHourglass size={20} />
                           </Button>
@@ -662,7 +662,7 @@ export default function AllAccountsTable() {
                             onClick={() => setStatusModal({ users: [u], status: "blocked" })}
                             title={m.admin.users.block}
                             aria-label={m.admin.users.block}
-                            className="!w-11 !min-w-0 !flex-none !p-0 rounded-full !text-danger"
+                            className="!h-11 !w-11 inline-flex items-center justify-center !min-h-0 !min-w-0 !flex-none !p-0 rounded-full !text-danger"
                           >
                             <IconBlock size={20} />
                           </Button>
@@ -673,7 +673,7 @@ export default function AllAccountsTable() {
                           onClick={() => setActivateRows([u])}
                           title={m.admin.users.activate}
                           aria-label={m.admin.users.activate}
-                          className="!w-11 !min-w-0 !flex-none !p-0 rounded-full !text-success"
+                          className="!h-11 !w-11 inline-flex items-center justify-center !min-h-0 !min-w-0 !flex-none !p-0 rounded-full !text-success"
                         >
                           <IconUnblock size={20} />
                         </Button>

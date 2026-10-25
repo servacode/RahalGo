@@ -168,7 +168,7 @@ export default function StoresTab() {
                 onClick={() => toggleFeatured(s)}
                 title={s.featured ? T.unfeature : T.makeFeatured}
                 aria-label={s.featured ? T.unfeature : T.makeFeatured}
-                className={`!h-10 !w-10 !min-w-0 !p-0 shrink-0 rounded-full ${s.featured ? "!text-warning" : "text-ink-muted hover:text-ink"}`}
+                className={`!h-10 !w-10 inline-flex items-center justify-center !min-h-0 !min-w-0 !p-0 shrink-0 rounded-full ${s.featured ? "!text-warning" : "text-ink-muted hover:text-ink"}`}
               >
                 <IconStar size={19} className={s.featured ? "fill-current" : ""} />
               </Button>
