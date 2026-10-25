@@ -41,6 +41,17 @@ func (s *Server) handleAdminRatingsList(w http.ResponseWriter, r *http.Request) 
 	}
 	const perPage = 30
 	low := q.Get("low") == "1"
+	// **وفلترٌ بالنوع وبالطرف** (المالك ٢٠٢٦-١٠-٢٥: «لازم نقدر نحدّد المنصّة، المتجر، السائق، أيّ سائق»):
+	// `kind` = platform · driver · store، و`driver_id` / `merchant_id` لطرفٍ بعينه.
+	kind := q.Get("kind")
+	driverID := q.Get("driver_id")
+	merchantID := q.Get("merchant_id")
+	if driverID != "" && !isUUID(driverID) {
+		driverID = ""
+	}
+	if merchantID != "" && !isUUID(merchantID) {
+		merchantID = ""
+	}
 	ctx := r.Context()
 
 	// **الطلبُ المُقيَّمُ من أيٍّ من الجهتين** — الزبونُ أو السائق.
@@ -53,10 +64,15 @@ func (s *Server) handleAdminRatingsList(w http.ResponseWriter, r *http.Request) 
 		LEFT JOIN merchants m ON m.id = COALESCE(mr.merchant_id, o.merchant_id)
 		WHERE (rt.order_id IS NOT NULL OR mr.order_id IS NOT NULL)
 		  AND (NOT $1 OR rt.platform_stars <= 2 OR rt.driver_stars <= 2
-		       OR mr.speed_stars <= 2 OR mr.conduct_stars <= 2)`
+		       OR mr.speed_stars <= 2 OR mr.conduct_stars <= 2)
+		  AND ($4 = '' OR ($4 = 'platform' AND rt.platform_stars IS NOT NULL)
+		               OR ($4 = 'driver' AND rt.driver_stars IS NOT NULL)
+		               OR ($4 = 'store' AND mr.order_id IS NOT NULL))
+		  AND ($5 = '' OR o.driver_id::text = $5)
+		  AND ($6 = '' OR m.id::text = $6)`
 
 	var total int64
-	if err := s.pg.QueryRow(ctx, `SELECT count(*) `+base, low).Scan(&total); err != nil {
+	if err := s.pg.QueryRow(ctx, `SELECT count(*) `+base+` AND $2::int >= 0 AND $3::int >= 0`, low, 0, 0, kind, driverID, merchantID).Scan(&total); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -68,7 +84,7 @@ func (s *Server) handleAdminRatingsList(w http.ResponseWriter, r *http.Request) 
 		       COALESCE(m.id::text, ''), COALESCE(m.name, ''), mr.speed_stars, mr.conduct_stars
 		`+base+`
 		ORDER BY GREATEST(rt.created_at, mr.created_at) DESC
-		LIMIT $2 OFFSET $3`, low, perPage, (page-1)*perPage)
+		LIMIT $2 OFFSET $3`, low, perPage, (page-1)*perPage, kind, driverID, merchantID)
 	if err != nil {
 		s.respondErr(w, err)
 		return

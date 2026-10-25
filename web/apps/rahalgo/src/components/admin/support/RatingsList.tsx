@@ -8,8 +8,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { getMessages, defaultLocale, fmtRef, fmtDateTime, errorText } from "@rahalgo/i18n";
-import { Chips, EmptyState, LoadingState, Pagination, ReloadState, IconStar } from "@rahalgo/ui";
+import { getMessages, defaultLocale, fmtRef, fmtDateTime, errorText, storeLabel } from "@rahalgo/i18n";
+import { Chips, EmptyState, LoadingState, Pagination, ReloadState, SearchSelect, IconStar } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
@@ -46,17 +46,51 @@ function Stars({ n }: { n: number | null }) {
 export function RatingsList({ canProfile }: { canProfile: boolean }) {
   const [low, setLow] = useState(false);
   const [page, setPage] = useState(1);
+  // **فلترٌ بالنوع وبالطرف** (المالك ٢٠٢٦-١٠-٢٥: «لازم نقدر نحدّد المنصّة، المتجر، السائق، أيّ سائق»).
+  const [kind, setKind] = useState<"" | "platform" | "driver" | "store">("");
+  const [driverId, setDriverId] = useState("");
+  const [merchantId, setMerchantId] = useState("");
+  const [drivers, setDrivers] = useState<{ id: string; full_name: string; phone: string }[]>([]);
+  const [stores, setStores] = useState<{ id: string; name: string; number: number }[]>([]);
+  useEffect(() => {
+    // **والقائمتان لمن يقرؤهما** — وتعذّرُهما يُخفي المرشِّحَ ولا يوقف الشاشة.
+    api<{ drivers: { id: string; full_name: string; phone: string }[] } | { id: string; full_name: string; phone: string }[]>(
+      "/api/v1/admin/drivers",
+    )
+      .then((r) => setDrivers(Array.isArray(r) ? r : r.drivers))
+      .catch(() => setDrivers([]));
+    void (async () => {
+      try {
+        const all: { id: string; name: string; number: number }[] = [];
+        for (let p = 1; p <= 20; p++) {
+          const r = await api<{ merchants: { id: string; name: string; number: number }[]; total: number }>(
+            `/api/v1/admin/merchants?per_page=100&page=${p}`,
+          );
+          all.push(...(r.merchants ?? []));
+          if (all.length >= r.total || (r.merchants ?? []).length === 0) break;
+        }
+        setStores(all);
+      } catch {
+        setStores([]);
+      }
+    })();
+  }, []);
   const [data, setData] = useState<{ ratings: Row[]; total: number; per_page: number } | null>(null);
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
     try {
-      setData(await api(`/api/v1/admin/ratings/list?page=${page}${low ? "&low=1" : ""}`));
+      const qs = new URLSearchParams({ page: String(page) });
+      if (low) qs.set("low", "1");
+      if (kind) qs.set("kind", kind);
+      if (driverId) qs.set("driver_id", driverId);
+      if (merchantId) qs.set("merchant_id", merchantId);
+      setData(await api(`/api/v1/admin/ratings/list?${qs}`));
       setError("");
     } catch (err) {
       setError(errorText(err));
     }
-  }, [page, low]);
+  }, [page, low, kind, driverId, merchantId]);
 
   useEffect(() => {
     void load();
@@ -86,6 +120,49 @@ export function RatingsList({ canProfile }: { canProfile: boolean }) {
             setPage(1);
           }}
         />
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Chips
+          items={[
+            { id: "", label: L.kindAll },
+            { id: "platform", label: L.kindPlatform },
+            { id: "driver", label: L.kindDriver },
+            { id: "store", label: L.kindStore },
+          ]}
+          value={kind}
+          onChange={(k) => {
+            setKind(k as typeof kind);
+            setPage(1);
+          }}
+        />
+        {drivers.length > 0 && (
+          <div className="w-full sm:w-56">
+            <SearchSelect
+              ariaLabel={L.anyDriver}
+              allLabel={L.anyDriver}
+              value={driverId}
+              options={drivers.map((d) => ({ value: d.id, label: d.full_name || d.phone }))}
+              onChange={(v) => {
+                setDriverId(v);
+                setPage(1);
+              }}
+            />
+          </div>
+        )}
+        {stores.length > 0 && (
+          <div className="w-full sm:w-56">
+            <SearchSelect
+              ariaLabel={L.anyStore}
+              allLabel={L.anyStore}
+              value={merchantId}
+              options={stores.map((x) => ({ value: x.id, label: storeLabel(x.name, x.number) }))}
+              onChange={(v) => {
+                setMerchantId(v);
+                setPage(1);
+              }}
+            />
+          </div>
+        )}
       </div>
       {error && !data ? (
         <ReloadState label={error} onRetry={() => void load()} />
