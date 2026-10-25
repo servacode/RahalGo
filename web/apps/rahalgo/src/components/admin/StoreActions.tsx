@@ -36,6 +36,7 @@ import {
   ActionMenu,
   type ActionMenuItem,
   IconEdit,
+  IconClose,
   IconDate,
   IconOrder as IconMenu,
   IconWarning,
@@ -160,7 +161,7 @@ export function StoreActions({
             iconBtn(
               it.key,
               typeof it.label === "string" ? it.label : it.key,
-              (it.icon ?? IconStore) as typeof IconEdit,
+              (it.key === "close" ? StoreCloseIcon : (it.icon ?? IconStore)) as typeof IconEdit,
               it.onSelect,
               it.key === "ban" ? "!text-danger" : it.key === "open" ? "!text-success" : it.key === "close" ? "!text-warning" : "",
             ),
@@ -258,5 +259,20 @@ export function StoreActions({
         />
       )}
     </>
+  );
+}
+
+/**
+ * **«إغلاق المتجر» بإشارة ✕ فوق أيقونة المتجر** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — فلا تلتبس بـ«فتح المتجر»
+ * التي تبقى أيقونةَ المتجر وحدَها.
+ */
+function StoreCloseIcon({ size = 19 }: { size?: number }) {
+  return (
+    <span className="relative inline-flex">
+      <IconStore size={size} />
+      <span className="absolute -bottom-1 -end-1.5 inline-flex rounded-full bg-danger-solid p-px text-on-solid">
+        <IconClose size={Math.round(size * 0.5)} strokeWidth={3} />
+      </span>
+    </span>
   );
 }

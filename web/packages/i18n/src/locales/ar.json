@@ -6245,7 +6245,14 @@
         "empty": "لا متاجر",
         "addStore": "متجر جديد",
         "control": "تحكّم",
-        "changeLogo": "تغيير لوغو المتجر"
+        "changeLogo": "تغيير لوغو المتجر",
+        "commission": "العمولة",
+        "commissionGeneral": "{p}٪ (العامة)",
+        "commissionOwn": "{p}٪ (خاصة)",
+        "commissionSpecial": "نسبة خاصة",
+        "commissionPct": "النسبة الخاصة ٪",
+        "changeCommission": "تغيير العمولة",
+        "owner": "صاحب المتجر"
       },
       "quality": {
         "noImageTitle": "أصناف بلا صورة",

@@ -33,7 +33,10 @@ import {
   useLiveData,
   IconStore,
   IconStar,
+  IconBalance,
   Modal,
+  Chips,
+  FormActions,
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useCanCall } from "@/lib/policy";
@@ -286,13 +289,109 @@ function StoreControl({ id, onChanged }: { id: string; onChanged: () => void }) 
   if (err) return <span className="text-xs text-danger">{err}</span>;
   if (!store) return <LoadingState variant="inline" />;
   return (
-    <StoreActions
-      direct
-      store={store}
-      onChanged={() => {
-        onChanged();
-        void load();
-      }}
-    />
+    <div className="flex flex-col gap-2">
+      {/* **صاحبُ المتجر ورقمُه على البطاقة** (قرارُ المالك ٢٠٢٦-١٠-٢٥). */}
+      <div className="flex items-center justify-between gap-2 text-sm">
+        <span className="min-w-0 truncate">
+          <span className="text-ink-muted">{T.owner}: </span>
+          <b>{store.owner_name || "—"}</b>
+        </span>
+        <span dir="ltr" className="shrink-0 font-medium">
+          {store.owner_phone || store.phone || "—"}
+        </span>
+      </div>
+      <CommissionLine store={store} onSaved={() => { onChanged(); void load(); }} />
+      <StoreActions
+        direct
+        store={store}
+        onChanged={() => {
+          onChanged();
+          void load();
+        }}
+      />
+    </div>
+  );
+}
+
+/**
+ * **العمولةُ على البطاقة وتُبدَّل بأيقونة** (قرارُ المالك ٢٠٢٦-١٠-٢٥: «حطّ شقد العمولة، وإذا بدنا نغيّرها
+ * بزر أيقونة بدون ما نفوت ع تعديل») — عامّةٌ أو خاصّة، بباب تعديل المتجر نفسِه (`-1` يعيدها للعامّة).
+ */
+function CommissionLine({ store, onSaved }: { store: Merchant; onSaved: () => void }) {
+  const canEdit = useCanCall()("PATCH", "/merchants/{id}");
+  const own = store.commission_percent_exact !== undefined ? store.commission_percent_exact : store.commission_percent;
+  const general = (store as unknown as { general_commission_percent_exact?: number; general_commission_percent?: number });
+  const gen = general.general_commission_percent_exact ?? general.general_commission_percent ?? 0;
+  const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<"general" | "special">(own == null ? "general" : "special");
+  const [val, setVal] = useState(String(own ?? ""));
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  async function save() {
+    setBusy(true);
+    try {
+      await api(`/api/v1/admin/merchants/${store.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ commission_percent: mode === "general" ? -1 : Number(val.trim()) || 0 }),
+      });
+      setOpen(false);
+      setErr("");
+      onSaved();
+    } catch (e) {
+      setErr(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div className="flex items-center justify-between gap-2 text-sm">
+      <span>
+        <span className="text-ink-muted">{T.commission}: </span>
+        <b>{own == null ? T.commissionGeneral.replace("{p}", fmtNum(gen)) : T.commissionOwn.replace("{p}", fmtNum(own))}</b>
+      </span>
+      {canEdit && (
+        <Button
+          variant="ghost"
+          title={T.changeCommission}
+          aria-label={T.changeCommission}
+          onClick={() => {
+            setMode(own == null ? "general" : "special");
+            setVal(String(own ?? ""));
+            setOpen(true);
+          }}
+          className="!h-9 !w-9 inline-flex items-center justify-center !min-h-0 !min-w-0 !p-0 rounded-full text-ink-muted hover:text-ink"
+        >
+          <IconBalance size={18} />
+        </Button>
+      )}
+      {open && (
+        <Modal open onClose={() => setOpen(false)} title={`${T.changeCommission}: ${store.name}`}>
+          <div className="space-y-3">
+            <Chips
+              wrap
+              items={[
+                { id: "general", label: T.commissionGeneral.replace("{p}", fmtNum(gen)) },
+                { id: "special", label: T.commissionSpecial },
+              ]}
+              value={mode}
+              onChange={(k) => setMode(k as "general" | "special")}
+            />
+            {mode === "special" && (
+              <Input
+                id={`com-${store.id}`}
+                type="number"
+                inputMode="decimal"
+                dir="ltr"
+                label={T.commissionPct}
+                value={val}
+                onChange={(e) => setVal(e.target.value)}
+              />
+            )}
+            {err && <Alert tone="error">{err}</Alert>}
+            <FormActions busy={busy || (mode === "special" && val.trim() === "")} onSave={() => void save()} onCancel={() => setOpen(false)} />
+          </div>
+        </Modal>
+      )}
+    </div>
   );
 }

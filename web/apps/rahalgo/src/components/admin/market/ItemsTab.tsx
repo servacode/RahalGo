@@ -30,6 +30,8 @@ import {
   useToast,
   IconStatus,
   IconEdit,
+  IconCheck,
+  IconBlock,
   MenuItemEditor,
   type MenuItem,
   type MenuPaths,
@@ -164,6 +166,18 @@ export default function ItemsTab() {
     }
   }
 
+  async function setOne(id: string, action: "available" | "unavailable") {
+    setBusy(true);
+    try {
+      await api("/api/v1/admin/market/items/bulk", { method: "POST", body: JSON.stringify({ ids: [id], action }) });
+      reload();
+    } catch (err) {
+      push(errorText(err), "error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const rows = data?.items ?? [];
   const allPicked = rows.length > 0 && rows.every((r) => picked.has(r.id));
 
@@ -290,6 +304,18 @@ export default function ItemsTab() {
                       <span className="text-sm font-bold">
                         <Money value={it.merchant_price} />
                       </span>
+                      <span className="flex items-center gap-0.5">
+                      {/* **متوفر / غير متوفر بضغطة** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — بباب الإجراء الجماعيّ نفسِه. */}
+                      <Button
+                        variant="ghost"
+                        title={it.available ? I.makeUnavailable : I.makeAvailable}
+                        aria-label={it.available ? I.makeUnavailable : I.makeAvailable}
+                        disabled={busy}
+                        onClick={() => void setOne(it.id, it.available ? "unavailable" : "available")}
+                        className={`!h-9 !w-9 inline-flex items-center justify-center !min-h-0 !min-w-0 !p-0 rounded-full ${it.available ? "!text-success" : "!text-warning"}`}
+                      >
+                        {it.available ? <IconCheck size={18} /> : <IconBlock size={18} />}
+                      </Button>
                       {canEdit && (
                         <Button
                           variant="ghost"
@@ -302,6 +328,7 @@ export default function ItemsTab() {
                           <IconEdit size={17} />
                         </Button>
                       )}
+                      </span>
                     </div>
                   </div>
                 </div>
