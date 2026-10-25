@@ -94,65 +94,60 @@ export function RatingsList({ canProfile }: { canProfile: boolean }) {
       ) : data.ratings.length === 0 ? (
         <EmptyState icon={IconStar} title={L.empty} />
       ) : (
-        <div className="overflow-x-auto rounded-card border border-line-soft">
-          <table className="w-full min-w-[46rem] text-sm">
-            <thead>
-              <tr className="border-b border-line-soft text-xs text-ink-muted">
-                <th className="p-3 text-start font-medium">{L.order}</th>
-                <th className="p-3 text-start font-medium">{L.customer}</th>
-                <th className="p-3 text-start font-medium">{L.orderStars}</th>
-                <th className="p-3 text-start font-medium">{L.driver}</th>
-                <th className="p-3 text-start font-medium">{L.driverStars}</th>
-                <th className="p-3 text-start font-medium">{L.store}</th>
-                <th className="p-3 text-start font-medium">{L.storeStars}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.ratings.map((r) => (
-                <tr key={r.order_id} className="border-b border-line-soft last:border-b-0">
-                  <td className="p-3">
-                    <Link href={`/dashboard/history?q=${r.order_number}`} className="font-bold hover:underline" dir="ltr">
-                      #{fmtRef(r.order_number)}
+        // **بطاقاتٌ لا جدول** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — بطاقةٌ لكلّ طلبٍ قُيّم.
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {data.ratings.map((r) => (
+            <div key={r.order_id} className="flex flex-col gap-3 rounded-card border border-line-soft surface-lit p-4 text-sm">
+              <div className="flex items-start justify-between gap-2">
+                <Link href={`/dashboard/history?q=${r.order_number}`} className="font-bold hover:underline" dir="ltr">
+                  #{fmtRef(r.order_number)}
+                </Link>
+                <span className="text-2xs text-ink-muted" dir="ltr">
+                  {fmtDateTime(r.created_at)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="min-w-0 truncate">
+                  <span className="text-xs text-ink-muted">{L.customer}: </span>
+                  {person(r.customer_id, r.customer_name)}
+                </span>
+                <span className="flex shrink-0 items-center gap-1 text-xs text-ink-muted">
+                  {L.orderStars} <Stars n={r.platform_stars} />
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-2 border-t border-line-soft pt-2">
+                <span className="min-w-0 truncate">
+                  <span className="text-xs text-ink-muted">{L.driver}: </span>
+                  {r.driver_name ? person(r.driver_id, r.driver_name) : "—"}
+                </span>
+                <Stars n={r.driver_stars} />
+              </div>
+              <div className="flex items-center justify-between gap-2 border-t border-line-soft pt-2">
+                <span className="min-w-0 truncate">
+                  <span className="text-xs text-ink-muted">{L.store}: </span>
+                  {r.merchant_id ? (
+                    <Link href={`/dashboard/merchants/${r.merchant_id}`} className="hover:underline">
+                      {r.merchant_name}
                     </Link>
-                    <span className="block text-2xs text-ink-muted" dir="ltr">
-                      {fmtDateTime(r.created_at)}
+                  ) : (
+                    "—"
+                  )}
+                </span>
+                {r.store_speed == null ? (
+                  <span className="text-ink-muted">—</span>
+                ) : (
+                  <span className="flex shrink-0 items-center gap-2 text-xs">
+                    <span>
+                      {L.speed} <Stars n={r.store_speed} />
                     </span>
-                  </td>
-                  <td className="p-3">{person(r.customer_id, r.customer_name)}</td>
-                  <td className="p-3">
-                    <Stars n={r.platform_stars} />
-                  </td>
-                  <td className="p-3">{r.driver_name ? person(r.driver_id, r.driver_name) : "—"}</td>
-                  <td className="p-3">
-                    <Stars n={r.driver_stars} />
-                  </td>
-                  <td className="p-3">
-                    {r.merchant_id ? (
-                      <Link href={`/dashboard/merchants/${r.merchant_id}`} className="hover:underline">
-                        {r.merchant_name}
-                      </Link>
-                    ) : (
-                      "—"
-                    )}
-                  </td>
-                  <td className="p-3">
-                    {r.store_speed == null ? (
-                      <span className="text-ink-muted">—</span>
-                    ) : (
-                      <span className="flex flex-col gap-0.5 text-xs">
-                        <span>
-                          {L.speed} <Stars n={r.store_speed} />
-                        </span>
-                        <span>
-                          {L.conduct} <Stars n={r.store_conduct} />
-                        </span>
-                      </span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                    <span>
+                      {L.conduct} <Stars n={r.store_conduct} />
+                    </span>
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       )}
       {data && data.total > data.per_page && (

@@ -15,8 +15,6 @@ import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalg
 import {
   Badge,
   DataView,
-  ViewToggle,
-  useViewMode,
   type DataColumn,
   IconWallet,
   IconDate,
@@ -79,7 +77,6 @@ export function CaseTable({
   /** **نصُّ الحالة لسطرٍ بلا نزاع** — في الخسائر وحدَها. */
   noDisputeLabel?: string;
 }) {
-  const [view, setView] = useViewMode(screen);
   // **وملفُّ الطرف والطلبُ لمن يُفتحان له** (قرارُ المالك ٢٠٢٦-١٠-٠٥).
   const open = useCanOpen();
   const partyOne = C.partyOne as Record<string, string>;
@@ -182,10 +179,7 @@ export function CaseTable({
 
   return (
     <>
-      <div className="mb-2 flex justify-end">
-        <ViewToggle view={view} onChange={setView} tableLabel={m.common.viewTable} cardsLabel={m.common.viewCards} />
-      </div>
-      <DataView items={rows} getKey={(x) => x.key} columns={columns} actions={actions} view={view} empty={empty} />
+      <DataView items={rows} getKey={(x) => x.key} columns={columns} actions={actions} view="cards" empty={empty} />
     </>
   );
 }

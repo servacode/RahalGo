@@ -16,8 +16,6 @@ import {
   FormSection,
   DataView,
   ComplaintCard,
-  ViewToggle,
-  useViewMode,
   type DataColumn,
   IconSupport,
   IconAdd,
@@ -159,7 +157,6 @@ export function TicketsView() {
   const [error, setError] = useState("");
   const [creating, setCreating] = useState(false);
   const [detailID, setDetailID] = useState<string | null>(null);
-  const [view, setView] = useViewMode("tickets");
 
   // ══════════════════════════════════════════════════════════════════
   // **وتُفتح تذكرةٌ بعينها من رابط**
@@ -300,12 +297,6 @@ export function TicketsView() {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <PageHeader icon={IconSupport} title={m.admin.tickets.title} />
         <div className="flex items-center gap-2">
-          <ViewToggle
-            view={view}
-            onChange={setView}
-            tableLabel={m.common.viewTable}
-            cardsLabel={m.common.viewCards}
-          />
           <Button onClick={() => setCreating(true)} className="flex items-center gap-1.5">
             <IconAdd size={16} />
             {m.admin.tickets.newTicket}
@@ -367,7 +358,8 @@ export function TicketsView() {
         loading={data === null && !error}
         getKey={(t) => t.id}
         columns={columns}
-        view={view}
+        // **بطاقاتٌ وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٢٥ — «المشاكل والتعويضات» كلُّه بطاقات).
+        view="cards"
         empty={m.admin.tickets.empty}
         card={(t) => (
           <ComplaintCard
