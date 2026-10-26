@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 572,
+    "routes": 574,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
