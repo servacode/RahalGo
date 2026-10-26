@@ -16,7 +16,7 @@
  * «تأكيد المراجعة» **بحكم المحرّك** (`can_approve`) — المالكُ وحدَه يراجع إغلاقَه حين لا غيرُه.
  */
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { fmtMoney, fmtDateTime, errorText } from "@rahalgo/i18n";
 import {
@@ -275,43 +275,43 @@ export function CashboxTab() {
           {done}
         </Alert>
       )}
-      <StatGrid>
-        <StatCard
-          label={C.expected}
-          value={fmtMoney(pos.expected)}
-          sub={pos.expected < 0 ? C.negative : undefined}
-          icon={IconWallet}
-          tone={pos.expected < 0 ? "danger" : undefined}
-          emphasis
-        />
-        <StatCard label={C.opening} value={fmtMoney(pos.opening)} sub={pos.opened_at ? fmtDateTime(pos.opened_at) : undefined} />
-        <StatCard label={C.in} value={fmtMoney(pos.cash_in)} tone="success" />
-        <StatCard label={C.out} value={fmtMoney(pos.cash_out)} tone="danger" />
-      </StatGrid>
-
-      <div className="flex flex-wrap items-center gap-2">
-        {canClose && !pending && (
-          <Button onClick={() => setClosing(true)} disabled={busy}>
-            {C.closeDay}
-          </Button>
-        )}
-        {showOpening && (
-          <Button variant="secondary" onClick={() => setOpening(true)} disabled={busy}>
-            {C.openingButton}
-          </Button>
-        )}
-        {canDeposit && (
-          <Button variant="secondary" onClick={() => setDeposit(true)} disabled={busy}>
-            {C.depositButton}
-          </Button>
-        )}
-        <Link href="/dashboard/cash" className="text-sm text-primary underline">
-          {C.cashPage}
-        </Link>
-        <span className="text-xs text-ink-muted">
-          {C.openLines}: <span dir="ltr">{pos.open_lines}</span>
-        </span>
-      </div>
+      {/* **الدرجُ بمعادلةٍ واحدة** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «صلّح الأرقام لتكون واضحة ونصلّح التصميم»):
+          رصيدُ الفتح + الداخل − الخارج = المفروض بالدرج هلّق، **والأزرارُ تحتها بسطرٍ واحد.** */}
+      <section className="surface space-y-3 p-4">
+        <div className="flex flex-wrap items-stretch gap-2">
+          <BoxCell label={C.opening} value={pos.opening} sub={pos.opened_at ? fmtDateTime(pos.opened_at) : undefined} />
+          <BoxOp>+</BoxOp>
+          <BoxCell label={C.in} value={pos.cash_in} tone="success" />
+          <BoxOp>−</BoxOp>
+          <BoxCell label={C.out} value={pos.cash_out} tone="danger" />
+          <BoxOp>=</BoxOp>
+          <BoxCell label={C.expected} value={pos.expected} strong tone={pos.expected < 0 ? "danger" : "success"} sub={pos.expected < 0 ? C.negative : undefined} />
+        </div>
+        <p className="text-xs text-ink-muted">{C.howTo}</p>
+        <div className="flex flex-wrap items-center gap-2 border-t border-line-soft pt-3">
+          {canClose && !pending && (
+            <Button onClick={() => setClosing(true)} disabled={busy}>
+              {C.closeDay}
+            </Button>
+          )}
+          {showOpening && (
+            <Button variant="secondary" onClick={() => setOpening(true)} disabled={busy}>
+              {C.openingButton}
+            </Button>
+          )}
+          {canDeposit && (
+            <Button variant="secondary" onClick={() => setDeposit(true)} disabled={busy}>
+              {C.depositButton}
+            </Button>
+          )}
+          <Link href="/dashboard/cash" className="ms-auto text-sm font-bold text-accent-text hover:underline">
+            {C.cashPage} ↗
+          </Link>
+          <span className="text-xs text-ink-muted">
+            {C.openLines}: <span dir="ltr">{pos.open_lines}</span>
+          </span>
+        </div>
+      </section>
 
       {pending && (
         <div className="surface space-y-2 p-3">
@@ -607,4 +607,33 @@ export function CashboxTab() {
       />
     </div>
   );
+}
+
+/** **خانةٌ في معادلة الدرج** — لفظٌ ورقمٌ وسطرٌ صغير. */
+function BoxCell({
+  label,
+  value,
+  sub,
+  tone,
+  strong,
+}: {
+  label: string;
+  value: number;
+  sub?: string;
+  tone?: "success" | "danger";
+  strong?: boolean;
+}) {
+  return (
+    <div className={`min-w-[7rem] flex-1 rounded-card border p-3 ${strong ? "border-accent" : "border-line-soft"}`}>
+      <span className="block text-xs text-ink-muted">{label}</span>
+      <span className={`figure block leading-tight ${tone === "success" ? "text-success" : tone === "danger" ? "text-danger" : ""}`}>
+        {fmtMoney(value)}
+      </span>
+      {sub && <span className="block text-2xs text-ink-muted">{sub}</span>}
+    </div>
+  );
+}
+
+function BoxOp({ children }: { children: ReactNode }) {
+  return <span className="figure flex items-center px-1 text-ink-muted">{children}</span>;
 }

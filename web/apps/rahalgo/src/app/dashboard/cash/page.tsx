@@ -36,14 +36,10 @@ import {
   Modal,
   Money,
   PageContainer,
-  PageHeader,
   ReloadState,
   StatCard,
   StatGrid,
-  Tabs,
-  ViewToggle,
   useLiveData,
-  useViewMode,
   type DataColumn,
   IconArrowOut,
   IconDate,
@@ -59,6 +55,8 @@ import { DriverCashReceive } from "@/components/admin/DriverCashReceive";
 import { MerchantSettlement } from "@/components/admin/MerchantSettlement";
 import { OpenLink } from "@/components/admin/OpenLink";
 import { useCanOpen } from "@/lib/policy";
+import { PageHero } from "@/components/admin/PageHero";
+import { Tile } from "@/components/admin/DashParts";
 
 const m = getMessages(defaultLocale);
 const C = m.admin.cashOutstanding;
@@ -78,6 +76,8 @@ interface Holder {
   overdue: boolean;
   last_settled_at: string | null;
   on_shift: boolean;
+  /** **حقُّ السائق بمحفظته** — أجورُه، ليُقرأ الصافي (٢٠٢٦-١٠-٢٦). */
+  wallet: number;
 }
 
 interface CashData {
@@ -147,12 +147,13 @@ export default function CashPage() {
 
   return (
     <PageContainer>
-      <PageHeader icon={IconWallet} title={C.tabTitle} subtitle={C.tabHint} />
-      <Tabs
-        className="mb-4"
-        items={[
-          { key: "drivers" as Tab, label: C.tabDrivers, icon: IconUser },
-          { key: "stores" as Tab, label: C.tabStores, icon: IconStore },
+      <PageHero<Tab>
+        icon={IconWallet}
+        title={C.tabTitle}
+        subtitle={C.tabHint}
+        tabs={[
+          { key: "drivers", label: C.tabDrivers, icon: IconUser },
+          { key: "stores", label: C.tabStores, icon: IconStore },
         ]}
         value={tab}
         onChange={setTab}
@@ -173,7 +174,6 @@ function DriversCash({ filter, setFilter }: { filter: Filter; setFilter: (f: Fil
   const canExport = can("finance.export");
   // **وملفُّ السائق لمن يفتح الحسابات** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — والتسويةُ هنا.
   const canUser = useCanOpen().user;
-  const [view, setView] = useViewMode("cash-outstanding");
   const [target, setTarget] = useState<Holder | null>(null);
   const [query, setQuery] = useState("");
   const [done, setDone] = useState("");
@@ -219,129 +219,15 @@ function DriversCash({ filter, setFilter }: { filter: Filter; setFilter: (f: Fil
     })();
   }
 
-  const columns: DataColumn<Holder>[] = [
-    {
-      id: "driver",
-      header: m.terms.driver,
-      icon: <IconUser />,
-      cell: (h) => (
-        <OpenLink allowed={canUser} href={`/dashboard/users/${h.driver_id}`} className="flex flex-col hover:underline">
-          <span className="font-medium">{h.name || h.phone}</span>
-          <span className="text-2xs text-ink-muted" dir="ltr">
-            {h.phone}
-          </span>
-        </OpenLink>
-      ),
-    },
-    {
-      id: "held",
-      header: C.held,
-      icon: <IconWallet />,
-      cell: (h) => <Money value={h.held} small />,
-    },
-    {
-      id: "open",
-      header: C.openCash,
-      cell: (h) => (h.open_cash > 0 ? <Money value={h.open_cash} small /> : <span className="text-ink-muted">—</span>),
-    },
-    {
-      id: "cap",
-      header: C.exposure,
-      cell: (h) => {
-        const pct = h.limit > 0 ? Math.min(100, Math.round((h.exposure / h.limit) * 100)) : 100;
-        return (
-          <span className="flex min-w-32 flex-col gap-1">
-            <span dir="ltr" className={`text-xs tabular-nums ${h.over_limit ? "text-danger" : "text-ink-muted"}`}>
-              {C.capOf.replace("{t}", fmtNum(h.exposure)).replace("{cap}", fmtNum(h.limit))}
-            </span>
-            {h.at_limit && <Badge variant="warning">{C.atLimit}</Badge>}
-            <span className="h-1.5 w-full overflow-hidden rounded-full bg-field" aria-hidden>
-              <span
-                className={`block h-full rounded-full ${h.over_limit ? "bg-danger" : h.at_limit || pct >= 80 ? "bg-warning" : "bg-success"}`}
-                style={{ width: `${pct}%` }}
-              />
-            </span>
-          </span>
-        );
-      },
-    },
-    {
-      id: "age",
-      header: C.age,
-      icon: <IconDate />,
-      // **القِدَمُ يُلوَّن لا المقدار**، وحدُّ الأحمر هو حدُّ التنبيه في الإعدادات.
-      cell: (h) => {
-        const d = daysHeld(h.oldest_at);
-        return (
-          <Badge variant={h.overdue ? "danger" : d >= 1 ? "warning" : "neutral"}>{daysLabel(d)}</Badge>
-        );
-      },
-    },
-    {
-      id: "last",
-      header: C.lastSettled,
-      cell: (h) =>
-        h.last_settled_at ? (
-          <span dir="ltr" className="text-xs text-ink-muted">
-            {fmtDate(h.last_settled_at)}
-          </span>
-        ) : (
-          <span className="text-xs text-ink-muted">{C.never}</span>
-        ),
-    },
-    {
-      id: "shift",
-      header: C.shift,
-      cell: (h) => (
-        <Badge variant={h.on_shift ? "success" : "neutral"}>{h.on_shift ? C.onShift : C.offShift}</Badge>
-      ),
-    },
-    {
-      id: "act",
-      header: "",
-      // **ولا استلامَ ممّن جيبُه فارغ** — ظهر لنقدٍ في الطريق لا لمالٍ بيده.
-      cell: (h) =>
-        canSettle && h.held > 0 ? (
-          <Button variant="secondary" onClick={() => setTarget(h)}>
-            {C.receive}
-          </Button>
-        ) : null,
-    },
-  ];
-
   return (
     <>
-      <StatGrid>
-        <StatCard
-          label={C.total}
-          value={fmtMoney(data.total)}
-          icon={IconWallet}
-          tone={data.total > 0 ? "danger" : "default"}
-        />
-        <StatCard
-          label={C.holders}
-          value={fmtNum(all.length)}
-          icon={IconUser}
-          selected={filter === "all"}
-          onClick={() => setFilter("all")}
-        />
-        <StatCard
-          label={C.overCount}
-          value={fmtNum(data.over_count)}
-          icon={IconWarning}
-          tone={data.over_count > 0 ? "danger" : "muted"}
-          selected={filter === "over"}
-          onClick={() => setFilter(filter === "over" ? "all" : "over")}
-        />
-        <StatCard
-          label={C.oldestAge}
-          value={all.length ? daysLabel(oldest) : "—"}
-          icon={IconDate}
-          tone={data.overdue_count > 0 ? "danger" : "default"}
-          selected={filter === "overdue"}
-          onClick={() => setFilter(filter === "overdue" ? "all" : "overdue")}
-        />
-      </StatGrid>
+      {/* **ملخّصٌ بأربع بطاقات** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «صلّح الأرقام لتكون واضحة ونصلّح التصميم»). */}
+      <div className="mb-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
+        <Tile icon={IconWallet} label={C.total} value={fmtMoney(data.total)} tone={data.total > 0 ? "warning" : "muted"} onClick={() => setFilter("all")} />
+        <Tile icon={IconUser} label={C.holders} value={fmtNum(all.length)} onClick={() => setFilter("all")} />
+        <Tile icon={IconWarning} label={C.overCount} value={fmtNum(data.over_count)} tone={data.over_count > 0 ? "danger" : "muted"} onClick={() => setFilter(filter === "over" ? "all" : "over")} />
+        <Tile icon={IconDate} label={C.oldestAge} value={all.length ? daysLabel(oldest) : "—"} tone={data.overdue_count > 0 ? "danger" : "default"} onClick={() => setFilter(filter === "overdue" ? "all" : "overdue")} />
+      </div>
 
       {done && (
         <Alert tone="success" className="mb-3">
@@ -381,12 +267,6 @@ function DriversCash({ filter, setFilter }: { filter: Filter; setFilter: (f: Fil
             </span>
           </Button>
         )}
-        <ViewToggle
-          view={view}
-          onChange={setView}
-          tableLabel={m.common.viewTable}
-          cardsLabel={m.common.viewCards}
-        />
       </div>
 
       {all.length === 0 ? (
@@ -394,7 +274,69 @@ function DriversCash({ filter, setFilter }: { filter: Filter; setFilter: (f: Fil
       ) : holders.length === 0 ? (
         <EmptyState icon={IconStatus} title={C.noMatch} />
       ) : (
-        <DataView items={holders} getKey={(h) => h.driver_id} columns={columns} view={view} empty={C.noMatch} />
+        // **كلُّ سائقٍ بطاقة**: ما معه للمكتب، وحقُّه بمحفظته، والصافي بينهما بجملةٍ واضحة.
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          {holders.map((h) => {
+            const net = h.held - h.wallet;
+            const pct = h.limit > 0 ? Math.min(100, Math.round((h.exposure / h.limit) * 100)) : 100;
+            const d = daysHeld(h.oldest_at);
+            return (
+              <div key={h.driver_id} className="surface flex flex-col gap-3 p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <OpenLink allowed={canUser} href={`/dashboard/users/${h.driver_id}`} className="min-w-0 hover:underline">
+                    <span className="block truncate font-bold">{h.name || h.phone}</span>
+                    <span className="block text-xs text-ink-muted" dir="ltr">{h.phone}</span>
+                  </OpenLink>
+                  <span className="flex shrink-0 flex-wrap justify-end gap-1">
+                    <Badge variant={h.on_shift ? "success" : "neutral"}>{h.on_shift ? C.onShift : C.offShift}</Badge>
+                    <Badge variant={h.overdue ? "danger" : d >= 1 ? "warning" : "neutral"}>{daysLabel(d)}</Badge>
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-card border border-line-soft p-3">
+                    <span className="block text-xs text-ink-muted">{C.cardHeld}</span>
+                    <span className="figure block leading-tight text-warning">{fmtMoney(h.held)}</span>
+                  </div>
+                  <div className="rounded-card border border-line-soft p-3">
+                    <span className="block text-xs text-ink-muted">{C.cardWallet}</span>
+                    <span className="figure block leading-tight text-success">{fmtMoney(h.wallet)}</span>
+                  </div>
+                </div>
+                <p
+                  className={`rounded-control px-3 py-2 text-sm font-bold ${
+                    net > 0 ? "bg-warning-solid text-on-solid" : net < 0 ? "bg-success-solid text-on-solid" : "bg-field"
+                  }`}
+                >
+                  {net > 0
+                    ? C.netDriverPays.replace("{n}", fmtMoney(net))
+                    : net < 0
+                      ? C.netOfficePays.replace("{n}", fmtMoney(-net))
+                      : C.netEven}
+                </p>
+                <div className="space-y-1">
+                  <span className={`block text-xs tabular-nums ${h.over_limit ? "text-danger" : "text-ink-muted"}`} dir="ltr">
+                    {C.capOf.replace("{t}", fmtNum(h.exposure)).replace("{cap}", fmtNum(h.limit))}
+                    {h.open_cash > 0 && ` · ${C.openCash}: ${fmtNum(h.open_cash)}`}
+                  </span>
+                  <span className="block h-1.5 w-full overflow-hidden rounded-full bg-field" aria-hidden>
+                    <span
+                      className={`block h-full rounded-full ${h.over_limit ? "bg-danger" : h.at_limit || pct >= 80 ? "bg-warning" : "bg-success"}`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </span>
+                </div>
+                <div className="flex items-center justify-between gap-2 border-t border-line-soft pt-3">
+                  <span className="text-xs text-ink-muted">
+                    {C.lastSettled}: {h.last_settled_at ? <span dir="ltr">{fmtDate(h.last_settled_at)}</span> : C.never}
+                  </span>
+                  {canSettle && h.held > 0 && (
+                    <Button onClick={() => setTarget(h)}>{C.receive}</Button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
 
       {target && (
@@ -485,7 +427,7 @@ function StoresCash() {
       {rows.length === 0 ? (
         <EmptyState icon={IconStatus} title={C.storesEmpty} />
       ) : (
-        <DataView items={rows} getKey={(d) => d.merchant_id} columns={columns} view="table" empty={C.storesEmpty} />
+        <DataView items={rows} getKey={(d) => d.merchant_id} columns={columns} view="cards" empty={C.storesEmpty} />
       )}
       {paying && (
         <Modal open size="lg" onClose={() => setPaying(null)} title={C.storePayTitle.replace("{name}", paying.name)}>
