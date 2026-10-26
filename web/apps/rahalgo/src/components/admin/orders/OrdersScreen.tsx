@@ -2723,9 +2723,8 @@ function OrderActions({
   }
 
   // **تحويلٌ بلا واتساب** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — المكتبُ أبلغ المتجرَ بنفسه، فيُوسَم ويُطلب سائق.
-  const [manualAsk, setManualAsk] = useState(false);
+  // **بضغطةٍ واحدةٍ بلا سؤال** (المالك ٢٠٢٦-١٠-٢٦: «الرسالة كلها ما تلزم، ضغطنا حوّل يتحوّل»).
   async function forwardManual() {
-    setManualAsk(false);
     setErr("");
     setBusy("wa");
     try {
@@ -3381,19 +3380,10 @@ function OrderActions({
         </Button>
       )}
       {canIntervene && !o.sent_to_merchant_at && (o.status === "accepted" || o.status === "preparing") && (
-        <Button variant="secondary" disabled={busy !== ""} onClick={() => setManualAsk(true)}>
+        <Button variant="secondary" disabled={busy !== ""} onClick={() => void forwardManual()}>
           {m.admin.ordersPage.sendManual}
         </Button>
       )}
-      <Modal open={manualAsk} onClose={() => setManualAsk(false)} title={m.admin.ordersPage.sendManualTitle}>
-        <p className="mb-4 text-sm text-ink-muted">{m.admin.ordersPage.sendManualBody}</p>
-        <FormActions
-          onSave={() => void forwardManual()}
-          onCancel={() => setManualAsk(false)}
-          busy={busy !== ""}
-          saveLabel={m.admin.ordersPage.sendManualConfirm}
-        />
-      </Modal>
 
       {/* **«أعد الإرسال على واتساب» بعد التحويل وقبل الاستلام** (المالك ٢٠٢٦-١٠-٢٥: «لازم يطلع لأنّ
           أحياناً تفشل») — الرسالةُ لم تصل أو ضاعت عند المتجر. **ولا يُعيد الإنزالَ ولا يفكّ السائق**
