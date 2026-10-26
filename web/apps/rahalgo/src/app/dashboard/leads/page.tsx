@@ -358,16 +358,22 @@ function LeadsScreen() {
     },
     {
       id: "waiting",
-      header: L.waiting,
+      // **تاريخُ التسجيل لكلّ طلب** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «لازم هذا تاريخ التسجيل والانضمام»)،
+      // **و«ينتظر منذ» تحته للمعلَّق وحدَه.**
+      header: L.registered,
       icon: <IconHourglass />,
-      cell: (l) =>
-        l.status === "new" || l.status === "needs_info" ? (
-          <span className="text-sm font-medium text-warning">{waitingFor(l.created_at)}</span>
-        ) : (
-          <span dir="ltr" className="text-xs text-ink-muted">
+      cell: (l) => (
+        <span className="flex flex-col items-end gap-0.5">
+          <span dir="ltr" className="text-sm">
             {fmtDate(l.created_at)}
           </span>
-        ),
+          {(l.status === "new" || l.status === "needs_info") && (
+            <span className="text-xs font-medium text-warning">
+              {L.waitingFor.replace("{t}", waitingFor(l.created_at))}
+            </span>
+          )}
+        </span>
+      ),
     },
   ];
 
