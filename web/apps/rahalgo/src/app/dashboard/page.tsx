@@ -35,9 +35,6 @@ import {
 } from "@rahalgo/i18n";
 import {
   useLiveRefresh,
-  StatCard,
-  StatGrid,
-  Card,
   Alert,
   Button,
   LoadingState,
@@ -50,8 +47,9 @@ import {
   IconSupport,
   IconLink,
   IconZones,
-  IconStatus,
   IconGrid,
+  IconSuccess,
+  IconPrev,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { roleLabelByCode } from "@/lib/rolemeta";
@@ -227,18 +225,6 @@ const GROUP_HREF: Record<string, string> = {
   promos: "/dashboard/promos",
 };
 
-function Section({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
-  return (
-    <section>
-      <h2 className="mb-2 flex flex-wrap items-baseline gap-2 font-bold">
-        {title}
-        {note && <span className="text-xs font-normal text-ink-muted">{note}</span>}
-      </h2>
-      {children}
-    </section>
-  );
-}
-
 export default function DashboardPage() {
   const router = useRouter();
   const [data, setData] = useState<Overview | null>(null);
@@ -360,312 +346,384 @@ export default function DashboardPage() {
             </Button>
           </>
         }
-      />
+      >
+        {/* **صحّةُ النظام سطرٌ صغيرٌ في الرأس** — نقطةٌ بلونها لكلّ خدمة، والضغطُ يفتح المراقبة. */}
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="font-bold text-ink-muted">{H.health}:</span>
+          {(
+            [
+              [H.healthApi, data.health.api],
+              [H.healthDb, data.health.database],
+              [H.healthWa, data.health.whatsapp],
+              [H.healthRouting, data.health.routing],
+            ] as const
+          ).map(([label, st]) => (
+            <Link
+              key={label}
+              href="/dashboard/ops"
+              className="inline-flex items-center gap-1.5 rounded-full border border-line-soft px-2.5 py-1 hover:bg-row-hover"
+            >
+              <span
+                className={`h-2 w-2 shrink-0 rounded-full ${
+                  st === "ok" || st === "dev" ? "bg-success" : st === "down" ? "bg-danger" : "bg-warning"
+                }`}
+              />
+              {label}
+              <span className="text-ink-muted">{(H.healthState as Record<string, string>)[st] ?? H.unknown}</span>
+            </Link>
+          ))}
+        </div>
+      </PageHero>
       {error && <Alert tone="warning">{H.refreshFailed}</Alert>}
       {data.missing.length > 0 && <Alert tone="warning">{H.missing}</Alert>}
       {/* **بياناتُ التواصل التجريبيّة** — قرارُ المالك ٢٠٢٦-١٠-٠٤ (الإعدادات ١٥). */}
       <ContactTestAlert />
 
-      {/* ── ١ · بانتظار قرارك ── */}
-      <Section title={H.awaiting} note={H.awaitingHint}>
-        <StatGrid>
-          {AWAITING.map((c) => {
-            const n = a[c.key];
-            const tone = toneOf(n, c.urgent);
-            return (
-              <StatCard
+      {/* ══ ١ · بانتظار قرارك ══ — المستعجلُ أوّلاً، **وما فيه رقمٌ يُلوَّن والصفرُ يهدأ** (قرارُ المالك
+          ٢٠٢٦-١٠-٢٦: «تصميم احترافي»). */}
+      <Panel title={H.awaiting} note={H.awaitingHint}>
+        {AWAITING.every((c) => known(a[c.key]) && a[c.key] === 0) && (
+          <p className="mb-3 flex items-center gap-1.5 text-sm font-bold text-success">
+            <IconSuccess size={16} />
+            {H.allClear}
+          </p>
+        )}
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {[...AWAITING]
+            .sort((x, y) => Number((a[y.key] ?? 0) > 0) - Number((a[x.key] ?? 0) > 0))
+            .map((c) => (
+              <Tile
                 key={c.key}
                 icon={c.icon}
                 label={c.key === "tickets_late" ? H.ticketsLate.replace("{h}", fmtNum(lateHours.current)) : c.label}
-                value={show(n)}
-                tone={tone}
-                emphasis={tone === "danger" || tone === "warning"}
+                value={show(a[c.key])}
+                tone={toneOf(a[c.key], c.urgent)}
                 onClick={go(c.href)}
               />
-            );
-          })}
-        </StatGrid>
-      </Section>
-
-      {/* ── ٢ · الآن ── */}
-      <Section title={H.now}>
-        <StatGrid>
-          {STAGES.map((s) => (
-            <StatCard
-              key={s}
-              icon={IconOrder}
-              label={H.stage[s]}
-              value={show(lv.stages[s])}
-              tone={known(lv.stages[s]) && lv.stages[s] === 0 ? "muted" : "default"}
-              onClick={go(`/dashboard/orders?stage=${s}`)}
-            />
-          ))}
-          <StatCard
-            icon={IconWarning}
-            label={H.stuck}
-            value={show(lv.orders_stuck)}
-            sub={known(lv.orders_open) ? `${H.liveOrders}${m.common.nameSeparator}${fmtNum(lv.orders_open)}` : undefined}
-            tone={toneOf(lv.orders_stuck, true)}
-            emphasis={known(lv.orders_stuck) && lv.orders_stuck > 0}
-            onClick={go("/dashboard/orders")}
-          />
-          <StatCard
-            icon={IconDriver}
-            label={H.driversOnShift}
-            value={show(lv.drivers_on_shift)}
-            sub={H.driversNote}
-            tone={known(lv.drivers_on_shift) && lv.drivers_on_shift === 0 ? "muted" : "default"}
-            onClick={go("/dashboard/opsmap?on_shift=true&status=active")}
-          />
-          <StatCard
-            icon={IconDriver}
-            label={H.driversFree}
-            value={show(lv.drivers_free)}
-            tone={known(lv.drivers_free) && lv.drivers_free === 0 ? "muted" : "default"}
-            onClick={go("/dashboard/opsmap?on_shift=true&status=active&has_active=false")}
-          />
-          <StatCard
-            icon={IconDriver}
-            label={H.driversBusy}
-            value={show(lv.drivers_busy)}
-            tone={known(lv.drivers_busy) && lv.drivers_busy === 0 ? "muted" : "default"}
-            onClick={go("/dashboard/opsmap?on_shift=true&status=active&has_active=true")}
-          />
-          <StatCard
-            icon={IconStore}
-            label={H.storesOpen}
-            value={show(lv.stores_open_now)}
-            sub={known(lv.stores_active) ? H.storesOf.replace("{n}", fmtNum(lv.stores_active)) : undefined}
-            tone={known(lv.stores_open_now) && lv.stores_open_now === 0 ? "muted" : "default"}
-            onClick={go("/dashboard/opsmap")}
-          />
-        </StatGrid>
-        <Card className="mt-3">
-          <p className="mb-2 text-sm font-bold">{H.health}</p>
-          <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
-            {(
-              [
-                [H.healthApi, data.health.api],
-                [H.healthDb, data.health.database],
-                [H.healthWa, data.health.whatsapp],
-                [H.healthRouting, data.health.routing],
-              ] as const
-            ).map(([label, st]) => (
-              <Link key={label} href="/dashboard/ops" className="flex items-center gap-2 rounded-control p-1 hover:bg-row-hover">
-                <span
-                  className={`h-2.5 w-2.5 shrink-0 rounded-badge ${
-                    st === "ok" || st === "dev" ? "bg-success" : st === "down" ? "bg-danger" : "bg-warning"
-                  }`}
-                />
-                <span className="min-w-0">
-                  <span className="block text-xs text-ink-muted">{label}</span>
-                  {(H.healthState as Record<string, string>)[st] ?? H.unknown}
-                </span>
-              </Link>
             ))}
-          </div>
-        </Card>
-      </Section>
-
-      {/* ── ٣ · اليوم مقابل أمس ── */}
-      <Section title={H.today} note={H.todayNote}>
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-          <Card>
-            <div className="space-y-2 text-sm">
-              <div className="flex gap-2 text-xs text-ink-muted">
-                <span className="flex-1" />
-                <span className="w-24 shrink-0">{H.colToday}</span>
-                <span className="w-24 shrink-0">{H.colYesterday}</span>
-              </div>
-              {dayRows.map((r) => (
-                <div key={r.key} className="flex items-baseline gap-2">
-                  <span className="min-w-0 flex-1 text-ink-muted">{r.label}</span>
-                  <span className="w-24 shrink-0 font-bold">{dayCell(t, r)}</span>
-                  <span className="w-24 shrink-0">{dayCell(y, r)}</span>
-                </div>
-              ))}
-            </div>
-          </Card>
-          <Card>
-            <p className="mb-2 text-sm font-bold">{H.failuresTitle}</p>
-            {data.missing.includes("failures") ? (
-              <p className="text-sm text-ink-muted">{H.unknown}</p>
-            ) : data.failures_today.length === 0 ? (
-              <p className="text-sm text-ink-muted">{H.noFailures}</p>
-            ) : (
-              <ul className="space-y-1 text-sm">
-                {data.failures_today.map((f) => (
-                  <li key={f.status + f.reason} className="flex gap-2">
-                    <span className="min-w-0 flex-1">
-                      {STATUS[f.status] ?? f.status}
-                      {m.common.nameSeparator}
-                      {f.reason ? (FAIL[f.reason] ?? f.reason) : H.noReason}
-                    </span>
-                    <span className="font-bold">{fmtNum(f.count)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Card>
         </div>
-      </Section>
+      </Panel>
 
-      {/* ── ٤ · المال اليوم ── */}
-      <Section title={H.money} note={H.todayNote}>
-        <StatGrid>
-          <StatCard icon={IconBalance} label={H.sales} value={show(data.money.sales, fmtMoney)} onClick={go("/dashboard/profits")} />
-          <StatCard
-            icon={IconWallet}
-            label={H.net}
-            value={show(data.money.net, fmtMoney)}
-            sub={H.netHint}
-            tone="accent"
-            onClick={go("/dashboard/profits")}
-          />
-          <StatCard icon={IconWallet} label={H.treasury} value={show(data.money.treasury_balance, fmtMoney)} onClick={go("/dashboard/treasury?tab=statement")} />
-          <StatCard icon={IconBalance} label={H.cashHeld} value={show(data.money.cash_held, fmtMoney)} onClick={go("/dashboard/cash")} />
-          <StatCard
+      {/* ══ ٢ · الآن ══ — مسارُ الطلب مراحلَ متتابعة، والسائقون والمتاجر بجانبه. */}
+      <Panel title={H.now}>
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-3">
+          <div className="xl:col-span-2">
+            <div className="flex flex-wrap items-stretch gap-1.5">
+              {STAGES.map((s, i) => {
+                const n = lv.stages[s];
+                const on = known(n) && n > 0;
+                return (
+                  <div key={s} className="flex min-w-[8rem] flex-1 items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={go(`/dashboard/orders?stage=${s}`)}
+                      className={`flex flex-1 flex-col items-center rounded-card border p-3 text-center transition-colors hover:bg-row-hover ${
+                        on ? "border-accent" : "border-line-soft"
+                      }`}
+                    >
+                      <span className={`figure leading-none ${on ? "" : "text-ink-muted"}`}>{show(n)}</span>
+                      <span className="mt-1 text-xs text-ink-muted">{H.stage[s]}</span>
+                    </button>
+                    {i < STAGES.length - 1 && <IconPrev size={14} className="shrink-0 text-ink-muted" />}
+                  </div>
+                );
+              })}
+            </div>
+            <button
+              type="button"
+              onClick={go("/dashboard/orders")}
+              className={`mt-2 flex w-full items-center justify-between gap-2 rounded-card border p-3 text-sm transition-colors hover:bg-row-hover ${
+                known(lv.orders_stuck) && lv.orders_stuck > 0 ? "border-danger bg-danger-tint" : "border-line-soft"
+              }`}
+            >
+              <span className="flex items-center gap-2">
+                <IconWarning size={16} className={known(lv.orders_stuck) && lv.orders_stuck > 0 ? "text-danger" : "text-ink-muted"} />
+                <b>{H.stuck}</b>
+                <span className="figure leading-none">{show(lv.orders_stuck)}</span>
+              </span>
+              <span className="text-xs text-ink-muted">
+                {H.liveOrders}
+                {m.common.nameSeparator}
+                {show(lv.orders_open)}
+              </span>
+            </button>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <Tile icon={IconDriver} label={H.driversOnShift} value={show(lv.drivers_on_shift)} tone={zeroMuted(lv.drivers_on_shift)} onClick={go("/dashboard/opsmap?on_shift=true&status=active")} />
+            <Tile icon={IconDriver} label={H.driversFree} value={show(lv.drivers_free)} tone={zeroMuted(lv.drivers_free)} onClick={go("/dashboard/opsmap?on_shift=true&status=active&has_active=false")} />
+            <Tile icon={IconDriver} label={H.driversBusy} value={show(lv.drivers_busy)} tone={zeroMuted(lv.drivers_busy)} onClick={go("/dashboard/opsmap?on_shift=true&status=active&has_active=true")} />
+            <Tile
+              icon={IconStore}
+              label={H.storesOpen}
+              value={show(lv.stores_open_now)}
+              sub={known(lv.stores_active) ? H.storesOf.replace("{n}", fmtNum(lv.stores_active)) : undefined}
+              tone={zeroMuted(lv.stores_open_now)}
+              onClick={go("/dashboard/opsmap")}
+            />
+          </div>
+        </div>
+      </Panel>
+
+      {/* ══ ٣ · المال اليوم ══ — الصافي أوّلاً وبلونه. */}
+      <Panel title={H.money} note={H.todayNote}>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+          <Tile icon={IconWallet} label={H.net} value={show(data.money.net, fmtMoney)} sub={H.netHint} tone="accent" onClick={go("/dashboard/profits")} />
+          <Tile icon={IconBalance} label={H.sales} value={show(data.money.sales, fmtMoney)} onClick={go("/dashboard/profits")} />
+          <Tile icon={IconWallet} label={H.treasury} value={show(data.money.treasury_balance, fmtMoney)} onClick={go("/dashboard/treasury?tab=statement")} />
+          <Tile icon={IconBalance} label={H.cashHeld} value={show(data.money.cash_held, fmtMoney)} onClick={go("/dashboard/cash")} />
+          <Tile
             icon={IconWallet}
             label={H.compensations}
             value={show(data.money.compensations_amount, fmtMoney)}
             sub={known(data.money.compensations_count) ? H.compensationsSub.replace("{n}", fmtNum(data.money.compensations_count)) : undefined}
-            tone={known(data.money.compensations_amount) && data.money.compensations_amount === 0 ? "muted" : "default"}
+            tone={zeroMuted(data.money.compensations_amount)}
             onClick={go("/dashboard/compensations")}
           />
-          <StatCard
-            icon={IconBalance}
-            label={H.losses}
-            value={show(data.money.losses, fmtMoney)}
-            tone={known(data.money.losses) && data.money.losses === 0 ? "muted" : "default"}
-            onClick={go("/dashboard/profits")}
-          />
-        </StatGrid>
-      </Section>
+          <Tile icon={IconBalance} label={H.losses} value={show(data.money.losses, fmtMoney)} tone={zeroMuted(data.money.losses)} onClick={go("/dashboard/profits")} />
+        </div>
+      </Panel>
 
-      {/* ── ٥ · آخر الأحداث المهمّة ── */}
-      <Section title={H.events}>
-        <Card>
+      {/* ══ ٤ · اليوم مقابل أمس ══ — والسهمُ يقول الاتّجاه بلا حساب. */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <Panel title={H.today} note={H.todayNote} className="lg:col-span-2">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm tabular-nums">
+              <thead>
+                <tr className="text-xs text-ink-muted">
+                  <th className="pb-2 text-start font-normal" />
+                  <th className="pb-2 text-start font-normal">{H.colToday}</th>
+                  <th className="pb-2 text-start font-normal">{H.colYesterday}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dayRows.map((r) => {
+                  const tv = t[r.key];
+                  const yv = y[r.key];
+                  const up = known(tv) && known(yv) && tv > yv;
+                  const down = known(tv) && known(yv) && tv < yv;
+                  const bad = r.key === "failed" || r.key === "avg_delivery_min";
+                  return (
+                    <tr key={r.key} className="border-t border-line-soft">
+                      <td className="py-2 text-ink-muted">{r.label}</td>
+                      <td className="py-2 font-bold">
+                        <span className="inline-flex items-center gap-1.5">
+                          {dayCell(t, r)}
+                          {(up || down) && (
+                            <span className={`text-xs ${(up && !bad) || (down && bad) ? "text-success" : "text-danger"}`}>
+                              {up ? "▲" : "▼"}
+                            </span>
+                          )}
+                        </span>
+                      </td>
+                      <td className="py-2 text-ink-muted">{dayCell(y, r)}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </Panel>
+        <Panel title={H.failuresTitle}>
+          {data.missing.includes("failures") ? (
+            <p className="text-sm text-ink-muted">{H.unknown}</p>
+          ) : data.failures_today.length === 0 ? (
+            <p className="flex items-center gap-1.5 text-sm font-bold text-success">
+              <IconSuccess size={16} />
+              {H.noFailures}
+            </p>
+          ) : (
+            <ul className="space-y-1.5 text-sm">
+              {data.failures_today.map((f) => (
+                <li key={f.status + f.reason} className="flex items-center gap-2 rounded-control bg-field px-2.5 py-1.5">
+                  <span className="min-w-0 flex-1">
+                    {STATUS[f.status] ?? f.status}
+                    {m.common.nameSeparator}
+                    {f.reason ? (FAIL[f.reason] ?? f.reason) : H.noReason}
+                  </span>
+                  <span className="rounded-full bg-danger-solid px-2 py-0.5 text-xs font-bold text-on-solid">{fmtNum(f.count)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+      </div>
+
+      {/* ══ ٥ · آخر الأحداث + المنصّة بالأرقام ══ */}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <Panel title={H.events}>
           {data.missing.includes("events") ? (
             <p className="text-sm text-ink-muted">{H.unknown}</p>
           ) : data.events.length === 0 ? (
             <p className="text-sm text-ink-muted">{H.noEvents}</p>
           ) : (
-            <ul className="divide-y divide-line-soft text-sm">
+            <ol className="relative space-y-3 border-s border-line-soft ps-4 text-sm">
               {data.events.map((e) => {
                 const href = eventHref(e);
-                const what = [
-                  ACTIONS[e.action] ?? e.action,
-                  e.label || (e.number != null ? `#${e.number}` : ""),
-                ]
+                const what = [ACTIONS[e.action] ?? e.action, e.label || (e.number != null ? `#${e.number}` : "")]
                   .filter(Boolean)
                   .join(m.common.nameSeparator);
                 return (
-                  <li key={e.id} className="flex flex-wrap items-baseline gap-2 py-2">
-                    <IconStatus size={14} className="shrink-0 text-ink-muted" />
-                    {href ? (
-                      <Link href={href} className="min-w-0 flex-1 hover:underline">
-                        {what}
-                      </Link>
-                    ) : (
-                      <span className="min-w-0 flex-1">{what}</span>
-                    )}
-                    {e.actor_name && (
-                      <span className="text-xs text-ink-muted">{H.by.replace("{name}", e.actor_name)}</span>
-                    )}
-                    <span className="text-xs text-ink-muted">{fmtTime(e.created_at)}</span>
+                  <li key={e.id} className="relative">
+                    <span className="absolute -start-[1.3rem] top-1.5 h-2 w-2 rounded-full bg-accent" />
+                    <div className="flex flex-wrap items-baseline gap-x-2">
+                      {href ? (
+                        <Link href={href} className="min-w-0 flex-1 font-medium hover:underline">
+                          {what}
+                        </Link>
+                      ) : (
+                        <span className="min-w-0 flex-1 font-medium">{what}</span>
+                      )}
+                      <span className="text-xs text-ink-muted">{fmtTime(e.created_at)}</span>
+                    </div>
+                    {e.actor_name && <p className="text-xs text-ink-muted">{H.by.replace("{name}", e.actor_name)}</p>}
                   </li>
                 );
               })}
-            </ul>
+            </ol>
           )}
-        </Card>
-      </Section>
+        </Panel>
 
-      {/* ── ٦ · المنصّة بالأرقام ── */}
-      <Section title={H.platform}>
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-          <Card>
-            {data.missing.includes("platform") ? (
-              <p className="text-sm text-ink-muted">{H.unknown}</p>
-            ) : (
-              <div className="space-y-2 text-sm">
-                <div className="flex gap-2 text-xs text-ink-muted">
-                  <span className="flex-1" />
-                  <span className="w-16 shrink-0">{H.colTotal}</span>
-                  <span className="w-16 shrink-0">{H.colNewToday}</span>
-                  <span className="w-16 shrink-0">{H.colNewWeek}</span>
-                </div>
-                {data.platform.groups.map((g) => (
-                  <div key={g.key} className="flex items-baseline gap-2">
-                    <Link href={GROUP_HREF[g.key] ?? "/dashboard"} className="min-w-0 flex-1 text-ink hover:underline">
-                      {(H.group as Record<string, string>)[g.key] ?? g.key}
-                    </Link>
-                    <span className="w-16 shrink-0 font-bold">{fmtNum(g.total)}</span>
-                    <span className={`w-16 shrink-0 ${g.today ? "" : "text-ink-muted"}`}>{fmtNum(g.today)}</span>
-                    <span className={`w-16 shrink-0 ${g.week ? "" : "text-ink-muted"}`}>{fmtNum(g.week)}</span>
-                  </div>
-                ))}
+        <Panel title={H.platform}>
+          {data.missing.includes("platform") ? (
+            <p className="text-sm text-ink-muted">{H.unknown}</p>
+          ) : (
+            <div className="space-y-4">
+              <CountTable
+                rows={data.platform.groups.map((g) => ({
+                  ...g,
+                  label: (H.group as Record<string, string>)[g.key] ?? g.key,
+                  href: GROUP_HREF[g.key] ?? "/dashboard",
+                }))}
+              />
+              <div>
+                <p className="mb-1 text-xs font-bold text-ink-muted">{H.staffTitle}</p>
+                <CountTable
+                  rows={data.platform.staff.map((g) => ({
+                    ...g,
+                    label: roleLabelByCode(g.key),
+                    href: `/dashboard/users?role=${g.key}`,
+                  }))}
+                />
               </div>
-            )}
-          </Card>
-          <Card>
-            <p className="mb-2 text-sm font-bold">{H.staffTitle}</p>
-            {data.missing.includes("platform") ? (
-              <p className="text-sm text-ink-muted">{H.unknown}</p>
-            ) : (
-              <div className="space-y-2 text-sm">
-                <div className="flex gap-2 text-xs text-ink-muted">
-                  <span className="flex-1" />
-                  <span className="w-16 shrink-0">{H.colTotal}</span>
-                  <span className="w-16 shrink-0">{H.colNewToday}</span>
-                  <span className="w-16 shrink-0">{H.colNewWeek}</span>
-                </div>
-                {data.platform.staff.map((g) => (
-                  <div key={g.key} className="flex items-baseline gap-2">
-                    <Link href={`/dashboard/users?role=${g.key}`} className="min-w-0 flex-1 text-ink hover:underline">
-                      {roleLabelByCode(g.key)}
-                    </Link>
-                    <span className="w-16 shrink-0 font-bold">{fmtNum(g.total)}</span>
-                    <span className={`w-16 shrink-0 ${g.today ? "" : "text-ink-muted"}`}>{fmtNum(g.today)}</span>
-                    <span className={`w-16 shrink-0 ${g.week ? "" : "text-ink-muted"}`}>{fmtNum(g.week)}</span>
-                  </div>
-                ))}
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                <Tile icon={IconOrder} label={H.customersOrderedWeek} value={show(data.platform.customers_ordered_week)} onClick={go("/dashboard/history")} />
+                <Tile icon={IconDriver} label={H.driversActive} value={show(data.platform.drivers_active)} onClick={go("/dashboard/users?role=driver&status=active")} />
+                <Tile icon={IconDriver} label={H.driversSuspended} value={show(data.platform.drivers_suspended)} tone={zeroMuted(data.platform.drivers_suspended)} onClick={go("/dashboard/users?role=driver&status=suspended")} />
+                <Tile icon={IconDriver} label={H.driversBlocked} value={show(data.platform.drivers_blocked)} tone={zeroMuted(data.platform.drivers_blocked)} onClick={go("/dashboard/users?role=driver&status=blocked")} />
+                <Tile icon={IconStore} label={H.storesActive} value={show(data.platform.stores_active)} onClick={go("/dashboard/opsmap")} />
+                <Tile icon={IconStore} label={H.storesNotActive} value={show(data.platform.stores_not_active)} tone={zeroMuted(data.platform.stores_not_active)} onClick={go("/dashboard/opsmap")} />
               </div>
-            )}
-          </Card>
-        </div>
-        <div className="mt-3">
-          <StatGrid>
-            <StatCard icon={IconOrder} label={H.customersOrderedWeek} value={show(data.platform.customers_ordered_week)} onClick={go("/dashboard/history")} />
-            <StatCard icon={IconDriver} label={H.driversActive} value={show(data.platform.drivers_active)} onClick={go("/dashboard/users?role=driver&status=active")} />
-            <StatCard
-              icon={IconDriver}
-              label={H.driversSuspended}
-              value={show(data.platform.drivers_suspended)}
-              tone={known(data.platform.drivers_suspended) && data.platform.drivers_suspended === 0 ? "muted" : "default"}
-              onClick={go("/dashboard/users?role=driver&status=suspended")}
-            />
-            <StatCard
-              icon={IconDriver}
-              label={H.driversBlocked}
-              value={show(data.platform.drivers_blocked)}
-              tone={known(data.platform.drivers_blocked) && data.platform.drivers_blocked === 0 ? "muted" : "default"}
-              onClick={go("/dashboard/users?role=driver&status=blocked")}
-            />
-            <StatCard icon={IconStore} label={H.storesActive} value={show(data.platform.stores_active)} onClick={go("/dashboard/opsmap")} />
-            <StatCard
-              icon={IconStore}
-              label={H.storesNotActive}
-              value={show(data.platform.stores_not_active)}
-              tone={known(data.platform.stores_not_active) && data.platform.stores_not_active === 0 ? "muted" : "default"}
-              onClick={go("/dashboard/opsmap")}
-            />
-          </StatGrid>
-        </div>
-      </Section>
+            </div>
+          )}
+        </Panel>
+      </div>
 
       {/* ── زوّارُ الموقع والتحميلات (طلبُ المالك ٢٠٢٦-١٠-٠٧) ── */}
       <SiteStatsSection />
+    </div>
+  );
+}
+
+/** **لوحةُ قسمٍ في الرئيسيّة** — عنوانٌ وملاحظةٌ صغيرةٌ ثمّ المحتوى في بطاقةٍ واحدة. */
+function Panel({
+  title,
+  note,
+  className = "",
+  children,
+}: {
+  title: string;
+  note?: string;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className={`surface p-4 ${className}`}>
+      <h2 className="heading-card mb-3 flex flex-wrap items-baseline gap-2">
+        {title}
+        {note && <span className="text-xs font-normal text-ink-muted">{note}</span>}
+      </h2>
+      {children}
+    </section>
+  );
+}
+
+type TileTone = "default" | "muted" | "danger" | "warning" | "accent";
+
+const TILE_ICON: Record<TileTone, string> = {
+  default: "bg-field text-ink",
+  muted: "bg-field text-ink-muted",
+  danger: "bg-danger-solid text-on-solid",
+  warning: "bg-warning-solid text-on-solid",
+  accent: "bg-accent text-on-bright",
+};
+
+/** **بطاقةٌ صغيرةٌ تُضغط** — أيقونةٌ في دائرةٍ بلون النبرة، ورقمٌ ولفظ. */
+function Tile({
+  icon: Icon,
+  label,
+  value,
+  sub,
+  tone = "default",
+  onClick,
+}: {
+  icon: typeof IconWarning;
+  label: string;
+  value: string;
+  sub?: string;
+  tone?: TileTone;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`flex items-center gap-3 rounded-card border p-3 text-start transition-colors hover:bg-row-hover ${
+        tone === "danger" ? "border-danger" : tone === "warning" ? "border-warning" : "border-line-soft"
+      }`}
+    >
+      <span className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${TILE_ICON[tone]}`}>
+        <Icon size={18} />
+      </span>
+      <span className="min-w-0">
+        <span className={`figure block leading-none ${tone === "muted" ? "text-ink-muted" : ""}`}>{value}</span>
+        <span className="mt-1 block truncate text-xs text-ink-muted">{label}</span>
+        {sub && <span className="block truncate text-2xs text-ink-muted">{sub}</span>}
+      </span>
+    </button>
+  );
+}
+
+/** **الصفرُ يهدأ** — رقمٌ صفريٌّ رماديّ، وما عداه عاديّ. */
+const zeroMuted = (n: N): TileTone => (known(n) && n === 0 ? "muted" : "default");
+
+/** **جدولُ الأعداد** — الكلُّ وجديدُ اليوم وجديدُ الأسبوع، وكلُّ سطرٍ يفتح صفحته. */
+function CountTable({ rows }: { rows: (Count & { label: string; href: string })[] }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-sm tabular-nums">
+        <thead>
+          <tr className="text-xs text-ink-muted">
+            <th className="pb-1.5 text-start font-normal" />
+            <th className="pb-1.5 text-start font-normal">{H.colTotal}</th>
+            <th className="pb-1.5 text-start font-normal">{H.colNewToday}</th>
+            <th className="pb-1.5 text-start font-normal">{H.colNewWeek}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((g) => (
+            <tr key={g.key} className="border-t border-line-soft">
+              <td className="py-1.5">
+                <Link href={g.href} className="hover:underline">
+                  {g.label}
+                </Link>
+              </td>
+              <td className="py-1.5 font-bold">{fmtNum(g.total)}</td>
+              <td className={`py-1.5 ${g.today ? "text-success" : "text-ink-muted"}`}>{g.today ? `+${fmtNum(g.today)}` : "0"}</td>
+              <td className={`py-1.5 ${g.week ? "text-success" : "text-ink-muted"}`}>{g.week ? `+${fmtNum(g.week)}` : "0"}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
