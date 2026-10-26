@@ -28,7 +28,6 @@ import { useCanCall } from "@/lib/policy";
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime, errorText } from "@rahalgo/i18n";
 import {
   PageContainer,
-  PageHeader,
   Select,
   Badge,
   Stars,
@@ -44,6 +43,7 @@ import {
 import { api } from "@/lib/api";
 import { RatingsList } from "./RatingsList";
 
+import { SectionBar } from "@/components/admin/support/SectionBar";
 const m = getMessages(defaultLocale);
 const R = m.admin.ratingsPage;
 
@@ -112,7 +112,7 @@ export function RatingsView() {
 
   return (
     <PageContainer>
-      <PageHeader icon={IconStar} title={R.title} subtitle={R.hint} />
+      <SectionBar hint={R.hint} />
 
       <StatGrid>
         <StatCard label={R.total} value={fmtNum(data.total)} icon={IconStar} />

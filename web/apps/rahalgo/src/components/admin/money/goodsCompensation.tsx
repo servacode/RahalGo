@@ -22,7 +22,6 @@ import {
   FormActions,
   Input,
   LoadingState,
-  PageHeader,
   ReloadState,
   IconBalance,
   useLiveData,
@@ -30,6 +29,7 @@ import {
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
+import { SectionBar } from "@/components/admin/support/SectionBar";
 const m = getMessages(defaultLocale);
 const L = m.admin.losses;
 const G = m.admin.ordersPage.board.goods;
@@ -87,7 +87,7 @@ export function GoodsCompensationView() {
 
   return (
     <div className="space-y-3">
-      <PageHeader icon={IconBalance} title={L.goodsTitle} subtitle={L.goodsHint} />
+      <SectionBar hint={L.goodsHint} />
       {sent && (
         <Alert tone="success" onDismiss={() => setSent("")}>
           {sent}

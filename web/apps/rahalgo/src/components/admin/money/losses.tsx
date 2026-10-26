@@ -27,7 +27,6 @@ import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
 import {
   PageContainer,
   Pagination,
-  PageHeader,
   LoadingState,
   ReloadState,
   StatGrid,
@@ -40,6 +39,7 @@ import {
 import { api } from "@/lib/api";
 import { CaseTable, CaseFilters, type CaseRow, type CaseStatus } from "./caseTable";
 
+import { SectionBar } from "@/components/admin/support/SectionBar";
 const m = getMessages(defaultLocale);
 const L = m.admin.losses;
 const KINDS: Record<string, string> = L.kinds;
@@ -118,7 +118,7 @@ export function LossesView() {
 
   return (
     <PageContainer>
-      <PageHeader icon={IconWallet} title={L.title} subtitle={L.hint} />
+      <SectionBar hint={L.hint} />
 
       <CaseFilters>
         <Input

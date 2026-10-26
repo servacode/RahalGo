@@ -16,7 +16,7 @@
 
 import { useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { PageContainer, PageHeader, Tabs, IconSupport, IconStar, IconTrendDown, IconBalance, IconSwap } from "@rahalgo/ui";
+import { PageContainer, IconSupport, IconStar, IconTrendDown, IconBalance, IconSwap } from "@rahalgo/ui";
 import { useAuth } from "@/lib/auth";
 import { useCanCall } from "@/lib/policy";
 import { TicketsView } from "@/components/admin/support/tickets";
@@ -56,9 +56,43 @@ export default function ProblemsPage() {
 
   return (
     <PageContainer>
-      <PageHeader icon={IconSupport} title={m.admin.nav.problems} subtitle={m.admin.nav.problemsHint} />
-      <div className="space-y-5">
-        {tabs.length > 1 && active && <Tabs<Tab> items={tabs} value={active} onChange={pick} />}
+      {/* **رأسٌ واحدٌ مرتّب** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «التصميم الاحترافي») — العنوانُ بأيقونته وتحته
+          التبويباتُ بسطرٍ واحد، **ولا عنوانَ ثانٍ داخل التبويب.** */}
+      <section className="surface mb-4 overflow-hidden">
+        <div className="flex items-center gap-3 p-4">
+          <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-on-bright">
+            <IconSupport size={22} />
+          </span>
+          <div className="min-w-0">
+            <h1 className="heading-page">{m.admin.nav.problems}</h1>
+            <p className="text-xs text-ink-muted">{m.admin.nav.problemsHint}</p>
+          </div>
+        </div>
+        {tabs.length > 1 && active && (
+          <nav className="flex gap-1 overflow-x-auto border-t border-line-soft px-2" role="tablist">
+            {tabs.map(({ key, label, icon: Icon }) => {
+              const on = active === key;
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  role="tab"
+                  aria-selected={on}
+                  onClick={() => pick(key)}
+                  className={`relative inline-flex shrink-0 items-center gap-2 px-3 py-3 text-sm font-bold transition-colors ${
+                    on ? "text-ink" : "text-ink-muted hover:text-ink"
+                  }`}
+                >
+                  <Icon size={16} />
+                  {label}
+                  {on && <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-accent" />}
+                </button>
+              );
+            })}
+          </nav>
+        )}
+      </section>
+      <div>
         {active === "tickets" && <TicketsView />}
         {active === "ratings" && <RatingsView />}
         {active === "losses" && <LossesView />}

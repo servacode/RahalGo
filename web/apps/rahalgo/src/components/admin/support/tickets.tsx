@@ -7,7 +7,6 @@ import {
   Pagination,
   Alert,
   useLiveRefresh,
-  PageHeader,
   Button,
   Input,
   Select,
@@ -33,6 +32,7 @@ import {
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
+import { SectionBar } from "@/components/admin/support/SectionBar";
 const m = getMessages(defaultLocale);
 
 interface Reply {
@@ -294,15 +294,14 @@ export function TicketsView() {
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <PageHeader icon={IconSupport} title={m.admin.tickets.title} />
-        <div className="flex items-center gap-2">
+      <SectionBar
+        actions={
           <Button onClick={() => setCreating(true)} className="flex items-center gap-1.5">
             <IconAdd size={16} />
             {m.admin.tickets.newTicket}
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* **عددُ المتأخّرة كلِّها** — يُنقر فيصفّي عليها. */}
       {data && (data.late ?? 0) > 0 && (

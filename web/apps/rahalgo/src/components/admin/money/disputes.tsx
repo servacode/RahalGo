@@ -27,7 +27,6 @@ import {
   Select,
   Modal,
   PageContainer,
-  PageHeader,
   Pagination,
   LoadingState,
   ReloadState,
@@ -46,6 +45,7 @@ import { useAuth } from "@/lib/auth";
 import { useCanCall } from "@/lib/policy";
 import { CaseTable, CaseFilters, reasonText, type CaseRow } from "./caseTable";
 
+import { SectionBar } from "@/components/admin/support/SectionBar";
 const m = getMessages(defaultLocale);
 const C = m.admin.claims;
 
@@ -180,9 +180,8 @@ export function DisputesView() {
 
   return (
     <PageContainer width="full">
-      <PageHeader
-        icon={IconBalance}
-        title={C.title}
+      <SectionBar
+        hint={C.hint}
         actions={
           canOpen ? (
             <Button onClick={() => setOpenNew(true)} className="flex items-center gap-1.5">
@@ -192,7 +191,6 @@ export function DisputesView() {
           ) : undefined
         }
       />
-      <p className="mb-4 text-sm text-ink-muted">{C.hint}</p>
 
       {/* **شريطُ الفلاتر الواحد** — الطرفُ بعدّه والحالة، لا تبويباتٌ فوق تبويبات. */}
       <CaseFilters>
