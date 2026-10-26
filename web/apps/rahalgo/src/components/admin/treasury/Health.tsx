@@ -115,75 +115,124 @@ export function HealthTab() {
   );
   if (error && !data) return <ReloadState onRetry={reload} />;
   if (!data) return <LoadingState />;
-  const sorted = [...data.checks].sort((a, b) => Number(a.ok) - Number(b.ok));
+  // **الفحوصُ بمواضيعها** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «تصير واضحة أكثر ومفهومة») — عشراتُ الأسطر
+  // تُقرأ بمواضيعَ بأسماءٍ مفهومة، **والموضوعُ الذي فيه خرقٌ يُفتح أوّلاً.**
+  const groups = new Map<string, Check[]>();
+  for (const c of data.checks) {
+    const g = groups.get(c.family) ?? [];
+    g.push(c);
+    groups.set(c.family, g);
+  }
+  const fam = H.families as Record<string, { t: string; d: string }>;
+  const ordered = [...groups.entries()].sort(
+    (x, y) => Number(x[1].every((c) => c.ok)) - Number(y[1].every((c) => c.ok)) || x[0].localeCompare(y[0]),
+  );
+  const okAll = data.failing === 0;
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-3">
-        {data.failing === 0 ? (
-          <Alert tone="success">{H.allGreen}</Alert>
-        ) : (
-          <Alert>
-            {H.failing}: <span dir="ltr">{data.failing}</span>
-          </Alert>
-        )}
-        <span className="text-xs text-ink-muted">
-          {H.checks}: <span dir="ltr">{data.total}</span> · <span dir="ltr">{fmtDateTime(data.checked_at)}</span>
+    <div className="space-y-4">
+      {/* **الحالُ بنظرة** — دائرةٌ خضراءُ أو حمراء، وجملةٌ تقول ما يعنيه الفحص. */}
+      <section className={`surface flex flex-wrap items-center gap-4 p-5 ${okAll ? "" : "border-danger"}`}>
+        <span
+          className={`inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-full text-on-solid ${
+            okAll ? "bg-success-solid" : "bg-danger-solid"
+          }`}
+        >
+          <IconShieldCheck size={30} />
         </span>
-        <Button variant="secondary" onClick={reload}>
-          {H.run}
-        </Button>
-        <CopyReport data={data} />
+        <div className="min-w-0 flex-1 space-y-1">
+          <h2 className={`heading-section ${okAll ? "text-success" : "text-danger"}`}>
+            {okAll ? H.allGreen : `${H.failing}: ${data.failing}`}
+          </h2>
+          <p className="text-sm text-ink-muted">{H.what}</p>
+          <p className="text-xs text-ink-muted">
+            {H.checks}: <span dir="ltr">{data.total}</span> · {H.passed}:{" "}
+            <span dir="ltr">{data.total - data.failing}</span> · {H.lastRun}{" "}
+            <span dir="ltr">{fmtDateTime(data.checked_at)}</span>
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <Button onClick={reload}>{H.run}</Button>
+          <CopyReport data={data} />
+        </div>
+      </section>
+
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        {ordered.map(([key, list]) => {
+          const bad = list.filter((c) => !c.ok).length;
+          const info = fam[key];
+          return (
+            <details key={key} open={bad > 0} className="surface group overflow-hidden">
+              <summary className="flex cursor-pointer list-none items-center gap-3 p-4">
+                <span
+                  className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-bold text-on-solid ${
+                    bad > 0 ? "bg-danger-solid" : "bg-success-solid"
+                  }`}
+                >
+                  {bad > 0 ? "!" : "\u2713"}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-bold">{info?.t ?? key}</span>
+                  <span className="block truncate text-xs text-ink-muted">{info?.d ?? ""}</span>
+                </span>
+                <span
+                  className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-bold tabular-nums ${
+                    bad > 0 ? "bg-danger-solid text-on-solid" : "bg-field text-ink-muted"
+                  }`}
+                  dir="ltr"
+                >
+                  {list.length - bad}/{list.length}
+                </span>
+                <span className="shrink-0 text-xs text-ink-muted transition-transform group-open:rotate-180">{"▾"}</span>
+              </summary>
+              <ul className="space-y-1.5 border-t border-line-soft p-3">
+                {list.map((c) => (
+                  <li key={c.id} className={`rounded-control px-3 py-2 text-sm ${c.ok ? "bg-field" : "bg-danger-tint"}`}>
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs ${c.ok ? "text-success" : "text-danger"}`}>{c.ok ? "\u2713" : "\u2717"}</span>
+                      <span className="min-w-0 flex-1">{c.name}</span>
+                      {!c.ok && <Badge variant="danger">{c.error ? H.error : `${c.count} ${H.rows}`}</Badge>}
+                    </div>
+                    {!c.ok && <p className="mt-1 text-xs text-ink-muted">{c.why}</p>}
+                    {c.error && (
+                      <p dir="ltr" className="mt-1 text-2xs text-danger">
+                        {c.error}
+                      </p>
+                    )}
+                    {!c.ok && c.sample && c.sample.length > 0 && (
+                      <div className="mt-1 overflow-x-auto">
+                        <table className="text-2xs" dir="ltr">
+                          {c.cols && (
+                            <thead>
+                              <tr>
+                                {c.cols.map((k) => (
+                                  <th key={k} className="px-1.5 text-start text-ink-muted">
+                                    {k}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                          )}
+                          <tbody>
+                            {c.sample.map((row, i) => (
+                              <tr key={i}>
+                                {row.map((v, j) => (
+                                  <td key={j} className="px-1.5">
+                                    {v}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </details>
+          );
+        })}
       </div>
-      <ul className="divide-y divide-line surface">
-        {sorted.map((c) => (
-          <li key={c.id} className="space-y-1 px-3 py-2 text-sm">
-            <div className="flex flex-wrap items-center gap-2">
-              <IconShieldCheck size={16} className={c.ok ? "text-success" : "text-danger"} />
-              <span dir="ltr" className="text-xs text-ink-muted">
-                {c.id}
-              </span>
-              <span className="font-medium">{c.name}</span>
-              <Badge variant={c.ok ? "success" : "danger"}>
-                {c.error ? H.error : c.ok ? H.ok : `${H.bad} · ${c.count} ${H.rows}`}
-              </Badge>
-            </div>
-            {!c.ok && <p className="text-xs text-ink-muted">{c.why}</p>}
-            {c.error && (
-              <p dir="ltr" className="text-2xs text-danger">
-                {c.error}
-              </p>
-            )}
-            {!c.ok && c.sample && c.sample.length > 0 && (
-              <div className="overflow-x-auto">
-                <table className="text-2xs" dir="ltr">
-                  {c.cols && (
-                    <thead>
-                      <tr>
-                        {c.cols.map((h) => (
-                          <th key={h} className="px-1 text-start text-ink-muted">
-                            {h}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                  )}
-                  <tbody>
-                    {c.sample.map((row, i) => (
-                      <tr key={i}>
-                        {row.map((v, j) => (
-                          <td key={j} className="px-1">
-                            {v}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }
