@@ -28,7 +28,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, errorText, fmtNum } from "@rahalgo/i18n";
-import { Alert, Card, Tabs, LoadingState, EmptyState } from "@rahalgo/ui";
+import { Alert, Card, Tabs, LoadingState, EmptyState, IconLocation } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
@@ -73,7 +73,7 @@ export default function PlaceDemandPanel() {
   return (
     <Card>
       <div className="space-y-3 p-4">
-        <h3 className="font-medium">{D.title}</h3>
+        <h3 className="heading-card">{D.title}</h3>
         <p className="text-sm text-ink-muted">{D.hint}</p>
         {error && <Alert>{error}</Alert>}
 
@@ -92,31 +92,33 @@ export default function PlaceDemandPanel() {
         ) : rows.length === 0 ? (
           <EmptyState title={D.empty} />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-start text-ink-muted">
-                  <th className="p-2 text-start">{D.governorate}</th>
-                  <th className="p-2 text-start">{D.city}</th>
-                  <th className="p-2 text-start">{D.people}</th>
-                  <th className="p-2 text-start">{D.signals}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r, i) => (
-                  <tr key={i} className="border-t border-line-soft">
-                    <td className="p-2">
-                      {r.governorate_name || (
-                        <span className="text-ink-muted">{D.unresolved}</span>
-                      )}
-                    </td>
-                    <td className="p-2">{r.city_name || "—"}</td>
-                    <td className="p-2 font-medium">{fmtNum(r.people)}</td>
-                    <td className="p-2">{fmtNum(r.signals)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          // **بطاقاتٌ لا جدول** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — المكانُ وتحته عددُ الأشخاص والطلبات.
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {rows.map((r, i) => (
+              <div key={i} className="flex items-center gap-3 rounded-card border border-line-soft p-3">
+                <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-field text-ink-muted">
+                  <IconLocation size={17} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-bold">
+                    {r.city_name || r.governorate_name || <span className="text-ink-muted">{D.unresolved}</span>}
+                  </p>
+                  {r.city_name && r.governorate_name && (
+                    <p className="truncate text-xs text-ink-muted">{r.governorate_name}</p>
+                  )}
+                </div>
+                <div className="flex shrink-0 gap-3 text-center tabular-nums">
+                  <span>
+                    <span className="block font-bold">{fmtNum(r.people)}</span>
+                    <span className="block text-2xs text-ink-muted">{D.people}</span>
+                  </span>
+                  <span>
+                    <span className="block font-bold">{fmtNum(r.signals)}</span>
+                    <span className="block text-2xs text-ink-muted">{D.signals}</span>
+                  </span>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>

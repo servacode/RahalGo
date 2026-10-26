@@ -20,17 +20,12 @@
 import { useMemo, useState } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtDate, errorText } from "@rahalgo/i18n";
 import {
-  PageHeader,
-  StatCard,
-  Chips,
   DataView,
   Badge,
   Button,
   ButtonLink,
   Alert,
   Confirm,
-  ViewToggle,
-  useViewMode,
   useLiveData,
   type DataColumn,
   IconLocation,
@@ -101,7 +96,6 @@ const n = (tpl: string, v: number, p?: number) =>
 
 export default function ExpansionPage() {
   const canPlaces = useCanCall()("GET", "/ops-map/coverage-demand/places");
-  const [view, setView] = useViewMode("expansion");
   const [filter, setFilter] = useState<Filter>(initialFilter);
   const [asking, setAsking] = useState<Row | null>(null);
   const [busy, setBusy] = useState(false);
@@ -223,16 +217,75 @@ export default function ExpansionPage() {
 
   return (
     <div>
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-        <PageHeader icon={IconLocation} title={T.title} />
-        <ViewToggle
-          view={view}
-          onChange={setView}
-          tableLabel={m.common.viewTable}
-          cardsLabel={m.common.viewCards}
-        />
-      </div>
-      <p className="mb-4 text-sm text-ink-muted">{T.subtitle}</p>
+      {/* **رأسٌ واحدٌ مرتّب** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «تصميم احترافي كالسابق»): العنوانُ بأيقونته،
+          والأرقامُ الأربعةُ بصفٍّ صغير، وتحتها الفلاترُ تبويباتٌ بسطرٍ واحدٍ بعدّها. */}
+      <section className="surface mb-4 overflow-hidden">
+        <div className="flex items-center gap-3 p-4">
+          <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-on-bright">
+            <IconLocation size={22} />
+          </span>
+          <div className="min-w-0">
+            <h1 className="heading-page">{T.title}</h1>
+            <p className="text-xs text-ink-muted">{T.subtitle}</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-2 px-4 pb-4 md:grid-cols-4">
+          {(
+            [
+              [IconUsers, T.people, s?.people, ""],
+              [IconTrendUp, T.newThisWeek, s?.new_this_week, s && s.new_this_week > 0 ? "bg-accent text-on-bright" : ""],
+              [IconZones, T.cities, s?.cities, ""],
+              [IconHourglass, T.waitingNotNotified, s?.waiting_not_notified, s && s.waiting_not_notified > 0 ? "bg-warning-solid text-on-solid" : ""],
+            ] as const
+          ).map(([Icon, label, v, tone]) => (
+            <div key={label} className="flex items-center gap-3 rounded-card border border-line-soft p-3">
+              <span className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${tone || "bg-field text-ink-muted"}`}>
+                <Icon size={17} />
+              </span>
+              <span className="min-w-0">
+                <span className="figure block leading-none">{v == null ? "—" : fmtNum(v)}</span>
+                <span className="block truncate text-xs text-ink-muted">{label}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+        <nav className="flex gap-1 overflow-x-auto border-t border-line-soft px-2" role="tablist">
+          {(
+            [
+              ["all", T.filterAll, s?.rows.length, IconLocation],
+              ["waiting", T.filterWaiting, s?.waiting_not_notified, IconHourglass],
+              ["ready", T.filterReady, s?.ready_places, IconSend],
+              ["uncovered", T.filterUncovered, s?.rows.filter((r) => r.status === "uncovered").length, IconZones],
+            ] as const
+          ).map(([id, label, count, Icon]) => {
+            const on = filter === id;
+            const warn = (id === "waiting" || id === "ready") && (count ?? 0) > 0;
+            return (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={on}
+                onClick={() => setFilter(id)}
+                className={`relative inline-flex shrink-0 items-center gap-2 px-3 py-3 text-sm font-bold transition-colors ${
+                  on ? "text-ink" : "text-ink-muted hover:text-ink"
+                }`}
+              >
+                <Icon size={16} />
+                {label}
+                <span
+                  className={`min-w-[1.5rem] rounded-full px-1.5 py-0.5 text-center text-2xs tabular-nums ${
+                    warn ? "bg-warning-solid text-on-solid" : on ? "bg-accent text-on-bright" : "bg-field text-ink-muted"
+                  }`}
+                >
+                  {count == null ? "…" : fmtNum(count)}
+                </span>
+                {on && <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-accent" />}
+              </button>
+            );
+          })}
+        </nav>
+      </section>
 
       {data.error && <Alert className="mb-4">{m.errors.internal}</Alert>}
       {msg && (
@@ -254,48 +307,12 @@ export default function ExpansionPage() {
         </Alert>
       )}
 
-      <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-        <StatCard icon={IconUsers} label={T.people} value={s ? fmtNum(s.people) : "—"} />
-        <StatCard
-          icon={IconTrendUp}
-          label={T.newThisWeek}
-          value={s ? fmtNum(s.new_this_week) : "—"}
-          tone={s && s.new_this_week > 0 ? "accent" : "muted"}
-        />
-        <StatCard icon={IconZones} label={T.cities} value={s ? fmtNum(s.cities) : "—"} />
-        <StatCard
-          icon={IconHourglass}
-          label={T.waitingNotNotified}
-          value={s ? fmtNum(s.waiting_not_notified) : "—"}
-          tone={s && s.waiting_not_notified > 0 ? "warning" : "muted"}
-          selected={filter === "waiting"}
-          onClick={() => setFilter("waiting")}
-        />
-      </div>
-
-      <Chips<Filter>
-        className="mb-4"
-        wrap
-        value={filter}
-        onChange={setFilter}
-        items={[
-          { id: "all", label: T.filterAll, count: s?.rows.length },
-          { id: "waiting", label: T.filterWaiting, count: s?.waiting_not_notified },
-          { id: "ready", label: T.filterReady, count: s?.ready_places },
-          {
-            id: "uncovered",
-            label: T.filterUncovered,
-            count: s?.rows.filter((r) => r.status === "uncovered").length,
-          },
-        ]}
-      />
-
       <DataView
         items={rows}
         loading={data.loading && !s}
         getKey={(r) => r.key}
         columns={columns}
-        view={view}
+        view="cards"
         empty={filter === "all" ? T.empty : T.emptyFilter}
         actions={(r) => (
           <>
