@@ -31,10 +31,14 @@ import {
   Modal,
   ReloadState,
   IconCheck,
+  IconWallet,
+  IconWarning,
+  Chips,
   useLiveData,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { T, sectionLabel } from "./shared";
+import { Tile } from "@/components/admin/DashParts";
 
 
 export interface ApprovalItem {
@@ -91,6 +95,7 @@ export function ApprovalsTab() {
   const [comp, setComp] = useState<ApprovalItem | null>(null);
   const [compAmount, setCompAmount] = useState("");
   const [compNote, setCompNote] = useState("");
+  const [section, setSection] = useState("");
 
   function openComp(it: ApprovalItem) {
     setComp(it);
@@ -140,56 +145,94 @@ export function ApprovalsTab() {
   const items = data.items ?? [];
   const now = Date.now();
 
+  // **الأقسامُ بعدّها** — للفلترة بضغطة.
+  const bySection = new Map<string, number>();
+  for (const it of items) bySection.set(it.section, (bySection.get(it.section) ?? 0) + 1);
+  const shown = section ? items.filter((it) => it.section === section) : items;
+  const urgent = items.filter((it) => it.can_approve && !(it.due_at !== null && new Date(it.due_at).getTime() > now)).length;
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {fail && <Alert>{fail}</Alert>}
-      <p className="text-sm text-ink-muted">
-        {T.approvals.count}: <span dir="ltr">{data.count}</span> · {T.approvals.total}:{" "}
-        <span dir="ltr" className="font-bold">
-          {fmtMoney(data.total)}
-        </span>
-        {(data.undecided_count ?? 0) > 0 && (
-          <> · {T.approvals.undecidedCount.replace("{n}", String(data.undecided_count))}</>
+
+      {/* **طابورُ الموافقات** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «نفهمها ونعيد تصميمها») — كلُّ مالٍ يتحرّك بيد
+          موظّفٍ يمرّ بموافقة شخصٍ ثانٍ: حركةُ محفظة، سلفة، إغلاقُ صندوق، نقص، تعويض، مصروف، شطبُ دين… */}
+      <section className="surface space-y-3 p-4">
+        <p className="text-sm text-ink-muted">{T.approvals.what}</p>
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+          <Tile icon={IconCheck} label={T.approvals.count} value={String(data.count)} tone={data.count > 0 ? "warning" : "muted"} onClick={() => setSection("")} />
+          <Tile icon={IconWallet} label={T.approvals.total} value={fmtMoney(data.total)} tone={data.total > 0 ? "default" : "muted"} />
+          <Tile icon={IconCheck} label={T.approvals.mine} value={String(urgent)} tone={urgent > 0 ? "accent" : "muted"} />
+          <Tile
+            icon={IconWarning}
+            label={T.approvals.undecided}
+            value={String(data.undecided_count ?? 0)}
+            tone={(data.undecided_count ?? 0) > 0 ? "warning" : "muted"}
+          />
+        </div>
+        {bySection.size > 1 && (
+          <Chips
+            wrap
+            items={[
+              { id: "", label: T.approvals.all, count: items.length },
+              ...[...bySection.entries()].map(([k, n]) => ({ id: k, label: sectionLabel(k), count: n })),
+            ]}
+            value={section}
+            onChange={setSection}
+          />
         )}
-      </p>
-      {items.length === 0 ? (
-        <EmptyState icon={IconCheck} title={T.approvals.empty} />
+      </section>
+
+      {shown.length === 0 ? (
+        <section className="surface p-6">
+          <EmptyState icon={IconCheck} title={T.approvals.empty} />
+        </section>
       ) : (
-        <ul className="divide-y divide-line surface">
-          {items.map((it) => {
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+          {shown.map((it) => {
             const notDue = it.due_at !== null && new Date(it.due_at).getTime() > now;
             return (
-              <li key={`${it.key}-${it.id}`} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-sm">
-                <Badge variant="neutral">{sectionLabel(it.section)}</Badge>
-                <ApprovalAmount it={it} />
-                {it.party_name && <span className="font-medium">{T.approvals.party.replace("{name}", it.party_name)}</span>}
-                <span className="min-w-0 flex-1 truncate text-ink-muted">{it.note}</span>
-                <span className="shrink-0 text-xs text-ink-muted">
+              <div key={`${it.key}-${it.id}`} className="surface flex flex-col gap-3 p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <span className="inline-flex rounded-full bg-accent px-2.5 py-0.5 text-xs font-bold text-on-bright">
+                      {sectionLabel(it.section)}
+                    </span>
+                    {it.party_name && <p className="mt-1.5 truncate font-bold">{T.approvals.party.replace("{name}", it.party_name)}</p>}
+                  </div>
+                  <span className="figure shrink-0 leading-none">
+                    <ApprovalAmount it={it} />
+                  </span>
+                </div>
+                {it.note && <p className="rounded-control bg-field px-3 py-2 text-sm">{it.note}</p>}
+                <p className="text-xs text-ink-muted">
                   {T.approvals.proposedBy}: {it.proposer_name || T.approvals.system} ·{" "}
                   <span dir="ltr">{fmtDateTime(it.created_at)}</span>
-                </span>
-                <span className="flex shrink-0 flex-wrap items-center gap-1.5">
+                  {notDue && it.due_at && (
+                    <>
+                      {" · "}
+                      {T.approvals.notDue} <span dir="ltr">{fmtDateTime(it.due_at)}</span>
+                    </>
+                  )}
+                </p>
+                {it.self_approval && it.can_approve && <p className="text-xs font-bold text-warning">{T.approvals.selfFlag}</p>}
+                <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-line-soft pt-3">
                   {it.approve_path ? (
                     <>
-                      {notDue && it.due_at && (
-                        <span className="text-xs text-ink-muted">
-                          {T.approvals.notDue} · <span dir="ltr">{fmtDateTime(it.due_at)}</span>
-                        </span>
-                      )}
                       {it.can_approve ? (
                         <Button
-                          className="!px-2.5"
+                          className="flex-1"
                           disabled={busy || notDue}
                           onClick={() => (it.amount_editable ? openComp(it) : setApprove(it))}
                         >
                           {T.approvals.approve}
                         </Button>
                       ) : (
-                        <span className="text-xs text-ink-muted">{T.approvals.own}</span>
+                        <span className="flex-1 text-xs text-ink-muted">{T.approvals.own}</span>
                       )}
                       <Button
                         variant="secondary"
-                        className="!px-2.5"
+                        className="flex-1"
                         disabled={busy || (it.key === "cash_shortfalls" && notDue)}
                         onClick={() => setReject(it)}
                       >
@@ -197,15 +240,15 @@ export function ApprovalsTab() {
                       </Button>
                     </>
                   ) : (
-                    <Link href={it.href} className="text-primary underline">
-                      {T.approvals.open}
+                    <Link href={it.href} className="text-sm font-bold text-accent-text hover:underline">
+                      {T.approvals.open} ↗
                     </Link>
                   )}
-                </span>
-              </li>
+                </div>
+              </div>
             );
           })}
-        </ul>
+        </div>
       )}
 
       <Confirm
