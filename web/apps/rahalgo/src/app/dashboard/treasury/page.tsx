@@ -17,9 +17,6 @@ import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   PageContainer,
-  PageHeader,
-  Tabs,
-  type TabDef,
   IconWallet,
   IconStatus,
   IconBalance,
@@ -34,6 +31,7 @@ import { ApprovalsTab } from "@/components/admin/treasury/Approvals";
 import { HealthTab } from "@/components/admin/treasury/Health";
 import { TopupTab } from "@/components/admin/treasury/Topup";
 import { useCanCall } from "@/lib/policy";
+import { PageHero, type HeroTab } from "@/components/admin/PageHero";
 
 type Tab = "overview" | "statement" | "cashbox" | "approvals" | "topup" | "health";
 const TABS: Tab[] = ["overview", "statement", "cashbox", "approvals", "topup", "health"];
@@ -82,20 +80,33 @@ function TreasuryHub() {
     router.replace(`/dashboard/treasury?tab=${k}`);
   }
 
-  const items: TabDef<string>[] = [
+  const tabs: HeroTab<string>[] = [
     { key: "overview", label: T.tabs.overview, icon: IconWallet },
     { key: "statement", label: T.tabs.statement, icon: IconStatus },
     { key: "cashbox", label: T.tabs.cashbox, icon: IconBalance },
     { key: "approvals", label: T.tabs.approvals, icon: IconCheck },
-    ...(canTopup ? [{ key: "topup" as const, label: T.topup.tab, icon: IconWallet }] : []),
+    ...(canTopup ? [{ key: "topup", label: T.topup.tab, icon: IconWallet }] : []),
     { key: "health", label: T.tabs.health, icon: IconShieldCheck },
-    ...LINKS.map((l) => ({ key: l.href, label: l.label })),
   ];
 
   return (
     <PageContainer>
-      <PageHeader icon={IconWallet} title={T.title} subtitle={T.subtitle} />
-      <Tabs<string> items={items} value={tab} onChange={go} className="mb-4" />
+      {/* **رأسٌ موحّد** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «الخزينة بالتصميم الجديد») — تبويباتُ الخزينة بسطرٍ واحد،
+          **وصفحاتُ المال التي لها بابُها روابطُ صغيرةٌ فوقها** (كانت مخلوطةً بالتبويبات، ٢٠٢٦-١٠-٢٣). */}
+      <PageHero<string> icon={IconWallet} title={T.title} subtitle={T.subtitle} tabs={tabs} value={tab} onChange={go}>
+        <div className="flex flex-wrap gap-1.5">
+          {LINKS.map((l) => (
+            <button
+              key={l.href}
+              type="button"
+              onClick={() => go(l.href)}
+              className="rounded-full border border-line-soft px-3 py-1 text-xs font-bold text-ink-muted transition-colors hover:bg-row-hover hover:text-ink"
+            >
+              {l.label} ↗
+            </button>
+          ))}
+        </div>
+      </PageHero>
       {tab === "overview" && <OverviewTab onTab={go} />}
       {tab === "statement" && <StatementTab />}
       {tab === "cashbox" && <CashboxTab />}

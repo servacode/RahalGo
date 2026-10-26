@@ -23,8 +23,6 @@ import {
   LoadingState,
   Modal,
   ReloadState,
-  StatCard,
-  StatGrid,
   IconWallet,
   IconBalance,
   IconDriver,
@@ -39,6 +37,7 @@ import { useCanCall } from "@/lib/policy";
 import { T, sectionLabel } from "./shared";
 import type { ApprovalItem } from "./Approvals";
 import { DiffBadge, type CashClose } from "./Cashbox";
+import { Panel, Tile } from "@/components/admin/DashParts";
 
 const O = T.overview;
 const W = T.withdraw;
@@ -132,67 +131,77 @@ export function OverviewTab({ onTab }: { onTab: (tab: "approvals" | "cashbox") =
         </Alert>
       )}
       {!d.has_treasury && <Alert tone="warning">{O.noTreasury}</Alert>}
-      {(d.profit_cards ?? []).length > 0 && (
-        <section className="space-y-2">
-          <h3 className="font-bold">{O.profitTitle}</h3>
-          <StatGrid>
-            {(d.profit_cards ?? []).map((c) => (
-              <StatCard
-                key={c.period}
-                label={O.profitCards[c.period]}
-                value={fmtMoney(c.net)}
-                icon={IconTrendUp}
-                tone={c.net > 0 ? "success" : c.net < 0 ? "danger" : "muted"}
-                onClick={() => router.push("/dashboard/profits")}
-              />
-            ))}
-          </StatGrid>
-          <p className="text-xs text-ink-muted">{O.profitHint}</p>
+      {/* **الخزينةُ بالتصميم الجديد** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — الرصيدُ أوّلاً بلونه، ثمّ الربحُ بمُدَده،
+          ثمّ حركةُ النقد (أين المالُ الآن)، ثمّ ما ينتظر قراراً. */}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <section
+          className={`surface flex flex-col justify-center gap-1 p-5 ${
+            d.treasury_balance < 0 ? "border-danger" : ""
+          }`}
+        >
+          <span className="text-sm text-ink-muted">{O.treasuryBalance}</span>
+          <span className={`figure text-3xl ${d.treasury_balance < 0 ? "text-danger" : "text-success"}`}>
+            {fmtMoney(d.treasury_balance)}
+          </span>
+          <span className="text-xs text-ink-muted">{O.balanceHint}</span>
         </section>
-      )}
-      <StatGrid>
-        <StatCard
-          label={O.treasuryBalance}
-          value={fmtMoney(d.treasury_balance)}
-          icon={IconWallet}
-          tone={d.treasury_balance >= 0 ? "success" : "danger"}
-          emphasis
-        />
-        <StatCard
-          label={O.cashboxExpected}
-          value={fmtMoney(d.cashbox.expected)}
-          icon={IconBalance}
-          tone={d.cashbox.expected < 0 ? "danger" : undefined}
-          onClick={() => onTab("cashbox")}
-        />
-        <StatCard label={O.todayIn} value={fmtMoney(d.today_in)} tone="success" />
-        <StatCard label={O.todayOut} value={fmtMoney(d.today_out)} tone="danger" />
-        <StatCard label={O.cashInStreet} value={fmtMoney(d.cash_in_street)} icon={IconDriver} />
-        <StatCard label={O.merchantCashDue} value={fmtMoney(d.merchant_cash_due)} icon={IconStore} />
-        <StatCard label={O.pendingPayouts} value={fmtMoney(d.pending_payouts)} />
-        <StatCard label={O.withdrawalsMonth} value={fmtMoney(d.withdrawals_month)} />
-        <StatCard
-          label={O.openShortfalls}
-          value={fmtMoney(d.open_shortfalls)}
-          icon={IconWarning}
-          tone={d.open_shortfalls > 0 ? "danger" : "muted"}
-        />
-        <StatCard
-          label={O.pendingApprovals}
-          value={String(d.pending_count)}
-          sub={
-            (d.pending_undecided ?? 0) > 0
-              ? `${fmtMoney(d.pending_total)} · ${O.undecided.replace("{n}", String(d.pending_undecided))}`
-              : fmtMoney(d.pending_total)
-          }
-          icon={IconCheck}
-          tone={d.pending_count > 0 ? "warning" : "muted"}
-          onClick={() => onTab("approvals")}
-        />
-      </StatGrid>
+        {(d.profit_cards ?? []).length > 0 && (
+          <Panel title={O.profitTitle} note={O.profitHint} className="xl:col-span-2">
+            <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+              {(d.profit_cards ?? []).map((c) => (
+                <Tile
+                  key={c.period}
+                  icon={IconTrendUp}
+                  label={O.profitCards[c.period]}
+                  value={fmtMoney(c.net)}
+                  tone={c.net > 0 ? "success" : c.net < 0 ? "danger" : "muted"}
+                  onClick={() => router.push("/dashboard/profits")}
+                />
+              ))}
+            </div>
+          </Panel>
+        )}
+      </div>
 
-      <section className="surface space-y-1 p-3 text-sm">
-        <h3 className="font-bold">{O.lastClose}</h3>
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <Panel title={O.cashTitle}>
+          <div className="grid grid-cols-2 gap-2">
+            <Tile
+              icon={IconBalance}
+              label={O.cashboxExpected}
+              value={fmtMoney(d.cashbox.expected)}
+              tone={d.cashbox.expected < 0 ? "danger" : "default"}
+              onClick={() => onTab("cashbox")}
+            />
+            <Tile icon={IconDriver} label={O.cashInStreet} value={fmtMoney(d.cash_in_street)} tone={d.cash_in_street > 0 ? "warning" : "muted"} onClick={() => router.push("/dashboard/cash")} />
+            <Tile icon={IconTrendUp} label={O.todayIn} value={fmtMoney(d.today_in)} tone={d.today_in > 0 ? "success" : "muted"} onClick={() => onTab("cashbox")} />
+            <Tile icon={IconWallet} label={O.todayOut} value={fmtMoney(d.today_out)} tone={d.today_out > 0 ? "danger" : "muted"} onClick={() => onTab("cashbox")} />
+          </div>
+        </Panel>
+        <Panel title={O.dueTitle}>
+          <div className="grid grid-cols-2 gap-2">
+            <Tile icon={IconStore} label={O.merchantCashDue} value={fmtMoney(d.merchant_cash_due)} tone={d.merchant_cash_due > 0 ? "warning" : "muted"} />
+            <Tile icon={IconWallet} label={O.pendingPayouts} value={fmtMoney(d.pending_payouts)} tone={d.pending_payouts > 0 ? "warning" : "muted"} onClick={() => router.push("/dashboard/payouts")} />
+            <Tile
+              icon={IconCheck}
+              label={O.pendingApprovals}
+              value={String(d.pending_count)}
+              sub={
+                (d.pending_undecided ?? 0) > 0
+                  ? `${fmtMoney(d.pending_total)} · ${O.undecided.replace("{n}", String(d.pending_undecided))}`
+                  : fmtMoney(d.pending_total)
+              }
+              tone={d.pending_count > 0 ? "warning" : "muted"}
+              onClick={() => onTab("approvals")}
+            />
+            <Tile icon={IconWarning} label={O.openShortfalls} value={fmtMoney(d.open_shortfalls)} tone={d.open_shortfalls > 0 ? "danger" : "muted"} onClick={() => onTab("cashbox")} />
+            <Tile icon={IconWallet} label={O.withdrawalsMonth} value={fmtMoney(d.withdrawals_month)} tone={d.withdrawals_month > 0 ? "default" : "muted"} />
+          </div>
+        </Panel>
+      </div>
+
+      <section className="surface space-y-2 p-4 text-sm">
+        <h3 className="heading-card">{O.lastClose}</h3>
         {d.last_close ? (
           <p className="flex flex-wrap items-center gap-2">
             <span dir="ltr">{d.last_close.day}</span>

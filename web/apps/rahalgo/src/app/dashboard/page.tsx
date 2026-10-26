@@ -57,6 +57,7 @@ import ContactTestAlert from "@/components/admin/settings/contact-check";
 import SiteStatsSection from "@/components/admin/SiteStatsSection";
 import PlatformSwitch from "@/components/admin/settings/PlatformSwitch";
 import { PageHero } from "@/components/admin/PageHero";
+import { Panel, Tile, type TileTone } from "@/components/admin/DashParts";
 
 const m = getMessages(defaultLocale);
 const H = m.admin.home;
@@ -621,75 +622,6 @@ export default function DashboardPage() {
       {/* ── زوّارُ الموقع والتحميلات (طلبُ المالك ٢٠٢٦-١٠-٠٧) ── */}
       <SiteStatsSection />
     </div>
-  );
-}
-
-/** **لوحةُ قسمٍ في الرئيسيّة** — عنوانٌ وملاحظةٌ صغيرةٌ ثمّ المحتوى في بطاقةٍ واحدة. */
-function Panel({
-  title,
-  note,
-  className = "",
-  children,
-}: {
-  title: string;
-  note?: string;
-  className?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className={`surface p-4 ${className}`}>
-      <h2 className="heading-card mb-3 flex flex-wrap items-baseline gap-2">
-        {title}
-        {note && <span className="text-xs font-normal text-ink-muted">{note}</span>}
-      </h2>
-      {children}
-    </section>
-  );
-}
-
-type TileTone = "default" | "muted" | "danger" | "warning" | "accent";
-
-const TILE_ICON: Record<TileTone, string> = {
-  default: "bg-field text-ink",
-  muted: "bg-field text-ink-muted",
-  danger: "bg-danger-solid text-on-solid",
-  warning: "bg-warning-solid text-on-solid",
-  accent: "bg-accent text-on-bright",
-};
-
-/** **بطاقةٌ صغيرةٌ تُضغط** — أيقونةٌ في دائرةٍ بلون النبرة، ورقمٌ ولفظ. */
-function Tile({
-  icon: Icon,
-  label,
-  value,
-  sub,
-  tone = "default",
-  onClick,
-}: {
-  icon: typeof IconWarning;
-  label: string;
-  value: string;
-  sub?: string;
-  tone?: TileTone;
-  onClick?: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex items-center gap-3 rounded-card border p-3 text-start transition-colors hover:bg-row-hover ${
-        tone === "danger" ? "border-danger" : tone === "warning" ? "border-warning" : "border-line-soft"
-      }`}
-    >
-      <span className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${TILE_ICON[tone]}`}>
-        <Icon size={18} />
-      </span>
-      <span className="min-w-0">
-        <span className={`figure block leading-none ${tone === "muted" ? "text-ink-muted" : ""}`}>{value}</span>
-        <span className="mt-1 block truncate text-xs text-ink-muted">{label}</span>
-        {sub && <span className="block truncate text-2xs text-ink-muted">{sub}</span>}
-      </span>
-    </button>
   );
 }
 
