@@ -21,13 +21,12 @@ import {
   Alert,
   Chips,
   Checkbox,
-  DataView,
-  ViewToggle,
-  useViewMode,
   Pagination,
-  type DataColumn,
+  LoadingState,
   IconStore,
-  IconStatus,
+  IconSearch,
+  IconAdd,
+  IconDate,
   Money,
   FormActions,
   Confirm,
@@ -97,7 +96,6 @@ export default function DiscountsTab({ onChanged }: { onChanged?: () => void }) 
   const [rows, setRows] = useState<Offer[] | null>(null);
   const [error, setError] = useState("");
   const [open, setOpen] = useState(false);
-  const [view, setView] = useViewMode("offers");
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<OfferStatus | "all">("all");
   const [page, setPage] = useState(1);
@@ -147,136 +145,73 @@ export default function DiscountsTab({ onChanged }: { onChanged?: () => void }) 
     }
   }
 
-  const columns: DataColumn<Offer>[] = [
-    {
-      id: "title",
-      header: P.fTitle,
-      primary: true,
-      cell: (o) => <span className="font-bold">{o.title}</span>,
-    },
-    {
-      id: "item",
-      header: O.itemCol,
-      icon: <IconStore />,
-      cell: (o) => (
-        <span>
-          {o.item_name} — {o.merchant_name}
-          {!o.item_available && (
-            <Badge variant="warning" className="ms-1">
-              {O.itemUnavailable}
-            </Badge>
-          )}
-        </span>
-      ),
-    },
-    {
-      id: "before",
-      header: O.priceBefore,
-      cell: (o) => (
-        <span className="text-ink-muted line-through">
-          <Money value={o.price_before} />
-        </span>
-      ),
-    },
-    {
-      id: "after",
-      header: O.priceAfter,
-      cell: (o) => (
-        <span className="font-bold text-success">
-          <Money value={o.price_after} />
-        </span>
-      ),
-    },
-    { id: "cut", header: O.discountCol, cell: cutText },
-    {
-      id: "borne",
-      header: O.borneCol,
-      cell: (o) => (o.borne_by === "platform" ? P.byPlatform : P.byMerchant),
-    },
-    {
-      id: "by",
-      header: O.createdBy,
-      cell: (o) =>
-        `${BY[o.created_by_kind ?? "admin"] ?? ""}${o.created_by_name ? ` · ${o.created_by_name}` : ""}`,
-    },
-    {
-      id: "status",
-      header: O.statusCol,
-      icon: <IconStatus />,
-      cell: (o) => {
-        const s = STATUS[statusOf(o)];
-        return <Badge variant={s.tone}>{s.label}</Badge>;
-      },
-    },
-    {
-      id: "ends",
-      header: O.endsCol,
-      cell: (o) => (o.ends_at ? fmtDate(o.ends_at) : P.noEnd),
-    },
-  ];
-
+  // تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦) — فلاترُ ببطاقةٍ واحدة، وكرتٌ لكلّ خصمٍ بدل الجدول.
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Button onClick={() => setOpen(true)}>{P.create}</Button>
-        <ViewToggle
-          view={view}
-          onChange={setView}
-          tableLabel={m.common.viewTable}
-          cardsLabel={m.common.viewCards}
+      <section className="surface space-y-3 p-3">
+        <div className="flex flex-wrap items-end gap-2">
+          <Input
+            id="offer-search"
+            label={O.search}
+            icon={<IconSearch size={16} />}
+            placeholder={O.searchDiscounts}
+            value={q}
+            onChange={(e) => {
+              setQ(e.target.value);
+              setPage(1);
+            }}
+            wrapperClassName="min-w-0 flex-1"
+          />
+          <Button onClick={() => setOpen(true)} className="flex items-center gap-1.5">
+            <IconAdd size={16} />
+            {P.create}
+          </Button>
+        </div>
+        <Chips
+          wrap
+          items={[
+            { id: "all" as const, label: O.fAll },
+            ...(Object.keys(STATUS) as OfferStatus[]).map((k) => ({ id: k, label: STATUS[k].label })),
+          ]}
+          value={status}
+          onChange={(k) => {
+            setStatus(k);
+            setPage(1);
+          }}
         />
-      </div>
-      <Input
-        id="offer-search"
-        label={O.search}
-        placeholder={O.searchDiscounts}
-        value={q}
-        onChange={(e) => {
-          setQ(e.target.value);
-          setPage(1);
-        }}
-      />
-      <Chips
-        wrap
-        items={[
-          { id: "all" as const, label: O.fAll },
-          ...(Object.keys(STATUS) as OfferStatus[]).map((k) => ({ id: k, label: STATUS[k].label })),
-        ]}
-        value={status}
-        onChange={(k) => {
-          setStatus(k);
-          setPage(1);
-        }}
-      />
+      </section>
 
       {error && <Alert>{error}</Alert>}
 
-      <DataView
-        items={shown}
-        loading={rows === null}
-        getKey={(o) => o.id}
-        columns={columns}
-        view={view}
-        empty={P.empty}
-        actions={(o) => {
-          const s = statusOf(o);
-          if (s === "pending" || s === "rejected" || s === "expired") return null;
-          return o.active ? (
-            <Button
-              variant="secondary"
-              disabled={busyId === o.id}
-              onClick={() => void deactivate(o)}
-            >
-              {busyId === o.id ? O.busy : P.deactivate}
-            </Button>
-          ) : (
-            <Button variant="secondary" onClick={() => setActivating(o)}>
-              {P.activate}
-            </Button>
-          );
-        }}
-      />
-      <Pagination page={page} total={filtered.length} perPage={PER_PAGE} onChange={setPage} />
+      {rows === null ? (
+        <LoadingState variant="list" />
+      ) : shown.length === 0 ? (
+        <section className="surface flex flex-col items-center gap-3 p-8 text-center">
+          <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-field text-ink-muted">
+            <IconStore size={28} />
+          </span>
+          <h2 className="heading-section">{rows.length === 0 ? P.empty : O.noMatch}</h2>
+          <p className="max-w-md text-sm text-ink-muted">{rows.length === 0 ? O.discountsEmptyHint : O.noMatchHint}</p>
+        </section>
+      ) : (
+        <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+          {shown.map((o) => (
+            <OfferCard
+              key={o.id}
+              o={o}
+              busy={busyId === o.id}
+              onDeactivate={() => void deactivate(o)}
+              onActivate={() => setActivating(o)}
+            />
+          ))}
+        </ul>
+      )}
+
+      {filtered.length > PER_PAGE && (
+        <div className="flex justify-center">
+          <Pagination page={page} total={filtered.length} perPage={PER_PAGE} onChange={setPage} />
+        </div>
+      )}
 
       {open && (
         <CreateOfferModal
@@ -300,6 +235,99 @@ export default function DiscountsTab({ onChanged }: { onChanged?: () => void }) 
         />
       )}
     </div>
+  );
+}
+
+/**
+ * **كرتُ الخصم** — تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦): العنوانُ والصنفُ والمتجر، والسعران
+ * (قبل مشطوب وبعد كبير)، ونسبةُ الخصم، ومين بيتحمّل ومين عمله، والانتهاء — والفعل.
+ */
+function OfferCard({
+  o,
+  busy,
+  onDeactivate,
+  onActivate,
+}: {
+  o: Offer;
+  busy: boolean;
+  onDeactivate: () => void;
+  onActivate: () => void;
+}) {
+  const s = STATUS[statusOf(o)];
+  const st = statusOf(o);
+  const canAct = st !== "pending" && st !== "rejected" && st !== "expired";
+  const cut = cutText(o);
+  return (
+    <li className="surface flex flex-col gap-3 p-4">
+      <div className="flex items-start gap-3">
+        <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-on-bright">
+          <IconStore size={20} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-bold">{o.title}</span>
+          <span className="block truncate text-xs text-ink-muted">
+            {o.item_name} — {o.merchant_name}
+          </span>
+        </span>
+        <Badge variant={s.tone} className="shrink-0">
+          {s.label}
+        </Badge>
+      </div>
+
+      {!o.item_available && (
+        <Badge variant="warning" className="self-start">
+          {O.itemUnavailable}
+        </Badge>
+      )}
+
+      <div className="flex items-end justify-between gap-2 rounded-control bg-field px-3 py-2.5">
+        <span className="min-w-0">
+          <span className="block text-2xs text-ink-muted">{O.priceBefore}</span>
+          <span className="block text-sm text-ink-muted line-through">
+            <Money value={o.price_before} />
+          </span>
+        </span>
+        {cut && (
+          <span className="rounded-control border-2 border-dashed border-success px-2 py-0.5 text-sm font-bold tabular-nums text-success" dir="ltr">
+            {cut}
+          </span>
+        )}
+        <span className="text-end">
+          <span className="block text-2xs text-ink-muted">{O.priceAfter}</span>
+          <span className="figure block text-success">
+            <Money value={o.price_after} />
+          </span>
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 gap-x-3 gap-y-1 text-2xs text-ink-muted sm:grid-cols-2">
+        <span>
+          {O.borneCol}: <span className="text-ink">{o.borne_by === "platform" ? P.byPlatform : P.byMerchant}</span>
+        </span>
+        <span className="flex items-center gap-1">
+          <IconDate size={12} className="shrink-0" />
+          {O.endsCol}: {o.ends_at ? fmtDate(o.ends_at) : P.noEnd}
+        </span>
+        <span className="sm:col-span-2">
+          {O.createdBy}: {BY[o.created_by_kind ?? "admin"] ?? ""}
+          {o.created_by_name ? ` · ${o.created_by_name}` : ""}
+        </span>
+      </div>
+
+      {canAct && (
+        <div className="mt-auto border-t border-line-soft pt-3">
+          {o.active ? (
+            <Button variant="secondary" className="w-full" disabled={busy} onClick={onDeactivate}>
+              {busy ? O.busy : P.deactivate}
+            </Button>
+          ) : (
+            <Button className="w-full" onClick={onActivate}>
+              {P.activate}
+            </Button>
+          )}
+        </div>
+      )}
+    </li>
   );
 }
 

@@ -10,21 +10,17 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getMessages, defaultLocale, fmtNum, errorText, damascusDay } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtMoney, errorText, damascusDay } from "@rahalgo/i18n";
 import {
   Alert,
+  Badge,
   Button,
-  Tabs,
-  type TabDef,
+  Chips,
   Input,
   PageContainer,
-  PageHeader,
-  EmptyState,
   LoadingState,
   ReloadState,
   Pagination,
-  StatGrid,
-  StatCard,
   Money,
   IconWallet,
   IconUser,
@@ -32,9 +28,17 @@ import {
   IconDriver,
   IconStatus,
   IconDate,
+  IconTrendUp,
+  IconTrendDown,
+  IconOrder,
+  IconCheck,
+  IconHourglass,
+  IconSwap,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { PageHero, type HeroTab } from "@/components/admin/PageHero";
+import { Panel, Tile } from "@/components/admin/DashParts";
 
 const m = getMessages(defaultLocale);
 const P = m.admin.profits;
@@ -202,7 +206,7 @@ export default function ProfitsPage() {
     { id: "all", label: P.presetAll, from: "", to: "" },
   ];
 
-  const tabs: TabDef<Tab>[] = [
+  const tabs: HeroTab<Tab>[] = [
     { key: "platform", label: P.tabPlatform, icon: IconWallet },
     { key: "customers", label: P.tabCustomers, icon: IconUser },
     { key: "reps", label: P.tabReps, icon: IconStatus },
@@ -246,49 +250,49 @@ export default function ProfitsPage() {
     }
   }
 
+  const activePreset = presets.find((x) => from === x.from && to === x.to)?.id ?? "";
+
+  // **تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦)** — رأسٌ موحّدٌ بتبويبات الأطراف، المدّةُ في كرتٍ واحد،
+  // والكشفُ أقسامٌ واضحة (دخل · خصومات · صافي) بدل قائمةٍ طويلة، والأشخاصُ كروتٌ لا جدول.
   return (
     <PageContainer>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <PageHeader icon={IconWallet} title={P.titlePl} subtitle={P.hintPl} />
-        <Button
-          variant="secondary"
-          onClick={() => void exportCsv()}
-          disabled={inverted || loading || data === null}
-        >
-          {P.export}
-        </Button>
-      </div>
-
-      <Tabs
-        items={tabs}
+      <PageHero<Tab>
+        icon={IconWallet}
+        title={P.titlePl}
+        subtitle={P.hintPl}
+        actions={
+          <Button
+            variant="secondary"
+            onClick={() => void exportCsv()}
+            disabled={inverted || loading || data === null}
+          >
+            {P.export}
+          </Button>
+        }
+        tabs={tabs}
         value={tab}
         onChange={(k) => {
           setTab(k);
           setPage(1);
           setData(null);
         }}
-        className="mb-4"
       />
 
-      <div className="mb-2 flex flex-wrap items-end gap-2">
-        {presets.map((x) => {
-          const on = from === x.from && to === x.to;
-          return (
-            <Button
-              key={x.id}
-              variant={on ? "primary" : "secondary"}
-              aria-pressed={on}
-              onClick={() => {
-                setFrom(x.from);
-                setTo(x.to);
-                setPage(1);
-              }}
-            >
-              {x.label}
-            </Button>
-          );
-        })}
-        <div className="min-w-[8.75rem] flex-1 sm:w-40 sm:flex-none">
+      {/* ── المدّة في كرتٍ واحد ── */}
+      <section className="surface mb-4 space-y-3 p-4">
+        <Chips
+          items={presets.map((x) => ({ id: x.id, label: x.label }))}
+          value={activePreset}
+          onChange={(id) => {
+            const x = presets.find((p) => p.id === id);
+            if (!x) return;
+            setFrom(x.from);
+            setTo(x.to);
+            setPage(1);
+          }}
+          wrap
+        />
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <Input
             id="pf-from"
             type="date"
@@ -300,8 +304,6 @@ export default function ProfitsPage() {
               setPage(1);
             }}
           />
-        </div>
-        <div className="min-w-[8.75rem] flex-1 sm:w-40 sm:flex-none">
           <Input
             id="pf-to"
             type="date"
@@ -314,8 +316,8 @@ export default function ProfitsPage() {
             }}
           />
         </div>
-      </div>
-      <p className="mb-4 text-2xs text-ink-muted">{P.basis}</p>
+        <p className="text-2xs text-ink-muted">{P.basis}</p>
+      </section>
 
       {inverted ? (
         <Alert className="mb-4">{P.inverted}</Alert>
@@ -329,7 +331,7 @@ export default function ProfitsPage() {
           {tab === "platform" ? (
             <PlatformView d={data as Platform} />
           ) : (
-            <PartyView d={data as Party} page={page} onPage={setPage} />
+            <PartyView d={data as Party} tab={tab} page={page} onPage={setPage} />
           )}
         </div>
       )}
@@ -341,7 +343,7 @@ export default function ProfitsPage() {
 function Signed({ v, strong }: { v: number; strong?: boolean }) {
   return (
     <span
-      className={`${strong ? "font-bold" : ""} ${v < 0 ? "text-danger" : v > 0 ? "text-success" : "text-ink-muted"}`}
+      className={`whitespace-nowrap ${strong ? "font-bold" : ""} ${v < 0 ? "text-danger" : v > 0 ? "text-success" : "text-ink-muted"}`}
     >
       <span dir="ltr" className="tabular-nums">
         {v < 0 ? "−" : v > 0 ? "+" : ""}
@@ -351,12 +353,29 @@ function Signed({ v, strong }: { v: number; strong?: boolean }) {
   );
 }
 
-function Row2({ label, v, strong }: { label: string; v: number; strong?: boolean }) {
+/** سطرٌ في الكشف — نقطةٌ بلون أثره، واسمُه، ومبلغُه بإشارته. */
+function Line({ label, v }: { label: string; v: number }) {
   return (
-    <li className="flex items-center justify-between gap-3 px-3 py-2">
-      <span className={`text-sm ${strong ? "font-bold" : ""}`}>{label}</span>
-      <Signed v={v} strong={strong} />
+    <li className="flex items-center justify-between gap-3 py-2">
+      <span className="flex min-w-0 items-center gap-2 text-sm">
+        <span
+          aria-hidden
+          className={`h-2 w-2 shrink-0 rounded-full ${v < 0 ? "bg-danger" : v > 0 ? "bg-success" : "bg-line"}`}
+        />
+        <span className="min-w-0">{label}</span>
+      </span>
+      <Signed v={v} />
     </li>
+  );
+}
+
+/** سطرُ المجموع تحت كلّ قسم. */
+function Subtotal({ label, v }: { label: string; v: number }) {
+  return (
+    <div className="mt-2 flex items-center justify-between gap-3 rounded-control bg-field px-3 py-2.5">
+      <span className="text-sm font-bold">{label}</span>
+      <Signed v={v} strong />
+    </div>
   );
 }
 
@@ -365,115 +384,193 @@ function PlatformView({ d }: { d: Platform }) {
   const income = shown.filter((l) => INCOME_KEYS.has(l.key));
   const rest = shown.filter((l) => !INCOME_KEYS.has(l.key));
   const out = d.net - d.income;
+  const gain = d.net >= 0;
   return (
-    <>
-      <StatGrid>
-        <StatCard
-          label={`${P.cardIncome} (${CUR})`}
-          value={fmtNum(d.income)}
-          icon={IconStore}
-          tone="success"
-        />
-        <StatCard label={`${P.cardOut} (${CUR})`} value={fmtNum(-out)} icon={IconStatus} tone="danger" />
-        <StatCard
-          label={`${P.cardNet} (${CUR})`}
-          value={fmtNum(d.net)}
-          icon={IconWallet}
-          tone={d.net >= 0 ? "success" : "danger"}
-        />
-        <StatCard
+    <div className="space-y-4">
+      {/* ── الصافي بكرتٍ كبير، وتحته فحصُ «مجموع البنود = الصافي» ── */}
+      <section
+        className={`surface flex flex-wrap items-center gap-4 border-2 p-5 ${gain ? "border-success" : "border-danger"}`}
+      >
+        <span
+          className={`inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-full text-on-solid ${
+            gain ? "bg-success-solid" : "bg-danger-solid"
+          }`}
+        >
+          {gain ? <IconTrendUp size={30} /> : <IconTrendDown size={30} />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="flex flex-wrap items-center gap-2 text-sm text-ink-muted">
+            {P.lineNet}
+            <Badge variant={gain ? "success" : "danger"}>{gain ? P.netProfit : P.netLoss}</Badge>
+          </p>
+          <p className={`figure ${gain ? "text-success" : "text-danger"}`}>
+            <span dir="ltr">
+              {d.net < 0 ? "−" : ""}
+              {fmtMoney(Math.abs(d.net))}
+            </span>
+          </p>
+          <p className="text-xs text-ink-muted">{P.netHint}</p>
+        </div>
+        <div className="w-full sm:w-auto">
+          {d.check_ok ? (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-field px-3 py-1.5 text-sm font-medium text-success">
+              <IconCheck size={16} />
+              {P.checkOk}
+            </span>
+          ) : (
+            <Alert>{P.checkBad.replace("{d}", `${fmtNum(d.check_diff)} ${CUR}`)}</Alert>
+          )}
+        </div>
+      </section>
+
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <Tile icon={IconStore} label={P.cardIncome} value={fmtMoney(d.income)} tone="success" />
+        <Tile icon={IconStatus} label={P.cardOut} value={fmtMoney(-out)} tone="danger" />
+        <Tile
+          icon={IconOrder}
           label={P.cardOrders}
           value={fmtNum(d.orders)}
-          icon={IconStatus}
-          sub={`${P.cardSales}: ${fmtNum(d.sales)} ${CUR}`}
+          sub={`${P.cardSales}: ${fmtMoney(d.sales)}`}
         />
-      </StatGrid>
+      </div>
 
-      <ul className="mt-4 divide-y divide-line surface">
-        {income.map((l) => (
-          <Row2 key={l.key} label={LINE_LABEL[l.key] ?? l.key} v={l.amount} />
-        ))}
-        <Row2 label={P.cardIncome} v={d.income} strong />
-        {rest.map((l) => (
-          <Row2 key={l.key} label={LINE_LABEL[l.key] ?? l.key} v={l.amount} />
-        ))}
-        <Row2 label={P.lineNet} v={d.net} strong />
-      </ul>
+      {/* ── الكشف قسمين: دخل ثمّ خصومات، وتحتهما المعادلة ── */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Panel title={P.cardIncome} note={P.incomeNote}>
+          <ul className="divide-y divide-line-soft">
+            {income.map((l) => (
+              <Line key={l.key} label={LINE_LABEL[l.key] ?? l.key} v={l.amount} />
+            ))}
+          </ul>
+          <Subtotal label={P.subtotal} v={d.income} />
+        </Panel>
+        <Panel title={P.cardOut} note={P.costsNote}>
+          <ul className="divide-y divide-line-soft">
+            {rest.map((l) => (
+              <Line key={l.key} label={LINE_LABEL[l.key] ?? l.key} v={l.amount} />
+            ))}
+          </ul>
+          <Subtotal label={P.subtotal} v={out} />
+        </Panel>
+      </div>
 
-      {d.check_ok ? (
-        <p className="mt-2 text-sm font-medium text-success">{P.checkOk}</p>
-      ) : (
-        <Alert className="mt-2">
-          {P.checkBad.replace("{d}", `${fmtNum(d.check_diff)} ${CUR}`)}
-        </Alert>
-      )}
+      <section className="surface flex flex-wrap items-center justify-center gap-x-3 gap-y-1 p-4 text-sm">
+        <Signed v={d.income} />
+        <span className="text-ink-muted">+</span>
+        <Signed v={out} />
+        <span className="text-ink-muted">=</span>
+        <span className="font-bold">{P.lineNet}</span>
+        <Signed v={d.net} strong />
+      </section>
 
-      <ul className="mt-4 divide-y divide-line surface">
-        <li className="px-3 py-2">
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-sm">{P.pending}</span>
-            <Money value={d.pending} className="font-bold" />
+      {/* ── أرقامٌ برّا الصافي ── */}
+      <Panel title={P.outsideTitle}>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="flex items-start gap-3 rounded-control bg-field p-3">
+            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-warning-solid text-on-solid">
+              <IconHourglass size={18} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-sm font-medium">{P.pending}</span>
+                <Money value={d.pending} className="font-bold" />
+              </div>
+              <p className="text-2xs text-ink-muted">{P.pendingHint}</p>
+            </div>
           </div>
-          <p className="text-2xs text-ink-muted">{P.pendingHint}</p>
-        </li>
-        <li className="px-3 py-2">
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-sm">{P.outside}</span>
-            <Signed v={d.outside} />
+          <div className="flex items-start gap-3 rounded-control bg-field p-3">
+            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface text-ink">
+              <IconSwap size={18} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-sm font-medium">{P.outside}</span>
+                <Signed v={d.outside} />
+              </div>
+              <p className="text-2xs text-ink-muted">{P.outsideHint}</p>
+            </div>
           </div>
-          <p className="text-2xs text-ink-muted">{P.outsideHint}</p>
-        </li>
-      </ul>
-    </>
+        </div>
+      </Panel>
+    </div>
   );
 }
 
+const PARTY_ICON: Record<Exclude<Tab, "platform">, typeof IconUser> = {
+  customers: IconUser,
+  reps: IconStatus,
+  drivers: IconDriver,
+  merchants: IconStore,
+};
+
+/** **كرتٌ لكلّ شخص** — أوّلُ عمودٍ رقمُه الكبير، والباقي خاناتٌ صغيرة. */
 function PartyView({
   d,
+  tab,
   page,
   onPage,
 }: {
   d: Party;
+  tab: Tab;
   page: number;
   onPage: (p: number) => void;
 }) {
   const rows = d.rows ?? [];
   const cols = d.columns ?? [];
-  if (rows.length === 0) return <EmptyState icon={IconUser} title={P.empty} />;
+  const Icon = tab === "platform" ? IconUser : PARTY_ICON[tab];
+  if (rows.length === 0) {
+    return (
+      <section className="surface flex flex-col items-center gap-3 p-8 text-center">
+        <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-success-solid text-on-solid">
+          <Icon size={28} />
+        </span>
+        <h2 className="heading-section">{P.empty}</h2>
+        <p className="max-w-md text-sm text-ink-muted">{P.emptyHint}</p>
+      </section>
+    );
+  }
   return (
     <>
-      <div className="surface overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="text-2xs text-ink-muted">
-            <tr className="border-b border-line-soft">
-              <th className="p-2 text-start">{m.terms.name}</th>
-              {cols.map((c) => (
-                <th key={c} className="p-2 text-start">
-                  {COL_LABEL[c] ?? c}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((x) => (
-              <tr key={x.user_id} className="border-b border-line-soft">
-                <td className="p-2">
-                  <span className="block font-medium">{x.name || x.phone}</span>
-                  <span dir="ltr" className="block text-2xs text-ink-muted">
-                    {x.phone}
-                  </span>
-                </td>
-                {cols.map((c, i) => (
-                  <td key={c} className="whitespace-nowrap p-2">
-                    <Money value={x.values[i] ?? 0} small className={i === 0 ? "font-bold" : undefined} />
-                  </td>
+      <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+        {rows.map((x) => (
+          <li key={x.user_id} className="surface flex flex-col gap-3 p-4">
+            <div className="flex items-center gap-3">
+              <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-on-bright">
+                <Icon size={20} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-bold">{x.name || x.phone}</span>
+                <span dir="ltr" className="block truncate text-end text-2xs text-ink-muted">
+                  {x.phone}
+                </span>
+              </span>
+            </div>
+            {cols.length > 0 && (
+              <div className="rounded-control bg-field px-3 py-2.5">
+                <span className="block text-2xs text-ink-muted">{COL_LABEL[cols[0]!] ?? cols[0]}</span>
+                <span className="figure block">{fmtMoney(x.values[0] ?? 0)}</span>
+              </div>
+            )}
+            {cols.length > 1 && (
+              <dl className="grid grid-cols-2 gap-2">
+                {cols.slice(1).map((c, j) => (
+                  <div key={c} className="rounded-control border border-line-soft px-3 py-2">
+                    <dt className="truncate text-2xs text-ink-muted">{COL_LABEL[c] ?? c}</dt>
+                    <dd>
+                      <Money value={x.values[j + 1] ?? 0} small />
+                    </dd>
+                  </div>
                 ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <Pagination page={page} total={d.total} perPage={d.per_page} onChange={onPage} />
+              </dl>
+            )}
+          </li>
+        ))}
+      </ul>
+      {d.total > d.per_page && (
+        <div className="mt-4 flex justify-center">
+          <Pagination page={page} total={d.total} perPage={d.per_page} onChange={onPage} />
+        </div>
+      )}
     </>
   );
 }

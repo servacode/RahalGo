@@ -18,16 +18,19 @@ import {
   Alert,
   Badge,
   Button,
-  EmptyState,
   FormActions,
   Input,
   LoadingState,
   ReloadState,
-  IconBalance,
+  IconStore,
+  IconOrder,
+  IconDate,
+  IconSwap,
   useLiveData,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { CaseEmpty } from "./caseTable";
 
 import { SectionBar } from "@/components/admin/support/SectionBar";
 const m = getMessages(defaultLocale);
@@ -85,8 +88,10 @@ export function GoodsCompensationView() {
   if (!data) return <LoadingState />;
   const rows = data.orders ?? [];
 
+  // تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦) — كرتٌ لكلّ طلبٍ رجعت بضاعتُه: المتجرُ والطلبُ وسعرُ البضاعة
+  // كبيراً، وزرُّ التعويض بعرض البطاقة.
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <SectionBar hint={L.goodsHint} />
       {sent && (
         <Alert tone="success" onDismiss={() => setSent("")}>
@@ -94,45 +99,58 @@ export function GoodsCompensationView() {
         </Alert>
       )}
       {rows.length === 0 ? (
-        <EmptyState icon={IconBalance} title={L.goodsEmpty} />
+        <CaseEmpty icon={IconSwap} title={L.goodsEmpty} hint={L.goodsEmptyHint} />
       ) : (
-        <ul className="space-y-2">
+        <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
           {rows.map((r) => (
-            <li key={r.order_id} className="surface space-y-2 p-3">
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="font-bold" dir="ltr">
-                  #{fmtRef(r.order_number)}
+            <li key={r.order_id} className="surface flex flex-col gap-3 p-4">
+              <div className="flex items-start gap-3">
+                <span
+                  className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${
+                    r.request_status === "pending"
+                      ? "bg-accent text-on-bright"
+                      : r.request_status === "rejected"
+                        ? "bg-danger-solid text-on-solid"
+                        : "bg-warning-solid text-on-solid"
+                  }`}
+                >
+                  <IconStore size={20} />
                 </span>
-                <span className="min-w-0 flex-1 font-medium">{r.merchant_name}</span>
-                <span className="text-sm">
-                  {L.goodsCost}: {fmtMoney(r.goods_cost)}
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-bold">{r.merchant_name}</span>
+                  <span className="flex items-center gap-1 text-2xs text-ink-muted">
+                    <IconOrder size={12} />
+                    <span dir="ltr">#{fmtRef(r.order_number)}</span>
+                  </span>
                 </span>
-                {r.closed_at && (
-                  <span className="text-xs text-ink-muted" dir="ltr">
-                    {fmtDateTime(r.closed_at)}
+                {r.request_status === "rejected" && (
+                  <span className="shrink-0">
+                    <Badge variant="danger">{L.goodsRejected}</Badge>
                   </span>
                 )}
-                {r.request_status === "pending" && (
-                  <Badge variant="info">
-                    {L.goodsPending} · {fmtMoney(r.request_amount)}
-                  </Badge>
-                )}
-                {r.request_status === "rejected" && <Badge variant="danger">{L.goodsRejected}</Badge>}
-                {canWrite && r.request_status === "" && open !== r.order_id && (
-                  <Button
-                    variant="secondary"
-                    onClick={() => {
-                      setOpen(r.order_id);
-                      setAmount("");
-                      setErr("");
-                    }}
-                  >
-                    {G.compensate}
-                  </Button>
+              </div>
+
+              <div className="flex items-end justify-between gap-2 rounded-control bg-field px-3 py-2.5">
+                <span>
+                  <span className="block text-2xs text-ink-muted">{L.goodsCost}</span>
+                  <span className="figure block">{fmtMoney(r.goods_cost)}</span>
+                </span>
+                {r.closed_at && (
+                  <span className="flex items-center gap-1 text-2xs text-ink-muted">
+                    <IconDate size={12} />
+                    <span dir="ltr">{fmtDateTime(r.closed_at)}</span>
+                  </span>
                 )}
               </div>
-              {open === r.order_id && (
-                <div className="space-y-2">
+
+              {r.request_status === "pending" && (
+                <p className="rounded-control bg-accent px-2.5 py-1 text-xs font-bold text-on-bright">
+                  {L.goodsPending} · {fmtMoney(r.request_amount)}
+                </p>
+              )}
+
+              {open === r.order_id ? (
+                <div className="space-y-2 border-t border-line-soft pt-3">
                   <p className="text-xs text-ink-muted">{G.compHintQueue.replace("{max}", fmtMoney(r.goods_cost))}</p>
                   <Input
                     type="number"
@@ -155,6 +173,22 @@ export function GoodsCompensationView() {
                     saveLabel={G.compSendQueue}
                   />
                 </div>
+              ) : (
+                canWrite &&
+                r.request_status === "" && (
+                  <div className="mt-auto border-t border-line-soft pt-3">
+                    <Button
+                      className="w-full"
+                      onClick={() => {
+                        setOpen(r.order_id);
+                        setAmount("");
+                        setErr("");
+                      }}
+                    >
+                      {G.compensate}
+                    </Button>
+                  </div>
+                )
               )}
             </li>
           ))}

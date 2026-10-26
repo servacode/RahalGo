@@ -1,8 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum, fmtMoney, fmtRef, fmtDate, fmtDateTime, errorText} from "@rahalgo/i18n";
+import {
+  getMessages,
+  defaultLocale,
+  fmtNum,
+  fmtMoney,
+  fmtRef,
+  fmtDateTime,
+  fmtSpan,
+  errorText,
+} from "@rahalgo/i18n";
 import {
   Pagination,
   Alert,
@@ -13,26 +23,23 @@ import {
   Badge,
   Modal,
   FormSection,
-  DataView,
-  ComplaintCard,
-  type DataColumn,
+  LoadingState,
   IconSupport,
   IconAdd,
   IconUser,
   IconPhone,
   IconOrder,
   IconWallet,
-  IconStatus,
-  IconDate,
+  IconWarning,
   IconReply,
   IconCheck,
   Money,
   FormActions,
 } from "@rahalgo/ui";
-import { api, ApiError } from "@/lib/api";
+import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { Tile } from "@/components/admin/DashParts";
 
-import { SectionBar } from "@/components/admin/support/SectionBar";
 const m = getMessages(defaultLocale);
 
 interface Reply {
@@ -197,206 +204,96 @@ export function TicketsView() {
 
   useLiveRefresh(["ticket"], load);
 
-  const columns: DataColumn<Ticket>[] = [
-    {
-      id: "number",
-      header: m.admin.tickets.table.number,
-      icon: <IconSupport />,
-      primary: true,
-      cell: (t) => <span className="font-bold">#{fmtRef(t.number)}</span>,
-    },
-    {
-      // **صاحبُ الشكوى لا زبونُ الطلب** — بلاغُ السائق صاحبُه السائق.
-      id: "customer",
-      header: m.admin.tickets.complainant,
-      icon: <IconUser />,
-      primary: true,
-      cell: (t) => (
-        <span className="flex flex-wrap items-center gap-1.5">
-          {t.complainant_kind && (
-            <Badge variant="neutral">{KIND_LABELS[t.complainant_kind]}</Badge>
-          )}
-          {t.complainant_name || t.customer_name || "—"}{" "}
-          <span dir="ltr" className="text-xs text-ink-muted">
-            {t.complainant_phone || t.customer_phone}
-          </span>
-        </span>
-      ),
-    },
-    {
-      id: "subject",
-      header: m.admin.tickets.table.subject,
-      icon: <IconReply />,
-      cell: (t) => (
-        <span className="flex flex-wrap items-center gap-1.5">
-          {/* ══════════════════════════════════════════════════════════
-              **وبلاغُ السائق يُميَّز عن شكوى الزبون**
-              ══════════════════════════════════════════════════════════
+  const T = m.admin.tickets;
+  const tickets = data?.tickets ?? [];
+  const filtered = status !== "";
+  const lateN = data?.late ?? 0;
+  const lateH = data?.late_hours ?? 2;
+  /** **وتغييرُ الفلتر يرجع للصفحة الأولى.** */
+  const pickStatus = (s: string) => {
+    setStatus(s);
+    setPage(1);
+  };
 
-              (كشفه فحصُ المالك ٢٠٢٦-٠٨-١٦.)
-
-              **وعمودُ «الزبون» يقول زبونَ الطلب لا كاتبَ الشكوى** —
-              فبلاغُ السائق على الزبون **يُقرأ شكوى الزبون نفسِه**،
-              والحكمان متناقضان.
-
-              **والمحرّكُ يرسل `opened_by_customer` ولا تقرؤه الشاشة.** */}
-          {!t.opened_by_customer && t.reason && (
-            <Badge variant="primary">{m.admin.tickets.byDriver}</Badge>
-          )}
-          <span className="line-clamp-1">{t.subject}</span>
-          {/* **السببُ المصنَّف بجانب النصّ.**
-
-              الموضوعُ يقول «شكوى على الطلب #١٢» ولا يقول **ما الشكوى** —
-              فيُفتح كلُّ سطرٍ ليُعرف. **والرمزُ يُقرأ من الصفّ**: من يبحث عن
-              «لم يصلني طلبي» يجدها بالنظر لا بالفتح. */}
-          {t.reason && REASONS[t.reason] && (
-            <Badge variant="warning">{REASONS[t.reason]}</Badge>
-          )}
-        </span>
-      ),
-    },
-    {
-      id: "order",
-      header: m.admin.tickets.table.order,
-      icon: <IconOrder />,
-      cell: (t) =>
-        t.order_number ? (
-          <span className="font-medium">#{fmtRef(t.order_number)}</span>
-        ) : (
-          <span className="text-ink-muted">—</span>
-        ),
-    },
-    {
-      id: "compensation",
-      header: m.admin.tickets.table.compensation,
-      icon: <IconWallet />,
-      cell: (t) => <CompensationCell t={t} />,
-    },
-    {
-      id: "created",
-      header: m.admin.tickets.table.created,
-      icon: <IconDate />,
-      cell: (t) => fmtDate(t.created_at),
-    },
-    {
-      id: "status",
-      header: m.admin.ordersPage.statusCol,
-      icon: <IconStatus />,
-      cell: (t) => (
-        <span className="flex flex-wrap items-center gap-1.5">
-          <Badge variant={STATUS_VARIANT[t.status]}>{STATUS_LABELS[t.status]}</Badge>
-          {/* **متأخّرةٌ بالأحمر** — مهلةُ الردّ ساعتان (قرارُ المالك ٢٠٢٦-١٠-٠٤). */}
-          {t.late && <Badge variant="danger">{m.admin.tickets.lateBadge}</Badge>}
-        </span>
-      ),
-    },
-  ];
-
+  // **تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦)** — رقمان يُضغطان، والشرحُ وزرُّ الشكوى الجديدة
+  // والفلترُ في بطاقةٍ واحدة، وكرتٌ لكلّ شكوى بأفعالها. **ولا جدول.**
   return (
     <div>
-      <SectionBar
-        actions={
-          <Button onClick={() => setCreating(true)} className="flex items-center gap-1.5">
-            <IconAdd size={16} />
-            {m.admin.tickets.newTicket}
-          </Button>
-        }
-      />
-
-      {/* **عددُ المتأخّرة كلِّها** — يُنقر فيصفّي عليها. */}
-      {data && (data.late ?? 0) > 0 && (
-        <Alert className="mb-4">
-          <button
-            type="button"
-            onClick={() => {
-              setStatus("late");
-              setPage(1);
-            }}
-            className="font-bold hover:underline"
-          >
-            {m.admin.tickets.lateCount.replace("{n}", fmtNum(data.late ?? 0))}
-          </button>{" "}
-          <span className="text-xs">
-            {m.admin.tickets.lateRule.replace("{h}", fmtNum(data.late_hours ?? 2))}
-          </span>
-        </Alert>
-      )}
-
-      <div className="mb-4 w-52">
-        <Select
-          id="status-filter"
-          value={status}
-          onChange={(e) => {
-            setStatus(e.target.value);
-            setPage(1);
-          }}
-        >
-          <option value="">{m.admin.tickets.allStatuses}</option>
-          <option value="unresolved">{m.admin.tickets.filterUnresolved}</option>
-          <option value="late">{m.admin.tickets.filterLate}</option>
-          {Object.entries(STATUS_LABELS).map(([k, v]) => (
-            <option key={k} value={k}>
-              {v}
-            </option>
-          ))}
-        </Select>
+      <div className="mb-4 grid grid-cols-2 gap-2">
+        <Tile
+          icon={IconSupport}
+          label={T.shownCount}
+          value={data ? fmtNum(data.total) : "—"}
+          sub={filtered ? undefined : T.allStatuses}
+          tone={(data?.total ?? 0) > 0 ? "accent" : "muted"}
+          onClick={() => pickStatus("")}
+        />
+        {/* **عددُ المتأخّرة كلِّها** — يُضغط فيصفّي عليها. */}
+        <Tile
+          icon={IconWarning}
+          label={T.lateTile}
+          value={fmtNum(lateN)}
+          sub={T.lateTileSub.replace("{h}", fmtNum(lateH))}
+          tone={lateN > 0 ? "danger" : "muted"}
+          onClick={() => pickStatus("late")}
+        />
       </div>
 
-      {error && (
-        <Alert className="mb-4">{error}</Alert>
+      <section className="surface mb-4 space-y-3 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="min-w-0 flex-1 text-sm text-ink-muted">{T.intro}</p>
+          <Button
+            onClick={() => setCreating(true)}
+            className="flex w-full items-center justify-center gap-1.5 sm:w-auto"
+          >
+            <IconAdd size={16} />
+            {T.newTicket}
+          </Button>
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <Select
+            id="status-filter"
+            label={T.statusLabel}
+            value={status}
+            onChange={(e) => pickStatus(e.target.value)}
+          >
+            <option value="">{T.allStatuses}</option>
+            <option value="unresolved">{T.filterUnresolved}</option>
+            <option value="late">{T.filterLate}</option>
+            {Object.entries(STATUS_LABELS).map(([k, v]) => (
+              <option key={k} value={k}>
+                {v}
+              </option>
+            ))}
+          </Select>
+        </div>
+      </section>
+
+      {error && <Alert className="mb-4">{error}</Alert>}
+
+      {data === null && !error ? (
+        <LoadingState variant="text" />
+      ) : tickets.length === 0 ? (
+        !error && (
+          <section className="surface flex flex-col items-center gap-3 p-8 text-center">
+            <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-success-solid text-on-solid">
+              <IconSupport size={28} />
+            </span>
+            <h2 className="heading-section">{filtered ? T.empty : T.emptyAll}</h2>
+            <p className="max-w-md text-sm text-ink-muted">{filtered ? T.emptyFilteredHint : T.emptyHint}</p>
+          </section>
+        )
+      ) : (
+        <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+          {tickets.map((t) => (
+            <TicketCard key={t.id} t={t} onOpen={() => setDetailID(t.id)} />
+          ))}
+        </ul>
       )}
 
-      {/* **والكرتُ هو كرتُ البلاغ نفسُه** الذي تعرضه لوحاتُ المتجر والسائق
-          والمندوب والزبون — **لا كرتٌ سادسٌ تبنيه الإدارةُ من أعمدتها.**
-          (طلبُ المالك ٢٠٢٦-٠٨-٠٨: «كروت وجداول مثل باقي المشروع».)
-
-          **والجدولُ يبقى من الأعمدة**: الإدارةُ تمسح مئةَ بلاغٍ بالعين،
-          والكرتُ لمن يقرأ واحداً. */}
-      <DataView
-        items={data?.tickets ?? []}
-        loading={data === null && !error}
-        getKey={(t) => t.id}
-        columns={columns}
-        // **بطاقاتٌ وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٢٥ — «المشاكل والتعويضات» كلُّه بطاقات).
-        view="cards"
-        empty={m.admin.tickets.empty}
-        card={(t) => (
-          <ComplaintCard
-            ticket={t}
-            note={[t.customer_name, t.customer_phone].filter(Boolean).join(" · ")}
-            action={
-              <Button
-                variant="secondary"
-                onClick={() => setDetailID(t.id)}
-                className="flex w-full items-center justify-center gap-1.5"
-              >
-                <IconReply size={15} />
-                {m.admin.ordersPage.details}
-              </Button>
-            }
-          />
-        )}
-        actions={(t) => (
-          <Button
-            variant="secondary"
-            onClick={() => setDetailID(t.id)}
-            className="flex items-center gap-1.5"
-          >
-            <IconReply size={15} />
-            {m.admin.ordersPage.details}
-          </Button>
-        )}
-      />
-
-      {/* **ولا سطرَ للإجمالي** — (قرارُ المالك ٢٠٢٦-٠٨-١٦).
-
-          **والترقيمُ يقوله بموضعه**: «٢ / ٧» تقول العددَ والموضعَ معاً،
-          **وسطرٌ ثانٍ يقول نصفَ ما تقوله** — و«الإجمالي: ٠» تحت قائمةٍ
-          فارغةٍ تقول ما تقوله القائمةُ نفسُها. */}
-      {data && (
-        <div className="mt-4">
-          {/* **والترقيمُ من المكوّن المشترك** — وأرقامُه كانت لاتينيّةً في
-              واجهةٍ عربية لأنّها لم تمرّ بـ`fmtNum`. */}
+      {/* **ولا سطرَ للإجمالي** (قرارُ المالك ٢٠٢٦-٠٨-١٦) — والترقيمُ لا يظهر لصفحةٍ واحدة. */}
+      {data && data.total > data.per_page && (
+        <div className="mt-4 flex justify-center">
           <Pagination page={page} total={data.total} perPage={data.per_page} onChange={setPage} />
         </div>
       )}
@@ -417,6 +314,137 @@ export function TicketsView() {
     </div>
   );
 }
+
+/** لونُ دائرة الكرت بحال الشكوى. */
+const STATUS_TINT: Record<string, string> = {
+  open: "bg-warning-solid text-on-solid",
+  in_progress: "bg-accent text-on-bright",
+  awaiting_finance: "bg-warning-solid text-on-solid",
+  resolved: "bg-success-solid text-on-solid",
+};
+
+/** **عمرُ الشكوى** — «من ٣ يوم» أو «من ٢ س ١٠ د». */
+function ageOf(iso: string): string {
+  const T = m.admin.tickets;
+  const sec = (Date.now() - new Date(iso).getTime()) / 1000;
+  const days = Math.floor(sec / 86400);
+  if (days >= 1) return T.ageDays.replace("{n}", fmtNum(days));
+  if (sec < 60) return T.ageNow;
+  return T.ageSpan.replace("{t}", fmtSpan(sec));
+}
+
+/**
+ * **كرتُ شكوى** (تصميمٌ احترافيّ — المالك ٢٠٢٦-١٠-٢٦) — صاحبُها وزبونُ الطلب، الموضوعُ وسببُه،
+ * الحالُ بلونها، الطلبُ والتعويضُ والعمر، والحلُّ إن وُجد، وزرُّ الفتح.
+ */
+function TicketCard({ t, onOpen }: { t: Ticket; onOpen: () => void }) {
+  const T = m.admin.tickets;
+  const who = t.complainant_name || t.customer_name || "—";
+  const phone = t.complainant_phone || t.customer_phone;
+  // **وزبونُ الطلب حين لا يكون هو صاحبَ الشكوى** — بلاغُ السائق أو المتجر يكون عليه.
+  const orderCustomer =
+    t.customer_name && t.customer_name !== who
+      ? [t.customer_name, t.customer_phone].filter(Boolean).join(" · ")
+      : "";
+  return (
+    <li className={`surface flex flex-col gap-3 p-4 ${t.late ? "border-danger" : ""}`}>
+      <div className="flex items-start gap-3">
+        <span
+          className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${STATUS_TINT[t.status] ?? "bg-field text-ink"}`}
+        >
+          <IconUser size={20} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex flex-wrap items-center gap-1.5">
+            <span className="truncate font-bold">{who}</span>
+            {t.complainant_kind && <Badge variant="neutral">{KIND_LABELS[t.complainant_kind]}</Badge>}
+          </span>
+          {phone && (
+            <span className="block text-2xs text-ink-muted" dir="ltr">
+              {phone}
+            </span>
+          )}
+        </span>
+        <span className="flex shrink-0 flex-col items-end gap-1">
+          <span dir="ltr" className="text-sm font-bold tabular-nums text-primary">
+            #{fmtRef(t.number)}
+          </span>
+          <Badge variant={STATUS_VARIANT[t.status]}>{STATUS_LABELS[t.status]}</Badge>
+          {/* **متأخّرةٌ بالأحمر** — مهلةُ الردّ ساعتان (قرارُ المالك ٢٠٢٦-١٠-٠٤). */}
+          {t.late && <Badge variant="danger">{T.lateBadge}</Badge>}
+        </span>
+      </div>
+
+      <div className="space-y-1.5">
+        <p className="font-medium leading-snug">{t.subject}</p>
+        {/* **بلاغُ السائق يُميَّز عن شكوى الزبون، والسببُ المصنَّف بجانبه** (فحصُ المالك ٢٠٢٦-٠٨-١٦). */}
+        {t.reason && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {!t.opened_by_customer && <Badge variant="primary">{T.byDriver}</Badge>}
+            {REASONS[t.reason] && <Badge variant="warning">{REASONS[t.reason]}</Badge>}
+          </div>
+        )}
+        {orderCustomer && (
+          <p className="text-xs text-ink-muted">
+            {T.orderCustomer}: <span className="text-ink">{orderCustomer}</span>
+          </p>
+        )}
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-control bg-field px-3 py-2">
+          <p className="flex items-center gap-1 text-2xs text-ink-muted">
+            <IconOrder size={12} />
+            {T.table.order}
+          </p>
+          {t.order_number ? (
+            <Link
+              href={`/dashboard/orders?q=${t.order_number}`}
+              dir="ltr"
+              className="mt-0.5 block text-sm font-bold tabular-nums text-primary hover:underline"
+            >
+              #{fmtRef(t.order_number)}
+            </Link>
+          ) : (
+            <p className="mt-0.5 text-sm text-ink-muted">—</p>
+          )}
+        </div>
+        <div className="rounded-control bg-field px-3 py-2">
+          <p className="flex items-center gap-1 text-2xs text-ink-muted">
+            <IconWallet size={12} />
+            {T.table.compensation}
+          </p>
+          <div className="mt-0.5 text-sm">
+            <CompensationCell t={t} />
+          </div>
+        </div>
+      </div>
+
+      <div className={`border-s-2 ps-3 ${t.resolution ? "border-success" : "border-line"}`}>
+        <p className="mb-0.5 flex items-center gap-1 text-2xs font-bold text-ink-muted">
+          <IconReply size={12} />
+          {T.lastReply}
+        </p>
+        <p className={`line-clamp-3 text-sm ${t.resolution ? "" : "text-ink-muted"}`}>
+          {t.resolution || T.noReplyYet}
+        </p>
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2 text-2xs text-ink-muted">
+        <span className={t.late ? "font-bold text-danger" : ""}>{ageOf(t.created_at)}</span>
+        <span dir="ltr">{fmtDateTime(t.created_at)}</span>
+      </div>
+
+      <div className="mt-auto border-t border-line-soft pt-3">
+        <Button variant="secondary" onClick={onOpen} className="flex w-full items-center justify-center gap-1.5">
+          <IconReply size={15} />
+          {T.openTicket}
+        </Button>
+      </div>
+    </li>
+  );
+}
+
 
 // ---------- فتح تذكرة ----------
 

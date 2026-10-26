@@ -1,27 +1,20 @@
 "use client";
 
 /**
- * **جدولٌ واحدٌ للخسائر والنزاعات** (قرارُ المالك ٢٠٢٦-١٠-٠٤ — «الخسائر والنزاعات»).
+ * **بطاقاتٌ واحدةٌ للخسائر والنزاعات** (قرارُ المالك ٢٠٢٦-١٠-٠٤ — «الخسائر والنزاعات»).
  *
- * كانت الخسائرُ جدولاً من المكتبة المشتركة والنزاعاتُ قائمةً مرسومةً باليد —
  * **الواقعةُ واحدةٌ فتُقرأ بشكلٍ واحد**: المبلغ · الطرف · السبب · الطلب (رابط) ·
  * التاريخ · الحالة · الإجراء. **وشريطُ الفلاتر واحدٌ لهما.**
+ *
+ * تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦): «ألغِ عرض الجداول» — كرتٌ لكلّ واقعة بشبكةٍ متجاوبة،
+ * وفراغٌ بدائرةٍ وعنوانٍ وجملة.
  */
 
-import type { ReactNode } from "react";
+import type { ComponentType, ReactNode } from "react";
 import { useCanOpen } from "@/lib/policy";
 import { OpenLink } from "@/components/admin/OpenLink";
-import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
-import {
-  Badge,
-  DataView,
-  type DataColumn,
-  IconWallet,
-  IconDate,
-  IconStatus,
-  IconOrder,
-  IconUser,
-} from "@rahalgo/ui";
+import { getMessages, defaultLocale, fmtMoney, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
+import { Badge, IconDate, IconOrder, IconStore, IconUser, IconWallet } from "@rahalgo/ui";
 
 const m = getMessages(defaultLocale);
 const C = m.admin.claims;
@@ -57,22 +50,51 @@ const STATUS_TONE: Record<CaseStatus, "warning" | "success" | "neutral"> = {
   waived: "neutral",
 };
 
+/** **لونُ دائرة الطرف بحال الواقعة** — خسارةٌ بلا نزاعٍ حمراء. */
+const AVATAR_TONE: Record<CaseStatus | "none", string> = {
+  open: "bg-warning-solid text-on-solid",
+  settled: "bg-success-solid text-on-solid",
+  waived: "bg-field text-ink-muted",
+  none: "bg-danger-solid text-on-solid",
+};
+
 /** **رابطُ الطرف** — المتجرُ إلى ملفّ المتجر، والشخصُ إلى حسابه. */
 function partyHref(role: string, id: string): string {
   return role === "merchant" ? `/dashboard/merchants/${id}` : `/dashboard/users/${id}`;
 }
 
-export function CaseTable({
-  screen,
+/** **فراغٌ واحدٌ للتبويبات** — دائرةٌ بأيقونة وعنوانٌ وجملةٌ تساعد. */
+export function CaseEmpty({
+  icon: Icon,
+  title,
+  hint,
+}: {
+  icon: ComponentType<{ size?: number; className?: string }>;
+  title: string;
+  hint: string;
+}) {
+  return (
+    <section className="surface flex flex-col items-center gap-3 p-8 text-center">
+      <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-success-solid text-on-solid">
+        <Icon size={28} />
+      </span>
+      <h2 className="heading-section">{title}</h2>
+      <p className="max-w-md text-sm text-ink-muted">{hint}</p>
+    </section>
+  );
+}
+
+export function CaseList({
   rows,
   empty,
+  emptyHint,
   actions,
   noDisputeLabel,
 }: {
-  /** مفتاحُ حفظ تفضيل العرض (جدول/بطاقات). */
-  screen: string;
   rows: CaseRow[];
   empty: string;
+  emptyHint: string;
+  /** **أزرارُ البطاقة** — تُرسم بعرضها في ذيلها. */
   actions?: (row: CaseRow) => ReactNode;
   /** **نصُّ الحالة لسطرٍ بلا نزاع** — في الخسائر وحدَها. */
   noDisputeLabel?: string;
@@ -82,109 +104,106 @@ export function CaseTable({
   const partyOne = C.partyOne as Record<string, string>;
   const statusOne = C.statusOne as Record<string, string>;
 
-  const columns: DataColumn<CaseRow>[] = [
-    {
-      id: "amount",
-      header: C.amount,
-      icon: <IconWallet />,
-      primary: true,
-      cell: (x) => (
-        <span dir="ltr" className={`font-bold ${x.status === null ? "text-danger" : "text-warning"}`}>
-          {fmtNum(x.amount)}
-          {x.recovered ? (
-            <span className="block text-xs font-normal text-ink-muted">
-              {C.recovered.replace("{n}", fmtNum(x.recovered))}
-            </span>
-          ) : null}
-        </span>
-      ),
-    },
-    {
-      id: "party",
-      header: C.party,
-      icon: <IconUser />,
-      cell: (x) =>
-        x.partyId && x.partyRole ? (
-          <span>
-            <OpenLink
-              allowed={x.partyRole === "merchant" ? open.merchant : open.user}
-              href={partyHref(x.partyRole, x.partyId)}
-              className="font-medium text-primary-dark hover:underline"
-            >
-              {x.partyName || "—"}
-            </OpenLink>{" "}
-            <Badge variant="neutral">{partyOne[x.partyRole] ?? x.partyRole}</Badge>
-            {(x.waivedBefore ?? 0) > 0 && (
-              <span className="block text-xs text-warning">
-                {C.waivedBefore.replace("{n}", fmtNum(x.waivedBefore ?? 0))}
-              </span>
-            )}
-          </span>
-        ) : (
-          "—"
-        ),
-    },
-    {
-      id: "reason",
-      header: C.reason,
-      icon: <IconStatus />,
-      cell: (x) => <span className="line-clamp-2">{reasonText(x.reason)}</span>,
-    },
-    {
-      id: "order",
-      header: m.terms.order,
-      icon: <IconOrder />,
-      cell: (x) =>
-        x.orderNumber == null ? (
-          "—"
-        ) : x.orderId ? (
-          <OpenLink
-            allowed={open.order}
-            href={`/dashboard/orders?id=${x.orderId}`}
-            dir="ltr"
-            className="text-primary-dark hover:underline"
-          >
-            #{fmtRef(x.orderNumber)}
-          </OpenLink>
-        ) : (
-          <span dir="ltr">#{fmtRef(x.orderNumber)}</span>
-        ),
-    },
-    {
-      id: "date",
-      header: m.admin.losses.date,
-      icon: <IconDate />,
-      cell: (x) => (
-        <span dir="ltr" className="text-xs text-ink-muted">
-          {fmtDateTime(x.date)}
-        </span>
-      ),
-    },
-    {
-      id: "status",
-      header: C.statusFilter,
-      icon: <IconStatus />,
-      cell: (x) => (
-        <span>
-          {x.status ? (
-            <Badge variant={STATUS_TONE[x.status]}>{statusOne[x.status] ?? x.status}</Badge>
-          ) : (
-            <span className="text-xs text-ink-muted">{noDisputeLabel ?? "—"}</span>
-          )}
-          {x.statusNote && <span className="mt-1 block text-xs text-ink-muted">{x.statusNote}</span>}
-        </span>
-      ),
-    },
-  ];
+  if (rows.length === 0) return <CaseEmpty icon={IconWallet} title={empty} hint={emptyHint} />;
 
   return (
-    <>
-      <DataView items={rows} getKey={(x) => x.key} columns={columns} actions={actions} view="cards" empty={empty} />
-    </>
+    <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+      {rows.map((x) => {
+        const act = actions?.(x);
+        const PartyIcon = x.partyRole === "merchant" ? IconStore : x.partyRole ? IconUser : IconWallet;
+        return (
+          <li key={x.key} className="surface flex flex-col gap-3 p-4">
+            {/* **الطرفُ وحالُه** */}
+            <div className="flex items-start gap-3">
+              <span
+                className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${AVATAR_TONE[x.status ?? "none"]}`}
+              >
+                <PartyIcon size={20} />
+              </span>
+              <span className="min-w-0 flex-1">
+                {x.partyId && x.partyRole ? (
+                  <OpenLink
+                    allowed={x.partyRole === "merchant" ? open.merchant : open.user}
+                    href={partyHref(x.partyRole, x.partyId)}
+                    className="block truncate font-bold hover:underline"
+                  >
+                    {x.partyName || "—"}
+                  </OpenLink>
+                ) : (
+                  <span className="block truncate font-bold text-ink-muted">—</span>
+                )}
+                {x.partyRole && (
+                  <span className="block text-2xs text-ink-muted">{partyOne[x.partyRole] ?? x.partyRole}</span>
+                )}
+                {(x.waivedBefore ?? 0) > 0 && (
+                  <span className="block text-2xs font-bold text-warning">
+                    {C.waivedBefore.replace("{n}", fmtNum(x.waivedBefore ?? 0))}
+                  </span>
+                )}
+              </span>
+              <span className="shrink-0">
+                {x.status ? (
+                  <Badge variant={STATUS_TONE[x.status]}>{statusOne[x.status] ?? x.status}</Badge>
+                ) : (
+                  <Badge variant="neutral">{noDisputeLabel ?? "—"}</Badge>
+                )}
+              </span>
+            </div>
+
+            {/* **المبلغُ كبيراً والطلبُ بجانبه** */}
+            <div className="flex items-end justify-between gap-2 rounded-control bg-field px-3 py-2.5">
+              <span>
+                <span className="block text-2xs text-ink-muted">{C.amount}</span>
+                <span className={`figure block ${x.status === null ? "text-danger" : "text-warning"}`}>
+                  {fmtMoney(x.amount)}
+                </span>
+                {x.recovered ? (
+                  <span className="block text-2xs text-ink-muted">
+                    {C.recovered.replace("{n}", fmtMoney(x.recovered))}
+                  </span>
+                ) : null}
+              </span>
+              {x.orderNumber != null && (
+                <span className="flex items-center gap-1 text-sm">
+                  <IconOrder size={14} className="text-ink-muted" />
+                  {x.orderId ? (
+                    <OpenLink
+                      allowed={open.order}
+                      href={`/dashboard/orders?id=${x.orderId}`}
+                      dir="ltr"
+                      className="font-bold text-primary-dark hover:underline"
+                    >
+                      #{fmtRef(x.orderNumber)}
+                    </OpenLink>
+                  ) : (
+                    <span dir="ltr" className="font-bold">
+                      #{fmtRef(x.orderNumber)}
+                    </span>
+                  )}
+                </span>
+              )}
+            </div>
+
+            {x.reason && <p className="border-s-2 border-accent ps-3 text-sm leading-relaxed">{reasonText(x.reason)}</p>}
+
+            {x.statusNote && (
+              <p className="rounded-control bg-warning-solid px-2.5 py-1 text-xs font-bold text-on-solid">{x.statusNote}</p>
+            )}
+
+            <span className="flex items-center gap-1 text-2xs text-ink-muted">
+              <IconDate size={12} />
+              <span dir="ltr">{fmtDateTime(x.date)}</span>
+            </span>
+
+            {act && <div className="mt-auto grid grid-cols-2 gap-2 border-t border-line-soft pt-3">{act}</div>}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
-/** **شريطُ الفلاتر الواحد** — صفٌّ واحدٌ بنفس الشكل في التبويبين. */
+/** **شريطُ الفلاتر الواحد** — كرتٌ واحدٌ بنفس الشكل في التبويبين. */
 export function CaseFilters({ children }: { children: ReactNode }) {
-  return <div className="mb-4 flex flex-wrap items-end gap-2">{children}</div>;
+  return <section className="surface mb-4 grid grid-cols-1 gap-2 p-4 sm:grid-cols-2 lg:grid-cols-4">{children}</section>;
 }

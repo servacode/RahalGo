@@ -3,26 +3,27 @@
 /**
  * **«ادعُ صديقاً»** — تبويبٌ في صفحة العروض (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٧).
  *
- * المبالغُ والشرطُ تُقرأ هنا وتُعدَّل من الإعدادات (رابط)، وجدولُ الدعوات:
+ * المبالغُ والشرطُ تُقرأ هنا وتُعدَّل من الإعدادات (رابط)، وقائمةُ الدعوات بكروت:
  * مين دعا مين، إمتى، انصرفت المكافأة أو لا، وقديش.
  */
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { getMessages, defaultLocale, fmtNum, fmtDate, fmtMoney, errorText } from "@rahalgo/i18n";
 import {
   Alert,
   Badge,
-  DataView,
+  ButtonLink,
   Pagination,
-  StatGrid,
-  StatCard,
-  type DataColumn,
-  IconPromos,
+  LoadingState,
+  IconUsers,
+  IconCheck,
   IconWallet,
+  IconSettings,
+  IconNext,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useCanOpen } from "@/lib/policy";
+import { Tile } from "@/components/admin/DashParts";
 
 const m = getMessages(defaultLocale);
 const O = m.admin.promosOwner;
@@ -69,70 +70,104 @@ export default function PromoReferralsTab() {
   }, [page]);
   useEffect(load, [load]);
 
-  const columns: DataColumn<Row>[] = [
-    { id: "inviter", header: O.refInviter, primary: true, cell: (r) => r.inviter_name || "—" },
-    { id: "invitee", header: O.refInvitee, cell: (r) => r.invitee_name || "—" },
-    { id: "when", header: O.refWhen, cell: (r) => fmtDate(r.created_at) },
-    {
-      id: "reward",
-      header: O.refRewardState,
-      cell: (r) =>
-        r.rewarded_at ? (
-          <Badge variant="success">
-            {O.refPaidOn.replace("{date}", fmtDate(r.rewarded_at))} · {fmtMoney(r.reward_amount)}
-          </Badge>
-        ) : (
-          <Badge variant="neutral">{O.refNotYet}</Badge>
-        ),
-    },
-  ];
-
   const s = data?.settings;
+  const rows = data?.referrals ?? [];
+  // تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦) — أرقامٌ بمربّعات، والمكافآتُ بمربّعاتٍ حسب الترتيب،
+  // وكرتٌ لكلّ دعوةٍ (مين دعا ← مين انْدعى) بدل الجدول.
   return (
     <div className="space-y-4">
       {error && <Alert>{error}</Alert>}
       {data && s && (
         <>
-          <StatGrid>
-            <StatCard icon={IconPromos} label={O.refTotal} value={fmtNum(data.total)} />
-            <StatCard icon={IconPromos} label={O.refRewarded} value={fmtNum(data.rewarded)} />
-            <StatCard icon={IconWallet} label={O.refPaid} value={fmtMoney(data.paid)} />
-          </StatGrid>
-          <div className="surface space-y-2 p-4 text-sm">
-            <p>
-              <span className="font-medium">{O.refCondition}: </span>
-              {s.reward_on === "first_order" ? O.refOnFirstOrder : O.refOnSignup}
-            </p>
-            <p className="font-medium">{O.refRewards}</p>
-            <ul className="grid grid-cols-2 gap-1 sm:grid-cols-5">
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
+            <Tile icon={IconUsers} label={O.refTotal} value={fmtNum(data.total)} tone={data.total > 0 ? "accent" : "muted"} />
+            <Tile
+              icon={IconCheck}
+              label={O.refRewarded}
+              value={fmtNum(data.rewarded)}
+              tone={data.rewarded > 0 ? "success" : "muted"}
+            />
+            <Tile icon={IconWallet} label={O.refPaid} value={fmtMoney(data.paid)} tone={data.paid > 0 ? "success" : "muted"} />
+          </div>
+          <section className="surface p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div className="min-w-0">
+                <h2 className="heading-card">{O.refRewards}</h2>
+                <p className="text-xs text-ink-muted">
+                  {O.refCondition}: {s.reward_on === "first_order" ? O.refOnFirstOrder : O.refOnSignup}
+                </p>
+              </div>
+              {/* **ولمن يفتح الإعدادات وحدَه** (قرارُ المالك ٢٠٢٦-١٠-٠٥): الماليّةُ لا تراها. */}
+              {canSettings && (
+                <ButtonLink href="/dashboard/settings" variant="secondary">
+                  <IconSettings size={14} />
+                  {O.refEditInSettings}
+                </ButtonLink>
+              )}
+            </div>
+            <ol className="grid grid-cols-2 gap-2 sm:grid-cols-5">
               {[s.reward_1, s.reward_2, s.reward_3, s.reward_4].map((v, i) => (
-                <li key={i}>
-                  {O.refRank.replace("{n}", fmtNum(i + 1))}: {fmtMoney(v)}
+                <li key={i} className="rounded-control bg-field px-3 py-2">
+                  <span className="block text-2xs text-ink-muted">{O.refRank.replace("{n}", fmtNum(i + 1))}</span>
+                  <span className="block font-bold tabular-nums">{fmtMoney(v)}</span>
                 </li>
               ))}
-              <li>
-                {O.refRest}: {fmtMoney(s.reward_rest)}
+              <li className="rounded-control bg-field px-3 py-2">
+                <span className="block text-2xs text-ink-muted">{O.refRest}</span>
+                <span className="block font-bold tabular-nums">{fmtMoney(s.reward_rest)}</span>
               </li>
-            </ul>
-            {/* **ولمن يفتح الإعدادات وحدَه** (قرارُ المالك ٢٠٢٦-١٠-٠٥): الماليّةُ لا تراها. */}
-            {canSettings && (
-              <Link href="/dashboard/settings" className="text-accent underline">
-                {O.refEditInSettings}
-              </Link>
-            )}
-          </div>
+            </ol>
+          </section>
         </>
       )}
-      <DataView
-        items={data?.referrals ?? []}
-        loading={data === null && !error}
-        getKey={(r) => `${r.created_at}-${r.invitee_name}-${r.rank}`}
-        columns={columns}
-        view="table"
-        empty={O.refEmpty}
-      />
-      {data && (
-        <Pagination page={page} total={data.total} perPage={data.per_page} onChange={setPage} />
+
+      {data === null && !error ? (
+        <LoadingState variant="list" />
+      ) : rows.length === 0 ? (
+        <section className="surface flex flex-col items-center gap-3 p-8 text-center">
+          <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-field text-ink-muted">
+            <IconUsers size={28} />
+          </span>
+          <h2 className="heading-section">{O.refEmpty}</h2>
+          <p className="max-w-md text-sm text-ink-muted">{O.refEmptyHint}</p>
+        </section>
+      ) : (
+        <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+          {rows.map((r) => (
+            <li key={`${r.created_at}-${r.invitee_name}-${r.rank}`} className="surface flex flex-col gap-3 p-4">
+              <div className="flex items-center gap-2">
+                <span className="min-w-0 flex-1 rounded-control bg-field px-3 py-2">
+                  <span className="block text-2xs text-ink-muted">{O.refInviter}</span>
+                  <span className="block truncate font-bold">{r.inviter_name || "—"}</span>
+                </span>
+                <IconNext size={16} className="shrink-0 text-ink-muted" />
+                <span className="min-w-0 flex-1 rounded-control bg-field px-3 py-2">
+                  <span className="block text-2xs text-ink-muted">{O.refInvitee}</span>
+                  <span className="block truncate font-bold">{r.invitee_name || "—"}</span>
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2 text-2xs text-ink-muted">
+                <span>
+                  {O.refRank.replace("{n}", fmtNum(r.rank))} · {O.refWhen}: {fmtDate(r.created_at)}
+                </span>
+                {r.rewarded_at ? (
+                  <Badge variant="success">
+                    {O.refPaidOn.replace("{date}", fmtDate(r.rewarded_at))} · {fmtMoney(r.reward_amount)}
+                  </Badge>
+                ) : (
+                  <Badge variant="neutral">
+                    {O.refRewardState}: {O.refNotYet}
+                  </Badge>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      {data && data.total > data.per_page && (
+        <div className="flex justify-center">
+          <Pagination page={page} total={data.total} perPage={data.per_page} onChange={setPage} />
+        </div>
       )}
     </div>
   );

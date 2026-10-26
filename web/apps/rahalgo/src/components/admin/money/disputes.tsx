@@ -30,20 +30,20 @@ import {
   Pagination,
   LoadingState,
   ReloadState,
-  StatGrid,
-  StatCard,
   useLiveData,
-  IconStore,
   IconWallet,
   IconBalance,
   IconAdd,
   IconSearch,
+  IconCheck,
+  IconBlock,
   FormActions,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useCanCall } from "@/lib/policy";
-import { CaseTable, CaseFilters, reasonText, type CaseRow } from "./caseTable";
+import { CaseList, CaseFilters, reasonText, type CaseRow } from "./caseTable";
+import { Tile } from "@/components/admin/DashParts";
 
 import { SectionBar } from "@/components/admin/support/SectionBar";
 const m = getMessages(defaultLocale);
@@ -147,34 +147,47 @@ export function DisputesView() {
       : undefined,
   }));
 
+  // تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦) — أزرارٌ بعرض البطاقة: الموافقةُ خضراء والرفضُ بإطارٍ أحمر.
   function actions(row: CaseRow) {
     const d = byId.get(row.key);
     if (!d || d.status !== "open") return null;
     if (d.pending) {
       if (!canDecide) return null;
       return (
-        <span className="flex shrink-0 gap-1.5">
-          {me?.id !== d.pending.proposed_by && (
-            <Button className="!px-2.5" onClick={() => setDeciding({ d, approve: true })}>
+        <>
+          {me?.id !== d.pending.proposed_by ? (
+            <button
+              type="button"
+              onClick={() => setDeciding({ d, approve: true })}
+              className="inline-flex items-center justify-center gap-1.5 rounded-control bg-success-solid py-2.5 text-sm font-bold text-on-solid transition-opacity hover:opacity-90"
+            >
+              <IconCheck size={16} />
               {C.approve}
-            </Button>
+            </button>
+          ) : (
+            <span />
           )}
-          <Button variant="secondary" className="!px-2.5" onClick={() => setDeciding({ d, approve: false })}>
+          <button
+            type="button"
+            onClick={() => setDeciding({ d, approve: false })}
+            className="inline-flex items-center justify-center gap-1.5 rounded-control border border-danger py-2.5 text-sm font-bold text-danger transition-colors hover:bg-danger-tint"
+          >
+            <IconBlock size={16} />
             {C.reject}
-          </Button>
-        </span>
+          </button>
+        </>
       );
     }
     if (!canPropose) return null;
     return (
-      <span className="flex shrink-0 gap-1.5">
-        <Button className="!px-2.5" onClick={() => setProposing({ d, charge: true })}>
+      <>
+        <Button className="w-full" onClick={() => setProposing({ d, charge: true })}>
           {C.charge}
         </Button>
-        <Button variant="secondary" className="!px-2.5" onClick={() => setProposing({ d, charge: false })}>
+        <Button variant="secondary" className="w-full" onClick={() => setProposing({ d, charge: false })}>
           {C.waive}
         </Button>
-      </span>
+      </>
     );
   }
 
@@ -225,9 +238,9 @@ export function DisputesView() {
       </CaseFilters>
 
       {notice && (
-        <div className="mb-3">
-          <Alert tone="info">{notice}</Alert>
-        </div>
+        <Alert tone="info" onDismiss={() => setNotice("")}>
+          {notice}
+        </Alert>
       )}
 
       {/* **تحميلٌ وخطأٌ غيرُ الفراغ** — كان الفشلُ يقول «لا نزاعات مفتوحة» وأصفاراً. */}
@@ -237,15 +250,22 @@ export function DisputesView() {
         <LoadingState />
       ) : (
         <>
-          <StatGrid>
-            <StatCard label={C.openCount} value={fmtNum(data.open_count)} icon={IconStore} />
-            <StatCard label={`${C.total} (${m.common.currency})`} value={fmtNum(data.total)} icon={IconWallet} />
-          </StatGrid>
-          <div className="mt-4">
-            <CaseTable screen="disputes" rows={rows} empty={emptyBy[status] ?? C.empty} actions={actions} />
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <Tile
+              icon={IconBalance}
+              label={C.openCount}
+              value={fmtNum(data.open_count)}
+              tone={data.open_count > 0 ? "warning" : "muted"}
+              onClick={() => {
+                setPage(1);
+                setStatus("open");
+              }}
+            />
+            <Tile icon={IconWallet} label={C.total} value={fmtMoney(data.total)} tone={data.total > 0 ? "accent" : "muted"} />
           </div>
+          <CaseList rows={rows} empty={emptyBy[status] ?? C.empty} emptyHint={C.emptyHint} actions={actions} />
           {data.count > data.per_page && (
-            <div className="mt-4 flex justify-center">
+            <div className="flex justify-center">
               <Pagination page={page} total={data.count} perPage={data.per_page} onChange={setPage} />
             </div>
           )}

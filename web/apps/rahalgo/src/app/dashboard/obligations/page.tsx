@@ -31,13 +31,9 @@ import {
   Modal,
   Alert,
   PageContainer,
-  PageHeader,
   Pagination,
-  EmptyState,
   LoadingState,
   ReloadState,
-  StatGrid,
-  StatCard,
   useLiveData,
   IconBalance,
   IconWallet,
@@ -51,6 +47,8 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useCanOpen } from "@/lib/policy";
 import { OpenLink } from "@/components/admin/OpenLink";
+import { PageHero } from "@/components/admin/PageHero";
+import { Tile } from "@/components/admin/DashParts";
 
 const m = getMessages(defaultLocale);
 const O = m.admin.obligations;
@@ -315,16 +313,18 @@ export default function ObligationsPage() {
 
   const rows = data?.obligations ?? [];
   const sum = data?.summary;
-  const unit = ` (${m.common.currency})`;
+  const alertDays = data?.alert_days ?? 30;
 
+  // **تصميمٌ احترافيّ** (المالك ٢٠٢٦-١٠-٢٦: «صفحة الديون كمان تصميم احترافي كالسابق») — رأسٌ
+  // موحّدٌ بتبويبات الأطراف، أرقامٌ تُضغط، فلاترُ في كرت، وكرتٌ لكلّ دينٍ بمبلغه وما بقي وأفعاله.
   return (
-    <PageContainer width="full">
-      <PageHeader
+    <PageContainer>
+      <PageHero<string>
         icon={IconBalance}
         title={O.title}
         subtitle={O.hint}
         actions={
-          <div className="flex flex-wrap gap-2">
+          <>
             <ButtonLink variant="secondary" href="/dashboard/treasury">
               {O.treasuryLink}
             </ButtonLink>
@@ -333,8 +333,16 @@ export default function ObligationsPage() {
                 {exporting ? O.exporting : O.export}
               </Button>
             )}
-          </div>
+          </>
         }
+        tabs={[
+          { key: "all", label: O.kinds.all, icon: IconBalance },
+          { key: "merchant", label: O.merchantsTotal, icon: IconStore },
+          { key: "rep", label: O.repsTotal, icon: IconUser },
+          { key: "driver", label: O.driversTotal, icon: IconUser },
+        ]}
+        value={f.kind || "all"}
+        onChange={(k) => pick({ kind: (k === "all" ? "" : k) as Kind })}
       />
 
       {error && !data ? (
@@ -353,52 +361,73 @@ export default function ObligationsPage() {
           )}
 
           {/* **كلُّ المفتوح بأنواعه** — لا الصفحةُ المعروضة. */}
-          <StatGrid>
-            <StatCard
-              label={O.outstandingTotal + unit}
-              value={fmtNum(sum?.outstanding_total ?? 0)}
+          <div className="mb-2 grid grid-cols-2 gap-2 lg:grid-cols-4">
+            <Tile
               icon={IconWallet}
-              tone={(sum?.outstanding_total ?? 0) > 0 ? "accent" : "default"}
+              label={O.outstandingTotal}
+              value={fmtMoney(sum?.outstanding_total ?? 0)}
+              sub={O.debtorsSub.replace("{n}", fmtNum(sum?.debtors ?? 0))}
+              tone={(sum?.outstanding_total ?? 0) > 0 ? "warning" : "muted"}
+              onClick={() => pick({ kind: "", state: "open" })}
             />
-            <StatCard label={O.merchantsTotal + unit} value={fmtNum(sum?.merchants_total ?? 0)} icon={IconStore} />
-            <StatCard label={O.repsTotal + unit} value={fmtNum(sum?.reps_total ?? 0)} icon={IconUser} />
-            <StatCard label={O.driversTotal + unit} value={fmtNum(sum?.drivers_total ?? 0)} icon={IconUser} />
-            <StatCard label={O.debtors} value={fmtNum(sum?.debtors ?? 0)} icon={IconBalance} />
-            <StatCard label={O.nearLimit} value={fmtNum(sum?.near_limit ?? 0)} icon={IconStore} />
-            <StatCard
-              label={O.overdue.replace("{n}", fmtNum(data?.alert_days ?? 30))}
-              value={fmtNum(sum?.overdue ?? 0)}
+            <Tile
+              icon={IconStore}
+              label={O.merchantsTotal}
+              value={fmtMoney(sum?.merchants_total ?? 0)}
+              sub={(sum?.near_limit ?? 0) > 0 ? O.nearLimitSub.replace("{n}", fmtNum(sum?.near_limit ?? 0)) : undefined}
+              tone={(sum?.near_limit ?? 0) > 0 ? "danger" : (sum?.merchants_total ?? 0) > 0 ? "default" : "muted"}
+              onClick={() => pick({ kind: "merchant" })}
+            />
+            <Tile
+              icon={IconUser}
+              label={O.repsTotal}
+              value={fmtMoney(sum?.reps_total ?? 0)}
+              tone={(sum?.reps_total ?? 0) > 0 ? "default" : "muted"}
+              onClick={() => pick({ kind: "rep" })}
+            />
+            <Tile
+              icon={IconUser}
+              label={O.driversTotal}
+              value={fmtMoney(sum?.drivers_total ?? 0)}
+              tone={(sum?.drivers_total ?? 0) > 0 ? "default" : "muted"}
+              onClick={() => pick({ kind: "driver" })}
+            />
+          </div>
+          <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <Tile
               icon={IconDate}
-              tone={(sum?.overdue ?? 0) > 0 ? "accent" : "default"}
+              label={O.overdue.replace("{n}", fmtNum(alertDays))}
+              value={fmtNum(sum?.overdue ?? 0)}
+              tone={(sum?.overdue ?? 0) > 0 ? "danger" : "muted"}
+              onClick={() => pick({ overdue: !f.overdue })}
             />
-            <StatCard label={O.pendingRequests} value={fmtNum(sum?.pending_requests ?? 0)} icon={IconStatus} />
-          </StatGrid>
+            <Tile
+              icon={IconStatus}
+              label={O.pendingRequests}
+              value={fmtNum(sum?.pending_requests ?? 0)}
+              tone={(sum?.pending_requests ?? 0) > 0 ? "accent" : "muted"}
+              onClick={() => pick({ pending: !f.pending })}
+            />
+          </div>
 
+          {/* ── الفلاتر في كرتٍ واحد ── */}
           <form
-            className="mb-4 mt-4 flex flex-wrap items-end gap-3"
+            className="surface mb-4 space-y-3 p-4"
             onSubmit={(e) => {
               e.preventDefault();
               pick({ q: typed });
             }}
           >
-            <div className="w-56">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
               <Input
+                id="obl-search"
+                icon={<IconUser size={15} />}
                 value={typed}
                 placeholder={O.search}
                 onChange={(e) => setTyped(e.target.value)}
                 onBlur={() => typed !== f.q && pick({ q: typed })}
               />
-            </div>
-            <div className="w-40">
-              <Select value={f.kind} onChange={(e) => pick({ kind: e.target.value as Kind })}>
-                <option value="">{O.kinds.all}</option>
-                <option value="merchant">{O.kinds.merchant}</option>
-                <option value="rep">{O.kinds.rep}</option>
-                <option value="driver">{O.kinds.driver}</option>
-              </Select>
-            </div>
-            <div className="w-48">
-              <Select value={f.state} onChange={(e) => pick({ state: e.target.value as State })}>
+              <Select aria-label={O.states.all} value={f.state} onChange={(e) => pick({ state: e.target.value as State })}>
                 <option value="">{O.states.all}</option>
                 <option value="open">{O.states.open}</option>
                 <option value="closed">{O.states.closed}</option>
@@ -406,9 +435,7 @@ export default function ObligationsPage() {
                 <option value="voided">{O.states.voided}</option>
                 <option value="written_off">{O.states.written_off}</option>
               </Select>
-            </div>
-            <div className="w-52">
-              <Select value={f.cause} onChange={(e) => pick({ cause: e.target.value })}>
+              <Select aria-label={O.causeAll} value={f.cause} onChange={(e) => pick({ cause: e.target.value })}>
                 <option value="">{O.causeAll}</option>
                 {Object.entries(O.causes).map(([k, v]) => (
                   <option key={k} value={k}>
@@ -416,182 +443,214 @@ export default function ObligationsPage() {
                   </option>
                 ))}
               </Select>
+              <div className="grid grid-cols-2 gap-2">
+                <Input type="date" aria-label={O.from} title={O.from} value={f.from} onChange={(e) => pick({ from: e.target.value })} />
+                <Input type="date" aria-label={O.to} title={O.to} value={f.to} onChange={(e) => pick({ to: e.target.value })} />
+              </div>
             </div>
-            <div className="w-40">
-              <Input type="date" label={O.from} value={f.from} onChange={(e) => pick({ from: e.target.value })} />
-            </div>
-            <div className="w-40">
-              <Input type="date" label={O.to} value={f.to} onChange={(e) => pick({ to: e.target.value })} />
-            </div>
-            <Button
-              type="button"
-              variant={f.overdue ? "primary" : "secondary"}
-              onClick={() => pick({ overdue: !f.overdue })}
-            >
-              {O.overdueOnly}
-            </Button>
-            <Button
-              type="button"
-              variant={f.pending ? "primary" : "secondary"}
-              onClick={() => pick({ pending: !f.pending })}
-            >
-              {O.pendingOnly}
-            </Button>
-            {qs && (
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 type="button"
-                variant="ghost"
-                onClick={() => {
-                  setTyped("");
-                  pick(EMPTY);
-                }}
+                variant={f.overdue ? "primary" : "secondary"}
+                onClick={() => pick({ overdue: !f.overdue })}
               >
-                {O.clear}
+                {O.overdueOnly}
               </Button>
-            )}
+              <Button
+                type="button"
+                variant={f.pending ? "primary" : "secondary"}
+                onClick={() => pick({ pending: !f.pending })}
+              >
+                {O.pendingOnly}
+              </Button>
+              {f.party && <Badge variant="neutral">{O.partyFiltered}</Badge>}
+              {qs && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setTyped("");
+                    pick(EMPTY);
+                  }}
+                >
+                  {O.clear}
+                </Button>
+              )}
+            </div>
           </form>
 
           {stale || loading ? (
             <LoadingState />
           ) : rows.length === 0 ? (
-            <EmptyState icon={IconBalance} title={O.empty} />
+            <section className="surface flex flex-col items-center gap-3 p-8 text-center">
+              <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-success-solid text-on-solid">
+                <IconBalance size={28} />
+              </span>
+              <h2 className="heading-section">{O.empty}</h2>
+              <p className="max-w-md text-sm text-ink-muted">{qs ? O.emptyFiltered : O.emptyHint}</p>
+            </section>
           ) : (
-            <ul className="space-y-2">
-              {rows.map((o) => (
-                <li key={o.id} className="surface p-3">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <span className="min-w-0 flex-1">
-                      <span className="flex flex-wrap items-center gap-1.5 font-bold">
-                        {o.party_kind === "merchant" ? <IconStore size={15} /> : <IconUser size={15} />}
+            <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+              {rows.map((o) => {
+                const paidPart = o.amount - o.outstanding;
+                const pct = o.amount > 0 ? Math.round((paidPart / o.amount) * 100) : 0;
+                return (
+                  <li key={o.id} className="surface flex flex-col gap-3 p-4">
+                    <div className="flex items-start gap-3">
+                      <span
+                        className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${
+                          o.state === "open"
+                            ? o.age_days >= alertDays
+                              ? "bg-danger-solid text-on-solid"
+                              : "bg-warning-solid text-on-solid"
+                            : o.state === "paid"
+                              ? "bg-success-solid text-on-solid"
+                              : "bg-field text-ink-muted"
+                        }`}
+                      >
+                        {o.party_kind === "merchant" ? <IconStore size={20} /> : <IconUser size={20} />}
+                      </span>
+                      <span className="min-w-0 flex-1">
                         <OpenLink
                           allowed={o.party_kind === "merchant" ? canOpen.merchant : canOpen.user}
                           href={partyHref(o)}
-                          className="hover:underline"
+                          className="block truncate font-bold hover:underline"
                           title={O.openParty}
                         >
                           {o.party_name || "—"}
                         </OpenLink>
+                        <span className="block truncate text-sm text-ink-muted">{causeText(o.cause)}</span>
+                      </span>
+                      <span className="flex shrink-0 flex-col items-end gap-1">
+                        <Badge variant={STATE_VARIANT[o.state]}>{O.states[o.state]}</Badge>
                         <Badge variant="neutral">{O.kinds[o.party_kind]}</Badge>
-                        {!f.party && (
-                          <button
-                            type="button"
-                            className="text-2xs font-normal text-ink-muted hover:underline"
-                            onClick={() => pick({ party: o.party_id })}
-                          >
-                            {O.partyFilter}
-                          </button>
-                        )}
                       </span>
-                      <span className="block text-sm text-ink-muted">{causeText(o.cause)}</span>
-                      <span className="flex items-center gap-1 text-xs text-ink-muted">
-                        <IconDate size={13} />
-                        <span dir="ltr">{fmtDateTime(o.created_at)}</span>
-                        <span>· {O.ageDays.replace("{n}", fmtNum(o.age_days))}</span>
-                      </span>
-                    </span>
+                    </div>
 
-                    {o.order_number != null && o.order_id && (
-                      <OpenLink
-                        allowed={canOpen.order}
-                        href={`/dashboard/orders?id=${o.order_id}`}
-                        dir="ltr"
-                        title={O.openOrder}
-                        className="flex shrink-0 items-center gap-1 text-sm text-ink-muted hover:underline"
-                      >
-                        <IconOrder size={14} />#{fmtRef(o.order_number)}
-                      </OpenLink>
-                    )}
-
-                    <span className="shrink-0 text-end">
-                      <span className="block text-2xs text-ink-muted">{O.amount}</span>
-                      <Money value={o.amount} className="text-ink-muted tabular-nums" />
-                    </span>
-                    <span className="shrink-0 text-end">
-                      <span className="block text-2xs text-ink-muted">{O.outstanding}</span>
-                      <Money
-                        value={o.outstanding}
-                        className={`font-bold tabular-nums ${o.outstanding > 0 ? "text-warning" : "text-ink-muted"}`}
-                      />
-                    </span>
-
-                    <Badge variant={STATE_VARIANT[o.state]}>{O.states[o.state]}</Badge>
-
-                    {o.settlements.length > 0 && (
-                      <Button variant="secondary" onClick={() => setOpen((cur) => (cur === o.id ? null : o.id))}>
-                        {O.history} ({fmtNum(o.settlements.length)})
-                      </Button>
-                    )}
-                    {o.state === "open" && !o.pending && data?.can_manage && (
-                      <>
-                        <Button variant="secondary" onClick={() => setAct({ o, kind: "office_cash" })}>
-                          {O.officeCash}
-                        </Button>
-                        <Button variant="ghost" onClick={() => setAct({ o, kind: "write_off" })}>
-                          {O.writeOff}
-                        </Button>
-                      </>
-                    )}
-                  </div>
-
-                  {/* **طلبٌ ينتظر** — ويوافق عليه غيرُ مقترِحه (والخادمُ يحكم). */}
-                  {o.pending && (
-                    <div className="surface-inset mt-3 flex flex-wrap items-center gap-3 px-3 py-2 text-sm">
-                      <span className="flex-1">
-                        {o.pending.kind === "office_cash"
-                          ? O.pendingCash.replace("{amount}", fmtMoney(o.pending.amount))
-                          : O.pendingWriteOff}
-                        <span className="block text-xs text-ink-muted">{o.pending.note}</span>
-                      </span>
-                      {data?.can_manage &&
-                        me?.id !== o.pending.proposed_by &&
-                        (o.pending.kind === "office_cash" || data.can_approve_writeoff) && (
-                          <Button onClick={() => decide(o.pending!, true)}>{O.approve}</Button>
-                        )}
-                      {data?.can_manage && (
-                        <Button variant="secondary" onClick={() => decide(o.pending!, false)}>
-                          {O.reject}
-                        </Button>
+                    <div className="space-y-2 rounded-control bg-field px-3 py-2.5">
+                      <div className="flex items-end justify-between gap-2">
+                        <span>
+                          <span className="block text-2xs text-ink-muted">{O.outstanding}</span>
+                          <span className={`figure block ${o.outstanding > 0 ? "text-warning" : "text-ink-muted"}`}>
+                            {fmtMoney(o.outstanding)}
+                          </span>
+                        </span>
+                        <span className="text-end text-sm">
+                          <span className="block text-2xs text-ink-muted">{O.amount}</span>
+                          <b className="tabular-nums">{fmtMoney(o.amount)}</b>
+                        </span>
+                      </div>
+                      {o.amount > 0 && o.state === "open" && paidPart > 0 && (
+                        <span className="block h-1.5 w-full overflow-hidden rounded-full bg-surface" aria-hidden>
+                          <span className="block h-full rounded-full bg-success" style={{ width: `${pct}%` }} />
+                        </span>
                       )}
                     </div>
-                  )}
 
-                  {/* **سطورُ التسوية بطريقتها** — انقطع من مستحق · دفع بالمكتب · انشطب. */}
-                  {open === o.id && (
-                    <ul className="surface-inset mt-3 divide-y divide-line-soft">
-                      {o.settlements.map((st, i) => (
-                        <li key={i} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm">
-                          <span className="flex items-center gap-2">
-                            <IconStatus size={13} />
-                            <span dir="ltr">{fmtDateTime(st.created_at)}</span>
-                            <span className="text-ink-muted">{O.methods[st.method] ?? st.method}</span>
-                            {st.order_number != null && (
-                              <span dir="ltr" className="flex items-center gap-1 text-ink-muted">
-                                <IconOrder size={13} />#{fmtRef(st.order_number)}
-                              </span>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-2xs text-ink-muted">
+                      <span className="flex items-center gap-1">
+                        <IconDate size={12} />
+                        <span dir="ltr">{fmtDateTime(o.created_at)}</span>
+                      </span>
+                      <span className={o.state === "open" && o.age_days >= alertDays ? "font-bold text-danger" : ""}>
+                        {O.ageDays.replace("{n}", fmtNum(o.age_days))}
+                      </span>
+                      {o.order_number != null && o.order_id && (
+                        <OpenLink
+                          allowed={canOpen.order}
+                          href={`/dashboard/orders?id=${o.order_id}`}
+                          dir="ltr"
+                          title={O.openOrder}
+                          className="flex items-center gap-1 hover:underline"
+                        >
+                          <IconOrder size={12} />#{fmtRef(o.order_number)}
+                        </OpenLink>
+                      )}
+                      {!f.party && (
+                        <button type="button" className="hover:underline" onClick={() => pick({ party: o.party_id })}>
+                          {O.partyFilter}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* **طلبٌ ينتظر** — ويوافق عليه غيرُ مقترِحه (والخادمُ يحكم). */}
+                    {o.pending && (
+                      <div className="space-y-2 rounded-control border border-accent px-3 py-2 text-sm">
+                        <span className="block font-medium">
+                          {o.pending.kind === "office_cash"
+                            ? O.pendingCash.replace("{amount}", fmtMoney(o.pending.amount))
+                            : O.pendingWriteOff}
+                        </span>
+                        {o.pending.note && <span className="block text-xs text-ink-muted">{o.pending.note}</span>}
+                        <span className="grid grid-cols-2 gap-2">
+                          {data?.can_manage &&
+                            me?.id !== o.pending.proposed_by &&
+                            (o.pending.kind === "office_cash" || data.can_approve_writeoff) && (
+                              <Button className="w-full" onClick={() => decide(o.pending!, true)}>
+                                {O.approve}
+                              </Button>
                             )}
-                          </span>
-                          <span className="flex items-center gap-4">
-                            <span>
+                          {data?.can_manage && (
+                            <Button className="w-full" variant="danger" onClick={() => decide(o.pending!, false)}>
+                              {O.reject}
+                            </Button>
+                          )}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* **سطورُ التسوية بطريقتها** — انقطع من مستحق · دفع بالمكتب · انشطب. */}
+                    {open === o.id && (
+                      <ul className="space-y-1.5">
+                        {o.settlements.map((st, i) => (
+                          <li key={i} className="flex flex-wrap items-center justify-between gap-2 rounded-control bg-field px-3 py-2 text-sm">
+                            <span className="min-w-0">
+                              <span className="block font-medium">{O.methods[st.method] ?? st.method}</span>
+                              <span className="block text-2xs text-ink-muted">
+                                <span dir="ltr">{fmtDateTime(st.created_at)}</span>
+                                {st.order_number != null && <span dir="ltr"> · #{fmtRef(st.order_number)}</span>}
+                              </span>
+                            </span>
+                            <span className="text-end">
                               <Money
                                 value={st.amount}
-                                className={`tabular-nums ${
+                                className={`font-bold tabular-nums ${
                                   st.method === "voided" || st.method === "written_off"
                                     ? "text-ink-muted line-through"
                                     : "text-success"
                                 }`}
                               />
+                              <span className="block text-2xs text-ink-muted">
+                                {O.remaining} {fmtMoney(st.remaining)}
+                              </span>
                             </span>
-                            <span>
-                              <span className="text-2xs text-ink-muted">{O.remaining} </span>
-                              <Money value={st.remaining} className="tabular-nums text-ink-muted" />
-                            </span>
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              ))}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    {(o.settlements.length > 0 || (o.state === "open" && !o.pending && data?.can_manage)) && (
+                      <div className="mt-auto flex flex-wrap gap-2 border-t border-line-soft pt-3">
+                        {o.state === "open" && !o.pending && data?.can_manage && (
+                          <>
+                            <Button className="flex-1" onClick={() => setAct({ o, kind: "office_cash" })}>
+                              {O.officeCash}
+                            </Button>
+                            <Button className="flex-1" variant="secondary" onClick={() => setAct({ o, kind: "write_off" })}>
+                              {O.writeOff}
+                            </Button>
+                          </>
+                        )}
+                        {o.settlements.length > 0 && (
+                          <Button variant="ghost" onClick={() => setOpen((cur) => (cur === o.id ? null : o.id))}>
+                            {O.history} ({fmtNum(o.settlements.length)})
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
 

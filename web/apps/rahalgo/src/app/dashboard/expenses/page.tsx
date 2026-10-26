@@ -36,6 +36,7 @@ import {
   getMessages,
   defaultLocale,
   fmtNum,
+  fmtMoney,
   fmtDate,
   errorText,
   westernDigits,
@@ -50,18 +51,11 @@ import {
   Modal,
   Textarea,
   PageContainer,
-  PageHeader,
   LoadingState,
   ReloadState,
   Pagination,
-  StatGrid,
-  StatCard,
   Checkbox,
   Radio,
-  DataView,
-  ViewToggle,
-  useViewMode,
-  type DataColumn,
   ImageUpload,
   IconWallet,
   IconAdd,
@@ -79,6 +73,8 @@ import {
 } from "@rahalgo/ui";
 import { api, apiFile, mediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { PageHero } from "@/components/admin/PageHero";
+import { Panel, Tile } from "@/components/admin/DashParts";
 
 const m = getMessages(defaultLocale);
 const X = m.admin.expenses;
@@ -192,7 +188,6 @@ export default function ExpensesPage() {
   // **الموافقةُ والرفضُ بتأكيد** — والرفضُ بسببٍ إلزاميّ (قرارُ المالك ٢٠٢٦-١٠-١٥).
   const [deciding, setDeciding] = useState<{ row: Row; approve: boolean } | null>(null);
   const [why, setWhy] = useState("");
-  const [view, setView] = useViewMode("expenses");
 
   // **ومدًى مقلوبٌ يُقال** — وكان يعطي قائمةً فارغةً بلا تنبيه.
   const inverted = range.from !== "" && range.to !== "" && range.from > range.to;
@@ -254,106 +249,14 @@ export default function ExpensesPage() {
   const salaryCat = cats.find((c) => c.id === category)?.is_salary === true;
   const byEmployee = data.by_employee ?? [];
 
-  const columns: DataColumn<Row>[] = [
-    {
-      id: "date",
-      header: X.colDate,
-      icon: <IconDate />,
-      cell: (e) => (
-        <span dir="ltr" className="whitespace-nowrap text-sm">
-          {fmtDate(e.spent_at)}
-        </span>
-      ),
-    },
-    {
-      id: "category",
-      header: X.colCategory,
-      primary: true,
-      cell: (e) => (
-        <span className="flex flex-wrap items-center gap-1.5">
-          <span className="font-medium">{e.category}</span>
-          {e.paid_from && (
-            <Badge variant={e.paid_from === "cash" ? "warning" : "neutral"}>{X.paidFromOptions[e.paid_from]}</Badge>
-          )}
-        </span>
-      ),
-    },
-    {
-      id: "amount",
-      header: `${X.colAmount} (${CUR})`,
-      icon: <IconWallet />,
-      cell: (e) => (
-        <span
-          dir="ltr"
-          className={`whitespace-nowrap font-bold tabular-nums ${
-            e.status === "voided" || e.status === "rejected" ? "text-ink-muted line-through" : "text-danger"
-          }`}
-        >
-          {fmtNum(e.amount)} {CUR}
-        </span>
-      ),
-    },
-    {
-      id: "note",
-      header: X.colNote,
-      icon: <IconNote />,
-      cell: (e) => (
-        <span className="flex flex-col text-sm">
-          <span className={e.status === "voided" ? "line-through text-ink-muted" : ""}>{e.note}</span>
-          {e.status === "voided" && e.reason && (
-            <span className="text-xs text-ink-muted">
-              {X.voidedBy.replace("{name}", e.decider).replace("{reason}", e.reason)}
-            </span>
-          )}
-          {e.status === "rejected" && e.reason && (
-            <span className="text-xs text-danger">
-              {X.rejectedBy.replace("{name}", e.decider).replace("{reason}", e.reason)}
-            </span>
-          )}
-        </span>
-      ),
-    },
-    {
-      id: "employee",
-      header: X.colEmployee,
-      icon: <IconUser />,
-      hide: (e) => !e.employee_name,
-      cell: (e) => <span className="text-sm">{e.employee_name}</span>,
-    },
-    {
-      id: "by",
-      header: X.colBy,
-      icon: <IconUser />,
-      cell: (e) => <span className="text-sm text-ink-muted">{e.by}</span>,
-    },
-    {
-      id: "status",
-      header: X.colStatus,
-      icon: <IconStatus />,
-      cell: (e) => <Badge variant={statusVariant[e.status]}>{X.status[e.status]}</Badge>,
-    },
-    {
-      id: "receipt",
-      header: X.colReceipt,
-      icon: <IconReceipt />,
-      hide: (e) => !e.receipt_url,
-      cell: (e) =>
-        e.receipt_url ? (
-          <a
-            href={mediaUrl(e.receipt_url) ?? "#"}
-            target="_blank"
-            rel="noreferrer"
-            className="text-sm text-primary underline"
-          >
-            {X.viewReceipt}
-          </a>
-        ) : null,
-    },
-  ];
+  const filtered = category !== "" || status !== "" || q.trim() !== "";
+  const rows = inverted ? [] : data.expenses;
 
+  // **تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦)** — رأسٌ موحّد، أرقامٌ بكروتٍ صغيرة، الفلاترُ في كرتٍ واحد،
+  // وكرتٌ لكلّ مصروفٍ ببابه ومبلغه وأفعاله — **ولا جدول** («ألغِ عرض الجداول»).
   return (
     <PageContainer>
-      <PageHeader
+      <PageHero
         icon={IconWallet}
         title={X.title}
         subtitle={X.hint}
@@ -386,141 +289,133 @@ export default function ExpensesPage() {
         </Alert>
       )}
 
-      <StatGrid>
-        <StatCard
-          label={`${X.monthTotal} (${CUR})`}
-          value={fmtNum(s.month_total)}
+      <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <Tile
           icon={IconWallet}
+          label={X.monthTotal}
+          value={fmtMoney(s.month_total)}
           tone={s.month_total > 0 ? "danger" : "muted"}
         />
-        <StatCard
-          label={`${X.vsLastMonth} (${CUR})`}
-          value={`${diff > 0 ? "+" : ""}${fmtNum(diff)}`}
-          sub={X.lastMonthWas.replace("{n}", fmtNum(s.prev_month_total))}
+        <Tile
           icon={diff > 0 ? IconTrendUp : diff < 0 ? IconTrendDown : IconTrendFlat}
+          label={X.vsLastMonth}
+          value={`${diff > 0 ? "+" : ""}${fmtMoney(diff)}`}
+          sub={X.lastMonthWas.replace("{n}", fmtMoney(s.prev_month_total))}
           tone={diff > 0 ? "danger" : diff < 0 ? "success" : "muted"}
         />
-        <StatCard
+        <Tile
+          icon={IconStatus}
           label={X.topCategory}
           value={s.top_category || X.none}
-          sub={s.top_category ? `${fmtNum(s.top_category_total)} ${CUR}` : undefined}
-          icon={IconStatus}
+          sub={s.top_category ? fmtMoney(s.top_category_total) : undefined}
+          tone={s.top_category ? "default" : "muted"}
         />
-      </StatGrid>
+      </div>
 
       {data.pending_count > 0 && (
-        <Alert tone="warning" className="my-3">
+        <Alert tone="warning" className="mb-4">
           {X.pendingNote
             .replace("{n}", fmtNum(data.pending_count))
             .replace("{amount}", `${fmtNum(data.pending_amount)} ${CUR}`)}
         </Alert>
       )}
 
-      {/* **شريطُ المدّة والمرشّحات** — يلتفّ على الجوّال. */}
-      <div className="my-4 flex flex-wrap items-end gap-3">
-        <div className="w-40">
-          <Input
-            id="exp-from"
-            type="date"
-            label={m.shared.statement.from}
-            value={range.from}
-            onChange={(e) => {
-              setRange({ ...range, from: e.target.value });
-              setPage(1);
-            }}
-          />
-        </div>
-        <div className="w-40">
-          <Input
-            id="exp-to"
-            type="date"
-            label={m.shared.statement.to}
-            value={range.to}
-            onChange={(e) => {
-              setRange({ ...range, to: e.target.value });
-              setPage(1);
-            }}
-          />
-        </div>
-        <div className="w-44">
-          <Select
-            id="exp-filter-cat"
-            label={X.colCategory}
-            value={category}
-            onChange={(e) => {
-              setCategory(e.target.value);
-              setPage(1);
-            }}
-          >
-            <option value="">{X.allCategories}</option>
-            {cats.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div className="w-44">
-          <Select
-            id="exp-filter-status"
-            label={X.colStatus}
-            value={status}
-            onChange={(e) => {
-              setStatus(e.target.value as "" | Status);
-              setPage(1);
-            }}
-          >
-            <option value="">{X.allStatuses}</option>
-            {(["posted", "pending", "voided", "rejected"] as Status[]).map((k) => (
-              <option key={k} value={k}>
-                {X.status[k]}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div className="min-w-0 flex-1 basis-48">
-          <Input
-            id="exp-search"
-            label={X.search}
-            value={q}
-            onChange={(e) => {
-              setQ(e.target.value);
-              setPage(1);
-            }}
-          />
-        </div>
-        <ViewToggle
-          view={view}
-          onChange={setView}
-          tableLabel={m.common.viewTable}
-          cardsLabel={m.common.viewCards}
+      {/* ── الفلاتر في كرتٍ واحد ── */}
+      <section className="surface mb-4 grid grid-cols-1 gap-2 p-4 sm:grid-cols-2 lg:grid-cols-5">
+        <Input
+          id="exp-from"
+          type="date"
+          icon={<IconDate />}
+          label={m.shared.statement.from}
+          value={range.from}
+          onChange={(e) => {
+            setRange({ ...range, from: e.target.value });
+            setPage(1);
+          }}
         />
-      </div>
+        <Input
+          id="exp-to"
+          type="date"
+          icon={<IconDate />}
+          label={m.shared.statement.to}
+          value={range.to}
+          onChange={(e) => {
+            setRange({ ...range, to: e.target.value });
+            setPage(1);
+          }}
+        />
+        <Select
+          id="exp-filter-cat"
+          label={X.colCategory}
+          value={category}
+          onChange={(e) => {
+            setCategory(e.target.value);
+            setPage(1);
+          }}
+        >
+          <option value="">{X.allCategories}</option>
+          {cats.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </Select>
+        <Select
+          id="exp-filter-status"
+          label={X.colStatus}
+          value={status}
+          onChange={(e) => {
+            setStatus(e.target.value as "" | Status);
+            setPage(1);
+          }}
+        >
+          <option value="">{X.allStatuses}</option>
+          {(["posted", "pending", "voided", "rejected"] as Status[]).map((k) => (
+            <option key={k} value={k}>
+              {X.status[k]}
+            </option>
+          ))}
+        </Select>
+        <Input
+          id="exp-search"
+          icon={<IconSearch size={15} />}
+          label={X.search}
+          value={q}
+          onChange={(e) => {
+            setQ(e.target.value);
+            setPage(1);
+          }}
+        />
+      </section>
 
       {inverted && <Alert className="mb-3">{X.invertedRange}</Alert>}
 
       {/* **ومجموعُ كلّ موظّفٍ حين يُختار بابُ الرواتب** (قرارُ المالك ٢٠٢٦-١٠-١٥). */}
       {salaryCat && byEmployee.length > 0 && (
-        <div className="mb-4 space-y-1.5">
-          <p className="text-sm font-medium">{X.byEmployeeTitle}</p>
-          <ul className="flex flex-wrap gap-2 text-sm">
+        <Panel title={X.byEmployeeTitle} className="mb-4">
+          <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {byEmployee.map((e) => (
-              <li key={e.name} className="rounded-control border border-line px-3 py-1">
-                <span className="font-medium">{e.name}</span>{" "}
-                <span dir="ltr" className="font-bold tabular-nums text-danger">
-                  {fmtNum(e.total)} {CUR}
-                </span>{" "}
-                <span className="text-xs text-ink-muted">({X.usedCount.replace("{n}", fmtNum(e.count))})</span>
+              <li key={e.name} className="flex items-center gap-3 rounded-control bg-field px-3 py-2">
+                <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-surface text-ink">
+                  <IconUser size={16} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium">{e.name}</span>
+                  <span className="block text-2xs text-ink-muted">{X.usedCount.replace("{n}", fmtNum(e.count))}</span>
+                </span>
+                <span dir="ltr" className="whitespace-nowrap font-bold tabular-nums text-danger">
+                  {fmtMoney(e.total)}
+                </span>
               </li>
             ))}
           </ul>
-        </div>
+        </Panel>
       )}
 
       {/* **والتوزيعُ على الأبواب بالمبلغ** — شريطٌ بالنسبة، ومجموعٌ واحدٌ لا يقول أين ذهب المال. */}
       {data.by_category.length > 0 && data.total_amount > 0 && (
-        <div className="mb-4 space-y-1.5">
-          <div className="flex h-3 w-full overflow-hidden rounded-full bg-line">
+        <Panel title={X.byCategoryTitle} note={fmtMoney(data.total_amount)} className="mb-4">
+          <div className="mb-3 flex h-3 w-full overflow-hidden rounded-full bg-line">
             {data.by_category.map((c, i) => (
               <span
                 key={c.id}
@@ -530,59 +425,56 @@ export default function ExpensesPage() {
               />
             ))}
           </div>
-          <ul className="flex flex-wrap gap-2 text-sm">
-            {data.by_category.map((c) => (
-              <li key={c.id} className="rounded-control border border-line px-3 py-1">
-                <span className="font-medium">{c.name}</span>{" "}
-                <span dir="ltr" className="font-bold tabular-nums text-danger">
-                  {fmtNum(c.total)} {CUR}
-                </span>{" "}
-                <span className="text-xs text-ink-muted">
-                  ({X.usedCount.replace("{n}", fmtNum(c.count))} ·{" "}
-                  {fmtNum(Math.round((c.total / data.total_amount) * 100))}%)
+          <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {data.by_category.map((c, i) => (
+              <li key={c.id} className="flex items-center gap-2 rounded-control bg-field px-3 py-2 text-sm">
+                <span
+                  aria-hidden
+                  className={`h-2.5 w-2.5 shrink-0 rounded-full ${i % 2 === 0 ? "bg-danger" : "bg-warning"}`}
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium">{c.name}</span>
+                  <span className="block text-2xs text-ink-muted">
+                    {X.usedCount.replace("{n}", fmtNum(c.count))} ·{" "}
+                    {fmtNum(Math.round((c.total / data.total_amount) * 100))}%
+                  </span>
+                </span>
+                <span dir="ltr" className="whitespace-nowrap font-bold tabular-nums text-danger">
+                  {fmtMoney(c.total)}
                 </span>
               </li>
             ))}
           </ul>
-        </div>
+        </Panel>
       )}
 
-      <DataView
-        items={inverted ? [] : data.expenses}
-        getKey={(e) => e.id}
-        columns={columns}
-        view={view}
-        empty={X.empty}
-        actions={
-          canManage
-            ? (e) =>
-                e.status === "posted" ? (
-                  e.can_void ? (
-                    <Button variant="ghost" className="!px-2 text-xs" onClick={() => setVoiding(e)}>
-                      {X.void}
-                    </Button>
-                  ) : null
-                ) : e.status === "pending" ? (
-                  <div className="flex gap-1">
-                    {e.can_approve && (
-                      <Button className="!px-2 text-xs" onClick={() => setDeciding({ row: e, approve: true })}>
-                        {X.approve}
-                      </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      className="!px-2 text-xs"
-                      onClick={() => setDeciding({ row: e, approve: false })}
-                    >
-                      {X.reject}
-                    </Button>
-                  </div>
-                ) : null
-            : undefined
-        }
-      />
+      {rows.length === 0 ? (
+        <section className="surface flex flex-col items-center gap-3 p-8 text-center">
+          <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-success-solid text-on-solid">
+            <IconReceipt size={28} />
+          </span>
+          <h2 className="heading-section">{filtered ? X.emptyFiltered : X.empty}</h2>
+          <p className="max-w-md text-sm text-ink-muted">{X.emptyHint}</p>
+        </section>
+      ) : (
+        <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+          {rows.map((e) => (
+            <ExpenseCard
+              key={e.id}
+              e={e}
+              canManage={canManage}
+              onVoid={() => setVoiding(e)}
+              onDecide={(approve) => setDeciding({ row: e, approve })}
+            />
+          ))}
+        </ul>
+      )}
 
-      <Pagination page={page} total={data.total} perPage={data.per_page} onChange={setPage} />
+      {data.total > data.per_page && (
+        <div className="mt-4 flex justify-center">
+          <Pagination page={page} total={data.total} perPage={data.per_page} onChange={setPage} />
+        </div>
+      )}
 
       {adding && (
         <AddModal
@@ -633,6 +525,132 @@ export default function ExpensesPage() {
         />
       )}
     </PageContainer>
+  );
+}
+
+const STATUS_TINT: Record<Status, string> = {
+  posted: "bg-danger-solid text-on-solid",
+  pending: "bg-warning-solid text-on-solid",
+  voided: "bg-field text-ink-muted",
+  rejected: "bg-field text-ink-muted",
+};
+
+/**
+ * **كرتُ المصروف** (تصميمٌ احترافيّ — المالك ٢٠٢٦-١٠-٢٦): الباب ومنين انصرف وحالته فوق،
+ * المبلغ كبير بخلفيّة، ثمّ التاريخ ومين سجّله والموظّف والإيصال، والملاحظة، والأفعال بعرض الكرت.
+ * **والأزرارُ بأعلام الخادم نفسِها** (`can_void` · `can_approve`) كما كانت.
+ */
+function ExpenseCard({
+  e,
+  canManage,
+  onVoid,
+  onDecide,
+}: {
+  e: Row;
+  canManage: boolean;
+  onVoid: () => void;
+  onDecide: (approve: boolean) => void;
+}) {
+  const dead = e.status === "voided" || e.status === "rejected";
+  const showVoid = canManage && e.status === "posted" && e.can_void === true;
+  const showDecide = canManage && e.status === "pending";
+  return (
+    <li className="surface flex flex-col gap-3 p-4">
+      <div className="flex items-start gap-3">
+        <span className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${STATUS_TINT[e.status]}`}>
+          <IconReceipt size={20} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-bold">{e.category}</span>
+          {e.employee_name && (
+            <span className="flex items-center gap-1 truncate text-sm text-ink-muted">
+              <IconUser size={13} />
+              {e.employee_name}
+            </span>
+          )}
+        </span>
+        <span className="flex shrink-0 flex-col items-end gap-1">
+          <Badge variant={statusVariant[e.status]}>{X.status[e.status]}</Badge>
+          {e.paid_from && (
+            <Badge variant={e.paid_from === "cash" ? "warning" : "neutral"}>{X.paidFromOptions[e.paid_from]}</Badge>
+          )}
+        </span>
+      </div>
+
+      <div className="flex items-end justify-between gap-2 rounded-control bg-field px-3 py-2.5">
+        <span>
+          <span className="block text-2xs text-ink-muted">{X.colAmount}</span>
+          <span dir="ltr" className={`figure block ${dead ? "text-ink-muted line-through" : "text-danger"}`}>
+            {fmtMoney(e.amount)}
+          </span>
+        </span>
+        <span className="text-end text-sm">
+          <span className="block text-2xs text-ink-muted">{X.colDate}</span>
+          <b dir="ltr" className="whitespace-nowrap tabular-nums">
+            {fmtDate(e.spent_at)}
+          </b>
+        </span>
+      </div>
+
+      {(e.note || (e.status === "voided" && e.reason) || (e.status === "rejected" && e.reason)) && (
+        <div className="space-y-1 text-sm">
+          {e.note && (
+            <p className={`flex items-start gap-1.5 ${e.status === "voided" ? "text-ink-muted line-through" : ""}`}>
+              <IconNote size={14} className="mt-0.5 shrink-0 text-ink-muted" />
+              <span className="min-w-0">{e.note}</span>
+            </p>
+          )}
+          {e.status === "voided" && e.reason && (
+            <p className="text-xs text-ink-muted">
+              {X.voidedBy.replace("{name}", e.decider).replace("{reason}", e.reason)}
+            </p>
+          )}
+          {e.status === "rejected" && e.reason && (
+            <p className="text-xs text-danger">
+              {X.rejectedBy.replace("{name}", e.decider).replace("{reason}", e.reason)}
+            </p>
+          )}
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-2xs text-ink-muted">
+        <span className="flex items-center gap-1">
+          <IconUser size={12} />
+          {X.colBy}: {e.by}
+        </span>
+        {e.receipt_url && (
+          <a
+            href={mediaUrl(e.receipt_url) ?? "#"}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center gap-1 text-primary underline"
+          >
+            <IconReceipt size={12} />
+            {X.colReceipt}: {X.viewReceipt}
+          </a>
+        )}
+      </div>
+
+      {(showVoid || showDecide) && (
+        <div className="mt-auto flex gap-2 border-t border-line-soft pt-3">
+          {showVoid && (
+            <Button className="flex-1" variant="secondary" onClick={onVoid}>
+              {X.void}
+            </Button>
+          )}
+          {showDecide && e.can_approve && (
+            <Button className="flex-1" onClick={() => onDecide(true)}>
+              {X.approve}
+            </Button>
+          )}
+          {showDecide && (
+            <Button className="flex-1" variant="danger" onClick={() => onDecide(false)}>
+              {X.reject}
+            </Button>
+          )}
+        </div>
+      )}
+    </li>
   );
 }
 

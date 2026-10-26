@@ -20,16 +20,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtMoney, fmtDateTime, errorText } from "@rahalgo/i18n";
 import {
-  Tabs,
   Chips,
-  type TabDef,
   Alert,
   PageContainer,
-  PageHeader,
   Button,
   ButtonLink,
   Badge,
-  Card,
   Modal,
   Drawer,
   Confirm,
@@ -38,8 +34,6 @@ import {
   EmptyState,
   LoadingState,
   ReloadState,
-  StatGrid,
-  StatCard,
   IconStar,
   IconDriver,
   IconUser,
@@ -55,6 +49,8 @@ import {
 import { api, apiFile } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useCanCall, useCanOpen } from "@/lib/policy";
+import { PageHero, type HeroTab } from "@/components/admin/PageHero";
+import { Tile } from "@/components/admin/DashParts";
 
 const m = getMessages(defaultLocale);
 const P = m.admin.incentives;
@@ -330,7 +326,7 @@ export default function IncentivesPage() {
       .catch(() => setLedger("failed"));
   }, [ledgerOf]);
 
-  const TABS: TabDef<Role>[] = [
+  const TABS: HeroTab<Role>[] = [
     { key: "driver", label: P.tabDrivers, icon: IconDriver },
     { key: "sales", label: P.tabSales, icon: IconUser },
   ];
@@ -349,13 +345,27 @@ export default function IncentivesPage() {
     return requests.filter((r) => ids.has(r.user_id) && (!r.role || r.role === role));
   }, [data, requests, role]);
 
+  // تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦) — رأسٌ موحّدٌ بتبويبَي الدور، أرقامٌ بمربّعات،
+  // وكرتٌ لكلّ شخصٍ بدل الجدول.
   return (
     <PageContainer>
-      <PageHeader icon={IconStar} title={P.title} subtitle={P.subtitle} />
+      <PageHero<Role>
+        icon={IconStar}
+        title={P.title}
+        subtitle={P.subtitle}
+        actions={
+          <Button variant="secondary" onClick={() => void exportCsv()} className="flex items-center gap-1.5">
+            <IconArrowOut size={16} />
+            {P.export}
+          </Button>
+        }
+        tabs={TABS}
+        value={role}
+        onChange={setRole}
+      />
 
-      <Tabs items={TABS} value={role} onChange={setRole} />
-
-      <div className="flex flex-wrap items-end gap-2">
+      {/* ── الفلاتر ببطاقةٍ واحدة: الشهر والبحث ── */}
+      <section className="surface flex flex-wrap items-end gap-3 p-3">
         <Input
           id="incentives-month"
           label={P.month}
@@ -373,11 +383,7 @@ export default function IncentivesPage() {
           onChange={(e) => setQuery(e.target.value)}
           wrapperClassName="min-w-0 flex-1"
         />
-        <Button variant="secondary" onClick={() => void exportCsv()} className="flex items-center gap-1.5">
-          <IconArrowOut size={16} />
-          {P.export}
-        </Button>
-      </div>
+      </section>
 
       {pageError && <Alert>{pageError}</Alert>}
       {notice && <Alert tone="success">{notice}</Alert>}
@@ -388,56 +394,88 @@ export default function IncentivesPage() {
         <ReloadState onRetry={load} />
       ) : (
         <>
-          {/* ── الكروت: كلُّ مرحلة · الآليّ · اليدويّ · العقوبات ── */}
-          <StatGrid>
+          {/* ── الأرقام: كلُّ مرحلة · الآليّ · اليدويّ · العقوبات ── */}
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-3 2xl:grid-cols-6">
             {data.summary.reached_per_level.map((n, i) => (
-              <StatCard key={i} icon={IconTarget} label={fill(P.cardStage, { n: i + 1 })} value={fmtNum(n)} />
+              <Tile
+                key={i}
+                icon={IconTarget}
+                label={fill(P.cardStage, { n: i + 1 })}
+                value={fmtNum(n)}
+                tone={n > 0 ? "accent" : "muted"}
+              />
             ))}
-            <StatCard icon={IconWallet} tone="success" label={P.cardAuto} value={fmtMoney(data.summary.auto_paid)} />
-            <StatCard icon={IconStar} tone="accent" label={P.cardManual} value={fmtMoney(data.summary.manual_paid)} />
-            <StatCard icon={IconWarning} tone="danger" label={P.cardPenalties} value={fmtMoney(data.summary.penalties)} />
-          </StatGrid>
+            <Tile
+              icon={IconWallet}
+              tone={data.summary.auto_paid > 0 ? "success" : "muted"}
+              label={P.cardAuto}
+              value={fmtMoney(data.summary.auto_paid)}
+            />
+            <Tile
+              icon={IconStar}
+              tone={data.summary.manual_paid > 0 ? "success" : "muted"}
+              label={P.cardManual}
+              value={fmtMoney(data.summary.manual_paid)}
+            />
+            <Tile
+              icon={IconWarning}
+              tone={data.summary.penalties > 0 ? "danger" : "muted"}
+              label={P.cardPenalties}
+              value={fmtMoney(data.summary.penalties)}
+            />
+          </div>
 
-          {/* ── شريطُ المراحل — الوعدُ كما هو، وتعديلُه من الإعدادات ── */}
-          <Card
-            title={P.stagesTitle}
-            icon={IconTarget}
-            actions={
-              // **ولمن يفتح الإعدادات وحدَه** (قرارُ المالك ٢٠٢٦-١٠-٠٥): الماليّةُ لا تراها.
-              canSettings ? (
+          {/* ── مراحلُ الهدف — الوعدُ كما هو، وتعديلُه من الإعدادات ── */}
+          <section className="surface p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div className="min-w-0">
+                <h2 className="heading-card">{P.stagesTitle}</h2>
+                <p className="text-xs text-ink-muted">{P.stagesHint}</p>
+              </div>
+              {/* **ولمن يفتح الإعدادات وحدَه** (قرارُ المالك ٢٠٢٦-١٠-٠٥): الماليّةُ لا تراها. */}
+              {canSettings && (
                 <ButtonLink href="/dashboard/settings" variant="secondary">
                   <IconSettings size={14} />
                   {P.editInSettings}
                 </ButtonLink>
-              ) : undefined
-            }
-          >
+              )}
+            </div>
             {data.levels.length === 0 ? (
               <p className="text-sm text-ink-muted">{P.noStages}</p>
             ) : (
-              <div className="flex flex-wrap gap-2">
+              <ol className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 {data.levels.map((l) => (
-                  <Badge key={l.n} variant="primary">
-                    {fill(P.stageLine, {
-                      n: l.n,
-                      target: fmtNum(l.target),
-                      unit,
-                      reward: fmtMoney(l.reward),
-                    })}
-                  </Badge>
+                  <li key={l.n} className="flex items-center gap-3 rounded-control bg-field px-3 py-2.5">
+                    <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent text-sm font-bold text-on-bright tabular-nums">
+                      {fmtNum(l.n)}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-2xs text-ink-muted">{fill(P.stageN, { n: fmtNum(l.n) })}</span>
+                      <span className="block font-bold tabular-nums">
+                        {fmtNum(l.target)} {unit}
+                      </span>
+                      <span className="block text-xs text-success">
+                        {fill(P.stageReward, { reward: fmtMoney(l.reward) })}
+                      </span>
+                    </span>
+                  </li>
                 ))}
-              </div>
+              </ol>
             )}
-          </Card>
+          </section>
 
           {/* ── التنبيهات — الماليّةُ تقرّر ── */}
           {data.alerts.length > 0 && (
-            <Card title={P.alertsTitle} icon={IconWarning} tone="danger">
-              <ul className="divide-y divide-line-soft">
+            <section className="surface p-4">
+              <h2 className="heading-card mb-3 flex items-center gap-2 text-danger">
+                <IconWarning size={18} />
+                {P.alertsTitle}
+              </h2>
+              <ul className="space-y-2">
                 {data.alerts.map((a) => (
                   <li
                     key={a.incentive_id ?? a.failure_id}
-                    className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-sm"
+                    className="flex flex-col gap-2 rounded-control bg-field p-3 text-sm sm:flex-row sm:items-center"
                   >
                     <span className="min-w-0 flex-1">
                       {a.kind === "grant_failed"
@@ -462,137 +500,99 @@ export default function IncentivesPage() {
                       )}
                     </span>
                     {canDecide && a.kind === "count_dropped" && (
-                      <span className="flex shrink-0 gap-1.5">
-                        <Button variant="secondary" className="!px-2.5" disabled={busy}
-                          onClick={() => setDeciding({ a, d: "keep" })}>
+                      <span className="grid shrink-0 grid-cols-2 gap-2">
+                        <Button variant="secondary" disabled={busy} onClick={() => setDeciding({ a, d: "keep" })}>
                           {P.keep}
                         </Button>
-                        <Button variant="danger" className="!px-2.5" disabled={busy}
-                          onClick={() => setDeciding({ a, d: "clawback" })}>
+                        <Button variant="danger" disabled={busy} onClick={() => setDeciding({ a, d: "clawback" })}>
                           {P.clawback}
                         </Button>
                       </span>
                     )}
                     {canDecide && a.kind === "grant_failed" && (
-                      <Button className="!px-2.5" disabled={busy} onClick={() => void retry(a)}>
+                      <Button disabled={busy} onClick={() => void retry(a)}>
                         {P.retry}
                       </Button>
                     )}
                   </li>
                 ))}
               </ul>
-            </Card>
+            </section>
           )}
 
           {/* ── الطلباتُ المعلّقة — يوافق عليها غيرُ من اقترحها ── */}
           {roleRequests.length > 0 && (
-            <Card title={P.pendingTitle} icon={IconWallet}>
-              <ul className="divide-y divide-line-soft">
+            <section className="surface p-4">
+              <h2 className="heading-card mb-3 flex items-center gap-2">
+                <IconWallet size={18} />
+                {P.pendingTitle}
+                <Badge variant="warning">{fmtNum(roleRequests.length)}</Badge>
+              </h2>
+              <ul className="grid grid-cols-1 gap-2 lg:grid-cols-2">
                 {roleRequests.map((r) => (
-                  <li key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-sm">
-                    <Badge variant={r.kind === "penalty" ? "danger" : "success"}>{kindLabel(r.kind)}</Badge>
-                    <span className="font-bold" dir="ltr">
-                      {fmtMoney(r.amount)}
-                    </span>
-                    <span className="font-medium">{r.user_name}</span>
-                    <span className="min-w-0 flex-1 truncate text-ink-muted">{r.note}</span>
-                    <span className="shrink-0 text-xs text-ink-muted">
+                  <li key={r.id} className="flex flex-col gap-2 rounded-control bg-field p-3 text-sm">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant={r.kind === "penalty" ? "danger" : "success"}>{kindLabel(r.kind)}</Badge>
+                      <span className="font-medium">{r.user_name}</span>
+                      <span
+                        className={`ms-auto font-bold tabular-nums ${r.kind === "penalty" ? "text-danger" : "text-success"}`}
+                        dir="ltr"
+                      >
+                        {fmtMoney(r.amount)}
+                      </span>
+                    </div>
+                    {r.note && <p className="border-s-2 border-line ps-2">{r.note}</p>}
+                    <p className="text-2xs text-ink-muted">
                       {P.proposedBy}: {r.proposer_name} · <span dir="ltr">{fmtDateTime(r.created_at)}</span>
-                    </span>
+                    </p>
                     {canDecide && (
-                      <span className="flex shrink-0 gap-1.5">
+                      <div className="grid grid-cols-2 gap-2">
                         {me?.id !== r.proposed_by && (
-                          <Button className="!px-2.5" disabled={busy} onClick={() => setApproving(r)}>
+                          <Button className="w-full" disabled={busy} onClick={() => setApproving(r)}>
                             {P.approve}
                           </Button>
                         )}
-                        <Button variant="secondary" className="!px-2.5" disabled={busy} onClick={() => setRejecting(r)}>
+                        <Button
+                          variant="secondary"
+                          className={`w-full ${me?.id === r.proposed_by ? "col-span-2" : ""}`}
+                          disabled={busy}
+                          onClick={() => setRejecting(r)}
+                        >
                           {P.reject}
                         </Button>
-                      </span>
+                      </div>
                     )}
                   </li>
                 ))}
               </ul>
-            </Card>
+            </section>
           )}
 
-          {/* ── الجدول ── */}
-          {data.standings.length === 0 ? (
-            <EmptyState icon={IconUser} title={P.empty} />
-          ) : rows.length === 0 ? (
-            <EmptyState icon={IconSearch} title={P.noResults} />
+          {/* ── الأشخاص — كرتٌ لكلّ واحد ── */}
+          {data.standings.length === 0 || rows.length === 0 ? (
+            <section className="surface flex flex-col items-center gap-3 p-8 text-center">
+              <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-field text-ink-muted">
+                {data.standings.length === 0 ? <IconUser size={28} /> : <IconSearch size={28} />}
+              </span>
+              <h2 className="heading-section">{data.standings.length === 0 ? P.empty : P.noResults}</h2>
+              <p className="max-w-md text-sm text-ink-muted">
+                {data.standings.length === 0 ? P.emptyHint : P.noResultsHint}
+              </p>
+            </section>
           ) : (
-            <div className="surface sm:overflow-x-auto">
-              <table className="table-stack w-full text-sm">
-                <thead className="border-b border-line-soft text-ink-muted">
-                  <tr>
-                    <th className="p-3 text-start font-medium">{P.person}</th>
-                    <th className="p-3 text-start font-medium">{P.progress}</th>
-                    <th className="p-3 text-start font-medium">{P.auto}</th>
-                    <th className="p-3 text-start font-medium">{P.manual}</th>
-                    <th className="p-3 text-start font-medium">{P.penalized}</th>
-                    <th className="p-3" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((x) => (
-                    <tr key={x.user_id} className="border-b border-line-soft last:border-0">
-                      <td className="p-3" data-label={P.person}>
-                        <span className="font-medium">{x.name || x.phone}</span>
-                        {x.levels > 0 && (
-                          <Badge variant={x.level > 0 ? "success" : "neutral"} className="ms-2">
-                            {x.level > 0 ? fill(P.stageReached, { n: x.level, total: x.levels }) : P.stageNone}
-                          </Badge>
-                        )}
-                      </td>
-                      <td className="p-3" data-label={P.progress}>
-                        {x.target > 0 ? (
-                          <div className="min-w-32 space-y-1">
-                            {/* **والوحدةُ بوحدة الدور** — عملاءُ للمندوب لا متاجر (٢٠٢٦-١٠-١٥). */}
-                            <span className="tabular-nums">
-                              {fill(P.progressOf, { done: fmtNum(x.done), target: fmtNum(x.target), unit })}
-                            </span>
-                            <div className="h-1.5 overflow-hidden rounded-full bg-ink-faint">
-                              <div
-                                className="h-full rounded-full bg-primary"
-                                style={{ width: `${Math.min(100, Math.round((x.done / x.target) * 100))}%` }}
-                              />
-                            </div>
-                          </div>
-                        ) : (
-                          <span className="text-xs text-ink-muted">{P.noTarget}</span>
-                        )}
-                        {(x.pending ?? 0) > 0 && (
-                          <p className="mt-1 text-2xs text-warning">{fill(P.pendingStores, { n: x.pending ?? 0 })}</p>
-                        )}
-                      </td>
-                      <td className="p-3 tabular-nums text-success" dir="ltr" data-label={P.auto}>
-                        {fmtMoney(x.auto_paid)}
-                      </td>
-                      <td className="p-3 tabular-nums text-success" dir="ltr" data-label={P.manual}>
-                        {fmtMoney(x.manual_paid)}
-                      </td>
-                      <td className="p-3 tabular-nums text-danger" dir="ltr" data-label={P.penalized}>
-                        {fmtMoney(x.penalized)}
-                      </td>
-                      <td className="p-3 text-end">
-                        <span className="inline-flex gap-1.5">
-                          <Button variant="secondary" className="!px-2.5" onClick={() => setLedgerOf(x)}>
-                            {P.openLedger}
-                          </Button>
-                          {canGrant && (
-                            <Button variant="secondary" className="!px-2.5" onClick={() => openGrant(x)}>
-                              {P.grant}
-                            </Button>
-                          )}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+              {rows.map((x) => (
+                <PersonCard
+                  key={x.user_id}
+                  x={x}
+                  levels={data.levels}
+                  unit={unit}
+                  canGrant={canGrant}
+                  onLedger={() => setLedgerOf(x)}
+                  onGrant={() => openGrant(x)}
+                />
+              ))}
+            </ul>
           )}
         </>
       )}
@@ -754,5 +754,124 @@ export default function IncentivesPage() {
         )}
       </Drawer>
     </PageContainer>
+  );
+}
+
+/**
+ * **كرتُ الشخص** — تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦) بدل صفّ الجدول: الاسمُ والمرحلة،
+ * والإنجازُ بشريطٍ وكم باقي للمرحلة الجاية، والآليُّ واليدويُّ والعقوباتُ بثلاث مربّعات، والزرّان.
+ */
+function PersonCard({
+  x,
+  levels,
+  unit,
+  canGrant,
+  onLedger,
+  onGrant,
+}: {
+  x: Standing;
+  levels: Level[];
+  unit: string;
+  canGrant: boolean;
+  onLedger: () => void;
+  onGrant: () => void;
+}) {
+  const name = x.name || x.phone;
+  const pct = x.target > 0 ? Math.min(100, Math.round((x.done / x.target) * 100)) : 0;
+  // **المرحلةُ الجاية** — للعرض وحدَه؛ المكافأةُ يحسبها الخادم.
+  const next = levels.find((l) => l.n > x.level);
+  const remaining = next ? Math.max(0, next.target - x.done) : 0;
+  return (
+    <li className="surface flex flex-col gap-3 p-4">
+      <div className="flex items-start gap-3">
+        <span
+          className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full font-bold ${
+            x.level > 0 ? "bg-success-solid text-on-solid" : "bg-field text-ink"
+          }`}
+          aria-hidden
+        >
+          {name.trim().charAt(0)}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-bold">{name}</span>
+          {x.name && (
+            <span className="block text-2xs text-ink-muted" dir="ltr">
+              {x.phone}
+            </span>
+          )}
+        </span>
+        {x.levels > 0 && (
+          <Badge variant={x.level > 0 ? "success" : "neutral"} className="shrink-0">
+            {x.level > 0 ? fill(P.stageReached, { n: x.level, total: x.levels }) : P.stageNone}
+          </Badge>
+        )}
+      </div>
+
+      <div className="rounded-control bg-field px-3 py-2.5">
+        {x.target > 0 ? (
+          <>
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-2xs text-ink-muted">{P.progress}</span>
+              {/* **والوحدةُ بوحدة الدور** — عملاءُ للمندوب لا متاجر (٢٠٢٦-١٠-١٥). */}
+              <span className="font-bold tabular-nums">
+                {fill(P.progressOf, { done: fmtNum(x.done), target: fmtNum(x.target), unit })}
+              </span>
+            </div>
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface" aria-hidden>
+              <div
+                className={`h-full rounded-full ${pct >= 100 ? "bg-success-solid" : "bg-accent"}`}
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            {x.levels > 0 && (
+              <p className="mt-1.5 text-2xs text-ink-muted">
+                {next
+                  ? remaining > 0
+                    ? fill(P.nextStage, { n: fmtNum(remaining), unit, stage: fmtNum(next.n) })
+                    : ""
+                  : P.allStages}
+              </p>
+            )}
+          </>
+        ) : (
+          <span className="text-xs text-ink-muted">{P.noTarget}</span>
+        )}
+        {(x.pending ?? 0) > 0 && (
+          <p className="mt-1 text-2xs text-warning">{fill(P.pendingStores, { n: x.pending ?? 0 })}</p>
+        )}
+      </div>
+
+      <div className="flex gap-2 text-center">
+        <span className="min-w-0 flex-1 rounded-control border border-line-soft px-2 py-2">
+          <span className="block text-2xs text-ink-muted">{P.auto}</span>
+          <span className="block font-bold tabular-nums text-success" dir="ltr">
+            {fmtMoney(x.auto_paid)}
+          </span>
+        </span>
+        <span className="min-w-0 flex-1 rounded-control border border-line-soft px-2 py-2">
+          <span className="block text-2xs text-ink-muted">{P.manual}</span>
+          <span className="block font-bold tabular-nums text-success" dir="ltr">
+            {fmtMoney(x.manual_paid)}
+          </span>
+        </span>
+        <span className="min-w-0 flex-1 rounded-control border border-line-soft px-2 py-2">
+          <span className="block text-2xs text-ink-muted">{P.penalized}</span>
+          <span className="block font-bold tabular-nums text-danger" dir="ltr">
+            {fmtMoney(x.penalized)}
+          </span>
+        </span>
+      </div>
+
+      <div className={`mt-auto grid gap-2 border-t border-line-soft pt-3 ${canGrant ? "grid-cols-2" : "grid-cols-1"}`}>
+        <Button variant="secondary" className="w-full" onClick={onLedger}>
+          {P.openLedger}
+        </Button>
+        {canGrant && (
+          <Button className="w-full" onClick={onGrant}>
+            {P.grant}
+          </Button>
+        )}
+      </div>
+    </li>
   );
 }

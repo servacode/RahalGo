@@ -3,27 +3,25 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtDate, fmtMoney, errorText } from "@rahalgo/i18n";
 import {
-  Tabs,
   Chips,
   Alert,
-  PageHeader,
+  PageContainer,
   Button,
   Input,
   Select,
   Badge,
   Modal,
-  DataView,
-  ViewToggle,
-  useViewMode,
   Pagination,
-  StatGrid,
-  StatCard,
-  type DataColumn,
+  LoadingState,
   IconPromos,
   IconAdd,
-  IconStatus,
   IconWallet,
   IconDate,
+  IconStore,
+  IconUsers,
+  IconMoto,
+  IconSearch,
+  IconHourglass,
   Checkbox,
   FormActions,
 } from "@rahalgo/ui";
@@ -33,6 +31,8 @@ import { useAuth } from "@/lib/auth";
 import DiscountsTab from "@/components/admin/DiscountsTab";
 import PromoReferralsTab from "@/components/admin/PromoReferralsTab";
 import FreeDeliveryTab from "@/components/admin/FreeDeliveryTab";
+import { PageHero, type HeroTab } from "@/components/admin/PageHero";
+import { Tile } from "@/components/admin/DashParts";
 
 const m = getMessages(defaultLocale);
 const O = m.admin.promosOwner;
@@ -88,42 +88,62 @@ const STATUS: Record<PromoStatus, { label: string; tone: "success" | "neutral" |
 
 const PER_PAGE = 20;
 
+type PromoTab = "codes" | "discounts" | "referrals" | "free";
+
 export default function PromosPage() {
   const { can } = useAuth();
   // **وإنشاءُ الأكواد وتحريرُها بقدرة العروض** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — لا المحتوى.
   const isAdmin = can("offers.manage");
   const isFinance = can("finance.read");
-  const [tab, setTab] = useState<"codes" | "discounts" | "referrals" | "free">("codes");
+  const [tab, setTab] = useState<PromoTab>("codes");
   const [summary, setSummary] = useState<Summary | null>(null);
 
   const loadSummary = useCallback(() => {
     api<Summary>("/api/v1/admin/promos/summary")
       .then(setSummary)
-      // @empty-ok — **الملخّصُ زيادةٌ فوق الجداول**: إن سقط بقيت الصفحةُ تعمل.
+      // @empty-ok — **الملخّصُ زيادةٌ فوق القوائم**: إن سقط بقيت الصفحةُ تعمل.
       .catch(() => setSummary(null));
   }, []);
   useEffect(loadSummary, [loadSummary]);
 
-  const tabs = [
-    { key: "codes" as const, label: m.admin.promos.tabCodes },
-    { key: "discounts" as const, label: m.admin.promos.tabDiscounts },
-    { key: "referrals" as const, label: O.tabReferrals },
-    { key: "free" as const, label: m.admin.promos.tabFreeDelivery },
+  const tabs: HeroTab<PromoTab>[] = [
+    { key: "codes", label: m.admin.promos.tabCodes, icon: IconPromos },
+    { key: "discounts", label: m.admin.promos.tabDiscounts, icon: IconStore },
+    { key: "referrals", label: O.tabReferrals, icon: IconUsers },
+    { key: "free", label: m.admin.promos.tabFreeDelivery, icon: IconMoto },
   ];
 
+  // تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦) — رأسٌ موحّدٌ بالتبويبات، أربعةُ أرقامٍ بمربّعات،
+  // وكرتٌ لكلّ كودٍ بدل الجدول.
   return (
-    <div>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <PageHeader icon={IconPromos} title={m.admin.promos.title} />
-        <Tabs items={tabs} value={tab} onChange={setTab} />
-      </div>
+    <PageContainer>
+      <PageHero<PromoTab>
+        icon={IconPromos}
+        title={m.admin.promos.title}
+        subtitle={O.pageHint}
+        tabs={tabs}
+        value={tab}
+        onChange={setTab}
+      />
 
       {summary && (
-        <div className="mb-6">
-          <StatGrid>
-            <StatCard icon={IconPromos} label={O.sumActiveCodes} value={fmtNum(summary.active_codes)} />
-            <StatCard icon={IconPromos} label={O.sumActiveDiscounts} value={fmtNum(summary.active_discounts)} />
-            <StatCard
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+            <Tile
+              icon={IconPromos}
+              label={O.sumActiveCodes}
+              value={fmtNum(summary.active_codes)}
+              tone={summary.active_codes > 0 ? "success" : "muted"}
+              onClick={() => setTab("codes")}
+            />
+            <Tile
+              icon={IconStore}
+              label={O.sumActiveDiscounts}
+              value={fmtNum(summary.active_discounts)}
+              tone={summary.active_discounts > 0 ? "success" : "muted"}
+              onClick={() => setTab("discounts")}
+            />
+            <Tile
               icon={IconWallet}
               label={O.sumPlatformCost}
               value={fmtMoney(summary.platform_cost)}
@@ -134,16 +154,17 @@ export default function PromosPage() {
                 .replace("{refs}", fmtMoney(summary.referrals))}
               tone={summary.platform_cost > 0 ? "accent" : "muted"}
             />
-            <StatCard
+            <Tile
               icon={IconWallet}
               label={O.sumStoresCost}
               value={fmtMoney(summary.stores_cost)}
               tone={summary.stores_cost > 0 ? "default" : "muted"}
             />
-          </StatGrid>
+          </div>
           {/* **وموافقاتُ المالية في صفحة الموافقات الموحّدة** (الخزينة) — لا تبويبَ هنا. */}
           {summary.pending_approvals > 0 && (
-            <p className="mt-2 text-sm text-ink-muted">
+            <p className="flex items-center gap-2 rounded-control bg-field px-3 py-2 text-sm">
+              <IconHourglass size={16} className="shrink-0 text-warning" />
               {isFinance ? (
                 <Link href="/dashboard/treasury?tab=approvals" className="text-primary underline">
                   {O.sumPending.replace("{n}", fmtNum(summary.pending_approvals))}
@@ -160,7 +181,7 @@ export default function PromosPage() {
       {tab === "discounts" && <DiscountsTab onChanged={loadSummary} />}
       {tab === "referrals" && <PromoReferralsTab />}
       {tab === "free" && <FreeDeliveryTab />}
-    </div>
+    </PageContainer>
   );
 }
 
@@ -179,7 +200,6 @@ function CodesTab({ isAdmin, onChanged }: { isAdmin: boolean; onChanged: () => v
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
   const [editing, setEditing] = useState<Promo | "new" | null>(null);
-  const [view, setView] = useViewMode("promos");
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<PromoStatus | "all">("all");
   const [page, setPage] = useState(1);
@@ -224,90 +244,31 @@ function CodesTab({ isAdmin, onChanged }: { isAdmin: boolean; onChanged: () => v
     }
   }
 
-  const columns: DataColumn<Promo>[] = [
-    {
-      id: "code",
-      header: m.admin.promos.code,
-      icon: <IconPromos />,
-      primary: true,
-      cell: (p) => (
-        <span dir="ltr" className="font-mono font-bold tracking-wider">
-          {p.code}
-        </span>
-      ),
-    },
-    {
-      id: "kind",
-      header: m.admin.promos.kind,
-      cell: (p) => (
-        <Badge variant="primary">
-          {KIND_LABEL[p.kind]}
-          {valueText(p) && ` ${valueText(p)}`}
-        </Badge>
-      ),
-    },
-    {
-      id: "min",
-      header: m.admin.promos.minOrder,
-      icon: <IconWallet />,
-      cell: (p) => fmtMoney(p.min_order),
-    },
-    {
-      id: "uses",
-      header: m.admin.promos.usedCount,
-      cell: (p) => `${fmtNum(p.used_count)}${p.max_uses ? ` / ${fmtNum(p.max_uses)}` : ""}`,
-    },
-    {
-      id: "expiry",
-      header: m.admin.promos.expiresAt,
-      icon: <IconDate />,
-      cell: (p) =>
-        p.expires_at ? (
-          fmtDate(p.expires_at)
-        ) : (
-          <span className="text-ink-muted">{m.admin.promos.noExpiry}</span>
-        ),
-    },
-    {
-      id: "status",
-      header: O.statusCol,
-      icon: <IconStatus />,
-      cell: (p) => <Badge variant={STATUS[p.status].tone}>{STATUS[p.status].label}</Badge>,
-    },
-    { id: "cost", header: O.cost, cell: (p) => fmtMoney(p.cost) },
-    { id: "by", header: O.createdBy, cell: (p) => p.created_by_name || "—" },
-  ];
-
   return (
-    <div>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        {isAdmin ? (
-          <Button onClick={() => setEditing("new")} className="flex items-center gap-1.5">
-            <IconAdd size={16} />
-            {m.admin.promos.create}
-          </Button>
-        ) : (
-          <span />
-        )}
-        <ViewToggle
-          view={view}
-          onChange={setView}
-          tableLabel={m.common.viewTable}
-          cardsLabel={m.common.viewCards}
-        />
-      </div>
-      <div className="mb-4 space-y-3">
-        <Input
-          id="promo-search"
-          label={O.search}
-          dir="ltr"
-          placeholder={O.searchCodes}
-          value={q}
-          onChange={(e) => {
-            setQ(e.target.value);
-            setPage(1);
-          }}
-        />
+    <div className="space-y-4">
+      {/* ── الفلاتر ببطاقةٍ واحدة: البحث والحالة وزرُّ الكود الجديد ── */}
+      <section className="surface space-y-3 p-3">
+        <div className="flex flex-wrap items-end gap-2">
+          <Input
+            id="promo-search"
+            label={O.search}
+            dir="ltr"
+            icon={<IconSearch size={16} />}
+            placeholder={O.searchCodes}
+            value={q}
+            onChange={(e) => {
+              setQ(e.target.value);
+              setPage(1);
+            }}
+            wrapperClassName="min-w-0 flex-1"
+          />
+          {isAdmin && (
+            <Button onClick={() => setEditing("new")} className="flex items-center gap-1.5">
+              <IconAdd size={16} />
+              {m.admin.promos.create}
+            </Button>
+          )}
+        </div>
         <Chips
           wrap
           items={[
@@ -320,41 +281,40 @@ function CodesTab({ isAdmin, onChanged }: { isAdmin: boolean; onChanged: () => v
             setPage(1);
           }}
         />
-      </div>
-      {error && <Alert className="mb-4">{error}</Alert>}
-      <DataView
-        items={shown}
-        loading={!loaded && !error}
-        getKey={(p) => p.id}
-        columns={columns}
-        view={view}
-        empty={m.admin.promos.empty}
-        actions={
-          isAdmin
-            ? (p) => (
-                <div className="flex gap-2">
-                  <Button variant="secondary" onClick={() => setEditing(p)}>
-                    {O.edit}
-                  </Button>
-                  {p.status !== "pending_approval" && p.status !== "rejected" && (
-                    <Button
-                      variant={p.active ? "danger" : "secondary"}
-                      disabled={busyId === p.id}
-                      onClick={() => void toggleActive(p)}
-                    >
-                      {busyId === p.id
-                        ? O.busy
-                        : p.active
-                          ? m.admin.merchants.deactivate
-                          : m.admin.merchants.activate}
-                    </Button>
-                  )}
-                </div>
-              )
-            : undefined
-        }
-      />
-      <Pagination page={page} total={filtered.length} perPage={PER_PAGE} onChange={setPage} />
+      </section>
+
+      {error && <Alert>{error}</Alert>}
+
+      {!loaded && !error ? (
+        <LoadingState variant="list" />
+      ) : shown.length === 0 ? (
+        <section className="surface flex flex-col items-center gap-3 p-8 text-center">
+          <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-field text-ink-muted">
+            <IconPromos size={28} />
+          </span>
+          <h2 className="heading-section">{promos.length === 0 ? m.admin.promos.empty : O.noMatch}</h2>
+          <p className="max-w-md text-sm text-ink-muted">{promos.length === 0 ? O.codesEmptyHint : O.noMatchHint}</p>
+        </section>
+      ) : (
+        <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+          {shown.map((p) => (
+            <PromoCard
+              key={p.id}
+              p={p}
+              isAdmin={isAdmin}
+              busy={busyId === p.id}
+              onEdit={() => setEditing(p)}
+              onToggle={() => void toggleActive(p)}
+            />
+          ))}
+        </ul>
+      )}
+
+      {filtered.length > PER_PAGE && (
+        <div className="flex justify-center">
+          <Pagination page={page} total={filtered.length} perPage={PER_PAGE} onChange={setPage} />
+        </div>
+      )}
       {editing && (
         <PromoModal
           promo={editing === "new" ? null : editing}
@@ -367,6 +327,116 @@ function CodesTab({ isAdmin, onChanged }: { isAdmin: boolean; onChanged: () => v
         />
       )}
     </div>
+  );
+}
+
+const STATUS_TINT: Record<PromoStatus, string> = {
+  active: "border-success text-success",
+  expired: "border-line text-ink-muted",
+  exhausted: "border-line text-ink-muted",
+  paused: "border-warning text-warning",
+  pending_approval: "border-accent text-ink",
+  rejected: "border-danger text-danger",
+};
+
+/**
+ * **كرتُ الكود** — تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦): الكودُ كبيرٌ بقسيمةٍ منقّطة، وقيمةُ الخصم،
+ * والحالةُ ملوّنة، والانتهاء، والاستخداماتُ بشريط، ومين عمله وقديش كلّف — والأفعال.
+ */
+function PromoCard({
+  p,
+  isAdmin,
+  busy,
+  onEdit,
+  onToggle,
+}: {
+  p: Promo;
+  isAdmin: boolean;
+  busy: boolean;
+  onEdit: () => void;
+  onToggle: () => void;
+}) {
+  const st = STATUS[p.status];
+  const usedPct = p.max_uses ? Math.min(100, Math.round((p.used_count / p.max_uses) * 100)) : 0;
+  const canToggle = p.status !== "pending_approval" && p.status !== "rejected";
+  return (
+    <li className="surface flex flex-col gap-3 p-4">
+      <div className="flex items-start justify-between gap-3">
+        <span
+          dir="ltr"
+          className={`inline-flex min-w-0 items-center gap-2 rounded-control border-2 border-dashed bg-field px-3 py-1.5 ${STATUS_TINT[p.status]}`}
+        >
+          <IconPromos size={16} className="shrink-0" />
+          <span className="figure truncate font-mono tracking-wider">{p.code}</span>
+        </span>
+        <Badge variant={st.tone} className="shrink-0">
+          {st.label}
+        </Badge>
+      </div>
+
+      <div className="flex items-end justify-between gap-2 rounded-control bg-field px-3 py-2.5">
+        <span className="min-w-0">
+          <span className="block text-2xs text-ink-muted">{KIND_LABEL[p.kind]}</span>
+          <span className="block font-bold tabular-nums">{valueText(p) || KIND_LABEL[p.kind]}</span>
+        </span>
+        <span className="text-end">
+          <span className="block text-2xs text-ink-muted">{m.admin.promos.minOrder}</span>
+          <span className="block text-sm tabular-nums">{fmtMoney(p.min_order)}</span>
+        </span>
+      </div>
+
+      <div>
+        <div className="flex items-baseline justify-between gap-2 text-sm">
+          <span className="text-2xs text-ink-muted">{m.admin.promos.usedCount}</span>
+          <span className="tabular-nums">
+            {p.max_uses
+              ? O.usageOf.replace("{used}", fmtNum(p.used_count)).replace("{max}", fmtNum(p.max_uses))
+              : O.usageUnlimited.replace("{used}", fmtNum(p.used_count))}
+          </span>
+        </div>
+        {p.max_uses ? (
+          <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-field" aria-hidden>
+            <div
+              className={`h-full rounded-full ${usedPct >= 100 ? "bg-danger-solid" : "bg-accent"}`}
+              style={{ width: `${usedPct}%` }}
+            />
+          </div>
+        ) : null}
+      </div>
+
+      {(p.first_order_only || p.once_per_user) && (
+        <div className="flex flex-wrap gap-1.5">
+          {p.first_order_only && <Badge variant="neutral">{m.admin.promos.firstOrderOnly}</Badge>}
+          {p.once_per_user && <Badge variant="neutral">{m.admin.promos.oncePerUser}</Badge>}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 gap-x-3 gap-y-1 text-2xs text-ink-muted sm:grid-cols-2">
+        <span className="flex items-center gap-1">
+          <IconDate size={12} className="shrink-0" />
+          {O.endsCol}: {p.expires_at ? fmtDate(p.expires_at) : m.admin.promos.noExpiry}
+        </span>
+        <span>
+          {O.cost}: <span className="tabular-nums text-ink">{fmtMoney(p.cost)}</span>
+        </span>
+        <span className="sm:col-span-2">
+          {O.createdBy}: {p.created_by_name || "—"}
+        </span>
+      </div>
+
+      {isAdmin && (
+        <div className={`mt-auto grid gap-2 border-t border-line-soft pt-3 ${canToggle ? "grid-cols-2" : "grid-cols-1"}`}>
+          <Button variant="secondary" className="w-full" onClick={onEdit}>
+            {O.edit}
+          </Button>
+          {canToggle && (
+            <Button variant={p.active ? "danger" : "secondary"} className="w-full" disabled={busy} onClick={onToggle}>
+              {busy ? O.busy : p.active ? m.admin.merchants.deactivate : m.admin.merchants.activate}
+            </Button>
+          )}
+        </div>
+      )}
+    </li>
   );
 }
 

@@ -21,7 +21,7 @@
  * - **ولا «السائق» في الجهة المذنبة حين يكون النوعُ «سائق»** — لا تعويضَ لذنبه.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   getMessages,
   defaultLocale,
@@ -32,41 +32,37 @@ import {
   fmtSpan,
   errorText,
 } from "@rahalgo/i18n";
-import { WalletRequestsList } from "@/components/admin/WalletRequests";
+import { kindLabel, type WalletRequestRow } from "@/components/admin/WalletRequests";
 import {
-  FormSection,
   Alert,
   Badge,
   Button,
+  Confirm,
   Input,
   Select,
-  Tabs,
   Textarea,
   Modal,
   PageContainer,
-  PageHeader,
-  EmptyState,
   LoadingState,
-  DataView,
   Pagination,
-  StatGrid,
-  StatCard,
-  ViewToggle,
-  useViewMode,
-  type DataColumn,
   useLiveData,
   IconWallet,
-  IconDriver,
   IconOrder,
   IconStatus,
   IconDate,
   IconWarning,
+  IconCheck,
+  IconBlock,
+  IconSupport,
+  IconHourglass,
   Money,
   FormActions,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useCanCall, useCanOpen } from "@/lib/policy";
+import { PageHero } from "@/components/admin/PageHero";
+import { Tile } from "@/components/admin/DashParts";
 import { OpenLink } from "@/components/admin/OpenLink";
 
 const m = getMessages(defaultLocale);
@@ -150,7 +146,6 @@ export default function CompensationsPage() {
   // لا ترى الطلباتِ ولا الحساباتِ ولا الشكاوى — فتُقرأ نصّاً لا رابطاً.
   const open = useCanOpen();
   const canTickets = useCanCall()("GET", "/tickets");
-  const [view, setView] = useViewMode("compensations");
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<Filters>(EMPTY);
   const [ready, setReady] = useState(false);
@@ -217,163 +212,29 @@ export default function CompensationsPage() {
   const sum = data?.summary;
   const pendingTab = filters.status === "pending";
 
-  const columns: DataColumn<Compensation>[] = [
-    {
-      id: "kind",
-      header: C.colKind,
-      icon: <IconStatus />,
-      cell: (c) => <Badge variant={c.kind === "driver" ? "primary" : c.kind === "complaint" ? "violet" : "info"}>{KINDS[c.kind] ?? c.kind}</Badge>,
-    },
-    {
-      id: "beneficiary",
-      header: C.colBeneficiary,
-      icon: <IconDriver />,
-      primary: true,
-      cell: (c) => (
-        <span>
-          <OpenLink allowed={open.user} href={`/dashboard/users/${c.driver_id}`} className="text-primary-dark hover:underline">
-            {c.driver_name}
-          </OpenLink>{" "}
-          <span className="text-xs text-ink-muted">{ROLES[c.beneficiary_role] ?? ""}</span>
-        </span>
-      ),
-    },
-    {
-      id: "ref",
-      header: C.colRef,
-      icon: <IconOrder />,
-      primary: true,
-      cell: (c) => (
-        <span className="flex flex-col">
-          {c.order_number > 0 && (
-            <OpenLink
-              allowed={open.order}
-              href={`/dashboard/orders?q=${c.order_number}`}
-              className="font-bold text-primary-dark hover:underline"
-              dir="ltr"
-            >
-              #{fmtRef(c.order_number)}
-            </OpenLink>
-          )}
-          {c.ticket_number > 0 && (
-            <OpenLink allowed={canTickets} href="/dashboard/tickets" className="text-xs text-primary-dark hover:underline">
-              {C.ticketRef.replace("{n}", fmtNum(c.ticket_number))}
-            </OpenLink>
-          )}
-        </span>
-      ),
-    },
-    {
-      id: "reason",
-      header: C.reason,
-      icon: <IconStatus />,
-      cell: (c) => (
-        <span className="flex flex-col">
-          <span>{c.reason_label}</span>
-          {c.fault_mismatch && (
-            <span className="text-xs text-warning">
-              <IconWarning className="inline" size={12} /> {FAULTS[c.expected_fault] ?? ""}
-            </span>
-          )}
-        </span>
-      ),
-    },
-    {
-      id: "fault",
-      header: C.fault,
-      icon: <IconWarning />,
-      cell: (c) => (c.fault ? FAULTS[c.fault] ?? c.fault : "—"),
-    },
-    {
-      id: "amount",
-      header: pendingTab ? C.suggested : C.amount,
-      icon: <IconWallet />,
-      primary: true,
-      cell: (c) => <Money value={c.amount ?? c.suggested_amount} className="font-bold" />,
-    },
-    {
-      id: "proposed",
-      header: C.colProposedBy,
-      icon: <IconDriver />,
-      cell: (c) => <span className="text-sm">{c.proposed_by ? c.proposed_by_name || "—" : C.engine}</span>,
-    },
-    pendingTab
-      ? {
-          id: "waiting",
-          header: C.colWaiting,
-          icon: <IconDate />,
-          cell: (c) => (
-            <span className={`text-xs ${c.overdue ? "font-bold text-danger" : "text-ink-muted"}`}>
-              {fmtSpan((Date.now() - new Date(c.created_at).getTime()) / 1000)}
-              {c.overdue && (
-                <>
-                  {" "}
-                  <Badge variant="danger">{C.overdueBadge}</Badge>
-                </>
-              )}
-            </span>
-          ),
-        }
-      : {
-          id: "decision",
-          header: C.colDecision,
-          icon: <IconStatus />,
-          cell: (c) => (
-            <span className="flex flex-col text-xs">
-              <Badge variant={c.status === "approved" ? "success" : c.status === "rejected" ? "danger" : "warning"}>
-                {STATUSES[c.status] ?? c.status}
-              </Badge>
-              {c.decided_by_name && (
-                <span className="text-ink-muted">
-                  {C.decidedBy}: {c.decided_by_name}
-                  {c.decided_at && (
-                    <span dir="ltr"> · {fmtDateTime(c.decided_at)}</span>
-                  )}
-                </span>
-              )}
-              {c.decision_note && <span className="text-ink-muted">{c.decision_note}</span>}
-              {c.self_approved && <span className="text-warning">{C.selfApproved}</span>}
-            </span>
-          ),
-        },
-    {
-      id: "created",
-      header: C.created,
-      icon: <IconDate />,
-      cell: (c) => (
-        <span dir="ltr" className="text-xs text-ink-muted">
-          {fmtDateTime(c.created_at)}
-        </span>
-      ),
-    },
-  ];
-
   const tabs = [
-    { key: "pending" as const, label: C.tabs.pending, count: sum?.pending_count },
-    { key: "approved" as const, label: C.tabs.approved },
-    { key: "rejected" as const, label: C.tabs.rejected },
-    { key: "all" as const, label: C.tabs.all },
+    { key: "pending" as const, label: C.tabs.pending, icon: IconHourglass, count: sum?.pending_count, warn: true },
+    { key: "approved" as const, label: C.tabs.approved, icon: IconCheck },
+    { key: "rejected" as const, label: C.tabs.rejected, icon: IconBlock },
+    { key: "all" as const, label: C.tabs.all, icon: IconStatus },
   ];
   const filtered = filters.kind || filters.fault || filters.person || filters.from || filters.to;
 
+  // تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦: «ألغِ عرض الجداول») — رأسٌ موحّدٌ بتبويبات الحالة، أربعةُ أرقامٍ
+  // تُضغط، الفلاترُ بكرتٍ واحد، وكرتُ موافقةٍ لكلّ تعويضٍ ولكلّ طلبِ حركة محفظة.
   return (
     <PageContainer width="full">
-      <PageHeader
+      <PageHero<Tab>
         icon={IconWallet}
         title={C.titleAll}
         subtitle={C.hintAll}
-        actions={
-          <ViewToggle
-            view={view}
-            onChange={setView}
-            tableLabel={m.common.viewTable}
-            cardsLabel={m.common.viewCards}
-          />
-        }
+        tabs={tabs}
+        value={filters.status}
+        onChange={(k) => set("status", k)}
       />
 
       {error && (
-        <Alert className="mb-3">
+        <Alert>
           <span>{C.loadFailed}</span>{" "}
           <button type="button" onClick={() => reload()} className="font-bold underline">
             {m.common.retry}
@@ -382,47 +243,45 @@ export default function CompensationsPage() {
       )}
 
       {sum && (
-        <StatGrid>
-          <StatCard
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+          <Tile
+            icon={IconHourglass}
             label={C.cardPending}
             value={fmtNum(sum.pending_count)}
             sub={C.cardPendingSub.replace("{amount}", fmtMoney(sum.pending_sum))}
-            icon={IconWallet}
             tone={sum.overdue_count > 0 ? "danger" : sum.pending_count > 0 ? "accent" : "muted"}
             onClick={() => set("status", "pending")}
           />
-          <StatCard
+          <Tile
+            icon={IconCheck}
             label={C.cardApproved}
             value={fmtMoney(sum.approved_month_sum)}
             sub={C.cardApprovedSub.replace("{n}", fmtNum(sum.approved_month_count))}
-            icon={IconStatus}
             tone="success"
             onClick={() => set("status", "approved")}
           />
-          <StatCard
+          <Tile
+            icon={IconBlock}
             label={C.cardRejected}
             value={fmtNum(sum.rejected_month_count)}
-            icon={IconStatus}
             tone="muted"
             onClick={() => set("status", "rejected")}
           />
-          <StatCard
+          <Tile
+            icon={IconWarning}
             label={C.cardOverdue.replace("{h}", fmtNum(sum.overdue_hours))}
             value={fmtNum(sum.overdue_count)}
-            icon={IconWarning}
             tone={sum.overdue_count > 0 ? "danger" : "muted"}
             onClick={() => {
               setFilters((f) => ({ ...f, status: "pending", overdue: "1" }));
               setPage(1);
             }}
           />
-        </StatGrid>
+        </div>
       )}
 
-      <Tabs items={tabs} value={filters.status} onChange={(k) => set("status", k)} className="mt-4" />
-
       {filters.overdue === "1" && (
-        <Alert tone="warning" className="mt-3">
+        <Alert tone="warning">
           <span>{C.overdueOnly}</span>{" "}
           <button type="button" onClick={() => set("overdue", "")} className="font-bold underline">
             {C.overdueClear}
@@ -430,100 +289,109 @@ export default function CompensationsPage() {
         </Alert>
       )}
 
-      <div className="mt-3 flex flex-wrap items-end gap-2">
-        <Select value={filters.kind} onChange={(e) => set("kind", e.target.value)} aria-label={C.colKind}>
-          <option value="">{C.filterKind}</option>
-          {Object.keys(KINDS).map((k) => (
-            <option key={k} value={k}>
-              {KINDS[k]}
-            </option>
-          ))}
-        </Select>
-        <Select value={filters.fault} onChange={(e) => set("fault", e.target.value)} aria-label={C.fault}>
-          <option value="">{C.filterFault}</option>
-          {Object.keys(FAULTS)
-            .filter((k) => !(filters.kind === "driver" && k === "driver"))
-            .map((k) => (
+      {/* ── الفلاتر في كرتٍ واحد ── */}
+      <section className="surface space-y-3 p-4">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <Select value={filters.kind} onChange={(e) => set("kind", e.target.value)} aria-label={C.colKind}>
+            <option value="">{C.filterKind}</option>
+            {Object.keys(KINDS).map((k) => (
               <option key={k} value={k}>
-                {FAULTS[k]}
+                {KINDS[k]}
               </option>
             ))}
-        </Select>
-        <Input
-          value={filters.person}
-          onChange={(e) => set("person", e.target.value)}
-          placeholder={C.filterPerson}
-          aria-label={C.filterPerson}
-        />
-        <Input
-          type="date"
-          dir="ltr"
-          value={filters.from}
-          onChange={(e) => set("from", e.target.value)}
-          aria-label={C.filterFrom}
-          title={C.filterFrom}
-        />
-        <Input
-          type="date"
-          dir="ltr"
-          value={filters.to}
-          onChange={(e) => set("to", e.target.value)}
-          aria-label={C.filterTo}
-          title={C.filterTo}
-        />
+          </Select>
+          <Select value={filters.fault} onChange={(e) => set("fault", e.target.value)} aria-label={C.fault}>
+            <option value="">{C.filterFault}</option>
+            {Object.keys(FAULTS)
+              .filter((k) => !(filters.kind === "driver" && k === "driver"))
+              .map((k) => (
+                <option key={k} value={k}>
+                  {FAULTS[k]}
+                </option>
+              ))}
+          </Select>
+          <Input
+            value={filters.person}
+            onChange={(e) => set("person", e.target.value)}
+            placeholder={C.filterPerson}
+            aria-label={C.filterPerson}
+          />
+          <div className="grid grid-cols-2 gap-2">
+            <Input
+              type="date"
+              dir="ltr"
+              value={filters.from}
+              onChange={(e) => set("from", e.target.value)}
+              aria-label={C.filterFrom}
+              title={C.filterFrom}
+            />
+            <Input
+              type="date"
+              dir="ltr"
+              value={filters.to}
+              onChange={(e) => set("to", e.target.value)}
+              aria-label={C.filterTo}
+              title={C.filterTo}
+            />
+          </div>
+        </div>
         {filtered && (
-          <Button variant="secondary" onClick={() => setFilters((f) => ({ ...EMPTY, status: f.status }))}>
+          <Button variant="ghost" onClick={() => setFilters((f) => ({ ...EMPTY, status: f.status }))}>
             {C.clearFilters}
           </Button>
         )}
-      </div>
+      </section>
 
-      <div className="mt-3">
-        {data && rows.length === 0 ? (
-          <EmptyState
-            icon={IconStatus}
-            title={pendingTab && !filtered ? C.empty : C.emptyHistory}
-            tone={pendingTab ? "success" : "muted"}
-          />
-        ) : (
-          rows.length > 0 && (
-            <DataView
-              items={rows}
-              getKey={(c) => c.id}
-              columns={columns}
-              view={view}
-              empty={C.empty}
-              actions={
-                canDecide
-                  ? (c) =>
-                      c.status === "pending" && c.can_decide ? (
-                        <>
-                          <Button onClick={() => setDeciding({ c, approve: true })}>{C.approve}</Button>
-                          <Button variant="danger" onClick={() => setDeciding({ c, approve: false })}>
-                            {C.reject}
-                          </Button>
-                        </>
-                      ) : null
-                  : undefined
-              }
-            />
-          )
-        )}
-      </div>
+      {data && rows.length === 0 ? (
+        <section className="surface flex flex-col items-center gap-3 p-8 text-center">
+          <span
+            className={`inline-flex h-16 w-16 items-center justify-center rounded-full ${
+              pendingTab ? "bg-success-solid text-on-solid" : "bg-field text-ink-muted"
+            }`}
+          >
+            <IconCheck size={28} />
+          </span>
+          <h2 className="heading-section">{pendingTab && !filtered ? C.empty : C.emptyHistory}</h2>
+          <p className="max-w-md text-sm text-ink-muted">{filtered ? C.emptyFilteredHint : C.emptyHint}</p>
+        </section>
+      ) : (
+        rows.length > 0 && (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+            {rows.map((c) => (
+              <CompensationCard
+                key={c.id}
+                c={c}
+                pendingTab={pendingTab}
+                canAct={canDecide && c.status === "pending" && !!c.can_decide}
+                openUser={open.user}
+                openOrder={open.order}
+                canTickets={canTickets}
+                onDecide={(approve) => setDeciding({ c, approve })}
+              />
+            ))}
+          </div>
+        )
+      )}
 
       {data && data.total > data.per_page && (
-        <div className="mt-4 flex justify-center">
+        <div className="flex justify-center">
           <Pagination page={page} total={data.total} perPage={data.per_page} onChange={setPage} />
         </div>
       )}
 
       {/* **وطلباتُ حركة المحفظة اليدويّة هنا أيضاً** (قرارُ المالك ٢٠٢٦-١٠-٠٤). */}
-      <div className="mt-6">
-        <FormSection title={m.admin.acc.requestsTitle} icon={<IconWallet />}>
-          <p className="mb-2 text-xs text-ink-muted">{m.admin.acc.requestsHint}</p>
-          <WalletRequestsList />
-        </FormSection>
-      </div>
+      <section className="space-y-3">
+        <div className="flex items-center gap-3">
+          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-on-bright">
+            <IconWallet size={18} />
+          </span>
+          <div className="min-w-0">
+            <h2 className="heading-section">{m.admin.acc.requestsTitle}</h2>
+            <p className="text-xs text-ink-muted">{m.admin.acc.requestsHint}</p>
+          </div>
+        </div>
+        <WalletRequestCards />
+      </section>
 
       {deciding && (
         <DecideModal
@@ -537,6 +405,312 @@ export default function CompensationsPage() {
         />
       )}
     </PageContainer>
+  );
+}
+
+/** **لونُ النوع في رأس البطاقة** — يُعرف النوعُ بنظرة. */
+const KIND_TONE: Record<string, string> = {
+  driver: "bg-accent text-on-bright",
+  merchant_goods: "bg-warning-solid text-on-solid",
+  complaint: "bg-danger-solid text-on-solid",
+};
+
+/** **كرتُ تعويض** — بشكل بطاقات الموافقات في الخزينة: رأسٌ ملوّن، المستفيدُ والمبلغُ كبيراً، السببُ مقتبساً، والقرار. */
+function CompensationCard({
+  c,
+  pendingTab,
+  canAct,
+  openUser,
+  openOrder,
+  canTickets,
+  onDecide,
+}: {
+  c: Compensation;
+  pendingTab: boolean;
+  canAct: boolean;
+  openUser: boolean;
+  openOrder: boolean;
+  canTickets: boolean;
+  onDecide: (approve: boolean) => void;
+}) {
+  const initial = (c.driver_name || "?").trim().charAt(0);
+  return (
+    <article className="surface flex flex-col overflow-hidden transition-shadow hover:elev-2">
+      <header className="flex items-center gap-2.5 border-b border-line-soft bg-field px-4 py-2.5">
+        <span
+          className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${KIND_TONE[c.kind] ?? "bg-accent text-on-bright"}`}
+        >
+          <IconWallet size={15} />
+        </span>
+        <span className="min-w-0 flex-1 truncate text-sm font-bold">{KINDS[c.kind] ?? c.kind}</span>
+        <span className="shrink-0 text-2xs text-ink-muted" dir="ltr">
+          {fmtDateTime(c.created_at)}
+        </span>
+      </header>
+
+      <div className="flex flex-1 flex-col gap-3 p-4">
+        {/* **المستفيدُ والمبلغ** */}
+        <div className="flex items-center gap-3">
+          <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-field text-base font-bold text-ink-muted">
+            {initial}
+          </span>
+          <div className="min-w-0 flex-1">
+            <OpenLink allowed={openUser} href={`/dashboard/users/${c.driver_id}`} className="block truncate font-bold hover:underline">
+              {c.driver_name}
+            </OpenLink>
+            <p className="truncate text-xs text-ink-muted">
+              {ROLES[c.beneficiary_role] ? `${ROLES[c.beneficiary_role]} · ` : ""}
+              {C.colProposedBy}: {c.proposed_by ? c.proposed_by_name || "—" : C.engine}
+            </p>
+          </div>
+          <div className="shrink-0 text-end">
+            <span className="block text-2xs text-ink-muted">{pendingTab ? C.suggested : C.amount}</span>
+            <span className="figure block leading-none">
+              <Money value={c.amount ?? c.suggested_amount} />
+            </span>
+          </div>
+        </div>
+
+        {/* **السببُ والذنب** */}
+        <div className="border-s-2 border-accent ps-3 text-sm leading-relaxed">
+          <p>{c.reason_label}</p>
+          <p className="text-xs text-ink-muted">
+            {C.fault}: {c.fault ? FAULTS[c.fault] ?? c.fault : "—"}
+          </p>
+          {c.fault_mismatch && (
+            <p className="flex items-center gap-1 text-xs font-bold text-warning">
+              <IconWarning size={12} /> {FAULTS[c.expected_fault] ?? ""}
+            </p>
+          )}
+        </div>
+
+        {(c.order_number > 0 || c.ticket_number > 0) && (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+            {c.order_number > 0 && (
+              <span className="flex items-center gap-1">
+                <IconOrder size={14} className="text-ink-muted" />
+                <OpenLink
+                  allowed={openOrder}
+                  href={`/dashboard/orders?q=${c.order_number}`}
+                  className="font-bold text-primary-dark hover:underline"
+                  dir="ltr"
+                >
+                  #{fmtRef(c.order_number)}
+                </OpenLink>
+              </span>
+            )}
+            {c.ticket_number > 0 && (
+              <span className="flex items-center gap-1">
+                <IconSupport size={14} className="text-ink-muted" />
+                <OpenLink allowed={canTickets} href="/dashboard/tickets" className="text-primary-dark hover:underline">
+                  {C.ticketRef.replace("{n}", fmtNum(c.ticket_number))}
+                </OpenLink>
+              </span>
+            )}
+          </div>
+        )}
+
+        {pendingTab ? (
+          <p className={`flex items-center gap-1.5 text-xs ${c.overdue ? "font-bold text-danger" : "text-ink-muted"}`}>
+            <IconDate size={12} />
+            {C.colWaiting}: {fmtSpan((Date.now() - new Date(c.created_at).getTime()) / 1000)}
+            {c.overdue && <Badge variant="danger">{C.overdueBadge}</Badge>}
+          </p>
+        ) : (
+          <div className="space-y-1 rounded-control bg-field px-3 py-2 text-xs">
+            <Badge variant={c.status === "approved" ? "success" : c.status === "rejected" ? "danger" : "warning"}>
+              {STATUSES[c.status] ?? c.status}
+            </Badge>
+            {c.decided_by_name && (
+              <p className="text-ink-muted">
+                {C.decidedBy}: {c.decided_by_name}
+                {c.decided_at && <span dir="ltr"> · {fmtDateTime(c.decided_at)}</span>}
+              </p>
+            )}
+            {c.decision_note && <p className="text-ink">{c.decision_note}</p>}
+            {c.self_approved && <p className="font-bold text-warning">{C.selfApproved}</p>}
+          </div>
+        )}
+      </div>
+
+      {/* **قرارٌ بضغطة** — موافقةٌ بالأخضر ورفضٌ بإطارٍ أحمر، عرضَ البطاقة. */}
+      {canAct && (
+        <footer className="grid grid-cols-2 gap-2 border-t border-line-soft p-3">
+          <ApproveButton label={C.approve} onClick={() => onDecide(true)} />
+          <RejectButton label={C.reject} onClick={() => onDecide(false)} />
+        </footer>
+      )}
+    </article>
+  );
+}
+
+function ApproveButton({ label, onClick, disabled }: { label: string; onClick: () => void; disabled?: boolean }) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className="inline-flex items-center justify-center gap-1.5 rounded-control bg-success-solid py-2.5 text-sm font-bold text-on-solid transition-opacity hover:opacity-90 disabled:opacity-50"
+    >
+      <IconCheck size={16} />
+      {label}
+    </button>
+  );
+}
+
+function RejectButton({ label, onClick, disabled }: { label: string; onClick: () => void; disabled?: boolean }) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className="inline-flex items-center justify-center gap-1.5 rounded-control border border-danger py-2.5 text-sm font-bold text-danger transition-colors hover:bg-danger-tint disabled:opacity-50"
+    >
+      <IconBlock size={16} />
+      {label}
+    </button>
+  );
+}
+
+/**
+ * **طلباتُ حركة المحفظة المعلّقة بكروت** — النداءاتُ نفسُها في `WalletRequestsList`:
+ * التحميلُ والموافقةُ والرفضُ بسببٍ، **وصاحبُ الاقتراح لا يرى زرَّ الموافقة.**
+ */
+function WalletRequestCards() {
+  const A = m.admin.acc;
+  const { user: me } = useAuth();
+  const canDecide = useCanCall()("POST", "/wallet-requests/{id}/approve");
+  const [rows, setRows] = useState<WalletRequestRow[] | null>(null);
+  const [error, setError] = useState("");
+  const [approve, setApprove] = useState<WalletRequestRow | null>(null);
+  const [reject, setReject] = useState<WalletRequestRow | null>(null);
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const q = new URLSearchParams({ status: "pending" });
+      const r = await api<{ requests: WalletRequestRow[] }>(`/api/v1/admin/wallet-requests?${q}`);
+      setRows(r?.requests ?? []);
+      setError("");
+    } catch (err) {
+      setRows([]);
+      setError(errorText(err));
+    }
+  }, []);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  async function decide(r: WalletRequestRow, ok: boolean) {
+    // **ونافذةُ التأكيد تُغلق قبل النداء** — نافذةُ كلمة السرّ تحتها فلا تُرى إن بقي مفتوحاً.
+    setApprove(null);
+    setReject(null);
+    setBusy(true);
+    try {
+      await api(`/api/v1/admin/wallet-requests/${r.id}/${ok ? "approve" : "reject"}`, {
+        method: "POST",
+        body: JSON.stringify({ note: ok ? "" : note.trim() }),
+      });
+      setNote("");
+      await load();
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (rows === null) return <LoadingState variant="text" />;
+
+  return (
+    <div className="space-y-3">
+      {error && <Alert>{error}</Alert>}
+      {rows.length === 0 ? (
+        <section className="surface flex flex-col items-center gap-3 p-8 text-center">
+          <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-success-solid text-on-solid">
+            <IconWallet size={28} />
+          </span>
+          <h2 className="heading-section">{A.requestsEmpty}</h2>
+          <p className="max-w-md text-sm text-ink-muted">{C.walletEmptyHint}</p>
+        </section>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+          {rows.map((r) => (
+            <article key={r.id} className="surface flex flex-col overflow-hidden transition-shadow hover:elev-2">
+              <header className="flex items-center gap-2.5 border-b border-line-soft bg-field px-4 py-2.5">
+                <span
+                  className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                    r.debit ? "bg-danger-solid text-on-solid" : "bg-success-solid text-on-solid"
+                  }`}
+                >
+                  <IconWallet size={15} />
+                </span>
+                <span className="min-w-0 flex-1 truncate text-sm font-bold">{kindLabel(r)}</span>
+                <span className="shrink-0 text-2xs text-ink-muted" dir="ltr">
+                  {fmtDateTime(r.created_at)}
+                </span>
+              </header>
+              <div className="flex flex-1 flex-col gap-3 p-4">
+                <div className="flex items-center gap-3">
+                  <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-field text-base font-bold text-ink-muted">
+                    {(r.user_name || "?").trim().charAt(0)}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-bold">{r.user_name}</p>
+                    <p className="truncate text-xs text-ink-muted">
+                      {A.proposedBy}: {r.proposer_name}
+                    </p>
+                  </div>
+                  <span className={`figure shrink-0 leading-none ${r.debit ? "text-danger" : ""}`} dir="ltr">
+                    {fmtMoney(r.amount)}
+                  </span>
+                </div>
+                {r.note && <p className="border-s-2 border-accent ps-3 text-sm leading-relaxed">{r.note}</p>}
+              </div>
+              {canDecide && (
+                <footer className="grid grid-cols-2 gap-2 border-t border-line-soft p-3">
+                  {me?.id !== r.proposed_by ? (
+                    <ApproveButton label={A.approve} disabled={busy} onClick={() => setApprove(r)} />
+                  ) : (
+                    <span />
+                  )}
+                  <RejectButton label={A.reject} disabled={busy} onClick={() => setReject(r)} />
+                </footer>
+              )}
+            </article>
+          ))}
+        </div>
+      )}
+
+      <Confirm
+        open={approve !== null}
+        tone="primary"
+        title={A.approveTitle}
+        body={
+          approve &&
+          A.approveBody
+            .replace("{amount}", fmtMoney(approve.amount))
+            .replace("{kind}", kindLabel(approve))
+            .replace("{user}", approve.user_name)
+            .replace("{side}", approve.kind === "topup" ? A.sideCashbox : A.sideTreasury)
+        }
+        confirmLabel={A.approve}
+        busy={busy}
+        onConfirm={() => approve && void decide(approve, true)}
+        onCancel={() => setApprove(null)}
+      />
+      <Confirm
+        open={reject !== null}
+        title={A.rejectTitle}
+        body={<Input id="wr-reject-note" label={A.rejectNote} value={note} onChange={(e) => setNote(e.target.value)} />}
+        confirmLabel={A.reject}
+        busy={busy}
+        onConfirm={() => reject && void decide(reject, false)}
+        onCancel={() => setReject(null)}
+      />
+    </div>
   );
 }
 

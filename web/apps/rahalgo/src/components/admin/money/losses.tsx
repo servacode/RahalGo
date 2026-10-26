@@ -23,21 +23,23 @@
  */
 
 import { useState } from "react";
-import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtMoney } from "@rahalgo/i18n";
 import {
   PageContainer,
   Pagination,
   LoadingState,
   ReloadState,
-  StatGrid,
-  StatCard,
   Input,
   useLiveData,
   IconWallet,
   IconBalance,
+  IconTrendDown,
+  IconTrendUp,
+  IconBlock,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
-import { CaseTable, CaseFilters, type CaseRow, type CaseStatus } from "./caseTable";
+import { Tile } from "@/components/admin/DashParts";
+import { CaseList, CaseFilters, type CaseRow, type CaseStatus } from "./caseTable";
 
 import { SectionBar } from "@/components/admin/support/SectionBar";
 const m = getMessages(defaultLocale);
@@ -116,6 +118,8 @@ export function LossesView() {
     status: x.dispute_status,
   }));
 
+  // تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦) — التاريخُ بكرت، خمسةُ أرقامٍ بمربّعات، توزيعُ الخسارة بكرت،
+  // وكرتٌ لكلّ خسارة.
   return (
     <PageContainer>
       <SectionBar hint={L.hint} />
@@ -148,51 +152,49 @@ export function LossesView() {
         <LoadingState />
       ) : (
         <>
-          <StatGrid>
-            <StatCard label={L.lost} value={fmtNum(data.total)} icon={IconWallet} tone={data.total > 0 ? "danger" : "muted"} />
-            <StatCard
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-5">
+            <Tile icon={IconTrendDown} label={L.lost} value={fmtMoney(data.total)} tone={data.total > 0 ? "danger" : "muted"} />
+            <Tile
+              icon={IconTrendUp}
               label={L.recovered}
-              value={fmtNum(data.recovered)}
-              icon={IconBalance}
+              value={fmtMoney(data.recovered)}
               tone={data.recovered > 0 ? "success" : "muted"}
             />
-            <StatCard
-              label={L.net}
-              value={fmtNum(data.net)}
-              icon={IconWallet}
-              tone={data.net > 0 ? "danger" : "muted"}
-              emphasis
-            />
-            <StatCard label={L.owed} value={fmtNum(data.owed)} icon={IconBalance} tone={data.owed > 0 ? "warning" : "muted"} />
-            <StatCard
+            <Tile icon={IconWallet} label={L.net} value={fmtMoney(data.net)} tone={data.net > 0 ? "danger" : "muted"} />
+            <Tile icon={IconBalance} label={L.owed} value={fmtMoney(data.owed)} tone={data.owed > 0 ? "warning" : "muted"} />
+            <Tile
+              icon={IconBlock}
               label={L.writtenOff}
-              value={fmtNum(data.written_off ?? 0)}
-              icon={IconBalance}
+              value={fmtMoney(data.written_off ?? 0)}
               tone={(data.written_off ?? 0) > 0 ? "warning" : "muted"}
             />
-          </StatGrid>
+          </div>
 
           {/* **سطورُ الخسارة بأرقام صفحة الأرباح نفسِها** (قرارُ المالك ٢٠٢٦-١٠-١٥). */}
           {(data.lines ?? []).some((l) => l.amount !== 0) && (
-            <ul className="mt-4 space-y-1 rounded-control border border-line p-3 text-sm">
-              {(data.lines ?? [])
-                .filter((l) => l.amount !== 0)
-                .map((l) => (
-                  <li key={l.key} className="flex items-center justify-between gap-3">
-                    <span className="text-ink-muted">{LINE_LABEL[l.key] ?? l.key}</span>
-                    <span className="font-medium text-ink">{fmtNum(l.amount)}</span>
-                  </li>
-                ))}
-            </ul>
+            <section className="surface p-4">
+              <h2 className="heading-card mb-3">{L.linesTitle}</h2>
+              <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {(data.lines ?? [])
+                  .filter((l) => l.amount !== 0)
+                  .map((l) => (
+                    <li
+                      key={l.key}
+                      className="flex items-center justify-between gap-3 rounded-control bg-field px-3 py-2 text-sm"
+                    >
+                      <span className="text-ink-muted">{LINE_LABEL[l.key] ?? l.key}</span>
+                      <span className="font-bold tabular-nums text-ink">{fmtMoney(l.amount)}</span>
+                    </li>
+                  ))}
+              </ul>
+            </section>
           )}
 
-          <div className="mt-4">
-            <CaseTable screen="losses" rows={rows} empty={L.empty} noDisputeLabel={L.noDispute} />
-          </div>
+          <CaseList rows={rows} empty={L.empty} emptyHint={L.emptyHint} noDisputeLabel={L.noDispute} />
 
           {/* **والترقيمُ من المكوّن المشترك** — ولا يظهر لصفحةٍ واحدة. */}
           {data.count > data.per_page && (
-            <div className="mt-4 flex justify-center">
+            <div className="flex justify-center">
               <Pagination page={page} total={data.count} perPage={data.per_page} onChange={setPage} />
             </div>
           )}

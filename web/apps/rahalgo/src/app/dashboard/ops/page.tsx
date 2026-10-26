@@ -12,6 +12,8 @@
  *	١ · سطرُ حالٍ واحد — «كل شي شغّال» أخضر، أو «في مشكلة: …» أحمر وكلُّ جملةٍ تُضغط
  *	٢ · سيرُ الطلبات الآن — عدّادُ كلّ مرحلةٍ بشرط لوحة الطلبات، وجدولُ العالق
  *	    من الدالّة الواحدة نفسِها، والسائقون والطوارئ، و«اعرض على الخريطة»
+ *	    (تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦): رأسٌ موحّدٌ ودائرةُ حالٍ كبيرة، والأرقامُ
+ *	    بطاقاتٌ ملوّنة، والعالقُ بطاقاتٌ لا جدول.)
  *	٣ · حالةُ النظام — كلمةٌ لكلّ جزء، والأرقامُ مطويّةٌ تحت «تفاصيل للمهندس»
  *
  * # ومن يرى ماذا (البند ٢)
@@ -39,24 +41,27 @@ import {
   Badge,
   Button,
   ButtonLink,
-  Card,
-  EmptyState,
   IconDriver,
-  IconOrder,
+  IconHourglass,
+  IconLocation,
+  IconMoto,
+  IconSettings,
+  IconShieldCheck,
+  IconShieldX,
   IconStatus,
+  IconStore,
+  IconSuccess,
   IconWarning,
-  ListRow,
   LoadingState,
   OrderRef,
   PageContainer,
-  PageHeader,
-  StatCard,
-  StatGrid,
   useLiveData,
 } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { problemPhrases } from "@/components/admin/OutageBanner";
+import { PageHero } from "@/components/admin/PageHero";
+import { Panel, Tile, type TileTone } from "@/components/admin/DashParts";
 
 const m = getMessages(defaultLocale);
 const O = m.admin.ops;
@@ -147,6 +152,61 @@ const FLOW = ["awaiting_accept", "awaiting_driver", "on_the_way", "at_door", "no
 /** العاجلُ منها — يحمرّ إن لم يكن صفراً. */
 const URGENT = new Set<string>(["no_driver", "stuck", "emergency"]);
 const PARTS = ["api", "db", "cache", "push", "realtime"] as const;
+
+// ── تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦) ──────────────────────────────
+/** أيقونةُ كلّ مرحلةٍ في سير الطلبات. */
+const FLOW_ICON: Record<(typeof FLOW)[number], typeof IconStore> = {
+  awaiting_accept: IconStore,
+  awaiting_driver: IconHourglass,
+  on_the_way: IconMoto,
+  at_door: IconLocation,
+  no_driver: IconDriver,
+  stuck: IconWarning,
+  emergency: IconShieldX,
+};
+/** الانتظارُ برتقاليّ — والعاجلُ أحمر، والصفرُ والمجهولُ رماديّان. */
+const WAITING = new Set<string>(["awaiting_accept", "awaiting_driver"]);
+function flowTone(k: string, v: N | undefined): TileTone {
+  if (v == null || v === 0) return "muted";
+  if (URGENT.has(k)) return "danger";
+  if (WAITING.has(k)) return "warning";
+  return "default";
+}
+type St = "ok" | "slow" | "down" | "unknown";
+const stateOf = (s?: string): St => (s === "ok" || s === "slow" || s === "down" ? s : "unknown");
+const DOT: Record<St, string> = {
+  ok: "bg-success",
+  slow: "bg-warning",
+  down: "bg-danger",
+  unknown: "bg-line",
+};
+
+/** **فارغٌ مطمئن** — دائرةٌ خضراءُ صغيرةٌ وجملة. */
+function AllClear({ text }: { text: string }) {
+  return (
+    <p className="flex items-center gap-2 text-sm font-bold text-success">
+      <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-success-solid text-on-solid">
+        <IconSuccess size={14} />
+      </span>
+      {text}
+    </p>
+  );
+}
+
+/** **كتلةُ تفاصيلٍ للمهندس** — عنوانٌ بنقطة حالٍ إن عُرفت، ثمّ أسطرُ القيم. */
+function Block({ title, state, children }: { title: string; state?: boolean; children: React.ReactNode }) {
+  return (
+    <div className="min-w-0 rounded-card border border-line-soft p-3">
+      <h3 className="heading-card mb-2 flex items-center gap-2">
+        {state != null && (
+          <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${state ? "bg-success" : "bg-danger"}`} />
+        )}
+        {title}
+      </h3>
+      {children}
+    </div>
+  );
+}
 
 const unknown = <span className="text-ink-muted">{O.unknown}</span>;
 
@@ -360,9 +420,13 @@ export default function OpsMonitorPage() {
   for (const p of problemPhrases(parts)) phrases.push({ text: p, href: "#system" });
   const unreachable = !!error && code !== 403 && code !== 401;
 
+  const bad = unreachable || phrases.length > 0;
+  const partsOk = !unreachable && PARTS.every((p) => parts?.[p] === "ok");
+
   return (
     <PageContainer>
-      <PageHeader
+      {/* **رأسٌ موحّد** — تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦): آخرُ تحديثٍ وزرُّه على الطرف. */}
+      <PageHero
         icon={IconStatus}
         title={O.title}
         subtitle={O.subtitle}
@@ -391,239 +455,310 @@ export default function OpsMonitorPage() {
         <LoadingState variant="stats" />
       ) : (
         <>
-          {/* ── ١ · سطرُ الحال ── */}
-          <Card tone={unreachable || phrases.length > 0 ? "danger" : "success"} padding="sm">
-            {unreachable ? (
-              <p className="flex items-center gap-2 font-bold text-danger">
-                <IconWarning size={18} className="shrink-0" />
-                {O.pUnreachable}
-              </p>
-            ) : phrases.length === 0 ? (
-              <p className="flex items-center gap-2 font-bold text-success">
-                <span aria-hidden>●</span>
-                {O.allGood}
-              </p>
-            ) : (
-              <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-bold text-danger">
-                <IconWarning size={18} className="shrink-0" />
-                <span>{O.problemPrefix}</span>
-                {phrases.map((p, i) => (
-                  <span key={p.text} className="flex items-center gap-2">
-                    {i > 0 && <span aria-hidden>·</span>}
-                    <Link href={p.href} className="underline">
-                      {p.text}
-                    </Link>
-                  </span>
-                ))}
-              </p>
-            )}
-            <p className="mt-1 text-xs text-ink-muted">{O.auto}</p>
-          </Card>
+          {/* ── ١ · الحالُ بنظرة ── تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦): دائرةٌ كبيرةٌ خضراءُ أو حمراء،
+              وجملُ المشكلة تُضغط فتنقل إليها. */}
+          <section className={`surface flex flex-wrap items-center gap-4 p-5 ${bad ? "border-danger" : ""}`}>
+            <span
+              className={`inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-full text-on-solid ${
+                bad ? "bg-danger-solid" : "bg-success-solid"
+              }`}
+            >
+              {bad ? <IconWarning size={30} /> : <IconShieldCheck size={30} />}
+            </span>
+            <div className="min-w-0 flex-1 space-y-1">
+              {unreachable ? (
+                <h2 className="heading-section text-danger">{O.pUnreachable}</h2>
+              ) : phrases.length === 0 ? (
+                <h2 className="heading-section text-success">{O.allGood}</h2>
+              ) : (
+                <h2 className="heading-section flex flex-wrap items-center gap-x-2 gap-y-1 text-danger">
+                  <span>{O.problemPrefix}</span>
+                  {phrases.map((p, i) => (
+                    <span key={p.text} className="flex items-center gap-2">
+                      {i > 0 && <span aria-hidden>·</span>}
+                      <Link href={p.href} className="underline">
+                        {p.text}
+                      </Link>
+                    </span>
+                  ))}
+                </h2>
+              )}
+              <p className="text-sm text-ink-muted">{bad ? O.badLine : O.okLine}</p>
+              <p className="text-xs text-ink-muted">{O.auto}</p>
+            </div>
+          </section>
 
           {/* ── ٢ · سيرُ الطلبات ── */}
           {data && (
             <>
-              <Card title={O.flowTitle} icon={IconOrder}>
-                <p className="mb-3 text-xs text-ink-muted">{O.flowHint}</p>
-                <StatGrid>
+              {/* **كلُّ رقمٍ بابٌ** — والصفرُ رماديٌّ، والانتظارُ برتقاليّ، والعاجلُ أحمر (المالك ٢٠٢٦-١٠-٢٦). */}
+              <Panel title={O.flowTitle} note={O.flowHint}>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
                   {FLOW.map((k) => {
                     const v = data.flow[k];
                     return (
-                      <StatCard
+                      <Tile
                         key={k}
+                        icon={FLOW_ICON[k]}
                         label={BOARD[k] ?? k}
-                        value={v == null ? O.unknown : v}
-                        tone={v == null || v === 0 ? "muted" : URGENT.has(k) ? "danger" : "default"}
-                        emphasis={URGENT.has(k) && v != null && v > 0}
+                        value={v == null ? O.unknown : fmtNum(v)}
+                        tone={flowTone(k, v)}
                         onClick={() => router.push(`/dashboard/orders?filter=${k}`)}
                       />
                     );
                   })}
-                </StatGrid>
-              </Card>
+                </div>
+              </Panel>
 
-              <Card title={O.stuckTitle} icon={IconWarning} tone={data.stuck.length > 0 ? "danger" : "default"}>
-                <div id="stuck" className="space-y-2">
-                  <p className="text-xs text-ink-muted">
-                    {data.reminder_min > 0
-                      ? O.reminderEvery.replace("{n}", fmtNum(data.reminder_min))
-                      : O.reminderOff}
-                  </p>
-                  {ackErr && <Alert>{ackErr}</Alert>}
-                  {data.stuck.length === 0 ? (
-                    <EmptyState title={O.stuckEmpty} />
-                  ) : (
-                    <ul className="space-y-2">
-                      {data.stuck.map((a) => (
-                        <ListRow
-                          key={a.order_id}
-                          leading={<OrderRef number={a.number} />}
-                          title={a.merchant_name}
-                          subtitle={
-                            <>
-                              {REASONS[a.reason] ?? a.reason}
-                              {m.common.listSeparator}
-                              {O.colSince}: {fmtSpan(Math.max(0, (now - Date.parse(a.since)) / 1000))}
-                              {m.common.listSeparator}
-                              {a.acked_at ? O.acked : O.notAcked}
+              {/* **العالقُ بطاقات** — رقمٌ ومتجرٌ وسببٌ ومدّة، وزرّا الفتح و«أنا عليه». */}
+              <section id="stuck" className={`surface p-4 ${data.stuck.length > 0 ? "border-danger" : ""}`}>
+                <h2 className="heading-card mb-1 flex flex-wrap items-center gap-2">
+                  <IconWarning size={18} className={data.stuck.length > 0 ? "text-danger" : "text-ink-muted"} />
+                  {O.stuckTitle}
+                  {data.stuck.length > 0 && (
+                    <span className="rounded-full bg-danger-solid px-2 py-0.5 text-xs font-bold text-on-solid">
+                      {O.stuckCount.replace("{n}", fmtNum(data.stuck.length))}
+                    </span>
+                  )}
+                </h2>
+                <p className="mb-3 text-xs text-ink-muted">
+                  {data.reminder_min > 0 ? O.reminderEvery.replace("{n}", fmtNum(data.reminder_min)) : O.reminderOff}
+                </p>
+                {ackErr && <Alert>{ackErr}</Alert>}
+                {data.stuck.length === 0 ? (
+                  <AllClear text={O.stuckEmpty} />
+                ) : (
+                  <ul className="grid grid-cols-1 gap-2 lg:grid-cols-2">
+                    {data.stuck.map((a) => (
+                      <li
+                        key={a.order_id}
+                        className={`flex flex-col gap-3 rounded-card border p-3 ${
+                          a.acked_at ? "border-line-soft" : "border-danger bg-danger-tint"
+                        }`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-danger-solid text-on-solid">
+                            <IconHourglass size={18} />
+                          </span>
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <OrderRef number={a.number} />
+                              <span className="min-w-0 truncate font-bold">{a.merchant_name}</span>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <Badge variant="danger">{REASONS[a.reason] ?? a.reason}</Badge>
+                              <Badge variant={a.acked_at ? "success" : "warning"}>
+                                {a.acked_at ? O.acked : O.notAcked}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-ink-muted">
+                              {O.stuckFor.replace("{t}", fmtSpan(Math.max(0, (now - Date.parse(a.since)) / 1000)))}
                               {a.reminders > 0 &&
                                 `${m.common.listSeparator}${O.reminded.replace("{n}", fmtNum(a.reminders))}`}
-                            </>
-                          }
-                          trailing={
-                            <>
-                              <ButtonLink variant="secondary" href={`/dashboard/orders?id=${a.order_id}`}>
-                                {O.openOrder}
-                              </ButtonLink>
-                              {canAck && !a.acked_at && (
-                                <Button
-                                  variant="danger"
-                                  disabled={acking === a.order_id}
-                                  onClick={() => void ackAlert(a.order_id)}
-                                >
-                                  {O.ack}
-                                </Button>
-                              )}
-                            </>
-                          }
-                        />
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </Card>
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <ButtonLink variant="secondary" href={`/dashboard/orders?id=${a.order_id}`}>
+                            {O.openOrder}
+                          </ButtonLink>
+                          {canAck && !a.acked_at && (
+                            <Button
+                              variant="danger"
+                              disabled={acking === a.order_id}
+                              onClick={() => void ackAlert(a.order_id)}
+                            >
+                              {O.ack}
+                            </Button>
+                          )}
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
 
-              <div className="grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2">
-                <Card title={O.driversTitle} icon={IconDriver}>
-                  <Row label={O.onShift} value={num(data.drivers.on_shift)} />
-                  <Row label={O.busy} value={num(data.drivers.busy)} />
-                  <Row label={O.free} value={num(data.drivers.free)} />
+              <div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2">
+                {/* **السائقون** — ثلاثُ دوائرَ بأرقامها، والخريطةُ تحتها. */}
+                <Panel title={O.driversTitle}>
+                  <ul className="space-y-1.5">
+                    {(
+                      [
+                        [O.onShift, data.drivers.on_shift, "bg-accent text-on-bright"],
+                        [O.busy, data.drivers.busy, "bg-warning-solid text-on-solid"],
+                        [O.free, data.drivers.free, "bg-success-solid text-on-solid"],
+                      ] as const
+                    ).map(([label, v, tint]) => (
+                      <li key={label} className="flex items-center gap-3 rounded-control bg-field px-3 py-2">
+                        <span
+                          className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+                            v ? tint : "border border-line text-ink-muted"
+                          }`}
+                        >
+                          <IconDriver size={16} />
+                        </span>
+                        <span className="min-w-0 flex-1 text-sm">{label}</span>
+                        <span className={`figure leading-none ${v ? "" : "text-ink-muted"}`}>{num(v)}</span>
+                      </li>
+                    ))}
+                  </ul>
                   <div className="mt-3">
                     <ButtonLink variant="secondary" href="/dashboard/opsmap">
                       {O.showMap}
                     </ButtonLink>
                   </div>
-                </Card>
-                <Card
-                  title={O.emergenciesTitle}
-                  icon={IconWarning}
-                  tone={data.emergencies_open ? "danger" : "default"}
-                >
-                  <p className="figure">{num(data.emergencies_open)}</p>
+                </Panel>
+
+                {/* **الطوارئ** — دائرةٌ كبيرةٌ بالعدد، حمراءُ إن كان فيها شي. */}
+                <section className={`surface p-4 ${data.emergencies_open ? "border-danger" : ""}`}>
+                  <h2 className="heading-card mb-3">{O.emergenciesTitle}</h2>
+                  <div className="flex items-center gap-4">
+                    <span
+                      className={`inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-full ${
+                        data.emergencies_open ? "bg-danger-solid text-on-solid" : "bg-field text-ink-muted"
+                      }`}
+                    >
+                      <span className="figure leading-none">{num(data.emergencies_open)}</span>
+                    </span>
+                    <p
+                      className={`min-w-0 flex-1 text-sm font-bold ${
+                        data.emergencies_open ? "text-danger" : data.emergencies_open === 0 ? "text-success" : "text-ink-muted"
+                      }`}
+                    >
+                      {data.emergencies_open
+                        ? O.emergenciesSome
+                        : data.emergencies_open === 0
+                          ? O.emergenciesNone
+                          : O.unknown}
+                    </p>
+                  </div>
                   <div className="mt-3">
                     <ButtonLink variant="secondary" href="/dashboard/emergencies">
                       {O.openEmergencies}
                     </ButtonLink>
                   </div>
-                </Card>
+                </section>
               </div>
             </>
           )}
 
-          {/* ── ٣ · حالةُ النظام ── */}
-          <Card title={O.systemTitle} icon={IconStatus}>
-            <div id="system" className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
+          {/* ── ٣ · حالةُ النظام ── سطرٌ لكلّ جزءٍ بنقطةٍ ملوّنةٍ وكلمة (المالك ٢٠٢٦-١٠-٢٦). */}
+          <section id="system" className="surface p-4">
+            <h2 className="heading-card mb-1">{O.systemTitle}</h2>
+            <p className="mb-3 text-xs text-ink-muted">{O.systemNote}</p>
+            {partsOk && <AllClear text={O.systemOk} />}
+            <ul className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
               {PARTS.map((p) => {
                 const detail = health?.verdict?.parts?.[p];
                 const reason = detail?.reason ? (O.reasons as Record<string, string>)[detail.reason] : "";
+                const st = unreachable ? undefined : parts?.[p];
                 return (
-                  <div key={p} className="min-w-0 rounded-control border border-line-soft p-2">
-                    <p className="text-xs text-ink-muted">{O.parts[p]}</p>
-                    <div className="mt-1">
-                      <StateBadge state={unreachable ? undefined : parts?.[p]} />
-                    </div>
-                    {reason && <p className="mt-1 text-xs text-ink-muted">{reason}</p>}
-                  </div>
+                  <li key={p} className="flex min-w-0 items-start gap-2.5 rounded-control bg-field px-3 py-2.5">
+                    <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${DOT[stateOf(st)]}`} />
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-bold">{O.parts[p]}</span>
+                      <span className="mt-1 block">
+                        <StateBadge state={st} />
+                      </span>
+                      {reason && <span className="mt-1 block text-xs text-ink-muted">{reason}</span>}
+                    </span>
+                  </li>
                 );
               })}
-            </div>
+            </ul>
 
             {canEngineer && health && (
-              <details className="mt-4">
-                <summary className="cursor-pointer text-sm font-bold">{O.engineer}</summary>
-                <p className="mt-2 text-xs text-ink-muted">
-                  {O.sinceRestart.replace(
-                    "{t}",
-                    rt?.uptime_seconds == null ? O.unknown : fmtSpan(rt.uptime_seconds),
-                  )}
-                  {health.window_minutes != null &&
-                    `${m.common.listSeparator}${O.windowNote.replace("{n}", fmtNum(health.window_minutes))}`}
-                </p>
-                <div className="mt-3 grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  <Card title={O.secServer} padding="sm">
-                    <Row label={O.uptime} value={span(rt?.uptime_seconds)} />
-                    <Row label={O.goroutines} value={num(rt?.goroutines)} />
-                    <Row label={O.heap} value={rt?.heap_mb == null ? unknown : `${fmtNum(rt.heap_mb)} MB`} />
-                    <Row label={O.sys} value={rt?.sys_mb == null ? unknown : `${fmtNum(rt.sys_mb)} MB`} />
-                  </Card>
-                  <Card title={O.secDb} padding="sm">
-                    <Row label={O.ping} value={ms(pg?.ping_ms)} />
-                    <Row label={O.backends} value={num(pg?.backends)} />
-                    <Row label={O.active} value={num(pg?.active)} />
-                    <Row label={O.idleInTx} value={num(pg?.idle_in_transaction)} />
-                    <Row label={O.longestTx} value={span(pg?.longest_tx_seconds)} />
-                    <Row label={O.waitingLocks} value={num(pg?.waiting_locks)} />
-                  </Card>
-                  <Card title={O.secPool} padding="sm">
-                    <Row label={O.poolMax} value={num(pool?.max)} />
-                    <Row label={O.poolTotal} value={num(pool?.total)} />
-                    <Row label={O.poolAcquired} value={num(pool?.acquired)} />
-                    <Row label={O.poolIdle} value={num(pool?.idle)} />
-                    <Row label={O.poolEmpty} value={num(pool?.empty_acquire_count)} />
-                    <Row label={O.poolCanceled} value={num(pool?.canceled_acquire_count)} />
-                    <Row label={O.poolWaitTotal} value={ms(pool?.acquire_duration_ms_total)} />
-                  </Card>
-                  <Card title={O.secRedis} padding="sm">
-                    <Row label={O.ping} value={ms(rd?.ping_ms)} />
-                    <Row label={O.redisTotal} value={num(rd?.total_conns)} />
-                    <Row label={O.redisIdle} value={num(rd?.idle_conns)} />
-                    <Row label={O.redisTimeouts} value={num(rd?.pool_timeouts)} />
-                  </Card>
-                  <Card title={O.secWs} padding="sm">
-                    <Row label={O.wsSubs} value={num(health.ws?.subscriptions)} />
-                    <p className="mb-1 mt-2 text-xs font-bold">{O.wsAuthTitle}</p>
-                    <Counters map={health.ws?.auth} labels={(k) => WS_LABELS[k] ?? k} />
-                  </Card>
-                  <Card title={O.secPush} padding="sm">
-                    <Counters map={health.push} labels={(k) => PUSH_LABELS[k] ?? k} />
-                  </Card>
-                  <Card title={O.secClients} padding="sm">
-                    <p className="mb-1 text-xs text-ink-muted">{O.clientsHint}</p>
-                    <Counters map={health.clients} labels={appLabel} />
-                    <Row label={O.clientsDropped} value={num(health.clients_dropped)} />
-                  </Card>
-                  {errs.data && (
-                    <Card title={O.secErrors} padding="sm">
-                      {errs.data.groups.length === 0 ? (
-                        <p className="text-sm">{O.errorsNone}</p>
-                      ) : (
-                        <>
-                          <p className="mb-2 text-xs text-ink-muted">
-                            {O.errorsTotal
-                              .replace("{n}", fmtNum(errs.data.total))
-                              .replace("{h}", fmtNum(errs.data.last_hour))}
-                          </p>
-                          {errs.data.groups.slice(0, 10).map((g) => (
-                            <Row
-                              key={`${g.route}|${g.code}`}
-                              label={`${g.route} (${g.code})`}
-                              value={`${fmtNum(g.count)} · ${O.errorsLast.replace("{t}", fmtClockTime(g.last_seen))}`}
-                            />
-                          ))}
-                        </>
-                      )}
-                    </Card>
-                  )}
-                  <Card title={O.secRelease} padding="sm">
-                    <Row label={O.environment} value={id?.environment ?? O.unknown} ltr />
-                    <Row label={O.migration} value={id?.migration_version ?? O.unknown} ltr />
-                    <Row label={O.commit} value={rt?.source_commit || id?.source_commit || O.unknown} ltr />
-                    <Row label={O.buildId} value={rt?.build_id || id?.build_id || O.unknown} ltr />
-                  </Card>
+              <details className="group mt-4 rounded-card border border-line-soft">
+                <summary className="flex cursor-pointer list-none items-center gap-2 p-3 text-sm font-bold">
+                  <IconSettings size={16} className="text-ink-muted" />
+                  <span className="flex-1">{O.engineer}</span>
+                  <span className="text-xs text-ink-muted transition-transform group-open:rotate-180">{"▾"}</span>
+                </summary>
+                <div className="border-t border-line-soft p-3">
+                  <p className="text-xs text-ink-muted">
+                    {O.sinceRestart.replace(
+                      "{t}",
+                      rt?.uptime_seconds == null ? O.unknown : fmtSpan(rt.uptime_seconds),
+                    )}
+                    {health.window_minutes != null &&
+                      `${m.common.listSeparator}${O.windowNote.replace("{n}", fmtNum(health.window_minutes))}`}
+                  </p>
+                  <div className="mt-3 grid min-w-0 grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    <Block title={O.secServer}>
+                      <Row label={O.uptime} value={span(rt?.uptime_seconds)} />
+                      <Row label={O.goroutines} value={num(rt?.goroutines)} />
+                      <Row label={O.heap} value={rt?.heap_mb == null ? unknown : `${fmtNum(rt.heap_mb)} MB`} />
+                      <Row label={O.sys} value={rt?.sys_mb == null ? unknown : `${fmtNum(rt.sys_mb)} MB`} />
+                    </Block>
+                    <Block title={O.secDb} state={pg?.reachable}>
+                      <Row label={O.ping} value={ms(pg?.ping_ms)} />
+                      <Row label={O.backends} value={num(pg?.backends)} />
+                      <Row label={O.active} value={num(pg?.active)} />
+                      <Row label={O.idleInTx} value={num(pg?.idle_in_transaction)} />
+                      <Row label={O.longestTx} value={span(pg?.longest_tx_seconds)} />
+                      <Row label={O.waitingLocks} value={num(pg?.waiting_locks)} />
+                    </Block>
+                    <Block title={O.secPool}>
+                      <Row label={O.poolMax} value={num(pool?.max)} />
+                      <Row label={O.poolTotal} value={num(pool?.total)} />
+                      <Row label={O.poolAcquired} value={num(pool?.acquired)} />
+                      <Row label={O.poolIdle} value={num(pool?.idle)} />
+                      <Row label={O.poolEmpty} value={num(pool?.empty_acquire_count)} />
+                      <Row label={O.poolCanceled} value={num(pool?.canceled_acquire_count)} />
+                      <Row label={O.poolWaitTotal} value={ms(pool?.acquire_duration_ms_total)} />
+                    </Block>
+                    <Block title={O.secRedis} state={rd?.reachable}>
+                      <Row label={O.ping} value={ms(rd?.ping_ms)} />
+                      <Row label={O.redisTotal} value={num(rd?.total_conns)} />
+                      <Row label={O.redisIdle} value={num(rd?.idle_conns)} />
+                      <Row label={O.redisTimeouts} value={num(rd?.pool_timeouts)} />
+                    </Block>
+                    <Block title={O.secWs}>
+                      <Row label={O.wsSubs} value={num(health.ws?.subscriptions)} />
+                      <p className="mb-1 mt-2 text-xs font-bold">{O.wsAuthTitle}</p>
+                      <Counters map={health.ws?.auth} labels={(k) => WS_LABELS[k] ?? k} />
+                    </Block>
+                    <Block title={O.secPush}>
+                      <Counters map={health.push} labels={(k) => PUSH_LABELS[k] ?? k} />
+                    </Block>
+                    <Block title={O.secClients}>
+                      <p className="mb-1 text-xs text-ink-muted">{O.clientsHint}</p>
+                      <Counters map={health.clients} labels={appLabel} />
+                      <Row label={O.clientsDropped} value={num(health.clients_dropped)} />
+                    </Block>
+                    {errs.data && (
+                      <Block title={O.secErrors} state={errs.data.groups.length === 0}>
+                        {errs.data.groups.length === 0 ? (
+                          <AllClear text={O.errorsNone} />
+                        ) : (
+                          <>
+                            <p className="mb-2 text-xs text-ink-muted">
+                              {O.errorsTotal
+                                .replace("{n}", fmtNum(errs.data.total))
+                                .replace("{h}", fmtNum(errs.data.last_hour))}
+                            </p>
+                            {errs.data.groups.slice(0, 10).map((g) => (
+                              <Row
+                                key={`${g.route}|${g.code}`}
+                                label={`${g.route} (${g.code})`}
+                                value={`${fmtNum(g.count)} · ${O.errorsLast.replace("{t}", fmtClockTime(g.last_seen))}`}
+                              />
+                            ))}
+                          </>
+                        )}
+                      </Block>
+                    )}
+                    <Block title={O.secRelease}>
+                      <Row label={O.environment} value={id?.environment ?? O.unknown} ltr />
+                      <Row label={O.migration} value={id?.migration_version ?? O.unknown} ltr />
+                      <Row label={O.commit} value={rt?.source_commit || id?.source_commit || O.unknown} ltr />
+                      <Row label={O.buildId} value={rt?.build_id || id?.build_id || O.unknown} ltr />
+                    </Block>
+                  </div>
                 </div>
               </details>
             )}
-          </Card>
+          </section>
         </>
       )}
     </PageContainer>

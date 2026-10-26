@@ -36,28 +36,22 @@ import {
   Radio,
   Modal,
   PageContainer,
-  PageHeader,
-  EmptyState,
   LoadingState,
   ReloadState,
-  DataView,
   Pagination,
-  StatGrid,
-  StatCard,
-  ViewToggle,
-  useViewMode,
-  type DataColumn,
   useLiveData,
   IconWallet,
   IconUser,
   IconStatus,
-  IconDate,
+  IconWarning,
   Money,
   FormActions,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { roleLabelByCode } from "@/lib/rolemeta";
+import { PageHero } from "@/components/admin/PageHero";
+import { Tile } from "@/components/admin/DashParts";
 
 const m = getMessages(defaultLocale);
 const P = m.shared.payout;
@@ -152,7 +146,6 @@ export default function PayoutsPage() {
   const [role, setRoleRaw] = useState(() => readParam("role"));
   const [page, setPage] = useState(1);
   const [deciding, setDeciding] = useState<{ p: Payout; action: Action } | null>(null);
-  const [view, setView] = useViewMode("payouts");
 
   /** **وتغييرُ الفلتر يرجع للصفحة الأولى** — كانت الصفحةُ الثالثةُ تبقى فيظهر «لا طلبات». */
   function setStatus(s: string) {
@@ -181,109 +174,6 @@ export default function PayoutsPage() {
   const st = data?.stats;
   const filtered = status !== "" || role !== "";
 
-  const columns: DataColumn<Payout>[] = [
-    {
-      id: "who",
-      header: m.terms.name,
-      icon: <IconUser />,
-      primary: true,
-      cell: (p) => (
-        <span>
-          {p.user_name}{" "}
-          <span dir="ltr" className="text-xs text-ink-muted">
-            {p.user_phone}
-          </span>
-        </span>
-      ),
-    },
-    {
-      id: "role",
-      header: A.roleCol,
-      cell: (p) => (p.user_role ? roleLabelByCode(p.user_role) : "—"),
-    },
-    {
-      id: "amount",
-      header: P.amount,
-      icon: <IconWallet />,
-      primary: true,
-      cell: (p) => (
-        <span className="font-bold text-primary-dark">
-          <Money value={p.amount} />
-        </span>
-      ),
-    },
-    {
-      /* **والمحجوزُ والمتاحُ يُعرَضان** — `XG-12`: الماليّةُ تقرّر على ما يجوز صرفُه. */
-      id: "available",
-      header: m.terms.walletAvailable,
-      icon: <IconWallet />,
-      cell: (p) => (
-        <span className="text-sm">
-          <Money value={p.available} small />
-          <span className="block text-xs text-ink-muted">
-            {m.terms.walletBalance}: {fmtNum(p.balance)} · {m.terms.walletReserved}: {fmtNum(p.reserved)}
-          </span>
-        </span>
-      ),
-    },
-    {
-      id: "status",
-      header: m.terms.status,
-      icon: <IconStatus />,
-      cell: (p) => (
-        <span>
-          <Badge variant={VARIANT[p.status]}>{A.status[p.status]}</Badge>
-          {p.paid_via && (
-            <span className="block text-xs text-ink-muted">
-              {p.paid_via === "cash" ? A.paidViaCash : A.paidViaTransfer}
-            </span>
-          )}
-        </span>
-      ),
-    },
-    {
-      /* **ملاحظةُ الطالب وقرارُ المالية سطران** — كانت الأولى تختفي بعد القرار. */
-      id: "note",
-      header: A.requesterNote,
-      cell: (p) => (
-        <span className="text-sm">
-          <span className="block">{p.note || "—"}</span>
-          {p.decision && (
-            <span className="block text-ink-muted">
-              {A.financeNote}: {p.decision}
-            </span>
-          )}
-        </span>
-      ),
-    },
-    {
-      id: "decided",
-      header: A.decidedCol,
-      cell: (p) =>
-        p.decided_at ? (
-          <span className="text-sm">
-            {p.decided_by_name || "—"}
-            <span dir="ltr" className="block text-xs text-ink-muted">
-              {fmtDateTime(p.decided_at)}
-            </span>
-          </span>
-        ) : (
-          "—"
-        ),
-    },
-    {
-      id: "date",
-      header: m.terms.date,
-      icon: <IconDate />,
-      cell: (p) => <span dir="ltr">{fmtDateTime(p.created_at)}</span>,
-    },
-  ];
-
-  const statusChips = [
-    { id: "", label: A.allStatuses },
-    ...STATUSES.map((s) => ({ id: s, label: A.status[s] })),
-    { id: FAILED_OR_REVERSED, label: A.failedOrReversed },
-  ];
   const roleChips = [
     { id: "", label: A.allRoles },
     ...ROLES.map((r) => ({ id: r, label: roleLabelByCode(r) })),
@@ -291,102 +181,85 @@ export default function PayoutsPage() {
 
   const count = (n: number) => A.cardCount.replace("{n}", fmtNum(n));
 
+  // **تصميمٌ احترافيّ بلا جداول** (المالك ٢٠٢٦-١٠-٢٦: «امسح العرض بالجداول وتصميم احترافي») —
+  // رأسٌ موحّدٌ بتبويبات الحالات، أربعةُ أرقامٍ تُضغط، وكرتٌ لكلّ طلبِ سحبٍ بأفعاله.
   return (
-    <PageContainer width="full">
-      <PageHeader
+    <PageContainer>
+      <PageHero<string>
         icon={IconWallet}
         title={P.adminTitle}
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            {/* **ولا زرَّ «شحن رصيد» هنا** (قرارُ المالك ٢٠٢٦-١٠-١٥): الشحنُ طلبٌ من صفحة
-                الحساب يوافق عليه موظفٌ آخر — وهذه صفحةُ السحوبات وحدَها. */}
-            <ViewToggle
-              view={view}
-              onChange={setView}
-              tableLabel={m.common.viewTable}
-              cardsLabel={m.common.viewCards}
-            />
-          </div>
-        }
+        subtitle={A.pageHint}
+        tabs={[
+          { key: "all", label: A.allStatuses },
+          ...STATUSES.map((s) => ({
+            key: s,
+            label: A.status[s],
+            count: s === "pending" ? st?.waiting_count : s === "processing" ? st?.processing_count : undefined,
+            warn: s === "pending" && (st?.waiting_count ?? 0) > 0,
+          })),
+          { key: FAILED_OR_REVERSED, label: A.failedOrReversed },
+        ]}
+        value={status || "all"}
+        onChange={(k) => setStatus(k === "all" ? "" : k)}
       />
 
-      {/* **البطاقاتُ الأربع** — و«بانتظار الصرف» يشمل «قيد الصرف»: مالٌ محجوزٌ لم يخرج. */}
-      <StatGrid>
-        <StatCard
+      {/* **الأرقامُ الأربعة** — و«بانتظار الصرف» يشمل «قيد الصرف»: مالٌ محجوزٌ لم يخرج. */}
+      <div className="mb-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
+        <Tile
+          icon={IconWallet}
           label={A.cardWaiting}
           value={fmtMoney(st?.waiting_sum ?? 0)}
           sub={count(st?.waiting_count ?? 0)}
-          icon={IconWallet}
-          tone={(st?.waiting_count ?? 0) > 0 ? "accent" : "muted"}
+          tone={(st?.waiting_count ?? 0) > 0 ? "warning" : "muted"}
           onClick={() => setStatus("pending")}
-          selected={status === "pending"}
         />
-        <StatCard
+        <Tile
+          icon={IconStatus}
           label={A.cardProcessing}
           value={fmtMoney(st?.processing_sum ?? 0)}
           sub={count(st?.processing_count ?? 0)}
-          icon={IconWallet}
-          tone={(st?.processing_count ?? 0) > 0 ? "warning" : "muted"}
+          tone={(st?.processing_count ?? 0) > 0 ? "accent" : "muted"}
           onClick={() => setStatus("processing")}
-          selected={status === "processing"}
         />
-        <StatCard
+        <Tile
+          icon={IconWallet}
           label={A.cardPaidMonth}
           value={fmtMoney(st?.paid_month_sum ?? 0)}
           sub={count(st?.paid_month_count ?? 0)}
-          icon={IconWallet}
-          tone="default"
+          tone={(st?.paid_month_count ?? 0) > 0 ? "success" : "muted"}
           onClick={() => setStatus("paid")}
-          selected={status === "paid"}
         />
-        <StatCard
+        <Tile
+          icon={IconWarning}
           label={A.cardReturnedMonth}
           value={fmtMoney(st?.returned_month_sum ?? 0)}
           sub={count(st?.returned_month_count ?? 0)}
-          icon={IconWallet}
           tone={(st?.returned_month_count ?? 0) > 0 ? "danger" : "muted"}
           onClick={() => setStatus(FAILED_OR_REVERSED)}
-          selected={status === FAILED_OR_REVERSED}
         />
-      </StatGrid>
-
-      <div className="my-4 space-y-2">
-        <Chips items={statusChips} value={status} onChange={setStatus} wrap />
-        <Chips items={roleChips} value={role} onChange={setRole} wrap />
       </div>
+
+      <section className="surface mb-4 flex flex-wrap items-center gap-2 p-3">
+        <span className="text-sm text-ink-muted">{A.roleCol}:</span>
+        <Chips items={roleChips} value={role} onChange={setRole} wrap />
+      </section>
 
       {error && !data ? (
         <ReloadState onRetry={reload} label={A.loadError} />
       ) : rows.length === 0 ? (
-        <EmptyState icon={IconWallet} title={filtered ? A.emptyFiltered : A.emptyAll} />
+        <section className="surface flex flex-col items-center gap-3 p-8 text-center">
+          <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-success-solid text-on-solid">
+            <IconWallet size={28} />
+          </span>
+          <h2 className="heading-section">{filtered ? A.emptyFiltered : A.emptyAll}</h2>
+          <p className="max-w-md text-sm text-ink-muted">{A.emptyHint}</p>
+        </section>
       ) : (
-        <DataView
-          items={rows}
-          getKey={(p) => p.id}
-          columns={columns}
-          view={view}
-          empty={filtered ? A.emptyFiltered : A.emptyAll}
-          actions={
-            canDecide
-              ? (p) =>
-                  ACTIONS[p.status].length > 0 ? (
-                    <>
-                      {ACTIONS[p.status].map((a) => (
-                        <Button
-                          key={a}
-                          variant={
-                            a === "paid" ? "primary" : NEEDS_REASON.includes(a) ? "danger" : "secondary"
-                          }
-                          onClick={() => setDeciding({ p, action: a })}
-                        >
-                          {actionLabel(a, p.status)}
-                        </Button>
-                      ))}
-                    </>
-                  ) : null
-              : undefined
-          }
-        />
+        <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+          {rows.map((p) => (
+            <PayoutCard key={p.id} p={p} canDecide={canDecide} onAct={(a) => setDeciding({ p, action: a })} />
+          ))}
+        </ul>
       )}
 
       {/* **ولا يظهر لصفحةٍ واحدة** — عنصرٌ لا يفعل شيئاً يزاحم ما يفعل. */}
@@ -408,6 +281,103 @@ export default function PayoutsPage() {
         />
       )}
     </PageContainer>
+  );
+}
+
+const STATUS_TINT: Record<Status, string> = {
+  pending: "bg-warning-solid text-on-solid",
+  processing: "bg-accent text-on-bright",
+  paid: "bg-success-solid text-on-solid",
+  rejected: "bg-field text-ink-muted",
+  failed: "bg-danger-solid text-on-solid",
+  reversed: "bg-field text-ink",
+};
+
+/** **كرتُ طلب سحب** — مين طلب، قديش، شو متاح بمحفظته، ملاحظتُه وقرارُ الماليّة، ومين قرّر — وأفعالُه. */
+function PayoutCard({ p, canDecide, onAct }: { p: Payout; canDecide: boolean; onAct: (a: Action) => void }) {
+  const acts = canDecide ? ACTIONS[p.status] : [];
+  return (
+    <li className="surface flex flex-col gap-3 p-4">
+      <div className="flex items-start gap-3">
+        <span className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${STATUS_TINT[p.status]}`}>
+          <IconUser size={20} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-bold">{p.user_name || p.user_phone}</span>
+          <span className="block text-2xs text-ink-muted" dir="ltr">
+            {p.user_phone}
+          </span>
+        </span>
+        <span className="flex shrink-0 flex-col items-end gap-1">
+          <Badge variant={VARIANT[p.status]}>{A.status[p.status]}</Badge>
+          {p.user_role && <Badge variant="neutral">{roleLabelByCode(p.user_role)}</Badge>}
+        </span>
+      </div>
+
+      <div className="flex items-end justify-between gap-2 rounded-control bg-field px-3 py-2.5">
+        <span>
+          <span className="block text-2xs text-ink-muted">{P.amount}</span>
+          <span className="figure block">{fmtMoney(p.amount)}</span>
+          {p.paid_via && (
+            <span className="block text-2xs text-ink-muted">{p.paid_via === "cash" ? A.paidViaCash : A.paidViaTransfer}</span>
+          )}
+        </span>
+        {/* **والمحجوزُ والمتاحُ يُعرَضان** — `XG-12`: الماليّةُ تقرّر على ما يجوز صرفُه. */}
+        <span className="text-end text-sm">
+          <span className="block text-2xs text-ink-muted">{m.terms.walletAvailable}</span>
+          <b className={`tabular-nums ${p.available < p.amount && p.status === "pending" ? "text-danger" : ""}`}>
+            {fmtMoney(p.available)}
+          </b>
+          <span className="block text-2xs text-ink-muted">
+            {m.terms.walletBalance} {fmtNum(p.balance)} · {m.terms.walletReserved} {fmtNum(p.reserved)}
+          </span>
+        </span>
+      </div>
+
+      {/* **ملاحظةُ الطالب وقرارُ المالية سطران** — كانت الأولى تختفي بعد القرار. */}
+      {(p.note || p.decision) && (
+        <div className="space-y-1 text-sm">
+          {p.note && (
+            <p className="border-s-2 border-line ps-2">
+              <span className="text-2xs text-ink-muted">{A.requesterNote}: </span>
+              {p.note}
+            </p>
+          )}
+          {p.decision && (
+            <p className="border-s-2 border-line ps-2">
+              <span className="text-2xs text-ink-muted">{A.financeNote}: </span>
+              {p.decision}
+            </p>
+          )}
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center justify-between gap-2 text-2xs text-ink-muted">
+        <span>
+          {m.terms.date}: <span dir="ltr">{fmtDateTime(p.created_at)}</span>
+        </span>
+        {p.decided_at && (
+          <span>
+            {A.decidedCol}: {p.decided_by_name || "—"} · <span dir="ltr">{fmtDateTime(p.decided_at)}</span>
+          </span>
+        )}
+      </div>
+
+      {acts.length > 0 && (
+        <div className="mt-auto grid grid-cols-1 gap-2 border-t border-line-soft pt-3 sm:grid-cols-3">
+          {acts.map((a) => (
+            <Button
+              key={a}
+              className="w-full"
+              variant={a === "paid" ? "primary" : NEEDS_REASON.includes(a) ? "danger" : "secondary"}
+              onClick={() => onAct(a)}
+            >
+              {actionLabel(a, p.status)}
+            </Button>
+          ))}
+        </div>
+      )}
+    </li>
   );
 }
 

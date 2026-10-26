@@ -13,16 +13,16 @@ import {
   Alert,
   Badge,
   Button,
-  Card,
   Checkbox,
   Input,
-  StatGrid,
-  StatCard,
+  LoadingState,
   Switch,
   IconWallet,
   IconPromos,
+  IconMoto,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
+import { Tile } from "@/components/admin/DashParts";
 
 const m = getMessages(defaultLocale);
 const F = m.admin.promos.freeDelivery;
@@ -126,87 +126,114 @@ export default function FreeDeliveryTab() {
     setForm((f) => ({ ...f, kinds: on ? [...f.kinds, k] : f.kinds.filter((x) => x !== k) }));
   }
 
-  if (!loaded) return null;
+  if (!loaded) return <LoadingState variant="stats" />;
 
+  // تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦) — بطاقةُ حالةٍ كبيرة، ورقمان بمربّعات، والإعداداتُ ببطاقةٍ واحدة.
+  const running = campaign?.running ?? false;
   return (
     <div className="space-y-4">
-      <p className="text-sm text-ink-muted">{F.hint}</p>
       {error && <Alert tone="error">{error}</Alert>}
       {saved && <Alert tone="success">{F.saved}</Alert>}
 
-      {campaign && (
-        <StatGrid>
-          <StatCard icon={IconPromos} label={F.claims} value={fmtNum(campaign.claims)} />
-          <StatCard icon={IconWallet} label={F.waived} value={fmtMoney(campaign.waived)} />
-        </StatGrid>
-      )}
-      {!campaign && <Alert tone="info">{F.none}</Alert>}
+      <section className="surface flex items-start gap-3 p-4">
+        <span
+          className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${
+            running ? "bg-success-solid text-on-solid" : "bg-field text-ink-muted"
+          }`}
+        >
+          <IconMoto size={24} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h2 className="heading-card flex flex-wrap items-center gap-2">
+            {m.admin.promos.tabFreeDelivery}
+            {campaign && (
+              <Badge variant={running ? "success" : "neutral"}>{running ? F.running : F.notRunning}</Badge>
+            )}
+          </h2>
+          <p className="mt-1 text-sm text-ink-muted">{F.hint}</p>
+          {!campaign && <p className="mt-1 text-sm font-medium">{F.none}</p>}
+        </div>
+      </section>
 
-      <Card>
-        <div className="space-y-4">
+      {campaign && (
+        <div className="grid grid-cols-2 gap-2">
+          <Tile
+            icon={IconPromos}
+            label={F.claims}
+            value={fmtNum(campaign.claims)}
+            tone={campaign.claims > 0 ? "accent" : "muted"}
+          />
+          <Tile
+            icon={IconWallet}
+            label={F.waived}
+            value={fmtMoney(campaign.waived)}
+            tone={campaign.waived > 0 ? "success" : "muted"}
+          />
+        </div>
+      )}
+
+      <section className="surface space-y-4 p-4">
+        <h2 className="heading-card">{F.formTitle}</h2>
+        <div className="rounded-control bg-field p-3">
           <Switch
             checked={form.active}
             onChange={(v) => setForm((f) => ({ ...f, active: v }))}
             label={F.active}
             hint={F.activeHint}
           />
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <Input
-              type="datetime-local"
-              label={F.startsAt}
-              value={form.starts}
-              onChange={(e) => setForm((f) => ({ ...f, starts: e.target.value }))}
-            />
-            <Input
-              type="datetime-local"
-              label={F.endsAt}
-              value={form.ends}
-              onChange={(e) => setForm((f) => ({ ...f, ends: e.target.value }))}
-            />
-          </div>
-          <div>
-            <p className="mb-2 text-sm font-bold">{F.kinds}</p>
-            <div className="flex flex-col gap-2">
-              {KINDS.map((k) => (
+        </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Input
+            type="datetime-local"
+            label={F.startsAt}
+            value={form.starts}
+            onChange={(e) => setForm((f) => ({ ...f, starts: e.target.value }))}
+          />
+          <Input
+            type="datetime-local"
+            label={F.endsAt}
+            value={form.ends}
+            onChange={(e) => setForm((f) => ({ ...f, ends: e.target.value }))}
+          />
+        </div>
+        <div>
+          <p className="mb-2 text-sm font-bold">{F.kinds}</p>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {KINDS.map((k) => (
+              <div key={k.key} className="rounded-control border border-line-soft px-3 py-2">
                 <Checkbox
-                  key={k.key}
                   id={`fd-${k.key}`}
                   label={k.label}
                   checked={form.kinds.includes(k.key)}
                   onChange={(e) => toggleKind(k.key, e.target.checked)}
                 />
-              ))}
-            </div>
+              </div>
+            ))}
           </div>
-          <div>
-            <Input
-              type="number"
-              inputMode="numeric"
-              min={1}
-              label={F.maxFee}
-              value={form.maxFee}
-              onChange={(e) => setForm((f) => ({ ...f, maxFee: e.target.value }))}
-            />
-            <p className="mt-1 text-xs text-ink-muted">{F.maxFeeHint}</p>
-          </div>
-          {campaign && (
-            <Badge variant={campaign.running ? "success" : "neutral"}>
-              {campaign.running ? F.running : F.notRunning}
-            </Badge>
-          )}
-          <div className="flex flex-wrap gap-2">
-            <Button onClick={() => save(false)} disabled={busy}>
-              {F.save}
-            </Button>
-            {campaign && (
-              <Button variant="secondary" onClick={() => save(true)} disabled={busy}>
-                {F.createNew}
-              </Button>
-            )}
-          </div>
-          {campaign && <p className="text-xs text-ink-muted">{F.createNewHint}</p>}
         </div>
-      </Card>
+        <div>
+          <Input
+            type="number"
+            inputMode="numeric"
+            min={1}
+            label={F.maxFee}
+            value={form.maxFee}
+            onChange={(e) => setForm((f) => ({ ...f, maxFee: e.target.value }))}
+          />
+          <p className="mt-1 text-xs text-ink-muted">{F.maxFeeHint}</p>
+        </div>
+        <div className="grid grid-cols-1 gap-2 border-t border-line-soft pt-4 sm:grid-cols-2">
+          <Button className="w-full" onClick={() => save(false)} disabled={busy}>
+            {F.save}
+          </Button>
+          {campaign && (
+            <Button variant="secondary" className="w-full" onClick={() => save(true)} disabled={busy}>
+              {F.createNew}
+            </Button>
+          )}
+        </div>
+        {campaign && <p className="text-xs text-ink-muted">{F.createNewHint}</p>}
+      </section>
     </div>
   );
 }

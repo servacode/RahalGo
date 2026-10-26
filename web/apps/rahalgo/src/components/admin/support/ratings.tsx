@@ -20,6 +20,11 @@
  * **رقمٌ بلا كلامٍ لا يُصلح شيئاً**: من رأى «٢٫٤» لا يعرف أهو تأخّرٌ أم سوءُ
  * خلق. **ولا تُعرض التعليقاتُ كلُّها** — الرضا الصامتُ لا يحتاج قراءة، وما
  * يُقرأ هو ما فيه كلمةٌ أو نجمتان فأقلّ.
+ *
+ * # تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦)
+ *
+ * ثلاثةُ أرقامٍ تُضغط، ثمّ كلُّ التقييمات بفلاترها في بطاقةٍ واحدة، ثمّ السائقون والمتاجرُ
+ * بطاقاتٍ بدائرةٍ ونجومٍ مرسومة. **ولا جدول.**
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -30,20 +35,17 @@ import {
   PageContainer,
   Select,
   Badge,
-  Stars,
-  StatGrid,
-  StatCard,
-  EmptyState,
   LoadingState,
   IconStar,
   IconDriver,
   IconWarning,
   IconOrder,
+  IconStore,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
-import { RatingsList } from "./RatingsList";
+import { Tile } from "@/components/admin/DashParts";
+import { RatingsList, StarRow, EmptyCircle, starTone } from "./RatingsList";
 
-import { SectionBar } from "@/components/admin/support/SectionBar";
 const m = getMessages(defaultLocale);
 const R = m.admin.ratingsPage;
 
@@ -85,12 +87,22 @@ interface Data {
   comments: Comment[];
 }
 
+/** لونُ دائرة السائق أو المتجر بمتوسّطه. */
+function avatarTint(avg: number): string {
+  return avg < 3
+    ? "bg-danger-solid text-on-solid"
+    : avg < 4
+      ? "bg-warning-solid text-on-solid"
+      : "bg-success-solid text-on-solid";
+}
+
 export function RatingsView() {
   const router = useRouter();
   // **وملفُّ الحساب لمن يقرأ الحسابات** (قرارُ المالك ٢٠٢٦-١٠-٠٥): موظّفُ العمليّات
   // لا يملك `users.read` — **فلا يُرسَم له رابطٌ يُردّ ٤٠٣.**
   const canProfile = useCanCall()("GET", "/users/{id}");
   const [min, setMin] = useState("3");
+  const [low, setLow] = useState(false);
   const [data, setData] = useState<Data | null>(null);
   const [error, setError] = useState("");
 
@@ -112,26 +124,45 @@ export function RatingsView() {
 
   return (
     <PageContainer>
-      <SectionBar hint={R.hint} />
+      <p className="mb-4 text-sm text-ink-muted">{R.hint}</p>
 
-      <StatGrid>
-        <StatCard label={R.total} value={fmtNum(data.total)} icon={IconStar} />
-        <StatCard
+      <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <Tile
+          icon={IconStar}
+          label={R.total}
+          value={fmtNum(data.total)}
+          sub={R.totalSub}
+          tone={data.total > 0 ? "accent" : "muted"}
+          onClick={() => setLow(false)}
+        />
+        <Tile
+          icon={IconStar}
           label={R.average}
           value={data.has_average ? data.average.toFixed(1) : "—"}
-          icon={IconStar}
+          sub={R.averageSub}
+          tone={!data.has_average ? "muted" : data.average < 3 ? "danger" : data.average < 4 ? "warning" : "success"}
         />
-        <StatCard label={R.lowCount} value={fmtNum(data.low)} icon={IconWarning} />
-      </StatGrid>
+        <Tile
+          icon={IconWarning}
+          label={R.lowCount}
+          value={fmtNum(data.low)}
+          sub={R.lowSub}
+          tone={data.low > 0 ? "danger" : "muted"}
+          onClick={() => setLow(true)}
+        />
+      </div>
 
       {/* **كلُّ تقييمٍ بسطره أوّلاً** (المالك ٢٠٢٦-١٠-٢٥) — ثمّ المعدّلاتُ بالسائق وبالمتجر. */}
-      <RatingsList canProfile={canProfile} />
+      <RatingsList canProfile={canProfile} low={low} onLow={setLow} />
 
-      <section>
-        <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
-          <h2 className="font-bold">{R.driversTitle}</h2>
-          <div className="w-56">
-            <Select value={min} onChange={(e) => setMin(e.target.value)}>
+      <section className="space-y-3">
+        <div className="surface flex flex-wrap items-center justify-between gap-3 p-4">
+          <span className="min-w-0 flex-1">
+            <h2 className="heading-section">{R.driversTitle}</h2>
+            <span className="block text-xs text-ink-muted">{R.driversHint}</span>
+          </span>
+          <div className="w-full sm:w-56">
+            <Select value={min} onChange={(e) => setMin(e.target.value)} aria-label={R.driversTitle}>
               {["1", "3", "5", "10"].map((v) => (
                 <option key={v} value={v}>
                   {R.minCount.replace("{n}", v)}
@@ -142,38 +173,41 @@ export function RatingsView() {
         </div>
 
         {data.drivers.length === 0 ? (
-          <EmptyState icon={IconDriver} title={R.noDrivers} />
+          <EmptyCircle icon={IconDriver} title={R.noDrivers} hint={R.noDriversHint} />
         ) : (
-          <ul className="divide-y divide-line surface">
+          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {data.drivers.map((d) => (
               <li key={d.id}>
                 <button
+                  type="button"
                   onClick={canProfile ? () => router.push(`/dashboard/users/${d.id}`) : undefined}
                   disabled={!canProfile}
-                  className="flex w-full flex-wrap items-center gap-3 px-3 py-2.5 text-start enabled:hover:bg-row-hover disabled:cursor-default"
+                  className={`surface flex h-full w-full flex-col gap-3 p-4 text-start enabled:hover:bg-row-hover disabled:cursor-default ${
+                    d.average < 3 ? "border-danger" : ""
+                  }`}
                 >
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-medium">{d.name}</span>
-                    <span dir="ltr" className="block text-xs text-ink-muted">
-                      {d.phone}
+                  <span className="flex w-full items-center gap-3">
+                    <span
+                      className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full font-bold ${avatarTint(d.average)}`}
+                    >
+                      {(d.name || d.phone || "?").trim().charAt(0)}
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate font-bold">{d.name}</span>
+                      <span dir="ltr" className="block text-2xs text-ink-muted">
+                        {d.phone}
+                      </span>
+                    </span>
+                    {/* **المتوسّطُ برقمه** — والنجومُ تُقرَّب فتكذب قليلاً. */}
+                    <span dir="ltr" className={`figure shrink-0 ${starTone(d.average)}`}>
+                      {d.average.toFixed(1)}
                     </span>
                   </span>
-                  <Stars value={Math.round(d.average)} />
-                  {/* **المتوسّطُ برقمه** — والنجومُ تُقرَّب فتكذب قليلاً. */}
-                  <span
-                    dir="ltr"
-                    className={`shrink-0 font-bold tabular-nums ${
-                      d.average < 3 ? "text-danger" : d.average < 4 ? "text-warning" : "text-success"
-                    }`}
-                  >
-                    {d.average.toFixed(1)}
+                  <span className="flex w-full flex-wrap items-center justify-between gap-2 rounded-control bg-field px-3 py-2">
+                    <StarRow n={Math.round(d.average)} />
+                    <span className="text-xs text-ink-muted">{R.ofCount.replace("{n}", fmtNum(d.count))}</span>
+                    {d.low > 0 && <Badge variant="danger">{R.lowBadge.replace("{n}", fmtNum(d.low))}</Badge>}
                   </span>
-                  <span className="shrink-0 text-xs text-ink-muted">
-                    {R.ofCount.replace("{n}", fmtNum(d.count))}
-                  </span>
-                  {d.low > 0 && (
-                    <Badge variant="danger">{R.lowBadge.replace("{n}", fmtNum(d.low))}</Badge>
-                  )}
                 </button>
               </li>
             ))}
@@ -197,48 +231,41 @@ export function RatingsView() {
           **ولا يُرسم فارغاً** — قسمٌ صفريٌّ يُقرأ عطباً، **وهو فارغٌ حتّى
           يبدأ السائقون بالتقييم.** */}
       {data.stores.length > 0 && (
-        <section>
-          <h2 className="mb-3 font-bold">{R.storesTitle}</h2>
-          <ul className="divide-y divide-line surface">
+        <section className="space-y-3">
+          <div>
+            <h2 className="heading-section">{R.storesTitle}</h2>
+            <p className="text-xs text-ink-muted">{R.storesHint}</p>
+          </div>
+          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {data.stores.map((x) => (
               <li key={x.id}>
                 <button
+                  type="button"
                   onClick={() => router.push(`/dashboard/merchants/${x.id}`)}
-                  className="flex w-full flex-wrap items-center gap-3 px-3 py-2.5 text-start hover:bg-row-hover"
+                  className={`surface flex h-full w-full flex-col gap-3 p-4 text-start hover:bg-row-hover ${
+                    Math.min(x.speed, x.conduct) < 3 ? "border-danger" : ""
+                  }`}
                 >
-                  <span className="min-w-0 flex-1 font-medium">{x.name}</span>
-                  <span className="shrink-0 text-xs text-ink-muted">
-                    {R.speed}:{" "}
+                  <span className="flex w-full items-center gap-3">
                     <span
-                      dir="ltr"
-                      className={`font-bold tabular-nums ${
-                        x.speed < 3 ? "text-danger" : x.speed < 4 ? "text-warning" : "text-success"
-                      }`}
+                      className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${avatarTint(Math.min(x.speed, x.conduct))}`}
                     >
-                      {x.speed.toFixed(1)}
+                      <IconStore size={20} />
+                    </span>
+                    <span className="min-w-0 flex-1 truncate font-bold">{x.name}</span>
+                    {x.low > 0 && <Badge variant="danger">{R.lowBadge.replace("{n}", fmtNum(x.low))}</Badge>}
+                  </span>
+                  <span className="w-full space-y-1.5 rounded-control bg-field px-3 py-2 text-xs">
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="text-ink-muted">{R.speed}</span>
+                      <StarRow n={x.speed} />
+                    </span>
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="text-ink-muted">{R.conduct}</span>
+                      <StarRow n={x.conduct} />
                     </span>
                   </span>
-                  <span className="shrink-0 text-xs text-ink-muted">
-                    {R.conduct}:{" "}
-                    <span
-                      dir="ltr"
-                      className={`font-bold tabular-nums ${
-                        x.conduct < 3
-                          ? "text-danger"
-                          : x.conduct < 4
-                            ? "text-warning"
-                            : "text-success"
-                      }`}
-                    >
-                      {x.conduct.toFixed(1)}
-                    </span>
-                  </span>
-                  <span className="shrink-0 text-xs text-ink-muted">
-                    {R.ofCount.replace("{n}", fmtNum(x.count))}
-                  </span>
-                  {x.low > 0 && (
-                    <Badge variant="danger">{R.lowBadge.replace("{n}", fmtNum(x.low))}</Badge>
-                  )}
+                  <span className="text-2xs text-ink-muted">{R.ofCount.replace("{n}", fmtNum(x.count))}</span>
                 </button>
               </li>
             ))}
@@ -246,33 +273,39 @@ export function RatingsView() {
         </section>
       )}
 
-      <section>
-        <h2 className="mb-3 font-bold">{R.lowTitle}</h2>
-        <p className="mb-3 text-xs text-ink-muted">{R.lowHint}</p>
+      <section className="space-y-3">
+        <div>
+          <h2 className="heading-section">{R.lowTitle}</h2>
+          <p className="text-xs text-ink-muted">{R.lowHint}</p>
+        </div>
         {data.comments.length === 0 ? (
-          <EmptyState icon={IconStar} title={R.noLow} />
+          <EmptyCircle icon={IconStar} title={R.noLow} hint={R.noLowHint} />
         ) : (
-          <ul className="space-y-2">
+          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {data.comments.map((c, i) => (
-              <li key={i} className="surface p-3">
-                <div className="mb-1 flex flex-wrap items-center gap-2 text-sm">
-                  <span dir="ltr" className="flex items-center gap-1 font-bold tabular-nums">
-                    <IconOrder size={13} />#{fmtRef(c.order_number)}
+              <li key={i} className="surface flex flex-col gap-2 border-danger p-4 text-sm">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="min-w-0">
+                    <span dir="ltr" className="flex items-center gap-1 font-bold tabular-nums">
+                      <IconOrder size={13} />#{fmtRef(c.order_number)}
+                    </span>
+                    <span className="block truncate text-ink-muted">{c.customer}</span>
                   </span>
-                  <span className="text-ink-muted">{c.customer}</span>
                   {c.driver && <Badge variant="neutral">{c.driver}</Badge>}
-                  <span className="ms-auto flex items-center gap-2">
-                    <span className="text-xs text-ink-muted">{R.platform}</span>
-                    <Stars value={c.platform_stars} />
-                    {c.driver_stars != null && (
-                      <>
-                        <span className="text-xs text-ink-muted">{R.driver}</span>
-                        <Stars value={c.driver_stars} />
-                      </>
-                    )}
-                  </span>
                 </div>
-                <p dir="ltr" className="mt-1 text-xs text-ink-muted">
+                <div className="space-y-1 rounded-control bg-field px-3 py-2 text-xs">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-ink-muted">{R.platform}</span>
+                    <StarRow n={c.platform_stars} />
+                  </div>
+                  {c.driver_stars != null && (
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-ink-muted">{R.driver}</span>
+                      <StarRow n={c.driver_stars} />
+                    </div>
+                  )}
+                </div>
+                <p dir="ltr" className="text-2xs text-ink-muted">
                   {fmtDateTime(c.created_at)}
                 </p>
               </li>
