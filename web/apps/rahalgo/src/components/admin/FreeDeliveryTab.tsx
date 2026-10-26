@@ -5,21 +5,27 @@
  *
  * مفتاحٌ وبدايةٌ ونهاية، وما يشمله العرض، وسقفٌ اختياريّ. **مرّةٌ لكلّ زبونٍ بالعرض**،
  * و«عرض جديد» يُرجع للجميع حقَّ توصيلة. والعدّادُ: كم انعطى وكم دفعت المنصّة.
+ *
+ * **ولا زرَّ حفظ** (قرارُ المالك ٢٠٢٦-١٠-٢٧: «ما يلزم زر حفظ، في خيار تشغيل وإطفاء والمعلومات تحفظ
+ * تلقائي») — كلُّ تغييرٍ يُحفظ لحظتَه. **والمدّةُ تُختار بالساعات أو الأيّام** («نحط كم يوم العرض أو كم
+ * ساعة») وتبدأ من الآن، والتاريخُ يُقرأ جملةً مفهومة؛ و«تاريخ محدّد» لمن أراد البدايةَ والنهايةَ بيده.
  */
 
-import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtMoney, errorText } from "@rahalgo/i18n";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { getMessages, defaultLocale, fmtNum, fmtMoney, fmtDateTime, errorText } from "@rahalgo/i18n";
 import {
   Alert,
   Badge,
   Button,
   Checkbox,
+  Confirm,
   Input,
   LoadingState,
   Switch,
   IconWallet,
   IconPromos,
   IconMoto,
+  IconDate,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { Tile } from "@/components/admin/DashParts";
@@ -34,6 +40,17 @@ const KINDS = [
   { key: "merchant", label: F.kindMerchant },
 ] as const;
 
+/** **مُدَدٌ جاهزة بالساعات** — والعرضُ يبدأ من لحظة الاختيار. */
+const DURATIONS: { hours: number; label: string }[] = [
+  { hours: 3, label: F.dur3h },
+  { hours: 6, label: F.dur6h },
+  { hours: 12, label: F.dur12h },
+  { hours: 24, label: F.dur1d },
+  { hours: 72, label: F.dur3d },
+  { hours: 168, label: F.dur1w },
+  { hours: 720, label: F.dur1m },
+];
+
 interface Campaign {
   id: string;
   active: boolean;
@@ -46,6 +63,14 @@ interface Campaign {
   waived: number;
 }
 
+interface Form {
+  active: boolean;
+  starts: string; // ISO
+  ends: string; // ISO
+  kinds: string[];
+  maxFee: string;
+}
+
 /** **تاريخُ الحقل بتوقيت الجهاز** — `datetime-local` لا يقرأ المنطقة. */
 function toLocal(iso: string): string {
   const d = new Date(iso);
@@ -53,33 +78,46 @@ function toLocal(iso: string): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function blank() {
+function blank(): Form {
   const now = new Date();
-  const week = new Date(now.getTime() + 7 * 24 * 3600 * 1000);
   return {
     active: false,
-    starts: toLocal(now.toISOString()),
-    ends: toLocal(week.toISOString()),
-    kinds: ["standard"] as string[],
+    starts: now.toISOString(),
+    ends: new Date(now.getTime() + 7 * 24 * 3600 * 1000).toISOString(),
+    kinds: ["standard"],
     maxFee: "",
   };
 }
 
+/** **كم باقي** — «يومين و٥ ساعات» · «٣ ساعات» · «انتهى». */
+function leftLabel(endIso: string): string {
+  const ms = new Date(endIso).getTime() - Date.now();
+  if (ms <= 0) return F.ended;
+  const h = Math.floor(ms / 3_600_000);
+  const d = Math.floor(h / 24);
+  const rh = h % 24;
+  if (d > 0) return F.leftDays.replace("{d}", fmtNum(d)).replace("{h}", fmtNum(rh));
+  if (h > 0) return F.leftHours.replace("{h}", fmtNum(h));
+  return F.leftMinutes.replace("{m}", fmtNum(Math.max(1, Math.floor(ms / 60_000))));
+}
+
 export default function FreeDeliveryTab() {
   const [campaign, setCampaign] = useState<Campaign | null>(null);
-  const [form, setForm] = useState(blank);
+  const [form, setForm] = useState<Form>(blank);
   const [loaded, setLoaded] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [state, setState] = useState<"" | "saving" | "saved">("");
   const [error, setError] = useState("");
-  const [saved, setSaved] = useState(false);
+  const [custom, setCustom] = useState(false);
+  const [askNew, setAskNew] = useState(false);
+  const busy = useRef(false);
 
   const fill = useCallback((c: Campaign | null) => {
     setCampaign(c);
     if (c) {
       setForm({
         active: c.active,
-        starts: toLocal(c.starts_at),
-        ends: toLocal(c.ends_at),
+        starts: c.starts_at,
+        ends: c.ends_at,
         kinds: c.kinds,
         maxFee: c.max_fee ? String(c.max_fee) : "",
       });
@@ -94,16 +132,19 @@ export default function FreeDeliveryTab() {
   }, [fill]);
   useEffect(load, [load]);
 
-  async function save(asNew: boolean) {
-    setBusy(true);
+  /** **يُحفظ لحظتَه** — أوّلُ تغييرٍ بلا عرضٍ يُنشئه، وما بعده يعدّله. */
+  async function persist(next: Form, asNew = false) {
+    if (busy.current) return;
+    busy.current = true;
+    setForm(next);
+    setState("saving");
     setError("");
-    setSaved(false);
     const body = {
-      active: form.active,
-      starts_at: new Date(form.starts).toISOString(),
-      ends_at: new Date(form.ends).toISOString(),
-      kinds: form.kinds,
-      max_fee: form.maxFee.trim() ? Number(form.maxFee) : null,
+      active: next.active,
+      starts_at: next.starts,
+      ends_at: next.ends,
+      kinds: next.kinds,
+      max_fee: next.maxFee.trim() ? Number(next.maxFee) : null,
     };
     try {
       const r =
@@ -114,90 +155,134 @@ export default function FreeDeliveryTab() {
             })
           : await api<{ campaign: Campaign }>("/api/v1/admin/free-delivery", { method: "POST", body: JSON.stringify(body) });
       fill(r.campaign);
-      setSaved(true);
+      setState("saved");
     } catch (e) {
       setError(errorText(e));
+      setState("");
+      load();
     } finally {
-      setBusy(false);
+      busy.current = false;
     }
   }
 
+  function pickDuration(hours: number) {
+    const now = new Date();
+    setCustom(false);
+    void persist({ ...form, starts: now.toISOString(), ends: new Date(now.getTime() + hours * 3_600_000).toISOString() });
+  }
+
   function toggleKind(k: string, on: boolean) {
-    setForm((f) => ({ ...f, kinds: on ? [...f.kinds, k] : f.kinds.filter((x) => x !== k) }));
+    const kinds = on ? [...form.kinds, k] : form.kinds.filter((x) => x !== k);
+    if (kinds.length === 0) return;
+    void persist({ ...form, kinds });
   }
 
   if (!loaded) return <LoadingState variant="stats" />;
 
-  // تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦) — بطاقةُ حالةٍ كبيرة، ورقمان بمربّعات، والإعداداتُ ببطاقةٍ واحدة.
   const running = campaign?.running ?? false;
+  const spanHours = Math.round((new Date(form.ends).getTime() - new Date(form.starts).getTime()) / 3_600_000);
   return (
     <div className="space-y-4">
       {error && <Alert tone="error">{error}</Alert>}
-      {saved && <Alert tone="success">{F.saved}</Alert>}
 
-      <section className="surface flex items-start gap-3 p-4">
+      {/* ── الحالُ بنظرة: شغّال أو لا، ومن إيمتى لإيمتى، وكم باقي ── */}
+      <section className="surface flex flex-wrap items-center gap-4 p-4">
         <span
-          className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${
+          className={`inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full ${
             running ? "bg-success-solid text-on-solid" : "bg-field text-ink-muted"
           }`}
         >
-          <IconMoto size={24} />
+          <IconMoto size={26} />
         </span>
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 space-y-1">
           <h2 className="heading-card flex flex-wrap items-center gap-2">
             {m.admin.promos.tabFreeDelivery}
-            {campaign && (
-              <Badge variant={running ? "success" : "neutral"}>{running ? F.running : F.notRunning}</Badge>
-            )}
+            <Badge variant={running ? "success" : "neutral"}>{running ? F.running : F.notRunning}</Badge>
           </h2>
-          <p className="mt-1 text-sm text-ink-muted">{F.hint}</p>
-          {!campaign && <p className="mt-1 text-sm font-medium">{F.none}</p>}
+          {campaign ? (
+            <p className="text-sm">
+              {F.fromTo.replace("{from}", fmtDateTime(form.starts)).replace("{to}", fmtDateTime(form.ends))}
+              {running && <b className="text-success"> · {leftLabel(form.ends)}</b>}
+            </p>
+          ) : (
+            <p className="text-sm font-medium">{F.none}</p>
+          )}
+          <p className="text-xs text-ink-muted">{F.hint}</p>
+        </div>
+        <div className="flex shrink-0 items-center gap-3 rounded-control bg-field px-3 py-2">
+          <Switch checked={form.active} onChange={(v) => void persist({ ...form, active: v })} label={F.active} />
         </div>
       </section>
 
       {campaign && (
         <div className="grid grid-cols-2 gap-2">
-          <Tile
-            icon={IconPromos}
-            label={F.claims}
-            value={fmtNum(campaign.claims)}
-            tone={campaign.claims > 0 ? "accent" : "muted"}
-          />
-          <Tile
-            icon={IconWallet}
-            label={F.waived}
-            value={fmtMoney(campaign.waived)}
-            tone={campaign.waived > 0 ? "success" : "muted"}
-          />
+          <Tile icon={IconPromos} label={F.claims} value={fmtNum(campaign.claims)} tone={campaign.claims > 0 ? "accent" : "muted"} />
+          <Tile icon={IconWallet} label={F.waived} value={fmtMoney(campaign.waived)} tone={campaign.waived > 0 ? "success" : "muted"} />
         </div>
       )}
 
-      <section className="surface space-y-4 p-4">
-        <h2 className="heading-card">{F.formTitle}</h2>
-        <div className="rounded-control bg-field p-3">
-          <Switch
-            checked={form.active}
-            onChange={(v) => setForm((f) => ({ ...f, active: v }))}
-            label={F.active}
-            hint={F.activeHint}
-          />
+      <section className="surface space-y-5 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="heading-card">{F.formTitle}</h2>
+          <span className={`text-xs ${state === "saved" ? "text-success" : "text-ink-muted"}`}>
+            {state === "saving" ? F.autoSaving : state === "saved" ? F.autoSaved : F.autoSaveHint}
+          </span>
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Input
-            type="datetime-local"
-            label={F.startsAt}
-            value={form.starts}
-            onChange={(e) => setForm((f) => ({ ...f, starts: e.target.value }))}
-          />
-          <Input
-            type="datetime-local"
-            label={F.endsAt}
-            value={form.ends}
-            onChange={(e) => setForm((f) => ({ ...f, ends: e.target.value }))}
-          />
+
+        {/* ── المدّة ── */}
+        <div className="space-y-2">
+          <p className="flex items-center gap-1.5 text-sm font-bold">
+            <IconDate size={15} />
+            {F.durationTitle}
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {DURATIONS.map((d) => {
+              const on = !custom && campaign != null && Math.abs(spanHours - d.hours) < 1;
+              return (
+                <button
+                  key={d.hours}
+                  type="button"
+                  onClick={() => pickDuration(d.hours)}
+                  className={`rounded-full px-3 py-1.5 text-sm font-bold transition-colors ${
+                    on ? "bg-accent text-on-bright" : "border border-line-soft text-ink-muted hover:bg-row-hover hover:text-ink"
+                  }`}
+                >
+                  {d.label}
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              onClick={() => setCustom((c) => !c)}
+              className={`rounded-full px-3 py-1.5 text-sm font-bold transition-colors ${
+                custom ? "bg-accent text-on-bright" : "border border-line-soft text-ink-muted hover:bg-row-hover hover:text-ink"
+              }`}
+            >
+              {F.durCustom}
+            </button>
+          </div>
+          <p className="text-xs text-ink-muted">{F.durationHint}</p>
+          {custom && (
+            <div className="grid grid-cols-1 gap-3 rounded-control bg-field p-3 sm:grid-cols-2">
+              <Input
+                type="datetime-local"
+                label={F.startsAt}
+                value={toLocal(form.starts)}
+                onChange={(e) => e.target.value && void persist({ ...form, starts: new Date(e.target.value).toISOString() })}
+              />
+              <Input
+                type="datetime-local"
+                label={F.endsAt}
+                value={toLocal(form.ends)}
+                onChange={(e) => e.target.value && void persist({ ...form, ends: new Date(e.target.value).toISOString() })}
+              />
+            </div>
+          )}
         </div>
-        <div>
-          <p className="mb-2 text-sm font-bold">{F.kinds}</p>
+
+        {/* ── ما يشمله ── */}
+        <div className="space-y-2">
+          <p className="text-sm font-bold">{F.kinds}</p>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {KINDS.map((k) => (
               <div key={k.key} className="rounded-control border border-line-soft px-3 py-2">
@@ -211,6 +296,8 @@ export default function FreeDeliveryTab() {
             ))}
           </div>
         </div>
+
+        {/* ── السقف ── يُحفظ عند الخروج من الخانة */}
         <div>
           <Input
             type="number"
@@ -219,21 +306,36 @@ export default function FreeDeliveryTab() {
             label={F.maxFee}
             value={form.maxFee}
             onChange={(e) => setForm((f) => ({ ...f, maxFee: e.target.value }))}
+            onBlur={() => {
+              const was = campaign?.max_fee ? String(campaign.max_fee) : "";
+              if (form.maxFee.trim() !== was) void persist(form);
+            }}
           />
           <p className="mt-1 text-xs text-ink-muted">{F.maxFeeHint}</p>
         </div>
-        <div className="grid grid-cols-1 gap-2 border-t border-line-soft pt-4 sm:grid-cols-2">
-          <Button className="w-full" onClick={() => save(false)} disabled={busy}>
-            {F.save}
-          </Button>
-          {campaign && (
-            <Button variant="secondary" className="w-full" onClick={() => save(true)} disabled={busy}>
+
+        {campaign && (
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t border-line-soft pt-4">
+            <p className="min-w-0 flex-1 text-xs text-ink-muted">{F.createNewHint}</p>
+            <Button variant="secondary" onClick={() => setAskNew(true)}>
               {F.createNew}
             </Button>
-          )}
-        </div>
-        {campaign && <p className="text-xs text-ink-muted">{F.createNewHint}</p>}
+          </div>
+        )}
       </section>
+
+      <Confirm
+        open={askNew}
+        tone="primary"
+        title={F.createNew}
+        body={F.createNewHint}
+        confirmLabel={F.createNew}
+        onCancel={() => setAskNew(false)}
+        onConfirm={() => {
+          setAskNew(false);
+          void persist({ ...form, starts: new Date().toISOString() }, true);
+        }}
+      />
     </div>
   );
 }
