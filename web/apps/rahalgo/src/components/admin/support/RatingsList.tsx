@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useState, type ComponentType } from "react";
 import Link from "next/link";
-import { getMessages, defaultLocale, fmtRef, fmtDateTime, errorText, storeLabel } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime, errorText, storeLabel } from "@rahalgo/i18n";
 import {
   Badge,
   Chips,
@@ -163,12 +163,15 @@ export function RatingsList({
 
   return (
     <section className="space-y-3">
-      <h2 className="heading-section">{L.title}</h2>
-
-      {/* **الفلاترُ كلُّها في بطاقةٍ واحدة** — العرض، والنوع، ومين. */}
-      <div className="surface relative z-30 space-y-3 p-4">
+      {/* **الفلاترُ بسطرٍ واحدٍ مرتّب** (المالك ٢٠٢٦-١٠-٢٧: «التصميم الاحترافي») — العنوانُ فوق، ثمّ «الكل /
+          الضعيفة» و«نوع التقييم» أزرارٌ بفاصل، ثمّ اختيارُ السائق والمتجر. */}
+      <div className="surface relative z-30 overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line-soft px-4 py-3">
+          <h2 className="heading-card">{L.title}</h2>
+          {data && <Badge variant="neutral">{L.shown.replace("{n}", fmtNum(data.total))}</Badge>}
+        </div>
+        <div className="space-y-3 p-4">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="w-20 shrink-0 text-xs text-ink-muted">{L.filterShow}</span>
           <Chips
             items={[
               { id: "all", label: L.all },
@@ -181,9 +184,7 @@ export function RatingsList({
             }}
             wrap
           />
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="w-20 shrink-0 text-xs text-ink-muted">{L.filterKind}</span>
+          <span className="mx-1 hidden h-6 w-px bg-line-soft sm:block" aria-hidden />
           <Chips
             items={[
               { id: "", label: L.kindAll },
@@ -201,7 +202,6 @@ export function RatingsList({
         </div>
         {(drivers.length > 0 || stores.length > 0) && (
           <div className="flex flex-wrap items-center gap-2">
-            <span className="w-20 shrink-0 text-xs text-ink-muted">{L.filterWho}</span>
             <div className="grid min-w-0 flex-1 grid-cols-1 gap-2 sm:grid-cols-2">
               {drivers.length > 0 && (
                 <SearchSelect
@@ -230,6 +230,7 @@ export function RatingsList({
             </div>
           </div>
         )}
+        </div>
       </div>
 
       {error && !data ? (

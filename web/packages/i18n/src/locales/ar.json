@@ -4998,8 +4998,13 @@
         "kindDriver": "تقييم السائق",
         "kindStore": "تقييم المتجر",
         "anyDriver": "كل السائقين",
-        "anyStore": "كل المتاجر"
-      }
+        "anyStore": "كل المتاجر",
+        "shown": "{n} تقييم"
+      },
+      "headTitle": "تقييم المنصة",
+      "outOf5": "من 5",
+      "headTotal": "{n} تقييم",
+      "headLow": "{n} ضعيف (نجمتين أو أقل)"
     },
     "merchantProfile": {
       "back": "إلى الحسابات",

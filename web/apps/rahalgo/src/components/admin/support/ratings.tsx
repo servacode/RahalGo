@@ -43,7 +43,6 @@ import {
   IconStore,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
-import { Tile } from "@/components/admin/DashParts";
 import { RatingsList, StarRow, EmptyCircle, starTone } from "./RatingsList";
 
 const m = getMessages(defaultLocale);
@@ -124,33 +123,55 @@ export function RatingsView() {
 
   return (
     <PageContainer>
-      <p className="mb-4 text-sm text-ink-muted">{R.hint}</p>
-
-      <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <Tile
-          icon={IconStar}
-          label={R.total}
-          value={fmtNum(data.total)}
-          sub={R.totalSub}
-          tone={data.total > 0 ? "accent" : "muted"}
-          onClick={() => setLow(false)}
-        />
-        <Tile
-          icon={IconStar}
-          label={R.average}
-          value={data.has_average ? data.average.toFixed(1) : "—"}
-          sub={R.averageSub}
-          tone={!data.has_average ? "muted" : data.average < 3 ? "danger" : data.average < 4 ? "warning" : "success"}
-        />
-        <Tile
-          icon={IconWarning}
-          label={R.lowCount}
-          value={fmtNum(data.low)}
-          sub={R.lowSub}
-          tone={data.low > 0 ? "danger" : "muted"}
-          onClick={() => setLow(true)}
-        />
-      </div>
+      {/* **رأسٌ واحدٌ احترافيّ** (المالك ٢٠٢٦-١٠-٢٧) — متوسّطُ المنصّة كبيراً بنجومه، وعددُ التقييمات
+          والضعيفةُ شارتان تُضغطان. */}
+      <section className="surface mb-4 flex flex-wrap items-center gap-4 p-4">
+        <span
+          className={`inline-flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-full ${
+            !data.has_average
+              ? "bg-field text-ink-muted"
+              : data.average < 3
+                ? "bg-danger-solid text-on-solid"
+                : data.average < 4
+                  ? "bg-warning-solid text-on-solid"
+                  : "bg-success-solid text-on-solid"
+          }`}
+        >
+          <span className="figure leading-none" dir="ltr">
+            {data.has_average ? data.average.toFixed(1) : "\u2014"}
+          </span>
+          <span className="text-2xs">{R.outOf5}</span>
+        </span>
+        <div className="min-w-0 flex-1 space-y-1">
+          <h2 className="heading-card">{R.headTitle}</h2>
+          {data.has_average && <StarRow n={data.average} />}
+          <p className="text-sm text-ink-muted">{R.hint}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setLow(false)}
+            className={`rounded-full px-3 py-1.5 text-sm font-bold ${
+              !low ? "bg-accent text-on-bright" : "border border-line-soft text-ink-muted hover:bg-row-hover"
+            }`}
+          >
+            {R.headTotal.replace("{n}", fmtNum(data.total))}
+          </button>
+          <button
+            type="button"
+            onClick={() => setLow(true)}
+            className={`rounded-full px-3 py-1.5 text-sm font-bold ${
+              low
+                ? "bg-danger-solid text-on-solid"
+                : data.low > 0
+                  ? "border border-danger text-danger hover:bg-row-hover"
+                  : "border border-line-soft text-ink-muted"
+            }`}
+          >
+            {R.headLow.replace("{n}", fmtNum(data.low))}
+          </button>
+        </div>
+      </section>
 
       {/* **كلُّ تقييمٍ بسطره أوّلاً** (المالك ٢٠٢٦-١٠-٢٥) — ثمّ المعدّلاتُ بالسائق وبالمتجر. */}
       <RatingsList canProfile={canProfile} low={low} onLow={setLow} />
