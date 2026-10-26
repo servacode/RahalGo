@@ -33,8 +33,8 @@
     "setting_defs": 250,
     "behaviour_settings": 205,
     "order_fields": 120,
-    "test_files": 649,
-    "test_funcs": 2504
+    "test_files": 650,
+    "test_funcs": 2507
   },
   "flows": [
     {
@@ -23738,6 +23738,24 @@
     {
       "name": "TestSNAP_015_MobileKnowsNothing",
       "file": "internal/qa/snap_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestADVANCE_DriverAdvanceGoesNegativeAndFillsBack",
+      "file": "internal/qa/staff_advance_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestADVANCE_RejectedForCustomer",
+      "file": "internal/qa/staff_advance_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestADVANCE_StaffAndRepEligible",
+      "file": "internal/qa/staff_advance_test.go",
       "package": "qa",
       "orphan": true
     },

@@ -168,6 +168,7 @@ const SERVER_ADMIN = new Set([
   // **قسمُ الحسابات** (قراراتُ المالك ٢٠٢٦-١٠-٠٤) — أبوابُ اللوحة وحدَها.
   "phone_change_pending", "second_person_required", "wallet_note_required",
   "wallet_over_cap", "wallet_payout_not_here", "self_approve", "request_decided",
+  "advance_not_eligible",
   "obligation_closed", "obligation_over_amount", "obligation_note_required",
   "obligation_request_pending", "writeoff_owner_only",
   "idempotency_key_required",

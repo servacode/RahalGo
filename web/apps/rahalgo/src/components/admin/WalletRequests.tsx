@@ -24,7 +24,7 @@ export interface WalletRequestRow {
   id: string;
   user_id: string;
   user_name: string;
-  kind: "topup" | "compensation" | "adjustment";
+  kind: "topup" | "compensation" | "adjustment" | "advance";
   debit: boolean;
   amount: number;
   note: string;
@@ -114,7 +114,7 @@ export function WalletRequestsList({
         <ul className="divide-y divide-line">
           {rows.map((r) => (
             <li key={r.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2 text-sm">
-              <Badge variant={r.kind === "adjustment" && r.debit ? "danger" : "success"}>{kindLabel(r)}</Badge>
+              <Badge variant={r.debit ? "danger" : "success"}>{kindLabel(r)}</Badge>
               <span className="font-bold" dir="ltr">
                 {fmtMoney(r.amount)}
               </span>

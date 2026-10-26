@@ -141,6 +141,16 @@ var Kinds = map[string]KindContract{
 		Invariants: []string{"FI-01.g", "FI-05.k", "FI-11.h"},
 		Reachable:  true,
 	},
+	// **السلفة** — قرارُ المالك ٢٠٢٦-١٠-٢٦.
+	"advance": {
+		Kind: "advance", Sign: "-", RefRequired: true, RefTarget: "wallet_requests",
+		Creators: []string{"internal/wallet/wallet.go", "internal/server/accounts_wallet_requests.go"},
+		Path:     "POST /admin/wallet-requests/{id}/approve",
+		Semantics: "سلفةٌ نقداً من درج المكتب لسائقٍ أو مندوبٍ أو موظّف — **تُنقص محفظتَه ولو صارت سالبة، " +
+			"ويقابلها سطرٌ خارجٌ من الصندوق، ولا تمسّ الخزينة** (كالسحب النقديّ).",
+		Invariants: []string{"FI-02.a", "FI-02.b", "FI-15.i"},
+		Reachable:  true,
+	},
 	"adjustment": {
 		Kind: "adjustment", Sign: "±", RefRequired: false,
 		Creators:   []string{"internal/server/accounts_wallet_requests.go", "internal/server/disputes.go", "internal/server/obligations_actions.go", "internal/obligations/credit.go"},

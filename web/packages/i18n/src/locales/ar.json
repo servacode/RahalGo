@@ -327,7 +327,8 @@
       "merchant_cash_accrued": "مستحق نقدي للمتجر",
       "merchant_cash_paid": "دفع نقدي للمتجر",
       "payout_reversal": "إرجاع سحب",
-      "treasury_withdrawal": "سحب الأدمن من رصيد الخزينة"
+      "treasury_withdrawal": "سحب الأدمن من رصيد الخزينة",
+      "advance": "سلفة"
     },
     "live": "مباشر",
     "liveOff": "غير متصل",
@@ -1100,7 +1101,8 @@
     "price_sync_agent_missing": "برنامج المزامنة مو جاهز للتحميل هلّق — جرّب بعد شوي",
     "price_sync_query": "جملة القراءة لازم تكون قراءة بس (SELECT) بلا أي تعديل",
     "door_report_pending": "بلاغ السائق عند الإدارة — لا تسليم قبل قرارها",
-    "free_delivery_invalid": "تأكد إنو تاريخ النهاية بعد البداية، واختار شي واحد على الأقل يشمله العرض"
+    "free_delivery_invalid": "تأكد إنو تاريخ النهاية بعد البداية، واختار شي واحد على الأقل يشمله العرض",
+    "advance_not_eligible": "السلفة بس للموظفين والسائقين والمندوبين"
   },
   "admin": {
     "sliderPanel": {
@@ -4447,7 +4449,13 @@
       "cardWallet": "إله بمحفظته (أجوره)",
       "netDriverPays": "بالصافي: السائق بيسلّم للمكتب {n}",
       "netOfficePays": "بالصافي: المكتب بيدفع للسائق {n}",
-      "netEven": "بالصافي: ما حدا إله شي"
+      "netEven": "بالصافي: ما حدا إله شي",
+      "pickDriver": "اختار سائق من القائمة",
+      "cardNet": "الصافي",
+      "netDriverPaysShort": "السائق بيسلّم للمكتب",
+      "netOfficePaysShort": "المكتب بيدفع للسائق",
+      "statementTitle": "كشف نقد السائق",
+      "statementEmpty": "ما في حركات نقد لهالسائق"
     },
     "losses": {
       "title": "خسائر المنصة",
@@ -6488,13 +6496,23 @@
       "kinds": {
         "topup": "شحن نقدي",
         "compensation": "تعويض",
-        "adjustment": "تسوية"
+        "adjustment": "تسوية",
+        "advance": "سلفة"
       },
       "txUnknown": "حركة",
       "tempPasswordLabel": "كلمة السر المؤقتة",
       "tempPasswordHint": "الرسالة لم تصل — أعطِ هذه الكلمة لصاحب الحساب بنفسك. يُطلب منه تغييرها عند أوّل دخول.",
       "tempPasswordCopy": "نسخ",
-      "tempPasswordCopied": "نُسخت"
+      "tempPasswordCopied": "نُسخت",
+      "advance": {
+        "button": "سلفة",
+        "title": "سلفة لـ {name}",
+        "hint": "المكتب بيعطيه المبلغ نقداً من الدرج، ومحفظته بتنقص فيه ولو صارت بالسالب. كل مصاري بتدخل محفظته بعدين بتسد السالب أول، وما بيقدر يسحب لحتى يرجع رصيده فوق الصفر. السلفة بتصير بعد موافقة شخص تاني.",
+        "amount": "المبلغ",
+        "reason": "سبب السلفة",
+        "submit": "اطلب السلفة",
+        "sent": "انبعت طلب السلفة، وبتنصرف بعد الموافقة"
+      }
     },
     "treasury": {
       "title": "الخزينة",
@@ -6653,7 +6671,8 @@
           "expense_cash": "مصروف نقداً",
           "advance_return": "سلفة رجعت للمكتب",
           "expense_cash_void": "إلغاء مصروف كاش",
-          "owner_deposit": "إيداع من المالك"
+          "owner_deposit": "إيداع من المالك",
+          "advance": "سلفة لموظف أو سائق أو مندوب"
         },
         "statuses": {
           "pending": "ينتظر المراجعة",

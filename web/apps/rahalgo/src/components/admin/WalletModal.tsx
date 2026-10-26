@@ -15,7 +15,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtMoney, errorText } from "@rahalgo/i18n";
-import { Alert, Button, Input, Select, Modal, IconWallet, Checkbox, FormSection } from "@rahalgo/ui";
+import { Alert, Button, Input, Select, Modal, IconWallet, Checkbox, FormSection, FormActions } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { WalletRequestsList } from "@/components/admin/WalletRequests";
 
@@ -150,6 +150,84 @@ export default function WalletModal({
           onDecided={() => void loadWallet()}
         />
       </FormSection>
+    </Modal>
+  );
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **السلفة** (قرارُ المالك ٢٠٢٦-١٠-٢٦)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **لموظّفٍ أو سائقٍ أو مندوب** — المكتبُ يعطيه نقداً من الدرج، ومحفظتُه تنقص ولو صارت
+ * سالبة، **وكلُّ مالٍ يدخلها بعدُ يسدّ السالبَ أوّلاً.** طلبٌ كغيره من حركات المحفظة
+ * (`kind: "advance"`) — **يوافق عليه غيرُ مقترِحه**، والمحرّكُ يردّ غيرَ المؤهَّل.
+ */
+export function AdvanceModal({
+  user,
+  onClose,
+}: {
+  user: { id: string; phone: string; full_name: string };
+  onClose: () => void;
+}) {
+  const V = A.advance;
+  const [amount, setAmount] = useState("");
+  const [note, setNote] = useState("");
+  const [error, setError] = useState("");
+  const [sent, setSent] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [cap, setCap] = useState<number | null>(null);
+  const [idemKey, setIdemKey] = useState(newKey);
+
+  useEffect(() => {
+    api<{ cap: number }>(`/api/v1/admin/wallet-requests?user_id=${user.id}`)
+      .then((r) => setCap(r?.cap ?? null))
+      // @empty-ok **والسقفُ تلميحٌ** — المحرّكُ يحرسه على كلّ حال.
+      .catch(() => setCap(null));
+  }, [user.id]);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError("");
+    setSent(false);
+    try {
+      await api(`/api/v1/admin/users/${user.id}/wallet`, {
+        method: "POST",
+        headers: { "Idempotency-Key": idemKey },
+        body: JSON.stringify({ amount: Number(amount) || 0, kind: "advance", debit: true, note: note.trim() }),
+      });
+      setAmount("");
+      setNote("");
+      setSent(true);
+      setIdemKey(newKey());
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} title={V.title.replace("{name}", user.full_name || user.phone)}>
+      <form onSubmit={submit} className="space-y-3">
+        <p className="text-xs leading-relaxed text-ink-muted">{V.hint}</p>
+        <Input
+          id="adv-amount"
+          label={`${V.amount} (${m.common.currency})`}
+          type="number"
+          min="1"
+          max={cap ?? undefined}
+          required
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+        />
+        <Input id="adv-note" label={V.reason} required value={note} onChange={(e) => setNote(e.target.value)} />
+        {cap !== null && <p className="text-xs text-ink-muted">{A.walletCap.replace("{cap}", fmtMoney(cap))}</p>}
+        {error && <Alert>{error}</Alert>}
+        {sent && <Alert tone="success">{V.sent}</Alert>}
+        <FormActions submit onCancel={onClose} busy={busy || !note.trim() || !(Number(amount) > 0)} saveLabel={V.submit} />
+      </form>
     </Modal>
   );
 }

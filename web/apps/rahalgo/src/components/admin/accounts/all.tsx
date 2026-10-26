@@ -58,11 +58,12 @@ import {
   FormActions,
   IconLock,
   IconHourglass,
+  IconHandshake,
 } from "@rahalgo/ui";
 import { api, apiFile, type AuthUser } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useCanCall } from "@/lib/policy";
-import WalletModal from "@/components/admin/WalletModal";
+import WalletModal, { AdvanceModal } from "@/components/admin/WalletModal";
 import { MerchantModal } from "@/components/admin/MerchantModal";
 import StatusReasonModal from "@/components/admin/StatusReasonModal";
 import RoleBadge, { ROLE_STYLES } from "@/components/admin/RoleBadge";
@@ -123,6 +124,7 @@ export default function AllAccountsTable() {
   const [error, setError] = useState("");
   const [createKind, setCreateKind] = useState<NewKind | null>(null);
   const [walletUser, setWalletUser] = useState<Row | null>(null);
+  const [advanceUser, setAdvanceUser] = useState<Row | null>(null);
   const [storeOpen, setStoreOpen] = useState(false);
   const [statusModal, setStatusModal] = useState<{ users: Row[]; status: string } | null>(null);
   const [activateRows, setActivateRows] = useState<Row[] | null>(null);
@@ -624,6 +626,17 @@ export default function AllAccountsTable() {
                         <IconWallet size={20} />
                       </Button>
                     )}
+                    {canWallet && u.roles.some((r) => r !== "customer" && r !== "merchant") && (
+                      <Button
+                        variant="ghost"
+                        onClick={() => setAdvanceUser(u)}
+                        title={A.advance.button}
+                        aria-label={A.advance.button}
+                        className="!h-11 !w-11 inline-flex items-center justify-center !min-h-0 !min-w-0 !flex-none !p-0 rounded-full text-ink-muted hover:text-ink"
+                      >
+                        <IconHandshake size={20} />
+                      </Button>
+                    )}
                     {canReset && u.id !== me?.id && (
                       <Button
                         variant="ghost"
@@ -733,6 +746,7 @@ export default function AllAccountsTable() {
         />
       )}
       {walletUser && <WalletModal user={walletUser} onClose={() => setWalletUser(null)} isAdmin={canWallet} />}
+      {advanceUser && <AdvanceModal user={advanceUser} onClose={() => setAdvanceUser(null)} />}
 
       {statusModal && (
         <StatusReasonModal

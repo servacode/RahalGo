@@ -133,12 +133,19 @@ var All = []Check{
 	},
 	{
 		ID: "FI-02.b", Family: FI02, Status: ProvableNow, Ops: true,
-		Name: "لا رصيدَ سالبٌ إلّا الخزينة",
-		Why:  "محفظةٌ بالسالب — ومالٌ صُرف ولم يكن موجوداً",
+		Name: "لا رصيدَ سالبٌ إلّا الخزينة — أو سلفةٌ لم تُسدَّد",
+		Why: "محفظةٌ بالسالب — ومالٌ صُرف ولم يكن موجوداً. **والسلفةُ وحدَها تُجيز السالب** " +
+			"(قرارُ المالك ٢٠٢٦-١٠-٢٦) حتّى قدرِ ما بقي منها، **وما بقي منها لا يتجاوز " +
+			"مجموعَ السلف المُوافَق عليها لصاحبها.**",
+		Kinds: []string{"advance"},
 		SQL: `
-			SELECT u.full_name, w.balance
+			SELECT u.full_name, w.balance, w.advance_owed
 			FROM wallets w JOIN users u ON u.id = w.user_id
-			WHERE w.balance < 0 AND NOT w.is_treasury`,
+			WHERE NOT w.is_treasury
+			  AND (w.balance < -w.advance_owed
+			       OR w.advance_owed > COALESCE((SELECT sum(wr.amount) FROM wallet_requests wr
+			                                      WHERE wr.user_id = w.user_id AND wr.kind = 'advance'
+			                                        AND wr.status = 'approved'), 0))`,
 	},
 	{
 		ID: "FI-02.c", Family: FI02, Status: ProvableNow, Ops: true,
@@ -878,6 +885,38 @@ var All = []Check{
 			                    AND c.ref = wr.id::text AND c.amount = wr.amount)`,
 	},
 	{
+		ID: "FI-15.i", Family: FI15, Status: ProvableNow, Ops: true,
+		Name: "سلفةٌ مُوافَقٌ عليها خرجت من الدرج ونقصت بها المحفظة",
+		Why: "سلفةٌ بلا سطرٍ خارجٍ بمقدارها أو بلا قيدِ `advance` في محفظة صاحبها، " +
+			"أو قيدُ سلفةٍ بلا طلبٍ مُوافَق — **نقدٌ خرج ولم يُكتب على أحد** (قرارُ المالك ٢٠٢٦-١٠-٢٦).",
+		Kinds: []string{"advance"},
+		SQL: `
+			SELECT wr.id::text, wr.amount, 'طلب' AS المصدر
+			FROM wallet_requests wr
+			WHERE wr.kind = 'advance' AND wr.status = 'approved'
+			  AND (NOT EXISTS (SELECT 1 FROM office_cash_entries c
+			                   WHERE c.source = 'advance' AND c.direction = 'out'
+			                     AND c.ref = wr.id::text AND c.amount = wr.amount
+			                     AND c.user_id = wr.user_id)
+			    OR NOT EXISTS (SELECT 1 FROM wallet_transactions t
+			                   WHERE t.kind = 'advance' AND t.ref = wr.id::text
+			                     AND t.amount = -wr.amount AND t.user_id = wr.user_id))
+			UNION ALL
+			SELECT t.ref, -t.amount, 'قيد'
+			FROM wallet_transactions t
+			WHERE t.kind = 'advance'
+			  AND NOT EXISTS (SELECT 1 FROM wallet_requests wr
+			                  WHERE wr.id::text = t.ref AND wr.kind = 'advance'
+			                    AND wr.status = 'approved' AND wr.user_id = t.user_id)
+			UNION ALL
+			SELECT c.ref, c.amount, 'درج'
+			FROM office_cash_entries c
+			WHERE c.source = 'advance'
+			  AND NOT EXISTS (SELECT 1 FROM wallet_requests wr
+			                  WHERE wr.id::text = c.ref AND wr.kind = 'advance'
+			                    AND wr.status = 'approved')`,
+	},
+	{
 		ID: "FI-15.h", Family: FI15, Status: ProvableNow, Ops: true,
 		Name: "مصروفٌ كاشٌ خرج من الدرج، وإلغاؤه رجع إليه",
 		Why: "مصروفٌ دُفع من الدرج بلا سطرٍ خارجٍ بمقداره، أو أُلغي بلا سطرٍ يردّه، " +
@@ -1078,9 +1117,10 @@ var All = []Check{
 		// **والخزينةُ مستثناةٌ من `balance >= 0` بعقدها** — فتُستثنى
 		// هنا كما استُثنيت في القيد. **ولا حجزَ لها أصلاً**، ويحرسه
 		// `FI-11.e`.
+		// **ومن رصيدُه سالبٌ بسلفةٍ لا محجوزَ له** — والصفرُ لا يُقارَن بالسالب (`0474`).
 		SQL: `SELECT user_id::text, balance, reserved
 		        FROM wallets
-		       WHERE reserved < 0 OR (reserved > balance AND NOT is_treasury)`,
+		       WHERE reserved < 0 OR (reserved > 0 AND reserved > balance AND NOT is_treasury)`,
 	},
 	{
 		ID: "FI-11.e", Family: FI11, Status: ProvableNow, Ops: true,

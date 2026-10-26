@@ -301,6 +301,43 @@ func (s *Service) applyTx(ctx context.Context, q Querier, userID string, amount 
 	return balance, nil
 }
 
+// AdvanceTx **قيدُ السلفة** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — يُنقص المحفظةَ بالمبلغ
+// **ولو صارت سالبة**، داخل معاملة المستدعي.
+//
+// **وهو الوحيدُ الذي يرفع `advance_owed`** — في التحديث نفسِه الذي يُنقص الرصيد،
+// والمُطلِقُ يقصّه إلى ما صار سالباً فعلاً. **فمن كان رصيدُه ١٠٠ وأخذ ٥٠٠ صار
+// −٤٠٠ وسقفُه ٤٠٠** — ولا يقدر خصمٌ آخرُ أن ينزله أكثر.
+func (s *Service) AdvanceTx(ctx context.Context, q Querier, userID string, amount int64, ref, note string, actorID *string) (int64, error) {
+	if amount <= 0 {
+		return 0, ErrInvalidAmount
+	}
+	if _, err := q.Exec(ctx, `
+		INSERT INTO wallets (user_id) VALUES ($1)
+		ON CONFLICT (user_id) DO NOTHING`, userID); err != nil {
+		return 0, err
+	}
+	var balance int64
+	err := q.QueryRow(ctx, `
+		UPDATE wallets SET balance = balance - $2, advance_owed = advance_owed + $2, updated_at = now()
+		WHERE user_id = $1
+		RETURNING balance`, userID, amount).Scan(&balance)
+	if isCheckViolation(err) {
+		// **محجوزٌ لسحبٍ جارٍ لا يجتمع مع رصيدٍ سالب** — يُفكّ أو يُصرف أوّلاً.
+		return 0, ErrInsufficient
+	}
+	if err != nil {
+		return 0, err
+	}
+	var id int64
+	if err := q.QueryRow(ctx, `
+		INSERT INTO wallet_transactions (user_id, amount, kind, ref, note, created_by)
+		VALUES ($1, $2, 'advance', $3, $4, $5) RETURNING id`,
+		userID, -amount, ref, note, actorID).Scan(&id); err != nil {
+		return 0, err
+	}
+	return balance, nil
+}
+
 func isCheckViolation(err error) bool {
 	var pgErr *pgconn.PgError
 	return errors.As(err, &pgErr) && pgErr.Code == "23514"

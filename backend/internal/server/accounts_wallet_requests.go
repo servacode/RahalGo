@@ -14,6 +14,8 @@ package server
 //	compensation  ⇒ +المحفظة · −الخزينة (`platform_expense`) — **لا يُقترح جديداً من هنا**
 //	              (قرارُ المالك ٢٠٢٦-١٠-١٥): طريقُه صفحةُ التعويضات؛ والمعلَّقُ القديمُ يُقرَّر.
 //	adjustment    إيداعٌ ⇒ +المحفظة −الخزينة · خصمٌ ⇒ −المحفظة +الخزينة
+//	advance       سلفةٌ نقداً من الدرج ⇒ −المحفظة (ولو سالبة) · وسطرٌ خارجٌ من صندوق المكتب
+//	              (قرارُ المالك ٢٠٢٦-١٠-٢٦) — لسائقٍ أو مندوبٍ أو موظّفٍ وحدَهم
 //
 // **ولا سحبَ من هنا** — السحبُ بابُه صفحةُ السحب وحدَها.
 //
@@ -52,6 +54,27 @@ var (
 	errRequestDecided = httpx.NewError(http.StatusConflict,
 		"request_decided", "errors.request_decided")
 )
+
+// errAdvanceNotEligible **السلفةُ لموظّفٍ أو سائقٍ أو مندوب** — لا لزبونٍ ولا لصاحب متجر.
+var errAdvanceNotEligible = httpx.NewError(http.StatusBadRequest,
+	"advance_not_eligible", "errors.advance_not_eligible")
+
+// advanceEligible **من تجوز له السلفة**: من يحمل دوراً غيرَ «زبون» و«صاحب متجر» —
+// سائقٌ أو مندوبٌ أو أيُّ دورِ موظّف. **وحسابٌ غيرُ موجودٍ يُردّ كغير المؤهَّل.**
+func advanceEligible(ctx context.Context, q dbtx.Querier, userID string) error {
+	var ok bool
+	if err := q.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM user_roles ur
+		                 JOIN users u ON u.id = ur.user_id
+		                WHERE ur.user_id = $1::uuid AND u.deleted_at IS NULL
+		                  AND ur.role_code NOT IN ('customer', 'merchant'))`, userID).Scan(&ok); err != nil {
+		return err
+	}
+	if !ok {
+		return errAdvanceNotEligible
+	}
+	return nil
+}
 
 // walletManualMax سقفُ الحركة اليدويّة الواحدة — من الإعدادات.
 func (s *Server) walletManualMax(ctx context.Context) int64 {
@@ -132,7 +155,7 @@ func (s *Server) handleAdminWalletApply(w http.ResponseWriter, r *http.Request) 
 		// الأوّل. **والمعلَّقُ القديمُ من هذا النوع يُقرَّر كما كان** (`postWalletRequest`).
 		s.respondErr(w, errWalletCompensationHere)
 		return
-	case "topup", "adjustment":
+	case "topup", "adjustment", "advance":
 	default:
 		s.respondErr(w, errValidation)
 		return
@@ -150,9 +173,15 @@ func (s *Server) handleAdminWalletApply(w http.ResponseWriter, r *http.Request) 
 		s.respondErr(w, errWalletNoteRequired)
 		return
 	}
-	debit := req.Kind == "adjustment" && req.Debit
+	// **والسلفةُ خصمٌ دائماً** — نقدٌ خرج من الدرج إلى يده، ومحفظتُه تنقص به.
+	debit := (req.Kind == "adjustment" && req.Debit) || req.Kind == "advance"
 	actor := userIDFrom(r)
 	s.WithIdempotentTx(w, r, func(ctx context.Context, q dbtx.Querier) (IdempotentBody, error) {
+		if req.Kind == "advance" {
+			if err := advanceEligible(ctx, q, target); err != nil {
+				return IdempotentBody{}, err
+			}
+		}
 		var id string
 		if err := q.QueryRow(ctx, `
 			INSERT INTO wallet_requests (user_id, kind, debit, amount, note, proposed_by)
@@ -367,6 +396,22 @@ func (s *Server) postWalletRequest(ctx context.Context, q dbtx.Querier, wr walle
 		}
 		// **والشحنُ يسدّ الدَّينَ أوّلاً** (قسمُ الديون ٢٠٢٦-١٠-٠٤).
 		return s.payDebtFromTopup(ctx, q, wr.UserID, wr.Amount, wr.ID, actor)
+	case wr.Kind == "advance":
+		// **السلفة** (قرارُ المالك ٢٠٢٦-١٠-٢٦): المحفظةُ تنقص ولو صارت سالبة، **والنقدُ
+		// خرج من الدرج** بالمرجع نفسِه. **ولا قيدَ في الخزينة** — كالسحب النقديّ تماماً:
+		// خرج نقدٌ من الدرج ونقص ما للشخص بقدره، **وربحُ المنصّة لم يتبدّل.**
+		// (قيدُ خزينةٍ هنا كان سيُحسب ربحاً لم يقع.) **وإعادةُ الأهليّة عند الموافقة** —
+		// فمن نُزع دورُه بين الاقتراح والموافقة لا تُصرف له.
+		if err := advanceEligible(ctx, q, wr.UserID); err != nil {
+			return 0, err
+		}
+		if _, err := s.wallet.AdvanceTx(ctx, q, wr.UserID, wr.Amount, wr.ID, wr.Note, &actor); err != nil {
+			return 0, err
+		}
+		return 0, officecash.Record(ctx, q, officecash.Entry{
+			Direction: officecash.Out, Amount: wr.Amount, Source: officecash.SourceAdvance,
+			Ref: wr.ID, UserID: wr.UserID, Actor: actor, Note: wr.Note,
+		})
 	case wr.Kind == "adjustment" && wr.Debit:
 		if _, err := s.wallet.ApplyTx(ctx, q, wr.UserID, -wr.Amount, "adjustment", wr.ID, wr.Note, &actor); err != nil {
 			return 0, err
