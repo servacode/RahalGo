@@ -13,7 +13,7 @@
  * **وحركاتُ الأدمن الشخصيّة** (طلباته وشحنُه ومستردُّه) **تُوسَم «حركة شخصية»** — ليست ربحاً.
  */
 
-import { Fragment, useState } from "react";
+import { useState, type ReactNode } from "react";
 import { getMessages, defaultLocale, fmtDateTime, fmtMoney, errorText } from "@rahalgo/i18n";
 import {
   Alert,
@@ -25,8 +25,6 @@ import {
   Pagination,
   ReloadState,
   Select,
-  StatCard,
-  StatGrid,
   IconWallet,
   useLiveData,
 } from "@rahalgo/ui";
@@ -155,7 +153,9 @@ export function StatementTab() {
   return (
     <div className="space-y-4">
       {fail && <Alert onDismiss={() => setFail("")}>{fail}</Alert>}
-      <div className="flex flex-wrap items-end gap-3">
+
+      {/* **الفلاترُ ببطاقةٍ واحدة** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «صحّح الصفحة بحيث تكون مفهومة وعِد التصميم»). */}
+      <section className="surface flex flex-wrap items-end gap-3 p-3">
         <div className="w-40">
           <Input id="ts-from" type="date" label={m.shared.statement.from} value={from}
             onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
@@ -175,15 +175,11 @@ export function StatementTab() {
           </Select>
         </div>
         {canExport && (
-          <Button variant="secondary" onClick={download}>
+          <Button variant="secondary" onClick={download} className="ms-auto">
             {S.export}
           </Button>
         )}
-      </div>
-      <p className="text-xs text-ink-muted">{S.tz}</p>
-      <p className="text-xs text-ink-muted">
-        {S.personal}: {S.personalHint}
-      </p>
+      </section>
 
       {error && !data ? (
         <ReloadState onRetry={reload} />
@@ -191,88 +187,79 @@ export function StatementTab() {
         <LoadingState />
       ) : (
         <>
-          <StatGrid>
-            <StatCard label={S.opening} value={fmtMoney(data.opening)} icon={IconWallet} />
-            <StatCard label={S.in} value={fmtMoney(data.in)} tone="success" />
-            <StatCard label={S.out} value={fmtMoney(data.out)} tone="danger" />
-            <StatCard label={S.closing} value={fmtMoney(data.closing)} emphasis />
-          </StatGrid>
+          {/* **المعادلةُ بسطرٍ واحد** — البدايةُ + الداخل − الخارج = النهاية، **والداخلُ والخارجُ مجموعُ الأسطر تحتها.** */}
+          <section className="surface space-y-3 p-4">
+            <div className="flex flex-wrap items-stretch gap-2">
+              <EqBox label={S.opening} value={data.opening} />
+              <EqOp>+</EqOp>
+              <EqBox label={S.in} value={data.in} tone="success" />
+              <EqOp>−</EqOp>
+              <EqBox label={S.out} value={data.out} tone="danger" />
+              <EqOp>=</EqOp>
+              <EqBox label={S.closing} value={data.closing} strong tone={data.closing < 0 ? "danger" : "success"} />
+            </div>
+            <p className="text-xs text-ink-muted">{S.howTo}</p>
+            <p className="text-2xs text-ink-muted">
+              {S.tz} · {S.personal}: {S.personalHint}
+            </p>
+          </section>
+
           {data.lines.length === 0 ? (
             <EmptyState icon={IconWallet} title={S.empty} />
           ) : (
-            <div className="surface overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-2xs text-ink-muted">
-                  <tr className="border-b border-line-soft">
-                    <th className="p-2 text-start">{S.colDate}</th>
-                    <th className="p-2 text-start">{S.colKind}</th>
-                    <th className="p-2 text-start">{S.colAmount}</th>
-                    <th className="p-2 text-start">{S.colBalance}</th>
-                    <th className="p-2 text-start">{S.colOrder}</th>
-                    <th className="p-2 text-start">{S.colBy}</th>
-                    <th className="p-2 text-start">{S.colNote}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.lines.map((l) => {
-                    const key = `${l.id}-${l.order_id ?? ""}`;
-                    const isOpen = open === key;
-                    return (
-                      <Fragment key={key}>
-                        <tr className="border-b border-line-soft">
-                          <td className="whitespace-nowrap p-2" dir="ltr">
-                            {fmtDateTime(l.created_at)}
-                          </td>
-                          <td className="p-2 font-medium">
-                            <span className="flex flex-wrap items-center gap-1.5">
-                              {l.grouped && l.order_number != null
-                                ? S.orderProfit.replace("{n}", String(l.order_number))
-                                : l.kind_ar}
-                              {l.personal && (
-                                <Badge variant="neutral">
-                                  {S.personal}
-                                </Badge>
-                              )}
-                            </span>
-                          </td>
-                          <td className="p-2">
-                            <Signed value={l.amount} />
-                          </td>
-                          <td className="p-2">
-                            <Amount value={l.balance} />
-                          </td>
-                          <td className="p-2" dir="ltr">
-                            {l.order_number ?? ""}
-                          </td>
-                          <td className="p-2">{l.by_name}</td>
-                          <td className="max-w-xs p-2 text-ink-muted">
-                            {l.grouped && l.order_id ? (
-                              <span className="flex flex-wrap items-center gap-2">
-                                {(l.entries ?? 0) > 1 && (
-                                  <span className="text-xs">{S.entries.replace("{n}", String(l.entries))}</span>
-                                )}
-                                <Button variant="secondary" className="!px-2.5" onClick={() => setOpen(isOpen ? null : key)}>
-                                  {isOpen ? S.hideBreakdown : S.showBreakdown}
-                                </Button>
-                              </span>
-                            ) : (
-                              <span className="block truncate">{l.note}</span>
-                            )}
-                          </td>
-                        </tr>
-                        {isOpen && l.order_id && (
-                          <tr className="border-b border-line-soft">
-                            <td colSpan={7}>
-                              <OrderBreakdown orderID={l.order_id} range={range.toString()} />
-                            </td>
-                          </tr>
-                        )}
-                      </Fragment>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <ul className="space-y-2">
+              {data.lines.map((l) => {
+                const key = `${l.id}-${l.order_id ?? ""}`;
+                const isOpen = open === key;
+                const canOpen = !!(l.grouped && l.order_id);
+                const up = l.amount >= 0;
+                return (
+                  <li key={key} className="surface overflow-hidden">
+                    <button
+                      type="button"
+                      disabled={!canOpen}
+                      onClick={() => setOpen(isOpen ? null : key)}
+                      className="flex w-full items-center gap-3 p-3 text-start transition-colors enabled:hover:bg-row-hover"
+                    >
+                      <span
+                        className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-on-solid ${
+                          up ? "bg-success-solid" : "bg-danger-solid"
+                        }`}
+                      >
+                        {up ? "▲" : "▼"}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="flex flex-wrap items-center gap-1.5 font-bold">
+                          {l.grouped && l.order_number != null
+                            ? S.orderProfit.replace("{n}", String(l.order_number))
+                            : l.kind_ar}
+                          {l.personal && <Badge variant="neutral">{S.personal}</Badge>}
+                        </span>
+                        <span className="block truncate text-xs text-ink-muted">
+                          <span dir="ltr">{fmtDateTime(l.created_at)}</span>
+                          {l.by_name && ` · ${l.by_name}`}
+                          {!l.grouped && l.note && ` · ${l.note}`}
+                        </span>
+                      </span>
+                      <span className="shrink-0 text-end">
+                        <span className={`figure block leading-none ${up ? "text-success" : "text-danger"}`}>
+                          <Signed value={l.amount} />
+                        </span>
+                        <span className="block text-2xs text-ink-muted">
+                          {S.colBalance}: <Amount value={l.balance} />
+                        </span>
+                      </span>
+                      {canOpen && <span className="shrink-0 text-xs text-ink-muted">{isOpen ? "▴" : "▾"}</span>}
+                    </button>
+                    {isOpen && l.order_id && (
+                      <div className="border-t border-line-soft bg-field">
+                        <OrderBreakdown orderID={l.order_id} range={range.toString()} />
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
           )}
           <Pagination page={page} total={data.total} perPage={data.per_page} onChange={setPage} />
         </>
@@ -281,3 +268,18 @@ export function StatementTab() {
   );
 }
 
+/** **خانةٌ في معادلة الكشف** — لفظٌ ورقم. */
+function EqBox({ label, value, tone, strong }: { label: string; value: number; tone?: "success" | "danger"; strong?: boolean }) {
+  return (
+    <div className={`min-w-[7rem] flex-1 rounded-card border p-3 ${strong ? "border-accent" : "border-line-soft"}`}>
+      <span className="block text-xs text-ink-muted">{label}</span>
+      <span className={`figure block leading-tight ${tone === "success" ? "text-success" : tone === "danger" ? "text-danger" : ""}`}>
+        {fmtMoney(value)}
+      </span>
+    </div>
+  );
+}
+
+function EqOp({ children }: { children: ReactNode }) {
+  return <span className="figure flex items-center px-1 text-ink-muted">{children}</span>;
+}

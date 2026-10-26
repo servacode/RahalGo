@@ -299,10 +299,13 @@ func (s *Server) handleTreasuryStatement(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	// **وما دخل وما خرج من القيود نفسِها** — لا من السطور المجمَّعة (ربحُ طلبٍ صافيه لا جانباه).
+	// **والداخلُ والخارجُ من الأسطر المعروضة نفسِها** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «صحّح الصفحة بحيث تكون
+	// مفهومة») — صافي كلّ طلبٍ سطرٌ واحد، فداخلٌ = مجموعُ الموجب وخارجٌ = مجموعُ السالب. كانت تُجمع
+	// خطواتُ القيد الداخليّة (−٧٦ عند الاستلام ثمّ الباقي) فلا تطابق ما يُقرأ تحتها، والصافي هو هو.
 	if err := s.pg.QueryRow(ctx, `
 		SELECT COALESCE(sum(amount) FILTER (WHERE amount > 0), 0)::bigint,
 		       COALESCE(-sum(amount) FILTER (WHERE amount < 0), 0)::bigint
-		  FROM (`+treasuryStatementSQL+`) s(id, created_at, kind, amount, balance, note, ref, num, by_name, personal)`,
+		  FROM (`+treasuryGroupedSQL+`) s`,
 		from, to, kind).Scan(&in, &out); err != nil {
 		s.respondErr(w, err)
 		return
