@@ -19,7 +19,6 @@ import {
   useLiveRefresh,
   Button,
   Input,
-  Select,
   Badge,
   Modal,
   FormSection,
@@ -38,7 +37,6 @@ import {
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Tile } from "@/components/admin/DashParts";
 
 const m = getMessages(defaultLocale);
 
@@ -219,29 +217,25 @@ export function TicketsView() {
   // والفلترُ في بطاقةٍ واحدة، وكرتٌ لكلّ شكوى بأفعالها. **ولا جدول.**
   return (
     <div>
-      <div className="mb-4 grid grid-cols-2 gap-2">
-        <Tile
-          icon={IconSupport}
-          label={T.shownCount}
-          value={data ? fmtNum(data.total) : "—"}
-          sub={filtered ? undefined : T.allStatuses}
-          tone={(data?.total ?? 0) > 0 ? "accent" : "muted"}
-          onClick={() => pickStatus("")}
-        />
-        {/* **عددُ المتأخّرة كلِّها** — يُضغط فيصفّي عليها. */}
-        <Tile
-          icon={IconWarning}
-          label={T.lateTile}
-          value={fmtNum(lateN)}
-          sub={T.lateTileSub.replace("{h}", fmtNum(lateH))}
-          tone={lateN > 0 ? "danger" : "muted"}
-          onClick={() => pickStatus("late")}
-        />
-      </div>
-
-      <section className="surface mb-4 space-y-3 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="min-w-0 flex-1 text-sm text-ink-muted">{T.intro}</p>
+      {/* **رأسٌ واحدٌ احترافيّ** (المالك ٢٠٢٦-١٠-٢٧: «هذا التصميم اعمله احترافي») — العنوانُ والعددُ وزرُّ
+          الشكوى الجديدة بسطر، وتحته الحالاتُ أزرارٌ تُضغط بدل القائمة المنسدلة، و«المتأخّرة» بعددها وبالأحمر. */}
+      <section className="surface mb-4 overflow-hidden">
+        <div className="flex flex-wrap items-center gap-3 p-4">
+          <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent text-on-bright">
+            <IconSupport size={22} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 className="heading-card flex flex-wrap items-center gap-2">
+              {T.headTitle}
+              <Badge variant="neutral">{data ? T.headCount.replace("{n}", fmtNum(data.total)) : "\u2026"}</Badge>
+              {lateN > 0 && (
+                <button type="button" onClick={() => pickStatus("late")}>
+                  <Badge variant="danger">{T.headLate.replace("{n}", fmtNum(lateN))}</Badge>
+                </button>
+              )}
+            </h2>
+            <p className="text-sm text-ink-muted">{T.intro}</p>
+          </div>
           <Button
             onClick={() => setCreating(true)}
             className="flex w-full items-center justify-center gap-1.5 sm:w-auto"
@@ -250,23 +244,45 @@ export function TicketsView() {
             {T.newTicket}
           </Button>
         </div>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <Select
-            id="status-filter"
-            label={T.statusLabel}
-            value={status}
-            onChange={(e) => pickStatus(e.target.value)}
-          >
-            <option value="">{T.allStatuses}</option>
-            <option value="unresolved">{T.filterUnresolved}</option>
-            <option value="late">{T.filterLate}</option>
-            {Object.entries(STATUS_LABELS).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v}
-              </option>
-            ))}
-          </Select>
+        <div className="flex flex-wrap gap-1.5 border-t border-line-soft bg-field px-4 py-3">
+          {[
+            { id: "", label: T.allStatuses },
+            { id: "unresolved", label: T.filterUnresolved },
+            { id: "late", label: T.filterLate, late: true },
+            ...Object.entries(STATUS_LABELS).map(([k, v]) => ({ id: k, label: v })),
+          ].map((c) => {
+            const on = status === c.id;
+            const isLate = "late" in c && c.late;
+            return (
+              <button
+                key={c.id || "all"}
+                type="button"
+                onClick={() => pickStatus(c.id)}
+                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-bold transition-colors ${
+                  on
+                    ? isLate
+                      ? "bg-danger-solid text-on-solid"
+                      : "bg-accent text-on-bright"
+                    : "border border-line-soft text-ink-muted hover:bg-row-hover hover:text-ink"
+                }`}
+              >
+                {c.label}
+                {isLate && (
+                  <span
+                    className={`rounded-full px-1.5 text-2xs tabular-nums ${
+                      on ? "bg-surface text-danger" : lateN > 0 ? "bg-danger-solid text-on-solid" : "bg-field"
+                    }`}
+                  >
+                    {fmtNum(lateN)}
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
+        <p className="border-t border-line-soft px-4 py-2 text-2xs text-ink-muted">
+          {T.lateRule.replace("{h}", fmtNum(lateH))}
+        </p>
       </section>
 
       {error && <Alert className="mb-4">{error}</Alert>}
