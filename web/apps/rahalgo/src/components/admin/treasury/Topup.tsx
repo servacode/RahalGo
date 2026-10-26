@@ -13,7 +13,7 @@
 
 import { useEffect, useState } from "react";
 import { fmtMoney, errorText } from "@rahalgo/i18n";
-import { Alert, Badge, Button, EmptyState, Input, LoadingState, IconWallet } from "@rahalgo/ui";
+import { Alert, Badge, Button, EmptyState, Input, LoadingState, IconWallet, IconSearch } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { roleLabelByCode } from "@/lib/rolemeta";
 import WalletModal from "@/components/admin/WalletModal";
@@ -62,49 +62,68 @@ export function TopupTab() {
   }, [q, tick]);
 
   return (
-    <div className="space-y-3">
-      <p className="text-sm text-ink-muted">{P.hint}</p>
-      <Input
-        id="topup-search"
-        label={P.search}
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder={P.minChars}
-      />
+    <div className="space-y-4">
+      {/* **شحنُ محفظةٍ بخطوتين** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «نزبط تصميم الصفحة») — ابحث بالاسم أو الرقم
+          (محلّيّاً أو بالعربيّ، بلا نداءٍ دوليّ)، ثمّ اقترح الحركة؛ ويوافق عليها موظّفٌ آخر. */}
+      <section className="surface space-y-3 p-4">
+        <p className="text-sm text-ink-muted">{P.hint}</p>
+        <Input
+          id="topup-search"
+          icon={<IconSearch size={16} />}
+          aria-label={P.search}
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder={P.placeholder}
+        />
+      </section>
       {error && <Alert>{error}</Alert>}
-      {busy && rows === null ? (
+      {q.trim().length < 2 ? (
+        <section className="surface p-6">
+          <EmptyState icon={IconSearch} title={P.startHint} />
+        </section>
+      ) : busy && rows === null ? (
         <LoadingState />
       ) : rows !== null && rows.length === 0 ? (
-        <EmptyState icon={IconWallet} title={P.none} />
+        <section className="surface p-6">
+          <EmptyState icon={IconWallet} title={P.none} />
+        </section>
       ) : (
-        <ul className="space-y-2">
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
           {(rows ?? []).map((a) => (
-            <li key={a.id} className="surface flex flex-wrap items-center gap-3 p-3">
-              <span className="min-w-0 flex-1">
-                <span className="block font-medium">{a.name || a.phone || "—"}</span>
-                {/* **والرقمُ لمن يملك قدرةَ الاتّصال** — يحذفه المحرّكُ عن غيره (`XG-42`). */}
-                {a.phone && (
-                  <span className="block text-xs text-ink-muted" dir="ltr">
-                    {a.phone}
+            <div key={a.id} className="surface flex flex-col gap-3 p-4">
+              <div className="flex items-center gap-3">
+                <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-field text-base font-bold text-ink-muted">
+                  {(a.name || a.phone || "?").trim().charAt(0)}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-bold">{a.name || a.phone || "—"}</span>
+                  {/* **والرقمُ لمن يملك قدرةَ الاتّصال** — يحذفه المحرّكُ عن غيره (`XG-42`). */}
+                  {a.phone && (
+                    <span className="block text-xs text-ink-muted" dir="ltr">
+                      {a.phone}
+                    </span>
+                  )}
+                </span>
+                <span className="shrink-0 text-end">
+                  <span className="block text-2xs text-ink-muted">{P.balance}</span>
+                  <span className={`figure block leading-none ${a.balance < 0 ? "text-danger" : a.balance > 0 ? "text-success" : ""}`}>
+                    {fmtMoney(a.balance)}
                   </span>
-                )}
-              </span>
-              <span className="flex flex-wrap gap-1">
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-1 border-t border-line-soft pt-3">
                 {a.roles.map((r) => (
                   <Badge key={r} variant="neutral">
                     {roleLabelByCode(r)}
                   </Badge>
                 ))}
-              </span>
-              <span className="text-sm">
-                {P.balance}: <span className="figure">{fmtMoney(a.balance)}</span>
-              </span>
-              <Button variant="secondary" onClick={() => setTarget(a)}>
-                {P.propose}
-              </Button>
-            </li>
+                <Button className="ms-auto" onClick={() => setTarget(a)}>
+                  {P.propose}
+                </Button>
+              </div>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
       {target && (
         <WalletModal

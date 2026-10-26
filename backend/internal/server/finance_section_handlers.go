@@ -51,15 +51,21 @@ func (s *Server) handleWalletLookup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// **والرقمُ يُطابَق بأرقامه** — «0933…» و«+963933…» سواء.
+	// **والرقمُ بأيّ شكلٍ كُتب** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «ما بدنا البحث بالنداء الدوليّ») — أرقامٌ عربيّةٌ
+	// (٠-٩) وفارسيّة تُقرأ لاتينيّة، و«00963» و«963» يُشالان، **والصفرُ الأوّل كذلك** — فـ«٠٩٣٣…» و«0933…»
+	// و«00963933…» و«+963933…» كلُّها تجد «+963933…».
+	q = normalizeDigits(q)
 	digits := strings.Map(func(c rune) rune {
 		if c >= '0' && c <= '9' {
 			return c
 		}
 		return -1
 	}, q)
-	if strings.HasPrefix(digits, "0") {
-		digits = digits[1:]
+	digits = strings.TrimPrefix(digits, "00")
+	if len(digits) > 9 {
+		digits = strings.TrimPrefix(digits, "963")
 	}
+	digits = strings.TrimPrefix(digits, "0")
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT u.id::text, COALESCE(u.full_name, ''), COALESCE(u.phone, ''),
 		       COALESCE((SELECT array_agg(role_code ORDER BY role_code)
@@ -157,4 +163,17 @@ func (s *Server) handleGoodsCompensations(w http.ResponseWriter, r *http.Request
 		return
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"orders": out})
+}
+
+// normalizeDigits **الأرقامُ العربيّةُ والفارسيّةُ لاتينيّة** — ما يُكتب بالكيبورد العربيّ يُبحث به.
+func normalizeDigits(s string) string {
+	return strings.Map(func(c rune) rune {
+		switch {
+		case c >= '٠' && c <= '٩':
+			return '0' + (c - '٠')
+		case c >= '۰' && c <= '۹':
+			return '0' + (c - '۰')
+		}
+		return c
+	}, s)
 }
