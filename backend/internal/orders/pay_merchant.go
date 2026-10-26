@@ -156,3 +156,14 @@ func (s *Service) fillPayMerchant(ctx context.Context, q dbtx.Querier, o *Order)
 	}
 	return nil
 }
+
+// FillPayMerchantList **ما يدفعه السائقُ للمتاجر — لقائمة اللوحة** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «لازم يكون
+// واضح شقد يعطي للمتجر وشقد يسلّم للمكتب»). للطلبات الجارية وحدَها — المغلقُ تسوّى ودفترُه يحكي.
+func (s *Service) FillPayMerchantList(ctx context.Context, list []Order) {
+	for i := range list {
+		if list[i].ClosedAt != nil {
+			continue
+		}
+		_ = s.fillPayMerchant(ctx, s.db, &list[i])
+	}
+}

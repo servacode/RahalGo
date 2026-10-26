@@ -1972,7 +1972,14 @@
       "partnerCommissionLater": "العمولة بتنحسب لما يتوثّق ثمن البضاعة",
       "partnerNoCommission": "بدون عمولة على هالمتجر",
       "transferSearch": "ابحث باسم المتجر أو رقمه…",
-      "freeDelivery": "توصيل مجاني (عرض) 🎁"
+      "freeDelivery": "توصيل مجاني (عرض) 🎁",
+      "moneyBox": "حساب السائق والمتجر",
+      "storeCommission": "عمولة المنصة من المتجر ({p}٪)",
+      "driverCollects": "السائق بيقبض من الزبون",
+      "driverPaysStore": "بيدفع للمتجر عند الاستلام",
+      "driverToOffice": "بيسلّم للمكتب",
+      "driverEarns": "أجرة السائق (بمحفظته)",
+      "driverEarnsFree": "أجرة السائق كاملة (المنصة دافعة عن الزبون)"
     },
     "customers": {
       "title": "الزبائن",

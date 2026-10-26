@@ -243,6 +243,11 @@ interface OrderRow {
   total: number;
   wallet_paid: number;
   cash_due: number;
+  /** **عمولةُ المنصّة من المتجر ونسبتُها وما يدفعه السائقُ للمتجر** — للّوحة (٢٠٢٦-١٠-٢٦). */
+  platform_commission?: number;
+  commission_percent_exact?: number;
+  merchant_net?: number;
+  pay_merchant?: number;
   promo_code: string | null;
   address_text: string;
   notes: string;
@@ -4139,7 +4144,7 @@ function InvoiceList({
         <span className="text-ink-muted">{m.admin.ordersPage.deliveryFee}</span>
         <Money value={o.delivery_fee} small />
       </li>
-      <FeeSplit fee={o.delivery_fee} driver={o.driver_fee} assigned={!!o.driver_name} />
+      <FeeSplit fee={o.delivery_fee + (o.free_waived ?? 0)} driver={o.driver_fee} assigned={!!o.driver_name} />
       {(o.free_waived ?? 0) > 0 && (
         <li className="flex items-center justify-between text-sm font-bold text-success">
           <span>{OP.freeDelivery}</span>
@@ -4184,6 +4189,7 @@ function InvoiceList({
         <span>{m.admin.ordersPage.payment}</span>
         <span>{PAYMENT_LABELS[o.payment_method]}</span>
       </li>
+      <DriverMoneyBox o={o} />
     </ul>
   );
 }
@@ -4255,5 +4261,62 @@ function InvoiceButton({ order }: { order: OrderRow }) {
         </span>
       )}
     </>
+  );
+}
+
+/**
+ * **حسابُ السائق والمتجر في الطلب** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «لازم يكون واضح شقد العمولة مشان السائق
+ * يعرف شقد يعطي للمتجر وشقد يسلّم للمكتب»). من أرقام الخادم نفسِها: عمولةُ المنصّة من المتجر، وما
+ * يدفعه السائقُ للمتجر عند الاستلام (`pay_merchant` — للمتاجر النقديّة)، وما يقبضه من الزبون، والباقي
+ * للمكتب — **وأجرتُه كاملةً ولو كان التوصيلُ مجّانيّاً على المنصّة.**
+ */
+function DriverMoneyBox({ o }: { o: OrderRow }) {
+  const OP = m.admin.ordersPage;
+  const com = o.platform_commission ?? 0;
+  const pay = o.pay_merchant ?? 0;
+  const cash = o.payment_method === "cash" ? o.cash_due ?? 0 : 0;
+  if (com <= 0 && pay <= 0 && cash <= 0) return null;
+  const office = Math.max(0, cash - pay);
+  const row = "flex items-center justify-between gap-2";
+  return (
+    <li className="mt-2 list-none rounded-control border border-line-soft bg-field p-2.5 text-sm">
+      <p className="mb-1.5 text-xs font-bold">{OP.moneyBox}</p>
+      <ul className="space-y-1">
+        {com > 0 && (
+          <li className={row}>
+            <span className="text-ink-muted">
+              {OP.storeCommission.replace("{p}", fmtNum(o.commission_percent_exact ?? 0))}
+            </span>
+            <Money value={com} small />
+          </li>
+        )}
+        {cash > 0 && (
+          <li className={row}>
+            <span className="text-ink-muted">{OP.driverCollects}</span>
+            <Money value={cash} small />
+          </li>
+        )}
+        {pay > 0 && (
+          <li className={row}>
+            <span className="text-ink-muted">{OP.driverPaysStore}</span>
+            <span className="flex items-center gap-1">
+              −<Money value={pay} small />
+            </span>
+          </li>
+        )}
+        {cash > 0 && (
+          <li className={`${row} border-t border-line-soft pt-1 font-bold`}>
+            <span>{OP.driverToOffice}</span>
+            <Money value={office} small />
+          </li>
+        )}
+        {(o.driver_fee ?? 0) > 0 && (
+          <li className={`${row} text-success`}>
+            <span>{(o.free_waived ?? 0) > 0 ? OP.driverEarnsFree : OP.driverEarns}</span>
+            <Money value={o.driver_fee ?? 0} small />
+          </li>
+        )}
+      </ul>
+    </li>
   );
 }

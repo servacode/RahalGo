@@ -151,6 +151,9 @@ func (s *Server) handleListOrders(w http.ResponseWriter, r *http.Request) {
 	s.fillBoard(r, res.Orders)
 	// **والمسافاتُ على الطريق لا بالهواء** (المالك ٢٠٢٦-١٠-٢٥) — للطلبات الجارية وحدَها.
 	s.fillRoadDistances(r.Context(), res.Orders)
+	// **وعمولةُ المنصّة من المتجر على البطاقة** (قرارُ المالك ٢٠٢٦-١٠-٢٦).
+	s.fillOrderCommission(r.Context(), res.Orders)
+	s.orders.FillPayMerchantList(r.Context(), res.Orders)
 	// **وتفاصيلُ الزبون لثلاثةٍ وحدَهم** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٣).
 	s.writeOrdersJSON(w, s.maskOrderDetails(r, res.Orders), res)
 }
