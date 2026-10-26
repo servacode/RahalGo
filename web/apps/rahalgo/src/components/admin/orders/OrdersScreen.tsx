@@ -2153,7 +2153,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       {/* **مُرشِّحاتُ السجلّ** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — مدىً جاهزٌ بضغطة،
           أو يومان بيد، ومتجرٌ وسائق. **وتلتفّ على الجوال ولا تُزيح الصفحة.** */}
       {!live && (
-        <div className="surface mb-4 flex flex-wrap items-end gap-2 p-3">
+        <div className="surface relative z-30 mb-4 flex flex-wrap items-end gap-2 p-3">
           {presets.map((p) => {
             const on = from === p.from && to === p.to;
             return (

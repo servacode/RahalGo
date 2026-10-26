@@ -123,7 +123,7 @@ export function RatingsList({ canProfile }: { canProfile: boolean }) {
           }}
         />
       </div>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="relative z-30 flex flex-wrap items-center gap-2">
         <Chips
           items={[
             { id: "", label: L.kindAll },
