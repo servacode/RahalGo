@@ -336,6 +336,8 @@
     <!-- بطاقة الطلب -->
     <string name="card_new_order">طلب جديد</string>
     <string name="card_fee">أجرة التوصيل</string>
+    <string name="card_fee_free">مجانية للزبون · أجرتك كاملة</string>
+    <string name="card_fee_paid">يدفعها الزبون</string>
     <string name="card_payment">الدفع</string>
     <string name="card_cash">عند التسليم</string>
     <string name="card_wallet">مدفوع</string>

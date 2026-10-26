@@ -298,6 +298,10 @@ type driverOrder struct {
 	CashDue int64 `json:"cash_due"`
 	// DeliveryFee **ما يكسبه هو** — لا ما يقبضه للمتجر.
 	DeliveryFee int64 `json:"delivery_fee"`
+	// FreeWaived **ما أُعفي منه الزبونُ من الأجرة** (توصيلٌ مجّانيّ بعرضٍ أو كود) — والسائقُ
+	// يأخذ أجرتَه كاملةً (قرارُ المالك ٢٠٢٦-١٠-٢٦: «السائق ايضا يعرف ان التوصيلة مجانية
+	// او مدفوعة»). و`delivery_fee` أعلاه الأجرةُ الكاملةُ لا ما دفعه الزبون.
+	FreeWaived int64 `json:"free_waived"`
 	// Items **ما يستلمه من المتجر باسمه وكميّته** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢: «بالبطاقة
 	// لازم يكون واضح ع السائق شو هو الطلب… هيك السائق اصلا مايعرف شو الطلب»). كان
 	// `items_count` وحدَه يصل — **فيقف عند المتجر لا يعرف أيَّ كيسٍ له.** والأسعارُ لا
@@ -525,7 +529,9 @@ const driverOrderSelect = `
 	       -- **وأجرةُ التوصيل غيرُ إجماليّ الطلب**: هي ما يكسبه هو،
 	       -- **والإجماليُّ ما يقبضه للمتجر.** وكان يرى الثاني ويظنّه
 	       -- الأوّل.
-	       o.delivery_fee,
+	       -- **والتوصيلُ المجانيّ لا يُصفّر أجرتَه** (٢٠٢٦-١٠-٢٦) — كان يرى «الأجرة 0» وهو يقبضها
+	       -- كاملة. فالأجرةُ قبل الإعفاء، والإعفاءُ حقلٌ لحاله يقول «مجانيّةٌ للزبون».
+	       o.delivery_fee + o.promo_delivery_waived, o.promo_delivery_waived,
 	       -- ══════════════════════════════════════════════════════════
 	       -- **وعنوانُ المتجر كما كتبه صاحبُه — لا اسمُ منطقته**
 	       -- ══════════════════════════════════════════════════════════
@@ -612,7 +618,7 @@ func (s *Server) loadDriverOrders(r *http.Request, sql string, args ...any) ([]d
 			&o.CustomFeeSource, &o.CustomFeeSnapshot, &o.CustomDriverMayChangeFee,
 			&o.CustomMode, &o.CustomGoodsPending,
 			&o.QuoteVersion, &o.QuoteConfirmedVersion, &o.QuoteRejectedAt,
-			&o.DeliveryFee, &o.PickupAddress,
+			&o.DeliveryFee, &o.FreeWaived, &o.PickupAddress,
 			&o.DropoffKnown, &o.ParcelNote, &o.FeePayer, &o.DriverNote,
 			&o.DoorInstruction, &o.DoorNote,
 			&o.ReturnTo, &o.storeLat, &o.storeLng, &o.storeAddr,

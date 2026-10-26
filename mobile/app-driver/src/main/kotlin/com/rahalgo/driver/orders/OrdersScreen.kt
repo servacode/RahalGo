@@ -563,6 +563,15 @@ private fun OrderCard(
                     custom -> stringResource(R.string.card_agreed_later)
                     else -> money(order.deliveryFee)
                 },
+                // **مجانيّةٌ للزبون أم يدفعها** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — والأجرةُ أعلاه كاملةٌ
+                // في الحالين: المنصّةُ تتحمّل المجانيّة. وتوصيلُ المتجر له «من يدفع» في الصندوق التالي.
+                note = when {
+                    order.freeWaived > 0 -> stringResource(R.string.card_fee_free)
+                    order.kind == "merchant_delivery" -> null
+                    custom && com.rahalgo.driver.trip.fixedCustomFee(order) == null -> null
+                    else -> stringResource(R.string.card_fee_paid)
+                },
+                noteTone = if (order.freeWaived > 0) Rahal.colors.success else null,
                 strong = true,
                 modifier = Modifier.weight(1f),
             )
@@ -846,6 +855,9 @@ private fun Metric(
     strong: Boolean = false,
     /** **لون الحال** — وفارغ يعني صندوقا محايدا. */
     tone: Color? = null,
+    /** **سطرٌ صغيرٌ تحت القيمة** — كـ«مجانيّة للزبون». وفارغٌ لا يُرسم. */
+    note: String? = null,
+    noteTone: Color? = null,
 ) {
     val ink = tone ?: if (strong) Rahal.colors.brand else MaterialTheme.colorScheme.onSurface
     Column(
@@ -882,6 +894,15 @@ private fun Metric(
             textAlign = TextAlign.Center,
             style = MaterialTheme.typography.bodyMedium,
         )
+        if (note != null) {
+            Text(
+                text = note,
+                color = noteTone ?: Rahal.colors.inkMuted,
+                fontWeight = if (noteTone != null) FontWeight.Bold else null,
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
     }
 }
 

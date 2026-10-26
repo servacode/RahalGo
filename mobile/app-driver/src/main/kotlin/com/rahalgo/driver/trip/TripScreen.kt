@@ -1191,7 +1191,9 @@ private fun OnRouteBanner(
                     fixedCustomFee(offer) != null -> money(fixedCustomFee(offer) ?: 0)
                     offer.kind == "custom" -> stringResource(R.string.card_agreed_later)
                     else -> money(offer.deliveryFee)
-                },
+                } +
+                // **والعرضُ يقول «مجانيّة للزبون» قبل أن يقبل** (٢٠٢٦-١٠-٢٦) — والأجرةُ كاملة.
+                if (offer.freeWaived > 0) " · " + stringResource(R.string.card_fee_free) else "",
             color = Color.White.copy(alpha = 0.9f),
         )
         Spacer(Modifier.height(10.dp))

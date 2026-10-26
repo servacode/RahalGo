@@ -475,6 +475,12 @@ func ViewFor(a Audience, o *Order) map[string]any {
 	// **والسائقُ يرى أقربَ معلمٍ ملصقاً بالعنوان** (قرارُ المالك ٢٠٢٦-١٠-٢١) — في
 	// الحقل الذي تعرضه نسختُه الحاليّة، **فلا تحديثَ للتطبيق**. وللزبون والمتجر
 	// والمكتب عنوانُه كما كتبه.
+	// **والسائقُ يرى أجرتَه كاملةً ولو كان التوصيلُ مجّانيّاً للزبون** (قرارُ المالك
+	// ٢٠٢٦-١٠-٢٦) — `delivery_fee` ما دفعه الزبون، فكان يقرأ «الأجرة 0» وهو يقبضها كاملة.
+	// والإعفاءُ يبقى في `free_waived` فتقول نسختُه الجديدة «مجانيّة للزبون».
+	if a == AudienceDriver && o.FreeWaived > 0 {
+		out["delivery_fee"] = o.DeliveryFee + o.FreeWaived
+	}
 	if a == AudienceDriver && o.NearLandmark != "" {
 		if addr, ok := out["address_text"].(string); ok {
 			if addr == "" {
