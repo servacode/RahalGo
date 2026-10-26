@@ -53,6 +53,7 @@ import {
 import { api, apiFile, ApiError, mediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useRinger } from "@/lib/ringer";
+import { PageHero } from "@/components/admin/PageHero";
 import { AutoModeToggle } from "@/components/admin/AutoModeToggle";
 import { EmergencyBanner } from "@/components/admin/EmergencyBanner";
 import { DoorPanel, type DoorView } from "./DoorPanel";
@@ -1885,6 +1886,46 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
 
   return (
     <div>
+      {/* **رأسُ السجلّ موحّد** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «تصميم احترافي») — الحالاتُ المنتهيةُ تبويباتٌ
+          بعدّها بسطرٍ واحد، بدل ستّة مربّعاتٍ كبيرة؛ والتصديرُ والتحديثُ على الطرف. */}
+      {!live && (
+        <PageHero<string>
+          icon={IconOrder}
+          title={m.admin.ordersPage.historyTitle}
+          actions={
+            <>
+              {can("finance.export") && (
+                <Button
+                  variant="secondary"
+                  disabled={exporting || inverted}
+                  title={H.exportHint}
+                  onClick={() => void exportList()}
+                >
+                  {H.export}
+                </Button>
+              )}
+              <Button variant="secondary" onClick={() => void load()}>
+                {H.refresh}
+              </Button>
+            </>
+          }
+          tabs={
+            counts && !inverted
+              ? [""].concat([...CLOSED_STATUSES]).map((k) => ({
+                  key: k || "all",
+                  label: k === "" ? m.admin.ordersPage.allStatuses : (STATUS_LABELS[k] ?? k),
+                  count: k === "" ? Object.values(counts).reduce((x, y) => x + y, 0) : (counts[k] ?? 0),
+                }))
+              : undefined
+          }
+          value={status || "all"}
+          onChange={(k) => {
+            setStatus(k === "all" ? "" : k);
+            setPage(1);
+          }}
+        />
+      )}
+      {live && (
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <h1 className="heading-page flex items-center gap-2">
           <IconOrder className="text-primary" />
@@ -1905,23 +1946,6 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
             </Badge>
           )}
         </h1>
-        {!live && (
-          <span className="flex flex-wrap items-center gap-2">
-            {can("finance.export") && (
-              <Button
-                variant="secondary"
-                disabled={exporting || inverted}
-                title={H.exportHint}
-                onClick={() => void exportList()}
-              >
-                {H.export}
-              </Button>
-            )}
-            <Button variant="secondary" onClick={() => void load()}>
-              {H.refresh}
-            </Button>
-          </span>
-        )}
         {/* **وزرُّ الصوت أوّلَ الدوام** — المتصفّحُ لا يُسمع شيئاً قبل ضغطة (البند ٥). */}
         {live && canAck && (
           <SoundButton
@@ -1932,6 +1956,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           />
         )}
       </div>
+      )}
 
       {/* **قبولُ الطلبات تلقائياً بضغطة** (قرارُ المالك ٢٠٢٦-١٠-٠٨) — للشاشة الحيّة. */}
       {live && (
@@ -2048,63 +2073,6 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
 
           **وفي السجلّ وحدَه**: شاشةُ العمل حالاتُها جاريةٌ كلُّها
           معروضة — **ولا حالَ منتهيةً فيها تُعَدّ.** */}
-      {!live && counts && !inverted && (
-        <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-          {/* ══════════════════════════════════════════════════════
-              **و«الكلّ» بطاقةٌ أولى لا ضغطةٌ ثانيةٌ تُطفئ**
-              ══════════════════════════════════════════════════════
-
-              (قرارُ المالك ٢٠٢٦-٠٨-١٣: «وهون نسيان كرت الكلّ».)
-
-              **كنتُ جعلتُ الضغطةَ الثانيةَ تُلغي الترشيح** ظنّاً أنّ
-              زرّاً أقلُّ أبسط. **والخفيُّ ليس أبسط**: من ضغط «مرفوض»
-              ثمّ أراد الكلَّ **لا شيءَ يقول له كيف يعود** — يبحث عن
-              زرٍّ لا يجده، أو يعيد تحميل الصفحة.
-
-              **والمجموعُ خبرٌ في نفسه**: كم طلباً في السجلّ أصلاً —
-              **ولا يقوله جمعُ خمسةِ أرقامٍ بالعين.**
-
-              **وأوّلاً في السطر** — يمينا في العربيّة: تُقرأ الجملةُ
-              «الكلّ ثمّ تفصيلُه» لا «تفصيلٌ ثمّ كلّ». */}
-          {[""].concat([...CLOSED_STATUSES]).map((k) => {
-            const on = status === k;
-            const all = k === "";
-            return (
-              <button
-                key={k || "all"}
-                type="button"
-                aria-pressed={on}
-                onClick={() => {
-                  setStatus(k);
-                  setPage(1);
-                }}
-                className={`rounded-card border p-3 text-start transition-colors ${
-                  on
-                    ? "border-accent bg-accent-tint"
-                    : "border-line-soft bg-surface hover:bg-field"
-                }`}
-              >
-                <span className="block text-xs text-ink-muted">
-                  {all
-                    ? m.admin.ordersPage.allStatuses
-                    : (STATUS_LABELS[k] ?? k)}
-                </span>
-                {/* **والرقمُ هو الخبر** — فيقع أكبرَ ممّا يسمّيه. */}
-                <span
-                  className={`figure block ${on ? "text-accent-text" : "text-ink"}`}
-                >
-                  {fmtNum(
-                    all
-                      ? Object.values(counts).reduce((a, b) => a + b, 0)
-                      : (counts[k] ?? 0),
-                  )}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-
       {/* **عدّاداتُ المراحل فوق اللوحة** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٣) — كلٌّ
           يُضغط فيفتح القائمةَ بشرطه في الخادم نفسِه. */}
       {live && (
@@ -2185,7 +2153,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       {/* **مُرشِّحاتُ السجلّ** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — مدىً جاهزٌ بضغطة،
           أو يومان بيد، ومتجرٌ وسائق. **وتلتفّ على الجوال ولا تُزيح الصفحة.** */}
       {!live && (
-        <div className="mb-4 flex flex-wrap items-end gap-2">
+        <div className="surface mb-4 flex flex-wrap items-end gap-2 p-3">
           {presets.map((p) => {
             const on = from === p.from && to === p.to;
             return (
