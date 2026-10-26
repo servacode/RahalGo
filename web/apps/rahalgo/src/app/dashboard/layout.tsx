@@ -25,6 +25,7 @@ import {
   IconSettings,
   IconLink,
   IconWallet,
+  IconBalance,
   BootScreen,
   IconShieldCheck,
   wsBase,
@@ -138,6 +139,18 @@ const ALL_NAV: NavItem[] = [
   // جارٍ · النقدُ والصندوق · الموافقات · صحّةُ الدفتر، **وصفحاتُ المال تُفتح منه** —
   // المصروفاتُ والأرباحُ والنقدُ والسحوباتُ والتعويضاتُ لم تعد بنوداً في القائمة.
   { href: "/dashboard/treasury", label: m.admin.treasury.title, icon: IconWallet,
+    caps: ["finance.read"] },
+  // **وصفحاتُ المال رجعت بنوداً بالقائمة** (قرارُ المالك ٢٠٢٦-١٠-٢٧: «كل واحد قسم لحاله، نرجعهن ع
+  // القائمة مشان ما نفوت من مكان لمكان») — وصفُّ روابطها شيل من رأس الخزينة.
+  { href: "/dashboard/cash", label: m.admin.treasury.links.cash, icon: IconWallet,
+    caps: ["finance.read"] },
+  { href: "/dashboard/payouts", label: m.admin.treasury.links.payouts, icon: IconWallet,
+    caps: ["finance.read"] },
+  { href: "/dashboard/obligations", label: m.admin.treasury.links.obligations, icon: IconBalance,
+    caps: ["finance.read"] },
+  { href: "/dashboard/profits", label: m.admin.treasury.links.profits, icon: IconStatus,
+    caps: ["finance.read"] },
+  { href: "/dashboard/expenses", label: m.admin.treasury.links.expenses, icon: IconWallet,
     caps: ["finance.read"] },
   // **والديونُ من الخزينة وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٢٥: «موجود بالقائمة وبالخزينة… نخلّيه بالخزينة»).
   // **والخسائرُ والنزاعاتُ وتعويضُ البضاعة صارت تبويباتٍ في «المشاكل والتعويضات»** (٢٠٢٦-١٠-٢٥).

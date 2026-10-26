@@ -575,7 +575,9 @@
       "partyBodySales": "سجلت {n} عميلا هذا الشهر. المكافأة في محفظتك."
     },
     "stagingBanner": "بيئةُ تجربة — البياناتُ هنا ليست حقيقيّة",
-    "drawerChip": "المتوقّع بالدرج"
+    "drawerChip": "درج المكتب — الكاش الموجود فعلياً بالمكتب",
+    "platformWalletChip": "محفظة المنصة",
+    "drawerChipShort": "درج المكتب"
   },
   "common": {
     "close": "إغلاق",
@@ -1104,7 +1106,15 @@
     "price_sync_query": "جملة القراءة لازم تكون قراءة بس (SELECT) بلا أي تعديل",
     "door_report_pending": "بلاغ السائق عند الإدارة — لا تسليم قبل قرارها",
     "free_delivery_invalid": "تأكد إنو تاريخ النهاية بعد البداية، واختار شي واحد على الأقل يشمله العرض",
-    "advance_not_eligible": "السلفة بس للموظفين والسائقين والمندوبين"
+    "advance_not_eligible": "السلفة بس للموظفين والسائقين والمندوبين",
+    "commission_waiver_reason_required": "اكتب سبب مسح العمولة",
+    "commission_waiver_not_delivered": "الطلب لسا ما انسلّم، ما فيك تمسح عمولته",
+    "commission_waiver_not_standard": "مسح العمولة بس للطلبات العادية من المتاجر",
+    "commission_waiver_no_commission": "هالطلب ما عليه عمولة",
+    "commission_already_waived": "عمولة هالطلب انمسحت من قبل",
+    "commission_waiver_not_driver_cash": "السائق ما قبض كاش هالطلب، فما في عمولة معه لتنمسح",
+    "commission_waiver_wallet_store": "هالمتجر بيقبض على المحفظة، والسائق ما دفعله وقت الاستلام، فما بينطبق هون",
+    "commission_waiver_driver_cash_short": "السائق سلّم المصاري للمكتب قبل، والكاش اللي معه أقل من العمولة"
   },
   "admin": {
     "sliderPanel": {
@@ -2421,7 +2431,8 @@
             "adjustment": "تعديل",
             "collect": "قبض من زبون",
             "settle": "تسليم للمنصة",
-            "adjust": "تعديل"
+            "adjust": "تعديل",
+            "commission_waived": "مسح عمولة"
           },
           "stores": "متاجره",
           "clients": "عملاؤه",
@@ -4394,7 +4405,8 @@
         "merchant.price_sync_token": "متجر طلب رمز مزامنة جديد",
         "admin.price_sync_config": "تعديل إعداد مزامنة الأمين",
         "admin.free_delivery_create": "إنشاء عرض توصيل مجاني",
-        "admin.free_delivery_update": "تعديل عرض التوصيل المجاني"
+        "admin.free_delivery_update": "تعديل عرض التوصيل المجاني",
+        "finance.commission_waived": "مسح عمولة طلب"
       }
     },
     "dash": {
@@ -4850,7 +4862,8 @@
         "penalty_remainder": "باقي عقوبة أكبر من الرصيد",
         "dispute_remainder": "باقي مطالبة نزاع أكبر من الرصيد",
         "failed_order_driver": "خسارة طلب فشل بذنب السائق",
-        "delivery_failed_recipient": "أجرة توصيلة فشلت بذنب المستلم"
+        "delivery_failed_recipient": "أجرة توصيلة فشلت بذنب المستلم",
+        "waived_rep_commission": "عمولة مندوب من طلب انمسحت عمولته"
       },
       "causeAll": "كل الأسباب",
       "methods": {
@@ -5728,7 +5741,8 @@
         "finance.ticket_resolve": "حل شكوى بتعويض",
         "finance.treasury_withdrawal": "سحب من الخزينة",
         "finance.cash_shortfall_loss": "تسجيل نقص الصندوق خسارة",
-        "finance.cash_owner_deposit": "إيداع من المالك بدرج المكتب"
+        "finance.cash_owner_deposit": "إيداع من المالك بدرج المكتب",
+        "finance.commission_waived": "مسح عمولة طلب ما استلمها السائق"
       },
       "statusValues": {
         "approved": "موافقة",
@@ -6650,11 +6664,11 @@
         "placeholder": "اسم الشخص أو رقمه: 0933… أو ٠٩٣٣…",
         "startHint": "اكتب حرفين أو رقمين على الأقل لتبلّش البحث"
       },
-      "subtitle": "رصيد المنصة وصندوق المكتب والموافقات في مكان واحد",
+      "subtitle": "محفظة المنصة (الحساب الرقمي) ودرج المكتب (الكاش الحقيقي) والموافقات — كل واحد لحاله",
       "tabs": {
         "overview": "نظرة عامة",
-        "statement": "كشف الحساب",
-        "cashbox": "النقد والصندوق",
+        "statement": "محفظة المنصة",
+        "cashbox": "درج المكتب",
         "approvals": "الموافقات",
         "health": "صحة الدفتر"
       },
@@ -6970,7 +6984,7 @@
             "d": "الاحتباس = المستحق القائم، والمدفوع = المسوّى"
           },
           "FI-15": {
-            "t": "صندوق المكتب (الدرج)",
+            "t": "درج المكتب",
             "d": "كل كاش دخل أو طلع من الدرج إله سبب معروف: تسليم سائق، سحب، سلفة، مصروف"
           }
         },
@@ -8138,7 +8152,8 @@
       "empty": "لا حركات بعد",
       "kinds": {
         "order_collection": "قبضت من زبون",
-        "settlement": "سلمت للمنصة"
+        "settlement": "سلمت للمنصة",
+        "commission_waived": "انمسحت العمولة"
       },
       "limit": "السقف",
       "remaining": "يبقى قبل السقف",

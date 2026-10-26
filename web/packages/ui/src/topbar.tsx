@@ -255,20 +255,25 @@ export function WalletPill({
   href,
   balance,
   icon,
+  label,
 }: {
   Link: LinkType;
   href: string;
   balance: number;
   icon: ReactNode;
+  /** **اسمٌ ظاهرٌ بجانب الرقم** — «محفظة المنصة» في لوحة الإدارة، فلا تُخلط بدرج المكتب (٢٠٢٦-١٠-٢٧). */
+  label?: string;
 }) {
   return (
     <TopBarLink
       Link={Link}
       href={href}
-      title={m.terms.wallet}
+      title={label ?? m.terms.wallet}
+      aria-label={label ?? m.terms.wallet}
       className="font-bold text-ink hover:text-accent-text"
     >
       {icon}
+      {label && <span className="hidden text-xs font-normal text-ink-muted md:inline">{label}</span>}
       <span dir="ltr">{fmtNum(balance)}</span>
       <span className="hidden text-xs font-normal sm:inline">{m.common.currency}</span>
     </TopBarLink>
@@ -662,6 +667,7 @@ export function TopBarActions({
   Link,
   notifications,
   walletHref,
+  walletLabel,
   balance,
   walletIcon,
   accountHref,
@@ -690,6 +696,8 @@ export function TopBarActions({
    */
   menu?: readonly AccountMenuItem[];
   walletHref?: string;
+  /** اسمُ المحفظة الظاهر — يُمرَّر في لوحة الإدارة وحدَها. */
+  walletLabel?: string;
   balance?: number;
   walletIcon?: ReactNode;
   accountHref: string;
@@ -707,7 +715,7 @@ export function TopBarActions({
     <>
       {notifications}
       {walletHref && (
-        <WalletPill Link={Link} href={walletHref} balance={balance ?? 0} icon={walletIcon} />
+        <WalletPill Link={Link} href={walletHref} balance={balance ?? 0} icon={walletIcon} label={walletLabel} />
       )}
       {extras}
       {menu ? (

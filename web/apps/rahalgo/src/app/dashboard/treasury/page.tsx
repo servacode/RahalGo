@@ -36,17 +36,6 @@ import { PageHero, type HeroTab } from "@/components/admin/PageHero";
 type Tab = "overview" | "statement" | "cashbox" | "approvals" | "topup" | "health";
 const TABS: Tab[] = ["overview", "statement", "cashbox", "approvals", "topup", "health"];
 
-/** **صفحاتُ المال التي لها بابُها** — تُفتح من هنا. */
-const LINKS: { href: string; label: string }[] = [
-  { href: "/dashboard/cash", label: T.links.cash },
-  { href: "/dashboard/payouts", label: T.links.payouts },
-  { href: "/dashboard/obligations", label: T.links.obligations },
-  { href: "/dashboard/profits", label: T.links.profits },
-  { href: "/dashboard/expenses", label: T.links.expenses },
-  { href: "/dashboard/losses", label: T.links.losses },
-  { href: "/dashboard/compensations", label: T.links.compensations },
-];
-
 export default function TreasuryPage() {
   return (
     <Suspense>
@@ -93,20 +82,7 @@ function TreasuryHub() {
     <PageContainer>
       {/* **رأسٌ موحّد** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «الخزينة بالتصميم الجديد») — تبويباتُ الخزينة بسطرٍ واحد،
           **وصفحاتُ المال التي لها بابُها روابطُ صغيرةٌ فوقها** (كانت مخلوطةً بالتبويبات، ٢٠٢٦-١٠-٢٣). */}
-      <PageHero<string> icon={IconWallet} title={T.title} subtitle={T.subtitle} tabs={tabs} value={tab} onChange={go}>
-        <div className="flex flex-wrap gap-1.5">
-          {LINKS.map((l) => (
-            <button
-              key={l.href}
-              type="button"
-              onClick={() => go(l.href)}
-              className="rounded-full border border-line-soft px-3 py-1 text-xs font-bold text-ink-muted transition-colors hover:bg-row-hover hover:text-ink"
-            >
-              {l.label} ↗
-            </button>
-          ))}
-        </div>
-      </PageHero>
+      <PageHero<string> icon={IconWallet} title={T.title} subtitle={T.subtitle} tabs={tabs} value={tab} onChange={go} />
       {tab === "overview" && <OverviewTab onTab={go} />}
       {tab === "statement" && <StatementTab />}
       {tab === "cashbox" && <CashboxTab />}

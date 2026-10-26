@@ -16,7 +16,7 @@
 
 import { useEffect, useState } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { PageContainer, IconSupport, IconStar, IconTrendDown, IconBalance, IconSwap } from "@rahalgo/ui";
+import { PageContainer, IconSupport, IconStar, IconTrendDown, IconBalance, IconSwap, IconWallet } from "@rahalgo/ui";
 import { useAuth } from "@/lib/auth";
 import { useCanCall } from "@/lib/policy";
 import { TicketsView } from "@/components/admin/support/tickets";
@@ -24,10 +24,11 @@ import { RatingsView } from "@/components/admin/support/ratings";
 import { LossesView } from "@/components/admin/money/losses";
 import { DisputesView } from "@/components/admin/money/disputes";
 import { GoodsCompensationView } from "@/components/admin/money/goodsCompensation";
+import { CompensationsView } from "@/components/admin/money/CompensationsView";
 
 const m = getMessages(defaultLocale);
 
-type Tab = "tickets" | "ratings" | "losses" | "disputes" | "goods";
+type Tab = "tickets" | "ratings" | "losses" | "disputes" | "goods" | "compensations";
 
 export default function ProblemsPage() {
   useAuth();
@@ -40,6 +41,10 @@ export default function ProblemsPage() {
     ...(canCall("GET", "/disputes") ? [{ key: "disputes" as const, label: m.admin.nav.claims, icon: IconBalance }] : []),
     ...(canCall("GET", "/losses/goods-compensations")
       ? [{ key: "goods" as const, label: m.admin.losses.goodsTab, icon: IconSwap }]
+      : []),
+    // **والتعويضاتُ هنا لا في الخزينة** (قرارُ المالك ٢٠٢٦-١٠-٢٧).
+    ...(canCall("GET", "/compensations")
+      ? [{ key: "compensations" as const, label: m.admin.treasury.links.compensations, icon: IconWallet }]
       : []),
   ];
   const [tab, setTab] = useState<Tab | "">("");
@@ -98,6 +103,7 @@ export default function ProblemsPage() {
         {active === "losses" && <LossesView />}
         {active === "disputes" && <DisputesView />}
         {active === "goods" && <GoodsCompensationView />}
+        {active === "compensations" && <CompensationsView embedded />}
       </div>
     </PageContainer>
   );

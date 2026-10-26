@@ -479,6 +479,7 @@ export function DashboardChrome({
             }
             menu={ACCOUNT_MENU}
             walletHref={walletHref}
+            walletLabel={drawerHref ? m.shared.platformWalletChip : undefined}
             balance={summary?.balance ?? 0}
             walletIcon={<IconWallet size={TOPBAR_ICON} />}
             accountHref={accountHref}
@@ -493,6 +494,7 @@ export function DashboardChrome({
               {drawerHref && typeof summary?.drawer_expected === "number" && (
                 <TopBarLink Link={Link} href={drawerHref} title={m.shared.drawerChip} aria-label={m.shared.drawerChip}>
                   <IconBalance size={TOPBAR_ICON} />
+                  <span className="hidden text-xs text-ink-muted md:inline">{m.shared.drawerChipShort}</span>
                   <span dir="ltr" className={`font-bold ${summary.drawer_expected < 0 ? "text-danger" : "text-ink"}`}>
                     {summary.drawer_expected < 0 ? "−" : ""}
                     {fmtNum(Math.abs(summary.drawer_expected))}

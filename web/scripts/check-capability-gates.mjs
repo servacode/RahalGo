@@ -183,7 +183,7 @@ const walk = (d, out = []) => {
     ["app/dashboard/cash/page.tsx", 'can("finance.manage")', "تسويةُ نقد السائق"],
     ["app/dashboard/tickets/page.tsx", 'canCall("GET", "/reports/losses")', "تبويبُ الخسائر"], // نُقل إلى «المشاكل والتعويضات» (٢٠٢٦-١٠-٢٥)
     ["app/dashboard/payouts/page.tsx", 'can("payouts.decide")', "قرارُ السحب"],
-    ["app/dashboard/compensations/page.tsx", 'can("finance.manage")', "قرارُ التعويض المعلَّق"],
+    ["components/admin/money/CompensationsView.tsx", 'can("finance.manage")', "قرارُ التعويض المعلَّق"],
     // **والنزاعاتُ من جدول المحرّك نفسِه** (قرارُ المالك ٢٠٢٦-١٠-٠٤): اقتراحُ الحسم والموافقةُ عليه.
     ["components/admin/money/disputes.tsx", 'canCall("POST", "/disputes/{id}/propose")', "اقتراحُ حسم النزاع"],
     ["components/admin/money/disputes.tsx", 'canCall("POST", "/dispute-resolutions/{id}/approve")', "الموافقةُ على حسم النزاع"],
@@ -194,8 +194,8 @@ const walk = (d, out = []) => {
     // ولا تُسند** (بندُ المالك ٨).
     ["components/admin/orders/OrdersScreen.tsx", 'const canIntervene = can("orders.intervene")', "التدخّلُ التشغيليّ"],
     ["components/admin/orders/OrdersScreen.tsx", 'canIntervene && TRANSFERABLE', "تحويلُ الطلب"],
-    // **وإعادةُ الحساب للمالك والأدمن وحدَهما** (قرارُ المالك ٢٠٢٦-١٠-٠٤، الطلبات ١٥).
-    ["components/admin/orders/OrdersScreen.tsx", 'can("finance.recompute") && o.closed_at', "إعادةُ الحساب"],
+    // **و«دقّق حساب هذا الطلب» شيل من كرت الطلب** (قرارُ المالك ٢٠٢٦-١٠-٢٧: «ماله فايدة») —
+    // `finance.recompute` بابُ محرّكٍ بلا زرّ، يُنادى عند الحاجة بعد إصلاح معادلة.
     ["components/admin/orders/OrdersScreen.tsx", 'can("drivers.read")', "عدّادُ الوردية"],
     ["components/admin/orders/OrdersScreen.tsx", "canIntervene && next.map", "أزرارُ تبديل الحال"],
     // **والبضاعةُ الراجعة: العمليّاتُ تقول أين والماليّةُ تكتب كم** (الطلبات ١٢).
