@@ -348,12 +348,12 @@ export function CashboxTab() {
 
       <CashReport />
 
-      <section className="space-y-2">
+      {/* **حركاتُ الدرج بطاقات** — داخلٌ بالأخضر وخارجٌ بالأحمر، ومن سلّم أو استلم وسببُه. */}
+      <section className="surface space-y-3 p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="font-bold">{C.entries}</h3>
+          <h3 className="heading-card">{C.entries}</h3>
           <Button
             variant="secondary"
-           
             onClick={() => {
               setAll(!all);
               setPage(1);
@@ -365,111 +365,99 @@ export function CashboxTab() {
         {box.data.entries.length === 0 ? (
           <EmptyState icon={IconWallet} title={C.noEntries} />
         ) : (
-          <div className="surface overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-2xs text-ink-muted">
-                <tr className="border-b border-line-soft">
-                  <th className="p-2 text-start">{T.statement.colDate}</th>
-                  <th className="p-2 text-start">{C.colSource}</th>
-                  <th className="p-2 text-start">{T.statement.colAmount}</th>
-                  <th className="p-2 text-start">{C.colParty}</th>
-                  <th className="p-2 text-start">{T.statement.colBy}</th>
-                  <th className="p-2 text-start">{T.statement.colNote}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {box.data.entries.map((e) => (
-                  <tr key={e.id} className="border-b border-line-soft">
-                    <td className="whitespace-nowrap p-2" dir="ltr">
-                      {fmtDateTime(e.created_at)}
-                    </td>
-                    <td className="p-2">{sourceLabel(e.source)}</td>
-                    <td className="p-2">
-                      <Signed value={e.direction === "in" ? e.amount : -e.amount} />
-                    </td>
-                    <td className="p-2">{e.user_name}</td>
-                    <td className="p-2">{e.recorded_by}</td>
-                    <td className="p-2 text-ink-muted">{e.note}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <ul className="space-y-2">
+            {box.data.entries.map((e) => {
+              const inn = e.direction === "in";
+              return (
+                <li key={e.id} className="flex items-center gap-3 rounded-card border border-line-soft p-3">
+                  <span
+                    className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-on-solid ${
+                      inn ? "bg-success-solid" : "bg-danger-solid"
+                    }`}
+                  >
+                    {inn ? "▲" : "▼"}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-bold">
+                      {sourceLabel(e.source)}
+                      {e.user_name && <span className="font-normal text-ink-muted"> · {e.user_name}</span>}
+                    </span>
+                    <span className="block truncate text-xs text-ink-muted">
+                      <span dir="ltr">{fmtDateTime(e.created_at)}</span>
+                      {e.recorded_by && ` · ${T.statement.colBy}: ${e.recorded_by}`}
+                      {e.note && ` · ${e.note}`}
+                    </span>
+                  </span>
+                  <span className={`figure shrink-0 leading-none ${inn ? "text-success" : "text-danger"}`}>
+                    <Signed value={inn ? e.amount : -e.amount} />
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
         )}
         <Pagination page={page} total={box.data.total} perPage={box.data.per_page} onChange={setPage} />
       </section>
 
-      <section className="space-y-2">
-        <h3 className="font-bold">{C.closes}</h3>
+      {/* **إغلاقاتُ الصندوق بطاقات** — اليومُ، والمفروضُ والمعدودُ والفرق، والحالُ ومن أغلق ومن راجع. */}
+      <section className="surface space-y-3 p-4">
+        <h3 className="heading-card">{C.closes}</h3>
         {!closes.data ? (
           <LoadingState variant="text" />
         ) : closes.data.closes.length === 0 ? (
           <EmptyState icon={IconWallet} title={C.noCloses} />
         ) : (
-          <div className="surface overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-2xs text-ink-muted">
-                <tr className="border-b border-line-soft">
-                  <th className="p-2 text-start">{C.colDay}</th>
-                  <th className="p-2 text-start">{C.colExpected}</th>
-                  <th className="p-2 text-start">{C.colCounted}</th>
-                  <th className="p-2 text-start">{C.difference}</th>
-                  <th className="p-2 text-start">{C.colStatus}</th>
-                  <th className="p-2 text-start">{C.colBy}</th>
-                  <th className="p-2 text-start">{C.colReviewer}</th>
-                  <th className="p-2 text-start">{C.shortfall}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {closes.data.closes.map((c) => (
-                  <tr key={c.id} className="border-b border-line-soft">
-                    <td className="whitespace-nowrap p-2" dir="ltr">
-                      {c.day}
-                    </td>
-                    <td className="p-2">
-                      <Amount value={c.expected} />
-                    </td>
-                    <td className="p-2">
-                      <Amount value={c.counted} />
-                    </td>
-                    <td className="p-2">
-                      {c.kind === "opening" ? (
-                        <Badge variant="neutral">{C.openingBadge}</Badge>
-                      ) : (
-                        <DiffBadge diff={c.difference} />
-                      )}
-                    </td>
-                    <td className="p-2">
-                      <Badge variant={c.status === "approved" ? "success" : c.status === "rejected" ? "danger" : "warning"}>
-                        {C.statuses[c.status]}
-                      </Badge>
-                      {c.self_approved && <span className="ms-1 text-2xs text-warning">{T.approvals.selfFlag}</span>}
-                    </td>
-                    <td className="p-2">{c.proposer_name}</td>
-                    <td className="p-2">{c.decider_name ?? ""}</td>
-                    <td className="p-2">
-                      {c.shortfall_status && (
-                        <div className="flex flex-wrap items-center gap-1">
-                          <Badge variant={c.shortfall_status === "pending" ? "warning" : "neutral"}>
-                            {C.shortfallStatuses[c.shortfall_status]}
-                          </Badge>
-                          {c.shortfall_status === "pending" && canClose && (
-                            <Button variant="secondary" disabled={busy} onClick={() => setResolve(c)}>
-                              {C.resolve}
-                            </Button>
-                          )}
-                          {c.shortfall_status === "pending" && c.shortfall_due_at && (
-                            <span className="text-2xs text-ink-muted">
-                              {C.dueAt} <span dir="ltr">{fmtDateTime(c.shortfall_due_at)}</span>
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
+            {closes.data.closes.map((c) => (
+              <div key={c.id} className="space-y-2 rounded-card border border-line-soft p-3 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="font-bold" dir="ltr">{c.day}</span>
+                  <span className="flex flex-wrap items-center gap-1">
+                    {c.kind === "opening" ? (
+                      <Badge variant="neutral">{C.openingBadge}</Badge>
+                    ) : (
+                      <DiffBadge diff={c.difference} />
+                    )}
+                    <Badge variant={c.status === "approved" ? "success" : c.status === "rejected" ? "danger" : "warning"}>
+                      {C.statuses[c.status]}
+                    </Badge>
+                    {c.self_approved && <span className="text-2xs text-warning">{T.approvals.selfFlag}</span>}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="rounded-control bg-field px-2.5 py-1.5">
+                    <span className="block text-2xs text-ink-muted">{C.colExpected}</span>
+                    <Amount value={c.expected} />
+                  </div>
+                  <div className="rounded-control bg-field px-2.5 py-1.5">
+                    <span className="block text-2xs text-ink-muted">{C.colCounted}</span>
+                    <Amount value={c.counted} />
+                  </div>
+                </div>
+                <p className="text-xs text-ink-muted">
+                  {C.colBy}: {c.proposer_name}
+                  {c.decider_name && ` · ${C.colReviewer}: ${c.decider_name}`}
+                </p>
+                {c.shortfall_status && (
+                  <div className="flex flex-wrap items-center gap-1 border-t border-line-soft pt-2">
+                    <span className="text-xs text-ink-muted">{C.shortfall}:</span>
+                    <Badge variant={c.shortfall_status === "pending" ? "warning" : "neutral"}>
+                      {C.shortfallStatuses[c.shortfall_status]}
+                    </Badge>
+                    {c.shortfall_status === "pending" && c.shortfall_due_at && (
+                      <span className="text-2xs text-ink-muted">
+                        {C.dueAt} <span dir="ltr">{fmtDateTime(c.shortfall_due_at)}</span>
+                      </span>
+                    )}
+                    {c.shortfall_status === "pending" && canClose && (
+                      <Button variant="secondary" disabled={busy} onClick={() => setResolve(c)} className="ms-auto">
+                        {C.resolve}
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </section>

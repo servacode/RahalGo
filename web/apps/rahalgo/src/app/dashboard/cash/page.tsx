@@ -236,7 +236,7 @@ function DriversCash({ filter, setFilter }: { filter: Filter; setFilter: (f: Fil
       )}
       {exportError && <Alert className="mb-3">{exportError}</Alert>}
 
-      <div className="mb-3 flex flex-wrap items-end gap-3">
+      <div className="surface mb-4 flex flex-wrap items-end gap-3 p-3">
         <Chips
           items={[
             { id: "all" as Filter, label: C.filterAll, count: all.length },
