@@ -22,10 +22,8 @@ import {
   Alert,
   Badge,
   Button,
-  Tabs,
   PageContainer,
   Pagination,
-  PageHeader,
   EmptyState,
   LoadingState,
   Card,
@@ -35,6 +33,7 @@ import {
   IconStatus,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
+import { PageHero } from "@/components/admin/PageHero";
 import { kindVariant } from "@/components/admin/emergency/kinds";
 
 const m = getMessages(defaultLocale);
@@ -94,19 +93,20 @@ export default function EmergenciesPage() {
 
   return (
     <PageContainer>
-      <PageHeader icon={IconWarning} title={E.title} subtitle={R.hint} />
-
-      <Tabs
-        items={[
-          { key: "open" as const, label: E.tabOpen, icon: IconWarning },
-          { key: "resolved" as const, label: E.tabResolved, icon: IconStatus },
+      {/* **رأسٌ موحّد** (قرارُ المالك ٢٠٢٦-١٠-٢٦). */}
+      <PageHero<"open" | "resolved">
+        icon={IconWarning}
+        title={E.title}
+        subtitle={R.hint}
+        tabs={[
+          { key: "open", label: E.tabOpen, icon: IconWarning, count: tab === "open" ? data.total : null, warn: true },
+          { key: "resolved", label: E.tabResolved, icon: IconStatus },
         ]}
         value={tab}
         onChange={(k) => {
           setTab(k);
           setPage(1);
         }}
-        className="mb-4"
       />
       {error && <Alert className="mb-3">{error}</Alert>}
 
