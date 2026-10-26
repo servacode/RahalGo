@@ -96,6 +96,8 @@ fun CustomScreen(
     // عند فتح الشاشة كما تُجدَّد للسلّة.
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) { Serving.refreshIfStale(scope) }
+    // **وأهليّتُه لعرض التوصيل المجاني** (٢٠٢٦-١٠-٢٦) — تُقرأ عند الفتح.
+    LaunchedEffect(Unit) { com.rahalgo.customer.FreeOffer.refresh(scope) }
 
     // ══════════════════════════════════════════════════════════════════
     // **ونجاحُ الإرسال يُفرِّغ ما كُتب ثمّ ينتقل**
@@ -223,15 +225,28 @@ fun CustomScreen(
         // المشتريات.** **وطريقةُ الدفع تُختار عند تأكيد العرض لا الآن.**
         Spacer(Modifier.height(12.dp))
         if (Serving.customFeeAdminDefined) {
+            val fee = Serving.customFeeFor(mode)
+            // **وعرضُ التوصيل المجاني يُسقطها** (٢٠٢٦-١٠-٢٦) — مشطوبةً وسطرُ العرض تحتها.
+            val waive = com.rahalgo.customer.FreeOffer.state.waiveFor(mode, fee)
             Text(
-                stringResource(R.string.ord_fee_value, money(Serving.customFeeFor(mode))),
+                stringResource(R.string.ord_fee_value, money(fee)),
+                color = if (waive > 0) Rahal.colors.inkMuted else androidx.compose.ui.graphics.Color.Unspecified,
+                textDecoration = if (waive > 0) androidx.compose.ui.text.style.TextDecoration.LineThrough else null,
                 style = MaterialTheme.typography.bodyMedium,
             )
+            if (waive > 0) {
+                Text(
+                    stringResource(R.string.free_custom),
+                    color = Rahal.colors.success,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
             Spacer(Modifier.height(4.dp))
             // **والأمانةُ لا مشترياتَ فيها** (٢٠٢٦-١٠-١٤) — كانت تقول «الإجماليُّ
             // بعد تحديد قيمة المشتريات» لأمانةٍ إجماليُّها الأجرةُ وحدَها.
             Text(
-                if (mode == "amanah") stringResource(R.string.cst_amanah_total, money(Serving.customFeeFor(mode)))
+                if (mode == "amanah") stringResource(R.string.cst_amanah_total, money(fee - waive))
                 else stringResource(R.string.cst_total_pending),
                 color = Rahal.colors.inkMuted,
                 style = MaterialTheme.typography.bodySmall,

@@ -259,6 +259,8 @@ data class Quote(
     val blocked: Boolean = false,
     val subtotal: Long = 0,
     @SerialName("delivery_fee") val deliveryFee: Long = 0,
+    /** **ما أسقطه عرضُ التوصيل المجاني** (٢٠٢٦-١٠-٢٦) — و`deliveryFee` بعده. */
+    @SerialName("free_waived") val freeWaived: Long = 0,
     val total: Long = 0,
     /**
      * **وتعدُّدُ المتاجر في الطلب** (٢٠٢٦-١٠-١٤) — كم متجراً، وسقفُها، وأجرةُ

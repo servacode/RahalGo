@@ -383,7 +383,12 @@ fun CartScreen(
                 // **وزيادةُ المتجر الثاني سطرٌ وحدَها** (٢٠٢٦-١٠-١٤) — رقمٌ واحدٌ يرتفع
                 // بلا تفسيرٍ يُقرأ زيادةً بلا سبب.
                 val extra = if (cut == null) q.sourcesFee.coerceIn(0, fee) else 0L
-                KeyValue(stringResource(R.string.ord_delivery), money(fee - extra))
+                // **وما أسقطه عرضُ التوصيل المجاني يُقال مشطوباً** (٢٠٢٦-١٠-٢٦) — بلا كود.
+                com.rahalgo.customer.DeliveryFeeRow(
+                    stringResource(R.string.ord_delivery),
+                    fee - extra,
+                    if (cut == null) q.freeWaived else 0L,
+                )
                 if (extra > 0) {
                     KeyValue(stringResource(R.string.src_fee_line), money(extra))
                 }

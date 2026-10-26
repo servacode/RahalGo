@@ -312,4 +312,8 @@
     <string name="store_empty">ما في أصناف بهالمتجر هلّق</string>
     <string name="store_empty_hint">ارجع بعدين — المتجر عم يضيف أصنافه</string>
     <string name="store_open_page">افتح صفحة المتجر</string>
+    <!-- عرض التوصيل المجاني (٢٠٢٦-١٠-٢٦) -->
+    <string name="free_badge">مجاني 🎁</string>
+    <string name="free_banner">🎁 توصيلتك الجاية مجانية — اطلب هلّق واستفيد من العرض</string>
+    <string name="free_custom">🎁 التوصيلة مجانية لهالطلب (عرض)</string>
 </resources>

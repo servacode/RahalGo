@@ -363,6 +363,14 @@ class CustomerApi(private val api: ApiClient) {
 
     suspend fun order(id: String): MyOrder = api.call("/api/v1/my/orders/$id")
 
+    /**
+     * **أيحقّ له توصيلٌ مجانيٌّ الآن؟** (عرضُ التوصيل المجاني، ٢٠٢٦-١٠-٢٦)
+     *
+     * **وسقوطُ النداء «لا عرض»** — ولا يُوعَد بمجانٍ لا يُعرف.
+     */
+    suspend fun freeDelivery(): FreeDelivery =
+        runCatching { api.call<FreeDelivery>("/api/v1/my/free-delivery") }.getOrDefault(FreeDelivery())
+
     /** **مفضّلتُه** — أصنافٌ لا متاجر. */
     suspend fun favorites(): ItemsPage = api.call("/api/v1/my/favorites")
 
@@ -666,6 +674,8 @@ data class MyOrder(
     val status: String = "",
     val subtotal: Long = 0,
     @SerialName("delivery_fee") val deliveryFee: Long = 0,
+    /** **ما أسقطه عرضُ التوصيل المجاني** (٢٠٢٦-١٠-٢٦) — و`deliveryFee` بعده. */
+    @SerialName("free_waived") val freeWaived: Long = 0,
     val discount: Long = 0,
     val total: Long = 0,
     @SerialName("payment_method") val paymentMethod: String = "",
@@ -810,3 +820,22 @@ data class DemandResult(
 /** **وحالُ الاشتراك بعد الإلغاء.** */
 @Serializable
 data class DemandCancel(val active: Boolean = false)
+
+/** **أهليّتُه لعرض التوصيل المجاني بنوع الطلب** — و`maxFee` سقفُ ما يُسقَط. */
+@Serializable
+data class FreeDelivery(
+    val standard: Boolean = false,
+    val purchase: Boolean = false,
+    val amanah: Boolean = false,
+    @SerialName("max_fee") val maxFee: Long? = null,
+    @SerialName("ends_at") val endsAt: String? = null,
+) {
+    val any: Boolean get() = standard || purchase || amanah
+
+    /** **أهو مجانيٌّ لهذا النوع من الطلب الخاصّ؟** */
+    fun customOn(mode: String): Boolean = if (mode == "amanah") amanah else purchase
+
+    /** **ما يُسقَط من أجرةٍ معلومة** — صفرٌ إن لم يحقّ. */
+    fun waiveFor(mode: String, fee: Long): Long =
+        if (customOn(mode)) minOf(fee, maxFee ?: fee).coerceAtLeast(0) else 0L
+}

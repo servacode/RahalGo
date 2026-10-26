@@ -197,7 +197,7 @@ fun OrderCard(
             CustomQuoteSection(order, walletBalance, onConfirmQuote, confirming, onRejectQuote)
         } else {
             if (order.subtotal > 0) KeyValue(stringResource(R.string.ord_subtotal), money(order.subtotal))
-            KeyValue(stringResource(R.string.ord_delivery), money(order.deliveryFee))
+            com.rahalgo.customer.DeliveryFeeRow(stringResource(R.string.ord_delivery), order.deliveryFee, order.freeWaived)
             if (order.discount > 0) {
                 KeyValue(stringResource(R.string.ord_discount), "-" + money(order.discount))
             }

@@ -136,12 +136,16 @@ fun ShopScreen(
     // **العودةُ إلى الواجهة تُصحّح إتاحةَ العنوان دائماً** (Batch 3b، تصحيحُ المالك ٢):
     // تجديدٌ إجباريٌّ عند ON_RESUME يتجاوز عمرَ الدقيقتين — فالعائدُ لا يرى حظراً/سماحاً
     // شائخاً. (والعمرُ يبقى للاستطلاع الروتينيّ في تبدّل النقطة.)
+    val freeScope = androidx.compose.runtime.rememberCoroutineScope()
+    androidx.compose.runtime.LaunchedEffect(Unit) { com.rahalgo.customer.FreeOffer.refresh(freeScope) }
     run {
         val shopOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
         androidx.compose.runtime.DisposableEffect(shopOwner, point) {
             val o = androidx.lifecycle.LifecycleEventObserver { _, e ->
                 if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
                     serviceVm.refreshAt(point, ctx0, force = true)
+                    // **وأهليّةُ عرض التوصيل المجاني معها** (٢٠٢٦-١٠-٢٦).
+                    com.rahalgo.customer.FreeOffer.refresh(freeScope)
                 }
             }
             shopOwner.lifecycle.addObserver(o)
@@ -442,6 +446,8 @@ fun ShopScreen(
             // **وفوق الأقسام لا تحتها** — **ولافتةٌ تحت البضاعة
             // لا تُرى إلّا بعد أن يُملأ ما فوقها.**
             addNotice()
+            // **لافتةُ عرض التوصيل المجاني** (٢٠٢٦-١٠-٢٦) — لمن يحقّ له وحدَه.
+            if (!previewing) com.rahalgo.customer.FreeDeliveryBanner()
 
             SectionRail(vm.visibleSections, vm.pick, media, vm::openSection)
         }
