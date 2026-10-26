@@ -33,6 +33,7 @@ import {
   IconCheck,
   IconWallet,
   IconWarning,
+  IconBlock,
   Chips,
   useLiveData,
 } from "@rahalgo/ui";
@@ -76,6 +77,19 @@ export function ApprovalAmount({ it }: { it: ApprovalItem }) {
     </span>
   );
 }
+
+/** **لونُ كلّ قسمٍ في رأس البطاقة** — يُعرف القسمُ بنظرة. */
+const SECTION_TONE: Record<string, string> = {
+  walletRequests: "bg-accent text-on-bright",
+  cashCloses: "bg-success-solid text-on-solid",
+  cashShortfalls: "bg-danger-solid text-on-solid",
+  compensations: "bg-warning-solid text-on-solid",
+  expenses: "bg-danger-solid text-on-solid",
+  obligations: "bg-warning-solid text-on-solid",
+  incentives: "bg-success-solid text-on-solid",
+  promos: "bg-accent text-on-bright",
+  disputes: "bg-danger-solid text-on-solid",
+};
 
 export function ApprovalsTab() {
   const { data, error, reload } = useLiveData<{
@@ -188,64 +202,98 @@ export function ApprovalsTab() {
           <EmptyState icon={IconCheck} title={T.approvals.empty} />
         </section>
       ) : (
-        <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
           {shown.map((it) => {
             const notDue = it.due_at !== null && new Date(it.due_at).getTime() > now;
+            const tone = SECTION_TONE[it.section] ?? "bg-accent text-on-bright";
+            const initial = (it.party_name || it.proposer_name || "?").trim().charAt(0);
             return (
-              <div key={`${it.key}-${it.id}`} className="surface flex flex-col gap-3 p-4">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <span className="inline-flex rounded-full bg-accent px-2.5 py-0.5 text-xs font-bold text-on-bright">
-                      {sectionLabel(it.section)}
-                    </span>
-                    {it.party_name && <p className="mt-1.5 truncate font-bold">{T.approvals.party.replace("{name}", it.party_name)}</p>}
-                  </div>
-                  <span className="figure shrink-0 leading-none">
-                    <ApprovalAmount it={it} />
+              <article key={`${it.key}-${it.id}`} className="surface flex flex-col overflow-hidden transition-shadow hover:elev-2">
+                {/* **رأسُ البطاقة**: القسمُ بلونه وأيقونته، ومتى اقتُرح. */}
+                <header className="flex items-center gap-2.5 border-b border-line-soft bg-field px-4 py-2.5">
+                  <span className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${tone}`}>
+                    <IconWallet size={15} />
                   </span>
-                </div>
-                {it.note && <p className="rounded-control bg-field px-3 py-2 text-sm">{it.note}</p>}
-                <p className="text-xs text-ink-muted">
-                  {T.approvals.proposedBy}: {it.proposer_name || T.approvals.system} ·{" "}
-                  <span dir="ltr">{fmtDateTime(it.created_at)}</span>
-                  {notDue && it.due_at && (
-                    <>
-                      {" · "}
-                      {T.approvals.notDue} <span dir="ltr">{fmtDateTime(it.due_at)}</span>
-                    </>
+                  <span className="min-w-0 flex-1 truncate text-sm font-bold">{sectionLabel(it.section)}</span>
+                  <span className="shrink-0 text-2xs text-ink-muted" dir="ltr">{fmtDateTime(it.created_at)}</span>
+                </header>
+
+                <div className="flex flex-1 flex-col gap-3 p-4">
+                  {/* **الطرفُ والمبلغ** — من يخصّه المال، والرقمُ كبيرٌ واضح. */}
+                  <div className="flex items-center gap-3">
+                    <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-field text-base font-bold text-ink-muted">
+                      {initial}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-bold">{it.party_name || T.approvals.noParty}</p>
+                      <p className="truncate text-xs text-ink-muted">
+                        {T.approvals.proposedBy}: {it.proposer_name || T.approvals.system}
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-end">
+                      <span className="figure block leading-none">
+                        <ApprovalAmount it={it} />
+                      </span>
+                    </div>
+                  </div>
+
+                  {it.note && (
+                    <p className="border-s-2 border-accent ps-3 text-sm leading-relaxed text-ink">{it.note}</p>
                   )}
-                </p>
-                {it.self_approval && it.can_approve && <p className="text-xs font-bold text-warning">{T.approvals.selfFlag}</p>}
-                <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-line-soft pt-3">
+
+                  {(notDue || (it.self_approval && it.can_approve)) && (
+                    <div className="space-y-1">
+                      {notDue && it.due_at && (
+                        <p className="text-xs text-ink-muted">
+                          {T.approvals.notDue} <span dir="ltr">{fmtDateTime(it.due_at)}</span>
+                        </p>
+                      )}
+                      {it.self_approval && it.can_approve && (
+                        <p className="rounded-control bg-warning-solid px-2.5 py-1 text-xs font-bold text-on-solid">{T.approvals.selfFlag}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* **قرارٌ بضغطة** — موافقةٌ بالأخضر ورفضٌ بإطارٍ أحمر، عرضَ البطاقة. */}
+                <footer className="grid grid-cols-2 gap-2 border-t border-line-soft p-3">
                   {it.approve_path ? (
                     <>
                       {it.can_approve ? (
-                        <Button
-                          className="flex-1"
+                        <button
+                          type="button"
                           disabled={busy || notDue}
                           onClick={() => (it.amount_editable ? openComp(it) : setApprove(it))}
+                          className="inline-flex items-center justify-center gap-1.5 rounded-control bg-success-solid py-2.5 text-sm font-bold text-on-solid transition-opacity hover:opacity-90 disabled:opacity-50"
                         >
+                          <IconCheck size={16} />
                           {T.approvals.approve}
-                        </Button>
+                        </button>
                       ) : (
-                        <span className="flex-1 text-xs text-ink-muted">{T.approvals.own}</span>
+                        <span className="flex items-center justify-center rounded-control bg-field px-2 text-center text-2xs text-ink-muted">
+                          {T.approvals.own}
+                        </span>
                       )}
-                      <Button
-                        variant="secondary"
-                        className="flex-1"
+                      <button
+                        type="button"
                         disabled={busy || (it.key === "cash_shortfalls" && notDue)}
                         onClick={() => setReject(it)}
+                        className="inline-flex items-center justify-center gap-1.5 rounded-control border border-danger py-2.5 text-sm font-bold text-danger transition-colors hover:bg-danger-tint disabled:opacity-50"
                       >
+                        <IconBlock size={16} />
                         {T.approvals.reject}
-                      </Button>
+                      </button>
                     </>
                   ) : (
-                    <Link href={it.href} className="text-sm font-bold text-accent-text hover:underline">
+                    <Link
+                      href={it.href}
+                      className="col-span-2 inline-flex items-center justify-center rounded-control border border-line py-2.5 text-sm font-bold hover:bg-row-hover"
+                    >
                       {T.approvals.open} ↗
                     </Link>
                   )}
-                </div>
-              </div>
+                </footer>
+              </article>
             );
           })}
         </div>
