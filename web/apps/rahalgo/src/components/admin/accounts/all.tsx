@@ -67,6 +67,7 @@ import { MerchantModal } from "@/components/admin/MerchantModal";
 import StatusReasonModal from "@/components/admin/StatusReasonModal";
 import RoleBadge, { ROLE_STYLES } from "@/components/admin/RoleBadge";
 import { MediaThumb } from "@/components/admin/ImageUpload";
+import { PageHero } from "@/components/admin/PageHero";
 import { TempPasswordNote } from "@/components/admin/accounts/TempPasswordNote";
 import { ResetPasswordModal, ChangePhoneModal } from "@/components/admin/accounts/ProfileParts";
 
@@ -370,9 +371,13 @@ export default function AllAccountsTable() {
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="heading-page">{m.admin.users.title}</h1>
-        <div className="flex flex-wrap gap-2">
+      {/* **رأسٌ موحّد** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «تصميم احترافي») — الأدوارُ تبويباتٌ بعدّها بسطرٍ واحد،
+          والحالاتُ الثلاث (موقوف أو محظور · المحذوفة · المتّصلون الآن) أزرارٌ صغيرةٌ تحتها. */}
+      <PageHero<string>
+        icon={IconUsers}
+        title={m.admin.users.title}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
           {canExport && (
             <Button variant="secondary" onClick={() => void exportCsv()} className="flex items-center gap-1.5">
               <IconReceipt size={16} />
@@ -396,81 +401,78 @@ export default function AllAccountsTable() {
           )}
           {/* **ولا زرَّ تصنيفاتٍ هنا** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — بابُها السوق (تبويبُ التصنيفات). */}
           <ActionMenu label={A.add} icon={IconAdd} variant="primary" items={addItems} width={200} />
-        </div>
-      </div>
-
-      {roleCounts && (
-        <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
-          <button
-            onClick={() => {
-              setRole("");
-              setStatusFilter("");
-              setOnlineOnly(false);
-              setPage(1);
-            }}
-            className={`rounded-card border p-2.5 text-center transition-colors ${role === "" && statusFilter === "" && !onlineOnly ? "border-primary bg-primary-tint" : "border-line bg-surface hover:border-primary-edge"}`}
-          >
-            <p className="figure">{fmtNum(roleCounts.total)}</p>
-            <p className="text-xs text-ink-muted">{m.admin.users.allRoles}</p>
-          </button>
-          {cards.map(({ key, label, style }) => (
+          </div>
+        }
+        tabs={
+          roleCounts
+            ? [
+                { key: "all", label: m.admin.users.allRoles, count: roleCounts.total },
+                ...cards.map(({ key, label, style }) => ({
+                  key,
+                  label,
+                  icon: style?.Icon,
+                  count: roleCounts.roles[key] ?? 0,
+                })),
+              ]
+            : undefined
+        }
+        value={role === "" ? "all" : role}
+        onChange={(k) => {
+          setRole(k === "all" ? "" : k);
+          setPage(1);
+        }}
+      >
+        {roleCounts && (
+          <div className="flex flex-wrap gap-2">
             <button
-              key={key}
+              type="button"
+              aria-pressed={statusFilter === "restricted"}
               onClick={() => {
-                setRole(role === key ? "" : key);
+                setStatusFilter(statusFilter === "restricted" ? "" : "restricted");
                 setPage(1);
               }}
-              className={`rounded-card border p-2.5 text-center transition-colors ${role === key ? "border-primary bg-primary-tint" : "border-line bg-surface hover:border-primary-edge"}`}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-bold transition-colors ${
+                statusFilter === "restricted" ? "border-danger bg-danger-solid text-on-solid" : "border-line text-danger hover:bg-row-hover"
+              }`}
             >
-              <p className={`figure inline-flex items-center gap-1 ${style ? style.text : ""}`}>
-                {style && <style.Icon size={15} />}
-                {fmtNum(roleCounts.roles[key] ?? 0)}
-              </p>
-              <p className="text-xs text-ink-muted">{label}</p>
-            </button>
-          ))}
-          <button
-            onClick={() => {
-              setStatusFilter(statusFilter === "restricted" ? "" : "restricted");
-              setPage(1);
-            }}
-            className={`rounded-card border p-2.5 text-center transition-colors ${statusFilter === "restricted" ? "border-danger bg-danger-tint" : "border-line bg-surface hover:border-danger-edge"}`}
-          >
-            <p className="figure inline-flex items-center gap-1 text-danger">
               <IconBlock size={15} />
-              {fmtNum(roleCounts.roles.restricted ?? 0)}
-            </p>
-            <p className="text-xs text-ink-muted">{A.cardRestricted}</p>
-          </button>
-          {/* **والمحذوفةُ مربّعُها** (قرارُ المالك ٢٠٢٦-١٠-٠٦) — ولا تُخلط بالأحياء. */}
-          <button
-            onClick={() => {
-              setStatusFilter(statusFilter === "deleted" ? "" : "deleted");
-              setPage(1);
-            }}
-            className={`rounded-card border p-2.5 text-center transition-colors ${statusFilter === "deleted" ? "border-ink-muted bg-field" : "border-line bg-surface hover:border-line-soft"}`}
-          >
-            <p className="figure inline-flex items-center gap-1 text-ink-muted">
+              {A.cardRestricted}
+              <span className="tabular-nums">{fmtNum(roleCounts.roles.restricted ?? 0)}</span>
+            </button>
+            {/* **والمحذوفةُ زرُّها** (قرارُ المالك ٢٠٢٦-١٠-٠٦) — ولا تُخلط بالأحياء. */}
+            <button
+              type="button"
+              aria-pressed={statusFilter === "deleted"}
+              onClick={() => {
+                setStatusFilter(statusFilter === "deleted" ? "" : "deleted");
+                setPage(1);
+              }}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-bold transition-colors ${
+                statusFilter === "deleted" ? "border-ink-muted bg-field text-ink" : "border-line text-ink-muted hover:bg-row-hover"
+              }`}
+            >
               <IconDelete size={15} />
-              {fmtNum(roleCounts.roles.deleted ?? 0)}
-            </p>
-            <p className="text-xs text-ink-muted">{A.cardDeleted}</p>
-          </button>
-          <button
-            onClick={() => {
-              setOnlineOnly(!onlineOnly);
-              setPage(1);
-            }}
-            className={`rounded-card border p-2.5 text-center transition-colors ${onlineOnly ? "border-success bg-success-tint" : "border-line bg-surface hover:border-success-edge"}`}
-          >
-            <p className="figure inline-flex items-center gap-1.5 text-success">
-              <span className="h-2 w-2 animate-pulse rounded-badge bg-success" />
-              {fmtNum(roleCounts.roles.online ?? 0)}
-            </p>
-            <p className="text-xs text-ink-muted">{m.admin.users.onlineCard}</p>
-          </button>
-        </div>
-      )}
+              {A.cardDeleted}
+              <span className="tabular-nums">{fmtNum(roleCounts.roles.deleted ?? 0)}</span>
+            </button>
+            <button
+              type="button"
+              aria-pressed={onlineOnly}
+              onClick={() => {
+                setOnlineOnly(!onlineOnly);
+                setPage(1);
+              }}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-bold transition-colors ${
+                onlineOnly ? "border-success bg-success-solid text-on-solid" : "border-line text-success hover:bg-row-hover"
+              }`}
+            >
+              <span className={`h-2 w-2 animate-pulse rounded-badge ${onlineOnly ? "bg-on-solid" : "bg-success"}`} />
+              {m.admin.users.onlineCard}
+              <span className="tabular-nums">{fmtNum(roleCounts.roles.online ?? 0)}</span>
+            </button>
+          </div>
+        )}
+      </PageHero>
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <div className="w-full sm:w-80">
