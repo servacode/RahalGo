@@ -280,7 +280,10 @@ func (s *Server) handleSendOrderToMerchant(w http.ResponseWriter, r *http.Reques
 	// يرسل `whatsapp` دائماً منذ بُني. **وشيفرةٌ لا يناديها أحدٌ تشيخ
 	// وتكذب** — وقع مثلُها اليومَ في `Harness.Setting`: كتبت شهراً في
 	// جدولٍ لا وجودَ له ولم يكشفها بناءٌ ولا فحص.
-	if req.Channel != "whatsapp" {
+	// **و«بدون واتساب»** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «لازم في قبول بدون تحويل للمتجر عالواتساب») — المكتبُ
+	// أبلغ المتجرَ بنفسه (هاتفٌ أو تطبيقُه)، **فيُوسَم الطلبُ ويُستدعى السائقُ بلا رسالة.**
+	manual := req.Channel == "manual"
+	if req.Channel != "whatsapp" && !manual {
 		s.respondErr(w, errBadChannel)
 		return
 	}
@@ -291,7 +294,7 @@ func (s *Server) handleSendOrderToMerchant(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	phone := ph.WhatsApp
-	if phone == "" {
+	if phone == "" && !manual {
 		s.respondErr(w, errNoMerchantPhone)
 		return
 	}

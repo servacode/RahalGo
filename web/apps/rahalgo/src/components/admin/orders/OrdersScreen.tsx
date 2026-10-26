@@ -2722,6 +2722,25 @@ function OrderActions({
     }
   }
 
+  // **تحويلٌ بلا واتساب** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — المكتبُ أبلغ المتجرَ بنفسه، فيُوسَم ويُطلب سائق.
+  const [manualAsk, setManualAsk] = useState(false);
+  async function forwardManual() {
+    setManualAsk(false);
+    setErr("");
+    setBusy("wa");
+    try {
+      await api(`/api/v1/admin/orders/${o.id}/whatsapp`, {
+        method: "POST",
+        body: JSON.stringify({ channel: "manual" }),
+      });
+      onChanged();
+    } catch (e) {
+      setErr(e instanceof ApiError ? translateKey(e.body.message_key) : m.errors.internal);
+    } finally {
+      setBusy("");
+    }
+  }
+
   async function forwardToMerchant() {
     setNoDriverWarn(false);
     setErr("");
@@ -3361,6 +3380,20 @@ function OrderActions({
           </span>
         </Button>
       )}
+      {canIntervene && !o.sent_to_merchant_at && (o.status === "accepted" || o.status === "preparing") && (
+        <Button variant="secondary" disabled={busy !== ""} onClick={() => setManualAsk(true)}>
+          {m.admin.ordersPage.sendManual}
+        </Button>
+      )}
+      <Modal open={manualAsk} onClose={() => setManualAsk(false)} title={m.admin.ordersPage.sendManualTitle}>
+        <p className="mb-4 text-sm text-ink-muted">{m.admin.ordersPage.sendManualBody}</p>
+        <FormActions
+          onSave={() => void forwardManual()}
+          onCancel={() => setManualAsk(false)}
+          busy={busy !== ""}
+          saveLabel={m.admin.ordersPage.sendManualConfirm}
+        />
+      </Modal>
 
       {/* **«أعد الإرسال على واتساب» بعد التحويل وقبل الاستلام** (المالك ٢٠٢٦-١٠-٢٥: «لازم يطلع لأنّ
           أحياناً تفشل») — الرسالةُ لم تصل أو ضاعت عند المتجر. **ولا يُعيد الإنزالَ ولا يفكّ السائق**
