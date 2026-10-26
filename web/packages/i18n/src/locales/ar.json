@@ -6242,7 +6242,8 @@
         "commission": "عمولة المتجر {n}٪",
         "storeNet": "يبقى للمتجر",
         "salePrice": "سعر الزبون",
-        "changeImage": "تبديل الصورة"
+        "changeImage": "تبديل الصورة",
+        "commissionExact": "بالضبط {x} — الكسر بيضل للمتجر"
       },
       "stores": {
         "search": "ابحث باسم المتجر",

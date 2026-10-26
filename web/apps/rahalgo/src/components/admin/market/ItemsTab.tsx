@@ -351,6 +351,14 @@ export default function ItemsTab() {
                         label={I.commission.replace("{n}", fmtNum(it.commission_percent))}
                         value={<><span dir="ltr">−</span><Money value={it.merchant_price - it.store_net} /></>}
                       />
+                      {/* **الرقمُ الحقيقيُّ للمعلومة** (قرارُ المالك ٢٠٢٦-١٠-٢٦): العمولةُ بليراتٍ كاملةٍ والكسرُ
+                          يُحذف لصالح المتجر — فلا نأخذ أكثرَ من الاتّفاق أبداً؛ ويُقال ذلك هنا. */}
+                      {(() => {
+                        const exact = Math.round(it.merchant_price * it.commission_percent) / 100;
+                        return exact !== Math.floor(exact) ? (
+                          <p className="text-2xs text-ink-muted">{I.commissionExact.replace("{x}", fmtNum(exact))}</p>
+                        ) : null;
+                      })()}
                       <PriceRow strong label={I.storeNet} value={<Money value={it.store_net} />} />
                       {it.price !== it.merchant_price && (
                         <PriceRow muted label={I.salePrice} value={<Money value={it.price} />} />
