@@ -7,7 +7,7 @@
 
 import { useRef, useState } from "react";
 import { fmtDateTime } from "@rahalgo/i18n";
-import { Alert, Badge, Button, LoadingState, ReloadState, IconShieldCheck, useLiveData } from "@rahalgo/ui";
+import { Alert, Badge, Button, LoadingState, ReloadState, IconShieldCheck, IconLoading, useLiveData } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { T } from "./shared";
 
@@ -109,10 +109,29 @@ function CopyReport({ data }: { data: Health }) {
 }
 
 export function HealthTab() {
-  const { data, error, reload } = useLiveData<Health>(
+  const { data, error, reload, setData } = useLiveData<Health>(
     () => api(`/api/v1/admin/treasury/health`),
     [],
   );
+  // **إعادةُ الفحص تُرى** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — كلُّ فحصٍ يصير «بالانتظار» ثمّ
+  // يتحوّل صحّاً أو خطأً. **ونصفُ ثانيةٍ على الأقلّ** كي لا يومض الانتظارُ فلا يُرى.
+  const [running, setRunning] = useState(false);
+  const [runFailed, setRunFailed] = useState(false);
+  const rerun = async () => {
+    setRunning(true);
+    setRunFailed(false);
+    const started = performance.now();
+    try {
+      const d = await api<Health>(`/api/v1/admin/treasury/health`);
+      const wait = 700 - (performance.now() - started);
+      if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+      setData(d);
+    } catch {
+      setRunFailed(true);
+    } finally {
+      setRunning(false);
+    }
+  };
   if (error && !data) return <ReloadState onRetry={reload} />;
   if (!data) return <LoadingState />;
   // **الفحوصُ بمواضيعها** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «تصير واضحة أكثر ومفهومة») — عشراتُ الأسطر
@@ -131,18 +150,19 @@ export function HealthTab() {
   return (
     <div className="space-y-4">
       {/* **الحالُ بنظرة** — دائرةٌ خضراءُ أو حمراء، وجملةٌ تقول ما يعنيه الفحص. */}
-      <section className={`surface flex flex-wrap items-center gap-4 p-5 ${okAll ? "" : "border-danger"}`}>
+      <section className={`surface flex flex-wrap items-center gap-4 p-5 ${running || okAll ? "" : "border-danger"}`}>
         <span
-          className={`inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-full text-on-solid ${
-            okAll ? "bg-success-solid" : "bg-danger-solid"
+          className={`inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-full ${
+            running ? "bg-field text-ink-muted" : okAll ? "bg-success-solid text-on-solid" : "bg-danger-solid text-on-solid"
           }`}
         >
-          <IconShieldCheck size={30} />
+          {running ? <IconLoading size={30} className="animate-spin" /> : <IconShieldCheck size={30} />}
         </span>
         <div className="min-w-0 flex-1 space-y-1">
-          <h2 className={`heading-section ${okAll ? "text-success" : "text-danger"}`}>
-            {okAll ? H.allGreen : `${H.failing}: ${data.failing}`}
+          <h2 className={`heading-section ${running ? "text-ink-muted" : okAll ? "text-success" : "text-danger"}`}>
+            {running ? H.running : okAll ? H.allGreen : `${H.failing}: ${data.failing}`}
           </h2>
+          {runFailed && <p className="text-sm text-danger">{H.runFailed}</p>}
           <p className="text-sm text-ink-muted">{H.what}</p>
           <p className="text-xs text-ink-muted">
             {H.checks}: <span dir="ltr">{data.total}</span> · {H.passed}:{" "}
@@ -151,7 +171,9 @@ export function HealthTab() {
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2">
-          <Button onClick={reload}>{H.run}</Button>
+          <Button onClick={rerun} disabled={running}>
+            {running ? H.running : H.run}
+          </Button>
           <CopyReport data={data} />
         </div>
       </section>
@@ -164,11 +186,11 @@ export function HealthTab() {
             <details key={key} open={bad > 0} className="surface group overflow-hidden">
               <summary className="flex cursor-pointer list-none items-center gap-3 p-4">
                 <span
-                  className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-bold text-on-solid ${
-                    bad > 0 ? "bg-danger-solid" : "bg-success-solid"
+                  className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full font-bold ${
+                    running ? "bg-field text-ink-muted" : bad > 0 ? "bg-danger-solid text-on-solid" : "bg-success-solid text-on-solid"
                   }`}
                 >
-                  {bad > 0 ? "!" : "\u2713"}
+                  {running ? <IconLoading size={18} className="animate-spin" /> : bad > 0 ? "!" : "\u2713"}
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="block font-bold">{info?.t ?? key}</span>
@@ -176,29 +198,34 @@ export function HealthTab() {
                 </span>
                 <span
                   className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-bold tabular-nums ${
-                    bad > 0 ? "bg-danger-solid text-on-solid" : "bg-field text-ink-muted"
+                    !running && bad > 0 ? "bg-danger-solid text-on-solid" : "bg-field text-ink-muted"
                   }`}
                   dir="ltr"
                 >
-                  {list.length - bad}/{list.length}
+                  {running ? "\u2026" : `${list.length - bad}/${list.length}`}
                 </span>
                 <span className="shrink-0 text-xs text-ink-muted transition-transform group-open:rotate-180">{"▾"}</span>
               </summary>
               <ul className="space-y-1.5 border-t border-line-soft p-3">
                 {list.map((c) => (
-                  <li key={c.id} className={`rounded-control px-3 py-2 text-sm ${c.ok ? "bg-field" : "bg-danger-tint"}`}>
+                  <li key={c.id} className={`rounded-control px-3 py-2 text-sm ${running || c.ok ? "bg-field" : "bg-danger-tint"}`}>
                     <div className="flex items-center gap-2">
-                      <span className={`text-xs ${c.ok ? "text-success" : "text-danger"}`}>{c.ok ? "\u2713" : "\u2717"}</span>
-                      <span className="min-w-0 flex-1">{c.name}</span>
-                      {!c.ok && <Badge variant="danger">{c.error ? H.error : `${c.count} ${H.rows}`}</Badge>}
+                      {running ? (
+                        <IconLoading size={12} className="animate-spin text-ink-muted" />
+                      ) : (
+                        <span className={`text-xs ${c.ok ? "text-success" : "text-danger"}`}>{c.ok ? "\u2713" : "\u2717"}</span>
+                      )}
+                      <span className={`min-w-0 flex-1 ${running ? "text-ink-muted" : ""}`}>{c.name}</span>
+                      {running && <span className="text-2xs text-ink-muted">{H.waiting}</span>}
+                      {!running && !c.ok && <Badge variant="danger">{c.error ? H.error : `${c.count} ${H.rows}`}</Badge>}
                     </div>
-                    {!c.ok && <p className="mt-1 text-xs text-ink-muted">{c.why}</p>}
-                    {c.error && (
+                    {!running && !c.ok && <p className="mt-1 text-xs text-ink-muted">{c.why}</p>}
+                    {!running && c.error && (
                       <p dir="ltr" className="mt-1 text-2xs text-danger">
                         {c.error}
                       </p>
                     )}
-                    {!c.ok && c.sample && c.sample.length > 0 && (
+                    {!running && !c.ok && c.sample && c.sample.length > 0 && (
                       <div className="mt-1 overflow-x-auto">
                         <table className="text-2xs" dir="ltr">
                           {c.cols && (
