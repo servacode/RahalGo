@@ -22,6 +22,7 @@ export interface HeroTab<K extends string> {
 export function PageHero<K extends string>({
   icon: Icon,
   title,
+  titleExtra,
   subtitle,
   actions,
   children,
@@ -31,6 +32,8 @@ export function PageHero<K extends string>({
 }: {
   icon: IconT;
   title: string;
+  /** **شيءٌ بجانب العنوان** — شارةُ «مباشر» مثلاً. */
+  titleExtra?: ReactNode;
   subtitle?: ReactNode;
   actions?: ReactNode;
   children?: ReactNode;
@@ -46,7 +49,10 @@ export function PageHero<K extends string>({
             <Icon size={22} />
           </span>
           <div className="min-w-0">
-            <h1 className="heading-page">{title}</h1>
+            <h1 className="heading-page flex flex-wrap items-center gap-2">
+              {title}
+              {titleExtra}
+            </h1>
             {subtitle && <p className="text-xs text-ink-muted">{subtitle}</p>}
           </div>
         </div>

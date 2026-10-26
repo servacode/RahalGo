@@ -92,7 +92,15 @@ export function AutoModeToggle({
 
   if (compact) {
     return (
-      <div className={`rounded-full border border-line px-3 py-1.5 ${className}`} title={hint}>
+      <div
+        className={`rounded-full border border-line px-3 py-1.5 ${className}`}
+        title={
+          minutesKey && minutes !== null
+            ? `${hint}
+${minutes > 0 ? A.unattended.replace("{n}", String(minutes)) : A.unattendedOff}`
+            : hint
+        }
+      >
         <Switch
           checked={row.on}
           onChange={(v: boolean) => void toggle(v)}

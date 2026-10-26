@@ -63,6 +63,7 @@ import { GoodsBox } from "./GoodsBox";
 import { OrderDetailPanel } from "./OrderDetailPanel";
 import {
   BoardCounters,
+  COUNTER_FILTERS,
   DriverLine,
   NewOrdersBar,
   OfferLine,
@@ -1925,46 +1926,59 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           }}
         />
       )}
+      {/* **رأسُ الشاشة الحيّة موحّد** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «تصميم احترافي») — العنوانُ وشارةُ «مباشر»،
+          والقبولُ التلقائيُّ مفتاحٌ صغيرٌ وزرُّ الصوت على الطرف، **وعدّاداتُ المراحل تبويباتٌ بعدّها بسطرٍ
+          واحد** (البند ٣ من ٢٠٢٦-١٠-٠٤: كلٌّ يفتح القائمةَ بشرطه في الخادم). */}
       {live && (
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="heading-page flex items-center gap-2">
-          <IconOrder className="text-primary" />
-          {live ? m.admin.ordersPage.title : m.admin.ordersPage.historyTitle}
-          {/* **والشارةُ للشاشة الحيّة وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٦) —
-              السجلُّ لا يتحدّث وحدَه فلا يقول «مباشر». */}
-          {live && (
-            <Badge
-              variant={liveConnected ? "success" : "danger"}
-              className="gap-1.5 py-1"
-            >
-              <span
-                className={`h-2 w-2 rounded-badge ${liveConnected ? "animate-pulse bg-success" : "bg-danger"}`}
-              />
-              {liveConnected
-                ? m.admin.ordersPage.live
-                : m.admin.ordersPage.liveOff}
+        <PageHero<string>
+          icon={IconOrder}
+          title={m.admin.ordersPage.title}
+          titleExtra={
+            <Badge variant={liveConnected ? "success" : "danger"} className="gap-1.5 py-1">
+              <span className={`h-2 w-2 rounded-badge ${liveConnected ? "animate-pulse bg-success" : "bg-danger"}`} />
+              {liveConnected ? m.admin.ordersPage.live : m.admin.ordersPage.liveOff}
             </Badge>
-          )}
-        </h1>
-        {/* **وزرُّ الصوت أوّلَ الدوام** — المتصفّحُ لا يُسمع شيئاً قبل ضغطة (البند ٥). */}
-        {live && canAck && (
-          <SoundButton
-            enabled={ringer.enabled}
-            unlocked={ringer.unlocked}
-            onEnable={ringer.unlock}
-            onToggle={ringer.setEnabled}
-          />
-        )}
-      </div>
-      )}
-
-      {/* **قبولُ الطلبات تلقائياً بضغطة** (قرارُ المالك ٢٠٢٦-١٠-٠٨) — للشاشة الحيّة. */}
-      {live && (
-        <AutoModeToggle
-          settingKey="orders.auto_transfer"
-          minutesKey="orders.unattended_auto_accept_min"
-          label={m.admin.autoMode.ordersLabel}
-          hint={m.admin.autoMode.ordersHint}
+          }
+          actions={
+            <>
+              <AutoModeToggle
+                compact
+                className=""
+                settingKey="orders.auto_transfer"
+                minutesKey="orders.unattended_auto_accept_min"
+                label={m.admin.autoMode.ordersLabel}
+                hint={m.admin.autoMode.ordersHint}
+              />
+              {/* **وزرُّ الصوت أوّلَ الدوام** — المتصفّحُ لا يُسمع شيئاً قبل ضغطة (البند ٥). */}
+              {canAck && (
+                <SoundButton
+                  enabled={ringer.enabled}
+                  unlocked={ringer.unlocked}
+                  onEnable={ringer.unlock}
+                  onToggle={ringer.setEnabled}
+                />
+              )}
+            </>
+          }
+          tabs={[
+            { key: "all", label: m.admin.ordersPage.allStatuses },
+            ...COUNTER_FILTERS.map((k) => ({
+              key: k,
+              label: (BOARD.counters as Record<string, string>)[k] ?? k,
+              count: counts0?.[k] ?? null,
+              warn: k === "stuck" || k === "reports",
+            })),
+          ]}
+          value={board || "all"}
+          onChange={(k) => {
+            setBoard(k === "all" ? "" : k);
+            setStatus("");
+            setAwaiting(false);
+            setStage("");
+            setFocusId("");
+            setQuery("");
+            setPage(1);
+          }}
         />
       )}
 
@@ -2075,22 +2089,8 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           معروضة — **ولا حالَ منتهيةً فيها تُعَدّ.** */}
       {/* **عدّاداتُ المراحل فوق اللوحة** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٣) — كلٌّ
           يُضغط فيفتح القائمةَ بشرطه في الخادم نفسِه. */}
-      {live && (
-        <BoardCounters
-          counts={counts0}
-          active={board}
-          failed={countsFailed}
-          onRetry={() => void loadBoard()}
-          onPick={(k) => {
-            setBoard(k);
-            setStatus("");
-            setAwaiting(false);
-            setStage("");
-            setFocusId("");
-            setQuery("");
-            setPage(1);
-          }}
-        />
+      {live && countsFailed && !counts0 && (
+        <BoardCounters counts={null} active={board} failed onRetry={() => void loadBoard()} onPick={() => undefined} />
       )}
 
       <div className="mb-4 flex flex-wrap items-center gap-3">
