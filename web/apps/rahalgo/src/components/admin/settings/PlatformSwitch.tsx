@@ -19,7 +19,7 @@ const S = m.admin.platformHours.switch;
 
 type Mode = "open" | "closed" | "schedule";
 
-export default function PlatformSwitch() {
+export default function PlatformSwitch({ compact = false }: { compact?: boolean }) {
   const { can } = useAuth();
   const may = can("settings.general.manage");
   const [mode, setMode] = useState<Mode | null>(null);
@@ -51,6 +51,36 @@ export default function PlatformSwitch() {
   }
 
   if (!may || mode === null) return error ? <Alert>{error}</Alert> : null;
+
+  // **مفتاحٌ بثلاث حالاتٍ في رأس الصفحة** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «تصميم احترافي») — مفتوح · حسب
+  // الجدول · مسكّر، **والمختارُ بلونه**، والشرحُ عند الوقوف عليه.
+  if (compact) {
+    const opts: { v: Mode; label: string; on: string }[] = [
+      { v: "open", label: S.open, on: "bg-success-solid text-on-solid" },
+      { v: "schedule", label: S.schedule, on: "bg-accent text-on-bright" },
+      { v: "closed", label: S.closed, on: "bg-danger-solid text-on-solid" },
+    ];
+    return (
+      <div className="flex flex-col items-end gap-1" title={S.hint}>
+        <div role="radiogroup" aria-label={S.title} className="flex overflow-hidden rounded-full border border-line text-sm">
+          {opts.map((o) => (
+            <button
+              key={o.v}
+              type="button"
+              role="radio"
+              aria-checked={mode === o.v}
+              disabled={busy}
+              onClick={() => mode !== o.v && void set(o.v)}
+              className={`px-3 py-1.5 font-bold transition-colors ${mode === o.v ? o.on : "text-ink-muted hover:bg-row-hover"}`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+        {error && <p className="text-2xs text-danger">{error}</p>}
+      </div>
+    );
+  }
 
   return (
     <Card tone={mode === "closed" ? "danger" : "default"}>

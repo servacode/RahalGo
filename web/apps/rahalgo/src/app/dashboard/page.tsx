@@ -51,12 +51,14 @@ import {
   IconLink,
   IconZones,
   IconStatus,
+  IconGrid,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { roleLabelByCode } from "@/lib/rolemeta";
 import ContactTestAlert from "@/components/admin/settings/contact-check";
 import SiteStatsSection from "@/components/admin/SiteStatsSection";
 import PlatformSwitch from "@/components/admin/settings/PlatformSwitch";
+import { PageHero } from "@/components/admin/PageHero";
 
 const m = getMessages(defaultLocale);
 const H = m.admin.home;
@@ -344,15 +346,21 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* **زرُّ الدوام أوّلُ ما يُرى** — فاتحين أو مسكّرين بضغطة (طلبُ المالك ٢٠٢٦-١٠-١٨). */}
-      <PlatformSwitch />
-      <div className="flex flex-wrap items-center gap-3">
-        <h1 className="heading-page flex-1">{H.title}</h1>
-        <span className="text-xs text-ink-muted">{ago}</span>
-        <Button variant="secondary" onClick={load} disabled={busy}>
-          {H.refresh}
-        </Button>
-      </div>
+      {/* **رأسٌ موحّد** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — والدوامُ أوّلُ ما يُرى: مفتوح · حسب الجدول · مسكّر
+          بضغطة (طلبُ المالك ٢٠٢٦-١٠-١٨)، والتحديثُ بجانبه. */}
+      <PageHero
+        icon={IconGrid}
+        title={H.title}
+        subtitle={ago}
+        actions={
+          <>
+            <PlatformSwitch compact />
+            <Button variant="secondary" onClick={load} disabled={busy}>
+              {H.refresh}
+            </Button>
+          </>
+        }
+      />
       {error && <Alert tone="warning">{H.refreshFailed}</Alert>}
       {data.missing.length > 0 && <Alert tone="warning">{H.missing}</Alert>}
       {/* **بياناتُ التواصل التجريبيّة** — قرارُ المالك ٢٠٢٦-١٠-٠٤ (الإعدادات ١٥). */}
