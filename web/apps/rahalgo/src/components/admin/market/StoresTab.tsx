@@ -34,6 +34,8 @@ import {
   IconStore,
   IconStar,
   IconBalance,
+  IconSwap,
+  Select,
   Modal,
   Chips,
   FormActions,
@@ -267,6 +269,7 @@ function StoreControl({ id, summary, onChanged }: { id: string; summary: MarketS
         />
       </dl>
       <Missing summary={summary} store={store} />
+      <RepLine store={store} onSaved={() => { onChanged(); void load(); }} />
       <CommissionLine store={store} onSaved={() => { onChanged(); void load(); }} />
       <StoreActions
         direct
@@ -389,6 +392,113 @@ function Missing({ summary, store }: { summary: MarketStore; store: Merchant }) 
       {gaps.map((g) => (
         <Badge key={g} variant="warning">{g}</Badge>
       ))}
+    </div>
+  );
+}
+
+/**
+ * **المندوبُ على البطاقة وتبديلُه بأيقونة** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «تسهّل علينا نقل المتجر من مندوب
+ * لمندوب»). البابُ نفسُه الذي في نموذج المتجر (`sales_rep_code` + `transfer_reason`): **النقلُ يحوّل
+ * عمولةَ الطلبات القادمة ونسبةَ الهدف، فسببُه إلزاميٌّ ويُقيَّد في سجلّ الأحداث.**
+ */
+function RepLine({ store, onSaved }: { store: Merchant; onSaved: () => void }) {
+  const canCall = useCanCall();
+  const canEdit = canCall("PATCH", "/merchants/{id}") && canCall("GET", "/salesreps");
+  const cur = store as unknown as { sales_rep_name?: string | null; sales_rep_code?: string | null };
+  const [open, setOpen] = useState(false);
+  const [reps, setReps] = useState<{ id: string; full_name: string; invite_code: string | null; status: string }[] | null>(null);
+  const [code, setCode] = useState("");
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  async function openIt() {
+    setOpen(true);
+    setCode("");
+    setReason("");
+    setErr("");
+    if (reps) return;
+    try {
+      const list = await api<{ id: string; full_name: string; invite_code: string | null; status: string }[]>(
+        "/api/v1/admin/salesreps",
+      );
+      setReps((list ?? []).filter((r) => r.invite_code && r.status === "active"));
+    } catch (e) {
+      setErr(errorText(e));
+    }
+  }
+
+  async function save() {
+    if (!code) return setErr(T.pickRep);
+    if (!reason.trim()) return setErr(m.admin.merchants.transferReasonRequired);
+    setBusy(true);
+    try {
+      await api(`/api/v1/admin/merchants/${store.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ sales_rep_code: code, transfer_reason: reason.trim() }),
+      });
+      setOpen(false);
+      onSaved();
+    } catch (e) {
+      setErr(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex items-center justify-between gap-2 text-sm">
+      <span className="min-w-0 truncate">
+        <span className="text-ink-muted">{T.rep}: </span>
+        {cur.sales_rep_name || cur.sales_rep_code ? (
+          <>
+            <b>{cur.sales_rep_name || "—"}</b>
+            {cur.sales_rep_code && (
+              <span dir="ltr" className="ms-1.5 rounded-full bg-field px-2 py-0.5 text-2xs text-ink-muted">
+                {cur.sales_rep_code}
+              </span>
+            )}
+          </>
+        ) : (
+          <span className="text-ink-muted">{T.noRep}</span>
+        )}
+      </span>
+      {canEdit && (
+        <Button
+          variant="ghost"
+          title={T.changeRep}
+          aria-label={T.changeRep}
+          onClick={() => void openIt()}
+          className="!h-9 !w-9 inline-flex items-center justify-center !min-h-0 !min-w-0 !p-0 rounded-full text-ink-muted hover:text-ink"
+        >
+          <IconSwap size={18} />
+        </Button>
+      )}
+      {open && (
+        <Modal open onClose={() => setOpen(false)} title={`${T.changeRep}: ${store.name}`}>
+          <div className="space-y-3">
+            <Select label={T.newRep} value={code} onChange={(e) => setCode(e.target.value)}>
+              <option value="">{T.pickRep}</option>
+              {(reps ?? [])
+                .filter((r) => r.invite_code !== cur.sales_rep_code)
+                .map((r) => (
+                  <option key={r.id} value={r.invite_code ?? ""}>
+                    {`${r.full_name || "—"} · ${r.invite_code}`}
+                  </option>
+                ))}
+            </Select>
+            <Input
+              id={`rep-reason-${store.id}`}
+              label={m.admin.merchants.transferReason}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
+            <p className="text-xs text-ink-muted">{m.admin.merchants.transferReasonHint}</p>
+            {err && <Alert tone="error">{err}</Alert>}
+            <FormActions busy={busy} onSave={() => void save()} onCancel={() => setOpen(false)} />
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

@@ -80,14 +80,16 @@ type Merchant struct {
 	OwnerPhone   *string `json:"owner_phone"`
 	// OwnerName **اسمُ صاحب المتجر** — يُعرض في نموذج التعديل فلا يُفتح فارغاً
 	// (بلاغُ المالك ٢٠٢٦-١٠-٢٠: «اسم صاحب المتجر ما عم ينحفظ ويطلع وقت التعديل»).
-	OwnerName     *string  `json:"owner_name"`
-	SalesRepPhone *string  `json:"sales_rep_phone"`
-	SalesRepCode  *string  `json:"sales_rep_code"`
-	Lat           *float64 `json:"lat"`
-	Lng           *float64 `json:"lng"`
-	LogoURL       *string  `json:"logo_url"`
-	LogoThumbURL  *string  `json:"logo_thumb_url"`
-	Status        string   `json:"status"`
+	OwnerName     *string `json:"owner_name"`
+	SalesRepPhone *string `json:"sales_rep_phone"`
+	SalesRepCode  *string `json:"sales_rep_code"`
+	// SalesRepName **اسمُ المندوب** — على بطاقة المتجر في اللوحة (قرارُ المالك ٢٠٢٦-١٠-٢٦).
+	SalesRepName *string  `json:"sales_rep_name"`
+	Lat          *float64 `json:"lat"`
+	Lng          *float64 `json:"lng"`
+	LogoURL      *string  `json:"logo_url"`
+	LogoThumbURL *string  `json:"logo_thumb_url"`
+	Status       string   `json:"status"`
 	// Violations إلغاءاتُ المتجر داخل نافذة الحظر وبعد آخر عفو.
 	//
 	// **في القائمة لا في صفحةٍ منفصلة**: متجرٌ على ٤ من ٥ تتّصل به العملياتُ
@@ -281,7 +283,7 @@ func (s *Service) DeleteCategory(ctx context.Context, actorID, id, ip string) er
 func merchantSelect(daysExpr string) string {
 	return `
 	SELECT m.id, m.number, m.name, m.description, m.category_id, c.name, c.icon,
-	       m.phone, m.address_text, m.owner_user_id, u.phone, NULLIF(u.full_name, ''), sr.phone, sr.invite_code,
+	       m.phone, m.address_text, m.owner_user_id, u.phone, NULLIF(u.full_name, ''), sr.phone, sr.invite_code, NULLIF(sr.full_name, ''),
 	       ST_Y(m.location::geometry), ST_X(m.location::geometry),
 	       lm.path, lm.thumb_path,
 	       m.status,
@@ -345,7 +347,7 @@ func (s *Service) banDays(ctx context.Context) int64 {
 func scanMerchant(row pgx.Row) (*Merchant, error) {
 	var m Merchant
 	err := row.Scan(&m.ID, &m.Number, &m.Name, &m.Description, &m.CategoryID, &m.CategoryName, &m.CategoryIcon,
-		&m.Phone, &m.AddressText, &m.OwnerUserID, &m.OwnerPhone, &m.OwnerName, &m.SalesRepPhone, &m.SalesRepCode,
+		&m.Phone, &m.AddressText, &m.OwnerUserID, &m.OwnerPhone, &m.OwnerName, &m.SalesRepPhone, &m.SalesRepCode, &m.SalesRepName,
 		&m.Lat, &m.Lng, &m.LogoURL, &m.LogoThumbURL,
 		&m.Status, &m.Violations, &m.CommissionExact, &m.EmergencyClosed, &m.AcceptsReturns, &m.CreatedAt, &m.DistrictID, &m.District,
 		&m.SettlementMethod, &m.Featured, &m.FeaturedOrder)
