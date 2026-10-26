@@ -33,8 +33,8 @@
     "setting_defs": 250,
     "behaviour_settings": 205,
     "order_fields": 120,
-    "test_files": 648,
-    "test_funcs": 2503
+    "test_files": 649,
+    "test_funcs": 2504
   },
   "flows": [
     {
@@ -17356,6 +17356,12 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestFreeDelivery_RepKeepsCommission",
+      "file": "internal/qa/free_delivery_rep_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestFreeDelivery_MerchantOncePerStore",

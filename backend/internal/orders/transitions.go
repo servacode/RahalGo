@@ -1325,7 +1325,11 @@ func (s *Service) settleRep(ctx context.Context, q wallet.Querier, orderID, acto
 	// **وكلفةُ الكود معها** — خصمُه وإعفاءُ توصيله (قرارُ المالك ٢٠٢٦-١٠-١٥): الكوبونُ
 	// من حصّة المنصّة، **فيُطرح من القاعدة قبل نصيب المندوب.** (`RepCommissionBase`)
 	if err := q.QueryRow(ctx, `
-		SELECT o.platform_commission, o.discount + o.promo_delivery_waived,
+		-- **وعرضُ التوصيل المجانيّ لا يُطرح** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «المندوب ما له علاقة، ياخذ عمولته
+		-- طبيعي مثل السائق، المنصّة تتحمّل») — يُستثنى إعفاءُ الحملة (free_delivery_claims) ويبقى الكوبون.
+		SELECT o.platform_commission,
+		       o.discount + o.promo_delivery_waived
+		         - COALESCE((SELECT c.waived FROM free_delivery_claims c WHERE c.order_id = o.id), 0),
 		       m.sales_rep_user_id,
 		       COALESCE(m.sales_rep_user_id = o.customer_id, false)
 		FROM orders o
