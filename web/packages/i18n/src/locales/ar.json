@@ -1971,7 +1971,8 @@
       "partnerCommissionOf": "(من ثمن البضاعة {goods})",
       "partnerCommissionLater": "العمولة بتنحسب لما يتوثّق ثمن البضاعة",
       "partnerNoCommission": "بدون عمولة على هالمتجر",
-      "transferSearch": "ابحث باسم المتجر أو رقمه…"
+      "transferSearch": "ابحث باسم المتجر أو رقمه…",
+      "freeDelivery": "توصيل مجاني (عرض) 🎁"
     },
     "customers": {
       "title": "الزبائن",
@@ -8454,6 +8455,13 @@
     },
     "invite": {
       "code": "رمزك"
+    },
+    "free": {
+      "badge": "مجاني 🎁",
+      "line": "عرض التوصيل المجاني",
+      "banner": "🎁 توصيلتك الجاية مجانية — اطلب هلّق واستفيد من العرض",
+      "customFree": "🎁 التوصيلة مجانية لهالطلب (عرض)",
+      "amanahFreeTotal": "المجموع اللي بتدفعه: {amount}"
     }
   },
   "store": {

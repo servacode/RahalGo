@@ -44,7 +44,7 @@ type Mode = "purchase" | "amanah";
 
 export default function CustomOrderPage() {
   const { user, loading } = useAuth();
-  const { address, platform } = useCustomer();
+  const { address, platform, freeDelivery } = useCustomer();
   const ordering = useOrderingState();
   // **وعنوانٌ لا نصله يُقال قبل الإرسال** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — كالسلّة.
   const gate = useAddGate();
@@ -64,6 +64,10 @@ export default function CustomOrderPage() {
   const cd = platform?.custom_delivery;
   const adminFee = cd?.source === "admin_defined";
   const fee = cd ? customFee(cd, mode) : 0;
+  // **والتوصيلةُ المجانيّةُ تُقال قبل الطلب** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «الزبون لسا يشوف السعر ١٠٠ —
+  // رح يفكّر إنّا خدعناه»). والإعفاءُ يقع في الخادم عند تثبيت الأجرة، **بسقف العرض إن كان.**
+  const freeOn = !!freeDelivery && (mode === "amanah" ? freeDelivery.amanah : freeDelivery.purchase);
+  const waive = freeOn ? Math.min(fee, freeDelivery?.max_fee ?? fee) : 0;
   const closed = platform ? !platform.launch.customer_custom_orders : false;
 
   const send = async () => {
@@ -159,9 +163,18 @@ export default function CustomOrderPage() {
         <div className="flex flex-col gap-1 border-t border-line-soft pt-3">
           {adminFee ? (
             <>
-              <p className="text-sm font-bold">{fill(K.feeValue, { amount: fmtMoney(fee) })}</p>
+              {waive > 0 ? (
+                <>
+                  <p className="text-sm">
+                    <s className="text-ink-muted">{fill(K.feeValue, { amount: fmtMoney(fee) })}</s>
+                  </p>
+                  <p className="text-sm font-bold text-success">{m.shop.free.customFree}</p>
+                </>
+              ) : (
+                <p className="text-sm font-bold">{fill(K.feeValue, { amount: fmtMoney(fee) })}</p>
+              )}
               <p className="text-xs text-ink-muted">
-                {mode === "amanah" ? fill(K.amanahTotal, { amount: fmtMoney(fee) }) : K.totalPending}
+                {mode === "amanah" ? fill(K.amanahTotal, { amount: fmtMoney(fee - waive) }) : K.totalPending}
               </p>
             </>
           ) : (

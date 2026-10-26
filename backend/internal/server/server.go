@@ -809,6 +809,8 @@ func (s *Server) Router() http.Handler {
 			r.Get("/my/orders", s.handleMyOrders)
 			r.Get("/my/orders/{id}", s.handleMyOrder)
 			r.Get("/my/wallet", s.handleMyWallet)
+			// **أله توصيلةٌ مجانيّةٌ الآن؟** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — لتقول الشاشةُ «مجانيّة» قبل الطلب.
+			r.Get("/my/free-delivery", s.handleMyFreeDelivery)
 			// **بابُ الشكوى عند الطلب لا في رقم هاتف.**
 			//
 			// كانت التذاكرُ تُفتح من لوحة الإدارة وحدَها: يتّصل الزبونُ فيفتح

@@ -155,6 +155,8 @@ interface OrderRow {
   /** **ما وُثّق ولم يُحاسَب** — تهمّ الإدارةَ وإن لم تأخذ منها شيئاً. */
   custom_goods_amount?: number | null;
   custom_fee?: number | null;
+  /** **إعفاءُ عرض التوصيل المجانيّ** — ما لا يدفعه الزبونُ من الأجرة (٢٠٢٦-١٠-٢٦). */
+  free_waived?: number;
   /** **نسخةُ العرض** — تُرفع مع كلّ تعديلٍ ماليّ، وبها يُعرف تأكيدٌ شاخ. */
   quote_version?: number;
   /** متى أكّد الزبونُ المبلغ — وفارغٌ يعني «لم يؤكّد بعد». */
@@ -3961,10 +3963,20 @@ function InvoiceList({
             )}
           </li>
           {fee != null && <FeeSplit fee={fee} driver={o.driver_fee} assigned={!!o.driver_name} />}
+          {/* **والتوصيلُ المجانيُّ يُقال** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — كان المجموعُ يُعرض بالأجرة كاملةً
+              والزبونُ لا يدفعها، فيُحصّل الموظّفُ أو السائقُ ما ليس له. */}
+          {(o.free_waived ?? 0) > 0 && (
+            <li className={`${row} font-bold text-success`}>
+              <span>{OP.freeDelivery}</span>
+              <span className="flex items-center gap-1">
+                −<Money value={o.free_waived ?? 0} small />
+              </span>
+            </li>
+          )}
           {fee != null && (amanah || (goods != null && goods > 0)) && (
             <li className={`${row} border-t border-line-soft pt-1.5 font-bold`}>
               <span>{amanah ? OP.collectTotal : OP.customTotal}</span>
-              <Money value={(amanah ? 0 : goods ?? 0) + fee} />
+              <Money value={(amanah ? 0 : goods ?? 0) + fee - (o.free_waived ?? 0)} />
             </li>
           )}
           <li className={`${row} text-xs`}>
@@ -4128,6 +4140,14 @@ function InvoiceList({
         <Money value={o.delivery_fee} small />
       </li>
       <FeeSplit fee={o.delivery_fee} driver={o.driver_fee} assigned={!!o.driver_name} />
+      {(o.free_waived ?? 0) > 0 && (
+        <li className="flex items-center justify-between text-sm font-bold text-success">
+          <span>{OP.freeDelivery}</span>
+          <span className="flex items-center gap-1">
+            −<Money value={o.free_waived ?? 0} small />
+          </span>
+        </li>
+      )}
       {o.discount > 0 && (
         <li className="flex items-center justify-between text-sm text-success">
           <span>{m.admin.ordersPage.discount}</span>

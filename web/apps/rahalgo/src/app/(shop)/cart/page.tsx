@@ -380,7 +380,21 @@ export default function CartPage() {
             <>
               <div className="flex justify-between">
                 <span className="text-ink-muted">{C.delivery}</span>
-                <Money value={fee - extra} />
+                {/* **والتوصيلُ المجانيُّ يُقال لا يُصفَّر بصمت** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — الأصلُ مشطوبٌ وبعده «مجاني». */}
+                {(quote.free_waived ?? 0) > 0 ? (
+                  <span className="flex items-center gap-2">
+                    <s className="text-xs text-ink-muted">
+                      <Money value={fee - extra + (quote.free_waived ?? 0)} />
+                    </s>
+                    {fee - extra > 0 ? (
+                      <Money value={fee - extra} />
+                    ) : (
+                      <span className="font-bold text-success">{m.shop.free.badge}</span>
+                    )}
+                  </span>
+                ) : (
+                  <Money value={fee - extra} />
+                )}
               </div>
               {extra > 0 && (
                 <div className="flex justify-between">

@@ -154,9 +154,9 @@ func TestCommission2_MerchantOverride(t *testing.T) {
 	}
 }
 
-// TestCommission2_IntegerUnchanged **النسبةُ الصحيحةُ كما كانت ليرةً بليرة.**
+// TestCommission2_IntegerUnchanged **النسبةُ الصحيحةُ تُقرَّب لأقرب ليرة** (قرارُ المالك ٢٠٢٦-١٠-٢٦).
 //
-//	١٢٬٣٤٥ × ١٠ ÷ ١٠٠ = ١٢٣٤٫٥ ⇒ ١٢٣٤ · والمتجرُ ١١٬١١١
+//	١٢٬٣٤٥ × ١٠ ÷ ١٠٠ = ١٢٣٤٫٥ ⇒ ١٢٣٥ (النصفُ يصعد) · والمتجرُ ١١٬١١٠
 func TestCommission2_IntegerUnchanged(t *testing.T) {
 	h := New(t)
 	treasury(t, h)
@@ -166,8 +166,8 @@ func TestCommission2_IntegerUnchanged(t *testing.T) {
 	oid := decimalOrder(t, h, m, 12_345)
 	platform, earning, snap := decimalLedger(t, h, oid)
 	t.Logf("لقطة=%s · عمولةُ المنصّة=%d · مستحقُّ المتجر=%d", snap, platform, earning)
-	if platform != 1_234 || earning != 11_111 {
-		t.Errorf("١٠٪ من ١٢٣٤٥: عمولة %d ومستحقّ %d — والمنتظَر 1234 و11111", platform, earning)
+	if platform != 1_235 || earning != 11_110 {
+		t.Errorf("١٠٪ من ١٢٣٤٥: عمولة %d ومستحقّ %d — والمنتظَر 1235 و11110", platform, earning)
 	}
 	o := merchantOrderJSON(t, h, m, oid)
 	if got := string(o["commission_percent"]); got != "10" {

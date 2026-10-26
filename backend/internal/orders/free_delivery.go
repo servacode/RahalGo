@@ -22,6 +22,7 @@ package orders
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -189,4 +190,31 @@ func (s *Service) FreeDeliveryPreview(ctx context.Context, customerID, kind stri
 		return 0
 	}
 	return off.waive
+}
+
+// FreeStatus **أللزبونِ توصيلةٌ مجانيّةٌ الآن — ولأيّ نوع؟** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «لازم يبيّن
+// عند الزبون إنها توصيلة مجانية» — وكان يرى أجرةَ المشتريات كاملةً قبل الطلب فيظنّ العرضَ خدعة.)
+type FreeStatus struct {
+	Standard bool       `json:"standard"`
+	Purchase bool       `json:"purchase"`
+	Amanah   bool       `json:"amanah"`
+	MaxFee   *int64     `json:"max_fee"`
+	EndsAt   *time.Time `json:"ends_at"`
+}
+
+// FreeDeliveryStatus **ما يستحقّه الزبونُ من العرض الآن** — بالقاعدة نفسِها التي تُعفي عند الطلب
+// (`freeDeliveryOffer`): حملةٌ فعّالةٌ تشمل النوع، ولم ينلها رقمُه بطلبٍ حيّ.
+func (s *Service) FreeDeliveryStatus(ctx context.Context, customerID string) FreeStatus {
+	var st FreeStatus
+	const probe = 1_000_000 // أجرةٌ اسميّةٌ — السؤالُ «أيُعفى؟» لا «كم».
+	st.Standard = s.FreeDeliveryPreview(ctx, customerID, FreeKindStandard, probe) > 0
+	st.Purchase = s.FreeDeliveryPreview(ctx, customerID, FreeKindPurchase, probe) > 0
+	st.Amanah = s.FreeDeliveryPreview(ctx, customerID, FreeKindAmanah, probe) > 0
+	if st.Standard || st.Purchase || st.Amanah {
+		_ = s.db.QueryRow(ctx, `
+			SELECT max_fee, ends_at FROM free_delivery_campaigns
+			 WHERE active AND now() >= starts_at AND now() < ends_at
+			 ORDER BY created_at DESC LIMIT 1`).Scan(&st.MaxFee, &st.EndsAt)
+	}
+	return st
 }

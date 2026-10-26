@@ -9323,6 +9323,21 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/my/free-delivery",
+      "handler": "handleMyFreeDelivery",
+      "auth": true,
+      "response": [
+        {
+          "name": "@FreeDeliveryStatus",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/my/orders",
       "handler": "handleMyOrders",
       "auth": true,

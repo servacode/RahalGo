@@ -132,3 +132,12 @@ export function ServiceBlockBanner() {
   if (!ordering.open || !address || !availability || availability.available) return null;
   return <AvailabilityNotice av={availability} address={address} />;
 }
+
+/** **لافتةُ «توصيلتك الجاية مجانية»** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — للزبون المستحقّ قبل أن يطلب، فلا يتفاجأ. */
+export function FreeDeliveryBanner() {
+  const { freeDelivery } = useCustomer();
+  const ordering = useOrderingState();
+  if (!ordering.open || !freeDelivery) return null;
+  if (!freeDelivery.standard && !freeDelivery.purchase && !freeDelivery.amanah) return null;
+  return <Alert tone="success">{S.free.banner}</Alert>;
+}

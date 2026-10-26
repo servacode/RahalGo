@@ -157,6 +157,8 @@ export interface Quote {
   too_many_sources: boolean;
   base_fee: number;
   sources_fee: number;
+  /** **ما أُعفي منه بعرض التوصيل المجانيّ** — و`delivery_fee` بعده (٢٠٢٦-١٠-٢٦). */
+  free_waived?: number;
   out_of_zone: boolean;
   zone_closed: boolean;
   next_available_at?: string;
@@ -224,6 +226,8 @@ export interface CustomerPlatform {
 }
 
 export interface MyOrder {
+  /** **إعفاءُ عرض التوصيل المجانيّ** — و`delivery_fee` بعده (٢٠٢٦-١٠-٢٦). */
+  free_waived?: number;
   /** **كودُ الاستلام** — لصاحب الطلب من الاستلام حتّى الباب، وإلّا غائب. */
   delivery_code?: string;
   id: string;
@@ -352,3 +356,12 @@ export interface Notice {
 
 /** **حالاتُ الطلب المنتهية** — مرآةُ `ENDED` في تطبيق أندرويد. */
 export const ENDED = new Set(["delivered", "cancelled", "failed", "rejected", "refunded"]);
+
+/** **أللزبون توصيلةٌ مجانيّةٌ الآن — ولأيّ نوع** (`/my/free-delivery`، ٢٠٢٦-١٠-٢٦). */
+export interface FreeDelivery {
+  standard: boolean;
+  purchase: boolean;
+  amanah: boolean;
+  max_fee: number | null;
+  ends_at: string | null;
+}

@@ -333,9 +333,12 @@ type Order struct {
 	PaymentMethod     string   `json:"payment_method"`
 	Subtotal          int64    `json:"subtotal"`
 	DeliveryFee       int64    `json:"delivery_fee"`
-	Discount          int64    `json:"discount"`
-	Total             int64    `json:"total"`
-	WalletPaid        int64    `json:"wallet_paid"`
+	// FreeWaived **ما أُعفي منه الزبونُ بعرض التوصيل المجانيّ** (`promo_delivery_waived`) — و`DeliveryFee`
+	// بعده. **يُعرض ليُقال «توصيلٌ مجانيّ»** (قرارُ المالك ٢٠٢٦-١٠-٢٦) لا رقمٌ نازلٌ بلا سبب.
+	FreeWaived int64 `json:"free_waived"`
+	Discount   int64 `json:"discount"`
+	Total      int64 `json:"total"`
+	WalletPaid int64 `json:"wallet_paid"`
 
 	// ══════════════════════════════════════════════════════════════════
 	// **شفافيّةُ المتجر — كم بِيع وكم أخذت المنصّة**

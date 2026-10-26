@@ -18,7 +18,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import type { Address, Availability, CustomerPlatform, Wallet } from "./types";
+import type { Address, Availability, CustomerPlatform, FreeDelivery, Wallet } from "./types";
 import { readJSON, writeJSON } from "./storage";
 
 const PICK_KEY = "rahalgo_delivery_address";
@@ -39,6 +39,8 @@ interface CustomerState {
    * عند تبديله وعند الرجوع للصفحة وكلَّ دقيقتين. **وفارغةٌ بلا عنوان** — والخادمُ يحرس الطلب.
    */
   availability: Availability | null;
+  /** **عرضُ التوصيل المجانيّ للزبون الآن** — فتقول الشاشاتُ «مجانيّة» قبل الطلب (٢٠٢٦-١٠-٢٦). */
+  freeDelivery: FreeDelivery | null;
   wallet: Wallet | null;
   reloadWallet: () => void;
   /** **الرصيدُ المتاح للدفع** — المتاحُ إن أُرسل، وإلّا الرصيد. */
@@ -117,6 +119,12 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const [freeDelivery, setFreeDelivery] = useState<FreeDelivery | null>(null);
+  const reloadFree = useCallback(() => {
+    api<FreeDelivery>("/api/v1/my/free-delivery")
+      .then(setFreeDelivery)
+      .catch(() => setFreeDelivery(null)); // @empty-ok — بلا عرضٍ تُعرض الأجرةُ كما هي، والخادمُ يُعفي.
+  }, []);
   const reloadWallet = useCallback(() => {
     api<Wallet>("/api/v1/my/wallet")
       .then(setWallet)
@@ -127,11 +135,13 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
     if (!user) {
       setAddresses(null);
       setWallet(null);
+      setFreeDelivery(null);
       return;
     }
     void reloadAddresses();
     reloadWallet();
-  }, [user, reloadAddresses, reloadWallet]);
+    reloadFree();
+  }, [user, reloadAddresses, reloadWallet, reloadFree]);
 
   const pickAddress = useCallback((id: string) => {
     setPicked(id);
@@ -189,8 +199,9 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
       reloadWallet,
       available,
       availability,
+      freeDelivery,
     }),
-    [platform, refreshPlatform, addresses, addressesError, reloadAddresses, address, pickAddress, wallet, reloadWallet, available, availability],
+    [platform, refreshPlatform, addresses, addressesError, reloadAddresses, address, pickAddress, wallet, reloadWallet, available, availability, freeDelivery],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

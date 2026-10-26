@@ -178,7 +178,20 @@ export default function OrderPage() {
               </Row>
             )}
             <Row label={O.delivery}>
-              <Money value={order.delivery_fee} />
+              {(order.free_waived ?? 0) > 0 ? (
+                <span className="flex items-center gap-2">
+                  <s className="text-xs text-ink-muted">
+                    <Money value={order.delivery_fee + (order.free_waived ?? 0)} />
+                  </s>
+                  {order.delivery_fee > 0 ? (
+                    <Money value={order.delivery_fee} />
+                  ) : (
+                    <span className="font-bold text-success">{m.shop.free.badge}</span>
+                  )}
+                </span>
+              ) : (
+                <Money value={order.delivery_fee} />
+              )}
             </Row>
             {order.discount > 0 && (
               <Row label={O.discount}>

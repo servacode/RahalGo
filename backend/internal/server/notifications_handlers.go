@@ -73,6 +73,9 @@ var notifTitles = struct {
 	targetReached string
 	// repMerchantCounted **اكتملت شروطُ متجرٍ فتحه فدخل هدفَه** (٢٠٢٦-١٠-١٣).
 	repMerchantCounted string
+	// freeDeliveryClaimed **نال الزبونُ توصيلتَه المجانيّة** (قرارُ المالك ٢٠٢٦-١٠-٢٦).
+	freeDeliveryClaimed     string
+	freeDeliveryClaimedBody string
 	// **سائقٌ في الدوام انقطع موقعُه** (٢٠٢٦-١٠-١٣) — له ما يفعل، وللمكتب من هو.
 	driverLocationLost, driverLocationLostBody, opsDriverLocationLost string
 	payoutRequested, payoutPaid, payoutRejected                       string
@@ -158,6 +161,8 @@ var notifTitles = struct {
 	driverTransferred:        "تحوّل طلبك إلى متجر آخر",
 	targetReached:            "أنجزت هدف الشهر — نالتك مكافأته",
 	repMerchantCounted:       "اكتملت شروط متجرك وانحسب بهدفك",
+	freeDeliveryClaimed:      "مبروك! أخدت توصيلتك المجانية 🎁",
+	freeDeliveryClaimedBody:  "خلّيك معنا دايماً — عنّا عروض كتير جاية",
 	driverLocationLost:       "موقعك ما عم يوصلنا — والطلبات ما رح توصلك",
 	driverLocationLostBody:   "افتح تطبيق السائق، وتأكد إنو الموقع مشغّل ومسموح «طول الوقت»، وإنو النت شغّال.",
 	opsDriverLocationLost:    "سائق بالدوام وموقعه مختفي — الطلبات ما عم تنعرض عليه",

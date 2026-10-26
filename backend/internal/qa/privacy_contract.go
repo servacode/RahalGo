@@ -208,6 +208,7 @@ var OrderPrivacy = map[string]FieldRule{
 	// **شفافيّةُ تسوية المتجر** — قرارُ المالك ٢٠٢٦-٠٨-٢٦ و٢٠٢٦-٠٩-٠٩.
 	"subtotal":     {Ref: "شفافيّةُ تسوية المتجر (قرارُ المالك ٢٠٢٦-٠٩-٠٩) — ما بِيع من عنده · وRQ-7 يجيزه للمندوب", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisAllowed, VisAllowed)},
 	"delivery_fee": {Ref: "merchant_privacy.go:49 · وأجرُ السائق", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisAllowed, VisAllowed)},
+	"free_waived":  {Ref: "models.go · إعفاءُ التوصيل المجانيّ — كأجرة التوصيل", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisAllowed, VisAllowed)},
 	"discount":     {Ref: "merchant_privacy.go:49", Vis: v(VisAllowed, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
 	"total":        {Ref: "merchant_privacy.go:49 · وRQ-7", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisAllowed, VisAllowed)},
 	"wallet_paid":  {Ref: "merchant_privacy.go:50", Vis: v(VisAllowed, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
