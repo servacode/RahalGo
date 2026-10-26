@@ -18,7 +18,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import type { Address, CustomerPlatform, Wallet } from "./types";
+import type { Address, Availability, CustomerPlatform, Wallet } from "./types";
 import { readJSON, writeJSON } from "./storage";
 
 const PICK_KEY = "rahalgo_delivery_address";
@@ -33,6 +33,12 @@ interface CustomerState {
   reloadAddresses: () => Promise<Address[]>;
   address: Address | null;
   pickAddress: (id: string) => void;
+  /**
+   * **أتُخدَم نقطةُ التوصيل الآن؟** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «ما بدنا حدا من الويب يطلب وهو خارج
+   * منطقة التوصيل») — مرآةُ `Orderable` في التطبيق: `/public/availability` بعنوان التوصيل، تُعاد
+   * عند تبديله وعند الرجوع للصفحة وكلَّ دقيقتين. **وفارغةٌ بلا عنوان** — والخادمُ يحرس الطلب.
+   */
+  availability: Availability | null;
   wallet: Wallet | null;
   reloadWallet: () => void;
   /** **الرصيدُ المتاح للدفع** — المتاحُ إن أُرسل، وإلّا الرصيد. */
@@ -141,6 +147,35 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
 
   const available = wallet ? (wallet.available ?? wallet.balance) : 0;
 
+  const [availability, setAvailability] = useState<Availability | null>(null);
+  const aLat = address?.lat;
+  const aLng = address?.lng;
+  const refreshAvailability = useCallback(() => {
+    if (aLat == null || aLng == null) {
+      setAvailability(null);
+      return;
+    }
+    api<Availability>(`/api/v1/public/availability?lat=${aLat}&lng=${aLng}`)
+      .then(setAvailability)
+      .catch(() => undefined); // @empty-ok — إتاحةٌ لم تُقرأ لا تُغلق شيئاً، والخادمُ يحرس الطلب.
+  }, [aLat, aLng]);
+  useEffect(() => {
+    refreshAvailability();
+    const t = setInterval(refreshAvailability, FRESH_MS);
+    // **والرجوعُ للصفحة يعيد السؤال** — كـ`ON_RESUME` في التطبيق: الدوامُ يتبدّل والصفحةُ مفتوحة.
+    const onShow = () => {
+      if (document.visibilityState === "visible") {
+        refreshAvailability();
+        refreshPlatform();
+      }
+    };
+    document.addEventListener("visibilitychange", onShow);
+    return () => {
+      clearInterval(t);
+      document.removeEventListener("visibilitychange", onShow);
+    };
+  }, [refreshAvailability, refreshPlatform]);
+
   const value = useMemo<CustomerState>(
     () => ({
       platform,
@@ -153,8 +188,9 @@ export function CustomerProvider({ children }: { children: ReactNode }) {
       wallet,
       reloadWallet,
       available,
+      availability,
     }),
-    [platform, refreshPlatform, addresses, addressesError, reloadAddresses, address, pickAddress, wallet, reloadWallet, available],
+    [platform, refreshPlatform, addresses, addressesError, reloadAddresses, address, pickAddress, wallet, reloadWallet, available, availability],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

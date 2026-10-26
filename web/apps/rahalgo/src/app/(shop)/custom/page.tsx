@@ -30,7 +30,7 @@ import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
 import { customFee, fill } from "@/lib/customer/texts";
 import { AddressChip, AddressSheet } from "@/components/customer/AddressSheet";
 import { NeedLogin } from "@/components/customer/NeedLogin";
-import { useOrderingState } from "@/components/customer/ServiceNotices";
+import { useOrderingState, useAddGate, AvailabilityNotice } from "@/components/customer/ServiceNotices";
 import { useShopToast } from "@/components/customer/toast";
 
 const m = getMessages(defaultLocale);
@@ -46,6 +46,8 @@ export default function CustomOrderPage() {
   const { user, loading } = useAuth();
   const { address, platform } = useCustomer();
   const ordering = useOrderingState();
+  // **وعنوانٌ لا نصله يُقال قبل الإرسال** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — كالسلّة.
+  const gate = useAddGate();
   const router = useRouter();
   const toast = useShopToast();
   const [mode, setMode] = useState<Mode>("purchase");
@@ -170,11 +172,12 @@ export default function CustomOrderPage() {
       </section>
 
       {!ordering.open && <Alert tone="warning">{ordering.text}</Alert>}
+      {gate.kind === "blocked" && <AvailabilityNotice av={gate.av} address={address} />}
 
       <Button
         className="w-full py-3 text-base"
         onClick={send}
-        disabled={busy || !request.trim() || !address || !ordering.open || closed}
+        disabled={busy || !request.trim() || !address || !ordering.open || closed || gate.kind === "blocked"}
       >
         {busy ? K.sending : K.send}
       </Button>

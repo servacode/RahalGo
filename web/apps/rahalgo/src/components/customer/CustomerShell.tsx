@@ -52,7 +52,7 @@ import { CustomerProvider } from "@/lib/customer/context";
 import { FavoritesProvider } from "@/lib/customer/favorites";
 import { LiveShareProvider } from "@/lib/customer/live";
 import { ShopToastProvider } from "./toast";
-import { OrderingBanner } from "./ServiceNotices";
+import { OrderingBanner, ServiceBlockBanner } from "./ServiceNotices";
 import PwaHints from "./PwaHints";
 import QuoteWatcher from "./QuoteWatcher";
 import WebPushCard from "@/components/WebPushCard";
@@ -205,6 +205,7 @@ function Shell({ children }: { children: ReactNode }) {
       <main className="flex min-w-0 flex-1 flex-col gap-3 px-3 pb-4 pt-3 sm:px-4">
         <PwaHints />
         <OrderingBanner />
+        <ServiceBlockBanner />
         {user && <LiveBanner />}
         {/* **«فعّل الإشعارات» قدّامه لا في «حسابي»** (ملاحظةُ المالك ٢٠٢٦-١٠-١٩) — **وصاحبُ
             الآيفون يُقال له كيف** (أضفه للشاشة الرئيسيّة)، فلا يدور على الإذن. */}

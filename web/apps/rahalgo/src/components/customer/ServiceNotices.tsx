@@ -94,3 +94,41 @@ export function AvailabilityNotice({ av, address }: { av: Availability; address:
     </div>
   );
 }
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **أتُضاف السلّةُ الآن؟ — قبل الإضافة لا عند الإرسال**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (قرارُ المالك ٢٠٢٦-١٠-٢٦: «لازم قبل ما يضيف للسلة أصلاً يطلعله… مو يضيف للسلة ليتفاجأ إنه
+ * ما يقدر يطلب».) مرآةُ `addActionFor` و`rememberAddBlocked` في التطبيق:
+ *
+ *	متوقّفٌ الآن (دوامٌ · إيقافٌ · قبل الإطلاق)   ⇒ `closed`
+ *	بلا عنوانِ توصيل                            ⇒ `need_address` (يُسأل أوّلاً)
+ *	عنوانٌ لا يُخدَم (خارجَ التغطية · منطقتُه مغلقة) ⇒ `blocked`
+ *
+ * **والخادمُ يبقى الحارسَ الأخير** (`requireOrdering` · `ErrOutOfZone`) — هذا ما يُقال قبله.
+ */
+export type AddGate =
+  | { kind: "ok" }
+  | { kind: "closed"; text: string }
+  | { kind: "need_address" }
+  | { kind: "blocked"; av: Availability };
+
+export function useAddGate(): AddGate {
+  const ordering = useOrderingState();
+  const { address, availability } = useCustomer();
+  if (!ordering.open) return { kind: "closed", text: ordering.text };
+  if (!address) return { kind: "need_address" };
+  if (availability && !availability.available) return { kind: "blocked", av: availability };
+  return { kind: "ok" };
+}
+
+/** **لافتةُ «عنوانُك لا نصله» فوق كلّ صفحة** — كـ`ServiceBlockNotice` في التطبيق، ومعها «اطلب تغطية منطقتي». */
+export function ServiceBlockBanner() {
+  const ordering = useOrderingState();
+  const { address, availability } = useCustomer();
+  // **ولافتتان لا تتراكبان**: المتوقّفُ يقوله `OrderingBanner` وحدَه.
+  if (!ordering.open || !address || !availability || availability.available) return null;
+  return <AvailabilityNotice av={availability} address={address} />;
+}

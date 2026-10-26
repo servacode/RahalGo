@@ -39,10 +39,15 @@ import { useFav } from "@/lib/customer/favorites";
 import type { Item, ItemDetail, ModifierGroup, ModifierOption } from "@/lib/customer/types";
 import { dollars, fill, backAt } from "@/lib/customer/texts";
 import { useShopToast } from "./toast";
+import { useAddGate, AvailabilityNotice } from "./ServiceNotices";
+import { AddressSheet } from "./AddressSheet";
+import { useCustomer } from "@/lib/customer/context";
+import { useAuth } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
 const I = m.shop.item;
 const S = m.shop.stores;
+const SV = m.shop.service;
 
 /** **السعرُ على سطرٍ واحد** — دولارٌ ثمّ «≈ ليرة»، أو ليرةٌ وحدَها. */
 export function Price({ syp, usd, className = "" }: { syp: number; usd?: number | null; className?: string }) {
@@ -229,6 +234,12 @@ export function ItemSheet({
   const [warn, setWarn] = useState("");
   const [askOther, setAskOther] = useState(false);
   const fav = useFav();
+  // **بوّابةُ الإضافة قبل السلّة** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — كالتطبيق: متوقّفٌ أو عنوانٌ لا نصله
+  // أو بلا عنوان يُقال هنا، **ولا يُضاف شيءٌ يُردّ عند الإرسال.**
+  const gate = useAddGate();
+  const { address } = useCustomer();
+  const { user } = useAuth();
+  const [pickAddr, setPickAddr] = useState(false);
 
   useEffect(() => {
     setDetail(null);
@@ -273,6 +284,7 @@ export function ItemSheet({
   const img = mediaUrl(view.image_url ?? view.image_thumb_url);
 
   const doAdd = () => {
+    if (gate.kind !== "ok") return;
     cart.add(view, qty, options);
     toast(I.added);
     onClose();
@@ -312,6 +324,28 @@ export function ItemSheet({
         footer={
           closed ? (
             <Alert tone="warning">{closedLabel(view)}</Alert>
+          ) : gate.kind === "closed" ? (
+            <Alert tone="warning" title={SV.closedTitle}>
+              {gate.text}
+            </Alert>
+          ) : gate.kind === "blocked" ? (
+            <AvailabilityNotice av={gate.av} address={address} />
+          ) : gate.kind === "need_address" ? (
+            <div className="space-y-2">
+              <Alert tone="info">{SV.needAddress}</Alert>
+              {user ? (
+                <Button className="w-full py-3" onClick={() => setPickAddr(true)}>
+                  {SV.addAddress}
+                </Button>
+              ) : (
+                <Link
+                  href="/login"
+                  className="flex w-full items-center justify-center rounded-control bg-accent py-3 font-bold text-on-bright"
+                >
+                  {SV.loginFirst}
+                </Link>
+              )}
+            </div>
           ) : (
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1 rounded-control bg-field p-1">
@@ -423,6 +457,7 @@ export function ItemSheet({
           {warn && <Alert tone="warning">{warn}</Alert>}
         </div>
       </Sheet>
+      <AddressSheet open={pickAddr} onClose={() => setPickAddr(false)} />
       <Confirm
         open={askOther}
         title={I.otherStoreTitle}
