@@ -36,12 +36,15 @@ export function AutoModeToggle({
   hint,
   className = "mb-4",
   minutesKey,
+  compact = false,
 }: {
   settingKey: string;
   label: string;
   hint: string;
   className?: string;
   minutesKey?: string;
+  /** **مفتاحٌ صغيرٌ في رأس الصفحة** بدل بطاقةٍ كاملة (قرارُ المالك ٢٠٢٦-١٠-٢٦: «تصميم احترافي»). */
+  compact?: boolean;
 }) {
   const kind = KIND[settingKey];
   const canCall = useCanCall();
@@ -86,6 +89,20 @@ export function AutoModeToggle({
   }
 
   if (!row || !row.editable) return null;
+
+  if (compact) {
+    return (
+      <div className={`rounded-full border border-line px-3 py-1.5 ${className}`} title={hint}>
+        <Switch
+          checked={row.on}
+          onChange={(v: boolean) => void toggle(v)}
+          label={`${A.title}: ${row.on ? A.on : A.off}`}
+          disabled={busy}
+        />
+        {error && <p className="text-2xs text-danger">{error}</p>}
+      </div>
+    );
+  }
 
   return (
     <Card className={`space-y-2 p-4 ${className}`}>

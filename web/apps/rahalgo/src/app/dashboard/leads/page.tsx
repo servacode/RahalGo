@@ -15,14 +15,11 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { getMessages, defaultLocale, fmtDate, fmtNum, fmtSpan, errorText } from "@rahalgo/i18n";
 import {
   useLiveRefresh,
-  PageHeader,
   Button,
   Badge,
   CategoryIcon,
   DataView,
   Pagination,
-  ViewToggle,
-  useViewMode,
   type DataColumn,
   IconStore,
   IconPhone,
@@ -91,12 +88,12 @@ const STATUS_VARIANT: Record<LeadStatus, "warning" | "success" | "danger" | "inf
   rejected: "danger",
 };
 
-const STATUS_CHIPS: { id: string; label: string }[] = [
-  { id: "new", label: L.st.new },
-  { id: "needs_info", label: L.st.needs_info },
-  { id: "converted", label: L.st.converted },
-  { id: "rejected", label: L.st.rejected },
-  { id: "all", label: L.filterAll },
+const STATUS_TABS: { id: string; label: string; Icon: typeof IconLink }[] = [
+  { id: "new", label: L.st.new, Icon: IconHourglass },
+  { id: "needs_info", label: L.st.needs_info, Icon: IconWarning },
+  { id: "converted", label: L.st.converted, Icon: IconSuccess },
+  { id: "rejected", label: L.st.rejected, Icon: IconBlock },
+  { id: "all", label: L.filterAll, Icon: IconStatus },
 ];
 
 /** مفاتيحُ الرابط — **الفلاترُ تُحفظ فيه** فيُشارَك ويُعاد إليه. */
@@ -143,7 +140,6 @@ function LeadsScreen() {
   const [cats, setCats] = useState<Named[]>([]);
   // **ولا «لا طلبات» قبل أن يصل الردّ** (تدقيقُ اللوحة ٢٠٢٦-١٠-٠٣).
   const [loaded, setLoaded] = useState(false);
-  const [view, setView] = useViewMode("leads", "cards");
   const [count, setCount] = useState(0);
   const [perPage, setPerPage] = useState(20);
   const [error, setError] = useState("");
@@ -379,18 +375,50 @@ function LeadsScreen() {
 
   return (
     <div>
-      <div className="mb-2 flex flex-wrap items-center justify-between gap-3">
-        <PageHeader icon={IconLink} title={L.title} />
-        <ViewToggle view={view} onChange={setView} tableLabel={m.common.viewTable} cardsLabel={m.common.viewCards} />
-      </div>
-      <p className="mb-4 text-sm text-ink-muted">{L.subtitle}</p>
-
-      {/* **قبولٌ تلقائيٌّ بضغطة** (قرارُ المالك ٢٠٢٦-١٠-٠٨) — يظهر لمن يملك كتابتَه. */}
-      <AutoModeToggle
-        settingKey="leads.auto_approve"
-        label={m.admin.autoMode.leadsLabel}
-        hint={m.admin.autoMode.leadsHint}
-      />
+      {/* **رأسٌ واحدٌ مرتّب** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «تصميم احترافي كالسابقات»): العنوانُ بأيقونته
+          والقبولُ التلقائيُّ مفتاحٌ صغيرٌ بجانبه، وتحته الحالاتُ تبويباتٌ بسطرٍ واحد. */}
+      <section className="surface mb-4 overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 p-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-on-bright">
+              <IconLink size={22} />
+            </span>
+            <div className="min-w-0">
+              <h1 className="heading-page">{L.title}</h1>
+              <p className="text-xs text-ink-muted">{L.subtitle}</p>
+            </div>
+          </div>
+          {/* **قبولٌ تلقائيٌّ بضغطة** (قرارُ المالك ٢٠٢٦-١٠-٠٨) — يظهر لمن يملك كتابتَه. */}
+          <AutoModeToggle
+            compact
+            className=""
+            settingKey="leads.auto_approve"
+            label={m.admin.autoMode.leadsLabel}
+            hint={m.admin.autoMode.leadsHint}
+          />
+        </div>
+        <nav className="flex gap-1 overflow-x-auto border-t border-line-soft px-2" role="tablist">
+          {STATUS_TABS.map(({ id, label, Icon }) => {
+            const on = status === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                role="tab"
+                aria-selected={on}
+                onClick={() => setParams({ status: id === "new" ? "" : id })}
+                className={`relative inline-flex shrink-0 items-center gap-2 px-3 py-3 text-sm font-bold transition-colors ${
+                  on ? "text-ink" : "text-ink-muted hover:text-ink"
+                }`}
+              >
+                <Icon size={16} />
+                {label}
+                {on && <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-accent" />}
+              </button>
+            );
+          })}
+        </nav>
+      </section>
 
       {/* **وسببُ الخادم يُعرض بنصّه** — جوابٌ يُصلَح به. */}
       {error && (
@@ -413,9 +441,8 @@ function LeadsScreen() {
         </Alert>
       )}
 
-      <Chips items={STATUS_CHIPS} value={status} onChange={(id) => setParams({ status: id === "new" ? "" : id })} className="mb-3" />
-
-      <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+      {/* **الفلاترُ ببطاقةٍ واحدة** — البحثُ والمندوبُ والمحافظةُ والتصنيفُ والتاريخان بصفٍّ واحدٍ على الشاشة العريضة. */}
+      <div className="surface mb-4 grid grid-cols-1 items-end gap-2 p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <Input
           id="lead-search"
           icon={<IconSearch size={16} />}
@@ -474,7 +501,7 @@ function LeadsScreen() {
         loading={!loaded && !error}
         getKey={(l) => l.id}
         columns={columns}
-        view={view}
+        view="cards"
         empty={L.empty}
         actions={(l) =>
           /* **وما حُوِّل لا يُردّ** — المتجرُ قائمٌ يبيع، والخادمُ يمنعه أيضاً. */
