@@ -49,8 +49,8 @@ func TestPercent2_ParseAndPrint(t *testing.T) {
 	}
 }
 
-// TestPercent2_CommissionTruncatesLikeBefore **البترُ نفسُه — والصحيحُ ليرةً بليرة.**
-func TestPercent2_CommissionTruncatesLikeBefore(t *testing.T) {
+// TestPercent2_CommissionMatchesWholePercent **النمطان يتطابقان — والصحيحُ ليرةً بليرة.**
+func TestPercent2_CommissionMatchesWholePercent(t *testing.T) {
 	ctx := context.Background()
 	st := fakeStore{"merchants.commission_percent": 1.5}
 	if got := pricing.MerchantCommission(ctx, st, nil).Of(12_345); got != 185 {

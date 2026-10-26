@@ -144,11 +144,13 @@ func (a Amount) Of(base int64) int64 {
 	switch a.Mode {
 	case "fixed":
 		v = a.Value
+	// **والتقريبُ لأقرب ليرة** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «إذا تحت الـ٫٥ للـ١، وإذا أكبر للـ٢»):
+	// كان الكسرُ يُحذف دائماً فتخسر المنصّةُ حتّى ٠٫٩٩ في كلّ طلب. **والنصفُ يصعد** (١٫٥ ← ٢).
+	// والنمطان يتطابقان ليرةً بليرة — `ثمن × ١٠٠٠ ÷ ١٠٠٠٠` هو `ثمن × ١٠ ÷ ١٠٠`.
 	case ModePercent2:
-		// **والبترُ نفسُه** — `ثمن × ١٠٠٠ ÷ ١٠٠٠٠` يساوي `ثمن × ١٠ ÷ ١٠٠` ليرةً بليرة.
-		v = base * a.Value / 10000
+		v = roundDiv(base*a.Value, 10000)
 	default:
-		v = base * a.Value / 100
+		v = roundDiv(base*a.Value, 100)
 	}
 	if v < 0 {
 		return 0
@@ -157,6 +159,14 @@ func (a Amount) Of(base int64) int64 {
 		return base
 	}
 	return v
+}
+
+// roundDiv **قسمةٌ بتقريبٍ لأقرب عدد** — النصفُ يصعد، والسالبُ (لا يقع في المال هنا) يُبتَر كما كان.
+func roundDiv(n, d int64) int64 {
+	if n < 0 {
+		return n / d
+	}
+	return (n + d/2) / d
 }
 
 // MerchantCommission عمولةُ المنصة من المتجر — **تُقتطع من سعر شرائه.**

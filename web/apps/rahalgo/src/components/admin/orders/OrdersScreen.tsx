@@ -3624,7 +3624,7 @@ function PartnerStoreBox({
             if (pct <= 0) return <p className="text-xs text-ink-muted">{OP.partnerNoCommission}</p>;
             if (!goodsDone) return <p className="text-xs text-ink-muted">{OP.partnerCommissionLater}</p>;
             const goods = o.custom_goods_amount ?? 0;
-            const cut = Math.min(goods, Math.floor((goods * Math.round(pct * 100)) / 10000));
+            const cut = Math.min(goods, Math.floor((goods * Math.round(pct * 100) + 5000) / 10000)); // لأقرب ليرة كالخادم
             return (
               <p className="text-xs font-bold text-success">
                 {OP.partnerCommissionAmount}: <Money value={cut} />

@@ -6243,7 +6243,7 @@
         "storeNet": "يبقى للمتجر",
         "salePrice": "سعر الزبون",
         "changeImage": "تبديل الصورة",
-        "commissionExact": "بالضبط {x} — الكسر بيضل للمتجر"
+        "commissionExact": "بالضبط {x} — مقرّبة لأقرب ليرة"
       },
       "stores": {
         "search": "ابحث باسم المتجر",
