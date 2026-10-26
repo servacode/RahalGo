@@ -121,7 +121,7 @@ func TestTREASURY_OrderBreakdownSumsToRow(t *testing.T) {
 	// **والخزينةُ قيّدت ١٧٠٠** — فالفرقُ ١٠٠ سطرٌ ظاهر لا مخفيّ.
 	pf.post(t, pf.treasury, 1000, "platform_profit", order, now)
 	pf.post(t, pf.treasury, 700, "platform_profit", order, now)
-	day := now.In(damascusLoc()).Format("2006-01-02")
+	day := accountToday(t, f.srv) // يومُ الحساب يبدأ بفتح الدوام (٢٠٢٦-١٠-٢٦)
 	w := f.call(f.a, "GET", "/admin/treasury/statement/orders/"+order+"?from="+day+"&to="+day,
 		map[string]string{"id": order}, "", f.srv.handleTreasuryOrderBreakdown)
 	if w.Code != http.StatusOK {

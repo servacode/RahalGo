@@ -232,7 +232,7 @@ func cashReversalNote(cause string) string {
 //   - `cash_reversed`: لا شيء.
 func (s *Service) reverseCashSettlements(ctx context.Context, q wallet.Querier, orderID, actorID string) error {
 	rows, err := q.Query(ctx, `
-		SELECT id::text, merchant_id::text, amount - reversed_amount, state
+		SELECT id::text, merchant_id::text, amount - reversed_amount, state, commission_waived
 		FROM merchant_settlements
 		WHERE order_id = $1 AND method = 'cash'
 		FOR UPDATE`, orderID)
@@ -244,11 +244,14 @@ func (s *Service) reverseCashSettlements(ctx context.Context, q wallet.Querier, 
 		merchantID  string
 		outstanding int64
 		state       string
+		// waived **عمولةٌ قبضها المتجرُ من السائق فوق مستحقّه** («ما استلمت العمولة»،
+		// ٢٠٢٦-١٠-٢٦) — قبضها فعلاً، فتُستردّ معه.
+		waived int64
 	}
 	var list []row
 	for rows.Next() {
 		var r row
-		if err := rows.Scan(&r.id, &r.merchantID, &r.outstanding, &r.state); err != nil {
+		if err := rows.Scan(&r.id, &r.merchantID, &r.outstanding, &r.state, &r.waived); err != nil {
 			rows.Close()
 			return err
 		}
@@ -273,10 +276,11 @@ func (s *Service) reverseCashSettlements(ctx context.Context, q wallet.Querier, 
 				return err
 			}
 		case "cash_paid":
-			// **المدفوعُ = amount − reversed_amount** — يُنشَأ التزامٌ لا يُعاد كتابة.
-			if r.outstanding > 0 {
+			// **المدفوعُ = amount − reversed_amount** (+ عمولةٌ محيت أخذها نقداً) — يُنشَأ
+			// التزامٌ لا يُعاد كتابة.
+			if paid := r.outstanding + r.waived; paid > 0 {
 				if _, err := obligations.Create(ctx, q, obligations.PartyMerchant,
-					r.merchantID, r.outstanding, obligations.CauseRefundMerchant,
+					r.merchantID, paid, obligations.CauseRefundMerchant,
 					orderID, &actorID); err != nil {
 					return err
 				}

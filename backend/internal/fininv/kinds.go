@@ -79,10 +79,10 @@ var Kinds = map[string]KindContract{
 		Reachable:  true,
 	},
 	"commission": {
-		Kind: "commission", Sign: "+", RefRequired: true, RefTarget: "orders",
-		Creators:   []string{"internal/orders/transitions.go:988"},
-		Path:       "تسويةُ التسليم",
-		Semantics:  "نصيبُ المندوبِ من هامشِ طلبٍ سُلّم لمتجرٍ فعّله.",
+		Kind: "commission", Sign: "±", RefRequired: true, RefTarget: "orders",
+		Creators:   []string{"internal/orders/transitions.go:988", "internal/orders/commission_waiver.go"},
+		Path:       "تسويةُ التسليم · وPOST /admin/orders/{id}/waive-commission",
+		Semantics:  "نصيبُ المندوبِ من هامشِ طلبٍ سُلّم لمتجرٍ فعّله — **والسالبُ اقتطاعُ دَينٍ أو عكسُ نصيبه من عمولةٍ محيت** (٢٠٢٦-١٠-٢٦).",
 		Invariants: []string{"FI-01.d", "FI-05.e", "FI-06.a", "FI-09.a"},
 		Reachable:  true,
 	},
@@ -223,22 +223,23 @@ var Kinds = map[string]KindContract{
 	"merchant_cash_accrued": {
 		Kind: "merchant_cash_accrued", Sign: "±", RefRequired: true, RefTarget: "orders",
 		Creators: []string{
-			"internal/orders/cash_settlement.go", // accrueCashSettlement · postCashReversal · offsetMerchantDebtCash
+			"internal/orders/cash_settlement.go",   // accrueCashSettlement · postCashReversal · offsetMerchantDebtCash
+			"internal/orders/commission_waiver.go", // عمولةٌ محيت أخذها المتجرُ من السائق (٢٠٢٦-١٠-٢٦)
 		},
 		Path: "الاستلامُ من متجرٍ طريقتُه «نقد» · وعكسُ استردادٍ · واقتطاعُ دَين",
 		// **التزامٌ نقديٌّ للمتجر في محفظة الاحتباس** — تراه الخزينةُ في
 		// `toParties` فلا تحسبه ربحاً. **والسالبُ عكسٌ (ردٌّ) أو اقتطاعُ دَينٍ
 		// سابقٍ من المستحقّ** — بالنوع نفسِه فيتصافى في المجموع.
 		Semantics:  "مستحقُّ المتجرِ نقداً في الاحتباس — **والسالبُ عكسٌ أو اقتطاعُ دَين.**",
-		Invariants: []string{"FI-06.a", "FI-14.a", "FI-14.b", "FI-14.c", "FI-14.d"},
+		Invariants: []string{"FI-06.a", "FI-14.a", "FI-14.b", "FI-14.c", "FI-14.d", "FI-14.g"},
 		Reachable:  true,
 	},
 	"merchant_cash_paid": {
 		Kind: "merchant_cash_paid", Sign: "-", RefRequired: true, RefTarget: "orders",
-		Creators:   []string{"internal/orders/cash_settlement.go"}, // payCashSettlement ← MarkCashSettlementPaid · payCashByDriver
+		Creators:   []string{"internal/orders/cash_settlement.go", "internal/orders/commission_waiver.go"}, // payCashSettlement ← MarkCashSettlementPaid · payCashByDriver · والعمولةُ المحوّة
 		Path:       "تأكيدُ الأدمنِ دفعَ مستحقٍّ نقديّ للمتجر · والسائقُ يدفعه عند الاستلام (٢٠٢٦-١٠-١٥)",
 		Semantics:  "خروجُ نقدٍ من الاحتباس تسويةً لمستحقّ متجرٍ — **لا نصيبَ طرفٍ في ربح الطلب.** وما دفعه السائقُ يُطرح من نقد صندوقه.",
-		Invariants: []string{"FI-14.a", "FI-14.f", "FI-06.a", "FI-10.b", "FI-15.b"},
+		Invariants: []string{"FI-14.a", "FI-14.f", "FI-14.g", "FI-06.a", "FI-10.b", "FI-10.d", "FI-15.b"},
 		Reachable:  true,
 	},
 }

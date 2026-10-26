@@ -131,11 +131,11 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 		       COALESCE(u.cash_limit_override, $2::bigint),
 		       COALESCE((SELECT balance FROM wallets WHERE user_id = u.id), 0),
 		       (SELECT count(*) FROM orders o WHERE o.driver_id = u.id AND o.status = 'delivered'
-		          AND o.delivered_at AT TIME ZONE 'Asia/Damascus' >= date_trunc('day', now() AT TIME ZONE 'Asia/Damascus')),
+		          AND o.delivered_at >= account_day_start(account_day(now()))),
 		       -- **وما تعذّر اليوم يُعدّ كما يُعدّ ما سُلّم** — وبوقت الإغلاق
 		       -- لأنّ الفشلَ إغلاقٌ ولا وقتَ تسليمٍ له.
 		       (SELECT count(*) FROM orders o WHERE o.driver_id = u.id AND o.status = 'failed'
-		          AND o.closed_at AT TIME ZONE 'Asia/Damascus' >= date_trunc('day', now() AT TIME ZONE 'Asia/Damascus')),
+		          AND o.closed_at >= account_day_start(account_day(now()))),
 		       -- **وأجرُ اليوم يشمل التعويض.**
 		       --
 		       -- كان أجرَ التوصيل وحدَه، **فسائقٌ قاد مشواراً وتعذّر تسليمُه
@@ -150,13 +150,13 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 		       COALESCE((SELECT sum(t.amount) FROM wallet_transactions t
 		                 JOIN orders o ON o.id::text = t.ref
 		                 WHERE t.user_id = u.id AND t.kind = 'driver_earning'
-		                   AND o.delivered_at AT TIME ZONE 'Asia/Damascus' >= date_trunc('day', now() AT TIME ZONE 'Asia/Damascus')), 0)
+		                   AND o.delivered_at >= account_day_start(account_day(now()))), 0)
 		       + COALESCE((SELECT sum(t.amount) FROM wallet_transactions t
 		                 WHERE t.user_id = u.id AND t.kind = 'compensation'
-		                   AND t.created_at AT TIME ZONE 'Asia/Damascus' >= date_trunc('day', now() AT TIME ZONE 'Asia/Damascus')), 0),
+		                   AND t.created_at >= account_day_start(account_day(now()))), 0),
 		       COALESCE((SELECT sum(t.amount) FROM wallet_transactions t
 		                 WHERE t.user_id = u.id AND t.kind = 'compensation'
-		                   AND t.created_at AT TIME ZONE 'Asia/Damascus' >= date_trunc('day', now() AT TIME ZONE 'Asia/Damascus')), 0),
+		                   AND t.created_at >= account_day_start(account_day(now()))), 0),
 		       (SELECT count(*) FROM orders o WHERE o.driver_id = u.id AND o.closed_at IS NULL),
 		       -- **ومتوسّطُ نجومه على كلّ ما قُيّم** — لا على آخر عشرة.
 		       --

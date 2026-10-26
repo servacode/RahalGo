@@ -91,7 +91,8 @@ const lossRowsCTE = `,
 func (s *Server) handlePlatformLosses(w http.ResponseWriter, r *http.Request) {
 	to, err := time.Parse("2006-01-02", r.URL.Query().Get("to"))
 	if err != nil {
-		to = time.Now().UTC().Add(3 * time.Hour) // يومُ دمشق
+		// **يومُ الحساب بدمشق** — ساعةُ فتح الدوام تُطرح (٢٠٢٦-١٠-٢٦).
+		to = time.Now().UTC().Add(3*time.Hour - time.Duration(s.settings.GetInt(r.Context(), "platform.day_start_hour"))*time.Hour)
 	}
 	from, err := time.Parse("2006-01-02", r.URL.Query().Get("from"))
 	if err != nil {

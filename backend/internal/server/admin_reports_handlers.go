@@ -117,8 +117,8 @@ func parseReportFilter(q map[string][]string, now time.Time) (reportFilter, erro
 // **ومدينةُ الطلب مدينةُ متجره**، والطلبُ الخاصُّ (بلا متجر) مدينتُه
 // المدينةُ التي تحوي نقطةَ تسليمه.
 const reportScopeSQL = `
-		WHERE o.created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Damascus')
-		  AND o.created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Damascus')
+		WHERE o.created_at >= account_day_start($1::date)
+		  AND o.created_at < account_day_start($2::date + 1)
 		  AND ($3::text = '' OR o.kind = $3::text)
 		  AND ($4::text = '' OR (CASE WHEN o.merchant_id IS NOT NULL
 		        THEN mr.city_id = NULLIF($4::text, '')::uuid
@@ -234,11 +234,11 @@ func (s *Server) customerVisitors(ctx context.Context) (reportVisitors, error) {
 	var v reportVisitors
 	err := s.pg.QueryRow(ctx, `
 		WITH d AS (
-			SELECT (now() AT TIME ZONE 'Asia/Damascus')::date AS today
+			SELECT account_day(now()) AS today
 		), b AS (
-			SELECT (d.today::timestamp AT TIME ZONE 'Asia/Damascus') AS t0,
-			       ((d.today - 6)::timestamp AT TIME ZONE 'Asia/Damascus') AS t7,
-			       ((d.today - 29)::timestamp AT TIME ZONE 'Asia/Damascus') AS t30
+			SELECT account_day_start(d.today) AS t0,
+			       account_day_start(d.today - 6) AS t7,
+			       account_day_start(d.today - 29) AS t30
 			FROM d
 		)
 		SELECT
@@ -254,7 +254,9 @@ func (s *Server) customerVisitors(ctx context.Context) (reportVisitors, error) {
 
 // handleReports تقريرُ مدّة — انظر رأسَ الملفّ.
 func (s *Server) handleReports(w http.ResponseWriter, r *http.Request) {
-	f, err := parseReportFilter(r.URL.Query(), time.Now())
+	// **و«اليوم» الافتراضيُّ يومُ الحساب** — ساعةُ فتح الدوام تُطرح فيُقرأ تاريخُه (٢٠٢٦-١٠-٢٦).
+	f, err := parseReportFilter(r.URL.Query(),
+		time.Now().Add(-time.Duration(s.settings.GetInt(r.Context(), "platform.day_start_hour"))*time.Hour))
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -319,7 +321,7 @@ func (s *Server) reportDaily(ctx context.Context, f reportFilter, money bool) ([
 	rows, err := s.pg.Query(ctx, `
 		WITH scoped AS (
 			SELECT o.status, o.total,
-			       (o.created_at AT TIME ZONE 'Asia/Damascus')::date AS day
+			       account_day(o.created_at) AS day
 			FROM orders o
 			LEFT JOIN merchants mr ON mr.id = o.merchant_id`+reportScopeSQL+`
 		)

@@ -470,10 +470,10 @@ func ListWhere(f ListFilter, lim StuckLimits) (string, []any, error) {
 	}
 	// **ومدى التاريخ بيوم دمشق** — يومُ إنشاء الطلب (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ١).
 	if f.From != "" {
-		and(`o.created_at >= (` + arg(f.From) + `::date::timestamp AT TIME ZONE 'Asia/Damascus')`)
+		and(`o.created_at >= account_day_start(` + arg(f.From) + `::date)`)
 	}
 	if f.To != "" {
-		and(`o.created_at < ((` + arg(f.To) + `::date + 1)::timestamp AT TIME ZONE 'Asia/Damascus')`)
+		and(`o.created_at < account_day_start(` + arg(f.To) + `::date + 1)`)
 	}
 	if f.Kind != "" {
 		and(`o.kind = ` + arg(f.Kind))

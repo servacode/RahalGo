@@ -365,7 +365,7 @@ func (s *Server) handleAdminGetUser(w http.ResponseWriter, r *http.Request) {
 		       COALESCE((SELECT held FROM driver_cash_boxes WHERE driver_id = u.id), 0),
 		       (SELECT count(*) FROM orders o WHERE o.driver_id = u.id AND o.status = 'delivered'),
 		       (SELECT count(*) FROM orders o WHERE o.driver_id = u.id AND o.status = 'delivered'
-		         AND o.delivered_at >= date_trunc('day', now()))
+		         AND o.delivered_at >= account_day_start(account_day(now())))
 		FROM users u WHERE u.id = $1`, id).
 		Scan(&out.ID, &out.Phone, &out.FullName, &out.Status, &out.InviteCode, &out.StatusReason, &out.AdminNotes, &out.Sessions, &out.AvatarThumb, &out.CreatedAt, &out.LastSeenAt,
 			&out.Roles, &out.ReferralsCount, &out.ReferralsEarned, &out.Balance, &out.OrdersCount, &out.OrdersSpent, &out.Merchants,

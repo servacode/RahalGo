@@ -678,6 +678,7 @@
 | المفتاح | المجموعة | النوع | الافتراضيّ |
 |---|---|---|---|
 | `platform.orders_mode` | المنصة | choice | `platform` |
+| `platform.day_start_hour` | المنصة | int | `9` |
 | `moderation.banned_words` | المنصة | longtext | `كلب
 كلاب
 حمار

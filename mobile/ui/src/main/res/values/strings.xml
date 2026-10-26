@@ -925,6 +925,14 @@
     <string name="err_not_found">تعذّر العثور على المطلوب.</string>
     <string name="err_comms_closed">المحادثة مغلقة — انتهى هذا الطلب أو أُلغي.</string>
     <string name="err_comms_no_driver">لا سائقَ بعد — تُفتح المحادثة بعد إسناد سائق.</string>
+    <string name="err_commission_waiver_reason_required">اكتب سبب مسح العمولة.</string>
+    <string name="err_commission_waiver_not_delivered">الطلب لسا ما انسلّم، ما فيك تمسح عمولته.</string>
+    <string name="err_commission_waiver_not_standard">مسح العمولة بس للطلبات العادية من المتاجر.</string>
+    <string name="err_commission_waiver_no_commission">هالطلب ما عليه عمولة.</string>
+    <string name="err_commission_already_waived">عمولة هالطلب انمسحت من قبل.</string>
+    <string name="err_commission_waiver_not_driver_cash">السائق ما قبض كاش هالطلب.</string>
+    <string name="err_commission_waiver_wallet_store">هالمتجر بيقبض على المحفظة، فما بينطبق هون.</string>
+    <string name="err_commission_waiver_driver_cash_short">السائق سلّم المصاري للمكتب قبل.</string>
     <string name="err_bad_request">طلبٌ غير صالح — راجع ما أُرسل</string>
     <!-- تحديدُ الموقع: لكلّ تعذّرٍ سببُه وعلاجُه (ML، ٢٠٢٦-٠٩-١٥) -->
     <string name="loc_fail_denied">لم يُسمح بالموقع — اسمح به ليُحدَّد مكانك</string>

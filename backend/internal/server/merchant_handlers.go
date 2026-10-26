@@ -593,7 +593,11 @@ func (s *Server) handleMerchantReports(w http.ResponseWriter, r *http.Request) {
 	if lerr != nil {
 		loc = time.UTC
 	}
-	now := time.Now().In(loc)
+	// **ويومُ الحساب يبدأ بساعة فتح الدوام** (قرارُ المالك ٢٠٢٦-١٠-٢٦،
+	// `platform.day_start_hour`) — ما قبلها لليوم السابق، كرسمِ الأيّام أدناه
+	// (`account_day`)، **فلا يخالف مجموعُ الرسم الملخّصَ فوقه.**
+	start := time.Duration(s.settings.GetInt(r.Context(), "platform.day_start_hour")) * time.Hour
+	now := time.Now().In(loc).Add(-start)
 	to := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
 	from := to.AddDate(0, 0, -6)
 	if v := r.URL.Query().Get("from"); v != "" {
@@ -606,7 +610,8 @@ func (s *Server) handleMerchantReports(w http.ResponseWriter, r *http.Request) {
 			to = t
 		}
 	}
-	toEnd := to.AddDate(0, 0, 1)
+	// **حدّا المدى لحظتا فتح الدوام** — دمشقُ +3 ثابتة فلا قفزةَ صيفيّة بينهما.
+	fromAt, toEnd := from.Add(start), to.AddDate(0, 0, 1).Add(start)
 
 	// **المبيعاتُ تُقاس بخروج البضاعة لا بوصولها.**
 	//
@@ -666,7 +671,7 @@ func (s *Server) handleMerchantReports(w http.ResponseWriter, r *http.Request) {
 		-- **والتوصيلةُ ليست بيعاً** — لها سجلُّها (الخطوة ١٨).
 		WHERE merchant_id = $1 AND created_at >= $2 AND created_at < $3
 		  AND kind <> 'merchant_delivery'`,
-		merchantID, from, toEnd).
+		merchantID, fromAt, toEnd).
 		Scan(&summary.Orders, &summary.Delivered, &summary.Cancelled,
 			&summary.Sold, &summary.Returned, &summary.Sales, &summary.Commission)
 	if err != nil {
@@ -687,7 +692,7 @@ func (s *Server) handleMerchantReports(w http.ResponseWriter, r *http.Request) {
 		FROM generate_series($2::date, $3::date, '1 day') d
 		LEFT JOIN (
 			-- **واليومُ يومُ دمشق** — لا يومُ ساعة القاعدة.
-			SELECT (created_at AT TIME ZONE 'Asia/Damascus')::date AS day, count(*) AS orders,
+			SELECT account_day(created_at) AS day, count(*) AS orders,
 			       count(*) FILTER (WHERE status = 'delivered') AS delivered,
 			       -- **وبسعر المتجر كما في المجاميع** — ولا رقمان لمعنًى واحد.
 			       COALESCE(sum(CASE WHEN picked_up_at IS NOT NULL AND returned_at IS NULL
@@ -700,7 +705,7 @@ func (s *Server) handleMerchantReports(w http.ResponseWriter, r *http.Request) {
 			  AND kind <> 'merchant_delivery'
 			GROUP BY 1
 		) o ON o.day = d::date`,
-		merchantID, from.Format("2006-01-02"), to.Format("2006-01-02"), toEnd, from)
+		merchantID, from.Format("2006-01-02"), to.Format("2006-01-02"), toEnd, fromAt)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -758,7 +763,7 @@ func (s *Server) handleMerchantReports(w http.ResponseWriter, r *http.Request) {
 		  AND o.picked_up_at IS NOT NULL AND o.returned_at IS NULL
 		GROUP BY oi.name
 		ORDER BY 3 DESC, 2 DESC
-		LIMIT 100`, merchantID, from, toEnd)
+		LIMIT 100`, merchantID, fromAt, toEnd)
 	if err != nil {
 		s.respondErr(w, err)
 		return

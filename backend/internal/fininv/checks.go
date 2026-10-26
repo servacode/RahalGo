@@ -485,11 +485,16 @@ var All = []Check{
 				WHERE t.ref = o.id::text
 				  AND (t.kind <> 'merchant_cash_paid'
 				       OR EXISTS (SELECT 1 FROM merchant_settlements ms
-				                  WHERE ms.paid_tx_id = t.id AND ms.paid_via = 'driver'))
+				                  WHERE ms.paid_tx_id = t.id AND ms.paid_via = 'driver')
+				       -- **وعمولةٌ محيت أخذها المتجرُ من السائق** (٢٠٢٦-١٠-٢٦) — من نقد الطلب كذلك.
+				       OR EXISTS (SELECT 1 FROM merchant_settlements ms
+				                  WHERE ms.waived_paid_tx_id = t.id))
 			) l ON true
+			-- **وسطرُ «ما استلمت العمولة» يُنقص نقدَ الطلب في صندوقه** (قرارُ المالك ٢٠٢٦-١٠-٢٦):
+			-- المتجرُ أخذها منه فلم تبقَ بيده — ومقابلُها في الدفتر دفعُها للمتجر وعكسُ الخزينة.
 			LEFT JOIN LATERAL (
 				SELECT sum(e.amount) AS cash FROM driver_cash_entries e
-				WHERE e.ref = o.id::text AND e.kind = 'order_collection'
+				WHERE e.ref = o.id::text AND e.kind IN ('order_collection', 'commission_waived')
 			) c ON true
 			-- **وما لم يغطّه نقدُ الزبون سلفةٌ ردّها المكتبُ من الدرج** (advance_return)
 			-- — فالنقدُ المقابلُ للدفتر = المحصَّلُ ناقصَها.
@@ -652,6 +657,26 @@ var All = []Check{
 			           AND ms.paid_by = e.driver_id), 0)
 			       -- **وما دفعه للمتجر في المشتريات** (قرارُ المالك ٢٠٢٦-١٠-١٥) — والقديمُ بلاه.
 			       - COALESCE(o.custom_store_paid, 0), 0)`,
+	},
+	{
+		ID: "FI-10.d", Family: FI10, Status: ProvableNow, Ops: true,
+		Name: "عمولةٌ محيت = سطرُ صندوق السائق = ما أخذه المتجر",
+		Why: "**«ما استلمت العمولة»** (قرارُ المالك ٢٠٢٦-١٠-٢٦): مقدارُ المحو على الطلب، وما " +
+			"نقص من صندوق السائق، وما كُتب أنّ المتجرَ قبضه — **ثلاثتُها رقمٌ واحد.** " +
+			"وافتراقُها سائقٌ يُعفى من غير ما أُعفي منه، أو عمولةٌ ضاعت بلا أثر.",
+		Flows: []string{"F-14", "F-27"},
+		SQL: `
+			SELECT o.number, o.commission_waived,
+			       COALESCE(d.amt, 0)::bigint AS الصندوق, COALESCE(m.amt, 0)::bigint AS المتاجر
+			FROM orders o
+			LEFT JOIN LATERAL (SELECT -sum(e.amount) AS amt FROM driver_cash_entries e
+			                    WHERE e.ref = o.id::text AND e.kind = 'commission_waived') d ON true
+			LEFT JOIN LATERAL (SELECT sum(ms.commission_waived) AS amt FROM merchant_settlements ms
+			                    WHERE ms.order_id = o.id) m ON true
+			WHERE (o.commission_waived > 0 OR d.amt IS NOT NULL OR COALESCE(m.amt, 0) > 0)
+			  AND (o.commission_waived <> COALESCE(d.amt, 0)
+			    OR o.commission_waived <> COALESCE(m.amt, 0)
+			    OR (o.status = 'delivered' AND o.platform_commission <> 0))`,
 	},
 	{
 		ID: "FI-10.c", Family: FI10, Status: ProvableNow, Ops: true,
@@ -1033,10 +1058,29 @@ var All = []Check{
 			SELECT paid.total AS paid_out, due.total AS settled_due
 			FROM (SELECT COALESCE(-sum(amount), 0) AS total
 			        FROM wallet_transactions WHERE kind = 'merchant_cash_paid') paid,
-			     (SELECT COALESCE(sum(amount - reversed_amount), 0) AS total
+			     (SELECT COALESCE(sum(amount - reversed_amount + commission_waived), 0) AS total
 			        FROM merchant_settlements
 			       WHERE method = 'cash' AND state = 'cash_paid') due
 			WHERE paid.total <> due.total`,
+	},
+	{
+		ID: "FI-14.g", Family: FI14, Status: ProvableNow, Ops: true,
+		Name: "عمولةٌ محيت على تسويةٍ لها قيدا احتباسٍ ودفعٍ بمقدارها",
+		Why: "**«ما استلمت العمولة»** (قرارُ المالك ٢٠٢٦-١٠-٢٦): المتجرُ أخذ العمولةَ نقداً من " +
+			"السائق، **فقيدُ احتباسٍ موجبٌ ودفعٌ سالبٌ بمقدارها بالضبط** — وFI-14.f يعدّ الدفعَ " +
+			"فوق المستحقّ. وافتراقُهما مالٌ مكتوبٌ للمتجر لم يقبضه، أو مقبوضٌ لا سطرَ له.",
+		Kinds: []string{"merchant_cash_accrued", "merchant_cash_paid"},
+		SQL: `
+			SELECT ms.id::text, ms.commission_waived
+			FROM merchant_settlements ms
+			WHERE ms.commission_waived > 0
+			  AND (ms.method <> 'cash' OR ms.state <> 'cash_paid' OR ms.paid_via <> 'driver'
+			    OR COALESCE((SELECT wt.amount FROM wallet_transactions wt
+			                  WHERE wt.id = ms.waived_accrued_tx_id
+			                    AND wt.kind = 'merchant_cash_accrued'), 0) <> ms.commission_waived
+			    OR COALESCE((SELECT -wt.amount FROM wallet_transactions wt
+			                  WHERE wt.id = ms.waived_paid_tx_id
+			                    AND wt.kind = 'merchant_cash_paid'), 0) <> ms.commission_waived)`,
 	},
 
 	// ═══════════════════════════════════════════════════════════════════

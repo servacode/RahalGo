@@ -134,6 +134,18 @@ func damascusAt(t *testing.T, s string) time.Time {
 	return v
 }
 
+// accountToday **يومُ الحساب الآن كما تحسبه القاعدة** — يبدأ بساعة فتح الدوام
+// (`platform.day_start_hour`، قرارُ المالك ٢٠٢٦-١٠-٢٦)، فما قبلها لليوم السابق.
+// **فلا يسقط الفحصُ إن شُغّل بين منتصف الليل والتاسعة.**
+func accountToday(t *testing.T, srv *Server) string {
+	t.Helper()
+	var d string
+	if err := srv.pg.QueryRow(context.Background(), `SELECT account_day(now())::text`).Scan(&d); err != nil {
+		t.Fatalf("يومُ الحساب: %v", err)
+	}
+	return d
+}
+
 // ── ١ · المالُ يُحذف في الخادم ─────────────────────────────────────────
 
 func TestReports_MoneyHiddenForNonFinance(t *testing.T) {
@@ -194,8 +206,7 @@ func TestReports_PlatformProfitEqualsProfitsPage(t *testing.T) {
 			`UPDATE wallets SET balance = balance - 54321 WHERE user_id = $1`, treasury)
 	})
 
-	today, _, _ := overviewDays(time.Now())
-	day := today.Format("2006-01-02")
+	day := accountToday(t, srv)
 	q := "from=" + day + "&to=" + day
 
 	w := callAs(srv.handleProfits, "GET", "/admin/profits?tab=platform&"+q, "", "", financeCaps)
@@ -214,26 +225,30 @@ func TestReports_PlatformProfitEqualsProfitsPage(t *testing.T) {
 	}
 }
 
-// ── ٣ · يومُ دمشق ──────────────────────────────────────────────────────
+// ── ٣ · يومُ الحساب بدمشق ──────────────────────────────────────────────
 
 func TestReports_DamascusDayBucketing(t *testing.T) {
 	f := newReportFixture(t)
-	// **الواحدةُ والنصفُ فجراً بدمشق** — وهي في اليوم السابق بغرينتش.
-	at := damascusAt(t, "2003-02-16 01:30")
-	if at.UTC().Day() != 15 {
-		t.Fatalf("الفحصُ يفترض أنّ الوقتَ في اليوم السابق بغرينتش: %v", at.UTC())
+	// **يومُ الحساب يبدأ بالتاسعة صباحاً بدمشق** (قرارُ المالك ٢٠٢٦-١٠-٢٦،
+	// `platform.day_start_hour` افتراضُها ٩) — فالثامنةُ والنصف يومَ ١٦ بدمشق
+	// وبغرينتش معاً **تُحسب على يوم ١٥**، والتاسعةُ والنصف على يوم ١٦.
+	before := damascusAt(t, "2003-02-16 08:30")
+	if before.UTC().Day() != 16 {
+		t.Fatalf("الفحصُ يفترض أنّ الثامنةَ والنصف يومَ ١٦ بغرينتش أيضاً: %v", before.UTC())
 	}
-	f.order(t, "pending", at, 5000)
+	f.order(t, "pending", before, 5000)
+	f.order(t, "pending", damascusAt(t, "2003-02-16 09:30"), 5000)
 
 	if r := readReport(t, f.srv, "from=2003-02-16&to=2003-02-16", analystCaps); r.Summary.OrdersTotal != 1 {
-		t.Fatalf("طلبُ الفجر لم يُعدّ في يومه بدمشق: %d", r.Summary.OrdersTotal)
+		t.Fatalf("يومُ ١٦ يعدّ %d — **والمطلوبُ طلبُ التاسعة والنصف وحدَه**", r.Summary.OrdersTotal)
 	}
-	if r := readReport(t, f.srv, "from=2003-02-15&to=2003-02-15", analystCaps); r.Summary.OrdersTotal != 0 {
-		t.Fatalf("طلبُ الفجر عُدّ في يوم غرينتش: %d", r.Summary.OrdersTotal)
+	if r := readReport(t, f.srv, "from=2003-02-15&to=2003-02-15", analystCaps); r.Summary.OrdersTotal != 1 {
+		t.Fatalf("طلبُ ما قبل فتح الدوام لم يُعدّ على اليوم السابق: %d", r.Summary.OrdersTotal)
 	}
 	r := readReport(t, f.srv, "from=2003-02-15&to=2003-02-16", analystCaps)
-	if len(r.Daily) != 2 || r.Daily[0].Orders != 0 || r.Daily[1].Day != "2003-02-16" || r.Daily[1].Orders != 1 {
-		t.Fatalf("المخطّطُ اليوميّ ليس بيوم دمشق: %+v", r.Daily)
+	if len(r.Daily) != 2 || r.Daily[0].Day != "2003-02-15" || r.Daily[0].Orders != 1 ||
+		r.Daily[1].Day != "2003-02-16" || r.Daily[1].Orders != 1 {
+		t.Fatalf("المخطّطُ اليوميّ ليس بيوم الحساب: %+v", r.Daily)
 	}
 }
 
@@ -367,8 +382,7 @@ func TestLedgerExport_PhoneGatedAndArabic(t *testing.T) {
 	t.Cleanup(func() {
 		_, _ = srv.pg.Exec(context.Background(), `DELETE FROM wallet_transactions WHERE user_id = $1`, uid)
 	})
-	today, _, _ := overviewDays(time.Now())
-	day := today.Format("2006-01-02")
+	day := accountToday(t, srv)
 	q := "/admin/ledger/export?from=" + day + "&to=" + day
 	exportCaps := []string{string(authz.FinanceExport)}
 

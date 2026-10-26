@@ -383,7 +383,7 @@ func newestFile(dir string) (time.Time, bool) {
 
 // yesterdayTotals **أرقامُ مبارح بتوقيت دمشق** — بشروط «اليوم» في الإحصاءات نفسِها.
 func (s *Server) yesterdayTotals(ctx context.Context, now time.Time) (orders, delivered, cancelled int64, sales int64, err error) {
-	today, yesterday, _ := overviewDays(now)
+	today, yesterday, _ := overviewDays(now, s.settings.GetInt(ctx, "platform.day_start_hour"))
 	err = s.pg.QueryRow(ctx, `
 		SELECT
 			count(*) FILTER (WHERE created_at >= $1 AND created_at < $2),

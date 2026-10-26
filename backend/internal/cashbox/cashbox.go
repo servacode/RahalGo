@@ -38,6 +38,33 @@ type Entry struct {
 	Note        string    `json:"note"`
 	CreatedBy   *string   `json:"created_by"`
 	CreatedAt   time.Time `json:"created_at"`
+	// ══════════════════════════════════════════════════════════════════
+	// **تفصيلُ طلب السطر** — لسطور التحصيل و«ما استلمت العمولة» وحدَها (٢٠٢٦-١٠-٢٦)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **حقولٌ مضافةٌ لا مبدَّلة** — التطبيقاتُ القديمةُ تقرأ ما فوقها كما كان.
+	// وتغيب (`omitempty`) عن سطور التسليم والتسوية: لا طلبَ وراءها.
+	//
+	// OrderID معرّفُ الطلب — لزرّ «ما استلمت العمولة».
+	OrderID *string `json:"order_id,omitempty"`
+	// CustomerName **من دفع** — اسمُ الزبون، أو المستلِمُ في «لدي توصيلة».
+	CustomerName *string `json:"customer_name,omitempty"`
+	// MerchantName المتجرُ — ومتاجرُ الطلب متعدّد المصادر مجموعةً بـ« · ».
+	MerchantName *string `json:"merchant_name,omitempty"`
+	// FeePart **أجرةُ التوصيل التي دفعها الزبون** (`delivery_fee`) — صفرٌ في التوصيل المجانيّ.
+	FeePart *int64 `json:"fee_part,omitempty"`
+	// CommissionPart **عمولةُ المنصّة كما قُيّدت أصلاً** — قبل أيّ محو.
+	//
+	// **و`FeePart + CommissionPart` = مبلغُ التحصيل** في الطلب النقديّ العاديّ والمتجرُ «نقداً»
+	// دفعه السائق. **ويفترقان** بهامش التسعير (سعرُ البيع فوق سعر الشراء) وبخصم الكود،
+	// وفي متجرٍ «محفظة» (التحصيلُ يشمل البضاعة) وفي طلبٍ دُفع بعضُه من المحفظة.
+	CommissionPart *int64 `json:"commission_part,omitempty"`
+	// CommissionWaived **ما مُحي من عمولة الطلب** («ما استلمت العمولة») — صفرٌ إن لم يُمحَ.
+	CommissionWaived *int64 `json:"commission_waived,omitempty"`
+	// WaivedReason سببُ المحو كما كتبه الموظّف.
+	WaivedReason *string `json:"waived_reason,omitempty"`
+	// FreeWaived **ما أعفاه عرضُ/كودُ التوصيل المجانيّ** (`promo_delivery_waived`) — صفرٌ إن لا عرض.
+	FreeWaived *int64 `json:"free_waived,omitempty"`
 }
 
 type Statement struct {
@@ -139,12 +166,32 @@ func (s *Service) StatementPage(ctx context.Context, driverID string, limit, pag
 		Scan(&st.Total); err != nil {
 		return nil, err
 	}
+	// **وتفصيلُ الطلب لسطور التحصيل والمحو وحدَها** — والتسليمُ بلا طلب.
 	rows, err := s.db.Query(ctx, `
-		SELECT e.id, e.amount, e.kind, e.ref,
-		       (SELECT o.number FROM orders o
-		         WHERE e.kind = 'order_collection' AND o.id::text = e.ref),
-		       e.note, e.created_by, e.created_at
-		FROM driver_cash_entries e WHERE e.driver_id = $1
+		SELECT e.id, e.amount, e.kind, e.ref, o.number,
+		       e.note, e.created_by, e.created_at,
+		       o.id::text,
+		       CASE WHEN o.id IS NULL THEN NULL
+		            WHEN o.kind = 'merchant_delivery'
+		            THEN COALESCE(NULLIF(btrim(o.recipient_name), ''), cu.full_name, '')
+		            ELSE COALESCE(cu.full_name, NULLIF(btrim(o.recipient_name), ''), '') END,
+		       CASE WHEN o.id IS NULL THEN NULL ELSE COALESCE(
+		           (SELECT string_agg(DISTINCT m.name, ' · ' ORDER BY m.name)
+		              FROM order_items oi JOIN merchants m ON m.id = oi.merchant_id
+		             WHERE oi.order_id = o.id),
+		           (SELECT m.name FROM merchants m
+		             WHERE m.id = COALESCE(o.merchant_id, o.partner_merchant_id)),
+		           '') END,
+		       o.delivery_fee,
+		       o.platform_commission + o.commission_waived,
+		       o.commission_waived,
+		       CASE WHEN o.id IS NULL THEN NULL ELSE COALESCE(o.commission_waived_reason, '') END,
+		       o.promo_delivery_waived
+		FROM driver_cash_entries e
+		LEFT JOIN orders o ON e.kind IN ('order_collection', 'commission_waived')
+		                  AND o.id::text = e.ref
+		LEFT JOIN users cu ON cu.id = o.customer_id
+		WHERE e.driver_id = $1
 		ORDER BY e.id DESC LIMIT $2 OFFSET $3`, driverID, limit, (page-1)*limit)
 	if err != nil {
 		return nil, err
@@ -152,7 +199,9 @@ func (s *Service) StatementPage(ctx context.Context, driverID string, limit, pag
 	defer rows.Close()
 	for rows.Next() {
 		var e Entry
-		if err := rows.Scan(&e.ID, &e.Amount, &e.Kind, &e.Ref, &e.OrderNumber, &e.Note, &e.CreatedBy, &e.CreatedAt); err != nil {
+		if err := rows.Scan(&e.ID, &e.Amount, &e.Kind, &e.Ref, &e.OrderNumber, &e.Note, &e.CreatedBy, &e.CreatedAt,
+			&e.OrderID, &e.CustomerName, &e.MerchantName, &e.FeePart, &e.CommissionPart,
+			&e.CommissionWaived, &e.WaivedReason, &e.FreeWaived); err != nil {
 			return nil, err
 		}
 		st.Entries = append(st.Entries, e)
@@ -245,6 +294,17 @@ func (s *Service) CollectTx(ctx context.Context, q Querier, driverID string, amo
 	}
 	_, err := s.applyTx(ctx, q, driverID, amount, "order_collection", orderID, "", actorID)
 	return err
+}
+
+// WaiveCommissionTx **«ما استلمت العمولة»** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — المتجرُ أخذ من
+// السائق ثمنَ البضاعة كاملاً فلم تبقَ العمولةُ بيده: سطرٌ سالبٌ بمقدارها بمرجع الطلب،
+// والسببُ في الملاحظة. **داخل معاملة المستدعي** — مع تصحيح المتجر والمندوب والخزينة.
+func (s *Service) WaiveCommissionTx(ctx context.Context, q Querier, driverID string,
+	amount int64, orderID, reason, actorID string) (int64, error) {
+	if amount <= 0 {
+		return 0, ErrOverSettle
+	}
+	return s.applyTx(ctx, q, driverID, -amount, "commission_waived", orderID, reason, &actorID)
 }
 
 // Settle تسليم الصندوق للمالية (كلياً أو جزئياً).

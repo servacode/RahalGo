@@ -49,8 +49,8 @@ import (
 // profitRange شرط المدى بيوم دمشق على عمود وقت — $1 و$2 نصّان YYYY-MM-DD،
 // والفارغ بلا حدّ.
 func profitRange(col string) string {
-	return `($1 = '' OR ` + col + ` >= (NULLIF($1, '')::date::timestamp AT TIME ZONE 'Asia/Damascus'))
-	   AND ($2 = '' OR ` + col + ` < ((NULLIF($2, '')::date + 1)::timestamp AT TIME ZONE 'Asia/Damascus'))`
+	return `($1 = '' OR ` + col + ` >= account_day_start(NULLIF($1, '')::date))
+	   AND ($2 = '' OR ` + col + ` < account_day_start(NULLIF($2, '')::date + 1))`
 }
 
 // refUUID يحوّل مرجع القيد (نصّ) إلى uuid إن كان شكله uuid، وإلّا NULL.
@@ -117,7 +117,9 @@ var treasuryEntriesCTE = `
 				WHEN j.kind = 'platform_profit' AND j.order_id IS NOT NULL AND j.ostatus IN (` + profitClosedStatuses + `)
 					THEN max(j.created_at) FILTER (WHERE j.kind = 'platform_profit') OVER (PARTITION BY j.order_id)
 				WHEN j.kind = 'operating_expense' AND j.spent_at IS NOT NULL
-					THEN j.spent_at::timestamp AT TIME ZONE 'Asia/Damascus'
+					-- **يومُ الصرف يومُ حسابٍ يبدأ بفتح الدوام** (قرارُ المالك ٢٠٢٦-١٠-٢٦) —
+					-- منتصفُ ليله يقع في يوم الحساب السابق فيخرج المصروفُ من يومه.
+					THEN account_day_start(j.spent_at)
 				ELSE j.created_at
 			END AS at
 		FROM j

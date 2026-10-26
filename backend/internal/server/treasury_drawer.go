@@ -92,7 +92,7 @@ func (s *Server) handleCashOpening(w http.ResponseWriter, r *http.Request) {
 			INSERT INTO office_cash_closes
 			       (day, kind, opening, cash_in, cash_out, expected, counted, difference, amount, note,
 			        status, proposed_by, decided_by, decided_at)
-			VALUES ((now() AT TIME ZONE 'Asia/Damascus')::date, 'opening', 0, $1, $2, $3, $4, $5, $6, $7,
+			VALUES (account_day(now()), 'opening', 0, $1, $2, $3, $4, $5, $6, $7,
 			        'approved', $8, $8, now())
 			RETURNING id::text`,
 			pos.CashIn, pos.CashOut, pos.Expected, *req.Counted, diff, abs, note, actor).Scan(&id); err != nil {
@@ -166,8 +166,10 @@ func (s *Server) handleCashDeposit(w http.ResponseWriter, r *http.Request) {
 // damascusPeriod **مدى «يوم · أسبوع · شهر» بيوم دمشق** — بمسطرة صفحة الأرباح نفسِها
 // (`profits/page.tsx`: الأسبوعُ آخرُ سبعة أيّامٍ باليوم، والشهرُ من أوّله إلى اليوم)،
 // **فتقول الشاشاتُ الشيءَ نفسَه عن المدّة نفسِها.** و`all` بلا حدّ (فارغان).
-func damascusPeriod(period string, now time.Time) (from, to string, ok bool) {
-	day := now.In(damascusLoc())
+func damascusPeriod(period string, now time.Time, startHour int64) (from, to string, ok bool) {
+	// **يومُ الحساب يبدأ بساعة فتح الدوام** (قرارُ المالك ٢٠٢٦-١٠-٢٦، `platform.day_start_hour`) —
+	// ما قبلها لليوم السابق.
+	day := now.In(damascusLoc()).Add(-time.Duration(startHour) * time.Hour)
 	today := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, time.UTC)
 	to = today.Format("2006-01-02")
 	switch period {
@@ -202,7 +204,7 @@ func (s *Server) handleCashboxReport(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, errValidation)
 		return
 	}
-	from, to, ok := damascusPeriod(period, time.Now())
+	from, to, ok := damascusPeriod(period, time.Now(), s.settings.GetInt(r.Context(), "platform.day_start_hour"))
 	if !ok {
 		s.respondErr(w, errValidation)
 		return
@@ -212,8 +214,8 @@ func (s *Server) handleCashboxReport(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx := r.Context()
 	const bounds = `
-		WITH b AS (SELECT ($1::date::timestamp AT TIME ZONE 'Asia/Damascus') AS t0,
-		                  (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Damascus') AS t1)`
+		WITH b AS (SELECT account_day_start($1::date) AS t0,
+		                  account_day_start($2::date + 1) AS t1)`
 	var in, out, entStart, entEnd int64
 	if err := s.pg.QueryRow(ctx, bounds+`
 		SELECT COALESCE(sum(e.amount) FILTER (WHERE e.direction = 'in'  AND e.created_at >= b.t0 AND e.created_at < b.t1), 0)::bigint,

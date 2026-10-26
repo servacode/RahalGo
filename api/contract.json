@@ -435,6 +435,10 @@
       "capability": "finance.read",
       "response": [
         {
+          "name": "day_start_hour",
+          "type": "unknown"
+        },
+        {
           "name": "holders",
           "type": "unknown"
         },
@@ -4294,6 +4298,40 @@
       "response": [
         {
           "name": "@o",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/waive-commission",
+      "handler": "handleWaiveCommission",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "driver_held",
+          "type": "unknown"
+        },
+        {
+          "name": "number",
+          "type": "unknown"
+        },
+        {
+          "name": "order_id",
+          "type": "unknown"
+        },
+        {
+          "name": "waived",
           "type": "unknown"
         }
       ],

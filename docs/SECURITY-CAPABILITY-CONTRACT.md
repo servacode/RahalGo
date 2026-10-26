@@ -7,7 +7,7 @@
 > **ومعها ملفٌّ يُقرأ بالآلة**: `docs/testing/system/AUTHZ_CONTRACT.json`.
 
 <!-- gen:counts -->
-**39 قدرةً · 306 صفَّ سياسةٍ للمسارات · 3 استثناءً · 37 فعلاً حسّاساً · 8 حقلاً محروساً · 2 قدرةً حقليّةً لا تحرس باباً · 0 قدرةً لا تحرس شيئاً.**
+**39 قدرةً · 307 صفَّ سياسةٍ للمسارات · 3 استثناءً · 38 فعلاً حسّاساً · 8 حقلاً محروساً · 2 قدرةً حقليّةً لا تحرس باباً · 0 قدرةً لا تحرس شيئاً.**
 <!-- /gen:counts -->
 
 ---
@@ -64,7 +64,7 @@
 | `drivers.read` | 2 | — | قراءة سجل السائقين ومواقعهم |
 | `emergencies.manage` | 12 | — | غرفة الطوارئ: القراءة والاستلام والإغلاق |
 | `finance.export` | 6 | — | تصدير الدفتر وكشف الطلبات ملفا |
-| `finance.manage` | 40 | — | اقتراح حركات المحافظ والموافقة عليها والمصاريف والخزينة |
+| `finance.manage` | 41 | — | اقتراح حركات المحافظ والموافقة عليها والمصاريف والخزينة |
 | `finance.read` | 35 | — | قراءة المال والتقارير المالية |
 | `finance.recompute` | 1 | — | إعادة حساب تسوية طلب مغلق |
 | `finance.writeoff.approve` | **0** + 1 داخلَ الباب | — | الموافقة على شطب دين متجر أو مندوب لن يسدد |
@@ -163,6 +163,7 @@
 | `admin.user_update` | `PATCH` | `/users/{id}` | `phone`, `status` | `userUpdateStrong` | `users.status.manage` |
 | `finance.cash_owner_deposit` | `POST` | `/cashbox/deposits` | `amount` | دائماً | `treasury.manage` |
 | `finance.cash_shortfall_loss` | `POST` | `/cashbox/shortfalls/{id}/approve` | — | دائماً | `treasury.manage` |
+| `finance.commission_waived` | `POST` | `/orders/{id}/waive-commission` | — | دائماً | `finance.manage` |
 | `finance.compensate_driver` | `POST` | `/orders/{id}/compensate-driver` | `amount` | دائماً | `finance.manage` |
 | `finance.compensation_approved` | `POST` | `/compensations/{id}/approve` | `amount` | دائماً | `finance.manage` |
 | `finance.dispute_proposed` | `POST` | `/disputes/{id}/propose` | `action` | دائماً | `finance.manage` |

@@ -123,6 +123,8 @@ var adminPolicy = []Rule{
 	{"GET", "/orders/{id}/transfer-candidates", OrdersIntervene},
 	// **وإعادةُ حساب التسوية للمالك والأدمن وحدَهما** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ١٥).
 	{"POST", "/orders/{id}/recompute", FinanceRecompute},
+	// **و«ما استلمت العمولة» فعلٌ نقديٌّ كاستلام صندوق السائق** (قرارُ المالك ٢٠٢٦-١٠-٢٦).
+	{"POST", "/orders/{id}/waive-commission", FinanceManage},
 	// **ومرشّحو الإسناد اليدويّ** — بالقرب والنقد والطلبات (البند ١٠).
 	{"GET", "/orders/{id}/assign-candidates", OrdersIntervene},
 	// **و«استلمتها» على الطلب الجديد** — يُسكت رنينَه عند المكتب كلِّه (البند ٥).

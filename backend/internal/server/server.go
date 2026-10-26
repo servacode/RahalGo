@@ -1475,6 +1475,9 @@ func (s *Server) Router() http.Handler {
 			// **وتصحيحُ تسويةٍ قديمة بقيدٍ مقابل** — لا بتصفير البيانات.
 			// **والأدمنُ وحدَه**: قيدٌ ماليٌّ يُنشأ بيد.
 			r.Post("/orders/{id}/recompute", s.handleRecomputeSettlement)
+			// **«ما استلمت العمولة»** — المتجرُ أخذ الثمنَ كاملاً من السائق: تُمحى العمولةُ
+			// ويُصحَّح الأطرافُ بقيودٍ جديدة (قرارُ المالك ٢٠٢٦-١٠-٢٦، `commission_waiver_handlers.go`).
+			r.Post("/orders/{id}/waive-commission", s.handleWaiveCommission)
 			// **تحويلُ الطلب إلى متجرٍ آخر** — قاعدةٌ احتياطية، وسعرُ الزبون
 			// لا يُمسّ. (انظر `order_transfer.go`)
 			r.Post("/orders/{id}/transfer", s.handleTransferOrder)

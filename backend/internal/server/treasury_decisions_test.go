@@ -293,7 +293,7 @@ func TestTREASURY_StatementGroupsOrderProfit(t *testing.T) {
 	order := pf.order(t, "delivered", now)
 	pf.post(t, pf.treasury, 900, "platform_profit", order, now)
 	pf.post(t, pf.treasury, 300, "platform_profit", order, now)
-	day := now.In(damascusLoc()).Format("2006-01-02")
+	day := accountToday(t, f.srv) // يومُ الحساب يبدأ بفتح الدوام (٢٠٢٦-١٠-٢٦)
 	w := f.call(f.a, "GET", "/admin/treasury/statement?from="+day+"&to="+day+"&kind=platform_profit&per_page=200",
 		nil, "", f.srv.handleTreasuryStatement)
 	lines, _ := raw(t, w.Body.Bytes())["lines"].([]any)

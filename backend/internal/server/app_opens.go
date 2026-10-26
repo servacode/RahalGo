@@ -35,7 +35,7 @@ func (s *Server) countOpen(r *http.Request) {
 		_, _ = s.pg.Exec(context.Background(), `
 			INSERT INTO app_opens_daily (day, client, opens)
 			VALUES (
-			  (now() AT TIME ZONE 'Asia/Damascus')::date,
+			  account_day(now()),
 			  $1, 1
 			)
 			ON CONFLICT (day, client)

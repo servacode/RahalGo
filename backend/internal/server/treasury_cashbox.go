@@ -260,7 +260,7 @@ func (s *Server) handleCreateCashClose(w http.ResponseWriter, r *http.Request) {
 			SELECT EXISTS (SELECT 1 FROM office_cash_closes WHERE status = 'pending'),
 			       EXISTS (SELECT 1 FROM office_cash_closes
 			                WHERE status = 'approved' AND kind = 'daily'
-			                  AND day = (now() AT TIME ZONE 'Asia/Damascus')::date)`).
+			                  AND day = account_day(now()))`).
 			Scan(&pending, &dayDone); err != nil {
 			return err
 		}
@@ -283,7 +283,7 @@ func (s *Server) handleCreateCashClose(w http.ResponseWriter, r *http.Request) {
 		if err := q.QueryRow(ctx, `
 			INSERT INTO office_cash_closes
 			       (day, opening, cash_in, cash_out, expected, counted, difference, amount, note, proposed_by)
-			VALUES ((now() AT TIME ZONE 'Asia/Damascus')::date, $1, $2, $3, $4, $5, $6, $7, $8, $9)
+			VALUES (account_day(now()), $1, $2, $3, $4, $5, $6, $7, $8, $9)
 			RETURNING id::text`,
 			pos.Opening, pos.CashIn, pos.CashOut, pos.Expected, *req.Counted, diff, abs,
 			clip(strings.TrimSpace(req.Note), 500), actor).Scan(&id); err != nil {

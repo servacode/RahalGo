@@ -152,6 +152,10 @@ var sensitiveActions = []Sensitive{
 	// **وإعادةُ حساب التسوية قيدٌ في الدفتر** (البند ١٥).
 	{"POST", "/orders/{id}/recompute", "finance.settlement_recomputed",
 		"order", 1, nil, ""},
+	// **و«ما استلمت العمولة» تمحو مالاً عن السائق والمندوب والخزينة** (قرارُ المالك ٢٠٢٦-١٠-٢٦) —
+	// والسببُ نصٌّ لا يدخل البصمة.
+	{"POST", "/orders/{id}/waive-commission", "finance.commission_waived",
+		"order", 1, nil, ""},
 	// **والنقلُ الإداريُّ إلى `refunded` يعكس مالاً** (قرارُ المالك ٢٠٢٦-٠٩-٢٧):
 	// شرطيٌّ — يُؤكَّد حين `to=refunded` وحدَها، لا في كلّ انتقال. والاسمُ اسمُ
 	// أثرِ التدقيق (`ops.order_transition`).

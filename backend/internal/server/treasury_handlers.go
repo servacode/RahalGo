@@ -73,11 +73,9 @@ func (s *Server) handleTreasuryOverview(w http.ResponseWriter, r *http.Request) 
 	if err := s.pg.QueryRow(ctx, `
 		SELECT (SELECT balance FROM wallets WHERE is_treasury LIMIT 1),
 		       COALESCE((SELECT sum(amount) FILTER (WHERE direction = 'in')  FROM office_cash_entries
-		                  WHERE created_at >= (date_trunc('day', now() AT TIME ZONE 'Asia/Damascus')
-		                                       AT TIME ZONE 'Asia/Damascus')), 0)::bigint,
+		                  WHERE created_at >= account_day_start(account_day(now()))), 0)::bigint,
 		       COALESCE((SELECT sum(amount) FILTER (WHERE direction = 'out') FROM office_cash_entries
-		                  WHERE created_at >= (date_trunc('day', now() AT TIME ZONE 'Asia/Damascus')
-		                                       AT TIME ZONE 'Asia/Damascus')), 0)::bigint,
+		                  WHERE created_at >= account_day_start(account_day(now()))), 0)::bigint,
 		       COALESCE((SELECT sum(held) FROM driver_cash_boxes), 0)::bigint,
 		       -- **«مستحقّ للمتاجر نقداً» رقمُ تبويب المتاجر نفسُه** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
 		       -- من صفوف التسوية لا من رصيد محفظة الاحتباس.
@@ -144,7 +142,7 @@ type profitCard struct {
 func (s *Server) profitCards(ctx context.Context, now time.Time) ([]profitCard, error) {
 	out := make([]profitCard, 0, 4)
 	for _, period := range []string{"day", "week", "month", "all"} {
-		from, to, _ := damascusPeriod(period, now)
+		from, to, _ := damascusPeriod(period, now, s.settings.GetInt(ctx, "platform.day_start_hour"))
 		p, err := s.platformProfit(ctx, from, to)
 		if err != nil {
 			return nil, err
@@ -196,8 +194,8 @@ const treasuryStatementSQL = `
 	  FROM t
 	  LEFT JOIN orders o ON o.id::text = t.ref
 	  LEFT JOIN users b ON b.id = t.created_by
-	 WHERE (NULLIF($1, '') IS NULL OR t.created_at >= (NULLIF($1, '')::date::timestamp AT TIME ZONE 'Asia/Damascus'))
-	   AND (NULLIF($2, '') IS NULL OR t.created_at < ((NULLIF($2, '')::date + 1)::timestamp AT TIME ZONE 'Asia/Damascus'))
+	 WHERE (NULLIF($1, '') IS NULL OR t.created_at >= account_day_start(NULLIF($1, '')::date))
+	   AND (NULLIF($2, '') IS NULL OR t.created_at < account_day_start(NULLIF($2, '')::date + 1))
 	   AND (NULLIF($3, '') IS NULL OR t.kind = $3)`
 
 // treasuryGroupedSQL **الكشفُ كما يُعرض**: قيودُ ربح الطلب الواحد سطراً واحداً «ربح طلب #N».
@@ -216,8 +214,8 @@ const treasuryGroupedSQL = `
 		            ELSE 'l:' || t.id::text END AS grp
 		  FROM t
 		  LEFT JOIN orders o ON o.id::text = t.ref
-		 WHERE (NULLIF($1, '') IS NULL OR t.created_at >= (NULLIF($1, '')::date::timestamp AT TIME ZONE 'Asia/Damascus'))
-		   AND (NULLIF($2, '') IS NULL OR t.created_at < ((NULLIF($2, '')::date + 1)::timestamp AT TIME ZONE 'Asia/Damascus'))
+		 WHERE (NULLIF($1, '') IS NULL OR t.created_at >= account_day_start(NULLIF($1, '')::date))
+		   AND (NULLIF($2, '') IS NULL OR t.created_at < account_day_start(NULLIF($2, '')::date + 1))
 		   AND (NULLIF($3, '') IS NULL OR t.kind = $3)
 	), g AS (
 		SELECT grp, max(id) AS id, max(created_at) AS created_at, min(kind) AS kind,
@@ -290,9 +288,9 @@ func (s *Server) handleTreasuryStatement(w http.ResponseWriter, r *http.Request)
 	var total int
 	if err := s.pg.QueryRow(ctx, `
 		SELECT COALESCE(sum(t.amount) FILTER (WHERE NULLIF($1, '') IS NOT NULL
-		         AND t.created_at < (NULLIF($1, '')::date::timestamp AT TIME ZONE 'Asia/Damascus')), 0)::bigint,
+		         AND t.created_at < account_day_start(NULLIF($1, '')::date)), 0)::bigint,
 		       COALESCE(sum(t.amount) FILTER (WHERE NULLIF($2, '') IS NULL
-		         OR t.created_at < ((NULLIF($2, '')::date + 1)::timestamp AT TIME ZONE 'Asia/Damascus')), 0)::bigint
+		         OR t.created_at < account_day_start(NULLIF($2, '')::date + 1)), 0)::bigint
 		  FROM wallet_transactions t JOIN wallets w ON w.user_id = t.user_id AND w.is_treasury`,
 		from, to).Scan(&opening, &closing); err != nil {
 		s.respondErr(w, err)
@@ -448,8 +446,8 @@ func (s *Server) orderProfitBreakdown(ctx context.Context, orderID, from, to str
 		  FROM wallet_transactions t
 		  JOIN wallets w ON w.user_id = t.user_id AND w.is_treasury
 		 WHERE t.kind = 'platform_profit' AND t.ref = $1
-		   AND (NULLIF($2, '') IS NULL OR t.created_at >= (NULLIF($2, '')::date::timestamp AT TIME ZONE 'Asia/Damascus'))
-		   AND (NULLIF($3, '') IS NULL OR t.created_at < ((NULLIF($3, '')::date + 1)::timestamp AT TIME ZONE 'Asia/Damascus'))
+		   AND (NULLIF($2, '') IS NULL OR t.created_at >= account_day_start(NULLIF($2, '')::date))
+		   AND (NULLIF($3, '') IS NULL OR t.created_at < account_day_start(NULLIF($3, '')::date + 1))
 		 ORDER BY t.created_at, t.id`, orderID, from, to)
 	if err != nil {
 		return nil, err

@@ -182,11 +182,13 @@ var overviewEvents = []string{
 	"user.self_delete",
 }
 
-// overviewDays **حدودُ الأيّام بمنطقة المنصّة.**
-func overviewDays(now time.Time) (today, yesterday, week time.Time) {
+// overviewDays **حدودُ الأيّام بمنطقة المنصّة — من ساعة فتح الدوام** (قرارُ المالك ٢٠٢٦-١٠-٢٦:
+// «كلشي لازم يكون أوّل ما نفتح الدوام»، `platform.day_start_hour`). ما قبلها لليوم السابق.
+func overviewDays(now time.Time, startHour int64) (today, yesterday, week time.Time) {
 	loc := platform.Location()
-	l := now.In(loc)
-	today = time.Date(l.Year(), l.Month(), l.Day(), 0, 0, 0, 0, loc)
+	shift := time.Duration(startHour) * time.Hour
+	l := now.In(loc).Add(-shift)
+	today = time.Date(l.Year(), l.Month(), l.Day(), 0, 0, 0, 0, loc).Add(shift)
 	return today, today.AddDate(0, 0, -1), today.AddDate(0, 0, -6)
 }
 
@@ -222,7 +224,7 @@ func hasCap(r *http.Request, c authz.Capability) bool {
 
 func (s *Server) buildOverview(ctx context.Context) overview {
 	now := time.Now()
-	today, yesterday, week := overviewDays(now)
+	today, yesterday, week := overviewDays(now, s.settings.GetInt(ctx, "platform.day_start_hour"))
 	tomorrow := today.AddDate(0, 0, 1)
 	ov := overview{
 		GeneratedAt: now, Today: today.Format("2006-01-02"),

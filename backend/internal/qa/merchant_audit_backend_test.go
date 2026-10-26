@@ -56,10 +56,12 @@ func TestMA05_ReportTodayIsDamascusDay(t *testing.T) {
 	}
 	oid, _ := made.JSON()["id"].(string)
 
-	// **الواحدةُ ليلاً بتوقيت دمشق** — وهي في UTC الأمس.
+	// **الواحدةُ ليلاً بتوقيت دمشق يومَ ٦** — وهي في UTC يومَ ٥، **وقبل فتح الدوام
+	// فهي من يوم حساب ٥** (قرارُ المالك ٢٠٢٦-١٠-٢٦: اليومُ يبدأ بالتاسعة،
+	// `platform.day_start_hour`). وبتاريخٍ ثابتٍ لا بالساعة الآن — فلا يتغيّر
+	// الفحصُ إن شُغّل قبل التاسعة أو بعدها.
 	loc, _ := time.LoadLocation("Asia/Damascus")
-	now := time.Now().In(loc)
-	early := time.Date(now.Year(), now.Month(), now.Day(), 1, 0, 0, 0, loc)
+	early := time.Date(2025, 3, 6, 1, 0, 0, 0, loc)
 	if _, err := h.Pool.Exec(ctxBG(),
 		`UPDATE orders SET created_at = $2 WHERE id = $1`, oid, early); err != nil {
 		t.Fatal(err)
@@ -71,7 +73,12 @@ func TestMA05_ReportTodayIsDamascusDay(t *testing.T) {
 		t.Fatal(err)
 	}
 	tok := h.TokenFor(owner, "merchant")
-	today := now.Format("2006-01-02")
+	today := "2025-03-05"
+	if r := h.GET("/api/v1/merchant/stores/"+item.MerchantID+"/reports?from=2025-03-06&to=2025-03-06", h.TokenFor(owner, "merchant")); r.Code != 200 {
+		t.Fatalf("التقرير: %d / %s", r.Code, r.Err())
+	} else if sum, _ := r.JSON()["summary"].(map[string]any); sum["orders"] != float64(0) {
+		t.Fatalf("**طلبُ ما قبل فتح الدوام عُدّ في يومه التقويميّ**: orders=%v", sum["orders"])
+	}
 	r := h.GET("/api/v1/merchant/stores/"+item.MerchantID+"/reports?from="+today+"&to="+today, tok)
 	if r.Code != 200 {
 		t.Fatalf("التقرير: %d / %s", r.Code, r.Err())

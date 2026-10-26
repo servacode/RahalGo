@@ -332,7 +332,7 @@ func TestOverview_ProfitIsTheProfitsPage(t *testing.T) {
 			*ov.Money.Net, *ov.Money.Sales, *ov.Money.Losses, p.Net, p.Sales, p.Losses)
 	}
 	// **ويومُ دمشق لا يومُ غرينتش.**
-	want, _, _ := overviewDays(time.Now())
+	want, _, _ := overviewDays(time.Now(), 9)
 	if ov.Today != want.Format("2006-01-02") {
 		t.Fatalf("اليومُ %s لا %s", ov.Today, want.Format("2006-01-02"))
 	}

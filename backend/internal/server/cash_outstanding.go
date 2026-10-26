@@ -84,6 +84,8 @@ func (s *Server) handleCashOutstanding(w http.ResponseWriter, r *http.Request) {
 		"holders": ov.Holders, "total": ov.Total, "limit": s.cashbox.Limit(r.Context()),
 		"over_count": ov.OverCount, "overdue_count": ov.OverdueCount,
 		"overdue_days": ov.OverdueDays,
+		// **ساعةُ فتح الدوام** — الصفحةُ تقسم كشفَ السائق بأيّام الحساب منها (٢٠٢٦-١٠-٢٦).
+		"day_start_hour": s.settings.GetInt(r.Context(), "platform.day_start_hour"),
 	})
 }
 
@@ -110,7 +112,8 @@ func (s *Server) cashOverviewOf(ctx context.Context) (cashOverview, error) {
 		                  WHERE o.driver_id = u.id AND o.closed_at IS NULL), 0) AS open_cash,
 		       COALESCE(u.cash_limit_override, $1::bigint) AS lim,
 		       x.oldest_at,
-		       COALESCE(x.oldest_at <= now() - make_interval(days => $2::int), false),
+		       -- **بأيّام الحساب (٩←٩)** كدالّة الإيقاف (هجرة 0476).
+		       COALESCE(x.oldest_at < account_day_start(account_day(now())) - make_interval(days => $2::int), false),
 		       (SELECT max(e.created_at) FROM driver_cash_entries e
 		         WHERE e.driver_id = u.id AND e.kind = 'settlement'),
 		       COALESCE(u.on_shift, false),

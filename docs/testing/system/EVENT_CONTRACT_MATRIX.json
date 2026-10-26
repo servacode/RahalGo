@@ -11,8 +11,8 @@
     "InApp": 8
   },
   "derived": {
-    "emit_sites": 99,
-    "realtime_publishers": 24,
+    "emit_sites": 104,
+    "realtime_publishers": 26,
     "rooms": 5,
     "untargeted_user_sites": 36
   },
@@ -49,7 +49,7 @@
     },
     {
       "file": "internal/orders/custom_quote.go",
-      "line": 553,
+      "line": 566,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -58,7 +58,7 @@
     },
     {
       "file": "internal/orders/custom_quote.go",
-      "line": 560,
+      "line": 573,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -67,11 +67,20 @@
     },
     {
       "file": "internal/orders/custom_quote.go",
-      "line": 619,
+      "line": 632,
       "call": "NotifyOps",
       "kind": "Order",
       "entity": "order",
       "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/orders/custom_quote.go",
+      "line": 641,
+      "call": "Notify",
+      "kind": "Order",
+      "entity": "order",
+      "has_app_targeting": true,
       "has_entity_id": true
     },
     {
@@ -103,7 +112,7 @@
     },
     {
       "file": "internal/orders/door.go",
-      "line": 397,
+      "line": 399,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -131,6 +140,15 @@
     {
       "file": "internal/orders/fetch_amount.go",
       "line": 230,
+      "call": "Notify",
+      "kind": "Order",
+      "entity": "order",
+      "has_app_targeting": true,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/orders/live_request.go",
+      "line": 66,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -175,7 +193,7 @@
     },
     {
       "file": "internal/orders/notify.go",
-      "line": 176,
+      "line": 183,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -184,7 +202,7 @@
     },
     {
       "file": "internal/orders/notify.go",
-      "line": 271,
+      "line": 278,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -193,7 +211,7 @@
     },
     {
       "file": "internal/orders/notify.go",
-      "line": 303,
+      "line": 310,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -202,7 +220,7 @@
     },
     {
       "file": "internal/orders/notify.go",
-      "line": 356,
+      "line": 363,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -211,7 +229,7 @@
     },
     {
       "file": "internal/orders/notify.go",
-      "line": 377,
+      "line": 384,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -220,7 +238,7 @@
     },
     {
       "file": "internal/orders/notify.go",
-      "line": 412,
+      "line": 419,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -229,7 +247,7 @@
     },
     {
       "file": "internal/orders/notify.go",
-      "line": 447,
+      "line": 454,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "wallet",
@@ -238,7 +256,7 @@
     },
     {
       "file": "internal/orders/notify.go",
-      "line": 490,
+      "line": 497,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "wallet",
@@ -247,7 +265,7 @@
     },
     {
       "file": "internal/orders/notify.go",
-      "line": 623,
+      "line": 630,
       "call": "Notify",
       "entity": "order",
       "has_app_targeting": true,
@@ -255,7 +273,7 @@
     },
     {
       "file": "internal/orders/notify.go",
-      "line": 673,
+      "line": 680,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "wallet",
@@ -331,25 +349,25 @@
     },
     {
       "file": "internal/server/accounts_wallet_requests.go",
-      "line": 310,
-      "call": "Notify",
-      "kind": "Wallet",
-      "entity": "wallet",
-      "has_app_targeting": false,
-      "has_entity_id": false
-    },
-    {
-      "file": "internal/server/accounts_wallet_requests.go",
-      "line": 315,
-      "call": "Notify",
-      "kind": "Wallet",
-      "entity": "wallet",
-      "has_app_targeting": false,
-      "has_entity_id": false
-    },
-    {
-      "file": "internal/server/accounts_wallet_requests.go",
       "line": 339,
+      "call": "Notify",
+      "kind": "Wallet",
+      "entity": "wallet",
+      "has_app_targeting": false,
+      "has_entity_id": false
+    },
+    {
+      "file": "internal/server/accounts_wallet_requests.go",
+      "line": 344,
+      "call": "Notify",
+      "kind": "Wallet",
+      "entity": "wallet",
+      "has_app_targeting": false,
+      "has_entity_id": false
+    },
+    {
+      "file": "internal/server/accounts_wallet_requests.go",
+      "line": 368,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "wallet",
@@ -375,7 +393,7 @@
     },
     {
       "file": "internal/server/admin_orders_handlers.go",
-      "line": 388,
+      "line": 393,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -538,7 +556,7 @@
     },
     {
       "file": "internal/server/driver_handlers.go",
-      "line": 1345,
+      "line": 1390,
       "call": "NotifyOps",
       "kind": "Order",
       "entity": "order",
@@ -596,6 +614,15 @@
       "kind": "Account",
       "entity": "user",
       "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/free_delivery_notify.go",
+      "line": 48,
+      "call": "Notify",
+      "kind": "Order",
+      "entity": "order",
+      "has_app_targeting": true,
       "has_entity_id": true
     },
     {
@@ -704,6 +731,24 @@
       "kind": "Lead",
       "entity": "merchant",
       "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/map_contrib_handlers.go",
+      "line": 120,
+      "call": "Notify",
+      "kind": "Order",
+      "entity": "order",
+      "has_app_targeting": true,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/server/map_contrib_handlers.go",
+      "line": 172,
+      "call": "Notify",
+      "kind": "Order",
+      "entity": "order",
+      "has_app_targeting": true,
       "has_entity_id": true
     },
     {
@@ -1286,7 +1331,7 @@
     },
     {
       "file": "internal/orders/door.go",
-      "line": 403,
+      "line": 405,
       "room": "driver:*"
     },
     {
@@ -1346,7 +1391,7 @@
     },
     {
       "file": "internal/orders/service.go",
-      "line": 1355,
+      "line": 1366,
       "room": "user:*"
     },
     {
@@ -1360,9 +1405,19 @@
       "room": "ops"
     },
     {
+      "file": "internal/server/driver_live.go",
+      "line": 35,
+      "room": "ops"
+    },
+    {
       "file": "internal/server/live_location.go",
       "line": 70,
       "room": "driver:*"
+    },
+    {
+      "file": "internal/server/live_location.go",
+      "line": 90,
+      "room": "ops"
     },
     {
       "file": "internal/server/notifications_handlers.go",
@@ -1461,25 +1516,25 @@
     },
     {
       "file": "internal/server/accounts_wallet_requests.go",
-      "line": 310,
-      "call": "Notify",
-      "kind": "Wallet",
-      "entity": "wallet",
-      "has_app_targeting": false,
-      "has_entity_id": false
-    },
-    {
-      "file": "internal/server/accounts_wallet_requests.go",
-      "line": 315,
-      "call": "Notify",
-      "kind": "Wallet",
-      "entity": "wallet",
-      "has_app_targeting": false,
-      "has_entity_id": false
-    },
-    {
-      "file": "internal/server/accounts_wallet_requests.go",
       "line": 339,
+      "call": "Notify",
+      "kind": "Wallet",
+      "entity": "wallet",
+      "has_app_targeting": false,
+      "has_entity_id": false
+    },
+    {
+      "file": "internal/server/accounts_wallet_requests.go",
+      "line": 344,
+      "call": "Notify",
+      "kind": "Wallet",
+      "entity": "wallet",
+      "has_app_targeting": false,
+      "has_entity_id": false
+    },
+    {
+      "file": "internal/server/accounts_wallet_requests.go",
+      "line": 368,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "wallet",

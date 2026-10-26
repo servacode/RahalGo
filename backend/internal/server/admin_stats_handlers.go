@@ -86,8 +86,7 @@ func (s *Server) handleAdminStats(w http.ResponseWriter, r *http.Request) {
 	}
 	err := s.pg.QueryRow(r.Context(), `
 		WITH day AS (
-			SELECT date_trunc('day', now() AT TIME ZONE 'Asia/Damascus')
-			       AT TIME ZONE 'Asia/Damascus' AS start
+			SELECT account_day_start(account_day(now())) AS start
 		),
 		-- أجور السائقين عن تسليمات اليوم في CTE مستقلّ: حسابُها داخل استعلامٍ
 		-- تجميعيّ يجعل day.start عموداً غير مجمَّع في استعلامٍ فرعيّ مرتبط،
@@ -154,8 +153,9 @@ func (s *Server) handleAdminStats(w http.ResponseWriter, r *http.Request) {
 	}
 	// **والصافي من حساب صفحة الأرباح نفسِه** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — كانت
 	// معادلةٌ هنا تنسى الهامشَ فتقول ربحاً غيرَ ما تقوله صفحةُ الأرباح.
-	today, _, _ := overviewDays(time.Now())
-	day := today.Format("2006-01-02")
+	// **و«اليوم» يومُ الحساب** كباقي أرقام هذا الردّ (`account_day_start` أعلاه) —
+	// لا منتصفُ ليل دمشق، وإلّا كان الصافي قبل التاسعة صباحاً ليومٍ لم يبدأ بعد.
+	day, _, _ := damascusPeriod("day", time.Now(), s.settings.GetInt(r.Context(), "platform.day_start_hour"))
 	if p, err := s.platformProfit(r.Context(), day, day); err == nil {
 		st.NetToday = p.Net
 	} else {

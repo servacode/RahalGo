@@ -90,6 +90,7 @@
       "checks": [
         "FI-10.a",
         "FI-10.b",
+        "FI-10.d",
         "FI-10.c"
       ]
     },
@@ -139,7 +140,8 @@
         "FI-14.c",
         "FI-14.d",
         "FI-14.e",
-        "FI-14.f"
+        "FI-14.f",
+        "FI-14.g"
       ]
     },
     {
@@ -152,6 +154,7 @@
         "FI-15.e",
         "FI-15.f",
         "FI-15.g",
+        "FI-15.i",
         "FI-15.h"
       ]
     }
@@ -251,9 +254,12 @@
     {
       "id": "FI-02.b",
       "family": "FI-02",
-      "name": "لا رصيدَ سالبٌ إلّا الخزينة",
+      "name": "لا رصيدَ سالبٌ إلّا الخزينة — أو سلفةٌ لم تُسدَّد",
       "status": "PROVABLE_NOW",
-      "ops": true
+      "ops": true,
+      "kinds": [
+        "advance"
+      ]
     },
     {
       "id": "FI-02.c",
@@ -706,6 +712,17 @@
       ]
     },
     {
+      "id": "FI-10.d",
+      "family": "FI-10",
+      "name": "عمولةٌ محيت = سطرُ صندوق السائق = ما أخذه المتجر",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-14",
+        "F-27"
+      ]
+    },
+    {
       "id": "FI-11.a",
       "family": "FI-11",
       "name": "السحبُ المرفوضُ لا يُخصَم",
@@ -1069,6 +1086,17 @@
       ]
     },
     {
+      "id": "FI-14.g",
+      "family": "FI-14",
+      "name": "عمولةٌ محيت على تسويةٍ لها قيدا احتباسٍ ودفعٍ بمقدارها",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "kinds": [
+        "merchant_cash_accrued",
+        "merchant_cash_paid"
+      ]
+    },
+    {
       "id": "FI-15.a",
       "family": "FI-15",
       "name": "نقدٌ سلّمه سائقٌ دخل صندوقَ المكتب",
@@ -1144,6 +1172,16 @@
       "kinds": [
         "operating_expense"
       ]
+    },
+    {
+      "id": "FI-15.i",
+      "family": "FI-15",
+      "name": "سلفةٌ مُوافَقٌ عليها خرجت من الدرج ونقصت بها المحفظة",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "kinds": [
+        "advance"
+      ]
     }
   ],
   "kinds": [
@@ -1166,14 +1204,33 @@
       "reachable": true
     },
     {
+      "kind": "advance",
+      "semantics": "سلفةٌ نقداً من درج المكتب لسائقٍ أو مندوبٍ أو موظّف — **تُنقص محفظتَه ولو صارت سالبة، ويقابلها سطرٌ خارجٌ من الصندوق، ولا تمسّ الخزينة** (كالسحب النقديّ).",
+      "sign": "-",
+      "ref_required": true,
+      "ref_target": "wallet_requests",
+      "path": "POST /admin/wallet-requests/{id}/approve",
+      "creators": [
+        "internal/wallet/wallet.go",
+        "internal/server/accounts_wallet_requests.go"
+      ],
+      "invariants": [
+        "FI-02.a",
+        "FI-02.b",
+        "FI-15.i"
+      ],
+      "reachable": true
+    },
+    {
       "kind": "commission",
-      "semantics": "نصيبُ المندوبِ من هامشِ طلبٍ سُلّم لمتجرٍ فعّله.",
-      "sign": "+",
+      "semantics": "نصيبُ المندوبِ من هامشِ طلبٍ سُلّم لمتجرٍ فعّله — **والسالبُ اقتطاعُ دَينٍ أو عكسُ نصيبه من عمولةٍ محيت** (٢٠٢٦-١٠-٢٦).",
+      "sign": "±",
       "ref_required": true,
       "ref_target": "orders",
-      "path": "تسويةُ التسليم",
+      "path": "تسويةُ التسليم · وPOST /admin/orders/{id}/waive-commission",
       "creators": [
-        "internal/orders/transitions.go:988"
+        "internal/orders/transitions.go:988",
+        "internal/orders/commission_waiver.go"
       ],
       "invariants": [
         "FI-01.d",
@@ -1246,14 +1303,16 @@
       "ref_target": "orders",
       "path": "الاستلامُ من متجرٍ طريقتُه «نقد» · وعكسُ استردادٍ · واقتطاعُ دَين",
       "creators": [
-        "internal/orders/cash_settlement.go"
+        "internal/orders/cash_settlement.go",
+        "internal/orders/commission_waiver.go"
       ],
       "invariants": [
         "FI-06.a",
         "FI-14.a",
         "FI-14.b",
         "FI-14.c",
-        "FI-14.d"
+        "FI-14.d",
+        "FI-14.g"
       ],
       "reachable": true
     },
@@ -1265,13 +1324,16 @@
       "ref_target": "orders",
       "path": "تأكيدُ الأدمنِ دفعَ مستحقٍّ نقديّ للمتجر · والسائقُ يدفعه عند الاستلام (٢٠٢٦-١٠-١٥)",
       "creators": [
-        "internal/orders/cash_settlement.go"
+        "internal/orders/cash_settlement.go",
+        "internal/orders/commission_waiver.go"
       ],
       "invariants": [
         "FI-14.a",
         "FI-14.f",
+        "FI-14.g",
         "FI-06.a",
         "FI-10.b",
+        "FI-10.d",
         "FI-15.b"
       ],
       "reachable": true
@@ -1499,12 +1561,12 @@
   ],
   "counts": {
     "families": 15,
-    "checks": 80,
-    "provable_now": 74,
+    "checks": 83,
+    "provable_now": 77,
     "not_implemented": 3,
     "deferred_p5": 1,
     "deferred_p6": 2,
-    "kinds": 19
+    "kinds": 20
   },
   "financial_settings": [
     "merchants.commission_percent",

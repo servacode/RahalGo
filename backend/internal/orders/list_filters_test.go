@@ -88,8 +88,11 @@ func TestList_DateRangeMerchantDriverAndSeenAt(t *testing.T) {
 		})
 		return id
 	}
-	lateJan10 := mk(mA, true, "2026-01-10 23:30:00")   // **آخرُ يوم ١٠ بدمشق**
-	earlyJan11 := mk(mA, false, "2026-01-11 00:30:00") // **وهو ما زال ١٠ في غرينتش**
+	// **ويومُ المنصّة يبدأ بساعة فتح الدوام** (قرارُ المالك ٢٠٢٦-١٠-٢٦، افتراضُها ٩) — فما قبل
+	// التاسعة صباحاً لليوم السابق، وما بعدها يومٌ جديد.
+	lateJan10 := mk(mA, true, "2026-01-10 23:30:00")       // **آخرُ يوم ١٠ بدمشق**
+	beforeOpenJan11 := mk(mA, true, "2026-01-11 08:30:00") // **قبل فتح الدوام ⇒ ما زال يومَ ١٠**
+	earlyJan11 := mk(mA, false, "2026-01-11 09:30:00")     // **أوّلُ يوم ١١ بعد فتح الدوام**
 	jan12B := mk(mB, true, "2026-01-12 12:00:00")
 
 	ids := func(f orders.ListFilter) map[string]bool {
@@ -112,15 +115,15 @@ func TestList_DateRangeMerchantDriverAndSeenAt(t *testing.T) {
 
 	// ── يومُ دمشق لا يومُ غرينتش ──────────────────────────────────
 	got := ids(orders.ListFilter{From: "2026-01-10", To: "2026-01-10"})
-	if !got[lateJan10] || got[earlyJan11] || len(got) != 1 {
-		t.Fatalf("يومُ ١٠: %v — **والمطلوبُ طلبُ آخر الليل وحدَه، لا ما بعد منتصف ليل دمشق**", got)
+	if !got[lateJan10] || !got[beforeOpenJan11] || got[earlyJan11] || len(got) != 2 {
+		t.Fatalf("يومُ ١٠: %v — **والمطلوبُ آخرُ الليل وما قبل فتح الدوام، لا ما بعده**", got)
 	}
 	got = ids(orders.ListFilter{From: "2026-01-11"})
-	if got[lateJan10] || !got[earlyJan11] || !got[jan12B] {
+	if got[lateJan10] || got[beforeOpenJan11] || !got[earlyJan11] || !got[jan12B] {
 		t.Fatalf("من ١١: %v — **والحدُّ الأدنى شاملٌ بيوم دمشق**", got)
 	}
 	got = ids(orders.ListFilter{To: "2026-01-11"})
-	if !got[lateJan10] || !got[earlyJan11] || got[jan12B] {
+	if !got[lateJan10] || !got[beforeOpenJan11] || !got[earlyJan11] || got[jan12B] {
 		t.Fatalf("إلى ١١: %v — **والحدُّ الأعلى يومٌ كاملٌ لا لحظةُ أوّله**", got)
 	}
 
@@ -130,7 +133,7 @@ func TestList_DateRangeMerchantDriverAndSeenAt(t *testing.T) {
 		t.Fatalf("متجرُ ب: %v", got)
 	}
 	got = ids(orders.ListFilter{DriverID: driver, From: "2026-01-10", To: "2026-01-11"})
-	if len(got) != 1 || !got[lateJan10] {
+	if len(got) != 2 || !got[lateJan10] || !got[beforeOpenJan11] {
 		t.Fatalf("السائقُ في مدى ١٠–١١: %v", got)
 	}
 
@@ -148,7 +151,7 @@ func TestList_DateRangeMerchantDriverAndSeenAt(t *testing.T) {
 	}
 	for _, o := range p.Orders {
 		switch o.ID {
-		case lateJan10, jan12B:
+		case lateJan10, beforeOpenJan11, jan12B:
 			if o.DriverSeenAt == nil {
 				t.Fatalf("طلبٌ بسائقٍ بلا آخرِ ظهور — **والشارةُ تقول «لم يظهر» عن سائقٍ ظهر قبل خمس دقائق**")
 			}

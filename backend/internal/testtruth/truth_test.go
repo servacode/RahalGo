@@ -349,8 +349,11 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	//
 	// **و٢٠٥ مع `drivers.location_ping_active_sec`** (قرارُ المالك ٢٠٢٦-١٠-١٩) — **نبضةُ
 	// السائق أثناء التوصيل.**
-	if d.BehaviourSettings != 205 {
-		t.Errorf("إعداداتُ السلوك = %d لا 205 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	//
+	// **و٢٠٦ مع `platform.day_start_hour`** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — **ساعةُ فتح الدوام
+	// التي يبدأ بها يومُ الحساب** (افتراضُها ٩).
+	if d.BehaviourSettings != 206 {
+		t.Errorf("إعداداتُ السلوك = %d لا 206 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

@@ -61,10 +61,12 @@ func TestOrdersExport_CustomDamascusArabicPhoneGate(t *testing.T) {
 	var phone string
 	_ = f.pool.QueryRow(context.Background(), `SELECT phone::text FROM users WHERE id = $1`, cust).Scan(&phone)
 
-	// **الواحدةُ ليلاً بدمشق يومَ ٥** — وهي ما زالت يومَ ٤ في غرينتش.
-	custom := historyOrder(t, f, cust, "custom", nil, "delivered", "2026-03-05 01:00:00")
+	// **يومُ الحساب من التاسعة صباحاً للتاسعة** (قرارُ المالك ٢٠٢٦-١٠-٢٦،
+	// `platform.day_start_hour`): الواحدةُ ليلاً يومَ ٦ بدمشق (يومَ ٥ بغرينتش) من
+	// يوم حساب ٥، والثامنةُ والنصف يومَ ٥ قبل فتح الدوام فهي من يوم ٤.
+	custom := historyOrder(t, f, cust, "custom", nil, "delivered", "2026-03-06 01:00:00")
 	std := historyOrder(t, f, evil, "standard", f.merchantID, "cancelled", "2026-03-05 12:00:00")
-	prevDay := historyOrder(t, f, cust, "standard", f.merchantID, "delivered", "2026-03-04 23:30:00")
+	prevDay := historyOrder(t, f, cust, "standard", f.merchantID, "delivered", "2026-03-05 08:30:00")
 
 	url := "/admin/orders/export?from=2026-03-05&to=2026-03-05&closed=1"
 	w := callCaps(f.srv.handleOrdersExport, url, admin, []string{"finance.export"})
@@ -83,11 +85,11 @@ func TestOrdersExport_CustomDamascusArabicPhoneGate(t *testing.T) {
 	if lines[custom] == "" {
 		t.Fatalf("**الطلبُ الخاصُّ #%d غاب عن الملف** — ضمٌّ صلبٌ بالمتجر يُسقطه:\n%s", custom, body)
 	}
-	if !strings.Contains(lines[custom], "2026-03-05 01:00") || !strings.Contains(lines[custom], "طلب خاص") {
+	if !strings.Contains(lines[custom], "2026-03-06 01:00") || !strings.Contains(lines[custom], "طلب خاص") {
 		t.Errorf("سطرُ الخاصّ بغير يوم دمشق أو بلا نوعه: %s", lines[custom])
 	}
 	if lines[prevDay] != "" {
-		t.Errorf("طلبُ يوم ٤ بدمشق دخل ملفَّ يوم ٥: %s", lines[prevDay])
+		t.Errorf("طلبُ ما قبل فتح الدوام (يوم حساب ٤) دخل ملفَّ يوم ٥: %s", lines[prevDay])
 	}
 	if !strings.Contains(lines[custom], "مُسلَّم") || strings.Contains(body, ",delivered,") ||
 		!strings.Contains(lines[custom], "نقداً") {

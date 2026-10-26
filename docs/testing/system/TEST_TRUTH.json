@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 575,
+    "routes": 576,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 250,
-    "behaviour_settings": 205,
+    "setting_defs": 251,
+    "behaviour_settings": 206,
     "order_fields": 120,
-    "test_files": 650,
-    "test_funcs": 2507
+    "test_files": 653,
+    "test_funcs": 2512
   },
   "flows": [
     {
@@ -6260,6 +6260,24 @@
       "status": "REGRESSION_TEST_PRESENT"
     },
     {
+      "key": "platform.day_start_hour",
+      "group": "platform",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "platform.orders_mode",
       "group": "platform",
       "kind": "choice",
@@ -10143,6 +10161,12 @@
       "orphan": true
     },
     {
+      "name": "TestDriverView_FreeDeliveryShowsFullFee",
+      "file": "internal/orders/driver_free_view_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
       "name": "TestDriverLossCode_Table",
       "file": "internal/orders/driver_lost_test.go",
       "package": "orders_test",
@@ -10235,6 +10259,12 @@
     {
       "name": "TestFreeCampaign_StandardOncePerCustomer",
       "file": "internal/orders/free_delivery_campaign_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestFreeCampaign_TwoOrdersAtOnce",
+      "file": "internal/orders/free_delivery_concurrent_test.go",
       "package": "orders_test",
       "orphan": true
     },
@@ -14088,6 +14118,24 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestWAIVE_CommissionWaivedEverywhere",
+      "file": "internal/qa/commission_waiver_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAIVE_FreeDeliveryStatement",
+      "file": "internal/qa/commission_waiver_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAIVE_WalletStoreRejected",
+      "file": "internal/qa/commission_waiver_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestCONC_BarrierReleasesTogether",

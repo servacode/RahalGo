@@ -192,8 +192,8 @@ func (s *Server) handleAdminLeads(w http.ResponseWriter, r *http.Request) {
 		AND ($2 = '' OR l.sales_rep_user_id::text = $2)
 		AND ($3 = '' OR d.governorate_id::text = $3)
 		AND ($4 = '' OR l.category_id::text = $4)
-		AND ($5::date IS NULL OR (l.created_at AT TIME ZONE 'Asia/Damascus')::date >= $5::date)
-		AND ($6::date IS NULL OR (l.created_at AT TIME ZONE 'Asia/Damascus')::date <= $6::date)
+		AND ($5::date IS NULL OR account_day(l.created_at) >= $5::date)
+		AND ($6::date IS NULL OR account_day(l.created_at) <= $6::date)
 		AND ($7 = '' OR strpos(lower(l.store_name), lower($7)) > 0
 		             OR strpos(lower(l.owner_name), lower($7)) > 0
 		             OR strpos(l.phone, $7) > 0

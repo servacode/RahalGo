@@ -263,8 +263,8 @@ func (s *Server) handleLedgerExport(w http.ResponseWriter, r *http.Request) {
 		JOIN users u ON u.id = t.user_id
 		LEFT JOIN orders o ON o.id::text = t.ref
 		LEFT JOIN users b ON b.id = t.created_by
-		WHERE t.created_at >= ($1::date::timestamp AT TIME ZONE 'Asia/Damascus')
-		  AND t.created_at < (($2::date + 1)::timestamp AT TIME ZONE 'Asia/Damascus')
+		WHERE t.created_at >= account_day_start($1::date)
+		  AND t.created_at < account_day_start($2::date + 1)
 		ORDER BY t.created_at`, from, to)
 	if err != nil {
 		s.respondErr(w, err)

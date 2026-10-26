@@ -438,12 +438,14 @@ func TestLD_LossesNetAndDamascusDay(t *testing.T) {
 	f := newLDFixture(t)
 	ctx := context.Background()
 	orderID := f.order(t, "merchant_closed")
-	// **خسارةٌ في الواحدة فجراً بتوقيت دمشق** (٢٢:٠٠ غرينتش من اليوم السابق).
+	// **خسارةٌ في الثامنة والنصف صباحاً يومَ ١١ بدمشق** (٠٥:٣٠ غرينتش يومَ ١١) —
+	// قبل فتح الدوام، **فهي من يوم حساب ١٠** (قرارُ المالك ٢٠٢٦-١٠-٢٦: اليومُ يبدأ
+	// بالتاسعة، `platform.day_start_hour`). لا يومُ غرينتش ولا منتصفُ ليل دمشق.
 	if err := f.srv.orders.DebitTreasury(ctx, f.pool, 4_000, orderID, "تعويضُ فحص", f.proposer); err != nil {
 		t.Fatalf("تعذّر القيد: %v", err)
 	}
 	if _, err := f.pool.Exec(ctx, `
-		UPDATE wallet_transactions SET created_at = '2031-03-09 22:00:00+00'
+		UPDATE wallet_transactions SET created_at = '2031-03-11 05:30:00+00'
 		WHERE ref = $1 AND kind = 'platform_expense'`, orderID); err != nil {
 		t.Fatal(err)
 	}
@@ -462,7 +464,7 @@ func TestLD_LossesNetAndDamascusDay(t *testing.T) {
 		t.Fatalf("الخسائرُ ردّت %d: %s", w.Code, w.Body.String())
 	}
 	if body.Data.Total != 4_000 {
-		t.Fatalf("**خسارةُ الواحدة فجراً بتوقيت دمشق حُسبت لغير يومها**: مجموعُ ١٠ آذار = %d", body.Data.Total)
+		t.Fatalf("**خسارةُ ما قبل فتح الدوام حُسبت لغير يوم حسابها**: مجموعُ ١٠ آذار = %d", body.Data.Total)
 	}
 	if body.Data.Net != body.Data.Total-body.Data.Recovered {
 		t.Fatalf("الصافي %d ≠ %d − %d", body.Data.Net, body.Data.Total, body.Data.Recovered)

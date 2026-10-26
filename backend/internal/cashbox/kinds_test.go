@@ -33,7 +33,7 @@ func TestCashKindsHaveArabicLabels(t *testing.T) {
 		t.Fatalf("تعذّر قراءة cashbox.go: %v", err)
 	}
 	// s.apply(ctx, driverID, amount, "<النوع>", ref, note, actorID)
-	re := regexp.MustCompile(`apply\([^)]*?"([a-z_]+)"`)
+	re := regexp.MustCompile(`apply(?:Tx)?\([^)]*?"([a-z_]+)"`)
 	found := map[string]bool{}
 	for _, mm := range re.FindAllStringSubmatch(string(src), -1) {
 		found[mm[1]] = true
@@ -119,7 +119,7 @@ func TestCashKindsHaveAppLabels(t *testing.T) {
 	if err != nil {
 		t.Fatalf("تعذّر قراءة cashbox.go: %v", err)
 	}
-	re := regexp.MustCompile(`apply\([^)]*?"([a-z_]+)"`)
+	re := regexp.MustCompile(`apply(?:Tx)?\([^)]*?"([a-z_]+)"`)
 	found := map[string]bool{}
 	for _, mm := range re.FindAllStringSubmatch(string(src), -1) {
 		found[mm[1]] = true
@@ -158,7 +158,7 @@ func TestCashKindsHaveAdminLabels(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cashbox.go: %v", err)
 	}
-	re := regexp.MustCompile(`apply\([^)]*?"([a-z_]+)"`)
+	re := regexp.MustCompile(`apply(?:Tx)?\([^)]*?"([a-z_]+)"`)
 	found := map[string]bool{}
 	for _, mm := range re.FindAllStringSubmatch(string(src), -1) {
 		found[mm[1]] = true

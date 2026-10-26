@@ -661,6 +661,15 @@ private val CODES: Map<String, Int> = mapOf(
     "not_found" to R.string.err_not_found,
     "comms_closed" to R.string.err_comms_closed,
     "comms_no_driver" to R.string.err_comms_no_driver,
+    // **«ما استلمت العمولة»** (٢٠٢٦-١٠-٢٦) — بابُ لوحةٍ، والحارسُ يطلب نصَّه لأنّه في `orders`.
+    "commission_waiver_reason_required" to R.string.err_commission_waiver_reason_required,
+    "commission_waiver_not_delivered" to R.string.err_commission_waiver_not_delivered,
+    "commission_waiver_not_standard" to R.string.err_commission_waiver_not_standard,
+    "commission_waiver_no_commission" to R.string.err_commission_waiver_no_commission,
+    "commission_already_waived" to R.string.err_commission_already_waived,
+    "commission_waiver_not_driver_cash" to R.string.err_commission_waiver_not_driver_cash,
+    "commission_waiver_wallet_store" to R.string.err_commission_waiver_wallet_store,
+    "commission_waiver_driver_cash_short" to R.string.err_commission_waiver_driver_cash_short,
 )
 
 /**

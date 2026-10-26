@@ -229,6 +229,13 @@ var financeOwnerSections = []string{
 	"/dashboard/tickets",    // المشاكل والتعويضات — الخسائرُ والنزاعاتُ فيها (٢٠٢٦-١٠-٢٥)
 	"/dashboard/incentives", // الأهداف والمكافآت
 	"/dashboard/promos",     // العروض والخصومات
+	// **وأقسامُ المال رجعت كلٌّ قسماً لحاله في القائمة** — قرارُ المالك ٢٠٢٦-١٠-٢٧:
+	// «كل واحد قسم لحاله نرجعهن ع القائمة»، وشُطب صفُّ روابط الخزينة.
+	"/dashboard/cash",        // النقد
+	"/dashboard/payouts",     // الدفعات
+	"/dashboard/obligations", // الديون
+	"/dashboard/profits",     // الأرباح
+	"/dashboard/expenses",    // المصروفات
 }
 
 // TestFinSections_NavEqualsOwnerList **ما تراه الماليّةُ في القائمة = قائمةُ المالك.**

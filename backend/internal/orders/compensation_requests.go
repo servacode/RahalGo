@@ -647,10 +647,10 @@ func (f CompensationFilter) conds(withStatus bool) (string, []any) {
 		add("(r.driver_id::text = $? OR u.full_name ILIKE '%' || $? || '%' OR u.phone::text LIKE '%' || $? || '%')", p)
 	}
 	if f.From != "" {
-		add("(r.created_at AT TIME ZONE 'Asia/Damascus')::date >= $?::date", f.From)
+		add("account_day(r.created_at) >= $?::date", f.From)
 	}
 	if f.To != "" {
-		add("(r.created_at AT TIME ZONE 'Asia/Damascus')::date <= $?::date", f.To)
+		add("account_day(r.created_at) <= $?::date", f.To)
 	}
 	if len(conds) == 0 {
 		return "", args
