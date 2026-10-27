@@ -187,11 +187,11 @@ fun ShopScreen(
         ItemOptionsSheet(
             item = target,
             api = vm.customerApi,
-            onAdd = { chosen ->
+            onAdd = { chosen, n ->
                 // **ولا تُضاف من النافذة ما مُنع من البطاقة** —
                 // **وبابان لفعلٍ واحدٍ أحدُهما بلا حارسٍ بابٌ مفتوح.**
                 if (!blocked) {
-                    val inc = Cart.add(target, options = chosen)
+                    val inc = Cart.add(target, qty = n, options = chosen)
                     com.rahalgo.customer.cart.SourceNotice.afterAdd(sourceScope, vm.customerApi, address, inc)
                     com.rahalgo.ui.Flash.ok(
                         context.getString(
@@ -207,6 +207,7 @@ fun ShopScreen(
             onStore = StoreLink.target(target, vm.storeId)?.let { id ->
                 { picking = null; vm.openStore(id) }
             },
+            media = media,
         )
     }
 
@@ -719,7 +720,8 @@ internal fun SectionRail(
                     style = catStyle,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    autoSize = TextAutoSize.StepBased(minFontSize = 8.sp, maxFontSize = catStyle.fontSize),
+                    // **وأصغرُ خطٍّ ٩ لا ٨** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧) — ما دونه لا يُقرأ.
+                    autoSize = TextAutoSize.StepBased(minFontSize = 9.sp, maxFontSize = catStyle.fontSize),
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -791,11 +793,13 @@ internal fun ItemCard(
             ) {
                 // **وأحمرُ حين يُضغط ورماديٌّ حين لا** (ملاحظةُ المالك ٢٠٢٦-٠٨-١٨) —
                 // **والأحمرُ لغةُ المفضّلة في كلّ تطبيق.**
+                // **ومساحةُ لمسه ٣٦ لا ٢٦** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧) — الإصبعُ أعرضُ من الأيقونة.
                 Box(
                     Modifier
                         .clip(CircleShape)
                         .clickable(onClick = onLike)
-                        .padding(Rahal.space.xs),
+                        .size(36.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         painter = painterResource(
@@ -808,7 +812,7 @@ internal fun ItemCard(
                             if (liked) R.string.shop_unlike else R.string.shop_like,
                         ),
                         tint = if (liked) Rahal.colors.danger else Rahal.colors.inkMuted,
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(20.dp),
                     )
                 }
                 Spacer(Modifier.weight(1f))
@@ -948,8 +952,8 @@ internal fun ItemCard(
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .heightIn(min = Rahal.space.xl + Rahal.space.sm)
-                    .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.xs),
+                    .heightIn(min = 40.dp)
+                    .padding(start = Rahal.space.sm, end = Rahal.space.xs),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 val toStore = onStore?.takeIf { !item.merchantName.isNullOrBlank() && item.merchantId.isNotBlank() }
@@ -963,7 +967,8 @@ internal fun ItemCard(
                     style = nameStyle,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    autoSize = TextAutoSize.StepBased(minFontSize = 7.sp, maxFontSize = nameStyle.fontSize),
+                    // **وأصغرُ خطٍّ ٩ لا ٧** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧) — ٧ لا يُقرأ على شاشةٍ صغيرة.
+                    autoSize = TextAutoSize.StepBased(minFontSize = 9.sp, maxFontSize = nameStyle.fontSize),
                     modifier = Modifier
                         .weight(1f)
                         .then(
@@ -979,19 +984,29 @@ internal fun ItemCard(
                 )
                 if (!closed && onAdd != null) {
                     Spacer(Modifier.width(Rahal.space.xs))
+                    // **دائرةٌ ٣٢ ومساحةُ لمسٍ ٤٠** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧) — كانت ٢٥
+                    // فيُضغط على الصورة فتنقلب بدل أن يُضاف الصنف.
                     Box(
                         Modifier
+                            .size(40.dp)
                             .clip(CircleShape)
-                            .background(Rahal.colors.brand)
-                            .clickable(onClick = onAdd)
-                            .padding(5.dp),
+                            .clickable(onClick = onAdd),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Icon(
-                            painter = painterResource(com.rahalgo.ui.R.drawable.ic_plus),
-                            contentDescription = stringResource(R.string.shop_add),
-                            tint = Rahal.colors.onBrand,
-                            modifier = Modifier.size(15.dp),
-                        )
+                        Box(
+                            Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(Rahal.colors.brand),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                painter = painterResource(com.rahalgo.ui.R.drawable.ic_plus),
+                                contentDescription = stringResource(R.string.shop_add),
+                                tint = Rahal.colors.onBrand,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        }
                     }
                 }
             }

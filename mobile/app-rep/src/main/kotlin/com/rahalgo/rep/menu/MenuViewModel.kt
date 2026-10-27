@@ -129,6 +129,9 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                     name = name,
                     items = list.sortedBy { it.name },
                     imageUrl = faceOf[name],
+                    // **ومعرّفُ القسم من أصنافه** (٢٠٢٦-١٠-٢٧) — فيُمرَّر إلى
+                    // «إضافة صنف» من داخله **ولا يُبحث عنه بالاسم**؛ و«بلا قسم» فارغ.
+                    sectionId = list.firstNotNullOfOrNull { it.platformSectionId?.takeIf(String::isNotBlank) }.orEmpty(),
                 )
             }
             .sortedByDescending { it.items.size }
@@ -207,7 +210,11 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                 error = ""
                 runCatching { exchangeRate = api.merchant(merchantID).merchant.exchangeRate }
             } catch (e: Exception) {
-                Flash.fail(apiError(getApplication(), e))
+                // **والخطأُ يُكتب في حاله لا في ومضةٍ وحدَها** (٢٠٢٦-١٠-٢٧) — **وكانت
+                // الدوّارةُ تبقى عشرين ثانيةً** والمندوبُ واقفٌ في المتجر ينتظر،
+                // لأنّ `error` لا يُملأ. **ومع قائمةٍ ظاهرةٍ تكفي الومضة.**
+                val msg = apiError(getApplication(), e)
+                if (sections == null) error = msg else Flash.fail(msg)
             }
             // **وأقسامُ السوق على حدة** — **سقوطُها لا يُخفي القائمة**،
             // ويبقى المندوبُ يقرأ ما هو قائمٌ ولو تعذّر عليه أن يضيف.
@@ -452,4 +459,6 @@ data class ItemGroup(
     val name: String,
     val items: List<MenuItem>,
     val imageUrl: String?,
+    /** **معرّفُ قسم السوق** — وفارغٌ لـ«بلا قسم». */
+    val sectionId: String = "",
 )

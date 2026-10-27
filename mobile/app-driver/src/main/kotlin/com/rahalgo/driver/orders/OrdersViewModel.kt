@@ -1366,15 +1366,21 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** **«أضف معلم»** — من موقعه، بانتظار الإدارة. */
+    /** **المعلمُ في الطريق** — والزرُّ معطَّلٌ حتّى يجيء الردّ، فلا يصل مرّتين. */
+    var landmarkSending by mutableStateOf(false)
+        private set
+
     fun suggestLandmark(name: String, kind: String, done: () -> Unit) {
+        if (landmarkSending) return
+        landmarkSending = true
         val app = getApplication<Application>()
         viewModelScope.launch {
-            val at = hereFresh()
-            if (at == null) {
-                com.rahalgo.ui.Flash.fail(app.getString(R.string.map_need_location))
-                return@launch
-            }
             try {
+                val at = hereFresh()
+                if (at == null) {
+                    com.rahalgo.ui.Flash.fail(app.getString(R.string.map_need_location))
+                    return@launch
+                }
                 backend.driver.suggestLandmark(name.trim(), kind, at.first, at.second)
                 com.rahalgo.ui.Flash.ok(app.getString(R.string.landmark_sent))
                 done()
@@ -1382,6 +1388,8 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 throw e
             } catch (e: Exception) {
                 com.rahalgo.ui.Flash.fail(describe(e))
+            } finally {
+                landmarkSending = false
             }
         }
     }

@@ -92,7 +92,7 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
                 // **وأوّل نداء قد يسقط والشاشة فارغة** — فلا يبقى صاحبها
                 // أمام بياض بلا سبب ولا زرّ.
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(state.error, color = Rahal.colors.accent, textAlign = TextAlign.Center)
+                    Text(state.error, color = Rahal.colors.danger, textAlign = TextAlign.Center)
                     RahalTextButton(onClick = actions.refresh) {
                         Text(stringResource(R.string.home_retry))
                     }
@@ -192,118 +192,104 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
         // عليه أقرب طلب.** والسائق لا يرى من ذلك شيئا.
         // **والحسابُ الموقوفُ يُقال أوّلاً** (٢٠٢٦-١٠-٠٢).
         if (me.suspended) {
+            // **والإيقافُ وحدَه بالأحمر** — ليس نقصاً يُصلَح بزرّ.
             Text(
                 text = stringResource(R.string.suspended_banner),
-                color = Rahal.colors.accent,
+                color = Rahal.colors.danger,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(Rahal.shape.md)
-                    .background(Rahal.colors.warnTint)
+                    .background(Rahal.colors.danger.copy(alpha = 0.10f))
                     .padding(16.dp),
             )
-            Spacer(Modifier.height(14.dp))
-        }
-        if (!state.locationOn) {
-            LocationCard(onEnable = actions.enableLocation)
-            Spacer(Modifier.height(14.dp))
-        } else if (me.onShift && com.rahalgo.driver.location.GpsSignal.lost) {
-            // ══════════════════════════════════════════════════════════
-            // **والإذنُ ممنوحٌ والإشارةُ ميّتة** (٢٠٢٦-١٠-٠٢)
-            // ══════════════════════════════════════════════════════════
-            //
-            // **كانت النبضةُ تُعيد آخرَ موضعٍ بلا حدّ** فيبقى «حديثاً» ويُعرض
-            // عليه ما لا يبلغه. **والآن تسكت — ويُقال له لماذا لا تصله طلبات.**
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .clip(Rahal.shape.md)
-                    .background(Rahal.colors.warnTint)
-                    .padding(16.dp),
-            ) {
-                Text(
-                    text = stringResource(R.string.gps_lost_title),
-                    fontWeight = FontWeight.Bold,
-                    color = Rahal.colors.accent,
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(stringResource(R.string.gps_lost_text), color = Rahal.colors.inkMuted)
-            }
             Spacer(Modifier.height(14.dp))
         }
 
         // ══════════════════════════════════════════════════════════════
-        // **وما يُبقي الموقعَ حيّاً والتطبيقُ مغلق** (٢٠٢٦-١٠-١٣)
+        // **ومفتاحُ الورديّة أوّلُ ما يُرى — دائماً**
         // ══════════════════════════════════════════════════════════════
         //
-        // (قِيس على الإنتاج: سائقٌ في الدوام بلا موضعٍ أربعَ ساعات، والطلبُ على
-        //  ثمانية أمتار منه لا يصله.) **«أثناء الاستخدام» يُوقف الموقعَ متى أُغلق
-        // التطبيق**، **وجوّالاتُ شاومي وأخواتُها تقتل الخدمةَ** ولو استُثنيت من
-        // توفير البطارية. **فبطاقةٌ لكلٍّ منهما حتى يُصلَح** — لا خطوةٌ في الإعداد
-        // تُنسى بعد يومها.
-        if (state.locationOn && !com.rahalgo.driver.location.LocationPermission.backgroundGranted(context)) {
-            KeepAliveCard(
-                title = stringResource(R.string.keep_bg_title),
-                text = stringResource(R.string.keep_bg_text),
-                button = stringResource(R.string.keep_bg_button),
-                onClick = actions.enableLocation,
-            )
-            Spacer(Modifier.height(14.dp))
-        }
+        // (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧: ستُّ بطاقاتٍ برتقاليّةٍ فوق بعض كانت تدفعه
+        //  إلى أسفل الشاشة.) **وما ينقصه بعده في بطاقةٍ واحدة.**
+        ShiftCard(me = me, busy = state.busy, onToggle = actions.toggleShift)
+
+        // ══════════════════════════════════════════════════════════════
+        // **«قبل ما تشتغل: ناقصك…» — بطاقةٌ واحدةٌ لا ستّ**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **الموقعُ، وإشارتُه، والموقعُ طولَ الوقت، والتشغيلُ التلقائيّ، والإشعارات** —
+        // كلٌّ سطرٌ بزرّه. **وما يُبقي الموقعَ حيّاً والتطبيقُ مغلق** (٢٠٢٦-١٠-١٣):
+        // «أثناء الاستخدام» يُوقف الموقعَ متى أُغلق التطبيق، **وجوّالاتُ شاومي
+        // وأخواتُها تقتل الخدمة.** **والإشعارُ شرطُ الإعلان عن التوفّر** (`DRF-04`):
+        // كشفُ الطلبات دفعٌ من `FCM`، **ومرفوضُه تُسقط رسالتُه صامتة.**
         var autoStartDone by remember { mutableStateOf(com.rahalgo.driver.location.AutoStart.done(context)) }
-        if (com.rahalgo.driver.location.AutoStart.applies() && !autoStartDone) {
-            KeepAliveCard(
-                title = stringResource(R.string.keep_autostart_title),
-                text = stringResource(R.string.keep_autostart_text),
-                button = stringResource(R.string.keep_autostart_button),
-                onClick = {
-                    com.rahalgo.driver.location.AutoStart.open(context)
-                    autoStartDone = true
-                },
-            )
-            Spacer(Modifier.height(14.dp))
+        val fixes = buildList {
+            if (!state.locationOn) {
+                add(
+                    Fix(
+                        title = stringResource(R.string.loc_permission_title),
+                        text = stringResource(R.string.loc_permission_text),
+                        button = stringResource(R.string.loc_permission_button),
+                        onClick = actions.enableLocation,
+                    ),
+                )
+            } else if (me.onShift && com.rahalgo.driver.location.GpsSignal.lost) {
+                add(
+                    Fix(
+                        title = stringResource(R.string.gps_lost_title),
+                        text = stringResource(R.string.gps_lost_text),
+                    ),
+                )
+            }
+            if (state.locationOn && !com.rahalgo.driver.location.LocationPermission.backgroundGranted(context)) {
+                add(
+                    Fix(
+                        title = stringResource(R.string.keep_bg_title),
+                        text = stringResource(R.string.keep_bg_text),
+                        button = stringResource(R.string.keep_bg_button),
+                        onClick = actions.enableLocation,
+                    ),
+                )
+            }
+            if (com.rahalgo.driver.location.AutoStart.applies() && !autoStartDone) {
+                add(
+                    Fix(
+                        title = stringResource(R.string.keep_autostart_title),
+                        text = stringResource(R.string.keep_autostart_text),
+                        button = stringResource(R.string.keep_autostart_button),
+                        onClick = {
+                            com.rahalgo.driver.location.AutoStart.open(context)
+                            autoStartDone = true
+                        },
+                    ),
+                )
+            }
+            if (state.notifyMissing) {
+                add(
+                    Fix(
+                        title = stringResource(R.string.notify_needed_title),
+                        text = stringResource(R.string.notify_needed_text),
+                        button = stringResource(R.string.notify_needed_button),
+                        onClick = actions.enableNotifications,
+                        link = stringResource(R.string.notify_needed_settings),
+                        onLink = actions.openAppSettings,
+                    ),
+                )
+            }
         }
+        if (fixes.isNotEmpty()) {
+            Spacer(Modifier.height(14.dp))
+            FixesCard(fixes)
+        }
+        Spacer(Modifier.height(14.dp))
 
-        // ══════════════════════════════════════════════════════════════
-        // **خريطةُ المدينة تُحضَّر تلقائيّاً — لا بطاقةَ تنزيلٍ يدويّة** (B)
-        // ══════════════════════════════════════════════════════════════
-        //
-        // (قرارُ المالك ٢٠٢٦-٠٩-٢٧، بعد شاهد الجهاز: حزمةُ الرقّة صارت ~٢م
-        //  لا ٥٠٢م، **فالتنزيلُ تلقائيٌّ صامتٌ في الخلفيّة على الواي فاي**
-        //  — نُودي أعلاه `AUTOMATIC`. **ولا بطاقةَ قرارٍ ولا زرَّ تنزيلٍ
-        //  بعد اليوم**؛ القرارُ الذي كان يُستحقُّ بأربعمئةِ ميغا لا يُستحقُّ
-        //  بمليونين.)
-        //
-        // **لكنّ السقوطَ لا يُخفى** (`TD-MAP-SILENT-RESOURCE-FAIL`): سطرٌ
-        // صغيرٌ غيرُ حاجبٍ للعمل يقول إنّه سقط ويتيح إعادةً — لا بطاقة.
         MapPrepStatus(
             downloading = OfflineMap.downloading && !OfflineMap.ready,
             failed = OfflineMap.failed,
             failure = OfflineMap.failure,
             onRetry = { MapPackageWorker.enqueue(context) },
         )
-
-        // ══════════════════════════════════════════════════════════════
-        // **والإشعارُ شرطُ الإعلان عن التوفّر** (`DRF-04`، ٢٠٢٦-٠٩-١٥)
-        // ══════════════════════════════════════════════════════════════
-        //
-        // **وقِيس**: **كشفُ الطلبات دفعٌ من `FCM`**، **و`onMessageReceived`
-        // لا تفعل غيرَ بناءِ إشعار** — **فالإذنُ مرفوضٌ ⇒ تصل الرسالةُ
-        // ويُسقطها النظامُ صامتاً**، **ولا شيءَ في التطبيق يُنعَش.**
-        //
-        // **فليس زينةً** — **بل هو طريقُ العمل**: **يُمنَع به الإعلانُ
-        // عن التوفّر، ولا تُوقَف رحلةٌ في يده.**
-        //
-        // **وتذهب حين يُمنَح** — **ولا بطاقةَ تبقى بعد اكتمال الجاهزيّة.**
-        if (state.notifyMissing) {
-            NotifyCard(
-                onAllow = actions.enableNotifications,
-                onSettings = actions.openAppSettings,
-            )
-            Spacer(Modifier.height(14.dp))
-        }
-
-        ShiftCard(me = me, busy = state.busy, onToggle = actions.toggleShift)
 
         // ══════════════════════════════════════════════════════════════
         // **وتنبيهُ البطّاريّة تحت مفتاح الورديّة مباشرةً**
@@ -321,7 +307,7 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
 
         if (state.error.isNotEmpty()) {
             Spacer(Modifier.height(12.dp))
-            Text(state.error, color = Rahal.colors.accent, modifier = Modifier.fillMaxWidth())
+            Text(state.error, color = Rahal.colors.danger, modifier = Modifier.fillMaxWidth())
         }
 
         Spacer(Modifier.height(20.dp))
@@ -330,21 +316,37 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
             style = MaterialTheme.typography.titleMedium,
         )
         Spacer(Modifier.height(10.dp))
-        StatRow {
-            StatBox(
-                label = stringResource(R.string.home_delivered),
-                value = grouped(me.todayDelivered.toLong()),
-                modifier = Modifier.weight(1f),
+        // **أرباحُ اليوم رقمٌ كبيرٌ بعملته** — كانت مربّعاً ثالثاً بلا «ل.س» جنب عدّين،
+        // **فيضيع الفرقُ بين عددٍ ومبلغ.** والعدّان تحتها بخطٍّ أصغر.
+        com.rahalgo.ui.Card {
+            Text(
+                text = stringResource(R.string.home_earned),
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodyMedium,
             )
-            StatBox(
-                label = stringResource(R.string.ord_st_failed),
-                value = grouped(me.todayFailed.toLong()),
-                modifier = Modifier.weight(1f),
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = money(me.todayEarned),
+                color = Rahal.colors.success,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
             )
-            StatBox(
-                label = stringResource(R.string.home_earned),
-                value = grouped(me.todayEarned),
-                modifier = Modifier.weight(1f),
+            if (me.todayCompensated > 0) {
+                Text(
+                    text = stringResource(R.string.home_compensated, money(me.todayCompensated)),
+                    color = Rahal.colors.inkMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(
+                text = stringResource(
+                    R.string.home_today_counts,
+                    grouped(me.todayDelivered.toLong()),
+                    grouped(me.todayFailed.toLong()),
+                ),
+                color = Rahal.colors.ink,
+                style = MaterialTheme.typography.bodyMedium,
             )
         }
 
@@ -368,8 +370,8 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
         // **والسقفُ ليس زينة**: من بلغه لا يُعرض عليه طلبٌ نقديّ، **فيقف
         // عملُه ولا يعرف لماذا.** **وشريطٌ يُرى قبل أن يُقرأ رقم.**
         if (me.cashLimit > 0) {
-            Spacer(Modifier.height(22.dp))
-            CashBar(held = me.cashHeld, limit = me.cashLimit)
+            Spacer(Modifier.height(14.dp))
+            com.rahalgo.ui.Card { CashBar(held = me.cashHeld, limit = me.cashLimit) }
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -383,13 +385,15 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
         // طلباتٍ من مكافأةٍ لا يسعى إليها.
         val st = state.goal?.standing
         if (st != null && st.target > 0) {
-            Spacer(Modifier.height(18.dp))
-            GoalBar(
-                done = st.done,
-                target = st.target,
-                reached = st.reached,
-                reward = state.goal?.targetReward ?: 0,
-            )
+            Spacer(Modifier.height(14.dp))
+            com.rahalgo.ui.Card {
+                GoalBar(
+                    done = st.done,
+                    target = st.target,
+                    reached = st.reached,
+                    reward = state.goal?.targetReward ?: 0,
+                )
+            }
         }
 
         // **والخروجُ انتقل إلى أسفل القائمة الجانبيّة** — (قرارُ المالك
@@ -485,74 +489,6 @@ internal fun failureMessage(failure: com.rahalgo.map.data.MapFailure?): Int = wh
     com.rahalgo.map.data.MapFailure.NO_SPACE -> R.string.offline_map_failed_space
 
     else -> R.string.offline_map_failed_other
-}
-
-/**
- * **بطاقة تفعيل الموقع.**
- *
- * **وتقول ماذا يخسر لا ماذا يريد النظام**: «لا تعرف كم يبعد المتجر»
- * أوقع من «التطبيق يحتاج إذن الموقع».
- */
-/**
- * **بطاقةُ إذن الإشعارات.**
- *
- * **وزرّان لأنّ الرفضَ المتكرّرَ يُسكت نافذةَ النظام** — **ومن ضغط
- * «اسمح» ثلاثاً ولا نافذةَ تظهر ظنّ التطبيقَ معطوباً**: **فالطريقُ
- * الثاني مكتوبٌ بجانبه.**
- *
- * **وتقول ماذا يخسر لا ماذا يريد النظام** — **كمثال [LocationCard].**
- */
-@Composable
-private fun NotifyCard(onAllow: () -> Unit, onSettings: () -> Unit) {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .clip(Rahal.shape.md)
-            .background(Rahal.colors.warnTint)
-            .padding(16.dp),
-    ) {
-        Text(
-            text = stringResource(R.string.notify_needed_title),
-            fontWeight = FontWeight.Bold,
-            color = Rahal.colors.accent,
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(stringResource(R.string.notify_needed_text), color = Rahal.colors.inkMuted)
-        Spacer(Modifier.height(10.dp))
-        RahalButton(onClick = onAllow, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.notify_needed_button))
-        }
-        Spacer(Modifier.height(4.dp))
-        RahalTextButton(onClick = onSettings, modifier = Modifier.fillMaxWidth()) {
-            Text(
-                stringResource(R.string.notify_needed_settings),
-                color = Rahal.colors.inkMuted,
-            )
-        }
-    }
-}
-
-@Composable
-private fun LocationCard(onEnable: () -> Unit) {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .clip(Rahal.shape.md)
-            .background(Rahal.colors.warnTint)
-            .padding(16.dp),
-    ) {
-        Text(
-            text = stringResource(R.string.loc_permission_title),
-            fontWeight = FontWeight.Bold,
-            color = Rahal.colors.accent,
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(stringResource(R.string.loc_permission_text), color = Rahal.colors.inkMuted)
-        Spacer(Modifier.height(10.dp))
-        RahalButton(onClick = onEnable, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.loc_permission_button))
-        }
-    }
 }
 
 /**
@@ -698,9 +634,24 @@ data class HomeState(
         )
 }
 
-/** **بطاقةُ ما يُبقي الموقعَ حيّاً** — عنوانٌ وسببٌ وزرٌّ واحد. */
+/** **نقصٌ يمنع الطلبات** — عنوانٌ وسببٌ وزرٌّ يصلحه (وبلا زرٍّ إن لم يكن له حيلة). */
+private data class Fix(
+    val title: String,
+    val text: String,
+    val button: String = "",
+    val onClick: () -> Unit = {},
+    val link: String = "",
+    val onLink: () -> Unit = {},
+)
+
+/**
+ * **بطاقةُ «قبل ما تشتغل»** — كلُّ نقصٍ سطرٌ بأيقونةٍ وزرّه، وفوقها كم ينقصه.
+ *
+ * **والعنوانُ غامقٌ لا برتقاليّ** — البرتقاليُّ على أرضٍ فاتحةٍ تباينُه ٢ إلى ١،
+ * **والأيقونةُ وحدَها بلون التنبيه.**
+ */
 @Composable
-private fun KeepAliveCard(title: String, text: String, button: String, onClick: () -> Unit) {
+private fun FixesCard(fixes: List<Fix>) {
     Column(
         Modifier
             .fillMaxWidth()
@@ -708,11 +659,38 @@ private fun KeepAliveCard(title: String, text: String, button: String, onClick: 
             .background(Rahal.colors.warnTint)
             .padding(16.dp),
     ) {
-        Text(text = title, fontWeight = FontWeight.Bold, color = Rahal.colors.accent)
-        Spacer(Modifier.height(4.dp))
-        Text(text, color = Rahal.colors.inkMuted)
-        Spacer(Modifier.height(8.dp))
-        RahalButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) { Text(button) }
+        Text(
+            text = stringResource(R.string.home_fixes_title, fixes.size),
+            fontWeight = FontWeight.Bold,
+            color = Rahal.colors.ink,
+            style = MaterialTheme.typography.titleMedium,
+        )
+        fixes.forEachIndexed { i, f ->
+            Spacer(Modifier.height(if (i == 0) 10.dp else 14.dp))
+            Row(verticalAlignment = Alignment.Top) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_warning),
+                    contentDescription = null,
+                    tint = Rahal.colors.accent,
+                    modifier = Modifier.padding(top = 2.dp).size(20.dp),
+                )
+                Spacer(Modifier.size(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(f.title, fontWeight = FontWeight.Bold, color = Rahal.colors.ink)
+                    Spacer(Modifier.height(2.dp))
+                    Text(f.text, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodyMedium)
+                    if (f.button.isNotEmpty()) {
+                        Spacer(Modifier.height(8.dp))
+                        RahalButton(onClick = f.onClick, compact = true) { Text(f.button) }
+                    }
+                    if (f.link.isNotEmpty()) {
+                        RahalTextButton(onClick = f.onLink) {
+                            Text(f.link, color = Rahal.colors.inkMuted)
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -753,14 +731,7 @@ private fun CashBar(held: Long, limit: Long) {
         )
     }
     Spacer(Modifier.height(8.dp))
-    Bar(
-        ratio = ratio,
-        color = when {
-            ratio >= 1f -> Rahal.colors.danger
-            ratio > 0.8f -> Rahal.colors.accent
-            else -> Rahal.colors.success
-        },
-    )
+    Bar(ratio = ratio, color = com.rahalgo.driver.menu.cashBarColor(ratio))
     Spacer(Modifier.height(6.dp))
     Text(
         text = if (left > 0) {

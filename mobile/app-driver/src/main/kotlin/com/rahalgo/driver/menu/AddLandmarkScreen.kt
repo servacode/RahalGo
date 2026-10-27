@@ -4,6 +4,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.ui.Alignment
+import com.rahalgo.ui.ScreenTitle
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -46,7 +52,7 @@ internal val LandmarkKinds = listOf(
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun AddLandmarkScreen(onSend: (name: String, kind: String) -> Unit) {
+fun AddLandmarkScreen(onSend: (name: String, kind: String) -> Unit, sending: Boolean = false) {
     var name by rememberSaveable { mutableStateOf("") }
     var kind by rememberSaveable { mutableStateOf("") }
     Column(
@@ -55,8 +61,8 @@ fun AddLandmarkScreen(onSend: (name: String, kind: String) -> Unit) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text(stringResource(R.string.landmark_title), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        Text(stringResource(R.string.landmark_hint), color = Rahal.colors.inkMuted)
+        // **وبعنوان شاشات القائمة نفسِه** (`ScreenTitle`) — لا شكلٌ ثانٍ.
+        ScreenTitle(stringResource(R.string.landmark_title), stringResource(R.string.landmark_hint))
         OutlinedTextField(
             value = name,
             onValueChange = { if (it.length <= 80) name = it },
@@ -67,22 +73,34 @@ fun AddLandmarkScreen(onSend: (name: String, kind: String) -> Unit) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             LandmarkKinds.forEach { (key, label) ->
                 val on = kind == key
-                Text(
-                    text = stringResource(label),
-                    color = if (on) Rahal.colors.onBrand else Rahal.colors.ink,
-                    fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
+                Box(
                     modifier = Modifier
                         .clip(Rahal.shape.sm)
                         .background(if (on) Rahal.colors.brand else Rahal.colors.field)
                         .clickable { kind = key }
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                )
+                        .heightIn(min = 44.dp)
+                        .padding(horizontal = 14.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = stringResource(label),
+                        color = if (on) Rahal.colors.onBrand else Rahal.colors.ink,
+                        fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
+                    )
+                }
             }
         }
         RahalButton(
             onClick = { onSend(name, kind) },
-            enabled = name.trim().length >= 2 && kind.isNotEmpty(),
+            // **ولا يُرسَل مرّتين** — يتعطّل حتّى يجيء الردّ، ودائرةٌ تقول إنّه يرسل.
+            enabled = !sending && name.trim().length >= 2 && kind.isNotEmpty(),
             modifier = Modifier.fillMaxWidth(),
-        ) { Text(stringResource(R.string.landmark_send)) }
+        ) {
+            if (sending) {
+                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = androidx.compose.ui.graphics.Color.White)
+            } else {
+                Text(stringResource(R.string.landmark_send))
+            }
+        }
     }
 }

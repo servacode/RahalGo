@@ -144,7 +144,8 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
             Note(vm.error, Rahal.colors.danger)
         }
         if (d == null) {
-            if (vm.error.isEmpty()) Text(stringResource(R.string.md_loading), color = Rahal.colors.inkMuted)
+            // **والتحميلُ بالقطعة المشتركة** (تدقيقُ ٢٠٢٦-١٠-٢٧).
+            if (vm.error.isEmpty()) com.rahalgo.ui.LoadState(loading = true, error = "")
             return@Screen
         }
 
@@ -259,7 +260,7 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
             }
             InfoLine(
                 com.rahalgo.ui.R.drawable.ic_wallet,
-                stringResource(DeliveryTexts.feeRow(d.feePayer, d.deliveryMode == "fetch"), d.fee.toString()),
+                stringResource(DeliveryTexts.feeRow(d.feePayer, d.deliveryMode == "fetch"), com.rahalgo.ui.grouped(d.fee)),
             )
             // **وما يقبضه السائقُ من المستلِم لك** — خارجَ حساب المنصّة (٢٠٢٦-١٠-١٥). **وفي «إحضار»
             // يدفعه بمكان الاستلام ويأخذه منك** (٢٠٢٦-١٠-١٦).
@@ -292,8 +293,16 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
     }
 }
 
-/** **الساعةُ وحدَها** «14:05» — من طابع الخادم (`2026-10-01T14:05:…`). */
+/**
+ * **الساعةُ وحدَها** «14:05» — **بتوقيت سوريا لا كما وصلت** (تدقيقُ ٢٠٢٦-١٠-٢٧).
+ *
+ * **وكانت تُقصّ من النصّ كما هو** — والخادمُ يرسل بغرينتش أحياناً، **فتظهر
+ * ناقصةً ثلاثَ ساعات.** **والقصُّ يبقى لِما لا يُحلَّل.**
+ */
 private fun clock(iso: String): String {
+    com.rahalgo.ui.syriaTime(iso)?.let {
+        return it.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm", java.util.Locale.US))
+    }
     val t = iso.substringAfter('T', "")
     return if (t.length >= 5) t.substring(0, 5) else ""
 }

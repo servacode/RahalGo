@@ -1028,6 +1028,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                                 }
                                 MenuItem.AddLandmark -> com.rahalgo.driver.menu.AddLandmarkScreen(
                                     onSend = { name, kind -> orders.suggestLandmark(name, kind) { overlay.clear() } },
+                                    sending = orders.landmarkSending,
                                 )
                                 else -> MenuScreen(vm = sectionsVm, item = item)
                             }

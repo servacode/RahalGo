@@ -60,7 +60,7 @@
          **و«البلوغ» وحدَها لا تقول بلوغَ ماذا** — والسطرُ الذي فوقها
          يقول «هدف الشهر»، **لكنّ العينَ تقرأ الأرقامَ لا الترتيب.** -->
     <string name="home_target_reward">مكافأة بلوغ الهدف الشهري %1$s</string>
-    <string name="home_target_got">نلت المكافأة %1$s</string>
+    <string name="home_target_got">أخدت المكافأة %1$s</string>
     <string name="home_retry">حاول مرة ثانية</string>
     <!-- ══ مفتاحُ العمل — حالٌ وفعلٌ في شيءٍ واحد ══
          (قرارُ المالك ٢٠٢٦-٠٨-١٣: «بدّل وردية مفتوحة/مغلقة، نخلّيه زرّاً
@@ -76,11 +76,11 @@
     <string name="shift_off_hint">لا يمكنك استقبال الطلبات — أنت خارج العمل</string>
     <string name="shift_active_orders">معك %1$s من %2$s طلبات</string>
     <!-- الطلبات -->
-    <string name="orders_no_offers_hint">الطابور يُحدَّث وحده — أبقِ الشاشة مفتوحة</string>
+    <string name="orders_no_offers_hint">القائمة بتتحدّث لحالها — خلّي الشاشة مفتوحة</string>
     <string name="orders_no_offers">لا يوجد طلب معروض عليك الآن</string>
     <string name="order_cash_due">تقبض نقدا</string>
     <string name="order_prepaid">مدفوع سلفا</string>
-    <string name="status_assigned">بذمتك — اذهب للمتجر</string>
+    <string name="status_assigned">الطلب معك — روح عالمتجر</string>
     <string name="status_picked_up">استلمت الطلب</string>
     <string name="status_on_the_way">في الطريق للزبون</string>
     <string name="status_arrived">وصلت للزبون</string>
@@ -130,9 +130,9 @@
     <string name="loc_channel">الوردية</string>
     <string name="loc_title">ورديتك مفتوحة</string>
     <string name="loc_text">موقعك يرسل ليصلك أقرب طلب</string>
-    <string name="loc_permission_title">فعل الموقع</string>
+    <string name="loc_permission_title">فعّل الموقع</string>
     <string name="loc_permission_text">بدون الموقع لا تعرف كم يبعد المتجر، ولا يصلك أقرب طلب</string>
-    <string name="loc_permission_button">فعل الآن</string>
+    <string name="loc_permission_button">فعّل هلق</string>
     <!-- اعداد اول دخول - طبقة رقيقة فوق الجاهزية (C، ٢٠٢٦-٠٩-٢٧) -->
     <string name="setup_title">تجهيز حسابك</string>
     <string name="setup_why">نحتاج موقعك لنرسل إليك أقرب طلب ونحسب المسافة والأجرة — يُستعمل أثناء العمل فقط. وتُحضَّر خريطة مدينتك تلقائياً لتعمل ولو انقطع الإنترنت.</string>
@@ -157,11 +157,11 @@
     <string name="shift_needs_notify">لا تظهر متاحا قبل السماح بالإشعارات — الطلب لن يصلك</string>
     <string name="shift_needs_location">لا تظهر متاحا قبل تفعيل الموقع</string>
     <!-- لماذا لا تصلني طلبات -->
-    <string name="why_shift_closed">ورديتك مغلقة — افتحها من «لوحتي» ليصلك أول طلب</string>
-    <string name="why_location_off">الموقع مطفأ — بدونه لا يعرف المحرك أين أنت فلا يعرض عليك أقرب طلب</string>
-    <string name="why_cash_full">النقد الذي بذمتك بلغ السقف — سلم للمكتب ليعود الطلب النقدي</string>
-    <string name="why_too_many">معك طلبات بعدد حدك — سلم واحدا ليصلك غيره</string>
-    <string name="why_all_good">كل شيء جاهز — لا يوجد طلب في هذه اللحظة</string>
+    <string name="why_shift_closed">ورديتك مسكّرة — افتحها من «لوحتي» لحتى يوصلك أول طلب</string>
+    <string name="why_location_off">الموقع مطفي — بدونه ما منعرف وينك، فما بيوصلك أقرب طلب</string>
+    <string name="why_cash_full">النقد اللي معك وصل للسقف — سلّم للمكتب لحتى ترجع توصلك الطلبات النقدية</string>
+    <string name="why_too_many">معك طلبات قد حدّك — سلّم واحد لحتى يوصلك غيره</string>
+    <string name="why_all_good">كل شي جاهز — ما في طلب هلق</string>
     <string name="offline_title">تعذر الاتصال</string>
     <string name="offline_text">حسابك محفوظ — تحقق من الشبكة وحاول مرة ثانية</string>
     <!-- الرحلة -->
@@ -254,8 +254,8 @@
          التطبيقَ أخطأ ويلغي التنزيل. -->
     <string name="offline_map_title">نزّل خريطة %1$s</string>
     <string name="offline_map_text">تنزل مرة وتبقى — فتعمل الخريطة ولو انقطع الإنترنت في الطريق</string>
-    <string name="offline_map_button">نزل الآن</string>
-    <string name="offline_map_progress">جار التنزيل %1$s%%</string>
+    <string name="offline_map_button">نزّل هلق</string>
+    <string name="offline_map_progress">عم ينزل %1$s%%</string>
     <string name="offline_map_resume">أكمل التنزيل</string>
     <!-- ══════════════════════════════════════════════════════════════
          عباراتُ الإخفاق — إغلاقُ TD-MAP-SILENT-RESOURCE-FAIL
@@ -364,11 +364,11 @@
          أيّ تعليقٍ بأيّ تطبيق»). **وكان النصُّ يعد بكلامٍ لا وجودَ
          له**: الحقلُ حُذف من نافذة الزبون، **والبطاقةُ لم تكن تعرضه
          أصلاً.** ووعدٌ بما لا يُعرض يجعل السائقَ يبحث عمّا ليس هناك. -->
-    <string name="rate_hint">ما قيمه الزبائن عن خدمتك</string>
+    <string name="rate_hint">شو قيّموك الزبائن عن خدمتك</string>
     <string name="rate_reviews">ما قاله الزبائن</string>
     <string name="rate_no_reviews">لا تقييمات بعد</string>
     <string name="rate_complaints">شكاوى عليك</string>
-    <string name="rate_none_yet">لم تقيم بعد — أول تقييم يصلك بعد أول تسليم</string>
+    <string name="rate_none_yet">ما حدا قيّمك لسّا — أول تقييم بيوصلك بعد أول تسليم</string>
 
     <!-- ══ المحفظة ══ -->
 
@@ -436,7 +436,7 @@
          يقول «ما رفع عليك» فوق تبويبين يجعل من فتح الآخرَ يظنّه خطأ. -->
     <string name="tik_hint">ما عليك وما رفعتَه — وأين صار كلٌّ منهما</string>
     <string name="tik_none">لا شكوى عليك</string>
-    <string name="tik_none_hint">وهذا خبر جيد — أبقه كذلك</string>
+    <string name="tik_none_hint">وهاد خبر منيح — خلّيه هيك</string>
     <string name="tik_mine_empty">لم ترفع بلاغا بعد — ولك أن تبلغ من «سجل الطلبات»</string>
 
     <!-- دردشاتي السابقة -->
@@ -472,10 +472,10 @@
 
     <!-- ══ الإفصاحُ الصريح عن الموقع — شرطُ غوغل ══ -->
     <string name="disc_title">موقعك أثناء الوردية</string>
-    <string name="disc_what">يجمع رحال غو موقع جهازك ما دامت ورديتك مفتوحة.</string>
-    <string name="disc_background">ويجمع أيضا والتطبيق مغلق أو الشاشة مطفأة — لأنك تقود والهاتف في جيبك.</string>
-    <string name="disc_why">ومنه يسند إليك أقرب طلب، ويرى الزبون أين طلبه على الخريطة، وتحسب المسافة وأجرتها.</string>
-    <string name="disc_stop">ويقف الجمع فور إغلاق ورديتك. ولك أن ترفض، ويعمل التطبيق، ولا تصلك طلبات.</string>
+    <string name="disc_what">رحّال غو بياخد موقع جهازك طول ما ورديتك مفتوحة.</string>
+    <string name="disc_background">وبياخده كمان والتطبيق مسكّر أو الشاشة مطفية — لأنك عم تسوق والموبايل بجيبتك.</string>
+    <string name="disc_why">ومنه منبعتلك أقرب طلب، والزبون بيشوف وين طلبه عالخريطة، ومنحسب المسافة وأجرتها.</string>
+    <string name="disc_stop">وبيوقف أخد الموقع أول ما تسكّر ورديتك. وفيك ترفض، والتطبيق بيضل شغّال، بس ما بتوصلك طلبات.</string>
     <string name="disc_agree">أوافق</string>
     <string name="disc_deny">ليس الآن</string>
 
@@ -542,7 +542,7 @@
     <string name="suspended_banner">حسابك موقوف — أكمل الطلب الحالي فقط، ولن تصلك طلبات جديدة.</string>
     <!-- **إشارةُ الموقع ميّتة والإذنُ ممنوح** (٢٠٢٦-١٠-٠٢). -->
     <string name="gps_lost_title">إشارة الموقع مفقودة</string>
-    <string name="gps_lost_text">لم يصل الهاتفَ موضعٌ منذ دقائق، فلن تُعرض عليك طلبات حتى تعود. اخرج إلى مكان مكشوف أو أعد تشغيل الموقع.</string>
+    <string name="gps_lost_text">الموقع مو واصل من كم دقيقة، فما رح توصلك طلبات لحتى يرجع. اطلع لمكان مكشوف أو طفّي الموقع وشغّله.</string>
     <!-- ما يُبقي الموقعَ حيّاً والتطبيقُ مغلق (٢٠٢٦-١٠-١٣) -->
     <string name="keep_bg_title">الموقع بيوقف لما تسكّر التطبيق</string>
     <string name="keep_bg_text">إذن الموقع عندك «أثناء الاستخدام» بس، فلما تطلع من التطبيق بيوقف موقعك وما بتوصلك طلبات. خلّيه «السماح طول الوقت».</string>
@@ -594,6 +594,8 @@
     <string name="trip_partner_store">اشترِ من متجر: %1$s</string>
     <string name="trip_goods_line">المشتريات: %1$s</string>
     <string name="trip_fee_line">أجرة التوصيل: %1$s</string>
+    <!-- **والأجرةُ المُعفاة لا تُطالَب** (تدقيق ٢٠٢٦-١٠-٢٧) — تفصيلُ المشتريات يطابق المبلغ الكبير. -->
+    <string name="trip_fee_line_free">أجرة التوصيل: مجانية للزبون (أجرتك محفوظة)</string>
     <string name="arrive_far_title">أنت بعيد عن المكان</string>
     <string name="arrive_far_body">بينك وبين المكان حوالي %1$s. متأكد إنك وصلت؟</string>
     <string name="arrive_far_yes">إي وصلت</string>
@@ -645,4 +647,26 @@
     <string name="trip_live_approx">" — موقع تقريبي"</string>
     <string name="trip_live_age_sec">%1$d ث</string>
     <string name="trip_live_age_min">%1$d د</string>
+    <!-- ══ تلميعُ التصميم والأعطال (تدقيق ٢٠٢٦-١٠-٢٧) ══ -->
+    <string name="map_problem_caption">مشكلة</string>
+    <string name="hist_counted">العدّ لآخر %1$d طلب من أصل %2$d</string>
+    <string name="hist_load_older">حمّل طلبات أقدم</string>
+    <string name="cash_load_older">حمّل حركات أقدم</string>
+    <string name="cash_d_store">متجر %1$s</string>
+    <string name="cash_d_fee">أجرة %1$s</string>
+    <string name="cash_d_commission">عمولة %1$s</string>
+    <string name="cash_d_commission_waived">انمسح من العمولة %1$s</string>
+    <string name="cash_d_free">مجانية للزبون</string>
+    <string name="home_compensated">منها تعويض %1$s</string>
+    <string name="home_today_counts">سلّمت %1$s · تعذّر %2$s</string>
+    <string name="home_fixes_title">قبل ما تشتغل — ناقصك (%1$d)</string>
+    <string name="why_suspended">حسابك موقوف — كمّل طلبك الحالي وتواصل مع المكتب</string>
+    <string name="card_out_of_pocket">بتدفع عنه وبتقبضه</string>
+    <string name="chat_empty_driver">ابعت للزبون إذا احتجت شي</string>
+    <string name="chat_quick_arrived">وصلت</string>
+    <string name="chat_quick_downstairs">أنا تحت البناية</string>
+    <string name="chat_quick_searching">عم دوّر عالعنوان</string>
+    <string name="chat_quick_five_min">بوصل بعد 5 دقايق</string>
+    <string name="setup_progress">خلصت %1$d من %2$d</string>
+    <string name="rate_title">تقييمي</string>
 </resources>

@@ -133,6 +133,10 @@ class MainActivity : ComponentActivity() {
         // **وإشعارُ المندوب `lead` نوعٌ لا تعرفه `route` فيسقط إلى البيت**،
         // فلا يصل هنا شيءٌ عمليّاً؛ **لكنّ التركيبَ واحدٌ فلا يفترق تطبيقٌ عن
         // إخوته**، **والمقصدُ يُنقّى على كلّ حال** فلا تبقى وجهةٌ شاردةٌ معلّقة.
+        //
+        // **وإشعارُ العميل يفتح «عملائي»** (`LeadTap`، ٢٠٢٦-١٠-٢٧) — ويُقرأ قبل
+        // `Opened` لأنّها تمحو علامةَ الإشعار من المقصد.
+        com.rahalgo.rep.push.LeadTap.from(this, intent)
         com.rahalgo.ui.Opened.from(intent)
         WindowCompat.getInsetsController(window, window.decorView)
             .isAppearanceLightStatusBars = true
@@ -146,6 +150,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        com.rahalgo.rep.push.LeadTap.from(this, intent)
         com.rahalgo.ui.Opened.from(intent)
     }
 }
@@ -273,6 +278,18 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
     val waiting = com.rahalgo.ui.Opened.pending
     LaunchedEffect(waiting) {
         if (!waiting.isHome) com.rahalgo.ui.Opened.take()
+    }
+
+    // **ونقرةُ إشعار عميلٍ تفتح «عملائي»** (`LeadTap`، ٢٠٢٦-١٠-٢٧) — رفضٌ أو
+    // طلبُ معلوماتٍ أو عميلٌ أُسند إليه: **يرى العميلَ وسببَه مباشرة.**
+    val toClients = com.rahalgo.rep.push.LeadTap.openClients
+    LaunchedEffect(toClients) {
+        if (!toClients) return@LaunchedEffect
+        com.rahalgo.rep.push.LeadTap.openClients = false
+        leaveStore()
+        clientsVm.closeDetail()
+        clientsVm.load()
+        tab = Tab.Clients
     }
 
     // **والرجوعُ من القائمة يغلقها — لا يُخرج من التطبيق.**
@@ -486,7 +503,12 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                         locating = locating,
                     )
 
-                    tab == Tab.Board -> BoardScreen(boardVm)
+                    // **والرصيدُ يفتح المحفظة، و«وثّق حسابك» يفتح «حسابي»** (٢٠٢٦-١٠-٢٧).
+                    tab == Tab.Board -> BoardScreen(
+                        vm = boardVm,
+                        onOpenWallet = { overlay.show(Overlay.Wallet) },
+                        onOpenAccount = { tab = Tab.Account; leaveStore() },
+                    )
 
                     // **وبعد الإرسال ينتقل إلى «عملائي»** (طلبُ المالك
                     // ٢٠٢٦-٠٩-٣٠) — **فيرى المكانَ الذي سيظهر فيه العميلُ
@@ -529,6 +551,8 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                         vm = clientsVm,
                         onOpenMenu = { id, name -> menuVm.open(id, name) },
                         onOpenOffers = { id, name -> offersVm.open(id, name) },
+                        // **والقائمةُ الفارغةُ تنقله إلى حيث يُسجَّل** (٢٠٢٦-١٠-٢٧).
+                        onAddClient = { tab = Tab.AddClient; leaveStore() },
                         // **«بحاجة معلومات» تُصلَح في نموذج الإضافة نفسِه** (٢٠٢٦-١٠-٢٧).
                         onEditLead = { lead -> addVm.startEdit(lead); tab = Tab.AddClient },
                     )
@@ -590,13 +614,8 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                         },
                     )
 
-                    // **وشاشتاه تُبنيان في دفعتيهما** — والقالبُ أوّلا.
-                    else -> Soon(
-                        when (tab) {
-
-                            else -> "profile"
-                        },
-                    )
+                    // **وحُذف `Soon`** (٢٠٢٦-١٠-٢٧) — التبويباتُ الأربعةُ كلُّها
+                    // مبنيّة، **وفرعٌ لا يُبلَغ يُوهم أنّ شاشةً لم تُبنَ.**
                 }
             }
         }
@@ -617,37 +636,3 @@ private fun RowScope.Tab(selected: Boolean, onClick: () -> Unit, icon: Int, labe
     )
 }
 
-/**
- * **قسمٌ لم يُبنَ بعد — ويقول ما ينتظره.**
- *
- * **وشاشةٌ بيضاءُ تُقرأ عطبا**: من فتحها ظنّ التطبيقَ مكسوراً فأغلقه.
- */
-@Composable
-private fun Soon(key: String) {
-    val title: Int
-    val hint: Int
-    when (key) {
-        RepItems.REWARDS -> {
-            title = com.rahalgo.ui.R.string.menu_rewards
-            hint = R.string.soon_rewards
-        }
-        else -> {
-            title = R.string.nav_profile
-            hint = R.string.soon_profile
-        }
-    }
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = Modifier.padding(28.dp),
-    ) {
-        Text(stringResource(title), style = MaterialTheme.typography.headlineSmall)
-        Spacer(Modifier.height(8.dp))
-        Text(
-            text = stringResource(hint),
-            color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center,
-        )
-    }
-}

@@ -27,8 +27,8 @@
     <string name="store_switch">تبديل</string>
 
     <string name="orders_hint">اقبل الطلب ثم حضّره ثم أعلن جاهزيته</string>
-    <string name="orders_empty_hint">يصلك الطلب بإشعار — وتأكّد أن متجرك مفتوح من «القائمة»</string>
-    <string name="orders_empty">لا طلبات الآن — سنُعلمك حين يصل طلب</string>
+    <string name="orders_empty_hint">الطلب بيوصلك بإشعار ورنّة — تأكد إنو متجرك فاتح من «متجري»</string>
+    <string name="orders_empty">ما في طلبات هلّق — منبعتلك إشعار أول ما يوصل طلب</string>
 
     <string name="order_accept">استلمت الطلب</string>
     <string name="order_reject">اعتذار عن الطلب</string>
@@ -94,7 +94,6 @@
          للفعل. **ولفظان لشيءٍ واحدٍ يجعلانه يظنّهما مفتاحين**: يبحث عن
          «مفتوح/مغلق» فلا يجده فيظنّ الدوامَ وحدَه يحكمه. -->
     <string name="store_open">مفتوح</string>
-    <string name="store_closed">مغلق</string>
     <!-- ══════════════════════════════════════════════════════════════
          **الحالةُ الفعليّةُ من الخادم — أربعُ حالات** (B5، ٢٠٢٦-٠٩-٢٦)
          ══════════════════════════════════════════════════════════════
@@ -106,12 +105,11 @@
     <string name="store_state_closed_hours">مغلق حسب ساعات العمل</string>
     <string name="store_next_open">يفتح %1$s</string>
     <!-- **طريقةُ استلامِ المستحقّات — عرضٌ لا يغيّره المتجر** (٢٠٢٦-٠٩-٢٧). -->
-    <string name="store_settlement_method">طريقة استلام المستحقات</string>
     <string name="store_settlement_cash">نقدي</string>
     <string name="store_settlement_wallet">المحفظة</string>
     <string name="store_unpaid_cash">المستحقات النقدية غير المسددة</string>
     <!-- **متجرٌ موقوفٌ يُقرأ ولا يُكتب فيه** (B6). -->
-    <string name="store_suspended_banner">متجرك موقوف من الإدارة. يمكنك عرض متجرك لكن لا تعديلَ القائمة ولا الإتاحة ولا الساعات حتى يُرفع الإيقاف — تواصل مع الدعم.</string>
+    <string name="store_suspended_banner">متجرك موقوف من الإدارة — بتقدر تشوفه بس ما بتقدر تعدّل شي. احكي مع الدعم.</string>
     <!-- **والشرحُ يقول ما لا يقوله المفتاح** — أنّ الدوامَ يغلقه أيضاً. -->
     <string name="store_prep">مدة التحضير الافتراضية</string>
     <string name="store_prep_unit">دقيقة</string>
@@ -135,14 +133,14 @@
          بابٌ خلفَ المحلّ، علامةٌ يعرفها أهلُ الحيّ. -->
     <string name="store_address_hint">الشارع والعلامة التي يعرفها الناس</string>
     <string name="store_point">موقع المتجر على الخريطة</string>
-    <string name="store_point_none">لم يُحدَّد بعد</string>
+    <string name="store_point_none">لسا ما حدّدته</string>
     <string name="store_point_pick">حدّد</string>
 
     <!-- ══════════════════════════════════════════════════════════════
          **ثلاثةُ أقسامٍ في الدرج** — طلبُ المالك ٢٠٢٦-٠٨-٢٣
          ══════════════════════════════════════════════════════════════ -->
     <string name="menu_warnings">الإنذارات</string>
-    <string name="warnings_hint">ما على متجرك — يُقرأ قبل أن يُحظر</string>
+    <string name="warnings_hint">الإنذارات اللي عليك — انتبه منها قبل ما يتوقف متجرك</string>
     <string name="menu_reports">الشكاوي والبلاغات</string>
     <string name="reports_list_hint">ما أرسلتَه وما صار به</string>
     <string name="reports_list_empty">لم ترسل بلاغاً بعد</string>
@@ -184,7 +182,7 @@
          يُكسر سطرين في زرٍّ عريض. -->
     <string name="store_emergency">إغلاق طارئ</string>
     <string name="store_emergency_do">أغلق الآن</string>
-    <string name="store_emergency_hint">يُقرأ فوراً من الإدارة، ولا يُحسب رفضاً عليك</string>
+    <string name="store_emergency_hint">الإدارة بتعرف فوراً، وما بتنحسب عليك رفض</string>
 
     <!-- ══════════════════════════════════════════════════════════════
          **أرقامُ اليوم — أربعةٌ لا خامسَ لها**
@@ -211,7 +209,7 @@
          ══════════════════════════════════════════════════════════════
 
          (قرارُ المالك ٢٠٢٦-٠٨-٢٣.) **و«الطلبات» لاستقبال الجديد وحدَه.** -->
-    <string name="history_hint">ما انتهى أمره — يُفتح عند سؤال</string>
+    <string name="history_hint">الطلبات اللي خلصت</string>
     <string name="history_empty">لا طلبات في السجل بعد</string>
 
 
@@ -274,18 +272,6 @@
     <string name="os_cancelled">أُلغي</string>
     <string name="os_failed">تعذّر تسليمه</string>
     <string name="os_refunded">استُرجع</string>
-    <!-- عروضُ المتجر (OF، ٢٠٢٦-٠٩-١٥) -->
-    <string name="offers_title">عروض متجري</string>
-    <string name="offers_empty">لا عروض بعد — أنشئ عرضاً على صنف ليراه الزبائن</string>
-    <string name="offer_new">عرض جديد</string>
-    <string name="offer_pick_item">اختر الصنف</string>
-    <string name="offer_percent">نسبة الخصم</string>
-    <string name="offer_duration">المدة</string>
-    <string name="offer_create">أنشئ العرض</string>
-    <string name="offer_default_title">خصم</string>
-    <string name="offer_bad_input">اختر صنفاً ونسبة بين ١ و٩٠ ومدة صحيحة</string>
-    <string name="offer_borne_note">الخصم يُحسم من مستحقك أنت</string>
-    <string name="offer_ends">ينتهي: %s</string>
 
     <!-- «لدي توصيلة» — الخطوة ١٨ -->
     <string name="tab_delivery">توصيلة</string>
@@ -300,24 +286,18 @@
     <string name="md_pay_me_cash">أنا (نقداً للسائق)</string>
     <string name="md_fee_me_cash">تدفعها أنت نقداً للسائق عند استلام الغرض</string>
     <string name="md_row_me_cash">الأجرة %1$s ل.س — نقداً منك</string>
-    <string name="md_point_optional">(اختياري)</string>
-    <string name="md_no_point_hint">بلا نقطة: تُحسب الأجرة من منطقة متجرك، ويصل السائق بالعنوان المكتوب — اكتبه واضحاً</string>
-    <string name="md_clear_point">أزل النقطة</string>
     <string name="md_row_no_point">بلا نقطة على الخريطة</string>
     <string name="md_title">لدي توصيلة</string>
     <string name="md_hint">خدمة توصيل طلباتك لزبائنك</string>
     <string name="md_name">اسم المستلم</string>
     <string name="md_phone">رقم المستلم</string>
     <string name="md_address">عنوان التسليم</string>
-    <string name="md_pick_point">حدد نقطة التسليم على الخريطة</string>
     <string name="md_link">رابط موقع الزبون</string>
     <string name="md_link_hint">الصق هون الرابط يلي بعتلك ياه الزبون</string>
     <string name="md_link_how">افتح موقع الزبون بالواتساب ← مشاركة ← انسخ الرابط والصقه هون</string>
     <string name="md_link_checking">عم نقرأ الموقع…</string>
     <string name="md_link_found">✓ تمام، قرينا الموقع — السائق رح يشوفه على الخريطة</string>
     <string name="md_link_not_found">هالرابط ما فيه موقع — اطلب من الزبون يبعتلك موقعه من الواتساب</string>
-    <string name="md_or_pick_point">أو حدّد النقطة على الخريطة بإيدك</string>
-    <string name="md_point_set">✓ %1$s — اضغط لتغييرها</string>
     <string name="md_parcel">شو بدك يوصّل السائق؟</string>
     <string name="md_parcel_hint">مثلاً: وجبتين شاورما وعلبتين كولا</string>
     <string name="md_driver_note">ملاحظة للسائق (اختياري)</string>
@@ -329,19 +309,18 @@
     <string name="md_fee_cash">يدفعها المستلم نقداً للسائق عند التسليم</string>
     <string name="md_fee_choose">اختر من يدفع</string>
     <string name="md_cannot_pay">رصيد محفظتك ما بيكفي — اشحنها أو اختر الدفع نقداً</string>
-    <string name="md_missing">ينقص قبل الإرسال: %1$s</string>
+    <string name="md_missing">ناقص: %1$s</string>
     <string name="md_send">اطلب سائقاً</string>
     <string name="md_sending">جاري الإرسال…</string>
     <string name="md_sent">✓ أُرسلت التوصيلة — بانتظار موافقة المنصة، ثم تُعرض على السائقين. تابعها في «توصيلاتي» أدناه</string>
     <string name="md_mine">توصيلاتي</string>
     <string name="md_loading">جاري التحميل…</string>
-    <string name="md_none">لا توصيلات بعد</string>
+    <string name="md_none">لسا ما بعتّ توصيلة</string>
     <string name="md_row_wallet">الأجرة %1$s ل.س — من محفظتك</string>
     <string name="md_row_cash">الأجرة %1$s ل.س — نقداً من المستلم</string>
     <string name="md_track_title">توصيلة #%1$s</string>
-    <string name="md_track_hint">تتحدث وحدها كل عشر ثوان ما دامت جارية</string>
+    <string name="md_track_hint">بتتحدّث لحالها كل ١٠ ثواني</string>
     <string name="md_track_open">اضغط لمتابعة حالتها</string>
-    <string name="md_track_to">إلى: %1$s</string>
     <string name="md_step_platform">بانتظار موافقة المنصة</string>
     <string name="md_step_waiting">بانتظار سائق</string>
     <string name="md_platform_accepted">وافقت المنصة</string>
@@ -364,11 +343,6 @@
     <string name="md_blocked_title">لا يمكن إرسال توصيلة الآن</string>
     <string name="md_track_details">تفاصيل التوصيلة</string>
     <!-- قبولُ الاسترداد وتأكيدُ الاختيار (طلبُ المالك ٢٠٢٦-١٠-٠٨) -->
-    <string name="store_returns">الاسترداد</string>
-    <string name="store_returns_yes">بقبل الترجيع</string>
-    <string name="store_returns_no">ما بقبل</string>
-    <string name="store_returns_hint">إذا الزبون ما استلم الطلب، بيرجّعلك السائق الغرض.</string>
-    <string name="store_choose_needed">اختار من تحت ⬇</string>
     <string name="ok_returns_saved">تم حفظ اختيارك</string>
     <!-- من يدفع — بطاقات (٢٠٢٦-١٠-٠٩) -->
     <string name="md_who_pays_q">مين بيدفع أجرة التوصيل؟ *</string>
@@ -431,21 +405,15 @@
     <string name="md_code_hint">أعطِ الكود للسائق لما يوصلك الغرض — بس وقتها.</string>
     <!-- سعر الصرف (٢٠٢٦-١٠-١٢) -->
     <string name="store_rate">سعر الصرف</string>
-    <string name="store_rate_value">1$ = %1$s ل.س</string>
-    <string name="store_rate_none">ما كتبته لسا</string>
-    <string name="store_rate_hint">أصنافك يلي سعرها بالدولار بتتحسب منه بالليرة، وبتتغيّر لحالها كل ما تغيّره. يلي سعرها بالليرة ما بتتأثر.</string>
     <string name="store_rate_field">كم ليرة الدولار؟</string>
-    <string name="store_rate_save">احفظ</string>
     <string name="ok_rate_saved">تم — تحدّث سعر %1$d صنف</string>
     <string name="store_rate_jump_title">سعر الصرف تغيّر كتير</string>
     <string name="store_rate_jump_body">من %1$s لـ %2$s. تأكد إنك ما زدت أو نقصت صفر بالغلط.</string>
     <string name="store_rate_jump_samples">أسعارك رح تصير (الجديد ← القديم):</string>
     <string name="store_rate_jump_yes">إي، احفظه</string>
     <string name="store_rate_jump_no">رجوع</string>
-    <string name="store_display_title">الزبون بيشوف أسعارك:</string>
     <string name="store_display_syp">بالليرة</string>
     <string name="store_display_usd">بالدولار</string>
-    <string name="store_display_hint">إذا اخترت دولار: الزبون بيشوف كل صنف بالدولار وتحته بالليرة، وبيدفع بالليرة.</string>
     <string name="store_display_need_rate">لتعرض أسعارك بالدولار، اكتب سعر الصرف واحفظه أول.</string>
     <string name="ok_display_saved">تم — تغيّرت عملة العرض للزبائن</string>
     <!-- صفحة متجري: سؤال وزرّين (٢٠٢٦-١٠-١٢) -->
@@ -461,4 +429,40 @@
     <string name="hours_apply_all">طبّق على كل الأيام</string>
     <string name="hours_open_24h">مفتوح ٢٤ ساعة</string>
     <string name="hours_open_24h_short">٢٤ ساعة</string>
+
+    <!-- ══════════════════════════════════════════════════════════════
+         **تدقيقُ التصميم والمنطق** (٢٠٢٦-١٠-٢٧)
+         ══════════════════════════════════════════════════════════════ -->
+    <string name="orders_go_store">روح لمتجري</string>
+    <string name="orders_history_link">الطلبات اللي خلصت ← سجل الطلبات</string>
+    <string name="orders_group_new">جديدة — بتستناك (%1$d)</string>
+    <string name="orders_group_preparing">عم تتحضّر (%1$d)</string>
+    <string name="orders_group_waiting">جاهزة — بانتظار السائق (%1$d)</string>
+    <string name="orders_group_closed">خلصت (%1$d)</string>
+    <string name="ord_no_payout">ما في مستحق — الطلب ما تسلّم</string>
+    <string name="setup_progress">جهّز متجرك — خلصت %1$d من %2$d</string>
+    <string name="store_point_set">✓ محدّد على الخريطة</string>
+    <string name="store_point_change">غيّر الموقع</string>
+    <string name="store_emergency_q">تسكّر متجرك هلّق؟</string>
+    <string name="store_settings_title">إعدادات المتجر</string>
+    <string name="md_none_hint">عبّي الاستمارة فوق واكبس «اطلب سائقاً»</string>
+    <string name="menu_search_none">ما في صنف بهالاسم</string>
+    <string name="sales_range">من %1$s لـ %2$s</string>
+    <string name="sales_from_title">من أيّ يوم؟</string>
+    <string name="sales_to_title">لأيّ يوم؟</string>
+    <!-- **أسماءُ الأشهر بالسوريّ** — لـ«الثلاثاء 27 تشرين الأول» (`Dates`). -->
+    <string-array name="months_sy">
+        <item>كانون الثاني</item>
+        <item>شباط</item>
+        <item>آذار</item>
+        <item>نيسان</item>
+        <item>أيار</item>
+        <item>حزيران</item>
+        <item>تموز</item>
+        <item>آب</item>
+        <item>أيلول</item>
+        <item>تشرين الأول</item>
+        <item>تشرين الثاني</item>
+        <item>كانون الأول</item>
+    </string-array>
 </resources>

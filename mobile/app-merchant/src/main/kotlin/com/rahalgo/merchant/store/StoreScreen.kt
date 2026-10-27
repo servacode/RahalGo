@@ -146,31 +146,60 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
             //
             // **ما تراه الإدارةُ في «إعداد المتاجر» يراه صاحبُه هنا** — وكلُّ
             // بندٍ يُكبس فيُنزله إلى مكانه. **ويختفي حين يكتمل.**
-            val missing = buildList {
-                if (vm.mySections.isEmpty()) add(StoreSpot.Sections)
-                if (!store.hasHours) add(StoreSpot.Hours)
-                if (store.lat == null || store.addressText.isBlank()) add(StoreSpot.Address)
-                if (!store.settlementConfirmed) add(StoreSpot.Settlement)
-                if (!store.returnsConfirmed) add(StoreSpot.Returns)
-            }
-            if (missing.isNotEmpty() && !suspended) {
-                Card(tone = Rahal.colors.danger) {
+            val done = mapOf(
+                StoreSpot.Sections to vm.mySections.isNotEmpty(),
+                StoreSpot.Hours to store.hasHours,
+                StoreSpot.Address to (store.lat != null && store.addressText.isNotBlank()),
+                StoreSpot.Settlement to store.settlementConfirmed,
+                StoreSpot.Returns to store.returnsConfirmed,
+            )
+            val doneCount = done.count { it.value }
+            // ══════════════════════════════════════════════════════════
+            // **وبلون التجهيز لا بلون الخطأ** (تدقيقُ ٢٠٢٦-١٠-٢٧)
+            // ══════════════════════════════════════════════════════════
+            //
+            // **كان كرتاً أحمرَ بلون الإيقاف** — فيظنّ المتجرُ الجديدُ أنّ عليه
+            // مشكلة، **وهي خطواتُ تجهيزٍ عاديّة.** فصار برتقاليّاً بشريط تقدّم،
+            // **وكلُّ خطوةٍ بدائرتها** (✓ لِما تمّ)، وسطرٌ يسع الإصبع.
+            if (doneCount < done.size && !suspended) {
+                Card(tone = Rahal.colors.accent) {
                     Text(
-                        stringResource(R.string.setup_missing_title),
-                        color = Rahal.colors.danger,
+                        stringResource(R.string.setup_progress, doneCount, done.size),
+                        color = Rahal.colors.accent,
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.titleSmall,
                     )
-                    Spacer(Modifier.height(6.dp))
-                    missing.forEach { spot ->
-                        Text(
-                            "• " + stringResource(spot.label) + "  ←",
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier
+                    Spacer(Modifier.height(8.dp))
+                    com.rahalgo.ui.Bar(doneCount.toFloat() / done.size, Rahal.colors.accent)
+                    Spacer(Modifier.height(4.dp))
+                    StoreSpot.entries.forEach { spot ->
+                        val ok = done[spot] == true
+                        Row(
+                            Modifier
                                 .fillMaxWidth()
-                                .clickable { vm.jumpTo = spot }
-                                .padding(vertical = 6.dp),
-                        )
+                                .height(48.dp)
+                                .clickable(enabled = !ok) { vm.jumpTo = spot },
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Box(
+                                Modifier
+                                    .size(22.dp)
+                                    .clip(Rahal.shape.pill)
+                                    .background(if (ok) Rahal.colors.success else Color.Transparent)
+                                    .border(2.dp, if (ok) Rahal.colors.success else Rahal.colors.accent, Rahal.shape.pill),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                if (ok) Text("✓", color = Color.White, style = MaterialTheme.typography.labelSmall)
+                            }
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                stringResource(spot.label),
+                                modifier = Modifier.weight(1f),
+                                color = if (ok) Rahal.colors.inkMuted else Rahal.colors.ink,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                            if (!ok) Text("←", color = Rahal.colors.accent, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
                 Spacer(Modifier.height(10.dp))
@@ -270,28 +299,16 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
                     Text(stringResource(R.string.store_emergency))
                 }
             }
+            // **والتأكيدُ نافذةٌ كبقيّة التطبيق** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كان كرتاً داخلَ الصفحة،
+            // **ويسأله المفتاحُ أيضاً**: لمسةٌ بالغلط كانت تُسكّر المتجرَ عن الزبائن بلا سؤال.
             if (confirming) {
-                Spacer(Modifier.height(8.dp))
-                Card {
-                    Text(
-                        stringResource(R.string.store_emergency_hint),
-                        color = Rahal.colors.inkMuted,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
-                            onClick = { vm.emergency(); confirming = false },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Rahal.colors.danger,
-                                contentColor = Color.White,
-                            ),
-                        ) { Text(stringResource(R.string.store_emergency_do)) }
-                        RahalTextButton(onClick = { confirming = false }) {
-                            Text(stringResource(R.string.act_cancel))
-                        }
-                    }
-                }
+                com.rahalgo.ui.ConfirmDialog(
+                    title = stringResource(R.string.store_emergency_q),
+                    body = stringResource(R.string.store_emergency_hint),
+                    confirm = stringResource(R.string.store_emergency_do),
+                    onConfirm = { vm.emergency(); confirming = false },
+                    onDismiss = { confirming = false },
+                )
             }
 
             // ══════════════════════════════════════════════════════════
@@ -327,6 +344,14 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
             }
             Card {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    // **ونقطةٌ بلون الحال** — تُرى قبل أن تُقرأ (تدقيقُ ٢٠٢٦-١٠-٢٧).
+                    Box(
+                        Modifier
+                            .size(14.dp)
+                            .clip(Rahal.shape.pill)
+                            .background(if (stateColor == Rahal.colors.brand) Rahal.colors.success else stateColor),
+                    )
+                    Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
                         Text(
                             stateLabel,
@@ -342,10 +367,11 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
                             )
                         }
                     }
+                    // **والفتحُ بلا سؤالٍ والإغلاقُ بسؤال** — كزرّ الطارئ نفسِه.
                     Switch(
                         checked = !store.emergencyClosed,
                         enabled = !vm.saving && !suspended,
-                        onCheckedChange = { vm.setOpen(it) },
+                        onCheckedChange = { on -> if (on) vm.setOpen(true) else confirming = true },
                     )
                 }
             }
@@ -404,7 +430,10 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
             // ويقدر يبدّلها») — **ويُسأل قبل التبديل**: للطلبات الجديدة وحدَها،
             // **والمستحقُّ النقديُّ القائمُ يبقى حتّى يُصرف.** «نقدي» يُسلَّم يداً،
             // «المحفظة» يُقيَّد في رصيده.
-            Spacer(Modifier.height(10.dp))
+            // **وعنوانٌ يفصل اليوميَّ عن إعداداتٍ تُضبط مرّة** (تدقيقُ ٢٠٢٦-١٠-٢٧).
+            Spacer(Modifier.height(16.dp))
+            com.rahalgo.ui.SectionTitle(stringResource(R.string.store_settings_title))
+            Spacer(Modifier.height(6.dp))
             Card(modifier = at(StoreSpot.Settlement)) {
                 // **سؤالٌ وزرّان لا شرح** (طلبُ المالك ٢٠٢٦-١٠-١٢: «كيف تحب تستلم
                 // مستحقاتك؟ زر نقدي والمحفظة خلي واضحات انه لازم يختار»).
@@ -472,10 +501,13 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
                 var rateText by androidx.compose.runtime.saveable.rememberSaveable(store.id) {
                     androidx.compose.runtime.mutableStateOf(com.rahalgo.ui.menu.usdText(store.exchangeRate))
                 }
+                // **وانتظارٌ أطولُ وحدٌّ أدنى** (تدقيقُ ٢٠٢٦-١٠-٢٧) — من كتب «1» ووقف ثانيةً
+                // كان يُحفظ له سعرُ صرفٍ واحدٌ **فتتبدّل أسعارُ أصنافه الدولاريّة كلُّها**، ولا
+                // سؤالَ قفزةٍ أوّلَ مرّة. **فلا يُحفظ دون عشر ليرات، وبعد ثانيتين ونصف.**
                 androidx.compose.runtime.LaunchedEffect(rateText) {
                     val v = com.rahalgo.ui.menu.parseUsd(rateText)
-                    if (v != null && v > 0.0 && v != store.exchangeRate) {
-                        kotlinx.coroutines.delay(1200)
+                    if (v != null && v >= MIN_RATE && v != store.exchangeRate) {
+                        kotlinx.coroutines.delay(2500)
                         vm.setExchangeRate(rateText)
                     }
                 }
@@ -713,13 +745,14 @@ private fun SectionsEditor(vm: StoreViewModel) {
                             .padding(vertical = 4.dp)
                             .clip(Rahal.shape.md)
                             .background(Rahal.colors.inkMuted.copy(alpha = 0.07f))
-                            .padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+                            .padding(start = 12.dp, end = 0.dp, top = 0.dp, bottom = 0.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(sec.name, style = MaterialTheme.typography.bodyMedium)
+                        // **وزرُّ الشيل ٤٨ لا ٣٢** — حدُّ الإصبع المريح (تدقيقُ ٢٠٢٦-١٠-٢٧).
                         IconButton(
                             onClick = { picked = picked - sec.id },
-                            modifier = Modifier.size(32.dp),
+                            modifier = Modifier.size(48.dp),
                         ) {
                             Icon(
                                 painter = painterResource(com.rahalgo.ui.R.drawable.ic_close),
@@ -814,12 +847,6 @@ private fun HoursEditor(vm: StoreViewModel) {
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.titleMedium,
         )
-        if (dirty && vm.store?.status != "suspended") {
-            RahalButton(
-                onClick = { save(draft) },
-                enabled = !vm.saving,
-            ) { Text(stringResource(R.string.act_save)) }
-        }
     }
     Spacer(Modifier.height(6.dp))
     // ══════════════════════════════════════════════════════════════════
@@ -838,7 +865,7 @@ private fun HoursEditor(vm: StoreViewModel) {
             Checkbox(
                 checked = all24,
                 onCheckedChange = { all24 = it },
-                modifier = Modifier.size(36.dp),
+                modifier = Modifier.size(48.dp),
             )
             Text(stringResource(R.string.hours_open_24h), style = MaterialTheme.typography.bodyMedium)
         }
@@ -883,6 +910,16 @@ private fun HoursEditor(vm: StoreViewModel) {
                 },
             )
         }
+        // **والحفظُ تحت ما تغيّر لا فوقه** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كان بعنوان القسم بعيداً
+        // عن اليوم الذي عدّله.
+        if (dirty && vm.store?.status != "suspended") {
+            Spacer(Modifier.height(8.dp))
+            RahalButton(
+                onClick = { save(draft) },
+                enabled = !vm.saving,
+                modifier = Modifier.fillMaxWidth(),
+            ) { Text(stringResource(R.string.act_save)) }
+        }
     }
 }
 
@@ -923,55 +960,58 @@ private fun HoursRow(d: DayHours, onChange: (DayHours) -> Unit) {
         5 -> R.string.days_fri
         else -> R.string.days_sat
     }
-    Row(
-        Modifier.fillMaxWidth().padding(vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Checkbox(
-            checked = !d.closed,
-            onCheckedChange = { onChange(d.copy(closed = !it)) },
-            modifier = Modifier.size(36.dp),
-        )
-        Spacer(Modifier.width(4.dp))
-        Text(
-            stringResource(name),
-            modifier = Modifier.width(56.dp),
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        Spacer(Modifier.weight(1f))
-        if (!d.closed) {
-            // **«٢٤ ساعة» لليوم وحدَه** — يُخفي الوقتين، وإطفاؤه يعيد ٩–٢٣.
+    // ══════════════════════════════════════════════════════════════════
+    // **سطرٌ لليوم وسطرٌ لوقته** (تدقيقُ ٢٠٢٦-١٠-٢٧)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **كان كلُّه في سطرٍ أعرضَ من الشاشة** — مربّعٌ واسمٌ ومربّعُ «٢٤ ساعة» ووقتان
+    // كلٌّ منهما ٩٦، **فينضغط على شاشةٍ عرضُها ٣٦٠، والمربّعاتُ ٣٦ أصغرُ من الإصبع.**
+    // **فاليومُ ومربّعاه فوق، ووقتاه تحته** — ولليوم المغلق سطرٌ واحد.
+    Column(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Checkbox(
-                checked = d.isOpen24h,
-                onCheckedChange = { onChange(d.with24h(it)) },
-                modifier = Modifier.size(36.dp),
+                checked = !d.closed,
+                onCheckedChange = { onChange(d.copy(closed = !it)) },
+                modifier = Modifier.size(48.dp),
             )
             Text(
-                stringResource(R.string.hours_open_24h_short),
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Spacer(Modifier.width(4.dp))
-        }
-        if (d.closed) {
-            Text(
-                stringResource(R.string.store_day_closed),
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        } else if (d.isOpen24h) {
-            Text(
-                stringResource(R.string.hours_open_24h),
+                stringResource(name),
+                modifier = Modifier.weight(1f),
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.bodyMedium,
             )
-        } else {
-            TimeField(d.openTime) { onChange(d.copy(openTime = it)) }
-            Text(
-                " — ",
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            TimeField(d.closeTime) { onChange(d.copy(closeTime = it)) }
+            if (d.closed) {
+                Text(
+                    stringResource(R.string.store_day_closed),
+                    color = Rahal.colors.inkMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            } else {
+                // **«٢٤ ساعة» لليوم وحدَه** — يُخفي الوقتين، وإطفاؤه يعيد ٩–٢٣.
+                Checkbox(
+                    checked = d.isOpen24h,
+                    onCheckedChange = { onChange(d.with24h(it)) },
+                    modifier = Modifier.size(48.dp),
+                )
+                Text(
+                    stringResource(R.string.hours_open_24h_short),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+        if (!d.closed && !d.isOpen24h) {
+            Row(
+                Modifier.fillMaxWidth().padding(start = 48.dp, bottom = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                TimeField(d.openTime) { onChange(d.copy(openTime = it)) }
+                Text(
+                    " — ",
+                    color = Rahal.colors.inkMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                TimeField(d.closeTime) { onChange(d.copy(closeTime = it)) }
+            }
         }
     }
 }
@@ -1107,8 +1147,9 @@ private fun TimeField(value: String, onChange: (String) -> Unit) {
  *
  * # وما يُعرض بدلَها
  *
- * **الإحداثيّان نصّاً** — **ومن لا يرى شيئاً لا يعرف أدبّوسُه موضوعٌ
- * أصلاً أم لا**، فيحرّكه بلا داعٍ أو يتركه وهو فارغ.
+ * **حالُ الدبّوس كلمةً** — «محدّد على الخريطة» أو «لسّا ما حدّدته» (تدقيقُ
+ * ٢٠٢٦-١٠-٢٧). **ومن لا يرى شيئاً لا يعرف أدبّوسُه موضوعٌ أصلاً أم لا**،
+ * والإحداثيّان كانا أرقاماً لا تعني له شيئاً.
  */
 @Composable
 private fun AddressEditor(vm: StoreViewModel, onPickPoint: () -> Unit) {
@@ -1126,12 +1167,6 @@ private fun AddressEditor(vm: StoreViewModel, onPickPoint: () -> Unit) {
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.titleMedium,
         )
-        if (dirty && vm.store?.status != "suspended") {
-            RahalButton(
-                onClick = { vm.saveAddress(text, vm.pickedLat, vm.pickedLng) },
-                enabled = !vm.saving,
-            ) { Text(stringResource(R.string.act_save)) }
-        }
     }
     Spacer(Modifier.height(6.dp))
     OutlinedTextField(
@@ -1152,15 +1187,12 @@ private fun AddressEditor(vm: StoreViewModel, onPickPoint: () -> Unit) {
                 )
                 val lat = vm.pickedLat ?: store.lat
                 val lng = vm.pickedLng ?: store.lng
+                val set = lat != null && lng != null
+                // **حالٌ لا أرقام** (تدقيقُ ٢٠٢٦-١٠-٢٧) — «35.95012, 39.01234» لا تعني شيئاً
+                // لصاحب المتجر. **فمحدَّدٌ بالأخضر، أو لسّا بالأحمر.**
                 Text(
-                    if (lat == null || lng == null) {
-                        stringResource(R.string.store_point_none)
-                    } else {
-                        // **ولا تُكتب بحروفٍ عربيّة** — الأرقامُ
-                        // اللاتينيّة هي ما يُلصق في خريطةٍ أخرى.
-                        String.format(java.util.Locale.US, "%.5f, %.5f", lat, lng)
-                    },
-                    color = Rahal.colors.inkMuted,
+                    stringResource(if (set) R.string.store_point_set else R.string.store_point_none),
+                    color = if (set) Rahal.colors.success else Rahal.colors.danger,
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
@@ -1172,9 +1204,22 @@ private fun AddressEditor(vm: StoreViewModel, onPickPoint: () -> Unit) {
                     modifier = Modifier.size(18.dp),
                 )
                 Spacer(Modifier.width(4.dp))
-                Text(stringResource(R.string.store_point_pick))
+                Text(
+                    stringResource(
+                        if ((vm.pickedLat ?: store.lat) != null) R.string.store_point_change else R.string.store_point_pick,
+                    ),
+                )
             }
         }
+    }
+    // **والحفظُ تحت العنوان والدبّوس معاً** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كان بعنوان القسم.
+    if (dirty && vm.store?.status != "suspended") {
+        Spacer(Modifier.height(8.dp))
+        RahalButton(
+            onClick = { vm.saveAddress(text, vm.pickedLat, vm.pickedLng) },
+            enabled = !vm.saving,
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text(stringResource(R.string.act_save)) }
     }
 }
 
@@ -1228,6 +1273,9 @@ internal fun clock12(hhmm: String): String {
     }
     return "$h12:$m " + if (h < 12) "ص" else "م"
 }
+
+/** **أدنى سعرِ صرفٍ يُحفظ وحدَه** — دونه كتابةٌ لم تكتمل لا سعر (تدقيقُ ٢٠٢٦-١٠-٢٧). */
+private const val MIN_RATE = 10.0
 
 /** **أقسامُ «متجري» التي يُنزَل إليها** — وبالترتيب الذي تُعرض به في «ناقصه». */
 enum class StoreSpot(val label: Int) {

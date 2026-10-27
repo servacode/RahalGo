@@ -1,7 +1,12 @@
 package com.rahalgo.merchant.orders
 
 import com.rahalgo.ui.Since
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
@@ -72,7 +77,13 @@ import com.rahalgo.ui.money
  * بابُ اتّصالٍ مباشرٍ يوماً ما يُخرج المنصّةَ من بينهما.**
  */
 @Composable
-fun OrdersScreen(vm: OrdersViewModel) {
+fun OrdersScreen(
+    vm: OrdersViewModel,
+    /** **يفتح «سجلّ الطلبات»** — المنتهي هناك لا هنا (تدقيقُ ٢٠٢٦-١٠-٢٧). */
+    onHistory: (() -> Unit)? = null,
+    /** **يفتح «متجري»** — من القائمة الفارغة: هناك مفتاحُ الفتح. */
+    onStore: (() -> Unit)? = null,
+) {
     if (vm.loading || (vm.error.isNotEmpty() && vm.orders.isEmpty())) {
         Screen {
             ScreenTitle(stringResource(R.string.nav_orders_mine), stringResource(R.string.orders_hint))
@@ -93,7 +104,10 @@ fun OrdersScreen(vm: OrdersViewModel) {
                 Empty(
                     text = stringResource(R.string.orders_empty),
                     hint = stringResource(R.string.orders_empty_hint),
+                    actionLabel = if (onStore != null) stringResource(R.string.orders_go_store) else "",
+                    onAction = onStore,
                 )
+                HistoryLink(onHistory)
                 return@Screen
             }
 
@@ -106,20 +120,63 @@ fun OrdersScreen(vm: OrdersViewModel) {
                 }
             }
 
-            vm.orders.forEach { order ->
-                Spacer(Modifier.height(10.dp))
-                OrderCard(
-                    order = order,
-                    busy = vm.busy(order.id),
-                    highlighted = order.id == vm.focusedId,
-                    onAccept = { vm.accept(order.id) },
-                    onStart = { vm.startPreparing(order.id) },
-                    onReady = { vm.markReady(order.id) },
-                    onReject = { note -> vm.reject(order.id, note) },
-                )
+            // ══════════════════════════════════════════════════════════
+            // **والطلباتُ بمجموعاتها — الجديدُ أوّلاً** (تدقيقُ ٢٠٢٦-١٠-٢٧)
+            // ══════════════════════════════════════════════════════════
+            //
+            // **كانت قائمةً واحدةً بترتيب الخادم** — فطلبٌ جديدٌ ينتظر قراراً
+            // قد يقع تحت طلبٍ يُحضَّر، **ومهلتُه تمضي وهو لا يُرى.**
+            val grouped = vm.orders.groupBy { groupOf(it.status, it.readyAt) }
+            OrderGroup.values().forEach { g ->
+                val list = grouped[g].orEmpty()
+                if (list.isEmpty()) return@forEach
+                GroupHead(g, list.size)
+                list.forEach { order ->
+                    Spacer(Modifier.height(10.dp))
+                    OrderCard(
+                        order = order,
+                        busy = vm.busy(order.id),
+                        highlighted = order.id == vm.focusedId,
+                        onAccept = { vm.accept(order.id) },
+                        onStart = { vm.startPreparing(order.id) },
+                        onReady = { vm.markReady(order.id) },
+                        onReject = { note -> vm.reject(order.id, note) },
+                    )
+                }
             }
+            HistoryLink(onHistory)
             Spacer(Modifier.height(24.dp))
         }
+    }
+}
+
+/** **عنوانُ مجموعةٍ بعددها** — «جديدة — بتستناك (2)». */
+@Composable
+private fun GroupHead(g: OrderGroup, count: Int) {
+    Spacer(Modifier.height(16.dp))
+    Text(
+        stringResource(
+            when (g) {
+                OrderGroup.New -> R.string.orders_group_new
+                OrderGroup.Preparing -> R.string.orders_group_preparing
+                OrderGroup.Waiting -> R.string.orders_group_waiting
+                OrderGroup.Closed -> R.string.orders_group_closed
+            },
+            count,
+        ),
+        color = if (g == OrderGroup.New) Rahal.colors.accent else Rahal.colors.inkMuted,
+        style = MaterialTheme.typography.labelLarge,
+        fontWeight = FontWeight.Bold,
+    )
+}
+
+/** **رابطُ السجلّ تحت القائمة** — المنتهي هناك. */
+@Composable
+private fun HistoryLink(onHistory: (() -> Unit)?) {
+    if (onHistory == null) return
+    Spacer(Modifier.height(12.dp))
+    RahalTextButton(onClick = onHistory, modifier = Modifier.fillMaxWidth()) {
+        Text(stringResource(R.string.orders_history_link))
     }
 }
 
@@ -214,14 +271,39 @@ private fun OrderCard(
 
         // **وملاحظةُ الزبون تُقرأ قبل الصنع لا بعده** — «بلا بصل»
         // تُقرأ بعد أن يُصنع تعني إعادةَ صنعه.
+        // **وفي صندوقٍ ملوّنٍ بأيقونة تنبيه** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كانت سطراً عادياً بين
+        // الأصناف، **و«حساسية» تُقرأ بنظرةٍ أو لا تُقرأ.**
         if (order.notes.isNotBlank()) {
             Spacer(Modifier.height(8.dp))
-            Text(
-                stringResource(R.string.order_note),
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.labelSmall,
-            )
-            Text(order.notes, style = MaterialTheme.typography.bodyMedium)
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(Rahal.shape.sm)
+                    .background(Rahal.colors.warnTint)
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.Top,
+            ) {
+                Icon(
+                    painterResource(com.rahalgo.ui.R.drawable.ic_warning),
+                    contentDescription = null,
+                    tint = Rahal.colors.accent,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        stringResource(R.string.order_note),
+                        color = Rahal.colors.accent,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        order.notes,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -239,58 +321,54 @@ private fun OrderCard(
         Spacer(Modifier.height(10.dp))
         HorizontalDivider()
         Spacer(Modifier.height(8.dp))
-        SumLine(
-            label = stringResource(R.string.ord_sum_lbl),
-            value = money(order.subtotal),
-        )
-        SumLine(
-            label = stringResource(R.string.ord_cut_lbl, order.commissionLabel),
-            value = "− " + money(order.platformCommission),
-        )
-        Spacer(Modifier.height(6.dp))
-        HorizontalDivider()
-        Spacer(Modifier.height(2.dp))
-        // **والمحصّلةُ خلف الخطّ وبلون العلامة** — هو الرقمُ الذي يعنيه.
-        SumLine(
-            label = stringResource(R.string.ord_due_lbl),
-            value = money(order.merchantNet),
-            strong = true,
-            color = Rahal.colors.brand,
-        )
+        // **وطلبٌ انتهى بلا بيعٍ لا حسبةَ فيه** (تدقيقُ ٢٠٢٦-١٠-٢٧) — انظر `noPayout`.
+        if (noPayout(order.status)) {
+            Text(
+                stringResource(R.string.ord_no_payout),
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        } else {
+            SumLine(
+                label = stringResource(R.string.ord_sum_lbl),
+                value = money(order.subtotal),
+            )
+            SumLine(
+                label = stringResource(R.string.ord_cut_lbl, order.commissionLabel),
+                value = "− " + money(order.platformCommission),
+            )
+            Spacer(Modifier.height(6.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(2.dp))
+            // **والمحصّلةُ خلف الخطّ وبلون العلامة** — هو الرقمُ الذي يعنيه.
+            SumLine(
+                label = stringResource(R.string.ord_due_lbl),
+                value = money(order.merchantNet),
+                strong = true,
+                color = Rahal.colors.brand,
+            )
+        }
         Spacer(Modifier.height(10.dp))
 
-        // ══════════════════════════════════════════════════════════════
-        // **ولا مالَ في بطاقة الطلب — بقرارِ المحرّك لا بسهوٍ منّا**
-        // ══════════════════════════════════════════════════════════════
-        //
-        // `merchant_privacy.go` يصفّر المبالغَ كلَّها قبل أن ترحل:
-        // **«المال — يراه في محفظته وتقاريره».**
-        //
-        // **وكتبتُ الشاشةَ أوّلاً تعرض «مستحقك» فظهرت «٠ ل.س»** — قِيس
-        // على الجهاز ٢٠٢٦-٠٨-٢٣. **وصفرٌ في موضع مالٍ أسوأُ من فراغ**:
-        // يُقرأ عطباً في المنصّة أو بخساً في حقّه، **والحقيقةُ أنّه في
-        // محفظته كاملاً.**
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            NextAction(order.status, order.readyAt, busy, onAccept, onStart, onReady)
-        }
+        // **والفعلُ التالي زرٌّ كبيرٌ بعرض البطاقة** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كان صغيراً على
+        // الطرف، **وزرُّ الاعتذار تحته أعرضَ منه، فتذهب العينُ إلى الرفض أوّلاً.**
+        NextAction(order.status, order.readyAt, busy, onAccept, onStart, onReady)
 
         // **والاعتذارُ نصٌّ جانبيٌّ لا زرٌّ مساوٍ** — انظر أعلاه.
         if (order.status == "pending") {
             var showReject by rememberSaveable(order.id) { mutableStateOf(false) }
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(8.dp))
             // **وزرٌّ أحمرُ واضحٌ بعرض البطاقة** (طلبُ المالك ٢٠٢٦-١٠-٠١: «اعتذر عن
             // الطلب خلّيه زرّاً أحمرَ واضحاً لأنّه رفض») — **ويسأل عن السبب قبل أن يرفض.**
+            // **ويبقى محدَّداً تحت زرّ القبول المملوء** — أحمرُ واضحٌ كما أراد المالك،
+            // **والقبولُ أكبرُ منه وأثقل** (تدقيقُ ٢٠٢٦-١٠-٢٧).
             com.rahalgo.ui.RahalOutlineButton(
                 onClick = { showReject = true },
                 enabled = !busy,
                 tone = com.rahalgo.ui.Tone.Danger,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(stringResource(R.string.order_reject), fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.order_reject))
             }
             if (showReject) {
                 RejectReasonDialog(
@@ -393,6 +471,9 @@ private fun RejectReasonDialog(
     )
 }
 
+/** **الزرُّ الأساسيُّ بعرض البطاقة وارتفاعٍ يسع الإبهام.** */
+private val PRIMARY = Modifier.fillMaxWidth().height(52.dp)
+
 /** **الزرُّ يتبع الحال** — واحدٌ في كلّ لحظة. */
 @Composable
 private fun NextAction(
@@ -411,17 +492,17 @@ private fun NextAction(
     // «بانتظار سائق» فلا يظهر أبداً. **والحالُ تبقى مكتوبةً بجانبه.**
     // انظر `Readiness.kt`.
     if (status != "pending" && status != "accepted" && canMarkReady(status, readyAt)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.fillMaxWidth()) {
             if (status != "preparing") {
                 Text(
                     statusLabel(status),
                     color = Rahal.colors.inkMuted,
                     style = MaterialTheme.typography.bodySmall,
                 )
-                Spacer(Modifier.size(8.dp))
+                Spacer(Modifier.size(6.dp))
             }
-            RahalButton(onClick = onReady, enabled = !busy) {
-                Text(stringResource(R.string.order_ready))
+            RahalButton(onClick = onReady, enabled = !busy, modifier = PRIMARY) {
+                Text(stringResource(R.string.order_ready), fontWeight = FontWeight.Bold)
             }
         }
         return
@@ -435,8 +516,12 @@ private fun NextAction(
         return
     }
     when (status) {
-        "pending" -> RahalButton(onClick = onAccept, enabled = !busy) {
-            Text(stringResource(R.string.order_accept))
+        "pending" -> RahalButton(onClick = onAccept, enabled = !busy, modifier = PRIMARY) {
+            Text(
+                stringResource(R.string.order_accept),
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium,
+            )
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -449,15 +534,14 @@ private fun NextAction(
         // المحرّك (`autoPreparing`). **فالحالةُ «مقبول» لا تُرى إلّا
         // لحظةً**، وتبقى هنا لوضع المنصّة: **المكتبُ يقبل والمتجرُ يبدأ،
         // وهما شخصان.** **و«جاهز» بجانبه** — من حضّر سريعاً لا يمرّ بخطوتين.
-        "accepted" -> Row(verticalAlignment = Alignment.CenterVertically) {
+        "accepted" -> Column(Modifier.fillMaxWidth()) {
+            RahalButton(onClick = onStart, enabled = !busy, modifier = PRIMARY) {
+                Text(stringResource(R.string.order_start), fontWeight = FontWeight.Bold)
+            }
             if (canMarkReady(status, readyAt)) {
-                RahalTextButton(onClick = onReady, enabled = !busy) {
+                RahalTextButton(onClick = onReady, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.order_ready))
                 }
-                Spacer(Modifier.size(8.dp))
-            }
-            RahalButton(onClick = onStart, enabled = !busy) {
-                Text(stringResource(R.string.order_start))
             }
         }
 

@@ -13,6 +13,13 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
+import com.rahalgo.ui.StatBox
+import com.rahalgo.ui.StatRow
+import com.rahalgo.ui.dayText
+import com.rahalgo.ui.timeText
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -94,6 +101,15 @@ data class HistoryState(
      * في أحدهما، **فيرسل التطبيقُ رمزاً لا يعرفه الخادم.**
      */
     val reasons: List<ReportReason> = emptyList(),
+    /** **لأيّ طلبٍ هذه الأسباب** — أسبابُ طلبٍ لا تُعرض على غيره. */
+    val reasonsFor: String = "",
+    /** **الأسبابُ في الطريق** — دائرةٌ لا قائمةٌ فارغة. */
+    val reasonsLoading: Boolean = false,
+    /** **كم طلباً في سجلّه كلِّه** — من الخادم، لا ممّا حُمّل. */
+    val total: Int = 0,
+    /** **آخرُ صفحةٍ حُمّلت** — و«حمّل أقدم» يطلب التي بعدها. */
+    val page: Int = 1,
+    val loadingMore: Boolean = false,
 )
 
 class HistoryViewModel(app: Application) : AndroidViewModel(app) {
@@ -108,17 +124,46 @@ class HistoryViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch { Refresh.tick.drop(1).collect { load() } }
     }
 
-    /** **يجلب أسبابَ البلاغ** — مرّةً وتبقى. */
+    /**
+     * **يجلب أسبابَ البلاغ لهذا الطلب** — والأسبابُ تختلف من طلبٍ لطلب، فلا تُعاد
+     * أسبابُ أوّلِ طلبٍ فُتح على كلّ ما بعده.
+     */
     fun loadReasons(orderId: String) {
-        if (state.reasons.isNotEmpty()) return
+        if (state.reasonsFor == orderId && state.reasons.isNotEmpty()) return
+        state = state.copy(reasons = emptyList(), reasonsFor = orderId, reasonsLoading = true)
         viewModelScope.launch {
             state = try {
-                state.copy(reasons = backend.driver.reportReasons(orderId).reasons)
+                val got = backend.driver.reportReasons(orderId).reasons
+                // **وردٌّ متأخّرٌ لطلبٍ سابقٍ لا يُكتب فوق الحاليّ.**
+                if (state.reasonsFor != orderId) state else state.copy(reasons = got, reasonsLoading = false)
             } catch (e: Exception) {
                 Log.e("RahalGo/سجل", "فشل جلب الأسباب", e)
                 state.copy(
+                    reasonsLoading = false,
                     error = getApplication<Application>().getString(R.string.hist_reasons_error),
                 )
+            }
+        }
+    }
+
+    /** **يحمّل الصفحةَ التي بعدها ويضيفها** — السجلُّ لا يقف عند آخر عشرين. */
+    fun loadMore() {
+        if (state.loadingMore || state.orders.size >= state.total) return
+        state = state.copy(loadingMore = true)
+        viewModelScope.launch {
+            state = try {
+                val next = state.page + 1
+                val got = backend.driver.historyPage(next)
+                val seen = state.orders.map { it.id }.toSet()
+                state.copy(
+                    orders = state.orders + got.orders.filter { it.id !in seen },
+                    total = got.total,
+                    page = next,
+                    loadingMore = false,
+                )
+            } catch (e: Exception) {
+                Log.e("RahalGo/سجل", "فشل جلب صفحة أقدم", e)
+                state.copy(loadingMore = false, error = describe(e))
             }
         }
     }
@@ -148,9 +193,11 @@ class HistoryViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 backend.driver.rateMerchant(orderId, speed, conduct)
-                val fresh = backend.driver.history().orders
+                val fresh = backend.driver.history()
                 state = state.copy(
-                    orders = fresh,
+                    orders = fresh.orders,
+                    total = fresh.total,
+                    page = 1,
                     busy = false,
                     done = getApplication<Application>().getString(R.string.hist_rate_sent),
                 )
@@ -191,6 +238,8 @@ class HistoryViewModel(app: Application) : AndroidViewModel(app) {
                 val page = backend.driver.history()
                 state.copy(
                     orders = page.orders,
+                    total = page.total,
+                    page = 1,
                     busy = false,
                     done = getApplication<Application>().getString(R.string.hist_returned_done),
                 )
@@ -222,7 +271,8 @@ class HistoryViewModel(app: Application) : AndroidViewModel(app) {
     fun load() {
         viewModelScope.launch {
             state = try {
-                state.copy(orders = backend.driver.history().orders, loading = false, error = "")
+                val first = backend.driver.history()
+                state.copy(orders = first.orders, total = first.total, page = 1, loading = false, error = "")
             } catch (e: Exception) {
                 Log.e("RahalGo/سجل", "فشل نداء السجلّ", e)
                 state.copy(
@@ -314,18 +364,28 @@ fun HistoryScreen(vm: HistoryViewModel) {
             //
             // **«كم عملتُ؟» سؤالٌ يُجاب برقمين لا بعدِّ أسطر** — ومن
             // فتح السجلَّ ليعرف كم سلّم **لا يعدّ ثلاثين بطاقةً بإصبعه.**
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Tally(
+            // **وبالمربّع المشترك** (`StatBox`) — لا نسخةٌ محلّيّةٌ تفترق في حشوتها.
+            StatRow {
+                StatBox(
                     label = stringResource(R.string.ord_st_delivered),
                     value = done.toString(),
                     color = Rahal.colors.success,
                     modifier = Modifier.weight(1f),
                 )
-                Tally(
+                StatBox(
                     label = stringResource(R.string.ord_st_failed),
                     value = failed.toString(),
                     color = if (failed > 0) Rahal.colors.danger else Rahal.colors.inkMuted,
                     modifier = Modifier.weight(1f),
+                )
+            }
+            // **والعدُّ يقول على ماذا عدّ** — ما حُمّل لا السجلّ كلّه.
+            if (s.total > s.orders.size) {
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = stringResource(R.string.hist_counted, s.orders.size, s.total),
+                    color = Rahal.colors.inkMuted,
+                    style = MaterialTheme.typography.bodySmall,
                 )
             }
             Spacer(Modifier.height(12.dp))
@@ -361,27 +421,24 @@ fun HistoryScreen(vm: HistoryViewModel) {
                 onReturn = { vm.returnGoods(o.id) },
             )
         }
+        // **والأقدمُ بزرّ** — كان السجلُّ يقف عند آخر عشرين بلا كلمة.
+        if (s.total > s.orders.size && query.isBlank()) {
+            item {
+                Spacer(Modifier.height(12.dp))
+                RahalOutlineButton(
+                    onClick = vm::loadMore,
+                    enabled = !s.loadingMore,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    if (s.loadingMore) {
+                        CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                    } else {
+                        Text(stringResource(R.string.hist_load_older))
+                    }
+                }
+            }
+        }
         item { Spacer(Modifier.height(24.dp)) }
-    }
-}
-
-@Composable
-private fun Tally(
-    label: String,
-    value: String,
-    color: androidx.compose.ui.graphics.Color,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier
-            .clip(Rahal.shape.md)
-            .background(Rahal.colors.inkMuted.copy(alpha = 0.07f))
-            .padding(vertical = 12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(label, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
-        Spacer(Modifier.height(4.dp))
-        Text(value, color = color, style = MaterialTheme.typography.headlineSmall)
     }
 }
 
@@ -417,14 +474,20 @@ private fun Row(
         // **وسببُ التعذّر يُقال** — من فشل طلبُه يُسأل عنه بعد أيّام،
         // **وسجلٌّ يقول «تعذّر» بلا سببٍ لا يُدافَع به.**
         if (!delivered && o.failReason.isNotEmpty()) {
-            Text(o.failReason, color = Rahal.colors.danger, style = MaterialTheme.typography.bodySmall)
+            // **بالعربيّة لا برمزه** — كان يُعرض `customer_absent` كما هو.
+            Text(
+                com.rahalgo.driver.trip.reasonLabel(o.failReason),
+                color = Rahal.colors.danger,
+                style = MaterialTheme.typography.bodySmall,
+            )
         }
         androidx.compose.foundation.layout.Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Text(
-                text = o.createdAt.take(10),
+                // **بيوم دمشق وساعتها** — لا أوّلُ عشرة أحرفٍ بتوقيت غرينتش.
+                text = dayText(o.createdAt) + " · " + timeText(o.createdAt),
                 color = Rahal.colors.inkMuted,
                 style = MaterialTheme.typography.bodySmall,
             )
@@ -542,7 +605,13 @@ private fun ReportDialog(
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Spacer(Modifier.height(10.dp))
-                for (r in s.reasons) {
+                // **والأسبابُ في الطريق تُقال** — لا نافذةٌ فارغة.
+                if (s.reasonsLoading) {
+                    Box(Modifier.fillMaxWidth().padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
+                    }
+                }
+                for (r in if (s.reasonsFor == o.id) s.reasons else emptyList()) {
                     androidx.compose.foundation.layout.Row(
                         Modifier
                             .fillMaxWidth()
@@ -642,16 +711,23 @@ private fun RateDialog(
 private fun StarPick(label: String, value: Int, onPick: (Int) -> Unit) {
     Text(label, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
     Spacer(Modifier.height(4.dp))
-    androidx.compose.foundation.layout.Row {
+    // **كلُّ نجمةٍ ٤٠dp وبينها فراغ** — كانت ٢٤ متلاصقة فيُضغط غيرُ المقصود.
+    androidx.compose.foundation.layout.Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         repeat(5) { i ->
-            Icon(
-                painter = painterResource(R.drawable.ic_star),
-                contentDescription = null,
-                tint = if (i < value) Rahal.colors.accent else Rahal.colors.inkMuted.copy(alpha = 0.30f),
-                modifier = Modifier
-                    .padding(end = 4.dp)
+            Box(
+                Modifier
+                    .size(40.dp)
+                    .clip(Rahal.shape.sm)
                     .clickable { onPick(i + 1) },
-            )
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_star),
+                    contentDescription = null,
+                    tint = if (i < value) Rahal.colors.accent else Rahal.colors.inkMuted.copy(alpha = 0.30f),
+                    modifier = Modifier.size(30.dp),
+                )
+            }
         }
     }
 }

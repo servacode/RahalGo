@@ -40,6 +40,10 @@ class DriverApi(private val api: ApiClient) {
      */
     suspend fun history(): HistoryPage = api.call("/api/v1/driver/orders/history")
 
+    /** **صفحةٌ بعينها من السجلّ** — لزرّ «حمّل أقدم» (الخادمُ يقلّب بـ`page`). */
+    suspend fun historyPage(page: Int): HistoryPage =
+        api.call("/api/v1/driver/orders/history?page=" + page)
+
     /**
      * **كشفُ صندوقه** — النقدُ الذي قبضه وما سلّمه.
      *

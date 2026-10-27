@@ -1,30 +1,37 @@
 package com.rahalgo.rep.clients
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import com.rahalgo.ui.RahalButton
 import com.rahalgo.ui.RahalOutlineButton
+import com.rahalgo.ui.RahalTextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.rahalgo.design.Rahal
@@ -36,12 +43,10 @@ import com.rahalgo.ui.Bar
 import com.rahalgo.ui.Card
 import com.rahalgo.ui.Chip
 import com.rahalgo.ui.Empty
-import com.rahalgo.ui.KeyValue
 import com.rahalgo.ui.LoadState
+import com.rahalgo.ui.Refreshable
 import com.rahalgo.ui.RemoteImage
 import com.rahalgo.ui.Screen
-import com.rahalgo.ui.StatBox
-import com.rahalgo.ui.StatRow
 import com.rahalgo.ui.ScreenTitle
 import com.rahalgo.ui.SectionTitle
 import com.rahalgo.ui.money
@@ -59,6 +64,9 @@ import com.rahalgo.ui.money
  * صباحاً يفتح الشاشةَ ليرى أقُبل، **لا ليقرأ عمولةَ متجرٍ سجّله الشهرَ
  * الماضي.**
  *
+ * **والمرفوضُ ليس معلَّقاً** (٢٠٢٦-١٠-٢٧) — له قسمُه المطويّ تحتهم،
+ * **وسببُ رفضه يُقال** (`decision_note`).
+ *
  * # والتفعيلُ يُقال بعددين لا بكلمة
  *
  * **«قيد التفعيل» وحدَها لا تقول كم بقي** — **ومن لا يعرف كم بقي لا
@@ -67,6 +75,7 @@ import com.rahalgo.ui.money
  * **والعمولةُ لا تجري حتّى يبلغ العددَ** (`sales.activation_orders`) —
  * **فرقمٌ ظاهرٌ خيرٌ من وعدٍ مبهم.**
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ClientsScreen(
     vm: ClientsViewModel,
@@ -78,6 +87,8 @@ fun ClientsScreen(
      * على أن يبقى الاسمُ فوق شاشة العروض**، فلا يُفتح بمعرّفٍ وحدَه.
      */
     onOpenOffers: (String, String) -> Unit = { _, _ -> },
+    /** **زرُّ القائمة الفارغة** — ينقله إلى تبويب «إضافة عميل». */
+    onAddClient: () -> Unit = {},
     /** **«بحاجة معلومات» تُصلَح من بطاقتها** (قرارُ المالك ٢٠٢٦-١٠-٢٧) — تفتح نموذجَ الإضافة مملوءاً. */
     onEditLead: (Lead) -> Unit = {},
 ) {
@@ -85,7 +96,7 @@ fun ClientsScreen(
     // فيعود فلا يجد موضعَه.**
     if (vm.openId.isNotEmpty()) {
         BackHandler { vm.closeDetail() }
-        ClientDetail(vm, onOpenMenu)
+        ClientDetail(vm, onOpenMenu, onOpenOffers)
         return
     }
 
@@ -95,109 +106,131 @@ fun ClientsScreen(
         return
     }
     val context = LocalContext.current
+    val pending = vm.pendingLeads
+    val rejected = vm.rejectedLeads
 
-    Screen {
-        // ══════════════════════════════════════════════════════════════
-        // **والعددُ بجانب الاسم — لا سطراً تحته ولا عنوانَ قسم**
-        // ══════════════════════════════════════════════════════════════
-        //
-        // **(طلبُ المالك ٢٠٢٦-٠٨-٣١:** «من سجّلتهم وما نلتَه عنهم ما
-        // تلزم · **يعملون (٤) أيضاً احذفها** · حطّ رقمَ عدد العملاء
-        // بجانب عملائي».)
-        //
-        // **وثلاثةُ أسطرٍ كانت تقول شيئاً واحدا**: الاسمُ، ثمّ تلميحٌ
-        // يشرحه، ثمّ عنوانُ قسمٍ يعدّ ما تحته. **والعددُ بجانب الاسم
-        // يجمعها في سطر.**
-        ScreenTitle(stringResource(R.string.nav_clients) + " (" + list.size + ")")
-
-        // ══════════════════════════════════════════════════════════════
-        // **والمعلَّقون أوّلا** — ما ينتظر عملا
-        // ══════════════════════════════════════════════════════════════
-        if (vm.leads.isNotEmpty()) {
-            SectionTitle(stringResource(R.string.cl_pending, vm.leads.size.toString()))
-            vm.leads.forEach { LeadCard(it, onEdit = { onEditLead(it) }) }
-            Spacer(Modifier.height(14.dp))
-            HorizontalDivider()
-        }
-
-        if (list.isEmpty() && vm.leads.isEmpty()) {
-            // **ولا متجرَ بعد — وماذا يفعل** (٢٠٢٦-٠٩-١٣).
-            Empty(
-                text = stringResource(R.string.cl_none),
-                hint = stringResource(R.string.cl_none_hint),
-            )
-            return@Screen
-        }
-
-        if (list.isNotEmpty()) {
+    // **وسحبٌ للتحديث كما في تطبيق المتجر** (٢٠٢٦-١٠-٢٧) — **ومن سجّل
+    // عميلاً صباحاً يسحب ليرى أقُبل** بلا خروجٍ وعودة.
+    Refreshable(refreshing = false, onRefresh = { vm.load() }) {
+        Screen {
             // ══════════════════════════════════════════════════════════
-            // **مربّعُ بحث** (طلبُ المالك ٢٠٢٦-١٠-٢٧: «مربع بحث للمندوب بصفحة عملائي ليقدر
-            // يدوّر على عميل») — بالاسم أو رقم صاحب المتجر أو الصنف، والأرقامُ العربيّةُ تُفهم.
+            // **والعددُ بجانب الاسم — لا سطراً تحته ولا عنوانَ قسم**
             // ══════════════════════════════════════════════════════════
-            OutlinedTextField(
-                value = vm.query,
-                onValueChange = { vm.query = it },
-                singleLine = true,
-                placeholder = { Text(stringResource(R.string.cl_search)) },
-                leadingIcon = {
-                    Icon(painterResource(com.rahalgo.ui.R.drawable.ic_search), contentDescription = null)
-                },
-                modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(10.dp))
-            val q = normalizeQuery(vm.query)
-            val shown = if (q.isEmpty()) list else list.filter { m ->
-                normalizeQuery(m.name).contains(q) ||
-                    normalizeQuery(m.categoryName).contains(q) ||
-                    digitsOnly(m.ownerPhone.orEmpty()).let { p -> digitsOnly(q).let { d -> d.isNotEmpty() && p.contains(d) } }
+            //
+            // **(طلبُ المالك ٢٠٢٦-٠٨-٣١:** «من سجّلتهم وما نلتَه عنهم ما
+            // تلزم · **يعملون (٤) أيضاً احذفها** · حطّ رقمَ عدد العملاء
+            // بجانب عملائي».)
+            ScreenTitle(stringResource(R.string.nav_clients) + " (" + list.size + ")")
+
+            // ══════════════════════════════════════════════════════════
+            // **والمعلَّقون أوّلا** — ما ينتظر عملا
+            // ══════════════════════════════════════════════════════════
+            //
+            // **والعددُ يعدّهم وحدَهم** — **وكان يعدّ المرفوضين معهم**، فيرى
+            // «ينتظرون (٣)» وواحدٌ منهم رُفض من شهر.
+            if (pending.isNotEmpty()) {
+                SectionTitle(stringResource(R.string.cl_pending, pending.size.toString()))
+                pending.forEach { LeadCard(it, onEdit = { onEditLead(it) }) }
             }
-            if (shown.isEmpty()) {
-                Empty(text = stringResource(R.string.cl_search_none), hint = stringResource(R.string.cl_search_none_hint))
+
+            // **والمرفوضون في قسمهم مطويّين** — يُرَون بضغطة، ولا يزحمون.
+            if (rejected.isNotEmpty()) {
+                SectionTitle(stringResource(R.string.cl_rejected_title, rejected.size.toString()))
+                RahalTextButton(onClick = { vm.showRejected = !vm.showRejected }) {
+                    Text(
+                        stringResource(
+                            if (vm.showRejected) R.string.cl_rejected_hide else R.string.cl_rejected_show,
+                        ),
+                        color = Rahal.colors.brand,
+                    )
+                }
+                if (vm.showRejected) rejected.forEach { LeadCard(it, onEdit = { onEditLead(it) }) }
             }
-                        shown.forEach { m ->
-                MerchantCard(
-                    m = m,
-                    media = { path -> Backend.of(context).media(path) },
-                    onOpen = { vm.openDetail(m.id) },
-                    onAddItem = { onOpenMenu(m.id, m.name) },
-                    onMakeOffer = { onOpenOffers(m.id, m.name) },
+            if (pending.isNotEmpty() || rejected.isNotEmpty()) {
+                Spacer(Modifier.height(14.dp))
+                HorizontalDivider()
+            }
+
+            if (list.isEmpty() && vm.leads.isEmpty()) {
+                // **ولا متجرَ بعد — وزرٌّ إلى حيث يُسجَّل** (٢٠٢٦-١٠-٢٧).
+                // **وكان التلميحُ يقول «زرّ الإضافة في الأعلى»** — والإضافةُ
+                // تبويبٌ تحت، **وجملتان تعيدان الشيءَ نفسَه.**
+                Empty(
+                    text = stringResource(R.string.cl_none),
+                    actionLabel = stringResource(R.string.nav_add_client),
+                    onAction = onAddClient,
                 )
+                return@Screen
             }
+
+            if (list.isNotEmpty()) {
+                // ══════════════════════════════════════════════════════
+                // **وبحثٌ وفلترةٌ لمن كثر عملاؤه** (٢٠٢٦-١٠-٢٧)
+                // ══════════════════════════════════════════════════════
+                //
+                // **ومن له ثلاثون عميلاً يمرّر طويلاً ليبلغ واحدا.** **ولا
+                // تُعرض لمن له خمسةٌ أو أقلّ** — قائمةٌ قصيرةٌ تُرى كلُّها.
+                if (list.size > 5) {
+                    Spacer(Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = vm.query,
+                        onValueChange = { vm.query = it },
+                        placeholder = { Text(stringResource(R.string.cl_search)) },
+                        leadingIcon = {
+                            Icon(
+                                painterResource(com.rahalgo.ui.R.drawable.ic_search),
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterOption(com.rahalgo.ui.R.string.wal_all, ClientFilter.All, vm)
+                        FilterOption(R.string.cl_f_missing, ClientFilter.Missing, vm)
+                        FilterOption(R.string.cl_f_no_items, ClientFilter.NoItems, vm)
+                        FilterOption(R.string.cl_stopped, ClientFilter.Stopped, vm)
+                    }
+                }
+                val shown = vm.visible(list)
+                if (shown.isEmpty()) {
+                    Empty(stringResource(R.string.cl_no_match))
+                }
+                shown.forEach { m ->
+                    MerchantCard(
+                        m = m,
+                        media = { path -> Backend.of(context).media(path) },
+                        onOpen = { vm.openDetail(m.id) },
+                        onAddItem = { onOpenMenu(m.id, m.name) },
+                        onMakeOffer = { onOpenOffers(m.id, m.name) },
+                    )
+                }
+            }
+            Spacer(Modifier.height(24.dp))
         }
-        Spacer(Modifier.height(24.dp))
     }
 }
 
-/** **الأرقامُ العربيّةُ والفارسيّةُ لاتينيّة**، والحروفُ صغيرة، وبلا مسافاتٍ زائدة. */
-private fun normalizeQuery(s: String): String = buildString {
-    for (c in s.trim().lowercase()) {
-        append(
-            when (c) {
-                in '\u0660'..'\u0669' -> '0' + (c - '\u0660')
-                in '\u06F0'..'\u06F9' -> '0' + (c - '\u06F0')
-                else -> c
-            },
-        )
-    }
-}
-
-/** **الرقمُ بلا رموز** — ويُقصّ مفتاحُ سوريا و«0» الأوّل فيطابق «0944…» و«963944…» و«944…». */
-private fun digitsOnly(s: String): String {
-    var d = normalizeQuery(s).filter { it.isDigit() }
-    if (d.startsWith("00")) d = d.drop(2)
-    if (d.startsWith("963") && d.length > 9) d = d.drop(3)
-    if (d.startsWith("0")) d = d.drop(1)
-    return d
+@Composable
+private fun FilterOption(label: Int, f: ClientFilter, vm: ClientsViewModel) {
+    FilterChip(
+        selected = vm.filter == f,
+        onClick = { vm.filter = f },
+        label = { Text(stringResource(label)) },
+    )
 }
 
 /**
- * **عميلٌ ينتظر البتّ.**
+ * **عميلٌ ينتظر البتّ — أو رُفض.**
  *
  * **ولا عمولةَ فيه ولا طلبات** — **ورقمٌ صفريٌّ بجانب اسمٍ يُقرأ فشلا**،
  * وهو لم يبدأ بعد.
  */
 @Composable
 private fun LeadCard(lead: Lead, onEdit: () -> Unit) {
+    val rejected = lead.status == "rejected"
     val needsInfo = lead.status == "needs_info"
     Spacer(Modifier.height(8.dp))
     Card {
@@ -210,11 +243,16 @@ private fun LeadCard(lead: Lead, onEdit: () -> Unit) {
                 text = lead.storeName,
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
+            // **و«الإدارة بدها معلومات» حالٌ ثالثة** — **وكانت تُقرأ
+            // «بانتظار الموافقة» بلونٍ عاديّ**، فلا يعرف أنّ الدورَ عليه.
             Chip(
                 stringResource(
                     when {
-                        lead.status == "rejected" -> R.string.cl_rejected
+                        rejected -> R.string.cl_rejected
                         needsInfo -> R.string.cl_needs_info
                         else -> R.string.cl_waiting
                     },
@@ -224,12 +262,24 @@ private fun LeadCard(lead: Lead, onEdit: () -> Unit) {
         }
         if (lead.ownerName.isNotEmpty() || lead.phone.isNotEmpty()) {
             Spacer(Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = listOf(lead.ownerName, lead.phone, lead.area)
+                        .filter { it.isNotEmpty() }
+                        .joinToString(" · "),
+                    color = Rahal.colors.inkMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.weight(1f),
+                )
+                // **واتّصالٌ بضغطة** — يلاحق صاحبَه وهو في الطريق.
+                if (lead.phone.isNotEmpty()) CallIcon(lead.phone)
+            }
+        }
+        if (lead.createdAt.isNotEmpty()) {
             Text(
-                text = listOf(lead.ownerName, lead.phone, lead.area)
-                    .filter { it.isNotEmpty() }
-                    .joinToString(" · "),
+                text = stringResource(R.string.cl_lead_since, com.rahalgo.ui.dayText(lead.createdAt)),
                 color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
+                style = MaterialTheme.typography.labelSmall,
             )
         }
         // **وسببُ الرفض وما ينقص يُقالان** — **ومن رُفض عميلُه بلا سببٍ يُعيد
@@ -254,7 +304,81 @@ private fun LeadCard(lead: Lead, onEdit: () -> Unit) {
     }
 }
 
-/** **عميلٌ مقبولٌ يعمل** — بعمولته وحال تفعيله. */
+/**
+ * **رقمٌ صغيرٌ بكلمته** — أربعةٌ في صفٍّ واحدٍ من البطاقة.
+ *
+ * **وليس `StatBox`**: أربعةُ مربّعاتٍ بحشوته في عرض الهاتف تقصّ الرقم،
+ * **وهذا أخفُّ** — رقمٌ ثقيلٌ وكلمةٌ صغيرةٌ تحته.
+ */
+@Composable
+private fun MiniStat(label: String, value: String, color: Color, modifier: Modifier) {
+    Column(
+        modifier
+            .clip(Rahal.shape.sm)
+            .background(Rahal.colors.inkMuted.copy(alpha = 0.07f))
+            .padding(horizontal = 4.dp, vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            value,
+            color = color,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+        )
+        Text(
+            label,
+            color = Rahal.colors.inkMuted,
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+/** **ما ينقص المتجرَ ليُحسب في هدفه** — بنداً بنداً، وفارغٌ إن لم ينقصه شيء. */
+@Composable
+internal fun missingFor(m: RepMerchant): List<String> = buildList {
+    if (m.goalState != "pending") return@buildList
+    if (!m.hasHours) add(stringResource(R.string.cl_miss_hours))
+    if (!m.hasLocation) add(stringResource(R.string.cl_miss_location))
+    if (m.photoItems < m.minItems) {
+        add(stringResource(R.string.cl_miss_items, (m.minItems - m.photoItems).toString()))
+    }
+}
+
+/** **شريطُ ما ينقص** — برتقاليٌّ فوق الأزرار، **فهو أهمُّ ما يُفعل في المتجر.** */
+@Composable
+internal fun MissingStrip(missing: List<String>) {
+    if (missing.isEmpty()) return
+    Spacer(Modifier.height(8.dp))
+    Text(
+        text = stringResource(R.string.cl_goal_missing, missing.joinToString(" · ")),
+        color = Rahal.colors.accent,
+        fontWeight = FontWeight.Bold,
+        style = MaterialTheme.typography.bodySmall,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(Rahal.shape.sm)
+            .background(Rahal.colors.warnTint)
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+    )
+}
+
+/**
+ * **عميلٌ مقبولٌ يعمل** — بعمولته وحال تفعيله.
+ *
+ * # وأخفُّ ممّا كان (٢٠٢٦-١٠-٢٧)
+ *
+ * **كانت البطاقةُ صورةً واسماً وشارتين وسطرَ نقصٍ وفاصلاً وصفّين من
+ * أربعة مربّعاتٍ وزرّين وشريطاً** — **وأهمُّ ما فيها (ما ينقص المتجرَ
+ * ليُحسب) ضائعٌ في وسطها.** **فصارت**: الاسمُ وشاراته، ثمّ شريطُ التفعيل
+ * إن كان، **ثمّ صفٌّ واحدٌ بأربعة أرقام**، **ثمّ ما ينقص بشريطٍ برتقاليّ
+ * فوق الزرّين.** والأرقامُ والزرّان كما هي.
+ */
 @Composable
 private fun MerchantCard(
     m: RepMerchant,
@@ -277,7 +401,7 @@ private fun MerchantCard(
                     .clip(Rahal.shape.sm),
             )
             Spacer(Modifier.size(10.dp))
-            Column(Modifier.fillMaxWidth(0.72f)) {
+            Column(Modifier.weight(1f)) {
                 Text(
                     text = m.name,
                     fontWeight = FontWeight.Bold,
@@ -293,14 +417,10 @@ private fun MerchantCard(
                     )
                 }
             }
-            Spacer(Modifier.fillMaxWidth(1f))
         }
 
         Spacer(Modifier.height(8.dp))
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Chip(
                 stringResource(
                     if (m.status == "active") R.string.cl_working else R.string.cl_stopped,
@@ -314,103 +434,9 @@ private fun MerchantCard(
                 "pending" -> Chip(stringResource(R.string.cl_goal_pending), Rahal.colors.accent)
             }
         }
-        // **وما ينقصه بنداً بنداً** — فيعرف المندوبُ ما يُكمله وهو واقفٌ في المتجر.
-        if (m.goalState == "pending") {
-            val missing = buildList {
-                if (!m.hasHours) add(stringResource(R.string.cl_miss_hours))
-                if (!m.hasLocation) add(stringResource(R.string.cl_miss_location))
-                if (m.photoItems < m.minItems) {
-                    add(stringResource(R.string.cl_miss_items, (m.minItems - m.photoItems).toString()))
-                }
-            }
-            if (missing.isNotEmpty()) {
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    text = stringResource(R.string.cl_goal_missing, missing.joinToString(" · ")),
-                    color = Rahal.colors.accent,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-        }
-
-        Spacer(Modifier.height(8.dp))
-        HorizontalDivider()
-        Spacer(Modifier.height(8.dp))
-        // **ومربّعان لا سطران** — (طلبُ المالك ٢٠٢٦-٠٨-٣١). **والرقمُ
-        // يُرى قبل أن يُقرأ**، وسطرٌ باسمٍ وقيمةٍ يُمرَّر عليه نصّا.
-        StatRow {
-            StatBox(
-                label = stringResource(R.string.cl_delivered),
-                value = m.deliveredOrders.toString(),
-                modifier = Modifier.weight(1f),
-            )
-            StatBox(
-                label = stringResource(R.string.cl_commission),
-                value = money(m.myCommission),
-                modifier = Modifier.weight(1f),
-                color = Rahal.colors.brand,
-            )
-        }
 
         // ══════════════════════════════════════════════════════════════
-        // **وكم صنفاً يعرض وكم عرضاً يجري — في البطاقة لا خلفها**
-        // ══════════════════════════════════════════════════════════════
-        //
-        // (طلبُ المالك ٢٠٢٦-٠٩-٣٠: «نضيف مربّعاً لعدد العناصر المعروضة
-        //  بكلّ متجر… لنعرف كلّ متجر كم صنف عارض بدون ما نفوت عليه».)
-        //
-        // **وكان المندوبُ يفتح كلَّ متجرٍ ليرى أفارغٌ هو** — نداءٌ وشاشةٌ
-        // ورجوع، لكلّ عميلٍ من عشرة.
-        //
-        // **والصفرُ هنا يُصبَغ تنبيهاً لا رماديّاً**: **متجرٌ بلا صنفٍ
-        // معروضٍ لا يظهر للزبون أصلاً** — فهو عملٌ ناقصٌ لا رقمٌ يُقرأ،
-        // **ومن رآه رماديّاً مرّ عليه.**
-        Spacer(Modifier.height(6.dp))
-        StatRow {
-            StatBox(
-                label = stringResource(R.string.cl_items),
-                value = m.itemsCount.toString(),
-                modifier = Modifier.weight(1f),
-                color = if (m.itemsCount == 0) Rahal.colors.accent else Rahal.colors.ink,
-            )
-            StatBox(
-                label = stringResource(R.string.cl_offers),
-                value = m.offersCount.toString(),
-                modifier = Modifier.weight(1f),
-                color = if (m.offersCount > 0) Rahal.colors.success else Rahal.colors.inkMuted,
-            )
-        }
-
-        // ══════════════════════════════════════════════════════════════
-        // **وفعلاه من بطاقته — لا من داخله**
-        // ══════════════════════════════════════════════════════════════
-        //
-        // (طلبُ المالك ٢٠٢٦-٠٩-٣٠: «نضيف نفس الزرّ إضافة صنف أو أنشئ
-        //  عرض بنفس البطاقة، هيك نسهّل عالمندوب».)
-        //
-        // **والمندوبُ واقفٌ في المتجر** — **وثلاثُ ضغطاتٍ ليبلغ «صنف
-        // جديد» ثلاثُ ضغطاتٍ يقضيها صاحبُ المتجر ينتظر.**
-        //
-        // **وهما الزرّان نفسُهما في صفحة الأصناف** — نصّاً وترتيباً،
-        // **فلا يتعلّم المندوبُ بابين لفعلٍ واحد.**
-        Spacer(Modifier.height(8.dp))
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            RahalButton(
-                onClick = onAddItem,
-                modifier = Modifier.weight(1f),
-            ) { Text(stringResource(R.string.mn_add_item)) }
-
-            RahalOutlineButton(
-                onClick = onMakeOffer,
-                modifier = Modifier.weight(1f),
-            ) { Text(stringResource(R.string.mn_make_offer)) }
-        }
-
-        // ══════════════════════════════════════════════════════════════
-        // **وشريطُ التفعيل حين لا يزال دونه**
+        // **وشريطُ التفعيل حين لا يزال دونه — تحت الشارات**
         // ══════════════════════════════════════════════════════════════
         //
         // **ولا يُعرض لمن فعّل** — شريطٌ ممتلئٌ دائماً يُقرأ زينةً لا خبرا.
@@ -431,6 +457,77 @@ private fun MerchantCard(
                 ratio = m.activationDone.toFloat() / needed.toFloat(),
                 color = Rahal.colors.accent,
             )
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // **وأربعةُ أرقامٍ في صفٍّ واحد**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (طلبُ المالك ٢٠٢٦-٠٩-٣٠: «نضيف مربّعاً لعدد العناصر المعروضة
+        //  بكلّ متجر… لنعرف كلّ متجر كم صنف عارض بدون ما نفوت عليه».)
+        //
+        // **والصفرُ في الأصناف يُصبَغ تنبيهاً لا رماديّاً**: **متجرٌ بلا
+        // صنفٍ معروضٍ لا يظهر للزبون أصلاً** — فهو عملٌ ناقصٌ لا رقمٌ
+        // يُقرأ، **ومن رآه رماديّاً مرّ عليه.**
+        Spacer(Modifier.height(10.dp))
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            MiniStat(
+                label = stringResource(R.string.cl_s_orders),
+                value = m.deliveredOrders.toString(),
+                color = Rahal.colors.ink,
+                modifier = Modifier.weight(1f),
+            )
+            // **والمالُ أعرضُ من العدد** — فلا يُقصّ «125,000 ل.س».
+            MiniStat(
+                label = stringResource(R.string.cl_s_commission),
+                value = money(m.myCommission),
+                color = Rahal.colors.brand,
+                modifier = Modifier.weight(1.6f),
+            )
+            MiniStat(
+                label = stringResource(R.string.cl_s_items),
+                value = m.itemsCount.toString(),
+                color = if (m.itemsCount == 0) Rahal.colors.accent else Rahal.colors.ink,
+                modifier = Modifier.weight(1f),
+            )
+            MiniStat(
+                label = stringResource(R.string.cl_s_offers),
+                value = m.offersCount.toString(),
+                color = if (m.offersCount > 0) Rahal.colors.success else Rahal.colors.inkMuted,
+                modifier = Modifier.weight(1f),
+            )
+        }
+
+        // **وما ينقصه بنداً بنداً — فوق الزرّين** — فيعرف المندوبُ ما يُكمله
+        // وهو واقفٌ في المتجر.
+        MissingStrip(missingFor(m))
+
+        // ══════════════════════════════════════════════════════════════
+        // **وفعلاه من بطاقته — لا من داخله**
+        // ══════════════════════════════════════════════════════════════
+        //
+        // (طلبُ المالك ٢٠٢٦-٠٩-٣٠: «نضيف نفس الزرّ إضافة صنف أو أنشئ
+        //  عرض بنفس البطاقة، هيك نسهّل عالمندوب».)
+        //
+        // **وهما الزرّان نفسُهما في صفحة الأصناف** — نصّاً وترتيباً،
+        // **فلا يتعلّم المندوبُ بابين لفعلٍ واحد.**
+        Spacer(Modifier.height(8.dp))
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            RahalButton(
+                onClick = onAddItem,
+                modifier = Modifier.weight(1f),
+            ) { Text(stringResource(R.string.mn_add_item)) }
+
+            RahalOutlineButton(
+                onClick = onMakeOffer,
+                modifier = Modifier.weight(1f),
+            ) { Text(stringResource(R.string.mn_make_offer)) }
         }
     }
 }

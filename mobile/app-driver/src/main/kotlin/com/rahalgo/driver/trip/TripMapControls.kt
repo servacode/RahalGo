@@ -128,6 +128,18 @@ internal fun MapButtons(
                     onClick = onProblem,
                     danger = true,
                 )
+                // **واسمُه تحته** — قرصٌ أحمرُ بعلامة تحذيرٍ وحدَها لا يعرفه السائقُ الجديد.
+                Text(
+                    text = stringResource(R.string.map_problem_caption),
+                    color = Rahal.colors.danger,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier
+                        .padding(top = 2.dp)
+                        .clip(Rahal.shape.sm)
+                        .background(Rahal.colors.surface.copy(alpha = 0.92f))
+                        .padding(horizontal = 6.dp, vertical = 1.dp),
+                )
                 Spacer(Modifier.height(8.dp))
             }
             // ══════════════════════════════════════════════════════════
@@ -268,7 +280,8 @@ internal fun MapButton(
                     .padding(horizontal = 6.dp, vertical = 1.dp),
             ) {
                 Text(
-                    text = if (badge > 9) "+9" else badge.toString(),
+                    // **«9+» لا «+9»** — هكذا تُقرأ بالعربيّة.
+                    text = if (badge > 9) "9+" else badge.toString(),
                     color = Color.White,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.labelSmall,

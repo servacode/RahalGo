@@ -32,6 +32,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.rahalgo.customer.R
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.padding
 import com.rahalgo.design.Rahal
 import com.rahalgo.shared.customer.MyOrder
 import com.rahalgo.ui.Card
@@ -85,22 +88,36 @@ fun OrderCard(
     confirming: Boolean = false,
     /** **يرفض السعرَ الجديد** بعد الاستلام — و`null` لا رفضَ هنا. */
     onRejectQuote: (() -> Unit)? = null,
+    /** **نصُّ زرّ الإلغاء بالعدّاد** — «إلغاء الطلب (باقي 0:45)»، و`null` النصُّ العاديّ. */
+    cancelLabel: String? = null,
 ) {
     Card {
+        // **الحالُ أبرزُ ما في الرأس ورقمُ الطلب صغيرٌ جنبها** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧)
+        // — كان الرقمُ أبرزَ شيءٍ في البطاقة، **والزبونُ يسأل «وين صار طلبي» لا «شو رقمه».**
         Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            val tone = statusColor(order.status)
+            Text(
+                text = statusText(order.status),
+                color = tone,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier
+                    .clip(Rahal.shape.pill)
+                    .background(tone.copy(alpha = 0.12f))
+                    .padding(horizontal = 12.dp, vertical = 5.dp),
+            )
             Text(
                 // **ورقمُه كما يعرفه الجميع** — لا ستّةُ أحرفٍ من
                 // معرّفه: **رقمٌ لا يعرفه صاحبُه ولا المكتبُ لا يُستعمل
                 // في شكوى.**
                 text = "#" + order.number,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodyMedium,
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodySmall,
             )
-            Chip(statusText(order.status), statusColor(order.status))
         }
 
         // **وما ليس في المنصّة يُقال بلفظ صاحبه** — لا «طلب #12».
@@ -127,6 +144,39 @@ fun OrderCard(
             Spacer(Modifier.height(12.dp))
             // **ودرّاجتُه تمشي ما دام جاريا** — والمنتهي لا شريطَ له.
             Stages(order.stages.map { stageLabel(it, order.customMode == "amanah") }, order.stageAt, live = true)
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // **وكم يأخذ تقريباً — من المحرّك** (تدقيقُ ٢٠٢٦-١٠-٢٧)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **أكثرُ سؤالٍ عند الزبون «إيمتى بيوصل؟»** والمحرّكُ يرسل التقدير. **وبالطريق
+        // زمنُ الطريق من المتجر إلى بابه** (`to_door_eta_sec`، يُلتقط عند الاستلام)،
+        // **وقبله مدّةُ التوصيل المتوقّعة** (`delivery_estimate_min`). **ولا يُخترَع رقم.**
+        if (!ended(order.status)) {
+            val door = order.toDoorEtaSec?.takeIf {
+                it > 0 && order.status in setOf("picked_up", "on_the_way")
+            }
+            val etaText = when {
+                door != null -> stringResource(
+                    R.string.ord_eta_door,
+                    com.rahalgo.ui.minutes(((door + 59) / 60).toLong()),
+                )
+                order.deliveryEstimateMin > 0 && order.status != "at_dropoff" -> stringResource(
+                    R.string.ord_eta_estimate,
+                    com.rahalgo.ui.minutes(order.deliveryEstimateMin.toLong()),
+                )
+                else -> ""
+            }
+            if (etaText.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = etaText,
+                    color = Rahal.colors.brand,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
         }
 
         // **والسائقُ يُسمّى حين يُسنَد** — ومن يعرف اسمَ من يحمل طلبَه
@@ -201,10 +251,15 @@ fun OrderCard(
             if (order.discount > 0) {
                 KeyValue(stringResource(R.string.ord_discount), "-" + money(order.discount))
             }
-            KeyValue(
+            // **والإجماليُّ برقمٍ كبيرٍ تحت خطّ** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧) — كان سطراً عاديّاً.
+            Spacer(Modifier.height(4.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(4.dp))
+            com.rahalgo.ui.SumLine(
                 stringResource(R.string.ord_total),
                 money(order.total),
-                valueColor = Rahal.colors.brand,
+                strong = true,
+                color = Rahal.colors.brand,
             )
         }
 
@@ -259,7 +314,7 @@ fun OrderCard(
                     onClick = it,
                     tone = Tone.Danger,
                     modifier = Modifier.weight(1f),
-                ) { Text(stringResource(R.string.ord_cancel)) }
+                ) { Text(cancelLabel ?: stringResource(R.string.ord_cancel), maxLines = 1) }
             }
             onRate?.let {
                 RahalButton(onClick = it, modifier = Modifier.weight(1f)) {
@@ -314,6 +369,17 @@ private fun CustomQuoteSection(
             stringResource(R.string.ord_delivery),
             if (fixed) money(fee) else stringResource(R.string.ord_delivery_on_deal),
         )
+        // **وعرضُ التوصيل المجاني يُذكَر بصيغةٍ صادقة** (تدقيقُ ٢٠٢٦-١٠-٢٧) — شاشةُ الإنشاء
+        // قالت «مجانية»، **والعرضُ يُحجز عند تحديد السعر لا قبله.**
+        if (com.rahalgo.customer.FreeOffer.state.customOn(order.customMode)) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                stringResource(R.string.free_custom_pending),
+                color = Rahal.colors.success,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = FontWeight.Bold,
+            )
+        }
         Spacer(Modifier.height(6.dp))
         Text(
             stringResource(
@@ -401,8 +467,22 @@ private fun QuoteAmounts(order: MyOrder) {
             if (order.customGoodsPending) stringResource(R.string.ord_goods_after_purchase) else money(goods),
         )
     }
-    KeyValue(stringResource(R.string.ord_delivery), money(order.customFee ?: 0L))
-    KeyValue(stringResource(R.string.ord_total), money(order.total), valueColor = Rahal.colors.brand)
+    // **والأجرةُ المُعفاةُ تُقال «مجاني 🎁» والأصلُ مشطوب** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كالطلب
+    // العاديّ (`DeliveryFeeRow`)؛ **كانت «التوصيل 0 ل.س».** والمحرّكُ يردّ `custom_fee` بما يدفعه.
+    com.rahalgo.customer.DeliveryFeeRow(
+        stringResource(R.string.ord_delivery),
+        order.customFee ?: 0L,
+        order.freeWaived,
+    )
+    Spacer(Modifier.height(4.dp))
+    HorizontalDivider()
+    Spacer(Modifier.height(4.dp))
+    com.rahalgo.ui.SumLine(
+        stringResource(R.string.ord_total),
+        money(order.total),
+        strong = true,
+        color = Rahal.colors.brand,
+    )
 }
 
 /**

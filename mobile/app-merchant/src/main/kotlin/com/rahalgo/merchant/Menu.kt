@@ -57,7 +57,9 @@ val MERCHANT_ITEMS: List<DrawerItem> = listOf(
         MerchantItems.OFFERS,
         com.rahalgo.ui.R.string.menu_mine,
         R.string.menu_offers,
-        com.rahalgo.ui.R.drawable.ic_offer,
+        // **علامةُ نسبةٍ لا بطاقةُ سعر** (تدقيقُ ٢٠٢٦-١٠-٢٧) — البطاقةُ لتبويب «الأصناف»،
+        // **وأيقونتان متطابقتان لشيئين تجعلان الضغطَ تخميناً.**
+        R.drawable.ic_percent,
     ),
     DrawerItem(
         MerchantItems.HISTORY,

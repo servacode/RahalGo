@@ -33,7 +33,11 @@ import com.rahalgo.ui.Card
 import com.rahalgo.ui.Chip
 import com.rahalgo.ui.KeyValue
 import com.rahalgo.ui.LoadState
+import com.rahalgo.ui.RahalButton
+import com.rahalgo.ui.RahalOutlineButton
 import com.rahalgo.ui.Refresh
+import com.rahalgo.ui.Refreshable
+import androidx.compose.foundation.clickable
 import com.rahalgo.ui.Screen
 import com.rahalgo.ui.StatRow
 import com.rahalgo.ui.StatBox
@@ -68,13 +72,22 @@ import kotlinx.coroutines.launch
  * إنّه محفوظٌ ينتظر.**
  */
 @Composable
-fun BoardScreen(vm: BoardViewModel) {
+fun BoardScreen(
+    vm: BoardViewModel,
+    /** **بطاقةُ الرصيد تفتح المحفظة** (٢٠٢٦-١٠-٢٧). */
+    onOpenWallet: () -> Unit = {},
+    /** **وزرُّ «وثّق حسابك» يفتح «حسابي»** (٢٠٢٦-١٠-٢٧). */
+    onOpenAccount: () -> Unit = {},
+) {
     val me = vm.me
     if (me == null) {
         LoadState(vm.busy, vm.error) { vm.load(force = true) }
         return
     }
+    val context = androidx.compose.ui.platform.LocalContext.current
 
+    // **وسحبٌ للتحديث كما في تطبيق المتجر** (٢٠٢٦-١٠-٢٧).
+    Refreshable(refreshing = false, onRefresh = { vm.load(force = true) }) {
     Screen {
         // **وبلا تلميحٍ تحت العنوان** — (طلبُ المالك ٢٠٢٦-٠٨-٣١:
         // «أرقامك وهدف الشهر احذفها، غيرُ ضروريّة»).
@@ -116,14 +129,47 @@ fun BoardScreen(vm: BoardViewModel) {
         //
         // **والعدّادُ شهريّ** — يبدأ من صفرٍ كلَّ شهرٍ بتوقيت دمشق
         // (`incentives.doneThisMonthOn`)، والمراحلُ تُدفع مرّةً في الشهر.
+        //
+        // ══════════════════════════════════════════════════════════════
+        // **ولا هدفَ يُخترع** (٢٠٢٦-١٠-٢٧)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **كان يضع «1» من عنده** حين تُطفئ الإدارةُ الهدفَ
+        // (`sales.monthly_target=0`) أو يسقط نداءُ المراحل — **فيرى
+        // «المرحلة 1 · 1 عملاء» هدفاً لم يضعه أحد**، وقد يظنّ أنّ على
+        // أوّل عميلٍ مكافأة. **فالمراحلُ من المحرّك، ثمّ الهدفُ الشهريُّ
+        // إن كان، ثمّ لا شيء** — وتقول البطاقةُ إنّه لا هدف.
         val done = me.monthMerchants
         val steps = vm.levels.ifEmpty {
-            listOf(com.rahalgo.shared.model.TargetLevel(n = 1, target = maxOf(1, me.monthlyTarget).toLong()))
+            if (me.monthlyTarget > 0) {
+                listOf(com.rahalgo.shared.model.TargetLevel(n = 1, target = me.monthlyTarget.toLong()))
+            } else {
+                emptyList()
+            }
         }
-        val top = steps.last().target
-        val allDone = done >= top
+        val top = steps.lastOrNull()?.target ?: 0L
+        val allDone = top > 0 && done >= top
         Spacer(Modifier.height(12.dp))
-        Card {
+        if (steps.isEmpty()) {
+            Card {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        stringResource(R.string.act_month_target),
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        stringResource(R.string.bd_no_target),
+                        color = Rahal.colors.inkMuted,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+        } else Card {
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -170,6 +216,7 @@ fun BoardScreen(vm: BoardViewModel) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
+                        // **«الهدف ٥» لا «٥ عملاء»** — فلا تُقرأ «1 عملاء» (٢٠٢٦-١٠-٢٧).
                         stringResource(R.string.bd_level, l.n.toString(), l.target.toString()),
                         color = if (reachedL) Rahal.colors.success else Rahal.colors.ink,
                         fontWeight = if (reachedL) FontWeight.Bold else FontWeight.Normal,
@@ -178,7 +225,8 @@ fun BoardScreen(vm: BoardViewModel) {
                     Text(
                         if (reachedL) {
                             if (l.reward > 0) {
-                                stringResource(R.string.bd_level_done_reward, l.reward.toString())
+                                // **والمكافأةُ بفواصلها كسائر المبالغ** — «+50,000 ل.س».
+                                stringResource(R.string.bd_level_done_reward, money(l.reward))
                             } else {
                                 stringResource(R.string.bd_level_done)
                             }
@@ -257,6 +305,9 @@ fun BoardScreen(vm: BoardViewModel) {
         // **وثلاثةٌ فوق ورصيدُه وحدَه تحت** — **والرصيدُ ليس من جنسها**:
         // تلك حصيلةُ عمله، **وهذا ما في يده الآن.** ومربّعٌ رابعٌ في
         // صفّها يجعله رقماً بينها فيُقرأ حصيلةً أخرى.
+        //
+        // **وصار الرصيدُ بطاقةً تُضغط فتفتح المحفظة** (٢٠٢٦-١٠-٢٧) — **وكان
+        // مربّعاً لا يُضغط** فيُقرأ رقماً إحصائيّاً كغيره.
         Card {
             StatRow {
                 StatBox(
@@ -275,13 +326,31 @@ fun BoardScreen(vm: BoardViewModel) {
                     modifier = Modifier.weight(1f),
                 )
             }
-            Spacer(Modifier.height(8.dp))
-            StatRow {
-                StatBox(
-                    label = stringResource(R.string.bd_balance),
-                    value = money(me.balance),
-                    modifier = Modifier.weight(1f),
+        }
+        Spacer(Modifier.height(10.dp))
+        Card(modifier = Modifier.clickable(onClick = onOpenWallet)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column {
+                    Text(
+                        stringResource(R.string.bd_balance),
+                        color = Rahal.colors.inkMuted,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        money(me.balance),
+                        color = Rahal.colors.brand,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.headlineSmall,
+                    )
+                }
+                Text(
+                    stringResource(R.string.bd_balance_go),
                     color = Rahal.colors.brand,
+                    style = MaterialTheme.typography.labelLarge,
                 )
             }
         }
@@ -302,20 +371,41 @@ fun BoardScreen(vm: BoardViewModel) {
             )
             Spacer(Modifier.height(4.dp))
             if (me.whatsappVerified && !me.inviteCode.isNullOrEmpty()) {
-                Text(
-                    text = me.inviteCode.orEmpty(),
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.headlineSmall,
-                )
+                // **والرمزُ يُنسخ بضغطة** (٢٠٢٦-١٠-٢٧) — يُرسله لمكتبٍ أو لصاحب متجر.
+                val code = me.inviteCode.orEmpty()
+                val copied = stringResource(R.string.bd_copied)
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = code,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.headlineSmall,
+                    )
+                    RahalOutlineButton(onClick = {
+                        val cm = context.getSystemService(android.content.ClipboardManager::class.java)
+                        cm?.setPrimaryClip(android.content.ClipData.newPlainText("code", code))
+                        com.rahalgo.ui.Flash.ok(copied)
+                    }) { Text(stringResource(R.string.bd_copy)) }
+                }
             } else {
+                // **و«غيرُ موثّق» تنبيهٌ برتقاليٌّ بزرّه لا خطأٌ أحمر** (٢٠٢٦-١٠-٢٧) —
+                // **الأحمرُ يُقرأ عطباً**، والمطلوبُ خطوةٌ يعرف أين يخطوها.
                 Text(
                     text = stringResource(R.string.bd_code_locked),
-                    color = Rahal.colors.danger,
+                    color = Rahal.colors.accent,
                     style = MaterialTheme.typography.bodyMedium,
                 )
+                Spacer(Modifier.height(8.dp))
+                RahalButton(onClick = onOpenAccount, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.bd_verify))
+                }
             }
         }
         Spacer(Modifier.height(28.dp))
+    }
     }
 }
 

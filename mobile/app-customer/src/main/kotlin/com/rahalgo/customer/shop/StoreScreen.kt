@@ -8,6 +8,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.border
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -126,7 +128,8 @@ private fun FeaturedName(name: String) {
         style = base,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
-        autoSize = TextAutoSize.StepBased(minFontSize = 8.sp, maxFontSize = base.fontSize),
+        // **وأصغرُ خطٍّ ١٠** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧) — ٨ ما بينقرا على شاشة صغيرة.
+        autoSize = TextAutoSize.StepBased(minFontSize = 10.sp, maxFontSize = base.fontSize),
         modifier = Modifier.fillMaxWidth(),
     )
 }
@@ -139,17 +142,21 @@ private fun FeaturedName(name: String) {
 private fun statusText(h: StoreHeader): String = when {
     h.today.open24h -> stringResource(R.string.store_open_24h)
     h.today.closed || h.today.open.isBlank() -> stringResource(R.string.store_closed_today)
-    else -> stringResource(R.string.store_today_hours, clock12(h.today.open), clock12(h.today.close))
+    else -> {
+        // **وحرفا الصبح والمسا من ملف النصوص** — لا مكتوبَين جوّا الشيفرة.
+        val am = stringResource(R.string.clock_am)
+        val pm = stringResource(R.string.clock_pm)
+        stringResource(R.string.store_today_hours, clock12(h.today.open, am, pm), clock12(h.today.close, am, pm))
+    }
 }
 
-/** «١٨:٣٠» ← «٦:٣٠ م». */
-internal fun clock12(hhmm: String): String {
+/** «18:30» ← «6:30 م». */
+internal fun clock12(hhmm: String, am: String, pm: String): String {
     val p = hhmm.split(":")
     val h = p.getOrNull(0)?.toIntOrNull() ?: return hhmm
     val m = p.getOrNull(1) ?: "00"
-    val am = h < 12
     val h12 = when (val x = h % 12) { 0 -> 12; else -> x }
-    return "$h12:$m " + if (am) "ص" else "م"
+    return "$h12:$m " + if (h < 12) am else pm
 }
 
 /**
@@ -178,24 +185,44 @@ internal fun StoreScreen(
     notice: @Composable () -> Unit = {},
 ) {
     Column(Modifier.fillMaxSize()) {
-        // **زرٌّ واضحٌ بسهم رجوع** (ملاحظةُ المالك ٢٠٢٦-١٠-١٨: «خليه زر واضح مع ايقونة مناسبة»).
-        com.rahalgo.ui.RahalOutlineButton(
-            onClick = onBack,
-            modifier = Modifier.padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
+        val page = vm.store
+        // ══════════════════════════════════════════════════════════════
+        // **شريطٌ علويٌّ: سهمُ رجوعٍ واسمُ المتجر** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **كان زرّاً بإطارٍ فوق الشعار** فيُقرأ زرّاً في نصّ الصفحة. **والسهمُ
+        // مع كلمة «رجوع للتسوق» باقٍ** (ملاحظةُ المالك ٢٠٢٦-١٠-١٨: «زر واضح مع
+        // ايقونة مناسبة») — **ومساحةُ لمسه ٤٨ لا أقلّ.**
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Rahal.space.xs, vertical = Rahal.space.xs),
         ) {
-            Icon(
-                painter = painterResource(com.rahalgo.ui.R.drawable.ic_arrow_back),
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-            )
-            Spacer(Modifier.width(Rahal.space.xs))
-            Text(
-                text = stringResource(R.string.store_back),
-                fontWeight = FontWeight.Bold,
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clip(Rahal.shape.md)
+                    .clickable(onClick = onBack)
+                    .heightIn(min = 48.dp)
+                    .padding(horizontal = Rahal.space.sm),
+            ) {
+                Icon(
+                    painter = painterResource(com.rahalgo.ui.R.drawable.ic_arrow_back),
+                    contentDescription = null,
+                    tint = Rahal.colors.brand,
+                    modifier = Modifier.size(22.dp),
+                )
+                Spacer(Modifier.width(Rahal.space.xs))
+                Text(
+                    text = stringResource(R.string.store_back),
+                    color = Rahal.colors.brand,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
         }
 
-        val page = vm.store
         when {
             vm.storeError.isNotEmpty() ->
                 LoadState(loading = false, error = vm.storeError, onRetry = vm::loadStore)
@@ -205,9 +232,15 @@ internal fun StoreScreen(
 
             else -> {
                 val h = page.store
+                // **بطاقةُ الرأس: الشعارُ والاسمُ وشارةُ «مفتوح/مسكّر» والدوامُ تحتها.**
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = Rahal.space.md)
+                        .clip(Rahal.shape.md)
+                        .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
+                        .padding(Rahal.space.md),
                 ) {
                     RemoteImage(
                         url = media(h.logoThumbUrl ?: h.logoUrl),
@@ -225,19 +258,31 @@ internal fun StoreScreen(
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.titleMedium,
                             maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Spacer(Modifier.height(Rahal.space.xs))
+                        val tone = if (h.openNow) Rahal.colors.success else Rahal.colors.danger
+                        Text(
+                            text = stringResource(if (h.openNow) R.string.store_pill_open else R.string.store_pill_closed),
+                            color = tone,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier
+                                .clip(Rahal.shape.pill)
+                                .background(tone.copy(alpha = 0.12f))
+                                .padding(horizontal = Rahal.space.sm, vertical = 2.dp),
                         )
                         Spacer(Modifier.height(Rahal.space.xs))
                         Text(
                             text = statusText(h),
-                            color = if (h.openNow) Rahal.colors.success else Rahal.colors.danger,
-                            fontWeight = FontWeight.Bold,
+                            color = Rahal.colors.inkMuted,
                             style = MaterialTheme.typography.labelMedium,
                         )
                     }
                 }
                 if (!h.openNow) {
                     Spacer(Modifier.height(Rahal.space.sm))
-                    Column(Modifier.padding(horizontal = 12.dp)) {
+                    Column(Modifier.padding(horizontal = Rahal.space.md)) {
                         com.rahalgo.ui.Note(stringResource(R.string.store_browse_only), Rahal.colors.danger)
                     }
                 }

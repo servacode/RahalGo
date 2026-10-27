@@ -666,7 +666,10 @@ private fun SignedIn(
         drawerContent = {
             // **والدرجُ رفيعٌ لا عريض** — عرضُ `ModalDrawerSheet`
             // الافتراضيُّ ٣٦٠، وهو نصفُ الشاشة.
-            ModalDrawerSheet(Modifier.width(200.dp)) {
+            // **وصار ٢٨٠ أو ٨٠٪ من العرض — الأصغرُ بينهما** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧):
+            // ٢٠٠ كانت تقصّ «الشكاوى والبلاغات» و«شرح التطبيق بالفيديو» وسطرَ المدينة.
+            val drawerWidth = minOf(280, (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp * 0.8f).toInt())
+            ModalDrawerSheet(Modifier.width(drawerWidth.dp)) {
                 Drawer(
                     // **والضيفُ يرى المنصّةَ والقانونيّةَ وحدَهما** —
                     // **وبنودٌ تُعرض لتقول «تحتاج حساباً» تُطيل القائمةَ
@@ -1024,6 +1027,7 @@ private fun SignedIn(
                             tab = Tab.Shop
                             shopVm.openStore(id)
                         },
+                        onBrowse = { overlay.clear(); tab = Tab.Shop },
                     )
 
                     // ══════════════════════════════════════════════
@@ -1090,10 +1094,12 @@ private fun SignedIn(
                         // **رصيدُ المحفظة الموثوق** (`CUST-WAL-011..014`) — من
                         // `ShellViewModel`؛ تحديثُه يُعيد تقييمَ أهليّة المحفظة.
                         walletBalance = shell.balance,
-                    ) {
-                        tab = Tab.Orders
-                        ordersVm.load()
-                    }
+                        onDone = {
+                            tab = Tab.Orders
+                            ordersVm.load()
+                        },
+                        onBrowse = { tab = Tab.Shop },
+                    )
 
                     tab == Tab.Shop -> ShopScreen(
                         vm = shopVm,
@@ -1122,7 +1128,11 @@ private fun SignedIn(
                     //
                     // **وقبل التبويبات في الترتيب** — ولو جاءت بعدها
                     // لَغطّاها التبويبُ فلا تُرى أبدا.
-                    tab == Tab.Orders -> OrdersScreen(ordersVm, walletBalance = shell.balance)
+                    tab == Tab.Orders -> OrdersScreen(
+                        ordersVm,
+                        walletBalance = shell.balance,
+                        onBrowse = { tab = Tab.Shop },
+                    )
 
                     // **ونجاحُ الطلب الخاصّ ينقله إلى «طلباتي»** —
                     // (شكوى المالك ٢٠٢٦-٠٨-١٨): **نموذجٌ يبقى مملوءاً

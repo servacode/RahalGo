@@ -99,7 +99,8 @@ fun OrdersScreen(state: OrdersState, actions: OrdersActions) {
         if (shown.isNotEmpty()) {
             item {
                 Column(Modifier.fillMaxWidth().padding(vertical = 12.dp)) {
-                    Text(shown, color = Rahal.colors.accent)
+                    // **والخطأُ أحمرُ دائماً** — البرتقاليُّ على الأبيض لا يُقرأ تحت الشمس.
+                    Text(shown, color = Rahal.colors.danger)
                     RahalTextButton(onClick = actions.refresh) {
                         Text(stringResource(R.string.home_retry))
                     }
@@ -200,6 +201,8 @@ private fun WhyNoOrders(state: OrdersState) {
     val me = state.me
     val reason: Pair<Int, Boolean>? = when {
         me == null -> null
+        // **والحسابُ الموقوفُ أوّلُ الأسباب** — كان يُقرأ «كلّ شيء جاهز» ولا طلب.
+        me.suspended -> R.string.why_suspended to true
         !me.onShift -> R.string.why_shift_closed to true
         !state.locationOn -> R.string.why_location_off to true
         me.cashLimit > 0 && me.cashHeld >= me.cashLimit -> R.string.why_cash_full to true
@@ -237,7 +240,9 @@ private fun WhyNoOrders(state: OrdersState) {
     ) {
         Text(
             text = stringResource(text),
-            color = if (blocking) Rahal.colors.accent else Rahal.colors.inkMuted,
+            // **نصٌّ غامقٌ فوق أرض التنبيه** — لا برتقاليٌّ على بيجٍ تباينُه ٢ إلى ١.
+            color = if (blocking) Rahal.colors.ink else Rahal.colors.inkMuted,
+            fontWeight = if (blocking) FontWeight.Bold else FontWeight.Normal,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -456,8 +461,9 @@ private fun OrderCard(
         // **وفي «إحضار» بالعكس** (٢٠٢٦-١٠-١٦): يدفع بمكان الاستلام ويقبضه من المتجر.
         com.rahalgo.driver.trip.collectForStore(order)?.let { amt ->
             Spacer(Modifier.height(10.dp))
+            // **وعنوانُه يقول ما يفعل** — لا «لدي توصيلة» (اسمُ الخدمة عند المتجر).
             WhatBox(
-                stringResource(R.string.kind_delivery),
+                stringResource(R.string.card_out_of_pocket),
                 stringResource(com.rahalgo.driver.trip.collectTextRes(order), com.rahalgo.driver.trip.orderAmount(order, amt)),
             )
         }
@@ -677,12 +683,13 @@ private fun OrderCard(
 private fun KindChip(text: String) {
     Text(
         text = text,
-        color = Rahal.colors.onBrand,
+        // **كتابةٌ غامقةٌ على برتقاليٍّ فاتح** — الأبيضُ على البرتقاليّ تباينُه ضعيف.
+        color = Rahal.colors.ink,
         fontWeight = FontWeight.Bold,
         style = MaterialTheme.typography.bodySmall,
         modifier = Modifier
             .clip(Rahal.shape.pill)
-            .background(Rahal.colors.accent)
+            .background(Rahal.colors.accent.copy(alpha = 0.22f))
             .padding(horizontal = 10.dp, vertical = 3.dp),
     )
 }
@@ -805,7 +812,15 @@ private fun Leg(label: String, value: String, far: String, mins: Long, tint: Col
         Spacer(Modifier.size(8.dp))
         Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(label, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
+                // **والاسمُ يأخذ ما بقي ويُقصّ** — لا يأكل المسافةَ والمدّة.
+                Text(
+                    label,
+                    color = Rahal.colors.inkMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
                 if (far.isNotEmpty()) {
                     Spacer(Modifier.size(8.dp))
                     // **والمسافة في سطر عنوانها** — رقم قصير لا يزاحم

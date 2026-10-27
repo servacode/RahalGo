@@ -18,6 +18,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -383,27 +384,58 @@ internal fun LegStrip(
     val legs2 = legs.drop(skip)
     val icons = (if (custom) CUSTOM_LEG_ICONS else LEG_ICONS).drop(skip)
     val at = ((if (custom) customLegOf(status, agreed) else legOf(status)) - skip).coerceAtLeast(0)
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-        for (i in legs2.indices) {
-            if (i > 0) {
-                // **والخطُّ في مستوى الدوائر** — لا تحتها ولا فوقها.
+    // ══════════════════════════════════════════════════════════════════
+    // **كلُّ مرحلةٍ بوزنٍ لا بعرضٍ ثابت** (تدقيق ٢٠٢٦-١٠-٢٧)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **ستُّ مراحلَ بـ٥٤dp = ٣٢٤dp** — وعلى هاتفٍ عرضُه ٣٦٠ يبقى ٣٠٨ بعد الحشوة،
+    // **فتنضغط الأخيرةُ ويُقصّ اسمُها والخطوطُ صفر.** فصار لكلٍّ حصّةٌ متساوية،
+    // **والخطُّ يُرسم خلف الدوائر**، وإن ضاقت الحصّةُ كُتب اسمُ الحاليّة وحدَها.
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val n = legs2.size.coerceAtLeast(1)
+        val narrow = maxWidth / n < 56.dp
+        // **والخطُّ في مستوى الدوائر** — من مركز الأولى إلى مركز الأخيرة.
+        Row(Modifier.fillMaxWidth().padding(top = (LEG_DOT / 2) - 1.dp)) {
+            Spacer(Modifier.weight(0.5f))
+            for (i in 1 until n) {
                 Box(
                     Modifier
                         .weight(1f)
-                        .padding(top = 15.dp)
                         .height(2.dp)
                         .background(
                             if (i <= at) Rahal.colors.brand else Color.White.copy(alpha = 0.18f),
                         ),
                 )
             }
-            LegDot(legs2[i], icons[i], i, at)
+            Spacer(Modifier.weight(0.5f))
+        }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+            for (i in legs2.indices) {
+                LegDot(
+                    legs2[i],
+                    icons[i],
+                    i,
+                    at,
+                    modifier = Modifier.weight(1f),
+                    showLabel = !narrow || i == at,
+                )
+            }
         }
     }
 }
 
+/** **قطرُ دائرة المرحلة** — ٢٨dp لتسع ستٌّ عرضَ هاتفٍ رخيص. */
+private val LEG_DOT = 28.dp
+
 @Composable
-internal fun LegDot(label: Int, icon: Int, index: Int, at: Int) {
+internal fun LegDot(
+    label: Int,
+    icon: Int,
+    index: Int,
+    at: Int,
+    modifier: Modifier = Modifier.width(54.dp),
+    showLabel: Boolean = true,
+) {
     val done = index < at
     val here = index == at
     val ground = when {
@@ -414,21 +446,21 @@ internal fun LegDot(label: Int, icon: Int, index: Int, at: Int) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         // **ستُّ مراحلَ تسعها الشاشة** (طلبُ المالك ٢٠٢٦-١٠-٠٢) — فضاق العمود.
-        modifier = Modifier.width(54.dp),
+        modifier = modifier,
     ) {
         Box(
-            Modifier.size(32.dp).clip(CircleShape).background(ground),
+            Modifier.size(LEG_DOT).clip(CircleShape).background(ground),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 painter = painterResource(if (done) R.drawable.ic_check_circle else icon),
                 contentDescription = null,
                 tint = if (here || done) Color.White else Color.White.copy(alpha = 0.45f),
-                modifier = Modifier.size(17.dp),
+                modifier = Modifier.size(15.dp),
             )
         }
         Spacer(Modifier.height(4.dp))
-        Text(
+        if (showLabel) Text(
             text = stringResource(label),
             color = when {
                 here -> Color.White
@@ -439,6 +471,7 @@ internal fun LegDot(label: Int, icon: Int, index: Int, at: Int) {
             style = MaterialTheme.typography.labelSmall,
             textAlign = TextAlign.Center,
             maxLines = 2,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
         )
     }
 }

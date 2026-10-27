@@ -140,6 +140,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 val p = api.orders(openOnly = false, page = 1)
                 open = p.orders.filterNot { it.status in ENDED }
                 history = p.orders.filter { it.status in ENDED }
+                loadedAt = android.os.SystemClock.elapsedRealtime()
                 noteQuoteChanges(open)
                 stopEndedShare(open)
                 lastPage = 1
@@ -164,6 +165,19 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
      * **ثمّ يُعاد الجلبُ فيمسحه** — فيرى صاحبُه أنّ شيئاً لم يقع.
      */
     var actionError by mutableStateOf("")
+        private set
+
+    // **قبل `init` لا بعده** — `init` ينادي `load()` فوراً على الخيط الرئيسيّ، وخانةٌ تُعلَن
+    // بعده تكون `null` لحظتها فينهار التطبيقُ عند الفتح (قِيس على جهاز المالك ٢٠٢٦-١٠-٢٧).
+    /**
+     * **لحظةُ آخرِ جلبٍ للقائمة** — بساعة التشغيل. **ومهلةُ الإلغاء (`cancel_seconds_left`)
+     * تُحسب منها** فيمشي العدّادُ والشاشةُ مفتوحة (تدقيقُ ٢٠٢٦-١٠-٢٧).
+     */
+    var loadedAt by mutableStateOf(0L)
+        private set
+
+    /** **أوصل أوّلُ جواب؟** — وقبله لا يُقال «لا طلبات» بل يُنتظر. */
+    var loadedOnce by mutableStateOf(false)
         private set
 
     init {
@@ -192,6 +206,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 val all = p.orders
                 open = all.filterNot { it.status in ENDED }
                 history = all.filter { it.status in ENDED }
+                loadedAt = android.os.SystemClock.elapsedRealtime()
                 noteQuoteChanges(open)
                 stopEndedShare(open)
                 lastPage = 1
@@ -234,6 +249,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 error = apiError(getApplication(), e)
             }
             busy = false
+            loadedOnce = true
         }
     }
 
@@ -379,9 +395,22 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     var reasons by mutableStateOf<List<ComplaintReason>>(emptyList())
         private set
 
+    /** **«عم نجيب» أم «ما قدرنا»** — كانت النافذةُ تعلق على «تجلب الأسباب…» إن سقط النداء. */
+    var reasonsLoading by mutableStateOf(false)
+        private set
+    var reasonsFailed by mutableStateOf(false)
+        private set
+
     fun loadReasons(orderId: String) {
+        // **وتُصفَّر قبل كلّ فتحة** — وإلّا ظهرت أسبابُ الطلب السابق حتّى تصل الجديدة.
+        reasons = emptyList()
+        reasonsFailed = false
+        reasonsLoading = true
         viewModelScope.launch {
-            reasons = runCatching { api.complaintReasons(orderId).reasons }.getOrDefault(emptyList())
+            runCatching { api.complaintReasons(orderId).reasons }
+                .onSuccess { reasons = it }
+                .onFailure { reasonsFailed = true }
+            reasonsLoading = false
         }
     }
 
@@ -392,6 +421,8 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 api.complain(orderId, reason, note)
+                // **ونجاحُها يُقال** — وإلّا ظنّ أنّها لم تصل فاشتكى ثانية.
+                Flash.ok(getApplication<Application>().getString(R.string.ord_complain_sent))
             } catch (e: Exception) {
                 actionError = apiError(getApplication(), e)
             }

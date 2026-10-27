@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -91,30 +92,35 @@ fun SetupWizard(
         Spacer(Modifier.height(20.dp))
 
         // ── خطواتٌ بترتيب `Readiness` — كلٌّ بحالتها من القائمة نفسِها ──
-        StepRow(
-            done = !readiness.blockers.contains(Readiness.Blocker.LOCATION_PERMISSION_REQUIRED),
-            label = stringResource(R.string.setup_step_location),
-        )
-        StepRow(
-            done = !readiness.blockers.contains(Readiness.Blocker.LOCATION_SERVICE_OFF) &&
-                !readiness.blockers.contains(Readiness.Blocker.LOCATION_PERMISSION_REQUIRED),
-            label = stringResource(R.string.setup_step_gps),
-        )
-        StepRow(
-            done = !readiness.blockers.contains(Readiness.Blocker.BACKGROUND_LOCATION_REQUIRED),
-            label = stringResource(R.string.setup_step_background),
-        )
-        StepRow(
-            done = !readiness.blockers.contains(Readiness.Blocker.NOTIFICATION_PERMISSION_REQUIRED),
-            label = stringResource(R.string.setup_step_notifications),
-        )
+        // **ورقمٌ أو علامةُ صحّ لكلّ خطوة، والحاليّةُ مظلّلة، وفوقها «خلصت X من Y»**
+        // (تدقيق ٢٠٢٦-١٠-٢٧) — كانت نقاطاً تفترق باللون وحدَه.
         // **وإعفاءُ البطّاريّة — «اعمل في الخلفية»** — خطوةُ تهيئةٍ لا بطاقةَ
-        // رئيسيّةٍ دائمة (قرارُ المالك ٢٠٢٦-٠٩-٢٨). **استرشاديٌّ لا يحجب المتابعة**:
-        // يُطلَب هنا مرّةً، فمن رفضه يعمل والمسارُ الأماميُّ يُبقي موضعَه حيّاً.
-        StepRow(
-            done = batteryExempt,
-            label = stringResource(R.string.setup_step_battery),
+        // رئيسيّةٍ دائمة (قرارُ المالك ٢٠٢٦-٠٩-٢٨). **استرشاديٌّ لا يحجب المتابعة.**
+        val steps = listOf(
+            stringResource(R.string.setup_step_location) to
+                !readiness.blockers.contains(Readiness.Blocker.LOCATION_PERMISSION_REQUIRED),
+            stringResource(R.string.setup_step_gps) to
+                (!readiness.blockers.contains(Readiness.Blocker.LOCATION_SERVICE_OFF) &&
+                    !readiness.blockers.contains(Readiness.Blocker.LOCATION_PERMISSION_REQUIRED)),
+            stringResource(R.string.setup_step_background) to
+                !readiness.blockers.contains(Readiness.Blocker.BACKGROUND_LOCATION_REQUIRED),
+            stringResource(R.string.setup_step_notifications) to
+                !readiness.blockers.contains(Readiness.Blocker.NOTIFICATION_PERMISSION_REQUIRED),
+            stringResource(R.string.setup_step_battery) to batteryExempt,
         )
+        val doneCount = steps.count { it.second }
+        val current = steps.indexOfFirst { !it.second }
+        Text(
+            text = stringResource(R.string.setup_progress, doneCount, steps.size),
+            color = Rahal.colors.ink,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(Modifier.height(6.dp))
+        com.rahalgo.ui.Bar(ratio = doneCount.toFloat() / steps.size, color = Rahal.colors.success)
+        Spacer(Modifier.height(14.dp))
+        steps.forEachIndexed { i, (label, done) ->
+            StepRow(number = i + 1, done = done, current = i == current, label = label)
+        }
 
         Spacer(Modifier.height(20.dp))
 
@@ -141,12 +147,8 @@ fun SetupWizard(
                 color = Rahal.colors.inkMuted,
                 style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
             )
-            Spacer(Modifier.height(6.dp))
-            RahalButton(
-                onClick = onOpenAppSettings,
-                modifier = Modifier.fillMaxWidth(),
-                tone = com.rahalgo.ui.Tone.Accent,
-            ) {
+            // **وبابُ الإعدادات رابطٌ صغير** — لا زرٌّ برتقاليٌّ ممتلئٌ ينازع الأساسيّ.
+            com.rahalgo.ui.RahalTextButton(onClick = onOpenAppSettings, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.setup_open_settings))
             }
         }
@@ -172,18 +174,54 @@ fun SetupWizard(
 }
 
 @Composable
-private fun StepRow(done: Boolean, label: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
+private fun StepRow(number: Int, done: Boolean, current: Boolean, label: String) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(Rahal.shape.sm)
+            .background(if (current) Rahal.colors.brand.copy(alpha = 0.08f) else androidx.compose.ui.graphics.Color.Transparent)
+            .padding(horizontal = 8.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         Box(
             Modifier
-                .size(18.dp)
+                .size(26.dp)
                 .background(
-                    if (done) Rahal.colors.brand else Rahal.colors.field,
+                    when {
+                        done -> Rahal.colors.success
+                        current -> Rahal.colors.brand
+                        else -> Rahal.colors.field
+                    },
                     CircleShape,
                 ),
-        )
+            contentAlignment = Alignment.Center,
+        ) {
+            if (done) {
+                androidx.compose.material3.Icon(
+                    painter = androidx.compose.ui.res.painterResource(R.drawable.ic_check_circle),
+                    contentDescription = null,
+                    tint = androidx.compose.ui.graphics.Color.White,
+                    modifier = Modifier.size(18.dp),
+                )
+            } else {
+                Text(
+                    text = com.rahalgo.ui.grouped(number.toLong()),
+                    color = if (current) Rahal.colors.onBrand else Rahal.colors.inkMuted,
+                    fontWeight = FontWeight.Bold,
+                    style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
+                )
+            }
+        }
         Spacer(Modifier.width(10.dp))
-        Text(label, color = if (done) Rahal.colors.brand else Rahal.colors.inkMuted)
+        Text(
+            label,
+            color = when {
+                done -> Rahal.colors.success
+                current -> Rahal.colors.ink
+                else -> Rahal.colors.inkMuted
+            },
+            fontWeight = if (current) FontWeight.Bold else FontWeight.Normal,
+        )
     }
-    Spacer(Modifier.height(10.dp))
+    Spacer(Modifier.height(6.dp))
 }

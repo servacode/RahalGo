@@ -208,6 +208,65 @@ private fun Grid(vm: MenuViewModel, media: (String?) -> String?) {
                 Spacer(Modifier.height(6.dp))
             }
         }
+        // ══════════════════════════════════════════════════════════════
+        // **والبحثُ يقلب الشبكةَ قائمةَ أصناف** (تدقيقُ ٢٠٢٦-١٠-٢٧)
+        // ══════════════════════════════════════════════════════════════
+        item(span = { GridItemSpan(maxLineSpan) }) {
+            OutlinedTextField(
+                value = vm.query,
+                onValueChange = { vm.query = it.take(60) },
+                placeholder = { Text(stringResource(com.rahalgo.ui.R.string.ow_search)) },
+                leadingIcon = {
+                    androidx.compose.material3.Icon(
+                        androidx.compose.ui.res.painterResource(com.rahalgo.ui.R.drawable.ic_search),
+                        contentDescription = null,
+                        tint = Rahal.colors.inkMuted,
+                    )
+                },
+                trailingIcon = if (vm.query.isNotEmpty()) {
+                    {
+                        androidx.compose.material3.IconButton(onClick = { vm.query = "" }) {
+                            androidx.compose.material3.Icon(
+                                androidx.compose.ui.res.painterResource(com.rahalgo.ui.R.drawable.ic_close),
+                                contentDescription = stringResource(com.rahalgo.ui.R.string.act_cancel),
+                                tint = Rahal.colors.inkMuted,
+                            )
+                        }
+                    }
+                } else {
+                    null
+                },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        val q = vm.query.trim()
+        if (q.isNotEmpty()) {
+            val found = vm.groups.flatMap { it.items }.filter { it.name.contains(q, ignoreCase = true) }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                if (found.isEmpty()) {
+                    Text(
+                        stringResource(R.string.menu_search_none),
+                        color = Rahal.colors.inkMuted,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(vertical = 12.dp),
+                    )
+                } else {
+                    Card {
+                        found.forEach { item ->
+                            ItemRow(
+                                item = item,
+                                media = media,
+                                suspended = vm.suspended,
+                                onToggle = { vm.toggle(item.id) },
+                                onEdit = { vm.editItem(item) },
+                            )
+                        }
+                    }
+                }
+            }
+            return@LazyVerticalGrid
+        }
         items(vm.groups, key = { it.name }) { g ->
             Column(
                 Modifier

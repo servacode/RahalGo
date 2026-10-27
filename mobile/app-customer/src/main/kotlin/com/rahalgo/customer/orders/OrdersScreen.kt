@@ -21,6 +21,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.verticalScroll
 import com.rahalgo.customer.R
 import com.rahalgo.design.Rahal
 import com.rahalgo.shared.customer.ComplaintReason
@@ -46,16 +53,92 @@ import com.rahalgo.ui.OrderChatViewModel
  * منتهيةٍ لا يجده.**
  */
 @Composable
-fun OrdersScreen(vm: OrdersViewModel, walletBalance: Long = 0) {
+fun OrdersScreen(
+    vm: OrdersViewModel,
+    walletBalance: Long = 0,
+    /** **«تصفّح السوق» من الفراغ** — ينقل لتبويب التسوّق. */
+    onBrowse: () -> Unit = {},
+) {
+    // ══════════════════════════════════════════════════════════════════
+    // **«جارية · منتهية» فوق «طلباتي»** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **من أراد طلبَ الأمس ليقيّمه أو يشتكي عليه فتح «طلباتي» فوجدها فارغة** —
+    // والسجلُّ في القائمة الجانبيّة. **فصار حبّتين بالعدد هنا، وبندُ القائمة
+    // باقٍ اختصاراً.** **والقائمتان من جلبٍ واحد** (`load`) — لا نداءَ ثانٍ.
+    var showHistory by rememberSaveable { mutableStateOf(false) }
     OrdersList(
         vm = vm,
-        list = vm.open,
+        list = if (showHistory) vm.history else vm.open,
         title = stringResource(R.string.nav_orders_mine),
         hint = stringResource(R.string.soon_orders),
-        empty = stringResource(R.string.ord_none_open),
-        history = false,
-        walletBalance = walletBalance,
+        empty = stringResource(if (showHistory) R.string.ord_none_history else R.string.ord_none_open),
+        history = showHistory,
+        // **والسجلُّ منتهٍ — لا تأكيدَ عرضٍ فيه، فلا حاجةَ لرصيد.**
+        walletBalance = if (showHistory) 0 else walletBalance,
+        onBrowse = if (showHistory) null else onBrowse,
+        tabs = {
+            Spacer(Modifier.height(4.dp))
+            androidx.compose.foundation.layout.Row(
+                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+            ) {
+                TabPill(
+                    text = stringResource(R.string.ord_tab_open, vm.open.size.toString()),
+                    on = !showHistory,
+                ) { showHistory = false }
+                TabPill(
+                    text = stringResource(
+                        R.string.ord_tab_history,
+                        vm.history.size.toString() + if (vm.historyHasMore) "+" else "",
+                    ),
+                    on = showHistory,
+                ) { showHistory = true }
+            }
+            Spacer(Modifier.height(4.dp))
+        },
     )
+}
+
+/** **حبّةُ اختيار** — المختارةُ بلون العلامة والأخرى بإطار، كفلاتر لوحة الإدارة. */
+@Composable
+private fun TabPill(text: String, on: Boolean, onClick: () -> Unit) {
+    Text(
+        text = text,
+        color = if (on) Rahal.colors.onBrand else Rahal.colors.ink,
+        fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
+        style = MaterialTheme.typography.labelLarge,
+        modifier = Modifier
+            .clip(Rahal.shape.pill)
+            .then(
+                if (on) Modifier.background(Rahal.colors.brand)
+                else Modifier.border(1.dp, Rahal.colors.line, Rahal.shape.pill),
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+    )
+}
+
+/**
+ * **كم ثانيةً بقيت من مهلة الإلغاء الآن** — تمشي والشاشةُ مفتوحة (تدقيقُ ٢٠٢٦-١٠-٢٧).
+ *
+ * **وكانت رقمَ آخرِ جلب** فيبقى الزرُّ بعد انقضائها ويُرَدّ الضغط. **و`-1` «بلا مهلة»
+ * و`0` «لا» يمرّان كما هما.**
+ */
+@Composable
+private fun cancelLeft(secs: Int, loadedAt: Long): Int {
+    if (secs <= 0) return secs
+    val left by androidx.compose.runtime.produceState(remain(secs, loadedAt), secs, loadedAt) {
+        while (value > 0) {
+            kotlinx.coroutines.delay(1000)
+            value = remain(secs, loadedAt)
+        }
+    }
+    return left
+}
+
+private fun remain(secs: Int, at: Long): Int {
+    val gone = if (at <= 0L) 0L else (android.os.SystemClock.elapsedRealtime() - at) / 1000L
+    return (secs - gone).toInt().coerceAtLeast(0)
 }
 
 /** **سجلُّ الطلبات — ما انتهى بفواتيره.** */
@@ -82,6 +165,10 @@ private fun OrdersList(
     empty: String,
     history: Boolean,
     walletBalance: Long,
+    /** **زرُّ «تصفّح السوق» تحت الفراغ** — و`null` لا زرّ. */
+    onBrowse: (() -> Unit)? = null,
+    /** **حبّتا «جارية · منتهية»** تحت العنوان — و`null` في شاشة السجلّ وحدَها. */
+    tabs: (@Composable () -> Unit)? = null,
 ) {
     // **والنوافذُ تبقى بعد الدوران** — من كتب سببَ شكواه ثمّ أمال هاتفَه
     // لا يعيد كتابتَه. (وقع في تطبيق السائق ٢٠٢٦-٠٨-١٣.)
@@ -128,19 +215,40 @@ private fun OrdersList(
     ) {
         item {
             ScreenTitle(title, hint)
+            tabs?.invoke()
 
             // **وخطأُ الفعل يبقى ظاهراً** — لا تمحوه إعادةُ القراءة.
             if (vm.actionError.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
                 Note(vm.actionError, Rahal.colors.danger)
             }
-            if (list.isEmpty()) Empty(empty)
+            // **ولا «لا طلبات» قبل أوّل جواب** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كانت تومض لحظةً
+            // فيظنّ من طلب الآن أنّ طلبَه ضاع.
+            if (list.isEmpty() && !vm.loadedOnce) {
+                androidx.compose.foundation.layout.Box(
+                    Modifier.fillMaxWidth().padding(vertical = 40.dp),
+                    contentAlignment = androidx.compose.ui.Alignment.Center,
+                ) { com.rahalgo.ui.RahalLoader() }
+            } else if (list.isEmpty()) {
+                Empty(
+                    text = empty,
+                    actionLabel = if (onBrowse != null) stringResource(R.string.act_browse_market) else "",
+                    onAction = onBrowse,
+                )
+            }
         }
 
         items(list, key = { it.id }) { o ->
             Spacer(Modifier.height(10.dp))
+            val left = if (history) 0 else cancelLeft(o.cancelSecondsLeft, vm.loadedAt)
             OrderCard(
                 order = o,
+                // **والعدّادُ على الزرّ** — «إلغاء الطلب (باقي 0:45)»، ويختفي عند الصفر.
+                cancelLabel = if (left > 0) {
+                    stringResource(R.string.ord_cancel_left, "%d:%02d".format(java.util.Locale.US, left / 60, left % 60))
+                } else {
+                    null
+                },
                 // ══════════════════════════════════════════════════════
                 // **والإلغاءُ يُعرض حيث يُقبل — و«بلا مهلة» ليست «لا»**
                 // ══════════════════════════════════════════════════════
@@ -153,7 +261,7 @@ private fun OrdersList(
                 // الوحيدة التي يملك فيها الإلغاءَ بلا قيد**: طلبٌ
                 // بانتظار القبول. (شهده المالك ٢٠٢٦-٠٨-١٥: «ما في زرّ
                 // إلغاء بالتطبيق صح؟».)
-                onCancel = if (!history && o.cancelSecondsLeft != 0) {
+                onCancel = if (!history && left != 0) {
                     { cancelId = o.id }
                 } else {
                     null
@@ -241,6 +349,9 @@ private fun OrdersList(
     complainId?.let { id ->
         ComplainDialog(
             reasons = vm.reasons,
+            loading = vm.reasonsLoading,
+            failed = vm.reasonsFailed,
+            onRetry = { vm.loadReasons(id) },
             onConfirm = { reason, note -> vm.complain(id, reason, note); complainId = null },
             onDismiss = { complainId = null },
         )
@@ -308,8 +419,15 @@ internal fun RateDialog(
     onConfirm: (Int, Int?) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var stars by rememberSaveable { mutableIntStateOf(5) }
-    var driverStars by rememberSaveable { mutableIntStateOf(5) }
+    // ══════════════════════════════════════════════════════════════════
+    // **والنجومُ تبدأ فارغة** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **كانت تبدأ خمساً** فمن ضغط «إرسال» دغري أرسل خمسَ نجومٍ وهو لم يقيّم —
+    // **فيتضخّم المتوسّطُ في اللوحة ويختفي الضعيف.** فالزرُّ معطّلٌ حتّى يختار.
+    var stars by rememberSaveable { mutableIntStateOf(0) }
+    var driverStars by rememberSaveable { mutableIntStateOf(0) }
+    val ready = stars > 0 && (!hasDriver || driverStars > 0)
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.ord_rate_title)) },
@@ -319,13 +437,16 @@ internal fun RateDialog(
                     text = stringResource(R.string.ord_rate_service),
                     color = Rahal.colors.ink,
                     style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
                 )
                 StarRow(stars) { stars = it }
                 if (hasDriver) {
+                    Spacer(Modifier.height(8.dp))
                     Text(
                         text = stringResource(R.string.ord_rate_driver),
                         color = Rahal.colors.ink,
                         style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
                     )
                     StarRow(driverStars) { driverStars = it }
                 }
@@ -336,6 +457,7 @@ internal fun RateDialog(
                 onClick = {
                     onConfirm(stars, driverStars.takeIf { hasDriver })
                 },
+                enabled = ready,
             ) { Text(stringResource(R.string.ord_send)) }
         },
         dismissButton = {
@@ -347,17 +469,43 @@ internal fun RateDialog(
 /** **صفُّ نجومٍ واحد** — ونسختان منه تفترقان يومَ يتبدّل شكلُ النجمة. */
 @Composable
 private fun StarRow(value: Int, onPick: (Int) -> Unit) {
-    androidx.compose.foundation.layout.Row {
+    // **أيقونةُ نجمةٍ حقيقيّة بحجم ٤٠** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧) — كانت «★/☆» نصّاً
+    // يتبدّل شكلُه من جهازٍ لجهاز. **والفارغةُ بلون الحدّ والمختارةُ برتقاليّة.**
+    androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
         (1..5).forEach { n ->
-            RahalTextButton(onClick = { onPick(n) }) {
-                Text(
-                    text = if (n <= value) "★" else "☆",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = Rahal.colors.accent,
+            val label = stringResource(R.string.rate_star_n, n.toString())
+            androidx.compose.foundation.layout.Box(
+                Modifier
+                    .size(44.dp)
+                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .clickable(onClickLabel = label) { onPick(n) },
+                contentAlignment = androidx.compose.ui.Alignment.Center,
+            ) {
+                androidx.compose.material3.Icon(
+                    painter = androidx.compose.ui.res.painterResource(com.rahalgo.ui.R.drawable.ic_star),
+                    contentDescription = label,
+                    tint = if (n <= value) Rahal.colors.accent else Rahal.colors.line,
+                    modifier = Modifier.size(40.dp),
                 )
             }
         }
     }
+    // **وكلمةٌ تحت النجوم تقول ما اختار** — «سيئ، مقبول، منيح، ممتاز».
+    Text(
+        text = stringResource(
+            when (value) {
+                1 -> R.string.rate_word_1
+                2 -> R.string.rate_word_2
+                3 -> R.string.rate_word_3
+                4 -> R.string.rate_word_4
+                5 -> R.string.rate_word_5
+                else -> R.string.rate_pick
+            },
+        ),
+        color = if (value > 0) Rahal.colors.accent else Rahal.colors.inkMuted,
+        style = MaterialTheme.typography.bodySmall,
+        fontWeight = if (value > 0) FontWeight.Bold else FontWeight.Normal,
+    )
 }
 
 /**
@@ -381,6 +529,9 @@ private fun StarRow(value: Int, onPick: (Int) -> Unit) {
 @Composable
 private fun ComplainDialog(
     reasons: List<ComplaintReason>,
+    loading: Boolean,
+    failed: Boolean,
+    onRetry: () -> Unit,
     onConfirm: (String, String) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -391,16 +542,41 @@ private fun ComplainDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.ord_complain_title)) },
         text = {
-            androidx.compose.foundation.layout.Column {
-                if (reasons.isEmpty()) {
-                    Text(stringResource(R.string.ord_reasons_loading))
+            androidx.compose.foundation.layout.Column(
+                Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState()),
+            ) {
+                // **«عم نجيب» أم «ما قدرنا» مع «إعادة»** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كانت النافذةُ
+                // تعلق على «تجلب الأسباب…» إلى الأبد إن سقط النداء.
+                if (reasons.isEmpty() && failed && !loading) {
+                    Text(stringResource(R.string.ord_reasons_failed), color = Rahal.colors.danger)
+                    RahalTextButton(onClick = onRetry) {
+                        Text(stringResource(com.rahalgo.ui.R.string.act_retry))
+                    }
+                } else if (reasons.isEmpty()) {
+                    Text(stringResource(R.string.ord_reasons_loading), color = Rahal.colors.inkMuted)
                 }
+                // **صفوفٌ بزرّ اختيارٍ حقيقيّ** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧) — كانت «● ○»
+                // حروفاً لا يعرفها قارئُ الشاشة اختياراً. **كبطاقتي الدفع في السلّة.**
                 reasons.forEach { r ->
                     val on = r.code == pick
-                    RahalTextButton(onClick = { pick = r.code }) {
+                    androidx.compose.foundation.layout.Row(
+                        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(Rahal.shape.sm)
+                            .selectable(
+                                selected = on,
+                                onClick = { pick = r.code },
+                                role = androidx.compose.ui.semantics.Role.RadioButton,
+                            )
+                            .padding(vertical = 2.dp),
+                    ) {
+                        androidx.compose.material3.RadioButton(selected = on, onClick = null)
                         Text(
-                            text = (if (on) "● " else "○ ") + reasonLabel(r.code),
-                            color = if (on) Rahal.colors.brand else Rahal.colors.inkMuted,
+                            text = reasonLabel(r.code),
+                            color = if (on) Rahal.colors.ink else Rahal.colors.inkMuted,
+                            fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
+                            style = MaterialTheme.typography.bodyMedium,
                         )
                     }
                 }

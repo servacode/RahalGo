@@ -1,6 +1,9 @@
 package com.rahalgo.driver.trip
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import com.rahalgo.design.Rahal
 import com.rahalgo.ui.chatDay
 import com.rahalgo.ui.ChatDayChip
@@ -108,6 +111,15 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
             }
         }
 
+        // **والفارغُ يقول ماذا يفعل** — لا نافذةٌ بيضاء بلا كلمة.
+        if (state.messages.isEmpty()) {
+            Text(
+                text = stringResource(R.string.chat_empty_driver),
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+            )
+        }
         LazyColumn(
             Modifier.weight(1f, fill = false).fillMaxWidth().padding(horizontal = 12.dp),
             // **والأحدث في الأسفل** — كما في كلّ حديث، **ويُقلب الترتيب
@@ -176,6 +188,36 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp),
                 )
+            }
+            // ══════════════════════════════════════════════════════════
+            // **وردودٌ جاهزةٌ بضغطة** (تدقيق ٢٠٢٦-١٠-٢٧) — وهو يقود، والكتابةُ خطر.
+            // ══════════════════════════════════════════════════════════
+            val quick = listOf(
+                stringResource(R.string.chat_quick_arrived),
+                stringResource(R.string.chat_quick_downstairs),
+                stringResource(R.string.chat_quick_searching),
+                stringResource(R.string.chat_quick_five_min),
+            )
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(start = 10.dp, end = 10.dp, top = 6.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                quick.forEach { q ->
+                    Box(
+                        Modifier
+                            .clip(Rahal.shape.pill)
+                            .background(Rahal.colors.field)
+                            .clickable(enabled = !state.busy) { actions.send(q) }
+                            .heightIn(min = 40.dp)
+                            .padding(horizontal = 14.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(q, color = Rahal.colors.ink, style = MaterialTheme.typography.labelLarge)
+                    }
+                }
             }
             OutlinedTextField(
                 value = draft,
