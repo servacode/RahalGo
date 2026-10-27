@@ -896,7 +896,9 @@ function opsNext(
 
   // **وبعد التحويل لا تُلغي طلباً** — ولو لم يمسكه سائقٌ بعد. وما قبله بيدها:
   // طلبٌ لم يعلم به مطبخٌ ولا تحرّك له سائق.
-  if (AFTER_HANDOFF.has(status)) {
+  // **وفي «المنصّة تدير» وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٢٧) — المحرّكُ لا يحجبه في «المتاجر تدير»
+  // (`rolesUnderMode` يرجع قبل حارس `afterHandoff`)، فكان الزرُّ غائباً والخادمُ يقبله.
+  if (!selfManage && AFTER_HANDOFF.has(status)) {
     next = next.filter((t) => t !== "cancelled");
   }
   return next;
@@ -1979,7 +1981,10 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
   const kindChips = [
     { id: "", label: H.kindAll },
     { id: "standard", label: H.kindStandard },
-    { id: "custom", label: H.kindCustom },
+    // **«مشتريات» و«أمانة» منفصلان** (قرارُ المالك ٢٠٢٦-١٠-٢٧) — و`custom` القديمُ
+    // يبقى يعمل في الروابط القديمة على المحرّك.
+    { id: "custom_purchase", label: H.kindPurchase },
+    { id: "custom_amanah", label: H.kindAmanah },
     { id: "merchant_delivery", label: H.kindDelivery },
   ];
   const periodChips = [

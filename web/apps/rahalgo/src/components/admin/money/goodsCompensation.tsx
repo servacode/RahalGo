@@ -68,6 +68,31 @@ export function GoodsCompensationView() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [sent, setSent] = useState("");
+  /**
+   * **«ما في تعويض»** (قرارُ المالك ٢٠٢٦-١٠-٢٧) — بتأكيدٍ وسببٍ اختياريّ، فيخرج الطلبُ من
+   * القائمة نهائياً بلا مال (`POST /orders/{id}/goods/compensation/none`، `finance.manage`).
+   */
+  const [noneFor, setNoneFor] = useState<string | null>(null);
+  const [noneReason, setNoneReason] = useState("");
+
+  async function markNone(r: Row) {
+    setBusy(true);
+    setErr("");
+    try {
+      await api(`/api/v1/admin/orders/${r.order_id}/goods/compensation/none`, {
+        method: "POST",
+        body: JSON.stringify({ reason: noneReason.trim() }),
+      });
+      setNoneFor(null);
+      setNoneReason("");
+      setSent(L.goodsNoneDone);
+      reload();
+    } catch (e) {
+      setErr(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   async function submit(r: Row) {
     const v = Math.round(Number(amount));
@@ -227,20 +252,58 @@ export function GoodsCompensationView() {
                     saveLabel={L.goodsSend}
                   />
                 </div>
+              ) : noneFor === r.order_id ? (
+                <div className="space-y-2 border-t border-line-soft pt-3">
+                  <p className="text-xs text-ink-muted">{L.goodsNoneConfirm}</p>
+                  <Input
+                    id={`goods-none-reason-${r.order_id}`}
+                    label={L.goodsNoneReason}
+                    value={noneReason}
+                    maxLength={500}
+                    onChange={(e) => {
+                      setNoneReason(e.target.value);
+                      setErr("");
+                    }}
+                  />
+                  {err && <p className="text-xs text-danger">{err}</p>}
+                  <FormActions
+                    busy={busy}
+                    tone="danger"
+                    onSave={() => void markNone(r)}
+                    onCancel={() => {
+                      setNoneFor(null);
+                      setErr("");
+                    }}
+                    saveLabel={L.goodsNoneYes}
+                  />
+                </div>
               ) : (
                 canWrite &&
                 r.request_status !== "pending" && (
-                  <div className="mt-auto border-t border-line-soft pt-3">
+                  <div className="mt-auto flex flex-col gap-2 border-t border-line-soft pt-3">
                     <Button
                       className="w-full"
                       variant={r.request_status === "rejected" ? "secondary" : "primary"}
                       onClick={() => {
                         setOpen(r.order_id);
+                        setNoneFor(null);
                         setAmount("");
                         setErr("");
                       }}
                     >
                       {r.request_status === "rejected" ? L.goodsRetry : G.compensate}
+                    </Button>
+                    <Button
+                      className="w-full"
+                      variant="ghost"
+                      onClick={() => {
+                        setNoneFor(r.order_id);
+                        setOpen(null);
+                        setNoneReason("");
+                        setErr("");
+                      }}
+                    >
+                      {L.goodsNone}
                     </Button>
                   </div>
                 )

@@ -366,7 +366,15 @@ type ListFilter struct {
 var errDateRangeInverted = httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
 
 // listKinds أنواعُ الطلب التي يُرشَّح بها.
-var listKinds = map[string]bool{"standard": true, "custom": true, "merchant_delivery": true}
+//
+// و`custom_purchase` و`custom_amanah` **شطرا الطلب الخاصّ** بـ`custom_mode` —
+// (قرارُ المالك ٢٠٢٦-١٠-٢٧: «مشتريات» و«أمانة» فلتران منفصلان.) **و`custom`
+// باقٍ للروابط القديمة** — يجمع الشطرين كما كان.
+var listKinds = map[string]bool{"standard": true, "custom": true, "merchant_delivery": true,
+	"custom_purchase": true, "custom_amanah": true}
+
+// customModeKinds **فلترُ الشطر ← قيمةُ `custom_mode`.**
+var customModeKinds = map[string]string{"custom_purchase": "purchase", "custom_amanah": "amanah"}
 
 // validUUID **أهو معرّفٌ صالح؟** — فلا يُصبّ نصٌّ فاسدٌ `uuid` فيسقط الاستعلام.
 func validUUID(s string) bool {
@@ -475,7 +483,9 @@ func ListWhere(f ListFilter, lim StuckLimits) (string, []any, error) {
 	if f.To != "" {
 		and(`o.created_at < account_day_start(` + arg(f.To) + `::date + 1)`)
 	}
-	if f.Kind != "" {
+	if mode, ok := customModeKinds[f.Kind]; ok {
+		and(`o.kind = 'custom' AND o.custom_mode = ` + arg(mode))
+	} else if f.Kind != "" {
 		and(`o.kind = ` + arg(f.Kind))
 	}
 	if f.SalesOnly {

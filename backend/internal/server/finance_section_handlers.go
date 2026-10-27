@@ -136,6 +136,7 @@ func (s *Server) handleGoodsCompensations(w http.ResponseWriter, r *http.Request
 		     WHERE r.order_id = o.id AND r.kind = 'merchant_goods'
 		     ORDER BY r.created_at DESC LIMIT 1) req ON true
 		WHERE o.goods_settled_to = 'merchant'
+		  AND o.goods_comp_none_at IS NULL
 		  AND COALESCE(req.status, '') <> 'approved'
 		  AND NOT EXISTS (
 		      SELECT 1 FROM wallet_transactions wt

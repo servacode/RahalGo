@@ -45,6 +45,7 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
@@ -309,7 +310,51 @@ var (
 		"goods_compensation_cap", "errors.goods_compensation_cap")
 	errGoodsCompensated = httpx.NewError(http.StatusConflict,
 		"goods_already_compensated", "errors.goods_already_compensated")
+	// **قيل «ما في تعويض»** (٢٠٢٦-١٠-٢٧) — ولا تعويضَ بعده.
+	errGoodsCompNone = httpx.NewError(http.StatusConflict,
+		"goods_comp_none", "errors.goods_comp_none")
+	// **طلبُ تعويضٍ معلَّق** — يُرفض من «التعويضات» قبل «ما في تعويض».
+	errGoodsCompPending = httpx.NewError(http.StatusConflict,
+		"goods_comp_pending", "errors.goods_comp_pending")
 )
+
+// handleGoodsNoCompensation **«ما في تعويض»** — `POST /orders/{id}/goods/compensation/none`.
+//
+// (قرارُ المالك ٢٠٢٦-١٠-٢٧.) بضاعةٌ رجعت إلى متجرها ولا تعويضَ لها: **تخرج من طابور
+// تعويض البضاعة نهائياً، ولا يتحرّك قرش** — فلا تأكيدَ بكلمة السرّ (`authz/sensitive.go`
+// للمال وحدَه). **وبقدرة أخيها** (`finance.manage`)، والسببُ اختياريٌّ يُحفظ في الطلب
+// وفي سجلّ التدقيق.
+func (s *Server) handleGoodsNoCompensation(w http.ResponseWriter, r *http.Request) {
+	orderID := chi.URLParam(r, "id")
+	req, err := decode[struct {
+		Reason string `json:"reason"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	reason := strings.TrimSpace(req.Reason)
+	if len([]rune(reason)) > 500 {
+		s.respondErr(w, errValidation)
+		return
+	}
+	if err := s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
+		if err := orders.MarkGoodsNoCompensationTx(ctx, q, orderID, userIDFrom(r), reason); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return httpx.ErrNotFound
+			}
+			return compensationErr(err)
+		}
+		return s.auditTx(ctx, q, r, "finance.goods_comp_none", "order", orderID, map[string]any{
+			"reason": reason,
+		})
+	}); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.touch("order", "ops")
+	httpx.JSON(w, http.StatusOK, map[string]any{"none": true})
+}
 
 // handleGoodsCompensation **تعويضُ الماليّة للمتجر عن بضاعةٍ رُدّت إليه.**
 //

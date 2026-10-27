@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 576,
+    "routes": 577,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -33,8 +33,8 @@
     "setting_defs": 251,
     "behaviour_settings": 206,
     "order_fields": 120,
-    "test_files": 664,
-    "test_funcs": 2564
+    "test_files": 666,
+    "test_funcs": 2566
   },
   "flows": [
     {
@@ -10452,6 +10452,12 @@
       "name": "TestList_DateRangeMerchantDriverAndSeenAt",
       "file": "internal/orders/list_filters_test.go",
       "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestListWhere_CustomModeKinds",
+      "file": "internal/orders/list_kind_mode_test.go",
+      "package": "orders",
       "orphan": true
     },
     {
@@ -27962,6 +27968,12 @@
     {
       "name": "TestGeoSeed_NoGovernorateWithoutDistricts",
       "file": "internal/server/geo_seed_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestGoodsCompNone_LeavesQueueWithoutMoney",
+      "file": "internal/server/goods_comp_none_test.go",
       "package": "server",
       "orphan": true
     },

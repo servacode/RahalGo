@@ -144,6 +144,7 @@ var adminPolicy = []Rule{
 	// **العمليّاتُ تقرّر أين البضاعة، والماليّةُ تكتب التعويض** (البند ١٢).
 	{"POST", "/orders/{id}/goods", OrdersIntervene},
 	{"POST", "/orders/{id}/goods/compensation", FinanceManage},
+	{"POST", "/orders/{id}/goods/compensation/none", FinanceManage}, // «ما في تعويض» — بلا مال (٢٠٢٦-١٠-٢٧)
 	// **إنهاءُ الإدارة عند باب الزبون** — سلّم الآن أو عُد إلى المكتب (مساءَ ٢٠٢٦-١٠-٠٢).
 	{"POST", "/orders/{id}/door-resolution", OrdersIntervene},
 	{"POST", "/orders/{id}/whatsapp", OrdersIntervene},

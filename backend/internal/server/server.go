@@ -1586,6 +1586,7 @@ func (s *Server) Router() http.Handler {
 			r.Post("/orders/{id}/goods", s.handleGoods)
 			// **والتعويضُ للماليّة بخطوةٍ ثانية** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ١٢).
 			r.Post("/orders/{id}/goods/compensation", s.handleGoodsCompensation)
+			r.Post("/orders/{id}/goods/compensation/none", s.handleGoodsNoCompensation)
 
 			// الأقسام التشغيلية لكل دور (قرار 16)
 			// **العروضُ والخصومات** — لافتةٌ تُرى وخصمٌ يُطبَّق في الدفتر.
