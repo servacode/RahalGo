@@ -142,7 +142,11 @@ class ClientsViewModel(app: Application) : AndroidViewModel(app) {
             // المترجِمُ لأنّه نصٌّ صالحٌ نحوا.**
             //
             // **والمعلَّقون على حدة** — سقوطُهم لا يُفرغ المقبولين.
-            runCatching { leads = api.leads().filter { it.status != "converted" } }
+            // **و«بحاجة معلومات» أوّلاً** — هي ما ينتظر يدَه هو (٢٠٢٦-١٠-٢٧).
+            runCatching {
+                leads = api.leads().filter { it.status != "converted" }
+                    .sortedByDescending { it.status == "needs_info" }
+            }
             busy = false
         }
     }
