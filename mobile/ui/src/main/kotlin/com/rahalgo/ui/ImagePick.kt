@@ -47,7 +47,10 @@ private const val JPEG_QUALITY = 85
  * بأربعة آلاف بكسلٍ تُفكّ إلى أربعةٍ وستّين ميغا في ذاكرة الهاتف،
  * **وهاتفٌ قديمٌ يسقط قبل أن يرفع.**
  */
-fun readScaledImage(context: Context, uri: Uri): ByteArray {
+fun readScaledImage(context: Context, uri: Uri): ByteArray = compressJpeg(decodeUpright(context, uri))
+
+/** يفكّ الصورة مصغّرةً ومُدارةً كما صُوّرت — بلا ضغط. */
+internal fun decodeUpright(context: Context, uri: Uri): Bitmap {
     val cr = context.contentResolver
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
     cr.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
@@ -68,10 +71,13 @@ fun readScaledImage(context: Context, uri: Uri): ByteArray {
     // ترويستها** — والفكُّ ثمّ الضغطُ هنا يرمي الترويسة، فتصل المحرّكَ مقلوبةً
     // ولا وسمَ فيها يُصلحها.
     val upright = rotateByExif(context, uri, bmp)
+    if (upright !== bmp) bmp.recycle()
+    return upright
+}
+
+internal fun compressJpeg(b: Bitmap): ByteArray {
     val out = ByteArrayOutputStream()
-    upright.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
-    if (upright !== bmp) upright.recycle()
-    bmp.recycle()
+    b.compress(Bitmap.CompressFormat.JPEG, JPEG_QUALITY, out)
     return out.toByteArray()
 }
 
@@ -131,16 +137,45 @@ private fun rotateByExif(context: Context, uri: Uri, bmp: Bitmap): Bitmap {
  * انتهت صلاحيّتُه.**
  */
 @Composable
-fun rememberImagePicker(onBytes: (ByteArray) -> Unit): () -> Unit {
+fun rememberImagePicker(
+    /**
+     * معاينة وقصّ مربّع قبل الرفع (طلب المالك ٢٠٢٦-١٠-٢٧) — لصور الأصناف
+     * واللوغو، لأنّ الزبون بيشوفها مربّعة. صورة الحساب بلاه.
+     */
+    crop: Boolean = false,
+    onBytes: (ByteArray) -> Unit,
+): () -> Unit {
     val context = LocalContext.current
     var asking by remember { mutableStateOf(false) }
     // **وعنوانُ الصورة الملتقَطة يُحفظ** — الردُّ يقول «نجحت» ولا يقول
     // أين، **فمن لم يحتفظ به فقد الصورةَ التي التُقطت للتوّ.**
     var shot by remember { mutableStateOf<Uri?>(null) }
 
+    var cropping by remember { mutableStateOf<Bitmap?>(null) }
+
     fun deliver(uri: Uri?) {
         // **وفشلُ القراءة لا يُسقط الشاشة** — يُترك بلا صورة.
-        uri?.let { runCatching { readScaledImage(context, it) }.getOrNull()?.let(onBytes) }
+        if (uri == null) return
+        if (crop) {
+            runCatching { decodeUpright(context, uri) }.getOrNull()?.let { cropping = it }
+        } else {
+            runCatching { readScaledImage(context, uri) }.getOrNull()?.let(onBytes)
+        }
+    }
+
+    cropping?.let { src ->
+        ImageCropDialog(
+            source = src,
+            onDone = { out ->
+                cropping = null
+                runCatching { compressJpeg(out) }.getOrNull()?.let(onBytes)
+            },
+            onAgain = {
+                cropping = null
+                asking = true
+            },
+            onCancel = { cropping = null },
+        )
     }
 
     val gallery = rememberLauncherForActivityResult(
