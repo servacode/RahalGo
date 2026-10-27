@@ -39,7 +39,6 @@ import {
   Chips,
   Button,
   Input,
-  Select,
   Textarea,
   Modal,
   PageContainer,
@@ -64,6 +63,7 @@ import { useCanCall, useCanOpen } from "@/lib/policy";
 import { PageHero } from "@/components/admin/PageHero";
 import { Tile } from "@/components/admin/DashParts";
 import { OpenLink } from "@/components/admin/OpenLink";
+import { PeriodPicker } from "./PeriodPicker";
 
 const m = getMessages(defaultLocale);
 const C = m.admin.compensations;
@@ -194,6 +194,8 @@ export function CompensationsView({ embedded = false }: { embedded?: boolean }) 
     page: number;
     per_page: number;
     summary: Summary;
+    /** **يومُ الحساب** — أزرارُ المدّة الجاهزة تُبنى عليه. */
+    today?: string;
   }>(
     () => api(`/api/v1/admin/compensations?${qs}`),
     ["order", "wallet"],
@@ -231,15 +233,7 @@ export function CompensationsView({ embedded = false }: { embedded?: boolean }) 
   return (
     <Wrap embedded={embedded}>
       {embedded ? (
-        <section className="surface mb-4 space-y-2 p-3">
-          <p className="text-sm text-ink-muted">{C.hintAll}</p>
-          <Chips
-            wrap
-            items={tabs.map((t) => ({ id: t.key, label: t.label, count: t.count }))}
-            value={filters.status}
-            onChange={(k) => set("status", k as Tab)}
-          />
-        </section>
+        <p className="text-sm text-ink-muted">{C.hintAll}</p>
       ) : (
         <PageHero<Tab>
           icon={IconWallet}
@@ -307,49 +301,62 @@ export function CompensationsView({ embedded = false }: { embedded?: boolean }) 
         </Alert>
       )}
 
-      {/* ── الفلاتر في كرتٍ واحد ── */}
-      <section className="surface space-y-3 p-4">
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          <Select value={filters.kind} onChange={(e) => set("kind", e.target.value)} aria-label={C.colKind}>
-            <option value="">{C.filterKind}</option>
-            {Object.keys(KINDS).map((k) => (
-              <option key={k} value={k}>
-                {KINDS[k]}
-              </option>
-            ))}
-          </Select>
-          <Select value={filters.fault} onChange={(e) => set("fault", e.target.value)} aria-label={C.fault}>
-            <option value="">{C.filterFault}</option>
-            {Object.keys(FAULTS)
-              .filter((k) => !(filters.kind === "driver" && k === "driver"))
-              .map((k) => (
-                <option key={k} value={k}>
-                  {FAULTS[k]}
-                </option>
-              ))}
-          </Select>
+      {/* ── الفلاترُ في كرتٍ واحد (فحصُ ٢٠٢٦-١٠-٢٧) — النوعُ و«مين الغلطان» أزرارٌ بدل القوائم،
+          والتاريخان باسمهما فوقهما مع أزرار مدّةٍ جاهزة بيوم الحساب من الخادم. ── */}
+      <section className="surface space-y-4 p-4">
+        {/* **والحالُ في الكرت نفسِه داخل التبويب** — لا كرتان فوق بعض. */}
+        {embedded && (
+          <Chips
+            wrap
+            items={tabs.map((t) => ({ id: t.key, label: t.label, count: t.count }))}
+            value={filters.status}
+            onChange={(k) => set("status", k as Tab)}
+          />
+        )}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="space-y-1.5">
+            <p className="text-xs font-bold text-ink-muted">{C.kindLabel}</p>
+            <Chips
+              wrap
+              items={[{ id: "", label: C.filterKind }, ...Object.keys(KINDS).map((k) => ({ id: k, label: KINDS[k] }))]}
+              value={filters.kind}
+              onChange={(k) => set("kind", k)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <p className="text-xs font-bold text-ink-muted">{C.faultLabel}</p>
+            <Chips
+              wrap
+              items={[
+                { id: "", label: C.faultAll },
+                ...Object.keys(FAULTS)
+                  .filter((k) => !(filters.kind === "driver" && k === "driver"))
+                  .map((k) => ({ id: k, label: FAULTS[k] })),
+              ]}
+              value={filters.fault}
+              onChange={(k) => set("fault", k)}
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           <Input
+            id="comp-person"
+            label={C.personLabel}
             value={filters.person}
             onChange={(e) => set("person", e.target.value)}
             placeholder={C.filterPerson}
-            aria-label={C.filterPerson}
           />
-          <div className="grid grid-cols-2 gap-2">
-            <Input
-              type="date"
-              dir="ltr"
-              value={filters.from}
-              onChange={(e) => set("from", e.target.value)}
-              aria-label={C.filterFrom}
-              title={C.filterFrom}
-            />
-            <Input
-              type="date"
-              dir="ltr"
-              value={filters.to}
-              onChange={(e) => set("to", e.target.value)}
-              aria-label={C.filterTo}
-              title={C.filterTo}
+          <div className="space-y-1.5">
+            <p className="text-xs font-bold text-ink-muted">{C.dateLabel}</p>
+            <PeriodPicker
+              from={filters.from}
+              to={filters.to}
+              today={data?.today ?? ""}
+              allLabel={C.anyDate}
+              onChange={(f, t) => {
+                setFilters((x) => ({ ...x, from: f, to: t }));
+                setPage(1);
+              }}
             />
           </div>
         </div>
@@ -427,7 +434,9 @@ export function CompensationsView({ embedded = false }: { embedded?: boolean }) 
 }
 
 function Wrap({ embedded, children }: { embedded: boolean; children: React.ReactNode }) {
-  return embedded ? <div>{children}</div> : <PageContainer width="full">{children}</PageContainer>;
+  // **وفراغٌ بين الأجزاء في التبويب أيضاً** (فحصُ ٢٠٢٦-١٠-٢٧) — كان `div` عارياً فالتصقت المربّعاتُ
+  // والفلاترُ والبطاقاتُ ببعضها؛ والصفحةُ المستقلّةُ تأخذه من `PageContainer`.
+  return embedded ? <div className="space-y-5">{children}</div> : <PageContainer width="full">{children}</PageContainer>;
 }
 
 /** **لونُ النوع في رأس البطاقة** — يُعرف النوعُ بنظرة. */
@@ -485,12 +494,25 @@ function CompensationCard({
               {C.colProposedBy}: {c.proposed_by ? c.proposed_by_name || "—" : C.engine}
             </p>
           </div>
-          <div className="shrink-0 text-end">
-            <span className="block text-2xs text-ink-muted">{pendingTab ? C.suggested : C.amount}</span>
-            <span className="figure block leading-none">
-              <Money value={c.amount ?? c.suggested_amount} />
-            </span>
-          </div>
+          {/* **والمرفوضُ لا يُكتب «المبلغ» كبيراً** (فحصُ ٢٠٢٦-١٠-٢٧) — لم يُصرف شيء، فيُقال «كان
+              المقترح» بلونٍ باهت. */}
+          {c.status === "rejected" ? (
+            <div className="shrink-0 text-end">
+              <span className="block text-2xs text-ink-muted">{C.suggestedRejected}</span>
+              <span className="block text-sm font-bold text-ink-muted">
+                <Money value={c.suggested_amount} />
+              </span>
+            </div>
+          ) : (
+            <div className="shrink-0 text-end">
+              <span className="block text-2xs text-ink-muted">
+                {c.status === "pending" || c.amount == null ? C.suggested : C.amount}
+              </span>
+              <span className="figure block leading-none">
+                <Money value={c.amount ?? c.suggested_amount} />
+              </span>
+            </div>
+          )}
         </div>
 
         {/* **السببُ والذنب** */}
@@ -524,7 +546,11 @@ function CompensationCard({
             {c.ticket_number > 0 && (
               <span className="flex items-center gap-1">
                 <IconSupport size={14} className="text-ink-muted" />
-                <OpenLink allowed={canTickets} href="/dashboard/tickets" className="text-primary-dark hover:underline">
+                <OpenLink
+                  allowed={canTickets && !!c.ticket_id}
+                  href={`/dashboard/tickets?tab=tickets&t=${c.ticket_id}`}
+                  className="text-primary-dark hover:underline"
+                >
                   {C.ticketRef.replace("{n}", fmtNum(c.ticket_number))}
                 </OpenLink>
               </span>

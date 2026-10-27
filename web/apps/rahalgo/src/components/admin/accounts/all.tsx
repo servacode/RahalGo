@@ -5,22 +5,21 @@
  * **قائمةُ الحسابات — بابٌ واحدٌ لكلّ من في المنصّة**
  * ══════════════════════════════════════════════════════════════════════
  *
- * (قراراتُ المالك ٢٠٢٦-١٠-٠٤ — قسمُ الحسابات.)
+ * (قراراتُ المالك ٢٠٢٦-١٠-٠٤ — قسمُ الحسابات، والتصميمُ الاحترافيّ ٢٠٢٦-١٠-٢٧.)
  *
- *	«إضافة ▾»         زرٌّ واحدٌ بقائمة أنواع (سائق · مندوب · متجر · موظّف) بحسب الصلاحيّة،
- *	                   ودورٌ واحدٌ للحساب، **ولا كلمةَ سرٍّ يكتبها الموظّف**
- *	البحث             بالاسم والهاتف وكود الدعوة **واسمِ المتجر**، واسمُ المتجر تحت صاحبه
- *	الشارة            للموقوف والمحظور وحدَهما
- *	التحديدُ الجماعيّ  إيقافٌ وتفعيلٌ وتصديرٌ فقط — **ولا فعلَ ماليّاً**
- *	التصدير           لمديرِ المنصّة وحدَه (`users.export`)، عربيٌّ ومحميٌّ من صيغ إكسل
- *	الأرصدة           تُحجب في المحرّك عمّن لا يملك المالَ ولا خدمةَ العملاء
+ *	الرأس              عنوانٌ وسطرُ شرح، و«إضافة ▾» و«المزيد ▾» (تصدير · جهاتُ الاتصال بنافذةٍ فيها التاريخ)
+ *	التبويبات          الأدوارُ بعدّها، وتحت «موظّفو المنصّة» وظائفُهم أزراراً صغيرة
+ *	الفلاتر            سطحٌ واحد: البحث، وأزرارُ الحالة بعدّها **داخلَ التبويب المفتوح** — ولا قوائمَ منسدلة
+ *	البطاقة            الصورةُ في الوسط، والرصيدُ السالبُ أحمرُ «عليه» والموجبُ «إله»، ولا «زبون» لمن له دورٌ آخر
+ *	المحذوف            بطاقةٌ رماديّةٌ «محذوف» و«رقم محذوف» **بلا أيّ زرّ** — والمحرّكُ يردّ تبديلَ حاله
+ *	التحديدُ الجماعيّ   إيقافٌ وتفعيلٌ وتصديرٌ فقط، **ويُمسح مع كلّ تغييرِ صفحةٍ أو فلترٍ أو بحث**
  *
  * **وكلُّ زرٍّ بقدرة بابه من جدول المحرّك** (`useCanCall`).
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum, fmtDate, errorText } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, errorText } from "@rahalgo/i18n";
 import { roleLabelByCode, signupGroups, ACCOUNT_TYPE_ROLE_CODES } from "@/lib/rolemeta";
 import { listRoles, roleLabel, type Role } from "@/lib/rbac";
 import {
@@ -34,37 +33,35 @@ import {
   Modal,
   Confirm,
   Checkbox,
+  Chips,
   DataView,
   ActionMenu,
+  ReloadState,
   type ActionMenuItem,
   type DataColumn,
   IconUser,
   IconPhone,
   IconRoles,
-  IconStatus,
   IconSearch,
   IconAdd,
   IconBlock,
-  IconDelete,
   IconUnblock,
   IconWallet,
-  IconOrder,
   IconStore,
   IconDriver,
-  IconGrid,
-  IconView,
   IconReceipt,
   IconUsers,
   FormActions,
   IconLock,
   IconHourglass,
   IconHandshake,
+  IconChevronDown,
+  IconDate,
 } from "@rahalgo/ui";
 import { api, apiFile, type AuthUser } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useCanCall } from "@/lib/policy";
 import WalletModal, { AdvanceModal } from "@/components/admin/WalletModal";
-import { MerchantModal } from "@/components/admin/MerchantModal";
 import StatusReasonModal from "@/components/admin/StatusReasonModal";
 import RoleBadge, { ROLE_STYLES } from "@/components/admin/RoleBadge";
 import { MediaThumb } from "@/components/admin/ImageUpload";
@@ -74,6 +71,7 @@ import { ResetPasswordModal, ChangePhoneModal } from "@/components/admin/account
 
 const m = getMessages(defaultLocale);
 const A = m.admin.acc;
+const U = A.ux;
 
 type Row = AuthUser & { store_names?: string[] };
 
@@ -85,7 +83,40 @@ interface UserPage {
   money_hidden: boolean;
 }
 
+interface Stats {
+  total: number;
+  roles: Record<string, number>;
+  /** **أعدادُ الحالات داخلَ الدور المطلوب** — من المحرّك (`?role=`). */
+  status?: Record<string, number>;
+  /** **مهلةُ الكلمة المؤقّتة من الإعدادات** — لا ٧٢ مكتوبةً هنا. */
+  temp_password_hours?: number;
+}
+
 type NewKind = "driver" | "sales" | "staff";
+
+/** **أزرارُ الحالة** — و«متّصل الآن» زرٌّ معها لا مربّعٌ وحدَه. */
+type Pill = "all" | "active" | "suspended" | "blocked" | "restricted" | "deleted" | "online";
+
+/** **المحذوفُ يُعرف بحاله أو برقمه** — المحرّكُ يبدّل رقمَه بـ`deleted-…`. */
+export function isDeletedAccount(u: { status?: string; phone?: string | null }): boolean {
+  return u.status === "deleted" || (u.phone ?? "").startsWith("deleted-");
+}
+
+/** **الرصيدُ بلونه وكلمته** — السالبُ أحمرُ «عليه»، والموجبُ «إله». */
+export function BalanceText({ n, className = "" }: { n: number; className?: string }) {
+  const tone = n < 0 ? "text-danger" : n > 0 ? "text-success" : "text-ink-muted";
+  return (
+    <span className={`inline-flex items-baseline gap-1 font-bold ${tone} ${className}`}>
+      <span dir="ltr" className="tabular-nums">
+        {fmtNum(n)}
+      </span>
+      {n !== 0 && <span className="text-xs font-medium">{n < 0 ? U.balOwes : U.balOwed}</span>}
+    </span>
+  );
+}
+
+const ICON_BTN =
+  "!h-11 !w-11 inline-flex items-center justify-center !min-h-0 !min-w-0 !flex-none !p-0 rounded-full";
 
 export default function AllAccountsTable() {
   const { user: me, can } = useAuth();
@@ -93,18 +124,11 @@ export default function AllAccountsTable() {
   const canCall = useCanCall();
   const canCreateUser = canCall("POST", "/users");
   const canGrant = canCall("POST", "/users/{id}/roles");
-  const canCreateStore = canCall("POST", "/merchants");
   // **وكلمةُ المرور زرٌّ سريعٌ في البطاقة** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — بلا فتح الملف.
   const canReset = canCall("POST", "/users/{id}/password");
   const [resetUser, setResetUser] = useState<{ id: string; hours: number } | null>(null);
   /** **تبديلُ الرقم من البطاقة** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — النافذةُ نفسُها التي في الملفّ. */
   const [phoneUser, setPhoneUser] = useState<Row | null>(null);
-  const openReset = (u: Row) => {
-    // **مهلةُ الكلمة المؤقّتة من المحرّك** — تُقرأ من ملفّه، والافتراضُ إن تعذّر.
-    api<{ temp_password_hours?: number }>(`/api/v1/admin/users/${u.id}`)
-      .then((p) => setResetUser({ id: u.id, hours: p.temp_password_hours ?? 24 }))
-      .catch(() => setResetUser({ id: u.id, hours: 24 }));
-  };
   const canStatus = canCall("PATCH", "/users/{id}");
   const canWallet = canCall("POST", "/users/{id}/wallet");
   // **والتصديرُ لمديرِ المنصّة وحدَه** — الزرُّ يُخفى عن غيره (قرار ١١).
@@ -118,27 +142,35 @@ export default function AllAccountsTable() {
   const [role, setRole] = useState(() => urlParam("role"));
   const [onlineOnly, setOnlineOnly] = useState(false);
   const [statusFilter, setStatusFilter] = useState(() => urlParam("status"));
-  const [roleCounts, setRoleCounts] = useState<{ total: number; roles: Record<string, number> } | null>(null);
+  const [stats, setStats] = useState<Stats | null>(null);
   const [allRoles, setAllRoles] = useState<Role[]>([]);
   const [page, setPage] = useState(1);
   const [error, setError] = useState("");
   const [createKind, setCreateKind] = useState<NewKind | null>(null);
   const [walletUser, setWalletUser] = useState<Row | null>(null);
   const [advanceUser, setAdvanceUser] = useState<Row | null>(null);
-  const [storeOpen, setStoreOpen] = useState(false);
+  const [contactsOpen, setContactsOpen] = useState(false);
   const [statusModal, setStatusModal] = useState<{ users: Row[]; status: string } | null>(null);
   const [activateRows, setActivateRows] = useState<Row[] | null>(null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkMsg, setBulkMsg] = useState("");
   const [busy, setBusy] = useState(false);
 
-  // **والإحصاءاتُ مرّةً لا مع كلّ حرف** — كانت تُعاد مع كلّ ضغطةٍ في البحث.
+  const openReset = (u: Row) => {
+    // **مهلةُ الكلمة المؤقّتة من المحرّك** — تُقرأ من ملفّه، ثمّ من الإحصاءات إن تعذّر.
+    const fallback = stats?.temp_password_hours ?? 72;
+    api<{ temp_password_hours?: number }>(`/api/v1/admin/users/${u.id}`)
+      .then((p) => setResetUser({ id: u.id, hours: p.temp_password_hours ?? fallback }))
+      .catch(() => setResetUser({ id: u.id, hours: fallback }));
+  };
+
+  // **والإحصاءاتُ مع الدور لا مع كلّ حرف** — وأعدادُ الحالات بحسب التبويب المفتوح.
   const loadStats = useCallback(() => {
-    api<{ total: number; roles: Record<string, number> }>("/api/v1/admin/users/stats")
-      .then(setRoleCounts)
-      // @empty-ok **والبطاقاتُ تلميح** — القائمةُ تعمل بدونها.
+    api<Stats>(`/api/v1/admin/users/stats?${new URLSearchParams({ role })}`)
+      .then(setStats)
+      // @empty-ok **والأعدادُ تلميح** — القائمةُ تعمل بدونها.
       .catch(() => undefined);
-  }, []);
+  }, [role]);
 
   const load = useCallback(async () => {
     try {
@@ -163,6 +195,12 @@ export default function AllAccountsTable() {
   }, [load]);
   useEffect(loadStats, [loadStats]);
 
+  // **والتحديدُ يُمسح مع كلّ تغييرِ صفحةٍ أو فلترٍ أو بحث** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كان العدّادُ
+  // يقول «محدّد ١٢» والإيقافُ يقع على خمسةٍ في الصفحة الحاليّة وحدَها.
+  useEffect(() => {
+    setSelected(new Set());
+  }, [query, role, statusFilter, onlineOnly, page]);
+
   const canRolesList = canCall("GET", "/roles");
   useEffect(() => {
     let alive = true;
@@ -183,18 +221,17 @@ export default function AllAccountsTable() {
     void load();
     loadStats();
   }, [load, loadStats]);
-  useLiveRefresh(["account"], refresh);
+  // **والمحفظةُ نبضتُها `wallet`** — كان رصيدُ البطاقة يبقى قديماً بعد حركةٍ أو سلفة.
+  useLiveRefresh(["account", "wallet"], refresh);
 
-  async function exportCsv(ids?: string[]) {
-    const params = new URLSearchParams({ query, role, status: statusFilter, online: onlineOnly ? "true" : "" });
-    if (ids && ids.length) params.set("ids", ids.join(","));
+  async function download(params: URLSearchParams, name: string) {
     try {
       const res = await apiFile(`/api/v1/admin/users/export?${params}`);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = "accounts.csv";
+      a.download = name;
       a.click();
       URL.revokeObjectURL(url);
       setError("");
@@ -203,23 +240,16 @@ export default function AllAccountsTable() {
     }
   }
 
+  function exportCsv(ids?: string[]) {
+    const params = new URLSearchParams({ query, role, status: statusFilter, online: onlineOnly ? "true" : "" });
+    if (ids && ids.length) params.set("ids", ids.join(","));
+    return download(params, "accounts.csv");
+  }
+
   // **جهاتُ الاتصال لجوال المالك** (٢٠٢٦-١٠-١٢) — ملفٌّ يُفتح على الجوال فتُحفظ كلُّها.
-  const [contactsSince, setContactsSince] = useState("");
-  async function exportContacts() {
-    const params = new URLSearchParams({ query, role, status: statusFilter, format: "vcf", since: contactsSince });
-    try {
-      const res = await apiFile(`/api/v1/admin/users/export?${params}`);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "rahalgo-contacts.vcf";
-      a.click();
-      URL.revokeObjectURL(url);
-      setError("");
-    } catch (err) {
-      setError(errorText(err));
-    }
+  function exportContacts(since: string) {
+    const params = new URLSearchParams({ query, role, status: statusFilter, format: "vcf", since });
+    return download(params, "rahalgo-contacts.vcf");
   }
 
   /** **فعلٌ على حسابٍ أو أكثر** — والخطأُ يُعدّ ويُقال لا يُبتلع. */
@@ -255,7 +285,9 @@ export default function AllAccountsTable() {
   const rows = useMemo(() => data?.users ?? [], [data]);
   const money = data ? !data.money_hidden : true;
   const selectable = canStatus || canExport;
-  const pageIds = rows.filter((u) => !u.is_system && u.id !== me?.id).map((u) => u.id);
+  /** **ما يُحدَّد** — لا النظاميُّ ولا أنا ولا المحذوف. */
+  const pickable = (u: Row) => !u.is_system && u.id !== me?.id && !isDeletedAccount(u);
+  const pageIds = rows.filter(pickable).map((u) => u.id);
   const allOnPage = pageIds.length > 0 && pageIds.every((i) => selected.has(i));
   const selRows = rows.filter((u) => selected.has(u.id));
 
@@ -278,64 +310,69 @@ export default function AllAccountsTable() {
       header: m.admin.users.table.name,
       icon: <IconUser />,
       primary: true,
-      cell: (u) => (
-        <span className="flex w-full flex-col gap-3">
-          {/* **مربّعُ التحديد يميناً قبل الدور، ولا عينَ** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — الكبسةُ على
-              البطاقة تفتح الملفَّ أصلاً. */}
-          <span className="flex items-center gap-2">
-            {selectable && !u.is_system && u.id !== me?.id && (
-              <span onClick={(e) => e.stopPropagation()}>
-                <Checkbox
-                  id={`sel-${u.id}`}
-                  label={<span className="sr-only">{A.selectRow}</span>}
-                  checked={selected.has(u.id)}
-                  onChange={() => toggle(u.id)}
-                />
+      cell: (u) => {
+        const gone = isDeletedAccount(u);
+        // **ولا «زبون» على كلّ بطاقة** — كلُّ سائقٍ ومتجرٍ ومندوبٍ زبونٌ أيضاً، فيُعرض الدورُ الأساسيّ.
+        const shown = u.roles.length > 1 ? u.roles.filter((r) => r !== "customer") : u.roles;
+        return (
+          <span className={`flex w-full flex-col gap-3 ${gone ? "opacity-70" : ""}`}>
+            {/* **مربّعُ التحديد يميناً قبل الدور، ولا عينَ** (قرارُ المالك ٢٠٢٦-١٠-٢٥). */}
+            <span className="flex items-center gap-2">
+              {selectable && pickable(u) && (
+                <span onClick={(e) => e.stopPropagation()}>
+                  <Checkbox
+                    id={`sel-${u.id}`}
+                    label={<span className="sr-only">{A.selectRow}</span>}
+                    checked={selected.has(u.id)}
+                    onChange={() => toggle(u.id)}
+                  />
+                </span>
+              )}
+              <span className="flex flex-wrap gap-1">
+                {shown.map((r) => (
+                  <RoleBadge key={r} role={r} />
+                ))}
+                {/* **شارةٌ صغيرةٌ للموقوف والمحظور والمحذوف** (قرار ٨). */}
+                {u.status === "suspended" && <Badge variant="warning">{m.admin.users.suspended}</Badge>}
+                {u.status === "blocked" && <Badge variant="danger">{m.admin.users.blocked}</Badge>}
+                {gone && <Badge variant="neutral">{U.deletedBadge}</Badge>}
+                {u.is_system ? <Badge variant="neutral">{m.admin.users.systemAccount}</Badge> : null}
               </span>
-            )}
-            <span className="flex flex-wrap gap-1">
-              {u.roles.map((r) => (
-                <RoleBadge key={r} role={r} />
-              ))}
-              {/* **شارةٌ صغيرةٌ للموقوف والمحظور وحدَهما** (قرار ٨). */}
-              {u.status === "suspended" && <Badge variant="warning">{m.admin.users.suspended}</Badge>}
-              {u.status === "blocked" && <Badge variant="danger">{m.admin.users.blocked}</Badge>}
-              {u.is_system ? <Badge variant="neutral">{m.admin.users.systemAccount}</Badge> : null}
+            </span>
+            <span className="flex justify-center">
+              <MediaThumb
+                url={u.avatar_thumb_url}
+                alt=""
+                fallback={u.full_name || m.terms.avatarFallback}
+                size={72}
+                round
+              />
+            </span>
+            <span className="flex items-center justify-between gap-3">
+              <span className="min-w-0 truncate text-base font-bold">{u.full_name || "—"}</span>
+              {gone ? (
+                <span className="shrink-0 text-xs text-ink-muted">{U.deletedPhone}</span>
+              ) : u.phone ? (
+                <span dir="ltr" className="shrink-0 font-medium">
+                  {u.phone}
+                </span>
+              ) : (
+                <span className="shrink-0 text-xs text-ink-muted">{A.phoneHidden}</span>
+              )}
+            </span>
+            {/* **واسمُ متجره بسطرٍ ثانٍ في الوسط، وسطرُه محجوزٌ ولو فارغاً** (قرارُ المالك ٢٠٢٦-١٠-٢٥). */}
+            <span
+              aria-hidden={!(u.store_names && u.store_names.length > 0)}
+              className={`flex h-5 items-center justify-center gap-1.5 truncate text-sm font-medium text-ink-muted ${
+                u.store_names && u.store_names.length > 0 ? "" : "invisible"
+              }`}
+            >
+              <IconStore size={14} />
+              {u.store_names && u.store_names.length > 0 ? u.store_names.join(" · ") : "—"}
             </span>
           </span>
-          <span className="flex justify-center">
-            <MediaThumb
-              url={u.avatar_thumb_url}
-              alt=""
-              fallback={u.full_name || m.terms.avatarFallback}
-              size={72}
-              round
-            />
-          </span>
-          <span className="flex items-center justify-between gap-3">
-            <span className="min-w-0 truncate text-base font-bold">{u.full_name || "—"}</span>
-            {u.phone ? (
-              <span dir="ltr" className="shrink-0 font-medium">
-                {u.phone}
-              </span>
-            ) : (
-              <span className="shrink-0 text-xs text-ink-muted">{A.phoneHidden}</span>
-            )}
-          </span>
-          {/* **واسمُ متجره بسطرٍ ثانٍ في الوسط** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — لصاحب المتجر وحدَه. */}
-          {/* **وسطرُه محجوزٌ ولو فارغاً** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — فيبقى الرصيدُ والأزرارُ على مستوًى
-              واحدٍ في كلّ البطاقات؛ الفراغُ مكانُ المتجر لا تحته. */}
-          <span
-            aria-hidden={!(u.store_names && u.store_names.length > 0)}
-            className={`flex h-5 items-center justify-center gap-1.5 truncate text-sm font-medium text-ink-muted ${
-              u.store_names && u.store_names.length > 0 ? "" : "invisible"
-            }`}
-          >
-            <IconStore size={14} />
-            {u.store_names && u.store_names.length > 0 ? u.store_names.join(" · ") : "—"}
-          </span>
-        </span>
-      ),
+        );
+      },
     },
     // **لا عددَ طلباتٍ ولا إنفاقَ ولا آخرَ طلبٍ في البطاقة** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — في ملفّ الحساب.
     ...(money
@@ -344,12 +381,10 @@ export default function AllAccountsTable() {
             id: "balance",
             header: `${m.admin.customers.balance} (${m.common.currency})`,
             icon: <IconWallet />,
-            cell: (u: Row) => fmtNum(u.balance ?? 0),
+            cell: (u: Row) => <BalanceText n={u.balance ?? 0} />,
           },
         ] as DataColumn<Row>[])
       : []),
-    // **ولا «طلبات جارية» ولا متاجرُ المندوب وعمولاتُه في البطاقة** (قرارُ المالك ٢٠٢٦-١٠-٢٥) —
-    // فيبقى شكلُ البطاقات موحّداً؛ وكلُّها في ملفّ الحساب.
   ];
 
   // ── «إضافة ▾» ─────────────────────────────────────────────────────────
@@ -363,6 +398,14 @@ export default function AllAccountsTable() {
   // **ولا «متجر جديد» هنا** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — المتاجرُ تُضاف وتُدار من السوق (تبويبُ المتاجر).
   if (canCreateUser && canGrant) addItems.push({ key: "staff", label: A.addStaff, icon: IconRoles, onSelect: () => setCreateKind("staff") });
 
+  // ── «المزيد ▾» — التصديرُ وجهاتُ الاتصال، لمديرِ المنصّة وحدَه ─────────────
+  const moreItems: ActionMenuItem[] = canExport
+    ? [
+        { key: "csv", label: A.exportCsv, icon: IconReceipt, onSelect: () => void exportCsv() },
+        { key: "vcf", label: U.contactsTitle, icon: IconPhone, onSelect: () => setContactsOpen(true) },
+      ]
+    : [];
+
   const cards = [
     { key: "staff", label: m.admin.users.staffCard, style: ROLE_STYLES.ops },
     { key: "sales", label: roleLabelByCode("sales"), style: ROLE_STYLES.sales },
@@ -371,113 +414,71 @@ export default function AllAccountsTable() {
     { key: "customer", label: A.cardCustomers, style: ROLE_STYLES.customer },
   ] as const;
 
+  // **وظائفُ الموظّفين** — كلُّ دورٍ ليس صفةَ حساب، أزرارٌ صغيرةٌ تحت «موظّفو المنصّة» وحدَه.
+  const staffRoles = allRoles
+    .filter((r) => !(ACCOUNT_TYPE_ROLE_CODES as readonly string[]).includes(r.code))
+    .sort((a, b) => roleLabel(a).localeCompare(roleLabel(b), "ar"));
+  const isStaffRole = staffRoles.some((r) => r.code === role);
+  const tabValue = role === "" ? "all" : cards.some((c) => c.key === role) ? role : isStaffRole ? "staff" : "all";
+
+  const pill: Pill = onlineOnly ? "online" : ((statusFilter || "all") as Pill);
+  function setPill(p: Pill) {
+    setOnlineOnly(p === "online");
+    setStatusFilter(p === "all" || p === "online" ? "" : p);
+    setPage(1);
+  }
+  const sc = stats?.status;
+  const pills: { id: Pill; label: string; count?: number }[] = [
+    { id: "all", label: U.stAll, count: sc?.all },
+    { id: "active", label: U.stActive, count: sc?.active },
+    { id: "suspended", label: U.stSuspended, count: sc?.suspended },
+    { id: "blocked", label: U.stBlocked, count: sc?.blocked },
+    // **و«موقوف أو محظور» يبقى باباً من الرئيسيّة** (`?status=restricted`) — يظهر حين يُفتح منه.
+    ...(pill === "restricted" ? [{ id: "restricted" as Pill, label: U.stRestricted, count: sc?.restricted }] : []),
+    { id: "deleted", label: U.stDeleted, count: sc?.deleted },
+    { id: "online", label: U.stOnline, count: sc?.online },
+  ];
+  const filtered = query !== "" || pill !== "all";
+
   return (
     <div>
-      {/* **رأسٌ موحّد** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «تصميم احترافي») — الأدوارُ تبويباتٌ بعدّها بسطرٍ واحد،
-          والحالاتُ الثلاث (موقوف أو محظور · المحذوفة · المتّصلون الآن) أزرارٌ صغيرةٌ تحتها. */}
+      {/* **رأسٌ موحّد** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «تصميم احترافي») — سطرُ شرح، و«إضافة» و«المزيد» وحدَهما. */}
       <PageHero<string>
         icon={IconUsers}
         title={m.admin.users.title}
+        subtitle={U.pageHint}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-          {canExport && (
-            <Button variant="secondary" onClick={() => void exportCsv()} className="flex items-center gap-1.5">
-              <IconReceipt size={16} />
-              {A.exportCsv}
-            </Button>
-          )}
-          {canExport && (
-            <div className="flex items-center gap-1.5">
-              <Input
-                type="date"
-                value={contactsSince}
-                onChange={(e) => setContactsSince(e.target.value)}
-                title={A.contactsSince}
-                aria-label={A.contactsSince}
-              />
-              <Button variant="secondary" onClick={() => void exportContacts()} className="flex items-center gap-1.5">
-                <IconReceipt size={16} />
-                {A.exportContacts}
-              </Button>
-            </div>
-          )}
-          {/* **ولا زرَّ تصنيفاتٍ هنا** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — بابُها السوق (تبويبُ التصنيفات). */}
-          <ActionMenu label={A.add} icon={IconAdd} variant="primary" items={addItems} width={200} />
+            {moreItems.length > 0 && <ActionMenu label={A.more} icon={IconChevronDown} items={moreItems} width={220} />}
+            {addItems.length > 0 && <ActionMenu label={A.add} icon={IconAdd} variant="primary" items={addItems} width={200} />}
           </div>
         }
         tabs={
-          roleCounts
+          stats
             ? [
-                { key: "all", label: m.admin.users.allRoles, count: roleCounts.total },
+                { key: "all", label: m.admin.users.allRoles, count: stats.total },
                 ...cards.map(({ key, label, style }) => ({
                   key,
                   label,
                   icon: style?.Icon,
-                  count: roleCounts.roles[key] ?? 0,
+                  count: stats.roles[key] ?? 0,
                 })),
               ]
             : undefined
         }
-        value={role === "" ? "all" : role}
+        value={tabValue}
         onChange={(k) => {
           setRole(k === "all" ? "" : k);
           setPage(1);
         }}
-      >
-        {roleCounts && (
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              aria-pressed={statusFilter === "restricted"}
-              onClick={() => {
-                setStatusFilter(statusFilter === "restricted" ? "" : "restricted");
-                setPage(1);
-              }}
-              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-bold transition-colors ${
-                statusFilter === "restricted" ? "border-danger bg-danger-solid text-on-solid" : "border-line text-danger hover:bg-row-hover"
-              }`}
-            >
-              <IconBlock size={15} />
-              {A.cardRestricted}
-              <span className="tabular-nums">{fmtNum(roleCounts.roles.restricted ?? 0)}</span>
-            </button>
-            {/* **والمحذوفةُ زرُّها** (قرارُ المالك ٢٠٢٦-١٠-٠٦) — ولا تُخلط بالأحياء. */}
-            <button
-              type="button"
-              aria-pressed={statusFilter === "deleted"}
-              onClick={() => {
-                setStatusFilter(statusFilter === "deleted" ? "" : "deleted");
-                setPage(1);
-              }}
-              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-bold transition-colors ${
-                statusFilter === "deleted" ? "border-ink-muted bg-field text-ink" : "border-line text-ink-muted hover:bg-row-hover"
-              }`}
-            >
-              <IconDelete size={15} />
-              {A.cardDeleted}
-              <span className="tabular-nums">{fmtNum(roleCounts.roles.deleted ?? 0)}</span>
-            </button>
-            <button
-              type="button"
-              aria-pressed={onlineOnly}
-              onClick={() => {
-                setOnlineOnly(!onlineOnly);
-                setPage(1);
-              }}
-              className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-bold transition-colors ${
-                onlineOnly ? "border-success bg-success-solid text-on-solid" : "border-line text-success hover:bg-row-hover"
-              }`}
-            >
-              <span className={`h-2 w-2 animate-pulse rounded-badge ${onlineOnly ? "bg-on-solid" : "bg-success"}`} />
-              {m.admin.users.onlineCard}
-              <span className="tabular-nums">{fmtNum(roleCounts.roles.online ?? 0)}</span>
-            </button>
-          </div>
-        )}
-      </PageHero>
+      />
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="w-full sm:w-80">
+      {/* ══════════════════════════════════════════════════════════════
+          **سطحُ الفلاتر الواحد** — البحث، ثمّ الحالةُ أزراراً بعدّها داخلَ التبويب المفتوح،
+          وتحت «موظّفو المنصّة» وظائفُهم. **ولا قوائمَ منسدلةً تكرّر التبويبات.**
+          ══════════════════════════════════════════════════════════════ */}
+      <section className="surface mb-4 space-y-3 p-3">
+        <div className="w-full sm:max-w-md">
           <Input
             icon={<IconSearch />}
             placeholder={canPhone ? A.searchPlaceholder : A.searchPlaceholderNoPhone}
@@ -488,47 +489,30 @@ export default function AllAccountsTable() {
             }}
           />
         </div>
-        <div className="w-[calc(50%-0.375rem)] sm:w-44">
-          <Select
-            value={role}
-            onChange={(e) => {
-              setRole(e.target.value);
-              setPage(1);
-            }}
-          >
-            <option value="">{m.admin.users.allRoles}</option>
-            {/* **و«موظّفو المنصّة» خيارٌ هنا أيضاً** — كانت البطاقةُ تُرشّح والقائمةُ تقول «كلّ الأدوار». */}
-            <option value="staff">{m.admin.users.staffCard}</option>
-            {[...allRoles]
-              .sort((a, b) => roleLabel(a).localeCompare(roleLabel(b), "ar"))
-              .map((r) => (
-                <option key={r.code} value={r.code}>
-                  {r.code === "customer" ? A.cardCustomers : roleLabel(r)}
-                </option>
-              ))}
-          </Select>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-ink-muted">{U.statusLabel}:</span>
+          <Chips items={pills} value={pill} onChange={setPill} wrap />
         </div>
-        <div className="w-[calc(50%-0.375rem)] sm:w-40">
-          <Select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(1);
-            }}
-          >
-            <option value="">{m.admin.users.statusFilter.all}</option>
-            <option value="active">{m.admin.users.statusFilter.active}</option>
-            <option value="restricted">{A.restricted}</option>
-            <option value="suspended">{m.admin.users.statusFilter.suspended}</option>
-            <option value="blocked">{m.admin.users.statusFilter.blocked}</option>
-          </Select>
-        </div>
-      </div>
+        {tabValue === "staff" && staffRoles.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-sm text-ink-muted">{U.staffRoleLabel}:</span>
+            <Chips
+              items={[{ id: "staff", label: U.staffAll }, ...staffRoles.map((r) => ({ id: r.code, label: roleLabel(r) }))]}
+              value={role}
+              onChange={(k) => {
+                setRole(k);
+                setPage(1);
+              }}
+              wrap
+            />
+          </div>
+        )}
+      </section>
 
       {/* ══════════════════════════════════════════════════════════════
-          **التحديدُ الجماعيّ — إيقافٌ وتفعيلٌ وتصديرٌ فقط** (قرار ١٠)
+          **التحديدُ الجماعيّ — إيقافٌ وتفعيلٌ وتصديرٌ فقط** (قرار ١٠)، وعددُ المحدّد على كلّ زرّ
           ══════════════════════════════════════════════════════════════ */}
-      {selectable && rows.length > 0 && (
+      {selectable && pageIds.length > 0 && (
         <div className="mb-3 flex flex-wrap items-center gap-2 rounded-control bg-field px-3 py-2 text-sm">
           <Checkbox
             id="sel-all"
@@ -543,9 +527,9 @@ export default function AllAccountsTable() {
               })
             }
           />
-          {selected.size > 0 && (
+          {selRows.length > 0 && (
             <>
-              <span className="text-ink-muted">{A.selectedN.replace("{n}", fmtNum(selected.size))}</span>
+              <span className="text-ink-muted">{A.selectedN.replace("{n}", fmtNum(selRows.length))}</span>
               {canStatus && (
                 <>
                   <Button
@@ -555,7 +539,7 @@ export default function AllAccountsTable() {
                     onClick={() => setStatusModal({ users: selRows, status: "suspended" })}
                   >
                     <IconBlock size={14} />
-                    {A.bulkSuspend}
+                    {U.bulkSuspendN.replace("{n}", fmtNum(selRows.length))}
                   </Button>
                   <Button
                     variant="secondary"
@@ -564,12 +548,12 @@ export default function AllAccountsTable() {
                     onClick={() => setActivateRows(selRows)}
                   >
                     <IconUnblock size={14} />
-                    {A.bulkActivate}
+                    {U.bulkActivateN.replace("{n}", fmtNum(selRows.length))}
                   </Button>
                 </>
               )}
               {canExport && (
-                <Button variant="secondary" className="!px-2.5" onClick={() => void exportCsv([...selected])}>
+                <Button variant="secondary" className="!px-2.5" onClick={() => void exportCsv(selRows.map((u) => u.id))}>
                   {A.exportSelected}
                 </Button>
               )}
@@ -587,7 +571,7 @@ export default function AllAccountsTable() {
       )}
       {data?.money_hidden && <p className="mb-2 text-xs text-ink-muted">{A.moneyHidden}</p>}
 
-      {error && (
+      {error && data && (
         <Alert className="mb-4">
           <span>{error}</span>{" "}
           <button type="button" onClick={() => void load()} className="font-bold underline">
@@ -596,112 +580,125 @@ export default function AllAccountsTable() {
         </Alert>
       )}
 
-      <DataView
-        items={rows}
-        loading={data === null && !error}
-        getKey={(u) => u.id}
-        columns={columns}
-        // **بطاقاتٌ وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٢٥: «الغي نظام الجداول من الصفحة نخليه بس بطاقات»).
-        view="cards"
-        // **و«لا نتائج» لا تُكتب تحت رسالة خطأ** — كانت تقول «لا أحد» والسببُ عطب.
-        empty={error ? "" : m.admin.users.noResults}
-        onRowClick={(u) => router.push(`/dashboard/users/${u.id}`)}
-        actions={
-          canWallet || canStatus || canReset
-            ? (u) =>
-                u.is_system ? null : (
-                  <>
-                  <div className="flex w-full items-center justify-around">
-                    {/* **أيقوناتٌ عاريةٌ بلا مربّعات، بصفٍّ واحد** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — شفّافةٌ بلون فعلها — `!min-w-0` يلغي حدَّ
-                        عرض أزرار البطاقة (٦٫٥rem) الذي كان يُنزلها سطرين؛ والاسمُ في التلميح ولقارئ الشاشة.
-                        **والمحفظةُ بقدرة المال وحدَها** — كانت مربوطةً بالإيقاف أيضاً فلا تراها الماليّة. */}
-                    {canWallet && (
-                      <Button
-                        variant="ghost"
-                        onClick={() => setWalletUser(u)}
-                        title={m.admin.users.wallet}
-                        aria-label={m.admin.users.wallet}
-                        className="!h-11 !w-11 inline-flex items-center justify-center !min-h-0 !min-w-0 !flex-none !p-0 rounded-full text-ink-muted hover:text-ink"
-                      >
-                        <IconWallet size={20} />
-                      </Button>
-                    )}
-                    {canWallet && u.roles.some((r) => r !== "customer" && r !== "merchant") && (
-                      <Button
-                        variant="ghost"
-                        onClick={() => setAdvanceUser(u)}
-                        title={A.advance.button}
-                        aria-label={A.advance.button}
-                        className="!h-11 !w-11 inline-flex items-center justify-center !min-h-0 !min-w-0 !flex-none !p-0 rounded-full text-ink-muted hover:text-ink"
-                      >
-                        <IconHandshake size={20} />
-                      </Button>
-                    )}
-                    {canReset && u.id !== me?.id && (
-                      <Button
-                        variant="ghost"
-                        onClick={() => openReset(u)}
-                        title={m.admin.users.profile.passwordBtn}
-                        aria-label={m.admin.users.profile.passwordBtn}
-                        className="!h-11 !w-11 inline-flex items-center justify-center !min-h-0 !min-w-0 !flex-none !p-0 rounded-full text-ink-muted hover:text-ink"
-                      >
-                        <IconLock size={20} />
-                      </Button>
-                    )}
-                    {canStatus && u.id !== me?.id && (
-                      <Button
-                        variant="ghost"
-                        onClick={() => setPhoneUser(u)}
-                        title={m.admin.users.profile.changePhone}
-                        aria-label={m.admin.users.profile.changePhone}
-                        className="!h-11 !w-11 inline-flex items-center justify-center !min-h-0 !min-w-0 !flex-none !p-0 rounded-full text-ink-muted hover:text-ink"
-                      >
-                        <IconPhone size={20} />
-                      </Button>
-                    )}
-                    {canStatus &&
-                      u.id !== me?.id &&
-                      (u.status === "active" ? (
-                        <>
-                          <Button
-                            variant="ghost"
-                            onClick={() => setStatusModal({ users: [u], status: "suspended" })}
-                            title={m.admin.users.suspend}
-                            aria-label={m.admin.users.suspend}
-                            className="!h-11 !w-11 inline-flex items-center justify-center !min-h-0 !min-w-0 !flex-none !p-0 rounded-full !text-warning"
-                          >
-                            <IconHourglass size={20} />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            onClick={() => setStatusModal({ users: [u], status: "blocked" })}
-                            title={m.admin.users.block}
-                            aria-label={m.admin.users.block}
-                            className="!h-11 !w-11 inline-flex items-center justify-center !min-h-0 !min-w-0 !flex-none !p-0 rounded-full !text-danger"
-                          >
-                            <IconBlock size={20} />
-                          </Button>
-                        </>
-                      ) : (
+      {error && !data ? (
+        <section className="surface">
+          <ReloadState onRetry={() => void load()} label={`${U.loadError} — ${error}`} />
+        </section>
+      ) : data && rows.length === 0 ? (
+        // **«ما في نتائج» دائرةٌ وعنوانٌ وجملةٌ تساعد** — كانت نصّاً رماديّاً وحدَه.
+        <section className="surface flex flex-col items-center gap-3 p-8 text-center">
+          <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-accent text-on-bright">
+            <IconUsers size={28} />
+          </span>
+          <h2 className="heading-section">{filtered ? U.emptyTitle : m.admin.users.noResults}</h2>
+          {filtered && <p className="max-w-md text-sm text-ink-muted">{U.emptyHint}</p>}
+        </section>
+      ) : (
+        <DataView
+          items={rows}
+          loading={data === null}
+          getKey={(u) => u.id}
+          columns={columns}
+          // **بطاقاتٌ وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٢٥: «الغي نظام الجداول من الصفحة نخليه بس بطاقات»).
+          view="cards"
+          empty=""
+          onRowClick={(u) => router.push(`/dashboard/users/${u.id}`)}
+          actions={
+            canWallet || canStatus || canReset
+              ? (u) =>
+                  // **والمحذوفُ بلا أيّ زرّ** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كان «تفعيل» يردّه حيّاً.
+                  u.is_system || isDeletedAccount(u) ? null : (
+                    <div className="flex w-full items-center justify-around">
+                      {/* **أيقوناتٌ عاريةٌ بلا مربّعات، بصفٍّ واحد** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — والاسمُ في التلميح
+                          ولقارئ الشاشة. **والمحفظةُ بقدرة المال وحدَها.** */}
+                      {canWallet && (
                         <Button
                           variant="ghost"
-                          onClick={() => setActivateRows([u])}
-                          title={m.admin.users.activate}
-                          aria-label={m.admin.users.activate}
-                          className="!h-11 !w-11 inline-flex items-center justify-center !min-h-0 !min-w-0 !flex-none !p-0 rounded-full !text-success"
+                          onClick={() => setWalletUser(u)}
+                          title={m.admin.users.wallet}
+                          aria-label={m.admin.users.wallet}
+                          className={`${ICON_BTN} text-ink-muted hover:text-ink`}
                         >
-                          <IconUnblock size={20} />
+                          <IconWallet size={20} />
                         </Button>
-                      ))}
-                  </div>
-                  </>
-                )
-            : undefined
-        }
-      />
+                      )}
+                      {canWallet && u.roles.some((r) => r !== "customer" && r !== "merchant") && (
+                        <Button
+                          variant="ghost"
+                          onClick={() => setAdvanceUser(u)}
+                          title={A.advance.button}
+                          aria-label={A.advance.button}
+                          className={`${ICON_BTN} text-ink-muted hover:text-ink`}
+                        >
+                          <IconHandshake size={20} />
+                        </Button>
+                      )}
+                      {canReset && u.id !== me?.id && (
+                        <Button
+                          variant="ghost"
+                          onClick={() => openReset(u)}
+                          title={m.admin.users.profile.passwordBtn}
+                          aria-label={m.admin.users.profile.passwordBtn}
+                          className={`${ICON_BTN} text-ink-muted hover:text-ink`}
+                        >
+                          <IconLock size={20} />
+                        </Button>
+                      )}
+                      {canStatus && u.id !== me?.id && (
+                        <Button
+                          variant="ghost"
+                          onClick={() => setPhoneUser(u)}
+                          title={m.admin.users.profile.changePhone}
+                          aria-label={m.admin.users.profile.changePhone}
+                          className={`${ICON_BTN} text-ink-muted hover:text-ink`}
+                        >
+                          <IconPhone size={20} />
+                        </Button>
+                      )}
+                      {canStatus &&
+                        u.id !== me?.id &&
+                        (u.status === "active" ? (
+                          <>
+                            <Button
+                              variant="ghost"
+                              onClick={() => setStatusModal({ users: [u], status: "suspended" })}
+                              title={m.admin.users.suspend}
+                              aria-label={m.admin.users.suspend}
+                              className={`${ICON_BTN} !text-warning`}
+                            >
+                              <IconHourglass size={20} />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              onClick={() => setStatusModal({ users: [u], status: "blocked" })}
+                              title={m.admin.users.block}
+                              aria-label={m.admin.users.block}
+                              className={`${ICON_BTN} !text-danger`}
+                            >
+                              <IconBlock size={20} />
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            onClick={() => setActivateRows([u])}
+                            title={m.admin.users.activate}
+                            aria-label={m.admin.users.activate}
+                            className={`${ICON_BTN} !text-success`}
+                          >
+                            <IconUnblock size={20} />
+                          </Button>
+                        ))}
+                    </div>
+                  )
+              : undefined
+          }
+        />
+      )}
 
-      {data && (
-        <div className="mt-4 flex flex-wrap items-center justify-end gap-2 text-sm text-ink-muted">
+      {/* **ولا ترقيمَ لصفحةٍ واحدة** — عنصرٌ لا يفعل شيئاً يزاحم ما يفعل. */}
+      {data && data.total > data.per_page && (
+        <div className="mt-4 flex justify-center">
           <Pagination page={page} total={data.total} perPage={data.per_page} onChange={setPage} />
         </div>
       )}
@@ -710,8 +707,18 @@ export default function AllAccountsTable() {
         <CreateAccountModal
           kind={createKind}
           allRoles={allRoles}
+          hours={stats?.temp_password_hours ?? null}
           onClose={() => setCreateKind(null)}
           onCreated={() => refresh()}
+        />
+      )}
+      {contactsOpen && (
+        <ContactsModal
+          onClose={() => setContactsOpen(false)}
+          onDownload={async (since) => {
+            await exportContacts(since);
+            setContactsOpen(false);
+          }}
         />
       )}
       {phoneUser && (
@@ -734,19 +741,26 @@ export default function AllAccountsTable() {
           onDone={() => void load()}
         />
       )}
-      {storeOpen && (
-        <MerchantModal
-          merchant={null}
-          categories={[]}
-          onClose={() => setStoreOpen(false)}
-          onSaved={() => {
-            setStoreOpen(false);
+      {/* **والرصيدُ يُعاد جلبُه عند إغلاق النافذتين** — الحركاتُ صارت تقع فوراً. */}
+      {walletUser && (
+        <WalletModal
+          user={walletUser}
+          onClose={() => {
+            setWalletUser(null);
+            refresh();
+          }}
+          isAdmin={canWallet}
+        />
+      )}
+      {advanceUser && (
+        <AdvanceModal
+          user={advanceUser}
+          onClose={() => {
+            setAdvanceUser(null);
             refresh();
           }}
         />
       )}
-      {walletUser && <WalletModal user={walletUser} onClose={() => setWalletUser(null)} isAdmin={canWallet} />}
-      {advanceUser && <AdvanceModal user={advanceUser} onClose={() => setAdvanceUser(null)} />}
 
       {statusModal && (
         <StatusReasonModal
@@ -763,11 +777,15 @@ export default function AllAccountsTable() {
           onClose={() => setStatusModal(null)}
         />
       )}
-      {/* **والتفعيلُ خلف تأكيد** — كان يقع من أوّل كبسة. */}
+      {/* **والتفعيلُ خلف تأكيد، وعددُه في عنوانه** — كان يقع من أوّل كبسة. */}
       <Confirm
         open={activateRows !== null}
         tone="primary"
-        title={activateRows && activateRows.length > 1 ? A.bulkActivateTitle : A.activateTitle}
+        title={
+          activateRows && activateRows.length > 1
+            ? U.bulkActivateTitleN.replace("{n}", fmtNum(activateRows.length))
+            : A.activateTitle
+        }
         body={activateRows && activateRows.length > 1 ? A.bulkActivateBody : A.activateBody}
         confirmLabel={m.admin.users.activate}
         busy={busy}
@@ -786,6 +804,39 @@ export default function AllAccountsTable() {
   );
 }
 
+/** **نافذةُ جهات الاتصال** — التاريخُ باسمه فوقه، لا خانةً عاريةً في الرأس. */
+function ContactsModal({ onClose, onDownload }: { onClose: () => void; onDownload: (since: string) => Promise<void> }) {
+  const [since, setSince] = useState("");
+  const [busy, setBusy] = useState(false);
+  return (
+    <Modal open onClose={onClose} title={U.contactsTitle}>
+      <form
+        className="space-y-4"
+        onSubmit={async (e) => {
+          e.preventDefault();
+          setBusy(true);
+          try {
+            await onDownload(since);
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        <p className="text-sm leading-relaxed text-ink-muted">{U.contactsHint}</p>
+        <Input
+          id="contacts-since"
+          type="date"
+          label={U.contactsSinceLabel}
+          icon={<IconDate />}
+          value={since}
+          onChange={(e) => setSince(e.target.value)}
+        />
+        <FormActions submit onCancel={onClose} busy={busy} saveLabel={U.contactsDownload} />
+      </form>
+    </Modal>
+  );
+}
+
 /**
  * ══════════════════════════════════════════════════════════════════════
  * **حسابٌ جديد — سائقٌ أو مندوبٌ أو موظّف، بدورٍ واحد** (قرارُ المالك ٢٠٢٦-١٠-٠٤)
@@ -800,11 +851,14 @@ export default function AllAccountsTable() {
 function CreateAccountModal({
   kind,
   allRoles,
+  hours,
   onClose,
   onCreated,
 }: {
   kind: NewKind;
   allRoles: readonly Role[];
+  /** **مهلةُ الكلمة المؤقّتة من المحرّك** — كانت ٧٢ مكتوبةً والإعدادُ ١٢٠. */
+  hours: number | null;
   onClose: () => void;
   onCreated: () => void;
 }) {
@@ -816,7 +870,15 @@ function CreateAccountModal({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState<{ id: string; sent: boolean; temp?: string } | null>(null);
-  const [partial, setPartial] = useState<{ id: string; role: string; why: string } | null>(null);
+  // **ونتيجةُ رسالة الترحيب تُحفظ من أوّل طلب** — كانت «إعادة منح الدور» تقول «لم تُرسل» دائماً
+  // وتُضيّع الكلمةَ المؤقّتة.
+  const [partial, setPartial] = useState<{
+    id: string;
+    role: string;
+    why: string;
+    sent: boolean;
+    temp?: string;
+  } | null>(null);
 
   // **أدوارُ الموظّفين التي يملك المشغّلُ منحَها** — ولا متجرَ ولا صفةَ حساب.
   const staffOptions = signupGroups(allRoles, me?.roles ?? [])
@@ -855,7 +917,13 @@ function CreateAccountModal({
       try {
         await grant(made.id, staffRole);
       } catch (err) {
-        setPartial({ id: made.id, role: staffRole, why: errorText(err) });
+        setPartial({
+          id: made.id,
+          role: staffRole,
+          why: errorText(err),
+          sent: !!made.welcome?.sent,
+          temp: made.welcome?.temp_password,
+        });
         setBusy(false);
         onCreated();
         return;
@@ -918,7 +986,7 @@ function CreateAccountModal({
             </Select>
           )}
           <p className="rounded-control bg-field px-3 py-2 text-xs leading-relaxed text-ink-muted">
-            {A.noPasswordHint.replace("{h}", fmtNum(72))}
+            {A.noPasswordHint.replace("{h}", fmtNum(hours ?? 72))}
           </p>
           {partial && (
             <Alert className="mb-3">
@@ -935,7 +1003,7 @@ function CreateAccountModal({
                     setBusy(true);
                     try {
                       await grant(partial.id, partial.role);
-                      setDone({ id: partial.id, sent: false });
+                      setDone({ id: partial.id, sent: partial.sent, temp: partial.temp });
                       setPartial(null);
                     } catch (err) {
                       setPartial({ ...partial, why: errorText(err) });

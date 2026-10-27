@@ -22,6 +22,12 @@ var (
 	ErrPhoneTaken  = httpx.NewError(http.StatusConflict, "phone_taken", "errors.phone_taken")
 	ErrInvalidRole = httpx.NewError(http.StatusBadRequest, "invalid_role", "errors.invalid_role")
 	ErrSelfAction  = httpx.NewError(http.StatusBadRequest, "self_action", "errors.self_action")
+	// ErrAccountDeleted **الحسابُ المحذوفُ لا تتبدّل حالُه** (تدقيقُ اللوحة ٢٠٢٦-١٠-٢٧) — كان زرُّ
+	// «تفعيل» يردّه فعّالاً باسم «حساب محذوف» ورقمِ deleted-… وبلا كلمة سرّ.
+	//
+	// **وهي إشارةٌ لا ردّ**: بابُ الإدارة (`server`) يترجمها إلى رمزه — فلا تبلغ رموزُ الإدارة
+	// خريطةَ أخطاء التطبيق.
+	ErrAccountDeleted = errors.New("identity: account deleted")
 )
 
 // AllRoles الأدوار السبعة المثبتة (PLAN.md §3).
@@ -169,6 +175,12 @@ func (s *Service) AdminUpdateUser(ctx context.Context, actorID, userID string, i
 	if in.Status != nil {
 		if *in.Status != "active" && *in.Status != "suspended" && *in.Status != "blocked" {
 			return nil, errValidationErr
+		}
+		// **والمحذوفُ يبقى محذوفاً** — لا تفعيلَ ولا إيقافَ ولا حظرَ لحسابٍ مسحه صاحبُه.
+		if cur, _, err := s.repo.UserByID(ctx, userID); err != nil {
+			return nil, err
+		} else if cur.Status == "deleted" {
+			return nil, ErrAccountDeleted
 		}
 		if userID == actorID && *in.Status != "active" {
 			return nil, ErrSelfAction // لا يمكنك حظر نفسك

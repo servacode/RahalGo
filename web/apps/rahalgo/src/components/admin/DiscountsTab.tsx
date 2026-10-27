@@ -9,6 +9,10 @@
  *  - الإشعارُ خيارٌ في النافذة بعدد مستلميه، لزبائن منطقة المتجر وحدَهم،
  *    وإعادةُ التفعيل لا تُبلّغ إلّا إن اختير.
  *  - الحالةُ الحقيقيّة، ومين عمله، والسعران بعملةٍ، والخطأُ داخل النافذة.
+ *
+ * (تدقيقُ العروض ٢٠٢٦-١٠-٢٧:) العددُ جنب كلّ حالة، وتأكيدٌ قبل التوقيف يقول إن كان الخصمُ من المتجر،
+ * وصورةُ الصنف في الكرت، والبحثُ يعرض الصورةَ والسعرَ والتوفّر، والسعرُ قبل وبعد قبل «انشر» —
+ * **وفشلُ التحميل يُعرض خطأً بزرّ «جرّب مرة تانية» لا «ما في خصومات».**
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -31,7 +35,7 @@ import {
   FormActions,
   Confirm,
 } from "@rahalgo/ui";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, mediaUrl } from "@/lib/api";
 
 const m = getMessages(defaultLocale);
 const P = m.admin.offersPage;
@@ -51,6 +55,7 @@ interface Offer {
   discount_percent: number | null;
   discount_amount: number | null;
   borne_by: "platform" | "merchant" | null;
+  item_image_url?: string | null;
   ends_at: string | null;
   active: boolean;
   live: boolean;
@@ -65,6 +70,12 @@ interface Item {
   id: string;
   name: string;
   merchant_name: string;
+  price: number;
+  price_before?: number | null;
+  image_url?: string | null;
+  image_thumb_url?: string | null;
+  available: boolean;
+  source_closed: boolean;
 }
 
 const STATUS: Record<OfferStatus, { label: string; tone: "success" | "neutral" | "warning" | "danger" | "info" }> = {
@@ -92,9 +103,11 @@ function cutText(o: Offer): string {
 
 const PER_PAGE = 20;
 
-export default function DiscountsTab({ onChanged }: { onChanged?: () => void }) {
+export default function DiscountsTab({ onChanged, autoApprove = false }: { onChanged?: () => void; autoApprove?: boolean }) {
   const [rows, setRows] = useState<Offer[] | null>(null);
   const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [stopping, setStopping] = useState<Offer | null>(null);
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<OfferStatus | "all">("all");
@@ -106,12 +119,10 @@ export default function DiscountsTab({ onChanged }: { onChanged?: () => void }) 
     api<{ offers: Offer[] }>("/api/v1/admin/offers")
       .then((r) => {
         setRows(r.offers ?? []);
-        setError("");
+        setLoadError("");
       })
-      .catch((err) => {
-        setRows([]);
-        setError(errorText(err));
-      });
+      // **ولا «ما في خصومات» تحت خطأ** — البياناتُ لم تصل، لا أنّها فارغة.
+      .catch((err) => setLoadError(errorText(err)));
   }, []);
   useEffect(load, [load]);
 
@@ -127,10 +138,17 @@ export default function DiscountsTab({ onChanged }: { onChanged?: () => void }) 
     );
   }, [rows, q, status]);
   const shown = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const counts = useMemo(() => {
+    const c: Partial<Record<OfferStatus, number>> = {};
+    for (const o of rows ?? []) c[statusOf(o)] = (c[statusOf(o)] ?? 0) + 1;
+    return c;
+  }, [rows]);
 
   async function deactivate(o: Offer) {
     if (busyId) return;
+    setStopping(null);
     setBusyId(o.id);
+    setError("");
     try {
       await api(`/api/v1/admin/offers/${o.id}/active`, {
         method: "POST",
@@ -170,8 +188,11 @@ export default function DiscountsTab({ onChanged }: { onChanged?: () => void }) 
         <Chips
           wrap
           items={[
-            { id: "all" as const, label: O.fAll },
-            ...(Object.keys(STATUS) as OfferStatus[]).map((k) => ({ id: k, label: STATUS[k].label })),
+            { id: "all" as const, label: O.fAll, count: rows?.length },
+            // **والحالةُ الفارغةُ لا تُعرض** — ستُّ حالاتٍ كثيرةٌ على الجوّال (إلّا المختارة).
+            ...(Object.keys(STATUS) as OfferStatus[])
+              .filter((k) => (counts[k] ?? 0) > 0 || k === status)
+              .map((k) => ({ id: k, label: STATUS[k].label, count: counts[k] ?? 0 })),
           ]}
           value={status}
           onChange={(k) => {
@@ -183,7 +204,18 @@ export default function DiscountsTab({ onChanged }: { onChanged?: () => void }) 
 
       {error && <Alert>{error}</Alert>}
 
-      {rows === null ? (
+      {loadError && rows === null ? (
+        <section className="surface flex flex-col items-center gap-3 p-8 text-center">
+          <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-danger-solid text-on-solid">
+            <IconStore size={28} />
+          </span>
+          <h2 className="heading-section">{O.loadFailed}</h2>
+          <Alert>{loadError}</Alert>
+          <Button variant="secondary" onClick={load}>
+            {O.retry}
+          </Button>
+        </section>
+      ) : rows === null ? (
         <LoadingState variant="list" />
       ) : shown.length === 0 ? (
         <section className="surface flex flex-col items-center gap-3 p-8 text-center">
@@ -200,7 +232,7 @@ export default function DiscountsTab({ onChanged }: { onChanged?: () => void }) 
               key={o.id}
               o={o}
               busy={busyId === o.id}
-              onDeactivate={() => void deactivate(o)}
+              onDeactivate={() => setStopping(o)}
               onActivate={() => setActivating(o)}
             />
           ))}
@@ -213,8 +245,30 @@ export default function DiscountsTab({ onChanged }: { onChanged?: () => void }) 
         </div>
       )}
 
+      {loadError && rows !== null && <Alert>{loadError}</Alert>}
+
+      <Confirm
+        open={stopping !== null}
+        title={O.stopOfferTitle.replace("{item}", stopping?.item_name || stopping?.title || "")}
+        body={
+          <>
+            <p>{O.stopOfferBody}</p>
+            {stopping && stopping.created_by_kind && stopping.created_by_kind !== "admin" && (
+              <p className="mt-1 font-bold text-warning">
+                {O.stopOfferNotOurs.replace("{by}", BY[stopping.created_by_kind] ?? "")}
+              </p>
+            )}
+          </>
+        }
+        confirmLabel={O.stopOffer}
+        busy={busyId !== ""}
+        onConfirm={() => stopping && void deactivate(stopping)}
+        onCancel={() => setStopping(null)}
+      />
+
       {open && (
         <CreateOfferModal
+          autoApprove={autoApprove}
           onClose={() => setOpen(false)}
           onSaved={() => {
             setOpen(false);
@@ -257,11 +311,18 @@ function OfferCard({
   const st = statusOf(o);
   const canAct = st !== "pending" && st !== "rejected" && st !== "expired";
   const cut = cutText(o);
+  const img = mediaUrl(o.item_image_url ?? null);
   return (
     <li className="surface flex flex-col gap-3 p-4">
       <div className="flex items-start gap-3">
-        <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-on-bright">
-          <IconStore size={20} />
+        {/* **وصورةُ الصنف بدل الأيقونة الثابتة** — يتميّز كلُّ خصمٍ بلمحة. */}
+        <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent text-on-bright">
+          {img ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={img} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <IconStore size={20} />
+          )}
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate font-bold">{o.title}</span>
@@ -301,8 +362,11 @@ function OfferCard({
       </div>
 
       <div className="grid grid-cols-1 gap-x-3 gap-y-1 text-2xs text-ink-muted sm:grid-cols-2">
-        <span>
-          {O.borneCol}: <span className="text-ink">{o.borne_by === "platform" ? P.byPlatform : P.byMerchant}</span>
+        <span className="flex items-center gap-1">
+          {O.borneCol}:
+          <Badge variant={o.borne_by === "platform" ? "info" : "neutral"}>
+            {o.borne_by === "platform" ? P.byPlatform : P.byMerchant}
+          </Badge>
         </span>
         <span className="flex items-center gap-1">
           <IconDate size={12} className="shrink-0" />
@@ -317,12 +381,12 @@ function OfferCard({
       {canAct && (
         <div className="mt-auto border-t border-line-soft pt-3">
           {o.active ? (
-            <Button variant="secondary" className="w-full" disabled={busy} onClick={onDeactivate}>
-              {busy ? O.busy : P.deactivate}
+            <Button variant="danger" className="w-full" disabled={busy} onClick={onDeactivate}>
+              {busy ? O.busy : O.stopOffer}
             </Button>
           ) : (
             <Button className="w-full" onClick={onActivate}>
-              {P.activate}
+              {O.activateOffer}
             </Button>
           )}
         </div>
@@ -369,12 +433,22 @@ function NotifyChoice({
   );
 }
 
-function CreateOfferModal({ onClose, onSaved }: { onClose: () => void; onSaved: () => void }) {
+function CreateOfferModal({
+  onClose,
+  onSaved,
+  autoApprove,
+}: {
+  onClose: () => void;
+  onSaved: () => void;
+  autoApprove: boolean;
+}) {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [itemQuery, setItemQuery] = useState("");
   const [items, setItems] = useState<Item[]>([]);
-  const [itemID, setItemID] = useState("");
+  const [searched, setSearched] = useState(false);
+  const [picked, setPicked] = useState<Item | null>(null);
+  const itemID = picked?.id ?? "";
   const [method, setMethod] = useState<"percent" | "amount">("percent");
   const [value, setValue] = useState("");
   const [endsOn, setEndsOn] = useState("");
@@ -388,7 +462,10 @@ function CreateOfferModal({ onClose, onSaved }: { onClose: () => void; onSaved: 
 
   /** **والصنفُ يُبحث لا يُكتب معرّفُه** — لا أحدَ يحفظ `uuid`. */
   useEffect(() => {
-    if (itemQuery.trim().length < 2 || itemID) return;
+    if (itemQuery.trim().length < 2 || itemID) {
+      setSearched(false);
+      return;
+    }
     const t = setTimeout(() => {
       api<{ items: Item[] }>(
         `/api/v1/public/search/items?q=${encodeURIComponent(itemQuery.trim())}`,
@@ -396,14 +473,26 @@ function CreateOfferModal({ onClose, onSaved }: { onClose: () => void; onSaved: 
         .then((r) => setItems(r.items ?? []))
         // @empty-ok — **بحثٌ يُعاد بحرفٍ واحد**: من كتب فلم يجد يُضيف حرفاً
         // فيُعاد النداء، **ولا قرارَ يُبنى على فراغه.**
-        .catch(() => setItems([]));
+        .catch(() => setItems([]))
+        .finally(() => setSearched(true));
     }, 250);
     return () => clearTimeout(t);
   }, [itemQuery, itemID]);
 
+  // **السعرُ قبل وبعد قبل «انشر»** — بحسبة الخادم (`offers.Cut`): النسبةُ تُقصّ لتحت، والمبلغُ لا يتجاوز السعر.
+  const base = picked ? (picked.price_before ?? picked.price) : 0;
+  const v = Number(value) || 0;
+  const cutPreview = base > 0 && v > 0 ? Math.min(base, method === "percent" ? Math.floor((base * v) / 100) : v) : 0;
+
   async function submit(replace = false) {
     // **والضغطُ الثاني لا يُرسل ثانيةً.**
     if (busy) return;
+    // **وما ينقص يُقال قبل الإرسال** — لا ردٌّ عامٌّ من الخادم.
+    const missing = !title.trim() ? O.needTitle : !itemID ? O.needItem : !(Number(value) > 0) ? O.needValue : "";
+    if (missing) {
+      setError(missing);
+      return;
+    }
     setBusy(true);
     setError("");
     setAskReplace(false);
@@ -457,32 +546,77 @@ function CreateOfferModal({ onClose, onSaved }: { onClose: () => void; onSaved: 
       <div className="space-y-3">
         <Input id="offer-title" label={P.fTitle} value={title} onChange={(e) => setTitle(e.target.value)} />
         <Input id="offer-body" label={P.fBody} value={body} onChange={(e) => setBody(e.target.value)} />
-        <Input
-          id="offer-item"
-          label={P.fItem}
-          value={itemQuery}
-          onChange={(e) => {
-            setItemQuery(e.target.value);
-            setItemID("");
-          }}
-        />
-        {items.length > 0 && !itemID && (
-          <ul className="max-h-40 space-y-1 overflow-y-auto">
-            {items.map((it) => (
-              <li key={it.id}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setItemID(it.id);
-                    setItemQuery(`${it.name} — ${it.merchant_name}`);
-                  }}
-                  className="w-full rounded-control border border-line px-3 py-2 text-start text-sm hover:border-accent"
-                >
-                  {it.name} — {it.merchant_name}
-                </button>
-              </li>
-            ))}
-          </ul>
+        {picked ? (
+          <div className="flex items-center gap-3 rounded-control border border-accent bg-field px-3 py-2">
+            <ItemThumb it={picked} />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-bold">{picked.name}</span>
+              <span className="block truncate text-xs text-ink-muted">
+                {picked.merchant_name} · <Money value={base} />
+              </span>
+            </span>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setPicked(null);
+                setItemQuery("");
+              }}
+            >
+              {O.itemChange}
+            </Button>
+          </div>
+        ) : (
+          <>
+            <Input
+              id="offer-item"
+              label={P.fItem}
+              icon={<IconSearch size={16} />}
+              value={itemQuery}
+              onChange={(e) => setItemQuery(e.target.value)}
+            />
+            {itemQuery.trim().length < 2 ? (
+              <p className="-mt-1 text-xs text-ink-muted">{O.itemSearchHint}</p>
+            ) : searched && items.length === 0 ? (
+              <p className="-mt-1 text-xs text-warning">{O.itemNoResult}</p>
+            ) : null}
+            {items.length > 0 && itemQuery.trim().length >= 2 && (
+              <ul className="max-h-56 space-y-1 overflow-y-auto">
+                {items.map((it) => {
+                  // **والصنفُ غيرُ المتوفّر يُرفض من الخادم** (`offer_item_unavailable`) — فلا يُختار.
+                  const off = !it.available;
+                  return (
+                    <li key={it.id}>
+                      <button
+                        type="button"
+                        disabled={off}
+                        onClick={() => {
+                          setPicked(it);
+                          setError("");
+                        }}
+                        className="flex w-full items-center gap-3 rounded-control border border-line px-3 py-2 text-start text-sm hover:border-accent disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <ItemThumb it={it} />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-bold">{it.name}</span>
+                          <span className="block truncate text-xs text-ink-muted">{it.merchant_name}</span>
+                        </span>
+                        <span className="flex shrink-0 flex-col items-end gap-1">
+                          <span className="tabular-nums">
+                            <Money value={it.price_before ?? it.price} />
+                          </span>
+                          {off ? (
+                            <Badge variant="warning">{O.itemUnavailable}</Badge>
+                          ) : it.source_closed ? (
+                            <Badge variant="neutral">{O.itemClosed}</Badge>
+                          ) : null}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </>
         )}
 
         <p className="text-sm font-medium">{O.method}</p>
@@ -510,8 +644,22 @@ function CreateOfferModal({ onClose, onSaved }: { onClose: () => void; onSaved: 
           value={endsOn}
           onChange={(e) => setEndsOn(e.target.value)}
         />
+        {picked && cutPreview > 0 && (
+          <div className="rounded-control bg-field px-3 py-2.5">
+            <span className="block text-2xs text-ink-muted">{O.previewTitle}</span>
+            <span className="flex flex-wrap items-baseline gap-2">
+              <span className="text-sm text-ink-muted line-through">
+                <Money value={base} />
+              </span>
+              <span className="figure text-success">
+                <Money value={base - cutPreview} />
+              </span>
+            </span>
+            <span className="block text-xs text-info">{O.previewCost.replace("{amount}", fmtMoney(cutPreview))}</span>
+          </div>
+        )}
         <p className="text-xs text-ink-muted">{O.platformOnly}</p>
-        <p className="text-xs text-ink-muted">{O.offerApprovalHint}</p>
+        <p className="text-xs text-ink-muted">{autoApprove ? O.offerApprovalHintAuto : O.offerApprovalHint}</p>
         {itemID && (
           <NotifyChoice id="offer-notify" count={audience} checked={notify} onChange={setNotify} />
         )}
@@ -520,6 +668,20 @@ function CreateOfferModal({ onClose, onSaved }: { onClose: () => void; onSaved: 
         <FormActions onSave={() => void submit()} onCancel={onClose} busy={busy} saveLabel={P.publish} />
       </div>
     </Modal>
+  );
+}
+
+function ItemThumb({ it }: { it: Item }) {
+  const src = mediaUrl(it.image_thumb_url ?? it.image_url ?? null);
+  return (
+    <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-control bg-field text-ink-muted">
+      {src ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={src} alt="" className="h-full w-full object-cover" />
+      ) : (
+        <IconStore size={16} />
+      )}
+    </span>
   );
 }
 

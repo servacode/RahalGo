@@ -235,6 +235,11 @@ func (s *Server) profitsPlatform(w http.ResponseWriter, r *http.Request, from, t
 		"outside":              p.Outside,
 		"losses":               p.Losses(),
 		"expenses_paid":        p.Opex,
+		// **والمشطوبُ رقمٌ للمعلومة** — لا يُطرح من الصافي (خسارتُه قُيّدت يومَ نشأ الدين).
+		"written_off": p.WrittenOff,
+		// **«اليوم» يومُ الحساب** — يبدأ بساعة فتح الدوام، والشاشةُ تبني أزرارَ المدّة عليه.
+		"today":          s.accountToday(r.Context()).Format("2006-01-02"),
+		"day_start_hour": s.dayStartHour(r.Context()),
 	})
 }
 
@@ -536,10 +541,16 @@ func (s *Server) profitsParties(w http.ResponseWriter, r *http.Request, from, to
 	}
 	// والزبون معه «أنفق لدينا» — قيمة طلباته المسلّمة بيوم تسليمها.
 	spentSel := `0::bigint`
+	// **الرقمُ الأساسيُّ للتبويب يُرتَّب عليه** (تدقيقُ ٢٠٢٦-١٠-٢٧): المندوبُ بعمولاته،
+	// والسائقُ بأجور توصيله (أوّلُ عمود)، **والزبونُ بما أنفقه** لا بمكافآت دعواته.
+	primary := keys[0]
+	order := `COALESCE(e.c0, 0) DESC, ` + spentSel + ` DESC`
 	if tab == "customers" {
 		keys = append(keys, "spent")
 		spentSel = `COALESCE(sp.paid, 0)`
 		nonZero = append(nonZero, `COALESCE(sp.paid, 0) <> 0`)
+		primary = "spent"
+		order = spentSel + ` DESC, COALESCE(e.c0, 0) DESC`
 	}
 
 	ctes := `
@@ -580,7 +591,7 @@ func (s *Server) profitsParties(w http.ResponseWriter, r *http.Request, from, to
 	rows, err := s.pg.Query(r.Context(), ctes+`
 		SELECT u.id::text, COALESCE(u.full_name, ''), u.phone::text,
 		       ARRAY[`+strings.Join(vals, ", ")+`]::bigint[]`+body+`
-		ORDER BY COALESCE(e.c0, 0) DESC, `+spentSel+` DESC, u.id
+		ORDER BY `+order+`, u.id
 		LIMIT $3 OFFSET $4`, from, to, pg.PerPage, pg.Offset)
 	if err != nil {
 		s.respondErr(w, err)
@@ -603,6 +614,9 @@ func (s *Server) profitsParties(w http.ResponseWriter, r *http.Request, from, to
 	}
 	res := paged("rows", out, count, pg)
 	res["columns"] = keys
+	res["primary"] = primary
+	res["today"] = s.accountToday(r.Context()).Format("2006-01-02")
+	res["day_start_hour"] = s.dayStartHour(r.Context())
 	httpx.JSON(w, http.StatusOK, res)
 }
 
@@ -715,5 +729,9 @@ func (s *Server) profitsMerchants(w http.ResponseWriter, r *http.Request, from, 
 	}
 	res := paged("rows", out, count, pg)
 	res["columns"] = []string{"our_margin", "our_commission", "gross", "store_earned", "compensation"}
+	// **الرقمُ الكبيرُ مبيعاتُه** — وهو نفسُه ما يُرتَّب عليه.
+	res["primary"] = "gross"
+	res["today"] = s.accountToday(r.Context()).Format("2006-01-02")
+	res["day_start_hour"] = s.dayStartHour(r.Context())
 	httpx.JSON(w, http.StatusOK, res)
 }

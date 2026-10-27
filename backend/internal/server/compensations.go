@@ -69,6 +69,10 @@ func compensationErr(err error) error {
 		return errGoodsCompCap
 	case errors.Is(err, orders.ErrGoodsAlreadyCompensated):
 		return errGoodsCompensated
+	case errors.Is(err, orders.ErrGoodsCompNone):
+		return errGoodsCompNone
+	case errors.Is(err, orders.ErrGoodsCompPending):
+		return errGoodsCompPending
 	}
 	return err
 }
@@ -482,6 +486,8 @@ func (s *Server) handleListCompensations(w http.ResponseWriter, r *http.Request)
 	}
 	out := paged("compensations", list, total, pg)
 	out["summary"] = sum
+	// **ويومُ الحساب** — أزرارُ المدّة الجاهزة («اليوم» · «٧ أيّام» · «هالشهر») تُبنى عليه.
+	out["today"] = s.accountToday(r.Context()).Format("2006-01-02")
 	httpx.JSON(w, http.StatusOK, out)
 }
 

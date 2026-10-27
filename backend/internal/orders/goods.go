@@ -48,6 +48,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
+
 	"github.com/servacode/rahalgo/backend/internal/obligations"
 
 	"github.com/servacode/rahalgo/backend/internal/wallet"
@@ -74,6 +76,11 @@ var (
 	ErrGoodsCompensationCap = errors.New("التعويضُ أكبرُ من سعر شراء البضاعة")
 	// ErrGoodsAlreadyCompensated **عُوّض المتجرُ عن هذه البضاعة سلفاً.**
 	ErrGoodsAlreadyCompensated = errors.New("عُوّض المتجرُ سلفاً")
+	// ErrGoodsCompNone **قيل «ما في تعويض» لهذه البضاعة** (قرارُ المالك ٢٠٢٦-١٠-٢٧) —
+	// قرارٌ نهائيٌّ لا يُكتب بعده تعويض.
+	ErrGoodsCompNone = errors.New("قيل «ما في تعويض» لهذه البضاعة")
+	// ErrGoodsCompPending **طلبُ تعويضٍ معلَّقٌ لهذه البضاعة** — يُرفض أوّلاً من «التعويضات».
+	ErrGoodsCompPending = errors.New("طلبُ تعويضٍ معلَّقٌ لهذه البضاعة")
 )
 
 // وجهتا البضاعة.
@@ -537,13 +544,18 @@ func GoodsCompensableTx(ctx context.Context, tx wallet.Querier, orderID string, 
 		return ErrGoodsBadCompensation
 	}
 	var settled *string
+	var none *time.Time
 	if err := tx.QueryRow(ctx,
-		`SELECT goods_settled_to FROM orders WHERE id = $1 FOR UPDATE`, orderID).
-		Scan(&settled); err != nil {
+		`SELECT goods_settled_to, goods_comp_none_at FROM orders WHERE id = $1 FOR UPDATE`, orderID).
+		Scan(&settled, &none); err != nil {
 		return err
 	}
 	if settled == nil || *settled != GoodsToMerchant {
 		return ErrGoodsBadCompensation
+	}
+	// **وبعد «ما في تعويض» لا تعويض** (٢٠٢٦-١٠-٢٧) — القرارُ نهائيّ.
+	if none != nil {
+		return ErrGoodsCompNone
 	}
 	var paid int64
 	if err := tx.QueryRow(ctx, `
@@ -564,4 +576,59 @@ func GoodsCompensableTx(ctx context.Context, tx wallet.Querier, orderID string, 
 		return ErrGoodsCompensationCap
 	}
 	return nil
+}
+
+// MarkGoodsNoCompensationTx **«ما في تعويض»** — قرارُ المالك ٢٠٢٦-١٠-٢٧.
+//
+// بضاعةٌ رجعت إلى متجرها ولا تعويضَ لها: **يُوسَم الطلبُ فيخرج من طابور تعويض
+// البضاعة نهائياً، ولا يتحرّك قرش.** والسببُ اختياريّ.
+//
+// ويُردّ: بضاعةٌ لم تُحسم «إلى المتجر» (`ErrGoodsBadCompensation`)، أو عُوّضت
+// (`ErrGoodsAlreadyCompensated`)، أو قيل فيها ذلك قبلاً (`ErrGoodsCompNone`)،
+// **أو لها طلبُ تعويضٍ معلَّق** (`ErrGoodsCompPending`) — يُرفض من «التعويضات» أوّلاً،
+// فلا يبقى طلبٌ معلَّقٌ لبضاعةٍ خرجت من الطابور.
+func MarkGoodsNoCompensationTx(ctx context.Context, tx wallet.Querier, orderID, actorID, reason string) error {
+	var settled *string
+	var none *time.Time
+	if err := tx.QueryRow(ctx,
+		`SELECT goods_settled_to, goods_comp_none_at FROM orders WHERE id = $1 FOR UPDATE`, orderID).
+		Scan(&settled, &none); err != nil {
+		return err
+	}
+	if settled == nil || *settled != GoodsToMerchant {
+		return ErrGoodsBadCompensation
+	}
+	if none != nil {
+		return ErrGoodsCompNone
+	}
+	var paid, pending bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM wallet_transactions wt
+		                JOIN merchants m ON m.owner_user_id = wt.user_id
+		                JOIN orders o ON o.merchant_id = m.id AND o.id = $1
+		               WHERE wt.ref = $1::text AND wt.kind = 'compensation'),
+		       EXISTS (SELECT 1 FROM driver_compensation_requests r
+		               WHERE r.order_id = $1 AND r.kind = $2 AND r.status = $3)`,
+		orderID, CompKindMerchantGoods, CompensationPending).Scan(&paid, &pending); err != nil {
+		return err
+	}
+	if paid {
+		return ErrGoodsAlreadyCompensated
+	}
+	if pending {
+		return ErrGoodsCompPending
+	}
+	var by *string
+	if actorID != "" {
+		by = &actorID
+	}
+	var why *string
+	if reason != "" {
+		why = &reason
+	}
+	_, err := tx.Exec(ctx, `
+		UPDATE orders SET goods_comp_none_at = now(), goods_comp_none_by = $2::uuid,
+		       goods_comp_none_reason = $3
+		 WHERE id = $1`, orderID, by, why)
+	return err
 }

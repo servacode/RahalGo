@@ -24,7 +24,7 @@
  * ولا يتجاوز تلك.**
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
 import {
   Alert,
@@ -75,7 +75,11 @@ function fromDamascusInput(v: string): string {
   return Number.isNaN(d.getTime()) ? "" : d.toISOString();
 }
 
-export default function HoursPanel() {
+/**
+ * **والترتيبُ** (تدقيقُ ٢٠٢٦-١٠-٢٧): زرُّ الدوام ← ساعةُ بداية اليوم ← الجدول ← الإيقافُ الطارئ
+ * بزرٍّ أحمر كامل العرض. كان الإيقافُ مدفوناً بعد ٢٣ بطاقة.
+ */
+export default function HoursPanel({ dayStart }: { dayStart?: ReactNode }) {
   const { can } = useAuth();
   // **والقدرةُ عينُها التي تحكم المناطق** — **ولا قدرةَ جديدةٌ تُخترَع.**
   const may = can("settings.general.manage");
@@ -186,9 +190,11 @@ export default function HoursPanel() {
 
       <PlatformSwitch />
 
+      {dayStart}
+
       <Card>
         <div className="space-y-3 p-4">
-          <h3 className="font-medium">{P.title}</h3>
+          <h2 className="heading-card">{P.title}</h2>
           <p className="text-sm text-ink-muted">{P.hint}</p>
           <p className="text-sm text-ink-muted">{P.timezone}</p>
 
@@ -209,8 +215,8 @@ export default function HoursPanel() {
           <WeekHours windows={wins} onChange={setWins} disabled={!may} />
 
           {may && (
-            <div className="flex items-center gap-3">
-              <Button onClick={saveHours}>{P.save}</Button>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button className="w-full sm:w-auto" onClick={saveHours}>{P.save}</Button>
               {savedHours && <span className="text-sm text-ink-muted">{P.saved}</span>}
             </div>
           )}
@@ -219,7 +225,7 @@ export default function HoursPanel() {
 
       <Card tone={closure.active ? "danger" : "default"}>
         <div className="space-y-3 p-4">
-          <h3 className="font-medium">{P.closure.title}</h3>
+          <h2 className="heading-card">{P.closure.title}</h2>
           <p className="text-sm text-ink-muted">{P.closure.hint}</p>
 
           {closure.active && <Alert tone="error">{P.closure.banner}</Alert>}
@@ -249,18 +255,18 @@ export default function HoursPanel() {
           </div>
 
           {may && (
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="space-y-2">
               {closure.active ? (
-                <>
-                  <Button onClick={() => void saveClosure(true)} disabled={busy} variant="secondary">
-                    {P.closure.save}
-                  </Button>
-                  <Button onClick={() => setAsk("resume")} disabled={busy}>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <Button className="w-full" onClick={() => setAsk("resume")} disabled={busy}>
                     {P.closure.resume}
                   </Button>
-                </>
+                  <Button className="w-full" onClick={() => void saveClosure(true)} disabled={busy} variant="secondary">
+                    {P.closure.save}
+                  </Button>
+                </div>
               ) : (
-                <Button variant="danger" onClick={() => setAsk("stop")} disabled={busy}>
+                <Button className="w-full" variant="danger" onClick={() => setAsk("stop")} disabled={busy}>
                   {P.closure.stopNow}
                 </Button>
               )}

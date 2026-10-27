@@ -11,21 +11,25 @@ import {
   type ChromeNavItem,
   IconDashboard,
   IconOrder,
-  IconUser,
-  IconDriver,
   IconWarning,
   IconUsers,
   IconStore,
   IconZones,
   IconLocation,
   IconPromos,
-  IconStatus,
   IconSupport,
-  IconStar,
   IconSettings,
-  IconLink,
   IconWallet,
   IconBalance,
+  IconHistory,
+  IconReports,
+  IconMonitor,
+  IconMoto,
+  IconArrowOut,
+  IconTrendUp,
+  IconReceipt,
+  IconTarget,
+  IconSignup,
   BootScreen,
   IconShieldCheck,
   wsBase,
@@ -70,7 +74,7 @@ const ALL_NAV: NavItem[] = [
   { href: "/dashboard/orders", label: m.terms.orders, icon: IconOrder,
     caps: ["orders.read"] },
   // **والسجلُّ بابٌ ثانٍ** — «ماذا جرى؟» سؤالٌ غيرُ «ما الذي يحتاجني الآن؟».
-  { href: "/dashboard/history", label: m.admin.nav.history, icon: IconStatus,
+  { href: "/dashboard/history", label: m.admin.nav.history, icon: IconHistory,
     caps: ["orders.read"] },
   // ══════════════════════════════════════════════════════════════════
   // **والحساباتُ ثالثاً — أهمُّ ما بعد الطلبات اليوم**
@@ -90,8 +94,9 @@ const ALL_NAV: NavItem[] = [
   //
   // **وبابٌ واحدٌ لكلّ من في المنصة**: الزبائنُ والمتاجرُ والسائقون
   // والمندوبون تبويباتٌ فيه — بجداولهم كما هي.
+  // **وملفُّ المتجر تابعٌ للحسابات** — يُلوّن بندَها (`activeAlso`) فلا يضيع الموظّفُ مكانَه.
   { href: "/dashboard/users", label: m.terms.accounts, icon: IconUsers,
-    caps: ["users.read"] },
+    caps: ["users.read"], activeAlso: ["/dashboard/merchants"] },
   // **والأدوارُ والصلاحيّاتُ في الإعدادات لا هنا** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — تُضبط مرّةً
   // وتُترك، **وبابُها `/dashboard/roles` باقٍ** (موضوعُ «الأدوار والصلاحيات» في الإعدادات).
   // **والسوقُ يليها** — ما يُعرض وما نفد وما ينتظر المراجعة.
@@ -104,11 +109,13 @@ const ALL_NAV: NavItem[] = [
   // **«المشاكل والتعويضات» — الشكاوى والتقييمات والخسائر والنزاعات وتعويض البضاعة بقسمٍ واحد**
   // (قرارُ المالك ٢٠٢٦-١٠-٢٥). وكلُّ تبويبٍ فيه بقدرته.
   { href: "/dashboard/tickets", label: m.admin.nav.problems, icon: IconSupport,
-    caps: ["support.manage", "finance.read", "disputes.manage"] },
+    caps: ["support.manage", "finance.read", "disputes.manage"],
+    // **والروابطُ القديمةُ لتبويباته تلوّنه** — التعويضاتُ والخسائرُ صارت تبويباتٍ فيه.
+    activeAlso: ["/dashboard/compensations", "/dashboard/losses"] },
   // **الطارئُ يبقى ظاهراً حتى يُغلقه إنسان** — والوقتُ لا يطمئنّ على أحد.
   { href: "/dashboard/emergencies", label: m.admin.nav.emergencies, icon: IconWarning,
     caps: ["emergencies.manage"] },
-  { href: "/dashboard/leads", label: m.terms.leads, icon: IconLink,
+  { href: "/dashboard/leads", label: m.terms.leads, icon: IconSignup,
     caps: ["merchants.verify"] },
   // ══════════════════════════════════════════════════════════════════
   // **خريطةُ العمليات — «أين» لا «كم»**
@@ -139,27 +146,27 @@ const ALL_NAV: NavItem[] = [
   // جارٍ · النقدُ والصندوق · الموافقات · صحّةُ الدفتر، **وصفحاتُ المال تُفتح منه** —
   // المصروفاتُ والأرباحُ والنقدُ والسحوباتُ والتعويضاتُ لم تعد بنوداً في القائمة.
   { href: "/dashboard/treasury", label: m.admin.treasury.title, icon: IconWallet,
-    caps: ["finance.read"] },
+    caps: ["finance.read"], activeAlso: ["/dashboard/wallet"] },
   // **وصفحاتُ المال رجعت بنوداً بالقائمة** (قرارُ المالك ٢٠٢٦-١٠-٢٧: «كل واحد قسم لحاله، نرجعهن ع
   // القائمة مشان ما نفوت من مكان لمكان») — وصفُّ روابطها شيل من رأس الخزينة.
-  { href: "/dashboard/cash", label: m.admin.treasury.links.cash, icon: IconWallet,
+  { href: "/dashboard/cash", label: m.admin.treasury.links.cash, icon: IconMoto,
     caps: ["finance.read"] },
-  { href: "/dashboard/payouts", label: m.admin.treasury.links.payouts, icon: IconWallet,
+  { href: "/dashboard/payouts", label: m.admin.treasury.links.payouts, icon: IconArrowOut,
     caps: ["finance.read"] },
   { href: "/dashboard/obligations", label: m.admin.treasury.links.obligations, icon: IconBalance,
     caps: ["finance.read"] },
-  { href: "/dashboard/profits", label: m.admin.treasury.links.profits, icon: IconStatus,
+  { href: "/dashboard/profits", label: m.admin.treasury.links.profits, icon: IconTrendUp,
     caps: ["finance.read"] },
-  { href: "/dashboard/expenses", label: m.admin.treasury.links.expenses, icon: IconWallet,
+  { href: "/dashboard/expenses", label: m.admin.treasury.links.expenses, icon: IconReceipt,
     caps: ["finance.read"] },
   // **والديونُ من الخزينة وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٢٥: «موجود بالقائمة وبالخزينة… نخلّيه بالخزينة»).
   // **والخسائرُ والنزاعاتُ وتعويضُ البضاعة صارت تبويباتٍ في «المشاكل والتعويضات»** (٢٠٢٦-١٠-٢٥).
   { href: "/dashboard/audit", label: m.admin.audit.title, icon: IconShieldCheck,
     caps: ["audit.read"] },
-  { href: "/dashboard/reports", label: m.terms.reports, icon: IconStatus,
+  { href: "/dashboard/reports", label: m.terms.reports, icon: IconReports,
     caps: ["analytics.read"] },
   // **الأهدافُ والمكافآت** — الشاشةُ تقول من بلغ، **والمكافأةُ بيدٍ لا بمعادلة.**
-  { href: "/dashboard/incentives", label: m.admin.incentives.title, icon: IconStar,
+  { href: "/dashboard/incentives", label: m.admin.incentives.title, icon: IconTarget,
     caps: ["finance.read"] },
   // **صفحةٌ واحدةٌ لثلاثة أشكال**: كودٌ يُكتب · ولافتةٌ تُرى · وخصمٌ
   // يُطبَّق في الدفتر. **وشاشتان لغرضٍ واحدٍ تجعلان من يبحث يفتح الاثنتين.**
@@ -167,9 +174,6 @@ const ALL_NAV: NavItem[] = [
   // تنال معه اللافتاتِ ولا الحملاتِ ولا البثّ.
   { href: "/dashboard/promos", label: m.admin.promos.title, icon: IconPromos,
     caps: ["offers.manage"] },
-  // الإعدادات تبقى للجميع **للقراءة**: العمليات تحتاج أن تعرف المهل التي
-  // تُحاسَب عليها، وإخفاؤها يجعلها تعمل بقواعد لا تراها. والتعديل للأدمن وحده
-  // ويُحرسه الخادم.
   // ══════════════════════════════════════════════════════════════════
   // **مراقبةُ التشغيل — «هل النظام يعمل؟»**
   // ══════════════════════════════════════════════════════════════════
@@ -184,11 +188,13 @@ const ALL_NAV: NavItem[] = [
   {
     href: "/dashboard/ops",
     label: m.admin.ops.navTitle,
-    icon: IconStatus,
+    icon: IconMonitor,
     caps: ["orders.read", "observability.read"],
   },
+  // **الإعداداتُ لمن يملك تعديلَ قسمٍ منها** — والأدوارُ موضوعٌ فيها (٢٠٢٦-١٠-٢٥) فتلوّنها.
   { href: "/dashboard/settings", label: m.terms.settings, icon: IconSettings,
-    caps: ["settings.general.manage", "settings.financial.manage", "settings.security.manage"] },
+    caps: ["settings.general.manage", "settings.financial.manage", "settings.security.manage"],
+    activeAlso: ["/dashboard/roles"] },
 ];
 
 /**
@@ -199,7 +205,7 @@ const ALL_NAV: NavItem[] = [
  * (قرارُ المالك ٢٠٢٦-٠٨-٠٨: «التشغيلُ اليوميّ · المال · البناءُ والإعداد —
  *  لا داعيَ لهما، احذفها من السايدبار».)
  *
- * **وسبعةَ عشرَ بنداً مرتّبةً لا تحتاج ثلاثةَ عناوينَ تفصلها** — والترتيبُ
+ * **واثنان وعشرون بنداً مرتّبةً لا تحتاج ثلاثةَ عناوينَ تفصلها** — والترتيبُ
  * نفسُه يقول ما يهمّ: الطلباتُ أوّلاً والإعداداتُ آخراً.
  *
  * **ومعها ذهب فخٌّ كان يلزم إغلاقه**: عنوانُ المجموعة يركب أوّلَ بندٍ منها،
@@ -233,6 +239,20 @@ function navFor(
   return ALL_NAV.filter((i) => !!i.caps && i.caps.some(can));
 }
 
+/**
+ * **بابُ الهبوط — الشغلُ الأساسيُّ قبل أوّل بندٍ بالترتيب** (تدقيقُ السايدبار ٢٠٢٦-١٠-٢٧).
+ *
+ * كان أوّلَ ما يملكه — **فموظّفُ الماليّة يهبط على «المشاكل والتعويضات»** لأنّها قبل الخزينة
+ * بالترتيب، وشغلُه الخزينة. **فالرئيسيّةُ ثمّ الطلباتُ ثمّ الخزينة**، وإلّا أوّلُ ما يملك.
+ */
+const LANDING_ORDER = ["/dashboard", "/dashboard/orders", "/dashboard/treasury"];
+function landingFor(nav: ChromeNavItem[]): ChromeNavItem | undefined {
+  for (const href of LANDING_ORDER) {
+    const hit = nav.find((i) => i.href === href);
+    if (hit) return hit;
+  }
+  return nav[0];
+}
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { user, capabilities, capsLoaded, loading, logout } = useAuth();
@@ -243,27 +263,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // **عدّادُ «المضافُ حديثاً» على بند السوق** (قرارُ المالك ٢٠٢٦-١٠-٠٤) —
   // ما أُضيف بعد آخر فتحٍ للسوق، **ويختفي حين يُفتح.** (إضافةٌ من دفعة السوق.)
   const canMarket = capabilities.includes("market.manage");
+  const canFinance = capabilities.includes("finance.read");
   const { data: marketNew } = useLiveData<{ count: number }>(
     () => (canMarket ? api("/api/v1/admin/market/new-count") : Promise.resolve({ count: 0 })),
     ["menu", "market_seen"],
     [canMarket],
   );
   const inMarket = pathname.startsWith("/dashboard/sections");
-  // **عدّادُ الطوارئ المفتوحة** (قرارُ المالك ٢٠٢٦-١٠-٠٤ — غرفةُ الطوارئ): **ويحمرّ** إن
-  // بقي طارئٌ بلا مستلِمٍ أطولَ من مهلته (`ops.emergency_unacked_red_min`).
+  // **عدّادُ الطوارئ المفتوحة** (قرارُ المالك ٢٠٢٦-١٠-٠٤ — غرفةُ الطوارئ): **ويحمرّ فوراً**
+  // إن كان فيها طارئٌ ما استلمه حدا (`unacked`) — قرارُ المالك ٢٠٢٦-١٠-٢٧؛ كان ينتظر مهلةَ
+  // `ops.emergency_unacked_red_min`، والمهلةُ باقيةٌ لسطر الغرفة ودبّوس الخريطة.
   const canEmergencies = capabilities.includes("emergencies.manage");
-  // **والاحمرارُ بمرور الوقت لا بحدث** — فيُعاد السؤالُ كلَّ دقيقة.
+  // **ويُعاد السؤالُ كلَّ دقيقة** — احتياطاً لحدثٍ فات.
   const [minuteTick, setMinuteTick] = useState(0);
   useEffect(() => {
     if (!canEmergencies) return;
     const t = window.setInterval(() => setMinuteTick((x) => x + 1), 60_000);
     return () => window.clearInterval(t);
   }, [canEmergencies]);
-  const { data: emergencyCount } = useLiveData<{ open: number; stale: number }>(
+  const { data: emergencyCount } = useLiveData<{ open: number; unacked: number; stale: number }>(
     () =>
       canEmergencies
         ? api("/api/v1/admin/emergencies/count")
-        : Promise.resolve({ open: 0, stale: 0 }),
+        : Promise.resolve({ open: 0, unacked: 0, stale: 0 }),
     ["emergency"],
     [canEmergencies, minuteTick],
   );
@@ -276,7 +298,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           return {
             ...i,
             badge: emergencyCount?.open ?? 0,
-            badgeTone: (emergencyCount?.stale ?? 0) > 0 ? ("danger" as const) : undefined,
+            badgeTone: (emergencyCount?.unacked ?? 0) > 0 ? ("danger" as const) : undefined,
           };
         return i;
       }),
@@ -303,7 +325,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // على شاشة الإقلاع. **ولا حلقة**: الوجهةُ من قائمته.
   useEffect(() => {
     if (loading || !capsLoaded) return;
-    const first = nav[0];
+    const first = landingFor(nav);
     // **والردُّ لبابٍ في القائمة لا يملكه وحدَه** (تدقيقُ اللوحة ٢٠٢٦-١٠-٠٣): كان الشرطُ «ليس في
     // قائمته» فرُدّ كلُّ بابِ تفصيلٍ — ملفُّ حساب، متجر، قسم، حسابي، الإشعارات — **إلى الرئيسيّة عند
     // أوّل فتحٍ في الجلسة**: الضغطةُ الأولى على ملفٍّ «لا تفعل شيئاً»، والتحديثُ يرمي إلى البيت.
@@ -320,7 +342,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // `overview` و`settings` فيردّها المحرّكُ ٤٠٣ — **ضجيجٌ وأخطاءُ طرفيّةٍ
   // في كلّ دخول.** فتبقى شاشةُ الإقلاع حتى يصل التحويل.
   const mustLand =
-    !!nav[0] && ALL_NAV.some((i) => i.href === pathname) && !nav.some((i) => i.href === pathname);
+    !!landingFor(nav) && ALL_NAV.some((i) => i.href === pathname) && !nav.some((i) => i.href === pathname);
 
   if (loading || !capsLoaded || !canAccessPanel(user, capabilities) || mustLand) {
     return (
@@ -347,8 +369,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         ٢٠٢٦-١٠-١٥) — وصفحةُ «محفظتي» أُزيلت: الخزينةُ هي محفظةُ الأدمن، وكشفُها
         في قسمها. **وشريحةُ الدرج لمن يملك `finance.read`** — يقرّرها المحرّكُ في الملخّص. */}
     <DashboardChrome
-      walletHref="/dashboard/treasury?tab=statement"
-      drawerHref="/dashboard/treasury?tab=cashbox"
+      /* **وشريحتا المال لمن يملك `finance.read` وحدَه** (تدقيقُ الشريط ٢٠٢٦-١٠-٢٧) — كانت «محفظة
+         المنصة» تظهر لموظّف الدعم فيضغطها فيُردّ إلى أوّل بابه: زرٌّ ميت. **والرقمُ رصيدُ الخزينة
+         نفسِها** (`treasury_balance`) لا محفظةُ الفاتح. */
+      walletHref={canFinance ? "/dashboard/treasury?tab=statement" : undefined}
+      drawerHref={canFinance ? "/dashboard/treasury?tab=cashbox" : undefined}
+      treasuryMode
       /* **و`brand` تسميةٌ احتياطيّةٌ للوحة لا اسمُ المنصة** — تُعرض حين
          لا يكون الاسمُ مضبوطاً في الإعدادات، **وتُقرأ للقارئ الصوتيّ على
          زرّ القائمة.** (قرارُ المالك ٢٠٢٦-٠٨-٠٦.) */

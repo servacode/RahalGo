@@ -259,5 +259,6 @@ private fun cashKind(kind: String): String = when (kind) {
     "order_collection" -> stringResource(R.string.cash_k_order_collection)
     "settlement" -> stringResource(R.string.cash_k_settlement)
     "commission_waived" -> stringResource(R.string.cash_k_commission_waived)
+    "recipient_cash_returned" -> stringResource(R.string.cash_k_recipient_cash_returned)
     else -> ""
 }

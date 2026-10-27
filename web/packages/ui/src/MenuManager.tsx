@@ -538,6 +538,7 @@ export function ItemModal({
   platformSections,
   editing,
   imageUpload,
+  note,
   onClose,
   onSaved,
 }: {
@@ -546,6 +547,8 @@ export function ItemModal({
   merchantID: string;
   platformSections: PlatformSection[];
   editing: { item: MenuItem | null; sectionId: string };
+  /** **سطرٌ فوق النموذج** — «الصنف لمتجر …» حين تُفتح النافذةُ من خارج صفحة المتجر (السوق، ٢٠٢٦-١٠-٢٧). */
+  note?: ReactNode;
   imageUpload?: (
     initialUrl: string | null | undefined,
     onChange: (id: string | null) => void,
@@ -618,7 +621,9 @@ export function ItemModal({
     e.preventDefault();
     // **وما تجاوز الحدَّ لا يُرسَل** — الخطأُ ظاهرٌ تحت الحقل.
     if (name.trim().length > ITEM_NAME_MAX) return;
-    if (usd && (usdValue == null || usdValue <= 0)) return setError(IT.vPrice);
+    // **والسعرُ صفرٌ مسموح** (قرارُ المالك ٢٠٢٦-١٠-٢٧، كتطبيق المندوب والخادم) — والفارغُ وحدَه
+    // يُردّ: حقلُ الليرة `required`، وفي الدولار يُفحص هنا.
+    if (usd && usdValue == null) return setError(IT.vPrice);
     setBusy(true);
     setError("");
     const body = {
@@ -666,6 +671,7 @@ export function ItemModal({
        **ومن سكرل ليصل إلى «حفظ» لا يرى ما كتبه** — يحفظ على غير يقين. */
     <Modal open onClose={onClose} title={item ? L.editItem : L.addItem} size="lg">
       <form onSubmit={submit} className="space-y-4 p-0.5">
+        {note && <div className="rounded-control bg-field px-3 py-2 text-sm">{note}</div>}
         {/* **والاسمُ والسعرُ والقسمُ في صفٍّ واحد** — ثلاثةُ حقولٍ قصيرةٍ
             تملأ العرضَ بدل أن تُطيل النموذج. **وتنهار إلى عمودٍ على
             الجوّال**: صفٌّ من ثلاثةٍ في شاشةٍ ضيّقةٍ يُقصّ لا يُقرأ. */}

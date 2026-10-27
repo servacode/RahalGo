@@ -15,7 +15,13 @@ package server
 // **فتنزيلٌ واحدٌ مقطّعٌ بطلباتِ مدىً لا يصير عشرة.**
 //
 // **والتسجيلُ لا يُبطئ التنزيلَ ولا يُسقطه** — في خلفيّةٍ بمهلةٍ قصيرة،
-// **وخطؤه يُبلع.** واليومُ يومُ دمشق (`platform.Location`).
+// **وخطؤه يُبلع.**
+//
+// # واليومُ يومُ المنصّة لا يومُ التقويم
+//
+// **يبدأ بساعة فتح الدوام** (`platform.day_start_hour`) كبقيّة الرئيسيّة
+// (`overviewDays`) — كان يومَ التقويم، فقالت الرئيسيّةُ الساعةَ الثانيةَ ليلاً
+// «زبونٌ جديدٌ اليوم» وقال هذا القسمُ «صفر» (تدقيقُ ٢٠٢٦-١٠-٢٧).
 
 import (
 	"context"
@@ -48,16 +54,22 @@ func visitorOf(r *http.Request) string {
 	return hex.EncodeToString(sum[:])[:32]
 }
 
-// siteDay **يومُ دمشق** بصيغة `YYYY-MM-DD`.
-func siteDay(t time.Time) string {
-	return t.In(platform.Location()).Format("2006-01-02")
+// siteDay **يومُ المنصّة** بصيغة `YYYY-MM-DD` — بمنطقتها ومن ساعة بدء يومها،
+// **والحسابُ نفسُه في `overviewDays`.**
+func siteDay(t time.Time, startHour int64) string {
+	return t.In(platform.Location()).Add(-time.Duration(startHour) * time.Hour).Format("2006-01-02")
+}
+
+// dayStartHour **ساعةُ بدء يوم المنصّة** (`platform.day_start_hour`).
+func (s *Server) dayStartHour(ctx context.Context) int64 {
+	return s.settings.GetInt(ctx, "platform.day_start_hour")
 }
 
 // recordHit **يُسجّل زيارةً أو تحميلاً — مرّةً في اليوم للشخص.**
 func (s *Server) recordHit(ctx context.Context, kind, visitor string, at time.Time) error {
 	_, err := s.pg.Exec(ctx, `
 		INSERT INTO site_hits (day, kind, visitor) VALUES ($1::date, $2, $3)
-		ON CONFLICT DO NOTHING`, siteDay(at), kind, visitor)
+		ON CONFLICT DO NOTHING`, siteDay(at, s.dayStartHour(ctx)), kind, visitor)
 	return err
 }
 
@@ -133,13 +145,16 @@ type siteDayRow struct {
 }
 
 type siteStats struct {
-	Today  siteToday    `json:"today"`
-	Totals siteTotals   `json:"totals"`
-	Series []siteDayRow `json:"series"`
+	// Day **يومُ المنصّة الحاليّ** و`DayStartHour` ساعةُ بدئه — كرئيسيّة المدير.
+	Day          string       `json:"day"`
+	DayStartHour int64        `json:"day_start_hour"`
+	Today        siteToday    `json:"today"`
+	Totals       siteTotals   `json:"totals"`
+	Series       []siteDayRow `json:"series"`
 }
 
 // accountsWhere **الحساباتُ الحقيقيّة** — بلا حساب النظام ولا المحذوف.
-const accountsWhere = `phone <> '` + systemUserPhone + `' AND deleted_at IS NULL`
+const accountsWhere = `phone <> '` + systemUserPhone + `' AND deleted_at IS NULL AND status <> 'deleted'`
 
 // handleSiteStats **زوّارُ الموقع والتحميلاتُ والحساباتُ الجديدة.**
 //
@@ -168,8 +183,10 @@ func (s *Server) handleSiteStats(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) buildSiteStats(ctx context.Context, now time.Time, days int) (siteStats, error) {
-	today := siteDay(now)
-	out := siteStats{Series: []siteDayRow{}}
+	startHour := s.dayStartHour(ctx)
+	today := siteDay(now, startHour)
+	dayFrom, _, _ := overviewDays(now, startHour)
+	out := siteStats{Day: today, DayStartHour: startHour, Series: []siteDayRow{}}
 
 	// ── اليوم والمجموع بالنوع ─────────────────────────────────────
 	rows, err := s.pg.Query(ctx, `
@@ -204,10 +221,11 @@ func (s *Server) buildSiteStats(ctx context.Context, now time.Time, days int) (s
 	}
 
 	// ── الحسابات ─────────────────────────────────────────────────
+	// **وجديدُ اليوم بحدود يوم المنصّة نفسِها** — من ساعة الفتح إلى مثلها غداً.
 	if err := s.pg.QueryRow(ctx, `
 		SELECT count(*),
-		       count(*) FILTER (WHERE (created_at AT TIME ZONE $2)::date = $1::date)
-		FROM users WHERE `+accountsWhere, today, platform.TZ).
+		       count(*) FILTER (WHERE created_at >= $1 AND created_at < $2)
+		FROM users WHERE `+accountsWhere, dayFrom, dayFrom.AddDate(0, 0, 1)).
 		Scan(&out.Totals.Accounts, &out.Today.NewAccounts); err != nil {
 		return out, err
 	}
@@ -225,7 +243,7 @@ func (s *Server) buildSiteStats(ctx context.Context, now time.Time, days int) (s
 			GROUP BY day
 		),
 		u AS (
-			SELECT (created_at AT TIME ZONE $3)::date AS day, count(*) AS n
+			SELECT ((created_at AT TIME ZONE $3) - make_interval(hours => $4::int))::date AS day, count(*) AS n
 			FROM users
 			WHERE `+accountsWhere+`
 			  AND created_at >= (($1::date - ($2::int - 1))::timestamp AT TIME ZONE $3) - interval '1 day'
@@ -234,7 +252,7 @@ func (s *Server) buildSiteStats(ctx context.Context, now time.Time, days int) (s
 		SELECT to_char(d.day, 'YYYY-MM-DD'), COALESCE(h.visits, 0),
 		       COALESCE(h.downloads, 0), COALESCE(u.n, 0)
 		FROM d LEFT JOIN h USING (day) LEFT JOIN u USING (day)
-		ORDER BY d.day`, today, days, platform.TZ)
+		ORDER BY d.day`, today, days, platform.TZ, startHour)
 	if err != nil {
 		return out, err
 	}

@@ -89,9 +89,21 @@ func (s *Server) handleAdminRatings(w http.ResponseWriter, r *http.Request) {
 	var avg *float64
 	var lowCount int
 	if err := s.pg.QueryRow(r.Context(), `
-		SELECT count(*), avg(platform_stars)::float8,
-		       count(*) FILTER (WHERE platform_stars <= 2)
-		FROM order_ratings`).Scan(&total, &avg, &lowCount); err != nil {
+		SELECT avg(platform_stars)::float8 FROM order_ratings`).Scan(&avg); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	// **والعددُ والضعيفُ بشرط القائمة نفسِه** (`handleAdminRatingsList`) — طلبٌ قُيّم من أيّ جهة،
+	// والضعيفُ نجمتان فأقلّ في أيٍّ من الأربعة. كان الضعيفُ يُعدّ بتقييم الطلب وحدَه فيكذب الرقمُ
+	// على القائمة التي يفتحها (فحصُ ٢٠٢٦-١٠-٢٧).
+	if err := s.pg.QueryRow(r.Context(), `
+		SELECT count(*),
+		       count(*) FILTER (WHERE rt.platform_stars <= 2 OR rt.driver_stars <= 2
+		                           OR mr.speed_stars <= 2 OR mr.conduct_stars <= 2)
+		FROM orders o
+		LEFT JOIN order_ratings rt ON rt.order_id = o.id
+		LEFT JOIN merchant_ratings mr ON mr.order_id = o.id
+		WHERE rt.order_id IS NOT NULL OR mr.order_id IS NOT NULL`).Scan(&total, &lowCount); err != nil {
 		s.respondErr(w, err)
 		return
 	}

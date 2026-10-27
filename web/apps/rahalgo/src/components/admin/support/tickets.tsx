@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import {
   getMessages,
   defaultLocale,
@@ -37,12 +36,16 @@ import {
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useCanOpen } from "@/lib/policy";
+import { OpenLink } from "@/components/admin/OpenLink";
 
 const m = getMessages(defaultLocale);
 
 interface Reply {
   id: number;
   author_id: string | null;
+  /** **من كتب الردّ** — فارغٌ لما كتبه النظام. */
+  author_name?: string;
   body: string;
   created_at: string;
 }
@@ -62,6 +65,10 @@ interface Ticket {
   complainant_name?: string;
   complainant_phone?: string;
   complainant_kind?: "customer" | "driver" | "merchant";
+  complainant_id?: string;
+  /** **آخرُ رسالةٍ في السجلّ وكاتبُها** — تُعرض على البطاقة (فحصُ ٢٠٢٦-١٠-٢٧). */
+  last_reply?: string;
+  last_reply_author_id?: string | null;
   status: "open" | "in_progress" | "awaiting_finance" | "resolved";
   /** ما دُفع فعلاً — بعد موافقة الماليّة. */
   compensation: number;
@@ -70,6 +77,10 @@ interface Ticket {
   compensation_status?: "" | "pending" | "approved" | "rejected";
   /** **سقفُ اقتراح التعويض** — سقفُ موافقة الشكوى نفسُه، وصفرُه «بلا سقف». */
   compensation_cap?: number;
+  /** **تعويضُ هذا القارئ ينفُذ فوراً** — مالكٌ أو مدير (قرارُ المالك ٢٠٢٦-١٠-٢٧). */
+  compensation_auto_applies?: boolean;
+  /** **نفذ التعويضُ لحظةَ الحلّ** — في ردّ الحلّ وحدَه. */
+  applied?: boolean;
   /** تأخّر ردُّ المكتب عن المهلة (`support.late_reply_hours`). */
   late?: boolean;
   resolution: string;
@@ -127,6 +138,16 @@ function CompensationCell({ t }: { t: Ticket }) {
     return <Badge variant="neutral">{m.admin.tickets.compRejected}</Badge>;
   }
   return <span className="text-ink-muted">{m.admin.tickets.noCompensation}</span>;
+}
+
+/**
+ * **مين كتب** — صاحبُ الشكوى، أو موظّفٌ من المكتب، أو النظام (فحصُ ٢٠٢٦-١٠-٢٧: كانت الردودُ
+ * بلا كاتب، فلا يُعرف ردُّ المكتب من كلام صاحب الشكوى).
+ */
+function authorKind(authorID: string | null | undefined, t: Ticket): "complainant" | "staff" | "system" {
+  if (!authorID) return "system";
+  if (authorID === t.complainant_id) return "complainant";
+  return "staff";
 }
 
 const STATUS_VARIANT: Record<string, "warning" | "primary" | "success"> = {
@@ -355,6 +376,8 @@ function ageOf(iso: string): string {
  */
 function TicketCard({ t, onOpen }: { t: Ticket; onOpen: () => void }) {
   const T = m.admin.tickets;
+  const canOrder = useCanOpen().order;
+  const lastBy = authorKind(t.last_reply_author_id, t);
   const who = t.complainant_name || t.customer_name || "—";
   const phone = t.complainant_phone || t.customer_phone;
   // **وزبونُ الطلب حين لا يكون هو صاحبَ الشكوى** — بلاغُ السائق أو المتجر يكون عليه.
@@ -393,11 +416,11 @@ function TicketCard({ t, onOpen }: { t: Ticket; onOpen: () => void }) {
 
       <div className="space-y-1.5">
         <p className="font-medium leading-snug">{t.subject}</p>
-        {/* **بلاغُ السائق يُميَّز عن شكوى الزبون، والسببُ المصنَّف بجانبه** (فحصُ المالك ٢٠٢٦-٠٨-١٦). */}
-        {t.reason && (
+        {/* **السببُ المصنَّف** (فحصُ المالك ٢٠٢٦-٠٨-١٦). **ولا شارةُ «بلاغ سائق»** (فحصُ ٢٠٢٦-١٠-٢٧) —
+            كانت تُوضع على بلاغ المتجر أيضاً جنب شارة «متجر»؛ وشارةُ صاحب الشكوى فوق تكفي. */}
+        {t.reason && REASONS[t.reason] && (
           <div className="flex flex-wrap items-center gap-1.5">
-            {!t.opened_by_customer && <Badge variant="primary">{T.byDriver}</Badge>}
-            {REASONS[t.reason] && <Badge variant="warning">{REASONS[t.reason]}</Badge>}
+            <Badge variant="warning">{REASONS[t.reason]}</Badge>
           </div>
         )}
         {orderCustomer && (
@@ -414,13 +437,14 @@ function TicketCard({ t, onOpen }: { t: Ticket; onOpen: () => void }) {
             {T.table.order}
           </p>
           {t.order_number ? (
-            <Link
+            <OpenLink
+              allowed={canOrder}
               href={`/dashboard/orders?q=${t.order_number}`}
               dir="ltr"
               className="mt-0.5 block text-sm font-bold tabular-nums text-primary hover:underline"
             >
               #{fmtRef(t.order_number)}
-            </Link>
+            </OpenLink>
           ) : (
             <p className="mt-0.5 text-sm text-ink-muted">—</p>
           )}
@@ -436,15 +460,32 @@ function TicketCard({ t, onOpen }: { t: Ticket; onOpen: () => void }) {
         </div>
       </div>
 
-      <div className={`border-s-2 ps-3 ${t.resolution ? "border-success" : "border-line"}`}>
-        <p className="mb-0.5 flex items-center gap-1 text-2xs font-bold text-ink-muted">
-          <IconReply size={12} />
-          {T.lastReply}
-        </p>
-        <p className={`line-clamp-3 text-sm ${t.resolution ? "" : "text-ink-muted"}`}>
-          {t.resolution || T.noReplyYet}
-        </p>
-      </div>
+      {/* **الحلُّ إن انحلّت، وإلّا آخرُ رسالةٍ وكاتبُها** (فحصُ ٢٠٢٦-١٠-٢٧) — كانت شكوى فيها ردودٌ
+          تُقرأ «لسا ما انحلّت» كأنّ أحداً لم يردّ. */}
+      {t.resolution ? (
+        <div className="border-s-2 border-success ps-3">
+          <p className="mb-0.5 flex items-center gap-1 text-2xs font-bold text-ink-muted">
+            <IconCheck size={12} />
+            {T.resolutionLabel}
+          </p>
+          <p className="line-clamp-3 text-sm">{t.resolution}</p>
+        </div>
+      ) : (
+        <div className={`border-s-2 ps-3 ${lastBy === "staff" && t.last_reply ? "border-accent" : "border-line"}`}>
+          <p className="mb-0.5 flex flex-wrap items-center gap-1 text-2xs font-bold text-ink-muted">
+            <IconReply size={12} />
+            {T.lastReply}
+            {t.last_reply && (
+              <Badge variant={lastBy === "staff" ? "primary" : "neutral"}>
+                {lastBy === "staff" ? T.fromStaff : lastBy === "complainant" ? T.fromComplainant : T.fromSystem}
+              </Badge>
+            )}
+          </p>
+          <p className={`line-clamp-3 text-sm ${t.last_reply ? "" : "text-ink-muted"}`}>
+            {t.last_reply || T.noReplyYet}
+          </p>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-2 text-2xs text-ink-muted">
         <span className={t.late ? "font-bold text-danger" : ""}>{ageOf(t.created_at)}</span>
@@ -560,8 +601,8 @@ function TicketDetailModal({
   onClose: () => void;
   onChanged: () => void;
 }) {
-  const { user: me, can } = useAuth();
-  const router = useRouter();
+  const { can } = useAuth();
+  const canOrder = useCanOpen().order;
   // ════════════════════════════════════════════════════════════════
   // **وإغلاقُ التذكرة قدرةُ الدعم لا قدرةُ المال** (٢٠٢٦-٠٩-١٣)
   // ════════════════════════════════════════════════════════════════
@@ -578,6 +619,7 @@ function TicketDetailModal({
   const [compensation, setCompensation] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -618,16 +660,19 @@ function TicketDetailModal({
     e.preventDefault();
     setBusy(true);
     setError("");
+    setNotice("");
     try {
-      setTicket(
-        await api<Ticket>(`/api/v1/admin/tickets/${ticketID}/resolve`, {
-          method: "POST",
-          body: JSON.stringify({
-            resolution,
-            compensation: compensation ? Number(compensation) : 0,
-          }),
-        })
-      );
+      const amount = compensation ? Number(compensation) : 0;
+      const t = await api<Ticket>(`/api/v1/admin/tickets/${ticketID}/resolve`, {
+        method: "POST",
+        body: JSON.stringify({ resolution, compensation: amount }),
+      });
+      setTicket(t);
+      // **والرسالةُ تُقرأ من الردّ (`applied`) لا تُفترض** — حركةُ المالك أو المدير
+      // نفذت فوراً، وغيرُها راح للماليّة (قرارُ المالك ٢٠٢٦-١٠-٢٧).
+      if (amount > 0) {
+        setNotice(t.applied ? m.admin.tickets.compAppliedNow : m.admin.tickets.compSentToFinance);
+      }
       onChanged();
     } catch (err) {
       setError(errorText(err));
@@ -666,13 +711,13 @@ function TicketDetailModal({
             <Badge variant={STATUS_VARIANT[ticket.status]}>{STATUS_LABELS[ticket.status]}</Badge>
             {ticket.late && <Badge variant="danger">{m.admin.tickets.lateBadge}</Badge>}
             {ticket.order_number && (
-              <button
-                type="button"
-                onClick={() => router.push(`/dashboard/orders?q=${ticket.order_number}`)}
+              <OpenLink
+                allowed={canOrder}
+                href={`/dashboard/orders?q=${ticket.order_number}`}
                 className="font-medium text-primary hover:underline"
               >
                 {m.admin.tickets.viewOrder} #{fmtRef(ticket.order_number)}
-              </button>
+              </OpenLink>
             )}
           </div>
           <p className="mt-2 font-medium">{ticket.subject}</p>
@@ -681,14 +726,30 @@ function TicketDetailModal({
         <FormSection title={m.admin.tickets.thread} icon={<IconReply />}>
           {ticket.replies && ticket.replies.length > 0 ? (
             <ol className="space-y-2">
-              {ticket.replies.map((r) => (
-                <li key={r.id} className="rounded-control bg-field px-3 py-2 text-sm">
-                  <p className="whitespace-pre-wrap">{r.body}</p>
-                  <p className="mt-1 text-xs text-ink-muted">
-                    {fmtDateTime(r.created_at)}
-                  </p>
-                </li>
-              ))}
+              {ticket.replies.map((r) => {
+                // **وكلُّ ردٍّ بكاتبه** — وردُّ المكتب بلونٍ غيرِ لون صاحب الشكوى.
+                const by = authorKind(r.author_id, ticket);
+                const T = m.admin.tickets;
+                return (
+                  <li
+                    key={r.id}
+                    className={`rounded-control px-3 py-2 text-sm ${
+                      by === "staff" ? "border-s-2 border-accent bg-surface" : "bg-field"
+                    }`}
+                  >
+                    <p className="mb-1 flex flex-wrap items-center gap-1.5 text-xs">
+                      <Badge variant={by === "staff" ? "primary" : by === "complainant" ? "neutral" : "warning"}>
+                        {by === "staff" ? T.authorStaff : by === "complainant" ? T.authorComplainant : T.authorSystem}
+                      </Badge>
+                      {r.author_name && <span className="font-bold">{r.author_name}</span>}
+                    </p>
+                    <p className="whitespace-pre-wrap">{r.body}</p>
+                    <p className="mt-1 text-xs text-ink-muted" dir="ltr">
+                      {fmtDateTime(r.created_at)}
+                    </p>
+                  </li>
+                );
+              })}
             </ol>
           ) : (
             <p className="text-sm text-ink-muted">{m.admin.tickets.noReplies}</p>
@@ -752,7 +813,11 @@ function TicketDetailModal({
                   value={compensation}
                   onChange={(e) => setCompensation(e.target.value.replace(/\D/g, ""))}
                 />
-                <p className="text-xs text-ink-muted">{m.admin.tickets.compProposedHint}</p>
+                <p className="text-xs text-ink-muted">
+                  {ticket.compensation_auto_applies
+                    ? m.admin.tickets.compAutoHint
+                    : m.admin.tickets.compProposedHint}
+                </p>
                 {(ticket.compensation_cap ?? 0) > 0 && (
                   <p className="text-xs text-ink-muted">
                     {m.admin.tickets.compCap.replace("{cap}", fmtMoney(ticket.compensation_cap ?? 0))}
@@ -768,6 +833,7 @@ function TicketDetailModal({
           )
         )}
 
+        {notice && <Alert tone="success">{notice}</Alert>}
         {error && (
           <Alert>{error}</Alert>
         )}

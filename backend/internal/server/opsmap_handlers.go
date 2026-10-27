@@ -261,7 +261,7 @@ func (s *Server) handleOpsMapRequests(w http.ResponseWriter, r *http.Request) {
 	}
 	q := r.URL.Query()
 	f := opsmap.RequestFilter{Status: q.Get("status"), CityID: q.Get("city_id")}
-	if from, to, ok := rangeFrom(r); ok {
+	if from, to, ok := s.rangeFrom(r); ok {
 		f.Since, f.Until = &from, &to
 	}
 	out, err := opsmap.CoverageRequests(r.Context(), s.pg, box, f, 0)
@@ -321,10 +321,10 @@ func (s *Server) handleCoverageRequestCreate(w http.ResponseWriter, r *http.Requ
 //
 // **والساعتان معاً أو لا شيء**: hour_from (٠–٢٣) وhour_to (١–٢٤)، **وغيرُ
 // الصالح يُهمَل** فتُعرض الساعاتُ كلُّها — لا خطأَ يُبيّض الخريطة.
-func demandFilterFrom(r *http.Request) opsmap.DemandFilter {
+func (s *Server) demandFilterFrom(r *http.Request) opsmap.DemandFilter {
 	q := r.URL.Query()
 	f := opsmap.DemandFilter{CityID: q.Get("city_id")}
-	if from, to, ok := rangeFrom(r); ok {
+	if from, to, ok := s.rangeFrom(r); ok {
 		f.Since, f.Until = &from, &to
 	}
 	hf, e1 := strconv.Atoi(q.Get("hour_from"))
@@ -335,12 +335,15 @@ func demandFilterFrom(r *http.Request) opsmap.DemandFilter {
 	return f
 }
 
-func rangeFrom(r *http.Request) (from, to time.Time, ok bool) {
+// **و«اليوم» يبدأ بساعة فتح الدوام** (`platform.day_start_hour`، تدقيقُ ٢٠٢٦-١٠-٢٧) — بحدود
+// الرئيسيّة نفسِها (`overviewDays`)، لا منتصفَ ليل غرينتش (الثالثةُ فجراً بتوقيت سوريا).
+func (s *Server) rangeFrom(r *http.Request) (from, to time.Time, ok bool) {
 	q := r.URL.Query()
 	now := time.Now()
 	switch q.Get("range") {
 	case "today":
-		return now.Truncate(24 * time.Hour), now, true
+		today, _, _ := overviewDays(now, s.dayStartHour(r.Context()))
+		return today, now, true
 	case "7d":
 		return now.AddDate(0, 0, -7), now, true
 	case "30d":
@@ -431,10 +434,10 @@ func (s *Server) handleOpsMapAreaSave(w http.ResponseWriter, r *http.Request) {
 // ══════════════════════════════════════════════════════════════════════
 
 // repFilterFrom مُرشِّحاتُ المندوبين من الاستعلام.
-func repFilterFrom(r *http.Request) opsmap.RepFilter {
+func (s *Server) repFilterFrom(r *http.Request) opsmap.RepFilter {
 	q := r.URL.Query()
 	f := opsmap.RepFilter{RepID: q.Get("rep_id"), CityID: q.Get("city_id")}
-	if from, to, ok := rangeFrom(r); ok {
+	if from, to, ok := s.rangeFrom(r); ok {
 		f.Since, f.Until = &from, &to
 	}
 	return f
@@ -446,7 +449,7 @@ func (s *Server) handleOpsMapReps(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	f := repFilterFrom(r)
+	f := s.repFilterFrom(r)
 	// **وأرباحُ المندوب لمن يملك صلاحيّتَها وحدَه** (البند ٢٦).
 	money := opsmap.Allows(capabilitiesFrom(r), opsmap.PermViewMoney)
 
@@ -470,7 +473,7 @@ func (s *Server) handleOpsMapReps(w http.ResponseWriter, r *http.Request) {
 // **والطبقاتُ منفصلةٌ في الردّ** — **ولا تُخلَط كثافتان في رقم**
 // (البند ١٨).
 func (s *Server) handleOpsMapDemand(w http.ResponseWriter, r *http.Request) {
-	f := demandFilterFrom(r)
+	f := s.demandFilterFrom(r)
 	ctx := r.Context()
 
 	orders, err := opsmap.OrderDemand(ctx, s.pg, f)
@@ -506,7 +509,7 @@ func (s *Server) handleOpsMapDemand(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleOpsMapOpportunities(w http.ResponseWriter, r *http.Request) {
-	f := demandFilterFrom(r)
+	f := s.demandFilterFrom(r)
 	out, err := opsmap.Opportunities(r.Context(), s.pg, f)
 	if err != nil {
 		s.respondErr(w, err)

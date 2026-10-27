@@ -423,8 +423,10 @@ func recordAdvanceReturn(ctx context.Context, q wallet.Querier, orderID, driverI
 
 // CashSettlementRow صفٌّ في كشفِ المستحقّات النقديّة لمتجر.
 type CashSettlementRow struct {
-	ID          string  `json:"id"`
-	OrderID     string  `json:"order_id"`
+	ID      string `json:"id"`
+	OrderID string `json:"order_id"`
+	// OrderNumber **رقمُ الطلب المعروف** (#N) — لا المعرّفُ الداخليّ (فحصُ اللوحة ٢٠٢٦-١٠-٢٧).
+	OrderNumber int64   `json:"order_number"`
 	Amount      int64   `json:"amount"`
 	Reversed    int64   `json:"reversed_amount"`
 	Outstanding int64   `json:"outstanding"`
@@ -446,18 +448,19 @@ type MerchantCashSummary struct {
 func (s *Service) MerchantCashSettlements(ctx context.Context, merchantID string) (MerchantCashSummary, error) {
 	var out MerchantCashSummary
 	rows, err := s.db.Query(ctx, `
-		SELECT id::text, order_id::text, amount, reversed_amount, state,
-		       paid_by::text, paid_via, paid_at, created_at
-		FROM merchant_settlements
-		WHERE merchant_id = $1 AND method = 'cash'
-		ORDER BY created_at DESC`, merchantID)
+		SELECT ms.id::text, ms.order_id::text, COALESCE(o.number, 0), ms.amount, ms.reversed_amount, ms.state,
+		       ms.paid_by::text, ms.paid_via, ms.paid_at, ms.created_at
+		FROM merchant_settlements ms
+		LEFT JOIN orders o ON o.id = ms.order_id
+		WHERE ms.merchant_id = $1 AND ms.method = 'cash'
+		ORDER BY ms.created_at DESC`, merchantID)
 	if err != nil {
 		return out, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var r CashSettlementRow
-		if err := rows.Scan(&r.ID, &r.OrderID, &r.Amount, &r.Reversed, &r.State,
+		if err := rows.Scan(&r.ID, &r.OrderID, &r.OrderNumber, &r.Amount, &r.Reversed, &r.State,
 			&r.PaidBy, &r.PaidVia, &r.PaidAt, &r.CreatedAt); err != nil {
 			return out, err
 		}

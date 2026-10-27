@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtDate, fmtMoney, errorText } from "@rahalgo/i18n";
 import {
   Chips,
@@ -8,7 +8,6 @@ import {
   PageContainer,
   Button,
   Input,
-  Select,
   Badge,
   Modal,
   Pagination,
@@ -23,9 +22,11 @@ import {
   IconSearch,
   IconHourglass,
   Checkbox,
+  Confirm,
   FormActions,
 } from "@rahalgo/ui";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import DiscountsTab from "@/components/admin/DiscountsTab";
@@ -68,6 +69,7 @@ interface Summary {
   platform_items: number;
   referrals: number;
   stores_cost: number;
+  auto_approve?: boolean;
 }
 
 const KIND_LABEL: Record<Promo["kind"], string> = {
@@ -89,13 +91,37 @@ const STATUS: Record<PromoStatus, { label: string; tone: "success" | "neutral" |
 const PER_PAGE = 20;
 
 type PromoTab = "codes" | "discounts" | "referrals" | "free";
+const TABS: PromoTab[] = ["codes", "discounts", "referrals", "free"];
 
 export default function PromosPage() {
+  return (
+    <Suspense>
+      <PromosHub />
+    </Suspense>
+  );
+}
+
+function PromosHub() {
   const { can } = useAuth();
+  const router = useRouter();
+  const params = useSearchParams();
   // **وإنشاءُ الأكواد وتحريرُها بقدرة العروض** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — لا المحتوى.
   const isAdmin = can("offers.manage");
   const isFinance = can("finance.read");
-  const [tab, setTab] = useState<PromoTab>("codes");
+  // **والتبويبُ في الرابط** (`?tab=`) — كالخزينة: رابطٌ من الرئيسيّة يفتح بابَه، والتحديثُ لا يُرجع لأوّله.
+  const fromUrl = params.get("tab") as PromoTab | null;
+  const [tab, setTabState] = useState<PromoTab>(fromUrl && TABS.includes(fromUrl) ? fromUrl : "codes");
+  useEffect(() => {
+    if (fromUrl && TABS.includes(fromUrl) && fromUrl !== tab) setTabState(fromUrl);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fromUrl]);
+  const setTab = useCallback(
+    (k: PromoTab) => {
+      setTabState(k);
+      router.replace(`/dashboard/promos?tab=${k}`);
+    },
+    [router],
+  );
   const [summary, setSummary] = useState<Summary | null>(null);
 
   const loadSummary = useCallback(() => {
@@ -105,6 +131,9 @@ export default function PromosPage() {
       .catch(() => setSummary(null));
   }, []);
   useEffect(loadSummary, [loadSummary]);
+  // **والمالكُ والمديرُ لا ينتظران الماليّة** (قرارُ المالك ٢٠٢٦-١٠-٢٧) — **والحكمُ من الخادم**
+  // (`auto_approve` من `approval.AutoApplies`) لا من اسم دور، فلا تقول لهما النافذةُ «بيروح لموافقة المالية».
+  const autoApprove = summary?.auto_approve ?? false;
 
   const tabs: HeroTab<PromoTab>[] = [
     { key: "codes", label: m.admin.promos.tabCodes, icon: IconPromos },
@@ -147,20 +176,43 @@ export default function PromosPage() {
               icon={IconWallet}
               label={O.sumPlatformCost}
               value={fmtMoney(summary.platform_cost)}
-              sub={O.sumPlatformCostSub
-                .replace("{codes}", fmtMoney(summary.codes))
-                .replace("{free}", fmtMoney(summary.free_delivery))
-                .replace("{items}", fmtMoney(summary.platform_items))
-                .replace("{refs}", fmtMoney(summary.referrals))}
               tone={summary.platform_cost > 0 ? "accent" : "muted"}
             />
             <Tile
-              icon={IconWallet}
+              icon={IconStore}
               label={O.sumStoresCost}
               value={fmtMoney(summary.stores_cost)}
               tone={summary.stores_cost > 0 ? "default" : "muted"}
+              onClick={() => setTab("discounts")}
             />
           </div>
+          {/* **ومن وين إجت كلفة المنصة** — أربعُ خاناتٍ بأرقامها، وكلُّ خانةٍ تفتح تبويبها
+              (كانت سطراً تحت الرقم يُقطع على الجوّال فلا يُقرأ). */}
+          <section className="surface p-3">
+            <p className="mb-2 text-xs font-bold text-ink-muted">{O.costBreakdown}</p>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {(
+                [
+                  { k: "codes", label: O.costCodes, v: summary.codes },
+                  { k: "free", label: O.costFree, v: summary.free_delivery },
+                  { k: "discounts", label: O.costItems, v: summary.platform_items },
+                  { k: "referrals", label: O.costRefs, v: summary.referrals },
+                ] as { k: PromoTab; label: string; v: number }[]
+              ).map((c) => (
+                <button
+                  key={c.k}
+                  type="button"
+                  onClick={() => setTab(c.k)}
+                  className={`rounded-control border px-3 py-2 text-start transition-colors hover:bg-row-hover ${
+                    tab === c.k ? "border-accent" : "border-line-soft"
+                  }`}
+                >
+                  <span className="block text-2xs text-ink-muted">{c.label}</span>
+                  <span className={`block font-bold tabular-nums ${c.v > 0 ? "" : "text-ink-muted"}`}>{fmtMoney(c.v)}</span>
+                </button>
+              ))}
+            </div>
+          </section>
           {/* **وموافقاتُ المالية في صفحة الموافقات الموحّدة** (الخزينة) — لا تبويبَ هنا. */}
           {summary.pending_approvals > 0 && (
             <p className="flex items-center gap-2 rounded-control bg-field px-3 py-2 text-sm">
@@ -177,8 +229,8 @@ export default function PromosPage() {
         </div>
       )}
 
-      {tab === "codes" && <CodesTab isAdmin={isAdmin} onChanged={loadSummary} />}
-      {tab === "discounts" && <DiscountsTab onChanged={loadSummary} />}
+      {tab === "codes" && <CodesTab isAdmin={isAdmin} autoApprove={autoApprove} onChanged={loadSummary} />}
+      {tab === "discounts" && <DiscountsTab onChanged={loadSummary} autoApprove={autoApprove} />}
       {tab === "referrals" && <PromoReferralsTab />}
       {tab === "free" && <FreeDeliveryTab />}
     </PageContainer>
@@ -194,12 +246,26 @@ function valueText(p: Promo): string {
   return "";
 }
 
-function CodesTab({ isAdmin, onChanged }: { isAdmin: boolean; onChanged: () => void }) {
+/** **أيُّ خانةٍ تُفتح عليها النافذة** — «مدّد التاريخ» على التاريخ، و«زيد السقف» على السقف. */
+type ModalFocus = "expiry" | "uses" | null;
+
+function CodesTab({
+  isAdmin,
+  autoApprove,
+  onChanged,
+}: {
+  isAdmin: boolean;
+  autoApprove: boolean;
+  onChanged: () => void;
+}) {
   const [promos, setPromos] = useState<Promo[]>([]);
   // **ولا «لا عروض» قبل أن يصل الردّ** (تدقيقُ اللوحة ٢٠٢٦-١٠-٠٣).
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
   const [editing, setEditing] = useState<Promo | "new" | null>(null);
+  const [focus, setFocus] = useState<ModalFocus>(null);
+  const [pausing, setPausing] = useState<Promo | null>(null);
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<PromoStatus | "all">("all");
   const [page, setPage] = useState(1);
@@ -209,9 +275,10 @@ function CodesTab({ isAdmin, onChanged }: { isAdmin: boolean; onChanged: () => v
     try {
       setPromos(await api<Promo[]>("/api/v1/admin/promos"));
       setLoaded(true);
-      setError("");
+      setLoadError("");
     } catch (err) {
-      setError(errorText(err));
+      // **ولا «لا أكواد بعد» تحت خطأ** — الأكوادُ لم تصل، لا أنّها فارغة.
+      setLoadError(errorText(err));
     }
   }, []);
 
@@ -226,10 +293,22 @@ function CodesTab({ isAdmin, onChanged }: { isAdmin: boolean; onChanged: () => v
     );
   }, [promos, q, status]);
   const shown = filtered.slice((page - 1) * PER_PAGE, page * PER_PAGE);
+  const counts = useMemo(() => {
+    const c: Partial<Record<PromoStatus, number>> = {};
+    for (const p of promos) c[p.status] = (c[p.status] ?? 0) + 1;
+    return c;
+  }, [promos]);
+
+  function openEdit(p: Promo, f: ModalFocus = null) {
+    setFocus(f);
+    setEditing(p);
+  }
 
   async function toggleActive(p: Promo) {
     if (busyId) return;
+    setPausing(null);
     setBusyId(p.id);
+    setError("");
     try {
       await api(`/api/v1/admin/promos/${p.id}`, {
         method: "PATCH",
@@ -272,8 +351,11 @@ function CodesTab({ isAdmin, onChanged }: { isAdmin: boolean; onChanged: () => v
         <Chips
           wrap
           items={[
-            { id: "all" as const, label: O.fAll },
-            ...(Object.keys(STATUS) as PromoStatus[]).map((k) => ({ id: k, label: STATUS[k].label })),
+            { id: "all" as const, label: O.fAll, count: promos.length },
+            // **والعددُ جنب كلّ حالة، والفارغةُ لا تُعرض** (إلّا المختارة) — كالتذاكر.
+            ...(Object.keys(STATUS) as PromoStatus[])
+              .filter((k) => (counts[k] ?? 0) > 0 || k === status)
+              .map((k) => ({ id: k, label: STATUS[k].label, count: counts[k] ?? 0 })),
           ]}
           value={status}
           onChange={(k) => {
@@ -285,7 +367,18 @@ function CodesTab({ isAdmin, onChanged }: { isAdmin: boolean; onChanged: () => v
 
       {error && <Alert>{error}</Alert>}
 
-      {!loaded && !error ? (
+      {loadError && !loaded ? (
+        <section className="surface flex flex-col items-center gap-3 p-8 text-center">
+          <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-danger-solid text-on-solid">
+            <IconPromos size={28} />
+          </span>
+          <h2 className="heading-section">{O.loadFailed}</h2>
+          <Alert>{loadError}</Alert>
+          <Button variant="secondary" onClick={() => void load()}>
+            {O.retry}
+          </Button>
+        </section>
+      ) : !loaded ? (
         <LoadingState variant="list" />
       ) : shown.length === 0 ? (
         <section className="surface flex flex-col items-center gap-3 p-8 text-center">
@@ -303,8 +396,8 @@ function CodesTab({ isAdmin, onChanged }: { isAdmin: boolean; onChanged: () => v
               p={p}
               isAdmin={isAdmin}
               busy={busyId === p.id}
-              onEdit={() => setEditing(p)}
-              onToggle={() => void toggleActive(p)}
+              onEdit={(f) => openEdit(p, f)}
+              onToggle={() => (p.active ? setPausing(p) : void toggleActive(p))}
             />
           ))}
         </ul>
@@ -315,9 +408,23 @@ function CodesTab({ isAdmin, onChanged }: { isAdmin: boolean; onChanged: () => v
           <Pagination page={page} total={filtered.length} perPage={PER_PAGE} onChange={setPage} />
         </div>
       )}
+      {loadError && loaded && <Alert>{loadError}</Alert>}
+
+      <Confirm
+        open={pausing !== null}
+        title={O.pauseCodeTitle.replace("{code}", pausing?.code ?? "")}
+        body={O.pauseCodeBody}
+        confirmLabel={O.pauseCode}
+        busy={busyId !== ""}
+        onConfirm={() => pausing && void toggleActive(pausing)}
+        onCancel={() => setPausing(null)}
+      />
+
       {editing && (
         <PromoModal
           promo={editing === "new" ? null : editing}
+          focus={editing === "new" ? null : focus}
+          autoApprove={autoApprove}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);
@@ -353,12 +460,15 @@ function PromoCard({
   p: Promo;
   isAdmin: boolean;
   busy: boolean;
-  onEdit: () => void;
+  onEdit: (focus?: ModalFocus) => void;
   onToggle: () => void;
 }) {
   const st = STATUS[p.status];
   const usedPct = p.max_uses ? Math.min(100, Math.round((p.used_count / p.max_uses) * 100)) : 0;
-  const canToggle = p.status !== "pending_approval" && p.status !== "rejected";
+  // **والمنتهي وخالصُ السقف لا يُفعَّلان ولا يُوقفان** (تدقيقُ العروض ٢٠٢٦-١٠-٢٧): الخادمُ يردّ
+  // `promo_expired_activate`، و«إيقاف» كودٍ لا يعمل أصلاً يُلخبط — **فالفعلُ ما يُرجعه للعمل.**
+  const fix: ModalFocus = p.status === "expired" ? "expiry" : p.status === "exhausted" ? "uses" : null;
+  const canToggle = !fix && p.status !== "pending_approval" && p.status !== "rejected";
   return (
     <li className="surface flex flex-col gap-3 p-4">
       <div className="flex items-start justify-between gap-3">
@@ -376,12 +486,12 @@ function PromoCard({
 
       <div className="flex items-end justify-between gap-2 rounded-control bg-field px-3 py-2.5">
         <span className="min-w-0">
-          <span className="block text-2xs text-ink-muted">{KIND_LABEL[p.kind]}</span>
-          <span className="block font-bold tabular-nums">{valueText(p) || KIND_LABEL[p.kind]}</span>
+          <span className="block text-2xs text-ink-muted">{p.kind === "free_delivery" ? O.kindLabel : KIND_LABEL[p.kind]}</span>
+          <span className="figure block tabular-nums">{valueText(p) || KIND_LABEL[p.kind]}</span>
         </span>
         <span className="text-end">
           <span className="block text-2xs text-ink-muted">{m.admin.promos.minOrder}</span>
-          <span className="block text-sm tabular-nums">{fmtMoney(p.min_order)}</span>
+          <span className="block text-sm tabular-nums">{p.min_order > 0 ? fmtMoney(p.min_order) : O.noMinOrder}</span>
         </span>
       </div>
 
@@ -424,14 +534,21 @@ function PromoCard({
         </span>
       </div>
 
+      {fix && <p className="text-xs font-bold text-warning">{fix === "expiry" ? O.expiredNote : O.exhaustedNote}</p>}
+
       {isAdmin && (
-        <div className={`mt-auto grid gap-2 border-t border-line-soft pt-3 ${canToggle ? "grid-cols-2" : "grid-cols-1"}`}>
-          <Button variant="secondary" className="w-full" onClick={onEdit}>
+        <div className={`mt-auto grid gap-2 border-t border-line-soft pt-3 ${canToggle || fix ? "grid-cols-2" : "grid-cols-1"}`}>
+          <Button variant="secondary" className="w-full" onClick={() => onEdit()}>
             {O.edit}
           </Button>
+          {fix && (
+            <Button className="w-full" onClick={() => onEdit(fix)}>
+              {fix === "expiry" ? O.extendDate : O.raiseCap}
+            </Button>
+          )}
           {canToggle && (
-            <Button variant={p.active ? "danger" : "secondary"} className="w-full" disabled={busy} onClick={onToggle}>
-              {busy ? O.busy : p.active ? m.admin.merchants.deactivate : m.admin.merchants.activate}
+            <Button variant={p.active ? "danger" : "primary"} className="w-full" disabled={busy} onClick={onToggle}>
+              {busy ? O.busy : p.active ? O.pauseCode : O.activateCode}
             </Button>
           )}
         </div>
@@ -479,10 +596,14 @@ function damascusDay(iso: string | null): string {
 
 function PromoModal({
   promo,
+  focus,
+  autoApprove,
   onClose,
   onSaved,
 }: {
   promo: Promo | null;
+  focus: ModalFocus;
+  autoApprove: boolean;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -499,6 +620,13 @@ function PromoModal({
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
+
+  // **«مدّد التاريخ» و«زيد السقف» يفتحان النافذةَ على خانتهما.**
+  useEffect(() => {
+    if (!focus) return;
+    const t = setTimeout(() => document.getElementById(focus === "expiry" ? "p-exp" : "p-max")?.focus(), 50);
+    return () => clearTimeout(t);
+  }, [focus]);
 
   const uses = maxUses === "" ? null : Number(maxUses);
   const reasons = approvalReasons(kind, Number(value) || 0, Number(minOrder) || 0, uses);
@@ -584,30 +712,37 @@ function PromoModal({
           className="font-mono uppercase"
           placeholder="WELCOME20"
         />
-        <div className="grid grid-cols-2 gap-3">
-          <Select
-            id="p-kind"
-            label={m.admin.promos.kind}
-            value={kind}
-            disabled={editing}
-            onChange={(e) => setKind(e.target.value as Promo["kind"])}
-          >
-            <option value="percent">{m.admin.promos.kindPercent}</option>
-            <option value="fixed">{m.admin.promos.kindFixed}</option>
-            <option value="free_delivery">{m.admin.promos.kindFreeDelivery}</option>
-          </Select>
+        {/* **النوعُ بأزرار لا قائمةٍ منسدلة** — ثلاثةُ خياراتٍ تُرى كلُّها (كـ«طريقة الخصم» في الخصومات).
+            **ولا يتبدّل بعد الإنشاء** — يُعرض شارةً. */}
+        <div className="space-y-1.5">
+          <p className="text-sm font-medium">{O.kindLabel}</p>
+          {editing ? (
+            <Badge variant="accent">{KIND_LABEL[kind]}</Badge>
+          ) : (
+            <Chips
+              wrap
+              items={[
+                { id: "percent" as const, label: m.admin.promos.kindPercent },
+                { id: "fixed" as const, label: m.admin.promos.kindFixed },
+                { id: "free_delivery" as const, label: m.admin.promos.kindFreeDelivery },
+              ]}
+              value={kind}
+              onChange={setKind}
+            />
+          )}
+        </div>
+        {kind !== "free_delivery" && (
           <Input
             id="p-value"
-            label={kind === "percent" ? `${m.admin.promos.value} (${O.percentHint})` : m.admin.promos.value}
+            label={kind === "percent" ? `${m.admin.promos.value} (${O.percentHint})` : O.fAmount}
             type="number"
             min="1"
             max={kind === "percent" ? "90" : undefined}
-            disabled={kind === "free_delivery"}
-            required={kind !== "free_delivery"}
-            value={kind === "free_delivery" ? "" : value}
+            required
+            value={value}
             onChange={(e) => setValue(e.target.value)}
           />
-        </div>
+        )}
         {kind === "percent" && (
           <Input
             id="p-cap"
@@ -661,7 +796,9 @@ function PromoModal({
         </div>
         {preview && <p className="text-sm font-medium">{preview}</p>}
         <p className="text-xs text-ink-muted">
-          {reasons.length > 0 ? O.approvalWhy.replace("{reasons}", reasons.join(m.common.listSep)) : O.approvalNone}
+          {reasons.length === 0
+            ? O.approvalNone
+            : (autoApprove ? O.approvalWhyAuto : O.approvalWhy).replace("{reasons}", reasons.join(m.common.listSep))}
         </p>
         {notice && <Alert tone="info">{notice}</Alert>}
         {error && <Alert>{error}</Alert>}

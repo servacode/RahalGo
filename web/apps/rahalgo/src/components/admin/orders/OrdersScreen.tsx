@@ -23,7 +23,7 @@ import {
   useLiveStatus,
   Button,
   Input,
-  Select,
+  Chips,
   Badge,
   Modal,
   DataView,
@@ -32,6 +32,13 @@ import {
   IconOrder,
   IconPrint,
   IconSearch,
+  IconSuccess,
+  IconError,
+  IconClose,
+  IconHourglass,
+  IconRoute,
+  IconBell,
+  IconKey,
   IconUser,
   IconMoto,
   IconCart,
@@ -47,13 +54,14 @@ import {
   Invoice,
   FormActions,
   SearchSelect,
-  EmptyState,
   Radio,
+  LoadingState,
 } from "@rahalgo/ui";
 import { api, apiFile, ApiError, mediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useRinger } from "@/lib/ringer";
 import { PageHero } from "@/components/admin/PageHero";
+import { Tile, type TileTone } from "@/components/admin/DashParts";
 import { AutoModeToggle } from "@/components/admin/AutoModeToggle";
 import { EmergencyBanner } from "@/components/admin/EmergencyBanner";
 import { DoorPanel, type DoorView } from "./DoorPanel";
@@ -65,7 +73,7 @@ import {
   BoardCounters,
   COUNTER_FILTERS,
   DriverLine,
-  NewOrdersBar,
+  AttentionCard,
   OfferLine,
   SoundButton,
   minutesSince,
@@ -250,6 +258,8 @@ interface OrderRow {
   pay_merchant?: number;
   promo_code: string | null;
   address_text: string;
+  /** **اسمُ منطقة التوصيل** — يُعرض بجانب العنوان. */
+  zone_name?: string | null;
   notes: string;
   cancel_reason: string;
   /** الدورُ الذي أنهى الطلب — يُقرأ ولا يُرسَل. */
@@ -282,6 +292,8 @@ interface BoardInfo {
   goods_cost: number;
   store_compensated: number;
   seen_at: string | null;
+  /** **سُلّم بكود التسليم فعلاً** — من الطلب نفسِه لا من الإعداد الحاليّ (تدقيقُ السجلّ ٢٠٢٦-١٠-٢٧). */
+  delivered_by_code?: boolean;
 }
 
 /** **إعداداتُ اللوحة من الخادم** (`GET /orders/board`) — لا من `/settings` (المشكلة ٣٢). */
@@ -291,6 +303,12 @@ interface BoardMeta {
   orders_mode: string;
   cash_ban_days: number;
   stale_location_minutes: number;
+  /** **يومُ الحساب الآن** — يبدأ بساعة فتح الدوام، والسجلُّ يفلتر به (`account_day_start`). */
+  today?: string;
+  day_start_hour?: number;
+  /** **إعدادا التسليم من اللوحة** — لا من `/settings` (يُردّ ٤٠٣ لمن لا يملكها). */
+  require_delivery_photo?: boolean;
+  delivery_code_required?: boolean;
 }
 
 interface OrderPage {
@@ -313,6 +331,8 @@ interface Alert {
   status: string;
   merchant_name: string;
   customer_phone: string;
+  /** **مخفيّاً لمن لا يملك تفاصيلَ الزبون** — يحجبه الخادم (تدقيقُ الطلبات ٢٠٢٦-١٠-٢٧). */
+  customer_phone_masked?: string;
   reason: "emergency" | "no_accept" | "not_sent" | "no_driver" | "too_long";
   minutes: number;
   /** **منذ متى يصدق السبب** — والدقائقُ تُعدّ منه حيّةً (المشكلة ١٩). */
@@ -329,6 +349,13 @@ function tookText(from: string, to: string): string {
   const h = Math.floor(mins / 60);
   const text = h > 0 ? O_DONE.hm.replace("{h}", fmtNum(h)).replace("{m}", fmtNum(mins % 60)) : O_DONE.m.replace("{m}", fmtNum(mins));
   return O_DONE.took.replace("{t}", text);
+}
+
+/** **يومٌ بالتقويم مزاحاً بأيّام** — `YYYY-MM-DD` بلا منطقةٍ زمنيّة (يومُ الحساب من الخادم). */
+function shiftDay(day: string, by: number): string {
+  const [y, mo, d] = day.split("-").map(Number);
+  if (!y || !mo || !d) return day;
+  return new Date(Date.UTC(y, mo - 1, d + by)).toISOString().slice(0, 10);
 }
 
 /**
@@ -827,9 +854,14 @@ function opsNext(
   // **والطلبُ الخاصُّ خارطتُه أقصر** — (تصحيحُ المالك ٢٠٢٦-٠٨-٠٩): موافقةٌ
   // واحدةٌ تُنزله الطابور. **ولا «مقبول» ولا «تحضير»** — لا متجرَ يقبل ولا
   // مطبخَ يحضّر.
-  if (kind === "custom") return CUSTOM_NEXT[status] ?? [];
+  // **وحارسُ «بعد التحويل لا إلغاءَ للموظّف» يسري على كلّ الأنواع** (تدقيقُ الطلبات ٢٠٢٦-١٠-٢٧) —
+  // كانت الخارطتان تُرجَعان قبله، فيرى الموظّفُ «إلغاء» في الخاصّ والسيرفرُ يردّه (`modes.go`، P5).
+  // **والمحرّكُ يطبّقه في وضع «المنصّة تدير» وحدَه.**
+  const handoffGuard = (list: string[]) =>
+    !isAdmin && !selfManage && AFTER_HANDOFF.has(status) ? list.filter((t) => t !== "cancelled") : list;
+  if (kind === "custom") return handoffGuard(CUSTOM_NEXT[status] ?? []);
   if (kind === "merchant_delivery" && MERCHANT_DELIVERY_NEXT[status]) {
-    return MERCHANT_DELIVERY_NEXT[status];
+    return handoffGuard(MERCHANT_DELIVERY_NEXT[status]);
   }
 
   let next = OPS_NEXT[status] ?? [];
@@ -864,7 +896,9 @@ function opsNext(
 
   // **وبعد التحويل لا تُلغي طلباً** — ولو لم يمسكه سائقٌ بعد. وما قبله بيدها:
   // طلبٌ لم يعلم به مطبخٌ ولا تحرّك له سائق.
-  if (AFTER_HANDOFF.has(status)) {
+  // **وفي «المنصّة تدير» وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٢٧) — المحرّكُ لا يحجبه في «المتاجر تدير»
+  // (`rolesUnderMode` يرجع قبل حارس `afterHandoff`)، فكان الزرُّ غائباً والخادمُ يقبله.
+  if (!selfManage && AFTER_HANDOFF.has(status)) {
     next = next.filter((t) => t !== "cancelled");
   }
   return next;
@@ -899,7 +933,13 @@ function translateKey(key: string): string {
 // ---------- الشاشة الرئيسية ----------
 
 export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
-  const delivery = useDeliveryFlags();
+  /**
+   * **إعدادا التسليم ويومُ الحساب من `GET /orders/board`** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كانا من `/settings`
+   * فيُردّ ٤٠٣ لمن لا يملك قراءتها، **وكان «اليوم» يبدأ نصفَ الليل والخادمُ يبدؤه بساعة الفتح.**
+   */
+  const [delivery, setDelivery] = useState({ photo: false, code: false });
+  const [serverToday, setServerToday] = useState("");
+  const [dayHour, setDayHour] = useState<number | null>(null);
   const params = useSearchParams();
   const initialQ = params.get("q") ?? "";
   const [data, setData] = useState<OrderPage | null>(null);
@@ -1034,6 +1074,9 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       setCashBanDays(r.meta.cash_ban_days);
       setStaleMin(r.meta.stale_location_minutes);
       setSelfManage(r.meta.orders_mode === "merchants");
+      setDelivery({ photo: !!r.meta.require_delivery_photo, code: !!r.meta.delivery_code_required });
+      if (r.meta.today) setServerToday(r.meta.today);
+      if (typeof r.meta.day_start_hour === "number") setDayHour(r.meta.day_start_hour);
     } catch {
       setCountsFailed(true);
       setSelfManage((v) => (v === null ? false : v));
@@ -1050,6 +1093,8 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
    * الثانية أو خارج فلترٍ مفتوحٍ يرنّ أيضاً.
    */
   const [newOrders, setNewOrders] = useState<NewOrder[]>([]);
+  /** **العددُ الحقيقيُّ للجديدة** — من `total` لا من طول الصفحة (أكثرُها ٢٠). */
+  const [newTotal, setNewTotal] = useState(0);
   const loadNew = useCallback(async () => {
     if (!live) return;
     try {
@@ -1064,6 +1109,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           created_at: o.created_at,
         })),
       );
+      setNewTotal(r.total ?? r.orders.length);
     } catch {
       // **ولا يُسكت الرنينُ لأنّ الجلبَ تعثّر** — تبقى القائمةُ كما كانت.
     }
@@ -1209,24 +1255,27 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
     }
   }, [live, can]);
 
-  /** **مدىً جاهز** — بيوم دمشق، و`to` اليومُ نفسُه. */
-  const today = damascusDay();
+  /**
+   * **مدىً جاهز — بيوم الحساب لا بنصف الليل** (تدقيقُ السجلّ ٢٠٢٦-١٠-٢٧). «اليوم» من الخادم
+   * (`account_day(now())`): يبدأ بساعة فتح الدوام كما يفلتر هو (`account_day_start`) — فالساعة ٢ بالليل
+   * «اليوم» هو يومُ الأمس بالتقويم. **وتعذّرُه يُرجع إلى يوم دمشق.**
+   */
+  const today = serverToday || damascusDay();
   const presets: { id: string; label: string; from: string; to: string }[] = [
     { id: "today", label: m.admin.ordersPage.range.today, from: today, to: today },
     {
       id: "yesterday",
       label: m.admin.ordersPage.range.yesterday,
-      from: damascusDay(Date.now() - 86_400_000),
-      to: damascusDay(Date.now() - 86_400_000),
+      from: shiftDay(today, -1),
+      to: shiftDay(today, -1),
     },
-    {
-      id: "last7",
-      label: m.admin.ordersPage.range.last7,
-      from: damascusDay(Date.now() - 6 * 86_400_000),
-      to: today,
-    },
+    { id: "last7", label: m.admin.ordersPage.range.last7, from: shiftDay(today, -6), to: today },
     { id: "month", label: m.admin.ordersPage.range.month, from: `${today.slice(0, 8)}01`, to: today },
   ];
+  const activePreset = presets.find((p) => p.from === from && p.to === to)?.id ?? "";
+  /** **«تاريخ مخصّص» يفتح الخانتين** — ومدىً لا يطابق زرّاً يفتحهما من نفسه. */
+  const [customRange, setCustomRange] = useState(false);
+  const showDates = customRange || ((from !== "" || to !== "") && activePreset === "");
   const filtered =
     from !== "" || to !== "" || merchantId !== "" || driverId !== "" || kind !== "";
   /** **امسح الفلاترَ كلَّها** — والبحثَ والحال (المشكلة ١٨). */
@@ -1316,15 +1365,17 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
     if (event.type === "order") {
       // **والسجلُّ لا يتحدّث وحدَه** (البند ٦) — يقول «في طلبات جديدة» ويُحدَّث بضغطة.
       if (!live) {
-        setStale(true);
+        // **وما يخصّ السجلَّ وحدَه** (تدقيقُ السجلّ ٢٠٢٦-١٠-٢٧) — طلبٌ انتهى الآن، لا كلُّ حركةٍ في طلبٍ جارٍ.
+        const st = (event.order as { status?: string } | undefined)?.status;
+        if (st && CLOSED_STATUSES.has(st)) setStale(true);
         return;
       }
       if (pending.current) clearTimeout(pending.current);
       pending.current = setTimeout(refreshAll, 500);
     }
+    // **والبثُّ بلا هاتف الزبون** (تدقيقُ ٢٠٢٦-١٠-٢٧) — فتُجلب القائمةُ من بابها بحجب قارئها.
     if (event.type === "alerts" && live) {
-      setAlerts((event.alerts as Alert[]) ?? []);
-      setAlertsFailed(false);
+      void loadAlerts();
     }
   });
   useEffect(
@@ -1451,62 +1502,28 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       // **سطران مرتّبان** (المالك ٢٠٢٦-١٠-٢٢: «طلب عادي ومكتمل… والتفاصيل وطباعة لازم يترتبو
       // بشكل افضل») — فوق: الرقمُ والنوعُ يميناً والحالةُ يساراً، كلٌّ بسطرٍ واحد؛ وتحت: الأزرار.
       cell: (o) => (
-        <span className="block space-y-2">
-          <span className="flex w-full items-start justify-between gap-2">
-            <span className="flex items-center gap-2 whitespace-nowrap">
-              <OrderRef number={o.number} at={o.created_at} />
-              <KindBadge o={o} />
-            </span>
-            <span className="flex flex-wrap items-center justify-end gap-1 whitespace-nowrap">
-              {/* **والمسلَّمُ مكتملٌ أخضر ومعه مدّتُه** (ملاحظةُ المالك ٢٠٢٦-١٠-٢٢: «أنهاه السائق
-                  شكله بشع… لازم يكون مكتمل وأخضر» و«كم دقيقة استغرق من أول الطلب للتسليم»).
-                  **والأحمرُ لما انتهى قبل أن يصل** — ألغاه الزبون أو المتجر أو العمليات. */}
-              {/* **مملوءةٌ والكتابةُ بيضاء** (المالك ٢٠٢٦-١٠-٢٢: «الخط ابيض والخلفية حمرا
-                  بالالغاء… والمكتمل ابيض بخلفية خضرا») — كشارة النوع. */}
-              {o.status === "delivered" ? (
-                <span className="rounded-badge bg-success-solid px-2.5 py-1 text-xs font-bold text-on-solid">
-                  {O_DONE.done}
-                  {o.closed_at && ` · ${tookText(o.created_at, o.closed_at)}`}
-                </span>
-              ) : (
-                o.ended_by && ENDED_BY[o.ended_by] && (
-                  <span className="rounded-badge bg-danger-solid px-2.5 py-1 text-xs font-bold text-on-solid">
-                    {ENDED_BY[o.ended_by]}
-                  </span>
-                )
-              )}
-              {/* **والطلبُ الذي فُتح بالرابط يُعلَّم** (المشكلة ٢١). */}
-              {focusId === o.id && <Badge variant="accent">{BOARD.focused}</Badge>}
-              {o.board?.emergency_open && (
-                <Badge variant="danger">{BOARD.emergencyBadge}</Badge>
-              )}
-              {live && o.board?.alert_reason && !o.board.emergency_open && (
-                <Badge variant="danger">
-                  {(m.admin.ordersPage.alertReasons as Record<string, string>)[
-                    o.board.alert_reason
-                  ] ?? o.board.alert_reason}
-                </Badge>
-              )}
-            </span>
+        // **والسطرُ يلتفّ على الجوّال** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كان `whitespace-nowrap` على الطرفين
+        // فيخرج رأسُ البطاقة عن عرض شاشةٍ ٣٦٠ بكسلاً مع نوعٍ طويل.
+        <span className="flex w-full flex-wrap items-start justify-between gap-2">
+          <span className="flex flex-wrap items-center gap-2">
+            <OrderRef number={o.number} at={o.created_at} />
+            <KindBadge o={o} />
           </span>
-          {!live && (
-            <span className="flex items-center justify-end gap-2 border-t border-line-soft pt-2">
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  // **وفتحُ التفاصيل يُسكت رنينَ الطلب الجديد** — بلا زرِّ «استلمتها»
-                  // (المالك ٢٠٢٦-١٠-٢٢: «مابدي هالزر اصلا»).
-                  if (o.status === "pending" && o.board && !o.board.seen_at) {
-                    void api(`/api/v1/admin/orders/${o.id}/seen`, { method: "POST", body: "{}" }).catch(() => {});
-                  }
-                  setPanelId(o.id);
-                }}
-              >
-                {H.openDetails}
-              </Button>
-              {!NO_INVOICE.has(o.status) && <InvoiceButton order={o} />}
-            </span>
-          )}
+          <span className="flex flex-wrap items-center justify-end gap-1">
+            {CLOSED_STATUSES.has(o.status) && <EndBadge o={o} />}
+            {/* **والطلبُ الذي فُتح بالرابط يُعلَّم** (المشكلة ٢١). */}
+            {focusId === o.id && <Badge variant="accent">{BOARD.focused}</Badge>}
+            {o.board?.emergency_open && (
+              <Badge variant="danger">{BOARD.emergencyBadge}</Badge>
+            )}
+            {live && o.board?.alert_reason && !o.board.emergency_open && (
+              <Badge variant="danger">
+                {(m.admin.ordersPage.alertReasons as Record<string, string>)[
+                  o.board.alert_reason
+                ] ?? o.board.alert_reason}
+              </Badge>
+            )}
+          </span>
         </span>
       ),
     },
@@ -1609,7 +1626,8 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
             : v < 1000
               ? P.meters.replace("{n}", fmtNum(Math.round(v / 10) * 10))
               : P.km.replace("{n}", fmtNum(Math.round(v / 100) / 10));
-        const parts = [
+        // **وطلبٌ انتهى لا مسافاتٍ له** (تدقيقُ السجلّ ٢٠٢٦-١٠-٢٧) — بُعدُ السائق عن المتجر بعد التسليم لا معنى له.
+        const parts = o.closed_at ? [] : [
           dist(o.leg_m) && P.legDist.replace("{d}", dist(o.leg_m)),
           o.driver_name && !o.picked_up_at && dist(o.driver_to_pickup_m) && P.driverDist.replace("{d}", dist(o.driver_to_pickup_m)),
           // **وبُعدُ السائق عن الزبون** (المالك ٢٠٢٦-١٠-٢٥) — بعد الاستلام، أو حين لا نقطةَ استلامٍ معروفة.
@@ -1620,6 +1638,8 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           <span className="flex flex-col gap-0.5">
             {/* **العنوانُ كاملاً** (المالك ٢٠٢٦-١٠-٢٥: «العنوان ناقص») — كان يُقصّ على سطرين. */}
             <span className="whitespace-pre-line break-words">{o.address_text || "—"}</span>
+            {/* **واسمُ المنطقة بجانب العنوان** (تدقيقُ الطلبات ٢٠٢٦-١٠-٢٧) — كان في الردّ ولا يُعرض. */}
+            {o.zone_name && <span className="text-xs font-medium text-accent-text">{o.zone_name}</span>}
             {parts.length > 0 && <span className="text-xs text-ink-muted">{parts.join(" · ")}</span>}
           </span>
         );
@@ -1632,13 +1652,10 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       id: "note",
       header: m.admin.ordersPage.customerNote,
       icon: <IconNote />,
-      block: true,
-      cell: (o) =>
-        o.notes ? (
-          <span className="text-xs text-accent-dark">{o.notes}</span>
-        ) : (
-          <span className="text-ink-muted">—</span>
-        ),
+      // **داخل صندوق الزبون، وتغيب حين لا ملاحظة** (تدقيقُ الطلبات ٢٠٢٦-١٠-٢٧) — كانت صندوقاً بعرض
+      // البطاقة يقول «—» في أغلب الطلبات.
+      hide: (o: OrderRow) => !o.notes,
+      cell: (o) => <span className="text-xs text-accent-dark">{o.notes}</span>,
     },
     {
       // **قسمٌ بعنوانه** (ملاحظةُ المالك ٢٠٢٦-١٠-٢٢: «نفصل بين الزبون والسائق والتفاصيل»).
@@ -1731,6 +1748,9 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           atStore={o.status === "at_pickup"}
           beforeStore={o.status === "assigned"}
           canTransfer={o.kind !== "merchant_delivery"}
+          // **والإلغاءُ بعد التسليم للسائقين للمالك وحدَه في «المنصّة تدير»** (`modes.go`، P5) — كان
+          // زرُّه يظهر للموظّف والمحرّكُ يردّه (تدقيقُ الطلبات ٢٠٢٦-١٠-٢٧).
+          canCancel={isAdmin || selfManage === true}
           acceptsReturns={o.kind !== "custom" && o.merchant_accepts_returns}
           customerPhone={o.customer_phone}
           driverPhone={o.driver_phone}
@@ -1821,9 +1841,11 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       // إن كان الكودُ مُلزَماً، أو سببُ الإعفاء — **وبلا شيءٍ من ذلك لا قسمَ أصلاً.**
       hide: (o: OrderRow) =>
         !PROOF_STATUSES.has(o.status) ||
-        (!o.proof_url && !o.proof_skip_reason && !(delivery.code && o.status === "delivered")),
+        (!o.proof_url && !o.proof_skip_reason && !o.board?.delivered_by_code),
+      // **«بكود التسليم» من الطلب نفسِه** (تدقيقُ السجلّ ٢٠٢٦-١٠-٢٧) — كان من الإعداد الحاليّ، فطلبٌ
+      // قديمٌ سُلّم قبل إلزام الكود يُقال عنه «بالكود»، ومن لا يقرأ الإعدادات لا يراه أبداً.
       cell: (o) => {
-        if (!o.proof_url && !o.proof_skip_reason && delivery.code) {
+        if (!o.proof_url && !o.proof_skip_reason && o.board?.delivered_by_code) {
           return <span className="text-xs font-medium text-success">{m.admin.ordersPage.proofByCode}</span>;
         }
         if (o.proof_skip_reason) {
@@ -1891,15 +1913,114 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
   // **وكلُّ قسمٍ مربّعٌ بلونه** (المالك ٢٠٢٦-١٠-٢٢: «معلومات الزبون ضمن مربع بلون مختلف وايضا
   // معلومات السائق») — رأسُ القسم وسطورُه في صندوقٍ واحد، لا سطورٌ متتاليةٌ بخطوطٍ بينها.
   const cardColumns = boxSections(columns);
+  /** **سطرُ إثبات التسليم** — نفسُه في بطاقة السجلّ الخفيفة. */
+  const proofCol = columns.find((c) => c.id === "proof");
+  const goodsCol = columns.find((c) => c.id === "goodsReturn");
+
+  // ══════════════════════════════════════════════════════════════════
+  // **التصميمُ الاحترافيّ** (قرارُ المالك ٢٠٢٦-١٠-٢٧: «بدي الصبح لاقي اللوحة كلها احترافية»)
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // رأسٌ موحّدٌ بسطر شرح · أرقامٌ تُضغط فتفلتر · فلاترُ في بطاقةٍ واحدة · بطاقةٌ لكلّ طلب ·
+  // وفراغٌ بدائرةٍ ملوّنةٍ وجملةٍ تساعد. **والشروطُ كلُّها في الخادم كما كانت.**
+  const rows = data?.orders ?? [];
+  const C = counts ?? {};
+  const closedTotal = Object.values(C).reduce((x, y) => x + y, 0);
+  const historyFiltered = filtered || searching || status !== "";
+  const liveFiltered = !!(awaiting || status || stage || board || focusId);
+  const pickStatus = (k: string) => {
+    setStatus(status === k ? "" : k);
+    setPage(1);
+  };
+  const pickBoard = (k: string) => {
+    setBoard(board === k ? "" : k);
+    setStatus("");
+    setAwaiting(false);
+    setStage("");
+    setFocusId("");
+    setFocusMissing(false);
+    setQuery("");
+    setPage(1);
+  };
+  const clearLive = () => {
+    setAwaiting(false);
+    setStatus("");
+    setStage("");
+    setBoard("");
+    setFocusId("");
+    setFocusMissing(false);
+    if (focusId) setQuery("");
+    setPage(1);
+  };
+  const liveFilterLabel = awaiting
+    ? m.admin.ordersPage.awaitingFilter
+    : board
+      ? ((BOARD.counters as Record<string, string>)[board] ?? board)
+      : stage
+        ? ((m.admin.home.stage as Record<string, string>)[stage] ?? stage)
+        : focusId
+          ? BOARD.focused
+          : (OFFICE_STATUS[status] ?? status);
+  const tone = (n: number | undefined, hot: TileTone): TileTone => ((n ?? 0) > 0 ? hot : "muted");
+  const LIVE_TILES: { k: (typeof COUNTER_FILTERS)[number]; icon: typeof IconBell; hot: TileTone }[] = [
+    { k: "awaiting_accept", icon: IconBell, hot: "accent" },
+    { k: "awaiting_driver", icon: IconHourglass, hot: "warning" },
+    { k: "on_the_way", icon: IconMoto, hot: "success" },
+    { k: "at_door", icon: IconLocation, hot: "warning" },
+    { k: "reports", icon: IconWarning, hot: "danger" },
+    { k: "stuck", icon: IconError, hot: "danger" },
+  ];
+  const HISTORY_TILES: { k: string; label: string; icon: typeof IconBell; hot: TileTone }[] = [
+    { k: "delivered", label: H.tileDelivered, icon: IconSuccess, hot: "success" },
+    { k: "failed", label: H.tileFailed, icon: IconError, hot: "danger" },
+    { k: "cancelled", label: OFFICE_STATUS.cancelled ?? "", icon: IconClose, hot: "warning" },
+    { k: "rejected", label: OFFICE_STATUS.rejected ?? "", icon: IconClose, hot: "warning" },
+    // **و«مسترجع» صفرٌ دائماً اليوم** — لا استرجاعَ من الشاشة؛ فيغيب حين لا شيءَ فيه.
+    ...((C.refunded ?? 0) > 0 ? [{ k: "refunded", label: H.tileRefunded, icon: IconSwap, hot: "accent" as TileTone }] : []),
+  ];
+  const kindChips = [
+    { id: "", label: H.kindAll },
+    { id: "standard", label: H.kindStandard },
+    // **«مشتريات» و«أمانة» منفصلان** (قرارُ المالك ٢٠٢٦-١٠-٢٧) — و`custom` القديمُ
+    // يبقى يعمل في الروابط القديمة على المحرّك.
+    { id: "custom_purchase", label: H.kindPurchase },
+    { id: "custom_amanah", label: H.kindAmanah },
+    { id: "merchant_delivery", label: H.kindDelivery },
+  ];
+  const periodChips = [
+    { id: "", label: m.admin.ordersPage.range.all },
+    ...presets.map((p) => ({ id: p.id, label: p.label })),
+    { id: "custom", label: m.admin.ordersPage.range.custom },
+  ];
+  const periodValue = customRange || showDates ? "custom" : activePreset;
+  const pickPeriod = (id: string) => {
+    setPage(1);
+    if (id === "custom") {
+      setCustomRange(true);
+      return;
+    }
+    setCustomRange(false);
+    const p = presets.find((x) => x.id === id);
+    setFrom(p ? p.from : "");
+    setTo(p ? p.to : "");
+  };
+  const clearHistory = () => {
+    setCustomRange(false);
+    clearAll();
+  };
+  const showEmpty =
+    !inverted && !(error && rows.length === 0) && !!data && rows.length === 0 && (live || !loading);
 
   return (
     <div>
-      {/* **رأسُ السجلّ موحّد** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «تصميم احترافي») — الحالاتُ المنتهيةُ تبويباتٌ
-          بعدّها بسطرٍ واحد، بدل ستّة مربّعاتٍ كبيرة؛ والتصديرُ والتحديثُ على الطرف. */}
+      {/* ══════════════════════════════════════════════════════════
+          **الرأس** — العنوانُ وسطرُ الشرح، والأفعالُ تلتفّ على الجوّال
+          ══════════════════════════════════════════════════════════ */}
       {!live && (
         <PageHero<string>
           icon={IconOrder}
           title={m.admin.ordersPage.historyTitle}
+          subtitle={H.subtitle}
           actions={
             <>
               {can("finance.export") && (
@@ -1917,102 +2038,109 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
               </Button>
             </>
           }
-          tabs={
-            counts && !inverted
-              ? [""].concat([...CLOSED_STATUSES]).map((k) => ({
-                  key: k || "all",
-                  label: k === "" ? m.admin.ordersPage.allStatuses : (STATUS_LABELS[k] ?? k),
-                  count: k === "" ? Object.values(counts).reduce((x, y) => x + y, 0) : (counts[k] ?? 0),
-                }))
-              : undefined
-          }
-          value={status || "all"}
-          onChange={(k) => {
-            setStatus(k === "all" ? "" : k);
-            setPage(1);
-          }}
         />
       )}
-      {/* **رأسُ الشاشة الحيّة موحّد** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «تصميم احترافي») — العنوانُ وشارةُ «مباشر»،
-          والقبولُ التلقائيُّ مفتاحٌ صغيرٌ وزرُّ الصوت على الطرف، **وعدّاداتُ المراحل تبويباتٌ بعدّها بسطرٍ
-          واحد** (البند ٣ من ٢٠٢٦-١٠-٠٤: كلٌّ يفتح القائمةَ بشرطه في الخادم). */}
       {live && (
         <PageHero<string>
           icon={IconOrder}
           title={m.admin.ordersPage.title}
+          subtitle={BOARD.subtitle}
           titleExtra={
             <Badge variant={liveConnected ? "success" : "danger"} className="gap-1.5 py-1">
               <span className={`h-2 w-2 rounded-badge ${liveConnected ? "animate-pulse bg-success" : "bg-danger"}`} />
               {liveConnected ? m.admin.ordersPage.live : m.admin.ordersPage.liveOff}
             </Badge>
           }
-          actions={
-            <>
-              <AutoModeToggle
-                compact
-                className=""
-                settingKey="orders.auto_transfer"
-                minutesKey="orders.unattended_auto_accept_min"
-                label={m.admin.autoMode.ordersLabel}
-                hint={m.admin.autoMode.ordersHint}
+        >
+          {/* **والمفتاحان في سطرٍ يلتفّ** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كانا على طرف الرأس فيخرجان عن الشاشة. */}
+          <div className="flex flex-wrap items-center gap-2">
+            <AutoModeToggle
+              compact
+              className=""
+              settingKey="orders.auto_transfer"
+              minutesKey="orders.unattended_auto_accept_min"
+              label={m.admin.autoMode.ordersLabel}
+              hint={m.admin.autoMode.ordersHint}
+            />
+            {/* **وزرُّ الصوت أوّلَ الدوام** — المتصفّحُ لا يُسمع شيئاً قبل ضغطة (البند ٥). */}
+            {canAck && (
+              <SoundButton
+                enabled={ringer.enabled}
+                unlocked={ringer.unlocked}
+                onEnable={ringer.unlock}
+                onToggle={ringer.setEnabled}
               />
-              {/* **وزرُّ الصوت أوّلَ الدوام** — المتصفّحُ لا يُسمع شيئاً قبل ضغطة (البند ٥). */}
-              {canAck && (
-                <SoundButton
-                  enabled={ringer.enabled}
-                  unlocked={ringer.unlocked}
-                  onEnable={ringer.unlock}
-                  onToggle={ringer.setEnabled}
-                />
-              )}
-            </>
-          }
-          tabs={[
-            { key: "all", label: m.admin.ordersPage.allStatuses },
-            ...COUNTER_FILTERS.map((k) => ({
-              key: k,
-              label: (BOARD.counters as Record<string, string>)[k] ?? k,
-              count: counts0?.[k] ?? null,
-              warn: k === "stuck" || k === "reports",
-            })),
-          ]}
-          value={board || "all"}
-          onChange={(k) => {
-            setBoard(k === "all" ? "" : k);
-            setStatus("");
-            setAwaiting(false);
-            setStage("");
-            setFocusId("");
-            setQuery("");
-            setPage(1);
-          }}
-        />
+            )}
+          </div>
+        </PageHero>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════
+          **الأرقامُ تُضغط فتفلتر** — بشرط الخادم نفسِه الذي عدّها
+          ══════════════════════════════════════════════════════════ */}
+      {live && countsFailed && !counts0 && (
+        <BoardCounters counts={null} active={board} failed onRetry={() => void loadBoard()} onPick={() => undefined} />
+      )}
+      {live && counts0 && (
+        <div role="group" aria-label={BOARD.countersLabel} className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+          {LIVE_TILES.map(({ k, icon, hot }) => (
+            <div key={k} className={`grid ${board === k ? "rounded-card ring-2 ring-accent" : ""}`}>
+              <Tile
+                icon={icon}
+                label={(BOARD.counters as Record<string, string>)[k] ?? k}
+                value={fmtNum(counts0[k] ?? 0)}
+                tone={tone(counts0[k], hot)}
+                onClick={() => pickBoard(k)}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+      {!live && counts && !inverted && (
+        <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
+          <div className={`grid ${status === "" ? "rounded-card ring-2 ring-accent" : ""}`}>
+            <Tile
+              icon={IconOrder}
+              label={H.tileAll}
+              value={fmtNum(closedTotal)}
+              tone={closedTotal > 0 ? "accent" : "muted"}
+              onClick={() => pickStatus("")}
+            />
+          </div>
+          {HISTORY_TILES.map(({ k, label, icon, hot }) => (
+            <div key={k} className={`grid ${status === k ? "rounded-card ring-2 ring-accent" : ""}`}>
+              <Tile
+                icon={icon}
+                label={label}
+                value={fmtNum(C[k] ?? 0)}
+                tone={tone(C[k], hot)}
+                onClick={() => pickStatus(k)}
+              />
+            </div>
+          ))}
+        </div>
       )}
 
       {/* **والطارئُ لمن يبلغه ولا يرى شريطَ اللوحة العامّ** — موظّفُ العمليّات
           يملك الطوارئ (البند ٧) والشريطُ أعلى الصفحات لمن يملك الدعم. */}
       {live && can("emergencies.manage") && !can("support.manage") && <EmergencyBanner />}
 
+      {/* **«بدها انتباهك» بطاقةٌ واحدة** (تدقيقُ ٢٠٢٦-١٠-٢٧) — الجديدةُ والعالقةُ بقسمين، بدل شرائطَ
+          فوق بعضها قبل أن تصل الطلبات. */}
       {live && (
-        <NewOrdersBar
-          orders={newOrders}
+        <AttentionCard
+          newOrders={newOrders}
+          newTotal={newTotal}
+          alerts={alerts}
+          alertsFailed={alertsFailed}
+          onRetryAlerts={() => void loadAlerts()}
           now={now}
           canAck={canAck}
           onAcked={refreshAll}
-          onOpen={(o) => openOrder(o.id, o.number)}
+          onOpen={(id, number) => openOrder(id, number)}
+          officeStatus={OFFICE_STATUS}
+          alertReasons={m.admin.ordersPage.alertReasons as Record<string, string>}
         />
-      )}
-
-      {/* **وفشلُ جلب التنبيهات يُقال** (المشكلة ٣١) — لا يختفي الشريطُ كأنّ شيئاً لم يعلق. */}
-      {live && alertsFailed && (
-        <Alert tone="warning" className="mb-4">
-          <span className="flex flex-wrap items-center gap-2">
-            {BOARD.alertsFailed}
-            <Button variant="secondary" onClick={() => void loadAlerts()}>
-              {BOARD.retry}
-            </Button>
-          </span>
-        </Alert>
       )}
 
       {!live && stale && (
@@ -2031,255 +2159,142 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         </Alert>
       )}
 
-      {/* تنبيهات التصعيد — **للشاشة الحيّة وحدَها** (البند ٦). */}
-      {live && alerts.length > 0 && (
-        <div className="mb-4 rounded-card border-2 border-danger-edge bg-danger-tint p-4">
-          <p className="mb-2 flex items-center gap-2 font-bold text-danger">
-            <span className="h-2.5 w-2.5 animate-pulse rounded-badge bg-danger" />
-            {m.admin.ordersPage.alertsTitle} ({fmtNum(alerts.length)})
-          </p>
-          <ul className="space-y-1.5">
-            {alerts.map((a) => (
-              <li
-                key={a.order_id + a.reason}
-                className="flex flex-wrap items-center gap-2 text-sm"
-              >
-                {/* الإنذارُ يجلب طلبَه إلى القائمة بدل أن يفتح نافذة:
-                    **البطاقة نفسها صارت تحمل كل ما يُقرَّر به** — والنافذة
-                    كانت تُخفي بقيّة الطلبات وهي مفتوحة. */}
-                <button
-                  onClick={() => {
-                    // **والضغطةُ تمسح الفلاترَ وتفتح الطلب** (المشكلة ٢٠) — كانت
-                    // تكتب الرقمَ والفلترُ قائمٌ فتعود القائمةُ فارغة.
-                    openOrder(a.order_id, a.number);
-                  }}
-                  className="font-bold text-danger underline-offset-2 hover:underline"
-                >
-                  #{a.number}
-                </button>
-                <Badge variant="danger">
-                  {(m.admin.ordersPage.alertReasons as Record<string, string>)[a.reason] ??
-                    a.reason}
-                </Badge>
-                <span>{a.merchant_name}</span>
-                <span dir="ltr" className="text-xs text-ink-muted">
-                  {a.customer_phone}
-                </span>
-                {/* **والدقائقُ تُعدّ في الشاشة من لحظة السبب** (المشكلة ١٩) — كانت
-                    «منذ ٣٢٣ دقيقة» تبقى ساعات، وبأرقامٍ خارج المنسِّق المركزيّ. */}
-                <span className="text-xs text-ink-muted">
-                  {BOARD.since.replace(
-                    "{n}",
-                    fmtNum(minutesSince(a.since, now) ?? a.minutes),
-                  )}
-                </span>
-                {/* **بلفظ المكتب لا الزبون** (المشكلة ٢٣). */}
-                <Badge variant="warning">{OFFICE_STATUS[a.status] ?? a.status}</Badge>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
       {/* ══════════════════════════════════════════════════════════
-          **وبطاقاتٌ تُرشِّح مكانَ قائمةٍ تُخفي**
-          ══════════════════════════════════════════════════════════
-
-          (قرارُ المالك ٢٠٢٦-٠٨-١٢: «بطاقاتٌ ذكيّةٌ أعلى صفحة سجلّ
-           الطلبات، ونُلغي القائمة المنسدلة ونترك خانة البحث».)
-
-          **والمنسدلةُ تُخفي الأرقام حتّى تُفتح**: تفتحها وتختار «فشل
-          التوصيل» **لتكتشف أنّه سبعة** — ضغطتان لتعرف أنّه لا يستحقّ
-          الضغطة. **والبطاقةُ تقول الرقمَ قبلها.**
-
-          **وفي السجلّ وحدَه**: شاشةُ العمل حالاتُها جاريةٌ كلُّها
-          معروضة — **ولا حالَ منتهيةً فيها تُعَدّ.** */}
-      {/* **عدّاداتُ المراحل فوق اللوحة** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٣) — كلٌّ
-          يُضغط فيفتح القائمةَ بشرطه في الخادم نفسِه. */}
-      {live && countsFailed && !counts0 && (
-        <BoardCounters counts={null} active={board} failed onRetry={() => void loadBoard()} onPick={() => undefined} />
+          **الفلاترُ في بطاقةٍ واحدة** — البحثُ أوّلاً ثمّ ما يضيّق
+          ══════════════════════════════════════════════════════════ */}
+      {live && (
+        <section className="surface mb-4 flex flex-wrap items-center gap-2 p-3">
+          <div className="w-full sm:w-72">
+            <Input
+              icon={<IconSearch />}
+              placeholder={m.admin.ordersPage.searchPlaceholder}
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+          {/* **والفلترُ الفعّالُ شريحةٌ تُمسح** — من الرئيسيّة أو من رقمٍ ضُغط. */}
+          {liveFiltered && (
+            <span className="inline-flex flex-wrap items-center gap-2 text-sm">
+              <span className="text-ink-muted">{BOARD.activeFilter}:</span>
+              <Badge variant="accent">{liveFilterLabel}</Badge>
+              <Button variant="secondary" onClick={clearLive}>
+                {BOARD.showAll}
+              </Button>
+            </span>
+          )}
+        </section>
       )}
 
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        {/* **وشاشةُ العمل مرشَّحةً من الرئيسيّة تقول ذلك** — وإلّا ظُنّ أنّ
-            الطلباتِ الأخرى اختفت. **وضغطةٌ تُعيد الكلّ.** */}
-        {live && (awaiting || status || stage || board || focusId) && (
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setAwaiting(false);
-              setStatus("");
-              setStage("");
-              setBoard("");
-              setFocusId("");
-              setFocusMissing(false);
-              if (focusId) setQuery("");
-              setPage(1);
-            }}
-          >
-            {awaiting
-              ? m.admin.ordersPage.awaitingFilter
-              : board
-                ? ((BOARD.counters as Record<string, string>)[board] ?? board)
-                : stage
-                  ? ((m.admin.home.stage as Record<string, string>)[stage] ?? stage)
-                  : focusId
-                    ? BOARD.focused
-                    : (OFFICE_STATUS[status] ?? status)}
-            {m.common.listSeparator}
-            {m.admin.ordersPage.clearFilter}
-          </Button>
-        )}
-        <div className="w-full sm:w-64">
+      {/* **مُرشِّحاتُ السجلّ** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — بحثٌ ومدّةٌ بأزرار، و«تاريخ مخصّص» يفتح
+          الخانتين، ونوعٌ بأزرار، ومتجرٌ وسائق. **وتلتفّ على الجوال ولا تُزيح الصفحة.** */}
+      {!live && (
+        <section className="surface relative z-30 mb-4 flex flex-col gap-3 p-3">
           <Input
             icon={<IconSearch />}
-            placeholder={live ? m.admin.ordersPage.searchPlaceholder : H.searchPlaceholder}
+            placeholder={H.searchPlaceholder}
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
               setPage(1);
             }}
           />
-        </div>
-
-        {/* ══════════════════════════════════════════════════════════
-            **ولا عرضَ جدولٍ في الطلبات**
-            ══════════════════════════════════════════════════════════
-
-            (قرارُ المالك ٢٠٢٦-٠٨-١٢: «ألغِ عرض الجدول من قسم الطلبات
-             وسجلّ الطلبات».)
-
-            **والطلبُ ليس صفّاً**: فيه فاتورةٌ من عشرة سطورٍ وعنوانٌ
-            وملاحظةٌ وأزرارُ فعل — **وصفٌّ يحملها يرتفع ويتباين طولُه**،
-            فيُقرأ الجدولُ عشوائيّا.
-
-            **والبطاقةُ تحمل الكلّ بلا ضغطة** — وهي ما بُني عليه هذا
-            القسمُ كلُّه في هذه الجولة. */}
-      </div>
-
-      {/* **مُرشِّحاتُ السجلّ** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — مدىً جاهزٌ بضغطة،
-          أو يومان بيد، ومتجرٌ وسائق. **وتلتفّ على الجوال ولا تُزيح الصفحة.** */}
-      {!live && (
-        <div className="surface relative z-30 mb-4 flex flex-wrap items-end gap-2 p-3">
-          {presets.map((p) => {
-            const on = from === p.from && to === p.to;
-            return (
-              <Button
-                key={p.id}
-                variant={on ? "primary" : "secondary"}
-                aria-pressed={on}
-                onClick={() => {
-                  setFrom(on ? "" : p.from);
-                  setTo(on ? "" : p.to);
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs text-ink-muted">{H.periodLabel}</span>
+            <Chips items={periodChips} value={periodValue} onChange={pickPeriod} wrap />
+          </div>
+          {showDates && (
+            <div className="grid grid-cols-1 gap-2 sm:max-w-md sm:grid-cols-2">
+              <Input
+                id="h-from"
+                label={m.admin.ordersPage.range.from}
+                type="date"
+                value={from}
+                onChange={(e) => {
+                  setFrom(e.target.value);
                   setPage(1);
                 }}
-              >
-                {p.label}
-              </Button>
-            );
-          })}
-          <div className="min-w-[8.75rem] flex-1 sm:w-40 sm:flex-none">
-            <Input
-              id="h-from"
-              label={m.admin.ordersPage.range.from}
-              type="date"
-              value={from}
-              onChange={(e) => {
-                setFrom(e.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
-          <div className="min-w-[8.75rem] flex-1 sm:w-40 sm:flex-none">
-            <Input
-              id="h-to"
-              label={m.admin.ordersPage.range.to}
-              type="date"
-              value={to}
-              onChange={(e) => {
-                setTo(e.target.value);
-                setPage(1);
-              }}
-            />
-          </div>
-          {storesState === "ok" && storeList.length > 0 && (
-            <div className="min-w-[10rem] flex-1 sm:w-52 sm:flex-none">
-              <SearchSelect
-                ariaLabel={m.admin.ordersPage.range.allStores}
-                allLabel={m.admin.ordersPage.range.allStores}
-                value={merchantId}
-                options={storeList.map((x) => ({ value: x.id, label: storeLabel(x.name, x.number) }))}
-                onChange={(v) => {
-                  setMerchantId(v);
+              />
+              <Input
+                id="h-to"
+                label={m.admin.ordersPage.range.to}
+                type="date"
+                value={to}
+                onChange={(e) => {
+                  setTo(e.target.value);
                   setPage(1);
                 }}
               />
             </div>
           )}
-          {driversState === "ok" && driverList.length > 0 && (
-            <div className="min-w-[10rem] flex-1 sm:w-52 sm:flex-none">
-              <SearchSelect
-                ariaLabel={m.admin.ordersPage.range.allDrivers}
-                allLabel={m.admin.ordersPage.range.allDrivers}
-                value={driverId}
-                options={driverList.map((d) => ({ value: d.id, label: d.full_name || d.phone }))}
-                onChange={(v) => {
-                  setDriverId(v);
-                  setPage(1);
-                }}
-              />
-            </div>
-          )}
-          {/* **ونوعُ الطلب** — والطلباتُ الخاصّةُ لحالها (المشكلة ٢٠). */}
-          <div className="min-w-[9rem] flex-1 sm:w-44 sm:flex-none">
-            <Select
-              aria-label={H.kindAll}
+          {/* **ونوعُ الطلب بأزرار** — بأسماء البطاقة نفسِها (تدقيقُ السجلّ ٢٠٢٦-١٠-٢٧). */}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs text-ink-muted">{H.kindLabel}</span>
+            <Chips
+              items={kindChips}
               value={kind}
-              onChange={(e) => {
-                setKind(e.target.value);
+              onChange={(v) => {
+                setKind(v);
                 setPage(1);
               }}
-            >
-              <option value="">{H.kindAll}</option>
-              <option value="standard">{H.kindStandard}</option>
-              <option value="custom">{H.kindCustom}</option>
-              <option value="merchant_delivery">{H.kindDelivery}</option>
-            </Select>
+              wrap
+            />
           </div>
-          {filtered && (
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setFrom("");
-                setTo("");
-                setMerchantId("");
-                setDriverId("");
-                setKind("");
-                setPage(1);
-              }}
-            >
-              {m.admin.ordersPage.range.clear}
-            </Button>
+          {((storesState === "ok" && storeList.length > 0) || (driversState === "ok" && driverList.length > 0)) && (
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:max-w-2xl">
+              {storesState === "ok" && storeList.length > 0 && (
+                <SearchSelect
+                  ariaLabel={m.admin.ordersPage.range.allStores}
+                  allLabel={m.admin.ordersPage.range.allStores}
+                  value={merchantId}
+                  options={storeList.map((x) => ({ value: x.id, label: storeLabel(x.name, x.number) }))}
+                  onChange={(v) => {
+                    setMerchantId(v);
+                    setPage(1);
+                  }}
+                />
+              )}
+              {driversState === "ok" && driverList.length > 0 && (
+                <SearchSelect
+                  ariaLabel={m.admin.ordersPage.range.allDrivers}
+                  allLabel={m.admin.ordersPage.range.allDrivers}
+                  value={driverId}
+                  options={driverList.map((d) => ({ value: d.id, label: d.full_name || d.phone }))}
+                  onChange={(v) => {
+                    setDriverId(v);
+                    setPage(1);
+                  }}
+                />
+              )}
+            </div>
           )}
-          {/* **والتاريخُ تاريخُ إنشاء الطلب بيوم دمشق** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ١)
-              — كالساعة المكتوبة على البطاقة. */}
-          <p className="w-full text-2xs text-ink-muted">{H.byOrderTime}</p>
-          {/* **وما غاب من المرشِّحات يُقال لماذا** (المشكلة ١٩). */}
-          {(storesState !== "ok" || driversState !== "ok") && (
-            <p className="w-full text-2xs text-ink-muted">
-              {[
-                storesState === "denied" ? H.noStoresPerm : storesState === "failed" ? H.storesFailed : "",
-                driversState === "denied"
-                  ? H.noDriversPerm
-                  : driversState === "failed"
-                    ? H.driversFailed
-                    : "",
-              ]
-                .filter(Boolean)
-                .join(m.common.listSeparator)}
-            </p>
-          )}
-        </div>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="flex flex-col gap-0.5">
+              {/* **واليومُ يومُ الحساب** — يبدأ بساعة فتح الدوام كما يفلتر الخادم. */}
+              <span className="text-2xs text-ink-muted">
+                {dayHour != null ? H.dayStartsAt.replace("{h}", fmtNum(dayHour)) : H.byOrderTime}
+              </span>
+              {/* **وما غاب من المرشِّحات يُقال لماذا** (المشكلة ١٩). */}
+              {(storesState !== "ok" || driversState !== "ok") && (
+                <span className="text-2xs text-ink-muted">
+                  {[
+                    storesState === "denied" ? H.noStoresPerm : storesState === "failed" ? H.storesFailed : "",
+                    driversState === "denied" ? H.noDriversPerm : driversState === "failed" ? H.driversFailed : "",
+                  ]
+                    .filter(Boolean)
+                    .join(m.common.listSeparator)}
+                </span>
+              )}
+            </span>
+            {historyFiltered && (
+              <Button variant="secondary" onClick={clearHistory}>
+                {H.clearFilters}
+              </Button>
+            )}
+          </div>
+        </section>
       )}
 
       {inverted && (
@@ -2305,10 +2320,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         <Alert tone="info" className="mb-4">
           <span className="flex flex-wrap items-center gap-2">
             {BOARD.closedOnLive}
-            <Link
-              href={`/dashboard/history?status=${status}`}
-              className="font-medium underline"
-            >
+            <Link href={`/dashboard/history?status=${status}`} className="font-medium underline">
               {BOARD.openHistory}
             </Link>
           </span>
@@ -2326,10 +2338,8 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         <Alert
           tone="info"
           className="mb-4"
-          title={m.admin.ordersPage.door.returnedTitle.replace(
-            "{n}",
-            `#${fmtNum(returnedNumber)}`,
-          )}
+          // **ورقمُ الطلب بلا فاصلة آلاف** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كما يُكتب في كلّ مكانٍ ويُبحث به.
+          title={m.admin.ordersPage.door.returnedTitle.replace("{n}", `#${returnedNumber}`)}
           onDismiss={() => setReturnedNumber(null)}
         >
           <p>{m.admin.ordersPage.door.returnedBody}</p>
@@ -2353,144 +2363,327 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
 
       {/* **والخطأُ وحدَه لا «لا طلبات» تحته** (المشكلة ١٦) · **وفراغُ الفلتر يقول
           «امسح الفلاتر»** (المشكلة ١٨) · **والمدى المقلوبُ لا قائمةَ له.** */}
-      {inverted || (error && !(data?.orders.length ?? 0)) ? null : !live &&
-        !loading &&
-        data &&
-        data.orders.length === 0 ? (
-        <EmptyState
-          title={filtered || searching || status ? H.emptyFiltered : H.emptyAll}
-          action={
-            filtered || searching || status ? (
-              <Button variant="secondary" onClick={clearAll}>
-                {H.clearFilters}
-              </Button>
-            ) : undefined
-          }
-        />
+      {inverted || (error && rows.length === 0) ? null : showEmpty ? (
+        live ? (
+          <EmptyBox
+            tone={liveFiltered || searching ? "muted" : "success"}
+            title={liveFiltered || searching ? BOARD.emptyFiltered : BOARD.emptyLive}
+            hint={liveFiltered || searching ? BOARD.emptyFilteredHint : BOARD.emptyLiveHint}
+            action={
+              liveFiltered || searching ? (
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    clearLive();
+                    setQuery("");
+                  }}
+                >
+                  {BOARD.showAll}
+                </Button>
+              ) : undefined
+            }
+          />
+        ) : (
+          <EmptyBox
+            tone={historyFiltered ? "muted" : "success"}
+            title={historyFiltered ? H.emptyFiltered : H.emptyAll}
+            hint={historyFiltered ? H.emptyHint : H.emptyAllHint}
+            action={
+              historyFiltered ? (
+                <Button variant="secondary" onClick={clearHistory}>
+                  {H.clearFilters}
+                </Button>
+              ) : undefined
+            }
+          />
+        )
+      ) : !live ? (
+        // ══════════════════════════════════════════════════════════
+        // **بطاقةُ السجلّ الخفيفة** (تدقيقُ السجلّ ٢٠٢٦-١٠-٢٧) — شو صار وليش، ومن أين لمين،
+        // والإجماليُّ كبيراً، وزرّان بعرض البطاقة. **والفاتورةُ والمسارُ من «التفاصيل».**
+        // **والقائمةُ القديمةُ تبقى ظاهرةً وقت التحميل** — فلا ترجف مع كلّ حرفٍ في البحث.
+        // ══════════════════════════════════════════════════════════
+        <>
+          {loading && data && (
+            <p className="mb-2 flex items-center gap-1.5 text-xs text-ink-muted" aria-live="polite">
+              <span className="h-2 w-2 animate-pulse rounded-badge bg-accent" />
+              {H.updating}
+            </p>
+          )}
+          {!data && loading ? (
+            <LoadingState />
+          ) : (
+            <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+              {rows.map((o) => (
+                <HistoryCard
+                  key={o.id}
+                  o={o}
+                  focused={focusId === o.id}
+                  proof={proofCol && !proofCol.hide?.(o) ? proofCol.cell(o) : null}
+                  goods={goodsCol && !goodsCol.hide?.(o) ? goodsCol.cell(o) : null}
+                  onDetails={() => {
+                    // **وفتحُ التفاصيل يُسكت رنينَ طلبٍ جديدٍ ظهر بالبحث** — لمن يملك التدخّل وحدَه
+                    // (تدقيقُ السجلّ ٢٠٢٦-١٠-٢٧: كان يُردّ ٤٠٣ صامتاً للماليّة).
+                    if (canAck && o.status === "pending" && o.board && !o.board.seen_at) {
+                      void api(`/api/v1/admin/orders/${o.id}/seen`, { method: "POST", body: "{}" }).catch(() => {});
+                    }
+                    setPanelId(o.id);
+                  }}
+                  actions={
+                    <OrderActions
+                      o={o}
+                      onChanged={load}
+                      selfManage={selfManage === true}
+                      isAdmin={isAdmin}
+                      assignAfterMin={assignAfterMin}
+                      onShift={onShift}
+                      now={now}
+                      requirePhoto={delivery.photo}
+                      codeRequired={delivery.code}
+                    />
+                  }
+                />
+              ))}
+            </ul>
+          )}
+        </>
       ) : (
-      <DataView
-        items={!live && loading ? [] : (data?.orders ?? [])}
-        loading={live ? data === null && !error : loading}
-        getKey={(o) => o.id}
-        columns={cardColumns}
-        // **والبطاقاتُ وحدَها** — (قرارُ المالك ٢٠٢٦-٠٨-١٢: «ألغِ عرضَ
-        // الجدول من قسم الطلبات وسجلّه»).
-        view="cards"
-        // ══════════════════════════════════════════════════════════
-        // **ومسارُ الطلب عمودٌ في طرف البطاقة**
-        // ══════════════════════════════════════════════════════════
-        //
-        // (قرارُ المالك ٢٠٢٦-٠٨-١٢: «شو رأيك نسوّيها بشكلٍ طوليّ… بدل ما
-        //  يكون شريط الرحلة أفقيّاً يصير عاموديّاً».)
-        //
-        // **والمراحلُ من المحرّك لا من هنا** — `ops_stages` يبنيه
-        // `stages.go`، **فما يُضاف من حالٍ جديدٍ يظهر في الشاشة بلا
-        // تعديلٍ فيها.**
-        //
-        // **وطلبٌ قديمٌ لا مسارَ معه لا يُرسم له عمودٌ فارغ** — بطاقةٌ
-        // بعمودٍ لا شيءَ فيه تُقرأ عطبا.
-        rail={(o) =>
-          o.ops_stages?.length ? (
-            <OrderTrackV
-              stages={o.ops_stages.map((id, i) => ({
-                id,
-                label: STAGE_LABELS[id] ?? id,
-                // **والساعةُ تُنسَّق في المعجم** — منطقةُ دمشق وصيغتُها
-                // **موضعٌ واحدٌ في المنصّة كلِّها.**
-                at: o.ops_stage_times?.[i]
-                  ? fmtTime(o.ops_stage_times[i]!)
-                  : null,
-                // ══════════════════════════════════════════════════
-                // **والمدّةُ تُطرح هنا لا في المحرّك**
-                // ══════════════════════════════════════════════════
-                //
-                // **الطرحُ لا رأيَ فيه** — فرقُ طابعَي وقتٍ واحدٌ أينما
-                // حُسب. **والذي يُحسب مركزيّاً هو ما فيه قاعدة**:
-                // الحكمُ بالتأخير (مهلٌ يضبطها المالك) والطيُّ إلى
-                // مراحل. **وإرسالُ رقمٍ يُشتقّ من رقمين مرسلَين** يزيد
-                // الرسالةَ ولا يزيد يقينا.
-                span: spanOf(o.ops_stage_times, i),
-                late: o.ops_stage_late?.[i] ?? null,
-                // ══════════════════════════════════════════════════
-                // **واسمُ السائق على خطّ إسناده**
-                // ══════════════════════════════════════════════════
-                //
-                // (قرارُ المالك ٢٠٢٦-٠٨-١٢: «تحت بانتظار سائق نضع اسم
-                //  السائق الذي أخذ الطلب».)
-                //
-                // **والمركّبةُ تكتب وصفَ المرحلة على الخطّ فوقها** —
-                // والخطُّ فوق مرحلة الإسناد هو لحظتُها بعينها،
-                // **فالاسمُ عليه يجيب «من أنهى الانتظار».**
-                //
-                // **ومرحلةُ الإسناد تختلف باختلاف المسار**: «السائق
-                // إلى المتجر» في العاديّ، **و«توثيق السعر» في الخاصّ**
-                // — ولا متجرَ فيه يُذهَب إليه.
-                // **ولا اسمَ سائقٍ في العمود** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٤) —
-                // سطرُه تحت ترويسة البطاقة، **والعمودُ للمراحل وحدَها.**
-                note: null,
-              }))}
-              current={o.ops_stage_at ?? -1}
+        <DataView
+          items={rows}
+          loading={data === null && !error}
+          getKey={(o) => o.id}
+          columns={cardColumns}
+          // **والبطاقاتُ وحدَها** — (قرارُ المالك ٢٠٢٦-٠٨-١٢: «ألغِ عرضَ
+          // الجدول من قسم الطلبات وسجلّه»).
+          view="cards"
+          // **ومسارُ الطلب عمودٌ في طرف البطاقة** (قرارُ المالك ٢٠٢٦-٠٨-١٢) — والمراحلُ من
+          // المحرّك (`ops_stages`)، **وطلبٌ بلا مسارٍ لا يُرسم له عمودٌ فارغ.**
+          rail={(o) =>
+            o.ops_stages?.length ? (
+              <OrderTrackV
+                stages={o.ops_stages.map((id, i) => ({
+                  id,
+                  label: STAGE_LABELS[id] ?? id,
+                  // **والساعةُ تُنسَّق في المعجم** — منطقةُ دمشق وصيغتُها موضعٌ واحد.
+                  at: o.ops_stage_times?.[i] ? fmtTime(o.ops_stage_times[i]!) : null,
+                  // **والمدّةُ فرقُ طابعَي وقت** — والحكمُ بالتأخير من المحرّك.
+                  span: spanOf(o.ops_stage_times, i),
+                  late: o.ops_stage_late?.[i] ?? null,
+                  // **ولا اسمَ سائقٍ في العمود** (البند ٤) — سطرُه تحت ترويسة البطاقة.
+                  note: null,
+                }))}
+                current={o.ops_stage_at ?? -1}
+              />
+            ) : null
+          }
+          empty={BOARD.emptyLive}
+          actions={(o) => (
+            <OrderActions
+              o={o}
+              onChanged={load}
+              // **والفراغُ أثناء التحميل يُقرأ «المنصة تدير»** — فلا يومض زرٌّ ثمّ يختفي.
+              selfManage={selfManage === true}
+              isAdmin={isAdmin}
+              assignAfterMin={assignAfterMin}
+              onShift={onShift}
+              now={now}
+              requirePhoto={delivery.photo}
+              codeRequired={delivery.code}
             />
-          ) : null
-        }
-        // **والفراغُ يقول لماذا** — لا طلباتَ مفتوحةً أصلاً، أم الفلترُ وحدَه.
-        empty={
-          !live || searching
-            ? m.admin.ordersPage.empty
-            : board || status || awaiting || stage
-              ? BOARD.emptyFiltered
-              : BOARD.emptyLive
-        }
-        actions={(o) => (
-          <OrderActions
-            o={o}
-            onChanged={load}
-            // **والفراغُ أثناء التحميل يُقرأ «المنصة تدير».**
-            //
-            // كان `selfManage !== false` — **فما لم يُقرأ بعدُ يُقرأ «المتاجر
-            // تدير»**، فتُخفى أزرارُ القبول والرفض لحظةً ثمّ تظهر. **ووميضُ
-            // زرٍّ يظهر ويختفي يجعل من ينتظره لا يثق أنّه رآه.**
-            selfManage={selfManage === true}
-            isAdmin={isAdmin}
-            assignAfterMin={assignAfterMin}
-            onShift={onShift}
-            now={now}
-          />
-        )}
-      />
+          )}
+        />
       )}
 
-      {!live && panelId && (
-        <OrderDetailPanel orderId={panelId} onClose={() => setPanelId("")} />
-      )}
+      {!live && panelId && <OrderDetailPanel orderId={panelId} onClose={() => setPanelId("")} />}
 
-      {data && !inverted && (
-        /* ══════════════════════════════════════════════════════════
-           **ولا سطرَ إجماليٍّ تحت القائمة**
-           ══════════════════════════════════════════════════════════
-
-           (قرارُ المالك ٢٠٢٦-٠٨-١٣: «هي ألغِها من الطلبات وسجلّ
-            الطلبات».)
-
-           **والسجلُّ يقوله فوقُ في بطاقة «كل الحالات»** — رقمٌ واحدٌ
-           في موضعين يُقرأ رقمين: **أهذا كلُّ السجلّ أم كلُّ ما
-           رُشِّح؟**
-
-           **وشاشةُ العمل لا تُسأل «كم»** بل «أيُّها ينتظر الآن» —
-           والترقيمُ نفسُه يقول كم صفحةً بقيت لمن أراد. */
-        <div className="mt-4 flex flex-wrap items-center justify-end gap-2 text-sm text-ink-muted">
-          {/* **والترقيمُ من المكوّن المشترك** — وكان مكتوباً هنا وفي أربعة
-                  ملفّاتٍ أخرى بالشكل نفسِه، **وأرقامُه لاتينيّةٌ في واجهةٍ
-                  عربية.** */}
-          <Pagination
-            page={page}
-            total={data.total}
-            perPage={data.per_page}
-            onChange={setPage}
-          />
+      {/* **ولا سطرَ إجماليٍّ تحت القائمة** (قرارُ المالك ٢٠٢٦-٠٨-١٣) — والترقيمُ من المكوّن المشترك،
+          **ولا يظهر لصفحةٍ واحدة.** */}
+      {data && !inverted && data.total > data.per_page && (
+        <div className="mt-4 flex justify-center">
+          <Pagination page={page} total={data.total} perPage={data.per_page} onChange={setPage} />
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * **فراغٌ يساعد** (تدقيقُ ٢٠٢٦-١٠-٢٧) — دائرةٌ ملوّنةٌ وعنوانٌ وجملةٌ تقول ماذا تفعل، كصفحة السحوبات.
+ */
+function EmptyBox({
+  tone,
+  title,
+  hint,
+  action,
+}: {
+  tone: "success" | "muted";
+  title: string;
+  hint: string;
+  action?: React.ReactNode;
+}) {
+  return (
+    <section className="surface flex flex-col items-center gap-3 p-8 text-center">
+      <span
+        className={`inline-flex h-16 w-16 items-center justify-center rounded-full ${
+          tone === "success" ? "bg-success-solid text-on-solid" : "bg-field text-ink-muted"
+        }`}
+      >
+        {tone === "success" ? <IconSuccess size={28} /> : <IconSearch size={28} />}
+      </span>
+      <h2 className="heading-section">{title}</h2>
+      <p className="max-w-md text-sm text-ink-muted">{hint}</p>
+      {action}
+    </section>
+  );
+}
+
+/** **لونُ النهاية** — أخضرُ للمسلَّم، أحمرُ للفشل، برتقاليٌّ للملغى والمرفوض، بنفسجيٌّ للمسترجع. */
+const END_TINT: Record<string, string> = {
+  delivered: "bg-success-solid",
+  failed: "bg-danger-solid",
+  cancelled: "bg-warning-solid",
+  rejected: "bg-warning-solid",
+  refunded: "bg-violet-solid",
+};
+
+/**
+ * **شارةُ ما انتهى إليه الطلب** (تدقيقُ السجلّ ٢٠٢٦-١٠-٢٧) — الحالةُ نفسُها بلونها، لا «من أنهاه» وحدَه:
+ * كان الفاشلُ يُقرأ «أنهته الإدارة» بالأحمر فلا يُعرف أفشل أم أُلغي. **ومع المسلَّم مدّتُه** (المالك
+ * ٢٠٢٦-١٠-٢٢: «كم دقيقة استغرق من أول الطلب للتسليم»)، **والكتابةُ بيضاءُ على تعبئة** (المالك ٢٠٢٦-١٠-٢٢).
+ */
+function EndBadge({ o }: { o: OrderRow }) {
+  return (
+    <span className={`rounded-badge px-2.5 py-1 text-xs font-bold text-on-solid ${END_TINT[o.status] ?? "bg-ink-muted"}`}>
+      {OFFICE_STATUS[o.status] ?? STATUS_LABELS[o.status] ?? o.status}
+      {o.status === "delivered" && o.closed_at && ` · ${tookText(o.created_at, o.closed_at)}`}
+    </span>
+  );
+}
+
+const FAILS: Record<string, string> = m.common.failReasons;
+const DOOR_REPORTS: Record<string, string> = m.admin.ordersPage.door.reports;
+const FAULT_LABELS: Record<string, string> = m.admin.ordersPage.door.faults;
+
+/**
+ * **بطاقةُ طلبٍ في السجلّ** — للقراءة السريعة: الرقمُ والنوعُ وما انتهى إليه، ثمّ مين أنهاه وليش،
+ * ثمّ من المتجر للزبون والسائق، ثمّ الإجماليُّ كبيراً، وزرّان بعرض البطاقة.
+ */
+function HistoryCard({
+  o,
+  focused,
+  proof,
+  goods,
+  actions,
+  onDetails,
+}: {
+  o: OrderRow;
+  focused: boolean;
+  proof: React.ReactNode;
+  goods: React.ReactNode;
+  actions: React.ReactNode;
+  onDetails: () => void;
+}) {
+  const closed = CLOSED_STATUSES.has(o.status);
+  const ended = closed && o.status !== "delivered";
+  const reason = o.cancel_reason || (o.fail_reason ? (DOOR_REPORTS[o.fail_reason] ?? FAILS[o.fail_reason] ?? o.fail_reason) : "");
+  const who = o.ended_by ? (ENDED_BY[o.ended_by] ?? o.ended_by) : H.endedBySystem;
+  const row = "flex items-start justify-between gap-3";
+  return (
+    <li className={`surface flex flex-col gap-3 p-4 ${focused ? "ring-2 ring-accent" : ""}`}>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <span className="flex flex-wrap items-center gap-2">
+          <OrderRef number={o.number} at={o.created_at} />
+          <KindBadge o={o} />
+        </span>
+        <span className="flex flex-wrap items-center justify-end gap-1">
+          {closed ? <EndBadge o={o} /> : <Badge variant="accent">{OFFICE_STATUS[o.status] ?? o.status}</Badge>}
+          {focused && <Badge variant="accent">{BOARD.focused}</Badge>}
+        </span>
+      </div>
+
+      {/* **شو صار وليش** — مين أنهاه، والسبب، والذنب على مين. */}
+      {ended && (
+        <div className="space-y-1 rounded-control border border-line-soft bg-field px-3 py-2 text-sm">
+          <p className={row}>
+            <span className="shrink-0 text-ink-muted">{H.endedBy}</span>
+            <span className="text-end font-medium">{who}</span>
+          </p>
+          {reason && (
+            <p className={row}>
+              <span className="shrink-0 text-ink-muted">{H.reason}</span>
+              <span className="min-w-0 text-end">{reason}</span>
+            </p>
+          )}
+          {o.fault && (
+            <p className={row}>
+              <span className="shrink-0 text-ink-muted">{H.fault}</span>
+              <span className="text-end">{FAULT_LABELS[o.fault] ?? o.fault}</span>
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* **من أين لمين** — المتجرُ ← الزبون، والسائقُ تحتهما. */}
+      <div className="space-y-1.5 text-sm">
+        <p className="flex flex-wrap items-center gap-1.5">
+          <IconStore size={14} className="shrink-0 text-warning" />
+          <span className="font-medium">{o.kind === "custom" ? kindLabel(o) : o.merchant_name || "—"}</span>
+          <span aria-hidden className="text-ink-muted">←</span>
+          <IconUser size={14} className="shrink-0 text-accent-text" />
+          <span className="font-medium">{o.customer_name || "—"}</span>
+          <span dir="ltr" className="text-xs text-ink-muted" title={o.customer_phone ? undefined : H.maskedPhone}>
+            {o.customer_phone || o.customer_phone_masked}
+          </span>
+        </p>
+        {o.driver_name && (
+          <p className="flex flex-wrap items-center gap-1.5">
+            <IconMoto size={14} className="shrink-0 text-success" />
+            <span>{o.driver_name}</span>
+            {o.driver_phone && (
+              <span dir="ltr" className="text-xs text-ink-muted">
+                {o.driver_phone}
+              </span>
+            )}
+          </p>
+        )}
+      </div>
+
+      {/* **والإجماليُّ كبيراً ومعه طريقةُ الدفع.** */}
+      <div className="flex items-end justify-between gap-2 rounded-control bg-field px-3 py-2.5">
+        <span>
+          <span className="block text-2xs text-ink-muted">{m.admin.ordersPage.total}</span>
+          <Money value={o.total} className="figure block" />
+        </span>
+        <span className="text-end text-xs text-ink-muted">
+          {PAYMENT_LABELS[o.payment_method]}
+          {(o.free_waived ?? 0) > 0 && <span className="block font-bold text-success">{m.admin.ordersPage.freeDelivery}</span>}
+        </span>
+      </div>
+
+      {goods && <div className="text-sm">{goods}</div>}
+      {proof && (
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <span className="inline-flex items-center gap-1.5 text-ink-muted">
+            <IconCamera size={14} />
+            {m.admin.ordersPage.proof}
+          </span>
+          {proof}
+        </div>
+      )}
+
+      {/* **أفعالُ ما بعد الفشل** (تسويةُ البضاعة) — وتغيب حين لا شيء. */}
+      <div className="flex flex-wrap gap-2 empty:hidden">{actions}</div>
+
+      <div className="mt-auto grid grid-cols-1 gap-2 border-t border-line-soft pt-3 sm:grid-cols-2">
+        <Button variant="secondary" className="w-full" onClick={onDetails}>
+          <span className="flex items-center justify-center gap-1.5">
+            <IconRoute size={15} />
+            {H.detailsBtn}
+          </span>
+        </Button>
+        {!NO_INVOICE.has(o.status) && <InvoiceButton order={o} />}
+      </div>
+    </li>
   );
 }
 
@@ -2510,35 +2703,6 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
  *
  * **وإسنادُ السائق يبقى في التفاصيل**: يحتاج قائمةَ اختيارٍ لا زرّاً.
  */
-/**
- * **إعدادا التسليم** — `drivers.require_delivery_photo` و`delivery.code_required`، يُقرآن مرّةً
- * للشاشة كلّها. **ومن لا يقرأ الإعدادات يرى كما كان** (صورةٌ مُلزَمة، بلا كود).
- */
-let deliveryFlags: Promise<{ photo: boolean; code: boolean }> | null = null;
-function useDeliveryFlags(): { photo: boolean; code: boolean } {
-  const [flags, setFlags] = useState({ photo: false, code: false });
-  useEffect(() => {
-    deliveryFlags ??= api<{ settings: { key: string; value: unknown }[] }>("/api/v1/admin/settings")
-      .then((r) => {
-        const on = (k: string) => {
-          const v = r.settings.find((x) => x.key === k)?.value;
-          return v === true || v === "true";
-        };
-        return { photo: on("drivers.require_delivery_photo"), code: on("delivery.code_required") };
-      })
-      .catch(() => ({ photo: true, code: false }));
-    let live = true;
-    void deliveryFlags.then((v) => live && setFlags(v));
-    return () => {
-      live = false;
-    };
-  }, []);
-  return flags;
-}
-function useRequireDeliveryPhoto(): boolean {
-  return useDeliveryFlags().photo;
-}
-
 function OrderActions({
   o,
   onChanged,
@@ -2547,9 +2711,17 @@ function OrderActions({
   assignAfterMin,
   onShift,
   now,
+  requirePhoto,
+  codeRequired,
 }: {
   o: OrderRow;
   onChanged: () => void;
+  /**
+   * **إعدادا التسليم من `GET /orders/board`** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كانا من `/settings` فيُردّ ٤٠٣
+   * لمن لا يملك قراءتها ويُفترض «صورةٌ مُلزَمة، بلا كود».
+   */
+  requirePhoto: boolean;
+  codeRequired: boolean;
   /** **ساعةُ الشاشة** — فتظهر مهلةُ الإسناد بلا حدث (المشكلة ١٨). */
   now: number;
   /** حين تكون `false` تُدير المنصةُ الطلبات وتُرسلها للمتجر على واتساب */
@@ -2561,9 +2733,23 @@ function OrderActions({
   /** كم سائقاً في الدوام — **و`null` مجهولٌ لا صفر** */
   onShift: number | null;
 }) {
-  // **و«إذن تسليم بلا صورة» حين تُلزَم الصورةُ وحدَه** (المالك ٢٠٢٦-١٠-٢٢) — وبلا إلزامٍ
-  // يُسلَّم بلا صورةٍ أصلاً، فالزرُّ لا يفعل شيئاً.
-  const requirePhoto = useRequireDeliveryPhoto();
+  // **و«إذن تسليم بلا صورة» حين تُلزَم الصورةُ أو الكود** (المالك ٢٠٢٦-١٠-٢٢؛ تدقيقُ ٢٠٢٦-١٠-٢٧) —
+  // الإذنُ يمحو الكودَ أيضاً، **وهو المخرجُ الوحيدُ بعد خمسِ محاولاتٍ خاطئة.**
+  /** **كودُ التسليم يُعرض بضغطة** — لمن يملك التدخّل، يقرؤه للسائق بعد التحقّق من الزبون. */
+  const [code, setCode] = useState<string | null>(null);
+  const [codeBusy, setCodeBusy] = useState(false);
+  async function showCode() {
+    setCodeBusy(true);
+    setErr("");
+    try {
+      const r = await api<{ delivery_code?: string | null }>(`/api/v1/admin/orders/${o.id}`);
+      setCode(r.delivery_code ?? "");
+    } catch (e) {
+      setErr(e instanceof ApiError ? translateKey(e.body.message_key) : m.errors.internal);
+    } finally {
+      setCodeBusy(false);
+    }
+  }
   const [busy, setBusy] = useState("");
   /** خبرٌ يُقال بعد فعلٍ نجح — **وكم صُحِّح** في إعادة الحساب. */
   const [notice, setNotice] = useState("");
@@ -3289,7 +3475,7 @@ function OrderActions({
         * **يظهر عند «وصل إلى العنوان» بلا صورةٍ بعد** — كاميرا السائق
         * معطّلةٌ فيأذن العملياتُ (قدرةُ `orders.intervene`) بالتسليم بلا
         * صورة بسببٍ إلزاميٍّ ومُدقَّق. **والسائقُ لا يأذن لنفسه.** */}
-      {o.status === "at_dropoff" && !o.proof_url && canIntervene && requirePhoto && (
+      {o.status === "at_dropoff" && !o.proof_url && canIntervene && (requirePhoto || codeRequired) && (
         <Button
           variant="secondary"
           disabled={busy !== ""}
@@ -3301,6 +3487,30 @@ function OrderActions({
           {m.admin.ordersPage.proofExceptionButton}
         </Button>
       )}
+
+      {/* **كودُ التسليم لمن يملك التدخّل** (قرارُ المالك ٢٠٢٦-١٠-٠٦؛ تدقيقُ ٢٠٢٦-١٠-٢٧) — يُرسله الخادمُ
+          ولا شاشةَ كانت تعرضه. **ويُعرض بضغطةٍ لا دائماً**: يقرؤه الموظّفُ للسائق بعد التحقّق من الزبون. */}
+      {codeRequired && canIntervene && (o.status === "picked_up" || o.status === "on_the_way" || o.status === "at_dropoff") &&
+        (code === null ? (
+          <Button variant="secondary" disabled={busy !== "" || codeBusy} onClick={() => void showCode()}>
+            <span className="flex items-center gap-1.5">
+              <IconKey size={15} />
+              {BOARD.showCode}
+            </span>
+          </Button>
+        ) : (
+          <span className="inline-flex items-center gap-2 rounded-control border border-line px-3 py-1.5 text-sm">
+            <IconKey size={15} className="text-ink-muted" />
+            {code ? (
+              <>
+                <span className="text-ink-muted">{BOARD.codeLabel}:</span>
+                <b dir="ltr" className="tabular-nums tracking-widest">{code}</b>
+              </>
+            ) : (
+              <span className="text-ink-muted">{BOARD.codeNone}</span>
+            )}
+          </span>
+        ))}
 
       {/* **التحويلُ إلى المتجر — في الوضعين لا في وضعٍ واحد.**
 
@@ -3460,6 +3670,15 @@ function OrderActions({
         >
           {m.admin.ordersPage.assignHere}
         </Button>
+      )}
+      {/* **ومتى يظهر الإسنادُ يُقال قبل أوانه** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كان الزرُّ يظهر فجأةً بلا كلمة. */}
+      {canAssign && !assignReady && (
+        <p className="w-full text-xs text-ink-muted">
+          {BOARD.assignAfter.replace(
+            "{n}",
+            fmtNum(Math.max(1, Math.ceil((assignAfterMin * 60_000 - (now - new Date(waitingSince).getTime())) / 60_000))),
+          )}
+        </p>
       )}
       {assigning && (
         <AssignDialog
@@ -4105,7 +4324,9 @@ function InvoiceList({
       </li>
       <li className="flex items-center justify-between text-sm">
         <span className="text-ink-muted">{m.admin.ordersPage.deliveryFee}</span>
-        <Money value={o.delivery_fee} small />
+        {/* **والتوصيلُ بأجرته الكاملة حين يكون مجّانيّاً** (تدقيقُ الطلبات ٢٠٢٦-١٠-٢٧) — الخادمُ يرسلها صافيةً
+            بعد الإعفاء، فكانت «التوصيل ٠» ثمّ «توصيل مجاني −١٠٠» والإجماليُّ لا يطابق ما فوقه. */}
+        <Money value={o.delivery_fee + (o.free_waived ?? 0)} small />
       </li>
       <FeeSplit fee={o.delivery_fee + (o.free_waived ?? 0)} driver={o.driver_fee} assigned={!!o.driver_name} />
       {(o.free_waived ?? 0) > 0 && (
@@ -4175,18 +4396,20 @@ function InvoiceButton({ order }: { order: OrderRow }) {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button
-        type="button"
-        title={m.admin.ordersPage.invoice}
-        aria-label={m.admin.ordersPage.invoice}
-        className="rounded-control p-1.5 text-ink-muted transition-colors hover:bg-field hover:text-ink"
+      {/* **زرٌّ بعرض البطاقة بكلمته وأيقونته** (تدقيقُ السجلّ ٢٠٢٦-١٠-٢٧) — كان طابعةً صغيرةً بلا كتابة. */}
+      <Button
+        variant="secondary"
+        className="w-full"
         onClick={(e) => {
           e.stopPropagation();
           setOpen(true);
         }}
       >
-        <IconPrint size={18} />
-      </button>
+        <span className="flex items-center justify-center gap-1.5">
+          <IconPrint size={15} />
+          {m.admin.ordersPage.history.invoiceBtn}
+        </span>
+      </Button>
       {open && (
         <span onClick={(e) => e.stopPropagation()}>
           <Modal

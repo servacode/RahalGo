@@ -35,41 +35,63 @@
  * **السائقُ ينزلق بين نبضتين ولا يقفز**، **وحلقةٌ نابضةٌ حولَ من موقعُه حيّ**،
  * **وعالقٌ جديدٌ يُومض عدّادُه ويرنّ جرسُ اللوحة** (بمفتاح الصوت نفسِه).
  * **والحسابُ كلُّه في `opsmap/live.ts`** — دوالُّ خالصةٌ يقيسها حارس.
+ *
+ * # والتصميمُ الاحترافيّ (تدقيقُ ٢٠٢٦-١٠-٢٧ — «بدي اللوحة كلها احترافية»)
+ *
+ * **رأسٌ موحّد (`PageHero`) · أربعةُ أرقامٍ تُضغط (`Tile`)** — والتركيزُ فيها لا في حبّاتٍ
+ * وحدَها · **سطحُ تحكّمٍ واحد**: البحثُ وحبّاتُ الطبقات الإضافيّة بعددها والمدّةُ وساعاتُ اليوم
+ * حبّاتٌ لا قوائم · **فلترُ الرابط شارةٌ تُرى وتُشال** · بطاقةُ المُحدَّد برأسٍ ملوّنٍ ورقمٍ كبيرٍ
+ * وأزرارٍ بعرضها، **ولوحةٌ سفليّةٌ على الجوّال** · وكلُّ فعلٍ بزرٍّ مقفولٍ وقتَ الإرسال
+ * ورسالةِ خطأٍ ونجاح، **وتأكيدٌ قبل الرفض والإيقاف.**
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentType, type ReactNode } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, fmtDateTime, fmtMoney, fmtNum, errorText } from "@rahalgo/i18n";
 import {
   PageContainer,
-  PageHeader,
-  Card,
   Button,
-  EmptyState,
   LoadingState,
+  ReloadState,
   Alert,
-  Checkbox,
-  CountBadge,
+  Badge,
+  Chips,
   Input,
-  Select,
   IconPhone,
   IconFullscreen,
   IconFullscreenExit,
   IconSearch,
   IconTarget,
   IconWhatsApp,
+  IconLocation,
+  IconLock,
+  IconMoto,
+  IconOrder,
+  IconStore,
+  IconWarning,
+  IconZones,
+  IconUser,
+  IconRoute,
+  IconBlock,
+  IconStar,
+  IconTrendUp,
+  IconClose,
+  IconOverview,
   useLiveData,
   useChime,
+  useToast,
   alertsSoundOn,
   themeColor,
   useLiveEvent,
 } from "@rahalgo/ui";
 import { AssignDialog } from "@/components/admin/orders/AssignDialog";
-import { api, mediaUrl } from "@/lib/api";
+import { PageHero } from "@/components/admin/PageHero";
+import { Tile } from "@/components/admin/DashParts";
+import { api, mediaUrl, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { useCanCall } from "@/lib/policy";
+import { useCanCall, useCanOpen } from "@/lib/policy";
 import { roleLabelByCode } from "@/lib/rolemeta";
 import type {
   FeatureCollection,
@@ -101,10 +123,35 @@ const OpsMapCanvas = dynamic(
   { ssr: false },
 );
 
-/** **لوحةُ المندوبين الجانبيّة مطويّة** (قرارُ المالك ٢٠٢٦-١٠-٢٥). */
-const REP_PANEL = false;
 const m = getMessages(defaultLocale);
 const T = m.admin.opsMap;
+const P = T.pro;
+
+/**
+ * **كلُّ قيمةٍ من الخادم تُترجم قبل أن تُعرض** (تدقيقُ ٢٠٢٦-١٠-٢٧: «حالُ الحساب: active») —
+ * من القواميس القائمة، **والمجهولُ «—» لا كلمةٌ إنكليزيّة.**
+ */
+function pick(dict: Record<string, string>, key: string | undefined | null): string {
+  return (key && dict[key]) || P.unknown;
+}
+const ORDER_STATUS = m.admin.ordersPage.board.status as Record<string, string>;
+const ACCOUNT_STATUS: Record<string, string> = {
+  active: m.terms.active,
+  suspended: m.terms.suspended,
+  blocked: m.terms.blocked,
+};
+const MERCHANT_STATUS: Record<string, string> = {
+  active: m.admin.merchants.active,
+  inactive: m.admin.merchants.inactive,
+  suspended: m.admin.merchants.suspended,
+};
+const PAYMENT = m.orders.payment as Record<string, string>;
+const BRANCH_STATUS: Record<string, string> = { active: P.branchActive, inactive: P.branchInactive };
+function sourceLabel(s: string): string {
+  if (s === "customer_app") return P.sourceCustomerApp;
+  if (s === "web" || s === "shop" || s === "pwa") return P.sourceWeb;
+  return P.sourceOther;
+}
 
 /** **أجزاءُ اليوم بساعاتها** — من الأولى حتّى قبل الثانية، والليلُ يعبر منتصفَ الليل. */
 const DAY_PARTS = {
@@ -227,18 +274,6 @@ interface BranchPin {
   lat?: number;
   lng?: number;
   areas: number;
-}
-
-interface AreaRow {
-  id: string;
-  name: string;
-  active: boolean;
-  city_id: string;
-  city?: string;
-  branch_id?: string;
-  branch?: string;
-  zone_id?: string;
-  zone?: string;
 }
 
 interface RepRow {
@@ -364,9 +399,6 @@ type Picked =
   | { kind: "rep"; v: RepRow }
   | { kind: "office" };
 
-/** **الطبقاتُ الستُّ في الشريط — بترتيب المالك.** */
-type MainLayer = "drivers" | "orders" | "merchants" | "customers" | "reps" | "office";
-
 /** **ما يُرى أوّلَ فتحة** — والمستخدمُ يبدّله فيُحفظ له. */
 const DEFAULT_VISIBLE: Record<string, boolean> = {
   drivers: true,
@@ -390,6 +422,15 @@ const ALWAYS_ON: Record<string, boolean> = {
   reps: true,
   office: true,
 };
+
+/**
+ * **القادمُ من «طلبات التوسّع» يرى طلباتِ التغطية** (`?focus=`) — وإلّا وصل إلى المكان
+ * بلا علامةٍ تقول أين الطلب. **ولا يُحفظ** — فتحةٌ عاديّةٌ بعدها تعود كما اختار.
+ */
+function fromExpansion(): Record<string, boolean> {
+  if (typeof window === "undefined") return {};
+  return new URLSearchParams(window.location.search).get("focus") ? { requests: true } : {};
+}
 
 function fc(features: FeatureCollection["features"]): FeatureCollection {
   return { type: "FeatureCollection", features };
@@ -431,9 +472,10 @@ export default function OpsMapPage() {
     try {
       const raw =
         window.localStorage.getItem(storeKey) ?? window.localStorage.getItem("opsmap.layers");
-      setVisible({ ...(raw ? (JSON.parse(raw) as Record<string, boolean>) : DEFAULT_VISIBLE), ...ALWAYS_ON });
+      setVisible({ ...(raw ? (JSON.parse(raw) as Record<string, boolean>) : DEFAULT_VISIBLE), ...ALWAYS_ON, ...fromExpansion() });
     } catch {
       /* تخزينٌ ممنوعٌ في نافذةٍ خاصّة — والافتراضُ يكفي */
+      setVisible((v) => ({ ...v, ...fromExpansion() }));
     }
   }, [storeKey]);
   const toggle = useCallback(
@@ -458,15 +500,28 @@ export default function OpsMapPage() {
     const v = new URLSearchParams(window.location.search).get(k);
     return v === "true" || v === "false" ? v : "";
   };
+  //
+  // **وكانت تعمل بالخفاء** (تدقيقُ ٢٠٢٦-١٠-٢٧): لا شارةَ ولا زرَّ يشيلها. **فصارت شارةً فوق
+  // الخريطة بـ✕** تمسحها من الحال ومن الرابط معاً.
   const [onShift, setOnShift] = useState<"" | "true" | "false">(() => tri("on_shift"));
-  const [stale, setStale] = useState<"" | "true" | "false">("");
   const [hasActive, setHasActive] = useState<"" | "true" | "false">(() => tri("has_active"));
-  const [driverStatus] = useState(() =>
+  const [driverStatus, setDriverStatus] = useState(() =>
     typeof window === "undefined" ? "" : (new URLSearchParams(window.location.search).get("status") ?? ""),
   );
-  const [search, setSearch] = useState("");
+  const clearUrlFilter = useCallback(() => {
+    setOnShift("");
+    setHasActive("");
+    setDriverStatus("");
+    try {
+      const u = new URL(window.location.href);
+      for (const k of ["on_shift", "has_active", "status"]) u.searchParams.delete(k);
+      window.history.replaceState(null, "", `${u.pathname}${u.search}${u.hash}`);
+    } catch {
+      /* رابطٌ لا يُكتب — والحالُ مُسحت */
+    }
+  }, []);
   const [selected, setSelected] = useState<Picked | null>(null);
-  const [menu, setMenu] = useState<"" | "extra" | "legend">("");
+  const [legendOpen, setLegendOpen] = useState(false);
   const [fly, setFly] = useState<FlyRequest | undefined>(undefined);
   const [assigning, setAssigning] = useState<OrderPin | null>(null);
 
@@ -508,7 +563,6 @@ export default function OpsMapPage() {
   const [draft, setDraft] = useState<[number, number][]>([]);
   const [zoneName, setZoneName] = useState("");
   const [saveErr, setSaveErr] = useState("");
-  const [reqStatus, setReqStatus] = useState("");
 
   // ── المدى الزمنيُّ للتحليلات (البند ٢٩) ───────────────────
   //
@@ -531,7 +585,19 @@ export default function OpsMapPage() {
   const [huntAt, setHuntAt] = useState(0);
 
   // ── ما يملكه من يقف أمامها ───────────────────────────────────
-  const meta = useLiveData<Meta>(() => api<Meta>("/api/v1/admin/ops-map/meta"), []);
+  //
+  // **و٤٠٣ هنا «لا صلاحية» لا «تعذّر الوصول»** (تدقيقُ ٢٠٢٦-١٠-٢٧) — الخادمُ يردّ
+  // `/meta` بـ٤٠٣ لمن لا يملك الخريطة، **فكان يرى خطأَ شبكةٍ وزرَّ إعادةٍ لا يفيد.**
+  const meta = useLiveData<Meta>(
+    () =>
+      api<Meta>("/api/v1/admin/ops-map/meta").catch((e: unknown) => {
+        if (e instanceof ApiError && e.status === 403) {
+          return { permissions: [], location_ping_sec: 60, assignable_sec: 0 };
+        }
+        throw e;
+      }),
+    [],
+  );
   const can = useCallback(
     (p: string) => !!meta.data?.permissions.includes(p),
     [meta.data],
@@ -570,13 +636,11 @@ export default function OpsMapPage() {
   const driverQuery = useMemo(() => {
     const q = new URLSearchParams();
     if (onShift) q.set("on_shift", onShift);
-    if (stale) q.set("stale", stale);
     if (hasActive) q.set("has_active", hasActive);
     if (driverStatus) q.set("status", driverStatus);
-    if (search.trim()) q.set("q", search.trim());
     const s = q.toString();
     return s ? `?${s}` : "";
-  }, [onShift, stale, hasActive, driverStatus, search]);
+  }, [onShift, hasActive, driverStatus]);
 
   const drivers = useLiveData<{ drivers: Driver[]; count: number }>(
     () =>
@@ -705,11 +769,11 @@ export default function OpsMapPage() {
     () =>
       can("VIEW_DEMAND_ANALYTICS") && visible.requests
         ? api<{ requests: CovRequest[]; count: number }>(
-            `/api/v1/admin/ops-map/coverage-requests${reqStatus ? `?status=${reqStatus}` : ""}`,
+            "/api/v1/admin/ops-map/coverage-requests",
           )
         : Promise.resolve({ requests: [], count: 0 }),
     [],
-    [visible.requests, reqStatus, meta.data],
+    [visible.requests, meta.data],
   );
 
   // ── الفروعُ والمناطقُ التشغيليّة ────────────────────────────
@@ -743,35 +807,59 @@ export default function OpsMapPage() {
     [visible.landmarks, meta.data],
   );
 
-  // **انفتح الطريق · وقبولُ المعلم أو رفضُه** (قرارات المالك ٢٠٢٦-١٠-٢١).
-  const clearClosure = useCallback(
-    async (id: number) => {
-      await api(`/api/v1/admin/ops-map/road-closures/${id}`, { method: "DELETE" });
-      closures.reload();
-      setSelected(null);
+  // ── أفعالُ البطاقة — زرٌّ مقفولٌ وقتَ الإرسال · خطأٌ يُقال · نجاحٌ يمرّ ──
+  //
+  // **كانت تفشل بلا كلمة** (تدقيقُ ٢٠٢٦-١٠-٢٧): لا `try` ولا قفلَ زرّ — فيُنبعث الفعلُ
+  // مرّتين، **والبطاقةُ تبقى كما هي بلا سبب.** **والرفضُ والإيقافُ يسألان أوّلاً.**
+  const { push: toast, Toaster } = useToast();
+  const [busy, setBusy] = useState(false);
+  const [actErr, setActErr] = useState("");
+  const [confirming, setConfirming] = useState<string | null>(null);
+  useEffect(() => {
+    setActErr("");
+    setConfirming(null);
+  }, [selected]);
+  const run = useCallback(
+    async (fn: () => Promise<unknown>, ok: string) => {
+      setBusy(true);
+      setActErr("");
+      try {
+        await fn();
+        setConfirming(null);
+        setSelected(null);
+        toast(ok);
+      } catch (e) {
+        setActErr(errorText(e));
+      } finally {
+        setBusy(false);
+      }
     },
-    [closures],
-  );
-  const decideLandmark = useCallback(
-    async (id: number, approve: boolean) => {
-      await api(`/api/v1/admin/ops-map/landmark-suggestions/${id}/decide`, {
-        method: "POST",
-        body: JSON.stringify({ approve }),
-      });
-      landmarks.reload();
-      setSelected(null);
-    },
-    [landmarks],
+    [toast],
   );
 
-  const areas = useLiveData<{ areas: AreaRow[]; count: number }>(
-    () =>
-      visible.areas
-        ? api<{ areas: AreaRow[]; count: number }>("/api/v1/admin/ops-map/areas")
-        : Promise.resolve({ areas: [], count: 0 }),
-    ["catalog"],
-    [visible.areas, meta.data],
+  // **انفتح الطريق · وقبولُ المعلم أو رفضُه** (قرارات المالك ٢٠٢٦-١٠-٢١).
+  const clearClosure = useCallback(
+    (id: number) =>
+      run(async () => {
+        await api(`/api/v1/admin/ops-map/road-closures/${id}`, { method: "DELETE" });
+        closures.reload();
+      }, P.doneClosure),
+    [closures, run],
   );
+  const decideLandmark = useCallback(
+    (id: number, approve: boolean) =>
+      run(async () => {
+        await api(`/api/v1/admin/ops-map/landmark-suggestions/${id}/decide`, {
+          method: "POST",
+          body: JSON.stringify({ approve }),
+        });
+        landmarks.reload();
+      }, approve ? P.doneApprove : P.doneReject),
+    [landmarks, run],
+  );
+
+  // **ولا طبقةَ «مناطق تشغيليّة»** (تدقيقُ ٢٠٢٦-١٠-٢٧): كان مفتاحُها يجلب ويعدّ ولا يرسم
+  // شيئاً — **ومفتاحٌ بلا أثرٍ يُقرأ عطلاً.** والمناطقُ تُدار من صفحتها.
 
   // ── المندوبون — «أين يعمل»: مركزُ متاجره ─────────────────────
   const reps = useLiveData<{ reps: RepRow[]; points: RepPoint[] }>(
@@ -830,7 +918,8 @@ export default function OpsMapPage() {
   const canIntervene = capabilities.includes("orders.intervene");
   // **وملفُّ الحساب لمن يقرأ الحسابات** (قرارُ المالك ٢٠٢٦-١٠-٠٥): موظّفُ العمليّات
   // لا يملك `users.read` — **فلا يُرسَم له رابطٌ يُردّ ٤٠٣.**
-  const canProfile = useCanCall()("GET", "/users/{id}");
+  const canCallFn = useCanCall();
+  const canProfile = canCallFn("GET", "/users/{id}");
   const emergencies = useLiveData<{ emergencies: EmergencyPin[]; count: number }>(
     () =>
       canEmergencies && visible.emergencies
@@ -844,15 +933,23 @@ export default function OpsMapPage() {
   const icons = useMemo(() => mapIcons(), []);
 
   // ── التركيز — ما يُرسَم بعد «العالقة فقط» أو «المتاحون فقط» ─────
+  //
+  // **ومن هو برّا الدوام لا يُرسم افتراضاً** (تدقيقُ ٢٠٢٦-١٠-٢٧): كان كلُّ سائقٍ يُرسم
+  // رماديّاً باسمه — الموقوفُ ومن لم يفتح الدوامَ أصلاً — **فتزدحم الخريطةُ بمن لا يعمل.**
+  // **وحبّةٌ صريحةٌ تُظهرهم**، وفلترُ الرابط (`on_shift`) يحكم إن جاء.
+  const driverPool = useMemo(() => {
+    const all = drivers.data?.drivers ?? [];
+    return onShift || visible.offShift ? all : all.filter((d) => d.on_shift);
+  }, [drivers.data, onShift, visible.offShift]);
   const focused = useMemo(
     () =>
       applyFocus(
         focusMode,
-        drivers.data?.drivers ?? [],
+        driverPool,
         orders.data?.orders ?? [],
         merchants.data?.merchants ?? [],
       ),
-    [focusMode, drivers.data, orders.data, merchants.data],
+    [focusMode, driverPool, orders.data, merchants.data],
   );
 
   // ── المُحدَّدُ حيٌّ لا لقطة ─────────────────────────────────────
@@ -1316,18 +1413,26 @@ export default function OpsMapPage() {
       visible, current, draft, drawing, emergencies.data, closures.data, landmarks.data]);
 
   // ── المكتبُ علامةٌ بشعار المنصّة ─────────────────────────────
+  //
+  // **والمكانُ المطلوبُ من «طلبات التوسّع» علامةٌ ظاهرة** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كان «اعرض على
+  // الخريطة» يصل إلى المكان بلا ما يدلّ عليه.
   const markers = useMemo<MapMarker[]>(() => {
+    const out: MapMarker[] = [];
+    if (focus) {
+      out.push({ id: "focus", lng: focus.lng, lat: focus.lat, letter: P.focusLetter, label: P.focusPin });
+    }
     const o = office.data;
-    if (!visible.office || !o || !o.has_location || o.lat == null || o.lng == null) return [];
-    return [{
+    if (!visible.office || !o || !o.has_location || o.lat == null || o.lng == null) return out;
+    out.push({
       id: "office",
       lng: o.lng,
       lat: o.lat,
       imageUrl: mediaUrl(o.logo),
       letter: o.name.trim().charAt(0),
       label: T.office.title,
-    }];
-  }, [office.data, visible.office]);
+    });
+    return out;
+  }, [office.data, visible.office, focus]);
 
   const onFeature = useCallback(
     (layerID: string, props: Record<string, unknown>) => {
@@ -1423,6 +1528,8 @@ export default function OpsMapPage() {
         const d = drivers.data?.drivers.find((x) => x.id === it.id);
         if (d) {
           if (!focused.drivers.some((x) => x.id === it.id)) setFocusMode("");
+          // **ومن هو برّا الدوام تُظهَر طبقتُه** — وإلّا طار إلى مكانٍ لا رمزَ فيه.
+          if (!d.on_shift && !onShift && !visible.offShift) toggle("offShift");
           setSelected({ kind: "driver", v: d });
         }
       } else if (it.kind === "merchant") {
@@ -1434,7 +1541,7 @@ export default function OpsMapPage() {
       }
       setFly({ lng: it.lng, lat: it.lat, zoom: 16, key: Date.now() });
     },
-    [orders.data, drivers.data, merchants.data, focused],
+    [orders.data, drivers.data, merchants.data, focused, onShift, visible.offShift, toggle],
   );
 
   // ── «رجّع على المكتب» ──────────────────────────────────────────
@@ -1446,8 +1553,10 @@ export default function OpsMapPage() {
     if (officeAt) setFly({ lng: officeAt.lng, lat: officeAt.lat, zoom: 14, key: Date.now() });
   }, [officeAt]);
 
+  const [saving, setSaving] = useState(false);
   const savePolygon = useCallback(async () => {
     setSaveErr("");
+    setSaving(true);
     try {
       await api("/api/v1/admin/ops-map/coverage", {
         method: "POST",
@@ -1459,75 +1568,74 @@ export default function OpsMapPage() {
       setDraft([]);
       setZoneName("");
       zones.reload();
+      toast(P.drawSaved);
     } catch (e) {
       setSaveErr(errorText(e));
+    } finally {
+      setSaving(false);
     }
-  }, [zoneName, draft, zones]);
+  }, [zoneName, draft, zones, toast]);
 
   const setZoneActive = useCallback(
-    async (id: string, active: boolean) => {
-      await api(`/api/v1/admin/ops-map/coverage/${id}/active`, {
-        method: "POST",
-        body: JSON.stringify({ active }),
-      });
-      zones.reload();
-      setSelected(null);
-    },
-    [zones],
+    (id: string, active: boolean) =>
+      run(async () => {
+        await api(`/api/v1/admin/ops-map/coverage/${id}/active`, {
+          method: "POST",
+          body: JSON.stringify({ active }),
+        });
+        zones.reload();
+      }, active ? P.doneZoneOn : P.doneZoneOff),
+    [zones, run],
   );
 
   const setRequestStatus = useCallback(
-    async (id: string, status: string) => {
-      await api(`/api/v1/admin/ops-map/coverage-requests/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify({ status }),
-      });
-      requests.reload();
-      setSelected(null);
-    },
-    [requests],
+    (id: string, status: string) =>
+      run(async () => {
+        await api(`/api/v1/admin/ops-map/coverage-requests/${id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ status }),
+        });
+        requests.reload();
+      }, P.doneRequest),
+    [requests, run],
   );
+
+  // ── ما يُفتح لصاحب الجلسة — قبل أيّ رجوعٍ مبكّر (قواعدُ الخطّافات) ──
+  const canOpen = useCanOpen();
+  const canDriversList = canCallFn("GET", "/users");
 
   // ── الحالاتُ الحدّيّة (البند ٣٩) ─────────────────────────────
   if (meta.loading) return <LoadingState />;
   if (meta.error) {
     return (
       <PageContainer>
-        <Alert tone="error">{T.networkError}</Alert>
-        <Button onClick={meta.reload}>{T.retry}</Button>
+        <ReloadState onRetry={meta.reload} label={T.networkError} />
       </PageContainer>
     );
   }
   if (!can("VIEW_OPERATIONS_MAP")) {
     return (
       <PageContainer>
-        <EmptyState title={T.noPermission} />
+        <section className="surface flex flex-col items-center gap-3 p-8 text-center">
+          <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-field text-ink-muted">
+            <IconLock size={28} />
+          </span>
+          <h2 className="heading-section">{T.noPermission}</h2>
+        </section>
       </PageContainer>
     );
   }
 
-  const noLoc = (drivers.data?.drivers ?? []).filter((d) => d.freshness === "NO_LOCATION");
-  // **أفي العمود الجانبيّ ما يُعرض؟** — وإلّا أخذت الخريطةُ العرضَ كلَّه.
-  const hasSide =
-    (can("MANAGE_COVERAGE") && drawing) ||
-    // **ولا لوحةَ مندوبين جانبيّة** (قرارُ المالك ٢٠٢٦-١٠-٢٥: «ما بتلزم») — المندوبون على الخريطة نفسِها.
-    noLoc.length > 0;
+  // **ومن لا موضعَ له وهو على الدوام يُقال** — **ومن هو برّا الدوام لا يُسأل عن موضعه**
+  // (تدقيقُ ٢٠٢٦-١٠-٢٧: كانت القائمةُ تقول «غالباً النظامُ أوقف التطبيق» عمّن لم يفتح الدوام).
+  const noLoc = (drivers.data?.drivers ?? []).filter((d) => d.on_shift && d.freshness === "NO_LOCATION");
   const S = summary.data;
-
-  // ── حبّاتُ الطبقات الستّ — بترتيب المالك ─────────────────────
-  const chips: Array<{ id: MainLayer; label: string; tone: MapTone | null; count?: number; show: boolean }> = [
-    { id: "drivers", label: T.chip.drivers, tone: "driver-available", count: S?.drivers?.total, show: can("VIEW_DRIVER_LOCATIONS") },
-    { id: "orders", label: T.chip.orders, tone: "order", count: S?.orders?.active, show: can("VIEW_ACTIVE_ORDERS") },
-    { id: "merchants", label: T.chip.merchants, tone: "store-open", count: S?.merchants?.total, show: can("VIEW_MERCHANT_LOCATIONS") },
-    { id: "customers", label: T.chip.customers, tone: "customer", count: S?.customers?.total, show: can("VIEW_ACTIVE_ORDERS") },
-    { id: "reps", label: T.chip.reps, tone: "rep", count: S?.reps, show: can("VIEW_REP_ACTIVITY") },
-    { id: "office", label: T.chip.office, tone: null, count: S?.staff_online, show: true },
-  ];
-
   const stuckN = S?.orders?.stuck ?? 0;
 
   // **حدودُ التغطية** (قرارُ المالك ٢٠٢٦-١٠-٢٥: «الخريطة تطلع بس منطقة تغطيتنا») — من المناطق الفعّالة:
   // المضلَّعُ بنقاطه، والدائرةُ بمركزها ونصف قطرها. وبلا مناطق لا حدود.
+  // **والمكانُ المطلوبُ داخلَها دائماً** (تدقيقُ ٢٠٢٦-١٠-٢٧): طلبُ التوسّع غالباً برّا التغطية،
+  // **فكانت الكاميرا ترجع وحدَها إلى الداخل ولا يُرسم حيث يجب.**
   const coverageBounds = (() => {
     let w = Infinity, so = Infinity, e = -Infinity, n = -Infinity;
     const add = (lng: number, lat: number) => {
@@ -1549,6 +1657,11 @@ export default function OpsMapPage() {
         add(z.lng + dLng, z.lat + dLat);
       }
     }
+    if (focus && Number.isFinite(w)) {
+      // **هامشٌ حول المكان المطلوب** — كيلومترٌ تقريباً، فيُرسم حولَه.
+      add(focus.lng - 0.01, focus.lat - 0.01);
+      add(focus.lng + 0.01, focus.lat + 0.01);
+    }
     return Number.isFinite(w) ? ([w, so, e, n] as [number, number, number, number]) : undefined;
   })();
 
@@ -1556,16 +1669,18 @@ export default function OpsMapPage() {
   //
   // **خريطةٌ فارغةٌ بلا كلمةٍ تُقرأ عطلاً** — «لا سائقين على الدوام الآن»
   // تُقرأ حقيقة. **ولا تُقال قبل أن تصل البيانات** — فلا يُكذَب أثناءَ التحميل.
-  const driversFiltered = !!(onShift || stale || hasActive || driverStatus || search.trim());
+  const urlFiltered = !!(onShift || hasActive || driverStatus);
   const emptyHints: string[] = [];
+  let driversEmpty = false;
   // **وفي «العالقة فقط» بلا عالقٍ تكفي جملةُ الطلبات** — لا جملتان لفراغٍ واحد.
   const noStuckAtAll = focusMode === "stuck" && focused.orders.length === 0;
   if (can("VIEW_DRIVER_LOCATIONS") && visible.drivers && drivers.data && !noStuckAtAll &&
       focused.drivers.filter((d) => d.freshness !== "NO_LOCATION").length === 0) {
+    driversEmpty = focusMode === "";
     emptyHints.push(
       focusMode === "available" ? T.emptyHint.available
         : focusMode === "stuck" ? T.emptyHint.stuckDrivers
-          : driversFiltered ? T.emptyHint.driversFiltered : T.emptyHint.drivers,
+          : urlFiltered ? T.emptyHint.driversFiltered : T.emptyHint.drivers,
     );
   }
   if (can("VIEW_ACTIVE_ORDERS") && visible.orders && orders.data && focused.orders.length === 0) {
@@ -1576,792 +1691,432 @@ export default function OpsMapPage() {
     emptyHints.push(T.emptyHint.merchants);
   }
 
+  // ── شارةُ فلتر الرابط — ما جاء من الرئيسيّة يُرى ويُشال ─────────────
+  const urlBits: string[] = [];
+  if (hasActive === "true") urlBits.push(P.urlBusy);
+  else if (hasActive === "false") urlBits.push(P.urlFree);
+  else if (onShift === "true") urlBits.push(P.urlOnShift);
+  if (onShift === "false") urlBits.push(P.urlOffShift);
+  if (driverStatus && driverStatus !== "active") {
+    urlBits.push(P.urlStatus.replace("{s}", pick(ACCOUNT_STATUS, driverStatus)));
+  }
+  if (urlBits.length === 0 && urlFiltered) urlBits.push(P.urlOnShift);
+
+  // ── حبّاتُ الطبقات الإضافيّة — بعددها، والعددُ عددُ ما على الخريطة ────────
+  //
+  // **وعددُ الكثافة عددُ الطلبات لا المربّعات** (تدقيقُ ٢٠٢٦-١٠-٢٧: «٢» وهي أربعةُ طلبات).
+  const demandOrders = (demand.data?.orders ?? []).reduce((sum, c) => sum + c.count, 0);
+  const offShiftN = (drivers.data?.drivers ?? []).filter((d) => !d.on_shift).length;
+  const layerChips: Array<{ id: string; label: string; count?: number }> = [];
+  if (can("VIEW_DRIVER_LOCATIONS") && !onShift) {
+    layerChips.push({ id: "offShift", label: P.offShiftLayer, count: drivers.data ? offShiftN : undefined });
+  }
+  if (canEmergencies) {
+    layerChips.push({ id: "emergencies", label: m.admin.emergencyRoom.mapLayer, count: emergencies.data?.count });
+  }
+  if (can("VIEW_DEMAND_ANALYTICS")) {
+    layerChips.push(
+      { id: "demand", label: T.layer.demand, count: visible.demand ? demandOrders : undefined },
+      { id: "opportunities", label: T.layer.opportunities, count: visible.opportunities ? opportunities.data?.count : undefined },
+      { id: "requests", label: T.layer.coverageRequests, count: visible.requests ? requests.data?.count : undefined },
+    );
+  }
+  layerChips.push(
+    { id: "closures", label: T.layer.closures, count: visible.closures ? closures.data?.count : undefined },
+    { id: "landmarks", label: T.layer.landmarks, count: visible.landmarks ? landmarks.data?.count : undefined },
+    { id: "branches", label: T.layer.branches, count: visible.branches ? branches.data?.count : undefined },
+  );
+  const layerOn = layerChips.filter((c) => visible[c.id]).map((c) => c.id);
+
+  const rangeName = range === "today" ? T.demandWhen.today : range === "7d" ? T.demandWhen.d7 : T.demandWhen.d30;
+  const maxScore = Math.max(1, ...(opportunities.data?.opportunities ?? []).map((o) => o.score));
+
   return (
     <PageContainer>
-      <PageHeader title={T.title} subtitle={T.subtitle} />
+      <PageHero
+        icon={IconLocation}
+        title={T.title}
+        subtitle={T.subtitle}
+        actions={
+          <Button variant="secondary" onClick={() => setFull(true)}>
+            <IconFullscreen size={16} aria-hidden />
+            {T.bar.fullscreen}
+          </Button>
+        }
+      />
 
-      {/* ══ ملءُ الشاشة — الشريطُ والخريطةُ معاً، والقوائمُ تغيب ════════ */}
-      <div className={full ? "fixed inset-0 z-40" : ""}>
-      <div className={full ? "surface-raised flex h-full flex-col gap-2 overflow-hidden rounded-none p-2" : ""}>
-      {/* ══ الشريطُ العلويّ — عدّاداتٌ حيّة وحبّاتُ الطبقات ══════════ */}
-      {/* **فوقَ الخريطة** (المالك ٢٠٢٦-١٠-٢٥: «طبقات إضافية تطلع تحت الخريطة») — `relative z-30` يرفع
-          قوائمَ الشريط فوق لوح الخريطة الذي يليه. */}
-      <div className={`surface relative z-30 flex flex-col gap-2 p-2 ${full ? "shrink-0" : "mb-3"}`}>
-        {/* ── العدّادات — «N سائق متاح · N طلب ماشي · N عالق · N متجر مفتوح» ── */}
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-1 text-sm">
+      {/* ══ الأرقامُ الأربعة — تُضغط، والتركيزُ فيها ══════════════════ */}
+      {(S?.drivers || S?.orders || S?.merchants) && (
+        <div className="mb-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
           {S?.drivers && (
-            <Counter n={S.drivers.available} label={T.counter.available} tone="driver-available" />
+            <Tile
+              icon={IconMoto}
+              label={P.tileAvailable}
+              value={fmtNum(S.drivers.available)}
+              sub={P.subAvailable}
+              tone={S.drivers.available > 0 ? "success" : "muted"}
+              onClick={() => setFocusMode(focusMode === "available" ? "" : "available")}
+              extra={focusMode === "available" ? <Badge variant="success">{P.focusOn}</Badge> : undefined}
+            />
           )}
           {S?.orders && (
-            <>
-              <Counter n={S.orders.active} label={T.counter.moving} tone="order" />
-              {stuckN > 0 ? (
-                <button
-                  type="button"
-                  onClick={goStuck}
-                  title={T.counter.stuckHint}
-                  className={`inline-flex items-center gap-1.5 rounded-full font-bold text-danger underline-offset-4 hover:underline ${
-                    flash ? "animate-pulse bg-danger-tint px-2 ring-2 ring-danger" : ""
-                  }`}
-                >
-                  <Dot tone="order-stuck" />
-                  <span className="tabular-nums">{fmtNum(stuckN)}</span>
-                  <span>{T.counter.stuck}</span>
-                </button>
-              ) : (
-                <Counter n={0} label={T.counter.stuck} tone="order-stuck" />
-              )}
-            </>
+            <Tile
+              icon={IconOrder}
+              label={P.tileMoving}
+              value={fmtNum(S.orders.active)}
+              sub={focusMode ? P.subMoving : undefined}
+              tone={S.orders.active > 0 ? "accent" : "muted"}
+              onClick={focusMode ? () => setFocusMode("") : undefined}
+            />
+          )}
+          {S?.orders && (
+            <div className={`rounded-card ${flash ? "animate-pulse ring-2 ring-danger" : ""}`}>
+              <Tile
+                icon={IconWarning}
+                label={P.tileStuck}
+                value={fmtNum(stuckN)}
+                sub={stuckN > 0 ? P.subStuck : P.subStuckNone}
+                tone={stuckN > 0 ? "danger" : "muted"}
+                onClick={
+                  stuckN > 0
+                    ? () => {
+                        if (focusMode === "stuck") {
+                          setFocusMode("");
+                        } else {
+                          setFocusMode("stuck");
+                          goStuck();
+                        }
+                      }
+                    : undefined
+                }
+                extra={focusMode === "stuck" ? <Badge variant="danger">{P.focusOn}</Badge> : undefined}
+              />
+            </div>
           )}
           {S?.merchants && (
-            <Counter n={S.merchants.open} label={T.counter.open} tone="store-open" />
+            <Tile
+              icon={IconStore}
+              label={P.tileOpen}
+              value={fmtNum(S.merchants.open)}
+              sub={P.subOpen.replace("{n}", fmtNum(S.merchants.total))}
+              tone={S.merchants.open > 0 ? "accent" : "muted"}
+            />
           )}
           {/* **ومضةُ العالق الجديد تُقال لقارئ الشاشة أيضاً.** */}
           <span className="sr-only" role="status" aria-live="polite">
             {flash ? T.counter.newStuck : ""}
           </span>
+        </div>
+      )}
 
-          {/* ── مفاتيحُ التركيز — بجوار العدّادات ── */}
-          {can("VIEW_ACTIVE_ORDERS") && (
-            <FocusToggle
-              on={focusMode === "stuck"}
-              label={T.focus.stuckOnly}
-              hint={T.focus.stuckHint}
-              tone="order-stuck"
-              onClick={() => {
-                // **والعالقُ يُقرأ من طبقة الطلبات** — فتُفتح معه إن كانت مطفأة.
-                if (focusMode !== "stuck" && !visible.orders) toggle("orders");
-                setFocusMode(focusMode === "stuck" ? "" : "stuck");
-              }}
-            />
+      {/* ══ ملءُ الشاشة — سطحُ التحكّم والخريطةُ معاً ════════════════════ */}
+      <div className={full ? "fixed inset-0 z-40" : ""}>
+      <div className={full ? "surface-raised flex h-full flex-col gap-2 overflow-hidden rounded-none p-2" : "flex flex-col gap-3"}>
+      {/* ══ سطحُ التحكّم — بحثٌ وطبقاتٌ ومدّةٌ ودليل ══════════════════════ */}
+      {/* `relative z-30` يرفع نتائجَ البحث فوق لوح الخريطة الذي يليه. */}
+      <section className={`surface relative z-30 flex flex-col gap-3 p-3 ${full ? "shrink-0" : ""}`}>
+        {/* ── ابحث واذهب ── */}
+        <div className="relative w-full">
+          <Input
+            icon={<IconSearch size={16} aria-hidden />}
+            placeholder={T.searchGo}
+            aria-label={T.searchGo}
+            value={hunt}
+            onChange={(e) => {
+              setHunt(e.target.value);
+              setHuntOpen(true);
+              setHuntAt(0);
+            }}
+            onFocus={() => setHuntOpen(true)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                setHuntOpen(false);
+              } else if (e.key === "ArrowDown") {
+                e.preventDefault();
+                setHuntAt((i) => Math.min(i + 1, Math.max(goItems.length - 1, 0)));
+              } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                setHuntAt((i) => Math.max(i - 1, 0));
+              } else if (e.key === "Enter" && goItems[huntAt]) {
+                e.preventDefault();
+                goTo(goItems[huntAt]);
+              }
+            }}
+          />
+          {huntOpen && hunt.trim() !== "" && (
+            <>
+              <button
+                type="button"
+                aria-label={T.close}
+                className="fixed inset-0 z-20 cursor-default"
+                onClick={() => setHuntOpen(false)}
+              />
+              <ul
+                role="listbox"
+                className="surface-raised absolute inset-x-0 top-full z-30 mt-1 max-h-80 overflow-y-auto p-1 text-sm"
+              >
+                {goItems.length === 0 ? (
+                  <li className="px-2 py-1.5 text-xs text-ink-muted">{T.searchNone}</li>
+                ) : (
+                  goItems.map((x, i) => (
+                    <li key={`${x.kind}-${x.id}`} role="option" aria-selected={i === huntAt}>
+                      <button
+                        type="button"
+                        onMouseEnter={() => setHuntAt(i)}
+                        onClick={() => goTo(x)}
+                        className={`flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-start ${
+                          i === huntAt ? "bg-row-hover" : ""
+                        }`}
+                      >
+                        <span className="truncate">{x.label}</span>
+                        <span className="ms-auto shrink-0 text-xs text-ink-muted">{kindLabel(x.kind)}</span>
+                      </button>
+                    </li>
+                  ))
+                )}
+              </ul>
+            </>
           )}
-          {can("VIEW_DRIVER_LOCATIONS") && (
-            <FocusToggle
-              on={focusMode === "available"}
-              label={T.focus.availableOnly}
-              hint={T.focus.availableHint}
-              tone="driver-available"
-              onClick={() => {
-                if (focusMode !== "available" && !visible.drivers) toggle("drivers");
-                setFocusMode(focusMode === "available" ? "" : "available");
-              }}
-            />
-          )}
-
-          {/* ── ابحث واذهب ── */}
-          <div className="relative w-full sm:ms-auto sm:w-72">
-            <Input
-              icon={<IconSearch size={16} aria-hidden />}
-              placeholder={T.searchGo}
-              aria-label={T.searchGo}
-              value={hunt}
-              onChange={(e) => {
-                setHunt(e.target.value);
-                setHuntOpen(true);
-                setHuntAt(0);
-              }}
-              onFocus={() => setHuntOpen(true)}
-              onKeyDown={(e) => {
-                if (e.key === "Escape") {
-                  setHuntOpen(false);
-                } else if (e.key === "ArrowDown") {
-                  e.preventDefault();
-                  setHuntAt((i) => Math.min(i + 1, Math.max(goItems.length - 1, 0)));
-                } else if (e.key === "ArrowUp") {
-                  e.preventDefault();
-                  setHuntAt((i) => Math.max(i - 1, 0));
-                } else if (e.key === "Enter" && goItems[huntAt]) {
-                  e.preventDefault();
-                  goTo(goItems[huntAt]);
-                }
-              }}
-            />
-            {huntOpen && hunt.trim() !== "" && (
-              <>
-                <button
-                  type="button"
-                  aria-label={T.close}
-                  className="fixed inset-0 z-20 cursor-default"
-                  onClick={() => setHuntOpen(false)}
-                />
-                <ul
-                  role="listbox"
-                  className="surface-raised absolute inset-x-0 top-full z-30 mt-1 max-h-80 overflow-y-auto p-1 text-sm"
-                >
-                  {goItems.length === 0 ? (
-                    <li className="px-2 py-1.5 text-xs text-ink-muted">{T.searchNone}</li>
-                  ) : (
-                    goItems.map((x, i) => (
-                      <li key={`${x.kind}-${x.id}`} role="option" aria-selected={i === huntAt}>
-                        <button
-                          type="button"
-                          onMouseEnter={() => setHuntAt(i)}
-                          onClick={() => goTo(x)}
-                          className={`flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-start ${
-                            i === huntAt ? "bg-row-hover" : ""
-                          }`}
-                        >
-                          <span className="truncate">{x.label}</span>
-                          <span className="ms-auto shrink-0 text-xs text-ink-muted">{kindLabel(x.kind)}</span>
-                        </button>
-                      </li>
-                    ))
-                  )}
-                </ul>
-              </>
-            )}
-          </div>
         </div>
 
-        {/* ── الحبّات — تلتفّ على الحاسوب وتنزلق على الجوّال ── */}
-        <div className="flex items-center gap-2">
-          {/* **ولا شريطَ حبّاتٍ** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — الطبقاتُ الستُّ دائماً ظاهرة (`ALWAYS_ON`). */}
-          <span className="flex-1" />
-
-          {/* ── طبقاتٌ إضافيّةٌ ودليلُ الألوان ── */}
-          <div className="relative flex shrink-0 items-center gap-1.5">
-            <Button
-              variant="secondary"
-              aria-expanded={menu === "extra"}
-              onClick={() => setMenu(menu === "extra" ? "" : "extra")}
-            >
-              {T.bar.extra}
+        {/* ── فلترُ الرابط — يُرى ويُشال (تدقيقُ ٢٠٢٦-١٠-٢٧) ── */}
+        {urlBits.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 rounded-control bg-warning-tint px-3 py-2 text-sm">
+            <span className="text-ink-muted">{P.urlFilter}</span>
+            <b>{urlBits.join(" · ")}</b>
+            <Button variant="secondary" className="ms-auto" onClick={clearUrlFilter}>
+              <IconClose size={14} aria-hidden />
+              {P.urlClear}
             </Button>
-            <button
-              type="button"
-              aria-label={T.bar.legend}
-              title={T.bar.legend}
-              aria-expanded={menu === "legend"}
-              onClick={() => setMenu(menu === "legend" ? "" : "legend")}
-              className="grid h-9 w-9 place-items-center rounded-full border border-line bg-surface text-sm font-bold text-ink-muted hover:text-ink"
-            >
-              {T.bar.legendMark}
-            </button>
-            {menu !== "" && (
-              <>
-                {/* **ونقرةٌ خارجَها تغلقها** — ستارٌ شفّافٌ تحت اللوحة. */}
-                <button
-                  type="button"
-                  aria-label={T.close}
-                  className="fixed inset-0 z-20 cursor-default"
-                  onClick={() => setMenu("")}
-                />
-                <div className="surface-raised absolute end-0 top-full z-30 mt-1.5 w-72 max-w-[calc(100vw-2rem)] p-3 text-sm">
-                  {menu === "extra" ? (
-                    <div className="flex flex-col gap-1">
-                      {canEmergencies && (
-                        <LayerToggle
-                          id="emergencies"
-                          label={m.admin.emergencyRoom.mapLayer}
-                          on={!!visible.emergencies}
-                          count={emergencies.data?.count}
-                          onToggle={toggle}
-                        />
-                      )}
-                      {can("VIEW_DEMAND_ANALYTICS") && (
-                        <>
-                          <LayerToggle
-                            id="demand"
-                            label={T.layer.demand}
-                            on={!!visible.demand}
-                            count={demand.data?.orders.length}
-                            onToggle={toggle}
-                          />
-                          <LayerToggle
-                            id="opportunities"
-                            label={T.layer.opportunities}
-                            on={!!visible.opportunities}
-                            count={opportunities.data?.count}
-                            onToggle={toggle}
-                          />
-                          <LayerToggle
-                            id="requests"
-                            label={T.layer.coverageRequests}
-                            on={!!visible.requests}
-                            count={requests.data?.count}
-                            onToggle={toggle}
-                          />
-                          {(visible.demand || visible.opportunities) && (
-                            <div className="flex flex-wrap gap-2 ps-6">
-                              <Select
-                                aria-label={T.demandWhen.range}
-                                className="!w-auto"
-                                value={range}
-                                onChange={(e) => setRange(e.target.value as typeof range)}
-                              >
-                                <option value="today">{T.demandWhen.today}</option>
-                                <option value="7d">{T.demandWhen.d7}</option>
-                                <option value="30d">{T.demandWhen.d30}</option>
-                              </Select>
-                              <Select
-                                aria-label={T.demandWhen.hours}
-                                className="!w-auto"
-                                value={dayPart}
-                                onChange={(e) => setDayPart(e.target.value as typeof dayPart)}
-                              >
-                                <option value="all">{T.demandWhen.all}</option>
-                                <option value="morning">{T.demandWhen.morning}</option>
-                                <option value="noon">{T.demandWhen.noon}</option>
-                                <option value="evening">{T.demandWhen.evening}</option>
-                                <option value="night">{T.demandWhen.night}</option>
-                              </Select>
-                            </div>
-                          )}
-                        </>
-                      )}
-                      <LayerToggle
-                        id="closures"
-                        label={T.layer.closures}
-                        on={!!visible.closures}
-                        count={closures.data?.count}
-                        onToggle={toggle}
-                      />
-                      <LayerToggle
-                        id="landmarks"
-                        label={T.layer.landmarks}
-                        on={!!visible.landmarks}
-                        count={landmarks.data?.count}
-                        onToggle={toggle}
-                      />
-                      <LayerToggle
-                        id="branches"
-                        label={T.layer.branches}
-                        on={!!visible.branches}
-                        count={branches.data?.count}
-                        onToggle={toggle}
-                      />
-                      <LayerToggle
-                        id="areas"
-                        label={T.layer.areas}
-                        on={!!visible.areas}
-                        count={areas.data?.count}
-                        onToggle={toggle}
-                      />
-                      <p className="mt-2 text-xs leading-5 text-ink-muted">{T.bar.coverageAlways}</p>
-                      {/* **ولا يظهر الرسمُ لمن لا يملكه** — ورؤيةُ زرٍّ يردّ
-                          `403` أسوأُ من غيابه. */}
-                      {can("MANAGE_COVERAGE") && !drawing && (
-                        <Button
-                          variant="secondary"
-                          className="mt-2"
-                          onClick={() => { setDrawing(true); setDraft([]); setMenu(""); }}
-                        >
-                          {T.bar.drawCoverage}
-                        </Button>
-                      )}
-                    </div>
-                  ) : (
-                    <Legend />
-                  )}
-                </div>
-              </>
-            )}
           </div>
+        )}
+
+        {/* ── الطبقاتُ الإضافيّة حبّاتٌ بعددها ── */}
+        <div className="flex flex-col gap-1.5">
+          <h2 className="heading-card">{P.controlsTitle}</h2>
+          <p className="text-xs text-ink-muted">{P.controlsHint}</p>
+          <Chips
+            items={layerChips.map((c) => ({ id: c.id, label: c.label, count: c.count }))}
+            value={layerOn}
+            onChange={toggle}
+            wrap
+          />
         </div>
+
+        {/* ── المدّةُ وساعاتُ اليوم — حين تُفتح الكثافةُ أو الفرصُ وحدَهما ── */}
+        {can("VIEW_DEMAND_ANALYTICS") && (visible.demand || visible.opportunities) && (
+          <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-ink-muted">{P.when}</span>
+              <Chips
+                items={[
+                  { id: "today", label: T.demandWhen.today },
+                  { id: "7d", label: T.demandWhen.d7 },
+                  { id: "30d", label: T.demandWhen.d30 },
+                ]}
+                value={range}
+                onChange={(k) => setRange(k as typeof range)}
+                wrap
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="text-xs text-ink-muted">{P.hours}</span>
+              <Chips
+                items={[
+                  { id: "all", label: T.demandWhen.all },
+                  { id: "morning", label: T.demandWhen.morning },
+                  { id: "noon", label: T.demandWhen.noon },
+                  { id: "evening", label: T.demandWhen.evening },
+                  { id: "night", label: T.demandWhen.night },
+                ]}
+                value={dayPart}
+                onChange={(k) => setDayPart(k as typeof dayPart)}
+                wrap
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ── معنى الألوان · ورسمُ التغطية — زرّان باسميهما ── */}
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <Button variant="secondary" className="w-full" aria-expanded={legendOpen} onClick={() => setLegendOpen((o) => !o)}>
+            {legendOpen ? P.legendHide : P.legendShow}
+          </Button>
+          {/* **ولا يظهر الرسمُ لمن لا يملكه** — ورؤيةُ زرٍّ يردّ `403` أسوأُ من غيابه. */}
+          {can("MANAGE_COVERAGE") && !drawing && (
+            <Button variant="secondary" className="w-full" onClick={() => { setDrawing(true); setDraft([]); }}>
+              <IconZones size={16} aria-hidden />
+              {P.draw}
+            </Button>
+          )}
+        </div>
+        {legendOpen && <Legend />}
 
         {visible.office && office.data && !office.data.has_location && (
-          <p className="px-1 text-xs text-ink-muted">{T.office.noLocation}</p>
+          <p className="text-xs text-ink-muted">{T.office.noLocation}</p>
+        )}
+      </section>
+
+      {/* ══ شريطُ الرسم — فوق الخريطة لا تحتها (تدقيقُ ٢٠٢٦-١٠-٢٧) ══════════ */}
+      {can("MANAGE_COVERAGE") && drawing && (
+        <section className={`surface flex flex-col gap-3 border-2 border-accent p-3 ${full ? "shrink-0" : ""}`}>
+          <div className="flex items-center gap-3">
+            <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-on-bright">
+              <IconZones size={20} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <h2 className="heading-card">{P.drawTitle}</h2>
+              <p className="text-xs text-ink-muted">{focus ? P.focusFound : P.drawHint}</p>
+            </div>
+            <span className="text-end">
+              <span className="figure block leading-none">{fmtNum(draft.length)}</span>
+              <span className="text-2xs text-ink-muted">{P.drawPoints}</span>
+            </span>
+          </div>
+          <Input
+            placeholder={P.drawName}
+            aria-label={P.drawName}
+            value={zoneName}
+            onChange={(e) => setZoneName(e.target.value)}
+          />
+          {draft.length > 0 && draft.length < 3 && <p className="text-xs text-ink-muted">{T.coverage.needThree}</p>}
+          {saveErr && <Alert tone="error">{saveErr}</Alert>}
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <Button
+              className="w-full"
+              disabled={saving || draft.length < 3 || !zoneName.trim()}
+              onClick={savePolygon}
+            >
+              {saving ? P.sending : T.coverage.save}
+            </Button>
+            <Button
+              variant="secondary"
+              className="w-full"
+              disabled={saving || draft.length === 0}
+              onClick={() => setDraft((d) => d.slice(0, -1))}
+            >
+              {T.coverage.undo}
+            </Button>
+            <Button
+              variant="secondary"
+              className="w-full"
+              disabled={saving}
+              onClick={() => { setDrawing(false); setDraft([]); setSaveErr(""); }}
+            >
+              {T.coverage.cancel}
+            </Button>
+          </div>
+        </section>
+      )}
+
+      {/* ══ الخريطة — والبطاقةُ فوقها (لوحةٌ سفليّةٌ على الجوّال، جانبيّةٌ على الحاسوب) ══ */}
+      <div
+        className={
+          full
+            ? "relative min-h-0 w-full flex-1"
+            : "relative h-[60vh] w-full lg:h-[calc(100vh-16rem)]"
+        }
+      >
+        <OpsMapCanvas
+          layers={layers}
+          icons={icons}
+          markers={markers}
+          flyTo={fly}
+          onFeatureClick={onFeature}
+          onMarkerClick={(id) => {
+            if (id === "office") setSelected({ kind: "office" });
+          }}
+          onMapClick={onGround}
+          unavailableLabel={T.unavailable}
+          focus={focus}
+          bounds={coverageBounds}
+        />
+
+        {/* ── أدواتُ الخريطة — ملءُ الشاشة والرجوعُ إلى المكتب ── */}
+        <div className="absolute start-2 top-2 z-[5] flex flex-col gap-1.5">
+          <MapTool
+            label={full ? T.bar.exitFullscreen : T.bar.fullscreen}
+            onClick={() => setFull((f) => !f)}
+          >
+            {full ? <IconFullscreenExit size={16} aria-hidden /> : <IconFullscreen size={16} aria-hidden />}
+          </MapTool>
+          {officeAt && (
+            <MapTool label={T.bar.recenter} onClick={recenter}>
+              <IconTarget size={16} aria-hidden />
+            </MapTool>
+          )}
+        </div>
+
+        {/* ── الفراغُ يُقال — شارةٌ بدائرةٍ ملوّنةٍ وجملةٍ مفيدة ── */}
+        {emptyHints.length > 0 && !current && (
+          <div className="pointer-events-none absolute inset-x-0 bottom-8 z-[5] flex justify-center px-4">
+            <div className="surface pointer-events-auto flex max-w-md items-center gap-3 px-3 py-2.5 shadow-lift">
+              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-field text-ink-muted">
+                <IconLocation size={18} />
+              </span>
+              <span className="min-w-0 text-sm">
+                <b className="block">{P.emptyTitle}</b>
+                <span className="block text-xs text-ink-muted">{emptyHints.join(" · ")}</span>
+                {driversEmpty && canDriversList && (
+                  <Link href="/dashboard/users?role=driver" className="text-xs font-bold text-accent-text underline">
+                    {P.driversList}
+                  </Link>
+                )}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {current && (
+          <aside
+            className="absolute inset-x-0 bottom-0 z-10 flex max-h-[65%] flex-col gap-3 overflow-y-auto rounded-t-card
+                       border-t border-line-soft bg-surface p-4 shadow-xl
+                       lg:inset-x-auto lg:inset-y-0 lg:end-0 lg:max-h-none lg:w-96 lg:rounded-none lg:border-s lg:border-t-0"
+          >
+            <span aria-hidden className="mx-auto h-1.5 w-10 shrink-0 rounded-full bg-line lg:hidden" />
+            <SelectedCard
+              current={current}
+              office={office.data}
+              orders={orders.data?.orders ?? []}
+              customersMin={customers.data?.min_count ?? 3}
+              rangeName={rangeName}
+              maxScore={maxScore}
+              can={can}
+              canIntervene={canIntervene}
+              canProfile={canProfile}
+              canOpenMerchant={canOpen.merchant}
+              busy={busy}
+              actErr={actErr}
+              confirming={confirming}
+              setConfirming={setConfirming}
+              onClose={() => setSelected(null)}
+              onAssign={(o) => setAssigning(o)}
+              onZoneActive={setZoneActive}
+              onRequestStatus={setRequestStatus}
+              onClearClosure={clearClosure}
+              onDecideLandmark={decideLandmark}
+            />
+          </aside>
         )}
       </div>
 
-      {/* **واللوحاتُ الجانبيّةُ لا تظهر إلّا بما يلزم** (طلبُ المالك ٢٠٢٦-١٠-١٧: «بدنا نحذفهم مشان
-          تظل الخريطة كبيرة») — شيلت المرشّحاتُ وطلباتُ التغطية والمدّةُ والمناطقُ التشغيليّة،
-          **وما بقي** (محرّرُ التغطية حين يُرسَم · المندوبون حين تُفتح طبقتُهم · سائقٌ بلا موضع)
-          **يفتح العمودَ وحدَه.** */}
-      <div className={full || !hasSide ? "flex min-h-0 flex-1 flex-col" : "grid gap-4 lg:grid-cols-[18rem_1fr]"}>
-        {/* ── الخريطةُ واللوحةُ الجانبيّة — أوّلاً على الجوّال ───────── */}
-        <div
-          className={
-            full
-              ? "relative h-full min-h-0 w-full"
-              : hasSide
-                ? "relative order-1 h-[28rem] lg:order-2 lg:h-[calc(100vh-16rem)]"
-                : "relative h-[28rem] w-full lg:h-[calc(100vh-16rem)]"
-          }
-        >
-          <OpsMapCanvas
-            layers={layers}
-            icons={icons}
-            markers={markers}
-            flyTo={fly}
-            onFeatureClick={onFeature}
-            onMarkerClick={() => setSelected({ kind: "office" })}
-            onMapClick={onGround}
-            unavailableLabel={T.unavailable}
-            focus={focus}
-            bounds={coverageBounds}
+      {/* ══ على الدوام وما في موقع — تحت الخريطة لا عمودٌ يصغّرها ══════════ */}
+      {!full && noLoc.length > 0 && (
+        <section className="surface flex flex-col gap-2 p-4">
+          <h2 className="heading-card">{P.noLocTitle.replace("{n}", fmtNum(noLoc.length))}</h2>
+          <p className="text-xs text-ink-muted">{T.driver.noLocationHint}</p>
+          {/* **والاسمُ يفتح بطاقتَه** — فيُتّصل به من هنا. */}
+          <Chips
+            items={noLoc.slice(0, 24).map((d) => ({ id: d.id, label: d.name }))}
+            value={[] as string[]}
+            onChange={(id) => {
+              const d = noLoc.find((x) => x.id === id);
+              if (d) setSelected({ kind: "driver", v: d });
+            }}
+            wrap
           />
-
-          {/* ── أدواتُ الخريطة — ملءُ الشاشة والرجوعُ إلى المكتب ── */}
-          <div className="absolute start-2 top-2 z-[5] flex flex-col gap-1.5">
-            <MapTool
-              label={full ? T.bar.exitFullscreen : T.bar.fullscreen}
-              onClick={() => setFull((f) => !f)}
-            >
-              {full ? <IconFullscreenExit size={16} aria-hidden /> : <IconFullscreen size={16} aria-hidden />}
-            </MapTool>
-            {officeAt && (
-              <MapTool label={T.bar.recenter} onClick={recenter}>
-                <IconTarget size={16} aria-hidden />
-              </MapTool>
-            )}
-          </div>
-
-          {/* ── الفراغُ يُقال — نصٌّ خافتٌ لا خريطةٌ صامتة ── */}
-          {emptyHints.length > 0 && (
-            <div className="pointer-events-none absolute inset-x-0 bottom-8 z-[5] flex justify-center px-4">
-              <p className="surface rounded-full px-3 py-1.5 text-center text-xs text-ink-muted shadow-lift">
-                {emptyHints.join(" · ")}
-              </p>
-            </div>
-          )}
-
-          {current && (
-            <aside
-              className="absolute inset-y-0 end-0 z-10 w-full max-w-sm overflow-y-auto
-                         border-s border-line-soft bg-surface p-4 shadow-xl"
-            >
-              <div className="mb-3 flex items-center gap-2">
-                <h3 className="text-base font-bold">
-                  {current.kind === "driver" && current.v.name}
-                  {current.kind === "merchant" && current.v.name}
-                  {current.kind === "order" && `#${current.v.number}`}
-                  {current.kind === "zone" && current.v.name}
-                  {current.kind === "request" && T.request.title}
-                  {current.kind === "branch" && current.v.name}
-                  {current.kind === "closure" && T.closure.title}
-                  {current.kind === "landmark" && current.v.name}
-                  {current.kind === "opportunity" && T.opportunity.title}
-                  {current.kind === "customers" && T.customerCard.title}
-                  {current.kind === "rep" && current.v.name}
-                  {current.kind === "office" && (office.data?.name || T.office.title)}
-                </h3>
-                <button
-                  className="ms-auto text-sm text-ink-muted"
-                  onClick={() => setSelected(null)}
-                >
-                  {T.close}
-                </button>
-              </div>
-
-              {current.kind === "driver" && (
-                <>
-                  <div className="mb-3 flex items-center gap-2 text-sm font-bold">
-                    <Dot tone={driverTone(current.v.tone)} />
-                    {T.tone[current.v.tone] ?? T.tone.idle}
-                  </div>
-                  <dl className="flex flex-col gap-2 text-sm">
-                    <Row k={T.driver.status} v={current.v.status} />
-                    <Row k={T.driver.onShift} v={current.v.on_shift ? T.yes : T.no} />
-                    <Row k={T.driver.activeOrders} v={String(current.v.active_orders)} />
-                    <Row
-                      k={T.driver.lastSeen}
-                      v={current.v.last_location_at ? fmtDateTime(current.v.last_location_at) : "—"}
-                    />
-                    <Row k={T.live} v={T.freshness[current.v.freshness]} />
-                    {/* **والمالُ لمن يملك صلاحيّتَه وحدَه** (البند ٦). */}
-                    {current.v.cash_held !== undefined && (
-                      <Row k={T.driver.cashHeld} v={fmtMoney(current.v.cash_held)} />
-                    )}
-                  </dl>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {/* **والهاتفُ لا يصل إلّا لمن يملك `users.contact.read`** — يحذفه الخادم. */}
-                    {current.v.phone && <ContactButtons phone={current.v.phone} />}
-                    {current.v.current_order && (
-                      <Link href={`/dashboard/orders?id=${current.v.current_order}`}>
-                        <Button variant="secondary">{T.order.openPage}</Button>
-                      </Link>
-                    )}
-                    {canProfile && (
-                      <Link href={`/dashboard/users?id=${current.v.id}`}>
-                        <Button variant="secondary">{T.driver.openProfile}</Button>
-                      </Link>
-                    )}
-                  </div>
-                </>
-              )}
-
-              {current.kind === "merchant" && (
-                <>
-                  <div className="mb-3 flex items-center gap-2 text-sm font-bold">
-                    <Dot tone={storeTone(current.v.open_now)} />
-                    {current.v.open_now ? T.merchant.open : T.merchant.closed}
-                  </div>
-                  <dl className="flex flex-col gap-2 text-sm">
-                    <Row k={T.merchant.activeOrders} v={String(current.v.active_orders)} />
-                    <Row k={T.merchant.status} v={current.v.status} />
-                    {current.v.city && <Row k={T.merchant.city} v={current.v.city} />}
-                    {/* **والمندوبُ لمن يراقب نشاطَهم وحدَه** (البند ٩). */}
-                    {current.v.rep && <Row k={T.merchant.rep} v={current.v.rep} />}
-                  </dl>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {current.v.phone && (
-                      <a href={`tel:${current.v.phone}`}>
-                        <Button variant="secondary">
-                          <IconPhone size={16} aria-hidden />
-                          {T.contact.call}
-                        </Button>
-                      </a>
-                    )}
-                    <Link href={`/dashboard/sections?merchant=${current.v.id}`}>
-                      <Button variant="secondary">{T.merchant.openPage}</Button>
-                    </Link>
-                  </div>
-                </>
-              )}
-
-              {current.kind === "order" && (
-                <>
-                  {current.v.stuck_reason && (
-                    <div className="mb-3 flex items-center gap-2 text-sm font-bold text-danger">
-                      <Dot tone="order-stuck" />
-                      {T.orderCard.stuck} ·{" "}
-                      {m.admin.ordersPage.alertReasons[
-                        current.v.stuck_reason as keyof typeof m.admin.ordersPage.alertReasons
-                      ] ?? current.v.stuck_reason}
-                    </div>
-                  )}
-                  <dl className="flex flex-col gap-2 text-sm">
-                    <Row k={T.order.state} v={current.v.status} />
-                    <Row k={T.order.merchant} v={current.v.merchant ?? "—"} />
-                    {/* **واسمُ الزبون لمن يملك تفاصيلَه وحدَه** — يحذفه الخادم. */}
-                    {current.v.customer_name && (
-                      <Row k={T.orderCard.customer} v={current.v.customer_name} />
-                    )}
-                    <Row k={T.order.driver} v={current.v.driver ?? T.order.noDriver} />
-                    {current.v.address && <Row k={T.order.area} v={current.v.address} />}
-                    <CustomerLiveRow
-                      live={orders.data?.orders.find((o) => o.id === current.v.id)?.customer_live ?? current.v.customer_live}
-                    />
-                    <Row
-                      k={T.orderCard.age}
-                      v={T.orderCard.minutes.replace("{n}", fmtNum(minutesSince(current.v.created_at)))}
-                    />
-                    <Row k={T.order.createdAt} v={fmtDateTime(current.v.created_at)} />
-                  </dl>
-                  {/* **كم مضى على كلّ مرحلة** — المراحلُ الواقعةُ وحدَها. */}
-                  <OrderSteps order={current.v} />
-                  <dl className="mt-2 flex flex-col gap-2 text-sm">
-                    {/* **والمالُ بصلاحيّته** (البند ١٠). */}
-                    {current.v.total !== undefined && (
-                      <Row k={T.order.total} v={fmtMoney(current.v.total)} />
-                    )}
-                    {current.v.delivery_fee !== undefined && (
-                      <Row k={T.order.delivery} v={fmtMoney(current.v.delivery_fee)} />
-                    )}
-                    {current.v.payment_method && (
-                      <Row k={T.order.payment} v={current.v.payment_method} />
-                    )}
-                  </dl>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {/* **والإسنادُ بمساره القائم** (`AssignDialog`) — بالقرب
-                        وبتأكيدٍ وسبب، **ولمن يملك التدخّل وحدَه.** */}
-                    {canIntervene &&
-                      !current.v.driver_id &&
-                      (current.v.status === "preparing" || current.v.status === "dispatching") && (
-                        <Button onClick={() => setAssigning(current.v)}>
-                          {m.admin.ordersPage.assignHere}
-                        </Button>
-                      )}
-                    <Link href={`/dashboard/orders?id=${current.v.id}`}>
-                      <Button variant="secondary">{T.order.openPage}</Button>
-                    </Link>
-                    {canProfile && current.v.driver_id && (
-                      <Link href={`/dashboard/users?id=${current.v.driver_id}`}>
-                        <Button variant="secondary">{T.driver.openProfile}</Button>
-                      </Link>
-                    )}
-                  </div>
-                </>
-              )}
-
-              {current.kind === "customers" && (
-                <>
-                  <dl className="flex flex-col gap-2 text-sm">
-                    <Row k={T.customerCard.count} v={fmtNum(current.v.count)} />
-                  </dl>
-                  <p className="mt-3 text-xs leading-5 text-ink-muted">
-                    {T.customerCard.privacy.replace("{n}", fmtNum(customers.data?.min_count ?? 3))}
-                  </p>
-                </>
-              )}
-
-              {current.kind === "rep" && (
-                <>
-                  <dl className="flex flex-col gap-2 text-sm">
-                    <Row k={T.rep.merchants} v={fmtNum(current.v.merchants)} />
-                    <Row k={T.rep.converted} v={fmtNum(current.v.converted)} />
-                    {current.v.last_activity && (
-                      <Row k={T.rep.lastActivity} v={fmtDateTime(current.v.last_activity)} />
-                    )}
-                    {current.v.earnings !== undefined && (
-                      <Row k={T.rep.earnings} v={fmtMoney(current.v.earnings)} />
-                    )}
-                  </dl>
-                  <p className="mt-3 text-xs text-ink-muted">{T.repCard.where}</p>
-                </>
-              )}
-
-              {current.kind === "office" && (
-                <>
-                  <dl className="flex flex-col gap-2 text-sm">
-                    <Row k={T.office.address} v={office.data?.address || T.office.noAddress} />
-                  </dl>
-                  <h4 className="mb-1 mt-4 text-sm font-bold">{T.office.online}</h4>
-                  <p className="mb-2 text-xs text-ink-muted">
-                    {T.office.window.replace("{n}", fmtNum(office.data?.presence_min ?? 5))}
-                  </p>
-                  {(office.data?.staff ?? []).length === 0 ? (
-                    <p className="text-sm text-ink-muted">{T.office.noneOnline}</p>
-                  ) : (
-                    <ul className="flex flex-col gap-1.5 text-sm">
-                      {(office.data?.staff ?? []).map((s, i) => (
-                        <li key={`${s.name}-${i}`} className="flex items-baseline gap-2">
-                          <span
-                            className="inline-block h-2 w-2 shrink-0 rounded-full"
-                            style={{ background: toneColor("driver-available") }}
-                          />
-                          <span className="font-medium">{s.name}</span>
-                          <span className="ms-auto text-xs text-ink-muted">
-                            {s.roles.map((r) => roleLabelByCode(r)).join(" · ")}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </>
-              )}
-
-              {current.kind === "zone" && (
-                <>
-                  <dl className="flex flex-col gap-2 text-sm">
-                    <Row
-                      k={T.coverage.shape}
-                      v={current.v.shape === "polygon" ? T.coverage.polygon : T.coverage.radius}
-                    />
-                    <Row k={T.coverage.active} v={current.v.active ? T.yes : T.no} />
-                    {current.v.city && <Row k={T.coverage.city} v={current.v.city} />}
-                    {current.v.shape === "radius" && (
-                      <Row k={T.coverage.radius} v={`${current.v.radius_m} ${T.coverage.metres}`} />
-                    )}
-                  </dl>
-                  {/* **والمنطقةُ تُوقَف ولا تُحذف** — منطقةٌ حُذفت تترك
-                      طلباتٍ تشير إلى عدم. */}
-                  {can("MANAGE_COVERAGE") && (
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <Button
-                        variant="secondary"
-                        onClick={() => setZoneActive(current.v.id, !current.v.active)}
-                      >
-                        {current.v.active ? T.coverage.disable : T.coverage.enable}
-                      </Button>
-                    </div>
-                  )}
-                  <p className="mt-3 text-xs text-ink-muted">{T.coverage.deleteHint}</p>
-                </>
-              )}
-
-              {current.kind === "request" && (
-                <>
-                  <dl className="flex flex-col gap-2 text-sm">
-                    <Row
-                      k={T.request.status}
-                      v={T.request.state[current.v.status as keyof typeof T.request.state]}
-                    />
-                    <Row k={T.request.createdAt} v={fmtDateTime(current.v.created_at)} />
-                    {current.v.address && <Row k={T.request.address} v={current.v.address} />}
-                    {current.v.city && <Row k={T.request.city} v={current.v.city} />}
-                    <Row k={T.request.source} v={current.v.source} />
-                    {current.v.note && <Row k={T.request.note} v={current.v.note} />}
-                  </dl>
-                  {can("MANAGE_COVERAGE") && (
-                    <div className="mt-4">
-                      <Select
-                        label={T.request.changeStatus}
-                        value={current.v.status}
-                        onChange={(e) => setRequestStatus(current.v.id, e.target.value)}
-                      >
-                        <option value="new">{T.request.state.new}</option>
-                        <option value="reviewing">{T.request.state.reviewing}</option>
-                        <option value="planned">{T.request.state.planned}</option>
-                        <option value="covered">{T.request.state.covered}</option>
-                        <option value="rejected">{T.request.state.rejected}</option>
-                      </Select>
-                    </div>
-                  )}
-                </>
-              )}
-              {current.kind === "branch" && (
-                <>
-                  <dl className="flex flex-col gap-2 text-sm">
-                    <Row
-                      k={T.branch.type}
-                      v={current.v.type === "primary" ? T.branch.primary : T.branch.sub}
-                    />
-                    <Row k={T.branch.status} v={current.v.status} />
-                    {current.v.city && <Row k={T.branch.city} v={current.v.city} />}
-                    {current.v.parent && <Row k={T.branch.parent} v={current.v.parent} />}
-                    <Row k={T.layer.areas} v={String(current.v.areas)} />
-                  </dl>
-                  <p className="mt-3 text-xs text-ink-muted">{T.branch.onePrimary}</p>
-                </>
-              )}
-              {current.kind === "closure" && (
-                <>
-                  <dl className="flex flex-col gap-2 text-sm">
-                    <Row
-                      k={T.closure.reason}
-                      v={T.closure.reasons[current.v.reason as keyof typeof T.closure.reasons] ?? current.v.reason}
-                    />
-                    <Row k={T.closure.reports} v={String(current.v.reports)} />
-                    <Row k={T.closure.by} v={current.v.reported_by_name || "—"} />
-                    <Row k={T.closure.until} v={fmtDateTime(current.v.expires_at)} />
-                  </dl>
-                  {can("MANAGE_COVERAGE") && (
-                    <Button className="mt-3 w-full" onClick={() => void clearClosure(current.v.id)}>
-                      {T.closure.clear}
-                    </Button>
-                  )}
-                </>
-              )}
-              {current.kind === "landmark" && (
-                <>
-                  <dl className="flex flex-col gap-2 text-sm">
-                    <Row
-                      k={T.landmark.kind}
-                      v={T.landmark.kinds[current.v.kind as keyof typeof T.landmark.kinds] ?? current.v.kind}
-                    />
-                    <Row k={T.landmark.by} v={current.v.suggested_by_name || "—"} />
-                    <Row k={T.landmark.at} v={fmtDateTime(current.v.created_at)} />
-                  </dl>
-                  {can("MANAGE_COVERAGE") && (
-                    <div className="mt-3 flex gap-2">
-                      <Button className="flex-1" onClick={() => void decideLandmark(current.v.id, true)}>
-                        {T.landmark.approve}
-                      </Button>
-                      <Button className="flex-1" onClick={() => void decideLandmark(current.v.id, false)}>
-                        {T.landmark.reject}
-                      </Button>
-                    </div>
-                  )}
-                </>
-              )}
-              {current.kind === "opportunity" && (
-                <>
-                  <dl className="flex flex-col gap-2 text-sm">
-                    <Row k={T.opportunity.score} v={String(current.v.score)} />
-                    <Row k={T.layer.orders} v={String(current.v.orders)} />
-                    <Row k={T.request.count} v={String(current.v.requests)} />
-                    <Row k={T.layer.merchants} v={String(current.v.merchants)} />
-                    <Row k={T.layer.drivers} v={String(current.v.drivers)} />
-                  </dl>
-                  {/* **ولا درجةَ بلا سببٍ مسمّى** — والأرقامُ الخامُّ
-                      فوقها، فمن لم يقبل الوزنَ حسب بنفسه. */}
-                  <ul className="mt-3 flex flex-col gap-1 text-xs text-ink-muted">
-                    {current.v.reasons.map((why) => (
-                      <li key={why}>
-                        {why === "high_demand_low_coverage" && T.opportunity.highDemandLowCoverage}
-                        {why === "high_demand_low_drivers" && T.opportunity.highDemandLowDrivers}
-                        {why === "many_requests" && T.opportunity.manyRequests}
-                        {why === "merchants_no_drivers" && T.opportunity.merchantsNoDrivers}
-                      </li>
-                    ))}
-                  </ul>
-                  <p className="mt-3 text-xs text-ink-muted">{T.opportunity.explain}</p>
-                </>
-              )}
-            </aside>
-          )}
-        </div>
-
-        {/* ── المرشِّحاتُ والقوائم — تغيب في ملء الشاشة ──────────────── */}
-        <div className={full || !hasSide ? "hidden" : "order-2 flex flex-col gap-4 lg:order-1"}>
-          {/* ── محرِّرُ التغطية (البند ١٣) — حين يُرسَم وحدَه ──────── */}
-          {can("MANAGE_COVERAGE") && drawing && (
-            <Card>
-              <h3 className="mb-2 text-sm font-bold">{T.coverage.title}</h3>
-              <div className="flex flex-col gap-2 text-sm">
-                <Input
-                  placeholder={T.coverage.name}
-                  value={zoneName}
-                  onChange={(e) => setZoneName(e.target.value)}
-                />
-                <p className="text-xs text-ink-muted">
-                  {draft.length} · {T.coverage.needThree}
-                </p>
-                {saveErr && <Alert tone="error">{saveErr}</Alert>}
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    disabled={draft.length < 3 || !zoneName.trim()}
-                    onClick={savePolygon}
-                  >
-                    {T.coverage.save}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    disabled={draft.length === 0}
-                    onClick={() => setDraft((d) => d.slice(0, -1))}
-                  >
-                    {T.coverage.undo}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    onClick={() => { setDrawing(false); setDraft([]); setSaveErr(""); }}
-                  >
-                    {T.coverage.cancel}
-                  </Button>
-                </div>
-              </div>
-              <p className="mt-3 text-xs leading-5 text-ink-muted">
-                {T.coverage.legacyHint}
-              </p>
-            </Card>
-          )}
-
-          {/* ── المندوبون (البند ٢٦) ─────────────────────────── */}
-          {REP_PANEL && can("VIEW_REP_ACTIVITY") && visible.reps && (
-            <Card>
-              <h3 className="mb-1 text-sm font-bold">{T.layer.reps}</h3>
-              <p className="mb-2 text-xs text-ink-muted">{T.rep.noTerritory}</p>
-              <ul className="flex flex-col gap-1 text-sm">
-                {(reps.data?.reps ?? []).slice(0, 15).map((r) => (
-                  <li key={r.id} className="flex items-center gap-2">
-                    <span>{r.name}</span>
-                    <span className="ms-auto text-xs text-ink-muted">
-                      {r.merchants} · {r.converted}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          )}
-
-          {/* **ومن لا موضعَ له يُقال ولا يُرسَم** — وهو أهمُّ ما تقوله
-              الخريطة: تطبيقٌ أوقفه النظامُ وورديّةٌ مفتوحة. */}
-          {noLoc.length > 0 && (
-            <Card>
-              <h3 className="mb-1 text-sm font-bold">{T.freshness.NO_LOCATION}</h3>
-              <p className="mb-2 text-xs text-ink-muted">{T.driver.noLocationHint}</p>
-              <ul className="flex flex-col gap-1 text-sm">
-                {noLoc.slice(0, 12).map((d) => (
-                  <li key={d.id} className="flex items-center gap-2">
-                    <span
-                      className="inline-block h-2 w-2 rounded-full"
-                      style={{ background: toneColor("driver-idle") }}
-                    />
-                    <span>{d.name}</span>
-                    {d.on_shift && (
-                      <span className="ms-auto text-xs text-ink-muted">
-                        {T.driver.onShift}
-                      </span>
-                    )}
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          )}
-        </div>
-      </div>
+        </section>
+      )}
       </div>
       </div>
 
@@ -2379,8 +2134,550 @@ export default function OpsMapPage() {
         />
       )}
 
+      <Toaster />
       {/* **«طلبُ التوسّع بالمكان» انتقل لقسم «طلبات التوسّع»** (قرارُ المالك ٢٠٢٦-١٠-٢٥). */}
     </PageContainer>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **بطاقةُ المُحدَّد** — رأسٌ ملوّنٌ ورقمٌ كبيرٌ وصفوفٌ قليلةٌ وأزرارٌ بعرضها
+// ══════════════════════════════════════════════════════════════════════
+
+type IconT = ComponentType<{ size?: number; className?: string }>;
+
+function SelectedCard({
+  current,
+  office,
+  orders,
+  customersMin,
+  rangeName,
+  maxScore,
+  can,
+  canIntervene,
+  canProfile,
+  canOpenMerchant,
+  busy,
+  actErr,
+  confirming,
+  setConfirming,
+  onClose,
+  onAssign,
+  onZoneActive,
+  onRequestStatus,
+  onClearClosure,
+  onDecideLandmark,
+}: {
+  current: Picked;
+  office: Office | null;
+  orders: OrderPin[];
+  customersMin: number;
+  rangeName: string;
+  maxScore: number;
+  can: (p: string) => boolean;
+  canIntervene: boolean;
+  canProfile: boolean;
+  canOpenMerchant: boolean;
+  busy: boolean;
+  actErr: string;
+  confirming: string | null;
+  setConfirming: (k: string | null) => void;
+  onClose: () => void;
+  onAssign: (o: OrderPin) => void;
+  onZoneActive: (id: string, active: boolean) => void;
+  onRequestStatus: (id: string, status: string) => void;
+  onClearClosure: (id: number) => void;
+  onDecideLandmark: (id: number, approve: boolean) => void;
+}) {
+  const head = (p: {
+    tone?: MapTone;
+    icon?: IconT;
+    tint?: string;
+    title: string;
+    badge?: ReactNode;
+  }) => (
+    <div className="flex items-start gap-3">
+      {p.tone ? (
+        <ToneIcon tone={p.tone} big />
+      ) : (
+        <span className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${p.tint ?? "bg-field text-ink"}`}>
+          {p.icon && <p.icon size={20} />}
+        </span>
+      )}
+      <div className="min-w-0 flex-1">
+        <h3 className="heading-card truncate">{p.title}</h3>
+        {p.badge && <div className="mt-1 flex flex-wrap gap-1">{p.badge}</div>}
+      </div>
+      <button
+        type="button"
+        aria-label={T.close}
+        title={T.close}
+        onClick={onClose}
+        className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-line bg-surface text-ink-muted hover:text-ink"
+      >
+        <IconClose size={16} aria-hidden />
+      </button>
+    </div>
+  );
+  const errBox = actErr ? <Alert tone="error">{actErr}</Alert> : null;
+
+  /** **فعلٌ يسأل أوّلاً** — نقرةٌ تفتح السؤالَ تحتَه، والثانيةُ تنفّذ. */
+  const confirmBox = (key: string, text: string, go: () => void) =>
+    confirming === key ? (
+      <div className="flex flex-col gap-2 rounded-control bg-danger-tint p-3">
+        <p className="text-sm">
+          <b>{P.sure}</b> {text}
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          <Button variant="danger" className="w-full" disabled={busy} onClick={go}>
+            {busy ? P.sending : P.yesGo}
+          </Button>
+          <Button variant="secondary" className="w-full" disabled={busy} onClick={() => setConfirming(null)}>
+            {P.noBack}
+          </Button>
+        </div>
+      </div>
+    ) : null;
+
+  switch (current.kind) {
+    case "driver": {
+      const d = current.v;
+      return (
+        <>
+          {head({
+            tone: driverTone(d.tone),
+            title: d.name,
+            badge: (
+              <>
+                <Badge variant={d.tone === "available" ? "success" : d.tone === "busy" ? "warning" : "neutral"}>
+                  {T.tone[d.tone] ?? T.tone.idle}
+                </Badge>
+                <Badge variant="neutral">{d.on_shift ? T.driver.onShift : T.driver.offShift}</Badge>
+              </>
+            ),
+          })}
+          <Big
+            value={d.active_orders > 0 ? P.inHand.replace("{n}", fmtNum(d.active_orders)) : P.freeNow}
+            sub={
+              // **والمالُ لمن يملك صلاحيّتَه وحدَه** (البند ٦).
+              d.cash_held !== undefined ? P.cashInHand.replace("{amount}", fmtMoney(d.cash_held)) : undefined
+            }
+          />
+          <dl className="flex flex-col gap-2 text-sm">
+            <Row k={T.driver.status} v={pick(ACCOUNT_STATUS, d.status)} />
+            <Row k={T.driver.lastSeen} v={d.last_location_at ? fmtDateTime(d.last_location_at) : P.unknown} />
+            <Row k={T.live} v={T.freshness[d.freshness]} />
+          </dl>
+          <div className="grid grid-cols-1 gap-2">
+            {/* **والهاتفُ لا يصل إلّا لمن يملك `users.contact.read`** — يحذفه الخادم. */}
+            {d.phone && <ContactButtons phone={d.phone} />}
+            {d.current_order && (
+              <Link href={`/dashboard/orders?id=${d.current_order}`}>
+                <Button variant="secondary" className="w-full">
+                  <IconOrder size={16} aria-hidden />
+                  {T.order.openPage}
+                </Button>
+              </Link>
+            )}
+            {/* **إلى ملفّ السائق نفسِه** (تدقيقُ ٢٠٢٦-١٠-٢٧): كان `/dashboard/users?id=` — وقائمةُ
+                الحسابات لا تقرأ `id`، فيصل إلى الناس كلِّهم. */}
+            {canProfile && (
+              <Link href={`/dashboard/users/${d.id}`}>
+                <Button variant="secondary" className="w-full">
+                  <IconUser size={16} aria-hidden />
+                  {T.driver.openProfile}
+                </Button>
+              </Link>
+            )}
+          </div>
+        </>
+      );
+    }
+
+    case "merchant": {
+      const x = current.v;
+      return (
+        <>
+          {head({
+            tone: storeTone(x.open_now),
+            title: x.name,
+            badge: (
+              <Badge variant={x.open_now ? "success" : "neutral"}>
+                {x.open_now ? T.merchant.open : T.merchant.closed}
+              </Badge>
+            ),
+          })}
+          <Big value={P.activeAtStore.replace("{n}", fmtNum(x.active_orders))} />
+          <dl className="flex flex-col gap-2 text-sm">
+            <Row k={T.merchant.status} v={pick(MERCHANT_STATUS, x.status)} />
+            {x.city && <Row k={T.merchant.city} v={x.city} />}
+            {/* **والمندوبُ لمن يراقب نشاطَهم وحدَه** (البند ٩). */}
+            {x.rep && <Row k={T.merchant.rep} v={x.rep} />}
+          </dl>
+          <div className="grid grid-cols-1 gap-2">
+            {x.phone && (
+              <a href={`tel:${x.phone}`}>
+                <Button variant="secondary" className="w-full">
+                  <IconPhone size={16} aria-hidden />
+                  {T.contact.call}
+                </Button>
+              </a>
+            )}
+            {/* **إلى صفحة المتجر نفسِه، ولمن تُفتح له** (تدقيقُ ٢٠٢٦-١٠-٢٧): كان
+                `/dashboard/sections?merchant=` — والسوقُ لا يقرأ `merchant`. */}
+            {canOpenMerchant && (
+              <Link href={`/dashboard/merchants/${x.id}`}>
+                <Button variant="secondary" className="w-full">
+                  <IconStore size={16} aria-hidden />
+                  {T.merchant.openPage}
+                </Button>
+              </Link>
+            )}
+          </div>
+        </>
+      );
+    }
+
+    case "order": {
+      const o = current.v;
+      const stuck = !!o.stuck_reason;
+      return (
+        <>
+          {head({
+            tone: orderTone(o.stuck_reason),
+            title: `#${fmtNum(o.number)}`,
+            badge: (
+              <>
+                <Badge variant={stuck ? "danger" : "info"}>{pick(ORDER_STATUS, o.status)}</Badge>
+                {stuck && (
+                  <Badge variant="danger">
+                    {T.orderCard.stuck} ·{" "}
+                    {pick(m.admin.ordersPage.alertReasons as Record<string, string>, o.stuck_reason)}
+                  </Badge>
+                )}
+              </>
+            ),
+          })}
+          <Big
+            label={P.orderAgeLabel}
+            value={P.orderAge.replace("{n}", fmtNum(minutesSince(o.created_at)))}
+            // **والمالُ بصلاحيّته** (البند ١٠).
+            sub={o.total !== undefined ? `${T.order.total}: ${fmtMoney(o.total)}` : undefined}
+            danger={stuck}
+          />
+          <dl className="flex flex-col gap-2 text-sm">
+            <Row k={T.order.merchant} v={o.merchant ?? P.unknown} />
+            {/* **واسمُ الزبون لمن يملك تفاصيلَه وحدَه** — يحذفه الخادم. */}
+            {o.customer_name && <Row k={T.orderCard.customer} v={o.customer_name} />}
+            <Row k={T.order.driver} v={o.driver ?? T.order.noDriver} />
+            {o.address && <Row k={T.order.area} v={o.address} />}
+            {o.payment_method && <Row k={T.order.payment} v={pick(PAYMENT, o.payment_method)} />}
+            {o.delivery_fee !== undefined && <Row k={T.order.delivery} v={fmtMoney(o.delivery_fee)} />}
+            <Row k={T.order.createdAt} v={fmtDateTime(o.created_at)} />
+          </dl>
+          <CustomerLiveRow live={orders.find((y) => y.id === o.id)?.customer_live ?? o.customer_live} />
+          {/* **كم مضى على كلّ مرحلة** — المراحلُ الواقعةُ وحدَها. */}
+          <OrderSteps order={o} />
+          <div className="grid grid-cols-1 gap-2">
+            {/* **والإسنادُ بمساره القائم** (`AssignDialog`) — بالقرب وبتأكيدٍ وسبب، **ولمن يملك التدخّل وحدَه.** */}
+            {canIntervene && !o.driver_id && (o.status === "preparing" || o.status === "dispatching") && (
+              <Button className="w-full" onClick={() => onAssign(o)}>
+                <IconMoto size={16} aria-hidden />
+                {m.admin.ordersPage.assignHere}
+              </Button>
+            )}
+            <Link href={`/dashboard/orders?id=${o.id}`}>
+              <Button variant="secondary" className="w-full">
+                <IconOrder size={16} aria-hidden />
+                {T.order.openPage}
+              </Button>
+            </Link>
+            {canProfile && o.driver_id && (
+              <Link href={`/dashboard/users/${o.driver_id}`}>
+                <Button variant="secondary" className="w-full">
+                  <IconUser size={16} aria-hidden />
+                  {T.driver.openProfile}
+                </Button>
+              </Link>
+            )}
+          </div>
+        </>
+      );
+    }
+
+    case "customers": {
+      const c = current.v;
+      return (
+        <>
+          {head({ tone: "customer", title: T.customerCard.title })}
+          <Big value={P.customersN.replace("{n}", fmtNum(c.count))} />
+          <p className="text-xs leading-5 text-ink-muted">
+            {T.customerCard.privacy.replace("{n}", fmtNum(customersMin))}
+          </p>
+        </>
+      );
+    }
+
+    case "rep": {
+      const r = current.v;
+      // **ورصيدُ المحفظة يُقال باتّجاهه** (تدقيقُ ٢٠٢٦-١٠-٢٧): «مستحقّاته: -٤٫٩٩» كانت تُقرأ
+      // مالاً له وهو عليه. **عرضٌ فقط — لا يُمسّ كيف يُحسب.**
+      const wallet =
+        r.earnings === undefined
+          ? undefined
+          : r.earnings < 0
+            ? P.walletOwes.replace("{amount}", fmtMoney(Math.abs(r.earnings)))
+            : P.walletHas.replace("{amount}", fmtMoney(r.earnings));
+      return (
+        <>
+          {head({ tone: "rep", title: r.name })}
+          <Big label={P.storesAll} value={fmtNum(r.merchants)} />
+          <dl className="flex flex-col gap-2 text-sm">
+            <Row k={P.rangeOf.replace("{label}", T.rep.converted).replace("{range}", rangeName)} v={fmtNum(r.converted)} />
+            {r.last_activity && <Row k={T.rep.lastActivity} v={fmtDateTime(r.last_activity)} />}
+            {wallet && <Row k={T.rep.earnings} v={wallet} danger={(r.earnings ?? 0) < 0} />}
+          </dl>
+          <p className="text-xs text-ink-muted">{T.repCard.where}</p>
+        </>
+      );
+    }
+
+    case "office": {
+      const staff = office?.staff ?? [];
+      return (
+        <>
+          {head({ icon: IconOverview, tint: "bg-paper text-on-bright border border-line", title: office?.name || T.office.title })}
+          <Big value={P.staffN.replace("{n}", fmtNum(staff.length))} sub={T.office.window.replace("{n}", fmtNum(office?.presence_min ?? 5))} />
+          <dl className="flex flex-col gap-2 text-sm">
+            <Row k={T.office.address} v={office?.address || T.office.noAddress} />
+          </dl>
+          {staff.length === 0 ? (
+            <p className="text-sm text-ink-muted">{T.office.noneOnline}</p>
+          ) : (
+            <ul className="flex flex-col gap-1.5 text-sm">
+              {staff.map((s, i) => (
+                <li key={`${s.name}-${i}`} className="flex items-baseline gap-2">
+                  <Dot tone="driver-available" />
+                  <span className="font-medium">{s.name}</span>
+                  <span className="ms-auto text-xs text-ink-muted">
+                    {s.roles.map((rc) => roleLabelByCode(rc)).join(" · ")}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      );
+    }
+
+    case "zone": {
+      const z = current.v;
+      const key = `zone-${z.id}`;
+      return (
+        <>
+          {head({
+            icon: IconZones,
+            tint: z.active ? "bg-accent text-on-bright" : "bg-field text-ink-muted",
+            title: z.name,
+            badge: <Badge variant={z.active ? "success" : "neutral"}>{z.active ? P.zoneOn : P.zoneOff}</Badge>,
+          })}
+          <dl className="flex flex-col gap-2 text-sm">
+            <Row k={T.coverage.shape} v={z.shape === "polygon" ? T.coverage.polygon : T.coverage.radius} />
+            {z.city && <Row k={T.coverage.city} v={z.city} />}
+            {z.shape === "radius" && <Row k={T.coverage.radius} v={P.metres.replace("{n}", fmtNum(z.radius_m))} />}
+          </dl>
+          {errBox}
+          {/* **والمنطقةُ تُوقَف ولا تُحذف** — منطقةٌ حُذفت تترك طلباتٍ تشير إلى عدم. */}
+          {can("MANAGE_COVERAGE") &&
+            (confirmBox(key, P.confirmDisable, () => onZoneActive(z.id, false)) ?? (
+              <Button
+                variant={z.active ? "danger" : "primary"}
+                className="w-full"
+                disabled={busy}
+                onClick={() => (z.active ? setConfirming(key) : onZoneActive(z.id, true))}
+              >
+                {busy ? P.sending : z.active ? T.coverage.disable : T.coverage.enable}
+              </Button>
+            ))}
+          <p className="text-xs text-ink-muted">{T.coverage.deleteHint}</p>
+        </>
+      );
+    }
+
+    case "request": {
+      const q = current.v;
+      const key = `request-${q.id}`;
+      const states = ["new", "reviewing", "planned", "covered", "rejected"] as const;
+      return (
+        <>
+          {head({
+            icon: IconLocation,
+            tint: "bg-violet-tint text-violet",
+            title: T.request.title,
+            badge: (
+              <Badge variant={q.status === "covered" ? "success" : q.status === "rejected" ? "neutral" : "violet"}>
+                {pick(T.request.state as Record<string, string>, q.status)}
+              </Badge>
+            ),
+          })}
+          <dl className="flex flex-col gap-2 text-sm">
+            <Row k={T.request.createdAt} v={fmtDateTime(q.created_at)} />
+            {q.address && <Row k={T.request.address} v={q.address} />}
+            {q.city && <Row k={T.request.city} v={q.city} />}
+            <Row k={T.request.source} v={sourceLabel(q.source)} />
+            {q.note && <Row k={T.request.note} v={q.note} />}
+          </dl>
+          {errBox}
+          {can("MANAGE_COVERAGE") && (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs text-ink-muted">{P.requestStatusPick}</span>
+              <Chips
+                items={states.map((s) => ({ id: s, label: T.request.state[s], disabled: busy }))}
+                value={q.status}
+                onChange={(s) => {
+                  if (s === q.status || busy) return;
+                  if (s === "rejected") setConfirming(key);
+                  else onRequestStatus(q.id, s);
+                }}
+                wrap
+              />
+              {confirmBox(key, P.confirmRequestReject, () => onRequestStatus(q.id, "rejected"))}
+            </div>
+          )}
+        </>
+      );
+    }
+
+    case "branch": {
+      const b = current.v;
+      return (
+        <>
+          {head({
+            icon: IconStore,
+            tint: b.type === "primary" ? "bg-accent text-on-bright" : "bg-field text-ink",
+            title: b.name,
+            badge: <Badge variant={b.status === "active" ? "success" : "neutral"}>{pick(BRANCH_STATUS, b.status)}</Badge>,
+          })}
+          <dl className="flex flex-col gap-2 text-sm">
+            <Row k={T.branch.type} v={b.type === "primary" ? T.branch.primary : T.branch.sub} />
+            {b.city && <Row k={T.branch.city} v={b.city} />}
+            {b.parent && <Row k={T.branch.parent} v={b.parent} />}
+            <Row k={T.layer.areas} v={P.areaUnit.replace("{n}", fmtNum(b.areas))} />
+          </dl>
+          <p className="text-xs text-ink-muted">{T.branch.onePrimary}</p>
+        </>
+      );
+    }
+
+    case "closure": {
+      const c = current.v;
+      const key = `closure-${c.id}`;
+      return (
+        <>
+          {head({
+            icon: IconBlock,
+            tint: "bg-danger-solid text-on-solid",
+            title: T.closure.title,
+            badge: (
+              <Badge variant="danger">
+                {pick(T.closure.reasons as Record<string, string>, c.reason)}
+              </Badge>
+            ),
+          })}
+          <Big value={P.reportsN.replace("{n}", fmtNum(c.reports))} label={T.closure.reports} />
+          <dl className="flex flex-col gap-2 text-sm">
+            <Row k={T.closure.by} v={c.reported_by_name || P.unknown} />
+            <Row k={T.closure.until} v={fmtDateTime(c.expires_at)} />
+          </dl>
+          {errBox}
+          {can("MANAGE_COVERAGE") &&
+            (confirmBox(key, P.confirmClear, () => onClearClosure(c.id)) ?? (
+              <Button className="w-full" disabled={busy} onClick={() => setConfirming(key)}>
+                <IconRoute size={16} aria-hidden />
+                {T.closure.clear}
+              </Button>
+            ))}
+        </>
+      );
+    }
+
+    case "landmark": {
+      const l = current.v;
+      const key = `landmark-${l.id}`;
+      return (
+        <>
+          {head({
+            icon: IconStar,
+            tint: "bg-accent text-on-bright",
+            title: l.name,
+            badge: <Badge variant="accent">{pick(T.landmark.kinds as Record<string, string>, l.kind)}</Badge>,
+          })}
+          <dl className="flex flex-col gap-2 text-sm">
+            <Row k={T.landmark.by} v={l.suggested_by_name || P.unknown} />
+            <Row k={T.landmark.at} v={fmtDateTime(l.created_at)} />
+          </dl>
+          {errBox}
+          {can("MANAGE_COVERAGE") &&
+            (confirmBox(key, P.confirmReject, () => onDecideLandmark(l.id, false)) ?? (
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <Button className="w-full" disabled={busy} onClick={() => onDecideLandmark(l.id, true)}>
+                  {busy ? P.sending : T.landmark.approve}
+                </Button>
+                <Button variant="danger" className="w-full" disabled={busy} onClick={() => setConfirming(key)}>
+                  {T.landmark.reject}
+                </Button>
+              </div>
+            ))}
+        </>
+      );
+    }
+
+    case "opportunity": {
+      const o = current.v;
+      // **قوّةُ الفرصة كلمةٌ لا رقمٌ بلا معنى** — نسبةً إلى أقوى فرصةٍ معروضة.
+      const ratio = o.score / maxScore;
+      const strength = ratio >= 0.66 ? P.strong : ratio >= 0.33 ? P.medium : P.weak;
+      return (
+        <>
+          {head({ icon: IconTrendUp, tint: "bg-danger-solid text-on-solid", title: T.opportunity.title })}
+          <Big label={T.opportunity.score} value={strength} sub={fmtNum(o.score)} />
+          <dl className="flex flex-col gap-2 text-sm">
+            <Row k={T.layer.orders} v={fmtNum(o.orders)} />
+            <Row k={T.layer.coverageRequests} v={fmtNum(o.requests)} />
+            <Row k={T.layer.merchants} v={fmtNum(o.merchants)} />
+            <Row k={T.layer.drivers} v={fmtNum(o.drivers)} />
+          </dl>
+          {/* **ولا درجةَ بلا سببٍ مسمّى** — والأرقامُ الخامُّ فوقها، فمن لم يقبل الوزنَ حسب بنفسه. */}
+          {o.reasons.length > 0 && (
+            <div className="flex flex-col gap-1">
+              <span className="text-xs font-bold text-ink-muted">{P.opportunityWhy}</span>
+              <ul className="flex flex-col gap-1 text-sm">
+                {o.reasons.map((why) => (
+                  <li key={why} className="border-s-2 border-line ps-2">
+                    {why === "high_demand_low_coverage" && T.opportunity.highDemandLowCoverage}
+                    {why === "high_demand_low_drivers" && T.opportunity.highDemandLowDrivers}
+                    {why === "many_requests" && T.opportunity.manyRequests}
+                    {why === "merchants_no_drivers" && T.opportunity.merchantsNoDrivers}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <p className="text-xs text-ink-muted">{T.opportunity.explain}</p>
+        </>
+      );
+    }
+  }
+}
+
+/** **الرقمُ الأهمّ في البطاقة** — كبيرٌ في صندوقٍ هادئ، وسطرٌ صغيرٌ تحته. */
+function Big({ label, value, sub, danger }: { label?: string; value: string; sub?: string; danger?: boolean }) {
+  return (
+    <div className={`rounded-control px-3 py-2.5 ${danger ? "bg-danger-tint" : "bg-field"}`}>
+      {label && <span className="block text-2xs text-ink-muted">{label}</span>}
+      <span className={`figure block ${danger ? "text-danger" : ""}`}>{value}</span>
+      {sub && <span className="block text-xs text-ink-muted">{sub}</span>}
+    </div>
   );
 }
 
@@ -2407,36 +2704,6 @@ function kindLabel(kind: string): string {
   return T.layer[key as keyof typeof T.layer];
 }
 
-/** **مفتاحُ تركيزٍ** — حبّةٌ صغيرةٌ بجوار العدّادات. */
-function FocusToggle({
-  on,
-  label,
-  hint,
-  tone,
-  onClick,
-}: {
-  on: boolean;
-  label: string;
-  hint: string;
-  tone: MapTone;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      aria-pressed={on}
-      title={hint}
-      onClick={onClick}
-      className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-bold ${
-        on ? "border-primary bg-primary-tint text-ink" : "border-line bg-surface text-ink-muted hover:text-ink"
-      }`}
-    >
-      <Dot tone={tone} />
-      {label}
-    </button>
-  );
-}
-
 /** **زرُّ أداةٍ فوق الخريطة** — مربّعٌ صغيرٌ باسمه في التلميح. */
 function MapTool({ label, onClick, children }: { label: string; onClick: () => void; children: ReactNode }) {
   return (
@@ -2457,7 +2724,7 @@ function OrderSteps({ order }: { order: OrderPin }) {
   const steps = orderTimeline(order, Date.now());
   if (steps.length === 0) return null;
   return (
-    <div className="mt-3">
+    <div>
       <h4 className="mb-1.5 text-xs font-bold text-ink-muted">{T.timeline.title}</h4>
       <ol className="flex flex-col gap-1.5 border-s-2 border-line ps-3 text-sm">
         {steps.map((st) => (
@@ -2473,37 +2740,16 @@ function OrderSteps({ order }: { order: OrderPin }) {
   );
 }
 
-/** **نقطةُ المكتب** — دائرةٌ بيضاءُ كعلامته على الخريطة. */
-function OfficeDot() {
-  return (
-    <span
-      aria-hidden
-      className="inline-block h-2.5 w-2.5 shrink-0 rounded-full border border-line bg-paper"
-    />
-  );
-}
-
-/** **عدّادٌ في الشريط** — رقمٌ ولونُه واسمُه. */
-function Counter({ n, label, tone }: { n: number; label: string; tone: MapTone }) {
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      <Dot tone={tone} />
-      <span className="font-bold tabular-nums">{fmtNum(n)}</span>
-      <span className="text-ink-muted">{label}</span>
-    </span>
-  );
-}
-
 /** **رمزُ حالٍ كما يُرسم على الخريطة** — دائرةٌ ورمزٌ أبيض. */
-function ToneIcon({ tone }: { tone: MapTone }) {
+function ToneIcon({ tone, big = false }: { tone: MapTone; big?: boolean }) {
   const Glyph = MAP_TONES[tone].glyph;
   return (
     <span
       aria-hidden
-      className="grid h-6 w-6 shrink-0 place-items-center rounded-full border-2 border-paper"
+      className={`grid shrink-0 place-items-center rounded-full border-2 border-paper ${big ? "h-11 w-11" : "h-6 w-6"}`}
       style={{ background: toneColor(tone) }}
     >
-      <Glyph size={13} color={themeColor("on-solid")} strokeWidth={2.25} />
+      <Glyph size={big ? 20 : 13} color={themeColor("on-solid")} strokeWidth={2.25} />
     </span>
   );
 }
@@ -2523,9 +2769,9 @@ function Legend() {
     ["rep", L.rep],
   ];
   return (
-    <div className="flex flex-col gap-2">
-      <h4 className="text-sm font-bold">{T.bar.legendTitle}</h4>
-      <ul className="flex flex-col gap-1.5 text-xs">
+    <div className="flex flex-col gap-2 rounded-control bg-field p-3">
+      <h3 className="heading-card">{T.bar.legendTitle}</h3>
+      <ul className="grid grid-cols-1 gap-1.5 text-xs sm:grid-cols-2">
         {rows.map(([tone, label]) => (
           <li key={tone} className="flex items-center gap-2">
             <ToneIcon tone={tone} />
@@ -2573,41 +2819,19 @@ function Legend() {
 /** **زرّا الاتّصال وواتساب** — والهاتفُ لا يصل إلّا لمن يملكه. */
 function ContactButtons({ phone }: { phone: string }) {
   return (
-    <>
+    <div className="grid grid-cols-2 gap-2">
       <a href={`tel:${phone}`}>
-        <Button variant="secondary">
+        <Button variant="secondary" className="w-full">
           <IconPhone size={16} aria-hidden />
           {T.contact.call}
         </Button>
       </a>
       <a href={waLink(phone)} target="_blank" rel="noopener noreferrer">
-        <Button variant="secondary">
+        <Button variant="secondary" className="w-full">
           <IconWhatsApp size={16} aria-hidden />
           {T.contact.whatsapp}
         </Button>
       </a>
-    </>
-  );
-}
-
-/** **مفتاحُ طبقةٍ وعدّادُها** — والعددُ يقول «هل ثمّة شيءٌ أصلاً». */
-function LayerToggle({
-  id,
-  label,
-  on,
-  count,
-  onToggle,
-}: {
-  id: string;
-  label: string;
-  on: boolean;
-  count?: number;
-  onToggle: (id: string) => void;
-}) {
-  return (
-    <div className="flex items-center gap-2">
-      <Checkbox id={`layer-${id}`} label={label} checked={on} onChange={() => onToggle(id)} />
-      <span className="ms-auto text-xs text-ink-muted">{count ?? 0}</span>
     </div>
   );
 }
@@ -2635,66 +2859,41 @@ function CustomerLiveRow({ live }: { live?: OrderPin["customer_live"] }) {
   const bits = [C.liveAgo.replace("{n}", fmtNum(ago))];
   if (live.accuracy_m != null) bits.push(C.liveAccuracy.replace("{n}", fmtNum(Math.round(live.accuracy_m))));
   return (
-    <div className="flex flex-col gap-1 rounded-control bg-accent-tint p-2">
+    <div className="flex flex-col gap-2 rounded-control bg-accent-tint p-3">
       <Row k={C.live} v={bits.join(" · ")} />
       {live.pin_gap_m > 50 && (
         <p className="text-xs font-bold text-danger">
           {C.liveFar.replace("{n}", fmtNum(Math.round(live.pin_gap_m)))}
         </p>
       )}
-      <div className="flex flex-wrap items-center gap-2">
-        <span dir="ltr" className="select-all font-mono text-xs">
-          {coords}
-        </span>
+      <span dir="ltr" className="select-all text-center font-mono text-xs">
+        {coords}
+      </span>
+      <div className="grid grid-cols-2 gap-2">
         <Button
           variant="secondary"
+          className="w-full"
           onClick={() => {
             void navigator.clipboard?.writeText(coords).then(() => setCopied(true));
           }}
         >
           {copied ? C.copied : C.copyCoords}
         </Button>
-        <a
-          href={`https://www.google.com/maps?q=${coords}`}
-          target="_blank"
-          rel="noreferrer"
-          className="text-xs font-bold text-accent-text underline"
-        >
-          {C.openGoogle}
+        <a href={`https://www.google.com/maps?q=${coords}`} target="_blank" rel="noreferrer">
+          <Button variant="secondary" className="w-full">
+            {C.openGoogle}
+          </Button>
         </a>
       </div>
     </div>
   );
 }
 
-function Row({ k, v }: { k: string; v: string }) {
+function Row({ k, v, danger }: { k: string; v: string; danger?: boolean }) {
   return (
     <div className="flex items-baseline gap-2">
       <dt className="text-ink-muted">{k}</dt>
-      <dd className="ms-auto font-medium">{v}</dd>
+      <dd className={`ms-auto text-end font-medium ${danger ? "text-danger" : ""}`}>{v}</dd>
     </div>
-  );
-}
-
-/** **مرشِّحٌ ثلاثيّ** — والفراغُ «الكلّ» لا «لا». */
-function Tri({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: "" | "true" | "false";
-  onChange: (v: "" | "true" | "false") => void;
-}) {
-  return (
-    <Select
-      label={label}
-      value={value}
-      onChange={(e) => onChange(e.target.value as "" | "true" | "false")}
-    >
-      <option value="">{T.all}</option>
-      <option value="true">{T.yes}</option>
-      <option value="false">{T.no}</option>
-    </Select>
   );
 }

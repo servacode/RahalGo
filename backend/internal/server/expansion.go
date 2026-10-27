@@ -82,6 +82,10 @@ type expansionRow struct {
 	// Waiting **صفوفٌ لم تُبلَّغ** · Notified **صفوفٌ بُلّغت.**
 	Waiting  int `json:"waiting"`
 	Notified int `json:"notified"`
+	// WaitingAccounts **طلباتُ «أضف منطقتي» لها حسابٌ ولم تُبلَّغ** (`expPending`) —
+	// **ومجموعُها عبر الصفوف عينُ `waiting_not_notified`**، فيفلتر بها «لسا ما انبلغوا»
+	// ولا تظهر بطاقةٌ كلُّ طلباتها بلا حساب (تدقيقُ ٢٠٢٦-١٠-٢٧).
+	WaitingAccounts int `json:"waiting_accounts"`
 	// Notifiable **كم يُبلَّغ لو ضُغط الزرُّ الآن** — يُعرض قبل الضغط.
 	Notifiable int    `json:"notifiable"`
 	Status     string `json:"status"`
@@ -99,6 +103,20 @@ type expansionSummary struct {
 	PendingNotify int            `json:"pending_notify"`
 	ReadyPlaces   int            `json:"ready_places"`
 	Rows          []expansionRow `json:"rows"`
+	// ByCity **التجميعُ بالمدينة والمحافظة من الصفوف نفسِها** — فلا يفترق رقمُ
+	// المدينة عن مجموع أماكنها (كانت لوحةٌ منفصلةٌ تعدّ الملغى والمرفوض).
+	ByCity []expansionCity `json:"by_city"`
+}
+
+// expansionCity **مدينةٌ في تجميع التوسّع** — الأشخاصُ متميّزون فيها.
+type expansionCity struct {
+	CityID          string `json:"city_id"`
+	CityName        string `json:"city_name"`
+	GovernorateID   string `json:"governorate_id"`
+	GovernorateName string `json:"governorate_name"`
+	People          int    `json:"people"`
+	Requests        int    `json:"requests"`
+	Places          int    `json:"places"`
 }
 
 // expRaw صفٌّ خامٌّ من القاعدة.
@@ -245,6 +263,14 @@ func (s *Server) expansion(ctx context.Context) (expansionSummary, error) {
 	groups := map[string]*group{}
 	var order []string
 
+	type cityAgg struct {
+		row    *expansionCity
+		people map[string]bool
+		places map[string]bool
+	}
+	byCity := map[string]*cityAgg{}
+	var cityOrder []string
+
 	for _, x := range raws {
 		who := x.id
 		if x.uid != nil {
@@ -301,7 +327,41 @@ func (s *Server) expansion(ctx context.Context) (expansionSummary, error) {
 		} else {
 			r.Notified++
 		}
+		if x.kind == opsmap.KindCoverage && expPending(x) {
+			r.WaitingAccounts++
+		}
+
+		// **والمدينةُ مدينةُ الصفّ** — فإن جُهلت جُمعت بالمحافظة، وإلّا «مكانٌ غيرُ معروف».
+		ck := "city:" + r.CityID
+		if r.CityID == "" {
+			ck = "gov:" + r.GovernorateID
+		}
+		c := byCity[ck]
+		if c == nil {
+			c = &cityAgg{row: &expansionCity{CityID: r.CityID, CityName: r.CityName,
+				GovernorateID: r.GovernorateID, GovernorateName: r.GovernorateName},
+				people: map[string]bool{}, places: map[string]bool{}}
+			byCity[ck] = c
+			cityOrder = append(cityOrder, ck)
+		}
+		c.people[who] = true
+		c.places[k] = true
+		c.row.Requests += x.requests
 	}
+
+	sum.ByCity = make([]expansionCity, 0, len(cityOrder))
+	for _, ck := range cityOrder {
+		c := byCity[ck]
+		c.row.People, c.row.Places = len(c.people), len(c.places)
+		sum.ByCity = append(sum.ByCity, *c.row)
+	}
+	sort.SliceStable(sum.ByCity, func(i, j int) bool {
+		a, b := sum.ByCity[i], sum.ByCity[j]
+		if a.People != b.People {
+			return a.People > b.People
+		}
+		return a.CityName < b.CityName
+	})
 
 	for _, k := range order {
 		g := groups[k]

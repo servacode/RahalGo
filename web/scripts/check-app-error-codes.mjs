@@ -115,9 +115,14 @@ const SERVER_ADMIN = new Set([
   "webpush_disabled",
   // **قطع الجهازُ الطلبَ قبل الردّ** — لا يصل الهاتفَ أصلاً (٢٠٢٦-١٠-١٤).
   "client_closed",
+  // **الحسابُ المحذوفُ لا تتبدّل حالُه** — بابُ قائمة الحسابات في اللوحة (٢٠٢٦-١٠-٢٧).
+  "account_deleted",
   "setting_conflict", "setting_placeholder_missing",
+  // **حصّةُ المنصّة بالنسبة فوق ٩٠٪** — صفحةُ الإعدادات وحدَها (قرارُ المالك ٢٠٢٦-١٠-٢٧).
+  "platform_share_over_max",
   "emergency_steps_pending", "emergency_step_done", "emergency_no_order",
   "emergency_no_driver", "emergency_bad_outcome", "emergency_outcome_stage",
+  "emergency_halt_active",
   "expense_future_date", "expense_receipt_required", "expense_void_reason_required",
   "expense_void_self", "expense_category_inactive", "expense_bad_range",
   // قراراتُ المالك ٢٠٢٦-١٠-١٥ — المصروفاتُ والتعويضات: شاشةُ الإدارة وحدَها.
@@ -151,6 +156,8 @@ const SERVER_ADMIN = new Set([
   // وحسمُ البضاعة وتعويضُ المتجر بابان للإدارة وحدَها.
   "transfer_delivery_kind", "goods_compensation_finance", "goods_not_handed",
   "goods_wrong_place", "goods_compensation_cap", "goods_already_compensated",
+  // **«ما في تعويض»** (قرارُ المالك ٢٠٢٦-١٠-٢٧) — بابُ الماليّة في اللوحة وحدَه.
+  "goods_comp_none", "goods_comp_pending",
   "compensation_above_cap", "compensation_ambiguous", "compensation_duplicate",
   "driver_off_shift", "order_already_taken",
   // ── staging-only QA fixtures (qa/* endpoints; never reach a real mobile client) ──

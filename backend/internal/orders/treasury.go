@@ -126,9 +126,11 @@ func (s *Service) creditTreasury(ctx context.Context, q wallet.Querier, orderID,
 		`SELECT wallet_paid, cash_due, status, kind,
 		        -- **ونقدُ التوصيلة ما قُبض فعلاً** (قرارُ المالك ٢٠٢٦-١٠-١٥) — «أنا نقداً»
 		        -- يُقبض عند الاستلام لا التسليم، فيُقرأ من الصندوق لا من الحال.
+		        -- **وما ردّه السائقُ للمستلِم يُطرح** (قرارُ المالك ٢٠٢٦-١٠-٢٧) — سطرٌ سالب.
 		        CASE WHEN kind = 'merchant_delivery'
 		             THEN COALESCE((SELECT sum(e.amount) FROM driver_cash_entries e
-		                            WHERE e.ref = orders.id::text AND e.kind = 'order_collection'), 0)
+		                            WHERE e.ref = orders.id::text
+		                              AND e.kind IN ('order_collection', 'recipient_cash_returned')), 0)
 		             ELSE 0 END,
 		        -- **وما دفعه السائقُ للمتجر لا الثمنُ كلُّه** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
 		        -- مع متجرٍ تابعٍ يدفع الثمنَ ناقصَ العمولة، **فتبقى العمولةُ للمنصّة.**
@@ -144,6 +146,30 @@ func (s *Service) creditTreasury(ctx context.Context, q wallet.Querier, orderID,
 		 FROM orders WHERE id = $1`, orderID).
 		Scan(&walletPaid, &cashDue, &status, &kind, &collected, &goods, &lost); err != nil {
 		return err
+	}
+	// ══════════════════════════════════════════════════════════════════
+	// **والمدفوعُ من المحفظة يُقرأ من قيود الدفع لا من العمود** (قرارُ المالك ٢٠٢٦-١٠-٢٧)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **`wallet_paid` ينزل حين يُحذف صنفٌ غيرُ متوفّر** (`MarkItemUnavailable` — الخطوة ٦)
+	// **ويُكتب الفرقُ قيدَ `refund` معه.** فلو أُخذ العمودُ مدفوعاً ثمّ طُرح كلُّ `refund`
+	// لَطُرح الردُّ مرّتين: طلبٌ ٣٥٠٠ رُدّ منه ٦٠٠ قُيّد ربحُه ٤٠ لا ٦٤٠، واختلّ `FI-06.a`.
+	//
+	// **والقيدُ لا ينزل**: `order_payment` هو ما خرج من المحفظة فعلاً، والردودُ كلُّها
+	// تُطرح تحت مرّةً واحدة. **والعمودُ يبقى لما بقي مدفوعاً** — فيُردّ عند الإلغاء
+	// الباقي لا الأصل. وفي سائر الطلبات (العاديّ والخاصّ والتوصيلة) القيدُ = العمود.
+	//
+	// **وطلبٌ بلا قيدِ دفعٍ أصلاً يبقى على عموده** — شاهدُه الوحيد (وغيابُ القيد خرقٌ
+	// يقرؤه `FI-04.b`، لا تُعيد الخزينةُ كتابتَه بصمت).
+	var ledgerPaid int64
+	var payments int
+	if err := q.QueryRow(ctx, `
+		SELECT -COALESCE(sum(amount), 0), count(*) FROM wallet_transactions
+		WHERE ref = $1 AND kind = 'order_payment'`, orderID).Scan(&ledgerPaid, &payments); err != nil {
+		return err
+	}
+	if payments > 0 {
+		walletPaid = ledgerPaid
 	}
 	// **والاسترجاعُ لا يُلغي قبضاً وقع.**
 	//

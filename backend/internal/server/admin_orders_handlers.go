@@ -187,6 +187,15 @@ type boardMeta struct {
 	// StaleLocationMin **متى يُعدّ موضعُ السائق متوقّفاً** — الحدُّ نفسُه الذي يحجب به
 	// المحرّكُ الإسنادَ الآليّ، **فلا تقول الشاشةُ «ظاهر» عمّن حجبه المحرّك.**
 	StaleLocationMin int `json:"stale_location_minutes"`
+	// Today **يومُ الحساب الآن** (`account_day(now())`) — يبدأ بساعة فتح الدوام
+	// (`platform.day_start_hour`)، **فتبني الشاشةُ «اليوم» و«أمس» على يوم الخادم نفسِه**
+	// الذي يفلتر به السجلّ (`account_day_start`)، لا على نصف الليل (تدقيقُ السجلّ ٢٠٢٦-١٠-٢٧).
+	Today        string `json:"today"`
+	DayStartHour int64  `json:"day_start_hour"`
+	// RequireDeliveryPhoto و DeliveryCodeRequired **إعدادا التسليم** — كانت الشاشةُ
+	// تقرؤهما من `/settings` فيُردّ ٤٠٣ لمن لا يملك `settings.read` وتأخذ قيماً غلط.
+	RequireDeliveryPhoto bool `json:"require_delivery_photo"`
+	DeliveryCodeRequired bool `json:"delivery_code_required"`
 }
 
 // handleOrdersBoard **عدّاداتُ لوحة الطلبات وإعداداتُها** — `GET /admin/orders/board`.
@@ -206,7 +215,12 @@ func (s *Server) handleOrdersBoard(w http.ResponseWriter, r *http.Request) {
 		OrdersMode:           s.settings.GetString(ctx, "platform.orders_mode"),
 		CashBanDays:          s.settings.GetInt(ctx, "customers.cash_ban_days"),
 		StaleLocationMin:     staleLocationMinutes,
+		DayStartHour:         s.settings.GetInt(ctx, "platform.day_start_hour"),
+		RequireDeliveryPhoto: s.settings.GetBool(ctx, "drivers.require_delivery_photo"),
+		DeliveryCodeRequired: s.settings.GetBool(ctx, "delivery.code_required"),
 	}
+	// **وتعذّرُ اليوم لا يُسقط اللوحة** — فارغُه يُرجع الشاشةَ إلى يوم دمشق.
+	_ = s.pg.QueryRow(ctx, `SELECT account_day(now())::text`).Scan(&meta.Today)
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"counts":  counts,
 		"filters": orders.BoardFilters,
@@ -219,6 +233,14 @@ func (s *Server) handleOrderAlerts(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	// **وهاتفُ الزبون يُحجب كما يُحجب في البطاقة** (تدقيقُ الطلبات ٢٠٢٦-١٠-٢٧) — كان شريطُ
+	// التصعيد يعرضه كاملاً لمن لا يملك `orders.customer_details.read`.
+	if !s.canSeeOrderDetails(r) {
+		for i := range alerts {
+			alerts[i].CustomerPhoneMasked = MaskPhone(alerts[i].CustomerPhone)
+			alerts[i].CustomerPhone = ""
+		}
 	}
 	httpx.JSON(w, http.StatusOK, alerts)
 }

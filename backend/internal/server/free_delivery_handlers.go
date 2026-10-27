@@ -18,6 +18,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/orders"
 )
@@ -131,17 +132,33 @@ func (s *Server) handleCreateFreeDelivery(w http.ResponseWriter, r *http.Request
 		s.respondErr(w, errFreeDeliveryInvalid)
 		return
 	}
+	// **والعرضُ الجديدُ يُطفئ ما قبله بالمعاملة نفسِها** (تدقيقُ العروض ٢٠٢٦-١٠-٢٧): اللوحةُ تعرض
+	// الأحدثَ وحدَه، **وعرضٌ قديمٌ بقي مفعَّلاً كان يظلّ يُعطي توصيلاتٍ مجانيّةً ولا يُرى ولا يُطفأ** —
+	// فمن أطفأ الجديدَ ظنّ أنّ العرضَ وقف. والحقُّ الممنوحُ قبلُ يبقى محسوباً على عرضه.
 	var id string
-	if err := s.pg.QueryRow(r.Context(), `
-		INSERT INTO free_delivery_campaigns (active, starts_at, ends_at, kinds, max_fee, created_by)
-		VALUES ($1, $2, $3, $4, $5, $6) RETURNING id::text`,
-		in.Active, in.StartsAt, in.EndsAt, in.Kinds, in.MaxFee, nilIfEmptyID(userIDFrom(r))).Scan(&id); err != nil {
+	var stopped int64
+	if err := s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
+		if err := q.QueryRow(ctx, `
+			INSERT INTO free_delivery_campaigns (active, starts_at, ends_at, kinds, max_fee, created_by)
+			VALUES ($1, $2, $3, $4, $5, $6) RETURNING id::text`,
+			in.Active, in.StartsAt, in.EndsAt, in.Kinds, in.MaxFee, nilIfEmptyID(userIDFrom(r))).Scan(&id); err != nil {
+			return err
+		}
+		tag, err := q.Exec(ctx, `
+			UPDATE free_delivery_campaigns SET active = false, updated_at = now()
+			 WHERE id <> $1::uuid AND active`, id)
+		if err != nil {
+			return err
+		}
+		stopped = tag.RowsAffected()
+		return nil
+	}); err != nil {
 		s.respondErr(w, err)
 		return
 	}
 	s.audit(r, "admin.free_delivery_create", "free_delivery_campaign", id, map[string]any{
 		"active": in.Active, "starts_at": in.StartsAt, "ends_at": in.EndsAt,
-		"kinds": in.Kinds, "max_fee": in.MaxFee})
+		"kinds": in.Kinds, "max_fee": in.MaxFee, "stopped_older": stopped})
 	c, err := s.loadFreeDeliveryCampaign(r.Context(), `WHERE id = $1`, id)
 	if err != nil {
 		s.respondErr(w, err)

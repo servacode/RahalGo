@@ -11,20 +11,26 @@ import type { ComponentType, ReactNode } from "react";
 export function Panel({
   title,
   note,
+  actions,
   className = "",
   children,
 }: {
   title: string;
   note?: string;
+  /** **زرٌّ صغيرٌ على طرف العنوان** — «عرض الكل» مثلاً. اختياريّ. */
+  actions?: ReactNode;
   className?: string;
   children: ReactNode;
 }) {
   return (
     <section className={`surface p-4 ${className}`}>
-      <h2 className="heading-card mb-3 flex flex-wrap items-baseline gap-2">
-        {title}
-        {note && <span className="text-xs font-normal text-ink-muted">{note}</span>}
-      </h2>
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+        <h2 className="heading-card flex min-w-0 flex-wrap items-baseline gap-x-2">
+          {title}
+          {note && <span className="text-xs font-normal text-ink-muted">{note}</span>}
+        </h2>
+        {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+      </div>
       {children}
     </section>
   );
@@ -41,7 +47,13 @@ const TILE_ICON: Record<TileTone, string> = {
   success: "bg-success-solid text-on-solid",
 };
 
-/** **بطاقةٌ صغيرةٌ تُضغط** — أيقونةٌ في دائرةٍ بلون النبرة، ورقمٌ ولفظ. */
+/**
+ * **بطاقةٌ صغيرةٌ تُضغط** — أيقونةٌ في دائرةٍ بلون النبرة، ورقمٌ ولفظ.
+ *
+ * **واللفظُ على سطرين لا يُقطع بنقاط** (تدقيقُ الرئيسيّة ٢٠٢٦-١٠-٢٧): على الجوّال بطاقتان في السطر،
+ * **و«شكاوى متأخّرة…» تصير «شكاوى متأ…» فلا تُفهم.** **وبلا `onClick` تُرسم رقماً لا زرّاً** — بطاقةٌ
+ * تبدو زرّاً ولا تفعل شيئاً أسوأُ من رقمٍ هادئ. و`extra` شاراتٌ صغيرةٌ تحت اللفظ (اختياريّة).
+ */
 export function Tile({
   icon: Icon,
   label,
@@ -49,6 +61,7 @@ export function Tile({
   sub,
   tone = "default",
   onClick,
+  extra,
 }: {
   icon: ComponentType<{ size?: number; className?: string }>;
   label: string;
@@ -56,23 +69,28 @@ export function Tile({
   sub?: string;
   tone?: TileTone;
   onClick?: () => void;
+  extra?: ReactNode;
 }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex items-center gap-3 rounded-card border p-3 text-start transition-colors hover:bg-row-hover ${
-        tone === "danger" ? "border-danger" : tone === "warning" ? "border-warning" : "border-line-soft"
-      }`}
-    >
+  const cls = `flex items-center gap-3 rounded-card border p-3 text-start ${
+    onClick ? "transition-colors hover:bg-row-hover" : ""
+  } ${tone === "danger" ? "border-danger" : tone === "warning" ? "border-warning" : "border-line-soft"}`;
+  const body = (
+    <>
       <span className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${TILE_ICON[tone]}`}>
         <Icon size={18} />
       </span>
-      <span className="min-w-0">
+      <span className="min-w-0 flex-1">
         <span className={`figure block leading-none ${tone === "muted" ? "text-ink-muted" : ""}`}>{value}</span>
-        <span className="mt-1 block truncate text-xs text-ink-muted">{label}</span>
-        {sub && <span className="block truncate text-2xs text-ink-muted">{sub}</span>}
+        <span className="mt-1 line-clamp-2 text-xs text-ink-muted">{label}</span>
+        {sub && <span className="line-clamp-2 text-2xs text-ink-muted">{sub}</span>}
+        {extra && <span className="mt-1 flex flex-wrap gap-1">{extra}</span>}
       </span>
+    </>
+  );
+  if (!onClick) return <div className={cls}>{body}</div>;
+  return (
+    <button type="button" onClick={onClick} className={cls}>
+      {body}
     </button>
   );
 }

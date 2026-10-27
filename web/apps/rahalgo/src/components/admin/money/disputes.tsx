@@ -21,30 +21,27 @@ import { useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtMoney, errorText } from "@rahalgo/i18n";
 import {
   Alert,
+  Badge,
   Button,
+  Chips,
   Confirm,
   Input,
-  Select,
   Modal,
   PageContainer,
   Pagination,
   LoadingState,
   ReloadState,
   useLiveData,
-  IconWallet,
   IconBalance,
   IconAdd,
   IconSearch,
-  IconCheck,
-  IconBlock,
   FormActions,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useCanCall } from "@/lib/policy";
-import { CaseList, CaseFilters, reasonText, type CaseRow } from "./caseTable";
-import { Tile } from "@/components/admin/DashParts";
+import { ApproveButton, RejectButton } from "@/components/admin/WalletRequests";
+import { CaseList, reasonText, type CaseRow } from "./caseTable";
 
-import { SectionBar } from "@/components/admin/support/SectionBar";
 const m = getMessages(defaultLocale);
 const C = m.admin.claims;
 
@@ -153,22 +150,8 @@ export function DisputesView() {
       if (!canDecide) return null;
       return (
         <>
-          <button
-            type="button"
-            onClick={() => setDeciding({ d, approve: true })}
-            className="inline-flex items-center justify-center gap-1.5 rounded-control bg-success-solid py-2.5 text-sm font-bold text-on-solid transition-opacity hover:opacity-90"
-          >
-            <IconCheck size={16} />
-            {C.approve}
-          </button>
-          <button
-            type="button"
-            onClick={() => setDeciding({ d, approve: false })}
-            className="inline-flex items-center justify-center gap-1.5 rounded-control border border-danger py-2.5 text-sm font-bold text-danger transition-colors hover:bg-danger-tint"
-          >
-            <IconBlock size={16} />
-            {C.reject}
-          </button>
+          <ApproveButton label={C.approve} onClick={() => setDeciding({ d, approve: true })} />
+          <RejectButton label={C.reject} onClick={() => setDeciding({ d, approve: false })} />
         </>
       );
     }
@@ -187,52 +170,82 @@ export function DisputesView() {
 
   return (
     <PageContainer width="full">
-      <SectionBar
-        hint={C.hint}
-        actions={
-          canOpen ? (
-            <Button onClick={() => setOpenNew(true)} className="flex items-center gap-1.5">
+      {/* **رأسٌ واحدٌ كرأس الشكاوى** (فحصُ ٢٠٢٦-١٠-٢٧) — العنوانُ وعددُ المفتوح ومجموعُه وزرُّ «افتح نزاع»
+          بسطر، وتحته الطرفُ والحالةُ أزرارٌ بأعدادها بدل القوائم المنسدلة. **ولا مربّعاتٌ لا تُضغط.** */}
+      <section className="surface overflow-hidden">
+        <div className="flex flex-wrap items-center gap-3 p-4">
+          <span
+            className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${
+              (data?.open_count ?? 0) > 0 ? "bg-warning-solid text-on-solid" : "bg-accent text-on-bright"
+            }`}
+          >
+            <IconBalance size={22} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 className="heading-card flex flex-wrap items-center gap-2">
+              {C.title}
+              {data && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPage(1);
+                    setStatus("open");
+                  }}
+                >
+                  <Badge variant={data.open_count > 0 ? "warning" : "neutral"}>
+                    {C.headCount.replace("{n}", fmtNum(data.open_count))}
+                  </Badge>
+                </button>
+              )}
+            </h2>
+            <p className="text-sm text-ink-muted">{C.hint}</p>
+          </div>
+          {data && (
+            <div className="shrink-0 text-end">
+              <span className="block text-2xs text-ink-muted">{C.total}</span>
+              <span className={`figure block leading-none ${data.total > 0 ? "text-warning" : "text-ink-muted"}`}>
+                {fmtMoney(data.total)}
+              </span>
+            </div>
+          )}
+          {canOpen && (
+            <Button
+              onClick={() => setOpenNew(true)}
+              className="flex w-full items-center justify-center gap-1.5 sm:w-auto"
+            >
               <IconAdd size={16} />
               {C.openBtn}
             </Button>
-          ) : undefined
-        }
-      />
-
-      {/* **شريطُ الفلاتر الواحد** — الطرفُ بعدّه والحالة، لا تبويباتٌ فوق تبويبات. */}
-      <CaseFilters>
-        <Select
-          label={C.partyFilter}
-          value={party}
-          onChange={(e) => {
-            setPage(1);
-            setParty(e.target.value as Party);
-          }}
-        >
-          {PARTIES.map((p) => (
-            <option key={p} value={p}>
-              {`${partyLabels[p || "all"]} (${fmtNum(p ? (counts[p] ?? 0) : allOpen)})`}
-            </option>
-          ))}
-        </Select>
-        <Select
-          label={C.statusFilter}
-          value={status}
-          onChange={(e) => {
-            setPage(1);
-            setStatus(e.target.value as Status);
-          }}
-        >
-          {STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {statusLabels[s]}
-            </option>
-          ))}
-        </Select>
-      </CaseFilters>
+          )}
+        </div>
+        <div className="space-y-2 border-t border-line-soft bg-field px-4 py-3">
+          <Chips
+            wrap
+            items={PARTIES.map((p) => ({
+              id: p || "all",
+              label: partyLabels[p || "all"],
+              count: p ? (counts[p] ?? 0) : allOpen,
+            }))}
+            value={party || "all"}
+            onChange={(k) => {
+              setPage(1);
+              setParty((k === "all" ? "" : k) as Party);
+            }}
+          />
+          <Chips
+            wrap
+            items={STATUSES.map((s) => ({ id: s, label: statusLabels[s] }))}
+            value={status}
+            onChange={(k) => {
+              setPage(1);
+              setStatus(k as Status);
+            }}
+          />
+        </div>
+      </section>
 
       {notice && (
-        <Alert tone="info" onDismiss={() => setNotice("")}>
+        <Alert tone="success" onDismiss={() => setNotice("")}>
           {notice}
         </Alert>
       )}
@@ -244,19 +257,6 @@ export function DisputesView() {
         <LoadingState />
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <Tile
-              icon={IconBalance}
-              label={C.openCount}
-              value={fmtNum(data.open_count)}
-              tone={data.open_count > 0 ? "warning" : "muted"}
-              onClick={() => {
-                setPage(1);
-                setStatus("open");
-              }}
-            />
-            <Tile icon={IconWallet} label={C.total} value={fmtMoney(data.total)} tone={data.total > 0 ? "accent" : "muted"} />
-          </div>
           <CaseList rows={rows} empty={emptyBy[status] ?? C.empty} emptyHint={C.emptyHint} actions={actions} />
           {data.count > data.per_page && (
             <div className="flex justify-center">
@@ -271,8 +271,9 @@ export function DisputesView() {
           dispute={proposing.d}
           charge={proposing.charge}
           onClose={() => setProposing(null)}
-          onDone={() => {
+          onDone={(msg) => {
             setProposing(null);
+            setNotice(msg);
             reload();
           }}
         />
@@ -302,7 +303,10 @@ export function DisputesView() {
   );
 }
 
-/** **اقتراحُ الحسم** — خصماً أو إسقاطاً، بكلمة. ولا مالَ يتحرّك هنا. */
+/**
+ * **الحسم** — خصماً أو مسامحةً، بكلمة. **حركةُ المالك أو المدير تنفذ فوراً وطلبُ الموظّف ينتظر**
+ * (قرارُ المالك ٢٠٢٦-١٠-٢٧) — والرسالةُ تُقرأ من الردّ (`applied`) لا تُفترض.
+ */
 function ProposeModal({
   dispute,
   charge,
@@ -312,7 +316,7 @@ function ProposeModal({
   dispute: Dispute;
   charge: boolean;
   onClose: () => void;
-  onDone: () => void;
+  onDone: (msg: string) => void;
 }) {
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -328,11 +332,22 @@ function ProposeModal({
     setBusy(true);
     setError("");
     try {
-      await api(`/api/v1/admin/disputes/${dispute.id}/propose`, {
-        method: "POST",
-        body: JSON.stringify({ action: charge ? "charge" : "waive", note: note.trim() }),
-      });
-      onDone();
+      const r = await api<{ applied?: boolean; charged?: number | null; remaining?: number }>(
+        `/api/v1/admin/disputes/${dispute.id}/propose`,
+        {
+          method: "POST",
+          body: JSON.stringify({ action: charge ? "charge" : "waive", note: note.trim() }),
+        },
+      );
+      if (!r?.applied) onDone(C.sent);
+      else if (!charge) onDone(C.appliedWaive);
+      else if ((r.remaining ?? 0) > 0)
+        onDone(
+          C.chargedPartial
+            .replace("{charged}", fmtMoney(r.charged ?? 0))
+            .replace("{remaining}", fmtMoney(r.remaining ?? 0)),
+        );
+      else onDone(C.appliedCharge.replace("{charged}", fmtMoney(r.charged ?? 0)));
     } catch (err) {
       setError(errorText(err));
       setBusy(false);
@@ -387,7 +402,9 @@ function DecideConfirm({
           ? C.chargedPartial
               .replace("{charged}", fmtMoney(r.charged ?? 0))
               .replace("{remaining}", fmtMoney(r.remaining))
-          : "",
+          : approve
+            ? C.applied
+            : "",
       );
     } catch (err) {
       setError(errorText(err));
@@ -481,7 +498,19 @@ function NewDisputeModal({ onClose, onDone }: { onClose: () => void; onDone: () 
     e.preventDefault();
     if (busy) return;
     const value = Number(amount);
-    if (!who || !Number.isFinite(value) || value <= 0 || !reason.trim()) return;
+    // **ولا رجوعٌ صامت** (فحصُ ٢٠٢٦-١٠-٢٧) — كان الزرُّ يُضغط فلا يحدث شيءٌ ولا يُقال ما الناقص.
+    if (!who) {
+      setError(C.pickPartyFirst);
+      return;
+    }
+    if (!Number.isFinite(value) || value <= 0) {
+      setError(C.amountRequired);
+      return;
+    }
+    if (!reason.trim()) {
+      setError(C.reasonRequired);
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -500,21 +529,20 @@ function NewDisputeModal({ onClose, onDone }: { onClose: () => void; onDone: () 
   return (
     <Modal open onClose={onClose} title={C.openTitle}>
       <form onSubmit={submit} className="space-y-3">
-        <Select
-          label={C.pickRole}
-          value={role}
-          onChange={(e) => {
-            setRole(e.target.value as Exclude<Party, "">);
-            setWho(null);
-            setOptions(null);
-          }}
-        >
-          {(["merchant", "driver", "sales", "customer"] as const).map((r) => (
-            <option key={r} value={r}>
-              {partyOne[r]}
-            </option>
-          ))}
-        </Select>
+        <div className="space-y-1.5">
+          <p className="text-sm font-medium">{C.pickRole}</p>
+          <Chips
+            wrap
+            items={(["merchant", "driver", "sales", "customer"] as const).map((r) => ({ id: r, label: partyOne[r] }))}
+            value={role}
+            onChange={(k) => {
+              setRole(k as Exclude<Party, "">);
+              setWho(null);
+              setOptions(null);
+              setError("");
+            }}
+          />
+        </div>
         {who ? (
           <div className="flex items-center justify-between gap-2 rounded-control bg-field px-3 py-2 text-sm">
             <span>

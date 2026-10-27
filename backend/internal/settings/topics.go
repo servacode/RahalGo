@@ -88,6 +88,8 @@ var placeRules = []placeRule{
 	{prefix: "sales.commission_percent", exact: true, topic: TopicMoney, section: "money.rep"},
 	{prefix: "delivery.fee", exact: true, topic: TopicMoney, section: "money.driver"},
 	// **و«لدي توصيلة» قسمٌ وحدَه** (قرارُ المالك ٢٠٢٦-١٠-١٦) — أجرتُها الثابتةُ وأساسُها ومسافتُها.
+	// **ودينُ «لدي توصيلة» متروك** — ما عاد إله أثر من ٢٠٢٦-١٠-١٥، فلا يُعرض مربّعاً يُربك.
+	{prefix: "delivery.merchant_debt_open", exact: true, topic: TopicMoney, hidden: true},
 	{prefix: "delivery.merchant_", topic: TopicMoney, section: "money.merchant_delivery"},
 	{prefix: "delivery.by_distance", exact: true, topic: TopicMoney, section: "money.driver"},
 	{prefix: "delivery.per_km", exact: true, topic: TopicMoney, section: "money.driver"},
@@ -147,6 +149,9 @@ var placeRules = []placeRule{
 	{prefix: "launch.", topic: TopicLaunch, section: "launch.gates"},
 	{prefix: "hours.platform_enforced", exact: true, topic: TopicLaunch, panel: "hours"},
 	{prefix: "hours.platform_switch", exact: true, topic: TopicLaunch, panel: "hours"},
+	// **وساعةُ بداية اليوم جنب الدوام** (تدقيقُ الإعدادات ٢٠٢٦-١٠-٢٧): كانت تقع بالقاعدة
+	// العامّة «platform.» فتظهر بقسم التواصل قبل رقم الدعم — وهي تحكم يومَ الحساب بالمنصّة كلّها.
+	{prefix: "platform.day_start_hour", exact: true, topic: TopicLaunch, panel: "hours"},
 	{prefix: "hours.", topic: TopicLaunch, section: "launch.ops"},
 	{prefix: "platform.orders_mode", exact: true, topic: TopicLaunch, section: "launch.ops"},
 	{prefix: "ops.", topic: TopicLaunch, section: "launch.ops"},
@@ -157,11 +162,10 @@ var placeRules = []placeRule{
 	{prefix: "app.min_version.", topic: TopicApps, panel: "release"},
 	// **وإجبارُ التحديث من الملفّ له مفتاحٌ في لوح «الإصدار»** — فلا يُعرض مرّةً ثانيةً
 	// مربّعاً في «الملفّات» (طلبُ المالك ٢٠٢٦-١٠-٠٩: لا إعدادَ بمكانين).
-	{prefix: "release.customer.auto_force", exact: true, topic: TopicApps, panel: "release"},
-	{prefix: "release.driver.auto_force", exact: true, topic: TopicApps, panel: "release"},
-	{prefix: "release.merchant.auto_force", exact: true, topic: TopicApps, panel: "release"},
-	{prefix: "release.rep.auto_force", exact: true, topic: TopicApps, panel: "release"},
-	{prefix: "release.", topic: TopicApps, section: "apps.files"},
+	// **وكلُّ ما يخصّ تطبيقاً في بطاقته** (تدقيقُ الإعدادات ٢٠٢٦-١٠-٢٧): الملفُّ ورابطُ
+	// غوغل بلاي ورقمُ النسخة واسمُها وفرضُ التحديث — كانت ١٧ بطاقةً مبعثرةً ومكرّرة،
+	// **فصار للوح «الإصدار» بطاقةٌ لكلّ تطبيق** تجمعها.
+	{prefix: "release.", topic: TopicApps, panel: "release"},
 	{prefix: "app.", topic: TopicApps, section: "apps.files"},
 
 	// ── الموقع والمحتوى والتواصل — الهويّةُ والتواصلُ والصفحاتُ القانونيّة وحدَها ──

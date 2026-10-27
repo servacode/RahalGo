@@ -260,7 +260,7 @@ func (s *Service) settleMerchantDelivery(ctx context.Context, q wallet.Querier,
 		//
 		// **محفظتُه إن خُصمت، ونقدُه إن قبضه السائقُ عند الاستلام** («أنا نقداً» —
 		// ٢٠٢٦-١٠-١٥): يُردّ إلى محفظته، **والنقدُ في صندوق السائق يُسلَّم للمكتب كسائر
-		// النقد.** ونقدُ المستلِم لا يُقبض قبل التسليم فلا شيءَ يُردّ منه.
+		// النقد.** ونقدُ المستلِم في «إحضار» يُردّ له بيد السائق — انظر تحت.
 		refund := in.walletPaid
 		if payer == FeePayerMerchantCash {
 			refund += collected
@@ -271,6 +271,22 @@ func (s *Service) settleMerchantDelivery(ctx context.Context, q wallet.Querier,
 				return err
 			}
 			out.credit(ownerID, refund, t.refunded2, notifications.AppMerchant)
+		}
+		// ══════════════════════════════════════════════════════════════
+		// **ونقدُ المستلِم يرجع له إن لم يكن الذنبُ ذنبَه** (قرارُ المالك ٢٠٢٦-١٠-٢٧)
+		// ══════════════════════════════════════════════════════════════
+		//
+		// **في «إحضار» يدفع المستلِمُ للسائق عند الاستلام** (`cashAtPickup`). وكان التعليقُ
+		// هنا يقول «لا يُقبض قبل التسليم» — **وذاك قبل ٢٠٢٦-١٠-١٥**؛ فصار نقدُه يبقى في صندوق
+		// السائق وتقرؤه الخزينةُ ربحاً على توصيلةٍ فشلت بذنبها أو بذنب السائق.
+		//
+		// **فالسائقُ يردّه للمستلِم بيده**: سطرٌ سالبٌ في صندوقه (`recipient_cash_returned`)
+		// يقابل سطرَ القبض — **فلا يبقى بذمّته، ولا تحسبه الخزينةُ مدفوعاً** (`creditTreasury`
+		// تجمع السطرين). **وذنبُ المستلِم** (`customer`) يبقى كما كان: نقدُه للسائق والمنصّة.
+		if payer == FeePayerRecipient && fault != FaultCustomer && collected > 0 {
+			if err := s.returnRecipientCash(ctx, q, in.orderID, collected, in.actorID); err != nil {
+				return err
+			}
 		}
 		// **والدينُ القديمُ يُسقَط كما يُردّ المال** — دينٌ على توصيلةٍ لم تقع باطل.
 		// (لا دينَ جديدٌ منذ ٢٠٢٦-١٠-١٥؛ والقائمُ قبله يُسقَط هنا.)
@@ -330,6 +346,37 @@ func (s *Service) merchantBearsFailedDelivery(ctx context.Context, q wallet.Quer
 		return err
 	}
 	return s.creditTreasury(ctx, q, in.orderID, in.actorID)
+}
+
+// returnRecipientCash **السائقُ الذي قبض يردّ** — لا السائقُ الحاليّ: طارئٌ بعد الاستلام
+// قد يبدّل السائق، **والنقدُ بيد من قبضه.** (قرارُ المالك ٢٠٢٦-١٠-٢٧.)
+//
+// **ولا يُردّ أكثرُ ممّا بذمّته**: سائقٌ سلّم صندوقَه للمكتب قبل أن تنتهي التوصيلةُ لم يبقَ
+// النقدُ معه — وسطرٌ يُهبط صندوقَه تحت الصفر يُسقط الانتقالَ كلَّه (`ErrOverSettle`). فيُردّ
+// ما بذمّته، **والباقي يُكتب تحذيراً** يردّه المكتبُ من الدرج بيده.
+func (s *Service) returnRecipientCash(ctx context.Context, q wallet.Querier,
+	orderID string, amount int64, actorID string) error {
+	var driverID string
+	var held int64
+	if err := q.QueryRow(ctx, `
+		SELECT e.driver_id::text, COALESCE(b.held, 0)
+		  FROM driver_cash_entries e
+		  LEFT JOIN driver_cash_boxes b ON b.driver_id = e.driver_id
+		 WHERE e.ref = $1 AND e.kind = 'order_collection'
+		 ORDER BY e.id LIMIT 1`, orderID).Scan(&driverID, &held); err != nil {
+		return err
+	}
+	give := amount
+	if give > held {
+		give = held
+		s.logger.Warn("ردُّ نقد المستلِم: الصندوقُ أقلّ من المقبوض — الباقي يردّه المكتب",
+			"order", orderID, "driver", driverID, "collected", amount, "held", held)
+	}
+	var actor *string
+	if actorID != "" {
+		actor = &actorID
+	}
+	return s.cashbox.ReturnRecipientCashTx(ctx, q, driverID, give, orderID, actor)
 }
 
 // causeMerchantDeliveryFee **سببُ دينِ أجرة التوصيلة القديم** — لا يُكتب جديدٌ منه منذ

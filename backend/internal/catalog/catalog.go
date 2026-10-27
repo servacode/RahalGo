@@ -986,6 +986,29 @@ func (s *Service) merchantByID(ctx context.Context, id string) (*Merchant, error
 	return m, err
 }
 
+// MerchantsByIDs **متاجرُ صفحةٍ كاملةً باستعلامٍ واحد** (تدقيقُ السوق ٢٠٢٦-١٠-٢٧) — كانت كلُّ بطاقةٍ
+// في تبويب المتاجر تنادي `GET /merchants/{id}` وحدَها، **خمسون طلباً مع كلّ فتحٍ وكلّ تحديث.**
+// **والصفُّ نفسُه الذي يردّه `MerchantByID`** — `merchantSelect` واحدةٌ فلا يفترقان.
+func (s *Service) MerchantsByIDs(ctx context.Context, ids []string) (map[string]*Merchant, error) {
+	out := map[string]*Merchant{}
+	if len(ids) == 0 {
+		return out, nil
+	}
+	rows, err := s.db.Query(ctx, merchantSelect("$2")+` WHERE m.id = ANY($1::uuid[])`, ids, s.banDays(ctx))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		m, err := scanMerchant(rows)
+		if err != nil {
+			return nil, err
+		}
+		out[m.ID] = m
+	}
+	return out, rows.Err()
+}
+
 // resolveRep ينسب المتجر للمندوب صاحب كود الدعوة.
 func (s *Service) resolveRep(ctx context.Context, repCode *string) (*string, error) {
 	if repCode == nil || *repCode == "" {

@@ -16,7 +16,7 @@ package server
 //
 // **لا يُكتب هنا شرطُ عدٍّ ثانٍ لشيءٍ تعدّه صفحةٌ أخرى**: البلاغاتُ من
 // `CountAwaitingOffice`، والشكاوى من `support.Count`، والنقدُ من
-// `cashHolders`، والعالقُ من `orders.Alerts`، والصافي من `platformProfit` —
+// `cashHolders`، والعالقُ من عدّاد فلتر «عالق» (`BoardCounts`)، والصافي من `platformProfit` —
 // **وهي ما تقرؤه صفحاتُها.** والباقي عدٌّ بشرط صفحته حرفاً، **ويحرسه
 // اختبارٌ يقارن الرقمين** (`admin_overview_test.go`).
 //
@@ -26,10 +26,10 @@ package server
 // — **والشاشةُ تكتب «غير معروف»**. **وصفرٌ أخضرُ على رقمٍ لم يُقرأ يقول
 // «لا شيءَ ينتظرك» وفي الشارع سائقٌ ينتظر.**
 //
-// # واليومُ يومُ دمشق
+// # واليومُ يومُ المنصّة — من ساعة فتح الدوام
 //
 // **حدودُ اليوم والأمس والأسبوع تُحسب بمنطقة المنصّة** (`platform.Location`)
-// — **وبفارق الثلاث ساعات تقع طلباتُ الليل في يومٍ آخر عند غرينتش.**
+// **ومن `platform.day_start_hour`** (`overviewDays`) — وزوّارُ الموقع باليوم نفسِه (`siteDay`).
 
 import (
 	"context"
@@ -147,19 +147,25 @@ type ovPlatform struct {
 }
 
 type overview struct {
-	GeneratedAt time.Time        `json:"generated_at"`
-	Today       string           `json:"today"`
-	Missing     []string         `json:"missing"`
-	Emergency   *emergencyBanner `json:"emergency"`
-	Awaiting    ovAwaiting       `json:"awaiting"`
-	Live        ovLive           `json:"live"`
-	Health      ovHealth         `json:"health"`
-	TodayStats  ovDay            `json:"today_stats"`
-	Yesterday   ovDay            `json:"yesterday_stats"`
-	Failures    []ovFailure      `json:"failures_today"`
-	Money       ovMoney          `json:"money"`
-	Events      []ovEvent        `json:"events"`
-	Platform    ovPlatform       `json:"platform"`
+	GeneratedAt time.Time `json:"generated_at"`
+	Today       string    `json:"today"`
+	// DayStartHour **ساعةُ بدء يوم المنصّة** (`platform.day_start_hour`) — تُقال تحت العنوان.
+	DayStartHour int64 `json:"day_start_hour"`
+	// TicketLateHours **مهلةُ الردّ على الشكوى** — تُقال في عنوان بطاقتها بلا قراءةٍ ثانيةٍ للإعدادات.
+	TicketLateHours int              `json:"ticket_late_hours"`
+	Missing         []string         `json:"missing"`
+	Emergency       *emergencyBanner `json:"emergency"`
+	Awaiting        ovAwaiting       `json:"awaiting"`
+	Live            ovLive           `json:"live"`
+	Health          ovHealth         `json:"health"`
+	TodayStats      ovDay            `json:"today_stats"`
+	Yesterday       ovDay            `json:"yesterday_stats"`
+	// YesterdaySoFar **أمسِ حتّى الساعةِ نفسِها** — اليومُ لم ينتهِ، ومقارنتُه بأمسٍ كاملٍ تُضلّل الصباح.
+	YesterdaySoFar ovDay       `json:"yesterday_same_time"`
+	Failures       []ovFailure `json:"failures_today"`
+	Money          ovMoney     `json:"money"`
+	Events         []ovEvent   `json:"events"`
+	Platform       ovPlatform  `json:"platform"`
 }
 
 // overviewEvents **الأحداثُ المهمّة** — ما يغيّر حالَ المنصّة أو مالَها.
@@ -224,10 +230,12 @@ func hasCap(r *http.Request, c authz.Capability) bool {
 
 func (s *Server) buildOverview(ctx context.Context) overview {
 	now := time.Now()
-	today, yesterday, week := overviewDays(now, s.settings.GetInt(ctx, "platform.day_start_hour"))
+	startHour := s.settings.GetInt(ctx, "platform.day_start_hour")
+	today, yesterday, week := overviewDays(now, startHour)
 	tomorrow := today.AddDate(0, 0, 1)
 	ov := overview{
 		GeneratedAt: now, Today: today.Format("2006-01-02"),
+		DayStartHour: startHour, TicketLateHours: s.ticketLateHours(ctx),
 		Missing: []string{}, Failures: []ovFailure{}, Events: []ovEvent{},
 	}
 	miss := func(section string, err error) bool {
@@ -274,7 +282,7 @@ func (s *Server) buildOverview(ctx context.Context) overview {
 			a.TicketsOpen = n64(int64(n))
 		}
 		if n, err := s.support.Count(ctx, support.TicketFilter{
-			LateHours: s.ticketLateHours(ctx)}); !miss("tickets_late", err) {
+			LateHours: ov.TicketLateHours}); !miss("tickets_late", err) {
 			a.TicketsLate = n64(int64(n))
 		}
 	} else {
@@ -332,11 +340,13 @@ func (s *Server) buildOverview(ctx context.Context) overview {
 	// **وفلترُ اللوحة «بلا سائق» يعدّ ما تجاوز مهلةَ إيجاد السائق**، فيقول
 	// الرقمُ شيئاً والقائمةُ غيرَه. **وصارت تُعدّ بـ`orders.NoDriverSQL`** عبر
 	// `BoardCounts` وتُفتح على `?filter=no_driver`.
+	// **والعالقُ بعدّاد فلتر «عالق» نفسِه** (`BoardStuck`) — وبطاقتُه تفتح `?filter=stuck`؛ كانت تفتح كلَّ
+	// الطلبات فيقول الرقمُ شيئاً والقائمةُ غيرَه (تدقيقُ ٢٠٢٦-١٠-٢٧). **وشرطُه شرطُ `Alerts` حرفاً** (`StuckReasonSQL`).
 	if c, err := s.orders.BoardCounts(ctx); !miss("no_driver", err) {
 		a.OrdersUnassigned = n64(int64(c[orders.BoardNoDriver]))
-	}
-	if al, err := s.orders.Alerts(ctx); !miss("stuck", err) {
-		lv.OrdersStuck = n64(int64(len(al)))
+		lv.OrdersStuck = n64(int64(c[orders.BoardStuck]))
+	} else {
+		ov.Missing = append(ov.Missing, "stuck")
 	}
 	{
 		// **ونصُّ العدِّ واحدٌ مع شاشة المراقب** (`driverShiftCounts`).
@@ -365,6 +375,9 @@ func (s *Server) buildOverview(ctx context.Context) overview {
 	}
 	if d, err := s.overviewDay(ctx, yesterday, today); !miss("yesterday", err) {
 		ov.Yesterday = d
+	}
+	if d, err := s.overviewDay(ctx, yesterday, now.Add(-24*time.Hour)); !miss("yesterday_same_time", err) {
+		ov.YesterdaySoFar = d
 	}
 	{
 		rows, err := s.pg.Query(ctx, `
@@ -423,11 +436,19 @@ func (s *Server) buildOverview(ctx context.Context) overview {
 			                                  WHERE m.id = a.entity_id::uuid)
 			           WHEN 'user' THEN (SELECT COALESCE(NULLIF(u2.full_name, ''), u2.phone::text)
 			                              FROM users u2 WHERE u2.id = a.entity_id::uuid)
+			           -- **والنزاعُ باسم طرفه** — متجرٌ أو حساب (تدقيقُ الرئيسيّة ٢٠٢٦-١٠-٢٧).
+			           WHEN 'dispute' THEN (SELECT COALESCE(dm.name, NULLIF(du.full_name, ''), du.phone::text)
+			                                 FROM disputes d
+			                                 LEFT JOIN merchants dm ON dm.id = d.merchant_id
+			                                 LEFT JOIN users du ON du.id = d.party_user_id
+			                                 WHERE d.id = a.entity_id::uuid)
 			           END END, ''),
 			       CASE WHEN a.entity_id ~ '^[0-9a-fA-F-]{36}$' THEN
 			           CASE a.entity
 			           WHEN 'order' THEN (SELECT o.number FROM orders o WHERE o.id = a.entity_id::uuid)
 			           WHEN 'ticket' THEN (SELECT t.number FROM tickets t WHERE t.id = a.entity_id::uuid)
+			           WHEN 'dispute' THEN (SELECT o.number FROM disputes d JOIN orders o ON o.id = d.order_id
+			                                 WHERE d.id = a.entity_id::uuid)
 			           END END,
 			       COALESCE(NULLIF(u.full_name, ''), u.phone::text, ''),
 			       a.created_at
@@ -475,7 +496,8 @@ func (s *Server) overviewDay(ctx context.Context, from, to time.Time) (ovDay, er
 			(SELECT round((avg(EXTRACT(EPOCH FROM delivered_at - created_at)) / 60)::numeric, 1)::float8
 			   FROM orders WHERE status = 'delivered'
 			   AND delivered_at >= $1 AND delivered_at < $2),
-			(SELECT count(*) FROM user_roles ur WHERE ur.role_code = 'customer'
+			(SELECT count(*) FROM user_roles ur JOIN users cu ON cu.id = ur.user_id AND cu.status <> 'deleted'
+			   WHERE ur.role_code = 'customer'
 			   AND ur.granted_at >= $1 AND ur.granted_at < $2 AND NOT EXISTS (SELECT 1 FROM user_roles n WHERE n.user_id = ur.user_id AND n.role_code <> 'customer')),
 			(SELECT round(avg(platform_stars)::numeric, 1)::float8 FROM order_ratings
 			   WHERE created_at >= $1 AND created_at < $2 AND platform_stars IS NOT NULL),
@@ -501,6 +523,8 @@ func (s *Server) overviewPlatform(ctx context.Context, today, week time.Time) (o
 		       count(*) FILTER (WHERE granted_at >= $1),
 		       count(*) FILTER (WHERE granted_at >= $2)
 		FROM user_roles ur
+		-- **والمحذوفُ لا يُعدّ** — صفحةُ الحسابات التي يفتحها الرابطُ تُخفيه (تدقيقُ ٢٠٢٦-١٠-٢٧).
+		JOIN users u ON u.id = ur.user_id AND u.status <> 'deleted'
 		-- **و«الزبون» زبونٌ فقط** — لا السائقُ ولا المتجرُ ولا الموظّف وإن حملوا دورَ الزبون.
 		WHERE ur.role_code <> 'customer'
 		   OR NOT EXISTS (SELECT 1 FROM user_roles n WHERE n.user_id = ur.user_id AND n.role_code <> 'customer')

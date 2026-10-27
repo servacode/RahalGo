@@ -40,6 +40,9 @@ export function DriverCashReceive({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const value = Number(amount) || 0;
+  // **والمبلغُ صحيحٌ بلا كسور** (فحصُ اللوحة ٢٠٢٦-١٠-٢٧) — الخادمُ يقرؤه عدداً صحيحاً،
+  // فكان «12.5» يُردّ بخطأ تحقّقٍ عامّ لا يقول ما الخطأ.
+  const whole = Number.isInteger(value);
 
   async function submit() {
     // **التأكيدُ يُغلق قبل النداء** — كلمةُ السرّ تُطلب في نافذةٍ تحته.
@@ -70,11 +73,11 @@ export function DriverCashReceive({
           className="space-y-3"
           onSubmit={(e) => {
             e.preventDefault();
-            if (value > 0 && value <= held) {
+            if (whole && value > 0 && value <= held) {
               setError("");
               setConfirming(true);
             } else {
-              setError(C.badAmount);
+              setError(whole ? C.badAmount : C.receiveWhole);
             }
           }}
         >
@@ -87,6 +90,8 @@ export function DriverCashReceive({
             label={`${A.settleAmount} (${m.common.currency})`}
             type="number"
             min="1"
+            step="1"
+            inputMode="numeric"
             max={held}
             required
             autoFocus
@@ -108,11 +113,12 @@ export function DriverCashReceive({
       <Confirm
         open={confirming}
         tone="primary"
-        title={A.settleConfirm}
-        body={A.settleConfirmBody
+        title={C.receiveConfirmTitle}
+        body={C.receiveConfirmBody
           .replace("{amount}", fmtMoney(value))
+          .replace("{name}", driverName || C.receiveDriverFallback)
           .replace("{rest}", fmtMoney(Math.max(held - value, 0)))}
-        confirmLabel={A.settleConfirm}
+        confirmLabel={C.receiveConfirmBtn}
         busy={busy}
         onConfirm={() => void submit()}
         onCancel={() => setConfirming(false)}

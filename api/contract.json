@@ -89,6 +89,10 @@
           "type": "unknown"
         },
         {
+          "name": "day_start_hour",
+          "type": "unknown"
+        },
+        {
           "name": "entries",
           "type": "unknown"
         },
@@ -109,11 +113,27 @@
           "type": "unknown"
         },
         {
+          "name": "today",
+          "type": "unknown"
+        },
+        {
+          "name": "today_counts",
+          "type": "unknown"
+        },
+        {
           "name": "total",
           "type": "unknown"
         },
         {
           "name": "total_capped",
+          "type": "unknown"
+        },
+        {
+          "name": "week_from",
+          "type": "unknown"
+        },
+        {
+          "name": "yesterday",
           "type": "unknown"
         }
       ],
@@ -439,6 +459,10 @@
           "type": "unknown"
         },
         {
+          "name": "drivers",
+          "type": "unknown"
+        },
+        {
           "name": "holders",
           "type": "unknown"
         },
@@ -649,6 +673,10 @@
         },
         {
           "name": "closes",
+          "type": "unknown"
+        },
+        {
+          "name": "day_start_hour",
           "type": "unknown"
         },
         {
@@ -2510,7 +2538,7 @@
       "capability": "market.manage",
       "response": [
         {
-          "name": "@paged",
+          "name": "@body",
           "type": "unknown"
         }
       ],
@@ -4084,6 +4112,28 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/goods/compensation/none",
+      "handler": "handleGoodsNoCompensation",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "none",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/admin/orders/{id}/items/{itemID}/unavailable",
       "handler": "handleItemUnavailable",
       "auth": true,
@@ -4812,6 +4862,10 @@
       "capability": "offers.manage",
       "response": [
         {
+          "name": "matched",
+          "type": "unknown"
+        },
+        {
           "name": "page",
           "type": "unknown"
         },
@@ -4860,6 +4914,10 @@
           "type": "unknown"
         },
         {
+          "name": "day_start_hour",
+          "type": "unknown"
+        },
+        {
           "name": "from",
           "type": "unknown"
         },
@@ -4893,6 +4951,10 @@
         },
         {
           "name": "to",
+          "type": "unknown"
+        },
+        {
+          "name": "today",
           "type": "unknown"
         },
         {
@@ -4961,6 +5023,10 @@
         },
         {
           "name": "to",
+          "type": "unknown"
+        },
+        {
+          "name": "today",
           "type": "unknown"
         },
         {
@@ -5298,11 +5364,19 @@
           "type": "unknown"
         },
         {
+          "name": "out",
+          "type": "unknown"
+        },
+        {
           "name": "page",
           "type": "unknown"
         },
         {
           "name": "per_page",
+          "type": "unknown"
+        },
+        {
+          "name": "store_off",
           "type": "unknown"
         }
       ],
@@ -5765,6 +5839,14 @@
       "response": [
         {
           "name": "roles",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "object"
+        },
+        {
+          "name": "temp_password_hours",
           "type": "unknown"
         },
         {

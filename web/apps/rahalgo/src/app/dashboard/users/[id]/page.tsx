@@ -37,9 +37,11 @@ import {
   IconLocation,
   IconChat,
   LoadingState,
+  ReloadState,
   Money,
   Confirm,
   ActionMenu,
+  IconChevronDown,
   type ActionMenuItem,
 } from "@rahalgo/ui";
 import { api, type AuthUser } from "@/lib/api";
@@ -70,6 +72,10 @@ import { ManageRolesModal } from "@/components/admin/ManageRolesModal";
 import StatusReasonModal from "@/components/admin/StatusReasonModal";
 import { MediaThumb } from "@/components/admin/ImageUpload";
 import RoleBadge from "@/components/admin/RoleBadge";
+import { Tile, type TileTone } from "@/components/admin/DashParts";
+import { isDeletedAccount } from "@/components/admin/accounts/all";
+
+type IconT = React.ComponentType<{ size?: number; className?: string }>;
 
 const m = getMessages(defaultLocale);
 const P = m.admin.users.profile;
@@ -77,6 +83,7 @@ const P = m.admin.users.profile;
 // في محفظة سائق (قرارُ المالك ٢٠٢٦-١٠-٠٤).
 const KINDS: Record<string, string> = { ...m.admin.users.txKinds, ...m.shared.txKinds };
 const A = m.admin.acc;
+const U = A.ux;
 /** **والرصيدان اسمُهما واحدٌ في المنصّة** — معجمُ الكشف المشترك. */
 const ST = m.shared.statement;
 /**
@@ -260,6 +267,8 @@ export default function UserProfilePage() {
   const [aPage, setAPage] = useState(1);
   const [gPage, setGPage] = useState(1);
   const [rPage, setRPage] = useState(1);
+  /** **ولتقييمات السائقين لمتجره صفحتُها** — كانت تتبع `rPage` بلا أزرار. */
+  const [dPage, setDPage] = useState(1);
   const [actCount, setActCount] = useState(0);
   const [actPer, setActPer] = useState(25);
   /** **وأفعالُه المتاحةُ للترشيح** — من المحرّك، **وما ليس عنده لا يُعرض عليه.** */
@@ -341,14 +350,14 @@ export default function UserProfilePage() {
     try {
       setFeedback(
         await api<Feedback>(
-          `/api/v1/admin/users/${id}/feedback?t_page=${tPage}&a_page=${aPage}&g_page=${gPage}&r_page=${rPage}`,
+          `/api/v1/admin/users/${id}/feedback?t_page=${tPage}&a_page=${aPage}&g_page=${gPage}&r_page=${rPage}&d_page=${dPage}`,
         ),
       );
       setFeedbackError("");
     } catch (err) {
       setFeedbackError(errorText(err));
     }
-  }, [id, tPage, aPage, gPage, rPage]);
+  }, [id, tPage, aPage, gPage, rPage, dPage]);
 
   useEffect(() => {
     void load();
@@ -445,120 +454,138 @@ export default function UserProfilePage() {
       });
   }, [id, tab, canFinance]);
 
-  if (error) return <p className="py-10 text-center text-danger">{error}</p>;
+  if (error)
+    return (
+      <section className="surface">
+        <ReloadState onRetry={() => void load()} label={`${U.profileLoadError} — ${error}`} />
+      </section>
+    );
   if (!p) return <LoadingState variant="text" />;
 
   const has = (r: string) => p.roles.includes(r);
 
   const isMe = me?.id === p.id;
   const money = !p.money_hidden;
-  const stats: { label: string; value: string; icon: React.ReactNode; onClick?: () => void }[] = [];
+  /** **المحذوفُ بلا أيّ فعل** (تدقيقُ ٢٠٢٦-١٠-٢٧) — والمحرّكُ يردّ تبديلَ حاله. */
+  const gone = isDeletedAccount(p);
+  const showOrdersTab = has("customer") || has("driver");
+  const toTab = (t: typeof tab, allowed = true) => (allowed ? () => setTab(t) : undefined);
+  // ══════════════════════════════════════════════════════════════════
+  // **الأرقامُ بطاقاتٌ تُضغط بألوانٍ لها معنى** (التصميمُ الاحترافيّ ٢٠٢٦-١٠-٢٧)
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // الرصيدُ أخضرُ «إله» أو أحمرُ «عليه»، والمحجوزُ برتقاليّ — **وكلُّ بطاقةٍ تفتح تبويبَها
+  // داخلَ الملفّ** (لا تُخرجه إلى شاشةٍ أخرى — قرارُ المالك ٢٠٢٦-٠٨-١٥).
+  const stats: { key: string; icon: IconT; label: string; value: string; sub?: string; tone?: TileTone; onClick?: () => void }[] = [];
   if (money) {
     stats.push({
+      key: "balance",
+      icon: IconWallet,
       label: `${m.admin.customers.balance} (${m.common.currency})`,
       value: fmtNum(p.balance),
-      icon: <IconWallet className="text-primary" />,
+      sub: p.balance < 0 ? U.balOwes : p.balance > 0 ? U.balOwed : undefined,
+      tone: p.balance < 0 ? "danger" : p.balance > 0 ? "success" : "muted",
+      onClick: toTab("wallet", canFinance),
     });
   }
-  // ══════════════════════════════════════════════════════════════════
-  // **وكم دعا وكم قبض** — (قرارُ المالك ٢٠٢٦-٠٨-١٥).
-  // ══════════════════════════════════════════════════════════════════
-  //
-  // **والمقبولةُ من رُوفئ عنه فعلاً** لا من سجّل برمزه: المكافأةُ
-  // تُقيَّد حين يُسلَّم أوّلُ طلبٍ للمدعوّ — **ومن عدّ المسجّلين وعد
-  // صاحبَه بمالٍ لم يستحقّه.**
-  //
-  // **ويُعرضان ولو كانا صفراً** — **والسؤالُ «كم دعا؟» جوابُه «لا
-  // أحد»، وهو جوابٌ لا فراغ.** (وقاعدةُ إخفاء الصفر للبطاقة التي
-  // تُمسح بالعين في قائمةٍ من مئة — **والملفُّ يُفتح لشخصٍ بعينه
-  // ليُسأل عنه.**)
+  // **وكم دعا وكم قبض** (قرارُ المالك ٢٠٢٦-٠٨-١٥) — ويُعرضان ولو كانا صفراً: «لا أحد» جوابٌ لا فراغ.
   if (has("customer")) {
-    stats.push(
-      {
-        label: P.referralsCount,
-        value: fmtNum(p.referrals_count),
-        icon: <IconLink />,
-      },
-      ...(money
-        ? [
-            {
-              label: `${P.referralsEarned} (${m.common.currency})`,
-              value: fmtNum(p.referrals_earned),
-              icon: <IconWallet className="text-success" />,
-            },
-          ]
-        : []),
-    );
+    stats.push({
+      key: "refs",
+      icon: IconLink,
+      label: P.referralsCount,
+      value: fmtNum(p.referrals_count),
+      tone: p.referrals_count > 0 ? "accent" : "muted",
+    });
+    if (money) {
+      stats.push({
+        key: "refsEarned",
+        icon: IconWallet,
+        label: `${P.referralsEarned} (${m.common.currency})`,
+        value: fmtNum(p.referrals_earned),
+        tone: p.referrals_earned > 0 ? "success" : "muted",
+        onClick: toTab("wallet", canFinance),
+      });
+    }
   }
   if (has("customer") || p.orders_count > 0) {
-    stats.push(
-      {
-        // **ورقمٌ يُقرأ لا زرٌّ يُضغط** — (قرارُ المالك ٢٠٢٦-٠٨-١٥:
-        // «ألغِ الزرَّ الذكيّ، لا يأخذنا إلى أيّ مكان — فقط يجلب عددَ
-        // طلبات الشخص وفقط»).
-        //
-        // **وتبويبُ «طلباته» بجانبه** يعرضها كلَّها، **وضغطةٌ تُخرجه
-        // من الملفّ إلى شاشةٍ أخرى تُضيّع ما كان يقرؤه.**
-        label: P.ordersCount,
-        value: fmtNum(p.orders_count),
-        icon: <IconOrder />,
-      },
-      ...(money
-        ? [
-            {
-              label: `${P.spent} (${m.common.currency})`,
-              value: fmtNum(p.orders_spent),
-              icon: <IconOrder className="text-success" />,
-            },
-          ]
-        : []),
-    );
+    stats.push({
+      key: "orders",
+      icon: IconOrder,
+      label: P.ordersCount,
+      value: fmtNum(p.orders_count),
+      tone: p.orders_count > 0 ? "default" : "muted",
+      onClick: toTab("orders", showOrdersTab),
+    });
+    if (money) {
+      stats.push({
+        key: "spent",
+        icon: IconOrder,
+        label: `${P.spent} (${m.common.currency})`,
+        value: fmtNum(p.orders_spent),
+        tone: p.orders_spent > 0 ? "default" : "muted",
+        onClick: toTab("orders", showOrdersTab),
+      });
+    }
   }
-  // **وورديّتُه هنا** — (قرارُ المالك ٢٠٢٦-٠٨-١٥: حُذفت من البطاقة).
-  // **ومن سأل «من يعمل الآن؟» يسأله في شاشة الطلبات**، ومن فتح ملفَّ
-  // سائقٍ بعينه يريد أن يعرف حالَه.
   if (has("sales")) {
-    stats.push(
-      { label: P.repStores, value: fmtNum(p.rep_stores), icon: <IconStore /> },
-      ...(money
-        ? [
-            {
-              label: `${P.commissions} (${m.common.currency})`,
-              value: fmtNum(p.commissions),
-              icon: <IconWallet className="text-success" />,
-            },
-          ]
-        : []),
-    );
+    stats.push({
+      key: "repStores",
+      icon: IconStore,
+      label: P.repStores,
+      value: fmtNum(p.rep_stores),
+      tone: p.rep_stores > 0 ? "accent" : "muted",
+      onClick: toTab("stores"),
+    });
+    if (money) {
+      stats.push({
+        key: "commissions",
+        icon: IconWallet,
+        label: `${P.commissions} (${m.common.currency})`,
+        value: fmtNum(p.commissions),
+        tone: p.commissions > 0 ? "success" : "muted",
+        onClick: toTab("financials", canFinance),
+      });
+    }
     if (money && p.held_commission > 0) {
       stats.push({
+        key: "held",
+        icon: IconWallet,
         label: `${A.heldCommission} (${m.common.currency})`,
         value: fmtNum(p.held_commission),
-        icon: <IconWallet className="text-warning" />,
+        tone: "warning",
+        onClick: toTab("financials", canFinance),
       });
     }
   }
   if (feedback?.avg_received != null) {
     stats.push({
+      key: "rating",
+      icon: IconStar,
       label: P.avgRating,
-      value: feedback.avg_received.toFixed(1),
-      icon: <IconStar className="fill-accent text-accent-text" />,
+      value: fmtNum(Math.round(feedback.avg_received * 10) / 10),
+      tone: feedback.avg_received < 3 ? "danger" : feedback.avg_received < 4 ? "warning" : "success",
+      onClick: toTab("feedback"),
     });
   }
   if (has("driver")) {
+    // **وسُلّم اليومَ غيرُ سُلّم كلَّه** — اليومُ يومُ المنصّة من ساعة الفتح (يحسبه المحرّك).
     stats.push(
-      // **وسُلّم اليومَ غيرُ سُلّم كلَّه** — (قرارُ المالك ٢٠٢٦-٠٨-١٥:
-      // حُذف من البطاقة). **ذاك يقول «كم عمل في عمره» وهذا يقول
-      // «أيعمل اليوم؟».**
       {
+        key: "today",
+        icon: IconOrder,
         label: m.admin.drivers.deliveredToday,
         value: fmtNum(p.delivered_today),
-        icon: <IconOrder className="text-success" />,
+        tone: p.delivered_today > 0 ? "success" : "muted",
+        onClick: toTab("orders", showOrdersTab),
       },
       {
+        key: "deliveries",
+        icon: IconDriver,
         label: P.deliveries,
         value: fmtNum(p.deliveries),
-        icon: <IconDriver />,
+        tone: p.deliveries > 0 ? "default" : "muted",
+        onClick: toTab("orders", showOrdersTab),
       },
     );
   }
@@ -570,10 +597,10 @@ export default function UserProfilePage() {
   // (قرارُ المالك ٢٠٢٦-١٠-٠٤.) **ولا يعيد الموظّفُ كلمتَه ولا يُخرج نفسَه ولا يوقفها
   // من ملفّه** — بابُه «حسابي».
   const actions: ActionMenuItem[] = [];
-  if (canRoles) actions.push({ key: "roles", label: m.admin.users.manageRoles, icon: IconRoles, onSelect: () => setRolesOpen(true) });
-  if (canReset && !isMe) actions.push({ key: "reset", label: P.passwordBtn, icon: IconLock, onSelect: () => setResetOpen(true) });
-  if (canStatus && !isMe) actions.push({ key: "phone", label: P.changePhone, icon: IconPhone, onSelect: () => setPhoneOpen(true) });
-  if (canLogout && !isMe)
+  if (canRoles && !gone) actions.push({ key: "roles", label: m.admin.users.manageRoles, icon: IconRoles, onSelect: () => setRolesOpen(true) });
+  if (canReset && !isMe && !gone) actions.push({ key: "reset", label: P.passwordBtn, icon: IconLock, onSelect: () => setResetOpen(true) });
+  if (canStatus && !isMe && !gone) actions.push({ key: "phone", label: P.changePhone, icon: IconPhone, onSelect: () => setPhoneOpen(true) });
+  if (canLogout && !isMe && !gone)
     actions.push({
       key: "logout",
       label: `${P.logoutAllShort} (${fmtNum(p.active_sessions)})`,
@@ -581,7 +608,7 @@ export default function UserProfilePage() {
       danger: true,
       onSelect: () => setConfirmLogout(true),
     });
-  if (canStatus && !isMe) {
+  if (canStatus && !isMe && !gone) {
     if (p.status === "active") {
       actions.push(
         { key: "suspend", label: m.admin.users.suspend, icon: IconBlock, danger: true, hint: A.statusExplain.suspended, onSelect: () => setStatusModal("suspended") },
@@ -592,64 +619,73 @@ export default function UserProfilePage() {
     }
   }
 
+  const statusBadge =
+    gone ? (
+      <Badge variant="neutral">{U.deletedBadge}</Badge>
+    ) : p.status === "active" ? (
+      <Badge variant="success">{m.admin.users.active}</Badge>
+    ) : p.status === "suspended" ? (
+      <Badge variant="warning">{m.admin.users.suspended}</Badge>
+    ) : (
+      <Badge variant="danger">{m.admin.users.blocked}</Badge>
+    );
+
   return (
     <div>
       <button
+        type="button"
         onClick={() => router.push("/dashboard/users")}
         className="mb-3 flex items-center gap-1 text-sm text-ink-muted hover:text-primary"
       >
         <IconPrev size={15} />
-        {m.admin.users.title}
+        {U.back}
       </button>
 
-      {/* الترويسة: البيانات في الصدارة والأزرار سطر واحد (ملاحظة مراجعة) */}
-      <div className="mb-3 surface p-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* ══════════════════════════════════════════════════════════════
+          **رأسُ الملفّ على نمط رأس الصفحة الموحّد** (التصميمُ الاحترافيّ ٢٠٢٦-١٠-٢٧)
+          ══════════════════════════════════════════════════════════════
+          صورةٌ دائريّةٌ كبيرة، والاسم، وسطرٌ للرقم والتسجيل وآخر ظهور، وشاراتُ الدور والحالة بسطرٍ
+          لحالها، وزرّا «المحفظة» و«إجراءات» على الطرف — **يلتفّان على الهاتف ولا يزيحان الصفحة**
+          (شهده المالك ٢٠٢٦-٠٨-١١). */}
+      <section className="surface mb-3 p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <MediaThumb url={p.avatar_thumb_url} alt="" fallback={p.full_name || m.terms.avatarFallback} size={56} />
-            <div className="min-w-0">
-              <h1 className="heading-card truncate">{p.full_name || "—"}</h1>
+            <MediaThumb url={p.avatar_thumb_url} alt="" fallback={p.full_name || m.terms.avatarFallback} size={72} round />
+            <div className="min-w-0 space-y-1">
+              <h1 className="heading-page truncate">{p.full_name || "—"}</h1>
               <p className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-ink-muted">
                 <span className="inline-flex items-center gap-1">
                   <IconPhone size={12} />
-                  {/* **والرقمُ المحجوبُ يُقال** — كان فراغاً جنبَ الأيقونة. */}
-                  {p.phone ? <span dir="ltr">{p.phone}</span> : <span>{A.phoneHidden}</span>}
+                  {/* **والرقمُ المحجوبُ يُقال، والمحذوفُ «رقم محذوف»** — لا `deleted-…` إنكليزيّة. */}
+                  {gone ? (
+                    <span>{U.deletedPhone}</span>
+                  ) : p.phone ? (
+                    <span dir="ltr">{p.phone}</span>
+                  ) : (
+                    <span>{A.phoneHidden}</span>
+                  )}
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <IconDate size={12} />
-                  {fmtDate(p.created_at)}
+                  {U.joined}: {fmtDate(p.created_at)}
                 </span>
+                {/* **وآخرُ ظهوره هنا** (قرارُ المالك ٢٠٢٦-٠٨-١٥). */}
+                <span>
+                  {m.admin.users.lastSeen}: {p.last_seen_at ? fmtDateTime(p.last_seen_at) : m.admin.users.neverSeen}
+                </span>
+              </p>
+              <div className="flex flex-wrap items-center gap-1">
+                {p.roles.map((r) => (
+                  <RoleBadge key={r} role={r} />
+                ))}
+                {statusBadge}
                 {p.invite_code && (
                   <Badge variant="accent" dir="ltr" className="px-1.5 font-mono">
                     {p.invite_code}
                   </Badge>
                 )}
-              </p>
-              <div className="mt-1 flex flex-wrap items-center gap-1">
-                {p.roles.map((r) => (
-                  <RoleBadge key={r} role={r} />
-                ))}
-                <Badge
-                  variant={p.status === "active" ? "success" : p.status === "suspended" ? "warning" : "danger"}
-                >
-                  {p.status === "active"
-                    ? m.admin.users.active
-                    : p.status === "suspended"
-                      ? m.admin.users.suspended
-                      : m.admin.users.blocked}
-                </Badge>
-                {p.status !== "active" && p.status_reason && (
-                  <span className="text-xs text-danger">{p.status_reason}</span>
-                )}
-                {/* **وآخرُ ظهوره هنا** — (قرارُ المالك ٢٠٢٦-٠٨-١٥:
-                    حُذف من البطاقة). **ومن فتح ملفَّ شخصٍ بعينه يسأل
-                    «متى كان هنا آخرَ مرّة؟».** */}
-                <span className="text-xs text-ink-muted">
-                  {m.admin.users.lastSeen}:{" "}
-                  {p.last_seen_at ? fmtDateTime(p.last_seen_at) : m.admin.users.neverSeen}
-                </span>
                 {/* **«لم يدخل بعد · تنتهي بعد …»** و«إعادة إرسال» (قرارُ المالك ٢٠٢٦-١٠-٠٤). */}
-                {p.temp_password_pending && p.temp_password_expires_at && (
+                {!gone && p.temp_password_pending && p.temp_password_expires_at && (
                   <TempPasswordBadge
                     userID={p.id}
                     expiresAt={p.temp_password_expires_at}
@@ -660,37 +696,35 @@ export default function UserProfilePage() {
               </div>
             </div>
           </div>
-
-          {/* ══════════════════════════════════════════════════════════
-              **وستّةُ أزرارٍ تلتفّ — وإلّا أزاحت الصفحةَ كلَّها**
-              ══════════════════════════════════════════════════════════
-
-              (شهده المالك ٢٠٢٦-٠٨-١١ بصورة: الصفحةُ منزاحةٌ، وبطاقاتُها
-               خارجَ الشاشة، والأزرارُ وحدَها تُرى.)
-
-              **كان `flex-nowrap` مقصوداً**: «الأزرارُ سطرٌ واحد» ملاحظةُ
-              مراجعةٍ قديمة — **وهي صحيحةٌ على الحاسوب.** وستّةُ أزرارٍ
-              بنصوصٍ عربيّةٍ تحتاج نحوَ ستّمئة بكسل، **والهاتفُ ثلاثمئةٌ
-              وستّون.**
-
-              **وصفٌّ لا يلتفّ لا يُقصّ — إنّما يوسّع المستندَ كلَّه.**
-              فينزاح الشريطُ العلويُّ ويخرج المحتوى، **وتُقرأ الصفحةُ
-              منهارةً بسبب صفٍّ فيها.** (وهو العطبُ نفسُه الذي أُصلح في
-              رأس التقارير.)
-
-              **و`whitespace-nowrap` تبقى** — تمنع كسرَ الكلمة داخلَ الزرّ،
-              **ولا علاقةَ لها بالتفاف الصفّ.** */}
-          <div className="flex flex-wrap items-center gap-1.5 whitespace-nowrap">
-            {(canWalletRead || canWalletPropose) && (
-              <Button onClick={() => setWalletOpen(true)} className="flex items-center gap-1.5 !px-2.5">
-                <IconWallet size={15} />
-                {m.admin.users.wallet}
-              </Button>
-            )}
-            <ActionMenu label={A.actions} items={actions} />
-          </div>
+          {!gone && ((canWalletRead || canWalletPropose) || actions.length > 0) && (
+            <div className="flex flex-wrap items-center gap-2 whitespace-nowrap">
+              {(canWalletRead || canWalletPropose) && (
+                <Button onClick={() => setWalletOpen(true)} className="flex items-center gap-1.5">
+                  <IconWallet size={16} />
+                  {m.admin.users.wallet}
+                </Button>
+              )}
+              {actions.length > 0 && <ActionMenu label={A.actions} items={actions} />}
+            </div>
+          )}
         </div>
-      </div>
+      </section>
+
+      {/* **وسببُ الإيقاف في صندوق تنبيهٍ تحت الرأس** — لا كلمةً حمراءَ صغيرةً بين الشارات. */}
+      {gone ? (
+        <Alert tone="info" className="mb-3">
+          {U.profileDeleted}
+        </Alert>
+      ) : (
+        p.status !== "active" && (
+          <Alert tone={p.status === "suspended" ? "warning" : "error"} className="mb-3">
+            <span className="block font-bold">{p.status === "suspended" ? U.profileSuspended : U.profileBlocked}</span>
+            <span className="block text-sm">
+              {U.reasonLabel}: {p.status_reason || U.reasonNone}
+            </span>
+          </Alert>
+        )
+      )}
 
       {actionError && <Alert className="mb-3">{actionError}</Alert>}
       {p.pending_phone_change && (
@@ -715,7 +749,7 @@ export default function UserProfilePage() {
               key: "orders",
               label: P.roleTabs.orders,
               icon: IconOrder,
-              show: has("customer") || has("driver"),
+              show: showOrdersTab,
             },
             {
               key: "addresses",
@@ -747,7 +781,8 @@ export default function UserProfilePage() {
               icon: IconStore,
               show: has("merchant") || has("sales"),
             },
-            { key: "wallet", label: P.tabs.wallet, icon: IconWallet, show: true },
+            // **والتبويبُ لمن يملك قراءته** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كان يظهر لكلّ أحدٍ فيقول «غير مسموح».
+            { key: "wallet", label: P.tabs.wallet, icon: IconWallet, show: canFinance },
             {
               key: "financials",
               // ══════════════════════════════════════════════════════════
@@ -769,7 +804,7 @@ export default function UserProfilePage() {
               // **ومن حمل دورين يبقى له** — سائقٌ يطلب لنفسه يرى كشفَه.
               label: P.tabs.financials,
               icon: IconBalance,
-              show: has("driver") || has("merchant") || has("sales"),
+              show: canFinance && (has("driver") || has("merchant") || has("sales")),
             },
             { key: "feedback", label: P.tabs.feedback, icon: IconStar, show: true },
             {
@@ -783,9 +818,9 @@ export default function UserProfilePage() {
               // **والقناةُ بين الزبون والسائق** — فمن ليس أحدَهما لا حديثَ له.
               label: P.tabs.chats,
               icon: IconChat,
-              show: has("customer") || has("driver"),
+              show: canChats && (has("customer") || has("driver")),
             },
-            { key: "activity", label: P.tabs.activity, icon: IconStatus, show: true },
+            { key: "activity", label: P.tabs.activity, icon: IconStatus, show: canSensitive },
           ] as const)
           .filter((t) => t.show)
           .map(({ key, label, icon }) => ({ key, label, icon }))}
@@ -818,22 +853,14 @@ export default function UserProfilePage() {
           {A.heldCommissionHint}
         </Alert>
       )}
-      {/* المؤشرات حسب الأدوار */}
-      <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-        {stats.map((s) => (
-          <div
-            key={s.label}
-            onClick={s.onClick}
-            className={`surface p-3 ${
-              s.onClick ? "cursor-pointer transition-shadow hover:border-primary-edge hover:elev-1" : ""
-            }`}
-          >
-            <div className="mb-1">{s.icon}</div>
-            <p className="figure">{s.value}</p>
-            <p className="text-xs text-ink-muted">{s.label}</p>
-          </div>
-        ))}
-      </div>
+      {/* **الأرقامُ بطاقاتٌ تُضغط** — كلٌّ تفتح تبويبَها. */}
+      {stats.length > 0 && (
+        <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
+          {stats.map((s) => (
+            <Tile key={s.key} icon={s.icon} label={s.label} value={s.value} sub={s.sub} tone={s.tone} onClick={s.onClick} />
+          ))}
+        </div>
+      )}
 
       {p.stores.length > 0 && (
         <div className="mb-3 surface p-3">
@@ -876,20 +903,57 @@ export default function UserProfilePage() {
         icon={<IconWallet />}
       >
         {walletError && <Alert className="mb-2">{walletError}</Alert>}
+        {/* ══════════════════════════════════════════════════════════════
+            **والرصيدان يُقفلان الصفحة — وفوقها** (قرارُ المالك ٢٠٢٦-٠٨-١٥)
+            ══════════════════════════════════════════════════════════════
+            الافتتاحيُّ + مجموعُ المعروض = الختاميّ، **والصفحةُ الثانيةُ تُقفل برصيدها هي.**
+            ومعهما ما دخل وما طلع في هذه الصفحة. */}
+        {txs.length > 0 && (
+          <div className="mb-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
+            <div className="rounded-card border border-line-soft p-3">
+              <span className="block text-2xs text-ink-muted">{ST.opening}</span>
+              <span className="figure block" dir="ltr">{fmtNum(txOpening)}</span>
+            </div>
+            <div className="rounded-card border border-line-soft p-3">
+              <span className="block text-2xs text-ink-muted">{U.pageIn}</span>
+              <span className="figure block text-success" dir="ltr">
+                +{fmtNum(txs.reduce((a, t) => a + (t.amount > 0 ? t.amount : 0), 0))}
+              </span>
+            </div>
+            <div className="rounded-card border border-line-soft p-3">
+              <span className="block text-2xs text-ink-muted">{U.pageOut}</span>
+              <span className="figure block text-danger" dir="ltr">
+                {fmtNum(txs.reduce((a, t) => a + (t.amount < 0 ? t.amount : 0), 0))}
+              </span>
+            </div>
+            <div className="rounded-card border border-line-soft p-3">
+              <span className="block text-2xs text-ink-muted">{ST.closing}</span>
+              <span className={`figure block ${txClosing < 0 ? "text-danger" : ""}`} dir="ltr">{fmtNum(txClosing)}</span>
+            </div>
+          </div>
+        )}
         {txs.length === 0 ? (
-          <p className="py-6 text-center text-sm text-ink-muted">{walletError ? "" : P.statementEmpty}</p>
+          !walletError && (
+            <div className="flex flex-col items-center gap-2 py-6 text-center">
+              <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-field text-ink-muted">
+                <IconWallet size={22} />
+              </span>
+              <p className="text-sm text-ink-muted">{P.statementEmpty}</p>
+            </div>
+          )
         ) : (
-          <ul className="space-y-1.5">
+          <ul className="grid grid-cols-1 gap-2 lg:grid-cols-2">
             {txs.map((t) => (
-              <li
-                key={t.id}
-                className="flex items-center justify-between gap-3 rounded-control border border-line px-3 py-2 text-sm"
-              >
-                <div className="min-w-0 flex-1">
+              <li key={t.id} className="flex flex-col gap-2 rounded-card border border-line-soft p-3 text-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <Badge variant={t.amount > 0 ? "success" : "danger"}>{KINDS[t.kind] ?? t.kind}</Badge>
+                  <span className={`figure ${t.amount > 0 ? "text-success" : "text-danger"}`} dir="ltr">
+                    {t.amount > 0 ? "+" : ""}
+                    {fmtNum(t.amount)}
+                  </span>
+                </div>
+                {(t.order_number != null || t.ticket_number != null || t.note) && (
                   <span className="flex flex-wrap items-center gap-2">
-                    <Badge variant={t.amount > 0 ? "success" : "danger"}>
-                      {KINDS[t.kind] ?? t.kind}
-                    </Badge>
                     {t.order_number != null && (
                       <button
                         type="button"
@@ -904,55 +968,24 @@ export default function UserProfilePage() {
                         {P.ticketRef} #{fmtRef(t.ticket_number)}
                       </span>
                     )}
-                    {t.note && <span className="truncate text-xs text-ink-muted">{t.note}</span>}
+                    {t.note && <span className="text-xs text-ink-muted">{t.note}</span>}
                   </span>
-                  <p className="mt-0.5 text-xs text-ink-muted">
+                )}
+                <span className="flex flex-wrap items-center justify-between gap-2 text-2xs text-ink-muted">
+                  <span>
                     {P.by}: {t.by_name ?? P.system}
-                  </p>
-                </div>
-                <span className="flex shrink-0 items-center gap-3">
-                  <span className={`font-bold ${t.amount > 0 ? "text-success" : "text-danger"}`} dir="ltr">
-                    {t.amount > 0 ? "+" : ""}
-                    {fmtNum(t.amount)}
                   </span>
-                  <span className="text-xs text-ink-muted" dir="ltr">
-                    {fmtDateTime(t.created_at)}
-                  </span>
+                  <span dir="ltr">{fmtDateTime(t.created_at)}</span>
                 </span>
               </li>
             ))}
           </ul>
         )}
-        {/* ══════════════════════════════════════════════════════════════
-            **والرصيدان يُقفلان الصفحة**
-            ══════════════════════════════════════════════════════════════
-
-            (قرارُ المالك ٢٠٢٦-٠٨-١٥.)
-
-            **والمحرّكُ يرسلهما ولم تكن تُعرض** — **ودفترٌ بلا افتتاحيٍّ
-            وختاميٍّ لا يُراجَع**: من يبدأ من منتصف التاريخ يجمع الأسطر
-            فلا تساوي رصيدَه، **فيظنّ الخللَ في المنصّة.**
-
-            **ومصانان ليتوازنا في كلّ صفحة**: الافتتاحيُّ + مجموعُ
-            المعروض = الختاميّ — **والصفحةُ الثانيةُ تُقفل برصيدها هي لا
-            برصيد اليوم.** */}
-        {txs.length > 0 && (
-          <div className="mt-2 flex items-center justify-between gap-3 rounded-control bg-field px-3 py-2 text-sm">
-            <span className="text-ink-muted">
-              {ST.opening}:{" "}
-              <span className="font-bold text-ink" dir="ltr">
-                {fmtNum(txOpening)}
-              </span>
-            </span>
-            <span className="text-ink-muted">
-              {ST.closing}:{" "}
-              <span className="font-bold text-ink" dir="ltr">
-                {fmtNum(txClosing)}
-              </span>
-            </span>
+        {txTotal > txPer && (
+          <div className="mt-3 flex justify-center">
+            <Pagination page={wPage} total={txTotal} perPage={txPer} onChange={setWPage} />
           </div>
         )}
-        <Pagination page={wPage} total={txTotal} perPage={txPer} onChange={setWPage} />
       </FormSection>
       )}
 
@@ -967,7 +1000,7 @@ export default function UserProfilePage() {
                 {fin.rates.map((rt, i) => (
                   <li
                     key={i}
-                    className="flex items-center justify-between rounded-control border border-line px-3 py-2 text-sm"
+                    className="flex items-center justify-between rounded-card border border-line-soft p-3 text-sm"
                   >
                     <span>{rt.label}</span>
                     <span className="font-bold text-primary-dark" dir="ltr">
@@ -1038,6 +1071,7 @@ export default function UserProfilePage() {
             limit={fin.limit}
             icon={<IconBalance />}
             money
+            labelIsRole
             onOrder={(n) => router.push(`/dashboard/orders?q=${n}`)}
           />
           <FinLog
@@ -1058,7 +1092,7 @@ export default function UserProfilePage() {
                 {fin.returns.map((e) => (
                   <li
                     key={e.ref}
-                    className="flex items-center justify-between gap-3 rounded-control border border-line px-3 py-2 text-sm"
+                    className="flex items-center justify-between gap-3 rounded-card border border-line-soft p-3 text-sm"
                   >
                     <div className="min-w-0 flex-1">
                       <span className="flex flex-wrap items-center gap-2">
@@ -1135,7 +1169,7 @@ export default function UserProfilePage() {
                 {feedback.ratings_given.map((rt, i) => (
                   <li
                     key={i}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-control border border-line px-3 py-2 text-sm"
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-card border border-line-soft p-3 text-sm"
                   >
                     <span className="flex min-w-0 flex-wrap items-center gap-2">
                       <button
@@ -1206,13 +1240,13 @@ export default function UserProfilePage() {
                 <span className="text-ink-muted">
                   {P.avgSpeed}:{" "}
                   <span className="font-bold text-accent-dark" dir="ltr">
-                    {feedback.avg_speed?.toFixed(1)}
+                    {fmtNum(Math.round((feedback.avg_speed ?? 0) * 10) / 10)}
                   </span>
                 </span>
                 <span className="text-ink-muted">
                   {P.avgConduct}:{" "}
                   <span className="font-bold text-accent-dark" dir="ltr">
-                    {feedback.avg_conduct?.toFixed(1)}
+                    {fmtNum(Math.round((feedback.avg_conduct ?? 0) * 10) / 10)}
                   </span>
                 </span>
               </div>
@@ -1220,7 +1254,7 @@ export default function UserProfilePage() {
                 {feedback.by_drivers.map((rt, i) => (
                   <li
                     key={i}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-control border border-line px-3 py-2 text-sm"
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-card border border-line-soft p-3 text-sm"
                   >
                     <span className="flex min-w-0 flex-wrap items-center gap-2">
                       <button
@@ -1246,6 +1280,16 @@ export default function UserProfilePage() {
                   </li>
                 ))}
               </ul>
+              {feedback.by_drivers_count > feedback.per_page && (
+                <div className="mt-3 flex justify-center">
+                  <Pagination
+                    page={dPage}
+                    total={feedback.by_drivers_count}
+                    perPage={feedback.per_page}
+                    onChange={setDPage}
+                  />
+                </div>
+              )}
             </FormSection>
           )}
 
@@ -1258,7 +1302,7 @@ export default function UserProfilePage() {
                 {feedback.ratings_received.map((rt, i) => (
                   <li
                     key={i}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-control border border-line px-3 py-2 text-sm"
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-card border border-line-soft p-3 text-sm"
                   >
                     <span className="flex min-w-0 flex-wrap items-center gap-2">
                       <Badge variant={rt.as === "driver" ? "primary" : "warning"}>
@@ -1345,57 +1389,9 @@ export default function UserProfilePage() {
             <p className="py-6 text-center text-sm text-ink-muted">{P.activityEmpty}</p>
           ) : (
             <ul className="space-y-1.5">
-              {activity.map((a, i) => {
-                const pairs = detailPairs(a.details);
-                // **ويُربط بما يخصّه — حين تكون له وجهةٌ تُفتح.**
-                //
-                // **وحسابٌ آخرُ وحدَه** (`entity='user'`): ورابطُ الطلب
-                // يحتاج رقمَه، **والمحفوظُ معرّفُه** — **وبحثُ الطلبات
-                // يطابق الرقمَ لا المعرّف فيردّ «لا نتائج».** (وهو
-                // العطبُ الذي أُصلح في الكشف الماليّ ٢٠٢٦-٠٨-١٥.)
-                const to =
-                  a.entity === "user" && a.entity_id && a.entity_id !== id
-                    ? `/dashboard/users/${a.entity_id}`
-                    : null;
-                return (
-                <li
-                  key={i}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-control border border-line px-3 py-2 text-sm"
-                >
-                  <span className="flex min-w-0 flex-wrap items-center gap-2">
-                    {to ? (
-                      <button
-                        type="button"
-                        onClick={() => router.push(to)}
-                        className="font-medium text-primary hover:underline"
-                      >
-                        {ACTIONS[a.action] ?? a.action}
-                      </button>
-                    ) : (
-                      <span className="font-medium">{ACTIONS[a.action] ?? a.action}</span>
-                    )}
-                    {/* **والتفاصيلُ تُقال** — كانت تصل وتُهمل. */}
-                    {pairs.map((d, j) => (
-                      <span key={j} className="truncate text-xs text-ink-muted">
-                        {d.k ? `${d.k}: ` : ""}
-                        {d.v}
-                      </span>
-                    ))}
-                    <span className="text-xs text-ink-muted">
-                      {P.by}: {a.by_self ? P.bySelf : (a.by_name ?? P.system)}
-                    </span>
-                    {a.ip && (
-                      <span className="text-xs text-ink-muted" dir="ltr">
-                        {a.ip}
-                      </span>
-                    )}
-                  </span>
-                  <span className="shrink-0 text-xs text-ink-muted" dir="ltr">
-                    {fmtDateTime(a.created_at)}
-                  </span>
-                </li>
-                );
-              })}
+              {activity.map((a, i) => (
+                <ActivityRow key={i} a={a} selfID={id} onOpen={(to) => router.push(to)} />
+              ))}
             </ul>
           )}
           {/* **والترقيمُ من المكوّن المشترك** — ولا يظهر لصفحةٍ واحدة. */}
@@ -1467,7 +1463,7 @@ export default function UserProfilePage() {
             const res = await api<{ revoked_sessions: number }>(`/api/v1/admin/users/${p.id}/logout-all`, {
               method: "POST",
             });
-            setNotice(P.logoutAllDone.replace("{n}", String(res.revoked_sessions)));
+            setNotice(P.logoutAllDone.replace("{n}", fmtNum(res.revoked_sessions)));
             await load();
           } catch (err) {
             setActionError(errorText(err));
@@ -1507,6 +1503,69 @@ export default function UserProfilePage() {
         onChanged={load}
       />
     </div>
+  );
+}
+
+/**
+ * **سطرُ نشاطٍ بجملةٍ بسيطة** (تدقيقُ ٢٠٢٦-١٠-٢٧) — الفعلُ ومن عمله ومتى، **والتفاصيلُ وعنوانُ الجهاز
+ * وراء زرّ «التفاصيل»**: كانت `مفتاح: قيمة` وعنوانُ IP تزحم السطرَ على المالك.
+ */
+function ActivityRow({ a, selfID, onOpen }: { a: Activity; selfID: string; onOpen: (to: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const pairs = detailPairs(a.details);
+  // **ويُربط بما يخصّه — حين تكون له وجهةٌ تُفتح.** وحسابٌ آخرُ وحدَه (`entity='user'`): **ورابطُ
+  // الطلب يحتاج رقمَه والمحفوظُ معرّفُه** — وبحثُ الطلبات يطابق الرقمَ فيردّ «لا نتائج».
+  const to = a.entity === "user" && a.entity_id && a.entity_id !== selfID ? `/dashboard/users/${a.entity_id}` : null;
+  const label = ACTIONS[a.action] ?? a.action;
+  const who = a.by_self ? P.bySelf : (a.by_name ?? P.system);
+  return (
+    <li className="rounded-card border border-line-soft p-3 text-sm">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <span className="min-w-0">
+          {to ? (
+            <button type="button" onClick={() => onOpen(to)} className="font-bold text-primary hover:underline">
+              {label}
+            </button>
+          ) : (
+            <span className="font-bold">{label}</span>
+          )}
+          <span className="block text-xs text-ink-muted">
+            {P.by}: {who}
+          </span>
+        </span>
+        <span className="shrink-0 text-2xs text-ink-muted" dir="ltr">
+          {fmtDateTime(a.created_at)}
+        </span>
+      </div>
+      {(pairs.length > 0 || a.ip) && (
+        <>
+          <button
+            type="button"
+            onClick={() => setOpen(!open)}
+            aria-expanded={open}
+            className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+          >
+            <IconChevronDown size={12} className={open ? "rotate-180" : ""} />
+            {open ? U.hideDetails : U.details}
+          </button>
+          {open && (
+            <ul className="mt-2 space-y-1 rounded-control bg-field px-3 py-2 text-xs text-ink-muted">
+              {pairs.map((d, j) => (
+                <li key={j}>
+                  {d.k ? `${d.k}: ` : ""}
+                  <span className="text-ink">{d.v}</span>
+                </li>
+              ))}
+              {a.ip && (
+                <li>
+                  {U.device}: <span dir="ltr">{a.ip}</span>
+                </li>
+              )}
+            </ul>
+          )}
+        </>
+      )}
+    </li>
   );
 }
 
@@ -1596,7 +1655,7 @@ function TicketList({
             <li
               key={t.id}
               onClick={() => onOpen(t)}
-              className="flex cursor-pointer flex-wrap items-center justify-between gap-2 rounded-control border border-line px-3 py-2 text-sm hover:bg-row-hover"
+              className="flex cursor-pointer flex-wrap items-center justify-between gap-2 rounded-card border border-line-soft p-3 text-sm hover:bg-row-hover"
             >
               <span className="flex min-w-0 flex-wrap items-center gap-2">
                 <span className="font-bold">#{fmtRef(t.number)}</span>
@@ -1663,6 +1722,7 @@ function FinLog({
   limit,
   icon,
   money = false,
+  labelIsRole = false,
   onOrder,
 }: {
   title: string;
@@ -1670,6 +1730,8 @@ function FinLog({
   count: number;
   limit: number;
   icon: React.ReactNode;
+  /** **اللفظُ رمزُ دورٍ** (`party_role` في النزاع) — يُترجَم: كان يظهر driver وmerchant. */
+  labelIsRole?: boolean;
   /** **أفيه مبلغ؟** — بلاغُ الطوارئ لا مالَ فيه، **وصفرٌ معروضٌ يُقرأ مبلغا.** */
   money?: boolean;
   onOrder?: (ref: string) => void;
@@ -1681,7 +1743,7 @@ function FinLog({
         {rows.map((e, i) => (
           <li
             key={i}
-            className="flex flex-wrap items-center justify-between gap-2 rounded-control border border-line px-3 py-2 text-sm"
+            className="flex flex-wrap items-center justify-between gap-2 rounded-card border border-line-soft p-3 text-sm"
           >
             <span className="flex min-w-0 flex-wrap items-center gap-2">
               {e.status && (
@@ -1700,14 +1762,18 @@ function FinLog({
                 </button>
               )}
               {e.reason && <span className="truncate">{e.reason}</span>}
-              {e.label && <span className="truncate text-xs text-ink-muted">{e.label}</span>}
+              {e.label && (
+                <span className="truncate text-xs text-ink-muted">
+                  {labelIsRole ? `${U.partyAs}: ${roleLabelByCode(e.label)}` : e.label}
+                </span>
+              )}
             </span>
             <span className="flex shrink-0 items-center gap-3">
               {/* **والعقوبةُ سالبةٌ بلونها** — **وموجبان في عمودٍ واحدٍ
                   يُقرأ من عوقب كمن كوفئ.** */}
               {money && e.amount !== 0 && (
                 <span
-                  className={`font-bold ${e.amount < 0 ? "text-danger" : "text-success"}`}
+                  className={`text-base font-bold tabular-nums ${e.amount < 0 ? "text-danger" : "text-success"}`}
                   dir="ltr"
                 >
                   {fmtNum(e.amount)}
@@ -1784,7 +1850,7 @@ function FinBucket({
           {items.map((e, i) => (
             <li
               key={e.ref || i}
-              className="flex items-center justify-between gap-3 rounded-control border border-line px-3 py-2 text-sm"
+              className="flex items-center justify-between gap-3 rounded-card border border-line-soft p-3 text-sm"
             >
               <div className="min-w-0 flex-1">
                 {e.ref ? (
@@ -1799,7 +1865,7 @@ function FinBucket({
                   <span className="font-medium">{e.label}</span>
                 )}
               </div>
-              <span className={`shrink-0 font-bold ${tone}`} dir="ltr">
+              <span className={`shrink-0 text-base font-bold tabular-nums ${tone}`} dir="ltr">
                 {fmtNum(e.amount)}
               </span>
             </li>

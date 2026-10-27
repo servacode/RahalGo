@@ -94,7 +94,7 @@ func likeEscape(s string) string {
 //
 // **والشرطُ واحدٌ للعدّ وللقائمة وللتصدير** — نصّان يفترقان يوماً **فيقول
 // العنوانُ ألفاً وتعرض القائمةُ تسعمئة، ويحمل الملفُّ ثالثاً.**
-func auditFilter(r *http.Request) (*sqlArgs, map[string]string, error) {
+func auditFilter(r *http.Request, startHour int64) (*sqlArgs, map[string]string, error) {
 	q := r.URL.Query()
 	b := &sqlArgs{}
 	echo := map[string]string{}
@@ -114,9 +114,7 @@ func auditFilter(r *http.Request) (*sqlArgs, map[string]string, error) {
 	echo["group"] = g.Key
 	switch {
 	case g.Key == "sensitive":
-		b.where("(a.action LIKE 'finance.%' OR a.action = ANY(" + b.arg(auditSensitiveActions()) +
-			") OR (a.action = 'admin.setting_update' AND a.entity_id = ANY(" +
-			b.arg(auditSensitiveSettingKeys()) + ")))")
+		b.where(auditSensitiveCond(b))
 	case len(g.Prefixes) > 0:
 		b.where("split_part(a.action, '.', 1) = ANY(" + b.arg(g.Prefixes) + ")")
 	}
@@ -156,17 +154,20 @@ func auditFilter(r *http.Request) (*sqlArgs, map[string]string, error) {
 		echo["entity_id"] = eid
 	}
 
-	// ── التاريخُ بيوم دمشق (المشكلةُ التاسعة) ───────────────────────
+	// ── التاريخُ بيوم المنصّة (المشكلةُ التاسعة، وتدقيقُ ٢٠٢٦-١٠-٢٧) ─────
 	//
 	// كان `created_at >= $3::date` — **بمنطقة القاعدة لا بمنطقة المنصّة**،
-	// فأحداثُ ما بين منتصف الليل والثالثة تقع في اليوم الخطأ.
+	// فأحداثُ ما بين منتصف الليل والثالثة تقع في اليوم الخطأ. **ثمّ صار
+	// اليومُ يبدأ بساعة فتح الدوام** (`platform.day_start_hour`) كبقيّة
+	// اللوحة — فـ«اليوم» في السجلّ هو «اليوم» في النقد والتقارير.
 	loc := platform.Location()
+	shift := time.Duration(startHour) * time.Hour
 	if from := q.Get("from"); from != "" {
 		t, err := time.ParseInLocation("2006-01-02", from, loc)
 		if err != nil {
 			return nil, nil, errValidation
 		}
-		b.where("a.created_at >= " + b.arg(t))
+		b.where("a.created_at >= " + b.arg(t.Add(shift)))
 		echo["from"] = from
 	}
 	if to := q.Get("to"); to != "" {
@@ -174,7 +175,7 @@ func auditFilter(r *http.Request) (*sqlArgs, map[string]string, error) {
 		if err != nil {
 			return nil, nil, errValidation
 		}
-		b.where("a.created_at < " + b.arg(t.AddDate(0, 0, 1)))
+		b.where("a.created_at < " + b.arg(t.AddDate(0, 0, 1).Add(shift)))
 		echo["to"] = to
 	}
 
@@ -240,6 +241,13 @@ func auditFilter(r *http.Request) (*sqlArgs, map[string]string, error) {
 	return b, echo, nil
 }
 
+// auditSensitiveCond **شرطُ «الأفعال الحساسة» — مكتوبٌ مرّة**: للتبويب ولعدّاد اليوم.
+func auditSensitiveCond(b *sqlArgs) string {
+	return "(a.action LIKE 'finance.%' OR a.action = ANY(" + b.arg(auditSensitiveActions()) +
+		") OR (a.action = 'admin.setting_update' AND a.entity_id = ANY(" +
+		b.arg(auditSensitiveSettingKeys()) + ")))"
+}
+
 // auditSelect **السطرُ كما يُعرض** — بالفاعل ودوره، وبالهدف مقروءاً.
 //
 // (المشكلةُ الرابعة: «تغيير حالة طلب — أحمد» بلا أيّ طلب.)
@@ -253,11 +261,22 @@ const auditSelect = `
 	           WHEN 'merchant' THEN (SELECT m.name FROM merchants m WHERE m.id = a.entity_id::uuid)
 	           WHEN 'user' THEN (SELECT COALESCE(NULLIF(tu.full_name, ''), tu.phone::text)
 	                             FROM users tu WHERE tu.id = a.entity_id::uuid)
+	           -- **والنزاعُ بطرفه، والصنفُ باسمه، وطلبُ الانضمام باسم متجره**
+	           -- (تدقيقُ ٢٠٢٦-١٠-٢٧: كانت تُعرض «—» فلا يُعرف على مَن وقع الفعل).
+	           WHEN 'dispute' THEN (SELECT COALESCE(dm.name, NULLIF(du.full_name, ''), du.phone::text)
+	                                FROM disputes d
+	                                LEFT JOIN merchants dm ON dm.id = d.merchant_id
+	                                LEFT JOIN users du ON du.id = d.party_user_id
+	                                WHERE d.id = a.entity_id::uuid)
+	           WHEN 'menu_item' THEN (SELECT mi.name FROM menu_items mi WHERE mi.id = a.entity_id::uuid)
+	           WHEN 'lead' THEN (SELECT ml.store_name FROM merchant_leads ml WHERE ml.id = a.entity_id::uuid)
 	           END END, ''),
 	       CASE WHEN a.entity_id ~ '^[0-9a-fA-F-]{36}$' THEN
 	           CASE a.entity
 	           WHEN 'order' THEN (SELECT o.number FROM orders o WHERE o.id = a.entity_id::uuid)
 	           WHEN 'ticket' THEN (SELECT tk.number FROM tickets tk WHERE tk.id = a.entity_id::uuid)
+	           WHEN 'dispute' THEN (SELECT o.number FROM disputes d JOIN orders o ON o.id = d.order_id
+	                                WHERE d.id = a.entity_id::uuid)
 	           END END,
 	       a.details, NULLIF(a.ip, ''), a.user_agent, a.created_at
 	FROM audit_log a
@@ -304,8 +323,33 @@ func (s *Server) handleAdminAudit(w http.ResponseWriter, r *http.Request) {
 	if page < 1 {
 		page = 1
 	}
-	b, echo, err := auditFilter(r)
+	startHour := s.dayStartHour(r.Context())
+	b, echo, err := auditFilter(r, startHour)
 	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+
+	// **عدّاداتُ اليوم** (تدقيقُ ٢٠٢٦-١٠-٢٧) — لخانات رأس الصفحة: حسّاسٌ ومالٌ وإعداداتٌ
+	// وكلُّ اليوم، **بيوم المنصّة** (من ساعة فتح الدوام). ولا يدخلها تجديدُ الجلسة —
+	// كما لا يدخل القائمة. **والضغطُ على الخانة يفتح القائمةَ نفسَها فيطابق العدد.**
+	today, yesterday, week := overviewDays(time.Now(), startHour)
+	tb := &sqlArgs{}
+	sens := auditSensitiveCond(tb)
+	var todayCounts struct {
+		Sensitive int `json:"sensitive"`
+		Finance   int `json:"finance"`
+		Settings  int `json:"settings"`
+		All       int `json:"all"`
+	}
+	if err := s.pg.QueryRow(r.Context(), `
+		SELECT count(*) FILTER (WHERE `+sens+`),
+		       count(*) FILTER (WHERE a.action LIKE 'finance.%'),
+		       count(*) FILTER (WHERE a.action = 'admin.setting_update'),
+		       count(*)
+		FROM audit_log a
+		WHERE a.created_at >= `+tb.arg(today)+` AND a.action <> 'auth.refresh'`, tb.args...).
+		Scan(&todayCounts.Sensitive, &todayCounts.Finance, &todayCounts.Settings, &todayCounts.All); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -337,6 +381,11 @@ func (s *Server) handleAdminAudit(w http.ResponseWriter, r *http.Request) {
 		"money_visible": s.canSeeAuditMoney(r),
 		// **زرُّ التصدير يظهر لمن يملكه وحدَه** — والخادمُ يرفض غيرَه على أيّ حال.
 		"can_export": s.hasCapability(r, authz.AuditExport),
+		// **«اليوم» و«أمس» و«٧ أيّام» من الخادم** — بيوم المنصّة لا بمنتصف ليل المتصفّح.
+		"today":          today.In(platform.Location()).Format("2006-01-02"),
+		"yesterday":      yesterday.In(platform.Location()).Format("2006-01-02"),
+		"week_from":      week.In(platform.Location()).Format("2006-01-02"),
+		"day_start_hour": startHour, "today_counts": todayCounts,
 	})
 }
 
@@ -400,7 +449,7 @@ func (s *Server) handleAdminAuditExport(w http.ResponseWriter, r *http.Request) 
 		s.respondErr(w, errForbidden)
 		return
 	}
-	b, echo, err := auditFilter(r)
+	b, echo, err := auditFilter(r, s.dayStartHour(r.Context()))
 	if err != nil {
 		s.respondErr(w, err)
 		return

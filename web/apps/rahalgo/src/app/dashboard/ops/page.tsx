@@ -35,22 +35,26 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum, fmtClockTime, fmtSpan, errorText } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtClockTime, fmtDateTime, fmtSpan, errorText } from "@rahalgo/i18n";
 import {
   Alert,
   Badge,
   Button,
   ButtonLink,
+  IconBell,
+  IconCheck,
   IconDriver,
   IconHourglass,
   IconLocation,
   IconMoto,
+  IconNote,
   IconSettings,
   IconShieldCheck,
   IconShieldX,
   IconStatus,
   IconStore,
   IconSuccess,
+  IconSupport,
   IconWarning,
   LoadingState,
   OrderRef,
@@ -84,6 +88,11 @@ interface Monitor {
   }[];
   drivers: { on_shift: N; busy: N; free: N };
   emergencies_open: N;
+  /** **بلاغاتٌ بانتظار قرارك** — بشرط بطاقة الرئيسيّة وفلتر `awaiting=1` نفسِه. */
+  reports_waiting?: N;
+  /** **شكاوي لم تُحلّ** و**نزاعاتٌ مفتوحة** — بجانب البلاغات (المالك ٢٠٢٦-١٠-٢٧). */
+  complaints_waiting?: N;
+  disputes_waiting?: N;
   system: { state: string; parts: Record<string, string>; since: string | null };
   reminder_min: number;
   missing: string[];
@@ -148,7 +157,7 @@ interface Identity {
 }
 
 /** ترتيبُ عدّادات السير — مفاتيحُها فلاترُ لوحة الطلبات بأعيانها. */
-const FLOW = ["awaiting_accept", "awaiting_driver", "on_the_way", "at_door", "no_driver", "stuck", "emergency"] as const;
+const FLOW = ["new", "awaiting_accept", "awaiting_driver", "on_the_way", "at_door", "no_driver", "stuck", "emergency"] as const;
 /** العاجلُ منها — يحمرّ إن لم يكن صفراً. */
 const URGENT = new Set<string>(["no_driver", "stuck", "emergency"]);
 const PARTS = ["api", "db", "cache", "push", "realtime"] as const;
@@ -156,6 +165,7 @@ const PARTS = ["api", "db", "cache", "push", "realtime"] as const;
 // ── تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦) ──────────────────────────────
 /** أيقونةُ كلّ مرحلةٍ في سير الطلبات. */
 const FLOW_ICON: Record<(typeof FLOW)[number], typeof IconStore> = {
+  new: IconBell,
   awaiting_accept: IconStore,
   awaiting_driver: IconHourglass,
   on_the_way: IconMoto,
@@ -165,7 +175,7 @@ const FLOW_ICON: Record<(typeof FLOW)[number], typeof IconStore> = {
   emergency: IconShieldX,
 };
 /** الانتظارُ برتقاليّ — والعاجلُ أحمر، والصفرُ والمجهولُ رماديّان. */
-const WAITING = new Set<string>(["awaiting_accept", "awaiting_driver"]);
+const WAITING = new Set<string>(["new", "awaiting_accept", "awaiting_driver"]);
 function flowTone(k: string, v: N | undefined): TileTone {
   if (v == null || v === 0) return "muted";
   if (URGENT.has(k)) return "danger";
@@ -180,6 +190,14 @@ const DOT: Record<St, string> = {
   down: "bg-danger",
   unknown: "bg-line",
 };
+
+/** **ما يعدّه الرقمُ إن التبس** — «طوارئ» هنا طلبات، وبطاقةُ الطوارئ بلاغات. */
+const FLOW_SUB: Partial<Record<(typeof FLOW)[number], string>> = {
+  new: O.newFlowSub,
+  emergency: O.emergencyFlowSub,
+};
+/** **أقسامٌ لم تُقرأ** — من حقل `missing`، ولا طمأنةَ مكانها. */
+const MISSING = O.missingSections as Record<string, string>;
 
 /** **فارغٌ مطمئن** — دائرةٌ خضراءُ صغيرةٌ وجملة. */
 function AllClear({ text }: { text: string }) {
@@ -215,7 +233,7 @@ function num(v?: number | null): React.ReactNode {
   return v == null ? unknown : fmtNum(v);
 }
 function ms(v?: number | null): React.ReactNode {
-  return v == null ? unknown : `${fmtNum(v)} ms`;
+  return v == null ? unknown : O.unitMs.replace("{n}", fmtNum(v));
 }
 function span(sec?: number | null): React.ReactNode {
   return sec == null ? unknown : fmtSpan(sec);
@@ -303,6 +321,9 @@ export default function OpsMonitorPage() {
   const [now, setNow] = useState(() => Date.now());
   const [acking, setAcking] = useState("");
   const [ackErr, setAckErr] = useState("");
+  // **زرُّ التحديث يقول إنّه يعمل** — يُطفأ مع أوّل جوابٍ أو عطب.
+  const [refreshing, setRefreshing] = useState(false);
+  const [tick, setTick] = useState(0);
 
   /** **والعطبُ يُحفظ بنصّه** — ٤٠٣ غيرُ ٤٠١ غيرُ انقطاع، والجسمُ القديمُ يبقى. */
   const guard = useCallback(async <T,>(load: () => Promise<T>): Promise<T> => {
@@ -316,6 +337,8 @@ export default function OpsMonitorPage() {
       setCode(err instanceof ApiError ? err.status : 0);
       setError(errorText(err));
       throw err;
+    } finally {
+      setTick((n) => n + 1);
     }
   }, []);
 
@@ -335,10 +358,11 @@ export default function OpsMonitorPage() {
     [canEngineer, canFlow],
   );
   // **وأخطاءُ الخادم لمن يرى التفاصيل التقنيّة** — تُقرأ مع كلّ تحديث.
-  const errs = useLiveData<ServerErrors | null>(
+  // **وفشلُ قراءتها يُقال** — لا تختفي الكتلةُ فيُظنّ ألّا أخطاء.
+  const errs = useLiveData<ServerErrors | "failed" | null>(
     () =>
       canEngineer
-        ? api<ServerErrors>("/api/v1/admin/monitoring/errors").catch(() => null)
+        ? api<ServerErrors>("/api/v1/admin/monitoring/errors").catch(() => "failed" as const)
         : Promise.resolve(null),
     ["system"],
     [canEngineer],
@@ -366,7 +390,17 @@ export default function OpsMonitorPage() {
     return () => clearInterval(t);
   }, [reloadMon, reloadEng, reloadErrs]);
 
+  useEffect(() => {
+    setRefreshing(false);
+  }, [tick]);
+  useEffect(() => {
+    if (!refreshing) return;
+    const t = setTimeout(() => setRefreshing(false), 15_000);
+    return () => clearTimeout(t);
+  }, [refreshing]);
+
   const refresh = () => {
+    setRefreshing(true);
     setNow(Date.now());
     reloadMon();
     reloadEng();
@@ -407,6 +441,10 @@ export default function OpsMonitorPage() {
   //
   // **وفشلُ آخر قراءةٍ يُقال ولا يُخفى تحت «كل شي شغّال»** (المشكلة ٥).
   const parts = data?.system.parts ?? plainParts(health?.verdict?.parts);
+  // **صفحةُ الطوارئ تحتاج صلاحيّتها** — ومن لا يملكها يُنقل لبطاقتها هنا.
+  const canEmergency = capabilities.includes("emergencies.manage");
+  const missing = data?.missing ?? [];
+  const stuckMissing = missing.includes("stuck");
   const phrases: { text: string; href: string }[] = [];
   if (data && data.stuck.length > 0) {
     phrases.push({ text: O.pStuck.replace("{n}", fmtNum(data.stuck.length)), href: "#stuck" });
@@ -414,13 +452,16 @@ export default function OpsMonitorPage() {
   if (data?.emergencies_open) {
     phrases.push({
       text: O.pEmergency.replace("{n}", fmtNum(data.emergencies_open)),
-      href: "/dashboard/emergencies",
+      href: canEmergency ? "/dashboard/emergencies" : "#emergencies",
     });
   }
   for (const p of problemPhrases(parts)) phrases.push({ text: p, href: "#system" });
   const unreachable = !!error && code !== 403 && code !== 401;
 
   const bad = unreachable || phrases.length > 0;
+  // **قسمٌ لم يُقرأ لا يُطمئن** — الدائرةُ برتقاليّةٌ والجملةُ تقول ما غاب.
+  const partial = !bad && missing.length > 0;
+  const missingText = missing.map((k) => MISSING[k] ?? k).join(" / ");
   const partsOk = !unreachable && PARTS.every((p) => parts?.[p] === "ok");
 
   return (
@@ -435,8 +476,8 @@ export default function OpsMonitorPage() {
             <span className="text-xs text-ink-muted">
               {O.lastUpdate}: {at ? fmtClockTime(at) : loading ? O.loading : "—"}
             </span>
-            <Button variant="secondary" onClick={refresh}>
-              {O.refresh}
+            <Button variant="secondary" disabled={refreshing} onClick={refresh}>
+              {refreshing ? O.refreshing : O.refresh}
             </Button>
           </>
         }
@@ -457,17 +498,25 @@ export default function OpsMonitorPage() {
         <>
           {/* ── ١ · الحالُ بنظرة ── تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦): دائرةٌ كبيرةٌ خضراءُ أو حمراء،
               وجملُ المشكلة تُضغط فتنقل إليها. */}
-          <section className={`surface flex flex-wrap items-center gap-4 p-5 ${bad ? "border-danger" : ""}`}>
+          <section
+            className={`surface flex flex-wrap items-center gap-4 p-5 ${
+              bad ? "border-danger" : partial ? "border-warning" : ""
+            }`}
+          >
             <span
               className={`inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-full text-on-solid ${
-                bad ? "bg-danger-solid" : "bg-success-solid"
+                bad ? "bg-danger-solid" : partial ? "bg-warning-solid" : "bg-success-solid"
               }`}
             >
-              {bad ? <IconWarning size={30} /> : <IconShieldCheck size={30} />}
+              {bad || partial ? <IconWarning size={30} /> : <IconShieldCheck size={30} />}
             </span>
             <div className="min-w-0 flex-1 space-y-1">
               {unreachable ? (
                 <h2 className="heading-section text-danger">{O.pUnreachable}</h2>
+              ) : partial ? (
+                <h2 className="heading-section text-warning">
+                  {O.missingPrefix} {missingText}
+                </h2>
               ) : phrases.length === 0 ? (
                 <h2 className="heading-section text-success">{O.allGood}</h2>
               ) : (
@@ -483,7 +532,12 @@ export default function OpsMonitorPage() {
                   ))}
                 </h2>
               )}
-              <p className="text-sm text-ink-muted">{bad ? O.badLine : O.okLine}</p>
+              <p className="text-sm text-ink-muted">{bad ? O.badLine : partial ? O.missingLine : O.okLine}</p>
+              {bad && missing.length > 0 && (
+                <p className="text-sm font-bold text-warning">
+                  {O.missingPrefix} {missingText}
+                </p>
+              )}
               <p className="text-xs text-ink-muted">{O.auto}</p>
             </div>
           </section>
@@ -493,7 +547,7 @@ export default function OpsMonitorPage() {
             <>
               {/* **كلُّ رقمٍ بابٌ** — والصفرُ رماديٌّ، والانتظارُ برتقاليّ، والعاجلُ أحمر (المالك ٢٠٢٦-١٠-٢٦). */}
               <Panel title={O.flowTitle} note={O.flowHint}>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
                   {FLOW.map((k) => {
                     const v = data.flow[k];
                     return (
@@ -502,16 +556,47 @@ export default function OpsMonitorPage() {
                         icon={FLOW_ICON[k]}
                         label={BOARD[k] ?? k}
                         value={v == null ? O.unknown : fmtNum(v)}
+                        sub={FLOW_SUB[k]}
                         tone={flowTone(k, v)}
                         onClick={() => router.push(`/dashboard/orders?filter=${k}`)}
                       />
                     );
                   })}
+                  {/* **بلاغاتٌ بانتظار قرارك** (المالك ٢٠٢٦-١٠-٢٧) — تفتح لوحةَ الطلبات بفلتر البلاغات. */}
+                  <Tile
+                    icon={IconNote}
+                    label={O.reportsTile}
+                    value={data.reports_waiting == null ? O.unknown : fmtNum(data.reports_waiting)}
+                    sub={O.reportsTileSub}
+                    tone={data.reports_waiting == null || data.reports_waiting === 0 ? "muted" : "danger"}
+                    onClick={() => router.push("/dashboard/orders?awaiting=1")}
+                  />
+                  <Tile
+                    icon={IconSupport}
+                    label={O.complaintsTile}
+                    value={data.complaints_waiting == null ? O.unknown : fmtNum(data.complaints_waiting)}
+                    sub={O.complaintsTileSub}
+                    tone={data.complaints_waiting == null || data.complaints_waiting === 0 ? "muted" : "danger"}
+                    onClick={() => router.push("/dashboard/tickets")}
+                  />
+                  <Tile
+                    icon={IconWarning}
+                    label={O.disputesTile}
+                    value={data.disputes_waiting == null ? O.unknown : fmtNum(data.disputes_waiting)}
+                    sub={O.disputesTileSub}
+                    tone={data.disputes_waiting == null || data.disputes_waiting === 0 ? "muted" : "danger"}
+                    onClick={() => router.push("/dashboard/losses")}
+                  />
                 </div>
               </Panel>
 
               {/* **العالقُ بطاقات** — رقمٌ ومتجرٌ وسببٌ ومدّة، وزرّا الفتح و«أنا عليه». */}
-              <section id="stuck" className={`surface p-4 ${data.stuck.length > 0 ? "border-danger" : ""}`}>
+              <section
+                id="stuck"
+                className={`surface p-4 ${
+                  data.stuck.length > 0 ? "border-danger" : stuckMissing ? "border-warning" : ""
+                }`}
+              >
                 <h2 className="heading-card mb-1 flex flex-wrap items-center gap-2">
                   <IconWarning size={18} className={data.stuck.length > 0 ? "text-danger" : "text-ink-muted"} />
                   {O.stuckTitle}
@@ -525,7 +610,14 @@ export default function OpsMonitorPage() {
                   {data.reminder_min > 0 ? O.reminderEvery.replace("{n}", fmtNum(data.reminder_min)) : O.reminderOff}
                 </p>
                 {ackErr && <Alert>{ackErr}</Alert>}
-                {data.stuck.length === 0 ? (
+                {stuckMissing ? (
+                  <p className="flex items-center gap-2 text-sm font-bold text-warning">
+                    <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-warning-solid text-on-solid">
+                      <IconWarning size={14} />
+                    </span>
+                    {O.stuckUnreadable}
+                  </p>
+                ) : data.stuck.length === 0 ? (
                   <AllClear text={O.stuckEmpty} />
                 ) : (
                   <ul className="grid grid-cols-1 gap-2 lg:grid-cols-2">
@@ -537,8 +629,13 @@ export default function OpsMonitorPage() {
                         }`}
                       >
                         <div className="flex items-start gap-3">
-                          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-danger-solid text-on-solid">
-                            <IconHourglass size={18} />
+                          {/* **المستلَمُ يهدأ لونُه** — فيبين بنظرةٍ أيُّ عالقٍ لسّا ما حدا عليه. */}
+                          <span
+                            className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-on-solid ${
+                              a.acked_at ? "bg-warning-solid" : "bg-danger-solid"
+                            }`}
+                          >
+                            {a.acked_at ? <IconCheck size={18} /> : <IconHourglass size={18} />}
                           </span>
                           <div className="min-w-0 flex-1 space-y-1">
                             <div className="flex flex-wrap items-center gap-2">
@@ -548,7 +645,12 @@ export default function OpsMonitorPage() {
                             <div className="flex flex-wrap items-center gap-1.5">
                               <Badge variant="danger">{REASONS[a.reason] ?? a.reason}</Badge>
                               <Badge variant={a.acked_at ? "success" : "warning"}>
-                                {a.acked_at ? O.acked : O.notAcked}
+                                {a.acked_at
+                                  ? O.ackedSince.replace(
+                                      "{t}",
+                                      fmtSpan(Math.max(0, (now - Date.parse(a.acked_at)) / 1000)),
+                                    )
+                                  : O.notAcked}
                               </Badge>
                             </div>
                             <p className="text-xs text-ink-muted">
@@ -558,13 +660,19 @@ export default function OpsMonitorPage() {
                             </p>
                           </div>
                         </div>
-                        <div className="flex flex-wrap justify-end gap-2">
-                          <ButtonLink variant="secondary" href={`/dashboard/orders?id=${a.order_id}`}>
+                        {/* **أزرارٌ بعرض البطاقة** — و«أنا عليه» أساسيٌّ لا أحمر: هو استلامٌ لا حذف. */}
+                        <div className={`grid gap-2 ${canAck && !a.acked_at ? "grid-cols-2" : "grid-cols-1"}`}>
+                          <ButtonLink
+                            variant="secondary"
+                            className="w-full justify-center"
+                            href={`/dashboard/orders?id=${a.order_id}`}
+                          >
                             {O.openOrder}
                           </ButtonLink>
                           {canAck && !a.acked_at && (
                             <Button
-                              variant="danger"
+                              variant="primary"
+                              className="w-full"
                               disabled={acking === a.order_id}
                               onClick={() => void ackAlert(a.order_id)}
                             >
@@ -572,6 +680,7 @@ export default function OpsMonitorPage() {
                             </Button>
                           )}
                         </div>
+                        {canAck && !a.acked_at && <p className="text-2xs text-ink-muted">{O.ackHint}</p>}
                       </li>
                     ))}
                   </ul>
@@ -603,15 +712,19 @@ export default function OpsMonitorPage() {
                     ))}
                   </ul>
                   <div className="mt-3">
-                    <ButtonLink variant="secondary" href="/dashboard/opsmap">
+                    <ButtonLink variant="secondary" className="w-full justify-center" href="/dashboard/opsmap">
                       {O.showMap}
                     </ButtonLink>
                   </div>
                 </Panel>
 
                 {/* **الطوارئ** — دائرةٌ كبيرةٌ بالعدد، حمراءُ إن كان فيها شي. */}
-                <section className={`surface p-4 ${data.emergencies_open ? "border-danger" : ""}`}>
-                  <h2 className="heading-card mb-3">{O.emergenciesTitle}</h2>
+                <section
+                  id="emergencies"
+                  className={`surface p-4 ${data.emergencies_open ? "border-danger" : ""}`}
+                >
+                  <h2 className="heading-card mb-1">{O.emergenciesTitle}</h2>
+                  <p className="mb-3 text-xs text-ink-muted">{O.emergenciesCardNote}</p>
                   <div className="flex items-center gap-4">
                     <span
                       className={`inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-full ${
@@ -632,10 +745,21 @@ export default function OpsMonitorPage() {
                           : O.unknown}
                     </p>
                   </div>
+                  {/* **الزرُّ لمن يفتح الصفحة** — ومن لا يملك الطوارئ يرى طلباتها في لوحة الطلبات. */}
                   <div className="mt-3">
-                    <ButtonLink variant="secondary" href="/dashboard/emergencies">
-                      {O.openEmergencies}
-                    </ButtonLink>
+                    {canEmergency ? (
+                      <ButtonLink variant="secondary" className="w-full justify-center" href="/dashboard/emergencies">
+                        {O.openEmergencies}
+                      </ButtonLink>
+                    ) : (
+                      <ButtonLink
+                        variant="secondary"
+                        className="w-full justify-center"
+                        href="/dashboard/orders?filter=emergency"
+                      >
+                        {O.openEmergencyOrders}
+                      </ButtonLink>
+                    )}
                   </div>
                 </section>
               </div>
@@ -687,8 +811,8 @@ export default function OpsMonitorPage() {
                     <Block title={O.secServer}>
                       <Row label={O.uptime} value={span(rt?.uptime_seconds)} />
                       <Row label={O.goroutines} value={num(rt?.goroutines)} />
-                      <Row label={O.heap} value={rt?.heap_mb == null ? unknown : `${fmtNum(rt.heap_mb)} MB`} />
-                      <Row label={O.sys} value={rt?.sys_mb == null ? unknown : `${fmtNum(rt.sys_mb)} MB`} />
+                      <Row label={O.heap} value={rt?.heap_mb == null ? unknown : O.unitMb.replace("{n}", fmtNum(rt.heap_mb))} />
+                      <Row label={O.sys} value={rt?.sys_mb == null ? unknown : O.unitMb.replace("{n}", fmtNum(rt.sys_mb))} />
                     </Block>
                     <Block title={O.secDb} state={pg?.reachable}>
                       <Row label={O.ping} value={ms(pg?.ping_ms)} />
@@ -726,27 +850,42 @@ export default function OpsMonitorPage() {
                       <Counters map={health.clients} labels={appLabel} />
                       <Row label={O.clientsDropped} value={num(health.clients_dropped)} />
                     </Block>
-                    {errs.data && (
-                      <Block title={O.secErrors} state={errs.data.groups.length === 0}>
-                        {errs.data.groups.length === 0 ? (
-                          <AllClear text={O.errorsNone} />
-                        ) : (
-                          <>
-                            <p className="mb-2 text-xs text-ink-muted">
-                              {O.errorsTotal
-                                .replace("{n}", fmtNum(errs.data.total))
-                                .replace("{h}", fmtNum(errs.data.last_hour))}
-                            </p>
-                            {errs.data.groups.slice(0, 10).map((g) => (
-                              <Row
-                                key={`${g.route}|${g.code}`}
-                                label={`${g.route} (${g.code})`}
-                                value={`${fmtNum(g.count)} · ${O.errorsLast.replace("{t}", fmtClockTime(g.last_seen))}`}
-                              />
-                            ))}
-                          </>
-                        )}
+                    {errs.data === "failed" ? (
+                      <Block title={O.secErrors}>
+                        <p className="py-2 text-sm font-bold text-warning">{O.errorsUnreadable}</p>
                       </Block>
+                    ) : (
+                      errs.data && (
+                        <Block title={O.secErrors} state={errs.data.groups.length === 0}>
+                          {errs.data.groups.length === 0 ? (
+                            <AllClear text={O.errorsNone} />
+                          ) : (
+                            <>
+                              <p className="mb-2 text-xs text-ink-muted">
+                                {O.errorsTotal
+                                  .replace("{n}", fmtNum(errs.data.total))
+                                  .replace("{h}", fmtNum(errs.data.last_hour))}
+                              </p>
+                              {/* **المسارُ بسطرٍ لاتينيٍّ ينكسر** — والعددُ وآخرُ مرّةٍ (بيومها) تحته. */}
+                              {errs.data.groups.slice(0, 10).map((g) => (
+                                <div
+                                  key={`${g.route}|${g.code}`}
+                                  className="min-w-0 border-b border-line-soft py-1.5 last:border-0"
+                                >
+                                  <p dir="ltr" className="break-all text-start font-mono text-[11px]">
+                                    {`${g.route} (${g.code})`}
+                                  </p>
+                                  <p className="mt-0.5 text-xs text-ink-muted">
+                                    {O.errorsCount.replace("{n}", fmtNum(g.count))}
+                                    {m.common.listSeparator}
+                                    {O.errorsLast.replace("{t}", fmtDateTime(g.last_seen))}
+                                  </p>
+                                </div>
+                              ))}
+                            </>
+                          )}
+                        </Block>
+                      )
                     )}
                     <Block title={O.secRelease}>
                       <Row label={O.environment} value={id?.environment ?? O.unknown} ltr />

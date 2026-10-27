@@ -14,7 +14,7 @@ package server
 //     لا معادلةٌ ثانية. و«عمولة المتاجر» بطاقةٌ لحالها.
 //   - **المستردُّ بطاقةٌ لحالها** — كان لا مسلَّماً ولا ملغى.
 //   - **مقارنةٌ بالفترة السابقة المساوية** (`previous`).
-//   - **الزوّارُ أجهزةُ الزبائن وحدَها وبيومٍ تقويميّ** — وعدُّ أجهزة
+//   - **الزوّارُ أجهزةُ الزبائن وحدَها وبيوم الحساب** — وعدُّ أجهزة
 //     التطبيقات الأخرى مكانُه مراقبةُ التشغيل.
 //   - **فلترُ النوع والمدينة**، وأفضلُ المتاجر تُنسَب لكلّ مصدرٍ حصّتُه.
 //   - **مدًى مقلوبٌ يُرفض برسالة**، ولا مدى فوق سنة.
@@ -126,6 +126,32 @@ const reportScopeSQL = `
 		                     WHERE c.id = NULLIF($4::text, '')::uuid
 		                       AND ST_DWithin(c.center, o.dropoff, c.radius_m)) END))`
 
+// reportCreditCTE **حصّةُ كلّ متجرٍ من أصناف الطلبات المسلّمة** — نصٌّ واحدٌ تقرؤه
+// بطاقةُ «مبيعات الأصناف» ومخطّطُها اليوميُّ وأفضلُ المتاجر معاً (قرارُ المالك
+// ٢٠٢٦-١٠-٢٧): **فمجموعُ مبيعات المتاجر يساوي البطاقةَ دائماً**، والتوصيلُ بطاقةٌ لحالها.
+//
+// لكلّ متجرٍ قيمةُ أصنافه هو في الطلب (order_items.merchant_id)، والطلبُ بلا
+// أصنافٍ مقيّدة (توصيلةُ متجر) يُنسب لمتجره بقيمة بضاعته. **والطلبُ الخاصُّ بلا
+// متجرٍ لا يدخل** — ليس مبيعَ متجر. يُلحق بعد WITH، ومعاملاتُه معاملاتُ reportScopeSQL.
+const reportCreditCTE = `
+		sold AS (
+			SELECT o.id, o.merchant_id, o.subtotal, account_day(o.created_at) AS day
+			FROM orders o
+			LEFT JOIN merchants mr ON mr.id = o.merchant_id` + reportScopeSQL + `
+			  AND o.status = 'delivered'
+		), credit AS (
+			SELECT oi.merchant_id AS mid, sc.id AS oid, sc.day, sum(oi.unit_price * oi.qty) AS sales
+			FROM sold sc JOIN order_items oi ON oi.order_id = sc.id
+			WHERE oi.merchant_id IS NOT NULL
+			GROUP BY oi.merchant_id, sc.id, sc.day
+			UNION ALL
+			SELECT sc.merchant_id, sc.id, sc.day, sc.subtotal
+			FROM sold sc
+			WHERE sc.merchant_id IS NOT NULL
+			  AND NOT EXISTS (SELECT 1 FROM order_items oi
+			                  WHERE oi.order_id = sc.id AND oi.merchant_id IS NOT NULL)
+		)`
+
 func (f reportFilter) args() []any {
 	return []any{f.fromS(), f.toS(), f.Kind, f.CityID}
 }
@@ -140,7 +166,10 @@ type reportSummary struct {
 	AvgOrderToDeliveryMin float64 `json:"avg_delivery_min"`
 	ActiveCustomers       int     `json:"active_customers"`
 
-	GrossSales     *int64 `json:"gross_sales,omitempty"`
+	GrossSales *int64 `json:"gross_sales,omitempty"`
+	// ItemsSales **مبيعاتُ الأصناف وحدَها** — مجموعُ حصص المتاجر (reportCreditCTE)
+	// بلا توصيل، **فتساوي مجموعَ مبيعات المتاجر** (قرارُ المالك ٢٠٢٦-١٠-٢٧).
+	ItemsSales     *int64 `json:"items_sales,omitempty"`
 	DeliveryFees   *int64 `json:"delivery_fees,omitempty"`
 	Commissions    *int64 `json:"commissions,omitempty"`
 	PlatformProfit *int64 `json:"platform_profit,omitempty"`
@@ -180,6 +209,14 @@ func (s *Server) reportSummaryOf(ctx context.Context, f reportFilter, money bool
 	if !money {
 		return out, nil
 	}
+	var items int64
+	if err := s.pg.QueryRow(ctx, `
+		WITH`+reportCreditCTE+`
+		SELECT COALESCE(sum(c.sales), 0)::bigint
+		FROM credit c JOIN merchants m ON m.id = c.mid`, f.args()...).Scan(&items); err != nil {
+		return out, err
+	}
+	out.ItemsSales = &items
 	p, err := s.platformProfit(ctx, f.fromS(), f.toS())
 	if err != nil {
 		return out, err
@@ -197,6 +234,8 @@ type reportDay struct {
 	Orders    int    `json:"orders"`
 	Delivered int    `json:"delivered"`
 	Sales     *int64 `json:"sales,omitempty"`
+	// ItemsSales **مبيعاتُ أصناف اليوم** — بحساب بطاقة «مبيعات الأصناف» نفسِه.
+	ItemsSales *int64 `json:"items_sales,omitempty"`
 }
 
 type reportStore struct {
@@ -214,7 +253,7 @@ type reportDriver struct {
 	Cash      *int64 `json:"cash,omitempty"`
 }
 
-// reportVisitors **زوّارُ تطبيق الزبون** — يومٌ تقويميٌّ بدمشق.
+// reportVisitors **زوّارُ تطبيق الزبون** — بيوم الحساب (يبدأ بساعة فتح الدوام).
 type reportVisitors struct {
 	OpensToday   int64 `json:"opens_today"`
 	Opens7       int64 `json:"opens_7d"`
@@ -227,8 +266,8 @@ type reportVisitors struct {
 // customerVisitors **فتحاتُ تطبيق الزبون وأجهزتُه** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
 //
 // **والأجهزةُ أجهزةُ الزبائن وحدَها** (app = 'customer') — كانت تعدّ أجهزةَ
-// السائقين والمتاجر والمناديب، **فتقول ٤ أجهزةٍ و١ فتحة.** **واليومُ يومٌ
-// تقويميٌّ بدمشق** كالفتحات — كان «آخرَ ٢٤ ساعة». **و«٧ أيّام» اليومُ
+// السائقين والمتاجر والمناديب، **فتقول ٤ أجهزةٍ و١ فتحة.** **واليومُ يومُ
+// الحساب** (`account_day`، يبدأ بساعة فتح الدوام) كالفتحات — كان «آخرَ ٢٤ ساعة». **و«٧ أيّام» اليومُ
 // وستّةٌ قبله.** والفتحاتُ لا يعدّها إلّا نداءُ رئيسيّة الزبون (countOpen).
 func (s *Server) customerVisitors(ctx context.Context) (reportVisitors, error) {
 	var v reportVisitors
@@ -255,8 +294,9 @@ func (s *Server) customerVisitors(ctx context.Context) (reportVisitors, error) {
 // handleReports تقريرُ مدّة — انظر رأسَ الملفّ.
 func (s *Server) handleReports(w http.ResponseWriter, r *http.Request) {
 	// **و«اليوم» الافتراضيُّ يومُ الحساب** — ساعةُ فتح الدوام تُطرح فيُقرأ تاريخُه (٢٠٢٦-١٠-٢٦).
-	f, err := parseReportFilter(r.URL.Query(),
-		time.Now().Add(-time.Duration(s.settings.GetInt(r.Context(), "platform.day_start_hour"))*time.Hour))
+	dayHour := s.settings.GetInt(r.Context(), "platform.day_start_hour")
+	accountNow := time.Now().Add(-time.Duration(dayHour) * time.Hour)
+	f, err := parseReportFilter(r.URL.Query(), accountNow)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -305,6 +345,9 @@ func (s *Server) handleReports(w http.ResponseWriter, r *http.Request) {
 
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"from": f.fromS(), "to": f.toS(),
+		// **ويومُ الحساب اليوم** — لتبني الصفحةُ أزرارَ «اليوم · أمس · آخر ٧ أيّام» عليه لا على
+		// يوم التقويم (تدقيقُ التقارير ٢٠٢٦-١٠-٢٧: بين منتصف الليل وساعة الفتح كان «اليوم» أصفاراً).
+		"today": accountNow.In(platform.Location()).Format("2006-01-02"), "day_start_hour": dayHour,
 		"kind": f.Kind, "city_id": f.CityID,
 		"previous_from": prevF.fromS(), "previous_to": prevF.toS(),
 		"money_visible": money,
@@ -349,7 +392,37 @@ func (s *Server) reportDaily(ctx context.Context, f reportFilter, money bool) ([
 		}
 		out = append(out, d)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil || !money {
+		return out, err
+	}
+	rows.Close()
+	// **ومبيعاتُ الأصناف باليوم من حصص المتاجر نفسِها** — فمجموعُ المخطّط يساوي البطاقة.
+	items, err := s.pg.Query(ctx, `
+		WITH`+reportCreditCTE+`
+		SELECT c.day::text, COALESCE(sum(c.sales), 0)::bigint
+		FROM credit c JOIN merchants m ON m.id = c.mid
+		GROUP BY c.day`, f.args()...)
+	if err != nil {
+		return nil, err
+	}
+	defer items.Close()
+	byDay := map[string]int64{}
+	for items.Next() {
+		var day string
+		var v int64
+		if err := items.Scan(&day, &v); err != nil {
+			return nil, err
+		}
+		byDay[day] = v
+	}
+	if err := items.Err(); err != nil {
+		return nil, err
+	}
+	for i := range out {
+		v := byDay[out[i].Day]
+		out[i].ItemsSales = &v
+	}
+	return out, nil
 }
 
 // reportTopStores **أفضلُ المتاجر — ولكلّ مصدرٍ حصّتُه.**
@@ -367,23 +440,7 @@ func (s *Server) reportTopStores(ctx context.Context, f reportFilter, money bool
 		order = `count(DISTINCT c.oid) DESC`
 	}
 	rows, err := s.pg.Query(ctx, `
-		WITH scoped AS (
-			SELECT o.id, o.merchant_id, o.subtotal
-			FROM orders o
-			LEFT JOIN merchants mr ON mr.id = o.merchant_id`+reportScopeSQL+`
-			  AND o.status = 'delivered'
-		), credit AS (
-			SELECT oi.merchant_id AS mid, sc.id AS oid, sum(oi.unit_price * oi.qty) AS sales
-			FROM scoped sc JOIN order_items oi ON oi.order_id = sc.id
-			WHERE oi.merchant_id IS NOT NULL
-			GROUP BY oi.merchant_id, sc.id
-			UNION ALL
-			SELECT sc.merchant_id, sc.id, sc.subtotal
-			FROM scoped sc
-			WHERE sc.merchant_id IS NOT NULL
-			  AND NOT EXISTS (SELECT 1 FROM order_items oi
-			                  WHERE oi.order_id = sc.id AND oi.merchant_id IS NOT NULL)
-		)
+		WITH`+reportCreditCTE+`
 		SELECT m.id::text, m.name, count(DISTINCT c.oid), COALESCE(sum(c.sales), 0)::bigint
 		FROM credit c JOIN merchants m ON m.id = c.mid
 		GROUP BY m.id, m.name

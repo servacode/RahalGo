@@ -11,13 +11,12 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { fmtMoney, fmtDateTime, errorText } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtMoney, fmtNum, fmtDateTime, errorText } from "@rahalgo/i18n";
 import {
   Alert,
   Badge,
   Button,
   Checkbox,
-  EmptyState,
   FormActions,
   Input,
   LoadingState,
@@ -30,15 +29,19 @@ import {
   IconCheck,
   IconWarning,
   IconTrendUp,
+  IconTrendDown,
+  IconArrowIn,
+  IconArrowOut,
+  IconDate,
   useLiveData,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useCanCall } from "@/lib/policy";
-import { T, sectionLabel } from "./shared";
-import type { ApprovalItem } from "./Approvals";
+import { T, EmptyCard, fmtDay, dayStartsLine } from "./shared";
 import { DiffBadge, type CashClose } from "./Cashbox";
 import { Panel, Tile } from "@/components/admin/DashParts";
 
+const m = getMessages(defaultLocale);
 const O = T.overview;
 const W = T.withdraw;
 
@@ -59,7 +62,8 @@ interface Overview {
   pending_undecided?: number;
   profit_cards?: ProfitCard[];
   last_close: CashClose | null;
-  approvals: ApprovalItem[];
+  /** **ساعةُ بدء يوم الحساب** (`platform.day_start_hour`). */
+  day_start_hour?: number;
 }
 interface ProfitCard {
   period: "day" | "week" | "month" | "all";
@@ -122,6 +126,17 @@ export function OverviewTab({ onTab }: { onTab: (tab: "approvals" | "cashbox") =
   if (!ov.data) return <LoadingState variant="stats" />;
   const d = ov.data;
   const amountNum = Number(amount);
+  const lc = d.last_close;
+
+  /** **كلُّ بطاقة ربحٍ تفتح الأرباحَ على مدّتها** — كان الرابطُ بلا مدّةٍ فيفتح الشهرَ دائماً. */
+  function openProfits(c: ProfitCard) {
+    const q = new URLSearchParams();
+    if (c.from) q.set("from", c.from);
+    if (c.to) q.set("to", c.to);
+    if (c.period === "all") q.set("period", "all");
+    const qs = q.toString();
+    router.push(qs ? `/dashboard/profits?${qs}` : "/dashboard/profits");
+  }
 
   return (
     <div className="space-y-4">
@@ -151,17 +166,22 @@ export function OverviewTab({ onTab }: { onTab: (tab: "approvals" | "cashbox") =
               {(d.profit_cards ?? []).map((c) => (
                 <Tile
                   key={c.period}
-                  icon={IconTrendUp}
+                  icon={c.net < 0 ? IconTrendDown : IconTrendUp}
                   label={O.profitCards[c.period]}
                   value={fmtMoney(c.net)}
+                  sub={c.to ? (c.from && c.from !== c.to ? `${fmtDay(c.from)} ← ${fmtDay(c.to)}` : fmtDay(c.to)) : undefined}
                   tone={c.net > 0 ? "success" : c.net < 0 ? "danger" : "muted"}
-                  onClick={() => router.push("/dashboard/profits")}
+                  onClick={() => openProfits(c)}
                 />
               ))}
             </div>
           </Panel>
         )}
       </div>
+      <p className="flex items-center gap-1.5 text-xs text-ink-muted">
+        <IconDate size={14} />
+        {dayStartsLine(d.day_start_hour)}
+      </p>
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
         <Panel title={O.cashTitle}>
@@ -173,15 +193,45 @@ export function OverviewTab({ onTab }: { onTab: (tab: "approvals" | "cashbox") =
               tone={d.cashbox.expected < 0 ? "danger" : "default"}
               onClick={() => onTab("cashbox")}
             />
-            <Tile icon={IconDriver} label={O.cashInStreet} value={fmtMoney(d.cash_in_street)} tone={d.cash_in_street > 0 ? "warning" : "muted"} onClick={() => router.push("/dashboard/cash")} />
-            <Tile icon={IconTrendUp} label={O.todayIn} value={fmtMoney(d.today_in)} tone={d.today_in > 0 ? "success" : "muted"} onClick={() => onTab("cashbox")} />
-            <Tile icon={IconWallet} label={O.todayOut} value={fmtMoney(d.today_out)} tone={d.today_out > 0 ? "danger" : "muted"} onClick={() => onTab("cashbox")} />
+            <Tile
+              icon={IconDriver}
+              label={O.cashInStreet}
+              value={fmtMoney(d.cash_in_street)}
+              tone={d.cash_in_street > 0 ? "warning" : "muted"}
+              onClick={() => router.push("/dashboard/cash")}
+            />
+            <Tile
+              icon={IconArrowIn}
+              label={O.todayIn}
+              value={fmtMoney(d.today_in)}
+              tone={d.today_in > 0 ? "success" : "muted"}
+              onClick={() => onTab("cashbox")}
+            />
+            <Tile
+              icon={IconArrowOut}
+              label={O.todayOut}
+              value={fmtMoney(d.today_out)}
+              tone={d.today_out > 0 ? "danger" : "muted"}
+              onClick={() => onTab("cashbox")}
+            />
           </div>
         </Panel>
         <Panel title={O.dueTitle}>
           <div className="grid grid-cols-2 gap-2">
-            <Tile icon={IconStore} label={O.merchantCashDue} value={fmtMoney(d.merchant_cash_due)} tone={d.merchant_cash_due > 0 ? "warning" : "muted"} />
-            <Tile icon={IconWallet} label={O.pendingPayouts} value={fmtMoney(d.pending_payouts)} tone={d.pending_payouts > 0 ? "warning" : "muted"} onClick={() => router.push("/dashboard/payouts")} />
+            <Tile
+              icon={IconStore}
+              label={O.merchantCashDue}
+              value={fmtMoney(d.merchant_cash_due)}
+              tone={d.merchant_cash_due > 0 ? "warning" : "muted"}
+              onClick={() => router.push("/dashboard/cash?tab=stores")}
+            />
+            <Tile
+              icon={IconWallet}
+              label={O.pendingPayouts}
+              value={fmtMoney(d.pending_payouts)}
+              tone={d.pending_payouts > 0 ? "warning" : "muted"}
+              onClick={() => router.push("/dashboard/payouts")}
+            />
             <Tile
               icon={IconCheck}
               label={O.pendingApprovals}
@@ -194,82 +244,108 @@ export function OverviewTab({ onTab }: { onTab: (tab: "approvals" | "cashbox") =
               tone={d.pending_count > 0 ? "warning" : "muted"}
               onClick={() => onTab("approvals")}
             />
-            <Tile icon={IconWarning} label={O.openShortfalls} value={fmtMoney(d.open_shortfalls)} tone={d.open_shortfalls > 0 ? "danger" : "muted"} onClick={() => onTab("cashbox")} />
-            <Tile icon={IconWallet} label={O.withdrawalsMonth} value={fmtMoney(d.withdrawals_month)} tone={d.withdrawals_month > 0 ? "default" : "muted"} />
+            <Tile
+              icon={IconWarning}
+              label={O.openShortfalls}
+              value={fmtMoney(d.open_shortfalls)}
+              tone={d.open_shortfalls > 0 ? "danger" : "muted"}
+              onClick={() => onTab("cashbox")}
+            />
+            <Tile
+              icon={IconArrowOut}
+              label={O.withdrawalsMonth}
+              value={fmtMoney(d.withdrawals_month)}
+              tone={d.withdrawals_month > 0 ? "default" : "muted"}
+              onClick={() => document.getElementById("treasury-withdrawals")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+            />
           </div>
         </Panel>
       </div>
 
-      <section className="surface space-y-2 p-4 text-sm">
-        <h3 className="heading-card">{O.lastClose}</h3>
-        {d.last_close ? (
-          <p className="flex flex-wrap items-center gap-2">
-            <span dir="ltr">{d.last_close.day}</span>
-            <Badge variant={d.last_close.status === "approved" ? "success" : "warning"}>
-              {T.cashbox.statuses[d.last_close.status]}
-            </Badge>
-            <DiffBadge diff={d.last_close.difference} />
-            <span className="text-ink-muted">{d.last_close.proposer_name}</span>
-          </p>
-        ) : (
-          <p className="text-ink-muted">{O.noClose}</p>
-        )}
-      </section>
-
-      {d.approvals.length > 0 && (
-        <section className="space-y-2">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold">{O.pendingApprovals}</h3>
-            <Button variant="secondary" onClick={() => onTab("approvals")}>
-              {O.seeAll}
-            </Button>
+      {/* **آخرُ إغلاقٍ بطاقة** (تدقيقُ الخزينة ٢٠٢٦-١٠-٢٧) — يومُه بالعربيّ، والمتوقَّعُ والمعدودُ والفرق،
+          وحالُه ومن سجّله. ومعاينةُ الموافقات شيلت: مربّعُ العدد فوق يفتحها. */}
+      <Panel
+        title={O.closeCard}
+        actions={
+          <Button variant="secondary" onClick={() => onTab("cashbox")}>
+            {O.openCashbox}
+          </Button>
+        }
+      >
+        {lc ? (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-bold">{O.closeDay.replace("{day}", fmtDay(lc.day))}</span>
+              <Badge variant={lc.status === "approved" ? "success" : lc.status === "rejected" ? "danger" : "warning"}>
+                {T.cashbox.statuses[lc.status]}
+              </Badge>
+              <span className="text-xs text-ink-muted">
+                {T.cashbox.colBy}: {lc.proposer_name}
+                {lc.decider_name && ` · ${T.cashbox.colReviewer}: ${lc.decider_name}`}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              <div className="rounded-control bg-field px-3 py-2">
+                <span className="block text-2xs text-ink-muted">{T.cashbox.colExpected}</span>
+                <span className="figure block leading-tight">{fmtMoney(lc.expected)}</span>
+              </div>
+              <div className="rounded-control bg-field px-3 py-2">
+                <span className="block text-2xs text-ink-muted">{T.cashbox.colCounted}</span>
+                <span className="figure block leading-tight">{fmtMoney(lc.counted)}</span>
+              </div>
+              <div className="col-span-2 rounded-control bg-field px-3 py-2 sm:col-span-1">
+                <span className="block text-2xs text-ink-muted">{T.cashbox.difference}</span>
+                <span className="mt-1 block">
+                  <DiffBadge diff={lc.difference} />
+                </span>
+              </div>
+            </div>
           </div>
-          <ul className="divide-y divide-line surface">
-            {d.approvals.map((a) => (
-              <li key={`${a.key}-${a.id}`} className="flex flex-wrap items-center gap-2 px-3 py-2 text-sm">
-                <Badge variant="neutral">{sectionLabel(a.section)}</Badge>
-                {a.amount_undecided ? (
-                  <Badge variant="warning">{T.approvals.undecided}</Badge>
-                ) : (
-                  <span dir="ltr" className="font-bold">
-                    {fmtMoney(a.amount)}
-                  </span>
-                )}
-                {a.party_name && <span className="font-medium">{T.approvals.party.replace("{name}", a.party_name)}</span>}
-                <span className="min-w-0 flex-1 truncate text-ink-muted">{a.note}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <section className="space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="font-bold">{W.list}</h3>
-          {canWithdraw && d.has_treasury && <Button onClick={() => setOpen(true)}>{W.button}</Button>}
-        </div>
-        {!wd.data ? (
-          <LoadingState variant="text" />
-        ) : wd.data.withdrawals.length === 0 ? (
-          <EmptyState icon={IconWallet} title={W.empty} />
         ) : (
-          <ul className="divide-y divide-line surface">
-            {wd.data.withdrawals.map((x) => (
-              <li key={x.id} className="flex flex-wrap items-center gap-2 px-3 py-2 text-sm">
-                <span dir="ltr" className="font-bold text-danger">
-                  −{fmtMoney(x.amount)}
-                </span>
-                <span className="font-medium">{x.by_name}</span>
-                <span className="min-w-0 flex-1 truncate text-ink-muted">{x.note}</span>
-                <Badge variant="neutral">{x.from_cashbox ? W.cashbox : W.notCashbox}</Badge>
-                <span className="text-xs text-ink-muted" dir="ltr">
-                  {fmtDateTime(x.created_at)}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <EmptyCard icon={IconBalance} title={O.noClose} hint={O.noCloseHint} tone="muted" bare />
         )}
-      </section>
+      </Panel>
+
+      {/* **سحوباتُ الأدمن بطاقات** — المبلغُ كبيرٌ بالأحمر، ومن سحب ومتى ومن أين. */}
+      <div id="treasury-withdrawals" className="scroll-mt-4">
+        <Panel
+          title={W.list}
+          actions={canWithdraw && d.has_treasury ? <Button onClick={() => setOpen(true)}>{W.button}</Button> : undefined}
+        >
+          {wd.error && !wd.data ? (
+            <ReloadState onRetry={wd.reload} />
+          ) : !wd.data ? (
+            <LoadingState variant="text" />
+          ) : wd.data.withdrawals.length === 0 ? (
+            <EmptyCard icon={IconWallet} title={W.empty} hint={W.emptyHint} bare />
+          ) : (
+            <ul className="grid grid-cols-1 gap-2 lg:grid-cols-2 2xl:grid-cols-3">
+              {wd.data.withdrawals.map((x) => (
+                <li key={x.id} className="flex flex-col gap-2 rounded-card border border-line-soft p-3">
+                  <div className="flex items-start gap-3">
+                    <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-danger-solid text-on-solid">
+                      <IconArrowOut size={18} />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="figure block leading-none text-danger">
+                        <span dir="ltr">−{fmtNum(x.amount)}</span> {m.common.currency}
+                      </span>
+                      <span className="mt-1 block truncate text-xs text-ink-muted">
+                        {W.by}: {x.by_name || "—"}
+                      </span>
+                    </span>
+                    <Badge variant={x.from_cashbox ? "warning" : "neutral"}>{x.from_cashbox ? W.cashbox : W.notCashbox}</Badge>
+                  </div>
+                  {x.note && <p className="border-s-2 border-line ps-2 text-sm">{x.note}</p>}
+                  <span className="text-2xs text-ink-muted" dir="ltr">
+                    {fmtDateTime(x.created_at)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Panel>
+      </div>
 
       <Modal open={open} onClose={() => setOpen(false)} title={W.title}>
         <div className="space-y-3">

@@ -16,29 +16,28 @@
  * «تأكيد المراجعة» **بحكم المحرّك** (`can_approve`) — المالكُ وحدَه يراجع إغلاقَه حين لا غيرُه.
  */
 
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import Link from "next/link";
-import { fmtMoney, fmtDateTime, errorText } from "@rahalgo/i18n";
+import { fmtMoney, fmtNum, fmtDateTime, errorText } from "@rahalgo/i18n";
 import {
   Alert,
   Badge,
   Button,
-  Confirm,
-  EmptyState,
+  Chips,
   FormActions,
   Input,
   LoadingState,
   Modal,
   Pagination,
   ReloadState,
-  StatCard,
-  StatGrid,
-  IconWallet,
+  IconBalance,
+  IconArrowIn,
+  IconArrowOut,
   useLiveData,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useCanCall } from "@/lib/policy";
-import { T, Signed, Amount } from "./shared";
+import { T, Signed, Amount, Equation, EmptyCard, fmtDay, dayStartsLine } from "./shared";
 
 const C = T.cashbox;
 
@@ -105,13 +104,21 @@ interface Report {
   closes: number;
   start_balance: number;
   end_balance: number;
+  /** **ساعةُ بدء يوم الحساب** (`platform.day_start_hour`). */
+  day_start_hour?: number;
 }
 
 function newKey(): string {
   return typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : String(Date.now());
 }
 
-/** **تقريرُ الدرج لفترة** — ما دخل وما خرج بمصادره، وفروقُ الإغلاق، والرصيدُ أوّلاً وآخراً. */
+/**
+ * **تقريرُ الدرج لفترة** — ما دخل وما طلع بمصادره، وفروقُ الإغلاق، والرصيدُ أوّلاً وآخراً.
+ *
+ * (تدقيقُ الخزينة ٢٠٢٦-١٠-٢٧) **بمعادلةٍ تُقرأ**: البدايةُ + الداخل − الطالع ± فروقُ الإغلاق = النهاية —
+ * وفروقُ الإغلاق فيها هي ما يُكمل المعادلةَ من أرقام المحرّك نفسِها (الإغلاقاتُ المعتمَدةُ في الفترة)،
+ * والمصادرُ صفوفٌ بأيقونة داخلٍ أو طالع بدل الجدول.
+ */
 function CashReport() {
   const [period, setPeriod] = useState<Period>("day");
   const { data, error, reload } = useLiveData<Report>(
@@ -120,17 +127,12 @@ function CashReport() {
     [period],
   );
   const periods: Period[] = ["day", "week", "month"];
+  const settled = data ? data.end_balance - data.start_balance - data.total_in + data.total_out : 0;
   return (
-    <section className="space-y-2">
+    <section className="surface space-y-3 p-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="font-bold">{C.reportTitle}</h3>
-        <div className="flex gap-1.5" role="group" aria-label={C.reportTitle}>
-          {periods.map((p) => (
-            <Button key={p} variant={p === period ? "primary" : "secondary"} className="!px-3" onClick={() => setPeriod(p)}>
-              {C.periods[p]}
-            </Button>
-          ))}
-        </div>
+        <h3 className="heading-card">{C.reportTitle}</h3>
+        <Chips items={periods.map((p) => ({ id: p, label: C.periods[p] }))} value={period} onChange={setPeriod} />
       </div>
       {error && !data ? (
         <ReloadState onRetry={reload} />
@@ -138,50 +140,68 @@ function CashReport() {
         <LoadingState variant="stats" />
       ) : (
         <>
-          <p className="text-xs text-ink-muted">
-            {C.reportRange.replace("{from}", data.from).replace("{to}", data.to)}
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-muted">
+            <span className="font-bold text-ink">
+              {data.from === data.to
+                ? fmtDay(data.to)
+                : C.reportRange.replace("{from}", fmtDay(data.from)).replace("{to}", fmtDay(data.to))}
+            </span>
+            <span>{dayStartsLine(data.day_start_hour)}</span>
           </p>
-          <StatGrid>
-            <StatCard
-              label={C.reportStart}
-              value={fmtMoney(data.start_balance)}
-              tone={data.start_balance < 0 ? "danger" : undefined}
-            />
-            <StatCard label={C.reportIn} value={fmtMoney(data.total_in)} tone="success" />
-            <StatCard label={C.reportOut} value={fmtMoney(data.total_out)} tone="danger" />
-            <StatCard
-              label={C.reportEnd}
-              value={fmtMoney(data.end_balance)}
-              tone={data.end_balance < 0 ? "danger" : undefined}
-              emphasis
-            />
-            <StatCard
-              label={C.reportDiff}
-              value={fmtMoney(data.close_difference)}
-              sub={`${C.reportShortage} ${fmtMoney(data.shortage)} · ${C.reportExcess} ${fmtMoney(data.excess)} · ${C.reportCloses} ${data.closes}`}
-              tone={data.close_difference < 0 ? "danger" : data.close_difference > 0 ? "warning" : "muted"}
-            />
-          </StatGrid>
+          <Equation
+            terms={[
+              { label: C.reportStart, value: data.start_balance, tone: data.start_balance < 0 ? "danger" : undefined },
+              { label: C.reportIn, value: data.total_in, tone: "success", op: "+" },
+              { label: C.reportOut, value: data.total_out, tone: "danger", op: "−" },
+              {
+                label: C.reportDiff,
+                value: settled,
+                op: "±",
+                signed: true,
+                tone: settled < 0 ? "danger" : settled > 0 ? "warning" : undefined,
+                sub: C.reportDiffSub
+                  .replace("{short}", fmtNum(data.shortage))
+                  .replace("{over}", fmtNum(data.excess))
+                  .replace("{n}", fmtNum(data.closes)),
+              },
+              {
+                label: C.reportEnd,
+                value: data.end_balance,
+                op: "=",
+                result: true,
+                tone: data.end_balance < 0 ? "danger" : "success",
+              },
+            ]}
+          />
+          <p className="text-2xs text-ink-muted">{C.reportEq}</p>
           {data.by_source.length === 0 ? (
-            <p className="text-sm text-ink-muted">{C.reportEmpty}</p>
+            <EmptyCard icon={IconBalance} title={C.reportEmpty} tone="muted" bare />
           ) : (
-            <div className="surface overflow-x-auto">
-              <table className="w-full text-sm">
-                <caption className="p-2 text-start text-2xs text-ink-muted">{C.reportBySource}</caption>
-                <tbody>
-                  {data.by_source.map((x) => (
-                    <tr key={`${x.direction}-${x.source}`} className="border-b border-line-soft">
-                      <td className="p-2">{sourceLabel(x.source)}</td>
-                      <td className="p-2 text-ink-muted" dir="ltr">
-                        {x.count}
-                      </td>
-                      <td className="p-2">
-                        <Signed value={x.direction === "in" ? x.amount : -x.amount} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-1.5">
+              <p className="text-xs font-bold text-ink-muted">{C.reportBySource}</p>
+              <ul className="grid grid-cols-1 gap-2 lg:grid-cols-2">
+                {data.by_source.map((x) => {
+                  const inn = x.direction === "in";
+                  return (
+                    <li key={`${x.direction}-${x.source}`} className="flex items-center gap-3 rounded-card border border-line-soft p-3">
+                      <span
+                        className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-on-solid ${
+                          inn ? "bg-success-solid" : "bg-danger-solid"
+                        }`}
+                      >
+                        {inn ? <IconArrowIn size={16} /> : <IconArrowOut size={16} />}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-bold">{sourceLabel(x.source)}</span>
+                        <span className="block text-2xs text-ink-muted">{C.reportCount.replace("{n}", fmtNum(x.count))}</span>
+                      </span>
+                      <span className="figure shrink-0 leading-none">
+                        <Signed value={inn ? x.amount : -x.amount} />
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
           )}
         </>
@@ -235,13 +255,15 @@ export function CashboxTab() {
   const [rejectClose, setRejectClose] = useState<CashClose | null>(null);
   const [resolve, setResolve] = useState<CashClose | null>(null);
   const [reason, setReason] = useState("");
+  const [reasonFail, setReasonFail] = useState("");
 
   function reloadAll() {
     box.reload();
     closes.reload();
   }
 
-  async function post(path: string, body: unknown, headers?: Record<string, string>) {
+  /** `sink` — **حيث يُكتب الخطأ**: داخل النافذة المفتوحة، أو أعلى الصفحة. */
+  async function post(path: string, body: unknown, headers?: Record<string, string>, sink: (m: string) => void = setFail) {
     setBusy(true);
     try {
       await api(path, { method: "POST", body: JSON.stringify(body), headers });
@@ -249,7 +271,7 @@ export function CashboxTab() {
       reloadAll();
       return true;
     } catch (err) {
-      setFail(errorText(err));
+      sink(errorText(err));
       return false;
     } finally {
       setBusy(false);
@@ -278,29 +300,55 @@ export function CashboxTab() {
       {/* **الدرجُ بمعادلةٍ واحدة** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «صلّح الأرقام لتكون واضحة ونصلّح التصميم»):
           رصيدُ الفتح + الداخل − الخارج = المفروض بالدرج هلّق، **والأزرارُ تحتها بسطرٍ واحد.** */}
       <section className="surface space-y-3 p-4">
-        <div className="flex flex-wrap items-stretch gap-2">
-          <BoxCell label={C.opening} value={pos.opening} sub={pos.opened_at ? fmtDateTime(pos.opened_at) : undefined} />
-          <BoxOp>+</BoxOp>
-          <BoxCell label={C.in} value={pos.cash_in} tone="success" />
-          <BoxOp>−</BoxOp>
-          <BoxCell label={C.out} value={pos.cash_out} tone="danger" />
-          <BoxOp>=</BoxOp>
-          <BoxCell label={C.expected} value={pos.expected} strong tone={pos.expected < 0 ? "danger" : "success"} sub={pos.expected < 0 ? C.negative : undefined} />
-        </div>
+        <Equation
+          terms={[
+            { label: C.opening, value: pos.opening, sub: pos.opened_at ? fmtDateTime(pos.opened_at) : undefined },
+            { label: C.in, value: pos.cash_in, tone: "success", op: "+" },
+            { label: C.out, value: pos.cash_out, tone: "danger", op: "−" },
+            {
+              label: C.expected,
+              value: pos.expected,
+              op: "=",
+              result: true,
+              tone: pos.expected < 0 ? "danger" : "success",
+              sub: pos.expected < 0 ? C.negative : undefined,
+            },
+          ]}
+        />
         <p className="text-xs text-ink-muted">{C.howTo}</p>
         <div className="flex flex-wrap items-center gap-2 border-t border-line-soft pt-3">
           {canClose && !pending && (
-            <Button onClick={() => setClosing(true)} disabled={busy}>
+            <Button
+              onClick={() => {
+                setReasonFail("");
+                setClosing(true);
+              }}
+              disabled={busy}
+            >
               {C.closeDay}
             </Button>
           )}
           {showOpening && (
-            <Button variant="secondary" onClick={() => setOpening(true)} disabled={busy}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setReasonFail("");
+                setOpening(true);
+              }}
+              disabled={busy}
+            >
               {C.openingButton}
             </Button>
           )}
           {canDeposit && (
-            <Button variant="secondary" onClick={() => setDeposit(true)} disabled={busy}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setReasonFail("");
+                setDeposit(true);
+              }}
+              disabled={busy}
+            >
               {C.depositButton}
             </Button>
           )}
@@ -338,7 +386,15 @@ export function CashboxTab() {
               ) : (
                 <span className="text-xs text-ink-muted">{C.ownClose}</span>
               )}
-              <Button variant="secondary" disabled={busy} onClick={() => setRejectClose(pending)}>
+              <Button
+                variant="secondary"
+                disabled={busy}
+                onClick={() => {
+                  setReason("");
+                  setReasonFail("");
+                  setRejectClose(pending);
+                }}
+              >
                 {C.rejectClose}
               </Button>
             </div>
@@ -352,18 +408,21 @@ export function CashboxTab() {
       <section className="surface space-y-3 p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="heading-card">{C.entries}</h3>
-          <Button
-            variant="secondary"
-            onClick={() => {
-              setAll(!all);
+          {/* **حبّتان لا زرٌّ يقلب اسمَه** — المختارةُ ملوّنة (تدقيقُ الخزينة ٢٠٢٦-١٠-٢٧). */}
+          <Chips
+            items={[
+              { id: "open", label: C.showOpen },
+              { id: "all", label: C.showAll },
+            ]}
+            value={all ? "all" : "open"}
+            onChange={(k) => {
+              setAll(k === "all");
               setPage(1);
             }}
-          >
-            {all ? C.showOpen : C.showAll}
-          </Button>
+          />
         </div>
         {box.data.entries.length === 0 ? (
-          <EmptyState icon={IconWallet} title={C.noEntries} />
+          <EmptyCard icon={IconBalance} title={C.noEntries} hint={C.noEntriesHint} tone="muted" bare />
         ) : (
           <ul className="space-y-2">
             {box.data.entries.map((e) => {
@@ -375,7 +434,7 @@ export function CashboxTab() {
                       inn ? "bg-success-solid" : "bg-danger-solid"
                     }`}
                   >
-                    {inn ? "▲" : "▼"}
+                    {inn ? <IconArrowIn size={16} /> : <IconArrowOut size={16} />}
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="block font-bold">
@@ -385,7 +444,7 @@ export function CashboxTab() {
                     <span className="block truncate text-xs text-ink-muted">
                       <span dir="ltr">{fmtDateTime(e.created_at)}</span>
                       {e.recorded_by && ` · ${T.statement.colBy}: ${e.recorded_by}`}
-                      {e.note && ` · ${e.note}`}
+                      {e.note && e.source !== "advance_return" && ` · ${e.note}`}
                     </span>
                   </span>
                   <span className={`figure shrink-0 leading-none ${inn ? "text-success" : "text-danger"}`}>
@@ -396,22 +455,28 @@ export function CashboxTab() {
             })}
           </ul>
         )}
-        <Pagination page={page} total={box.data.total} perPage={box.data.per_page} onChange={setPage} />
+        {box.data.total > box.data.per_page && (
+          <div className="flex justify-center">
+            <Pagination page={page} total={box.data.total} perPage={box.data.per_page} onChange={setPage} />
+          </div>
+        )}
       </section>
 
       {/* **إغلاقاتُ الصندوق بطاقات** — اليومُ، والمفروضُ والمعدودُ والفرق، والحالُ ومن أغلق ومن راجع. */}
       <section className="surface space-y-3 p-4">
         <h3 className="heading-card">{C.closes}</h3>
-        {!closes.data ? (
+        {closes.error && !closes.data ? (
+          <ReloadState onRetry={closes.reload} />
+        ) : !closes.data ? (
           <LoadingState variant="text" />
         ) : closes.data.closes.length === 0 ? (
-          <EmptyState icon={IconWallet} title={C.noCloses} />
+          <EmptyCard icon={IconBalance} title={C.noCloses} hint={C.noClosesHint} tone="muted" bare />
         ) : (
           <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
             {closes.data.closes.map((c) => (
               <div key={c.id} className="space-y-2 rounded-card border border-line-soft p-3 text-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="font-bold" dir="ltr">{c.day}</span>
+                  <span className="font-bold">{fmtDay(c.day)}</span>
                   <span className="flex flex-wrap items-center gap-1">
                     {c.kind === "opening" ? (
                       <Badge variant="neutral">{C.openingBadge}</Badge>
@@ -450,7 +515,16 @@ export function CashboxTab() {
                       </span>
                     )}
                     {c.shortfall_status === "pending" && canClose && (
-                      <Button variant="secondary" disabled={busy} onClick={() => setResolve(c)} className="ms-auto">
+                      <Button
+                        variant="secondary"
+                        disabled={busy}
+                        onClick={() => {
+                          setReason("");
+                          setReasonFail("");
+                          setResolve(c);
+                        }}
+                        className="ms-auto"
+                      >
                         {C.resolve}
                       </Button>
                     )}
@@ -465,6 +539,7 @@ export function CashboxTab() {
       <Modal open={closing} onClose={() => setClosing(false)} title={C.closeDay}>
         <div className="space-y-3">
           <p className="text-sm text-ink-muted">{C.closeHint}</p>
+          {reasonFail && <Alert>{reasonFail}</Alert>}
           <p className="text-sm">
             {C.expected}: <Amount value={pos.expected} />
           </p>
@@ -488,7 +563,12 @@ export function CashboxTab() {
             saveLabel={C.closeDay}
             onCancel={() => setClosing(false)}
             onSave={() => {
-              void post(`/api/v1/admin/cashbox/closes`, { counted: Math.round(countedNum), note: note.trim() }).then(
+              void post(
+                `/api/v1/admin/cashbox/closes`,
+                { counted: Math.round(countedNum), note: note.trim() },
+                undefined,
+                setReasonFail,
+              ).then(
                 (ok) => {
                   if (!ok) return;
                   setClosing(false);
@@ -504,6 +584,7 @@ export function CashboxTab() {
       <Modal open={opening} onClose={() => setOpening(false)} title={C.openingTitle}>
         <div className="space-y-3">
           <p className="text-sm text-ink-muted">{C.openingHint}</p>
+          {reasonFail && <Alert>{reasonFail}</Alert>}
           <Input
             id="cb-opening"
             type="number"
@@ -518,7 +599,7 @@ export function CashboxTab() {
             saveLabel={C.openingButton}
             onCancel={() => setOpening(false)}
             onSave={() => {
-              void post(`/api/v1/admin/cashbox/opening`, { counted: Math.round(openingNum) }).then((ok) => {
+              void post(`/api/v1/admin/cashbox/opening`, { counted: Math.round(openingNum) }, undefined, setReasonFail).then((ok) => {
                 if (!ok) return;
                 setOpening(false);
                 setOpeningCounted("");
@@ -531,6 +612,7 @@ export function CashboxTab() {
       <Modal open={deposit} onClose={() => setDeposit(false)} title={C.depositTitle}>
         <div className="space-y-3">
           <p className="text-sm text-ink-muted">{C.depositHint}</p>
+          {reasonFail && <Alert>{reasonFail}</Alert>}
           <Input
             id="cb-deposit-amount"
             type="number"
@@ -550,6 +632,7 @@ export function CashboxTab() {
                 `/api/v1/admin/cashbox/deposits`,
                 { amount: Math.round(depositNum), note: depositNote.trim() },
                 { "Idempotency-Key": depositKey },
+                setReasonFail,
               ).then((ok) => {
                 if (!ok) return;
                 setDeposit(false);
@@ -563,65 +646,58 @@ export function CashboxTab() {
         </div>
       </Modal>
 
-      <Confirm
-        open={rejectClose !== null}
-        title={C.rejectClose}
-        body={<Input id="cb-reject" label={C.rejectReason} value={reason} onChange={(e) => setReason(e.target.value)} />}
-        confirmLabel={C.rejectClose}
-        busy={busy}
-        onConfirm={() => {
-          const c = rejectClose;
-          setRejectClose(null);
-          if (c) void post(`/api/v1/admin/cashbox/closes/${c.id}/reject`, { note: reason.trim() }).then(() => setReason(""));
-        }}
-        onCancel={() => setRejectClose(null)}
-      />
-      <Confirm
-        open={resolve !== null}
-        tone="primary"
-        title={C.resolve}
-        body={<Input id="cb-resolve" label={C.resolveNote} value={reason} onChange={(e) => setReason(e.target.value)} />}
-        confirmLabel={C.resolve}
-        busy={busy}
-        onConfirm={() => {
-          const c = resolve;
-          setResolve(null);
-          if (c?.shortfall_id)
-            void post(`/api/v1/admin/cashbox/shortfalls/${c.shortfall_id}/resolve`, { note: reason.trim() }).then(() =>
-              setReason(""),
-            );
-        }}
-        onCancel={() => setResolve(null)}
-      />
+      {/* **رفضُ الإغلاق و«وُجد المال» بسببٍ لازم** (تدقيقُ الخزينة ٢٠٢٦-١٠-٢٧) — المحرّكُ يردّ السببَ
+          الفارغ، فالزرُّ معطّلٌ حتّى يُكتب، والنافذةُ تبقى مفتوحةً والخطأُ داخلها حتّى ينجح. */}
+      <Modal open={rejectClose !== null} onClose={() => setRejectClose(null)} title={C.rejectClose}>
+        <div className="space-y-3">
+          {reasonFail && <Alert>{reasonFail}</Alert>}
+          <Input id="cb-reject" label={C.rejectReason} value={reason} onChange={(e) => setReason(e.target.value)} />
+          {reason.trim() === "" && <p className="text-2xs text-ink-muted">{C.reasonNeeded}</p>}
+          <FormActions
+            busy={busy || reason.trim() === ""}
+            tone="danger"
+            saveLabel={C.rejectClose}
+            onCancel={() => setRejectClose(null)}
+            onSave={() => {
+              const c = rejectClose;
+              if (!c) return;
+              void post(`/api/v1/admin/cashbox/closes/${c.id}/reject`, { note: reason.trim() }, undefined, setReasonFail).then(
+                (ok) => {
+                  if (!ok) return;
+                  setRejectClose(null);
+                  setReason("");
+                },
+              );
+            }}
+          />
+        </div>
+      </Modal>
+      <Modal open={resolve !== null} onClose={() => setResolve(null)} title={C.resolve}>
+        <div className="space-y-3">
+          {reasonFail && <Alert>{reasonFail}</Alert>}
+          <Input id="cb-resolve" label={C.resolveNote} value={reason} onChange={(e) => setReason(e.target.value)} />
+          {reason.trim() === "" && <p className="text-2xs text-ink-muted">{C.reasonNeeded}</p>}
+          <FormActions
+            busy={busy || reason.trim() === ""}
+            saveLabel={C.resolve}
+            onCancel={() => setResolve(null)}
+            onSave={() => {
+              const c = resolve;
+              if (!c?.shortfall_id) return;
+              void post(
+                `/api/v1/admin/cashbox/shortfalls/${c.shortfall_id}/resolve`,
+                { note: reason.trim() },
+                undefined,
+                setReasonFail,
+              ).then((ok) => {
+                if (!ok) return;
+                setResolve(null);
+                setReason("");
+              });
+            }}
+          />
+        </div>
+      </Modal>
     </div>
   );
-}
-
-/** **خانةٌ في معادلة الدرج** — لفظٌ ورقمٌ وسطرٌ صغير. */
-function BoxCell({
-  label,
-  value,
-  sub,
-  tone,
-  strong,
-}: {
-  label: string;
-  value: number;
-  sub?: string;
-  tone?: "success" | "danger";
-  strong?: boolean;
-}) {
-  return (
-    <div className={`min-w-[7rem] flex-1 rounded-card border p-3 ${strong ? "border-accent" : "border-line-soft"}`}>
-      <span className="block text-xs text-ink-muted">{label}</span>
-      <span className={`figure block leading-tight ${tone === "success" ? "text-success" : tone === "danger" ? "text-danger" : ""}`}>
-        {fmtMoney(value)}
-      </span>
-      {sub && <span className="block text-2xs text-ink-muted">{sub}</span>}
-    </div>
-  );
-}
-
-function BoxOp({ children }: { children: ReactNode }) {
-  return <span className="figure flex items-center px-1 text-ink-muted">{children}</span>;
 }

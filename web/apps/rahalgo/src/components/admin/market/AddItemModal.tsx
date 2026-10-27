@@ -2,177 +2,88 @@
 
 /**
  * **إضافةُ صنفٍ من السوق** — نُقلت من صفحة القسم إلى تبويب الأصناف (قرارُ المالك ٢٠٢٦-١٠-٢٥:
- * «بالأصناف نحطّ خيار أضف صنفاً ونحذفه من القسم»). **وقسمُ السوق يُختار هنا** بعد أن كان
- * مثبَّتاً بالصفحة التي فُتحت منها.
+ * «بالأصناف نحطّ خيار أضف صنفاً ونحذفه من القسم»).
+ *
+ * # خطوتان: المتجرُ بالبحث، ثمّ نافذةُ الصنف نفسُها
+ *
+ * (تدقيقُ السوق ٢٠٢٦-١٠-٢٧.) **كانت النافذةُ تسأل عن «قسمه في قائمة المتجر»** من `GET /menu` — وهو
+ * لا يردّ إلّا أقسامَ السوق التي للمتجر فيها صنفٌ من قبل، **فمتجرٌ جديدٌ بلا أصنافٍ يقرأ «لا أقسام —
+ * أنشئ قسماً أوّلاً» ولا مكانَ لإنشائه**: لا يُضاف له صنفٌ أبداً. **والحقلُ يُرسَل `section_id` ولا
+ * يكتبه الخادمُ أصلاً**، والسعرُ الفارغ يُحفظ صفراً بلا تنبيه.
+ *
+ * **فصار**: يُختار المتجرُ بالبحث (لا قائمةٌ تنقص بعد مئة)، **ثمّ تُفتح نافذةُ تعديل الصنف نفسُها**
+ * (`MenuItemEditor`) — بالليرة أو الدولار والوصف والإضافات، **كتطبيق المتجر بالضبط.** والحفظُ من بابِ
+ * السوق (`POST /market/stores/{id}/items`) بقدرة السوق، والصورةُ من باب صوره.
  */
 
-import { useEffect, useState } from "react";
-import { getMessages, defaultLocale, errorText, storeLabel } from "@rahalgo/i18n";
-import { Input, Select, Modal, LoadingState, FormActions } from "@rahalgo/ui";
-import { api, ApiError } from "@/lib/api";
+import { useState } from "react";
+import { getMessages, defaultLocale, storeLabel } from "@rahalgo/i18n";
+import { MenuItemEditor, type MenuPaths } from "@rahalgo/ui";
+import { api } from "@/lib/api";
+import { useCanCall } from "@/lib/policy";
 import ImageUpload from "@/components/admin/ImageUpload";
+import { StorePickerModal, type PickedStore } from "./MarketParts";
 
-const MARKET_MEDIA = "/api/v1/admin/market/media";
+export const MARKET_MEDIA = "/api/v1/admin/market/media";
 const m = getMessages(defaultLocale);
-const S = m.admin.sections;
-const I = m.admin.market.items;
-
-interface MerchantRow {
-  id: string;
-  name: string;
-  /** **رقمُه** — متجران باسمٍ واحدٍ في القائمة يُفرَّقان به. */
-  number: number;
-}
-interface MenuSectionRow {
-  id: string;
-  name: string;
-}
+const U = m.admin.market.ui;
 
 /**
- * **إضافةُ صنفٍ من بابِ السوق — والمتجرُ يُسأل عنه أوّلاً.**
- *
- * # ولماذا قسمُ المتجر أيضاً
- *
- * الصنفُ يعيش في قائمة متجره (`section_id`) **ويُعرض في قسم السوق**
- * (`platform_section_id`) — **موضعان لا واحد**: الأوّلُ ترتيبُ المطبخ يراه
- * صاحبُه، والثاني بابُ الزبون. **ولا يُنشأ صنفٌ بلا موضعٍ في قائمة صاحبه**:
- * يصير يتيماً لا يجده من يملكه.
- *
- * **وقسمُ السوق مثبَّتٌ هنا** — هو الصفحةُ التي فُتح منها، فلا يُسأل عنه.
+ * **مساراتُ السوق لنافذة الصنف** — الإضافةُ والتعديلُ من باب السوق (`market.manage`) لا من باب إدارة
+ * المتاجر، **فموظّفُ السوق لا يُردّ ٤٠٣ على صنفٍ هو صاحبُ تعديله.** وسعرُ صرف المتجر لمن يقرأ المتاجر.
  */
+export function marketMenuPaths(canReadStore: boolean): MenuPaths {
+  return {
+    menu: (id) => `/api/v1/admin/merchants/${id}/menu`,
+    items: (id) => `/api/v1/admin/market/stores/${id}/items`,
+    item: (id) => `/api/v1/admin/market/items/${id}`,
+    platformSections: () => `/api/v1/admin/sections`,
+    ...(canReadStore ? { merchant: (id: string) => `/api/v1/admin/merchants/${id}` } : {}),
+  };
+}
+
+/** **صورةُ الصنف في النافذة** — من باب صور السوق لا من باب المحتوى. */
+export function marketItemImage(initialUrl: string | null | undefined, onChange: (id: string | null) => void) {
+  return <ImageUpload path={MARKET_MEDIA} kind="menu_item" label={m.shared.menuEditor.itemImage} initialUrl={initialUrl} onChange={onChange} />;
+}
+
 export default function AddItemModal({
   sections,
   onClose,
   onSaved,
 }: {
-  sections: { id: string; name: string }[];
+  /** **أقسامُ السوق الفعّالةُ وحدَها** — والمطفأُ يردّه المحرّك «غير موجود». */
+  sections: { id: string; name: string; active?: boolean }[];
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [merchants, setMerchants] = useState<MerchantRow[]>([]);
-  const [sectionID, setSectionID] = useState("");
-  const [merchantID, setMerchantID] = useState("");
-  const [menuSections, setMenuSections] = useState<MenuSectionRow[] | null>(null);
-  const [menuSectionID, setMenuSectionID] = useState("");
-  const [name, setName] = useState("");
-  const [price, setPrice] = useState("");
-  const [imageID, setImageID] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  const canReadStore = useCanCall()("GET", "/merchants/{id}");
+  const [store, setStore] = useState<PickedStore | null>(null);
 
-  useEffect(() => {
-    // **وقائمةُ الاختيار كاملةٌ** — (كشفه فحصُ المالك ٢٠٢٦-٠٨-١٦).
-    //
-    // **كانت تُنادى بلا حدٍّ فيردّ المحرّكُ عشرين** — **وهي قائمةُ اختيار**:
-    // فمن عنده خمسةٌ وعشرون متجراً **لا يستطيع أن يضيف صنفاً لخمسةٍ منها**،
-    // **ولا شيءَ يقول إنّها قُصّت** — إنّما لا يجد المتجرَ فيظنّه غيرَ مسجَّل.
-    api<{ merchants: MerchantRow[] }>("/api/v1/admin/merchants?per_page=100")
-      .then((r) => setMerchants(r.merchants ?? []))
-      .catch((err) => setError(errorText(err)));
-  }, []);
-
-  // **وقائمةُ المتجر تُقرأ حين يُختار** — لا قبله: أقسامُ متجرٍ لم يُختر
-  // بعدُ لا معنى لها، **وقراءةُ قوائم كلّ المتاجر سلفاً حملٌ بلا سبب.**
-  useEffect(() => {
-    if (!merchantID) {
-      setMenuSections(null);
-      setMenuSectionID("");
-      return;
-    }
-    setMenuSections(null);
-    api<MenuSectionRow[]>(`/api/v1/admin/merchants/${merchantID}/menu`)
-      .then((r) => {
-        const list = r ?? [];
-        setMenuSections(list);
-        setMenuSectionID(list[0]?.id ?? "");
-      })
-      .catch((err) => setError(errorText(err)));
-  }, [merchantID]);
-
-  async function submit() {
-    if (!sectionID) return setError(I.pickSection);
-    if (!merchantID) return setError(S.pickMerchant);
-    if (!menuSectionID) return setError(S.pickMenuSection);
-    if (!name.trim()) return setError(S.itemNameRequired);
-    setBusy(true);
-    setError("");
-    try {
-      await api(`/api/v1/admin/market/stores/${merchantID}/items`, {
-        method: "POST",
-        body: JSON.stringify({
-          section_id: menuSectionID,
-          name: name.trim(),
-          price: Number(price) || 0,
-          platform_section_id: sectionID,
-          ...(imageID !== null ? { image_media_id: imageID } : {}),
-        }),
-      });
-      onSaved();
-    } catch (err) {
-      const key = err instanceof ApiError ? (err.body.message_key.split(".").pop() ?? "") : "";
-      setError((m.errors as Record<string, string>)[key] ?? m.errors.internal);
-      setBusy(false);
-    }
+  if (!store) {
+    return <StorePickerModal title={U.addPickStoreTitle} hint={U.addPickStoreHint} onPick={setStore} onClose={onClose} />;
   }
-
   return (
-    <Modal open title={I.addItem} onClose={onClose}>
-      <div className="space-y-3">
-        <Select label={I.marketSection} value={sectionID} onChange={(e) => setSectionID(e.target.value)}>
-          <option value="">{I.pickSection}</option>
-          {sections.map((x) => (
-            <option key={x.id} value={x.id}>
-              {x.name}
-            </option>
-          ))}
-        </Select>
-        <Select
-          label={S.merchant}
-          value={merchantID}
-          onChange={(e) => setMerchantID(e.target.value)}
-        >
-          <option value="">{S.pickMerchant}</option>
-          {merchants.map((x) => (
-            <option key={x.id} value={x.id}>
-              {storeLabel(x.name, x.number)}
-            </option>
-          ))}
-        </Select>
-
-        {/* **وقسمُ المطبخ لا يُسأل عنه قبل المتجر** — حقلٌ فارغٌ معطَّلٌ يُقرأ
-            عطباً، **وغيابُه يقول «اختر المتجر أوّلاً» بلا كلمة.** */}
-        {merchantID &&
-          (menuSections === null ? (
-            <LoadingState variant="inline" />
-          ) : menuSections.length === 0 ? (
-            <p className="text-sm text-danger">{S.merchantHasNoSections}</p>
-          ) : (
-            <Select
-              label={S.menuSection}
-              value={menuSectionID}
-              onChange={(e) => setMenuSectionID(e.target.value)}
-            >
-              {menuSections.map((x) => (
-                <option key={x.id} value={x.id}>
-                  {x.name}
-                </option>
-              ))}
-            </Select>
-          ))}
-
-        <ImageUpload path={MARKET_MEDIA} kind="menu_item" label={S.itemImage} onChange={setImageID} />
-        <Input label={S.itemName} value={name} onChange={(e) => setName(e.target.value)} />
-        {/* **سعرُ الشراء لا سعرُ البيع** — ما يقبضه المتجر، **والمنصةُ تحسب
-            الهامشَ فوقه.** واللفظُ يقول أيَّهما، فـ«السعر» وحدَها تحتمل الاثنين. */}
-        <Input
-          label={S.itemPrice}
-          type="number"
-          value={price}
-          onChange={(e) => setPrice(e.target.value)}
-        />
-        {error && <p className="text-sm text-danger">{error}</p>}
-        <FormActions onSave={submit} onCancel={onClose} busy={busy} />
-      </div>
-    </Modal>
+    <MenuItemEditor
+      api={api}
+      paths={marketMenuPaths(canReadStore)}
+      merchantID={store.id}
+      platformSections={sections.filter((s) => s.active !== false)}
+      editing={{ item: null, sectionId: "" }}
+      imageUpload={marketItemImage}
+      note={
+        <span className="flex flex-wrap items-center justify-between gap-2">
+          <span>
+            <span className="text-ink-muted">{U.addForStore} </span>
+            <b>{storeLabel(store.name, store.number)}</b>
+          </span>
+          <button type="button" className="text-xs font-bold text-accent hover:underline" onClick={() => setStore(null)}>
+            {U.changeStore}
+          </button>
+        </span>
+      }
+      onClose={onClose}
+      onSaved={onSaved}
+    />
   );
 }

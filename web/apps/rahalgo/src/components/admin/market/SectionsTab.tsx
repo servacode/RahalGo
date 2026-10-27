@@ -1,10 +1,11 @@
 "use client";
 
 /**
- * **تبويبُ الأقسام** — بطاقةٌ لكلّ قسمٍ بصورته، **تُرتَّب بالسحب**.
+ * **تبويبُ الأقسام** — بطاقةٌ لكلّ قسمٍ بصورته، **تُرتَّب بالسحب أو بالأسهم**.
  *
  * (قرارُ المالك ٢٠٢٦-١٠-٠٤: «الأقسام بترتيبٍ بالسحب هو ترتيبُها عند الزبون ·
- * ويُضاف زرُّ حذف القسم».)
+ * ويُضاف زرُّ حذف القسم».) **والأسهمُ للّمس** (تدقيقُ السوق ٢٠٢٦-١٠-٢٧): السحبُ بأحداث HTML5
+ * لا يعمل على الجوّال، فكان الموبايلُ بلا أيّ طريقةٍ للترتيب.
  *
  * **والترتيبُ يُرسَل كلُّه بعد كلّ إفلات** (`PUT /sections/order`) — لا خطوةً
  * واحدة، فلا يبقى قسمان على رقمٍ واحد.
@@ -24,11 +25,9 @@ import {
   Input,
   Modal,
   Select,
-  EmptyState,
   LoadingState,
   useLiveData,
   useToast,
-  IconStatus,
   IconCamera,
   FormActions,
   Confirm,
@@ -36,16 +35,21 @@ import {
   IconDelete,
   IconCheck,
   IconBlock,
+  IconAdd,
+  IconGrid,
+  IconChevronDown,
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import ImageUpload, { useImagePicker } from "@/components/admin/ImageUpload";
 import StateBadge from "./StateBadge";
+import { LoadError, StateBox } from "./MarketParts";
 
 /** **صورُ السوق من بابها** — بقدرة السوق لا المحتوى (قرارُ المالك ٢٠٢٦-١٠-٠٥). */
 const MARKET_MEDIA = "/api/v1/admin/market/media";
 
 const m = getMessages(defaultLocale);
 const S = m.admin.sections;
+const U = m.admin.market.ui;
 
 export interface Section {
   id: string;
@@ -62,7 +66,7 @@ export interface Section {
 }
 
 export default function SectionsTab() {
-  const { data, reload } = useLiveData<{ sections: Section[] }>(
+  const { data, error, reload } = useLiveData<{ sections: Section[] }>(
     () => api("/api/v1/admin/sections"),
     ["catalog"],
   );
@@ -71,6 +75,9 @@ export default function SectionsTab() {
   /** **الترتيبُ المحلّيّ أثناء السحب** — يُعرض فوراً ثمّ يُحفظ. */
   const [order, setOrder] = useState<Section[] | null>(null);
   const [dragID, setDragID] = useState<string | null>(null);
+  /** **القسمُ الذي يتبدّل توفّرُه الآن** — والزرُّ معطّلٌ حتّى يردّ المحرّك، فلا ترجعه كبستان ورا بعض. */
+  const [toggling, setToggling] = useState<string | null>(null);
+  const [ordering, setOrdering] = useState(false);
   const router = useRouter();
   const { push, Toaster } = useToast();
   // **الضغطُ على صورة القسم يفتح ملفّات الجهاز فوراً** (قرارُ المالك ٢٠٢٦-١٠-٢٦).
@@ -94,10 +101,13 @@ export default function SectionsTab() {
     if (data) setOrder(data.sections ?? []);
   }, [data]);
 
+  if (error && !data) return <LoadError onRetry={reload} />;
   if (!data || !order) return <LoadingState />;
   const list = order;
 
   async function toggle(sec: Section) {
+    if (toggling) return;
+    setToggling(sec.id);
     try {
       await api(`/api/v1/admin/sections/${sec.id}`, {
         method: "PATCH",
@@ -106,20 +116,27 @@ export default function SectionsTab() {
       reload();
     } catch (err) {
       push(errorText(err), "error");
+    } finally {
+      setToggling(null);
     }
   }
 
   /** **يُسقط القسمَ المسحوبَ مكانَ الهدف** — ويحفظ الترتيبَ كلَّه. */
   async function drop(targetID: string) {
-    if (!dragID || dragID === targetID) return setDragID(null);
     const from = list.findIndex((s) => s.id === dragID);
     const to = list.findIndex((s) => s.id === targetID);
-    if (from < 0 || to < 0) return setDragID(null);
+    setDragID(null);
+    await moveTo(from, to);
+  }
+
+  /** **ينقل القسمَ من موضعٍ لموضع** — للسحب وللأسهم معاً — ثمّ يحفظ الترتيبَ كلَّه. */
+  async function moveTo(from: number, to: number) {
+    if (ordering || from < 0 || to < 0 || from >= list.length || to >= list.length || from === to) return;
     const next = [...list];
     const [moved] = next.splice(from, 1);
     if (moved) next.splice(to, 0, moved);
     setOrder(next);
-    setDragID(null);
+    setOrdering(true);
     try {
       await api("/api/v1/admin/sections/order", {
         method: "PUT",
@@ -130,21 +147,34 @@ export default function SectionsTab() {
     } catch (err) {
       push(errorText(err), "error");
       reload();
+    } finally {
+      setOrdering(false);
     }
   }
 
+  const roundBtn = "!h-9 !w-9 inline-flex items-center justify-center !min-h-0 !min-w-0 !p-0 rounded-full";
+
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-ink-muted">{S.dragHint}</p>
-        <Button onClick={() => setEditing("new")}>{S.add}</Button>
-      </div>
+      <section className="surface flex flex-wrap items-center justify-between gap-2 p-3">
+        <p className="min-w-0 flex-1 text-sm text-ink-muted">{S.dragHint}</p>
+        <Button onClick={() => setEditing("new")} className="inline-flex shrink-0 items-center gap-1.5">
+          <IconAdd size={16} />
+          {S.add}
+        </Button>
+      </section>
 
       {list.length === 0 ? (
-        <EmptyState icon={IconStatus} title={S.empty} />
+        <StateBox
+          icon={IconGrid}
+          tone="accent"
+          title={S.empty}
+          hint={U.sectionsEmptyHint}
+          action={<Button onClick={() => setEditing("new")}>{S.add}</Button>}
+        />
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {list.map((sec) => (
+          {list.map((sec, idx) => (
             <div
               key={sec.id}
               draggable
@@ -173,20 +203,20 @@ export default function SectionsTab() {
                   }}
                   className="group absolute inset-0 flex items-center justify-center"
                 >
-                {sec.image_url || sec.image_thumb_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={mediaUrl(sec.image_url ?? sec.image_thumb_url) ?? ""}
-                    alt={sec.name}
-                    draggable={false}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <span className="flex flex-col items-center gap-1 text-xs text-ink-muted">
-                    <IconCamera size={20} />
-                    {S.addImage}
-                  </span>
-                )}
+                  {sec.image_url || sec.image_thumb_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={mediaUrl(sec.image_url ?? sec.image_thumb_url) ?? ""}
+                      alt={sec.name}
+                      draggable={false}
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <span className="flex flex-col items-center gap-1 text-xs text-ink-muted">
+                      <IconCamera size={20} />
+                      {S.addImage}
+                    </span>
+                  )}
                   <span className="absolute bottom-2 start-2 inline-flex h-8 w-8 items-center justify-center rounded-full bg-surface text-ink elev-1 opacity-80 group-hover:opacity-100">
                     <IconCamera size={16} />
                   </span>
@@ -199,9 +229,7 @@ export default function SectionsTab() {
               <div className="flex flex-1 flex-col gap-2 p-3">
                 <div className="flex min-w-0 flex-1 items-baseline justify-between gap-2">
                   <p className="truncate font-bold">{sec.name}</p>
-                  <p className="shrink-0 text-xs text-ink-muted">
-                    {S.items.replace("{n}", fmtNum(sec.items))}
-                  </p>
+                  <p className="shrink-0 text-xs text-ink-muted">{S.items.replace("{n}", fmtNum(sec.items))}</p>
                 </div>
 
                 {/* **زرٌّ ذكيٌّ للتوفّر** يقول الحالَ بلونه ويقلبها بضغطة، **والتعديلُ والحذفُ أيقونات**. */}
@@ -210,21 +238,23 @@ export default function SectionsTab() {
                     type="button"
                     role="switch"
                     aria-checked={sec.active}
-                    title={sec.active ? S.makeUnavailable : S.makeAvailable}
+                    aria-busy={toggling === sec.id}
+                    title={sec.active ? U.makeSectionOff : U.makeSectionOn}
+                    disabled={toggling === sec.id}
                     onClick={() => void toggle(sec)}
-                    className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-on-solid transition-colors ${
+                    className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-bold text-on-solid transition-colors disabled:opacity-60 ${
                       sec.active ? "bg-success-solid" : "bg-warning-solid"
                     }`}
                   >
                     {sec.active ? <IconCheck size={14} /> : <IconBlock size={14} />}
-                    {sec.active ? S.available : S.unavailable}
+                    {toggling === sec.id ? U.saving : sec.active ? S.available : S.unavailable}
                   </button>
                   <Button
                     variant="ghost"
                     title={m.common.edit}
                     aria-label={m.common.edit}
                     onClick={() => setEditing(sec)}
-                    className="!h-9 !w-9 inline-flex items-center justify-center !min-h-0 !min-w-0 !p-0 rounded-full text-ink-muted hover:text-ink"
+                    className={`${roundBtn} text-ink-muted hover:text-ink`}
                   >
                     <IconEdit size={17} />
                   </Button>
@@ -233,9 +263,32 @@ export default function SectionsTab() {
                     title={S.delete}
                     aria-label={S.delete}
                     onClick={() => setDeleting(sec)}
-                    className="!h-9 !w-9 inline-flex items-center justify-center !min-h-0 !min-w-0 !p-0 rounded-full !text-danger"
+                    className={`${roundBtn} !text-danger`}
                   >
                     <IconDelete size={17} />
+                  </Button>
+                </div>
+                {/* **أسهمُ الترتيب للّمس** — والسحبُ يبقى للفأرة. */}
+                <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+                  <Button
+                    variant="secondary"
+                    disabled={idx === 0 || ordering}
+                    title={U.moveUp}
+                    aria-label={U.moveUp}
+                    onClick={() => void moveTo(idx, idx - 1)}
+                    className="!min-h-0 flex-1 !py-1"
+                  >
+                    <IconChevronDown size={16} className="rotate-180" />
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    disabled={idx === list.length - 1 || ordering}
+                    title={U.moveDown}
+                    aria-label={U.moveDown}
+                    onClick={() => void moveTo(idx, idx + 1)}
+                    className="!min-h-0 flex-1 !py-1"
+                  >
+                    <IconChevronDown size={16} />
                   </Button>
                 </div>
               </div>

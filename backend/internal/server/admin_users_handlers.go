@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 	"encoding/csv"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -18,6 +19,9 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/support"
 )
+
+// errAccountDeleted **الحسابُ المحذوفُ لا يُفعَّل ولا يُوقَف ولا يُبدَّل رقمُه** — رمزُ إدارةٍ لا يبلغ هاتفاً.
+var errAccountDeleted = httpx.NewError(http.StatusConflict, "account_deleted", "errors.account_deleted")
 
 func (s *Server) handleAdminListUsers(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
@@ -97,6 +101,16 @@ func (s *Server) handleAdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 	req.AdminNotes = nil
 	newPhone := req.Phone
 	req.Phone = nil
+	// **والحسابُ المحذوفُ لا تتبدّل حالُه ولا رقمُه** (تدقيقُ اللوحة ٢٠٢٦-١٠-٢٧) — كان زرُّ «تفعيل»
+	// يردّه فعّالاً باسم «حساب محذوف» ورقمِ deleted-…، **ورقمٌ جديدٌ عليه يُحييه بهويّةٍ ممسوحة.**
+	if req.Status != nil || (newPhone != nil && strings.TrimSpace(*newPhone) != "") {
+		var status string
+		if err := s.pg.QueryRow(r.Context(), `SELECT status FROM users WHERE id::text = $1`, id).
+			Scan(&status); err == nil && status == "deleted" {
+			s.respondErr(w, errAccountDeleted)
+			return
+		}
+	}
 	var phoneResult map[string]any
 	if newPhone != nil && strings.TrimSpace(*newPhone) != "" {
 		phoneResult, err = s.changePhone(r, id, *newPhone)
@@ -106,6 +120,9 @@ func (s *Server) handleAdminUpdateUser(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	user, err := s.identity.AdminUpdateUser(r.Context(), userIDFrom(r), id, *req, clientIP(r))
+	if errors.Is(err, identity.ErrAccountDeleted) {
+		err = errAccountDeleted
+	}
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -263,7 +280,48 @@ func (s *Server) handleAdminUserRoleCounts(w http.ResponseWriter, r *http.Reques
 	counts["restricted"] = restricted
 	// **والمحذوفةُ بطاقةٌ لها** (قرارُ المالك ٢٠٢٦-١٠-٠٦) — ولا تدخل المجموعَ ولا الأدوار.
 	counts["deleted"] = deleted
-	httpx.JSON(w, http.StatusOK, map[string]any{"total": total, "roles": counts})
+
+	// ══════════════════════════════════════════════════════════════
+	// **وأعدادُ الحالات بحسب التبويب المفتوح** (تدقيقُ اللوحة ٢٠٢٦-١٠-٢٧)
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **كان زرُّ «موقوف أو محظور» يعدّ المنصّةَ كلَّها** والتبويبُ «سائقون» —
+	// فيقول الزرُّ ٥ والقائمةُ ٢. **فتُعدّ هنا بمُسنَد دور القائمة نفسِه**
+	// (`ListUsersFiltered`): «الزبون» زبونٌ فقط، و«staff» كلُّ دورٍ ليس صفةَ حساب.
+	role := r.URL.Query().Get("role")
+	var sAll, sActive, sSusp, sBlocked, sRestricted, sDeleted, sOnline int
+	if err := s.pg.QueryRow(r.Context(), `
+		SELECT count(*) FILTER (WHERE u.status <> 'deleted'),
+		       count(*) FILTER (WHERE u.status = 'active'),
+		       count(*) FILTER (WHERE u.status = 'suspended'),
+		       count(*) FILTER (WHERE u.status = 'blocked'),
+		       count(*) FILTER (WHERE u.status IN ('suspended', 'blocked')),
+		       count(*) FILTER (WHERE u.status = 'deleted'),
+		       count(*) FILTER (WHERE u.status <> 'deleted' AND u.last_seen_at > now() - interval '2 minutes')
+		FROM users u
+		WHERE ($1 = '' OR ($1 = 'customer' AND EXISTS (
+		          SELECT 1 FROM user_roles cr WHERE cr.user_id = u.id AND cr.role_code = 'customer')
+		        AND NOT EXISTS (
+		          SELECT 1 FROM user_roles nr WHERE nr.user_id = u.id AND nr.role_code <> 'customer'))
+		    OR ($1 <> 'customer' AND EXISTS (
+		      SELECT 1 FROM user_roles fr WHERE fr.user_id = u.id
+		      AND (fr.role_code = $1 OR ($1 = 'staff' AND fr.role_code <> ALL($2))))))`,
+		role, accountTypes).
+		Scan(&sAll, &sActive, &sSusp, &sBlocked, &sRestricted, &sDeleted, &sOnline); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"total": total,
+		"roles": counts,
+		// status **أعدادُ الحالات داخلَ الدور المطلوب** (`?role=`) — وفراغُه: كلُّ المنصّة.
+		"status": map[string]int{
+			"all": sAll, "active": sActive, "suspended": sSusp, "blocked": sBlocked,
+			"restricted": sRestricted, "deleted": sDeleted, "online": sOnline,
+		},
+		// temp_password_hours **مهلةُ الكلمة المؤقّتة من الإعدادات** — كانت النافذةُ تكتب ٧٢ ثابتة.
+		"temp_password_hours": s.identity.TempPasswordHours(r.Context()),
+	})
 }
 
 // handleAdminGetUser صفحة تفاصيل الحساب: الملف + المحفظة + مؤشرات حسب أدواره.
@@ -591,6 +649,8 @@ func (s *Server) handleAdminUserFeedback(w http.ResponseWriter, r *http.Request)
 	ap := pagingFrom(q.Get("a_page"), 10)
 	gp := pagingFrom(q.Get("g_page"), 10)
 	rp := pagingFrom(q.Get("r_page"), 10)
+	// **وتقييماتُ السائقين لمتجره صفحتُها** (`d_page`) — كانت تتبع `r_page` بلا أزرار.
+	dp := pagingFrom(q.Get("d_page"), 10)
 
 	out := struct {
 		Tickets []map[string]any `json:"tickets"`
@@ -817,7 +877,7 @@ func (s *Server) handleAdminUserFeedback(w http.ResponseWriter, r *http.Request)
 		JOIN orders o ON o.id = mr.order_id
 		LEFT JOIN users dr ON dr.id = mr.driver_id
 		WHERE m.owner_user_id = $1
-		ORDER BY mr.created_at DESC LIMIT $2 OFFSET $3`, id, rp.PerPage, rp.Offset)
+		ORDER BY mr.created_at DESC LIMIT $2 OFFSET $3`, id, dp.PerPage, dp.Offset)
 	if err == nil {
 		for dRows.Next() {
 			var num int64

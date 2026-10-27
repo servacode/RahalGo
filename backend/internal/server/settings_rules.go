@@ -9,6 +9,7 @@ import (
 	"reflect"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/settings"
 )
 
@@ -18,6 +19,36 @@ func settingConflictErr(with string) *httpx.AppError {
 	e := httpx.NewError(http.StatusBadRequest, "setting_conflict", "errors.setting_conflict")
 	e.Details = map[string]any{"with": with}
 	return e
+}
+
+// errPlatformShareOverMax **حصّةُ المنصّة بالنسبة فوق ٩٠٪** (قرارُ المالك ٢٠٢٦-١٠-٢٧).
+//
+// **كانت تُحفظ ثمّ تُقصّ صامتةً عند الحساب** (`platformShare`) — فيقرأ المالكُ «٩٥» في
+// الشاشة ويأخذ التطبيقُ تسعين. **فصار البابُ يردّها برسالةٍ تقول السبب**: لا بدّ أن يبقى
+// للسائق شيء، ومن أراد أكثرَ فطريقتُه «مبلغ ثابت».
+var errPlatformShareOverMax = httpx.NewError(http.StatusBadRequest,
+	"platform_share_over_max", "errors.platform_share_over_max")
+
+// checkPlatformShare **النسبةُ لا تتجاوز ٩٠** — في الحالين: رقمٌ جديدٌ والطريقةُ «نسبة»،
+// أو طريقةٌ تصير «نسبة» والرقمُ المحفوظُ فوق التسعين. **و`norm` القيمةُ بعد `Validate`.**
+func (s *Server) checkPlatformShare(ctx context.Context, key string, norm any) error {
+	for _, kind := range orders.ShareKinds {
+		valueKey := orders.SettingShare(kind)
+		modeKey := valueKey + "_mode"
+		switch key {
+		case valueKey:
+			n, ok := norm.(int64)
+			if ok && n > orders.PlatformSharePercentMax && s.settings.GetString(ctx, modeKey) != "fixed" {
+				return errPlatformShareOverMax
+			}
+		case modeKey:
+			mode, _ := norm.(string)
+			if mode != "fixed" && s.settings.GetInt(ctx, valueKey) > orders.PlatformSharePercentMax {
+				return errPlatformShareOverMax
+			}
+		}
+	}
+	return nil
 }
 
 // settingPlaceholderErr **قالبٌ ينقصه نصٌّ إلزاميّ** — `{code}` في قالب الرمز.

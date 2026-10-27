@@ -376,6 +376,8 @@ func DemandByPlace(ctx context.Context, q Querier, kind string) ([]PlaceDemand, 
 		LEFT JOIN governorates g ON g.id = r.governorate_id
 		LEFT JOIN cities c       ON c.id = r.city_id
 		WHERE ($1 = '' OR r.kind = $1)
+		  -- والملغى والمرفوض لا يُعدّان — شرطُ قسم التوسّع عينُه (تدقيق 2026-10-27)
+		  AND r.active AND r.status <> 'rejected'
 		GROUP BY 1, 2, 3, 4, 5
 		ORDER BY 7 DESC
 		LIMIT 500`, kind)
