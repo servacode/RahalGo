@@ -10790,6 +10790,62 @@
       ]
     },
     {
+      "method": "PUT",
+      "path": "/api/v1/rep/leads/{id}",
+      "handler": "handleRepResubmitLead",
+      "auth": true,
+      "roles": [
+        "sales"
+      ],
+      "request": [
+        {
+          "name": "store_name",
+          "type": "string"
+        },
+        {
+          "name": "owner_name",
+          "type": "string"
+        },
+        {
+          "name": "phone",
+          "type": "string"
+        },
+        {
+          "name": "area",
+          "type": "string"
+        },
+        {
+          "name": "district_id",
+          "type": "string"
+        },
+        {
+          "name": "category_id",
+          "type": "string"
+        },
+        {
+          "name": "lat",
+          "type": "?float64"
+        },
+        {
+          "name": "lng",
+          "type": "?float64"
+        }
+      ],
+      "response": [
+        {
+          "name": "id",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "string"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "GET",
       "path": "/api/v1/rep/me",
       "handler": "handleRepMe",

@@ -25,6 +25,17 @@
     <string name="cl_f_missing">ناقصه شروط</string>
     <string name="cl_f_no_items">بلا أصناف</string>
     <string name="cl_no_match">ما في عميل بهالبحث</string>
+    <!-- **«بحاجة معلومات»** (قرار المالك ٢٠٢٦-١٠-٢٧) -->
+    <string name="cl_needs_info">بحاجة معلومات</string>
+    <string name="cl_admin_note">ملاحظة الإدارة: %1$s</string>
+    <string name="cl_fix_lead">عدّل الطلب وأعد إرساله</string>
+    <string name="ac_edit_title">تعديل طلب الانضمام</string>
+    <string name="ac_edit_hint">صلّح المطلوب وأعد الإرسال — بيرجع للإدارة كطلب جديد</string>
+    <string name="ac_edit_note_title">الإدارة طلبت:</string>
+    <string name="ac_resend">أعد الإرسال للإدارة</string>
+    <string name="ac_edit_cancel">إلغاء التعديل</string>
+    <string name="ac_resent_title">تم إرسال التعديل</string>
+    <string name="ac_resent_body">رجع الطلب للإدارة كطلب جديد وهو بانتظار الموافقة.</string>
     <string name="cl_working">يعمل</string>
     <string name="cl_stopped">متوقف</string>
     <!-- هدفُ المندوب: يُحسب المتجرُ حين تكتمل شروطُه (قرارُ المالك ٢٠٢٦-١٠-١٣) -->

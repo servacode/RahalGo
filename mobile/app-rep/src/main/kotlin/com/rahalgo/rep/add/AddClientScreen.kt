@@ -39,6 +39,8 @@ import androidx.lifecycle.viewModelScope
 import com.rahalgo.design.Rahal
 import com.rahalgo.rep.R
 import com.rahalgo.shared.rep.Division
+import com.rahalgo.shared.rep.Lead
+import com.rahalgo.shared.rep.LeadEdit
 import com.rahalgo.shared.rep.NewLead
 import com.rahalgo.shared.rep.RepApi
 import com.rahalgo.shared.rep.RepCategory
@@ -221,11 +223,11 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
             onDismissRequest = { vm.dismissDone(); onDone() },
             title = {
                 Text(
-                    "✓ " + stringResource(R.string.ac_ok_title),
+                    "✓ " + stringResource(if (vm.resent) R.string.ac_resent_title else R.string.ac_ok_title),
                     color = Rahal.colors.success,
                 )
             },
-            text = { Text(stringResource(R.string.ac_ok_body)) },
+            text = { Text(stringResource(if (vm.resent) R.string.ac_resent_body else R.string.ac_ok_body)) },
             confirmButton = {
                 RahalTextButton(onClick = { vm.dismissDone(); onDone() }) {
                     Text(stringResource(R.string.ac_ok_go))
@@ -235,10 +237,40 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
     }
 
     Screen {
+        val editing = vm.editingId.isNotEmpty()
         ScreenTitle(
-            stringResource(R.string.nav_add_client),
-            stringResource(R.string.ac_title_hint),
+            stringResource(if (editing) R.string.ac_edit_title else R.string.nav_add_client),
+            stringResource(if (editing) R.string.ac_edit_hint else R.string.ac_title_hint),
         )
+
+        // ══════════════════════════════════════════════════════════════
+        // **وفي التعديل: ما طلبته الإدارةُ فوق النموذج** (قرارُ المالك ٢٠٢٦-١٠-٢٧)
+        // ══════════════════════════════════════════════════════════════
+        if (editing) {
+            if (vm.editNote.isNotEmpty()) {
+                Spacer(Modifier.height(10.dp))
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(Rahal.shape.md)
+                        .background(Rahal.colors.warnTint)
+                        .border(Rahal.stroke.hair, Rahal.colors.danger.copy(alpha = 0.55f), Rahal.shape.md)
+                        .padding(12.dp),
+                ) {
+                    Text(
+                        stringResource(R.string.ac_edit_note_title),
+                        color = Rahal.colors.danger,
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(vm.editNote, color = Rahal.colors.ink, style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+            Spacer(Modifier.height(6.dp))
+            RahalTextButton(onClick = { vm.cancelEdit() }) {
+                Text(stringResource(R.string.ac_edit_cancel))
+            }
+        }
 
         // ══════════════════════════════════════════════════════════════
         // **والاختياراتُ الثلاثةُ أوّلاً — ثمّ ما يُكتب باليد**
@@ -483,7 +515,7 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
             if (vm.busy) {
                 CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
             } else {
-                Text(stringResource(R.string.ac_send))
+                Text(stringResource(if (editing) R.string.ac_resend else R.string.ac_send))
             }
         }
 
@@ -564,6 +596,72 @@ class AddClientViewModel(app: Application) : AndroidViewModel(app) {
 
     var done by mutableStateOf(false)
         private set
+
+    // ══════════════════════════════════════════════════════════════════
+    // **وتعديلُ طلبٍ «بحاجة معلومات»** (قرارُ المالك ٢٠٢٦-١٠-٢٧، البند ١٧)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **النموذجُ نفسُه لا نموذجٌ ثانٍ** — حقولُه حقولُ الإضافة، وما يُصلَح في
+    // أحدهما يُنسى في الآخر. ومعرّفُه فارغٌ ⇒ إضافةٌ جديدة.
+
+    var editingId by mutableStateOf("")
+        private set
+
+    /** **ما طلبته الإدارة** — يُرسم فوق النموذج ما دام يعدّل. */
+    var editNote by mutableStateOf("")
+        private set
+
+    /** **آخرُ نجاحٍ كان إعادةَ إرسال** — فتقول النافذةُ ذلك لا «تم تسجيل العميل». */
+    var resent by mutableStateOf(false)
+        private set
+
+    /** **يملأ النموذجَ من الطلب** — ويجلب مناطقَ محافظته ومنطقتُه مختارة. */
+    fun startEdit(lead: Lead) {
+        loadCategories()
+        editingId = lead.id
+        editNote = lead.decisionNote
+        error = ""
+        store = lead.storeName
+        owner = lead.ownerName
+        phone = lead.phone
+        area = lead.area
+        pickedCategory = lead.categoryId.orEmpty()
+        val lat = lead.lat
+        val lng = lead.lng
+        point = if (lat != null && lng != null) lat to lng else null
+        pointLabel = if (lat != null && lng != null) "%.5f، %.5f".format(lat, lng) else ""
+        val gov = lead.governorateId.orEmpty()
+        pickedGovernorate = gov
+        pickedDistrict = lead.districtId.orEmpty()
+        districts = emptyList()
+        if (gov.isNotEmpty()) {
+            viewModelScope.launch {
+                runCatching { districts = api.districts(gov) }
+                    .onFailure { error = apiError(getApplication(), it as Exception) }
+            }
+        }
+    }
+
+    /** **يترك التعديلَ ويُفرّغ النموذج** — فيعود نموذجَ إضافةٍ جديدة. */
+    fun cancelEdit() {
+        editingId = ""
+        editNote = ""
+        error = ""
+        clearForm()
+    }
+
+    private fun clearForm() {
+        store = ""
+        owner = ""
+        phone = ""
+        area = ""
+        point = null
+        pointLabel = ""
+        pickedCategory = ""
+        pickedGovernorate = ""
+        pickedDistrict = ""
+        districts = emptyList()
+    }
 
     /**
      * **يُطوى التأكيدُ بعد أن يُقرأ** — **و`done` تبقى `private set`**
@@ -671,9 +769,14 @@ class AddClientViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun send() {
         if (busy) return
+        if (editingId.isNotEmpty()) {
+            resend()
+            return
+        }
         busy = true
         error = ""
         done = false
+        resent = false
         // **ومفتاحٌ ثابتٌ للمحاولة** (`Attempt.LEAD`) — يُولَّد مرّةً ويبقى على
         // القرص حتّى تنجح، **فإعادةٌ بعد جوابٍ غامضٍ (انقطاعُ شبكة) تحمله نفسَه**
         // والخادمُ يلفّ المسارَ (`s.idempotent`) فيردّ الطلبَ الأوّلَ ولا يُنشئ
@@ -700,16 +803,7 @@ class AddClientViewModel(app: Application) : AndroidViewModel(app) {
                 done = true
                 // **والنموذجُ يُفرَّغ بعد أن يُقيَّد لا قبله** — **ومن
                 // فرّغه قبل الجواب خسر ما كتبه إن سقط النداء.**
-                store = ""
-                owner = ""
-                phone = ""
-                area = ""
-                point = null
-                pointLabel = ""
-                pickedCategory = ""
-                pickedGovernorate = ""
-                pickedDistrict = ""
-                districts = emptyList()
+                clearForm()
                 // **والمحافظةُ الوحيدةُ تُختار ثانيةً** — فلا يعود النموذجُ يسأل عنها.
                 governorates.singleOrNull()?.let { pickGovernorate(it.id) }
             } catch (e: Exception) {
@@ -718,6 +812,44 @@ class AddClientViewModel(app: Application) : AndroidViewModel(app) {
                 if (com.rahalgo.ui.isDecided(e)) {
                     com.rahalgo.ui.Attempt.clear(com.rahalgo.ui.Attempt.LEAD)
                 }
+                error = apiError(getApplication(), e)
+            }
+            busy = false
+        }
+    }
+
+    /**
+     * **يرسل التعديلَ فيعود الطلبُ «جديداً» عند الإدارة.**
+     *
+     * **ولا مفتاحَ تفرّد**: الخادمُ يقبله من «بحاجة معلومات» وحدَها، فإعادةٌ
+     * ثانيةٌ تُردّ ولا تكتب شيئاً — والضغطُ المزدوجُ يمنعه `busy`.
+     */
+    private fun resend() {
+        val id = editingId
+        busy = true
+        error = ""
+        done = false
+        viewModelScope.launch {
+            try {
+                api.resubmitLead(
+                    id,
+                    LeadEdit(
+                        storeName = store.trim(),
+                        ownerName = owner.trim(),
+                        phone = phone.trim(),
+                        area = area.trim(),
+                        districtId = pickedDistrict,
+                        categoryId = pickedCategory,
+                        lat = point?.first,
+                        lng = point?.second,
+                    ),
+                )
+                resent = true
+                done = true
+                editingId = ""
+                editNote = ""
+                clearForm()
+            } catch (e: Exception) {
                 error = apiError(getApplication(), e)
             }
             busy = false

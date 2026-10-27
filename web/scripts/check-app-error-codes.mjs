@@ -82,7 +82,7 @@ const SERVER_MOBILE = new Set([
   "already_returned", "merchant_no_returns", "order_not_returnable",
   "not_readyable", "reason_required", "never_picked_up",
   "payout_below_min", "payout_closed", "payout_not_allowed",
-  "invite_required", "lead_already_converted", "bad_bbox",
+  "invite_required", "lead_already_converted", "lead_not_needs_info", "bad_bbox",
   // **وتعذّرُ بناءِ حمولةٍ آمنة** — يبلغ الزبونَ والمتجرَ لأنّ
   // البابَ بابُهما، **ونصُّه نصُّ العطب العامّ**: لا فعلَ لصاحب
   // الجهاز فيه، **ورسالةٌ تصفُ داخلَنا تُقلق ولا تُفيد.**

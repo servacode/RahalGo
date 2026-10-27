@@ -89,6 +89,8 @@ fun ClientsScreen(
     onOpenOffers: (String, String) -> Unit = { _, _ -> },
     /** **زرُّ القائمة الفارغة** — ينقله إلى تبويب «إضافة عميل». */
     onAddClient: () -> Unit = {},
+    /** **«بحاجة معلومات» تُصلَح من بطاقتها** (قرارُ المالك ٢٠٢٦-١٠-٢٧) — تفتح نموذجَ الإضافة مملوءاً. */
+    onEditLead: (Lead) -> Unit = {},
 ) {
     // **والتفصيلُ يغطّي القائمةَ** — **ولا صفحةٌ ثانيةٌ يخرج إليها
     // فيعود فلا يجد موضعَه.**
@@ -128,7 +130,7 @@ fun ClientsScreen(
             // «ينتظرون (٣)» وواحدٌ منهم رُفض من شهر.
             if (pending.isNotEmpty()) {
                 SectionTitle(stringResource(R.string.cl_pending, pending.size.toString()))
-                pending.forEach { LeadCard(it) }
+                pending.forEach { LeadCard(it, onEdit = { onEditLead(it) }) }
             }
 
             // **والمرفوضون في قسمهم مطويّين** — يُرَون بضغطة، ولا يزحمون.
@@ -142,7 +144,7 @@ fun ClientsScreen(
                         color = Rahal.colors.brand,
                     )
                 }
-                if (vm.showRejected) rejected.forEach { LeadCard(it) }
+                if (vm.showRejected) rejected.forEach { LeadCard(it, onEdit = { onEditLead(it) }) }
             }
             if (pending.isNotEmpty() || rejected.isNotEmpty()) {
                 Spacer(Modifier.height(14.dp))
@@ -227,7 +229,7 @@ private fun FilterOption(label: Int, f: ClientFilter, vm: ClientsViewModel) {
  * وهو لم يبدأ بعد.
  */
 @Composable
-private fun LeadCard(lead: Lead) {
+private fun LeadCard(lead: Lead, onEdit: () -> Unit) {
     val rejected = lead.status == "rejected"
     val needsInfo = lead.status == "needs_info"
     Spacer(Modifier.height(8.dp))
@@ -255,11 +257,7 @@ private fun LeadCard(lead: Lead) {
                         else -> R.string.cl_waiting
                     },
                 ),
-                when {
-                    rejected -> Rahal.colors.danger
-                    needsInfo -> Rahal.colors.accent
-                    else -> Rahal.colors.inkMuted
-                },
+                if (lead.status == "rejected" || needsInfo) Rahal.colors.danger else Rahal.colors.accent,
             )
         }
         if (lead.ownerName.isNotEmpty() || lead.phone.isNotEmpty()) {
@@ -284,22 +282,24 @@ private fun LeadCard(lead: Lead) {
                 style = MaterialTheme.typography.labelSmall,
             )
         }
-        // ══════════════════════════════════════════════════════════════
-        // **وسببُ الرفض يُقال — من ملاحظة الإدارة لا من ملاحظته هو**
-        // ══════════════════════════════════════════════════════════════
-        //
-        // **كانت تُقرأ `note`** — وهي ملاحظةُ المندوب، **والتطبيقُ لا
-        // يرسلها أصلاً**، فبقيت فارغةً دائماً. **والإدارةُ تكتب سببَها في
-        // `decision_note`** (٢٠٢٦-١٠-٢٧). **ومن رُفض عميلُه بلا سببٍ يُعيد
-        // تسجيلَه بالخطأ نفسِه.**
-        val reason = lead.decisionNote.ifEmpty { lead.note }
-        if (reason.isNotEmpty()) {
-            Spacer(Modifier.height(4.dp))
+        // **وسببُ الرفض وما ينقص يُقالان** — **ومن رُفض عميلُه بلا سببٍ يُعيد
+        // تسجيلَه بالخطأ نفسِه.** وهي ملاحظةُ الإدارة (`decision_note`) لا ما
+        // كتبه المندوبُ نفسُه (`note`) — كانت تعرض الثانيةَ فلا يرى ما طُلب.
+        if (lead.decisionNote.isNotEmpty() && (lead.status == "rejected" || needsInfo)) {
+            Spacer(Modifier.height(6.dp))
             Text(
-                text = reason,
-                color = if (rejected) Rahal.colors.danger else Rahal.colors.accent,
+                text = stringResource(R.string.cl_admin_note, lead.decisionNote),
+                color = Rahal.colors.danger,
+                fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.bodySmall,
             )
+        }
+        // **و«بحاجة معلومات» تُصلَح من هنا** (قرارُ المالك ٢٠٢٦-١٠-٢٧).
+        if (needsInfo) {
+            Spacer(Modifier.height(8.dp))
+            RahalButton(onClick = onEdit, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.cl_fix_lead))
+            }
         }
     }
 }

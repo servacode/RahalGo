@@ -651,6 +651,7 @@ private val CODES: Map<String, Int> = mapOf(
     "payout_not_allowed" to R.string.err_payout_not_allowed,
     "invite_required" to R.string.err_invite_required,
     "lead_already_converted" to R.string.err_lead_already_converted,
+    "lead_not_needs_info" to R.string.err_lead_not_needs_info,
     "bad_bbox" to R.string.err_bad_request,
     // ── المحادثةُ والوجود ─ `CAF-18` (`CUST-20-019`) ───────────────────
     //
