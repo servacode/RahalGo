@@ -69,6 +69,10 @@ func compensationErr(err error) error {
 		return errGoodsCompCap
 	case errors.Is(err, orders.ErrGoodsAlreadyCompensated):
 		return errGoodsCompensated
+	case errors.Is(err, orders.ErrGoodsCompNone):
+		return errGoodsCompNone
+	case errors.Is(err, orders.ErrGoodsCompPending):
+		return errGoodsCompPending
 	}
 	return err
 }

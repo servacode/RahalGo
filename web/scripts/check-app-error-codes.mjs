@@ -156,6 +156,8 @@ const SERVER_ADMIN = new Set([
   // وحسمُ البضاعة وتعويضُ المتجر بابان للإدارة وحدَها.
   "transfer_delivery_kind", "goods_compensation_finance", "goods_not_handed",
   "goods_wrong_place", "goods_compensation_cap", "goods_already_compensated",
+  // **«ما في تعويض»** (قرارُ المالك ٢٠٢٦-١٠-٢٧) — بابُ الماليّة في اللوحة وحدَه.
+  "goods_comp_none", "goods_comp_pending",
   "compensation_above_cap", "compensation_ambiguous", "compensation_duplicate",
   "driver_off_shift", "order_already_taken",
   // ── staging-only QA fixtures (qa/* endpoints; never reach a real mobile client) ──

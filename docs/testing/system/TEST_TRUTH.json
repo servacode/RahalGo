@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 576,
+    "routes": 577,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -33,8 +33,8 @@
     "setting_defs": 251,
     "behaviour_settings": 206,
     "order_fields": 120,
-    "test_files": 664,
-    "test_funcs": 2565
+    "test_files": 666,
+    "test_funcs": 2570
   },
   "flows": [
     {
@@ -10455,6 +10455,12 @@
       "orphan": true
     },
     {
+      "name": "TestListWhere_CustomModeKinds",
+      "file": "internal/orders/list_kind_mode_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
       "name": "TestList_PagesThroughEveryOrder",
       "file": "internal/orders/list_paging_test.go",
       "package": "orders_test",
@@ -14107,6 +14113,12 @@
     {
       "name": "TestCMP_CustomerRatingNotTheMerchants",
       "file": "internal/qa/cmp_ratings_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCMP_OwnerComplaintCompensationAppliesNow",
+      "file": "internal/qa/cmp_unified_compensation_test.go",
       "package": "qa",
       "orphan": true
     },
@@ -23904,6 +23916,12 @@
       "orphan": true
     },
     {
+      "name": "TestSETTINGS_PlatformSharePercentCappedAt90",
+      "file": "internal/qa/settings_owner_1004_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestSETTINGS_RelatedKeysRejectedWithReason",
       "file": "internal/qa/settings_owner_1004_test.go",
       "package": "qa",
@@ -27972,6 +27990,12 @@
       "orphan": true
     },
     {
+      "name": "TestGoodsCompNone_LeavesQueueWithoutMoney",
+      "file": "internal/server/goods_comp_none_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestMaskPhone",
       "file": "internal/server/history_export_privacy_test.go",
       "package": "server",
@@ -28903,6 +28927,12 @@
     },
     {
       "name": "TestPAYOUTS_ListCardsAndRole",
+      "file": "internal/server/payouts_section_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPAYOUTS_MonthStartsAtOpeningHour",
       "file": "internal/server/payouts_section_test.go",
       "package": "server",
       "orphan": true

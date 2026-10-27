@@ -4112,6 +4112,28 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/goods/compensation/none",
+      "handler": "handleGoodsNoCompensation",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "none",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/admin/orders/{id}/items/{itemID}/unavailable",
       "handler": "handleItemUnavailable",
       "auth": true,
