@@ -41,10 +41,12 @@ func TestGoodsCompNone_LeavesQueueWithoutMoney(t *testing.T) {
 		w := f.call(f.srv.handleGoodsCompensations, http.MethodGet,
 			"/admin/losses/goods-compensations", "", fin, []string{"finance"}, "")
 		var out struct {
-			Orders []goodsCompRow `json:"orders"`
+			Data struct {
+				Orders []goodsCompRow `json:"orders"`
+			} `json:"data"`
 		}
 		_ = json.Unmarshal(w.Body.Bytes(), &out)
-		for _, r := range out.Orders {
+		for _, r := range out.Data.Orders {
 			if r.OrderID == orderID {
 				return true
 			}

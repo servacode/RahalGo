@@ -4788,6 +4788,7 @@
         "finance.expense_voided": "إلغاء مصروف تشغيل",
         "finance.goods_settled": "حسم بضاعة طلب فاشل",
         "finance.goods_compensation": "تعويض متجر عن بضاعة راجعة",
+        "finance.goods_comp_none": "ما في تعويض عن بضاعة راجعة",
         "finance.incentive": "صرف مكافأة",
         "finance.ledger_exported": "تصدير دفتر المال",
         "finance.orders_exported": "تصدير سجل الطلبات",
