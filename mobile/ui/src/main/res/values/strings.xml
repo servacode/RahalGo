@@ -418,6 +418,11 @@
     <string name="photo_source">من أين تريد الصورة؟</string>
     <string name="photo_camera">التقط صورة</string>
     <string name="photo_gallery">من المعرض</string>
+    <string name="crop_title">عدّل الصورة</string>
+    <string name="crop_hint">كبّر بإصبعين وحرّك الصورة. اللي جوّا المربّع هو اللي بيشوفه الزبون</string>
+    <string name="crop_use">اعتمد</string>
+    <string name="crop_rotate">تدوير</string>
+    <string name="crop_again">صورة تانية</string>
     <string name="acc_photo_remove">إزالة الصورة</string>
     <string name="acc_pw_change">تغيير كلمة المرور</string>
     <string name="acc_pw_changed">تم تغيير كلمة المرور بنجاح</string>

@@ -72,7 +72,7 @@ fun ClientDetail(vm: ClientsViewModel, onOpenMenu: (String, String) -> Unit) {
         return
     }
     val context = LocalContext.current
-    val pickLogo = com.rahalgo.ui.rememberImagePicker { bytes -> vm.setLogo(bytes) }
+    val pickLogo = com.rahalgo.ui.rememberImagePicker(crop = true) { bytes -> vm.setLogo(bytes) }
     val head = d.merchant
     val sum = d.summary
 

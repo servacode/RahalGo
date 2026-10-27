@@ -146,7 +146,7 @@ fun ItemEditor(
     /** **ما يُقال إن غاب سعرُ الصرف** — المتجرُ يكتبه بنفسه، والمندوبُ ينتظر صاحبَه. */
     @StringRes rateMissing: Int = R.string.item_usd_need_rate,
 ) {
-    val pick = rememberImagePicker { bytes -> onPickImage(bytes) }
+    val pick = rememberImagePicker(crop = true) { bytes -> onPickImage(bytes) }
     var confirmDelete by remember { mutableStateOf(false) }
 
     Screen {

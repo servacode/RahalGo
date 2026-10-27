@@ -101,7 +101,7 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
 
     // **ويبقى مع التدوير** (تقريرُ فحص المتجر).
     var renaming by rememberSaveable { mutableStateOf<String?>(null) }
-    val pickLogo = com.rahalgo.ui.rememberImagePicker { bytes -> vm.setLogo(bytes) }
+    val pickLogo = com.rahalgo.ui.rememberImagePicker(crop = true) { bytes -> vm.setLogo(bytes) }
     var confirming by remember { mutableStateOf(false) }
 
     // ══════════════════════════════════════════════════════════════════
