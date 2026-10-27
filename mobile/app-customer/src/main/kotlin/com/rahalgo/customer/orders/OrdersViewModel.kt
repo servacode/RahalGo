@@ -167,6 +167,19 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     var actionError by mutableStateOf("")
         private set
 
+    // **قبل `init` لا بعده** — `init` ينادي `load()` فوراً على الخيط الرئيسيّ، وخانةٌ تُعلَن
+    // بعده تكون `null` لحظتها فينهار التطبيقُ عند الفتح (قِيس على جهاز المالك ٢٠٢٦-١٠-٢٧).
+    /**
+     * **لحظةُ آخرِ جلبٍ للقائمة** — بساعة التشغيل. **ومهلةُ الإلغاء (`cancel_seconds_left`)
+     * تُحسب منها** فيمشي العدّادُ والشاشةُ مفتوحة (تدقيقُ ٢٠٢٦-١٠-٢٧).
+     */
+    var loadedAt by mutableStateOf(0L)
+        private set
+
+    /** **أوصل أوّلُ جواب؟** — وقبله لا يُقال «لا طلبات» بل يُنتظر. */
+    var loadedOnce by mutableStateOf(false)
+        private set
+
     init {
         load()
         // **وما يتبدّل يُقرأ** — الوصلةُ الحيّةُ تقول «تغيّر شيء».
@@ -239,17 +252,6 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             loadedOnce = true
         }
     }
-
-    /**
-     * **لحظةُ آخرِ جلبٍ للقائمة** — بساعة التشغيل. **ومهلةُ الإلغاء (`cancel_seconds_left`)
-     * تُحسب منها** فيمشي العدّادُ والشاشةُ مفتوحة (تدقيقُ ٢٠٢٦-١٠-٢٧).
-     */
-    var loadedAt by mutableStateOf(0L)
-        private set
-
-    /** **أوصل أوّلُ جواب؟** — وقبله لا يُقال «لا طلبات» بل يُنتظر. */
-    var loadedOnce by mutableStateOf(false)
-        private set
 
     fun clearAction() {
         actionError = ""
