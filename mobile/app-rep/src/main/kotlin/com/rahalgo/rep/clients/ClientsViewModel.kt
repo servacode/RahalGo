@@ -60,6 +60,9 @@ class ClientsViewModel(app: Application) : AndroidViewModel(app) {
     var openId by mutableStateOf("")
         private set
 
+    /** **بحثُ «عملائي»** (طلبُ المالك ٢٠٢٦-١٠-٢٧) — بالاسم أو الرقم أو الصنف، على الجهاز. */
+    var query by mutableStateOf("")
+
     /** **يفتح تفصيلَ عميل** — ويُجلب عند الفتح لا مع القائمة. */
     fun openDetail(id: String) {
         if (id.isEmpty()) return

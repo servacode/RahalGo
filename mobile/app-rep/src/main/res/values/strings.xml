@@ -256,4 +256,8 @@
     <string name="offer_borne_note">الخصم يُحسم من مستحق المتجر</string>
     <!-- **نصُّ شاشة التحديث الإلزاميّ للمندوب** — توزيعٌ مباشرٌ من الموقع، لا Google Play، والمندوبُ لا «يطلب». -->
     <string name="update_body_rep">صدر تحديثٌ إلزاميٌّ لتطبيق المندوب. نزّله من موقع رحّال غو لتتابع عملك.</string>
+    <!-- بحث «عملائي» (٢٠٢٦-١٠-٢٧) -->
+    <string name="cl_search">دوّر بالاسم أو الرقم أو الصنف</string>
+    <string name="cl_search_none">ما لقينا عميل بهالبحث</string>
+    <string name="cl_search_none_hint">جرّب جزء من الاسم أو آخر أرقام التلفون</string>
 </resources>

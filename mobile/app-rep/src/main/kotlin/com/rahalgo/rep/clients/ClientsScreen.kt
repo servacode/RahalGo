@@ -10,6 +10,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.ui.res.painterResource
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import com.rahalgo.ui.RahalButton
@@ -125,7 +128,31 @@ fun ClientsScreen(
         }
 
         if (list.isNotEmpty()) {
-                        list.forEach { m ->
+            // ══════════════════════════════════════════════════════════
+            // **مربّعُ بحث** (طلبُ المالك ٢٠٢٦-١٠-٢٧: «مربع بحث للمندوب بصفحة عملائي ليقدر
+            // يدوّر على عميل») — بالاسم أو رقم صاحب المتجر أو الصنف، والأرقامُ العربيّةُ تُفهم.
+            // ══════════════════════════════════════════════════════════
+            OutlinedTextField(
+                value = vm.query,
+                onValueChange = { vm.query = it },
+                singleLine = true,
+                placeholder = { Text(stringResource(R.string.cl_search)) },
+                leadingIcon = {
+                    Icon(painterResource(com.rahalgo.ui.R.drawable.ic_search), contentDescription = null)
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(10.dp))
+            val q = normalizeQuery(vm.query)
+            val shown = if (q.isEmpty()) list else list.filter { m ->
+                normalizeQuery(m.name).contains(q) ||
+                    normalizeQuery(m.categoryName).contains(q) ||
+                    digitsOnly(m.ownerPhone.orEmpty()).let { p -> digitsOnly(q).let { d -> d.isNotEmpty() && p.contains(d) } }
+            }
+            if (shown.isEmpty()) {
+                Empty(text = stringResource(R.string.cl_search_none), hint = stringResource(R.string.cl_search_none_hint))
+            }
+                        shown.forEach { m ->
                 MerchantCard(
                     m = m,
                     media = { path -> Backend.of(context).media(path) },
@@ -137,6 +164,28 @@ fun ClientsScreen(
         }
         Spacer(Modifier.height(24.dp))
     }
+}
+
+/** **الأرقامُ العربيّةُ والفارسيّةُ لاتينيّة**، والحروفُ صغيرة، وبلا مسافاتٍ زائدة. */
+private fun normalizeQuery(s: String): String = buildString {
+    for (c in s.trim().lowercase()) {
+        append(
+            when (c) {
+                in '\u0660'..'\u0669' -> '0' + (c - '\u0660')
+                in '\u06F0'..'\u06F9' -> '0' + (c - '\u06F0')
+                else -> c
+            },
+        )
+    }
+}
+
+/** **الرقمُ بلا رموز** — ويُقصّ مفتاحُ سوريا و«0» الأوّل فيطابق «0944…» و«963944…» و«944…». */
+private fun digitsOnly(s: String): String {
+    var d = normalizeQuery(s).filter { it.isDigit() }
+    if (d.startsWith("00")) d = d.drop(2)
+    if (d.startsWith("963") && d.length > 9) d = d.drop(3)
+    if (d.startsWith("0")) d = d.drop(1)
+    return d
 }
 
 /**
