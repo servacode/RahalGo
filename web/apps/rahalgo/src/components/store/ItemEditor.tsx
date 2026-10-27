@@ -351,6 +351,7 @@ export default function ItemEditor({
         errorText={errorText}
         path="/api/v1/merchant/media"
         maxEdge={IMAGE_EDGE}
+        crop
       />
 
       <div>

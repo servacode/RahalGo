@@ -75,6 +75,10 @@ function Stars({ value, onPick, label }: { value: number; onPick: (n: number) =>
           </button>
         ))}
       </div>
+      {/* **وكلمةٌ تحت النجوم تقول ما اختار** — وقبل الاختيار: «اضغط على النجوم لتقيّم». */}
+      <p className={`mt-1 text-xs ${value > 0 ? "font-bold text-accent" : "text-ink-muted"}`}>
+        {value > 0 ? (R.words as Record<string, string>)[String(value)] : R.pick}
+      </p>
     </div>
   );
 }
@@ -91,8 +95,11 @@ export function RateDialog({
 }) {
   const toast = useShopToast();
   const driver = hasDriver(order);
-  const [stars, setStars] = useState(5);
-  const [driverStars, setDriverStars] = useState(5);
+  // **والنجومُ تبدأ فارغة** (مرآةُ `RateDialog` ٢٠٢٦-١٠-٢٧) — كانت خمساً، فمن ضغط «إرسال» دغري
+  // أرسل خمسَ نجومٍ وهو لم يقيّم. **فالزرُّ معطّلٌ حتّى يختار.**
+  const [stars, setStars] = useState(0);
+  const [driverStars, setDriverStars] = useState(0);
+  const ready = stars > 0 && (!driver || driverStars > 0);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -130,7 +137,7 @@ export function RateDialog({
         {driver && <Stars value={driverStars} onPick={setDriverStars} label={R.driver} />}
         {error && <Alert>{error}</Alert>}
         <div className="flex gap-2">
-          <Button className="flex-1" onClick={send} disabled={busy}>
+          <Button className="flex-1" onClick={send} disabled={busy || !ready}>
             {busy ? m.common.loading : R.send}
           </Button>
           <Button variant="secondary" onClick={onClose} disabled={busy}>
@@ -203,6 +210,7 @@ export function ComplaintBox({ order }: { order: MyOrder }) {
   const [ticket, setTicket] = useState<{ number: number } | null | undefined>(undefined);
   const [open, setOpen] = useState(false);
   const [reasons, setReasons] = useState<ComplaintReason[] | null>(null);
+  const [reasonsFailed, setReasonsFailed] = useState(false);
   const [pick, setPick] = useState("");
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -214,18 +222,24 @@ export function ComplaintBox({ order }: { order: MyOrder }) {
       .catch(() => setTicket(null));
   }, [order.id]);
 
+  /** **الأسبابُ — وإن سقط النداءُ قيل ذلك مع «إعادة»** (مرآةُ `ComplainDialog`) لا تعليقٌ على «عم نجيب». */
+  const loadReasons = () => {
+    setReasons(null);
+    setReasonsFailed(false);
+    api<{ reasons: ComplaintReason[] }>(`/api/v1/my/orders/${order.id}/complaint-reasons`)
+      .then((r) => setReasons(r.reasons ?? []))
+      .catch(() => {
+        setReasons([]);
+        setReasonsFailed(true);
+      });
+  };
+
   const openBox = () => {
     setOpen(true);
     setPick("");
     setNote("");
     setError("");
-    setReasons(null);
-    api<{ reasons: ComplaintReason[] }>(`/api/v1/my/orders/${order.id}/complaint-reasons`)
-      .then((r) => setReasons(r.reasons ?? []))
-      .catch((err) => {
-        setReasons([]);
-        setError(errorText(err));
-      });
+    loadReasons();
   };
 
   const needNote = pick === "other" && !note.trim();
@@ -262,7 +276,14 @@ export function ComplaintBox({ order }: { order: MyOrder }) {
       <Modal open={open} onClose={() => setOpen(false)} title={Q.title}>
         <div className="space-y-3">
           {reasons === null ? (
-            <LoadingState variant="inline" />
+            <LoadingState variant="inline" label={Q.loading} />
+          ) : reasons.length === 0 && reasonsFailed ? (
+            <div className="space-y-2">
+              <p className="text-sm text-danger">{Q.failed}</p>
+              <Button variant="secondary" onClick={loadReasons}>
+                {m.common.retry}
+              </Button>
+            </div>
           ) : (
             <fieldset className="flex flex-col gap-2">
               {reasons.map((r) => (

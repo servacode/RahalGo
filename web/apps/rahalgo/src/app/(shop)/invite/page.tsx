@@ -42,7 +42,8 @@ export default function InvitePage() {
   if (!user) return <NeedLogin />;
   if (!r) return error ? <ReloadState label={error} onRetry={load} /> : <LoadingState variant="list" rows={3} />;
 
-  const share = `${withPlatform(V.shareText, name)} ${r.link}`;
+  // **والمشاركةُ جملةٌ فيها الرمزُ والرابط** (مرآةُ `inv_share_text`) — رابطٌ وحدَه على واتساب لا يُعرف ما هو.
+  const share = fill(withPlatform(V.shareText, name), { code: r.code, link: r.link });
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(r.link);

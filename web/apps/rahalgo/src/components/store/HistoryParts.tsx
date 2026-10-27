@@ -13,7 +13,7 @@ import { useEffect, useState } from "react";
 import { getMessages, defaultLocale, errorText, fmtMoney, fmtNum } from "@rahalgo/i18n";
 import { Alert, FormActions, Modal, Radio, Textarea } from "@rahalgo/ui";
 import { api } from "@/lib/api";
-import type { MerchantOrder } from "@/lib/store/types";
+import { noPayout, type MerchantOrder } from "@/lib/store/types";
 import { fill } from "@/lib/customer/texts";
 import { useShopToast } from "@/components/customer/toast";
 
@@ -31,6 +31,8 @@ export function reasonText(code: string): string {
 
 /** **المجموعُ وخصمُ المنصّة والمستحقّ** — مرآةُ `SumLine` الثلاثة. */
 export function MoneyLines({ o }: { o: MerchantOrder }) {
+  // **وطلبٌ انتهى بلا بيعٍ لا حسبةَ فيه** — انظر `noPayout`.
+  if (noPayout(o.status)) return <p className="text-sm text-ink-muted">{S.orders.noPayout}</p>;
   return (
     <dl className="flex flex-col gap-0.5 text-sm">
       <div className="flex justify-between gap-2">

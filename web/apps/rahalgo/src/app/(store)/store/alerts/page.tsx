@@ -10,7 +10,7 @@
  */
 
 import { useCallback } from "react";
-import { getMessages, defaultLocale, fmtDate } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtRelDay } from "@rahalgo/i18n";
 import { EmptyState, IconWarning, LoadingState, ReloadState, useLiveData } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import type { Warning } from "@/lib/store/types";
@@ -43,7 +43,7 @@ export default function AlertsPage() {
               <span className="font-bold">{REASONS[w.reason] ?? w.reason}</span>
               {w.note && <span className="text-sm text-ink-muted">{w.note}</span>}
               <span className="flex gap-3 text-2xs text-ink-muted">
-                <span>{fmtDate(w.created_at)}</span>
+                <span>{fmtRelDay(w.created_at)}</span>
                 {w.order_number != null && <span>{fill(W.onOrder, { n: `#${w.order_number}` })}</span>}
               </span>
             </li>

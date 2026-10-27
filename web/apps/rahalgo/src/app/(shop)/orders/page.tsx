@@ -11,9 +11,10 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
-import { Button, Chips, EmptyState, LoadingState, ReloadState, IconOrder } from "@rahalgo/ui";
+import { getMessages, defaultLocale, errorText, fmtNum } from "@rahalgo/i18n";
+import { Button, ButtonLink, Chips, EmptyState, LoadingState, ReloadState, IconOrder } from "@rahalgo/ui";
 import { api } from "@/lib/api";
+import { fill } from "@/lib/customer/texts";
 import { useAuth } from "@/lib/auth";
 import { ENDED, type MyOrder, type MyOrdersPage } from "@/lib/customer/types";
 import { OrderSummary } from "@/components/customer/OrderSummary";
@@ -69,6 +70,8 @@ export default function OrdersPage() {
   const open = (orders ?? []).filter((o) => !ENDED.has(o.status));
   const history = (orders ?? []).filter((o) => ENDED.has(o.status));
   const list = tab === "open" ? open : history;
+  // **والسجلُّ بعدده، و«+» حين بقيت صفحات** (مرآةُ `ord_tab_history` في التطبيق).
+  const hasMore = !!orders && orders.length < total;
 
   return (
     <div className="flex flex-col gap-4">
@@ -79,7 +82,9 @@ export default function OrdersPage() {
       <Chips<"open" | "history">
         items={[
           { id: "open", label: O.open, count: open.length },
-          { id: "history", label: O.history },
+          hasMore
+            ? { id: "history", label: fill(O.historyMore, { n: fmtNum(history.length) }) }
+            : { id: "history", label: O.history, count: history.length },
         ]}
         value={tab}
         onChange={setTab}
@@ -89,7 +94,17 @@ export default function OrdersPage() {
       ) : orders === null ? (
         <LoadingState variant="list" rows={3} />
       ) : list.length === 0 ? (
-        <EmptyState icon={IconOrder} title={tab === "open" ? O.noneOpen : O.noneHistory} />
+        <EmptyState
+          icon={IconOrder}
+          title={tab === "open" ? O.noneOpen : O.noneHistory}
+          action={
+            tab === "open" ? (
+              <ButtonLink href="/shop" variant="secondary">
+                {O.browse}
+              </ButtonLink>
+            ) : undefined
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {list.map((o) => (
@@ -97,7 +112,7 @@ export default function OrdersPage() {
           ))}
         </div>
       )}
-      {orders && orders.length < total && tab === "history" && (
+      {hasMore && tab === "history" && (
         <Button
           variant="secondary"
           className="mx-auto"

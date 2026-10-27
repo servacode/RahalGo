@@ -74,6 +74,7 @@ function normalizePlatform(raw: Record<string, unknown>): CustomerPlatform {
         ? raw.password_min_length
         : 8,
     social: { whatsapp: typeof social.whatsapp === "string" ? social.whatsapp : "" },
+    support_phone: typeof raw.support_phone === "string" ? raw.support_phone : "",
     custom_delivery: {
       source: typeof cd.source === "string" ? cd.source : "driver_defined",
       fee: typeof cd.fee === "number" ? cd.fee : 0,

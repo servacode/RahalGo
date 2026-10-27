@@ -14,7 +14,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
-import { Alert, Button, LoadingState, ReloadState, useLiveRefresh } from "@rahalgo/ui";
+import { Alert, Button, EmptyState, IconMoto, LoadingState, ReloadState, useLiveRefresh } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import type { Delivery } from "@/lib/store/types";
@@ -86,7 +86,9 @@ export default function DeliveriesHistoryPage() {
       {cancelError && <Alert>{cancelError}</Alert>}
       {failed && !rows && <ReloadState onRetry={() => void fetchPage(1, true)} />}
       {rows == null && !failed && <LoadingState variant="inline" label={D.loading} />}
-      {rows != null && rows.length === 0 && <p className="text-sm text-ink-muted">{D.none}</p>}
+      {rows != null && rows.length === 0 && (
+        <EmptyState icon={IconMoto} title={D.none} action={<p className="text-xs text-ink-muted">{D.noneHint}</p>} />
+      )}
       {rows?.map((d) => (
         <DeliveryRow key={d.id} d={d} cancelling={cancelling === d.id} onCancel={() => void cancel(d.id)} />
       ))}

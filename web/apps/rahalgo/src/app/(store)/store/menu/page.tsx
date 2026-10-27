@@ -25,7 +25,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import DrinksCard from "@/components/store/DrinksCard";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   getMessages,
   defaultLocale,
@@ -55,7 +55,7 @@ import {
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
-import type { MenuItem, MenuSection } from "@/lib/store/types";
+import type { MenuItem, MenuSection, SectionRef } from "@/lib/store/types";
 import { dollars, fill } from "@/lib/customer/texts";
 import { parseUsd, usdInput, usdToSyp } from "@/lib/store/usd";
 import { useShopToast } from "@/components/customer/toast";
@@ -433,6 +433,16 @@ export default function MenuPage() {
   const router = useRouter();
   const suspended = store?.status === "suspended";
 
+  // **أقسامُ المتجر بترتيبها كما يراها الزبون** (مرآةُ `MenuViewModel`، تدقيقُ ٢٠٢٦-١٠-٢٧).
+  // **وتعذّرُها لا يُخفي شيئاً** — تبقى المجموعاتُ بعدد أصنافها كما كانت.
+  const [order, setOrder] = useState<string[]>([]);
+  useEffect(() => {
+    if (!id) return;
+    api<{ sections: SectionRef[] }>(`/api/v1/merchant/stores/${id}/sections`)
+      .then((r) => setOrder((r.sections ?? []).map((x) => x.name)))
+      .catch(() => undefined);
+  }, [id]);
+
   const groups = useMemo(() => {
     const all = (data ?? []).flatMap((s) => s.items);
     const needle = q.trim();
@@ -447,8 +457,15 @@ export default function MenuPage() {
         name,
         items: items.sort((a, b) => a.name.localeCompare(b.name, "ar")),
       }))
-      .sort((a, b) => b.items.length - a.items.length);
-  }, [data, q]);
+      // **بترتيب أقسام المتجر** — وما ليس في أقسامه آخراً بعدد أصنافه.
+      .sort((a, b) => {
+        const ia = order.indexOf(a.name);
+        const ib = order.indexOf(b.name);
+        const ra = ia < 0 ? Number.MAX_SAFE_INTEGER : ia;
+        const rb = ib < 0 ? Number.MAX_SAFE_INTEGER : ib;
+        return ra - rb || b.items.length - a.items.length;
+      });
+  }, [data, q, order]);
 
   async function toggle(item: MenuItem) {
     const next = !item.available;

@@ -84,8 +84,10 @@ export default function AddressEditor() {
       <div className="surface flex items-center gap-3 rounded-card p-3">
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold">{A.point}</p>
-          <p className="text-xs text-ink-muted" dir={lat != null && lng != null ? "ltr" : undefined}>
-            {lat == null || lng == null ? A.pointNone : `${lat.toFixed(5)}, ${lng.toFixed(5)}`}
+          {/* **حالٌ لا أرقام** (مرآةُ `StoreScreen.kt`، تدقيقُ ٢٠٢٦-١٠-٢٧) — «35.95012, 39.01234»
+              لا تعني شيئاً لصاحب المتجر. **فمحدَّدٌ بالأخضر، أو لسّا بالأحمر.** */}
+          <p className={`text-xs font-bold ${lat != null && lng != null ? "text-success" : "text-danger"}`}>
+            {lat != null && lng != null ? A.pointSet : A.pointNone}
           </p>
         </div>
         <Button
@@ -98,7 +100,7 @@ export default function AddressEditor() {
           }}
         >
           <IconLocation size={16} className="text-accent-text" />
-          {A.pointPick}
+          {lat != null && lng != null ? A.pointChange : A.pointPick}
         </Button>
       </div>
       <Modal open={mapOpen} onClose={() => setMapOpen(false)} title={A.point} size="lg">

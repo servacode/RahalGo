@@ -9,7 +9,7 @@
  */
 
 import { useCallback, useState } from "react";
-import { getMessages, defaultLocale, fmtDate } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtRelDay } from "@rahalgo/i18n";
 import { EmptyState, IconChat, LoadingState, ReloadState, Tabs, useLiveData } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
@@ -30,7 +30,7 @@ function Row({ t }: { t: MerchantReport }) {
       </span>
       {t.order_number != null && <span className="text-xs text-ink-muted">{fill(C.onOrder, { n: `#${t.order_number}` })}</span>}
       {t.resolution && <span className="text-sm">{t.resolution}</span>}
-      <span className="text-2xs text-ink-muted">{fmtDate(t.created_at)}</span>
+      <span className="text-2xs text-ink-muted">{fmtRelDay(t.created_at)}</span>
     </li>
   );
 }

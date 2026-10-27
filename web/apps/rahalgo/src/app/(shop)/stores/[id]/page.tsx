@@ -22,21 +22,12 @@ import { Alert, Badge, EmptyState, LoadingState, ReloadState, IconPrev, IconStor
 import { api, mediaUrl } from "@/lib/api";
 import { useBrowseQuery } from "@/lib/customer/context";
 import type { Item, StorePage } from "@/lib/customer/types";
-import { fill } from "@/lib/customer/texts";
+import { clock12, fill } from "@/lib/customer/texts";
 import { ItemGrid, ItemSheet } from "@/components/customer/items";
 import { StoreLogo } from "@/components/customer/stores";
 
 const m = getMessages(defaultLocale);
 const ST = m.shop.stores;
-
-/** «١٨:٣٠» ← «٦:٣٠ م». */
-function clock12(hhmm: string): string {
-  const [hs, ms = "00"] = hhmm.split(":");
-  const h = Number(hs);
-  if (!Number.isFinite(h)) return hhmm;
-  const h12 = h % 12 === 0 ? 12 : h % 12;
-  return `${h12}:${ms} ${h < 12 ? ST.am : ST.pm}`;
-}
 
 /**
  * **دوامُ اليوم بلفظ الزبون** (ملاحظةُ المالك ٢٠٢٦-١٠-١٨) — «مفتوح ٢٤ ساعة» أو «اليوم من … لـ …»
@@ -95,11 +86,11 @@ export default function StorePageView() {
             <StoreLogo name={page.store.name} logo={page.store.logo_thumb_url ?? page.store.logo_url} className="h-20 w-20" />
             <div className="min-w-0 flex-1 space-y-1">
               <h1 className="heading-page truncate">{page.store.name}</h1>
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant={page.store.open_now ? "success" : "danger"}>
-                  {todayText(page.store.today)}
-                </Badge>
-              </div>
+              {/* **«مفتوح / مسكّر» حبّةً، ودوامُ اليوم سطرٌ تحتها** (مرآةُ `StoreScreen.kt` ٢٠٢٦-١٠-٢٧). */}
+              <Badge variant={page.store.open_now ? "success" : "danger"} className="font-bold">
+                {page.store.open_now ? ST.pillOpen : ST.pillClosed}
+              </Badge>
+              <p className="text-xs text-ink-muted">{todayText(page.store.today)}</p>
             </div>
           </header>
 

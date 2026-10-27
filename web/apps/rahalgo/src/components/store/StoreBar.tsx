@@ -19,7 +19,7 @@
 
 import { useState } from "react";
 import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
-import { Alert, IconStore, Select, Switch } from "@rahalgo/ui";
+import { Alert, Confirm, IconStore, Select, Switch } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import { backAt, fill } from "@/lib/customer/texts";
@@ -32,6 +32,9 @@ export default function StoreBar() {
   const { store, stores, select, patch, reload } = useStore();
   const toast = useShopToast();
   const [saving, setSaving] = useState(false);
+  // **والفتحُ بلا سؤالٍ والإغلاقُ بسؤال** (مرآةُ `StoreScreen.kt`، تدقيقُ ٢٠٢٦-١٠-٢٧) —
+  // لمسةٌ بالغلط كانت تُسكّر المتجرَ عن الزبائن بلا سؤال.
+  const [asking, setAsking] = useState(false);
   if (!store) return null;
 
   const suspended = store.status === "suspended";
@@ -95,12 +98,24 @@ export default function StoreBar() {
         <Switch
           checked={!store.emergency_closed}
           disabled={saving || suspended}
-          onChange={(on) => void setOpen(on)}
+          onChange={(on) => (on ? void setOpen(true) : setAsking(true))}
           label={label}
           hint={next ? fill(S.state.nextOpen, { when: next }) : S.state.switchLabel}
         />
       </div>
       {suspended && <Alert tone="error">{S.suspendedBanner}</Alert>}
+      <Confirm
+        open={asking}
+        title={S.settings.emergencyQ}
+        body={S.settings.emergencyHint}
+        confirmLabel={S.settings.emergencyDo}
+        busy={saving}
+        onConfirm={() => {
+          setAsking(false);
+          void setOpen(false);
+        }}
+        onCancel={() => setAsking(false)}
+      />
     </section>
   );
 }

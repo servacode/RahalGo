@@ -15,7 +15,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtDateTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtDamascusTime, fmtRelDay } from "@rahalgo/i18n";
 import { Button, Chips, EmptyState, IconReceipt, IconWarning, LoadingState, ReloadState } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
@@ -84,12 +84,23 @@ export default function HistoryPage() {
       {failed && !rows && <ReloadState onRetry={() => void fetchPage(1, true)} />}
       {rows == null && !failed && <LoadingState variant="list" rows={4} />}
       {rows != null && rows.length === 0 && <EmptyState icon={IconReceipt} title={H.empty} />}
+      {/* **بعناوين أيّامٍ وبطاقةٍ لكلّ طلب** (مرآةُ `HistoryScreen.kt`، تدقيقُ ٢٠٢٦-١٠-٢٧) —
+          «طلبُ مبارح العصر» يُوجد تحت يومه، وبرأسه ساعتُه. */}
       <ul className="flex flex-col gap-2">
-        {rows?.map((o) => (
-          <li key={o.id} className="surface flex flex-col gap-2 rounded-card p-3" data-testid="history-order">
+        {rows?.map((o, i, all) => {
+          const day = fmtRelDay(o.created_at);
+          const prev = all[i - 1];
+          const head = !prev || fmtRelDay(prev.created_at) !== day;
+          return (
+          <li key={o.id} className="flex flex-col gap-2">
+            {head && <h3 className="heading-card pt-2 text-ink-muted">{day}</h3>}
+            <div className="surface flex flex-col gap-2 rounded-card p-3" data-testid="history-order">
             <Link href={`/store/history/${o.id}`} className="flex flex-col gap-2">
               <header className="flex items-center justify-between gap-2">
-                <span className="font-bold">{`#${o.number}`}</span>
+                <span className="flex items-baseline gap-2">
+                  <span className="font-bold">{`#${o.number}`}</span>
+                  <span className="text-xs text-ink-muted" dir="ltr">{fmtDamascusTime(o.created_at)}</span>
+                </span>
                 <span className={`text-xs ${o.status === "delivered" ? "text-accent-text" : "text-ink-muted"}`}>
                   {orderStatus(o.status)}
                 </span>
@@ -98,10 +109,7 @@ export default function HistoryPage() {
               {o.items.length > 0 && (
                 <p className="text-xs text-ink-muted">{o.items.map((l) => `${l.qty}× ${l.name}`).join(m.common.listSep)}</p>
               )}
-              <p className="flex items-center justify-between text-2xs text-ink-muted">
-                <span>{fmtDateTime(o.closed_at ?? o.created_at)}</span>
-                <span className="text-accent-text">{H.open}</span>
-              </p>
+              <p className="text-end text-2xs text-accent-text">{H.open}</p>
             </Link>
             {reportable.has(o.id) && (
               <Button variant="ghost" className="flex w-fit items-center gap-1 text-danger" onClick={() => setReporting(o)}>
@@ -109,8 +117,10 @@ export default function HistoryPage() {
                 {H.report}
               </Button>
             )}
+            </div>
           </li>
-        ))}
+          );
+        })}
       </ul>
       {rows != null && rows.length < total && (
         <Button variant="secondary" disabled={busy} onClick={() => void fetchPage(page + 1, false)} data-testid="history-more">

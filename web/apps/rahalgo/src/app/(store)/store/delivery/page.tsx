@@ -23,7 +23,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getMessages, defaultLocale, errorText, fmtNum } from "@rahalgo/i18n";
-import { Alert, Button, Checkbox, IconMoto, Input, LoadingState, Textarea } from "@rahalgo/ui";
+import { Alert, Button, Checkbox, EmptyState, IconMoto, Input, LoadingState, Textarea } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import { useStoreDeliveries } from "@/lib/store/deliveries";
@@ -119,6 +119,8 @@ export default function DeliveryPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
+  // **ضغطَ «اطلب سائقاً» والنموذجُ ناقص** — فتُعلَّم خاناتُه بالأحمر (مرآةُ `tried`، تدقيقُ ٢٠٢٦-١٠-٢٧).
+  const [tried, setTried] = useState(false);
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [cancelError, setCancelError] = useState("");
   const [shown, setShown] = useState(5);
@@ -219,6 +221,12 @@ export default function DeliveryPage() {
 
   async function send() {
     if (busy || !storeId) return;
+    // **الزرُّ لا يقف صامتاً** — كان رماديّاً بلا كلمة؛ والضغطُ والنموذجُ ناقصٌ يُعلّم ولا يُرسل.
+    if (missing.length > 0) {
+      setTried(true);
+      return;
+    }
+    setTried(false);
     setBusy(true);
     setError("");
     setSent(false);
@@ -351,6 +359,7 @@ export default function DeliveryPage() {
         >
           <Input
             label={isFetch ? D.nameFetch : D.name}
+            error={tried && !name.trim() ? D.required : undefined}
             value={name}
             disabled={busy}
             autoComplete="off"
@@ -361,6 +370,7 @@ export default function DeliveryPage() {
           />
           <Input
             label={isFetch ? D.phoneFetch : D.phone}
+            error={tried && !phone.trim() ? D.required : undefined}
             value={phone}
             disabled={busy}
             type="tel"
@@ -375,6 +385,7 @@ export default function DeliveryPage() {
           <Textarea
             id="delivery-address"
             label={isFetch ? D.addressFetch : D.address}
+            error={tried && !address.trim() ? D.required : undefined}
             value={address}
             disabled={busy}
             rows={2}
@@ -457,6 +468,7 @@ export default function DeliveryPage() {
               </div>
               <Input
                 label={`${isFetch ? D.collectAmountFetch : D.collectAmount} (${currency === "USD" ? "$" : m.common.currency})`}
+                error={tried && collectValue == null ? D.required : undefined}
                 value={collectAmount}
                 disabled={busy}
                 inputMode={currency === "USD" ? "decimal" : "numeric"}
@@ -475,7 +487,7 @@ export default function DeliveryPage() {
           )}
 
           <div className="flex flex-col gap-2" role="radiogroup" aria-label={D.whoPays}>
-            <p className="text-sm font-bold">{D.whoPaysQ}</p>
+            <p className={`text-sm font-bold ${tried && !payer ? "text-danger" : ""}`}>{D.whoPaysQ}</p>
             {payers.map((p) => {
               const short = p.key === "merchant" && quote?.merchant_can_pay === false;
               return (
@@ -507,10 +519,10 @@ export default function DeliveryPage() {
           )}
           {payer === "merchant" && quote && !quote.merchant_can_pay && <Alert>{D.cannotPay}</Alert>}
           {missing.length > 0 && (
-            <p className="text-xs text-ink-muted">{fill(D.missing, { list: missing.join(m.common.listSep) })}</p>
+            <p className={`text-xs ${tried ? "font-bold text-danger" : "text-ink-muted"}`}>{fill(D.missing, { list: missing.join(m.common.listSep) })}</p>
           )}
           {error && <Alert>{error}</Alert>}
-          <Button type="submit" size="lg" className="w-full" disabled={busy || missing.length > 0 || blocked || !storeId}>
+          <Button type="submit" size="lg" className="w-full" disabled={busy || blocked || !storeId}>
             {busy ? D.sending : D.send}
           </Button>
         </form>
@@ -520,7 +532,9 @@ export default function DeliveryPage() {
         <h3 className="heading-card">{D.mine}</h3>
         {(listError || cancelError) && <Alert>{cancelError || errorText(listError)}</Alert>}
         {rows == null && !listError && <LoadingState variant="inline" label={D.loading} />}
-        {rows != null && rows.length === 0 && <p className="text-sm text-ink-muted">{D.none}</p>}
+        {rows != null && rows.length === 0 && (
+          <EmptyState icon={IconMoto} title={D.none} action={<p className="text-xs text-ink-muted">{D.noneHint}</p>} />
+        )}
         {rows?.slice(0, shown).map((d) => (
           <DeliveryRow key={d.id} d={d} cancelling={cancelling === d.id} onCancel={() => void cancel(d.id)} />
         ))}

@@ -154,6 +154,7 @@ export function LogoCard() {
       mediaUrl={mediaUrl}
       errorText={errorText}
       path="/api/v1/merchant/media"
+      crop
     />
   );
 }
@@ -191,7 +192,7 @@ export function EmergencyButton() {
       </Button>
       <Confirm
         open={ask}
-        title={T.emergency}
+        title={T.emergencyQ}
         body={T.emergencyHint}
         confirmLabel={T.emergencyDo}
         busy={busy}
@@ -303,6 +304,9 @@ interface RateJump {
  * **ويُحفظ بزرٍّ لا بعد ثانيةٍ من الكتابة** كما في التطبيق — لوحةُ مفاتيح
  * الحاسوب تكتب أسرعَ من المهلة، **ونصفُ رقمٍ يُحفظ سعراً لكلّ الأصناف.**
  */
+/** **أدنى سعرِ صرفٍ يُحفظ** — دونه كتابةٌ لم تكتمل لا سعر (مرآةُ `MIN_RATE` في التطبيق، تدقيقُ ٢٠٢٦-١٠-٢٧). */
+const MIN_RATE = 10;
+
 export function RateCard() {
   const { store, patch, reload } = useStore();
   const toast = useShopToast();
@@ -320,6 +324,10 @@ export function RateCard() {
     if (!store) return;
     if (!(rate > 0)) {
       toast(T.rateInvalid, "error");
+      return;
+    }
+    if (rate < MIN_RATE) {
+      toast(T.rateTooLow, "error");
       return;
     }
     setBusy(true);
@@ -369,6 +377,7 @@ export function RateCard() {
           value={text}
           disabled={suspended}
           onChange={(e) => setText(usdInput(e.target.value))}
+          error={value != null && value > 0 && value < MIN_RATE ? T.rateTooLow : undefined}
           wrapperClassName="min-w-0 flex-1"
         />
         <Button type="submit" disabled={!dirty || busy || suspended} data-testid="store-rate-save">

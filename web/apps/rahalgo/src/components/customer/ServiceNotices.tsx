@@ -16,7 +16,7 @@ import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
 import { Alert, Button, usePlatform } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useCustomer } from "@/lib/customer/context";
-import { serviceText, demandKind, demandCta, demandDone } from "@/lib/customer/texts";
+import { serviceText, demandKind, demandCta, demandDone, freeOfferLines } from "@/lib/customer/texts";
 import type { Address, Availability } from "@/lib/customer/types";
 
 const m = getMessages(defaultLocale);
@@ -133,11 +133,23 @@ export function ServiceBlockBanner() {
   return <AvailabilityNotice av={availability} address={address} />;
 }
 
-/** **لافتةُ «توصيلتك الجاية مجانية»** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — للزبون المستحقّ قبل أن يطلب، فلا يتفاجأ. */
+/**
+ * **لافتةُ «توصيلتك الجاية مجانية»** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — مرآةُ `FreeDeliveryBanner` في `FreeOffer.kt`.
+ *
+ * **لمن يحقّ له طلبُ السوق والطلبُ مفتوح** — عرضٌ للأمانة وحدَها لا يُعلَن في السوق، فيملأ
+ * الزبونُ سلّةً ويجد الأجرةَ كاملة. **ويُقال السقفُ ولإيمتى** من الخادم (`max_fee` · `ends_at`).
+ */
 export function FreeDeliveryBanner() {
   const { freeDelivery } = useCustomer();
   const ordering = useOrderingState();
-  if (!ordering.open || !freeDelivery) return null;
-  if (!freeDelivery.standard && !freeDelivery.purchase && !freeDelivery.amanah) return null;
-  return <Alert tone="success">{S.free.banner}</Alert>;
+  if (!ordering.open || !freeDelivery || !freeDelivery.standard) return null;
+  return (
+    <Alert tone="success">
+      {freeOfferLines(freeDelivery, S.free.banner).map((line) => (
+        <span key={line} className="block">
+          {line}
+        </span>
+      ))}
+    </Alert>
+  );
 }

@@ -15,7 +15,7 @@
  */
 
 import { useCallback, useState } from "react";
-import { getMessages, defaultLocale, damascusDay, fmtMoney, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, damascusDay, fmtCalendarDay, fmtMoney, fmtNum } from "@rahalgo/i18n";
 import { Button, Chips, IconPrint, Input, LoadingState, ReloadState, StatCard, StatGrid, useLiveData } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
@@ -86,8 +86,9 @@ export default function ReportsPage() {
       <div className="hidden print:block">
         <h2 className="heading-page">{`${R.title} · ${store?.name ?? ""}`}</h2>
       </div>
-      <p className="text-xs text-ink-muted" dir="auto">
-        {fill(R.period, { from: span.from, to: span.to })}
+      {/* **والمدى بالأيّام لا بصيغة الآلة** (مرآةُ `Dates.ymd`، تدقيقُ ٢٠٢٦-١٠-٢٧). */}
+      <p className="text-xs text-ink-muted">
+        {fill(R.range, { from: fmtCalendarDay(span.from), to: fmtCalendarDay(span.to) })}
       </p>
       {loading && !data ? (
         <LoadingState variant="stats" rows={6} />

@@ -38,6 +38,10 @@ export {
   westernDigits,
   fmtLongDate,
   damascusDay,
+  fmtCalendarDay,
+  fmtRelDay,
+  fmtRelStamp,
+  fmtDamascusTime,
 } from "./format";
 import { fmtNum } from "./format";
 

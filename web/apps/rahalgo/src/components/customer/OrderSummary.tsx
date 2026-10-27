@@ -12,16 +12,23 @@ import { getMessages, defaultLocale, fmtDateTime, fmtRef } from "@rahalgo/i18n";
 import { Badge, Money, IconNext } from "@rahalgo/ui";
 import { statusLabel } from "@/lib/customer/texts";
 import { ENDED, type MyOrder } from "@/lib/customer/types";
-import { OrderStages } from "./orderParts";
+import { OrderEta, OrderStages } from "./orderParts";
 
 const m = getMessages(defaultLocale);
 const O = m.shop.orders;
 
-export function statusTone(status: string): "success" | "danger" | "warning" | "info" {
+/**
+ * **لونُ الشارة يقول الحالَ قبل أن تُقرأ** — مرآةُ `statusColor` في `Status.kt` (٢٠٢٦-١٠-٢٧):
+ * الانتظارُ برتقاليّ، والعملُ عليه بلون العلامة، والأخضرُ للتسليم وحدَه، والأحمرُ لما سقط.
+ */
+const ACTIVE = new Set(["accepted", "confirmed", "preparing", "assigned", "at_pickup", "picked_up", "on_the_way", "at_dropoff"]);
+
+export function statusTone(status: string): "success" | "danger" | "warning" | "primary" | "neutral" {
   if (status === "delivered") return "success";
-  if (["cancelled", "failed", "rejected", "refunded"].includes(status)) return "danger";
-  if (status === "pending") return "warning";
-  return "info";
+  if (status === "cancelled" || status === "rejected" || status === "failed") return "danger";
+  if (status === "pending" || status === "dispatching") return "warning";
+  if (ACTIVE.has(status)) return "primary";
+  return "neutral";
 }
 
 export function OrderSummary({ order }: { order: MyOrder }) {
@@ -40,6 +47,7 @@ export function OrderSummary({ order }: { order: MyOrder }) {
         </p>
       )}
       {live && <OrderStages order={order} />}
+      {live && <OrderEta order={order} />}
       {order.items_preview && <p className="line-clamp-2 text-xs text-ink-muted">{order.items_preview}</p>}
       <div className="flex items-center justify-between gap-2 text-sm">
         <span className="text-xs text-ink-muted">{fmtDateTime(order.created_at)}</span>

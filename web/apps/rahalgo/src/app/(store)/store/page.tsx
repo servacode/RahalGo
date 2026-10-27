@@ -18,7 +18,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, damascusDay, fmtMoney, fmtNum } from "@rahalgo/i18n";
-import { IconWarning, LoadingState, StatCard, StatGrid, useLiveData } from "@rahalgo/ui";
+import { fill } from "@/lib/customer/texts";
+import { IconCheck, LoadingState, StatCard, StatGrid, useLiveData } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import type { SectionRef, StoreReport } from "@/lib/store/types";
@@ -72,26 +73,57 @@ export default function StoreHome() {
   if (!store) return null;
   const suspended = store.status === "suspended";
 
-  const missing: Spot[] = [];
-  if (mine != null && mine.length === 0) missing.push("sections");
-  if (!store.has_hours) missing.push("hours");
-  if (store.lat == null || !store.address_text.trim()) missing.push("address");
-  if (!store.settlement_confirmed) missing.push("settlement");
-  if (!store.returns_confirmed) missing.push("returns");
+  // ══════════════════════════════════════════════════════════════════
+  // **خطواتُ التجهيز بتقدّمها — لا كرتٌ أحمر** (مرآةُ `StoreScreen.kt`، تدقيقُ ٢٠٢٦-١٠-٢٧)
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // **كان كرتاً بلون الإيقاف** — فيظنّ المتجرُ الجديدُ أنّ عليه مشكلة، **وهي
+  // خطواتُ تجهيزٍ عاديّة.** فصار شريطَ تقدّمٍ وكلُّ خطوةٍ بدائرتها (✓ لِما تمّ).
+  // **وأقسامٌ لم تُقرأ بعدُ لا تُعدّ ناقصة.**
+  const steps: { spot: Spot; done: boolean }[] = [
+    { spot: "sections", done: mine == null || mine.length > 0 },
+    { spot: "hours", done: store.has_hours },
+    { spot: "address", done: store.lat != null && !!store.address_text.trim() },
+    { spot: "settlement", done: store.settlement_confirmed },
+    { spot: "returns", done: store.returns_confirmed },
+  ];
+  const doneCount = steps.filter((x) => x.done).length;
 
   return (
     <div className="flex flex-col gap-3">
-      {missing.length > 0 && !suspended && (
-        <section className="flex flex-col gap-1 rounded-card border border-danger-edge bg-danger-tint p-3" data-testid="store-missing">
-          <p className="flex items-center gap-2 font-bold text-danger">
-            <IconWarning size={18} className="shrink-0" />
-            {T.setupTitle}
-          </p>
-          {missing.map((s) => (
-            <button key={s} type="button" onClick={() => jump(s)} className="py-1.5 text-start text-sm hover:underline">
-              {`• ${T.setup[s]}  ←`}
-            </button>
-          ))}
+      {doneCount < steps.length && !suspended && (
+        <section className="flex flex-col gap-2 rounded-card border border-accent-edge bg-accent-tint p-3" data-testid="store-missing">
+          <p className="font-bold text-accent-text">{fill(T.setupProgress, { done: fmtNum(doneCount), total: fmtNum(steps.length) })}</p>
+          <div className="h-2 overflow-hidden rounded-badge bg-field" role="presentation">
+            <div className="h-full rounded-badge bg-accent transition-all" style={{ width: `${(doneCount / steps.length) * 100}%` }} />
+          </div>
+          <ul className="flex flex-col">
+            {steps.map(({ spot, done }) => (
+              <li key={spot}>
+                <button
+                  type="button"
+                  disabled={done}
+                  onClick={() => jump(spot)}
+                  className="flex min-h-12 w-full items-center gap-3 text-start text-sm disabled:cursor-default"
+                >
+                  <span
+                    className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-badge border-2 ${
+                      done ? "border-success bg-success text-on-bright" : "border-accent"
+                    }`}
+                    aria-hidden
+                  >
+                    {done && <IconCheck size={14} />}
+                  </span>
+                  <span className={`min-w-0 flex-1 ${done ? "text-ink-muted" : ""}`}>{T.setup[spot]}</span>
+                  {!done && (
+                    <span className="font-bold text-accent-text" aria-hidden>
+                      ←
+                    </span>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
 
@@ -120,6 +152,8 @@ export default function StoreHome() {
         )
       )}
 
+      {/* **وعنوانٌ يفصل اليوميَّ عن إعداداتٍ تُضبط مرّة** (تدقيقُ ٢٠٢٦-١٠-٢٧). */}
+      <h2 className="heading-section pt-3">{T.title}</h2>
       <div id="spot-settlement" className="scroll-mt-20">
         <SettlementCard />
       </div>

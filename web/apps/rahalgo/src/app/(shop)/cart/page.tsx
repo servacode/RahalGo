@@ -25,6 +25,7 @@ import {
   Alert,
   Button,
   ButtonLink,
+  Confirm,
   EmptyState,
   Input,
   LoadingState,
@@ -51,6 +52,22 @@ import { useShopToast } from "@/components/customer/toast";
 const m = getMessages(defaultLocale);
 const C = m.shop.cart;
 const ORDER_SLOT = "order";
+
+/** **أمتّصلٌ بالشبكة؟** — مرآةُ `Net.online`: لا يُرسَل طلبٌ بلا شبكة، ويُقال السببُ تحت. */
+function useOnline(): boolean {
+  const [online, setOnline] = useState(true);
+  useEffect(() => {
+    const sync = () => setOnline(navigator.onLine);
+    sync();
+    window.addEventListener("online", sync);
+    window.addEventListener("offline", sync);
+    return () => {
+      window.removeEventListener("online", sync);
+      window.removeEventListener("offline", sync);
+    };
+  }, []);
+  return online;
+}
 
 /** **بصمةُ ما عُرض** — ومنها يُعرف أنّ الزبونَ أقرّ القيمَ الحاليّة لا غيرَها. */
 function fingerprint(q: Quote | null, lines: string, point: string, discount: number): string {
@@ -80,6 +97,8 @@ export default function CartPage() {
   const [error, setError] = useState("");
   const [errorCode, setErrorCode] = useState("");
   const [uncertain, setUncertain] = useState(false);
+  const [askClear, setAskClear] = useState(false);
+  const online = useOnline();
 
   const point = address ? `${address.lat},${address.lng}` : "";
   const linesKey = cart.lines.map((l) => `${lineKey(l)}:${l.qty}`).join(",");
@@ -123,7 +142,11 @@ export default function CartPage() {
 
   const cut = promoRes?.valid ? promoRes : null;
   const fee = quote ? (cut ? cut.delivery_fee : quote.delivery_fee) : 0;
-  const extra = quote && !cut ? Math.min(Math.max(quote.sources_fee, 0), fee) : 0;
+  // **وسطرُ المتجر الثاني يبقى ولو انطبق كود** (مرآةُ `CartScreen.kt` ٢٠٢٦-١٠-٢٧).
+  const extra = quote ? Math.min(Math.max(quote.sources_fee, 0), fee) : 0;
+  // **وكودُ التوصيل المجاني وحدَه يُغني عن العرض** — كودُ حسمٍ عاديٌّ لا يمحو «مجاني».
+  const freeCode = cut?.kind === "free_delivery";
+  const waived = freeCode ? 0 : (quote?.free_waived ?? 0);
   const payable = quote ? (cut ? Math.max(0, quote.subtotal + fee - cut.discount) : quote.total) : null;
   const walletBlocked = payable != null && available < payable;
 
@@ -225,270 +248,320 @@ export default function CartPage() {
     quote.blocked === true ||
     quote.too_many_sources ||
     av?.available === false;
-  const wa = (platform?.social.whatsapp ?? "").replace(/\D/g, "");
+  // **ورقمٌ واحدٌ للحساب وعليه واتساب** (قرارُ المالك) — فإن لم يُضبط واتسابٌ منفصلٌ فرقمُ الدعم.
+  const wa = ((platform?.social.whatsapp ?? "").trim() || (platform?.support_phone ?? "")).replace(/\D/g, "");
+  const closedNow =
+    !ordering.open ||
+    quote?.out_of_zone === true ||
+    quote?.zone_closed === true ||
+    quote?.blocked === true ||
+    av?.available === false;
+  // **سببُ تعطيل الإرسال سطرٌ واحدٌ فوق الزرّ** — مرآةُ `why` في `CartScreen.kt`.
+  const why = busy
+    ? ""
+    : !address
+      ? C.whyAddress
+      : !online
+        ? C.whyOffline
+        : closedNow
+          ? C.whyClosed
+          : quote?.too_many_sources
+            ? quote.max_sources <= 1
+              ? C.tooManyOne
+              : fill(C.tooMany, { n: fmtNum(quote.max_sources) })
+            : !quote
+              ? C.whyPricing
+              : !canSubmit
+                ? C.whyReview
+                : "";
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] lg:items-start">
-      <section className="flex flex-col gap-3">
-        <div>
-          <h1 className="heading-page">{C.title}</h1>
-          <p className="text-sm text-ink-muted">{C.hint}</p>
-        </div>
-        <ul className="surface divide-y divide-line-soft">
-          {cart.lines.map((l) => {
-            const k = lineKey(l);
-            const img = mediaUrl(l.item.image_thumb_url ?? l.item.image_url);
-            return (
-              <li key={k} className="flex items-center gap-3 p-3">
-                <span className="h-14 w-14 shrink-0 overflow-hidden rounded-control bg-field">
-                  {img && <img src={img} alt="" loading="lazy" className="h-full w-full object-cover" />}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold">{l.item.name}</p>
-                  {l.options.length > 0 && (
-                    <p className="truncate text-xs text-ink-muted">{l.options.map((o) => o.name).join(m.common.listSep)}</p>
-                  )}
-                  {l.item.merchant_name && (
-                    <p className="flex items-center gap-1 truncate text-xs text-ink-muted">
-                      <IconStore size={11} />
-                      {l.item.merchant_name}
-                    </p>
-                  )}
-                  <Money value={unitPrice(l) * l.qty} className="text-sm font-bold text-accent-text" />
-                </div>
-                <div className="flex shrink-0 items-center gap-0.5 rounded-control bg-field p-0.5">
-                  <button
-                    type="button"
-                    aria-label={m.shop.item.minus}
-                    onClick={() => cart.setQty(k, l.qty - 1)}
-                    className="taparea flex h-8 w-8 items-center justify-center rounded-control hover:bg-row-hover"
-                  >
-                    <IconMinus size={14} />
-                  </button>
-                  <span className="min-w-6 text-center text-sm font-bold tabular-nums">{fmtNum(l.qty)}</span>
-                  <button
-                    type="button"
-                    aria-label={m.shop.item.plus}
-                    onClick={() => cart.setQty(k, l.qty + 1)}
-                    className="taparea flex h-8 w-8 items-center justify-center rounded-control hover:bg-row-hover"
-                  >
-                    <IconAdd size={14} />
-                  </button>
-                </div>
-                <button
-                  type="button"
-                  aria-label={C.remove}
-                  onClick={() => cart.setQty(k, 0)}
-                  className="taparea flex h-8 w-8 shrink-0 items-center justify-center rounded-control text-danger hover:bg-row-hover"
-                >
-                  <IconDelete size={16} />
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-        <button type="button" onClick={cart.clear} className="w-fit text-sm text-danger hover:underline">
-          {C.clear}
-        </button>
-      </section>
-
-      <aside className="flex flex-col gap-3">
-        {!user ? (
-          <div className="surface flex flex-col gap-3 p-4">
-            <p className="text-sm">{C.needLogin}</p>
-            <ButtonLink href="/login?next=/cart" className="w-full py-3">
-              {C.login}
-            </ButtonLink>
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] lg:items-start">
+        <section className="flex flex-col gap-3">
+          <div>
+            <h1 className="heading-page">{C.title}</h1>
+            <p className="text-sm text-ink-muted">{C.hint}</p>
           </div>
-        ) : (
-          <>
-            <AddressChip onOpen={() => setPickAddr(true)} />
+          <ul className="surface divide-y divide-line-soft">
+            {cart.lines.map((l) => {
+              const k = lineKey(l);
+              const img = mediaUrl(l.item.image_thumb_url ?? l.item.image_url);
+              return (
+                <li key={k} className="flex items-center gap-3 p-3">
+                  <span className="h-14 w-14 shrink-0 overflow-hidden rounded-control bg-field">
+                    {img && <img src={img} alt="" loading="lazy" className="h-full w-full object-cover" />}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold">{l.item.name}</p>
+                    {l.options.length > 0 && (
+                      <p className="truncate text-xs text-ink-muted">{l.options.map((o) => o.name).join(m.common.listSep)}</p>
+                    )}
+                    {l.item.merchant_name && (
+                      <p className="flex items-center gap-1 truncate text-xs text-ink-muted">
+                        <IconStore size={11} />
+                        {l.item.merchant_name}
+                      </p>
+                    )}
+                    <Money value={unitPrice(l) * l.qty} className="text-sm font-bold text-accent-text" />
+                  </div>
+                  <div className="flex shrink-0 items-center gap-0.5 rounded-control bg-field p-0.5">
+                    <button
+                      type="button"
+                      aria-label={m.shop.item.minus}
+                      onClick={() => cart.setQty(k, l.qty - 1)}
+                      className="taparea flex h-8 w-8 items-center justify-center rounded-control hover:bg-row-hover"
+                    >
+                      <IconMinus size={14} />
+                    </button>
+                    <span className="min-w-6 text-center text-sm font-bold tabular-nums">{fmtNum(l.qty)}</span>
+                    <button
+                      type="button"
+                      aria-label={m.shop.item.plus}
+                      onClick={() => cart.setQty(k, l.qty + 1)}
+                      className="taparea flex h-8 w-8 items-center justify-center rounded-control hover:bg-row-hover"
+                    >
+                      <IconAdd size={14} />
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label={C.remove}
+                    onClick={() => cart.setQty(k, 0)}
+                    className="taparea flex h-8 w-8 shrink-0 items-center justify-center rounded-control text-danger hover:bg-row-hover"
+                  >
+                    <IconDelete size={16} />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          <button type="button" onClick={() => setAskClear(true)} className="w-fit text-sm text-danger hover:underline">
+            {C.clear}
+          </button>
+          {/* **وإفراغُ السلّة يُسأل قبله** — ضغطةٌ غلطٌ تطيّر سلّةً كاملة. */}
+          <Confirm
+            open={askClear}
+            title={C.clearTitle}
+            body={C.clearBody}
+            confirmLabel={C.clearYes}
+            onCancel={() => setAskClear(false)}
+            onConfirm={() => {
+              setAskClear(false);
+              cart.clear();
+            }}
+          />
+        </section>
 
+        <aside className="flex flex-col gap-3">
+          {!user ? (
             <div className="surface flex flex-col gap-3 p-4">
-              <div className="flex items-end gap-2">
-                <Input
-                  id="promo"
-                  label={C.promo}
-                  dir="ltr"
-                  value={promo}
-                  onChange={(e) => {
-                    setPromo(e.target.value);
-                    setPromoRes(null);
-                  }}
-                  wrapperClassName="flex-1"
-                />
-                <Button variant="secondary" onClick={applyPromo} disabled={promoBusy || !promo.trim() || !quote}>
-                  {C.promoApply}
-                </Button>
-              </div>
-              {promoRes && (
-                <p className={`text-xs ${promoRes.valid ? "text-success" : "text-danger"}`}>
-                  {promoRes.valid
-                    ? promoRes.kind === "free_delivery" && promoRes.discount === 0
-                      ? C.promoFree
-                      : fill(C.promoOk, { amount: fmtMoney(promoRes.discount) })
-                    : promoRes.reason
-                      ? serviceText(promoRes.reason)
-                      : C.promoBad}
-                </p>
-              )}
-
-              <fieldset className="flex flex-col gap-2">
-                <legend className="mb-1 text-sm font-medium">{C.payment}</legend>
-                <Radio id="pay-cash" name="pay" checked={!wallet} onChange={() => setWallet(false)} label={C.cash} />
-                <Radio
-                  id="pay-wallet"
-                  name="pay"
-                  checked={wallet}
-                  disabled={walletBlocked}
-                  onChange={() => setWallet(true)}
-                  label={
-                    <span>
-                      {C.wallet}
-                      <span className="ms-2 text-xs text-ink-muted">{fill(C.walletBalance, { amount: fmtMoney(available) })}</span>
-                    </span>
-                  }
-                />
-                {walletBlocked && (
-                  <p className="text-xs text-ink-muted">
-                    {fill(C.walletShort, { amount: fmtMoney(available) })} {C.codHint}
-                  </p>
-                )}
-              </fieldset>
-
-              <Textarea
-                id="notes"
-                label={C.notes}
-                placeholder={C.notesHint}
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={2}
-              />
+              <p className="text-sm">{C.needLogin}</p>
+              <ButtonLink href="/login?next=/cart" className="w-full py-3">
+                {C.login}
+              </ButtonLink>
             </div>
-          </>
-        )}
-
-        <div className="surface flex flex-col gap-2 p-4 text-sm">
-          <h2 className="heading-card">{C.summary}</h2>
-          <div className="flex justify-between">
-            <span className="text-ink-muted">{C.subtotal}</span>
-            <Money value={quote?.subtotal ?? cart.subtotal} />
-          </div>
-          {!quote ? (
-            <p className="text-xs text-ink-muted">{quoting ? C.quoting : C.needAddress}</p>
           ) : (
             <>
-              <div className="flex justify-between">
-                <span className="text-ink-muted">{C.delivery}</span>
-                {/* **والتوصيلُ المجانيُّ يُقال لا يُصفَّر بصمت** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — الأصلُ مشطوبٌ وبعده «مجاني». */}
-                {(quote.free_waived ?? 0) > 0 ? (
-                  <span className="flex items-center gap-2">
-                    <s className="text-xs text-ink-muted">
-                      <Money value={fee - extra + (quote.free_waived ?? 0)} />
-                    </s>
-                    {fee - extra > 0 ? (
-                      <Money value={fee - extra} />
-                    ) : (
-                      <span className="font-bold text-success">{m.shop.free.badge}</span>
-                    )}
-                  </span>
-                ) : (
-                  <Money value={fee - extra} />
+              <AddressChip onOpen={() => setPickAddr(true)} />
+
+              <div className="surface flex flex-col gap-3 p-4">
+                <div className="flex items-end gap-2">
+                  <Input
+                    id="promo"
+                    label={C.promo}
+                    dir="ltr"
+                    value={promo}
+                    onChange={(e) => {
+                      setPromo(e.target.value);
+                      setPromoRes(null);
+                    }}
+                    wrapperClassName="flex-1"
+                  />
+                  <Button variant="secondary" onClick={applyPromo} disabled={promoBusy || !promo.trim() || !quote}>
+                    {C.promoApply}
+                  </Button>
+                </div>
+                {promoRes && (
+                  <p className={`text-xs ${promoRes.valid ? "text-success" : "text-danger"}`}>
+                    {promoRes.valid
+                      ? promoRes.kind === "free_delivery" && promoRes.discount === 0
+                        ? C.promoFree
+                        : fill(C.promoOk, { amount: fmtMoney(promoRes.discount) })
+                      : promoRes.reason
+                        ? serviceText(promoRes.reason)
+                        : C.promoBad}
+                  </p>
                 )}
-              </div>
-              {extra > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-ink-muted">{C.sourcesFee}</span>
-                  <Money value={extra} />
-                </div>
-              )}
-              {cut && cut.discount > 0 && (
-                <div className="flex justify-between text-success">
-                  <span>{C.discount}</span>
-                  <span>
-                    {"− "}
-                    <Money value={cut.discount} />
-                  </span>
-                </div>
-              )}
-              <div className="flex justify-between border-t border-line-soft pt-2 font-bold">
-                <span>{C.total}</span>
-                <Money value={payable ?? quote.total} className="text-accent-text" />
+
+                <fieldset className="flex flex-col gap-2">
+                  <legend className="mb-1 text-sm font-medium">{C.payment}</legend>
+                  <Radio id="pay-cash" name="pay" checked={!wallet} onChange={() => setWallet(false)} label={C.cash} />
+                  <Radio
+                    id="pay-wallet"
+                    name="pay"
+                    checked={wallet}
+                    disabled={walletBlocked}
+                    onChange={() => setWallet(true)}
+                    label={
+                      <span>
+                        {C.wallet}
+                        <span className="ms-2 text-xs text-ink-muted">{fill(C.walletBalance, { amount: fmtMoney(available) })}</span>
+                      </span>
+                    }
+                  />
+                  {walletBlocked && (
+                    <p className="text-xs text-ink-muted">
+                      {fill(C.walletShort, { amount: fmtMoney(available) })} {C.codHint}
+                    </p>
+                  )}
+                </fieldset>
+
+                <Textarea
+                  id="notes"
+                  label={C.notes}
+                  placeholder={C.notesHint}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={2}
+                />
               </div>
             </>
           )}
-        </div>
 
-        {quoteError && <Alert>{quoteError}</Alert>}
-        {av && !av.available && <AvailabilityNotice av={av} address={address} />}
-        {!av && quote?.out_of_zone && <Alert>{C.outOfZone}</Alert>}
-        {!av && quote?.zone_closed && <Alert tone="warning">{serviceText("zone_closed_now", "", quote.next_available_at)}</Alert>}
-        {quote?.too_many_sources && (
-          <Alert>{quote.max_sources <= 1 ? C.tooManyOne : fill(C.tooMany, { n: fmtNum(quote.max_sources) })}</Alert>
-        )}
-
-        {changes.length > 0 && (
-          <Alert tone="warning" title={C.reviewTitle}>
-            <ul className="list-disc space-y-1 ps-4">
-              {changes.map((c, i) => (
-                <li key={`${c.type}-${c.menu_item_id}-${i}`}>{changeText(c)}</li>
-              ))}
-            </ul>
-            {!canSubmit && (
-              <button type="button" onClick={() => setAcked(fp)} className="mt-2 font-bold underline">
-                {C.reviewCta}
-              </button>
+          <div className="surface flex flex-col gap-2 p-4 text-sm">
+            <h2 className="heading-card">{C.summary}</h2>
+            <div className="flex justify-between">
+              <span className="text-ink-muted">{C.subtotal}</span>
+              <Money value={quote?.subtotal ?? cart.subtotal} />
+            </div>
+            {!quote ? (
+              <p className="text-xs text-ink-muted">{quoting ? C.quoting : C.needAddress}</p>
+            ) : (
+              <>
+                <div className="flex justify-between">
+                  <span className="text-ink-muted">{C.delivery}</span>
+                  {/* **والتوصيلُ المجانيُّ يُقال لا يُصفَّر بصمت** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — الأصلُ مشطوبٌ وبعده «مجاني». */}
+                  {waived > 0 ? (
+                    <span className="flex items-center gap-2">
+                      <s className="text-xs text-ink-muted">
+                        <Money value={fee - extra + waived} />
+                      </s>
+                      {fee - extra > 0 ? (
+                        <Money value={fee - extra} />
+                      ) : (
+                        <span className="font-bold text-success">{m.shop.free.badge}</span>
+                      )}
+                    </span>
+                  ) : (
+                    <Money value={fee - extra} />
+                  )}
+                </div>
+                {extra > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-ink-muted">{C.sourcesFee}</span>
+                    <Money value={extra} />
+                  </div>
+                )}
+                {cut && cut.discount > 0 && (
+                  <div className="flex justify-between text-success">
+                    <span>{C.discount}</span>
+                    <span>
+                      {"− "}
+                      <Money value={cut.discount} />
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between border-t border-line-soft pt-2 font-bold">
+                  <span>{C.total}</span>
+                  <Money value={payable ?? quote.total} className="text-accent-text" />
+                </div>
+              </>
             )}
-          </Alert>
-        )}
+          </div>
 
-        {error && (
-          <Alert>
-            {error}
-            {errorCode === "cod_limit_exceeded" && wa && (
-              <a
-                href={`https://wa.me/${wa}?text=${encodeURIComponent(C.codPrefill)}`}
-                target="_blank"
-                rel="noreferrer"
+          {quoteError && <Alert>{quoteError}</Alert>}
+          {av && !av.available && <AvailabilityNotice av={av} address={address} />}
+          {!av && quote?.out_of_zone && <Alert>{C.outOfZone}</Alert>}
+          {!av && quote?.zone_closed && <Alert tone="warning">{serviceText("zone_closed_now", "", quote.next_available_at)}</Alert>}
+          {quote?.too_many_sources && (
+            <Alert>{quote.max_sources <= 1 ? C.tooManyOne : fill(C.tooMany, { n: fmtNum(quote.max_sources) })}</Alert>
+          )}
+
+          {changes.length > 0 && (
+            <Alert tone="warning" title={C.reviewTitle}>
+              <ul className="list-disc space-y-1 ps-4">
+                {changes.map((c, i) => (
+                  <li key={`${c.type}-${c.menu_item_id}-${i}`}>{changeText(c)}</li>
+                ))}
+              </ul>
+              {!canSubmit && (
+                <button type="button" onClick={() => setAcked(fp)} className="mt-2 font-bold underline">
+                  {C.reviewCta}
+                </button>
+              )}
+            </Alert>
+          )}
+
+          {error && (
+            <Alert>
+              {error}
+              {errorCode === "cod_limit_exceeded" && wa && (
+                <a
+                  href={`https://wa.me/${wa}?text=${encodeURIComponent(C.codPrefill)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-1 block font-bold underline"
+                >
+                  {C.contactWhatsapp}
+                </a>
+              )}
+              {errorCode === "whatsapp_required" && (
+                <Link href="/account#whatsapp" className="mt-1 block font-bold underline">
+                  {m.shop.custom.verifyNow}
+                </Link>
+              )}
+            </Alert>
+          )}
+          {uncertain && (
+            <Alert tone="warning">
+              {C.uncertain}
+              <button
+                type="button"
+                onClick={() => {
+                  clearAttempt(ORDER_SLOT);
+                  setUncertain(false);
+                  setError("");
+                }}
                 className="mt-1 block font-bold underline"
               >
-                {C.contactWhatsapp}
-              </a>
-            )}
-            {errorCode === "whatsapp_required" && (
-              <Link href="/account#whatsapp" className="mt-1 block font-bold underline">
-                {m.shop.custom.verifyNow}
-              </Link>
-            )}
-          </Alert>
-        )}
-        {uncertain && (
-          <Alert tone="warning">
-            {C.uncertain}
-            <button
-              type="button"
-              onClick={() => {
-                clearAttempt(ORDER_SLOT);
-                setUncertain(false);
-                setError("");
-              }}
-              className="mt-1 block font-bold underline"
-            >
-              {C.uncertainAck}
-            </button>
-          </Alert>
-        )}
+                {C.uncertainAck}
+              </button>
+            </Alert>
+          )}
+        </aside>
+      </div>
 
-        {user && (
-          <Button
-            className="w-full py-3 text-base"
-            onClick={send}
-            disabled={busy || !address || !ordering.open || blocked || !canSubmit}
-          >
-            {busy ? C.sending : C.send}
-          </Button>
-        )}
-      </aside>
+      {/* ══ **الشريطُ الثابت — الإجماليُّ وزرُّ الإرسال وسببُ تعطيله** (مرآةُ `CartScreen.kt`) ══
+          **كان الزرُّ آخرَ صفحةٍ طويلة، وإن كان معطّلاً لم يُعرف لماذا.** والإجماليُّ بمعادلة الملخّص حرفاً. */}
+      {user && (
+        <div className="surface sticky bottom-[calc(3.75rem+env(safe-area-inset-bottom))] z-30 flex flex-col gap-2 p-3 md:bottom-0">
+          {why && <p className="line-clamp-2 text-xs text-danger">{why}</p>}
+          <div className="flex items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-ink-muted">{C.total}</p>
+              {payable != null ? <Money value={payable} className="figure" /> : <p className="figure">—</p>}
+            </div>
+            <Button
+              className="flex-1 py-3 text-base"
+              onClick={send}
+              disabled={busy || !address || !online || !ordering.open || blocked || !canSubmit}
+            >
+              {busy ? C.sending : C.send}
+            </Button>
+          </div>
+        </div>
+      )}
       <AddressSheet open={pickAddr} onClose={() => setPickAddr(false)} />
     </div>
   );

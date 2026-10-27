@@ -58,7 +58,9 @@ export function StoreOrdersProvider({ children }: { children: ReactNode }) {
   const reload = useCallback(async () => {
     if (!storeId) return;
     try {
-      const p = await api<OrdersPage>(`/api/v1/merchant/stores/${storeId}/orders`);
+      // **والجاريةُ وحدَها** (مرآةُ `openOnly` في التطبيق، تدقيقُ ٢٠٢٦-١٠-٢٧) — والمنتهي
+      // في «سجلّ الطلبات». المحرّكُ يقرؤه في `merchant_handlers.go`.
+      const p = await api<OrdersPage>(`/api/v1/merchant/stores/${storeId}/orders?open_only=true`);
       setOrders(p.orders ?? []);
       setError(null);
     } catch (e) {

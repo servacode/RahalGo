@@ -7,7 +7,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRelStamp } from "@rahalgo/i18n";
 import { Button, Confirm, IconClose, IconHourglass, IconLocation, IconMoto, IconNote, IconPhone, IconUser, IconWallet } from "@rahalgo/ui";
 import type { Delivery } from "@/lib/store/types";
 import { CANCELLABLE, amountText } from "@/lib/store/deliveries";
@@ -146,15 +146,22 @@ export function DeliveryRow({ d, cancelling, onCancel }: { d: Delivery; cancelli
     <article className={`surface flex flex-col gap-2 rounded-card border p-3 ${EDGE[tone]}`} data-testid="store-delivery">
       <Link href={`/store/delivery/${d.id}`} className="flex flex-col gap-2">
         <header className="flex items-center justify-between gap-2">
-          <span className="font-bold">{fill(D.trackTitle, { n: d.number })}</span>
+          <span className="flex min-w-0 flex-col">
+            <span className="font-bold">{fill(D.trackTitle, { n: d.number })}</span>
+            {/* **ويومُها وساعتُها** (مرآةُ `Dates.stamp`، تدقيقُ ٢٠٢٦-١٠-٢٧) — كانت بلا تاريخ. */}
+            {d.created_at && <span className="text-xs text-ink-muted">{fmtRelStamp(d.created_at)}</span>}
+          </span>
           <StatusPill status={d.status} />
         </header>
         {d.status === "dispatching" && <SearchingBanner />}
         <DeliveryLines d={d} />
-        <span className="flex items-center gap-1 text-xs text-accent-text">
-          <IconHourglass size={12} />
-          {D.trackOpen}
-        </span>
+        {/* **و«اضغط لمتابعتها» لِما يجري وحدَه** — المنتهيةُ لا تُتابَع. */}
+        {(tone === "waiting" || tone === "moving") && (
+          <span className="flex items-center gap-1 text-xs font-bold text-accent-text">
+            <IconHourglass size={12} />
+            {D.trackOpen}
+          </span>
+        )}
       </Link>
       {CANCELLABLE.has(d.status) && <CancelDeliveryButton busy={cancelling} onConfirm={onCancel} />}
     </article>

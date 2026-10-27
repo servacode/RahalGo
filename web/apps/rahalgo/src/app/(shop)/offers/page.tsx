@@ -16,13 +16,39 @@ import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, errorText, fmtMoney, fmtNum, fmtSpan } from "@rahalgo/i18n";
 import { Badge, EmptyState, LoadingState, Money, ReloadState, IconPromos, IconStore } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
-import { useBrowseQuery } from "@/lib/customer/context";
-import { fill } from "@/lib/customer/texts";
-import type { Item, Offer } from "@/lib/customer/types";
+import { useBrowseQuery, useCustomer } from "@/lib/customer/context";
+import { fill, freeOfferLines } from "@/lib/customer/texts";
+import type { FreeDelivery, Item, Offer } from "@/lib/customer/types";
 import { ItemSheet } from "@/components/customer/items";
 
 const m = getMessages(defaultLocale);
 const F = m.shop.offers;
+const FR = m.shop.free;
+
+/**
+ * **بطاقةُ عرض التوصيل المجاني — أوّلَ العروض** (مرآةُ `Offers` في `MineScreens.kt`).
+ *
+ * **كانت الصفحةُ تقول «لا عروض سارية» ولزبونها توصيلةٌ مجانيّة.** والأهليّةُ من الخادم.
+ */
+function FreeOfferCard({ fd }: { fd: FreeDelivery }) {
+  const kinds = [
+    fd.standard ? FR.kindStandard : "",
+    fd.purchase ? FR.kindPurchase : "",
+    fd.amanah ? FR.kindAmanah : "",
+  ]
+    .filter(Boolean)
+    .join(m.common.listSep);
+  return (
+    <section className="surface flex flex-col gap-1 border border-success-edge p-4">
+      <h2 className="text-base font-bold text-success">{FR.offerTitle}</h2>
+      {freeOfferLines(fd, fill(FR.offerKinds, { kinds })).map((line) => (
+        <p key={line} className="text-sm">
+          {line}
+        </p>
+      ))}
+    </section>
+  );
+}
 
 /** **صنفُ العرض** — هيكلٌ يكفي النافذةَ لتجلب تفاصيلَه من المحرّك. */
 function asItem(o: Offer): Item | null {
@@ -56,6 +82,8 @@ function left(endsAt: string | null): string {
 
 export default function OffersPage() {
   const scope = useBrowseQuery("?");
+  const { freeDelivery } = useCustomer();
+  const free = freeDelivery && (freeDelivery.standard || freeDelivery.purchase || freeDelivery.amanah) ? freeDelivery : null;
   const [offers, setOffers] = useState<Offer[] | null>(null);
   const [error, setError] = useState("");
   const [open, setOpen] = useState<Item | null>(null);
@@ -75,12 +103,13 @@ export default function OffersPage() {
         <h1 className="heading-page">{F.title}</h1>
         <p className="text-sm text-ink-muted">{F.hint}</p>
       </div>
+      {free && <FreeOfferCard fd={free} />}
       {error && !offers ? (
         <ReloadState label={error} onRetry={load} />
       ) : offers === null ? (
         <LoadingState variant="list" rows={3} />
       ) : offers.length === 0 ? (
-        <EmptyState icon={IconPromos} title={F.empty} action={<span className="text-xs text-ink-muted">{F.emptyHint}</span>} />
+        free ? null : <EmptyState icon={IconPromos} title={F.empty} action={<span className="text-xs text-ink-muted">{F.emptyHint}</span>} />
       ) : (
         <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {offers.map((o) => {

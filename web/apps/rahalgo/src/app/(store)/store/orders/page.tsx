@@ -21,12 +21,14 @@
  */
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, errorText, fmtMoney, fmtNum, fmtSpan } from "@rahalgo/i18n";
-import { Alert, Button, EmptyState, IconOrder, LoadingState, Modal, ReloadState, Textarea } from "@rahalgo/ui";
+import { Alert, Button, EmptyState, IconOrder, IconWarning, LoadingState, Modal, ReloadState, Textarea } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import { useStoreOrders } from "@/lib/store/orders";
-import { canMarkReady, type MerchantOrder } from "@/lib/store/types";
+import { canMarkReady, groupOf, noPayout, ORDER_GROUPS, type MerchantOrder } from "@/lib/store/types";
 import { fill } from "@/lib/customer/texts";
 import { useShopToast } from "@/components/customer/toast";
 
@@ -125,27 +127,37 @@ function OrderCard({
         </ul>
       </div>
 
+      {/* **وملاحظةُ الزبون في صندوقٍ بأيقونة تنبيهٍ وخطٍّ عريض** (تدقيقُ ٢٠٢٦-١٠-٢٧) —
+          «حساسية» تُقرأ بنظرةٍ أو لا تُقرأ. */}
       {order.notes.trim() && (
-        <div className="rounded-control border border-warning-edge bg-warning-tint px-3 py-2">
-          <p className="text-xs text-ink-muted">{O.note}</p>
-          <p className="text-sm">{order.notes}</p>
+        <div className="flex items-start gap-2 rounded-control border border-warning-edge bg-warning-tint px-3 py-2">
+          <IconWarning size={18} className="mt-0.5 shrink-0 text-accent-text" aria-hidden />
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-bold text-accent-text">{O.note}</p>
+            <p className="text-sm font-bold">{order.notes}</p>
+          </div>
         </div>
       )}
 
-      <dl className="flex flex-col gap-1 border-t border-line-soft pt-2 text-sm">
-        <div className="flex justify-between">
-          <dt>{O.sum}</dt>
-          <dd>{fmtMoney(order.subtotal)}</dd>
-        </div>
-        <div className="flex justify-between text-ink-muted">
-          <dt>{fill(O.cut, { n: fmtNum(order.commission_percent_exact ?? order.commission_percent) })}</dt>
-          <dd>− {fmtMoney(order.platform_commission)}</dd>
-        </div>
-        <div className="flex justify-between border-t border-line-soft pt-1 font-bold text-accent-text">
-          <dt>{O.due}</dt>
-          <dd>{fmtMoney(order.merchant_net)}</dd>
-        </div>
-      </dl>
+      {/* **وطلبٌ انتهى بلا بيعٍ لا حسبةَ فيه** — انظر `noPayout`. */}
+      {noPayout(order.status) ? (
+        <p className="border-t border-line-soft pt-2 text-sm text-ink-muted">{O.noPayout}</p>
+      ) : (
+        <dl className="flex flex-col gap-1 border-t border-line-soft pt-2 text-sm">
+          <div className="flex justify-between">
+            <dt>{O.sum}</dt>
+            <dd>{fmtMoney(order.subtotal)}</dd>
+          </div>
+          <div className="flex justify-between text-ink-muted">
+            <dt>{fill(O.cut, { n: fmtNum(order.commission_percent_exact ?? order.commission_percent) })}</dt>
+            <dd>− {fmtMoney(order.platform_commission)}</dd>
+          </div>
+          <div className="flex justify-between border-t border-line-soft pt-1 font-bold text-accent-text">
+            <dt>{O.due}</dt>
+            <dd>{fmtMoney(order.merchant_net)}</dd>
+          </div>
+        </dl>
+      )}
 
       {selfManage && order.status === "pending" && (
         <div className="flex flex-col gap-2">
@@ -200,6 +212,7 @@ function OrderCard({
 
 export default function OrdersPage() {
   const { selfManage } = useStore();
+  const router = useRouter();
   const { orders, error, reload } = useStoreOrders();
   const toast = useShopToast();
   const [busy, setBusy] = useState<Set<string>>(new Set());
@@ -233,8 +246,19 @@ export default function OrdersPage() {
   if (!orders && error) return <ReloadState label={errorText(error)} onRetry={() => void reload()} />;
   if (!orders) return <LoadingState variant="list" rows={3} />;
 
-  const active = orders.filter((o) => !o.closed_at);
-  const ended = orders.filter((o) => !!o.closed_at);
+  // ══════════════════════════════════════════════════════════════════
+  // **والطلباتُ بمجموعاتها — الجديدُ أوّلاً** (مرآةُ `groupOf`، تدقيقُ ٢٠٢٦-١٠-٢٧)
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // **كانت قائمةً واحدةً بترتيب الخادم** — فطلبٌ جديدٌ ينتظر قراراً قد يقع
+  // تحت طلبٍ يُحضَّر، **ومهلتُه تمضي وهو لا يُرى.** والمنتهي في «سجلّ الطلبات».
+  const groups = ORDER_GROUPS.map((g) => ({ g, list: orders.filter((o) => groupOf(o) === g) })).filter((x) => x.list.length > 0);
+
+  const historyLink = (
+    <Link href="/store/history" className="block py-3 text-center text-sm font-bold text-primary hover:underline">
+      {O.historyLink}
+    </Link>
+  );
 
   return (
     <div className="flex flex-col gap-3">
@@ -247,27 +271,28 @@ export default function OrdersPage() {
         <EmptyState
           icon={IconOrder}
           title={O.empty}
-          action={<p className="text-xs text-ink-muted">{O.emptyHint}</p>}
+          action={
+            <div className="flex flex-col items-center gap-3">
+              <p className="text-xs text-ink-muted">{O.emptyHint}</p>
+              <Button variant="secondary" onClick={() => router.push("/store")}>
+                {O.goStore}
+              </Button>
+            </div>
+          }
         />
       ) : (
-        <>
-          {active.length > 0 && (
-            <section className="flex flex-col gap-3" aria-label={O.active}>
-              {active.map((o) => (
-                <OrderCard key={o.id} order={o} selfManage={selfManage} busy={busy.has(o.id)} now={now} onAct={act} />
-              ))}
-            </section>
-          )}
-          {ended.length > 0 && (
-            <section className="flex flex-col gap-3" aria-label={O.ended}>
-              <h3 className="heading-card text-ink-muted">{O.ended}</h3>
-              {ended.slice(0, 10).map((o) => (
-                <OrderCard key={o.id} order={o} selfManage={selfManage} busy={false} now={now} onAct={act} />
-              ))}
-            </section>
-          )}
-        </>
+        groups.map(({ g, list }) => (
+          <section key={g} className="flex flex-col gap-3" aria-label={fill(O.groups[g], { n: fmtNum(list.length) })}>
+            <h3 className={`heading-card pt-2 ${g === "new" ? "text-accent-text" : "text-ink-muted"}`}>
+              {fill(O.groups[g], { n: fmtNum(list.length) })}
+            </h3>
+            {list.map((o) => (
+              <OrderCard key={o.id} order={o} selfManage={selfManage} busy={busy.has(o.id)} now={now} onAct={act} />
+            ))}
+          </section>
+        ))
       )}
+      {historyLink}
     </div>
   );
 }

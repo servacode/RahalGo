@@ -48,6 +48,8 @@ const m = getMessages(defaultLocale);
 const I = m.shop.item;
 const S = m.shop.stores;
 const SV = m.shop.service;
+/** **سقفُ العدد في النافذة** — مرآةُ `ItemOptionsSheet.kt` (`qty < 99`). */
+const MAX_QTY = 99;
 
 /** **السعرُ على سطرٍ واحد** — دولارٌ ثمّ «≈ ليرة»، أو ليرةٌ وحدَها. */
 export function Price({ syp, usd, className = "" }: { syp: number; usd?: number | null; className?: string }) {
@@ -353,7 +355,8 @@ export function ItemSheet({
                   type="button"
                   aria-label={I.minus}
                   onClick={() => setQty((q) => Math.max(1, q - 1))}
-                  className="taparea flex h-9 w-9 items-center justify-center rounded-control hover:bg-row-hover"
+                  disabled={qty <= 1}
+                  className="taparea flex h-9 w-9 items-center justify-center rounded-control hover:bg-row-hover disabled:opacity-40"
                 >
                   <IconMinus size={16} />
                 </button>
@@ -361,8 +364,9 @@ export function ItemSheet({
                 <button
                   type="button"
                   aria-label={I.plus}
-                  onClick={() => setQty((q) => q + 1)}
-                  className="taparea flex h-9 w-9 items-center justify-center rounded-control hover:bg-row-hover"
+                  onClick={() => setQty((q) => Math.min(MAX_QTY, q + 1))}
+                  disabled={qty >= MAX_QTY}
+                  className="taparea flex h-9 w-9 items-center justify-center rounded-control hover:bg-row-hover disabled:opacity-40"
                 >
                   <IconAdd size={16} />
                 </button>
@@ -371,7 +375,20 @@ export function ItemSheet({
                 <span className="flex items-center justify-center gap-2">
                   {I.add}
                   <span aria-hidden>·</span>
-                  <Money value={unit * qty} />
+                  {/* **والدولارُ يتبع العدد كالليرة** — كان سعرَ الواحد مهما زاد العدد. */}
+                  {usdUnit != null ? (
+                    <span className="inline-flex items-baseline gap-1.5">
+                      <span dir="ltr" className="tabular-nums">
+                        {dollars(usdUnit * qty)}
+                      </span>
+                      <span className="text-xs opacity-80">
+                        {"≈ "}
+                        <Money value={unit * qty} small />
+                      </span>
+                    </span>
+                  ) : (
+                    <Money value={unit * qty} />
+                  )}
                 </span>
               </Button>
             </div>

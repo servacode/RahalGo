@@ -19,10 +19,10 @@ import { getMessages, defaultLocale, errorText, fmtDateTime, fmtMoney, fmtNum, f
 import { Alert, Badge, Button, LoadingState, Money, OrderChat, ReloadState, Sheet, IconChat, IconPrev, useLiveRefresh } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { customFee, fill, statusLabel } from "@/lib/customer/texts";
+import { customFee, fill, freeCustomOn, statusLabel } from "@/lib/customer/texts";
 import { useCustomer } from "@/lib/customer/context";
 import { ENDED, type MyOrder } from "@/lib/customer/types";
-import { CancelOrder, DeliveryCode, OrderStages, QuoteAmounts } from "@/components/customer/orderParts";
+import { CancelOrder, DeliveryCode, OrderEta, OrderStages, QuoteAmounts } from "@/components/customer/orderParts";
 import { statusTone } from "@/components/customer/OrderSummary";
 import { NeedLogin } from "@/components/customer/NeedLogin";
 import { useShopToast } from "@/components/customer/toast";
@@ -48,7 +48,7 @@ export default function OrderPage() {
   const id = params?.id ?? "";
   const { user, loading } = useAuth();
   const toast = useShopToast();
-  const { platform } = useCustomer();
+  const { platform, freeDelivery } = useCustomer();
   const [order, setOrder] = useState<MyOrder | null>(null);
   const [error, setError] = useState("");
   const [chat, setChat] = useState(false);
@@ -111,6 +111,7 @@ export default function OrderPage() {
         {!ended && (
           <>
             <OrderStages order={order} />
+            <OrderEta order={order} />
             <p className="text-xs text-ink-muted">{O.live}</p>
           </>
         )}
@@ -154,6 +155,10 @@ export default function OrderPage() {
               <Row label={O.delivery}>
                 {fixedFee ? <Money value={order.custom_fee ?? (cd ? customFee(cd, order.custom_mode) : 0)} /> : O.deliveryOnDeal}
               </Row>
+              {/* **والعرضُ يُذكَر بصيغةٍ صادقة** (مرآةُ `CustomQuoteSection`) — يُحجز عند تحديد السعر لا قبله. */}
+              {!ended && freeCustomOn(freeDelivery, order.custom_mode) && (
+                <p className="text-xs font-bold text-success">{m.shop.free.customPending}</p>
+              )}
               <p className="text-xs text-ink-muted">
                 {adminFee
                   ? order.custom_mode === "amanah"

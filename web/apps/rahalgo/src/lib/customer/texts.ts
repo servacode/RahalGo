@@ -9,8 +9,8 @@
  * **ولا قرارَ هنا**: الخادمُ يقول السببَ رمزاً، **وهذه تختار اللفظ.**
  */
 
-import { getMessages, defaultLocale, fmtMoney, fmtTime, withPlatform } from "@rahalgo/i18n";
-import type { CartChange } from "./types";
+import { getMessages, defaultLocale, damascusDay, fmtDamascusTime, fmtMoney, fmtTime, withPlatform } from "@rahalgo/i18n";
+import type { CartChange, FreeDelivery } from "./types";
 
 const m = getMessages(defaultLocale);
 const S = m.shop;
@@ -147,4 +147,49 @@ export function statusLabel(status: string): string {
  */
 export function customFee(cd: { fee: number; fee_amanah: number }, mode: string): number {
   return mode === "amanah" && cd.fee_amanah > 0 ? cd.fee_amanah : cd.fee;
+}
+
+/** **«18:30» ← «6:30 م»** — مرآةُ `clock12` في `StoreScreen.kt`. */
+export function clock12(hhmm: string): string {
+  const [hs, ms = "00"] = hhmm.split(":");
+  const h = Number(hs);
+  if (!hs || !Number.isFinite(h)) return hhmm;
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${ms} ${h < 12 ? S.stores.am : S.stores.pm}`;
+}
+
+/**
+ * **«العرض لغاية اليوم الساعة 9:00 م»** — مرآةُ `freeUntilText` في `FreeOffer.kt`:
+ * بتوقيت سوريا، وفارغٌ إن لم يُرسَل الموعدُ أو لم يُفهم.
+ */
+export function freeUntilText(endsAt: string | null | undefined): string {
+  const v = (endsAt ?? "").trim();
+  if (!v) return "";
+  const at = new Date(v);
+  if (Number.isNaN(at.getTime())) return "";
+  const time = clock12(fmtDamascusTime(at));
+  const day = damascusDay(at);
+  const diff = Math.round((Date.parse(`${day}T00:00:00Z`) - Date.parse(`${damascusDay(Date.now())}T00:00:00Z`)) / 86_400_000);
+  if (diff === 0) return fill(S.free.untilToday, { time });
+  if (diff === 1) return fill(S.free.untilTomorrow, { time });
+  const [, mm = "", dd = ""] = day.split("-");
+  return fill(S.free.until, { date: `${Number(dd)}/${Number(mm)}`, time });
+}
+
+/**
+ * **سطورُ العرض مع حدوده** — مرآةُ `freeOfferText`: الجملةُ الأساسُ ثمّ السقفُ ثمّ الموعد.
+ * **ولا حدَّ يُقال إن لم يُرسَل** — صفرٌ أو فارغٌ يعني «بلا سقف» و«بلا موعد».
+ */
+export function freeOfferLines(fd: FreeDelivery, base: string): string[] {
+  const out = [base];
+  if (fd.max_fee != null && fd.max_fee > 0) out.push(fill(S.free.cap, { amount: fmtMoney(fd.max_fee) }));
+  const until = freeUntilText(fd.ends_at);
+  if (until) out.push(until);
+  return out;
+}
+
+/** **أهو مجانيٌّ لهذا النوع من الطلب الخاصّ؟** — مرآةُ `FreeDelivery.customOn`. */
+export function freeCustomOn(fd: FreeDelivery | null, mode: string): boolean {
+  if (!fd) return false;
+  return mode === "amanah" ? fd.amanah : fd.purchase;
 }

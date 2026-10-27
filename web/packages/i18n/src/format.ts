@@ -9,6 +9,8 @@
  * عربية-هندية، وكان مكرّراً في 29 ملفاً. استعمل الدوال أدناه.
  */
 
+import ar from "./locales/ar.json";
+
 const LOCALE = "ar-SY-u-nu-latn";
 
 const numFmt = new Intl.NumberFormat(LOCALE);
@@ -155,4 +157,79 @@ const isoDayFmt = new Intl.DateTimeFormat("en-CA", {
 });
 export function damascusDay(v: string | number | Date = Date.now()): string {
   return isoDayFmt.format(toDate(v));
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **التاريخُ كما يقرؤه صاحبُ المتجر — لا كما تكتبه الآلة** (مرآةُ `Dates.kt`)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **كان يظهر «2026-10-27»** في التقارير والإنذارات وسجلّ الطلبات. **فصار
+// «اليوم» و«أمس» ثمّ «الثلاثاء 27 تشرين الأول»** — بأسماء الأشهر السوريّة
+// من المعجم، **والأرقامُ لاتينيّةٌ كبقيّة المنصّة**. **واليومُ يومُ دمشق.**
+
+const DATES = ar.common.dates;
+const YMD = /^(\d{4})-(\d{2})-(\d{2})$/;
+const damascusClockFmt = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Asia/Damascus",
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+interface CalDay {
+  y: number;
+  m: number;
+  d: number;
+}
+
+/** **يومُ دمشق للمدخل** — و`YYYY-MM-DD` يُقرأ يوماً كما هو بلا إزاحة منطقة. */
+function calDay(v: string | number | Date): CalDay | null {
+  const s = typeof v === "string" ? YMD.exec(v) : null;
+  const raw = s ? s[0] : (() => {
+    const t = toDate(v);
+    return Number.isNaN(t.getTime()) ? "" : damascusDay(t);
+  })();
+  const p = YMD.exec(raw);
+  if (!p) return null;
+  return { y: Number(p[1]), m: Number(p[2]), d: Number(p[3]) };
+}
+
+function epochDay(c: CalDay): number {
+  return Math.round(Date.UTC(c.y, c.m - 1, c.d) / 86_400_000);
+}
+
+/** **«الثلاثاء 27 تشرين الأول»** — والسنةُ إن لم تكن سنتَنا. */
+export function fmtCalendarDay(v: string | number | Date): string {
+  const c = calDay(v);
+  if (!c) return String(v);
+  const today = calDay(Date.now());
+  const weekday = DATES.days[new Date(Date.UTC(c.y, c.m - 1, c.d)).getUTCDay()] ?? "";
+  const month = DATES.monthsSy[c.m - 1] ?? String(c.m);
+  const base = `${weekday} ${c.d} ${month}`;
+  return today && today.y !== c.y ? `${base} ${c.y}` : base;
+}
+
+/** **«اليوم» · «أمس» · ثمّ التاريخ كاملاً.** */
+export function fmtRelDay(v: string | number | Date): string {
+  const c = calDay(v);
+  const today = calDay(Date.now());
+  if (!c || !today) return String(v);
+  const diff = epochDay(today) - epochDay(c);
+  if (diff === 0) return DATES.today;
+  if (diff === 1) return DATES.yesterday;
+  return fmtCalendarDay(v);
+}
+
+/** **ساعةُ دمشق «14:05»** — بأربعٍ وعشرين كالتطبيق. */
+export function fmtDamascusTime(v: string | number | Date): string {
+  const t = toDate(v);
+  return Number.isNaN(t.getTime()) ? "" : clean(damascusClockFmt.format(t));
+}
+
+/** **«اليوم · 14:05»** — يومُ الطابع وساعتُه. ويومٌ بلا ساعةٍ يُعاد يوماً. */
+export function fmtRelStamp(v: string | number | Date): string {
+  if (typeof v === "string" && YMD.test(v)) return fmtRelDay(v);
+  const time = fmtDamascusTime(v);
+  if (!time) return String(v);
+  return DATES.stamp.replace("{day}", fmtRelDay(v)).replace("{time}", time);
 }

@@ -27,6 +27,7 @@
 import { useRef, useState, type ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { Button } from "./components";
+import { ImageCropDialog } from "./ImageCrop";
 import { IconAdd, IconDelete, IconLoading } from "./icons";
 
 const m = getMessages(defaultLocale);
@@ -61,6 +62,7 @@ export function ImageUpload({
   path = "/api/v1/admin/media",
   errorText,
   maxEdge,
+  crop = false,
 }: {
   kind: MediaKind;
   label: string;
@@ -88,11 +90,22 @@ export function ImageUpload({
    * **وما فشل تصغيرُه يُرسَل كما هو** — والخادمُ يحكم.
    */
   maxEdge?: number;
+  /**
+   * **معاينةٌ وقصٌّ مربّعٌ قبل الرفع** — مرآةُ `ImageCropDialog` في التطبيق
+   * (طلبُ المالك ٢٠٢٦-١٠-٢٧). **اختياريٌّ** — وبلاه يُرفع الملفُّ كما كان.
+   * والناتجُ مربّعٌ JPEG بأطول ضلعٍ ١٦٠٠، فلا يمرّ بـ`maxEdge`.
+   */
+  crop?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(mediaUrl(initialUrl));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [cropping, setCropping] = useState<File | null>(null);
+
+  function resetInput() {
+    if (inputRef.current) inputRef.current.value = "";
+  }
 
   async function shrink(file: File): Promise<Blob> {
     if (!maxEdge) return file;
@@ -113,14 +126,14 @@ export function ImageUpload({
     }
   }
 
-  async function upload(file: File) {
+  async function upload(file: File | Blob) {
     setBusy(true);
     setError("");
     try {
       const form = new FormData();
       form.append("kind", kind);
-      const blob = await shrink(file);
-      form.append("file", blob, blob === file ? file.name : "image.jpg");
+      const blob = file instanceof File ? await shrink(file) : file;
+      form.append("file", blob, blob instanceof File ? blob.name : "image.jpg");
       const res = await api<MediaResult>(path, { method: "POST", body: form });
       setPreview(mediaUrl(res.thumb_url));
       onChange(res.id);
@@ -185,9 +198,30 @@ export function ImageUpload({
         className="hidden"
         onChange={(e) => {
           const f = e.target.files?.[0];
-          if (f) void upload(f);
+          if (!f) return;
+          if (crop) setCropping(f);
+          else void upload(f);
         }}
       />
+      {cropping && (
+        <ImageCropDialog
+          file={cropping}
+          onDone={(blob) => {
+            setCropping(null);
+            resetInput();
+            void upload(blob);
+          }}
+          onAgain={() => {
+            setCropping(null);
+            resetInput();
+            inputRef.current?.click();
+          }}
+          onCancel={() => {
+            setCropping(null);
+            resetInput();
+          }}
+        />
+      )}
     </div>
   );
 }

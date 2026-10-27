@@ -86,6 +86,29 @@ export function canMarkReady(o: Pick<MerchantOrder, "status" | "ready_at">): boo
   return READYABLE.has(o.status) && !o.ready_at;
 }
 
+/**
+ * **طلبٌ انتهى بلا بيع — فلا مجموعَ ولا عمولةَ ولا مستحقَّ يُعرض** (مرآةُ `noPayout`
+ * في `Readiness.kt`، تدقيقُ ٢٠٢٦-١٠-٢٧). **المحرّكُ يحسبها لكلّ طلبٍ مهما كان حالُه**،
+ * فطلبٌ اعتُذر عنه كان يُري «المستحق لك» **ولن يقبض منه شيئاً.**
+ */
+const NO_PAYOUT = new Set(["rejected", "cancelled", "failed", "refunded"]);
+export function noPayout(status: string): boolean {
+  return NO_PAYOUT.has(status);
+}
+
+/**
+ * **مجموعةُ الطلب في صفحة الطلبات** — مرآةُ `groupOf`: جديدٌ ينتظر قراراً، ثمّ ما
+ * يُحضَّر، ثمّ ما ينتظر السائق، **ثمّ ما انتهى** (لا يصل مع `open_only` إلّا من خادمٍ أقدم).
+ */
+export type OrderGroup = "new" | "preparing" | "waiting" | "closed";
+export const ORDER_GROUPS: readonly OrderGroup[] = ["new", "preparing", "waiting", "closed"];
+export function groupOf(o: Pick<MerchantOrder, "status" | "ready_at">): OrderGroup {
+  if (o.status === "pending") return "new";
+  if (o.status === "delivered" || noPayout(o.status)) return "closed";
+  if (o.status === "accepted" || o.status === "preparing" || canMarkReady(o)) return "preparing";
+  return "waiting";
+}
+
 export interface OrdersPage {
   orders: MerchantOrder[];
   total: number;

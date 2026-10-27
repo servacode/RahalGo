@@ -15,7 +15,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { getMessages, defaultLocale, errorText, fmtClock, fmtRef } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, errorText, fmtClock, fmtRef, fmtSpan } from "@rahalgo/i18n";
 import { Alert, Button, Chips, Confirm, Money } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
@@ -61,6 +61,29 @@ export function OrderStages({ order }: { order: MyOrder }) {
       })}
     </ol>
   );
+}
+
+/**
+ * **كم يأخذ تقريباً — من المحرّك** (مرآةُ `OrderCard.kt` ٢٠٢٦-١٠-٢٧).
+ *
+ * **وبالطريق زمنُ الطريق من المتجر إلى بابه** (`to_door_eta_sec`، يُلتقط عند الاستلام)،
+ * **وقبله مدّةُ التوصيل المتوقّعة** (`delivery_estimate_min`). **ولا يُخترَع رقم.**
+ */
+export function etaText(o: MyOrder): string {
+  if (ENDED.has(o.status)) return "";
+  const door = o.to_door_eta_sec ?? 0;
+  if (door > 0 && (o.status === "picked_up" || o.status === "on_the_way")) {
+    return fill(O.etaDoor, { t: fmtSpan(Math.ceil(door / 60) * 60) });
+  }
+  const est = o.delivery_estimate_min ?? 0;
+  if (est > 0 && o.status !== "at_dropoff") return fill(O.etaEstimate, { t: fmtSpan(est * 60) });
+  return "";
+}
+
+export function OrderEta({ order }: { order: MyOrder }) {
+  const text = etaText(order);
+  if (!text) return null;
+  return <p className="text-sm font-bold text-primary">{text}</p>;
 }
 
 /**
@@ -133,6 +156,8 @@ export function CancelOrder({ order, onDone }: { order: MyOrder; onDone: () => v
 export function QuoteAmounts({ order }: { order: MyOrder }) {
   const goods = order.custom_goods_amount;
   if (goods == null) return null;
+  const fee = order.custom_fee ?? 0;
+  const waived = order.free_waived ?? 0;
   return (
     <dl className="space-y-1 text-sm">
       {order.custom_mode !== "amanah" && (
@@ -143,8 +168,18 @@ export function QuoteAmounts({ order }: { order: MyOrder }) {
       )}
       <div className="flex justify-between gap-2">
         <dt className="text-ink-muted">{O.delivery}</dt>
+        {/* **والأجرةُ المُعفاةُ تُقال «مجاني 🎁» والأصلُ مشطوب** — كالطلب العاديّ (`DeliveryFeeRow`). */}
         <dd>
-          <Money value={order.custom_fee ?? 0} />
+          {waived > 0 ? (
+            <span className="flex items-center gap-2">
+              <s className="text-xs text-ink-muted">
+                <Money value={fee + waived} />
+              </s>
+              {fee > 0 ? <Money value={fee} /> : <span className="font-bold text-success">{m.shop.free.badge}</span>}
+            </span>
+          ) : (
+            <Money value={fee} />
+          )}
         </dd>
       </div>
       <div className="flex justify-between gap-2 font-bold">

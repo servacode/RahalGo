@@ -27,7 +27,7 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useCustomer } from "@/lib/customer/context";
 import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
-import { customFee, fill } from "@/lib/customer/texts";
+import { customFee, fill, freeCustomOn, freeUntilText } from "@/lib/customer/texts";
 import { AddressChip, AddressSheet } from "@/components/customer/AddressSheet";
 import { NeedLogin } from "@/components/customer/NeedLogin";
 import { useOrderingState, useAddGate, AvailabilityNotice } from "@/components/customer/ServiceNotices";
@@ -66,9 +66,12 @@ export default function CustomOrderPage() {
   const fee = cd ? customFee(cd, mode) : 0;
   // **والتوصيلةُ المجانيّةُ تُقال قبل الطلب** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «الزبون لسا يشوف السعر ١٠٠ —
   // رح يفكّر إنّا خدعناه»). والإعفاءُ يقع في الخادم عند تثبيت الأجرة، **بسقف العرض إن كان.**
-  const freeOn = !!freeDelivery && (mode === "amanah" ? freeDelivery.amanah : freeDelivery.purchase);
-  const waive = freeOn ? Math.min(fee, freeDelivery?.max_fee ?? fee) : 0;
+  const freeOn = freeCustomOn(freeDelivery, mode);
+  const waive = freeOn ? Math.max(0, Math.min(fee, freeDelivery?.max_fee ?? fee)) : 0;
+  const freeUntil = freeOn ? freeUntilText(freeDelivery?.ends_at) : "";
   const closed = platform ? !platform.launch.customer_custom_orders : false;
+  // **ونصُّ المالك يغلب** (مرآةُ `CustomScreen.kt` ٢٠٢٦-١٠-٢٧) — من كتب في اللوحة سببَه قُرئ كما كتبه.
+  const closedText = closed ? platform?.launch.notice.trim() || K.closed : "";
 
   const send = async () => {
     if (!address || busy) return;
@@ -116,7 +119,7 @@ export default function CustomOrderPage() {
         <p className="text-sm text-ink-muted">{K.subtitle}</p>
       </div>
 
-      {closed && <Alert tone="warning">{K.closed}</Alert>}
+      {closed && <Alert tone="warning">{closedText}</Alert>}
 
       <section className="surface flex flex-col gap-3 p-4">
         <p className="text-sm font-bold">{K.modeTitle}</p>
@@ -168,7 +171,11 @@ export default function CustomOrderPage() {
                   <p className="text-sm">
                     <s className="text-ink-muted">{fill(K.feeValue, { amount: fmtMoney(fee) })}</s>
                   </p>
-                  <p className="text-sm font-bold text-success">{m.shop.free.customFree}</p>
+                  {/* **والإعفاءُ الجزئيُّ لا يُقال «مجانية»** — سقفُ العرض أقلُّ من الأجرة، فيُقال ما بقي. */}
+                  <p className="text-sm font-bold text-success">
+                    {waive >= fee ? m.shop.free.customFree : fill(K.feeValue, { amount: fmtMoney(fee - waive) })}
+                  </p>
+                  {freeUntil && <p className="text-xs text-ink-muted">{freeUntil}</p>}
                 </>
               ) : (
                 <p className="text-sm font-bold">{fill(K.feeValue, { amount: fmtMoney(fee) })}</p>
@@ -178,7 +185,11 @@ export default function CustomOrderPage() {
               </p>
             </>
           ) : (
-            <p className="text-xs text-ink-muted">{K.feeOnDeal}</p>
+            <>
+              <p className="text-xs text-ink-muted">{K.feeOnDeal}</p>
+              {/* **والعرضُ يُقال ولو كانت الأجرةُ عند السائق** — بصيغةٍ صادقة: يُحجز وقتَ تحديد السعر. */}
+              {freeOn && <p className="text-xs font-bold text-success">{m.shop.free.customPending}</p>}
+            </>
           )}
           <p className="text-xs text-ink-muted">{mode === "amanah" && adminFee ? K.amanahPay : K.payAfterCost}</p>
         </div>

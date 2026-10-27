@@ -220,6 +220,8 @@ export interface CustomerPlatform {
   signup_verify: boolean;
   password_min_length: number;
   social: { whatsapp: string };
+  /** **رقمُ الدعم** — وعليه واتساب حين لا يُضبط رقمُ واتسابٍ منفصل (قرارُ المالك: رقمٌ واحد). */
+  support_phone: string;
   custom_delivery: CustomDelivery;
   /** **الدخولُ برمزٍ على واتساب** — مفتاحُ `auth.otp_login` في اللوحة. */
   otp_login: boolean;
@@ -264,6 +266,10 @@ export interface MyOrder {
   cash_due: number;
   stages: string[];
   stage_at: number;
+  /** **زمنُ الطريق من المتجر إلى الباب بالثواني** — يُلتقط عند الاستلام، و`null` لم يُقَس. */
+  to_door_eta_sec?: number | null;
+  /** **مدّةُ التوصيل المتوقّعة بالدقائق** — من المحرّك، وصفرٌ لا تقدير. */
+  delivery_estimate_min?: number;
 }
 
 export interface MyOrdersPage {
