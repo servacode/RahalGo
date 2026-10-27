@@ -1227,12 +1227,10 @@ private fun OnRouteBanner(
                 modifier = Modifier.weight(1f),
             ) { Text(stringResource(R.string.order_agree)) }
             // **و«لاحقاً» ليست خطراً** — زرٌّ بإطارٍ أبيضَ بلا تعبئة، لا أحمرُ كالحذف.
-            androidx.compose.material3.OutlinedButton(
+            com.rahalgo.ui.RahalOutlineButton(
                 onClick = onDismiss,
                 enabled = !busy,
-                shape = Rahal.shape.md,
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color.White),
-                colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                tone = com.rahalgo.ui.Tone.OnDark,
                 modifier = Modifier.weight(1f).fillMaxHeight(),
             ) { Text(stringResource(R.string.order_later), fontWeight = FontWeight.Bold) }
         }

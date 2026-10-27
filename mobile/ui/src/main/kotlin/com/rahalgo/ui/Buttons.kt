@@ -57,6 +57,9 @@ enum class Tone {
 
     /** **ما لا يُستردّ** — حذفٌ وإلغاءٌ ورفض. */
     Danger,
+
+    /** On a dark/brand background: white outline and text (driver offer banner). */
+    OnDark,
 }
 
 /**
@@ -78,6 +81,7 @@ private fun Tone.color(): Color = when (this) {
     Tone.Accent -> Rahal.colors.accent
     Tone.Success -> Rahal.colors.success
     Tone.Danger -> Rahal.colors.danger
+    Tone.OnDark -> Color.White
 }
 
 /**
