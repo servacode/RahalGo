@@ -374,6 +374,8 @@ private val CODES: Map<String, Int> = mapOf(
     // **وعرضُ رحّال غو يغلب عرضَ المتجر** (قرارُ المالك ٢٠٢٦-١٠-١٥) — يبلغ تطبيقَي المتجر والمندوب.
     "offer_platform_live" to R.string.err_offer_platform_live,
     "item_price_too_high" to R.string.err_item_price_too_high,
+    "bulk_percent_invalid" to R.string.err_bulk_percent_invalid,
+    "preset_invalid" to R.string.err_preset_invalid,
     // **مزامنةُ الأمين** (٢٠٢٦-١٠-١٩) — `catalog/pricesync*.go`.
     "price_sync_empty" to R.string.err_price_sync_empty,
     "price_sync_file_type" to R.string.err_price_sync_file_type,

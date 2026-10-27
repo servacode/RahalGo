@@ -148,6 +148,40 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
         errText = { err(it) },
     )
 
+    // **خياراتُ الأصناف والأسعارُ دفعةً واحدة** (طلبُ المالك ٢٠٢٦-١٠-٢٧) — مشتركةٌ مع المندوب.
+    val presets = com.rahalgo.ui.menu.OptionPresetsState(
+        scope = viewModelScope,
+        load = { api.optionPresets(storeId) },
+        save = { api.setOptionPresets(storeId, it) },
+        errText = { err(it) },
+    )
+    val bulk = com.rahalgo.ui.menu.BulkPriceState(
+        scope = viewModelScope,
+        run = { api.bulkPrice(storeId, it) },
+        onApplied = { load() },
+        errText = { err(it) },
+    )
+
+    /**
+     * **نسخُ الصنف ثمّ فتحُ النسخة** (٢٠٢٦-١٠-٢٧) — قميصٌ بخمسة ألوان يُعمل مرّةً
+     * ويُنسخ، **فيبدّل الصورةَ والاسمَ ويحفظ.**
+     */
+    fun duplicate(itemId: String) {
+        busy = true
+        viewModelScope.launch {
+            runCatching {
+                val newId = api.duplicateItem(itemId)
+                val items = api.menu(storeId).flatMap { it.items }
+                regroup(items)
+                items.first { it.id == newId }
+            }.onSuccess { copy ->
+                editItem(copy)
+                Flash.ok(getApplication<android.app.Application>().getString(com.rahalgo.ui.R.string.item_duplicated))
+            }.onFailure { editError = err(it) }
+            busy = false
+        }
+    }
+
     fun openGroup(g: MenuGroup) {
         open = g
     }
@@ -220,6 +254,7 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 regroup(api.menu(storeId).flatMap { it.items })
                 error = ""
+                presets.refresh()
             }.onFailure { error = err(it) }
             loading = false
         }

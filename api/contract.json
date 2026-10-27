@@ -3742,6 +3742,70 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/option-presets",
+      "handler": "handleAdminOptionPresets",
+      "auth": true,
+      "capability": "market.manage",
+      "response": [
+        {
+          "name": "presets",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/option-presets",
+      "handler": "handleAdminSaveOptionPreset",
+      "auth": true,
+      "capability": "market.manage",
+      "response": [
+        {
+          "name": "id",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/option-presets/{id}",
+      "handler": "handleAdminDeleteOptionPreset",
+      "auth": true,
+      "capability": "market.manage",
+      "response": [
+        {
+          "name": "deleted",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/option-presets/{id}",
+      "handler": "handleAdminSaveOptionPreset",
+      "auth": true,
+      "capability": "market.manage",
+      "response": [
+        {
+          "name": "id",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/orders",
       "handler": "handleListOrders",
       "auth": true,
@@ -8410,6 +8474,15 @@
       ]
     },
     {
+      "method": "POST",
+      "path": "/api/v1/merchant/menu/items/{itemID}/duplicate",
+      "handler": "handleMerchantDuplicateItem",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ]
+    },
+    {
       "method": "DELETE",
       "path": "/api/v1/merchant/menu/sections/{sectionID}",
       "handler": "handleMerchantDeleteSection",
@@ -8880,6 +8953,15 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/merchant/stores/{id}/menu/prices",
+      "handler": "handleMerchantBulkPrice",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ]
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/merchant/stores/{id}/menu/sections",
       "handler": "handleMerchantCreateSection",
       "auth": true,
@@ -8919,6 +9001,24 @@
       "method": "POST",
       "path": "/api/v1/merchant/stores/{id}/offers/{offerID}/stop",
       "handler": "handleMerchantStopOffer",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/merchant/stores/{id}/option-presets",
+      "handler": "handleMerchantOptionPresets",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/merchant/stores/{id}/option-presets",
+      "handler": "handleMerchantSetOptionPresets",
       "auth": true,
       "roles": [
         "merchant"
@@ -10918,6 +11018,15 @@
       ]
     },
     {
+      "method": "POST",
+      "path": "/api/v1/rep/menu/items/{itemID}/duplicate",
+      "handler": "handleRepDuplicateItem",
+      "auth": true,
+      "roles": [
+        "sales"
+      ]
+    },
+    {
       "method": "GET",
       "path": "/api/v1/rep/merchants",
       "handler": "handleRepMerchants",
@@ -11071,6 +11180,15 @@
       "idempotent": true
     },
     {
+      "method": "POST",
+      "path": "/api/v1/rep/stores/{id}/menu/prices",
+      "handler": "handleRepBulkPrice",
+      "auth": true,
+      "roles": [
+        "sales"
+      ]
+    },
+    {
       "method": "GET",
       "path": "/api/v1/rep/stores/{id}/offers",
       "handler": "handleRepOffers",
@@ -11093,6 +11211,24 @@
       "method": "POST",
       "path": "/api/v1/rep/stores/{id}/offers/{offerID}/stop",
       "handler": "handleRepStopOffer",
+      "auth": true,
+      "roles": [
+        "sales"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/rep/stores/{id}/option-presets",
+      "handler": "handleRepOptionPresets",
+      "auth": true,
+      "roles": [
+        "sales"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/rep/stores/{id}/option-presets",
+      "handler": "handleRepSetOptionPresets",
       "auth": true,
       "roles": [
         "sales"

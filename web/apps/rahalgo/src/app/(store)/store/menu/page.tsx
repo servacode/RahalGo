@@ -23,6 +23,7 @@
  */
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import DrinksCard from "@/components/store/DrinksCard";
 import { useCallback, useMemo, useState } from "react";
 import {
@@ -34,9 +35,11 @@ import {
 } from "@rahalgo/i18n";
 import {
   Alert,
+  Button,
   ButtonLink,
   EmptyState,
   IconAdd,
+  IconCopy,
   IconEdit,
   FormActions,
   IconList,
@@ -46,6 +49,7 @@ import {
   MediaThumb,
   Modal,
   ReloadState,
+  Select,
   Switch,
   useLiveData,
 } from "@rahalgo/ui";
@@ -160,16 +164,192 @@ function PriceDialog({
   );
 }
 
+/** **أقسامُ السوق التي فيها أصناف** — لمرشِّح «تغيير الأسعار». */
+function sectionsOf(data: MenuSection[]): { id: string; name: string }[] {
+  const seen = new Map<string, string>();
+  for (const it of data.flatMap((s) => s.items)) {
+    if (it.platform_section_id && !seen.has(it.platform_section_id)) {
+      seen.set(it.platform_section_id, it.platform_section_name);
+    }
+  }
+  return [...seen.entries()].map(([id, name]) => ({ id, name }));
+}
+
+interface BulkPreview {
+  count: number;
+  samples: { name: string; old_price: number; new_price: number }[];
+  applied: boolean;
+}
+
+/**
+ * **تغييرُ الأسعار بنسبة** — `POST /stores/{id}/menu/prices`. **بلا `confirm` معاينةٌ لا
+ * تغيّر شيئاً**: العددُ وأمثلةٌ، ثمّ «طبّق» يرسلها نفسَها بـ`confirm: true`.
+ */
+function BulkPriceDialog({
+  storeId,
+  sections,
+  onClose,
+  onApplied,
+}: {
+  storeId: string;
+  sections: { id: string; name: string }[];
+  onClose: () => void;
+  onApplied: () => void;
+}) {
+  const B = M.bulk;
+  const toast = useShopToast();
+  const [text, setText] = useState("");
+  const [section, setSection] = useState("");
+  const [preview, setPreview] = useState<BulkPreview | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const percent = Number(text);
+  const valid =
+    text.trim() !== "" &&
+    Number.isFinite(percent) &&
+    percent !== 0 &&
+    percent >= -50 &&
+    percent <= 100;
+
+  async function send(confirm: boolean) {
+    if (!valid) {
+      setError(B.badPercent);
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const r = await api<BulkPreview>(
+        `/api/v1/merchant/stores/${storeId}/menu/prices`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            percent,
+            ...(section ? { platform_section_id: section } : {}),
+            confirm,
+          }),
+        },
+      );
+      if (confirm) {
+        toast(fill(B.applied, { n: fmtNum(r.count) }), "success");
+        onApplied();
+      } else {
+        setPreview(r);
+      }
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const samples = preview?.samples ?? [];
+  const rest = preview ? preview.count - samples.length : 0;
+
+  return (
+    <Modal open onClose={onClose} title={B.title}>
+      <div className="flex flex-col gap-3" data-testid="bulk-price">
+        {preview == null ? (
+          <>
+            <p className="text-xs text-ink-muted">{B.hint}</p>
+            <Input
+              label={B.percent}
+              inputMode="decimal"
+              dir="ltr"
+              value={text}
+              onChange={(e) => {
+                setText(e.target.value.replace(/[^\d.-]/g, "").slice(0, 6));
+                setError("");
+              }}
+              autoFocus
+            />
+            {sections.length > 0 && (
+              <Select
+                label={B.section}
+                value={section}
+                onChange={(e) => setSection(e.target.value)}
+              >
+                <option value="">{B.allSections}</option>
+                {sections.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </Select>
+            )}
+            {error && <Alert>{error}</Alert>}
+            <FormActions
+              onSave={() => void send(false)}
+              onCancel={onClose}
+              busy={busy}
+              saveLabel={B.preview}
+            />
+          </>
+        ) : (
+          <>
+            <p className="font-bold">
+              {preview.count > 0
+                ? fill(B.count, { n: fmtNum(preview.count) })
+                : B.none}
+            </p>
+            {samples.length > 0 && (
+              <ul className="surface divide-y divide-line rounded-card px-3">
+                {samples.map((s, i) => (
+                  <li
+                    key={`${s.name}-${i}`}
+                    className="flex items-center justify-between gap-2 py-2 text-sm"
+                  >
+                    <span className="min-w-0 truncate">{s.name}</span>
+                    <span className="shrink-0 tabular-nums">
+                      <span className="text-ink-muted line-through">
+                        {fmtMoney(s.old_price)}
+                      </span>
+                      {" ← "}
+                      <span className="font-bold">{fmtMoney(s.new_price)}</span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {rest > 0 && (
+              <p className="text-xs text-ink-muted">
+                {fill(B.more, { n: fmtNum(rest) })}
+              </p>
+            )}
+            {error && <Alert>{error}</Alert>}
+            {preview.count > 0 ? (
+              <FormActions
+                onSave={() => void send(true)}
+                onCancel={() => setPreview(null)}
+                busy={busy}
+                saveLabel={B.apply}
+                cancelLabel={B.back}
+              />
+            ) : (
+              <Button variant="secondary" onClick={() => setPreview(null)}>
+                {B.back}
+              </Button>
+            )}
+          </>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 function ItemRow({
   item,
   disabled,
   onToggle,
   onPrice,
+  onDuplicate,
 }: {
   item: MenuItem;
   disabled: boolean;
   onToggle: () => void;
   onPrice: () => void;
+  onDuplicate: () => void;
 }) {
   return (
     <li
@@ -209,6 +389,18 @@ function ItemRow({
           </p>
         )}
       </div>
+      {/* **«نسخ»** — صنفٌ بالصورة والقسم والخيارات، ويُفتح للتعديل (٢٠٢٦-١٠-٢٧). */}
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={onDuplicate}
+        aria-label={`${M.duplicate} · ${item.name}`}
+        title={M.duplicate}
+        data-testid="store-menu-duplicate"
+        className="shrink-0 rounded-control p-1.5 text-ink-muted hover:bg-row-hover hover:text-ink disabled:opacity-50"
+      >
+        <IconCopy size={16} />
+      </button>
       <div className="shrink-0">
         <Switch
           checked={item.available}
@@ -236,6 +428,9 @@ export default function MenuPage() {
   );
   const [q, setQ] = useState("");
   const [editing, setEditing] = useState<MenuItem | null>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [copying, setCopying] = useState(false);
+  const router = useRouter();
   const suspended = store?.status === "suspended";
 
   const groups = useMemo(() => {
@@ -280,6 +475,24 @@ export default function MenuPage() {
     }
   }
 
+  /** **نسخُ الصنف** — ثمّ يُفتح الجديدُ في المحرّر. */
+  async function duplicate(item: MenuItem) {
+    if (copying) return;
+    setCopying(true);
+    try {
+      const r = await api<{ id: string }>(
+        `/api/v1/merchant/menu/items/${item.id}/duplicate`,
+        { method: "POST" },
+      );
+      toast(M.duplicated, "success");
+      router.push(`/store/menu/${r.id}`);
+    } catch (e) {
+      toast(errorText(e), "error");
+    } finally {
+      setCopying(false);
+    }
+  }
+
   if (loading && !data) return <LoadingState variant="list" rows={5} />;
   if (error && !data) return <ReloadState onRetry={() => void reload()} />;
 
@@ -307,6 +520,17 @@ export default function MenuPage() {
         <ButtonLink href="/store/price-sync" variant="secondary" className="w-fit">
           {m.store.priceSync.open}
         </ButtonLink>
+      )}
+      {/* **تغييرُ الأسعار بنسبة** — معاينةٌ ثمّ تأكيد (٢٠٢٦-١٠-٢٧). */}
+      {!suspended && !empty && (
+        <Button
+          variant="secondary"
+          className="w-fit"
+          data-testid="store-menu-bulk-price"
+          onClick={() => setBulkOpen(true)}
+        >
+          {M.bulkPrice}
+        </Button>
       )}
       {/* **قائمةُ المشروبات — تُكتب مرّةً وتنضاف لكلّ الأصناف** (٢٠٢٦-١٠-١٩). */}
       {!suspended && id && (
@@ -357,12 +581,24 @@ export default function MenuPage() {
                     disabled={suspended}
                     onToggle={() => void toggle(it)}
                     onPrice={() => setEditing(it)}
+                    onDuplicate={() => void duplicate(it)}
                   />
                 ))}
               </ul>
             </section>
           ))}
         </>
+      )}
+      {bulkOpen && id && (
+        <BulkPriceDialog
+          storeId={id}
+          sections={sectionsOf(data ?? [])}
+          onClose={() => setBulkOpen(false)}
+          onApplied={() => {
+            setBulkOpen(false);
+            void reload();
+          }}
+        />
       )}
       {editing && (
         <PriceDialog

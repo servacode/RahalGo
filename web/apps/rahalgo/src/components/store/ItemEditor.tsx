@@ -32,7 +32,7 @@
  * يبقى حتّى يُحسم الطلب — **فانقطاعٌ بعد الضغط لا يصنع صنفين.**
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, errorText, fmtMoney } from "@rahalgo/i18n";
 import {
@@ -50,7 +50,12 @@ import {
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
-import type { MenuItem, ModifierGroup, SectionRef } from "@/lib/store/types";
+import type {
+  MenuItem,
+  ModifierGroup,
+  SectionRef,
+  StorePresets,
+} from "@/lib/store/types";
 import { parseUsd, usdInput, usdText, usdToSyp } from "@/lib/store/usd";
 import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
 import { fill } from "@/lib/customer/texts";
@@ -71,6 +76,8 @@ interface DraftOption {
   name: string;
   price_delta: number;
   usd: string;
+  /** **خيارٌ خلصان** والصنفُ متوفّر — يُرسَل `available` مع كلّ خيار. */
+  available: boolean;
 }
 interface DraftGroup {
   id?: string;
@@ -81,42 +88,59 @@ interface DraftGroup {
 }
 
 /**
- * **مجموعاتٌ جاهزةٌ بمربّع صح** (قرارُ المالك ٢٠٢٦-١٠-١٩) — الحجمُ والوزنُ خيارٌ واحدٌ
- * إلزاميّ، والإضافاتُ اختياريّةٌ بلا حدّ. **وأسماءُ الخيارات وأسعارُها بيده.**
+ * **مجموعاتٌ جاهزةٌ بمربّع صح** — كانت ثلاثاً ثابتةً لكلّ متجر (٢٠٢٦-١٠-١٩)، **وصارت
+ * من اللوحة لكلّ تصنيف** (قرارُ المالك ٢٠٢٦-١٠-٢٧): `GET /stores/{id}/option-presets`
+ * وما `chosen` منها يظهر هنا. **والمربّعُ ينسخ المجموعةَ بخياراتها إلى الصنف**،
+ * **وتُعرف المجموعةُ باسمها.** **وإن تعذّر الجلبُ رجعت الثلاثُ القديمة** — لا محرّرَ بلا مجموعات.
  * والمشروباتُ ليست هنا — تنضاف من قائمتها (`DrinksCard`).
  */
-type Preset = "size" | "weight" | "extras";
-const PRESET_NAME: Record<Exclude<Preset, "extras">, string> = {
-  size: I.presetSize,
-  weight: I.presetWeight,
-};
-function presetOf(g: DraftGroup): Preset {
-  const n = g.name.trim();
-  if (n === I.presetSize) return "size";
-  if (n === I.presetWeight) return "weight";
-  return "extras";
+interface PresetDef {
+  key: string;
+  name: string;
+  min_select: number;
+  max_select: number;
+  options: { name: string; price_delta: number }[];
 }
-function presetGroup(p: Preset): DraftGroup {
-  const opt = (name: string): DraftOption => ({
-    name,
-    price_delta: 0,
-    usd: "",
-  });
-  if (p === "size")
-    return {
+function fallbackPresets(): PresetDef[] {
+  const opts = (...names: string[]) =>
+    names.map((name) => ({ name, price_delta: 0 }));
+  return [
+    {
+      key: "size",
       name: I.presetSize,
       min_select: 1,
       max_select: 1,
-      options: [opt(I.optNormal), opt(I.optDouble)],
-    };
-  if (p === "weight")
-    return {
+      options: opts(I.optNormal, I.optDouble),
+    },
+    {
+      key: "weight",
       name: I.presetWeight,
       min_select: 1,
       max_select: 1,
-      options: [opt(I.optHalfKg), opt(I.optKg)],
-    };
-  return { name: I.extrasName, min_select: 0, max_select: 99, options: [] };
+      options: opts(I.optHalfKg, I.optKg),
+    },
+    {
+      key: "extras",
+      name: I.extrasName,
+      min_select: 0,
+      max_select: 99,
+      options: [],
+    },
+  ];
+}
+const sameName = (a: string, b: string) => a.trim() === b.trim();
+function presetGroup(p: PresetDef): DraftGroup {
+  return {
+    name: p.name,
+    min_select: p.min_select,
+    max_select: p.max_select,
+    options: p.options.map((o) => ({
+      name: o.name,
+      price_delta: o.price_delta,
+      usd: "",
+      available: true,
+    })),
+  };
 }
 
 function toDraft(groups: ModifierGroup[] | undefined): DraftGroup[] {
@@ -130,6 +154,7 @@ function toDraft(groups: ModifierGroup[] | undefined): DraftGroup[] {
       name: o.name,
       price_delta: o.price_delta,
       usd: usdText(o.price_delta_usd ?? null),
+      available: o.available !== false,
     })),
   }));
 }
@@ -170,6 +195,41 @@ export default function ItemEditor({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [askDelete, setAskDelete] = useState(false);
+  /** `null` تُجلب بعد · وتعذّرُها يرجّع الثلاثَ القديمة ويقول ذلك. */
+  const [presets, setPresets] = useState<PresetDef[] | null>(null);
+  const [presetsFailed, setPresetsFailed] = useState(false);
+  const storeId = store?.id ?? "";
+
+  useEffect(() => {
+    if (!storeId) return;
+    let live = true;
+    api<StorePresets>(`/api/v1/merchant/stores/${storeId}/option-presets`)
+      .then((r) => {
+        if (!live) return;
+        setPresets(
+          (r.presets ?? [])
+            .filter((p) => p.chosen)
+            .map((p) => ({
+              key: p.id,
+              name: p.name,
+              min_select: p.min_select,
+              max_select: p.max_select,
+              options: p.options ?? [],
+            })),
+        );
+      })
+      .catch(() => {
+        if (!live) return;
+        setPresets(fallbackPresets());
+        setPresetsFailed(true);
+      });
+    return () => {
+      live = false;
+    };
+  }, [storeId]);
+
+  const isPreset = (g: DraftGroup) =>
+    (presets ?? []).some((p) => sameName(p.name, g.name));
 
   const usd = currency === "USD";
   const nameLen = name.trim().length;
@@ -206,6 +266,7 @@ export default function ItemEditor({
       return setError(I.vPrice);
     }
     if (!section) return setError(I.vSection);
+    if (groups.some((g) => !g.name.trim())) return setError(I.vGroupName);
     const modifiers = groups.map((g) => ({
       ...(g.id ? { id: g.id } : {}),
       name: g.name.trim(),
@@ -215,6 +276,7 @@ export default function ItemEditor({
         ...(o.id ? { id: o.id } : {}),
         name: o.name.trim(),
         price_delta: o.price_delta,
+        available: o.available,
         ...(usd ? { price_delta_usd: parseUsd(o.usd) ?? 0 } : {}),
       })),
     }));
@@ -414,29 +476,41 @@ export default function ItemEditor({
       <section className="flex flex-col gap-2" aria-label={I.modTitle}>
         <h3 className="heading-card">{I.modTitle}</h3>
         <p className="text-xs text-ink-muted">{I.modHint}</p>
-        {/* **مربّعُ صحٍّ لكلّ مجموعةٍ جاهزة** — يفتحها بخياراتها أو يشيلها. */}
+        {/* **مربّعُ صحٍّ لكلّ مجموعةٍ من «خياراتي»** — ينسخها بخياراتها أو يشيلها. */}
+        {presetsFailed && (
+          <p className="text-xs text-warning">{I.presetsFailed}</p>
+        )}
         <div className="flex flex-wrap gap-4" data-testid="item-presets">
-          {(["size", "weight", "extras"] as const).map((p) => (
+          {(presets ?? []).map((p) => (
             <Checkbox
-              key={p}
-              id={`preset-${p}`}
-              checked={groups.some((g) => presetOf(g) === p)}
+              key={p.key}
+              id={`preset-${p.key}`}
+              checked={groups.some((g) => sameName(g.name, p.name))}
               onChange={(e) =>
                 edit((gs) =>
                   e.target.checked
                     ? [...gs, presetGroup(p)]
-                    : gs.filter((g) => presetOf(g) !== p),
+                    : gs.filter((g) => !sameName(g.name, p.name)),
                 )
               }
-              label={
-                p === "size"
-                  ? I.presetSize
-                  : p === "weight"
-                    ? I.presetWeight
-                    : I.presetExtras
-              }
+              label={p.name}
             />
           ))}
+          <Button
+            type="button"
+            variant="secondary"
+            className="flex w-fit items-center gap-1"
+            data-testid="item-custom-group"
+            onClick={() =>
+              edit((gs) => [
+                ...gs,
+                { name: "", min_select: 0, max_select: 99, options: [] },
+              ])
+            }
+          >
+            <IconAdd size={13} />
+            {I.customGroup}
+          </Button>
         </div>
         {groups.map((g, gi) => (
           <div
@@ -444,17 +518,56 @@ export default function ItemEditor({
             className="surface flex flex-col gap-2 rounded-card p-3"
             data-testid="item-group"
           >
-            {presetOf(g) === "extras" ? (
-              <Input
-                id={`g-name-${gi}`}
-                label={I.groupName}
-                value={g.name}
-                onChange={(e) => setGroup(gi, { name: e.target.value })}
-              />
+            {isPreset(g) ? (
+              <div className="flex items-center justify-between gap-2">
+                <h4 className="font-bold">{g.name}</h4>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  aria-label={I.remove}
+                  onClick={() => edit((gs) => gs.filter((_, i) => i !== gi))}
+                >
+                  <IconDelete size={14} className="text-danger" />
+                </Button>
+              </div>
             ) : (
-              <h4 className="font-bold">
-                {PRESET_NAME[presetOf(g) as "size" | "weight"]}
-              </h4>
+              <>
+                <div className="flex items-end gap-2">
+                  <Input
+                    id={`g-name-${gi}`}
+                    label={I.groupName}
+                    value={g.name}
+                    onChange={(e) => setGroup(gi, { name: e.target.value })}
+                    wrapperClassName="min-w-0 flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    aria-label={I.remove}
+                    onClick={() => edit((gs) => gs.filter((_, i) => i !== gi))}
+                  >
+                    <IconDelete size={14} className="text-danger" />
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-4">
+                  <Checkbox
+                    id={`g-req-${gi}`}
+                    checked={g.min_select > 0}
+                    onChange={(e) =>
+                      setGroup(gi, { min_select: e.target.checked ? 1 : 0 })
+                    }
+                    label={I.required}
+                  />
+                  <Checkbox
+                    id={`g-multi-${gi}`}
+                    checked={g.max_select > 1}
+                    onChange={(e) =>
+                      setGroup(gi, { max_select: e.target.checked ? 99 : 1 })
+                    }
+                    label={I.multi}
+                  />
+                </div>
+              </>
             )}
             <p className="text-xs text-ink-muted">
               {g.min_select > 0 ? I.sizeRule : I.extrasRule}
@@ -462,52 +575,68 @@ export default function ItemEditor({
             {g.options.map((o, oi) => (
               <div
                 key={oi}
-                className="flex items-end gap-2"
+                className="flex flex-col gap-1"
                 data-testid="item-option"
               >
-                <Input
-                  id={`o-name-${gi}-${oi}`}
-                  label={I.optionName}
-                  value={o.name}
-                  onChange={(e) => setOption(gi, oi, { name: e.target.value })}
-                  wrapperClassName="min-w-0 flex-1"
-                />
-                <Input
-                  id={`o-price-${gi}-${oi}`}
-                  label={usd ? I.optPriceUsd : I.optPrice}
-                  inputMode={usd ? "decimal" : "numeric"}
-                  dir="ltr"
-                  value={
-                    usd
-                      ? o.usd
-                      : o.price_delta === 0
-                        ? ""
-                        : String(o.price_delta)
-                  }
+                <div className="flex items-end gap-2">
+                  <Input
+                    id={`o-name-${gi}-${oi}`}
+                    label={I.optionName}
+                    value={o.name}
+                    onChange={(e) =>
+                      setOption(gi, oi, { name: e.target.value })
+                    }
+                    wrapperClassName="min-w-0 flex-1"
+                  />
+                  <Input
+                    id={`o-price-${gi}-${oi}`}
+                    label={usd ? I.optPriceUsd : I.optPrice}
+                    inputMode={usd ? "decimal" : "numeric"}
+                    dir="ltr"
+                    value={
+                      usd
+                        ? o.usd
+                        : o.price_delta === 0
+                          ? ""
+                          : String(o.price_delta)
+                    }
+                    onChange={(e) =>
+                      usd
+                        ? setOption(gi, oi, {
+                            usd: usdInput(e.target.value, 8),
+                          })
+                        : setOption(gi, oi, {
+                            price_delta:
+                              Number(
+                                e.target.value.replace(/\D/g, "").slice(0, 9),
+                              ) || 0,
+                          })
+                    }
+                    wrapperClassName="w-28 shrink-0"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    aria-label={I.remove}
+                    onClick={() =>
+                      setGroup(gi, {
+                        options: g.options.filter((_, j) => j !== oi),
+                      })
+                    }
+                  >
+                    <IconDelete size={14} className="text-danger" />
+                  </Button>
+                </div>
+                {/* **خيارٌ خلصان والصنفُ متوفّر** — الزبونُ يشوفه رمادي. */}
+                <Checkbox
+                  id={`o-avail-${gi}-${oi}`}
+                  checked={o.available}
                   onChange={(e) =>
-                    usd
-                      ? setOption(gi, oi, { usd: usdInput(e.target.value, 8) })
-                      : setOption(gi, oi, {
-                          price_delta:
-                            Number(
-                              e.target.value.replace(/\D/g, "").slice(0, 9),
-                            ) || 0,
-                        })
+                    setOption(gi, oi, { available: e.target.checked })
                   }
-                  wrapperClassName="w-28 shrink-0"
+                  label={I.optAvailable}
+                  className={o.available ? "" : "text-ink-muted"}
                 />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  aria-label={I.remove}
-                  onClick={() =>
-                    setGroup(gi, {
-                      options: g.options.filter((_, j) => j !== oi),
-                    })
-                  }
-                >
-                  <IconDelete size={14} className="text-danger" />
-                </Button>
               </div>
             ))}
             <Button
@@ -518,7 +647,7 @@ export default function ItemEditor({
                 setGroup(gi, {
                   options: [
                     ...g.options,
-                    { name: "", price_delta: 0, usd: "" },
+                    { name: "", price_delta: 0, usd: "", available: true },
                   ],
                 })
               }

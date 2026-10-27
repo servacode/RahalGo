@@ -463,6 +463,9 @@ type ModifierOptionInput struct {
 	// منه `PriceDelta` بسعر صرف المتجر. انظر `usd.go`.
 	PriceDeltaUSD      *float64 `json:"price_delta_usd"`
 	priceDeltaUSDCents *int64
+	// Available **خيارٌ نفد وحدَه** (طلبُ المالك ٢٠٢٦-١٠-٢٧: «نمرة ٤٢ خلصت»).
+	// **وغيابُه «متوفّر»** — التطبيقاتُ القديمةُ لا ترسله، فلا يُطفأ خيارٌ بصمتها.
+	Available *bool `json:"available"`
 }
 
 type ModifierGroupInput struct {
@@ -771,8 +774,8 @@ func insertModifiers(ctx context.Context, tx dbtx.Querier, itemID string, groups
 				return ErrNameRequired
 			}
 			if _, err := tx.Exec(ctx, `
-				INSERT INTO modifier_options (group_id, name, price_delta, sort_order, price_delta_usd_cents)
-				VALUES ($1, $2, $3, $4, $5)`, groupID, o.Name, o.PriceDelta, oi, o.priceDeltaUSDCents); err != nil {
+				INSERT INTO modifier_options (group_id, name, price_delta, sort_order, price_delta_usd_cents, available)
+				VALUES ($1, $2, $3, $4, $5, COALESCE($6, true))`, groupID, o.Name, o.PriceDelta, oi, o.priceDeltaUSDCents, o.Available); err != nil {
 				return err
 			}
 		}

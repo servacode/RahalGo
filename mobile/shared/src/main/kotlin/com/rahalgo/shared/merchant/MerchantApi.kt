@@ -343,6 +343,21 @@ class MerchantApi(private val api: ApiClient) {
     suspend fun setDrinks(storeId: String, drinks: List<Drink>): List<Drink> =
         api.call<DrinksBody>("/api/v1/merchant/stores/$storeId/drinks", HttpMethod.Put, DrinksBody(drinks)).drinks
 
+    /** **خياراتُ الصنف الجاهزة** (٢٠٢٦-١٠-٢٧) — كلُّها معلَّمةً بما يطلع عنده. */
+    suspend fun optionPresets(storeId: String): OptionPresetsBody =
+        api.call("/api/v1/merchant/stores/$storeId/option-presets")
+
+    suspend fun setOptionPresets(storeId: String, body: SetOptionPresets): OptionPresetsBody =
+        api.call("/api/v1/merchant/stores/$storeId/option-presets", HttpMethod.Put, body)
+
+    /** **نسخُ صنفٍ بصورته وخياراته** — ويُرجع معرّفَ النسخة. */
+    suspend fun duplicateItem(itemId: String): String =
+        api.call<DuplicatedItem>("/api/v1/merchant/menu/items/$itemId/duplicate", HttpMethod.Post, emptyMap<String, String>()).id
+
+    /** **الأسعارُ دفعةً واحدة** — معاينةٌ ثمّ تطبيق. */
+    suspend fun bulkPrice(storeId: String, input: BulkPriceInput): BulkPriceResult =
+        api.call("/api/v1/merchant/stores/$storeId/menu/prices", HttpMethod.Post, input)
+
     /** **يرفع شعارَ متجره** (طلبُ المالك ٢٠٢٦-١٠-١٨) — ثمّ يُربط بـ`settings`. */
     suspend fun uploadLogo(fileName: String, bytes: ByteArray): MediaRef {
         val raw = api.upload(

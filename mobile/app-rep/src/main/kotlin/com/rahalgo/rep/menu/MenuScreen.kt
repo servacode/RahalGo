@@ -108,6 +108,24 @@ fun MenuScreen(vm: MenuViewModel, onOffers: () -> Unit = {}) {
         return
     }
 
+    // **خياراتُ الأصناف وتغييرُ الأسعار كما عند المتجر** (٢٠٢٦-١٠-٢٧).
+    if (vm.presets.open) {
+        BackHandler { vm.presets.close() }
+        com.rahalgo.ui.menu.OptionPresetsEditor(vm.presets)
+        return
+    }
+    if (vm.bulk.open) {
+        BackHandler { vm.bulk.close() }
+        val mine = vm.sections.orEmpty().map { it.id }.toSet()
+        com.rahalgo.ui.menu.BulkPriceEditor(
+            vm.bulk,
+            vm.platformSections.filter { it.id in mine }.map {
+                com.rahalgo.shared.merchant.PlatformSectionRef(id = it.id, name = it.name)
+            },
+        )
+        return
+    }
+
     if (vm.editing != null) {
         // **والمحرّرُ من الوحدة المشتركة** — نسخةٌ واحدةٌ للمتجر
         // والمندوب (`ui.menu.ItemEditor`). **وكان نموذجان بمئتين وستّين
@@ -160,6 +178,8 @@ fun MenuScreen(vm: MenuViewModel, onOffers: () -> Unit = {}) {
             descLabel = R.string.mn_desc,
             sectionLabel = R.string.mn_platform_section,
             sectionHint = R.string.mn_no_platform_section_hint,
+            presets = vm.presets.chosen,
+            onDuplicate = { vm.editing?.itemId?.let(vm::duplicate) },
         )
         return
     }
@@ -242,6 +262,7 @@ fun MenuScreen(vm: MenuViewModel, onOffers: () -> Unit = {}) {
         if (open == null) {
             // **وزرُّ المشروبات فوق الشبكة كما عند المتجر.**
             com.rahalgo.ui.menu.DrinksButton(vm.drinks)
+            com.rahalgo.ui.menu.MenuToolsButtons(vm.presets, vm.bulk)
             Spacer(Modifier.height(10.dp))
             // **ومربّعاتٌ بعمودين كما عند المتجر** (طلبُ المالك ٢٠٢٦-١٠-١٩: «مطابق للمتجر»)
             // — لا أسطرَ بصورةٍ صغيرة. **وصفوفٌ لا شبكةٌ كسولة** داخل `Screen` الذي يمرّر.

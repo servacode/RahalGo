@@ -119,6 +119,8 @@ export interface ModifierOption {
   name: string;
   price_delta: number;
   price_delta_usd?: number | null;
+  /** **خيارٌ خلصان** (مقاس ٤٢ مثلاً) — والصنفُ يبقى متوفّراً. غيابُه يعني متوفّر. */
+  available?: boolean;
 }
 
 export interface ModifierGroup {
@@ -127,6 +129,28 @@ export interface ModifierGroup {
   min_select: number;
   max_select: number;
   options: ModifierOption[];
+}
+
+/**
+ * **مجموعةُ خياراتٍ جاهزة** (قرارُ المالك ٢٠٢٦-١٠-٢٧) — من
+ * `GET /merchant/stores/{id}/option-presets`. و`chosen` «تظهر لهذا المتجر».
+ */
+export interface OptionPreset {
+  id: string;
+  name: string;
+  min_select: number;
+  max_select: number;
+  options: { name: string; price_delta: number }[];
+  sort_order: number;
+  active: boolean;
+  category_ids?: string[];
+  chosen?: boolean;
+}
+
+/** **ردُّ خيارات المتجر** — و`custom=false` يعني «ماشي على تصنيفه». */
+export interface StorePresets {
+  presets: OptionPreset[];
+  custom: boolean;
 }
 
 /** **قسمُ سوقٍ** — من `/merchant/platform-sections` و`/stores/{id}/sections`. */

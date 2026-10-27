@@ -34,6 +34,7 @@ import {
 import HoursEditor from "@/components/store/HoursEditor";
 import { OrderPhonesCard, StoreStaffCard } from "@/components/admin/StoreStaffAdmin";
 import SectionsEditor from "@/components/store/SectionsEditor";
+import OptionPresetsCard from "@/components/store/OptionPresetsCard";
 import AddressEditor from "@/components/store/AddressEditor";
 
 const m = getMessages(defaultLocale);
@@ -133,6 +134,8 @@ export default function StoreHome() {
       <div id="spot-sections" className="scroll-mt-20">
         {mine != null && <SectionsEditor all={all} mine={mine} onChange={setMine} />}
       </div>
+      {/* **«خياراتي»** — مجموعاتُ الخيارات في محرّر الصنف (٢٠٢٦-١٠-٢٧). */}
+      <OptionPresetsCard />
       <div id="spot-address" className="scroll-mt-20">
         <AddressEditor />
       </div>

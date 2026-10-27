@@ -6,12 +6,13 @@
  * «السوق عندي يحوي الأصناف الخاصّة بكلّ المتاجر، لأنّ المتاجرَ أصلاً لا تُعرض
  * على الزبون». **والمتاجرُ تُدار هنا ولا تُعرض على الزبون** — واسمُها «المتاجر».
  *
- * # ستّةُ تبويبات
+ * # سبعةُ تبويبات
  *
  *	الأقسام        ←  بطاقاتٌ تُرتَّب بالسحب أو بالأسهم (هو ترتيبُها عند الزبون) · وحذفُ القسم
  *	الأصناف        ←  الأحدثُ أوّلاً بعلامة «جديد» · بحثٌ وفلاترُ وإجراءاتٌ جماعيّة
  *	المتاجر        ←  صفحةٌ موحّدة بفلاتر الحال
  *	التصنيفات      ←  مطاعم · بقالة… وترتيبُها
+ *	خيارات الأصناف ←  الحجم · الوزن · المقاس… لكلّ تصنيف (٢٠٢٦-١٠-٢٧)
  *	إعداد المتاجر  ←  مين ضبط ومين لا
  *	جودةُ البيانات ←  بلا صورة · بلا دوام · التجريبيُّ وحذفُه بتأكيد
  *
@@ -33,6 +34,7 @@ import {
   IconOrder,
   IconSettings,
   IconShieldCheck,
+  IconCheckAll,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useCanCall } from "@/lib/policy";
@@ -43,6 +45,7 @@ import ItemsTab from "@/components/admin/market/ItemsTab";
 import StoresTab from "@/components/admin/market/StoresTab";
 import QualityTab from "@/components/admin/market/QualityTab";
 import CategoriesTab from "@/components/admin/market/CategoriesTab";
+import OptionPresetsTab from "@/components/admin/market/OptionPresetsTab";
 import SetupTab from "@/components/admin/market/SetupTab";
 
 const m = getMessages(defaultLocale);
@@ -50,8 +53,8 @@ const S = m.admin.sections;
 const T = m.admin.market.tabs;
 const U = m.admin.market.ui;
 
-type TabKey = "sections" | "items" | "stores" | "categories" | "setup" | "quality";
-const TAB_KEYS: TabKey[] = ["sections", "items", "stores", "categories", "setup", "quality"];
+type TabKey = "sections" | "items" | "stores" | "categories" | "presets" | "setup" | "quality";
+const TAB_KEYS: TabKey[] = ["sections", "items", "stores", "categories", "presets", "setup", "quality"];
 
 function readParam(key: string): string {
   if (typeof window === "undefined") return "";
@@ -63,6 +66,7 @@ interface Counts {
   items?: number;
   stores?: number;
   categories?: number;
+  presets?: number;
   setup?: number;
   noImage?: number;
   noHours?: number;
@@ -98,11 +102,12 @@ export default function MarketPage() {
   // **الأرقامُ تتحدّث وحدَها** (تدقيقُ السوق ٢٠٢٦-١٠-٢٧) — كانت تُجلب مرّةً عند الفتح فتبقى قديمة.
   const { data: counts } = useLiveData<Counts>(
     async () => {
-      const [sec, items, stores, cats, setup, quality] = await Promise.all([
+      const [sec, items, stores, cats, presets, setup, quality] = await Promise.all([
         opt(api<{ sections?: unknown[] }>("/api/v1/admin/sections")),
         opt(api<{ total?: number }>("/api/v1/admin/market/items?per_page=1")),
         opt(api<{ total?: number }>("/api/v1/admin/market/stores?per_page=1")),
         opt(api<unknown[]>("/api/v1/admin/categories")),
+        opt(api<{ presets?: unknown[] }>("/api/v1/admin/option-presets")),
         canSetup ? opt(api<{ stores: { missing: string[] }[] }>("/api/v1/admin/merchants-setup")) : Promise.resolve(undefined),
         opt(
           api<{
@@ -118,6 +123,7 @@ export default function MarketPage() {
         items: items?.total,
         stores: stores?.total,
         categories: Array.isArray(cats) ? cats.length : undefined,
+        presets: presets?.presets?.length,
         setup: setup ? setup.stores.filter((x) => x.missing.length > 0).length : undefined,
         noImage: quality?.items_without_image_count,
         noHours: quality?.stores_without_hours?.length,
@@ -146,6 +152,7 @@ export default function MarketPage() {
     { key: "items", label: T.items, icon: IconOrder, count: c.items },
     { key: "stores", label: T.stores, icon: IconStore, count: c.stores },
     { key: "categories", label: T.categories, icon: IconList, count: c.categories },
+    { key: "presets", label: T.presets, icon: IconCheckAll, count: c.presets },
     ...(canSetup ? [{ key: "setup" as const, label: T.setup, icon: IconSettings, count: c.setup, warn: true }] : []),
     { key: "quality", label: T.quality, icon: IconShieldCheck, count: quality, warn: true },
   ];
@@ -195,6 +202,7 @@ export default function MarketPage() {
       {shown === "items" && <ItemsTab initialMerchant={merchant} />}
       {shown === "stores" && <StoresTab />}
       {shown === "categories" && <CategoriesTab />}
+      {shown === "presets" && <OptionPresetsTab />}
       {shown === "setup" && <SetupTab />}
       {shown === "quality" && <QualityTab />}
     </PageContainer>

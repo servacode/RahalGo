@@ -945,6 +945,11 @@ func (s *Server) Router() http.Handler {
 				// **وقائمةُ المشروبات كما عند المتجر** (طلبُ المالك ٢٠٢٦-١٠-١٩).
 				r.Get("/stores/{id}/drinks", s.handleRepGetDrinks)
 				r.Put("/stores/{id}/drinks", s.handleRepSetDrinks)
+				// **خياراتُ الصنف الجاهزة ونسخُ صنفٍ والأسعارُ دفعةً واحدة** (٢٠٢٦-١٠-٢٧).
+				r.Get("/stores/{id}/option-presets", s.handleRepOptionPresets)
+				r.Put("/stores/{id}/option-presets", s.handleRepSetOptionPresets)
+				r.Post("/stores/{id}/menu/prices", s.handleRepBulkPrice)
+				r.Post("/menu/items/{itemID}/duplicate", s.handleRepDuplicateItem)
 				// **وشعارُ متجر عميله** (طلبُ المالك ٢٠٢٦-١٠-١٩).
 				r.Put("/stores/{id}/logo", s.handleRepSetLogo)
 			})
@@ -1093,6 +1098,11 @@ func (s *Server) Router() http.Handler {
 			r.Post("/staff", s.notStaff(s.handleMerchantAddStaff))
 			r.Delete("/staff/{staffID}", s.notStaff(s.handleMerchantRemoveStaff))
 			r.Put("/stores/{id}/drinks", s.handleMerchantSetDrinks)
+			// **خياراتُ الصنف الجاهزة ونسخُ صنفٍ والأسعارُ دفعةً واحدة** (٢٠٢٦-١٠-٢٧).
+			r.Get("/stores/{id}/option-presets", s.handleMerchantOptionPresets)
+			r.Put("/stores/{id}/option-presets", s.handleMerchantSetOptionPresets)
+			r.Post("/stores/{id}/menu/prices", s.handleMerchantBulkPrice)
+			r.Post("/menu/items/{itemID}/duplicate", s.handleMerchantDuplicateItem)
 			// **مزامنةُ الأسعار والكميّات من الأمين** (٢٠٢٦-١٠-١٩) — انظر price_sync_handlers.go.
 			r.Get("/stores/{id}/price-sync", s.handleMerchantPriceSyncInfo)
 			r.Post("/stores/{id}/price-sync/file", s.handleMerchantPriceSyncFile)
@@ -1791,6 +1801,11 @@ func (s *Server) Router() http.Handler {
 				r.Post("/categories", s.handleCreateCategory)
 				r.Patch("/categories/{id}", s.handleUpdateCategory)
 				r.Delete("/categories/{id}", s.handleDeleteCategory)
+				// **خياراتُ الصنف الجاهزة لكلّ تصنيف** (قرارُ المالك ٢٠٢٦-١٠-٢٧).
+				r.Get("/option-presets", s.handleAdminOptionPresets)
+				r.Post("/option-presets", s.handleAdminSaveOptionPreset)
+				r.Patch("/option-presets/{id}", s.handleAdminSaveOptionPreset)
+				r.Delete("/option-presets/{id}", s.handleAdminDeleteOptionPreset)
 				r.Post("/merchants", s.handleCreateMerchant)
 				r.Patch("/merchants/{id}", s.handleUpdateMerchant)
 				// **حذفٌ نهائيٌّ لمتجرٍ بلا طلب** (قرارُ المالك ٢٠٢٦-١٠-٢٠).

@@ -373,6 +373,9 @@ var adminPolicy = []Rule{
 	{"POST", "/market/test-data/delete", MarketManage},
 	{"", "/categories", MarketManage},
 	{"", "/categories/{id}", MarketManage},
+	// **وخياراتُ الصنف الجاهزةُ لكلّ تصنيف** (قرارُ المالك ٢٠٢٦-١٠-٢٧) — من صنف التصنيفات.
+	{"", "/option-presets", MarketManage},
+	{"", "/option-presets/{id}", MarketManage},
 	{"POST", "/media", ContentManage},
 	{"GET", "/media/sign", ContentManage},
 	// **ومركزُ الإشعارات بالقدرة نفسِها** — **وهي قدرةُ من يخاطب

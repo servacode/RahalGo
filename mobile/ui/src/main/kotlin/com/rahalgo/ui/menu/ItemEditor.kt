@@ -77,6 +77,8 @@ import com.rahalgo.shared.merchant.MenuItem
 import com.rahalgo.shared.merchant.ModifierGroup
 import com.rahalgo.shared.merchant.ModifierOption
 import com.rahalgo.shared.merchant.PlatformSectionRef as SectionRef
+import com.rahalgo.shared.merchant.OptionPreset
+import com.rahalgo.shared.merchant.PresetOption
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -145,6 +147,13 @@ fun ItemEditor(
     exchangeRate: Double? = null,
     /** **ما يُقال إن غاب سعرُ الصرف** — المتجرُ يكتبه بنفسه، والمندوبُ ينتظر صاحبَه. */
     @StringRes rateMissing: Int = R.string.item_usd_need_rate,
+    /**
+     * **خياراتُ الصنف الجاهزة لهذا المتجر** (٢٠٢٦-١٠-٢٧) — المختارةُ وحدَها.
+     * **و`null` لم تُقرأ** فتبقى القوالبُ القديمة؛ والفارغةُ اختيارُه «لا شيء».
+     */
+    presets: List<OptionPreset>? = null,
+    /** **«نسخ الصنف»** — يظهر في التعديل وحدَه؛ و`null` لا زرّ. */
+    onDuplicate: (() -> Unit)? = null,
 ) {
     val pick = rememberImagePicker(crop = true) { bytes -> onPickImage(bytes) }
     var confirmDelete by remember { mutableStateOf(false) }
@@ -302,7 +311,7 @@ fun ItemEditor(
             )
         }
 
-        ModifiersEditor(d, onEdit)
+        ModifiersEditor(d, presets, onEdit)
 
         if (error.isNotEmpty()) {
             Spacer(Modifier.height(12.dp))
@@ -318,6 +327,13 @@ fun ItemEditor(
             }
         }
 
+        // **قميصٌ بخمسة ألوان يُعمل مرّةً ويُنسخ** (٢٠٢٦-١٠-٢٧).
+        if (d.itemId.isNotEmpty() && onDuplicate != null) {
+            Spacer(Modifier.height(20.dp))
+            RahalOutlineButton(onClick = { onDuplicate() }, enabled = !busy) {
+                Text(stringResource(R.string.item_duplicate))
+            }
+        }
         if (d.itemId.isNotEmpty()) {
             Spacer(Modifier.height(20.dp))
             if (!confirmDelete) {
@@ -373,7 +389,11 @@ fun ItemEditor(
  * **فيُعرضان سؤالين**: «إلزاميّ؟» و«يختار أكثر من واحد؟».
  */
 @Composable
-private fun ModifiersEditor(d: ItemDraft, onEdit: ((ItemDraft) -> ItemDraft) -> Unit) {
+private fun ModifiersEditor(
+    d: ItemDraft,
+    presets: List<OptionPreset>?,
+    onEdit: ((ItemDraft) -> ItemDraft) -> Unit,
+) {
     Spacer(Modifier.height(16.dp))
     Text(
         stringResource(R.string.mod_title),
@@ -386,63 +406,45 @@ private fun ModifiersEditor(d: ItemDraft, onEdit: ((ItemDraft) -> ItemDraft) -> 
         style = MaterialTheme.typography.bodySmall,
     )
     // ══════════════════════════════════════════════════════════════
-    // **مجموعاتٌ جاهزةٌ بمربّع صح** (قرارُ المالك ٢٠٢٦-١٠-١٩)
+    // **مجموعاتٌ جاهزةٌ بمربّع صح — من تصنيف المتجر** (قرارُ المالك ٢٠٢٦-١٠-٢٧)
     // ══════════════════════════════════════════════════════════════
     //
-    // الحجمُ والوزنُ خيارٌ واحدٌ إلزاميّ، والإضافاتُ اختياريّةٌ بلا حدّ —
-    // **وأسماءُ الخيارات وأسعارُها بيده.** والمشروباتُ ليست هنا: تنضاف من
-    // قائمتها لكلّ الأصناف. **ومرآتُها `ItemEditor.tsx` في الويب.**
-    val sizeName = stringResource(R.string.mod_preset_size)
-    val weightName = stringResource(R.string.mod_preset_weight)
-    val presetDefaults = mapOf(
-        "size" to ModifierGroup(
-            name = sizeName, minSelect = 1, maxSelect = 1,
-            options = listOf(
-                ModifierOption(name = stringResource(R.string.mod_opt_normal)),
-                ModifierOption(name = stringResource(R.string.mod_opt_double)),
-            ),
-        ),
-        "weight" to ModifierGroup(
-            name = weightName, minSelect = 1, maxSelect = 1,
-            options = listOf(
-                ModifierOption(name = stringResource(R.string.mod_opt_half_kg)),
-                ModifierOption(name = stringResource(R.string.mod_opt_kg)),
-            ),
-        ),
-        "extras" to ModifierGroup(name = stringResource(R.string.mod_extras_name), minSelect = 0, maxSelect = 99),
-    )
-    fun presetOf(g: ModifierGroup): String = when (g.name.trim()) {
-        sizeName -> "size"
-        weightName -> "weight"
-        else -> "extras"
-    }
-    listOf(
-        "size" to R.string.mod_preset_size,
-        "weight" to R.string.mod_preset_weight,
-        "extras" to R.string.mod_preset_extras,
-    ).forEach { (key, label) ->
-        val on = d.modifiers.any { presetOf(it) == key }
+    // كانت ثلاثةً ثابتةً لكلّ المتاجر (قرارُ ٢٠٢٦-١٠-١٩)، **فمحلُّ الأحذية لا
+    // يجد «النمرة».** صارت من المحرّك: ما اختاره المتجرُ أو ما يناسب تصنيفه.
+    // **و`null` يعني أنّها لم تُقرأ** (شبكةٌ أو محرّكٌ قديم) فتبقى القديمة.
+    // **والمجموعةُ تُعرف باسمها** — فصنفٌ قديمٌ فيه «الحجم» يُعلَّم مربّعُه.
+    // **ومرآتُها `ItemEditor.tsx` في الويب.**
+    val list = presets ?: legacyPresets()
+    val names = list.map { it.name.trim() }.toSet()
+    list.forEach { p ->
+        val on = d.modifiers.any { it.name.trim() == p.name.trim() }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(
                 checked = on,
                 onCheckedChange = { want ->
                     onEdit { dd ->
                         dd.copy(
-                            modifiers = if (want) dd.modifiers + presetDefaults.getValue(key)
-                            else dd.modifiers.filterNot { presetOf(it) == key },
+                            modifiers = if (want) dd.modifiers + p.toGroup()
+                            else dd.modifiers.filterNot { it.name.trim() == p.name.trim() },
                         )
                     }
                 },
             )
-            Text(stringResource(label), style = MaterialTheme.typography.bodyMedium)
+            Text(p.name, style = MaterialTheme.typography.bodyMedium)
         }
     }
+    // **ومجموعةٌ خاصّةٌ لما لم يخطر لنا** — اسمُها وخياراتُها بيده.
+    val customName = stringResource(R.string.mod_extras_name)
+    RahalOutlineButton(onClick = {
+        onEdit { dd -> dd.copy(modifiers = dd.modifiers + ModifierGroup(name = customName, minSelect = 0, maxSelect = 99)) }
+    }) { Text(stringResource(R.string.mod_custom_group)) }
 
     d.modifiers.forEachIndexed { gi, g ->
         Spacer(Modifier.height(10.dp))
         Card {
             Column(Modifier.padding(4.dp)) {
-                if (presetOf(g) == "extras") {
+                val isPreset = g.name.trim() in names
+                if (!isPreset) {
                     OutlinedTextField(
                         value = g.name,
                         onValueChange = { v ->
@@ -454,14 +456,35 @@ private fun ModifiersEditor(d: ItemDraft, onEdit: ((ItemDraft) -> ItemDraft) -> 
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                     )
+                    // **والقاعدةُ بيده في مجموعته** — «اللون» يلزم واحداً، و«الإضافات» ما شاء.
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Switch(
+                            checked = g.minSelect > 0,
+                            onCheckedChange = { one ->
+                                onEdit { dd ->
+                                    dd.copy(
+                                        modifiers = dd.modifiers.replaceAt(gi) {
+                                            if (one) it.copy(minSelect = 1, maxSelect = 1)
+                                            else it.copy(minSelect = 0, maxSelect = 99)
+                                        },
+                                    )
+                                }
+                            },
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            stringResource(if (g.minSelect > 0) R.string.mod_rule_one else R.string.mod_rule_any),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                 } else {
                     Text(g.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        stringResource(if (g.minSelect > 0) R.string.mod_rule_one else R.string.mod_rule_any),
+                        color = Rahal.colors.inkMuted,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
                 }
-                Text(
-                    stringResource(if (g.minSelect > 0) R.string.mod_rule_one else R.string.mod_rule_any),
-                    color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.bodySmall,
-                )
                 g.options.forEachIndexed { oi, o ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(
@@ -520,22 +543,73 @@ private fun ModifiersEditor(d: ItemDraft, onEdit: ((ItemDraft) -> ItemDraft) -> 
                             }
                         }) { Text("×", color = Rahal.colors.danger) }
                     }
+                    // ══════════════════════════════════════════════════
+                    // **«نمرة ٤٢ خلصت» — يطفئها وحدَها** (طلبُ المالك ٢٠٢٦-١٠-٢٧)
+                    // ══════════════════════════════════════════════════
+                    // والصنفُ يبقى يُباع؛ **وعند الزبون تطلع رماديّةً لا تُختار.**
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Switch(
+                            checked = o.available,
+                            onCheckedChange = { av ->
+                                onEdit { dd ->
+                                    dd.copy(
+                                        modifiers = dd.modifiers.replaceAt(gi) { gg ->
+                                            gg.copy(options = gg.options.replaceAt(oi) { it.copy(available = av) })
+                                        },
+                                    )
+                                }
+                            },
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            stringResource(if (o.available) R.string.mod_opt_available else R.string.mod_opt_out),
+                            color = if (o.available) Rahal.colors.inkMuted else Rahal.colors.danger,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                 }
 
                 // **وخيارٌ يُضاف كمجموعةٍ تُضاف** — انظر أعلاه.
-                RahalOutlineButton(onClick = {
-                    onEdit { dd ->
-                        dd.copy(
-                            modifiers = dd.modifiers.replaceAt(gi) { gg ->
-                                gg.copy(options = gg.options + ModifierOption(name = ""))
-                            },
-                        )
-                    }
-                }) { Text(stringResource(R.string.mod_add_option)) }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    RahalOutlineButton(onClick = {
+                        onEdit { dd ->
+                            dd.copy(
+                                modifiers = dd.modifiers.replaceAt(gi) { gg ->
+                                    gg.copy(options = gg.options + ModifierOption(name = ""))
+                                },
+                            )
+                        }
+                    }) { Text(stringResource(R.string.mod_add_option)) }
+                    RahalTextButton(onClick = {
+                        onEdit { dd -> dd.copy(modifiers = dd.modifiers.filterIndexed { i, _ -> i != gi }) }
+                    }) { Text(stringResource(R.string.mod_remove_group), color = Rahal.colors.danger) }
+                }
             }
         }
     }
 }
+
+/**
+ * **القوالبُ القديمة** — لمحرّكٍ لم يُحدَّث أو قراءةٍ فشلت، كما كانت قبل
+ * ٢٠٢٦-١٠-٢٧: الحجمُ والوزن (والإضافاتُ صارت «مجموعة خاصة»).
+ */
+@Composable
+private fun legacyPresets(): List<OptionPreset> = listOf(
+    OptionPreset(
+        name = stringResource(R.string.mod_preset_size), minSelect = 1, maxSelect = 1,
+        options = listOf(
+            PresetOption(stringResource(R.string.mod_opt_normal)),
+            PresetOption(stringResource(R.string.mod_opt_double)),
+        ),
+    ),
+    OptionPreset(
+        name = stringResource(R.string.mod_preset_weight), minSelect = 1, maxSelect = 1,
+        options = listOf(
+            PresetOption(stringResource(R.string.mod_opt_half_kg)),
+            PresetOption(stringResource(R.string.mod_opt_kg)),
+        ),
+    ),
+)
 
 /** **يستبدل عنصراً بموضعه** — ولا يمسّ ما سواه. */
 private inline fun <T> List<T>.replaceAt(i: Int, block: (T) -> T): List<T> =

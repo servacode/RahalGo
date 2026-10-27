@@ -178,6 +178,38 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
         errText = { apiError(getApplication(), it) },
     )
 
+    // **خياراتُ الأصناف والأسعارُ دفعةً واحدة كما عند المتجر** (٢٠٢٦-١٠-٢٧).
+    val presets = com.rahalgo.ui.menu.OptionPresetsState(
+        scope = viewModelScope,
+        load = { api.optionPresets(merchantID) },
+        save = { api.setOptionPresets(merchantID, it) },
+        errText = { apiError(getApplication(), it) },
+    )
+    val bulk = com.rahalgo.ui.menu.BulkPriceState(
+        scope = viewModelScope,
+        run = { api.bulkPrice(merchantID, it) },
+        onApplied = { load(); Refresh.bump() },
+        errText = { apiError(getApplication(), it) },
+    )
+
+    /** **نسخُ الصنف ثمّ فتحُ النسخة** — كما عند المتجر (٢٠٢٦-١٠-٢٧). */
+    fun duplicate(itemId: String) {
+        busy = true
+        viewModelScope.launch {
+            try {
+                val newId = api.duplicateItem(itemId)
+                sections = api.menu(merchantID)
+                regroup()
+                sections.orEmpty().flatMap { it.items }.firstOrNull { it.id == newId }?.let { editItem(it) }
+                Flash.ok(getApplication<Application>().getString(com.rahalgo.ui.R.string.item_duplicated))
+                Refresh.bump()
+            } catch (e: Exception) {
+                Flash.fail(apiError(getApplication(), e))
+            }
+            busy = false
+        }
+    }
+
     init {
         // ══════════════════════════════════════════════════════════════
         // **والقائمةُ تتحدّث لحظيّاً كما عند المتجر** (طلبُ المالك ٢٠٢٦-١٠-١٩)
@@ -209,6 +241,7 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                 regroup()
                 error = ""
                 runCatching { exchangeRate = api.merchant(merchantID).merchant.exchangeRate }
+                presets.refresh()
             } catch (e: Exception) {
                 // **والخطأُ يُكتب في حاله لا في ومضةٍ وحدَها** (٢٠٢٦-١٠-٢٧) — **وكانت
                 // الدوّارةُ تبقى عشرين ثانيةً** والمندوبُ واقفٌ في المتجر ينتظر،

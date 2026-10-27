@@ -139,6 +139,27 @@ class RepApi(private val api: ApiClient) {
             com.rahalgo.shared.merchant.DrinksBody(drinks),
         ).drinks
 
+    /** **خياراتُ الصنف لعميله** — كما عند المتجر (٢٠٢٦-١٠-٢٧). */
+    suspend fun optionPresets(merchantID: String): com.rahalgo.shared.merchant.OptionPresetsBody =
+        api.call("/api/v1/rep/stores/$merchantID/option-presets")
+
+    suspend fun setOptionPresets(
+        merchantID: String,
+        body: com.rahalgo.shared.merchant.SetOptionPresets,
+    ): com.rahalgo.shared.merchant.OptionPresetsBody =
+        api.call("/api/v1/rep/stores/$merchantID/option-presets", io.ktor.http.HttpMethod.Put, body)
+
+    suspend fun duplicateItem(itemId: String): String =
+        api.call<com.rahalgo.shared.merchant.DuplicatedItem>(
+            "/api/v1/rep/menu/items/$itemId/duplicate", io.ktor.http.HttpMethod.Post, emptyMap<String, String>(),
+        ).id
+
+    suspend fun bulkPrice(
+        merchantID: String,
+        input: com.rahalgo.shared.merchant.BulkPriceInput,
+    ): com.rahalgo.shared.merchant.BulkPriceResult =
+        api.call("/api/v1/rep/stores/$merchantID/menu/prices", io.ktor.http.HttpMethod.Post, input)
+
     suspend fun platformSections(): List<PlatformSection> =
         api.call<PlatformSections>("/api/v1/rep/platform-sections").sections
 

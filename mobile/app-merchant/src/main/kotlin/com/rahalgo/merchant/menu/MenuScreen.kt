@@ -115,7 +115,21 @@ fun MenuScreen(vm: MenuViewModel) {
             onCancel = { vm.cancelEdit() },
             onDelete = { vm.deleteItem(draft.itemId) },
             exchangeRate = vm.exchangeRate,
+            presets = vm.presets.chosen,
+            onDuplicate = if (vm.suspended) null else { { vm.duplicate(draft.itemId) } },
         )
+        return
+    }
+
+    // **خياراتُ الأصناف وتغييرُ الأسعار تغطّيان الشبكةَ كالمحرّر** (٢٠٢٦-١٠-٢٧).
+    if (vm.presets.open) {
+        BackHandler { vm.presets.close() }
+        com.rahalgo.ui.menu.OptionPresetsEditor(vm.presets)
+        return
+    }
+    if (vm.bulk.open) {
+        BackHandler { vm.bulk.close() }
+        com.rahalgo.ui.menu.BulkPriceEditor(vm.bulk, vm.sections)
         return
     }
 
@@ -186,6 +200,7 @@ private fun Grid(vm: MenuViewModel, media: (String?) -> String?) {
                 stringResource(R.string.menu_sections_hint),
             )
             if (!vm.suspended) com.rahalgo.ui.menu.DrinksButton(vm.drinks)
+            if (!vm.suspended) com.rahalgo.ui.menu.MenuToolsButtons(vm.presets, vm.bulk)
             Empty(stringResource(R.string.menu_empty))
         }
         return
@@ -205,6 +220,7 @@ private fun Grid(vm: MenuViewModel, media: (String?) -> String?) {
                     stringResource(R.string.menu_sections_hint),
                 )
                 if (!vm.suspended) com.rahalgo.ui.menu.DrinksButton(vm.drinks)
+                if (!vm.suspended) com.rahalgo.ui.menu.MenuToolsButtons(vm.presets, vm.bulk)
                 Spacer(Modifier.height(6.dp))
             }
         }
