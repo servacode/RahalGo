@@ -263,7 +263,7 @@ internal fun MapButton(
                 painter = painterResource(icon),
                 contentDescription = stringResource(label),
                 tint = when {
-                    danger -> Color.White
+                    danger -> Rahal.colors.onPanel
                     on -> Rahal.colors.onBrand
                     else -> Rahal.colors.ink
                 },
@@ -282,7 +282,7 @@ internal fun MapButton(
                 Text(
                     // **«9+» لا «+9»** — هكذا تُقرأ بالعربيّة.
                     text = if (badge > 9) "9+" else badge.toString(),
-                    color = Color.White,
+                    color = Rahal.colors.onPanel,
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.labelSmall,
                 )

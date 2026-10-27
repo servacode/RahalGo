@@ -62,7 +62,16 @@ class SectionsViewModel(app: Application) : AndroidViewModel(app) {
             Refresh.tick.drop(1).collect {
                 // **ويُعاد ما كان محمَّلاً صامتاً** (٢٠٢٦-١٠-٠٦) — كان يُمحى فيبقى المفتوحُ على دوّارٍ ثمّ
                 // «تعذّر»، **لأنّ الشاشةَ المفتوحةَ لا تطلبه ثانية.** والمطويُّ لا يُنادى له.
-                if (cash != null) runCatching { cash = backend.driver.cash(); me = backend.driver.me() }
+                //
+                // **ومن حمّل أقدمَ لا يُرجَع إلى الصفحة الأولى** — كانت كلُّ نبضةٍ
+                // تمحو ما حمّله بـ«حمّل أقدم». **والحركةُ لا رقمَ لها يُدمج به**،
+                // فيبقى الكشفُ كما هو ويُحدَّث الصندوقُ وحدَه.
+                val c = cash
+                if (c != null && c.page > 1) {
+                    runCatching { me = backend.driver.me() }
+                } else if (c != null && !cashMoreBusy) {
+                    runCatching { cash = backend.driver.cash(); me = backend.driver.me() }
+                }
                 if (reputation != null) runCatching { reputation = backend.me.reputation() }
             }
         }

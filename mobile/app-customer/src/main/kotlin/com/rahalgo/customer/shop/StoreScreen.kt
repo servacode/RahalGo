@@ -8,7 +8,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.border
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -261,21 +260,16 @@ internal fun StoreScreen(
                             overflow = TextOverflow.Ellipsis,
                         )
                         Spacer(Modifier.height(Rahal.space.xs))
-                        val tone = if (h.openNow) Rahal.colors.success else Rahal.colors.danger
+                        // **دوامُ اليوم وحدَه بلا شارة «مفتوح/مسكّر»** (قرارُ المالك ٢٠٢٦-١٠-٢٨) —
+                        // **والإغلاقُ الطارئُ يُقال بلفظه** فلا يُقرأ الدوامُ وعداً بأنّه مفتوح.
                         Text(
-                            text = stringResource(if (h.openNow) R.string.store_pill_open else R.string.store_pill_closed),
-                            color = tone,
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.labelMedium,
-                            modifier = Modifier
-                                .clip(Rahal.shape.pill)
-                                .background(tone.copy(alpha = 0.12f))
-                                .padding(horizontal = Rahal.space.sm, vertical = 2.dp),
-                        )
-                        Spacer(Modifier.height(Rahal.space.xs))
-                        Text(
-                            text = statusText(h),
-                            color = Rahal.colors.inkMuted,
+                            text = if (h.emergencyClosed) {
+                                stringResource(R.string.store_emergency_closed)
+                            } else {
+                                statusText(h)
+                            },
+                            color = if (h.emergencyClosed) Rahal.colors.danger else Rahal.colors.inkMuted,
+                            fontWeight = if (h.emergencyClosed) FontWeight.Bold else FontWeight.Normal,
                             style = MaterialTheme.typography.labelMedium,
                         )
                     }

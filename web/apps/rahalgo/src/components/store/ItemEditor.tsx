@@ -129,18 +129,69 @@ function fallbackPresets(): PresetDef[] {
   ];
 }
 const sameName = (a: string, b: string) => a.trim() === b.trim();
-function presetGroup(p: PresetDef): DraftGroup {
-  return {
+/**
+ * **ليرةٌ ⇒ دولارٌ نصّاً لخيار** — مرآةُ `forItemCurrency` في `ItemDraft.kt`
+ * (تدقيقُ ٢٠٢٦-١٠-٢٨). **وبلا سعر صرفٍ يبقى فارغاً و`lost`** — لا صفرَ بصمت.
+ */
+function sypToUsdText(
+  delta: number,
+  rate: number | null,
+): { text: string; lost: boolean } {
+  if (delta === 0) return { text: "", lost: false };
+  if (rate != null && rate > 0) return { text: usdText(delta / rate), lost: false };
+  return { text: "", lost: true };
+}
+function presetGroup(
+  p: PresetDef,
+  usd: boolean,
+  rate: number | null,
+): { group: DraftGroup; lost: boolean } {
+  let lost = false;
+  const group: DraftGroup = {
     name: p.name,
     min_select: p.min_select,
     max_select: p.max_select,
-    options: p.options.map((o) => ({
-      name: o.name,
-      price_delta: o.price_delta,
-      usd: "",
-      available: true,
-    })),
+    options: p.options.map((o) => {
+      const c = usd ? sypToUsdText(o.price_delta, rate) : { text: "", lost: false };
+      if (c.lost) lost = true;
+      return {
+        name: o.name,
+        price_delta: o.price_delta,
+        usd: c.text,
+        available: true,
+      };
+    }),
   };
+  return { group, lost };
+}
+
+/**
+ * **تبديلُ عملة الصنف يحوّل فروقَ خياراته** — مرآةُ `withCurrency` في `ItemDraft.kt`
+ * (تدقيقُ ٢٠٢٦-١٠-٢٨). كانت تصير صفراً بصمت.
+ */
+function convertGroups(
+  groups: DraftGroup[],
+  to: "SYP" | "USD",
+  rate: number | null,
+): { groups: DraftGroup[]; lost: boolean } {
+  let lost = false;
+  const out = groups.map((g) => ({
+    ...g,
+    options: g.options.map((o) => {
+      if (to === "USD") {
+        const c = sypToUsdText(o.price_delta, rate);
+        if (c.lost) lost = true;
+        return { ...o, usd: c.text };
+      }
+      const u = parseUsd(o.usd);
+      if (u == null || u === 0) return { ...o, price_delta: 0 };
+      if (rate != null && rate > 0) return { ...o, price_delta: usdToSyp(u, rate) };
+      // **وفرقُه بالليرة من المحرّك يبقى** إن وُجد — وإلّا يُقال.
+      if (o.price_delta <= 0) lost = true;
+      return o;
+    }),
+  }));
+  return { groups: out, lost };
 }
 
 function toDraft(groups: ModifierGroup[] | undefined): DraftGroup[] {
@@ -178,9 +229,12 @@ export default function ItemEditor({
   const [currency, setCurrency] = useState<"SYP" | "USD">(
     item?.price_currency === "USD" ? "USD" : "SYP",
   );
+  // **والصفرُ يُعرض صفراً** (قرارُ المالك ٢٠٢٦-١٠-٢٨: «مسموح للكل»).
   const [price, setPrice] = useState(
-    item && item.price > 0 ? String(item.price) : "",
+    item && item.price >= 0 ? String(item.price) : "",
   );
+  /** **فرقُ خيارٍ لم يُحوَّل لغياب سعر الصرف** — يُقال ولا يُصفَّر بصمت. */
+  const [rateLost, setRateLost] = useState(false);
   const [priceUsd, setPriceUsd] = useState(
     usdText(item?.merchant_price_usd ?? null),
   );
@@ -258,16 +312,27 @@ export default function ItemEditor({
     if (!store) return;
     if (!name.trim()) return setError(I.vName);
     if (nameOver) return;
-    const syp = usd ? null : Number(price.trim());
+    // **والصفرُ مسموح** (قرارُ المالك ٢٠٢٦-١٠-٢٨) — والفارغُ لا.
+    const syp = usd || price.trim() === "" ? null : Number(price.trim());
     if (
-      (usd && (usdValue == null || usdValue <= 0)) ||
-      (!usd && !(syp != null && Number.isInteger(syp) && syp > 0))
+      (usd && usdValue == null) ||
+      (!usd && !(syp != null && Number.isInteger(syp) && syp >= 0))
     ) {
       return setError(I.vPrice);
     }
     if (!section) return setError(I.vSection);
     if (groups.some((g) => !g.name.trim())) return setError(I.vGroupName);
-    const modifiers = groups.map((g) => ({
+    // **والخيارُ بلا اسمٍ يُسقط** — مرآةُ `modifiersForSave` (تدقيقُ ٢٠٢٦-١٠-٢٨).
+    const named = groups.map((g) => ({
+      ...g,
+      options: g.options.filter((o) => o.name.trim() !== ""),
+    }));
+    // **وإلزاميّةٌ بلا خيارٍ متوفّر** — الزبونُ ما بيقدر يطلب الصنف أصلاً.
+    const stuck = named.find(
+      (g) => g.min_select > 0 && !g.options.some((o) => o.available),
+    );
+    if (stuck) return setError(fill(I.vRequiredEmpty, { name: stuck.name.trim() }));
+    const modifiers = named.map((g) => ({
       ...(g.id ? { id: g.id } : {}),
       name: g.name.trim(),
       min_select: g.min_select,
@@ -403,7 +468,14 @@ export default function ItemEditor({
               role="radio"
               aria-checked={currency === code}
               disabled={busy}
-              onClick={() => setCurrency(code)}
+              onClick={() => {
+                if (code === currency) return;
+                // **وفروقُ الخيارات تُحوَّل معه** — مرآةُ `withCurrency`.
+                const c = convertGroups(groups, code, rate);
+                if (c.lost) setRateLost(true);
+                setGroups(c.groups);
+                setCurrency(code);
+              }}
               className={`px-5 py-2 text-sm font-bold transition-colors ${
                 currency === code
                   ? "bg-accent text-on-bright"
@@ -487,13 +559,15 @@ export default function ItemEditor({
               key={p.key}
               id={`preset-${p.key}`}
               checked={groups.some((g) => sameName(g.name, p.name))}
-              onChange={(e) =>
-                edit((gs) =>
-                  e.target.checked
-                    ? [...gs, presetGroup(p)]
-                    : gs.filter((g) => !sameName(g.name, p.name)),
-                )
-              }
+              onChange={(e) => {
+                if (e.target.checked) {
+                  const r = presetGroup(p, usd, rate);
+                  if (r.lost) setRateLost(true);
+                  edit((gs) => [...gs, r.group]);
+                } else {
+                  edit((gs) => gs.filter((g) => !sameName(g.name, p.name)));
+                }
+              }}
               label={p.name}
             />
           ))}
@@ -658,6 +732,7 @@ export default function ItemEditor({
             </Button>
           </div>
         ))}
+        {rateLost && <p className="text-xs text-danger">{I.usdNoRate}</p>}
       </section>
 
       {error && <Alert>{error}</Alert>}

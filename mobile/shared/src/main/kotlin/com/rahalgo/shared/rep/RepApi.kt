@@ -345,6 +345,8 @@ data class RepMe(
     @SerialName("item_name_max") val itemNameMax: Int = 30,
     /** **ما ينتظر موافقةَ الإدارة** — ومنه يعرف أنّ عملَه لم يضع. */
     @SerialName("pending_leads") val pendingLeads: Int = 0,
+    /** **طلباتٌ ردّتها الإدارةُ تسأل عن معلومة** — عليه هو لا عليها (٢٠٢٦-١٠-٢٨). */
+    @SerialName("needs_info_leads") val needsInfoLeads: Int = 0,
     @SerialName("whatsapp_verified") val whatsappVerified: Boolean = false,
 )
 

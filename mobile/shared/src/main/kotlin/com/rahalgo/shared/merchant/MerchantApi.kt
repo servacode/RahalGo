@@ -368,6 +368,28 @@ class MerchantApi(private val api: ApiClient) {
 
     // **والقائمةُ والساعاتُ مصفوفتان خامّتان** — لا مغلَّفَ لهما،
     // **قِيس من `merchant_handlers.go` و`merchant_ops_handlers.go`.**
+
+    // ══════════════════════════════════════════════════════════════════
+    // **رقمُ الطلبات حسب الدوام وموظّفو المتجر** (قرارُ المالك ٢٠٢٦-١٠-٢٠)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // كما تناديها لوحةُ المتجر بالويب (`StoreStaffAdmin.tsx`). **والموظّفُ لا يدير
+    // الموظّفين** — المحرّكُ يردّه `staff_not_allowed` (`notStaff`). والأنواعُ في `Staff.kt`.
+
+    suspend fun orderPhones(storeId: String): OrderPhones =
+        api.call("/api/v1/merchant/stores/$storeId/order-phones")
+
+    suspend fun setOrderPhones(storeId: String, phones: OrderPhones): OrderPhones =
+        api.call("/api/v1/merchant/stores/$storeId/order-phones", HttpMethod.Put, phones)
+
+    suspend fun staff(): List<StaffMember> =
+        api.call<StaffPage>("/api/v1/merchant/staff").staff
+
+    suspend fun addStaff(phone: String, name: String): StaffAdded =
+        api.call("/api/v1/merchant/staff", HttpMethod.Post, StaffInput(phone, name))
+
+    suspend fun removeStaff(staffId: String): StaffRemoved =
+        api.call("/api/v1/merchant/staff/$staffId", HttpMethod.Delete, Unit)
 }
 
 // ══════════════════════════════════════════════════════════════════════

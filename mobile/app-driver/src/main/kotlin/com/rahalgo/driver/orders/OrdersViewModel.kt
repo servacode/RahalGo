@@ -2199,7 +2199,10 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     fun sendMessage(body: String) {
         val id = currentId() ?: return
         if (body.isBlank()) return
-        chat = chat?.copy(error = "", unsent = "")
+        // **ومشغولٌ حتّى يردّ الخادم** — وإلّا فضغطتان سريعتان على رسالةٍ
+        // جاهزةٍ تُرسلانها مرّتين: حارسُ الشاشة (`busy`) لم يكن يُرفع.
+        if (chat?.busy == true) return
+        chat = chat?.copy(busy = true, error = "", unsent = "")
         viewModelScope.launch {
             try {
                 backend.chat.send(id, body)

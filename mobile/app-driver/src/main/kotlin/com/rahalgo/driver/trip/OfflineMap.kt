@@ -108,7 +108,19 @@ object OfflineMap {
         private set
 
     var status by mutableStateOf(
-        Status(FALLBACK_REGION, "الرقّة", null, State.NOT_INSTALLED, 0, 0),
+        // **والاسمُ من ملفّ النصوص لا من الشيفرة** — وإن لم يُجهَّز اللبُّ
+        // بعدُ بقي فارغاً حتّى يُقرأ الفهرس، لا أن يسقط التطبيق.
+        Status(
+            FALLBACK_REGION,
+            runCatching {
+                com.rahalgo.ui.AppCore.get().app
+                    .getString(com.rahalgo.driver.R.string.offline_map_fallback_region)
+            }.getOrDefault(""),
+            null,
+            State.NOT_INSTALLED,
+            0,
+            0,
+        ),
     )
         private set
 

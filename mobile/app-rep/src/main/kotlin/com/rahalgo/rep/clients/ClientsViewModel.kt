@@ -217,6 +217,13 @@ class ClientsViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 merchants = api.merchants()
+                // **ومن صارت قائمتُه خمسةً أو أقلّ يُصفَّر بحثُه وفلترُه** (٢٠٢٦-١٠-٢٨) —
+                // **فالحقلُ والفلترُ يختفيان تحت ستّة** (`ClientsScreen`) ويبقيان يحجبان
+                // عملاءَ لا يرى سببَ غيابهم ولا ما يمحوه.
+                if ((merchants?.size ?: 0) <= 5) {
+                    query = ""
+                    filter = ClientFilter.All
+                }
                 error = ""
             } catch (e: Exception) {
                 error = apiError(getApplication(), e)

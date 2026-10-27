@@ -11,7 +11,7 @@
 
     <!-- **عملائي** -->
     <!-- والمعلَّقُ وحدَه يُعدّ في عنوانه — والمرفوضُ في قسمه (٢٠٢٦-١٠-٢٧) -->
-    <string name="cl_pending">بانتظار الموافقة (%1$s)</string>
+    <string name="cl_pending">طلبات الانضمام (%1$s)</string>
     <string name="cl_rejected_title">طلبات انرفضت (%1$s)</string>
     <string name="cl_rejected_show">عرض الطلبات المرفوضة</string>
     <string name="cl_rejected_hide">إخفاء الطلبات المرفوضة</string>
@@ -20,7 +20,7 @@
     <string name="cl_waiting">بانتظار موافقة الإدارة</string>
     <string name="cl_rejected">مرفوض</string>
     <!-- بحثٌ وفلترةٌ بقائمة العملاء -->
-    <string name="cl_search">دوّر بالاسم أو الرقم أو الصنف</string>
+    <string name="cl_search">دوّر بالاسم أو الرقم أو التصنيف</string>
     <string name="cl_f_missing">ناقصه شروط</string>
     <string name="cl_f_no_items">بلا أصناف</string>
     <string name="cl_no_match">ما في عميل بهالبحث</string>
@@ -221,6 +221,8 @@
          «هذا الشهر» أصلاً** — فتكرارُه في كلّ مربّعٍ حشو. -->
     <string name="bd_month_commissions">عمولات الشهر</string>
     <string name="bd_pending">بانتظار موافقة الإدارة</string>
+    <!-- طلبات ردّتها الإدارة تسأل عن معلومة — تفتح «عملائي» (٢٠٢٦-١٠-٢٨) -->
+    <string name="bd_needs_info">طلبات بحاجة معلومات منك</string>
     <string name="bd_all_time">منذ بدأت</string>
     <string name="bd_clients">عملاؤك</string>
     <string name="bd_delivered">طلبات مسلمة</string>

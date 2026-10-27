@@ -68,6 +68,10 @@ export default function OptionPresetsCard() {
   if (!store) return null;
   const suspended = store.status === "suspended";
   const presets = data?.presets ?? [];
+  // **وحفظٌ لم يُغيّر شيئاً لا يُرسَل** — كان يقلب المتجرَ من «تصنيفه» إلى «اختياره»
+  // بالقائمة نفسِها (مرآةُ `OptionPresetsState.submit`، تدقيقُ ٢٠٢٦-١٠-٢٨).
+  const unchanged =
+    presets.every((p) => p.chosen === picked.has(p.id));
 
   return (
     <section className="surface flex flex-col gap-3 rounded-card p-4" aria-label={O.title} data-testid="store-option-presets">
@@ -113,7 +117,7 @@ export default function OptionPresetsCard() {
           {error && <Alert>{error}</Alert>}
           <div className="flex flex-wrap gap-2">
             <Button
-              disabled={busy || suspended}
+              disabled={busy || suspended || unchanged}
               onClick={() => void send({ preset_ids: presets.filter((p) => picked.has(p.id)).map((p) => p.id) }, O.saved)}
             >
               {O.save}

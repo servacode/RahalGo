@@ -214,8 +214,8 @@
     <string name="deliver_confirm_due_title">هل قبضت المبلغ؟</string>
     <string name="deliver_confirm_due_body">المبلغ المطلوب من %1$s</string>
     <string name="deliver_confirm_due_yes">نعم، قبضت وسلّمت</string>
-    <string name="deliver_confirm_paid_title">تأكيد التسليم</string>
-    <string name="deliver_confirm_paid_yes">تأكيد التسليم</string>
+    <string name="deliver_confirm_paid_title">هل سلّمت الطلب للزبون؟</string>
+    <string name="deliver_confirm_paid_yes">نعم، سلّمت</string>
     <string name="deliver_code_ask">اطلب من الزبون كود الاستلام</string>
     <string name="deliver_code_ask_store">اطلب من المتجر كود الاستلام</string>
     <string name="leg_to_store">في الطريق للمتجر</string>
@@ -425,7 +425,7 @@
     <string name="cash_k_order_collection">قبضت من زبون</string>
     <!-- **ومِمَّن قبض باسمه** — والصفةُ أعلاه تبقى لقيدٍ بلا طلب. -->
     <string name="cash_from">قبضت من %1$s</string>
-    <string name="cash_k_settlement">سلمت للمنصة</string>
+    <string name="cash_k_settlement">سلمت للمكتب</string>
     <string name="cash_k_commission_waived">انمسحت العمولة — المتجر ما خصمها</string>
     <string name="cash_k_recipient_cash_returned">رجعت النقد للمستلم — التوصيلة ما تمت</string>
 
@@ -651,6 +651,8 @@
     <string name="map_problem_caption">مشكلة</string>
     <string name="hist_counted">العدّ لآخر %1$d طلب من أصل %2$d</string>
     <string name="hist_load_older">حمّل طلبات أقدم</string>
+    <string name="hist_st_cancelled">ملغى</string>
+    <string name="offline_map_fallback_region">الرقّة</string>
     <string name="cash_load_older">حمّل حركات أقدم</string>
     <string name="cash_d_store">متجر %1$s</string>
     <string name="cash_d_fee">أجرة %1$s</string>

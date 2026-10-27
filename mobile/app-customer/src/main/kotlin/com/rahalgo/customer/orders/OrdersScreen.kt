@@ -262,11 +262,11 @@ private fun OrdersList(
                 // بانتظار القبول. (شهده المالك ٢٠٢٦-٠٨-١٥: «ما في زرّ
                 // إلغاء بالتطبيق صح؟».)
                 onCancel = if (!history && left != 0) {
-                    { cancelId = o.id }
+                    { vm.clearAction(); cancelId = o.id }
                 } else {
                     null
                 },
-                onComplain = { complainId = o.id; vm.loadReasons(o.id) },
+                onComplain = { vm.clearAction(); complainId = o.id; vm.loadReasons(o.id) },
                 // ══════════════════════════════════════════════════════
                 // **وحديثُ السائق حيث يوجد سائق**
                 // ══════════════════════════════════════════════════════
@@ -286,7 +286,7 @@ private fun OrdersList(
                 // **ولا نجومَ لطلبٍ لم يُسلَّم ولا لطلبٍ قُيّم** — نجومٌ
                 // مرّتين تُقرأ أنّ الأولى لم تصل.
                 onRate = if (o.status == "delivered" && o.id !in vm.rated) {
-                    { rateId = o.id }
+                    { vm.clearAction(); rateId = o.id }
                 } else {
                     null
                 },
@@ -303,7 +303,7 @@ private fun OrdersList(
                 } else {
                     null
                 },
-                confirming = vm.busy,
+                confirming = vm.acting,
             )
         }
         // **مزيدٌ من السجلّ — صفحةً صفحة** (`CAF-14`/`CUST-14-026`).
@@ -327,10 +327,18 @@ private fun OrdersList(
         item { Spacer(Modifier.height(32.dp)) }
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    // **والنافذةُ تُغلق بعد نجاح الفعل لا قبله** (تدقيقُ ٢٠٢٦-١٠-٢٨)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **كانت تُغلق فورَ الضغط** — فإن سقط الفعلُ أو رُدّ ضاع بصمت. **والآن تبقى
+    // مفتوحةً وزرُّها معطّلٌ حتّى يرجع الجواب، وخطؤه يُكتب فيها.**
     cancelId?.let { id ->
         ConfirmCancel(
-            onConfirm = { vm.cancel(id); cancelId = null },
-            onDismiss = { cancelId = null },
+            sending = vm.acting,
+            error = vm.actionError,
+            onConfirm = { vm.cancel(id) { cancelId = null } },
+            onDismiss = { cancelId = null; vm.clearAction() },
         )
     }
     rateId?.let { id ->
@@ -339,11 +347,12 @@ private fun OrdersList(
         val hasDriver = list.any { it.id == id && !it.driverName.isNullOrEmpty() }
         RateDialog(
             hasDriver = hasDriver,
+            sending = vm.acting,
+            error = vm.actionError,
             onConfirm = { stars, driverStars ->
-                vm.rate(id, stars, driverStars)
-                rateId = null
+                vm.rate(id, stars, driverStars) { rateId = null }
             },
-            onDismiss = { rateId = null },
+            onDismiss = { rateId = null; vm.clearAction() },
         )
     }
     complainId?.let { id ->
@@ -351,9 +360,11 @@ private fun OrdersList(
             reasons = vm.reasons,
             loading = vm.reasonsLoading,
             failed = vm.reasonsFailed,
+            sending = vm.acting,
+            error = vm.actionError,
             onRetry = { vm.loadReasons(id) },
-            onConfirm = { reason, note -> vm.complain(id, reason, note); complainId = null },
-            onDismiss = { complainId = null },
+            onConfirm = { reason, note -> vm.complain(id, reason, note) { complainId = null } },
+            onDismiss = { complainId = null; vm.clearAction() },
         )
     }
     }
@@ -375,13 +386,23 @@ private fun OrdersList(
  * طلباً دفع فيه مالاً.**
  */
 @Composable
-private fun ConfirmCancel(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+private fun ConfirmCancel(
+    sending: Boolean,
+    error: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.ord_cancel_title)) },
-        text = { Text(stringResource(R.string.ord_cancel_ask)) },
+        text = {
+            androidx.compose.foundation.layout.Column {
+                Text(stringResource(R.string.ord_cancel_ask))
+                DialogError(error)
+            }
+        },
         confirmButton = {
-            RahalTextButton(onClick = onConfirm) {
+            RahalTextButton(onClick = onConfirm, enabled = !sending) {
                 Text(stringResource(R.string.ord_cancel_yes), color = Rahal.colors.danger)
             }
         },
@@ -389,6 +410,14 @@ private fun ConfirmCancel(onConfirm: () -> Unit, onDismiss: () -> Unit) {
             RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.act_back)) }
         },
     )
+}
+
+/** **خطأُ الفعل داخل نافذته** — فلا يُخفيه ظهرُها فوق القائمة. */
+@Composable
+private fun DialogError(error: String) {
+    if (error.isEmpty()) return
+    Spacer(Modifier.height(8.dp))
+    Text(error, color = Rahal.colors.danger, style = MaterialTheme.typography.bodySmall)
 }
 
 /**
@@ -416,6 +445,8 @@ private fun ConfirmCancel(onConfirm: () -> Unit, onDismiss: () -> Unit) {
 @Composable
 internal fun RateDialog(
     hasDriver: Boolean,
+    sending: Boolean = false,
+    error: String = "",
     onConfirm: (Int, Int?) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -450,6 +481,7 @@ internal fun RateDialog(
                     )
                     StarRow(driverStars) { driverStars = it }
                 }
+                DialogError(error)
             }
         },
         confirmButton = {
@@ -457,7 +489,7 @@ internal fun RateDialog(
                 onClick = {
                     onConfirm(stars, driverStars.takeIf { hasDriver })
                 },
-                enabled = ready,
+                enabled = ready && !sending,
             ) { Text(stringResource(R.string.ord_send)) }
         },
         dismissButton = {
@@ -531,6 +563,8 @@ private fun ComplainDialog(
     reasons: List<ComplaintReason>,
     loading: Boolean,
     failed: Boolean,
+    sending: Boolean,
+    error: String,
     onRetry: () -> Unit,
     onConfirm: (String, String) -> Unit,
     onDismiss: () -> Unit,
@@ -600,12 +634,13 @@ private fun ComplainDialog(
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
+                DialogError(error)
             }
         },
         confirmButton = {
             RahalTextButton(
                 onClick = { onConfirm(pick, note.trim()) },
-                enabled = pick.isNotBlank() && !needNote,
+                enabled = pick.isNotBlank() && !needNote && !sending,
             ) { Text(stringResource(R.string.ord_send)) }
         },
         dismissButton = {

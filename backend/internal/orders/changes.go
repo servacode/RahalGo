@@ -60,6 +60,12 @@ type Change struct {
 	MenuItemID string `json:"menu_item_id,omitempty"`
 	Name       string `json:"name,omitempty"`
 	Qty        int    `json:"qty,omitempty"`
+	// Option **اسمُ الخيار الذي نفد** — مع `product_unavailable` وحدَه.
+	//
+	// **والنوعُ يبقى `product_unavailable`** (تدقيقُ ٢٠٢٦-١٠-٢٨): العميلُ القديمُ
+	// لا يعرف الحقلَ فيقرأ «الصنفُ غيرُ متوفّر» — **وهو قريبٌ لا خاطئ**؛ والجديدُ
+	// يقرأ «الخيار X خلص — اختار غيره».
+	Option string `json:"option,omitempty"`
 	// OldValue ما كان معروضاً عند صاحب السلّة · NewValue ما يقوله
 	// المحرّكُ الآن. **والاثنان يُعرضان معاً**: **«تبدّل من كذا إلى
 	// كذا» تُفهَم، و«تبدّل السعر» لا تُفهَم.**
@@ -106,12 +112,17 @@ func (s *Service) CartChanges(
 			})
 			continue
 		case errors.Is(err, ErrItemUnavailable):
-			out = append(out, Change{
+			c := Change{
 				Type:       ChangeItemUnavailable,
 				MenuItemID: in.MenuItemID,
 				Name:       s.itemName(ctx, q, in.MenuItemID),
 				Qty:        in.Qty,
-			})
+			}
+			var optErr *OptionUnavailableError
+			if errors.As(err, &optErr) {
+				c.Option = optErr.Option
+			}
+			out = append(out, c)
 			continue
 		case errors.Is(err, ErrBadQty):
 			out = append(out, Change{
@@ -178,6 +189,18 @@ func PromoChange(exp Expected, discount int64) []Change {
 		NewValue: discount,
 	}}
 }
+
+// OptionUnavailableError **خيارٌ واحدٌ نفد والصنفُ قائم.**
+//
+// **ويلفّ `ErrItemUnavailable`** — فالردُّ على الطلب وكلُّ `errors.Is` كما كانا،
+// **ولا يقرأ اسمَ الخيار إلّا من سأل عنه** (`CartChanges`).
+type OptionUnavailableError struct {
+	Option string
+}
+
+func (e *OptionUnavailableError) Error() string { return ErrItemUnavailable.Error() }
+
+func (e *OptionUnavailableError) Unwrap() error { return ErrItemUnavailable }
 
 // itemName **اسمُ الصنف ليُعلَّم سطرُه** — وفارغٌ لما لم يعد موجوداً.
 func (s *Service) itemName(ctx context.Context, q dbtx.Querier, id string) string {

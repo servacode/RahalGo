@@ -144,7 +144,7 @@ fun ClientDetail(
             )
             head.ownerPhone?.takeIf { it.isNotEmpty() }?.let {
                 Spacer(Modifier.height(8.dp))
-                KeyValue(stringResource(R.string.cd_owner_phone), it)
+                KeyValue(stringResource(R.string.cd_owner_phone), ltrPhone(it))
                 // **والرقمُ يُضغط** (٢٠٢٦-١٠-٢٧) — اتّصالٌ أو واتساب، **وكان نصّاً
                 // يُنسخ باليد.**
                 Spacer(Modifier.height(6.dp))

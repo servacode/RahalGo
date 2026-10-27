@@ -1428,8 +1428,9 @@ internal fun TopNotice(text: String, ground: Color) {
 /**
  * **ما يُكتب فوق أرضٍ ملوّنة** — غامقٌ على الفاتح، وأبيضُ على الغامق.
  */
+@Composable
 internal fun onGround(ground: Color): Color =
-    if (ground.luminance() > 0.3f) Color(0xFF04222F) else Color.White
+    if (ground.luminance() > 0.3f) Rahal.colors.onLight else Rahal.colors.onPanel
 
 /**
  * **حبّةُ فعلٍ فوق الخريطة** — بارتفاعٍ يُضغط وهو يقود (٤٤dp على الأقلّ).

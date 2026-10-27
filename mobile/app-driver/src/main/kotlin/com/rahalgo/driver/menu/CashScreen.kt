@@ -224,12 +224,21 @@ private fun CashRow(e: CashEntry) {
         Text(label.ifEmpty { e.note }, style = MaterialTheme.typography.bodyMedium)
         // **وتفصيلُ التحصيل** (يرسله الخادمُ منذ ٢٠٢٦-١٠-٢٦) — كم منها أجرةٌ وكم عمولة،
         // ومن أيّ متجر، **وأكان التوصيلُ مجانيّاً للزبون.**
+        //
+        // **والتفصيلُ لسطر التحصيل وحدَه** — الخادمُ يُلحق بيانات الطلب بسطرَي
+        // «انمسحت العمولة» و«رجعت النقد» أيضاً، **وأجرةٌ وعمولةٌ تحتهما تُقرأ
+        // قبضاً ثانياً.** فهناك اسمُ المتجر فقط.
+        //
+        // **وأجرةٌ صفرٌ لا تُكتب** — توصيلٌ مجانيٌّ تقوله كلمتُه لا «أجرة ٠».
+        val collection = e.kind == "order_collection"
         val parts = buildList {
             if (e.merchantName.isNotBlank()) add(stringResource(R.string.cash_d_store, e.merchantName))
-            e.feePart?.let { add(stringResource(R.string.cash_d_fee, money(it))) }
-            e.commissionPart?.takeIf { it > 0 }?.let { add(stringResource(R.string.cash_d_commission, money(it))) }
-            if ((e.commissionWaived ?: 0) > 0) add(stringResource(R.string.cash_d_commission_waived, money(e.commissionWaived ?: 0)))
-            if ((e.freeWaived ?: 0) > 0) add(stringResource(R.string.cash_d_free))
+            if (collection) {
+                e.feePart?.takeIf { it > 0 }?.let { add(stringResource(R.string.cash_d_fee, money(it))) }
+                e.commissionPart?.takeIf { it > 0 }?.let { add(stringResource(R.string.cash_d_commission, money(it))) }
+                if ((e.commissionWaived ?: 0) > 0) add(stringResource(R.string.cash_d_commission_waived, money(e.commissionWaived ?: 0)))
+                if ((e.freeWaived ?: 0) > 0) add(stringResource(R.string.cash_d_free))
+            }
         }
         if (parts.isNotEmpty()) {
             Text(parts.joinToString(" · "), color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)

@@ -1,5 +1,8 @@
 package com.rahalgo.ui.menu
 
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.ui.semantics.Role
+import com.rahalgo.ui.money
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -82,25 +85,67 @@ class OptionPresetsState(
     var busy by mutableStateOf(false)
         private set
 
+    /**
+     * **أقُرئت القائمةُ؟** (تدقيقُ ٢٠٢٦-١٠-٢٨) — كان «احفظ» يُضغط قبل أن تصل،
+     * **فإن فشلت القراءةُ أُرسلت قائمةٌ فارغةٌ تمحو اختيارَ المتجر.**
+     */
+    var loaded by mutableStateOf(false)
+        private set
+    var loading by mutableStateOf(false)
+        private set
+
+    /** **ما وصل من المحرّك** — فحفظٌ لم يُغيّر شيئاً لا يُرسَل. */
+    private var savedPicked: Set<String> = emptySet()
+
+    /**
+     * **رقمُ الجيل** — يزيد مع كلّ `reset()`، **فردٌّ متأخّرٌ لعميلٍ سابقٍ يُرمى**
+     * ولا يكتب خياراتِه فوق خيارات العميل الجديد.
+     */
+    private var gen = 0
+
     private fun fill(b: OptionPresetsBody) {
         all = b.presets
         chosen = b.presets.filter { it.chosen }
         custom = b.custom
         picked = chosen.orEmpty().map { it.id }.toSet()
+        savedPicked = picked
+        loaded = true
     }
 
     /** **يُقرأ مع القائمة** — فيجد المحرّرُ الخياراتِ حين يُفتح. */
     fun refresh() {
-        scope.launch { runCatching { load() }.onSuccess { fill(it) } }
+        val g = gen
+        scope.launch { runCatching { load() }.onSuccess { if (g == gen) fill(it) } }
+    }
+
+    /**
+     * **يمحو ما قُرئ** — عند تبديل المتجر (المندوبُ بين عملائه)، **فلا تطلع
+     * خياراتُ العميل السابق في محرّر العميل الجديد.**
+     */
+    fun reset() {
+        gen++
+        all = emptyList()
+        chosen = null
+        custom = false
+        picked = emptySet()
+        savedPicked = emptySet()
+        loaded = false
+        loading = false
+        error = ""
+        open = false
+        busy = false
     }
 
     fun show() {
         error = ""
         open = true
+        loading = true
+        val g = gen
         scope.launch {
             runCatching { load() }
-                .onSuccess { fill(it) }
-                .onFailure { error = errText(it) }
+                .onSuccess { if (g == gen) fill(it) }
+                .onFailure { if (g == gen) error = errText(it) }
+            if (g == gen) loading = false
         }
     }
 
@@ -112,23 +157,43 @@ class OptionPresetsState(
         picked = if (id in picked) picked - id else picked + id
     }
 
+    /** **يُحفظ؟** — بعد القراءة وحدَها، **وبقائمةٍ فيها شيءٌ يُختار.** */
+    val canSave: Boolean get() = loaded && !loading && !busy && all.isNotEmpty()
+
     private fun send(body: SetOptionPresets) {
         busy = true
+        val g = gen
         scope.launch {
             runCatching { save(body) }
                 .onSuccess {
+                    if (g != gen) return@onSuccess
                     fill(it)
                     open = false
                     Flash.ok(AppCore.get().app.getString(R.string.presets_saved))
                 }
-                .onFailure { error = errText(it) }
-            busy = false
+                .onFailure { if (g == gen) error = errText(it) }
+            if (g == gen) busy = false
         }
     }
 
-    fun submit() = send(SetOptionPresets(presetIds = all.map { it.id }.filter { it in picked }))
+    /**
+     * **ولا يُرسَل ما لم يتغيّر** — كان حفظٌ بلا تبديلٍ يقلب المتجرَ من «خياراتِ
+     * تصنيفه» إلى «اختياره» بالقائمة نفسِها، **فلا يتبع تصنيفَه بعدها.**
+     */
+    fun submit() {
+        if (!canSave) return
+        if (picked == savedPicked) {
+            open = false
+            return
+        }
+        send(SetOptionPresets(presetIds = all.map { it.id }.filter { it in picked }))
+    }
 
-    fun reset() = send(SetOptionPresets(reset = true))
+    /** **يعيده إلى خيارات تصنيفه.** */
+    fun resetToCategory() {
+        if (!loaded || busy) return
+        send(SetOptionPresets(reset = true))
+    }
 }
 
 /** **تغييرُ الأسعار دفعةً واحدة** — معاينةٌ أوّلاً ثمّ تأكيد. */
@@ -165,8 +230,16 @@ class BulkPriceState(
         open = false
     }
 
+    /**
+     * **رقمُ الطلب** (تدقيقُ ٢٠٢٦-١٠-٢٨) — معاينةٌ قديمةٌ تصل بعد تبديل النسبة
+     * **كانت تُعرض ثمّ يُؤكَّد بالنسبة الجديدة.** فكلُّ تبديلٍ يزيده، وما وصل
+     * برقمٍ قديمٍ يُرمى.
+     */
+    private var seq = 0
+
     /** **أيُّ تبديلٍ يُسقط المعاينة** — فلا يُؤكَّد ما لم يُرَ. */
     fun changed() {
+        seq++
         preview = null
         error = ""
     }
@@ -185,24 +258,27 @@ class BulkPriceState(
     }
 
     fun look() {
+        if (busy) return
         val body = input(false) ?: return
+        val mine = seq
         busy = true
         scope.launch {
             runCatching { run(body) }
-                .onSuccess { preview = it }
-                .onFailure { error = errText(it) }
+                .onSuccess { if (mine == seq) preview = it }
+                .onFailure { if (mine == seq) error = errText(it) }
             busy = false
         }
     }
 
     fun apply() {
+        if (busy || preview == null) return
         val body = input(true) ?: return
         busy = true
         scope.launch {
             runCatching { run(body) }
                 .onSuccess {
                     open = false
-                    Flash.ok(AppCore.get().app.getString(R.string.bulk_done, it.count))
+                    Flash.ok(AppCore.get().app.getString(R.string.bulk_done, it.count.toString()))
                     onApplied()
                 }
                 .onFailure { error = errText(it) }
@@ -235,6 +311,9 @@ fun OptionPresetsEditor(state: OptionPresetsState) {
             style = MaterialTheme.typography.bodySmall,
         )
         Spacer(Modifier.height(8.dp))
+        if (state.loading && !state.loaded) {
+            Text(stringResource(R.string.presets_loading), color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
+        }
         state.all.forEach { p ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(checked = p.id in state.picked, onCheckedChange = { state.toggle(p.id) })
@@ -255,12 +334,12 @@ fun OptionPresetsEditor(state: OptionPresetsState) {
         }
         Spacer(Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            RahalButton(onClick = { state.submit() }, enabled = !state.busy) { Text(stringResource(R.string.act_save)) }
+            RahalButton(onClick = { state.submit() }, enabled = state.canSave) { Text(stringResource(R.string.act_save)) }
             RahalTextButton(onClick = { state.close() }) { Text(stringResource(R.string.act_cancel)) }
         }
-        if (state.custom) {
+        if (state.custom && state.loaded) {
             Spacer(Modifier.height(8.dp))
-            RahalTextButton(onClick = { state.reset() }, enabled = !state.busy) {
+            RahalTextButton(onClick = { state.resetToCategory() }, enabled = !state.busy) {
                 Text(stringResource(R.string.presets_reset))
             }
         }
@@ -272,31 +351,29 @@ fun OptionPresetsEditor(state: OptionPresetsState) {
 fun BulkPriceEditor(state: BulkPriceState, sections: List<PlatformSectionRef>) {
     Screen {
         ScreenTitle(stringResource(R.string.bulk_title), stringResource(R.string.bulk_hint))
+        // **والمدخلاتُ تُقفل والطلبُ ماشٍ** — فلا تتبدّل النسبةُ تحت معاينةٍ لم تصل.
+        val free = !state.busy
         Row(verticalAlignment = Alignment.CenterVertically) {
-            RadioButton(selected = state.up, onClick = { state.up = true; state.changed() })
-            Text(stringResource(R.string.bulk_up))
-            Spacer(Modifier.width(16.dp))
-            RadioButton(selected = !state.up, onClick = { state.up = false; state.changed() })
-            Text(stringResource(R.string.bulk_down))
+            RadioRow(state.up, free, stringResource(R.string.bulk_up), Modifier.weight(1f)) { state.up = true; state.changed() }
+            RadioRow(!state.up, free, stringResource(R.string.bulk_down), Modifier.weight(1f)) { state.up = false; state.changed() }
         }
         OutlinedTextField(
             value = state.percent,
-            onValueChange = { v -> state.percent = v.filter { it.isDigit() }.take(3); state.changed() },
+            onValueChange = { v -> state.percent = v.filter { it in '0'..'9' }.take(3); state.changed() },
             label = { Text(stringResource(R.string.bulk_percent)) },
             singleLine = true,
+            enabled = free,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(10.dp))
         Text(stringResource(R.string.bulk_scope), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            RadioButton(selected = state.sectionId.isEmpty(), onClick = { state.sectionId = ""; state.changed() })
-            Text(stringResource(R.string.bulk_all))
+        RadioRow(state.sectionId.isEmpty(), free, stringResource(R.string.bulk_all), Modifier.fillMaxWidth()) {
+            state.sectionId = ""; state.changed()
         }
         sections.forEach { s ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                RadioButton(selected = state.sectionId == s.id, onClick = { state.sectionId = s.id; state.changed() })
-                Text(s.name)
+            RadioRow(state.sectionId == s.id, free, s.name, Modifier.fillMaxWidth()) {
+                state.sectionId = s.id; state.changed()
             }
         }
         state.preview?.let { pv ->
@@ -306,10 +383,10 @@ fun BulkPriceEditor(state: BulkPriceState, sections: List<PlatformSectionRef>) {
                     if (pv.count == 0) {
                         Text(stringResource(R.string.bulk_none))
                     } else {
-                        Text(stringResource(R.string.bulk_preview_count, pv.count), fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.bulk_preview_count, pv.count.toString()), fontWeight = FontWeight.Bold)
                         pv.samples.forEach { sm ->
                             Text(
-                                stringResource(R.string.bulk_sample, sm.name, sm.oldPrice, sm.newPrice),
+                                stringResource(R.string.bulk_sample, sm.name, money(sm.oldPrice), money(sm.newPrice)),
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         }
@@ -332,5 +409,18 @@ fun BulkPriceEditor(state: BulkPriceState, sections: List<PlatformSectionRef>) {
             RahalTextButton(onClick = { state.close() }) { Text(stringResource(R.string.act_cancel)) }
         }
         Spacer(Modifier.height(24.dp))
+    }
+}
+
+/** **سطرُ اختيارٍ يُضغط كلُّه** — لا الدائرةُ الصغيرةُ وحدَها. */
+@Composable
+private fun RadioRow(selected: Boolean, enabled: Boolean, label: String, modifier: Modifier, onPick: () -> Unit) {
+    Row(
+        modifier.selectable(selected = selected, enabled = enabled, role = Role.RadioButton, onClick = onPick),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = null, enabled = enabled)
+        Spacer(Modifier.width(4.dp))
+        Text(label)
     }
 }

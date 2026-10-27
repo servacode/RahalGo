@@ -98,6 +98,9 @@ type storeHeader struct {
 	LogoThumbURL *string    `json:"logo_thumb_url"`
 	OpenNow      bool       `json:"open_now"`
 	OpensAt      *time.Time `json:"opens_at"`
+	// EmergencyClosed **إغلاقٌ طارئٌ بيد المتجر أو الإدارة** — فتقول الصفحةُ «مسكّر — إغلاق طارئ»
+	// بدل دوامٍ يُظنّ معه مفتوحاً (قرارُ المالك ٢٠٢٦-١٠-٢٨).
+	EmergencyClosed bool `json:"emergency_closed"`
 	// PrepMinutes **مدّةُ تحضيره المعتادة** — «يجهز خلال ٢٠ دقيقة».
 	PrepMinutes int `json:"prep_minutes"` // Today **دوامُ اليوم** (ملاحظةُ المالك ٢٠٢٦-١٠-١٨: «تحط ساعات الدوام… كل يوم بيومو»)
 	// — يُعرض بدل «مفتوح هلّق»: «مفتوح ٢٤ ساعة» أو «من … لـ …» أو «مغلق اليوم».
@@ -156,12 +159,12 @@ func (s *Server) handlePublicStore(w http.ResponseWriter, r *http.Request) {
 	err := s.pg.QueryRow(r.Context(), `
 		SELECT m.id, m.name, lm.path, lm.thumb_path,
 		       `+orders.OpenNowSQL+`, `+orders.NextOpenSQL+`,
-		       m.default_prep_minutes
+		       m.default_prep_minutes, m.emergency_closed
 		FROM merchants m
 		LEFT JOIN media lm ON lm.id = m.logo_media_id
 		WHERE m.id = $1::uuid AND m.status = 'active'`+where,
 		append([]any{id}, geo...)...).
-		Scan(&h.ID, &h.Name, &h.LogoURL, &h.LogoThumbURL, &h.OpenNow, &h.OpensAt, &h.PrepMinutes)
+		Scan(&h.ID, &h.Name, &h.LogoURL, &h.LogoThumbURL, &h.OpenNow, &h.OpensAt, &h.PrepMinutes, &h.EmergencyClosed)
 	if err != nil {
 		// **ولا صفّ ⇒ ٤٠٤** — ولا يُفرَّق بين «لا وجود» و«موقوف»: **الفرقُ
 		// يقول لزائرٍ أنّ المعرّفَ لمتجرٍ حقيقيّ.**

@@ -328,14 +328,14 @@ internal fun SmallAction(
             CircularProgressIndicator(
                 Modifier.size(16.dp),
                 strokeWidth = 2.dp,
-                color = Color.White,
+                color = Rahal.colors.onPanel,
             )
             return@RahalButton
         }
         Icon(
             painter = painterResource(icon),
             contentDescription = null,
-            tint = Color.White,
+            tint = Rahal.colors.onPanel,
             modifier = Modifier.size(16.dp),
         )
         Spacer(Modifier.size(4.dp))

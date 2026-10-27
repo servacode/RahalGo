@@ -18,7 +18,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
-import { Alert, Badge, EmptyState, LoadingState, ReloadState, IconPrev, IconStore, SectionRail } from "@rahalgo/ui";
+import { Alert, EmptyState, LoadingState, ReloadState, IconPrev, IconStore, SectionRail } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useBrowseQuery } from "@/lib/customer/context";
 import type { Item, StorePage } from "@/lib/customer/types";
@@ -86,11 +86,13 @@ export default function StorePageView() {
             <StoreLogo name={page.store.name} logo={page.store.logo_thumb_url ?? page.store.logo_url} className="h-20 w-20" />
             <div className="min-w-0 flex-1 space-y-1">
               <h1 className="heading-page truncate">{page.store.name}</h1>
-              {/* **«مفتوح / مسكّر» حبّةً، ودوامُ اليوم سطرٌ تحتها** (مرآةُ `StoreScreen.kt` ٢٠٢٦-١٠-٢٧). */}
-              <Badge variant={page.store.open_now ? "success" : "danger"} className="font-bold">
-                {page.store.open_now ? ST.pillOpen : ST.pillClosed}
-              </Badge>
-              <p className="text-xs text-ink-muted">{todayText(page.store.today)}</p>
+              {/* **دوامُ اليوم وحدَه بلا حبّة «مفتوح / مسكّر»** (قرارُ المالك ٢٠٢٦-١٠-٢٨، مرآةُ `StoreScreen.kt`) —
+                  **والإغلاقُ الطارئُ يُقال بلفظه** فلا يُقرأ الدوامُ وعداً بأنّه مفتوح. */}
+              {page.store.emergency_closed ? (
+                <p className="text-xs font-bold text-danger">{ST.emergencyClosed}</p>
+              ) : (
+                <p className="text-xs text-ink-muted">{todayText(page.store.today)}</p>
+              )}
             </div>
           </header>
 

@@ -508,6 +508,7 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                         vm = boardVm,
                         onOpenWallet = { overlay.show(Overlay.Wallet) },
                         onOpenAccount = { tab = Tab.Account; leaveStore() },
+                        onOpenClients = { tab = Tab.Clients; leaveStore() },
                     )
 
                     // **وبعد الإرسال ينتقل إلى «عملائي»** (طلبُ المالك

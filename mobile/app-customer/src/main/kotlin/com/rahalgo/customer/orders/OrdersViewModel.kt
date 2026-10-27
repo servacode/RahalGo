@@ -155,6 +155,16 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     var busy by mutableStateOf(false)
         private set
 
+    /**
+     * **فعلٌ في الجوّ** (إلغاء · تقييم · شكوى · تأكيدُ سعر · رفضُه) — **غيرُ `busy`.**
+     *
+     * **كانت الأفعالُ تُردّ إن كان `busy`** — و`busy` يُرفع مع كلّ جلبٍ، والجلبُ يقع مع كلّ
+     * نبضةٍ حيّة؛ **فتُغلق النافذةُ ويضيع الفعلُ بصمت** (تدقيقُ ٢٠٢٦-١٠-٢٨).
+     * **فالجلبُ في الخلفيّة لا يمنع فعلاً، وفعلٌ يمنع تكرارَ نفسِه وحدَه.**
+     */
+    var acting by mutableStateOf(false)
+        private set
+
     var error by mutableStateOf("")
         private set
 
@@ -330,8 +340,8 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun rejectQuote(orderId: String) {
-        if (busy) return
-        busy = true
+        if (acting) return
+        acting = true
         actionError = ""
         viewModelScope.launch {
             try {
@@ -339,30 +349,33 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 Flash.ok(getApplication<Application>().getString(R.string.ord_quote_rejected_sent))
             } catch (e: Exception) {
                 actionError = apiError(getApplication(), e)
+                Flash.fail(actionError)
             }
-            busy = false
+            acting = false
             load()
         }
     }
 
-    fun cancel(orderId: String) {
-        if (busy) return
-        busy = true
+    /** **و`onDone` يُنادى عند النجاح وحدَه** — فتُغلق النافذةُ بعد أن يقع الفعل لا قبله. */
+    fun cancel(orderId: String, onDone: () -> Unit = {}) {
+        if (acting) return
+        acting = true
         actionError = ""
         viewModelScope.launch {
             try {
                 api.cancel(orderId)
+                onDone()
             } catch (e: Exception) {
                 actionError = apiError(getApplication(), e)
             }
-            busy = false
+            acting = false
             load()
         }
     }
 
-    fun rate(orderId: String, stars: Int, driverStars: Int?) {
-        if (busy) return
-        busy = true
+    fun rate(orderId: String, stars: Int, driverStars: Int?, onDone: () -> Unit = {}) {
+        if (acting) return
+        acting = true
         actionError = ""
         viewModelScope.launch {
             try {
@@ -370,17 +383,19 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 // **قُيّم فيُغلَق السؤالُ التلقائيّ** — والخادمُ يصير المرجعَ
                 // (`rated`)، فيختفي زرُّ «قيّم الطلب» ولا يُسأل ثانيةً.
                 askRate = null
+                onDone()
             } catch (e: Exception) {
                 // **«قيّمتَه من قبل» تُغلق النافذة** (٢٠٢٦-١٠-١٧) — كان الخطأُ يُبقيها مفتوحةً
                 // فتعود بعد كلّ «إرسال»؛ **والخادمُ يقول إنّه مقيَّم فهو مقيَّم.**
                 if (e is ApiClient.ApiException && e.body.code == "already_rated") {
                     rated = rated + orderId
                     askRate = null
+                    onDone()
                 } else {
                     actionError = apiError(getApplication(), e)
                 }
             }
-            busy = false
+            acting = false
             load()
         }
     }
@@ -414,19 +429,20 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun complain(orderId: String, reason: String, note: String) {
-        if (busy) return
-        busy = true
+    fun complain(orderId: String, reason: String, note: String, onDone: () -> Unit = {}) {
+        if (acting) return
+        acting = true
         actionError = ""
         viewModelScope.launch {
             try {
                 api.complain(orderId, reason, note)
                 // **ونجاحُها يُقال** — وإلّا ظنّ أنّها لم تصل فاشتكى ثانية.
                 Flash.ok(getApplication<Application>().getString(R.string.ord_complain_sent))
+                onDone()
             } catch (e: Exception) {
                 actionError = apiError(getApplication(), e)
             }
-            busy = false
+            acting = false
             load()
         }
     }
@@ -440,8 +456,8 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     // لا خطأٌ عامّ (`L`). **والمحرّكُ سلطان**: المحفظةُ لا تُقبَل بلا رصيدٍ
     // كافٍ، ويُحجَز فوراً. **ومفتاحُ المحاولة يحمله** فلا يُؤكَّد مرّتين.
     fun confirmQuote(order: MyOrder, method: String) {
-        if (busy) return
-        busy = true
+        if (acting) return
+        acting = true
         actionError = ""
         val slot = "confirm:" + order.id
         val key = Attempt.key(slot)
@@ -462,9 +478,10 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 } else {
                     if (com.rahalgo.ui.isDecided(e)) Attempt.clear(slot)
                     actionError = apiError(getApplication(), e)
+                    Flash.fail(actionError)
                 }
             }
-            busy = false
+            acting = false
             load()
         }
     }

@@ -775,13 +775,13 @@ private fun Chip(icon: Int, text: String) {
         Icon(
             painter = painterResource(icon),
             contentDescription = null,
-            tint = Color.White,
+            tint = Rahal.colors.onBrand,
             modifier = Modifier.size(14.dp),
         )
         Spacer(Modifier.size(5.dp))
         Text(
             text = text,
-            color = Color.White,
+            color = Rahal.colors.onBrand,
             style = MaterialTheme.typography.bodySmall,
             fontWeight = FontWeight.Bold,
         )

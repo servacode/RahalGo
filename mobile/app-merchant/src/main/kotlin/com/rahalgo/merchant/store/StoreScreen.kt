@@ -444,7 +444,8 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
                         stringResource(R.string.store_settlement_cash) to (store.settlementConfirmed && store.settlementMethod == "cash"),
                         stringResource(R.string.store_settlement_wallet) to (store.settlementConfirmed && store.settlementMethod == "wallet"),
                     ),
-                    enabled = !vm.saving,
+                    // **والموقوفُ لا يبدّل إعداداته** (تدقيقُ ٢٠٢٦-١٠-٢٨) — كانت تُضغط لتُردّ بخطأ.
+                    enabled = !vm.saving && !suspended,
                 ) { i ->
                     val m = if (i == 0) "cash" else "wallet"
                     if (!store.settlementConfirmed || store.settlementMethod != m) askMethod = m
@@ -484,7 +485,7 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
                         stringResource(R.string.yes) to (store.returnsConfirmed && store.acceptsReturns),
                         stringResource(R.string.no) to (store.returnsConfirmed && !store.acceptsReturns),
                     ),
-                    enabled = !vm.saving,
+                    enabled = !vm.saving && !suspended,
                 ) { i -> vm.setAcceptsReturns(i == 0) }
             }
 
@@ -506,7 +507,7 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
                 // سؤالَ قفزةٍ أوّلَ مرّة. **فلا يُحفظ دون عشر ليرات، وبعد ثانيتين ونصف.**
                 androidx.compose.runtime.LaunchedEffect(rateText) {
                     val v = com.rahalgo.ui.menu.parseUsd(rateText)
-                    if (v != null && v >= MIN_RATE && v != store.exchangeRate) {
+                    if (!suspended && v != null && v >= MIN_RATE && v != store.exchangeRate) {
                         kotlinx.coroutines.delay(2500)
                         vm.setExchangeRate(rateText)
                     }
@@ -518,6 +519,7 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
                     onValueChange = { v -> rateText = v.filter { c -> c.isDigit() || c == '.' || c == '٫' || c == ',' }.take(10) },
                     label = { Text(stringResource(R.string.store_rate_field)) },
                     singleLine = true,
+                    enabled = !suspended,
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
                         keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal,
                     ),
@@ -530,7 +532,7 @@ fun StoreScreen(vm: StoreViewModel, onPickPoint: () -> Unit = {}) {
                         stringResource(R.string.store_display_syp) to (store.displayCurrency != "USD"),
                         stringResource(R.string.store_display_usd) to (store.displayCurrency == "USD"),
                     ),
-                    enabled = !vm.saving,
+                    enabled = !vm.saving && !suspended,
                 ) { i ->
                     if (i == 1 && (store.exchangeRate ?: 0.0) <= 0.0) {
                         com.rahalgo.ui.Flash.fail(com.rahalgo.ui.AppCore.get().app.getString(R.string.store_display_need_rate))
@@ -1026,7 +1028,7 @@ private fun HoursRow(d: DayHours, onChange: (DayHours) -> Unit) {
  * على الأيّام السبعة معاً**، فلا يُحفظ شيء.
  */
 @Composable
-private fun TimeField(value: String, onChange: (String) -> Unit) {
+internal fun TimeField(value: String, onChange: (String) -> Unit) {
     val context = LocalContext.current
     // **والثواني تُقطع** — المحرّكُ يردّ `08:00:00`.
     val shown = value.take(5).ifBlank { "00:00" }

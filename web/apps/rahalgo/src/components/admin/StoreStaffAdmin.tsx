@@ -13,7 +13,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, errorText, fmtDateTime } from "@rahalgo/i18n";
 import { Alert, Button, Card, Confirm, Input } from "@rahalgo/ui";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { fill } from "@/lib/customer/texts";
 
 const m = getMessages(defaultLocale);
@@ -40,11 +40,17 @@ export function StoreStaffCard({ base, canManage }: { base: string; canManage: b
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
   const [removing, setRemoving] = useState<StaffRow | null>(null);
+  // **والموظّفُ لا يرى بطاقةَ الموظّفين** — المحرّكُ يردّه `staff_not_allowed` (`notStaff`)،
+  // كما يُخفي تطبيقُ المتجر البندَ من الدرج.
+  const [isStaff, setIsStaff] = useState(false);
 
   const load = useCallback(() => {
     api<{ staff: StaffRow[] }>(base)
       .then((r) => setList(r.staff ?? []))
-      .catch((e) => setError(errorText(e)));
+      .catch((e) => {
+        if (e instanceof ApiError && e.body.code === "staff_not_allowed") setIsStaff(true);
+        else setError(errorText(e));
+      });
   }, [base]);
   useEffect(load, [load]);
 
@@ -82,6 +88,7 @@ export function StoreStaffCard({ base, canManage }: { base: string; canManage: b
     }
   }
 
+  if (isStaff) return null;
   return (
     <Card title={S.title}>
       <div className="flex flex-col gap-3">

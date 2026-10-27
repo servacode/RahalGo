@@ -1195,7 +1195,7 @@ private fun SignedIn(
                     com.rahalgo.customer.orders.QuoteConfirmDialog(
                         order = o,
                         walletBalance = shell.balance,
-                        confirming = ordersVm.busy,
+                        confirming = ordersVm.acting,
                         onConfirmQuote = { method -> ordersVm.confirmQuote(o, method) },
                         onRejectQuote = { ordersVm.rejectQuote(o.id) },
                         onDismiss = { ordersVm.dismissQuote(o) },
@@ -1279,6 +1279,8 @@ private fun SignedIn(
                     ordersVm.askRate?.let { o ->
                         RateDialog(
                             hasDriver = !o.driverName.isNullOrEmpty(),
+                            sending = ordersVm.acting,
+                            error = ordersVm.actionError,
                             onConfirm = { stars, driverStars ->
                                 ordersVm.rate(o.id, stars, driverStars)
                             },

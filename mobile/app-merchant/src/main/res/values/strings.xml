@@ -152,6 +152,29 @@
     <string name="setup_missing_settlement">اختار كيف بتستلم مصاريك</string>
     <string name="setup_missing_returns">اختار إذا بتقبل ترجيع الغرض</string>
     <string name="menu_tutorial">شرح التطبيق بالفيديو</string>
+    <!-- موظفين المتجر ورقم الطلبات حسب الدوام (قرار المالك ٢٠٢٦-١٠-٢٠) — نفس نصوص لوحة المتجر بالويب -->
+    <string name="menu_staff">موظفين المتجر</string>
+    <string name="staff_hint">كل موظف بيدخل بتطبيق المتجر برقمه وكلمة سرّه، وبيشتغل على نفس المتجر متل صاحبه — بلا ما حدا يطلّع التاني. وبتوصله كلمة السر عالواتساب.</string>
+    <string name="staff_none">ما في موظفين لسا</string>
+    <string name="staff_phone">رقم الموظف</string>
+    <string name="staff_name">اسمه (مثلاً: الدوام المسائي)</string>
+    <string name="staff_add">أضف موظف</string>
+    <string name="staff_remove">احذف</string>
+    <string name="staff_remove_confirm">تحذف الموظف %1$s؟ رح يطلع فوراً من التطبيق.</string>
+    <string name="staff_last_login">آخر دخول: %1$s</string>
+    <string name="staff_never_login">ما دخل لسا</string>
+    <string name="staff_added">✓ انضاف الموظف. كلمة سرّه: %1$s</string>
+    <string name="staff_sent">وانبعتت له عالواتساب</string>
+    <string name="staff_not_sent">ما وصلت الواتساب — بلّغه كلمة السر بإيدك</string>
+    <string name="menu_order_phones">رقم الطلبات حسب الدوام</string>
+    <string name="order_phones_hint">وقت تحويل الطلب للمتجر عالواتساب، بيروح لرقم الدوام الحالي بتوقيت سوريا.</string>
+    <string name="order_phones_full">دوام كامل — رقم واحد</string>
+    <string name="order_phones_split">صباحي ومسائي — رقمين</string>
+    <string name="order_phones_morning">رقم الدوام الصباحي</string>
+    <string name="order_phones_evening">رقم الدوام المسائي</string>
+    <string name="order_phones_evening_from">المسائي بيبلّش الساعة</string>
+    <string name="order_phones_save">احفظ</string>
+    <string name="order_phones_saved">✓ انحفظ</string>
     <string name="sales_hint">مبيعاتك على مدًى تختاره</string>
     <string name="sales_week">٧ أيّام</string>
     <string name="sales_month">٣٠ يوماً</string>
@@ -246,7 +269,7 @@
          ٢٠٢٦-٠٨-٢٦: ثلاثةٌ وعشرون نصّاً يراها صاحبُ المتجر ولا
          يُصحَّح واحدُها من مكانٍ واحد. -->
     <string name="v_item_name">اكتب اسم الصنف</string>
-    <string name="v_item_price">اكتب سعر الشراء</string>
+    <string name="v_item_price">اكتب السعر</string>
     <string name="v_item_section">اختر قسم السوق — وصنف بلا قسم لا يراه زبون</string>
     <string name="v_store_name">اكتب اسم المتجر</string>
     <string name="ok_address_saved">حُفظ عنوانك</string>

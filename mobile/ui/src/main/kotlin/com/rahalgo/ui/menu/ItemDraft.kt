@@ -84,8 +84,75 @@ fun ModifierGroup.withUsdText(): ModifierGroup =
  * **وليريٌّ يمحوه** فلا يُحسب فرقُه من سعر الصرف بعد أن صار بالليرة.
  */
 fun ItemDraft.modifiersForSave(): List<ModifierGroup> = modifiers.map { g ->
-    g.copy(options = g.options.map { o ->
-        if (isUsd) o.copy(priceDeltaUsd = parseUsd(o.usdText) ?: 0.0)
-        else o.copy(priceDeltaUsd = null)
+    // **والخيارُ بلا اسمٍ يُسقط** (تدقيقُ ٢٠٢٦-١٠-٢٨) — سطرٌ فارغٌ نسيه لا يُرسَل.
+    g.copy(name = g.name.trim(), options = g.options.filter { it.name.isNotBlank() }.map { o ->
+        if (isUsd) o.copy(name = o.name.trim(), priceDeltaUsd = parseUsd(o.usdText) ?: 0.0)
+        else o.copy(name = o.name.trim(), priceDeltaUsd = null)
     })
+}
+
+/**
+ * **سببُ رفض الإضافات قبل الإرسال** — و`null` لا سبب. (تدقيقُ ٢٠٢٦-١٠-٢٨:
+ * كان المحرّكُ يردّ «validation» عامّةً لا يفهمها صاحبُ المتجر.)
+ *
+ * - مجموعةٌ بلا اسم.
+ * - مجموعةٌ إلزاميّةٌ بلا خيارٍ متوفّر — **فلا يقدر الزبونُ يطلب الصنفَ أصلاً.**
+ */
+fun ItemDraft.optionsError(): String? {
+    val app = com.rahalgo.ui.AppCore.get().app
+    val groups = modifiersForSave()
+    if (groups.any { it.name.isBlank() }) return app.getString(com.rahalgo.ui.R.string.mod_v_group_name)
+    groups.firstOrNull { g -> g.minSelect > 0 && g.options.none { it.available } }?.let {
+        return app.getString(com.rahalgo.ui.R.string.mod_v_required_empty, it.name)
+    }
+    return null
+}
+
+/**
+ * **خياراتٌ بالليرة ⇒ بعملة الصنف** — مجموعةٌ جاهزةٌ تُضاف لصنفٍ دولاريّ تُحسب
+ * بالدولار من سعر الصرف. **وبلا سعر صرفٍ يبقى الحقلُ فارغاً ويُقال** (الثاني
+ * `true`) — **ولا يُصفَّر سعرٌ بصمت.**
+ */
+fun ModifierGroup.forItemCurrency(usd: Boolean, rate: Double?): Pair<ModifierGroup, Boolean> {
+    if (!usd) return this to false
+    var lost = false
+    val opts = options.map { o ->
+        when {
+            o.priceDelta == 0L -> o.copy(usdText = "")
+            rate != null && rate > 0 -> o.copy(usdText = usdText(o.priceDelta / rate))
+            else -> { lost = true; o.copy(usdText = "") }
+        }
+    }
+    return copy(options = opts) to lost
+}
+
+/**
+ * **تبديلُ عملة الصنف يحوّل فروقَ خياراته** (تدقيقُ ٢٠٢٦-١٠-٢٨) — كانت تصير
+ * صفراً بصمت. **والثاني `true`: فرقٌ لم يُحوَّل لغياب سعر الصرف.**
+ */
+fun ItemDraft.withCurrency(to: String, rate: Double?): Pair<ItemDraft, Boolean> {
+    if (to == currency) return this to false
+    val ok = rate != null && rate > 0
+    var lost = false
+    val groups = modifiers.map { g ->
+        g.copy(options = g.options.map { o ->
+            if (to == CURRENCY_USD) {
+                when {
+                    o.priceDelta == 0L -> o.copy(usdText = "")
+                    ok -> o.copy(usdText = usdText(o.priceDelta / rate!!))
+                    else -> { lost = true; o.copy(usdText = "") }
+                }
+            } else {
+                val u = parseUsd(o.usdText)
+                when {
+                    u == null || u == 0.0 -> o.copy(priceDelta = 0L)
+                    ok -> o.copy(priceDelta = usdToSyp(u, rate!!))
+                    // **وفرقُه بالليرة من المحرّك يبقى** إن وُجد — وإلّا يُقال.
+                    o.priceDelta > 0 -> o
+                    else -> { lost = true; o }
+                }
+            }
+        })
+    }
+    return copy(currency = to, modifiers = groups) to lost
 }

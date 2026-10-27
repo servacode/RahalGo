@@ -288,6 +288,9 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
     // الطلبات وتُبرز ذاك الطلب** (`ordersVm.focus`) — والإبرازُ يبحث عنه في
     // الفروع إن لزم. **وفي وضع المنصّة لا تبويبَ للطلبات** فتُستهلَك الوجهةُ
     // بلا أثرٍ ضارّ (البابُ آمنٌ للطلب الشائخ).
+    // **أهذا الحسابُ موظّف؟** — يُسأل المحرّكُ مرّةً فيُخفى بابُ الموظّفين عنه.
+    LaunchedEffect(Unit) { com.rahalgo.merchant.store.TeamAccess.probe() }
+
     val waiting = com.rahalgo.ui.Opened.pending
     LaunchedEffect(waiting) {
         if (waiting.type == com.rahalgo.ui.Engagement.DEST_ORDER) {
@@ -401,7 +404,10 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
         drawerContent = {
             ModalDrawerSheet(Modifier.width(200.dp)) {
                 Drawer(
-                    items = MERCHANT_ITEMS + PlatformPages.items,
+                    // **والموظّفُ لا يرى بابَ الموظّفين** — المحرّكُ يردّه (`notStaff`).
+                    items = MERCHANT_ITEMS.filter {
+                        !(it.key == MerchantItems.STAFF && com.rahalgo.merchant.store.TeamAccess.isStaff)
+                    } + PlatformPages.items,
                     onPick = { item ->
                         if (item.key == MerchantItems.TUTORIAL) {
                             scope.launch { openTutorial(context) }
@@ -663,6 +669,30 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                         val salesVm: SalesViewModel = viewModel()
                         LaunchedEffect(Unit) { salesVm.load() }
                         SalesScreen(salesVm)
+                    }
+
+                    // **ورقمُ الطلبات حسب الدوام وموظّفوه** (٢٠٢٦-١٠-٢٠) — للمتجر المختار،
+                    // **والموقوفُ يقرأ ولا يعدّل** كما في الويب.
+                    over is Overlay.Menu && over.key == MerchantItems.ORDER_PHONES -> {
+                        val phonesVm: com.rahalgo.merchant.store.OrderPhonesViewModel = viewModel()
+                        val st = storeVm.store
+                        if (st == null) {
+                            com.rahalgo.ui.Screen { com.rahalgo.ui.LoadState(storeVm.store == null, "") }
+                        } else {
+                            com.rahalgo.merchant.store.OrderPhonesScreen(
+                                phonesVm,
+                                storeId = st.id,
+                                canManage = st.status != "suspended",
+                            )
+                        }
+                    }
+
+                    over is Overlay.Menu && over.key == MerchantItems.STAFF -> {
+                        val staffVm: com.rahalgo.merchant.store.StaffViewModel = viewModel()
+                        com.rahalgo.merchant.store.StaffScreen(
+                            staffVm,
+                            canManage = storeVm.store?.status != "suspended",
+                        )
                     }
 
                     over == Overlay.Wallet -> WalletScreen(vm = walletVm, payouts = true)

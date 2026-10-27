@@ -86,20 +86,19 @@ function PriceDialog({
       ? item.merchant_price_usd != null
         ? String(item.merchant_price_usd)
         : ""
-      : String(item.price || ""),
+      : String(item.price ?? ""),
   );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const toast = useShopToast();
 
+  // **والصفرُ مسموح** (قرارُ المالك ٢٠٢٦-١٠-٢٨: «مسموح للكل») — والفارغُ لا.
   const usdValue = usd ? parseUsd(text) : null;
-  const sypValue = usd ? null : Number(text.replace(/\D/g, "")) || 0;
+  const sypDigits = usd ? "" : text.replace(/\D/g, "");
+  const sypValue = usd || sypDigits === "" ? null : Number(sypDigits);
 
   async function save() {
-    if (
-      (usd && (usdValue == null || usdValue <= 0)) ||
-      (!usd && (!sypValue || sypValue <= 0))
-    ) {
+    if ((usd && usdValue == null) || (!usd && sypValue == null)) {
       setError(M.badPrice);
       return;
     }

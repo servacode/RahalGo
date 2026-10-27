@@ -67,6 +67,8 @@ export interface StoreHeader {
   open_now: boolean;
   opens_at: string | null;
   prep_minutes: number;
+  /** **إغلاقٌ طارئ** — «مسكّر — إغلاق طارئ» بدل الدوام (٢٠٢٦-١٠-٢٨). */
+  emergency_closed?: boolean;
   /** **دوامُ اليوم** — بدل «مفتوح هلّق» (٢٠٢٦-١٠-١٨). */
   today?: { closed: boolean; open_24h: boolean; open: string; close: string };
 }
@@ -141,6 +143,8 @@ export interface CartChange {
   type: string;
   menu_item_id: string;
   name: string;
+  /** **اسمُ الخيار الذي نفد** — مع `product_unavailable` وحدَه، والصنفُ قائم. */
+  option?: string;
   qty: number;
   old_value: number;
   new_value: number;

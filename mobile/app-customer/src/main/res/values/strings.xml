@@ -195,6 +195,8 @@
     <string name="options_required">مطلوب</string>
     <string name="options_add">أضف — %1$s</string>
     <string name="options_failed">تعذّر جلبُ الخيارات — تحقّق من الاتصال</string>
+    <string name="options_unavailable">غير متوفر</string>
+    <string name="options_all_out">كل خيارات %1$s غير متوفرة هلّق</string>
     <!-- صنفٌ من متجرٍ ثانٍ (٢٠٢٦-١٠-١٤) -->
     <string name="src_other_title">هالصنف من متجر تاني</string>
     <string name="src_other_text_fee">انت ضفت صنف تابع لمتجر تاني، فبيوصلك بنفس الطلب بس في مبلغ إضافي %1$s حسب مسافة المتجر التاني.</string>
@@ -324,8 +326,7 @@
     <!-- **حرفا الصبح والمسا بالدوام** — كانوا مكتوبين جوّا الكود. -->
     <string name="clock_am">ص</string>
     <string name="clock_pm">م</string>
-    <string name="store_pill_open">مفتوح</string>
-    <string name="store_pill_closed">مسكّر</string>
+    <string name="store_emergency_closed">مسكّر — إغلاق طارئ</string>
     <string name="store_closed_today">مغلق اليوم</string>
     <string name="store_today_hours">اليوم من %1$s لـ %2$s</string>
     <string name="store_browse_only">المتجر مسكّر هلّق — فيك تتصفح الأصناف بس ما فيك تطلب لحتى يفتح</string>

@@ -344,7 +344,7 @@ fun CartScreen(
         // الحاكمَ الأخير** (يرفض الناقصَ مهما فعل عميلٌ معدَّل).
         val q0 = vm.priced
         val cut0 = vm.promoResult?.takeIf { it.valid }
-        val payableTotal: Long? = q0?.let {
+        val payableTotal: Long? = q0?.takeUnless { it.blocked }?.let {
             val fee0 = cut0?.deliveryFee ?: it.deliveryFee
             if (cut0 == null) it.total else maxOf(0L, it.subtotal + fee0 - cut0.discount)
         }
@@ -405,7 +405,10 @@ fun CartScreen(
             // المحسوب.** والمحرّكُ هو الحقيقة (`priceItems`)، وتردّها التسعيرةُ في
             // `priced`. **وقبل أوّل تسعيرةٍ وحدَها يُعرض المخزَّنُ مؤقّتاً.**
             val q = vm.priced
-            KeyValue(stringResource(R.string.ord_subtotal), money(q?.subtotal ?: Cart.subtotal))
+            KeyValue(
+                stringResource(R.string.ord_subtotal),
+                if (q?.blocked == true) "—" else money(q?.subtotal ?: Cart.subtotal),
+            )
             if (q == null) {
                 // **ولا يُخمَّن التوصيل** — رقمٌ مخمَّنٌ أسوأُ من لا رقم.
                 //
@@ -417,6 +420,19 @@ fun CartScreen(
                     text = stringResource(R.string.cart_need_address),
                     color = Rahal.colors.inkMuted,
                     style = MaterialTheme.typography.bodySmall,
+                )
+            } else if (q.blocked) {
+                // **سلّةٌ موقوفةٌ لا مجموعَ لها** (تدقيقُ ٢٠٢٦-١٠-٢٨) — المحرّكُ يردّ الأرقامَ
+                // صفراً عمداً حتّى يُحسَم ما تبدّل (`QuoteResult.Blocked`)، **و«الإجمالي 0 ل.س»
+                // يُقرأ سعراً.** فلا توصيلَ ولا إجماليَّ بل «—».
+                Spacer(Modifier.height(4.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(4.dp))
+                com.rahalgo.ui.SumLine(
+                    stringResource(R.string.ord_total),
+                    "—",
+                    strong = true,
+                    color = Rahal.colors.inkMuted,
                 )
             } else {
                 // ══════════════════════════════════════════════════════
@@ -708,7 +724,8 @@ fun CartScreen(
     // **والإجماليُّ بمعادلة بطاقة الملخّص حرفاً** — رقمٌ واحدٌ في موضعين لا يفترق.
     val bq = vm.priced
     val bcut = vm.promoResult?.takeIf { it.valid }
-    val barTotal: Long? = bq?.let {
+    // **وسلّةٌ موقوفةٌ (`blocked`) لا رقمَ لها** — «—» لا «0 ل.س».
+    val barTotal: Long? = bq?.takeUnless { it.blocked }?.let {
         val bfee = bcut?.deliveryFee ?: it.deliveryFee
         if (bcut == null) it.total else maxOf(0L, it.subtotal + bfee - bcut.discount)
     }

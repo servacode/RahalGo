@@ -623,7 +623,8 @@ class AddClientViewModel(app: Application) : AndroidViewModel(app) {
         error = ""
         store = lead.storeName
         owner = lead.ownerName
-        phone = lead.phone
+        // **بالشكل المحلّيّ الذي يطلبه الحقل** — المحرّكُ يردّه «+963…» (٢٠٢٦-١٠-٢٨).
+        phone = com.rahalgo.rep.clients.localPhone(lead.phone)
         area = lead.area
         pickedCategory = lead.categoryId.orEmpty()
         val lat = lead.lat

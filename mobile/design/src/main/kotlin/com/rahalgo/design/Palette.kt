@@ -74,6 +74,13 @@ data class RahalPalette(
     val panel: Color,
     /** **فقاعةُ الطرف الآخر** في الحديث. */
     val bubble: Color,
+    /**
+     * **ما يُكتب على لوح الرحلة** وعلى أرضٍ ملوّنةٍ ثابتة (أحمرُ الخطر) —
+     * أبيضُ في السمتين، **لأنّ اللوحَ داكنٌ فيهما.**
+     */
+    val onPanel: Color,
+    /** **حبرٌ غامقٌ لأرضٍ فاتحةٍ ملوّنة** — في السمتين، كما يُكتب على الأخضر الفاتح. */
+    val onLight: Color,
     /** **أهي الغامقة** — لِما لا يُقاس بلون: أيقونةُ شريط النظام. */
     val dark: Boolean,
 )
@@ -101,6 +108,8 @@ val LightPalette = RahalPalette(
     warnTint = Color(0xFFFFF4E5),
     panel = Color(0xFF07283A),
     bubble = Color(0xFFF0F3F5),
+    onPanel = Color(0xFFFFFFFF),
+    onLight = Color(0xFF04222F),
     dark = false,
 )
 
@@ -131,6 +140,8 @@ val DarkPalette = RahalPalette(
     warnTint = Color(0xFF3A2A12),
     panel = Color(0xFF061F2D),
     bubble = Color(0xFF17394B),
+    onPanel = Color(0xFFFFFFFF),
+    onLight = Color(0xFF04222F),
     dark = true,
 )
 

@@ -470,6 +470,7 @@ private val CODES: Map<String, Int> = mapOf(
     // ── السجلّ والبلاغات ──────────────────────────────────────────────
     "complaint_already_open" to R.string.hist_already_open,
     "already_rated" to R.string.hist_already_rated,
+    "ticket_resolved" to R.string.err_ticket_resolved,
     // **ولا متجرَ في الطلب الخاصّ** — ورمزٌ يصل بلا ترجمةٍ يُعرض
     // لاتينيّاً على شاشةٍ عربيّة.
     "no_merchant" to R.string.err_no_merchant,

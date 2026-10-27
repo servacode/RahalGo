@@ -78,6 +78,8 @@ fun BoardScreen(
     onOpenWallet: () -> Unit = {},
     /** **وزرُّ «وثّق حسابك» يفتح «حسابي»** (٢٠٢٦-١٠-٢٧). */
     onOpenAccount: () -> Unit = {},
+    /** **بطاقةُ «بحاجة معلومات» تفتح «عملائي»** (٢٠٢٦-١٠-٢٨). */
+    onOpenClients: () -> Unit = {},
 ) {
     val me = vm.me
     if (me == null) {
@@ -293,6 +295,31 @@ fun BoardScreen(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Chip(me.pendingLeads.toString(), Rahal.colors.accent)
+                }
+            }
+        }
+
+        // **وما ردّته الإدارةُ تسأل عن معلومة** (٢٠٢٦-١٠-٢٨) — عليه هو لا عليها،
+        // **فبطاقةٌ برتقاليّةٌ تُضغط فتفتح «عملائي»** حيث الطلبُ وملاحظتُه. وكانت لا
+        // تُعدّ أصلاً (`pending_leads` تعدّ `new` وحدَها) فلا يعلم أنّ عليه شيئاً.
+        if (me.needsInfoLeads > 0) {
+            Spacer(Modifier.height(10.dp))
+            Card(
+                modifier = Modifier.clickable(onClick = onOpenClients),
+                tone = Rahal.colors.accent,
+            ) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        stringResource(R.string.bd_needs_info),
+                        color = Rahal.colors.accent,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Chip(me.needsInfoLeads.toString(), Rahal.colors.accent)
                 }
             }
         }

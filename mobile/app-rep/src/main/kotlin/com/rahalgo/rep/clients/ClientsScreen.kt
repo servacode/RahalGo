@@ -194,7 +194,8 @@ fun ClientsScreen(
                         FilterOption(R.string.cl_stopped, ClientFilter.Stopped, vm)
                     }
                 }
-                val shown = vm.visible(list)
+                // **وبلا حقلٍ ظاهرٍ لا بحثَ يُطبَّق** (٢٠٢٦-١٠-٢٨) — والنموذجُ يصفّرهما أيضاً.
+                val shown = if (list.size > 5) vm.visible(list) else list
                 if (shown.isEmpty()) {
                     Empty(stringResource(R.string.cl_no_match))
                 }
@@ -257,14 +258,14 @@ private fun LeadCard(lead: Lead, onEdit: () -> Unit) {
                         else -> R.string.cl_waiting
                     },
                 ),
-                if (lead.status == "rejected" || needsInfo) Rahal.colors.danger else Rahal.colors.accent,
+                if (rejected) Rahal.colors.danger else Rahal.colors.accent,
             )
         }
         if (lead.ownerName.isNotEmpty() || lead.phone.isNotEmpty()) {
             Spacer(Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = listOf(lead.ownerName, lead.phone, lead.area)
+                    text = listOf(lead.ownerName, ltrPhone(lead.phone), lead.area)
                         .filter { it.isNotEmpty() }
                         .joinToString(" · "),
                     color = Rahal.colors.inkMuted,
@@ -289,7 +290,7 @@ private fun LeadCard(lead: Lead, onEdit: () -> Unit) {
             Spacer(Modifier.height(6.dp))
             Text(
                 text = stringResource(R.string.cl_admin_note, lead.decisionNote),
-                color = Rahal.colors.danger,
+                color = if (rejected) Rahal.colors.danger else Rahal.colors.accent,
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.bodySmall,
             )
@@ -427,8 +428,9 @@ private fun MerchantCard(
                 ),
                 if (m.status == "active") Rahal.colors.success else Rahal.colors.inkMuted,
             )
-            // **أمحسوبٌ في هدفه أم ينتظر** (قرارُ المالك ٢٠٢٦-١٠-١٣) — ولا شارةَ
-            // لمتجرٍ نُقل إليه: لا يُحسب له أصلاً.
+            // **أمحسوبٌ في هدفه أم ينتظر** (قرارُ المالك ٢٠٢٦-١٠-١٣) — **والهدفُ يتبع
+            // المندوبَ الحاليّ** (قرارُ المالك ٢٠٢٦-١٠-٢٠): المتجرُ المنقولُ إليه يُحسب له،
+            // والمنقولُ عنه لا يُحسب لمن فتحه.
             when (m.goalState) {
                 "counted" -> Chip(stringResource(R.string.cl_goal_counted), Rahal.colors.success)
                 "pending" -> Chip(stringResource(R.string.cl_goal_pending), Rahal.colors.accent)

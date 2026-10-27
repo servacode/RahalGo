@@ -54,6 +54,8 @@ data class StoreHeader(
     @SerialName("open_now") val openNow: Boolean = true,
     @SerialName("opens_at") val opensAt: String? = null,
     @SerialName("prep_minutes") val prepMinutes: Int = 0,
+    /** **إغلاقٌ طارئ** — «مسكّر — إغلاق طارئ» بدل الدوام (قرارُ المالك ٢٠٢٦-١٠-٢٨). */
+    @SerialName("emergency_closed") val emergencyClosed: Boolean = false,
     /** **دوامُ اليوم** — يُعرض بدل «مفتوح هلّق» (ملاحظةُ المالك ٢٠٢٦-١٠-١٨). */
     val today: TodayHours = TodayHours(),
 )
@@ -350,6 +352,8 @@ data class CartChange(
     val type: String = "",
     @SerialName("menu_item_id") val menuItemId: String = "",
     val name: String = "",
+    /** **اسمُ الخيار الذي نفد** — مع `product_unavailable` وحدَه، والصنفُ قائم. */
+    val option: String = "",
     val qty: Int = 0,
     @SerialName("old_value") val oldValue: Long = 0,
     @SerialName("new_value") val newValue: Long = 0,

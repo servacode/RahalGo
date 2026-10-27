@@ -2,6 +2,7 @@ package com.rahalgo.merchant.menu
 
 import com.rahalgo.ui.menu.ItemDraft
 import com.rahalgo.ui.menu.modifiersForSave
+import com.rahalgo.ui.menu.optionsError
 import com.rahalgo.ui.menu.withUsdText
 import com.rahalgo.merchant.noStoreMsg
 import com.rahalgo.merchant.SelectedStore
@@ -126,18 +127,10 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
 
-    init {
-        load()
-        // ══════════════════════════════════════════════════════════════
-        // **وتسمع النبضةَ** — انظر `StoreViewModel.saveSections`.
-        //
-        // **وأقسامُ المتجر تُحرَّر في شاشةٍ أخرى** — فمن حفظها هناك
-        // يجد هذه الشاشةَ لا تعرف، **ويُقال له «اذهب إلى متجري» وهو
-        // عائدٌ منه للتوّ.**
-        viewModelScope.launch {
-            com.rahalgo.ui.Refresh.tick.collect { if (it > 0L) { if (active) load() else stale = true } }
-        }
-    }
+    // ══════════════════════════════════════════════════════════════════
+    // **وتُعلَن قبل `init`** (تدقيقُ ٢٠٢٦-١٠-٢٨) — `init { load() }` كان يسبقها،
+    // **فيُنادى `presets.refresh()` على حقلٍ لم يُبنَ بعد.**
+    // ══════════════════════════════════════════════════════════════════
 
     // **قائمةُ المشروبات** (قرارُ المالك ٢٠٢٦-١٠-١٩) — محرّرُها مشتركٌ مع المندوب (`DrinksState`).
     val drinks = com.rahalgo.ui.menu.DrinksState(
@@ -162,11 +155,34 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
         errText = { err(it) },
     )
 
+    /** **المتجرُ الذي قُرئت خياراتُه** — فلا تُقرأ مع كلّ نبضةٍ حيّة، بل أوّلَ مرّةٍ وعند تبديله. */
+    private var presetsFor: String? = null
+
+    init {
+        load()
+        // ══════════════════════════════════════════════════════════════
+        // **وتسمع النبضةَ** — انظر `StoreViewModel.saveSections`.
+        //
+        // **وأقسامُ المتجر تُحرَّر في شاشةٍ أخرى** — فمن حفظها هناك
+        // يجد هذه الشاشةَ لا تعرف، **ويُقال له «اذهب إلى متجري» وهو
+        // عائدٌ منه للتوّ.**
+        viewModelScope.launch {
+            com.rahalgo.ui.Refresh.tick.collect { if (it > 0L) { if (active) load() else stale = true } }
+        }
+    }
+
+    /** **المسوّدةُ كما فُتحت** — فيُعرف أفيها ما لم يُحفظ. */
+    private var loadedDraft: ItemDraft? = null
+
+    /** **في المحرّر تعديلٌ لم يُحفظ؟** — فلا يُنسخ الصنفُ المحفوظُ فوقه. */
+    val dirty: Boolean get() = editing != null && editing != loadedDraft
+
     /**
      * **نسخُ الصنف ثمّ فتحُ النسخة** (٢٠٢٦-١٠-٢٧) — قميصٌ بخمسة ألوان يُعمل مرّةً
      * ويُنسخ، **فيبدّل الصورةَ والاسمَ ويحفظ.**
      */
     fun duplicate(itemId: String) {
+        if (busy || dirty) return
         busy = true
         viewModelScope.launch {
             runCatching {
@@ -175,9 +191,11 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                 regroup(items)
                 items.first { it.id == newId }
             }.onSuccess { copy ->
+                // **أُغلق المحرّرُ والنسخُ ماشٍ؟** — فلا يُفتح من جديد بلا طلب.
+                if (editing == null) return@onSuccess
                 editItem(copy)
                 Flash.ok(getApplication<android.app.Application>().getString(com.rahalgo.ui.R.string.item_duplicated))
-            }.onFailure { editError = err(it) }
+            }.onFailure { if (editing != null) editError = err(it) }
             busy = false
         }
     }
@@ -254,7 +272,12 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 regroup(api.menu(storeId).flatMap { it.items })
                 error = ""
-                presets.refresh()
+                // **أوّلَ مرّةٍ وعند تبديل الفرع وحدَهما** — لا مع كلّ نبضة (تدقيقُ ٢٠٢٦-١٠-٢٨).
+                if (presetsFor != storeId) {
+                    if (presetsFor != null) presets.reset()
+                    presetsFor = storeId
+                    presets.refresh()
+                }
             }.onFailure { error = err(it) }
             loading = false
         }
@@ -347,14 +370,17 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
         editError = ""
         val ps = sections.firstOrNull { it.name == sectionName }?.id.orEmpty()
         editing = ItemDraft(platformSectionId = ps)
+        loadedDraft = editing
     }
 
     fun editItem(item: MenuItem) {
+        editError = ""
         editing = ItemDraft(
             itemId = item.id,
             name = item.name,
             description = item.description,
-            price = if (item.price > 0) item.price.toString() else "",
+            // **والصفرُ يُعرض صفراً** (قرارُ المالك ٢٠٢٦-١٠-٢٨: «مسموح للكل»).
+            price = if (item.price >= 0) item.price.toString() else "",
             platformSectionId = item.platformSectionId.orEmpty(),
             imageThumb = item.imageThumbUrl ?: item.imageUrl,
             // **وتُحمَّل مع الصنف** — ومن حرّر صنفاً بلا حملها ثمّ حفظ
@@ -365,6 +391,7 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
             currency = item.priceCurrency,
             priceUsd = com.rahalgo.ui.menu.usdText(item.merchantPriceUsd),
         )
+        loadedDraft = editing
     }
 
     fun editDraft(block: (ItemDraft) -> ItemDraft) {
@@ -375,6 +402,7 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
     fun cancelEdit() {
         editError = ""
         editing = null
+        loadedDraft = null
     }
 
     /**
@@ -430,21 +458,26 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun saveItem() {
         val d = editing ?: return
+        if (busy || suspended) return
+        // **وأسبابُ الرفض فوق زرّ الحفظ** (تدقيقُ ٢٠٢٦-١٠-٢٨) — كانت `Flash` عابرة.
+        val app = com.rahalgo.ui.AppCore.get().app
         if (d.name.isBlank()) {
-            Flash.fail(com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.v_item_name))
+            editError = app.getString(com.rahalgo.merchant.R.string.v_item_name)
             return
         }
         // **وبالدولار يُفحص الدولار** (٢٠٢٦-١٠-١٢) — والليرةُ يحسبها الخادم.
+        // **والصفرُ مسموح** (قرارُ المالك ٢٠٢٦-١٠-٢٨: «مسموح للكل») — والفارغُ لا.
         val usd = if (d.isUsd) com.rahalgo.ui.menu.parseUsd(d.priceUsd) else null
         val price = if (d.isUsd) null else d.price.trim().toLongOrNull()
-        if ((d.isUsd && (usd == null || usd <= 0.0)) || (!d.isUsd && (price == null || price <= 0))) {
-            Flash.fail(com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.v_item_price))
+        if ((d.isUsd && usd == null) || (!d.isUsd && (price == null || price < 0))) {
+            editError = app.getString(com.rahalgo.merchant.R.string.v_item_price)
             return
         }
         if (d.platformSectionId.isBlank()) {
-            Flash.fail(com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.v_item_section))
+            editError = app.getString(com.rahalgo.merchant.R.string.v_item_section)
             return
         }
+        d.optionsError()?.let { editError = it; return }
         busy = true
         viewModelScope.launch {
             val input = MenuItemInput(

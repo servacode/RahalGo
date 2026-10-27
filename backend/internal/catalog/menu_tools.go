@@ -175,8 +175,11 @@ func (s *Service) BulkPrice(ctx context.Context, actorID, merchantID string, in 
 	if in.PlatformSectionID != nil {
 		section = strings.TrimSpace(*in.PlatformSectionID)
 	}
+	// **والصنفُ المجّانيُّ يبقى مجّانيّاً** (قرارُ المالك ٢٠٢٦-١٠-٢٨: السعرُ صفرٌ
+	// مسموح) — كان `GREATEST(1, …)` يقلب صفرَه ليرةً. فلا يُمسّ ولا يُعدّ.
 	where := `i.merchant_id = $1::uuid AND ($3::text = '' OR i.platform_section_id::text = $3)
-	          AND (i.price_usd_cents IS NULL OR COALESCE(m.exchange_rate, 0) > 0)`
+	          AND ((i.price_usd_cents IS NULL AND i.merchant_price > 0)
+	               OR (i.price_usd_cents > 0 AND COALESCE(m.exchange_rate, 0) > 0))`
 
 	res := &BulkPriceResult{Samples: []RateSample{}}
 	rows, err := s.db.Query(ctx, fmt.Sprintf(`

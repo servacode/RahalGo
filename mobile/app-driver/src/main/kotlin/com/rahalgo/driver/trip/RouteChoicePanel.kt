@@ -29,7 +29,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.rahalgo.design.Rahal
 import com.rahalgo.design.RahalShapeTokens
 import com.rahalgo.design.RahalSpaceTokens
@@ -163,7 +162,7 @@ fun RouteChoicePanel(
             Text(
                 text = stringResource(R.string.route_no_longer_available),
                 color = Rahal.colors.inkMuted,
-                fontSize = 13.sp,
+                style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(top = RahalSpaceTokens.xs),
             )
         }
@@ -240,13 +239,13 @@ private fun RouteCard(
             Text(
                 text = title,
                 color = color,
-                fontSize = 14.sp,
+                style = MaterialTheme.typography.bodyMedium,
                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
             )
             if (deltas.isEmpty()) {
-                Text(text = metricsLine, color = Rahal.colors.inkMuted, fontSize = 13.sp)
+                Text(text = metricsLine, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodyMedium)
             } else {
-                Text(text = deltaLine, color = Rahal.colors.ink, fontSize = 13.sp)
+                Text(text = deltaLine, color = Rahal.colors.ink, style = MaterialTheme.typography.bodyMedium)
             }
         }
     }
@@ -270,7 +269,7 @@ private fun PanelButton(
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(text = label, color = Rahal.colors.onBrand, fontSize = 15.sp)
+        Text(text = label, color = Rahal.colors.onBrand, style = MaterialTheme.typography.labelLarge)
     }
 }
 

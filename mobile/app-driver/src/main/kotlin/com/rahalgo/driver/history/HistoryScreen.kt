@@ -331,7 +331,8 @@ fun HistoryScreen(vm: HistoryViewModel) {
     }
 
     val done = s.orders.count { it.status == "delivered" }
-    val failed = s.orders.size - done
+    // **والملغى ليس تعذّراً** — طلبٌ أُلغي قبل وصوله لا يُحسب على السائق.
+    val failed = s.orders.count { it.status != "delivered" && it.status != "cancelled" }
 
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         item {
@@ -450,6 +451,7 @@ private fun Row(
     onReturn: () -> Unit,
 ) {
     val delivered = o.status == "delivered"
+    val cancelled = o.status == "cancelled"
     Column(Modifier.fillMaxWidth().padding(vertical = 9.dp)) {
         androidx.compose.foundation.layout.Row(
             Modifier.fillMaxWidth(),
@@ -458,10 +460,19 @@ private fun Row(
             Text("#${o.number}", style = MaterialTheme.typography.titleSmall, color = Rahal.colors.brand)
             // **والحالُ كلمةٌ ملوّنة** — تُقرأ قبل أن يُقرأ السطر.
             Text(
+                // **والملغى غيرُ المتعذّر** — كان كلُّ ما لم يُسلَّم يُكتب «تعذّر».
                 text = stringResource(
-                    if (delivered) R.string.ord_st_delivered else R.string.ord_st_failed,
+                    when {
+                        delivered -> R.string.ord_st_delivered
+                        cancelled -> R.string.hist_st_cancelled
+                        else -> R.string.ord_st_failed
+                    },
                 ),
-                color = if (delivered) Rahal.colors.success else Rahal.colors.danger,
+                color = when {
+                    delivered -> Rahal.colors.success
+                    cancelled -> Rahal.colors.inkMuted
+                    else -> Rahal.colors.danger
+                },
                 style = MaterialTheme.typography.bodySmall,
             )
         }

@@ -44,7 +44,13 @@ object CartChanges {
         val name = c.name.ifBlank { ctx.getString(R.string.cc_unnamed_item) }
         return when (c.type) {
             PRODUCT_REMOVED -> ctx.getString(R.string.cc_product_removed, name)
-            PRODUCT_UNAVAILABLE -> ctx.getString(R.string.cc_product_unavailable, name)
+            // **خيارٌ نفد والصنفُ قائم** (تدقيقُ ٢٠٢٦-١٠-٢٨) — يُسمّى الخيارُ فيختار غيرَه.
+            PRODUCT_UNAVAILABLE ->
+                if (c.option.isNotBlank()) {
+                    ctx.getString(R.string.cc_option_unavailable, c.option.trim(), name)
+                } else {
+                    ctx.getString(R.string.cc_product_unavailable, name)
+                }
             QUANTITY_INVALID -> ctx.getString(R.string.cc_quantity_invalid, name)
             PRICE_CHANGED -> ctx.getString(
                 R.string.cc_price_changed, name, money(c.oldValue), money(c.newValue),

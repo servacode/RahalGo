@@ -33,8 +33,8 @@
     "setting_defs": 251,
     "behaviour_settings": 206,
     "order_fields": 120,
-    "test_files": 669,
-    "test_funcs": 2578
+    "test_files": 670,
+    "test_funcs": 2581
   },
   "flows": [
     {
@@ -13690,6 +13690,12 @@
       "orphan": true
     },
     {
+      "name": "TestCC05b_UnavailableOptionIsNamed",
+      "file": "internal/qa/cart_changes_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestCC07_CC08_PriceChangeIsSurfacedBothWays",
       "file": "internal/qa/cart_changes_test.go",
       "package": "qa",
@@ -20406,6 +20412,12 @@
     },
     {
       "name": "TestBulkPrice_PreviewThenApply",
+      "file": "internal/qa/option_presets_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestBulkPrice_ZeroPricedItemStaysZero",
       "file": "internal/qa/option_presets_test.go",
       "package": "qa",
       "orphan": true
@@ -29390,6 +29402,12 @@
     {
       "name": "TestRepMenuGuard_OnlyOwnClients",
       "file": "internal/server/rep_menu_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestRepMe_CountsNeedsInfoLeadsApart",
+      "file": "internal/server/rep_needs_info_count_test.go",
       "package": "server",
       "orphan": true
     },

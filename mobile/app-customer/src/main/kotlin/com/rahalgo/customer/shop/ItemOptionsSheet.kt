@@ -92,7 +92,15 @@ fun ItemOptionsSheet(
 
     LaunchedEffect(item.id) {
         runCatching { api.itemDetail(item.id) }
-            .onSuccess { groups = it.modifiers }
+            .onSuccess { d ->
+                groups = d.modifiers
+                // **والمجموعةُ الإلزاميّةُ بخيارٍ واحدٍ يُختار أوّلُ متوفّرٍ فيها** — مرآةُ الويب
+                // (`items.tsx`): «الحجم: عادي» بلا ضغطةٍ إضافيّة.
+                chosen = d.modifiers.mapNotNull { g ->
+                    val first = g.options.firstOrNull { it.available }
+                    if (g.minSelect > 0 && g.maxSelect == 1 && first != null) g.id to listOf(first) else null
+                }.toMap()
+            }
             .onFailure { failed = true }
     }
 
@@ -101,6 +109,10 @@ fun ItemOptionsSheet(
 
     // **وناقصٌ واحدٌ يكفي لإطفاء الزرّ.**
     val ready = groups?.all { g -> (chosen[g.id]?.size ?: 0) >= g.minSelect } == true
+
+    // **ومجموعةٌ إلزاميّةٌ كلُّ خياراتها نافدةٌ تُطفئ الزرَّ للأبد** (تدقيقُ ٢٠٢٦-١٠-٢٨) —
+    // **فيُقال لماذا** بدل زرٍّ مطفأٍ بلا سبب.
+    val allOut = groups?.firstOrNull { g -> g.minSelect > 0 && g.options.none { it.available } }
 
     ModalBottomSheet(
         onDismissRequest = onClose,
@@ -188,6 +200,14 @@ fun ItemOptionsSheet(
             }
 
             Spacer(Modifier.height(20.dp))
+            allOut?.let { g ->
+                Text(
+                    stringResource(R.string.options_all_out, g.name),
+                    color = Rahal.colors.danger,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Spacer(Modifier.height(8.dp))
+            }
             Row(verticalAlignment = Alignment.CenterVertically) {
             // **أداةُ الكمّيّة جنب الزرّ** — والسعرُ على الزرّ يتبعها.
             Row(
@@ -272,6 +292,14 @@ private fun GroupBlock(
                 style = MaterialTheme.typography.labelSmall,
             )
         }
+        if (group.minSelect > 0 && group.options.none { it.available }) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                stringResource(R.string.options_all_out, group.name),
+                color = Rahal.colors.danger,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
         Spacer(Modifier.height(8.dp))
         group.options.forEach { o ->
             OptionRow(
@@ -300,12 +328,24 @@ private fun OptionRow(option: ModifierOption, selected: Boolean, onClick: () -> 
                 .background(if (selected) Rahal.colors.brand else Rahal.colors.line),
         )
         Spacer(Modifier.size(12.dp))
-        Text(
-            option.name,
-            modifier = Modifier.weight(1f),
-            color = if (option.available) Rahal.colors.ink else Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodyLarge,
-        )
+        // **والنافدُ مشطوبٌ وبجنبه «غير متوفر»** — مرآةُ الويب (تدقيقُ ٢٠٢٦-١٠-٢٨)؛
+        // كان رماديّاً وحدَه فيُظنّ معطّلاً بلا سبب.
+        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                option.name,
+                color = if (option.available) Rahal.colors.ink else Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodyLarge,
+                textDecoration = if (option.available) null else androidx.compose.ui.text.style.TextDecoration.LineThrough,
+            )
+            if (!option.available) {
+                Spacer(Modifier.size(8.dp))
+                Text(
+                    stringResource(R.string.options_unavailable),
+                    color = Rahal.colors.danger,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
+        }
         // **والصفرُ لا يُكتب «+٠»** — **رقمٌ بلا معنًى يُقرأ سعراً.**
         if (option.priceDelta != 0L) {
             Text(

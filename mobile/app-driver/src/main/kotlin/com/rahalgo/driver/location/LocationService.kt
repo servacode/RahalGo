@@ -160,6 +160,7 @@ class LocationService : Service() {
         }
         request(seconds)
         heartbeat()
+        appliedSec = seconds
         // **ويُعاد تشغيلها إن قتلها النظام تحت ضغط الذاكرة** — الوردية
         // مفتوحة ولا أحد يعرف أنّ الموقع انقطع.
         return START_STICKY
@@ -244,6 +245,7 @@ class LocationService : Service() {
     }
 
     override fun onDestroy() {
+        appliedSec = 0L
         client.removeLocationUpdates(callback)
         // **ولا إنذارَ «إشارةٌ مفقودة» لمن أغلق ورديّته.**
         GpsSignal.alive()
@@ -498,6 +500,18 @@ class LocationService : Service() {
 
         /** **من الإقلاع؟** — فإن رُدّت الخدمةُ طُلب فتحُ التطبيق (`BootResume`). */
         private const val EXTRA_FROM_BOOT = "from_boot"
+
+        /**
+         * **الفترةُ النافذةُ الآن** — صفرٌ والخدمةُ واقفة.
+         *
+         * **وتقرؤها الشاشةُ قبل أن تُعيد التشغيل**: كلُّ نبضةِ تحديثٍ كانت
+         * تنادي `start` فتُعيد رفعَ الخدمة وطلبَ الموقع وإن لم يتغيّر شيء.
+         * **ومن الخدمة نفسِها لا من ذاكرة الشاشة** — فإن قتلها النظامُ صار
+         * صفراً فتُرفع من جديد.
+         */
+        @Volatile
+        var appliedSec: Long = 0L
+            private set
 
         /** **تبدأ مع الوردية** — والفترة من المحرّك. */
         fun start(context: Context, pingSec: Long, fromBoot: Boolean = false) {

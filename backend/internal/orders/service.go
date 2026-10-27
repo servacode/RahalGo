@@ -986,7 +986,9 @@ func (s *Service) priceItems(ctx context.Context, q dbtx.Querier, inputs []ItemI
 				return nil, 0, err
 			}
 			if !optAvailable {
-				return nil, 0, ErrItemUnavailable
+				// **والخيارُ يُسمّى** (تدقيقُ ٢٠٢٦-١٠-٢٨) — كان يُقال «الصنفُ نفد»
+				// والصنفُ قائمٌ وخيارٌ واحدٌ منه نفد. **والرمزُ نفسُه للعملاء القدامى.**
+				return nil, 0, &OptionUnavailableError{Option: optName}
 			}
 			rules[groupID].chosen++
 			// **الفارقُ يُضاف إلى السعرين معاً.**

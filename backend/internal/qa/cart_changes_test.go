@@ -290,3 +290,48 @@ func TestCC21_CC22_NoHiddenMinimumOrder(t *testing.T) {
 		t.Fatalf("**حدٌّ أدنى معروضٌ وهو غيرُ مفروض**: %v", j["min_order"])
 	}
 }
+
+// TestCC05b_UnavailableOptionIsNamed **خيارٌ واحدٌ نفد يُسمّى — لا «الصنفُ نفد».**
+//
+// (تدقيقُ ٢٠٢٦-١٠-٢٨): كان التبدّلُ يقول اسمَ الصنف وحدَه والصنفُ قائم،
+// **فيمحو الزبونُ صنفاً كان يكفيه أن يختار خياراً غيرَه.** **والنوعُ يبقى
+// `product_unavailable`** لِيقرأه العميلُ القديمُ كما كان.
+func TestCC05b_UnavailableOptionIsNamed(t *testing.T) {
+	hh := New(t)
+	z := zoneForDemand(t, hh, "منطقةُ CC-05ب")
+	it := hh.NewItem(1000)
+
+	var gid, optID string
+	if err := hh.Pool.QueryRow(ctxBG(), `
+		INSERT INTO modifier_groups (item_id, name, min_select, max_select, sort_order)
+		VALUES ($1, 'الحجم', 1, 1, 0) RETURNING id::text`, it.ID).Scan(&gid); err != nil {
+		t.Fatalf("مجموعةُ الخيارات: %v", err)
+	}
+	if err := hh.Pool.QueryRow(ctxBG(), `
+		INSERT INTO modifier_options (group_id, name, price_delta, sort_order, available)
+		VALUES ($1, 'كبير', 0, 0, false) RETURNING id::text`, gid).Scan(&optID); err != nil {
+		t.Fatalf("الخيار: %v", err)
+	}
+
+	items := []map[string]any{{"menu_item_id": it.ID, "qty": 1, "option_ids": []string{optID}}}
+	cs := changesOf(t, quoteWith(t, hh, items, z.Lat, z.Lng, map[string]any{
+		"lines": map[string]any{it.ID: 1000},
+	}))
+
+	un := hasChange(cs, "product_unavailable")
+	if un == nil {
+		t.Fatalf("**خيارٌ نفد لم يُقَل**: %v", cs)
+	}
+	if un["name"] != it.Name {
+		t.Fatalf("**الصنفُ بلا اسمه**: %v", un)
+	}
+	if un["option"] != "كبير" {
+		t.Fatalf("**الخيارُ الذي نفد لم يُسمَّ** — فيُقرأ أنّ الصنفَ كلَّه نفد: %v", un)
+	}
+
+	// **والعميلُ القديمُ بلا مقارنةٍ يأخذ الرمزَ نفسَه** — لا ٥٠٠ ولا رمزٌ جديدٌ لا يعرفه.
+	old := quoteWith(t, hh, items, z.Lat, z.Lng, nil)
+	if old.Code != http.StatusConflict || old.Err() != "item_unavailable" {
+		t.Fatalf("**تبدّل ردُّ العميل القديم**: %d / %s", old.Code, old.Err())
+	}
+}

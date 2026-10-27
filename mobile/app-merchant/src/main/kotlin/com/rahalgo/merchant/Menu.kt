@@ -34,6 +34,10 @@ object MerchantItems {
     const val WARNINGS = "Warnings"
     const val REPORTS = "Reports"
     const val SALES = "Sales"
+    /** **رقمُ الطلبات حسب الدوام** (٢٠٢٦-١٠-٢٠). */
+    const val ORDER_PHONES = "OrderPhones"
+    /** **موظّفو المتجر** — لصاحب الحساب وحدَه (`notStaff`). */
+    const val STAFF = "Staff"
     /** **شرحُ التطبيق بالفيديو** — يفتح يوتيوب لا شاشة (طلبُ المالك ٢٠٢٦-١٠-٠٨). */
     const val TUTORIAL = "Tutorial"
 }
@@ -87,6 +91,20 @@ val MERCHANT_ITEMS: List<DrawerItem> = listOf(
         com.rahalgo.ui.R.string.menu_mine,
         R.string.menu_sales,
         com.rahalgo.ui.R.drawable.ic_chart,
+    ),
+    // **ورقمُ الطلبات حسب الدوام وموظّفوه** (قرارُ المالك ٢٠٢٦-١٠-٢٠) — كلوحة المتجر
+    // بالويب، **والموظّفُ لا يرى بابَ الموظّفين** (`TeamAccess`).
+    DrawerItem(
+        MerchantItems.ORDER_PHONES,
+        com.rahalgo.ui.R.string.menu_mine,
+        R.string.menu_order_phones,
+        com.rahalgo.ui.R.drawable.ic_phone,
+    ),
+    DrawerItem(
+        MerchantItems.STAFF,
+        com.rahalgo.ui.R.string.menu_mine,
+        R.string.menu_staff,
+        com.rahalgo.ui.R.drawable.ic_user,
     ),
     DrawerItem(
         MerchantItems.TUTORIAL,

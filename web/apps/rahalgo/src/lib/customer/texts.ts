@@ -97,7 +97,10 @@ export function changeText(c: CartChange): string {
     case "product_removed":
       return fill(C.removed, { name });
     case "product_unavailable":
-      return fill(C.unavailable, { name });
+      // **خيارٌ نفد والصنفُ قائم** (تدقيقُ ٢٠٢٦-١٠-٢٨) — يُسمّى الخيارُ فيختار غيرَه.
+      return c.option?.trim()
+        ? fill(C.optionUnavailable, { option: c.option.trim(), name })
+        : fill(C.unavailable, { name });
     case "quantity_invalid":
       return fill(C.qty, { name });
     case "product_price_changed":

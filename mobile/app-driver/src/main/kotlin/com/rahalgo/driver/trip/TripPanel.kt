@@ -55,7 +55,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -187,7 +186,7 @@ internal fun TripPanel(state: TripState, arrived: Boolean = false) {
                 } else {
                     stringResource(phaseLabel(state.step, isFetch(order)), name)
                 },
-                color = Color.White,
+                color = Rahal.colors.onPanel,
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleMedium,
             )
@@ -280,7 +279,7 @@ internal fun TripPanel(state: TripState, arrived: Boolean = false) {
             }
             if (stripOpen) {
                 Spacer(Modifier.height(10.dp))
-                HorizontalDivider(color = Color.White.copy(alpha = 0.12f))
+                HorizontalDivider(color = Rahal.colors.onPanel.copy(alpha = 0.12f))
             }
         }
 
@@ -308,7 +307,7 @@ internal fun TripPanel(state: TripState, arrived: Boolean = false) {
         Box(
             Modifier
                 .clip(Rahal.shape.pill)
-                .background(Color.White.copy(alpha = 0.30f))
+                .background(Rahal.colors.onPanel.copy(alpha = 0.30f))
                 .size(width = 44.dp, height = 5.dp)
                 .clickable { stripOpen = !stripOpen },
         )
@@ -328,7 +327,7 @@ internal fun PanelChip(icon: Int, text: String) {
         Spacer(Modifier.size(5.dp))
         Text(
             text = text,
-            color = Color.White,
+            color = Rahal.colors.onPanel,
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.bodyMedium,
         )
@@ -403,7 +402,7 @@ internal fun LegStrip(
                         .weight(1f)
                         .height(2.dp)
                         .background(
-                            if (i <= at) Rahal.colors.brand else Color.White.copy(alpha = 0.18f),
+                            if (i <= at) Rahal.colors.brand else Rahal.colors.onPanel.copy(alpha = 0.18f),
                         ),
                 )
             }
@@ -441,7 +440,7 @@ internal fun LegDot(
     val ground = when {
         here -> Rahal.colors.accent
         done -> Rahal.colors.brand
-        else -> Color.White.copy(alpha = 0.12f)
+        else -> Rahal.colors.onPanel.copy(alpha = 0.12f)
     }
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -455,7 +454,7 @@ internal fun LegDot(
             Icon(
                 painter = painterResource(if (done) R.drawable.ic_check_circle else icon),
                 contentDescription = null,
-                tint = if (here || done) Color.White else Color.White.copy(alpha = 0.45f),
+                tint = if (here || done) Rahal.colors.onPanel else Rahal.colors.onPanel.copy(alpha = 0.45f),
                 modifier = Modifier.size(15.dp),
             )
         }
@@ -463,9 +462,9 @@ internal fun LegDot(
         if (showLabel) Text(
             text = stringResource(label),
             color = when {
-                here -> Color.White
-                done -> Color.White.copy(alpha = 0.7f)
-                else -> Color.White.copy(alpha = 0.4f)
+                here -> Rahal.colors.onPanel
+                done -> Rahal.colors.onPanel.copy(alpha = 0.7f)
+                else -> Rahal.colors.onPanel.copy(alpha = 0.4f)
             },
             fontWeight = if (here) FontWeight.Bold else FontWeight.Normal,
             style = MaterialTheme.typography.labelSmall,
@@ -614,7 +613,7 @@ private fun NoLocationBox(text: String) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(Rahal.shape.sm)
-            .background(Color.White)
+            .background(Rahal.colors.onPanel)
             .padding(horizontal = 12.dp, vertical = 8.dp),
     )
 }

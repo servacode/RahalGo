@@ -28,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -113,9 +114,12 @@ internal fun ImageCropDialog(
                     val side = min(w, h)
                     frame = side
                     val k = coverScale(bmp, side) * zoom
+                    // **مقصوصةٌ على حدودها** (تدقيقُ ٢٠٢٦-١٠-٢٨) — صورةٌ مكبَّرةٌ أو طويلة
+                    // كانت تُرسم فوق العنوان والأزرار.
                     Canvas(
                         Modifier
                             .fillMaxSize()
+                            .clipToBounds()
                             .pointerInput(bmp, side) {
                                 detectTransformGestures { _, pan, z, _ ->
                                     zoom = (zoom * z).coerceIn(1f, 6f)

@@ -104,3 +104,27 @@ fun longDate(iso: String): String {
         .withDecimalStyle(java.time.format.DecimalStyle.STANDARD)
     return runCatching { at.format(fmt) }.getOrDefault(iso.take(10))
 }
+
+/**
+ * **رقمٌ داخل نصٍّ عربيّ** — معزولٌ يساراً (LRI…PDI) فلا تقفز «+» من «+963…»
+ * إلى الطرف الآخر (٢٠٢٦-١٠-٢٨). والفارغُ يبقى فارغاً.
+ */
+fun ltrPhone(phone: String): String =
+    if (phone.isEmpty()) phone else Char(0x2066) + phone + Char(0x2069)
+
+/**
+ * **«+963912345678» ⇒ «0912345678»** — الشكلُ الذي يطلبه حقلُ الرقم (`09xxxxxxxx`).
+ *
+ * المحرّكُ يحفظ الرقمَ دوليّاً (`identity.NormalizePhone`)، **ونموذجُ «بحاجة
+ * معلومات» كان يُملأ به كما هو** فيرى المندوبُ شكلاً غيرَ الذي يكتبه (٢٠٢٦-١٠-٢٨).
+ * وما لا يُعرف شكلُه يُترك كما جاء.
+ */
+fun localPhone(phone: String): String {
+    val d = phone.trim().filter { it.isDigit() }
+    return when {
+        d.startsWith("00963") && d.length == 14 -> "0" + d.drop(5)
+        d.startsWith("963") && d.length == 12 -> "0" + d.drop(3)
+        d.length == 9 && d.startsWith("9") -> "0$d"
+        else -> phone.trim()
+    }
+}

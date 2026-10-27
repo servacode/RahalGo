@@ -295,7 +295,9 @@ export function ItemSheet({
   const tryAdd = () => {
     const miss = missingGroup(groups, picked);
     if (miss) {
-      setWarn(fill(I.needOption, { group: miss.name }));
+      /* **ومجموعةٌ إلزاميّةٌ كلُّ خياراتها نافدةٌ لا يُقال لها «اختر»** — لا شيءَ يُختار. */
+      const out = !miss.options.some((o) => o.available);
+      setWarn(fill(out ? I.allOptionsOut : I.needOption, { group: miss.name }));
       return;
     }
     if (item.has_options && !detail) return;
@@ -435,11 +437,17 @@ export function ItemSheet({
                   {g.min_select > 0 ? I.required : g.max_select === 1 ? I.pickOne : fill(I.pickUpTo, { n: fmtNum(g.max_select) })}
                 </span>
               </legend>
+              {g.min_select > 0 && !g.options.some((o) => o.available) && (
+                <p className="text-xs text-danger">{fill(I.allOptionsOut, { group: g.name })}</p>
+              )}
               {g.options.map((o) => {
                 const on = picked[g.id]?.includes(o.id) ?? false;
                 const label = (
                   <span className="flex w-full items-center justify-between gap-3">
-                    <span className={o.available ? "" : "text-ink-dim line-through"}>{o.name}</span>
+                    <span className="flex items-center gap-2">
+                      <span className={o.available ? "" : "text-ink-dim line-through"}>{o.name}</span>
+                      {!o.available && <span className="text-xs text-danger">{I.unavailable}</span>}
+                    </span>
                     {o.price_delta !== 0 && (
                       <span className="text-xs text-ink-muted">
                         {"+ "}

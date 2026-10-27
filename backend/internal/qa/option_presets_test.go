@@ -214,6 +214,36 @@ func TestBulkPrice_PreviewThenApply(t *testing.T) {
 	}
 }
 
+// **الصنفُ بسعر صفرٍ يبقى صفراً** (قرارُ المالك ٢٠٢٦-١٠-٢٨: الصفرُ مسموح) —
+// كان `GREATEST(1, …)` يقلبه ليرةً، وكان يُعدّ في المعاينة.
+func TestBulkPrice_ZeroPricedItemStaysZero(t *testing.T) {
+	h := New(t)
+	f := h.Factory()
+	m := f.Merchant()
+	paid := h.NewItemFor(m, 100)
+	free := h.NewItemFor(m, 100)
+	if _, err := h.Pool.Exec(ctxBG(),
+		`UPDATE menu_items SET merchant_price = 0, price = 0 WHERE id = $1`, free.ID); err != nil {
+		t.Fatal(err)
+	}
+	path := "/api/v1/merchant/stores/" + m.ID + "/menu/prices"
+
+	r := h.POST(path, m.Owner.Token, map[string]any{"percent": 10})
+	if r.Code != 200 || num(r.JSON()["count"]) != 1 {
+		t.Fatalf("المعاينةُ تعدّ المدفوعَ وحدَه: %s", r)
+	}
+	r = h.POST(path, m.Owner.Token, map[string]any{"percent": 10, "confirm": true})
+	if r.Code != 200 || num(r.JSON()["count"]) != 1 {
+		t.Fatalf("التطبيق: %s", r)
+	}
+	var p, z int64
+	_ = h.Pool.QueryRow(ctxBG(), `SELECT merchant_price FROM menu_items WHERE id = $1`, paid.ID).Scan(&p)
+	_ = h.Pool.QueryRow(ctxBG(), `SELECT merchant_price FROM menu_items WHERE id = $1`, free.ID).Scan(&z)
+	if p != 110 || z != 0 {
+		t.Fatalf("المدفوع=%d (المنتظَر ١١٠) والمجّانيّ=%d (المنتظَر ٠)", p, z)
+	}
+}
+
 // **اللوحةُ تنشئ قالباً وتربطه بتصنيف** — فيطلع لمتاجره.
 func TestAdminOptionPresets_CreateLinkDelete(t *testing.T) {
 	h := New(t)

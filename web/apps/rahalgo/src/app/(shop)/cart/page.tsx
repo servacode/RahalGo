@@ -147,7 +147,9 @@ export default function CartPage() {
   // **وكودُ التوصيل المجاني وحدَه يُغني عن العرض** — كودُ حسمٍ عاديٌّ لا يمحو «مجاني».
   const freeCode = cut?.kind === "free_delivery";
   const waived = freeCode ? 0 : (quote?.free_waived ?? 0);
-  const payable = quote ? (cut ? Math.max(0, quote.subtotal + fee - cut.discount) : quote.total) : null;
+  // **وسلّةٌ موقوفةٌ (`blocked`) لا مجموعَ لها** — المحرّكُ يصفّرها عمداً، و«0 ل.س» يُقرأ سعراً (مرآةُ `CartScreen.kt`).
+  const priced = quote && !quote.blocked ? quote : null;
+  const payable = priced ? (cut ? Math.max(0, priced.subtotal + fee - cut.discount) : priced.total) : null;
   const walletBlocked = payable != null && available < payable;
 
   useEffect(() => {
@@ -433,10 +435,15 @@ export default function CartPage() {
             <h2 className="heading-card">{C.summary}</h2>
             <div className="flex justify-between">
               <span className="text-ink-muted">{C.subtotal}</span>
-              <Money value={quote?.subtotal ?? cart.subtotal} />
+              {quote?.blocked ? <span>—</span> : <Money value={quote?.subtotal ?? cart.subtotal} />}
             </div>
             {!quote ? (
               <p className="text-xs text-ink-muted">{quoting ? C.quoting : C.needAddress}</p>
+            ) : quote.blocked ? (
+              <div className="flex justify-between border-t border-line-soft pt-2 font-bold">
+                <span>{C.total}</span>
+                <span className="text-ink-muted">—</span>
+              </div>
             ) : (
               <>
                 <div className="flex justify-between">

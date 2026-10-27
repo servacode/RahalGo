@@ -117,6 +117,9 @@ fun MenuScreen(vm: MenuViewModel) {
             exchangeRate = vm.exchangeRate,
             presets = vm.presets.chosen,
             onDuplicate = if (vm.suspended) null else { { vm.duplicate(draft.itemId) } },
+            dirty = vm.dirty,
+            // **والموقوفُ يرى ولا يحفظ ولا يحذف** (تدقيقُ ٢٠٢٦-١٠-٢٨).
+            readOnly = vm.suspended,
         )
         return
     }

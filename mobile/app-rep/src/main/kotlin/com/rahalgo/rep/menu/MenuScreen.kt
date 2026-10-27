@@ -180,6 +180,8 @@ fun MenuScreen(vm: MenuViewModel, onOffers: () -> Unit = {}) {
             sectionHint = R.string.mn_no_platform_section_hint,
             presets = vm.presets.chosen,
             onDuplicate = { vm.editing?.itemId?.let(vm::duplicate) },
+            dirty = vm.dirty,
+            error = vm.editError,
         )
         return
     }

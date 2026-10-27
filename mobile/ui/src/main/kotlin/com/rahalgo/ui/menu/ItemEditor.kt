@@ -154,9 +154,21 @@ fun ItemEditor(
     presets: List<OptionPreset>? = null,
     /** **«نسخ الصنف»** — يظهر في التعديل وحدَه؛ و`null` لا زرّ. */
     onDuplicate: (() -> Unit)? = null,
+    /**
+     * **في المسوّدة ما لم يُحفظ؟** (تدقيقُ ٢٠٢٦-١٠-٢٨) — النسخُ ينسخ الصنفَ
+     * المحفوظ، **فمن نسخ قبل الحفظ ضاعت تعديلاتُه.** فيُطفأ الزرُّ ويُقال لماذا.
+     */
+    dirty: Boolean = false,
+    /**
+     * **متجرٌ موقوف** (تدقيقُ ٢٠٢٦-١٠-٢٨) — يرى صنفَه ولا يحفظ ولا يحذف ولا ينسخ.
+     * كانت الأزرارُ تُضغط لتُردّ بخطأ.
+     */
+    readOnly: Boolean = false,
 ) {
     val pick = rememberImagePicker(crop = true) { bytes -> onPickImage(bytes) }
     var confirmDelete by remember { mutableStateOf(false) }
+    // **فرقُ خيارٍ لم يُحوَّل لغياب سعر الصرف** — يُقال ولا يُصفَّر بصمت.
+    var rateLost by remember(d.itemId) { mutableStateOf(false) }
 
     Screen {
         ScreenTitle(
@@ -225,7 +237,13 @@ fun ItemEditor(
         )
         Spacer(Modifier.height(8.dp))
         // **زرُّ العملة الذكيّ** (طلبُ المالك ٢٠٢٦-١٠-١٢): «ل.س» أو «$» لكلّ صنف.
-        CurrencySwitch(selected = d.currency, enabled = !busy) { c -> onEdit { it.copy(currency = c) } }
+        // **وفروقُ الخيارات تُحوَّل معه** (تدقيقُ ٢٠٢٦-١٠-٢٨) — كانت تصير صفراً بصمت.
+        CurrencySwitch(selected = d.currency, enabled = !busy) { c ->
+            if (c != d.currency) {
+                if (d.withCurrency(c, exchangeRate).second) rateLost = true
+                onEdit { it.withCurrency(c, exchangeRate).first }
+            }
+        }
         Spacer(Modifier.height(6.dp))
         if (!d.isUsd) {
             OutlinedTextField(
@@ -311,7 +329,19 @@ fun ItemEditor(
             )
         }
 
-        ModifiersEditor(d, presets, onEdit)
+        ModifiersEditor(d, presets, onEdit, onAddPreset = { p ->
+            val (g, lost) = p.toGroup().forItemCurrency(d.isUsd, exchangeRate)
+            if (lost) rateLost = true
+            onEdit { dd -> dd.copy(modifiers = dd.modifiers + g) }
+        })
+        if (rateLost) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                stringResource(R.string.mod_usd_no_rate),
+                color = Rahal.colors.danger,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
 
         if (error.isNotEmpty()) {
             Spacer(Modifier.height(12.dp))
@@ -319,8 +349,10 @@ fun ItemEditor(
         }
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            RahalButton(onClick = { onSave() }, enabled = !busy && !nameOver) {
-                Text(stringResource(R.string.act_save))
+            if (!readOnly) {
+                RahalButton(onClick = { onSave() }, enabled = !busy && !nameOver) {
+                    Text(stringResource(R.string.act_save))
+                }
             }
             RahalTextButton(onClick = { onCancel() }, enabled = !busy) {
                 Text(stringResource(R.string.act_cancel))
@@ -328,13 +360,20 @@ fun ItemEditor(
         }
 
         // **قميصٌ بخمسة ألوان يُعمل مرّةً ويُنسخ** (٢٠٢٦-١٠-٢٧).
-        if (d.itemId.isNotEmpty() && onDuplicate != null) {
+        if (d.itemId.isNotEmpty() && onDuplicate != null && !readOnly) {
             Spacer(Modifier.height(20.dp))
-            RahalOutlineButton(onClick = { onDuplicate() }, enabled = !busy) {
+            RahalOutlineButton(onClick = { onDuplicate() }, enabled = !busy && !dirty) {
                 Text(stringResource(R.string.item_duplicate))
             }
+            if (dirty) {
+                Text(
+                    stringResource(R.string.item_duplicate_save_first),
+                    color = Rahal.colors.inkMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
         }
-        if (d.itemId.isNotEmpty()) {
+        if (d.itemId.isNotEmpty() && !readOnly) {
             Spacer(Modifier.height(20.dp))
             if (!confirmDelete) {
                 RahalTextButton(onClick = { confirmDelete = true }, enabled = !busy) {
@@ -393,6 +432,8 @@ private fun ModifiersEditor(
     d: ItemDraft,
     presets: List<OptionPreset>?,
     onEdit: ((ItemDraft) -> ItemDraft) -> Unit,
+    /** **مجموعةٌ جاهزةٌ تُضاف** — بعملة الصنف (انظر `forItemCurrency`). */
+    onAddPreset: (OptionPreset) -> Unit,
 ) {
     Spacer(Modifier.height(16.dp))
     Text(
@@ -422,12 +463,8 @@ private fun ModifiersEditor(
             Checkbox(
                 checked = on,
                 onCheckedChange = { want ->
-                    onEdit { dd ->
-                        dd.copy(
-                            modifiers = if (want) dd.modifiers + p.toGroup()
-                            else dd.modifiers.filterNot { it.name.trim() == p.name.trim() },
-                        )
-                    }
+                    if (want) onAddPreset(p)
+                    else onEdit { dd -> dd.copy(modifiers = dd.modifiers.filterNot { it.name.trim() == p.name.trim() }) }
                 },
             )
             Text(p.name, style = MaterialTheme.typography.bodyMedium)
@@ -530,7 +567,10 @@ private fun ModifiersEditor(
                             },
                             label = { Text(stringResource(if (d.isUsd) R.string.mod_opt_price_usd else R.string.mod_opt_price)) },
                             singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            // **والدولارُ بكسوره** — «0.5» يحتاج النقطة (تدقيقُ ٢٠٢٦-١٠-٢٨).
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = if (d.isUsd) KeyboardType.Decimal else KeyboardType.Number,
+                            ),
                             modifier = Modifier.width(110.dp),
                         )
                         RahalTextButton(onClick = {

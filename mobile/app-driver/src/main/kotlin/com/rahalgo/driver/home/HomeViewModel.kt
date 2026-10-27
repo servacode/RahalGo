@@ -131,9 +131,12 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         val normal = me.locationPingSec.takeIf { it > 0 } ?: 20L
         val pingSec = if (me.activeOrders > 0) me.locationPingActiveSec.takeIf { it > 0 } ?: normal else normal
         com.rahalgo.driver.location.ShiftMemory.remember(app, me.onShift, pingSec)
+        // **ولا يُعاد التشغيلُ إلّا إن تغيّر شيء** — كانت كلُّ نبضةِ تحديثٍ
+        // تُعيد رفعَ الخدمة الأماميّة وطلبَ الموقع والفترةُ هي هي.
         if (me.onShift && LocationPermission.granted(app)) {
-            LocationService.start(app, pingSec)
+            if (LocationService.appliedSec != pingSec) LocationService.start(app, pingSec)
         } else {
+            // **والإيقافُ يبقى دائماً** — لا يُعيد تشغيلَ شيء، ويلحق خدمةً طُلبت ولم تقم بعد.
             LocationService.stop(app)
         }
     }
