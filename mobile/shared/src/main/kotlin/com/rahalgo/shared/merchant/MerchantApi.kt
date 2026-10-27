@@ -379,8 +379,18 @@ class MerchantApi(private val api: ApiClient) {
     suspend fun orderPhones(storeId: String): OrderPhones =
         api.call("/api/v1/merchant/stores/$storeId/order-phones")
 
+    // **والحقولُ كلُّها تُرسَل صراحةً** — المُرمِّزُ يُسقط ما يساوي قيمتَه الافتراضيّة،
+    // **فـ«دوام كامل» (`full`) كان لا يُرسَل أصلاً** فيردّه المحرّكُ «تحقق من البيانات».
     suspend fun setOrderPhones(storeId: String, phones: OrderPhones): OrderPhones =
-        api.call("/api/v1/merchant/stores/$storeId/order-phones", HttpMethod.Put, phones)
+        api.call(
+            "/api/v1/merchant/stores/$storeId/order-phones", HttpMethod.Put,
+            mapOf(
+                "mode" to phones.mode,
+                "morning_phone" to phones.morning,
+                "evening_phone" to phones.evening,
+                "evening_from" to phones.eveningFrom,
+            ),
+        )
 
     suspend fun staff(): List<StaffMember> =
         api.call<StaffPage>("/api/v1/merchant/staff").staff

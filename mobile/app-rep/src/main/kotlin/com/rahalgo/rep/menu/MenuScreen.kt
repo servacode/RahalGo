@@ -246,6 +246,11 @@ fun MenuScreen(vm: MenuViewModel, onOffers: () -> Unit = {}) {
         Spacer(Modifier.height(12.dp))
 
         if (list.isEmpty()) {
+            // **وأدواتُ القائمة تبين والقائمةُ فارغة** — كما عند المتجر: المندوبُ
+            // يضبط خياراتِ عميله قبل أوّل صنف (شُهد على المحاكي ٢٠٢٦-١٠-٢٨).
+            com.rahalgo.ui.menu.DrinksButton(vm.drinks)
+            com.rahalgo.ui.menu.MenuToolsButtons(vm.presets, vm.bulk)
+            Spacer(Modifier.height(10.dp))
             Empty(stringResource(R.string.mn_empty))
             return@Screen
         }

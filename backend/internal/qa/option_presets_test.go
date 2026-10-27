@@ -3,6 +3,7 @@ package qa
 // خياراتُ الصنف الجاهزة ونسخُ صنفٍ والأسعارُ دفعةً واحدة (قرارُ المالك ٢٠٢٦-١٠-٢٧).
 
 import (
+	"encoding/json"
 	"testing"
 )
 
@@ -274,5 +275,30 @@ func TestAdminOptionPresets_CreateLinkDelete(t *testing.T) {
 	}
 	if r := h.DEL("/api/v1/admin/option-presets/"+id, admin.Token); r.Code != 200 {
 		t.Fatalf("الحذف: %s", r)
+	}
+}
+
+// **السقفُ يُرسَل نصّاً** — التطبيقُ يقرأ `details` خريطةَ نصوص، **فرقمٌ فيها
+// يُسقط قراءةَ الخطأ كلَّها** فيرى «تعذّر إتمام الطلب» بدل «السعر أعلى من الحدّ».
+// (شُهد على المحاكي ٢٠٢٦-١٠-٢٨ بتغيير الأسعار ١٠٪ على صنفٍ بالسقف.)
+func TestPriceTooHigh_DetailsAreText(t *testing.T) {
+	h := New(t)
+	f := h.Factory()
+	m := f.Merchant()
+	h.NewItemFor(m, 1000)
+	h.Setting("merchants.max_item_price", "1000")
+
+	r := h.POST("/api/v1/merchant/stores/"+m.ID+"/menu/prices", m.Owner.Token, map[string]any{"percent": 10})
+	if r.Err() != "item_price_too_high" {
+		t.Fatalf("المنتظَرُ item_price_too_high: %s", r)
+	}
+	var env struct {
+		Error struct {
+			Details map[string]any `json:"details"`
+		} `json:"error"`
+	}
+	_ = json.Unmarshal(r.Body, &env)
+	if _, ok := env.Error.Details["max"].(string); !ok {
+		t.Fatalf("السقفُ ليس نصّاً: %s", r)
 	}
 }

@@ -221,9 +221,10 @@ func TestEXPENSES_AtThresholdPostsDirectlyAndNamesCategory(t *testing.T) {
 	if note != "مصروف تشغيل — إيجار" {
 		t.Fatalf("نصُّ القيد %q", note)
 	}
-	// **ويومُ الصرف الافتراضيُّ يومُ دمشق.**
-	if spent.Format("2006-01-02") != expenseToday() {
-		t.Fatalf("يومُ الصرف %s ويومُ دمشق %s", spent.Format("2006-01-02"), expenseToday())
+	// **ويومُ الصرف الافتراضيُّ يومُ الحساب** (قرارُ المالك ٢٠٢٦-١٠-٢٧) — قبل ساعة
+	// الفتح ما زال اليومَ السابق. **وكان يُقارن بيوم دمشق فيسقط بين منتصف الليل والتاسعة.**
+	if want := s.expenseAccountDay(context.Background()); spent.Format("2006-01-02") != want {
+		t.Fatalf("يومُ الصرف %s ويومُ الحساب %s", spent.Format("2006-01-02"), want)
 	}
 }
 

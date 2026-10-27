@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"math"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -203,7 +204,7 @@ func (s *Service) BulkPrice(ctx context.Context, actorID, merchantID string, in 
 		if maxPrice > 0 && sm.NewPrice > maxPrice {
 			rows.Close()
 			return nil, &httpx.AppError{Status: http.StatusBadRequest, Code: "item_price_too_high",
-				MessageKey: "errors.item_price_too_high", Details: map[string]any{"max": maxPrice}}
+				MessageKey: "errors.item_price_too_high", Details: map[string]any{"max": strconv.FormatInt(maxPrice, 10)}}
 		}
 		if len(res.Samples) < 3 {
 			res.Samples = append(res.Samples, sm)

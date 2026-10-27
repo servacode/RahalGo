@@ -19,6 +19,7 @@ package catalog
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
@@ -114,7 +115,7 @@ func (s *Service) SetDrinks(ctx context.Context, actorID, merchantID string, in 
 		}
 		if max > 0 && d.Price > max {
 			return nil, &httpx.AppError{Status: http.StatusBadRequest, Code: "item_price_too_high",
-				MessageKey: "errors.item_price_too_high", Details: map[string]any{"max": max}}
+				MessageKey: "errors.item_price_too_high", Details: map[string]any{"max": strconv.FormatInt(max, 10)}}
 		}
 		clean = append(clean, d)
 		cents = append(cents, c)

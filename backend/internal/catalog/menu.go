@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -59,7 +60,7 @@ func (s *Service) checkItemBounds(ctx context.Context, in MenuItemInput) error {
 	if in.Price != nil && s.settings != nil {
 		if max := s.settings.GetInt(ctx, "merchants.max_item_price"); max > 0 && *in.Price > max {
 			return &httpx.AppError{Status: http.StatusBadRequest, Code: "item_price_too_high",
-				MessageKey: "errors.item_price_too_high", Details: map[string]any{"max": max}}
+				MessageKey: "errors.item_price_too_high", Details: map[string]any{"max": strconv.FormatInt(max, 10)}}
 		}
 	}
 	return nil

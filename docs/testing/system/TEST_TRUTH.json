@@ -34,7 +34,7 @@
     "behaviour_settings": 206,
     "order_fields": 120,
     "test_files": 670,
-    "test_funcs": 2581
+    "test_funcs": 2582
   },
   "flows": [
     {
@@ -20442,6 +20442,12 @@
     },
     {
       "name": "TestOptionPresets_RepForClientOnly",
+      "file": "internal/qa/option_presets_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPriceTooHigh_DetailsAreText",
       "file": "internal/qa/option_presets_test.go",
       "package": "qa",
       "orphan": true
