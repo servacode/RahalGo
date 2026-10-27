@@ -153,6 +153,115 @@ func (s *Server) handleListPromoApprovals(w http.ResponseWriter, r *http.Request
 	httpx.JSON(w, http.StatusOK, map[string]any{"approvals": out})
 }
 
+// decidePromoApprovalTx **القرارُ الواحد على كودٍ أو عرضٍ ينتظر الماليّة** — داخلَ
+// معاملة المنادي. **ويناديه الإنشاءُ والتعديلُ نفسُهما** حين يكون صاحبُهما مالكاً أو
+// مديراً (`autoApprovePromo`، قرارُ المالك ٢٠٢٦-١٠-٢٧).
+func (s *Server) decidePromoApprovalTx(ctx context.Context, q dbtx.Querier, r *http.Request,
+	id, actor string, approve bool, note string) (out promoApprovalRow, replaced []offers.Replaced, err error) {
+	err = func() error {
+		a, err := scanPromoApproval(q.QueryRow(ctx, promoApprovalCols+`
+			WHERE pa.id = $1 FOR UPDATE OF pa`, id))
+		if errors.Is(err, pgx.ErrNoRows) {
+			return httpx.ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if a.Status != "pending" {
+			return errRequestDecided
+		}
+		var verdict approval.Verdict
+		if approve {
+			if verdict, err = approval.Check(ctx, q, approval.Request{
+				ProposedBy: a.ProposedBy, Actor: actor, Capability: authz.FinanceManage,
+			}); err != nil {
+				return err
+			}
+		}
+		switch a.TargetKind {
+		case "promo":
+			state := offers.ApprovalRejected
+			if approve {
+				state = offers.ApprovalOK
+			}
+			if _, err := q.Exec(ctx, `
+				UPDATE promo_codes SET approval_state = $2, active = $3 WHERE id = $1::uuid`,
+				a.TargetID, state, approve); err != nil {
+				return err
+			}
+		case "offer":
+			// **والموافقةُ تستبدل عرضَ المتجر وتُخبره** (قرارُ المالك ٢٠٢٦-١٠-١٥).
+			if replaced, err = s.offers.Decide(ctx, q, a.TargetID, approve); err != nil {
+				return err
+			}
+		}
+		status := "rejected"
+		if approve {
+			status = "approved"
+		}
+		if _, err := q.Exec(ctx, `
+			UPDATE promo_approvals
+			   SET status = $2, decided_by = $3::uuid, decided_at = now(),
+			       decision_note = $4, self_approved = $5
+			 WHERE id = $1::uuid`, id, status, actor,
+			clip(strings.TrimSpace(note), 500), verdict.SelfApproved); err != nil {
+			return err
+		}
+		a.Status = status
+		a.SelfApproved = verdict.SelfApproved
+		out = a
+		details := map[string]any{"approval_id": id, "target_kind": a.TargetKind,
+			"amount": a.Amount, "proposed_by": a.ProposedBy, "note": strings.TrimSpace(note)}
+		for k, v := range verdict.AuditFields() {
+			details[k] = v
+		}
+		action := "finance.promo_rejected"
+		if approve {
+			action = "finance.promo_approved"
+		}
+		return s.auditTx(ctx, q, r, action, a.TargetKind, a.TargetID, details)
+	}()
+	return
+}
+
+// autoApprovePromo **كودٌ أو عرضٌ عمله المالكُ أو المدير لا ينتظر الماليّة** (قرارُ المالك
+// ٢٠٢٦-١٠-٢٧) — يُقرَّر طلبُه المعلَّقُ فوراً بطريق الموافقة نفسِه، **في معاملةٍ تلي
+// الإنشاء** (الإنشاءُ في حزمته بمعاملته). ويردّ `true` إن نفذ.
+func (s *Server) autoApprovePromo(r *http.Request, kind, targetID string) (bool, error) {
+	actor := userIDFrom(r)
+	applied := false
+	var replaced []offers.Replaced
+	err := s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
+		applied, replaced = false, nil
+		auto, err := approval.AutoApplies(ctx, q, actor)
+		if err != nil || !auto {
+			return err
+		}
+		var id string
+		err = q.QueryRow(ctx, `
+			SELECT id::text FROM promo_approvals
+			 WHERE target_kind = $1 AND target_id = $2::uuid AND status = 'pending'`,
+			kind, targetID).Scan(&id)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if _, replaced, err = s.decidePromoApprovalTx(ctx, q, r, id, actor, true, ""); err != nil {
+			return err
+		}
+		applied = true
+		return nil
+	})
+	if err != nil || !applied {
+		return false, err
+	}
+	s.notifyOffersReplaced(r.Context(), replaced)
+	s.touch("offer", "ops")
+	return true, nil
+}
+
 // handleDecidePromoApproval `POST /admin/promo-approvals/{id}/approve|reject`.
 //
 // **والمقترحُ غيرُ الموافق** (`approval.Check`) — من عمل الكودَ لا يوافق عليه.
@@ -174,67 +283,9 @@ func (s *Server) handleDecidePromoApproval(approve bool) http.HandlerFunc {
 		var out promoApprovalRow
 		var replaced []offers.Replaced
 		if err := s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
-			a, err := scanPromoApproval(q.QueryRow(ctx, promoApprovalCols+`
-				WHERE pa.id = $1 FOR UPDATE OF pa`, id))
-			if errors.Is(err, pgx.ErrNoRows) {
-				return httpx.ErrNotFound
-			}
-			if err != nil {
-				return err
-			}
-			if a.Status != "pending" {
-				return errRequestDecided
-			}
-			var verdict approval.Verdict
-			if approve {
-				if verdict, err = approval.Check(ctx, q, approval.Request{
-					ProposedBy: a.ProposedBy, Actor: actor, Capability: authz.FinanceManage,
-				}); err != nil {
-					return err
-				}
-			}
-			switch a.TargetKind {
-			case "promo":
-				state := offers.ApprovalRejected
-				if approve {
-					state = offers.ApprovalOK
-				}
-				if _, err := q.Exec(ctx, `
-					UPDATE promo_codes SET approval_state = $2, active = $3 WHERE id = $1::uuid`,
-					a.TargetID, state, approve); err != nil {
-					return err
-				}
-			case "offer":
-				// **والموافقةُ تستبدل عرضَ المتجر وتُخبره** (قرارُ المالك ٢٠٢٦-١٠-١٥).
-				if replaced, err = s.offers.Decide(ctx, q, a.TargetID, approve); err != nil {
-					return err
-				}
-			}
-			status := "rejected"
-			if approve {
-				status = "approved"
-			}
-			if _, err := q.Exec(ctx, `
-				UPDATE promo_approvals
-				   SET status = $2, decided_by = $3::uuid, decided_at = now(),
-				       decision_note = $4, self_approved = $5
-				 WHERE id = $1::uuid`, id, status, actor,
-				clip(strings.TrimSpace(req.Note), 500), verdict.SelfApproved); err != nil {
-				return err
-			}
-			a.Status = status
-			a.SelfApproved = verdict.SelfApproved
-			out = a
-			details := map[string]any{"approval_id": id, "target_kind": a.TargetKind,
-				"amount": a.Amount, "proposed_by": a.ProposedBy, "note": strings.TrimSpace(req.Note)}
-			for k, v := range verdict.AuditFields() {
-				details[k] = v
-			}
-			action := "finance.promo_rejected"
-			if approve {
-				action = "finance.promo_approved"
-			}
-			return s.auditTx(ctx, q, r, action, a.TargetKind, a.TargetID, details)
+			var err error
+			out, replaced, err = s.decidePromoApprovalTx(ctx, q, r, id, actor, approve, req.Note)
+			return err
 		}); err != nil {
 			s.respondErr(w, err)
 			return

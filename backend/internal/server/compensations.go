@@ -131,6 +131,37 @@ func (s *Server) approveCompensationTx(ctx context.Context, q dbtx.Querier, r *h
 	return s.auditTx(ctx, q, r, "finance.driver_compensation", entity, entityID, meta)
 }
 
+// autoApproveCompensationTx **تعويضٌ اقترحه المالكُ أو المدير ينفُذ فوراً** (قرارُ
+// المالك ٢٠٢٦-١٠-٢٧) — بالموافقة الواحدة نفسِها (`approveCompensationTx`) وفي معاملة
+// الاقتراح، بمبلغه وملاحظته. **وما فوق سقف النوع لغير المالك يبقى معلَّقاً** كما
+// كان — فالسقفُ يُفحص قبل أيّ كتابة. ويُرجع الطلبَ المدفوعَ لإشعار ما بعد التثبيت.
+func (s *Server) autoApproveCompensationTx(ctx context.Context, q dbtx.Querier, r *http.Request,
+	id string) (*orders.CompensationRequest, int64, error) {
+	auto, err := approval.AutoApplies(ctx, q, userIDFrom(r))
+	if err != nil || !auto {
+		return nil, 0, err
+	}
+	c, err := s.orders.CompensationByIDTx(ctx, q, id)
+	if err != nil || c == nil {
+		return nil, 0, err
+	}
+	amount := c.SuggestedAmount
+	if c.Amount != nil && *c.Amount > 0 {
+		amount = *c.Amount
+	}
+	note := strings.TrimSpace(c.Note)
+	if note == "" {
+		note = "نفذت فوراً بحركة الإدارة"
+	}
+	if err := s.approveCompensationTx(ctx, q, r, c, amount, note); err != nil {
+		if errors.Is(err, errCompensationAboveCap) {
+			return nil, 0, nil
+		}
+		return nil, 0, err
+	}
+	return c, amount, nil
+}
+
 // compensationCapTx **سقفُ النوع من داخل المعاملة** — لا من المخزن.
 //
 // **والمخزنُ يأخذ اتّصالاً ثانياً من البِركة**: أربعُ موافقاتٍ متزامنةٍ تمسك كلٌّ
@@ -332,6 +363,8 @@ func (s *Server) handleProposeCompensation(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	var id string
+	var paid *orders.CompensationRequest
+	var paidAmount int64
 	if err := s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
 		var driverOK bool
 		if err := q.QueryRow(ctx, `
@@ -351,18 +384,37 @@ func (s *Server) handleProposeCompensation(w http.ResponseWriter, r *http.Reques
 		if e != nil {
 			return compensationErr(e)
 		}
-		return s.auditTx(ctx, q, r, "finance.compensation_proposed", "order", req.OrderID, map[string]any{
+		if err := s.auditTx(ctx, q, r, "finance.compensation_proposed", "order", req.OrderID, map[string]any{
 			"request_id": id, "kind": orders.CompKindDriver, "beneficiary_id": req.UserID,
 			"amount": req.Amount, "note": note,
-		})
+		}); err != nil {
+			return err
+		}
+		paid, paidAmount, e = s.autoApproveCompensationTx(ctx, q, r, id)
+		return e
 	}); err != nil {
 		s.respondErr(w, err)
+		return
+	}
+	s.respondCompensationProposed(w, r, id, paid, paidAmount)
+}
+
+// respondCompensationProposed **ردُّ الاقتراح** — وإن نفذ فوراً (حركةُ مالكٍ أو مدير)
+// أُخبر المستفيدُ ولا تُنبَّه الماليّةُ على ما لا ينتظرها.
+func (s *Server) respondCompensationProposed(w http.ResponseWriter, r *http.Request, id string,
+	paid *orders.CompensationRequest, amount int64) {
+	if paid != nil {
+		s.notifyCompensationPaid(r.Context(), paid, amount)
+		s.touch("order", "ops")
+		s.touch("wallet", "ops")
+		httpx.JSON(w, http.StatusAccepted, map[string]any{"proposed": id, "status": "approved",
+			"applied": true, "compensated": amount})
 		return
 	}
 	// **والماليّةُ تُنبَّه** — بعد التثبيت (قرارُ المالك ٢٠٢٦-١٠-١٥).
 	s.orders.AlertCompensationPending(r.Context(), id)
 	s.touch("order", "ops")
-	httpx.JSON(w, http.StatusAccepted, map[string]any{"proposed": id})
+	httpx.JSON(w, http.StatusAccepted, map[string]any{"proposed": id, "status": "pending"})
 }
 
 // handleListCompensations **القائمةُ بتبويباتها وفلاترها وبطاقاتها.**

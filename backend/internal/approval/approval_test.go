@@ -113,3 +113,25 @@ func TestAPR_OwnerAloneSelfApprovesFlagged(t *testing.T) {
 		t.Fatalf("**الموافقةُ الذاتيّةُ بلا علامةٍ صريحةٍ في السجلّ**: %v", f)
 	}
 }
+
+// TestAPR_AutoAppliesForOwnerAndAdminOnly **قرارُ المالك ٢٠٢٦-١٠-٢٧: حركةُ المالك أو المدير
+// تنفذ فوراً، وطلبُ غيرِهما ينتظر** — والحكمُ من الأدوار في القاعدة لا من الشاشة.
+func TestAPR_AutoAppliesForOwnerAndAdminOnly(t *testing.T) {
+	pool := testdb.Pool(t)
+	ctx := context.Background()
+	for role, want := range map[string]bool{
+		authz.RoleOwnerSuperAdmin: true,
+		authz.RoleAdmin:           true,
+		"finance":                 false,
+		"operations":              false,
+	} {
+		u := testdb.NewUser(t, pool, role)
+		got, err := AutoApplies(ctx, pool, u)
+		if err != nil || got != want {
+			t.Errorf("الدور %s: تنفيذٌ فوريّ=%v (%v) — والمنتظَر %v", role, got, err, want)
+		}
+	}
+	if got, err := AutoApplies(ctx, pool, ""); err != nil || got {
+		t.Errorf("فاعلٌ بلا معرّف نفذ فوراً: %v %v", got, err)
+	}
+}

@@ -161,7 +161,9 @@ func TestEXP1015_MonthlyReminderOncePerMonth(t *testing.T) {
 func TestEXP1015_RejectNeedsReasonAndShowsIt(t *testing.T) {
 	x := newOpexFixture(t)
 	s := x.f.srv
-	clerk := testdb.NewUser(t, x.f.pool, "admin")
+	// **مقترحٌ من الماليّة لا مدير** — حركةُ المدير تنفذ فوراً (قرارُ المالك ٢٠٢٦-١٠-٢٧)،
+	// والاختبارُ هنا لطريق الطلب المعلَّق.
+	clerk := testdb.NewUser(t, x.f.pool, "finance")
 	boss := testdb.NewUser(t, x.f.pool, "admin")
 	over := strconv.FormatInt(s.expenseApprovalThreshold(context.Background())+1, 10)
 	rc := x.receipt(t, clerk)
@@ -188,7 +190,9 @@ func TestEXP1015_RejectNeedsReasonAndShowsIt(t *testing.T) {
 func TestEXP1015_CanVoidCanApproveFlags(t *testing.T) {
 	x := newOpexFixture(t)
 	s := x.f.srv
-	clerk := testdb.NewUser(t, x.f.pool, "admin")
+	// **مقترحٌ من الماليّة لا مدير** — حركةُ المدير تنفذ فوراً (قرارُ المالك ٢٠٢٦-١٠-٢٧)،
+	// والاختبارُ هنا لطريق الطلب المعلَّق.
+	clerk := testdb.NewUser(t, x.f.pool, "finance")
 	boss := testdb.NewUser(t, x.f.pool, "admin")
 	third := testdb.NewUser(t, x.f.pool, "admin")
 	tag := "أعلام-فحص-" + strconv.FormatInt(time.Now().UnixNano()%1_000_000, 10)

@@ -47,7 +47,6 @@ import {
   useLiveRefresh,
 } from "@rahalgo/ui";
 import { api, apiFile } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
 import { useCanCall, useCanOpen } from "@/lib/policy";
 import { PageHero, type HeroTab } from "@/components/admin/PageHero";
 import { Tile } from "@/components/admin/DashParts";
@@ -147,7 +146,6 @@ export default function IncentivesPage() {
   const [role, setRole] = useState<Role>("driver");
   const [month, setMonth] = useState(thisMonth());
   const [query, setQuery] = useState("");
-  const { user: me } = useAuth();
   const canCall = useCanCall();
   const canGrant = canCall("POST", "/users/{id}/incentive");
   const canDecide = canCall("POST", "/incentive-requests/{id}/approve");
@@ -547,14 +545,12 @@ export default function IncentivesPage() {
                     </p>
                     {canDecide && (
                       <div className="grid grid-cols-2 gap-2">
-                        {me?.id !== r.proposed_by && (
-                          <Button className="w-full" disabled={busy} onClick={() => setApproving(r)}>
-                            {P.approve}
-                          </Button>
-                        )}
+                        <Button className="w-full" disabled={busy} onClick={() => setApproving(r)}>
+                          {P.approve}
+                        </Button>
                         <Button
                           variant="secondary"
-                          className={`w-full ${me?.id === r.proposed_by ? "col-span-2" : ""}`}
+                          className="w-full"
                           disabled={busy}
                           onClick={() => setRejecting(r)}
                         >

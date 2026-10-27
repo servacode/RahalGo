@@ -524,6 +524,10 @@
       ],
       "response": [
         {
+          "name": "applied",
+          "type": "unknown"
+        },
+        {
           "name": "close",
           "type": "unknown"
         }
@@ -937,15 +941,6 @@
           "name": "note",
           "type": "string"
         }
-      ],
-      "response": [
-        {
-          "name": "proposed",
-          "type": "unknown"
-        }
-      ],
-      "statuses": [
-        "StatusAccepted"
       ]
     },
     {
@@ -1252,12 +1247,32 @@
       ],
       "response": [
         {
+          "name": "applied",
+          "type": "bool"
+        },
+        {
+          "name": "charged",
+          "type": "unknown"
+        },
+        {
+          "name": "debt",
+          "type": "unknown"
+        },
+        {
+          "name": "remaining",
+          "type": "unknown"
+        },
+        {
           "name": "resolution_id",
           "type": "unknown"
         },
         {
+          "name": "self_approved",
+          "type": "unknown"
+        },
+        {
           "name": "status",
-          "type": "string"
+          "type": "unknown"
         }
       ],
       "statuses": [
@@ -1584,6 +1599,10 @@
       ],
       "response": [
         {
+          "name": "applied",
+          "type": "unknown"
+        },
+        {
           "name": "request_id",
           "type": "unknown"
         },
@@ -1791,6 +1810,10 @@
         }
       ],
       "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        },
         {
           "name": "id",
           "type": "unknown"
@@ -2050,6 +2073,10 @@
         }
       ],
       "response": [
+        {
+          "name": "applied",
+          "type": "unknown"
+        },
         {
           "name": "decided",
           "type": "bool"
@@ -4053,15 +4080,6 @@
           "name": "amount",
           "type": "int64"
         }
-      ],
-      "response": [
-        {
-          "name": "proposed",
-          "type": "unknown"
-        }
-      ],
-      "statuses": [
-        "StatusAccepted"
       ]
     },
     {

@@ -13,6 +13,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/media"
+	"github.com/servacode/rahalgo/backend/internal/offers"
 	"github.com/servacode/rahalgo/backend/internal/settings"
 )
 
@@ -38,6 +39,17 @@ func (s *Server) handleCreatePromo(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// **وكودُ المالك أو المدير لا ينتظر الماليّة** (قرارُ المالك ٢٠٢٦-١٠-٢٧).
+	if p.ApprovalState == offers.ApprovalPending {
+		applied, err := s.autoApprovePromo(r, "promo", p.ID)
+		if err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		if applied {
+			p.ApprovalState, p.Active = offers.ApprovalOK, true
+		}
+	}
 	httpx.JSON(w, http.StatusCreated, p)
 }
 
@@ -51,6 +63,17 @@ func (s *Server) handleUpdatePromo(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	// **وكودُ المالك أو المدير لا ينتظر الماليّة** (قرارُ المالك ٢٠٢٦-١٠-٢٧).
+	if p.ApprovalState == offers.ApprovalPending {
+		applied, err := s.autoApprovePromo(r, "promo", p.ID)
+		if err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		if applied {
+			p.ApprovalState, p.Active = offers.ApprovalOK, true
+		}
 	}
 	httpx.JSON(w, http.StatusOK, p)
 }

@@ -332,6 +332,8 @@ func (s *Server) handleGoodsCompensation(w http.ResponseWriter, r *http.Request)
 	// هنا وعند الموافقة معاً**، ولا يوافق عليه كاتبُه.
 	// ══════════════════════════════════════════════════════════════════
 	var id string
+	var paid *orders.CompensationRequest
+	var paidAmount int64
 	if err := s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
 		if err := orders.GoodsCompensableTx(ctx, q, orderID, req.Amount); err != nil {
 			return compensationErr(err)
@@ -355,17 +357,19 @@ func (s *Server) handleGoodsCompensation(w http.ResponseWriter, r *http.Request)
 		if e != nil {
 			return compensationErr(e)
 		}
-		return s.auditTx(ctx, q, r, "finance.compensation_proposed", "order", orderID, map[string]any{
+		if err := s.auditTx(ctx, q, r, "finance.compensation_proposed", "order", orderID, map[string]any{
 			"request_id": id, "kind": orders.CompKindMerchantGoods, "amount": req.Amount,
-		})
+		}); err != nil {
+			return err
+		}
+		// **وتعويضُ المالك أو المدير ينفُذ فوراً** (قرارُ المالك ٢٠٢٦-١٠-٢٧).
+		paid, paidAmount, e = s.autoApproveCompensationTx(ctx, q, r, id)
+		return e
 	}); err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	// **والماليّةُ تُنبَّه** — بعد التثبيت (قرارُ المالك ٢٠٢٦-١٠-١٥).
-	s.orders.AlertCompensationPending(r.Context(), id)
-	s.touch("order", "ops")
-	httpx.JSON(w, http.StatusAccepted, map[string]any{"proposed": id})
+	s.respondCompensationProposed(w, r, id, paid, paidAmount)
 }
 
 // handleSettleGoodsLegacy الجسدُ القديم — يبقى للقراءة لا للنداء.

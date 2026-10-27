@@ -250,7 +250,9 @@ func (s *Server) handleCreateCashClose(w http.ResponseWriter, r *http.Request) {
 	}
 	actor := userIDFrom(r)
 	var row cashCloseRow
+	var applied bool
 	if err := s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
+		applied = false
 		// **إغلاقٌ واحدٌ في كلّ مرّة** — يُقفَل الجدولُ لكتابةٍ حتّى تُحسب الفترةُ وتُوسَم.
 		if _, err := q.Exec(ctx, `LOCK TABLE office_cash_closes IN SHARE ROW EXCLUSIVE MODE`); err != nil {
 			return err
@@ -297,6 +299,18 @@ func (s *Server) handleCreateCashClose(w http.ResponseWriter, r *http.Request) {
 			map[string]any{"expected": pos.Expected, "counted": *req.Counted, "difference": diff}); err != nil {
 			return err
 		}
+		// **وإغلاقُ المالك أو المدير يُعتمَد فوراً** (قرارُ المالك ٢٠٢٦-١٠-٢٧) — بطريق المراجعة
+		// نفسِه وفي المعاملة نفسِها؛ وإغلاقُ الموظّف ينتظر.
+		auto, err := approval.AutoApplies(ctx, q, actor)
+		if err != nil {
+			return err
+		}
+		if auto {
+			if _, _, err := s.decideCashCloseTx(ctx, q, r, id, actor, true, ""); err != nil {
+				return err
+			}
+			applied = true
+		}
 		rows, err := s.closesWhere(ctx, q, `c.id = $1`, 1, id)
 		if err != nil || len(rows) == 0 {
 			return err
@@ -308,7 +322,7 @@ func (s *Server) handleCreateCashClose(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.touch("wallet", "ops")
-	httpx.JSON(w, http.StatusCreated, map[string]any{"close": row})
+	httpx.JSON(w, http.StatusCreated, map[string]any{"close": row, "applied": applied})
 }
 
 // handleDecideCashClose **مراجعةُ الإغلاق** — شخصٌ غيرُ من عدّ.
@@ -339,68 +353,9 @@ func (s *Server) handleDecideCashClose(approve bool) http.HandlerFunc {
 		var status string
 		var self bool
 		if err := s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
-			var proposedBy, cur, day string
-			var diff int64
-			if err := q.QueryRow(ctx, `
-				SELECT proposed_by::text, status, difference, day::text
-				  FROM office_cash_closes WHERE id = $1 FOR UPDATE`, id).
-				Scan(&proposedBy, &cur, &diff, &day); err != nil {
-				if errors.Is(err, pgx.ErrNoRows) {
-					return httpx.ErrNotFound
-				}
-				return err
-			}
-			if cur != "pending" {
-				return errRequestDecided
-			}
-			var verdict approval.Verdict
-			if approve {
-				v, err := approval.Check(ctx, q, approval.Request{
-					ProposedBy: proposedBy, Actor: actor, Capability: authz.FinanceManage})
-				if err != nil {
-					return err
-				}
-				verdict = v
-			}
-			self = verdict.SelfApproved
-			status = "rejected"
-			if approve {
-				status = "approved"
-			}
-			if _, err := q.Exec(ctx, `
-				UPDATE office_cash_closes
-				   SET status = $2, decided_by = $3, decided_at = now(),
-				       decision_note = $4, self_approved = $5
-				 WHERE id = $1`, id, status, actor, note, self); err != nil {
-				return err
-			}
-			if !approve {
-				if _, err := q.Exec(ctx,
-					`UPDATE office_cash_entries SET close_id = NULL WHERE close_id = $1`, id); err != nil {
-					return err
-				}
-			}
-			details := map[string]any{"difference": diff, "proposed_by": proposedBy, "note": note}
-			if approve && diff < 0 {
-				// **النقصُ يُسجَّل ولا يُقيَّد** — ينتظر يوماً: يُحَلّ أو يصير خسارة.
-				var sid string
-				if err := q.QueryRow(ctx, `
-					INSERT INTO office_cash_shortfalls (close_id, amount, note, proposed_by, eligible_at)
-					VALUES ($1, $2, $3, $4, now() + interval '1 day')
-					RETURNING id::text`, id, -diff, "نقصُ صندوق المكتب — إغلاقُ يوم "+day, proposedBy).
-					Scan(&sid); err != nil {
-					return err
-				}
-				details["shortfall_id"] = sid
-			}
-			for k, v := range verdict.AuditFields() {
-				details[k] = v
-			}
-			action := "finance.cash_close_rejected"
-			if approve {
-				action = "finance.cash_close_approved"
-			}
-			return s.auditTx(ctx, q, r, action, "office_cash_close", id, details)
+			var err error
+			status, self, err = s.decideCashCloseTx(ctx, q, r, id, actor, approve, note)
+			return err
 		}); err != nil {
 			s.respondErr(w, err)
 			return
@@ -408,6 +363,78 @@ func (s *Server) handleDecideCashClose(approve bool) http.HandlerFunc {
 		s.touch("wallet", "ops")
 		httpx.JSON(w, http.StatusOK, map[string]any{"status": status, "self_approved": self})
 	}
+}
+
+// decideCashCloseTx **القرارُ الواحد على الإغلاق** — داخلَ معاملة المنادي. **ويناديه
+// الإغلاقُ نفسُه** حين يكون من عدّ مالكاً أو مديراً (`approval.AutoApplies`، قرارُ المالك
+// ٢٠٢٦-١٠-٢٧).
+func (s *Server) decideCashCloseTx(ctx context.Context, q dbtx.Querier, r *http.Request,
+	id, actor string, approve bool, note string) (status string, self bool, err error) {
+	err = func() error {
+		var proposedBy, cur, day string
+		var diff int64
+		if err := q.QueryRow(ctx, `
+			SELECT proposed_by::text, status, difference, day::text
+			  FROM office_cash_closes WHERE id = $1 FOR UPDATE`, id).
+			Scan(&proposedBy, &cur, &diff, &day); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return httpx.ErrNotFound
+			}
+			return err
+		}
+		if cur != "pending" {
+			return errRequestDecided
+		}
+		var verdict approval.Verdict
+		if approve {
+			v, err := approval.Check(ctx, q, approval.Request{
+				ProposedBy: proposedBy, Actor: actor, Capability: authz.FinanceManage})
+			if err != nil {
+				return err
+			}
+			verdict = v
+		}
+		self = verdict.SelfApproved
+		status = "rejected"
+		if approve {
+			status = "approved"
+		}
+		if _, err := q.Exec(ctx, `
+			UPDATE office_cash_closes
+			   SET status = $2, decided_by = $3, decided_at = now(),
+			       decision_note = $4, self_approved = $5
+			 WHERE id = $1`, id, status, actor, note, self); err != nil {
+			return err
+		}
+		if !approve {
+			if _, err := q.Exec(ctx,
+				`UPDATE office_cash_entries SET close_id = NULL WHERE close_id = $1`, id); err != nil {
+				return err
+			}
+		}
+		details := map[string]any{"difference": diff, "proposed_by": proposedBy, "note": note}
+		if approve && diff < 0 {
+			// **النقصُ يُسجَّل ولا يُقيَّد** — ينتظر يوماً: يُحَلّ أو يصير خسارة.
+			var sid string
+			if err := q.QueryRow(ctx, `
+				INSERT INTO office_cash_shortfalls (close_id, amount, note, proposed_by, eligible_at)
+				VALUES ($1, $2, $3, $4, now() + interval '1 day')
+				RETURNING id::text`, id, -diff, "نقصُ صندوق المكتب — إغلاقُ يوم "+day, proposedBy).
+				Scan(&sid); err != nil {
+				return err
+			}
+			details["shortfall_id"] = sid
+		}
+		for k, v := range verdict.AuditFields() {
+			details[k] = v
+		}
+		action := "finance.cash_close_rejected"
+		if approve {
+			action = "finance.cash_close_approved"
+		}
+		return s.auditTx(ctx, q, r, action, "office_cash_close", id, details)
+	}()
+	return
 }
 
 // handleResolveShortfall **وُجد المالُ الناقص** — يدخل الدرجَ سطراً، ويُغلَق النقص.

@@ -13,6 +13,8 @@ import (
 	"net/http"
 	"testing"
 	"time"
+
+	"github.com/servacode/rahalgo/backend/internal/testdb"
 )
 
 func TestTREASURY_OpeningBalanceFeedsExpected(t *testing.T) {
@@ -95,7 +97,9 @@ func TestTREASURY_CashCloseCanApproveFlag(t *testing.T) {
 	f := newTreasuryFixture(t)
 	resetCashCloses(t, f.pool)
 	t.Cleanup(func() { resetCashCloses(t, f.pool) })
-	if w := f.call(f.a, "POST", "/admin/cashbox/closes", nil, `{"counted":0}`, f.srv.handleCreateCashClose); w.Code != http.StatusCreated {
+	// **من الماليّة لا مدير** — إغلاقُ المدير يُعتمَد فوراً (قرارُ المالك ٢٠٢٦-١٠-٢٧)، فلا زرَّ يُعرض.
+	clerk := testdb.NewUser(t, f.pool, "finance")
+	if w := f.call(clerk, "POST", "/admin/cashbox/closes", nil, `{"counted":0}`, f.srv.handleCreateCashClose); w.Code != http.StatusCreated {
 		t.Fatalf("الإغلاقُ ردّ %d: %s", w.Code, w.Body)
 	}
 	flag := func(actor string) any {
@@ -104,7 +108,7 @@ func TestTREASURY_CashCloseCanApproveFlag(t *testing.T) {
 		return pc["can_approve"]
 	}
 	// **قرارُ ٢٠٢٦-١٠-٢٢:** من أغلق يراجع نفسَه.
-	if flag(f.a) != true {
+	if flag(clerk) != true {
 		t.Fatal("من أغلق لا يرى زرَّ مراجعة نفسِه")
 	}
 	if flag(f.b) != true {

@@ -26,6 +26,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/servacode/rahalgo/backend/internal/approval"
 	"github.com/servacode/rahalgo/backend/internal/authz"
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
@@ -163,6 +164,28 @@ func (s *Server) handleIncentiveGrant(w http.ResponseWriter, r *http.Request) {
 				"reason": strings.TrimSpace(req.Reason)}); err != nil {
 			return IdempotentBody{}, err
 		}
+		// **حافزُ المالك أو المدير ينفُذ فوراً** (قرارُ المالك ٢٠٢٦-١٠-٢٧) — بطريق
+		// الموافقة نفسِه وفي المعاملة نفسِها؛ والموظّفُ يبقى طلبُه معلَّقاً.
+		auto, err := approval.AutoApplies(ctx, q, actor)
+		if err != nil {
+			return IdempotentBody{}, err
+		}
+		if auto {
+			out, err := s.decideIncentiveRequestTx(ctx, q, r, id, actor, true, "")
+			if err != nil {
+				return IdempotentBody{}, err
+			}
+			return IdempotentBody{
+				Status: http.StatusCreated,
+				Payload: map[string]any{"request_id": id, "status": out.Status,
+					"applied": true, "self_approved": out.SelfApproved},
+				AfterCommit: func() {
+					s.notifyIncentive(context.WithoutCancel(ctx), out)
+					s.touchUser(out.UserID, "wallet")
+					s.touch("incentive", "ops")
+				},
+			}, nil
+		}
 		return IdempotentBody{
 			Status:  http.StatusCreated,
 			Payload: map[string]any{"request_id": id, "status": "pending"},
@@ -216,22 +239,9 @@ func (s *Server) handleDecideIncentiveRequest(approve bool) http.HandlerFunc {
 		actor := userIDFrom(r)
 		var out incentives.Request
 		if err := s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
-			row, verdict, err := s.incentives.DecideRequest(ctx, q, id, actor, approve, req.Note)
-			if err != nil {
-				return err
-			}
-			out = row
-			action := "finance.incentive_request_rejected"
-			if approve {
-				action = "finance.incentive"
-			}
-			details := map[string]any{"request_id": id, "kind": row.Kind, "amount": row.Amount,
-				"reason": row.Note, "proposed_by": row.ProposedBy, "source": row.Source,
-				"note": strings.TrimSpace(req.Note)}
-			for k, v := range verdict.AuditFields() {
-				details[k] = v
-			}
-			return s.auditTx(ctx, q, r, action, "user", row.UserID, details)
+			var err error
+			out, err = s.decideIncentiveRequestTx(ctx, q, r, id, actor, approve, req.Note)
+			return err
 		}); err != nil {
 			s.respondErr(w, err)
 			return
@@ -246,6 +256,28 @@ func (s *Server) handleDecideIncentiveRequest(approve bool) http.HandlerFunc {
 		httpx.JSON(w, http.StatusOK, map[string]any{"status": out.Status,
 			"self_approved": out.SelfApproved})
 	}
+}
+
+// decideIncentiveRequestTx **القرارُ الواحد على طلب الحافز مع سطر السجلّ** — داخلَ معاملة
+// المنادي. **ويناديه بابُ الاقتراح نفسُه** حين يكون المقترحُ مالكاً أو مديراً
+// (`approval.AutoApplies`، قرارُ المالك ٢٠٢٦-١٠-٢٧).
+func (s *Server) decideIncentiveRequestTx(ctx context.Context, q dbtx.Querier, r *http.Request,
+	id, actor string, approve bool, note string) (incentives.Request, error) {
+	row, verdict, err := s.incentives.DecideRequest(ctx, q, id, actor, approve, note)
+	if err != nil {
+		return row, err
+	}
+	action := "finance.incentive_request_rejected"
+	if approve {
+		action = "finance.incentive"
+	}
+	details := map[string]any{"request_id": id, "kind": row.Kind, "amount": row.Amount,
+		"reason": row.Note, "proposed_by": row.ProposedBy, "source": row.Source,
+		"note": strings.TrimSpace(note)}
+	for k, v := range verdict.AuditFields() {
+		details[k] = v
+	}
+	return row, s.auditTx(ctx, q, r, action, "user", row.UserID, details)
 }
 
 // notifyIncentive **صاحبُ المكافأة أو العقوبة يعلم بها وبسببها.**
@@ -341,21 +373,44 @@ func (s *Server) handleDecideIncentiveAlert(w http.ResponseWriter, r *http.Reque
 	}
 	actor := userIDFrom(r)
 	var reqID string
+	var applied *incentives.Request
 	if err := s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
+		applied = nil
 		rid, err := s.incentives.DecideAlert(ctx, q, id, actor, req.Decision, req.Note)
 		if err != nil {
 			return err
 		}
 		reqID = rid
-		return s.auditTx(ctx, q, r, "finance.incentive_alert", "incentive", id,
+		if err := s.auditTx(ctx, q, r, "finance.incentive_alert", "incentive", id,
 			map[string]any{"decision": req.Decision, "note": strings.TrimSpace(req.Note),
-				"request_id": rid})
+				"request_id": rid}); err != nil {
+			return err
+		}
+		// **وعقوبةُ الاسترداد يطلبها المالكُ أو المدير تنفُذ فوراً** (قرارُ المالك ٢٠٢٦-١٠-٢٧).
+		if rid == "" {
+			return nil
+		}
+		auto, err := approval.AutoApplies(ctx, q, actor)
+		if err != nil || !auto {
+			return err
+		}
+		out, err := s.decideIncentiveRequestTx(ctx, q, r, rid, actor, true, "")
+		if err != nil {
+			return err
+		}
+		applied = &out
+		return nil
 	}); err != nil {
 		s.respondErr(w, err)
 		return
 	}
+	if applied != nil {
+		s.notifyIncentive(r.Context(), *applied)
+		s.touchUser(applied.UserID, "wallet")
+	}
 	s.touch("incentive", "ops")
-	httpx.JSON(w, http.StatusOK, map[string]any{"decided": true, "request_id": reqID})
+	httpx.JSON(w, http.StatusOK, map[string]any{"decided": true, "request_id": reqID,
+		"applied": applied != nil})
 }
 
 // handleRetryIncentiveFailure **يعيد مكافأةَ هدفٍ تعثّرت** — لشهرها.

@@ -895,12 +895,29 @@ func (s *Server) handleCreateExpense(w http.ResponseWriter, r *http.Request) {
 			s.respondErr(w, err)
 			return
 		}
+		// **مصروفُ المالك أو المدير ينفُذ فوراً** (قرارُ المالك ٢٠٢٦-١٠-٢٧) — بطريق
+		// الموافقة نفسِه وفي المعاملة نفسِها؛ والموظّفُ يبقى اقتراحُه معلَّقاً.
+		auto, err := approval.AutoApplies(r.Context(), tx, actor)
+		if err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		out := map[string]any{"id": id, "status": "pending"}
+		if auto {
+			expenseID, self, err := s.approveExpenseRequestTx(r.Context(), tx, r, id, actor, "")
+			if err != nil {
+				s.respondErr(w, err)
+				return
+			}
+			out = map[string]any{"id": id, "status": "approved", "applied": true,
+				"expense_id": expenseID, "self_approved": self}
+		}
 		if err := tx.Commit(r.Context()); err != nil {
 			s.respondErr(w, err)
 			return
 		}
 		s.touch("wallet", "ops")
-		httpx.JSON(w, http.StatusCreated, map[string]any{"id": id, "status": "pending"})
+		httpx.JSON(w, http.StatusCreated, out)
 		return
 	}
 
@@ -1041,76 +1058,8 @@ func (s *Server) handleApproveExpenseRequest(w http.ResponseWriter, r *http.Requ
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	var status, categoryID, catName, note, proposedBy, paidFrom, employee string
-	var amount int64
-	var spent time.Time
-	var receipt *string
-	err = tx.QueryRow(ctx, `
-		SELECT q.status, q.category_id::text, c.name, q.amount, q.note, q.spent_at,
-		       q.proposed_by::text, q.receipt_media_id::text, q.paid_from, q.employee_name
-		FROM expense_requests q JOIN expense_categories c ON c.id = q.category_id
-		WHERE q.id = $1 FOR UPDATE OF q`, id).
-		Scan(&status, &categoryID, &catName, &amount, &note, &spent, &proposedBy, &receipt, &paidFrom,
-			&employee)
-	if errors.Is(err, pgx.ErrNoRows) {
-		s.respondErr(w, httpx.ErrNotFound)
-		return
-	}
+	expenseID, self, err := s.approveExpenseRequestTx(ctx, tx, r, id, actor, req.Note)
 	if err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	if status != "pending" {
-		s.respondErr(w, errRequestDecided)
-		return
-	}
-	verdict, err := approval.Check(ctx, tx, approval.Request{
-		ProposedBy: proposedBy, Actor: actor, Capability: authz.FinanceManage,
-	})
-	if err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	var expenseID string
-	if err := tx.QueryRow(ctx, `
-		INSERT INTO expenses (category_id, amount, note, spent_at, created_by, receipt_media_id,
-		                      approved_by, self_approved, paid_from, employee_name)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id::text`,
-		categoryID, amount, note, spent, proposedBy, receipt, actor, verdict.SelfApproved, paidFrom,
-		employee).
-		Scan(&expenseID); err != nil {
-		s.respondErr(w, receiptErr(err))
-		return
-	}
-	// **وفوق السقف يخرج الكاشُ عند الموافقة** — حين يُقيَّد المصروف، لا حين يُقترح.
-	if err := expenseCashOut(ctx, tx, paidFrom, expenseID, amount, actor,
-		treasuryExpenseNote("مصروف تشغيل", catName, note)); err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	if _, err := s.wallet.ApplyTx(ctx, tx, s.orders.TreasuryID(ctx),
-		-amount, "operating_expense", expenseID, treasuryExpenseNote("مصروف تشغيل", catName, note),
-		&actor); err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	if _, err := tx.Exec(ctx, `
-		UPDATE expense_requests
-		   SET status = 'approved', decided_by = $2, decided_at = now(),
-		       decision_note = $3, self_approved = $4, expense_id = $5
-		 WHERE id = $1`, id, actor, clip(strings.TrimSpace(req.Note), 300),
-		verdict.SelfApproved, expenseID); err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	details := map[string]any{"request_id": id, "expense_id": expenseID, "amount": amount,
-		"category": catName, "spent_at": spent.Format("2006-01-02"), "proposed_by": proposedBy,
-		"note": strings.TrimSpace(req.Note), "paid_from": paidFrom}
-	for k, v := range verdict.AuditFields() {
-		details[k] = v
-	}
-	if err := s.auditTx(ctx, tx, r, "finance.expense_request_approved", "expense", expenseID,
-		details); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -1120,7 +1069,80 @@ func (s *Server) handleApproveExpenseRequest(w http.ResponseWriter, r *http.Requ
 	}
 	s.touch("wallet", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{"status": "approved",
-		"expense_id": expenseID, "self_approved": verdict.SelfApproved})
+		"expense_id": expenseID, "self_approved": self})
+}
+
+// approveExpenseRequestTx **الموافقةُ الواحدة على اقتراح مصروف** — داخلَ معاملة المنادي.
+//
+// **ويناديه بابُ الإنشاء نفسُه** حين يكون المقترحُ مالكاً أو مديراً
+// (`approval.AutoApplies`، قرارُ المالك ٢٠٢٦-١٠-٢٧) — فالقيدُ هو هو.
+func (s *Server) approveExpenseRequestTx(ctx context.Context, tx dbtx.Querier, r *http.Request,
+	id, actor, decisionNote string) (string, bool, error) {
+	var status, categoryID, catName, note, proposedBy, paidFrom, employee string
+	var amount int64
+	var spent time.Time
+	var receipt *string
+	err := tx.QueryRow(ctx, `
+		SELECT q.status, q.category_id::text, c.name, q.amount, q.note, q.spent_at,
+		       q.proposed_by::text, q.receipt_media_id::text, q.paid_from, q.employee_name
+		FROM expense_requests q JOIN expense_categories c ON c.id = q.category_id
+		WHERE q.id = $1 FOR UPDATE OF q`, id).
+		Scan(&status, &categoryID, &catName, &amount, &note, &spent, &proposedBy, &receipt, &paidFrom,
+			&employee)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", false, httpx.ErrNotFound
+	}
+	if err != nil {
+		return "", false, err
+	}
+	if status != "pending" {
+		return "", false, errRequestDecided
+	}
+	verdict, err := approval.Check(ctx, tx, approval.Request{
+		ProposedBy: proposedBy, Actor: actor, Capability: authz.FinanceManage,
+	})
+	if err != nil {
+		return "", false, err
+	}
+	var expenseID string
+	if err := tx.QueryRow(ctx, `
+		INSERT INTO expenses (category_id, amount, note, spent_at, created_by, receipt_media_id,
+		                      approved_by, self_approved, paid_from, employee_name)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id::text`,
+		categoryID, amount, note, spent, proposedBy, receipt, actor, verdict.SelfApproved, paidFrom,
+		employee).
+		Scan(&expenseID); err != nil {
+		return "", false, receiptErr(err)
+	}
+	// **وفوق السقف يخرج الكاشُ عند الموافقة** — حين يُقيَّد المصروف، لا حين يُقترح.
+	if err := expenseCashOut(ctx, tx, paidFrom, expenseID, amount, actor,
+		treasuryExpenseNote("مصروف تشغيل", catName, note)); err != nil {
+		return "", false, err
+	}
+	if _, err := s.wallet.ApplyTx(ctx, tx, s.orders.TreasuryID(ctx),
+		-amount, "operating_expense", expenseID, treasuryExpenseNote("مصروف تشغيل", catName, note),
+		&actor); err != nil {
+		return "", false, err
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE expense_requests
+		   SET status = 'approved', decided_by = $2, decided_at = now(),
+		       decision_note = $3, self_approved = $4, expense_id = $5
+		 WHERE id = $1`, id, actor, clip(strings.TrimSpace(decisionNote), 300),
+		verdict.SelfApproved, expenseID); err != nil {
+		return "", false, err
+	}
+	details := map[string]any{"request_id": id, "expense_id": expenseID, "amount": amount,
+		"category": catName, "spent_at": spent.Format("2006-01-02"), "proposed_by": proposedBy,
+		"note": strings.TrimSpace(decisionNote), "paid_from": paidFrom}
+	for k, v := range verdict.AuditFields() {
+		details[k] = v
+	}
+	if err := s.auditTx(ctx, tx, r, "finance.expense_request_approved", "expense", expenseID,
+		details); err != nil {
+		return "", false, err
+	}
+	return expenseID, verdict.SelfApproved, nil
 }
 
 // handleRejectExpenseRequest **يُرفض الاقتراح** — لا مالَ يتحرّك، ويبقى ظاهراً مرفوضاً.

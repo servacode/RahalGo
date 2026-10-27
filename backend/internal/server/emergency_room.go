@@ -842,7 +842,10 @@ func (s *Server) handleEmergencyMoney(w http.ResponseWriter, r *http.Request) {
 	}
 	actor := userIDFrom(r)
 	var requestID, orderID string
+	var paid *orders.CompensationRequest
+	var paidAmount int64
 	err = s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
+		created := false
 		e, err := loadEmergency(ctx, q, chi.URLParam(r, "id"), true)
 		if err != nil {
 			return err
@@ -884,6 +887,7 @@ func (s *Server) handleEmergencyMoney(w http.ResponseWriter, r *http.Request) {
 			 WHERE order_id = $1 AND driver_id = $2 AND status = 'pending'`,
 			orderID, *e.DriverID).Scan(&requestID)
 		if errors.Is(err, pgx.ErrNoRows) {
+			created = true
 			requestID, err = orders.ProposeCompensationTx(ctx, q, orders.CompensationProposal{
 				Kind: orders.CompKindDriver, OrderID: orderID, BeneficiaryID: *e.DriverID,
 				Fault: orders.FaultPlatform, Reason: "emergency_" + e.Kind,
@@ -901,19 +905,32 @@ func (s *Server) handleEmergencyMoney(w http.ResponseWriter, r *http.Request) {
 		if err := addEmergencyNote(ctx, q, e.ID, actor, note); err != nil {
 			return err
 		}
-		return s.auditTx(ctx, q, r, "ops.emergency_money", "emergency", e.ID, map[string]any{
+		if err := s.auditTx(ctx, q, r, "ops.emergency_money", "emergency", e.ID, map[string]any{
 			"order_id": orderID, "request_id": requestID, "amount": req.Amount, "note": note,
-		})
+		}); err != nil {
+			return err
+		}
+		// **وتعويضٌ جديدٌ اقترحه المالكُ أو المدير ينفُذ فوراً** (قرارُ المالك ٢٠٢٦-١٠-٢٧)
+		// — والمربوطُ بطلبٍ قائمٍ اقترحه غيرُه يبقى لقرار الماليّة.
+		if created {
+			paid, paidAmount, err = s.autoApproveCompensationTx(ctx, q, r, requestID)
+		}
+		return err
 	})
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	if requestID != "" {
+	if paid != nil {
+		s.notifyCompensationPaid(r.Context(), paid, paidAmount)
+		s.touch("wallet", "ops")
+		s.touch("order", "ops")
+	} else if requestID != "" {
 		// **والماليّةُ تُنبَّه** — من البابِ الواحد لكلّ تعويض (قرارُ المالك ٢٠٢٦-١٠-١٥).
 		s.orders.AlertCompensationPending(r.Context(), requestID)
 		s.touch("wallet", "ops")
 	}
 	s.touch("emergency", "ops")
-	httpx.JSON(w, http.StatusOK, map[string]any{"request_id": requestID, "skipped": req.Skip})
+	httpx.JSON(w, http.StatusOK, map[string]any{"request_id": requestID, "skipped": req.Skip,
+		"applied": paid != nil})
 }

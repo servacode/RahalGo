@@ -444,7 +444,10 @@ func (s *Server) handleProposeDisputeResolution(w http.ResponseWriter, r *http.R
 	}
 	actor := userIDFrom(r)
 	var resID string
+	var decided *disputeResolutionRow
+	var remaining, debt int64
 	if err := s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
+		decided = nil
 		var status string
 		var open int64
 		var pending bool
@@ -472,14 +475,40 @@ func (s *Server) handleProposeDisputeResolution(w http.ResponseWriter, r *http.R
 			id, req.Action, open, note, actor).Scan(&resID); err != nil {
 			return err
 		}
-		return s.auditTx(ctx, q, r, "finance.dispute_proposed", "dispute", id, map[string]any{
+		if err := s.auditTx(ctx, q, r, "finance.dispute_proposed", "dispute", id, map[string]any{
 			"resolution_id": resID, "action": req.Action, "amount": open, "note": note,
-		})
+		}); err != nil {
+			return err
+		}
+		// **حسمُ المالك أو المدير ينفُذ فوراً** (قرارُ المالك ٢٠٢٦-١٠-٢٧) — بطريق الموافقة
+		// نفسِه. **ورصيدٌ لا يُخصم منه شيءٌ يُبقي الاقتراحَ معلَّقاً** كما في الموافقة.
+		auto, err := approval.AutoApplies(ctx, q, actor)
+		if err != nil || !auto {
+			return err
+		}
+		res, rem, dbt, err := s.decideDisputeResolutionTx(ctx, q, r, resID, actor, true, "")
+		if errors.Is(err, errDisputeNothingToCharge) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		decided, remaining, debt = &res, rem, dbt
+		return nil
 	}); err != nil {
 		s.respondErr(w, err)
 		return
 	}
 	s.touch("dispute", "ops")
+	if decided != nil {
+		if decided.Action == "charge" {
+			s.touch("wallet", "ops")
+		}
+		httpx.JSON(w, http.StatusCreated, map[string]any{"resolution_id": resID,
+			"status": decided.Status, "applied": true, "charged": decided.Charged,
+			"remaining": remaining, "debt": debt, "self_approved": decided.SelfApproved})
+		return
+	}
 	httpx.JSON(w, http.StatusCreated, map[string]any{"resolution_id": resID, "status": "pending"})
 }
 
@@ -558,6 +587,169 @@ func (s *Server) handleListDisputeResolutions(w http.ResponseWriter, r *http.Req
 	httpx.JSON(w, http.StatusOK, map[string]any{"resolutions": out})
 }
 
+// decideDisputeResolutionTx **القرارُ الواحد على اقتراح الحسم** — داخلَ معاملة المنادي.
+//
+// **ويناديه بابُ الاقتراح نفسُه** حين يكون المقترحُ مالكاً أو مديراً
+// (`approval.AutoApplies`، قرارُ المالك ٢٠٢٦-١٠-٢٧).
+func (s *Server) decideDisputeResolutionTx(ctx context.Context, q dbtx.Querier, r *http.Request,
+	id, actor string, approve bool, decisionNote string) (out disputeResolutionRow, remaining, debt int64, err error) {
+	err = func() error {
+		res, err := scanDisputeResolution(q.QueryRow(ctx, disputeResolutionCols+`
+			WHERE r.id = $1 FOR UPDATE OF r`, id))
+		if errors.Is(err, pgx.ErrNoRows) {
+			return httpx.ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if res.Status != "pending" {
+			return errRequestDecided
+		}
+		if !approve {
+			if _, err := q.Exec(ctx, `
+				UPDATE dispute_resolutions
+				   SET status = 'rejected', decided_by = $2, decided_at = now(), decision_note = $3
+				 WHERE id = $1`, id, actor, decisionNote); err != nil {
+				return err
+			}
+			res.Status = "rejected"
+			out = res
+			return s.auditTx(ctx, q, r, "finance.dispute_resolution_rejected", "dispute",
+				res.DisputeID, map[string]any{"resolution_id": id, "action": res.Action,
+					"proposed_by": res.ProposedBy, "note": decisionNote})
+		}
+
+		verdict, err := approval.Check(ctx, q, approval.Request{
+			ProposedBy: res.ProposedBy, Actor: actor, Capability: authz.FinanceManage,
+		})
+		if err != nil {
+			return err
+		}
+
+		// **القفلُ على النزاع داخل المعاملة** — موافقتان متزامنتان تخصمان مرّتين.
+		// **ومحفظةُ الطرف من مصدره**: المتجرُ يُخصم من صاحبه، والباقي من نفسه.
+		var amount, recovered int64
+		var status, partyRole string
+		var walletUser, merchantID, partyUserID, orderID *string
+		if err := q.QueryRow(ctx, `
+			SELECT d.amount, d.recovered, d.status,
+			       COALESCE(mm.owner_user_id::text, d.party_user_id::text),
+			       d.party_role, d.merchant_id::text, d.party_user_id::text, d.order_id::text
+			FROM disputes d
+			LEFT JOIN merchants mm ON mm.id = d.merchant_id
+			WHERE d.id = $1 FOR UPDATE OF d`, res.DisputeID).
+			Scan(&amount, &recovered, &status, &walletUser,
+				&partyRole, &merchantID, &partyUserID, &orderID); err != nil {
+			return err
+		}
+		if status != "open" {
+			return errClaimSettled
+		}
+		open := amount - recovered
+		// **والملاحظةُ تُقرأ مع القرار** — اقتراحُ المقترِح وكلمةُ الموافق.
+		note := res.Note
+		var charged, debted int64
+		newStatus := "open"
+		var settlement any
+		if res.Action == "waive" {
+			newStatus, settlement = "waived", "waived"
+		} else {
+			// **ومتجرٌ بلا صاحبٍ لا يُخصم منه** — ولا يُقال «سُوّي» عمّا لم يقع.
+			if walletUser == nil {
+				return errDisputeNoWallet
+			}
+			// **والمتاحُ لا الرصيد** (قرارُ المالك ٢٠٢٦-١٠-١٥) — كان يُقرأ الرصيدُ
+			// كلُّه، **فيُخصم ما حُجز لطلبٍ قائم** ويسقط القيدُ أو يُفرغ الحجز.
+			var avail int64
+			if err := q.QueryRow(ctx, `
+				SELECT COALESCE((SELECT balance - reserved FROM wallets
+				                  WHERE user_id = $1 FOR UPDATE), 0)`,
+				*walletUser).Scan(&avail); err != nil {
+				return err
+			}
+			charged = max(0, min(open, avail))
+			// **والباقي يصير ديناً على الطرف** (قرارُ المالك ٢٠٢٦-١٠-١٥) — ينقطع
+			// من أرباحه الجاية. **والزبونُ لا طرفَ دينٍ له** فيبقى باقيه مفتوحاً.
+			party, partyID := disputeDebtParty(partyRole, merchantID, partyUserID)
+			rest := open - charged
+			if charged <= 0 && (rest <= 0 || party == "") {
+				return errDisputeNothingToCharge
+			}
+			if charged > 0 {
+				// **والملاحظةُ الداخليّةُ لا تصل الطرف** (قرارُ المالك ٢٠٢٦-١٠-١٥) — كان
+				// سطرُ محفظته «مطالبةُ المنصة — » وكلمةَ المقترِح، **وهي كلامُ مكتبٍ لمكتب.**
+				// **ولا تصنيفَ لسبب النزاع في القاعدة** (`reason` نصٌّ حرٌّ يكتبه الموظّف)،
+				// فالسطرُ نصٌّ محايدٌ ثابت.
+				if _, err := s.wallet.ApplyTx(ctx, q, *walletUser, -charged,
+					"adjustment", res.DisputeID, DisputeChargeLine, &actor); err != nil {
+					return err
+				}
+				// **ويعود إلى الخزينة ما خرج منها** — خصمٌ بلا قيدٍ مقابلٍ يجعل
+				// المنصةَ تبدو خاسرةً وقد استُرِدّ لها.
+				if err := s.orders.CreditTreasuryDirect(ctx, q, charged, res.DisputeID,
+					"استردادُ مطالبةٍ", actor); err != nil {
+					return err
+				}
+			}
+			if rest > 0 && party != "" {
+				order := ""
+				if orderID != nil {
+					order = *orderID
+				}
+				if _, err := obligations.CreateRef(ctx, q, party, partyID, rest,
+					obligations.CauseDisputeRemainder, order, res.DisputeID, &actor); err != nil {
+					return err
+				}
+				debted = rest
+			}
+			if charged+debted == open {
+				newStatus, settlement = "settled", "charged"
+			}
+		}
+		// **والباقي ما لم يُخصم ولم يُسقط** — يبقى ديناً مفتوحاً على الطرف.
+		remaining = open - charged - debted
+		debt = debted
+		if newStatus == "waived" {
+			remaining = 0
+		}
+		if _, err := q.Exec(ctx, `
+			UPDATE disputes
+			SET recovered = recovered + $2,
+			    status = $3,
+			    settlement = COALESCE($4::text, settlement),
+			    settled_at = CASE WHEN $3 = 'open' THEN settled_at ELSE now() END,
+			    settled_by = CASE WHEN $3 = 'open' THEN settled_by ELSE $5::uuid END,
+			    note = CASE WHEN note = '' THEN $6 ELSE note || ' · ' || $6 END
+			WHERE id = $1`, res.DisputeID, charged, newStatus, settlement, actor, note); err != nil {
+			return err
+		}
+		if _, err := q.Exec(ctx, `
+			UPDATE dispute_resolutions
+			   SET status = 'approved', charged = $2, decided_by = $3, decided_at = now(),
+			       decision_note = $4, self_approved = $5
+			 WHERE id = $1`, id, charged, actor, decisionNote, verdict.SelfApproved); err != nil {
+			return err
+		}
+		res.Status = "approved"
+		res.Charged = &charged
+		res.SelfApproved = verdict.SelfApproved
+		out = res
+		// **والأثرُ داخلَ المعاملة** (`AQ-4`/`PF-06`): مالٌ تحرّك أو أُعفي،
+		// **فسطرُ تدقيقٍ بعد التثبيت قد يسقط ويترك القرارَ بلا أثر.**
+		details := map[string]any{
+			"resolution_id": id, "party": res.PartyRole, "action": res.Action,
+			"amount": open, "charged": charged, "remaining": remaining, "debt": debted,
+			"proposed_by": res.ProposedBy, "note": note, "decision_note": decisionNote,
+		}
+		for k, v := range verdict.AuditFields() {
+			details[k] = v
+		}
+		return s.auditTx(ctx, q, r, "finance.dispute_resolution_approved", "dispute",
+			res.DisputeID, details)
+	}()
+	return
+}
+
 // handleDecideDisputeResolution **يوافق على اقتراح الحسم أو يرفضه.**
 //
 // **والموافقةُ لغير المقترِح** (`approval.Check`) — والمالكُ الأعلى وحدَه يوافق
@@ -588,158 +780,9 @@ func (s *Server) handleDecideDisputeResolution(approve bool) http.HandlerFunc {
 		var out disputeResolutionRow
 		var remaining, debt int64
 		if err := s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
-			res, err := scanDisputeResolution(q.QueryRow(ctx, disputeResolutionCols+`
-				WHERE r.id = $1 FOR UPDATE OF r`, id))
-			if errors.Is(err, pgx.ErrNoRows) {
-				return httpx.ErrNotFound
-			}
-			if err != nil {
-				return err
-			}
-			if res.Status != "pending" {
-				return errRequestDecided
-			}
-			if !approve {
-				if _, err := q.Exec(ctx, `
-					UPDATE dispute_resolutions
-					   SET status = 'rejected', decided_by = $2, decided_at = now(), decision_note = $3
-					 WHERE id = $1`, id, actor, decisionNote); err != nil {
-					return err
-				}
-				res.Status = "rejected"
-				out = res
-				return s.auditTx(ctx, q, r, "finance.dispute_resolution_rejected", "dispute",
-					res.DisputeID, map[string]any{"resolution_id": id, "action": res.Action,
-						"proposed_by": res.ProposedBy, "note": decisionNote})
-			}
-
-			verdict, err := approval.Check(ctx, q, approval.Request{
-				ProposedBy: res.ProposedBy, Actor: actor, Capability: authz.FinanceManage,
-			})
-			if err != nil {
-				return err
-			}
-
-			// **القفلُ على النزاع داخل المعاملة** — موافقتان متزامنتان تخصمان مرّتين.
-			// **ومحفظةُ الطرف من مصدره**: المتجرُ يُخصم من صاحبه، والباقي من نفسه.
-			var amount, recovered int64
-			var status, partyRole string
-			var walletUser, merchantID, partyUserID, orderID *string
-			if err := q.QueryRow(ctx, `
-				SELECT d.amount, d.recovered, d.status,
-				       COALESCE(mm.owner_user_id::text, d.party_user_id::text),
-				       d.party_role, d.merchant_id::text, d.party_user_id::text, d.order_id::text
-				FROM disputes d
-				LEFT JOIN merchants mm ON mm.id = d.merchant_id
-				WHERE d.id = $1 FOR UPDATE OF d`, res.DisputeID).
-				Scan(&amount, &recovered, &status, &walletUser,
-					&partyRole, &merchantID, &partyUserID, &orderID); err != nil {
-				return err
-			}
-			if status != "open" {
-				return errClaimSettled
-			}
-			open := amount - recovered
-			// **والملاحظةُ تُقرأ مع القرار** — اقتراحُ المقترِح وكلمةُ الموافق.
-			note := res.Note
-			var charged, debted int64
-			newStatus := "open"
-			var settlement any
-			if res.Action == "waive" {
-				newStatus, settlement = "waived", "waived"
-			} else {
-				// **ومتجرٌ بلا صاحبٍ لا يُخصم منه** — ولا يُقال «سُوّي» عمّا لم يقع.
-				if walletUser == nil {
-					return errDisputeNoWallet
-				}
-				// **والمتاحُ لا الرصيد** (قرارُ المالك ٢٠٢٦-١٠-١٥) — كان يُقرأ الرصيدُ
-				// كلُّه، **فيُخصم ما حُجز لطلبٍ قائم** ويسقط القيدُ أو يُفرغ الحجز.
-				var avail int64
-				if err := q.QueryRow(ctx, `
-					SELECT COALESCE((SELECT balance - reserved FROM wallets
-					                  WHERE user_id = $1 FOR UPDATE), 0)`,
-					*walletUser).Scan(&avail); err != nil {
-					return err
-				}
-				charged = max(0, min(open, avail))
-				// **والباقي يصير ديناً على الطرف** (قرارُ المالك ٢٠٢٦-١٠-١٥) — ينقطع
-				// من أرباحه الجاية. **والزبونُ لا طرفَ دينٍ له** فيبقى باقيه مفتوحاً.
-				party, partyID := disputeDebtParty(partyRole, merchantID, partyUserID)
-				rest := open - charged
-				if charged <= 0 && (rest <= 0 || party == "") {
-					return errDisputeNothingToCharge
-				}
-				if charged > 0 {
-					// **والملاحظةُ الداخليّةُ لا تصل الطرف** (قرارُ المالك ٢٠٢٦-١٠-١٥) — كان
-					// سطرُ محفظته «مطالبةُ المنصة — » وكلمةَ المقترِح، **وهي كلامُ مكتبٍ لمكتب.**
-					// **ولا تصنيفَ لسبب النزاع في القاعدة** (`reason` نصٌّ حرٌّ يكتبه الموظّف)،
-					// فالسطرُ نصٌّ محايدٌ ثابت.
-					if _, err := s.wallet.ApplyTx(ctx, q, *walletUser, -charged,
-						"adjustment", res.DisputeID, DisputeChargeLine, &actor); err != nil {
-						return err
-					}
-					// **ويعود إلى الخزينة ما خرج منها** — خصمٌ بلا قيدٍ مقابلٍ يجعل
-					// المنصةَ تبدو خاسرةً وقد استُرِدّ لها.
-					if err := s.orders.CreditTreasuryDirect(ctx, q, charged, res.DisputeID,
-						"استردادُ مطالبةٍ", actor); err != nil {
-						return err
-					}
-				}
-				if rest > 0 && party != "" {
-					order := ""
-					if orderID != nil {
-						order = *orderID
-					}
-					if _, err := obligations.CreateRef(ctx, q, party, partyID, rest,
-						obligations.CauseDisputeRemainder, order, res.DisputeID, &actor); err != nil {
-						return err
-					}
-					debted = rest
-				}
-				if charged+debted == open {
-					newStatus, settlement = "settled", "charged"
-				}
-			}
-			// **والباقي ما لم يُخصم ولم يُسقط** — يبقى ديناً مفتوحاً على الطرف.
-			remaining = open - charged - debted
-			debt = debted
-			if newStatus == "waived" {
-				remaining = 0
-			}
-			if _, err := q.Exec(ctx, `
-				UPDATE disputes
-				SET recovered = recovered + $2,
-				    status = $3,
-				    settlement = COALESCE($4::text, settlement),
-				    settled_at = CASE WHEN $3 = 'open' THEN settled_at ELSE now() END,
-				    settled_by = CASE WHEN $3 = 'open' THEN settled_by ELSE $5::uuid END,
-				    note = CASE WHEN note = '' THEN $6 ELSE note || ' · ' || $6 END
-				WHERE id = $1`, res.DisputeID, charged, newStatus, settlement, actor, note); err != nil {
-				return err
-			}
-			if _, err := q.Exec(ctx, `
-				UPDATE dispute_resolutions
-				   SET status = 'approved', charged = $2, decided_by = $3, decided_at = now(),
-				       decision_note = $4, self_approved = $5
-				 WHERE id = $1`, id, charged, actor, decisionNote, verdict.SelfApproved); err != nil {
-				return err
-			}
-			res.Status = "approved"
-			res.Charged = &charged
-			res.SelfApproved = verdict.SelfApproved
-			out = res
-			// **والأثرُ داخلَ المعاملة** (`AQ-4`/`PF-06`): مالٌ تحرّك أو أُعفي،
-			// **فسطرُ تدقيقٍ بعد التثبيت قد يسقط ويترك القرارَ بلا أثر.**
-			details := map[string]any{
-				"resolution_id": id, "party": res.PartyRole, "action": res.Action,
-				"amount": open, "charged": charged, "remaining": remaining, "debt": debted,
-				"proposed_by": res.ProposedBy, "note": note, "decision_note": decisionNote,
-			}
-			for k, v := range verdict.AuditFields() {
-				details[k] = v
-			}
-			return s.auditTx(ctx, q, r, "finance.dispute_resolution_approved", "dispute",
-				res.DisputeID, details)
+			var err error
+			out, remaining, debt, err = s.decideDisputeResolutionTx(ctx, q, r, id, actor, approve, decisionNote)
+			return err
 		}); err != nil {
 			s.respondErr(w, err)
 			return
