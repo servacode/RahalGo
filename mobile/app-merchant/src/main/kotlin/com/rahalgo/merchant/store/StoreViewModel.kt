@@ -103,6 +103,25 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
         pickedLng = lng
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    // **والنبضةُ تقرأ الشاشةَ الظاهرةَ وحدَها** (تدقيقُ ٢٠٢٦-١٠-٢٧)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **كان كلُّ حدثٍ حيٍّ يعيد تحميلَ كلّ الشاشات معاً** — والمخفيّةُ منها أيضاً،
+    // فوق أربعةَ عشرَ نداءً على باقة صاحب المتجر. **فالمخفيّةُ تُعلَّم «قديمة»
+    // وتُقرأ لحظةَ تظهر** — فيبقى التحديثُ اللحظيُّ كما أراد المالك (٢٠٢٦-٠٨-٣١)
+    // لما يراه، **بلا نداءٍ لما لا يراه.** وافتراضُه ظاهرٌ كما كان.
+    private var stale = false
+    var active: Boolean = true
+        set(v) {
+            val woke = v && !field
+            field = v
+            if (woke && stale) {
+                stale = false
+                load()
+            }
+        }
+
     init {
         load()
         // **ويسمع النبضة** — (طلبُ المالك ٢٠٢٦-٠٨-٣١: «وتأكّد من التحديث
@@ -111,7 +130,7 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
         // **وكانت تُحمَّل مرّةً عند الفتح** — فيُسلَّم طلبٌ وهو ينظر
         // إليها **فلا يتبدّل رقم**، ولا يعرف أنّ عليه أن يخرج ويعود.
         viewModelScope.launch {
-            com.rahalgo.ui.Refresh.tick.collect { if (it > 0L) load() }
+            com.rahalgo.ui.Refresh.tick.collect { if (it > 0L) { if (active) load() else stale = true } }
         }
     }
 

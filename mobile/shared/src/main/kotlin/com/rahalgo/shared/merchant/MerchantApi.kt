@@ -59,9 +59,16 @@ class MerchantApi(private val api: ApiClient) {
     // **الطلبات — قلبُ التطبيق**
     // ══════════════════════════════════════════════════════════════════
 
-    /** **طلباتُ متجرٍ** — صفحةٌ بعدّادات، كما يردّها المحرّك. */
-    suspend fun orders(storeId: String): OrdersPage =
-        api.call("/api/v1/merchant/stores/$storeId/orders")
+    /**
+     * **طلباتُ متجرٍ** — صفحةٌ بعدّادات، كما يردّها المحرّك.
+     *
+     * **و`openOnly` الجاريةُ وحدَها** (تدقيقُ ٢٠٢٦-١٠-٢٧) — شاشةُ العمل لا
+     * تخلط «تم التسليم» بالطلب الجديد، **والمنتهي في السجلّ.** وافتراضُه كما كان.
+     */
+    suspend fun orders(storeId: String, openOnly: Boolean = false): OrdersPage =
+        api.call(
+            "/api/v1/merchant/stores/$storeId/orders" + if (openOnly) "?open_only=true" else "",
+        )
 
     /**
      * **سجلُّ ما انتهى** — قسمٌ منفصلٌ كما في الويب.

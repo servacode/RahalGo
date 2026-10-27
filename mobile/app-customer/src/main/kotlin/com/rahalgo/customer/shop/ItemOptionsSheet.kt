@@ -1,6 +1,7 @@
 package com.rahalgo.customer.shop
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -70,16 +71,21 @@ import com.rahalgo.ui.money
 fun ItemOptionsSheet(
     item: Item,
     api: CustomerApi,
-    onAdd: (List<ModifierOption>) -> Unit,
+    /** **ما اختاره والعدد** — «أضف» يحمل الكمّيّةَ كلَّها بضغطةٍ واحدة. */
+    onAdd: (List<ModifierOption>, Int) -> Unit,
     onClose: () -> Unit,
     /**
      * **اسمُ المتجر بابُ صفحته** (قرارُ المالك ٢٠٢٦-١٠-١٨) — كما في البطاقة.
      * و`null` في صفحة المتجر نفسِه وحيث لا صفحة (`StoreLink.target`).
      */
     onStore: (() -> Unit)? = null,
+    /** **عنوانُ الصور** — وبه تُرسم صورةُ الصنف عريضةً فوق النافذة، و`null` بلا صورة. */
+    media: ((String?) -> String?)? = null,
 ) {
     var groups by remember(item.id) { mutableStateOf<List<ModifierGroup>?>(null) }
     var failed by remember(item.id) { mutableStateOf(false) }
+    // **والعددُ هنا** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧) — من أراد ثلاثةً كان يفتح النافذةَ ثلاثاً.
+    var qty by remember(item.id) { mutableStateOf(1) }
 
     // **المختارُ محفوظٌ بالمجموعة** — فمجموعةٌ تُبدَّل لا تمسّ أختَها.
     var chosen by remember(item.id) { mutableStateOf<Map<String, List<ModifierOption>>>(emptyMap()) }
@@ -102,6 +108,18 @@ fun ItemOptionsSheet(
         containerColor = Rahal.colors.canvas,
     ) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+            // **وصورةُ الصنف عريضةٌ فوق** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧) — يرى ما يختار له.
+            if (media != null && (item.imageThumbUrl ?: item.imageUrl) != null) {
+                com.rahalgo.ui.RemoteImage(
+                    url = media(item.imageUrl ?: item.imageThumbUrl),
+                    name = item.name,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(160.dp)
+                        .clip(Rahal.shape.md),
+                )
+                Spacer(Modifier.height(12.dp))
+            }
             Text(
                 item.name,
                 fontWeight = FontWeight.Bold,
@@ -170,9 +188,22 @@ fun ItemOptionsSheet(
             }
 
             Spacer(Modifier.height(20.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+            // **أداةُ الكمّيّة جنب الزرّ** — والسعرُ على الزرّ يتبعها.
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clip(Rahal.shape.pill)
+                    .border(1.dp, Rahal.colors.line, Rahal.shape.pill),
+            ) {
+                SheetQty(R.drawable.ic_minus, stringResource(R.string.cart_qty_less), enabled = qty > 1) { qty -= 1 }
+                Text(qty.toString(), fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp))
+                SheetQty(com.rahalgo.ui.R.drawable.ic_plus, stringResource(R.string.cart_qty_more), enabled = qty < 99) { qty += 1 }
+            }
+            Spacer(Modifier.size(12.dp))
             RahalButton(
-                onClick = { onAdd(picked) },
-                modifier = Modifier.fillMaxWidth(),
+                onClick = { onAdd(picked, qty) },
+                modifier = Modifier.weight(1f),
                 enabled = ready,
             ) {
                 // **وبالدولار لمتجرٍ اختاره، والليرةُ بجانبه** — هي ما يُدفع (٢٠٢٦-١٠-١٢).
@@ -185,13 +216,34 @@ fun ItemOptionsSheet(
                     stringResource(
                         R.string.options_add,
                         if (usdUnit != null) {
-                            com.rahalgo.ui.dollars(usdUnit) + " (≈ " + money(unit) + ")"
-                        } else money(unit),
+                            com.rahalgo.ui.dollars(usdUnit * qty) + " (≈ " + money(unit * qty) + ")"
+                        } else money(unit * qty),
                     ),
+                    maxLines = 2,
                 )
+            }
             }
             Spacer(Modifier.height(24.dp))
         }
+    }
+}
+
+/** **زرُّ عددٍ في النافذة** — دائرةٌ ٤٠ بأيقونة، وباهتٌ حين لا يعمل. */
+@Composable
+private fun SheetQty(icon: Int, label: String, enabled: Boolean, onClick: () -> Unit) {
+    Box(
+        Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .clickable(enabled = enabled, onClickLabel = label, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        androidx.compose.material3.Icon(
+            painter = androidx.compose.ui.res.painterResource(icon),
+            contentDescription = label,
+            tint = if (enabled) Rahal.colors.brand else Rahal.colors.line,
+            modifier = Modifier.size(18.dp),
+        )
     }
 }
 

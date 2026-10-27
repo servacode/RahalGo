@@ -30,6 +30,10 @@ class RepApi(private val api: ApiClient) {
     suspend fun merchant(id: String): RepMerchantDetail =
         api.call("/api/v1/rep/merchants/$id")
 
+    /** **صفحةٌ تاليةٌ من طلبات العميل** — المحرّكُ يقسمها عشرين عشرين. */
+    suspend fun merchantPage(id: String, page: Int): RepMerchantDetail =
+        api.call("/api/v1/rep/merchants/$id?page=$page")
+
     /** **من سجّلهم ولم يُوافَق عليهم بعد.** */
     suspend fun leads(): List<Lead> = api.call("/api/v1/rep/leads")
 
@@ -431,6 +435,8 @@ data class Lead(
     val status: String = "",
     val note: String = "",
     @SerialName("created_at") val createdAt: String = "",
+    /** **ملاحظةُ الإدارة** — سببُ الرفض، أو ما تطلبه من معلومات (`needs_info`). */
+    @SerialName("decision_note") val decisionNote: String = "",
 )
 
 /**

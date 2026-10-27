@@ -106,6 +106,34 @@ class SectionsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** **صفحةُ الكشف التالية في الطريق.** */
+    var cashMoreBusy by mutableStateOf(false)
+        private set
+
+    /**
+     * **يجلب الحركاتِ الأقدم ويضيفها** — كان الكشفُ يقول «عرض ٢٠ من ٥٠» ولا يُري الباقي،
+     * **فمن اختلف مع المكتب على حركةٍ قديمة لا يجدها.**
+     */
+    fun loadMoreCash() {
+        val cur = cash ?: return
+        if (cashMoreBusy || cur.entries.size >= cur.total) return
+        cashMoreBusy = true
+        viewModelScope.launch {
+            try {
+                val next = backend.driver.cash(cur.page + 1)
+                val now = cash ?: cur
+                cash = now.copy(
+                    entries = now.entries + next.entries,
+                    total = next.total,
+                    page = next.page.coerceAtLeast(cur.page + 1),
+                )
+            } catch (e: Exception) {
+                error = describe(e)
+            }
+            cashMoreBusy = false
+        }
+    }
+
     private fun load(block: suspend () -> Unit) {
         busy = true
         viewModelScope.launch {

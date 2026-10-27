@@ -30,6 +30,9 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -1223,12 +1226,15 @@ private fun OnRouteBanner(
                 tone = Tone.Success,
                 modifier = Modifier.weight(1f),
             ) { Text(stringResource(R.string.order_agree)) }
-            RahalButton(
+            // **و«لاحقاً» ليست خطراً** — زرٌّ بإطارٍ أبيضَ بلا تعبئة، لا أحمرُ كالحذف.
+            androidx.compose.material3.OutlinedButton(
                 onClick = onDismiss,
                 enabled = !busy,
-                tone = Tone.Danger,
-                modifier = Modifier.weight(1f),
-            ) { Text(stringResource(R.string.order_later)) }
+                shape = Rahal.shape.md,
+                border = androidx.compose.foundation.BorderStroke(1.dp, Color.White),
+                colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+            ) { Text(stringResource(R.string.order_later), fontWeight = FontWeight.Bold) }
         }
         // ══════════════════════════════════════════════════════════════
         // **وجوابُ الضغطة تحتها مباشرة**
@@ -1268,16 +1274,21 @@ private fun StopsRow(stops: List<Stop>, current: String, onPick: (String) -> Uni
     ) {
         for (stop in stops) {
             val now = stop.id == current
-            Text(
-                text = "#" + stop.number,
-                color = if (now) Rahal.colors.onBrand else Rahal.colors.inkMuted,
-                fontWeight = if (now) FontWeight.Bold else FontWeight.Normal,
+            Box(
                 modifier = Modifier
                     .clip(Rahal.shape.sm)
                     .background(if (now) Rahal.colors.brand else Rahal.colors.field)
                     .clickable { onPick(stop.id) }
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
-            )
+                    .heightIn(min = 44.dp)
+                    .padding(horizontal = 16.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "#" + stop.number,
+                    color = if (now) Rahal.colors.onBrand else Rahal.colors.inkMuted,
+                    fontWeight = if (now) FontWeight.Bold else FontWeight.Normal,
+                )
+            }
         }
     }
 }
@@ -1291,19 +1302,25 @@ data class Stop(val id: String, val number: Long)
 @Composable
 private fun RoadClosureButton(onReport: (String) -> Unit) {
     var open by remember { mutableStateOf(false) }
-    Text(
-        text = stringResource(R.string.closure_button),
-        color = Rahal.colors.ink,
-        style = MaterialTheme.typography.labelMedium,
-        fontWeight = FontWeight.Bold,
-        // **ومسافةٌ فوقه** — كان لاصقاً بزرّ «اطلب موقع الزبون» (شُهد على الجهاز ٢٠٢٦-١٠-٢١).
+    // **ومسافةٌ فوقه** — كان لاصقاً بزرّ «اطلب موقع الزبون» (شُهد على الجهاز ٢٠٢٦-١٠-٢١).
+    // **وارتفاعٌ يُضغط وهو يقود** — ٤٤dp لا ٣٠.
+    Box(
         modifier = Modifier
             .padding(top = 10.dp, bottom = 4.dp)
             .clip(Rahal.shape.sm)
             .background(Rahal.colors.warnTint)
             .clickable { open = true }
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-    )
+            .heightIn(min = 44.dp)
+            .padding(horizontal = 14.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = stringResource(R.string.closure_button),
+            color = Rahal.colors.ink,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+        )
+    }
     if (open && roomyWindow()) {
         val reasons = listOf(
             "works" to R.string.closure_works,
@@ -1353,17 +1370,11 @@ private fun LiveCustomerNotice(state: TripState, onRequest: () -> Unit) {
     // **«اطلب موقع الزبون المباشر»** (قرارُ المالك ٢٠٢٦-١٠-٢١) — حين لا موقعَ حيٌّ منه:
     // يُسأل الزبونُ ثانيةً وإن رفض أوّلَ مرّة. **والخادمُ يحدّه** (ثلاثٌ ودقيقتان).
     if (state.customerLive == null || state.liveStale) {
-        Text(
+        MapPill(
             text = stringResource(R.string.trip_live_request),
-            color = Rahal.colors.onBrand,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier
-                .padding(vertical = 4.dp)
-                .clip(Rahal.shape.sm)
-                .background(Rahal.colors.brand)
-                .clickable(onClick = onRequest)
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+            ground = Rahal.colors.brand,
+            modifier = Modifier.padding(vertical = 4.dp),
+            onClick = onRequest,
         )
     }
     when {
@@ -1386,7 +1397,7 @@ private fun LiveCustomerNotice(state: TripState, onRequest: () -> Unit) {
         }
         Text(
             text = if (state.livePrecise) line else line + stringResource(R.string.trip_live_approx),
-            color = Rahal.colors.onBrand,
+            color = onGround(Rahal.colors.success),
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
             modifier = Modifier
@@ -1402,7 +1413,9 @@ private fun LiveCustomerNotice(state: TripState, onRequest: () -> Unit) {
 internal fun TopNotice(text: String, ground: Color) {
     Text(
         text = text,
-        color = Color.White,
+        // **ولونُ الكتابة من الأرض** — الأبيضُ على `ink` الغامقة (شبهُ أبيض) لا يُقرأ،
+        // ولا على الأخضر والأحمر والسماويّ المرفوعة فيها.
+        color = onGround(ground),
         fontWeight = FontWeight.Bold,
         style = MaterialTheme.typography.bodyMedium,
         modifier = Modifier
@@ -1412,6 +1425,41 @@ internal fun TopNotice(text: String, ground: Color) {
             .background(ground)
             .padding(horizontal = 14.dp, vertical = 10.dp),
     )
+}
+
+/**
+ * **ما يُكتب فوق أرضٍ ملوّنة** — غامقٌ على الفاتح، وأبيضُ على الغامق.
+ */
+internal fun onGround(ground: Color): Color =
+    if (ground.luminance() > 0.3f) Color(0xFF04222F) else Color.White
+
+/**
+ * **حبّةُ فعلٍ فوق الخريطة** — بارتفاعٍ يُضغط وهو يقود (٤٤dp على الأقلّ).
+ */
+@Composable
+private fun MapPill(
+    text: String,
+    ground: Color,
+    modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
+) {
+    Box(
+        modifier = modifier
+            .clip(Rahal.shape.sm)
+            .background(ground)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .heightIn(min = 44.dp)
+            .padding(horizontal = 14.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            color = onGround(ground),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(vertical = 6.dp),
+        )
+    }
 }
 
 /**
@@ -1680,7 +1728,9 @@ private fun TripCard(
                                 order.customerName.ifBlank { stringResource(R.string.detail_customer) },
                             ),
                             amount = money(order.cashDue),
-                            tint = Rahal.colors.accent,
+                            // **ولونُ «تقبض» واحدٌ في كلّ الشاشات** — أحمرُ كبطاقة الطلب (قرارُ المالك
+                            // ٢٠٢٦-٠٨-١٢: «أحمر يعني اقبض»)، لا برتقاليٌّ هنا وأحمرُ هناك.
+                            tint = CollectTint(),
                         )
                         // **والمشترياتُ مفصّلة** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢: «مشتريات بقيمة 350 اجرة
                         // توصيل 150 مجموع 500»).
@@ -1688,7 +1738,13 @@ private fun TripCard(
                             InfoBox(
                                 icon = R.drawable.ic_cash,
                                 text = stringResource(R.string.trip_goods_line, money(order.customGoods ?: 0)) + "\n" +
-                                    stringResource(R.string.trip_fee_line, money(order.customFee ?: 0)),
+                                    // **والأجرةُ المُعفاة لا تُطالَب** — المربّعُ الكبير يقول
+                                    // `cashDue` (البضاعة وحدها)، فالتفصيلُ يطابقه.
+                                    if (order.freeWaived > 0) {
+                                        stringResource(R.string.trip_fee_line_free)
+                                    } else {
+                                        stringResource(R.string.trip_fee_line, money(order.customFee ?: 0))
+                                    },
                                 tint = Rahal.colors.accent,
                             )
                         }
@@ -1753,7 +1809,7 @@ private fun TripCard(
                             MoneyBox(
                                 label = stringResource(R.string.trip_collect_later),
                                 amount = money(order.cashDue),
-                                tint = Rahal.colors.accent,
+                                tint = CollectTint(),
                             )
                         } else {
                             InfoBox(
@@ -1775,7 +1831,7 @@ private fun TripCard(
                             stringResource(R.string.detail_fee_from_store)
                         },
                         amount = money(order.cashDue),
-                        tint = Rahal.colors.accent,
+                        tint = CollectTint(),
                     )
                 }
                 // **«ادفع للمتجر X من جيبك، واقبض من المستلم X»** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
@@ -1824,7 +1880,8 @@ private fun TripCard(
                                 else -> R.string.door_continue
                             },
                         ) + if (order.doorNote.isNotBlank()) " — " + order.doorNote else "",
-                        tint = Rahal.colors.brand,
+                        // **وأمرُ الإدارة برتقاليٌّ بأيقونته** — يتميّز عن مربّعات الخبر الزرقاء.
+                        tint = Rahal.colors.accent,
                         bold = true,
                     )
                 }
@@ -2078,6 +2135,10 @@ private fun TripPrimary(label: Int, onClick: () -> Unit, enabled: Boolean, busy:
     }
 }
 
+/** **لونُ ما يُقبض** — واحدٌ لبطاقة الطلب والرحلة ونافذة التسليم. */
+@Composable
+private fun CollectTint(): Color = Rahal.colors.danger
+
 /** **مربّعُ خبر** — أيقونةٌ ونصٌّ على أرضٍ بلونِ معناه. */
 @Composable
 private fun InfoBox(icon: Int, text: String, tint: Color, bold: Boolean = false) {
@@ -2311,7 +2372,7 @@ private fun DeliverConfirmDialog(
                     Spacer(Modifier.height(10.dp))
                     Text(
                         amount,
-                        color = Rahal.colors.accent,
+                        color = CollectTint(),
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.headlineMedium,
                     )

@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -198,7 +200,7 @@ internal fun AgreeDialog(
                 }
                 if (error.isNotEmpty()) {
                     Spacer(Modifier.height(8.dp))
-                    Text(error, color = Rahal.colors.accent, style = MaterialTheme.typography.bodySmall)
+                    Text(error, color = Rahal.colors.danger, style = MaterialTheme.typography.bodySmall)
                 }
             }
         },
@@ -511,69 +513,66 @@ internal fun FailDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.problem_title)) },
         text = {
-            Column(Modifier.verticalScroll(rememberScrollState())) {
+            // ══════════════════════════════════════════════════════════
+            // **كلُّ صنفٍ بطاقةٌ بلونه — لا قائمةُ نصوصٍ مسطّحة** (تدقيق ٢٠٢٦-١٠-٢٧)
+            // ══════════════════════════════════════════════════════════
+            //
+            // **أزرقُ «بلّغ الإدارة، الطلب بيضل معك» · أحمرُ «ينهي الطلب» · برتقاليُّ
+            // «المشكلة عندي»** — والسائقُ مستعجل، فاللونُ يقول الأثرَ قبل أن يُقرأ.
+            // **وكلُّ خيارٍ سطرٌ بإطارٍ وارتفاع ٤٨dp**، والمنتظِرُ شريحةٌ رماديّة.
+            Column(
+                Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
                 if (error.isNotEmpty()) {
-                    Text(error, color = Rahal.colors.accent)
+                    Text(error, color = Rahal.colors.danger)
                     RahalTextButton(onClick = onRetry, modifier = Modifier.fillMaxWidth()) {
                         Text(stringResource(R.string.problem_retry), modifier = Modifier.fillMaxWidth())
                     }
-                    HorizontalDivider(Modifier.padding(vertical = 6.dp))
                 }
                 val reports = reasons.filter { it.kind == "report" }
                 val releases = reasons.filter { it.kind == "release" }
                 val ends = reasons.filter { it.kind == "fail" }
                 if (reports.isNotEmpty()) {
-                    Section(R.string.problem_reports_title)
-                    for (r in reports) {
-                        RahalTextButton(onClick = { onPick(r.code) }, modifier = Modifier.fillMaxWidth()) {
-                            Text(reasonLabel(r.code), modifier = Modifier.fillMaxWidth())
+                    ProblemGroup(R.string.problem_reports_title, Rahal.colors.brand) {
+                        for (r in reports) {
+                            // **والبلاغُ يمرّ بالتأكيد كسائر الخيارات** — كان يُرسَل من ضغطةٍ
+                            // واحدةٍ وهو يقود، ونصُّ تأكيده (`confirm_report_body`) لا يُبلَغ.
+                            ProblemOption(reasonLabel(r.code), onClick = { pending = Pending.Reason(r) })
                         }
                     }
-                    HorizontalDivider(Modifier.padding(vertical = 6.dp))
                 }
                 if (ends.isNotEmpty()) {
-                    Section(if (ends.all { it.closes }) R.string.problem_ends_title else R.string.problem_ops_title)
-                    for (r in ends) {
-                        val left = (r.availableInSec - (nowMs - loadedAtMs) / 1000).coerceAtLeast(0)
-                        RahalTextButton(
-                            onClick = { pending = Pending.Reason(r) },
-                            enabled = left == 0L,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text(
-                                if (left > 0) {
-                                    reasonLabel(r.code) + " · " + stringResource(
-                                        R.string.problem_wait, "%d:%02d".format(left / 60, left % 60),
-                                    )
+                    ProblemGroup(
+                        if (ends.all { it.closes }) R.string.problem_ends_title else R.string.problem_ops_title,
+                        Rahal.colors.danger,
+                    ) {
+                        for (r in ends) {
+                            val left = (r.availableInSec - (nowMs - loadedAtMs) / 1000).coerceAtLeast(0)
+                            ProblemOption(
+                                text = reasonLabel(r.code),
+                                wait = if (left > 0) {
+                                    stringResource(R.string.problem_wait, "%d:%02d".format(left / 60, left % 60))
                                 } else {
-                                    reasonLabel(r.code)
+                                    ""
                                 },
-                                modifier = Modifier.fillMaxWidth(),
+                                enabled = left == 0L,
+                                onClick = { pending = Pending.Reason(r) },
                             )
                         }
                     }
-                    HorizontalDivider(Modifier.padding(vertical = 6.dp))
                 }
-                Section(R.string.problem_mine)
                 // **قبل الاستلام: أسبابُ التركِ من الخادم** (يذهب الطلبُ لغيره ويُغلَق دوامُه)؛
                 // **وبعده: «مشكلتي» طارئٌ** يبقى معه الطلبُ وتُنبَّه العمليات.
-                if (releases.isNotEmpty()) {
-                    for (r in releases) {
-                        RahalTextButton(
-                            onClick = { pending = Pending.Reason(r) },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text(reasonLabel(r.code), color = Rahal.colors.accent, modifier = Modifier.fillMaxWidth())
+                ProblemGroup(R.string.problem_mine, Rahal.colors.accent) {
+                    if (releases.isNotEmpty()) {
+                        for (r in releases) {
+                            ProblemOption(reasonLabel(r.code), onClick = { pending = Pending.Reason(r) })
                         }
-                    }
-                } else {
-                    for (id in MINE) {
-                        val label = stringResource(id)
-                        RahalTextButton(
-                            onClick = { pending = Pending.Mine(label) },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) {
-                            Text(label, color = Rahal.colors.accent, modifier = Modifier.fillMaxWidth())
+                    } else {
+                        for (id in MINE) {
+                            val label = stringResource(id)
+                            ProblemOption(label, onClick = { pending = Pending.Mine(label) })
                         }
                     }
                 }
@@ -583,6 +582,71 @@ internal fun FailDialog(
             RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.act_cancel)) }
         },
     )
+}
+
+/** **صنفٌ في نافذة «لدي مشكلة»** — أرضٌ خفيفةٌ بلونه وعنوانٌ بلونه. */
+@Composable
+private fun ProblemGroup(
+    title: Int,
+    tone: Color,
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit,
+) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(Rahal.shape.md)
+            .background(tone.copy(alpha = 0.08f))
+            .padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            text = stringResource(title),
+            color = tone,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.labelLarge,
+        )
+        content()
+    }
+}
+
+/** **خيارٌ واحد** — سطرٌ بإطارٍ يُضغط بإبهام (٤٨dp)، **ومهلتُه شريحةٌ رماديّة.** */
+@Composable
+private fun ProblemOption(
+    text: String,
+    onClick: () -> Unit,
+    wait: String = "",
+    enabled: Boolean = true,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .clip(Rahal.shape.sm)
+            .background(Rahal.colors.canvas)
+            .border(1.dp, Rahal.colors.line, Rahal.shape.sm)
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = text,
+            color = if (enabled) Rahal.colors.ink else Rahal.colors.inkMuted,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.weight(1f),
+        )
+        if (wait.isNotEmpty()) {
+            Spacer(Modifier.size(8.dp))
+            Text(
+                text = wait,
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.labelSmall,
+                modifier = Modifier
+                    .clip(Rahal.shape.pill)
+                    .background(Rahal.colors.field)
+                    .padding(horizontal = 8.dp, vertical = 3.dp),
+            )
+        }
+    }
 }
 
 /** **ما ينتظر تأكيداً** — سببٌ من الخادم أو «مشكلتي». */

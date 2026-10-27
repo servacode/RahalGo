@@ -147,6 +147,22 @@ fun CustomScreen(
             stringResource(R.string.soon_custom),
         )
 
+        // ══════════════════════════════════════════════════════════════
+        // **والإغلاقُ يُقال قبل أن يكتب لا بعد أن يُرسل** (تدقيقُ ٢٠٢٦-١٠-٢٧)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **كالسلّة تماماً** (`ServiceClosedBanner`): مفتاحُ الطلب الخاصّ من اللوحة
+        // (`launch.customer_custom_orders`) ثمّ حالُ الاستقبال. **ونصُّ المالك يغلب.**
+        val closedText = when {
+            !Serving.customOrdersOpen ->
+                Serving.launchNotice.trim().ifEmpty { stringResource(R.string.cst_closed) }
+            !Serving.available -> com.rahalgo.customer.cart.servingText(androidx.compose.ui.platform.LocalContext.current)
+            else -> ""
+        }
+        if (closedText.isNotEmpty()) {
+            Spacer(Modifier.height(10.dp))
+            com.rahalgo.ui.ServiceClosedBanner(closedText)
+        }
 
         Spacer(Modifier.height(12.dp))
         Text(stringResource(R.string.cst_mode_title), fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
@@ -223,24 +239,32 @@ fun CustomScreen(
         // **أجرةُ التوصيل**: إن حدّدتها المنصةُ عُرضت فوراً، وإلّا قيل إنّها
         // تُحدَّد بعد قبول السائق. **والإجماليُّ مجهولٌ حتّى تُعرَف قيمةُ
         // المشتريات.** **وطريقةُ الدفع تُختار عند تأكيد العرض لا الآن.**
+        // **والأجرةُ بطاقةٌ برقمٍ واضح** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧) — لا ثلاثةُ أسطرٍ رماديّة.
         Spacer(Modifier.height(12.dp))
+        com.rahalgo.ui.Card {
         if (Serving.customFeeAdminDefined) {
             val fee = Serving.customFeeFor(mode)
             // **وعرضُ التوصيل المجاني يُسقطها** (٢٠٢٦-١٠-٢٦) — مشطوبةً وسطرُ العرض تحتها.
             val waive = com.rahalgo.customer.FreeOffer.state.waiveFor(mode, fee)
             Text(
                 stringResource(R.string.ord_fee_value, money(fee)),
-                color = if (waive > 0) Rahal.colors.inkMuted else androidx.compose.ui.graphics.Color.Unspecified,
+                color = if (waive > 0) Rahal.colors.inkMuted else Rahal.colors.ink,
                 textDecoration = if (waive > 0) androidx.compose.ui.text.style.TextDecoration.LineThrough else null,
-                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (waive > 0) null else androidx.compose.ui.text.font.FontWeight.Bold,
+                style = if (waive > 0) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.titleMedium,
             )
             if (waive > 0) {
+                // **والإعفاءُ الجزئيُّ لا يُقال «مجانية»** — سقفُ العرض أقلُّ من الأجرة.
                 Text(
-                    stringResource(R.string.free_custom),
+                    if (waive >= fee) stringResource(R.string.free_custom)
+                    else stringResource(R.string.ord_fee_value, money(fee - waive)),
                     color = Rahal.colors.success,
                     fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.titleMedium,
                 )
+                com.rahalgo.customer.freeUntilText(com.rahalgo.customer.FreeOffer.state.endsAt)?.let {
+                    Text(it, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
+                }
             }
             Spacer(Modifier.height(4.dp))
             // **والأمانةُ لا مشترياتَ فيها** (٢٠٢٦-١٠-١٤) — كانت تقول «الإجماليُّ
@@ -254,9 +278,21 @@ fun CustomScreen(
         } else {
             Text(
                 stringResource(R.string.cst_fee_on_deal),
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
+                color = Rahal.colors.ink,
+                style = MaterialTheme.typography.bodyMedium,
             )
+            // **والعرضُ يُقال ولو كانت الأجرةُ عند السائق** — بصيغةٍ صادقة: يُحجز وقتَ
+            // تحديد السعر لا الآن (تدقيقُ المنطق ٢٠٢٦-١٠-٢٧).
+            if (com.rahalgo.customer.FreeOffer.state.customOn(mode)) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    stringResource(R.string.free_custom_pending),
+                    color = Rahal.colors.success,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
         }
         Spacer(Modifier.height(8.dp))
         // **وأمانةٌ بأجرةٍ من المنصّة لا عرضَ يُؤكَّد بعدها** — تُدفع نقداً للسائق.
@@ -278,7 +314,9 @@ fun CustomScreen(
                     vm.send(request.trim(), it.text, it.lat, it.lng, notes.trim(), "cash", mode)
                 }
             },
-            enabled = !vm.busy && request.isNotBlank() && address != null,
+            // **والإغلاقُ يُطفئ الزرَّ والسببُ فوقُ مكتوب** — لا يُرَدّ بعد الكتابة.
+            enabled = !vm.busy && request.isNotBlank() && address != null &&
+                Serving.available && Serving.customOrdersOpen,
             modifier = Modifier.fillMaxWidth(),
         ) {
             if (vm.busy) {

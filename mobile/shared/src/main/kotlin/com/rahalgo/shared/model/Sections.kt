@@ -43,6 +43,16 @@ data class CashEntry(
      */
     @SerialName("customer_name") val customerName: String = "",
     @SerialName("created_at") val createdAt: String = "",
+    // **تفصيلُ سطر التحصيل** (`cashbox.go`، ٢٠٢٦-١٠-٢٦) — حقولٌ مضافةٌ تغيب عن سطور التسليم.
+    @SerialName("merchant_name") val merchantName: String = "",
+    /** **أجرةُ التوصيل التي دفعها الزبون** — صفرٌ في التوصيل المجانيّ. */
+    @SerialName("fee_part") val feePart: Long? = null,
+    /** **عمولةُ المنصّة كما قُيّدت** — قبل أيّ محو. */
+    @SerialName("commission_part") val commissionPart: Long? = null,
+    /** **ما مُحي من العمولة** («ما استلمت العمولة»). */
+    @SerialName("commission_waived") val commissionWaived: Long? = null,
+    /** **ما أعفاه عرضُ التوصيل المجانيّ.** */
+    @SerialName("free_waived") val freeWaived: Long? = null,
 )
 
 @Serializable

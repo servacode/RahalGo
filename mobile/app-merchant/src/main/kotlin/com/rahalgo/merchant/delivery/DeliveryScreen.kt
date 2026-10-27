@@ -29,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -393,8 +394,10 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
 
 
 @Composable
-fun DeliveryScreen(vm: DeliveryViewModel, onPickPoint: () -> Unit) {
+fun DeliveryScreen(vm: DeliveryViewModel) {
     var tracking by rememberSaveable { mutableStateOf<String?>(null) }
+    // **ضغطَ «اطلب سائقاً» والنموذجُ ناقص** — فيُعلَّم الناقصُ بالأحمر (تدقيقُ ٢٠٢٦-١٠-٢٧).
+    var tried by rememberSaveable { mutableStateOf(false) }
     tracking?.let { id ->
         val tvm: DeliveryTrackViewModel = viewModel(key = "track-$id")
         DeliveryTrackScreen(tvm, id) { tracking = null; vm.load() }
@@ -500,6 +503,7 @@ fun DeliveryScreen(vm: DeliveryViewModel, onPickPoint: () -> Unit) {
             onValueChange = { vm.name = it; vm.touched() },
             label = { Text(stringResource(if (fetch) R.string.md_name_fetch else R.string.md_name)) },
             leadingIcon = { FieldIcon(com.rahalgo.ui.R.drawable.ic_user) },
+            isError = tried && vm.name.isBlank(),
             singleLine = true,
             enabled = !vm.busy,
             modifier = Modifier.fillMaxWidth(),
@@ -518,6 +522,7 @@ fun DeliveryScreen(vm: DeliveryViewModel, onPickPoint: () -> Unit) {
             onValueChange = { vm.address = it; vm.touched() },
             label = { Text(stringResource(if (fetch) R.string.md_address_fetch else R.string.md_address)) },
             leadingIcon = { FieldIcon(com.rahalgo.ui.R.drawable.ic_home) },
+            isError = tried && vm.address.isBlank(),
             enabled = !vm.busy,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -614,6 +619,7 @@ fun DeliveryScreen(vm: DeliveryViewModel, onPickPoint: () -> Unit) {
             OutlinedTextField(
                 value = vm.collectAmount,
                 onValueChange = { v -> vm.onCollectAmount(v) },
+                isError = tried && vm.collectValue == null,
                 label = {
                     Text(
                         stringResource(
@@ -635,7 +641,12 @@ fun DeliveryScreen(vm: DeliveryViewModel, onPickPoint: () -> Unit) {
 
         // ── من يدفع — بطاقاتٌ واضحةٌ إجباريّة (طلبُ المالك ٢٠٢٦-١٠-٠٩) ──
         Spacer(Modifier.height(14.dp))
-        Text(stringResource(R.string.md_who_pays_q), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+        Text(
+            stringResource(R.string.md_who_pays_q),
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleSmall,
+            color = if (tried && vm.payer.isEmpty()) Rahal.colors.danger else Color.Unspecified,
+        )
         Spacer(Modifier.height(8.dp))
         listOf(
             Triple("merchant", R.string.md_pay_me, R.string.md_pay_me_sub),
@@ -698,13 +709,13 @@ fun DeliveryScreen(vm: DeliveryViewModel, onPickPoint: () -> Unit) {
                     .padding(12.dp),
             ) {
                 Text(
-                    stringResource(R.string.md_fee, q.fee.toString()),
+                    stringResource(R.string.md_fee, com.rahalgo.ui.grouped(q.fee)),
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.titleMedium,
                 )
                 Text(
                     when (vm.payer) {
-                        "merchant" -> stringResource(R.string.md_fee_from_wallet, q.availableBalance.toString())
+                        "merchant" -> stringResource(R.string.md_fee_from_wallet, com.rahalgo.ui.grouped(q.availableBalance))
                         "merchant_cash" -> stringResource(if (fetch) R.string.md_fee_me_cash_fetch else R.string.md_fee_me_cash)
                         "recipient" -> stringResource(if (fetch) R.string.md_fee_cash_fetch else R.string.md_fee_cash)
                         else -> stringResource(R.string.md_fee_choose)
@@ -754,10 +765,33 @@ fun DeliveryScreen(vm: DeliveryViewModel, onPickPoint: () -> Unit) {
             Spacer(Modifier.height(12.dp))
             Note(vm.error, Rahal.colors.danger)
         }
+        // ══════════════════════════════════════════════════════════════
+        // **وما ينقص يُقال فوق الزرّ** (تدقيقُ ٢٠٢٦-١٠-٢٧)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **كان الزرُّ يصير رماديّاً بلا كلمة** — والقائمةُ محسوبةٌ ولا تُعرض، فيعبّي
+        // التاجرُ الاستمارةَ الطويلة ويجد الزرَّ واقفاً ولا يعرف ليش. **فالناقصُ سطرٌ
+        // فوقه، والضغطُ والنموذجُ ناقصٌ يعلّم خاناته بالأحمر** — ولا يُرسل شيئاً.
+        if (missing.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            Text(
+                stringResource(R.string.md_missing, missing.joinToString("، ")),
+                color = if (tried) Rahal.colors.danger else Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = if (tried) FontWeight.Bold else FontWeight.Normal,
+            )
+        }
         Spacer(Modifier.height(12.dp))
         RahalButton(
-            onClick = { vm.send() },
-            enabled = !vm.busy && missing.isEmpty() && !blocked && vm.storeId.isNotEmpty(),
+            onClick = {
+                if (missing.isNotEmpty()) {
+                    tried = true
+                } else {
+                    tried = false
+                    vm.send()
+                }
+            },
+            enabled = !vm.busy && !blocked && vm.storeId.isNotEmpty(),
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(stringResource(if (vm.busy) R.string.md_sending else R.string.md_send))
@@ -783,8 +817,9 @@ private fun RecentDeliveries(vm: DeliveryViewModel, onOpen: (String) -> Unit) {
     when {
         rows == null && vm.listError.isEmpty() ->
             Text(stringResource(R.string.md_loading), color = Rahal.colors.inkMuted)
+        // **والفارغُ بالقطعة المشتركة** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كبقيّة الشاشات، ويقول ماذا يفعل.
         rows != null && rows.isEmpty() ->
-            Text(stringResource(R.string.md_none), color = Rahal.colors.inkMuted)
+            com.rahalgo.ui.Empty(stringResource(R.string.md_none), hint = stringResource(R.string.md_none_hint))
         rows != null -> rows.take(5).forEach { d ->
             DeliveryRow(d, cancelling = vm.cancelling != null, onOpen = { onOpen(d.id) }) { vm.cancel(d.id) }
         }
@@ -817,12 +852,21 @@ fun DeliveryRow(d: Delivery, cancelling: Boolean, onOpen: () -> Unit = {}, onCan
             .padding(14.dp),
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                stringResource(R.string.md_track_title, d.number.toString()),
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleSmall,
-                modifier = Modifier.weight(1f),
-            )
+            Column(Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.md_track_title, d.number.toString()),
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                // **ويومُها وساعتُها** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كانت بلا تاريخ.
+                if (d.createdAt.isNotBlank()) {
+                    Text(
+                        com.rahalgo.merchant.Dates.stamp(androidx.compose.ui.platform.LocalContext.current, d.createdAt),
+                        color = Rahal.colors.inkMuted,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
             StatusPill(d.status)
         }
         Hairline()
@@ -844,7 +888,7 @@ fun DeliveryRow(d: Delivery, cancelling: Boolean, onOpen: () -> Unit = {}, onCan
         }
         InfoLine(
             com.rahalgo.ui.R.drawable.ic_wallet,
-            stringResource(DeliveryTexts.feeRow(d.feePayer, d.deliveryMode == "fetch"), d.fee.toString()),
+            stringResource(DeliveryTexts.feeRow(d.feePayer, d.deliveryMode == "fetch"), com.rahalgo.ui.grouped(d.fee)),
         )
         d.collectAmount?.takeIf { it > 0 }?.let {
             InfoLine(
@@ -852,13 +896,16 @@ fun DeliveryRow(d: Delivery, cancelling: Boolean, onOpen: () -> Unit = {}, onCan
                 stringResource(DeliveryTexts.collectRow(d.deliveryMode == "fetch"), DeliveryTexts.amount(d, it)),
             )
         }
-        Spacer(Modifier.height(6.dp))
-        Text(
-            stringResource(R.string.md_track_open),
-            color = Rahal.colors.brand,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.bodySmall,
-        )
+        // **و«اضغط لمتابعتها» لِما يجري وحدَه** — المنتهيةُ لا تُتابَع (تدقيقُ ٢٠٢٦-١٠-٢٧).
+        if (toneOf(d.status) == Tone.Waiting || toneOf(d.status) == Tone.Moving) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                stringResource(R.string.md_track_open),
+                color = Rahal.colors.brand,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
         if (d.status in cancellable) {
             Spacer(Modifier.height(10.dp))
             CancelDeliveryButton(busy = cancelling, onConfirm = onCancel)
@@ -968,10 +1015,11 @@ fun DeliveryHistoryScreen(vm: DeliveryHistoryViewModel) {
         }
         val rows = vm.rows
         when {
+            // **والتحميلُ والفارغُ بالقطع المشتركة** (تدقيقُ ٢٠٢٦-١٠-٢٧).
             rows == null && vm.error.isEmpty() ->
-                Text(stringResource(R.string.md_loading), color = Rahal.colors.inkMuted)
+                com.rahalgo.ui.LoadState(loading = true, error = "")
             rows != null && rows.isEmpty() ->
-                Text(stringResource(R.string.md_none), color = Rahal.colors.inkMuted)
+                com.rahalgo.ui.Empty(stringResource(R.string.md_none), hint = stringResource(R.string.md_none_hint))
             rows != null -> rows.forEach { d ->
                 DeliveryRow(d, cancelling = vm.cancelling != null, onOpen = { tracking = d.id }) { vm.cancel(d.id) }
             }

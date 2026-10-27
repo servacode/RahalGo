@@ -74,11 +74,10 @@ import kotlinx.coroutines.launch
  * **وصاحبُ المطعم يتذكّر «الطلبَ الذي تأخّر» لا اسمَ السائق** — الذي
  * لا يراه أصلاً.
  *
- * # ولا مالَ فيه
+ * # والمالُ فيه بشفافية
  *
- * **المحرّكُ يصفّر المبالغَ للمتجر** (`merchant_privacy.go`): «المال —
- * يراه في محفظته وتقاريره». **وصفرٌ في موضع مالٍ يُقرأ عطباً**، فلا
- * يُعرض أصلاً.
+ * **كلُّ طلبٍ بمجموعه وعمولته ومستحقّه** (بلاغُ المالك ٢٠٢٦-٠٨-٢٦) —
+ * **إلّا ما انتهى بلا بيع** فلا مستحقَّ يُعرض فيه (`noPayout`).
  */
 class HistoryViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -111,6 +110,22 @@ class HistoryViewModel(app: Application) : AndroidViewModel(app) {
 
     private var storeId: String = ""
 
+    /** **صفحاتُ السجلّ** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كان يقف عند آخر عشرين طلباً. */
+    private var page = 1
+
+    /** **بقي أقدمُ ممّا يُرى** — يقوله مجموعُ الخادم (`total`). */
+    var more by mutableStateOf(false)
+        private set
+
+    var loadingMore by mutableStateOf(false)
+        private set
+
+    /**
+     * **أهو مفتوح؟** — السجلُّ في الدرج، **والنبضةُ لا تعيد قراءتَه وهو مغلق**
+     * (تدقيقُ ٢٠٢٦-١٠-٢٧): كان كلُّ حدثٍ حيٍّ ينادي سجلّاً لا يراه أحد. وفتحُه يقرؤه.
+     */
+    var active = false
+
     init {
         load()
         // **ويسمع النبضة** — (طلبُ المالك ٢٠٢٦-٠٨-٣١: «وتأكّد من التحديث
@@ -119,7 +134,7 @@ class HistoryViewModel(app: Application) : AndroidViewModel(app) {
         // **وكانت تُحمَّل مرّةً عند الفتح** — فيُسلَّم طلبٌ وهو ينظر
         // إليها **فلا يتبدّل رقم**، ولا يعرف أنّ عليه أن يخرج ويعود.
         viewModelScope.launch {
-            com.rahalgo.ui.Refresh.tick.collect { if (it > 0L) load() }
+            com.rahalgo.ui.Refresh.tick.collect { if (it > 0L && active) load() }
         }
     }
 
@@ -134,12 +149,32 @@ class HistoryViewModel(app: Application) : AndroidViewModel(app) {
                     loading = false
                     return@launch
                 }
-                val page = api.history(storeId)
-                orders = page.orders
-                reportable = page.reportable.toSet()
+                val got = api.history(storeId)
+                page = 1
+                orders = got.orders
+                reportable = got.reportable.toSet()
+                more = got.orders.isNotEmpty() && got.orders.size < got.total
                 error = ""
             }.onFailure { error = err(it) }
             loading = false
+        }
+    }
+
+    /** **الصفحةُ التالية** — تُلحق بما يُرى ولا تمسحه. */
+    fun loadMore() {
+        if (loadingMore || !more || storeId.isEmpty()) return
+        loadingMore = true
+        viewModelScope.launch {
+            runCatching { api.history(storeId, page + 1) }
+                .onSuccess { got ->
+                    page += 1
+                    val seen = orders.map { it.id }.toSet()
+                    orders = orders + got.orders.filter { it.id !in seen }
+                    reportable = reportable + got.reportable
+                    more = got.orders.isNotEmpty() && orders.size < got.total
+                }
+                .onFailure { Flash.fail(err(it)) }
+            loadingMore = false
         }
     }
 
@@ -199,109 +234,38 @@ fun HistoryScreen(vm: HistoryViewModel) {
                 return@Screen
             }
 
-            Spacer(Modifier.height(10.dp))
-            Card {
-                vm.orders.forEachIndexed { i, o ->
-                    if (i > 0) HorizontalDivider()
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                "#" + o.number,
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                            // **وما فيه يُقال في سطر** — من يسأل عن طلبٍ
-                            // مضى يسأل عن بضاعته لا عن رقمه وحدَه.
-                            // ══════════════════════════════════════
-                            // **وثلاثةُ أرقامٍ بشفافية**
-                            // ══════════════════════════════════════
-                            //
-                            // (بلاغُ المالك ٢٠٢٦-٠٨-٢٦: «سجلّ الطلبات
-                            //  ما فيه شقد المبلغ المباع وشقد نسبة
-                            //  العمولة للمنصّة — هيك لازم يكون
-                            //  بشفافية».)
-                            //
-                            // **وكان يرى رقمَ الطلب وأصنافَه وحالتَه
-                            // فقط** — ولا يعرف كم دخل جيبَه.
-                            //
-                            // **والنسبةُ تُذكر مع العمولة** — ورقمٌ
-                            // بلا نسبةٍ يُحفظ ولا يُفهم، **ومن رآها
-                            // عرف أنّها قاعدةٌ لا مزاج.**
-                            //
-                            // **وأجرةُ التوصيل ليست منه** — فلا تُخلط:
-                            // `subtotal` بضاعتُه، و`total` فيه التوصيل.
-                            // **ومربّعاتٌ كما في «الطلبات»** — (بلاغُ
-                            // المالك ٢٠٢٦-٠٨-٣١). **وسطرٌ بثلاثة أرقامٍ
-                            // مفصولةٍ بنقاطٍ يُقرأ جملةً لا حسبة.**
-                            // **وحسبةُ الفاتورة كما في «الطلبات»** —
-                            // (بلاغُ المالك ٢٠٢٦-٠٨-٣١). **والمربّعاتُ
-                            // تكسر الطرحَ فتُقرأ ثلاثةَ أشياءَ لا
-                            // حسبة**، وشكلُ الفاتورة يُقرأ بلا تعليم.
-                            SumLine(
-                                label = stringResource(com.rahalgo.merchant.R.string.ord_sum_lbl),
-                                value = money(o.subtotal),
-                            )
-                            SumLine(
-                                label = stringResource(
-                                    com.rahalgo.merchant.R.string.ord_cut_lbl,
-                                    o.commissionLabel,
-                                ),
-                                value = "− " + money(o.platformCommission),
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            HorizontalDivider()
-                            SumLine(
-                                label = stringResource(com.rahalgo.merchant.R.string.ord_due_lbl),
-                                value = money(o.merchantNet),
-                                strong = true,
-                                color = Rahal.colors.brand,
-                            )
-                            if (o.items.isNotEmpty()) {
-                                Text(
-                                    o.items.joinToString("، ") { "${it.qty}× ${it.name}" },
-                                    color = Rahal.colors.inkMuted,
-                                    style = MaterialTheme.typography.bodySmall,
-                                )
-                            }
-                        }
-                        // ══════════════════════════════════════════════
-                        // **وزرُّ البلاغ لمن يملكه وحدَه**
-                        // ══════════════════════════════════════════════
-                        //
-                        // **وزرٌّ يُعرض ثمّ يردّ خطأً أسوأُ من زرٍّ غائب**:
-                        // صاحبُ المطعم يضغطه فيُقال له «سببٌ غير صالح»
-                        // وهو لم يختر سبباً بعد.
-                        if (vm.reportable.contains(o.id)) {
-                            RahalTextButton(onClick = {
-                                reporting = o
-                                vm.loadReasons()
-                            }) {
-                                Icon(
-                                    painter = painterResource(com.rahalgo.ui.R.drawable.ic_warning),
-                                    contentDescription = null,
-                                    tint = Rahal.colors.danger,
-                                    modifier = Modifier.size(16.dp),
-                                )
-                                Spacer(Modifier.width(4.dp))
-                                Text(
-                                    stringResource(com.rahalgo.merchant.R.string.report_driver),
-                                    color = Rahal.colors.danger,
-                                    style = MaterialTheme.typography.labelMedium,
-                                )
-                            }
-                        }
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            statusAr(o.status),
-                            color = if (o.status == "delivered") Rahal.colors.brand
-                            else Rahal.colors.inkMuted,
-                            style = MaterialTheme.typography.labelMedium,
-                        )
-                    }
+            // ══════════════════════════════════════════════════════════
+            // **بعناوين أيّامٍ وبطاقةٍ لكلّ طلب** (تدقيقُ ٢٠٢٦-١٠-٢٧)
+            // ══════════════════════════════════════════════════════════
+            //
+            // **كان كلُّ طلبٍ سطراً بلا تاريخٍ ولا ساعة** — فلا يجد صاحبُ المتجر
+            // «طلبَ مبارح العصر». **فصار تحت يومه، وبرأسه ساعتُه وحالُه بلون.**
+            val ctx = androidx.compose.ui.platform.LocalContext.current
+            var lastDay: String? = null
+            vm.orders.forEach { o ->
+                val day = com.rahalgo.merchant.Dates.dayOf(ctx, o.createdAt)
+                if (day != lastDay) {
+                    com.rahalgo.ui.DayHead(day)
+                    lastDay = day
+                } else {
+                    Spacer(Modifier.height(8.dp))
                 }
+                HistoryCard(
+                    o = o,
+                    reportable = vm.reportable.contains(o.id),
+                    onReport = {
+                        reporting = o
+                        vm.loadReasons()
+                    },
+                )
+            }
+            if (vm.more) {
+                Spacer(Modifier.height(12.dp))
+                com.rahalgo.ui.RahalOutlineButton(
+                    onClick = { vm.loadMore() },
+                    enabled = !vm.loadingMore,
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text(stringResource(com.rahalgo.merchant.R.string.md_more)) }
             }
             Spacer(Modifier.height(24.dp))
         }
@@ -313,6 +277,90 @@ fun HistoryScreen(vm: HistoryViewModel) {
             order = o,
             onClose = { reporting = null },
         )
+    }
+}
+
+/**
+ * **بطاقةُ طلبٍ منتهٍ** — رقمُه وساعتُه وحالُه، ثمّ حسبتُه وأصنافُه، **وزرُّ البلاغ
+ * أسفلَها** لا في السطر نفسِه (تدقيقُ ٢٠٢٦-١٠-٢٧).
+ */
+@Composable
+private fun HistoryCard(o: MerchantOrder, reportable: Boolean, onReport: () -> Unit) {
+    Card {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "#" + o.number,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleSmall,
+            )
+            val at = com.rahalgo.ui.timeText(o.createdAt)
+            if (at.isNotBlank() && at != o.createdAt) {
+                Spacer(Modifier.width(8.dp))
+                Text(at, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
+            }
+            Spacer(Modifier.weight(1f))
+            com.rahalgo.ui.Chip(
+                statusAr(o.status),
+                when {
+                    o.status == "delivered" -> Rahal.colors.success
+                    noPayout(o.status) -> Rahal.colors.danger
+                    else -> Rahal.colors.inkMuted
+                },
+            )
+        }
+        if (o.items.isNotEmpty()) {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                o.items.joinToString("، ") { "${it.qty}× ${it.name}" },
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+        Spacer(Modifier.height(6.dp))
+        // **وثلاثةُ أرقامٍ بشفافية** (بلاغُ المالك ٢٠٢٦-٠٨-٢٦) — **إلّا طلباً انتهى بلا بيع**:
+        // «المستحق لك» فيه يُقرأ مالاً عند المنصّة وليس له شيء (تدقيقُ ٢٠٢٦-١٠-٢٧).
+        if (noPayout(o.status)) {
+            Text(
+                stringResource(com.rahalgo.merchant.R.string.ord_no_payout),
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        } else {
+            SumLine(
+                label = stringResource(com.rahalgo.merchant.R.string.ord_sum_lbl),
+                value = money(o.subtotal),
+            )
+            SumLine(
+                label = stringResource(com.rahalgo.merchant.R.string.ord_cut_lbl, o.commissionLabel),
+                value = "− " + money(o.platformCommission),
+            )
+            Spacer(Modifier.height(4.dp))
+            HorizontalDivider()
+            SumLine(
+                label = stringResource(com.rahalgo.merchant.R.string.ord_due_lbl),
+                value = money(o.merchantNet),
+                strong = true,
+                color = Rahal.colors.brand,
+            )
+        }
+        // **وزرُّ البلاغ لمن يملكه وحدَه** — وزرٌّ يُعرض ثمّ يردّ خطأً أسوأُ من غيابه.
+        if (reportable) {
+            Spacer(Modifier.height(4.dp))
+            RahalTextButton(onClick = onReport) {
+                Icon(
+                    painter = painterResource(com.rahalgo.ui.R.drawable.ic_warning),
+                    contentDescription = null,
+                    tint = Rahal.colors.danger,
+                    modifier = Modifier.size(16.dp),
+                )
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    stringResource(com.rahalgo.merchant.R.string.report_driver),
+                    color = Rahal.colors.danger,
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            }
+        }
     }
 }
 

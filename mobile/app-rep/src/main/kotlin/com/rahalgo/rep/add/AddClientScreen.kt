@@ -3,9 +3,11 @@ package com.rahalgo.rep.add
 import android.app.Application
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,7 +15,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -49,7 +50,6 @@ import com.rahalgo.ui.Screen
 import com.rahalgo.ui.ScreenTitle
 import com.rahalgo.ui.apiError
 import com.rahalgo.ui.RahalButton
-import com.rahalgo.ui.RahalOutlineButton
 import kotlinx.coroutines.launch
 
 /**
@@ -102,11 +102,15 @@ import kotlinx.coroutines.launch
  *
  * **ولا لونَ جديد** — `accent` و`success` و`brand` من لوح العلامة.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PickerBlock(
     label: String,
     hint: String,
     chosen: String?,
+    /** **سقوطُ جلب الخيارات يُقال داخل اللوح** — وفارغٌ يعني لا سقوط. */
+    failed: String = "",
+    onRetry: (() -> Unit)? = null,
     chips: @Composable () -> Unit,
 ) {
     val done = !chosen.isNullOrBlank()
@@ -159,11 +163,34 @@ private fun PickerBlock(
                 style = MaterialTheme.typography.bodySmall,
             )
         }
+        // ══════════════════════════════════════════════════════════════
+        // **وسقوطُ الجلب يُقال هنا بزرّ إعادة** (٢٠٢٦-١٠-٢٧)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **كان اللوحُ يبقى فارغاً تحت «مطلوب» بلا كلمة** إن سقط جلبُ
+        // المحافظات — فلا يختار منطقةً ولا يُرسل، **ولا يُحَلّ إلّا بإغلاق
+        // التطبيق.**
+        if (failed.isNotEmpty()) {
+            Spacer(Modifier.height(6.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    failed,
+                    color = Rahal.colors.danger,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.weight(1f),
+                )
+                if (onRetry != null) {
+                    RahalTextButton(onClick = onRetry) {
+                        Text(stringResource(com.rahalgo.ui.R.string.act_retry), color = Rahal.colors.brand)
+                    }
+                }
+            }
+        }
         Spacer(Modifier.height(8.dp))
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
+        // **والرقائقُ تنزل سطراً جديداً** (٢٠٢٦-١٠-٢٧) — **وكانت صفّاً يمرّ
+        // بالعرض** فيبقى ما بعد الرابعة خارجَ الشاشة بلا إشارةٍ أنّ غيرها موجود.
+        FlowRow(
+            Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) { chips() }
     }
@@ -246,6 +273,8 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
             label = stringResource(R.string.ac_governorate),
             hint = stringResource(R.string.ac_pick_governorate),
             chosen = vm.governorates.firstOrNull { it.id == vm.pickedGovernorate }?.name,
+            failed = if (vm.govFailed) stringResource(R.string.ac_gov_failed) else "",
+            onRetry = { vm.loadCategories() },
         ) {
             vm.governorates.forEach { g ->
                 FilterChip(
@@ -293,6 +322,8 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
             label = stringResource(R.string.ac_category),
             hint = stringResource(R.string.ac_pick_category),
             chosen = vm.categories.firstOrNull { it.id == vm.pickedCategory }?.name,
+            failed = if (vm.catFailed) stringResource(R.string.ac_cat_failed) else "",
+            onRetry = { vm.loadCategories() },
         ) {
             vm.categories.forEach { c ->
                 FilterChip(
@@ -336,20 +367,44 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
         // ══════════════════════════════════════════════════════════════
         // **والنقطةُ على الخريطة**
         // ══════════════════════════════════════════════════════════════
+        //
+        // **وحقلُ النقطة وزرُّها بطاقةٌ واحدةٌ تُضغط** (٢٠٢٦-١٠-٢٧) — اسمُ
+        // المكان وتحته «بدّل النقطة»؛ **وكانا حقلاً للقراءة وزرّاً تحته
+        // يقولان الشيءَ نفسَه.** وبإطار ألواح الاختيار فوقها: ناقصٌ بلون
+        // التنبيه، وتامٌّ بلون العلامة.
         Spacer(Modifier.height(12.dp))
-        OutlinedTextField(
-            value = vm.pointLabel,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text(stringResource(R.string.ac_point)) },
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Spacer(Modifier.height(6.dp))
-        RahalOutlineButton(onClick = pick, modifier = Modifier.fillMaxWidth()) {
+        val hasPoint = vm.point != null
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .clip(Rahal.shape.md)
+                .background(if (hasPoint) Rahal.colors.surface else Rahal.colors.warnTint)
+                .border(
+                    Rahal.stroke.hair,
+                    (if (hasPoint) Rahal.colors.brand else Rahal.colors.accent)
+                        .copy(alpha = if (hasPoint) 0.35f else 0.55f),
+                    Rahal.shape.md,
+                )
+                .clickable(onClick = pick)
+                .padding(12.dp),
+        ) {
             Text(
-                stringResource(
-                    if (vm.point == null) R.string.ac_pick else R.string.ac_repick,
-                ),
+                stringResource(R.string.ac_point),
+                color = Rahal.colors.ink,
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Spacer(Modifier.height(4.dp))
+            if (hasPoint) {
+                Text(
+                    "✓ " + vm.pointLabel,
+                    color = Rahal.colors.success,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
+            Text(
+                stringResource(if (hasPoint) R.string.ac_repick else R.string.ac_pick),
+                color = Rahal.colors.brand,
+                style = MaterialTheme.typography.labelLarge,
             )
         }
         Spacer(Modifier.height(4.dp))
@@ -369,11 +424,12 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
         if (vm.point != null && chosenDistrict != null && pointDistrict != null &&
             !vm.pointLabel.contains(chosenDistrict.name)
         ) {
-            Spacer(Modifier.height(4.dp))
-            Text(
+            // **وتنبيهٌ برتقاليٌّ لا خطأٌ أحمر** (٢٠٢٦-١٠-٢٧) — لا يمنع الإرسال،
+            // **والأحمرُ يجعله يظنّ أنّ عليه أن يُصلح شيئاً.**
+            Spacer(Modifier.height(6.dp))
+            Note(
                 stringResource(R.string.ac_point_other_district, pointDistrict.name, chosenDistrict.name),
-                color = Rahal.colors.danger,
-                style = MaterialTheme.typography.bodySmall,
+                Rahal.colors.accent,
             )
         }
 
@@ -485,7 +541,7 @@ class AddClientViewModel(app: Application) : AndroidViewModel(app) {
     var owner by mutableStateOf("")
     var phone by mutableStateOf("")
     var area by mutableStateOf("")
-    var password by mutableStateOf("")
+    // **ولا حقلَ كلمة مرور** — أُلغيت بقرار المالك ٢٠٢٦-١٠-٠٦، فحُذف حقلُها الميّت (٢٠٢٦-١٠-٢٧).
 
     var categories by mutableStateOf<List<RepCategory>>(emptyList())
         private set
@@ -539,14 +595,39 @@ class AddClientViewModel(app: Application) : AndroidViewModel(app) {
     var pickedDistrict by mutableStateOf("")
         private set
 
+    /** **سقط جلبُ المحافظات** — فيُقال داخل لوحها بزرّ إعادة. */
+    var govFailed by mutableStateOf(false)
+        private set
+
+    /** **سقط جلبُ التصنيفات** — كذلك. */
+    var catFailed by mutableStateOf(false)
+        private set
+
+    // ══════════════════════════════════════════════════════════════════
+    // **وكلُّ قائمةٍ تُجلب وحدَها حتّى تمتلئ** (٢٠٢٦-١٠-٢٧)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **كان الشرطُ «التصنيفاتُ محمّلة؟ فاخرج»** — **فإن نزلت التصنيفاتُ
+    // وسقطت المحافظاتُ لم تُجلب ثانيةً أبداً**، ويبقى لوحُها فارغاً بلا
+    // رسالةٍ ولا إعادة. **فكلٌّ بشرطه**: الفارغةُ وحدَها تُعاد.
     fun loadCategories() {
-        if (categories.isNotEmpty()) return
         viewModelScope.launch {
-            runCatching { categories = api.categories() }
-                .onFailure { error = apiError(getApplication(), it as Exception) }
-            // **والمحافظاتُ في النداء نفسِه** — **وسقوطُها لا يُخفي
-            // النموذج**: يبقى يملأ ما عداها ثمّ يُعيد.
-            runCatching { governorates = api.governorates() }
+            if (categories.isEmpty()) {
+                runCatching { categories = api.categories() }
+                    .onSuccess { catFailed = false }
+                    .onFailure { catFailed = true }
+            }
+            // **وسقوطُها لا يُخفي النموذج**: يبقى يملأ ما عداها ثمّ يُعيد.
+            if (governorates.isEmpty()) {
+                runCatching { governorates = api.governorates() }
+                    .onSuccess {
+                        govFailed = false
+                        // **ومحافظةٌ واحدةٌ تُختار وحدَها** — **ولا يُسأل عن
+                        // اختيارٍ لا بديلَ له**، وتُفتح مناطقُها فوراً.
+                        governorates.singleOrNull()?.let { pickGovernorate(it.id) }
+                    }
+                    .onFailure { govFailed = true }
+            }
         }
     }
 
@@ -623,13 +704,14 @@ class AddClientViewModel(app: Application) : AndroidViewModel(app) {
                 owner = ""
                 phone = ""
                 area = ""
-                password = ""
                 point = null
                 pointLabel = ""
                 pickedCategory = ""
                 pickedGovernorate = ""
                 pickedDistrict = ""
                 districts = emptyList()
+                // **والمحافظةُ الوحيدةُ تُختار ثانيةً** — فلا يعود النموذجُ يسأل عنها.
+                governorates.singleOrNull()?.let { pickGovernorate(it.id) }
             } catch (e: Exception) {
                 // **وردُّ الخادم حسمٌ فيُمحى المفتاح** — محاولةٌ جديدةٌ عن قصد.
                 // **وانقطاعُ الشبكة ليس حسماً فيبقى** — إعادةٌ آمنةٌ بالمفتاح نفسِه.

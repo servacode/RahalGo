@@ -43,6 +43,10 @@ fun statusText(status: String): String = when (status) {
 fun statusColor(status: String): Color = when (status) {
     "delivered" -> Rahal.colors.success
     "cancelled", "rejected", "failed" -> Rahal.colors.danger
+    // **والجاري ملوَّنٌ لا رماديّ** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧) — الرماديُّ يُقرأ «واقف».
+    // **الانتظارُ برتقاليّ، والعملُ عليه بلون العلامة** — والأخضرُ يبقى للتسليم وحدَه.
+    "pending", "dispatching" -> Rahal.colors.accent
+    "accepted", "confirmed", "preparing", "assigned", "at_pickup", "picked_up",
     "on_the_way", "at_dropoff" -> Rahal.colors.brand
     else -> Rahal.colors.inkMuted
 }

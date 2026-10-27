@@ -142,7 +142,7 @@ fun WarningsScreen(vm: WarningsViewModel) {
                             )
                         }
                         Text(
-                            day(w.createdAt),
+                            day(LocalContext.current, w.createdAt),
                             color = Rahal.colors.inkMuted,
                             style = MaterialTheme.typography.labelSmall,
                         )
@@ -242,6 +242,7 @@ fun MyReportsScreen(vm: MyReportsViewModel) {
     // **والسببُ يُترجَم هنا لا هناك**: رموزُ المتجر عن السائقين،
     // **ورموزُ السائق عن المتاجر والزبائن** — **وشاشةٌ تترجم للجميع
     // تحتاج أن تعرف الأدوار كلَّها.**
+    val ctx = LocalContext.current
     val toRow: (com.rahalgo.shared.merchant.MerchantReport) -> TicketRow = { t ->
         TicketRow(
             key = "#" + t.number,
@@ -249,7 +250,7 @@ fun MyReportsScreen(vm: MyReportsViewModel) {
             status = t.status,
             orderNumber = t.orderNumber?.toString().orEmpty(),
             resolution = t.resolution,
-            date = day(t.createdAt),
+            date = day(ctx, t.createdAt),
         )
     }
     Refreshable(refreshing = false, onRefresh = { vm.load() }) {
@@ -443,6 +444,20 @@ fun SalesScreen(vm: SalesViewModel) {
                     label = { Text(stringResource(com.rahalgo.merchant.R.string.sales_custom)) },
                 )
             }
+            // **والمدى المختارُ مكتوباً بالأيّام** (تدقيقُ ٢٠٢٦-١٠-٢٧) — من اختار «مدة محددة»
+            // يرى ما اختار، **لا تقويمين ثمّ أرقاماً بلا تاريخ.**
+            if (vm.range == 3 && vm.fromShown.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    stringResource(
+                        com.rahalgo.merchant.R.string.sales_range,
+                        com.rahalgo.merchant.Dates.ymd(context, vm.fromShown),
+                        com.rahalgo.merchant.Dates.ymd(context, vm.toShown),
+                    ),
+                    color = Rahal.colors.inkMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
             Spacer(Modifier.height(12.dp))
 
             if (vm.loading || vm.error.isNotEmpty()) {
@@ -522,7 +537,10 @@ fun SalesScreen(vm: SalesViewModel) {
             RahalButton(
                 onClick = {
                     printReport(
-                        context, title, vm.fromShown, vm.toShown,
+                        // **والمدى بالأيّام لا بصيغة الآلة** (تدقيقُ ٢٠٢٦-١٠-٢٧).
+                        context, title,
+                        com.rahalgo.merchant.Dates.ymd(context, vm.fromShown),
+                        com.rahalgo.merchant.Dates.ymd(context, vm.toShown),
                         listOf(
                             lblOrders to vm.summary.orders.toString(),
                             lblDone to vm.summary.delivered.toString(),
@@ -552,9 +570,14 @@ fun SalesScreen(vm: SalesViewModel) {
 internal fun reasonAr(code: String): String =
     com.rahalgo.ui.TicketReasons.text(com.rahalgo.ui.AppCore.get().app, code)
 
-/** **واليومُ يُقتطع من الطابع** — ولا ساعةَ فيه: **الحادثةُ يومٌ لا لحظة.** */
-private fun day(iso: String): String =
-    if (iso.length >= 10) iso.substring(0, 10) else iso
+/**
+ * **اليومُ وحدَه** — ولا ساعةَ فيه: **الحادثةُ يومٌ لا لحظة.**
+ *
+ * **وبالاسم لا بالأرقام** (تدقيقُ ٢٠٢٦-١٠-٢٧) — «الثلاثاء 27 تشرين الأول» لا
+ * «2026-10-27». انظر `Dates`.
+ */
+private fun day(ctx: android.content.Context, iso: String): String =
+    com.rahalgo.merchant.Dates.dayOf(ctx, iso)
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -586,12 +609,15 @@ private fun pickRange(context: android.content.Context, vm: SalesViewModel) {
             ).apply {
                 datePicker.maxDate = System.currentTimeMillis()
                 // **ولا نهايةَ قبل البداية** — انظر `setCustom`.
+                // **وعنوانٌ يقول أيُّهما** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كانا تقويمين بلا «من» ولا «لـ».
+                setTitle(context.getString(com.rahalgo.merchant.R.string.sales_to_title))
                 show()
             }
         },
         f.year, f.monthValue - 1, f.dayOfMonth,
     ).apply {
         datePicker.maxDate = System.currentTimeMillis()
+        setTitle(context.getString(com.rahalgo.merchant.R.string.sales_from_title))
         show()
     }
 }

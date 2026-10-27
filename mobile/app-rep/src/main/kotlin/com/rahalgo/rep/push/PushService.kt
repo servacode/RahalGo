@@ -46,6 +46,13 @@ class PushService : RahalPushService() {
     // **والمحرّكُ يرسل `kind=lead`** حين يُسند عميلٌ جديد.
     override fun isUrgent(kind: String): Boolean = kind == KIND_LEAD
 
+    // **وإشعارُ العميل يُعلَّم** — فنقرتُه تفتح «عملائي» (`LeadTap`، ٢٠٢٦-١٠-٢٧).
+    override fun onMessageReceived(message: com.google.firebase.messaging.RemoteMessage) {
+        val d = message.data
+        if (d["kind"] == KIND_LEAD || d["entity"] == KIND_LEAD) LeadTap.arm(this)
+        super.onMessageReceived(message)
+    }
+
     companion object {
         const val KIND_LEAD = "lead"
     }

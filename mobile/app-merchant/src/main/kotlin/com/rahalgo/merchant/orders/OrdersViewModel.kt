@@ -83,6 +83,9 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     var focusedId by mutableStateOf("")
         private set
 
+    /** **كم طلباً ينتظر قراره** — رقمُ تبويب «طلباتي» (تدقيقُ ٢٠٢٦-١٠-٢٧). */
+    val pendingCount: Int get() = orders.count { it.status == "pending" }
+
     fun clearFocus() {
         focusedId = ""
     }
@@ -135,7 +138,8 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 return
             }
             store = mine
-            orders = api.orders(mine.id).orders
+            // **والجاريةُ وحدَها** (تدقيقُ ٢٠٢٦-١٠-٢٧) — والمنتهي في «سجلّ الطلبات».
+            orders = api.orders(mine.id, openOnly = true).orders
             error = ""
         }.onFailure {
             // **وإخفاقُ إنعاشٍ لا يمسح ما على الشاشة** — **قائمةٌ تختفي
@@ -166,7 +170,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             // **لم يكن في الفرع المختار** — ابحث في بقيّة الفروع.
             for (s in stores) {
                 if (s.id == store?.id) continue
-                val here = runCatching { api.orders(s.id).orders.any { it.id == orderId } }
+                val here = runCatching { api.orders(s.id, openOnly = true).orders.any { it.id == orderId } }
                     .getOrDefault(false)
                 if (here) {
                     SelectedStore.set(s.id)

@@ -7,7 +7,11 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Switch
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -253,27 +257,34 @@ fun MenuScreen(vm: MenuViewModel, onOffers: () -> Unit = {}) {
                                 .clip(Rahal.shape.md)
                                 .clickable { vm.openGroup(g) },
                         ) {
-                            RemoteImage(
-                                url = Backend.of(ctx).media(g.imageUrl),
-                                name = g.name,
-                                modifier = Modifier.fillMaxWidth().aspectRatio(4f / 3f).clip(Rahal.shape.sm),
-                            )
-                            Spacer(Modifier.height(6.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    g.name,
-                                    modifier = Modifier.weight(1f),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.bodyMedium,
+                            // **وعددُ الأصناف بكلمته على زاوية الصورة** (٢٠٢٦-١٠-٢٧) —
+                            // «12 صنف» لا «12» وحدَها، فلا يُسأل: عددُ ماذا؟
+                            Box {
+                                RemoteImage(
+                                    url = Backend.of(ctx).media(g.imageUrl),
+                                    name = g.name,
+                                    modifier = Modifier.fillMaxWidth().aspectRatio(4f / 3f).clip(Rahal.shape.sm),
                                 )
                                 Text(
-                                    "${g.items.size}",
-                                    color = Rahal.colors.inkMuted,
-                                    style = MaterialTheme.typography.labelMedium,
+                                    stringResource(R.string.mn_group_count, g.items.size),
+                                    color = Rahal.colors.ink,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    modifier = Modifier
+                                        .align(Alignment.TopStart)
+                                        .padding(6.dp)
+                                        .clip(Rahal.shape.sm)
+                                        .background(Rahal.colors.surface.copy(alpha = 0.88f))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp),
                                 )
                             }
+                            Spacer(Modifier.height(6.dp))
+                            Text(
+                                g.name,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
                         }
                     }
                     if (pair.size == 1) Spacer(Modifier.weight(1f))
@@ -292,7 +303,14 @@ fun MenuScreen(vm: MenuViewModel, onOffers: () -> Unit = {}) {
             Spacer(Modifier.height(6.dp))
             // **وإضافةُ صنفٍ من داخل قسمه كما عند المتجر** — فلا يُعيد اختيارَ ما هو فيه.
             RahalButton(
-                onClick = { vm.newItem(vm.platformSections.firstOrNull { it.name == open.name }?.id.orEmpty()) },
+                // **بمعرّف القسم لا باسمه** (٢٠٢٦-١٠-٢٧) — والاسمُ احتياطٌ لقسمٍ قديمٍ بلا معرّف.
+                onClick = {
+                    vm.newItem(
+                        open.sectionId.ifEmpty {
+                            vm.platformSections.firstOrNull { it.name == open.name }?.id.orEmpty()
+                        },
+                    )
+                },
                 enabled = !vm.busy,
             ) { Text(stringResource(R.string.mn_add_item)) }
             Spacer(Modifier.height(10.dp))
@@ -313,6 +331,7 @@ fun MenuScreen(vm: MenuViewModel, onOffers: () -> Unit = {}) {
  * **ومساواةُ الرقمين تعني «لا هامش»، وعرضُهما متساويين يسأل صاحبَه عن
  * فرقٍ لا وجودَ له.**
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ItemRow(item: MenuItem, vm: MenuViewModel) {
     val context = LocalContext.current
@@ -358,7 +377,12 @@ private fun ItemRow(item: MenuItem, vm: MenuViewModel) {
         // بأحجامٍ أو بإضافات، فيبني ثانياً مثلَه بحجمٍ آخر.**
         if (item.modifiers.isNotEmpty()) {
             Spacer(Modifier.height(6.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            // **وتنزل سطراً ثانياً** (٢٠٢٦-١٠-٢٧) — **وكانت صفّاً لا يلتفّ** فتُقصّ
+            // الثالثةُ عن طرف الشاشة.
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
                 item.modifiers.forEach { g ->
                     Chip(g.name + " (" + g.options.size + ")", Rahal.colors.inkMuted)
                 }
@@ -371,6 +395,9 @@ private fun ItemRow(item: MenuItem, vm: MenuViewModel) {
         ) {
             // **والمعلَّقُ يحلّ محلّ حال التوفّر** — كما في الويب:
             // **صنفٌ لم يُنشر بعدُ لا يعني الزبونَ أمتوفّرٌ هو أم نافد.**
+            //
+            // **والمقبولُ بلا شارة** (٢٠٢٦-١٠-٢٧) — **المفتاحُ وكلمتُه تحته يقولان
+            // «متوفر» أصلاً**، وشارةٌ بجانبهما تقول الكلمةَ نفسَها مرّةً ثانية.
             if (!item.approved) {
                 Chip(
                     stringResource(
@@ -378,13 +405,6 @@ private fun ItemRow(item: MenuItem, vm: MenuViewModel) {
                         else R.string.mn_pending_review,
                     ),
                     Rahal.colors.accent,
-                )
-            } else {
-                Chip(
-                    stringResource(
-                        if (item.available) R.string.mn_available else R.string.mn_unavailable,
-                    ),
-                    if (item.available) Rahal.colors.success else Rahal.colors.inkMuted,
                 )
             }
             // **و«خارجَ الدوام» يقوله الوقتُ لا صاحبُ المتجر** — ومن
@@ -438,24 +458,4 @@ private fun ItemRow(item: MenuItem, vm: MenuViewModel) {
 
 
 
-/**
- * **خيارُ قسمٍ واحد.**
- *
- * **والمختارُ يُعرف بلونه وثقله لا بكلمةٍ بجانبه** — **ولفظٌ يُخترع هنا
- * («مختار») ليس في معجم الويب فيعود الفرقُ من حيث أُغلق.**
- */
-@Composable
-private fun SectionChoice(label: String, chosen: Boolean, onPick: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().clickable(onClick = onPick),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = if (chosen) FontWeight.Bold else FontWeight.Normal,
-            color = if (chosen) Rahal.colors.brand else Rahal.colors.ink,
-        )
-    }
-    Spacer(Modifier.height(6.dp))
-}
+// **وحُذف `SectionChoice`** (٢٠٢٦-١٠-٢٧) — لا يستدعيه أحدٌ منذ صار المحرّرُ في `:ui`.

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.CircularProgressIndicator
@@ -96,6 +97,8 @@ fun CartScreen(
      */
     walletBalance: Long = 0L,
     onDone: () -> Unit,
+    /** **«تصفّح السوق» من السلّة الفارغة** — ينقل لتبويب التسوّق. */
+    onBrowse: () -> Unit = {},
 ) {
     val here = address?.let { LastPoint.Point(it.lat, it.lng, it.text) }
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -129,12 +132,37 @@ fun CartScreen(
     if (Cart.lines.isEmpty()) {
         Screen {
             ScreenTitle(stringResource(R.string.cart_title), "")
-            com.rahalgo.ui.Empty(stringResource(R.string.cart_empty))
+            // **والفراغُ يقول الخطوةَ التالية بزرّ** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧).
+            com.rahalgo.ui.Empty(
+                text = stringResource(R.string.cart_empty),
+                actionLabel = stringResource(R.string.act_browse_market),
+                onAction = onBrowse,
+            )
         }
         return
     }
 
-    Screen {
+    // **وإفراغُ السلّة يُسأل قبله** (تدقيقُ ٢٠٢٦-١٠-٢٧) — ضغطةٌ غلطٌ تطيّر سلّةً كاملة.
+    var askClear by rememberSaveable { mutableStateOf(false) }
+    if (askClear) {
+        com.rahalgo.ui.ConfirmDialog(
+            title = stringResource(R.string.cart_clear_title),
+            body = stringResource(R.string.cart_clear_body),
+            confirm = stringResource(R.string.cart_clear_yes),
+            onConfirm = { Cart.clear() },
+            onDismiss = { askClear = false },
+        )
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **والإجماليُّ وزرُّ الإرسال في شريطٍ ثابتٍ تحت** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **كان الزرُّ في آخر صفحةٍ طويلة** — عنوانٌ وكودٌ ودفعٌ وملاحظات — فيُمرَّر
+    // إليه، **وإن كان معطّلاً لم يُعرف لماذا.** فصار الإجماليُّ والزرُّ ثابتين،
+    // **وسببُ التعطيل سطرٌ فوقهما.** **والتفاصيلُ تبقى في الصفحة كما هي.**
+    Column(Modifier.fillMaxSize()) {
+    Screen(Modifier.weight(1f)) {
         ScreenTitle(stringResource(R.string.cart_title), stringResource(R.string.cart_hint))
 
         // **والخطأُ لا يُرسم هنا** — يُرسم فوق زرّ الطلب. انظر أدناه.
@@ -146,6 +174,17 @@ fun CartScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    // **وصورةٌ مصغّرةٌ أوّلَ السطر** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧) — اسمٌ وسعرٌ بلا
+                    // صورةٍ يُقرأ جدولاً، **والصورةُ تقول «هذا ما اخترتُه» بلمحة.**
+                    com.rahalgo.ui.RemoteImage(
+                        url = media(line.item.imageThumbUrl ?: line.item.imageUrl),
+                        name = line.item.name,
+                        modifier = Modifier
+                            .padding(vertical = 6.dp)
+                            .size(56.dp)
+                            .clip(Rahal.shape.sm),
+                    )
+                    Spacer(Modifier.size(10.dp))
                     Column(Modifier.weight(1f)) {
                         Text(line.item.name, style = MaterialTheme.typography.bodyMedium)
                         // **وما اختاره يُقال تحت اسمه** — **وسطران
@@ -167,12 +206,27 @@ fun CartScreen(
                     // **والعدُّ يُبدَّل هنا** — ومن أراد صنفين لا يعود
                     // إلى السوق ليضغط مرّتين.
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        RahalTextButton(onClick = { Cart.setQty(line.key, line.qty - 1) }) {
-                            Text("−", style = MaterialTheme.typography.titleLarge)
-                        }
-                        Text(line.qty.toString(), fontWeight = FontWeight.Bold)
-                        RahalTextButton(onClick = { Cart.setQty(line.key, line.qty + 1) }) {
-                            Text("+", style = MaterialTheme.typography.titleLarge)
+                        // **وأداةُ الكمّيّة حبّةٌ واحدة: «−  2  +» بأيقوناتٍ وأزرارِ ٣٦**
+                        // (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧) — كانت حرفين في زرّين نصّيّين.
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(Rahal.shape.pill)
+                                .border(1.dp, Rahal.colors.line, Rahal.shape.pill),
+                        ) {
+                            QtyButton(
+                                icon = R.drawable.ic_minus,
+                                label = stringResource(R.string.cart_qty_less),
+                            ) { Cart.setQty(line.key, line.qty - 1) }
+                            Text(
+                                line.qty.toString(),
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 4.dp),
+                            )
+                            QtyButton(
+                                icon = com.rahalgo.ui.R.drawable.ic_plus,
+                                label = stringResource(R.string.cart_qty_more),
+                            ) { Cart.setQty(line.key, line.qty + 1) }
                         }
 
                         // ══════════════════════════════════════════════
@@ -185,12 +239,13 @@ fun CartScreen(
                         // **وكان الحذفُ بالإنقاص حتّى الصفر** — ومن
                         // أضاف خمسةً يضغط خمساً ليُلغيها، **وضغطةٌ
                         // تُعاد خمساً تُقرأ عناداً في التطبيق.**
-                        Spacer(Modifier.size(4.dp))
+                        // **ومساحةُ لمسِ السلّة ٤٨** — كانت ٣٠ فتُخطَأ.
                         Box(
                             Modifier
+                                .size(48.dp)
                                 .clip(CircleShape)
-                                .clickable { Cart.setQty(line.key, 0) }
-                                .padding(6.dp),
+                                .clickable { Cart.setQty(line.key, 0) },
+                            contentAlignment = Alignment.Center,
                         ) {
                             Icon(
                                 painter = painterResource(
@@ -337,7 +392,7 @@ fun CartScreen(
         // يلمع، **ومن أفرغها بالخطأ يعيد بناءها صنفاً صنفا.**
         if (Cart.lines.isNotEmpty()) {
             Spacer(Modifier.height(6.dp))
-            RahalTextButton(onClick = { Cart.clear() }, tone = Tone.Danger) {
+            RahalTextButton(onClick = { askClear = true }, tone = Tone.Danger) {
                 Text(stringResource(R.string.cart_clear))
             }
         }
@@ -382,12 +437,17 @@ fun CartScreen(
                 val fee = cut?.deliveryFee ?: q.deliveryFee
                 // **وزيادةُ المتجر الثاني سطرٌ وحدَها** (٢٠٢٦-١٠-١٤) — رقمٌ واحدٌ يرتفع
                 // بلا تفسيرٍ يُقرأ زيادةً بلا سبب.
-                val extra = if (cut == null) q.sourcesFee.coerceIn(0, fee) else 0L
-                // **وما أسقطه عرضُ التوصيل المجاني يُقال مشطوباً** (٢٠٢٦-١٠-٢٦) — بلا كود.
+                // **ويبقى سطرُه ولو انطبق كود** (تدقيقُ المنطق ٢٠٢٦-١٠-٢٧) — كان يختفي مع
+                // أيّ كود، **وكودُ التوصيل المجاني يصفّر `fee` فيصفّره معه.**
+                val extra = q.sourcesFee.coerceIn(0, fee)
+                // **وما أسقطه عرضُ التوصيل المجاني يُقال مشطوباً** (٢٠٢٦-١٠-٢٦) — **ولو مع كود
+                // حسمٍ عاديّ** (تدقيقُ ٢٠٢٦-١٠-٢٧): كان أيُّ كودٍ يمحو «مجاني» فيُقرأ «0 ل.س».
+                // **وكودُ التوصيل المجاني وحدَه يُغني عن العرض** — فلا يُقال الإسقاطُ مرّتين.
+                val freeCode = cut?.kind == "free_delivery"
                 com.rahalgo.customer.DeliveryFeeRow(
                     stringResource(R.string.ord_delivery),
                     fee - extra,
-                    if (cut == null) q.freeWaived else 0L,
+                    if (!freeCode) q.freeWaived else 0L,
                 )
                 if (extra > 0) {
                     KeyValue(stringResource(R.string.src_fee_line), money(extra))
@@ -418,10 +478,16 @@ fun CartScreen(
                 //
                 // **والخصمُ محسوبٌ على `q.subtotal` عينِه** (`applyPromo`)
                 // **بمعادلة المحرّك نفسِها** (`validatePromo`) — فلا يفترقان.
-                KeyValue(
+                // **والإجماليُّ أبرزُ سطرٍ تحت خطٍّ فاصل** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧) — كان
+                // بحجم باقي الأسطر ولونُه وحدَه يفرّقه.
+                Spacer(Modifier.height(4.dp))
+                HorizontalDivider()
+                Spacer(Modifier.height(4.dp))
+                com.rahalgo.ui.SumLine(
                     stringResource(R.string.ord_total),
                     money(if (cut == null) q.total else maxOf(0L, q.subtotal + fee - cut.discount)),
-                    valueColor = Rahal.colors.brand,
+                    strong = true,
+                    color = Rahal.colors.brand,
                 )
             }
         }
@@ -509,6 +575,24 @@ fun CartScreen(
         if (!Serving.available) {
             Spacer(Modifier.height(8.dp))
             com.rahalgo.ui.ServiceClosedBanner(servingText(LocalContext.current))
+        } else if (!Serving.ordersOpen) {
+            // **ومفتاحُ «طلبات الزبون» من اللوحة** (`launch.customer_orders`، تدقيقُ ٢٠٢٦-١٠-٢٧)
+            // — كان التطبيقُ لا يقرؤه فيُرَدّ الطلبُ بعد ملء السلّة. **ونصُّ المالك يغلب.**
+            Spacer(Modifier.height(8.dp))
+            com.rahalgo.ui.ServiceClosedBanner(
+                Serving.launchNotice.trim().ifEmpty { stringResource(R.string.cart_orders_closed) },
+            )
+        }
+
+        // ══════════════════════════════════════════════════════════════
+        // **وسلّةٌ من متاجرَ أكثرَ من المسموح تُقال قبل الإرسال** (تدقيقُ ٢٠٢٦-١٠-٢٧)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **وتقع من شاشة العروض** أو من سلّةٍ قديمة — والسوقُ وحدَه يحرسها لحظةَ
+        // الإضافة (`SourceNotice`). **فكان المحرّكُ يردّها برسالةٍ عامّة.**
+        if (vm.priced?.tooManySources == true) {
+            Spacer(Modifier.height(8.dp))
+            Note(tooManySourcesText(vm.priced?.maxSources ?: 1), Rahal.colors.danger)
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -615,6 +699,65 @@ fun CartScreen(
         }
 
         Spacer(Modifier.height(14.dp))
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **الشريطُ الثابت — الإجماليُّ كبيراً وزرُّ الإرسال وسببُ تعطيله**
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **والإجماليُّ بمعادلة بطاقة الملخّص حرفاً** — رقمٌ واحدٌ في موضعين لا يفترق.
+    val bq = vm.priced
+    val bcut = vm.promoResult?.takeIf { it.valid }
+    val barTotal: Long? = bq?.let {
+        val bfee = bcut?.deliveryFee ?: it.deliveryFee
+        if (bcut == null) it.total else maxOf(0L, it.subtotal + bfee - bcut.discount)
+    }
+    val closedNow = !Serving.available || !Serving.ordersOpen ||
+        bq?.outOfZone == true || bq?.zoneClosed == true || bq?.blocked == true ||
+        bq?.availability?.available == false
+    val why: String = when {
+        vm.busy -> ""
+        address == null -> stringResource(R.string.cart_why_address)
+        !com.rahalgo.ui.Net.online -> stringResource(R.string.cart_why_offline)
+        closedNow -> stringResource(R.string.cart_why_closed)
+        bq?.tooManySources == true -> tooManySourcesText(bq.maxSources)
+        bq == null -> stringResource(R.string.cart_why_pricing)
+        !vm.canSubmit -> stringResource(R.string.cart_why_review)
+        else -> vm.error
+    }
+    HorizontalDivider()
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .background(Rahal.colors.surface)
+            .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.sm),
+    ) {
+        if (why.isNotEmpty()) {
+            Text(
+                text = why,
+                color = Rahal.colors.danger,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 2,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(6.dp))
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    stringResource(R.string.ord_total),
+                    color = Rahal.colors.inkMuted,
+                    style = MaterialTheme.typography.labelMedium,
+                )
+                Text(
+                    text = barTotal?.let { money(it) } ?: "—",
+                    color = Rahal.colors.ink,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleLarge,
+                    maxLines = 1,
+                )
+            }
+            Spacer(Modifier.size(Rahal.space.md))
         RahalButton(
             onClick = {
                 address?.let {
@@ -637,24 +780,52 @@ fun CartScreen(
             // «نجاحاً كاذباً» أو «نقرةً صامتة».** **والحالُ المركزيّةُ
             // `Net.online` تحكم** (وشريطُ الانقطاع فوقَه يقول السبب) — فلا
             // يُرسَل إلّا على شبكةٍ موثَّقة.
+            // **ومفتاحُ «طلبات الزبون» وسقفُ المتاجر يحكمان أيضاً** (تدقيقُ ٢٠٢٦-١٠-٢٧).
             enabled = !vm.busy && address != null && Serving.available &&
                 com.rahalgo.ui.Net.online &&
                 vm.priced != null && vm.priced?.outOfZone != true &&
                 vm.priced?.zoneClosed != true &&
                 vm.priced?.blocked != true &&
                 vm.priced?.availability?.available != false &&
+                Serving.ordersOpen && vm.priced?.tooManySources != true &&
                 vm.canSubmit,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.weight(1f),
         ) {
             if (vm.busy) {
                 CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
             } else {
-                Text(stringResource(R.string.cart_send))
+                Text(stringResource(R.string.cart_send), maxLines = 1)
             }
         }
-        Spacer(Modifier.height(28.dp))
+        }
+    }
     }
 }
+
+/** **زرُّ الكمّيّة** — دائرةٌ ٣٦ بأيقونةٍ حقيقيّة لا حرف. */
+@Composable
+private fun QtyButton(icon: Int, label: String, onClick: () -> Unit) {
+    Box(
+        Modifier
+            .size(36.dp)
+            .clip(CircleShape)
+            .clickable(onClickLabel = label, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            painter = painterResource(icon),
+            contentDescription = label,
+            tint = Rahal.colors.brand,
+            modifier = Modifier.size(18.dp),
+        )
+    }
+}
+
+/** **سقفُ المتاجر نصّاً** — «متجر واحد بس» حين السقفُ واحد. */
+@Composable
+private fun tooManySourcesText(max: Int): String =
+    if (max <= 1) stringResource(R.string.cart_only_one_source)
+    else stringResource(R.string.cart_too_many_sources, max.toString())
 
 class CartViewModel(app: Application) : AndroidViewModel(app) {
 
@@ -1032,7 +1203,9 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
                 // المنصّة، يُجلب عند الحاجة وحدَها (لا مع كلّ إرسال).
                 if (errorCode == "cod_limit_exceeded" && supportWhatsapp.isEmpty()) {
                     runCatching { auth.platform() }
-                        .onSuccess { supportWhatsapp = it.social.whatsapp }
+                        // **ورقمٌ واحدٌ للحساب وعليه واتساب** (قرارُ المالك) — فإن لم يُضبط
+                        // واتسابٌ منفصلٌ فرقمُ الدعم، **كما تفعل صفحةُ التواصل** (تدقيقُ ٢٠٢٦-١٠-٢٧).
+                        .onSuccess { supportWhatsapp = it.social.whatsapp.ifBlank { it.supportPhone } }
                 }
             }
             busy = false
@@ -1106,7 +1279,7 @@ private fun PayChoice(
  *
  * **ونصُّ المالك أوّلاً** — **فهو يعرف سببَه، ونصُّ الحزمة عامٌّ.**
  */
-private fun servingText(ctx: android.content.Context): String {
+internal fun servingText(ctx: android.content.Context): String {
     val own = Serving.message.trim()
     val base = if (own.isNotEmpty()) own else ctx.getString(
         if (Serving.reason == "temporarily_unavailable") {

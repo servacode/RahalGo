@@ -739,6 +739,13 @@ data class MyOrder(
     @SerialName("wallet_paid") val walletPaid: Long = 0,
     @SerialName("cash_due") val cashDue: Long = 0,
     /**
+     * **مدّةُ التوصيل المتوقّعة بالدقائق** (`orders.delivery_estimate_min`) — وصفرٌ لا تقدير.
+     * **حقلٌ مضافٌ بافتراضٍ آمن** (٢٠٢٦-١٠-٢٧) — خادمٌ لا يرسله لا يكسر شيئاً.
+     */
+    @SerialName("delivery_estimate_min") val deliveryEstimateMin: Int = 0,
+    /** **زمنُ الطريق من المتجر إلى الباب بالثواني** — يُلتقط عند الاستلام، و`null` لم يُقَس. */
+    @SerialName("to_door_eta_sec") val toDoorEtaSec: Int? = null,
+    /**
      * ══════════════════════════════════════════════════════════════════
      * **مسارُه ومرحلتُه — يحسبهما المحرّكُ لا الشاشة**
      * ══════════════════════════════════════════════════════════════════

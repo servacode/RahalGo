@@ -56,6 +56,12 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
         private set
 
     /** **القسمُ المفتوح** — وفارغٌ يعني الشبكة. (كنمط الويب.) */
+    /**
+     * **بحثٌ في كلّ الأصناف** (تدقيقُ ٢٠٢٦-١٠-٢٧) — المتجرُ الكبيرُ كان يفتح كلَّ قسمٍ
+     * ويقلّب ليجد صنفاً يطفئه. **وفارغٌ يعني الشبكة.**
+     */
+    var query by mutableStateOf("")
+
     var open by mutableStateOf<MenuGroup?>(null)
         private set
 
@@ -101,6 +107,25 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
     var busy by mutableStateOf(false)
         private set
 
+    // ══════════════════════════════════════════════════════════════════
+    // **والنبضةُ تقرأ الشاشةَ الظاهرةَ وحدَها** (تدقيقُ ٢٠٢٦-١٠-٢٧)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **كان كلُّ حدثٍ حيٍّ يعيد تحميلَ كلّ الشاشات معاً** — والمخفيّةُ منها أيضاً،
+    // فوق أربعةَ عشرَ نداءً على باقة صاحب المتجر. **فالمخفيّةُ تُعلَّم «قديمة»
+    // وتُقرأ لحظةَ تظهر** — فيبقى التحديثُ اللحظيُّ كما أراد المالك (٢٠٢٦-٠٨-٣١)
+    // لما يراه، **بلا نداءٍ لما لا يراه.** وافتراضُه ظاهرٌ كما كان.
+    private var stale = false
+    var active: Boolean = true
+        set(v) {
+            val woke = v && !field
+            field = v
+            if (woke && stale) {
+                stale = false
+                load()
+            }
+        }
+
     init {
         load()
         // ══════════════════════════════════════════════════════════════
@@ -110,7 +135,7 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
         // يجد هذه الشاشةَ لا تعرف، **ويُقال له «اذهب إلى متجري» وهو
         // عائدٌ منه للتوّ.**
         viewModelScope.launch {
-            com.rahalgo.ui.Refresh.tick.collect { if (it > 0L) load() }
+            com.rahalgo.ui.Refresh.tick.collect { if (it > 0L) { if (active) load() else stale = true } }
         }
     }
 
@@ -224,7 +249,14 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                 imageUrl = faces[name]
                     ?: list.firstNotNullOfOrNull { it.imageThumbUrl ?: it.imageUrl },
             )
-        }.sortedByDescending { it.items.size }
+        }
+            // **بترتيب أقسام المتجر كما يراها الزبون** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كانت بعدد
+            // الأصناف والتعليقُ يقول غيرَه. **وما ليس في أقسامه آخراً بعدد أصنافه.**
+            .sortedWith(
+                compareBy<MenuGroup> { g ->
+                    sections.indexOfFirst { it.name == g.name }.let { if (it < 0) Int.MAX_VALUE else it }
+                }.thenByDescending { it.items.size },
+            )
 
         // **والمفتوحُ يُحدَّث لا يُغلق** — من بدّل توفّرَ صنفٍ وهو داخلَ
         // قسمٍ **لا تُقذف به الشبكةُ إلى الخارج.**

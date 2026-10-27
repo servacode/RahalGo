@@ -122,6 +122,8 @@ fun RatingScreen(vm: RatingViewModel) {
             .verticalScroll(rememberScrollState())
             .padding(16.dp),
     ) {
+        // **وبعنوان شاشات القائمة نفسِه** (`ScreenTitle`) — كالسجلّ وصندوقي.
+        com.rahalgo.ui.ScreenTitle(stringResource(R.string.rate_title))
         Summary(rep)
         Spacer(Modifier.height(20.dp))
         HorizontalDivider()

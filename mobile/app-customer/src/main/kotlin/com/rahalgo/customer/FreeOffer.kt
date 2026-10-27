@@ -85,11 +85,49 @@ fun DeliveryFeeRow(label: String, fee: Long, waived: Long) {
     }
 }
 
-/** **لافتةُ «توصيلتك الجاية مجانية»** — لمن يحقّ له أيُّ نوعٍ والطلبُ مفتوح (كما في الويب). */
+/**
+ * **لافتةُ «توصيلتك الجاية مجانية» في السوق** — لمن يحقّ له **طلبُ السوق** والطلبُ مفتوح.
+ *
+ * **كانت تُرسم لأيّ نوعٍ** (`any`): عرضٌ للأمانة وحدَها يُعلَن في السوق، فيملأ الزبونُ
+ * سلّةً ويجد الأجرةَ كاملة (تدقيقُ المنطق ٢٠٢٦-١٠-٢٧). **والطلبُ الخاصُّ يقول عرضَه في شاشته.**
+ *
+ * **ويُقال السقفُ ولإيمتى** — من الخادم (`max_fee` · `ends_at`)، ولا يُخترَع.
+ */
 @Composable
 fun FreeDeliveryBanner() {
-    if (!FreeOffer.state.any || !Serving.available) return
+    val st = FreeOffer.state
+    if (!st.standard || !Serving.available || !Serving.ordersOpen) return
     androidx.compose.foundation.layout.Column(Modifier.padding(horizontal = 12.dp)) {
-        com.rahalgo.ui.Note(stringResource(R.string.free_banner), Rahal.colors.success)
+        com.rahalgo.ui.Note(freeOfferText(st, stringResource(R.string.free_banner)), Rahal.colors.success)
+    }
+}
+
+/**
+ * **نصُّ العرض مع حدوده** — الجملةُ الأساسُ ثمّ السقفُ ثمّ الموعد، كلٌّ بسطر.
+ *
+ * **ولا حدَّ يُقال إن لم يُرسَل** — صفرٌ أو فارغٌ يعني «بلا سقف» و«بلا موعد».
+ */
+@Composable
+fun freeOfferText(st: FreeDelivery, base: String): String {
+    val parts = mutableListOf(base)
+    st.maxFee?.takeIf { it > 0 }?.let { parts += stringResource(R.string.free_cap, money(it)) }
+    freeUntilText(st.endsAt)?.let { parts += it }
+    return parts.joinToString("\n")
+}
+
+/** **«العرض لغاية اليوم الساعة 9:00 م»** — بتوقيت سوريا، و`null` إن لم يُفهم الموعد. */
+@Composable
+fun freeUntilText(endsAt: String?): String? {
+    val at = endsAt?.takeIf { it.isNotBlank() }?.let { com.rahalgo.ui.syriaTime(it) } ?: return null
+    val am = stringResource(R.string.clock_am)
+    val pm = stringResource(R.string.clock_pm)
+    val time = com.rahalgo.customer.shop.clock12(
+        "%02d:%02d".format(java.util.Locale.US, at.hour, at.minute), am, pm,
+    )
+    val today = java.time.LocalDate.now(at.zone)
+    return when (java.time.temporal.ChronoUnit.DAYS.between(today, at.toLocalDate())) {
+        0L -> stringResource(R.string.free_until_today, time)
+        1L -> stringResource(R.string.free_until_tomorrow, time)
+        else -> stringResource(R.string.free_until, "${at.dayOfMonth}/${at.monthValue}", time)
     }
 }

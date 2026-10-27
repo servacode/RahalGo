@@ -43,6 +43,48 @@ class ClientsViewModel(app: Application) : AndroidViewModel(app) {
     var leads by mutableStateOf<List<Lead>>(emptyList())
         private set
 
+    // ══════════════════════════════════════════════════════════════════
+    // **والمعلَّقُ غيرُ المرفوض** (٢٠٢٦-١٠-٢٧)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **كان المرفوضُ يُعدّ في «ينتظرون البتّ» ويبقى فيه للأبد** — فبعد
+    // شهرين يرى المندوبُ عشرين «بانتظار» وهم مرفوضون من زمن. **ورقمُ
+    // اللوحة (`pending_leads`) يعدّ `new` وحدَها**، فيتناقض الرقمان.
+    //
+    // **فالمعلَّقُ ما ينتظر الإدارةَ أو تنتظره هي** (`new` و`needs_info`)،
+    // **والمرفوضُ في قسمه.**
+
+    /** **ما ينتظر البتّ** — جديدٌ أو تطلب الإدارةُ فيه معلومات. */
+    val pendingLeads: List<Lead> get() = leads.filter { it.status != "rejected" }
+
+    /** **ما رُفض** — بسببه، في قسمٍ مطويٍّ تحت المعلَّقين. */
+    val rejectedLeads: List<Lead> get() = leads.filter { it.status == "rejected" }
+
+    /** **أتُعرض المرفوضة؟** — مطويّةٌ افتراضاً فلا تزحم القائمة. */
+    var showRejected by mutableStateOf(false)
+
+    // **البحثُ والفلترة** — لمن له عشراتُ العملاء (٢٠٢٦-١٠-٢٧).
+    var query by mutableStateOf("")
+    var filter by mutableStateOf(ClientFilter.All)
+
+    /** **العملاءُ بعد البحث والفلترة** — والترتيبُ ترتيبُ المحرّك. */
+    fun visible(list: List<RepMerchant>): List<RepMerchant> {
+        val q = query.trim()
+        return list.filter { m ->
+            (q.isEmpty() || m.name.contains(q, ignoreCase = true)) &&
+                when (filter) {
+                    ClientFilter.All -> true
+                    ClientFilter.Missing -> m.goalState == "pending"
+                    ClientFilter.NoItems -> m.itemsCount == 0
+                    ClientFilter.Stopped -> m.status != "active"
+                }
+        }
+    }
+
+    /** **أتُجلب صفحةٌ تالية؟** — فلا يُضغط «المزيد» مرّتين. */
+    var loadingMore by mutableStateOf(false)
+        private set
+
     var busy by mutableStateOf(false)
         private set
 
@@ -98,6 +140,64 @@ class ClientsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * **يُعيد جلبَ التفصيل والتفصيلُ ظاهر** — سحبٌ للتحديث.
+     *
+     * **ولا يُفرغ ما يُرى قبل أن يصل الجديد** — وإلّا رأى دوّارةً مكانَ
+     * شاشته ثمّ رجعت.
+     */
+    fun refreshDetail() {
+        val id = openId
+        if (id.isEmpty()) return
+        busy = true
+        viewModelScope.launch {
+            try {
+                detail = api.merchant(id)
+                error = ""
+            } catch (e: Exception) {
+                com.rahalgo.ui.Flash.fail(apiError(getApplication(), e))
+            }
+            busy = false
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **وطلباتُ العميل كلُّها لا أوّلُ عشرين** (٢٠٢٦-١٠-٢٧)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **المحرّكُ يقسمها صفحاتٍ ويرسل `total`** — والتطبيقُ كان يجلب
+    // الأولى وحدَها، **فالمربّعاتُ فوق تقول ١٥٠ والقائمةُ عشرون.**
+
+    /** **أبقيت طلباتٌ لم تُجلب؟** */
+    val hasMoreOrders: Boolean
+        get() = detail?.let { it.orders.size < it.total } ?: false
+
+    /** **يجلب الصفحةَ التالية ويضمّها** — والملخّصُ يبقى من الأولى. */
+    fun loadMoreOrders() {
+        val d = detail ?: return
+        val id = openId
+        if (id.isEmpty() || loadingMore || !hasMoreOrders) return
+        loadingMore = true
+        viewModelScope.launch {
+            try {
+                val next = api.merchantPage(id, d.page + 1)
+                // **ولا يُضمّ ما جاء لعميلٍ أُغلق في الأثناء.**
+                if (openId == id) {
+                    // **ورقمُ الطلب مفتاحُه** — طلبٌ جديدٌ يُزيح الصفحاتِ سطراً فيتكرّر.
+                    val seen = d.orders.map { it.number }.toSet()
+                    detail = d.copy(
+                        orders = d.orders + next.orders.filter { it.number !in seen },
+                        page = next.page,
+                        total = next.total,
+                    )
+                }
+            } catch (e: Exception) {
+                com.rahalgo.ui.Flash.fail(apiError(getApplication(), e))
+            }
+            loadingMore = false
+        }
+    }
+
     fun closeDetail() {
         openId = ""
         detail = null
@@ -144,3 +244,6 @@ class ClientsViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 }
+
+/** **فلاترُ قائمة العملاء** — الكلُّ · ناقصُه شروط · بلا أصناف · متوقّف. */
+enum class ClientFilter { All, Missing, NoItems, Stopped }

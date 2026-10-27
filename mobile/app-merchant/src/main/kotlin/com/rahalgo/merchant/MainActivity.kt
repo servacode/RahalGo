@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.offset
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalDrawerSheet
@@ -227,10 +228,9 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
     // خرج إلى صفحةٍ ليختار نقطةً عاد فلم يجد ما كتب.**
     var picking by rememberSaveable { mutableStateOf(false) }
     // **«لدي توصيلة»** (الخطوة ١٨) — ونقطةُ المستلِم على الخريطة نفسِها.
+    // **ولا تحديدَ يدويّاً لنقطة المستلِم** (طلبُ المالك ٢٠٢٦-١٠-٠٩) — فرعُ خريطتها نُظّف
+    // (تدقيقُ ٢٠٢٦-١٠-٢٧): الموقعُ من رابطٍ يشاركه الزبون.
     val deliveryVm: com.rahalgo.merchant.delivery.DeliveryViewModel = viewModel()
-    var pickingDelivery by rememberSaveable { mutableStateOf(false) }
-    // **و«رجوع» على الخريطة يُغلقها لا التطبيق.**
-    androidx.activity.compose.BackHandler(enabled = pickingDelivery) { pickingDelivery = false }
     // **«إحضار»: مبلغُ السائق ينتظر موافقتك — نافذةٌ فوق أيّ شاشة** (قرارُ المالك ٢٠٢٦-١٠-١٦).
     com.rahalgo.merchant.delivery.DeliveryTexts.pendingAmount(deliveryVm.list)?.let { d ->
         com.rahalgo.merchant.delivery.FetchAmountApproveDialog(
@@ -276,7 +276,7 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
     // في تطبيق المندوب. **والخريطةُ والدرجُ والشاشاتُ المفتوحةُ تغلبه** (تُسجَّل
     // بعده فتُقدَّم)، **ولا يُفعَّل وهما مفتوحتان** — فيُسبَق بشرطهما هنا.
     androidx.activity.compose.BackHandler(
-        enabled = tab != Tab.Store && !drawer.isOpen && !picking && !pickingDelivery,
+        enabled = tab != Tab.Store && !drawer.isOpen && !picking,
     ) { tab = Tab.Store; menuVm.cancelEdit() }
 
     // ══════════════════════════════════════════════════════════════════
@@ -346,6 +346,18 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
     // **و«الأصناف» تُغلقه بيدها** (انظر نداءَها) — **وهذه لِما عداها.**
     LaunchedEffect(tab) {
         if (tab != Tab.AddItem && tab != Tab.Menu) menuVm.cancelEdit()
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **والنبضةُ تقرأ الظاهرَ وحدَه** (تدقيقُ ٢٠٢٦-١٠-٢٧) — انظر `StoreViewModel.active`.
+    // ══════════════════════════════════════════════════════════════════
+    val shown = overlay.current
+    LaunchedEffect(tab, shown, selfManage) {
+        val bare = shown == Overlay.None
+        storeVm.active = bare && tab == Tab.Store
+        menuVm.active = bare &&
+            (tab == Tab.Menu || tab == Tab.AddItem || (tab == Tab.Orders && !selfManage))
+        historyVm.active = shown is Overlay.Menu && shown.key == MerchantItems.HISTORY
     }
 
     BackHandler(enabled = drawer.isOpen) { scope.launch { drawer.close() } }
@@ -432,11 +444,14 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                     //
                     // **والأوّلُ يقع تحت الإبهام** — وهو ما يُفتح أكثر.
                     if (selfManage) {
+                        // **ورقمٌ أحمرُ بعدد ما ينتظر قراره** (تدقيقُ ٢٠٢٦-١٠-٢٧) — الجرسُ يرنّ
+                        // وهو في «متجري»، **والرقمُ يقول له أين يذهب.**
                         Tab(
                             selected = tab == Tab.Orders && over == Overlay.None,
                             onClick = { tab = Tab.Orders; overlay.clear() },
                             icon = com.rahalgo.ui.R.drawable.ic_orders,
                             label = R.string.nav_orders_all,
+                            badge = ordersVm.pendingCount,
                         )
                     }
                     // **ومتجري ثانياً** — حالُه وأرقامُه يُفتحان صباحاً.
@@ -545,7 +560,7 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                 // عند فرعٍ واحد)، **ولا فوق الخريطة ولا الصفحات المنبثقة ولا
                 // حسابي** — تلك ليست مشهدَ فرع. **وتبديلُه يُعيد بناءَ
                 // الشاشات كلِّها** (`SelectedStore.set` + `Refresh.bump`).
-                if (!picking && !pickingDelivery && over == Overlay.None && tab != Tab.Account) {
+                if (!picking && over == Overlay.None && tab != Tab.Account) {
                     com.rahalgo.merchant.store.StoreSwitcher(
                         stores = storeVm.stores,
                         selectedId = com.rahalgo.merchant.SelectedStore.id,
@@ -606,33 +621,6 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                         locating = locating,
                     )
 
-                    // **ونقطةُ مستلِم التوصيلة** — تبدأ من المتجر: الغرضُ
-                    // يخرج منه، والمستلِمُ غالباً في حيّه.
-                    pickingDelivery -> PickPoint(
-                        start = (storeVm.store?.lat to storeVm.store?.lng)
-                            .let { (la, ln) ->
-                                if (la != null && ln != null) {
-                                    org.maplibre.android.geometry.LatLng(la, ln)
-                                } else {
-                                    null
-                                }
-                            },
-                        vm = pickVm,
-                        onPick = { at, label ->
-                            deliveryVm.setPoint(at.latitude, at.longitude, label)
-                            pickingDelivery = false
-                        },
-                        onCancel = { pickingDelivery = false },
-                        onLocate = {
-                            if (Here.granted(context)) {
-                                Here.refresh(context, locating, Accuracy.CONFIRM_M)
-                            } else {
-                                askHere.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
-                            }
-                        },
-                        locating = locating,
-                    )
-
                     over is Overlay.Menu && PlatformPages.has(over.key) ->
                         PlatformScreen(vm = pagesVm, key = over.key, role = HelpRole.Merchant)
 
@@ -687,7 +675,11 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                     // **وفي وضع المنصّة لا تبويبَ للطلبات** — فمن كان
                     // عليه يُنقل إلى الأصناف، **ولا يبقى على شاشةٍ لا
                     // زرَّ له فيها.**
-                    tab == Tab.Orders && selfManage -> OrdersScreen(ordersVm)
+                    tab == Tab.Orders && selfManage -> OrdersScreen(
+                        ordersVm,
+                        onHistory = { overlay.show(Overlay.Menu(MerchantItems.HISTORY)) },
+                        onStore = { tab = Tab.Store },
+                    )
 
                     tab == Tab.Orders -> MenuScreen(menuVm)
 
@@ -727,9 +719,7 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
 
                     tab == Tab.Store -> StoreScreen(storeVm) { picking = true }
 
-                    tab == Tab.Delivery -> com.rahalgo.merchant.delivery.DeliveryScreen(deliveryVm) {
-                        pickingDelivery = true
-                    }
+                    tab == Tab.Delivery -> com.rahalgo.merchant.delivery.DeliveryScreen(deliveryVm)
 
                     else -> AccountScreen(
                         vm = accountVm,
@@ -780,12 +770,33 @@ private fun RowScope.Tab(
     onClick: () -> Unit,
     icon: Int,
     label: Int,
+    badge: Int = 0,
 ) {
     NavigationBarItem(
         selected = selected,
         onClick = onClick,
-        icon = { Icon(painterResource(icon), contentDescription = null) },
-        label = { Text(stringResource(label)) },
+        icon = {
+            Box {
+                Icon(painterResource(icon), contentDescription = null)
+                if (badge > 0) {
+                    com.rahalgo.ui.CountBadge(
+                        count = badge,
+                        color = Rahal.colors.danger,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .offset(x = 8.dp, y = (-6).dp),
+                    )
+                }
+            }
+        },
+        // **ولا يلتفّ الاسمُ على شاشةٍ صغيرة** (تدقيقُ ٢٠٢٦-١٠-٢٧) — ستّةُ تبويبات.
+        label = {
+            Text(
+                stringResource(label),
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            )
+        },
     )
 }
 

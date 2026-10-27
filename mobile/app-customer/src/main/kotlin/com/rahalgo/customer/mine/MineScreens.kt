@@ -2,6 +2,7 @@ package com.rahalgo.customer.mine
 
 import android.content.Intent
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -73,10 +74,12 @@ fun MineScreen(
     address: com.rahalgo.shared.model.Address? = null,
     /** **يفتح صفحةَ متجرٍ في السوق** — من اسمه على بطاقة المفضّلة أو في نافذة الخيارات. */
     onOpenStore: (String) -> Unit = {},
+    /** **«تصفّح السوق» من الفراغ** — ينقل لتبويب التسوّق. */
+    onBrowse: () -> Unit = {},
 ) {
     LaunchedEffect(key) { vm.open(key) }
     when (key) {
-        CustomerItems.FAVORITES -> Favorites(vm, onOpenStore)
+        CustomerItems.FAVORITES -> Favorites(vm, address, onOpenStore, onBrowse)
         CustomerItems.OFFERS -> Offers(vm, address, onOpenStore)
         CustomerItems.INVITE -> Invite(vm)
         CustomerItems.TICKETS -> Tickets(vm)
@@ -90,7 +93,12 @@ fun MineScreen(
  * أخرى** — **فما يُتعلَّم في شاشةٍ لا يُعرف في الباقي.**
  */
 @Composable
-private fun Favorites(vm: MineViewModel, onOpenStore: (String) -> Unit) {
+private fun Favorites(
+    vm: MineViewModel,
+    address: com.rahalgo.shared.model.Address?,
+    onOpenStore: (String) -> Unit,
+    onBrowse: () -> Unit,
+) {
     val list = vm.favorites
     if (list == null) {
         LoadState(vm.busy, vm.error) { vm.open(CustomerItems.FAVORITES, force = true) }
@@ -98,6 +106,44 @@ private fun Favorites(vm: MineViewModel, onOpenStore: (String) -> Unit) {
     }
     val context = LocalContext.current
     val backend = Backend.of(context)
+
+    // ══════════════════════════════════════════════════════════════════
+    // **و«+» في المفضّلة بشروط السوق نفسِها** (تدقيقُ ٢٠٢٦-١٠-٢٧)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **من حفظ صنفاً ليعود إليه بسرعة كان لا يضيفه منها** — يبحث عنه في السوق.
+    // **والحارسُ واحد**: بوّابةُ الخدمة (`rememberAddBlocked`)، والخياراتُ قبل الدخول،
+    // **وتنبيهُ المتجر الثاني** (`SourceNotice`) — كما في السوق والعروض.
+    val blocked = com.rahalgo.customer.rememberAddBlocked(address)
+    val blockedText = stringResource(R.string.offer_add_blocked)
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    com.rahalgo.customer.cart.SourceNoticeDialog()
+    var picking by remember { mutableStateOf<Item?>(null) }
+    val addOne: (Item, Int, List<com.rahalgo.shared.model.ModifierOption>) -> Unit = { it, n, chosen ->
+        if (blocked) {
+            Flash.fail(blockedText)
+        } else {
+            val inc = Cart.add(it, qty = n, options = chosen)
+            com.rahalgo.customer.cart.SourceNotice.afterAdd(scope, vm.customerApi, address, inc)
+            Flash.ok(
+                context.getString(
+                    if (inc) com.rahalgo.ui.R.string.cart_qty_updated
+                    else com.rahalgo.ui.R.string.cart_item_added,
+                ),
+            )
+        }
+    }
+    picking?.let { target ->
+        com.rahalgo.customer.shop.ItemOptionsSheet(
+            item = target,
+            api = vm.customerApi,
+            onAdd = { chosen, n -> addOne(target, n, chosen); picking = null },
+            onClose = { picking = null },
+            onStore = com.rahalgo.customer.shop.StoreLink.target(target, null)
+                ?.let { id -> { picking = null; onOpenStore(id) } },
+            media = backend::media,
+        )
+    }
     // ══════════════════════════════════════════════════════════════════
     // **وتملأ الشاشةَ لتبدأ من أعلاها**
     // ══════════════════════════════════════════════════════════════════
@@ -126,6 +172,8 @@ private fun Favorites(vm: MineViewModel, onOpenStore: (String) -> Unit) {
             Empty(
                 text = stringResource(R.string.fav_none),
                 hint = stringResource(R.string.fav_none_hint),
+                actionLabel = stringResource(R.string.act_browse_market),
+                onAction = onBrowse,
             )
             return@Column
         }
@@ -143,13 +191,16 @@ private fun Favorites(vm: MineViewModel, onOpenStore: (String) -> Unit) {
                 // **إطارٌ بشريطين واسمُ المتجر** — ونسختان من البطاقة تفترقان
                 // يوماً كما افترقتا في السعر. **والقلبُ يُرفع من شاشته هو**
                 // — ومن أراد أن يحذف لا يبحث عن الصنف في السوق.
-                // **ولا «+» هنا** — كما كانت المفضّلةُ قبلها (`onAdd = null`).
+                // **و«+» هنا الآن** (تدقيقُ ٢٠٢٦-١٠-٢٧) — بحارس السوق نفسِه أعلاه.
                 // **والمصغَّرُ أوّلاً** — تطلبه البطاقةُ نفسُها (قِيس ٢٠٢٦-٠٨-٢٤).
                 com.rahalgo.customer.shop.ItemCard(
                     item = item,
                     media = backend::media,
                     liked = true,
-                    onAdd = null,
+                    onAdd = {
+                        if (item.hasOptions && !blocked) picking = item
+                        else addOne(item, 1, emptyList())
+                    },
                     onLike = { vm.toggleFavorite(item.id) },
                     // **واسمُ المتجر يفتح صفحتَه** كما في السوق (٢٠٢٦-١٠-١٨).
                     onStore = com.rahalgo.customer.shop.StoreLink.target(item, null)
@@ -191,17 +242,23 @@ private fun Offers(
     val blocked = com.rahalgo.customer.rememberAddBlocked(address)
     val blockedText = stringResource(R.string.offer_add_blocked)
 
+    // **وتنبيهُ المتجر الثاني بعد كلّ إضافةٍ من هنا أيضاً** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كانت
+    // العروضُ تضيف صامتةً فتُملأ السلّةُ من متاجرَ فوق السقف **ويُرَدّ الطلبُ برسالةٍ عامّة.**
+    val sourceScope = androidx.compose.runtime.rememberCoroutineScope()
+    com.rahalgo.customer.cart.SourceNoticeDialog()
+
     // **والصنفُ ذو الخياراتِ يُسأل قبل أن يدخل** — انظر `ItemOptionsSheet`.
     var picking by remember { mutableStateOf<Item?>(null) }
     picking?.let { target ->
         com.rahalgo.customer.shop.ItemOptionsSheet(
             item = target,
             api = vm.customerApi,
-            onAdd = { chosen ->
+            onAdd = { chosen, n ->
                 if (blocked) {
                     Flash.fail(blockedText)
                 } else {
-                    Cart.add(target, options = chosen)
+                    val inc = Cart.add(target, qty = n, options = chosen)
+                    com.rahalgo.customer.cart.SourceNotice.afterAdd(sourceScope, vm.customerApi, address, inc)
                     Flash.ok(addedText)
                 }
                 picking = null
@@ -209,6 +266,7 @@ private fun Offers(
             onClose = { picking = null },
             onStore = com.rahalgo.customer.shop.StoreLink.target(target, null)
                 ?.let { id -> { picking = null; onOpenStore(id) } },
+            media = Backend.of(context)::media,
         )
     }
 
@@ -235,11 +293,47 @@ private fun Offers(
                 style = MaterialTheme.typography.bodySmall,
             )
         }
+        // ══════════════════════════════════════════════════════════════
+        // **وعرضُ التوصيل المجاني أوّلَ العروض** (تدقيقُ ٢٠٢٦-١٠-٢٧)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **كانت الشاشةُ تقول «لا عروض سارية» ولزبونها توصيلةٌ مجانيّة** — فيقرأ أنّ
+        // لا شيء له. **والأهليّةُ من الخادم** (`FreeOffer`) — لا تُخمَّن.
+        val scopeFree = androidx.compose.runtime.rememberCoroutineScope()
+        LaunchedEffect(Unit) { com.rahalgo.customer.FreeOffer.refresh(scopeFree) }
+        val free = com.rahalgo.customer.FreeOffer.state
+        if (free.any) {
+            Spacer(Modifier.height(10.dp))
+            Card(tone = Rahal.colors.success) {
+                Text(
+                    text = stringResource(R.string.free_offer_title),
+                    color = Rahal.colors.success,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                val kinds = listOfNotNull(
+                    stringResource(R.string.free_kind_standard).takeIf { free.standard },
+                    stringResource(R.string.free_kind_purchase).takeIf { free.purchase },
+                    stringResource(R.string.free_kind_amanah).takeIf { free.amanah },
+                ).joinToString("، ")
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = com.rahalgo.customer.freeOfferText(
+                        free,
+                        stringResource(R.string.free_offer_kinds, kinds),
+                    ),
+                    color = Rahal.colors.ink,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
         if (list.isEmpty()) {
-            Empty(
-                text = stringResource(R.string.off_none),
-                hint = stringResource(R.string.off_none_hint),
-            )
+            if (!free.any) {
+                Empty(
+                    text = stringResource(R.string.off_none),
+                    hint = stringResource(R.string.off_none_hint),
+                )
+            }
             return@Screen
         }
         val ordered =
@@ -360,7 +454,10 @@ private fun Offers(
                                         // **لا يُضاف عرضٌ إلى نقطةٍ لا نصلها.**
                                         Flash.fail(blockedText)
                                     } else {
-                                        Cart.add(picked)
+                                        val inc = Cart.add(picked)
+                                        com.rahalgo.customer.cart.SourceNotice.afterAdd(
+                                            sourceScope, vm.customerApi, address, inc,
+                                        )
                                         // **ورسالةٌ تقول إنّه وقع** —
                                         // **وضغطةٌ بلا أثرٍ تُقرأ عطبا**،
                                         // والبطاقةُ لا تتغيّر بعدها.
@@ -418,18 +515,62 @@ private fun Invite(vm: MineViewModel) {
             )
         }
 
+        // ══════════════════════════════════════════════════════════════
+        // **الرمزُ بخطٍّ كبيرٍ في مربّعٍ وجنبه «انسخ»** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **كان سطراً صغيراً بلا نسخ** — ومن أراد أن يقوله لصديقٍ على الهاتف يقرؤه
+        // حرفاً حرفاً. **والأرقامُ الثلاثةُ مربّعاتٌ كاللوحة** (`StatRow`).
         Spacer(Modifier.height(10.dp))
-        Card {
-            KeyValue(stringResource(R.string.inv_code), r.code)
-            Spacer(Modifier.height(8.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(8.dp))
-            KeyValue(stringResource(R.string.inv_invited), r.invited.toString())
-            KeyValue(stringResource(R.string.inv_rewarded), r.rewarded.toString())
-            KeyValue(stringResource(R.string.inv_earned), money(r.earned))
+        val copiedText = stringResource(R.string.inv_copied)
+        val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(Rahal.shape.md)
+                .border(
+                    androidx.compose.foundation.BorderStroke(1.5.dp, Rahal.colors.brand.copy(alpha = 0.5f)),
+                    Rahal.shape.md,
+                )
+                .padding(horizontal = 14.dp, vertical = 10.dp),
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.inv_code),
+                    color = Rahal.colors.inkMuted,
+                    style = MaterialTheme.typography.labelMedium,
+                )
+                Text(
+                    text = r.code,
+                    color = Rahal.colors.ink,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.headlineSmall,
+                    maxLines = 1,
+                )
+            }
+            com.rahalgo.ui.RahalOutlineButton(
+                onClick = {
+                    clipboard.setText(androidx.compose.ui.text.AnnotatedString(r.code))
+                    Flash.ok(copiedText)
+                },
+            ) { Text(stringResource(R.string.inv_copy)) }
+        }
+        Spacer(Modifier.height(10.dp))
+        com.rahalgo.ui.StatRow {
+            com.rahalgo.ui.StatBox(stringResource(R.string.inv_invited), r.invited.toString(), Modifier.weight(1f))
+            com.rahalgo.ui.StatBox(stringResource(R.string.inv_rewarded), r.rewarded.toString(), Modifier.weight(1f))
+            com.rahalgo.ui.StatBox(
+                stringResource(R.string.inv_earned),
+                money(r.earned),
+                Modifier.weight(1f),
+                color = Rahal.colors.success,
+            )
         }
 
         Spacer(Modifier.height(12.dp))
+        // **والمشاركةُ جملةٌ فيها الرمزُ والرابط** — رابطٌ وحدَه على واتساب لا يُعرف ما هو.
+        val shareText = stringResource(R.string.inv_share_text, r.code, r.link)
         RahalButton(
             onClick = {
                 // **ويُشارَك بما يعرفه هاتفُه** — واتساب أو رسالة:
@@ -440,7 +581,7 @@ private fun Invite(vm: MineViewModel) {
                         Intent.createChooser(
                             Intent(Intent.ACTION_SEND).apply {
                                 type = "text/plain"
-                                putExtra(Intent.EXTRA_TEXT, r.link)
+                                putExtra(Intent.EXTRA_TEXT, shareText)
                             },
                             null,
                         ),

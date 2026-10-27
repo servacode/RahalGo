@@ -35,7 +35,10 @@ import com.rahalgo.ui.RemoteImage
 import com.rahalgo.ui.Screen
 import com.rahalgo.ui.SectionTitle
 import com.rahalgo.ui.money
+import com.rahalgo.ui.RahalButton
 import com.rahalgo.ui.RahalOutlineButton
+import com.rahalgo.ui.RahalTextButton
+import com.rahalgo.ui.Refreshable
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -65,7 +68,11 @@ import com.rahalgo.ui.RahalOutlineButton
  * وحسبةٌ في الجهاز لا تعرف ذلك **فتُظهر للمندوب مالاً ليس له.**
  */
 @Composable
-fun ClientDetail(vm: ClientsViewModel, onOpenMenu: (String, String) -> Unit) {
+fun ClientDetail(
+    vm: ClientsViewModel,
+    onOpenMenu: (String, String) -> Unit,
+    onOpenOffers: (String, String) -> Unit = { _, _ -> },
+) {
     val d = vm.detail
     if (d == null) {
         LoadState(vm.busy, vm.error) { vm.openDetail(vm.openId) }
@@ -75,8 +82,17 @@ fun ClientDetail(vm: ClientsViewModel, onOpenMenu: (String, String) -> Unit) {
     val pickLogo = com.rahalgo.ui.rememberImagePicker { bytes -> vm.setLogo(bytes) }
     val head = d.merchant
     val sum = d.summary
+    // **وبطاقتُه في القائمة تعرف ما ينقصه** — والتفصيلُ لا يحمله، فيُقرأ منها.
+    val row = vm.merchants.orEmpty().firstOrNull { it.id == vm.openId }
 
+    // **وسحبٌ للتحديث** (٢٠٢٦-١٠-٢٧) — يرى أنزلت عمولةٌ بلا خروجٍ وعودة.
+    Refreshable(refreshing = false, onRefresh = { vm.refreshDetail() }) {
     Screen {
+        // **وزرُّ رجوعٍ ظاهر** — كما في صفحة الأصناف (٢٠٢٦-١٠-٢٧)؛ **ومن لا
+        // يعرف زرَّ الجهاز لا يجد طريقَ العودة.**
+        RahalTextButton(onClick = { vm.closeDetail() }) {
+            Text(stringResource(R.string.cd_back), color = Rahal.colors.brand)
+        }
         // ══════════════════════════════════════════════════════════════
         // **ترويسةُ العميل — من هو وحالُه ورقمُ صاحبه**
         // ══════════════════════════════════════════════════════════════
@@ -129,10 +145,18 @@ fun ClientDetail(vm: ClientsViewModel, onOpenMenu: (String, String) -> Unit) {
             head.ownerPhone?.takeIf { it.isNotEmpty() }?.let {
                 Spacer(Modifier.height(8.dp))
                 KeyValue(stringResource(R.string.cd_owner_phone), it)
+                // **والرقمُ يُضغط** (٢٠٢٦-١٠-٢٧) — اتّصالٌ أو واتساب، **وكان نصّاً
+                // يُنسخ باليد.**
+                Spacer(Modifier.height(6.dp))
+                ContactButtons(it)
+                Spacer(Modifier.height(6.dp))
             }
             if (head.joinedAt.isNotEmpty()) {
-                KeyValue(stringResource(R.string.cd_joined), head.joinedAt.take(10))
+                // **وتاريخٌ يقرؤه الناس** — «27 تشرين الأول 2026» لا صيغةَ آلة.
+                KeyValue(stringResource(R.string.cd_joined), longDate(head.joinedAt))
             }
+            // **وما ينقصه ليُحسب — كما في بطاقته** (٢٠٢٦-١٠-٢٧).
+            row?.let { MissingStrip(missingFor(it)) }
 
             // ══════════════════════════════════════════════════════════
             // **وبابُ أصنافه — يبنيها نيابةً عنه**
@@ -146,11 +170,23 @@ fun ClientDetail(vm: ClientsViewModel, onOpenMenu: (String, String) -> Unit) {
             //
             // **وهنا لا في القائمة**: المندوبُ يفتح العميلَ ليعمل عليه،
             // **وزرٌّ في سطر القائمة يُضغط سهواً وهو يمرّر.**
+            //
+            // **والزرّان نفسُهما في بطاقته** (٢٠٢٦-١٠-٢٧) — «إضافة صنف» و«إنشاء
+            // عرض»؛ **وكان هنا «الأصناف» وحدَه، فالشاشتان لا تتطابقان.**
             Spacer(Modifier.height(10.dp))
-            RahalOutlineButton(
-                onClick = { onOpenMenu(vm.openId, head.name) },
-                modifier = Modifier.fillMaxWidth(),
-            ) { Text(stringResource(R.string.mn_items)) }
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                RahalButton(
+                    onClick = { onOpenMenu(vm.openId, head.name) },
+                    modifier = Modifier.weight(1f),
+                ) { Text(stringResource(R.string.mn_add_item)) }
+                RahalOutlineButton(
+                    onClick = { onOpenOffers(vm.openId, head.name) },
+                    modifier = Modifier.weight(1f),
+                ) { Text(stringResource(R.string.mn_make_offer)) }
+            }
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -207,6 +243,19 @@ fun ClientDetail(vm: ClientsViewModel, onOpenMenu: (String, String) -> Unit) {
         }
         d.orders.forEach { OrderRow(it) }
 
+        // **و«عرض المزيد» حين بقي ما لم يُجلب** (٢٠٢٦-١٠-٢٧) — **وكانت
+        // القائمةُ تقف عند عشرين** والمربّعاتُ فوقها تعدّ الكلّ.
+        if (vm.hasMoreOrders) {
+            Spacer(Modifier.height(10.dp))
+            RahalOutlineButton(
+                onClick = { vm.loadMoreOrders() },
+                enabled = !vm.loadingMore,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.cd_more, d.orders.size.toString(), d.total.toString()))
+            }
+        }
+
         // **والقاعدةُ تُقال مرّةً تحت الجدول** — **ومن رأى رقماً مشطوباً
         // بلا شرحٍ ظنّ أنّ حقَّه ضاع.**
         Spacer(Modifier.height(12.dp))
@@ -217,9 +266,8 @@ fun ClientDetail(vm: ClientsViewModel, onOpenMenu: (String, String) -> Unit) {
         )
         Spacer(Modifier.height(24.dp))
     }
+    }
 }
-
-private val Color_Unspecified = androidx.compose.ui.graphics.Color.Unspecified
 
 /**
  * **سطرُ طلب** — رقمُه وحالُه وقيمتُه وعمولةُ المنصّة ونصيبُه.
@@ -240,11 +288,23 @@ private fun OrderRow(o: RepOrderLine) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = "#" + o.number,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            // **وتاريخُه بجانب رقمه** (٢٠٢٦-١٠-٢٧) — **ومن لا يعرف أمن أمسِ
+            // الطلبُ أم من شهرٍ لا يعرف أيسأل عنه.** وبتوقيت دمشق (`whenText`).
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "#" + o.number,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                if (o.createdAt.isNotEmpty()) {
+                    Spacer(Modifier.size(8.dp))
+                    Text(
+                        text = com.rahalgo.ui.whenText(o.createdAt),
+                        color = Rahal.colors.inkMuted,
+                        style = MaterialTheme.typography.labelSmall,
+                    )
+                }
+            }
             Chip(
                 stringResource(
                     when {

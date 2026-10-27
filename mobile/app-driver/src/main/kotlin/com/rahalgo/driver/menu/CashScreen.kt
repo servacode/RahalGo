@@ -17,6 +17,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.CircularProgressIndicator
+import com.rahalgo.ui.RahalOutlineButton
 import com.rahalgo.driver.R
 import com.rahalgo.ui.Bar
 import com.rahalgo.ui.Card
@@ -88,14 +92,7 @@ fun CashScreen(vm: SectionsViewModel) {
             )
             Spacer(Modifier.height(12.dp))
             // **ولونُ الشريط يقول قربَه من الحافّة** قبل أن يُقرأ رقم.
-            Bar(
-                ratio = ratio,
-                color = when {
-                    ratio > 0.8f -> Rahal.colors.danger
-                    ratio > 0.5f -> Rahal.colors.accent
-                    else -> Rahal.colors.success
-                },
-            )
+            Bar(ratio = ratio, color = cashBarColor(ratio))
             Spacer(Modifier.height(6.dp))
             Row(
                 Modifier.fillMaxWidth(),
@@ -160,8 +157,33 @@ fun CashScreen(vm: SectionsViewModel) {
                 color = Rahal.colors.inkMuted,
                 style = MaterialTheme.typography.bodySmall,
             )
+            Spacer(Modifier.height(8.dp))
+            RahalOutlineButton(
+                onClick = vm::loadMoreCash,
+                enabled = !vm.cashMoreBusy,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                if (vm.cashMoreBusy) {
+                    CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp)
+                } else {
+                    Text(stringResource(R.string.cash_load_older))
+                }
+            }
         }
     }
+}
+
+/**
+ * **لونُ شريط الصندوق — واحدٌ للشاشتين** (الرئيسيّة وصندوقي).
+ *
+ * كانت الرئيسيّةُ تقلبه برتقاليّاً فوق ٨٠٪ وصندوقي فوق ٥٠٪، **فنفسُ المبلغ أخضرُ هنا
+ * وبرتقاليٌّ هناك.** والحدودُ حدودُ تنبيه «اقتربت من السقف» نفسِه.
+ */
+@Composable
+internal fun cashBarColor(ratio: Float): Color = when {
+    ratio >= 1f -> Rahal.colors.danger
+    ratio > 0.8f -> Rahal.colors.accent
+    else -> Rahal.colors.success
 }
 
 /**
@@ -200,6 +222,18 @@ private fun CashRow(e: CashEntry) {
             cashKind(e.kind)
         }
         Text(label.ifEmpty { e.note }, style = MaterialTheme.typography.bodyMedium)
+        // **وتفصيلُ التحصيل** (يرسله الخادمُ منذ ٢٠٢٦-١٠-٢٦) — كم منها أجرةٌ وكم عمولة،
+        // ومن أيّ متجر، **وأكان التوصيلُ مجانيّاً للزبون.**
+        val parts = buildList {
+            if (e.merchantName.isNotBlank()) add(stringResource(R.string.cash_d_store, e.merchantName))
+            e.feePart?.let { add(stringResource(R.string.cash_d_fee, money(it))) }
+            e.commissionPart?.takeIf { it > 0 }?.let { add(stringResource(R.string.cash_d_commission, money(it))) }
+            if ((e.commissionWaived ?: 0) > 0) add(stringResource(R.string.cash_d_commission_waived, money(e.commissionWaived ?: 0)))
+            if ((e.freeWaived ?: 0) > 0) add(stringResource(R.string.cash_d_free))
+        }
+        if (parts.isNotEmpty()) {
+            Text(parts.joinToString(" · "), color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
+        }
         // **والملاحظةُ لا تُكرّر الاسم** — تظهر إن قالت زيادة.
         if (e.note.isNotEmpty() && e.note != label) {
             Text(e.note, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
