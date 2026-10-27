@@ -15,7 +15,6 @@
     <string name="cl_rejected_title">طلبات انرفضت (%1$s)</string>
     <string name="cl_rejected_show">عرض الطلبات المرفوضة</string>
     <string name="cl_rejected_hide">إخفاء الطلبات المرفوضة</string>
-    <string name="cl_needs_info">الإدارة بدها معلومات</string>
     <string name="cl_lead_since">سجّلته: %1$s</string>
     <string name="cl_none">لسا ما سجّلت ولا عميل</string>
     <string name="cl_waiting">بانتظار موافقة الإدارة</string>
