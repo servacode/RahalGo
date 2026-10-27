@@ -54,7 +54,8 @@ const m = getMessages(defaultLocale);
  * - **أرقامُ المال يحذفها الخادمُ** عمّن ليس من الماليّة أو مدير المنصّة؛
  *   والصفحةُ تعرض ما وصلها فقط (`money_visible`).
  * - **«ربح المنصّة» رقمُ صفحة الأرباح نفسُه** — وأحمرُ باسم «خسارة» إن كان سالباً.
- * - **«قيمةُ الطلبات المسلّمة» فيها التوصيل** — وأفضلُ المتاجر قيمةُ أصنافها وحدَها، والاسمُ يقول ذلك.
+ * - **مبيعاتُ الأصناف والتوصيلُ بطاقتان** (المالك ٢٠٢٦-١٠-٢٧) — الأصنافُ ومخطّطُها اليوميُّ بحساب
+ *   أفضل المتاجر نفسِه (`items_sales`)، فمجموعُ المتاجر يساوي البطاقة؛ كانت بطاقةً واحدةً فيها التوصيل.
  * - **المستردُّ بطاقةٌ لحالها**، **ومقارنةٌ بالفترة السابقة المساوية** — وتاريخاها مكتوبان.
  * - **الزوّارُ أجهزةُ الزبائن وحدَها** — وعطبُهم يُقال لا يُخفى.
  * - **المدى المقلوبُ أو الأطولُ من سنة لا يُرسَل** — رسالةٌ تحت التاريخ، والأرقامُ السابقةُ باقية.
@@ -68,6 +69,8 @@ interface DailyPoint {
   orders: number;
   delivered: number;
   sales?: number;
+  /** **مبيعاتُ أصناف اليوم** — بحساب بطاقة «مبيعات الأصناف» نفسِه، بلا توصيل. */
+  items_sales?: number;
 }
 
 interface Summary {
@@ -78,6 +81,8 @@ interface Summary {
   avg_delivery_min: number;
   active_customers: number;
   gross_sales?: number;
+  /** **مبيعاتُ الأصناف وحدَها** — تساوي مجموعَ مبيعات المتاجر (المالك ٢٠٢٦-١٠-٢٧). */
+  items_sales?: number;
   delivery_fees?: number;
   commissions?: number;
   platform_profit?: number;
@@ -780,17 +785,25 @@ export default function ReportsPage() {
           {money ? (
             <Panel title={r.secMoney}>
               <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
+                {/* **الأصنافُ والتوصيلُ بطاقتان متجاورتان** (المالك ٢٠٢٦-١٠-٢٧) — الأصنافُ تساوي مجموعَ
+                    مبيعات المتاجر تحت، والتوصيلُ لحاله، فلا يخلطهما رقمٌ واحد. */}
                 <StatTile
-                  wide
                   icon={IconReceipt}
-                  tone={(s.gross_sales ?? 0) > 0 ? "accent" : "muted"}
-                  label={r.summary.grossSales}
-                  value={<Money value={s.gross_sales ?? 0} />}
-                  delta={change(s.gross_sales, p.gross_sales)}
+                  tone={(s.items_sales ?? 0) > 0 ? "accent" : "muted"}
+                  label={r.summary.itemsSales}
+                  value={<Money value={s.items_sales ?? 0} />}
+                  sub={r.summary.itemsSalesHint}
+                  delta={change(s.items_sales, p.items_sales)}
                   onClick={goHistory("delivered")}
                 />
                 <StatTile
-                  wide
+                  icon={IconMoto}
+                  label={r.summary.deliveryFees}
+                  value={<Money value={s.delivery_fees ?? 0} />}
+                  delta={change(s.delivery_fees, p.delivery_fees)}
+                  onClick={goHistory("delivered")}
+                />
+                <StatTile
                   icon={profit < 0 ? IconTrendDown : IconWallet}
                   tone={profitTone}
                   label={profit < 0 ? r.summary.platformLoss : r.summary.platformProfit}
@@ -805,13 +818,6 @@ export default function ReportsPage() {
                   value={<Money value={s.commissions ?? 0} />}
                   delta={change(s.commissions, p.commissions)}
                   onClick={goProfits}
-                />
-                <StatTile
-                  icon={IconMoto}
-                  label={r.summary.deliveryFees}
-                  value={<Money value={s.delivery_fees ?? 0} />}
-                  delta={change(s.delivery_fees, p.delivery_fees)}
-                  onClick={goHistory("delivered")}
                 />
                 <StatTile
                   icon={IconWallet}
@@ -839,7 +845,7 @@ export default function ReportsPage() {
             </Panel>
             {money && (
               <Panel title={r.dailySales}>
-                <DailyBars data={report.daily} value={(d) => d.sales ?? 0} format={(v) => fmtMoney(v)} />
+                <DailyBars data={report.daily} value={(d) => d.items_sales ?? 0} format={(v) => fmtMoney(v)} />
               </Panel>
             )}
           </div>

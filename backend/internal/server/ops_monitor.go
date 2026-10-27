@@ -69,7 +69,11 @@ type opsMonitor struct {
 	Stuck           []monitorStuck `json:"stuck"`
 	Drivers         monitorDrivers `json:"drivers"`
 	EmergenciesOpen num            `json:"emergencies_open"`
-	System          monitorSystem  `json:"system"`
+	// ReportsWaiting **بلاغاتٌ بانتظار قرارك** — بلاغُ سائقٍ ينتظر قرارَ المكتب،
+	// بشرط بطاقة الرئيسيّة وفلتر `awaiting=1` نفسِه (`CountAwaitingOffice`)
+	// (قرارُ المالك ٢٠٢٦-١٠-٢٧).
+	ReportsWaiting num           `json:"reports_waiting"`
+	System         monitorSystem `json:"system"`
 	// ReminderMin **كلَّ كم دقيقةٍ يُعاد تذكيرُ العالق** — وصفرُه لا تكرار.
 	ReminderMin int64 `json:"reminder_min"`
 	// Missing **أقسامٌ لم تُقرأ** — ورقمُها `null` لا صفر.
@@ -118,6 +122,9 @@ func (s *Server) buildOpsMonitor(ctx context.Context) opsMonitor {
 		if !miss("emergencies", err) {
 			out.EmergenciesOpen = n64(n)
 		}
+	}
+	if n, err := s.orders.CountAwaitingOffice(ctx); !miss("reports", err) {
+		out.ReportsWaiting = n64(int64(n))
 	}
 	if s.settings != nil {
 		out.ReminderMin = s.settings.GetInt(ctx, "ops.stuck_reminder_min")
