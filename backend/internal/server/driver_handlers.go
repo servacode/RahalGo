@@ -1466,10 +1466,24 @@ func (s *Server) handleDriverCash(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT e.kind, e.amount, e.note, o.number,
 		       COALESCE(NULLIF(cu.full_name, ''), '') AS customer_name,
-		       e.created_at
+		       e.created_at,
+		       CASE WHEN od.id IS NULL THEN NULL ELSE COALESCE(
+		           (SELECT string_agg(DISTINCT m.name, ' · ' ORDER BY m.name)
+		              FROM order_items oi JOIN merchants m ON m.id = oi.merchant_id
+		             WHERE oi.order_id = od.id),
+		           (SELECT m.name FROM merchants m
+		             WHERE m.id = COALESCE(od.merchant_id, od.partner_merchant_id)),
+		           '') END,
+		       od.delivery_fee,
+		       od.platform_commission + od.commission_waived,
+		       od.commission_waived,
+		       od.promo_delivery_waived
 		FROM driver_cash_entries e
 		LEFT JOIN orders o ON o.id::text = e.ref
 		LEFT JOIN users cu ON cu.id = o.customer_id
+		-- تفصيل الطلب لسطور التحصيل والمحو وردّ نقد المستلم وحدها — كالكشف بلوحة الإدارة (cashbox.go).
+		LEFT JOIN orders od ON e.kind IN ('order_collection', 'commission_waived', 'recipient_cash_returned')
+		                   AND od.id::text = e.ref
 		WHERE e.driver_id = $1
 		ORDER BY e.id DESC LIMIT $2 OFFSET $3`, userIDFrom(r), pg.PerPage, pg.Offset)
 	if err != nil {
@@ -1486,12 +1500,20 @@ func (s *Server) handleDriverCash(w http.ResponseWriter, r *http.Request) {
 		OrderNumber  *int64    `json:"order_number"`
 		CustomerName string    `json:"customer_name"`
 		CreatedAt    time.Time `json:"created_at"`
+		// تفصيل التحصيل (٢٠٢٦-١٠-٢٧) — التطبيق كان يقرؤه ولا يصله إلا كشف الإدارة.
+		// حقول مضافة تغيب عن سطور التسليم والتسوية.
+		MerchantName     *string `json:"merchant_name,omitempty"`
+		FeePart          *int64  `json:"fee_part,omitempty"`
+		CommissionPart   *int64  `json:"commission_part,omitempty"`
+		CommissionWaived *int64  `json:"commission_waived,omitempty"`
+		FreeWaived       *int64  `json:"free_waived,omitempty"`
 	}
 	out := []entry{}
 	for rows.Next() {
 		var e entry
 		if err := rows.Scan(&e.Kind, &e.Amount, &e.Note, &e.OrderNumber,
-			&e.CustomerName, &e.CreatedAt); err != nil {
+			&e.CustomerName, &e.CreatedAt, &e.MerchantName, &e.FeePart,
+			&e.CommissionPart, &e.CommissionWaived, &e.FreeWaived); err != nil {
 			s.respondErr(w, err)
 			return
 		}
