@@ -54,6 +54,7 @@ import {
   IconStatus,
   IconStore,
   IconSuccess,
+  IconSupport,
   IconWarning,
   LoadingState,
   OrderRef,
@@ -89,6 +90,9 @@ interface Monitor {
   emergencies_open: N;
   /** **بلاغاتٌ بانتظار قرارك** — بشرط بطاقة الرئيسيّة وفلتر `awaiting=1` نفسِه. */
   reports_waiting?: N;
+  /** **شكاوي لم تُحلّ** و**نزاعاتٌ مفتوحة** — بجانب البلاغات (المالك ٢٠٢٦-١٠-٢٧). */
+  complaints_waiting?: N;
+  disputes_waiting?: N;
   system: { state: string; parts: Record<string, string>; since: string | null };
   reminder_min: number;
   missing: string[];
@@ -566,6 +570,22 @@ export default function OpsMonitorPage() {
                     sub={O.reportsTileSub}
                     tone={data.reports_waiting == null || data.reports_waiting === 0 ? "muted" : "danger"}
                     onClick={() => router.push("/dashboard/orders?awaiting=1")}
+                  />
+                  <Tile
+                    icon={IconSupport}
+                    label={O.complaintsTile}
+                    value={data.complaints_waiting == null ? O.unknown : fmtNum(data.complaints_waiting)}
+                    sub={O.complaintsTileSub}
+                    tone={data.complaints_waiting == null || data.complaints_waiting === 0 ? "muted" : "danger"}
+                    onClick={() => router.push("/dashboard/tickets")}
+                  />
+                  <Tile
+                    icon={IconWarning}
+                    label={O.disputesTile}
+                    value={data.disputes_waiting == null ? O.unknown : fmtNum(data.disputes_waiting)}
+                    sub={O.disputesTileSub}
+                    tone={data.disputes_waiting == null || data.disputes_waiting === 0 ? "muted" : "danger"}
+                    onClick={() => router.push("/dashboard/losses")}
                   />
                 </div>
               </Panel>

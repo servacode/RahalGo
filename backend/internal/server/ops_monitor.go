@@ -72,8 +72,12 @@ type opsMonitor struct {
 	// ReportsWaiting **بلاغاتٌ بانتظار قرارك** — بلاغُ سائقٍ ينتظر قرارَ المكتب،
 	// بشرط بطاقة الرئيسيّة وفلتر `awaiting=1` نفسِه (`CountAwaitingOffice`)
 	// (قرارُ المالك ٢٠٢٦-١٠-٢٧).
-	ReportsWaiting num           `json:"reports_waiting"`
-	System         monitorSystem `json:"system"`
+	ReportsWaiting num `json:"reports_waiting"`
+	// ComplaintsWaiting **شكاوي لم تُحلّ** — مفتوحةٌ أو قيد المتابعة أو بانتظار المالية.
+	ComplaintsWaiting num `json:"complaints_waiting"`
+	// DisputesWaiting **نزاعاتٌ مفتوحة** — بشرط صفحة الخسائر والنزاعات نفسِه.
+	DisputesWaiting num           `json:"disputes_waiting"`
+	System          monitorSystem `json:"system"`
 	// ReminderMin **كلَّ كم دقيقةٍ يُعاد تذكيرُ العالق** — وصفرُه لا تكرار.
 	ReminderMin int64 `json:"reminder_min"`
 	// Missing **أقسامٌ لم تُقرأ** — ورقمُها `null` لا صفر.
@@ -125,6 +129,20 @@ func (s *Server) buildOpsMonitor(ctx context.Context) opsMonitor {
 	}
 	if n, err := s.orders.CountAwaitingOffice(ctx); !miss("reports", err) {
 		out.ReportsWaiting = n64(int64(n))
+	}
+	{
+		var n int64
+		err := s.pg.QueryRow(ctx, `SELECT count(*) FROM tickets WHERE status <> 'resolved'`).Scan(&n)
+		if !miss("complaints", err) {
+			out.ComplaintsWaiting = n64(n)
+		}
+	}
+	{
+		var n int64
+		err := s.pg.QueryRow(ctx, `SELECT count(*) FROM disputes WHERE status = 'open'`).Scan(&n)
+		if !miss("disputes", err) {
+			out.DisputesWaiting = n64(n)
+		}
 	}
 	if s.settings != nil {
 		out.ReminderMin = s.settings.GetInt(ctx, "ops.stuck_reminder_min")
