@@ -389,13 +389,10 @@ func TestWalletOrder_FailedAfterPickup_CashStore(t *testing.T) {
 // **و`creditTreasury` تأخذ `wallet_paid` (بعد التخفيض) ثمّ تطرح قيدَ الردّ الجزئيّ
 // مرّةً ثانية** — فتُقيّد ٤٠ لا ٦٤٠ ويختلّ `FI-06.a` بـ٦٠٠. **هذا الاختبارُ يكشف ذلك.**
 func TestWalletOrder_ItemUnavailableThenDelivered_TreasuryConserves(t *testing.T) {
-	// **عطبٌ حقيقيٌّ في المحرّك لا في الاختبار** (٢٠٢٦-١٠-٢٧): `MarkItemUnavailable`
-	// (item_unavailable.go — الخطوة ٦) يكتب قيدَ `refund` بالفرق **ويُنزل `wallet_paid`
-	// معه**، و`creditTreasury` (treasury.go) تأخذ `wallet_paid` ثمّ تطرح كلَّ `refund`
-	// بمرجع الطلب — **فيُطرح الردُّ الجزئيّ مرّتين** وتنقص الخزينةُ ٦٠٠ ويختلّ `FI-06.a`.
-	// **ودفترُ المال لا يُمَسّ إلّا بقرار المالك** — فيُوقَف حتّى يقرّر.
-	t.Skip("بانتظار قرار المالك: الردُّ الجزئيّ لصنفٍ غيرِ متوفّرٍ في طلب محفظةٍ يُطرح من ربح الخزينة مرّتين " +
-		"(wallet_paid نزل وقيدُ refund قائم) — الخزينةُ 40 والصحيحُ 640، وFI-06.a يختلّ بـ600")
+	// **كان عطباً حقيقيّاً في المحرّك** (٢٠٢٦-١٠-٢٧): `MarkItemUnavailable` يكتب قيدَ
+	// `refund` بالفرق **ويُنزل `wallet_paid` معه**، و`creditTreasury` كانت تأخذ
+	// `wallet_paid` ثمّ تطرح كلَّ `refund` — **فيُطرح الردُّ مرّتين.** وصارت تقرأ المدفوعَ
+	// من قيود `order_payment` (قرارُ المالك ٢٠٢٦-١٠-٢٧).
 	f := newWO(t, "wallet")
 	ctx := context.Background()
 	base := f.baseline(t)

@@ -166,7 +166,7 @@ func (s *Service) StatementPage(ctx context.Context, driverID string, limit, pag
 		Scan(&st.Total); err != nil {
 		return nil, err
 	}
-	// **وتفصيلُ الطلب لسطور التحصيل والمحو وحدَها** — والتسليمُ بلا طلب.
+	// **وتفصيلُ الطلب لسطور التحصيل والمحو وردِّ نقد المستلِم وحدَها** — والتسليمُ بلا طلب.
 	rows, err := s.db.Query(ctx, `
 		SELECT e.id, e.amount, e.kind, e.ref, o.number,
 		       e.note, e.created_by, e.created_at,
@@ -188,7 +188,7 @@ func (s *Service) StatementPage(ctx context.Context, driverID string, limit, pag
 		       CASE WHEN o.id IS NULL THEN NULL ELSE COALESCE(o.commission_waived_reason, '') END,
 		       o.promo_delivery_waived
 		FROM driver_cash_entries e
-		LEFT JOIN orders o ON e.kind IN ('order_collection', 'commission_waived')
+		LEFT JOIN orders o ON e.kind IN ('order_collection', 'commission_waived', 'recipient_cash_returned')
 		                  AND o.id::text = e.ref
 		LEFT JOIN users cu ON cu.id = o.customer_id
 		WHERE e.driver_id = $1
@@ -305,6 +305,20 @@ func (s *Service) WaiveCommissionTx(ctx context.Context, q Querier, driverID str
 		return 0, ErrOverSettle
 	}
 	return s.applyTx(ctx, q, driverID, -amount, "commission_waived", orderID, reason, &actorID)
+}
+
+// ReturnRecipientCashTx **«رجّعت النقد للمستلِم»** (قرارُ المالك ٢٠٢٦-١٠-٢٧) — توصيلةُ «إحضار»
+// قبض فيها السائقُ الأجرةَ من المستلِم عند الاستلام ثمّ فشلت بغير ذنبه (المنصّةُ أو السائق):
+// **ردّ السائقُ النقدَ بيده**، فسطرٌ سالبٌ بمقداره بمرجع التوصيلة يقابل سطرَ القبض —
+// فلا يبقى بذمّته ولا تحسبه الخزينةُ مدفوعاً لها. **داخل معاملة الانتقال.**
+func (s *Service) ReturnRecipientCashTx(ctx context.Context, q Querier, driverID string,
+	amount int64, orderID string, actorID *string) error {
+	if amount <= 0 {
+		return nil
+	}
+	_, err := s.applyTx(ctx, q, driverID, -amount, "recipient_cash_returned", orderID,
+		"رجع النقد للمستلم — التوصيلة ما تمت", actorID)
+	return err
 }
 
 // Settle تسليم الصندوق للمالية (كلياً أو جزئياً).

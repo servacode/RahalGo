@@ -293,10 +293,34 @@ func TestMDM07_MerchantCashRecipientFaultKeepsCash(t *testing.T) {
 	mdaNoNewViolations(t, h, base)
 }
 
+// mdmReturned **ما ردّه سائقٌ للمستلِم من صندوقه عن التوصيلة** — موجباً — وعددُ سطوره.
+func mdmReturned(t *testing.T, h *Harness, id string) (sum int64, rows int, driverID string) {
+	t.Helper()
+	if err := h.Pool.QueryRow(ctxBG(), `
+		SELECT -COALESCE(sum(amount), 0), count(*), COALESCE(max(driver_id::text), '')
+		  FROM driver_cash_entries WHERE ref = $1 AND kind = 'recipient_cash_returned'`, id).
+		Scan(&sum, &rows, &driverID); err != nil {
+		t.Fatalf("ردُّ نقد المستلِم: %v", err)
+	}
+	return sum, rows, driverID
+}
+
+// mdmHeldFor **صافي ما بذمّة السائق عن التوصيلة** — كلُّ سطور صندوقه بمرجعها.
+func mdmHeldFor(t *testing.T, h *Harness, id string) int64 {
+	t.Helper()
+	var n int64
+	if err := h.Pool.QueryRow(ctxBG(), `
+		SELECT COALESCE(sum(amount), 0) FROM driver_cash_entries WHERE ref = $1`, id).Scan(&n); err != nil {
+		t.Fatalf("الصندوق: %v", err)
+	}
+	return n
+}
+
 // TestMDM08_FetchRecipientCashPlatformFault **«إحضار» والمستلِمُ دفع عند الاستلام ثمّ فشلت
-// بذنب المنصّة** — يوثّق السلوكَ الحاليّ: **نقدُ المستلِم يبقى في الصندوق ولا يُردّ لأحد**
-// (`refund` يحسب نقدَ «أنا نقداً» وحدَه)، والسائقُ بطلب تعويضٍ معلَّق، والدفترُ متوازن.
-// **والسؤالُ للمالك**: هل يُردّ هذا النقدُ للمستلِم؟ — انظر التقرير.
+// بذنب المنصّة ⇒ يُردّ نقدُه له** (قرارُ المالك ٢٠٢٦-١٠-٢٧).
+//
+// **كان نقدُ المستلِم يبقى في الصندوق وتقرؤه الخزينةُ ربحاً (٥٠٠)** — والمستلِمُ لم يُخطئ.
+// وصار: سطرٌ سالبٌ بـ٥٠٠ في صندوق السائق نفسِه، **وربحُ المنصّة صفر**، والسائقُ بطلب تعويض.
 func TestMDM08_FetchRecipientCashPlatformFault(t *testing.T) {
 	h := New(t)
 	m := newMDFx(t, h, "منطقةُ MDM-08")
@@ -309,6 +333,15 @@ func TestMDM08_FetchRecipientCashPlatformFault(t *testing.T) {
 	if sum, _ := mdCollected(t, h, id); sum != 500 {
 		t.Fatalf("الصندوقُ %d والمنتظَر 500 قُبضت من المستلِم عند الاستلام", sum)
 	}
+	if sum, rows, who := mdmReturned(t, h, id); sum != 500 || rows != 1 || who != drv.ID {
+		t.Fatalf("**ردُّ نقد المستلِم** %d في %d سطر من %q — والمنتظَرُ 500 في سطرٍ واحدٍ من السائق", sum, rows, who)
+	}
+	if got := mdmHeldFor(t, h, id); got != 0 {
+		t.Fatalf("بقي بذمّة السائق %d عن توصيلةٍ ردّ نقدَها", got)
+	}
+	if got := mdmProfit(t, h, id); got != 0 {
+		t.Fatalf("**ربحُ المنصّة %d من نقد مستلِمٍ لم يُخطئ** — والمنتظَر 0", got)
+	}
 	if got := walletOf(t, h, owner); got != 0 {
 		t.Fatalf("مُسّت محفظةُ المتجر: %d", got)
 	}
@@ -318,6 +351,65 @@ func TestMDM08_FetchRecipientCashPlatformFault(t *testing.T) {
 	if n, fault := mdCompRequests(t, h, id); n != 1 || fault != "platform" {
 		t.Fatalf("طلباتُ تعويض %d بذنب %q — والمنتظَرُ واحدٌ بذنب platform", n, fault)
 	}
-	t.Logf("ربحُ المنصّة المقيَّدُ على توصيلةٍ فشلت بذنبها: %d (نقدُ المستلِم)", mdmProfit(t, h, id))
+	mdaNoNewViolations(t, h, base)
+}
+
+// TestMDM08b_FetchRecipientCashDriverFault **وبذنب السائق كذلك يُردّ نقدُ المستلِم** —
+// ولا أجرَ ولا تعويضَ ولا دينَ على السائق (لم تخسر المنصّةُ شيئاً: ما قبضته ردّته).
+func TestMDM08b_FetchRecipientCashDriverFault(t *testing.T) {
+	h := New(t)
+	m := newMDFx(t, h, "منطقةُ MDM-08b")
+	base := mdaBaseline(t, h)
+	id, drv := mdmCreate(t, h, m, "recipient", "fetch", "mdm08b")
+	mdDriveTo(t, h, id, drv, "at_dropoff")
+	mdDoorFail(t, h, m, id, map[string]any{"fault": "driver", "driver_share": "full"})
+
+	if sum, rows, who := mdmReturned(t, h, id); sum != 500 || rows != 1 || who != drv.ID {
+		t.Fatalf("ردُّ نقد المستلِم %d في %d سطر من %q — والمنتظَرُ 500 من السائق", sum, rows, who)
+	}
+	if got := mdmHeldFor(t, h, id); got != 0 {
+		t.Fatalf("بقي بذمّة السائق %d", got)
+	}
+	if got := mdmProfit(t, h, id); got != 0 {
+		t.Fatalf("ربحُ المنصّة %d — والمنتظَر 0", got)
+	}
+	if got := walletOf(t, h, drv.ID); got != 0 {
+		t.Fatalf("السائقُ قبض %d وذنبُه", got)
+	}
+	if n, _ := mdCompRequests(t, h, id); n != 0 {
+		t.Fatalf("طلبُ تعويضٍ (%d) بذنب السائق", n)
+	}
+	if d := mdObligations(t, h, "driver", drv.ID, "failed_order_driver", id); d != 0 {
+		t.Fatalf("دينٌ على السائق %d ولا خسارةَ للمنصّة", d)
+	}
+	mdaNoNewViolations(t, h, base)
+}
+
+// TestMDM08c_FetchRecipientCashRecipientFault **وبذنب المستلِم يبقى كما كان**: نقدُه للسائق
+// (٤٥٠) والمنصّة (٥٠) كأنّها سُلّمت، **ولا ردّ.**
+func TestMDM08c_FetchRecipientCashRecipientFault(t *testing.T) {
+	h := New(t)
+	m := newMDFx(t, h, "منطقةُ MDM-08c")
+	owner := m.fx.M.Owner.ID
+	base := mdaBaseline(t, h)
+	id, drv := mdmCreate(t, h, m, "recipient", "fetch", "mdm08c")
+	mdDriveTo(t, h, id, drv, "at_dropoff")
+	mdDoorFail(t, h, m, id, map[string]any{"fault": "customer", "customer_action": "none"})
+
+	if _, rows, _ := mdmReturned(t, h, id); rows != 0 {
+		t.Fatalf("رُدّ نقدُ المستلِم (%d سطر) والذنبُ ذنبُه", rows)
+	}
+	if got := mdmHeldFor(t, h, id); got != 500 {
+		t.Fatalf("بذمّة السائق %d والمنتظَر 500", got)
+	}
+	if got := walletOf(t, h, drv.ID); got != 450 {
+		t.Fatalf("أجرُ السائق %d والمنتظَر 450", got)
+	}
+	if got := mdmProfit(t, h, id); got != 50 {
+		t.Fatalf("ربحُ المنصّة %d والمنتظَر 50", got)
+	}
+	if got := walletOf(t, h, owner); got != 0 {
+		t.Fatalf("مُسّت محفظةُ المتجر: %d — المستلِمُ دفع", got)
+	}
 	mdaNoNewViolations(t, h, base)
 }

@@ -427,6 +427,7 @@
     <string name="cash_from">قبضت من %1$s</string>
     <string name="cash_k_settlement">سلمت للمنصة</string>
     <string name="cash_k_commission_waived">انمسحت العمولة — المتجر ما خصمها</string>
+    <string name="cash_k_recipient_cash_returned">رجعت النقد للمستلم — التوصيلة ما تمت</string>
 
     <!-- أهدافي والمكافآت -->
 

@@ -455,6 +455,8 @@ var All = []Check{
 		// يُقيَّد عند الاستلام، **والخزينةُ تحسب ما قُبض فعلاً لا ما يعد به `cash_due`**
 		// (`creditTreasury`) — فتوصيلةٌ فشلت بعد الاستلام بذنب المستلِم تحفظ معادلتَها:
 		// أجرُ السائق + حصّةُ المنصّة = النقدُ الذي في صندوقه.
+		// **وبغير ذنبه يُردّ نقدُه** (قرارُ المالك ٢٠٢٦-١٠-٢٧): سطرُ `recipient_cash_returned`
+		// يُنقص النقدَ، والخزينةُ تطرحه من المقبوض — فالطرفان صفر.
 		//
 		// **وتُشترط خزينة**: بلا خزينةٍ لا يُقيَّد نصيبُ المنصّة أصلاً
 		// (treasuryOn تردّ فارغاً) — فالسؤالُ لا معنى له، **وهو FI-02.c.**
@@ -492,9 +494,11 @@ var All = []Check{
 			) l ON true
 			-- **وسطرُ «ما استلمت العمولة» يُنقص نقدَ الطلب في صندوقه** (قرارُ المالك ٢٠٢٦-١٠-٢٦):
 			-- المتجرُ أخذها منه فلم تبقَ بيده — ومقابلُها في الدفتر دفعُها للمتجر وعكسُ الخزينة.
+			-- **وكذا نقدُ المستلِم المردودُ له** في «إحضار» فشلت بغير ذنبه (٢٠٢٦-١٠-٢٧).
 			LEFT JOIN LATERAL (
 				SELECT sum(e.amount) AS cash FROM driver_cash_entries e
-				WHERE e.ref = o.id::text AND e.kind IN ('order_collection', 'commission_waived')
+				WHERE e.ref = o.id::text
+				  AND e.kind IN ('order_collection', 'commission_waived', 'recipient_cash_returned')
 			) c ON true
 			-- **وما لم يغطّه نقدُ الزبون سلفةٌ ردّها المكتبُ من الدرج** (advance_return)
 			-- — فالنقدُ المقابلُ للدفتر = المحصَّلُ ناقصَها.
@@ -677,6 +681,25 @@ var All = []Check{
 			  AND (o.commission_waived <> COALESCE(d.amt, 0)
 			    OR o.commission_waived <> COALESCE(m.amt, 0)
 			    OR (o.status = 'delivered' AND o.platform_commission <> 0))`,
+	},
+	{
+		ID: "FI-10.e", Family: FI10, Status: ProvableNow, Ops: true,
+		Name: "نقدُ المستلِم المردودُ = ما قُبض منه، وعلى توصيلةٍ لم تُسلَّم",
+		Why: "**«إحضار» فشلت بغير ذنب المستلِم** (قرارُ المالك ٢٠٢٦-١٠-٢٧): السائقُ يردّ له " +
+			"ما قبضه منه عند الاستلام. **وردٌّ يزيد على المقبوض مالٌ خرج من صندوقٍ بلا أصل، " +
+			"وردٌّ على توصيلةٍ سُلّمت نقدٌ ضاع من المنصّة.**",
+		Flows: []string{"F-14", "F-27"},
+		SQL: `
+			SELECT o.number, o.status,
+			       COALESCE(r.amt, 0)::bigint AS المردود, COALESCE(c.amt, 0)::bigint AS المقبوض
+			FROM orders o
+			JOIN LATERAL (SELECT -sum(e.amount) AS amt FROM driver_cash_entries e
+			              WHERE e.ref = o.id::text AND e.kind = 'recipient_cash_returned') r
+			  ON r.amt IS NOT NULL
+			LEFT JOIN LATERAL (SELECT sum(e.amount) AS amt FROM driver_cash_entries e
+			                   WHERE e.ref = o.id::text AND e.kind = 'order_collection') c ON true
+			WHERE r.amt <= 0 OR r.amt > COALESCE(c.amt, 0)
+			   OR o.kind <> 'merchant_delivery' OR o.status = 'delivered'`,
 	},
 	{
 		ID: "FI-10.c", Family: FI10, Status: ProvableNow, Ops: true,

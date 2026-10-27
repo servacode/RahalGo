@@ -2667,7 +2667,8 @@
             "collect": "قبض من زبون",
             "settle": "تسليم للمنصة",
             "adjust": "تعديل",
-            "commission_waived": "مسح عمولة"
+            "commission_waived": "مسح عمولة",
+            "recipient_cash_returned": "رجع نقد المستلم"
           },
           "stores": "متاجره",
           "clients": "عملاؤه",
@@ -9136,7 +9137,8 @@
       "kinds": {
         "order_collection": "قبضت من زبون",
         "settlement": "سلمت للمنصة",
-        "commission_waived": "انمسحت العمولة"
+        "commission_waived": "انمسحت العمولة",
+        "recipient_cash_returned": "رجعت النقد للمستلم"
       },
       "limit": "السقف",
       "remaining": "يبقى قبل السقف",

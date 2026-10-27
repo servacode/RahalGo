@@ -33,8 +33,8 @@
     "setting_defs": 251,
     "behaviour_settings": 206,
     "order_fields": 120,
-    "test_files": 663,
-    "test_funcs": 2558
+    "test_files": 664,
+    "test_funcs": 2564
   },
   "flows": [
     {
@@ -10629,6 +10629,30 @@
       "orphan": true
     },
     {
+      "name": "TestItemUnavailable_DeliveredThenRefunded_TreasuryConserves",
+      "file": "internal/orders/money_item_unavailable_treasury_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestItemUnavailable_OldShape_RecomputeCorrects",
+      "file": "internal/orders/money_item_unavailable_treasury_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestItemUnavailable_ThenCancelled_RefundsRemaining",
+      "file": "internal/orders/money_item_unavailable_treasury_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestItemUnavailable_ThenFailedAfterPickup_TreasuryConserves",
+      "file": "internal/orders/money_item_unavailable_treasury_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
       "name": "TestWalletOrder_Delivered_WalletStore",
       "file": "internal/orders/money_wallet_order_scenarios_test.go",
       "package": "orders_test",
@@ -19055,6 +19079,18 @@
     },
     {
       "name": "TestMDM08_FetchRecipientCashPlatformFault",
+      "file": "internal/qa/money_merchant_delivery_scenarios_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMDM08b_FetchRecipientCashDriverFault",
+      "file": "internal/qa/money_merchant_delivery_scenarios_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMDM08c_FetchRecipientCashRecipientFault",
       "file": "internal/qa/money_merchant_delivery_scenarios_test.go",
       "package": "qa",
       "orphan": true
