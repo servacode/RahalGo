@@ -155,7 +155,7 @@ func TestReports_MoneyHiddenForNonFinance(t *testing.T) {
 
 	w := callAs(f.srv.handleReports, "GET", "/admin/reports?"+q, "", "", analystCaps)
 	body := string(dataOf(t, w))
-	for _, key := range []string{"gross_sales", "commissions", "platform_profit",
+	for _, key := range []string{"gross_sales", "items_sales", "commissions", "platform_profit",
 		"delivery_fees", "wallet_paid", "cash_collected", `"sales"`, `"cash"`} {
 		if strings.Contains(body, key) {
 			t.Fatalf("مبلغٌ %s وصل لمن لا يقرأ المال: %s", key, body)
@@ -346,6 +346,63 @@ func TestReports_TopStoresCreditEachSource(t *testing.T) {
 	}
 	if got[f.storeA] != 3000 || got[f.storeB] != 7000 || len(got) != 2 {
 		t.Fatalf("الحصص %v — أ ٣٠٠٠ وب ٧٠٠٠", got)
+	}
+}
+
+// ── ٦ب · مبيعاتُ الأصناف = مجموعُ مبيعات المتاجر، والتوصيلُ لحاله ─────────
+//
+// قرارُ المالك ٢٠٢٦-١٠-٢٧: **كانت بطاقةُ المبيعات فيها التوصيل** فلا تساوي
+// مجموعَ المتاجر. فصارت بطاقتين — والأصنافُ تساوي مجموعَ المتاجر ومجموعَ المخطّط.
+func TestReports_ItemsSalesEqualStoresSum(t *testing.T) {
+	f := newReportFixture(t)
+	// طلبٌ من متجرين: أ ٣٠٠٠، ب ٣٥٠٠×٢.
+	multi := f.order(t, "delivered", damascusAt(t, "2002-11-05 12:00"), 12000)
+	if _, err := f.srv.pg.Exec(context.Background(), `
+		INSERT INTO order_items (order_id, name, unit_price, qty, merchant_id, merchant_price)
+		VALUES ($1, 'صنفٌ من أ', 3000, 1, $2, 2500), ($1, 'صنفٌ من ب', 3500, 2, $3, 3000)`,
+		multi, f.storeA, f.storeB); err != nil {
+		t.Fatalf("الأصناف: %v", err)
+	}
+	// طلبٌ بلا أصنافٍ مقيّدة — يُنسب لمتجره بقيمة بضاعته (١٠٠٠٠ − ٢٠٠٠ توصيل = ٨٠٠٠).
+	f.order(t, "delivered", damascusAt(t, "2002-11-06 12:00"), 10000)
+	// والملغى لا يدخل.
+	f.order(t, "cancelled", damascusAt(t, "2002-11-06 13:00"), 9000)
+
+	r := readReport(t, f.srv, "from=2002-11-05&to=2002-11-06", financeCaps)
+	if r.Summary.ItemsSales == nil || r.Summary.DeliveryFees == nil {
+		t.Fatalf("بطاقتا الأصناف والتوصيل غائبتان عن الماليّة: %+v", r.Summary)
+	}
+	var stores int64
+	for _, s := range r.TopMerchants {
+		if s.Sales == nil {
+			t.Fatalf("متجرٌ بلا مبيعات: %+v", s)
+		}
+		stores += *s.Sales
+	}
+	if len(r.TopMerchants) != 2 {
+		t.Fatalf("المتوقَّعُ متجران في الفترة: %+v", r.TopMerchants)
+	}
+	if *r.Summary.ItemsSales != stores {
+		t.Fatalf("مبيعاتُ الأصناف %d ومجموعُ المتاجر %d — **يجب أن يتساويا**", *r.Summary.ItemsSales, stores)
+	}
+	if *r.Summary.ItemsSales != 18000 {
+		t.Fatalf("مبيعاتُ الأصناف %d — والمتوقَّع ٣٠٠٠ + ٧٠٠٠ + ٨٠٠٠ = ١٨٠٠٠", *r.Summary.ItemsSales)
+	}
+	if *r.Summary.DeliveryFees != 4000 {
+		t.Fatalf("التوصيلُ %d — والمتوقَّع طلبان × ٢٠٠٠", *r.Summary.DeliveryFees)
+	}
+	var daily int64
+	for _, d := range r.Daily {
+		if d.ItemsSales == nil {
+			t.Fatalf("يومٌ بلا مبيعات أصناف للماليّة: %+v", d)
+		}
+		daily += *d.ItemsSales
+	}
+	if daily != *r.Summary.ItemsSales {
+		t.Fatalf("مجموعُ المخطّط %d وبطاقةُ الأصناف %d", daily, *r.Summary.ItemsSales)
+	}
+	if a := readReport(t, f.srv, "from=2002-11-05&to=2002-11-06", analystCaps); a.Summary.ItemsSales != nil {
+		t.Fatal("مبيعاتُ الأصناف وصلت لمن لا يقرأ المال")
 	}
 }
 

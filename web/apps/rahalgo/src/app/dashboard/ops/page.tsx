@@ -47,6 +47,7 @@ import {
   IconHourglass,
   IconLocation,
   IconMoto,
+  IconNote,
   IconSettings,
   IconShieldCheck,
   IconShieldX,
@@ -86,6 +87,8 @@ interface Monitor {
   }[];
   drivers: { on_shift: N; busy: N; free: N };
   emergencies_open: N;
+  /** **بلاغاتٌ بانتظار قرارك** — بشرط بطاقة الرئيسيّة وفلتر `awaiting=1` نفسِه. */
+  reports_waiting?: N;
   system: { state: string; parts: Record<string, string>; since: string | null };
   reminder_min: number;
   missing: string[];
@@ -555,6 +558,15 @@ export default function OpsMonitorPage() {
                       />
                     );
                   })}
+                  {/* **بلاغاتٌ بانتظار قرارك** (المالك ٢٠٢٦-١٠-٢٧) — تفتح لوحةَ الطلبات بفلتر البلاغات. */}
+                  <Tile
+                    icon={IconNote}
+                    label={O.reportsTile}
+                    value={data.reports_waiting == null ? O.unknown : fmtNum(data.reports_waiting)}
+                    sub={O.reportsTileSub}
+                    tone={data.reports_waiting == null || data.reports_waiting === 0 ? "muted" : "danger"}
+                    onClick={() => router.push("/dashboard/orders?awaiting=1")}
+                  />
                 </div>
               </Panel>
 

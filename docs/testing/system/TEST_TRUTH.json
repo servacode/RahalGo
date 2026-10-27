@@ -34,7 +34,7 @@
     "behaviour_settings": 206,
     "order_fields": 120,
     "test_files": 664,
-    "test_funcs": 2564
+    "test_funcs": 2565
   },
   "flows": [
     {
@@ -26904,6 +26904,12 @@
     },
     {
       "name": "TestReports_DefaultRangeEndsOnDamascusToday",
+      "file": "internal/server/admin_reports_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestReports_ItemsSalesEqualStoresSum",
       "file": "internal/server/admin_reports_test.go",
       "package": "server",
       "orphan": true

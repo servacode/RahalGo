@@ -270,21 +270,22 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     [canMarket],
   );
   const inMarket = pathname.startsWith("/dashboard/sections");
-  // **عدّادُ الطوارئ المفتوحة** (قرارُ المالك ٢٠٢٦-١٠-٠٤ — غرفةُ الطوارئ): **ويحمرّ** إن
-  // بقي طارئٌ بلا مستلِمٍ أطولَ من مهلته (`ops.emergency_unacked_red_min`).
+  // **عدّادُ الطوارئ المفتوحة** (قرارُ المالك ٢٠٢٦-١٠-٠٤ — غرفةُ الطوارئ): **ويحمرّ فوراً**
+  // إن كان فيها طارئٌ ما استلمه حدا (`unacked`) — قرارُ المالك ٢٠٢٦-١٠-٢٧؛ كان ينتظر مهلةَ
+  // `ops.emergency_unacked_red_min`، والمهلةُ باقيةٌ لسطر الغرفة ودبّوس الخريطة.
   const canEmergencies = capabilities.includes("emergencies.manage");
-  // **والاحمرارُ بمرور الوقت لا بحدث** — فيُعاد السؤالُ كلَّ دقيقة.
+  // **ويُعاد السؤالُ كلَّ دقيقة** — احتياطاً لحدثٍ فات.
   const [minuteTick, setMinuteTick] = useState(0);
   useEffect(() => {
     if (!canEmergencies) return;
     const t = window.setInterval(() => setMinuteTick((x) => x + 1), 60_000);
     return () => window.clearInterval(t);
   }, [canEmergencies]);
-  const { data: emergencyCount } = useLiveData<{ open: number; stale: number }>(
+  const { data: emergencyCount } = useLiveData<{ open: number; unacked: number; stale: number }>(
     () =>
       canEmergencies
         ? api("/api/v1/admin/emergencies/count")
-        : Promise.resolve({ open: 0, stale: 0 }),
+        : Promise.resolve({ open: 0, unacked: 0, stale: 0 }),
     ["emergency"],
     [canEmergencies, minuteTick],
   );
@@ -297,7 +298,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           return {
             ...i,
             badge: emergencyCount?.open ?? 0,
-            badgeTone: (emergencyCount?.stale ?? 0) > 0 ? ("danger" as const) : undefined,
+            badgeTone: (emergencyCount?.unacked ?? 0) > 0 ? ("danger" as const) : undefined,
           };
         return i;
       }),
