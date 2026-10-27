@@ -1,13 +1,17 @@
 package server
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/servacode/rahalgo/backend/internal/approval"
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
+	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/support"
 )
 
@@ -110,6 +114,10 @@ func (s *Server) handleGetTicket(w http.ResponseWriter, r *http.Request) {
 	// **وسقفُ اقتراح التعويض يُعرض في شاشة الحلّ** (قرارُ المالك ٢٠٢٦-١٠-١٥) — وهو سقفُ
 	// موافقة الشكوى نفسُه (`compensations.cap_complaint`)، فلا يُكتب مبلغٌ يُردّ.
 	t.CompensationCap = s.support.CompensationCap(r.Context())
+	if t.CompensationAutoApplies, err = approval.AutoApplies(r.Context(), s.pg, userIDFrom(r)); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	httpx.JSON(w, http.StatusOK, t)
 }
 
@@ -155,11 +163,24 @@ func (s *Server) handleTicketResolve(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	t, err := s.support.Resolve(r.Context(), userIDFrom(r), chi.URLParam(r, "id"),
-		req.Resolution, req.Compensation, clientIP(r))
+	// **وتعويضُ المالك أو المدير ينفُذ فوراً** (قرارُ المالك ٢٠٢٦-١٠-٢٧) — بالموافقة الواحدة
+	// (`autoApproveCompensationTx`) في معاملة الحلّ نفسِها؛ وتعويضُ غيرِهما يبقى للماليّة.
+	var paid *orders.CompensationRequest
+	var paidAmount int64
+	t, err := s.support.ResolveWith(r.Context(), userIDFrom(r), chi.URLParam(r, "id"),
+		req.Resolution, req.Compensation, clientIP(r),
+		func(ctx context.Context, q dbtx.Querier, requestID string) error {
+			var e error
+			paid, paidAmount, e = s.autoApproveCompensationTx(ctx, q, r, requestID)
+			return compensationErr(e)
+		})
 	if err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	t.Applied = paid != nil
+	if paid != nil {
+		s.notifyCompensationPaid(r.Context(), paid, paidAmount)
 	}
 	// **التعويضُ اقتراحٌ لا دفع** — يُسجَّل حتى لو كان صفراً، فحلُّ الشكوى بلا
 	// تعويضٍ قرارٌ أيضاً وقد يُراجَع. والدفعُ يُسجَّل عند موافقة الماليّة.

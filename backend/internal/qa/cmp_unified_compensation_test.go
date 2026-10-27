@@ -5,8 +5,56 @@ package qa
 // حلُّ التذكرة بتعويضٍ يكتب طلباً معلَّقاً واحداً في `driver_compensation_requests`
 // (نوعُ «شكوى»، مستفيدُه صاحبُ الشكوى، ومربوطٌ بالتذكرة) — **لا طلبَ محفظة،
 // ولا مالَ يتحرّك قبل موافقة الماليّة**، ويظهر في صفحة الموافقات الموحّدة.
+//
+// **والمقترِحُ هنا موظّفُ دعم** (`customer_support`) لا مدير: تعويضُ المالك أو المدير
+// ينفُذ فوراً منذ قرار المالك ٢٠٢٦-١٠-٢٧ (`TestCMP_OwnerComplaintCompensationAppliesNow`).
 
 import "testing"
+
+// TestCMP_OwnerComplaintCompensationAppliesNow **قرارُ المالك ٢٠٢٦-١٠-٢٧:** حلُّ شكوى بتعويضٍ
+// من المدير ينفُذ فوراً — الطلبُ موافَقٌ عليه بنفسه، والمالُ لصاحب الشكوى ومثلُه من الخزينة،
+// والتذكرةُ «محلولة» بالمبلغ، والردُّ يقول `applied`.
+func TestCMP_OwnerComplaintCompensationAppliesNow(t *testing.T) {
+	h := New(t)
+	h.oldScaleMoney()
+	tid := treasury(t, h)
+	admin := h.NewUser("admin")
+	cust := h.Customer()
+	ticket := openTicketFor(t, h, admin, cust)
+
+	tBefore := treasuryBalance(t, h, tid)
+	res := h.POST("/api/v1/admin/tickets/"+ticket+"/resolve", admin.Token,
+		map[string]any{"resolution": "نعتذر", "compensation": 3000})
+	if res.Code >= 400 {
+		t.Fatalf("الحلّ: %s", res)
+	}
+	if applied, _ := res.JSON()["applied"].(bool); !applied {
+		t.Fatalf("الردُّ لا يقول applied: %s", res)
+	}
+	st, reqID, paid, resolved := ticketState(t, h, ticket)
+	if st != "resolved" || !resolved || paid != 3000 || reqID == "" {
+		t.Fatalf("بعد الحلّ: حال %q · محلولة %v · مدفوع %d — المطلوبُ محلولةٌ بـ٣٠٠٠", st, resolved, paid)
+	}
+	var status string
+	var self bool
+	if err := h.Pool.QueryRow(ctxBG(), `
+		SELECT status, self_approved FROM driver_compensation_requests WHERE id = $1::uuid`,
+		reqID).Scan(&status, &self); err != nil {
+		t.Fatal(err)
+	}
+	if status != "approved" || !self {
+		t.Fatalf("الطلب: حال %q · موافَقٌ بنفسه %v", status, self)
+	}
+	var credited int64
+	_ = h.Pool.QueryRow(ctxBG(), `SELECT COALESCE(sum(amount), 0) FROM wallet_transactions
+		WHERE ref = $1 AND kind = 'compensation' AND user_id = $2::uuid`, ticket, cust.ID).Scan(&credited)
+	if credited != 3000 {
+		t.Fatalf("محفظةُ صاحب الشكوى زادت %d — المطلوبُ ٣٠٠٠", credited)
+	}
+	if got := treasuryBalance(t, h, tid); tBefore-got != 3000 {
+		t.Fatalf("الخزينةُ نقصت %d — المطلوبُ ٣٠٠٠", tBefore-got)
+	}
+}
 
 // openTicketFor تذكرةٌ يفتحها المكتبُ لزبون — وتردّ معرّفَها.
 func openTicketFor(t *testing.T, h *Harness, staff, cust *User) string {
@@ -28,7 +76,7 @@ func TestCMP_ResolvedComplaintProposesIntoUnifiedQueue(t *testing.T) {
 	h := New(t)
 	h.oldScaleMoney()
 	tid := treasury(t, h)
-	staff := h.NewUser("admin")
+	staff := h.NewUser("customer_support")
 	cust := h.Customer()
 	ticket := openTicketFor(t, h, staff, cust)
 
@@ -114,7 +162,7 @@ func TestCMP_PendingCompensationWaitsForFinance(t *testing.T) {
 	h := New(t)
 	h.oldScaleMoney()
 	treasury(t, h)
-	staff := h.NewUser("admin")
+	staff := h.NewUser("customer_support")
 	fin := h.NewUser("admin")
 	cust := h.Customer()
 	ticket := openTicketFor(t, h, staff, cust)

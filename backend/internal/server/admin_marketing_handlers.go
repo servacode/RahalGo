@@ -317,6 +317,11 @@ func (s *Server) handleSetSetting(w http.ResponseWriter, r *http.Request) {
 			s.respondErr(w, err)
 			return
 		}
+		// **وحصّةُ المنصّة بالنسبة لا تتجاوز ٩٠٪** (قرارُ المالك ٢٠٢٦-١٠-٢٧).
+		if err := s.checkPlatformShare(r.Context(), key, norm); err != nil {
+			s.respondErr(w, err)
+			return
+		}
 	}
 
 	// التحقق كلُّه في الكتالوج: المفتاح المجهول مرفوض، والقيمة خارج المدى

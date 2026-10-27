@@ -62,6 +62,37 @@ func TestSETTINGS_RelatedKeysRejectedWithReason(t *testing.T) {
 	}
 }
 
+// **حصّةُ المنصّة بالنسبة لا تتجاوز ٩٠٪** (قرارُ المالك ٢٠٢٦-١٠-٢٧) — كانت تُحفظ ثمّ تُقصّ
+// صامتة. والمبلغُ الثابتُ فوق التسعين مقبول، وقلبُ الطريقة إلى «نسبة» فوقها مرفوض.
+func TestSETTINGS_PlatformSharePercentCappedAt90(t *testing.T) {
+	h := New(t)
+	admin := h.NewUser("admin")
+	key := "delivery.share_purchase"
+	h.Setting(key+"_mode", `"percent"`)
+	h.Setting(key, "10")
+
+	res := h.Call("PUT", "/api/v1/admin/settings/"+key, admin.Token, map[string]any{"value": 95}, nil)
+	if res.Code != http.StatusBadRequest || res.Err() != "platform_share_over_max" {
+		t.Fatalf("نسبةُ ٩٥ ⇒ %s — والمنتظَرُ platform_share_over_max", res)
+	}
+	if res := h.Call("PUT", "/api/v1/admin/settings/"+key, admin.Token, map[string]any{"value": 90}, nil); res.Code != http.StatusOK {
+		t.Fatalf("نسبةُ ٩٠ ⇒ %s — والمنتظَرُ قبولُها", res)
+	}
+
+	// **والمبلغُ الثابتُ لا سقفَ نسبةٍ عليه.**
+	if res := h.Call("PUT", "/api/v1/admin/settings/"+key+"_mode", admin.Token, map[string]any{"value": "fixed"}, nil); res.Code != http.StatusOK {
+		t.Fatalf("قلبُ الطريقة إلى مبلغ ⇒ %s", res)
+	}
+	if res := h.Call("PUT", "/api/v1/admin/settings/"+key, admin.Token, map[string]any{"value": 500}, nil); res.Code != http.StatusOK {
+		t.Fatalf("مبلغٌ ثابتٌ ٥٠٠ ⇒ %s — والمنتظَرُ قبولُه", res)
+	}
+	// **ولا رجوعَ إلى «نسبة» والرقمُ المحفوظُ فوق التسعين.**
+	res = h.Call("PUT", "/api/v1/admin/settings/"+key+"_mode", admin.Token, map[string]any{"value": "percent"}, nil)
+	if res.Code != http.StatusBadRequest || res.Err() != "platform_share_over_max" {
+		t.Fatalf("قلبُ الطريقة إلى نسبة على ٥٠٠ ⇒ %s — والمنتظَرُ platform_share_over_max", res)
+	}
+}
+
 // **قالبُ الرمز لا يُحفظ بلا `{code}`** — وإلّا وقف الدخولُ بالرمز للجميع.
 func TestSETTINGS_OTPTemplateNeedsCode(t *testing.T) {
 	h := New(t)

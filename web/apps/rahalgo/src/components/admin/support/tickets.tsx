@@ -77,6 +77,10 @@ interface Ticket {
   compensation_status?: "" | "pending" | "approved" | "rejected";
   /** **سقفُ اقتراح التعويض** — سقفُ موافقة الشكوى نفسُه، وصفرُه «بلا سقف». */
   compensation_cap?: number;
+  /** **تعويضُ هذا القارئ ينفُذ فوراً** — مالكٌ أو مدير (قرارُ المالك ٢٠٢٦-١٠-٢٧). */
+  compensation_auto_applies?: boolean;
+  /** **نفذ التعويضُ لحظةَ الحلّ** — في ردّ الحلّ وحدَه. */
+  applied?: boolean;
   /** تأخّر ردُّ المكتب عن المهلة (`support.late_reply_hours`). */
   late?: boolean;
   resolution: string;
@@ -615,6 +619,7 @@ function TicketDetailModal({
   const [compensation, setCompensation] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -655,16 +660,19 @@ function TicketDetailModal({
     e.preventDefault();
     setBusy(true);
     setError("");
+    setNotice("");
     try {
-      setTicket(
-        await api<Ticket>(`/api/v1/admin/tickets/${ticketID}/resolve`, {
-          method: "POST",
-          body: JSON.stringify({
-            resolution,
-            compensation: compensation ? Number(compensation) : 0,
-          }),
-        })
-      );
+      const amount = compensation ? Number(compensation) : 0;
+      const t = await api<Ticket>(`/api/v1/admin/tickets/${ticketID}/resolve`, {
+        method: "POST",
+        body: JSON.stringify({ resolution, compensation: amount }),
+      });
+      setTicket(t);
+      // **والرسالةُ تُقرأ من الردّ (`applied`) لا تُفترض** — حركةُ المالك أو المدير
+      // نفذت فوراً، وغيرُها راح للماليّة (قرارُ المالك ٢٠٢٦-١٠-٢٧).
+      if (amount > 0) {
+        setNotice(t.applied ? m.admin.tickets.compAppliedNow : m.admin.tickets.compSentToFinance);
+      }
       onChanged();
     } catch (err) {
       setError(errorText(err));
@@ -805,7 +813,11 @@ function TicketDetailModal({
                   value={compensation}
                   onChange={(e) => setCompensation(e.target.value.replace(/\D/g, ""))}
                 />
-                <p className="text-xs text-ink-muted">{m.admin.tickets.compProposedHint}</p>
+                <p className="text-xs text-ink-muted">
+                  {ticket.compensation_auto_applies
+                    ? m.admin.tickets.compAutoHint
+                    : m.admin.tickets.compProposedHint}
+                </p>
                 {(ticket.compensation_cap ?? 0) > 0 && (
                   <p className="text-xs text-ink-muted">
                     {m.admin.tickets.compCap.replace("{cap}", fmtMoney(ticket.compensation_cap ?? 0))}
@@ -821,6 +833,7 @@ function TicketDetailModal({
           )
         )}
 
+        {notice && <Alert tone="success">{notice}</Alert>}
         {error && (
           <Alert>{error}</Alert>
         )}
