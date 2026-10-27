@@ -118,6 +118,8 @@ const SERVER_ADMIN = new Set([
   // **الحسابُ المحذوفُ لا تتبدّل حالُه** — بابُ قائمة الحسابات في اللوحة (٢٠٢٦-١٠-٢٧).
   "account_deleted",
   "setting_conflict", "setting_placeholder_missing",
+  // **حصّةُ المنصّة بالنسبة فوق ٩٠٪** — صفحةُ الإعدادات وحدَها (قرارُ المالك ٢٠٢٦-١٠-٢٧).
+  "platform_share_over_max",
   "emergency_steps_pending", "emergency_step_done", "emergency_no_order",
   "emergency_no_driver", "emergency_bad_outcome", "emergency_outcome_stage",
   "emergency_halt_active",

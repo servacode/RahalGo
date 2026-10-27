@@ -539,7 +539,6 @@ export function ItemModal({
   editing,
   imageUpload,
   note,
-  requirePositivePrice = false,
   onClose,
   onSaved,
 }: {
@@ -550,11 +549,6 @@ export function ItemModal({
   editing: { item: MenuItem | null; sectionId: string };
   /** **سطرٌ فوق النموذج** — «الصنف لمتجر …» حين تُفتح النافذةُ من خارج صفحة المتجر (السوق، ٢٠٢٦-١٠-٢٧). */
   note?: ReactNode;
-  /**
-   * **السعرُ أكبرُ من صفر** — للإضافة من السوق (تدقيقُ السوق ٢٠٢٦-١٠-٢٧: السعرُ الفارغ كان يُحفظ صفراً
-   * بلا تنبيه). **ولا يُفرض على المتجر نفسِه** — قاعدتُه كما هي.
-   */
-  requirePositivePrice?: boolean;
   imageUpload?: (
     initialUrl: string | null | undefined,
     onChange: (id: string | null) => void,
@@ -627,8 +621,9 @@ export function ItemModal({
     e.preventDefault();
     // **وما تجاوز الحدَّ لا يُرسَل** — الخطأُ ظاهرٌ تحت الحقل.
     if (name.trim().length > ITEM_NAME_MAX) return;
-    if (usd && (usdValue == null || usdValue <= 0)) return setError(IT.vPrice);
-    if (!usd && requirePositivePrice && !(Number(price) > 0)) return setError(IT.vPrice);
+    // **والسعرُ صفرٌ مسموح** (قرارُ المالك ٢٠٢٦-١٠-٢٧، كتطبيق المندوب والخادم) — والفارغُ وحدَه
+    // يُردّ: حقلُ الليرة `required`، وفي الدولار يُفحص هنا.
+    if (usd && usdValue == null) return setError(IT.vPrice);
     setBusy(true);
     setError("");
     const body = {

@@ -355,7 +355,14 @@ const (
 func SettingShare(t string) string { return "delivery.share_" + t }
 
 // platformDeliveryPercentMax **لا أجرَ للسائق عند المئة** — فالحدُّ تسعون.
-const platformDeliveryPercentMax = 90
+const platformDeliveryPercentMax = PlatformSharePercentMax
+
+// PlatformSharePercentMax **أعلى حصّةٍ نسبيّةٍ للمنصّة** — وبابُ الإعدادات يرفض ما فوقها
+// برسالةٍ واضحة (قرارُ المالك ٢٠٢٦-١٠-٢٧) بدل أن تُقصّ هنا صامتة.
+const PlatformSharePercentMax = 90
+
+// ShareKinds **الأنواعُ الأربعة** — لكلٍّ حصّتُه وطريقتُها.
+var ShareKinds = []string{ShareStandard, ShareMerchant, SharePurchase, ShareAmanah}
 
 // platformShare **حصّةُ المنصّة النافذةُ الآن لنوع** — نسبةٌ أو مبلغ (والآخرُ صفر).
 func (s *Service) platformShare(ctx context.Context, q dbtx.Querier, t string) (pct, fixed int64) {

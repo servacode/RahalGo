@@ -83,6 +83,11 @@ type Ticket struct {
 	CompensationProposed int64 `json:"compensation_proposed"`
 	// CompensationCap **سقفُ اقتراح التعويض** — يملؤه بابُ الإدارة وحدَه (صفرُه «بلا سقف»).
 	CompensationCap int64 `json:"compensation_cap,omitempty"`
+	// CompensationAutoApplies **تعويضُ هذا القارئ ينفُذ فوراً؟** — المالكُ والمدير (قرارُ
+	// المالك ٢٠٢٦-١٠-٢٧، `approval.AutoApplies`)؛ يملؤه بابُ الإدارة لنصّ شاشة الحلّ.
+	CompensationAutoApplies bool `json:"compensation_auto_applies,omitempty"`
+	// Applied **نفذ التعويضُ لحظةَ الحلّ** — في ردّ الحلّ وحدَه.
+	Applied bool `json:"applied,omitempty"`
 	// CompensationStatus حالُ الاقتراح: `pending` · `approved` · `rejected` · وفارغٌ بلا اقتراح.
 	CompensationStatus string `json:"compensation_status"`
 	// Late **تأخّر الردّ** — مفتوحةٌ لم يردّ عليها المكتبُ بعد مهلة الإعدادات
@@ -462,6 +467,18 @@ func (s *Service) Reply(ctx context.Context, actorID, ticketID, body string) (*T
 // (قرارُ المالك ٢٠٢٦-١٠-٠٤: «الدعم يحوّل التعويض للماليّة، إذا وافقت تدفع،
 // وإذا شافت السبب مو مستاهل ترفض».) **ولصاحب الشكوى** لا للزبون دائماً.
 func (s *Service) Resolve(ctx context.Context, actorID, ticketID, resolution string, compensation int64, ip string) (*Ticket, error) {
+	return s.ResolveWith(ctx, actorID, ticketID, resolution, compensation, ip, nil)
+}
+
+// AfterProposeFunc **ما يجري على الاقتراح في معاملة الحلّ نفسِها** — بعد أن كُتب الطلبُ
+// وصارت التذكرةُ «بانتظار المالية». بابُ الإدارة يمرّر هنا التنفيذَ الفوريّ لحركة
+// المالك أو المدير (قرارُ المالك ٢٠٢٦-١٠-٢٧، `approval.AutoApplies`): فإن نفذ
+// حلّت الموافقةُ التذكرةَ بالمبلغ، **وإن سقط رجع الحلُّ كلُّه.**
+type AfterProposeFunc func(ctx context.Context, q dbtx.Querier, requestID string) error
+
+// ResolveWith هو `Resolve` مع نداءٍ بعد الاقتراح (`after`، ويجوز فراغُه).
+func (s *Service) ResolveWith(ctx context.Context, actorID, ticketID, resolution string, compensation int64,
+	ip string, after AfterProposeFunc) (*Ticket, error) {
 	/* ══════════════════════════════════════════════════════════════════
 	   **الحلُّ خطوةٌ واحدةٌ — لا أربع**
 	   ══════════════════════════════════════════════════════════════════
@@ -549,6 +566,13 @@ func (s *Service) Resolve(ctx context.Context, actorID, ticketID, resolution str
 			resolved_at = now(), updated_at = now()
 		WHERE id = $1`, ticketID, resolution); err != nil {
 		return nil, err
+	}
+	// **والنداءُ بعد الحالة لا قبلها** — فالموافقةُ الفوريّة تكتب «محلولة» فوق
+	// «بانتظار المالية»، ولو سبقتها لأعادها التحديثُ أعلاه معلَّقة.
+	if requestID != nil && after != nil {
+		if err := after(ctx, tx, *requestID); err != nil {
+			return nil, err
+		}
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err

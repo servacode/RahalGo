@@ -71,7 +71,6 @@ export default function AddItemModal({
       platformSections={sections.filter((s) => s.active !== false)}
       editing={{ item: null, sectionId: "" }}
       imageUpload={marketItemImage}
-      requirePositivePrice
       note={
         <span className="flex flex-wrap items-center justify-between gap-2">
           <span>
