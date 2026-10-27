@@ -26,11 +26,12 @@ var errLeadConverted = httpx.NewError(http.StatusConflict,
 	"lead_already_converted", "errors.lead_already_converted")
 
 // نصوص إشعارات هذا القسم — مجمّعة كي لا تتناثر في الكود.
-var m = struct{ leadNewOps, leadApproved, leadNeedsInfo, leadAutoOps string }{
-	leadNewOps:    "طلب انضمام متجر جديد",
-	leadApproved:  "تمت الموافقة على عميلك",
-	leadNeedsInfo: "طلب انضمام بحاجة معلومات",
-	leadAutoOps:   "قُبل طلب انضمام تلقائياً",
+var m = struct{ leadNewOps, leadApproved, leadNeedsInfo, leadAutoOps, leadResubmitted string }{
+	leadNewOps:      "طلب انضمام متجر جديد",
+	leadApproved:    "تمت الموافقة على عميلك",
+	leadNeedsInfo:   "طلب انضمام بحاجة معلومات",
+	leadAutoOps:     "قُبل طلب انضمام تلقائياً",
+	leadResubmitted: "المندوب عدّل طلب انضمام وأعاد إرساله",
 }
 
 // حدود طول الحقول — نقطة عامة بلا حساب، نمنع تخزين حمولات ضخمة لكل صف.
@@ -543,22 +544,169 @@ func (s *Server) handleRepCreateLead(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// repLead **طلبٌ كما يراه صاحبُه المندوب** — الطلبُ ومعرّفاتُ اختياراته.
+//
+// (قرارُ المالك ٢٠٢٦-١٠-٢٧، البند ١٧: «بحاجة معلومات» تعمل من التطبيق.)
+// **والمعرّفاتُ ليملأ نموذجُ التعديل ما اختاره أوّلاً** — التصنيفُ والمحافظةُ
+// والمنطقة — **فلا يعيد اختيارَ كلّ شيءٍ ليصلح حقلاً واحداً.**
+type repLead struct {
+	lead
+	CategoryID    *string `json:"category_id"`
+	DistrictID    *string `json:"district_id"`
+	GovernorateID *string `json:"governorate_id"`
+}
+
 // handleRepLeads طلبات انضمام المندوب نفسه (بوابة المندوب).
 func (s *Server) handleRepLeads(w http.ResponseWriter, r *http.Request) {
-	rows, err := s.pg.Query(r.Context(),
-		leadSelect+` WHERE l.sales_rep_user_id = $1 ORDER BY l.created_at DESC LIMIT 200`,
+	rows, err := s.pg.Query(r.Context(), `
+	SELECT l.id, l.store_name, l.owner_name, l.phone, l.area,
+	       COALESCE(d.name || '، ' || g.name, ''),
+	       c.name, c.icon, l.lat, l.lng,
+	       NULLIF(COALESCE(u.full_name, u.phone::text), ''), u.invite_code, l.status, l.created_at,
+	       l.note, l.decision_note,
+	       l.category_id::text, l.district_id::text, d.governorate_id::text
+	FROM merchant_leads l
+	LEFT JOIN users u ON u.id = l.sales_rep_user_id
+	LEFT JOIN categories c ON c.id = l.category_id
+	LEFT JOIN districts d ON d.id = l.district_id
+	LEFT JOIN governorates g ON g.id = d.governorate_id
+	WHERE l.sales_rep_user_id = $1 ORDER BY l.created_at DESC LIMIT 200`,
 		userIDFrom(r))
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
 	defer rows.Close()
-	out, err := scanLeads(rows)
-	if err != nil {
+	out := []repLead{}
+	for rows.Next() {
+		var a repLead
+		l := &a.lead
+		if err := rows.Scan(&l.ID, &l.StoreName, &l.OwnerName, &l.Phone, &l.Area, &l.District,
+			&l.CategoryName, &l.CategoryIcon, &l.Lat, &l.Lng,
+			&l.RepName, &l.RepCode, &l.Status, &l.CreatedAt,
+			&l.Note, &l.DecisionNote,
+			&a.CategoryID, &a.DistrictID, &a.GovernorateID); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		out = append(out, a)
+	}
+	if err := rows.Err(); err != nil {
 		s.respondErr(w, err)
 		return
 	}
 	httpx.JSON(w, http.StatusOK, out)
+}
+
+// errLeadNotNeedsInfo **لا يُعدَّل إلّا طلبٌ أرجعته الإدارةُ «بحاجة معلومات».**
+//
+// والجديدُ ينتظر المكتبَ كما هو، والمقبولُ صار متجراً، والمرفوضُ قرارٌ.
+var errLeadNotNeedsInfo = httpx.NewError(http.StatusConflict,
+	"lead_not_needs_info", "errors.lead_not_needs_info")
+
+// handleRepResubmitLead **يُصلح المندوبُ طلبَه ويعيد إرساله.**
+//
+// (قرارُ المالك ٢٠٢٦-١٠-٢٧، البند ١٧.) كانت الإدارةُ تكتب «بحاجة معلومات»
+// بملاحظة، **والمندوبُ لا يرى ما الناقص ولا يقدر أن يصلحه** — فيُعيد تسجيلَ
+// المتجر من أوّله، ورقمُه محجوزٌ بالطلب الأوّل.
+//
+//   - **صاحبُ الطلب وحدَه** — طلبُ مندوبٍ آخرَ «غير موجود» لا «ممنوع».
+//   - **وفي `needs_info` وحدَها** — والشرطُ في `UPDATE` نفسِه، فضغطتان
+//     متزامنتان لا تمرّان معاً.
+//   - **ويعود «جديداً»** فيظهر في طابور المكتب، **وملاحظةُ الإدارة تبقى**
+//     (`decision_note`) ليرى من يراجع ما طُلب، وفي السجلّ `ops.lead_resubmitted`.
+//   - **ولا قبولَ تلقائيّاً بعده** — الإدارةُ هي التي طلبت المعلومة فهي تراها.
+func (s *Server) handleRepResubmitLead(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if !isUUID(id) {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	req, err := decode[struct {
+		StoreName  string   `json:"store_name"`
+		OwnerName  string   `json:"owner_name"`
+		Phone      string   `json:"phone"`
+		Area       string   `json:"area"`
+		DistrictID string   `json:"district_id"`
+		CategoryID string   `json:"category_id"`
+		Lat        *float64 `json:"lat"`
+		Lng        *float64 `json:"lng"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	req.StoreName = clip(req.StoreName, leadMaxShort)
+	req.OwnerName = clip(req.OwnerName, leadMaxShort)
+	req.Area = clip(req.Area, leadMaxShort)
+	if req.StoreName == "" || req.CategoryID == "" || !isUUID(req.CategoryID) {
+		s.respondErr(w, errValidation)
+		return
+	}
+	phone, ok := identity.NormalizePhone(req.Phone)
+	if !ok {
+		s.respondErr(w, identity.ErrInvalidPhone)
+		return
+	}
+	// **والطلبُ نفسُه مستثنى** — رقمُه محجوزٌ به هو لا بغيره.
+	if taken, err := phoneHasStore(r.Context(), s.pg, phone, id); err != nil {
+		s.respondErr(w, err)
+		return
+	} else if taken {
+		s.respondErr(w, ErrPhoneHasStore)
+		return
+	}
+	district, err := s.validDistrict(r, req.DistrictID)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if district == nil {
+		s.respondErr(w, errDivNeedsGovernorate)
+		return
+	}
+	repID := userIDFrom(r)
+	var decisionNote string
+	err = s.pg.QueryRow(r.Context(), `
+		UPDATE merchant_leads
+		   SET store_name = $3, owner_name = $4, phone = $5, area = $6,
+		       district_id = $7, category_id = $8, lat = $9, lng = $10,
+		       status = 'new', updated_at = now()
+		 WHERE id = $1 AND sales_rep_user_id = $2 AND status = 'needs_info'
+		 RETURNING decision_note`,
+		id, repID, req.StoreName, req.OwnerName, phone, req.Area,
+		district, req.CategoryID, req.Lat, req.Lng).Scan(&decisionNote)
+	if errors.Is(err, pgx.ErrNoRows) {
+		// **غائبٌ أو لغيره ⇒ «غير موجود»**، ولصاحبه بحالٍ أخرى ⇒ السبب.
+		var cur string
+		if e := s.pg.QueryRow(r.Context(),
+			`SELECT status FROM merchant_leads WHERE id = $1 AND sales_rep_user_id = $2`,
+			id, repID).Scan(&cur); e != nil {
+			s.respondErr(w, httpx.ErrNotFound)
+			return
+		}
+		s.respondErr(w, errLeadNotNeedsInfo)
+		return
+	}
+	if err != nil {
+		if isFKViolation(err) {
+			s.respondErr(w, catalog.ErrCategoryInvalid)
+			return
+		}
+		s.respondErr(w, err)
+		return
+	}
+	meta := map[string]any{"name": req.StoreName, "sales_rep_id": repID}
+	if decisionNote != "" {
+		meta["note"] = decisionNote
+	}
+	s.audit(r, "ops.lead_resubmitted", "lead", id, meta)
+	s.notify.NotifyOps(r.Context(), notifications.Input{
+		Kind: notifications.KindLead, Title: m.leadResubmitted,
+		Body: req.StoreName, Entity: "lead", EntityID: id, Href: "/dashboard/leads",
+	})
+	s.touch("lead", "ops", "sales:"+repID)
+	httpx.JSON(w, http.StatusOK, map[string]any{"id": id, "status": "new"})
 }
 
 // handleAdminLeadStatus تحديث حالة طلب. "converted" ينشئ المتجر فعلياً (موافقة

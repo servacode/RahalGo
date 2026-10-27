@@ -46,6 +46,14 @@ class RepApi(private val api: ApiClient) {
     suspend fun createLead(input: NewLead, idempotencyKey: String? = null): Lead =
         api.call("/api/v1/rep/leads", HttpMethod.Post, input, idempotencyKey = idempotencyKey)
 
+    /**
+     * **يصلح طلباً أرجعته الإدارةُ «بحاجة معلومات» ويعيده «جديداً»**
+     * (قرارُ المالك ٢٠٢٦-١٠-٢٧). لصاحب الطلب وحدَه، وفي تلك الحال وحدَها.
+     */
+    suspend fun resubmitLead(id: String, input: LeadEdit) {
+        api.call<kotlinx.serialization.json.JsonObject>("/api/v1/rep/leads/$id", HttpMethod.Put, input)
+    }
+
     /** **تصنيفاتُ المتاجر** — لنموذج التسجيل. */
     suspend fun categories(): List<RepCategory> = api.call("/api/v1/rep/categories")
 
@@ -431,6 +439,29 @@ data class Lead(
     val status: String = "",
     val note: String = "",
     @SerialName("created_at") val createdAt: String = "",
+    /** **ملاحظةُ الإدارة** — سببُ الرفض أو ما ينقص في «بحاجة معلومات». و`note` صوتُ المندوب نفسِه. */
+    @SerialName("decision_note") val decisionNote: String = "",
+    /** **معرّفاتُ ما اختاره** — ليملأ نموذجُ التعديل اختياراتِه (قرارُ المالك ٢٠٢٦-١٠-٢٧). */
+    @SerialName("category_id") val categoryId: String? = null,
+    @SerialName("district_id") val districtId: String? = null,
+    @SerialName("governorate_id") val governorateId: String? = null,
+    val lat: Double? = null,
+    val lng: Double? = null,
+)
+
+/**
+ * **تعديلُ طلبٍ «بحاجة معلومات»** — حقولُ نموذج الإضافة نفسُها بلا كلمة مرور.
+ */
+@Serializable
+data class LeadEdit(
+    @SerialName("store_name") val storeName: String,
+    @SerialName("owner_name") val ownerName: String,
+    val phone: String,
+    val area: String,
+    @SerialName("district_id") val districtId: String,
+    @SerialName("category_id") val categoryId: String,
+    val lat: Double? = null,
+    val lng: Double? = null,
 )
 
 /**

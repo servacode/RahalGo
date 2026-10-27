@@ -918,6 +918,7 @@
     <string name="err_payout_not_allowed">حسابك لا يملك سحب رصيد. المحفظة عندك رصيد إنفاق لا رصيد دخل.</string>
     <string name="err_invite_required">التسجيل بدعوة من مندوب رحال غو فقط. تواصل مع الدعم ليصلك رابط الدعوة.</string>
     <string name="err_lead_already_converted">هذا الطلب صار متجرا يعمل — ولا يرد بعد التحويل. أوقف المتجر من صفحته إن لزم.</string>
+    <string name="err_lead_not_needs_info">هذا الطلب ما عاد بحاجة معلومات — حدّث الصفحة لتشوف حالته.</string>
     <string name="err_in_progress">العملية قيد التنفيذ — انتظر قليلا ولا تعدها.</string>
     <!-- CAF-02: مفتاحٌ لجسمين — عُدّلت السلّة ومحاولةٌ سابقةٌ لم تُحسَم -->
     <string name="err_key_reused">عدّلتَ الطلب قبل أن نتأكّد من محاولتك السابقة — تحقّق من «طلباتي» أولا كي لا يتكرّر.</string>

@@ -894,6 +894,8 @@ func (s *Server) Router() http.Handler {
 			r.Get("/leads", s.handleRepLeads)
 			// يسجّل عميلاً باسمه من الميدان — يبقى معلّقاً حتى موافقة الإدارة
 			r.Post("/leads", s.idempotent(s.handleRepCreateLead))
+			// **«بحاجة معلومات» يصلحها المندوب ويعيدها «جديداً»** (قرارُ المالك ٢٠٢٦-١٠-٢٧)
+			r.Put("/leads/{id}", s.handleRepResubmitLead)
 			r.Get("/categories", s.handleRepCategories) // تصنيفات المتاجر للنموذج — الفعّالةُ وحدَها
 			// **وهدفُ المندوب كهدف السائق** — المقياسُ يختلف والمعنى واحد.
 			r.Get("/incentives", s.handleMyIncentives)

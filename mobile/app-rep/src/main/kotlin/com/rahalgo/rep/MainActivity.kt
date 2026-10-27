@@ -494,7 +494,7 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                     tab == Tab.AddClient -> AddClientScreen(
                         vm = addVm,
                         pick = { picking = true },
-                        onDone = { tab = Tab.Clients; overlay.clear() },
+                        onDone = { tab = Tab.Clients; overlay.clear(); clientsVm.load() },
                     )
 
                     // ══════════════════════════════════════════════
@@ -529,6 +529,8 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                         vm = clientsVm,
                         onOpenMenu = { id, name -> menuVm.open(id, name) },
                         onOpenOffers = { id, name -> offersVm.open(id, name) },
+                        // **«بحاجة معلومات» تُصلَح في نموذج الإضافة نفسِه** (٢٠٢٦-١٠-٢٧).
+                        onEditLead = { lead -> addVm.startEdit(lead); tab = Tab.AddClient },
                     )
 
                     tab == Tab.Account -> AccountScreen(
