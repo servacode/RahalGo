@@ -31,15 +31,37 @@ import {
   Money,
   Timeline,
   type TimelineNode,
+  IconUser,
+  IconStore,
+  IconMoto,
+  IconWallet,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { roleLabelByCode } from "@/lib/rolemeta";
 
 const m = getMessages(defaultLocale);
 const H = m.admin.ordersPage.history;
 const OFFICE_STATUS: Record<string, string> = m.admin.ordersPage.board.status;
 const STATUS_LABELS: Record<string, string> = m.orders.status;
 const TX_KINDS: Record<string, string> = m.shared.txKinds;
+const PARTIES: Record<string, string> = H.parties;
+/** **ترتيبُ الأطراف في القيود** — الزبونُ يدفع، ثمّ من يقبض، ثمّ المنصّة، ثمّ ما سواها. */
+const PARTY_ORDER = ["customer", "merchant", "driver", "sales", "platform", "other"];
+
+/** **لونُ الحالة** — أخضرُ للمسلَّم، أحمرُ للفاشل، برتقاليٌّ للملغى والمرفوض (تدقيقُ السجلّ ٢٠٢٦-١٠-٢٧). */
+const STATUS_VARIANT: Record<string, "success" | "danger" | "warning" | "violet" | "accent"> = {
+  delivered: "success",
+  failed: "danger",
+  cancelled: "warning",
+  rejected: "warning",
+  refunded: "violet",
+};
+
+/** **اسمُ المرسِل** — وحين يغيب يُقال دورُه بالعربيّ لا رمزُه (`driver`). */
+function senderLabel(l: { sender: string; role: string }): string {
+  return l.sender || PARTIES[l.role] || roleLabelByCode(l.role);
+}
 
 interface Step {
   status: string;
@@ -164,28 +186,39 @@ export function OrderDetailPanel({
       {order === "failed" && <Alert tone="warning">{H.panelFailed}</Alert>}
       {order && order !== "failed" && (
         <div className="space-y-5">
-          <div className="space-y-1 text-sm">
+          {/* **كلُّ سطرٍ بعنوانه وأيقونته** (تدقيقُ السجلّ ٢٠٢٦-١٠-٢٧) — كانت أسماءٌ متتاليةٌ بلا عنوان
+              فلا يُعرف من المتجرُ ومن السائق، ومبلغٌ لا يقول ما هو. */}
+          <div className="space-y-2 text-sm">
             <p className="flex flex-wrap items-center gap-2">
-              <Badge variant="neutral">{OFFICE_STATUS[order.status] ?? order.status}</Badge>
+              <Badge variant={STATUS_VARIANT[order.status] ?? "accent"}>
+                {OFFICE_STATUS[order.status] ?? order.status}
+              </Badge>
               <span className="text-ink-muted" dir="ltr">
                 {fmtDateTime(order.created_at)}
               </span>
             </p>
-            <p>
+            <InfoRow icon={<IconUser size={15} />} label={H.infoCustomer}>
               {order.customer_name || "—"}
-              {" · "}
-              <span dir="ltr" className="text-ink-muted">
-                {order.customer_phone || order.customer_phone_masked || "—"}
+              <span dir="ltr" className="ms-2 text-xs text-ink-muted">
+                {order.customer_phone || order.customer_phone_masked || ""}
               </span>
-            </p>
-            {order.merchant_name && <p>{order.merchant_name}</p>}
-            {order.driver_name && <p>{order.driver_name}</p>}
+            </InfoRow>
+            {order.merchant_name && (
+              <InfoRow icon={<IconStore size={15} />} label={H.infoStore}>
+                {order.merchant_name}
+              </InfoRow>
+            )}
+            {order.driver_name && (
+              <InfoRow icon={<IconMoto size={15} />} label={H.infoDriver}>
+                {order.driver_name}
+              </InfoRow>
+            )}
             {order.customer_live && (
               <p className="font-bold text-success">{liveLine(order.customer_live, Date.now())}</p>
             )}
-            <p className="font-bold">
-              <Money value={order.total} />
-            </p>
+            <InfoRow icon={<IconWallet size={15} />} label={H.infoTotal}>
+              <Money value={order.total} className="font-bold" />
+            </InfoRow>
           </div>
 
           <section>
@@ -225,7 +258,7 @@ export function OrderDetailPanel({
                   {chat.lines.map((l) => (
                     <li key={l.id} className="flex items-start gap-2 text-sm">
                       <Badge variant={l.role === "driver" ? "primary" : "neutral"}>
-                        {l.sender || l.role}
+                        {senderLabel(l)}
                       </Badge>
                       <span className="min-w-0 flex-1">{l.body}</span>
                       <span dir="ltr" className="shrink-0 text-2xs text-ink-muted">
@@ -246,23 +279,63 @@ export function OrderDetailPanel({
               {money && money !== "failed" && money.lines.length === 0 && (
                 <p className="text-sm text-ink-muted">{H.moneyEmpty}</p>
               )}
+              {/* **مجمّعةٌ بالطرف، و«إلو/عليه» بدل إشارة الناقص** (تدقيقُ السجلّ ٢٠٢٦-١٠-٢٧) — كانت أسماءَ
+                  حساباتٍ داخليّةٍ ومبالغَ بناقصٍ بلا شرح. **والأرقامُ من الدفتر كما هي — عرضٌ لا حساب.** */}
               {money && money !== "failed" && money.lines.length > 0 && (
-                <ul className="space-y-1.5 text-sm">
-                  {money.lines.map((l, i) => (
-                    <li key={i} className="flex items-center justify-between gap-2">
-                      <span className="min-w-0">
-                        {TX_KINDS[l.kind] ?? l.kind}
-                        <span className="text-ink-muted"> — {l.name}</span>
-                      </span>
-                      <Money value={l.amount} />
-                    </li>
-                  ))}
-                </ul>
+                <div className="space-y-3 text-sm">
+                  <p className="text-2xs text-ink-muted">{H.moneyHint}</p>
+                  {PARTY_ORDER.map((party) => {
+                    const lines = money.lines.filter(
+                      (l) => (PARTY_ORDER.includes(l.party) ? l.party : "other") === party,
+                    );
+                    if (lines.length === 0) return null;
+                    return (
+                      <div key={party} className="rounded-control border border-line-soft p-2.5">
+                        <p className="mb-1.5 text-xs font-bold">{PARTIES[party] ?? party}</p>
+                        <ul className="space-y-1.5">
+                          {lines.map((l, i) => (
+                            <li key={i} className="flex items-start justify-between gap-2">
+                              <span className="min-w-0">
+                                {TX_KINDS[l.kind] ?? l.kind}
+                                {/* **واسمُ صاحب المحفظة للأطراف** — والحسابُ الداخليُّ لا يُسمّى. */}
+                                {party !== "platform" && party !== "other" && l.name && (
+                                  <span className="text-ink-muted"> — {l.name}</span>
+                                )}
+                                {l.note && <span className="block text-2xs text-ink-muted">{l.note}</span>}
+                              </span>
+                              <span
+                                className={`flex shrink-0 items-center gap-1.5 ${
+                                  l.amount < 0 ? "text-danger" : "text-success"
+                                }`}
+                              >
+                                <span className="text-2xs">{l.amount < 0 ? H.debit : H.credit}</span>
+                                <Money value={Math.abs(l.amount)} small />
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </section>
           )}
         </div>
       )}
     </Drawer>
+  );
+}
+
+/** **سطرٌ بعنوانه وأيقونته** — العنوانُ يميناً والقيمةُ يساراً. */
+function InfoRow({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <span className="inline-flex shrink-0 items-center gap-1.5 text-ink-muted">
+        {icon}
+        {label}
+      </span>
+      <span className="min-w-0 text-end">{children}</span>
+    </div>
   );
 }

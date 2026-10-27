@@ -42,6 +42,12 @@ export interface CaseRow {
   status: CaseStatus | null;
   /** **ما يُكتب تحت الحالة** — «بانتظار الموافقة» مثلاً. */
   statusNote?: ReactNode;
+  /**
+   * **عنوانُ البطاقة حين لا طرف** — نوعُ الخسارة («طلب فاشل»…) بدل شرطةٍ في دائرةٍ حمراء
+   * (فحصُ ٢٠٢٦-١٠-٢٧)، وتحته `noPartyNote` جملةً صغيرة.
+   */
+  title?: string;
+  noPartyNote?: string;
 }
 
 const STATUS_TONE: Record<CaseStatus, "warning" | "success" | "neutral"> = {
@@ -130,9 +136,12 @@ export function CaseList({
                     {x.partyName || "—"}
                   </OpenLink>
                 ) : (
-                  <span className="block truncate font-bold text-ink-muted">—</span>
+                  <span className={`block truncate font-bold ${x.title ? "" : "text-ink-muted"}`}>{x.title || "—"}</span>
                 )}
-                {x.partyRole && (
+                {!x.partyId && x.noPartyNote && (
+                  <span className="block text-2xs text-ink-muted">{x.noPartyNote}</span>
+                )}
+                {x.partyId && x.partyRole && (
                   <span className="block text-2xs text-ink-muted">{partyOne[x.partyRole] ?? x.partyRole}</span>
                 )}
                 {(x.waivedBefore ?? 0) > 0 && (
@@ -205,5 +214,5 @@ export function CaseList({
 
 /** **شريطُ الفلاتر الواحد** — كرتٌ واحدٌ بنفس الشكل في التبويبين. */
 export function CaseFilters({ children }: { children: ReactNode }) {
-  return <section className="surface mb-4 grid grid-cols-1 gap-2 p-4 sm:grid-cols-2 lg:grid-cols-4">{children}</section>;
+  return <section className="surface grid grid-cols-1 gap-2 p-4 sm:grid-cols-2 lg:grid-cols-4">{children}</section>;
 }

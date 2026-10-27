@@ -38,6 +38,8 @@ func (s *Server) handleSetMerchantSettlementMethod(w http.ResponseWriter, r *htt
 		s.respondErr(w, err)
 		return
 	}
+	// **والصفحاتُ المفتوحةُ تتحدّث** (فحصُ اللوحة ٢٠٢٦-١٠-٢٧) — كبابِ صاحب المتجر.
+	s.touch("merchant", "ops", "merchant:"+chi.URLParam(r, "id"))
 	httpx.JSON(w, http.StatusOK, m)
 }
 
@@ -119,6 +121,9 @@ func (s *Server) handleMarkCashSettlementPaid(w http.ResponseWriter, r *http.Req
 			Apps: []string{notifications.AppMerchant},
 		})
 	}
+	// **وكرتُ المتجر ومجموعُ المستحقّ يتحدّثان بعد الدفع** (فحصُ اللوحة ٢٠٢٦-١٠-٢٧) —
+	// كان لا يُبثّ شيء، فيبقى زرُّ «ادفع» على المبلغ نفسِه حتّى يُحدَّث المتصفّح.
+	s.touch("wallet", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"settlement_id": res.SettlementID,
 		"state":         "cash_paid",

@@ -105,7 +105,7 @@ func TestSiteStatsShapeAndAuthz(t *testing.T) {
 	s := overviewServer(t)
 	ctx := context.Background()
 	now := time.Now()
-	today := siteDay(now)
+	today := siteDay(now, s.dayStartHour(ctx))
 	tag := fmt.Sprintf("sst%d", now.UnixNano())
 
 	read := func() siteStats {

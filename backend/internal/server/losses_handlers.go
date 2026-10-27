@@ -35,6 +35,7 @@ package server
 // من الشحن، **وتسويةٌ يدويّةٌ خصماً من محفظة.** والصافي = الخسارة − المستردّ.
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -73,6 +74,12 @@ const lossRowsCTE = `,
 		  FROM inr WHERE bucket IN ('compensation','shortfall','adjustment_credit')
 	)`
 
+// accountToday **يومُ الحساب الآن** — بدمشق وبعد طرح ساعة فتح الدوام (`platform.day_start_hour`)،
+// كدالّة `account_day` في القاعدة. يُردّ للواجهة فتبني «اليوم» و«٧ أيّام» عليه.
+func (s *Server) accountToday(ctx context.Context) time.Time {
+	return time.Now().UTC().Add(3*time.Hour - time.Duration(s.settings.GetInt(ctx, "platform.day_start_hour"))*time.Hour)
+}
+
 // handlePlatformLosses خسائرُ المنصّة في المدى — واقعةً بواقعة ومجموعاً.
 //
 // # والأرقامُ جنباً إلى جنب (قرارُ المالك ٢٠٢٦-١٠-٠٤، «الخسائر والنزاعات» البند ٤)
@@ -89,10 +96,12 @@ const lossRowsCTE = `,
 // يُحسبان في القاعدة** (`AT TIME ZONE 'Asia/Damascus'`) كما في التقارير — لا
 // بمنطقةٍ يحمّلها الخادمُ فتسقط إلى غرينتش على جهازٍ بلا جدول مناطق.
 func (s *Server) handlePlatformLosses(w http.ResponseWriter, r *http.Request) {
+	// **يومُ الحساب بدمشق** — ساعةُ فتح الدوام تُطرح (٢٠٢٦-١٠-٢٦)، **ويُردّ `today`** فتبني
+	// الواجهةُ «اليوم» و«٧ أيّام» عليه لا على منتصف ليل المتصفّح (فحصُ ٢٠٢٦-١٠-٢٧).
+	today := s.accountToday(r.Context())
 	to, err := time.Parse("2006-01-02", r.URL.Query().Get("to"))
 	if err != nil {
-		// **يومُ الحساب بدمشق** — ساعةُ فتح الدوام تُطرح (٢٠٢٦-١٠-٢٦).
-		to = time.Now().UTC().Add(3*time.Hour - time.Duration(s.settings.GetInt(r.Context(), "platform.day_start_hour"))*time.Hour)
+		to = today
 	}
 	from, err := time.Parse("2006-01-02", r.URL.Query().Get("from"))
 	if err != nil {
@@ -182,5 +191,6 @@ func (s *Server) handlePlatformLosses(w http.ResponseWriter, r *http.Request) {
 		"page":        pg.Page, "per_page": pg.PerPage,
 		"treasury_balance": treasury,
 		"from":             fromDay, "to": toDay,
+		"today": today.Format("2006-01-02"),
 	})
 }

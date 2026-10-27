@@ -737,6 +737,31 @@ func TestACC_DeletedAccountsHaveTheirOwnBox(t *testing.T) {
 	}
 }
 
+// TestACC_DeletedAccountStatusIsFrozen **المحذوفُ لا يُفعَّل ولا يُوقَف** (تدقيقُ اللوحة
+// ٢٠٢٦-١٠-٢٧): كان زرُّ «تفعيل» يظهر عليه والمحرّكُ يقبل فيردّه فعّالاً باسم «حساب محذوف».
+func TestACC_DeletedAccountStatusIsFrozen(t *testing.T) {
+	h := New(t)
+	f := h.Factory()
+	admin := h.NewUser("admin")
+	gone := f.NewUserWith("customer")
+	if _, err := h.Pool.Exec(ctxBG(),
+		`UPDATE users SET status = 'deleted' WHERE id = $1`, gone.ID); err != nil {
+		t.Fatalf("حذف: %v", err)
+	}
+	for _, st := range []string{"active", "suspended", "blocked"} {
+		r := h.PATCH("/api/v1/admin/users/"+gone.ID, admin.Token,
+			map[string]any{"status": st, "status_reason": "اختبار"})
+		if r.Code != 409 {
+			t.Errorf("**تبديلُ حال المحذوف إلى %s قُبل**: %d", st, r.Code)
+		}
+	}
+	var status string
+	_ = h.Pool.QueryRow(ctxBG(), `SELECT status FROM users WHERE id = $1`, gone.ID).Scan(&status)
+	if status != "deleted" {
+		t.Fatalf("**المحذوفُ عاد حيّاً**: %s", status)
+	}
+}
+
 // TestACC_WelcomedAccountIsVerified — **من وصلته رسالةُ الترحيب حسابُه موثَّق**
 // (قرارُ المالك ٢٠٢٦-١٠-١٢): المتجرُ والمندوبُ والسائقُ لا يُطلب منهم توثيقٌ ثانٍ.
 func TestACC_WelcomedAccountIsVerified(t *testing.T) {

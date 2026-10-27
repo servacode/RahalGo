@@ -23,6 +23,7 @@ import {
   IconStar,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
+import { OpenLink } from "@/components/admin/OpenLink";
 
 const m = getMessages(defaultLocale);
 const L = m.admin.ratingsPage.list;
@@ -86,13 +87,19 @@ const isLow = (n: number | null) => n != null && n <= 2;
 
 export function RatingsList({
   canProfile,
+  canMerchant,
+  canOrder,
   low,
-  onLow,
 }: {
   canProfile: boolean;
-  /** **«الضعيفةُ بس» من فوق** — بطاقةُ «نجمتان فأقل» تضغطها أيضاً. */
+  /** **ملفُّ المتجر وسجلُّ الطلب لمن يُفتحان له** (فحصُ ٢٠٢٦-١٠-٢٧) — وإلّا نصٌّ لا رابطٌ يُردّ ٤٠٣. */
+  canMerchant: boolean;
+  canOrder: boolean;
+  /**
+   * **«الضعيفةُ بس» من الرأس وحدَه** (فحصُ ٢٠٢٦-١٠-٢٧) — كان زرّان لشيءٍ واحد: في الرأس وفي القائمة.
+   * فبقي في الرأس بعدّه، وعددُه الآن بشرط القائمة نفسِه من الخادم.
+   */
   low: boolean;
-  onLow: (v: boolean) => void;
 }) {
   const [page, setPage] = useState(1);
   // **فلترٌ بالنوع وبالطرف** (المالك ٢٠٢٦-١٠-٢٥: «لازم نقدر نحدّد المنصّة، المتجر، السائق، أيّ سائق»).
@@ -172,19 +179,7 @@ export function RatingsList({
         </div>
         <div className="space-y-3 p-4">
         <div className="flex flex-wrap items-center gap-2">
-          <Chips
-            items={[
-              { id: "all", label: L.all },
-              { id: "low", label: L.lowOnly },
-            ]}
-            value={low ? "low" : "all"}
-            onChange={(k) => {
-              onLow(k === "low");
-              setPage(1);
-            }}
-            wrap
-          />
-          <span className="mx-1 hidden h-6 w-px bg-line-soft sm:block" aria-hidden />
+          {low && <Badge variant="danger">{L.lowOnly}</Badge>}
           <Chips
             items={[
               { id: "", label: L.kindAll },
@@ -252,13 +247,14 @@ export function RatingsList({
               >
                 <div className="flex items-start justify-between gap-2">
                   <span className="min-w-0">
-                    <Link
+                    <OpenLink
+                      allowed={canOrder}
                       href={`/dashboard/history?q=${r.order_number}`}
                       className="block font-bold text-primary hover:underline"
                       dir="ltr"
                     >
                       #{fmtRef(r.order_number)}
-                    </Link>
+                    </OpenLink>
                     <span className="block text-2xs text-ink-muted" dir="ltr">
                       {fmtDateTime(r.created_at)}
                     </span>
@@ -290,9 +286,13 @@ export function RatingsList({
                   <p className="text-2xs text-ink-muted">{L.storeStars}</p>
                   <div className="mt-1 min-w-0 truncate">
                     {r.merchant_id ? (
-                      <Link href={`/dashboard/merchants/${r.merchant_id}`} className="font-medium hover:underline">
+                      <OpenLink
+                        allowed={canMerchant}
+                        href={`/dashboard/merchants/${r.merchant_id}`}
+                        className="font-medium hover:underline"
+                      >
                         {r.merchant_name}
-                      </Link>
+                      </OpenLink>
                     ) : (
                       "—"
                     )}

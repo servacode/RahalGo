@@ -259,7 +259,8 @@ export function WalletPill({
 }: {
   Link: LinkType;
   href: string;
-  balance: number;
+  /** **و`null` = لم يصل بعد** — يُرسم «—» لا صفراً كاذباً (تدقيقُ الشريط ٢٠٢٦-١٠-٢٧). */
+  balance: number | null;
   icon: ReactNode;
   /** **اسمٌ ظاهرٌ بجانب الرقم** — «محفظة المنصة» في لوحة الإدارة، فلا تُخلط بدرج المكتب (٢٠٢٦-١٠-٢٧). */
   label?: string;
@@ -274,8 +275,16 @@ export function WalletPill({
     >
       {icon}
       {label && <span className="hidden text-xs font-normal text-ink-muted md:inline">{label}</span>}
-      <span dir="ltr">{fmtNum(balance)}</span>
-      <span className="hidden text-xs font-normal sm:inline">{m.common.currency}</span>
+      {balance === null ? (
+        <span className="text-ink-muted">—</span>
+      ) : (
+        <>
+          <span dir="ltr" className={balance < 0 ? "text-danger" : undefined}>
+            {fmtNum(balance)}
+          </span>
+          <span className="hidden text-xs font-normal sm:inline">{m.common.currency}</span>
+        </>
+      )}
     </TopBarLink>
   );
 }
@@ -522,7 +531,9 @@ export function AccountMenu({
   const menu = (
     <div
       ref={panel}
-      role="menu"
+      /* **لوحٌ لا قائمةُ أسهم** (تدقيقُ الشريط ٢٠٢٦-١٠-٢٧): كانت `role="menu"` وبنودُها روابطُ بلا
+         `menuitem` ولا تنقّلٍ بالأسهم — **وعدٌ للقارئ الصوتيّ لا يُوفى.** فهي لوحةٌ بروابطَ عاديّة. */
+      role="dialog"
       aria-label={accountLabel}
       style={{ top: at.top, left: at.left }}
       className="fixed z-[80] w-56 overflow-hidden surface-raised elev-3"
@@ -594,7 +605,6 @@ export function AccountMenu({
           عن الروابط يمنع أن يُضغط بامتداد الإصبع.** */}
       <button
         type="button"
-        role="menuitem"
         onClick={() => {
           setOpen(false);
           onLogout();
@@ -613,7 +623,7 @@ export function AccountMenu({
         ref={btn}
         type="button"
         onClick={() => setOpen((v) => !v)}
-        aria-haspopup="menu"
+        aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={name}
         title={name}
@@ -639,7 +649,8 @@ export function AccountMenu({
             **ومن `sm` فصاعداً يظهر** — هناك عرضٌ يسعه بلا قصّ.
 
             **ويبقى للقارئ الصوتيّ** في `aria-label` الزرّ. */}
-        <span className="hidden max-w-28 truncate text-sm font-medium sm:inline">{name}</span>
+        {/* **وحدُّه مئةٌ وستّون لا مئةٌ واثنا عشر** (تدقيقُ الشريط ٢٠٢٦-١٠-٢٧) — كان يقصّ الأسماءَ العاديّة. */}
+        <span className="hidden max-w-40 truncate text-sm font-medium sm:inline">{name}</span>
         <IconChevronDown
           size={15}
           className={`shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
@@ -698,7 +709,8 @@ export function TopBarActions({
   walletHref?: string;
   /** اسمُ المحفظة الظاهر — يُمرَّر في لوحة الإدارة وحدَها. */
   walletLabel?: string;
-  balance?: number;
+  /** **و`null` = لم يصل بعد** — يُرسم «—». */
+  balance?: number | null;
   walletIcon?: ReactNode;
   accountHref: string;
   accountLabel: string;
@@ -715,7 +727,13 @@ export function TopBarActions({
     <>
       {notifications}
       {walletHref && (
-        <WalletPill Link={Link} href={walletHref} balance={balance ?? 0} icon={walletIcon} label={walletLabel} />
+        <WalletPill
+          Link={Link}
+          href={walletHref}
+          balance={balance === undefined ? 0 : balance}
+          icon={walletIcon}
+          label={walletLabel}
+        />
       )}
       {extras}
       {menu ? (

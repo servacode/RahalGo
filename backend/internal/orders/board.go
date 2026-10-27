@@ -242,6 +242,10 @@ type BoardInfo struct {
 	StoreCompensated int64 `json:"store_compensated"`
 	// SeenAt **متى ضغط موظّفٌ «استلمتها»** — والفارغُ مع «بانتظار القبول» يرنّ.
 	SeenAt *string `json:"seen_at"`
+	// DeliveredByCode **سُلّم بكود التسليم فعلاً** — من الطلب نفسِه لا من الإعداد الحاليّ:
+	// طلبٌ سُلّم قبل أن يصير الكودُ إلزاميّاً لا يُقال عنه «بالكود» (تدقيقُ السجلّ ٢٠٢٦-١٠-٢٧).
+	// **والكودُ نفسُه لا يُرسل هنا.**
+	DeliveredByCode bool `json:"delivered_by_code"`
 }
 
 // BoardInfoOf **معلوماتُ المكتب لصفحةٍ من الطلبات** — في رحلةٍ واحدة.
@@ -265,7 +269,8 @@ func (s *Service) BoardInfoOf(ctx context.Context, ids []string) (map[string]*Bo
 		                 JOIN merchants mm ON mm.owner_user_id = wt.user_id
 		                 WHERE wt.ref = o.id::text AND wt.kind = 'compensation'
 		                   AND mm.id = o.merchant_id), 0),
-		       to_char(o.office_seen_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+		       to_char(o.office_seen_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
+		       (o.status IN ('delivered', 'refunded') AND o.delivery_code IS NOT NULL)
 		FROM orders o WHERE o.id = ANY($1::uuid[])`, ids)
 	if err != nil {
 		return nil, err
@@ -276,7 +281,8 @@ func (s *Service) BoardInfoOf(ctx context.Context, ids []string) (map[string]*Bo
 		b := &BoardInfo{}
 		var since *string
 		if err := rows.Scan(&id, &b.AlertReason, &since, &b.EmergencyOpen,
-			&b.OfferExpiresAt, &b.OfferPassed, &b.GoodsCost, &b.StoreCompensated, &b.SeenAt); err != nil {
+			&b.OfferExpiresAt, &b.OfferPassed, &b.GoodsCost, &b.StoreCompensated, &b.SeenAt,
+			&b.DeliveredByCode); err != nil {
 			return nil, err
 		}
 		if b.AlertReason != "" {

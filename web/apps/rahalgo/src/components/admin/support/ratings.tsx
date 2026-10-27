@@ -29,18 +29,17 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useCanCall } from "@/lib/policy";
-import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime, errorText } from "@rahalgo/i18n";
+import { useCanOpen } from "@/lib/policy";
+import { getMessages, defaultLocale, fmtNum, errorText } from "@rahalgo/i18n";
 import {
   PageContainer,
-  Select,
   Badge,
+  Chips,
   LoadingState,
-  IconStar,
+  ReloadState,
   IconDriver,
-  IconWarning,
-  IconOrder,
   IconStore,
+  useLiveRefresh,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { RatingsList, StarRow, EmptyCircle, starTone } from "./RatingsList";
@@ -97,9 +96,11 @@ function avatarTint(avg: number): string {
 
 export function RatingsView() {
   const router = useRouter();
-  // **وملفُّ الحساب لمن يقرأ الحسابات** (قرارُ المالك ٢٠٢٦-١٠-٠٥): موظّفُ العمليّات
-  // لا يملك `users.read` — **فلا يُرسَم له رابطٌ يُردّ ٤٠٣.**
-  const canProfile = useCanCall()("GET", "/users/{id}");
+  // **وملفُّ الحساب والمتجر والطلب لمن يُفتح له** (قرارُ المالك ٢٠٢٦-١٠-٠٥، وفحصُ ٢٠٢٦-١٠-٢٧):
+  // موظّفُ الدعم يقرأ التقييمات ولا يملك بالضرورة `merchants.read` أو `orders.read` —
+  // **فلا يُرسَم له رابطٌ يُردّ ٤٠٣.**
+  const open = useCanOpen();
+  const canProfile = open.user;
   const [min, setMin] = useState("3");
   const [low, setLow] = useState(false);
   const [data, setData] = useState<Data | null>(null);
@@ -117,8 +118,10 @@ export function RatingsView() {
   useEffect(() => {
     void load();
   }, [load]);
+  useLiveRefresh(["order"], load);
 
-  if (error) return <p className="py-10 text-center text-danger">{error}</p>;
+  // **الخطأُ بزرّ إعادة** كباقي التبويبات — لا سطرٌ أحمر تختفي معه الصفحة.
+  if (error && !data) return <ReloadState label={error || R.loadError} onRetry={() => void load()} />;
   if (!data) return <LoadingState />;
 
   return (
@@ -174,7 +177,7 @@ export function RatingsView() {
       </section>
 
       {/* **كلُّ تقييمٍ بسطره أوّلاً** (المالك ٢٠٢٦-١٠-٢٥) — ثمّ المعدّلاتُ بالسائق وبالمتجر. */}
-      <RatingsList canProfile={canProfile} low={low} onLow={setLow} />
+      <RatingsList canProfile={canProfile} canMerchant={open.merchant} canOrder={open.order} low={low} />
 
       <section className="space-y-3">
         <div className="surface flex flex-wrap items-center justify-between gap-3 p-4">
@@ -182,14 +185,15 @@ export function RatingsView() {
             <h2 className="heading-section">{R.driversTitle}</h2>
             <span className="block text-xs text-ink-muted">{R.driversHint}</span>
           </span>
-          <div className="w-full sm:w-56">
-            <Select value={min} onChange={(e) => setMin(e.target.value)} aria-label={R.driversTitle}>
-              {["1", "3", "5", "10"].map((v) => (
-                <option key={v} value={v}>
-                  {R.minCount.replace("{n}", v)}
-                </option>
-              ))}
-            </Select>
+          {/* **أربعُ قيمٍ بس فأزرار** (فحصُ ٢٠٢٦-١٠-٢٧) — لا قائمةٌ منسدلة. */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs text-ink-muted">{R.minLabel}</span>
+            <Chips
+              wrap
+              items={["1", "3", "5", "10"].map((v) => ({ id: v, label: R.minChip.replace("{n}", fmtNum(Number(v))) }))}
+              value={min}
+              onChange={(k) => setMin(k)}
+            />
           </div>
         </div>
 
@@ -262,8 +266,9 @@ export function RatingsView() {
               <li key={x.id}>
                 <button
                   type="button"
-                  onClick={() => router.push(`/dashboard/merchants/${x.id}`)}
-                  className={`surface flex h-full w-full flex-col gap-3 p-4 text-start hover:bg-row-hover ${
+                  onClick={open.merchant ? () => router.push(`/dashboard/merchants/${x.id}`) : undefined}
+                  disabled={!open.merchant}
+                  className={`surface flex h-full w-full flex-col gap-3 p-4 text-start enabled:hover:bg-row-hover disabled:cursor-default ${
                     Math.min(x.speed, x.conduct) < 3 ? "border-danger" : ""
                   }`}
                 >
@@ -293,47 +298,6 @@ export function RatingsView() {
           </ul>
         </section>
       )}
-
-      <section className="space-y-3">
-        <div>
-          <h2 className="heading-section">{R.lowTitle}</h2>
-          <p className="text-xs text-ink-muted">{R.lowHint}</p>
-        </div>
-        {data.comments.length === 0 ? (
-          <EmptyCircle icon={IconStar} title={R.noLow} hint={R.noLowHint} />
-        ) : (
-          <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            {data.comments.map((c, i) => (
-              <li key={i} className="surface flex flex-col gap-2 border-danger p-4 text-sm">
-                <div className="flex items-start justify-between gap-2">
-                  <span className="min-w-0">
-                    <span dir="ltr" className="flex items-center gap-1 font-bold tabular-nums">
-                      <IconOrder size={13} />#{fmtRef(c.order_number)}
-                    </span>
-                    <span className="block truncate text-ink-muted">{c.customer}</span>
-                  </span>
-                  {c.driver && <Badge variant="neutral">{c.driver}</Badge>}
-                </div>
-                <div className="space-y-1 rounded-control bg-field px-3 py-2 text-xs">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-ink-muted">{R.platform}</span>
-                    <StarRow n={c.platform_stars} />
-                  </div>
-                  {c.driver_stars != null && (
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-ink-muted">{R.driver}</span>
-                      <StarRow n={c.driver_stars} />
-                    </div>
-                  )}
-                </div>
-                <p dir="ltr" className="text-2xs text-ink-muted">
-                  {fmtDateTime(c.created_at)}
-                </p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
     </PageContainer>
   );
 }

@@ -370,16 +370,32 @@ func (s *Server) handleOpenEmergencies(w http.ResponseWriter, r *http.Request) {
 		order = "e.resolved_at DESC"
 	}
 
+	// **والصندوقُ واحدٌ بأنواعه** (غرفةُ الطوارئ ٢٠٢٦-١٠-٠٤) — فالسائقُ والمتجرُ
+	// اختياريّان، **وما بلا مستلِمٍ بعد المهلة يُعلَّم ليحمرّ.**
+	staleMin := s.settings.GetNum(r.Context(), emergencyStaleSetting, 10)
+	// **ومربّعاتُ الأرقام تفلتر** (تصميمُ اللوحة ٢٠٢٦-١٠-٢٧) — «ما حدا استلمها» و«متأخرة»
+	// على المفتوح وحدَه، بالشرط نفسِه الذي يعدّه `handleEmergencyCount`.
+	only := ""
+	if status == "open" {
+		switch r.URL.Query().Get("only") {
+		case "unacked":
+			only = ` AND e.acknowledged_at IS NULL`
+		case "stale":
+			only = ` AND e.acknowledged_at IS NULL
+			         AND e.created_at < now() - make_interval(mins => $2::int)`
+		}
+	}
+
+	// (`$2` المهلةُ دائماً — والشرطُ `>= 0` يُبقيه مذكوراً حين لا فلتر، فلا يردّ المشغّلُ
+	// «وسائطُ أكثرُ من مواضعها».)
 	var count int
 	if err := s.pg.QueryRow(r.Context(),
-		`SELECT count(*) FROM driver_emergencies WHERE status = $1`, status).
+		`SELECT count(*) FROM driver_emergencies e WHERE e.status = $1 AND $2::int >= 0`+only,
+		status, staleMin).
 		Scan(&count); err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	// **والصندوقُ واحدٌ بأنواعه** (غرفةُ الطوارئ ٢٠٢٦-١٠-٠٤) — فالسائقُ والمتجرُ
-	// اختياريّان، **وما بلا مستلِمٍ بعد المهلة يُعلَّم ليحمرّ.**
-	staleMin := s.settings.GetNum(r.Context(), emergencyStaleSetting, 10)
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT e.id, u.full_name, COALESCE(u.phone::text, ''), o.number, e.note,
 		       ST_Y(e.at::geometry), ST_X(e.at::geometry), e.created_at,
@@ -397,7 +413,7 @@ func (s *Server) handleOpenEmergencies(w http.ResponseWriter, r *http.Request) {
 		LEFT JOIN merchants m ON m.id = e.merchant_id
 		LEFT JOIN users rb ON rb.id = e.resolved_by
 		LEFT JOIN users ab ON ab.id = e.acknowledged_by
-		WHERE e.status = $1
+		WHERE e.status = $1`+strings.ReplaceAll(only, "$2::int", "$4::int")+`
 		ORDER BY `+order+` LIMIT $2 OFFSET $3`, status, pg.PerPage, pg.Offset, staleMin)
 	if err != nil {
 		s.respondErr(w, err)
@@ -506,6 +522,17 @@ func (s *Server) handleResolveEmergency(w http.ResponseWriter, r *http.Request) 
 	if e.missingStep() != "" {
 		s.respondErr(w, errEmergencyStepsPending)
 		return
+	}
+	if e.Kind == EmergencyPlatformHalt {
+		halted, err := s.platformHaltActive(r.Context())
+		if err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		if halted {
+			s.respondErr(w, errEmergencyHaltActive)
+			return
+		}
 	}
 	// **ومن أُغلق بلاغُه يُعلَم** — يُقرأ اسمُ سائقه قبل التبديل.
 	var driverID string

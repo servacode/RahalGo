@@ -31,8 +31,18 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/offers"
 )
 
-// monthStartDamascus **أوّلُ الشهر بتوقيت دمشق** — كالحوافز.
-const monthStartDamascus = `(date_trunc('month', now() AT TIME ZONE 'Asia/Damascus') AT TIME ZONE 'Asia/Damascus')`
+// promoMonthStart **أوّلُ شهر الحساب** — يومُه الأوّلُ بدمشق عند ساعة فتح الدوام
+// (`platform.day_start_hour`، قرارُ المالك ٢٠٢٦-١٠-٢٦). **كان من منتصف الليل** فتُحسب طلباتُ
+// ما قبل الفتح في أوّل الشهر على الشهر الجديد هنا وعلى القديم في الخزينة والأرباح.
+func (s *Server) promoMonthStart(ctx context.Context, now time.Time) time.Time {
+	startHour := s.settings.GetInt(ctx, "platform.day_start_hour")
+	from, _, _ := damascusPeriod("month", now, startHour)
+	d, err := time.ParseInLocation("2006-01-02", from, damascusLoc())
+	if err != nil {
+		return now
+	}
+	return d.Add(time.Duration(startHour) * time.Hour)
+}
 
 // promoSummary **ملخّصُ أعلى الصفحة.**
 type promoSummary struct {
@@ -47,27 +57,32 @@ type promoSummary struct {
 	Referrals     int64 `json:"referrals"`
 	// StoresCost **خصوماتٌ تحمّلتها المتاجر** هذا الشهر.
 	StoresCost int64 `json:"stores_cost"`
+	// AutoApprove **ما يعمله هذا المستخدمُ ينفُذ بلا موافقة الماليّة** (المالكُ والمدير،
+	// `approval.AutoApplies`) — فلا تقول النافذةُ «بيروح لموافقة المالية». **والحكمُ من الخادم
+	// لا من اسم دورٍ في الشاشة.**
+	AutoApprove bool `json:"auto_approve"`
 }
 
 func (s *Server) promoSummary(ctx context.Context) (promoSummary, error) {
 	var p promoSummary
+	monthStart := s.promoMonthStart(ctx, time.Now())
 	err := s.pg.QueryRow(ctx, `
 		SELECT
 		  (SELECT count(*) FROM promo_codes p WHERE `+catalog.PromoLiveSQL+`),
 		  (SELECT count(*) FROM offers o WHERE `+offers.LiveCond+`),
 		  (SELECT count(*) FROM promo_approvals WHERE status = 'pending'),
 		  (SELECT COALESCE(sum(discount), 0) FROM orders
-		    WHERE status = 'delivered' AND delivered_at >= `+monthStartDamascus+`),
+		    WHERE status = 'delivered' AND delivered_at >= $1),
 		  (SELECT COALESCE(sum(promo_delivery_waived), 0) FROM orders
-		    WHERE status = 'delivered' AND delivered_at >= `+monthStartDamascus+`),
+		    WHERE status = 'delivered' AND delivered_at >= $1),
 		  (SELECT COALESCE(sum(oi.offer_cut * oi.qty) FILTER (WHERE oi.offer_borne_by = 'platform'), 0)
 		     FROM order_items oi JOIN orders o ON o.id = oi.order_id
-		    WHERE o.status = 'delivered' AND o.delivered_at >= `+monthStartDamascus+`),
+		    WHERE o.status = 'delivered' AND o.delivered_at >= $1),
 		  (SELECT COALESCE(sum(oi.offer_cut * oi.qty) FILTER (WHERE oi.offer_borne_by = 'merchant'), 0)
 		     FROM order_items oi JOIN orders o ON o.id = oi.order_id
-		    WHERE o.status = 'delivered' AND o.delivered_at >= `+monthStartDamascus+`),
+		    WHERE o.status = 'delivered' AND o.delivered_at >= $1),
 		  (SELECT COALESCE(sum(reward_amount), 0) FROM referrals
-		    WHERE rewarded_at >= `+monthStartDamascus+`)`).
+		    WHERE rewarded_at >= $1)`, monthStart).
 		Scan(&p.ActiveCodes, &p.ActiveDiscounts, &p.PendingApprovals, &p.Codes,
 			&p.FreeDelivery, &p.PlatformItems, &p.StoresCost, &p.Referrals)
 	p.PlatformCost = p.Codes + p.FreeDelivery + p.PlatformItems + p.Referrals
@@ -78,6 +93,10 @@ func (s *Server) promoSummary(ctx context.Context) (promoSummary, error) {
 func (s *Server) handlePromoSummary(w http.ResponseWriter, r *http.Request) {
 	p, err := s.promoSummary(r.Context())
 	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if p.AutoApprove, err = approval.AutoApplies(r.Context(), s.pg, userIDFrom(r)); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -338,6 +357,9 @@ func (s *Server) notifyOfferArea(ctx context.Context, o *offers.Offer) int {
 // ── «ادعُ صديقاً» ─────────────────────────────────────────────────────
 
 type referralRow struct {
+	// InviterID و InviteeID **لرابط الحساب** — الاسمُ وحدَه لا يُفتح.
+	InviterID    *string    `json:"inviter_id"`
+	InviteeID    *string    `json:"invitee_id"`
 	InviterName  string     `json:"inviter_name"`
 	InviteeName  string     `json:"invitee_name"`
 	Rank         int        `json:"rank"`
@@ -355,12 +377,26 @@ func (s *Server) handleAdminReferrals(w http.ResponseWriter, r *http.Request) {
 		page = 1
 	}
 	const per = 25
+	// **وفلترُ «انصرفت · لسا»** (`state=rewarded|pending`) — فارغٌ يعني الكلّ.
+	state := r.URL.Query().Get("state")
+	cond := ``
+	switch state {
+	case "rewarded":
+		cond = ` WHERE r.rewarded_at IS NOT NULL`
+	case "pending":
+		cond = ` WHERE r.rewarded_at IS NULL`
+	case "":
+	default:
+		s.respondErr(w, errValidation)
+		return
+	}
 	rows, err := s.pg.Query(ctx, `
-		SELECT COALESCE(iu.full_name, ''), COALESCE(eu.full_name, ''), r.rank,
+		SELECT r.inviter_id::text, r.invitee_id::text,
+		       COALESCE(iu.full_name, ''), COALESCE(eu.full_name, ''), r.rank,
 		       r.created_at, r.rewarded_at, r.reward_amount
 		FROM referrals r
 		LEFT JOIN users iu ON iu.id = r.inviter_id
-		LEFT JOIN users eu ON eu.id = r.invitee_id
+		LEFT JOIN users eu ON eu.id = r.invitee_id`+cond+`
 		ORDER BY r.created_at DESC
 		LIMIT $1 OFFSET $2`, per, (page-1)*per)
 	if err != nil {
@@ -371,14 +407,19 @@ func (s *Server) handleAdminReferrals(w http.ResponseWriter, r *http.Request) {
 	list := []referralRow{}
 	for rows.Next() {
 		var x referralRow
-		if err := rows.Scan(&x.InviterName, &x.InviteeName, &x.Rank, &x.CreatedAt,
-			&x.RewardedAt, &x.RewardAmount); err != nil {
+		if err := rows.Scan(&x.InviterID, &x.InviteeID, &x.InviterName, &x.InviteeName, &x.Rank,
+			&x.CreatedAt, &x.RewardedAt, &x.RewardAmount); err != nil {
 			s.respondErr(w, err)
 			return
 		}
 		list = append(list, x)
 	}
 	if err := rows.Err(); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	var matched int64
+	if err := s.pg.QueryRow(ctx, `SELECT count(*) FROM referrals r`+cond).Scan(&matched); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -404,7 +445,9 @@ func (s *Server) handleAdminReferrals(w http.ResponseWriter, r *http.Request) {
 			"reward_rest": s.settings.GetInt(ctx, "referral.reward_rest"),
 		},
 		"total": total, "rewarded": rewarded, "paid": paid,
-		"page": page, "per_page": per,
+		// matched **عددُ ما يطابق الفلتر** — للتنقّل بين الصفحات.
+		"matched": matched,
+		"page":    page, "per_page": per,
 		"referrals": list,
 	})
 }

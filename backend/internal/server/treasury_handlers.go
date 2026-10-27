@@ -67,8 +67,12 @@ func (s *Server) handleTreasuryOverview(w http.ResponseWriter, r *http.Request) 
 		ProfitCards []profitCard   `json:"profit_cards"`
 		LastClose   *cashCloseRow  `json:"last_close"`
 		Approvals   []approvalItem `json:"approvals"`
+		// DayStartHour **ساعةُ بدء يوم الحساب** (`platform.day_start_hour`) — تقولها الشاشةُ
+		// تحت أرقام «اليوم» فلا يُظنّ اليومُ من نصف الليل.
+		DayStartHour int64 `json:"day_start_hour"`
 	}
 	var o overview
+	o.DayStartHour = s.settings.GetInt(ctx, "platform.day_start_hour")
 	var bal *int64
 	if err := s.pg.QueryRow(ctx, `
 		SELECT (SELECT balance FROM wallets WHERE is_treasury LIMIT 1),
@@ -81,9 +85,10 @@ func (s *Server) handleTreasuryOverview(w http.ResponseWriter, r *http.Request) 
 		       -- من صفوف التسوية لا من رصيد محفظة الاحتباس.
 		       `+merchantCashDueTotalSQL+`::bigint,
 		       COALESCE((SELECT sum(amount) FROM payout_requests WHERE status IN ('pending', 'processing')), 0)::bigint,
+		       -- **وأوّلُ الشهر بساعة فتح الدوام** (تدقيقُ الخزينة ٢٠٢٦-١٠-٢٧) — كبطاقة «صافي ربح هذا الشهر»
+		       -- (damascusPeriod)، لا بنصف الليل: فلا تقع ساعاتُ الفجر الأولى في شهرٍ هنا وفي آخرَ هناك.
 		       COALESCE((SELECT sum(amount) FROM treasury_withdrawals
-		                  WHERE created_at >= (date_trunc('month', now() AT TIME ZONE 'Asia/Damascus')
-		                                       AT TIME ZONE 'Asia/Damascus')), 0)::bigint,
+		                  WHERE created_at >= account_day_start(date_trunc('month', account_day(now()))::date)), 0)::bigint,
 		       COALESCE((SELECT sum(amount) FROM office_cash_shortfalls WHERE status = 'pending'), 0)::bigint`).
 		Scan(&bal, &o.TodayIn, &o.TodayOut, &o.CashInStreet, &o.MerchantCashDue,
 			&o.PendingPayouts, &o.WithdrawalsMonth, &o.OpenShortfalls); err != nil {
@@ -334,8 +339,36 @@ func (s *Server) handleTreasuryStatement(w http.ResponseWriter, r *http.Request)
 		s.respondErr(w, err)
 		return
 	}
+	// **الأنواعُ التي مرّت بالخزينة فعلاً** (تدقيقُ الخزينة ٢٠٢٦-١٠-٢٧) — لفلتر النوع، فلا يُعرض
+	// عشرون نوعاً أكثرُها لا يمسّ الخزينة أبداً.
+	kinds := []string{}
+	krows, err := s.pg.Query(ctx, `
+		SELECT DISTINCT t.kind FROM wallet_transactions t
+		  JOIN wallets w ON w.user_id = t.user_id AND w.is_treasury
+		 ORDER BY t.kind`)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	defer krows.Close()
+	for krows.Next() {
+		var k string
+		if err := krows.Scan(&k); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		kinds = append(kinds, k)
+	}
+	if err := krows.Err(); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	// **ويومُ الحساب اليوم** — لأزرار «اليوم · هالأسبوع · هالشهر» بيوم المنصّة لا بيوم المتصفّح.
+	startHour := s.settings.GetInt(ctx, "platform.day_start_hour")
+	today, _, _ := damascusPeriod("day", time.Now(), startHour)
 	res := paged("lines", lines, total, pg)
 	res["opening"], res["closing"], res["in"], res["out"] = opening, closing, in, out
+	res["kinds"], res["today"], res["day_start_hour"] = kinds, today, startHour
 	httpx.JSON(w, http.StatusOK, res)
 }
 

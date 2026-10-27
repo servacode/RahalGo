@@ -33,8 +33,8 @@
     "setting_defs": 251,
     "behaviour_settings": 206,
     "order_fields": 120,
-    "test_files": 654,
-    "test_funcs": 2517
+    "test_files": 663,
+    "test_funcs": 2558
   },
   "flows": [
     {
@@ -9198,6 +9198,12 @@
       "orphan": true
     },
     {
+      "name": "TestEveryCauseHasArabicLabel",
+      "file": "internal/obligations/causes_i18n_test.go",
+      "package": "obligations",
+      "orphan": true
+    },
+    {
       "name": "BenchmarkClient",
       "file": "internal/obs/obs_bench_test.go",
       "package": "obs",
@@ -10563,6 +10569,102 @@
       "orphan": true
     },
     {
+      "name": "TestMoneyCustom_AmanahCash_AdminFeeFixedShare",
+      "file": "internal/orders/money_custom_scenarios_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestMoneyCustom_AmanahWallet_AmanahShare",
+      "file": "internal/orders/money_custom_scenarios_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestMoneyCustom_FeeOffsetsDriverDebt",
+      "file": "internal/orders/money_custom_scenarios_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestMoneyCustom_PartnerCash_CommissionPlusFeeShare",
+      "file": "internal/orders/money_custom_scenarios_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestMoneyCustom_PartnerLostGoods_NetLoss",
+      "file": "internal/orders/money_custom_scenarios_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestMoneyCustom_PurchaseWallet_FixedShare_AdvanceReturn",
+      "file": "internal/orders/money_custom_scenarios_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestMFS_CashStoreFailedAfterPickup_AdvanceReturned",
+      "file": "internal/orders/money_failures_scenarios_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestMFS_CashStoreFailedByDriver_PercentDebt",
+      "file": "internal/orders/money_failures_scenarios_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestMFS_DriverCompensationApproved_MerchantFault",
+      "file": "internal/orders/money_failures_scenarios_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestMFS_WalletPaidFailedAfterPickup_CustomerRefunded",
+      "file": "internal/orders/money_failures_scenarios_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestWalletOrder_Delivered_WalletStore",
+      "file": "internal/orders/money_wallet_order_scenarios_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestWalletOrder_FailedAfterPickup_CashStore",
+      "file": "internal/orders/money_wallet_order_scenarios_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestWalletOrder_FailedAfterPickup_WalletStore",
+      "file": "internal/orders/money_wallet_order_scenarios_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestWalletOrder_ItemUnavailableThenDelivered_TreasuryConserves",
+      "file": "internal/orders/money_wallet_order_scenarios_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestWalletOrder_RefundAfterDelivery_CashStore",
+      "file": "internal/orders/money_wallet_order_scenarios_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestWalletOrder_RefundAfterDelivery_WalletStore",
+      "file": "internal/orders/money_wallet_order_scenarios_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
       "name": "TestSources_CapEnforced",
       "file": "internal/orders/multisource_test.go",
       "package": "orders_test",
@@ -11844,6 +11946,12 @@
     },
     {
       "name": "TestACC_CustomerCardCountsCustomersOnly",
+      "file": "internal/qa/accounts_section_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestACC_DeletedAccountStatusIsFrozen",
       "file": "internal/qa/accounts_section_test.go",
       "package": "qa",
       "orphan": true
@@ -18868,6 +18976,120 @@
       "orphan": true
     },
     {
+      "name": "TestCASHORD_FullChainMarginShareRepDrawer",
+      "file": "internal/qa/money_cash_order_scenarios_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCASHORD_TwoCashStoresWaiverSplitsPerStore",
+      "file": "internal/qa/money_cash_order_scenarios_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCASHORD_WaiverRepAlreadyWithdrewBecomesDebt",
+      "file": "internal/qa/money_cash_order_scenarios_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMDEBT_CashCloseExcessAndFoundShortfall",
+      "file": "internal/qa/money_debts_misc_scenarios_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMDEBT_DriverDisputeDebtOfficeCashThenWriteoff",
+      "file": "internal/qa/money_debts_misc_scenarios_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMDEBT_PenaltyPartialRestDebtRewardsPayIt",
+      "file": "internal/qa/money_debts_misc_scenarios_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMDM01_MerchantWalletTreasuryGetsShare",
+      "file": "internal/qa/money_merchant_delivery_scenarios_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMDM02_FetchRecipientPaysAtPickup",
+      "file": "internal/qa/money_merchant_delivery_scenarios_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMDM03_FetchMerchantCashPaysAtDelivery",
+      "file": "internal/qa/money_merchant_delivery_scenarios_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMDM04_FixedPlatformShare",
+      "file": "internal/qa/money_merchant_delivery_scenarios_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMDM05_FreeDeliveryTreasuryPaysDriver",
+      "file": "internal/qa/money_merchant_delivery_scenarios_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMDM06_LegacyDeliveryDebtVoidedOnCancel",
+      "file": "internal/qa/money_merchant_delivery_scenarios_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMDM07_MerchantCashRecipientFaultKeepsCash",
+      "file": "internal/qa/money_merchant_delivery_scenarios_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMDM08_FetchRecipientCashPlatformFault",
+      "file": "internal/qa/money_merchant_delivery_scenarios_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMPS01_FixedCouponMoneyMovements",
+      "file": "internal/qa/money_promos_scenarios_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMPS02_FreeDeliveryCodeVsCampaign",
+      "file": "internal/qa/money_promos_scenarios_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMPS03_ItemOfferWhoBears",
+      "file": "internal/qa/money_promos_scenarios_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMPS04_CancelReleasesOncePerUserCode",
+      "file": "internal/qa/money_promos_scenarios_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMPS05_ReferralRewardPairsWithTreasury",
+      "file": "internal/qa/money_promos_scenarios_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestFIN_ItemPriceComesFromDB",
       "file": "internal/qa/money_test.go",
       "package": "qa",
@@ -18900,6 +19122,30 @@
     {
       "name": "TestVAL_MissingSection",
       "file": "internal/qa/money_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWALLETOPS_AdvanceLifecycleWithDrawerAndTreasury",
+      "file": "internal/qa/money_wallet_ops_scenarios_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWALLETOPS_CashPayoutReversedReturnsToDrawer",
+      "file": "internal/qa/money_wallet_ops_scenarios_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWALLETOPS_CompensationAdminNowAboveCapWaits",
+      "file": "internal/qa/money_wallet_ops_scenarios_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWALLETOPS_FinanceDebitWaitsThenCreditsTreasury",
+      "file": "internal/qa/money_wallet_ops_scenarios_test.go",
       "package": "qa",
       "orphan": true
     },

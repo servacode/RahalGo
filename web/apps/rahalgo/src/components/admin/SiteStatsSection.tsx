@@ -7,13 +7,17 @@
  *
  * يقرأ `GET /api/v1/admin/site-stats` — **والمحرّكُ يعدّ كلَّ شخصٍ مرّةً في
  * اليوم** (`site_stats.go`). **ولا يظهر لمن لا يملك الباب** (`useCanCall`).
+ *
+ * **واليومُ يومُ المنصّة** — يبدأ بساعة فتح الدوام كبقيّة الرئيسيّة (تدقيقُ ٢٠٢٦-١٠-٢٧)،
+ * **وبالشكل نفسِه**: لوحةٌ وبطاقاتٌ (`DashParts`)، والرسمُ يُضغط على الجوّال لا يُوقَف عليه فقط.
  */
 
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
-import { StatCard, StatGrid, Card, Alert, IconUsers, IconUser, IconApp } from "@rahalgo/ui";
+import { IconUsers, IconUser, IconApp, IconWarning } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useCanCall } from "@/lib/policy";
+import { Panel, Tile } from "@/components/admin/DashParts";
 
 const S = getMessages(defaultLocale).admin.home.site;
 
@@ -25,6 +29,8 @@ interface Apps {
 }
 
 interface SiteStats {
+  day?: string;
+  day_start_hour?: number;
   today: { visits: number; downloads: Apps; new_accounts: number };
   totals: { visits_unique_ever: number; visits_days_sum: number; downloads: Apps; accounts: number };
   series: { day: string; visits: number; downloads: number; new_accounts: number }[];
@@ -39,13 +45,14 @@ const APPS: { key: keyof Apps; label: string }[] = [
 
 const sum = (a: Apps) => a.customer + a.driver + a.merchant + a.rep;
 
+/** **تحميلاتٌ بالتطبيق** — بطاقةٌ واحدة: المجموعُ كبيرٌ وتحته سطرٌ لكلّ تطبيق. */
 function AppsBreakdown({ title, apps }: { title: string; apps: Apps }) {
   return (
-    <Card>
-      <p className="mb-2 flex items-baseline gap-2 text-sm font-bold">
-        <span className="flex-1">{title}</span>
-        <span>{fmtNum(sum(apps))}</span>
-      </p>
+    <div className="rounded-card border border-line-soft p-3">
+      <div className="mb-2 flex items-baseline gap-2">
+        <span className="min-w-0 flex-1 text-sm text-ink-muted">{title}</span>
+        <span className="figure leading-none">{fmtNum(sum(apps))}</span>
+      </div>
       <div className="space-y-1 text-sm">
         {APPS.map((x) => (
           <div key={x.key} className="flex items-baseline gap-2">
@@ -54,18 +61,20 @@ function AppsBreakdown({ title, apps }: { title: string; apps: Apps }) {
           </div>
         ))}
       </div>
-    </Card>
+    </div>
   );
 }
 
+/** **أعمدةُ آخر ٣٠ يوماً** — الوقوفُ أو الضغطُ على يومٍ يكتب أرقامَه تحت الرسم (يعمل على الجوّال). */
 function DailyBars({ series }: { series: SiteStats["series"] }) {
-  const [hover, setHover] = useState<number | null>(null);
+  const [picked, setPicked] = useState<number | null>(null);
   const max = Math.max(1, ...series.map((d) => Math.max(d.visits, d.downloads)));
   const h = (v: number) => Math.max(v > 0 ? 6 : 2, (v / max) * 100);
+  const sel = picked !== null ? series[picked] : series[series.length - 1];
   return (
-    <section className="surface p-5">
-      <div className="mb-4 flex flex-wrap items-center gap-3 text-sm">
-        <h3 className="flex-1 font-bold">{S.chartTitle}</h3>
+    <div className="rounded-card border border-line-soft p-3">
+      <div className="mb-3 flex flex-wrap items-center gap-3 text-sm">
+        <span className="min-w-0 flex-1 font-bold">{S.chartTitle}</span>
         <span className="flex items-center gap-1 text-xs text-ink-muted">
           <span aria-hidden className="h-2.5 w-2.5 rounded-badge bg-primary" />
           {S.chartVisits}
@@ -77,29 +86,27 @@ function DailyBars({ series }: { series: SiteStats["series"] }) {
       </div>
       <div className="flex h-40 items-end gap-0.5" dir="ltr">
         {series.map((d, i) => (
-          <div
+          <button
             key={d.day}
-            className="relative flex h-full flex-1 items-end justify-center gap-px"
-            onMouseEnter={() => setHover(i)}
-            onMouseLeave={() => setHover(null)}
+            type="button"
+            aria-label={d.day}
+            aria-pressed={picked === i}
+            className={`relative flex h-full flex-1 items-end justify-center gap-px rounded-t ${
+              picked === i ? "bg-row-hover" : ""
+            }`}
+            onMouseEnter={() => setPicked(i)}
+            onFocus={() => setPicked(i)}
+            onClick={() => setPicked(i)}
           >
-            <div
-              className={`w-1/2 max-w-3 rounded-t ${d.visits > 0 ? "bg-primary" : "bg-line"}`}
+            <span
+              className={`block w-1/2 max-w-3 rounded-t ${d.visits > 0 ? "bg-primary" : "bg-line"}`}
               style={{ height: `${h(d.visits)}%` }}
             />
-            <div
-              className={`w-1/2 max-w-3 rounded-t ${d.downloads > 0 ? "bg-accent" : "bg-line"}`}
+            <span
+              className={`block w-1/2 max-w-3 rounded-t ${d.downloads > 0 ? "bg-accent" : "bg-line"}`}
               style={{ height: `${h(d.downloads)}%` }}
             />
-            {hover === i && (
-              <div className="pointer-events-none absolute bottom-full z-10 mb-1 whitespace-nowrap surface-inset px-2.5 py-1.5 text-xs elev-2" dir="rtl">
-                <span className="text-ink-muted">{d.day.slice(5)} · </span>
-                <span className="font-bold">
-                  {S.chartVisits} {fmtNum(d.visits)} · {S.chartDownloads} {fmtNum(d.downloads)}
-                </span>
-              </div>
-            )}
-          </div>
+          </button>
         ))}
       </div>
       <div className="mt-1 flex gap-0.5 border-t border-line-soft pt-1" dir="ltr">
@@ -109,7 +116,19 @@ function DailyBars({ series }: { series: SiteStats["series"] }) {
           </div>
         ))}
       </div>
-    </section>
+      {sel && (
+        <p className="mt-2 rounded-control bg-field px-2.5 py-1.5 text-xs" aria-live="polite">
+          <span className="font-bold">
+            {S.dayDetail
+              .replace("{day}", sel.day.slice(5))
+              .replace("{v}", fmtNum(sel.visits))
+              .replace("{d}", fmtNum(sel.downloads))
+              .replace("{a}", fmtNum(sel.new_accounts))}
+          </span>
+        </p>
+      )}
+      <p className="mt-1 text-2xs text-ink-muted">{S.tapHint}</p>
+    </div>
   );
 }
 
@@ -124,6 +143,7 @@ export default function SiteStatsSection() {
         setData(d);
         setFailed(false);
       })
+      // @empty-ok — **القسمُ يقول إنّه لم يصل** بدائرةٍ وجملة، والرئيسيّةُ تبقى.
       .catch(() => setFailed(true));
   }, []);
 
@@ -133,37 +153,48 @@ export default function SiteStatsSection() {
 
   if (!allowed) return null;
 
+  const note = S.note.replace("{h}", fmtNum(data?.day_start_hour ?? 0));
+
   return (
-    <section>
-      <h2 className="mb-2 flex flex-wrap items-baseline gap-2 font-bold">
-        {S.title}
-        <span className="text-xs font-normal text-ink-muted">{S.note}</span>
-      </h2>
-      {failed && !data && <Alert tone="warning">{S.failed}</Alert>}
-      {data && (
+    <Panel title={S.title} note={data ? note : undefined}>
+      {failed && !data ? (
+        <div className="flex flex-col items-center gap-2 py-6 text-center">
+          <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-warning-solid text-on-solid">
+            <IconWarning size={22} />
+          </span>
+          <p className="text-sm font-bold">{S.failed}</p>
+          <p className="max-w-md text-xs text-ink-muted">{S.failedHint}</p>
+        </div>
+      ) : !data ? (
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
+            <span key={i} className="block h-16 animate-pulse rounded-card bg-field" />
+          ))}
+        </div>
+      ) : (
         <div className="space-y-3">
-          <StatGrid>
-            <StatCard icon={IconUsers} label={S.visitsToday} value={fmtNum(data.today.visits)} tone={data.today.visits ? "default" : "muted"} />
-            <StatCard
+          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+            <Tile icon={IconUsers} label={S.visitsToday} value={fmtNum(data.today.visits)} tone={data.today.visits ? "accent" : "muted"} />
+            <Tile
               icon={IconUsers}
               label={S.visitsAll}
               value={fmtNum(data.totals.visits_unique_ever)}
               sub={S.visitsAllSub.replace("{n}", fmtNum(data.totals.visits_days_sum))}
             />
-            <StatCard
+            <Tile
               icon={IconApp}
               label={S.downloadsToday}
               value={fmtNum(sum(data.today.downloads))}
-              tone={sum(data.today.downloads) ? "default" : "muted"}
+              tone={sum(data.today.downloads) ? "accent" : "muted"}
             />
-            <StatCard
+            <Tile
               icon={IconUser}
               label={S.accountsToday}
               value={fmtNum(data.today.new_accounts)}
               sub={S.accountsAll.replace("{n}", fmtNum(data.totals.accounts))}
-              tone={data.today.new_accounts ? "default" : "muted"}
+              tone={data.today.new_accounts ? "success" : "muted"}
             />
-          </StatGrid>
+          </div>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <AppsBreakdown title={S.downloadsToday} apps={data.today.downloads} />
             <AppsBreakdown title={S.downloadsAll} apps={data.totals.downloads} />
@@ -171,6 +202,6 @@ export default function SiteStatsSection() {
           <DailyBars series={data.series} />
         </div>
       )}
-    </section>
+    </Panel>
   );
 }

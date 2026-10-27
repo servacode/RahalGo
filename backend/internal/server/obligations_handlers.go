@@ -18,9 +18,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/servacode/rahalgo/backend/internal/approval"
 	"github.com/servacode/rahalgo/backend/internal/authz"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/obligations"
+	"github.com/servacode/rahalgo/backend/internal/platform"
 )
 
 // obligationSettlement سطرُ تسويةٍ واحد — **كم، وبأيّ طريقة، وكم بقي، ومتى.**
@@ -41,6 +43,9 @@ type obligationPending struct {
 	// ProposedBy مقترحُ الطلب — **فلا يُعرَض له زرُّ موافقةٍ يردّه المحرّك**
 	// (فحصُ المال ٢٠٢٦-١٠-٠٥: كان المقترحُ يرى «موافقة» فيُسأل كلمةَ سرّه ثمّ يُردّ ٤٠٣).
 	ProposedBy string `json:"proposed_by"`
+	// ProposerName ومتى — **يعرف الموافقُ من طلب وإيمتى** (تدقيقُ ٢٠٢٦-١٠-٢٧).
+	ProposerName string    `json:"proposer_name"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 // obligationRow دينٌ واحدٌ كما يُعرَض — **بلا هاتفٍ ولا سرّ.**
@@ -101,8 +106,8 @@ const oblWhere = `
 	  AND ($4 = '' OR o.cause = $4)
 	  AND ($5 = '' OR COALESCE(mm.name, uu.full_name, '') ILIKE '%' || $5 || '%'
 	               OR ord.number::text = $5)
-	  AND ($6::date IS NULL OR o.created_at >= $6::date)
-	  AND ($7::date IS NULL OR o.created_at < $7::date + 1)
+	  AND ($6::timestamptz IS NULL OR o.created_at >= $6::timestamptz)
+	  AND ($7::timestamptz IS NULL OR o.created_at < $7::timestamptz)
 	  AND ($8 = 0 OR (o.closed_at IS NULL AND o.created_at < now() - make_interval(days => $8)))
 	  AND (NOT $9::boolean OR EXISTS (SELECT 1 FROM obligation_requests pq
 	                                   WHERE pq.obligation_id = o.id AND pq.status = 'pending'))`
@@ -110,8 +115,10 @@ const oblWhere = `
 // oblFilter المرشّحاتُ مقروءةً ومتحقَّقاً منها.
 type oblFilter struct {
 	kind, party, state, cause, query string
-	from, to                         *string
-	overdue                          int
+	// from/to **حدودُ يوم المنصّة** — يبدأ بساعة فتح الدوام بتوقيت دمشق
+	// (`platform.day_start_hour`، تدقيقُ ٢٠٢٦-١٠-٢٧)، لا منتصفَ ليل القاعدة.
+	from, to *time.Time
+	overdue  int
 	// pending **ما ينتظر قرارَ دفعٍ أو شطب** (`?pending=1`) — تفتحه بطاقةُ الرئيسيّة
 	// «دفع دين أو شطبه ينتظر الموافقة» (قرارُ المالك ٢٠٢٦-١٠-١٥؛ كانت تفتح «المفتوحة» كلَّها).
 	pending bool
@@ -134,16 +141,19 @@ func (s *Server) readOblFilter(r *http.Request) (oblFilter, bool) {
 	if f.party != "" && !isUUID(f.party) {
 		return f, false
 	}
+	shift := time.Duration(s.dayStartHour(r.Context())) * time.Hour
 	for _, p := range []struct {
-		key string
-		dst **string
-	}{{"from", &f.from}, {"to", &f.to}} {
+		key  string
+		dst  **time.Time
+		next int
+	}{{"from", &f.from, 0}, {"to", &f.to, 1}} {
 		if v := q.Get(p.key); v != "" {
-			if _, err := time.Parse("2006-01-02", v); err != nil {
+			d, err := time.ParseInLocation("2006-01-02", v, platform.Location())
+			if err != nil {
 				return f, false
 			}
-			vv := v
-			*p.dst = &vv
+			t := d.AddDate(0, 0, p.next).Add(shift)
+			*p.dst = &t
 		}
 	}
 	f.pending = q.Get("pending") == "1"
@@ -200,6 +210,15 @@ func (s *Server) handleListObligations(w http.ResponseWriter, r *http.Request) {
 	res["can_manage"] = s.hasCapability(r, authz.FinanceManage)
 	res["can_approve_writeoff"] = s.hasCapability(r, authz.FinanceWriteoffApprove)
 	res["can_export"] = s.hasCapability(r, authz.FinanceExport)
+	res["day_start_hour"] = s.dayStartHour(ctx)
+	// auto_applies **حركتُه تنفذ فوراً** (المالكُ والمدير، قرارُ ٢٠٢٦-١٠-٢٧) — فيقول الزرُّ
+	// «سجّل الدفعة» لا «أرسل للموافقة». قراءةٌ فقط؛ الحكمُ في بابِ الاقتراح نفسِه.
+	auto, err := approval.AutoApplies(ctx, s.pg, userIDFrom(r))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	res["auto_applies"] = auto
 	httpx.JSON(w, http.StatusOK, res)
 }
 
@@ -254,11 +273,13 @@ func (s *Server) queryObligations(ctx context.Context, f oblFilter, limit, offse
 		       COALESCE(mm.name, uu.full_name, ''),
 		       o.amount, o.amount - o.settled, o.cause,
 		       o.order_id::text, ord.number, o.created_at,
-		       (extract(epoch FROM (COALESCE(o.closed_at, now()) - o.created_at)) / 86400)::bigint,
+		       floor(extract(epoch FROM (COALESCE(o.closed_at, now()) - o.created_at)) / 86400)::bigint,
 		       `+oblStateSQL+`,
-		       rq.id::text, rq.kind, rq.amount, rq.note, rq.proposed_by::text
+		       rq.id::text, rq.kind, rq.amount, rq.note, rq.proposed_by::text,
+		       COALESCE(NULLIF(pu.full_name, ''), pu.phone, ''), rq.created_at
 		`+oblFrom+`
-		LEFT JOIN obligation_requests rq ON rq.obligation_id = o.id AND rq.status = 'pending'`+
+		LEFT JOIN obligation_requests rq ON rq.obligation_id = o.id AND rq.status = 'pending'
+		LEFT JOIN users pu ON pu.id = rq.proposed_by`+
 		oblWhere+`
 		ORDER BY o.created_at DESC, o.id
 		LIMIT $10 OFFSET $11`, args...)
@@ -271,18 +292,25 @@ func (s *Server) queryObligations(ctx context.Context, f oblFilter, limit, offse
 	byID := map[string]int{}
 	for rows.Next() {
 		var x obligationRow
-		var pID, pKind, pNote, pBy *string
+		var pID, pKind, pNote, pBy, pName *string
 		var pAmount *int64
+		var pAt *time.Time
 		x.Settlements = []obligationSettlement{}
 		if err := rows.Scan(&x.ID, &x.PartyKind, &x.PartyID, &x.PartyUserID, &x.PartyName,
 			&x.Amount, &x.Outstanding, &x.Cause, &x.OrderID, &x.OrderNo, &x.CreatedAt,
-			&x.AgeDays, &x.State, &pID, &pKind, &pAmount, &pNote, &pBy); err != nil {
+			&x.AgeDays, &x.State, &pID, &pKind, &pAmount, &pNote, &pBy, &pName, &pAt); err != nil {
 			return nil, err
 		}
 		if pID != nil {
 			x.Pending = &obligationPending{ID: *pID, Kind: *pKind, Amount: *pAmount, Note: *pNote}
 			if pBy != nil {
 				x.Pending.ProposedBy = *pBy
+			}
+			if pName != nil {
+				x.Pending.ProposerName = *pName
+			}
+			if pAt != nil {
+				x.Pending.CreatedAt = *pAt
 			}
 		}
 		byID[x.ID] = len(out)

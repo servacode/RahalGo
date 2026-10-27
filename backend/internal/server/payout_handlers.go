@@ -296,23 +296,31 @@ func (s *Server) handleAdminPayouts(w http.ResponseWriter, r *http.Request) {
 	// **وهذا مالٌ خرج، ومراجعتُه ناقصةً أسوأُ من عدمها.**
 	status := r.URL.Query().Get("status")
 	// **«مرتجع أو فاشل» فلترٌ واحد** (قرارُ المالك ٢٠٢٦-١٠-١٥) — البطاقةُ الرابعةُ تفتحه.
-	if status != "" && status != payoutFailedOrReversed && !slices.Contains(
+	// **و«بانتظار الصرف» فلترٌ ثالث** (`waiting`: معلَّقٌ + قيدُ الصرف) — بطاقتُه
+	// تعدّ الحالتين، فكانت تفتح المعلَّقَ وحدَه فتبدو طلباتٌ ناقصة (تدقيق ٢٠٢٦-١٠-٢٧).
+	if status != "" && status != payoutFailedOrReversed && status != payoutWaiting && !slices.Contains(
 		[]string{"pending", "processing", "paid", "rejected", "failed", "reversed"}, status) {
 		s.respondErr(w, errValidation)
 		return
 	}
 	// **والدورُ فلترٌ ثانٍ** (قسمُ طلبات السحب ٢٠٢٦-١٠-٠٤): سائق · متجر · مندوب.
 	role := r.URL.Query().Get("role")
+	// **و`month=1` يحصر القائمةَ في قرارات هالشهر** — بالشرط نفسِه الذي تعدّ به
+	// بطاقتا «مصروف هالشهر» و«مرتجع أو فاشل هالشهر»، فيطابق العددُ القائمة.
+	month := r.URL.Query().Get("month") == "1"
 	pg := pagingOf(r, 25)
 
 	// **والعدُّ بشرط القائمة نفسِه** — نصّان يفترقان يوماً.
 	const where = ` WHERE ($1 = '' OR p.status = $1
-		  OR ($1 = '` + payoutFailedOrReversed + `' AND p.status IN ('failed', 'reversed')))
-		  AND ($2 = '' OR ` + payoutRoleSQL + ` = $2)`
+		  OR ($1 = '` + payoutFailedOrReversed + `' AND p.status IN ('failed', 'reversed'))
+		  OR ($1 = '` + payoutWaiting + `' AND p.status IN ('pending', 'processing')))
+		  AND ($2 = '' OR ` + payoutRoleSQL + ` = $2)
+		  AND (NOT $3::bool OR p.decided_at AT TIME ZONE 'Asia/Damascus'
+		       >= date_trunc('month', now() AT TIME ZONE 'Asia/Damascus'))`
 	var count int
 	if err := s.pg.QueryRow(r.Context(),
 		`SELECT count(*) FROM payout_requests p`+where,
-		status, role).Scan(&count); err != nil {
+		status, role, month).Scan(&count); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -343,6 +351,9 @@ func (s *Server) handleAdminPayouts(w http.ResponseWriter, r *http.Request) {
 	// **و«قيد الصرف» داخلَ «بانتظار الصرف»** — كان خارجَه وهو مالٌ محجوزٌ
 	// لم يُصرف بعد، فيقول المجموعُ أقلَّ ممّا على المنصّة أن تدفع.
 	type payoutStats struct {
+		// PendingCount **المعلَّقُ وحدَه** — رقمُ تبويب «بانتظار المالية»؛ و`waiting_count`
+		// يشمل قيدَ الصرف فكان التبويبُ يقول ٣ ويفتح على طلبٍ واحد.
+		PendingCount    int   `json:"pending_count"`
 		WaitingCount    int   `json:"waiting_count"`
 		WaitingSum      int64 `json:"waiting_sum"`
 		ProcessingCount int   `json:"processing_count"`
@@ -355,7 +366,8 @@ func (s *Server) handleAdminPayouts(w http.ResponseWriter, r *http.Request) {
 	var st payoutStats
 	if err := s.pg.QueryRow(r.Context(), `
 		WITH m AS (SELECT date_trunc('month', now() AT TIME ZONE 'Asia/Damascus') AS start)
-		SELECT count(*) FILTER (WHERE status IN ('pending','processing')),
+		SELECT count(*) FILTER (WHERE status = 'pending'),
+		       count(*) FILTER (WHERE status IN ('pending','processing')),
 		       COALESCE(sum(amount) FILTER (WHERE status IN ('pending','processing')), 0),
 		       count(*) FILTER (WHERE status = 'processing'),
 		       COALESCE(sum(amount) FILTER (WHERE status = 'processing'), 0),
@@ -368,7 +380,7 @@ func (s *Server) handleAdminPayouts(w http.ResponseWriter, r *http.Request) {
 		       COALESCE(sum(amount) FILTER (WHERE status IN ('failed','reversed')
 		                          AND decided_at AT TIME ZONE 'Asia/Damascus' >= m.start), 0)
 		  FROM payout_requests CROSS JOIN m`).
-		Scan(&st.WaitingCount, &st.WaitingSum, &st.ProcessingCount, &st.ProcessingSum,
+		Scan(&st.PendingCount, &st.WaitingCount, &st.WaitingSum, &st.ProcessingCount, &st.ProcessingSum,
 			&st.PaidMonthCount, &st.PaidMonthSum, &st.ReturnedCount, &st.ReturnedSum); err != nil {
 		s.respondErr(w, err)
 		return
@@ -377,7 +389,7 @@ func (s *Server) handleAdminPayouts(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := s.pg.Query(r.Context(), payoutSelect+where+`
 		ORDER BY (p.status = 'pending') DESC, (p.status = 'processing') DESC, p.created_at DESC
-		LIMIT $3 OFFSET $4`, status, role, pg.PerPage, pg.Offset)
+		LIMIT $4 OFFSET $5`, status, role, month, pg.PerPage, pg.Offset)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -396,6 +408,9 @@ func (s *Server) handleAdminPayouts(w http.ResponseWriter, r *http.Request) {
 
 // payoutFailedOrReversed **فلترُ «مرتجع أو فاشل»** — حالتان في بطاقةٍ واحدة.
 const payoutFailedOrReversed = "failed_or_reversed"
+
+// payoutWaiting **فلترُ «بانتظار الصرف»** — معلَّقٌ وقيدُ الصرف معاً، كبطاقته.
+const payoutWaiting = "waiting"
 
 // handleDecidePayout صرف الطلب أو رفضه — أدمن/مالية حصراً.
 // الصرف يقيّد `payout` في دفتر المحفظة: المال يخرج بأثر، لا بتعديل رصيد.

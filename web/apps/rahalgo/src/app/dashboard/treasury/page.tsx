@@ -18,7 +18,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   PageContainer,
   IconWallet,
-  IconStatus,
+  IconOverview,
+  IconReceipt,
   IconBalance,
   IconCheck,
   IconShieldCheck,
@@ -70,8 +71,8 @@ function TreasuryHub() {
   }
 
   const tabs: HeroTab<string>[] = [
-    { key: "overview", label: T.tabs.overview, icon: IconWallet },
-    { key: "statement", label: T.tabs.statement, icon: IconStatus },
+    { key: "overview", label: T.tabs.overview, icon: IconOverview },
+    { key: "statement", label: T.tabs.statement, icon: IconReceipt },
     { key: "cashbox", label: T.tabs.cashbox, icon: IconBalance },
     { key: "approvals", label: T.tabs.approvals, icon: IconCheck },
     ...(canTopup ? [{ key: "topup", label: T.topup.tab, icon: IconWallet }] : []),

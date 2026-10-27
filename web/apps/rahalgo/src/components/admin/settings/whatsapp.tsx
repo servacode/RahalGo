@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import QRCode from "qrcode";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
 import {
   Alert,
   Confirm,
-  PageHeader, Button, Badge, IconWhatsApp,
+  Button, Badge, LoadingState,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
@@ -33,14 +33,21 @@ export default function WhatsAppPanel() {
   const [notice, setNotice] = useState("");
   /** **وسؤالُ الخروج بنافذة المنصّة** — لا بنافذة النظام. */
   const [asking, setAsking] = useState(false);
+  /** **فشلُ القراءة ليس «غير متصل»** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كانت الحالُ تُمسح فتظهر شارةٌ حمراء
+      والبوتُ شغّال. **فيُقال «تعذّرت القراءة» بدل الشارات.** */
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [actionError, setActionError] = useState("");
 
   async function unpair() {
     setAsking(false);
     setBusy(true);
+    setActionError("");
     try {
       await api("/api/v1/admin/whatsapp/unpair", { method: "POST" });
       setNotice(m.admin.whatsappPage.unpairDone);
       await load();
+    } catch (e) {
+      setActionError(`${m.admin.whatsappPage.actionFailed}: ${errorText(e)}`);
     } finally {
       setBusy(false);
     }
@@ -50,9 +57,12 @@ export default function WhatsAppPanel() {
   async function pair() {
     setBusy(true);
     setNotice("");
+    setActionError("");
     try {
       await api("/api/v1/admin/whatsapp/pair", { method: "POST" });
       await load();
+    } catch (e) {
+      setActionError(`${m.admin.whatsappPage.actionFailed}: ${errorText(e)}`);
     } finally {
       setBusy(false);
     }
@@ -62,13 +72,15 @@ export default function WhatsAppPanel() {
     try {
       const st = await api<WAStatus>("/api/v1/admin/whatsapp");
       setStatus(st);
+      setLoadFailed(false);
       if (st.qr) {
         setQrDataURL(await QRCode.toDataURL(st.qr, { width: 280, margin: 1 }));
       } else {
         setQrDataURL("");
       }
     } catch {
-      setStatus(null);
+      // **والحالُ الأخيرةُ تبقى** — ولا تُقرأ عطلاً.
+      setLoadFailed(true);
     }
   }, []);
 
@@ -79,10 +91,13 @@ export default function WhatsAppPanel() {
   }, [load]);
 
   return (
-    <div>
-      <div className="mb-6 flex items-center justify-between">
-        <PageHeader icon={IconWhatsApp} title={m.admin.whatsappPage.title} />
-        <div className="flex gap-2">
+    <section className="surface space-y-4 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="heading-card">{m.admin.whatsappPage.title}</h2>
+          <p className="text-sm text-ink-muted">{m.admin.whatsappPage.subtitle}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
           <Button variant="secondary" onClick={load}>
             {m.admin.whatsappPage.refresh}
           </Button>
@@ -155,15 +170,19 @@ export default function WhatsAppPanel() {
         onCancel={() => setAsking(false)}
       />
 
-      {notice && <Alert tone="success" className="mb-4">{notice}</Alert>}
+      {notice && <Alert tone="success">{notice}</Alert>}
+      {actionError && <Alert tone="error">{actionError}</Alert>}
+      {loadFailed && <Alert tone="warning">{m.admin.whatsappPage.loadFailed}</Alert>}
 
-      {status?.provider === "dev" ? (
-        <div className="surface p-6 text-ink-muted">
+      {!status ? (
+        loadFailed ? null : <LoadingState variant="text" />
+      ) : status.provider === "dev" ? (
+        <div className="rounded-control bg-field p-4 text-sm text-ink-muted">
           {m.admin.whatsappPage.devMode}
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <div className="space-y-4 surface p-6">
+          <div className="space-y-4 rounded-control bg-field p-4">
             {/* ══════════════════════════════════════════════════════════
                 **وسطران يقولان ما الفرق بينهما**
                 ══════════════════════════════════════════════════════════
@@ -227,15 +246,20 @@ export default function WhatsAppPanel() {
             {status?.pair_wanted && !status?.qr && (
               <Alert tone="info">{m.admin.whatsappPage.requestingQR}</Alert>
             )}
+            {/* **والخطأُ التقنيُّ تحت «التفاصيل»** — الجملةُ بالعربي أوّلاً. */}
             {status?.last_error && (
-              <Alert>
-                {m.admin.whatsappPage.lastError}: <span dir="ltr">{status.last_error}</span>
+              <Alert tone="warning">
+                <span className="block">{m.admin.whatsappPage.lastErrorPlain}</span>
+                <details className="mt-1 text-xs">
+                  <summary className="cursor-pointer">{m.admin.whatsappPage.details}</summary>
+                  <span dir="ltr" className="mt-1 block break-all">{status.last_error}</span>
+                </details>
               </Alert>
             )}
           </div>
 
           {qrDataURL && !status?.logged_in && (
-            <div className="flex flex-col items-center surface p-6">
+            <div className="flex flex-col items-center rounded-control bg-field p-4">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={qrDataURL} alt="WhatsApp QR" loading="lazy" className="rounded-control" />
               <p className="mt-3 max-w-xs text-center text-sm text-ink-muted">
@@ -245,6 +269,6 @@ export default function WhatsAppPanel() {
           )}
         </div>
       )}
-    </div>
+    </section>
   );
 }

@@ -10,7 +10,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
-import { Alert, Badge, Button, Card } from "@rahalgo/ui";
+import { Alert, Badge, Button, Card, Confirm } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
@@ -25,6 +25,8 @@ export default function PlatformSwitch({ compact = false }: { compact?: boolean 
   const [mode, setMode] = useState<Mode | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // **التسكيرُ يُسأل قبله** (تدقيقُ الرئيسيّة ٢٠٢٦-١٠-٢٧) — ضغطةٌ غلطٌ في رأس الصفحة تمنع كلَّ الزبائن يطلبوا.
+  const [asking, setAsking] = useState(false);
 
   const load = useCallback(() => {
     api<{ switch?: string }>("/api/v1/admin/platform/hours")
@@ -50,10 +52,34 @@ export default function PlatformSwitch({ compact = false }: { compact?: boolean 
     }
   }
 
+  /** **الفتحُ والجدولُ فوراً، والتسكيرُ بعد تأكيد.** */
+  const choose = (v: Mode) => {
+    if (v === mode) return;
+    if (v === "closed") setAsking(true);
+    else void set(v);
+  };
+
+  const nowLine = mode === "open" ? S.nowOpen : mode === "closed" ? S.nowClosed : S.nowSchedule;
+
+  const confirm = (
+    <Confirm
+      open={asking}
+      title={S.confirmTitle}
+      body={S.confirmBody}
+      confirmLabel={S.closeNow}
+      busy={busy}
+      onCancel={() => setAsking(false)}
+      onConfirm={() => {
+        setAsking(false);
+        void set("closed");
+      }}
+    />
+  );
+
   if (!may || mode === null) return error ? <Alert>{error}</Alert> : null;
 
   // **مفتاحٌ بثلاث حالاتٍ في رأس الصفحة** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «تصميم احترافي») — مفتوح · حسب
-  // الجدول · مسكّر، **والمختارُ بلونه**، والشرحُ عند الوقوف عليه.
+  // الجدول · مسكّر، **والمختارُ بلونه**، **وتحته سطرٌ يقول الحالَ هلق** — الشرحُ في `title` لا يراه الجوّال.
   if (compact) {
     const opts: { v: Mode; label: string; on: string }[] = [
       { v: "open", label: S.open, on: "bg-success-solid text-on-solid" },
@@ -70,14 +96,16 @@ export default function PlatformSwitch({ compact = false }: { compact?: boolean 
               role="radio"
               aria-checked={mode === o.v}
               disabled={busy}
-              onClick={() => mode !== o.v && void set(o.v)}
+              onClick={() => choose(o.v)}
               className={`px-3 py-1.5 font-bold transition-colors ${mode === o.v ? o.on : "text-ink-muted hover:bg-row-hover"}`}
             >
               {o.label}
             </button>
           ))}
         </div>
+        <p className={`text-2xs ${mode === "closed" ? "font-bold text-danger" : "text-ink-muted"}`}>{nowLine}</p>
         {error && <p className="text-2xs text-danger">{error}</p>}
+        {confirm}
       </div>
     );
   }
@@ -96,7 +124,7 @@ export default function PlatformSwitch({ compact = false }: { compact?: boolean 
             </Button>
           )}
           {mode !== "closed" && (
-            <Button variant="danger" onClick={() => set("closed")} disabled={busy}>
+            <Button variant="danger" onClick={() => choose("closed")} disabled={busy}>
               {S.closeNow}
             </Button>
           )}
@@ -106,8 +134,10 @@ export default function PlatformSwitch({ compact = false }: { compact?: boolean 
             </Button>
           )}
         </div>
+        <p className="w-full text-xs font-bold">{nowLine}</p>
         <p className="w-full text-xs text-ink-muted">{S.hint}</p>
         {error && <Alert>{error}</Alert>}
+        {confirm}
       </div>
     </Card>
   );

@@ -92,7 +92,8 @@ func (s *Server) handleOrdersExport(w http.ResponseWriter, r *http.Request) {
 		-- **والمتجرُ يُضمّ يساراً** — الطلبُ الخاصُّ لا متجرَ له (٢٠٢٦-١٠-٠٤).
 		LEFT JOIN merchants mr ON mr.id = o.merchant_id
 		LEFT JOIN users dr ON dr.id = o.driver_id`+where+`
-		ORDER BY o.number`, args...)
+		-- **والأحدثُ أوّلاً كالشاشة** (تدقيقُ السجلّ ٢٠٢٦-١٠-٢٧) — كان الملفُّ من الأقدم والشاشةُ من الأحدث.
+		ORDER BY o.created_at DESC, o.number DESC`, args...)
 	if err != nil {
 		s.respondErr(w, err)
 		return

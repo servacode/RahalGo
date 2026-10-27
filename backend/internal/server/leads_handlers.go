@@ -130,6 +130,9 @@ type adminLead struct {
 	// تصله «صار عندك متجر». يُقال قبل الموافقة.
 	ExistingAccount bool      `json:"existing_account"`
 	UpdatedAt       time.Time `json:"updated_at"`
+	// MerchantID **المتجرُ الذي صار منه الطلب** — للمقبول وحدَه، فيُفتح من بطاقته
+	// بدل البحث عنه بالاسم (تدقيقُ اللوحة ٢٠٢٦-١٠-٢٧).
+	MerchantID *string `json:"merchant_id"`
 }
 
 // leadStatuses **الحالاتُ الأربع** — و`needs_info` تعود للمندوب بملاحظة.
@@ -225,7 +228,7 @@ func (s *Server) handleAdminLeads(w http.ResponseWriter, r *http.Request) {
 			&l.RepName, &l.RepCode, &l.Status, &l.CreatedAt,
 			&l.Note, &l.DecisionNote,
 			&a.GovernorateID, &a.DuplicatePhone, &a.NearbySameName, &a.ExistingAccount,
-			&a.UpdatedAt); err != nil {
+			&a.UpdatedAt, &a.MerchantID); err != nil {
 			s.respondErr(w, err)
 			return
 		}
@@ -251,6 +254,55 @@ func (s *Server) handleAdminLeads(w http.ResponseWriter, r *http.Request) {
 		rr.Close()
 	}
 	res["reps"] = reps
+	// **وعددُ كلّ حالةٍ بالفلاتر نفسِها عدا الحالة** (تدقيقُ اللوحة ٢٠٢٦-١٠-٢٧): كانت
+	// الصفحةُ تفتح على «جديد» فتقول «لا طلبات» والطلباتُ في التبويب الآخر.
+	counts := map[string]int{"new": 0, "needs_info": 0, "converted": 0, "rejected": 0}
+	countArgs := append([]any{""}, args[1:]...)
+	if cr, err := s.pg.Query(r.Context(),
+		`SELECT l.status, count(*)::int FROM merchant_leads l
+		 LEFT JOIN districts d ON d.id = l.district_id`+leadWhere+` GROUP BY l.status`,
+		countArgs...); err == nil {
+		for cr.Next() {
+			var st string
+			var n int
+			if cr.Scan(&st, &n) == nil {
+				counts[st] = n
+			}
+		}
+		cr.Close()
+	}
+	res["counts"] = counts
+	// **ومحافظاتُ الطلبات وتصنيفاتُها مع الجواب** — كمندوبيها: موظّفُ مراجعة المتاجر
+	// (`merchants.verify`) لا يقرأ `/admin/governorates` ولا `/admin/categories`،
+	// **فكان المرشِّحان فارغَين بلا كلمة.**
+	named := func(sql string) []map[string]string {
+		out := []map[string]string{}
+		if rr, err := s.pg.Query(r.Context(), sql); err == nil {
+			for rr.Next() {
+				var id, name string
+				if rr.Scan(&id, &name) == nil {
+					out = append(out, map[string]string{"id": id, "name": name})
+				}
+			}
+			rr.Close()
+		}
+		return out
+	}
+	res["governorates"] = named(`
+		SELECT DISTINCT g.id::text, g.name
+		  FROM merchant_leads l
+		  JOIN districts d ON d.id = l.district_id
+		  JOIN governorates g ON g.id = d.governorate_id
+		 WHERE l.sales_rep_user_id IS NOT NULL
+		 ORDER BY 2`)
+	res["categories"] = named(`
+		SELECT DISTINCT c.id::text, c.name
+		  FROM merchant_leads l JOIN categories c ON c.id = l.category_id
+		 WHERE l.sales_rep_user_id IS NOT NULL
+		 ORDER BY 2`)
+	// **و«اليوم» يومُ المنصّة** — يبدأ بساعة فتح الدوام كفلتر التاريخ أعلاه (`account_day`).
+	res["today"] = s.accountToday(r.Context()).Format("2006-01-02")
+	res["day_start_hour"] = s.settings.GetInt(r.Context(), "platform.day_start_hour")
 	httpx.JSON(w, http.StatusOK, res)
 }
 
@@ -286,7 +338,7 @@ var adminLeadSelect = `
 	                   OR (l.district_id IS NOT NULL AND m3.district_id = l.district_id))
 	           LIMIT 5) n), '{}'),
 	       EXISTS (SELECT 1 FROM users ux WHERE ux.phone::text = l.phone),
-	       l.updated_at
+	       l.updated_at, l.merchant_id::text
 	FROM merchant_leads l
 	LEFT JOIN users u ON u.id = l.sales_rep_user_id
 	LEFT JOIN categories c ON c.id = l.category_id

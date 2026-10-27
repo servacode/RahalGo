@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { CountBadge } from "./components";
-import { IconBell, IconBellOff, IconClose } from "./icons";
+import { IconBell, IconClose, IconSound, IconSoundOff } from "./icons";
 import { useChime, installAudioUnlock, playChime } from "./chime";
 
 const m = getMessages(defaultLocale);
@@ -288,7 +288,7 @@ export function AlertSoundControl() {
         aria-label={on ? N.soundOn : N.soundOff}
         title={on ? N.soundOn : N.soundOff}
       >
-        {on ? <IconBell size={17} /> : <IconBellOff size={17} />}
+        {on ? <IconSound size={19} /> : <IconSoundOff size={19} className="text-danger" />}
       </button>
     </span>
   );

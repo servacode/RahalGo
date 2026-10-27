@@ -33,6 +33,8 @@ import {
   IconCheckAll,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
+import { useCanCall } from "@/lib/policy";
+import { LoadError } from "./MarketParts";
 
 const m = getMessages(defaultLocale);
 const U = m.admin.market.setup;
@@ -83,15 +85,18 @@ function Item({ ok, label, Icon, detail }: { ok: boolean; label: string; Icon: I
 }
 
 export default function SetupTab() {
-  const { data, reload } = useLiveData<{ stores: SetupRow[] }>(
+  const { data, error, reload } = useLiveData<{ stores: SetupRow[] }>(
     () => api("/api/v1/admin/merchants-setup"),
     ["merchant", "catalog"],
   );
+  // **وزرُّ الإشعار لمن يملك بابَه** (تدقيقُ السوق ٢٠٢٦-١٠-٢٧) — كان يظهر للعمليات فيُردّ ٤٠٣.
+  const canRemind = useCanCall()("POST", "/merchants/{id}/setup-reminder");
   /** "missing" = الناقصين بس · "all" = الكل · أو بندٌ بعينه. */
   const [filter, setFilter] = useState<"missing" | "all" | Key>("missing");
   const [busy, setBusy] = useState<string | null>(null);
   const { push, Toaster } = useToast();
 
+  if (error && !data) return <LoadError onRetry={reload} />;
   if (!data) return <LoadingState />;
 
   const all = data.stores;
@@ -254,7 +259,7 @@ export default function SetupTab() {
                   />
                 </ul>
 
-                {s.missing.length > 0 && (
+                {s.missing.length > 0 && (s.whatsapp_url || canRemind) && (
                   <div className="mt-auto flex items-center justify-end gap-1.5 border-t border-line-soft pt-3">
                     {s.whatsapp_url && (
                       <a
@@ -268,16 +273,18 @@ export default function SetupTab() {
                         <IconWhatsApp size={19} />
                       </a>
                     )}
-                    <Button
-                      variant="ghost"
-                      title={U.appNotify}
-                      aria-label={U.appNotify}
-                      disabled={busy === s.id}
-                      onClick={() => void remind(s)}
-                      className={`${iconBtn} text-ink-muted hover:text-ink`}
-                    >
-                      <IconBell size={18} />
-                    </Button>
+                    {canRemind && (
+                      <Button
+                        variant="ghost"
+                        title={U.appNotify}
+                        aria-label={U.appNotify}
+                        disabled={busy === s.id}
+                        onClick={() => void remind(s)}
+                        className={`${iconBtn} text-ink-muted hover:text-ink`}
+                      >
+                        <IconBell size={18} />
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>

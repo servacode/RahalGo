@@ -28,6 +28,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/servacode/rahalgo/backend/internal/approval"
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
@@ -88,7 +89,20 @@ var (
 		"emergency_bad_outcome", "errors.emergency_bad_outcome")
 	errEmergencyOutcomeStage = httpx.NewError(http.StatusConflict,
 		"emergency_outcome_stage", "errors.emergency_outcome_stage")
+	// **وتوقّفُ المنصّة لا يُغلق باليد والمنصّةُ واقفة** (٢٠٢٦-١٠-٢٧) — كان يُقبل، فيختفي
+	// من الغرفة والمنصّةُ ما زالت متوقّفة. **ويُغلق وحدَه حين تعود** (`recordPlatformHalt`).
+	errEmergencyHaltActive = httpx.NewError(http.StatusConflict,
+		"emergency_halt_active", "errors.emergency_halt_active")
 )
+
+// platformHaltActive **أالمنصّةُ متوقّفةٌ الآن؟** — بموعد العودة إن مضى (`Closure.ActiveAt`).
+func (s *Server) platformHaltActive(ctx context.Context) (bool, error) {
+	c, err := s.platform.Closure(ctx, s.pg)
+	if err != nil {
+		return false, err
+	}
+	return c.ActiveAt(time.Now()), nil
+}
 
 // notifyCustomerEmergency **يُخبَر الزبون** — بما صار إليه طلبُه.
 func (s *Server) notifyCustomerEmergency(ctx context.Context, orderID, body string) {
@@ -336,33 +350,38 @@ type emergencyMoney struct {
 }
 
 type emergencyDetail struct {
-	ID             string                `json:"id"`
-	Kind           string                `json:"kind"`
-	Stage          string                `json:"stage"`
-	Status         string                `json:"status"`
-	Note           string                `json:"note"`
-	Lat            *float64              `json:"lat"`
-	Lng            *float64              `json:"lng"`
-	CreatedAt      time.Time             `json:"created_at"`
-	Stale          bool                  `json:"stale"`
-	AcknowledgedAt *time.Time            `json:"acknowledged_at"`
-	AcknowledgedBy string                `json:"acknowledged_by"`
-	DriverOKAt     *time.Time            `json:"driver_ok_at"`
-	DriverOKBy     string                `json:"driver_ok_by"`
-	Outcome        string                `json:"outcome"`
-	OutcomeAt      *time.Time            `json:"outcome_at"`
-	OutcomeBy      string                `json:"outcome_by"`
-	MoneySkipped   bool                  `json:"money_skipped"`
-	MoneyAt        *time.Time            `json:"money_at"`
-	MoneyRequest   *emergencyMoney       `json:"money_request"`
-	Resolution     string                `json:"resolution"`
-	ResolvedAt     *time.Time            `json:"resolved_at"`
-	ResolvedBy     string                `json:"resolved_by"`
-	NextStep       string                `json:"next_step"`
-	Driver         *emergencyDriver      `json:"driver"`
-	Order          *emergencyOrder       `json:"order"`
-	OtherOrders    []emergencyOtherOrder `json:"other_orders"`
-	Merchant       *struct {
+	ID             string          `json:"id"`
+	Kind           string          `json:"kind"`
+	Stage          string          `json:"stage"`
+	Status         string          `json:"status"`
+	Note           string          `json:"note"`
+	Lat            *float64        `json:"lat"`
+	Lng            *float64        `json:"lng"`
+	CreatedAt      time.Time       `json:"created_at"`
+	Stale          bool            `json:"stale"`
+	AcknowledgedAt *time.Time      `json:"acknowledged_at"`
+	AcknowledgedBy string          `json:"acknowledged_by"`
+	DriverOKAt     *time.Time      `json:"driver_ok_at"`
+	DriverOKBy     string          `json:"driver_ok_by"`
+	Outcome        string          `json:"outcome"`
+	OutcomeAt      *time.Time      `json:"outcome_at"`
+	OutcomeBy      string          `json:"outcome_by"`
+	MoneySkipped   bool            `json:"money_skipped"`
+	MoneyAt        *time.Time      `json:"money_at"`
+	MoneyRequest   *emergencyMoney `json:"money_request"`
+	Resolution     string          `json:"resolution"`
+	ResolvedAt     *time.Time      `json:"resolved_at"`
+	ResolvedBy     string          `json:"resolved_by"`
+	NextStep       string          `json:"next_step"`
+	// HaltActive **لتوقّف المنصّة: أما زالت واقفة؟** — فالشاشةُ لا تعرض «تمّ» وهي واقفة.
+	HaltActive bool `json:"halt_active"`
+	// MoneyAutoApplies **تعويضُ هذا القارئ ينفُذ فوراً؟** — المالكُ والمديرُ (`approval.AutoApplies`،
+	// قرارُ ٢٠٢٦-١٠-٢٧). **والشاشةُ تقرؤه علَماً** فلا تحكم بالدور بنفسها.
+	MoneyAutoApplies bool                  `json:"money_auto_applies"`
+	Driver           *emergencyDriver      `json:"driver"`
+	Order            *emergencyOrder       `json:"order"`
+	OtherOrders      []emergencyOtherOrder `json:"other_orders"`
+	Merchant         *struct {
 		emergencyPerson
 		EmergencyClosed bool `json:"emergency_closed"`
 	} `json:"merchant"`
@@ -415,6 +434,16 @@ func (s *Server) handleEmergencyDetail(w http.ResponseWriter, r *http.Request) {
 		d.NextStep = e.missingStep()
 		if d.NextStep == "" {
 			d.NextStep = "resolve"
+		}
+		if e.Kind == EmergencyPlatformHalt {
+			if d.HaltActive, err = s.platformHaltActive(ctx); err != nil {
+				s.respondErr(w, err)
+				return
+			}
+		}
+		if d.MoneyAutoApplies, err = approval.AutoApplies(ctx, s.pg, userIDFrom(r)); err != nil {
+			s.respondErr(w, err)
+			return
 		}
 	}
 	if moneyID != nil {

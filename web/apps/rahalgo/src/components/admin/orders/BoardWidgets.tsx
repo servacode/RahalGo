@@ -179,76 +179,145 @@ export interface NewOrder {
   created_at: string;
 }
 
+/** **طلبٌ عالق** — من `GET /orders/alerts`، والهاتفُ يحجبه الخادمُ لمن لا يملك تفاصيلَ الزبون. */
+export interface StuckAlert {
+  order_id: string;
+  number: number;
+  status: string;
+  merchant_name: string;
+  customer_phone: string;
+  customer_phone_masked?: string;
+  reason: string;
+  minutes: number;
+  since?: string;
+}
+
 /**
- * **شريطُ الطلبات الجديدة — يرنّ حتّى «استلمتها»** (البند ٥).
+ * ══════════════════════════════════════════════════════════════════════
+ * **«بدها انتباهك» — بطاقةٌ واحدةٌ بقسمين** (تدقيقُ الطلبات ٢٠٢٦-١٠-٢٧)
+ * ══════════════════════════════════════════════════════════════════════
  *
- * **والضغطةُ تُكتب في الطلب** (`POST /orders/{id}/seen`) — فيسكت الرنينُ عند
- * المكتب كلِّه لا عند من ضغط وحدَه.
+ * كانت الجديدةُ شريطاً والعالقةُ شريطاً وفشلُ التنبيهات شريطاً — **فوق بعضها قبل أن تصل
+ * الطلبات.** وصارت: «جديدة» بالأزرق و«عالقة» بالأحمر، وكلُّ سطرٍ رقمُه وسببُه ومدّتُه وزرُّ «افتح».
+ *
+ * **وفتحُ الجديد يُسكت رنينَه** (`POST /orders/{id}/seen`) — بلا زرِّ «استلمتها» (المالك ٢٠٢٦-١٠-٢٢:
+ * «مابدي هالزر اصلا») — فيسكت عند المكتب كلِّه لا عند من ضغط وحدَه.
  */
-export function NewOrdersBar({
-  orders,
+export function AttentionCard({
+  newOrders,
+  newTotal,
+  alerts,
+  alertsFailed,
+  onRetryAlerts,
   now,
   canAck,
   onAcked,
   onOpen,
+  officeStatus,
+  alertReasons,
 }: {
-  orders: NewOrder[];
+  newOrders: NewOrder[];
+  newTotal: number;
+  alerts: StuckAlert[];
+  alertsFailed: boolean;
+  onRetryAlerts: () => void;
   now: number;
   canAck: boolean;
   onAcked: () => void;
-  onOpen: (o: NewOrder) => void;
+  onOpen: (id: string, number: number) => void;
+  officeStatus: Record<string, string>;
+  alertReasons: Record<string, string>;
 }) {
-  const [busy, setBusy] = useState("");
   const [err, setErr] = useState("");
-  if (orders.length === 0) return null;
+  if (newOrders.length === 0 && alerts.length === 0 && !alertsFailed) return null;
 
-  async function ack(ids: string[], key: string) {
-    setBusy(key);
+  async function openNew(o: NewOrder) {
     setErr("");
-    try {
-      for (const id of ids) {
-        await api(`/api/v1/admin/orders/${id}/seen`, { method: "POST", body: "{}" });
+    if (canAck) {
+      try {
+        await api(`/api/v1/admin/orders/${o.id}/seen`, { method: "POST", body: "{}" });
+        onAcked();
+      } catch (e) {
+        setErr(errorText(e) || B.ackFailed);
       }
-      onAcked();
-    } catch (e) {
-      setErr(errorText(e) || B.ackFailed);
-    } finally {
-      setBusy("");
     }
+    onOpen(o.id, o.number);
   }
 
   return (
-    <div
-      role="alert"
-      className="mb-4 rounded-card border-2 border-accent bg-accent-tint p-3 text-sm"
-    >
-      <p className="mb-2 flex items-center gap-2 font-bold text-accent-text">
-        <span className="h-2.5 w-2.5 animate-pulse rounded-badge bg-accent" />
-        {B.newTitle} ({fmtNum(orders.length)})
-      </p>
-      <ul className="space-y-1.5">
-        {orders.map((o) => (
-          <li key={o.id} className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                // **وفتحُ الطلب يُسكت رنينَه** — بلا زرِّ «استلمتها» (المالك ٢٠٢٦-١٠-٢٢).
-                if (canAck) void ack([o.id], o.id);
-                onOpen(o);
-              }}
-              className="font-bold text-accent-text underline-offset-2 hover:underline"
-            >
-              #{o.number}
-            </button>
-            <span className="min-w-0 flex-1 truncate text-ink">{o.merchant_name}</span>
-            <span className="text-xs text-ink-muted">
-              {B.since.replace("{n}", fmtNum(minutesSince(o.created_at, now) ?? 0))}
-            </span>
-          </li>
-        ))}
-      </ul>
-      {err && <p className="mt-2 text-xs text-danger">{err}</p>}
-    </div>
+    <section className="surface mb-4 overflow-hidden" role="alert">
+      <h2 className="heading-card flex items-center gap-2 border-b border-line-soft px-4 py-3">
+        <span className="h-2.5 w-2.5 animate-pulse rounded-badge bg-danger" />
+        {B.attentionTitle}
+      </h2>
+
+      {newOrders.length > 0 && (
+        <div className="border-b border-line-soft bg-accent-tint px-4 py-3 last:border-b-0">
+          <p className="mb-1 flex flex-wrap items-center gap-2 text-sm font-bold text-accent-text">
+            {B.attentionNew}
+            <Badge variant="accent">{fmtNum(Math.max(newTotal, newOrders.length))}</Badge>
+          </p>
+          <p className="mb-2 text-xs text-ink-muted">{B.newTitle}</p>
+          <ul className="space-y-1.5">
+            {newOrders.map((o) => (
+              <li key={o.id} className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="font-bold text-accent-text">#{o.number}</span>
+                <span className="min-w-0 flex-1 truncate text-ink">{o.merchant_name}</span>
+                <span className="text-xs text-ink-muted">
+                  {B.since.replace("{n}", fmtNum(minutesSince(o.created_at, now) ?? 0))}
+                </span>
+                <Button variant="primary" onClick={() => void openNew(o)}>
+                  {B.open}
+                </Button>
+              </li>
+            ))}
+          </ul>
+          {err && <p className="mt-2 text-xs text-danger">{err}</p>}
+        </div>
+      )}
+
+      {alerts.length > 0 && (
+        <div className="bg-danger-tint px-4 py-3">
+          <p className="mb-2 flex flex-wrap items-center gap-2 text-sm font-bold text-danger">
+            {B.attentionStuck}
+            <Badge variant="danger">{fmtNum(alerts.length)}</Badge>
+          </p>
+          <ul className="space-y-2">
+            {alerts.map((a) => (
+              <li key={a.order_id + a.reason} className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="font-bold text-danger">#{a.number}</span>
+                <Badge variant="danger">{alertReasons[a.reason] ?? a.reason}</Badge>
+                <span className="min-w-0 truncate">{a.merchant_name}</span>
+                {(a.customer_phone || a.customer_phone_masked) && (
+                  <span dir="ltr" className="text-xs text-ink-muted">
+                    {a.customer_phone || a.customer_phone_masked}
+                  </span>
+                )}
+                {/* **والدقائقُ تُعدّ في الشاشة من لحظة السبب** (المشكلة ١٩). */}
+                <span className="text-xs text-ink-muted">
+                  {B.since.replace("{n}", fmtNum(minutesSince(a.since, now) ?? a.minutes))}
+                </span>
+                {/* **بلفظ المكتب لا الزبون** (المشكلة ٢٣). */}
+                <Badge variant="warning">{officeStatus[a.status] ?? a.status}</Badge>
+                <Button variant="secondary" className="ms-auto" onClick={() => onOpen(a.order_id, a.number)}>
+                  {B.open}
+                </Button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* **وفشلُ جلب التنبيهات يُقال** (المشكلة ٣١) — لا يختفي القسمُ كأنّ شيئاً لم يعلق. */}
+      {alertsFailed && (
+        <div className="flex flex-wrap items-center gap-2 px-4 py-3 text-sm text-warning">
+          {B.alertsFailed}
+          <Button variant="secondary" onClick={onRetryAlerts}>
+            {B.retry}
+          </Button>
+        </div>
+      )}
+    </section>
   );
 }
 

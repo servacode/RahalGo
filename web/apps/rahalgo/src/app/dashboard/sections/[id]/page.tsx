@@ -30,30 +30,33 @@
  * لا يُطبخ ولا يُحاسَب عليه أحد.**
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum, errorText } from "@rahalgo/i18n";
+import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
+  Button,
+  Chips,
   Input,
-  Select,
   PageContainer,
   Pagination,
-  EmptyState,
   LoadingState,
+  useLiveData,
   IconStore,
   IconPrev,
   IconSearch,
   IconOrder,
-  IconWarning,
+  IconGrid,
   IconCamera,
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import StateBadge from "@/components/admin/market/StateBadge";
+import { LoadError, StateBox } from "@/components/admin/market/MarketParts";
 import { NotAllowed } from "@/components/admin/accounts/ProfileParts";
 import { useCanCall } from "@/lib/policy";
 
 const m = getMessages(defaultLocale);
 const S = m.admin.sections;
+const U = m.admin.market.ui;
 
 interface Section {
   id: string;
@@ -111,87 +114,107 @@ function itemState(it: SectionItem): { label: string; variant: "success" | "warn
 export default function SectionPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
-  const [sec, setSec] = useState<Section | null>(null);
-  const [rows, setRows] = useState<SectionItem[] | null>(null);
   /** **صفحةُ أصناف القسم** — (قرارُ المالك ٢٠٢٦-٠٨-١٠).
 
       **والقسمُ يجمع أصنافَ كلّ المتاجر** — ينمو بعدد المتاجر لا بعدد
       الأقسام. **وخمسُمئةٍ صامتةٌ تعني أنّ صنفاً لا يُوافَق عليه لأنّ أحداً
       لم يره.** */
   const [page, setPage] = useState(1);
-  const [count, setCount] = useState(0);
-  const [perPage, setPerPage] = useState(50);
   const [q, setQ] = useState("");
   const [state, setState] = useState("");
-  /** **وعددا القسم كلِّه من المحرّك** — لا من طول الصفحة. */
-  const [all, setAll] = useState(0);
-  const [live, setLive] = useState(0);
-  const [error, setError] = useState("");
   // **ومن لا يملك السوقَ لا يُنادي أبوابَه** (فحصُ المتصفّح ٢٠٢٦-١٠-٠٥):
   // المالية تفتح رابطَ قسمٍ فتُردّ ٤٠٣ وتُعرض رسالةُ الخطأ حمراء.
   const canCall = useCanCall();
   const canRead = canCall("GET", "/sections");
 
-  const load = useCallback(async () => {
-    if (!canRead) return;
-    try {
-      // **القسمُ من قائمته** — والقائمةُ قصيرةٌ دائماً (عشرةُ أقسامٍ أو نحوها)،
-      // **ونقطةٌ ثانيةٌ لصفٍّ واحدٍ سطحٌ يُصان بلا حاجة.**
-      const list = await api<{ sections: Section[] }>("/api/v1/admin/sections");
-      setSec((list.sections ?? []).find((x) => x.id === id) ?? null);
-      // ══════════════════════════════════════════════════════════════
-      // **والبحثُ والترشيحُ يُرسلان إلى المحرّك**
-      // ══════════════════════════════════════════════════════════════
-      //
-      // (كشفه فحصُ المالك ٢٠٢٦-٠٨-١٦.)
-      //
-      // **كانا يعملان على الصفحة المعروضة وحدَها** — فمن بحث عن صنفٍ في
-      // الصفحة الثالثة **قرأ «لا أصناف»**، فيُضيفه مرّتين.
-      const qs = new URLSearchParams({ page: String(page) });
-      if (q.trim()) qs.set("q", q.trim());
-      if (state) qs.set("state", state);
-      const res = await api<{
-        items: SectionItem[];
-        count: number;
-        per_page: number;
-        all: number;
-        live: number;
-      }>(`/api/v1/admin/sections/${id}/items?${qs}`);
-      setRows(res.items ?? []);
-      setCount(res.count ?? 0);
-      setPerPage(res.per_page || 50);
-      setAll(res.all ?? 0);
-      setLive(res.live ?? 0);
-      setError("");
-    } catch (err) {
-      setError(errorText(err));
-    }
-  }, [id, page, q, state, canRead]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  // **القسمُ من قائمته** — والقائمةُ قصيرةٌ دائماً، **ونقطةٌ ثانيةٌ لصفٍّ واحدٍ سطحٌ يُصان بلا حاجة.**
+  // **وتُجلب وحدَها** — لا مع كلّ حرفٍ في البحث.
+  const secs = useLiveData<{ sections: Section[] }>(
+    () => (canRead ? api("/api/v1/admin/sections") : Promise.resolve({ sections: [] })),
+    ["catalog"],
+    [canRead],
+  );
+  // ══════════════════════════════════════════════════════════════
+  // **والبحثُ والترشيحُ يُرسلان إلى المحرّك**
+  // ══════════════════════════════════════════════════════════════
+  //
+  // (كشفه فحصُ المالك ٢٠٢٦-٠٨-١٦.) **كانا يعملان على الصفحة المعروضة وحدَها** — فمن بحث عن صنفٍ في
+  // الصفحة الثالثة **قرأ «لا أصناف»**، فيُضيفه مرّتين.
+  const qs = new URLSearchParams({ page: String(page) });
+  if (q.trim()) qs.set("q", q.trim());
+  if (state) qs.set("state", state);
+  const items = useLiveData<ItemsRes>(
+    () => (canRead ? api(`/api/v1/admin/sections/${id}/items?${qs}`) : Promise.reject(new Error("forbidden"))),
+    ["menu", "catalog"],
+    [id, qs.toString(), canRead],
+  );
 
   if (!canRead) return <NotAllowed />;
-  if (error) return <p className="py-10 text-center text-danger">{error}</p>;
-  if (!rows || !sec) return <LoadingState />;
 
-  // **ولا ترشيحَ هنا** — المحرّكُ رشّح وعدّ، **وترشيحٌ فوق ترشيحٍ يُنقص
-  // ما رُشِّح أصلاً.**
-  const shown = rows;
+  const back = (
+    <button
+      onClick={() => router.push("/dashboard/sections")}
+      className="mb-3 flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink"
+    >
+      <IconPrev size={15} />
+      {S.backToMarket}
+    </button>
+  );
+
+  // **والخطأُ بشكل حالة الخطأ** — لا سطرٌ أحمرُ يستبدل الصفحةَ بلا رجوعٍ ولا إعادة (تدقيقُ السوق ٢٠٢٦-١٠-٢٧).
+  if ((secs.error && !secs.data) || (items.error && !items.data)) {
+    return (
+      <PageContainer width="full">
+        {back}
+        <LoadError
+          onRetry={() => {
+            secs.reload();
+            items.reload();
+          }}
+        />
+      </PageContainer>
+    );
+  }
+  if (!secs.data) return <LoadingState />;
+  const sec = (secs.data.sections ?? []).find((x) => x.id === id) ?? null;
+  // **وقسمٌ انحذف أو رابطٌ قديم يُقال** — كان الدولابُ يلفّ للأبد.
+  if (!sec) {
+    return (
+      <PageContainer width="full">
+        {back}
+        <StateBox
+          icon={IconGrid}
+          tone="muted"
+          title={U.sectionGoneTitle}
+          hint={U.sectionGoneHint}
+          action={<Button onClick={() => router.push("/dashboard/sections")}>{S.backToMarket}</Button>}
+        />
+      </PageContainer>
+    );
+  }
+  if (!items.data) return <LoadingState />;
+
+  // **ولا ترشيحَ هنا** — المحرّكُ رشّح وعدّ، **وترشيحٌ فوق ترشيحٍ يُنقص ما رُشِّح أصلاً.**
+  const res = items.data;
+  const shown = res.items ?? [];
+  const perPage = res.per_page || 50;
+  const all = res.all ?? 0;
+  const live = res.live ?? 0;
+  // **و«غير متوفر» و«المتجر موقوف» عدّان** — كان الثالثُ «الكلّ ناقص المعروض» فيُخلط بهما.
+  const out = res.out ?? 0;
+  const storeOff = res.store_off ?? 0;
+  const filtered = q.trim() !== "" || state !== "";
+  const pick = (v: string) => {
+    setState(v);
+    setPage(1);
+  };
 
   return (
     <PageContainer width="full">
-      <button
-        onClick={() => router.push("/dashboard/sections")}
-        className="mb-3 flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink"
-      >
-        <IconPrev size={15} />
-        {S.backToMarket}
-      </button>
+      {back}
 
-      {/* **رأسُ القسم بطاقةٌ واحدة** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «بطريقة احترافية»): الصورة، والاسم،
-          والحالة، والأعداد — بدل شريطٍ فارغٍ وشارةٍ طائرةٍ وثلاث مربّعاتٍ كبيرة. */}
+      {/* **رأسُ القسم بطاقةٌ واحدة** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «بطريقة احترافية»): الصورة، والاسم، والحالة،
+          **والأعدادُ أزرارُ فلترة** (تدقيقُ السوق ٢٠٢٦-١٠-٢٧) — ولا تتأثّر بالبحث. */}
       <div className="surface mb-4 flex flex-wrap items-center gap-4 p-4">
         <span className="h-24 w-24 shrink-0 overflow-hidden rounded-card bg-field ring-1 ring-line sm:h-28 sm:w-28">
           {sec.image_url || sec.image_thumb_url ? (
@@ -210,59 +233,60 @@ export default function SectionPage() {
         <div className="min-w-0 flex-1 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="heading-page truncate">{sec.name}</h1>
-            <StateBadge
-              label={sec.active ? S.available : S.unavailable}
-              variant={sec.active ? "success" : "danger"}
-            />
+            <StateBadge label={sec.active ? S.available : S.unavailable} variant={sec.active ? "success" : "warning"} />
           </div>
-          <div className="flex flex-wrap gap-2 text-sm tabular-nums">
-            <Count icon={IconOrder} label={S.statAll} value={all} />
-            <Count icon={IconStore} label={S.statLive} value={live} tone="text-success" />
-            <Count icon={IconWarning} label={S.statHidden} value={all - live} tone={all - live > 0 ? "text-warning" : ""} />
-          </div>
+          <Chips
+            wrap
+            items={[
+              { id: "", label: S.statAll, count: all },
+              { id: "live", label: S.itemLive, count: live },
+              { id: "out", label: S.itemOut, count: out },
+              { id: "store_off", label: S.itemStoreOff, count: storeOff },
+            ]}
+            value={state}
+            onChange={pick}
+          />
         </div>
       </div>
 
-      <div className="mb-4 flex flex-wrap items-end gap-3">
-        <div className="w-64">
-          <Input
-            id="sec-q"
-            icon={<IconSearch />}
-            placeholder={S.searchItems}
-            value={q}
-            onChange={(e) => {
-              setQ(e.target.value);
-              setPage(1);
-            }}
-          />
-        </div>
-        <div className="w-48">
-          {/* **والقيمةُ رمزٌ لا نصٌّ معروض** — **وترشيحٌ بنصّ الشارة
-              العربيّ ينكسر بتبديل كلمةٍ في المعجم**، ولا يُكتشف حتّى
-              يُجرَّب. */}
-          <Select
-            value={state}
-            onChange={(e) => {
-              setState(e.target.value);
-              setPage(1);
-            }}
-          >
-            <option value="">{S.allStates}</option>
-            <option value="live">{S.itemLive}</option>
-            <option value="out">{S.itemOut}</option>
-            <option value="store_off">{S.itemStoreOff}</option>
-          </Select>
-        </div>
+      <div className="mb-4 max-w-md">
+        <Input
+          id="sec-q"
+          icon={<IconSearch />}
+          placeholder={S.searchItems}
+          value={q}
+          onChange={(e) => {
+            setQ(e.target.value);
+            setPage(1);
+          }}
+        />
       </div>
 
       {/* **بطاقةٌ لكلّ صنفٍ بصورته — كبطاقة القسم.**
           (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «لازم يكون كرت يحوي على صورة لكلّ طعام
-          واسمِ المتجر الخاصّ بالصنف والسعر ومعروضٌ أو لا».)
-
-          **والشكلُ واحدٌ في الشاشتين**: من يمسح السوقَ بالعين ثمّ يفتح قسماً
-          **لا يُعيد تعلُّمَ أين يقع كلُّ شيء.** */}
+          واسمِ المتجر الخاصّ بالصنف والسعر ومعروضٌ أو لا».) */}
       {shown.length === 0 ? (
-        <EmptyState icon={IconStore} title={S.noItems} />
+        <StateBox
+          icon={IconOrder}
+          tone={filtered ? "muted" : "accent"}
+          title={filtered ? U.sectionNoMatch : S.noItems}
+          hint={filtered ? U.itemsEmptyFilteredHint : U.sectionEmptyHint}
+          action={
+            filtered ? (
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setQ("");
+                  pick("");
+                }}
+              >
+                {U.clearFilters}
+              </Button>
+            ) : (
+              <Button onClick={() => router.push("/dashboard/sections?tab=items")}>{U.goAddItem}</Button>
+            )
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
           {shown.map((it) => {
@@ -299,9 +323,7 @@ export default function SectionPage() {
                 <div className="flex flex-1 flex-col gap-2 p-3">
                   <div>
                     <p className="truncate font-bold">{it.name}</p>
-                    {/* **واسمُ المتجر يبقى هنا وحدَه** — شاشتُنا لا شاشةُ الزبون.
-                        السوقُ يُخفي المصدر عن الزبون، **والإدارةُ لا تُدير ما
-                        لا ترى مصدرَه.** */}
+                    {/* **واسمُ المتجر يبقى هنا وحدَه** — شاشتُنا لا شاشةُ الزبون. */}
                     <p className="truncate text-xs text-ink-muted">{it.merchant_name}</p>
                   </div>
                 </div>
@@ -312,32 +334,21 @@ export default function SectionPage() {
       )}
 
       {/* **والترقيمُ من المكوّن المشترك** — ولا يظهر لصفحةٍ واحدة. */}
-      {count > perPage && (
+      {res.count > perPage && (
         <div className="mt-4 flex justify-center">
-          <Pagination page={page} total={count} perPage={perPage} onChange={setPage} />
+          <Pagination page={page} total={res.count} perPage={perPage} onChange={setPage} />
         </div>
       )}
     </PageContainer>
   );
 }
 
-/** **عدٌّ صغيرٌ في رأس القسم** — أيقونةٌ ورقمٌ ولفظ. */
-function Count({
-  icon: Icon,
-  label,
-  value,
-  tone = "",
-}: {
-  icon: typeof IconStore;
-  label: string;
-  value: number;
-  tone?: string;
-}) {
-  return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-field px-3 py-1">
-      <Icon size={15} className={tone || "text-ink-muted"} />
-      <b className={tone}>{fmtNum(value)}</b>
-      <span className="text-ink-muted">{label}</span>
-    </span>
-  );
+interface ItemsRes {
+  items: SectionItem[];
+  count: number;
+  per_page: number;
+  all: number;
+  live: number;
+  out?: number;
+  store_off?: number;
 }

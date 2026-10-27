@@ -115,9 +115,12 @@ const SERVER_ADMIN = new Set([
   "webpush_disabled",
   // **قطع الجهازُ الطلبَ قبل الردّ** — لا يصل الهاتفَ أصلاً (٢٠٢٦-١٠-١٤).
   "client_closed",
+  // **الحسابُ المحذوفُ لا تتبدّل حالُه** — بابُ قائمة الحسابات في اللوحة (٢٠٢٦-١٠-٢٧).
+  "account_deleted",
   "setting_conflict", "setting_placeholder_missing",
   "emergency_steps_pending", "emergency_step_done", "emergency_no_order",
   "emergency_no_driver", "emergency_bad_outcome", "emergency_outcome_stage",
+  "emergency_halt_active",
   "expense_future_date", "expense_receipt_required", "expense_void_reason_required",
   "expense_void_self", "expense_category_inactive", "expense_bad_range",
   // قراراتُ المالك ٢٠٢٦-١٠-١٥ — المصروفاتُ والتعويضات: شاشةُ الإدارة وحدَها.

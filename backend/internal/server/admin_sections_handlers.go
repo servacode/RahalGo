@@ -421,15 +421,22 @@ func (s *Server) handleSectionItems(w http.ResponseWriter, r *http.Request) {
 	//
 	// **وتُحسب قبل الترشيح بالحال** — **وبطاقةٌ تتبع مُرشِّحَها تقول
 	// «المعروضُ صفر» لمن رشّح «نفد»**، وهي لا تخصّه.
-	var count, all, live int
+	//
+	// **ولا تتبع البحثَ أيضاً** (تدقيقُ السوق ٢٠٢٦-١٠-٢٧): كان «كلّ الأصناف» يصغر مع كلّ حرفٍ في
+	// خانة البحث — **فرقمٌ عنوانُه «الكلّ» صار عددَ نتائج البحث.** والبحثُ يعدّه `count` وحدَه.
+	// **و«غير متوفر» و«المتجر موقوف» عدّان منفصلان** — كان الثالثُ «الكلّ ناقص المعروض» فيُخلط بهما.
+	var count, all, live, outN, storeOff int
 	if err := s.pg.QueryRow(r.Context(), `SELECT count(*)`+scope, id, q, state).
 		Scan(&count); err != nil {
 		s.respondErr(w, err)
 		return
 	}
 	if err := s.pg.QueryRow(r.Context(), `
-		SELECT count(*), count(*) FILTER (WHERE `+stateExpr+` = 'live')`+scope,
-		id, q, "").Scan(&all, &live); err != nil {
+		SELECT count(*),
+		       count(*) FILTER (WHERE `+stateExpr+` = 'live'),
+		       count(*) FILTER (WHERE `+stateExpr+` = 'out'),
+		       count(*) FILTER (WHERE `+stateExpr+` = 'store_off')`+scope,
+		id, "", "").Scan(&all, &live, &outN, &storeOff); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -542,6 +549,6 @@ func (s *Server) handleSectionItems(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"items": out, "count": count, "page": pg.Page, "per_page": pg.PerPage,
 		// **وعددا القسم كلِّه** — تقرؤهما البطاقات، **ولا تعدّ الصفحة.**
-		"all": all, "live": live,
+		"all": all, "live": live, "out": outN, "store_off": storeOff,
 	})
 }

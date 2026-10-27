@@ -6,10 +6,12 @@
  * فتبقى @rahalgo/ui غير مقيّدة بإطار معيّن.
  */
 
-import { useCallback, useEffect, useState, type ComponentType, type ReactNode } from "react";
-import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { useCallback, useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { LiveNotifications, useLiveRefresh } from "./Notifications";
-import { BrandMark } from "./platform";
+import { BrandMark, usePlatform } from "./platform";
+import { Money } from "./money";
 import { isStagingEnv } from "./runtimeconfig";
 import { CountBadge } from "./components";
 import {
@@ -25,7 +27,6 @@ import {
   IconStar,
   IconTrendUp,
   IconTrendDown,
-  IconLogout,
   IconHamburger,
   IconClose,
   IconStore,
@@ -40,7 +41,7 @@ const m = getMessages(defaultLocale);
  * (قرارُ المالك ٢٠٢٦-٠٨-٠٦: «طبّق الاسم والقائمة مع باقي اللوحات وأضِف فقط
  *  تسجيل الخروج للقائمة».)
  *
- * **وأبوابُ اللوحة في سايدبارها** — تسعةَ عشرَ بنداً بأسمائها ومجموعاتها،
+ * **وأبوابُ اللوحة في سايدبارها** — اثنان وعشرون بنداً بأسمائها،
  * **فقائمةٌ تُكرّر منها بعضاً تصير باباً ثانياً لِما له باب.**
  *
  * **وخارجَ المكوّن لا داخلَه**: مصفوفةٌ تُبنى في كلّ طلاءٍ مرجعٌ جديدٌ في
@@ -61,7 +62,9 @@ export interface ChromeNavItem {
    *
    * # لماذا وُجد
    *
-   * قائمةُ الادمن **تسعةَ عشرَ بنداً مسطَّحة**: الطلباتُ ثمّ السجلُّ ثمّ
+   * (**ولا يُستعمل في لوحة الإدارة** — رفض المالك عناوينَ المجموعات ٢٠٢٦-٠٨-٠٨؛ يبقى للبوّابات.)
+   *
+   * كانت قائمةُ الادمن **بنوداً مسطَّحة**: الطلباتُ ثمّ السجلُّ ثمّ
    * الأقسامُ ثمّ الشكاوى ثمّ التقييماتُ ثمّ الطوارئ ثمّ الخزينةُ ثمّ
    * الصندوقُ… **بلا فاصلٍ ولا عنوان.**
    *
@@ -87,6 +90,11 @@ export interface ChromeNavItem {
    * قرارُ المالك ٢٠٢٦-١٠-٠٤). وافتراضُه النبرةُ العاديّة.
    */
   badgeTone?: "accent" | "danger";
+  /**
+   * **مساراتٌ أخرى تلوّن هذا البند** (تدقيقُ السايدبار ٢٠٢٦-١٠-٢٧) — صفحةٌ فرعيّةٌ تنتمي إليه
+   * بغير بادئته: ملفُّ المتجر للحسابات، والأدوارُ للإعدادات. **وبدونها يفقد الموظّفُ مكانَه.**
+   */
+  activeAlso?: string[];
 }
 
 interface Summary {
@@ -98,6 +106,8 @@ interface Summary {
    * `finance.read` وحدَه، **وغيابُه يُخفي الشريحة** فلا يُخمَّن الحقُّ في الواجهة.
    */
   drawer_expected?: number;
+  /** **رصيدُ محفظة الخزينة نفسِها** — لمن يملك `finance.read` وحدَه (تدقيقُ الشريط ٢٠٢٦-١٠-٢٧). */
+  treasury_balance?: number;
 }
 interface Rep {
   rating: { avg: number; count: number; trend: "up" | "down" | "flat" };
@@ -144,6 +154,7 @@ export function DashboardChrome({
   wsUrl,
   token,
   notificationsHref,
+  treasuryMode = false,
   children,
 }: {
   brand: string;
@@ -174,14 +185,27 @@ export function DashboardChrome({
   token?: string | null;
   /** مسار صفحة الإشعارات الكاملة في هذا التطبيق */
   notificationsHref?: string;
+  /**
+   * **لوحةُ الإدارة: الرصيدُ رصيدُ الخزينة لا محفظةُ الفاتح** (تدقيقُ الشريط ٢٠٢٦-١٠-٢٧) — يُقرأ من
+   * `treasury_balance`، **وغيابُه يُخفي الشريحة**. وعلى الجوّال تصير الشريحتان زرّاً واحداً «المال».
+   */
+  treasuryMode?: boolean;
   children: ReactNode;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [summary, setSummary] = useState<Summary | null>(null);
+  // **ولا صفرَ كاذبٌ قبل الوصول** — «—» حتّى يصل الملخّص، وتلميحٌ صريحٌ إن فشل.
+  const [summaryFailed, setSummaryFailed] = useState(false);
   const [rep, setRep] = useState<Rep | null>(null);
+  const { name: platformName } = usePlatform();
 
   const loadSummary = useCallback(() => {
-    api<Summary>("/api/v1/me/summary").then(setSummary).catch(() => undefined);
+    api<Summary>("/api/v1/me/summary")
+      .then((v) => {
+        setSummary(v);
+        setSummaryFailed(false);
+      })
+      .catch(() => setSummaryFailed(true));
     if (showRating) api<Rep>("/api/v1/me/reputation").then(setRep).catch(() => undefined);
   }, [api, showRating]);
 
@@ -197,10 +221,43 @@ export function DashboardChrome({
 
   useEffect(() => setMenuOpen(false), [pathname]);
 
-  const isActive = (href: string) => (href === homeHref ? pathname === href : pathname.startsWith(href));
-  // **وعنوانُ الشريط اسمُ القسم المفتوح** — **وفارغٌ إن لم يُطابق شيء**،
-  // ولا يسقط إلى تسمية البوّابة (قرارُ المالك ٢٠٢٦-٠٨-٠٦).
-  const activeLabel = nav.find((i) => isActive(i.href))?.label ?? "";
+  // ══════════════════════════════════════════════════════════════════
+  // **والمطابقةُ بالمسار كاملاً أو بما بعده «/»** (تدقيقُ السايدبار ٢٠٢٦-١٠-٢٧)
+  // ══════════════════════════════════════════════════════════════════
+  //
+  // كانت `startsWith(href)` — **و`/dashboard/opsmap` يبدأ بـ`/dashboard/ops`**، فتلوّن «خريطةُ
+  // العمليات» و«مراقبةُ التشغيل» معاً. **والرئيسيّةُ بمطابقةٍ كاملةٍ** كما كانت.
+  const under = (href: string) => pathname === href || pathname.startsWith(href + "/");
+  const isActive = (item: ChromeNavItem) =>
+    item.href === homeHref
+      ? pathname === item.href
+      : under(item.href) || !!item.activeAlso?.some(under);
+  // **واسمُ القسم المفتوح عنوانُ لسان المتصفّح** — لا في الشريط (قرارُ المالك ٢٠٢٦-٠٨-١١)،
+  // **ومن فتح أقساماً في ألسنةٍ يميّز «الطلبات» من «الخزينة».**
+  const activeLabel = nav.find((i) => isActive(i))?.label ?? "";
+  const baseTitle = platformName || brand;
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.title = activeLabel ? `${activeLabel} · ${baseTitle}` : baseTitle;
+  }, [activeLabel, baseTitle]);
+
+  // ══════════════════════════════════════════════════════════════════
+  // **ودُرجُ الجوّال: الهروبُ يُغلقه، والصفحةُ لا تتحرّك تحته، والبندُ المفتوحُ يُرى**
+  // ══════════════════════════════════════════════════════════════════
+  const drawerRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!menuOpen) return;
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && setMenuOpen(false);
+    document.addEventListener("keydown", esc);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    drawerRef.current?.querySelector('[aria-current="page"]')?.scrollIntoView({ block: "center" });
+    return () => {
+      document.removeEventListener("keydown", esc);
+      document.body.style.overflow = prev;
+    };
+  }, [menuOpen]);
+  const staging = isStagingEnv();
 
   /**
    * **بابُ التسوّق — وصار تنقّلاً لا عبوراً.**
@@ -247,7 +304,9 @@ export function DashboardChrome({
 
           **وزرُّ الإغلاق مطلقٌ لا شريكٌ في الصفّ** — وإلّا أزاح العلامةَ عن
           الوسط على الجوّال وحدَه، **فتُرى الشاشتان مختلفتين.** */}
-      <div className={`relative flex items-center justify-center ${showBrand ? "p-4" : "p-2 lg:p-0"}`}>
+      {/* **ورأسٌ بارتفاعٍ يسع زرَّ الإغلاق على الجوّال** (تدقيقُ السايدبار ٢٠٢٦-١٠-٢٧) — كان ستّةَ
+          عشرَ بكسلاً بلا علامة، فيركب الزرُّ طرفَ أوّل بند **ومن ضغط البندَ أغلق القائمة.** */}
+      <div className={`relative flex items-center justify-center ${showBrand ? "p-4" : "h-12 lg:hidden"}`}>
         <div className="flex items-center gap-2">
           {/* ══════════════════════════════════════════════════════
               **اللوغو وحدَه — لا اسمٌ ولا تسميةُ بوّابة**
@@ -270,8 +329,12 @@ export function DashboardChrome({
         </div>
         <button
           onClick={() => setMenuOpen(false)}
-          className="absolute end-4 top-4 text-ink-muted hover:text-ink lg:hidden"
-          aria-label={m.common.cancel}
+          type="button"
+          className={`absolute end-3 flex items-center rounded-control p-2 text-ink-muted hover:bg-row-hover hover:text-ink lg:hidden ${
+            showBrand ? "top-3" : "top-1/2 -translate-y-1/2"
+          }`}
+          aria-label={m.shared.closeMenu}
+          title={m.shared.closeMenu}
         >
           <IconClose size={20} />
         </button>
@@ -321,7 +384,7 @@ export function DashboardChrome({
 
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
         {nav.map((item) => {
-          const active = isActive(item.href);
+          const active = isActive(item);
           const Icon = item.icon;
           return (
             <div key={item.href}>
@@ -379,7 +442,7 @@ export function DashboardChrome({
        كان `bg-shell` — **لوحاً مصمتاً يغطّي الشاشةَ كلَّها**، فتُرسم الخلفيّةُ
        تحته ولا تُرى. **ولوحةُ التحكّم أربعةُ تطبيقاتٍ من خمسة**، فتبقى
        الخلفيّةُ في الموقع وحدَه. */
-    <div className="flex min-h-screen">
+    <div className={`flex min-h-screen ${staging ? "pt-6" : ""}`}>
       {/* ══════════════════════════════════════════════════════════════
           **رايةُ بيئة التجربة — سلامةٌ لا زينة** (`P-0` البند ٤٥)
           ══════════════════════════════════════════════════════════════
@@ -394,15 +457,21 @@ export function DashboardChrome({
 
           **وشريطٌ ثابتٌ في أعلى الشاشة لا شارةٌ في زاوية** — **والزاويةُ
           تُنسى بعد ساعة.** */}
-      {isStagingEnv() && (
+      {/* **ويأخذ مكانَه ولا يغطّي** (تدقيقُ الشريط ٢٠٢٦-١٠-٢٧): كان ثابتاً بلا مسافةٍ تحته، فيُدفن
+          رأسُ السايدبار والشريطِ وعدّادُ الجرس. **فالغلافُ ينزل بقدره** (`pt-6` = ارتفاعُه). */}
+      {staging && (
         <div
           role="status"
-          className="fixed inset-x-0 top-0 z-50 bg-warning py-1 text-center text-xs font-bold text-on-bright"
+          className="fixed inset-x-0 top-0 z-[60] h-6 bg-warning text-center text-xs font-bold leading-6 text-on-bright"
         >
           {stagingLabel}
         </div>
       )}
-      <aside className="sticky top-3 m-3 me-0 hidden h-[calc(100vh-1.5rem)] w-60 shrink-0 flex-col surface-lit chrome overflow-hidden rounded-card border border-line lg:flex">
+      <aside
+        className={`sticky m-3 me-0 hidden w-60 shrink-0 flex-col surface-lit chrome overflow-hidden rounded-card border border-line lg:flex ${
+          staging ? "top-9 h-[calc(100vh-3rem)]" : "top-3 h-[calc(100vh-1.5rem)]"
+        }`}
+      >
         {sidebar}
       </aside>
 
@@ -410,7 +479,12 @@ export function DashboardChrome({
         <div className="fixed inset-0 z-40 scrim lg:hidden" onClick={() => setMenuOpen(false)} />
       )}
       <aside
-        /* **والدُّرجُ الجوّاليُّ يُضبّب ويثقل — وهو يعلو المحتوى.**
+        ref={drawerRef}
+        inert={!menuOpen}
+        aria-hidden={!menuOpen}
+        /* **ومغلقاً لا يُمسَك بالتنقّل بلوحة المفاتيح** (`inert`) — روابطُه خارج الشاشة.
+
+           **والدُّرجُ الجوّاليُّ يُضبّب ويثقل — وهو يعلو المحتوى.**
 
            (المرحلةُ الثالثة ٢٠٢٦-٠٨-٠٦.)
 
@@ -420,7 +494,7 @@ export function DashboardChrome({
 
            **و`raised` لا `surface`**: ما يعلو كلَّ شيءٍ يبقى أثقل — كالنوافذ
            والقوائم، **وقائمةُ تنقّلٍ لا تُقرأ ليست قائمة.** */
-        className={`surface-lit chrome fixed inset-y-0 start-0 z-50 flex w-64 flex-col elev-4 transition-transform duration-200 lg:hidden ${
+        className={`surface-lit chrome fixed bottom-0 start-0 z-50 flex w-64 ${staging ? "top-6" : "top-0"} flex-col elev-4 transition-transform duration-200 lg:hidden ${
           menuOpen ? "translate-x-0" : "translate-x-full rtl:translate-x-full ltr:-translate-x-full"
         }`}
       >
@@ -448,9 +522,12 @@ export function DashboardChrome({
           start={
             <>
               <TopBarChip
+                type="button"
                 onClick={() => setMenuOpen(true)}
                 className="lg:hidden"
-                aria-label={brand}
+                aria-label={m.shared.openMenu}
+                aria-expanded={menuOpen}
+                title={m.shared.openMenu}
               >
                 <IconHamburger size={22} />
               </TopBarChip>
@@ -461,7 +538,7 @@ export function DashboardChrome({
                   عريض — **واسمُه في الشريط العلويِّ تكرارٌ يأكل عرضاً**
                   هو أضيقُ ما يُنازع عليه في الجوّال.
 
-                  **ويبقى `activeLabel` محسوباً** — يقرؤه عنوانُ التبويب. */}
+                  **و`activeLabel` يقرؤه عنوانُ لسان المتصفّح** (`document.title` فوق). */}
               {topbarStart}
             </>
           }
@@ -478,9 +555,8 @@ export function DashboardChrome({
               />
             }
             menu={ACCOUNT_MENU}
-            walletHref={walletHref}
-            walletLabel={drawerHref ? m.shared.platformWalletChip : undefined}
-            balance={summary?.balance ?? 0}
+            walletHref={treasuryMode ? undefined : walletHref}
+            balance={summary ? summary.balance : null}
             walletIcon={<IconWallet size={TOPBAR_ICON} />}
             accountHref={accountHref}
             accountLabel={m.terms.account}
@@ -491,15 +567,16 @@ export function DashboardChrome({
             active={pathname}
             extras={
               <>
-              {drawerHref && typeof summary?.drawer_expected === "number" && (
-                <TopBarLink Link={Link} href={drawerHref} title={m.shared.drawerChip} aria-label={m.shared.drawerChip}>
-                  <IconBalance size={TOPBAR_ICON} />
-                  <span className="hidden text-xs text-ink-muted md:inline">{m.shared.drawerChipShort}</span>
-                  <span dir="ltr" className={`font-bold ${summary.drawer_expected < 0 ? "text-danger" : "text-ink"}`}>
-                    {summary.drawer_expected < 0 ? "−" : ""}
-                    {fmtNum(Math.abs(summary.drawer_expected))}
-                  </span>
-                </TopBarLink>
+              {treasuryMode && (walletHref || drawerHref) && (
+                <MoneyChips
+                  Link={Link}
+                  walletHref={walletHref}
+                  drawerHref={drawerHref}
+                  wallet={summary?.treasury_balance}
+                  drawer={summary?.drawer_expected}
+                  state={summary ? "ready" : summaryFailed ? "failed" : "loading"}
+                  pathname={pathname}
+                />
               )}
               {/* **والعضوُ يُحرَس كما يُحرَس الكائن.**
 
@@ -553,5 +630,187 @@ export function DashboardChrome({
         </main>
       </div>
     </div>
+  );
+}
+
+// ---------- شريحتا المال — لوحة الإدارة ----------
+
+type MoneyState = "loading" | "ready" | "failed";
+
+/**
+ * **رقمٌ بعملته — والسالبُ أحمرُ في الشريحتين بقاعدةٍ واحدة** (تدقيقُ الشريط ٢٠٢٦-١٠-٢٧).
+ *
+ * كان الدرجُ السالبُ أحمرَ بإشارةٍ تُكتب باليد والمحفظةُ السالبةُ بلونٍ عاديٍّ وبلا عملةٍ على
+ * الجوّال. **و«—» قبل الوصول لا صفرٌ كاذب** — وتلميحٌ صريحٌ إن فشل الطلب.
+ */
+function MoneyFigure({ value, state }: { value: number | undefined; state: MoneyState }) {
+  if (typeof value !== "number") {
+    return (
+      <span
+        className="font-bold text-ink-muted"
+        title={state === "failed" ? m.shared.balanceFailed : m.shared.balanceLoading}
+      >
+        —
+      </span>
+    );
+  }
+  return (
+    <Money
+      value={value}
+      small
+      className={`whitespace-nowrap font-bold ${value < 0 ? "text-danger" : "text-ink"}`}
+    />
+  );
+}
+
+/**
+ * **«محفظة المنصة» و«درج المكتب» — شريحتان على الواسع، وزرٌّ واحدٌ «المال» على الجوّال.**
+ *
+ * (تدقيقُ الشريط ٢٠٢٦-١٠-٢٧: على الجوّال كان رقمان متجاوران بلا اسمٍ ولا عملة، فلا يُعرف أيُّهما
+ *  المحفظةُ وأيُّهما الدرج، والصفُّ يفيض فتختبئ الصورةُ خلف التمرير.) **فالزرُّ يفتح لوحاً صغيراً
+ * بسطرين واضحين**: الاسمُ والشرحُ والرقمُ بعملته، وكلُّ سطرٍ يفتح كشفَه.
+ */
+function MoneyChips({
+  Link,
+  walletHref,
+  drawerHref,
+  wallet,
+  drawer,
+  state,
+  pathname,
+}: {
+  Link: LinkType;
+  walletHref?: string;
+  drawerHref?: string;
+  wallet: number | undefined;
+  drawer: number | undefined;
+  state: MoneyState;
+  pathname: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [top, setTop] = useState(0);
+  const btn = useRef<HTMLSpanElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
+
+  useEffect(() => setOpen(false), [pathname]);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: PointerEvent) => {
+      const t = e.target as Node;
+      if (btn.current?.contains(t) || panel.current?.contains(t)) return;
+      setOpen(false);
+    };
+    const esc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    const close = () => setOpen(false);
+    document.addEventListener("pointerdown", away);
+    document.addEventListener("keydown", esc);
+    window.addEventListener("resize", close);
+    window.addEventListener("scroll", close, true);
+    return () => {
+      document.removeEventListener("pointerdown", away);
+      document.removeEventListener("keydown", esc);
+      window.removeEventListener("resize", close);
+      window.removeEventListener("scroll", close, true);
+    };
+  }, [open]);
+
+  // **والمحفظةُ تُرى «—» حتّى يصل الملخّص** — ثمّ تُخفى إن لم يرسل المحرّكُ رصيدَ الخزينة.
+  const showWallet = !!walletHref && (state !== "ready" || typeof wallet === "number");
+  const showDrawer = !!drawerHref && typeof drawer === "number";
+  if (!showWallet && !showDrawer) return null;
+
+  const drawerHint = typeof drawer === "number" && drawer < 0 ? m.shared.drawerNegative : m.shared.drawerChip;
+
+  const toggle = () => {
+    if (!open) {
+      const bar = btn.current?.closest("header")?.getBoundingClientRect();
+      setTop((bar?.bottom ?? 64) + 8);
+    }
+    setOpen((v) => !v);
+  };
+
+  const row = "flex items-center gap-3 px-4 py-3 text-sm transition-colors hover:bg-row-hover";
+
+  return (
+    <>
+      <span className="hidden sm:contents">
+        {showWallet && walletHref && (
+          <TopBarLink
+            Link={Link}
+            href={walletHref}
+            title={m.shared.platformWalletHint}
+            aria-label={m.shared.platformWalletChip}
+          >
+            <IconWallet size={TOPBAR_ICON} />
+            <span className="hidden text-xs text-ink-muted md:inline">{m.shared.platformWalletChip}</span>
+            <MoneyFigure value={wallet} state={state} />
+          </TopBarLink>
+        )}
+        {showDrawer && drawerHref && (
+          <TopBarLink Link={Link} href={drawerHref} title={drawerHint} aria-label={m.shared.drawerChipShort}>
+            <IconBalance size={TOPBAR_ICON} />
+            <span className="hidden text-xs text-ink-muted md:inline">{m.shared.drawerChipShort}</span>
+            <MoneyFigure value={drawer} state={state} />
+          </TopBarLink>
+        )}
+      </span>
+
+      <span ref={btn} className="flex shrink-0 sm:hidden">
+        <TopBarChip
+          type="button"
+          onClick={toggle}
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          aria-label={m.shared.moneyPanel}
+          title={m.shared.moneyPanel}
+          className={open ? "text-ink" : ""}
+        >
+          <IconWallet size={TOPBAR_ICON} />
+          <span className="text-sm font-medium">{m.shared.moneyChip}</span>
+          {typeof drawer === "number" && drawer < 0 && (
+            <span className="h-2 w-2 rounded-full bg-danger-solid" aria-hidden />
+          )}
+        </TopBarChip>
+      </span>
+
+      {open &&
+        createPortal(
+          <div
+            ref={panel}
+            role="dialog"
+            aria-label={m.shared.moneyPanel}
+            style={{ top }}
+            className="fixed inset-x-3 z-[80] overflow-hidden surface-raised elev-3 sm:hidden"
+          >
+            {showWallet && walletHref && (
+              <Link href={walletHref} className={row} onClick={() => setOpen(false)}>
+                <IconWallet size={20} className="shrink-0 text-primary" />
+                <span className="min-w-0 flex-1">
+                  <span className="block font-bold text-ink">{m.shared.platformWalletChip}</span>
+                  <span className="block text-xs text-ink-muted">{m.shared.platformWalletHint}</span>
+                </span>
+                <MoneyFigure value={wallet} state={state} />
+              </Link>
+            )}
+            {showDrawer && drawerHref && (
+              <Link
+                href={drawerHref}
+                className={`${row} ${showWallet ? "border-t border-line-soft" : ""}`}
+                onClick={() => setOpen(false)}
+              >
+                <IconBalance size={20} className="shrink-0 text-primary" />
+                <span className="min-w-0 flex-1">
+                  <span className="block font-bold text-ink">{m.shared.drawerChipShort}</span>
+                  <span className={`block text-xs ${typeof drawer === "number" && drawer < 0 ? "text-danger" : "text-ink-muted"}`}>
+                    {drawerHint}
+                  </span>
+                </span>
+                <MoneyFigure value={drawer} state={state} />
+              </Link>
+            )}
+          </div>,
+          document.body,
+        )}
+    </>
   );
 }

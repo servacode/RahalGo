@@ -13,24 +13,26 @@
  * **وحركاتُ الأدمن الشخصيّة** (طلباته وشحنُه ومستردُّه) **تُوسَم «حركة شخصية»** — ليست ربحاً.
  */
 
-import { useState, type ReactNode } from "react";
-import { getMessages, defaultLocale, fmtDateTime, fmtMoney, errorText } from "@rahalgo/i18n";
+import { useState } from "react";
+import { getMessages, defaultLocale, fmtDateTime, errorText, damascusDay } from "@rahalgo/i18n";
 import {
   Alert,
   Badge,
   Button,
-  EmptyState,
+  Chips,
   Input,
   LoadingState,
   Pagination,
   ReloadState,
   Select,
-  IconWallet,
+  IconReceipt,
+  IconArrowIn,
+  IconArrowOut,
   useLiveData,
 } from "@rahalgo/ui";
 import { api, apiFile } from "@/lib/api";
 import { useCanCall } from "@/lib/policy";
-import { T, Signed, Amount } from "./shared";
+import { T, Signed, Amount, Equation, EmptyCard, dayStartsLine, shiftDay } from "./shared";
 
 const m = getMessages(defaultLocale);
 const S = T.statement;
@@ -102,9 +104,28 @@ function OrderBreakdown({ orderID, range }: { orderID: string; range: string }) 
   );
 }
 
+type Preset = "all" | "today" | "week" | "month" | "custom";
+const PRESETS: Preset[] = ["all", "today", "week", "month", "custom"];
+
+interface StatementData {
+  lines: Line[];
+  total: number;
+  per_page: number;
+  opening: number;
+  closing: number;
+  in: number;
+  out: number;
+  /** **الأنواعُ التي مرّت بالخزينة** — لفلتر النوع. */
+  kinds?: string[];
+  /** **يومُ الحساب اليوم** — لأزرار المدّة. */
+  today?: string;
+  day_start_hour?: number;
+}
+
 export function StatementTab() {
   const canCall = useCanCall();
   const canExport = canCall("GET", "/treasury/statement/export");
+  const [preset, setPreset] = useState<Preset>("all");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
   const [kind, setKind] = useState("");
@@ -117,15 +138,35 @@ export function StatementTab() {
   if (to) qs.set("to", to);
   if (kind) qs.set("kind", kind);
 
-  const { data, error, reload } = useLiveData<{
-    lines: Line[];
-    total: number;
-    per_page: number;
-    opening: number;
-    closing: number;
-    in: number;
-    out: number;
-  }>(() => api(`/api/v1/admin/treasury/statement?${qs.toString()}&page=${page}`), ["wallet"], [from, to, kind, page]);
+  const { data, error, reload } = useLiveData<StatementData>(
+    () => api(`/api/v1/admin/treasury/statement?${qs.toString()}&page=${page}`),
+    ["wallet"],
+    [from, to, kind, page],
+  );
+
+  /**
+   * **أزرارُ المدّة بيوم المنصّة** (تدقيقُ الخزينة ٢٠٢٦-١٠-٢٧) — «اليوم» يومُ الحساب الذي يردّه المحرّك
+   * (يبدأ بساعة الفتح)، لا يومُ المتصفّح؛ والافتراضُ «من أول يوم» فيصل اليومُ مع أوّل ردّ.
+   */
+  function pickPreset(p: Preset) {
+    setPreset(p);
+    setPage(1);
+    if (p === "custom") return;
+    const today = data?.today ?? damascusDay();
+    if (p === "all") {
+      setFrom("");
+      setTo("");
+    } else if (p === "today") {
+      setFrom(today);
+      setTo(today);
+    } else if (p === "week") {
+      setFrom(shiftDay(today, -6));
+      setTo(today);
+    } else {
+      setFrom(`${today.slice(0, 8)}01`);
+      setTo(today);
+    }
+  }
 
   function download() {
     void (async () => {
@@ -144,41 +185,77 @@ export function StatementTab() {
     })();
   }
 
-  const kinds = Object.entries(m.shared.txKinds as Record<string, string>);
+  const allKinds = m.shared.txKinds as Record<string, string>;
+  // **الأنواعُ المستعملةُ وحدَها** — والمختارُ يبقى في القائمة ولو خلت مدّتُه.
+  const used = data?.kinds ?? Object.keys(allKinds);
+  const kindKeys = kind && !used.includes(kind) ? [kind, ...used] : used;
+  const kindName = (k: string) => allKinds[k] ?? k;
   // **مدى الكشف بلا النوع** — للتفصيل، فمجموعُه هو مبلغُ السطر.
   const range = new URLSearchParams();
   if (from) range.set("from", from);
   if (to) range.set("to", to);
+  const Q = S.quick as Record<Preset, string>;
 
   return (
     <div className="space-y-4">
       {fail && <Alert onDismiss={() => setFail("")}>{fail}</Alert>}
 
-      {/* **الفلاترُ ببطاقةٍ واحدة** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «صحّح الصفحة بحيث تكون مفهومة وعِد التصميم»). */}
-      <section className="surface flex flex-wrap items-end gap-3 p-3">
-        <div className="w-40">
-          <Input id="ts-from" type="date" label={m.shared.statement.from} value={from}
-            onChange={(e) => { setFrom(e.target.value); setPage(1); }} />
+      {/* **الفلاترُ ببطاقةٍ واحدة** — حبّاتُ المدّة أوّلاً، ثمّ التاريخان لمدّةٍ محدّدة، ثمّ النوع والتنزيل. */}
+      <section className="surface space-y-3 p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-ink-muted">{S.period}:</span>
+          <Chips wrap items={PRESETS.map((p) => ({ id: p, label: Q[p] }))} value={preset} onChange={pickPreset} />
         </div>
-        <div className="w-40">
-          <Input id="ts-to" type="date" label={m.shared.statement.to} value={to}
-            onChange={(e) => { setTo(e.target.value); setPage(1); }} />
-        </div>
-        <div className="w-48">
-          <Select id="ts-kind" label={S.kind} value={kind} onChange={(e) => { setKind(e.target.value); setPage(1); }}>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 lg:items-end">
+          {preset === "custom" && (
+            <>
+              <Input
+                id="ts-from"
+                type="date"
+                label={m.shared.statement.from}
+                value={from}
+                onChange={(e) => {
+                  setFrom(e.target.value);
+                  setPage(1);
+                }}
+              />
+              <Input
+                id="ts-to"
+                type="date"
+                label={m.shared.statement.to}
+                value={to}
+                onChange={(e) => {
+                  setTo(e.target.value);
+                  setPage(1);
+                }}
+              />
+            </>
+          )}
+          <Select
+            id="ts-kind"
+            label={S.kind}
+            value={kind}
+            onChange={(e) => {
+              setKind(e.target.value);
+              setPage(1);
+            }}
+          >
             <option value="">{S.allKinds}</option>
-            {kinds.map(([k, label]) => (
+            {kindKeys.map((k) => (
               <option key={k} value={k}>
-                {label}
+                {kindName(k)}
               </option>
             ))}
           </Select>
+          {canExport && (
+            <Button variant="secondary" onClick={download} className="w-full">
+              {S.export}
+            </Button>
+          )}
         </div>
-        {canExport && (
-          <Button variant="secondary" onClick={download} className="ms-auto">
-            {S.export}
-          </Button>
-        )}
+        <p className="text-2xs text-ink-muted">
+          {dayStartsLine(data?.day_start_hour)} · {S.tz}
+        </p>
       </section>
 
       {error && !data ? (
@@ -187,25 +264,49 @@ export function StatementTab() {
         <LoadingState />
       ) : (
         <>
-          {/* **المعادلةُ بسطرٍ واحد** — البدايةُ + الداخل − الخارج = النهاية، **والداخلُ والخارجُ مجموعُ الأسطر تحتها.** */}
           <section className="surface space-y-3 p-4">
-            <div className="flex flex-wrap items-stretch gap-2">
-              <EqBox label={S.opening} value={data.opening} />
-              <EqOp>+</EqOp>
-              <EqBox label={S.in} value={data.in} tone="success" />
-              <EqOp>−</EqOp>
-              <EqBox label={S.out} value={data.out} tone="danger" />
-              <EqOp>=</EqOp>
-              <EqBox label={S.closing} value={data.closing} strong tone={data.closing < 0 ? "danger" : "success"} />
-            </div>
-            <p className="text-xs text-ink-muted">{S.howTo}</p>
+            {kind ? (
+              <>
+                {/* **نوعٌ مختار ⇒ مجموعُه وحدَه** (تدقيقُ الخزينة ٢٠٢٦-١٠-٢٧) — رصيدا البداية والنهاية للمحفظة
+                    كلِّها لا للنوع، فكانت المعادلةُ تُقرأ «٠ + ٠ − ٠ = −١٢٧». */}
+                <h3 className="heading-card">{S.kindTotal.replace("{kind}", kindName(kind))}</h3>
+                <Equation
+                  terms={[
+                    { label: S.in, value: data.in, tone: "success" },
+                    { label: S.out, value: data.out, tone: "danger", op: "−" },
+                    {
+                      label: S.kindNet,
+                      value: data.in - data.out,
+                      op: "=",
+                      result: true,
+                      signed: true,
+                      tone: data.in - data.out < 0 ? "danger" : data.in - data.out > 0 ? "success" : undefined,
+                    },
+                  ]}
+                />
+                <p className="text-xs text-ink-muted">{S.kindHint}</p>
+              </>
+            ) : (
+              <>
+                {/* **المعادلة** — البدايةُ + الداخل − الطالع = النهاية، **والداخلُ والطالعُ مجموعُ الأسطر تحتها.** */}
+                <Equation
+                  terms={[
+                    { label: S.opening, value: data.opening },
+                    { label: S.in, value: data.in, tone: "success", op: "+", hint: S.inHint },
+                    { label: S.out, value: data.out, tone: "danger", op: "−", hint: S.outHint },
+                    { label: S.closing, value: data.closing, op: "=", result: true, tone: data.closing < 0 ? "danger" : "success" },
+                  ]}
+                />
+                <p className="text-xs text-ink-muted">{S.howTo}</p>
+              </>
+            )}
             <p className="text-2xs text-ink-muted">
-              {S.tz} · {S.personal}: {S.personalHint}
+              {S.personal}: {S.personalHint}
             </p>
           </section>
 
           {data.lines.length === 0 ? (
-            <EmptyState icon={IconWallet} title={S.empty} />
+            <EmptyCard icon={IconReceipt} title={S.empty} hint={S.emptyHint} tone="muted" />
           ) : (
             <ul className="space-y-2">
               {data.lines.map((l) => {
@@ -226,7 +327,7 @@ export function StatementTab() {
                           up ? "bg-success-solid" : "bg-danger-solid"
                         }`}
                       >
-                        {up ? "▲" : "▼"}
+                        {up ? <IconArrowIn size={18} /> : <IconArrowOut size={18} />}
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="flex flex-wrap items-center gap-1.5 font-bold">
@@ -237,7 +338,7 @@ export function StatementTab() {
                         </span>
                         <span className="block truncate text-xs text-ink-muted">
                           <span dir="ltr">{fmtDateTime(l.created_at)}</span>
-                          {l.by_name && ` · ${l.by_name}`}
+                          {!l.grouped && l.by_name && ` · ${S.colBy} ${l.by_name}`}
                           {!l.grouped && l.note && ` · ${l.note}`}
                         </span>
                       </span>
@@ -261,25 +362,13 @@ export function StatementTab() {
               })}
             </ul>
           )}
-          <Pagination page={page} total={data.total} perPage={data.per_page} onChange={setPage} />
+          {data.total > data.per_page && (
+            <div className="flex justify-center">
+              <Pagination page={page} total={data.total} perPage={data.per_page} onChange={setPage} />
+            </div>
+          )}
         </>
       )}
     </div>
   );
-}
-
-/** **خانةٌ في معادلة الكشف** — لفظٌ ورقم. */
-function EqBox({ label, value, tone, strong }: { label: string; value: number; tone?: "success" | "danger"; strong?: boolean }) {
-  return (
-    <div className={`min-w-[7rem] flex-1 rounded-card border p-3 ${strong ? "border-accent" : "border-line-soft"}`}>
-      <span className="block text-xs text-ink-muted">{label}</span>
-      <span className={`figure block leading-tight ${tone === "success" ? "text-success" : tone === "danger" ? "text-danger" : ""}`}>
-        {fmtMoney(value)}
-      </span>
-    </div>
-  );
-}
-
-function EqOp({ children }: { children: ReactNode }) {
-  return <span className="figure flex items-center px-1 text-ink-muted">{children}</span>;
 }

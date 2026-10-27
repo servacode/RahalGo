@@ -80,13 +80,53 @@ func (s *Server) handleCashOutstanding(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	roster, err := s.cashDriverRoster(r.Context())
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"holders": ov.Holders, "total": ov.Total, "limit": s.cashbox.Limit(r.Context()),
+		// **كلُّ السائقين بأسمائهم** (فحصُ اللوحة ٢٠٢٦-١٠-٢٧) — كانت الصفحةُ تجلبهم من
+		// `/admin/users` بقدرة `users.read`، **والماليّةُ لا تملكها** (قرارُ المالك
+		// ٢٠٢٦-١٠-٠٥)، فلا ترى إلّا من معه نقد. اسمٌ ورقمٌ ودوامٌ فقط — لا حساب.
+		"drivers":    roster,
 		"over_count": ov.OverCount, "overdue_count": ov.OverdueCount,
 		"overdue_days": ov.OverdueDays,
 		// **ساعةُ فتح الدوام** — الصفحةُ تقسم كشفَ السائق بأيّام الحساب منها (٢٠٢٦-١٠-٢٦).
 		"day_start_hour": s.settings.GetInt(r.Context(), "platform.day_start_hour"),
 	})
+}
+
+// cashDriver سائقٌ في قائمة صفحة النقد — اسمُه ورقمُه ودوامُه لا غير.
+type cashDriver struct {
+	ID       string `json:"id"`
+	FullName string `json:"full_name"`
+	Phone    string `json:"phone"`
+	OnShift  bool   `json:"on_shift"`
+}
+
+// cashDriverRoster **كلُّ السائقين غيرِ المحذوفين** — لقائمة صفحة النقد بقدرة `finance.read`.
+func (s *Server) cashDriverRoster(ctx context.Context) ([]cashDriver, error) {
+	rows, err := s.pg.Query(ctx, `
+		SELECT u.id::text, COALESCE(u.full_name, ''), u.phone, COALESCE(u.on_shift, false)
+		FROM users u
+		JOIN user_roles ur ON ur.user_id = u.id AND ur.role_code = 'driver'
+		WHERE u.status <> 'deleted'
+		ORDER BY u.on_shift DESC, u.full_name ASC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []cashDriver{}
+	for rows.Next() {
+		var d cashDriver
+		if err := rows.Scan(&d.ID, &d.FullName, &d.Phone, &d.OnShift); err != nil {
+			return nil, err
+		}
+		out = append(out, d)
+	}
+	return out, rows.Err()
 }
 
 // cashHolders **من يحمل نقداً ومجموعُه** — لصفحة النقد ولرئيسيّة المدير معاً.

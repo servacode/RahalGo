@@ -111,6 +111,7 @@ export function DoorPanel({
   atStore = false,
   beforeStore = false,
   canTransfer = true,
+  canCancel = true,
   acceptsReturns = false,
   driverPhone,
   customerPhone,
@@ -138,6 +139,11 @@ export function DoorPanel({
   beforeStore?: boolean;
   /** **و«لدي توصيلة» لا تُحوَّل** — متجرُها مُنشئُها. */
   canTransfer?: boolean;
+  /**
+   * **أيملك الناظرُ الإلغاءَ هنا** (تدقيقُ الطلبات ٢٠٢٦-١٠-٢٧) — بعد التسليم للسائقين الإلغاءُ للمالك وحدَه
+   * في «المنصّة تدير» (`modes.go`، P5)، **فلا يُعرض لموظّفٍ زرٌّ يردّه المحرّك.**
+   */
+  canCancel?: boolean;
   /**
    * **أيقبل المتجرُ إرجاعَ البضاعة** (`merchant_accepts_returns`) — وفي الطلب الخاصّ
    * كاذبٌ دائماً: لا متجر. **ومنه يظهر «رجّع للمتجر»** (قرارُ المالك ٢٠٢٦-١٠-٠٣).
@@ -288,16 +294,20 @@ export function DoorPanel({
     ? (D.faults as Record<string, string>)[door.suggested_fault]
     : "";
 
+  // **واللونُ بالخطورة** (تدقيقُ الطلبات ٢٠٢٦-١٠-٢٧) — أحمرُ حين بلاغٌ أو انتظارٌ طويل (المالك ٢٠٢٦-١٠-٢٢:
+  // «مربع الابلاغ لازم احمر لنعرف انها مشكلة بدها حل»)، **وأزرقُ هادئٌ لطلبٍ وصل الباب بلا مشكلة.**
+  const urgent = !!door?.report_code || (door?.waited_min ?? 0) >= 10;
   return (
     // **وضغطُ اللوحة لا يصل البطاقةَ تحتها** — ولا ما في نوافذها.
-    // **وأحمرُ لا برتقاليّ** (المالك ٢٠٢٦-١٠-٢٢: «مربع الابلاغ لازم احمر لنعرف انها مشكلة بدها حل»).
     <div
-      className="w-full space-y-3 rounded-control border-2 border-danger-edge bg-danger-tint p-3"
+      className={`w-full space-y-3 rounded-control border-2 p-3 ${
+        urgent ? "border-danger-edge bg-danger-tint" : "border-accent-edge bg-accent-tint"
+      }`}
       onClick={(e) => e.stopPropagation()}
     >
       {/* **والعنوانُ تسميةُ الحقل فوق اللوحة** (`header` في البطاقة) —
        **فأوّلُ سطرٍ فيها كم ينتظر رجلٌ في الشارع.** */}
-      <p className="text-sm font-semibold text-warning">
+      <p className={`text-sm font-semibold ${urgent ? "text-danger" : "text-accent-text"}`}>
         {beforeStore
           ? D.beforeStore
           : atStore
@@ -393,7 +403,7 @@ export function DoorPanel({
                   ? D.deliverNow
                   : D.continue}
           </Button>
-          {beforeStore && (
+          {beforeStore && canCancel && (
             <Button
               variant="danger"
               disabled={busy}
@@ -417,7 +427,7 @@ export function DoorPanel({
           )}
           {/* **و«لدي توصيلة» لا تُحوَّل — مخرجُها الإلغاءُ بسبب** (قرارُ المالك
               ٢٠٢٦-١٠-٠٤، البند ١١). كانت «استلم» وحدَها والمتجرُ مغلق. */}
-          {atStore && !canTransfer && (
+          {atStore && !canTransfer && canCancel && (
             <Button
               variant="danger"
               disabled={busy}
@@ -436,6 +446,10 @@ export function DoorPanel({
             </Button>
           )}
         </div>
+      )}
+      {/* **ومن لا يملك الإلغاءَ يُقال له لماذا غاب** — لا زرٌّ يُردّ. */}
+      {canResolve && !canCancel && (beforeStore || (atStore && !canTransfer)) && (
+        <p className="text-xs text-ink-muted">{BD.cancelAdminOnly}</p>
       )}
 
       <Modal

@@ -78,7 +78,11 @@ func (s *Server) handleMerchantUploadMedia(w http.ResponseWriter, r *http.Reques
 //
 // **وقسمُ السوق صورتُه من صنف `banner`** (`SectionsTab`) — **ورفعُ صورةٍ ليس نشرَ
 // لافتة**: اللافتةُ تُنشأ ببابها (`/banners`) وهو بقدرة المحتوى.
-var marketKinds = map[string]bool{"menu_item": true, "menu_section": true, "banner": true}
+//
+// **ولوغو المتجر من بابه أيضاً** (تدقيقُ السوق ٢٠٢٦-١٠-٢٧): تبديلُه من بطاقة المتجر كان يرفع على
+// `/media` بقدرة المحتوى، **فيُردّ مديرُ المتاجر ٤٠٣ وهو صاحبُ التبديل.** والرفعُ وحدَه لا يغيّر
+// شيئاً — **ربطُ الصورة بالمتجر `PATCH /merchants/{id}` بقدرة إدارة المتاجر كما كان.**
+var marketKinds = map[string]bool{"menu_item": true, "menu_section": true, "banner": true, "merchant_logo": true}
 
 // handleMarketUploadMedia **رفعُ صورةٍ من صفحة السوق** — `POST /admin/market/media`.
 //

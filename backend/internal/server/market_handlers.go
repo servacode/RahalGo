@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/servacode/rahalgo/backend/internal/authz"
 	"github.com/servacode/rahalgo/backend/internal/catalog"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/media"
@@ -112,6 +113,23 @@ func (s *Server) handleMarketItems(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// **وعددُ كلّ حالٍ لأزرار الفلتر** (تدقيقُ السوق ٢٠٢٦-١٠-٢٧) — بباقي الفلاتر وبلا فلتر الحال نفسِه،
+	// فزرُّ «غير متوفر» يقول كم صنفاً سيظهر إن كُبس.
+	var stAll, stLive, stOut, stOff int
+	{
+		const st = `(CASE WHEN m.status <> 'active' THEN 'store_off' WHEN NOT i.available THEN 'out' ELSE 'live' END)`
+		sargs := append([]any{}, args...)
+		sargs[3] = ""
+		if err := s.pg.QueryRow(r.Context(), `
+			SELECT count(*),
+			       count(*) FILTER (WHERE `+st+` = 'live'),
+			       count(*) FILTER (WHERE `+st+` = 'out'),
+			       count(*) FILTER (WHERE `+st+` = 'store_off')`+scope, sargs...).
+			Scan(&stAll, &stLive, &stOut, &stOff); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+	}
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT i.id::text, i.name, i.merchant_price, i.available, i.price, m.commission_percent,
 		       m.id::text, m.name, m.status, ps.id::text, ps.name,
@@ -146,6 +164,7 @@ func (s *Server) handleMarketItems(w http.ResponseWriter, r *http.Request) {
 	}
 	body := paged("items", out, total, pg)
 	body["new_hours"] = marketNewHours
+	body["state_counts"] = map[string]int{"all": stAll, "live": stLive, "out": stOut, "store_off": stOff}
 	httpx.JSON(w, http.StatusOK, body)
 }
 
@@ -294,6 +313,31 @@ type marketStore struct {
 	// Featured **«متجر مميّز» في شريط السوق** وترتيبُه (٢٠٢٦-١٠-١٨) — شارةٌ في القائمة.
 	Featured      bool `json:"featured"`
 	FeaturedOrder int  `json:"featured_order"`
+	// Merchant **صفُّ المتجر كاملاً** — صاحبُه ورقمُه ومندوبُه وعمولتُه وموقعُه ومخالفاتُه، **وهو ما تحتاجه
+	// أفعالُ البطاقة** (تدقيقُ السوق ٢٠٢٦-١٠-٢٧: كانت تُجلب بطلبٍ لكلّ بطاقة). **ولمن يملك قراءةَ المتاجر
+	// وحدَه** — `merchants.read` بابُ `GET /merchants/{id}` نفسُه؛ ومن لا يملكها يرى البطاقةَ بلا تفاصيل.
+	Merchant *marketStoreMerchant `json:"merchant,omitempty"`
+}
+
+// marketStoreMerchant **ما يردّه `GET /merchants/{id}`** — الصفُّ والعمولةُ العامّةُ معه.
+type marketStoreMerchant struct {
+	*catalog.Merchant
+	General      int64            `json:"general_commission_percent"`
+	GeneralExact pricing.Percent2 `json:"general_commission_percent_exact"`
+}
+
+// marketStoreFilters **ترشيحاتُ تبويب المتاجر** — شرطٌ على `merchants m`. و«ناقصُه شي» هو ما تعدّه
+// البطاقةُ نفسُها: دوامٌ وموقعٌ ولوغو وأصنافٌ وصورُها.
+var marketStoreFilters = map[string]string{
+	"active":    `m.status = 'active'`,
+	"inactive":  `m.status = 'inactive'`,
+	"suspended": `m.status = 'suspended'`,
+	"emergency": `m.emergency_closed`,
+	"featured":  `m.featured`,
+	"missing": `(NOT EXISTS (SELECT 1 FROM merchant_hours h WHERE h.merchant_id = m.id)
+	              OR m.location IS NULL OR m.logo_media_id IS NULL
+	              OR NOT EXISTS (SELECT 1 FROM menu_items i WHERE i.merchant_id = m.id)
+	              OR EXISTS (SELECT 1 FROM menu_items i WHERE i.merchant_id = m.id AND i.image_media_id IS NULL))`,
 }
 
 // handleMarketStores **المتاجرُ بصفحةٍ موحّدة** — تُدار في اللوحة ولا تُعرض
@@ -301,14 +345,51 @@ type marketStore struct {
 func (s *Server) handleMarketStores(w http.ResponseWriter, r *http.Request) {
 	pg := pagingOf(r, 50)
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	// **وترشيحٌ بالحال** (تدقيقُ السوق ٢٠٢٦-١٠-٢٧) — فعّال · موقوف · محظور · مغلقٌ طارئاً · ناقصُه شي
+	// · مميّز؛ **وعددُ كلِّ واحدٍ معه** يُكتب على زرّه. ورمزٌ مجهولٌ يُقرأ «الكلّ».
+	filter := r.URL.Query().Get("filter")
+	filterSQL, ok := marketStoreFilters[filter]
+	if !ok {
+		filter, filterSQL = "", "TRUE"
+	}
 	var total int
 	// **ويُبحث برقمه كما باسمه** — «M-1045» أو «1045» (طلبُ المالك ٢٠٢٦-١٠-١٦).
-	where := `($1 = '' OR m.name ILIKE '%'||$1||'%' OR ` + catalog.MerchantNumberMatchSQL("m", "$1") + `)`
+	search := `($1 = '' OR m.name ILIKE '%'||$1||'%' OR ` + catalog.MerchantNumberMatchSQL("m", "$1") + `)`
+	where := search + ` AND (` + filterSQL + `)`
 	if err := s.pg.QueryRow(r.Context(), `
 		SELECT count(*) FROM merchants m WHERE `+where,
 		q).Scan(&total); err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	// **والأعدادُ تتبع البحثَ لا الترشيح** — زرُّ «محظور» يقول كم محظوراً بين نتائج البحث.
+	counts := map[string]int{}
+	{
+		keys := []string{"", "active", "inactive", "suspended", "emergency", "missing", "featured"}
+		sel := make([]string, len(keys))
+		for i, k := range keys {
+			f := "TRUE"
+			if k != "" {
+				f = marketStoreFilters[k]
+			}
+			sel[i] = `count(*) FILTER (WHERE ` + f + `)`
+		}
+		vals := make([]int, len(keys))
+		dst := make([]any, len(keys))
+		for i := range vals {
+			dst[i] = &vals[i]
+		}
+		if err := s.pg.QueryRow(r.Context(), `SELECT `+strings.Join(sel, ", ")+` FROM merchants m WHERE `+search, q).
+			Scan(dst...); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		for i, k := range keys {
+			if k == "" {
+				k = "all"
+			}
+			counts[k] = vals[i]
+		}
 	}
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT m.id::text, m.number, m.name, m.status, m.emergency_closed, lm.thumb_path,
@@ -346,7 +427,27 @@ func (s *Server) handleMarketStores(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, paged("stores", out, total, pg))
+	if s.hasCapability(r, authz.MerchantsRead) && len(out) > 0 {
+		ids := make([]string, len(out))
+		for i := range out {
+			ids[i] = out[i].ID
+		}
+		full, err := s.catalog.MerchantsByIDs(r.Context(), ids)
+		if err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		general := s.generalCommission(r.Context())
+		for i := range out {
+			if mr := full[out[i].ID]; mr != nil {
+				out[i].Merchant = &marketStoreMerchant{mr, general.RoundedPercent(), general}
+			}
+		}
+	}
+	body := paged("stores", out, total, pg)
+	body["counts"] = counts
+	body["filter"] = filter
+	httpx.JSON(w, http.StatusOK, body)
 }
 
 type qualityItem struct {

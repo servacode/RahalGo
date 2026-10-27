@@ -47,6 +47,10 @@ func (s *Server) handleMeSummary(w http.ResponseWriter, r *http.Request) {
 		// الرصيد لمن يملك `finance.read` وحدَه، **والغائبُ لا يُرسل شيئاً.** وهو `cashboxPosition`
 		// نفسُه — لا حسابٌ ثانٍ ولا نداءٌ ثانٍ من الشريط.
 		DrawerExpected *int64 `json:"drawer_expected,omitempty"`
+		// TreasuryBalance **رصيدُ محفظة الخزينة نفسِها** (تدقيقُ الشريط ٢٠٢٦-١٠-٢٧) — شريحةُ «محفظة
+		// المنصة» كانت تقرأ `balance` (محفظةَ الفاتح نفسِه)، فموظّفُ الماليّة يرى رصيدَه كأنّه رصيدُ
+		// المنصة. **ولمن يملك `finance.read` وحدَه** — والغائبُ يُخفي الشريحة. قراءةٌ لا حساب.
+		TreasuryBalance *int64 `json:"treasury_balance,omitempty"`
 	}
 	err := s.pg.QueryRow(r.Context(), `
 		SELECT u.full_name,
@@ -79,6 +83,13 @@ func (s *Server) handleMeSummary(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		out.DrawerExpected = &pos.Expected
+		var tb int64
+		if err := s.pg.QueryRow(r.Context(),
+			`SELECT COALESCE(sum(balance), 0)::bigint FROM wallets WHERE is_treasury`).Scan(&tb); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		out.TreasuryBalance = &tb
 	}
 	httpx.JSON(w, http.StatusOK, out)
 }

@@ -32,10 +32,13 @@ var ErrTicketAwaitingFinance = httpx.NewError(http.StatusConflict,
 const StatusAwaitingFinance = "awaiting_finance"
 
 type Reply struct {
-	ID        int64     `json:"id"`
-	AuthorID  *string   `json:"author_id"`
-	Body      string    `json:"body"`
-	CreatedAt time.Time `json:"created_at"`
+	ID       int64   `json:"id"`
+	AuthorID *string `json:"author_id"`
+	// AuthorName **من كتب الردّ** — تقرؤه اللوحةُ جنبَ الردّ فيُعرف ردُّ المكتب من كلام صاحب
+	// الشكوى (فحصُ ٢٠٢٦-١٠-٢٧). فارغٌ لما كتبه النظام.
+	AuthorName string    `json:"author_name"`
+	Body       string    `json:"body"`
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 type Ticket struct {
@@ -89,6 +92,10 @@ type Ticket struct {
 	CreatedAt  time.Time  `json:"created_at"`
 	ResolvedAt *time.Time `json:"resolved_at"`
 	Replies    []Reply    `json:"replies,omitempty"`
+	// LastReply **آخرُ رسالةٍ في سجلّ المتابعة** — تُعرض على بطاقة القائمة فلا تُقرأ شكوى
+	// فيها ردودٌ كأنّ أحداً لم يردّ عليها (فحصُ ٢٠٢٦-١٠-٢٧). وكاتبُها بمعرّفه.
+	LastReply         string  `json:"last_reply"`
+	LastReplyAuthorID *string `json:"last_reply_author_id"`
 }
 
 type TicketPage struct {
@@ -218,8 +225,12 @@ const ticketSelect = `
 	            ELSE 'driver' END,
 	       t.status, ` + PaidCompensationSQL + `,
 	       COALESCE(wr.amount, dcr.suggested_amount, 0), COALESCE(wr.status, dcr.status, ''),
-	       t.resolution, t.created_at, t.resolved_at
+	       t.resolution, t.created_at, t.resolved_at,
+	       COALESCE(lr.body, ''), lr.author_id::text
 	FROM tickets t
+	LEFT JOIN LATERAL (
+	    SELECT x.body, x.author_id FROM ticket_replies x
+	     WHERE x.ticket_id = t.id ORDER BY x.id DESC LIMIT 1) lr ON true
 	JOIN users cu ON cu.id = t.customer_id
 	JOIN users cp ON cp.id = ` + ComplainantSQL + `
 	LEFT JOIN orders o ON o.id = t.order_id
@@ -234,7 +245,8 @@ func scanTicket(row pgx.Row) (*Ticket, error) {
 		&t.OpenedByCustomer,
 		&t.ComplainantID, &t.ComplainantName, &t.ComplainantPhone, &t.ComplainantKind,
 		&t.Status, &t.Compensation, &t.CompensationProposed, &t.CompensationStatus,
-		&t.Resolution, &t.CreatedAt, &t.ResolvedAt)
+		&t.Resolution, &t.CreatedAt, &t.ResolvedAt,
+		&t.LastReply, &t.LastReplyAuthorID)
 	if err != nil {
 		return nil, err
 	}
@@ -398,8 +410,9 @@ func (s *Service) Get(ctx context.Context, id string) (*Ticket, error) {
 	}
 	markLate(t, s.LateHours(ctx), time.Now())
 	rows, err := s.db.Query(ctx, `
-		SELECT id, author_id, body, created_at FROM ticket_replies
-		WHERE ticket_id = $1 ORDER BY id`, id)
+		SELECT x.id, x.author_id, COALESCE(u.full_name, ''), x.body, x.created_at
+		  FROM ticket_replies x LEFT JOIN users u ON u.id = x.author_id
+		 WHERE x.ticket_id = $1 ORDER BY x.id`, id)
 	if err != nil {
 		return nil, err
 	}
@@ -407,7 +420,7 @@ func (s *Service) Get(ctx context.Context, id string) (*Ticket, error) {
 	t.Replies = []Reply{}
 	for rows.Next() {
 		var r Reply
-		if err := rows.Scan(&r.ID, &r.AuthorID, &r.Body, &r.CreatedAt); err != nil {
+		if err := rows.Scan(&r.ID, &r.AuthorID, &r.AuthorName, &r.Body, &r.CreatedAt); err != nil {
 			return nil, err
 		}
 		t.Replies = append(t.Replies, r)

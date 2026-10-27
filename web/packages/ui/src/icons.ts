@@ -104,6 +104,15 @@ export {
   Send as IconSend,
   Copy as IconCopy,
   BellOff as IconBellOff,
+  // **صوتُ التنبيهات سمّاعةٌ لا جرس** (تدقيقُ الشريط ٢٠٢٦-١٠-٢٧): كان جرسان متجاوران — واحدٌ يكتم
+  // وواحدٌ يفتح الإشعارات — فيُضغط الكتمُ بدلَ الإشعارات وتفوت رنّةُ الطارئ.
+  Volume2 as IconSound,
+  VolumeX as IconSoundOff,
+  // **بنودُ القائمة الجانبيّة — أيقونةٌ لكلّ باب** (تدقيقُ السايدبار ٢٠٢٦-١٠-٢٧): كانت أيقونةٌ واحدة
+  // على أربعة بنود مال وأخرى على أربعة بنود متابعة، فلا يُفرَّق بينها بالعين.
+  History as IconHistory,
+  ChartColumn as IconReports,
+  Gauge as IconMonitor,
   TrendingUp as IconTrendUp,
   TrendingDown as IconTrendDown,
   Minus as IconTrendFlat,

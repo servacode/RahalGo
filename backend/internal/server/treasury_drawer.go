@@ -204,7 +204,8 @@ func (s *Server) handleCashboxReport(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, errValidation)
 		return
 	}
-	from, to, ok := damascusPeriod(period, time.Now(), s.settings.GetInt(r.Context(), "platform.day_start_hour"))
+	startHour := s.settings.GetInt(r.Context(), "platform.day_start_hour")
+	from, to, ok := damascusPeriod(period, time.Now(), startHour)
 	if !ok {
 		s.respondErr(w, errValidation)
 		return
@@ -276,5 +277,6 @@ func (s *Server) handleCashboxReport(w http.ResponseWriter, r *http.Request) {
 		"total_in": in, "total_out": out, "by_source": bySource,
 		"close_difference": diff, "shortage": shortage, "excess": excess, "closes": closes,
 		"start_balance": entStart + diffStart, "end_balance": entEnd + diffEnd,
+		"day_start_hour": startHour,
 	})
 }

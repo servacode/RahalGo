@@ -21,13 +21,11 @@ import dynamic from "next/dynamic";
 import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
 import {
   Alert,
-  PageHeader,
   Button,
   Input,
   Badge,
   IconAdd,
   IconDelete,
-  IconZones,
   IconClose,
   Confirm,
   themeColor,
@@ -255,9 +253,9 @@ export default function ZonesPanel() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-6rem)] flex-col lg:h-[calc(100vh-3rem)]">
+    <div className="flex flex-col">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <PageHeader icon={IconZones} title={Z.title} />
+        <h2 className="heading-card">{Z.title}</h2>
         {isAdmin && !drawing && (
           <Button onClick={startNew} className="flex items-center gap-1.5">
             <IconAdd size={16} />
@@ -273,8 +271,9 @@ export default function ZonesPanel() {
       )}
       {error && <Alert className="mb-3">{error}</Alert>}
 
-      <div className="flex min-h-0 flex-1 flex-col gap-4 md:flex-row">
-        <div className="min-h-64 flex-1 overflow-hidden rounded-card border border-line">
+      {/* **الخريطةُ بارتفاعٍ محدود** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كانت بارتفاع الشاشة كلّها جوّا الصفحة. */}
+      <div className="flex flex-col gap-4 md:flex-row">
+        <div className="h-80 flex-1 overflow-hidden rounded-card border border-line md:h-[32rem]">
           <OpsMapCanvas
             layers={layers}
             unavailableLabel={m.map.unavailable}
@@ -289,7 +288,7 @@ export default function ZonesPanel() {
           />
         </div>
 
-        <aside className="w-full shrink-0 space-y-3 overflow-y-auto md:w-80">
+        <aside className="w-full shrink-0 space-y-3 md:max-h-[32rem] md:w-80 md:overflow-y-auto">
           {/* ── محرِّرُ الرسم ─────────────────────────────────── */}
           {drawing && (
             <div className="space-y-3 surface !border-accent p-4">

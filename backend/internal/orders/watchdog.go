@@ -13,13 +13,15 @@ import (
 
 // Alert تنبيه تصعيد لطلب عالق — يظهر أحمر في غرفة العمليات.
 type Alert struct {
-	OrderID       string  `json:"order_id"`
-	Number        int64   `json:"number"`
-	Status        string  `json:"status"`
-	MerchantName  string  `json:"merchant_name"`
-	CustomerPhone string  `json:"customer_phone"`
-	Reason        string  `json:"reason"` // emergency | no_accept | not_sent | no_driver | too_long
-	Minutes       float64 `json:"minutes"`
+	OrderID       string `json:"order_id"`
+	Number        int64  `json:"number"`
+	Status        string `json:"status"`
+	MerchantName  string `json:"merchant_name"`
+	CustomerPhone string `json:"customer_phone"`
+	// CustomerPhoneMasked **الهاتفُ مخفيّاً جزئيّاً** — لمن لا يملك تفاصيلَ الزبون (يملؤه الخادم).
+	CustomerPhoneMasked string  `json:"customer_phone_masked,omitempty"`
+	Reason              string  `json:"reason"` // emergency | no_accept | not_sent | no_driver | too_long
+	Minutes             float64 `json:"minutes"`
 	// Since **منذ متى يصدق السبب** — والشاشةُ تعدّ الدقائقَ منه حيّةً (البند ١٩).
 	//
 	// **وكان الرقمُ يُرسل مرّةً فيبقى «منذ ٣٢٣ دقيقة» ساعاتٍ** — الراصدُ لا
@@ -124,7 +126,15 @@ func (s *Service) RunWatchdog(ctx context.Context, interval time.Duration) {
 				continue
 			}
 			lastKey = key
-			s.pub.Publish("ops", map[string]any{"type": "alerts", "alerts": alerts})
+			// **والبثُّ بلا هاتف الزبون** (تدقيقُ الطلبات ٢٠٢٦-١٠-٢٧) — القناةُ واحدةٌ لكلّ المكتب،
+			// **ومن لا يملك تفاصيلَ الزبون لا يصله رقمُه منها.** والشاشةُ تجلب القائمةَ من
+			// `GET /orders/alerts` بحجب قارئها حين يصل الحدث.
+			public := make([]Alert, len(alerts))
+			copy(public, alerts)
+			for i := range public {
+				public[i].CustomerPhone = ""
+			}
+			s.pub.Publish("ops", map[string]any{"type": "alerts", "alerts": public})
 			if len(alerts) > 0 {
 				s.logger.Warn("watchdog escalation", "count", len(alerts))
 			}

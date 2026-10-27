@@ -13,7 +13,7 @@
  * **وكان المجموعُ إجماليّاً وحدَه** — فلا يُعرف كم خسرنا فعلاً بعد الاسترجاع.
  * **وسطرُ الخسارة يحمل حالَ نزاعه** (مفتوح · انخصم · انسقط · لا نزاع).
  *
- * **والأيّامُ بتوقيت دمشق** — الخادمُ يحسب حدَّي اليوم بها.
+ * **والأيّامُ أيّامُ حساب** — بدمشق وبساعة فتح الدوام؛ الخادمُ يحسب الحدّين ويردّ `today`.
  *
  * # وكلُّ خسارةٍ بأرقام صفحة الأرباح (قرارُ المالك ٢٠٢٦-١٠-١٥)
  *
@@ -29,7 +29,6 @@ import {
   Pagination,
   LoadingState,
   ReloadState,
-  Input,
   useLiveData,
   IconWallet,
   IconBalance,
@@ -38,8 +37,9 @@ import {
   IconBlock,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
-import { Tile } from "@/components/admin/DashParts";
-import { CaseList, CaseFilters, type CaseRow, type CaseStatus } from "./caseTable";
+import { CaseList, type CaseRow, type CaseStatus } from "./caseTable";
+import { StatTile } from "./StatTile";
+import { PeriodPicker } from "./PeriodPicker";
 
 import { SectionBar } from "@/components/admin/support/SectionBar";
 const m = getMessages(defaultLocale);
@@ -85,25 +85,34 @@ interface LossPage {
   lines?: { key: string; amount: number }[];
   count: number;
   per_page: number;
-}
-
-/** **يومُ دمشق** — لا يومُ جهاز المتصفّح ولا غرينتش. */
-function damascusDay(offsetDays = 0): string {
-  const d = new Date(Date.now() + 3 * 3600_000 + offsetDays * 86400_000);
-  return d.toISOString().slice(0, 10);
+  /** **حدّا المدّة كما حسبهما الخادم** — وافتراضُهما آخرُ ٣٠ يومَ حساب. */
+  from: string;
+  to: string;
+  /** **يومُ الحساب الآن** — يبدأ بساعة فتح الدوام (`platform.day_start_hour`). */
+  today?: string;
 }
 
 export function LossesView() {
-  const [to, setTo] = useState(damascusDay());
-  const [from, setFrom] = useState(damascusDay(-29));
+  // **لا تاريخَ في أوّل نداء** (فحصُ ٢٠٢٦-١٠-٢٧) — الخادمُ يحسب آخرَ ٣٠ يومَ حسابٍ بساعة فتح
+  // الدوام، **والواجهةُ تأخذ الحدّين من ردّه.** كانت تحسب «اليوم» من منتصف ليل دمشق فتنزلق
+  // الفترةُ يوماً بين ١٢ الليل و٩ الصبح.
+  const [range, setRange] = useState<{ from: string; to: string } | null>(null);
   /** **صفحةُ الكشف** — (قرارُ المالك ٢٠٢٦-٠٨-١٠). */
   const [page, setPage] = useState(1);
 
   const { data, error, reload } = useLiveData<LossPage>(
-    () => api(`/api/v1/admin/reports/losses?from=${from}&to=${to}&page=${page}`),
+    () => {
+      const q = new URLSearchParams({ page: String(page) });
+      if (range?.from) q.set("from", range.from);
+      if (range?.to) q.set("to", range.to);
+      return api(`/api/v1/admin/reports/losses?${q}`);
+    },
     ["wallet", "order", "dispute"],
-    [from, to, page],
+    [range?.from, range?.to, page],
   );
+
+  const from = range?.from ?? data?.from ?? "";
+  const to = range?.to ?? data?.to ?? "";
 
   const rows: CaseRow[] = (data?.losses ?? []).map((x, i) => ({
     key: `${x.created_at}-${x.amount}-${i}`,
@@ -111,39 +120,36 @@ export function LossesView() {
     partyRole: x.party_role,
     partyId: x.party_id,
     partyName: x.party_name,
-    reason: [KINDS[x.kind] ?? x.kind, x.note].filter(Boolean).join(" — "),
+    // **وبلا طرفٍ عنوانُها نوعُها** — لا شرطةٌ في دائرةٍ حمراء.
+    title: KINDS[x.kind] ?? x.kind,
+    noPartyNote: L.noParty,
+    reason: x.party_id ? [KINDS[x.kind] ?? x.kind, x.note].filter(Boolean).join(" — ") : x.note,
     orderId: x.order_id,
     orderNumber: x.order_number,
     date: x.created_at,
     status: x.dispute_status,
   }));
 
-  // تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦) — التاريخُ بكرت، خمسةُ أرقامٍ بمربّعات، توزيعُ الخسارة بكرت،
-  // وكرتٌ لكلّ خسارة.
+  // تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦) — المدّةُ بأزرارٍ جاهزةٍ وتاريخين، خمسةُ أرقامٍ بمربّعات
+  // و«الآن» مميّزٌ عنها، توزيعُ الخسارة بكرت، وكرتٌ لكلّ خسارة.
   return (
     <PageContainer>
       <SectionBar hint={L.hint} />
 
-      <CaseFilters>
-        <Input
-          label={m.shared.statement.from}
-          type="date"
-          value={from}
-          onChange={(e) => {
+      <section className="surface space-y-3 p-4">
+        <PeriodPicker
+          from={from}
+          to={to}
+          today={data?.today ?? ""}
+          onChange={(f, t) => {
             setPage(1);
-            setFrom(e.target.value);
+            setRange({ from: f, to: t });
           }}
         />
-        <Input
-          label={m.shared.statement.to}
-          type="date"
-          value={to}
-          onChange={(e) => {
-            setPage(1);
-            setTo(e.target.value);
-          }}
-        />
-      </CaseFilters>
+        {from && to && (
+          <p className="text-xs text-ink-muted">{L.period.replace("{from}", from).replace("{to}", to)}</p>
+        )}
+      </section>
 
       {/* **الخطأُ غيرُ التحميل** — كان الفشلُ يُبقي «جاري التحميل» للأبد. */}
       {error ? (
@@ -153,20 +159,42 @@ export function LossesView() {
       ) : (
         <>
           <div className="grid grid-cols-2 gap-2 lg:grid-cols-5">
-            <Tile icon={IconTrendDown} label={L.lost} value={fmtMoney(data.total)} tone={data.total > 0 ? "danger" : "muted"} />
-            <Tile
+            <StatTile
+              icon={IconTrendDown}
+              label={L.lost}
+              sub={L.lostSub}
+              value={fmtMoney(data.total)}
+              tone={data.total > 0 ? "danger" : "muted"}
+            />
+            <StatTile
               icon={IconTrendUp}
               label={L.recovered}
+              sub={L.recoveredSub}
               value={fmtMoney(data.recovered)}
               tone={data.recovered > 0 ? "success" : "muted"}
             />
-            <Tile icon={IconWallet} label={L.net} value={fmtMoney(data.net)} tone={data.net > 0 ? "danger" : "muted"} />
-            <Tile icon={IconBalance} label={L.owed} value={fmtMoney(data.owed)} tone={data.owed > 0 ? "warning" : "muted"} />
-            <Tile
+            <StatTile
+              icon={IconWallet}
+              label={L.net}
+              sub={L.lostSub}
+              value={fmtMoney(data.net)}
+              tone={data.net > 0 ? "danger" : "muted"}
+            />
+            <StatTile
               icon={IconBlock}
               label={L.writtenOff}
+              sub={L.writtenOffSub}
               value={fmtMoney(data.written_off ?? 0)}
               tone={(data.written_off ?? 0) > 0 ? "warning" : "muted"}
+            />
+            {/* **«هلّق» لا «الفترة»** — لقطةٌ للمفتوح كلِّه، فيُميَّز بإطارٍ متقطّع. */}
+            <StatTile
+              icon={IconBalance}
+              label={L.owed}
+              sub={L.owedSub}
+              value={fmtMoney(data.owed)}
+              tone={data.owed > 0 ? "warning" : "muted"}
+              highlight
             />
           </div>
 

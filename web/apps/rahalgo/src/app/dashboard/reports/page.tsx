@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtNum, errorText, fmtMoney, damascusDay } from "@rahalgo/i18n";
+import { useRouter } from "next/navigation";
+import { getMessages, defaultLocale, fmtNum, errorText, fmtMoney, fmtDate, damascusDay } from "@rahalgo/i18n";
 import {
   Alert,
   Input,
@@ -13,7 +14,6 @@ import {
   IconWallet,
   IconStore,
   IconDriver,
-  IconStatus,
   IconDate,
   IconUsers,
   IconCheck,
@@ -27,14 +27,18 @@ import {
   IconTrendDown,
   IconSmartphone,
   IconView,
+  IconCompare,
+  IconWarning,
   Money,
   SkeletonStats,
   SkeletonList,
 } from "@rahalgo/ui";
 import { api, apiFile } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useCanOpen } from "@/lib/policy";
 import { PageHero } from "@/components/admin/PageHero";
 import { Panel, type TileTone } from "@/components/admin/DashParts";
+import { OpenLink } from "@/components/admin/OpenLink";
 
 const m = getMessages(defaultLocale);
 
@@ -43,17 +47,20 @@ const m = getMessages(defaultLocale);
  * **التقارير — قرارُ المالك ٢٠٢٦-١٠-٠٤**
  * ══════════════════════════════════════════════════════════════════════
  *
- * - **اليومُ يومُ دمشق** — في الأزرار والافتراض والمخطّط (والمحرّكُ كذلك).
+ * - **اليومُ يومُ الحساب** — يبدأ بساعة فتح الدوام (`platform.day_start_hour`)، **والخادمُ
+ *   يقول «اليوم» (`today`)** فتُبنى الأزرارُ عليه (تدقيقُ ٢٠٢٦-١٠-٢٧: كانت تُبنى على يوم التقويم،
+ *   فبين منتصف الليل وساعة الفتح كان «اليوم» أصفاراً وطلباتُ الليل في «أمس»).
+ *   **وأوّلُ تحميلٍ بلا تاريخ** — يأخذ الافتراضَ من الخادم.
  * - **أرقامُ المال يحذفها الخادمُ** عمّن ليس من الماليّة أو مدير المنصّة؛
  *   والصفحةُ تعرض ما وصلها فقط (`money_visible`).
- * - **«ربح المنصّة» رقمُ صفحة الأرباح نفسُه**، و«عمولة المتاجر» بطاقةٌ لحالها.
- * - **المستردُّ بطاقةٌ لحالها**، **ومقارنةٌ بالفترة السابقة المساوية.**
+ * - **«ربح المنصّة» رقمُ صفحة الأرباح نفسُه** — وأحمرُ باسم «خسارة» إن كان سالباً.
+ * - **«قيمةُ الطلبات المسلّمة» فيها التوصيل** — وأفضلُ المتاجر قيمةُ أصنافها وحدَها، والاسمُ يقول ذلك.
+ * - **المستردُّ بطاقةٌ لحالها**، **ومقارنةٌ بالفترة السابقة المساوية** — وتاريخاها مكتوبان.
  * - **الزوّارُ أجهزةُ الزبائن وحدَها** — وعطبُهم يُقال لا يُخفى.
+ * - **المدى المقلوبُ أو الأطولُ من سنة لا يُرسَل** — رسالةٌ تحت التاريخ، والأرقامُ السابقةُ باقية.
  *
- * **تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦)** — رأسٌ موحّد، والفلاترُ ببطاقةٍ واحدة، والأرقامُ
- * بلوحتين («الطلبات» و«المال») ومقارنةٌ ملوّنةٌ قصيرة، والمخطّطاتُ والأفضلُ بلوحات — بلا جداول.
- * **العرضُ وحدَه تغيّر** — النداءاتُ والحسابُ والتصديرُ والصلاحيّاتُ كما كانت.
- * **ويومُ الحساب يبدأ بساعة فتح الدوام** (`platform.day_start_hour`) — والخادمُ يطبّقه.
+ * **تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦/٢٧)** — رأسٌ موحّد، والفلاترُ ببطاقةٍ واحدةٍ بحبوب، والأرقامُ
+ * بطاقاتٌ تُضغط فتفتح سجلَّ الطلبات أو الأرباح أو النقد بالفترة نفسِها، والمخطّطُ يعمل باللمس.
  */
 
 interface DailyPoint {
@@ -90,6 +97,11 @@ interface Visitors {
 interface Report {
   from: string;
   to: string;
+  /** **يومُ الحساب اليوم** — من الخادم (يبدأ بساعة فتح الدوام). */
+  today?: string;
+  day_start_hour?: number;
+  previous_from?: string;
+  previous_to?: string;
   money_visible: boolean;
   profit_unfiltered: boolean;
   summary: Summary;
@@ -106,9 +118,24 @@ interface City {
   name: string;
 }
 
-const DAY = 86_400_000;
+const HOUR = 3_600_000;
+/** أطولُ مدًى يقبله الخادم (`reportMaxDays`). */
+const MAX_DAYS = 366;
 
-/** **الشهرُ الماضي بيوم دمشق** — من أوّله إلى آخره. */
+/** **يومٌ بعد/قبل يوم** — حسابُ تاريخٍ بحت `YYYY-MM-DD`. */
+function shiftDay(iso: string, n: number): string {
+  const y = Number(iso.slice(0, 4));
+  const mo = Number(iso.slice(5, 7));
+  const d = Number(iso.slice(8, 10));
+  return new Date(Date.UTC(y, mo - 1, d + n)).toISOString().slice(0, 10);
+}
+
+/** عددُ أيّام المدى شاملاً طرفيه. */
+function spanDays(from: string, to: string): number {
+  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / (24 * HOUR)) + 1;
+}
+
+/** **الشهرُ الماضي بيوم الحساب** — من أوّله إلى آخره. */
 function lastMonth(today: string): { from: string; to: string } {
   const y = Number(today.slice(0, 4));
   const mo = Number(today.slice(5, 7));
@@ -117,6 +144,16 @@ function lastMonth(today: string): { from: string; to: string } {
   const last = new Date(Date.UTC(py, pm, 0)).getUTCDate();
   const mm = String(pm).padStart(2, "0");
   return { from: `${py}-${mm}-01`, to: `${py}-${mm}-${String(last).padStart(2, "0")}` };
+}
+
+/** «27/10» — يومٌ قصيرٌ للمخطّط. */
+function shortDay(iso: string): string {
+  return `${fmtNum(Number(iso.slice(8, 10)))}/${fmtNum(Number(iso.slice(5, 7)))}`;
+}
+
+/** تاريخٌ للعرض — منتصفُ النهار فلا ينزلق اليومُ بفرق التوقيت. */
+function dayText(iso: string): string {
+  return fmtDate(`${iso}T12:00:00Z`);
 }
 
 /** **التغيّرُ عن الفترة السابقة** — نصٌّ قصيرٌ واتّجاهُه (للّون)، أو لا شيء. */
@@ -152,7 +189,8 @@ const TONE_ICON: Record<TileTone, string> = {
 
 /**
  * **بطاقةُ رقمٍ بمقارنة** — شكلُ `Tile` نفسُه (أيقونةٌ في دائرةٍ ورقمٌ ولفظ)، وتحتها سطرُ التغيّر
- * ملوّناً: أخضرُ للأحسن وأحمرُ للأسوأ — **والأحسنُ في الملغى والمستردّ النزول** (`lowerIsBetter`).
+ * ملوّناً: أخضرُ للأحسن وأحمرُ للأسوأ — **والأحسنُ في الملغى والمستردّ والوقت النزول** (`lowerIsBetter`).
+ * **وبـ`onClick` تصير زرّاً** يفتح ما وراء الرقم؛ وبلاه رقمٌ هادئ. و`wide` تأخذ سطراً كاملاً على الجوّال.
  */
 function StatTile({
   icon: Icon,
@@ -162,6 +200,8 @@ function StatTile({
   delta,
   tone = "default",
   lowerIsBetter = false,
+  onClick,
+  wide = false,
 }: {
   icon: React.ComponentType<{ size?: number; className?: string }>;
   label: string;
@@ -170,19 +210,28 @@ function StatTile({
   delta?: Delta;
   tone?: TileTone;
   lowerIsBetter?: boolean;
+  onClick?: () => void;
+  wide?: boolean;
 }) {
   const good = delta && ((delta.dir === "up" && !lowerIsBetter) || (delta.dir === "down" && lowerIsBetter));
   const bad = delta && ((delta.dir === "down" && !lowerIsBetter) || (delta.dir === "up" && lowerIsBetter));
   const TrendIcon = delta?.dir === "up" ? IconTrendUp : delta?.dir === "down" ? IconTrendDown : null;
-  return (
-    <div className="flex items-center gap-3 rounded-card border border-line-soft p-3">
+  const cls = `flex items-center gap-3 rounded-card border p-3 text-start ${wide ? "col-span-2 sm:col-span-1" : ""} ${
+    onClick ? "transition-colors hover:bg-row-hover" : ""
+  } ${tone === "danger" ? "border-danger" : tone === "warning" ? "border-warning" : "border-line-soft"}`;
+  const body = (
+    <>
       <span className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${TONE_ICON[tone]}`}>
         <Icon size={18} />
       </span>
-      <span className="min-w-0">
-        <span className="figure block leading-none">{value}</span>
-        <span className="mt-1 block text-xs text-ink-muted">{label}</span>
-        {sub && <span className="block text-2xs text-ink-muted">{sub}</span>}
+      <span className="min-w-0 flex-1">
+        <span
+          className={`figure block leading-none ${tone === "muted" ? "text-ink-muted" : tone === "danger" ? "text-danger" : ""}`}
+        >
+          {value}
+        </span>
+        <span className="mt-1 line-clamp-2 text-xs text-ink-muted">{label}</span>
+        {sub && <span className="line-clamp-2 text-2xs text-ink-muted">{sub}</span>}
         {delta && (
           <span
             className={`mt-0.5 flex items-center gap-1 text-2xs ${
@@ -194,12 +243,51 @@ function StatTile({
           </span>
         )}
       </span>
+    </>
+  );
+  if (!onClick) return <div className={cls}>{body}</div>;
+  return (
+    <button type="button" onClick={onClick} className={cls}>
+      {body}
+    </button>
+  );
+}
+
+/** **فارغٌ بالنمط** — دائرةٌ ملوّنةٌ وعنوانٌ وجملةٌ تساعد. */
+function Empty({
+  icon: Icon,
+  title,
+  hint,
+}: {
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  title: string;
+  hint: string;
+}) {
+  return (
+    <div className="flex flex-col items-center gap-2 py-6 text-center">
+      <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-field text-ink-muted">
+        <Icon size={22} />
+      </span>
+      <p className="text-sm font-bold">{title}</p>
+      <p className="text-xs text-ink-muted">{hint}</p>
     </div>
   );
 }
 
+/** عمودٌ في المخطّط — يومٌ أو أسبوع. */
+interface Bucket {
+  key: string;
+  label: string;
+  week: boolean;
+  v: number;
+}
+
 /**
- * مخطط أعمدة يومي — سلسلةٌ واحدةٌ بلونٍ واحد (عنوانُ اللوحة يسمّيها)، وتلميحٌ لكلّ عمود.
+ * **مخطّطُ أعمدةٍ يوميّ** — سلسلةٌ واحدةٌ بلونٍ واحد (عنوانُ اللوحة يسمّيها).
+ *
+ * (تدقيقُ ٢٠٢٦-١٠-٢٧) **يعمل باللمس** — الضغطُ يثبّت رقمَ العمود، والفأرةُ تُريه مروراً. **وفوقه
+ * ملخّص** (أعلى يومٍ ومتوسّطُ اليوم)، **وأرقامُ الأيّام لا تتراكب** — في الفترة الطويلة يُكتب
+ * بعضُها، **وفوق ٦٠ يوماً كلُّ عمودٍ أسبوع.** والتلميحُ عند الطرفين لا يخرج من الشاشة.
  */
 function DailyBars({
   data,
@@ -210,92 +298,158 @@ function DailyBars({
   value: (d: DailyPoint) => number;
   format: (v: number) => string;
 }) {
+  const r = m.admin.reports;
   const [hover, setHover] = useState<number | null>(null);
-  const max = Math.max(1, ...data.map(value));
+  const [picked, setPicked] = useState<number | null>(null);
+
+  const weekly = data.length > 60;
+  const buckets: Bucket[] = [];
+  if (weekly) {
+    for (let i = 0; i < data.length; i += 7) {
+      const chunk = data.slice(i, i + 7);
+      const first = chunk[0]?.day ?? "";
+      buckets.push({
+        key: first,
+        label: shortDay(first),
+        week: true,
+        v: chunk.reduce((a, d) => a + value(d), 0),
+      });
+    }
+  } else {
+    for (const d of data) buckets.push({ key: d.day, label: shortDay(d.day), week: false, v: value(d) });
+  }
+
+  const total = data.reduce((a, d) => a + value(d), 0);
+  const max = Math.max(0, ...buckets.map((b) => b.v));
+  const top = buckets.find((b) => b.v === max && max > 0);
+  const avg = data.length > 0 ? total / data.length : 0;
+  const scale = Math.max(1, max);
+  const n = buckets.length;
+  const step = n > 14 ? Math.ceil(n / 8) : 1;
+  const shown = hover ?? picked;
 
   return (
-    <div className="relative">
-      <div className="pointer-events-none absolute inset-x-0 bottom-6 top-0">
-        {[0.25, 0.5, 0.75].map((f) => (
-          <div key={f} className="absolute inset-x-0 border-t border-line-soft" style={{ bottom: `${f * 100}%` }} />
-        ))}
-      </div>
+    <div className="space-y-2">
+      <p className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-ink-muted">
+        {top && (
+          <span>
+            {(top.week ? r.chartTopWeek : r.chartTop)
+              .replace("{v}", format(top.v))
+              .replace("{d}", top.label)}
+          </span>
+        )}
+        <span>{r.chartAvg.replace("{v}", format(Math.round(avg)))}</span>
+        {weekly && <span>{r.chartWeekly}</span>}
+      </p>
 
-      <div className="flex h-40 items-end gap-0.5" dir="ltr">
-        {data.map((d, i) => {
-          const v = value(d);
-          const h = Math.max(v > 0 ? 6 : 2, (v / max) * 100);
-          return (
-            <div
-              key={d.day}
-              className="group relative flex h-full flex-1 items-end justify-center"
-              onMouseEnter={() => setHover(i)}
-              onMouseLeave={() => setHover(null)}
-            >
-              <div
-                className={`w-full max-w-6 rounded-t transition-colors ${
-                  v > 0 ? (hover === i ? "bg-primary-dark" : "bg-primary") : "bg-line"
-                }`}
-                style={{ height: `${h}%`, borderRadius: "4px 4px 0 0" }}
-              />
-              {hover === i && (
-                <div className="pointer-events-none absolute bottom-full mb-1 whitespace-nowrap surface-inset px-2.5 py-1.5 text-xs elev-2">
-                  <span className="font-bold">{format(v)}</span>
-                  <span className="text-ink-muted"> · {d.day.slice(5)}</span>
-                </div>
-              )}
+      <div className="relative">
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-40">
+          <div className="absolute inset-x-0 top-0 border-t border-dashed border-line-soft" />
+          <div className="absolute inset-x-0 top-1/2 border-t border-dashed border-line-soft" />
+          {max > 0 && (
+            <span className="absolute end-0 top-0 -translate-y-full text-2xs text-ink-muted">{format(max)}</span>
+          )}
+        </div>
+
+        <div className="flex h-40 items-end gap-0.5" dir="ltr">
+          {buckets.map((b, i) => {
+            const h = Math.max(b.v > 0 ? 6 : 2, (b.v / scale) * 100);
+            const on = shown === i;
+            const place = i < n / 3 ? "left-0" : i >= (2 * n) / 3 ? "right-0" : "left-1/2 -translate-x-1/2";
+            const when = b.week ? r.weekOf.replace("{d}", b.label) : b.label;
+            return (
+              <button
+                type="button"
+                key={b.key}
+                aria-label={`${when} · ${format(b.v)}`}
+                className="relative flex h-full flex-1 items-end justify-center"
+                onMouseEnter={() => setHover(i)}
+                onMouseLeave={() => setHover(null)}
+                onClick={() => setPicked((p) => (p === i ? null : i))}
+              >
+                <span
+                  className={`block w-full max-w-6 transition-colors ${
+                    b.v > 0 ? (on ? "bg-primary-dark" : "bg-primary") : "bg-line"
+                  }`}
+                  style={{ height: `${h}%`, borderRadius: "4px 4px 0 0" }}
+                />
+                {on && (
+                  <span
+                    className={`pointer-events-none absolute bottom-full z-10 mb-1 whitespace-nowrap surface-inset px-2.5 py-1.5 text-xs elev-2 ${place}`}
+                  >
+                    <span className="font-bold">{format(b.v)}</span>
+                    <span className="text-ink-muted"> · {when}</span>
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        <div className="mt-1 flex gap-0.5 border-t border-line-soft pt-1" dir="ltr">
+          {buckets.map((b, i) => (
+            <div key={b.key} className="flex-1 overflow-visible whitespace-nowrap text-center text-2xs text-ink-muted">
+              {i % step === 0 ? b.label : ""}
             </div>
-          );
-        })}
+          ))}
+        </div>
       </div>
-      <div className="mt-1 flex gap-0.5 border-t border-line-soft pt-1" dir="ltr">
-        {data.map((d) => (
-          <div key={d.day} className="flex-1 text-center text-2xs text-ink-muted">
-            {d.day.slice(8)}
-          </div>
-        ))}
-      </div>
+      <p className="text-2xs text-ink-muted">{r.chartTapHint}</p>
     </div>
   );
 }
 
-/** **سطرُ ترتيبٍ في «الأفضل»** — رقمُ المرتبة بدائرة، والاسمُ وسطرُه، والرقمُ على الطرف. */
+/** **سطرُ ترتيبٍ في «الأفضل»** — رقمُ المرتبة بدائرة، والاسمُ وسطرُه، والرقمُ على الطرف؛ ويفتح الملفّ لمن يُفتح له. */
 function RankRow({
   rank,
   name,
   sub,
   end,
+  href,
+  allowed,
 }: {
   rank: number;
   name: React.ReactNode;
   sub?: React.ReactNode;
   end?: React.ReactNode;
+  href: string;
+  allowed: boolean;
 }) {
   return (
-    <li className="flex items-center gap-3 rounded-control px-2 py-2 transition-colors hover:bg-row-hover">
-      <span
-        className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums ${
-          rank === 1 ? "bg-accent text-on-bright" : "bg-field text-ink-muted"
-        }`}
+    <li>
+      <OpenLink
+        allowed={allowed}
+        href={href}
+        className="flex items-center gap-3 rounded-control px-2 py-2 transition-colors hover:bg-row-hover"
       >
-        {fmtNum(rank)}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-bold">{name}</span>
-        {sub && <span className="block truncate text-2xs text-ink-muted">{sub}</span>}
-      </span>
-      {end && <span className="shrink-0 text-end text-sm">{end}</span>}
+        <span
+          className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold tabular-nums ${
+            rank === 1 ? "bg-accent text-on-bright" : "bg-field text-ink-muted"
+          }`}
+        >
+          {fmtNum(rank)}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-bold">{name}</span>
+          {sub && <span className="block truncate text-2xs text-ink-muted">{sub}</span>}
+        </span>
+        {end && <span className="shrink-0 text-end text-sm">{end}</span>}
+      </OpenLink>
     </li>
   );
 }
 
 export default function ReportsPage() {
   const { can } = useAuth();
+  const open = useCanOpen();
+  const router = useRouter();
   const canExport = can("finance.export");
+  const canOrders = can("orders.read");
+  const canFinance = can("finance.read");
   const r = m.admin.reports;
 
-  const [from, setFrom] = useState(() => damascusDay(Date.now() - 6 * DAY));
-  const [to, setTo] = useState(() => damascusDay());
+  /** **فارغٌ = افتراضُ الخادم** (آخرُ سبعة أيّامٍ بيوم الحساب) — فلا يُحسب «اليوم» في المتصفّح. */
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
   const [kind, setKind] = useState("");
   const [city, setCity] = useState("");
   /** **والفلترُ من الرابط** — يُقرأ بعد التركيب فلا تختلف الصفحةُ بين الخادم والمتصفّح. */
@@ -304,13 +458,12 @@ export default function ReportsPage() {
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [exporting, setExporting] = useState<"orders" | "ledger" | null>(null);
 
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
-    const f = q.get("from");
-    const t = q.get("to");
-    if (f) setFrom(f);
-    if (t) setTo(t);
+    setFrom(q.get("from") ?? "");
+    setTo(q.get("to") ?? "");
     setKind(q.get("kind") ?? "");
     setCity(q.get("city_id") ?? "");
     setReady(true);
@@ -323,32 +476,63 @@ export default function ReportsPage() {
       .catch(() => setCities([]));
   }, []);
 
-  const today = damascusDay();
+  // **«اليوم» من الخادم** — وقبل أوّل ردٍّ تقديرٌ بساعة الفتح الافتراضيّة (٩).
+  const today = report?.today ?? damascusDay(Date.now() - (report?.day_start_hour ?? 9) * HOUR);
+  const yesterday = shiftDay(today, -1);
   const lm = lastMonth(today);
   const presets = [
     { id: "today", label: r.range.today, from: today, to: today },
-    {
-      id: "yesterday",
-      label: r.range.yesterday,
-      from: damascusDay(Date.now() - DAY),
-      to: damascusDay(Date.now() - DAY),
-    },
-    { id: "last7", label: r.range.last7, from: damascusDay(Date.now() - 6 * DAY), to: today },
+    { id: "yesterday", label: r.range.yesterday, from: yesterday, to: yesterday },
+    { id: "last7", label: r.range.last7, from: shiftDay(today, -6), to: today },
     { id: "month", label: r.range.month, from: `${today.slice(0, 8)}01`, to: today },
     { id: "lastMonth", label: r.range.lastMonth, from: lm.from, to: lm.to },
   ];
-  const activePreset = presets.find((x) => from === x.from && to === x.to)?.id ?? "";
 
-  const query = new URLSearchParams({ from, to });
+  /** **المدى الفعليّ** — ما اختاره المستخدم، وإلّا ما ردّ به الخادم. */
+  const effFrom = from || report?.from || "";
+  const effTo = to || report?.to || "";
+  const activePreset = presets.find((x) => effFrom === x.from && effTo === x.to)?.id ?? "";
+
+  // **مدًى لا يقبله الخادم لا يُرسَل** — رسالةٌ تحت التاريخ، والأرقامُ السابقةُ باقية.
+  const rangeError =
+    effFrom && effTo
+      ? effFrom > effTo
+        ? r.rangeInverted
+        : spanDays(effFrom, effTo) > MAX_DAYS
+          ? r.rangeTooLong
+          : ""
+      : "";
+
+  const query = new URLSearchParams();
+  if (from) query.set("from", from);
+  if (to) query.set("to", to);
   if (kind) query.set("kind", kind);
   if (city) query.set("city_id", city);
   const qs = query.toString();
 
-  /** تنزيلُ CSV — **بالمدّة المعروضة نفسِها** (والنوعُ لتصدير الطلبات). */
+  /** **رابطُ سجلّ الطلبات بالفترة والنوع نفسِهما** — والحالةُ إن طُلبت. */
+  function historyHref(status?: string): string {
+    const q = new URLSearchParams();
+    if (report) {
+      q.set("from", report.from);
+      q.set("to", report.to);
+    }
+    if (kind) q.set("kind", kind);
+    if (status) q.set("status", status);
+    return `/dashboard/history?${q}`;
+  }
+  const goHistory = (status?: string) => (canOrders ? () => router.push(historyHref(status)) : undefined);
+  const goProfits =
+    canFinance && report ? () => router.push(`/dashboard/profits?from=${report.from}&to=${report.to}`) : undefined;
+  const goCash = canFinance ? () => router.push("/dashboard/cash") : undefined;
+
+  /** تنزيلُ CSV — **بالمدّة المعروضة نفسِها** (والنوعُ لتصدير الطلبات)؛ والزرُّ يقول إنّه يُنزّل. */
   function download(which: "orders" | "ledger") {
+    if (!report || exporting) return;
     const path = which === "orders" ? "orders/export" : "ledger/export";
-    const q = new URLSearchParams({ from, to });
+    const q = new URLSearchParams({ from: report.from, to: report.to });
     if (which === "orders" && kind) q.set("kind", kind);
+    setExporting(which);
     void (async () => {
       try {
         const res = await apiFile(`/api/v1/admin/${path}?${q.toString()}`);
@@ -356,11 +540,13 @@ export default function ReportsPage() {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        a.download = `${which}-${from}_${to}.csv`;
+        a.download = `${which}-${report.from}_${report.to}.csv`;
         a.click();
         URL.revokeObjectURL(url);
       } catch (err) {
         setError(errorText(err));
+      } finally {
+        setExporting(null);
       }
     })();
   }
@@ -368,10 +554,9 @@ export default function ReportsPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setReport(await api<Report>(`/api/v1/admin/reports?${qs}`));
+      setReport(await api<Report>(`/api/v1/admin/reports${qs ? `?${qs}` : ""}`));
       setError("");
     } catch (err) {
-      setReport(null);
       setError(errorText(err));
     } finally {
       setLoading(false);
@@ -379,42 +564,50 @@ export default function ReportsPage() {
   }, [qs]);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || rangeError) return;
     try {
-      window.history.replaceState(null, "", `${window.location.pathname}?${qs}`);
+      window.history.replaceState(null, "", qs ? `${window.location.pathname}?${qs}` : window.location.pathname);
     } catch {
       /* الرابطُ راحةٌ لا شرط */
     }
     void load();
-  }, [load, qs, ready]);
+  }, [load, qs, ready, rangeError]);
 
-  const inverted = from !== "" && to !== "" && from > to;
   const s = report?.summary;
   const p = report?.previous;
   const money = report?.money_visible ?? false;
+  const profit = s?.platform_profit ?? 0;
+  const profitTone: TileTone = profit < 0 ? "danger" : profit === 0 ? "muted" : "success";
+  const kinds = [
+    { id: "all", label: r.kindAll },
+    { id: "standard", label: r.kindStandard },
+    { id: "custom", label: r.kindCustom },
+    { id: "merchant_delivery", label: r.kindDelivery },
+  ];
+  const exportOff = !report || !!rangeError || exporting !== null;
 
   return (
     <PageContainer>
-      {/* **رأسٌ موحّد** — والتصديرُ لمن يملك `finance.export` وحدَه، كما كان. */}
+      {/* **رأسٌ موحّد** — والتنزيلُ لمن يملك `finance.export` وحدَه، كما كان. */}
       <PageHero
-        icon={IconStatus}
+        icon={IconTrendUp}
         title={r.title}
         subtitle={r.subtitle}
         actions={
           canExport ? (
             <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" onClick={() => download("orders")} disabled={inverted}>
-                {r.exportOrders}
+              <Button variant="secondary" onClick={() => download("orders")} disabled={exportOff}>
+                {exporting === "orders" ? r.exporting : r.exportOrders}
               </Button>
-              <Button variant="secondary" onClick={() => download("ledger")} disabled={inverted}>
-                {r.exportLedger}
+              <Button variant="secondary" onClick={() => download("ledger")} disabled={exportOff}>
+                {exporting === "ledger" ? r.exporting : r.exportLedger}
               </Button>
             </div>
           ) : undefined
         }
       />
 
-      {/* **الفترةُ والفلاترُ ببطاقةٍ واحدة** — تلتفّ على الجوال ولا تُزيح الصفحة. */}
+      {/* **الفترةُ والفلاترُ ببطاقةٍ واحدة** — حبوبٌ تلتفّ على الجوال ولا تُزيح الصفحة. */}
       <section className="surface space-y-3 p-3">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm text-ink-muted">{r.periodLabel}:</span>
@@ -430,37 +623,51 @@ export default function ReportsPage() {
             }}
           />
         </div>
-        <div className="flex flex-wrap items-end gap-2">
-          <div className="min-w-[8.75rem] flex-1 sm:w-40 sm:flex-none">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-end">
+          <div className="sm:w-44">
             <Input
               id="r-from"
               label={r.from}
               icon={<IconDate />}
               type="date"
-              value={from}
-              onChange={(e) => setFrom(e.target.value)}
+              value={effFrom}
+              onChange={(e) => {
+                setFrom(e.target.value);
+                if (!to && report) setTo(report.to);
+              }}
             />
           </div>
-          <div className="min-w-[8.75rem] flex-1 sm:w-40 sm:flex-none">
+          <div className="sm:w-44">
             <Input
               id="r-to"
               label={r.to}
               icon={<IconDate />}
               type="date"
-              value={to}
-              onChange={(e) => setTo(e.target.value)}
+              value={effTo}
+              onChange={(e) => {
+                setTo(e.target.value);
+                if (!from && report) setFrom(report.from);
+              }}
             />
           </div>
-          <div className="min-w-[9rem] flex-1 sm:w-44 sm:flex-none">
-            <Select aria-label={r.kindAll} value={kind} onChange={(e) => setKind(e.target.value)}>
-              <option value="">{r.kindAll}</option>
-              <option value="standard">{r.kindStandard}</option>
-              <option value="custom">{r.kindCustom}</option>
-              <option value="merchant_delivery">{r.kindDelivery}</option>
-            </Select>
-          </div>
-          {cities.length > 0 && (
-            <div className="min-w-[9rem] flex-1 sm:w-44 sm:flex-none">
+        </div>
+        {rangeError && (
+          <p role="alert" className="flex items-center gap-1.5 text-xs font-bold text-danger">
+            <IconWarning size={14} />
+            {rangeError}
+          </p>
+        )}
+        <Chips wrap items={kinds} value={kind || "all"} onChange={(id) => setKind(id === "all" ? "" : id)} />
+        {cities.length > 1 &&
+          (cities.length <= 3 ? (
+            <Chips
+              wrap
+              items={[{ id: "all", label: r.cityAll }, ...cities.map((c) => ({ id: c.id, label: c.name }))]}
+              value={city || "all"}
+              onChange={(id) => setCity(id === "all" ? "" : id)}
+            />
+          ) : (
+            <div className="sm:w-56">
               <Select aria-label={r.cityAll} value={city} onChange={(e) => setCity(e.target.value)}>
                 <option value="">{r.cityAll}</option>
                 {cities.map((c) => (
@@ -470,13 +677,22 @@ export default function ReportsPage() {
                 ))}
               </Select>
             </div>
+          ))}
+        <div className="space-y-1 text-2xs text-ink-muted">
+          <p className="flex items-center gap-1.5">
+            <IconHourglass size={12} />
+            {r.byOrderDay}
+          </p>
+          {report?.previous_from && report.previous_to && (
+            <p className="flex items-center gap-1.5">
+              <IconCompare size={12} />
+              {r.comparingWith
+                .replace("{from}", dayText(report.previous_from))
+                .replace("{to}", dayText(report.previous_to))}
+            </p>
           )}
+          {canExport && city && <p>{r.exportAllCities}</p>}
         </div>
-        {/* **ويومُ الحساب من ساعة فتح الدوام** — التقريرُ لا يحمل الساعة، فاللفظُ بلا رقم. */}
-        <p className="flex items-center gap-1.5 text-2xs text-ink-muted">
-          <IconHourglass size={12} />
-          {r.byOrderDay}
-        </p>
       </section>
 
       {error && (
@@ -499,15 +715,16 @@ export default function ReportsPage() {
 
       {s && p && report && (
         <div className={`space-y-5 ${loading ? "opacity-60 transition-opacity" : "transition-opacity"}`}>
-          {/* ── أرقامُ الطلبات — لكلّ من يفتح الصفحة ── */}
+          {/* ── أرقامُ الطلبات — لكلّ من يفتح الصفحة، وكلُّ بطاقةٍ تفتح السجلَّ بالفترة نفسِها ── */}
           <Panel title={r.secOrders}>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
               <StatTile
                 icon={IconOrder}
-                tone="accent"
+                tone={s.orders_total > 0 ? "accent" : "muted"}
                 label={r.summary.ordersTotal}
                 value={fmtNum(s.orders_total)}
                 delta={change(s.orders_total, p.orders_total)}
+                onClick={goHistory()}
               />
               <StatTile
                 icon={IconCheck}
@@ -516,6 +733,7 @@ export default function ReportsPage() {
                 value={fmtNum(s.delivered)}
                 sub={share(s.delivered, s.orders_total)}
                 delta={change(s.delivered, p.delivered)}
+                onClick={goHistory("delivered")}
               />
               <StatTile
                 icon={IconBlock}
@@ -525,6 +743,7 @@ export default function ReportsPage() {
                 sub={share(s.cancelled, s.orders_total)}
                 delta={change(s.cancelled, p.cancelled)}
                 lowerIsBetter
+                onClick={goHistory("cancelled")}
               />
               <StatTile
                 icon={IconSwap}
@@ -534,14 +753,22 @@ export default function ReportsPage() {
                 sub={share(s.refunded, s.orders_total)}
                 delta={change(s.refunded, p.refunded)}
                 lowerIsBetter
+                onClick={goHistory("refunded")}
               />
               <StatTile
                 icon={IconHourglass}
+                tone={s.delivered > 0 ? "default" : "muted"}
                 label={r.summary.avgOrderToDelivery}
-                value={`${fmtNum(s.avg_delivery_min)} ${r.summary.minutes}`}
+                value={s.delivered > 0 ? `${fmtNum(s.avg_delivery_min)} ${r.summary.minutes}` : r.summary.noTime}
+                sub={s.delivered > 0 ? undefined : r.summary.noDelivered}
+                delta={
+                  s.delivered > 0 && p.delivered > 0 ? change(s.avg_delivery_min, p.avg_delivery_min) : undefined
+                }
+                lowerIsBetter
               />
               <StatTile
                 icon={IconUsers}
+                tone={s.active_customers > 0 ? "default" : "muted"}
                 label={r.summary.activeCustomers}
                 value={fmtNum(s.active_customers)}
                 delta={change(s.active_customers, p.active_customers)}
@@ -552,33 +779,39 @@ export default function ReportsPage() {
           {/* ── المال — يصل من الخادم لمن يقرؤه وحدَه ── */}
           {money ? (
             <Panel title={r.secMoney}>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">
                 <StatTile
+                  wide
                   icon={IconReceipt}
-                  tone="accent"
+                  tone={(s.gross_sales ?? 0) > 0 ? "accent" : "muted"}
                   label={r.summary.grossSales}
                   value={<Money value={s.gross_sales ?? 0} />}
                   delta={change(s.gross_sales, p.gross_sales)}
+                  onClick={goHistory("delivered")}
                 />
                 <StatTile
-                  icon={IconWallet}
-                  tone="success"
-                  label={r.summary.platformProfit}
-                  value={<Money value={s.platform_profit ?? 0} />}
+                  wide
+                  icon={profit < 0 ? IconTrendDown : IconWallet}
+                  tone={profitTone}
+                  label={profit < 0 ? r.summary.platformLoss : r.summary.platformProfit}
+                  value={<Money value={profit} />}
                   sub={report.profit_unfiltered ? r.profitAllPlatform : r.profitHint}
                   delta={change(s.platform_profit, p.platform_profit)}
+                  onClick={goProfits}
                 />
                 <StatTile
                   icon={IconStore}
                   label={r.summary.storeCommission}
                   value={<Money value={s.commissions ?? 0} />}
                   delta={change(s.commissions, p.commissions)}
+                  onClick={goProfits}
                 />
                 <StatTile
                   icon={IconMoto}
                   label={r.summary.deliveryFees}
                   value={<Money value={s.delivery_fees ?? 0} />}
                   delta={change(s.delivery_fees, p.delivery_fees)}
+                  onClick={goHistory("delivered")}
                 />
                 <StatTile
                   icon={IconWallet}
@@ -591,6 +824,7 @@ export default function ReportsPage() {
                   label={r.summary.cashCollected}
                   value={<Money value={s.cash_collected ?? 0} />}
                   delta={change(s.cash_collected, p.cash_collected)}
+                  onClick={goCash}
                 />
               </div>
             </Panel>
@@ -610,20 +844,19 @@ export default function ReportsPage() {
             )}
           </div>
 
-          {/* ── الأفضلُ بالفترة — قوائمُ مرتّبةٌ لا جداول ── */}
+          {/* ── الأفضلُ بالفترة — قوائمُ مرتّبةٌ لا جداول، وكلُّ سطرٍ يفتح ملفَّ صاحبه ── */}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <Panel title={r.topMerchants} note={money ? r.storeSalesHint : undefined}>
               {report.top_merchants.length === 0 ? (
-                <p className="flex flex-col items-center gap-2 py-6 text-center text-sm text-ink-muted">
-                  <IconStore size={22} />
-                  {r.noData}
-                </p>
+                <Empty icon={IconStore} title={r.noStores} hint={r.noDataHint} />
               ) : (
                 <ol className="space-y-0.5">
                   {report.top_merchants.map((t, i) => (
                     <RankRow
                       key={t.id}
                       rank={i + 1}
+                      href={`/dashboard/merchants/${t.id}`}
+                      allowed={open.merchant}
                       name={t.name}
                       sub={`${fmtNum(t.delivered)} ${r.deliveries}`}
                       end={
@@ -641,16 +874,15 @@ export default function ReportsPage() {
 
             <Panel title={r.topDrivers}>
               {report.top_drivers.length === 0 ? (
-                <p className="flex flex-col items-center gap-2 py-6 text-center text-sm text-ink-muted">
-                  <IconDriver size={22} />
-                  {r.noData}
-                </p>
+                <Empty icon={IconDriver} title={r.noDrivers} hint={r.noDataHint} />
               ) : (
                 <ol className="space-y-0.5">
                   {report.top_drivers.map((t, i) => (
                     <RankRow
                       key={t.id}
                       rank={i + 1}
+                      href={`/dashboard/users/${t.id}`}
+                      allowed={open.user}
                       name={t.name || (t.phone ? <span dir="ltr">{t.phone}</span> : r.noName)}
                       sub={
                         t.cash !== undefined ? (
@@ -672,7 +904,7 @@ export default function ReportsPage() {
             </Panel>
           </div>
 
-          {/* **الزوّار** — أجهزةُ تطبيق الزبون وحدَها، ولا يتبعون المدّة. */}
+          {/* **الزوّار** — أجهزةُ تطبيق الزبون وحدَها، بيوم الحساب، ولا يتبعون المدّة. */}
           <Panel title={m.admin.dash.visitors} note={r.visitorsHint}>
             {report.visitors ? (
               <div className="grid grid-cols-2 gap-2 lg:grid-cols-3">

@@ -3,12 +3,16 @@
 /**
  * **الديون — تبويبُ «الديون» في الخزينة** (قراراتُ المالك ٢٠٢٦-١٠-٠٤).
  *
- * الدَّينُ على المتاجر والمناديب (`financial_obligations`): على من، وكم، ولماذا،
+ * الدَّينُ على المتاجر والمناديب والسائقين (`financial_obligations`): على من، وكم، ولماذا،
  * ومن أيّ طلب، وكم بقي. **وفعلان، كلٌّ منهما اقتراحٌ يوافق عليه غيرُ مقترِحه**:
- * «دفع نقدي بالمكتب» (يدخل صندوقَ المكتب) و«شطب الدين» (يوافق مديرُ المنصّة).
+ * «دفع نقدي بالمكتب» (يدخل صندوقَ المكتب) و«شطب الدين» (يوافق مديرُ المنصّة) —
+ * **وحركةُ المالك أو المدير تنفذ فوراً** (قرارُ ٢٠٢٦-١٠-٢٧، علمُ `auto_applies`).
  *
- * **والحالُ أربعة**: مفتوح · انسدّ · انشطب لأنّ الطلب ما صار · شطبته الإدارة —
+ * **والحالُ أربعة**: مفتوح · انسدّ · انلغى طلبه · شطبته الإدارة —
  * **والملغى لا يُعرض مسدَّداً.** **وفشلُ التحميل خطأٌ لا صفر.**
+ *
+ * تدقيقُ ٢٠٢٦-١٠-٢٧: الخاناتُ هي الفلتر (لا تبويباتٌ تكرّرها)، والعرضُ الافتراضيّ «مفتوح»،
+ * والحالةُ أزرارُ حبّة، ومهلةُ التنبيه صفرٌ = لا متأخّر، والرفضُ بتأكيدٍ ولمن يملكه.
  */
 
 import { useEffect, useState } from "react";
@@ -29,6 +33,8 @@ import {
   Input,
   Select,
   Modal,
+  FormActions,
+  Chips,
   Alert,
   PageContainer,
   Pagination,
@@ -53,7 +59,9 @@ const m = getMessages(defaultLocale);
 const O = m.admin.obligations;
 
 type Kind = "" | "merchant" | "rep" | "driver";
-type State = "" | "open" | "closed" | "paid" | "voided" | "written_off";
+/** **«مفتوح» هو الافتراض** — الشغلُ اليوميّ؛ و«الكل» يُكتب صراحةً. («مغلق» شِيل لأنّه مجموعُ التلاتة.) */
+type State = "all" | "open" | "paid" | "voided" | "written_off";
+const STATE_PILLS: State[] = ["open", "paid", "voided", "written_off", "all"];
 type RowState = "open" | "paid" | "voided" | "written_off";
 type Method = keyof typeof O.methods;
 
@@ -72,6 +80,9 @@ interface Pending {
   note: string;
   /** مقترحُ الطلب — لا يرى زرَّ الموافقة عليه. */
   proposed_by?: string;
+  /** **من طلبه وإيمتى** — يعرف الموافقُ على شو عم يوافق. */
+  proposer_name?: string;
+  created_at?: string;
 }
 
 interface Obligation {
@@ -113,6 +124,10 @@ interface ObligationsPage {
   can_manage: boolean;
   can_approve_writeoff: boolean;
   can_export: boolean;
+  /** **حركتُه تنفذ فوراً** — المالكُ والمدير (قرارُ ٢٠٢٦-١٠-٢٧). */
+  auto_applies?: boolean;
+  /** ساعةُ بدء يوم المنصّة — حدودُ «من/إلى تاريخ» عند الخادم. */
+  day_start_hour?: number;
 }
 
 interface Filters {
@@ -130,7 +145,7 @@ interface Filters {
 
 const EMPTY: Filters = {
   kind: "",
-  state: "",
+  state: "open",
   cause: "",
   q: "",
   party: "",
@@ -154,9 +169,10 @@ const STATE_VARIANT: Record<RowState, "warning" | "success" | "neutral" | "dange
 function readUrl(): Filters {
   if (typeof window === "undefined") return EMPTY;
   const p = new URLSearchParams(window.location.search);
+  const st = p.get("state") ?? "";
   return {
     kind: (p.get("party_kind") ?? "") as Kind,
-    state: (p.get("state") ?? "") as State,
+    state: (STATE_PILLS as string[]).includes(st) ? (st as State) : "open",
     cause: p.get("cause") ?? "",
     q: p.get("q") ?? "",
     party: p.get("party_id") ?? "",
@@ -167,10 +183,14 @@ function readUrl(): Filters {
   };
 }
 
-function query(f: Filters): string {
+/**
+ * **رابطُ الصفحة ونداءُ الخادم من مصدرٍ واحد** — والفرقُ في الحالة وحدَها: الرابطُ يسكت عن
+ * «مفتوح» (الافتراض) ويكتب «all»، والخادمُ يأخذ «open» صراحةً و«الكل» عنده فراغ.
+ */
+function query(f: Filters, forUrl = false): string {
   const p = new URLSearchParams();
   if (f.kind) p.set("party_kind", f.kind);
-  if (f.state) p.set("state", f.state);
+  if (forUrl ? f.state !== "open" : f.state !== "all") p.set("state", f.state);
   if (f.cause) p.set("cause", f.cause);
   if (f.q.trim()) p.set("q", f.q.trim());
   if (f.party) p.set("party_id", f.party);
@@ -218,6 +238,9 @@ function buildCsv(rows: Obligation[]): string {
 const partyHref = (o: Obligation) =>
   o.party_kind === "merchant" ? `/dashboard/merchants/${o.party_id}` : `/dashboard/users/${o.party_id}`;
 
+/** **الخانةُ المختارة** — إطارٌ ملوّنٌ حولها، فيُعرف أيّ فلترٍ شغّال. */
+const ring = (on: boolean) => (on ? "rounded-card ring-2 ring-accent" : "");
+
 export default function ObligationsPage() {
   // **وملفُّ الطرف والطلبُ لمن يُفتحان له** (قرارُ المالك ٢٠٢٦-١٠-٠٥).
   const canOpen = useCanOpen();
@@ -232,6 +255,10 @@ export default function ObligationsPage() {
   const [exporting, setExporting] = useState(false);
   /** **بحثٌ يُكتب ثمّ يُرسَل** — لا نداءَ مع كلّ حرف. */
   const [typed, setTyped] = useState("");
+  /** **الطلبُ قيد القرار** — كبستان ورا بعض ما بتبعتا طلبين. */
+  const [deciding, setDeciding] = useState<string | null>(null);
+  /** **الرفضُ بتأكيد** — الطلبُ اللي عم يسأل «متأكد؟». */
+  const [rejecting, setRejecting] = useState<string | null>(null);
 
   useEffect(() => {
     const init = readUrl();
@@ -242,11 +269,13 @@ export default function ObligationsPage() {
 
   useEffect(() => {
     if (!ready) return;
-    const qs = query(f);
-    window.history.replaceState(null, "", qs ? `?${qs}` : window.location.pathname);
+    const u = query(f, true);
+    window.history.replaceState(null, "", u ? `?${u}` : window.location.pathname);
   }, [f, ready]);
 
   const qs = query(f);
+  /** **في فلترٌ غيرُ الافتراض؟** — يُظهر «امسح الفلاتر» ويختار نصَّ الحالة الفاضية. */
+  const filtered = query(f, true) !== "";
   const { data, loading, error, reload } = useLiveData<ObligationsPage>(
     () =>
       ready
@@ -267,6 +296,7 @@ export default function ObligationsPage() {
   function pick(next: Partial<Filters>) {
     setPage(1);
     setOpen(null);
+    setRejecting(null);
     setShownKey("");
     setF((cur) => ({ ...cur, ...next }));
   }
@@ -294,16 +324,21 @@ export default function ObligationsPage() {
   }
 
   async function decide(p: Pending, approve: boolean) {
+    if (deciding) return;
+    setDeciding(p.id);
     setNotice("");
     try {
       await api(`/api/v1/admin/obligation-requests/${p.id}/${approve ? "approve" : "reject"}`, {
         method: "POST",
         body: JSON.stringify({}),
       });
-      setNotice(O.decided);
+      setNotice(approve ? (p.kind === "office_cash" ? O.appliedCash : O.appliedWriteOff) : O.rejected);
+      setRejecting(null);
       reload();
     } catch (err) {
       setNotice(errorText(err));
+    } finally {
+      setDeciding(null);
     }
   }
 
@@ -312,12 +347,21 @@ export default function ObligationsPage() {
   const rows = data?.obligations ?? [];
   const sum = data?.summary;
   const alertDays = data?.alert_days ?? 30;
+  /** **مهلةُ صفر = بلا تنبيه** — فلا دينَ متأخّر ولا لونَ أحمر (`finance.obligation_alert_days`). */
+  const alertOn = alertDays > 0;
+  const isOverdue = (o: Obligation) => alertOn && o.state === "open" && o.age_days >= alertDays;
 
-  // **تصميمٌ احترافيّ** (المالك ٢٠٢٦-١٠-٢٦: «صفحة الديون كمان تصميم احترافي كالسابق») — رأسٌ
-  // موحّدٌ بتبويبات الأطراف، أرقامٌ تُضغط، فلاترُ في كرت، وكرتٌ لكلّ دينٍ بمبلغه وما بقي وأفعاله.
+  const partyTiles = [
+    { k: "merchant" as const, icon: IconStore, label: O.merchantsTotal, total: sum?.merchants_total ?? 0 },
+    { k: "rep" as const, icon: IconUser, label: O.repsTotal, total: sum?.reps_total ?? 0 },
+    { k: "driver" as const, icon: IconUser, label: O.driversTotal, total: sum?.drivers_total ?? 0 },
+  ];
+
+  // **تصميمٌ احترافيّ** (المالك ٢٠٢٦-١٠-٢٦) — رأسٌ موحّد، أرقامٌ تُضغط وهي نفسُها الفلتر،
+  // فلاترُ في كرت، وكرتٌ لكلّ دينٍ بمبلغه وما بقي وأفعاله.
   return (
     <PageContainer>
-      <PageHero<string>
+      <PageHero
         icon={IconBalance}
         title={O.title}
         subtitle={O.hint}
@@ -333,14 +377,6 @@ export default function ObligationsPage() {
             )}
           </>
         }
-        tabs={[
-          { key: "all", label: O.kinds.all, icon: IconBalance },
-          { key: "merchant", label: O.merchantsTotal, icon: IconStore },
-          { key: "rep", label: O.repsTotal, icon: IconUser },
-          { key: "driver", label: O.driversTotal, icon: IconUser },
-        ]}
-        value={f.kind || "all"}
-        onChange={(k) => pick({ kind: (k === "all" ? "" : k) as Kind })}
       />
 
       {error && !data ? (
@@ -358,65 +394,79 @@ export default function ObligationsPage() {
             </Alert>
           )}
 
-          {/* **كلُّ المفتوح بأنواعه** — لا الصفحةُ المعروضة. */}
+          {/* **كلُّ المفتوح بأنواعه** — لا الصفحةُ المعروضة. **والخانةُ هي الفلتر**: تكبسها فتُعرض
+              ديونُ هالطرف المفتوحة، وتكبسها تاني فترجع للكل. */}
           <div className="mb-2 grid grid-cols-2 gap-2 lg:grid-cols-4">
-            <Tile
-              icon={IconWallet}
-              label={O.outstandingTotal}
-              value={fmtMoney(sum?.outstanding_total ?? 0)}
-              sub={O.debtorsSub.replace("{n}", fmtNum(sum?.debtors ?? 0))}
-              tone={(sum?.outstanding_total ?? 0) > 0 ? "warning" : "muted"}
-              onClick={() => pick({ kind: "", state: "open" })}
-            />
-            <Tile
-              icon={IconStore}
-              label={O.merchantsTotal}
-              value={fmtMoney(sum?.merchants_total ?? 0)}
-              sub={(sum?.near_limit ?? 0) > 0 ? O.nearLimitSub.replace("{n}", fmtNum(sum?.near_limit ?? 0)) : undefined}
-              tone={(sum?.near_limit ?? 0) > 0 ? "danger" : (sum?.merchants_total ?? 0) > 0 ? "default" : "muted"}
-              onClick={() => pick({ kind: "merchant" })}
-            />
-            <Tile
-              icon={IconUser}
-              label={O.repsTotal}
-              value={fmtMoney(sum?.reps_total ?? 0)}
-              tone={(sum?.reps_total ?? 0) > 0 ? "default" : "muted"}
-              onClick={() => pick({ kind: "rep" })}
-            />
-            <Tile
-              icon={IconUser}
-              label={O.driversTotal}
-              value={fmtMoney(sum?.drivers_total ?? 0)}
-              tone={(sum?.drivers_total ?? 0) > 0 ? "default" : "muted"}
-              onClick={() => pick({ kind: "driver" })}
-            />
+            <div className={ring(f.kind === "" && f.state === "open" && !f.overdue && !f.pending)}>
+              <Tile
+                icon={IconWallet}
+                label={O.outstandingTotal}
+                value={fmtMoney(sum?.outstanding_total ?? 0)}
+                sub={O.debtorsSub.replace("{n}", fmtNum(sum?.debtors ?? 0))}
+                tone={(sum?.outstanding_total ?? 0) > 0 ? "warning" : "muted"}
+                onClick={() => pick({ kind: "", state: "open", overdue: false, pending: false })}
+              />
+            </div>
+            {partyTiles.map((t) => (
+              <div key={t.k} className={ring(f.kind === t.k)}>
+                <Tile
+                  icon={t.icon}
+                  label={t.label}
+                  value={fmtMoney(t.total)}
+                  tone={t.total > 0 ? "default" : "muted"}
+                  onClick={() => pick(f.kind === t.k ? { kind: "" } : { kind: t.k, state: "open" })}
+                />
+              </div>
+            ))}
           </div>
-          <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <Tile
-              icon={IconDate}
-              label={O.overdue.replace("{n}", fmtNum(alertDays))}
-              value={fmtNum(sum?.overdue ?? 0)}
-              tone={(sum?.overdue ?? 0) > 0 ? "danger" : "muted"}
-              onClick={() => pick({ overdue: !f.overdue })}
-            />
-            <Tile
-              icon={IconStatus}
-              label={O.pendingRequests}
-              value={fmtNum(sum?.pending_requests ?? 0)}
-              tone={(sum?.pending_requests ?? 0) > 0 ? "accent" : "muted"}
-              onClick={() => pick({ pending: !f.pending })}
-            />
+          <div className={`mb-2 grid grid-cols-1 gap-2 ${alertOn ? "sm:grid-cols-2" : ""}`}>
+            {alertOn && (
+              <div className={ring(f.overdue)}>
+                <Tile
+                  icon={IconDate}
+                  label={O.overdue.replace("{n}", fmtNum(alertDays))}
+                  value={fmtNum(sum?.overdue ?? 0)}
+                  tone={(sum?.overdue ?? 0) > 0 ? "danger" : "muted"}
+                  onClick={() => pick({ overdue: !f.overdue })}
+                />
+              </div>
+            )}
+            <div className={ring(f.pending)}>
+              <Tile
+                icon={IconStatus}
+                label={O.pendingRequests}
+                value={fmtNum(sum?.pending_requests ?? 0)}
+                tone={(sum?.pending_requests ?? 0) > 0 ? "accent" : "muted"}
+                onClick={() => pick({ pending: !f.pending })}
+              />
+            </div>
           </div>
+          {/* **قربُ سقف الدين معلومةٌ لا زرّ** — ما إله فلتر، فما بينكتب على خانةٍ بتنكبس. */}
+          {(sum?.near_limit ?? 0) > 0 && (
+            <p className="mb-2 flex items-center gap-2 text-xs font-medium text-danger">
+              <IconStore size={14} />
+              {O.nearLimitNote.replace("{n}", fmtNum(sum?.near_limit ?? 0))}
+            </p>
+          )}
 
           {/* ── الفلاتر في كرتٍ واحد ── */}
           <form
-            className="surface mb-4 space-y-3 p-4"
+            className="surface mb-4 mt-2 space-y-3 p-4"
             onSubmit={(e) => {
               e.preventDefault();
               pick({ q: typed });
             }}
           >
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="space-y-1.5">
+              <span className="block text-xs font-bold text-ink-muted">{O.stateLabel}</span>
+              <Chips
+                wrap
+                items={STATE_PILLS.map((st) => ({ id: st, label: O.states[st] }))}
+                value={f.state}
+                onChange={(st) => pick({ state: st })}
+              />
+            </div>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               <Input
                 id="obl-search"
                 icon={<IconUser size={15} />}
@@ -425,14 +475,6 @@ export default function ObligationsPage() {
                 onChange={(e) => setTyped(e.target.value)}
                 onBlur={() => typed !== f.q && pick({ q: typed })}
               />
-              <Select aria-label={O.states.all} value={f.state} onChange={(e) => pick({ state: e.target.value as State })}>
-                <option value="">{O.states.all}</option>
-                <option value="open">{O.states.open}</option>
-                <option value="closed">{O.states.closed}</option>
-                <option value="paid">{O.states.paid}</option>
-                <option value="voided">{O.states.voided}</option>
-                <option value="written_off">{O.states.written_off}</option>
-              </Select>
               <Select aria-label={O.causeAll} value={f.cause} onChange={(e) => pick({ cause: e.target.value })}>
                 <option value="">{O.causeAll}</option>
                 {Object.entries(O.causes).map(([k, v]) => (
@@ -446,14 +488,19 @@ export default function ObligationsPage() {
                 <Input type="date" aria-label={O.to} title={O.to} value={f.to} onChange={(e) => pick({ to: e.target.value })} />
               </div>
             </div>
+            {(f.from || f.to) && data?.day_start_hour ? (
+              <p className="text-2xs text-ink-muted">{O.dayStartNote.replace("{h}", fmtNum(data.day_start_hour))}</p>
+            ) : null}
             <div className="flex flex-wrap items-center gap-2">
-              <Button
-                type="button"
-                variant={f.overdue ? "primary" : "secondary"}
-                onClick={() => pick({ overdue: !f.overdue })}
-              >
-                {O.overdueOnly}
-              </Button>
+              {alertOn && (
+                <Button
+                  type="button"
+                  variant={f.overdue ? "primary" : "secondary"}
+                  onClick={() => pick({ overdue: !f.overdue })}
+                >
+                  {O.overdueOnly}
+                </Button>
+              )}
               <Button
                 type="button"
                 variant={f.pending ? "primary" : "secondary"}
@@ -462,7 +509,7 @@ export default function ObligationsPage() {
                 {O.pendingOnly}
               </Button>
               {f.party && <Badge variant="neutral">{O.partyFiltered}</Badge>}
-              {qs && (
+              {filtered && (
                 <Button
                   type="button"
                   variant="ghost"
@@ -485,20 +532,26 @@ export default function ObligationsPage() {
                 <IconBalance size={28} />
               </span>
               <h2 className="heading-section">{O.empty}</h2>
-              <p className="max-w-md text-sm text-ink-muted">{qs ? O.emptyFiltered : O.emptyHint}</p>
+              <p className="max-w-md text-sm text-ink-muted">
+                {filtered ? O.emptyFiltered : (sum?.outstanding_total ?? 0) === 0 ? O.emptyHint : O.emptyOpen}
+              </p>
             </section>
           ) : (
             <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
               {rows.map((o) => {
                 const paidPart = o.amount - o.outstanding;
                 const pct = o.amount > 0 ? Math.round((paidPart / o.amount) * 100) : 0;
+                const p = o.pending;
+                // **القرارُ لمن يملكه**: الدفعةُ بإدارة المال، والشطبُ — رفضاً كموافقة — لمدير المنصّة.
+                const canDecide = !!p && !!data?.can_manage && (p.kind === "office_cash" || !!data?.can_approve_writeoff);
+                const busy = !!p && deciding === p.id;
                 return (
                   <li key={o.id} className="surface flex flex-col gap-3 p-4">
                     <div className="flex items-start gap-3">
                       <span
                         className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${
                           o.state === "open"
-                            ? o.age_days >= alertDays
+                            ? isOverdue(o)
                               ? "bg-danger-solid text-on-solid"
                               : "bg-warning-solid text-on-solid"
                             : o.state === "paid"
@@ -517,11 +570,12 @@ export default function ObligationsPage() {
                         >
                           {o.party_name || "—"}
                         </OpenLink>
-                        <span className="block truncate text-sm text-ink-muted">{causeText(o.cause)}</span>
+                        <span className="block truncate text-sm text-ink-muted">
+                          {O.kinds[o.party_kind]} · {causeText(o.cause)}
+                        </span>
                       </span>
-                      <span className="flex shrink-0 flex-col items-end gap-1">
+                      <span className="shrink-0">
                         <Badge variant={STATE_VARIANT[o.state]}>{O.states[o.state]}</Badge>
-                        <Badge variant="neutral">{O.kinds[o.party_kind]}</Badge>
                       </span>
                     </div>
 
@@ -550,7 +604,7 @@ export default function ObligationsPage() {
                         <IconDate size={12} />
                         <span dir="ltr">{fmtDateTime(o.created_at)}</span>
                       </span>
-                      <span className={o.state === "open" && o.age_days >= alertDays ? "font-bold text-danger" : ""}>
+                      <span className={isOverdue(o) ? "font-bold text-danger" : ""}>
                         {O.ageDays.replace("{n}", fmtNum(o.age_days))}
                       </span>
                       {o.order_number != null && o.order_id && (
@@ -571,32 +625,51 @@ export default function ObligationsPage() {
                       )}
                     </div>
 
-                    {/* **طلبٌ ينتظر** — ويوافق عليه غيرُ مقترِحه (والخادمُ يحكم). */}
-                    {o.pending && (
-                      <div className="space-y-2 rounded-control border border-accent px-3 py-2 text-sm">
-                        <span className="block font-medium">
-                          {o.pending.kind === "office_cash"
-                            ? O.pendingCash.replace("{amount}", fmtMoney(o.pending.amount))
-                            : O.pendingWriteOff}
+                    {/* **طلبٌ ينتظر** — مين طلبه وإيمتى وقديش، ويوافق عليه غيرُ مقترِحه (والخادمُ يحكم). */}
+                    {p && (
+                      <div className="space-y-2 rounded-control border border-accent px-3 py-2.5 text-sm">
+                        <span className="flex items-center justify-between gap-2">
+                          <span className="font-medium">
+                            {p.kind === "office_cash" ? O.pendingCashLabel : O.pendingWriteOff}
+                          </span>
+                          <Money value={p.amount} className="font-bold tabular-nums" />
                         </span>
-                        {o.pending.note && <span className="block text-xs text-ink-muted">{o.pending.note}</span>}
-                        <span className="grid grid-cols-2 gap-2">
-                          {data?.can_manage &&
-                            (o.pending.kind === "office_cash" || data.can_approve_writeoff) && (
-                              <Button className="w-full" onClick={() => decide(o.pending!, true)}>
-                                {O.approve}
+                        {(p.proposer_name || p.created_at) && (
+                          <span className="block text-2xs text-ink-muted">
+                            {O.proposedBy
+                              .replace("{name}", p.proposer_name || "—")
+                              .replace("{time}", p.created_at ? fmtDateTime(p.created_at) : "")}
+                          </span>
+                        )}
+                        {p.note && <span className="block text-xs text-ink-muted">{p.note}</span>}
+                        {!canDecide ? (
+                          <span className="block text-xs font-medium text-ink-muted">{O.waitingAdmin}</span>
+                        ) : rejecting === p.id ? (
+                          <span className="block space-y-2">
+                            <span className="block text-xs font-bold text-danger">{O.rejectConfirm}</span>
+                            <span className="grid grid-cols-2 gap-2">
+                              <Button className="w-full" variant="danger" disabled={busy} onClick={() => decide(p, false)}>
+                                {O.rejectYes}
                               </Button>
-                            )}
-                          {data?.can_manage && (
-                            <Button className="w-full" variant="danger" onClick={() => decide(o.pending!, false)}>
+                              <Button className="w-full" variant="secondary" disabled={busy} onClick={() => setRejecting(null)}>
+                                {O.rejectNo}
+                              </Button>
+                            </span>
+                          </span>
+                        ) : (
+                          <span className="grid grid-cols-2 gap-2">
+                            <Button className="w-full" disabled={busy} onClick={() => decide(p, true)}>
+                              {O.approve}
+                            </Button>
+                            <Button className="w-full" variant="danger" disabled={busy} onClick={() => setRejecting(p.id)}>
                               {O.reject}
                             </Button>
-                          )}
-                        </span>
+                          </span>
+                        )}
                       </div>
                     )}
 
-                    {/* **سطورُ التسوية بطريقتها** — انقطع من مستحق · دفع بالمكتب · انشطب. */}
+                    {/* **شو انسدّ منه بطريقته** — انقطع من مستحق · دفع بالمكتب · انشطب. */}
                     {open === o.id && (
                       <ul className="space-y-1.5">
                         {o.settlements.map((st, i) => (
@@ -626,9 +699,9 @@ export default function ObligationsPage() {
                       </ul>
                     )}
 
-                    {(o.settlements.length > 0 || (o.state === "open" && !o.pending && data?.can_manage)) && (
+                    {(o.settlements.length > 0 || (o.state === "open" && !p && data?.can_manage)) && (
                       <div className="mt-auto flex flex-wrap gap-2 border-t border-line-soft pt-3">
-                        {o.state === "open" && !o.pending && data?.can_manage && (
+                        {o.state === "open" && !p && data?.can_manage && (
                           <>
                             <Button className="flex-1" onClick={() => setAct({ o, kind: "office_cash" })}>
                               {O.officeCash}
@@ -639,7 +712,11 @@ export default function ObligationsPage() {
                           </>
                         )}
                         {o.settlements.length > 0 && (
-                          <Button variant="ghost" onClick={() => setOpen((cur) => (cur === o.id ? null : o.id))}>
+                          <Button
+                            className="w-full sm:w-auto"
+                            variant="ghost"
+                            onClick={() => setOpen((cur) => (cur === o.id ? null : o.id))}
+                          >
                             {O.history} ({fmtNum(o.settlements.length)})
                           </Button>
                         )}
@@ -657,9 +734,9 @@ export default function ObligationsPage() {
                 page={page}
                 total={data.total}
                 perPage={data.per_page}
-                onChange={(p) => {
+                onChange={(pg) => {
                   setShownKey("");
-                  setPage(p);
+                  setPage(pg);
                 }}
               />
             </div>
@@ -671,10 +748,12 @@ export default function ObligationsPage() {
         <ActionModal
           o={act.o}
           kind={act.kind}
+          auto={!!data?.auto_applies && (act.kind === "office_cash" || !!data?.can_approve_writeoff)}
           onClose={() => setAct(null)}
           onDone={(applied) => {
+            const k = act.kind;
             setAct(null);
-            setNotice(applied ? O.applied : O.sent);
+            setNotice(applied ? (k === "office_cash" ? O.appliedCash : O.appliedWriteOff) : O.sent);
             reload();
           }}
         />
@@ -683,15 +762,18 @@ export default function ObligationsPage() {
   );
 }
 
-/** **نافذةُ الاقتراح** — مبلغٌ (للدفع) وسببٌ إلزاميّ. */
+/** **نافذةُ الاقتراح** — «عليه» بخطٍّ كبير، ومبلغٌ (للدفع) وسببٌ إلزاميّ. */
 function ActionModal({
   o,
   kind,
+  auto,
   onClose,
   onDone,
 }: {
   o: Obligation;
   kind: "office_cash" | "write_off";
+  /** **تنفذ فوراً؟** — من الخادم (`auto_applies`)، فيقول الزرُّ والشرحُ الصحّ. */
+  auto: boolean;
   onClose: () => void;
   /** `applied`: **حركةُ المالك أو المدير نفذت فوراً** (قرارُ المالك ٢٠٢٦-١٠-٢٧). */
   onDone: (applied: boolean) => void;
@@ -701,14 +783,19 @@ function ActionModal({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const cash = kind === "office_cash";
+  // **الخادمُ يأخذ رقماً صحيحاً** — والكسرُ كان يرجع بخطأ قراءةٍ مبهم.
+  const n = Number(amount);
+  const amountOk = Number.isInteger(n) && n > 0 && n <= o.outstanding;
+  const invalid = !note.trim() || (cash && !amountOk);
 
   async function send() {
+    if (busy || invalid) return;
     setBusy(true);
     setErr("");
     try {
       const r = await api<{ applied?: boolean }>(`/api/v1/admin/obligations/${o.id}/${cash ? "office-cash" : "write-off"}`, {
         method: "POST",
-        body: JSON.stringify(cash ? { amount: Number(amount), note } : { note }),
+        body: JSON.stringify(cash ? { amount: n, note } : { note }),
       });
       onDone(!!r?.applied);
     } catch (e) {
@@ -720,33 +807,53 @@ function ActionModal({
 
   return (
     <Modal open onClose={onClose} title={cash ? O.officeCashTitle : O.writeOffTitle}>
-      <div className="space-y-3">
-        <p className="text-sm text-ink-muted">{cash ? O.officeCashHint : O.writeOffHint}</p>
-        <p className="text-sm font-bold">
-          {o.party_name} · <Money value={o.outstanding} className="tabular-nums" />
+      <form
+        className="space-y-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          send();
+        }}
+      >
+        <div className="rounded-control bg-field px-3 py-2.5">
+          <span className="block truncate text-sm font-bold">{o.party_name || "—"}</span>
+          <span className="block text-2xs text-ink-muted">{O.owes}</span>
+          <Money value={o.outstanding} className={`figure block ${cash ? "text-warning" : "text-danger"}`} />
+        </div>
+        <p className="text-sm text-ink-muted">
+          {cash ? (auto ? O.officeCashHintAuto : O.officeCashHint) : auto ? O.writeOffHintAuto : O.writeOffHint}
         </p>
         {cash && (
-          <Input
-            id="obl-amount"
-            label={O.amountField}
-            type="number"
-            min={1}
-            max={o.outstanding}
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-          />
+          <div className="space-y-1">
+            <Input
+              id="obl-amount"
+              label={O.amountField}
+              type="number"
+              inputMode="numeric"
+              min={1}
+              step={1}
+              max={o.outstanding}
+              value={amount}
+              error={amount !== "" && !amountOk ? O.amountWhole : undefined}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+            {String(o.outstanding) !== amount && (
+              <Button type="button" variant="ghost" onClick={() => setAmount(String(o.outstanding))}>
+                {O.fullAmount}
+              </Button>
+            )}
+          </div>
         )}
         <Input id="obl-note" label={O.reasonField} value={note} onChange={(e) => setNote(e.target.value)} />
         {err && <Alert tone="error">{err}</Alert>}
-        <div className="flex gap-2">
-          <Button onClick={send} disabled={busy || !note.trim() || (cash && !(Number(amount) > 0))}>
-            {O.send}
-          </Button>
-          <Button variant="secondary" onClick={onClose}>
-            {O.cancel}
-          </Button>
-        </div>
-      </div>
+        <FormActions
+          submit
+          busy={busy || invalid}
+          onCancel={onClose}
+          cancelLabel={O.cancel}
+          saveLabel={auto ? (cash ? O.sendCash : O.sendWriteOff) : O.send}
+          tone={cash ? undefined : "danger"}
+        />
+      </form>
     </Modal>
   );
 }

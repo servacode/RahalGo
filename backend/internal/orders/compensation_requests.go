@@ -728,7 +728,8 @@ func (s *Service) PendingCompensations(ctx context.Context, limit, offset int) (
 	return s.Compensations(ctx, CompensationFilter{Status: CompensationPending}, limit, offset)
 }
 
-// CompensationsSummary **أرقامُ البطاقات** — بتوقيت دمشق للشهر، **وبفلاتر الصفحة**
+// CompensationsSummary **أرقامُ البطاقات** — والشهرُ بيوم الحساب (`account_day`، يبدأ بساعة فتح الدوام)
+// كفلتر التاريخ نفسِه (فحصُ ٢٠٢٦-١٠-٢٧)، **وبفلاتر الصفحة**
 // (النوع · الجهة · المستفيد · التاريخ) لا بتبويبها (قرارُ المالك ٢٠٢٦-١٠-١٥).
 func (s *Service) CompensationsSummary(ctx context.Context, f CompensationFilter) (CompensationSummary, error) {
 	sum := CompensationSummary{OverdueHours: s.OverdueHours(ctx)}
@@ -736,8 +737,7 @@ func (s *Service) CompensationsSummary(ctx context.Context, f CompensationFilter
 	hoursArg := fmt.Sprintf("$%d", len(args)+1)
 	args = append(args, sum.OverdueHours)
 	err := s.db.QueryRow(ctx, `
-		WITH m AS (SELECT date_trunc('month', now() AT TIME ZONE 'Asia/Damascus')
-		                  AT TIME ZONE 'Asia/Damascus' AS start)
+		WITH m AS (SELECT account_day_start(date_trunc('month', account_day(now()))::date) AS start)
 		SELECT count(*) FILTER (WHERE r.status = 'pending'),
 		       COALESCE(sum(r.suggested_amount) FILTER (WHERE r.status = 'pending'), 0),
 		       count(*) FILTER (WHERE r.status = 'approved' AND r.decided_at >= m.start),

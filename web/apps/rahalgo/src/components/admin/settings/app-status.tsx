@@ -2,7 +2,7 @@
 
 /**
  * ══════════════════════════════════════════════════════════════════════
- * **حالة التطبيق — ثلاثُ حالاتٍ فوق أربعِ رايات** (`PL`، ٢٠٢٦-٠٩-١٦)
+ * **حالة التطبيق — ثلاثُ حالاتٍ فوق أربعةِ أبواب** (`PL`، ٢٠٢٦-٠٩-١٦)
  * ══════════════════════════════════════════════════════════════════════
  *
  * # ولمَ حالٌ لا رايات
@@ -30,27 +30,17 @@ import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
 import {
   Alert,
   Confirm,
-  PageHeader,
   Button,
   Badge,
-  Card,
   Textarea,
   LoadingState,
-  IconSettings,
   useLiveRefresh,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 
 const m = getMessages(defaultLocale);
 const S = m.admin.appStatus;
-
-/** **الرايةُ ومفتاحُها** — والاسمُ العربيُّ للعرض وحدَه. */
-const CUSTOMER_KEYS = [
-  "launch.customer_signup",
-  "launch.customer_browse",
-  "launch.customer_orders",
-  "launch.customer_custom_orders",
-] as const;
 
 const PRESETS = ["pre_launch", "browse_only", "open"] as const;
 type PresetName = (typeof PRESETS)[number];
@@ -73,7 +63,14 @@ function label(key: string): string {
   return (S.flags as Record<string, string>)[key] ?? key;
 }
 
+/**
+ * **بطاقةٌ واحدة** (تدقيقُ ٢٠٢٦-١٠-٢٧): الحالُ الآن وثلاثُ حبوبٍ للحالات، **والأبوابُ السبعةُ
+ * مفاتيحُ تحتها في الصفحة** — كانت تُعرض هنا مرّةً ثانيةً شاراتٍ رماديّةً بأسماءٍ أخرى.
+ * **والتبديلُ وحفظُ النصّ لمن يملك الإعداداتِ العامّة** — غيرُه كان يكبس فيُردّ ٤٠٣.
+ */
 export default function AppStatusPanel() {
+  const { can } = useAuth();
+  const may = can("settings.general.manage");
   const [state, setState] = useState<LaunchState | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -95,8 +92,7 @@ export default function AppStatusPanel() {
   useEffect(() => {
     void load();
   }, [load]);
-  // **ويتحدّث مع أيّ تغييرٍ في الإعدادات** — أبوابُ الإطلاق لها مربّعاتٌ ثانيةٌ في
-  // الصفحة. **ولا يمسّ نصَّ الإشعار وهو يُكتب** — الحالُ وحدَها.
+  // **ويتحدّث مع أيّ تغييرٍ في الإعدادات** — **ولا يمسّ نصَّ الإشعار وهو يُكتب**.
   useLiveRefresh(["settings"], () => {
     api<LaunchState>("/api/v1/admin/launch").then(setState).catch(() => undefined);
   });
@@ -104,6 +100,7 @@ export default function AppStatusPanel() {
   async function apply(preset: PresetName) {
     setAsking(null);
     setBusy(true);
+    setNotice("");
     try {
       await api("/api/v1/admin/launch/preset", {
         method: "POST",
@@ -120,6 +117,7 @@ export default function AppStatusPanel() {
 
   async function saveNotice() {
     setBusy(true);
+    setNotice("");
     try {
       await api("/api/v1/admin/settings/launch.notice", {
         method: "PUT",
@@ -146,91 +144,79 @@ export default function AppStatusPanel() {
   const pending = asking ? state.presets[asking] : null;
 
   return (
-    <div>
-      <PageHeader icon={IconSettings} title={S.title} />
-      <p className="mb-4 text-sm text-ink-muted">{S.hint}</p>
-
-      {error && <Alert className="mb-4">{error}</Alert>}
-      {notice && <Alert tone="success" className="mb-4">{notice}</Alert>}
-
-      {/* **والحالُ الآن أوّلُ ما يُقرأ** — **ومن لا يعرف أين هو لا يختار.** */}
-      <Card className="mb-4 p-4">
-        <div className="mb-3 flex items-center gap-2">
-          <span className="text-sm text-ink-muted">{S.current}</span>
-          <Badge>{activeLabel}</Badge>
+    <section className="surface space-y-4 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h2 className="heading-card">{S.title}</h2>
+          <p className="text-sm text-ink-muted">{S.hint}</p>
         </div>
-        <ul className="grid gap-1 text-sm">
-          {CUSTOMER_KEYS.map((k) => (
-            <li key={k} className="flex items-center gap-2">
-              <Badge>{state.current[k] ? S.on : S.off}</Badge>
-              <span>{label(k)}</span>
-            </li>
-          ))}
-        </ul>
-      </Card>
+        <Badge variant={state.active === "open" ? "success" : "warning"}>
+          {S.current}: {activeLabel}
+        </Badge>
+      </div>
 
-      {/* **وأبوابُ العمل تُعرَض لتُطمئن** — **لا يمسّها النمط.** */}
-      <Card className="mb-4 p-4">
-        <p className="mb-2 text-sm text-ink-muted">{S.untouched}</p>
-        <ul className="grid gap-1 text-sm">
-          {Object.keys(state.untouched).map((k) => (
-            <li key={k} className="flex items-center gap-2">
-              <Badge>{state.untouched[k] ? S.on : S.off}</Badge>
-              <span>{label(k)}</span>
-            </li>
-          ))}
-        </ul>
-      </Card>
+      {error && <Alert>{error}</Alert>}
+      {notice && <Alert tone="success">{notice}</Alert>}
 
-      <div className="mb-4 grid gap-3">
-        {PRESETS.map((p) => {
-          const info = state.presets[p];
-          const nothing =
-            !info || (info.enable.length === 0 && info.disable.length === 0);
-          return (
-            <Card key={p} className="p-4">
-              <div className="mb-1 font-medium">
-                {(S.presets as Record<string, string>)[p]}
-              </div>
-              <p className="mb-3 text-sm text-ink-muted">
-                {(S.presetHints as Record<string, string>)[p]}
-              </p>
-              <Button
-                disabled={busy || nothing}
+      {/* **تلات حبوب** — الحالُ الحاليّةُ ملوّنة، والكبسُ على غيرها يسأل ويقول شو بيتبدّل. */}
+      <div className="space-y-1.5">
+        <span className="block text-xs font-bold text-ink-muted">{S.choose}</span>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          {PRESETS.map((p) => {
+            const on = state.active === p;
+            const info = state.presets[p];
+            const nothing = !info || (info.enable.length === 0 && info.disable.length === 0);
+            return (
+              <button
+                key={p}
+                type="button"
+                aria-pressed={on}
+                disabled={!may || busy || on || nothing}
                 onClick={() => setAsking(p)}
+                className={`rounded-card border p-3 text-start transition-colors disabled:cursor-default ${
+                  on ? "border-accent bg-accent text-on-bright" : "border-line-soft hover:bg-row-hover"
+                }`}
               >
-                {nothing ? S.noChange : S.apply}
-              </Button>
-            </Card>
-          );
-        })}
+                <span className="block font-bold">{(S.presets as Record<string, string>)[p]}</span>
+                <span className={`mt-0.5 block text-xs ${on ? "" : "text-ink-muted"}`}>
+                  {(S.presetHints as Record<string, string>)[p]}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        {!may && <p className="text-xs text-ink-muted">{S.viewOnly}</p>}
       </div>
 
       {/* **ونصُّ الشاشة يُبدَّل من هنا** — **بلا نشرٍ في المتجر.** */}
-      <Card className="p-4">
-        <div className="mb-1 font-medium">{S.notice}</div>
-        <p className="mb-3 text-sm text-ink-muted">{S.noticeHint}</p>
+      <div className="space-y-2 border-t border-line-soft pt-3">
+        <span className="block font-bold">{S.notice}</span>
+        <p className="text-sm text-ink-muted">{S.noticeHint}</p>
         <Textarea
           id="launch-notice"
           label=""
           value={noticeText}
+          disabled={!may}
           onChange={(e) => setNoticeText(e.target.value)}
         />
-        <div className="mt-3">
-          <Button disabled={busy} onClick={saveNotice}>
-            {S.apply}
+        {may && (
+          <Button
+            className="w-full sm:w-auto"
+            disabled={busy || noticeText === (state.notice ?? "")}
+            onClick={saveNotice}
+          >
+            {m.common.save}
           </Button>
-        </div>
-      </Card>
+        )}
+      </div>
 
-      {/* ══════════════════════════════════════════════════════════════
-          **ولا يُفتح شيءٌ على ظنّ** — **يُقال بالحرف ما سيتبدّل**
-          ══════════════════════════════════════════════════════════ */}
+      {/* **ولا يُفتح شيءٌ على ظنّ** — **يُقال بالحرف ما سيتبدّل** */}
       {asking && pending && (
         <Confirm
           open
           title={S.confirmTitle}
           confirmLabel={S.apply}
+          tone="primary"
           busy={busy}
           onCancel={() => setAsking(null)}
           onConfirm={() => void apply(asking)}
@@ -256,6 +242,6 @@ export default function AppStatusPanel() {
           }
         />
       )}
-    </div>
+    </section>
   );
 }

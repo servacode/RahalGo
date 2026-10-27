@@ -14,7 +14,7 @@ package server
 //     لا معادلةٌ ثانية. و«عمولة المتاجر» بطاقةٌ لحالها.
 //   - **المستردُّ بطاقةٌ لحالها** — كان لا مسلَّماً ولا ملغى.
 //   - **مقارنةٌ بالفترة السابقة المساوية** (`previous`).
-//   - **الزوّارُ أجهزةُ الزبائن وحدَها وبيومٍ تقويميّ** — وعدُّ أجهزة
+//   - **الزوّارُ أجهزةُ الزبائن وحدَها وبيوم الحساب** — وعدُّ أجهزة
 //     التطبيقات الأخرى مكانُه مراقبةُ التشغيل.
 //   - **فلترُ النوع والمدينة**، وأفضلُ المتاجر تُنسَب لكلّ مصدرٍ حصّتُه.
 //   - **مدًى مقلوبٌ يُرفض برسالة**، ولا مدى فوق سنة.
@@ -214,7 +214,7 @@ type reportDriver struct {
 	Cash      *int64 `json:"cash,omitempty"`
 }
 
-// reportVisitors **زوّارُ تطبيق الزبون** — يومٌ تقويميٌّ بدمشق.
+// reportVisitors **زوّارُ تطبيق الزبون** — بيوم الحساب (يبدأ بساعة فتح الدوام).
 type reportVisitors struct {
 	OpensToday   int64 `json:"opens_today"`
 	Opens7       int64 `json:"opens_7d"`
@@ -227,8 +227,8 @@ type reportVisitors struct {
 // customerVisitors **فتحاتُ تطبيق الزبون وأجهزتُه** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
 //
 // **والأجهزةُ أجهزةُ الزبائن وحدَها** (app = 'customer') — كانت تعدّ أجهزةَ
-// السائقين والمتاجر والمناديب، **فتقول ٤ أجهزةٍ و١ فتحة.** **واليومُ يومٌ
-// تقويميٌّ بدمشق** كالفتحات — كان «آخرَ ٢٤ ساعة». **و«٧ أيّام» اليومُ
+// السائقين والمتاجر والمناديب، **فتقول ٤ أجهزةٍ و١ فتحة.** **واليومُ يومُ
+// الحساب** (`account_day`، يبدأ بساعة فتح الدوام) كالفتحات — كان «آخرَ ٢٤ ساعة». **و«٧ أيّام» اليومُ
 // وستّةٌ قبله.** والفتحاتُ لا يعدّها إلّا نداءُ رئيسيّة الزبون (countOpen).
 func (s *Server) customerVisitors(ctx context.Context) (reportVisitors, error) {
 	var v reportVisitors
@@ -255,8 +255,9 @@ func (s *Server) customerVisitors(ctx context.Context) (reportVisitors, error) {
 // handleReports تقريرُ مدّة — انظر رأسَ الملفّ.
 func (s *Server) handleReports(w http.ResponseWriter, r *http.Request) {
 	// **و«اليوم» الافتراضيُّ يومُ الحساب** — ساعةُ فتح الدوام تُطرح فيُقرأ تاريخُه (٢٠٢٦-١٠-٢٦).
-	f, err := parseReportFilter(r.URL.Query(),
-		time.Now().Add(-time.Duration(s.settings.GetInt(r.Context(), "platform.day_start_hour"))*time.Hour))
+	dayHour := s.settings.GetInt(r.Context(), "platform.day_start_hour")
+	accountNow := time.Now().Add(-time.Duration(dayHour) * time.Hour)
+	f, err := parseReportFilter(r.URL.Query(), accountNow)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -305,6 +306,9 @@ func (s *Server) handleReports(w http.ResponseWriter, r *http.Request) {
 
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"from": f.fromS(), "to": f.toS(),
+		// **ويومُ الحساب اليوم** — لتبني الصفحةُ أزرارَ «اليوم · أمس · آخر ٧ أيّام» عليه لا على
+		// يوم التقويم (تدقيقُ التقارير ٢٠٢٦-١٠-٢٧: بين منتصف الليل وساعة الفتح كان «اليوم» أصفاراً).
+		"today": accountNow.In(platform.Location()).Format("2006-01-02"), "day_start_hour": dayHour,
 		"kind": f.Kind, "city_id": f.CityID,
 		"previous_from": prevF.fromS(), "previous_to": prevF.toS(),
 		"money_visible": money,

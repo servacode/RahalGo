@@ -28,6 +28,7 @@ import {
   IconDelete,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
+import { LoadError } from "./MarketParts";
 
 const m = getMessages(defaultLocale);
 const Q = m.admin.market.quality;
@@ -66,7 +67,7 @@ const openBtn =
 const row = "flex items-center gap-3 rounded-card border border-line-soft p-2.5";
 
 export default function QualityTab() {
-  const { data, reload } = useLiveData<Quality>(
+  const { data, error, reload } = useLiveData<Quality>(
     () => api("/api/v1/admin/market/quality"),
     ["menu", "catalog"],
   );
@@ -76,6 +77,7 @@ export default function QualityTab() {
   const [busy, setBusy] = useState(false);
   const { push, Toaster } = useToast();
 
+  if (error && !data) return <LoadError onRetry={reload} />;
   if (!data) return <LoadingState />;
 
   const flip = (set: Set<string>, id: string) => {

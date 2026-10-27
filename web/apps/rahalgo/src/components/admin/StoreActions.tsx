@@ -139,6 +139,8 @@ export function StoreActions({
     });
   }
 
+  // **وتحت كلّ أيقونةٍ كلمتُها** (تدقيقُ السوق ٢٠٢٦-١٠-٢٧: «أيقونات بس وما بتنفهم») — الصفُّ نفسُه
+  // بلا قائمة كما قرّر المالك، والموظّفُ لا يحزر شو كلُّ وحدة.
   const iconBtn = (key: string, label: string, Icon: typeof IconEdit, onClick: () => void, tone = "") => (
     <Button
       key={key}
@@ -146,16 +148,17 @@ export function StoreActions({
       onClick={onClick}
       title={label}
       aria-label={label}
-      className={`!h-10 !w-10 inline-flex items-center justify-center !min-h-0 !min-w-0 !p-0 rounded-full ${tone || "text-ink-muted hover:text-ink"}`}
+      className={`inline-flex !min-h-0 !min-w-0 min-w-0 flex-1 flex-col items-center justify-center gap-0.5 !px-1 !py-1.5 ${tone || "text-ink-muted hover:text-ink"}`}
     >
       <Icon size={19} />
+      <span className="max-w-full truncate text-2xs font-bold">{label}</span>
     </Button>
   );
 
   return (
     <>
       {direct ? (
-        <div className="flex w-full items-center justify-around">
+        <div className="flex w-full items-stretch justify-around gap-1">
           {canEdit && iconBtn("edit", M.edit, IconEdit, () => setEdit(true))}
           {items.map((it) =>
             iconBtn(
