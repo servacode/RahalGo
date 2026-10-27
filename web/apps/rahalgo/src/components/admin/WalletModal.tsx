@@ -45,7 +45,7 @@ export default function WalletModal({
   const [debit, setDebit] = useState(false);
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
-  const [sent, setSent] = useState(false);
+  const [sent, setSent] = useState<"" | "pending" | "applied">("");
   const [busy, setBusy] = useState(false);
   const [cap, setCap] = useState<number | null>(null);
   const [refresh, setRefresh] = useState(0);
@@ -74,9 +74,9 @@ export default function WalletModal({
     e.preventDefault();
     setBusy(true);
     setError("");
-    setSent(false);
+    setSent("");
     try {
-      await api(`/api/v1/admin/users/${user.id}/wallet`, {
+      const r = await api<{ applied?: boolean }>(`/api/v1/admin/users/${user.id}/wallet`, {
         method: "POST",
         headers: { "Idempotency-Key": idemKey },
         body: JSON.stringify({ amount: Number(amount) || 0, kind, debit: kind === "adjustment" && debit, note: note.trim() }),
@@ -84,7 +84,9 @@ export default function WalletModal({
       setAmount("");
       setNote("");
       setDebit(false);
-      setSent(true);
+      // **حركةُ المالك أو المدير تنفذ فوراً** (قرارُ المالك ٢٠٢٦-١٠-٢٧) — فالرصيدُ يُقرأ ثانيةً.
+      setSent(r?.applied ? "applied" : "pending");
+      if (r?.applied) void loadWallet();
       setIdemKey(newKey());
       setRefresh((n) => n + 1);
     } catch (err) {
@@ -136,7 +138,7 @@ export default function WalletModal({
           <Input id="w-note" label={A.walletNote} required value={note} onChange={(e) => setNote(e.target.value)} />
           {cap !== null && <p className="text-xs text-ink-muted">{A.walletCap.replace("{cap}", fmtMoney(cap))}</p>}
           {error && <Alert>{error}</Alert>}
-          {sent && <Alert tone="success">{A.walletSent}</Alert>}
+          {sent && <Alert tone="success">{sent === "applied" ? A.walletApplied : A.walletSent}</Alert>}
           <Button type="submit" disabled={busy || !note.trim()} className="w-full">
             {A.walletSubmit}
           </Button>
@@ -174,7 +176,7 @@ export function AdvanceModal({
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
-  const [sent, setSent] = useState(false);
+  const [sent, setSent] = useState<"" | "pending" | "applied">("");
   const [busy, setBusy] = useState(false);
   const [cap, setCap] = useState<number | null>(null);
   const [idemKey, setIdemKey] = useState(newKey);
@@ -190,16 +192,16 @@ export function AdvanceModal({
     e.preventDefault();
     setBusy(true);
     setError("");
-    setSent(false);
+    setSent("");
     try {
-      await api(`/api/v1/admin/users/${user.id}/wallet`, {
+      const r = await api<{ applied?: boolean }>(`/api/v1/admin/users/${user.id}/wallet`, {
         method: "POST",
         headers: { "Idempotency-Key": idemKey },
         body: JSON.stringify({ amount: Number(amount) || 0, kind: "advance", debit: true, note: note.trim() }),
       });
       setAmount("");
       setNote("");
-      setSent(true);
+      setSent(r?.applied ? "applied" : "pending");
       setIdemKey(newKey());
     } catch (err) {
       setError(errorText(err));
@@ -225,7 +227,7 @@ export function AdvanceModal({
         <Input id="adv-note" label={V.reason} required value={note} onChange={(e) => setNote(e.target.value)} />
         {cap !== null && <p className="text-xs text-ink-muted">{A.walletCap.replace("{cap}", fmtMoney(cap))}</p>}
         {error && <Alert>{error}</Alert>}
-        {sent && <Alert tone="success">{V.sent}</Alert>}
+        {sent && <Alert tone="success">{sent === "applied" ? V.applied : V.sent}</Alert>}
         <FormActions submit onCancel={onClose} busy={busy || !note.trim() || !(Number(amount) > 0)} saveLabel={V.submit} />
       </form>
     </Modal>

@@ -33,8 +33,8 @@
     "setting_defs": 251,
     "behaviour_settings": 206,
     "order_fields": 120,
-    "test_files": 653,
-    "test_funcs": 2512
+    "test_files": 654,
+    "test_funcs": 2517
   },
   "flows": [
     {
@@ -7392,6 +7392,12 @@
       "orphan": true
     },
     {
+      "name": "TestAPR_AutoAppliesForOwnerAndAdminOnly",
+      "file": "internal/approval/approval_test.go",
+      "package": "approval",
+      "orphan": true
+    },
+    {
       "name": "TestAPR_OtherApproverPasses",
       "file": "internal/approval/approval_test.go",
       "package": "approval",
@@ -12167,6 +12173,30 @@
         "db"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestAPPLYNOW_AdminWalletTopupAndAdvance",
+      "file": "internal/qa/admin_actions_apply_now_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAPPLYNOW_ExpenseAboveThreshold",
+      "file": "internal/qa/admin_actions_apply_now_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAPPLYNOW_ObligationOfficeCash",
+      "file": "internal/qa/admin_actions_apply_now_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAPPLYNOW_OwnFundsRuleUnchanged",
+      "file": "internal/qa/admin_actions_apply_now_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestAG01_RaqqaResolves",

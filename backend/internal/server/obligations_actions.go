@@ -110,6 +110,10 @@ func (s *Server) proposeObligation(w http.ResponseWriter, r *http.Request, kind 
 	actor := userIDFrom(r)
 	var reqID string
 	var amount int64
+	var applied bool
+	var decided obligationRequestRow
+	var partyUser, partyApp string
+	var remaining int64
 	err = s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
 		var rest int64
 		var partyKind, partyID string
@@ -142,12 +146,33 @@ func (s *Server) proposeObligation(w http.ResponseWriter, r *http.Request, kind 
 			}
 			return err
 		}
-		return s.auditTx(ctx, q, r, "finance.obligation_request", "obligation", id,
+		if err := s.auditTx(ctx, q, r, "finance.obligation_request", "obligation", id,
 			map[string]any{"request_id": reqID, "kind": kind, "amount": amount,
-				"note": note, "party_kind": partyKind, "party_id": partyID})
+				"note": note, "party_kind": partyKind, "party_id": partyID}); err != nil {
+			return err
+		}
+		// **طلبُ المالك أو المدير ينفُذ فوراً** (قرارُ المالك ٢٠٢٦-١٠-٢٧) — بطريق الموافقة
+		// نفسِه وفي المعاملة نفسِها. **والشطبُ لمن يملك قدرتَه وحدَه**؛ وغيرُه يبقى معلَّقاً.
+		auto, err := approval.AutoApplies(ctx, q, actor)
+		if err != nil {
+			return err
+		}
+		if !auto || (kind == oblReqWriteOff && !s.hasCapability(r, authz.FinanceWriteoffApprove)) {
+			return nil
+		}
+		applied = true
+		decided, partyUser, partyApp, remaining, err = s.decideObligationRequestTx(ctx, q, r, reqID, actor, true, "")
+		return err
 	})
 	if err != nil {
 		s.respondErr(w, err)
+		return
+	}
+	if applied {
+		s.afterObligationDecision(r, decided, true, partyUser, partyApp, remaining)
+		httpx.JSON(w, http.StatusCreated, map[string]any{"request_id": reqID,
+			"status": decided.Status, "amount": amount, "applied": true,
+			"self_approved": decided.SelfApproved, "remaining": remaining})
 		return
 	}
 	s.touch("wallet", "ops")
@@ -254,98 +279,118 @@ func (s *Server) handleDecideObligationRequest(approve bool) http.HandlerFunc {
 		var partyUser, partyApp string
 		var remaining int64
 		err = s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
-			x, err := scanObligationRequest(q.QueryRow(ctx, obligationRequestCols+`
-				WHERE rq.id = $1 FOR UPDATE OF rq`, id))
-			if errors.Is(err, pgx.ErrNoRows) {
-				return httpx.ErrNotFound
-			}
-			if err != nil {
-				return err
-			}
-			if x.Status != "pending" {
-				return errRequestDecided
-			}
-			cap := authz.FinanceManage
-			if x.Kind == oblReqWriteOff {
-				cap = authz.FinanceWriteoffApprove
-				// **ورفضُ الشطب كموافقته** (قرارُ المالك ٢٠٢٦-١٠-١٥) — كان يرفضه كلُّ من
-				// يملك `finance.manage`، **فيُسقط موظّفٌ قراراً ليس له أن يتّخذه.**
-				if !s.hasCapability(r, cap) {
-					return errWriteoffNotYours
-				}
-			}
-			var verdict approval.Verdict
-			if approve {
-				if verdict, err = approval.Check(ctx, q, approval.Request{
-					ProposedBy: x.ProposedBy, Actor: actor, Capability: cap,
-				}); err != nil {
-					return err
-				}
-				if partyUser, err = obligationPartyUser(ctx, q, x.PartyKind, x.PartyID); err != nil {
-					return err
-				}
-				if remaining, err = s.postObligationRequest(ctx, q, &x, partyUser, actor); err != nil {
-					return err
-				}
-			} else if x.Kind == oblReqOfficeCash {
-				// **ودفعةٌ رُفضت يُخبَر بها صاحبُها** (قرارُ المالك ٢٠٢٦-١٠-١٥) — دفع
-				// نقداً وينتظر أن ينقص دينُه.
-				if partyUser, partyApp, err = obligations.PartyUser(ctx, q, x.PartyKind, x.PartyID); err != nil {
-					return err
-				}
-			}
-			status := "rejected"
-			if approve {
-				status = "approved"
-			}
-			if _, err := q.Exec(ctx, `
-				UPDATE obligation_requests
-				   SET status = $2, decided_by = $3, decided_at = now(),
-				       decision_note = $4, self_approved = $5, amount = $6
-				 WHERE id = $1`, id, status, actor, clip(strings.TrimSpace(req.Note), 500),
-				verdict.SelfApproved, x.Amount); err != nil {
-				return err
-			}
-			x.Status = status
-			x.SelfApproved = verdict.SelfApproved
-			row = x
-			details := map[string]any{"request_id": id, "kind": x.Kind, "amount": x.Amount,
-				"proposed_by": x.ProposedBy, "note": strings.TrimSpace(req.Note),
-				"party_kind": x.PartyKind, "party_id": x.PartyID}
-			for k, v := range verdict.AuditFields() {
-				details[k] = v
-			}
-			action := "finance.obligation_request_rejected"
-			if approve {
-				action = "finance.obligation_request_approved"
-			}
-			return s.auditTx(ctx, q, r, action, "obligation", x.ObligationID, details)
+			var err error
+			row, partyUser, partyApp, remaining, err = s.decideObligationRequestTx(ctx, q, r, id, actor, approve, req.Note)
+			return err
 		})
 		if err != nil {
 			s.respondErr(w, err)
 			return
 		}
-		if approve && partyUser != "" {
-			title, body := obligationNotice(row.Kind, row.Amount, remaining)
-			s.notify.Notify(r.Context(), notifications.Input{
-				UserID: partyUser, Kind: notifications.KindWallet,
-				Title: title, Body: body, Entity: "wallet", Href: "/portal/wallet",
-			})
-			s.touchUser(partyUser, "wallet")
-		}
-		if !approve && partyUser != "" {
-			s.notify.Notify(r.Context(), notifications.Input{
-				UserID: partyUser, Kind: notifications.KindWallet,
-				Title: "ما انسجلت دفعتك على الدين",
-				Body: "ما انقبلت دفعتك النقدية " + fmtMoneyAr(row.Amount) +
-					" على الدين، والدين باقي عليك. راجع المكتب.",
-				Entity: "wallet", Href: "/portal/wallet", Apps: []string{partyApp},
-			})
-		}
-		s.touch("wallet", "ops")
+		s.afterObligationDecision(r, row, approve, partyUser, partyApp, remaining)
 		httpx.JSON(w, http.StatusOK, map[string]any{"status": row.Status,
 			"self_approved": row.SelfApproved, "remaining": remaining})
 	}
+}
+
+// decideObligationRequestTx **القرارُ الواحد على طلب الدين** — داخلَ معاملة المنادي.
+//
+// **ويناديه بابُ الاقتراح نفسُه** حين يكون المقترحُ مالكاً أو مديراً
+// (`approval.AutoApplies`، قرارُ المالك ٢٠٢٦-١٠-٢٧).
+func (s *Server) decideObligationRequestTx(ctx context.Context, q dbtx.Querier, r *http.Request,
+	id, actor string, approve bool, note string) (row obligationRequestRow, partyUser, partyApp string, remaining int64, err error) {
+	err = func() error {
+		x, err := scanObligationRequest(q.QueryRow(ctx, obligationRequestCols+`
+			WHERE rq.id = $1 FOR UPDATE OF rq`, id))
+		if errors.Is(err, pgx.ErrNoRows) {
+			return httpx.ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		if x.Status != "pending" {
+			return errRequestDecided
+		}
+		cap := authz.FinanceManage
+		if x.Kind == oblReqWriteOff {
+			cap = authz.FinanceWriteoffApprove
+			// **ورفضُ الشطب كموافقته** (قرارُ المالك ٢٠٢٦-١٠-١٥) — كان يرفضه كلُّ من
+			// يملك `finance.manage`، **فيُسقط موظّفٌ قراراً ليس له أن يتّخذه.**
+			if !s.hasCapability(r, cap) {
+				return errWriteoffNotYours
+			}
+		}
+		var verdict approval.Verdict
+		if approve {
+			if verdict, err = approval.Check(ctx, q, approval.Request{
+				ProposedBy: x.ProposedBy, Actor: actor, Capability: cap,
+			}); err != nil {
+				return err
+			}
+			if partyUser, err = obligationPartyUser(ctx, q, x.PartyKind, x.PartyID); err != nil {
+				return err
+			}
+			if remaining, err = s.postObligationRequest(ctx, q, &x, partyUser, actor); err != nil {
+				return err
+			}
+		} else if x.Kind == oblReqOfficeCash {
+			// **ودفعةٌ رُفضت يُخبَر بها صاحبُها** (قرارُ المالك ٢٠٢٦-١٠-١٥) — دفع
+			// نقداً وينتظر أن ينقص دينُه.
+			if partyUser, partyApp, err = obligations.PartyUser(ctx, q, x.PartyKind, x.PartyID); err != nil {
+				return err
+			}
+		}
+		status := "rejected"
+		if approve {
+			status = "approved"
+		}
+		if _, err := q.Exec(ctx, `
+			UPDATE obligation_requests
+			   SET status = $2, decided_by = $3, decided_at = now(),
+			       decision_note = $4, self_approved = $5, amount = $6
+			 WHERE id = $1`, id, status, actor, clip(strings.TrimSpace(note), 500),
+			verdict.SelfApproved, x.Amount); err != nil {
+			return err
+		}
+		x.Status = status
+		x.SelfApproved = verdict.SelfApproved
+		row = x
+		details := map[string]any{"request_id": id, "kind": x.Kind, "amount": x.Amount,
+			"proposed_by": x.ProposedBy, "note": strings.TrimSpace(note),
+			"party_kind": x.PartyKind, "party_id": x.PartyID}
+		for k, v := range verdict.AuditFields() {
+			details[k] = v
+		}
+		action := "finance.obligation_request_rejected"
+		if approve {
+			action = "finance.obligation_request_approved"
+		}
+		return s.auditTx(ctx, q, r, action, "obligation", x.ObligationID, details)
+	}()
+	return
+}
+
+// afterObligationDecision **ما بعد التثبيت** — إشعارُ صاحب الدين والبثّ.
+func (s *Server) afterObligationDecision(r *http.Request, row obligationRequestRow, approve bool,
+	partyUser, partyApp string, remaining int64) {
+	if approve && partyUser != "" {
+		title, body := obligationNotice(row.Kind, row.Amount, remaining)
+		s.notify.Notify(r.Context(), notifications.Input{
+			UserID: partyUser, Kind: notifications.KindWallet,
+			Title: title, Body: body, Entity: "wallet", Href: "/portal/wallet",
+		})
+		s.touchUser(partyUser, "wallet")
+	}
+	if !approve && partyUser != "" {
+		s.notify.Notify(r.Context(), notifications.Input{
+			UserID: partyUser, Kind: notifications.KindWallet,
+			Title: "ما انسجلت دفعتك على الدين",
+			Body: "ما انقبلت دفعتك النقدية " + fmtMoneyAr(row.Amount) +
+				" على الدين، والدين باقي عليك. راجع المكتب.",
+			Entity: "wallet", Href: "/portal/wallet", Apps: []string{partyApp},
+		})
+	}
+	s.touch("wallet", "ops")
 }
 
 // postObligationRequest **أثرُ الموافقة** — داخلَ معاملتها.

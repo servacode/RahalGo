@@ -44,7 +44,6 @@ import {
   IconDate,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
 import { useCanOpen } from "@/lib/policy";
 import { OpenLink } from "@/components/admin/OpenLink";
 import { PageHero } from "@/components/admin/PageHero";
@@ -220,7 +219,6 @@ const partyHref = (o: Obligation) =>
   o.party_kind === "merchant" ? `/dashboard/merchants/${o.party_id}` : `/dashboard/users/${o.party_id}`;
 
 export default function ObligationsPage() {
-  const { user: me } = useAuth();
   // **وملفُّ الطرف والطلبُ لمن يُفتحان له** (قرارُ المالك ٢٠٢٦-١٠-٠٥).
   const canOpen = useCanOpen();
   const [f, setF] = useState<Filters>(EMPTY);
@@ -584,7 +582,6 @@ export default function ObligationsPage() {
                         {o.pending.note && <span className="block text-xs text-ink-muted">{o.pending.note}</span>}
                         <span className="grid grid-cols-2 gap-2">
                           {data?.can_manage &&
-                            me?.id !== o.pending.proposed_by &&
                             (o.pending.kind === "office_cash" || data.can_approve_writeoff) && (
                               <Button className="w-full" onClick={() => decide(o.pending!, true)}>
                                 {O.approve}
@@ -675,9 +672,9 @@ export default function ObligationsPage() {
           o={act.o}
           kind={act.kind}
           onClose={() => setAct(null)}
-          onDone={() => {
+          onDone={(applied) => {
             setAct(null);
-            setNotice(O.sent);
+            setNotice(applied ? O.applied : O.sent);
             reload();
           }}
         />
@@ -696,7 +693,8 @@ function ActionModal({
   o: Obligation;
   kind: "office_cash" | "write_off";
   onClose: () => void;
-  onDone: () => void;
+  /** `applied`: **حركةُ المالك أو المدير نفذت فوراً** (قرارُ المالك ٢٠٢٦-١٠-٢٧). */
+  onDone: (applied: boolean) => void;
 }) {
   const [amount, setAmount] = useState(String(o.outstanding));
   const [note, setNote] = useState("");
@@ -708,11 +706,11 @@ function ActionModal({
     setBusy(true);
     setErr("");
     try {
-      await api(`/api/v1/admin/obligations/${o.id}/${cash ? "office-cash" : "write-off"}`, {
+      const r = await api<{ applied?: boolean }>(`/api/v1/admin/obligations/${o.id}/${cash ? "office-cash" : "write-off"}`, {
         method: "POST",
         body: JSON.stringify(cash ? { amount: Number(amount), note } : { note }),
       });
-      onDone();
+      onDone(!!r?.applied);
     } catch (e) {
       setErr(errorText(e));
     } finally {

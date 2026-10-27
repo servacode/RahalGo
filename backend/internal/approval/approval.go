@@ -116,6 +116,30 @@ func OwnerAlone(ctx context.Context, q dbtx.Querier, actor string, capability au
 	return owner && !others, nil
 }
 
+// AutoApplies **أتنفُذ حركةُ هذا المقترِح فوراً بلا انتظار موافقة؟**
+//
+// **قرارُ المالك ٢٠٢٦-١٠-٢٧:** «انا الادمن، وقت اقوم بحركة ما لازم يطلب مني موافقة.
+// الموافقة فقط وقت موظف المالية يطلب.» — فمن يحمل دورَ المالك الأعلى أو المدير
+// (`owner_super_admin` · `admin`) تُطبَّق حركتُه لحظةَ إنشائها **بطريق الموافقة
+// نفسِه** (`Check` يردّ `SelfApproved`، فتُعلَّم في الطلب والسجلّ)، وغيرُه يبقى
+// طلبُه معلَّقاً. **وهنا وحدَه يُقرأ هذا الحكم** — كلُّ قسمٍ يناديه ولا يكتبه.
+//
+// **ومالُ الفاعل نفسِه** (`OwnFunds`) لا يمرّ من هنا: من يقترح سحبَ ماله لا
+// يُطبَّق فوراً — يبقى لحكم `Check`/`OwnerAlone`.
+func AutoApplies(ctx context.Context, q dbtx.Querier, actor string) (bool, error) {
+	if actor == "" {
+		return false, nil
+	}
+	var ok bool
+	if err := q.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM user_roles
+		                WHERE user_id = $1::uuid AND role_code IN ($2, $3))`,
+		actor, authz.RoleOwnerSuperAdmin, authz.RoleAdmin).Scan(&ok); err != nil {
+		return false, err
+	}
+	return ok, nil
+}
+
 // Allowed **حكمُ `Check` بلا قاعدة** — يجوز للفاعل إن لم يكن أحدَ الأطراف (`parties`:
 // المقترحُ، والموافقُ حين يُلغى ما وافق عليه)، أو كان المالكَ وحدَه (`ownerAlone`
 // من `OwnerAlone`). **والشاشةُ تقرؤه علَماً** فلا تقارن المعرّفاتِ بنفسها.

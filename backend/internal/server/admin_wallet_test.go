@@ -88,7 +88,8 @@ func (f *adminWalletFixture) call(actor, method, path string, params map[string]
 	return w
 }
 
-// apply **يقترح ثمّ يوافق غيرُ المقترِح** — ويُرجع رمزَ الخطوة التي حسمت.
+// apply **يقترح ثمّ يوافق غيرُ المقترِح** — ويُرجع رمزَ الخطوة التي حسمت. **والمقترحُ
+// هنا مديرٌ فتنفذ حركتُه فوراً** (قرارُ المالك ٢٠٢٦-١٠-٢٧)، والموافقةُ لما بقي معلَّقاً.
 func (f *adminWalletFixture) apply(target, kind string, amount int64, debit bool) int {
 	body := `{"amount":` + itoa64(amount) + `,"kind":"` + kind + `","debit":` +
 		map[bool]string{true: "true", false: "false"}[debit] + `,"note":"تسويةُ اختبار"}`
@@ -101,9 +102,14 @@ func (f *adminWalletFixture) apply(target, kind string, amount int64, debit bool
 	var res struct {
 		Data struct {
 			RequestID string `json:"request_id"`
+			Status    string `json:"status"`
 		} `json:"data"`
 	}
 	_ = json.Unmarshal(w.Body.Bytes(), &res)
+	// **وحركةُ المدير تنفذ فوراً** (قرارُ المالك ٢٠٢٦-١٠-٢٧) — فلا موافقةَ بعدها.
+	if res.Data.Status == "approved" {
+		return http.StatusOK
+	}
 	a := f.call(f.approver, http.MethodPost, "/admin/wallet-requests/"+res.Data.RequestID+"/approve",
 		map[string]string{"id": res.Data.RequestID}, `{}`, f.srv.handleDecideWalletRequest(true), nil)
 	if a.Code == http.StatusOK {

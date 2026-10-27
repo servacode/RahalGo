@@ -21,7 +21,7 @@
     <string name="cl_waiting">بانتظار موافقة الإدارة</string>
     <string name="cl_rejected">مرفوض</string>
     <!-- بحثٌ وفلترةٌ بقائمة العملاء -->
-    <string name="cl_search">دوّر على عميل بالاسم</string>
+    <string name="cl_search">دوّر بالاسم أو الرقم أو الصنف</string>
     <string name="cl_f_missing">ناقصه شروط</string>
     <string name="cl_f_no_items">بلا أصناف</string>
     <string name="cl_no_match">ما في عميل بهالبحث</string>

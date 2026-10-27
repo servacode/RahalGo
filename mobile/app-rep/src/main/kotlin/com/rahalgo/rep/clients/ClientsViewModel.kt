@@ -69,9 +69,12 @@ class ClientsViewModel(app: Application) : AndroidViewModel(app) {
 
     /** **العملاءُ بعد البحث والفلترة** — والترتيبُ ترتيبُ المحرّك. */
     fun visible(list: List<RepMerchant>): List<RepMerchant> {
-        val q = query.trim()
+        // **بالاسم أو الصنف أو رقم صاحب المتجر** — والأرقامُ العربيّةُ ومفتاحُ سوريا يُفهمان.
+        val q = normalizeQuery(query)
+        val qd = digitsOnly(query)
         return list.filter { m ->
-            (q.isEmpty() || m.name.contains(q, ignoreCase = true)) &&
+            (q.isEmpty() || normalizeQuery(m.name).contains(q) || normalizeQuery(m.categoryName).contains(q) ||
+                (qd.isNotEmpty() && digitsOnly(m.ownerPhone.orEmpty()).contains(qd))) &&
                 when (filter) {
                     ClientFilter.All -> true
                     ClientFilter.Missing -> m.goalState == "pending"
@@ -247,3 +250,25 @@ class ClientsViewModel(app: Application) : AndroidViewModel(app) {
 
 /** **فلاترُ قائمة العملاء** — الكلُّ · ناقصُه شروط · بلا أصناف · متوقّف. */
 enum class ClientFilter { All, Missing, NoItems, Stopped }
+
+/** **الأرقامُ العربيّةُ والفارسيّةُ لاتينيّة**، والحروفُ صغيرة. */
+private fun normalizeQuery(s: String): String = buildString {
+    for (c in s.trim().lowercase()) {
+        append(
+            when (c) {
+                in '\u0660'..'\u0669' -> '0' + (c - '\u0660')
+                in '\u06F0'..'\u06F9' -> '0' + (c - '\u06F0')
+                else -> c
+            },
+        )
+    }
+}
+
+/** **الرقمُ بلا رموز** — ويُقصّ «00» و«963» و«0» الأوّل. */
+private fun digitsOnly(s: String): String {
+    var d = normalizeQuery(s).filter { it.isDigit() }
+    if (d.startsWith("00")) d = d.drop(2)
+    if (d.startsWith("963") && d.length > 9) d = d.drop(3)
+    if (d.startsWith("0")) d = d.drop(1)
+    return d
+}

@@ -58,6 +58,21 @@ func (s *Server) handleCreateOffer(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// **وعرضُ المالك أو المدير لا ينتظر الماليّة** (قرارُ المالك ٢٠٢٦-١٠-٢٧) — يُقرَّر
+	// فوراً ويُقرأ ثانيةً بحاله الجديد.
+	if pending {
+		applied, err := s.autoApprovePromo(r, "offer", o.ID)
+		if err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		if applied {
+			if fresh, err := s.offers.Get(r.Context(), o.ID, s.saleOf(r)); err == nil && fresh != nil {
+				o = fresh
+			}
+			pending = false
+		}
+	}
 	s.audit(r, "catalog.offer_create", "offer", o.ID, map[string]any{
 		"kind": o.Kind, "title": o.Title, "pending_approval": pending, "notify": in.Notify,
 		"replaced": len(replaced),

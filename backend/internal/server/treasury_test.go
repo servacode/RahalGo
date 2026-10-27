@@ -268,7 +268,9 @@ func TestTREASURY_DailyCloseReviewAndShortfallLoss(t *testing.T) {
 		counted = 10_000 - 3000
 		book = 10_000
 	}
-	w := f.call(f.a, "POST", "/admin/cashbox/closes", nil, `{"counted":`+itoa64(counted)+`}`,
+	// **من الماليّة لا مدير** — إغلاقُ المدير يُعتمَد فوراً (قرارُ المالك ٢٠٢٦-١٠-٢٧).
+	clerk := testdb.NewUser(t, f.pool, "finance")
+	w := f.call(clerk, "POST", "/admin/cashbox/closes", nil, `{"counted":`+itoa64(counted)+`}`,
 		f.srv.handleCreateCashClose)
 	if w.Code != http.StatusCreated {
 		t.Fatalf("الإغلاق ردّ %d: %s", w.Code, w.Body)

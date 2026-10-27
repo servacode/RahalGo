@@ -40,7 +40,6 @@ import {
   FormActions,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
-import { useAuth } from "@/lib/auth";
 import { useCanCall } from "@/lib/policy";
 import { CaseList, CaseFilters, reasonText, type CaseRow } from "./caseTable";
 import { Tile } from "@/components/admin/DashParts";
@@ -98,7 +97,6 @@ const PARTIES: Party[] = ["", "merchant", "driver", "sales", "customer"];
 const STATUSES: Status[] = ["open", "settled", "waived", "all"];
 
 export function DisputesView() {
-  const { user: me } = useAuth();
   const canCall = useCanCall();
   // **الأزرارُ بسياسة المحرّك نفسِها** — لا بقدرةٍ يخمّنها الزرّ (المشكلة ٣).
   const canOpen = canCall("POST", "/disputes");
@@ -155,18 +153,14 @@ export function DisputesView() {
       if (!canDecide) return null;
       return (
         <>
-          {me?.id !== d.pending.proposed_by ? (
-            <button
-              type="button"
-              onClick={() => setDeciding({ d, approve: true })}
-              className="inline-flex items-center justify-center gap-1.5 rounded-control bg-success-solid py-2.5 text-sm font-bold text-on-solid transition-opacity hover:opacity-90"
-            >
-              <IconCheck size={16} />
-              {C.approve}
-            </button>
-          ) : (
-            <span />
-          )}
+          <button
+            type="button"
+            onClick={() => setDeciding({ d, approve: true })}
+            className="inline-flex items-center justify-center gap-1.5 rounded-control bg-success-solid py-2.5 text-sm font-bold text-on-solid transition-opacity hover:opacity-90"
+          >
+            <IconCheck size={16} />
+            {C.approve}
+          </button>
           <button
             type="button"
             onClick={() => setDeciding({ d, approve: false })}

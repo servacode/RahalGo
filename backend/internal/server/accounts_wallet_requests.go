@@ -119,7 +119,8 @@ func scanWalletRequest(row pgx.Row) (walletRequestRow, error) {
 	return w, err
 }
 
-// handleAdminWalletApply **يقترح حركةً يدويّة** — لا يقيّد شيئاً.
+// handleAdminWalletApply **يقترح حركةً يدويّة** — ولا يقيّد شيئاً إلّا لمالكٍ أو مدير:
+// حركتُهما تنفذ فوراً بطريق الموافقة نفسِه (قرارُ المالك ٢٠٢٦-١٠-٢٧، `approval.AutoApplies`).
 //
 // **والاسمُ باقٍ** لأنّ بابَه باقٍ (`POST /admin/users/{id}/wallet`)، **ومعناه
 // تبدّل**: الردُّ ٢٠١ بطلبٍ معلَّق، والقيدُ عند الموافقة.
@@ -198,6 +199,24 @@ func (s *Server) handleAdminWalletApply(w http.ResponseWriter, r *http.Request) 
 				"amount": req.Amount, "note": note}); err != nil {
 			return IdempotentBody{}, err
 		}
+		// **حركةُ المالك أو المدير تنفُذ فوراً** (قرارُ المالك ٢٠٢٦-١٠-٢٧) — بطريق
+		// الموافقة نفسِه وفي المعاملة نفسِها؛ والموظّفُ يبقى طلبُه معلَّقاً.
+		auto, err := approval.AutoApplies(ctx, q, actor)
+		if err != nil {
+			return IdempotentBody{}, err
+		}
+		if auto {
+			wr, debtPaid, err := s.decideWalletRequestTx(ctx, q, r, id, actor, true, "")
+			if err != nil {
+				return IdempotentBody{}, err
+			}
+			return IdempotentBody{
+				Status: http.StatusCreated,
+				Payload: map[string]any{"request_id": id, "status": wr.Status,
+					"applied": true, "self_approved": wr.SelfApproved},
+				AfterCommit: func() { s.afterWalletDecision(r, wr, true, "", debtPaid) },
+			}, nil
+		}
 		return IdempotentBody{
 			Status:  http.StatusCreated,
 			Payload: map[string]any{"request_id": id, "status": "pending"},
@@ -273,107 +292,126 @@ func (s *Server) handleDecideWalletRequest(approve bool) http.HandlerFunc {
 		// **ما سدّه الشحنُ من دينٍ** — يُبلَّغ صاحبُه بعد الإيداع (قسمُ الديون).
 		var debtPaid int64
 		if err := s.inTx(r.Context(), func(ctx context.Context, q dbtx.Querier) error {
-			row, err := scanWalletRequest(q.QueryRow(ctx, walletRequestCols+`
-				WHERE wr.id = $1 FOR UPDATE OF wr`, id))
-			if errors.Is(err, pgx.ErrNoRows) {
-				return httpx.ErrNotFound
-			}
-			if err != nil {
-				return err
-			}
-			if row.Status != "pending" {
-				return errRequestDecided
-			}
-			var verdict approval.Verdict
-			if approve {
-				v, err := approval.Check(ctx, q, approval.Request{
-					ProposedBy: row.ProposedBy, Actor: actor,
-					Capability: authz.FinanceManage,
-				})
-				if err != nil {
-					return err
-				}
-				verdict = v
-			}
-			self := verdict.SelfApproved
-			status := "rejected"
-			if approve {
-				status = "approved"
-				paid, err := s.postWalletRequest(ctx, q, row, actor)
-				if err != nil {
-					return err
-				}
-				debtPaid = paid
-			}
-			if _, err := q.Exec(ctx, `
-				UPDATE wallet_requests
-				   SET status = $2, decided_by = $3, decided_at = now(),
-				       decision_note = $4, self_approved = $5
-				 WHERE id = $1`, id, status, actor, clip(strings.TrimSpace(req.Note), 500),
-				self && approve); err != nil {
-				return err
-			}
-			action := "finance.wallet_request_rejected"
-			if approve {
-				action = "finance.wallet_request_approved"
-			}
-			row.Status = status
-			row.SelfApproved = self && approve
-			wr = row
-			details := map[string]any{
-				"request_id": id, "kind": row.Kind, "debit": row.Debit, "amount": row.Amount,
-				"proposed_by": row.ProposedBy, "note": strings.TrimSpace(req.Note)}
-			for k, v := range verdict.AuditFields() {
-				details[k] = v
-			}
-			return s.auditTx(ctx, q, r, action, "user", row.UserID, details)
+			var err error
+			wr, debtPaid, err = s.decideWalletRequestTx(ctx, q, r, id, actor, approve, req.Note)
+			return err
 		}); err != nil {
 			s.respondErr(w, err)
 			return
 		}
-		if approve {
-			title := notifTitles.walletCredit
-			if wr.Debit {
-				title = notifTitles.walletDebit
-			}
-			s.notify.Notify(r.Context(), notifications.Input{
-				UserID: wr.UserID, Kind: notifications.KindWallet,
-				Title: title, Body: wr.Note, Entity: "wallet", Href: "/portal/wallet",
-			})
-			if debtPaid > 0 {
-				s.notify.Notify(r.Context(), notifications.Input{
-					UserID: wr.UserID, Kind: notifications.KindWallet,
-					Title:  "انسدّ من دينك من الشحن",
-					Body:   "شحنتك سدّت " + fmtMoneyAr(debtPaid) + " من الدين اللي عليك، والباقي بمحفظتك.",
-					Entity: "wallet", Href: "/portal/wallet",
-				})
-			}
-			s.touchUser(wr.UserID, "wallet")
-		} else {
-			// ══════════════════════════════════════════════════════════
-			// **والرفضُ يصل صاحبَ الحساب بسببه** (قرارُ المالك ٢٠٢٦-١٠-١٥)
-			// ══════════════════════════════════════════════════════════
-			//
-			// **كان الرفضُ صامتاً** — دفع الزبونُ نقداً في المكتب لشحن محفظته،
-			// **ثمّ رُفض الطلبُ ولا خبر**: ينتظر رصيداً لا يأتي. **فيُقال له
-			// الرفضُ والمبلغُ والسبب.** ولكلّ أنواع الطلبات لا للشحن وحدَه.
-			title := notifTitles.walletRequestRejected
-			if wr.Kind == "topup" {
-				title = notifTitles.walletTopupRejected
-			}
-			body := fmtMoneyAr(wr.Amount)
-			if reason := strings.TrimSpace(req.Note); reason != "" {
-				body += " · " + reason
-			}
-			s.notify.Notify(r.Context(), notifications.Input{
-				UserID: wr.UserID, Kind: notifications.KindWallet,
-				Title: title, Body: body, Entity: "wallet", Href: "/portal/wallet",
-			})
-		}
-		s.touch("wallet", "ops")
+		s.afterWalletDecision(r, wr, approve, req.Note, debtPaid)
 		httpx.JSON(w, http.StatusOK, map[string]any{"status": wr.Status,
 			"self_approved": wr.SelfApproved})
 	}
+}
+
+// decideWalletRequestTx **القرارُ الواحد** — موافقةً أو رفضاً، داخلَ معاملة المنادي.
+//
+// **ويناديه بابُ الاقتراح نفسُه** حين يكون المقترحُ مالكاً أو مديراً
+// (`approval.AutoApplies`، قرارُ المالك ٢٠٢٦-١٠-٢٧) — فالقيدُ والسجلُّ والعلامةُ
+// هي هي، لا نسخةٌ ثانيةٌ من منطق المال.
+func (s *Server) decideWalletRequestTx(ctx context.Context, q dbtx.Querier, r *http.Request,
+	id, actor string, approve bool, note string) (walletRequestRow, int64, error) {
+	var debtPaid int64
+	row, err := scanWalletRequest(q.QueryRow(ctx, walletRequestCols+`
+		WHERE wr.id = $1 FOR UPDATE OF wr`, id))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return row, 0, httpx.ErrNotFound
+	}
+	if err != nil {
+		return row, 0, err
+	}
+	if row.Status != "pending" {
+		return row, 0, errRequestDecided
+	}
+	var verdict approval.Verdict
+	if approve {
+		v, err := approval.Check(ctx, q, approval.Request{
+			ProposedBy: row.ProposedBy, Actor: actor,
+			Capability: authz.FinanceManage,
+		})
+		if err != nil {
+			return row, 0, err
+		}
+		verdict = v
+	}
+	self := verdict.SelfApproved
+	status := "rejected"
+	if approve {
+		status = "approved"
+		paid, err := s.postWalletRequest(ctx, q, row, actor)
+		if err != nil {
+			return row, 0, err
+		}
+		debtPaid = paid
+	}
+	note = strings.TrimSpace(note)
+	if _, err := q.Exec(ctx, `
+		UPDATE wallet_requests
+		   SET status = $2, decided_by = $3, decided_at = now(),
+		       decision_note = $4, self_approved = $5
+		 WHERE id = $1`, id, status, actor, clip(note, 500),
+		self && approve); err != nil {
+		return row, 0, err
+	}
+	action := "finance.wallet_request_rejected"
+	if approve {
+		action = "finance.wallet_request_approved"
+	}
+	row.Status = status
+	row.SelfApproved = self && approve
+	details := map[string]any{
+		"request_id": id, "kind": row.Kind, "debit": row.Debit, "amount": row.Amount,
+		"proposed_by": row.ProposedBy, "note": note}
+	for k, v := range verdict.AuditFields() {
+		details[k] = v
+	}
+	return row, debtPaid, s.auditTx(ctx, q, r, action, "user", row.UserID, details)
+}
+
+// afterWalletDecision **ما بعد التثبيت** — إشعارُ صاحب الحساب والبثّ.
+func (s *Server) afterWalletDecision(r *http.Request, wr walletRequestRow, approve bool,
+	note string, debtPaid int64) {
+	if approve {
+		title := notifTitles.walletCredit
+		if wr.Debit {
+			title = notifTitles.walletDebit
+		}
+		s.notify.Notify(r.Context(), notifications.Input{
+			UserID: wr.UserID, Kind: notifications.KindWallet,
+			Title: title, Body: wr.Note, Entity: "wallet", Href: "/portal/wallet",
+		})
+		if debtPaid > 0 {
+			s.notify.Notify(r.Context(), notifications.Input{
+				UserID: wr.UserID, Kind: notifications.KindWallet,
+				Title:  "انسدّ من دينك من الشحن",
+				Body:   "شحنتك سدّت " + fmtMoneyAr(debtPaid) + " من الدين اللي عليك، والباقي بمحفظتك.",
+				Entity: "wallet", Href: "/portal/wallet",
+			})
+		}
+		s.touchUser(wr.UserID, "wallet")
+	} else {
+		// ══════════════════════════════════════════════════════════
+		// **والرفضُ يصل صاحبَ الحساب بسببه** (قرارُ المالك ٢٠٢٦-١٠-١٥)
+		// ══════════════════════════════════════════════════════════
+		//
+		// **كان الرفضُ صامتاً** — دفع الزبونُ نقداً في المكتب لشحن محفظته،
+		// **ثمّ رُفض الطلبُ ولا خبر**: ينتظر رصيداً لا يأتي. **فيُقال له
+		// الرفضُ والمبلغُ والسبب.** ولكلّ أنواع الطلبات لا للشحن وحدَه.
+		title := notifTitles.walletRequestRejected
+		if wr.Kind == "topup" {
+			title = notifTitles.walletTopupRejected
+		}
+		body := fmtMoneyAr(wr.Amount)
+		if reason := strings.TrimSpace(note); reason != "" {
+			body += " · " + reason
+		}
+		s.notify.Notify(r.Context(), notifications.Input{
+			UserID: wr.UserID, Kind: notifications.KindWallet,
+			Title: title, Body: body, Entity: "wallet", Href: "/portal/wallet",
+		})
+	}
+	s.touch("wallet", "ops")
 }
 
 // postWalletRequest **القيدُ بطرفين** — داخلَ معاملة الموافقة.

@@ -11,8 +11,8 @@
  * - **بطاقات**: ما ينتظر (عدداً ومجموعاً) · ما قُبل ورُفض هذا الشهر · ما تأخّر.
  * - **فلاتر في الرابط**: النوع · الجهة المذنبة · المستفيد · التاريخ.
  * - **الأزرارُ بمعرّف طلب التعويض لا برقم الطلب** — كان الزرُّ يدفع لسائقٍ غيرِ المعروض.
- * - **ولا يوافق أحدٌ على ما اقترحه، وفوق السقف المالكُ وحدَه** — المحرّكُ يحرس
- *   ذلك، والتأكيدُ بكلمة المرور يلتقطه العميلُ المركزيّ (`StepUpGate`).
+ * - **حركةُ المالك أو المدير تنفذ فوراً، وطلبُ الموظّف ينتظر** (قرارُ المالك ٢٠٢٦-١٠-٢٧)،
+ *   **وفوق السقف المالكُ وحدَه** — المحرّكُ يحرس ذلك، والتأكيدُ بكلمة المرور يلتقطه العميلُ المركزيّ (`StepUpGate`).
  *
  * # قراراتُ المالك ٢٠٢٦-١٠-١٥
  *
@@ -21,7 +21,7 @@
  * - **ولا «السائق» في الجهة المذنبة حين يكون النوعُ «سائق»** — لا تعويضَ لذنبه.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   getMessages,
   defaultLocale,
@@ -32,13 +32,12 @@ import {
   fmtSpan,
   errorText,
 } from "@rahalgo/i18n";
-import { kindLabel, type WalletRequestRow } from "@/components/admin/WalletRequests";
+import { ApproveButton, RejectButton, WalletRequestsList } from "@/components/admin/WalletRequests";
 import {
   Alert,
   Badge,
   Chips,
   Button,
-  Confirm,
   Input,
   Select,
   Textarea,
@@ -409,7 +408,7 @@ export function CompensationsView({ embedded = false }: { embedded?: boolean }) 
             <p className="text-xs text-ink-muted">{m.admin.acc.requestsHint}</p>
           </div>
         </div>
-        <WalletRequestCards />
+        <WalletRequestsList />
       </section>
 
       {deciding && (
@@ -564,176 +563,6 @@ function CompensationCard({
         </footer>
       )}
     </article>
-  );
-}
-
-function ApproveButton({ label, onClick, disabled }: { label: string; onClick: () => void; disabled?: boolean }) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className="inline-flex items-center justify-center gap-1.5 rounded-control bg-success-solid py-2.5 text-sm font-bold text-on-solid transition-opacity hover:opacity-90 disabled:opacity-50"
-    >
-      <IconCheck size={16} />
-      {label}
-    </button>
-  );
-}
-
-function RejectButton({ label, onClick, disabled }: { label: string; onClick: () => void; disabled?: boolean }) {
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={onClick}
-      className="inline-flex items-center justify-center gap-1.5 rounded-control border border-danger py-2.5 text-sm font-bold text-danger transition-colors hover:bg-danger-tint disabled:opacity-50"
-    >
-      <IconBlock size={16} />
-      {label}
-    </button>
-  );
-}
-
-/**
- * **طلباتُ حركة المحفظة المعلّقة بكروت** — النداءاتُ نفسُها في `WalletRequestsList`:
- * التحميلُ والموافقةُ والرفضُ بسببٍ، **وصاحبُ الاقتراح لا يرى زرَّ الموافقة.**
- */
-function WalletRequestCards() {
-  const A = m.admin.acc;
-  const { user: me } = useAuth();
-  const canDecide = useCanCall()("POST", "/wallet-requests/{id}/approve");
-  const [rows, setRows] = useState<WalletRequestRow[] | null>(null);
-  const [error, setError] = useState("");
-  const [approve, setApprove] = useState<WalletRequestRow | null>(null);
-  const [reject, setReject] = useState<WalletRequestRow | null>(null);
-  const [note, setNote] = useState("");
-  const [busy, setBusy] = useState(false);
-
-  const load = useCallback(async () => {
-    try {
-      const q = new URLSearchParams({ status: "pending" });
-      const r = await api<{ requests: WalletRequestRow[] }>(`/api/v1/admin/wallet-requests?${q}`);
-      setRows(r?.requests ?? []);
-      setError("");
-    } catch (err) {
-      setRows([]);
-      setError(errorText(err));
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  async function decide(r: WalletRequestRow, ok: boolean) {
-    // **ونافذةُ التأكيد تُغلق قبل النداء** — نافذةُ كلمة السرّ تحتها فلا تُرى إن بقي مفتوحاً.
-    setApprove(null);
-    setReject(null);
-    setBusy(true);
-    try {
-      await api(`/api/v1/admin/wallet-requests/${r.id}/${ok ? "approve" : "reject"}`, {
-        method: "POST",
-        body: JSON.stringify({ note: ok ? "" : note.trim() }),
-      });
-      setNote("");
-      await load();
-    } catch (err) {
-      setError(errorText(err));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  if (rows === null) return <LoadingState variant="text" />;
-
-  return (
-    <div className="space-y-3">
-      {error && <Alert>{error}</Alert>}
-      {rows.length === 0 ? (
-        <section className="surface flex flex-col items-center gap-3 p-8 text-center">
-          <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-success-solid text-on-solid">
-            <IconWallet size={28} />
-          </span>
-          <h2 className="heading-section">{A.requestsEmpty}</h2>
-          <p className="max-w-md text-sm text-ink-muted">{C.walletEmptyHint}</p>
-        </section>
-      ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
-          {rows.map((r) => (
-            <article key={r.id} className="surface flex flex-col overflow-hidden transition-shadow hover:elev-2">
-              <header className="flex items-center gap-2.5 border-b border-line-soft bg-field px-4 py-2.5">
-                <span
-                  className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                    r.debit ? "bg-danger-solid text-on-solid" : "bg-success-solid text-on-solid"
-                  }`}
-                >
-                  <IconWallet size={15} />
-                </span>
-                <span className="min-w-0 flex-1 truncate text-sm font-bold">{kindLabel(r)}</span>
-                <span className="shrink-0 text-2xs text-ink-muted" dir="ltr">
-                  {fmtDateTime(r.created_at)}
-                </span>
-              </header>
-              <div className="flex flex-1 flex-col gap-3 p-4">
-                <div className="flex items-center gap-3">
-                  <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-field text-base font-bold text-ink-muted">
-                    {(r.user_name || "?").trim().charAt(0)}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-bold">{r.user_name}</p>
-                    <p className="truncate text-xs text-ink-muted">
-                      {A.proposedBy}: {r.proposer_name}
-                    </p>
-                  </div>
-                  <span className={`figure shrink-0 leading-none ${r.debit ? "text-danger" : ""}`} dir="ltr">
-                    {fmtMoney(r.amount)}
-                  </span>
-                </div>
-                {r.note && <p className="border-s-2 border-accent ps-3 text-sm leading-relaxed">{r.note}</p>}
-              </div>
-              {canDecide && (
-                <footer className="grid grid-cols-2 gap-2 border-t border-line-soft p-3">
-                  {me?.id !== r.proposed_by ? (
-                    <ApproveButton label={A.approve} disabled={busy} onClick={() => setApprove(r)} />
-                  ) : (
-                    <span />
-                  )}
-                  <RejectButton label={A.reject} disabled={busy} onClick={() => setReject(r)} />
-                </footer>
-              )}
-            </article>
-          ))}
-        </div>
-      )}
-
-      <Confirm
-        open={approve !== null}
-        tone="primary"
-        title={A.approveTitle}
-        body={
-          approve &&
-          A.approveBody
-            .replace("{amount}", fmtMoney(approve.amount))
-            .replace("{kind}", kindLabel(approve))
-            .replace("{user}", approve.user_name)
-            .replace("{side}", approve.kind === "topup" ? A.sideCashbox : A.sideTreasury)
-        }
-        confirmLabel={A.approve}
-        busy={busy}
-        onConfirm={() => approve && void decide(approve, true)}
-        onCancel={() => setApprove(null)}
-      />
-      <Confirm
-        open={reject !== null}
-        title={A.rejectTitle}
-        body={<Input id="wr-reject-note" label={A.rejectNote} value={note} onChange={(e) => setNote(e.target.value)} />}
-        confirmLabel={A.reject}
-        busy={busy}
-        onConfirm={() => reject && void decide(reject, false)}
-        onCancel={() => setReject(null)}
-      />
-    </div>
   );
 }
 

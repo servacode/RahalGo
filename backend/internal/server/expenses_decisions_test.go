@@ -133,7 +133,9 @@ func (x *opexFixture) receipt(t *testing.T, by string) string {
 func TestEXPENSES_AboveThresholdNeedsSecondApprover(t *testing.T) {
 	x := newOpexFixture(t)
 	s := x.f.srv
-	clerk := testdb.NewUser(t, x.f.pool, "admin")
+	// **مقترحٌ من الماليّة لا مدير** — حركةُ المدير تنفذ فوراً (قرارُ المالك ٢٠٢٦-١٠-٢٧)،
+	// والاختبارُ هنا لطريق الطلب المعلَّق.
+	clerk := testdb.NewUser(t, x.f.pool, "finance")
 	boss := testdb.NewUser(t, x.f.pool, "admin")
 	limit := s.expenseApprovalThreshold(context.Background())
 	over := strconv.FormatInt(limit+1, 10)
