@@ -150,6 +150,14 @@ func expenseToday() string {
 	return time.Now().In(damascusLoc()).Format("2006-01-02")
 }
 
+// expenseAccountDay **يومُ الحساب** — التاريخُ الافتراضيُّ للمصروف (قرارُ المالك ٢٠٢٦-١٠-٢٧):
+// قبل ساعة فتح الدوام (`platform.day_start_hour`) ما زال اليومَ السابق. **و`today` يبقى
+// حدَّ «لا صرفَ في الغد»** — فمن سجّل الساعة ٨ صباحاً مصروفاً بتاريخ اليوم لا يُرفض.
+func (s *Server) expenseAccountDay(ctx context.Context) string {
+	day, _, _ := damascusPeriod("day", time.Now(), s.settings.GetInt(ctx, "platform.day_start_hour"))
+	return day
+}
+
 // treasuryExpenseNote **نصُّ قيد الخزينة**: «مصروف تشغيل — <الباب> — <ملاحظة>».
 //
 // **وكان الملاحظةَ وحدَها** — فإن فرغت لم يُعرف من الكشف على ماذا صُرف المال.
@@ -693,6 +701,7 @@ func (s *Server) handleListExpenses(w http.ResponseWriter, r *http.Request) {
 	res["threshold"] = s.expenseApprovalThreshold(ctx)
 	res["treasury_balance"] = balance
 	res["today"] = expenseToday()
+	res["account_day"] = s.expenseAccountDay(ctx)
 	httpx.JSON(w, http.StatusOK, res)
 }
 
@@ -799,7 +808,7 @@ func (s *Server) handleCreateExpense(w http.ResponseWriter, r *http.Request) {
 	spent := strings.TrimSpace(req.SpentAt)
 	today := expenseToday()
 	if spent == "" {
-		spent = today
+		spent = s.expenseAccountDay(r.Context())
 	}
 	if _, err := time.Parse("2006-01-02", spent); err != nil {
 		s.respondErr(w, errValidation)

@@ -159,6 +159,7 @@ interface Data {
   threshold: number;
   treasury_balance: number;
   today: string;
+  account_day?: string;
 }
 
 type Preset = "month" | "prev" | "three" | "custom";
@@ -689,6 +690,7 @@ export default function ExpensesPage() {
           threshold={data.threshold}
           balance={data.treasury_balance}
           today={data.today}
+          accountDay={data.account_day}
           autoApplies={autoApplies}
           onClose={() => setAdding(false)}
           onDone={(st) => {
@@ -1020,6 +1022,7 @@ function AddModal({
   threshold,
   balance,
   today,
+  accountDay,
   autoApplies,
   onClose,
   onDone,
@@ -1028,6 +1031,7 @@ function AddModal({
   threshold: number;
   balance: number;
   today: string;
+  accountDay?: string;
   autoApplies: boolean;
   onClose: () => void;
   onDone: (status: string) => void;
@@ -1035,8 +1039,9 @@ function AddModal({
   const [categoryID, setCategoryID] = useState(cats[0]?.id ?? "");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
-  // **ويومُ الصرف الافتراضيُّ يومُ دمشق** — كان بغرينتش فيظهر أمسِ بعد منتصف الليل.
-  const [spentAt, setSpentAt] = useState(today || damascusDay());
+  // **ويومُ الصرف الافتراضيُّ يومُ الحساب** (قرارُ المالك ٢٠٢٦-١٠-٢٧) — من المحرّك
+  // (`account_day`): قبل ساعة فتح الدوام ما زال أمس. و`today` يبقى حدَّ «لا صرفَ في الغد».
+  const [spentAt, setSpentAt] = useState(accountDay || today || damascusDay());
   const [receipt, setReceipt] = useState("");
   // **«منين دفعت؟» — كاشٌ من الدرج افتراضاً** (قرارُ المالك ٢٠٢٦-١٠-١٥).
   const [paidFrom, setPaidFrom] = useState<PaidFrom>("cash");

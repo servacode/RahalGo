@@ -315,8 +315,7 @@ func (s *Server) handleAdminPayouts(w http.ResponseWriter, r *http.Request) {
 		  OR ($1 = '` + payoutFailedOrReversed + `' AND p.status IN ('failed', 'reversed'))
 		  OR ($1 = '` + payoutWaiting + `' AND p.status IN ('pending', 'processing')))
 		  AND ($2 = '' OR ` + payoutRoleSQL + ` = $2)
-		  AND (NOT $3::bool OR p.decided_at AT TIME ZONE 'Asia/Damascus'
-		       >= date_trunc('month', now() AT TIME ZONE 'Asia/Damascus'))`
+		  AND (NOT $3::bool OR p.decided_at >= ` + payoutMonthStartSQL + `)`
 	var count int
 	if err := s.pg.QueryRow(r.Context(),
 		`SELECT count(*) FROM payout_requests p`+where,
@@ -365,20 +364,20 @@ func (s *Server) handleAdminPayouts(w http.ResponseWriter, r *http.Request) {
 	}
 	var st payoutStats
 	if err := s.pg.QueryRow(r.Context(), `
-		WITH m AS (SELECT date_trunc('month', now() AT TIME ZONE 'Asia/Damascus') AS start)
+		WITH m AS (SELECT `+payoutMonthStartSQL+` AS start)
 		SELECT count(*) FILTER (WHERE status = 'pending'),
 		       count(*) FILTER (WHERE status IN ('pending','processing')),
 		       COALESCE(sum(amount) FILTER (WHERE status IN ('pending','processing')), 0),
 		       count(*) FILTER (WHERE status = 'processing'),
 		       COALESCE(sum(amount) FILTER (WHERE status = 'processing'), 0),
 		       count(*) FILTER (WHERE status = 'paid'
-		                          AND decided_at AT TIME ZONE 'Asia/Damascus' >= m.start),
+		                          AND decided_at >= m.start),
 		       COALESCE(sum(amount) FILTER (WHERE status = 'paid'
-		                          AND decided_at AT TIME ZONE 'Asia/Damascus' >= m.start), 0),
+		                          AND decided_at >= m.start), 0),
 		       count(*) FILTER (WHERE status IN ('failed','reversed')
-		                          AND decided_at AT TIME ZONE 'Asia/Damascus' >= m.start),
+		                          AND decided_at >= m.start),
 		       COALESCE(sum(amount) FILTER (WHERE status IN ('failed','reversed')
-		                          AND decided_at AT TIME ZONE 'Asia/Damascus' >= m.start), 0)
+		                          AND decided_at >= m.start), 0)
 		  FROM payout_requests CROSS JOIN m`).
 		Scan(&st.PendingCount, &st.WaitingCount, &st.WaitingSum, &st.ProcessingCount, &st.ProcessingSum,
 			&st.PaidMonthCount, &st.PaidMonthSum, &st.ReturnedCount, &st.ReturnedSum); err != nil {
@@ -411,6 +410,11 @@ const payoutFailedOrReversed = "failed_or_reversed"
 
 // payoutWaiting **فلترُ «بانتظار الصرف»** — معلَّقٌ وقيدُ الصرف معاً، كبطاقته.
 const payoutWaiting = "waiting"
+
+// payoutMonthStartSQL **بدايةُ «هالشهر» بساعة فتح الدوام** (قرارُ المالك ٢٠٢٦-١٠-٢٧) —
+// أوّلُ الشهر الساعة ٩ بدمشق لا منتصفُ الليل. **والشهرُ شهرُ يوم الحساب**: قبل التاسعة
+// من يوم ١ ما زلنا في الشهر السابق. نصٌّ واحدٌ للبطاقتين والفلتر فيتطابق العددُ والقائمة.
+const payoutMonthStartSQL = `account_day_start(date_trunc('month', account_day(now()))::date)`
 
 // handleDecidePayout صرف الطلب أو رفضه — أدمن/مالية حصراً.
 // الصرف يقيّد `payout` في دفتر المحفظة: المال يخرج بأثر، لا بتعديل رصيد.

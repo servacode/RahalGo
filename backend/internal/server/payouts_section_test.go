@@ -17,6 +17,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -336,5 +337,79 @@ func TestPAYOUTS_ListCardsAndRole(t *testing.T) {
 	}
 	if got := get("page=1&status=processing"); got.Data.Total-beforeProc != 1 {
 		t.Fatalf("فلترُ قيد الصرف زاد %d", got.Data.Total-beforeProc)
+	}
+}
+
+// TestPAYOUTS_MonthStartsAtOpeningHour **«هالشهر» يبدأ بساعة فتح الدوام** — قرارُ المالك
+// ٢٠٢٦-١٠-٢٧: أوّلُ الشهر الساعة ٩ بدمشق لا منتصفُ الليل. صرفٌ قبلها بدقيقة للشهر
+// السابق، وبعدها بدقيقة لهذا الشهر — في البطاقة وفي فلتر `month=1` معاً.
+func TestPAYOUTS_MonthStartsAtOpeningHour(t *testing.T) {
+	f := newPayoutFixture(t)
+	fin := f.financeUser(t)
+	ctx := context.Background()
+
+	type res struct {
+		Data struct {
+			Total int `json:"total"`
+			Stats struct {
+				PaidMonthCount int `json:"paid_month_count"`
+			} `json:"stats"`
+			Payouts []struct {
+				ID string `json:"id"`
+			} `json:"payouts"`
+		} `json:"data"`
+	}
+	get := func(q string) res {
+		req := httptest.NewRequest(http.MethodGet, "/x?"+q, nil)
+		c := context.WithValue(req.Context(), ctxRoles, []string{"admin"})
+		w := httptest.NewRecorder()
+		f.srv.handleAdminPayouts(w, req.WithContext(c))
+		if w.Code != 200 {
+			t.Fatalf("ردّ %d — %s", w.Code, w.Body.String())
+		}
+		var out res
+		_ = json.Unmarshal(w.Body.Bytes(), &out)
+		return out
+	}
+
+	// **الحدُّ محسوبٌ هنا بمعزلٍ عن نصّ الاستعلام**: أوّلُ شهر يوم الحساب + ساعةُ الفتح.
+	startHour := f.srv.settings.GetInt(ctx, "platform.day_start_hour")
+	from, _, _ := damascusPeriod("month", time.Now(), startHour)
+	d, err := time.Parse("2006-01-02", from)
+	if err != nil {
+		t.Fatalf("أوّلُ الشهر %q: %v", from, err)
+	}
+	boundary := time.Date(d.Year(), d.Month(), 1, int(startHour), 0, 0, 0, damascusLoc())
+
+	before := get("page=1")
+	beforeList := get("page=1&month=1").Data.Total
+
+	_, early := f.newPayout(t, "driver", f.min)
+	_, late := f.newPayout(t, "merchant", f.min)
+	for _, id := range []string{early, late} {
+		if w := f.decide(fin, financeRoles, id, map[string]any{"status": "paid", "method": "transfer"}); w.Code != 200 {
+			t.Fatalf("الصرف ردّ %d — %s", w.Code, w.Body.String())
+		}
+	}
+	for id, at := range map[string]time.Time{early: boundary.Add(-time.Minute), late: boundary.Add(time.Minute)} {
+		if _, err := f.pool.Exec(ctx, `UPDATE payout_requests SET decided_at = $2 WHERE id = $1`, id, at); err != nil {
+			t.Fatalf("تاريخُ القرار: %v", err)
+		}
+	}
+
+	after := get("page=1")
+	if n := after.Data.Stats.PaidMonthCount - before.Data.Stats.PaidMonthCount; n != 1 {
+		t.Fatalf("مصروف هالشهر زاد %d — يُنتظر 1 (**ما قبل ساعة الفتح يوم ١ للشهر السابق**)", n)
+	}
+	list := get("page=1&month=1&per_page=100")
+	if n := list.Data.Total - beforeList; n != 1 {
+		t.Fatalf("فلترُ هالشهر زاد %d — يُنتظر 1", n)
+	}
+	seen := map[string]bool{}
+	for _, p := range list.Data.Payouts {
+		seen[p.ID] = true
+	}
+	if !seen[late] || seen[early] {
+		t.Fatalf("فلترُ هالشهر: بعد الحدّ %v وقبله %v — يُنتظر true/false", seen[late], seen[early])
 	}
 }
