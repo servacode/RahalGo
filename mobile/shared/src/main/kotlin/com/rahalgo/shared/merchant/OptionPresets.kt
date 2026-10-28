@@ -98,7 +98,9 @@ data class SetOptionPresets(
 /** **تغييرُ الأسعار دفعةً واحدة** — وبلا `confirm` معاينةٌ لا تكتب. */
 @Serializable
 data class BulkPriceInput(
-    val percent: Double,
+    val percent: Double = 0.0,
+    /** **مبلغٌ ثابتٌ بالليرة** (٢٠٢٦-١٠-٢٩) — موجبٌ زيادةً وسالبٌ تخفيضاً، ومعه النسبةُ صفر. */
+    val amount: Long? = null,
     @SerialName("platform_section_id") val platformSectionId: String? = null,
     val confirm: Boolean = false,
 )

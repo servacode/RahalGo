@@ -38,11 +38,12 @@ func (s *Service) DuplicateItem(ctx context.Context, actorID, itemID string, max
 	var price int64
 	var image, section *string
 	var usdCents *int64
+	var withDrinks bool
 	err = tx.QueryRow(ctx, `
 		SELECT merchant_id::text, name, description, merchant_price, image_media_id::text,
-		       platform_section_id::text, price_usd_cents
+		       platform_section_id::text, price_usd_cents, NOT drinks_off
 		  FROM menu_items WHERE id = $1::uuid`, itemID).
-		Scan(&merchantID, &name, &desc, &price, &image, &section, &usdCents)
+		Scan(&merchantID, &name, &desc, &price, &image, &section, &usdCents, &withDrinks)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", httpx.ErrNotFound
 	}
@@ -73,6 +74,8 @@ func (s *Service) DuplicateItem(ctx context.Context, actorID, itemID string, max
 		Price:             &price,
 		ImageMediaID:      image,
 		PlatformSectionID: section,
+		// **والنسخةُ كأصلها في «أضف مشروباتي»** (هجرة 0483).
+		StoreDrinks: &withDrinks,
 	}
 	if usdCents != nil {
 		cur := CurrencyUSD
@@ -146,6 +149,11 @@ func (s *Service) DuplicateItem(ctx context.Context, actorID, itemID string, max
 type BulkPriceInput struct {
 	// Percent **نسبةُ التغيير** — ١٠ تعني زيادةً ١٠٪ و-١٠ نقصاً.
 	Percent float64 `json:"percent"`
+	// Amount **مبلغٌ ثابتٌ بالليرة** (طلبُ المالك ٢٠٢٦-١٠-٢٩) — ٥٠٠ تعني زيادةَ
+	// ٥٠٠ ل.س و-٥٠٠ نقصاً. **واحدٌ منهما لا اثنان**: النسبةُ أو المبلغ.
+	// والدولاريُّ يُحوَّل المبلغُ إلى سنتٍ بسعر الصرف. وغيابُه (العميلُ القديم)
+	// نسبةٌ كما كانت.
+	Amount *int64 `json:"amount,omitempty"`
 	// PlatformSectionID **قسمٌ واحد** — وفراغُه كلُّ الأصناف.
 	PlatformSectionID *string `json:"platform_section_id"`
 	// Confirm **بلاه معاينةٌ لا تكتب** — يرى العددَ والأمثلةَ قبل أن يقرّر.
@@ -161,18 +169,42 @@ type BulkPriceResult struct {
 
 var ErrBulkPercent = httpx.NewError(http.StatusBadRequest, "bulk_percent_invalid", "errors.bulk_percent_invalid")
 
+// ErrBulkAmount **مبلغٌ صفرٌ أو كبيرٌ جداً — أو مع نسبةٍ معاً.**
+var ErrBulkAmount = httpx.NewError(http.StatusBadRequest, "bulk_amount_invalid", "errors.bulk_amount_invalid")
+
+// bulkAmountMax **أقصى مبلغٍ ثابت** — زيادةً أو نقصاً، بالليرة الجديدة.
+const bulkAmountMax = 10_000_000
+
 // newPriceSQL **السعرُ الجديد لصفٍّ من `menu_items i`** — والليرةُ تُقرَّب
 // لأقرب ليرة ولا تنزل تحت الواحد، **والدولارُ يُغيَّر بسنته ثمّ يُحسب بالليرة
 // بسعر الصرف** كما يُحسب في كلّ مكان (`usd.go`).
+//
+// `$2` النسبةُ و`$4` المبلغُ الثابت — **وأحدُهما صفرٌ دائماً.** والمبلغُ
+// للدولاريّ يُحوَّل إلى سنتٍ بسعر الصرف (`newCentsSQL`).
 const newPriceSQL = `
 	CASE WHEN i.price_usd_cents IS NULL
-	     THEN GREATEST(1, round(i.merchant_price * (100 + $2::numeric) / 100))::bigint
-	     ELSE (round(round(i.price_usd_cents * (100 + $2::numeric) / 100) * COALESCE(m.exchange_rate, 0) / 100 / 5) * 5)::bigint
+	     THEN CASE WHEN $4::bigint = 0
+	               THEN GREATEST(1, round(i.merchant_price * (100 + $2::numeric) / 100))::bigint
+	               ELSE GREATEST(1, i.merchant_price + $4::bigint)::bigint END
+	     ELSE (round(` + newCentsSQL + ` * COALESCE(m.exchange_rate, 0) / 100 / 5) * 5)::bigint
 	END`
+
+// newCentsSQL **السنتُ الجديدُ للصنف الدولاريّ** — بالنسبة، أو بالمبلغ
+// محوَّلاً بسعر الصرف (ولا ينزل تحت سنتٍ واحد).
+const newCentsSQL = `(CASE WHEN $4::bigint = 0
+	     THEN round(i.price_usd_cents * (100 + $2::numeric) / 100)
+	     ELSE GREATEST(1, i.price_usd_cents + round($4::numeric * 100 / NULLIF(m.exchange_rate, 0)))
+	END)`
 
 // BulkPrice **يعاين أو يطبّق** نسبةً على أصناف المتجر أو قسمٍ منها.
 func (s *Service) BulkPrice(ctx context.Context, actorID, merchantID string, in BulkPriceInput, ip string) (*BulkPriceResult, error) {
-	if in.Percent == 0 || in.Percent < -50 || in.Percent > 100 || math.IsNaN(in.Percent) {
+	amount := int64(0)
+	if in.Amount != nil && *in.Amount != 0 {
+		amount = *in.Amount
+		if in.Percent != 0 || amount < -bulkAmountMax || amount > bulkAmountMax {
+			return nil, ErrBulkAmount
+		}
+	} else if in.Percent == 0 || in.Percent < -50 || in.Percent > 100 || math.IsNaN(in.Percent) {
 		return nil, ErrBulkPercent
 	}
 	section := ""
@@ -190,7 +222,7 @@ func (s *Service) BulkPrice(ctx context.Context, actorID, merchantID string, in 
 		SELECT i.name, i.merchant_price, %s, count(*) OVER ()
 		  FROM menu_items i JOIN merchants m ON m.id = i.merchant_id
 		 WHERE %s
-		 ORDER BY i.sort_order, i.created_at`, newPriceSQL, where), merchantID, in.Percent, section)
+		 ORDER BY i.sort_order, i.created_at`, newPriceSQL, where), merchantID, in.Percent, section, amount)
 	if err != nil {
 		return nil, err
 	}
@@ -232,10 +264,10 @@ func (s *Service) BulkPrice(ctx context.Context, actorID, merchantID string, in 
 		   SET merchant_price = %[1]s,
 		       price          = %[1]s,
 		       price_usd_cents = CASE WHEN i.price_usd_cents IS NULL THEN NULL
-		                              ELSE round(i.price_usd_cents * (100 + $2::numeric) / 100)::bigint END,
+		                              ELSE `+newCentsSQL+`::bigint END,
 		       updated_at = now()
 		  FROM merchants m
-		 WHERE m.id = i.merchant_id AND %[2]s`, newPriceSQL, where), merchantID, in.Percent, section); err != nil {
+		 WHERE m.id = i.merchant_id AND %[2]s`, newPriceSQL, where), merchantID, in.Percent, section, amount); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -243,6 +275,6 @@ func (s *Service) BulkPrice(ctx context.Context, actorID, merchantID string, in 
 	}
 	res.Applied = true
 	s.auditDetail(ctx, actorID, "menu.bulk_price", "merchant", merchantID, ip,
-		map[string]any{"percent": in.Percent, "section": section, "count": res.Count})
+		map[string]any{"percent": in.Percent, "amount": amount, "section": section, "count": res.Count})
 	return res, nil
 }

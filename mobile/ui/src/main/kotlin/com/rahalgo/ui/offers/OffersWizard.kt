@@ -1,5 +1,6 @@
 package com.rahalgo.ui.offers
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -7,19 +8,27 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -27,7 +36,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -35,67 +43,83 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.rahalgo.design.Rahal
-import com.rahalgo.ui.R
+import com.rahalgo.ui.ConfirmDialog
 import com.rahalgo.ui.OfferCard
 import com.rahalgo.ui.OfferDuration
-import com.rahalgo.ui.money
+import com.rahalgo.ui.OfferStatus
+import com.rahalgo.ui.R
 import com.rahalgo.ui.RahalButton
+import com.rahalgo.ui.RahalOutlineButton
 import com.rahalgo.ui.RahalTextButton
+import com.rahalgo.ui.money
+import com.rahalgo.ui.remainingLabel
+
+/** **مربّعُ أيقونة الفراغ** — دائرةٌ كبيرةٌ تُقرأ رسماً لا سطراً. */
+private val EmptyCircle = 88.dp
+private val EmptyIcon = 40.dp
+
+/** **أيقونةٌ داخل زرّ** — كما في محرّر الصنف. */
+private val ButtonIcon = 18.dp
+
+/** **مربّعُ نوع الخصم** — كبيرٌ يُضغط بالإبهام. */
+private val TypeTileHeight = 96.dp
+private val TypeGlyph = 48.dp
+
+/** **مربّعُ صنفٍ أو مدّة** — أدنى ارتفاعٍ يُضغط بثقة. */
+private val TileMin = 56.dp
+
+/** **زرُّ الرجوع** — مساحةُ لمسٍ كاملة. */
+private val BackTouch = 48.dp
+
+/** **نسبٌ تُضغط ضغطةً** — والحقلُ باقٍ لما سواها. */
+private val QuickPercents = listOf(10, 15, 20, 25, 30, 50)
 
 /**
  * ══════════════════════════════════════════════════════════════════════
- * **إنشاءُ عرضٍ — خمسُ خطواتٍ تُمشى، لا نموذجٌ يُملأ**
+ * **العروض — قائمةٌ ببطاقاتٍ احترافيّة، ونموذجُ إنشاءٍ في بطاقات**
  * ══════════════════════════════════════════════════════════════════════
  *
- * (طلبُ المالك ٢٠٢٦-٠٩-٣٠: «إعادة تصميم صفحة العروض… يختار المتجر ثمّ
- *  القسم ثمّ الصنف ثمّ نسبة ثمّ المدّة».)
+ * (طلبُ المالك ٢٠٢٦-١٠-٢٩: «صفحة العروض بدها إعادة تصميم كامل احترافي»
+ *  و«ما في داعي للشرح».) **عناوينُ وحقولٌ وأزرارٌ ورسائلُ خطأ — لا أسطرَ شرح.**
  *
- * # ما كان
- *
- * **كلُّ أصناف المتجر في عمودٍ واحدٍ بلا قسم** (`flatMap`)، **وسطورٌ
- * نصّيّةٌ تُضغط بلا ما يقول إنّها تُضغط** — لا إطارَ ولا أرضيّة.
- * **والمدّةُ خمسُ كلماتٍ رماديّةٍ في صفّ**، والنسبةُ حقلٌ حرّ. **فالشاشةُ
- * تُقرأ لوحةَ إعداداتٍ لا فعلاً يُمشى.**
- *
- * **ومتجرٌ فيه ثمانون صنفاً يصير بحثاً بالعين.**
- *
- * # وما صار
- *
- * **خطوةٌ واحدةٌ ظاهرةٌ في كلّ مرّة**، ورأسٌ يقول «الخطوة ٣ من ٥»،
- * **وما اختير يبقى مكتوباً فوقها** — فيُراجَع بلا رجوع.
- *
- * **والمتجرُ يُختار من قائمة عملائه بالاسم** لا بمعرّفٍ يُكتب — **وحارسُ
- * `RO-01` باقٍ**: اسمُ المتجر فوق كلّ خطوةٍ بعده، **ومن أنزل خصماً على
- * متجرٍ ظنّه غيرَه أضرّ برزق رجل.**
+ * - **رأسٌ بسهم رجوعٍ وعنوان** — في القائمة يُغلق الشاشة (`onBack`)،
+ *   **وفي النموذج يعود إلى القائمة.**
+ * - **القائمة**: زرُّ «أنشئ عرضاً» بارزٌ ثمّ البطاقات (`OfferCard`)،
+ *   **والإيقافُ يُسأل عنه قبل أن يقع.** والفراغُ رسمٌ وزرٌّ كبير.
+ * - **النموذج**: نوعُ الخصم مربّعان متساويان، والصنفُ مربّعاتٌ بعلامة ✓،
+ *   والقيمةُ حقلٌ بوحدته، والمدّةُ مربّعات، ثمّ ملخّصٌ و«حفظ» و«إلغاء».
  *
  * # وشاشةٌ واحدةٌ للمندوب وللمتجر
  *
- * (طلبُ المالك ٢٠٢٦-٠٩-٣٠.) **المتجرُ لا يختار متجراً** — فرعُه المختارُ
- * يُفتح وحدَه وخطواتُه أربع. **والخصمُ نسبةٌ أو مبلغٌ ثابت** للاثنين.
+ * (طلبُ المالك ٢٠٢٦-٠٩-٣٠.) **المندوبُ يختار متجراً من عملائه** — **وحارسُ
+ * `RO-01` باقٍ**: اسمُ المتجر فوق القائمة والنموذج. **والمتجرُ فرعُه مختار.**
+ * **والعرضُ على صنفٍ واحدٍ بالليرة** — نسبةً أو مبلغاً، **كما يقبله المحرّك.**
  */
 @Composable
-fun OffersWizard(vm: OffersWizardViewModel) {
+fun OffersWizard(
+    vm: OffersWizardViewModel,
+    /** **سهمُ الرجوع في القائمة** — و`null` لا سهمَ فيها (المندوبُ يرجع بزرّ الجهاز). */
+    onBack: (() -> Unit)? = null,
+) {
     val ctx = LocalContext.current
     val focus = LocalFocusManager.current
-    // ══════════════════════════════════════════════════════════════════
-    // **صفحتان لا صفحةٌ معجوقة** (طلبُ المالك ٢٠٢٦-١٠-٠٩)
-    // ══════════════════════════════════════════════════════════════════
-    //
-    // «صفحة إنشاء العرض معجوقة مو مفهومة.» — **كانت الخطواتُ والاختياراتُ
-    // ورسالةُ «تمّ» والعروضُ القديمةُ كلُّها فوق بعضها**، و«الخطوة ٣ من ٥»
-    // تتبدّل وحدَها. **فصارت**: «العروض» (القائمة وزرُّ «عرض جديد») ثمّ
-    // «عرض جديد» (نموذجٌ واحدٌ ظاهرٌ كلُّه ومعاينةٌ قبل الإنشاء)، **ومن
-    // أنشأ عاد إلى القائمة.** ويبقيان مع تدوير الشاشة.
+    // **صفحتان لا صفحةٌ معجوقة** (طلبُ المالك ٢٠٢٦-١٠-٠٩) — القائمةُ ثمّ النموذج،
+    // **ومن أنشأ عاد إلى القائمة.** ويبقيان مع تدوير الشاشة.
     var composing by rememberSaveable { mutableStateOf(false) }
     var percent by rememberSaveable { mutableStateOf("") }
     var hours by rememberSaveable { mutableStateOf(24) }
     var query by rememberSaveable { mutableStateOf("") }
+    var askStop by rememberSaveable { mutableStateOf<String?>(null) }
 
     LaunchedEffect(vm.merchantID) {
         if (vm.merchantID.isEmpty()) vm.loadClients()
@@ -110,6 +134,25 @@ fun OffersWizard(vm: OffersWizardViewModel) {
     }
     androidx.activity.compose.BackHandler(enabled = composing) { composing = false }
 
+    // **والإيقافُ يُسأل عنه** — عرضٌ نزل بالخطأ يُعاد إنشاؤه من أوّله.
+    askStop?.let { id ->
+        ConfirmDialog(
+            title = stringResource(R.string.ow_stop_q),
+            body = stringResource(R.string.ow_stop_body),
+            confirm = stringResource(R.string.ow_stop_do),
+            onConfirm = { vm.stop(id) },
+            onDismiss = { askStop = null },
+        )
+    }
+
+    val startCompose = {
+        vm.clearCreated()
+        vm.pickItem("")
+        percent = ""
+        query = ""
+        composing = true
+    }
+
     val value = percent.toLongOrNull() ?: 0L
     val picked = vm.items.firstOrNull { it.id == vm.pickedItem }
     val itemPrice = picked?.price ?: 0L
@@ -117,9 +160,24 @@ fun OffersWizard(vm: OffersWizardViewModel) {
     else value > 0 && (itemPrice <= 0 || value < itemPrice)
 
     LazyColumn(
-        Modifier.fillMaxWidth().imePadding().padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        Modifier
+            .fillMaxSize()
+            .background(Rahal.colors.surface)
+            .imePadding(),
+        contentPadding = PaddingValues(Rahal.space.lg),
+        verticalArrangement = Arrangement.spacedBy(Rahal.space.md),
     ) {
+        // ── الرأس ─────────────────────────────────────────────────────
+        item {
+            Header(
+                title = stringResource(if (composing) R.string.ow_new_title else R.string.ow_title),
+                onBack = when {
+                    composing -> ({ composing = false })
+                    else -> onBack
+                },
+            )
+        }
+
         if (vm.error.isNotEmpty()) {
             item {
                 Column(
@@ -127,7 +185,7 @@ fun OffersWizard(vm: OffersWizardViewModel) {
                         .fillMaxWidth()
                         .clip(Rahal.shape.md)
                         .background(Rahal.colors.warnTint)
-                        .padding(12.dp),
+                        .padding(Rahal.space.md),
                 ) {
                     Text(vm.error, color = Rahal.colors.danger)
                     if (vm.merchantID.isNotEmpty() && vm.sections.isEmpty()) {
@@ -142,14 +200,14 @@ fun OffersWizard(vm: OffersWizardViewModel) {
         // ── اختيارُ المتجر (للمندوب) ─────────────────────────────────
         if (vm.merchantID.isEmpty()) {
             if (!vm.picksStore) {
-                item { if (vm.busy) Hint(stringResource(R.string.ow_loading)) }
+                item { if (vm.busy) Muted(stringResource(R.string.ow_loading)) }
             } else {
                 item {
-                    StepCard(stringResource(R.string.ow_s1)) {
-                        if (vm.clients.isEmpty() && !vm.busy) Hint(stringResource(R.string.ow_no_clients))
-                        if (vm.clients.isEmpty() && vm.busy) Hint(stringResource(R.string.ow_loading))
+                    FormCard(stringResource(R.string.ow_s1)) {
+                        if (vm.clients.isEmpty() && !vm.busy) Muted(stringResource(R.string.ow_no_clients))
+                        if (vm.clients.isEmpty() && vm.busy) Muted(stringResource(R.string.ow_loading))
                         vm.clients.forEach { c ->
-                            PickRow(text = c.name, chosen = false, onClick = { vm.open(c.id, c.name) })
+                            ChoiceRow(text = c.name, chosen = false, onClick = { vm.open(c.id, c.name) })
                         }
                     }
                 }
@@ -157,65 +215,82 @@ fun OffersWizard(vm: OffersWizardViewModel) {
             return@LazyColumn
         }
 
-        // ── رأسُ المتجر ───────────────────────────────────────────────
-        item {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    if (composing) stringResource(R.string.ow_new_title)
-                    else stringResource(if (vm.picksStore) R.string.ow_current else R.string.ow_current_mine),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Rahal.colors.ink,
-                    modifier = Modifier.weight(1f),
-                )
-                when {
-                    composing -> RahalTextButton(onClick = { composing = false }) {
-                        Text(stringResource(R.string.ow_back_to_list))
-                    }
-                    vm.picksStore -> RahalTextButton(onClick = { vm.clearMerchant() }) {
-                        Text(stringResource(R.string.ow_change_store))
+        // ── اسمُ المتجر (للمندوب) — `RO-01` ────────────────────────────
+        if (vm.picksStore) {
+            item {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clip(Rahal.shape.md)
+                        .background(Rahal.colors.canvas)
+                        .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
+                        .padding(start = Rahal.space.md),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        painterResource(R.drawable.ic_store),
+                        contentDescription = null,
+                        tint = Rahal.colors.brand,
+                        modifier = Modifier.size(ButtonIcon),
+                    )
+                    Spacer(Modifier.width(Rahal.space.sm))
+                    Text(
+                        vm.merchantName,
+                        fontWeight = FontWeight.Bold,
+                        color = Rahal.colors.ink,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (!composing) {
+                        RahalTextButton(onClick = { vm.clearMerchant() }) {
+                            Text(stringResource(R.string.ow_change_store))
+                        }
+                    } else {
+                        Spacer(Modifier.height(BackTouch))
                     }
                 }
-            }
-            if (vm.picksStore) {
-                Text(vm.merchantName, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodyMedium)
             }
         }
 
         if (!composing) {
             // ══════════════════════════════════════════════════════════
-            // **١ · العروض — القائمةُ وزرُّ «عرض جديد»**
+            // **١ · القائمة**
             // ══════════════════════════════════════════════════════════
             if (vm.createdShown && vm.error.isEmpty()) {
                 item {
-                    Text(
-                        stringResource(R.string.ow_created_top),
-                        color = Rahal.colors.success,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier
+                    Row(
+                        Modifier
                             .fillMaxWidth()
                             .clip(Rahal.shape.md)
                             .background(Rahal.colors.success.copy(alpha = 0.10f))
-                            .padding(12.dp),
-                    )
+                            .padding(Rahal.space.md),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            stringResource(R.string.ow_created_top),
+                            color = Rahal.colors.success,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
                 }
             }
-            item {
-                RahalButton(
-                    onClick = {
-                        vm.clearCreated()
-                        vm.pickItem("")
-                        percent = ""
-                        query = ""
-                        composing = true
-                    },
-                    enabled = !vm.busy || vm.items.isNotEmpty(),
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text(stringResource(R.string.ow_new_button)) }
-            }
             val rows = vm.rows
-            if (rows == null && vm.busy) item { Hint(stringResource(R.string.ow_loading)) }
-            if (rows != null && rows.isEmpty()) item { Hint(stringResource(R.string.ow_offers_empty)) }
+            if (rows == null && vm.busy) item { Muted(stringResource(R.string.ow_loading)) }
+            if (rows != null && rows.isEmpty()) {
+                item {
+                    EmptyOffers(enabled = !vm.busy || vm.items.isNotEmpty(), onCreate = startCompose)
+                }
+            }
+            if (!rows.isNullOrEmpty()) {
+                item {
+                    RahalButton(
+                        onClick = startCompose,
+                        enabled = !vm.busy || vm.items.isNotEmpty(),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { IconText(R.drawable.ic_plus, stringResource(R.string.ow_add)) }
+                }
+            }
             items(rows.orEmpty(), key = { it.id }) { o ->
                 OfferCard(
                     itemName = o.itemName,
@@ -225,18 +300,41 @@ fun OffersWizard(vm: OffersWizardViewModel) {
                     percent = o.discountPercent,
                     amount = o.discountAmount,
                     stopping = vm.stopping == o.id,
-                    onStop = { vm.stop(o.id) },
+                    onStop = { askStop = o.id },
                     endsAt = o.endsAt,
+                    startsAt = o.startsAt,
                 )
             }
             return@LazyColumn
         }
 
         // ══════════════════════════════════════════════════════════════
-        // **٢ · عرضٌ جديد — نموذجٌ واحدٌ ظاهرٌ كلُّه**
+        // **٢ · عرضٌ جديد — بطاقاتٌ بالترتيب**
         // ══════════════════════════════════════════════════════════════
 
-        // ── الصنف: بحثٌ وأقسامٌ للفلترة ─────────────────────────────
+        // ── نوعُ الخصم: مربّعان متساويان ──────────────────────────────
+        item {
+            FormCard(stringResource(R.string.ow_f_type)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
+                    TypeTile(
+                        glyph = stringResource(R.string.ow_unit_percent),
+                        label = stringResource(R.string.ow_mode_percent),
+                        chosen = vm.byPercent,
+                        onClick = { if (!vm.byPercent) { vm.pickMode(true); percent = "" } },
+                        modifier = Modifier.weight(1f),
+                    )
+                    TypeTile(
+                        glyph = stringResource(R.string.ow_unit_syp),
+                        label = stringResource(R.string.ow_mode_fixed),
+                        chosen = !vm.byPercent,
+                        onClick = { if (vm.byPercent) { vm.pickMode(false); percent = "" } },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+        }
+
+        // ── الصنف: بحثٌ وأقسامٌ ومربّعاتٌ بعلامة ✓ ────────────────────
         item {
             val pool = if (vm.picksSection && vm.pickedSection.isNotEmpty()) {
                 vm.sections.firstOrNull { it.id == vm.pickedSection }?.items.orEmpty()
@@ -247,148 +345,151 @@ fun OffersWizard(vm: OffersWizardViewModel) {
             else pool.filter { it.name.contains(query.trim(), ignoreCase = true) }
             // **وصنفٌ عليه عرضٌ يُقال بجانبه** — الجديدُ يحلّ محلّه (`OFFER-EXP`).
             val taken = vm.rows.orEmpty()
-                .filter {
-                    it.status == com.rahalgo.ui.OfferStatus.ACTIVE ||
-                        it.status == com.rahalgo.ui.OfferStatus.SCHEDULED
-                }
+                .filter { it.status == OfferStatus.ACTIVE || it.status == OfferStatus.SCHEDULED }
                 .mapNotNull { o -> o.menuItemId?.let { it to o.status } }
                 .toMap()
-            StepCard(stringResource(R.string.ow_f_item)) {
+            FormCard(stringResource(R.string.ow_f_item)) {
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it.take(40) },
                     placeholder = { Text(stringResource(R.string.ow_search)) },
                     leadingIcon = {
-                        androidx.compose.material3.Icon(
-                            androidx.compose.ui.res.painterResource(R.drawable.ic_search),
-                            contentDescription = null,
-                        )
+                        Icon(painterResource(R.drawable.ic_search), contentDescription = null)
                     },
                     singleLine = true,
+                    shape = Rahal.shape.md,
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(onSearch = { focus.clearFocus() }),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 if (vm.picksSection && vm.sections.size > 1) {
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(Rahal.space.sm))
                     Row(
                         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
                     ) {
-                        FilterChip(
-                            selected = vm.pickedSection.isEmpty(),
+                        Pill(
+                            text = stringResource(R.string.ow_all_sections),
+                            on = vm.pickedSection.isEmpty(),
                             onClick = { vm.pickSection("") },
-                            label = { Text(stringResource(R.string.ow_all_sections)) },
                         )
                         vm.sections.forEach { s ->
-                            FilterChip(
-                                selected = vm.pickedSection == s.id,
-                                onClick = { vm.pickSection(s.id) },
-                                label = { Text(s.name) },
-                            )
+                            Pill(text = s.name, on = vm.pickedSection == s.id, onClick = { vm.pickSection(s.id) })
                         }
                     }
                 }
-                Spacer(Modifier.height(8.dp))
-                if (vm.busy && pool.isEmpty()) Hint(stringResource(R.string.ow_loading_items))
+                Spacer(Modifier.height(Rahal.space.sm))
+                if (vm.busy && pool.isEmpty()) Muted(stringResource(R.string.ow_loading_items))
                 if (shown.isEmpty() && !vm.busy) {
-                    Hint(
-                        stringResource(
-                            if (query.isNotBlank()) R.string.ow_no_match else R.string.ow_no_items_store,
-                        ),
-                    )
+                    Muted(stringResource(if (query.isNotBlank()) R.string.ow_no_match else R.string.ow_no_items_store))
                 }
-                shown.forEach { i ->
-                    PickRow(
-                        text = i.name + "  ·  " + money(i.price),
+                TileGrid(shown, columns = 2) { i, mod ->
+                    ItemTile(
+                        name = i.name,
+                        price = money(i.price),
                         chosen = vm.pickedItem == i.id,
                         note = when (taken[i.id]) {
                             null -> null
-                            com.rahalgo.ui.OfferStatus.SCHEDULED -> stringResource(R.string.ow_item_scheduled)
+                            OfferStatus.SCHEDULED -> stringResource(R.string.ow_item_scheduled)
                             else -> stringResource(R.string.ow_item_taken)
                         },
                         onClick = { vm.pickItem(i.id) },
+                        modifier = mod,
                     )
                 }
             }
         }
 
-        // ── الخصم: نسبةٌ أو مبلغ ─────────────────────────────────────
+        // ── قيمةُ الخصم ───────────────────────────────────────────────
         item {
-            StepCard(stringResource(R.string.ow_f_discount)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
-                        selected = vm.byPercent,
-                        onClick = { if (!vm.byPercent) { vm.pickMode(true); percent = "" } },
-                        label = { Text(stringResource(R.string.ow_mode_percent)) },
-                    )
-                    FilterChip(
-                        selected = !vm.byPercent,
-                        onClick = { if (vm.byPercent) { vm.pickMode(false); percent = "" } },
-                        label = { Text(stringResource(R.string.ow_mode_fixed)) },
+            // **ورسالةُ الخطأ وحدَها تحت الحقل** — ولا سطرَ شرح (طلبُ المالك ٢٠٢٦-١٠-٢٩).
+            val badValue: (@Composable () -> Unit)? = if (percent.isNotEmpty() && !valueOK) {
+                {
+                    Text(
+                        if (vm.byPercent) stringResource(R.string.ow_bad_percent)
+                        else stringResource(R.string.ow_bad_amount, itemPrice.toString()),
+                        color = Rahal.colors.danger,
                     )
                 }
-                Spacer(Modifier.height(8.dp))
+            } else {
+                null
+            }
+            FormCard(stringResource(R.string.ow_f_value)) {
                 OutlinedTextField(
                     value = percent,
                     onValueChange = { v ->
                         percent = v.filter { it.isDigit() }.take(if (vm.byPercent) 2 else 9)
                     },
                     label = { Text(stringResource(if (vm.byPercent) R.string.ow_percent else R.string.ow_amount)) },
-                    singleLine = true,
-                    isError = percent.isNotEmpty() && !valueOK,
-                    supportingText = {
+                    suffix = {
                         Text(
-                            when {
-                                percent.isNotEmpty() && !valueOK && vm.byPercent ->
-                                    stringResource(R.string.ow_bad_percent)
-                                percent.isNotEmpty() && !valueOK ->
-                                    stringResource(R.string.ow_bad_amount, itemPrice.toString())
-                                vm.byPercent -> stringResource(R.string.ow_percent_hint)
-                                else -> stringResource(R.string.ow_amount_hint)
-                            },
-                            color = if (percent.isNotEmpty() && !valueOK) Rahal.colors.danger else Rahal.colors.inkMuted,
+                            stringResource(if (vm.byPercent) R.string.ow_unit_percent else R.string.ow_unit_syp),
+                            fontWeight = FontWeight.Bold,
+                            color = Rahal.colors.inkMuted,
                         )
                     },
+                    singleLine = true,
+                    shape = Rahal.shape.md,
+                    textStyle = MaterialTheme.typography.titleMedium,
+                    isError = percent.isNotEmpty() && !valueOK,
+                    supportingText = badValue,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
                     keyboardActions = KeyboardActions(onDone = { focus.clearFocus() }),
                     modifier = Modifier.fillMaxWidth(),
                 )
-            }
-        }
-
-        // ── المدّة ───────────────────────────────────────────────────
-        item {
-            StepCard(stringResource(R.string.ow_s5)) {
-                Row(
-                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    OfferDuration.PRESET_HOURS.forEach { h ->
-                        FilterChip(
-                            selected = h == hours,
-                            onClick = { hours = h },
-                            label = { Text(OfferDuration.label(ctx, h)) },
-                        )
+                if (vm.byPercent) {
+                    Spacer(Modifier.height(Rahal.space.sm))
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
+                    ) {
+                        QuickPercents.forEach { p ->
+                            Pill(
+                                text = p.toString() + stringResource(R.string.ow_unit_percent),
+                                on = value == p.toLong(),
+                                onClick = { percent = p.toString(); focus.clearFocus() },
+                            )
+                        }
                     }
                 }
             }
         }
 
-        // ── المعاينة والإنشاء ────────────────────────────────────────
+        // ── المدّة: مربّعاتٌ أربعةٌ في الصفّ ثمّ موعدُ الانتهاء ─────────
         item {
-            Column(
-                Modifier
-                    .fillMaxWidth()
-                    .clip(Rahal.shape.md)
-                    .background(Rahal.colors.success.copy(alpha = 0.08f))
-                    .padding(12.dp),
-            ) {
-                Text(stringResource(R.string.ow_preview_title), color = Rahal.colors.inkMuted, style = MaterialTheme.typography.labelMedium)
-                Spacer(Modifier.height(6.dp))
-                if (picked == null) {
-                    Text(stringResource(R.string.ow_preview_pick), color = Rahal.colors.inkMuted)
-                } else {
+            FormCard(stringResource(R.string.ow_f_period)) {
+                TileGrid(OfferDuration.PRESET_HOURS, columns = 4) { h, mod ->
+                    DurationTile(
+                        text = OfferDuration.label(ctx, h),
+                        chosen = h == hours,
+                        onClick = { hours = h },
+                        modifier = mod,
+                    )
+                }
+                // **وموعدُ الانتهاء يُقرأ قبل الحفظ** — والمحرّكُ يحكم عند الإنشاء.
+                val ends = java.time.Instant.ofEpochMilli(
+                    OfferDuration.endsAtMillis(System.currentTimeMillis(), hours),
+                ).toString()
+                remainingLabel(ctx, ends)?.let {
+                    Spacer(Modifier.height(Rahal.space.sm))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            painterResource(R.drawable.ic_time),
+                            contentDescription = null,
+                            tint = Rahal.colors.inkMuted,
+                            modifier = Modifier.size(ButtonIcon),
+                        )
+                        Spacer(Modifier.width(Rahal.space.xs))
+                        Text(it, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
+        }
+
+        // ── الملخّص ثمّ «حفظ» و«إلغاء» ───────────────────────────────
+        if (picked != null) {
+            item {
+                FormCard(stringResource(R.string.ow_preview_title)) {
                     Text(picked.name, fontWeight = FontWeight.Bold, color = Rahal.colors.ink)
                     // **ولا يُحسب السعرُ في الجهاز** (`OffersPolicyTest`): المحرّكُ يحسبه بهامش
                     // الصنف والقسم — **فيُقال الخصمُ وسعرُ الصنف، والنهائيُّ في القائمة.**
@@ -397,7 +498,8 @@ fun OffersWizard(vm: OffersWizardViewModel) {
                         Text(
                             stringResource(
                                 R.string.ow_preview_discount,
-                                if (vm.byPercent) value.toString() + "٪" else money(value),
+                                if (vm.byPercent) value.toString() + stringResource(R.string.ow_unit_percent)
+                                else money(value),
                             ),
                             fontWeight = FontWeight.Bold,
                             color = Rahal.colors.success,
@@ -409,124 +511,331 @@ fun OffersWizard(vm: OffersWizardViewModel) {
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
-                Spacer(Modifier.height(4.dp))
-                if (picked != null) Hint(stringResource(R.string.ow_preview_final))
-                Hint(stringResource(if (vm.picksStore) R.string.ow_borne_store else R.string.ow_borne_me))
-                Spacer(Modifier.height(10.dp))
+            }
+        }
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
                 RahalButton(
                     onClick = {
                         focus.clearFocus()
                         vm.create(vm.pickedItem, value, hours)
                     },
                     enabled = !vm.busy && picked != null && valueOK,
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text(stringResource(R.string.ow_create)) }
+                    modifier = Modifier.weight(1f),
+                ) { IconText(R.drawable.ic_check_mark, stringResource(R.string.act_save)) }
+                RahalOutlineButton(
+                    onClick = { composing = false },
+                    enabled = !vm.busy,
+                    modifier = Modifier.weight(1f),
+                ) { IconText(R.drawable.ic_close, stringResource(R.string.act_cancel)) }
             }
+            Spacer(Modifier.height(Rahal.space.xl))
         }
     }
 }
 
-/** **لوحُ خطوةٍ** — عنوانٌ ورجوعٌ وما فيها. */
+/** **رأسُ الصفحة** — سهمُ رجوعٍ وعنوانٌ كبير. */
 @Composable
-private fun StepCard(
-    title: String,
-    onBack: (() -> Unit)? = null,
-    body: @Composable () -> Unit,
-) {
+private fun Header(title: String, onBack: (() -> Unit)?) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        if (onBack != null) {
+            IconButton(onClick = onBack, modifier = Modifier.size(BackTouch)) {
+                Icon(
+                    painterResource(R.drawable.ic_arrow_back),
+                    contentDescription = stringResource(R.string.ow_back),
+                    tint = Rahal.colors.ink,
+                )
+            }
+            Spacer(Modifier.width(Rahal.space.xs))
+        }
+        Text(
+            title,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleLarge,
+            color = Rahal.colors.ink,
+            modifier = Modifier.weight(1f),
+        )
+    }
+}
+
+/** **بطاقةُ قسمٍ من النموذج** — بيضاءُ بحدٍّ رفيعٍ وعنوانٍ عريض. */
+@Composable
+private fun FormCard(title: String, body: @Composable ColumnScope.() -> Unit) {
     Column(
         Modifier
             .fillMaxWidth()
             .clip(Rahal.shape.md)
             .background(Rahal.colors.canvas)
             .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
-            .padding(12.dp),
+            .padding(Rahal.space.md),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                title,
-                fontWeight = FontWeight.Bold,
-                color = Rahal.colors.ink,
-                modifier = Modifier.weight(1f),
-            )
-            // **ورجوعٌ خطوةً واحدة** — **ومن أخطأ صنفاً لا يبدأ من أوّله.**
-            if (onBack != null) {
-                RahalTextButton(onClick = onBack) {
-                    Text(stringResource(R.string.ow_back))
-                }
-            }
-        }
-        Spacer(Modifier.height(8.dp))
+        Text(
+            title,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleSmall,
+            color = Rahal.colors.ink,
+        )
+        Spacer(Modifier.height(Rahal.space.sm))
         body()
     }
 }
 
-/**
- * **سطرٌ يُضغط ويبدو أنّه يُضغط** — **وكان نصّاً عارياً**: يتبدّل لونُه
- * حين يُختار وحدَه، **فلا شيء يقول للمندوب أنّ هذا السطرَ بابٌ.**
- */
+/** **فراغُ القائمة** — رسمٌ في دائرة، وعنوان، وزرٌّ كبير. */
 @Composable
-private fun PickRow(
-    text: String,
-    chosen: Boolean,
-    onClick: () -> Unit,
-    enabled: Boolean = true,
-    /** **وسببُ المنع بجانبه** — **وصفٌّ معطّلٌ بلا سببٍ يُقرأ عطبا.** */
-    note: String? = null,
-) {
-    Row(
+private fun EmptyOffers(enabled: Boolean, onCreate: () -> Unit) {
+    Column(
         Modifier
             .fillMaxWidth()
-            .clip(Rahal.shape.sm)
-            .background(
-                when {
-                    !enabled -> Rahal.colors.surface
-                    chosen -> Rahal.colors.brand.copy(alpha = 0.12f)
-                    else -> Rahal.colors.surface
-                },
+            .clip(Rahal.shape.md)
+            .background(Rahal.colors.canvas)
+            .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
+            .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.xl),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            Modifier
+                .size(EmptyCircle)
+                .clip(Rahal.shape.pill)
+                .background(Rahal.colors.brand.copy(alpha = 0.10f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painterResource(R.drawable.ic_offer),
+                contentDescription = null,
+                tint = Rahal.colors.brand,
+                modifier = Modifier.size(EmptyIcon),
             )
+        }
+        Spacer(Modifier.height(Rahal.space.md))
+        Text(
+            stringResource(R.string.ow_empty_title),
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleMedium,
+            color = Rahal.colors.ink,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(Rahal.space.lg))
+        RahalButton(onClick = onCreate, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
+            IconText(R.drawable.ic_plus, stringResource(R.string.ow_add))
+        }
+    }
+}
+
+/** **مربّعُ نوع الخصم** — رمزٌ كبيرٌ واسمٌ تحته، و✓ على المختار. */
+@Composable
+private fun TypeTile(
+    glyph: String,
+    label: String,
+    chosen: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val tint = if (chosen) Rahal.colors.brand else Rahal.colors.inkMuted
+    Box(
+        modifier
+            .heightIn(min = TypeTileHeight)
+            .clip(Rahal.shape.md)
+            .background(if (chosen) Rahal.colors.brand.copy(alpha = 0.08f) else Rahal.colors.canvas)
             .border(
-                Rahal.stroke.hair,
+                if (chosen) Rahal.stroke.focus else Rahal.stroke.hair,
+                if (chosen) Rahal.colors.brand else Rahal.colors.line,
+                Rahal.shape.md,
+            )
+            .selectable(selected = chosen, role = Role.RadioButton, onClick = onClick)
+            .padding(Rahal.space.sm),
+    ) {
+        Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                Modifier
+                    .size(TypeGlyph)
+                    .clip(Rahal.shape.pill)
+                    .background(tint.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(glyph, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = tint)
+            }
+            Spacer(Modifier.height(Rahal.space.xs))
+            Text(
+                label,
+                fontWeight = FontWeight.Bold,
+                color = if (chosen) Rahal.colors.brand else Rahal.colors.ink,
+                textAlign = TextAlign.Center,
+            )
+        }
+        if (chosen) CheckBadge(Modifier.align(Alignment.TopEnd))
+    }
+}
+
+/** **مربّعُ صنف** — اسمُه وسعرُه، و✓ على المختار، وتنبيهُ «عليه عرض» إن وُجد. */
+@Composable
+private fun ItemTile(
+    name: String,
+    price: String,
+    chosen: Boolean,
+    note: String?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier
+            .heightIn(min = TileMin)
+            .clip(Rahal.shape.sm)
+            .background(if (chosen) Rahal.colors.brand.copy(alpha = 0.08f) else Rahal.colors.canvas)
+            .border(
+                if (chosen) Rahal.stroke.focus else Rahal.stroke.hair,
                 if (chosen) Rahal.colors.brand else Rahal.colors.line,
                 Rahal.shape.sm,
             )
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .selectable(selected = chosen, role = Role.RadioButton, onClick = onClick)
+            .padding(Rahal.space.sm),
+    ) {
+        Column(Modifier.fillMaxWidth().padding(end = if (chosen) Rahal.space.lg else 0.dp)) {
+            Text(
+                name,
+                fontWeight = FontWeight.Bold,
+                color = if (chosen) Rahal.colors.brand else Rahal.colors.ink,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(price, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
+            if (note != null) {
+                Spacer(Modifier.height(Rahal.space.xs))
+                Text(
+                    note,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Rahal.colors.accent,
+                    modifier = Modifier
+                        .clip(Rahal.shape.sm)
+                        .background(Rahal.colors.accent.copy(alpha = 0.12f))
+                        .padding(horizontal = Rahal.space.xs, vertical = 2.dp),
+                )
+            }
+        }
+        if (chosen) CheckBadge(Modifier.align(Alignment.TopEnd))
+    }
+}
+
+/** **مربّعُ مدّة** — نصٌّ في الوسط، والمختارُ بلون العلامة. */
+@Composable
+private fun DurationTile(text: String, chosen: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Box(
+        modifier
+            .heightIn(min = TileMin)
+            .clip(Rahal.shape.sm)
+            .background(if (chosen) Rahal.colors.brand else Rahal.colors.canvas)
+            .border(Rahal.stroke.hair, if (chosen) Rahal.colors.brand else Rahal.colors.line, Rahal.shape.sm)
+            .selectable(selected = chosen, role = Role.RadioButton, onClick = onClick)
+            .padding(Rahal.space.xs),
+        contentAlignment = Alignment.Center,
     ) {
         Text(
             text,
-            maxLines = 1,
-            color = when {
-                !enabled -> Rahal.colors.inkMuted
-                chosen -> Rahal.colors.brand
-                else -> Rahal.colors.ink
-            },
-            fontWeight = if (chosen) FontWeight.Bold else FontWeight.Normal,
-            modifier = Modifier.weight(1f),
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.bodyMedium,
+            color = if (chosen) Rahal.colors.onBrand else Rahal.colors.ink,
+            textAlign = TextAlign.Center,
         )
-        if (note != null) {
-            Text(
-                note,
-                style = MaterialTheme.typography.labelMedium,
-                color = Rahal.colors.accent,
-                modifier = Modifier
-                    .clip(Rahal.shape.sm)
-                    .background(Rahal.colors.accent.copy(alpha = 0.12f))
-                    .padding(horizontal = 6.dp, vertical = 2.dp),
-            )
-        } else if (chosen) {
-            Text("✓", color = Rahal.colors.brand, fontWeight = FontWeight.Bold)
+    }
+}
+
+/** **علامةُ ✓ في زاوية المختار.** */
+@Composable
+private fun CheckBadge(modifier: Modifier = Modifier) {
+    Box(
+        modifier
+            .size(ButtonIcon + Rahal.space.xs)
+            .clip(Rahal.shape.pill)
+            .background(Rahal.colors.brand),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            painterResource(R.drawable.ic_check_mark),
+            contentDescription = null,
+            tint = Rahal.colors.onBrand,
+            modifier = Modifier.size(ButtonIcon - Rahal.space.xs),
+        )
+    }
+}
+
+/** **شبكةُ مربّعاتٍ متساوية** — صفوفٌ بعدد الأعمدة، والناقصُ يُملأ فراغاً. */
+@Composable
+private fun <T> TileGrid(list: List<T>, columns: Int, tile: @Composable (T, Modifier) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
+        list.chunked(columns).forEach { row ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
+                row.forEach { tile(it, Modifier.weight(1f)) }
+                repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
+            }
         }
     }
-    Spacer(Modifier.height(6.dp))
+}
+
+/** **رقاقةٌ تُضغط** — قسمٌ أو نسبةٌ سريعة. */
+@Composable
+private fun Pill(text: String, on: Boolean, onClick: () -> Unit) {
+    Text(
+        text,
+        color = if (on) Rahal.colors.onBrand else Rahal.colors.ink,
+        fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
+        style = MaterialTheme.typography.bodyMedium,
+        maxLines = 1,
+        modifier = Modifier
+            .clip(Rahal.shape.pill)
+            .background(if (on) Rahal.colors.brand else Rahal.colors.canvas)
+            .border(Rahal.stroke.hair, if (on) Rahal.colors.brand else Rahal.colors.line, Rahal.shape.pill)
+            .selectable(selected = on, role = Role.RadioButton, onClick = onClick)
+            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
+    )
+}
+
+/** **سطرٌ يُضغط** — متجرٌ من عملاء المندوب. */
+@Composable
+private fun ChoiceRow(text: String, chosen: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .heightIn(min = TileMin)
+            .clip(Rahal.shape.sm)
+            .background(if (chosen) Rahal.colors.brand.copy(alpha = 0.08f) else Rahal.colors.canvas)
+            .border(Rahal.stroke.hair, if (chosen) Rahal.colors.brand else Rahal.colors.line, Rahal.shape.sm)
+            .clickable(onClick = onClick)
+            .padding(horizontal = Rahal.space.md),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            painterResource(R.drawable.ic_store),
+            contentDescription = null,
+            tint = Rahal.colors.brand,
+            modifier = Modifier.size(ButtonIcon),
+        )
+        Spacer(Modifier.width(Rahal.space.sm))
+        Text(
+            text,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            fontWeight = FontWeight.Bold,
+            color = Rahal.colors.ink,
+            modifier = Modifier.weight(1f),
+        )
+    }
+    Spacer(Modifier.height(Rahal.space.sm))
 }
 
 @Composable
-private fun Hint(text: String) {
+private fun Muted(text: String) {
     Text(
         text,
         color = Rahal.colors.inkMuted,
-        style = MaterialTheme.typography.bodySmall,
-        modifier = Modifier.padding(vertical = 2.dp),
+        style = MaterialTheme.typography.bodyMedium,
+        modifier = Modifier.padding(vertical = Rahal.space.xs),
     )
+}
+
+/** **أيقونةٌ ونصٌّ داخل زرّ** — لونُهما من الزرّ نفسِه. */
+@Composable
+private fun RowScope.IconText(@DrawableRes icon: Int, text: String) {
+    Icon(painterResource(icon), contentDescription = null, modifier = Modifier.size(ButtonIcon))
+    Spacer(Modifier.width(Rahal.space.xs))
+    Text(text, fontWeight = FontWeight.Bold)
 }

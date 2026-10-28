@@ -1,21 +1,30 @@
 package com.rahalgo.ui.menu
 
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.ui.semantics.Role
-import com.rahalgo.ui.money
+import androidx.annotation.DrawableRes
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -23,26 +32,31 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.rahalgo.design.Rahal
 import com.rahalgo.shared.merchant.BulkPriceInput
 import com.rahalgo.shared.merchant.BulkPriceResult
 import com.rahalgo.shared.merchant.OptionPreset
 import com.rahalgo.shared.merchant.OptionPresetsBody
+import com.rahalgo.shared.merchant.PRICE_MODE_NONE
+import com.rahalgo.shared.merchant.PRICE_MODE_WEIGHT
 import com.rahalgo.shared.merchant.PlatformSectionRef
 import com.rahalgo.shared.merchant.SetOptionPresets
 import com.rahalgo.ui.AppCore
-import com.rahalgo.ui.Card
 import com.rahalgo.ui.Flash
 import com.rahalgo.ui.R
 import com.rahalgo.ui.RahalButton
 import com.rahalgo.ui.RahalOutlineButton
 import com.rahalgo.ui.RahalTextButton
 import com.rahalgo.ui.Screen
-import com.rahalgo.ui.ScreenTitle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -196,7 +210,14 @@ class OptionPresetsState(
     }
 }
 
-/** **تغييرُ الأسعار دفعةً واحدة** — معاينةٌ أوّلاً ثمّ تأكيد. */
+
+/**
+ * **تغييرُ الأسعار دفعةً واحدة** — بنسبةٍ أو بمبلغٍ ثابت (٢٠٢٦-١٠-٢٩).
+ *
+ * **ولا خطوةَ معاينةٍ منفصلة** (ملاحظاتُ المالك ٢٠٢٦-١٠-٢٩): يكتب القيمةَ
+ * ويضغط «تطبيق» فيُسأل المحرّكُ بلا كتابةٍ عن العدد، **وتطلع نافذةُ تأكيدٍ
+ * واحدة** «سيتغيّر سعر N صنفاً»، ثمّ يُطبَّق بالقيمة نفسِها.
+ */
 class BulkPriceState(
     private val scope: CoroutineScope,
     private val run: suspend (BulkPriceInput) -> BulkPriceResult,
@@ -206,11 +227,17 @@ class BulkPriceState(
 ) {
     var open by mutableStateOf(false)
         private set
-    var percent by mutableStateOf("")
+    /** **القيمةُ كما تُكتب** — نسبةٌ أو مبلغٌ بحسب `byAmount`. */
+    var value by mutableStateOf("")
     var up by mutableStateOf(true)
+    /** **مبلغٌ ثابتٌ بالليرة** لا نسبة. */
+    var byAmount by mutableStateOf(false)
     /** **قسمٌ واحد** — وفارغٌ كلُّ الأصناف. */
     var sectionId by mutableStateOf("")
-    var preview by mutableStateOf<BulkPriceResult?>(null)
+    /** **ما تسأل عنه نافذةُ التأكيد** — وفراغُها لا نافذة. */
+    var asking by mutableStateOf<BulkPriceInput?>(null)
+        private set
+    var askCount by mutableStateOf(0)
         private set
     var error by mutableStateOf("")
         private set
@@ -218,10 +245,11 @@ class BulkPriceState(
         private set
 
     fun show() {
-        percent = ""
+        value = ""
         up = true
+        byAmount = false
         sectionId = ""
-        preview = null
+        asking = null
         error = ""
         open = true
     }
@@ -231,51 +259,75 @@ class BulkPriceState(
     }
 
     /**
-     * **رقمُ الطلب** (تدقيقُ ٢٠٢٦-١٠-٢٨) — معاينةٌ قديمةٌ تصل بعد تبديل النسبة
-     * **كانت تُعرض ثمّ يُؤكَّد بالنسبة الجديدة.** فكلُّ تبديلٍ يزيده، وما وصل
+     * **رقمُ الطلب** (تدقيقُ ٢٠٢٦-١٠-٢٨) — عددٌ قديمٌ يصل بعد تبديل القيمة
+     * **كان يُعرض ثمّ يُؤكَّد بالقيمة الجديدة.** فكلُّ تبديلٍ يزيده، وما وصل
      * برقمٍ قديمٍ يُرمى.
      */
     private var seq = 0
 
-    /** **أيُّ تبديلٍ يُسقط المعاينة** — فلا يُؤكَّد ما لم يُرَ. */
     fun changed() {
         seq++
-        preview = null
+        asking = null
         error = ""
     }
 
-    private fun input(confirm: Boolean): BulkPriceInput? {
-        val p = percent.filter { it.isDigit() }.toIntOrNull()
-        if (p == null || p <= 0 || (up && p > 100) || (!up && p > 50)) {
-            error = AppCore.get().app.getString(R.string.bulk_bad_percent)
+    private fun input(): BulkPriceInput? {
+        val app = AppCore.get().app
+        val n = value.filter { it.isDigit() }.toLongOrNull()
+        if (byAmount) {
+            if (n == null || n <= 0 || n > 10_000_000) {
+                error = app.getString(R.string.bulk_bad_amount)
+                return null
+            }
+            return BulkPriceInput(
+                amount = if (up) n else -n,
+                platformSectionId = sectionId.ifBlank { null },
+            )
+        }
+        if (n == null || n <= 0 || (up && n > 100) || (!up && n > 50)) {
+            error = app.getString(R.string.bulk_bad_percent)
             return null
         }
         return BulkPriceInput(
-            percent = (if (up) p else -p).toDouble(),
+            percent = (if (up) n else -n).toDouble(),
             platformSectionId = sectionId.ifBlank { null },
-            confirm = confirm,
         )
     }
 
-    fun look() {
+    /** **«تطبيق»** — يعدّ بلا كتابة، ثمّ يفتح نافذةَ التأكيد. */
+    fun submit() {
         if (busy) return
-        val body = input(false) ?: return
+        val body = input() ?: return
         val mine = seq
         busy = true
         scope.launch {
-            runCatching { run(body) }
-                .onSuccess { if (mine == seq) preview = it }
+            runCatching { run(body.copy(confirm = false)) }
+                .onSuccess {
+                    if (mine != seq) return@onSuccess
+                    if (it.count == 0) {
+                        error = AppCore.get().app.getString(R.string.bulk_none)
+                    } else {
+                        askCount = it.count
+                        asking = body
+                    }
+                }
                 .onFailure { if (mine == seq) error = errText(it) }
             busy = false
         }
     }
 
-    fun apply() {
-        if (busy || preview == null) return
-        val body = input(true) ?: return
+    fun dismiss() {
+        asking = null
+    }
+
+    /** **«تأكيد»** — بالقيمة التي عُدَّ عليها، لا بما كُتب بعدها. */
+    fun confirm() {
+        val body = asking ?: return
+        if (busy) return
+        asking = null
         busy = true
         scope.launch {
-            runCatching { run(body) }
+            runCatching { run(body.copy(confirm = true)) }
                 .onSuccess {
                     open = false
                     Flash.ok(AppCore.get().app.getString(R.string.bulk_done, it.count.toString()))
@@ -287,140 +339,360 @@ class BulkPriceState(
     }
 }
 
-/** **زرّا الأدوات** تحت زرّ المشروبات. */
+// ══════════════════════════════════════════════════════════════════════
+// **قطعُ شاشات الأدوات** — رأسٌ بسهم رجوع، ومربّعُ اختيار، وزرٌّ بأيقونة.
+// ══════════════════════════════════════════════════════════════════════
+
+/** **ارتفاعُ مربّعَي «زيادة / تخفيض».** */
+private val ChoiceBoxHeight = 64.dp
+
+/** **ارتفاعُ زرَّي «نسبة / مبلغ».** */
+private val SegmentHeight = 48.dp
+
+/** **ارتفاعُ بطاقة الخيار الجاهز** — كلُّها واحد. */
+private val PresetCardHeight = 76.dp
+
+/** **دائرةُ الأيقونة في المربّع.** */
+private val ChoiceIcon = 32.dp
+
+/**
+ * **رأسُ شاشة أداة** — سهمُ رجوعٍ واضحٌ (٤٨) ثمّ العنوان. **ولا سطرَ شرح**
+ * (ملاحظةُ المالك ٢٠٢٦-١٠-٢٩: «ما في داعي للشرح»).
+ */
+@Composable
+internal fun ToolHeader(title: String, onBack: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) {
+            Icon(
+                painter = painterResource(R.drawable.ic_arrow_back),
+                contentDescription = stringResource(R.string.act_back),
+                tint = Rahal.colors.ink,
+            )
+        }
+        Spacer(Modifier.width(Rahal.space.xs))
+        Text(
+            title,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+    Spacer(Modifier.height(Rahal.space.md))
+}
+
+/** **زرّا «حفظ/تطبيق» و«إلغاء»** — متساويان، وكلٌّ بأيقونته. */
+@Composable
+internal fun ToolActions(
+    primary: String,
+    primaryEnabled: Boolean,
+    onPrimary: () -> Unit,
+    cancelEnabled: Boolean,
+    onCancel: () -> Unit,
+) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
+        RahalButton(onClick = onPrimary, enabled = primaryEnabled, modifier = Modifier.weight(1f)) {
+            IconText(R.drawable.ic_check_mark, primary)
+        }
+        RahalOutlineButton(onClick = onCancel, enabled = cancelEnabled, modifier = Modifier.weight(1f)) {
+            IconText(R.drawable.ic_close, stringResource(R.string.act_cancel))
+        }
+    }
+}
+
+/** **رسالةُ الخطأ** تحت الحقول. */
+@Composable
+internal fun ToolError(text: String) {
+    if (text.isEmpty()) return
+    Spacer(Modifier.height(Rahal.space.sm))
+    Text(text, color = Rahal.colors.danger, style = MaterialTheme.typography.bodySmall)
+}
+
+/** **زرّا الأدوات** تحت زرّ المشروبات (المندوب). */
 @Composable
 fun MenuToolsButtons(presets: OptionPresetsState, bulk: BulkPriceState) {
     Spacer(Modifier.height(6.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
         RahalOutlineButton(onClick = { presets.show() }, modifier = Modifier.weight(1f)) {
-            Text(stringResource(R.string.presets_title))
+            Text(stringResource(R.string.presets_title), maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         RahalOutlineButton(onClick = { bulk.show() }, modifier = Modifier.weight(1f)) {
-            Text(stringResource(R.string.bulk_title))
+            Text(stringResource(R.string.bulk_title), maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **«خيارات الأصناف»** (تصميمُ ٢٠٢٦-١٠-٢٩)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * بطاقاتٌ متساويةٌ في قائمة: الاسمُ ورقاقةُ طريقة السعر، وتحتهما معاينةُ
+ * القيم، **ومربّعُ اختيارٍ واضح** — والبطاقةُ كلُّها تُضغط.
+ */
+@Composable
+fun OptionPresetsEditor(state: OptionPresetsState) {
+    Screen {
+        ToolHeader(stringResource(R.string.presets_title)) { state.close() }
+        if (state.loading && !state.loaded) {
+            Text(stringResource(R.string.presets_loading), color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
+            state.all.forEach { p ->
+                PresetCard(p, on = p.id in state.picked, enabled = !state.busy) { state.toggle(p.id) }
+            }
+        }
+        ToolError(state.error)
+        Spacer(Modifier.height(Rahal.space.lg))
+        ToolActions(
+            primary = stringResource(R.string.act_save),
+            primaryEnabled = state.canSave,
+            onPrimary = { state.submit() },
+            cancelEnabled = !state.busy,
+            onCancel = { state.close() },
+        )
+        if (state.custom && state.loaded) {
+            Spacer(Modifier.height(Rahal.space.sm))
+            RahalTextButton(
+                onClick = { state.resetToCategory() },
+                enabled = !state.busy,
+                modifier = Modifier.fillMaxWidth(),
+            ) { IconText(R.drawable.ic_history, stringResource(R.string.presets_reset)) }
         }
     }
 }
 
 @Composable
-fun OptionPresetsEditor(state: OptionPresetsState) {
-    Screen {
-        ScreenTitle(stringResource(R.string.presets_title), stringResource(R.string.presets_hint))
-        Text(
-            stringResource(if (state.custom) R.string.presets_custom else R.string.presets_from_category),
-            color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodySmall,
-        )
-        Spacer(Modifier.height(8.dp))
-        if (state.loading && !state.loaded) {
-            Text(stringResource(R.string.presets_loading), color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
-        }
-        state.all.forEach { p ->
+private fun PresetCard(p: OptionPreset, on: Boolean, enabled: Boolean, onToggle: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(PresetCardHeight)
+            .clip(Rahal.shape.md)
+            .background(if (on) Rahal.colors.brand.copy(alpha = 0.06f) else Rahal.colors.canvas)
+            .border(
+                if (on) Rahal.stroke.focus else Rahal.stroke.hair,
+                if (on) Rahal.colors.brand else Rahal.colors.line,
+                Rahal.shape.md,
+            )
+            .selectable(selected = on, enabled = enabled, role = Role.Checkbox, onClick = onToggle)
+            .padding(start = Rahal.space.md, end = Rahal.space.xs),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(checked = p.id in state.picked, onCheckedChange = { state.toggle(p.id) })
-                Column(Modifier.weight(1f)) {
-                    Text(p.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
-                    val opts = p.options.joinToString(" · ") { it.name }
+                Text(
+                    p.name,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodyLarge,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                Spacer(Modifier.width(Rahal.space.sm))
+                when (p.priceMode) {
+                    PRICE_MODE_NONE -> TagChip(stringResource(R.string.mod_chip_none), Rahal.colors.inkMuted)
+                    PRICE_MODE_WEIGHT -> TagChip(stringResource(R.string.mod_chip_weight), Rahal.colors.accent)
+                    else -> TagChip(stringResource(R.string.mod_chip_priced), Rahal.colors.brand)
+                }
+            }
+            val opts = p.options.joinToString(" · ") { it.name }
+            if (opts.isNotBlank()) {
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    opts,
+                    color = Rahal.colors.inkMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+        Checkbox(
+            checked = on,
+            onCheckedChange = null,
+            enabled = enabled,
+            colors = CheckboxDefaults.colors(checkedColor = Rahal.colors.brand),
+            modifier = Modifier.size(TouchTarget),
+        )
+    }
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **«تغيير الأسعار»** (تصميمُ ٢٠٢٦-١٠-٢٩)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * مربّعان متساويان «زيادة / تخفيض»، ثمّ «نسبة ٪ / مبلغ ثابت ل.س»، ثمّ
+ * القيمة، ثمّ «على:»، ثمّ «تطبيق» ونافذةُ تأكيدٍ واحدة.
+ */
+@Composable
+fun BulkPriceEditor(state: BulkPriceState, sections: List<PlatformSectionRef>) {
+    Screen {
+        ToolHeader(stringResource(R.string.bulk_title)) { state.close() }
+        // **والمدخلاتُ تُقفل والطلبُ ماشٍ** — فلا تتبدّل القيمةُ تحت عدٍّ لم يصل.
+        val free = !state.busy
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
+            ChoiceBox(R.drawable.ic_plus, stringResource(R.string.bulk_up), Rahal.colors.success, state.up, free, Modifier.weight(1f)) {
+                state.up = true; state.changed()
+            }
+            ChoiceBox(R.drawable.ic_minus, stringResource(R.string.bulk_down), Rahal.colors.danger, !state.up, free, Modifier.weight(1f)) {
+                state.up = false; state.changed()
+            }
+        }
+        Spacer(Modifier.height(Rahal.space.md))
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .height(SegmentHeight)
+                .clip(Rahal.shape.md)
+                .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md),
+        ) {
+            listOf(false to R.string.bulk_mode_percent, true to R.string.bulk_mode_amount).forEach { (amount, label) ->
+                val on = state.byAmount == amount
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .height(SegmentHeight)
+                        .background(if (on) Rahal.colors.brand else Color.Transparent)
+                        .selectable(selected = on, enabled = free, role = Role.RadioButton) {
+                            if (state.byAmount != amount) {
+                                state.byAmount = amount
+                                state.value = ""
+                                state.changed()
+                            }
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
                     Text(
-                        if (opts.isBlank()) stringResource(R.string.presets_empty_opts) else opts,
-                        color = Rahal.colors.inkMuted,
-                        style = MaterialTheme.typography.bodySmall,
+                        stringResource(label),
+                        color = if (on) Rahal.colors.onBrand else Rahal.colors.ink,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
                     )
                 }
             }
         }
-        if (state.error.isNotEmpty()) {
-            Spacer(Modifier.height(6.dp))
-            Text(state.error, color = Rahal.colors.danger, style = MaterialTheme.typography.bodySmall)
-        }
-        Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            RahalButton(onClick = { state.submit() }, enabled = state.canSave) { Text(stringResource(R.string.act_save)) }
-            RahalTextButton(onClick = { state.close() }) { Text(stringResource(R.string.act_cancel)) }
-        }
-        if (state.custom && state.loaded) {
-            Spacer(Modifier.height(8.dp))
-            RahalTextButton(onClick = { state.resetToCategory() }, enabled = !state.busy) {
-                Text(stringResource(R.string.presets_reset))
-            }
-        }
-        Spacer(Modifier.height(24.dp))
-    }
-}
-
-@Composable
-fun BulkPriceEditor(state: BulkPriceState, sections: List<PlatformSectionRef>) {
-    Screen {
-        ScreenTitle(stringResource(R.string.bulk_title), stringResource(R.string.bulk_hint))
-        // **والمدخلاتُ تُقفل والطلبُ ماشٍ** — فلا تتبدّل النسبةُ تحت معاينةٍ لم تصل.
-        val free = !state.busy
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            RadioRow(state.up, free, stringResource(R.string.bulk_up), Modifier.weight(1f)) { state.up = true; state.changed() }
-            RadioRow(!state.up, free, stringResource(R.string.bulk_down), Modifier.weight(1f)) { state.up = false; state.changed() }
-        }
+        Spacer(Modifier.height(Rahal.space.md))
         OutlinedTextField(
-            value = state.percent,
-            onValueChange = { v -> state.percent = v.filter { it in '0'..'9' }.take(3); state.changed() },
-            label = { Text(stringResource(R.string.bulk_percent)) },
+            value = state.value,
+            onValueChange = { v ->
+                state.value = v.filter { it in '0'..'9' }.take(if (state.byAmount) 8 else 3)
+                state.changed()
+            },
+            label = { Text(stringResource(if (state.byAmount) R.string.bulk_amount else R.string.bulk_percent)) },
+            suffix = { Text(if (state.byAmount) stringResource(R.string.item_currency_syp) else "٪") },
             singleLine = true,
             enabled = free,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth(),
         )
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(Rahal.space.md))
         Text(stringResource(R.string.bulk_scope), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
-        RadioRow(state.sectionId.isEmpty(), free, stringResource(R.string.bulk_all), Modifier.fillMaxWidth()) {
+        RadioRow(state.sectionId.isEmpty(), free, stringResource(R.string.bulk_all)) {
             state.sectionId = ""; state.changed()
         }
         sections.forEach { s ->
-            RadioRow(state.sectionId == s.id, free, s.name, Modifier.fillMaxWidth()) {
+            RadioRow(state.sectionId == s.id, free, s.name) {
                 state.sectionId = s.id; state.changed()
             }
         }
-        state.preview?.let { pv ->
-            Spacer(Modifier.height(10.dp))
-            Card {
-                Column(Modifier.padding(4.dp)) {
-                    if (pv.count == 0) {
-                        Text(stringResource(R.string.bulk_none))
-                    } else {
-                        Text(stringResource(R.string.bulk_preview_count, pv.count.toString()), fontWeight = FontWeight.Bold)
-                        pv.samples.forEach { sm ->
-                            Text(
-                                stringResource(R.string.bulk_sample, sm.name, money(sm.oldPrice), money(sm.newPrice)),
-                                style = MaterialTheme.typography.bodySmall,
-                            )
-                        }
-                    }
+        ToolError(state.error)
+        Spacer(Modifier.height(Rahal.space.lg))
+        ToolActions(
+            primary = stringResource(R.string.bulk_go),
+            primaryEnabled = free && state.value.isNotEmpty(),
+            onPrimary = { state.submit() },
+            cancelEnabled = free,
+            onCancel = { state.close() },
+        )
+    }
+    if (state.asking != null) {
+        AlertDialog(
+            onDismissRequest = { state.dismiss() },
+            title = { Text(stringResource(R.string.bulk_title), fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    stringResource(R.string.bulk_ask_count, state.askCount.toString()),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+            },
+            confirmButton = {
+                RahalButton(onClick = { state.confirm() }) {
+                    IconText(R.drawable.ic_check_mark, stringResource(R.string.act_confirm))
                 }
-            }
+            },
+            dismissButton = {
+                RahalOutlineButton(onClick = { state.dismiss() }) {
+                    IconText(R.drawable.ic_close, stringResource(R.string.act_cancel))
+                }
+            },
+        )
+    }
+}
+
+/** **مربّعُ «زيادة» أو «تخفيض»** — أيقونةٌ في دائرةٍ واسمٌ، والمختارُ بحدّ المنصّة. */
+@Composable
+private fun ChoiceBox(
+    @DrawableRes icon: Int,
+    label: String,
+    tint: Color,
+    on: Boolean,
+    enabled: Boolean,
+    modifier: Modifier,
+    onPick: () -> Unit,
+) {
+    Row(
+        modifier
+            .height(ChoiceBoxHeight)
+            .clip(Rahal.shape.md)
+            .background(if (on) Rahal.colors.brand.copy(alpha = 0.08f) else Rahal.colors.canvas)
+            .border(
+                if (on) Rahal.stroke.focus else Rahal.stroke.hair,
+                if (on) Rahal.colors.brand else Rahal.colors.line,
+                Rahal.shape.md,
+            )
+            .selectable(selected = on, enabled = enabled, role = Role.RadioButton, onClick = onPick)
+            .padding(horizontal = Rahal.space.md),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        Box(
+            Modifier
+                .size(ChoiceIcon)
+                .clip(CircleShape)
+                .background(tint.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(painterResource(icon), contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
         }
-        if (state.error.isNotEmpty()) {
-            Spacer(Modifier.height(6.dp))
-            Text(state.error, color = Rahal.colors.danger, style = MaterialTheme.typography.bodySmall)
-        }
-        Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            val pv = state.preview
-            if (pv == null || pv.count == 0) {
-                RahalButton(onClick = { state.look() }, enabled = !state.busy) { Text(stringResource(R.string.bulk_preview)) }
-            } else {
-                RahalButton(onClick = { state.apply() }, enabled = !state.busy) { Text(stringResource(R.string.bulk_apply)) }
-            }
-            RahalTextButton(onClick = { state.close() }) { Text(stringResource(R.string.act_cancel)) }
-        }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.width(Rahal.space.sm))
+        Text(
+            label,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.titleMedium,
+            color = if (on) Rahal.colors.brand else Rahal.colors.ink,
+        )
     }
 }
 
 /** **سطرُ اختيارٍ يُضغط كلُّه** — لا الدائرةُ الصغيرةُ وحدَها. */
 @Composable
-private fun RadioRow(selected: Boolean, enabled: Boolean, label: String, modifier: Modifier, onPick: () -> Unit) {
+private fun RadioRow(selected: Boolean, enabled: Boolean, label: String, onPick: () -> Unit) {
     Row(
-        modifier.selectable(selected = selected, enabled = enabled, role = Role.RadioButton, onClick = onPick),
+        Modifier
+            .fillMaxWidth()
+            .height(TouchTarget)
+            .selectable(selected = selected, enabled = enabled, role = Role.RadioButton, onClick = onPick),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        RadioButton(selected = selected, onClick = null, enabled = enabled)
-        Spacer(Modifier.width(4.dp))
-        Text(label)
+        RadioButton(
+            selected = selected,
+            onClick = null,
+            enabled = enabled,
+            colors = RadioButtonDefaults.colors(selectedColor = Rahal.colors.brand),
+        )
+        Spacer(Modifier.width(Rahal.space.sm))
+        Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }

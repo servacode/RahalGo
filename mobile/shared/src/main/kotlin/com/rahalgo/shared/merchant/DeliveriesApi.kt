@@ -116,6 +116,36 @@ data class ResolvedLocation(val found: Boolean = false, val lat: Double = 0.0, v
 @Serializable
 private data class ResolveLocationInput(val url: String)
 
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **«اطلب الموقع من المستلم»** (قرارُ المالك ٢٠٢٦-١٠-٢٩)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * يصل المستلِمَ بالواتساب رابطٌ لصفحة «أرسل موقعي»، **وتصل نقطتُه إلى النموذج.**
+ * **وإن لم تصل الرسالةُ** (`whatsappSent=false`) يشارك المتجرُ الرابطَ بنفسه (`waUrl`).
+ */
+@Serializable
+data class LocationRequest(
+    val id: String = "",
+    @SerialName("whatsapp_sent") val whatsappSent: Boolean = false,
+    val link: String = "",
+    @SerialName("share_text") val shareText: String = "",
+    @SerialName("wa_url") val waUrl: String = "",
+)
+
+/** **حالُ الطلب** — `pending` · `received` · `expired`، والنقطةُ ودقّتُها بعد الوصول. */
+@Serializable
+data class LocationRequestStatus(
+    val id: String = "",
+    val status: String = "pending",
+    val lat: Double? = null,
+    val lng: Double? = null,
+    @SerialName("accuracy_m") val accuracyM: Double? = null,
+)
+
+@Serializable
+private data class LocationRequestInput(val phone: String, val mode: String)
+
 @Serializable
 private data class FetchDecision(@SerialName("expected_version") val expectedVersion: Long)
 
@@ -124,6 +154,18 @@ class DeliveriesApi(private val api: ApiClient) {
     /** **يقرأ رابطَ موقعٍ شاركه الزبونُ** — نقطةً على خريطتنا (٢٠٢٦-١٠-٠٨). */
     suspend fun resolveLocation(storeId: String, url: String): ResolvedLocation =
         api.call("/api/v1/merchant/stores/$storeId/resolve-location", io.ktor.http.HttpMethod.Post, ResolveLocationInput(url))
+
+    /** **يطلب موقعَ المستلِم برسالة واتساب** — `mode`: `send` أو `fetch`. */
+    suspend fun requestLocation(storeId: String, phone: String, mode: String): LocationRequest =
+        api.call(
+            "/api/v1/merchant/stores/$storeId/location-requests",
+            HttpMethod.Post,
+            LocationRequestInput(phone, mode),
+        )
+
+    /** **أوصل الموقع؟** — يُسأل كلَّ ثوانٍ ما دام ينتظر. */
+    suspend fun locationRequest(id: String): LocationRequestStatus =
+        api.call("/api/v1/merchant/location-requests/$id")
 
     /**
      * **والنقطةُ اختياريّة** — بلاها فالأجرةُ الأساسُ وحدَه. **والوضعُ يغيّر المسافة**:

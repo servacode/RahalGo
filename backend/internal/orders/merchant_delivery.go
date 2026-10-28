@@ -181,10 +181,8 @@ func (s *Service) CreateMerchantDeliveryIn(ctx context.Context, tx dbtx.Querier,
 	if err := s.requireZoneOpen(ctx, tx, zone); err != nil {
 		return "", err
 	}
-	// **ولا توصيلةَ بلا سائقٍ بالدوام** — انظر `merchant_delivery_drivers.go`.
-	if err := s.requireDriverOnShift(ctx, tx); err != nil {
-		return "", err
-	}
+	// **ولا شرطَ سائقٍ بالدوام** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — دوامُ المنصّة يكفي،
+	// **ويُحرَس في البوّابة قبل المعاملة.** انظر `merchant_delivery_drivers.go`.
 
 	// ── المال ─────────────────────────────────────────────────────────
 	//
@@ -472,10 +470,8 @@ func (s *Service) QuoteMerchantDelivery(ctx context.Context, merchantID string,
 	if err := s.requireZoneOpen(ctx, s.db, zone); err != nil {
 		return nil, err
 	}
-	// **ويُقال عند فتح الشاشة** — لا بعد ملء النموذج كلِّه.
-	if err := s.requireDriverOnShift(ctx, s.db); err != nil {
-		return nil, err
-	}
+	// **ولا شرطَ سائقٍ بالدوام** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — دوامُ المنصّة يُحرَس
+	// في البوّابة (`requireOrdering`) ويُقال عند فتح الشاشة.
 	// **والرقمُ بدالّة الإنشاء نفسِها** — فلا يُعرض رقمٌ ويُخصم غيرُه.
 	fee, dist, basis, err := s.merchantDeliveryFee(ctx, s.db, merchantID, lat, lng, hasPoint, mode)
 	if err != nil {

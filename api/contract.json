@@ -8422,6 +8422,24 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/v1/merchant/location-requests/{id}",
+      "handler": "handleMerchantLocationRequest",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "POST",
       "path": "/api/v1/merchant/media",
       "handler": "handleMerchantUploadMedia",
@@ -8947,6 +8965,58 @@
       ],
       "statuses": [
         "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/merchant/stores/{id}/location-requests",
+      "handler": "handleMerchantRequestLocation",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "request": [
+        {
+          "name": "phone",
+          "type": "string"
+        },
+        {
+          "name": "mode",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "expires_at",
+          "type": "unknown"
+        },
+        {
+          "name": "id",
+          "type": "unknown"
+        },
+        {
+          "name": "link",
+          "type": "unknown"
+        },
+        {
+          "name": "share_text",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "string"
+        },
+        {
+          "name": "wa_url",
+          "type": "unknown"
+        },
+        {
+          "name": "whatsapp_sent",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
       ]
     },
     {
@@ -10349,6 +10419,58 @@
         {
           "name": "modifiers",
           "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/public/location-requests/{token}",
+      "handler": "handlePublicLocationRequest",
+      "auth": false,
+      "response": [
+        {
+          "name": "mode",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "unknown"
+        },
+        {
+          "name": "store_name",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/public/location-requests/{token}",
+      "handler": "handlePublicSubmitLocation",
+      "auth": false,
+      "request": [
+        {
+          "name": "lat",
+          "type": "?float64"
+        },
+        {
+          "name": "lng",
+          "type": "?float64"
+        },
+        {
+          "name": "accuracy_m",
+          "type": "?float64"
+        }
+      ],
+      "response": [
+        {
+          "name": "ok",
+          "type": "bool"
         }
       ],
       "statuses": [

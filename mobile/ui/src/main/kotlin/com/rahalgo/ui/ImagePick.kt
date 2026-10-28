@@ -143,6 +143,8 @@ fun rememberImagePicker(
      * واللوغو، لأنّ الزبون بيشوفها مربّعة. صورة الحساب بلاه.
      */
     crop: Boolean = false,
+    /** إطاراتُ القصّ — `ItemCropFrames` لصورة الصنف (كاملة افتراضاً)، والشعارُ مربّع. */
+    cropFrames: List<CropFrame> = LogoCropFrames,
     onBytes: (ByteArray) -> Unit,
 ): () -> Unit {
     val context = LocalContext.current
@@ -166,6 +168,7 @@ fun rememberImagePicker(
     cropping?.let { src ->
         ImageCropDialog(
             source = src,
+            frames = cropFrames,
             onDone = { out ->
                 cropping = null
                 runCatching { compressJpeg(out) }.getOrNull()?.let(onBytes)

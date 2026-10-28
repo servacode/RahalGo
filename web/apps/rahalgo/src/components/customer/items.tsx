@@ -32,6 +32,7 @@ import {
   IconAdd,
   IconMinus,
   IconStore,
+  ImageViewer,
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useCart, unitPrice } from "@/lib/customer/cart";
@@ -242,6 +243,7 @@ export function ItemSheet({
   const { address } = useCustomer();
   const { user } = useAuth();
   const [pickAddr, setPickAddr] = useState(false);
+  const [viewing, setViewing] = useState(false);
 
   useEffect(() => {
     setDetail(null);
@@ -249,6 +251,7 @@ export function ItemSheet({
     setPicked({});
     setQty(1);
     setWarn("");
+    setViewing(false);
     if (!item) return;
     let alive = true;
     api<ItemDetail>(`/api/v1/public/items/${item.id}`)
@@ -398,11 +401,18 @@ export function ItemSheet({
         }
       >
         <div className="space-y-4">
+          {/* **الصورةُ كاملةً بأبعادها، والنقرُ يفتحها بملء الشاشة** (قرارُ المالك ٢٠٢٦-١٠-٢٩). */}
           {img && (
-            <div className="overflow-hidden rounded-card bg-field">
-              <img src={img} alt="" className="max-h-72 w-full object-cover" />
-            </div>
+            <button
+              type="button"
+              onClick={() => setViewing(true)}
+              aria-label={view.name}
+              className="flex w-full items-center justify-center overflow-hidden rounded-card bg-field"
+            >
+              <img src={img} alt="" className="max-h-80 w-auto max-w-full object-contain" />
+            </button>
           )}
+          {img && viewing && <ImageViewer src={img} alt={view.name} onClose={() => setViewing(false)} />}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Price syp={unit} usd={usdUnit} />
             <span className="flex items-center gap-2">

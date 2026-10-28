@@ -726,6 +726,10 @@ func (s *Server) Router() http.Handler {
 		// **وحجزُ الدعوة برقم الصديق** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — صفحةُ
 		// الدعوة الساكنة تناديه، **فلا يُنسخ رمز.** انظر `referral_handlers.go`.
 		r.Post("/public/invite/claim", s.handleInviteClaim)
+		// **وصفحةُ «أرسل موقعي» للمستلِم** (٢٠٢٦-١٠-٢٩) — برمزٍ لمرّةٍ واحدة،
+		// ولا تكشف إلّا اسمَ المتجر. انظر `recipient_location.go`.
+		r.Get("/public/location-requests/{token}", s.handlePublicLocationRequest)
+		r.Post("/public/location-requests/{token}", s.handlePublicSubmitLocation)
 
 		// ══════════════════════════════════════════════════════════
 		// **ونيّةُ التوسّع تُسجَّل بعد أن يُعيد الخادمُ الحكم** (`CR`)
@@ -1157,6 +1161,9 @@ func (s *Server) Router() http.Handler {
 			r.Post("/stores/{id}/deliveries", s.idempotent(s.handleMerchantCreateDelivery))
 			// **ورابطُ موقع المستلِم يُقرأ نقطة** (٢٠٢٦-١٠-٠٨) — merchant_location_link.go
 			r.Post("/stores/{id}/resolve-location", s.handleMerchantResolveLocation)
+			// **«اطلب الموقع من المستلم»** (٢٠٢٦-١٠-٢٩) — رسالةُ واتساب برابطٍ، recipient_location.go
+			r.Post("/stores/{id}/location-requests", s.handleMerchantRequestLocation)
+			r.Get("/location-requests/{id}", s.handleMerchantLocationRequest)
 			// **وسعرُ صرفه** — الأصنافُ الدولاريّةُ تُحسب منه (٢٠٢٦-١٠-١٢، `exchange_rate_handlers.go`).
 			r.Patch("/stores/{id}/exchange-rate", s.handleMerchantExchangeRate)
 			r.Get("/deliveries/{id}", s.handleMerchantDelivery)

@@ -45,6 +45,7 @@ import {
   IconDelete,
   ImageUpload,
   Input,
+  ITEM_CROP_FRAMES,
   Radio,
   Textarea,
 } from "@rahalgo/ui";
@@ -479,6 +480,8 @@ export default function ItemEditor({
         path="/api/v1/merchant/media"
         maxEdge={IMAGE_EDGE}
         crop
+        cropFrames={ITEM_CROP_FRAMES}
+        fit
       />
 
       <div>

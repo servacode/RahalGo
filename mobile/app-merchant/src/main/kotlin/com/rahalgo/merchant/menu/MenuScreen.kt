@@ -3,8 +3,14 @@ package com.rahalgo.merchant.menu
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.draw.alpha
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -94,7 +100,13 @@ import com.rahalgo.ui.money
  * يُخطئه الإصبعُ فيفتح ما لا يريد.
  */
 @Composable
-fun MenuScreen(vm: MenuViewModel) {
+fun MenuScreen(
+    vm: MenuViewModel,
+    // **«أضف صنفاً» كتبويب الإضافة** — وبلا نداءٍ يفتح المحرّرَ هنا.
+    onAddItem: (() -> Unit)? = null,
+    // **«أنشئ عرضاً»** — يفتح صفحةَ العروض؛ وبلا نداءٍ لا يظهر الزرّ.
+    onOffer: (() -> Unit)? = null,
+) {
     val context = LocalContext.current
     val media = { path: String? -> Backend.of(context).media(path) }
 
@@ -155,53 +167,48 @@ fun MenuScreen(vm: MenuViewModel) {
     val open = vm.open
     // **والرجوعُ يعيد إلى «الكل» لا يُخرج** — من اختار قسماً ثمّ ضغط رجوعاً
     // **يتوقّع قائمتَه كلَّها لا أن يخرج.**
-    BackHandler(enabled = open != null) { vm.back() }
-    ItemsList(vm, media, open)
+    BackHandler(enabled = open != null || vm.onlyOff) { vm.back() }
+    ItemsList(vm, media, open, onAddItem, onOffer)
 }
 
 /**
  * ══════════════════════════════════════════════════════════════════════
- * **الأصناف — عنوانٌ وبحثٌ وأدواتٌ ورقائقُ أقسامٍ ثمّ القائمة** (التصميمُ المعتمد ٢٠٢٦-١٠-٢٨)
+ * **الأصناف — التصميمُ المعتمد ٢٠٢٦-١٠-٢٩**
  * ══════════════════════════════════════════════════════════════════════
  *
- * **والرقاقةُ هي قسمُ السوق نفسُه** (`vm.open`) — «الكل» يعرض كلَّ الأصناف،
- * والقسمُ يعرض ما فيه مع زرّ «أضف صنفاً» فيه. **وقائمةٌ واحدةٌ تمرّر** — لا
- * تمريران متداخلان.
+ * من فوق لتحت: **البحث · مربّعا الأرقام (عدد الأصناف · غير المتوفرة) · الأدوات
+ * الثلاث · «أضف صنفاً» و«أنشئ عرضاً» · رقائقُ الأقسام · ثمّ الأصناف بطاقتين في كلّ سطر.**
+ *
+ * **والرقاقةُ هي قسمُ السوق نفسُه** (`vm.open`) — «الكل» يعرض كلَّ الأصناف.
+ * **وشبكةٌ واحدةٌ تمرّر** — لا تمريران متداخلان.
  */
 @Composable
-private fun ItemsList(vm: MenuViewModel, media: (String?) -> String?, open: MenuGroup?) {
+private fun ItemsList(
+    vm: MenuViewModel,
+    media: (String?) -> String?,
+    open: MenuGroup?,
+    onAddItem: (() -> Unit)?,
+    onOffer: (() -> Unit)?,
+) {
     val all = vm.groups.flatMap { it.items }
     val off = all.count { !it.available }
     val q = vm.query.trim()
     val shown = when {
         q.isNotEmpty() -> all.filter { it.name.contains(q, ignoreCase = true) }
+        vm.onlyOff -> all.filter { !it.available }
         open != null -> vm.groups.firstOrNull { it.name == open.name }?.items ?: open.items
         else -> all
     }
-    LazyColumn(
+    val full: (LazyGridItemSpanScope.() -> GridItemSpan) = { GridItemSpan(maxLineSpan) }
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = Rahal.space.lg, end = Rahal.space.lg, top = Rahal.space.lg, bottom = Rahal.space.xl),
+        horizontalArrangement = Arrangement.spacedBy(Rahal.space.md),
+        verticalArrangement = Arrangement.spacedBy(Rahal.space.md),
     ) {
-        item {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    stringResource(com.rahalgo.ui.R.string.mn_items),
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.weight(1f),
-                )
-                if (all.isNotEmpty()) {
-                    Text(
-                        stringResource(R.string.menu_count, all.size, off),
-                        color = Rahal.colors.inkMuted,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            }
-            Spacer(Modifier.height(Rahal.space.md))
-        }
-        // ── البحث — حقلٌ ممتلئٌ بلا إطار ──
-        item {
+        // ── ١ · البحث — حقلٌ ممتلئٌ بلا إطار ──
+        item(span = full) {
             OutlinedTextField(
                 value = vm.query,
                 onValueChange = { vm.query = it.take(60) },
@@ -235,66 +242,168 @@ private fun ItemsList(vm: MenuViewModel, media: (String?) -> String?, open: Menu
                 ),
                 modifier = Modifier.fillMaxWidth(),
             )
-            Spacer(Modifier.height(Rahal.space.md))
         }
-        // ── الأدواتُ الثلاث — خياراتُ الأصناف · تغييرُ الأسعار · المشروبات ──
-        // **والموقوفُ لا يرى أدواتٍ لا يملكها** (B6).
-        if (!vm.suspended) {
-            item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
-                    ToolTile(com.rahalgo.ui.R.drawable.ic_custom, stringResource(com.rahalgo.ui.R.string.presets_title), Modifier.weight(1f)) { vm.presets.show() }
-                    ToolTile(com.rahalgo.ui.R.drawable.ic_offer, stringResource(com.rahalgo.ui.R.string.bulk_title), Modifier.weight(1f)) { vm.bulk.show() }
-                    ToolTile(com.rahalgo.ui.R.drawable.ic_cart, stringResource(R.string.menu_tool_drinks), Modifier.weight(1f)) { vm.drinks.show() }
-                }
-                Spacer(Modifier.height(Rahal.space.md))
+        // ── ٢ · مربّعا الأرقام — و«غير المتوفرة» يصفّي بضغطة ──
+        item(span = full) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .height(IntrinsicSize.Min),
+                horizontalArrangement = Arrangement.spacedBy(Rahal.space.md),
+            ) {
+                StatBox(
+                    icon = com.rahalgo.ui.R.drawable.ic_store,
+                    label = stringResource(R.string.menu_stat_total),
+                    value = all.size,
+                    tint = Rahal.colors.brand,
+                    selected = false,
+                    modifier = Modifier.weight(1f),
+                ) { vm.back() }
+                StatBox(
+                    icon = R.drawable.ic_block,
+                    label = stringResource(R.string.menu_stat_off),
+                    value = off,
+                    tint = if (off > 0) Rahal.colors.danger else Rahal.colors.inkMuted,
+                    selected = vm.onlyOff,
+                    modifier = Modifier.weight(1f),
+                ) { if (vm.onlyOff) vm.back() else vm.showUnavailable() }
             }
         }
-        // ── رقائقُ الأقسام ──
+        // ── ٣ · الأدواتُ الثلاث — والموقوفُ لا يرى أدواتٍ لا يملكها (B6) ──
+        if (!vm.suspended) {
+            item(span = full) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
+                    ToolTile(com.rahalgo.ui.R.drawable.ic_custom, stringResource(com.rahalgo.ui.R.string.presets_title), Modifier.weight(1f)) { vm.presets.show() }
+                    ToolTile(R.drawable.ic_banknotes, stringResource(com.rahalgo.ui.R.string.bulk_title), Modifier.weight(1f)) { vm.bulk.show() }
+                    ToolTile(com.rahalgo.ui.R.drawable.ic_cart, stringResource(R.string.menu_tool_drinks), Modifier.weight(1f)) { vm.drinks.show() }
+                }
+            }
+            // ── ٤ · «أضف صنفاً» و«أنشئ عرضاً» ──
+            item(span = full) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.md)) {
+                    RahalButton(
+                        onClick = {
+                            // **ومن داخل قسمٍ يُضاف إليه** — فلا يُعيد اختيارَ ما هو فيه.
+                            when {
+                                open != null -> vm.newItem(open.name)
+                                onAddItem != null -> onAddItem()
+                                else -> vm.newItem()
+                            }
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(52.dp),
+                    ) {
+                        Icon(painterResource(com.rahalgo.ui.R.drawable.ic_plus), contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(Rahal.space.sm))
+                        Text(stringResource(R.string.item_add), fontWeight = FontWeight.Bold, maxLines = 1)
+                    }
+                    if (onOffer != null) {
+                        RahalOutlineButton(
+                            onClick = onOffer,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(52.dp),
+                        ) {
+                            Icon(painterResource(com.rahalgo.ui.R.drawable.ic_offer), contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(Rahal.space.sm))
+                            Text(stringResource(R.string.menu_create_offer), fontWeight = FontWeight.Bold, maxLines = 1)
+                        }
+                    }
+                }
+            }
+        }
+        // ── ٥ · رقائقُ الأقسام — «الكل» ثمّ كلُّ قسمٍ بعدده ──
         if (vm.groups.isNotEmpty() && q.isEmpty()) {
-            item {
+            item(span = full) {
                 Row(
                     Modifier
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
                 ) {
-                    SectionChip(stringResource(R.string.menu_all), open == null) { vm.back() }
+                    SectionChip(stringResource(R.string.menu_all), all.size, open == null && !vm.onlyOff) { vm.back() }
                     vm.groups.forEach { g ->
-                        SectionChip("${g.name} ${g.items.size}", open?.name == g.name) { vm.openGroup(g) }
+                        SectionChip(g.name, g.items.size, open?.name == g.name && !vm.onlyOff) { vm.openGroup(g) }
                     }
                 }
-                Spacer(Modifier.height(Rahal.space.sm))
             }
         }
-        // **وإضافةُ صنفٍ من داخل قسمه** — فلا يُعيد اختيارَ ما هو فيه.
-        if (open != null && q.isEmpty() && !vm.suspended) {
-            item {
-                RahalOutlineButton(onClick = { vm.newItem(open.name) }, modifier = Modifier.fillMaxWidth()) {
-                    Text(stringResource(R.string.item_add))
-                }
-                Spacer(Modifier.height(Rahal.space.xs))
-            }
-        }
+        // ── ٦ · الأصناف — بطاقتان في كلّ سطر ──
         when {
-            vm.groups.isEmpty() -> item { Empty(stringResource(R.string.menu_empty)) }
-            shown.isEmpty() -> item {
+            vm.groups.isEmpty() -> item(span = full) { Empty(stringResource(R.string.menu_empty)) }
+            shown.isEmpty() -> item(span = full) {
+                // **والمرشّحُ «غير متوفر» بلا بحثٍ له رسالتُه** (ملاحظةُ المالك ٢٠٢٦-١٠-٢٩).
                 Text(
-                    stringResource(R.string.menu_search_none),
+                    stringResource(if (vm.onlyOff && q.isEmpty()) R.string.menu_off_none else R.string.menu_search_none),
                     color = Rahal.colors.inkMuted,
                     style = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.padding(vertical = Rahal.space.md),
                 )
             }
             else -> items(shown, key = { it.id }) { item ->
-                ItemRow(
+                ItemCard(
                     item = item,
                     media = media,
                     suspended = vm.suspended,
                     onToggle = { vm.toggle(item.id) },
                     onEdit = { vm.editItem(item) },
                 )
-                HorizontalDivider(color = Rahal.colors.line, thickness = Rahal.stroke.hair)
             }
+        }
+    }
+}
+
+/** **مربّعُ رقم** — أيقونةٌ في دائرة، والرقمُ كبيراً، واسمُه تحته. والمختارُ بحدّ لونه. */
+@Composable
+private fun StatBox(
+    icon: Int,
+    label: String,
+    value: Int,
+    tint: Color,
+    selected: Boolean,
+    modifier: Modifier,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier
+            .fillMaxHeight()
+            .clip(Rahal.shape.lg)
+            .background(if (selected) tint.copy(alpha = 0.08f) else Rahal.colors.surface)
+            .border(
+                if (selected) Rahal.stroke.focus else Rahal.stroke.hair,
+                if (selected) tint else Rahal.colors.line,
+                Rahal.shape.lg,
+            )
+            .clickable(onClick = onClick)
+            .padding(Rahal.space.md),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier
+                .size(40.dp)
+                .clip(Rahal.shape.pill)
+                .background(tint.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(painterResource(icon), contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+        }
+        Spacer(Modifier.width(Rahal.space.md))
+        Column(Modifier.weight(1f)) {
+            Text(
+                value.toString(),
+                color = Rahal.colors.ink,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.headlineSmall,
+                maxLines = 1,
+            )
+            Text(
+                label,
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
@@ -325,112 +434,161 @@ private fun ToolTile(icon: Int, label: String, modifier: Modifier, onClick: () -
     }
 }
 
-/** **رقاقةُ قسم** — المختارةُ داكنةٌ بلون اللوح، والباقيةُ مؤطَّرة. */
+/** **رقاقةُ قسم** — اسمُه وعددُه؛ المختارةُ ممتلئةٌ بلون العلامة، والباقيةُ مؤطَّرة. */
 @Composable
-private fun SectionChip(text: String, selected: Boolean, onClick: () -> Unit) {
-    Text(
-        text,
-        color = if (selected) Rahal.colors.onPanel else Rahal.colors.ink,
-        fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-        style = MaterialTheme.typography.bodyMedium,
-        maxLines = 1,
-        modifier = Modifier
+private fun SectionChip(text: String, count: Int, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier
             .clip(Rahal.shape.pill)
-            .background(if (selected) Rahal.colors.panel else Rahal.colors.canvas)
-            .border(Rahal.stroke.hair, if (selected) Rahal.colors.panel else Rahal.colors.line, Rahal.shape.pill)
+            .background(if (selected) Rahal.colors.brand else Rahal.colors.canvas)
+            .border(Rahal.stroke.hair, if (selected) Rahal.colors.brand else Rahal.colors.line, Rahal.shape.pill)
             .clickable(onClick = onClick)
-            .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.sm),
-    )
+            .padding(start = Rahal.space.lg, end = Rahal.space.sm, top = Rahal.space.sm, bottom = Rahal.space.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text,
+            color = if (selected) Rahal.colors.onBrand else Rahal.colors.ink,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+            style = MaterialTheme.typography.bodyMedium,
+            maxLines = 1,
+        )
+        Spacer(Modifier.width(Rahal.space.sm))
+        Text(
+            count.toString(),
+            color = if (selected) Rahal.colors.brand else Rahal.colors.inkMuted,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier
+                .clip(Rahal.shape.pill)
+                .background(if (selected) Rahal.colors.onBrand else Rahal.colors.field)
+                .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.xs),
+        )
+    }
 }
 
+/**
+ * **بطاقةُ صنف** — صورتُه فوق، ثمّ اسمُه ووصفُه وسعرُه، ثمّ مفتاحُ توفّره.
+ * (طلبُ المالك ٢٠٢٦-٠٨-٢٩: «زرُّ متوفر/غير متوفر لكلّ صنف».) **والبطاقةُ كلُّها
+ * تفتح المحرّر، والمفتاحُ وحدَه يبدّل التوفّر. وغيرُ المتوفّر باهت.**
+ */
 @Composable
-private fun ItemRow(
+private fun ItemCard(
     item: MenuItem,
     media: (String?) -> String?,
     suspended: Boolean,
     onToggle: () -> Unit,
     onEdit: () -> Unit,
 ) {
-    // ══════════════════════════════════════════════════════════════════
-    // **صنفٌ بصورته وخياراته وسعره ومفتاحِ توفّره**
-    // ══════════════════════════════════════════════════════════════════
-    //
-    // (طلبُ المالك ٢٠٢٦-٠٨-٢٩: «زرُّ متوفر/غير متوفر لكلّ صنف».) **والسطرُ كلُّه
-    // يفتح المحرّر، والمفتاحُ وحدَه يبدّل التوفّر.**
-    Row(
+    val dim = if (item.available) 1f else 0.5f
+    Column(
         Modifier
             .fillMaxWidth()
-            .clickable(onClick = onEdit)
-            .padding(vertical = Rahal.space.md),
-        verticalAlignment = Alignment.CenterVertically,
+            .clip(Rahal.shape.lg)
+            .background(Rahal.colors.canvas)
+            .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.lg)
+            .clickable(onClick = onEdit),
     ) {
-        RemoteImage(
-            url = media(item.imageThumbUrl ?: item.imageUrl),
-            name = item.name.ifBlank { "?" },
-            modifier = Modifier
-                .size(60.dp)
-                .clip(Rahal.shape.md),
-        )
-        Spacer(Modifier.width(Rahal.space.md))
-        Column(Modifier.weight(1f)) {
-            Text(
-                item.name,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                fontWeight = FontWeight.Bold,
-                color = if (item.available) Rahal.colors.ink else Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodyLarge,
-            )
-            Text(
-                item.modifiers.map { it.name }.filter { it.isNotBlank() }.joinToString(" · ")
-                    .ifBlank { stringResource(R.string.menu_no_options) },
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            Text(
-                // **والدولاريُّ بدولاره وليرته** (٢٠٢٦-١٠-١٢).
-                com.rahalgo.ui.menu.priceLine(item.price, item.merchantPriceUsd),
-                color = if (item.available) Rahal.colors.brand else Rahal.colors.inkMuted,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodyMedium,
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(1.15f)
+                .alpha(dim),
+        ) {
+            RemoteImage(
+                url = media(item.imageThumbUrl ?: item.imageUrl),
+                name = item.name.ifBlank { "?" },
+                modifier = Modifier.fillMaxSize(),
             )
             if (!item.approved) {
                 Text(
                     stringResource(R.string.mn_pending_review),
-                    color = Rahal.colors.accent,
+                    color = Rahal.colors.onBrand,
                     style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(Rahal.space.sm)
+                        .clip(Rahal.shape.pill)
+                        .background(Rahal.colors.accent)
+                        .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.xs),
                 )
-                if (item.reviewNote.isNotBlank()) {
+            }
+        }
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
+        ) {
+            Column(Modifier.alpha(dim)) {
+                Text(
+                    item.name,
+                    minLines = 2,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    fontWeight = FontWeight.Bold,
+                    color = Rahal.colors.ink,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Text(
+                    item.description.trim().ifBlank {
+                        item.modifiers.map { it.name }.filter { it.isNotBlank() }.joinToString(" · ")
+                    },
+                    minLines = 2,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    color = Rahal.colors.inkMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Spacer(Modifier.height(Rahal.space.xs))
+                Text(
+                    // **والدولاريُّ بدولاره وليرته** (٢٠٢٦-١٠-١٢).
+                    com.rahalgo.ui.menu.priceLine(item.price, item.merchantPriceUsd),
+                    color = Rahal.colors.brand,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (!item.approved && item.reviewNote.isNotBlank()) {
                     Text(
                         item.reviewNote,
                         color = Rahal.colors.danger,
                         style = MaterialTheme.typography.bodySmall,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
-        }
-        Spacer(Modifier.width(Rahal.space.sm))
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            // **والموقوفُ لا يبدّل الإتاحة** (B6) — المفتاحُ يُعطَّل.
-            Switch(
-                checked = item.available,
-                enabled = !suspended,
-                onCheckedChange = { onToggle() },
-                colors = SwitchDefaults.colors(
-                    checkedTrackColor = Rahal.colors.success,
-                    checkedThumbColor = Rahal.colors.onPanel,
-                    checkedBorderColor = Rahal.colors.success,
-                ),
-            )
-            Text(
-                stringResource(
-                    if (item.available) R.string.mn_available else R.string.mn_unavailable,
-                ),
-                color = if (item.available) Rahal.colors.success else Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.labelSmall,
-            )
+            Spacer(Modifier.height(Rahal.space.xs))
+            HorizontalDivider(color = Rahal.colors.line, thickness = Rahal.stroke.hair)
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(
+                        if (item.available) R.string.mn_available else R.string.mn_unavailable,
+                    ),
+                    color = if (item.available) Rahal.colors.success else Rahal.colors.inkMuted,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.labelMedium,
+                    maxLines = 1,
+                    modifier = Modifier.weight(1f),
+                )
+                // **والموقوفُ لا يبدّل الإتاحة** (B6) — المفتاحُ يُعطَّل.
+                Switch(
+                    checked = item.available,
+                    enabled = !suspended,
+                    onCheckedChange = { onToggle() },
+                    colors = SwitchDefaults.colors(
+                        checkedTrackColor = Rahal.colors.success,
+                        checkedThumbColor = Rahal.colors.onPanel,
+                        checkedBorderColor = Rahal.colors.success,
+                    ),
+                )
+            }
         }
     }
 }

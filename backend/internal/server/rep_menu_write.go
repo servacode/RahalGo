@@ -119,7 +119,8 @@ func (s *Server) handleRepCreateItem(w http.ResponseWriter, r *http.Request) {
 func touchesContent(in catalog.MenuItemInput) bool {
 	return in.Name != nil || in.Description != nil || in.Price != nil ||
 		in.ImageMediaID != nil || in.PlatformSectionID != nil ||
-		in.MarginOverride != nil || in.SectionID != nil || in.Modifiers != nil
+		in.MarginOverride != nil || in.SectionID != nil || in.Modifiers != nil ||
+		in.StoreDrinks != nil
 }
 
 // handleRepUpdateItem **تعديلُ صنفٍ في قائمة عميله.**

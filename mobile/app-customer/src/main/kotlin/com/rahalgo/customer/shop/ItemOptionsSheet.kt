@@ -122,13 +122,10 @@ fun ItemOptionsSheet(
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
             // **وصورةُ الصنف عريضةٌ فوق** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧) — يرى ما يختار له.
             if (media != null && (item.imageThumbUrl ?: item.imageUrl) != null) {
-                com.rahalgo.ui.RemoteImage(
+                // **والصورةُ كاملةً بأبعادها، والنقرُ يفتحها بملء الشاشة** (قرارُ المالك ٢٠٢٦-١٠-٢٩).
+                com.rahalgo.ui.FullPhoto(
                     url = media(item.imageUrl ?: item.imageThumbUrl),
                     name = item.name,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(160.dp)
-                        .clip(Rahal.shape.md),
                 )
                 Spacer(Modifier.height(12.dp))
             }

@@ -101,10 +101,15 @@ const SERVER_MOBILE = new Set([
   "landmark_name",
   "landmark_kind",
   "no_dropoff_suggestion",
+  // **«اطلب الموقع من المستلم»** — حدّا تطبيق المتجر (٢٠٢٦-١٠-٢٩).
+  "location_request_too_soon",
+  "location_request_limit",
 ]);
 
 /** **ما لا يبلغ هاتفاً** — أبوابُ الإدارة واللوحات. */
 const SERVER_ADMIN = new Set([
+  // **رابطُ «أرسل موقعي» انتهى** — صفحةُ المستلِم العامّة على الويب وحدَها (٢٠٢٦-١٠-٢٩).
+  "location_request_closed",
   "free_delivery_invalid",
   // **قرارُ معلمٍ قُرّر من قبل** — لوحةُ العمليّات (٢٠٢٦-١٠-٢١).
   "landmark_decided",

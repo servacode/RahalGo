@@ -114,6 +114,7 @@
     <string name="err_price_sync_file_type">تعذّرت قراءة الملف. احفظه من الأمين بصيغة Excel (xlsx) أو CSV وحاول مرة أخرى</string>
     <string name="err_price_sync_mapping">يوجد عمود مختار غير موجود في الملف — اختر الأعمدة من جديد</string>
     <string name="err_item_price_too_high">السعر أعلى من الحد المسموح للصنف — راجع الأصفار</string>
+    <string name="err_bulk_amount_invalid">اكتب مبلغاً صحيحاً أكبر من صفر</string>
     <string name="err_bulk_percent_invalid">يجب أن تكون النسبة من ١ إلى ١٠٠ للزيادة، أو من ١ إلى ٥٠ للتخفيض</string>
     <string name="err_preset_invalid">اسم الخيار أو أسماء خياراته غير صحيحة</string>
     <string name="err_exchange_rate_required">اكتب سعر الصرف في صفحة «متجري» أولاً، لنتمكن من حساب أسعارك بالدولار</string>
@@ -424,10 +425,14 @@
     <string name="photo_camera">التقط صورة</string>
     <string name="photo_gallery">من المعرض</string>
     <string name="crop_title">عدّل الصورة</string>
-    <string name="crop_hint">كبّر بإصبعين وحرّك الصورة. ما داخل المربع هو ما سيراه الزبون</string>
     <string name="crop_use">اعتمد</string>
     <string name="crop_rotate">تدوير</string>
     <string name="crop_again">صورة أخرى</string>
+    <string name="crop_reset">إعادة ضبط</string>
+    <string name="crop_frame_full">كاملة</string>
+    <string name="crop_frame_square">مربّعة</string>
+    <string name="crop_frame_portrait">طولية</string>
+    <string name="image_viewer_close">إغلاق الصورة</string>
     <string name="acc_photo_remove">إزالة الصورة</string>
     <string name="acc_pw_change">تغيير كلمة المرور</string>
     <string name="acc_pw_changed">تم تغيير كلمة المرور بنجاح</string>
@@ -790,15 +795,15 @@
     <string name="presets_hint">حدّد الخيارات التي تحتاجها أصنافك. تظهر هذه الخيارات فقط عند إضافة صنف أو تعديله.</string>
     <string name="presets_from_category">الخيارات الحالية هي الخيارات الجاهزة لتصنيف المتجر.</string>
     <string name="presets_custom">هذا اختيارك أنت.</string>
-    <string name="presets_reset">العودة إلى الخيارات الجاهزة للتصنيف</string>
+    <string name="presets_reset">العودة إلى خيارات التصنيف الافتراضية</string>
     <string name="presets_saved">✓ تم حفظ الخيارات</string>
     <string name="presets_empty_opts">تكتب خياراتها بنفسك</string>
     <string name="bulk_title">تغيير الأسعار</string>
     <string name="bulk_hint">ارفع أو خفّض أسعار كل الأصناف أو قسم واحد بنسبة. الأصناف المسعّرة بالدولار يتغيّر سعرها بالدولار.</string>
     <string name="bulk_up">زيادة</string>
     <string name="bulk_down">تخفيض</string>
-    <string name="bulk_percent">النسبة ٪</string>
-    <string name="bulk_scope">على ماذا؟</string>
+    <string name="bulk_percent">النسبة</string>
+    <string name="bulk_scope">على:</string>
     <string name="bulk_all">كل الأصناف</string>
     <string name="bulk_preview">معاينة قبل التغيير</string>
     <string name="bulk_preview_count">سيتغيّر سعر %1$s صنف، مثلاً:</string>
@@ -807,14 +812,23 @@
     <string name="bulk_done">✓ تغيّر سعر %1$s صنف</string>
     <string name="bulk_none">لا توجد أصناف ضمن هذا الاختيار</string>
     <string name="bulk_bad_percent">اكتب نسبة من 1 إلى 100 للزيادة، أو من 1 إلى 50 للتخفيض</string>
+    <string name="bulk_mode_percent">نسبة ٪</string>
+    <string name="bulk_mode_amount">مبلغ ثابت ل.س</string>
+    <string name="bulk_amount">المبلغ</string>
+    <string name="bulk_bad_amount">اكتب مبلغاً أكبر من صفر</string>
+    <string name="bulk_go">تطبيق</string>
+    <string name="bulk_ask_count">سيتغيّر سعر %1$s صنفاً</string>
+    <string name="act_confirm">تأكيد</string>
+    <string name="drinks_delete">حذف المشروب</string>
+    <string name="drinks_price">السعر</string>
     <string name="presets_loading">جارٍ تحميل الخيارات…</string>
     <string name="item_duplicate_save_first">احفظ تعديلاتك أولاً، ثم انسخ الصنف</string>
     <string name="mod_usd_no_rate">لا يوجد سعر صرف حالياً، لذلك لم تُحوَّل بعض أسعار الخيارات — اكتبها بنفسك</string>
     <string name="mod_v_group_name">اكتب اسماً لكل مجموعة خيارات</string>
     <string name="mod_v_required_empty">المجموعة «%1$s» إلزامية ولا تحتوي أي خيار متوفر — أضف خياراً متوفراً أو اجعلها اختيارية</string>
-    <string name="item_usd_equals">≈ %1$d ل.س (سعر الصرف %2$s)</string>
-    <string name="item_usd_rate_is">سعر الصرف %1$s — يرى الزبون السعر بالليرة</string>
-    <string name="item_usd_need_rate">اكتب سعر الصرف في صفحة «متجري» أولاً، لنتمكن من حساب سعرك بالليرة</string>
+    <string name="item_usd_equals">≈ %1$d ل.س · الصرف %2$s</string>
+    <string name="item_usd_rate_is">الصرف %1$s · يرى الزبون السعر بالليرة</string>
+    <string name="item_usd_need_rate">اكتب سعر الصرف في صفحة «متجري» أولاً</string>
     <string name="mod_title">الإضافات والخيارات</string>
     <string name="mod_none_hint">هذه الخيارات بلا سعر — اختر الموجود منها وأوقف غير المتوفر</string>
     <string name="mod_weight_hint">سعر الصنف يخص الوزن المكتوب هنا، ويُحسب سعر كل وزن منه تلقائياً</string>
@@ -823,6 +837,28 @@
     <string name="mod_weight_price">السعر %1$s</string>
     <string name="mod_weight_add">أضف وزناً</string>
     <string name="mn_unsorted">غير مصنّف</string>
+    <string name="item_photo_change">غيّر الصورة</string>
+    <string name="item_currency_usd_short">$</string>
+    <string name="item_currency_label">العملة</string>
+    <string name="item_section_pick">اختر القسم</string>
+    <string name="item_section_title">اختر قسم السوق</string>
+    <string name="item_section_empty">لا توجد أقسام حالياً</string>
+    <string name="mod_hint_short">اختر ما يناسب الصنف، ثم عدّل الأسماء والأسعار.</string>
+    <string name="mod_drinks_switch">أضف مشروباتي</string>
+    <string name="mod_drinks_on">تظهر قائمة مشروباتك مع هذا الصنف</string>
+    <string name="mod_drinks_off">لا تظهر المشروبات مع هذا الصنف</string>
+    <string name="mod_chip_none">بلا سعر</string>
+    <string name="mod_chip_weight">حسب الوزن</string>
+    <string name="mod_chip_priced">بسعر إضافي</string>
+    <string name="mod_chip_one">إلزامي: خيار واحد</string>
+    <string name="mod_chip_any">اختياري</string>
+    <string name="mod_custom_btn">مجموعة خاصة</string>
+    <string name="mod_custom_untitled">مجموعة بلا اسم</string>
+    <string name="mod_opt_delete">حذف الخيار</string>
+    <string name="mod_rule_switch">إلزامي: يختار الزبون خياراً واحداً</string>
+    <string name="mod_weight_unit">غ</string>
+    <string name="mod_weight_base_label">السعر المكتوب لوزن</string>
+    <string name="mod_weight_quick">أوزان سريعة:</string>
     <!-- ══════════════════════════════════════════════════════════
          **عنوانُ شاشة الدخول — واحدٌ في التطبيقات الأربعة**
          ══════════════════════════════════════════════════════════
@@ -1007,9 +1043,9 @@
     <string name="loc_acquiring">يُحدَّد موقعك…</string>
     <!-- عروضُ المتجر: حالٌ تُقرأ لا رمزٌ آليّ (OF، ٢٠٢٦-٠٩-١٥) -->
     <string name="offer_status_scheduled">مجدول</string>
-    <string name="offer_status_active">ساري</string>
+    <string name="offer_status_active">فعّال</string>
     <string name="offer_status_stopped">موقوف</string>
-    <string name="offer_status_expired">منتهي</string>
+    <string name="offer_status_expired">منتهٍ</string>
     <string name="offer_status_unknown">حالة غير معروفة</string>
     <string name="offer_price_line">%1$s ← %2$s</string>
     <!-- بطاقة العرض — الخصم شارة، والتوفير رقم يفهمه صاحب المتجر -->
@@ -1102,6 +1138,21 @@
     <string name="ow_borne_store">الخصم يُحسم من مستحق المتجر</string>
     <string name="ow_borne_me">الخصم يُحسم من مستحقك أنت</string>
     <string name="ow_offers_empty">لا توجد عروض لهذا المتجر بعد — اضغط «عرض جديد»</string>
+    <string name="ow_title">العروض</string>
+    <string name="ow_add">أنشئ عرضاً</string>
+    <string name="ow_empty_title">لا توجد عروض بعد</string>
+    <string name="ow_f_type">نوع الخصم</string>
+    <string name="ow_f_value">قيمة الخصم</string>
+    <string name="ow_f_period">مدة العرض</string>
+    <string name="ow_period_from_to">من %1$s إلى %2$s</string>
+    <string name="ow_period_until">حتى %1$s</string>
+    <string name="ow_disc_percent">خصم %1$s٪</string>
+    <string name="ow_disc_amount">خصم %1$s</string>
+    <string name="ow_unit_percent">٪</string>
+    <string name="ow_unit_syp">ل.س</string>
+    <string name="ow_stop_q">إيقاف العرض؟</string>
+    <string name="ow_stop_body">يعود الصنف إلى سعره الأصلي فوراً.</string>
+    <string name="ow_stop_do">أوقف العرض</string>
     <string name="err_return_bad_target">وجهة إرجاع البضاعة غير معروفة</string>
     <string name="err_return_store_refused">هذا المتجر لا يقبل إرجاع البضاعة</string>
     <string name="err_no_return_trip">لا مشوار إرجاع على هذا الطلب</string>
@@ -1120,7 +1171,7 @@
     <string name="fx_rate_jump_yes">نعم، احفظه</string>
     <string name="fx_rate_jump_no">رجوع</string>
     <string name="fx_rate_owner_sets">يضعه صاحب المتجر من صفحة «متجري» في تطبيقه، وتُحسب منه أصنافه المسعّرة بالدولار.</string>
-    <string name="item_usd_need_rate_rep">يجب أن يضع صاحب المتجر سعر الصرف من تطبيقه أولاً — أضف الصنف بالليرة حالياً</string>
+    <string name="item_usd_need_rate_rep">لم يضع صاحب المتجر سعر الصرف بعد — استعمل الليرة حالياً</string>
     <!-- أسباب الشكاوى والبلاغات بلفظ طرف ثالث (TicketReasons) — ولا رمز إنكليزي يطلع للناس -->
     <string name="tr_not_received">لم يستلم الزبون الطلب</string>
     <string name="tr_missing_items">نقص في الطلب</string>

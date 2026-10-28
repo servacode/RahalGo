@@ -56,6 +56,11 @@ data class ItemDraft(
     val currency: String = CURRENCY_SYP,
     /** **السعرُ بالدولار نصّاً** — «1.5» كما يُكتب. */
     val priceUsd: String = "",
+    /**
+     * **«أضف مشروباتي»** (ملاحظاتُ المالك ٢٠٢٦-١٠-٢٩) — قائمةُ مشروبات المتجر تُنسخ
+     * إلى هذا الصنف أم لا. **وافتراضُه نعم** كما كان قبل المفتاح.
+     */
+    val storeDrinks: Boolean = true,
 ) {
     val isNew: Boolean get() = itemId.isEmpty()
     val isUsd: Boolean get() = currency == CURRENCY_USD

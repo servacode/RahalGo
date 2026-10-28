@@ -157,6 +157,7 @@ func syncDrinks(ctx context.Context, tx dbtx.Querier, merchantID, itemID string)
 			INSERT INTO modifier_groups (item_id, name, min_select, max_select, sort_order, store_drinks)
 			SELECT i.id, $3, 0, 99, 1000, true FROM menu_items i
 			 WHERE i.merchant_id = $1::uuid AND ($2 = '' OR i.id::text = $2)
+			   AND NOT i.drinks_off
 			   AND EXISTS (SELECT 1 FROM merchant_drinks d WHERE d.merchant_id = i.merchant_id)
 			RETURNING id
 		)

@@ -44,6 +44,8 @@ export function FormActions({
   cancelLabel,
   /** **لهجةُ الفعل** — `danger` لحذفٍ لا رجعةَ فيه. */
   tone,
+  saveIcon,
+  cancelIcon,
 }: {
   onSave?: () => void;
   onCancel?: () => void;
@@ -52,6 +54,9 @@ export function FormActions({
   saveLabel?: string;
   cancelLabel?: string;
   tone?: "danger";
+  /** **أيقونةٌ قبل النصّ** — لشريط أدواتٍ كلُّه أيقونات (نافذةُ قصّ الصورة). */
+  saveIcon?: React.ReactNode;
+  cancelIcon?: React.ReactNode;
 }) {
   return (
     <div className="flex justify-end gap-2">
@@ -60,10 +65,18 @@ export function FormActions({
         disabled={busy}
         onClick={submit ? undefined : onSave}
         variant={tone === "danger" ? "danger" : undefined}
+        className={saveIcon ? "inline-flex flex-1 items-center justify-center gap-1.5" : undefined}
       >
+        {saveIcon}
         {saveLabel ?? m.common.save}
       </Button>
-      <Button type="button" variant="secondary" onClick={onCancel}>
+      <Button
+        type="button"
+        variant="secondary"
+        onClick={onCancel}
+        className={cancelIcon ? "inline-flex flex-1 items-center justify-center gap-1.5" : undefined}
+      >
+        {cancelIcon}
         {cancelLabel ?? m.common.cancel}
       </Button>
     </div>

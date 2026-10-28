@@ -51,7 +51,8 @@ export { DataView, ViewToggle, useViewMode, type DataColumn, type ViewMode } fro
 /** **رفعُ الصور ومصغَّرُها** — كانا في لوحة الإدارة، **فبوّابةُ المتجر لا
     تراهما**، وصورةُ الصنف مبنيّةٌ في المحرّك بلا يدٍ ترفعها. */
 export { ImageUpload, MediaThumb, type MediaKind } from "./ImageUpload";
-export { ImageCropDialog } from "./ImageCrop";
+export { ImageCropDialog, ITEM_CROP_FRAMES, LOGO_CROP_FRAMES, type CropFrame } from "./ImageCrop";
+export { ImageViewer } from "./ImageViewer";
 export { FileUpload } from "./FileUpload";
 export { AccountSettings } from "./AccountSettings";
 /** **كرتُ الشكوى والبلاغ — واحدٌ في الخمس.** (قرارُ المالك ٢٠٢٦-٠٨-٠٧.) */

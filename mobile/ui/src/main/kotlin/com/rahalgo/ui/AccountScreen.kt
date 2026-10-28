@@ -117,6 +117,13 @@ fun AccountScreen(
      */
     worker: Boolean = true,
     /**
+     * **أيُعرض «وثّق حسابك» بالواتساب؟** (قرارُ المالك ٢٠٢٦-١٠-٢٩)
+     *
+     * **تطبيقُ المتجر يُخفيه** — حسابُ المتجر تصله رسائلُ الواتساب أصلاً، **فبندٌ
+     * يطلب توثيقَ ما يعمل يُقرأ نقصاً لا وجودَ له.** وافتراضُه الإظهار.
+     */
+    whatsapp: Boolean = true,
+    /**
      * **أفي هذا التطبيق إشعاراتٌ أصلا؟**
      *
      * **وقسمُ فحصِ الإشعارات في تطبيقٍ بلا نقطةٍ يقول «لا جهازَ
@@ -169,7 +176,7 @@ fun AccountScreen(
             .padding(16.dp),
     ) {
 
-        Identity(vm, s, worker)
+        Identity(vm, s, worker, whatsapp)
         Gap()
         PasswordSection(vm, s)
         Gap()
@@ -216,7 +223,7 @@ fun AccountScreen(
 // ــ الهويّة ــ
 
 @Composable
-private fun Identity(vm: AccountViewModel, s: AccountState, worker: Boolean) {
+private fun Identity(vm: AccountViewModel, s: AccountState, worker: Boolean, whatsapp: Boolean) {
     val me = s.me ?: return
     var draft by rememberSaveable(me.fullName) { mutableStateOf(me.fullName) }
 
@@ -299,8 +306,10 @@ private fun Identity(vm: AccountViewModel, s: AccountState, worker: Boolean) {
     )
     Spacer(Modifier.height(8.dp))
     PhoneChange(vm, s)
-    Spacer(Modifier.height(12.dp))
-    WhatsAppVerify(vm, s, me.whatsappVerified, worker)
+    if (whatsapp) {
+        Spacer(Modifier.height(12.dp))
+        WhatsAppVerify(vm, s, me.whatsappVerified, worker)
+    }
 }
 
 /**

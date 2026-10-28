@@ -62,7 +62,7 @@ import com.rahalgo.design.Rahal
  * غيّر شكلَ الانتظار غيّره في المنصّة كلِّها.**
  */
 @Composable
-fun RahalLoader(size: Dp = 64.dp, modifier: Modifier = Modifier) {
+fun RahalLoader(size: Dp = 112.dp, modifier: Modifier = Modifier) {
     val t = rememberInfiniteTransition(label = "loader")
     val p by t.animateFloat(
         initialValue = 0f,
@@ -108,7 +108,8 @@ fun RahalLoader(size: Dp = 64.dp, modifier: Modifier = Modifier) {
         Image(
             painter = painterResource(com.rahalgo.design.R.drawable.intro_logo),
             contentDescription = null,
-            modifier = Modifier.size(size * 0.5f),
+            // **أكبرُ من النصف** (بلاغُ المالك ٢٠٢٦-١٠-٢٩: «لوغو الانتظار صغير كثير»).
+            modifier = Modifier.size(size * 0.6f),
         )
     }
 }

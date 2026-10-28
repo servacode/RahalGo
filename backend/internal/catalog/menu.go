@@ -139,6 +139,9 @@ type MenuItem struct {
 	// للموافقة على الصنف أساساً». يُضيفه المتجرُ فيظهر فوراً (هجرة ٠٢٠٠).
 	SortOrder int             `json:"sort_order"`
 	Modifiers []ModifierGroup `json:"modifiers"`
+	// StoreDrinks **«أضف مشروباتي»** (ملاحظاتُ المالك ٢٠٢٦-١٠-٢٩، هجرة 0483) —
+	// تُنسخ قائمةُ مشروبات المتجر إلى هذا الصنف أم لا. **وافتراضُه نعم.**
+	StoreDrinks bool `json:"store_drinks"`
 }
 
 type MenuSection struct {
@@ -259,7 +262,8 @@ func (s *Service) GetMenu(ctx context.Context, merchantID string) ([]MenuSection
 		SELECT i.id, COALESCE(i.section_id::text, ''), i.name, i.description,
 		       i.merchant_price, i.margin_override, ps.margin_override,
 		       i.platform_section_id, COALESCE(ps.name, ''),
-		       im.path, im.thumb_path, i.available, i.sort_order, i.price_usd_cents
+		       im.path, im.thumb_path, i.available, i.sort_order, i.price_usd_cents,
+		       NOT i.drinks_off
 		FROM menu_items i
 		LEFT JOIN platform_sections ps ON ps.id = i.platform_section_id
 		LEFT JOIN media im ON im.id = i.image_media_id
@@ -273,7 +277,8 @@ func (s *Service) GetMenu(ctx context.Context, merchantID string) ([]MenuSection
 		if err := rows.Scan(&it.ID, &it.SectionID, &it.Name, &it.Description,
 			&it.MerchantPrice, &it.MarginOverride, &sectionMargin,
 			&it.PlatformSectionID, &it.PlatformSectionName,
-			&it.ImageURL, &it.ImageThumbURL, &it.Available, &it.SortOrder, &usdCents); err != nil {
+			&it.ImageURL, &it.ImageThumbURL, &it.Available, &it.SortOrder, &usdCents,
+			&it.StoreDrinks); err != nil {
 			rows.Close()
 			return nil, err
 		}
@@ -521,6 +526,9 @@ type MenuItemInput struct {
 	// وبالدولار يُرسَل `price_usd` ويُحسب `price` بالليرة. انظر `usd.go`.
 	PriceCurrency *string  `json:"price_currency"`
 	PriceUSD      *float64 `json:"price_usd"`
+	// StoreDrinks **«أضف مشروباتي»** (هجرة 0483) — غيرُ مُرسَلٍ يعني بلا تغيير،
+	// **فالنسخةُ القديمة من التطبيق لا تمسّه.** وفي الإنشاء افتراضُه نعم.
+	StoreDrinks *bool `json:"store_drinks"`
 }
 
 func (s *Service) CreateItem(ctx context.Context, actorID, merchantID string, in MenuItemInput, ip string) (string, error) {
@@ -595,15 +603,15 @@ func (s *Service) CreateItemIn(ctx context.Context, tx dbtx.Querier, merchantID 
 	err = tx.QueryRow(ctx, `
 		INSERT INTO menu_items (merchant_id, name, description,
 		                        merchant_price, price, image_media_id, sort_order,
-		                        platform_section_id, price_usd_cents)
+		                        platform_section_id, price_usd_cents, drinks_off)
 		SELECT $1, $2, COALESCE($3,''), $4, $4, NULLIF(COALESCE($5, ''), '')::uuid,
 		       COALESCE((SELECT max(sort_order)+1 FROM menu_items
 		                 WHERE merchant_id=$1 AND platform_section_id=$6::uuid), 1),
-		       $6::uuid, $7
+		       $6::uuid, $7, NOT COALESCE($8::bool, true)
 		WHERE EXISTS (SELECT 1 FROM platform_sections WHERE id = $6::uuid AND active)
 		RETURNING id`,
 		merchantID, *in.Name, in.Description, *in.Price, in.ImageMediaID,
-		*in.PlatformSectionID, usdCents).Scan(&id)
+		*in.PlatformSectionID, usdCents, in.StoreDrinks).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", httpx.ErrNotFound
 	}
@@ -746,6 +754,17 @@ func (s *Service) UpdateItem(ctx context.Context, actorID, itemID string, in Men
 			return err
 		}
 		if err := insertModifiers(ctx, tx, itemID, *in.Modifiers); err != nil {
+			return err
+		}
+	}
+	// **«أضف مشروباتي»** (هجرة 0483) — يُكتب المفتاحُ ثمّ تُعاد مشروباتُ الصنف وحدَه:
+	// تُمحى إن أُطفئ، وتُنسخ إن أُشعل.
+	if in.StoreDrinks != nil {
+		if _, err := tx.Exec(ctx, `UPDATE menu_items SET drinks_off = NOT $2::bool WHERE id = $1`,
+			itemID, *in.StoreDrinks); err != nil {
+			return err
+		}
+		if err := syncDrinks(ctx, tx, merchantID, itemID); err != nil {
 			return err
 		}
 	}

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -160,6 +161,8 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
         link = text.take(2000)
         touched()
         linkJob?.cancel()
+        // **ورابطٌ يُكتب بعد وصول موقع المستلِم يحلّ محلّه** — فلا تبقى «✓ وصل» فوق غيره.
+        if (ask == AskState.Received && link.contains("http")) ask = AskState.Idle
         if (!link.contains("http")) {
             linkState = LinkState.Idle
             if (pointFromLink) clearPoint()
@@ -187,6 +190,90 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
     var quoteError by mutableStateOf("")
         private set
 
+    /**
+     * **المنصّةُ خارجَ دوامها أو موقوفة** (قرارُ المالك ٢٠٢٦-١٠-٢٩: «مادام المنصة بالدوام
+     * معناها في سائقين، إذا كانت خارج الدوام ما يقدر يرسل») — **يُقال متى تفتح ولا زرَّ
+     * «أعد المحاولة»**: الضغطُ لا يفتحها.
+     */
+    var quoteClosed by mutableStateOf(false)
+        private set
+
+    /** **موعدُ الفتح بالمللي** — بعده يُعاد سؤالُ الأجرة مع النبض، لا قبله (لا طرقَ على ٥٠٣). */
+    private var closedUntil: Long? = null
+
+    // ══════════════════════════════════════════════════════════════════
+    // **«اطلب الموقع من المستلم»** (قرارُ المالك ٢٠٢٦-١٠-٢٩)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // يصل المستلِمَ بالواتساب رابطُ صفحة «أرسل موقعي»، **ويُسأل الخادمُ كلَّ أربع ثوانٍ**
+    // حتّى تصل النقطة فتملأ النموذجَ كما يملؤه الرابط. **والرابطُ الملصوقُ باقٍ احتياطاً.**
+    var ask by mutableStateOf(AskState.Idle)
+        private set
+    var askReq by mutableStateOf<com.rahalgo.shared.merchant.LocationRequest?>(null)
+        private set
+    var askError by mutableStateOf("")
+        private set
+    var askAccuracy by mutableStateOf<Double?>(null)
+        private set
+    private var askJob: kotlinx.coroutines.Job? = null
+
+    fun askLocation() {
+        if (storeId.isEmpty() || ask == AskState.Sending) return
+        askError = ""
+        if (phone.isBlank()) {
+            askError = getApplication<Application>().getString(R.string.md_ask_need_phone)
+            return
+        }
+        askJob?.cancel()
+        ask = AskState.Sending
+        askJob = viewModelScope.launch {
+            val req = try {
+                api.requestLocation(storeId, phone.trim(), mode.ifEmpty { "send" })
+            } catch (e: Exception) {
+                ask = AskState.Idle
+                askError = apiError(
+                    getApplication(), e,
+                    mapOf(
+                        "location_request_too_soon" to R.string.md_ask_too_soon,
+                        "location_request_limit" to R.string.md_ask_limit,
+                    ),
+                )
+                return@launch
+            }
+            askReq = req
+            askAccuracy = null
+            ask = AskState.Waiting
+            while (true) {
+                kotlinx.coroutines.delay(4000)
+                // **وتعثّرُ سؤالٍ واحدٍ لا يوقف الانتظار** — يُسأل بعد أربع ثوانٍ.
+                val st = runCatching { api.locationRequest(req.id) }.getOrNull() ?: continue
+                val lat = st.lat
+                val lng = st.lng
+                if (st.status == "received" && lat != null && lng != null) {
+                    linkJob?.cancel()
+                    link = ""
+                    linkState = LinkState.Idle
+                    setPoint(lat, lng, "")
+                    askAccuracy = st.accuracyM
+                    ask = AskState.Received
+                    break
+                }
+                if (st.status == "expired") {
+                    ask = AskState.Expired
+                    break
+                }
+            }
+        }
+    }
+
+    private fun resetAsk() {
+        askJob?.cancel()
+        ask = AskState.Idle
+        askReq = null
+        askError = ""
+        askAccuracy = null
+    }
+
     var busy by mutableStateOf(false)
         private set
     var error by mutableStateOf("")
@@ -207,7 +294,13 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
         // **والنبضُ العامُّ يُحدّث القائمةَ لا الأجرة** (٢٠٢٦-١٠-١٣) — كان يعيد سؤالَ
         // `delivery-quote` مع كلّ نبضةٍ والمنصّةُ مسكّرة (٥٠٣ مقصود)، **فيطرق بابَها بلا توقّف.**
         // **والأجرةُ تُسأل عند الفتح وتغيّر النقطة و«أعد المحاولة» وحدَها.**
-        viewModelScope.launch { Refresh.tick.drop(1).collect { load(withQuote = false) } }
+        viewModelScope.launch {
+            Refresh.tick.drop(1).collect {
+                // **ومنصّةٌ أُغلقت ثمّ حان موعدُ فتحها** — يُعاد سؤالُ الأجرة فيزول المنع.
+                val until = closedUntil
+                load(withQuote = quoteClosed && until != null && System.currentTimeMillis() >= until)
+            }
+        }
     }
 
     fun load(withQuote: Boolean = true) {
@@ -277,6 +370,8 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
     private fun fetchQuote(lat: Double?, lng: Double?) {
         quote = null
         quoteError = ""
+        quoteClosed = false
+        closedUntil = null
         if (storeId.isEmpty()) return
         viewModelScope.launch {
             try {
@@ -285,8 +380,20 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
                 // **والمحفظةُ لا تكفي ⇒ لا يبقى «من محفظتي» مختاراً** — لا دين (٢٠٢٦-١٠-١٥).
                 if (payer == "merchant" && !q.merchantCanPay) payer = ""
             } catch (e: Exception) {
-                // **وخارجُ التغطية يُقال عند النقطة** — لا بعد ملء كلّ شيء.
-                quoteError = apiError(getApplication(), e)
+                val closed = (e as? com.rahalgo.shared.net.ApiClient.ApiException)?.body
+                quoteClosed = closed?.code == "platform_closed_now" || closed?.code == "temporarily_unavailable"
+                closedUntil = closed?.details?.get("next_available_at")?.let {
+                    runCatching { java.time.OffsetDateTime.parse(it.trim()).toInstant().toEpochMilli() }.getOrNull()
+                }
+                quoteError = if (closed != null && closed.code == "platform_closed_now") {
+                    // **«تفتح المنصة الساعة …»** — وبلا موعدٍ جملةٌ ثابتة.
+                    val back = com.rahalgo.ui.backAtText(closed.details["next_available_at"])
+                    if (back != null) getApplication<Application>().getString(R.string.md_closed_at, back)
+                    else getApplication<Application>().getString(R.string.md_closed_plain)
+                } else {
+                    // **وخارجُ التغطية يُقال عند النقطة** — لا بعد ملء كلّ شيء.
+                    apiError(getApplication(), e)
+                }
             }
         }
     }
@@ -365,6 +472,7 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
                 linkState = LinkState.Idle
                 point = null
                 pointLabel = ""
+                resetAsk()
                 load()
                 Refresh.bump()
             } catch (e: Exception) {
@@ -459,14 +567,18 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
-                        stringResource(R.string.md_blocked_title),
+                        stringResource(if (vm.quoteClosed) R.string.md_closed_title else R.string.md_blocked_title),
                         color = Rahal.colors.danger,
                         fontWeight = FontWeight.Bold,
                     )
                     Text(vm.quoteError, color = Rahal.colors.ink, style = MaterialTheme.typography.bodySmall)
                 }
-                RahalTextButton(onClick = { vm.load() }) {
-                    Text(stringResource(com.rahalgo.ui.R.string.act_retry))
+                // **وخارجَ الدوام لا «أعد المحاولة»** (٢٠٢٦-١٠-٢٩) — الضغطُ لا يفتح المنصّة،
+                // **والنبضُ العامُّ يُعيد السؤالَ بعد موعد الفتح** (`closedUntil`).
+                if (!vm.quoteClosed) {
+                    RahalTextButton(onClick = { vm.load() }) {
+                        Text(stringResource(com.rahalgo.ui.R.string.act_retry))
+                    }
                 }
             }
         }
@@ -561,19 +673,30 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
             modifier = Modifier.fillMaxWidth(),
         )
 
-        // ── موقعُ المستلِم: رابطٌ يُلصق، والخريطةُ احتياط (٢٠٢٦-١٠-٠٨) ──
+        // ── موقعُ المستلِم: «اطلب الموقع من المستلم» أوّلاً (٢٠٢٦-١٠-٢٩)، والرابطُ احتياط ──
+        Spacer(Modifier.height(10.dp))
+        AskLocationCard(vm, fetch)
         Spacer(Modifier.height(8.dp))
-        OutlinedTextField(
-            shape = Rahal.shape.md,
-            value = vm.link,
-            onValueChange = { vm.onLink(it) },
-            label = { Text(stringResource(if (fetch) R.string.md_link_fetch else R.string.md_link)) },
-            placeholder = { Text(stringResource(if (fetch) R.string.md_link_hint_fetch else R.string.md_link_hint)) },
-            leadingIcon = { FieldIcon(com.rahalgo.ui.R.drawable.ic_pin) },
-            singleLine = true,
-            enabled = !vm.busy,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                shape = Rahal.shape.md,
+                value = vm.link,
+                onValueChange = { vm.onLink(it) },
+                label = { Text(stringResource(if (fetch) R.string.md_link_fetch else R.string.md_link)) },
+                placeholder = { Text(stringResource(if (fetch) R.string.md_link_hint_fetch else R.string.md_link_hint)) },
+                leadingIcon = { FieldIcon(com.rahalgo.ui.R.drawable.ic_pin) },
+                singleLine = true,
+                enabled = !vm.busy,
+                modifier = Modifier.weight(1f),
+            )
+            Spacer(Modifier.width(Rahal.space.sm))
+            // **«لصق» بلمسة** — يقرأ الحافظةَ ويمرّرها لقارئ الرابط نفسِه.
+            RahalOutlineButton(
+                onClick = { clipboard.getText()?.text?.trim()?.takeIf { it.isNotEmpty() }?.let { vm.onLink(it) } },
+                enabled = !vm.busy,
+            ) { Text(stringResource(R.string.md_paste), fontWeight = FontWeight.Bold) }
+        }
         when (vm.linkState) {
             LinkState.Checking -> Text(
                 stringResource(R.string.md_link_checking),
@@ -649,10 +772,10 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
             }
         }
         if (vm.collectOn) {
-            // **ليرة أو دولار** (قرارُ المالك ٢٠٢٦-١٠-٢٠) — زرُّ عملة الأصناف نفسُه.
-            com.rahalgo.ui.menu.CurrencySwitch(selected = vm.collectCurrency, enabled = !vm.busy) { vm.pickCollectCurrency(it) }
-            Spacer(Modifier.height(6.dp))
+            // **ليرة أو دولار** (قرارُ المالك ٢٠٢٦-١٠-٢٠) — **ومنذ ٢٠٢٦-١٠-٢٩ دائرتان بجانب
+            // خانة المبلغ** («ل.س» و«$»)، والمختارةُ مملوءةٌ بلون العلامة.
             val usd = isUsd(vm.collectCurrency)
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
                 shape = Rahal.shape.md,
                 value = vm.collectAmount,
@@ -673,8 +796,11 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
                     keyboardType = if (usd) androidx.compose.ui.text.input.KeyboardType.Decimal
                     else androidx.compose.ui.text.input.KeyboardType.Number,
                 ),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.weight(1f),
             )
+            Spacer(Modifier.width(Rahal.space.sm))
+            CurrencyDots(selected = vm.collectCurrency, enabled = !vm.busy) { vm.pickCollectCurrency(it) }
+            }
         }
 
         // ── من يدفع — بطاقاتٌ واضحةٌ إجباريّة (طلبُ المالك ٢٠٢٦-١٠-٠٩) ──
@@ -867,6 +993,123 @@ private fun RecentDeliveries(vm: DeliveryViewModel, onOpen: (String) -> Unit) {
             com.rahalgo.ui.Empty(stringResource(R.string.md_none), hint = stringResource(R.string.md_none_hint))
         rows != null -> rows.take(5).forEach { d ->
             DeliveryRow(d, cancelling = vm.cancelling != null, onOpen = { onOpen(d.id) }) { vm.cancel(d.id) }
+        }
+    }
+}
+
+/**
+ * **«اطلب الموقع من المستلم»** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — زرٌّ وحالُه تحته:
+ * يُرسَل · ينتظر (ومشاركةُ الرابط إن لم تصل الرسالة) · **✓ وصل بدقّته** · انتهى.
+ */
+@Composable
+private fun AskLocationCard(vm: DeliveryViewModel, fetch: Boolean) {
+    val uri = androidx.compose.ui.platform.LocalUriHandler.current
+    val waiting = vm.ask == AskState.Sending || vm.ask == AskState.Waiting
+    RahalOutlineButton(
+        onClick = { vm.askLocation() },
+        enabled = !vm.busy && !waiting,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(52.dp),
+    ) {
+        Icon(painterResource(com.rahalgo.ui.R.drawable.ic_pin), contentDescription = null, tint = Rahal.colors.brand)
+        Spacer(Modifier.width(Rahal.space.sm))
+        Text(
+            stringResource(
+                when {
+                    vm.ask == AskState.Sending -> R.string.md_ask_sending
+                    fetch -> R.string.md_ask_loc_fetch
+                    else -> R.string.md_ask_loc
+                },
+            ),
+            fontWeight = FontWeight.Bold,
+        )
+    }
+    val req = vm.askReq
+    when {
+        vm.ask == AskState.Waiting && req != null -> {
+            Spacer(Modifier.height(6.dp))
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(Rahal.shape.md)
+                    .background(Rahal.colors.canvas)
+                    .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
+                    .padding(12.dp),
+            ) {
+                Text(
+                    stringResource(if (req.whatsappSent) R.string.md_ask_waiting else R.string.md_ask_not_sent),
+                    color = Rahal.colors.inkMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                // **ولم تصل الرسالة** (البوتُ غيرُ مقترن) — يشارك الرابطَ بنفسه بلمسة.
+                if (!req.whatsappSent && req.waUrl.isNotEmpty()) {
+                    RahalTextButton(onClick = { runCatching { uri.openUri(req.waUrl) } }) {
+                        Text(stringResource(R.string.md_ask_share), fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+        vm.ask == AskState.Received -> {
+            Spacer(Modifier.height(6.dp))
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(Rahal.shape.md)
+                    .background(Rahal.colors.success.copy(alpha = 0.10f))
+                    .padding(12.dp),
+            ) {
+                Text(
+                    stringResource(if (fetch) R.string.md_ask_received_fetch else R.string.md_ask_received),
+                    color = Rahal.colors.success,
+                    fontWeight = FontWeight.Bold,
+                )
+                vm.askAccuracy?.let {
+                    Text(
+                        stringResource(R.string.md_ask_accuracy, com.rahalgo.ui.grouped(it.toLong())),
+                        color = Rahal.colors.inkMuted,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+        }
+        vm.ask == AskState.Expired -> Text(
+            stringResource(R.string.md_ask_expired),
+            color = Rahal.colors.danger,
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
+    if (vm.askError.isNotEmpty()) {
+        Text(vm.askError, color = Rahal.colors.danger, style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+/** **دائرتا العملة بجانب خانة المبلغ** (٢٠٢٦-١٠-٢٩) — المختارةُ مملوءةٌ بلون العلامة. */
+@Composable
+private fun CurrencyDots(selected: String, enabled: Boolean, onPick: (String) -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.xs)) {
+        listOf("SYP" to R.string.md_cur_syp, "USD" to R.string.md_cur_usd).forEach { (code, label) ->
+            val on = isUsd(selected) == isUsd(code)
+            androidx.compose.foundation.layout.Box(
+                Modifier
+                    .size(48.dp)
+                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(if (on) Rahal.colors.brand else Rahal.colors.canvas)
+                    .border(
+                        Rahal.stroke.hair,
+                        if (on) Rahal.colors.brand else Rahal.colors.line,
+                        androidx.compose.foundation.shape.CircleShape,
+                    )
+                    .clickable(enabled = enabled) { onPick(code) },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    stringResource(label),
+                    color = if (on) Rahal.colors.onBrand else Rahal.colors.ink,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
         }
     }
 }
@@ -1083,3 +1326,6 @@ fun DeliveryHistoryScreen(vm: DeliveryHistoryViewModel) {
 
 /** **حالُ رابط الموقع** — فارغ · يُقرأ · وُجد · لا موقعَ فيه. */
 enum class LinkState { Idle, Checking, Found, NotFound }
+
+/** **حالُ «اطلب الموقع من المستلم»** — لا طلب · يُرسَل · ينتظر · وصل · انتهى. */
+enum class AskState { Idle, Sending, Waiting, Received, Expired }

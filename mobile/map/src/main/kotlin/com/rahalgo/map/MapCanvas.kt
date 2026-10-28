@@ -75,6 +75,12 @@ fun MapCanvas(
      */
     zoomTick: Int = 0,
     zoomStep: Double = 0.0,
+    /**
+     * **الخريطةُ داخل صفحةٍ تُمرَّر** (بطاقةُ موقع المتجر، ٢٠٢٦-١٠-٢٨) — اللمسةُ التي تبدأ
+     * على الخريطة تبقى للخريطة إلى أن يُرفع الإصبع، فلا تمرّر الصفحةُ بدلها.
+     * **وافتراضُه مطفأ** — فالشاشاتُ الكاملة كما كانت.
+     */
+    holdTouch: Boolean = false,
 ) {
     // ══════════════════════════════════════════════════════════════════
     // **وإيماءةُ فتحِ الدرج تُقفَل ما دام هذا السطحُ حاضراً** (`DWR`)
@@ -233,7 +239,26 @@ fun MapCanvas(
     }
 
     Box(modifier) {
-        AndroidView(factory = { surface.view }, modifier = Modifier.fillMaxSize())
+        AndroidView(
+            factory = { surface.view },
+            modifier = Modifier.fillMaxSize(),
+            // **واللوحُ واحدٌ للنشاط** (`MapSurfaceCache`) — فيُضبط المستمعُ في كلّ تحديثٍ
+            // ويُرفع حين لا يُطلب، **ولا يبقى من بطاقةٍ سابقةٍ على شاشةٍ كاملة.**
+            update = { v ->
+                v.setOnTouchListener(
+                    if (holdTouch) {
+                        android.view.View.OnTouchListener { view, e ->
+                            if (e.actionMasked == android.view.MotionEvent.ACTION_DOWN) {
+                                view.parent?.requestDisallowInterceptTouchEvent(true)
+                            }
+                            false
+                        }
+                    } else {
+                        null
+                    },
+                )
+            },
+        )
         // ══════════════════════════════════════════════════════════════
         // **ولا تُترك بيضاءَ صامتة**
         // ══════════════════════════════════════════════════════════════

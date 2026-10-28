@@ -1,8 +1,8 @@
 package com.rahalgo.ui.menu
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,10 +10,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -22,8 +21,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -34,9 +35,7 @@ import com.rahalgo.ui.Flash
 import com.rahalgo.ui.R
 import com.rahalgo.ui.RahalButton
 import com.rahalgo.ui.RahalOutlineButton
-import com.rahalgo.ui.RahalTextButton
 import com.rahalgo.ui.Screen
-import com.rahalgo.ui.ScreenTitle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -166,68 +165,107 @@ fun DrinksButton(state: DrinksState) {
 @Composable
 fun DrinksEditor(
     state: DrinksState,
-    // **والمندوبُ يقرأ «أصناف عميلك»** (ملاحظةُ المالك ٢٠٢٦-١٠-٢٠) — وصاحبُ المتجر «أصنافك».
-    hint: Int = R.string.drinks_hint,
+    // **وسطرُ الشرح أُلغي** (ملاحظةُ المالك ٢٠٢٦-١٠-٢٩: «ما في داعي للشرح») —
+    // ويبقى الوسيطُ فلا ينكسر نداءُ المندوب.
+    @Suppress("UNUSED_PARAMETER") hint: Int = R.string.drinks_hint,
 ) {
     Screen {
-        ScreenTitle(stringResource(R.string.drinks_title), stringResource(hint))
+        ToolHeader(stringResource(R.string.drinks_title)) { state.close() }
+        // ── العملة: «ليرة / دولار» زرّان متساويان ──
         Row(
-            Modifier.clip(Rahal.shape.md).background(Rahal.colors.canvas),
-            verticalAlignment = Alignment.CenterVertically,
+            Modifier
+                .fillMaxWidth()
+                .height(RowFieldHeight)
+                .clip(Rahal.shape.md)
+                .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md),
         ) {
             listOf(false to R.string.drinks_syp, true to R.string.drinks_usd).forEach { (usd, label) ->
                 val on = state.usd == usd
-                Text(
-                    stringResource(label),
-                    color = if (on) Rahal.colors.canvas else Rahal.colors.ink,
-                    modifier = Modifier
-                        .background(if (on) Rahal.colors.brand else Rahal.colors.canvas)
-                        .clickable { state.usd = usd }
-                        .padding(horizontal = 16.dp, vertical = 8.dp),
-                )
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .height(RowFieldHeight)
+                        .background(if (on) Rahal.colors.brand else Color.Transparent)
+                        .selectable(selected = on, enabled = !state.busy, role = Role.RadioButton) { state.usd = usd },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        stringResource(label),
+                        color = if (on) Rahal.colors.onBrand else Rahal.colors.ink,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
             }
         }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.md))
         if (state.rows.isEmpty()) {
             Text(stringResource(R.string.drinks_empty), color = Rahal.colors.inkMuted)
+        } else {
+            // **عناوينُ الأعمدة مرّةً فوق الأسطر** — كسطور خيارات الصنف.
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                ColumnLabel(stringResource(R.string.drinks_name), Modifier.weight(1f))
+                Spacer(Modifier.width(Rahal.space.xs))
+                ColumnLabel(
+                    stringResource(if (state.usd) R.string.drinks_price_usd else R.string.drinks_price_syp),
+                    Modifier.width(DrinkPriceWidth),
+                )
+                Spacer(Modifier.width(TouchTarget + Rahal.space.xs))
+            }
         }
         state.rows.forEachIndexed { i, r ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                OutlinedTextField(
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RowField(
                     value = r.name,
-                    onValueChange = { state.edit(i, r.copy(name = it)) },
-                    label = { Text(stringResource(R.string.drinks_name)) },
-                    singleLine = true,
+                    onChange = { state.edit(i, r.copy(name = it)) },
+                    placeholder = stringResource(R.string.drinks_name),
+                    enabled = !state.busy,
                     modifier = Modifier.weight(1f),
                 )
-                Spacer(Modifier.width(6.dp))
-                OutlinedTextField(
+                Spacer(Modifier.width(Rahal.space.xs))
+                RowField(
                     value = if (state.usd) r.usd else r.syp,
-                    onValueChange = { v ->
+                    onChange = { v ->
                         if (state.usd) {
                             state.edit(i, r.copy(usd = v.filter { c -> c.isDigit() || c == '.' || c == '٫' || c == ',' }.take(8)))
                         } else {
                             state.edit(i, r.copy(syp = v.filter { it.isDigit() }.take(9)))
                         }
                     },
-                    label = { Text(stringResource(if (state.usd) R.string.drinks_price_usd else R.string.drinks_price_syp)) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.width(110.dp),
+                    placeholder = "0",
+                    keyboard = if (state.usd) KeyboardType.Decimal else KeyboardType.Number,
+                    enabled = !state.busy,
+                    modifier = Modifier.width(DrinkPriceWidth),
                 )
-                RahalTextButton(onClick = { state.remove(i) }) { Text("×", color = Rahal.colors.danger) }
+                Spacer(Modifier.width(Rahal.space.xs))
+                IconButton(onClick = { state.remove(i) }, enabled = !state.busy, modifier = Modifier.size(TouchTarget)) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_trash),
+                        contentDescription = stringResource(R.string.drinks_delete),
+                        tint = Rahal.colors.danger,
+                    )
+                }
             }
         }
-        Spacer(Modifier.height(6.dp))
-        RahalOutlineButton(onClick = { state.add() }) { Text(stringResource(R.string.drinks_add)) }
-        if (state.error.isNotEmpty()) {
-            Spacer(Modifier.height(6.dp))
-            Text(state.error, color = Rahal.colors.danger, style = MaterialTheme.typography.bodySmall)
+        Spacer(Modifier.height(Rahal.space.sm))
+        RahalOutlineButton(onClick = { state.add() }, enabled = !state.busy) {
+            IconText(R.drawable.ic_plus, stringResource(R.string.drinks_add))
         }
-        Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            RahalButton(onClick = { state.submit() }, enabled = !state.busy) { Text(stringResource(R.string.drinks_save)) }
-            RahalTextButton(onClick = { state.close() }) { Text(stringResource(R.string.act_cancel)) }
-        }
+        ToolError(state.error)
+        Spacer(Modifier.height(Rahal.space.lg))
+        ToolActions(
+            primary = stringResource(R.string.act_save),
+            primaryEnabled = !state.busy,
+            onPrimary = { state.submit() },
+            cancelEnabled = !state.busy,
+            onCancel = { state.close() },
+        )
     }
 }
+
+/** **عرضُ حقل سعر المشروب** — كحقل سعر الخيار. */
+private val DrinkPriceWidth = 96.dp

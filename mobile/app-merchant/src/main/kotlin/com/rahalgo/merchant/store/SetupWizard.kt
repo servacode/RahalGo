@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,7 +27,17 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -69,8 +78,6 @@ import com.rahalgo.ui.Tone
 @Composable
 fun SetupWizard(
     vm: StoreViewModel,
-    onPickPoint: () -> Unit,
-    onAddItem: () -> Unit,
     onFinish: () -> Unit,
 ) {
     val steps = vm.wizardSteps ?: return
@@ -84,8 +91,8 @@ fun SetupWizard(
     ) {
         when {
             idx < 0 -> Welcome(steps) { vm.wizardIndex = 0 }
-            idx >= steps.size -> Ready(onAddItem = onAddItem, onFinish = onFinish)
-            else -> StepScreen(vm, steps, idx, onPickPoint)
+            idx >= steps.size -> Ready(onFinish = onFinish)
+            else -> StepScreen(vm, steps, idx)
         }
     }
 }
@@ -116,18 +123,19 @@ private fun Welcome(steps: List<SetupStep>, onStart: () -> Unit) {
                 .padding(start = Rahal.space.xl, end = Rahal.space.xl, top = Rahal.space.xxl, bottom = Rahal.space.xxl),
             verticalArrangement = Arrangement.spacedBy(Rahal.space.md),
         ) {
+            // **شعارُ رحّال غو لا أيقونةُ متجر** (ملاحظةُ المالك ١) — الرسميُّ نفسُه
+            // (`intro_logo` المولَّدُ من `mobile/brand/logo.png`) على أرضٍ بيضاء.
             Box(
                 Modifier
-                    .size(64.dp)
+                    .size(72.dp)
                     .clip(Rahal.shape.md)
-                    .background(Rahal.colors.accent),
+                    .background(Rahal.colors.canvas),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    painterResource(com.rahalgo.ui.R.drawable.ic_store),
+                androidx.compose.foundation.Image(
+                    painterResource(com.rahalgo.design.R.drawable.intro_logo),
                     contentDescription = null,
-                    tint = Rahal.colors.onLight,
-                    modifier = Modifier.size(34.dp),
+                    modifier = Modifier.size(60.dp),
                 )
             }
             Text(
@@ -199,14 +207,24 @@ private fun Welcome(steps: List<SetupStep>, onStart: () -> Unit) {
 // ── خطوةٌ واحدة ─────────────────────────────────────────────────────────
 
 @Composable
-private fun StepScreen(vm: StoreViewModel, steps: List<SetupStep>, idx: Int, onPickPoint: () -> Unit) {
+private fun StepScreen(
+    vm: StoreViewModel,
+    steps: List<SetupStep>,
+    idx: Int,
+) {
     val step = steps[idx]
     val advance = { vm.wizardIndex = idx + 1 }
     // **ما يفعله «التالي» وأيقبله الآن** — تردّه الخطوةُ نفسُها (`Column` مضمَّنٌ
     // فيُقرأ في المرور نفسِه، بلا حالٍ يُكتب أثناء الرسم).
     var next = StepNext(false) {}
 
-    Column(Modifier.fillMaxSize()) {
+    // **كلُّ سؤالٍ في بطاقةٍ بيضاءَ فوق أرضٍ رماديّةٍ فاتحة** (ملاحظةُ المالك ٢٠٢٦-١٠-٢٨) —
+    // **وشريطُ التقدّم و«السابق/التالي» خارجها.**
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(Rahal.colors.surface),
+    ) {
         // ── الرأس: «إعداد متجرك» · «الخطوة N من M» · شريطُ التقدّم ──
         Column(
             Modifier
@@ -247,15 +265,25 @@ private fun StepScreen(vm: StoreViewModel, steps: List<SetupStep>, idx: Int, onP
                 .weight(1f)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.md),
-            verticalArrangement = Arrangement.spacedBy(Rahal.space.md),
         ) {
-            next = when (step) {
-                SetupStep.Logo -> LogoStep(vm, advance)
-                SetupStep.Sections -> SectionsStep(vm, advance)
-                SetupStep.Address -> AddressStep(vm, onPickPoint, advance)
-                SetupStep.Hours -> HoursStep(vm, advance)
-                SetupStep.Settlement -> SettlementStep(vm, advance)
-                SetupStep.Returns -> ReturnsStep(vm, advance)
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .shadow(6.dp, Rahal.shape.lg)
+                    .clip(Rahal.shape.lg)
+                    .background(Rahal.colors.canvas)
+                    .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.lg)
+                    .padding(Rahal.space.lg),
+                verticalArrangement = Arrangement.spacedBy(Rahal.space.md),
+            ) {
+                next = when (step) {
+                    SetupStep.Logo -> LogoStep(vm, advance)
+                    SetupStep.Sections -> SectionsStep(vm, advance)
+                    SetupStep.Address -> AddressStep(vm, advance)
+                    SetupStep.Hours -> HoursStep(vm, advance)
+                    SetupStep.Settlement -> SettlementStep(vm, advance)
+                    SetupStep.Returns -> ReturnsStep(vm, advance)
+                }
             }
         }
         // ── «السابق» و«التالي» ──
@@ -327,7 +355,7 @@ private fun ColumnScope.LogoStep(vm: StoreViewModel, advance: () -> Unit): StepN
     return StepNext(true, if (has) null else R.string.wz_later, advance)
 }
 
-// ── ٢ · أقسامُ السوق ──
+// ── ٢ · أقسامُ السوق — شبكةٌ مرتّبة (ملاحظةُ المالك ٢) ──
 
 @Composable
 private fun SectionsStep(vm: StoreViewModel, advance: () -> Unit): StepNext {
@@ -341,35 +369,17 @@ private fun SectionsStep(vm: StoreViewModel, advance: () -> Unit): StepNext {
         Text(stringResource(R.string.wz_sections_none), color = Rahal.colors.danger)
         return next
     }
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
-        verticalArrangement = Arrangement.spacedBy(Rahal.space.sm),
-    ) {
-        vm.allSections.forEach { sec ->
-            val on = sec.id in picked
-            Text(
-                sec.name,
-                color = if (on) Rahal.colors.onBrand else Rahal.colors.ink,
-                fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier
-                    .clip(Rahal.shape.pill)
-                    .background(if (on) Rahal.colors.brand else Rahal.colors.canvas)
-                    .border(Rahal.stroke.hair, if (on) Rahal.colors.brand else Rahal.colors.line, Rahal.shape.pill)
-                    .clickable { picked = if (on) picked - sec.id else picked + sec.id }
-                    .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.md),
-            )
-        }
+    SectionGrid(all = vm.allSections, picked = picked.toSet()) { id ->
+        picked = if (id in picked) picked - id else picked + id
     }
     return next
 }
 
-// ── ٣ · العنوانُ والدبّوس ──
+// ── ٣ · العنوانُ والدبّوس — بخريطةٍ ظاهرة (ملاحظةُ المالك ٣) ──
 
 @Composable
 private fun AddressStep(
     vm: StoreViewModel,
-    onPickPoint: () -> Unit,
     advance: () -> Unit,
 ): StepNext {
     val store = vm.store ?: return StepNext(false) {}
@@ -394,42 +404,11 @@ private fun AddressStep(
         minLines = 2,
         modifier = Modifier.fillMaxWidth(),
     )
-    ChoiceRowAction(
-        title = stringResource(R.string.store_point),
-        status = stringResource(if (pointSet) R.string.store_point_set else R.string.store_point_none),
-        ok = pointSet,
-        action = stringResource(if (pointSet) R.string.store_point_change else R.string.store_point_pick),
-        onAction = onPickPoint,
-    )
+    StoreMapCard(vm, enabled = !vm.saving)
     return next
 }
 
-@Composable
-private fun ChoiceRowAction(title: String, status: String, ok: Boolean, action: String, onAction: () -> Unit) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clip(Rahal.shape.md)
-            .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
-            .clickable(onClick = onAction)
-            .padding(Rahal.space.md),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(painterResource(com.rahalgo.ui.R.drawable.ic_pin), contentDescription = null, tint = Rahal.colors.brand)
-        Spacer(Modifier.width(Rahal.space.md))
-        Column(Modifier.weight(1f)) {
-            Text(title, fontWeight = FontWeight.Bold)
-            Text(
-                status,
-                color = if (ok) Rahal.colors.success else Rahal.colors.danger,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-        Text(action, color = Rahal.colors.brand, fontWeight = FontWeight.Bold)
-    }
-}
-
-// ── ٤ · الدوام — يُختار صراحةً ──
+// ── ٤ · الدوام — يُختار صراحةً، والجمعةُ تُسأل (ملاحظتا المالك ٤ و٧) ──
 
 @Composable
 private fun HoursStep(vm: StoreViewModel, advance: () -> Unit): StepNext {
@@ -440,30 +419,11 @@ private fun HoursStep(vm: StoreViewModel, advance: () -> Unit): StepNext {
         LoadState(vm.loading, vm.error) { vm.load() }
         return StepNext(false) {}
     }
-    val firstOpen = sorted.firstOrNull { !it.closed }
     // **ولا اختيارَ افتراضيّاً لمن لم يضبط دوامَه** — يختار هو (قرارُ المالك).
-    var mode by rememberSaveable {
-        mutableStateOf(
-            when {
-                !store.hasHours -> ""
-                sorted.all { it.closed || it.isOpen24h } -> "24"
-                else -> "custom"
-            },
-        )
-    }
-    var allOpen by rememberSaveable { mutableStateOf(firstOpen?.takeIf { !it.isOpen24h }?.openTime?.take(5) ?: "09:00") }
-    var allClose by rememberSaveable { mutableStateOf(firstOpen?.takeIf { !it.isOpen24h }?.closeTime?.take(5) ?: "23:00") }
-    var draft by remember(sorted) {
-        mutableStateOf(
-            if (store.hasHours) sorted
-            else sorted.map { it.copy(closed = false, open24h = false, openTime = allOpen, closeTime = allClose) },
-        )
-    }
-    var showDays by rememberSaveable { mutableStateOf(false) }
+    val plan = remember(sorted, store.hasHours) { HoursPlan(sorted, store.hasHours) }
     var nightCheck by remember { mutableStateOf<List<DayHours>?>(null) }
-
-    val days: List<DayHours> = if (mode == "24") sorted.map { it.with24h(true) } else draft
-    val next = StepNext(mode.isNotEmpty()) {
+    val next = StepNext(plan.chosen) {
+        val days = plan.days()
         if (days.any { opensAtNight(it) }) nightCheck = days else vm.saveHours(days) { advance() }
     }
     nightCheck?.let { d ->
@@ -482,79 +442,39 @@ private fun HoursStep(vm: StoreViewModel, advance: () -> Unit): StepNext {
             },
         )
     }
-
     StepTitle(R.string.wz_hours_q, R.string.wz_hours_hint)
-    ChoiceCard(
-        title = stringResource(R.string.hours_open_24h),
-        sub = stringResource(R.string.wz_hours_24_sub),
-        selected = mode == "24",
-    ) { mode = "24" }
-    ChoiceCard(
-        title = stringResource(R.string.wz_hours_custom),
-        sub = stringResource(R.string.wz_hours_custom_sub),
-        selected = mode == "custom",
-    ) { mode = "custom" }
-    if (mode == "custom") {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(vertical = Rahal.space.xs),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(stringResource(R.string.wz_hours_all), fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-            TimeField(allOpen) { v ->
-                allOpen = v
-                draft = draft.map { it.copy(closed = false, open24h = false, openTime = v, closeTime = allClose) }
-            }
-            Text(
-                " ${stringResource(R.string.hours_to)} ",
-                color = Rahal.colors.inkMuted,
-            )
-            TimeField(allClose) { v ->
-                allClose = v
-                draft = draft.map { it.copy(closed = false, open24h = false, openTime = allOpen, closeTime = v) }
-            }
-        }
-        HorizontalDivider(color = Rahal.colors.line)
-        RahalTextButton(onClick = { showDays = !showDays }) {
-            Text(stringResource(if (showDays) R.string.wz_hours_hide_days else R.string.wz_hours_edit_day), fontWeight = FontWeight.Bold)
-        }
-        if (showDays) {
-            draft.forEachIndexed { i, d ->
-                if (i > 0) HorizontalDivider(color = Rahal.colors.line)
-                HoursRow(d = d) { changed ->
-                    draft = draft.map { if (it.dayOfWeek == changed.dayOfWeek) changed else it }
-                }
-            }
-        }
-    }
+    HoursPlanner(plan)
     return next
 }
 
-// ── ٥ · طريقةُ استلام الأموال ──
+// ── ٥ · طريقةُ استلام الأموال — بطاقتان بأيقونة (ملاحظةُ المالك ٥) ──
 
 @Composable
 private fun SettlementStep(vm: StoreViewModel, advance: () -> Unit): StepNext {
     val store = vm.store ?: return StepNext(false) {}
     var m by rememberSaveable { mutableStateOf(if (store.settlementConfirmed) store.settlementMethod else "") }
-    // **والمتجرُ يبدّلها بنفسه** (قرارُ المالك ٢٠٢٦-١٠-٠١، `POST .../settlement-method`) —
-    // **فيُختار هنا اختياراً لا عرضاً.**
+    // **والمتجرُ يبدّلها بنفسه** (قرارُ المالك ٢٠٢٦-١٠-٠١) — **فيُختار هنا اختياراً لا عرضاً.**
     val chosen = m
     StepTitle(R.string.wz_settlement_q, R.string.wz_settlement_hint)
-    ChoiceCard(
-        title = stringResource(R.string.store_settlement_cash),
-        sub = stringResource(R.string.wz_settlement_cash_sub),
-        selected = m == "cash",
-    ) { m = "cash" }
-    ChoiceCard(
-        title = stringResource(R.string.store_settlement_wallet),
-        sub = stringResource(R.string.wz_settlement_wallet_sub),
-        selected = m == "wallet",
-    ) { m = "wallet" }
+    Spacer(Modifier.height(Rahal.space.sm))
+    IconChoicePair(
+        first = IconChoice(
+            icon = R.drawable.ic_banknotes,
+            title = stringResource(R.string.wz_pay_cash),
+            sub = stringResource(R.string.wz_settlement_cash_sub),
+            selected = m == "cash",
+        ) { m = "cash" },
+        second = IconChoice(
+            icon = com.rahalgo.ui.R.drawable.ic_wallet,
+            title = stringResource(R.string.wz_pay_wallet),
+            sub = stringResource(R.string.wz_settlement_wallet_sub),
+            selected = m == "wallet",
+        ) { m = "wallet" },
+    )
     return StepNext(chosen.isNotEmpty()) { vm.setSettlementMethod(chosen) { advance() } }
 }
 
-// ── ٦ · ترجيعُ الغرض ──
+// ── ٦ · ترجيعُ الغرض — بالبطاقتين نفسيهما ──
 
 @Composable
 private fun ReturnsStep(vm: StoreViewModel, advance: () -> Unit): StepNext {
@@ -564,23 +484,43 @@ private fun ReturnsStep(vm: StoreViewModel, advance: () -> Unit): StepNext {
     }
     val chosen = pick
     StepTitle(R.string.wz_step_returns, R.string.wz_returns_hint)
-    ChoiceCard(
-        title = stringResource(R.string.yes),
-        sub = stringResource(R.string.wz_returns_yes_sub),
-        selected = pick == "yes",
-    ) { pick = "yes" }
-    ChoiceCard(
-        title = stringResource(R.string.no),
-        sub = stringResource(R.string.wz_returns_no_sub),
-        selected = pick == "no",
-    ) { pick = "no" }
+    Spacer(Modifier.height(Rahal.space.sm))
+    IconChoicePair(
+        first = IconChoice(
+            icon = R.drawable.ic_return,
+            title = stringResource(R.string.wz_returns_yes),
+            sub = stringResource(R.string.wz_returns_yes_sub),
+            selected = pick == "yes",
+        ) { pick = "yes" },
+        second = IconChoice(
+            icon = R.drawable.ic_block,
+            title = stringResource(R.string.wz_returns_no),
+            sub = stringResource(R.string.wz_returns_no_sub),
+            selected = pick == "no",
+        ) { pick = "no" },
+    )
     return StepNext(chosen.isNotEmpty()) { vm.setAcceptsReturns(chosen == "yes") { advance() } }
 }
 
 // ── «متجرك جاهز» ──
 
+/**
+ * **علامةُ صحٍّ كبيرةٌ تظهر بحركةٍ ثمّ يُفتح «متجري» وحدَه** (ملاحظةُ المالك ٢٠٢٦-١٠-٢٨) —
+ * **بلا أزرار**: لا قرارَ بقي ليُتّخذ هنا.
+ */
 @Composable
-private fun Ready(onAddItem: () -> Unit, onFinish: () -> Unit) {
+private fun Ready(onFinish: () -> Unit) {
+    val grow = remember { Animatable(0.4f) }
+    val fade = remember { Animatable(0f) }
+    val done by rememberUpdatedState(onFinish)
+    LaunchedEffect(Unit) {
+        launch { fade.animateTo(1f, tween(durationMillis = 350)) }
+        grow.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow))
+    }
+    LaunchedEffect(Unit) {
+        delay(READY_MS)
+        done()
+    }
     Column(
         Modifier
             .fillMaxSize()
@@ -592,16 +532,21 @@ private fun Ready(onAddItem: () -> Unit, onFinish: () -> Unit) {
     ) {
         Box(
             Modifier
-                .size(88.dp)
+                .size(128.dp)
+                .graphicsLayer {
+                    scaleX = grow.value
+                    scaleY = grow.value
+                    alpha = fade.value
+                }
                 .clip(Rahal.shape.pill)
-                .background(Rahal.colors.success.copy(alpha = 0.12f)),
+                .background(Rahal.colors.success),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
-                painterResource(com.rahalgo.ui.R.drawable.ic_store),
+                painterResource(R.drawable.ic_check),
                 contentDescription = null,
-                tint = Rahal.colors.success,
-                modifier = Modifier.size(44.dp),
+                tint = Rahal.colors.onBrand,
+                modifier = Modifier.size(72.dp),
             )
         }
         Spacer(Modifier.height(Rahal.space.xl))
@@ -611,27 +556,10 @@ private fun Ready(onAddItem: () -> Unit, onFinish: () -> Unit) {
             style = MaterialTheme.typography.headlineMedium,
             color = Rahal.colors.success,
             textAlign = TextAlign.Center,
+            modifier = Modifier.graphicsLayer { alpha = fade.value },
         )
-        Spacer(Modifier.height(Rahal.space.sm))
-        Text(
-            stringResource(R.string.wz_ready_body),
-            color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(Rahal.space.xxl))
-        RahalButton(
-            onClick = onAddItem,
-            tone = Tone.Accent,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-        ) {
-            Text(stringResource(R.string.wz_add_first), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-        }
-        Spacer(Modifier.height(Rahal.space.sm))
-        RahalTextButton(onClick = onFinish) {
-            Text(stringResource(R.string.wz_go_store), fontWeight = FontWeight.Bold)
-        }
     }
 }
+
+/** **كم تبقى شاشةُ «جاهز» قبل أن يُفتح «متجري».** */
+private const val READY_MS = 2_500L

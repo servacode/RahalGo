@@ -253,6 +253,8 @@ data class MenuItem(
     val approved: Boolean = true,
     @SerialName("review_note") val reviewNote: String = "",
     val modifiers: List<ModifierGroup> = emptyList(),
+    /** **«أضف مشروباتي»** (٢٠٢٦-١٠-٢٩) — قائمةُ مشروبات المتجر على هذا الصنف. ومحرّكٌ قديمٌ لا يرسله ⇒ نعم. */
+    @SerialName("store_drinks") val storeDrinks: Boolean = true,
 )
 
 /**
@@ -319,6 +321,8 @@ data class ItemInput(
      * الصنف كلَّها بضغطةٍ على «إيقاف مؤقت».**
      */
     val modifiers: List<ModifierGroup>? = null,
+    /** **«أضف مشروباتي»** (٢٠٢٦-١٠-٢٩) — و`null` بلا تغيير. */
+    @SerialName("store_drinks") val storeDrinks: Boolean? = null,
 )
 
 /**

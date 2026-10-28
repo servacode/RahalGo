@@ -614,6 +614,8 @@ data class MenuItem(
     @SerialName("merchant_price_usd") val merchantPriceUsd: Double? = null,
     /** **خياراتُه** — تُقرأ لتُعرض في المحرّر وتُعاد كما هي إن لم تُمسّ. */
     val modifiers: List<ModifierGroup> = emptyList(),
+    /** **«أضف مشروباتي»** (٢٠٢٦-١٠-٢٩) — قائمةُ مشروبات المتجر على هذا الصنف. ومحرّكٌ قديمٌ لا يرسله ⇒ نعم. */
+    @SerialName("store_drinks") val storeDrinks: Boolean = true,
 )
 
 @Serializable
@@ -860,6 +862,8 @@ data class MenuItemInput(
     /** **عملةُ الصنف** «SYP» أو «USD» (٢٠٢٦-١٠-١٢) — وبالدولار يُرسَل `price_usd`. */
     @SerialName("price_currency") val priceCurrency: String? = null,
     @SerialName("price_usd") val priceUsd: Double? = null,
+    /** **«أضف مشروباتي»** (٢٠٢٦-١٠-٢٩) — و`null` بلا تغيير. */
+    @SerialName("store_drinks") val storeDrinks: Boolean? = null,
 )
 
 /** **سعرُ صرف المتجر** — `PATCH /merchant/stores/{id}/exchange-rate`. */

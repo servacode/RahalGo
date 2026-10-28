@@ -27,7 +27,7 @@
 import { useRef, useState, type ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { Button } from "./components";
-import { ImageCropDialog } from "./ImageCrop";
+import { ImageCropDialog, LOGO_CROP_FRAMES, type CropFrame } from "./ImageCrop";
 import { IconAdd, IconDelete, IconLoading } from "./icons";
 
 const m = getMessages(defaultLocale);
@@ -63,6 +63,8 @@ export function ImageUpload({
   errorText,
   maxEdge,
   crop = false,
+  cropFrames = LOGO_CROP_FRAMES,
+  fit = false,
 }: {
   kind: MediaKind;
   label: string;
@@ -96,6 +98,10 @@ export function ImageUpload({
    * والناتجُ مربّعٌ JPEG بأطول ضلعٍ ١٦٠٠، فلا يمرّ بـ`maxEdge`.
    */
   crop?: boolean;
+  /** **إطاراتُ القصّ** — `ITEM_CROP_FRAMES` لصورة الصنف (كاملة افتراضاً)، والشعارُ مربّع. */
+  cropFrames?: CropFrame[];
+  /** **المعاينةُ كاملةً لا مقصوصة** — لصورة الصنف. */
+  fit?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(mediaUrl(initialUrl));
@@ -160,7 +166,7 @@ export function ImageUpload({
           ) : preview ? (
             // صور الوسائط ديناميكية من خادمنا — لا تمر بمحسّن Next
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={preview} alt="" loading="lazy" className="h-full w-full object-cover" />
+            <img src={preview} alt="" loading="lazy" className={`h-full w-full ${fit ? "object-contain" : "object-cover"}`} />
           ) : (
             <IconAdd size={24} />
           )}
@@ -206,6 +212,7 @@ export function ImageUpload({
       {cropping && (
         <ImageCropDialog
           file={cropping}
+          frames={cropFrames}
           onDone={(blob) => {
             setCropping(null);
             resetInput();

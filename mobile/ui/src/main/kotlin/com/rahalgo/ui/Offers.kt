@@ -4,6 +4,12 @@ import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.Color
+import androidx.compose.material3.Icon
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -157,131 +163,172 @@ fun OfferCard(
     amount: Long? = null,
     stopping: Boolean,
     onStop: () -> Unit,
-    /** **ينتهي متى** (٢٠٢٦-١٠-٠٩) — «ينتهي بعد ٥ ساعات» تحت السعر. وفارغٌ: لا يُقال. */
+    /** **ينتهي متى** — يُكتب في سطر المدّة. وفارغٌ: لا يُقال. */
     endsAt: String? = null,
+    /** **يبدأ متى** (٢٠٢٦-١٠-٢٩) — «من … إلى …». وفارغٌ: «حتّى …» وحدَها. */
+    startsAt: String? = null,
 ) {
     val ctx = LocalContext.current
     // ══════════════════════════════════════════════════════════════════
-    //  **وبطاقةٌ تُقرأ من بعيد — لا ثلاثةُ أسطرٍ رماديّة**
+    //  **بطاقةٌ احترافيّة** (طلبُ المالك ٢٠٢٦-١٠-٢٩: «إعادة تصميم كامل»)
     // ══════════════════════════════════════════════════════════════════
     //
-    // (طلبُ المالك ٢٠٢٦-٠٩-٣٠: «تصميم عروض المتجر يجب أن تكون أقوى
-    //  بصريّاً من العرض الحالي».)
-    //
-    // **وكانت سطرين بحجمٍ واحدٍ ولونٍ واحد**: اسمُ الصنف، ثمّ
-    // `قبل ← بعد · ٢٠٪` **كلُّه `bodySmall` رماديّ.** **فالخصمُ — وهو
-    // كلُّ سببِ وجود البطاقة — أصغرُ ما فيها**، والسعرُ الجديدُ لا
-    // يُميَّز عن القديم إلّا بسهمٍ بينهما.
-    //
-    // **وصارت:**
-    //   - **شارةُ خصمٍ ملوّنةٌ في رأس البطاقة** — «٢٠٪» أو «−٥٠٠» بلون
-    //     العلامة على أرضيّةٍ خفيفة، **تُقرأ قبل أن يُقرأ الاسم.**
-    //   - **والسعرُ الجديدُ بحجم العنوان** وبلون النجاح، **والقديمُ
-    //     صغيرٌ مشطوبٌ فوقه** — **لا سهمٌ بين رقمين متساويين.**
-    //   - **وسطرُ التوفير بالليرة** — **والمتجرُ يفهم «يوفّر ٥٠٠» أسرعَ
-    //     من «٢٠٪»**، وهو ما يقوله لزبونه.
-    //   - **وحدٌّ يمينيٌّ بلون الحال** — سارٍ بلون العلامة، ومنتهٍ
-    //     رماديّ: **فصفٌّ من عشرِ بطاقاتٍ يُفرَز بالعين بلا قراءة.**
+    // **شارةُ النوع** (٪ أو ل.س) ثمّ الاسمُ والخصم، **ورقاقةُ الحال بلونها**؛
+    // ثمّ السعرُ الجديدُ كبيراً والقديمُ مشطوباً، ثمّ سطرُ المدّة،
+    // ثمّ زرُّ الإيقاف حيث يُفيد. **بطاقةٌ بيضاءُ بحدٍّ رفيع** كبطاقات «متجري».
     val live = OfferStatus.discounting(status)
-    val edge = if (live) Rahal.colors.brand else Rahal.colors.inkMuted
+    val tint = if (live) Rahal.colors.brand else Rahal.colors.inkMuted
     val saved = (priceBefore - priceAfter).coerceAtLeast(0)
     Column(
         Modifier
             .fillMaxWidth()
             .clip(Rahal.shape.md)
             .background(Rahal.colors.canvas)
-            .border(Rahal.stroke.hair, edge.copy(alpha = 0.35f), Rahal.shape.md)
-            .padding(12.dp),
+            .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
+            .padding(Rahal.space.md),
     ) {
-        Row(
-            Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // **وشارةُ الخصم أوّلَ ما يقع عليه البصر.**
-            val badge = when {
-                percent != null -> percent.toString() + "٪−"
-                amount != null -> "−" + money(amount)
-                else -> ""
-            }
-            if (badge.isNotEmpty()) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier
+                    .size(OfferBadgeSize)
+                    .clip(Rahal.shape.sm)
+                    .background(tint.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center,
+            ) {
                 Text(
-                    text = badge,
-                    style = MaterialTheme.typography.titleSmall,
+                    stringResource(if (amount != null && percent == null) R.string.ow_unit_syp else R.string.ow_unit_percent),
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = if (live) Rahal.colors.brand else Rahal.colors.inkMuted,
-                    modifier = Modifier
-                        .clip(Rahal.shape.sm)
-                        .background(
-                            (if (live) Rahal.colors.brand else Rahal.colors.inkMuted)
-                                .copy(alpha = 0.12f),
-                        )
-                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                    color = tint,
                 )
-                Spacer(Modifier.width(8.dp))
             }
-            // **ولا قصّ** — الاختصارُ يقصّ نقاطَ ما تحت السطر وأوّلَ حرف (٢٠٢٦-١٠-١٤).
-            Text(
-                text = itemName,
-                fontWeight = FontWeight.Bold,
-                maxLines = 2,
-                overflow = TextOverflow.Visible,
-                modifier = Modifier.weight(1f),
-            )
-            // **والحالُ بلفظها لا برمزها** — **و«ساري» وحدَها بلون
-            // العلامة**: **فما يُنقص السعرَ الآن يُرى من بعيد.**
+            Spacer(Modifier.width(Rahal.space.sm))
+            Column(Modifier.weight(1f)) {
+                // **ولا قصّ** — الاختصارُ يقصّ نقاطَ ما تحت السطر وأوّلَ حرف (٢٠٢٦-١٠-١٤).
+                Text(
+                    text = itemName,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Rahal.colors.ink,
+                    maxLines = 2,
+                    overflow = TextOverflow.Visible,
+                )
+                val disc = when {
+                    percent != null -> stringResource(R.string.ow_disc_percent, percent.toString())
+                    amount != null -> stringResource(R.string.ow_disc_amount, money(amount))
+                    else -> ""
+                }
+                if (disc.isNotEmpty()) {
+                    Text(disc, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = tint)
+                }
+            }
+            Spacer(Modifier.width(Rahal.space.sm))
+            // **والحالُ بلفظها لا برمزها** — ولونُها يُفرز الصفَّ بالعين.
+            val tone = statusColor(status)
             Text(
                 text = OfferStatus.text(ctx, status),
-                style = MaterialTheme.typography.bodySmall,
-                color = if (live) Rahal.colors.accent else Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                color = tone,
+                maxLines = 1,
+                modifier = Modifier
+                    .clip(Rahal.shape.pill)
+                    .background(tone.copy(alpha = 0.12f))
+                    .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.xs),
             )
         }
 
-        Spacer(Modifier.height(8.dp))
-        Row(verticalAlignment = Alignment.Bottom) {
-            // **والسعرُ الجديدُ هو الرقم** — بحجم العنوان ولون النجاح.
+        Spacer(Modifier.height(Rahal.space.md))
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+            // **والسعرُ الجديدُ هو الرقم** — والقديمُ صغيرٌ مشطوب.
             Text(
                 text = money(priceAfter),
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = if (live) Rahal.colors.success else Rahal.colors.ink,
             )
-            Spacer(Modifier.width(8.dp))
-            // **والقديمُ مشطوبٌ صغيرٌ** — **ورقمان متساويان في الحجم
-            // يجعلان القارئَ يقارن بدل أن يرى.**
+            Spacer(Modifier.width(Rahal.space.sm))
             Text(
                 text = money(priceBefore),
                 style = MaterialTheme.typography.bodySmall,
                 color = Rahal.colors.inkMuted,
                 textDecoration = TextDecoration.LineThrough,
+                modifier = Modifier.weight(1f),
             )
-        }
-
-        // **وما يوفّره بالليرة** — **وهو ما يقوله المتجرُ لزبونه.**
-        //
-        // **والموقوفُ والمنتهي لا «يوفّران» شيئاً** (`OFFER-EXP`، رُئي على
-        // الجهاز): «يوفر ٧٥ ل.س» بجانب «موقوف» يُقرأ عرضاً سارياً.
-        if (saved > 0 && (live || status == OfferStatus.SCHEDULED)) {
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = stringResource(R.string.offer_saves, money(saved)),
-                style = MaterialTheme.typography.bodySmall,
-                color = if (live) Rahal.colors.success else Rahal.colors.inkMuted,
-            )
-        }
-        // **وزرُّ الإيقاف حيث يُفيد** — **ولا يُعرَض على منتهٍ.**
-        if (live && endsAt != null) {
-            remainingLabel(ctx, endsAt)?.let {
-                Spacer(Modifier.height(4.dp))
-                Text(it, style = MaterialTheme.typography.bodySmall, color = Rahal.colors.inkMuted)
+            // **والموقوفُ والمنتهي لا «يوفّران» شيئاً** (`OFFER-EXP`).
+            if (saved > 0 && (live || status == OfferStatus.SCHEDULED)) {
+                Text(
+                    text = stringResource(R.string.offer_saves, money(saved)),
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (live) Rahal.colors.success else Rahal.colors.inkMuted,
+                )
             }
         }
+
+        // **والمدّةُ من … إلى …** — بتوقيت دمشق كما أرسلها المحرّك.
+        val from = startsAt?.let { offerTime(it) }
+        val to = endsAt?.let { offerTime(it) }
+        val period = when {
+            from != null && to != null -> stringResource(R.string.ow_period_from_to, from, to)
+            to != null -> stringResource(R.string.ow_period_until, to)
+            else -> null
+        }
+        if (period != null) {
+            Spacer(Modifier.height(Rahal.space.sm))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    painterResource(R.drawable.ic_time),
+                    contentDescription = null,
+                    tint = Rahal.colors.inkMuted,
+                    modifier = Modifier.size(OfferIconSize),
+                )
+                Spacer(Modifier.width(Rahal.space.xs))
+                Text(period, style = MaterialTheme.typography.bodySmall, color = Rahal.colors.inkMuted)
+            }
+        }
+
+        // **وزرُّ الإيقاف حيث يُفيد** — **ولا يُعرَض على منتهٍ ولا موقوف.**
         if (OfferStatus.canStop(status)) {
-            Spacer(Modifier.height(6.dp))
-            RahalTextButton(onClick = onStop, enabled = !stopping) {
-                Text(stringResource(R.string.offer_stop), color = Rahal.colors.danger)
+            Spacer(Modifier.height(Rahal.space.md))
+            HorizontalDivider(color = Rahal.colors.line, thickness = Rahal.stroke.hair)
+            Spacer(Modifier.height(Rahal.space.sm))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                RahalOutlineButton(onClick = onStop, enabled = !stopping, tone = Tone.Danger) {
+                    Icon(
+                        painterResource(R.drawable.ic_power),
+                        contentDescription = null,
+                        modifier = Modifier.size(OfferIconSize),
+                    )
+                    Spacer(Modifier.width(Rahal.space.xs))
+                    Text(stringResource(R.string.ow_stop_do))
+                }
             }
         }
     }
+}
+
+/** **لونُ الحال** — فعّالٌ أخضر، مجدولٌ برتقاليّ، موقوفٌ أحمر، ومنتهٍ رماديّ. */
+@Composable
+private fun statusColor(status: String): Color = when (status) {
+    OfferStatus.ACTIVE -> Rahal.colors.success
+    OfferStatus.SCHEDULED -> Rahal.colors.accent
+    OfferStatus.STOPPED -> Rahal.colors.danger
+    else -> Rahal.colors.inkMuted
+}
+
+/** **شارةُ نوع الخصم** في رأس البطاقة. */
+private val OfferBadgeSize = 44.dp
+
+/** **أيقونةُ سطرٍ أو زرّ** داخل البطاقة. */
+private val OfferIconSize = 18.dp
+
+/** **لحظةٌ تُقرأ** — يومٌ وتاريخٌ وساعةٌ بتوقيت دمشق. */
+internal fun offerTime(iso: String): String? {
+    val t = runCatching { java.time.Instant.parse(iso) }.getOrNull() ?: return null
+    val fmt = java.time.format.DateTimeFormatter.ofPattern("EEEE d MMMM، h:mm a", java.util.Locale("ar"))
+        .withZone(java.time.ZoneId.of("Asia/Damascus"))
+    return fmt.format(t)
 }
 
 /**

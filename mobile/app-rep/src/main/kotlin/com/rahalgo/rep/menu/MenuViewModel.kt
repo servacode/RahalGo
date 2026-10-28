@@ -313,6 +313,7 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
             // **وعملتُه كما حُفظت** (٢٠٢٦-١٠-١٢).
             currency = item.priceCurrency,
             priceUsd = com.rahalgo.ui.menu.usdText(item.merchantPriceUsd),
+            storeDrinks = item.storeDrinks,
         )
         loadedDraft = editing
     }
@@ -470,6 +471,7 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                 .filter { it.name.isNotBlank() && it.options.isNotEmpty() },
             priceCurrency = d.currency,
             priceUsd = usd,
+            storeDrinks = d.storeDrinks,
         )
         // **ومفتاحُ المحاولة للإنشاء وحدَه** (`DUP-LEAD`) — يثبت حتّى ينجح
         // أو يحسمه الخادم، **فإعادةٌ بعد انقطاعٍ لا تُدرج صنفاً ثانياً.**

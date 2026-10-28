@@ -170,4 +170,10 @@ export {
   Smartphone as IconSmartphone,
   // **وإنقاصُ العدد في السلّة** — `IconTrendFlat` شرطةٌ لمعنًى آخر.
   Minus as IconMinus,
+  // **أدواتُ قصّ الصورة** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — إطارٌ لكلّ خيار.
+  RotateCw as IconRotate,
+  RefreshCcw as IconReset,
+  Image as IconFrameFull,
+  Square as IconFrameSquare,
+  RectangleVertical as IconFramePortrait,
 } from "lucide-react";

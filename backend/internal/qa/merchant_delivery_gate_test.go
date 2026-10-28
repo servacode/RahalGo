@@ -1,14 +1,13 @@
 package qa
 
-// **حمايةُ «لدي توصيلة»** — قرارا المالك ٢٠٢٦-١٠-٠١ (والثاني: «المهمّ سائقٌ بالدوام»).
+// **حمايةُ «لدي توصيلة»** — دوامُ المنصّة وحدَه (قرارُ المالك ٢٠٢٦-١٠-٢٩).
 //
-// (نصُّه: «لازم نحمي هي الخطوة إذا كانت المنصّة خارج أوقات العمل والسائقين
-//  خارج أوقات العمل أيضاً» · واختار: «سائقٌ بالدوام قريبٌ من المتجر».)
-//
-// **كانت التوصيلةُ تُرسَل والمنصّةُ موقوفةٌ والسائقون كلُّهم خارجَ الدوام.**
+// (نصُّه: «مادام المنصة بالدوام معناها في سائقين، إذا كانت خارج الدوام ما
+//  يقدر يرسل».) **وأُلغي شرطُ «سائقٍ بالدوام»** الذي قرّره ٢٠٢٦-١٠-٠١.
 
 import (
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 )
@@ -25,17 +24,32 @@ func mdgExpect(t *testing.T, h *Harness, m mdFx, code string) {
 	}
 }
 
-// TestMDG01_NoDriverOnShift **لا سائقَ بالدوام** ⇒ لا عرضَ سعرٍ ولا إنشاء.
-func TestMDG01_NoDriverOnShift(t *testing.T) {
+// TestMDG01_NoDriverOnShiftStillSends **لا سائقَ بالدوام والمنصّةُ بدوامها ⇒ تمرّ**
+// (قرارُ المالك ٢٠٢٦-١٠-٢٩ — كانت تُردّ بـ`no_drivers_on_shift`). والتوزيعُ ينتظر.
+func TestMDG01_NoDriverOnShiftStillSends(t *testing.T) {
 	h := New(t)
 	m := newMDFxBare(t, h, "منطقةُ MDG-01")
 	// **وسائقو الفحوص السابقة في القاعدة نفسِها خارجَ الدوام** — يُقاس هذا وحدَه.
 	if _, err := h.Pool.Exec(ctxBG(), `UPDATE users SET on_shift = false WHERE on_shift`); err != nil {
 		t.Fatal(err)
 	}
-	// **وسائقٌ عند المتجر خارجَ الدوام لا يُحسب.**
 	m.f.Driver(LocationAt(m.z.Lat, m.z.Lng, time.Now()))
-	mdgExpect(t, h, m, "no_drivers_on_shift")
+	mdgAllowed(t, h, m, "mdg01")
+}
+
+// TestMDG06_PlatformClosedHours **المنصّةُ خارجَ دوامها ⇒ لا عرضَ سعرٍ ولا إنشاء**
+// ولو كان سائقٌ بالدوام — **ومعه موعدُ الفتح.**
+func TestMDG06_PlatformClosedHours(t *testing.T) {
+	h := New(t)
+	m := newMDFxBare(t, h, "منطقةُ MDG-06")
+	mdDriverAtStore(t, h, m.f, m.fx.M.ID)
+	closedNow(t, h)
+	t.Cleanup(func() { ordersOpen(t, h) })
+	mdgExpect(t, h, m, "platform_closed_now")
+	q := h.GET(m.url("/delivery-quote"), m.fx.Tok)
+	if !strings.Contains(string(q.Body), "next_available_at") {
+		t.Fatalf("خارجَ الدوام بلا موعد فتح: %s", q.Body)
+	}
 }
 
 // mdgAllowed **تمرّ** — عرضُ السعر والإنشاء كلاهما.

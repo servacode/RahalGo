@@ -23,13 +23,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getMessages, defaultLocale, errorText, fmtNum } from "@rahalgo/i18n";
-import { Alert, Button, Checkbox, EmptyState, IconMoto, Input, LoadingState, Textarea } from "@rahalgo/ui";
-import { api } from "@/lib/api";
+import { Alert, Button, Checkbox, EmptyState, IconLocation, IconMoto, Input, LoadingState, Textarea } from "@rahalgo/ui";
+import { api, ApiError } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import { useStoreDeliveries } from "@/lib/store/deliveries";
 import type { DeliveryQuote } from "@/lib/store/types";
 import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
-import { fill } from "@/lib/customer/texts";
+import { backAt, fill } from "@/lib/customer/texts";
 import { DeliveryRow } from "@/components/store/DeliveryParts";
 
 const m = getMessages(defaultLocale);
@@ -39,6 +39,48 @@ const SLOT = "merchant_delivery";
 type Mode = "" | "send" | "fetch";
 type Payer = "" | "merchant" | "merchant_cash" | "recipient";
 type LinkState = "idle" | "checking" | "found" | "notFound";
+/** **«اطلب الموقع من المستلم»** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — حالُ الطلب في النموذج. */
+type AskState = "idle" | "sending" | "waiting" | "received" | "expired";
+type AskReq = { id: string; whatsapp_sent: boolean; link: string; share_text: string; wa_url: string };
+type AskStatus = { status: "pending" | "received" | "expired"; lat: number | null; lng: number | null; accuracy_m: number | null };
+
+/**
+ * **خارجَ دوام المنصّة** (قرارُ المالك ٢٠٢٦-١٠-٢٩: «مادام المنصة بالدوام معناها في
+ * سائقين، إذا كانت خارج الدوام ما يقدر يرسل») — **يُقال متى تفتح ولا زرَّ «أعد المحاولة»**.
+ */
+function closedText(e: unknown): string | null {
+  if (!(e instanceof ApiError)) return null;
+  const code = e.body?.code;
+  if (code !== "platform_closed_now" && code !== "temporarily_unavailable") return null;
+  if (code === "temporarily_unavailable") return errorText(e);
+  const d = (e.body?.details ?? {}) as { next_available_at?: string };
+  const time = backAt(d.next_available_at);
+  return time ? fill(D.closedAt, { time }) : D.closedPlain;
+}
+
+/** **دائرتا العملة بجانب خانة المبلغ** — المختارةُ مملوءةٌ بلون العلامة. */
+function CurrencyDots({ value, disabled, onPick }: { value: "SYP" | "USD"; disabled: boolean; onPick: (c: "SYP" | "USD") => void }) {
+  return (
+    <div className="flex shrink-0 gap-2" role="radiogroup" aria-label={D.collectAmount}>
+      {(["SYP", "USD"] as const).map((c) => (
+        <button
+          key={c}
+          type="button"
+          role="radio"
+          aria-checked={value === c}
+          aria-label={c === "SYP" ? D.currencySyp : D.currencyUsd}
+          disabled={disabled}
+          onClick={() => onPick(c)}
+          className={`flex h-11 w-11 items-center justify-center rounded-full border text-sm font-bold transition-colors ${
+            value === c ? "border-accent bg-accent text-on-bright" : "border-line bg-field text-ink hover:bg-row-hover"
+          }`}
+        >
+          {c === "SYP" ? m.common.currency : "$"}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function ModeButton({ on, title, sub, onClick, disabled }: { on: boolean; title: string; sub: string; onClick: () => void; disabled: boolean }) {
   return (
@@ -116,6 +158,15 @@ export default function DeliveryPage() {
   const [payer, setPayer] = useState<Payer>("");
   const [quote, setQuote] = useState<DeliveryQuote | null>(null);
   const [quoteError, setQuoteError] = useState("");
+  // **المنصّةُ خارجَ دوامها** — رسالةٌ بموعد الفتح بلا زرّ إعادة.
+  const [closed, setClosed] = useState(false);
+  // **موعدُ الفتح** — حين يحين يُعاد سؤالُ الأجرة فيزول المنع بلا تحديث صفحة.
+  const [closedUntil, setClosedUntil] = useState<number | null>(null);
+  const [ask, setAsk] = useState<AskState>("idle");
+  const [askReq, setAskReq] = useState<AskReq | null>(null);
+  const [askError, setAskError] = useState("");
+  const [askAcc, setAskAcc] = useState<number | null>(null);
+  const [copied, setCopied] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
@@ -137,6 +188,8 @@ export default function DeliveryPage() {
     async (p: { lat: number; lng: number } | null, md: Mode) => {
       setQuote(null);
       setQuoteError("");
+      setClosed(false);
+      setClosedUntil(null);
       if (!storeId) return;
       try {
         const q = await api<DeliveryQuote>(
@@ -146,7 +199,11 @@ export default function DeliveryPage() {
         setQuote(q);
         setPayer((cur) => (cur === "merchant" && !q.merchant_can_pay ? "" : cur));
       } catch (e) {
-        setQuoteError(errorText(e));
+        const c = closedText(e);
+        setClosed(c != null);
+        const at = e instanceof ApiError ? Date.parse(String(e.body?.details?.next_available_at ?? "")) : NaN;
+        setClosedUntil(c != null && !Number.isNaN(at) ? at : null);
+        setQuoteError(c ?? errorText(e));
       }
     },
     [storeId],
@@ -155,6 +212,13 @@ export default function DeliveryPage() {
   useEffect(() => {
     void fetchQuote(null, "");
   }, [fetchQuote]);
+
+  useEffect(() => {
+    if (!closed || closedUntil == null) return;
+    const wait = Math.min(Math.max(closedUntil - Date.now(), 0) + 2000, 2 ** 31 - 1);
+    const t = setTimeout(() => void fetchQuote(point, mode), wait);
+    return () => clearTimeout(t);
+  }, [closed, closedUntil, fetchQuote, point, mode]);
 
   function pickMode(md: Mode) {
     if (md === mode) return;
@@ -201,6 +265,79 @@ export default function DeliveryPage() {
         setLinkState("notFound");
       }
     }, 400);
+  }
+
+  /** **«لصق» بلمسة** — يقرأ الحافظةَ ويمرّرها لقارئ الرابط نفسِه. */
+  async function paste() {
+    setAskError("");
+    try {
+      const t = (await navigator.clipboard.readText()).trim();
+      if (!t) return;
+      if (ask === "received" && t.includes("http")) setAsk("idle");
+      onLink(t);
+    } catch {
+      setAskError(D.pasteFailed);
+    }
+  }
+
+  /** **«اطلب الموقع من المستلم»** — رسالةُ واتساب برابطٍ لصفحة «أرسل موقعي». */
+  async function askLocation() {
+    if (!storeId || ask === "sending") return;
+    setAskError("");
+    setCopied(false);
+    if (!phone.trim()) {
+      setAskError(D.askLocNeedPhone);
+      return;
+    }
+    setAsk("sending");
+    try {
+      const r = await api<AskReq>(`/api/v1/merchant/stores/${storeId}/location-requests`, {
+        method: "POST",
+        body: JSON.stringify({ phone: phone.trim(), mode: mode || "send" }),
+      });
+      setAskReq(r);
+      setAskAcc(null);
+      setAsk("waiting");
+    } catch (e) {
+      setAsk("idle");
+      setAskError(errorText(e));
+    }
+  }
+
+  // **ويُسأل كلَّ أربع ثوانٍ** ما دام الطلبُ ينتظر — وتصل النقطةُ إلى النموذج.
+  useEffect(() => {
+    if (ask !== "waiting" || !askReq) return;
+    const id = askReq.id;
+    const timer = setInterval(async () => {
+      try {
+        const st = await api<AskStatus>(`/api/v1/merchant/location-requests/${id}`);
+        if (st.status === "received" && st.lat != null && st.lng != null) {
+          const p = { lat: st.lat, lng: st.lng };
+          linkSeq.current++;
+          setLink("");
+          setLinkState("idle");
+          setPoint(p);
+          setAskAcc(st.accuracy_m);
+          setAsk("received");
+          void fetchQuote(p, mode);
+        } else if (st.status === "expired") {
+          setAsk("expired");
+        }
+      } catch {
+        /* **وتعثّرُ سؤالٍ واحدٍ لا يوقف الانتظار** — يُسأل بعد أربع ثوانٍ. */
+      }
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [ask, askReq, fetchQuote, mode]);
+
+  async function copyLink() {
+    if (!askReq) return;
+    try {
+      await navigator.clipboard.writeText(askReq.link);
+      setCopied(true);
+    } catch {
+      /* **ومتصفّحٌ يمنع النسخ** — زرُّ المشاركة باقٍ. */
+    }
   }
 
   const collectValue = collectOn
@@ -262,6 +399,9 @@ export default function DeliveryPage() {
       setLink("");
       setLinkState("idle");
       setPoint(null);
+      setAsk("idle");
+      setAskReq(null);
+      setAskAcc(null);
       void fetchQuote(null, "");
       void reload();
     } catch (e) {
@@ -331,12 +471,14 @@ export default function DeliveryPage() {
         <div className="flex items-center gap-3 rounded-card border border-danger-edge bg-danger-tint p-3">
           <IconMoto size={22} className="shrink-0 text-danger" />
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-bold text-danger">{D.blockedTitle}</p>
+            <p className="text-sm font-bold text-danger">{closed ? D.closedTitle : D.blockedTitle}</p>
             <p className="text-xs">{quoteError}</p>
           </div>
-          <Button variant="secondary" onClick={() => void fetchQuote(point, mode)}>
-            {m.common.retry}
-          </Button>
+          {!closed && (
+            <Button variant="secondary" onClick={() => void fetchQuote(point, mode)}>
+              {m.common.retry}
+            </Button>
+          )}
         </div>
       )}
 
@@ -394,17 +536,66 @@ export default function DeliveryPage() {
               touched();
             }}
           />
-          <div className="flex flex-col gap-1">
-            <Input
-              label={isFetch ? D.linkFetch : D.link}
-              placeholder={isFetch ? D.linkHintFetch : D.linkHint}
-              value={link}
-              disabled={busy}
-              dir="ltr"
-              inputMode="url"
-              autoComplete="off"
-              onChange={(e) => onLink(e.target.value)}
-            />
+          <div className="flex flex-col gap-2">
+            {/* **«اطلب الموقع من المستلم»** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — الطريقُ الأوّل، والرابطُ احتياط. */}
+            <Button
+              type="button"
+              variant="secondary"
+              className="flex w-full items-center justify-center gap-2"
+              disabled={busy || ask === "sending" || ask === "waiting"}
+              onClick={() => void askLocation()}
+            >
+              <IconLocation size={18} />
+              {ask === "sending" ? D.askLocSending : isFetch ? D.askLocFetch : D.askLoc}
+            </Button>
+            {ask === "waiting" && askReq && (
+              <div className="flex flex-col gap-2 rounded-control border border-line bg-field p-3">
+                <p className="text-xs text-ink-muted">{askReq.whatsapp_sent ? D.askLocWaiting : D.askLocNotSent}</p>
+                {!askReq.whatsapp_sent && (
+                  <div className="flex flex-wrap gap-3">
+                    <a
+                      className="text-sm font-bold text-accent"
+                      href={askReq.wa_url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {D.askLocShare}
+                    </a>
+                    <button type="button" className="text-sm font-bold text-accent" onClick={() => void copyLink()}>
+                      {copied ? D.askLocCopied : D.askLocCopy}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+            {ask === "received" && (
+              <div className="rounded-control border border-success-edge bg-success-tint p-3">
+                <p className="text-sm font-bold text-success">{isFetch ? D.askLocReceivedFetch : D.askLocReceived}</p>
+                {askAcc != null && <p className="text-xs">{fill(D.askLocAccuracy, { m: fmtNum(askAcc) })}</p>}
+              </div>
+            )}
+            {ask === "expired" && <p className="text-xs text-danger">{D.askLocExpired}</p>}
+            {askError && <p className="text-xs text-danger">{askError}</p>}
+            <div className="flex items-end gap-2">
+              <div className="min-w-0 flex-1">
+                <Input
+                  label={isFetch ? D.linkFetch : D.link}
+                  placeholder={isFetch ? D.linkHintFetch : D.linkHint}
+                  value={link}
+                  disabled={busy}
+                  dir="ltr"
+                  inputMode="url"
+                  autoComplete="off"
+                  onChange={(e) => {
+                    if (ask === "received" && e.target.value.includes("http")) setAsk("idle");
+                    onLink(e.target.value);
+                  }}
+                />
+              </div>
+              <Button type="button" variant="secondary" disabled={busy} onClick={() => void paste()}>
+                {D.paste}
+              </Button>
+            </div>
             <p className={`text-xs ${linkNote.cls}`}>{linkNote.text}</p>
           </div>
           <Textarea
@@ -444,28 +635,8 @@ export default function DeliveryPage() {
             }}
           />
           {collectOn && (
-            <div className="flex flex-col gap-2">
-              <div className="flex gap-2" role="radiogroup" aria-label={D.collectAmount}>
-                {(["SYP", "USD"] as const).map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    role="radio"
-                    aria-checked={currency === c}
-                    disabled={busy}
-                    onClick={() => {
-                      setCurrency(c);
-                      setCollectAmount("");
-                      touched();
-                    }}
-                    className={`rounded-control border px-4 py-2 text-sm font-bold ${
-                      currency === c ? "border-2 border-accent bg-accent-tint" : "border-line bg-field hover:bg-row-hover"
-                    }`}
-                  >
-                    {c === "SYP" ? D.currencySyp : D.currencyUsd}
-                  </button>
-                ))}
-              </div>
+            <div className="flex items-end gap-2">
+              <div className="min-w-0 flex-1">
               <Input
                 label={`${isFetch ? D.collectAmountFetch : D.collectAmount} (${currency === "USD" ? "$" : m.common.currency})`}
                 error={tried && collectValue == null ? D.required : undefined}
@@ -480,6 +651,17 @@ export default function DeliveryPage() {
                       ? raw.replace(/[^\d.,]/g, "").replace(",", ".").replace(/^(\d*\.?\d{0,2}).*$/, "$1").slice(0, 10)
                       : raw.replace(/\D/g, "").slice(0, 12),
                   );
+                  touched();
+                }}
+              />
+              </div>
+              <CurrencyDots
+                value={currency}
+                disabled={busy}
+                onPick={(c) => {
+                  if (c === currency) return;
+                  setCurrency(c);
+                  setCollectAmount("");
                   touched();
                 }}
               />

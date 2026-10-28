@@ -36,13 +36,13 @@ type mdFx struct {
 func newMDFx(t *testing.T, h *Harness, name string) mdFx {
 	t.Helper()
 	m := newMDFxBare(t, h, name)
-	// **وسائقٌ بالدوام عند المتجر** — لا توصيلةَ بلا سائقٍ قريب (قرارُ المالك
-	// ٢٠٢٦-١٠-٠١). وحرّاسُ غيابه في `merchant_delivery_gate_test.go`.
+	// **وسائقٌ بالدوام عند المتجر** — ليُقبل ويُوزَّع في الفحوص. **ولم يعُد شرطاً
+	// للإرسال** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — انظر `merchant_delivery_gate_test.go`.
 	mdDriverAtStore(t, h, m.f, m.fx.M.ID)
 	return m
 }
 
-// newMDFxBare **المتجرُ ومنطقتُه بلا سائق** — لحرّاس «لا سائقَ قريب».
+// newMDFxBare **المتجرُ ومنطقتُه بلا سائق** — لفحوص البوّابة.
 func newMDFxBare(t *testing.T, h *Harness, name string) mdFx {
 	t.Helper()
 	treasury(t, h)

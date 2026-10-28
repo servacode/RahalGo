@@ -14,10 +14,11 @@
  * «شغّال». **وتحتها «تسوّق كزبون»** لمن له الدوران، **و«خروج».**
  */
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { AccountSettings, Button, ButtonLink, IconBag, IconLogout, Switch } from "@rahalgo/ui";
-import { api, mediaUrl } from "@/lib/api";
+import { api, ApiError, mediaUrl } from "@/lib/api";
 import { hasRole, useAuth } from "@/lib/auth";
 import { useStoreOrders } from "@/lib/store/orders";
 import WebPushCard from "@/components/WebPushCard";
@@ -29,6 +30,16 @@ export default function StoreAccountPage() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const { soundEnabled, setSoundEnabled } = useStoreOrders();
+  // **شارةُ الدور** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — «صاحب المتجر» أو «موظف»، من ردّ المحرّك:
+  // بابُ الموظّفين يردّ الموظّفَ `staff_not_allowed` (كتطبيق المتجر `TeamAccess`).
+  const [role, setRole] = useState<"" | "owner" | "staff">("");
+  useEffect(() => {
+    api("/api/v1/merchant/staff")
+      .then(() => setRole("owner"))
+      .catch((e) => {
+        if (e instanceof ApiError && e.body.code === "staff_not_allowed") setRole("staff");
+      });
+  }, []);
   const out = () => {
     logout();
     router.replace("/login");
@@ -36,7 +47,18 @@ export default function StoreAccountPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="heading-page">{A.title}</h2>
+      <div className="flex flex-wrap items-center gap-3">
+        <h2 className="heading-page">{A.title}</h2>
+        {role && (
+          <span
+            className={`rounded-full px-3 py-1 text-xs font-bold ${
+              role === "owner" ? "bg-accent-tint text-accent" : "bg-field text-ink"
+            }`}
+          >
+            {role === "owner" ? A.roleOwner : A.roleStaff}
+          </span>
+        )}
+      </div>
 
       <section className="surface rounded-card p-4" aria-label={A.sound} data-testid="store-sound">
         <Switch
@@ -50,7 +72,7 @@ export default function StoreAccountPage() {
 
       <WebPushCard app="merchant" />
 
-      <AccountSettings api={api} mediaUrl={mediaUrl} phone={user?.phone} onDeleted={out} />
+      <AccountSettings api={api} mediaUrl={mediaUrl} phone={user?.phone} onDeleted={out} whatsapp={false} />
 
       {user && hasRole(user, "customer") && (
         <ButtonLink href="/shop" variant="secondary" className="flex items-center justify-center gap-2 py-3">

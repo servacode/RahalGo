@@ -57,6 +57,7 @@ export function AccountSettings({
   onDeleted,
   onVerified,
   onLogout,
+  whatsapp = true,
 }: {
   api: ApiFn;
   mediaUrl: (p: string | null | undefined) => string | null;
@@ -73,6 +74,11 @@ export function AccountSettings({
   onDeleted?: () => void;
   /** يُستدعى بعد توثيق واتساب — تفتح به الصفحات المقفلة بلا تحديث */
   onVerified?: () => void;
+  /**
+   * **أيُعرض توثيقُ الواتساب؟** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — لوحةُ المتجر تُخفيه:
+   * حسابُ المتجر تصله رسائلُ الواتساب أصلاً. وافتراضُه الإظهار.
+   */
+  whatsapp?: boolean;
 }) {
   const [avatar, setAvatar] = useState<string | null>(null);
   const [name, setName] = useState("");
@@ -459,6 +465,7 @@ export function AccountSettings({
           </form>
         )}
       
+        {whatsapp && (
         <div className="mt-4 border-t border-line-soft pt-4">
           <p className="mb-2 flex items-center gap-2 text-xs font-bold text-ink-muted">
             <IconWhatsApp className="h-4 w-4 text-primary" />
@@ -534,6 +541,7 @@ export function AccountSettings({
           </form>
         )}
       </div>
+        )}
       </Section>
 
       <section className="surface-lit surface !border-danger-edge p-4 sm:col-span-2 lg:col-span-3">

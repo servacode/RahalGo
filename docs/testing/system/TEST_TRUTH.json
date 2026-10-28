@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 591,
+    "routes": 595,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -34,7 +34,7 @@
     "behaviour_settings": 206,
     "order_fields": 120,
     "test_files": 672,
-    "test_funcs": 2595
+    "test_funcs": 2596
   },
   "flows": [
     {
@@ -18838,7 +18838,7 @@
       "orphan": true
     },
     {
-      "name": "TestMDG01_NoDriverOnShift",
+      "name": "TestMDG01_NoDriverOnShiftStillSends",
       "file": "internal/qa/merchant_delivery_gate_test.go",
       "package": "qa",
       "orphan": true
@@ -18863,6 +18863,12 @@
     },
     {
       "name": "TestMDG05_PlatformPaused",
+      "file": "internal/qa/merchant_delivery_gate_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMDG06_PlatformClosedHours",
       "file": "internal/qa/merchant_delivery_gate_test.go",
       "package": "qa",
       "orphan": true
