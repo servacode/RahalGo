@@ -1498,6 +1498,10 @@ func (s *Server) Router() http.Handler {
 			r.Get("/orders/{id}/transfer-candidates", s.handleTransferCandidates)
 			r.With(s.RequireCapability(authz.OrdersIntervene)).
 				Post("/orders/{id}/transition", s.handleOrderTransition)
+			// **«تصحيح: الطلب انلغى»** — تسليمٌ سُجّل خطأً (قرارُ المالك ٢٠٢٦-١٠-٢٨). للأدمن وحدَه
+			// والمحرّكُ يحرسه، ومسارُه مستقلٌّ عن الاسترجاع. انظر `orders/undeliver.go`.
+			r.With(s.RequireCapability(authz.OrdersIntervene)).
+				Post("/orders/{id}/undeliver", s.handleOrderUndeliver)
 			// **وعند باب الزبون الإدارةُ تُنهي** — السائقُ يُبلّغ ولا يُغلق
 			// (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢). انظر `door_resolution.go`.
 			r.With(s.RequireCapability(authz.OrdersIntervene)).

@@ -4439,6 +4439,32 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/undeliver",
+      "handler": "handleOrderUndeliver",
+      "auth": true,
+      "capability": "orders.intervene",
+      "request": [
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "order",
+          "type": "unknown"
+        },
+        {
+          "name": "result",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/admin/orders/{id}/waive-commission",
       "handler": "handleWaiveCommission",
       "auth": true,

@@ -188,7 +188,8 @@ func (s *Service) StatementPage(ctx context.Context, driverID string, limit, pag
 		       CASE WHEN o.id IS NULL THEN NULL ELSE COALESCE(o.commission_waived_reason, '') END,
 		       o.promo_delivery_waived
 		FROM driver_cash_entries e
-		LEFT JOIN orders o ON e.kind IN ('order_collection', 'commission_waived', 'recipient_cash_returned')
+		LEFT JOIN orders o ON e.kind IN ('order_collection', 'commission_waived', 'recipient_cash_returned',
+		                                 'collection_reversed')
 		                  AND o.id::text = e.ref
 		LEFT JOIN users cu ON cu.id = o.customer_id
 		WHERE e.driver_id = $1
@@ -319,6 +320,18 @@ func (s *Service) ReturnRecipientCashTx(ctx context.Context, q Querier, driverID
 	_, err := s.applyTx(ctx, q, driverID, -amount, "recipient_cash_returned", orderID,
 		"رجع النقد للمستلم — التوصيلة ما تمت", actorID)
 	return err
+}
+
+// ReverseCollectionTx **«تصحيح: الطلب انلغى»** (قرارُ المالك ٢٠٢٦-١٠-٢٨) — طلبٌ سُجّل تسليمُه
+// خطأً، فالسائقُ لم يقبض من الزبون شيئاً: سطرٌ سالبٌ بمرجع الطلب يقابل تحصيلَه.
+// **ولا يتجاوز ما في صندوقه اليوم** — يقرّره المنادي (`orders.UndeliverTx`). داخل معاملة المستدعي.
+func (s *Service) ReverseCollectionTx(ctx context.Context, q Querier, driverID string,
+	amount int64, orderID, actorID string) (int64, error) {
+	if amount <= 0 {
+		return 0, ErrOverSettle
+	}
+	return s.applyTx(ctx, q, driverID, -amount, "collection_reversed", orderID,
+		"إلغاءُ قبضِ طلبٍ سُجّل تسليمُه خطأً", &actorID)
 }
 
 // Settle تسليم الصندوق للمالية (كلياً أو جزئياً).

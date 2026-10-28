@@ -381,6 +381,52 @@ func (s *Server) handleOrderTransition(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, o)
 }
 
+// handleOrderUndeliver **«تصحيح: الطلب انلغى»** — قرارُ المالك ٢٠٢٦-١٠-٢٨.
+//
+// السائقُ ضغط «تم التسليم» خطأً والطلبُ أُلغي فعلاً: يصير ملغياً، ويُعكَس ما سجّله التسليمُ على
+// السائق والمندوب، ويبقى للمتجر ما قبضه (`orders.Undeliver`). **بابٌ مستقلٌّ لا انتقالٌ في
+// الخارطة** — فلا يبلغ مسارَ الاسترجاع الذي يردّ للزبون نقداً لم يدفعه. **والتدقيقُ في المعاملة.**
+func (s *Server) handleOrderUndeliver(w http.ResponseWriter, r *http.Request) {
+	oid := chi.URLParam(r, "id")
+	if !isUUID(oid) {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	req, err := decode[struct {
+		Reason string `json:"reason"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	reason := clip(strings.TrimSpace(req.Reason), 500)
+	o, res, err := s.orders.Undeliver(r.Context(), userIDFrom(r), rolesFrom(r), oid, reason,
+		func(ctx context.Context, q dbtx.Querier, res orders.UndeliverResult) error {
+			return s.auditTx(ctx, q, r, "ops.order_undeliver", "order", oid, map[string]any{
+				"reason": reason, "number": res.Number,
+				"box_reversed": res.BoxReversed, "box_handed_over": res.BoxHandedOver,
+				"driver_id": res.DriverID, "driver_reversed": res.DriverReversed, "driver_debt": res.DriverDebt,
+				"rep_id": res.RepID, "rep_reversed": res.RepReversed, "rep_debt": res.RepDebt,
+				"rep_held_forfeited": res.RepHeldForfeited,
+				"referral_reversed":  res.ReferralReversed, "referral_kept": res.ReferralKept,
+				"customer_refund": res.CustomerRefund, "drawer_out": res.DrawerOut,
+			})
+		})
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.touch("order", "ops")
+	s.touch("wallet", "ops")
+	if res.DriverID != "" {
+		s.touchUser(res.DriverID, "wallet")
+	}
+	if res.RepID != "" {
+		s.touchUser(res.RepID, "wallet")
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"order": o, "result": res})
+}
+
 func (s *Server) handleOrderAssign(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[struct {
 		DriverID string `json:"driver_id"`

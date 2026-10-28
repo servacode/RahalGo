@@ -1482,7 +1482,7 @@ func (s *Server) handleDriverCash(w http.ResponseWriter, r *http.Request) {
 		LEFT JOIN orders o ON o.id::text = e.ref
 		LEFT JOIN users cu ON cu.id = o.customer_id
 		-- تفصيل الطلب لسطور التحصيل والمحو وردّ نقد المستلم وحدها — كالكشف بلوحة الإدارة (cashbox.go).
-		LEFT JOIN orders od ON e.kind IN ('order_collection', 'commission_waived', 'recipient_cash_returned')
+		LEFT JOIN orders od ON e.kind IN ('order_collection', 'commission_waived', 'recipient_cash_returned', 'collection_reversed')
 		                   AND od.id::text = e.ref
 		WHERE e.driver_id = $1
 		ORDER BY e.id DESC LIMIT $2 OFFSET $3`, userIDFrom(r), pg.PerPage, pg.Offset)

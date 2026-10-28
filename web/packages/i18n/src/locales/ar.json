@@ -1172,14 +1172,19 @@
     "free_delivery_invalid": "تأكد إنو تاريخ النهاية بعد البداية، واختار شي واحد على الأقل يشمله العرض",
     "advance_not_eligible": "السلفة بس للموظفين والسائقين والمندوبين",
     "commission_waiver_reason_required": "اكتب سبب مسح العمولة",
-    "commission_waiver_not_delivered": "الطلب لسا ما انسلّم، ما فيك تمسح عمولته",
-    "commission_waiver_not_standard": "مسح العمولة بس للطلبات العادية من المتاجر",
-    "commission_waiver_no_commission": "هالطلب ما عليه عمولة",
-    "commission_already_waived": "عمولة هالطلب انمسحت من قبل",
-    "commission_waiver_not_driver_cash": "السائق ما قبض كاش هالطلب، فما في عمولة معه لتنمسح",
-    "commission_waiver_wallet_store": "هالمتجر بيقبض على المحفظة، والسائق ما دفعله وقت الاستلام، فما بينطبق هون",
-    "commission_waiver_driver_cash_short": "السائق سلّم المصاري للمكتب قبل، والكاش اللي معه أقل من العمولة",
-    "bulk_percent_invalid": "النسبة لازم تكون بين ‎-50 و100، وما تكون صفر",
+    "commission_waiver_not_delivered": "لم يُسلَّم الطلب بعد، لا يمكنك مسح عمولته",
+    "commission_waiver_not_standard": "مسح العمولة للطلبات العادية من المتاجر فقط",
+    "commission_waiver_no_commission": "لا توجد عمولة على هذا الطلب",
+    "commission_already_waived": "عمولة هذا الطلب مُسحت من قبل",
+    "commission_waiver_not_driver_cash": "لم يقبض السائق نقد هذا الطلب، فلا توجد عمولة معه لتُمسح",
+    "commission_waiver_wallet_store": "هذا المتجر يقبض عبر المحفظة، والسائق لم يدفع له وقت الاستلام، لذلك لا ينطبق هنا",
+    "commission_waiver_driver_cash_short": "سلّم السائق النقود للمكتب من قبل، والنقد الذي معه أقل من العمولة",
+    "undeliver_reason_required": "اكتب سبب التصحيح",
+    "undeliver_admin_only": "هذا التصحيح للأدمن فقط",
+    "undeliver_not_standard": "هذا التصحيح للطلبات العادية من المتاجر فقط",
+    "undeliver_not_delivered": "الطلب ليس مُسلَّماً، فلا يوجد ما يُصحَّح",
+    "undeliver_commission_waived": "عمولة هذا الطلب مُسحت من قبل، ولا يمكن تصحيحه بهذا الزر",
+    "bulk_percent_invalid": "يجب أن تكون النسبة بين ‎-50 و100، وألا تكون صفراً",
     "preset_invalid": "بيانات المجموعة ناقصة — اكتب الاسم وأسماء الخيارات"
   },
   "admin": {
@@ -1709,6 +1714,12 @@
       "storeCompHint": "يدفع من الخزينة إلى محفظة المتجر. اتركه فارغا إن لا تعويض.",
       "storeCompBad": "اكتب مبلغا صحيحا أو اتركه فارغا",
       "proofExceptionButton": "إذن تسليم بلا صورة",
+      "undeliverButton": "تصحيح: الطلب انلغى",
+      "undeliverTitle": "تصحيح: الطلب انلغى",
+      "undeliverHint": "للطلب الذي ضغط فيه السائق «تم التسليم» خطأً وقد أُلغي فعلاً. يصبح الطلب ملغياً، ويُلغى ما سُجّل على السائق والمندوب عند التسليم، ويبقى للمتجر ما قبضه.",
+      "undeliverReason": "السبب — إلزاميّ ويُسجَّل",
+      "undeliverConfirm": "تأكيد التصحيح",
+      "undeliverDone": "صُحّح الطلب وأصبح ملغياً",
       "proofExceptionTitle": "إذن استثناء إثبات التسليم",
       "proofExceptionHint": "للكاميرا المعطّلة فقط — يُسجَّل من أذن ولأيّ طلب ولماذا، ويلزمه تأكيد.",
       "proofExceptionReason": "السبب — إلزاميّ ويُسجَّل",
@@ -2707,7 +2718,8 @@
             "settle": "تسليم للمنصة",
             "adjust": "تعديل",
             "commission_waived": "مسح عمولة",
-            "recipient_cash_returned": "رجع نقد المستلم"
+            "recipient_cash_returned": "رجع نقد المستلم",
+            "collection_reversed": "إلغاء قبض طلب سُجّل تسليمه خطأً"
           },
           "stores": "متاجره",
           "clients": "عملاؤه",
@@ -4962,7 +4974,8 @@
         "admin.price_sync_config": "تعديل إعداد مزامنة الأمين",
         "admin.free_delivery_create": "إنشاء عرض توصيل مجاني",
         "admin.free_delivery_update": "تعديل عرض التوصيل المجاني",
-        "finance.commission_waived": "مسح عمولة طلب"
+        "finance.commission_waived": "مسح عمولة طلب",
+        "ops.order_undeliver": "تصحيح طلب سُجّل تسليمه خطأً"
       }
     },
     "dash": {
@@ -5529,7 +5542,8 @@
         "failed_order_driver": "خسارة طلب فشل بذنب السائق",
         "delivery_failed_recipient": "أجرة توصيلة فشلت بذنب المستلم",
         "waived_rep_commission": "عمولة مندوب من طلب انمسحت عمولته",
-        "refund_rep_share": "نصيب المندوب من طلب مسترجع"
+        "refund_rep_share": "نصيب المندوب من طلب مسترجع",
+        "undelivered_order": "أجر أو عمولة طلب سُجّل تسليمه خطأً ثم أُلغي"
       },
       "causeAll": "كل الأسباب",
       "methods": {
@@ -7878,7 +7892,8 @@
           "advance_return": "رجّعنا للسائق اللي دفعه للمتجر",
           "expense_cash_void": "إلغاء مصروف كاش",
           "owner_deposit": "إيداع من المالك",
-          "advance": "سلفة لموظف أو سائق أو مندوب"
+          "advance": "سلفة لموظف أو سائق أو مندوب",
+          "undelivered_return": "رددنا للسائق ما دفعه — طلب سُجّل تسليمه خطأً ثم أُلغي"
         },
         "statuses": {
           "pending": "ينتظر المراجعة",
@@ -9230,7 +9245,8 @@
         "order_collection": "قبضت من زبون",
         "settlement": "سلمت للمنصة",
         "commission_waived": "انمسحت العمولة",
-        "recipient_cash_returned": "رجعت النقد للمستلم"
+        "recipient_cash_returned": "رجعت النقد للمستلم",
+        "collection_reversed": "أُلغي قبض طلب سُجّل تسليمه خطأً"
       },
       "limit": "السقف",
       "remaining": "يبقى قبل السقف",

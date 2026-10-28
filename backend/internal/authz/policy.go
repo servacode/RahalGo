@@ -113,6 +113,7 @@ var adminPolicy = []Rule{
 
 	// ── الطلبات ─────────────────────────────────────────────────
 	{"POST", "/orders/{id}/transition", OrdersIntervene},
+	{"POST", "/orders/{id}/undeliver", OrdersIntervene},                  // «تصحيح: الطلب انلغى» — للأدمن وحدَه (٢٠٢٦-١٠-٢٨)
 	{"POST", "/orders/{id}/custom-quote", OrdersIntervene},               // تدخّلُ الأدمن على عرض المخصَّص — Batch 2a
 	{"POST", "/orders/{id}/items/{itemID}/unavailable", OrdersIntervene}, // صنفٌ غيرُ متوفّر (٢٠٢٦-١٠-١٥)
 	{"POST", "/orders/{id}/partner", OrdersIntervene},                    // ربطُ متجرٍ تابعٍ بالمشتريات (٢٠٢٦-١٠-١٥)

@@ -498,13 +498,16 @@ var All = []Check{
 			LEFT JOIN LATERAL (
 				SELECT sum(e.amount) AS cash FROM driver_cash_entries e
 				WHERE e.ref = o.id::text
-				  AND e.kind IN ('order_collection', 'commission_waived', 'recipient_cash_returned')
+				  AND e.kind IN ('order_collection', 'commission_waived', 'recipient_cash_returned',
+				                 'collection_reversed')
 			) c ON true
 			-- **وما لم يغطّه نقدُ الزبون سلفةٌ ردّها المكتبُ من الدرج** (advance_return)
 			-- — فالنقدُ المقابلُ للدفتر = المحصَّلُ ناقصَها.
+			-- **وتصحيحُ تسليمٍ سُجّل خطأً** (قرارُ المالك ٢٠٢٦-١٠-٢٨): يُعكَس التحصيلُ في الصندوق
+			-- (collection_reversed)، ويردّ الدرجُ باقيَ السلفة وما سلّمه السائقُ عنه (undelivered_return).
 			LEFT JOIN LATERAL (
 				SELECT sum(oc.amount) AS adv FROM office_cash_entries oc
-				WHERE oc.ref = o.id::text AND oc.source = 'advance_return'
+				WHERE oc.ref = o.id::text AND oc.source IN ('advance_return', 'undelivered_return')
 			) a ON true
 			-- **وطلبٌ في الطريق دفع سائقُه للمتجر ولم يُختم بعد** — المدفوعُ سلفةٌ
 			-- قائمةٌ بيده لا نقدٌ محصَّل؛ تُحسم عند الختام (تحصيلٌ أو ردُّ سلفة).
@@ -604,6 +607,9 @@ var All = []Check{
 		// **وسطرُ اقتطاع الدين ليس أجراً** (قرارُ المالك ٢٠٢٦-١٠-١٥): `offsetDriverDebt`
 		// يكتب `driver_earning` سالباً بمرجع الطلب ويوصله بسطر تسوية — **فيُستثنى**،
 		// والأجرُ المعتمَدُ يبقى ما قُيّد له.
+		//
+		// **وطلبٌ سُجّل تسليمُه خطأً ثمّ صُحّح إلى «ملغى»** (قرارُ المالك ٢٠٢٦-١٠-٢٨): أجرُه يُعكَس —
+		// **فالباقي منه = ما صار ديناً على السائق** (`undelivered_order`) لأنّ متاحَه لم يحتمله.
 		SQL: `
 			SELECT o.number, o.driver_fee, sum(t.amount)::bigint AS المقيَّد
 			FROM orders o
@@ -611,8 +617,12 @@ var All = []Check{
 			  ON t.ref = o.id::text AND t.kind = 'driver_earning'
 			 AND NOT EXISTS (SELECT 1 FROM obligation_settlements s WHERE s.ledger_tx_id = t.id)
 			WHERE o.kind <> 'custom'
-			GROUP BY o.number, o.driver_fee
-			HAVING sum(t.amount) <> o.driver_fee`,
+			GROUP BY o.id, o.number, o.driver_fee, o.status
+			HAVING sum(t.amount) <> CASE WHEN o.status = 'cancelled'
+			         THEN COALESCE((SELECT sum(f.amount) FROM financial_obligations f
+			                         WHERE f.order_id = o.id AND f.party_kind = 'driver'
+			                           AND f.cause = 'undelivered_order'), 0)
+			         ELSE o.driver_fee END`,
 	},
 
 	// ═══════════════════════════════════════════════════════════════════

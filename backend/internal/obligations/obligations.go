@@ -59,6 +59,9 @@ const (
 	// CauseWaivedRepCommission **نصيبُ المندوب من عمولةٍ مُحيت لأنّ المتجرَ لم يخصمها**
 	// (قرارُ المالك ٢٠٢٦-١٠-٢٦، هجرة `0475`) — ما عجزت محفظتُه عن عكسه. مصدرُه معرّفُ الطلب.
 	CauseWaivedRepCommission = "waived_rep_commission"
+	// CauseUndeliveredOrder **أجرُ سائقٍ أو عمولةُ مندوبٍ عن طلبٍ سُجّل تسليمُه خطأً ثمّ أُلغي**
+	// (قرارُ المالك ٢٠٢٦-١٠-٢٨، هجرة `0481`) — ما عجز متاحُه عن ردّه. مصدرُه معرّفُ الطلب.
+	CauseUndeliveredOrder = "undelivered_order"
 )
 
 // طرقُ التسوية — **وهي قيدُ `CHECK` في `obligation_settlements.method`** (هجرة `0340`).
@@ -90,6 +93,8 @@ var causeWords = map[string]string{
 	CauseRefundRepShare: "نصيب المندوب من طلب مسترجع",
 	// (قرارُ المالك ٢٠٢٦-١٠-٢٦.)
 	CauseWaivedRepCommission: "عمولة طلب ما استلمناها من المتجر",
+	// (قرارُ المالك ٢٠٢٦-١٠-٢٨.)
+	CauseUndeliveredOrder: "طلب سُجّل تسليمه خطأً ثم أُلغي",
 }
 
 // CauseWords السببُ بالعربيّ — ومجهولُه «دين».

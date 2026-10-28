@@ -674,6 +674,12 @@ private val CODES: Map<String, Int> = mapOf(
     "commission_waiver_not_driver_cash" to R.string.err_commission_waiver_not_driver_cash,
     "commission_waiver_wallet_store" to R.string.err_commission_waiver_wallet_store,
     "commission_waiver_driver_cash_short" to R.string.err_commission_waiver_driver_cash_short,
+    // **«تصحيح: الطلب انلغى»** (٢٠٢٦-١٠-٢٨) — بابُ لوحةٍ، والحارسُ يطلب نصَّه لأنّه في `orders`.
+    "undeliver_reason_required" to R.string.err_undeliver_reason_required,
+    "undeliver_admin_only" to R.string.err_undeliver_admin_only,
+    "undeliver_not_standard" to R.string.err_undeliver_not_standard,
+    "undeliver_not_delivered" to R.string.err_undeliver_not_delivered,
+    "undeliver_commission_waived" to R.string.err_undeliver_commission_waived,
 )
 
 /**

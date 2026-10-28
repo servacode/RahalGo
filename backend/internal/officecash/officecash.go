@@ -56,6 +56,9 @@ const (
 	// ٢٠٢٦-١٠-٢٦) — بمرجع طلب السلفة، ويقابلها قيدُ `advance` سالباً في محفظته.
 	// **وغيرُ `advance_return`** — تلك سلفةُ مدير المكتب للسائق عن طلب.
 	SourceAdvance = "advance"
+	// SourceUndeliveredReturn **خارجٌ: تصحيحُ طلبٍ سُجّل تسليمُه خطأً** (قرارُ المالك ٢٠٢٦-١٠-٢٨) —
+	// ما بقي من سلفةِ دفعِ المتجر يُردّ، ومعه ما سلّمه السائقُ للمكتب عن طلبٍ لم يقبض نقدَه.
+	SourceUndeliveredReturn = "undelivered_return"
 )
 
 // Sources كلُّ المصادر المعروفة واتّجاهُها — يقرؤها الحارسُ والشاشة.
@@ -73,6 +76,7 @@ var Sources = map[string]Direction{
 	SourceExpenseCashVoid:    In,
 	SourceOwnerDeposit:       In,
 	SourceAdvance:            Out,
+	SourceUndeliveredReturn:  Out,
 }
 
 // Entry سطرٌ واحدٌ في الصندوق.

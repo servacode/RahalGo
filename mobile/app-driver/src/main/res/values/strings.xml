@@ -426,8 +426,9 @@
     <!-- **ومِمَّن قبض باسمه** — والصفةُ أعلاه تبقى لقيدٍ بلا طلب. -->
     <string name="cash_from">قبضت من %1$s</string>
     <string name="cash_k_settlement">سلمت للمكتب</string>
-    <string name="cash_k_commission_waived">انمسحت العمولة — المتجر ما خصمها</string>
-    <string name="cash_k_recipient_cash_returned">رجعت النقد للمستلم — التوصيلة ما تمت</string>
+    <string name="cash_k_commission_waived">أُلغيت العمولة — لم يخصمها المتجر</string>
+    <string name="cash_k_recipient_cash_returned">أعدت النقد للمستلم — لم تتم التوصيلة</string>
+    <string name="cash_k_collection_reversed">أُلغي قبض طلب سُجّل تسليمه خطأً</string>
 
     <!-- أهدافي والمكافآت -->
 

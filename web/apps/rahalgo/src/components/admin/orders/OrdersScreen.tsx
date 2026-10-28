@@ -23,6 +23,7 @@ import {
   useLiveStatus,
   Button,
   Input,
+  Textarea,
   Chips,
   Badge,
   Modal,
@@ -2780,6 +2781,11 @@ function OrderActions({
   // **إذنُ استثناء إثبات التسليم — بيدِ العمليّات لا السائق** (٢٠٢٦-٠٩-٢٧).
   const [proofExcepting, setProofExcepting] = useState(false);
   /**
+   * **«تصحيح: الطلب انلغى»** (قرارُ المالك ٢٠٢٦-١٠-٢٨) — السائقُ ضغط «تم التسليم» خطأً والطلبُ
+   * أُلغي فعلاً. للأدمن وحدَه، بسببٍ إلزاميّ، **والخادمُ يقرّر المالَ كلَّه** (`orders/undeliver.go`).
+   */
+  const [undelivering, setUndelivering] = useState(false);
+  /**
    * **تعديلُ عرض الطلب الخاصّ** — نموذجٌ يُملأ، ثمّ مراجعةٌ تُؤكَّد قبل الإرسال.
    *
    * **خطوتان لا واحدة** (قرارٌ ٣): يفتح الزرُّ النموذجَ فتُملأ الأرقام،
@@ -3036,6 +3042,33 @@ function OrderActions({
     }
   }
 
+  async function submitUndeliver() {
+    if (reason.trim() === "") {
+      setErr(BOARD.reasonMissing);
+      return;
+    }
+    setBusy("undeliver");
+    setErr("");
+    try {
+      await api(`/api/v1/admin/orders/${o.id}/undeliver`, {
+        method: "POST",
+        body: JSON.stringify({ reason: reason.trim() }),
+      });
+      setUndelivering(false);
+      setReason("");
+      setNotice(m.admin.ordersPage.undeliverDone);
+      onChanged();
+    } catch (e) {
+      setErr(
+        e instanceof ApiError
+          ? translateKey(e.body.message_key)
+          : m.errors.internal,
+      );
+    } finally {
+      setBusy("");
+    }
+  }
+
   async function go(to: string, note: string) {
     // **وما يلزمه سببٌ لا يُرسَل بلا سبب** (المشكلة ٣٣) — يُقال لا يُبتلع.
     if ((DESTRUCTIVE.has(to) || releasing) && note.trim() === "") {
@@ -3096,6 +3129,43 @@ function OrderActions({
             setErr("");
           }}
           saveLabel={m.common.confirm}
+        />
+      </div>
+    );
+  }
+
+  if (undelivering) {
+    return (
+      <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
+        <p className="text-xs font-medium text-danger">
+          {m.admin.ordersPage.undeliverTitle}
+        </p>
+        <p className="text-xs text-ink-muted">
+          {m.admin.ordersPage.undeliverHint}
+        </p>
+        <Textarea
+          id={`undeliver-${o.id}`}
+          autoFocus
+          autoGrow
+          rows={2}
+          value={reason}
+          onChange={(e) => {
+            setReason(e.target.value);
+            setErr("");
+          }}
+          placeholder={m.admin.ordersPage.undeliverReason}
+        />
+        {err && <p className="text-xs text-danger">{err}</p>}
+        <FormActions
+          busy={busy !== ""}
+          onSave={() => void submitUndeliver()}
+          onCancel={() => {
+            setUndelivering(false);
+            setReason("");
+            setErr("");
+          }}
+          saveLabel={m.admin.ordersPage.undeliverConfirm}
+          tone="danger"
         />
       </div>
     );
@@ -3386,6 +3456,21 @@ function OrderActions({
           </Button>
         );
       })}
+      {/* **«تصحيح: الطلب انلغى»** — بجانب «استرجاع»، للأدمن وحدَه وعلى الطلب العاديّ المسلَّم
+          (قرارُ المالك ٢٠٢٦-١٠-٢٨). الخاصُّ و«لدي توصيلة» يردّهما الخادم. */}
+      {canIntervene && isAdmin && o.status === "delivered" && o.kind === "standard" && (
+        <Button
+          variant="danger"
+          disabled={busy !== ""}
+          onClick={() => {
+            setReason("");
+            setErr("");
+            setUndelivering(true);
+          }}
+        >
+          {m.admin.ordersPage.undeliverButton}
+        </Button>
+      )}
       {notice && (
         <span className="rounded-control bg-success-tint px-2.5 py-1 text-xs text-success">
           {notice}

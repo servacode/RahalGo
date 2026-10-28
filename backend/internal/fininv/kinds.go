@@ -60,7 +60,7 @@ var Kinds = map[string]KindContract{
 	},
 	"refund": {
 		Kind: "refund", Sign: "+", RefRequired: true, RefTarget: "orders",
-		Creators:   []string{"internal/orders/transitions.go:659", "internal/orders/transitions.go:739"},
+		Creators:   []string{"internal/orders/transitions.go:659", "internal/orders/transitions.go:739", "internal/orders/undeliver.go"},
 		Path:       "انتقالُ حالةٍ إلى نهايةٍ غيرِ التسليم",
 		Semantics:  "ردُّ ما دفعه الزبون — **من المحفظة قبل التسليم، وكاملُ المبلغ بعده.**",
 		Invariants: []string{"FI-01.d", "FI-05.g", "FI-06.a"},
@@ -80,7 +80,7 @@ var Kinds = map[string]KindContract{
 	},
 	"commission": {
 		Kind: "commission", Sign: "±", RefRequired: true, RefTarget: "orders",
-		Creators:   []string{"internal/orders/transitions.go:988", "internal/orders/commission_waiver.go"},
+		Creators:   []string{"internal/orders/transitions.go:988", "internal/orders/commission_waiver.go", "internal/orders/undeliver.go"},
 		Path:       "تسويةُ التسليم · وPOST /admin/orders/{id}/waive-commission",
 		Semantics:  "نصيبُ المندوبِ من هامشِ طلبٍ سُلّم لمتجرٍ فعّله — **والسالبُ اقتطاعُ دَينٍ أو عكسُ نصيبه من عمولةٍ محيت** (٢٠٢٦-١٠-٢٦).",
 		Invariants: []string{"FI-01.d", "FI-05.e", "FI-06.a", "FI-09.a"},
@@ -105,7 +105,7 @@ var Kinds = map[string]KindContract{
 		// **والسالبُ تصحيحٌ بالمرجع نفسِه** (0434: ثمنُ بضاعةِ مشترياتٍ قديمةٍ يعود للمنصّة)،
 		// **أو اقتطاعُ دين السائق من أجره** (`offsetDriverDebt`، قرارُ المالك ٢٠٢٦-١٠-١٥).
 		Kind: "driver_earning", Sign: "±", RefRequired: true, RefTarget: "orders",
-		Creators:   []string{"internal/orders/transitions.go:1236", "internal/orders/custom.go:282"},
+		Creators:   []string{"internal/orders/transitions.go:1236", "internal/orders/custom.go:282", "internal/orders/undeliver.go"},
 		Path:       "تسويةُ التسليم",
 		Semantics:  "أجرُ توصيلِ طلبٍ سُلّم — **وهو أجرةُ الطلبِ المحفوظةُ لا إعدادٌ حيّ.**",
 		Invariants: []string{"FI-01.d", "FI-05.f", "FI-06.c", "FI-13.e"},
@@ -203,6 +203,7 @@ var Kinds = map[string]KindContract{
 		Creators: []string{
 			"internal/incentives/incentives.go:277", "internal/incentives/target.go:237",
 			"internal/referrals/referrals.go:314", "internal/referrals/referrals.go:443",
+			"internal/orders/undeliver.go", // عكسُ مكافأةِ دعوةٍ عن طلبٍ سُجّل تسليمُه خطأً (٢٠٢٦-١٠-٢٨)
 		},
 		Path:      "POST /admin/users/{id}/incentive · وبلوغُ هدفٍ · ودعوةٌ ومنحةُ حسابٍ جديد",
 		Semantics: "مكافأةٌ تخرج من الخزينة إلى مستحقّها — **والسالبُ وجهُها في الخزينة.**",
