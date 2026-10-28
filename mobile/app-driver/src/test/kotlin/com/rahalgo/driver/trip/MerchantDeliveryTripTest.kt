@@ -119,6 +119,6 @@ class MerchantDeliveryTripTest {
         ).first { it.exists() }.readText(Charsets.UTF_8)
         val text = Regex("""<string name="trip_collect_for_store_fetch">(.*?)</string>""")
             .find(xml)?.groupValues?.get(1)
-        assertEquals("ادفع بمكان الاستلام %1\$s من جيبك، واقبضه من المتجر لما توصل", text)
+        assertEquals("ادفع في مكان الاستلام %1\$s من جيبك، واقبضه من المتجر عند وصولك", text)
     }
 }

@@ -144,6 +144,8 @@ export interface ModifierOption {
   price_delta_usd?: number | null;
   /** **خيارٌ خلصان** (مقاس ٤٢ مثلاً) — والصنفُ يبقى متوفّراً. غيابُه يعني متوفّر. */
   available?: boolean;
+  /** **وزنُ الخيار بالغرام** لمجموعة «حسب الوزن» (٢٠٢٦-١٠-٢٨). */
+  grams?: number | null;
 }
 
 export interface ModifierGroup {
@@ -152,6 +154,10 @@ export interface ModifierGroup {
   min_select: number;
   max_select: number;
   options: ModifierOption[];
+  /** **طريقةُ السعر** «priced» «none» «weight» — انظر `optionModes.ts`. */
+  price_mode?: string;
+  /** الوزنُ الذي يخصّه سعرُ الصنف — لـ«weight» وحدَها. */
+  base_grams?: number | null;
 }
 
 /**
@@ -163,11 +169,13 @@ export interface OptionPreset {
   name: string;
   min_select: number;
   max_select: number;
-  options: { name: string; price_delta: number }[];
+  options: { name: string; price_delta: number; grams?: number | null }[];
   sort_order: number;
   active: boolean;
   category_ids?: string[];
   chosen?: boolean;
+  /** «priced» «none» «weight» — تحدّدها اللوحة (٢٠٢٦-١٠-٢٨). */
+  price_mode?: string;
 }
 
 /** **ردُّ خيارات المتجر** — و`custom=false` يعني «ماشي على تصنيفه». */

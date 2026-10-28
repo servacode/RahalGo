@@ -47,25 +47,25 @@ func TestOptionPresets_CategoryThenStoreChoice(t *testing.T) {
 		t.Fatalf("القراءة: %s", r)
 	}
 	chosen := presetNames(r, true)
-	if !chosen["الحجم"] || !chosen["الإضافات"] || chosen["النمرة"] || r.JSON()["custom"] != false {
+	if !chosen["الحجم"] || !chosen["الإضافات"] || chosen["نمرة رجالي"] || r.JSON()["custom"] != false {
 		t.Fatalf("المطعمُ يرى خياراتِ تصنيفه وحدَها: %v", chosen)
 	}
-	if all := presetNames(r, false); !all["النمرة"] || !all["المقاس"] {
+	if all := presetNames(r, false); !all["نمرة رجالي"] || !all["المقاس"] {
 		t.Fatalf("والقائمةُ الكاملةُ تصله ليختار منها: %v", all)
 	}
 
-	shoe := presetID(r, "النمرة")
+	shoe := presetID(r, "نمرة رجالي")
 	r = h.Call("PUT", path, m.Owner.Token, map[string]any{"preset_ids": []string{shoe}}, nil)
 	if r.Code != 200 {
 		t.Fatalf("الحفظ: %s", r)
 	}
 	chosen = presetNames(r, true)
-	if len(chosen) != 1 || !chosen["النمرة"] || r.JSON()["custom"] != true {
+	if len(chosen) != 1 || !chosen["نمرة رجالي"] || r.JSON()["custom"] != true {
 		t.Fatalf("اختيارُه يعلو على تصنيفه: %v", chosen)
 	}
 
 	r = h.Call("PUT", path, m.Owner.Token, map[string]any{"reset": true}, nil)
-	if chosen = presetNames(r, true); !chosen["الحجم"] || chosen["النمرة"] {
+	if chosen = presetNames(r, true); !chosen["الحجم"] || chosen["نمرة رجالي"] {
 		t.Fatalf("والإرجاعُ يعيده إلى تصنيفه: %v", chosen)
 	}
 

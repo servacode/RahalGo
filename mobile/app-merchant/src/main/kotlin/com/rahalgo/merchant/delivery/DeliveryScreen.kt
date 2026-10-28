@@ -406,6 +406,38 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
     Screen {
         ScreenTitle(stringResource(R.string.md_title), stringResource(R.string.md_hint))
 
+        // ══════════════════════════════════════════════════════════════
+        // **توصيلةٌ جارية — شريطٌ فوق النموذج بزرّ «تابعها»** (التصميمُ المعتمد ٢٠٢٦-١٠-٢٨)
+        // ══════════════════════════════════════════════════════════════
+        vm.list?.firstOrNull { toneOf(it.status) == Tone.Waiting || toneOf(it.status) == Tone.Moving }?.let { live ->
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(Rahal.shape.md)
+                    .background(Rahal.colors.brand.copy(alpha = 0.10f))
+                    .clickable { tracking = live.id }
+                    .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    painterResource(com.rahalgo.ui.R.drawable.ic_moto),
+                    contentDescription = null,
+                    tint = Rahal.colors.brand,
+                )
+                Spacer(Modifier.width(Rahal.space.sm))
+                Text(
+                    stringResource(R.string.md_active, live.number, deliveryStatusText(live.status)),
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Rahal.colors.ink,
+                )
+                RahalTextButton(onClick = { tracking = live.id }) {
+                    Text(stringResource(R.string.md_follow), fontWeight = FontWeight.Bold)
+                }
+            }
+            Spacer(Modifier.height(Rahal.space.xs))
+        }
+
         // **وما يمنع الإرسالَ يُقال أوّلَ الشاشة** — المنصّةُ خارجَ دوامها أو لا
         // سائقَ قريب (قرارُ المالك ٢٠٢٦-١٠-٠١) — **لا بعد ملء النموذج كلِّه.**
         if (vm.quoteError.isNotEmpty()) {
@@ -499,6 +531,7 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
 
         Spacer(Modifier.height(8.dp))
         OutlinedTextField(
+            shape = Rahal.shape.md,
             value = vm.name,
             onValueChange = { vm.name = it; vm.touched() },
             label = { Text(stringResource(if (fetch) R.string.md_name_fetch else R.string.md_name)) },
@@ -518,6 +551,7 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
         )
         Spacer(Modifier.height(8.dp))
         OutlinedTextField(
+            shape = Rahal.shape.md,
             value = vm.address,
             onValueChange = { vm.address = it; vm.touched() },
             label = { Text(stringResource(if (fetch) R.string.md_address_fetch else R.string.md_address)) },
@@ -530,6 +564,7 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
         // ── موقعُ المستلِم: رابطٌ يُلصق، والخريطةُ احتياط (٢٠٢٦-١٠-٠٨) ──
         Spacer(Modifier.height(8.dp))
         OutlinedTextField(
+            shape = Rahal.shape.md,
             value = vm.link,
             onValueChange = { vm.onLink(it) },
             label = { Text(stringResource(if (fetch) R.string.md_link_fetch else R.string.md_link)) },
@@ -567,6 +602,7 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
 
         Spacer(Modifier.height(8.dp))
         OutlinedTextField(
+            shape = Rahal.shape.md,
             value = vm.parcel,
             onValueChange = { vm.parcel = it.take(200); vm.touched() },
             // **«يجيب» لا «يوصّل» في الإحضار** — السائقُ يأتي بالغرض إلى المتجر.
@@ -578,6 +614,7 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
         )
         Spacer(Modifier.height(8.dp))
         OutlinedTextField(
+            shape = Rahal.shape.md,
             value = vm.driverNote,
             onValueChange = { vm.driverNote = it.take(200); vm.touched() },
             label = { Text(stringResource(R.string.md_driver_note)) },
@@ -617,6 +654,7 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
             Spacer(Modifier.height(6.dp))
             val usd = isUsd(vm.collectCurrency)
             OutlinedTextField(
+                shape = Rahal.shape.md,
                 value = vm.collectAmount,
                 onValueChange = { v -> vm.onCollectAmount(v) },
                 isError = tried && vm.collectValue == null,
@@ -792,9 +830,16 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
                 }
             },
             enabled = !vm.busy && !blocked && vm.storeId.isNotEmpty(),
-            modifier = Modifier.fillMaxWidth(),
+            // **زرٌّ كبيرٌ بعرض الشاشة** (التصميمُ المعتمد ٢٠٢٦-١٠-٢٨).
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
         ) {
-            Text(stringResource(if (vm.busy) R.string.md_sending else R.string.md_send))
+            Text(
+                stringResource(if (vm.busy) R.string.md_sending else R.string.md_send),
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium,
+            )
         }
         RecentDeliveries(vm) { tracking = it }
         Spacer(Modifier.height(24.dp))

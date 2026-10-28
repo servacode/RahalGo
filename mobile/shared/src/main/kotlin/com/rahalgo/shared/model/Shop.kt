@@ -215,6 +215,11 @@ data class ModifierGroup(
     @SerialName("min_select") val minSelect: Int = 0,
     @SerialName("max_select") val maxSelect: Int = 1,
     val options: List<ModifierOption> = emptyList(),
+    /**
+     * **طريقةُ السعر** (٢٠٢٦-١٠-٢٨): «weight» يُعرض فيها سعرُ كلّ وزنٍ كاملاً
+     * لا «+فرق»، و«none» بلا سعر. وغيابُه (محرّكٌ قديم) «priced».
+     */
+    @SerialName("price_mode") val priceMode: String = "priced",
 )
 
 /** **خيارٌ واحدٌ وفرقُ سعره** — والفرقُ يُضاف إلى ثمن الصنف. */
@@ -226,6 +231,8 @@ data class ModifierOption(
     val available: Boolean = true,
     /** **فرقُ الإضافة بالدولار** لمتجرٍ يعرض بالدولار (٢٠٢٦-١٠-١٢) — والدفعُ بالليرة. */
     @SerialName("price_delta_usd") val priceDeltaUsd: Double? = null,
+    /** **وزنُ الخيار بالغرام** لمجموعة «حسب الوزن». */
+    val grams: Int? = null,
 )
 
 /** **صنفٌ بتفصيله** — هو وخياراتُه معاً في نداءٍ واحد. */

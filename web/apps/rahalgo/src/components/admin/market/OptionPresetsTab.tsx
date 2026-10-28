@@ -33,6 +33,7 @@ import {
   IconCheckAll,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
+import { priceModeOf, weightName, type PriceMode } from "@/lib/store/optionModes";
 import { LoadError, StateBox } from "./MarketParts";
 
 const m = getMessages(defaultLocale);
@@ -41,6 +42,7 @@ const P = m.admin.market.presets;
 interface PresetOption {
   name: string;
   price_delta: number;
+  grams?: number | null;
 }
 interface Preset {
   id: string;
@@ -51,7 +53,15 @@ interface Preset {
   sort_order: number;
   active: boolean;
   category_ids: string[];
+  /** **طريقةُ السعر** (قرارُ المالك ٢٠٢٦-١٠-٢٨) — تُنسخ مع المجموعة إلى الصنف. */
+  price_mode?: string;
 }
+
+const MODES: { key: PriceMode; label: string; hint: string }[] = [
+  { key: "priced", label: P.modePriced, hint: P.modeHintPriced },
+  { key: "none", label: P.modeNone, hint: P.modeHintNone },
+  { key: "weight", label: P.modeWeight, hint: P.modeHintWeight },
+];
 interface Category {
   id: string;
   name: string;
@@ -75,6 +85,7 @@ function bodyOf(p: Omit<Preset, "id">) {
     sort_order: p.sort_order,
     active: p.active,
     category_ids: p.category_ids,
+    price_mode: priceModeOf(p.price_mode),
   });
 }
 
@@ -157,9 +168,14 @@ export default function OptionPresetsTab() {
                 <span className="min-w-0 flex-1 font-bold">{p.name}</span>
                 <Badge variant={p.active ? "success" : "warning"}>{p.active ? P.active : P.stopped}</Badge>
               </div>
-              <Badge variant="neutral" className="w-fit">
-                {required(p) ? P.ruleOne : P.ruleAny}
-              </Badge>
+              <div className="flex flex-wrap gap-1">
+                <Badge variant="neutral" className="w-fit">
+                  {required(p) ? P.ruleOne : P.ruleAny}
+                </Badge>
+                <Badge variant="neutral" className="w-fit">
+                  {MODES.find((x) => x.key === priceModeOf(p.price_mode))?.label}
+                </Badge>
+              </div>
               <div className="flex flex-wrap gap-1">
                 {p.options.length === 0 ? (
                   <span className="text-xs text-ink-muted">{P.noOptions}</span>
@@ -167,7 +183,7 @@ export default function OptionPresetsTab() {
                   p.options.map((o, i) => (
                     <span key={`${o.name}-${i}`} className="rounded-control bg-field px-2 py-0.5 text-xs">
                       {o.name}
-                      {o.price_delta > 0 && <span className="text-ink-muted">{` +${fmtMoney(o.price_delta)}`}</span>}
+                      {priceModeOf(p.price_mode) === "priced" && o.price_delta > 0 && <span className="text-ink-muted">{` +${fmtMoney(o.price_delta)}`}</span>}
                     </span>
                   ))
                 )}
@@ -248,6 +264,7 @@ function PresetModal({
   const [one, setOne] = useState(preset ? required(preset) : true);
   const [options, setOptions] = useState<PresetOption[]>(preset?.options ?? [{ name: "", price_delta: 0 }]);
   const [active, setActive] = useState(preset?.active ?? true);
+  const [mode, setMode] = useState<PriceMode>(priceModeOf(preset?.price_mode));
   const [catIds, setCatIds] = useState<Set<string>>(new Set(preset?.category_ids ?? []));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -259,7 +276,8 @@ function PresetModal({
 
   async function submit() {
     if (!name.trim()) return setError(P.nameRequired);
-    if (options.some((o) => !o.name.trim())) return setError(P.optionNameRequired);
+    if (mode !== "weight" && options.some((o) => !o.name.trim())) return setError(P.optionNameRequired);
+    if (mode === "weight" && options.some((o) => !o.grams || o.grams <= 0)) return setError(P.optionNameRequired);
     setBusy(true);
     setError("");
     try {
@@ -267,7 +285,12 @@ function PresetModal({
         name: name.trim(),
         min_select: one ? 1 : 0,
         max_select: one ? 1 : 99,
-        options: options.map((o) => ({ name: o.name.trim(), price_delta: o.price_delta })),
+        options: options.map((o) =>
+          mode === "weight"
+            ? { name: weightName(o.grams ?? 0), price_delta: 0, grams: o.grams }
+            : { name: o.name.trim(), price_delta: mode === "none" ? 0 : o.price_delta },
+        ),
+        price_mode: mode,
         sort_order: preset?.sort_order ?? nextOrder,
         active,
         category_ids: categories.filter((c) => catIds.has(c.id)).map((c) => c.id),
@@ -304,25 +327,64 @@ function PresetModal({
           </div>
         </fieldset>
         <fieldset className="space-y-2">
+          <legend className="mb-1 text-sm font-bold">{P.priceMode}</legend>
+          <div className="flex flex-wrap gap-4">
+            {MODES.map((x) => (
+              <Radio
+                key={x.key}
+                id={`preset-mode-${x.key}`}
+                name="preset-mode"
+                checked={mode === x.key}
+                onChange={() => {
+                  setMode(x.key);
+                  setError("");
+                }}
+                label={x.label}
+              />
+            ))}
+          </div>
+          <p className="text-xs text-ink-muted">{MODES.find((x) => x.key === mode)?.hint}</p>
+        </fieldset>
+        <fieldset className="space-y-2">
           <legend className="mb-1 text-sm font-bold">{P.options}</legend>
           {options.map((o, i) => (
             <div key={i} className="flex items-end gap-2">
-              <Input
-                id={`preset-opt-${i}`}
-                label={P.optionName}
-                value={o.name}
-                onChange={(e) => setOption(i, { name: e.target.value })}
-                wrapperClassName="min-w-0 flex-1"
-              />
-              <Input
-                id={`preset-price-${i}`}
-                label={P.optionPrice}
-                inputMode="numeric"
-                dir="ltr"
-                value={o.price_delta === 0 ? "" : String(o.price_delta)}
-                onChange={(e) => setOption(i, { price_delta: Number(e.target.value.replace(/\D/g, "").slice(0, 9)) || 0 })}
-                wrapperClassName="w-28 shrink-0"
-              />
+              {mode === "weight" ? (
+                <>
+                  <Input
+                    id={`preset-grams-${i}`}
+                    label={P.optionGrams}
+                    inputMode="numeric"
+                    dir="ltr"
+                    value={o.grams ? String(o.grams) : ""}
+                    onChange={(e) => {
+                      const g = Number(e.target.value.replace(/\D/g, "").slice(0, 7)) || 0;
+                      setOption(i, { grams: g || null, name: g ? weightName(g) : "" });
+                    }}
+                    wrapperClassName="w-32 shrink-0"
+                  />
+                  <span className="min-w-0 flex-1 pb-2 text-sm">{o.grams ? weightName(o.grams) : ""}</span>
+                </>
+              ) : (
+                <Input
+                  id={`preset-opt-${i}`}
+                  label={P.optionName}
+                  value={o.name}
+                  onChange={(e) => setOption(i, { name: e.target.value })}
+                  wrapperClassName="min-w-0 flex-1"
+                />
+              )}
+              {mode === "priced" && (
+                <Input
+                  id={`preset-price-${i}`}
+                  label={P.optionPrice}
+                  inputMode="numeric"
+                  dir="ltr"
+                  value={o.price_delta === 0 ? "" : String(o.price_delta)}
+                  onChange={(e) => setOption(i, { price_delta: Number(e.target.value.replace(/\D/g, "").slice(0, 9)) || 0 })}
+                  wrapperClassName="w-28 shrink-0"
+                />
+              )}
               <IconBtn
                 title={P.removeOption}
                 className="!text-danger"

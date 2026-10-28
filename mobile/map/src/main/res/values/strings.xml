@@ -18,7 +18,7 @@
          ماب يوجد أيقونةُ موقعي أو تحديد الموقع بدقّة يجب أن تكون
          موجودة، يضغط عليها يتم تحديد عنوانه ثم زرّ حفظ»). -->
     <string name="pick_my_location">موقعي الحالي</string>
-    <string name="pick_no_location">تعذر تحديد موقعك — فعل الموقع وحاول ثانية</string>
+    <string name="pick_no_location">تعذر تحديد موقعك — فعّل الموقع وحاول مرة أخرى</string>
     <!-- **حين لا يُبنى النمط** — إغلاقُ TD-CUSTOMER-MAP-NO-MANIFEST.
          والسببُ شبكةٌ في الغالب، والبياضُ يُقرأ عطباً في التطبيق. -->
     <string name="map_unreachable">تعذّر تحميل الخريطة — تحقّق من الاتّصال وحاول مرّة أخرى</string>
@@ -31,10 +31,10 @@
          («Showing a Map created with MapLibre…»)، رُئي على الجهاز في الخطوة ١٥. -->
     <string name="maplibre_mapActionDescription" tools:ignore="UnusedResources">خريطة — اسحبها لتحريكها، وباعد إصبعيك للتقريب</string>
     <!-- دقّة الموقع (٢٠٢٦-١٠-١٢) -->
-    <string name="pick_acc_waiting">عم نحدّد موقعك…</string>
+    <string name="pick_acc_waiting">جارٍ تحديد موقعك…</string>
     <string name="pick_acc_value">دقة الموقع: ± %1$s م</string>
-    <string name="pick_acc_improving">عم نحسّن…</string>
-    <string name="pick_acc_outside">إذا كنت داخل البيت أو المحل، الأفضل تطلع لبرّا أو تقرّب من الشبّاك ليتحدد موقعك بدقة أكبر.</string>
-    <string name="pick_wait_accuracy">زر التأكيد بيطلع لمّا تصير الدقة 15 متر أو أقل — أو حرّك الدبوس بإيدك لمكانك</string>
-    <string name="pick_choose_first">اضغط «موقعي» أو حرّك الدبوس بإيدك لمكانك الصحيح</string>
+    <string name="pick_acc_improving">جارٍ تحسين الدقة…</string>
+    <string name="pick_acc_outside">إذا كنت داخل البيت أو المحل، فالأفضل أن تخرج أو تقترب من النافذة ليتحدد موقعك بدقة أكبر.</string>
+    <string name="pick_wait_accuracy">يظهر زر التأكيد عندما تصبح الدقة 15 متراً أو أقل — أو حرّك الدبوس بيدك إلى مكانك</string>
+    <string name="pick_choose_first">اضغط «موقعي» أو حرّك الدبوس بيدك إلى مكانك الصحيح</string>
 </resources>

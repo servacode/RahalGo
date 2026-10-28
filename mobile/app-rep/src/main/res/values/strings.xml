@@ -12,39 +12,39 @@
     <!-- **عملائي** -->
     <!-- والمعلَّقُ وحدَه يُعدّ في عنوانه — والمرفوضُ في قسمه (٢٠٢٦-١٠-٢٧) -->
     <string name="cl_pending">طلبات الانضمام (%1$s)</string>
-    <string name="cl_rejected_title">طلبات انرفضت (%1$s)</string>
+    <string name="cl_rejected_title">طلبات مرفوضة (%1$s)</string>
     <string name="cl_rejected_show">عرض الطلبات المرفوضة</string>
     <string name="cl_rejected_hide">إخفاء الطلبات المرفوضة</string>
     <string name="cl_lead_since">سجّلته: %1$s</string>
-    <string name="cl_none">لسا ما سجّلت ولا عميل</string>
+    <string name="cl_none">لم تسجّل أي عميل بعد</string>
     <string name="cl_waiting">بانتظار موافقة الإدارة</string>
     <string name="cl_rejected">مرفوض</string>
     <!-- بحثٌ وفلترةٌ بقائمة العملاء -->
-    <string name="cl_search">دوّر بالاسم أو الرقم أو التصنيف</string>
-    <string name="cl_f_missing">ناقصه شروط</string>
+    <string name="cl_search">ابحث بالاسم أو الرقم أو التصنيف</string>
+    <string name="cl_f_missing">شروط ناقصة</string>
     <string name="cl_f_no_items">بلا أصناف</string>
-    <string name="cl_no_match">ما في عميل بهالبحث</string>
+    <string name="cl_no_match">لا يوجد عميل يطابق البحث</string>
     <!-- **«بحاجة معلومات»** (قرار المالك ٢٠٢٦-١٠-٢٧) -->
     <string name="cl_needs_info">بحاجة معلومات</string>
     <string name="cl_admin_note">ملاحظة الإدارة: %1$s</string>
     <string name="cl_fix_lead">عدّل الطلب وأعد إرساله</string>
     <string name="ac_edit_title">تعديل طلب الانضمام</string>
-    <string name="ac_edit_hint">صلّح المطلوب وأعد الإرسال — بيرجع للإدارة كطلب جديد</string>
+    <string name="ac_edit_hint">صحّح المطلوب وأعد الإرسال — يعود إلى الإدارة كطلب جديد</string>
     <string name="ac_edit_note_title">الإدارة طلبت:</string>
     <string name="ac_resend">أعد الإرسال للإدارة</string>
     <string name="ac_edit_cancel">إلغاء التعديل</string>
     <string name="ac_resent_title">تم إرسال التعديل</string>
-    <string name="ac_resent_body">رجع الطلب للإدارة كطلب جديد وهو بانتظار الموافقة.</string>
+    <string name="ac_resent_body">عاد الطلب إلى الإدارة كطلب جديد وهو بانتظار الموافقة.</string>
     <string name="cl_working">يعمل</string>
     <string name="cl_stopped">متوقف</string>
     <!-- هدفُ المندوب: يُحسب المتجرُ حين تكتمل شروطُه (قرارُ المالك ٢٠٢٦-١٠-١٣) -->
-    <string name="cl_goal_counted">محسوب بهدفك</string>
+    <string name="cl_goal_counted">محسوب في هدفك</string>
     <string name="cl_goal_pending">قيد الانتظار</string>
-    <string name="cl_goal_missing">ليُحسب بهدفك ناقصه: %1$s</string>
+    <string name="cl_goal_missing">ليُحسب في هدفك ينقصه: %1$s</string>
     <string name="cl_miss_hours">ساعات الدوام</string>
     <string name="cl_miss_location">الموقع على الخريطة</string>
     <string name="cl_miss_items">%1$s أصناف بصورها</string>
-    <string name="bd_goal_pending">%1$s متجر بانتظار اكتمال الشروط — بينحسبوا لما يكتملوا</string>
+    <string name="bd_goal_pending">%1$s متجر بانتظار اكتمال الشروط — تُحسب عند اكتمالها</string>
     <!-- أرقامُ البطاقة الأربعة بصفٍّ واحد — كلماتٌ قصيرة (٢٠٢٦-١٠-٢٧) -->
     <string name="cl_s_orders">طلبات سلمت</string>
     <string name="cl_s_commission">عمولتك</string>
@@ -94,7 +94,7 @@
          إعفاءُ المتجر من عمولة طلب يعكس نصيبَ المندوب منه. **فالنصُّ
          يقوله** — وكان يقول «وتبقى لك» وهو لم يعد صحيحاً. (٢٠٢٦-١٠-٢٧)
     -->
-    <string name="cd_hint">عمولتك بتنقيد لحظة تسليم الطلب — دورك جلب العميل وقد جلبته. وإذا أعفت الإدارة المتجر من عمولة طلب، بتنعكس عمولتك عن هالطلب. وأرقام الطلبات الملغية بتطلع مشطوبة: هي اللي كانت رح تنحسب لولا الإلغاء، وما بيدخل شي منها بمجاميعك. والسطر بيضل على كل حال: ما بينخفى طلب.</string>
+    <string name="cd_hint">تُقيَّد عمولتك لحظة تسليم الطلب — دورك جلب العميل وقد جلبته. وإذا أعفت الإدارة المتجر من عمولة طلب، تُعكس عمولتك عن هذا الطلب. وتظهر أرقام الطلبات الملغاة مشطوبة: وهي ما كان سيُحسب لولا الإلغاء، ولا يدخل شيء منها في مجاميعك. ويبقى السطر ظاهراً في كل الأحوال: لا يُخفى أي طلب.</string>
 
     <!-- ══════════════════════════════════════════════════════════════
          **أصنافُ العميل — يبنيها المندوبُ نيابةً عنه**
@@ -191,8 +191,8 @@
     <string name="ac_pick_category">اختر تصنيف المتجر</string>
     <string name="ac_district_after_gov">اختر المحافظة أولا لتظهر مناطقها</string>
     <!-- وسقوطُ جلب المحافظات يُقال داخل لوحها مع زرّ إعادة (٢٠٢٦-١٠-٢٧) -->
-    <string name="ac_gov_failed">ما قدرنا نجيب المحافظات</string>
-    <string name="ac_cat_failed">ما قدرنا نجيب التصنيفات</string>
+    <string name="ac_gov_failed">تعذّر جلب المحافظات</string>
+    <string name="ac_cat_failed">تعذّر جلب التصنيفات</string>
 
     <!-- **لوحتي** — والشهريُّ يسبق التراكميّ. -->
     <!-- **والوحدةُ «عميل»** — الهدفُ يعدّ ما فتح من متاجرَ هذا الشهر
@@ -203,14 +203,14 @@
          «الهدفُ الشهريُّ هو عددُ العملاء المسجَّلين».)
          **ومندوبٌ فتح عشرةَ متاجرَ في أسبوعٍ كان عدّادُه صفراً** حتّى
          يشتري الناسُ منها — **وذلك يقيس السوقَ لا المندوب.** -->
-    <string name="bd_target_left">باقي %1$s</string>
+    <string name="bd_target_left">يبقى %1$s</string>
     <!-- «الهدف ٥» لا «٥ عملاء» — فلا تُقرأ «١ عملاء» (٢٠٢٦-١٠-٢٧) -->
     <string name="bd_level">المرحلة %1$s · الهدف %2$s</string>
     <string name="bd_level_done">✓ تحققت</string>
     <!-- والمكافأةُ بفواصلها وعملتها من `money()` -->
     <string name="bd_level_done_reward">✓ تحققت · +%1$s</string>
     <!-- والهدفُ المطفأ لا يُخترع له رقم (٢٠٢٦-١٠-٢٧) -->
-    <string name="bd_no_target">ما في هدف محدد لهالشهر</string>
+    <string name="bd_no_target">لا يوجد هدف محدد لهذا الشهر</string>
     <string name="bd_this_month">هذا الشهر</string>
     <!-- **وأخفُّ** — (طلبُ المالك ٢٠٢٦-٠٨-٣١). **والقسمُ فوقها يقول
          «هذا الشهر»، والآخرُ «منذ بدأت»** — فيكفي «عملاؤك» فيهما. -->
@@ -232,11 +232,11 @@
     <string name="bd_balance_go">افتح المحفظة ←</string>
     <string name="bd_code">رمزك لدى الإدارة</string>
     <string name="bd_copy">نسخ</string>
-    <string name="bd_copied">✓ انتسخ رمزك</string>
+    <string name="bd_copied">✓ تم نسخ رمزك</string>
     <!-- **ويُقفل حتّى يوثّق واتساب** — والمتجرُ الذي يُسجّل برمزه
          يُنسب إليه، **ومن لا قناةَ تواصلٍ موثّقةً له لا يُتحقّق أنّه
          هو.** والحالُ تنبيهٌ برتقاليٌّ بزرّه لا خطأٌ أحمر (٢٠٢٦-١٠-٢٧). -->
-    <string name="bd_code_locked">رمزك بيظهر بعد ما توثّق حسابك</string>
+    <string name="bd_code_locked">يظهر رمزك بعد توثيق حسابك</string>
     <string name="bd_verify">وثّق حسابك</string>
 
     <!-- **رابطُ الدعوة** -->

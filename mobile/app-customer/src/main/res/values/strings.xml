@@ -10,8 +10,8 @@
          **و«تسوّق» تقول ماذا يفعل.** -->
     <string name="nav_shop">تسوق</string>
 
-    <string name="soon_orders">هون بتتابع طلباتك — لوين وصل كل واحد منها</string>
-    <string name="soon_custom">اطلب أي شي من جوّا المدينة — ونحنا منجيبلك ياه</string>
+    <string name="soon_orders">تابع هنا حالة طلباتك</string>
+    <string name="soon_custom">اطلب أي شيء من داخل المدينة ونحن نوصله إليك</string>
 
     <string name="soon_history">ما سلم وما تعذر — بفواتيره</string>
     <string name="soon_offers">الحسوم الجارية وما يقرب انتهاؤه</string>
@@ -52,19 +52,19 @@
     <string name="ord_cancel">إلغاء الطلب</string>
     <string name="ord_rate">قيّم الطلب</string>
     <string name="ord_complain">شكوى</string>
-    <string name="ord_none_open">ما عندك طلبات جارية — تصفّح السوق وابدأ</string>
-    <string name="ord_none_history">ما في طلبات منتهية لسّا</string>
+    <string name="ord_none_open">لا توجد لديك طلبات جارية — تصفّح السوق وابدأ</string>
+    <string name="ord_none_history">لا توجد طلبات منتهية بعد</string>
     <!-- **«جارية · منتهية» فوق «طلباتي»** — والسجلّ صار جوّا الشاشة نفسها. -->
     <string name="ord_tab_open">جارية (%1$s)</string>
     <string name="ord_tab_history">منتهية (%1$s)</string>
     <string name="act_browse_market">تصفّح السوق</string>
     <string name="ord_cancel_title">إلغاء الطلب؟</string>
-    <string name="ord_cancel_ask">رح ينلغى الطلب وما فيك ترجعه.</string>
-    <string name="ord_cancel_yes">إي، ألغيه</string>
+    <string name="ord_cancel_ask">سيُلغى الطلب نهائياً ولا يمكن التراجع.</string>
+    <string name="ord_cancel_yes">نعم، ألغِه</string>
     <!-- **الزرّ بيقول قدّيش باقي من مهلة الإلغاء** — وبيختفي لما تخلص. -->
-    <string name="ord_cancel_left">إلغاء الطلب (باقي %1$s)</string>
+    <string name="ord_cancel_left">إلغاء الطلب (متبقٍ %1$s)</string>
     <!-- **الوقت المتوقّع للتوصيل** — من المحرّك، تقريبي. -->
-    <string name="ord_eta_door">الطريق من المتجر لعندك تقريباً %1$s</string>
+    <string name="ord_eta_door">الطريق من المتجر إليك يستغرق تقريباً %1$s</string>
     <string name="ord_eta_estimate">مدة التوصيل المتوقعة تقريباً %1$s</string>
     <string name="ord_rate_title">كيف كانت الخدمة؟</string>
     <string name="ord_rate_service">تقييم الخدمة</string>
@@ -72,10 +72,10 @@
     <string name="ord_send">إرسال</string>
     <!-- **التقييم بيبلّش فاضي** — والكلمة تحت النجوم بتتغيّر مع العدد. -->
     <string name="rate_pick">اضغط على النجوم لتقيّم</string>
-    <string name="rate_word_1">سيئ كتير</string>
+    <string name="rate_word_1">سيئ جداً</string>
     <string name="rate_word_2">سيئ</string>
     <string name="rate_word_3">مقبول</string>
-    <string name="rate_word_4">منيح</string>
+    <string name="rate_word_4">جيد</string>
     <string name="rate_word_5">ممتاز</string>
     <string name="rate_star_n">%1$s من 5</string>
     <string name="ord_complain_title">ما المشكلة؟</string>
@@ -89,9 +89,9 @@
     <string name="cr_other">أخرى</string>
     <string name="ord_complain_what">ما الذي حدث بالضبط؟</string>
     <string name="ord_complain_note">تفاصيل (اختياري)</string>
-    <string name="ord_reasons_loading">عم نجيب الأسباب…</string>
-    <string name="ord_reasons_failed">ما قدرنا نجيب الأسباب — تأكد من الإنترنت</string>
-    <string name="ord_complain_sent">وصلت شكواك — رح نتابعها ونرد عليك</string>
+    <string name="ord_reasons_loading">جارٍ تحميل الأسباب…</string>
+    <string name="ord_reasons_failed">تعذّر تحميل الأسباب — تحقّق من الإنترنت</string>
+    <string name="ord_complain_sent">وصلت شكواك — سنتابعها ونرد عليك</string>
 
     <string name="cst_mode_title">نوع الطلب</string>
     <string name="cst_mode_purchase">مشتريات</string>
@@ -115,10 +115,10 @@
       **المثالُ يُري ما يُطلب وما لا يُطلب** — ولا تعريفَ يُغني عنه.
       (قرارُ المالك ٢٠٢٦-٠٨-١٥.)
     -->
-    <string name="cst_what_hint">مثال: طلب من مطعم أو متجر معيّن · أمانة من حدا · أو أي شي تاني</string>
+    <string name="cst_what_hint">مثال: طلب من مطعم أو متجر معيّن · أمانة من شخص · أو أي شيء آخر</string>
     <string name="cst_notes">ملاحظات للسائق</string>
     <!-- **مفتاح الطلب الخاص من اللوحة** — إذا سكّرته الإدارة منقول قبل ما يكتب. -->
-    <string name="cst_closed">الطلب الخاص موقّف هلّق — جرّب بعدين</string>
+    <string name="cst_closed">الطلب الخاص متوقف حالياً — حاول لاحقاً</string>
     <string name="offer_add_blocked">لا يمكن الإضافة — عنوانك خارج نطاق التوصيل حاليًا</string>
     <string name="ord_load_more">تحميل المزيد</string>
     <string name="cst_send">أرسل الطلب</string>
@@ -128,8 +128,8 @@
     <string name="cst_pay_after_cost">طريقة الدفع تُحدد بعد تحديد تكلفة الطلب.</string>
     <string name="cst_fee_on_deal">سيتم تحديد أجرة التوصيل بعد قبول السائق.</string>
     <string name="cst_total_pending">الإجمالي يُعرف بعد تحديد قيمة المشتريات.</string>
-    <string name="cst_amanah_total">الإجمالي %1$s — أجرة التوصيل بس، بدون أي مبلغ تاني.</string>
-    <string name="cst_amanah_pay">بتدفع الأجرة نقداً للسائق.</string>
+    <string name="cst_amanah_total">الإجمالي %1$s — أجرة التوصيل فقط، دون أي مبلغ آخر.</string>
+    <string name="cst_amanah_pay">تدفع الأجرة نقداً للسائق.</string>
     <string name="ord_awaiting_quote">بانتظار تحديد تكلفة الطلب</string>
     <string name="ord_fee_value">أجرة التوصيل: %1$s</string>
     <string name="ord_confirm_prompt">أكد المبلغ واختر طريقة الدفع</string>
@@ -147,18 +147,18 @@
     <!-- نافذةُ تأكيد السعر وسؤالُ الرفض (قرارُ المالك ٢٠٢٦-١٠-١٥) -->
     <string name="ord_quote_dialog_title">تأكيد سعر الطلب #%1$s</string>
     <string name="ord_quote_reject_title">رفض السعر الجديد؟</string>
-    <string name="ord_quote_reject_body">متأكد بدك ترفض السعر الجديد؟ الطلب رح يوقف لحتى يتواصل معك المكتب.</string>
+    <string name="ord_quote_reject_body">هل أنت متأكد من رفض السعر الجديد؟ سيتوقف الطلب حتى يتواصل معك المكتب.</string>
     <string name="ord_quote_reject_yes">أرفض</string>
     <!-- أسماءُ شريط المراحل القصيرة — للشريط وحدَه، والطويلةُ تبقى لغيره (٢٠٢٦-١٠-١٥) -->
-    <string name="stg_waiting">بالانتظار</string>
+    <string name="stg_waiting">في الانتظار</string>
     <string name="stg_accepted">مقبول</string>
     <string name="stg_preparing">تحضير</string>
     <string name="stg_seeking">سائق</string>
-    <string name="stg_buying">عم يشتري</string>
+    <string name="stg_buying">جارٍ الشراء</string>
     <string name="stg_bought">اشترى</string>
-    <string name="stg_buying_amanah">عم يستلم</string>
+    <string name="stg_buying_amanah">جارٍ الاستلام</string>
     <string name="stg_bought_amanah">استلم</string>
-    <string name="stg_on_the_way">بالطريق</string>
+    <string name="stg_on_the_way">في الطريق</string>
     <string name="stg_arrived">وصل</string>
     <string name="stg_delivered">تسلّم</string>
 
@@ -174,20 +174,20 @@
     <string name="off_none">لا عروض سارية الآن</string>
     <string name="off_from_notice">العرض الذي وصلك</string>
     <string name="off_gone">العرض الذي وصلك لم يعد سارياً</string>
-    <string name="tkt_none">ما اشتكيت من شي — ونتمنى يضل هيك</string>
+    <string name="tkt_none">لم تقدّم أي شكوى — ونتمنى أن يبقى الأمر كذلك</string>
     <string name="tkt_against_none">لا بلاغات ضدك — وهذا خبرٌ جيّد</string>
 
     <string name="inv_earn">ادعُ صديقاً واربح %1$s</string>
-    <string name="inv_on_signup">بتنزل المكافأة لما يخلص تسجيله</string>
-    <string name="inv_on_order">بتنزل المكافأة لما يوصله أول طلب</string>
+    <string name="inv_on_signup">تُضاف المكافأة عندما يكمل تسجيله</string>
+    <string name="inv_on_order">تُضاف المكافأة عندما يصله أول طلب</string>
     <string name="inv_code">رمزك</string>
     <string name="inv_invited">سجّلوا برمزك</string>
     <string name="inv_rewarded">طلبوا فعلاً</string>
     <string name="inv_earned">ربحت</string>
     <string name="inv_copy">انسخ</string>
-    <string name="inv_copied">انتسخ الرمز</string>
+    <string name="inv_copied">تم نسخ الرمز</string>
     <!-- **رسالة المشاركة** — جملة مع المكافأة والرابط، مو رابط لحاله. -->
-    <string name="inv_share_text">جرّب رحّال غو — منجيبلك أكلك وأغراضك لباب البيت. سجّل برمزي %1$s من هالرابط: %2$s</string>
+    <string name="inv_share_text">جرّب رحّال غو — نوصل طعامك وأغراضك إلى باب البيت. سجّل برمزي %1$s من هذا الرابط: %2$s</string>
 
 
     <!-- **السلّة** -->
@@ -196,42 +196,42 @@
     <string name="options_add">أضف — %1$s</string>
     <string name="options_failed">تعذّر جلبُ الخيارات — تحقّق من الاتصال</string>
     <string name="options_unavailable">غير متوفر</string>
-    <string name="options_all_out">كل خيارات %1$s غير متوفرة هلّق</string>
+    <string name="options_all_out">كل خيارات %1$s غير متوفرة حالياً</string>
     <!-- صنفٌ من متجرٍ ثانٍ (٢٠٢٦-١٠-١٤) -->
-    <string name="src_other_title">هالصنف من متجر تاني</string>
-    <string name="src_other_text_fee">انت ضفت صنف تابع لمتجر تاني، فبيوصلك بنفس الطلب بس في مبلغ إضافي %1$s حسب مسافة المتجر التاني.</string>
-    <string name="src_other_text_free">انت ضفت صنف تابع لمتجر تاني. المتجر قريب، فبيوصلك بنفس الطلب بدون أي مبلغ إضافي.</string>
-    <string name="src_too_many_title">ما فيك تضيف من متجر جديد</string>
-    <string name="src_too_many_text">الطلب الواحد بيكون من %1$s متاجر بالأكتر. شلنا الصنف من السلة — اطلبه بطلب تاني.</string>
-    <string name="src_only_one_text">الطلب الواحد بيكون من متجر واحد بس. شلنا الصنف من السلة — اطلبه بطلب لحاله.</string>
-    <string name="src_ok">تمام</string>
-    <string name="src_undo">شيله من السلة</string>
-    <string name="src_fee_line">أجرة المتجر التاني</string>
+    <string name="src_other_title">هذا الصنف من متجر آخر</string>
+    <string name="src_other_text_fee">أضفت صنفاً من متجر آخر، وسيصلك ضمن الطلب نفسه مع مبلغ إضافي %1$s حسب مسافة المتجر الآخر.</string>
+    <string name="src_other_text_free">أضفت صنفاً من متجر آخر. المتجر قريب، لذلك سيصلك ضمن الطلب نفسه دون أي مبلغ إضافي.</string>
+    <string name="src_too_many_title">لا يمكنك الإضافة من متجر جديد</string>
+    <string name="src_too_many_text">الطلب الواحد يكون من %1$s متاجر كحد أقصى. حذفنا الصنف من السلة — اطلبه في طلب آخر.</string>
+    <string name="src_only_one_text">الطلب الواحد يكون من متجر واحد فقط. حذفنا الصنف من السلة — اطلبه في طلب منفصل.</string>
+    <string name="src_ok">حسناً</string>
+    <string name="src_undo">احذفه من السلة</string>
+    <string name="src_fee_line">أجرة المتجر الآخر</string>
     <!-- «يُطلب معه» في السلّة -->
     <string name="suggest_title">يُطلب معه</string>
 
     <string name="cart_title">سلتي</string>
     <string name="cart_hint">راجع ما اخترته ثم أرسل</string>
-    <string name="cart_empty">سلتك فاضية — تصفّح السوق وضيف يلي بيعجبك</string>
+    <string name="cart_empty">سلتك فارغة — تصفّح السوق وأضف ما يعجبك</string>
     <string name="cart_promo">كود خصم (اختياري)</string>
     <string name="cart_promo_apply">تطبيق</string>
     <string name="cart_remove">حذف من السلة</string>
     <string name="cart_clear">إفراغ السلة</string>
     <!-- **تأكيد قبل ما تنمسح السلة كلها** — ضغطة غلط ما بتطيّرها. -->
-    <string name="cart_clear_title">بدك تفضّي السلة؟</string>
-    <string name="cart_clear_body">رح تنشال كل الأصناف من السلة.</string>
-    <string name="cart_clear_yes">إي، فضّيها</string>
-    <string name="cart_qty_less">نقّص واحد</string>
-    <string name="cart_qty_more">زيد واحد</string>
+    <string name="cart_clear_title">هل تريد إفراغ السلة؟</string>
+    <string name="cart_clear_body">ستُحذف جميع الأصناف من السلة.</string>
+    <string name="cart_clear_yes">نعم، أفرغها</string>
+    <string name="cart_qty_less">أنقص واحداً</string>
+    <string name="cart_qty_more">زد واحداً</string>
     <!-- **ليش زر الإرسال مطفي** — سطر صغير بالشريط تحت. -->
-    <string name="cart_why_address">اختار عنوان التوصيل أول</string>
-    <string name="cart_why_pricing">عم نحسب السعر…</string>
-    <string name="cart_why_review">راجع التغييرات فوق ووافق عليها</string>
-    <string name="cart_why_offline">ما في إنترنت — رجّع الاتصال وجرّب</string>
-    <string name="cart_why_closed">الطلب ما بيمشي هلّق — شوف السبب فوق</string>
-    <string name="cart_orders_closed">استقبال الطلبات موقّف هلّق — فيك تتصفّح وتجهّز سلتك وتطلب لما يرجع</string>
-    <string name="cart_too_many_sources">سلتك فيها أصناف من أكتر من %1$s متاجر — شيل الأصناف الزيادة لتقدر ترسل</string>
-    <string name="cart_only_one_source">الطلب الواحد بيكون من متجر واحد بس — شيل أصناف المتجر التاني لتقدر ترسل</string>
+    <string name="cart_why_address">اختر عنوان التوصيل أولاً</string>
+    <string name="cart_why_pricing">جارٍ حساب السعر…</string>
+    <string name="cart_why_review">راجع التغييرات في الأعلى ووافق عليها</string>
+    <string name="cart_why_offline">لا يوجد اتصال بالإنترنت — أعد الاتصال وحاول مجدداً</string>
+    <string name="cart_why_closed">لا يمكن إرسال الطلب حالياً — انظر السبب في الأعلى</string>
+    <string name="cart_orders_closed">استقبال الطلبات متوقف حالياً — يمكنك التصفّح وتجهيز سلتك والطلب عند استئنافه</string>
+    <string name="cart_too_many_sources">سلتك فيها أصناف من أكثر من %1$s متاجر — احذف الأصناف الزائدة لتتمكن من الإرسال</string>
+    <string name="cart_only_one_source">الطلب الواحد يكون من متجر واحد فقط — احذف أصناف المتجر الآخر لتتمكن من الإرسال</string>
     <string name="cart_promo_ok">تم تطبيق الكود — خصم %1$s</string>
     <string name="cart_promo_bad">الكود غير صالح أو منتهي</string>
     <string name="cart_promo_free_delivery">تم تطبيق الكود — توصيل مجاني</string>
@@ -291,33 +291,33 @@
     <!-- **ما قبل الافتتاح** — حالٌ مقصودةٌ لا خطأ (PL، ٢٠٢٦-٠٩-١٦).
          **والعنوانُ في الحزمة والنصُّ من اللوحة**: العنوانُ ثابتُ
          حالٍ، والنصُّ يبدّله المالكُ بلا نشر. -->
-    <string name="prelaunch_title">قريباً منفتح رحّال غو</string>
-    <string name="prelaunch_body">عم نجهّز رحّال غو لنستقبل طلباتكم.\nترقّبوا الافتتاح قريباً.</string>
+    <string name="prelaunch_title">رحّال غو يفتتح قريباً</string>
+    <string name="prelaunch_body">نجهّز رحّال غو لاستقبال طلباتكم.\nترقّبوا الافتتاح قريباً.</string>
     <string name="prelaunch_login">تسجيل الدخول</string>
     <string name="menu_tutorial">شرح التطبيق بالفيديو</string>
     <!-- **مشاركةُ الموقع المباشر مع السائق** (قرارُ المالك ٢٠٢٦-١٠-١٦) — `live/LiveShare.kt`.
          **ولفظٌ واحدٌ بكلّ التطبيق: «السائق»** — لا «الكابتن» هون و«السائق» هونيك. -->
-    <string name="live_ask_title">السائق بالطريق لعندك</string>
-    <string name="live_ask_body">شارك موقعك المباشر ليوصلك سائق رحّال غو لباب بيتك</string>
+    <string name="live_ask_title">السائق في الطريق إليك</string>
+    <string name="live_ask_body">شارك موقعك المباشر ليصل سائق رحّال غو إلى باب بيتك</string>
     <string name="live_ask_share">شارك موقعي</string>
     <string name="live_ask_no">لا، العنوان صحيح</string>
-    <string name="live_note_title">عم تشارك موقعك مع السائق</string>
-    <string name="live_note_text">بتوقف المشاركة لحالها لما يوصلك الطلب</string>
-    <string name="live_stop">وقّف المشاركة</string>
+    <string name="live_note_title">أنت تشارك موقعك مع السائق</string>
+    <string name="live_note_text">تتوقف المشاركة تلقائياً عند وصول الطلب إليك</string>
+    <string name="live_stop">أوقف المشاركة</string>
     <string name="live_channel">مشاركة الموقع مع السائق</string>
-    <string name="live_card_sharing">عم تشارك موقعك المباشر مع السائق</string>
-    <string name="live_denied">ما فينا نشارك موقعك بدون إذن الموقع</string>
+    <string name="live_card_sharing">أنت تشارك موقعك المباشر مع السائق</string>
+    <string name="live_denied">لا يمكننا مشاركة موقعك دون إذن الموقع</string>
     <!-- **«موقعك الصح هون؟»** (قرارُ المالك ٢٠٢٦-١٠-٢١). -->
     <string name="dropoff_fix_title">هل هذا عنوانك الصحيح؟</string>
     <string name="dropoff_fix_body">تم تسليم طلبك في موقع يختلف عن عنوانك المحفوظ. هل تريد اعتماده لطلباتك القادمة؟</string>
     <string name="dropoff_fix_yes">نعم، اعتمده</string>
     <string name="dropoff_fix_done">تم تحديث عنوانك</string>
     <!-- **«في نسخة جديدة — حدّث»** (قرارُ المالك ٢٠٢٦-١٠-٢١). -->
-    <string name="update_offer">في نسخة جديدة من رحّال غو (%1$s) — اضغط لتحدّث</string>
-    <string name="update_play_unreachable">ما قدرنا نوصل لغوغل بلاي — شغّل برنامج فك الحجب وجرّب مرة تانية</string>
+    <string name="update_offer">يوجد إصدار جديد من رحّال غو (%1$s) — اضغط للتحديث</string>
+    <string name="update_play_unreachable">تعذّر الوصول إلى غوغل بلاي — شغّل برنامج فك الحجب وحاول مرة أخرى</string>
     <!-- **ظهرُ صورة الصنف حين لا وصف** (قرارُ المالك ٢٠٢٦-١٠-٢١). -->
     <string name="shop_no_description">لا يوجد وصف لهذا الصنف</string>
-    <string name="live_needs_location_on">المشاركة بتحتاج تشغيل الموقع — اضغط «شارك» مرة تانية وشغّله</string>
+    <string name="live_needs_location_on">المشاركة تحتاج تشغيل الموقع — اضغط «شارك» مرة أخرى وشغّله</string>
 
     <!-- **متاجر مميّزة وصفحة المتجر** (قرارُ المالك ٢٠٢٦-١٠-١٨) — ألفاظُ الويب نفسُها. -->
     <string name="shop_featured_stores">متاجر مميّزة</string>
@@ -326,28 +326,28 @@
     <!-- **حرفا الصبح والمسا بالدوام** — كانوا مكتوبين جوّا الكود. -->
     <string name="clock_am">ص</string>
     <string name="clock_pm">م</string>
-    <string name="store_emergency_closed">مسكّر — إغلاق طارئ</string>
+    <string name="store_emergency_closed">مغلق — إغلاق طارئ</string>
     <string name="store_closed_today">مغلق اليوم</string>
-    <string name="store_today_hours">اليوم من %1$s لـ %2$s</string>
-    <string name="store_browse_only">المتجر مسكّر هلّق — فيك تتصفح الأصناف بس ما فيك تطلب لحتى يفتح</string>
-    <string name="store_empty">ما في أصناف بهالمتجر هلّق</string>
-    <string name="store_empty_hint">ارجع بعدين — المتجر عم يضيف أصنافه</string>
+    <string name="store_today_hours">اليوم من %1$s إلى %2$s</string>
+    <string name="store_browse_only">المتجر مغلق حالياً — يمكنك تصفّح الأصناف لكن لا يمكنك الطلب حتى يفتح</string>
+    <string name="store_empty">لا توجد أصناف في هذا المتجر حالياً</string>
+    <string name="store_empty_hint">عد لاحقاً — المتجر يضيف أصنافه</string>
     <string name="store_open_page">افتح صفحة المتجر</string>
     <!-- عرض التوصيل المجاني (٢٠٢٦-١٠-٢٦) -->
     <string name="free_badge">مجاني 🎁</string>
-    <string name="free_banner">🎁 توصيلتك الجاية مجانية — اطلب هلّق واستفيد من العرض</string>
-    <string name="free_custom">🎁 التوصيلة مجانية لهالطلب (عرض)</string>
+    <string name="free_banner">🎁 توصيلتك القادمة مجانية — اطلب الآن واستفد من العرض</string>
+    <string name="free_custom">🎁 التوصيل مجاني لهذا الطلب (عرض)</string>
     <!-- **حدود العرض** — السقف ولإيمتى، من الخادم (`max_fee` · `ends_at`). -->
-    <string name="free_cap">بتوفّر لحد %1$s من أجرة التوصيل</string>
-    <string name="free_until_today">العرض لغاية اليوم الساعة %1$s</string>
-    <string name="free_until_tomorrow">العرض لغاية بكرا الساعة %1$s</string>
-    <string name="free_until">العرض لغاية %1$s الساعة %2$s</string>
+    <string name="free_cap">توفّر حتى %1$s من أجرة التوصيل</string>
+    <string name="free_until_today">العرض حتى اليوم الساعة %1$s</string>
+    <string name="free_until_tomorrow">العرض حتى الغد الساعة %1$s</string>
+    <string name="free_until">العرض حتى %1$s الساعة %2$s</string>
     <!-- **الطلب الخاص قبل ما ينحدد السعر** — العرض بينحجز وقت تحديد السعر. -->
-    <string name="free_custom_pending">🎁 إذا ضل العرض شغّال لوقت تحديد السعر، بتكون التوصيلة مجانية</string>
-    <string name="free_custom_kinds">🎁 عرض التوصيل المجاني شغّال على الطلب الخاص (%1$s)</string>
+    <string name="free_custom_pending">🎁 إذا بقي العرض فعّالاً حتى تحديد السعر، يكون التوصيل مجانياً</string>
+    <string name="free_custom_kinds">🎁 عرض التوصيل المجاني فعّال على الطلب الخاص (%1$s)</string>
     <!-- **بطاقة العرض بشاشة «العروض».** -->
-    <string name="free_offer_title">🎁 توصيلتك الجاية مجانية</string>
-    <string name="free_offer_kinds">بيشمل: %1$s</string>
+    <string name="free_offer_title">🎁 توصيلتك القادمة مجانية</string>
+    <string name="free_offer_kinds">يشمل: %1$s</string>
     <string name="free_kind_standard">طلبات السوق</string>
     <string name="free_kind_purchase">المشتريات</string>
     <string name="free_kind_amanah">الأمانة</string>

@@ -83,7 +83,7 @@ func (s *Service) DuplicateItem(ctx context.Context, actorID, itemID string, max
 	// **والخياراتُ بلا المشروبات المنسوخة** — تلك تعود من قائمة المتجر وحدَها.
 	groups := []ModifierGroupInput{}
 	rows, err := tx.Query(ctx, `
-		SELECT g.id::text, g.name, g.min_select, g.max_select
+		SELECT g.id::text, g.name, g.min_select, g.max_select, g.price_mode, g.base_grams
 		  FROM modifier_groups g
 		 WHERE g.item_id = $1::uuid AND NOT g.store_drinks
 		 ORDER BY g.sort_order`, itemID)
@@ -94,17 +94,20 @@ func (s *Service) DuplicateItem(ctx context.Context, actorID, itemID string, max
 	for rows.Next() {
 		var id string
 		var g ModifierGroupInput
-		if err := rows.Scan(&id, &g.Name, &g.MinSelect, &g.MaxSelect); err != nil {
+		var mode string
+		if err := rows.Scan(&id, &g.Name, &g.MinSelect, &g.MaxSelect, &mode, &g.BaseGrams); err != nil {
 			rows.Close()
 			return "", err
 		}
+		// **وطريقةُ السعر تُنسخ** — فالنسخةُ بالوزن كأصلها (٢٠٢٦-١٠-٢٨).
+		g.PriceMode = &mode
 		ids = append(ids, id)
 		groups = append(groups, g)
 	}
 	rows.Close()
 	for i, gid := range ids {
 		orows, err := tx.Query(ctx, `
-			SELECT name, price_delta, available, price_delta_usd_cents
+			SELECT name, price_delta, available, price_delta_usd_cents, grams
 			  FROM modifier_options WHERE group_id = $1::uuid ORDER BY sort_order`, gid)
 		if err != nil {
 			return "", err
@@ -113,7 +116,7 @@ func (s *Service) DuplicateItem(ctx context.Context, actorID, itemID string, max
 			var o ModifierOptionInput
 			var av bool
 			var oc *int64
-			if err := orows.Scan(&o.Name, &o.PriceDelta, &av, &oc); err != nil {
+			if err := orows.Scan(&o.Name, &o.PriceDelta, &av, &oc, &o.Grams); err != nil {
 				orows.Close()
 				return "", err
 			}

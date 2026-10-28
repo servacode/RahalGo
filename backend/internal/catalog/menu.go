@@ -74,14 +74,21 @@ type ModifierOption struct {
 	PriceDeltaUSD *float64 `json:"price_delta_usd,omitempty"`
 	Available     bool     `json:"available"`
 	SortOrder     int      `json:"sort_order"`
+	// Grams **وزنُ الخيار بالغرام** لمجموعة «حسب الوزن» (٢٠٢٦-١٠-٢٨) — وفرقُه
+	// محسوبٌ في القاعدة من سعر الصنف. انظر `option_modes.go`.
+	Grams *int `json:"grams,omitempty"`
 }
 
 type ModifierGroup struct {
-	ID        string           `json:"id"`
-	Name      string           `json:"name"`
-	MinSelect int              `json:"min_select"`
-	MaxSelect int              `json:"max_select"`
-	SortOrder int              `json:"sort_order"`
+	ID        string `json:"id"`
+	Name      string `json:"name"`
+	MinSelect int    `json:"min_select"`
+	MaxSelect int    `json:"max_select"`
+	SortOrder int    `json:"sort_order"`
+	// PriceMode **طريقةُ السعر** «priced» أو «none» أو «weight» (٢٠٢٦-١٠-٢٨).
+	PriceMode string `json:"price_mode"`
+	// BaseGrams الوزنُ الذي يخصّه سعرُ الصنف — لـ«weight» وحدَها.
+	BaseGrams *int             `json:"base_grams,omitempty"`
 	Options   []ModifierOption `json:"options"`
 }
 
@@ -305,7 +312,7 @@ func (s *Service) GetMenu(ctx context.Context, merchantID string) ([]MenuSection
 
 	groupIdx := map[string][3]int{} // groupID → (sectionIdx, itemIdx, groupIdx)
 	rows, err = s.db.Query(ctx, `
-		SELECT g.id, g.item_id, g.name, g.min_select, g.max_select, g.sort_order
+		SELECT g.id, g.item_id, g.name, g.min_select, g.max_select, g.sort_order, g.price_mode, g.base_grams
 		FROM modifier_groups g
 		JOIN menu_items i ON i.id = g.item_id
 		-- **والمشروباتُ المنسوخةُ لا تُرى في المحرّر** — تُدار من قائمتها (٢٠٢٦-١٠-١٩).
@@ -316,7 +323,7 @@ func (s *Service) GetMenu(ctx context.Context, merchantID string) ([]MenuSection
 	for rows.Next() {
 		var g ModifierGroup
 		var itemID string
-		if err := rows.Scan(&g.ID, &itemID, &g.Name, &g.MinSelect, &g.MaxSelect, &g.SortOrder); err != nil {
+		if err := rows.Scan(&g.ID, &itemID, &g.Name, &g.MinSelect, &g.MaxSelect, &g.SortOrder, &g.PriceMode, &g.BaseGrams); err != nil {
 			rows.Close()
 			return nil, err
 		}
@@ -335,7 +342,7 @@ func (s *Service) GetMenu(ctx context.Context, merchantID string) ([]MenuSection
 	}
 
 	rows, err = s.db.Query(ctx, `
-		SELECT o.id, o.group_id, o.name, o.price_delta, o.available, o.sort_order, o.price_delta_usd_cents
+		SELECT o.id, o.group_id, o.name, o.price_delta, o.available, o.sort_order, o.price_delta_usd_cents, o.grams
 		FROM modifier_options o
 		JOIN modifier_groups g ON g.id = o.group_id
 		JOIN menu_items i ON i.id = g.item_id
@@ -348,7 +355,7 @@ func (s *Service) GetMenu(ctx context.Context, merchantID string) ([]MenuSection
 		var o ModifierOption
 		var groupID string
 		var optUSD *int64
-		if err := rows.Scan(&o.ID, &groupID, &o.Name, &o.PriceDelta, &o.Available, &o.SortOrder, &optUSD); err != nil {
+		if err := rows.Scan(&o.ID, &groupID, &o.Name, &o.PriceDelta, &o.Available, &o.SortOrder, &optUSD, &o.Grams); err != nil {
 			return nil, err
 		}
 		if optUSD != nil {
@@ -467,12 +474,20 @@ type ModifierOptionInput struct {
 	// Available **خيارٌ نفد وحدَه** (طلبُ المالك ٢٠٢٦-١٠-٢٧: «نمرة ٤٢ خلصت»).
 	// **وغيابُه «متوفّر»** — التطبيقاتُ القديمةُ لا ترسله، فلا يُطفأ خيارٌ بصمتها.
 	Available *bool `json:"available"`
+	// Grams **وزنُ الخيار بالغرام** لمجموعة «حسب الوزن» — والفرقُ يُحسب ولا يُقرأ
+	// من `price_delta`. **وغيابُه في مجموعةٍ قائمةٍ يُبقي غراماتها** (`inheritModes`).
+	Grams *int `json:"grams"`
 }
 
 type ModifierGroupInput struct {
-	Name      string                `json:"name"`
-	MinSelect int                   `json:"min_select"`
-	MaxSelect int                   `json:"max_select"`
+	Name      string `json:"name"`
+	MinSelect int    `json:"min_select"`
+	MaxSelect int    `json:"max_select"`
+	// PriceMode «priced» أو «none» أو «weight» — **وغيابُه يُبقي طريقةَ المجموعة
+	// القائمة بالاسم نفسِه** (نسخُ التطبيقات القديمة لا ترسله)، **ولجديدةٍ «priced».**
+	PriceMode *string `json:"price_mode"`
+	// BaseGrams الوزنُ الذي يخصّه سعرُ الصنف — وفراغُه ١٠٠ غ.
+	BaseGrams *int                  `json:"base_grams"`
 	Options   []ModifierOptionInput `json:"options"`
 }
 
@@ -723,6 +738,10 @@ func (s *Service) UpdateItem(ctx context.Context, actorID, itemID string, in Men
 	}
 	if in.Modifiers != nil {
 		// **والمشروباتُ المنسوخةُ تبقى** — حفظُ الصنف لا يمحو قائمةَ المتجر (٢٠٢٦-١٠-١٩).
+		// **ونسخةُ التطبيق القديمة لا ترسل طريقةَ السعر** — فتُقرأ من القائمة قبل محوها.
+		if err := inheritModes(ctx, tx, itemID, *in.Modifiers); err != nil {
+			return err
+		}
 		if _, err := tx.Exec(ctx, `DELETE FROM modifier_groups WHERE item_id = $1 AND NOT store_drinks`, itemID); err != nil {
 			return err
 		}
@@ -763,11 +782,13 @@ func insertModifiers(ctx context.Context, tx dbtx.Querier, itemID string, groups
 		if g.MinSelect > g.MaxSelect {
 			g.MinSelect = g.MaxSelect
 		}
+		// **والطريقةُ تُضبط قبل الكتابة** — والسعرُ تحسبه القاعدة (هجرة 0482).
+		mode, base := cleanGroupMode(&g)
 		var groupID string
 		if err := tx.QueryRow(ctx, `
-			INSERT INTO modifier_groups (item_id, name, min_select, max_select, sort_order)
-			VALUES ($1, $2, $3, $4, $5) RETURNING id`,
-			itemID, g.Name, g.MinSelect, g.MaxSelect, gi).Scan(&groupID); err != nil {
+			INSERT INTO modifier_groups (item_id, name, min_select, max_select, sort_order, price_mode, base_grams)
+			VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+			itemID, g.Name, g.MinSelect, g.MaxSelect, gi, mode, base).Scan(&groupID); err != nil {
 			return err
 		}
 		for oi, o := range g.Options {
@@ -775,8 +796,8 @@ func insertModifiers(ctx context.Context, tx dbtx.Querier, itemID string, groups
 				return ErrNameRequired
 			}
 			if _, err := tx.Exec(ctx, `
-				INSERT INTO modifier_options (group_id, name, price_delta, sort_order, price_delta_usd_cents, available)
-				VALUES ($1, $2, $3, $4, $5, COALESCE($6, true))`, groupID, o.Name, o.PriceDelta, oi, o.priceDeltaUSDCents, o.Available); err != nil {
+				INSERT INTO modifier_options (group_id, name, price_delta, sort_order, price_delta_usd_cents, available, grams)
+				VALUES ($1, $2, $3, $4, $5, COALESCE($6, true), $7)`, groupID, o.Name, o.PriceDelta, oi, o.priceDeltaUSDCents, o.Available, o.Grams); err != nil {
 				return err
 			}
 		}
@@ -793,14 +814,14 @@ func (s *Service) ItemModifiers(ctx context.Context, itemID string) ([]ModifierG
 	groups := []ModifierGroup{}
 	idx := map[string]int{}
 	rows, err := s.db.Query(ctx, `
-		SELECT id, name, min_select, max_select, sort_order
+		SELECT id, name, min_select, max_select, sort_order, price_mode, base_grams
 		FROM modifier_groups WHERE item_id = $1 ORDER BY sort_order`, itemID)
 	if err != nil {
 		return nil, err
 	}
 	for rows.Next() {
 		var g ModifierGroup
-		if err := rows.Scan(&g.ID, &g.Name, &g.MinSelect, &g.MaxSelect, &g.SortOrder); err != nil {
+		if err := rows.Scan(&g.ID, &g.Name, &g.MinSelect, &g.MaxSelect, &g.SortOrder, &g.PriceMode, &g.BaseGrams); err != nil {
 			rows.Close()
 			return nil, err
 		}
@@ -817,7 +838,7 @@ func (s *Service) ItemModifiers(ctx context.Context, itemID string) ([]ModifierG
 	}
 
 	rows, err = s.db.Query(ctx, `
-		SELECT o.id, o.group_id, o.name, o.price_delta, o.available, o.sort_order, o.price_delta_usd_cents
+		SELECT o.id, o.group_id, o.name, o.price_delta, o.available, o.sort_order, o.price_delta_usd_cents, o.grams
 		FROM modifier_options o
 		JOIN modifier_groups g ON g.id = o.group_id
 		WHERE g.item_id = $1 ORDER BY o.sort_order`, itemID)
@@ -829,7 +850,7 @@ func (s *Service) ItemModifiers(ctx context.Context, itemID string) ([]ModifierG
 		var o ModifierOption
 		var groupID string
 		var optUSD *int64
-		if err := rows.Scan(&o.ID, &groupID, &o.Name, &o.PriceDelta, &o.Available, &o.SortOrder, &optUSD); err != nil {
+		if err := rows.Scan(&o.ID, &groupID, &o.Name, &o.PriceDelta, &o.Available, &o.SortOrder, &optUSD, &o.Grams); err != nil {
 			return nil, err
 		}
 		if optUSD != nil {

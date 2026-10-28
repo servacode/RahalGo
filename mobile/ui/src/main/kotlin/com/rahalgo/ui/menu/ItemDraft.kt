@@ -1,6 +1,10 @@
 package com.rahalgo.ui.menu
 
+import com.rahalgo.shared.merchant.DEFAULT_BASE_GRAMS
 import com.rahalgo.shared.merchant.ModifierGroup
+import com.rahalgo.shared.merchant.PRICE_MODE_NONE
+import com.rahalgo.shared.merchant.PRICE_MODE_WEIGHT
+import com.rahalgo.shared.merchant.weightName
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -84,12 +88,35 @@ fun ModifierGroup.withUsdText(): ModifierGroup =
  * **وليريٌّ يمحوه** فلا يُحسب فرقُه من سعر الصرف بعد أن صار بالليرة.
  */
 fun ItemDraft.modifiersForSave(): List<ModifierGroup> = modifiers.map { g ->
-    // **والخيارُ بلا اسمٍ يُسقط** (تدقيقُ ٢٠٢٦-١٠-٢٨) — سطرٌ فارغٌ نسيه لا يُرسَل.
-    g.copy(name = g.name.trim(), options = g.options.filter { it.name.isNotBlank() }.map { o ->
-        if (isUsd) o.copy(name = o.name.trim(), priceDeltaUsd = parseUsd(o.usdText) ?: 0.0)
-        else o.copy(name = o.name.trim(), priceDeltaUsd = null)
-    })
+    when (g.priceMode) {
+        // **بالوزن: الغراماتُ وحدَها** — والاسمُ منها والسعرُ يحسبه الخادم (٢٠٢٦-١٠-٢٨).
+        PRICE_MODE_WEIGHT -> g.copy(
+            name = g.name.trim(),
+            baseGrams = g.baseGrams ?: DEFAULT_BASE_GRAMS,
+            options = g.options.filter { (it.grams ?: 0) > 0 }
+                .map { o -> o.copy(name = weightName(o.grams!!), priceDelta = 0, priceDeltaUsd = null) },
+        )
+        // **بدون سعر: لا فرقَ يُرسَل.**
+        PRICE_MODE_NONE -> g.copy(
+            name = g.name.trim(),
+            options = g.options.filter { it.name.isNotBlank() }
+                .map { o -> o.copy(name = o.name.trim(), priceDelta = 0, priceDeltaUsd = null) },
+        )
+        // **والخيارُ بلا اسمٍ يُسقط** (تدقيقُ ٢٠٢٦-١٠-٢٨) — سطرٌ فارغٌ نسيه لا يُرسَل.
+        else -> g.copy(name = g.name.trim(), options = g.options.filter { it.name.isNotBlank() }.map { o ->
+            if (isUsd) o.copy(name = o.name.trim(), priceDeltaUsd = parseUsd(o.usdText) ?: 0.0)
+            else o.copy(name = o.name.trim(), priceDeltaUsd = null)
+        })
+    }
 }
+
+/**
+ * **سعرُ الصنف بالليرة للمعاينة** — من الحقل أو من الدولار بسعر الصرف. و`null`
+ * إن لم يُكتب بعد.
+ */
+fun ItemDraft.itemPriceSyp(rate: Double?): Long? =
+    if (isUsd) parseUsd(priceUsd)?.let { u -> rate?.takeIf { it > 0 }?.let { usdToSyp(u, it) } }
+    else price.toLongOrNull()
 
 /**
  * **سببُ رفض الإضافات قبل الإرسال** — و`null` لا سبب. (تدقيقُ ٢٠٢٦-١٠-٢٨:
@@ -114,7 +141,7 @@ fun ItemDraft.optionsError(): String? {
  * `true`) — **ولا يُصفَّر سعرٌ بصمت.**
  */
 fun ModifierGroup.forItemCurrency(usd: Boolean, rate: Double?): Pair<ModifierGroup, Boolean> {
-    if (!usd) return this to false
+    if (!usd || priceMode == PRICE_MODE_NONE || priceMode == PRICE_MODE_WEIGHT) return this to false
     var lost = false
     val opts = options.map { o ->
         when {
@@ -135,6 +162,8 @@ fun ItemDraft.withCurrency(to: String, rate: Double?): Pair<ItemDraft, Boolean> 
     val ok = rate != null && rate > 0
     var lost = false
     val groups = modifiers.map { g ->
+        // **ولا فرقَ يُحوَّل في «بدون سعر» و«حسب الوزن»** — الخادمُ يحسبهما.
+        if (g.priceMode == PRICE_MODE_NONE || g.priceMode == PRICE_MODE_WEIGHT) return@map g
         g.copy(options = g.options.map { o ->
             if (to == CURRENCY_USD) {
                 when {

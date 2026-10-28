@@ -116,6 +116,8 @@ export interface ModifierOption {
   price_delta: number;
   price_delta_usd?: number | null;
   available: boolean;
+  /** **وزنُ الخيار بالغرام** لمجموعة «حسب الوزن» (٢٠٢٦-١٠-٢٨). */
+  grams?: number | null;
 }
 
 export interface ModifierGroup {
@@ -124,6 +126,9 @@ export interface ModifierGroup {
   min_select: number;
   max_select: number;
   options: ModifierOption[];
+  /** **طريقةُ السعر** «priced» «none» «weight» — و«weight» يُعرض سعرُها كاملاً. */
+  price_mode?: string;
+  base_grams?: number | null;
 }
 
 export interface ItemDetail {

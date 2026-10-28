@@ -93,10 +93,75 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
 
     /** **يستقبل ما اختاره على الخريطة** — ولا يحفظ: الحفظُ بزرّه. */
     /**
-     * **إلى أيّ قسمٍ من «متجري» يُنزَل** (طلبُ المالك ٢٠٢٦-١٠-٠٨) — من كرت
-     * «متجرك ناقصه» أو من صفحة «اختر أقسامك أوّلاً». ويُصفَّر بعد النزول.
+     * **صفحةُ الإعداد المفتوحة من «متجري»** (تصميمُ ٢٠٢٦-١٠-٢٨) — تعيش في النموذج
+     * لا في الشاشة: **فمن فتح الخريطةَ من صفحة العنوان عاد إليها لا إلى البيت.**
      */
-    var jumpTo by mutableStateOf<StoreSpot?>(null)
+    var page by mutableStateOf<StorePage?>(null)
+
+    /** **أُجيب سؤالا الأقسام؟** — وإلّا فالقائمةُ الفارغةُ لا تعني «لم يختر». */
+    var sectionsKnown by mutableStateOf(false)
+        private set
+
+    // ══════════════════════════════════════════════════════════════════
+    // **معالجُ الإعداد الأوّل** (قرارُ المالك ٢٠٢٦-١٠-٢٨)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **ومصدرُ «الناقص» هو فحصُ «جهّز متجرك» نفسُه** (`missingRequired`) —
+    // والخطواتُ تُثبَّت عند البدء فلا تختفي خطوةٌ من العدّاد وهو فيها.
+    var wizardSteps by mutableStateOf<List<SetupStep>?>(null)
+        private set
+
+    /** **-1 الترحيب · ثمّ الخطوات · ثمّ «جاهز»** (`== wizardSteps.size`). */
+    var wizardIndex by mutableStateOf(-1)
+
+    private var wizardFor: String? = null
+
+    /** **مسوّدةُ عنوان المعالج** — تبقى حين تُفتح الخريطةُ فوقه ثمّ تُغلق. */
+    var wizardAddress by mutableStateOf<String?>(null)
+
+    /**
+     * **الخطواتُ الإلزاميّةُ الناقصة** — بترتيب المعالج.
+     *
+     * **والدوامُ «ناقصٌ» متى لم يُحفظ له صفٌّ** (`has_hours`) — والمحرّكُ يعدّه
+     * حينها مفتوحاً ٢٤ ساعة، **فيُسأل صاحبُه أن يختار صراحةً.**
+     */
+    fun missingRequired(): List<SetupStep> {
+        val s = store ?: return emptyList()
+        if (s.status == "suspended" || !sectionsKnown) return emptyList()
+        return buildList {
+            if (allSections.isNotEmpty() && mySections.isEmpty()) add(SetupStep.Sections)
+            if (s.lat == null || s.lng == null || s.addressText.isBlank()) add(SetupStep.Address)
+            if (!s.hasHours) add(SetupStep.Hours)
+            if (!s.settlementConfirmed) add(SetupStep.Settlement)
+            if (!s.returnsConfirmed) add(SetupStep.Returns)
+        }
+    }
+
+    /**
+     * **يبدأ المعالجَ إن نقص إلزاميّ** — والشعارُ يُضاف إليه إن غاب، **ولا يفتحه
+     * وحدَه** (اختياريّ). ومتجرٌ كاملٌ لا يرى المعالجَ أبداً.
+     */
+    fun maybeStartWizard() {
+        val s = store ?: return
+        if (wizardSteps != null && wizardFor == s.id) return
+        val missing = missingRequired()
+        if (missing.isEmpty()) {
+            wizardSteps = null
+            wizardFor = null
+            return
+        }
+        val logo = if (s.logoThumbUrl.isNullOrBlank()) listOf(SetupStep.Logo) else emptyList()
+        wizardSteps = logo + missing
+        wizardIndex = -1
+        wizardFor = s.id
+    }
+
+    /** **«جاهز»** — يُغلق المعالج؛ وإن بقي ناقصٌ (حفظٌ سقط) عاد في الفحص التالي. */
+    fun finishWizard() {
+        wizardSteps = null
+        wizardFor = null
+        maybeStartWizard()
+    }
 
     fun setPoint(lat: Double, lng: Double) {
         pickedLat = lat
@@ -159,8 +224,9 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
                 runCatching { hours = api.hours(mine.id) }
                 // **والأقسامُ زينةٌ حول الحال مثلُها** — ومن سقطت
                 // شاشتُه لأنّ نداءَ أقسامٍ تعثّر لم يفتح متجرَه.
-                runCatching { allSections = api.platformSections().sections }
-                runCatching { mySections = api.storeSections(mine.id).sections }
+                val okAll = runCatching { allSections = api.platformSections().sections }.isSuccess
+                val okMine = runCatching { mySections = api.storeSections(mine.id).sections }.isSuccess
+                sectionsKnown = okAll && okMine
                 // **واليومُ وحدَه** — **ومدًى من سبعة أيّامٍ يُقرأ «اليوم»
                 // فيظنّ صاحبُ المتجر يومَه أكبرَ ممّا هو.**
                 runCatching {
@@ -204,15 +270,16 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
      * **يبدّل طريقةَ مستحقّاته** — للطلبات الجديدة وحدَها، **والمستحقُّ النقديُّ
      * القائمُ يبقى حتّى يُصرف** (قرارُ المالك ٢٠٢٦-١٠-٠١).
      */
-    fun setSettlementMethod(method: String) {
+    fun setSettlementMethod(method: String, onOk: () -> Unit = {}) {
         val id = store?.id ?: return
         // **ومن لم يؤكّد بعد يؤكّد بالقيمة نفسِها** — فالافتراضُ ليس اختياراً.
-        if (method == store?.settlementMethod && store?.settlementConfirmed == true) return
+        if (method == store?.settlementMethod && store?.settlementConfirmed == true) { onOk(); return }
         saving = true
         viewModelScope.launch {
             runCatching { api.setSettlementMethod(id, method) }
                 .onSuccess {
                     store = store?.copy(settlementMethod = it.settlementMethod, settlementConfirmed = true)
+                    onOk()
                     Flash.ok(com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.ok_settlement_saved))
                 }
                 .onFailure { Flash.fail(err(it)) }
@@ -313,14 +380,15 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** **قبولُ الاسترداد** — (طلبُ المالك ٢٠٢٦-١٠-٠٨). */
-    fun setAcceptsReturns(accepts: Boolean) {
+    fun setAcceptsReturns(accepts: Boolean, onOk: () -> Unit = {}) {
         val id = store?.id ?: return
-        if (accepts == store?.acceptsReturns && store?.returnsConfirmed == true) return
+        if (accepts == store?.acceptsReturns && store?.returnsConfirmed == true) { onOk(); return }
         saving = true
         viewModelScope.launch {
             runCatching { api.settings(id, StoreSettingsInput(acceptsReturns = accepts)) }
                 .onSuccess {
                     store = store?.copy(acceptsReturns = accepts, returnsConfirmed = true)
+                    onOk()
                     Flash.ok(com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.ok_returns_saved))
                 }
                 .onFailure { Flash.fail(err(it)) }
@@ -382,7 +450,7 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
      * خطأً (`merchant_ops_handlers.go`): **من أرسل `lat` وحدَه نقل
      * متجرَه إلى خطّ الاستواء.**
      */
-    fun saveAddress(text: String, lat: Double?, lng: Double?) {
+    fun saveAddress(text: String, lat: Double?, lng: Double?, onOk: () -> Unit = {}) {
         val id = store?.id ?: return
         val trimmed = text.trim()
         saving = true
@@ -407,6 +475,7 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
                     // معلّقةً تُرسَل ثانيةً مع أيّ حفظٍ تالٍ.**
                     pickedLat = null
                     pickedLng = null
+                    onOk()
                     Flash.ok(com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.ok_address_saved))
                 }
                 .onFailure { Flash.fail(err(it)) }
@@ -420,13 +489,14 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
      * **ولا يُحفظ فارغاً بلا قصد**: من أزال الكلَّ عاد يرى القائمةَ
      * كاملةً كما قبل الاختيار، **وذاك سلوكٌ مقصودٌ لا عطب.**
      */
-    fun saveSections(ids: List<String>) {
+    fun saveSections(ids: List<String>, onOk: () -> Unit = {}) {
         val id = store?.id ?: return
         saving = true
         viewModelScope.launch {
             runCatching { api.setStoreSections(id, ids) }
                 .onSuccess {
                     mySections = allSections.filter { it.id in ids }
+                    onOk()
                     // ══════════════════════════════════════════════════
                     // **ونبضةٌ لبقيّة الشاشات**
                     // ══════════════════════════════════════════════════
@@ -447,12 +517,12 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun saveHours(days: List<DayHours>) {
+    fun saveHours(days: List<DayHours>, onOk: () -> Unit = {}) {
         val id = store?.id ?: return
         saving = true
         viewModelScope.launch {
             runCatching { api.setHours(id, days) }
-                .onSuccess { hours = days; store = store?.copy(hasHours = true); Flash.ok(com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.ok_hours_saved)) }
+                .onSuccess { hours = days; store = store?.copy(hasHours = true); onOk(); Flash.ok(com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.ok_hours_saved)) }
                 .onFailure { Flash.fail(err(it)) }
             saving = false
         }
@@ -476,3 +546,9 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 }
+
+/** **خطواتُ معالج الإعداد** — بترتيب التصميم المعتمد (٢٠٢٦-١٠-٢٨). */
+enum class SetupStep { Logo, Sections, Address, Hours, Settlement, Returns }
+
+/** **صفحاتُ الإعداد التي تُفتح من «متجري».** */
+enum class StorePage { Hours, Sections, Address, Settlement, Returns, Rate, Prep }

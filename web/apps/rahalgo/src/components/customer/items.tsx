@@ -448,11 +448,19 @@ export function ItemSheet({
                       <span className={o.available ? "" : "text-ink-dim line-through"}>{o.name}</span>
                       {!o.available && <span className="text-xs text-danger">{I.unavailable}</span>}
                     </span>
-                    {o.price_delta !== 0 && (
+                    {g.price_mode === "weight" ? (
+                      // **«حسب الوزن» بسعره كاملاً** لا «+فرق» (قرارُ المالك ٢٠٢٦-١٠-٢٨) —
+                      // مرآةُ `ItemOptionsSheet.kt`.
                       <span className="text-xs text-ink-muted">
-                        {"+ "}
-                        <Money value={o.price_delta} small />
+                        <Money value={view.price + o.price_delta} small />
                       </span>
+                    ) : (
+                      o.price_delta !== 0 && (
+                        <span className="text-xs text-ink-muted">
+                          {"+ "}
+                          <Money value={o.price_delta} small />
+                        </span>
+                      )
                     )}
                   </span>
                 );

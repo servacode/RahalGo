@@ -741,6 +741,13 @@ data class ModifierGroup(
     @SerialName("min_select") val minSelect: Int = 0,
     @SerialName("max_select") val maxSelect: Int = 1,
     val options: List<ModifierOption> = emptyList(),
+    /**
+     * **طريقةُ السعر** «priced» أو «none» أو «weight» (قرارُ المالك ٢٠٢٦-١٠-٢٨).
+     * **وفراغُه لا يُرسَل** فيُبقي الخادمُ طريقةَ المجموعة القائمة.
+     */
+    @SerialName("price_mode") val priceMode: String? = null,
+    /** **الوزنُ الذي يخصّه سعرُ الصنف** — لـ«weight» وحدَها، وفراغُه ١٠٠ غ. */
+    @SerialName("base_grams") val baseGrams: Int? = null,
 )
 
 @Serializable
@@ -754,6 +761,8 @@ data class ModifierOption(
      * يحسب منه `price_delta` بسعر صرف المتجر. وفراغُه: الإضافةُ بالليرة.
      */
     @SerialName("price_delta_usd") val priceDeltaUsd: Double? = null,
+    /** **وزنُ الخيار بالغرام** لمجموعة «حسب الوزن» — وسعرُه يحسبه الخادم. */
+    val grams: Int? = null,
     /** **ما يُكتب في الحقل** وهو يُكتب — «0.» لا يضيع قبل الرقم التالي. لا يُرسَل. */
     @kotlinx.serialization.Transient val usdText: String = "",
 )

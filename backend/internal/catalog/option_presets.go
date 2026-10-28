@@ -24,18 +24,22 @@ import (
 type PresetOption struct {
 	Name       string `json:"name"`
 	PriceDelta int64  `json:"price_delta"`
+	// Grams وزنُ الخيار لقالبٍ «حسب الوزن» (٢٠٢٦-١٠-٢٨).
+	Grams *int `json:"grams,omitempty"`
 }
 
 // OptionPreset **قالبُ مجموعة خيارات** — «النمرة» بخياراتها ٣٨…٤٥.
 type OptionPreset struct {
-	ID          string         `json:"id"`
-	Name        string         `json:"name"`
-	MinSelect   int            `json:"min_select"`
-	MaxSelect   int            `json:"max_select"`
-	Options     []PresetOption `json:"options"`
-	SortOrder   int            `json:"sort_order"`
-	Active      bool           `json:"active"`
-	CategoryIDs []string       `json:"category_ids"`
+	ID        string         `json:"id"`
+	Name      string         `json:"name"`
+	MinSelect int            `json:"min_select"`
+	MaxSelect int            `json:"max_select"`
+	Options   []PresetOption `json:"options"`
+	SortOrder int            `json:"sort_order"`
+	Active    bool           `json:"active"`
+	// PriceMode «priced» «none» «weight» — يُنسخ إلى المجموعة مع خياراتها (٢٠٢٦-١٠-٢٨).
+	PriceMode   string   `json:"price_mode"`
+	CategoryIDs []string `json:"category_ids"`
 	// Chosen **أيطلع عند هذا المتجر؟** — يُملأ في قراءة المتجر وحدَها.
 	Chosen bool `json:"chosen"`
 }
@@ -49,6 +53,8 @@ type OptionPresetInput struct {
 	SortOrder   *int           `json:"sort_order"`
 	Active      *bool          `json:"active"`
 	CategoryIDs *[]string      `json:"category_ids"`
+	// PriceMode **وغيابُه في التعديل يُبقي القائم**، وفي الإنشاء «priced».
+	PriceMode *string `json:"price_mode"`
 }
 
 var ErrPresetInvalid = httpx.NewError(http.StatusBadRequest, "preset_invalid", "errors.preset_invalid")
@@ -67,9 +73,33 @@ func (in *OptionPresetInput) clean() error {
 	if in.MinSelect > in.MaxSelect {
 		in.MinSelect = in.MaxSelect
 	}
+	if in.PriceMode != nil {
+		m := validPriceMode(*in.PriceMode)
+		in.PriceMode = &m
+	}
 	opts := make([]PresetOption, 0, len(in.Options))
 	for _, o := range in.Options {
 		o.Name = strings.TrimSpace(o.Name)
+		// **والوزنُ اسمُه من غراماته** — «250 غ» و«نصف كيلو».
+		if in.PriceMode != nil && *in.PriceMode == PriceModeWeight {
+			if o.Grams == nil || *o.Grams <= 0 || *o.Grams > maxGrams {
+				o.Grams = nil
+				if n := GramsFromName(o.Name); n > 0 {
+					o.Grams = &n
+				}
+			}
+			if o.Grams != nil {
+				o.Name = WeightName(*o.Grams)
+			} else if o.Name != "" {
+				return ErrPresetInvalid
+			}
+			o.PriceDelta = 0
+		} else if in.PriceMode != nil {
+			o.Grams = nil
+		}
+		if in.PriceMode != nil && *in.PriceMode == PriceModeNone {
+			o.PriceDelta = 0
+		}
 		if o.Name == "" {
 			continue
 		}
@@ -107,7 +137,7 @@ func (s *Service) readPresets(ctx context.Context, activeOnly bool, merchantID s
 	// **والمختارُ يُحسب في الاستعلام نفسِه**: اختيارُ المتجر إن وُجد،
 	// وإلّا ربطُ تصنيفه.
 	rows, err := s.db.Query(ctx, `
-		SELECT p.id::text, p.name, p.min_select, p.max_select, p.options, p.sort_order, p.active,
+		SELECT p.id::text, p.name, p.min_select, p.max_select, p.options, p.sort_order, p.active, p.price_mode,
 		       COALESCE((SELECT array_agg(cop.category_id::text) FROM category_option_presets cop
 		                  WHERE cop.preset_id = p.id), '{}'),
 		       CASE WHEN $2::text = '' THEN false
@@ -131,7 +161,7 @@ func (s *Service) readPresets(ctx context.Context, activeOnly bool, merchantID s
 		var p OptionPreset
 		var raw []byte
 		if err := rows.Scan(&p.ID, &p.Name, &p.MinSelect, &p.MaxSelect, &raw, &p.SortOrder,
-			&p.Active, &p.CategoryIDs, &p.Chosen); err != nil {
+			&p.Active, &p.PriceMode, &p.CategoryIDs, &p.Chosen); err != nil {
 			return nil, err
 		}
 		p.Options = []PresetOption{}
@@ -182,16 +212,17 @@ func (s *Service) SaveOptionPreset(ctx context.Context, actorID, id string, in O
 	defer func() { _ = tx.Rollback(ctx) }()
 	if id == "" {
 		err = tx.QueryRow(ctx, `
-			INSERT INTO option_presets (name, min_select, max_select, options, sort_order, active)
+			INSERT INTO option_presets (name, min_select, max_select, options, sort_order, active, price_mode)
 			VALUES ($1, $2, $3, $4, COALESCE($5, (SELECT COALESCE(max(sort_order), 0) + 1 FROM option_presets)),
-			        COALESCE($6, true))
-			RETURNING id::text`, in.Name, in.MinSelect, in.MaxSelect, raw, in.SortOrder, in.Active).Scan(&id)
+			        COALESCE($6, true), COALESCE($7, 'priced'))
+			RETURNING id::text`, in.Name, in.MinSelect, in.MaxSelect, raw, in.SortOrder, in.Active, in.PriceMode).Scan(&id)
 	} else {
 		var tag interface{ RowsAffected() int64 }
 		tag, err = tx.Exec(ctx, `
 			UPDATE option_presets SET name = $2, min_select = $3, max_select = $4, options = $5,
-			       sort_order = COALESCE($6, sort_order), active = COALESCE($7, active)
-			 WHERE id = $1::uuid`, id, in.Name, in.MinSelect, in.MaxSelect, raw, in.SortOrder, in.Active)
+			       sort_order = COALESCE($6, sort_order), active = COALESCE($7, active),
+			       price_mode = COALESCE($8, price_mode)
+			 WHERE id = $1::uuid`, id, in.Name, in.MinSelect, in.MaxSelect, raw, in.SortOrder, in.Active, in.PriceMode)
 		if err == nil && tag.RowsAffected() == 0 {
 			return "", httpx.ErrNotFound
 		}

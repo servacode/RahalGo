@@ -17,6 +17,8 @@ import kotlinx.serialization.Serializable
 data class PresetOption(
     val name: String = "",
     @SerialName("price_delta") val priceDelta: Long = 0,
+    /** وزنُ الخيار بالغرام لقالبٍ «حسب الوزن» (٢٠٢٦-١٠-٢٨). */
+    val grams: Int? = null,
 )
 
 /** **قالبُ مجموعة خيارات** — و`chosen` يعني أنّه يطلع عند هذا المتجر. */
@@ -28,14 +30,55 @@ data class OptionPreset(
     @SerialName("max_select") val maxSelect: Int = 1,
     val options: List<PresetOption> = emptyList(),
     val chosen: Boolean = false,
+    /** **طريقةُ السعر** «priced» «none» «weight» — تحدّدها اللوحة (٢٠٢٦-١٠-٢٨). */
+    @SerialName("price_mode") val priceMode: String = PRICE_MODE_PRICED,
 ) {
-    /** **مجموعةٌ تُنسخ إلى الصنف** حين يُعلَّم القالب. */
+    /** **مجموعةٌ تُنسخ إلى الصنف** حين يُعلَّم القالب — بطريقة سعرها. */
     fun toGroup(): ModifierGroup = ModifierGroup(
         name = name,
         minSelect = minSelect,
         maxSelect = maxSelect,
-        options = options.map { ModifierOption(name = it.name, priceDelta = it.priceDelta) },
+        priceMode = priceMode,
+        baseGrams = if (priceMode == PRICE_MODE_WEIGHT) DEFAULT_BASE_GRAMS else null,
+        options = options.map {
+            when (priceMode) {
+                PRICE_MODE_WEIGHT -> ModifierOption(name = it.grams?.let(::weightName) ?: it.name, grams = it.grams)
+                PRICE_MODE_NONE -> ModifierOption(name = it.name)
+                else -> ModifierOption(name = it.name, priceDelta = it.priceDelta)
+            }
+        },
     )
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **طريقةُ سعر الخيارات** (قرارُ المالك ٢٠٢٦-١٠-٢٨)
+// ══════════════════════════════════════════════════════════════════════
+//
+// «بدون سعر» للمقاس واللون والنمرة، و«حسب الوزن» يُحسب من سعر الصنف.
+// **والخادمُ يحسب السعرَ الحقيقيّ** — وهذه المعادلةُ للمعاينة وحدَها،
+// وهي نفسُها في `weight_option_delta` (هجرة 0482) وفي `optionModes.ts` للويب.
+
+const val PRICE_MODE_PRICED = "priced"
+const val PRICE_MODE_NONE = "none"
+const val PRICE_MODE_WEIGHT = "weight"
+const val DEFAULT_BASE_GRAMS = 100
+
+/** **أوزانٌ سريعة** — ٢٥٠ غ ونصف كيلو وكيلو. */
+val QUICK_GRAMS = listOf(250, 500, 1000)
+
+/** **اسمُ الوزن بالفصحى** — «250 غ»، «نصف كيلو»، «كيلو»، «1.5 كيلو». */
+fun weightName(g: Int): String = when {
+    g == 500 -> "نصف كيلو"
+    g == 1000 -> "كيلو"
+    g > 1000 && g % 500 == 0 ->
+        java.math.BigDecimal(g).movePointLeft(3).stripTrailingZeros().toPlainString() + " كيلو"
+    else -> "$g غ"
+}
+
+/** **سعرُ الوزن كاملاً** = سعرُ الصنف × غراماته ÷ الأساس، لأقرب ٥ ل.س. */
+fun weightPrice(itemPrice: Long, grams: Int, baseGrams: Int?): Long {
+    val base = (baseGrams ?: DEFAULT_BASE_GRAMS).takeIf { it > 0 } ?: DEFAULT_BASE_GRAMS
+    return Math.round(itemPrice.toDouble() * grams / base / 5.0) * 5
 }
 
 /** **ما يُردّ** — القائمةُ كلُّها معلَّمةً، و`custom` أنّه اختار لنفسه. */

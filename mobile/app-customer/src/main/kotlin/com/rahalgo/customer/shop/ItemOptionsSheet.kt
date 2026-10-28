@@ -180,6 +180,8 @@ fun ItemOptionsSheet(
                     groups.orEmpty().forEach { g ->
                         GroupBlock(
                             group = g,
+                            itemPrice = item.price,
+                            itemPriceUsd = item.priceUsd,
                             chosen = chosen[g.id].orEmpty(),
                             onPick = { opt ->
                                 val now = chosen[g.id].orEmpty()
@@ -271,6 +273,8 @@ private fun SheetQty(icon: Int, label: String, enabled: Boolean, onClick: () -> 
 @Composable
 private fun GroupBlock(
     group: ModifierGroup,
+    itemPrice: Long,
+    itemPriceUsd: Double?,
     chosen: List<ModifierOption>,
     onPick: (ModifierOption) -> Unit,
 ) {
@@ -304,6 +308,10 @@ private fun GroupBlock(
         group.options.forEach { o ->
             OptionRow(
                 option = o,
+                // **«حسب الوزن» بسعره كاملاً** لا «+فرق» (قرارُ المالك ٢٠٢٦-١٠-٢٨) —
+                // «كيلو 6,000 ل.س» يُفهم، و«+5,400» لا يُفهم.
+                fullPrice = if (group.priceMode == "weight") itemPrice + o.priceDelta else null,
+                fullPriceUsd = if (group.priceMode == "weight") itemPriceUsd?.let { b -> o.priceDeltaUsd?.let { b + it } } else null,
                 selected = chosen.any { it.id == o.id },
                 onClick = { if (o.available) onPick(o) },
             )
@@ -313,7 +321,13 @@ private fun GroupBlock(
 
 /** **سطرُ خيارٍ** — واسمُه وفرقُ سعره، والمختارُ يُعرف بلونه. */
 @Composable
-private fun OptionRow(option: ModifierOption, selected: Boolean, onClick: () -> Unit) {
+private fun OptionRow(
+    option: ModifierOption,
+    selected: Boolean,
+    onClick: () -> Unit,
+    fullPrice: Long? = null,
+    fullPriceUsd: Double? = null,
+) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -346,8 +360,14 @@ private fun OptionRow(option: ModifierOption, selected: Boolean, onClick: () -> 
                 )
             }
         }
-        // **والصفرُ لا يُكتب «+٠»** — **رقمٌ بلا معنًى يُقرأ سعراً.**
-        if (option.priceDelta != 0L) {
+        if (fullPrice != null) {
+            Text(
+                fullPriceUsd?.let { com.rahalgo.ui.dollars(it) } ?: money(fullPrice),
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        } else if (option.priceDelta != 0L) {
+            // **والصفرُ لا يُكتب «+٠»** — **رقمٌ بلا معنًى يُقرأ سعراً.**
             Text(
                 // **وبالدولار لمتجرٍ يعرض به** (٢٠٢٦-١٠-١٢).
                 "+" + (option.priceDeltaUsd?.let { com.rahalgo.ui.dollars(it) } ?: money(option.priceDelta)),

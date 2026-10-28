@@ -87,6 +87,11 @@ import com.rahalgo.ui.WalletViewModel
 import com.rahalgo.ui.rememberOverlay
 import kotlinx.coroutines.launch
 import com.rahalgo.ui.DrawerGestures
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -227,6 +232,50 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
     // **وخريطةُ الدبّوس تغطّي الشاشةَ ولا تفتح صفحةً ثانية** — **ومن
     // خرج إلى صفحةٍ ليختار نقطةً عاد فلم يجد ما كتب.**
     var picking by rememberSaveable { mutableStateOf(false) }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **معالجُ الإعداد الأوّل يسبق التبويبات** (قرارُ المالك ٢٠٢٦-١٠-٢٨)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **متجرٌ ينقصه إعدادٌ إلزاميّ لا يرى التبويبات حتّى يُكمله** — والناقصُ من
+    // فحص «جهّز متجرك» نفسِه (`missingRequired`). **ومتجرٌ كاملٌ لا يراه أبداً.**
+    LaunchedEffect(storeVm.store, storeVm.sectionsKnown, storeVm.mySections, storeVm.allSections) {
+        storeVm.maybeStartWizard()
+    }
+    val wizardOn = storeVm.wizardSteps != null
+    // **وخريطةُ الدبّوس واحدةٌ** — لصفحة العنوان في «متجري» ولخطوة العنوان في المعالج.
+    val pickPointView: @Composable () -> Unit = {
+        PickPoint(
+            // **موقعُ المتجر المحفوظ يُؤكَّد بلا تحريك** (٢٠٢٦-١٠-١٢).
+            startIsSaved = storeVm.store?.lat != null && storeVm.store?.lng != null,
+            start = (storeVm.store?.lat to storeVm.store?.lng)
+                .let { (la, ln) ->
+                    if (la != null && ln != null) {
+                        org.maplibre.android.geometry.LatLng(la, ln)
+                    } else {
+                        com.rahalgo.ui.LastPoint.value?.let { p ->
+                            org.maplibre.android.geometry.LatLng(p.lat, p.lng)
+                        }
+                    }
+                },
+            vm = pickVm,
+            onPick = { at, _ ->
+                storeVm.setPoint(at.latitude, at.longitude)
+                picking = false
+            },
+            onCancel = { picking = false },
+            // **ودبّوسُ المتجر يكفيه حدُّ التأكيد** — **ومئةُ مترٍ خطأً بابُ جارِه.**
+            onLocate = {
+                if (Here.granted(context)) {
+                    Here.refresh(context, locating, Accuracy.CONFIRM_M)
+                } else {
+                    askHere.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+                }
+            },
+            // **وحالُ التحديد تُرسَم** (`MLW-02`) — **والتعذّرُ يُقال بسببه لا «حدث خطأ».**
+            locating = locating,
+        )
+    }
     // **«لدي توصيلة»** (الخطوة ١٨) — ونقطةُ المستلِم على الخريطة نفسِها.
     // **ولا تحديدَ يدويّاً لنقطة المستلِم** (طلبُ المالك ٢٠٢٦-١٠-٠٩) — فرعُ خريطتها نُظّف
     // (تدقيقُ ٢٠٢٦-١٠-٢٧): الموقعُ من رابطٍ يشاركه الزبون.
@@ -276,7 +325,7 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
     // في تطبيق المندوب. **والخريطةُ والدرجُ والشاشاتُ المفتوحةُ تغلبه** (تُسجَّل
     // بعده فتُقدَّم)، **ولا يُفعَّل وهما مفتوحتان** — فيُسبَق بشرطهما هنا.
     androidx.activity.compose.BackHandler(
-        enabled = tab != Tab.Store && !drawer.isOpen && !picking,
+        enabled = tab != Tab.Store && !drawer.isOpen && !picking && !wizardOn,
     ) { tab = Tab.Store; menuVm.cancelEdit() }
 
     // ══════════════════════════════════════════════════════════════════
@@ -355,9 +404,10 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
     // **والنبضةُ تقرأ الظاهرَ وحدَه** (تدقيقُ ٢٠٢٦-١٠-٢٧) — انظر `StoreViewModel.active`.
     // ══════════════════════════════════════════════════════════════════
     val shown = overlay.current
-    LaunchedEffect(tab, shown, selfManage) {
+    LaunchedEffect(tab, shown, selfManage, wizardOn) {
         val bare = shown == Overlay.None
-        storeVm.active = bare && tab == Tab.Store
+        // **والمعالجُ يقرأ المتجرَ حيّاً** — هو الظاهرُ ما دام مفتوحاً.
+        storeVm.active = (bare && tab == Tab.Store) || wizardOn
         menuVm.active = bare &&
             (tab == Tab.Menu || tab == Tab.AddItem || (tab == Tab.Orders && !selfManage))
         historyVm.active = shown is Overlay.Menu && shown.key == MerchantItems.HISTORY
@@ -400,7 +450,8 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
         //
         // **والدرجُ المفتوحُ يبقى قابلاً للإغلاق بالسحب** — **فلا يُحبَس
         // أحدٌ بدرجٍ لا يُغلَق**، **والخريطةُ خلفَ حاجبٍ حينها فلا تنازع.**
-        gesturesEnabled = DrawerGestures.enabledFor(drawer),
+        // **ولا درجَ والمعالجُ مفتوح** — لا تبويبَ ولا بابَ قبل أن يكتمل الإعداد.
+        gesturesEnabled = !wizardOn && DrawerGestures.enabledFor(drawer),
         drawerContent = {
             ModalDrawerSheet(Modifier.width(200.dp)) {
                 Drawer(
@@ -425,6 +476,29 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
     ) {
         val over = overlay.current
 
+        if (wizardOn) {
+            // **والمعالجُ يبقى تحت الخريطة** — فلا تضيع خطوتُه حين يُختار الدبّوس.
+            Box(Modifier.fillMaxSize()) {
+                com.rahalgo.merchant.store.SetupWizard(
+                    vm = storeVm,
+                    onPickPoint = { picking = true },
+                    onAddItem = {
+                        storeVm.finishWizard()
+                        overlay.clear()
+                        tab = Tab.AddItem
+                        menuVm.newItem()
+                    },
+                    onFinish = {
+                        storeVm.finishWizard()
+                        overlay.clear()
+                        tab = Tab.Store
+                    },
+                )
+                if (picking) pickPointView()
+            }
+            return@ModalNavigationDrawer
+        }
+
         Scaffold(
             topBar = {
                 TopBar(
@@ -439,7 +513,20 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                 )
             },
             bottomBar = {
-                NavigationBar {
+                // **شريطٌ أبيضُ بخطٍّ رفيعٍ فوقه، والمختارُ أيقونتُه في كبسولة** (التصميمُ المعتمد ٢٠٢٦-١٠-٢٨).
+                val barLine = Rahal.colors.line
+                NavigationBar(
+                    containerColor = Rahal.colors.canvas,
+                    tonalElevation = 0.dp,
+                    modifier = Modifier.drawBehind {
+                        drawLine(
+                            color = barLine,
+                            start = androidx.compose.ui.geometry.Offset(0f, 0f),
+                            end = androidx.compose.ui.geometry.Offset(size.width, 0f),
+                            strokeWidth = Rahal.stroke.hair.toPx(),
+                        )
+                    },
+                ) {
                     // ══════════════════════════════════════════════════
                     // **الترتيبُ بحسب ما يُفتح — يميناً إلى يسار**
                     // ══════════════════════════════════════════════════
@@ -590,42 +677,7 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                     //
                     // **وأوّلُ الفروع لا آخرُها** — **ولو جاءت بعد
                     // تبويب «متجري» لَغطّاها هو فلا تُرى أبداً.**
-                    picking -> PickPoint(
-                        // **موقعُ المتجر المحفوظ يُؤكَّد بلا تحريك** (٢٠٢٦-١٠-١٢).
-                        startIsSaved = storeVm.store?.lat != null && storeVm.store?.lng != null,
-                        start = (storeVm.store?.lat to storeVm.store?.lng)
-                            .let { (la, ln) ->
-                                if (la != null && ln != null) {
-                                    org.maplibre.android.geometry.LatLng(la, ln)
-                                } else {
-                                    com.rahalgo.ui.LastPoint.value?.let { p ->
-                                        org.maplibre.android.geometry.LatLng(p.lat, p.lng)
-                                    }
-                                }
-                            },
-                        vm = pickVm,
-                        onPick = { at, _ ->
-                            storeVm.setPoint(at.latitude, at.longitude)
-                            picking = false
-                        },
-                        onCancel = { picking = false },
-                        // **ودبّوسُ المتجر يكفيه حدُّ التأكيد** —
-                        // **ومئةُ مترٍ خطأً بابُ جارِه.**
-                        onLocate = {
-                            if (Here.granted(context)) {
-                                Here.refresh(context, locating, Accuracy.CONFIRM_M)
-                            } else {
-                                askHere.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
-                            }
-                        },
-                        // ══════════════════════════════════════════
-                        // **وحالُ التحديد تُرسَم** (`MLW-02`)
-                        // ══════════════════════════════════════════
-                        //
-                        // **فالزرُّ يدور ما دام النداءُ قائماً**،
-                        // **والتعذّرُ يُقال بسببه لا «حدث خطأ».**
-                        locating = locating,
-                    )
+                    picking -> pickPointView()
 
                     over is Overlay.Menu && PlatformPages.has(over.key) ->
                         PlatformScreen(vm = pagesVm, key = over.key, role = HelpRole.Merchant)
@@ -741,17 +793,31 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                                 body = stringResource(R.string.store_suspended_banner),
                             ) { tab = Tab.Store }
                         } else if (menuVm.sections.isEmpty() && !menuVm.loading) {
-                            NeedSections { storeVm.jumpTo = com.rahalgo.merchant.store.StoreSpot.Sections; tab = Tab.Store }
+                            NeedSections { storeVm.page = com.rahalgo.merchant.store.StorePage.Sections; tab = Tab.Store }
                         } else {
                             MenuScreen(menuVm)
                         }
                     }
 
-                    tab == Tab.Store -> StoreScreen(storeVm) { picking = true }
+                    // **وتنبيهُ «غير متوفر» يُحسب من الأصناف المحمّلة** — بلا نداءٍ جديد.
+                    tab == Tab.Store -> StoreScreen(
+                        storeVm,
+                        unavailable = menuVm.groups.sumOf { g -> g.items.count { !it.available } },
+                        onUnavailable = { menuVm.cancelEdit(); tab = Tab.Menu },
+                        onPickPoint = { picking = true },
+                    )
 
                     tab == Tab.Delivery -> com.rahalgo.merchant.delivery.DeliveryScreen(deliveryVm)
 
-                    else -> AccountScreen(
+                    // **وحسابي كما هو — برأسٍ بالتصميم الجديد** (قرارُ المالك ٢٠٢٦-١٠-٢٨):
+                    // الاسمُ والرقمُ والمحفظة، ثمّ تعديلُ الحساب القائم بلا تغيير.
+                    else -> Column(Modifier.fillMaxSize()) {
+                        AccountHeader(
+                            me = accountVm.state.me,
+                            balance = shell.balance,
+                            onWallet = { overlay.show(Overlay.Wallet) },
+                        )
+                        Box(Modifier.weight(1f)) { AccountScreen(
                         vm = accountVm,
                         onLoggedOut = onLogout,
                         // ══════════════════════════════════════════
@@ -773,7 +839,8 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                         // **وصاحبُ المتجر عاملٌ** — توثيقُ واتساب شرطُ عمله.
                         worker = true,
                         push = false,
-                    )
+                    ) }
+                    }
                 }
                 }
             }
@@ -825,8 +892,17 @@ private fun RowScope.Tab(
                 stringResource(label),
                 maxLines = 1,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
             )
         },
+        // **والمختارُ بلون العلامة في كبسولةٍ فاتحة، والباقي باهت.**
+        colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
+            selectedIconColor = Rahal.colors.brand,
+            selectedTextColor = Rahal.colors.brand,
+            indicatorColor = Rahal.colors.brand.copy(alpha = 0.12f),
+            unselectedIconColor = Rahal.colors.inkMuted,
+            unselectedTextColor = Rahal.colors.inkMuted,
+        ),
     )
 }
 
@@ -865,4 +941,58 @@ private fun NeedSections(
             Text(stringResource(R.string.need_sections_go))
         }
     }
+}
+
+/**
+ * **رأسُ «حسابي»** (التصميمُ المعتمد ٢٠٢٦-١٠-٢٨) — صاحبُ الحساب ورقمُه، **ورصيدُ
+ * محفظته يُضغط فيفتحها.** وتحته تعديلُ الحساب القائم كما هو.
+ */
+@Composable
+private fun AccountHeader(me: com.rahalgo.shared.model.MeSummary?, balance: Long, onWallet: () -> Unit) {
+    if (me == null) return
+    androidx.compose.foundation.layout.Row(
+        Modifier
+            .fillMaxWidth()
+            .background(Rahal.colors.canvas)
+            .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.md),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Avatar(url = com.rahalgo.ui.AppCore.get().media(me.avatarThumbUrl), name = me.fullName, size = 52)
+        Spacer(Modifier.width(Rahal.space.md))
+        Column(Modifier.weight(1f)) {
+            Text(
+                me.fullName,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            )
+            // **والرقمُ يُقرأ من اليسار** — أرقامٌ لا نصّ.
+            Text(
+                "‎" + me.phone,
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+        Column(
+            Modifier
+                .clip(Rahal.shape.sm)
+                .clickable(onClick = onWallet)
+                .padding(Rahal.space.sm),
+            horizontalAlignment = Alignment.End,
+        ) {
+            Text(
+                stringResource(com.rahalgo.ui.R.string.top_wallet),
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.labelSmall,
+            )
+            Text(
+                com.rahalgo.ui.money(balance),
+                color = Rahal.colors.success,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleSmall,
+            )
+        }
+    }
+    androidx.compose.material3.HorizontalDivider(color = Rahal.colors.line, thickness = Rahal.stroke.hair)
 }

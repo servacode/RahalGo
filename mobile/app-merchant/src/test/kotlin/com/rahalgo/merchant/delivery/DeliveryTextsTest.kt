@@ -43,9 +43,9 @@ class DeliveryTextsTest {
 
     @Test
     fun `the owner's words, letter for letter`() {
-        assertEquals("بدك السائق يدفع مبلغ بمكان الاستلام؟", text("md_collect_q_fetch"))
+        assertEquals("هل تريد أن يدفع السائق مبلغاً في مكان الاستلام؟", text("md_collect_q_fetch"))
         // **والوحدةُ تأتي من العملة المختارة** (قرارُ المالك ٢٠٢٦-١٠-٢٠) — ليرة أو دولار.
-        assertEquals("المبلغ يلي بيدفعه (%1\$s)", text("md_collect_amount_fetch"))
+        assertEquals("المبلغ الذي يدفعه (%1\$s)", text("md_collect_amount_fetch"))
         // **ولا «يقبض» في نصوص الإحضار** — هو يدفع.
         for (n in listOf("md_collect_q_fetch", "md_collect_amount_fetch", "md_row_collect_fetch")) {
             assertFalse("«$n» يقول يقبض", text(n).contains("يقبض"))

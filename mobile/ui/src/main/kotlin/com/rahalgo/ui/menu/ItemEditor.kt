@@ -79,6 +79,14 @@ import com.rahalgo.shared.merchant.ModifierOption
 import com.rahalgo.shared.merchant.PlatformSectionRef as SectionRef
 import com.rahalgo.shared.merchant.OptionPreset
 import com.rahalgo.shared.merchant.PresetOption
+import com.rahalgo.shared.merchant.DEFAULT_BASE_GRAMS
+import com.rahalgo.shared.merchant.PRICE_MODE_NONE
+import com.rahalgo.shared.merchant.PRICE_MODE_PRICED
+import com.rahalgo.shared.merchant.PRICE_MODE_WEIGHT
+import com.rahalgo.shared.merchant.QUICK_GRAMS
+import com.rahalgo.shared.merchant.weightName
+import com.rahalgo.shared.merchant.weightPrice
+import com.rahalgo.ui.money
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -329,7 +337,7 @@ fun ItemEditor(
             )
         }
 
-        ModifiersEditor(d, presets, onEdit, onAddPreset = { p ->
+        ModifiersEditor(d, presets, onEdit, itemPrice = d.itemPriceSyp(exchangeRate), onAddPreset = { p ->
             val (g, lost) = p.toGroup().forItemCurrency(d.isUsd, exchangeRate)
             if (lost) rateLost = true
             onEdit { dd -> dd.copy(modifiers = dd.modifiers + g) }
@@ -432,6 +440,8 @@ private fun ModifiersEditor(
     d: ItemDraft,
     presets: List<OptionPreset>?,
     onEdit: ((ItemDraft) -> ItemDraft) -> Unit,
+    /** **سعرُ الصنف بالليرة** — لمعاينة أسعار الأوزان؛ و`null` لم يُكتب. */
+    itemPrice: Long?,
     /** **مجموعةٌ جاهزةٌ تُضاف** — بعملة الصنف (انظر `forItemCurrency`). */
     onAddPreset: (OptionPreset) -> Unit,
 ) {
@@ -473,7 +483,7 @@ private fun ModifiersEditor(
     // **ومجموعةٌ خاصّةٌ لما لم يخطر لنا** — اسمُها وخياراتُها بيده.
     val customName = stringResource(R.string.mod_extras_name)
     RahalOutlineButton(onClick = {
-        onEdit { dd -> dd.copy(modifiers = dd.modifiers + ModifierGroup(name = customName, minSelect = 0, maxSelect = 99)) }
+        onEdit { dd -> dd.copy(modifiers = dd.modifiers + ModifierGroup(name = customName, minSelect = 0, maxSelect = 99, priceMode = PRICE_MODE_PRICED)) }
     }) { Text(stringResource(R.string.mod_custom_group)) }
 
     d.modifiers.forEachIndexed { gi, g ->
@@ -522,7 +532,23 @@ private fun ModifiersEditor(
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
-                g.options.forEachIndexed { oi, o ->
+                // ══════════════════════════════════════════════════
+                // **طريقةُ السعر** (قرارُ المالك ٢٠٢٦-١٠-٢٨) — «بدون سعر» لا حقلَ
+                // سعرٍ فيها، و«حسب الوزن» أوزانٌ بالغرام وسعرُها محسوب.
+                // ══════════════════════════════════════════════════
+                val mode = g.priceMode ?: PRICE_MODE_PRICED
+                val updateGroup: ((ModifierGroup) -> ModifierGroup) -> Unit = { f ->
+                    onEdit { dd -> dd.copy(modifiers = dd.modifiers.replaceAt(gi, f)) }
+                }
+                if (mode == PRICE_MODE_NONE) {
+                    Text(
+                        stringResource(R.string.mod_none_hint),
+                        color = Rahal.colors.inkMuted,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                if (mode == PRICE_MODE_WEIGHT) WeightOptions(g, itemPrice, updateGroup)
+                else g.options.forEachIndexed { oi, o ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         OutlinedTextField(
                             value = o.name,
@@ -539,6 +565,7 @@ private fun ModifiersEditor(
                             singleLine = true,
                             modifier = Modifier.weight(1f),
                         )
+                        if (mode == PRICE_MODE_PRICED) {
                         Spacer(Modifier.width(6.dp))
                         OutlinedTextField(
                             // **وبعملة صنفها** (٢٠٢٦-١٠-١٢): دولاريٌّ يُكتب بالدولار.
@@ -573,6 +600,7 @@ private fun ModifiersEditor(
                             ),
                             modifier = Modifier.width(110.dp),
                         )
+                        }
                         RahalTextButton(onClick = {
                             onEdit { dd ->
                                 dd.copy(
@@ -619,12 +647,105 @@ private fun ModifiersEditor(
                                 },
                             )
                         }
-                    }) { Text(stringResource(R.string.mod_add_option)) }
+                    }) { Text(stringResource(if (mode == PRICE_MODE_WEIGHT) R.string.mod_weight_add else R.string.mod_add_option)) }
                     RahalTextButton(onClick = {
                         onEdit { dd -> dd.copy(modifiers = dd.modifiers.filterIndexed { i, _ -> i != gi }) }
                     }) { Text(stringResource(R.string.mod_remove_group), color = Rahal.colors.danger) }
                 }
             }
+        }
+    }
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **«حسب الوزن»** (قرارُ المالك ٢٠٢٦-١٠-٢٨)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * سعرُ الصنف لوزنٍ أساسيّ (١٠٠ غ افتراضاً، ويكتب غيرَه من يبيع بالكيلو)،
+ * والأوزانُ أرقامٌ بالغرام أو أزرارٌ سريعة، **وسعرُ كلّ وزنٍ معاينةٌ هنا
+ * والخادمُ يحسبه ويحفظه** فيبقى صحيحاً متى تبدّل سعرُ الصنف.
+ * **ومرآتُها `ItemEditor.tsx` في الويب.**
+ */
+@Composable
+private fun WeightOptions(
+    g: ModifierGroup,
+    itemPrice: Long?,
+    update: ((ModifierGroup) -> ModifierGroup) -> Unit,
+) {
+    Text(
+        stringResource(R.string.mod_weight_hint),
+        color = Rahal.colors.inkMuted,
+        style = MaterialTheme.typography.bodySmall,
+    )
+    OutlinedTextField(
+        value = g.baseGrams?.toString() ?: "",
+        onValueChange = { v ->
+            val n = v.filter(Char::isDigit).take(6).toIntOrNull()?.takeIf { it > 0 }
+            update { it.copy(baseGrams = n) }
+        },
+        label = { Text(stringResource(R.string.mod_weight_base)) },
+        placeholder = { Text(DEFAULT_BASE_GRAMS.toString()) },
+        singleLine = true,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        modifier = Modifier.fillMaxWidth(),
+    )
+    g.options.forEachIndexed { oi, o ->
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedTextField(
+                value = o.grams?.toString() ?: "",
+                onValueChange = { v ->
+                    val n = v.filter(Char::isDigit).take(7).toIntOrNull()?.takeIf { it > 0 }
+                    update { gg ->
+                        gg.copy(options = gg.options.replaceAt(oi) { it.copy(grams = n, name = n?.let(::weightName) ?: "") })
+                    }
+                },
+                label = { Text(stringResource(R.string.mod_weight_grams)) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.width(120.dp),
+            )
+            Spacer(Modifier.width(8.dp))
+            Column(Modifier.weight(1f)) {
+                o.grams?.let { gr ->
+                    Text(weightName(gr), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+                    if (itemPrice != null) {
+                        Text(
+                            stringResource(R.string.mod_weight_price, money(weightPrice(itemPrice, gr, g.baseGrams))),
+                            color = Rahal.colors.inkMuted,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+            }
+            RahalTextButton(onClick = {
+                update { gg -> gg.copy(options = gg.options.filterIndexed { i, _ -> i != oi }) }
+            }) { Text("×", color = Rahal.colors.danger) }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Switch(
+                checked = o.available,
+                onCheckedChange = { av ->
+                    update { gg -> gg.copy(options = gg.options.replaceAt(oi) { it.copy(available = av) }) }
+                },
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                stringResource(if (o.available) R.string.mod_opt_available else R.string.mod_opt_out),
+                color = if (o.available) Rahal.colors.inkMuted else Rahal.colors.danger,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+    }
+    // **أوزانٌ سريعة** — ٢٥٠ غ ونصف كيلو وكيلو؛ والموجودُ لا يُكرَّر.
+    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        QUICK_GRAMS.forEach { q ->
+            RahalOutlineButton(onClick = {
+                update { gg ->
+                    if (gg.options.any { it.grams == q }) gg
+                    else gg.copy(options = gg.options + ModifierOption(name = weightName(q), grams = q))
+                }
+            }) { Text(weightName(q)) }
         }
     }
 }

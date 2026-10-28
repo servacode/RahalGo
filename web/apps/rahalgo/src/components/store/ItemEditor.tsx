@@ -57,6 +57,14 @@ import type {
   StorePresets,
 } from "@/lib/store/types";
 import { parseUsd, usdInput, usdText, usdToSyp } from "@/lib/store/usd";
+import {
+  DEFAULT_BASE_GRAMS,
+  QUICK_GRAMS,
+  priceModeOf,
+  weightName,
+  weightPrice,
+  type PriceMode,
+} from "@/lib/store/optionModes";
 import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
 import { fill } from "@/lib/customer/texts";
 import { useShopToast } from "@/components/customer/toast";
@@ -78,6 +86,8 @@ interface DraftOption {
   usd: string;
   /** **خيارٌ خلصان** والصنفُ متوفّر — يُرسَل `available` مع كلّ خيار. */
   available: boolean;
+  /** **وزنُ الخيار بالغرام** لمجموعة «حسب الوزن». */
+  grams?: number | null;
 }
 interface DraftGroup {
   id?: string;
@@ -85,6 +95,10 @@ interface DraftGroup {
   min_select: number;
   max_select: number;
   options: DraftOption[];
+  /** **طريقةُ السعر** (قرارُ المالك ٢٠٢٦-١٠-٢٨) — مرآةُ `ItemEditor.kt`. */
+  price_mode: PriceMode;
+  /** الوزنُ الذي يخصّه سعرُ الصنف — لـ«weight» وحدَها، وفراغُه ١٠٠ غ. */
+  base_grams: number | null;
 }
 
 /**
@@ -99,7 +113,8 @@ interface PresetDef {
   name: string;
   min_select: number;
   max_select: number;
-  options: { name: string; price_delta: number }[];
+  options: { name: string; price_delta: number; grams?: number | null }[];
+  price_mode: PriceMode;
 }
 function fallbackPresets(): PresetDef[] {
   const opts = (...names: string[]) =>
@@ -111,6 +126,7 @@ function fallbackPresets(): PresetDef[] {
       min_select: 1,
       max_select: 1,
       options: opts(I.optNormal, I.optDouble),
+      price_mode: "priced",
     },
     {
       key: "weight",
@@ -118,6 +134,7 @@ function fallbackPresets(): PresetDef[] {
       min_select: 1,
       max_select: 1,
       options: opts(I.optHalfKg, I.optKg),
+      price_mode: "priced",
     },
     {
       key: "extras",
@@ -125,6 +142,7 @@ function fallbackPresets(): PresetDef[] {
       min_select: 0,
       max_select: 99,
       options: [],
+      price_mode: "priced",
     },
   ];
 }
@@ -147,11 +165,24 @@ function presetGroup(
   rate: number | null,
 ): { group: DraftGroup; lost: boolean } {
   let lost = false;
+  const mode = p.price_mode;
   const group: DraftGroup = {
     name: p.name,
     min_select: p.min_select,
     max_select: p.max_select,
+    price_mode: mode,
+    base_grams: mode === "weight" ? DEFAULT_BASE_GRAMS : null,
     options: p.options.map((o) => {
+      if (mode !== "priced") {
+        const g = mode === "weight" ? (o.grams ?? null) : null;
+        return {
+          name: g ? weightName(g) : o.name,
+          price_delta: 0,
+          usd: "",
+          available: true,
+          grams: g,
+        };
+      }
       const c = usd ? sypToUsdText(o.price_delta, rate) : { text: "", lost: false };
       if (c.lost) lost = true;
       return {
@@ -175,7 +206,8 @@ function convertGroups(
   rate: number | null,
 ): { groups: DraftGroup[]; lost: boolean } {
   let lost = false;
-  const out = groups.map((g) => ({
+  // **ولا فرقَ يُحوَّل في «بدون سعر» و«حسب الوزن»** — الخادمُ يحسبهما.
+  const out = groups.map((g) => g.price_mode !== "priced" ? g : ({
     ...g,
     options: g.options.map((o) => {
       if (to === "USD") {
@@ -200,12 +232,15 @@ function toDraft(groups: ModifierGroup[] | undefined): DraftGroup[] {
     name: g.name,
     min_select: g.min_select,
     max_select: g.max_select,
+    price_mode: priceModeOf(g.price_mode),
+    base_grams: g.base_grams ?? null,
     options: g.options.map((o) => ({
       id: o.id,
       name: o.name,
       price_delta: o.price_delta,
       usd: usdText(o.price_delta_usd ?? null),
       available: o.available !== false,
+      grams: o.grams ?? null,
     })),
   }));
 }
@@ -269,6 +304,7 @@ export default function ItemEditor({
               min_select: p.min_select,
               max_select: p.max_select,
               options: p.options ?? [],
+              price_mode: priceModeOf(p.price_mode),
             })),
         );
       })
@@ -289,6 +325,14 @@ export default function ItemEditor({
   const nameLen = name.trim().length;
   const nameOver = nameLen > itemNameMax;
   const usdValue = parseUsd(priceUsd);
+  /** **سعرُ الصنف بالليرة** — لمعاينة أسعار الأوزان؛ والخادمُ يحسبها ويحفظها. */
+  const itemSyp: number | null = usd
+    ? usdValue != null && rate != null && rate > 0
+      ? usdToSyp(usdValue, rate)
+      : null
+    : price.trim() !== "" && Number.isFinite(Number(price))
+      ? Number(price)
+      : null;
 
   const edit = (fn: (g: DraftGroup[]) => DraftGroup[]) => {
     setGroups(fn);
@@ -325,7 +369,9 @@ export default function ItemEditor({
     // **والخيارُ بلا اسمٍ يُسقط** — مرآةُ `modifiersForSave` (تدقيقُ ٢٠٢٦-١٠-٢٨).
     const named = groups.map((g) => ({
       ...g,
-      options: g.options.filter((o) => o.name.trim() !== ""),
+      options: g.options.filter((o) =>
+        g.price_mode === "weight" ? (o.grams ?? 0) > 0 : o.name.trim() !== "",
+      ),
     }));
     // **وإلزاميّةٌ بلا خيارٍ متوفّر** — الزبونُ ما بيقدر يطلب الصنف أصلاً.
     const stuck = named.find(
@@ -337,13 +383,29 @@ export default function ItemEditor({
       name: g.name.trim(),
       min_select: g.min_select,
       max_select: g.max_select,
-      options: g.options.map((o) => ({
-        ...(o.id ? { id: o.id } : {}),
-        name: o.name.trim(),
-        price_delta: o.price_delta,
-        available: o.available,
-        ...(usd ? { price_delta_usd: parseUsd(o.usd) ?? 0 } : {}),
-      })),
+      price_mode: g.price_mode,
+      ...(g.price_mode === "weight"
+        ? { base_grams: g.base_grams ?? DEFAULT_BASE_GRAMS }
+        : {}),
+      options: g.options.map((o) =>
+        g.price_mode === "weight"
+          ? {
+              ...(o.id ? { id: o.id } : {}),
+              name: weightName(o.grams ?? 0),
+              grams: o.grams,
+              price_delta: 0,
+              available: o.available,
+            }
+          : {
+              ...(o.id ? { id: o.id } : {}),
+              name: o.name.trim(),
+              price_delta: g.price_mode === "none" ? 0 : o.price_delta,
+              available: o.available,
+              ...(usd && g.price_mode === "priced"
+                ? { price_delta_usd: parseUsd(o.usd) ?? 0 }
+                : {}),
+            },
+      ),
     }));
     const body = {
       name: name.trim(),
@@ -579,7 +641,14 @@ export default function ItemEditor({
             onClick={() =>
               edit((gs) => [
                 ...gs,
-                { name: "", min_select: 0, max_select: 99, options: [] },
+                {
+                  name: "",
+                  min_select: 0,
+                  max_select: 99,
+                  options: [],
+                  price_mode: "priced",
+                  base_grams: null,
+                },
               ])
             }
           >
@@ -647,7 +716,121 @@ export default function ItemEditor({
             <p className="text-xs text-ink-muted">
               {g.min_select > 0 ? I.sizeRule : I.extrasRule}
             </p>
-            {g.options.map((o, oi) => (
+            {g.price_mode === "none" && (
+              <p className="text-xs text-ink-muted">{I.noneHint}</p>
+            )}
+            {g.price_mode === "weight" && (
+              <>
+                <p className="text-xs text-ink-muted">{I.weightHint}</p>
+                <Input
+                  id={`g-base-${gi}`}
+                  label={I.weightBase}
+                  inputMode="numeric"
+                  dir="ltr"
+                  placeholder={String(DEFAULT_BASE_GRAMS)}
+                  value={g.base_grams ? String(g.base_grams) : ""}
+                  onChange={(e) =>
+                    setGroup(gi, {
+                      base_grams:
+                        Number(e.target.value.replace(/\D/g, "").slice(0, 6)) ||
+                        null,
+                    })
+                  }
+                />
+                {g.options.map((o, oi) => (
+                  <div
+                    key={oi}
+                    className="flex flex-col gap-1"
+                    data-testid="item-option"
+                  >
+                    <div className="flex items-end gap-2">
+                      <Input
+                        id={`o-grams-${gi}-${oi}`}
+                        label={I.weightGrams}
+                        inputMode="numeric"
+                        dir="ltr"
+                        value={o.grams ? String(o.grams) : ""}
+                        onChange={(e) => {
+                          const n =
+                            Number(e.target.value.replace(/\D/g, "").slice(0, 7)) ||
+                            0;
+                          setOption(gi, oi, {
+                            grams: n || null,
+                            name: n ? weightName(n) : "",
+                          });
+                        }}
+                        wrapperClassName="w-32 shrink-0"
+                      />
+                      <div className="min-w-0 flex-1 pb-2 text-sm">
+                        {o.grams ? (
+                          <>
+                            <span className="font-bold">{weightName(o.grams)}</span>
+                            {itemSyp != null && (
+                              <span className="ms-2 text-ink-muted">
+                                {fill(I.weightPrice, {
+                                  price: fmtMoney(
+                                    weightPrice(itemSyp, o.grams, g.base_grams),
+                                  ),
+                                })}
+                              </span>
+                            )}
+                          </>
+                        ) : null}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        aria-label={I.remove}
+                        onClick={() =>
+                          setGroup(gi, {
+                            options: g.options.filter((_, j) => j !== oi),
+                          })
+                        }
+                      >
+                        <IconDelete size={14} className="text-danger" />
+                      </Button>
+                    </div>
+                    <Checkbox
+                      id={`o-avail-${gi}-${oi}`}
+                      checked={o.available}
+                      onChange={(e) =>
+                        setOption(gi, oi, { available: e.target.checked })
+                      }
+                      label={I.optAvailable}
+                      className={o.available ? "" : "text-ink-muted"}
+                    />
+                  </div>
+                ))}
+                <div className="flex flex-wrap gap-2">
+                  {QUICK_GRAMS.map((q) => (
+                    <Button
+                      key={q}
+                      type="button"
+                      variant="secondary"
+                      onClick={() =>
+                        g.options.some((o) => o.grams === q)
+                          ? undefined
+                          : setGroup(gi, {
+                              options: [
+                                ...g.options,
+                                {
+                                  name: weightName(q),
+                                  grams: q,
+                                  price_delta: 0,
+                                  usd: "",
+                                  available: true,
+                                },
+                              ],
+                            })
+                      }
+                    >
+                      {weightName(q)}
+                    </Button>
+                  ))}
+                </div>
+              </>
+            )}
+            {g.price_mode !== "weight" && g.options.map((o, oi) => (
               <div
                 key={oi}
                 className="flex flex-col gap-1"
@@ -663,6 +846,7 @@ export default function ItemEditor({
                     }
                     wrapperClassName="min-w-0 flex-1"
                   />
+                  {g.price_mode === "priced" && (
                   <Input
                     id={`o-price-${gi}-${oi}`}
                     label={usd ? I.optPriceUsd : I.optPrice}
@@ -689,6 +873,7 @@ export default function ItemEditor({
                     }
                     wrapperClassName="w-28 shrink-0"
                   />
+                  )}
                   <Button
                     type="button"
                     variant="ghost"
@@ -728,7 +913,7 @@ export default function ItemEditor({
               }
             >
               <IconAdd size={13} />
-              {I.addOption}
+              {g.price_mode === "weight" ? I.weightAdd : I.addOption}
             </Button>
           </div>
         ))}

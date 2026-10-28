@@ -119,7 +119,7 @@ class SessionSupersededTest {
         assertTrue("**غاب مفتاحُ `err_session_superseded`**", s.contains("name=\"err_session_superseded\""))
         assertTrue(
             "**الرسالةُ لا تذكر «جهاز آخر» صراحةً**",
-            s.contains("تم تسجيل خروجك") && s.contains("من جهاز تاني"),
+            s.contains("تم تسجيل خروجك") && s.contains("من جهاز آخر"),
         )
     }
 

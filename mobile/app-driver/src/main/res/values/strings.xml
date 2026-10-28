@@ -60,8 +60,8 @@
          **و«البلوغ» وحدَها لا تقول بلوغَ ماذا** — والسطرُ الذي فوقها
          يقول «هدف الشهر»، **لكنّ العينَ تقرأ الأرقامَ لا الترتيب.** -->
     <string name="home_target_reward">مكافأة بلوغ الهدف الشهري %1$s</string>
-    <string name="home_target_got">أخدت المكافأة %1$s</string>
-    <string name="home_retry">حاول مرة ثانية</string>
+    <string name="home_target_got">حصلت على المكافأة %1$s</string>
+    <string name="home_retry">حاول مرة أخرى</string>
     <!-- ══ مفتاحُ العمل — حالٌ وفعلٌ في شيءٍ واحد ══
          (قرارُ المالك ٢٠٢٦-٠٨-١٣: «بدّل وردية مفتوحة/مغلقة، نخلّيه زرّاً
           ذكيّاً بالعمل وخارج العمل، وتحته يُكتب: الآن تستقبل الطلبات ·
@@ -76,11 +76,11 @@
     <string name="shift_off_hint">لا يمكنك استقبال الطلبات — أنت خارج العمل</string>
     <string name="shift_active_orders">معك %1$s من %2$s طلبات</string>
     <!-- الطلبات -->
-    <string name="orders_no_offers_hint">القائمة بتتحدّث لحالها — خلّي الشاشة مفتوحة</string>
+    <string name="orders_no_offers_hint">تتحدّث القائمة تلقائياً — أبقِ الشاشة مفتوحة</string>
     <string name="orders_no_offers">لا يوجد طلب معروض عليك الآن</string>
     <string name="order_cash_due">تقبض نقدا</string>
     <string name="order_prepaid">مدفوع سلفا</string>
-    <string name="status_assigned">الطلب معك — روح عالمتجر</string>
+    <string name="status_assigned">الطلب معك — توجّه إلى المتجر</string>
     <string name="status_picked_up">استلمت الطلب</string>
     <string name="status_on_the_way">في الطريق للزبون</string>
     <string name="status_arrived">وصلت للزبون</string>
@@ -132,7 +132,7 @@
     <string name="loc_text">موقعك يرسل ليصلك أقرب طلب</string>
     <string name="loc_permission_title">فعّل الموقع</string>
     <string name="loc_permission_text">بدون الموقع لا تعرف كم يبعد المتجر، ولا يصلك أقرب طلب</string>
-    <string name="loc_permission_button">فعّل هلق</string>
+    <string name="loc_permission_button">فعّل الآن</string>
     <!-- اعداد اول دخول - طبقة رقيقة فوق الجاهزية (C، ٢٠٢٦-٠٩-٢٧) -->
     <string name="setup_title">تجهيز حسابك</string>
     <string name="setup_why">نحتاج موقعك لنرسل إليك أقرب طلب ونحسب المسافة والأجرة — يُستعمل أثناء العمل فقط. وتُحضَّر خريطة مدينتك تلقائياً لتعمل ولو انقطع الإنترنت.</string>
@@ -151,19 +151,19 @@
     <string name="setup_continue">متابعة إلى الرئيسية</string>
     <!-- والاشعار شرط الاعلان عن التوفر - لا زينة (قيس ٢٠٢٦-٠٩-١٥) -->
     <string name="notify_needed_title">اسمح بالإشعارات</string>
-    <string name="notify_needed_text">الطلب الجديد يوصلك بإشعار — وبدونه لا شيء ينبهك والجوال في جيبك</string>
+    <string name="notify_needed_text">يصلك الطلب الجديد بإشعار — وبدونه لن ينبّهك شيء والهاتف في جيبك</string>
     <string name="notify_needed_button">اسمح الآن</string>
     <string name="notify_needed_settings">من إعدادات النظام</string>
     <string name="shift_needs_notify">لا تظهر متاحا قبل السماح بالإشعارات — الطلب لن يصلك</string>
     <string name="shift_needs_location">لا تظهر متاحا قبل تفعيل الموقع</string>
     <!-- لماذا لا تصلني طلبات -->
-    <string name="why_shift_closed">ورديتك مسكّرة — افتحها من «لوحتي» لحتى يوصلك أول طلب</string>
-    <string name="why_location_off">الموقع مطفي — بدونه ما منعرف وينك، فما بيوصلك أقرب طلب</string>
-    <string name="why_cash_full">النقد اللي معك وصل للسقف — سلّم للمكتب لحتى ترجع توصلك الطلبات النقدية</string>
-    <string name="why_too_many">معك طلبات قد حدّك — سلّم واحد لحتى يوصلك غيره</string>
-    <string name="why_all_good">كل شي جاهز — ما في طلب هلق</string>
+    <string name="why_shift_closed">ورديتك مغلقة — افتحها من «لوحتي» لتصلك الطلبات</string>
+    <string name="why_location_off">الموقع متوقف — بدونه لا نعرف مكانك، فلن يصلك أقرب طلب</string>
+    <string name="why_cash_full">بلغ النقد الذي معك السقف — سلّمه للمكتب لتعود إليك الطلبات النقدية</string>
+    <string name="why_too_many">معك الحد الأقصى من الطلبات — سلّم أحدها ليصلك غيره</string>
+    <string name="why_all_good">كل شيء جاهز — لا يوجد طلب الآن</string>
     <string name="offline_title">تعذر الاتصال</string>
-    <string name="offline_text">حسابك محفوظ — تحقق من الشبكة وحاول مرة ثانية</string>
+    <string name="offline_text">حسابك محفوظ — تحقق من الشبكة وحاول مرة أخرى</string>
     <!-- الرحلة -->
     <string name="nav_trip">الرحلة</string>
     <string name="trip_none">لا رحلة الآن</string>
@@ -188,7 +188,7 @@
          الصوت»). -->
     <string name="map_voice_on">أوقف الصوت</string>
     <string name="map_voice_off">شغّل الصوت</string>
-    <string name="map_recenter">ردني إلى موقعي</string>
+    <string name="map_recenter">عد إلى موقعي</string>
     <!-- **وهذا هو زرُّ الملاحة الحقيقيّ** — يفتح الجلسةَ ويغلقها
          (`LaunchedEffect(follow)`). **وكان اسمُه «تابعني على الخريطة»
          فيُقرأ ضبطَ كاميرا لا تشغيلَ ملاحة**، وهو مُطفأٌ افتراضيّاً
@@ -254,8 +254,8 @@
          التطبيقَ أخطأ ويلغي التنزيل. -->
     <string name="offline_map_title">نزّل خريطة %1$s</string>
     <string name="offline_map_text">تنزل مرة وتبقى — فتعمل الخريطة ولو انقطع الإنترنت في الطريق</string>
-    <string name="offline_map_button">نزّل هلق</string>
-    <string name="offline_map_progress">عم ينزل %1$s%%</string>
+    <string name="offline_map_button">نزّل الآن</string>
+    <string name="offline_map_progress">جارٍ التنزيل %1$s%%</string>
     <string name="offline_map_resume">أكمل التنزيل</string>
     <!-- ══════════════════════════════════════════════════════════════
          عباراتُ الإخفاق — إغلاقُ TD-MAP-SILENT-RESOURCE-FAIL
@@ -322,9 +322,9 @@
     <string name="recipient_whatsapp">واتساب</string>
     <string name="recipient_wa_message">مرحباً بك، أنا كابتن من فريق رحّال غو. لقد قام متجر %1$s بإرسال طلبيّة لك، هل يمكنك إرسال موقعك إليّ؟</string>
     <!-- **رفض الزبونُ السعر** (قرارُ المالك ٢٠٢٦-١٠-٢١). -->
-    <string name="drv_quote_rejected">رفض الزبون السعر — احكي معه بالدردشة وعدّل السعر</string>
+    <string name="drv_quote_rejected">رفض الزبون السعر — تحدّث معه في الدردشة وعدّل السعر</string>
     <string name="agree_edit_button">تعديل السعر</string>
-    <string name="agree_edit_title">عدّل السعر وابعته للزبون</string>
+    <string name="agree_edit_title">عدّل السعر وأرسله للزبون</string>
     <string name="drv_awaiting_customer">بانتظار تأكيد الزبون للتكلفة</string>
     <string name="drv_customer_confirmed">الزبون أكّد الطلب — قم بالشراء</string>
     <string name="drv_customer_confirmed_amanah">الزبون أكّد الطلب — استلم الأمانة</string>
@@ -364,11 +364,11 @@
          أيّ تعليقٍ بأيّ تطبيق»). **وكان النصُّ يعد بكلامٍ لا وجودَ
          له**: الحقلُ حُذف من نافذة الزبون، **والبطاقةُ لم تكن تعرضه
          أصلاً.** ووعدٌ بما لا يُعرض يجعل السائقَ يبحث عمّا ليس هناك. -->
-    <string name="rate_hint">شو قيّموك الزبائن عن خدمتك</string>
+    <string name="rate_hint">تقييم الزبائن لخدمتك</string>
     <string name="rate_reviews">ما قاله الزبائن</string>
     <string name="rate_no_reviews">لا تقييمات بعد</string>
     <string name="rate_complaints">شكاوى عليك</string>
-    <string name="rate_none_yet">ما حدا قيّمك لسّا — أول تقييم بيوصلك بعد أول تسليم</string>
+    <string name="rate_none_yet">لم يقيّمك أحد بعد — يصلك أول تقييم بعد أول تسليم</string>
 
     <!-- ══ المحفظة ══ -->
 
@@ -437,7 +437,7 @@
          يقول «ما رفع عليك» فوق تبويبين يجعل من فتح الآخرَ يظنّه خطأ. -->
     <string name="tik_hint">ما عليك وما رفعتَه — وأين صار كلٌّ منهما</string>
     <string name="tik_none">لا شكوى عليك</string>
-    <string name="tik_none_hint">وهاد خبر منيح — خلّيه هيك</string>
+    <string name="tik_none_hint">وهذا خبر جيد — حافظ عليه</string>
     <string name="tik_mine_empty">لم ترفع بلاغا بعد — ولك أن تبلغ من «سجل الطلبات»</string>
 
     <!-- دردشاتي السابقة -->
@@ -473,10 +473,10 @@
 
     <!-- ══ الإفصاحُ الصريح عن الموقع — شرطُ غوغل ══ -->
     <string name="disc_title">موقعك أثناء الوردية</string>
-    <string name="disc_what">رحّال غو بياخد موقع جهازك طول ما ورديتك مفتوحة.</string>
-    <string name="disc_background">وبياخده كمان والتطبيق مسكّر أو الشاشة مطفية — لأنك عم تسوق والموبايل بجيبتك.</string>
-    <string name="disc_why">ومنه منبعتلك أقرب طلب، والزبون بيشوف وين طلبه عالخريطة، ومنحسب المسافة وأجرتها.</string>
-    <string name="disc_stop">وبيوقف أخد الموقع أول ما تسكّر ورديتك. وفيك ترفض، والتطبيق بيضل شغّال، بس ما بتوصلك طلبات.</string>
+    <string name="disc_what">يستخدم رحّال غو موقع جهازك طوال فترة ورديتك.</string>
+    <string name="disc_background">ويستخدمه أيضاً والتطبيق مغلق أو الشاشة مطفأة — لأنك تقود والهاتف في جيبك.</string>
+    <string name="disc_why">ومنه نرسل إليك أقرب طلب، ويرى الزبون مكان طلبه على الخريطة، ونحسب المسافة وأجرتها.</string>
+    <string name="disc_stop">ويتوقف استخدام الموقع فور إغلاق ورديتك. يمكنك الرفض، وسيبقى التطبيق يعمل لكن لن تصلك طلبات.</string>
     <string name="disc_agree">أوافق</string>
     <string name="disc_deny">ليس الآن</string>
 
@@ -543,13 +543,13 @@
     <string name="suspended_banner">حسابك موقوف — أكمل الطلب الحالي فقط، ولن تصلك طلبات جديدة.</string>
     <!-- **إشارةُ الموقع ميّتة والإذنُ ممنوح** (٢٠٢٦-١٠-٠٢). -->
     <string name="gps_lost_title">إشارة الموقع مفقودة</string>
-    <string name="gps_lost_text">الموقع مو واصل من كم دقيقة، فما رح توصلك طلبات لحتى يرجع. اطلع لمكان مكشوف أو طفّي الموقع وشغّله.</string>
+    <string name="gps_lost_text">لم يصل موقعك منذ بضع دقائق، فلن تصلك طلبات حتى يعود. انتقل إلى مكان مكشوف، أو أطفئ الموقع ثم شغّله.</string>
     <!-- ما يُبقي الموقعَ حيّاً والتطبيقُ مغلق (٢٠٢٦-١٠-١٣) -->
-    <string name="keep_bg_title">الموقع بيوقف لما تسكّر التطبيق</string>
-    <string name="keep_bg_text">إذن الموقع عندك «أثناء الاستخدام» بس، فلما تطلع من التطبيق بيوقف موقعك وما بتوصلك طلبات. خلّيه «السماح طول الوقت».</string>
-    <string name="keep_bg_button">اسمح طول الوقت</string>
-    <string name="keep_autostart_title">خلّي التطبيق يشتغل لحاله</string>
-    <string name="keep_autostart_text">موبايلك بيسكّر التطبيقات بالخلفية لتوفير البطارية، فبيوقف موقعك وما بتوصلك طلبات. شغّل «التشغيل التلقائي» لتطبيق رحّال غو.</string>
+    <string name="keep_bg_title">يتوقف الموقع عند إغلاق التطبيق</string>
+    <string name="keep_bg_text">إذن الموقع لديك «أثناء الاستخدام» فقط، فعند الخروج من التطبيق يتوقف موقعك ولا تصلك طلبات. اختر «السماح طوال الوقت».</string>
+    <string name="keep_bg_button">اسمح طوال الوقت</string>
+    <string name="keep_autostart_title">اسمح للتطبيق بالعمل تلقائياً</string>
+    <string name="keep_autostart_text">يغلق هاتفك التطبيقات في الخلفية لتوفير البطارية، فيتوقف موقعك ولا تصلك طلبات. فعّل «التشغيل التلقائي» لتطبيق رحّال غو.</string>
     <string name="keep_autostart_button">افتح الإعداد</string>
     <!-- مشوارُ إرجاع البضاعة (قرارُ المالك ٢٠٢٦-١٠-٠٣) -->
     <string name="trip_return_office">أرجِع البضاعة إلى المكتب</string>
@@ -565,14 +565,14 @@
     <string name="kind_fetch">لدي توصيلة — إحضار</string>
     <string name="trip_collect_for_store">ادفع للمتجر %1$s من جيبك، واقبض من المستلم %1$s</string>
     <!-- **وفي «إحضار» يدفع بمكان الاستلام ويقبض من المتجر** (قرارُ المالك ٢٠٢٦-١٠-١٦) -->
-    <string name="trip_collect_for_store_fetch">ادفع بمكان الاستلام %1$s من جيبك، واقبضه من المتجر لما توصل</string>
-    <string name="fetch_amount_button">اكتب المبلغ اللي دفعته</string>
-    <string name="fetch_amount_title">شقد دفعت بمكان الاستلام؟</string>
-    <string name="fetch_amount_hint">اكتب المبلغ الحقيقي اللي دفعته من جيبك — بيوصل للمتجر ليوافق عليه.</string>
+    <string name="trip_collect_for_store_fetch">ادفع في مكان الاستلام %1$s من جيبك، واقبضه من المتجر عند وصولك</string>
+    <string name="fetch_amount_button">اكتب المبلغ الذي دفعته</string>
+    <string name="fetch_amount_title">كم دفعت في مكان الاستلام؟</string>
+    <string name="fetch_amount_hint">اكتب المبلغ الحقيقي الذي دفعته من جيبك — يصل إلى المتجر ليوافق عليه.</string>
     <string name="fetch_amount_estimate">تقدير المتجر: %1$s</string>
     <string name="fetch_amount_field">المبلغ</string>
     <string name="fetch_amount_send">أرسل للمتجر</string>
-    <string name="fetch_amount_enter">اكتب المبلغ اللي دفعته بمكان الاستلام — المتجر لازم يوافق عليه قبل ما تستلم</string>
+    <string name="fetch_amount_enter">اكتب المبلغ الذي دفعته في مكان الاستلام — يجب أن يوافق عليه المتجر قبل أن تستلم</string>
     <string name="fetch_amount_rejected">المتجر رفض المبلغ %1$s — اكتب المبلغ الصحيح</string>
     <string name="fetch_amount_waiting">بانتظار موافقة المتجر على المبلغ %1$s</string>
     <string name="fetch_amount_approved">المتجر وافق على المبلغ %1$s</string>
@@ -585,8 +585,8 @@
     <string name="total_collect_customer">اقبض من الزبون</string>
     <string name="total_collect_recipient">اقبض من المستلم</string>
     <string name="total_collect_store">اقبض من المتجر</string>
-    <string name="total_paid_wallet">تم الدفع من المحفظة — لا تقبض شي</string>
-    <string name="total_paid_customer">مدفوع — لا تقبض شي</string>
+    <string name="total_paid_wallet">تم الدفع من المحفظة — لا تقبض شيئاً</string>
+    <string name="total_paid_customer">مدفوع — لا تقبض شيئاً</string>
     <string name="total_purchase_fixed">تقبض ثمن البضاعة + %1$s أجرة التوصيل</string>
     <string name="trip_order_items">الطلب:</string>
     <string name="trip_collect_later">تقبض من الزبون عند التسليم</string>
@@ -598,50 +598,50 @@
     <!-- **والأجرةُ المُعفاة لا تُطالَب** (تدقيق ٢٠٢٦-١٠-٢٧) — تفصيلُ المشتريات يطابق المبلغ الكبير. -->
     <string name="trip_fee_line_free">أجرة التوصيل: مجانية للزبون (أجرتك محفوظة)</string>
     <string name="arrive_far_title">أنت بعيد عن المكان</string>
-    <string name="arrive_far_body">بينك وبين المكان حوالي %1$s. متأكد إنك وصلت؟</string>
-    <string name="arrive_far_yes">إي وصلت</string>
+    <string name="arrive_far_body">المسافة بينك وبين المكان حوالي %1$s. هل أنت متأكد أنك وصلت؟</string>
+    <string name="arrive_far_yes">نعم، وصلت</string>
     <string name="map_no_location_dropoff">لا يوجد موقع للمستلم على الخريطة — اعتمد على العنوان المكتوب</string>
     <string name="map_no_location_amanah">لا يوجد موقع للأمانة على الخريطة — اسأل الزبون بالمحادثة</string>
     <string name="map_no_location_purchase">لا يوجد موقع لمكان الشراء على الخريطة — اسأل الزبون بالمحادثة</string>
     <string name="trip_p_fixed_amanah">استلم الأمانة ثم سلّمها للزبون</string>
     <string name="trip_p_fixed_purchase">اشترِ المطلوب ووثّق ثمنه</string>
     <!-- **موقعُ الزبون المباشر** (قرارُ المالك ٢٠٢٦-١٠-١٦) — `trip/DoorTarget.kt`. -->
-    <string name="trip_live_switched">الزبون مو عند العنوان — الطريق تحوّل لموقعه الحالي</string>
+    <string name="trip_live_switched">الزبون ليس عند العنوان — تحوّل الطريق إلى موقعه الحالي</string>
     <!-- **ما يضيفه السائقُ للخريطة** (قرارات المالك ٢٠٢٦-١٠-٢١). -->
-    <string name="map_need_location">ما عم نعرف موقعك هلق — استنى لحظة وجرّب</string>
-    <string name="entrance_title">انت هلق عند باب البناية؟</string>
-    <string name="entrance_body">إذا حفظت الباب، أي سائق بيوصل لهالعنوان المرة الجاية بيوصل للباب بالضبط.</string>
-    <string name="entrance_yes">إي، احفظ الباب</string>
+    <string name="map_need_location">لا نستطيع تحديد موقعك الآن — انتظر لحظة وحاول مجدداً</string>
+    <string name="entrance_title">هل أنت الآن عند باب البناية؟</string>
+    <string name="entrance_body">إذا حفظت الباب، فسيصل أي سائق يأتي إلى هذا العنوان لاحقاً إلى الباب مباشرة.</string>
+    <string name="entrance_yes">نعم، احفظ الباب</string>
     <string name="entrance_no">لا</string>
-    <string name="entrance_saved">انحفظ باب البناية — شكراً إلك</string>
-    <string name="entrance_too_far">انت بعيد عن نقطة الزبون كتير — ما انحفظ الباب</string>
-    <string name="closure_button">الطريق مسكّر؟</string>
-    <string name="closure_title">شو مسكّر الطريق هون؟</string>
+    <string name="entrance_saved">تم حفظ باب البناية — شكراً لك</string>
+    <string name="entrance_too_far">أنت بعيد جداً عن نقطة الزبون — لم يتم حفظ الباب</string>
+    <string name="closure_button">الطريق مغلق؟</string>
+    <string name="closure_title">ما الذي يغلق الطريق هنا؟</string>
     <string name="closure_works">حفريات</string>
     <string name="closure_barrier">حاجز</string>
     <string name="closure_market">سوق</string>
-    <string name="closure_traffic">زحمة كتير</string>
-    <string name="closure_other">غيره</string>
-    <string name="closure_sent">وصل البلاغ — رح نبعد السائقين عن هالطريق</string>
-    <string name="menu_add_landmark">أضف معلم</string>
-    <string name="landmark_title">أضف معلم من مكانك هلق</string>
-    <string name="landmark_hint">وقّف عند المعلم واكتب اسمه، مثلاً: صيدلية الشفاء</string>
+    <string name="closure_traffic">ازدحام شديد</string>
+    <string name="closure_other">غير ذلك</string>
+    <string name="closure_sent">وصل البلاغ — سنُبعد السائقين عن هذا الطريق</string>
+    <string name="menu_add_landmark">أضف معلماً</string>
+    <string name="landmark_title">أضف معلماً من مكانك الحالي</string>
+    <string name="landmark_hint">قف عند المعلم واكتب اسمه، مثلاً: صيدلية الشفاء</string>
     <string name="landmark_name">اسم المعلم</string>
     <string name="landmark_send">أضف المعلم</string>
-    <string name="landmark_sent">وصل المعلم — بيبيّن بعد ما توافق الإدارة</string>
+    <string name="landmark_sent">وصل المعلم — سيظهر بعد موافقة الإدارة</string>
     <string name="lm_mosque">جامع</string>
     <string name="lm_pharmacy">صيدلية</string>
     <string name="lm_school">مدرسة</string>
     <string name="lm_hospital">مشفى</string>
     <string name="lm_shop">محل</string>
     <string name="lm_roundabout">دوّار</string>
-    <string name="lm_other">غيره</string>
+    <string name="lm_other">غير ذلك</string>
     <!-- **«اطلب موقع الزبون المباشر»** (قرارُ المالك ٢٠٢٦-١٠-٢١). -->
     <string name="trip_live_request">اطلب موقع الزبون المباشر</string>
-    <string name="trip_live_requested">انبعت الطلب للزبون — بقيلك %1$d مرات</string>
-    <string name="trip_live_request_wait">طلبته من شوي — استنى دقيقتين قبل ما تطلبه مرة تانية</string>
-    <string name="trip_live_request_limit">طلبته ٣ مرات — احكي مع الزبون بالدردشة</string>
-    <string name="trip_live_stale">موقع الزبون المباشر صار قديم — رجعنا للعنوان</string>
+    <string name="trip_live_requested">أُرسل الطلب للزبون — بقي لك %1$d مرات</string>
+    <string name="trip_live_request_wait">طلبته قبل قليل — انتظر دقيقتين قبل أن تطلبه مرة أخرى</string>
+    <string name="trip_live_request_limit">طلبته ٣ مرات — تحدّث مع الزبون في الدردشة</string>
+    <string name="trip_live_stale">أصبح موقع الزبون المباشر قديماً — عدنا إلى العنوان</string>
     <string name="trip_live_now">الزبون الآن · قبل %1$s</string>
     <!-- **ودقّتُه ونوعُه** (قرارُ المالك ٢٠٢٦-١٠-١٦) — `TripScreen.LiveCustomerNotice`. -->
     <string name="trip_live_within">الزبون ضمن %1$d م · قبل %2$s</string>
@@ -658,18 +658,18 @@
     <string name="cash_d_store">متجر %1$s</string>
     <string name="cash_d_fee">أجرة %1$s</string>
     <string name="cash_d_commission">عمولة %1$s</string>
-    <string name="cash_d_commission_waived">انمسح من العمولة %1$s</string>
+    <string name="cash_d_commission_waived">أُلغي من العمولة %1$s</string>
     <string name="cash_d_free">مجانية للزبون</string>
     <string name="home_compensated">منها تعويض %1$s</string>
     <string name="home_today_counts">سلّمت %1$s · تعذّر %2$s</string>
-    <string name="home_fixes_title">قبل ما تشتغل — ناقصك (%1$d)</string>
-    <string name="why_suspended">حسابك موقوف — كمّل طلبك الحالي وتواصل مع المكتب</string>
-    <string name="card_out_of_pocket">بتدفع عنه وبتقبضه</string>
-    <string name="chat_empty_driver">ابعت للزبون إذا احتجت شي</string>
+    <string name="home_fixes_title">قبل أن تبدأ العمل — ينقصك (%1$d)</string>
+    <string name="why_suspended">حسابك موقوف — أكمل طلبك الحالي وتواصل مع المكتب</string>
+    <string name="card_out_of_pocket">تدفع عنه ثم تقبضه</string>
+    <string name="chat_empty_driver">راسل الزبون إذا احتجت شيئاً</string>
     <string name="chat_quick_arrived">وصلت</string>
-    <string name="chat_quick_downstairs">أنا تحت البناية</string>
-    <string name="chat_quick_searching">عم دوّر عالعنوان</string>
-    <string name="chat_quick_five_min">بوصل بعد 5 دقايق</string>
-    <string name="setup_progress">خلصت %1$d من %2$d</string>
+    <string name="chat_quick_downstairs">أنا عند مدخل البناية</string>
+    <string name="chat_quick_searching">أبحث عن العنوان</string>
+    <string name="chat_quick_five_min">أصل بعد 5 دقائق</string>
+    <string name="setup_progress">أنجزت %1$d من %2$d</string>
     <string name="rate_title">تقييمي</string>
 </resources>
