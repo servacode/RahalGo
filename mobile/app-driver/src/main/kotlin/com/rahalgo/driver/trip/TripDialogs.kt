@@ -501,7 +501,7 @@ internal fun FailDialog(
                         }
                     },
                     tone = Tone.Danger,
-                ) { Text(stringResource(R.string.act_confirm)) }
+                ) { Text(stringResource(R.string.trip_act_confirm)) }
             },
             dismissButton = {
                 RahalTextButton(onClick = { pending = null }) { Text(stringResource(R.string.act_cancel)) }

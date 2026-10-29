@@ -124,7 +124,6 @@
          عدّله أنّه عدّل ما يُعرض.** -->
     <!-- عددُ أصناف القسم على مربّعه — بكلمته لا رقماً وحدَه -->
     <string name="mn_group_count">%1$d صنف</string>
-    <string name="mn_hint">أضف أصناف عميلك: الاسم والسعر والصورة — وتتحكم بإتاحتها وتوفرها.</string>
     <string name="mn_empty">القائمة فارغة — أضف أول صنف</string>
     <string name="mn_price">سعر المتجر</string>
     <string name="mn_desc">الوصف</string>

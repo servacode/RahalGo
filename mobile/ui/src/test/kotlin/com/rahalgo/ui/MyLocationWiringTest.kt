@@ -27,7 +27,8 @@ class MyLocationWiringTest {
         /** **مواضعُ «موقعي» الحقيقيّة** — **زرٌّ يضغطه صاحبُه.** */
         val SHELLS = listOf(
             "app-customer/src/main/kotlin/com/rahalgo/customer/MainActivity.kt",
-            "app-merchant/src/main/kotlin/com/rahalgo/merchant/MainActivity.kt",
+            // **والمتجرُ خرج منها** (٢٠٢٦-١٠-٢٩): موقعُه بالخريطة الصغيرة (`map.PointMapCard`)
+            // لا بملتقطٍ بشاشةٍ كاملة.
             "app-rep/src/main/kotlin/com/rahalgo/rep/MainActivity.kt",
         )
         const val CUSTOMER_HERE =
@@ -265,12 +266,15 @@ class MyLocationWiringTest {
             "**الزبونُ بلا حدِّ تأكيد**",
             cust.contains("Accuracy.CONFIRM_M"),
         )
-        for (rel in listOf(SHELLS[1], SHELLS[2])) {
-            assertTrue(
-                "**«موقعي» بلا حدِّ دقّةٍ في** " + rel,
-                read(rel).contains("Accuracy.CONFIRM_M"),
-            )
-        }
+        assertTrue(
+            "**«موقعي» بلا حدِّ دقّةٍ في** " + SHELLS[1],
+            read(SHELLS[1]).contains("Accuracy.CONFIRM_M"),
+        )
+        // **والخريطةُ الصغيرةُ (المتجرُ والمندوب) تقف عند حدّ التأكيد** (٢٠٢٦-١٠-٢٩).
+        assertTrue(
+            "**الخريطةُ الصغيرةُ بلا حدِّ دقّة**",
+            read("map/src/main/kotlin/com/rahalgo/map/PointMapCard.kt").contains("CONFIRM_ACCURACY_M"),
+        )
     }
 
     /**

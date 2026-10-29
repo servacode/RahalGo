@@ -101,7 +101,6 @@ const PAIRS = [
   [web.addOption, "mod_add_option"],
   // **وعنوانُ الشاشة والبابُ إليها** — الويبُ يسمّيهما `terms.menu`.
   [terms.menu, "mn_items"],
-  [rep.menuHint, "mn_hint"],
 ];
 
 // ══════════════════════════════════════════════════════════════════════

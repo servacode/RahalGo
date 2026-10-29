@@ -115,7 +115,7 @@
     <string name="problem_wait">متاح بعد %1$s</string>
     <string name="problem_retry">تعذّر تحميل الخيارات — أعد المحاولة</string>
     <string name="confirm_title">تأكيد</string>
-    <string name="act_confirm">نعم، تأكيد</string>
+    <string name="trip_act_confirm">نعم، تأكيد</string>
     <string name="confirm_close_body">هذا ينهي الطلب ولا يمكن التراجع عنه. متأكد؟</string>
     <string name="confirm_customer_body">هذا ينهي الطلب، ويُمنع الزبون من الدفع نقداً 30 يوماً. متأكد؟</string>
     <string name="confirm_report_body">يصل بلاغك للإدارة، والطلب يبقى معك حتى تقرّر. متأكد؟</string>

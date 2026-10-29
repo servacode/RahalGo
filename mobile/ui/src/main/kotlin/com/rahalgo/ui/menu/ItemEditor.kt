@@ -745,13 +745,10 @@ private fun GroupCard(
                 }
             }
             Spacer(Modifier.width(Rahal.space.sm))
-            OutlinedButton(
+            com.rahalgo.ui.RahalOutlineButton(
                 onClick = onRemove,
                 enabled = !busy,
-                shape = Rahal.shape.md,
-                contentPadding = SmallButtonPad,
-                border = BorderStroke(Rahal.stroke.hair, Rahal.colors.danger),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = Rahal.colors.danger),
+                tone = com.rahalgo.ui.Tone.Danger,
                 modifier = Modifier.heightIn(min = TouchTarget),
             ) { IconText(R.drawable.ic_trash, stringResource(R.string.mod_remove_group)) }
         }

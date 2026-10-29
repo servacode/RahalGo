@@ -60,11 +60,20 @@ class WeightOptionsTest {
     @Test fun presetCarriesMode() {
         val g = OptionPreset(
             name = "الوزن", priceMode = PRICE_MODE_WEIGHT,
-            options = listOf(PresetOption(name = "x", grams = 500)),
+            options = listOf(PresetOption(name = "x", grams = 250), PresetOption(name = "y", grams = 500)),
         ).toGroup()
         assertEquals(PRICE_MODE_WEIGHT, g.priceMode)
         assertEquals(100, g.baseGrams)
-        assertEquals("نصف كيلو", g.options[0].name)
-        assertEquals(500, g.options[0].grams)
+        assertEquals("نصف كيلو", g.options[1].name)
+        assertEquals(500, g.options[1].grams)
+    }
+
+    /** **«وزن ثقيل» سعرُه لكلّ كيلو** — كلُّ خياراته نصفُ كيلو فأكثر (٢٠٢٦-١٠-٢٩). */
+    @Test fun heavyPresetPricesPerKilo() {
+        val g = OptionPreset(
+            name = "وزن ثقيل", priceMode = PRICE_MODE_WEIGHT,
+            options = listOf(PresetOption(name = "a", grams = 500), PresetOption(name = "b", grams = 2000)),
+        ).toGroup()
+        assertEquals(1000, g.baseGrams)
     }
 }

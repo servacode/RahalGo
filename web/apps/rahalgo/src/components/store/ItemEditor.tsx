@@ -1045,7 +1045,7 @@ function SectionPicker({
         ) : shown.length === 0 ? (
           <p className="text-sm text-ink-muted">{I.sectionNoMatch}</p>
         ) : (
-          <ul className="grid grid-cols-3 gap-2">
+          <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
             {shown.map((s) => {
               const on = s.id === selected;
               const img = mediaUrl(s.image_thumb_url ?? s.image_url);
