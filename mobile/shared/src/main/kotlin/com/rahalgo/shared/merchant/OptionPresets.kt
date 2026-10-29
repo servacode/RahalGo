@@ -73,10 +73,18 @@ fun presetBaseGrams(grams: List<Int>): Int =
 /** **أوزانٌ سريعة** — ٢٥٠ غ ونصف كيلو وكيلو. */
 val QUICK_GRAMS = listOf(250, 500, 1000)
 
+/** **وللوزن الثقيل أوزانُه** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — ٢٥٠ غ لا محلَّ لها بين الخضرة. */
+val QUICK_GRAMS_HEAVY = listOf(2000, 5000, 10000)
+
+/** **الأوزانُ السريعةُ لمجموعة** — بأساسها: الكيلو للثقيل. */
+fun quickGrams(baseGrams: Int?): List<Int> = if ((baseGrams ?: DEFAULT_BASE_GRAMS) >= 1000) QUICK_GRAMS_HEAVY else QUICK_GRAMS
+
 /** **اسمُ الوزن بالفصحى** — «250 غ»، «نصف كيلو»، «كيلو»، «1.5 كيلو». */
 fun weightName(g: Int): String = when {
     g == 500 -> "نصف كيلو"
     g == 1000 -> "كيلو"
+    // **كما يقولها السوق** (قرارُ المالك ٢٠٢٦-١٠-٢٩).
+    g == 1500 -> "كيلو ونصف"
     g > 1000 && g % 500 == 0 ->
         java.math.BigDecimal(g).movePointLeft(3).stripTrailingZeros().toPlainString() + " كيلو"
     else -> "$g غ"

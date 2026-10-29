@@ -488,11 +488,14 @@ private fun MapCardStatus(
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.bodyMedium,
             )
-            Text(
-                stringResource(if (set) R.string.map_drag_to_change else R.string.map_drag_to_set),
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
-            )
+            // **والشرحُ قبل التحديد وحدَه** (تجربةُ المالك ٢٠٢٦-١٠-٢٩).
+            if (!set) {
+                Text(
+                    stringResource(R.string.map_drag_to_set),
+                    color = Rahal.colors.inkMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
         }
     }
 }

@@ -90,7 +90,6 @@ import com.rahalgo.shared.merchant.PRICE_MODE_NONE
 import com.rahalgo.shared.merchant.PRICE_MODE_PRICED
 import com.rahalgo.shared.merchant.PRICE_MODE_WEIGHT
 import com.rahalgo.shared.merchant.PresetOption
-import com.rahalgo.shared.merchant.QUICK_GRAMS
 import com.rahalgo.shared.merchant.weightName
 import com.rahalgo.shared.merchant.weightPrice
 import com.rahalgo.shared.merchant.PlatformSectionRef as SectionRef
@@ -1014,7 +1013,7 @@ private fun WeightOptions(
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.align(Alignment.CenterVertically),
         )
-        QUICK_GRAMS.forEach { q ->
+        com.rahalgo.shared.merchant.quickGrams(g.baseGrams).forEach { q ->
             val has = g.options.any { it.grams == q }
             PresetChip(weightName(q), on = has, enabled = !busy) {
                 if (!has) update { gg -> gg.copy(options = gg.options + ModifierOption(name = weightName(q), grams = q)) }

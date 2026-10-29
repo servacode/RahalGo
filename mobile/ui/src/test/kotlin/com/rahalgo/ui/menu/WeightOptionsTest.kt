@@ -21,7 +21,7 @@ class WeightOptionsTest {
         assertEquals("250 غ", weightName(250))
         assertEquals("نصف كيلو", weightName(500))
         assertEquals("كيلو", weightName(1000))
-        assertEquals("1.5 كيلو", weightName(1500))
+        assertEquals("كيلو ونصف", weightName(1500))
         assertEquals("2 كيلو", weightName(2000))
         assertEquals("1250 غ", weightName(1250))
     }

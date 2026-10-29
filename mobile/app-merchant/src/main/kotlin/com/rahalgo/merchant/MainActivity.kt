@@ -1,6 +1,7 @@
 package com.rahalgo.merchant
 
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -264,6 +265,8 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
     val overlay = rememberOverlay { key -> MERCHANT_ITEMS.any { it.key == key } }
     // **ويفتح على «متجري»** (طلبُ المالك ٢٠٢٦-١٠-٠٨) — حالُه وما ينقصه أوّلُ ما يراه.
     var tab by rememberSaveable { mutableStateOf(Tab.Store) }
+    // **«أنشئ عرضاً» من الأصناف يفتح «عرض جديد»** لا قائمةَ العروض (تجربةُ المالك ٢٠٢٦-١٠-٢٩).
+    var offerNew by remember { mutableStateOf(false) }
 
     // **و«رجوع» من تبويبٍ يعود إلى الأوّل لا يُخرج** (تقريرُ فحص المتجر) — كما
     // في تطبيق المندوب. **والخريطةُ والدرجُ والشاشاتُ المفتوحةُ تغلبه** (تُسجَّل
@@ -609,7 +612,7 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                     if (over != Overlay.None) BackHandler { overlay.clear() }
                     when {
                     over is Overlay.Menu && PlatformPages.has(over.key) ->
-                        PlatformScreen(vm = pagesVm, key = over.key, role = HelpRole.Merchant)
+                        PlatformScreen(vm = pagesVm, key = over.key, role = HelpRole.Merchant, onBack = { overlay.clear() })
 
                     // **وعروضُه** — **على المحرّك المركزيّ نفسِه**
                     // (`offers`)، **وبحارس قائمته** (`ownsMerchant`).
@@ -617,7 +620,8 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                         val offersVm: com.rahalgo.merchant.offers.OffersViewModel = viewModel()
                         // **وكلُّ فتحٍ يقرأ الفرعَ المختار** — النموذجُ يعيش مع النشاط.
                         LaunchedEffect(Unit) { offersVm.clearMerchant() }
-                        com.rahalgo.ui.offers.OffersWizard(offersVm, onBack = { overlay.clear() })
+                        com.rahalgo.ui.offers.OffersWizard(offersVm, onBack = { overlay.clear() }, startNew = offerNew)
+                        DisposableEffect(Unit) { onDispose { offerNew = false } }
                     }
 
                     // **وسجلُّ الطلبات من الدرج** — قسمٌ منفصلٌ كما في الويب.
@@ -713,13 +717,13 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                     tab == Tab.Orders -> MenuScreen(
                         menuVm,
                         onAddItem = { overlay.clear(); tab = Tab.AddItem; menuVm.newItem() },
-                        onOffer = { overlay.show(Overlay.Menu(MerchantItems.OFFERS)) },
+                        onOffer = { offerNew = true; overlay.show(Overlay.Menu(MerchantItems.OFFERS)) },
                     )
 
                     tab == Tab.Menu -> MenuScreen(
                         menuVm,
                         onAddItem = { overlay.clear(); tab = Tab.AddItem; menuVm.newItem() },
-                        onOffer = { overlay.show(Overlay.Menu(MerchantItems.OFFERS)) },
+                        onOffer = { offerNew = true; overlay.show(Overlay.Menu(MerchantItems.OFFERS)) },
                     )
 
                     // **وصفحةُ الإضافة وجهةٌ بذاتها** — والرجوعُ منها
@@ -759,7 +763,7 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                             }
                             MenuScreen(
                                 menuVm,
-                                onOffer = { overlay.show(Overlay.Menu(MerchantItems.OFFERS)) },
+                                onOffer = { offerNew = true; overlay.show(Overlay.Menu(MerchantItems.OFFERS)) },
                             )
                         }
                     }

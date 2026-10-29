@@ -513,7 +513,6 @@
     <string name="wz_logo_pick">اختر صورة</string>
     <string name="wz_logo_change">غيّر الصورة</string>
     <string name="wz_sections_q">ماذا يبيع متجرك؟</string>
-    <string name="wz_sections_hint">اختر قسماً واحداً على الأقل من أقسام السوق. تظهر أصنافك للزبائن تحت هذه الأقسام.</string>
     <string name="wz_sections_none">لا توجد أقسام سوق متاحة الآن. تواصل مع إدارة المنصة.</string>
     <string name="wz_address_q">أين يقع متجرك؟</string>
     <string name="wz_hours_q">متى يفتح متجرك؟</string>
@@ -523,11 +522,7 @@
     <string name="wz_hours_hide_days">إخفاء الأيام</string>
     <string name="wz_settlement_q">كيف تستلم أموالك؟</string>
     <string name="wz_settlement_hint">يمكنك تغييرها لاحقاً من «متجري».</string>
-    <string name="wz_settlement_cash_sub">تستلم ثمن طلباتك نقداً من السائق أو من المكتب</string>
-    <string name="wz_settlement_wallet_sub">يُضاف ثمن طلباتك إلى محفظتك وتسحبه متى أردت</string>
     <string name="wz_returns_hint">إذا لم يستلم الزبون طلبه، هل يُعيد السائق الغرض إلى متجرك؟</string>
-    <string name="wz_returns_yes_sub">يُعيد السائق الغرض إلى المتجر</string>
-    <string name="wz_returns_no_sub">لا يُعاد الغرض إلى المتجر</string>
     <string name="wz_ready_title">✓ متجرك أصبح جاهزاً</string>
     <string name="home_open_now">مفتوح الآن</string>
     <string name="home_by_hours">حسب ساعات الدوام</string>
@@ -558,8 +553,6 @@
     <string name="hours_on">دوام</string>
     <string name="hours_off">عطلة</string>
     <string name="hours_friday_q">يوم الجمعة؟</string>
-    <string name="hours_friday_on_sub">يعمل يوم الجمعة</string>
-    <string name="hours_friday_off_sub">مغلق يوم الجمعة</string>
     <string name="hours_apply_same">طبّق نفس الساعات على كل الأيام</string>
     <string name="hours_apply_same_title">ساعات كل أيام الدوام</string>
     <string name="hours_done">تم</string>

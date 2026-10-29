@@ -23,6 +23,14 @@ export function presetBaseGrams(grams: number[]): number {
 /** **أوزانٌ سريعة** — ٢٥٠ غ ونصف كيلو وكيلو. */
 export const QUICK_GRAMS = [250, 500, 1000];
 
+/** **وللوزن الثقيل أوزانُه** (قرارُ المالك ٢٠٢٦-١٠-٢٩). */
+export const QUICK_GRAMS_HEAVY = [2000, 5000, 10000];
+
+/** **الأوزانُ السريعةُ لمجموعة** — بأساسها: الكيلو للثقيل. */
+export function quickGrams(baseGrams: number | null | undefined): number[] {
+  return (baseGrams ?? DEFAULT_BASE_GRAMS) >= 1000 ? QUICK_GRAMS_HEAVY : QUICK_GRAMS;
+}
+
 export function priceModeOf(v: string | null | undefined): PriceMode {
   return v === "none" || v === "weight" ? v : "priced";
 }
@@ -31,6 +39,8 @@ export function priceModeOf(v: string | null | undefined): PriceMode {
 export function weightName(g: number): string {
   if (g === 500) return "نصف كيلو";
   if (g === 1000) return "كيلو";
+  // **كما يقولها السوق** (قرارُ المالك ٢٠٢٦-١٠-٢٩).
+  if (g === 1500) return "كيلو ونصف";
   if (g > 1000 && g % 500 === 0) return `${g / 1000} كيلو`;
   return `${g} غ`;
 }

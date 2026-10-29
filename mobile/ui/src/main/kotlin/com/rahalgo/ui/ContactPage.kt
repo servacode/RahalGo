@@ -64,7 +64,7 @@ import com.rahalgo.shared.model.Platform
  * ما كان سيفعله بالرقم بعد أن ينسخه.
  */
 @Composable
-fun ContactPage(vm: PagesViewModel) {
+fun ContactPage(vm: PagesViewModel, onBack: (() -> Unit)? = null) {
     val p = vm.platform
     if (p == null) {
         LoadState(vm.busy, vm.error) { vm.load(force = true) }
@@ -72,10 +72,14 @@ fun ContactPage(vm: PagesViewModel) {
     }
 
     Screen {
-        ScreenTitle(
-            stringResource(R.string.menu_contact),
-            stringResource(R.string.contact_hint),
-        )
+        if (onBack != null) {
+            PageHeader(stringResource(R.string.menu_contact), onBack)
+        } else {
+            ScreenTitle(
+                stringResource(R.string.menu_contact),
+                stringResource(R.string.contact_hint),
+            )
+        }
         if (!hasContact(p)) {
             Empty(stringResource(R.string.contact_none))
             return@Screen

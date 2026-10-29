@@ -105,7 +105,13 @@ export default function HistoryPage() {
               </header>
               <MoneyLines o={o} />
               {o.items.length > 0 && (
-                <p className="text-xs text-ink-muted">{o.items.map((l) => `${l.qty}× ${l.name}`).join(m.common.listSep)}</p>
+                <p className="text-xs text-ink-muted">{o.items
+                    .map((l) => {
+                      // **وبما اختاره الزبون** (تجربةُ المالك ٢٠٢٦-١٠-٢٩) — «بندورة» بلا «كيلو» لا تُجهَّز.
+                      const opts = (l.options ?? []).map((x) => x.name).join(m.common.listSep);
+                      return `${l.qty}× ${l.name}${opts ? ` (${opts})` : ""}${l.note ? ` — ${l.note}` : ""}`;
+                    })
+                    .join(m.common.listSep)}</p>
               )}
             </Link>
             {reportable.has(o.id) && (

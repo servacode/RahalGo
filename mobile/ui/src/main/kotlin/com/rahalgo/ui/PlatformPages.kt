@@ -108,13 +108,13 @@ class PagesViewModel(app: Application) : AndroidViewModel(app) {
  * **ونسختان لا تفترقان اليومَ تفترقان غدا.**
  */
 @Composable
-fun PlatformScreen(vm: PagesViewModel, key: String, role: HelpRole) {
+fun PlatformScreen(vm: PagesViewModel, key: String, role: HelpRole, onBack: (() -> Unit)? = null) {
     androidx.compose.runtime.LaunchedEffect(key) { vm.load() }
     val item = PlatformPages.items.first { it.key == key }
     if (key == PlatformPages.CONTACT) {
-        ContactPage(vm)
+        ContactPage(vm, onBack)
     } else {
-        PlatformPage(vm, item, role = role)
+        PlatformPage(vm, item, role = role, onBack = onBack)
     }
 }
 

@@ -49,6 +49,8 @@ fun PlatformPage(
      * أبدأ ورديّتي؟».**
      */
     role: HelpRole = HelpRole.Customer,
+    /** **سهمُ رجوعٍ مكانَ العنوان** — ولا سطرَ شرحٍ معه (تجربةُ المالك ٢٠٢٦-١٠-٢٩). */
+    onBack: (() -> Unit)? = null,
 ) {
     val contact = vm.contact
     if (contact == null) {
@@ -99,7 +101,11 @@ fun PlatformPage(
     val findUs = vm.platform?.takeIf { item.key == PlatformPages.ABOUT && hasContact(it) }
 
     Screen {
-        ScreenTitle(stringResource(item.label), stringResource(pageHint(item.key)))
+        if (onBack != null) {
+            PageHeader(stringResource(item.label), onBack)
+        } else {
+            ScreenTitle(stringResource(item.label), stringResource(pageHint(item.key)))
+        }
         if (blocks.isEmpty() && findUs == null) {
             Empty(stringResource(R.string.page_empty))
             return@Screen

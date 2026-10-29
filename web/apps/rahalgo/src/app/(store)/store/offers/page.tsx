@@ -20,7 +20,7 @@
  * على النافذة والقيمة (`bad_offer_window` …).
  */
 
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { getMessages, defaultLocale, errorText, fmtDateTime, fmtMoney, fmtNum } from "@rahalgo/i18n";
 import {
   Alert,
@@ -427,6 +427,10 @@ export default function OffersPage() {
   }, [id]);
   const { data, loading, error, reload, setData } = useLiveData(load, ["menu", "offers"], [id]);
   const [composing, setComposing] = useState(false);
+  // **«أنشئ عرضاً» من الأصناف يفتح «عرض جديد» مباشرةً** (تجربةُ المالك ٢٠٢٦-١٠-٢٩).
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has("new")) setComposing(true);
+  }, []);
   const [created, setCreated] = useState(false);
   const [stopping, setStopping] = useState("");
   const [askStop, setAskStop] = useState<StoreOffer | null>(null);

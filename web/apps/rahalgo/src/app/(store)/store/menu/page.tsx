@@ -313,7 +313,7 @@ export default function MenuPage() {
             testId="menu-add"
             primary
           />
-          <ToolPill icon={IconPromos} label={M.addOffer} href="/store/offers" testId="menu-offer" />
+          <ToolPill icon={IconPromos} label={M.addOffer} href="/store/offers?new=1" testId="menu-offer" />
           <ToolPill icon={IconBanknote} label={M.toolBulk} href="/store/menu/prices" testId="menu-tool-prices" />
           <ToolPill icon={IconOptions} label={M.toolPresets} href="/store/menu/options" testId="menu-tool-options" />
           <ToolPill icon={IconCatDrinks} label={M.toolDrinks} href="/store/menu/drinks" testId="menu-tool-drinks" />

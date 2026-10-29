@@ -47,6 +47,9 @@ func WeightName(g int) string {
 		return "نصف كيلو"
 	case g == 1000:
 		return "كيلو"
+	case g == 1500:
+		// **كما يقولها السوق** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — كانت «1.5 كيلو» هنا و«كيلو ونصف» في القالب.
+		return "كيلو ونصف"
 	case g > 1000 && g%500 == 0:
 		return strconv.FormatFloat(float64(g)/1000, 'f', -1, 64) + " كيلو"
 	}

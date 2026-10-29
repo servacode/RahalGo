@@ -463,13 +463,13 @@ private fun SettlementStep(vm: StoreViewModel, advance: () -> Unit): StepNext {
         first = IconChoice(
             icon = R.drawable.ic_banknotes,
             title = stringResource(R.string.wz_pay_cash),
-            sub = stringResource(R.string.wz_settlement_cash_sub),
+            sub = "",
             selected = m == "cash",
         ) { m = "cash" },
         second = IconChoice(
             icon = com.rahalgo.ui.R.drawable.ic_wallet,
             title = stringResource(R.string.wz_pay_wallet),
-            sub = stringResource(R.string.wz_settlement_wallet_sub),
+            sub = "",
             selected = m == "wallet",
         ) { m = "wallet" },
     )
@@ -491,13 +491,13 @@ private fun ReturnsStep(vm: StoreViewModel, advance: () -> Unit): StepNext {
         first = IconChoice(
             icon = R.drawable.ic_return,
             title = stringResource(R.string.wz_returns_yes),
-            sub = stringResource(R.string.wz_returns_yes_sub),
+            sub = "",
             selected = pick == "yes",
         ) { pick = "yes" },
         second = IconChoice(
             icon = R.drawable.ic_block,
             title = stringResource(R.string.wz_returns_no),
-            sub = stringResource(R.string.wz_returns_no_sub),
+            sub = "",
             selected = pick == "no",
         ) { pick = "no" },
     )

@@ -115,12 +115,14 @@ fun OffersWizard(
     vm: OffersWizardViewModel,
     /** **سهمُ الرجوع في القائمة** — و`null` لا سهمَ فيها (المندوبُ يرجع بزرّ الجهاز). */
     onBack: (() -> Unit)? = null,
+    /** **يفتح على «عرض جديد» مباشرةً** — من زرّ «أنشئ عرضاً» في الأصناف (٢٠٢٦-١٠-٢٩). */
+    startNew: Boolean = false,
 ) {
     val ctx = LocalContext.current
     val focus = LocalFocusManager.current
     // **صفحتان لا صفحةٌ معجوقة** (طلبُ المالك ٢٠٢٦-١٠-٠٩) — القائمةُ ثمّ النموذج،
     // **ومن أنشأ عاد إلى القائمة.** ويبقيان مع تدوير الشاشة.
-    var composing by rememberSaveable { mutableStateOf(false) }
+    var composing by rememberSaveable { mutableStateOf(startNew) }
     var percent by rememberSaveable { mutableStateOf("") }
     var hours by rememberSaveable { mutableStateOf(24) }
     var query by rememberSaveable { mutableStateOf("") }

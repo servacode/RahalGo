@@ -807,13 +807,13 @@ private fun StorePageScreen(
                     first = IconChoice(
                         icon = R.drawable.ic_banknotes,
                         title = stringResource(R.string.wz_pay_cash),
-                        sub = stringResource(R.string.wz_settlement_cash_sub),
+                        sub = "",
                         selected = store.settlementConfirmed && store.settlementMethod == "cash",
                     ) { pickMethod("cash") },
                     second = IconChoice(
                         icon = com.rahalgo.ui.R.drawable.ic_wallet,
                         title = stringResource(R.string.wz_pay_wallet),
-                        sub = stringResource(R.string.wz_settlement_wallet_sub),
+                        sub = "",
                         selected = store.settlementConfirmed && store.settlementMethod == "wallet",
                     ) { pickMethod("wallet") },
                     enabled = !vm.saving && !suspended,
@@ -844,13 +844,13 @@ private fun StorePageScreen(
                     first = IconChoice(
                         icon = R.drawable.ic_return,
                         title = stringResource(R.string.wz_returns_yes),
-                        sub = stringResource(R.string.wz_returns_yes_sub),
+                        sub = "",
                         selected = store.returnsConfirmed && store.acceptsReturns,
                     ) { vm.setAcceptsReturns(true) },
                     second = IconChoice(
                         icon = R.drawable.ic_block,
                         title = stringResource(R.string.wz_returns_no),
-                        sub = stringResource(R.string.wz_returns_no_sub),
+                        sub = "",
                         selected = store.returnsConfirmed && !store.acceptsReturns,
                     ) { vm.setAcceptsReturns(false) },
                     enabled = !vm.saving && !suspended,

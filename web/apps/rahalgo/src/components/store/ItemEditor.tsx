@@ -74,7 +74,7 @@ import { parseUsd, usdInput, usdText, usdToSyp } from "@/lib/store/usd";
 import {
   DEFAULT_BASE_GRAMS,
   presetBaseGrams,
-  QUICK_GRAMS,
+  quickGrams,
   priceModeOf,
   weightName,
   weightPrice,
@@ -814,7 +814,7 @@ export default function ItemEditor({
                 ))}
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-xs text-ink-muted">{I.weightQuick}</span>
-                  {QUICK_GRAMS.map((q) => {
+                  {quickGrams(g.base_grams).map((q) => {
                     const has = g.options.some((o) => o.grams === q);
                     return (
                       <button

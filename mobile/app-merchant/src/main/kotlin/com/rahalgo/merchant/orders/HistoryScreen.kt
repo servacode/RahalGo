@@ -309,7 +309,12 @@ private fun HistoryCard(o: MerchantOrder, reportable: Boolean, onReport: () -> U
         if (o.items.isNotEmpty()) {
             Spacer(Modifier.height(4.dp))
             Text(
-                o.items.joinToString("، ") { "${it.qty}× ${it.name}" },
+                // **وبما اختاره الزبون** (تجربةُ المالك ٢٠٢٦-١٠-٢٩) — «بندورة» بلا «كيلو» لا تُجهَّز.
+                o.items.joinToString("\n") { l ->
+                    val opts = l.options.joinToString("، ") { it.name }
+                    "${l.qty}× ${l.name}" + (if (opts.isNotBlank()) " ($opts)" else "") +
+                        (if (l.note.isNotBlank()) " — ${l.note}" else "")
+                },
                 color = Rahal.colors.inkMuted,
                 style = MaterialTheme.typography.bodySmall,
             )

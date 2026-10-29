@@ -351,13 +351,15 @@ private fun IconChoiceCard(c: IconChoice, enabled: Boolean, modifier: Modifier) 
                 style = MaterialTheme.typography.titleMedium,
                 textAlign = TextAlign.Center,
             )
-            Spacer(Modifier.height(Rahal.space.xs))
-            Text(
-                c.sub,
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center,
-            )
+            if (c.sub.isNotBlank()) {
+                Spacer(Modifier.height(Rahal.space.xs))
+                Text(
+                    c.sub,
+                    color = Rahal.colors.inkMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
         if (c.selected) {
             CheckBadge(
@@ -570,13 +572,13 @@ internal fun HoursPlanner(plan: HoursPlan, enabled: Boolean = true) {
             first = IconChoice(
                 icon = com.rahalgo.ui.R.drawable.ic_time,
                 title = stringResource(R.string.hours_on),
-                sub = stringResource(R.string.hours_friday_on_sub),
+                sub = "",
                 selected = plan.friday == "on",
             ) { plan.chooseFriday(true) },
             second = IconChoice(
                 icon = com.rahalgo.ui.R.drawable.ic_power,
                 title = stringResource(R.string.hours_off),
-                sub = stringResource(R.string.hours_friday_off_sub),
+                sub = "",
                 selected = plan.friday == "off",
             ) { plan.chooseFriday(false) },
             enabled = enabled,
@@ -770,12 +772,6 @@ internal fun SectionsEditor(vm: StoreViewModel) {
             vm.saveSections(picked.toList())
         }
     }
-    Text(
-        stringResource(R.string.wz_sections_hint),
-        color = Rahal.colors.inkMuted,
-        style = MaterialTheme.typography.bodyMedium,
-    )
-    Spacer(Modifier.height(Rahal.space.md))
     SectionGrid(all = vm.allSections, picked = picked, enabled = !suspended) { id ->
         picked = if (id in picked) picked - id else picked + id
     }

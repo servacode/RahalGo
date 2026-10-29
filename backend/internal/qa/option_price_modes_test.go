@@ -89,7 +89,7 @@ func TestOptionModes_WeightComputesAndRounds(t *testing.T) {
 
 	patchItem(t, h, tok, it.ID, map[string]any{"modifiers": []any{weightGroup(100, 250, 500, 1000, 1500)}})
 	d := optionDeltas(t, h, it.ID)
-	want := map[string]int64{"250 غ": 900, "نصف كيلو": 2400, "كيلو": 5400, "1.5 كيلو": 8400}
+	want := map[string]int64{"250 غ": 900, "نصف كيلو": 2400, "كيلو": 5400, "كيلو ونصف": 8400}
 	for n, v := range want {
 		if got, ok := d[n]; !ok || got != v {
 			t.Fatalf("**وزن %s**: %v (المنتظَر %d) — الكلّ %v", n, got, v, d)

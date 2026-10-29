@@ -39,7 +39,6 @@
     <string name="pick_choose_first">اضغط «موقعي» أو حرّك الدبوس بيدك إلى مكانك الصحيح</string>
     <!-- **بطاقةُ الخريطة الصغيرة** — للمتجر والمندوب (٢٠٢٦-١٠-٢٩). -->
     <string name="map_drag_to_set">حرّك الخريطة حتى يصبح الدبوس فوق المتجر</string>
-    <string name="map_drag_to_change">لتغيير الموقع حرّك الخريطة حتى يصبح الدبوس فوق المتجر</string>
     <string name="map_point_chosen">تم اختيار موقع جديد، ولم يُحفظ بعد</string>
     <string name="map_locating">جارٍ تحديد موقعك…</string>
     <string name="map_locating_acc">جارٍ تحديد موقعك… الدقة %1$s م</string>
