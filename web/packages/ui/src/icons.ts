@@ -16,6 +16,10 @@ export {
   // شيء **قبل أن يقرأ الكلمة** — وسهمٌ واحدٌ يُقرأ «إرسالاً» لا «تبديلاً».
   Repeat as IconSwap,
   Settings as IconSettings,
+  // **«نقدي» في طريقة استلام الأموال** — مرآةُ `ic_banknotes` في تطبيق المتجر.
+  Banknote as IconCash,
+  // **ترجيعُ الغرض** — مرآةُ `ic_return`.
+  Undo2 as IconReturn,
   // الحقول والبيانات
   User as IconUser,
   Phone as IconPhone,
@@ -176,4 +180,7 @@ export {
   Image as IconFrameFull,
   Square as IconFrameSquare,
   RectangleVertical as IconFramePortrait,
+  // **أدواتُ الأصناف** (تصميمُ ٢٠٢٦-١٠-٢٩) — «تغيير الأسعار» و«خيارات الأصناف».
+  Banknote as IconBanknote,
+  SlidersHorizontal as IconOptions,
 } from "lucide-react";

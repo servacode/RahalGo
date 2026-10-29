@@ -21,6 +21,7 @@
  * **والإرسالُ مرّةً واحدةً مهما أُعيد** — مفتاحُ المحاولة (`Idempotency-Key`).
  */
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getMessages, defaultLocale, errorText, fmtNum } from "@rahalgo/i18n";
 import { Alert, Button, Checkbox, EmptyState, IconLocation, IconMoto, Input, LoadingState, Textarea } from "@rahalgo/ui";
@@ -30,7 +31,7 @@ import { useStoreDeliveries } from "@/lib/store/deliveries";
 import type { DeliveryQuote } from "@/lib/store/types";
 import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
 import { backAt, fill } from "@/lib/customer/texts";
-import { DeliveryRow } from "@/components/store/DeliveryParts";
+import { DeliveryRow, statusText, toneOf } from "@/components/store/DeliveryParts";
 
 const m = getMessages(defaultLocale);
 const D = m.store.delivery;
@@ -459,6 +460,11 @@ export default function DeliveryPage() {
           : D.feeChoose;
 
   const rows = list;
+  // **توصيلةٌ جارية — شريطٌ فوق النموذج بـ«تابعها»** (مرآةُ التطبيق، التصميمُ المعتمد ٢٠٢٦-١٠-٢٨).
+  const live = rows?.find((d) => {
+    const t = toneOf(d.status);
+    return t === "waiting" || t === "moving";
+  });
 
   return (
     <div className="flex flex-col gap-3">
@@ -466,6 +472,18 @@ export default function DeliveryPage() {
         <h2 className="heading-page">{D.title}</h2>
         <p className="text-sm text-ink-muted">{D.hint}</p>
       </header>
+
+      {live && (
+        <Link
+          href={`/store/delivery/${live.id}`}
+          data-testid="delivery-live"
+          className="flex items-center gap-2 rounded-control bg-accent-tint px-3 py-2 transition-opacity hover:opacity-90"
+        >
+          <IconMoto size={20} className="shrink-0 text-accent-text" />
+          <span className="min-w-0 flex-1 text-sm">{fill(D.active, { n: live.number, status: statusText(live.status) })}</span>
+          <span className="shrink-0 text-sm font-bold text-accent-text">{D.follow}</span>
+        </Link>
+      )}
 
       {quoteError && (
         <div className="flex items-center gap-3 rounded-card border border-danger-edge bg-danger-tint p-3">

@@ -26,15 +26,18 @@ import {
   IconChat,
   IconLogout,
   IconMoto,
+  IconPhone,
   IconPromos,
   IconReceipt,
   IconSupport,
   IconTrendUp,
+  IconUsers,
   IconWallet,
   IconWarning,
 } from "@rahalgo/ui";
 import { useAuth } from "@/lib/auth";
 import { useTutorialUrl } from "@/lib/store/platform";
+import { useTeamRole } from "@/lib/store/team";
 
 const m = getMessages(defaultLocale);
 const N = m.store.nav;
@@ -49,6 +52,9 @@ const MINE: readonly (readonly [string, string, Icon])[] = [
   ["/store/complaints", N.complaints, IconChat],
   ["/store/reports", N.reports, IconTrendUp],
   ["/store/wallet", N.wallet, IconWallet],
+  // **ورقمُ الطلبات حسب الدوام وموظّفوه** — كدرج التطبيق، **والموظّفُ لا يرى بابَ الموظّفين.**
+  ["/store/order-phones", N.orderPhones, IconPhone],
+  ["/store/team", N.staff, IconUsers],
 ];
 
 const PLATFORM: readonly (readonly [string, string])[] = [
@@ -65,13 +71,14 @@ export default function StoreMenu({ open, onClose }: { open: boolean; onClose: (
   const { logout } = useAuth();
   const router = useRouter();
   const tutorial = useTutorialUrl();
+  const role = useTeamRole();
   return (
     <Drawer open={open} onClose={onClose} title={N.more}>
       <nav className="flex flex-col gap-4" aria-label={N.more} data-testid="store-menu">
         <section>
           <p className="px-3 pb-1 text-xs font-bold text-ink-muted">{N.mine}</p>
           <ul className="flex flex-col">
-            {MINE.map(([href, label, Ico]) => (
+            {MINE.filter(([href]) => !(role === "staff" && href === "/store/team")).map(([href, label, Ico]) => (
               <li key={href}>
                 <Link href={href} onClick={onClose} className={ROW}>
                   <Ico size={18} className="shrink-0 text-accent-text" />

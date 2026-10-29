@@ -14,11 +14,11 @@
  * «شغّال». **وتحتها «تسوّق كزبون»** لمن له الدوران، **و«خروج».**
  */
 
-import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { AccountSettings, Button, ButtonLink, IconBag, IconLogout, Switch } from "@rahalgo/ui";
-import { api, ApiError, mediaUrl } from "@/lib/api";
+import { AccountSettings, Badge, Button, ButtonLink, IconBag, IconLogout, Switch } from "@rahalgo/ui";
+import { api, mediaUrl } from "@/lib/api";
+import { useTeamRole } from "@/lib/store/team";
 import { hasRole, useAuth } from "@/lib/auth";
 import { useStoreOrders } from "@/lib/store/orders";
 import WebPushCard from "@/components/WebPushCard";
@@ -30,16 +30,9 @@ export default function StoreAccountPage() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const { soundEnabled, setSoundEnabled } = useStoreOrders();
-  // **شارةُ الدور** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — «صاحب المتجر» أو «موظف»، من ردّ المحرّك:
-  // بابُ الموظّفين يردّ الموظّفَ `staff_not_allowed` (كتطبيق المتجر `TeamAccess`).
-  const [role, setRole] = useState<"" | "owner" | "staff">("");
-  useEffect(() => {
-    api("/api/v1/merchant/staff")
-      .then(() => setRole("owner"))
-      .catch((e) => {
-        if (e instanceof ApiError && e.body.code === "staff_not_allowed") setRole("staff");
-      });
-  }, []);
+  // **شارةُ الدور** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — «صاحب المتجر» أو «موظف»، من ردّ المحرّك
+  // (`useTeamRole`، مرآةُ `TeamAccess`). **ولا رأسَ باسمٍ ورقمٍ ومحفظة** — كـ«حسابي» في التطبيق.
+  const role = useTeamRole();
   const out = () => {
     logout();
     router.replace("/login");
@@ -47,18 +40,12 @@ export default function StoreAccountPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <h2 className="heading-page">{A.title}</h2>
-        {role && (
-          <span
-            className={`rounded-full px-3 py-1 text-xs font-bold ${
-              role === "owner" ? "bg-accent-tint text-accent" : "bg-field text-ink"
-            }`}
-          >
-            {role === "owner" ? A.roleOwner : A.roleStaff}
-          </span>
-        )}
-      </div>
+      <h2 className="sr-only">{A.title}</h2>
+      {role && (
+        <Badge variant={role === "owner" ? "primary" : "neutral"} className="w-fit px-3 py-1 text-sm font-bold">
+          <span data-testid="account-role">{role === "owner" ? A.roleOwner : A.roleStaff}</span>
+        </Badge>
+      )}
 
       <section className="surface rounded-card p-4" aria-label={A.sound} data-testid="store-sound">
         <Switch

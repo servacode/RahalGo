@@ -62,6 +62,8 @@ import StoreBar from "./StoreBar";
 import OrderAlert from "./OrderAlert";
 import FetchAmountWatcher from "./FetchAmountWatcher";
 import StoreMenu from "./StoreMenu";
+import SetupWizard from "./SetupWizard";
+import { useSetupWizard, useStoreSections } from "@/lib/store/setup";
 
 const m = getMessages(defaultLocale);
 const S = m.store;
@@ -115,6 +117,11 @@ function Shell({ children }: { children: ReactNode }) {
   const { pending } = useStoreOrders();
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const router = useRouter();
+  /* **معالجُ الإعداد الأوّل** (مرآةُ `maybeStartWizard`، ٢٠٢٦-١٠-٢٨) — متجرٌ ينقصه
+     إعدادٌ إلزاميٌّ لا يرى الأقسامَ حتّى يُكمله. **و«حسابي» يبقى مفتوحاً** — للخروج. */
+  const sec = useStoreSections(store?.id ?? "");
+  const wizard = useSetupWizard(store, sec);
 
   /* ══════════════════════════════════════════════════════════════════
      **الشريطُ السفليُّ تبويباتُ التطبيق نفسُها وبترتيبها**
@@ -150,6 +157,21 @@ function Shell({ children }: { children: ReactNode }) {
   if (loading) body = <LoadingState variant="list" rows={3} />;
   else if (error) body = <ReloadState label={errorText(error)} onRetry={() => void reload()} />;
   else if (!store) body = <EmptyState icon={IconStore} title={S.noStore} />;
+
+  if (store && wizard.steps && !path.startsWith("/store/account")) {
+    return (
+      <SetupWizard
+        steps={wizard.steps}
+        index={wizard.index}
+        setIndex={wizard.setIndex}
+        sec={sec}
+        onFinish={() => {
+          wizard.finish();
+          router.push("/store");
+        }}
+      />
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -201,7 +223,7 @@ function Shell({ children }: { children: ReactNode }) {
       <main className="flex min-w-0 flex-1 flex-col gap-3 px-3 pb-4 pt-3 sm:px-4">
         <PwaHints android={ANDROID_HINT} />
         {/* **وصفحةُ الحساب بلا شريط المتجر** — كما يُخفي التطبيقُ مبدّلَ المتجر في «حسابي». */}
-        {store && !path.startsWith("/store/account") && <StoreBar />}
+        {store && path !== "/store" && !path.startsWith("/store/account") && <StoreBar />}
         {store && selfManage && <OrderAlert />}
         {/* **وبجانب زرّ الصوت «فعّل إشعارات الطلبات»** — يرنّ والموقعُ مسكّر. */}
         {store && selfManage && <WebPushCard app="merchant" variant="banner" notes={path === "/store"} />}

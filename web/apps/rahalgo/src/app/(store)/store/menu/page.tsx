@@ -2,66 +2,54 @@
 
 /**
  * ══════════════════════════════════════════════════════════════════════
- * **‏/store/menu — «أصنافي»: متوفر / غير متوفر وتعديلُ السعر**
+ * **‏/store/menu — «الأصناف»: التصميمُ المعتمد ٢٠٢٦-١٠-٢٩**
  * ══════════════════════════════════════════════════════════════════════
  *
- * (مرآةُ `MenuScreen.kt` و`MenuViewModel.kt` في تطبيق المتجر.)
+ * (مرآةُ `MenuItemsGrid` في `ui/menu/MenuGrid.kt` — نسخةٌ واحدةٌ للمتجر
+ *  والمندوب في التطبيق، وهذه مرآتُها على الويب.)
  *
- * **الأصنافُ تحت أقسام السوق** (`platform_section_name`) — كما يجمعها
- * التطبيق، **والأكثرُ أصنافاً أوّلاً.**
+ * من فوق لتحت: **البحث · مربّعا الأرقام (عدد الأصناف · غير المتوفرة) ·
+ * الأدوات الثلاث · «أضف صنفاً» و«أنشئ عرضاً» · رقائقُ الأقسام · ثمّ الأصناف
+ * بطاقتين في كلّ سطرٍ على الجوّال وأكثرَ على الحاسوب.**
  *
- * **والمفتاحُ يتبدّل فوراً** ثمّ يُسأل المحرّك — **فإن ردّه عاد كما كان**
- * وقيل السببُ كما قاله الخادم.
+ * **والبطاقةُ كلُّها تفتح المحرّر، والمفتاحُ وحدَه يبدّل التوفّر** — يتبدّل
+ * فوراً ثمّ يُسأل المحرّك، **فإن ردّه عاد كما كان** وقيل السببُ كما قاله.
+ * **وغيرُ المتوفّر باهت.**
  *
- * # والسعرُ بعملة الصنف
- *
- * **صنفٌ بالدولار يُعدَّل بالدولار** (`price_currency = USD`) **والليرةُ
- * تُحسب منه في المحرّك** بسعر صرف المتجر مدوَّرةً لأقرب خمسة — **وتُعرض هنا
- * قبل الحفظ بالقاعدة نفسِها** (`usdToSyp` في `ItemDraft.kt`). **وصنفٌ
- * بالليرة يُعدَّل بالليرة.** ومن أرسل ليرةً لصنفٍ بالدولار محا دولارَه —
- * **فلا يُرسَل إلّا ما يخصّ عملتَه.**
+ * **و`?filter=unavailable` يفتحها مصفّاةً على غير المتوفرة** — زرُّ «غير
+ * المتوفر» في «متجري» يصل إليها.
  */
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import DrinksCard from "@/components/store/DrinksCard";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ComponentType } from "react";
+import { getMessages, defaultLocale, errorText, fmtMoney, fmtNum } from "@rahalgo/i18n";
 import {
-  getMessages,
-  defaultLocale,
-  errorText,
-  fmtMoney,
-  fmtNum,
-} from "@rahalgo/i18n";
-import {
-  Alert,
-  Button,
   ButtonLink,
   EmptyState,
   IconAdd,
-  IconCopy,
-  IconEdit,
-  FormActions,
+  IconBanknote,
+  IconBlock,
+  IconCatDrinks,
+  IconClose,
   IconList,
+  IconOptions,
+  IconPromos,
   IconSearch,
-  Input,
+  IconStore,
   LoadingState,
-  MediaThumb,
-  Modal,
   ReloadState,
-  Select,
-  Switch,
   useLiveData,
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import type { MenuItem, MenuSection, SectionRef } from "@/lib/store/types";
-import { dollars, fill } from "@/lib/customer/texts";
-import { parseUsd, usdInput, usdToSyp } from "@/lib/store/usd";
+import { dollars } from "@/lib/customer/texts";
 import { useShopToast } from "@/components/customer/toast";
 
 const m = getMessages(defaultLocale);
 const M = m.store.menu;
+
+type Icon = ComponentType<{ size?: number; className?: string }>;
 
 function priceLine(it: MenuItem): string {
   return it.price_currency === "USD" && it.merchant_price_usd != null
@@ -69,344 +57,156 @@ function priceLine(it: MenuItem): string {
     : fmtMoney(it.price);
 }
 
-function PriceDialog({
-  item,
-  rate,
-  onClose,
-  onSaved,
+/** **الوصفُ — أو أسماءُ مجموعات خياراته إن خلا** (مرآةُ `ItemsList` في التطبيق). */
+function descOf(it: MenuItem): string {
+  const d = it.description.trim();
+  if (d) return d;
+  return (it.modifiers ?? [])
+    .map((g) => g.name.trim())
+    .filter(Boolean)
+    .join(" · ");
+}
+
+/** **مربّعُ رقم** — أيقونةٌ في دائرة، والرقمُ كبيراً، واسمُه تحته. والمختارُ بحدّ لونه. */
+function StatBox({
+  icon: Ico,
+  label,
+  value,
+  tone,
+  selected,
+  onClick,
+  testId,
 }: {
-  item: MenuItem;
-  rate: number | null;
-  onClose: () => void;
-  onSaved: () => void;
+  icon: Icon;
+  label: string;
+  value: number;
+  tone: "accent" | "danger" | "muted";
+  selected: boolean;
+  onClick: () => void;
+  testId: string;
 }) {
-  const usd = item.price_currency === "USD";
-  const [text, setText] = useState(
-    usd
-      ? item.merchant_price_usd != null
-        ? String(item.merchant_price_usd)
-        : ""
-      : String(item.price ?? ""),
-  );
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const toast = useShopToast();
-
-  // **والصفرُ مسموح** (قرارُ المالك ٢٠٢٦-١٠-٢٨: «مسموح للكل») — والفارغُ لا.
-  const usdValue = usd ? parseUsd(text) : null;
-  const sypDigits = usd ? "" : text.replace(/\D/g, "");
-  const sypValue = usd || sypDigits === "" ? null : Number(sypDigits);
-
-  async function save() {
-    if ((usd && usdValue == null) || (!usd && sypValue == null)) {
-      setError(M.badPrice);
-      return;
-    }
-    setBusy(true);
-    setError("");
-    try {
-      await api(`/api/v1/merchant/menu/items/${item.id}`, {
-        method: "PATCH",
-        body: JSON.stringify(
-          usd
-            ? { price_currency: "USD", price_usd: usdValue }
-            : { price_currency: "SYP", price: sypValue },
-        ),
-      });
-      toast(M.saved, "success");
-      onSaved();
-    } catch (e) {
-      setError(errorText(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
+  const circle = { accent: "bg-accent-tint text-accent-text", danger: "bg-danger-tint text-danger", muted: "bg-field text-ink-muted" }[tone];
+  const edge = { accent: "border-accent", danger: "border-danger", muted: "border-line" }[tone];
   return (
-    <Modal open onClose={onClose} title={`${M.editPrice} · ${item.name}`}>
-      <div className="flex flex-col gap-3">
-        <Input
-          label={usd ? M.priceUsd : M.priceSyp}
-          inputMode={usd ? "decimal" : "numeric"}
-          dir="ltr"
-          value={text}
-          onChange={(e) =>
-            setText(
-              usd
-                ? usdInput(e.target.value)
-                : e.target.value.replace(/\D/g, "").slice(0, 9),
-            )
-          }
-          autoFocus
-        />
-        {usd && rate != null && (
-          <p className="text-xs text-ink-muted">
-            {fill(M.rate, { rate: fmtNum(rate) })}
-            {usdValue != null && usdValue > 0 && (
-              <>
-                {" — "}
-                {fill(M.usdPreview, {
-                  syp: fmtMoney(usdToSyp(usdValue, rate)),
-                })}
-              </>
-            )}
-          </p>
-        )}
-        {error && <Alert>{error}</Alert>}
-        <FormActions
-          onSave={() => void save()}
-          onCancel={onClose}
-          busy={busy}
-        />
-      </div>
-    </Modal>
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onClick}
+      data-testid={testId}
+      className={`flex flex-1 items-center gap-3 rounded-card p-3 text-start transition-colors ${
+        selected ? `border-2 ${edge} bg-row-hover` : "surface border border-line hover:bg-row-hover"
+      }`}
+    >
+      <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${circle}`} aria-hidden>
+        <Ico size={20} />
+      </span>
+      <span className="flex min-w-0 flex-col">
+        <span className="figure tabular-nums text-ink">{fmtNum(value)}</span>
+        <span className="truncate text-xs text-ink-muted">{label}</span>
+      </span>
+    </button>
   );
 }
 
-/** **أقسامُ السوق التي فيها أصناف** — لمرشِّح «تغيير الأسعار». */
-function sectionsOf(data: MenuSection[]): { id: string; name: string }[] {
-  const seen = new Map<string, string>();
-  for (const it of data.flatMap((s) => s.items)) {
-    if (it.platform_section_id && !seen.has(it.platform_section_id)) {
-      seen.set(it.platform_section_id, it.platform_section_name);
-    }
-  }
-  return [...seen.entries()].map(([id, name]) => ({ id, name }));
+/** **زرُّ أداة** — أيقونةٌ فوق اسمها في مربّعٍ فاتح. */
+function ToolTile({ icon: Ico, label, href, testId }: { icon: Icon; label: string; href: string; testId: string }) {
+  return (
+    <Link
+      href={href}
+      data-testid={testId}
+      className="surface flex h-[4.25rem] flex-1 flex-col items-center justify-center gap-1 rounded-control border border-line px-1 hover:bg-row-hover"
+    >
+      <Ico size={22} className="text-accent-text" />
+      <span className="max-w-full truncate text-xs font-medium text-ink">{label}</span>
+    </Link>
+  );
 }
 
-interface BulkPreview {
-  count: number;
-  samples: { name: string; old_price: number; new_price: number }[];
-  applied: boolean;
+/** **رقاقةُ قسم** — اسمُه وعددُه؛ المختارةُ ممتلئةٌ بلون المنصّة، والباقيةُ مؤطَّرة. */
+function SectionChip({ text, count, selected, onClick }: { text: string; count: number; selected: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={selected}
+      onClick={onClick}
+      data-testid="menu-chip"
+      className={`flex shrink-0 items-center gap-2 rounded-full border py-1.5 pe-1.5 ps-4 text-sm transition-colors ${
+        selected ? "border-accent bg-accent font-bold text-on-bright" : "border-line bg-surface text-ink hover:bg-row-hover"
+      }`}
+    >
+      <span className="whitespace-nowrap">{text}</span>
+      <span
+        className={`rounded-full px-2 py-0.5 text-2xs font-bold tabular-nums ${
+          selected ? "bg-surface text-accent-text" : "bg-field text-ink-muted"
+        }`}
+      >
+        {fmtNum(count)}
+      </span>
+    </button>
+  );
 }
 
 /**
- * **تغييرُ الأسعار بنسبة** — `POST /stores/{id}/menu/prices`. **بلا `confirm` معاينةٌ لا
- * تغيّر شيئاً**: العددُ وأمثلةٌ، ثمّ «طبّق» يرسلها نفسَها بـ`confirm: true`.
+ * **بطاقةُ صنف** — صورتُه فوق، ثمّ اسمُه ووصفُه وسعرُه، ثمّ مفتاحُ توفّره.
+ * **والبطاقةُ كلُّها تفتح المحرّر، والمفتاحُ وحدَه يبدّل التوفّر.**
  */
-function BulkPriceDialog({
-  storeId,
-  sections,
-  onClose,
-  onApplied,
-}: {
-  storeId: string;
-  sections: { id: string; name: string }[];
-  onClose: () => void;
-  onApplied: () => void;
-}) {
-  const B = M.bulk;
-  const toast = useShopToast();
-  const [text, setText] = useState("");
-  const [section, setSection] = useState("");
-  const [preview, setPreview] = useState<BulkPreview | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-
-  const percent = Number(text);
-  const valid =
-    text.trim() !== "" &&
-    Number.isFinite(percent) &&
-    percent !== 0 &&
-    percent >= -50 &&
-    percent <= 100;
-
-  async function send(confirm: boolean) {
-    if (!valid) {
-      setError(B.badPercent);
-      return;
-    }
-    setBusy(true);
-    setError("");
-    try {
-      const r = await api<BulkPreview>(
-        `/api/v1/merchant/stores/${storeId}/menu/prices`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            percent,
-            ...(section ? { platform_section_id: section } : {}),
-            confirm,
-          }),
-        },
-      );
-      if (confirm) {
-        toast(fill(B.applied, { n: fmtNum(r.count) }), "success");
-        onApplied();
-      } else {
-        setPreview(r);
-      }
-    } catch (e) {
-      setError(errorText(e));
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  const samples = preview?.samples ?? [];
-  const rest = preview ? preview.count - samples.length : 0;
-
-  return (
-    <Modal open onClose={onClose} title={B.title}>
-      <div className="flex flex-col gap-3" data-testid="bulk-price">
-        {preview == null ? (
-          <>
-            <p className="text-xs text-ink-muted">{B.hint}</p>
-            <Input
-              label={B.percent}
-              inputMode="decimal"
-              dir="ltr"
-              value={text}
-              onChange={(e) => {
-                setText(e.target.value.replace(/[^\d.-]/g, "").slice(0, 6));
-                setError("");
-              }}
-              autoFocus
-            />
-            {sections.length > 0 && (
-              <Select
-                label={B.section}
-                value={section}
-                onChange={(e) => setSection(e.target.value)}
-              >
-                <option value="">{B.allSections}</option>
-                {sections.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </Select>
-            )}
-            {error && <Alert>{error}</Alert>}
-            <FormActions
-              onSave={() => void send(false)}
-              onCancel={onClose}
-              busy={busy}
-              saveLabel={B.preview}
-            />
-          </>
-        ) : (
-          <>
-            <p className="font-bold">
-              {preview.count > 0
-                ? fill(B.count, { n: fmtNum(preview.count) })
-                : B.none}
-            </p>
-            {samples.length > 0 && (
-              <ul className="surface divide-y divide-line rounded-card px-3">
-                {samples.map((s, i) => (
-                  <li
-                    key={`${s.name}-${i}`}
-                    className="flex items-center justify-between gap-2 py-2 text-sm"
-                  >
-                    <span className="min-w-0 truncate">{s.name}</span>
-                    <span className="shrink-0 tabular-nums">
-                      <span className="text-ink-muted line-through">
-                        {fmtMoney(s.old_price)}
-                      </span>
-                      {" ← "}
-                      <span className="font-bold">{fmtMoney(s.new_price)}</span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {rest > 0 && (
-              <p className="text-xs text-ink-muted">
-                {fill(B.more, { n: fmtNum(rest) })}
-              </p>
-            )}
-            {error && <Alert>{error}</Alert>}
-            {preview.count > 0 ? (
-              <FormActions
-                onSave={() => void send(true)}
-                onCancel={() => setPreview(null)}
-                busy={busy}
-                saveLabel={B.apply}
-                cancelLabel={B.back}
-              />
-            ) : (
-              <Button variant="secondary" onClick={() => setPreview(null)}>
-                {B.back}
-              </Button>
-            )}
-          </>
-        )}
-      </div>
-    </Modal>
-  );
-}
-
-function ItemRow({
-  item,
-  disabled,
-  onToggle,
-  onPrice,
-  onDuplicate,
-}: {
-  item: MenuItem;
-  disabled: boolean;
-  onToggle: () => void;
-  onPrice: () => void;
-  onDuplicate: () => void;
-}) {
+function ItemCard({ item, disabled, onToggle }: { item: MenuItem; disabled: boolean; onToggle: () => void }) {
+  const img = mediaUrl(item.image_thumb_url ?? item.image_url);
+  const dim = item.available ? "" : "opacity-50";
+  const desc = descOf(item);
   return (
     <li
-      className="flex items-center gap-3 py-2"
+      className="surface flex flex-col overflow-hidden rounded-card border border-line"
       data-testid="store-menu-item"
       data-item-id={item.id}
+      data-available={item.available}
     >
-      <MediaThumb
-        url={item.image_thumb_url ?? item.image_url}
-        alt={item.name}
-        fallback={item.name}
-        size={52}
-        mediaUrl={mediaUrl}
-      />
-      <div className="min-w-0 flex-1">
-        <Link
-          href={`/store/menu/${item.id}`}
-          aria-label={`${M.edit} · ${item.name}`}
-          data-testid="store-menu-edit"
-          className={`flex min-w-0 items-center gap-1 font-medium hover:underline ${item.available ? "text-ink" : "text-ink-muted"}`}
-        >
-          <span className="truncate">{item.name}</span>
-          <IconEdit size={13} className="shrink-0 text-ink-muted" />
-        </Link>
+      <Link href={`/store/menu/${item.id}`} aria-label={`${M.edit} · ${item.name}`} data-testid="store-menu-edit" className="flex flex-1 flex-col">
+        <span className={`relative block aspect-[1.15] w-full bg-field ${dim}`}>
+          {img ? (
+            <img src={img} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+          ) : (
+            <span className="absolute inset-0 flex items-center justify-center text-3xl font-medium text-ink-muted" aria-hidden>
+              {item.name.trim().charAt(0) || "?"}
+            </span>
+          )}
+          {item.approved === false && (
+            <span className="absolute start-2 top-2 rounded-full bg-accent px-2 py-0.5 text-2xs font-bold text-on-bright">
+              {M.pendingReview}
+            </span>
+          )}
+        </span>
+        <span className={`flex flex-col gap-0.5 px-3 pt-2 ${dim}`}>
+          <span className="line-clamp-2 min-h-[2.5rem] text-sm font-bold leading-5 text-ink">{item.name}</span>
+          <span className="line-clamp-2 min-h-[2rem] text-xs leading-4 text-ink-muted">{desc}</span>
+          <span className="mt-1 line-clamp-2 text-sm font-bold text-accent-text">{priceLine(item)}</span>
+          {item.approved === false && item.review_note && (
+            <span className="line-clamp-2 text-xs text-danger">{item.review_note}</span>
+          )}
+        </span>
+      </Link>
+      <div className="mx-3 mt-2 flex items-center gap-2 border-t border-line-soft py-1.5">
+        <span className={`min-w-0 flex-1 truncate text-xs font-bold ${item.available ? "text-success" : "text-ink-muted"}`}>
+          {item.available ? M.available : M.unavailable}
+        </span>
         <button
           type="button"
+          role="switch"
+          aria-checked={item.available}
+          aria-label={`${item.name} · ${item.available ? M.available : M.unavailable}`}
           disabled={disabled}
-          onClick={onPrice}
-          className="text-xs text-accent-text underline-offset-2 hover:underline disabled:no-underline"
+          onClick={onToggle}
+          data-testid="store-menu-toggle"
+          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-badge border transition-colors disabled:opacity-50 ${
+            item.available ? "border-success-edge bg-success-fill" : "border-line bg-field"
+          }`}
         >
-          {priceLine(item)}
+          <span
+            className={`absolute h-4.5 w-4.5 rounded-badge transition-[inset-inline-start] duration-200 ${
+              item.available ? "start-[1.5rem] bg-success" : "start-0.5 bg-ink-muted"
+            }`}
+          />
         </button>
-        {item.approved === false && (
-          <p className="text-xs text-warning">
-            {M.pendingReview}
-            {item.review_note ? ` — ${item.review_note}` : ""}
-          </p>
-        )}
-      </div>
-      {/* **«نسخ»** — صنفٌ بالصورة والقسم والخيارات، ويُفتح للتعديل (٢٠٢٦-١٠-٢٧). */}
-      <button
-        type="button"
-        disabled={disabled}
-        onClick={onDuplicate}
-        aria-label={`${M.duplicate} · ${item.name}`}
-        title={M.duplicate}
-        data-testid="store-menu-duplicate"
-        className="shrink-0 rounded-control p-1.5 text-ink-muted hover:bg-row-hover hover:text-ink disabled:opacity-50"
-      >
-        <IconCopy size={16} />
-      </button>
-      <div className="shrink-0">
-        <Switch
-          checked={item.available}
-          disabled={disabled}
-          onChange={onToggle}
-          label={item.available ? M.available : M.unavailable}
-        />
       </div>
     </li>
   );
@@ -416,24 +216,24 @@ export default function MenuPage() {
   const { store } = useStore();
   const id = store?.id ?? "";
   const toast = useShopToast();
-  const load = useCallback(
-    () => api<MenuSection[]>(`/api/v1/merchant/stores/${id}/menu`),
-    [id],
-  );
-  const { data, loading, error, reload, setData } = useLiveData(
-    load,
-    ["menu"],
-    [id],
-  );
+  const load = useCallback(() => api<MenuSection[]>(`/api/v1/merchant/stores/${id}/menu`), [id]);
+  const { data, loading, error, reload, setData } = useLiveData(load, ["menu"], [id]);
   const [q, setQ] = useState("");
-  const [editing, setEditing] = useState<MenuItem | null>(null);
-  const [bulkOpen, setBulkOpen] = useState(false);
-  const [copying, setCopying] = useState(false);
-  const router = useRouter();
+  /** **المفتوح**: `null` الكلّ، أو اسمُ قسم. */
+  const [open, setOpen] = useState<string | null>(null);
+  const [onlyOff, setOnlyOff] = useState(false);
   const suspended = store?.status === "suspended";
 
-  // **أقسامُ المتجر بترتيبها كما يراها الزبون** (مرآةُ `MenuViewModel`، تدقيقُ ٢٠٢٦-١٠-٢٧).
-  // **وتعذّرُها لا يُخفي شيئاً** — تبقى المجموعاتُ بعدد أصنافها كما كانت.
+  // **`?filter=unavailable`** — من زرّ «غير المتوفر» في «متجري».
+  useEffect(() => {
+    try {
+      if (new URLSearchParams(window.location.search).get("filter") === "unavailable") setOnlyOff(true);
+    } catch {
+      /* لا عنوانَ يُقرأ — تبقى «الكل». */
+    }
+  }, []);
+
+  // **أقسامُ المتجر بترتيبها كما يراها الزبون** — وتعذّرُها لا يُخفي شيئاً.
   const [order, setOrder] = useState<string[]>([]);
   useEffect(() => {
     if (!id) return;
@@ -442,21 +242,15 @@ export default function MenuPage() {
       .catch(() => undefined);
   }, [id]);
 
+  const all = useMemo(() => (data ?? []).flatMap((s) => s.items), [data]);
   const groups = useMemo(() => {
-    const all = (data ?? []).flatMap((s) => s.items);
-    const needle = q.trim();
-    const hit = needle ? all.filter((i) => i.name.includes(needle)) : all;
     const by = new Map<string, MenuItem[]>();
-    for (const it of hit) {
+    for (const it of all) {
       const k = it.platform_section_name.trim() || M.unsorted;
       by.set(k, [...(by.get(k) ?? []), it]);
     }
     return [...by.entries()]
-      .map(([name, items]) => ({
-        name,
-        items: items.sort((a, b) => a.name.localeCompare(b.name, "ar")),
-      }))
-      // **بترتيب أقسام المتجر** — وما ليس في أقسامه آخراً بعدد أصنافه.
+      .map(([name, items]) => ({ name, items: items.sort((a, b) => a.name.localeCompare(b.name, "ar")) }))
       .sort((a, b) => {
         const ia = order.indexOf(a.name);
         const ib = order.indexOf(b.name);
@@ -464,20 +258,31 @@ export default function MenuPage() {
         const rb = ib < 0 ? Number.MAX_SAFE_INTEGER : ib;
         return ra - rb || b.items.length - a.items.length;
       });
-  }, [data, q, order]);
+  }, [all, order]);
+
+  const off = all.filter((i) => !i.available).length;
+  const needle = q.trim();
+  const shown = needle
+    ? all.filter((i) => i.name.toLowerCase().includes(needle.toLowerCase()))
+    : onlyOff
+      ? all.filter((i) => !i.available)
+      : open != null
+        ? (groups.find((g) => g.name === open)?.items ?? [])
+        : groups.flatMap((g) => g.items);
+
+  // **ومن داخل قسمٍ يُضاف إليه** — فلا يُعيد اختيارَ ما هو فيه.
+  const openSection = open != null && !onlyOff ? (groups.find((g) => g.name === open)?.items[0]?.platform_section_id ?? "") : "";
+
+  const showAll = () => {
+    setOnlyOff(false);
+    setOpen(null);
+  };
 
   async function toggle(item: MenuItem) {
     const next = !item.available;
     const flip = (v: boolean) =>
       setData((d) =>
-        d
-          ? d.map((s) => ({
-              ...s,
-              items: s.items.map((i) =>
-                i.id === item.id ? { ...i, available: v } : i,
-              ),
-            }))
-          : d,
+        d ? d.map((s) => ({ ...s, items: s.items.map((i) => (i.id === item.id ? { ...i, available: v } : i)) })) : d,
       );
     flip(next);
     try {
@@ -491,141 +296,123 @@ export default function MenuPage() {
     }
   }
 
-  /** **نسخُ الصنف** — ثمّ يُفتح الجديدُ في المحرّر. */
-  async function duplicate(item: MenuItem) {
-    if (copying) return;
-    setCopying(true);
-    try {
-      const r = await api<{ id: string }>(
-        `/api/v1/merchant/menu/items/${item.id}/duplicate`,
-        { method: "POST" },
-      );
-      toast(M.duplicated, "success");
-      router.push(`/store/menu/${r.id}`);
-    } catch (e) {
-      toast(errorText(e), "error");
-    } finally {
-      setCopying(false);
-    }
-  }
-
   if (loading && !data) return <LoadingState variant="list" rows={5} />;
   if (error && !data) return <ReloadState onRetry={() => void reload()} />;
 
-  const empty = (data ?? []).every((s) => s.items.length === 0);
-
   return (
-    <div className="flex flex-col gap-3">
-      <header className="flex items-start gap-2">
-        <div className="min-w-0 flex-1">
-          <h2 className="heading-page">{M.title}</h2>
-          <p className="text-sm text-ink-muted">{M.hint}</p>
-        </div>
-        {!suspended && (
-          <ButtonLink
-            href="/store/menu/new"
-            className="flex shrink-0 items-center gap-1"
-          >
-            <IconAdd size={15} />
-            {M.add}
-          </ButtonLink>
-        )}
-      </header>
-      {/* **مزامنةُ الأمين** — للمولات (٢٠٢٦-١٠-١٩). */}
-      {!suspended && (
-        <ButtonLink href="/store/price-sync" variant="secondary" className="w-fit">
-          {m.store.priceSync.open}
-        </ButtonLink>
-      )}
-      {/* **تغييرُ الأسعار بنسبة** — معاينةٌ ثمّ تأكيد (٢٠٢٦-١٠-٢٧). */}
-      {!suspended && !empty && (
-        <Button
-          variant="secondary"
-          className="w-fit"
-          data-testid="store-menu-bulk-price"
-          onClick={() => setBulkOpen(true)}
-        >
-          {M.bulkPrice}
-        </Button>
-      )}
-      {/* **قائمةُ المشروبات — تُكتب مرّةً وتنضاف لكلّ الأصناف** (٢٠٢٦-١٠-١٩). */}
-      {!suspended && id && (
-        <DrinksCard
-          storeId={id}
-          itemCount={(data ?? []).reduce((n, s) => n + s.items.length, 0)}
+    <div className="flex flex-col gap-3" data-testid="store-menu">
+      <h2 className="sr-only">{M.title}</h2>
+
+      {/* ── ١ · البحث ── */}
+      <div className="relative">
+        <span className="pointer-events-none absolute inset-y-0 start-3 flex items-center text-ink-muted" aria-hidden>
+          <IconSearch size={18} />
+        </span>
+        <input
+          type="search"
+          value={q}
+          onChange={(e) => setQ(e.target.value.slice(0, 60))}
+          placeholder={M.search}
+          aria-label={M.search}
+          data-testid="store-menu-search"
+          className="h-12 w-full rounded-control border border-transparent bg-field pe-11 ps-10 text-sm text-ink outline-none placeholder:text-ink-muted focus:border-accent"
         />
-      )}
-      {empty ? (
-        <EmptyState icon={IconList} title={M.empty} />
-      ) : (
+        {q && (
+          <button
+            type="button"
+            onClick={() => setQ("")}
+            aria-label={M.clearSearch}
+            className="absolute inset-y-0 end-1 flex w-10 items-center justify-center text-ink-muted hover:text-ink"
+          >
+            <IconClose size={18} />
+          </button>
+        )}
+      </div>
+
+      {/* ── ٢ · مربّعا الأرقام — و«غير المتوفرة» يصفّي بضغطة ── */}
+      <div className="flex gap-3">
+        <StatBox icon={IconStore} label={M.statTotal} value={all.length} tone="accent" selected={false} onClick={showAll} testId="menu-stat-total" />
+        <StatBox
+          icon={IconBlock}
+          label={M.statOff}
+          value={off}
+          tone={off > 0 ? "danger" : "muted"}
+          selected={onlyOff}
+          onClick={() => {
+            if (onlyOff) return showAll();
+            setOnlyOff(true);
+            setOpen(null);
+            setQ("");
+          }}
+          testId="menu-stat-off"
+        />
+      </div>
+
+      {!suspended && (
         <>
-          <Input
-            type="search"
-            aria-label={M.search}
-            placeholder={M.search}
-            icon={<IconSearch size={16} />}
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-          />
-          {groups.length === 0 && (
-            <p className="py-6 text-center text-sm text-ink-muted">
-              {M.noMatch}
-            </p>
-          )}
-          {groups.map((g) => (
-            <section key={g.name} className="surface rounded-card p-3">
-              <h3 className="heading-card flex items-center justify-between gap-2">
-                <span className="min-w-0 truncate">{g.name}</span>
-                <span className="flex shrink-0 items-center gap-2 text-xs font-normal text-ink-muted">
-                  {fill(M.count, { n: fmtNum(g.items.length) })}
-                  {!suspended && g.items[0]?.platform_section_id && (
-                    <Link
-                      href={`/store/menu/new?section=${g.items[0].platform_section_id}`}
-                      aria-label={`${M.add} · ${g.name}`}
-                      className="rounded-control p-1 text-accent-text hover:bg-row-hover"
-                    >
-                      <IconAdd size={16} />
-                    </Link>
-                  )}
-                </span>
-              </h3>
-              <ul className="divide-y divide-line">
-                {g.items.map((it) => (
-                  <ItemRow
-                    key={it.id}
-                    item={it}
-                    disabled={suspended}
-                    onToggle={() => void toggle(it)}
-                    onPrice={() => setEditing(it)}
-                    onDuplicate={() => void duplicate(it)}
-                  />
-                ))}
-              </ul>
-            </section>
-          ))}
+          {/* ── ٣ · الأدواتُ الثلاث ── */}
+          <div className="flex gap-2">
+            <ToolTile icon={IconOptions} label={M.toolPresets} href="/store/menu/options" testId="menu-tool-options" />
+            <ToolTile icon={IconBanknote} label={M.toolBulk} href="/store/menu/prices" testId="menu-tool-prices" />
+            <ToolTile icon={IconCatDrinks} label={M.toolDrinks} href="/store/menu/drinks" testId="menu-tool-drinks" />
+          </div>
+          {/* ── ٤ · «أضف صنفاً» و«أنشئ عرضاً» ── */}
+          <div className="flex gap-3">
+            <ButtonLink
+              href={openSection ? `/store/menu/new?section=${openSection}` : "/store/menu/new"}
+              className="h-13 flex-1 font-bold"
+              data-testid="menu-add"
+            >
+              <IconAdd size={18} />
+              {M.add}
+            </ButtonLink>
+            <ButtonLink href="/store/offers" variant="secondary" className="h-13 flex-1 border-accent font-bold text-accent-text" data-testid="menu-offer">
+              <IconPromos size={18} />
+              {M.addOffer}
+            </ButtonLink>
+          </div>
         </>
       )}
-      {bulkOpen && id && (
-        <BulkPriceDialog
-          storeId={id}
-          sections={sectionsOf(data ?? [])}
-          onClose={() => setBulkOpen(false)}
-          onApplied={() => {
-            setBulkOpen(false);
-            void reload();
-          }}
-        />
+
+      {/* ── ٥ · رقائقُ الأقسام ── */}
+      {groups.length > 0 && !needle && (
+        <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1 sm:-mx-4 sm:px-4">
+          <SectionChip text={M.all} count={all.length} selected={open == null && !onlyOff} onClick={showAll} />
+          {groups.map((g) => (
+            <SectionChip
+              key={g.name}
+              text={g.name}
+              count={g.items.length}
+              selected={open === g.name && !onlyOff}
+              onClick={() => {
+                setOnlyOff(false);
+                setOpen(g.name);
+              }}
+            />
+          ))}
+        </div>
       )}
-      {editing && (
-        <PriceDialog
-          item={editing}
-          rate={store?.exchange_rate ?? null}
-          onClose={() => setEditing(null)}
-          onSaved={() => {
-            setEditing(null);
-            void reload();
-          }}
-        />
+
+      {/* ── ٦ · الأصناف ── */}
+      {groups.length === 0 ? (
+        <EmptyState icon={IconList} title={M.empty} />
+      ) : shown.length === 0 ? (
+        <p className="py-6 text-center text-sm text-ink-muted" data-testid="menu-none">
+          {onlyOff && !needle ? M.offNone : M.noMatch}
+        </p>
+      ) : (
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {shown.map((it) => (
+            <ItemCard key={it.id} item={it} disabled={suspended} onToggle={() => void toggle(it)} />
+          ))}
+        </ul>
+      )}
+
+      {/* **مزامنةُ الأمين** — للمولات (٢٠٢٦-١٠-١٩)، ويبقى بابُها هنا. */}
+      {!suspended && (
+        <Link href="/store/price-sync" className="mx-auto py-2 text-xs text-ink-muted underline-offset-2 hover:underline">
+          {m.store.priceSync.open}
+        </Link>
       )}
     </div>
   );

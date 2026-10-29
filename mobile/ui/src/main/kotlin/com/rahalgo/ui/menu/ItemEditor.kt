@@ -194,7 +194,6 @@ fun ItemEditor(
 ) {
     val pick = rememberImagePicker(crop = true, cropFrames = com.rahalgo.ui.ItemCropFrames) { bytes -> onPickImage(bytes) }
     var confirmDelete by remember { mutableStateOf(false) }
-    var pickSection by remember { mutableStateOf(false) }
     // **فرقُ خيارٍ لم يُحوَّل لغياب سعر الصرف** — يُقال ولا يُصفَّر بصمت.
     var rateLost by remember(d.itemId) { mutableStateOf(false) }
 
@@ -291,76 +290,40 @@ fun ItemEditor(
         }
 
         // ══════════════════════════════════════════════════════════════
-        // **٣ · قسمُ السوق — حقلٌ يفتح مربّعاتِ الأقسام بصورها**
+        // **٣ · قسمُ السوق — مربّعاتٌ بصورها في الصفحة نفسِها، ثلاثةٌ بكلّ سطر**
         // ══════════════════════════════════════════════════════════════
+        //
+        // (طلبُ المالك ٢٠٢٦-١٠-٢٩: «بلا القائمة المنسدلة… بالصفحة نفسها صور، كل سطر
+        //  ياخذ ٣ أقسام».) **فلا نافذةَ تُفتح** — يرى الأقسامَ ويضغط.
         Spacer(Modifier.height(Rahal.space.md))
-        val current = sections.firstOrNull { it.id == d.platformSectionId }
         val missing = sectionHint != 0 && d.platformSectionId.isEmpty()
         Text(
             stringResource(sectionLabel),
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.labelLarge,
+            color = if (missing) Rahal.colors.accent else Rahal.colors.ink,
         )
-        Spacer(Modifier.height(Rahal.space.xs))
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .clip(Rahal.shape.sm)
-                .border(Rahal.stroke.hair, if (missing) Rahal.colors.accent else Rahal.colors.line, Rahal.shape.sm)
-                .clickable(enabled = !busy) { pickSection = true }
-                .padding(Rahal.space.sm),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            if (current != null) {
-                RemoteImage(
-                    url = media(current.imageThumbUrl ?: current.imageUrl),
-                    name = current.name,
-                    modifier = Modifier.size(SectionThumb).clip(Rahal.shape.sm),
-                )
-                Spacer(Modifier.width(Rahal.space.sm))
-                Text(
-                    current.name,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodyLarge,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
-            } else {
-                Text(
-                    stringResource(R.string.item_section_pick),
-                    color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.bodyLarge,
-                    modifier = Modifier.weight(1f).padding(vertical = Rahal.space.sm),
-                )
+        Spacer(Modifier.height(Rahal.space.sm))
+        if (sections.isEmpty()) {
+            Text(stringResource(R.string.item_section_empty), color = Rahal.colors.inkMuted)
+        }
+        sections.chunked(3).forEach { row ->
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
+            ) {
+                row.forEach { sec ->
+                    SectionTile(
+                        sec = sec,
+                        on = sec.id == d.platformSectionId,
+                        media = media,
+                        enabled = !busy,
+                        modifier = Modifier.weight(1f),
+                    ) { onEdit { it.copy(platformSectionId = sec.id) } }
+                }
+                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
             }
-            Icon(
-                painter = painterResource(R.drawable.ic_chevron_down),
-                contentDescription = null,
-                tint = Rahal.colors.inkMuted,
-                modifier = Modifier.size(ButtonIcon),
-            )
-        }
-        // **وبلا قسمٍ يُحفظ الصنفُ ولا يراه زبون** — يُقال قبل أن يُحفظ.
-        if (missing) {
-            Spacer(Modifier.height(Rahal.space.xs))
-            Text(
-                stringResource(sectionHint),
-                color = Rahal.colors.accent,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-        if (pickSection) {
-            SectionPickerDialog(
-                sections = sections,
-                selected = d.platformSectionId,
-                media = media,
-                onPick = { id ->
-                    onEdit { it.copy(platformSectionId = id) }
-                    pickSection = false
-                },
-                onDismiss = { pickSection = false },
-            )
+            Spacer(Modifier.height(Rahal.space.sm))
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -557,108 +520,70 @@ private fun CurrencyCircles(selected: String, enabled: Boolean, onSelect: (Strin
 }
 
 /**
- * **نافذةُ قسم السوق** — مربّعاتٌ بصورة كلّ قسمٍ واسمه، **و✓ على المختار.**
- * (ملاحظاتُ المالك ٢٠٢٦-١٠-٢٩.) **وهي هنا لا في تطبيق المتجر** — فالمندوبُ
- * يراها كما يراها صاحبُ المتجر.
+ * **مربّعُ قسم السوق** — صورتُه واسمُه، **و✓ وإطارٌ أزرقُ على المختار.**
+ * (ملاحظاتُ المالك ٢٠٢٦-١٠-٢٩.) **وهو هنا لا في تطبيق المتجر** — فالمندوبُ يراه كما يراه صاحبُ المتجر.
  */
 @Composable
-private fun SectionPickerDialog(
-    sections: List<SectionRef>,
-    selected: String,
+private fun SectionTile(
+    sec: SectionRef,
+    on: Boolean,
     media: (String?) -> String?,
-    onPick: (String) -> Unit,
-    onDismiss: () -> Unit,
+    enabled: Boolean,
+    modifier: Modifier,
+    onClick: () -> Unit,
 ) {
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Rahal.space.lg)
-                .clip(Rahal.shape.lg)
-                .background(Rahal.colors.canvas)
-                .padding(Rahal.space.lg),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    stringResource(R.string.item_section_title),
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.weight(1f),
-                )
-                IconButton(onClick = onDismiss, modifier = Modifier.size(TouchTarget)) {
+    Column(
+        modifier
+            .clip(Rahal.shape.md)
+            .border(
+                if (on) Rahal.stroke.focus else Rahal.stroke.hair,
+                if (on) Rahal.colors.brand else Rahal.colors.line,
+                Rahal.shape.md,
+            )
+            .background(if (on) Rahal.colors.brand.copy(alpha = 0.06f) else Rahal.colors.canvas)
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(Rahal.space.xs),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box {
+            RemoteImage(
+                url = media(sec.imageThumbUrl ?: sec.imageUrl),
+                name = sec.name,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .clip(Rahal.shape.sm),
+            )
+            if (on) {
+                Box(
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(Rahal.space.xs)
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(Rahal.colors.brand),
+                    contentAlignment = Alignment.Center,
+                ) {
                     Icon(
-                        painter = painterResource(R.drawable.ic_close),
-                        contentDescription = stringResource(R.string.act_cancel),
-                        tint = Rahal.colors.inkMuted,
+                        painter = painterResource(R.drawable.ic_check_mark),
+                        contentDescription = null,
+                        tint = Rahal.colors.onBrand,
+                        modifier = Modifier.size(16.dp),
                     )
                 }
             }
-            Spacer(Modifier.height(Rahal.space.sm))
-            if (sections.isEmpty()) {
-                Text(stringResource(R.string.item_section_empty), color = Rahal.colors.inkMuted)
-            }
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
-                modifier = Modifier.heightIn(max = SectionGridMax),
-                horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
-                verticalArrangement = Arrangement.spacedBy(Rahal.space.sm),
-            ) {
-                items(sections, key = { it.id }) { sec ->
-                    val on = sec.id == selected
-                    Column(
-                        Modifier
-                            .clip(Rahal.shape.md)
-                            .border(
-                                if (on) Rahal.stroke.focus else Rahal.stroke.hair,
-                                if (on) Rahal.colors.brand else Rahal.colors.line,
-                                Rahal.shape.md,
-                            )
-                            .clickable { onPick(sec.id) }
-                            .padding(Rahal.space.xs),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        Box {
-                            RemoteImage(
-                                url = media(sec.imageThumbUrl ?: sec.imageUrl),
-                                name = sec.name,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .aspectRatio(1f)
-                                    .clip(Rahal.shape.sm),
-                            )
-                            if (on) {
-                                Box(
-                                    Modifier
-                                        .align(Alignment.TopEnd)
-                                        .padding(Rahal.space.xs)
-                                        .size(24.dp)
-                                        .clip(CircleShape)
-                                        .background(Rahal.colors.brand),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Icon(
-                                        painter = painterResource(R.drawable.ic_check_mark),
-                                        contentDescription = null,
-                                        tint = Rahal.colors.onBrand,
-                                        modifier = Modifier.size(16.dp),
-                                    )
-                                }
-                            }
-                        }
-                        Spacer(Modifier.height(Rahal.space.xs))
-                        Text(
-                            sec.name,
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
-                            color = if (on) Rahal.colors.brand else Rahal.colors.ink,
-                            textAlign = TextAlign.Center,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-            }
         }
+        Spacer(Modifier.height(Rahal.space.xs))
+        Text(
+            sec.name,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
+            color = if (on) Rahal.colors.brand else Rahal.colors.ink,
+            textAlign = TextAlign.Center,
+            minLines = 2,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
     }
 }
 

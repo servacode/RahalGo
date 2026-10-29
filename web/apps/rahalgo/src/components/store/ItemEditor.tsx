@@ -8,9 +8,15 @@
  * (مرآةُ `ItemEditor.kt` و`ItemDraft.kt` في `:ui`، و`MenuViewModel.saveItem`
  *  في تطبيق المتجر.)
  *
- * **الحقولُ بترتيبها**: الصورة · الاسم (بعدّادٍ وحدٍّ من المحرّك) · الوصف ·
- * العملة (ليرة / دولار) · السعر بعملته · قسمُ السوق · الإضافاتُ والخيارات ·
- * حفظ / إلغاء · «احذف الصنف» بسؤال.
+ * # الشكلُ (ملاحظاتُ المالك ٢٠٢٦-١٠-٢٩)
+ *
+ * - صورةٌ مربّعةٌ كبيرةٌ يميناً، وعن يسارها الاسمُ والوصفُ فوق بعض.
+ * - السعرُ وجنبه دائرتا العملة «ل.س» و«$».
+ * - قسمُ السوق حقلٌ يفتح نافذةَ مربّعاتٍ بصور الأقسام وبحثٍ و✓ على المختار.
+ * - «أضف مشروباتي» مفتاحٌ لكلّ صنف (`store_drinks`، هجرة 0483).
+ * - المجموعاتُ الجاهزة مربّعاتٌ متساويةٌ فوق بعض، وكلُّ خيارٍ سطرٌ واحد:
+ *   اسمٌ وسعرٌ ومفتاحُ «متوفر / غير متوفر» وحذفٌ أحمر.
+ * - كلُّ فعلٍ زرٌّ بأيقونة — والحذفُ بلون الخطر. **ولا سطرَ شرح.**
  *
  * # والسعرُ بعملة الصنف
  *
@@ -32,23 +38,30 @@
  * يبقى حتّى يُحسم الطلب — **فانقطاعٌ بعد الضغط لا يصنع صنفين.**
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, errorText, fmtMoney } from "@rahalgo/i18n";
 import {
   Alert,
   Button,
-  Checkbox,
   Confirm,
   FormActions,
   IconAdd,
+  IconCheck,
+  IconChevronDown,
+  IconClose,
+  IconCopy,
   IconDelete,
+  IconSearch,
   ImageUpload,
   Input,
   ITEM_CROP_FRAMES,
-  Radio,
+  MediaThumb,
+  Modal,
+  Switch,
   Textarea,
 } from "@rahalgo/ui";
+import { ColumnLabel, CurrencyCircles, RowField, TagChip, ToolHeader } from "./ToolParts";
 import { api, mediaUrl } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import type {
@@ -107,7 +120,7 @@ interface DraftGroup {
  * من اللوحة لكلّ تصنيف** (قرارُ المالك ٢٠٢٦-١٠-٢٧): `GET /stores/{id}/option-presets`
  * وما `chosen` منها يظهر هنا. **والمربّعُ ينسخ المجموعةَ بخياراتها إلى الصنف**،
  * **وتُعرف المجموعةُ باسمها.** **وإن تعذّر الجلبُ رجعت الثلاثُ القديمة** — لا محرّرَ بلا مجموعات.
- * والمشروباتُ ليست هنا — تنضاف من قائمتها (`DrinksCard`).
+ * والمشروباتُ ليست هنا — تنضاف من قائمتها (`DrinksEditor`)، **ويُطفئها مفتاحُ «أضف مشروباتي»**.
  */
 interface PresetDef {
   key: string;
@@ -282,9 +295,14 @@ export default function ItemEditor({
   const [groups, setGroups] = useState<DraftGroup[]>(() =>
     toDraft(item?.modifiers),
   );
+  /** **«أضف مشروباتي»** — وافتراضُه نعم كما كان. */
+  const [storeDrinks, setStoreDrinks] = useState(item?.store_drinks !== false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [askDelete, setAskDelete] = useState(false);
+  const [pickSection, setPickSection] = useState(false);
+  /** **في المسوّدة ما لم يُحفظ؟** — فيُطفأ النسخُ حتّى يُحفظ. */
+  const [touched, setTouched] = useState(false);
   /** `null` تُجلب بعد · وتعذّرُها يرجّع الثلاثَ القديمة ويقول ذلك. */
   const [presets, setPresets] = useState<PresetDef[] | null>(null);
   const [presetsFailed, setPresetsFailed] = useState(false);
@@ -337,6 +355,12 @@ export default function ItemEditor({
 
   const edit = (fn: (g: DraftGroup[]) => DraftGroup[]) => {
     setGroups(fn);
+    setError("");
+    setTouched(true);
+  };
+  /** **كلُّ تعديلٍ يُطفئ النسخ ويمسح الخطأ.** */
+  const dirty = () => {
+    setTouched(true);
     setError("");
   };
   const setGroup = (gi: number, p: Partial<DraftGroup>) =>
@@ -413,6 +437,7 @@ export default function ItemEditor({
       description: description.trim(),
       platform_section_id: section,
       modifiers,
+      store_drinks: storeDrinks,
       price_currency: currency,
       ...(usd ? { price_usd: usdValue } : { price: syp }),
       ...(imageId !== null ? { image_media_id: imageId } : {}),
@@ -458,101 +483,91 @@ export default function ItemEditor({
     }
   }
 
+  /** **«نسخ الصنف»** — صنفٌ بالصورة والقسم والخيارات، ويُفتح للتعديل (٢٠٢٦-١٠-٢٧). */
+  async function duplicate() {
+    if (!item || busy) return;
+    setBusy(true);
+    try {
+      const r = await api<{ id: string }>(`/api/v1/merchant/menu/items/${item.id}/duplicate`, { method: "POST" });
+      toast(m.store.menu.duplicated, "success");
+      router.push(`/store/menu/${r.id}`);
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const readOnly = store?.status === "suspended";
+  const current = sections.find((s) => s.id === section) ?? null;
+  const removeGroup = (gi: number) => edit((gs) => gs.filter((_, i) => i !== gi));
+  const removeOption = (gi: number, oi: number) =>
+    setGroup(gi, { options: (groups[gi]?.options ?? []).filter((_, j) => j !== oi) });
+
   return (
     <form
-      className="flex flex-col gap-4"
+      className="mx-auto flex w-full max-w-2xl flex-col gap-4"
       data-testid="item-editor"
       onSubmit={(e) => {
         e.preventDefault();
         void save();
       }}
     >
-      <h2 className="heading-page">{item ? I.edit : I.new}</h2>
+      <ToolHeader title={item ? I.edit : I.new} href="/store/menu" />
 
-      <ImageUpload
-        kind="menu_item"
-        label={I.image}
-        initialUrl={item?.image_thumb_url ?? item?.image_url}
-        onChange={(id) => setImageId(id)}
-        api={api}
-        mediaUrl={mediaUrl}
-        errorText={errorText}
-        path="/api/v1/merchant/media"
-        maxEdge={IMAGE_EDGE}
-        crop
-        cropFrames={ITEM_CROP_FRAMES}
-        fit
-      />
-
-      <div>
-        <Input
-          id="item-name"
-          label={I.name}
-          value={name}
-          onChange={(e) => {
-            setName(e.target.value.slice(0, NAME_TYPE_MAX));
-            setError("");
+      {/* ── ١ · الصورةُ يميناً، والاسمُ والوصفُ عن يسارها ── */}
+      <div className="flex items-start gap-3">
+        <ImageUpload
+          kind="menu_item"
+          label={I.image}
+          initialUrl={item?.image_thumb_url ?? item?.image_url}
+          onChange={(id) => {
+            setImageId(id);
+            dirty();
           }}
-          error={
-            nameOver
-              ? fill(I.nameOver, { max: itemNameMax, n: nameLen })
-              : undefined
-          }
+          api={api}
+          mediaUrl={mediaUrl}
+          errorText={errorText}
+          path="/api/v1/merchant/media"
+          maxEdge={IMAGE_EDGE}
+          crop
+          cropFrames={ITEM_CROP_FRAMES}
+          fit
+          tile={{ pick: I.pickImage, change: I.photoChange, clear: I.clearImage }}
         />
-        {!nameOver && (
-          <p
-            className="mt-1 text-xs tabular-nums text-ink-muted"
-            dir="ltr"
-          >{`${nameLen} / ${itemNameMax}`}</p>
-        )}
+        <div className="flex min-w-0 flex-1 flex-col gap-2">
+          <div>
+            <Input
+              id="item-name"
+              label={I.name}
+              value={name}
+              onChange={(e) => {
+                setName(e.target.value.slice(0, NAME_TYPE_MAX));
+                dirty();
+              }}
+              error={nameOver ? fill(I.nameOver, { max: itemNameMax, n: nameLen }) : undefined}
+            />
+            {!nameOver && (
+              <p className="mt-1 text-xs tabular-nums text-ink-muted" dir="ltr">{`${nameLen} / ${itemNameMax}`}</p>
+            )}
+          </div>
+          <Textarea
+            id="item-desc"
+            label={I.desc}
+            rows={3}
+            value={description}
+            onChange={(e) => {
+              setDescription(e.target.value.slice(0, DESC_MAX));
+              dirty();
+            }}
+          />
+        </div>
       </div>
 
-      <Textarea
-        id="item-desc"
-        label={I.desc}
-        rows={2}
-        value={description}
-        onChange={(e) => setDescription(e.target.value.slice(0, DESC_MAX))}
-      />
-
-      <div className="flex flex-col gap-2">
-        <div
-          role="radiogroup"
-          aria-label={I.currency}
-          className="inline-flex w-fit overflow-hidden rounded-control border border-line"
-        >
-          {(
-            [
-              ["SYP", I.currencySyp],
-              ["USD", I.currencyUsd],
-            ] as const
-          ).map(([code, label]) => (
-            <button
-              key={code}
-              type="button"
-              role="radio"
-              aria-checked={currency === code}
-              disabled={busy}
-              onClick={() => {
-                if (code === currency) return;
-                // **وفروقُ الخيارات تُحوَّل معه** — مرآةُ `withCurrency`.
-                const c = convertGroups(groups, code, rate);
-                if (c.lost) setRateLost(true);
-                setGroups(c.groups);
-                setCurrency(code);
-              }}
-              className={`px-5 py-2 text-sm font-bold transition-colors ${
-                currency === code
-                  ? "bg-accent text-on-bright"
-                  : "bg-field text-ink hover:bg-row-hover"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        {usd ? (
-          <>
+      {/* ── ٢ · السعرُ وجنبه دائرتا العملة ── */}
+      <div className="flex flex-col gap-1">
+        <div className="flex items-end gap-3">
+          {usd ? (
             <Input
               id="item-price-usd"
               label={I.priceUsd}
@@ -561,361 +576,342 @@ export default function ItemEditor({
               value={priceUsd}
               onChange={(e) => {
                 setPriceUsd(usdInput(e.target.value));
-                setError("");
+                dirty();
               }}
+              wrapperClassName="min-w-0 flex-1"
             />
-            <p
-              className={`text-xs ${rate != null && rate > 0 ? "text-ink-muted" : "text-danger"}`}
-            >
-              {rate == null || rate <= 0
-                ? I.usdNeedRate
-                : usdValue == null
-                  ? fill(I.usdRateIs, { rate: usdText(rate) })
-                  : fill(I.usdEquals, {
-                      syp: fmtMoney(usdToSyp(usdValue, rate)),
-                      rate: usdText(rate),
-                    })}
-            </p>
-          </>
-        ) : (
-          <Input
-            id="item-price"
-            label={I.price}
-            inputMode="numeric"
-            dir="ltr"
-            value={price}
-            onChange={(e) => {
-              setPrice(e.target.value.replace(/\D/g, "").slice(0, 12));
-              setError("");
+          ) : (
+            <Input
+              id="item-price"
+              label={I.price}
+              inputMode="numeric"
+              dir="ltr"
+              value={price}
+              onChange={(e) => {
+                setPrice(e.target.value.replace(/\D/g, "").slice(0, 12));
+                dirty();
+              }}
+              wrapperClassName="min-w-0 flex-1"
+            />
+          )}
+          <CurrencyCircles
+            label={I.currency}
+            value={currency}
+            syp={I.currencySyp}
+            usd={I.currencyUsdShort}
+            disabled={busy}
+            onChange={(code) => {
+              // **وفروقُ الخيارات تُحوَّل معه** — مرآةُ `withCurrency`.
+              const c = convertGroups(groups, code, rate);
+              if (c.lost) setRateLost(true);
+              setGroups(c.groups);
+              setCurrency(code);
+              dirty();
             }}
           />
+        </div>
+        {usd && (
+          <p className={`text-xs ${rate != null && rate > 0 ? "text-ink-muted" : "text-danger"}`}>
+            {rate == null || rate <= 0
+              ? I.usdNeedRate
+              : usdValue == null
+                ? fill(I.usdRateIs, { rate: usdText(rate) })
+                : fill(I.usdEquals, { syp: fmtMoney(usdToSyp(usdValue, rate)), rate: usdText(rate) })}
+          </p>
         )}
       </div>
 
-      <fieldset className="flex flex-col gap-1">
-        <legend className="mb-1 text-sm font-bold">{I.section}</legend>
-        <div className="surface flex flex-col gap-2 rounded-card p-3">
-          {sections.map((s) => (
-            <Radio
-              key={s.id}
-              id={`item-sec-${s.id}`}
-              name="item-section"
-              checked={section === s.id}
-              onChange={() => {
-                setSection(s.id);
-                setError("");
-              }}
-              label={s.name}
-            />
-          ))}
-        </div>
-      </fieldset>
+      {/* ── ٣ · قسمُ السوق — حقلٌ يفتح مربّعاتِ الأقسام بصورها ── */}
+      <div className="flex flex-col gap-1">
+        <span className="text-sm font-bold">{I.section}</span>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => setPickSection(true)}
+          data-testid="item-section"
+          className="flex min-h-14 w-full items-center gap-2 rounded-control border border-line bg-field p-2 text-start hover:bg-row-hover"
+        >
+          {current ? (
+            <>
+              <MediaThumb url={current.image_thumb_url ?? current.image_url} alt="" fallback={current.name} size={40} mediaUrl={mediaUrl} />
+              <span className="min-w-0 flex-1 truncate font-bold">{current.name}</span>
+            </>
+          ) : (
+            <span className="min-w-0 flex-1 px-1 text-ink-muted">{I.sectionPick}</span>
+          )}
+          <IconChevronDown size={18} className="shrink-0 text-ink-muted" />
+        </button>
+      </div>
+      {pickSection && (
+        <SectionPicker
+          sections={sections}
+          selected={section}
+          onPick={(id) => {
+            setSection(id);
+            setPickSection(false);
+            dirty();
+          }}
+          onClose={() => setPickSection(false)}
+        />
+      )}
 
-      <section className="flex flex-col gap-2" aria-label={I.modTitle}>
+      {/* ── ٤ · الإضافاتُ والخيارات ── */}
+      <section className="flex flex-col gap-3" aria-label={I.modTitle}>
         <h3 className="heading-card">{I.modTitle}</h3>
-        <p className="text-xs text-ink-muted">{I.modHint}</p>
-        {/* **مربّعُ صحٍّ لكلّ مجموعةٍ من «خياراتي»** — ينسخها بخياراتها أو يشيلها. */}
-        {presetsFailed && (
-          <p className="text-xs text-warning">{I.presetsFailed}</p>
-        )}
-        <div className="flex flex-wrap gap-4" data-testid="item-presets">
-          {(presets ?? []).map((p) => (
-            <Checkbox
-              key={p.key}
-              id={`preset-${p.key}`}
-              checked={groups.some((g) => sameName(g.name, p.name))}
-              onChange={(e) => {
-                if (e.target.checked) {
-                  const r = presetGroup(p, usd, rate);
-                  if (r.lost) setRateLost(true);
-                  edit((gs) => [...gs, r.group]);
-                } else {
-                  edit((gs) => gs.filter((g) => !sameName(g.name, p.name)));
-                }
-              }}
-              label={p.name}
-            />
-          ))}
-          <Button
-            type="button"
-            variant="secondary"
-            className="flex w-fit items-center gap-1"
-            data-testid="item-custom-group"
-            onClick={() =>
-              edit((gs) => [
-                ...gs,
-                {
-                  name: "",
-                  min_select: 0,
-                  max_select: 99,
-                  options: [],
-                  price_mode: "priced",
-                  base_grams: null,
-                },
-              ])
-            }
-          >
-            <IconAdd size={13} />
-            {I.customGroup}
-          </Button>
+        {/* **«أضف مشروباتي»** (هجرة 0483) — أتظهر قائمةُ المشروبات مع هذا الصنف. */}
+        <div className="rounded-control bg-accent-tint px-3 py-2" data-testid="item-drinks">
+          <Switch
+            checked={storeDrinks}
+            disabled={busy}
+            onChange={(v) => {
+              setStoreDrinks(v);
+              dirty();
+            }}
+            label={I.drinksSwitch}
+          />
         </div>
-        {groups.map((g, gi) => (
-          <div
-            key={gi}
-            className="surface flex flex-col gap-2 rounded-card p-3"
-            data-testid="item-group"
-          >
-            {isPreset(g) ? (
-              <div className="flex items-center justify-between gap-2">
-                <h4 className="font-bold">{g.name}</h4>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  aria-label={I.remove}
-                  onClick={() => edit((gs) => gs.filter((_, i) => i !== gi))}
+        {presetsFailed && <p className="text-xs text-warning">{I.presetsFailed}</p>}
+        {/* **مجموعاتٌ جاهزةٌ — مربّعاتٌ متساويةٌ فوق بعض.** */}
+        <div className="flex flex-col gap-2" data-testid="item-presets">
+          {(presets ?? []).map((p) => {
+            const on = groups.some((g) => sameName(g.name, p.name));
+            const values = p.options.map((o) => o.name).join(" · ");
+            return (
+              <button
+                key={p.key}
+                type="button"
+                role="checkbox"
+                aria-checked={on}
+                disabled={busy}
+                data-testid="item-preset"
+                onClick={() => {
+                  if (!on) {
+                    const r = presetGroup(p, usd, rate);
+                    if (r.lost) setRateLost(true);
+                    edit((gs) => [...gs, r.group]);
+                  } else {
+                    edit((gs) => gs.filter((g) => !sameName(g.name, p.name)));
+                  }
+                }}
+                className={`flex h-[3.75rem] w-full items-center gap-3 rounded-control border px-3 text-start transition-colors disabled:opacity-60 ${
+                  on ? "border-2 border-accent bg-accent-tint" : "border-line bg-surface hover:bg-row-hover"
+                }`}
+              >
+                <span
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${
+                    on ? "bg-accent text-on-bright" : "bg-accent-tint text-accent-text"
+                  }`}
+                  aria-hidden
                 >
-                  <IconDelete size={14} className="text-danger" />
-                </Button>
+                  {on ? <IconCheck size={16} /> : <IconAdd size={16} />}
+                </span>
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate font-bold text-ink">{p.name}</span>
+                  {values && <span className="truncate text-xs text-ink-muted">{values}</span>}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <Button
+          type="button"
+          variant="secondary"
+          className="inline-flex w-fit items-center gap-1.5 font-bold"
+          data-testid="item-custom-group"
+          disabled={busy}
+          onClick={() =>
+            edit((gs) => [
+              ...gs,
+              { name: I.extrasName, min_select: 0, max_select: 99, options: [], price_mode: "priced", base_grams: null },
+            ])
+          }
+        >
+          <IconAdd size={18} />
+          {I.customGroup}
+        </Button>
+
+        {groups.map((g, gi) => (
+          <div key={gi} className="surface flex flex-col gap-2 rounded-card border border-line p-3" data-testid="item-group">
+            {/* ── الرأس: اسمٌ ورقاقتان وحذفٌ أحمر ── */}
+            <div className="flex items-start gap-2">
+              <div className="flex min-w-0 flex-1 flex-col gap-1">
+                <span className="truncate font-bold">{g.name.trim() || I.customUntitled}</span>
+                <span className="flex flex-wrap gap-1">
+                  {g.price_mode === "none" ? (
+                    <TagChip text={I.chipNone} tone="muted" />
+                  ) : g.price_mode === "weight" ? (
+                    <TagChip text={I.chipWeight} tone="warning" />
+                  ) : (
+                    <TagChip text={I.chipPriced} tone="accent" />
+                  )}
+                  <TagChip text={g.min_select > 0 ? I.chipOne : I.chipAny} tone="muted" />
+                </span>
               </div>
+              <button
+                type="button"
+                aria-label={I.removeGroup}
+                title={I.removeGroup}
+                disabled={busy}
+                onClick={() => removeGroup(gi)}
+                data-testid="item-group-remove"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control border border-danger-edge text-danger hover:bg-danger-tint disabled:opacity-50"
+              >
+                <IconDelete size={18} />
+              </button>
+            </div>
+            {/* ── المجموعةُ الخاصّة: اسمُها وقاعدتُها بيده ── */}
+            {!isPreset(g) && (
+              <>
+                <Input
+                  id={`g-name-${gi}`}
+                  label={I.groupName}
+                  value={g.name}
+                  onChange={(e) => setGroup(gi, { name: e.target.value })}
+                />
+                <Switch
+                  checked={g.min_select > 0}
+                  disabled={busy}
+                  onChange={(one) => setGroup(gi, one ? { min_select: 1, max_select: 1 } : { min_select: 0, max_select: 99 })}
+                  label={I.ruleSwitch}
+                />
+              </>
+            )}
+
+            {g.price_mode === "weight" ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <span className="min-w-0 flex-1 text-sm">{I.weightBaseLabel}</span>
+                  <RowField
+                    id={`g-base-${gi}`}
+                    value={g.base_grams ? String(g.base_grams) : ""}
+                    onChange={(v) => setGroup(gi, { base_grams: Number(v.replace(/\D/g, "").slice(0, 6)) || null })}
+                    placeholder={String(DEFAULT_BASE_GRAMS)}
+                    label={I.weightBase}
+                    numeric
+                    suffix={I.weightUnit}
+                    disabled={busy}
+                    className="w-24 shrink-0"
+                  />
+                </div>
+                {g.options.map((o, oi) => (
+                  <OptionRow
+                    key={oi}
+                    available={o.available}
+                    busy={busy}
+                    onAvailable={(v) => setOption(gi, oi, { available: v })}
+                    onDelete={() => removeOption(gi, oi)}
+                  >
+                    <RowField
+                      id={`o-grams-${gi}-${oi}`}
+                      value={o.grams ? String(o.grams) : ""}
+                      onChange={(v) => {
+                        const n = Number(v.replace(/\D/g, "").slice(0, 7)) || 0;
+                        setOption(gi, oi, { grams: n || null, name: n ? weightName(n) : "" });
+                      }}
+                      placeholder="250"
+                      label={I.weightGrams}
+                      numeric
+                      suffix={I.weightUnit}
+                      disabled={busy}
+                      className="w-24 shrink-0"
+                    />
+                    <span className="flex min-w-0 flex-1 flex-col text-sm">
+                      {o.grams ? (
+                        <>
+                          <span className="truncate font-bold">{weightName(o.grams)}</span>
+                          {itemSyp != null && (
+                            <span className="truncate text-xs text-accent-text">
+                              {fill(I.weightPrice, { price: fmtMoney(weightPrice(itemSyp, o.grams, g.base_grams)) })}
+                            </span>
+                          )}
+                        </>
+                      ) : null}
+                    </span>
+                  </OptionRow>
+                ))}
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs text-ink-muted">{I.weightQuick}</span>
+                  {QUICK_GRAMS.map((q) => {
+                    const has = g.options.some((o) => o.grams === q);
+                    return (
+                      <button
+                        key={q}
+                        type="button"
+                        aria-pressed={has}
+                        disabled={busy}
+                        onClick={() =>
+                          has
+                            ? undefined
+                            : setGroup(gi, {
+                                options: [...g.options, { name: weightName(q), grams: q, price_delta: 0, usd: "", available: true }],
+                              })
+                        }
+                        className={`inline-flex min-h-10 items-center gap-1 rounded-full border px-3 text-sm ${
+                          has ? "border-accent bg-accent-tint font-bold text-accent-text" : "border-line bg-surface text-ink hover:bg-row-hover"
+                        }`}
+                      >
+                        {has ? <IconCheck size={14} /> : <IconAdd size={14} />}
+                        {weightName(q)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
             ) : (
               <>
-                <div className="flex items-end gap-2">
-                  <Input
-                    id={`g-name-${gi}`}
-                    label={I.groupName}
-                    value={g.name}
-                    onChange={(e) => setGroup(gi, { name: e.target.value })}
-                    wrapperClassName="min-w-0 flex-1"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    aria-label={I.remove}
-                    onClick={() => edit((gs) => gs.filter((_, i) => i !== gi))}
-                  >
-                    <IconDelete size={14} className="text-danger" />
-                  </Button>
-                </div>
-                <div className="flex flex-wrap gap-4">
-                  <Checkbox
-                    id={`g-req-${gi}`}
-                    checked={g.min_select > 0}
-                    onChange={(e) =>
-                      setGroup(gi, { min_select: e.target.checked ? 1 : 0 })
-                    }
-                    label={I.required}
-                  />
-                  <Checkbox
-                    id={`g-multi-${gi}`}
-                    checked={g.max_select > 1}
-                    onChange={(e) =>
-                      setGroup(gi, { max_select: e.target.checked ? 99 : 1 })
-                    }
-                    label={I.multi}
-                  />
-                </div>
-              </>
-            )}
-            <p className="text-xs text-ink-muted">
-              {g.min_select > 0 ? I.sizeRule : I.extrasRule}
-            </p>
-            {g.price_mode === "none" && (
-              <p className="text-xs text-ink-muted">{I.noneHint}</p>
-            )}
-            {g.price_mode === "weight" && (
-              <>
-                <p className="text-xs text-ink-muted">{I.weightHint}</p>
-                <Input
-                  id={`g-base-${gi}`}
-                  label={I.weightBase}
-                  inputMode="numeric"
-                  dir="ltr"
-                  placeholder={String(DEFAULT_BASE_GRAMS)}
-                  value={g.base_grams ? String(g.base_grams) : ""}
-                  onChange={(e) =>
-                    setGroup(gi, {
-                      base_grams:
-                        Number(e.target.value.replace(/\D/g, "").slice(0, 6)) ||
-                        null,
-                    })
-                  }
-                />
-                {g.options.map((o, oi) => (
-                  <div
-                    key={oi}
-                    className="flex flex-col gap-1"
-                    data-testid="item-option"
-                  >
-                    <div className="flex items-end gap-2">
-                      <Input
-                        id={`o-grams-${gi}-${oi}`}
-                        label={I.weightGrams}
-                        inputMode="numeric"
-                        dir="ltr"
-                        value={o.grams ? String(o.grams) : ""}
-                        onChange={(e) => {
-                          const n =
-                            Number(e.target.value.replace(/\D/g, "").slice(0, 7)) ||
-                            0;
-                          setOption(gi, oi, {
-                            grams: n || null,
-                            name: n ? weightName(n) : "",
-                          });
-                        }}
-                        wrapperClassName="w-32 shrink-0"
-                      />
-                      <div className="min-w-0 flex-1 pb-2 text-sm">
-                        {o.grams ? (
-                          <>
-                            <span className="font-bold">{weightName(o.grams)}</span>
-                            {itemSyp != null && (
-                              <span className="ms-2 text-ink-muted">
-                                {fill(I.weightPrice, {
-                                  price: fmtMoney(
-                                    weightPrice(itemSyp, o.grams, g.base_grams),
-                                  ),
-                                })}
-                              </span>
-                            )}
-                          </>
-                        ) : null}
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        aria-label={I.remove}
-                        onClick={() =>
-                          setGroup(gi, {
-                            options: g.options.filter((_, j) => j !== oi),
-                          })
-                        }
-                      >
-                        <IconDelete size={14} className="text-danger" />
-                      </Button>
-                    </div>
-                    <Checkbox
-                      id={`o-avail-${gi}-${oi}`}
-                      checked={o.available}
-                      onChange={(e) =>
-                        setOption(gi, oi, { available: e.target.checked })
-                      }
-                      label={I.optAvailable}
-                      className={o.available ? "" : "text-ink-muted"}
-                    />
+                {g.price_mode === "priced" && g.options.length > 0 && (
+                  <div className="flex items-center gap-1.5">
+                    <ColumnLabel text={I.optionName} className="min-w-0 flex-1" />
+                    <ColumnLabel text={usd ? I.optPriceUsd : I.optPrice} className="w-24 shrink-0" />
+                    <span className="w-[6.5rem] shrink-0" />
                   </div>
+                )}
+                {g.options.map((o, oi) => (
+                  <OptionRow
+                    key={oi}
+                    available={o.available}
+                    busy={busy}
+                    onAvailable={(v) => setOption(gi, oi, { available: v })}
+                    onDelete={() => removeOption(gi, oi)}
+                  >
+                    <RowField
+                      id={`o-name-${gi}-${oi}`}
+                      value={o.name}
+                      onChange={(v) => setOption(gi, oi, { name: v })}
+                      placeholder={I.optionName}
+                      label={I.optionName}
+                      disabled={busy}
+                      className="min-w-0 flex-1"
+                    />
+                    {g.price_mode === "priced" && (
+                      <RowField
+                        id={`o-price-${gi}-${oi}`}
+                        value={usd ? o.usd : o.price_delta === 0 ? "" : String(o.price_delta)}
+                        onChange={(v) =>
+                          usd
+                            ? setOption(gi, oi, { usd: usdInput(v, 8) })
+                            : setOption(gi, oi, { price_delta: Number(v.replace(/\D/g, "").slice(0, 9)) || 0 })
+                        }
+                        placeholder="0"
+                        label={usd ? I.optPriceUsd : I.optPrice}
+                        numeric={!usd}
+                        decimal={usd}
+                        disabled={busy}
+                        className="w-24 shrink-0"
+                      />
+                    )}
+                  </OptionRow>
                 ))}
-                <div className="flex flex-wrap gap-2">
-                  {QUICK_GRAMS.map((q) => (
-                    <Button
-                      key={q}
-                      type="button"
-                      variant="secondary"
-                      onClick={() =>
-                        g.options.some((o) => o.grams === q)
-                          ? undefined
-                          : setGroup(gi, {
-                              options: [
-                                ...g.options,
-                                {
-                                  name: weightName(q),
-                                  grams: q,
-                                  price_delta: 0,
-                                  usd: "",
-                                  available: true,
-                                },
-                              ],
-                            })
-                      }
-                    >
-                      {weightName(q)}
-                    </Button>
-                  ))}
-                </div>
               </>
             )}
-            {g.price_mode !== "weight" && g.options.map((o, oi) => (
-              <div
-                key={oi}
-                className="flex flex-col gap-1"
-                data-testid="item-option"
-              >
-                <div className="flex items-end gap-2">
-                  <Input
-                    id={`o-name-${gi}-${oi}`}
-                    label={I.optionName}
-                    value={o.name}
-                    onChange={(e) =>
-                      setOption(gi, oi, { name: e.target.value })
-                    }
-                    wrapperClassName="min-w-0 flex-1"
-                  />
-                  {g.price_mode === "priced" && (
-                  <Input
-                    id={`o-price-${gi}-${oi}`}
-                    label={usd ? I.optPriceUsd : I.optPrice}
-                    inputMode={usd ? "decimal" : "numeric"}
-                    dir="ltr"
-                    value={
-                      usd
-                        ? o.usd
-                        : o.price_delta === 0
-                          ? ""
-                          : String(o.price_delta)
-                    }
-                    onChange={(e) =>
-                      usd
-                        ? setOption(gi, oi, {
-                            usd: usdInput(e.target.value, 8),
-                          })
-                        : setOption(gi, oi, {
-                            price_delta:
-                              Number(
-                                e.target.value.replace(/\D/g, "").slice(0, 9),
-                              ) || 0,
-                          })
-                    }
-                    wrapperClassName="w-28 shrink-0"
-                  />
-                  )}
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    aria-label={I.remove}
-                    onClick={() =>
-                      setGroup(gi, {
-                        options: g.options.filter((_, j) => j !== oi),
-                      })
-                    }
-                  >
-                    <IconDelete size={14} className="text-danger" />
-                  </Button>
-                </div>
-                {/* **خيارٌ خلصان والصنفُ متوفّر** — الزبونُ يشوفه رمادي. */}
-                <Checkbox
-                  id={`o-avail-${gi}-${oi}`}
-                  checked={o.available}
-                  onChange={(e) =>
-                    setOption(gi, oi, { available: e.target.checked })
-                  }
-                  label={I.optAvailable}
-                  className={o.available ? "" : "text-ink-muted"}
-                />
-              </div>
-            ))}
             <Button
               type="button"
-              variant="ghost"
-              className="flex w-fit items-center gap-1"
-              onClick={() =>
-                setGroup(gi, {
-                  options: [
-                    ...g.options,
-                    { name: "", price_delta: 0, usd: "", available: true },
-                  ],
-                })
-              }
+              variant="secondary"
+              className="inline-flex w-fit items-center gap-1.5"
+              disabled={busy}
+              onClick={() => setGroup(gi, { options: [...g.options, { name: "", price_delta: 0, usd: "", available: true }] })}
             >
-              <IconAdd size={13} />
+              <IconAdd size={16} />
               {g.price_mode === "weight" ? I.weightAdd : I.addOption}
             </Button>
           </div>
@@ -923,25 +919,44 @@ export default function ItemEditor({
         {rateLost && <p className="text-xs text-danger">{I.usdNoRate}</p>}
       </section>
 
+      {/* ── ٥ · الحفظُ والإلغاء — ثمّ النسخُ والحذف ── */}
       {error && <Alert>{error}</Alert>}
-      <FormActions
-        submit
-        onCancel={() => router.push("/store/menu")}
-        busy={busy || nameOver}
-      />
+      {!readOnly && (
+        <FormActions
+          submit
+          onCancel={() => router.push("/store/menu")}
+          busy={busy || nameOver}
+          saveIcon={<IconCheck size={18} />}
+          cancelIcon={<IconClose size={18} />}
+        />
+      )}
 
-      {item && (
+      {item && !readOnly && (
         <>
-          <Button
-            type="button"
-            variant="ghost"
-            className="w-fit text-danger"
-            disabled={busy}
-            onClick={() => setAskDelete(true)}
-            data-testid="item-delete"
-          >
-            {I.delete}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              className="inline-flex flex-1 items-center justify-center gap-1.5 font-bold"
+              disabled={busy || touched}
+              onClick={() => void duplicate()}
+              data-testid="item-duplicate"
+            >
+              <IconCopy size={18} />
+              {I.duplicate}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              className="inline-flex flex-1 items-center justify-center gap-1.5 border-danger-edge font-bold text-danger"
+              disabled={busy}
+              onClick={() => setAskDelete(true)}
+              data-testid="item-delete"
+            >
+              <IconDelete size={18} />
+              {I.delete}
+            </Button>
+          </div>
           <Confirm
             open={askDelete}
             title={I.delete}
@@ -954,5 +969,140 @@ export default function ItemEditor({
         </>
       )}
     </form>
+  );
+}
+
+/**
+ * **سطرُ خيارٍ واحد** — حقولُه ثمّ مفتاحُ التوفّر ثمّ حذفٌ أحمر.
+ *
+ * **«نمرة ٤٢ خلصت» — يطفئها وحدَها** والصنفُ يبقى يُباع، وعند الزبون تطلع
+ * رماديّةً لا تُختار.
+ */
+function OptionRow({
+  available,
+  busy,
+  onAvailable,
+  onDelete,
+  children,
+}: {
+  available: boolean;
+  busy: boolean;
+  onAvailable: (v: boolean) => void;
+  onDelete: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-1.5" data-testid="item-option">
+      {children}
+      <span className="flex w-16 shrink-0 flex-col items-center gap-0.5">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={available}
+          aria-label={available ? I.optAvailable : I.unavailable}
+          disabled={busy}
+          onClick={() => onAvailable(!available)}
+          className={`relative inline-flex h-5 w-9 items-center rounded-badge border transition-colors disabled:opacity-50 ${
+            available ? "border-success-edge bg-success-fill" : "border-line bg-field"
+          }`}
+        >
+          <span
+            className={`absolute h-3.5 w-3.5 rounded-badge transition-[inset-inline-start] duration-200 ${
+              available ? "start-[1.15rem] bg-success" : "start-0.5 bg-ink-muted"
+            }`}
+          />
+        </button>
+        <span className={`text-2xs font-bold ${available ? "text-success" : "text-danger"}`}>
+          {available ? I.optAvailable : I.unavailable}
+        </span>
+      </span>
+      <button
+        type="button"
+        aria-label={I.optDelete}
+        title={I.optDelete}
+        disabled={busy}
+        onClick={onDelete}
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control text-danger hover:bg-danger-tint disabled:opacity-50"
+      >
+        <IconDelete size={18} />
+      </button>
+    </div>
+  );
+}
+
+/**
+ * **نافذةُ قسم السوق** — مربّعاتٌ بصورة كلّ قسمٍ واسمه، وبحث، **و✓ على المختار.**
+ * (مرآةُ `SectionPickerDialog` في `ItemEditor.kt`.)
+ */
+function SectionPicker({
+  sections,
+  selected,
+  onPick,
+  onClose,
+}: {
+  sections: SectionRef[];
+  selected: string;
+  onPick: (id: string) => void;
+  onClose: () => void;
+}) {
+  const [q, setQ] = useState("");
+  const needle = q.trim();
+  const shown = needle ? sections.filter((s) => s.name.includes(needle)) : sections;
+  return (
+    <Modal open onClose={onClose} title={I.sectionTitle} size="lg">
+      <div className="flex flex-col gap-3" data-testid="section-picker">
+        {sections.length > 6 && (
+          <Input
+            type="search"
+            aria-label={I.sectionSearch}
+            placeholder={I.sectionSearch}
+            icon={<IconSearch size={16} />}
+            value={q}
+            onChange={(e) => setQ(e.target.value.slice(0, 40))}
+          />
+        )}
+        {sections.length === 0 ? (
+          <p className="text-sm text-ink-muted">{I.sectionEmpty}</p>
+        ) : shown.length === 0 ? (
+          <p className="text-sm text-ink-muted">{I.sectionNoMatch}</p>
+        ) : (
+          <ul className="grid max-h-[60vh] grid-cols-3 gap-2 overflow-y-auto sm:grid-cols-4">
+            {shown.map((s) => {
+              const on = s.id === selected;
+              const img = mediaUrl(s.image_thumb_url ?? s.image_url);
+              return (
+                <li key={s.id}>
+                  <button
+                    type="button"
+                    aria-pressed={on}
+                    onClick={() => onPick(s.id)}
+                    data-testid="section-tile"
+                    className={`flex w-full flex-col items-center gap-1 rounded-control border p-1 ${
+                      on ? "border-2 border-accent bg-accent-tint" : "border-line hover:bg-row-hover"
+                    }`}
+                  >
+                    <span className="relative block aspect-square w-full overflow-hidden rounded-control bg-field">
+                      {img ? (
+                        <img src={img} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+                      ) : (
+                        <span className="absolute inset-0 flex items-center justify-center text-2xl font-medium text-ink-muted" aria-hidden>
+                          {s.name.trim().charAt(0)}
+                        </span>
+                      )}
+                      {on && (
+                        <span className="absolute end-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-accent text-on-bright" aria-hidden>
+                          <IconCheck size={15} />
+                        </span>
+                      )}
+                    </span>
+                    <span className={`line-clamp-2 text-center text-xs ${on ? "font-bold text-accent-text" : "text-ink"}`}>{s.name}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+    </Modal>
   );
 }

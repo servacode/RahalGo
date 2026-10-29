@@ -28,7 +28,7 @@ import { useRef, useState, type ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { Button } from "./components";
 import { ImageCropDialog, LOGO_CROP_FRAMES, type CropFrame } from "./ImageCrop";
-import { IconAdd, IconDelete, IconLoading } from "./icons";
+import { IconAdd, IconCamera, IconClose, IconDelete, IconLoading } from "./icons";
 
 const m = getMessages(defaultLocale);
 
@@ -65,6 +65,7 @@ export function ImageUpload({
   crop = false,
   cropFrames = LOGO_CROP_FRAMES,
   fit = false,
+  tile,
 }: {
   kind: MediaKind;
   label: string;
@@ -102,6 +103,11 @@ export function ImageUpload({
   cropFrames?: CropFrame[];
   /** **المعاينةُ كاملةً لا مقصوصة** — لصورة الصنف. */
   fit?: boolean;
+  /**
+   * **مربّعٌ كبيرٌ يُضغط** (محرّرُ الصنف، تصميمُ ٢٠٢٦-١٠-٢٩) — مرآةُ `ItemPhoto`
+   * في التطبيق: شريطٌ أسفلَه يقول ما يفعله الضغط، **و✕ في زاويته يُزيلها.**
+   */
+  tile?: { pick: string; change: string; clear: string };
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(mediaUrl(initialUrl));
@@ -148,6 +154,89 @@ export function ImageUpload({
     } finally {
       setBusy(false);
     }
+  }
+
+  const picker = (
+    <>
+      {error && <p className="mt-1.5 text-xs text-danger">{error}</p>}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (!f) return;
+          if (crop) setCropping(f);
+          else void upload(f);
+        }}
+      />
+      {cropping && (
+        <ImageCropDialog
+          file={cropping}
+          frames={cropFrames}
+          onDone={(blob) => {
+            setCropping(null);
+            resetInput();
+            void upload(blob);
+          }}
+          onAgain={() => {
+            setCropping(null);
+            resetInput();
+            inputRef.current?.click();
+          }}
+          onCancel={() => {
+            setCropping(null);
+            resetInput();
+          }}
+        />
+      )}
+    </>
+  );
+
+  if (tile) {
+    return (
+      <div className="w-32 shrink-0 sm:w-36">
+        <div className="relative aspect-square w-full overflow-hidden rounded-card border border-line bg-field">
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            disabled={busy}
+            aria-label={preview ? tile.change : tile.pick}
+            data-testid="image-tile"
+            className="absolute inset-0 flex items-center justify-center text-ink-muted"
+          >
+            {busy ? (
+              <IconLoading size={24} className="animate-spin" />
+            ) : preview ? (
+              <img src={preview} alt="" loading="lazy" className={`h-full w-full ${fit ? "object-contain" : "object-cover"}`} />
+            ) : (
+              <IconCamera size={28} />
+            )}
+            <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-scrim py-1 text-xs font-medium text-on-solid">
+              <IconCamera size={14} />
+              {preview ? tile.change : tile.pick}
+            </span>
+          </button>
+          {preview && !busy && (
+            <button
+              type="button"
+              aria-label={tile.clear}
+              title={tile.clear}
+              onClick={() => {
+                setPreview(null);
+                onChange("");
+                resetInput();
+              }}
+              className="absolute end-1 top-1 flex h-8 w-8 items-center justify-center rounded-full bg-scrim text-on-solid"
+            >
+              <IconClose size={16} />
+            </button>
+          )}
+        </div>
+        {picker}
+      </div>
+    );
   }
 
   return (

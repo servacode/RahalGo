@@ -2,246 +2,70 @@
 
 /**
  * ══════════════════════════════════════════════════════════════════════
- * **ساعاتُ العمل — محرّرُ التطبيق نفسُه**
+ * **ساعاتُ الدوام — المخطّطُ نفسُه الذي في المعالج**
  * ══════════════════════════════════════════════════════════════════════
  *
- * (مرآةُ `HoursEditor` و`HoursRow` في `StoreScreen.kt`.)
+ * (مرآةُ `HoursEditor` في `StoreParts.kt`، ملاحظةُ المالك ٧، ٢٠٢٦-١٠-٢٨.)
  *
- * **بطاقةُ «نفس الدوام لكل الأيام»** فوق: من · لـ · «طبّق على كل الأيام»
- * — **تفتح الأيامَ السبعةَ بالوقتين وتحفظ فوراً.**
- *
- * **وتحتها يومٌ يومٌ**: مربّعُ «مفتوح» ثمّ وقتا الفتح والإغلاق، **و«حفظ»
- * يظهر حين يتغيّر شيء.**
- *
- * **وفتحٌ بين منتصف الليل والسادسة يُسأل عنه** (`hours_night_*`) — من كتب
- * «٩:٠٠» وقصد المساء اختار «ص» بلا انتباه، **فيبين متجرُه مغلقاً طولَ
- * النهار.**
+ * **والمسوّدةُ محلّيّةٌ حتّى يُضغط «حفظ»**، **والمحرّكُ يريد الأيّامَ السبعةَ معاً.**
+ * **وفتحٌ بعد منتصف الليل يُسأل عنه قبل الحفظ** (`nightOpen`).
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
-import { Button, Checkbox, Confirm, Input, LoadingState } from "@rahalgo/ui";
-import { api } from "@/lib/api";
+import { Button, Confirm, LoadingState, ReloadState } from "@rahalgo/ui";
 import { useStore } from "@/lib/store/context";
 import type { DayHours } from "@/lib/store/types";
 import { fill } from "@/lib/customer/texts";
 import { useShopToast } from "@/components/customer/toast";
+import { clock12, HoursPlanner, nightOpen, putHours, sameHours, useHoursPlan, useStoreHours } from "./SetupParts";
+
+export { clock12, is24h } from "./SetupParts";
 
 const m = getMessages(defaultLocale);
 const H = m.store.hours;
 
-/** **مرآةُ `clock12`** — «٩:٠٠ م» لا «21:00». */
-export function clock12(hhmm: string): string {
-  const h = Number(hhmm.slice(0, 2));
-  if (!Number.isFinite(h)) return hhmm;
-  const mm = hhmm.slice(3, 5) || "00";
-  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
-  return `${h12}:${mm} ${h < 12 ? H.am : H.pm}`;
-}
-
-/** **«مفتوح ٢٤ ساعة»** — الرايةُ من الخادم، أو ٠٠:٠٠ ← ٠٠:٠٠ من خادمٍ أقدم (٢٠٢٦-١٠-١٨). */
-export function is24h(d: DayHours): boolean {
-  return d.open_24h ?? (hhmm(d.open_time) === "00:00" && hhmm(d.close_time) === "00:00");
-}
-
-/** **وإطفاءُ الراية يعيد ساعتين عاديّتين** — ٠٠:٠٠ ← ٠٠:٠٠ تُقرأ ٢٤ ساعة ثانيةً. */
-const DEFAULT_OPEN = "09:00";
-const DEFAULT_CLOSE = "23:00";
-function with24h(d: DayHours, on: boolean): DayHours {
-  if (on) return { ...d, closed: false, open_24h: true, open_time: "00:00", close_time: "00:00" };
-  return { ...d, open_24h: false, open_time: DEFAULT_OPEN, close_time: DEFAULT_CLOSE };
-}
-
-/** **مرآةُ `nightOpen`** — يفتح بين ٠ و٥ صباحاً، **إلّا الدوامَ الكاملَ** (٠٠:٠٠ → ٢٣:٥٩) و«٢٤ ساعة». */
-function nightOpen(d: DayHours): boolean {
-  if (is24h(d)) return false;
-  const open = Number(d.open_time.slice(0, 2));
-  const close = Number(d.close_time.slice(0, 2));
-  const o = Number.isFinite(open) ? open : 9;
-  const c = Number.isFinite(close) ? close : 23;
-  return !d.closed && o >= 0 && o <= 5 && !(o === 0 && c >= 23);
-}
-
-const hhmm = (t: string) => t.slice(0, 5);
-
-function TimeField({ id, label, value, onChange, disabled }: { id: string; label: string; value: string; onChange: (v: string) => void; disabled?: boolean }) {
-  return (
-    <Input
-      id={id}
-      type="time"
-      aria-label={label}
-      dir="ltr"
-      step={60}
-      value={hhmm(value) || "00:00"}
-      disabled={disabled}
-      onChange={(e) => e.target.value && onChange(e.target.value)}
-      wrapperClassName="w-28 shrink-0"
-    />
-  );
-}
-
-export default function HoursEditor({ onSaved }: { onSaved?: () => void }) {
+function Planner({ saved, onSaved }: { saved: DayHours[]; onSaved: (days: DayHours[]) => void }) {
   const { store, patch } = useStore();
-  const id = store?.id ?? "";
   const toast = useShopToast();
-  const [saved, setSaved] = useState<DayHours[] | null>(null);
-  const [draft, setDraft] = useState<DayHours[]>([]);
-  const [allOpen, setAllOpen] = useState("09:00");
-  const [allClose, setAllClose] = useState("23:00");
-  /** **«مفتوح ٢٤ ساعة» لكلّ الأيام** — يُخفي الوقتين (قرارُ المالك ٢٠٢٦-١٠-١٨). */
-  const [all24, setAll24] = useState(false);
+  const plan = useHoursPlan(saved, !!store?.has_hours);
   const [busy, setBusy] = useState(false);
   const [night, setNight] = useState<DayHours[] | null>(null);
-  const suspended = store?.status === "suspended";
+  if (!store) return null;
+  const suspended = store.status === "suspended";
+  const days = plan.days();
+  const dirty = plan.chosen && (!store.has_hours || !sameHours(days, saved));
 
-  const load = useCallback(async () => {
-    if (!id) return;
-    try {
-      const rows = await api<DayHours[]>(`/api/v1/merchant/stores/${id}/hours`);
-      const sorted = [...(rows ?? [])]
-        .map((d) => ({ ...d, open_time: hhmm(d.open_time), close_time: hhmm(d.close_time) }))
-        .map((d) => ({ ...d, open_24h: is24h(d) }))
-        .sort((a, b) => a.day_of_week - b.day_of_week);
-      setSaved(sorted);
-      setDraft(sorted);
-      const first = sorted.find((d) => !d.closed);
-      if (first) {
-        setAll24(!!first.open_24h);
-        setAllOpen(first.open_24h ? DEFAULT_OPEN : first.open_time);
-        setAllClose(first.open_24h ? DEFAULT_CLOSE : first.close_time);
-      }
-    } catch {
-      setSaved([]);
-    }
-  }, [id]);
-  useEffect(() => {
-    void load();
-  }, [load]);
-
-  const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(saved ?? []), [draft, saved]);
-
-  async function put(days: DayHours[]) {
-    if (!id) return;
+  async function put(d: DayHours[]) {
+    if (!store) return;
     setBusy(true);
     try {
-      await api(`/api/v1/merchant/stores/${id}/hours`, { method: "PUT", body: JSON.stringify({ days }) });
-      setSaved(days);
-      setDraft(days);
+      await putHours(store.id, d);
       patch({ has_hours: true });
       toast(H.saved, "success");
-      onSaved?.();
+      onSaved(d);
     } catch (e) {
       toast(errorText(e), "error");
     } finally {
       setBusy(false);
     }
   }
-  const save = (days: DayHours[]) => (days.some(nightOpen) ? setNight(days) : void put(days));
-
-  if (saved == null) return <LoadingState variant="inline" />;
-  if (saved.length === 0) return null;
   const nightDay = night?.find(nightOpen);
 
   return (
-    <section className="flex flex-col gap-3" aria-label={H.title} data-testid="store-hours">
-      <header className="flex items-center gap-2">
-        <h3 className="heading-card min-w-0 flex-1">{H.title}</h3>
-        {dirty && !suspended && (
-          <Button onClick={() => save(draft)} disabled={busy} data-testid="hours-save">
-            {m.common.save}
-          </Button>
-        )}
-      </header>
-      <div className="surface flex flex-col gap-2 rounded-card p-4">
-        <p className="text-sm font-bold">{H.allDays}</p>
-        <Checkbox
-          id="hours-all-24h"
-          checked={all24}
-          disabled={suspended}
-          onChange={(e) => setAll24(e.target.checked)}
-          label={H.open24}
-          data-testid="hours-all-24h"
-        />
-        {!all24 && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm">{H.from}</span>
-            <TimeField id="hours-all-open" label={H.from} value={allOpen} onChange={setAllOpen} disabled={suspended} />
-            <span className="text-sm">{H.to}</span>
-            <TimeField id="hours-all-close" label={H.to} value={allClose} onChange={setAllClose} disabled={suspended} />
-          </div>
-        )}
-        <p className="text-xs text-ink-muted">
-          {all24 ? H.open24 : fill(H.summary, { from: clock12(allOpen), to: clock12(allClose) })}
-        </p>
+    <div className="flex flex-col gap-4">
+      <HoursPlanner plan={plan} disabled={suspended || busy} />
+      {dirty && !suspended && (
         <Button
-          variant="secondary"
-          className="w-full"
-          data-testid="hours-apply-all"
-          disabled={busy || suspended || (!all24 && (!allOpen || !allClose))}
-          onClick={() => {
-            const days = draft.map((d) =>
-              all24
-                ? with24h(d, true)
-                : { ...d, closed: false, open_24h: false, open_time: allOpen, close_time: allClose },
-            );
-            setDraft(days);
-            save(days);
-          }}
+          size="lg"
+          className="w-full font-bold"
+          disabled={busy}
+          data-testid="hours-save"
+          onClick={() => (days.some(nightOpen) ? setNight(days) : void put(days))}
         >
-          {H.applyAll}
+          {m.common.save}
         </Button>
-      </div>
-      <ul className="surface flex flex-col divide-y divide-line rounded-card px-4">
-        {draft.map((d) => (
-          <li key={d.day_of_week} className="flex flex-wrap items-center gap-2 py-2" data-testid="hours-day">
-            <Checkbox
-              id={`hours-open-${d.day_of_week}`}
-              checked={!d.closed}
-              disabled={suspended}
-              onChange={(e) =>
-                setDraft((all) => all.map((x) => (x.day_of_week === d.day_of_week ? { ...x, closed: !e.target.checked } : x)))
-              }
-              label={H.days[d.day_of_week] ?? ""}
-              className="min-w-24 flex-1"
-            />
-            {!d.closed && (
-              <Checkbox
-                id={`hours-24h-${d.day_of_week}`}
-                checked={is24h(d)}
-                disabled={suspended}
-                onChange={(e) =>
-                  setDraft((all) => all.map((x) => (x.day_of_week === d.day_of_week ? with24h(x, e.target.checked) : x)))
-                }
-                label={H.open24Short}
-                className="text-xs"
-              />
-            )}
-            {d.closed ? (
-              <span className="text-xs text-ink-muted">{H.dayClosed}</span>
-            ) : is24h(d) ? (
-              <span className="text-xs font-medium text-accent-text" data-testid="hours-day-24h">{H.open24}</span>
-            ) : (
-              <span className="flex items-center gap-1">
-                <TimeField
-                  id={`hours-o-${d.day_of_week}`}
-                  label={`${H.days[d.day_of_week] ?? ""} ${H.from}`}
-                  value={d.open_time}
-                  disabled={suspended}
-                  onChange={(v) => setDraft((all) => all.map((x) => (x.day_of_week === d.day_of_week ? { ...x, open_time: v } : x)))}
-                />
-                <span className="text-xs text-ink-muted">—</span>
-                <TimeField
-                  id={`hours-c-${d.day_of_week}`}
-                  label={`${H.days[d.day_of_week] ?? ""} ${H.to}`}
-                  value={d.close_time}
-                  disabled={suspended}
-                  onChange={(v) => setDraft((all) => all.map((x) => (x.day_of_week === d.day_of_week ? { ...x, close_time: v } : x)))}
-                />
-              </span>
-            )}
-          </li>
-        ))}
-      </ul>
+      )}
       <Confirm
         open={!!night}
         title={H.nightTitle}
@@ -250,11 +74,33 @@ export default function HoursEditor({ onSaved }: { onSaved?: () => void }) {
         tone="primary"
         busy={busy}
         onConfirm={() => {
-          const days = night;
+          const d = night;
           setNight(null);
-          if (days) void put(days);
+          if (d) void put(d);
         }}
         onCancel={() => setNight(null)}
+      />
+    </div>
+  );
+}
+
+export default function HoursEditor() {
+  const { store } = useStore();
+  const { saved, setSaved, error, reload } = useStoreHours(store?.id ?? "");
+  const [stamp, setStamp] = useState(0);
+  if (!store) return null;
+  if (saved == null) {
+    return error ? <ReloadState label={errorText(error)} onRetry={() => void reload()} /> : <LoadingState variant="list" rows={4} />;
+  }
+  return (
+    <section aria-label={H.title} data-testid="store-hours">
+      <Planner
+        key={`${store.id}-${stamp}`}
+        saved={saved}
+        onSaved={(d) => {
+          setSaved(d);
+          setStamp((n) => n + 1);
+        }}
       />
     </section>
   );

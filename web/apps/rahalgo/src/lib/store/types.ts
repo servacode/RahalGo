@@ -134,6 +134,8 @@ export interface MenuItem {
   price_currency: string;
   merchant_price_usd: number | null;
   modifiers?: ModifierGroup[];
+  /** **«أضف مشروباتي»** (هجرة 0483) — تُنسخ قائمةُ مشروبات المتجر إلى الصنف أم لا. وغيابُه نعم. */
+  store_drinks?: boolean;
 }
 
 /** **مجموعةُ إضافات** — `catalog.ModifierGroup`، **وتُستبدل كلُّها عند الحفظ.** */
