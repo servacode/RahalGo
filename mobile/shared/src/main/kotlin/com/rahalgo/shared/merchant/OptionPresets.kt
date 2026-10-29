@@ -39,7 +39,7 @@ data class OptionPreset(
         minSelect = minSelect,
         maxSelect = maxSelect,
         priceMode = priceMode,
-        baseGrams = if (priceMode == PRICE_MODE_WEIGHT) DEFAULT_BASE_GRAMS else null,
+        baseGrams = if (priceMode == PRICE_MODE_WEIGHT) presetBaseGrams(options.mapNotNull { it.grams }) else null,
         options = options.map {
             when (priceMode) {
                 PRICE_MODE_WEIGHT -> ModifierOption(name = it.grams?.let(::weightName) ?: it.name, grams = it.grams)
@@ -62,6 +62,13 @@ const val PRICE_MODE_PRICED = "priced"
 const val PRICE_MODE_NONE = "none"
 const val PRICE_MODE_WEIGHT = "weight"
 const val DEFAULT_BASE_GRAMS = 100
+
+/**
+ * **الوزنُ الذي يُكتب له السعر** — «وزن ثقيل» (كلُّ خياراته نصفُ كيلو فأكثر: خضرةٌ وفواكه)
+ * سعرُه لكلّ كيلو كما في السوق، والباقي لكلّ ١٠٠ غ (قرارُ المالك ٢٠٢٦-١٠-٢٩).
+ */
+fun presetBaseGrams(grams: List<Int>): Int =
+    if (grams.isNotEmpty() && grams.all { it >= 500 }) 1000 else DEFAULT_BASE_GRAMS
 
 /** **أوزانٌ سريعة** — ٢٥٠ غ ونصف كيلو وكيلو. */
 val QUICK_GRAMS = listOf(250, 500, 1000)

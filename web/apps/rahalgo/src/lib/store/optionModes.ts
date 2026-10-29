@@ -15,6 +15,11 @@ export type PriceMode = "priced" | "none" | "weight";
 
 export const DEFAULT_BASE_GRAMS = 100;
 
+/** **الوزنُ الذي يُكتب له السعر** — «وزن ثقيل» (كلُّ خياراته نصفُ كيلو فأكثر) لكلّ كيلو، والباقي لكلّ ١٠٠ غ. */
+export function presetBaseGrams(grams: number[]): number {
+  return grams.length > 0 && grams.every((g) => g >= 500) ? 1000 : DEFAULT_BASE_GRAMS;
+}
+
 /** **أوزانٌ سريعة** — ٢٥٠ غ ونصف كيلو وكيلو. */
 export const QUICK_GRAMS = [250, 500, 1000];
 

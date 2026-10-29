@@ -254,12 +254,12 @@ func TestOptionModes_PresetsSeeded(t *testing.T) {
 		switch name {
 		case "اللون":
 			colors, _ = p["options"].([]any)
-		case "الوزن":
+		case "وزن خفيف":
 			weights, _ = p["options"].([]any)
 		}
 	}
 	for n, want := range map[string]string{"المقاس": "none", "اللون": "none", "نمرة رجالي": "none", "نمرة نسائي": "none", "نمرة أطفال": "none", "مقاس أطفال": "none", "بدون": "none",
-		"الوزن": "weight", "الحجم": "priced", "العبوة": "priced", "الإضافات": "priced"} {
+		"وزن خفيف": "weight", "وزن ثقيل": "weight", "الحجم": "priced", "العبوة": "priced", "الإضافات": "priced"} {
 		if modes[n] != want {
 			t.Fatalf("**طريقةُ «%s»**: %q والمنتظَر %q", n, modes[n], want)
 		}

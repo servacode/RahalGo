@@ -73,6 +73,7 @@ import type {
 import { parseUsd, usdInput, usdText, usdToSyp } from "@/lib/store/usd";
 import {
   DEFAULT_BASE_GRAMS,
+  presetBaseGrams,
   QUICK_GRAMS,
   priceModeOf,
   weightName,
@@ -185,7 +186,7 @@ function presetGroup(
     min_select: p.min_select,
     max_select: p.max_select,
     price_mode: mode,
-    base_grams: mode === "weight" ? DEFAULT_BASE_GRAMS : null,
+    base_grams: mode === "weight" ? presetBaseGrams(p.options.flatMap((o) => (o.grams ? [o.grams] : []))) : null,
     options: p.options.map((o) => {
       if (mode !== "priced") {
         const g = mode === "weight" ? (o.grams ?? null) : null;
