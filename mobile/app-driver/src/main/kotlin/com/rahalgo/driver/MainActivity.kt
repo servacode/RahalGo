@@ -1000,6 +1000,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                     Overlay.Inbox -> InboxSheet(
                         items = home.inbox.orEmpty(),
                         onMarkAll = home::markAllRead,
+                        onOpen = home::markOneRead,
                     )
                     is Overlay.Menu ->
                         // **وبنودُ المنصّة أوّلا** — شاشتُها من الوحدة،

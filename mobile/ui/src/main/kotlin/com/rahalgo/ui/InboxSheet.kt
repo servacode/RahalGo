@@ -1,6 +1,7 @@
 package com.rahalgo.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import com.rahalgo.design.Rahal
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -46,7 +47,7 @@ import com.rahalgo.shared.model.Notice
  * — يكفي أن تكون مقروءة وغير مقروءة وتوصل لنا الخبر».)
  */
 @Composable
-fun InboxSheet(items: List<Notice>, onMarkAll: () -> Unit) {
+fun InboxSheet(items: List<Notice>, onMarkAll: () -> Unit, onOpen: (Notice) -> Unit = {}) {
     Column(
         Modifier
             .fillMaxSize()
@@ -107,7 +108,8 @@ fun InboxSheet(items: List<Notice>, onMarkAll: () -> Unit) {
                     day = d
                     DayHead(d)
                 }
-                Row(Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
+                // **والضغطُ على الخبر يعلّمه مقروءاً** (تجربةُ المالك ٢٠٢٦-١٠-٢٩: ضغط فلم يتغيّر شيء).
+                Row(Modifier.fillMaxWidth().clickable { onOpen(notice) }.padding(vertical = 10.dp)) {
                     // **ونقطة لغير المقروء** — تُرى ولا تصبغ السطر.
                     Box(
                         Modifier

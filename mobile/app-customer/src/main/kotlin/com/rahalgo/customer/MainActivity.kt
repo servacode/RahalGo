@@ -1054,6 +1054,7 @@ private fun SignedIn(
                     over == Overlay.Inbox -> InboxSheet(
                         items = shell.inbox.orEmpty(),
                         onMarkAll = shell::markAllRead,
+                        onOpen = shell::markOneRead,
                     )
 
                     // ══════════════════════════════════════════════

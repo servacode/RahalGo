@@ -17,8 +17,9 @@ class MeApi(private val api: ApiClient) {
         api.call("/api/v1/me/notifications?limit=" + limit)
 
     /** **يُعلّم المقروء** — وبلاه تبقى الشارة حمراء وقد قرأها. */
-    suspend fun markRead() {
-        api.call<Ack>("/api/v1/me/notifications/read", HttpMethod.Post, mapOf<String, String>())
+    suspend fun markRead(id: String = "") {
+        val body = if (id.isBlank()) mapOf<String, String>() else mapOf("id" to id)
+        api.call<Ack>("/api/v1/me/notifications/read", HttpMethod.Post, body)
     }
 
     /**

@@ -265,6 +265,17 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** **خبرٌ واحدٌ يُقرأ بالضغط عليه.** */
+    fun markOneRead(n: com.rahalgo.shared.model.Notice) {
+        if (n.read || n.id.isBlank()) return
+        viewModelScope.launch {
+            runCatching { backend.me.markRead(n.id) }.onSuccess {
+                unread = (unread - 1).coerceAtLeast(0)
+                inbox = inbox?.map { if (it.id == n.id) it.copy(read = true) else it }
+            }
+        }
+    }
+
     fun closeInbox() {
         inbox = null
     }

@@ -183,7 +183,7 @@ func (s *Service) notifyCreated(ctx context.Context, o *Order) {
 		// **فيقرّر أيتركُ ما بيده أم يُكمل.**
 		body := ref
 		if p.itemCount > 0 {
-			body = fmt.Sprintf("%s — %d صنفاً · %d ل.س", ref, p.itemCount, p.subtotal)
+			body = fmt.Sprintf("%s — %s · %s ل.س", ref, itemsCountAr(p.itemCount), groupDigits(p.subtotal))
 		}
 		s.notify.Notify(ctx, notifications.Input{
 			UserID: *p.merchantOwner, Kind: notifications.KindOrder,
@@ -693,3 +693,17 @@ func (s *Service) notifyTargetReached(ctx context.Context, driverID string, amou
 
 // currencyWord **اسمُ العملة في نصّ إشعار.**
 const currencyWord = "ل.س"
+
+// itemsCountAr **عددُ الأصناف بعربيّةٍ سليمة** — كان «2 صنفاً» (تجربةُ المالك ٢٠٢٦-١٠-٢٩).
+func itemsCountAr(n int) string {
+	switch {
+	case n == 1:
+		return "صنف واحد"
+	case n == 2:
+		return "صنفان"
+	case n >= 3 && n <= 10:
+		return fmt.Sprintf("%d أصناف", n)
+	default:
+		return fmt.Sprintf("%d صنفاً", n)
+	}
+}

@@ -677,6 +677,7 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                     over == Overlay.Inbox -> InboxSheet(
                         items = shell.inbox.orEmpty(),
                         onMarkAll = shell::markAllRead,
+                        onOpen = shell::markOneRead,
                     )
 
                     // **وفي وضع المنصّة لا تبويبَ للطلبات** — فمن كان
