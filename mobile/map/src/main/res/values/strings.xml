@@ -37,4 +37,18 @@
     <string name="pick_acc_outside">إذا كنت داخل البيت أو المحل، فالأفضل أن تخرج أو تقترب من النافذة ليتحدد موقعك بدقة أكبر.</string>
     <string name="pick_wait_accuracy">يظهر زر التأكيد عندما تصبح الدقة 15 متراً أو أقل — أو حرّك الدبوس بيدك إلى مكانك</string>
     <string name="pick_choose_first">اضغط «موقعي» أو حرّك الدبوس بيدك إلى مكانك الصحيح</string>
+    <!-- **بطاقةُ الخريطة الصغيرة** — للمتجر والمندوب (٢٠٢٦-١٠-٢٩). -->
+    <string name="map_drag_to_set">حرّك الخريطة حتى يصبح الدبوس فوق المتجر</string>
+    <string name="map_drag_to_change">لتغيير الموقع حرّك الخريطة حتى يصبح الدبوس فوق المتجر</string>
+    <string name="map_point_chosen">تم اختيار موقع جديد، ولم يُحفظ بعد</string>
+    <string name="map_locating">جارٍ تحديد موقعك…</string>
+    <string name="map_locating_acc">جارٍ تحديد موقعك… الدقة %1$s م</string>
+    <string name="map_located">تم تحديد موقعك — الدقة %1$s م</string>
+    <string name="map_zoom_in">تكبير الخريطة</string>
+    <string name="map_zoom_out">تصغير الخريطة</string>
+    <string name="map_point_set">موقع المتجر محدّد على الخريطة</string>
+    <string name="map_locate_exact">حدّد موقعي بدقة</string>
+    <string name="map_locate_hint">يُحدَّد موقعك فوراً، ثم تتحسّن الدقة تلقائياً خلال ثوانٍ</string>
+    <string name="map_located_refining">تم تحديد موقعك — الدقة %1$s م · جارٍ تحسين الدقة…</string>
+    <string name="map_point_none">لم يُحدَّد بعد</string>
 </resources>

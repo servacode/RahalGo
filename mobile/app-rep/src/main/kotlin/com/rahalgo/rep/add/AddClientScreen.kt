@@ -404,46 +404,22 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
         // المكان وتحته «بدّل النقطة»؛ **وكانا حقلاً للقراءة وزرّاً تحته
         // يقولان الشيءَ نفسَه.** وبإطار ألواح الاختيار فوقها: ناقصٌ بلون
         // التنبيه، وتامٌّ بلون العلامة.
+        // **الخريطةُ الصغيرةُ نفسُها التي في معالج المتجر** (طلبُ المالك ٢٠٢٦-١٠-٢٩) —
+        // الدبّوسُ في الوسط والخريطةُ تتحرّك تحته، و«حدّد موقعي بدقة» فيها؛ **ولا ملتقطَ
+        // بشاشةٍ كاملة.**
         Spacer(Modifier.height(12.dp))
-        val hasPoint = vm.point != null
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .clip(Rahal.shape.md)
-                .background(if (hasPoint) Rahal.colors.surface else Rahal.colors.warnTint)
-                .border(
-                    Rahal.stroke.hair,
-                    (if (hasPoint) Rahal.colors.brand else Rahal.colors.accent)
-                        .copy(alpha = if (hasPoint) 0.35f else 0.55f),
-                    Rahal.shape.md,
-                )
-                .clickable(onClick = pick)
-                .padding(12.dp),
-        ) {
-            Text(
-                stringResource(R.string.ac_point),
-                color = Rahal.colors.ink,
-                style = MaterialTheme.typography.titleSmall,
-            )
-            Spacer(Modifier.height(4.dp))
-            if (hasPoint) {
-                Text(
-                    "✓ " + vm.pointLabel,
-                    color = Rahal.colors.success,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
-            Text(
-                stringResource(if (hasPoint) R.string.ac_repick else R.string.ac_pick),
-                color = Rahal.colors.brand,
-                style = MaterialTheme.typography.labelLarge,
-            )
-        }
-        Spacer(Modifier.height(4.dp))
         Text(
-            stringResource(R.string.ac_point_hint),
-            color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodySmall,
+            stringResource(R.string.ac_point),
+            color = Rahal.colors.ink,
+            style = MaterialTheme.typography.titleSmall,
+        )
+        Spacer(Modifier.height(6.dp))
+        com.rahalgo.map.PointMapCard(
+            lat = vm.point?.first,
+            lng = vm.point?.second,
+            pending = false,
+            enabled = !vm.busy,
+            onPoint = { la, ln -> vm.setPoint(la, ln, "") },
         )
         // **والنقطةُ في منطقةٍ غيرِ المختارة يُنبَّه عليها** (الخطوة ١٥) —
         // رُئي على الجهاز: نقطةٌ «الثورة، الرقة» والمنطقةُ «مركز الرقة»،

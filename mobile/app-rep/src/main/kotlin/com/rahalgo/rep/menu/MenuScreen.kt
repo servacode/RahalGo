@@ -192,298 +192,87 @@ fun MenuScreen(vm: MenuViewModel, onOffers: () -> Unit = {}) {
         return
     }
 
-    Screen {
-        // **واسمُ المتجر في الرأس** (الخطوة ١٥) — كان «الأصناف» وحدَها،
-        // **ومندوبٌ له عشرةُ عملاء لا يعرف في أيّهم يُضيف.** (وهو حارسُ
-        // `RO-01` نفسُه في شاشة العروض: اسمُ المتجر فوق كلّ خطوة.)
-        ScreenTitle(
-            if (vm.merchantName.isNotBlank()) {
-                stringResource(R.string.mn_items_of, vm.merchantName)
-            } else {
-                stringResource(R.string.mn_items)
-            },
-            stringResource(R.string.mn_hint),
-        )
-
-        // ══════════════════════════════════════════════════════════════
-        // **فعلان بوزنٍ واحد — لا زرٌّ وفوقه رابط**
-        // ══════════════════════════════════════════════════════════════
-        //
-        // (طلبُ المالك ٢٠٢٦-٠٩-٣٠: «صفحة الأصناف هناك زرّين: إضافة صنف
-        //  وإنشاء عرض، مشان يكون واضح للمندوب».)
-        //
-        // **وكان «العروض» `RahalTextButton`** — بلا أرضيّةٍ ولا إطار،
-        // **فيُقرأ رابطاً أو عنواناً لا فعلاً**، والمندوبُ الواقفُ في
-        // السوق لا يراه بابَ عمل. **والصنفُ زرٌّ ممتلئٌ تحته**، فبدا
-        // الفعلُ واحداً وفوقه سطرٌ.
-        //
-        // **وهما فعلان لمتجرٍ واحد**: يضيف صنفاً، ثمّ يضع عليه عرضاً.
-        // **فيُوضعان في صفٍّ واحدٍ بوزنين متساويين** — والأوّلُ ممتلئٌ
-        // لأنّه الأكثرُ وقوعاً، **والثاني مؤطَّرٌ فيُرى فعلاً لا رابطاً.**
-        //
-        // **وبابُ عروضه من حيث قائمتُه** — **والخصمُ على صنفٍ يُفتح من
-        // مكان الصنف لا من قائمةٍ بعيدة.**
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            RahalButton(
-                onClick = { vm.newItem() },
-                enabled = !vm.busy,
-                modifier = Modifier.weight(1f),
-            ) { Text(stringResource(R.string.mn_add_item)) }
-
-            RahalOutlineButton(
-                onClick = onOffers,
-                modifier = Modifier.weight(1f),
-            ) { Text(stringResource(R.string.mn_make_offer)) }
-        }
-
-        // **وسعرُ صرف المتجر للقراءة** — يكتبه صاحبُه (قرارُ المالك ٢٠٢٦-١٠-١٢).
-        Spacer(Modifier.height(12.dp))
-        com.rahalgo.ui.menu.ExchangeRateCard(rate = vm.exchangeRate, busy = vm.busy, editable = false)
-
-        Spacer(Modifier.height(12.dp))
-
-        if (list.isEmpty()) {
-            // **وأدواتُ القائمة تبين والقائمةُ فارغة** — كما عند المتجر: المندوبُ
-            // يضبط خياراتِ عميله قبل أوّل صنف (شُهد على المحاكي ٢٠٢٦-١٠-٢٨).
-            com.rahalgo.ui.menu.DrinksButton(vm.drinks)
-            com.rahalgo.ui.menu.MenuToolsButtons(vm.presets, vm.bulk)
-            Spacer(Modifier.height(10.dp))
-            Empty(stringResource(R.string.mn_empty))
-            return@Screen
-        }
-
-        // ══════════════════════════════════════════════════════════════
-        // **شبكةُ أقسام السوق — كما في تطبيق المتجر**
-        // ══════════════════════════════════════════════════════════════
-        //
-        // (قرارُ المالك ٢٠٢٦-٠٨-٣٠: «الأصناف لازم أوّل شي تُعرض بشكل
-        //  أقسام وندخل بالقسم مثل المتجر وليس بشكل مختلف».)
-        //
-        // **وكانت كتلاً متتابعةً بأقسام المتجر الداخليّة** — والمندوبُ
-        // يملأ القائمةَ نفسَها التي يملؤها صاحبُ المتجر، **فشاشتان
-        // مختلفتان لعملٍ واحدٍ تجعلان من عرف إحداهما يتعثّر بالأخرى.**
-        val open = vm.open
-        if (open == null) {
-            // **وزرُّ المشروبات فوق الشبكة كما عند المتجر.**
-            com.rahalgo.ui.menu.DrinksButton(vm.drinks)
-            com.rahalgo.ui.menu.MenuToolsButtons(vm.presets, vm.bulk)
-            Spacer(Modifier.height(10.dp))
-            // **ومربّعاتٌ بعمودين كما عند المتجر** (طلبُ المالك ٢٠٢٦-١٠-١٩: «مطابق للمتجر»)
-            // — لا أسطرَ بصورةٍ صغيرة. **وصفوفٌ لا شبكةٌ كسولة** داخل `Screen` الذي يمرّر.
-            vm.groups.chunked(2).forEach { pair ->
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    pair.forEach { g ->
-                        Column(
-                            Modifier
-                                .weight(1f)
-                                .clip(Rahal.shape.md)
-                                .clickable { vm.openGroup(g) },
-                        ) {
-                            // **وعددُ الأصناف بكلمته على زاوية الصورة** (٢٠٢٦-١٠-٢٧) —
-                            // «12 صنف» لا «12» وحدَها، فلا يُسأل: عددُ ماذا؟
-                            Box {
-                                RemoteImage(
-                                    url = Backend.of(ctx).media(g.imageUrl),
-                                    name = g.name,
-                                    modifier = Modifier.fillMaxWidth().aspectRatio(4f / 3f).clip(Rahal.shape.sm),
-                                )
-                                Text(
-                                    stringResource(R.string.mn_group_count, g.items.size),
-                                    color = Rahal.colors.ink,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    modifier = Modifier
-                                        .align(Alignment.TopStart)
-                                        .padding(6.dp)
-                                        .clip(Rahal.shape.sm)
-                                        .background(Rahal.colors.surface.copy(alpha = 0.88f))
-                                        .padding(horizontal = 6.dp, vertical = 2.dp),
-                                )
-                            }
-                            Spacer(Modifier.height(6.dp))
-                            Text(
-                                g.name,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                fontWeight = FontWeight.Bold,
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
-                    }
-                    if (pair.size == 1) Spacer(Modifier.weight(1f))
-                }
-                Spacer(Modifier.height(14.dp))
-            }
-        } else {
-            RahalTextButton(onClick = { vm.back() }) {
-                Text(stringResource(R.string.mn_back), color = Rahal.colors.brand)
-            }
-            Text(
-                open.name,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Spacer(Modifier.height(6.dp))
-            // **وإضافةُ صنفٍ من داخل قسمه كما عند المتجر** — فلا يُعيد اختيارَ ما هو فيه.
-            RahalButton(
-                // **بمعرّف القسم لا باسمه** (٢٠٢٦-١٠-٢٧) — والاسمُ احتياطٌ لقسمٍ قديمٍ بلا معرّف.
-                onClick = {
-                    vm.newItem(
-                        open.sectionId.ifEmpty {
-                            vm.platformSections.firstOrNull { it.name == open.name }?.id.orEmpty()
+    // ══════════════════════════════════════════════════════════════════
+    // **شبكةُ الأصناف نفسُها التي عند المتجر** — `ui.menu.MenuItemsGrid`
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // (طلبُ المالك ٢٠٢٦-١٠-٢٩: «لازم تطبيق المندوب يطبق عليه كلشي تطبق على
+    //  المتجر».) **واسمُ المتجر وسعرُ صرفه فوقها** — ومندوبٌ له عشرةُ عملاء
+    // لا يعرف في أيّهم يُضيف بلا اسمه.
+    val media = { path: String? -> Backend.of(ctx).media(path) }
+    val byId = list.flatMap { it.items }.associateBy { it.id }
+    val open = vm.open
+    BackHandler(enabled = open != null || vm.onlyOff) { vm.back() }
+    com.rahalgo.ui.menu.MenuItemsGrid(
+        groups = vm.groups.map { g ->
+            com.rahalgo.ui.menu.GridGroup(
+                g.name,
+                g.items.map { item ->
+                    val merchant = if (item.merchantPrice > 0) item.merchantPrice else item.price
+                    com.rahalgo.ui.menu.GridItem(
+                        id = item.id,
+                        name = item.name,
+                        description = item.description.trim().ifBlank {
+                            item.modifiers.map { it.name }.filter { it.isNotBlank() }.joinToString(" · ")
                         },
+                        imageUrl = media(item.imageThumbUrl),
+                        // **والدولاريُّ بدولاره وليرته** (٢٠٢٦-١٠-١٢).
+                        price = com.rahalgo.ui.menu.priceLine(merchant, item.merchantPriceUsd),
+                        // **والسعرُ الثاني لا يُعرض إلّا إن كان أعلى** — كما في الويب.
+                        customerPrice = if (item.merchantPrice > 0 && item.price > item.merchantPrice) money(item.price) else null,
+                        available = item.available,
+                        approved = item.approved,
+                        rejected = !item.approved && item.reviewNote.isNotEmpty(),
+                        reviewNote = if (item.approved) "" else item.reviewNote,
+                        closedNow = item.sourceClosed,
                     )
                 },
-                enabled = !vm.busy,
-            ) { Text(stringResource(R.string.mn_add_item)) }
-            Spacer(Modifier.height(10.dp))
-            open.items.forEach { item -> ItemRow(item, vm) }
-        }
-        Spacer(Modifier.height(24.dp))
-    }
-}
-
-
-/**
- * **سطرُ صنف — بصورته وسعره وحاله.**
- *
- * **و«نافد» تُقال بلونٍ لا بغياب**: صنفٌ يختفي حين يُطفأ يُضاف ثانيةً
- * وثالثة، **فتمتلئ القائمةُ نسخاً من الشيء الواحد.**
- *
- * **والسعرُ الثاني لا يُعرض إلّا إن كان أعلى** — كما في الويب حرفا:
- * **ومساواةُ الرقمين تعني «لا هامش»، وعرضُهما متساويين يسأل صاحبَه عن
- * فرقٍ لا وجودَ له.**
- */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun ItemRow(item: MenuItem, vm: MenuViewModel) {
-    val context = LocalContext.current
-    Spacer(Modifier.height(8.dp))
-    Card {
-        Row(
-            Modifier.fillMaxWidth().clickable { vm.editItem(item) },
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            RemoteImage(
-                url = Backend.of(context).media(item.imageThumbUrl),
-                name = item.name,
-                modifier = Modifier.size(46.dp).clip(Rahal.shape.sm),
             )
-            Spacer(Modifier.size(10.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    text = item.name,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodyMedium,
+        },
+        query = vm.query,
+        onQuery = { vm.query = it },
+        openName = open?.name,
+        onlyOff = vm.onlyOff,
+        onAll = { vm.back() },
+        onOnlyOff = { vm.showUnavailable() },
+        onOpen = { name -> vm.groups.firstOrNull { it.name == name }?.let(vm::openGroup) },
+        showTools = true,
+        onPresets = { vm.presets.show() },
+        onBulk = { vm.bulk.show() },
+        onDrinks = { vm.drinks.show() },
+        addLabel = stringResource(R.string.mn_add_item),
+        onAdd = {
+            // **ومن داخل قسمٍ يُضاف إليه** — بمعرّفه، والاسمُ احتياطٌ لقسمٍ قديم.
+            if (open != null) {
+                vm.newItem(
+                    open.sectionId.ifEmpty {
+                        vm.platformSections.firstOrNull { it.name == open.name }?.id.orEmpty()
+                    },
                 )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        // **والدولاريُّ بدولاره وليرته** (٢٠٢٦-١٠-١٢).
-                        text = com.rahalgo.ui.menu.priceLine(
-                            if (item.merchantPrice > 0) item.merchantPrice else item.price, item.merchantPriceUsd),
-                        color = Rahal.colors.inkMuted,
-                        style = MaterialTheme.typography.bodySmall,
+            } else {
+                vm.newItem()
+            }
+        },
+        offerLabel = stringResource(R.string.mn_make_offer),
+        onOffer = onOffers,
+        emptyText = stringResource(R.string.mn_empty),
+        toggleEnabled = !vm.busy,
+        onToggle = { g -> byId[g.id]?.let(vm::toggleAvailable) },
+        onEdit = { g -> byId[g.id]?.let(vm::editItem) },
+        header = {
+            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                Column {
+                    ScreenTitle(
+                        if (vm.merchantName.isNotBlank()) {
+                            stringResource(R.string.mn_items_of, vm.merchantName)
+                        } else {
+                            stringResource(R.string.mn_items)
+                        },
                     )
-                    if (item.merchantPrice > 0 && item.price > item.merchantPrice) {
-                        Spacer(Modifier.size(6.dp))
-                        Text(
-                            text = "← " + money(item.price),
-                            color = Rahal.colors.success,
-                            style = MaterialTheme.typography.labelSmall,
-                        )
-                    }
+                    // **وسعرُ صرف المتجر للقراءة** — يكتبه صاحبُه (قرارُ المالك ٢٠٢٦-١٠-١٢).
+                    com.rahalgo.ui.menu.ExchangeRateCard(rate = vm.exchangeRate, busy = vm.busy, editable = false)
                 }
             }
-        }
-        // **ومجموعاتُ المُعدِّلات تُلمَح في السطر** — كما في الويب:
-        // اسمُها وعددُ خياراتها. **ومن لا يراها لا يعرف أنّ الصنفَ يُطلب
-        // بأحجامٍ أو بإضافات، فيبني ثانياً مثلَه بحجمٍ آخر.**
-        if (item.modifiers.isNotEmpty()) {
-            Spacer(Modifier.height(6.dp))
-            // **وتنزل سطراً ثانياً** (٢٠٢٦-١٠-٢٧) — **وكانت صفّاً لا يلتفّ** فتُقصّ
-            // الثالثةُ عن طرف الشاشة.
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                item.modifiers.forEach { g ->
-                    Chip(g.name + " (" + g.options.size + ")", Rahal.colors.inkMuted)
-                }
-            }
-        }
-        Spacer(Modifier.height(6.dp))
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            // **والمعلَّقُ يحلّ محلّ حال التوفّر** — كما في الويب:
-            // **صنفٌ لم يُنشر بعدُ لا يعني الزبونَ أمتوفّرٌ هو أم نافد.**
-            //
-            // **والمقبولُ بلا شارة** (٢٠٢٦-١٠-٢٧) — **المفتاحُ وكلمتُه تحته يقولان
-            // «متوفر» أصلاً**، وشارةٌ بجانبهما تقول الكلمةَ نفسَها مرّةً ثانية.
-            if (!item.approved) {
-                Chip(
-                    stringResource(
-                        if (item.reviewNote.isNotEmpty()) R.string.mn_rejected
-                        else R.string.mn_pending_review,
-                    ),
-                    Rahal.colors.accent,
-                )
-            }
-            // **و«خارجَ الدوام» يقوله الوقتُ لا صاحبُ المتجر** — ومن
-            // خلط بينهما جعله يطفئ أصنافَه كلَّ ليلةٍ ويشعلها كلَّ صباح.
-            if (item.sourceClosed) {
-                Chip(stringResource(R.string.mn_closed_now), Rahal.colors.accent)
-            }
-            Spacer(Modifier.weight(1f))
-            // **والإتاحةُ زرٌّ لا مفتاح** — كما في الويب: **زرٌّ يقول ما
-            // سيقع، ومفتاحٌ يقول ما هو قائم**، والخلطُ بينهما يجعل من
-            // يقرأ «متوفر» على مفتاحٍ مرفوعٍ يظنّ أنّه يُطفئه بالرفع.
-            // ══════════════════════════════════════════════════════════
-            // **ومفتاحٌ ذكيٌّ بدل زرٍّ يقول الفعل**
-            // ══════════════════════════════════════════════════════════
-            //
-            // (قرارُ المالك ٢٠٢٦-٠٨-٣٠: «ما في داعي لكلمة متوفر، زرّ
-            //  ذكيّ متوفر/غير متوفر».)
-            //
-            // **وكان زرّاً نصُّه ينقلب**: يقول «متوفر» حين يكون متوفراً
-            // فيُقرأ حالاً، **ويُقرأ فعلاً أيضاً** — أيُّهما؟ ومن ضغطه
-            // لم يتيقّن أنّه قلبه أم أكّده.
-            //
-            // **والمفتاحُ لا يلتبس**: موضعُه هو الحال، وقلبُه هو الفعل.
-            // **وهو نفسُه في تطبيق المتجر** — والشاشتان لغرضٍ واحد.
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Switch(
-                    checked = item.available,
-                    onCheckedChange = { vm.toggleAvailable(item) },
-                    enabled = !vm.busy,
-                )
-                Text(
-                    stringResource(
-                        if (item.available) R.string.mn_available
-                        else R.string.mn_unavailable,
-                    ),
-                    color = if (item.available) Rahal.colors.brand else Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.labelSmall,
-                )
-            }
-        }
-        if (!item.approved && item.reviewNote.isNotEmpty()) {
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = item.reviewNote,
-                color = Rahal.colors.danger,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-    }
+        },
+    )
 }
-
-
-
-// **وحُذف `SectionChoice`** (٢٠٢٦-١٠-٢٧) — لا يستدعيه أحدٌ منذ صار المحرّرُ في `:ui`.

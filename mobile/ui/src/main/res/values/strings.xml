@@ -1221,4 +1221,13 @@
     <string name="store_logo_add">+ أضف شعار المتجر</string>
     <string name="store_logo_change">غيّر الشعار</string>
     <string name="ok_logo_saved">✓ حُفظ شعار المتجر</string>
+    <!-- **شبكةُ الأصناف المشتركة بين المتجر والمندوب** (٢٠٢٦-١٠-٢٩). -->
+    <string name="grid_stat_total">عدد الأصناف</string>
+    <string name="grid_stat_off">غير المتوفرة</string>
+    <string name="grid_drinks">المشروبات</string>
+    <string name="grid_all">الكل</string>
+    <string name="grid_off_none">لا توجد أصناف غير متوفرة</string>
+    <string name="grid_search_none">لا يوجد صنف بهذا الاسم</string>
+    <string name="grid_rejected">مرفوض</string>
+    <string name="grid_closed_now">خارج الدوام</string>
 </resources>

@@ -89,12 +89,24 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
     var open by mutableStateOf<ItemGroup?>(null)
         private set
 
+    /** **البحثُ ومرشّحُ «غير المتوفرة»** — كشبكة المتجر (٢٠٢٦-١٠-٢٩). */
+    var query by mutableStateOf("")
+    var onlyOff by mutableStateOf(false)
+        private set
+
     fun openGroup(g: ItemGroup) {
         open = g
+        onlyOff = false
+    }
+
+    fun showUnavailable() {
+        open = null
+        onlyOff = true
     }
 
     fun back() {
         open = null
+        onlyOff = false
     }
 
     /**
@@ -178,6 +190,9 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
         merchantID = id
         merchantName = name
         sections = null
+        open = null
+        onlyOff = false
+        query = ""
         editing = null
         loadedDraft = null
         editError = ""
