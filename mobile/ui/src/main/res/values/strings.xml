@@ -817,7 +817,7 @@
     <string name="bulk_amount">المبلغ</string>
     <string name="bulk_bad_amount">اكتب مبلغاً أكبر من صفر</string>
     <string name="bulk_go">تطبيق</string>
-    <string name="bulk_ask_count">سيتغيّر سعر %1$s صنفاً</string>
+    <string name="bulk_ask_count">عدد الأصناف التي سيتغيّر سعرها: %1$s</string>
     <string name="act_confirm">تأكيد</string>
     <string name="drinks_delete">حذف المشروب</string>
     <string name="drinks_price">السعر</string>

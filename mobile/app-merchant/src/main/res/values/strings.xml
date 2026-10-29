@@ -494,7 +494,6 @@
     <string name="store_point_change">غيّر الموقع</string>
     <string name="store_emergency_q">إغلاق متجرك الآن؟</string>
     <string name="store_settings_title">إعدادات المتجر</string>
-    <string name="md_none_hint">املأ الاستمارة في الأعلى واضغط «اطلب سائقاً»</string>
     <string name="menu_search_none">لا يوجد صنف بهذا الاسم</string>
     <string name="menu_off_none">لا توجد أصناف غير متوفرة</string>
     <string name="sales_range">من %1$s إلى %2$s</string>

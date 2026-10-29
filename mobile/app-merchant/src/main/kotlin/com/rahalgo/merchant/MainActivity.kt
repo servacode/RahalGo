@@ -728,7 +728,17 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                         } else if (menuVm.sections.isEmpty() && !menuVm.loading) {
                             NeedSections { storeVm.page = com.rahalgo.merchant.store.StorePage.Sections; tab = Tab.Store }
                         } else {
-                            MenuScreen(menuVm)
+                            // **وبعد الحفظ أو الإلغاء يعود إلى «الأصناف»** (فحصُ ٢٠٢٦-١٠-٢٩) — كان
+                            // يبقى على تبويب الإضافة فيرى الشبكةَ بلا «أنشئ عرضاً».
+                            var opened by remember { mutableStateOf(false) }
+                            LaunchedEffect(menuVm.editing != null) {
+                                if (menuVm.editing != null) opened = true
+                                else if (opened) tab = Tab.Menu
+                            }
+                            MenuScreen(
+                                menuVm,
+                                onOffer = { overlay.show(Overlay.Menu(MerchantItems.OFFERS)) },
+                            )
                         }
                     }
 

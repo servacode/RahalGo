@@ -990,7 +990,7 @@ private fun RecentDeliveries(vm: DeliveryViewModel, onOpen: (String) -> Unit) {
             Text(stringResource(R.string.md_loading), color = Rahal.colors.inkMuted)
         // **والفارغُ بالقطعة المشتركة** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كبقيّة الشاشات، ويقول ماذا يفعل.
         rows != null && rows.isEmpty() ->
-            com.rahalgo.ui.Empty(stringResource(R.string.md_none), hint = stringResource(R.string.md_none_hint))
+            com.rahalgo.ui.Empty(stringResource(R.string.md_none))
         rows != null -> rows.take(5).forEach { d ->
             DeliveryRow(d, cancelling = vm.cancelling != null, onOpen = { onOpen(d.id) }) { vm.cancel(d.id) }
         }
@@ -1307,7 +1307,7 @@ fun DeliveryHistoryScreen(vm: DeliveryHistoryViewModel) {
             rows == null && vm.error.isEmpty() ->
                 com.rahalgo.ui.LoadState(loading = true, error = "")
             rows != null && rows.isEmpty() ->
-                com.rahalgo.ui.Empty(stringResource(R.string.md_none), hint = stringResource(R.string.md_none_hint))
+                com.rahalgo.ui.Empty(stringResource(R.string.md_none))
             rows != null -> rows.forEach { d ->
                 DeliveryRow(d, cancelling = vm.cancelling != null, onOpen = { tracking = d.id }) { vm.cancel(d.id) }
             }
