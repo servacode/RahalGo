@@ -123,7 +123,7 @@ internal val TouchTarget = 44.dp
 private val NumberFieldWidth = 84.dp
 
 /** **حقلُ سعر الخيار في سطره الثاني** — أعرضُ من حقل الغرام ليتّسع لتسميته. */
-private val PriceFieldWidth = 128.dp
+private val PriceFieldWidth = 92.dp
 
 /** **العدّادُ يظهر حين يبقى من الحدّ هذا العددُ أو أقلّ.** */
 private const val NameWarnAt = 5
@@ -763,12 +763,12 @@ private fun GroupCard(
                 }
             }
             Spacer(Modifier.width(Rahal.space.sm))
-            // **وحذفُ المجموعة رماديّ** — الأحمرُ لحذف الصنف وحدَه (مراجعةُ ٢٠٢٦-١٠-٢٩).
+            // **والحذفُ أحمرُ مميَّز** (قرارُ المالك ٢٠٢٦-١٠-٢٩).
             IconButton(onClick = onRemove, enabled = !busy, modifier = Modifier.size(TouchTarget)) {
                 Icon(
                     painter = painterResource(R.drawable.ic_trash),
                     contentDescription = stringResource(R.string.mod_remove_group),
-                    tint = Rahal.colors.inkMuted,
+                    tint = Rahal.colors.danger,
                 )
             }
         }
@@ -878,31 +878,25 @@ private fun OptionRow(
     second: (@Composable RowScope.() -> Unit)? = null,
     fields: @Composable RowScope.() -> Unit,
 ) {
-    Column(Modifier.fillMaxWidth().padding(vertical = Rahal.space.xs)) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            fields()
-            if (second == null) {
-                Spacer(Modifier.width(Rahal.space.xs))
-                AvailSwitch(available, busy, onAvailable)
-            }
-            // **والحذفُ رماديّ** — الأحمرُ لحذف الصنف وحدَه.
-            IconButton(onClick = onDelete, enabled = !busy, modifier = Modifier.size(TouchTarget)) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_trash),
-                    contentDescription = stringResource(R.string.mod_opt_delete),
-                    tint = Rahal.colors.inkMuted,
-                )
-            }
-        }
+    // **سطرٌ واحدٌ للخيار** (قرارُ المالك ٢٠٢٦-١٠-٢٩: «صغير ما بدها كل هالمربع») —
+    // الاسمُ ثمّ السعرُ الإضافيّ ثمّ التوفّر ثمّ الحذفُ أحمرَ مميَّزاً.
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = Rahal.space.xs),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        fields()
         if (second != null) {
-            Spacer(Modifier.height(Rahal.space.xs))
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                second()
-                Spacer(Modifier.weight(1f))
-                AvailSwitch(available, busy, onAvailable)
-                // **محاذاةٌ مع السطر الأوّل** — المفتاحُ يقف حيث يقف تحت السلّة.
-                Spacer(Modifier.width(TouchTarget))
-            }
+            Spacer(Modifier.width(Rahal.space.xs))
+            second()
+        }
+        Spacer(Modifier.width(Rahal.space.xs))
+        AvailSwitch(available, busy, onAvailable)
+        IconButton(onClick = onDelete, enabled = !busy, modifier = Modifier.size(TouchTarget)) {
+            Icon(
+                painter = painterResource(R.drawable.ic_trash),
+                contentDescription = stringResource(R.string.mod_opt_delete),
+                tint = Rahal.colors.danger,
+            )
         }
     }
 }
@@ -916,7 +910,7 @@ private fun AvailSwitch(available: Boolean, busy: Boolean, onAvailable: (Boolean
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
             stringResource(if (available) R.string.mn_available else R.string.mn_unavailable),
-            color = if (available) Rahal.colors.success else Rahal.colors.inkMuted,
+            color = if (available) Rahal.colors.success else Rahal.colors.danger,
             style = MaterialTheme.typography.labelSmall,
             maxLines = 1,
         )

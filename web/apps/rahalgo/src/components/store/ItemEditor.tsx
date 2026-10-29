@@ -737,7 +737,7 @@ export default function ItemEditor({
                 disabled={busy}
                 onClick={() => removeGroup(gi)}
                 data-testid="item-group-remove"
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control border border-line text-ink-muted hover:bg-row-hover hover:text-ink disabled:opacity-50"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control border border-danger-edge text-danger hover:bg-row-hover disabled:opacity-50"
               >
                 <IconDelete size={18} />
               </button>
@@ -1002,7 +1002,7 @@ function OptionRow({
             }`}
           />
         </button>
-        <span className={`text-2xs font-bold ${available ? "text-success" : "text-ink-muted"}`}>
+        <span className={`text-2xs font-bold ${available ? "text-success" : "text-danger"}`}>
           {available ? I.optAvailable : I.unavailable}
         </span>
       </span>
@@ -1012,7 +1012,7 @@ function OptionRow({
         title={I.optDelete}
         disabled={busy}
         onClick={onDelete}
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-row-hover hover:text-ink disabled:opacity-50"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control text-danger hover:bg-row-hover disabled:opacity-50"
       >
         <IconDelete size={18} />
       </button>
