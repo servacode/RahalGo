@@ -517,7 +517,11 @@ func (s *Service) NotifyRoles(ctx context.Context, roles []string, in Input) {
 
 // List إشعارات المستخدم (الأحدث أولاً) مع عدد غير المقروء.
 // kind فارغ = كل الأنواع (الجرس يطلب الأحدث، والصفحة الكاملة تفلتر وتوسّع الحد).
-func (s *Service) List(ctx context.Context, userID string, limit int, kind string) ([]Notification, int, error) {
+//
+// **وapp يحصر الصندوقَ بتطبيقه** (فحصُ ٢٠٢٦-١٠-٢٩): صاحبُ المتجر حسابٌ واحد، **وكان
+// يرى في تطبيق المتجر ترويجَ الزبائن** («شو بدك تتغدى اليوم؟»). فارغٌ = كلُّ شيء،
+// وإلّا فما خصّ هذا التطبيقَ أو لم يخصّ تطبيقاً بعينه (`push_apps` خاوية).
+func (s *Service) List(ctx context.Context, userID string, limit int, kind, app string) ([]Notification, int, error) {
 	if limit <= 0 || limit > 200 {
 		limit = 30
 	}
@@ -527,7 +531,8 @@ func (s *Service) List(ctx context.Context, userID string, limit int, kind strin
 		FROM notifications
 		 WHERE user_id = $1 AND ($3 = '' OR kind = $3)
 		   AND kind <> ALL($4::text[])
-		ORDER BY created_at DESC LIMIT $2`, userID, limit, kind, InboxHidden())
+		   AND ($5 = '' OR cardinality(push_apps) = 0 OR $5 = ANY(push_apps))
+		ORDER BY created_at DESC LIMIT $2`, userID, limit, kind, InboxHidden(), app)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -547,8 +552,9 @@ func (s *Service) List(ctx context.Context, userID string, limit int, kind strin
 	var unread int
 	_ = s.db.QueryRow(ctx, `
 		SELECT count(*) FROM notifications
-		 WHERE user_id = $1 AND read_at IS NULL AND kind <> ALL($2::text[])`,
-		userID, InboxHidden()).Scan(&unread)
+		 WHERE user_id = $1 AND read_at IS NULL AND kind <> ALL($2::text[])
+		   AND ($3 = '' OR cardinality(push_apps) = 0 OR $3 = ANY(push_apps))`,
+		userID, InboxHidden(), app).Scan(&unread)
 	return out, unread, rows.Err()
 }
 

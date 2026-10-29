@@ -80,7 +80,7 @@ const ANDROID_HINT = {
 function Bell() {
   // **والخروجُ يُلغي اشتراكَ إشعارات المتصفّح** — كما في قشرة الزبون.
   useEffect(() => onLogout(() => void dropWebPushOnLogout()), []);
-  const notif = useLiveNotifications(api, wsBase(), tokenStore.access);
+  const notif = useLiveNotifications(api, wsBase(), tokenStore.access, "merchant");
   return (
     <>
       <NotificationBell unread={notif.unread} Link={Link} allHref="/store/notifications" />

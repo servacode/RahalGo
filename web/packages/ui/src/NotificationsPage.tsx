@@ -86,14 +86,17 @@ function dayLabel(iso: string): string {
 export function NotificationsPage({
   api,
   Link,
+  app = "",
 }: {
   api: ApiFn;
   Link: LinkType;
+  /** **صندوقُ هذا التطبيق وحدَه** — انظر `useLiveNotifications`. */
+  app?: string;
 }) {
   const [kind, setKind] = useState("");
 
   const { data, loading, error, reload } = useLiveData<Feed>(
-    () => api(`/api/v1/me/notifications?limit=200${kind ? `&kind=${kind}` : ""}`),
+    () => api(`/api/v1/me/notifications?limit=200${kind ? `&kind=${kind}` : ""}${app ? `&app=${app}` : ""}`),
     ["order", "ticket", "wallet", "rating", "lead", "account", READ_EVENT],
     // **والنوعُ يُعيد الجلب** — بدونه تُضيء الشريحةُ ولا تُنادى الشبكة.
     [kind],

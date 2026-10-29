@@ -66,7 +66,7 @@ func TestOfferPush_RowQueuedForClosedApp(t *testing.T) {
 	}
 
 	// **ولا يُعرض في الصندوق ولا يُعَدّ في شارته** — قرارُ ٢٠٢٦-٠٨-١٤ باقٍ.
-	items, unread, err := notif.List(ctx, f.drivers[0], 200, "")
+	items, unread, err := notif.List(ctx, f.drivers[0], 200, "", "")
 	if err != nil {
 		t.Fatalf("الصندوق: %v", err)
 	}

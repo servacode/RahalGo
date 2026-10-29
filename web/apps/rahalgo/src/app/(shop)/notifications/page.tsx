@@ -18,5 +18,5 @@ export default function Page() {
   const { user, loading } = useAuth();
   if (loading) return <LoadingState variant="list" rows={3} />;
   if (!user) return <NeedLogin />;
-  return <NotificationsPage api={api} Link={Link} />;
+  return <NotificationsPage api={api} Link={Link} app="customer" />;
 }

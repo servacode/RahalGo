@@ -75,7 +75,7 @@ const BARE = ["/login", "/signup", "/forgot"];
 function Bell() {
   // **والخروجُ يُلغي اشتراكَ إشعارات المتصفّح** — من دخل بعده لا تصله إشعاراتُ غيره.
   useEffect(() => onLogout(() => void dropWebPushOnLogout()), []);
-  const notif = useLiveNotifications(api, wsBase(), tokenStore.access);
+  const notif = useLiveNotifications(api, wsBase(), tokenStore.access, "customer");
   return (
     <>
       <NotificationBell unread={notif.unread} Link={Link} allHref="/notifications" />

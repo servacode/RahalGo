@@ -1,6 +1,7 @@
 package server
 
 import (
+	"github.com/servacode/rahalgo/backend/internal/identity"
 	"net/http"
 	"strconv"
 
@@ -187,7 +188,8 @@ var notifTitles = struct {
 
 func (s *Server) handleMyNotifications(w http.ResponseWriter, r *http.Request) {
 	limit, _ := strconv.Atoi(r.URL.Query().Get("limit"))
-	items, unread, err := s.notify.List(r.Context(), userIDFrom(r), limit, r.URL.Query().Get("kind"))
+	app := inboxApp(r)
+	items, unread, err := s.notify.List(r.Context(), userIDFrom(r), limit, r.URL.Query().Get("kind"), app)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -198,8 +200,9 @@ func (s *Server) handleMyNotifications(w http.ResponseWriter, r *http.Request) {
 		// **ولا يُعَدّ نوعٌ لا يُعرَض** — **وصفُّ المحادثة حدثُ نقلٍ
 		// لا خبرٌ في صندوق** (`notifications.KindChat`).
 		`SELECT kind, count(*) FROM notifications
-		  WHERE user_id = $1 AND kind <> ALL($2::text[]) GROUP BY kind`,
-		userIDFrom(r), notifications.InboxHidden())
+		  WHERE user_id = $1 AND kind <> ALL($2::text[])
+		    AND ($3 = '' OR cardinality(push_apps) = 0 OR $3 = ANY(push_apps)) GROUP BY kind`,
+		userIDFrom(r), notifications.InboxHidden(), app)
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {
@@ -227,4 +230,18 @@ func (s *Server) handleMarkNotificationRead(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})
+}
+
+// inboxApp **تطبيقُ الصندوق** — من ترويسة العميل (`android-merchant` ⇒ `merchant`)، أو من
+// `?app=` للويب (لوحةُ المتجر تقول `merchant`). **ومجهولٌ يعني كلَّ الإشعارات** كما كان.
+func inboxApp(r *http.Request) string {
+	_, app := identity.SplitClient(identity.ClientFrom(r.Context()))
+	if app == "" {
+		app = r.URL.Query().Get("app")
+	}
+	switch app {
+	case notifications.AppCustomer, notifications.AppDriver, notifications.AppMerchant, notifications.AppRep:
+		return app
+	}
+	return ""
 }

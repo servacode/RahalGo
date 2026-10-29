@@ -99,6 +99,9 @@ func (s *Server) handleBroadcast(w http.ResponseWriter, r *http.Request) {
 		Title: title,
 		Body:  clip(strings.TrimSpace(req.Body), 500),
 		Href:  strings.TrimSpace(req.Href),
+		// **وكلُّ دورٍ إلى تطبيقه** (فحصُ ٢٠٢٦-١٠-٢٩) — صاحبُ المتجر زبونٌ أيضاً، **وإعلانُ
+		// الزبائن كان يظهر في تطبيق متجره.**
+		Apps: broadcastApps(roles),
 	})
 
 	s.audit(r, "ops.broadcast", "notification", "", map[string]any{
@@ -117,6 +120,21 @@ func parseRoles(raw string) []string {
 		x = strings.TrimSpace(x)
 		if broadcastRoles[x] {
 			out = append(out, x)
+		}
+	}
+	return out
+}
+
+// broadcastApps **تطبيقاتُ الأدوار المختارة** — الزبون ⇒ تطبيق الزبون، والمندوب (`sales`) ⇒ تطبيقه.
+func broadcastApps(roles []string) []string {
+	to := map[string]string{
+		"customer": notifications.AppCustomer, "driver": notifications.AppDriver,
+		"merchant": notifications.AppMerchant, "sales": notifications.AppRep,
+	}
+	out := []string{}
+	for _, r := range roles {
+		if a, ok := to[r]; ok {
+			out = append(out, a)
 		}
 	}
 	return out

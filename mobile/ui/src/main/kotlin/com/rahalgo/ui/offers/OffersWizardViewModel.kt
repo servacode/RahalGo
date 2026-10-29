@@ -239,6 +239,8 @@ abstract class OffersWizardViewModel(app: Application) : AndroidViewModel(app) {
         if (stopping != null) return
         stopping = offerId
         error = ""
+        // **ورسالةُ «تمّ الإنشاء» تُطوى** (فحصُ ٢٠٢٦-١٠-٢٩) — كانت تبقى فوق عرضٍ صار «موقوفاً».
+        createdShown = false
         viewModelScope.launch {
             try {
                 val updated = offers.stop(merchantID, offerId)

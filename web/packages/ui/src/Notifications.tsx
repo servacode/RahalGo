@@ -294,7 +294,8 @@ export function AlertSoundControl() {
   );
 }
 
-export function useLiveNotifications(api: ApiFn, wsUrl: string, token: string | null) {
+/** `app`: **صندوقُ هذا التطبيق وحدَه** — لوحةُ المتجر `merchant` والموقعُ `customer` (٢٠٢٦-١٠-٢٩). */
+export function useLiveNotifications(api: ApiFn, wsUrl: string, token: string | null, app = "") {
   useEffect(installAbortGuard, []);
   const chime = useChime();
   const [items, setItems] = useState<AppNotification[]>([]);
@@ -303,13 +304,13 @@ export function useLiveNotifications(api: ApiFn, wsUrl: string, token: string | 
 
   const refresh = useCallback(async () => {
     try {
-      const d = await api<{ items: AppNotification[]; unread: number }>("/api/v1/me/notifications");
+      const d = await api<{ items: AppNotification[]; unread: number }>(`/api/v1/me/notifications${app ? `?app=${app}` : ""}`);
       setItems(d.items);
       setUnread(d.unread);
     } catch {
       /* تجاهل */
     }
-  }, [api]);
+  }, [api, app]);
 
   useEffect(() => {
     void refresh();
