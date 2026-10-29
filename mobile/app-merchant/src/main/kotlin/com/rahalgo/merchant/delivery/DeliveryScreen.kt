@@ -592,9 +592,9 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
             horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
         ) {
             listOf(
-                Triple("send", R.string.md_mode_send, R.string.md_mode_send_sub),
-                Triple("fetch", R.string.md_mode_fetch, R.string.md_mode_fetch_sub),
-            ).forEach { (key, label, sub) ->
+                "send" to R.string.md_mode_send,
+                "fetch" to R.string.md_mode_fetch,
+            ).forEach { (key, label) ->
                 val on = vm.mode == key
                 Column(
                     Modifier
@@ -615,13 +615,6 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.titleLarge,
                         color = if (on) Rahal.colors.brand else Rahal.colors.ink,
-                    )
-                    Spacer(Modifier.height(Rahal.space.xs))
-                    Text(
-                        stringResource(sub),
-                        color = Rahal.colors.inkMuted,
-                        style = MaterialTheme.typography.bodySmall,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     )
                 }
             }

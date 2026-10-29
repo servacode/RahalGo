@@ -83,7 +83,7 @@ function CurrencyDots({ value, disabled, onPick }: { value: "SYP" | "USD"; disab
   );
 }
 
-function ModeButton({ on, title, sub, onClick, disabled }: { on: boolean; title: string; sub: string; onClick: () => void; disabled: boolean }) {
+function ModeButton({ on, title, onClick, disabled }: { on: boolean; title: string; onClick: () => void; disabled: boolean }) {
   return (
     <button
       type="button"
@@ -96,7 +96,6 @@ function ModeButton({ on, title, sub, onClick, disabled }: { on: boolean; title:
       }`}
     >
       <span className="heading-card">{title}</span>
-      <span className="text-xs text-ink-muted">{sub}</span>
     </button>
   );
 }
@@ -499,8 +498,8 @@ export default function DeliveryPage() {
       )}
 
       <div className="flex gap-3">
-        <ModeButton on={mode === "send"} title={D.modeSend} sub={D.modeSendSub} disabled={busy} onClick={() => pickMode("send")} />
-        <ModeButton on={mode === "fetch"} title={D.modeFetch} sub={D.modeFetchSub} disabled={busy} onClick={() => pickMode("fetch")} />
+        <ModeButton on={mode === "send"} title={D.modeSend} disabled={busy} onClick={() => pickMode("send")} />
+        <ModeButton on={mode === "fetch"} title={D.modeFetch} disabled={busy} onClick={() => pickMode("fetch")} />
       </div>
 
       {sent && <Alert tone="success">{D.sent}</Alert>}

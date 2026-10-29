@@ -367,8 +367,6 @@
     <!-- قرارات المالك ٢٠٢٦-١٠-١٥: الوضعان، المبلغ من المستلم، ولا دين -->
     <string name="md_mode_send">توصيل</string>
     <string name="md_mode_fetch">إحضار</string>
-    <string name="md_mode_send_sub">يأخذ السائق الغرض منك ويوصله إلى المستلم</string>
-    <string name="md_mode_fetch_sub">يذهب السائق إلى العنوان، ويأخذ الغرض، ويحضره إليك</string>
     <string name="md_name_fetch">اسم الشخص في مكان الاستلام</string>
     <string name="md_phone_fetch">رقم الشخص في مكان الاستلام</string>
     <string name="md_address_fetch">عنوان مكان الاستلام</string>
