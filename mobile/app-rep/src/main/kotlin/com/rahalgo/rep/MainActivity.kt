@@ -112,6 +112,11 @@ import com.rahalgo.ui.DrawerGestures
  */
 class MainActivity : ComponentActivity() {
 
+    // **والأرقامُ بالأجنبيّة** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — كما في المتجر، انظر `WesternDigits`.
+    override fun attachBaseContext(base: android.content.Context) {
+        super.attachBaseContext(com.rahalgo.ui.WesternDigits.wrap(base))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // **ومراقبُ الشبكة يُسجَّل مرّةً** — انظر `Net`: **مراقبٌ لكلّ
@@ -230,6 +235,12 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
     // **والتبويبُ يُغلق شاشةَ المتجر المفتوحة** (الخطوة ١٥) — رُئي على الجهاز:
     // «عملائي» ضُغط وشاشةُ الأصناف باقيةٌ فوقه، **فلا يعرف أنّه ضغط.**
     // الأصنافُ والعروضُ تُفتح بمعرّف المتجر لا بطبقة، فلا يمحوها `overlay.clear`.
+    // **عرضٌ جديدٌ لعميل** — وتُمحى علامةُ «أُنشئ» السابقة، وإلّا أعادت النموذجَ إلى القائمة.
+    fun newOffer(id: String, name: String) {
+        offersVm.clearCreated()
+        offersVm.open(id, name)
+    }
+
     fun leaveStore() {
         overlay.clear()
         menuVm.close()
@@ -455,19 +466,32 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                 if (over != Overlay.None) BackHandler { overlay.clear() }
                 when {
                     over is Overlay.Menu && PlatformPages.has(over.key) ->
-                        PlatformScreen(vm = pagesVm, key = over.key, role = HelpRole.Rep)
+                        // **وصفحاتُ الدرج بسهم رجوع** — كما في تطبيق المتجر (مراجعةُ المالك ٢٠٢٦-١٠-٣٠).
+                        PlatformScreen(vm = pagesVm, key = over.key, role = HelpRole.Rep, onBack = { overlay.clear() })
 
                     over is Overlay.Menu && over.key == RepItems.REWARDS -> {
                         LaunchedEffect(Unit) { goalsVm.load() }
-                        IncentivesScreen(goalsVm)
+                        IncentivesScreen(goalsVm, onBack = { overlay.clear() })
                     }
 
-                    over == Overlay.Wallet -> WalletScreen(vm = walletVm, payouts = true)
+                    over == Overlay.Wallet -> WalletScreen(vm = walletVm, payouts = true, onBack = { overlay.clear() })
 
+                    // **ولا سهمَ في الإشعارات** — الجرسُ يفتحها ويُغلقها (قرارُ المالك).
                     over == Overlay.Inbox -> InboxSheet(
                         items = shell.inbox.orEmpty(),
                         onMarkAll = shell::markAllRead,
-                        onOpen = shell::markOneRead,
+                        // **وخبرُ العميل يفتح عميلَه** (مراجعةُ المالك ٢٠٢٦-١٠-٣٠) — نوعُ `lead`
+                        // ومتنُه يبدأ باسم المتجر. **وغيرُه يُعلَّم مقروءاً فقط.**
+                        onOpen = { n ->
+                            shell.markOneRead(n)
+                            if (n.kind == "lead") {
+                                overlay.clear()
+                                leaveStore()
+                                clientsVm.closeDetail()
+                                clientsVm.openByName(n.body.substringBefore(" — ").trim())
+                                tab = Tab.Clients
+                            }
+                        },
                     )
 
                     // ══════════════════════════════════════════════
@@ -539,20 +563,23 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                     // ولا يُخطئ متجراً بمتجر.**
                     offersVm.merchantID.isNotEmpty() -> {
                         BackHandler { offersVm.close() }
-                        com.rahalgo.ui.offers.OffersWizard(offersVm)
+                        // **«إنشاء عرض» يفتح النموذجَ مباشرةً** بسهم رجوع (مراجعةُ المالك ٢٠٢٦-١٠-٣٠).
+                        com.rahalgo.ui.offers.OffersWizard(offersVm, onBack = { offersVm.close() }, startNew = true)
                     }
 
                     menuVm.merchantID.isNotEmpty() -> MenuScreen(
                         vm = menuVm,
-                        onOffers = { offersVm.open(menuVm.merchantID, menuVm.merchantName) },
+                        onOffers = { newOffer(menuVm.merchantID, menuVm.merchantName) },
                     )
 
                     // **وفعلا البطاقة يفتحان ما يفتحه الدخولُ نفسُه** —
                     // (طلبُ المالك ٢٠٢٦-٠٩-٣٠) **فلا بابان لفعلٍ واحد.**
                     tab == Tab.Clients -> ClientsScreen(
                         vm = clientsVm,
-                        onOpenMenu = { id, name -> menuVm.open(id, name) },
-                        onOpenOffers = { id, name -> offersVm.open(id, name) },
+                        // **«إضافة صنف» تفتح محرّرَ صنفٍ جديد مباشرةً** (مراجعةُ المالك ٢٠٢٦-١٠-٣٠)
+                        // — والإلغاءُ يرجع إلى أصناف العميل.
+                        onOpenMenu = { id, name -> menuVm.open(id, name); menuVm.newItem() },
+                        onOpenOffers = { id, name -> newOffer(id, name) },
                         // **والقائمةُ الفارغةُ تنقله إلى حيث يُسجَّل** (٢٠٢٦-١٠-٢٧).
                         onAddClient = { tab = Tab.AddClient; leaveStore() },
                         // **«بحاجة معلومات» تُصلَح في نموذج الإضافة نفسِه** (٢٠٢٦-١٠-٢٧).

@@ -83,14 +83,16 @@ const PAIRS = [
   [web.addItem, "mn_item_new"],
   [web.editItem, "mn_item_edit"],
   [web.itemName, "mn_item_name"],
-  [web.itemDescription, "mn_desc"],
+  // **وألفاظُ المندوب هي ألفاظُ المتجر** (مراجعةُ المالك ٢٠٢٦-١٠-٣٠): «السعر»
+  // و«قسم السوق» و«وصف مختصر» — من `:ui` لا من نسخةٍ خاصّةٍ بالمندوب.
+  [web.itemDescription, "item_desc"],
   [web.itemImage, "item_pick_image"],
-  [web.price, "mn_price"],
+  [web.price, "item_price"],
   [web.available, "mn_available"],
   [web.unavailable, "mn_unavailable"],
   [web.confirmDeleteItem, "item_delete_ask"],
-  [web.platformSection, "mn_platform_section"],
-  [web.noPlatformSectionHint, "mn_no_platform_section_hint"],
+  [web.platformSection, "item_section"],
+  // **ولا سطرَ تنبيهٍ تحت القسم في التطبيق** — لا سطورَ شرحٍ (قرارُ المالك).
   // **ولا «بانتظار المراجعة» ولا «مرفوض» في الويب** — رُفعت مراجعةُ الأصناف
   // (قرارُ المالك ٢٠٢٦-١٠-٠٤). وبقيت نصوصُها في تطبيقَي المتجر والمندوب
   // المغلقَين بلا أثر: لا صنفَ معلَّقاً بعد هجرة ٠٢٠٠.

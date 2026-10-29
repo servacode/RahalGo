@@ -150,10 +150,10 @@ fun MenuScreen(vm: MenuViewModel, onOffers: () -> Unit = {}) {
             // بعد، **ومن أراد قسماً جديداً لم يجد إليه سبيلاً.** **بل
             // تُقدَّم أقسامُه ويبقى ما سواها خلفها** — فينال السرعةَ ولا
             // يفقد القدرة.
+            // **وأقسامُ المتجر المختارةُ وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٢٩: «ماتطلع كل الأقسام
+            // للمندوب») — كما في تطبيق المتجر. **ومتجرٌ لم يختر بعدُ يرى الكلّ** فلا يُحبس.
             sections = run {
-                val mine = vm.sections.orEmpty().map { it.id }.toSet()
-                (vm.platformSections.filter { it.id in mine } +
-                    vm.platformSections.filter { it.id !in mine })
+                vm.storeSections.ifEmpty { vm.platformSections }
                     .map {
                         // **وصورةُ القسم من القسم** — **وكانت تُمرَّر
                         // فارغةً فيرسم المحرّرُ حرفاً بدل وجهِ السوق.**
@@ -171,13 +171,9 @@ fun MenuScreen(vm: MenuViewModel, onOffers: () -> Unit = {}) {
             onSave = { vm.saveItem() },
             onCancel = { vm.cancelEdit() },
             onDelete = { vm.editing?.itemId?.let(vm::deleteItem) },
-            // **وألفاظُ المندوب هي ألفاظُ الويب حرفاً** — يحرسها
-            // `pnpm check:menu-parity`. **والمتجرُ يقرأ غيرَها** لأنّه
-            // يكتب سعرَ نفسِه لا سعرَ متجرِ غيره.
-            priceLabel = R.string.mn_price,
-            descLabel = R.string.mn_desc,
-            sectionLabel = R.string.mn_platform_section,
-            sectionHint = R.string.mn_no_platform_section_hint,
+            // **وألفاظُ المندوب هي ألفاظُ المتجر** (مراجعةُ المالك ٢٠٢٦-١٠-٣٠):
+            // «السعر» و«قسم السوق» و«وصف مختصر» — الافتراضيّةُ في المحرّر، ولا
+            // سطرَ تنبيهٍ تحت القسم. ويحرسها `pnpm check:menu-parity`.
             presets = vm.presets.chosen,
             onDuplicate = { vm.editing?.itemId?.let(vm::duplicate) },
             dirty = vm.dirty,
@@ -262,13 +258,16 @@ fun MenuScreen(vm: MenuViewModel, onOffers: () -> Unit = {}) {
         header = {
             item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                 Column {
-                    ScreenTitle(
-                        if (vm.merchantName.isNotBlank()) {
+                    // **وسهمُ رجوعٍ إلى العميل** (مراجعةُ المالك ٢٠٢٦-١٠-٣٠) — ومن داخل قسمٍ يرجع درجة.
+                    com.rahalgo.ui.PageHeader(
+                        title = if (vm.merchantName.isNotBlank()) {
                             stringResource(R.string.mn_items_of, vm.merchantName)
                         } else {
                             stringResource(R.string.mn_items)
                         },
+                        onBack = { if (vm.open != null || vm.onlyOff) vm.back() else vm.close() },
                     )
+                    Spacer(Modifier.height(Rahal.space.sm))
                     // **وسعرُ صرف المتجر للقراءة** — يكتبه صاحبُه (قرارُ المالك ٢٠٢٦-١٠-١٢).
                     com.rahalgo.ui.menu.ExchangeRateCard(rate = vm.exchangeRate, busy = vm.busy, editable = false)
                 }

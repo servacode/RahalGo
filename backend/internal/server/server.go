@@ -921,6 +921,9 @@ func (s *Server) Router() http.Handler {
 			r.Group(func(r chi.Router) {
 				r.Use(s.repMenuGuard)
 				r.Get("/stores/{id}/menu", s.handleRepMenu)
+				r.Get("/stores/{id}/sections", s.handleRepStoreSections)
+				r.Get("/stores/{id}/hours", s.handleRepGetHours)
+				r.Put("/stores/{id}/hours", s.handleRepSetHours)
 				// **ولا يكتب المندوبُ سعرَ الصرف** (قرارُ المالك ٢٠٢٦-١٠-١٢: «المندوب ما يغيّره
 				// أبداً، يجي من صفحة المتجر وللقراءة فقط عنده») — يقرؤه من تفصيل متجره.
 				// ══════════════════════════════════════════════════

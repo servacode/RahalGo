@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.rahalgo.shared.merchant.DayHours
 import com.rahalgo.shared.rep.Lead
 import com.rahalgo.shared.rep.RepApi
 import com.rahalgo.shared.rep.RepMerchant
@@ -110,6 +111,8 @@ class ClientsViewModel(app: Application) : AndroidViewModel(app) {
         if (id.isEmpty()) return
         openId = id
         detail = null
+        hoursOpen = false
+        loadHours(id)
         busy = true
         viewModelScope.launch {
             try {
@@ -204,6 +207,84 @@ class ClientsViewModel(app: Application) : AndroidViewModel(app) {
     fun closeDetail() {
         openId = ""
         detail = null
+        hoursOpen = false
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **ساعاتُ دوام عميله** (قرارُ المالك ٢٠٢٦-١٠-٣٠)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **بالمخطّط نفسِه الذي في تطبيق المتجر** (`com.rahalgo.ui.hours`) — والأيّامُ
+    // السبعةُ تُجلب مع فتح العميل، **والحفظُ بها معاً** (`setStoreHours`).
+
+    /** **الأيّامُ السبعة لعميله المفتوح** — وفارغةٌ حتّى تصل. */
+    var hours by mutableStateOf<List<DayHours>>(emptyList())
+        private set
+
+    /** **صفحةُ «ساعات الدوام» مفتوحة** فوق تفصيل العميل. */
+    var hoursOpen by mutableStateOf(false)
+
+    var hoursSaving by mutableStateOf(false)
+        private set
+
+    /** **أضُبط دوامُه؟** — من بطاقته في القائمة (`has_hours`). */
+    val hoursSet: Boolean
+        get() = merchants.orEmpty().firstOrNull { it.id == openId }?.hasHours == true
+
+    var hoursLoading by mutableStateOf(false)
+        private set
+    var hoursError by mutableStateOf("")
+        private set
+
+    private fun loadHours(id: String) {
+        hours = emptyList()
+        hoursLoading = true
+        hoursError = ""
+        viewModelScope.launch {
+            try {
+                val got = api.storeHours(id)
+                if (openId == id) hours = got
+            } catch (e: Exception) {
+                if (openId == id) hoursError = apiError(getApplication(), e)
+            }
+            hoursLoading = false
+        }
+    }
+
+    fun openHours() {
+        if (hours.isEmpty() && !hoursLoading && openId.isNotEmpty()) loadHours(openId)
+        hoursOpen = true
+    }
+
+    fun saveHours(days: List<DayHours>) {
+        val id = openId
+        if (id.isEmpty()) return
+        hoursSaving = true
+        viewModelScope.launch {
+            try {
+                api.setStoreHours(id, days)
+                if (openId == id) hours = days
+                merchants = merchants?.map { if (it.id == id) it.copy(hasHours = true) else it }
+                com.rahalgo.ui.Flash.ok(getApplication<android.app.Application>().getString(com.rahalgo.ui.R.string.ok_hours_saved))
+                // **وما ينقصه يُقرأ من جديد** — قد صار محسوباً في هدفه.
+                load()
+            } catch (e: Exception) {
+                com.rahalgo.ui.Flash.fail(apiError(getApplication(), e))
+            }
+            hoursSaving = false
+        }
+    }
+
+    /** **اسمُ عميلٍ يُفتح بعد القراءة** — من خبرٍ في الإشعارات (مراجعةُ المالك ٢٠٢٦-١٠-٣٠). */
+    private var openName = ""
+
+    /**
+     * **يفتح «عملائي» على عميل الخبر** — والخبرُ لا يحمل معرّفَه، ومتنُه يبدأ
+     * باسم المتجر. **ومن لم يُطابَق (طلبُ انضمامٍ لم يُقبل) بقي على القائمة.**
+     */
+    fun openByName(name: String) {
+        openName = name.trim()
+        load()
     }
 
     init {
@@ -255,6 +336,12 @@ class ClientsViewModel(app: Application) : AndroidViewModel(app) {
                     .sortedByDescending { it.status == "needs_info" }
             }
             busy = false
+            // **وخبرٌ نُقر يفتح عميلَه** — إن طابق اسمُه متجراً عنده (بعد انتهاء القراءة).
+            val want = openName
+            openName = ""
+            if (want.isNotEmpty()) {
+                merchants.orEmpty().firstOrNull { it.name.trim() == want }?.let { openDetail(it.id) }
+            }
         }
     }
 }

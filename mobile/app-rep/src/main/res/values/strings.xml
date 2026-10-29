@@ -44,9 +44,14 @@
     <string name="cl_miss_hours">ساعات الدوام</string>
     <string name="cl_miss_location">الموقع على الخريطة</string>
     <string name="cl_miss_items">%1$s أصناف بصورها</string>
-    <string name="bd_goal_pending">%1$s متجر بانتظار اكتمال الشروط — تُحسب عند اكتمالها</string>
+    <!-- والعددُ يوافق المعدود (مراجعة المالك ٢٠٢٦-١٠-٣٠: «6 متجر») — انظر goalPendingText -->
+    <string name="bd_goal_pending_one">متجر واحد بانتظار اكتمال الشروط</string>
+    <string name="bd_goal_pending_two">متجران بانتظار اكتمال الشروط</string>
+    <string name="bd_goal_pending_few">%1$s متاجر بانتظار اكتمال الشروط</string>
+    <string name="bd_goal_pending_many">%1$s متجراً بانتظار اكتمال الشروط</string>
+    <string name="bd_goal_pending_other">%1$s متجر بانتظار اكتمال الشروط</string>
     <!-- أرقامُ البطاقة الأربعة بصفٍّ واحد — كلماتٌ قصيرة (٢٠٢٦-١٠-٢٧) -->
-    <string name="cl_s_orders">طلبات سلمت</string>
+    <string name="cl_s_orders">طلبات سُلّمت</string>
     <string name="cl_s_commission">عمولتك</string>
     <string name="cl_s_items">أصناف</string>
     <string name="cl_s_offers">عروض</string>
@@ -57,14 +62,13 @@
     <!-- **تفصيلُ العميل — شفافيّةُ العمولة** -->
     <string name="cd_owner_phone">رقم صاحب المتجر</string>
     <string name="cd_joined">انضم في</string>
-    <string name="cd_back">رجوع إلى عملائي</string>
     <string name="cd_more">عرض المزيد (%1$s من %2$s)</string>
     <string name="cd_sum_orders">إجمالي الطلبات</string>
     <!-- **ولفظُ المنصّة** — (قرارُ المالك ٢٠٢٦-٠٨-٣١: «تم التسليم تُفهم
          عن كلّ الأطراف»). **وكانت «مسلم» هنا وحدَها.** -->
     <string name="cd_sum_delivered">تم التسليم</string>
     <string name="cd_sum_cancelled">ملغى</string>
-    <string name="cd_sales">مبيعات سلمت</string>
+    <string name="cd_sales">مبيعات سُلّمت</string>
     <string name="cd_earnings">صافي عمولتي</string>
     <string name="cd_orders">طلبات هذا العميل</string>
     <string name="cd_no_orders">لا طلبات بعد من هذا العميل</string>
@@ -94,7 +98,6 @@
          إعفاءُ المتجر من عمولة طلب يعكس نصيبَ المندوب منه. **فالنصُّ
          يقوله** — وكان يقول «وتبقى لك» وهو لم يعد صحيحاً. (٢٠٢٦-١٠-٢٧)
     -->
-    <string name="cd_hint">تُقيَّد عمولتك لحظة تسليم الطلب — دورك جلب العميل وقد جلبته. وإذا أعفت الإدارة المتجر من عمولة طلب، تُعكس عمولتك عن هذا الطلب. وتظهر أرقام الطلبات الملغاة مشطوبة: وهي ما كان سيُحسب لولا الإلغاء، ولا يدخل شيء منها في مجاميعك. ويبقى السطر ظاهراً في كل الأحوال: لا يُخفى أي طلب.</string>
 
     <!-- ══════════════════════════════════════════════════════════════
          **أصنافُ العميل — يبنيها المندوبُ نيابةً عنه**
@@ -125,10 +128,6 @@
     <!-- عددُ أصناف القسم على مربّعه — بكلمته لا رقماً وحدَه -->
     <string name="mn_group_count">%1$d صنف</string>
     <string name="mn_empty">القائمة فارغة — أضف أول صنف</string>
-    <string name="mn_price">سعر المتجر</string>
-    <string name="mn_desc">الوصف</string>
-    <string name="mn_platform_section">قسم المنصة</string>
-    <string name="mn_no_platform_section_hint">بلا قسم لن يظهر الصنف في تصفح الزبون</string>
     <!-- ══════════════════════════════════════════════════════════════
          **والزرُّ يقول الحالَ لا الفعل** — (توحيدٌ ٢٠٢٦-٠٨-٢٣)
          ══════════════════════════════════════════════════════════════
@@ -152,7 +151,6 @@
     <string name="mn_closed_now">خارج الدوام الآن</string>
 
     <!-- **إضافةُ عميل** — وأكثرُ نصوصها من الويب حرفا. -->
-    <string name="ac_title_hint">يبقى معلقا حتى موافقة الإدارة</string>
     <string name="ac_owner">اسم صاحبه</string>
     <!-- ══════════════════════════════════════════════════════════════
          **والمحافظةُ والمنطقةُ تُختاران ولا تُكتبان**
@@ -185,10 +183,6 @@
     <string name="ac_ok_go">عرض عملائي</string>
     <!-- وحقولُ الاختيار تقول إنها مطلوبة قبل أن يُضغط زر معطل -->
     <string name="ac_required">مطلوب</string>
-    <string name="ac_pick_governorate">اختر المحافظة</string>
-    <string name="ac_pick_district">اختر المنطقة</string>
-    <string name="ac_pick_category">اختر تصنيف المتجر</string>
-    <string name="ac_district_after_gov">اختر المحافظة أولا لتظهر مناطقها</string>
     <!-- وسقوطُ جلب المحافظات يُقال داخل لوحها مع زرّ إعادة (٢٠٢٦-١٠-٢٧) -->
     <string name="ac_gov_failed">تعذّر جلب المحافظات</string>
     <string name="ac_cat_failed">تعذّر جلب التصنيفات</string>

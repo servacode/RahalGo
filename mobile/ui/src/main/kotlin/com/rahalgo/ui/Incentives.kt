@@ -49,7 +49,11 @@ import com.rahalgo.shared.model.TargetLevel
  * إنجازاً، **فيُهنّئ من لم يُطلب منه شيء.**
  */
 @Composable
-fun IncentivesScreen(vm: IncentivesViewModel) {
+fun IncentivesScreen(
+    vm: IncentivesViewModel,
+    /** **سهمُ الرجوع في الرأس** — و`null` عنوانٌ بلا سهم كما كان (السائق). */
+    onBack: (() -> Unit)? = null,
+) {
     val data = vm.data
     if (data == null) {
         LoadState(vm.busy, vm.error) { vm.load(force = true) }
@@ -61,7 +65,13 @@ fun IncentivesScreen(vm: IncentivesViewModel) {
         // **وبلا تلميح** — (طلبُ المالك ٢٠٢٦-٠٨-٣١: «ما أنجزتَه هذا
         // الشهر وما نلتَه عليه احذفها، ما تلزم»). **والشاشةُ تعرضهما
         // بأسمائهما تحته، فالتلميحُ يعيد ولا يضيف.**
-        ScreenTitle(stringResource(R.string.menu_rewards))
+        if (onBack != null) {
+            // **والمندوبُ يرجع بسهمٍ كما في صفحات المتجر** (مراجعةُ المالك ٢٠٢٦-١٠-٣٠).
+            PageHeader(title = stringResource(R.string.menu_rewards), onBack = onBack)
+            Spacer(Modifier.height(Rahal.space.sm))
+        } else {
+            ScreenTitle(stringResource(R.string.menu_rewards))
+        }
 
         // ══════════════════════════════════════════════════════════════
         // **مراحلُ الشهر — واحدةٌ أو ثلاث**

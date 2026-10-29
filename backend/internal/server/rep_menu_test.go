@@ -17,6 +17,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
@@ -87,5 +88,55 @@ func TestRepMenuGuard_OnlyOwnClients(t *testing.T) {
 	// باباً مغلقاً لا مفتوحاً — **وحارسٌ يسمح عند الشكّ ليس حارساً.**
 	if code := call(rep, ""); code == http.StatusOK {
 		t.Fatal("مسارٌ بلا معرّفٍ مرّ — **والافتراضُ يجب أن يكون منعاً**")
+	}
+}
+
+// TestRepHours_OwnClientOnly **المندوبُ يضبط ساعاتِ عميله وحدَه** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
+func TestRepHours_OwnClientOnly(t *testing.T) {
+	f := newDriverFixture(t, 0)
+	ctx := context.Background()
+	rep := testdb.NewUser(t, f.pool, "sales")
+	other := testdb.NewUser(t, f.pool, "sales")
+	owner := testdb.NewUser(t, f.pool, "merchant")
+	var cat, store string
+	if err := f.pool.QueryRow(ctx, `INSERT INTO categories (name, icon, active) VALUES ('فحصُ دوام المندوب', 'other', true) RETURNING id`).Scan(&cat); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _, _ = f.pool.Exec(context.Background(), `DELETE FROM categories WHERE id = $1`, cat) })
+	if err := f.pool.QueryRow(ctx, `
+		INSERT INTO merchants (name, owner_user_id, sales_rep_user_id, status, category_id)
+		VALUES ('متجرُ دوام', $1, $2, 'active', $3) RETURNING id`, owner, rep, cat).Scan(&store); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _, _ = f.pool.Exec(context.Background(), `DELETE FROM merchants WHERE id = $1`, store) })
+
+	body := `{"days":[` +
+		`{"day_of_week":0,"closed":false,"open_time":"10:00","close_time":"22:00"},` +
+		`{"day_of_week":1,"closed":false,"open_time":"10:00","close_time":"22:00"},` +
+		`{"day_of_week":2,"closed":false,"open_time":"10:00","close_time":"22:00"},` +
+		`{"day_of_week":3,"closed":false,"open_time":"10:00","close_time":"22:00"},` +
+		`{"day_of_week":4,"closed":false,"open_time":"10:00","close_time":"22:00"},` +
+		`{"day_of_week":5,"closed":true,"open_time":"10:00","close_time":"22:00"},` +
+		`{"day_of_week":6,"closed":false,"open_time":"10:00","close_time":"22:00"}]}`
+	put := func(user string) int {
+		req := httptest.NewRequest(http.MethodPut, "/x", strings.NewReader(body))
+		rc := chi.NewRouteContext()
+		rc.URLParams.Add("id", store)
+		c := context.WithValue(req.Context(), chi.RouteCtxKey, rc)
+		c = context.WithValue(c, ctxUserID, user)
+		w := httptest.NewRecorder()
+		f.srv.repMenuGuard(http.HandlerFunc(f.srv.handleRepSetHours)).ServeHTTP(w, req.WithContext(c))
+		return w.Code
+	}
+	if code := put(other); code != http.StatusForbidden {
+		t.Fatalf("**مندوبٌ غريبٌ ضبط ساعاتِ متجرٍ ليس عميلَه**: %d", code)
+	}
+	if code := put(rep); code != http.StatusOK {
+		t.Fatalf("مندوبُ المتجر لم يضبط ساعاتِه: %d", code)
+	}
+	var n int
+	_ = f.pool.QueryRow(ctx, `SELECT count(*) FROM merchant_hours WHERE merchant_id = $1 AND open_time = '10:00'`, store).Scan(&n)
+	if n != 7 {
+		t.Fatalf("الساعاتُ لم تُحفظ: %d", n)
 	}
 }

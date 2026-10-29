@@ -47,7 +47,7 @@ fun ExchangeRateCard(rate: Double?, busy: Boolean, editable: Boolean = true, onS
                     (rate?.let { stringResource(R.string.fx_rate_value, usdText(it)) } ?: stringResource(R.string.fx_rate_none)),
                 fontWeight = FontWeight.Bold,
             )
-            Text(stringResource(R.string.fx_rate_owner_sets), style = MaterialTheme.typography.bodySmall, color = Rahal.colors.inkMuted)
+            // **ولا سطرَ شرحٍ تحته** (مراجعةُ المالك ٢٠٢٦-١٠-٣٠) — القراءةُ للمندوب وحدَه.
             return@Card
         }
         Text(

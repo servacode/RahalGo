@@ -9457,15 +9457,6 @@
       "auth": true,
       "roles": [
         "merchant"
-      ],
-      "response": [
-        {
-          "name": "sections",
-          "type": "unknown"
-        }
-      ],
-      "statuses": [
-        "StatusOK"
       ]
     },
     {
@@ -11298,6 +11289,48 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/v1/rep/stores/{id}/hours",
+      "handler": "handleRepGetHours",
+      "auth": true,
+      "roles": [
+        "sales"
+      ],
+      "response": [
+        {
+          "name": "@hours",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/rep/stores/{id}/hours",
+      "handler": "handleRepSetHours",
+      "auth": true,
+      "roles": [
+        "sales"
+      ],
+      "request": [
+        {
+          "name": "days",
+          "type": "[]catalog.DayHours"
+        }
+      ],
+      "response": [
+        {
+          "name": "updated",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "PUT",
       "path": "/api/v1/rep/stores/{id}/logo",
       "handler": "handleRepSetLogo",
@@ -11399,6 +11432,15 @@
       "method": "PUT",
       "path": "/api/v1/rep/stores/{id}/option-presets",
       "handler": "handleRepSetOptionPresets",
+      "auth": true,
+      "roles": [
+        "sales"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/rep/stores/{id}/sections",
+      "handler": "handleRepStoreSections",
       "auth": true,
       "roles": [
         "sales"

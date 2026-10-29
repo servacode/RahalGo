@@ -259,6 +259,17 @@ func (s *Server) handleMerchantStoreSections(w http.ResponseWriter, r *http.Requ
 		s.respondErr(w, errForbidden)
 		return
 	}
+	s.writeStoreSections(w, r, storeID)
+}
+
+// handleRepStoreSections **أقسامُ متجر عميله للقراءة** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — كان محرّرُ
+// المندوب يعرض كلَّ أقسام السوق. **والحارسُ `repMenuGuard` قبله**: لا يقرأ إلّا متجرَ عميله.
+func (s *Server) handleRepStoreSections(w http.ResponseWriter, r *http.Request) {
+	s.writeStoreSections(w, r, chi.URLParam(r, "id"))
+}
+
+// writeStoreSections يكتب أقسامَ المتجر المختارة — **بابٌ واحدٌ للمتجر والمندوب.**
+func (s *Server) writeStoreSections(w http.ResponseWriter, r *http.Request, storeID string) {
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT ps.id::text, ps.name, im.path, im.thumb_path
 		FROM store_sections ss

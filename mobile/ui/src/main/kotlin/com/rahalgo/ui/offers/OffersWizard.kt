@@ -134,8 +134,11 @@ fun OffersWizard(
         if (vm.merchantID.isEmpty()) vm.loadClients()
     }
     // **ونجاحُ الإنشاء يعيد إلى القائمة** — والجديدُ أوّلُها، ورسالةُ «تمّ» فوقها.
+    // **وإنشاءٌ سبق فتحَ الشاشة لا يُغلق النموذج** — وإلّا رجع «عرضٌ جديد» (`startNew`)
+    // إلى القائمة في كلّ فتحٍ بعد أوّل عرض (مراجعةُ المالك ٢٠٢٦-١٠-٣٠).
+    val createdAtOpen = androidx.compose.runtime.saveable.rememberSaveable { vm.created }
     LaunchedEffect(vm.created) {
-        if (vm.created > 0) {
+        if (vm.created > createdAtOpen) {
             percent = ""
             query = ""
             composing = false

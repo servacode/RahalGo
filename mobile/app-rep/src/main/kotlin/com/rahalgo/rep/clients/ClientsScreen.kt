@@ -95,6 +95,12 @@ fun ClientsScreen(
     // **والتفصيلُ يغطّي القائمةَ** — **ولا صفحةٌ ثانيةٌ يخرج إليها
     // فيعود فلا يجد موضعَه.**
     if (vm.openId.isNotEmpty()) {
+        // **وصفحةُ «ساعات الدوام» فوق التفصيل** (٢٠٢٦-١٠-٣٠) — والرجوعُ منها إليه.
+        if (vm.hoursOpen) {
+            BackHandler { vm.hoursOpen = false }
+            ClientHours(vm)
+            return
+        }
         BackHandler { vm.closeDetail() }
         ClientDetail(vm, onOpenMenu, onOpenOffers)
         return
@@ -333,7 +339,9 @@ private fun MiniStat(label: String, value: String, color: Color, modifier: Modif
             label,
             color = Rahal.colors.inkMuted,
             style = MaterialTheme.typography.labelSmall,
-            maxLines = 1,
+            // **سطران لا قصّ** (مراجعةُ المالك ٢٠٢٦-١٠-٣٠: «طلبات سلمت» كانت تنقطع).
+            minLines = 2,
+            maxLines = 2,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
         )
@@ -353,7 +361,7 @@ internal fun missingFor(m: RepMerchant): List<String> = buildList {
 
 /** **شريطُ ما ينقص** — برتقاليٌّ فوق الأزرار، **فهو أهمُّ ما يُفعل في المتجر.** */
 @Composable
-internal fun MissingStrip(missing: List<String>) {
+internal fun MissingStrip(missing: List<String>, onClick: (() -> Unit)? = null) {
     if (missing.isEmpty()) return
     Spacer(Modifier.height(8.dp))
     Text(
@@ -365,6 +373,7 @@ internal fun MissingStrip(missing: List<String>) {
             .fillMaxWidth()
             .clip(Rahal.shape.sm)
             .background(Rahal.colors.warnTint)
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(horizontal = 10.dp, vertical = 8.dp),
     )
 }
@@ -506,6 +515,12 @@ private fun MerchantCard(
         // **وما ينقصه بنداً بنداً — فوق الزرّين** — فيعرف المندوبُ ما يُكمله
         // وهو واقفٌ في المتجر.
         MissingStrip(missingFor(m))
+
+        // **واتّصالٌ وواتساب من البطاقة** — بلا فتح العميل (مراجعةُ المالك ٢٠٢٦-١٠-٣٠).
+        m.ownerPhone?.takeIf { it.isNotBlank() }?.let {
+            Spacer(Modifier.height(8.dp))
+            ContactButtons(it)
+        }
 
         // ══════════════════════════════════════════════════════════════
         // **وفعلاه من بطاقته — لا من داخله**

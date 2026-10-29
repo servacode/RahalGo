@@ -1,5 +1,11 @@
 package com.rahalgo.merchant.store
 
+import com.rahalgo.ui.hours.HoursPlan
+import com.rahalgo.ui.hours.HoursPlanner
+import com.rahalgo.ui.hours.IconChoice
+import com.rahalgo.ui.hours.IconChoicePair
+import com.rahalgo.ui.hours.NightHoursDialog
+import com.rahalgo.ui.hours.opensAtNight
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -429,20 +435,7 @@ private fun HoursStep(vm: StoreViewModel, advance: () -> Unit): StepNext {
         if (days.any { opensAtNight(it) }) nightCheck = days else vm.saveHours(days) { advance() }
     }
     nightCheck?.let { d ->
-        val first = d.first { opensAtNight(it) }
-        AlertDialog(
-            onDismissRequest = { nightCheck = null },
-            title = { Text(stringResource(R.string.hours_night_title)) },
-            text = { Text(stringResource(R.string.hours_night_text, clock12(first.openTime), clock12(first.closeTime))) },
-            confirmButton = {
-                RahalButton(onClick = { nightCheck = null; vm.saveHours(d) { advance() } }) {
-                    Text(stringResource(R.string.hours_night_yes))
-                }
-            },
-            dismissButton = {
-                RahalOutlineButton(onClick = { nightCheck = null }) { Text(stringResource(R.string.hours_night_fix)) }
-            },
-        )
+        NightHoursDialog(d, onDismiss = { nightCheck = null }) { nightCheck = null; vm.saveHours(d) { advance() } }
     }
     StepTitle(R.string.wz_hours_q)
     HoursPlanner(plan)

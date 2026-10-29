@@ -1,5 +1,10 @@
 package com.rahalgo.merchant.store
 
+import com.rahalgo.ui.hours.ChoiceCard
+import com.rahalgo.ui.hours.IconChoice
+import com.rahalgo.ui.hours.IconChoicePair
+import com.rahalgo.ui.hours.clock12
+import com.rahalgo.ui.hours.hoursSummary
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -599,20 +604,9 @@ private fun Tile(
     }
 }
 
-/** **قيمةُ الدوام في سطرٍ واحد** — أو فراغٌ إن لم يُضبط بعد. */
+/** **قيمةُ الدوام في سطرٍ واحد** — أو فراغٌ إن لم يُضبط بعد (`com.rahalgo.ui.hours.hoursSummary`). */
 @Composable
-private fun hoursValue(store: Store, hours: List<DayHours>): String? {
-    if (!store.hasHours) return null
-    val open = hours.filter { !it.closed }
-    if (open.isEmpty()) return null
-    if (open.all { it.isOpen24h }) return stringResource(R.string.hours_open_24h)
-    val first = open.first()
-    return if (open.all { !it.isOpen24h && it.openTime.take(5) == first.openTime.take(5) && it.closeTime.take(5) == first.closeTime.take(5) }) {
-        stringResource(R.string.home_val_hours_range, clock12(first.openTime.take(5)), clock12(first.closeTime.take(5)))
-    } else {
-        stringResource(R.string.home_val_hours_mixed)
-    }
-}
+private fun hoursValue(store: Store, hours: List<DayHours>): String? = hoursSummary(store.hasHours, hours)
 
 /** **سهمُ «يفتح»** — سهمُ الرجوع مقلوباً، فيشير إلى الأمام بالعربي. */
 @Composable
@@ -705,48 +699,6 @@ internal fun SettingsRow(
         Chevron()
     }
     if (!last) HorizontalDivider(color = Rahal.colors.line, thickness = Rahal.stroke.hair)
-}
-
-/**
- * **بطاقةُ اختيارٍ كبيرة** — دائرةٌ وعنوانٌ وسطرُ شرح، والمختارةُ بحدّ العلامة.
- * (التصميمُ المعتمد: خطوةُ الدوام وما يشبهها.)
- */
-@Composable
-internal fun ChoiceCard(
-    title: String,
-    sub: String,
-    selected: Boolean,
-    enabled: Boolean = true,
-    onClick: () -> Unit,
-) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clip(Rahal.shape.md)
-            .background(if (selected) Rahal.colors.brand.copy(alpha = 0.08f) else Rahal.colors.canvas)
-            .border(
-                if (selected) Rahal.stroke.focus else Rahal.stroke.hair,
-                if (selected) Rahal.colors.brand else Rahal.colors.line,
-                Rahal.shape.md,
-            )
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.md),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        RadioButton(
-            selected = selected,
-            onClick = null,
-            enabled = enabled,
-            colors = RadioButtonDefaults.colors(selectedColor = Rahal.colors.brand),
-        )
-        Spacer(Modifier.width(Rahal.space.md))
-        Column(Modifier.weight(1f)) {
-            Text(title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = Rahal.colors.ink)
-            if (sub.isNotBlank()) {
-                Text(sub, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
-            }
-        }
-    }
 }
 
 /** **رأسُ صفحةٍ فرعيّة** — سهمُ رجوعٍ وعنوان. */

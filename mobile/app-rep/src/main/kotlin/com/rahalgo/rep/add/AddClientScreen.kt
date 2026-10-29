@@ -108,7 +108,7 @@ import kotlinx.coroutines.launch
 @Composable
 private fun PickerBlock(
     label: String,
-    hint: String,
+    hint: String = "",
     chosen: String?,
     /** **سقوطُ جلب الخيارات يُقال داخل اللوح** — وفارغٌ يعني لا سقوط. */
     failed: String = "",
@@ -157,7 +157,7 @@ private fun PickerBlock(
         }
         // **والتلميحُ يبقى ما دام ناقصاً ويذهب حين يتمّ** — **وشرحٌ
         // يبقى بعد الفعل يزحم الشاشةَ ولا يُقرأ.**
-        if (!done) {
+        if (!done && hint.isNotEmpty()) {
             Spacer(Modifier.height(4.dp))
             Text(
                 hint,
@@ -240,7 +240,8 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
         val editing = vm.editingId.isNotEmpty()
         ScreenTitle(
             stringResource(if (editing) R.string.ac_edit_title else R.string.nav_add_client),
-            stringResource(if (editing) R.string.ac_edit_hint else R.string.ac_title_hint),
+            // **ولا سطرَ شرحٍ تحت «إضافة عميل»** (مراجعةُ المالك ٢٠٢٦-١٠-٣٠).
+            if (editing) stringResource(R.string.ac_edit_hint) else "",
         )
 
         // ══════════════════════════════════════════════════════════════
@@ -303,7 +304,6 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
         Spacer(Modifier.height(12.dp))
         PickerBlock(
             label = stringResource(R.string.ac_governorate),
-            hint = stringResource(R.string.ac_pick_governorate),
             chosen = vm.governorates.firstOrNull { it.id == vm.pickedGovernorate }?.name,
             failed = if (vm.govFailed) stringResource(R.string.ac_gov_failed) else "",
             onRetry = { vm.loadCategories() },
@@ -324,13 +324,6 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
         Spacer(Modifier.height(10.dp))
         PickerBlock(
             label = stringResource(R.string.ac_district),
-            hint = stringResource(
-                if (vm.pickedGovernorate.isEmpty()) {
-                    R.string.ac_district_after_gov
-                } else {
-                    R.string.ac_pick_district
-                },
-            ),
             chosen = vm.districts.firstOrNull { it.id == vm.pickedDistrict }?.name,
         ) {
             vm.districts.forEach { d ->
@@ -352,7 +345,6 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
         Spacer(Modifier.height(12.dp))
         PickerBlock(
             label = stringResource(R.string.ac_category),
-            hint = stringResource(R.string.ac_pick_category),
             chosen = vm.categories.firstOrNull { it.id == vm.pickedCategory }?.name,
             failed = if (vm.catFailed) stringResource(R.string.ac_cat_failed) else "",
             onRetry = { vm.loadCategories() },

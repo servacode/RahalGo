@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -15,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -90,9 +92,9 @@ fun ClientDetail(
     Screen {
         // **وزرُّ رجوعٍ ظاهر** — كما في صفحة الأصناف (٢٠٢٦-١٠-٢٧)؛ **ومن لا
         // يعرف زرَّ الجهاز لا يجد طريقَ العودة.**
-        RahalTextButton(onClick = { vm.closeDetail() }) {
-            Text(stringResource(R.string.cd_back), color = Rahal.colors.brand)
-        }
+        // **سهمُ رجوعٍ وعنوان** — كما في صفحات المتجر (مراجعةُ المالك ٢٠٢٦-١٠-٣٠).
+        com.rahalgo.ui.PageHeader(title = stringResource(R.string.nav_clients), onBack = { vm.closeDetail() })
+        Spacer(Modifier.height(Rahal.space.sm))
         // ══════════════════════════════════════════════════════════════
         // **ترويسةُ العميل — من هو وحالُه ورقمُ صاحبه**
         // ══════════════════════════════════════════════════════════════
@@ -156,7 +158,13 @@ fun ClientDetail(
                 KeyValue(stringResource(R.string.cd_joined), longDate(head.joinedAt))
             }
             // **وما ينقصه ليُحسب — كما في بطاقته** (٢٠٢٦-١٠-٢٧).
-            row?.let { MissingStrip(missingFor(it)) }
+            // **ونقصُ الدوام يُضغط فيفتح صفحتَه** (٢٠٢٦-١٠-٣٠).
+            row?.let { MissingStrip(missingFor(it), onClick = if (!it.hasHours) ({ vm.openHours() }) else null) }
+
+            // **وساعاتُ دوامه — يضبطها هو** (قرارُ المالك ٢٠٢٦-١٠-٣٠) بالمخطّط نفسِه
+            // الذي في تطبيق المتجر (`ClientHours`).
+            Spacer(Modifier.height(8.dp))
+            HoursRow(vm)
 
             // ══════════════════════════════════════════════════════════
             // **وبابُ أصنافه — يبنيها نيابةً عنه**
@@ -256,16 +264,53 @@ fun ClientDetail(
             }
         }
 
-        // **والقاعدةُ تُقال مرّةً تحت الجدول** — **ومن رأى رقماً مشطوباً
-        // بلا شرحٍ ظنّ أنّ حقَّه ضاع.**
-        Spacer(Modifier.height(12.dp))
-        Text(
-            text = stringResource(R.string.cd_hint),
-            color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodySmall,
-        )
+        // **وسطرُ الشرح الطويل تحت الجدول حُذف** (طلبُ المالك ٢٠٢٦-١٠-٣٠).
         Spacer(Modifier.height(24.dp))
     }
+    }
+}
+
+/**
+ * **سطرُ «ساعات الدوام»** — قيمتُه الحاليّة («مفتوح 24 ساعة» · «9:00 ص – 11:00 م» ·
+ * «لم يُضبط بعد» بالأحمر)، ويُضغط فيفتح صفحتَها.
+ */
+@Composable
+private fun HoursRow(vm: ClientsViewModel) {
+    val set = vm.hoursSet
+    val value = com.rahalgo.ui.hours.hoursSummary(set, vm.hours)
+        ?: if (set) "" else stringResource(com.rahalgo.ui.R.string.home_val_not_set)
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(Rahal.shape.sm)
+            .clickable { vm.openHours() }
+            .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            stringResource(com.rahalgo.ui.R.string.home_row_hours),
+            color = Rahal.colors.ink,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Spacer(Modifier.size(8.dp))
+        Text(
+            value,
+            color = if (set) Rahal.colors.inkMuted else Rahal.colors.danger,
+            style = MaterialTheme.typography.bodySmall,
+            maxLines = 1,
+            textAlign = androidx.compose.ui.text.style.TextAlign.End,
+            modifier = Modifier.weight(1f),
+        )
+        Spacer(Modifier.size(6.dp))
+        androidx.compose.material3.Icon(
+            androidx.compose.ui.res.painterResource(com.rahalgo.ui.R.drawable.ic_arrow_back),
+            contentDescription = null,
+            tint = Rahal.colors.inkMuted,
+            modifier = Modifier
+                .size(18.dp)
+                .graphicsLayer { rotationZ = 180f },
+        )
     }
 }
 

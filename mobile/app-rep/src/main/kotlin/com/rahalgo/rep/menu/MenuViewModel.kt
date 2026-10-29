@@ -156,6 +156,9 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
 
     /** **أقسامُ السوق** — **وبلاها لا يظهر الصنفُ في التصفّح.** */
     var platformSections by mutableStateOf<List<PlatformSection>>(emptyList())
+
+    /** **ما اختاره المتجرُ من أقسام السوق** — ومنها وحدَها يختار المندوبُ قسمَ الصنف. */
+    var storeSections by mutableStateOf<List<PlatformSection>>(emptyList())
         private set
 
     var busy by mutableStateOf(false)
@@ -190,6 +193,7 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
         merchantID = id
         merchantName = name
         sections = null
+        storeSections = emptyList()
         open = null
         onlyOff = false
         query = ""
@@ -265,6 +269,7 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
         merchantID = ""
         editing = null
         sections = null
+        storeSections = emptyList()
     }
 
     /** **سعرُ صرف المتجر** — يُقرأ مع القائمة ويُكتب من بطاقته (٢٠٢٦-١٠-١٢). */
@@ -295,6 +300,7 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
             // **وأقسامُ السوق على حدة** — **سقوطُها لا يُخفي القائمة**،
             // ويبقى المندوبُ يقرأ ما هو قائمٌ ولو تعذّر عليه أن يضيف.
             runCatching { platformSections = api.platformSections() }
+            runCatching { storeSections = api.storeSections(merchantID) }
             busy = false
         }
     }

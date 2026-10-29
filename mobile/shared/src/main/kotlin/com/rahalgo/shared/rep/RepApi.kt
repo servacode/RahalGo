@@ -149,6 +149,21 @@ class RepApi(private val api: ApiClient) {
     ): com.rahalgo.shared.merchant.OptionPresetsBody =
         api.call("/api/v1/rep/stores/$merchantID/option-presets", io.ktor.http.HttpMethod.Put, body)
 
+    /**
+     * **ساعاتُ دوام عميله** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — الأيّامُ السبعةُ كما عند المتجر
+     * (`MerchantApi.hours`)، **والحفظُ بالأيّام السبعة معاً.**
+     */
+    suspend fun storeHours(merchantID: String): List<com.rahalgo.shared.merchant.DayHours> =
+        api.call("/api/v1/rep/stores/$merchantID/hours")
+
+    suspend fun setStoreHours(merchantID: String, days: List<com.rahalgo.shared.merchant.DayHours>) {
+        api.call<kotlinx.serialization.json.JsonObject>(
+            "/api/v1/rep/stores/$merchantID/hours",
+            io.ktor.http.HttpMethod.Put,
+            com.rahalgo.shared.merchant.HoursInput(days),
+        )
+    }
+
     suspend fun duplicateItem(itemId: String): String =
         api.call<com.rahalgo.shared.merchant.DuplicatedItem>(
             "/api/v1/rep/menu/items/$itemId/duplicate", io.ktor.http.HttpMethod.Post, emptyMap<String, String>(),
@@ -162,6 +177,10 @@ class RepApi(private val api: ApiClient) {
 
     suspend fun platformSections(): List<PlatformSection> =
         api.call<PlatformSections>("/api/v1/rep/platform-sections").sections
+
+    /** **أقسامُ السوق التي اختارها متجرُ عميله** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — وفارغُها يعني الكلّ. */
+    suspend fun storeSections(merchantID: String): List<PlatformSection> =
+        api.call<PlatformSections>("/api/v1/rep/stores/$merchantID/sections").sections
 
     suspend fun createItem(merchantID: String, input: ItemInput, idempotencyKey: String? = null): CreatedID =
         api.call("/api/v1/rep/stores/$merchantID/menu/items", HttpMethod.Post, input, idempotencyKey = idempotencyKey)

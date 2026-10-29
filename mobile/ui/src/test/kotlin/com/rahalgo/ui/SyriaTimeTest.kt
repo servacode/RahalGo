@@ -34,6 +34,8 @@ class SyriaTimeTest {
         val today = LocalDate.parse("2026-10-04")
         assertEquals("اليوم", dayText("2026-10-03T22:30:00Z", today))
         assertEquals("أمس", dayText("2026-10-03T20:30:00Z", today))
+        assertEquals("27 أيلول", dayText("2026-09-27T10:00:00Z", today))
+        assertEquals("27 أيلول 2025", dayText("2025-09-27T10:00:00Z", today))
     }
 
     /**

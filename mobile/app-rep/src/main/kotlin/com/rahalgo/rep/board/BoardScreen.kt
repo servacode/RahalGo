@@ -245,7 +245,7 @@ fun BoardScreen(
             if (me.goalPending > 0) {
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    stringResource(R.string.bd_goal_pending, me.goalPending.toString()),
+                    goalPendingText(me.goalPending.toInt()),
                     color = Rahal.colors.accent,
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -433,6 +433,22 @@ fun BoardScreen(
         }
         Spacer(Modifier.height(28.dp))
     }
+    }
+}
+
+/**
+ * **العددُ يوافق المعدود** (مراجعةُ المالك ٢٠٢٦-١٠-٣٠: «6 متجر») — متجرٌ واحد ·
+ * متجران · ٣–١٠ متاجر · ١١–٩٩ متجراً · والمئةُ وأخواتُها متجر.
+ */
+@Composable
+private fun goalPendingText(n: Int): String {
+    val r = n % 100
+    return when {
+        n == 1 -> stringResource(R.string.bd_goal_pending_one)
+        n == 2 -> stringResource(R.string.bd_goal_pending_two)
+        r in 3..10 -> stringResource(R.string.bd_goal_pending_few, n.toString())
+        r in 11..99 -> stringResource(R.string.bd_goal_pending_many, n.toString())
+        else -> stringResource(R.string.bd_goal_pending_other, n.toString())
     }
 }
 

@@ -1169,7 +1169,6 @@
     <string name="fx_rate_jump_samples">ستصبح الأسعار (الجديد ← القديم):</string>
     <string name="fx_rate_jump_yes">نعم، احفظه</string>
     <string name="fx_rate_jump_no">رجوع</string>
-    <string name="fx_rate_owner_sets">يضعه صاحب المتجر من صفحة «متجري» في تطبيقه، وتُحسب منه أصنافه المسعّرة بالدولار.</string>
     <string name="item_usd_need_rate_rep">لم يضع صاحب المتجر سعر الصرف بعد — استعمل الليرة حالياً</string>
     <!-- أسباب الشكاوى والبلاغات بلفظ طرف ثالث (TicketReasons) — ولا رمز إنكليزي يطلع للناس -->
     <string name="tr_not_received">لم يستلم الزبون الطلب</string>
@@ -1229,4 +1228,34 @@
     <string name="grid_search_none">لا يوجد صنف بهذا الاسم</string>
     <string name="grid_rejected">مرفوض</string>
     <string name="grid_closed_now">خارج الدوام</string>
+    <!-- ساعات الدوام — المخطط المشترك بين المتجر والمندوب (com.rahalgo.ui.hours) -->
+    <string name="wz_hours_custom">ساعات محددة</string>
+    <string name="hours_mode_24">مفتوح 24 ساعة كل الأيام</string>
+    <string name="hours_apply_same">طبّق نفس الساعات على كل الأيام</string>
+    <string name="hours_friday_q">يوم الجمعة؟</string>
+    <string name="hours_on">دوام</string>
+    <string name="hours_off">عطلة</string>
+    <string name="hours_apply_same_title">ساعات كل أيام الدوام</string>
+    <string name="hours_day_24">24 ساعة</string>
+    <string name="home_val_hours_range">%1$s – %2$s</string>
+    <string name="hours_day_specific">ساعات محددة</string>
+    <string name="hours_from">من</string>
+    <string name="hours_to">إلى</string>
+    <string name="hours_done">تم</string>
+    <string name="days_sun">الأحد</string>
+    <string name="days_mon">الاثنين</string>
+    <string name="days_tue">الثلاثاء</string>
+    <string name="days_wed">الأربعاء</string>
+    <string name="days_thu">الخميس</string>
+    <string name="days_fri">الجمعة</string>
+    <string name="days_sat">السبت</string>
+    <string name="hours_night_title">هل يفتح متجرك في الليل؟</string>
+    <string name="hours_night_text">وضعت وقت الفتح الساعة %1$s والإغلاق %2$s، أي أن متجرك يفتح بعد منتصف الليل. إذا كنت تقصد الظهر أو المساء، فارجع وغيّر الساعة واختر «م».</string>
+    <string name="hours_night_yes">نعم، صحيح</string>
+    <string name="hours_night_fix">لا، أريد التعديل</string>
+    <string name="hours_open_24h">مفتوح 24 ساعة</string>
+    <string name="home_val_hours_mixed">ساعات مختلفة</string>
+    <string name="home_row_hours">ساعات الدوام</string>
+    <string name="home_val_not_set">لم يُضبط بعد</string>
+    <string name="ok_hours_saved">✓ حُفظت أوقات العمل</string>
 </resources>

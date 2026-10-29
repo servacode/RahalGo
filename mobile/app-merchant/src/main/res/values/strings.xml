@@ -114,10 +114,6 @@
     <string name="store_prep_unit">دقيقة</string>
     <string name="store_hours">ساعات الدوام</string>
     <string name="hours_summary">مفتوح من %1$s إلى %2$s</string>
-    <string name="hours_night_title">هل يفتح متجرك في الليل؟</string>
-    <string name="hours_night_text">وضعت وقت الفتح الساعة %1$s والإغلاق %2$s، أي أن متجرك يفتح بعد منتصف الليل. إذا كنت تقصد الظهر أو المساء، فارجع وغيّر الساعة واختر «م».</string>
-    <string name="hours_night_yes">نعم، صحيح</string>
-    <string name="hours_night_fix">لا، أريد التعديل</string>
     <!-- **وساعاتُه بيده** — تصحيحُ المالك ٢٠٢٦-٠٨-٢٣.
 
          **و«من» و«إلى» حُذفتا**: «ما في داعٍ من وإلى وهيك كلّ هالشي —
@@ -236,13 +232,6 @@
     <string name="history_empty">لا طلبات في السجل بعد</string>
 
 
-    <string name="days_sun">الأحد</string>
-    <string name="days_mon">الاثنين</string>
-    <string name="days_tue">الثلاثاء</string>
-    <string name="days_wed">الأربعاء</string>
-    <string name="days_thu">الخميس</string>
-    <string name="days_fri">الجمعة</string>
-    <string name="days_sat">السبت</string>
     <string name="push_ch_new_order">طلبات جديدة</string>
     <string name="store_sections">أقسام السوق</string>
     <string name="store_sections_hint">أضف أقسام متجرك</string>
@@ -301,7 +290,6 @@
     <string name="mn_item_saved">✓ تم حفظ الصنف</string>
     <string name="ok_prep_saved">✓ حُفظت مدة التحضير</string>
     <string name="ok_name_saved">✓ حُفظ اسم المتجر</string>
-    <string name="ok_hours_saved">✓ حُفظت أوقات العمل</string>
     <string name="mn_item_deleted">✓ حُذف الصنف</string>
     <string name="menu_deliveries">سجل التوصيلات</string>
     <string name="md_more">عرض المزيد</string>
@@ -454,10 +442,7 @@
     <string name="no">لا</string>
     <string name="choose_one">اختر واحداً</string>
     <string name="hours_all_days">نفس الدوام لكل الأيام</string>
-    <string name="hours_from">من</string>
-    <string name="hours_to">إلى</string>
     <string name="hours_apply_all">طبّق على كل الأيام</string>
-    <string name="hours_open_24h">مفتوح 24 ساعة</string>
     <string name="hours_open_24h_short">24 ساعة</string>
 
     <!-- ══════════════════════════════════════════════════════════════
@@ -516,7 +501,6 @@
     <string name="wz_sections_none">لا توجد أقسام سوق متاحة الآن. تواصل مع إدارة المنصة.</string>
     <string name="wz_address_q">أين يقع متجرك؟</string>
     <string name="wz_hours_q">متى يفتح متجرك؟</string>
-    <string name="wz_hours_custom">ساعات محددة</string>
     <string name="wz_hours_all">كل الأيام</string>
     <string name="wz_hours_edit_day">+ تعديل يوم بعينه</string>
     <string name="wz_hours_hide_days">إخفاء الأيام</string>
@@ -528,16 +512,12 @@
     <string name="home_by_hours">حسب ساعات الدوام</string>
     <string name="home_reopen">إعادة الفتح</string>
     <string name="home_sales_today">مبيعات اليوم</string>
-    <string name="home_row_hours">ساعات الدوام</string>
     <string name="home_row_address">العنوان والموقع</string>
     <string name="home_row_settlement">طريقة استلام أموالك</string>
     <string name="home_row_returns">الإرجاع</string>
     <!-- **أسماءٌ قصيرةٌ لأسطر «متجري»** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) — الطويلةُ تأكل مكانَ القيمة. -->
     <string name="home_row_rate_short">سعر الصرف</string>
     <string name="home_row_prep">مدة التحضير</string>
-    <string name="home_val_not_set">لم يُضبط بعد</string>
-    <string name="home_val_hours_range">%1$s – %2$s</string>
-    <string name="home_val_hours_mixed">ساعات مختلفة</string>
     <string name="home_val_point_set">محدّد ✓</string>
     <string name="home_val_cash">نقداً</string>
     <string name="home_val_wallet">المحفظة</string>
@@ -549,15 +529,6 @@
     <string name="wz_sections_search">ابحث عن قسم</string>
     <string name="wz_sections_picked">الأقسام المختارة: %1$d</string>
     <string name="wz_sections_no_match">لا يوجد قسم بهذا الاسم</string>
-    <string name="hours_mode_24">مفتوح 24 ساعة كل الأيام</string>
-    <string name="hours_on">دوام</string>
-    <string name="hours_off">عطلة</string>
-    <string name="hours_friday_q">يوم الجمعة؟</string>
-    <string name="hours_apply_same">طبّق نفس الساعات على كل الأيام</string>
-    <string name="hours_apply_same_title">ساعات كل أيام الدوام</string>
-    <string name="hours_done">تم</string>
-    <string name="hours_day_24">24 ساعة</string>
-    <string name="hours_day_specific">ساعات محددة</string>
     <string name="wz_pay_cash">نقدي</string>
     <string name="wz_pay_wallet">المحفظة</string>
     <string name="wz_returns_yes">نعم، أقبل الإرجاع</string>

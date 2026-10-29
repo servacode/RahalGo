@@ -30,6 +30,7 @@ package server
 // عميلَه**، أو يمنع صاحبَه من متجره.
 
 import (
+	"github.com/servacode/rahalgo/backend/internal/catalog"
 	"net/http"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
@@ -107,4 +108,42 @@ func (s *Server) handleRepMenu(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.JSON(w, http.StatusOK, menu)
+}
+
+// handleRepGetHours **ساعاتُ دوام عميله** (قرارُ المالك ٢٠٢٦-١٠-٣٠: «أكيد المندوب يقدر يضبط
+// ساعات دوام عميله») — الحارسُ `repMenuGuard` قبله: عميلُه وحدَه.
+func (s *Server) handleRepGetHours(w http.ResponseWriter, r *http.Request) {
+	hours, err := s.catalog.GetHours(r.Context(), chi.URLParam(r, "id"))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, hours)
+}
+
+// handleRepSetHours يضبط ساعاتِ دوام عميله — **بالمنطق نفسِه الذي يضبط به صاحبُ المتجر**
+// (`catalog.SetHours`)، **والفاعلُ المندوبُ في السجلّ.** **والموقوفُ لا تُكتب ساعاتُه.**
+func (s *Server) handleRepSetHours(w http.ResponseWriter, r *http.Request) {
+	merchantID := chi.URLParam(r, "id")
+	var status string
+	if err := s.pg.QueryRow(r.Context(), `SELECT status FROM merchants WHERE id = $1`, merchantID).Scan(&status); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if status == "suspended" {
+		s.respondErr(w, errForbidden)
+		return
+	}
+	req, err := decode[struct {
+		Days []catalog.DayHours `json:"days"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if err := s.catalog.SetHours(r.Context(), userIDFrom(r), merchantID, req.Days, clientIP(r)); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"updated": true})
 }

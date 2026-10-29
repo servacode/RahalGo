@@ -163,10 +163,16 @@ fun dayText(iso: String, today: java.time.LocalDate = java.time.LocalDate.now(SY
     val at = syriaTime(iso)?.toLocalDate()
         ?: runCatching { java.time.LocalDate.parse(iso.take(10)) }.getOrNull()
         ?: return iso
-    val date = at.format(DATE_FMT)
     return when (java.time.temporal.ChronoUnit.DAYS.between(at, today)) {
         in Long.MIN_VALUE..0L -> "اليوم"
         1L -> "أمس"
-        else -> date
+        // **وما قبل أمسِ بالعربيّة** (تجربةُ المالك ٢٠٢٦-١٠-٢٩) — كان «2026-10-27» خاماً.
+        else -> "${at.dayOfMonth} ${SY_MONTHS[at.monthValue - 1]}" + if (at.year != today.year) " ${at.year}" else ""
     }
 }
+
+/** **أسماءُ الأشهر كما تُقال في سوريا.** */
+private val SY_MONTHS = listOf(
+    "كانون الثاني", "شباط", "آذار", "نيسان", "أيار", "حزيران",
+    "تموز", "آب", "أيلول", "تشرين الأول", "تشرين الثاني", "كانون الأول",
+)
