@@ -300,7 +300,6 @@ export default function ItemEditor({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [askDelete, setAskDelete] = useState(false);
-  const [pickSection, setPickSection] = useState(false);
   /** **في المسوّدة ما لم يُحفظ؟** — فيُطفأ النسخُ حتّى يُحفظ. */
   const [touched, setTouched] = useState(false);
   /** `null` تُجلب بعد · وتعذّرُها يرجّع الثلاثَ القديمة ويقول ذلك. */
@@ -621,39 +620,19 @@ export default function ItemEditor({
         )}
       </div>
 
-      {/* ── ٣ · قسمُ السوق — حقلٌ يفتح مربّعاتِ الأقسام بصورها ── */}
-      <div className="flex flex-col gap-1">
+      {/* ── ٣ · قسمُ السوق — مربّعاتٌ بصورها في الصفحة نفسِها، ثلاثةٌ بكلّ سطر (طلبُ المالك ٢٠٢٦-١٠-٢٩) ── */}
+      <div className="flex flex-col gap-2" data-testid="item-section">
         <span className="text-sm font-bold">{I.section}</span>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => setPickSection(true)}
-          data-testid="item-section"
-          className="flex min-h-14 w-full items-center gap-2 rounded-control border border-line bg-field p-2 text-start hover:bg-row-hover"
-        >
-          {current ? (
-            <>
-              <MediaThumb url={current.image_thumb_url ?? current.image_url} alt="" fallback={current.name} size={40} mediaUrl={mediaUrl} />
-              <span className="min-w-0 flex-1 truncate font-bold">{current.name}</span>
-            </>
-          ) : (
-            <span className="min-w-0 flex-1 px-1 text-ink-muted">{I.sectionPick}</span>
-          )}
-          <IconChevronDown size={18} className="shrink-0 text-ink-muted" />
-        </button>
-      </div>
-      {pickSection && (
         <SectionPicker
           sections={sections}
           selected={section}
+          disabled={busy}
           onPick={(id) => {
             setSection(id);
-            setPickSection(false);
             dirty();
           }}
-          onClose={() => setPickSection(false)}
         />
-      )}
+      </div>
 
       {/* ── ٤ · الإضافاتُ والخيارات ── */}
       <section className="flex flex-col gap-3" aria-label={I.modTitle}>
@@ -1031,26 +1010,25 @@ function OptionRow({
 }
 
 /**
- * **نافذةُ قسم السوق** — مربّعاتٌ بصورة كلّ قسمٍ واسمه، وبحث، **و✓ على المختار.**
+ * **أقسامُ السوق في الصفحة نفسِها** — مربّعاتٌ بصورة كلّ قسمٍ واسمه، وبحث، **و✓ على المختار.**
  * (مرآةُ `SectionPickerDialog` في `ItemEditor.kt`.)
  */
 function SectionPicker({
   sections,
   selected,
+  disabled,
   onPick,
-  onClose,
 }: {
   sections: SectionRef[];
   selected: string;
+  disabled: boolean;
   onPick: (id: string) => void;
-  onClose: () => void;
 }) {
   const [q, setQ] = useState("");
   const needle = q.trim();
   const shown = needle ? sections.filter((s) => s.name.includes(needle)) : sections;
   return (
-    <Modal open onClose={onClose} title={I.sectionTitle} size="lg">
-      <div className="flex flex-col gap-3" data-testid="section-picker">
+    <div className="flex flex-col gap-3" data-testid="section-picker">
         {sections.length > 6 && (
           <Input
             type="search"
@@ -1066,7 +1044,7 @@ function SectionPicker({
         ) : shown.length === 0 ? (
           <p className="text-sm text-ink-muted">{I.sectionNoMatch}</p>
         ) : (
-          <ul className="grid max-h-[60vh] grid-cols-3 gap-2 overflow-y-auto sm:grid-cols-4">
+          <ul className="grid grid-cols-3 gap-2">
             {shown.map((s) => {
               const on = s.id === selected;
               const img = mediaUrl(s.image_thumb_url ?? s.image_url);
@@ -1075,6 +1053,7 @@ function SectionPicker({
                   <button
                     type="button"
                     aria-pressed={on}
+                    disabled={disabled}
                     onClick={() => onPick(s.id)}
                     data-testid="section-tile"
                     className={`flex w-full flex-col items-center gap-1 rounded-control border p-1 ${
@@ -1102,7 +1081,6 @@ function SectionPicker({
             })}
           </ul>
         )}
-      </div>
-    </Modal>
+    </div>
   );
 }
