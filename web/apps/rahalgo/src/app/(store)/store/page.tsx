@@ -24,7 +24,6 @@ import {
   Button,
   Confirm,
   FormActions,
-  IconAdd,
   IconBlock,
   IconCash,
   IconCheck,
@@ -90,15 +89,6 @@ function HomeHeader({ store, suspended, onLogo }: { store: MerchantStore; suspen
   const logo = mediaUrl(store.logo_thumb_url);
   return (
     <section className="flex flex-col gap-3 rounded-card bg-primary-solid p-4 text-on-solid">
-      {stores.length > 1 && (
-        <Select aria-label={S.pickStore} value={store.id} onChange={(e) => select(e.target.value)} className="font-bold">
-          {stores.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </Select>
-      )}
       <div className="flex items-center gap-3">
         <button
           type="button"
@@ -114,7 +104,18 @@ function HomeHeader({ store, suspended, onLogo }: { store: MerchantStore; suspen
           )}
         </button>
         <div className="min-w-0 flex-1">
-          <h1 className="heading-page line-clamp-2">{store.name}</h1>
+          {/* **والاسمُ مرّةً واحدة** (تجربةُ المالك ٢٠٢٦-١٠-٢٩) — ومن له فروعٌ يبدّل منه. */}
+          {stores.length > 1 ? (
+            <Select aria-label={S.pickStore} value={store.id} onChange={(e) => select(e.target.value)} className="font-bold">
+              {stores.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </Select>
+          ) : (
+            <h1 className="heading-page line-clamp-2">{store.name}</h1>
+          )}
           {store.address_text.trim() && <p className="truncate text-sm opacity-85">{store.address_text}</p>}
           {!suspended && (
             <button type="button" onClick={onLogo} className="mt-1 text-sm font-bold underline-offset-2 hover:underline">
@@ -273,9 +274,9 @@ function QuickAction({ href, icon: Icon, label, tint, badge = 0 }: { href: strin
   );
 }
 
-function Tile({ icon: Icon, tint, value, label, sub }: { icon: IconT; tint: Tint; value: string; label: string; sub?: string }) {
-  return (
-    <div className="surface flex items-center gap-3 rounded-card p-3">
+function Tile({ icon: Icon, tint, value, label, sub, href }: { icon: IconT; tint: Tint; value: string; label: string; sub?: string; href?: string }) {
+  const body = (
+    <>
       <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-control ${TINT[tint]}`}>
         <Icon size={20} />
       </span>
@@ -284,7 +285,15 @@ function Tile({ icon: Icon, tint, value, label, sub }: { icon: IconT; tint: Tint
         <p className="truncate text-xs text-ink-muted">{label}</p>
         {sub && <p className="truncate text-xs text-ink-muted">{sub}</p>}
       </div>
-    </div>
+    </>
+  );
+  // **وطلباتُ اليوم تُضغط فتُري الطلبات** (قرارُ المالك ٢٠٢٦-١٠-٢٩).
+  return href ? (
+    <Link href={href} className="surface flex items-center gap-3 rounded-card p-3 transition-colors hover:bg-row-hover">
+      {body}
+    </Link>
+  ) : (
+    <div className="surface flex items-center gap-3 rounded-card p-3">{body}</div>
   );
 }
 
@@ -387,7 +396,7 @@ export default function StoreHome() {
 
       {!suspended && (
         <div className="flex gap-2">
-          <QuickAction href="/store/menu/new" icon={IconAdd} label={HM.quickAdd} tint="brand" />
+          <QuickAction href="/store/offers" icon={IconPromos} label={HM.quickOffers} tint="brand" />
           <QuickAction
             href="/store/menu?filter=unavailable"
             icon={IconViewOff}
@@ -413,6 +422,7 @@ export default function StoreHome() {
                 value={fmtNum(report.summary.orders)}
                 label={HM.todayOrders}
                 sub={fill(HM.cancelledSub, { n: fmtNum(report.summary.cancelled) })}
+                href="/store/history"
               />
               <Tile icon={IconCheck} tint="success" value={fmtNum(report.summary.delivered)} label={HM.deliveredToday} />
               <Tile icon={IconReports} tint="accent" value={fmtMoney(report.summary.sales)} label={HM.salesToday} />

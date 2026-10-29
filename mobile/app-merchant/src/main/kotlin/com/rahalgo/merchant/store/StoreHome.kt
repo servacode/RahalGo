@@ -87,9 +87,12 @@ fun StoreScreen(
     vm: StoreViewModel,
     unavailable: Int = 0,
     onUnavailable: () -> Unit = {},
-    onAddItem: () -> Unit = {},
+    onOffers: () -> Unit = {},
     onPrices: () -> Unit = {},
     onDelivery: () -> Unit = {},
+    onTodayOrders: () -> Unit = {},
+    stores: List<Store> = emptyList(),
+    onSwitch: (String) -> Unit = {},
 ) {
     val store = vm.store
     if (vm.loading || store == null) {
@@ -135,6 +138,8 @@ fun StoreScreen(
                 saving = vm.saving,
                 onLogo = { pickLogo() },
                 onRename = { renaming = store.name },
+                stores = stores,
+                onSwitch = onSwitch,
             )
             Column(
                 Modifier.padding(Rahal.space.lg),
@@ -180,7 +185,8 @@ fun StoreScreen(
                             .height(IntrinsicSize.Min),
                         horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
                     ) {
-                        QuickAction(com.rahalgo.ui.R.drawable.ic_plus, stringResource(R.string.home_quick_add), Rahal.colors.brand, Modifier.weight(1f), onClick = onAddItem)
+                        // **«أضف صنفاً» تبويبٌ تحت — فمكانُه هنا للعروض** (تجربةُ المالك ٢٠٢٦-١٠-٢٩).
+                        QuickAction(com.rahalgo.ui.R.drawable.ic_offer, stringResource(R.string.home_quick_offers), Rahal.colors.brand, Modifier.weight(1f), onClick = onOffers)
                         QuickAction(
                             com.rahalgo.ui.R.drawable.ic_eye_off,
                             stringResource(R.string.home_quick_unavailable),
@@ -204,8 +210,9 @@ fun StoreScreen(
                                 tint = Rahal.colors.brand,
                                 value = r.summary.orders.toString(),
                                 label = stringResource(R.string.reports_today_orders),
-                                sub = stringResource(R.string.home_cancelled_sub, r.summary.cancelled),
-                                modifier = Modifier.weight(1f),
+                                sub = stringResource(R.string.home_cancelled_sub, r.summary.cancelled.toString()),
+                                // **ويُضغط فيُريه طلباتِه** (قرارُ المالك ٢٠٢٦-١٠-٢٩): كان يرى «1» ولا يعرف ما يجهّز.
+                                modifier = Modifier.weight(1f).clip(Rahal.shape.md).clickable(onClick = onTodayOrders),
                             )
                             Tile(
                                 icon = R.drawable.ic_check,
@@ -325,6 +332,8 @@ private fun HomeHeader(
     saving: Boolean,
     onLogo: () -> Unit,
     onRename: () -> Unit,
+    stores: List<Store> = emptyList(),
+    onSwitch: (String) -> Unit = {},
 ) {
     Row(
         Modifier
@@ -354,6 +363,27 @@ private fun HomeHeader(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
+            // **ومبدّلُ الفرع هنا لا شريطاً فوقه** (تجربةُ المالك ٢٠٢٦-١٠-٢٩) — كان الاسمُ يُقرأ مرّتين.
+            if (stores.size > 1) {
+                var open by remember { mutableStateOf(false) }
+                androidx.compose.foundation.layout.Box {
+                    Text(
+                        stringResource(R.string.store_switch),
+                        color = Rahal.colors.onBrand,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.clickable { open = true }.padding(vertical = Rahal.space.xs),
+                    )
+                    androidx.compose.material3.DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+                        stores.forEach { s ->
+                            androidx.compose.material3.DropdownMenuItem(
+                                text = { Text(s.name, fontWeight = if (s.id == store.id) FontWeight.Bold else FontWeight.Normal) },
+                                onClick = { open = false; if (s.id != store.id) onSwitch(s.id) },
+                            )
+                        }
+                    }
+                }
+            }
             if (store.addressText.isNotBlank()) {
                 Text(
                     store.addressText,

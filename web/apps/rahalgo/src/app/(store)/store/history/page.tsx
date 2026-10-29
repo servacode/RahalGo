@@ -46,7 +46,7 @@ export default function HistoryPage() {
       setBusy(true);
       setFailed(false);
       try {
-        const q = new URLSearchParams({ closed_only: "true", page: String(p), per_page: String(PER_PAGE) });
+        const q = new URLSearchParams({ with_active: "true", page: String(p), per_page: String(PER_PAGE) });
         if (status) q.set("status", status);
         const r = await api<OrdersPage>(`/api/v1/merchant/stores/${id}/orders?${q.toString()}`);
         setRows((old) => (reset ? r.orders ?? [] : [...(old ?? []), ...(r.orders ?? [])]));

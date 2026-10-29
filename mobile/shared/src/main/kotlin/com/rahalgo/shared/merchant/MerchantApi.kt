@@ -82,7 +82,7 @@ class MerchantApi(private val api: ApiClient) {
      * النداءُ يطلبها صراحةً في الوضعين.
      */
     suspend fun history(storeId: String, page: Int = 1): OrdersPage =
-        api.call("/api/v1/merchant/stores/$storeId/orders?closed_only=true&page=$page")
+        api.call("/api/v1/merchant/stores/$storeId/orders?with_active=true&page=$page")
 
     /** **طلبٌ بتفصيله** — أصنافُه وخياراتُه وملاحظتُه. */
     suspend fun order(orderId: String): MerchantOrder =

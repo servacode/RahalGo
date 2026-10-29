@@ -231,8 +231,14 @@ func (s *Server) handleMerchantOrders(w http.ResponseWriter, r *http.Request) {
 	// **وصاحبُ المطعم يسأل «ماذا بعتُ وماذا ضاع منّي؟»** — وذاك حقُّه في
 	// كلّ الأوضاع. **والجاريةُ وحدَها هي المحجوبةُ في وضع «المنصّة تدير»**،
 	// لأنّه لا يملك فيها زرّاً.
+	//
+	// **و`with_active=true` يُريه الجاريةَ أيضاً للقراءة** (قرارُ المالك ٢٠٢٦-١٠-٢٩) —
+	// كان يرى «طلبات اليوم: 1» ولا يعرف ما يجهّز. **بلا زرٍّ فيها**: السجلُّ قراءةٌ فقط.
 	if q.Get("closed_only") == "true" {
 		f.ClosedOnly = true
+		f.OpenOnly = false
+	} else if q.Get("with_active") == "true" {
+		f.ClosedOnly = false
 		f.OpenOnly = false
 	} else if !s.orders.MerchantsSelfManage(r.Context()) {
 		f.ClosedOnly = true

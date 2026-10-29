@@ -607,7 +607,6 @@
     <string name="wz_pay_wallet">المحفظة</string>
     <string name="wz_returns_yes">نعم، أقبل الترجيع</string>
     <string name="wz_returns_no">لا أقبل</string>
-    <string name="home_quick_add">أضف صنفاً</string>
     <string name="home_quick_unavailable">غير المتوفر</string>
     <string name="home_quick_prices">تغيير الأسعار</string>
     <string name="home_quick_delivery">اطلب توصيلة</string>
@@ -617,7 +616,8 @@
     <string name="home_suspended_sub">لا يستقبل طلبات. تواصل مع إدارة المنصة</string>
     <string name="home_today">اليوم</string>
     <string name="home_delivered_today">سُلّم اليوم</string>
-    <string name="home_cancelled_sub">أُلغي %1$d</string>
+    <string name="home_cancelled_sub">أُلغي %1$s</string>
+    <string name="home_quick_offers">العروض</string>
     <string name="home_group_store">المتجر</string>
     <string name="home_group_hours_money">الدوام والمال</string>
     <string name="home_row_logo">الشعار</string>

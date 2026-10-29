@@ -584,7 +584,7 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                 // عند فرعٍ واحد)، **ولا فوق الخريطة ولا الصفحات المنبثقة ولا
                 // حسابي** — تلك ليست مشهدَ فرع. **وتبديلُه يُعيد بناءَ
                 // الشاشات كلِّها** (`SelectedStore.set` + `Refresh.bump`).
-                if (over == Overlay.None && tab != Tab.Account) {
+                if (over == Overlay.None && tab != Tab.Account && tab != Tab.Store) {
                     com.rahalgo.merchant.store.StoreSwitcher(
                         stores = storeVm.stores,
                         selectedId = com.rahalgo.merchant.SelectedStore.id,
@@ -677,7 +677,11 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                     over == Overlay.Inbox -> InboxSheet(
                         items = shell.inbox.orEmpty(),
                         onMarkAll = shell::markAllRead,
-                        onOpen = shell::markOneRead,
+                        // **وخبرُ الطلب يفتح سجلَّ الطلبات** — ليرى ما يجهّز (٢٠٢٦-١٠-٢٩).
+                        onOpen = { n ->
+                            shell.markOneRead(n)
+                            if (n.kind == "order") overlay.show(Overlay.Menu(MerchantItems.HISTORY))
+                        },
                     )
 
                     // **وفي وضع المنصّة لا تبويبَ للطلبات** — فمن كان
@@ -749,9 +753,15 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                         unavailable = menuVm.groups.sumOf { g -> g.items.count { !it.available } },
                         onUnavailable = { menuVm.cancelEdit(); menuVm.showUnavailable(); tab = Tab.Menu },
                         // **الأزرارُ السريعة** (ملاحظةُ المالك ٦ب).
-                        onAddItem = { overlay.clear(); tab = Tab.AddItem; menuVm.newItem() },
+                        onOffers = { overlay.show(Overlay.Menu(MerchantItems.OFFERS)) },
                         onPrices = { menuVm.cancelEdit(); menuVm.bulk.show(); tab = Tab.Menu },
                         onDelivery = { overlay.clear(); tab = Tab.Delivery },
+                        onTodayOrders = { overlay.show(Overlay.Menu(MerchantItems.HISTORY)) },
+                        stores = storeVm.stores,
+                        onSwitch = { id ->
+                            com.rahalgo.merchant.SelectedStore.set(id)
+                            com.rahalgo.ui.Refresh.bump()
+                        },
                     )
 
                     tab == Tab.Delivery -> com.rahalgo.merchant.delivery.DeliveryScreen(deliveryVm)
