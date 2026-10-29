@@ -85,6 +85,27 @@ private fun Tone.color(): Color = when (this) {
 }
 
 /**
+ * **ما يُكتب على النبرة المملوءة** — من اللوح حسب السمة لا أبيضُ ثابت.
+ *
+ * **والأبيضُ على سماويّ الغامقة (`#4FB8E8`) تباينُه قرابةَ ٢ من ٢١**، وعلى
+ * البرتقاليّ مثلُه في السمتين — فالبرتقاليُّ يُكتب عليه حبرٌ غامق، والباقي
+ * `onBrand` (أبيضُ في الفاتحة وكحليٌّ غامقٌ في الغامقة).
+ */
+@Composable
+private fun Tone.onColor(): Color = when (this) {
+    Tone.Accent -> Rahal.colors.onLight
+    Tone.OnDark -> Color.White
+    else -> Rahal.colors.onBrand
+}
+
+/** **حبرُ النبرة للزرّ المحدَّد والنصّيّ** — البرتقاليُّ نصّاً بحبره الغامق. */
+@Composable
+private fun Tone.inkColor(): Color = when (this) {
+    Tone.Accent -> Rahal.colors.accentInk
+    else -> color()
+}
+
+/**
  * **حشوةٌ واحدةٌ لكلّ الأزرار** — والارتفاعُ يتبعها.
  *
  * **وحشوةٌ تُكتب في الموضع تجعل زرّين متجاورين مختلفَي الارتفاع** —
@@ -124,10 +145,8 @@ fun RahalButton(
         contentPadding = if (compact) PadTight else Pad,
         colors = ButtonDefaults.buttonColors(
             containerColor = tone.color(),
-            // **والنصُّ أبيضُ على كلّ النبرات** — نبراتُنا الأربعُ
-            // داكنةٌ كلُّها، **ولونُ نصٍّ يتبع السمةَ يصير أبيضَ على
-            // أبيضَ في الفاتحة.**
-            contentColor = Color.White,
+            // **والنصُّ من اللوح حسب النبرة والسمة** — لا أبيضُ ثابت.
+            contentColor = tone.onColor(),
             // ══════════════════════════════════════════════════════════
             // **والمعطَّلُ يُرى معطَّلاً لا يختفي**
             // ══════════════════════════════════════════════════════════
@@ -142,7 +161,7 @@ fun RahalButton(
             // **والمعطَّلُ يجب أن يُرى**: هو ما سيعمل حين يملأ حقلَه،
             // **ومن لم يرَه لم يعرف أنّ ثمّة زرّا.**
             disabledContainerColor = tone.color().copy(alpha = 0.30f),
-            disabledContentColor = Color.White.copy(alpha = 0.55f),
+            disabledContentColor = tone.onColor().copy(alpha = 0.55f),
         ),
         content = content,
     )
@@ -162,7 +181,7 @@ fun RahalOutlineButton(
     tone: Tone = Tone.Brand,
     content: @Composable RowScope.() -> Unit,
 ) {
-    val c = tone.color()
+    val c = tone.inkColor()
     OutlinedButton(
         onClick = onClick,
         modifier = modifier,
@@ -194,7 +213,7 @@ fun RahalTextButton(
         modifier = modifier,
         enabled = enabled,
         shape = Rahal.shape.md,
-        colors = ButtonDefaults.textButtonColors(contentColor = tone.color()),
+        colors = ButtonDefaults.textButtonColors(contentColor = tone.inkColor()),
         content = content,
     )
 }

@@ -16,6 +16,7 @@ import { useStore } from "@/lib/store/context";
 import type { MerchantReport } from "@/lib/store/types";
 import { fill } from "@/lib/customer/texts";
 import { reasonText } from "@/components/store/HistoryParts";
+import { PageHeader } from "@/components/store/SetupParts";
 
 const m = getMessages(defaultLocale);
 const C = m.store.complaints;
@@ -26,7 +27,7 @@ function Row({ t }: { t: MerchantReport }) {
     <li className="flex flex-col gap-1 py-3" data-testid="store-ticket">
       <span className="flex items-center justify-between gap-2">
         <span className="font-bold">{`#${t.number} · ${reasonText(t.reason)}`}</span>
-        <span className={`shrink-0 text-xs ${t.status === "resolved" ? "text-success" : "text-warning"}`}>{status}</span>
+        <span className={`shrink-0 text-xs ${t.status === "resolved" ? "text-success" : "text-ink-muted"}`}>{status}</span>
       </span>
       {t.order_number != null && <span className="text-xs text-ink-muted">{fill(C.onOrder, { n: `#${t.order_number}` })}</span>}
       {t.resolution && <span className="text-sm">{t.resolution}</span>}
@@ -54,10 +55,7 @@ export default function ComplaintsPage() {
 
   return (
     <div className="flex flex-col gap-3">
-      <header>
-        <h2 className="heading-page">{C.title}</h2>
-        <p className="text-sm text-ink-muted">{C.hint}</p>
-      </header>
+      <PageHeader title={C.title} />
       <Tabs
         items={[
           { key: "mine", label: C.mine, count: data?.mine.length ?? 0 },

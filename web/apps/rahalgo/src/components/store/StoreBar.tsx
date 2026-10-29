@@ -33,18 +33,19 @@ export default function StoreBar() {
       : !store.open_now
         ? S.state.closedHours
         : S.home.openNow;
+  // **أرضٌ فاتحةٌ من لون الحال وحرفٌ بلونه** — كشريط الحال في «متجري» (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩).
   const tone = suspended
-    ? "bg-danger-solid text-on-solid"
+    ? "bg-danger-tint text-danger"
     : store.emergency_closed
-      ? "bg-warning-solid text-on-solid"
+      ? "bg-warning-tint text-warning"
       : !store.open_now
-        ? "bg-disabled text-on-solid"
-        : "bg-success-solid text-on-solid";
+        ? "bg-field text-ink-muted"
+        : "bg-success-tint text-success";
 
   return (
     <section className="surface flex flex-col gap-2 p-3" aria-label={S.nav.store}>
       <div className="flex items-center gap-2">
-        <IconStore size={18} className="shrink-0 text-accent-text" />
+        <IconStore size={18} className="shrink-0 text-primary" />
         {stores.length > 1 ? (
           <Select
             aria-label={S.pickStore}

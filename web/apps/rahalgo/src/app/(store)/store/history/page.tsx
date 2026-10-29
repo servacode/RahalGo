@@ -21,6 +21,7 @@ import { api } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import type { MerchantOrder, OrdersPage } from "@/lib/store/types";
 import { MoneyLines, orderStatus, ReportDriver } from "@/components/store/HistoryParts";
+import { PageHeader } from "@/components/store/SetupParts";
 
 const m = getMessages(defaultLocale);
 const H = m.store.history;
@@ -76,10 +77,7 @@ export default function HistoryPage() {
 
   return (
     <div className="flex flex-col gap-3">
-      <header>
-        <h2 className="heading-page">{H.title}</h2>
-        <p className="text-sm text-ink-muted">{H.hint}</p>
-      </header>
+      <PageHeader title={H.title} />
       {chips.length > 2 && <Chips items={chips} value={status} onChange={setStatus} />}
       {failed && !rows && <ReloadState onRetry={() => void fetchPage(1, true)} />}
       {rows == null && !failed && <LoadingState variant="list" rows={4} />}
@@ -109,7 +107,6 @@ export default function HistoryPage() {
               {o.items.length > 0 && (
                 <p className="text-xs text-ink-muted">{o.items.map((l) => `${l.qty}× ${l.name}`).join(m.common.listSep)}</p>
               )}
-              <p className="text-end text-2xs text-accent-text">{H.open}</p>
             </Link>
             {reportable.has(o.id) && (
               <Button variant="ghost" className="flex w-fit items-center gap-1 text-danger" onClick={() => setReporting(o)}>

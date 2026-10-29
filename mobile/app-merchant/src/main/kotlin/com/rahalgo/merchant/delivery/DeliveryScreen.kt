@@ -353,7 +353,7 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
     fun setPoint(lat: Double, lng: Double, label: String) {
         pointFromLink = false
         point = lat to lng
-        pointLabel = label.ifEmpty { "%.5f، %.5f".format(lat, lng) }
+        pointLabel = label.ifEmpty { String.format(java.util.Locale.US, "%.5f، %.5f", lat, lng) }
         touched()
         fetchQuote(lat, lng)
     }
@@ -512,7 +512,7 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
         return
     }
     Screen {
-        ScreenTitle(stringResource(R.string.md_title), stringResource(R.string.md_hint))
+        ScreenTitle(stringResource(R.string.md_title))
 
         // ══════════════════════════════════════════════════════════════
         // **توصيلةٌ جارية — شريطٌ فوق النموذج بزرّ «تابعها»** (التصميمُ المعتمد ٢٠٢٦-١٠-٢٨)
@@ -549,14 +549,14 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
         // **وما يمنع الإرسالَ يُقال أوّلَ الشاشة** — المنصّةُ خارجَ دوامها أو لا
         // سائقَ قريب (قرارُ المالك ٢٠٢٦-١٠-٠١) — **لا بعد ملء النموذج كلِّه.**
         if (vm.quoteError.isNotEmpty()) {
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             Row(
                 Modifier
                     .fillMaxWidth()
                     .clip(Rahal.shape.md)
                     .background(Rahal.colors.danger.copy(alpha = 0.08f))
                     .border(Rahal.stroke.hair, Rahal.colors.danger.copy(alpha = 0.4f), Rahal.shape.md)
-                    .padding(12.dp),
+                    .padding(Rahal.space.md),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
@@ -564,7 +564,7 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
                     contentDescription = null,
                     tint = Rahal.colors.danger,
                 )
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(Rahal.space.sm))
                 Column(Modifier.weight(1f)) {
                     Text(
                         stringResource(if (vm.quoteClosed) R.string.md_closed_title else R.string.md_blocked_title),
@@ -586,10 +586,10 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
         // ── «توصيل» أو «إحضار» — زرّان كبيران، ولا مختارَ افتراضاً (ملاحظةُ المالك ٢٠٢٦-١٠-١٦):
         // «لازم يكونن زرين واضحين لازم يختار وحدة منهن». **والنموذجُ لا يظهر قبل الاختيار.**
         val fetch = vm.mode == "fetch"
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(Rahal.space.md))
         Row(
             Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
         ) {
             listOf(
                 Triple("send", R.string.md_mode_send, R.string.md_mode_send_sub),
@@ -602,12 +602,12 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
                         .clip(Rahal.shape.md)
                         .background(if (on) Rahal.colors.brand.copy(alpha = 0.10f) else Rahal.colors.canvas)
                         .border(
-                            if (on) 2.dp else Rahal.stroke.hair,
+                            if (on) Rahal.stroke.focus else Rahal.stroke.hair,
                             if (on) Rahal.colors.brand else Rahal.colors.line,
                             Rahal.shape.md,
                         )
                         .clickable(enabled = !vm.busy) { vm.pickMode(key) }
-                        .padding(horizontal = 12.dp, vertical = 16.dp),
+                        .padding(horizontal = Rahal.space.md, vertical = Rahal.space.lg),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
@@ -616,7 +616,7 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
                         style = MaterialTheme.typography.titleLarge,
                         color = if (on) Rahal.colors.brand else Rahal.colors.ink,
                     )
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(Rahal.space.xs))
                     Text(
                         stringResource(sub),
                         color = Rahal.colors.inkMuted,
@@ -627,21 +627,13 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
             }
         }
         if (vm.mode.isEmpty()) {
-            Spacer(Modifier.height(16.dp))
-            Text(
-                stringResource(R.string.md_mode_pick),
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            )
             // **و«توصيلاتي» تبقى ظاهرةً قبل الاختيار** — لا تختفي مع النموذج.
             RecentDeliveries(vm) { tracking = it }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(Rahal.space.xl))
             return@Screen
         }
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         OutlinedTextField(
             shape = Rahal.shape.md,
             value = vm.name,
@@ -653,7 +645,7 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
             enabled = !vm.busy,
             modifier = Modifier.fillMaxWidth(),
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         // **والرقمُ بحقل الهاتف المشترك** — بأيقونته ومثاله.
         PhoneField(
             value = vm.phone,
@@ -661,7 +653,7 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
             enabled = !vm.busy,
             label = if (fetch) R.string.md_phone_fetch else R.string.md_phone,
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         OutlinedTextField(
             shape = Rahal.shape.md,
             value = vm.address,
@@ -673,29 +665,34 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
             modifier = Modifier.fillMaxWidth(),
         )
 
-        // ── موقعُ المستلِم: «اطلب الموقع من المستلم» أوّلاً (٢٠٢٦-١٠-٢٩)، والرابطُ احتياط ──
-        Spacer(Modifier.height(10.dp))
-        AskLocationCard(vm, fetch)
-        Spacer(Modifier.height(8.dp))
-        val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                shape = Rahal.shape.md,
-                value = vm.link,
-                onValueChange = { vm.onLink(it) },
-                label = { Text(stringResource(if (fetch) R.string.md_link_fetch else R.string.md_link)) },
-                placeholder = { Text(stringResource(if (fetch) R.string.md_link_hint_fetch else R.string.md_link_hint)) },
-                leadingIcon = { FieldIcon(com.rahalgo.ui.R.drawable.ic_pin) },
-                singleLine = true,
-                enabled = !vm.busy,
-                modifier = Modifier.weight(1f),
-            )
-            Spacer(Modifier.width(Rahal.space.sm))
-            // **«لصق» بلمسة** — يقرأ الحافظةَ ويمرّرها لقارئ الرابط نفسِه.
-            RahalOutlineButton(
-                onClick = { clipboard.getText()?.text?.trim()?.takeIf { it.isNotEmpty() }?.let { vm.onLink(it) } },
-                enabled = !vm.busy,
-            ) { Text(stringResource(R.string.md_paste), fontWeight = FontWeight.Bold) }
+        // ── موقعُ المستلِم: «اطلب الموقع» وجنبه «لصق رابط» بصفٍّ واحد (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) ──
+        // **وحقلُ الرابط مخفيٌّ حتّى يُطلب** — ولا سطرَ شرح («مافي داعي للشرح»).
+        var linkOpen by rememberSaveable { mutableStateOf(false) }
+        val showLink = linkOpen || vm.link.isNotEmpty()
+        Spacer(Modifier.height(Rahal.space.sm))
+        AskLocationCard(vm, fetch, linkOpen = showLink) { linkOpen = !linkOpen }
+        if (showLink) {
+            Spacer(Modifier.height(Rahal.space.sm))
+            val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    shape = Rahal.shape.md,
+                    value = vm.link,
+                    onValueChange = { vm.onLink(it) },
+                    label = { Text(stringResource(if (fetch) R.string.md_link_fetch else R.string.md_link)) },
+                    placeholder = { Text(stringResource(if (fetch) R.string.md_link_hint_fetch else R.string.md_link_hint)) },
+                    leadingIcon = { FieldIcon(com.rahalgo.ui.R.drawable.ic_pin) },
+                    singleLine = true,
+                    enabled = !vm.busy,
+                    modifier = Modifier.weight(1f),
+                )
+                Spacer(Modifier.width(Rahal.space.sm))
+                // **«لصق» بلمسة** — يقرأ الحافظةَ ويمرّرها لقارئ الرابط نفسِه.
+                RahalOutlineButton(
+                    onClick = { clipboard.getText()?.text?.trim()?.takeIf { it.isNotEmpty() }?.let { vm.onLink(it) } },
+                    enabled = !vm.busy,
+                ) { Text(stringResource(R.string.md_paste), fontWeight = FontWeight.Bold) }
+            }
         }
         when (vm.linkState) {
             LinkState.Checking -> Text(
@@ -713,17 +710,12 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
                 color = Rahal.colors.danger,
                 style = MaterialTheme.typography.bodySmall,
             )
-            LinkState.Idle -> Text(
-                // **وفي الإحضار الموقعُ موقعُ مكان الاستلام لا الزبون** (٢٠٢٦-١٠-١٦).
-                stringResource(if (fetch) R.string.md_link_how_fetch else R.string.md_link_how),
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
-            )
+            LinkState.Idle -> Unit
         }
         // **ولا تحديدَ يدويّاً على الخريطة** (طلبُ المالك ٢٠٢٦-١٠-٠٩: «صفحة نظيفة»)
         // — الموقعُ من رابطٍ يشاركه الزبون، والعنوانُ المكتوبُ يكمّله.
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         OutlinedTextField(
             shape = Rahal.shape.md,
             value = vm.parcel,
@@ -735,7 +727,7 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
             enabled = !vm.busy,
             modifier = Modifier.fillMaxWidth(),
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         OutlinedTextField(
             shape = Rahal.shape.md,
             value = vm.driverNote,
@@ -749,7 +741,7 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
 
         // ── «بدك السائق يقبض مبلغ من المستلم؟» — عرضٌ لا حساب (٢٠٢٦-١٠-١٥) ──
         // **وفي «إحضار» يدفعه بمكان الاستلام ويأخذه منك** (٢٠٢٦-١٠-١٦) — `DeliveryTexts`.
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         Row(
             Modifier
                 .fillMaxWidth()
@@ -804,27 +796,20 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
         }
 
         // ── من يدفع — بطاقاتٌ واضحةٌ إجباريّة (طلبُ المالك ٢٠٢٦-١٠-٠٩) ──
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(Rahal.space.md))
         Text(
             stringResource(R.string.md_who_pays_q),
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.titleSmall,
             color = if (tried && vm.payer.isEmpty()) Rahal.colors.danger else Color.Unspecified,
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
+        // **والكلمةُ تكفي** — بلا سطر شرحٍ تحت كلّ خيار (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩).
         listOf(
-            Triple("merchant", R.string.md_pay_me, R.string.md_pay_me_sub),
-            Triple(
-                "merchant_cash",
-                R.string.md_pay_me_cash,
-                if (fetch) R.string.md_pay_me_cash_sub_fetch else R.string.md_pay_me_cash_sub,
-            ),
-            Triple(
-                "recipient",
-                if (fetch) R.string.md_pay_recipient_fetch else R.string.md_pay_recipient,
-                if (fetch) R.string.md_pay_recipient_sub_fetch else R.string.md_pay_recipient_sub,
-            ),
-        ).forEach { (key, title, sub) ->
+            "merchant" to R.string.md_pay_me,
+            "merchant_cash" to R.string.md_pay_me_cash,
+            "recipient" to if (fetch) R.string.md_pay_recipient_fetch else R.string.md_pay_recipient,
+        ).forEach { (key, title) ->
             val on = vm.payer == key
             // **ولا دين** (قرارُ المالك ٢٠٢٦-١٠-١٥): المتاحُ لا يكفي ⇒ «من محفظتي» معطَّل.
             val walletShort = key == "merchant" && vm.quote?.merchantCanPay == false
@@ -832,31 +817,34 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 4.dp)
+                    .padding(vertical = Rahal.space.xs)
                     .clip(Rahal.shape.md)
                     .background(if (on) Rahal.colors.brand.copy(alpha = 0.10f) else Rahal.colors.canvas)
                     .border(
-                        if (on) 2.dp else Rahal.stroke.hair,
+                        if (on) Rahal.stroke.focus else Rahal.stroke.hair,
                         if (on) Rahal.colors.brand else Rahal.colors.line,
                         Rahal.shape.md,
                     )
                     .clickable(enabled = usable) { vm.pickPayer(key) }
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                    .padding(horizontal = Rahal.space.md, vertical = Rahal.space.md),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 androidx.compose.material3.RadioButton(selected = on, onClick = { vm.pickPayer(key) }, enabled = usable)
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(Rahal.space.sm))
                 Column(Modifier.weight(1f)) {
                     Text(
                         stringResource(title),
                         fontWeight = FontWeight.Bold,
                         color = if (walletShort) Rahal.colors.inkMuted else Rahal.colors.ink,
                     )
-                    Text(
-                        stringResource(if (walletShort) R.string.md_wallet_short else sub),
-                        color = if (walletShort) Rahal.colors.danger else Rahal.colors.inkMuted,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
+                    // **والمحفظةُ لا تكفي — حالٌ يُقال**، لا شرح.
+                    if (walletShort) {
+                        Text(
+                            stringResource(R.string.md_wallet_short),
+                            color = Rahal.colors.danger,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
                 }
             }
         }
@@ -864,13 +852,15 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
         // ── الأجرةُ قبل الإرسال ───────────────────────────────────────
         val q = vm.quote
         if (vm.quoteError.isEmpty() && q != null) {
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             Column(
                 Modifier
                     .fillMaxWidth()
                     .clip(Rahal.shape.md)
-                    .background(Rahal.colors.success.copy(alpha = 0.10f))
-                    .padding(12.dp),
+                    // **أرضيّةٌ عاديّة لا خضراء** — الأخضرُ «تمّ/مدفوع»، والأجرةُ لم تُدفع بعد.
+                    .background(Rahal.colors.surface)
+                    .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
+                    .padding(Rahal.space.md),
             ) {
                 Text(
                     stringResource(R.string.md_fee, com.rahalgo.ui.grouped(q.fee)),
@@ -896,7 +886,7 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
                     )
                 } else if (q.feeBasis == "distance" && q.distanceM > 0) {
                     Text(
-                        stringResource(R.string.md_fee_distance, "%.1f".format(q.distanceM / 1000.0)),
+                        stringResource(R.string.md_fee_distance, String.format(java.util.Locale.US, "%.1f", q.distanceM / 1000.0)),
                         color = Rahal.colors.inkMuted,
                         style = MaterialTheme.typography.bodySmall,
                     )
@@ -904,7 +894,7 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
             }
             // **ولا يكفيه أن يدفع من محفظته — يُقال قبل الضغط** لا ٤٠٢ بعده.
             if (vm.payer == "merchant" && !q.merchantCanPay) {
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(Rahal.space.xs))
                 Note(stringResource(R.string.md_cannot_pay), Rahal.colors.danger)
             }
         }
@@ -922,11 +912,11 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
             (vm.payer == "merchant" && q != null && !q.merchantCanPay)
 
         if (vm.sent) {
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Rahal.space.md))
             Note(stringResource(R.string.md_sent), Rahal.colors.success)
         }
         if (vm.error.isNotEmpty()) {
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Rahal.space.md))
             Note(vm.error, Rahal.colors.danger)
         }
         // ══════════════════════════════════════════════════════════════
@@ -937,7 +927,7 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
         // التاجرُ الاستمارةَ الطويلة ويجد الزرَّ واقفاً ولا يعرف ليش. **فالناقصُ سطرٌ
         // فوقه، والضغطُ والنموذجُ ناقصٌ يعلّم خاناته بالأحمر** — ولا يُرسل شيئاً.
         if (missing.isNotEmpty()) {
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Rahal.space.md))
             Text(
                 stringResource(R.string.md_missing, missing.joinToString("، ")),
                 color = if (tried) Rahal.colors.danger else Rahal.colors.inkMuted,
@@ -945,7 +935,7 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
                 fontWeight = if (tried) FontWeight.Bold else FontWeight.Normal,
             )
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(Rahal.space.md))
         RahalButton(
             onClick = {
                 if (missing.isNotEmpty()) {
@@ -968,7 +958,7 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
             )
         }
         RecentDeliveries(vm) { tracking = it }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(Rahal.space.xl))
     }
 }
 
@@ -976,7 +966,7 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
 @Composable
 private fun RecentDeliveries(vm: DeliveryViewModel, onOpen: (String) -> Unit) {
     // ── آخرُ التوصيلات — والسجلُّ كلُّه في القائمة الجانبيّة ────────
-    Spacer(Modifier.height(20.dp))
+    Spacer(Modifier.height(Rahal.space.lg))
     SectionTitle(stringResource(R.string.md_mine))
     if (vm.listError.isNotEmpty()) {
         Note(vm.listError, Rahal.colors.danger)
@@ -1002,40 +992,63 @@ private fun RecentDeliveries(vm: DeliveryViewModel, onOpen: (String) -> Unit) {
  * يُرسَل · ينتظر (ومشاركةُ الرابط إن لم تصل الرسالة) · **✓ وصل بدقّته** · انتهى.
  */
 @Composable
-private fun AskLocationCard(vm: DeliveryViewModel, fetch: Boolean) {
+private fun AskLocationCard(vm: DeliveryViewModel, fetch: Boolean, linkOpen: Boolean, onLink: () -> Unit) {
     val uri = androidx.compose.ui.platform.LocalUriHandler.current
     val waiting = vm.ask == AskState.Sending || vm.ask == AskState.Waiting
-    RahalOutlineButton(
-        onClick = { vm.askLocation() },
-        enabled = !vm.busy && !waiting,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(52.dp),
-    ) {
-        Icon(painterResource(com.rahalgo.ui.R.drawable.ic_pin), contentDescription = null, tint = Rahal.colors.brand)
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        RahalOutlineButton(
+            onClick = { vm.askLocation() },
+            enabled = !vm.busy && !waiting,
+            modifier = Modifier
+                .weight(1f)
+                .height(52.dp),
+        ) {
+            Icon(painterResource(com.rahalgo.ui.R.drawable.ic_pin), contentDescription = null, tint = Rahal.colors.brand)
+            Spacer(Modifier.width(Rahal.space.sm))
+            Text(
+                stringResource(
+                    when {
+                        vm.ask == AskState.Sending -> R.string.md_ask_sending
+                        fetch -> R.string.md_ask_loc_fetch
+                        else -> R.string.md_ask_loc
+                    },
+                ),
+                fontWeight = FontWeight.Bold,
+            )
+        }
         Spacer(Modifier.width(Rahal.space.sm))
-        Text(
-            stringResource(
-                when {
-                    vm.ask == AskState.Sending -> R.string.md_ask_sending
-                    fetch -> R.string.md_ask_loc_fetch
-                    else -> R.string.md_ask_loc
-                },
-            ),
-            fontWeight = FontWeight.Bold,
-        )
+        // **«لصق رابط» أيقونةٌ بجانب الزرّ** — تفتح حقلَ الرابط وقتَ الحاجة.
+        androidx.compose.foundation.layout.Box(
+            Modifier
+                .size(52.dp)
+                .clip(Rahal.shape.md)
+                .background(if (linkOpen) Rahal.colors.brand.copy(alpha = 0.10f) else Rahal.colors.canvas)
+                .border(
+                    if (linkOpen) Rahal.stroke.focus else Rahal.stroke.hair,
+                    if (linkOpen) Rahal.colors.brand else Rahal.colors.line,
+                    Rahal.shape.md,
+                )
+                .clickable(enabled = !vm.busy) { onLink() },
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painterResource(com.rahalgo.ui.R.drawable.ic_copy),
+                contentDescription = stringResource(if (fetch) R.string.md_link_fetch else R.string.md_link),
+                tint = Rahal.colors.brand,
+            )
+        }
     }
     val req = vm.askReq
     when {
         vm.ask == AskState.Waiting && req != null -> {
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(Rahal.space.xs))
             Column(
                 Modifier
                     .fillMaxWidth()
                     .clip(Rahal.shape.md)
                     .background(Rahal.colors.canvas)
                     .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
-                    .padding(12.dp),
+                    .padding(Rahal.space.md),
             ) {
                 Text(
                     stringResource(if (req.whatsappSent) R.string.md_ask_waiting else R.string.md_ask_not_sent),
@@ -1051,13 +1064,13 @@ private fun AskLocationCard(vm: DeliveryViewModel, fetch: Boolean) {
             }
         }
         vm.ask == AskState.Received -> {
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(Rahal.space.xs))
             Column(
                 Modifier
                     .fillMaxWidth()
                     .clip(Rahal.shape.md)
                     .background(Rahal.colors.success.copy(alpha = 0.10f))
-                    .padding(12.dp),
+                    .padding(Rahal.space.md),
             ) {
                 Text(
                     stringResource(if (fetch) R.string.md_ask_received_fetch else R.string.md_ask_received),
@@ -1128,75 +1141,93 @@ private fun FieldIcon(icon: Int) {
  */
 @Composable
 fun DeliveryRow(d: Delivery, cancelling: Boolean, onOpen: () -> Unit = {}, onCancel: () -> Unit) {
-    Spacer(Modifier.height(10.dp))
+    Spacer(Modifier.height(Rahal.space.sm))
     val tone = toneColor(toneOf(d.status))
+    val live = toneOf(d.status) == Tone.Waiting || toneOf(d.status) == Tone.Moving
+    // **سطران مطويّان، واللمسةُ تفتح التفاصيل** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩).
+    var open by rememberSaveable(d.id) { mutableStateOf(false) }
     Column(
         Modifier
             .fillMaxWidth()
             .clip(Rahal.shape.md)
             .background(Rahal.colors.canvas)
             .border(Rahal.stroke.hair, tone.copy(alpha = 0.45f), Rahal.shape.md)
-            .clickable { onOpen() }
-            .padding(14.dp),
+            .clickable { open = !open }
+            .padding(Rahal.space.md),
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(
-                    stringResource(R.string.md_track_title, d.number.toString()),
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleSmall,
-                )
-                // **ويومُها وساعتُها** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كانت بلا تاريخ.
-                if (d.createdAt.isNotBlank()) {
-                    Text(
-                        com.rahalgo.merchant.Dates.stamp(androidx.compose.ui.platform.LocalContext.current, d.createdAt),
-                        color = Rahal.colors.inkMuted,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            }
+            Text(
+                stringResource(R.string.md_track_title, d.number.toString()),
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleSmall,
+                modifier = Modifier.weight(1f),
+            )
             StatusPill(d.status)
         }
-        Hairline()
-        if (d.status == "dispatching") {
-            SearchingBanner(compact = true)
-            Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.xs))
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                d.recipientName,
+                color = Rahal.colors.ink,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            Spacer(Modifier.width(Rahal.space.sm))
+            Text(
+                com.rahalgo.ui.money(d.fee),
+                fontWeight = FontWeight.Bold,
+                color = Rahal.colors.ink,
+                style = MaterialTheme.typography.bodyMedium,
+            )
         }
-        if (d.deliveryMode == "fetch") {
-            InfoLine(com.rahalgo.ui.R.drawable.ic_moto, stringResource(R.string.md_row_fetch), strong = true)
-        }
-        InfoLine(com.rahalgo.ui.R.drawable.ic_user, d.recipientName, strong = true)
-        InfoLine(com.rahalgo.ui.R.drawable.ic_phone, d.recipientPhone)
-        InfoLine(com.rahalgo.ui.R.drawable.ic_home, d.addressText)
-        if (!d.dropoffKnown) {
-            InfoLine(com.rahalgo.ui.R.drawable.ic_pin, stringResource(R.string.md_row_no_point), muted = true)
-        }
-        if (d.parcelNote.isNotBlank()) {
-            InfoLine(com.rahalgo.ui.R.drawable.ic_orders, d.parcelNote)
-        }
-        InfoLine(
-            com.rahalgo.ui.R.drawable.ic_wallet,
-            stringResource(DeliveryTexts.feeRow(d.feePayer, d.deliveryMode == "fetch"), com.rahalgo.ui.grouped(d.fee)),
-        )
-        d.collectAmount?.takeIf { it > 0 }?.let {
+        if (open) {
+            Hairline()
+            // **ويومُها وساعتُها** (تدقيقُ ٢٠٢٦-١٠-٢٧).
+            if (d.createdAt.isNotBlank()) {
+                Text(
+                    com.rahalgo.merchant.Dates.stamp(androidx.compose.ui.platform.LocalContext.current, d.createdAt),
+                    color = Rahal.colors.inkMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Spacer(Modifier.height(Rahal.space.xs))
+            }
+            if (d.status == "dispatching") {
+                SearchingBanner(compact = true)
+                Spacer(Modifier.height(Rahal.space.sm))
+            }
+            if (d.deliveryMode == "fetch") {
+                InfoLine(com.rahalgo.ui.R.drawable.ic_moto, stringResource(R.string.md_row_fetch), strong = true)
+            }
+            InfoLine(com.rahalgo.ui.R.drawable.ic_phone, d.recipientPhone)
+            InfoLine(com.rahalgo.ui.R.drawable.ic_home, d.addressText)
+            if (!d.dropoffKnown) {
+                InfoLine(com.rahalgo.ui.R.drawable.ic_pin, stringResource(R.string.md_row_no_point), muted = true)
+            }
+            if (d.parcelNote.isNotBlank()) {
+                InfoLine(com.rahalgo.ui.R.drawable.ic_orders, d.parcelNote)
+            }
             InfoLine(
                 com.rahalgo.ui.R.drawable.ic_wallet,
-                stringResource(DeliveryTexts.collectRow(d.deliveryMode == "fetch"), DeliveryTexts.amount(d, it)),
+                stringResource(DeliveryTexts.feeRow(d.feePayer, d.deliveryMode == "fetch"), com.rahalgo.ui.grouped(d.fee)),
             )
-        }
-        // **و«اضغط لمتابعتها» لِما يجري وحدَه** — المنتهيةُ لا تُتابَع (تدقيقُ ٢٠٢٦-١٠-٢٧).
-        if (toneOf(d.status) == Tone.Waiting || toneOf(d.status) == Tone.Moving) {
-            Spacer(Modifier.height(6.dp))
-            Text(
-                stringResource(R.string.md_track_open),
-                color = Rahal.colors.brand,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-        if (d.status in cancellable) {
-            Spacer(Modifier.height(10.dp))
-            CancelDeliveryButton(busy = cancelling, onConfirm = onCancel)
+            d.collectAmount?.takeIf { it > 0 }?.let {
+                InfoLine(
+                    com.rahalgo.ui.R.drawable.ic_wallet,
+                    stringResource(DeliveryTexts.collectRow(d.deliveryMode == "fetch"), DeliveryTexts.amount(d, it)),
+                )
+            }
+            // **و«تابعها» لِما يجري وحدَه** — المنتهيةُ لا تُتابَع.
+            if (live) {
+                RahalTextButton(onClick = onOpen) {
+                    Text(stringResource(R.string.md_follow), fontWeight = FontWeight.Bold)
+                }
+            }
+            if (d.status in cancellable) {
+                Spacer(Modifier.height(Rahal.space.sm))
+                CancelDeliveryButton(busy = cancelling, onConfirm = onCancel)
+            }
         }
     }
 }
@@ -1293,9 +1324,9 @@ fun DeliveryHistoryScreen(vm: DeliveryHistoryViewModel) {
         return
     }
     Screen {
-        ScreenTitle(stringResource(R.string.menu_deliveries), stringResource(R.string.md_history_hint))
+        // **والعنوانُ في رأس الصفحة** (`OverlayPage`) — بسهم رجوع.
         if (vm.error.isNotEmpty()) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             Note(vm.error, Rahal.colors.danger)
             RahalTextButton(onClick = { vm.load() }) {
                 Text(stringResource(com.rahalgo.ui.R.string.act_retry))
@@ -1313,14 +1344,14 @@ fun DeliveryHistoryScreen(vm: DeliveryHistoryViewModel) {
             }
         }
         if (vm.more) {
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             RahalOutlineButton(
                 onClick = { vm.next() },
                 enabled = !vm.busy,
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(stringResource(R.string.md_more)) }
         }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(Rahal.space.xl))
     }
 }
 

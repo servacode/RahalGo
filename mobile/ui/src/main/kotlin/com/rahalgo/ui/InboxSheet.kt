@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -36,32 +37,41 @@ import com.rahalgo.shared.model.Notice
  * **وشارة الجرس تُقرأ ولا تُفتح على فراغ** — زرّ يعرض عددا ثمّ لا يفتح
  * شيئا **يُقرأ عطبا.**
  *
- * # وغير المقروء يُعلَّم بنقطة
+ * # وغير المقروء عريضٌ بأرضٍ خفيفة، والمقروءُ عاديّ
  *
- * **لا بخلفيّة ملوّنة**: عشرة إشعارات غير مقروءة تجعل الشاشة كلّها
- * لونا واحدا، **فلا يُقرأ منها شيء.**
+ * (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩: كانا بشكلٍ واحدٍ إلّا نقطةً صغيرة.) **والأرضُ
+ * خفيفةٌ جدّاً** — عشرةُ أخبارٍ جديدةٍ لا تصبغ الشاشةَ لوناً واحداً.
  *
- * # ولا تُفتح شاشة بالضغط
+ * # ولا مسافةَ شريط النظام مرّتين
  *
- * (قرار المالك ٢٠٢٦-٠٨-١١: «الإشعارات عند الضغط تفتح صفحات غير موجودة
- * — يكفي أن تكون مقروءة وغير مقروءة وتوصل لنا الخبر».)
+ * الصندوقُ يُعرض داخل `Scaffold` أعطاه مسافةَ شريطه العلويّ، **فـ`statusBarsPadding`
+ * فوقها فراغٌ مضاعف.** و`statusBarInset = true` لمن يعرضه بلا شريط (السائقُ على الخريطة).
  */
 @Composable
-fun InboxSheet(items: List<Notice>, onMarkAll: () -> Unit, onOpen: (Notice) -> Unit = {}) {
+fun InboxSheet(
+    items: List<Notice>,
+    onMarkAll: () -> Unit,
+    onOpen: (Notice) -> Unit = {},
+    statusBarInset: Boolean = false,
+) {
     Column(
         Modifier
             .fillMaxSize()
             .background(Rahal.colors.canvas)
-            .statusBarsPadding(),
+            .then(if (statusBarInset) Modifier.statusBarsPadding() else Modifier),
     ) {
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = HeadHeight)
+                .padding(horizontal = Rahal.space.lg),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = stringResource(R.string.inbox_title),
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
             )
             // ══════════════════════════════════════════════════════════
             // **ولا زرَّ رجوعٍ هنا — الجرسُ يفتح ويُغلق**
@@ -83,11 +93,7 @@ fun InboxSheet(items: List<Notice>, onMarkAll: () -> Unit, onOpen: (Notice) -> U
         }
 
         if (items.isEmpty()) {
-            Text(
-                text = stringResource(R.string.inbox_empty),
-                color = Rahal.colors.inkMuted,
-                modifier = Modifier.fillMaxWidth().padding(24.dp),
-            )
+            Empty(stringResource(R.string.inbox_empty), icon = R.drawable.ic_bell)
             return@Column
         }
 
@@ -101,28 +107,38 @@ fun InboxSheet(items: List<Notice>, onMarkAll: () -> Unit, onOpen: (Notice) -> U
         // **وثلاثون خبراً في قائمةٍ متّصلةٍ تُقرأ كتلةً واحدة** — ومن فتح
         // ليعرف ما جدّ اليومَ لا يعرف أين ينتهي اليومُ ويبدأ الأمس.
         var day = ""
-        LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+        LazyColumn(Modifier.fillMaxSize()) {
             items(items) { notice ->
                 val d = dayText(notice.createdAt)
                 if (d != day) {
                     day = d
-                    DayHead(d)
+                    Column(Modifier.padding(horizontal = Rahal.space.lg)) { DayHead(d) }
                 }
                 // **والضغطُ على الخبر يعلّمه مقروءاً** (تجربةُ المالك ٢٠٢٦-١٠-٢٩: ضغط فلم يتغيّر شيء).
-                Row(Modifier.fillMaxWidth().clickable { onOpen(notice) }.padding(vertical = 10.dp)) {
-                    // **ونقطة لغير المقروء** — تُرى ولا تصبغ السطر.
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .background(if (notice.read) Color.Transparent else Rahal.colors.brand.copy(alpha = UnreadTint))
+                        .clickable { onOpen(notice) }
+                        .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.md),
+                ) {
+                    // **ونقطة لغير المقروء** — مع العنوان العريض.
                     Box(
                         Modifier
-                            .padding(top = 6.dp)
-                            .size(8.dp)
+                            .padding(top = Rahal.space.sm)
+                            .size(Dot)
                             .clip(CircleShape)
                             .background(if (notice.read) Color.Transparent else Rahal.colors.brand),
                     )
-                    Spacer(Modifier.size(10.dp))
+                    Spacer(Modifier.size(Rahal.space.md))
                     Column(Modifier.weight(1f)) {
-                        Text(notice.title, fontWeight = FontWeight.Bold)
+                        Text(
+                            notice.title,
+                            fontWeight = if (notice.read) FontWeight.Normal else FontWeight.Bold,
+                            color = Rahal.colors.ink,
+                        )
                         if (notice.body.isNotBlank()) {
-                            Spacer(Modifier.height(2.dp))
+                            Spacer(Modifier.height(Rahal.space.xs))
                             Text(notice.body, color = Rahal.colors.inkMuted)
                         }
                     }
@@ -131,6 +147,15 @@ fun InboxSheet(items: List<Notice>, onMarkAll: () -> Unit, onOpen: (Notice) -> U
         }
     }
 }
+
+/** **ارتفاعُ رأس الصندوق** — يتّسع لزرّ «تعليم الكل» بلمسته الكاملة. */
+private val HeadHeight = 56.dp
+
+/** **نقطةُ غير المقروء.** */
+private val Dot = 8.dp
+
+/** **أرضُ غير المقروء** — خفيفةٌ تُرى ولا تصبغ الشاشة. */
+private const val UnreadTint = 0.06f
 
 @Composable
 private fun Box(modifier: Modifier, content: @Composable () -> Unit = {}) {

@@ -2,7 +2,7 @@
 
 /**
  * ══════════════════════════════════════════════════════════════════════
- * **‏/store/delivery — «لدي توصيلة»**
+ * **‏/store/delivery — «اطلب توصيلة»**
  * ══════════════════════════════════════════════════════════════════════
  *
  * (مرآةُ `DeliveryScreen.kt` و`DeliveryViewModel` في تطبيق المتجر.)
@@ -24,7 +24,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getMessages, defaultLocale, errorText, fmtNum } from "@rahalgo/i18n";
-import { Alert, Button, Checkbox, EmptyState, IconLocation, IconMoto, Input, LoadingState, Textarea } from "@rahalgo/ui";
+import { Alert, Button, Checkbox, EmptyState, IconLink, IconLocation, IconMoto, Input, LoadingState, Textarea } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import { useStoreDeliveries } from "@/lib/store/deliveries";
@@ -110,7 +110,7 @@ function PayerOption({
 }: {
   on: boolean;
   title: string;
-  sub: string;
+  sub?: string;
   disabled: boolean;
   onPick: () => void;
 }) {
@@ -132,7 +132,7 @@ function PayerOption({
       </span>
       <span className="min-w-0">
         <span className="block text-sm font-bold">{title}</span>
-        <span className="block text-xs text-ink-muted">{sub}</span>
+        {sub && <span className="block text-xs text-danger">{sub}</span>}
       </span>
     </button>
   );
@@ -168,6 +168,8 @@ export default function DeliveryPage() {
   const [askError, setAskError] = useState("");
   const [askAcc, setAskAcc] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
+  // **خانةُ الرابط مطويّةٌ حتّى يُطلب لصقُه** — أو ما دام فيها رابط.
+  const [linkOpen, setLinkOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
@@ -275,6 +277,7 @@ export default function DeliveryPage() {
       const t = (await navigator.clipboard.readText()).trim();
       if (!t) return;
       if (ask === "received" && t.includes("http")) setAsk("idle");
+      setLinkOpen(true);
       onLink(t);
     } catch {
       setAskError(D.pasteFailed);
@@ -399,6 +402,7 @@ export default function DeliveryPage() {
       setCollectAmount("");
       setLink("");
       setLinkState("idle");
+      setLinkOpen(false);
       setPoint(null);
       setAsk("idle");
       setAskReq(null);
@@ -434,16 +438,13 @@ export default function DeliveryPage() {
         ? { text: D.linkFound, cls: "text-success" }
         : linkState === "notFound"
           ? { text: isFetch ? D.linkNotFoundFetch : D.linkNotFound, cls: "text-danger" }
-          : { text: isFetch ? D.linkHowFetch : D.linkHow, cls: "text-ink-muted" };
+          : null;
 
-  const payers: { key: Payer; title: string; sub: string }[] = [
-    { key: "merchant", title: D.payMe, sub: D.payMeSub },
-    { key: "merchant_cash", title: D.payMeCash, sub: isFetch ? D.payMeCashSubFetch : D.payMeCashSub },
-    {
-      key: "recipient",
-      title: isFetch ? D.payRecipientFetch : D.payRecipient,
-      sub: isFetch ? D.payRecipientSubFetch : D.payRecipientSub,
-    },
+  // **الخيارُ بكلمته وحدَها** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) — والسطرُ تحته لـ«الرصيد لا يكفي» وحدَه.
+  const payers: { key: Payer; title: string }[] = [
+    { key: "merchant", title: D.payMe },
+    { key: "merchant_cash", title: D.payMeCash },
+    { key: "recipient", title: isFetch ? D.payRecipientFetch : D.payRecipient },
   ];
 
   const feeSub =
@@ -457,7 +458,7 @@ export default function DeliveryPage() {
           ? isFetch
             ? D.feeCashFetch
             : D.feeCash
-          : D.feeChoose;
+          : "";
 
   const rows = list;
   // **توصيلةٌ جارية — شريطٌ فوق النموذج بـ«تابعها»** (مرآةُ التطبيق، التصميمُ المعتمد ٢٠٢٦-١٠-٢٨).
@@ -468,10 +469,7 @@ export default function DeliveryPage() {
 
   return (
     <div className="flex flex-col gap-3">
-      <header>
-        <h2 className="heading-page">{D.title}</h2>
-        <p className="text-sm text-ink-muted">{D.hint}</p>
-      </header>
+      <h2 className="heading-page">{D.title}</h2>
 
       {live && (
         <Link
@@ -507,9 +505,7 @@ export default function DeliveryPage() {
 
       {sent && <Alert tone="success">{D.sent}</Alert>}
 
-      {!mode ? (
-        <p className="text-center text-sm text-ink-muted">{D.modePick}</p>
-      ) : (
+      {mode && (
         <form
           className="surface flex flex-col gap-3 rounded-card p-4"
           onSubmit={(e) => {
@@ -555,31 +551,46 @@ export default function DeliveryPage() {
             }}
           />
           <div className="flex flex-col gap-2">
-            {/* **«اطلب الموقع من المستلم»** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — الطريقُ الأوّل، والرابطُ احتياط. */}
-            <Button
-              type="button"
-              variant="secondary"
-              className="flex w-full items-center justify-center gap-2"
-              disabled={busy || ask === "sending" || ask === "waiting"}
-              onClick={() => void askLocation()}
-            >
-              <IconLocation size={18} />
-              {ask === "sending" ? D.askLocSending : isFetch ? D.askLocFetch : D.askLoc}
-            </Button>
+            {/* **طريقا الموقع في صفٍّ واحد** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩): «اطلب الموقع» — الطريقُ
+                الأوّل (قرارُ المالك ٢٠٢٦-١٠-٢٩) — **وبجانبه «لصق رابط» يفتح خانةَ الرابط وقتَ الحاجة.** */}
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                className="flex min-w-0 flex-1 items-center justify-center gap-2"
+                disabled={busy || ask === "sending" || ask === "waiting"}
+                onClick={() => void askLocation()}
+              >
+                <IconLocation size={18} />
+                <span className="truncate">{ask === "sending" ? D.askLocSending : isFetch ? D.askLocFetch : D.askLoc}</span>
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                className="flex shrink-0 items-center gap-1.5"
+                aria-expanded={linkOpen}
+                disabled={busy}
+                onClick={() => setLinkOpen((v) => !v)}
+                data-testid="delivery-link-toggle"
+              >
+                <IconLink size={18} />
+                {D.pasteLink}
+              </Button>
+            </div>
             {ask === "waiting" && askReq && (
               <div className="flex flex-col gap-2 rounded-control border border-line bg-field p-3">
                 <p className="text-xs text-ink-muted">{askReq.whatsapp_sent ? D.askLocWaiting : D.askLocNotSent}</p>
                 {!askReq.whatsapp_sent && (
                   <div className="flex flex-wrap gap-3">
                     <a
-                      className="text-sm font-bold text-accent"
+                      className="text-sm font-bold text-accent-text"
                       href={askReq.wa_url}
                       target="_blank"
                       rel="noreferrer"
                     >
                       {D.askLocShare}
                     </a>
-                    <button type="button" className="text-sm font-bold text-accent" onClick={() => void copyLink()}>
+                    <button type="button" className="text-sm font-bold text-accent-text" onClick={() => void copyLink()}>
                       {copied ? D.askLocCopied : D.askLocCopy}
                     </button>
                   </div>
@@ -594,6 +605,7 @@ export default function DeliveryPage() {
             )}
             {ask === "expired" && <p className="text-xs text-danger">{D.askLocExpired}</p>}
             {askError && <p className="text-xs text-danger">{askError}</p>}
+            {linkOpen && (
             <div className="flex items-end gap-2">
               <div className="min-w-0 flex-1">
                 <Input
@@ -614,7 +626,8 @@ export default function DeliveryPage() {
                 {D.paste}
               </Button>
             </div>
-            <p className={`text-xs ${linkNote.cls}`}>{linkNote.text}</p>
+            )}
+            {linkNote && <p className={`text-xs ${linkNote.cls}`}>{linkNote.text}</p>}
           </div>
           <Textarea
             id="delivery-parcel"
@@ -695,7 +708,7 @@ export default function DeliveryPage() {
                   key={p.key}
                   on={payer === p.key}
                   title={p.title}
-                  sub={short ? D.walletShort : p.sub}
+                  sub={short ? D.walletShort : undefined}
                   disabled={busy || short}
                   onPick={() => {
                     setPayer(p.key);
@@ -707,9 +720,10 @@ export default function DeliveryPage() {
           </div>
 
           {!quoteError && quote && (
-            <div className="rounded-control border border-success-edge bg-success-tint p-3">
-              <p className="font-bold text-success">{fill(D.fee, { fee: fmtNum(quote.fee) })}</p>
-              <p className="text-xs">{feeSub}</p>
+            /* **أرضٌ محايدة** — الأخضرُ يقول «تمّ/دُفع»، والأجرةُ لم تُدفع بعد. */
+            <div className="rounded-control border border-line bg-field p-3">
+              <p className="font-bold text-ink">{fill(D.fee, { fee: fmtNum(quote.fee) })}</p>
+              {feeSub && <p className="text-xs text-ink-muted">{feeSub}</p>}
               {quote.fee_basis === "no_point" ? (
                 <p className="text-xs text-ink-muted">{isFetch ? D.feeNoPointFetch : D.feeNoPoint}</p>
               ) : quote.fee_basis === "distance" && quote.distance_m > 0 ? (
@@ -733,7 +747,7 @@ export default function DeliveryPage() {
         {(listError || cancelError) && <Alert>{cancelError || errorText(listError)}</Alert>}
         {rows == null && !listError && <LoadingState variant="inline" label={D.loading} />}
         {rows != null && rows.length === 0 && (
-          <EmptyState icon={IconMoto} title={D.none} action={<p className="text-xs text-ink-muted">{D.noneHint}</p>} />
+          <EmptyState icon={IconMoto} title={D.none} />
         )}
         {rows?.slice(0, shown).map((d) => (
           <DeliveryRow key={d.id} d={d} cancelling={cancelling === d.id} onCancel={() => void cancel(d.id)} />

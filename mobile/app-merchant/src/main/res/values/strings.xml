@@ -56,7 +56,6 @@
          **القائمة**
          ══════════════════════════════════════════════════════════════ -->
     <string name="menu_title">أصنافي</string>
-    <string name="menu_hint">اضغط على الصنف لتعديله، والمفتاح بجانبه لتغيير توفّره</string>
     <!-- **وأقسامُ السوق لا أقسامُ مطبخه** — الزبونُ يتصفّح بها، **ومن
          رتّب أصنافَه بترتيب مطبخه لم يعرف أين تقع بضاعتُه في السوق.** -->
     <string name="menu_sections_hint">أقسام السوق التي فيها أصنافك</string>
@@ -102,7 +101,7 @@
          open_now — لا يعيد حسابَ الساعات. -->
     <string name="store_state_suspended">موقوف من الإدارة</string>
     <string name="store_state_temp_closed">مغلق مؤقتاً</string>
-    <string name="store_state_closed_hours">مغلق حسب ساعات العمل</string>
+    <string name="store_state_closed_hours">مغلق حسب ساعات الدوام</string>
     <string name="store_next_open">يفتح %1$s</string>
     <!-- **طريقةُ استلامِ المستحقّات — عرضٌ لا يغيّره المتجر** (٢٠٢٦-٠٩-٢٧). -->
     <string name="store_settlement_cash">نقدي</string>
@@ -113,7 +112,7 @@
     <!-- **والشرحُ يقول ما لا يقوله المفتاح** — أنّ الدوامَ يغلقه أيضاً. -->
     <string name="store_prep">مدة التحضير الافتراضية</string>
     <string name="store_prep_unit">دقيقة</string>
-    <string name="store_hours">ساعات العمل</string>
+    <string name="store_hours">ساعات الدوام</string>
     <string name="hours_summary">مفتوح من %1$s إلى %2$s</string>
     <string name="hours_night_title">هل يفتح متجرك في الليل؟</string>
     <string name="hours_night_text">وضعت وقت الفتح الساعة %1$s والإغلاق %2$s، أي أن متجرك يفتح بعد منتصف الليل. إذا كنت تقصد الظهر أو المساء، فارجع وغيّر الساعة واختر «م».</string>
@@ -140,14 +139,12 @@
          **ثلاثةُ أقسامٍ في الدرج** — طلبُ المالك ٢٠٢٦-٠٨-٢٣
          ══════════════════════════════════════════════════════════════ -->
     <string name="menu_warnings">الإنذارات</string>
-    <string name="warnings_hint">الإنذارات المسجّلة عليك — انتبه لها قبل أن يتوقف متجرك</string>
     <string name="menu_reports">الشكاوى والبلاغات</string>
-    <string name="reports_list_hint">ما أرسلتَه وما صار به</string>
     <string name="reports_list_empty">لم ترسل بلاغاً بعد</string>
     <string name="menu_sales">التقارير</string>
     <string name="setup_missing_title">متجرك تنقصه بعض الأمور — اضغط على كل بند لإكماله:</string>
     <string name="setup_missing_sections">اختر أقسام السوق (بدونها لا يمكنك إضافة أصناف)</string>
-    <string name="setup_missing_hours">اضبط ساعات الدوام (بدونها يظهر متجرك مفتوحاً ٢٤ ساعة)</string>
+    <string name="setup_missing_hours">اضبط ساعات الدوام (بدونها يظهر متجرك مفتوحاً 24 ساعة)</string>
     <string name="setup_missing_address">اكتب العنوان وحدّد موقعك على الخريطة</string>
     <string name="setup_missing_settlement">اختر طريقة استلام أموالك</string>
     <string name="setup_missing_returns">اختر إن كنت تقبل إرجاع الغرض</string>
@@ -180,9 +177,8 @@
     <string name="staff_new_title">موظف جديد</string>
     <string name="staff_list_title">الموظفون</string>
     <string name="order_phones_numbers_title">الأرقام</string>
-    <string name="sales_hint">مبيعاتك على مدًى تختاره</string>
-    <string name="sales_week">٧ أيّام</string>
-    <string name="sales_month">٣٠ يوماً</string>
+    <string name="sales_week">7 أيّام</string>
+    <string name="sales_month">30 يوماً</string>
     <string name="reports_sales">المبيعات</string>
     <string name="reports_commission">عمولة المنصّة</string>
     <string name="reports_due">مستحقك</string>
@@ -237,7 +233,6 @@
          ══════════════════════════════════════════════════════════════
 
          (قرارُ المالك ٢٠٢٦-٠٨-٢٣.) **و«الطلبات» لاستقبال الجديد وحدَه.** -->
-    <string name="history_hint">الطلبات المنتهية</string>
     <string name="history_empty">لا طلبات في السجل بعد</string>
 
 
@@ -309,20 +304,17 @@
     <string name="ok_hours_saved">✓ حُفظت أوقات العمل</string>
     <string name="mn_item_deleted">✓ حُذف الصنف</string>
     <string name="menu_deliveries">سجل التوصيلات</string>
-    <string name="md_history_hint">كل توصيلة أرسلتها من متجرك — الأحدث أولاً</string>
     <string name="md_more">عرض المزيد</string>
     <string name="md_pay_me_cash">أنا (نقداً للسائق)</string>
     <string name="md_fee_me_cash">تدفعها أنت نقداً للسائق عند استلام الغرض</string>
     <string name="md_row_me_cash">الأجرة %1$s ل.س — نقداً منك</string>
     <string name="md_row_no_point">بلا نقطة على الخريطة</string>
-    <string name="md_title">لدي توصيلة</string>
-    <string name="md_hint">خدمة توصيل طلباتك لزبائنك</string>
+    <string name="md_title">اطلب توصيلة</string>
     <string name="md_name">اسم المستلم</string>
     <string name="md_phone">رقم المستلم</string>
     <string name="md_address">عنوان التسليم</string>
     <string name="md_link">رابط موقع الزبون</string>
     <string name="md_link_hint">الصق هنا الرابط الذي أرسله لك الزبون</string>
-    <string name="md_link_how">افتح موقع الزبون في واتساب ← مشاركة ← انسخ الرابط والصقه هنا</string>
     <string name="md_link_checking">جاري قراءة الموقع…</string>
     <string name="md_link_found">✓ تمت قراءة الموقع — سيراه السائق على الخريطة</string>
     <string name="md_link_not_found">هذا الرابط لا يحتوي على موقع — اطلب من الزبون أن يرسل لك موقعه من واتساب</string>
@@ -347,8 +339,7 @@
     <string name="md_row_wallet">الأجرة %1$s ل.س — من محفظتك</string>
     <string name="md_row_cash">الأجرة %1$s ل.س — نقداً من المستلم</string>
     <string name="md_track_title">توصيلة #%1$s</string>
-    <string name="md_track_hint">تتحدّث تلقائياً كل ١٠ ثوانٍ</string>
-    <string name="md_track_open">اضغط لمتابعة حالتها</string>
+    <string name="md_track_hint">تتحدّث تلقائياً كل 10 ثوانٍ</string>
     <string name="md_step_platform">بانتظار موافقة المنصة</string>
     <string name="md_step_waiting">بانتظار سائق</string>
     <string name="md_platform_accepted">وافقت المنصة</string>
@@ -358,8 +349,8 @@
     <string name="md_step_to_recipient">في الطريق إلى المستلم</string>
     <string name="md_step_delivered">تم التسليم</string>
     <string name="md_cancel">إلغاء التوصيلة</string>
-    <string name="ok_settlement_saved">تم تغيير طريقة استلام المستحقات</string>
-    <string name="settlement_q">تغيير طريقة استلام المستحقات؟</string>
+    <string name="ok_settlement_saved">تم تغيير طريقة استلام أموالك</string>
+    <string name="settlement_q">تغيير طريقة استلام أموالك؟</string>
     <string name="settlement_body">ينطبق على الطلبات الجديدة فقط. وما لك نقداً من الطلبات السابقة يبقى كما هو حتى يُسلَّم لك.</string>
     <string name="settlement_yes">نعم، غيّرها</string>
     <string name="md_cancelling">جاري الإلغاء…</string>
@@ -367,21 +358,16 @@
     <string name="md_cancel_body">ستتوقف التوصيلة، ويعود أي مبلغ دُفع من محفظتك إليها.</string>
     <string name="md_cancel_yes">نعم، ألغِها</string>
     <string name="md_searching">جاري البحث عن سائق…</string>
-    <string name="md_searching_hint">نعرضها الآن على السائقين القريبين — وتتغير الحالة وحدها حين يقبلها أحدهم</string>
     <string name="md_blocked_title">لا يمكن إرسال توصيلة الآن</string>
     <string name="md_track_details">تفاصيل التوصيلة</string>
-    <!-- قبولُ الاسترداد وتأكيدُ الاختيار (طلبُ المالك ٢٠٢٦-١٠-٠٨) -->
+    <!-- قبولُ الإرجاع وتأكيدُ الاختيار (طلبُ المالك ٢٠٢٦-١٠-٠٨) -->
     <string name="ok_returns_saved">تم حفظ اختيارك</string>
     <!-- من يدفع — بطاقات (٢٠٢٦-١٠-٠٩) -->
     <string name="md_who_pays_q">من يدفع أجرة التوصيل؟ *</string>
-    <string name="md_pay_me_sub">تُخصم الأجرة من رصيد محفظتك</string>
-    <string name="md_pay_me_cash_sub">تدفع الأجرة للسائق نقداً عند استلامه الغرض</string>
-    <string name="md_pay_recipient_sub">يدفع المستلم الأجرة للسائق نقداً</string>
     <!-- قرارات المالك ٢٠٢٦-١٠-١٥: الوضعان، المبلغ من المستلم، ولا دين -->
     <string name="md_mode_send">توصيل</string>
     <string name="md_mode_fetch">إحضار</string>
     <string name="md_mode_send_sub">يأخذ السائق الغرض منك ويوصله إلى المستلم</string>
-    <string name="md_mode_pick">اختر نوع التوصيلة للمتابعة</string>
     <string name="md_mode_fetch_sub">يذهب السائق إلى العنوان، ويأخذ الغرض، ويحضره إليك</string>
     <string name="md_name_fetch">اسم الشخص في مكان الاستلام</string>
     <string name="md_phone_fetch">رقم الشخص في مكان الاستلام</string>
@@ -400,7 +386,6 @@
     <string name="md_parcel_fetch">ماذا تريد أن يحضر السائق؟</string>
     <string name="md_parcel_hint_fetch">مثلاً: كرتونة بضاعة من المورّد</string>
     <string name="md_link_hint_fetch">الصق هنا رابط موقع مكان الاستلام</string>
-    <string name="md_link_how_fetch">افتح موقع مكان الاستلام في واتساب ← مشاركة ← انسخ الرابط والصقه هنا</string>
     <string name="md_link_not_found_fetch">هذا الرابط لا يحتوي على موقع — اطلب من الشخص في مكان الاستلام أن يرسل لك موقعه من واتساب</string>
     <string name="md_ask_loc">اطلب الموقع من المستلم</string>
     <string name="md_ask_loc_fetch">اطلب الموقع من الشخص في مكان الاستلام</string>
@@ -431,8 +416,6 @@
     <string name="md_step_at_pickup_fetch">السائق في مكان الاستلام</string>
     <string name="md_step_to_you_fetch">في الطريق إليك</string>
     <string name="md_pay_recipient_fetch">الشخص في مكان الاستلام (نقداً للسائق)</string>
-    <string name="md_pay_recipient_sub_fetch">يدفع الشخص في مكان الاستلام الأجرة للسائق نقداً</string>
-    <string name="md_pay_me_cash_sub_fetch">تدفع الأجرة للسائق نقداً عندما يحضر لك الغرض</string>
     <string name="md_fee_cash_fetch">يدفعها الشخص في مكان الاستلام نقداً للسائق عندما يسلّمه الغرض</string>
     <string name="md_fee_me_cash_fetch">تدفعها أنت نقداً للسائق عندما يحضر لك الغرض</string>
     <string name="md_fee_no_point_fetch">لم تحدد موقع مكان الاستلام — تُحسب الأجرة الأساسية فقط</string>
@@ -466,8 +449,8 @@
     <string name="store_display_need_rate">لتعرض أسعارك بالدولار، اكتب سعر الصرف واحفظه أولاً.</string>
     <string name="ok_display_saved">تم — تغيّرت عملة العرض للزبائن</string>
     <!-- صفحة متجري: سؤال وزرّين (٢٠٢٦-١٠-١٢) -->
-    <string name="q_settlement">كيف تريد استلام مستحقاتك؟</string>
-    <string name="q_returns">هل تقبل استرداد بضاعتك؟</string>
+    <string name="q_settlement">كيف تريد استلام أموالك؟</string>
+    <string name="q_returns">هل تقبل الإرجاع؟</string>
     <string name="q_display">كيف تريد عرض أسعارك؟</string>
     <string name="yes">نعم</string>
     <string name="no">لا</string>
@@ -476,8 +459,8 @@
     <string name="hours_from">من</string>
     <string name="hours_to">إلى</string>
     <string name="hours_apply_all">طبّق على كل الأيام</string>
-    <string name="hours_open_24h">مفتوح ٢٤ ساعة</string>
-    <string name="hours_open_24h_short">٢٤ ساعة</string>
+    <string name="hours_open_24h">مفتوح 24 ساعة</string>
+    <string name="hours_open_24h_short">24 ساعة</string>
 
     <!-- ══════════════════════════════════════════════════════════════
          **تدقيقُ التصميم والمنطق** (٢٠٢٦-١٠-٢٧)
@@ -494,8 +477,6 @@
     <string name="store_point_change">غيّر الموقع</string>
     <string name="store_emergency_q">إغلاق متجرك الآن؟</string>
     <string name="store_settings_title">إعدادات المتجر</string>
-    <string name="menu_search_none">لا يوجد صنف بهذا الاسم</string>
-    <string name="menu_off_none">لا توجد أصناف غير متوفرة</string>
     <string name="sales_range">من %1$s إلى %2$s</string>
     <string name="sales_from_title">من أيّ يوم؟</string>
     <string name="sales_to_title">لأيّ يوم؟</string>
@@ -523,24 +504,21 @@
     <string name="wz_step_sections">ماذا تبيع؟ (أقسام السوق)</string>
     <string name="wz_step_address">عنوان المتجر وموقعه على الخريطة</string>
     <string name="wz_step_hours">ساعات الدوام</string>
-    <string name="wz_step_settlement">كيف تستلم أموالك</string>
-    <string name="wz_step_returns">هل تقبل ترجيع الغرض؟</string>
+    <string name="wz_step_settlement">طريقة استلام أموالك</string>
+    <string name="wz_step_returns">هل تقبل الإرجاع؟</string>
     <string name="wz_header">إعداد متجرك</string>
     <string name="wz_progress">الخطوة %1$d من %2$d</string>
     <string name="wz_prev">السابق</string>
     <string name="wz_next">التالي</string>
     <string name="wz_later">لاحقاً</string>
     <string name="wz_logo_q">أضف شعار متجرك</string>
-    <string name="wz_logo_hint">يظهر الشعار للزبائن بجانب اسم متجرك. ويمكنك إضافته لاحقاً.</string>
     <string name="wz_logo_pick">اختر صورة</string>
     <string name="wz_logo_change">غيّر الصورة</string>
     <string name="wz_sections_q">ماذا يبيع متجرك؟</string>
     <string name="wz_sections_hint">اختر قسماً واحداً على الأقل من أقسام السوق. تظهر أصنافك للزبائن تحت هذه الأقسام.</string>
     <string name="wz_sections_none">لا توجد أقسام سوق متاحة الآن. تواصل مع إدارة المنصة.</string>
     <string name="wz_address_q">أين يقع متجرك؟</string>
-    <string name="wz_address_hint">اكتب العنوان كما يعرفه الناس، ثم حدّد موقع المتجر على الخريطة ليصل إليه السائق.</string>
     <string name="wz_hours_q">متى يفتح متجرك؟</string>
-    <string name="wz_hours_hint">يظهر متجرك للزبائن ويستقبل الطلبات في هذه الساعات فقط، ويُغلق تلقائياً خارجها.</string>
     <string name="wz_hours_24_sub">كل أيام الأسبوع، ويوم الجمعة حسب اختيارك</string>
     <string name="wz_hours_custom">ساعات محددة</string>
     <string name="wz_hours_custom_sub">تحدّد ساعات الدوام لكل يوم</string>
@@ -548,7 +526,7 @@
     <string name="wz_hours_edit_day">+ تعديل يوم بعينه</string>
     <string name="wz_hours_hide_days">إخفاء الأيام</string>
     <string name="wz_settlement_q">كيف تستلم أموالك؟</string>
-    <string name="wz_settlement_hint">هذه طريقة استلام ثمن طلباتك من المنصة. ويمكنك تغييرها لاحقاً من «متجري»، وتسري على الطلبات الجديدة فقط.</string>
+    <string name="wz_settlement_hint">يمكنك تغييرها لاحقاً من «متجري».</string>
     <string name="wz_settlement_cash_sub">تستلم ثمن طلباتك نقداً من السائق أو من المكتب</string>
     <string name="wz_settlement_wallet_sub">يُضاف ثمن طلباتك إلى محفظتك وتسحبه متى أردت</string>
     <string name="wz_returns_hint">إذا لم يستلم الزبون طلبه، هل يُعيد السائق الغرض إلى متجرك؟</string>
@@ -559,14 +537,13 @@
     <string name="home_by_hours">حسب ساعات الدوام</string>
     <string name="home_reopen">إعادة الفتح</string>
     <string name="home_sales_today">مبيعات اليوم</string>
-    <string name="home_orders_sub">سُلّم %1$d · أُلغي %2$d</string>
-    <string name="home_unavailable">أصناف غير متوفرة: %1$d</string>
-    <string name="home_unavailable_sub">لا يراها الزبائن</string>
     <string name="home_row_hours">ساعات الدوام</string>
     <string name="home_row_address">العنوان والموقع</string>
-    <string name="home_row_settlement">طريقة استلام الأموال</string>
-    <string name="home_row_returns">ترجيع الغرض</string>
-    <string name="home_row_rate">سعر الصرف وعرض الأسعار</string>
+    <string name="home_row_settlement">طريقة استلام أموالك</string>
+    <string name="home_row_returns">الإرجاع</string>
+    <!-- **أسماءٌ قصيرةٌ لأسطر «متجري»** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) — الطويلةُ تأكل مكانَ القيمة. -->
+    <string name="home_row_rate_short">سعر الصرف</string>
+    <string name="home_row_prep">مدة التحضير</string>
     <string name="home_val_not_set">لم يُضبط بعد</string>
     <string name="home_val_hours_range">%1$s – %2$s</string>
     <string name="home_val_hours_mixed">ساعات مختلفة</string>
@@ -575,22 +552,13 @@
     <string name="home_val_wallet">المحفظة</string>
     <string name="home_val_returns_yes">يقبل</string>
     <string name="home_val_returns_no">لا يقبل</string>
-    <string name="home_back">رجوع</string>
-    <string name="home_change_logo">تغيير الشعار</string>
-    <string name="menu_count">عدد الأصناف: %1$d · غير متوفر: %2$d</string>
-    <string name="menu_all">الكل</string>
-    <string name="menu_no_options">بدون خيارات</string>
-    <string name="menu_tool_drinks">المشروبات</string>
     <string name="md_active">توصيلة جارية: #%1$d · %2$s</string>
     <string name="md_follow">تابعها</string>
-    <string name="menu_stat_total">عدد الأصناف</string>
-    <string name="menu_stat_off">غير المتوفرة</string>
     <string name="menu_create_offer">أنشئ عرضاً</string>
-    <string name="menu_filter_off">غير المتوفر %1$d</string>
     <string name="wz_sections_search">ابحث عن قسم</string>
     <string name="wz_sections_picked">الأقسام المختارة: %1$d</string>
     <string name="wz_sections_no_match">لا يوجد قسم بهذا الاسم</string>
-    <string name="hours_mode_24">مفتوح ٢٤ ساعة كل الأيام</string>
+    <string name="hours_mode_24">مفتوح 24 ساعة كل الأيام</string>
     <string name="hours_on">دوام</string>
     <string name="hours_off">عطلة</string>
     <string name="hours_friday_q">يوم الجمعة؟</string>
@@ -600,12 +568,12 @@
     <string name="hours_apply_same">طبّق نفس الساعات على كل الأيام</string>
     <string name="hours_apply_same_title">ساعات كل أيام الدوام</string>
     <string name="hours_done">تم</string>
-    <string name="hours_day_24">٢٤ ساعة</string>
+    <string name="hours_day_24">24 ساعة</string>
     <string name="hours_day_specific">ساعات محددة</string>
     <string name="hours_days_title">أيام الأسبوع</string>
     <string name="wz_pay_cash">نقدي</string>
     <string name="wz_pay_wallet">المحفظة</string>
-    <string name="wz_returns_yes">نعم، أقبل الترجيع</string>
+    <string name="wz_returns_yes">نعم، أقبل الإرجاع</string>
     <string name="wz_returns_no">لا أقبل</string>
     <string name="home_quick_unavailable">غير المتوفر</string>
     <string name="home_quick_prices">تغيير الأسعار</string>

@@ -19,6 +19,7 @@ import { api } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import type { Delivery } from "@/lib/store/types";
 import { DeliveryRow } from "@/components/store/DeliveryParts";
+import { PageHeader } from "@/components/store/SetupParts";
 
 const m = getMessages(defaultLocale);
 const D = m.store.delivery;
@@ -79,15 +80,12 @@ export default function DeliveriesHistoryPage() {
 
   return (
     <div className="flex flex-col gap-3">
-      <header>
-        <h2 className="heading-page">{X.title}</h2>
-        <p className="text-sm text-ink-muted">{X.hint}</p>
-      </header>
+      <PageHeader title={X.title} />
       {cancelError && <Alert>{cancelError}</Alert>}
       {failed && !rows && <ReloadState onRetry={() => void fetchPage(1, true)} />}
       {rows == null && !failed && <LoadingState variant="inline" label={D.loading} />}
       {rows != null && rows.length === 0 && (
-        <EmptyState icon={IconMoto} title={D.none} action={<p className="text-xs text-ink-muted">{D.noneHint}</p>} />
+        <EmptyState icon={IconMoto} title={D.none} />
       )}
       {rows?.map((d) => (
         <DeliveryRow key={d.id} d={d} cancelling={cancelling === d.id} onCancel={() => void cancel(d.id)} />

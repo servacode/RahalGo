@@ -15,7 +15,7 @@
  */
 
 import Link from "next/link";
-import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ComponentType } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { Button, IconCheck, IconClose, IconPrev, IconSearch, Modal, FormActions, Input, Switch } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
@@ -34,19 +34,31 @@ export const FRIDAY = 5;
 // رأسُ الصفحة الفرعيّة
 // ══════════════════════════════════════════════════════════════════════
 
-/** **سهمُ رجوعٍ وعنوان** — مرآةُ `PageHeader`. */
-export function PageHeader({ title, href = "/store" }: { title: string; href?: string }) {
+/** **سهمُ الرجوع وحدَه** — لرأسٍ مشتركٍ يأخذه قبل عنوانه (الإشعارات). */
+export function BackArrow({ href = "/store" }: { href?: string }) {
+  return (
+    <Link
+      href={href}
+      aria-label={HM.back}
+      title={HM.back}
+      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control text-ink transition-colors hover:bg-row-hover"
+    >
+      <IconPrev size={22} />
+    </Link>
+  );
+}
+
+/**
+ * **سهمُ رجوعٍ وعنوان** — مرآةُ `PageHeader`، **ورأسٌ واحدٌ لكلّ صفحةٍ فرعيّة**
+ * (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩: صفحاتٌ كانت بسهمٍ وأخرى بلا طريقِ رجوع).
+ * و`actions` في آخر السطر إن وُجدت.
+ */
+export function PageHeader({ title, href = "/store", actions }: { title: string; href?: string; actions?: ReactNode }) {
   return (
     <header className="flex items-center gap-2">
-      <Link
-        href={href}
-        aria-label={HM.back}
-        title={HM.back}
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control text-ink transition-colors hover:bg-row-hover"
-      >
-        <IconPrev size={22} />
-      </Link>
+      <BackArrow href={href} />
       <h1 className="heading-page min-w-0 flex-1 truncate">{title}</h1>
+      {actions}
     </header>
   );
 }

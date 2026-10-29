@@ -8,9 +8,10 @@
  * (مرآةُ `MenuItemsGrid` في `ui/menu/MenuGrid.kt` — نسخةٌ واحدةٌ للمتجر
  *  والمندوب في التطبيق، وهذه مرآتُها على الويب.)
  *
- * من فوق لتحت: **البحث · مربّعا الأرقام (عدد الأصناف · غير المتوفرة) ·
- * الأدوات الثلاث · «أضف صنفاً» و«أنشئ عرضاً» · رقائقُ الأقسام · ثمّ الأصناف
- * بطاقتين في كلّ سطرٍ على الجوّال وأكثرَ على الحاسوب.**
+ * من فوق لتحت: **البحث · صفُّ الأدوات (أضف · عرض · الأسعار · الخيارات ·
+ * المشروبات) · الرقائق («الكل» · «غير المتوفر» · الأقسام) · ثمّ الأصناف**
+ * بطاقتين في كلّ سطرٍ على الجوّال وأكثرَ على الحاسوب. (مراجعةُ التصميم
+ * ٢٠٢٦-١٠-٢٩: كانت خمسةَ صفوفٍ قبل أوّل صنف.)
  *
  * **والبطاقةُ كلُّها تفتح المحرّر، والمفتاحُ وحدَه يبدّل التوفّر** — يتبدّل
  * فوراً ثمّ يُسأل المحرّك، **فإن ردّه عاد كما كان** وقيل السببُ كما قاله.
@@ -24,18 +25,15 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ComponentType } from "react";
 import { getMessages, defaultLocale, errorText, fmtMoney, fmtNum } from "@rahalgo/i18n";
 import {
-  ButtonLink,
   EmptyState,
   IconAdd,
   IconBanknote,
-  IconBlock,
   IconCatDrinks,
   IconClose,
   IconList,
   IconOptions,
   IconPromos,
   IconSearch,
-  IconStore,
   LoadingState,
   ReloadState,
   useLiveData,
@@ -67,69 +65,45 @@ function descOf(it: MenuItem): string {
     .join(" · ");
 }
 
-/** **مربّعُ رقم** — أيقونةٌ في دائرة، والرقمُ كبيراً، واسمُه تحته. والمختارُ بحدّ لونه. */
-function StatBox({
-  icon: Ico,
-  label,
-  value,
-  tone,
-  selected,
-  onClick,
-  testId,
-}: {
-  icon: Icon;
-  label: string;
-  value: number;
-  tone: "accent" | "danger" | "muted";
-  selected: boolean;
-  onClick: () => void;
-  testId: string;
-}) {
-  const circle = { accent: "bg-accent-tint text-accent-text", danger: "bg-danger-tint text-danger", muted: "bg-field text-ink-muted" }[tone];
-  const edge = { accent: "border-accent", danger: "border-danger", muted: "border-line" }[tone];
-  return (
-    <button
-      type="button"
-      aria-pressed={selected}
-      onClick={onClick}
-      data-testid={testId}
-      className={`flex flex-1 items-center gap-3 rounded-card p-3 text-start transition-colors ${
-        selected ? `border-2 ${edge} bg-row-hover` : "surface border border-line hover:bg-row-hover"
-      }`}
-    >
-      <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${circle}`} aria-hidden>
-        <Ico size={20} />
-      </span>
-      <span className="flex min-w-0 flex-col">
-        <span className="figure tabular-nums text-ink">{fmtNum(value)}</span>
-        <span className="truncate text-xs text-ink-muted">{label}</span>
-      </span>
-    </button>
-  );
-}
-
-/** **زرُّ أداة** — أيقونةٌ فوق اسمها في مربّعٍ فاتح. */
-function ToolTile({ icon: Ico, label, href, testId }: { icon: Icon; label: string; href: string; testId: string }) {
+/**
+ * **زرُّ أداةٍ صغير** — أيقونةٌ واسمُها في سطرٍ واحد، **وكلُّ الأدوات في صفٍّ واحد**
+ * يُمرَّر أفقيّاً (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩: خمسةُ صفوفٍ قبل أوّل صنفٍ صارت اثنين).
+ */
+function ToolPill({ icon: Ico, label, href, testId, primary = false }: { icon: Icon; label: string; href: string; testId: string; primary?: boolean }) {
   return (
     <Link
       href={href}
       data-testid={testId}
-      className="surface flex h-[4.25rem] flex-1 flex-col items-center justify-center gap-1 rounded-control border border-line px-1 hover:bg-row-hover"
+      className={`flex h-10 shrink-0 items-center gap-1.5 rounded-full border px-3 text-sm font-bold transition-colors ${
+        primary ? "border-accent bg-accent text-on-bright hover:opacity-90" : "border-line bg-surface text-ink hover:bg-row-hover"
+      }`}
     >
-      <Ico size={22} className="text-accent-text" />
-      <span className="max-w-full truncate text-xs font-medium text-ink">{label}</span>
+      <Ico size={18} className={primary ? "" : "text-primary"} />
+      <span className="whitespace-nowrap">{label}</span>
     </Link>
   );
 }
 
 /** **رقاقةُ قسم** — اسمُه وعددُه؛ المختارةُ ممتلئةٌ بلون المنصّة، والباقيةُ مؤطَّرة. */
-function SectionChip({ text, count, selected, onClick }: { text: string; count: number; selected: boolean; onClick: () => void }) {
+function SectionChip({
+  text,
+  count,
+  selected,
+  onClick,
+  testId = "menu-chip",
+}: {
+  text: string;
+  count: number;
+  selected: boolean;
+  onClick: () => void;
+  testId?: string;
+}) {
   return (
     <button
       type="button"
       aria-pressed={selected}
       onClick={onClick}
-      data-testid="menu-chip"
+      data-testid={testId}
       className={`flex shrink-0 items-center gap-2 rounded-full border py-1.5 pe-1.5 ps-4 text-sm transition-colors ${
         selected ? "border-accent bg-accent font-bold text-on-bright" : "border-line bg-surface text-ink hover:bg-row-hover"
       }`}
@@ -329,55 +303,39 @@ export default function MenuPage() {
         )}
       </div>
 
-      {/* ── ٢ · مربّعا الأرقام — و«غير المتوفرة» يصفّي بضغطة ── */}
-      <div className="flex gap-3">
-        <StatBox icon={IconStore} label={M.statTotal} value={all.length} tone="accent" selected={false} onClick={showAll} testId="menu-stat-total" />
-        <StatBox
-          icon={IconBlock}
-          label={M.statOff}
-          value={off}
-          tone={off > 0 ? "danger" : "muted"}
-          selected={onlyOff}
-          onClick={() => {
-            if (onlyOff) return showAll();
-            setOnlyOff(true);
-            setOpen(null);
-            setQ("");
-          }}
-          testId="menu-stat-off"
-        />
-      </div>
-
+      {/* ── ٢ · الأدواتُ في صفٍّ واحد ── */}
       {!suspended && (
-        <>
-          {/* ── ٣ · الأدواتُ الثلاث ── */}
-          <div className="flex gap-2">
-            <ToolTile icon={IconOptions} label={M.toolPresets} href="/store/menu/options" testId="menu-tool-options" />
-            <ToolTile icon={IconBanknote} label={M.toolBulk} href="/store/menu/prices" testId="menu-tool-prices" />
-            <ToolTile icon={IconCatDrinks} label={M.toolDrinks} href="/store/menu/drinks" testId="menu-tool-drinks" />
-          </div>
-          {/* ── ٤ · «أضف صنفاً» و«أنشئ عرضاً» ── */}
-          <div className="flex gap-3">
-            <ButtonLink
-              href={openSection ? `/store/menu/new?section=${openSection}` : "/store/menu/new"}
-              className="h-13 flex-1 font-bold"
-              data-testid="menu-add"
-            >
-              <IconAdd size={18} />
-              {M.add}
-            </ButtonLink>
-            <ButtonLink href="/store/offers" variant="secondary" className="h-13 flex-1 border-accent font-bold text-accent-text" data-testid="menu-offer">
-              <IconPromos size={18} />
-              {M.addOffer}
-            </ButtonLink>
-          </div>
-        </>
+        <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1 sm:-mx-4 sm:px-4">
+          <ToolPill
+            icon={IconAdd}
+            label={M.add}
+            href={openSection ? `/store/menu/new?section=${openSection}` : "/store/menu/new"}
+            testId="menu-add"
+            primary
+          />
+          <ToolPill icon={IconPromos} label={M.addOffer} href="/store/offers" testId="menu-offer" />
+          <ToolPill icon={IconBanknote} label={M.toolBulk} href="/store/menu/prices" testId="menu-tool-prices" />
+          <ToolPill icon={IconOptions} label={M.toolPresets} href="/store/menu/options" testId="menu-tool-options" />
+          <ToolPill icon={IconCatDrinks} label={M.toolDrinks} href="/store/menu/drinks" testId="menu-tool-drinks" />
+        </div>
       )}
 
-      {/* ── ٥ · رقائقُ الأقسام ── */}
+      {/* ── ٣ · الرقائق: «الكل» · «غير المتوفر» · الأقسام ── */}
       {groups.length > 0 && !needle && (
         <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1 sm:-mx-4 sm:px-4">
           <SectionChip text={M.all} count={all.length} selected={open == null && !onlyOff} onClick={showAll} />
+          <SectionChip
+            text={M.unavailable}
+            count={off}
+            selected={onlyOff}
+            testId="menu-stat-off"
+            onClick={() => {
+              if (onlyOff) return showAll();
+              setOnlyOff(true);
+              setOpen(null);
+              setQ("");
+            }}
+          />
           {groups.map((g) => (
             <SectionChip
               key={g.name}
@@ -393,7 +351,7 @@ export default function MenuPage() {
         </div>
       )}
 
-      {/* ── ٦ · الأصناف ── */}
+      {/* ── ٤ · الأصناف ── */}
       {groups.length === 0 ? (
         <EmptyState icon={IconList} title={M.empty} />
       ) : shown.length === 0 ? (

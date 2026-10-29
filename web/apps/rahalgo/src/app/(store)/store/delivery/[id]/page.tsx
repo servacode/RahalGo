@@ -14,7 +14,6 @@
  * **وكودُ الاستلام في «إحضار»** — يُعطى للسائق حين يصل بالغرض، **بس وقتها.**
  */
 
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { getMessages, defaultLocale, errorText, fmtClockTime, fmtNum } from "@rahalgo/i18n";
@@ -24,6 +23,7 @@ import { CANCELLABLE, amountText, useStoreDeliveries } from "@/lib/store/deliver
 import type { Delivery } from "@/lib/store/types";
 import { fill } from "@/lib/customer/texts";
 import { CancelDeliveryButton, DeliveryLines, SearchingBanner, StatusPill } from "@/components/store/DeliveryParts";
+import { PageHeader } from "@/components/store/SetupParts";
 
 const m = getMessages(defaultLocale);
 const D = m.store.delivery;
@@ -104,13 +104,7 @@ export default function DeliveryTrack() {
 
   return (
     <div className="flex flex-col gap-3">
-      <Link href="/store/delivery" className="text-sm text-accent-text">
-        {D.back}
-      </Link>
-      <header>
-        <h2 className="heading-page">{fill(D.trackTitle, { n: d?.number ?? "" })}</h2>
-        <p className="text-sm text-ink-muted">{D.trackHint}</p>
-      </header>
+      <PageHeader title={fill(D.trackTitle, { n: d?.number ?? "" })} href="/store/delivery" />
       {error && <Alert>{error}</Alert>}
       {!d ? (
         !error && <LoadingState variant="list" rows={2} />
@@ -126,10 +120,11 @@ export default function DeliveryTrack() {
             </section>
           )}
           {at < 0 ? (
-            <Alert>
+            /* **المنتهيةُ رماديّة** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) — الإلغاءُ ليس خطأً. */
+            <p className="surface rounded-card border border-line p-3 text-sm text-ink-muted">
               {(d.status === "failed" ? ST.failed : d.status === "rejected" ? ST.rejected : ST.cancelled) +
                 (d.cancel_reason?.trim() ? ` — ${d.cancel_reason}` : "")}
-            </Alert>
+            </p>
           ) : (
             <>
               {d.status === "dispatching" && <SearchingBanner />}

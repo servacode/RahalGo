@@ -74,6 +74,9 @@ import androidx.compose.ui.unit.Dp
 /** حشوةُ الشاشة — **رقمٌ واحدٌ لا يُخمَّن في كلّ ملفّ.** */
 val ScreenPad = 16.dp
 
+/** **دائرةُ أيقونة الفراغ** في `Empty`. */
+private val EmptyIconCircle = 72.dp
+
 /**
  * **جسدُ القسم** — عمودٌ يملأ الشاشةَ ويمرّر ما زاد.
  *
@@ -101,7 +104,11 @@ fun Screen(modifier: Modifier = Modifier, content: @Composable ColumnScope.() ->
  */
 @Composable
 fun ScreenTitle(title: String, hint: String = "") {
-    Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+    // **وعنوانٌ فارغٌ لا يُرسم** — ولا يترك سطراً فارغاً فوق الصفحة (رأسُها `PageHeader`).
+    if (title.isBlank() && hint.isEmpty()) return
+    if (title.isNotBlank()) {
+        Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+    }
     if (hint.isNotEmpty()) {
         Spacer(Modifier.height(4.dp))
         Text(hint, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodyMedium)
@@ -167,23 +174,26 @@ fun CountBadge(
 }
 
 /**
- * **بطاقةٌ** — أرضٌ خفيفةٌ تعزل ما فيها عمّا حولَه.
+ * **بطاقةٌ** — أرضٌ بيضاءُ بحدٍّ رفيع، كبطاقات «متجري» والعروض والإعدادات.
  *
- * **ولا ظلَّ ولا حدّ**: أرضٌ بلونٍ باهتٍ تكفي لتقول «هذه وحدة»، **وحدٌّ
- * حول كلّ شيءٍ يُشوّش الشاشة.**
+ * (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩: كانت أرضاً زرقاءَ خفيفةً بلا حدّ، وبطاقاتُ
+ *  الرئيسية بيضاءَ بحدّ — **لغتا بطاقاتٍ في تطبيقٍ واحد.**) فصارت لغةً واحدة.
+ *
+ * **و`tone` لمعنى حال** (تمامٌ أو تنبيه): أرضٌ خفيفةٌ من لونه وحدٌّ منه.
  */
 @Composable
 fun Card(
     modifier: Modifier = Modifier,
-    tone: Color = Rahal.colors.brand,
+    tone: Color? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
         modifier
             .fillMaxWidth()
             .clip(Rahal.shape.md)
-            .background(tone.copy(alpha = 0.06f))
-            .padding(14.dp),
+            .background(tone?.copy(alpha = 0.06f) ?: Rahal.colors.canvas)
+            .border(Rahal.stroke.hair, tone?.copy(alpha = 0.30f) ?: Rahal.colors.line, Rahal.shape.md)
+            .padding(Rahal.space.md),
         content = content,
     )
 }
@@ -219,9 +229,9 @@ fun Note(text: String, color: Color) {
             .fillMaxWidth()
             .clip(Rahal.shape.sm)
             .background(color.copy(alpha = 0.08f))
-            .padding(10.dp),
+            .padding(Rahal.space.md),
     )
-    Spacer(Modifier.height(10.dp))
+    Spacer(Modifier.height(Rahal.space.md))
 }
 
 /**
@@ -287,6 +297,8 @@ fun Empty(
     /** **نصُّ الزرّ** — وفارغٌ يعني لا زرّ. */
     actionLabel: String = "",
     onAction: (() -> Unit)? = null,
+    /** **أيقونةٌ فوق النصّ** في دائرةٍ خفيفة — و`null` لا أيقونة. */
+    @androidx.annotation.DrawableRes icon: Int? = null,
 ) {
     Box(
         Modifier.fillMaxWidth().padding(vertical = 40.dp),
@@ -296,6 +308,23 @@ fun Empty(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.padding(horizontal = 24.dp),
         ) {
+            if (icon != null) {
+                Box(
+                    Modifier
+                        .size(EmptyIconCircle)
+                        .clip(Rahal.shape.pill)
+                        .background(Rahal.colors.brand.copy(alpha = 0.08f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    androidx.compose.material3.Icon(
+                        androidx.compose.ui.res.painterResource(icon),
+                        contentDescription = null,
+                        tint = Rahal.colors.brand,
+                        modifier = Modifier.size(Rahal.space.xxl),
+                    )
+                }
+                Spacer(Modifier.height(Rahal.space.md))
+            }
             Text(text, color = Rahal.colors.inkMuted, textAlign = TextAlign.Center)
             if (hint.isNotBlank()) {
                 Spacer(Modifier.height(6.dp))

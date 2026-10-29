@@ -37,8 +37,14 @@ import com.rahalgo.map.dispatchMapLowMemory
  */
 class MerchantApplication : Application() {
 
+    // **والأرقامُ بالأجنبيّة** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — انظر `WesternDigits`.
+    override fun attachBaseContext(base: android.content.Context) {
+        super.attachBaseContext(com.rahalgo.ui.WesternDigits.wrap(base))
+    }
+
     override fun onCreate() {
         super.onCreate()
+        com.rahalgo.ui.WesternDigits.applyDefault()
         // ══════════════════════════════════════════════════════════
         // **وقنواتُ الإشعار قبل أن تصل رسالة**
         // ══════════════════════════════════════════════════════════

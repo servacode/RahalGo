@@ -7,8 +7,9 @@
  *
  * (مرآةُ `StoreHome.kt` — ملاحظةُ المالك ٦، ٢٠٢٦-١٠-٢٨.)
  *
- * **من فوق إلى تحت**: رأسٌ بالشعار والاسم · **شريطُ الحال ملوّناً** (أخضر مفتوح ·
- * رماديّ مغلق بالساعات · برتقاليّ إغلاقٌ طارئ · أحمر موقوف) وزرُّه تحته ·
+ * **من فوق إلى تحت**: رأسٌ بالشعار والاسم · **شريطُ الحال بأرضٍ فاتحةٍ من لونه**
+ * (أخضر مفتوح · رماديّ مغلق بالساعات · برتقاليّ إغلاقٌ طارئ · أحمر موقوف) وزرُّه
+ * صغيرٌ محدَّدٌ في آخره ·
  * **أربعةُ أزرارٍ سريعة** · **أرقامُ اليوم** · **ثمّ الإعداداتُ في مجموعتين**:
  * «المتجر» و«الدوام والمال»، كلُّ سطرٍ بأيقونته وقيمته ونقطةٍ حمراءَ إن نقص.
  *
@@ -24,6 +25,7 @@ import {
   Button,
   Confirm,
   FormActions,
+  IconBanknote,
   IconBlock,
   IconCash,
   IconCheck,
@@ -69,14 +71,12 @@ const HM = S.home;
 
 type IconT = ComponentType<{ size?: number; className?: string }>;
 
-/** **لونُ الأيقونة** — توكنز المنصّة لا ألوانٌ مكتوبة. */
-const TINT = {
-  brand: "bg-primary-tint text-primary",
-  accent: "bg-accent-tint text-accent-text",
-  success: "bg-success-tint text-success",
-  danger: "bg-danger-tint text-danger",
-} as const;
-type Tint = keyof typeof TINT;
+/**
+ * **لونُ الأيقونة واحدٌ هادئ** — لونُ المنصّة لكلّ سطرٍ وزرّ (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩).
+ * **والأحمرُ والبرتقاليُّ والأخضرُ للحال وحدَها**: نقطةُ «ناقص» وشريطُ الحال —
+ * وكان العنوانُ أحمرَ فيُقرأ مشكلةً وهو ليس كذلك.
+ */
+const ICON_TINT = "bg-primary-tint text-primary";
 
 // ══════════════════════════════════════════════════════════════════════
 // الرأس
@@ -115,12 +115,6 @@ function HomeHeader({ store, suspended, onLogo }: { store: MerchantStore; suspen
             </Select>
           ) : (
             <h1 className="heading-page line-clamp-2">{store.name}</h1>
-          )}
-          {store.address_text.trim() && <p className="truncate text-sm opacity-85">{store.address_text}</p>}
-          {!suspended && (
-            <button type="button" onClick={onLogo} className="mt-1 text-sm font-bold underline-offset-2 hover:underline">
-              {logo ? HM.changeLogo : HM.addLogo}
-            </button>
           )}
         </div>
         {!suspended && draft == null && (
@@ -186,13 +180,15 @@ function StatusBand({ store, suspended }: { store: MerchantStore; suspended: boo
       : !store.open_now
         ? HM.closedHours
         : HM.byHours;
+  /* **أرضٌ فاتحةٌ من لون الحال وحرفٌ بلونه** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) — كان أبيضَ
+     على تعبئةٍ مصمتة، **وكان «إغلاقٌ طارئ» أكبرَ زرٍّ في الشاشة.** */
   const tone = suspended
-    ? "bg-danger-solid"
+    ? "border-danger-edge bg-danger-tint text-danger"
     : store.emergency_closed
-      ? "bg-warning-solid"
+      ? "border-warning-edge bg-warning-tint text-warning"
       : !store.open_now
-        ? "bg-disabled"
-        : "bg-success-solid";
+        ? "border-line bg-field text-ink-muted"
+        : "border-success-edge bg-success-tint text-success";
   const Icon: IconT = suspended ? IconLock : store.emergency_closed || !store.open_now ? IconBlock : IconStore;
 
   async function setClosed(closed: boolean) {
@@ -215,26 +211,22 @@ function StatusBand({ store, suspended }: { store: MerchantStore; suspended: boo
 
   const reopen = store.emergency_closed;
   return (
-    <section className={`flex flex-col gap-3 rounded-card p-4 text-on-solid ${tone}`} data-testid="store-status">
-      <div className="flex items-center gap-3">
-        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-badge bg-on-solid-tint">
-          <Icon size={24} />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="heading-section">{label}</p>
-          <p className="text-sm opacity-90">{sub}</p>
-        </div>
+    <section className={`flex items-center gap-3 rounded-card border p-3 ${tone}`} data-testid="store-status">
+      <Icon size={24} className="shrink-0" />
+      <div className="min-w-0 flex-1">
+        <p className="heading-card">{label}</p>
+        <p className="text-sm text-ink-muted">{sub}</p>
       </div>
       {!suspended && (
         <button
           type="button"
           disabled={busy}
           onClick={() => (reopen ? void setClosed(false) : setAsking(true))}
-          className={`flex h-12 w-full items-center justify-center gap-2 rounded-control bg-paper text-base font-bold disabled:opacity-60 ${
-            reopen ? "text-success-solid" : "text-danger-solid"
+          className={`flex h-10 shrink-0 items-center gap-1.5 rounded-control border px-3 text-sm font-bold transition-colors hover:bg-row-hover disabled:opacity-60 ${
+            reopen ? "border-success-edge text-success" : "border-danger-edge text-danger"
           }`}
         >
-          <IconBlock size={18} />
+          <IconBlock size={16} />
           {reopen ? HM.reopen : T.emergency}
         </button>
       )}
@@ -255,13 +247,13 @@ function StatusBand({ store, suspended }: { store: MerchantStore; suspended: boo
 // الأزرارُ السريعة · أرقامُ اليوم · سطورُ الإعداد
 // ══════════════════════════════════════════════════════════════════════
 
-function QuickAction({ href, icon: Icon, label, tint, badge = 0 }: { href: string; icon: IconT; label: string; tint: Tint; badge?: number }) {
+function QuickAction({ href, icon: Icon, label, badge = 0 }: { href: string; icon: IconT; label: string; badge?: number }) {
   return (
     <Link
       href={href}
       className="surface relative flex min-w-0 flex-1 flex-col items-center gap-2 rounded-card px-1 py-3 text-center transition-colors hover:bg-row-hover"
     >
-      <span className={`flex h-11 w-11 items-center justify-center rounded-badge ${TINT[tint]}`}>
+      <span className={`flex h-11 w-11 items-center justify-center rounded-badge ${ICON_TINT}`}>
         <Icon size={24} />
       </span>
       <span className="text-xs font-bold sm:text-sm">{label}</span>
@@ -274,10 +266,10 @@ function QuickAction({ href, icon: Icon, label, tint, badge = 0 }: { href: strin
   );
 }
 
-function Tile({ icon: Icon, tint, value, label, sub, href }: { icon: IconT; tint: Tint; value: string; label: string; sub?: string; href?: string }) {
+function Tile({ icon: Icon, value, label, sub, href }: { icon: IconT; value: string; label: string; sub?: string; href?: string }) {
   const body = (
     <>
-      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-control ${TINT[tint]}`}>
+      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-control ${ICON_TINT}`}>
         <Icon size={20} />
       </span>
       <div className="min-w-0 flex-1">
@@ -308,7 +300,6 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
 
 function Row({
   icon: Icon,
-  tint,
   label,
   value,
   warn,
@@ -317,7 +308,6 @@ function Row({
   disabled,
 }: {
   icon: IconT;
-  tint: Tint;
   label: string;
   value?: string;
   warn?: boolean;
@@ -327,7 +317,7 @@ function Row({
 }) {
   const body = (
     <>
-      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-control ${TINT[tint]}`}>
+      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-control ${ICON_TINT}`}>
         <Icon size={20} />
       </span>
       <span className="shrink-0 text-base">{label}</span>
@@ -396,16 +386,15 @@ export default function StoreHome() {
 
       {!suspended && (
         <div className="flex gap-2">
-          <QuickAction href="/store/offers" icon={IconPromos} label={HM.quickOffers} tint="brand" />
+          <QuickAction href="/store/offers" icon={IconPromos} label={HM.quickOffers} />
           <QuickAction
             href="/store/menu?filter=unavailable"
             icon={IconViewOff}
             label={HM.quickUnavailable}
-            tint="accent"
             badge={unavailable}
           />
-          <QuickAction href="/store/menu/prices" icon={IconPromos} label={HM.quickPrices} tint="success" />
-          <QuickAction href="/store/delivery" icon={IconMoto} label={HM.quickDelivery} tint="brand" />
+          <QuickAction href="/store/menu/prices" icon={IconBanknote} label={HM.quickPrices} />
+          <QuickAction href="/store/delivery" icon={IconMoto} label={HM.quickDelivery} />
         </div>
       )}
 
@@ -418,17 +407,15 @@ export default function StoreHome() {
             <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
               <Tile
                 icon={IconOrder}
-                tint="brand"
                 value={fmtNum(report.summary.orders)}
                 label={HM.todayOrders}
                 sub={fill(HM.cancelledSub, { n: fmtNum(report.summary.cancelled) })}
                 href="/store/history"
               />
-              <Tile icon={IconCheck} tint="success" value={fmtNum(report.summary.delivered)} label={HM.deliveredToday} />
-              <Tile icon={IconReports} tint="accent" value={fmtMoney(report.summary.sales)} label={HM.salesToday} />
+              <Tile icon={IconCheck} value={fmtNum(report.summary.delivered)} label={HM.deliveredToday} />
+              <Tile icon={IconReports} value={fmtMoney(report.summary.sales)} label={HM.salesToday} />
               <Tile
                 icon={IconWallet}
-                tint="brand"
                 value={fmtMoney(report.summary.sales - report.summary.platform_commission)}
                 label={HM.dueToday}
               />
@@ -440,7 +427,6 @@ export default function StoreHome() {
       <Group title={HM.groupStore}>
         <Row
           icon={IconCatOther}
-          tint="accent"
           label={HM.rowSections}
           value={sec.mine.map((s) => s.name).join(" · ") || notSet}
           warn={sec.known && sec.mine.length === 0}
@@ -448,7 +434,6 @@ export default function StoreHome() {
         />
         <Row
           icon={IconLocation}
-          tint="danger"
           label={HM.rowAddress}
           value={point ? store.address_text : notSet}
           warn={!point}
@@ -456,20 +441,18 @@ export default function StoreHome() {
         />
         <Row
           icon={IconCamera}
-          tint="success"
           label={HM.rowLogo}
           value={store.logo_thumb_url ? HM.logoSet : HM.logoNone}
           disabled={suspended}
           onClick={() => setLogoOpen(true)}
         />
-        <Row icon={IconUsers} tint="brand" label={HM.rowStaff} href="/store/team" />
-        <Row icon={IconPhone} tint="accent" label={HM.rowOrderPhones} href="/store/order-phones" />
+        <Row icon={IconUsers} label={HM.rowStaff} href="/store/team" />
+        <Row icon={IconPhone} label={HM.rowOrderPhones} href="/store/order-phones" />
       </Group>
 
       <Group title={HM.groupHoursMoney}>
         <Row
           icon={IconDate}
-          tint="brand"
           label={HM.rowHours}
           value={hoursValue(store, hours) ?? notSet}
           warn={!store.has_hours}
@@ -477,7 +460,6 @@ export default function StoreHome() {
         />
         <Row
           icon={store.settlement_method === "wallet" ? IconWallet : IconCash}
-          tint="success"
           label={HM.rowSettlement}
           value={!store.settlement_confirmed ? notSet : store.settlement_method === "wallet" ? HM.wallet : HM.cash}
           warn={!store.settlement_confirmed}
@@ -485,7 +467,6 @@ export default function StoreHome() {
         />
         <Row
           icon={IconReturn}
-          tint="accent"
           label={HM.rowReturns}
           value={!store.returns_confirmed ? notSet : store.accepts_returns ? HM.returnsYes : HM.returnsNo}
           warn={!store.returns_confirmed}
@@ -493,14 +474,12 @@ export default function StoreHome() {
         />
         <Row
           icon={IconTrendUp}
-          tint="brand"
           label={HM.rowRate}
           value={store.exchange_rate ? usdText(store.exchange_rate) : notSet}
           href="/store/settings/rate"
         />
         <Row
           icon={IconHourglass}
-          tint="accent"
           label={HM.rowPrep}
           value={`${fmtNum(store.default_prep_minutes)} ${T.prepUnit}`}
           href="/store/settings/prep"

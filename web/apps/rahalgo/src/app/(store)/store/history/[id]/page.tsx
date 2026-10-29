@@ -6,7 +6,6 @@
  * **وسببُ الإلغاء إن أُلغي.** — «يُفتح عند سؤال» كما يقول السجلّ.
  */
 
-import Link from "next/link";
 import { useCallback } from "react";
 import { useParams } from "next/navigation";
 import { getMessages, defaultLocale, fmtMoney, fmtRelStamp } from "@rahalgo/i18n";
@@ -15,6 +14,7 @@ import { api } from "@/lib/api";
 import type { MerchantOrder } from "@/lib/store/types";
 import { fill } from "@/lib/customer/texts";
 import { MoneyLines, orderStatus } from "@/components/store/HistoryParts";
+import { PageHeader } from "@/components/store/SetupParts";
 
 const m = getMessages(defaultLocale);
 const S = m.store;
@@ -32,13 +32,11 @@ export default function HistoryOrderPage() {
 
   return (
     <div className="flex flex-col gap-3" data-testid="history-detail">
-      <Link href="/store/history" className="text-sm text-accent-text hover:underline">
-        {H.back}
-      </Link>
-      <header className="flex items-center justify-between gap-2">
-        <h2 className="heading-page">{fill(H.orderTitle, { n: o.number })}</h2>
-        <span className="text-sm text-ink-muted">{orderStatus(o.status)}</span>
-      </header>
+      <PageHeader
+        title={fill(H.orderTitle, { n: o.number })}
+        href="/store/history"
+        actions={<span className="shrink-0 text-sm text-ink-muted">{orderStatus(o.status)}</span>}
+      />
       <p className="text-xs text-ink-muted">{fmtRelStamp(o.closed_at ?? o.created_at)}</p>
       <section className="surface flex flex-col gap-2 rounded-card p-3">
         <h3 className="heading-card">{S.orders.items}</h3>

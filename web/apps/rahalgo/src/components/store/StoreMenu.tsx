@@ -8,8 +8,8 @@
  * (مرآةُ `MERCHANT_ITEMS + PlatformPages.items` في `Menu.kt`، وزرِّ الخروج
  *  أسفلَ الدرج.)
  *
- * **«ما يخصني»**: الإنذارات · العروض · سجل الطلبات · سجل التوصيلات ·
- * الشكاوي والبلاغات · التقارير — **والمحفظةُ معها** (في التطبيق زرٌّ في
+ * **«ما يخصني»**: العروض · التقارير · سجل الطلبات · سجل التوصيلات ·
+ * الموظفون · أرقام الطلبات · الشكاوى · الإنذارات — **والمحفظةُ معها** (في التطبيق زرٌّ في
  * الشريط العلويّ، وهنا الشريطُ أضيق).
  *
  * **«المنصة»**: شرحُ التطبيق بالفيديو (رابطٌ خارجيّ من الإعدادات) ·
@@ -45,16 +45,17 @@ const N = m.store.nav;
 type Icon = typeof IconWarning;
 
 const MINE: readonly (readonly [string, string, Icon])[] = [
-  ["/store/alerts", N.alerts, IconWarning],
+  // **ترتيبُ مراجعة التصميم ٢٠٢٦-١٠-٢٩**: ما يجلب البيعَ أوّلاً، والإنذاراتُ آخراً.
   ["/store/offers", N.offers, IconPromos],
+  ["/store/reports", N.reports, IconTrendUp],
   ["/store/history", N.history, IconReceipt],
   ["/store/deliveries", N.deliveries, IconMoto],
-  ["/store/complaints", N.complaints, IconChat],
-  ["/store/reports", N.reports, IconTrendUp],
-  ["/store/wallet", N.wallet, IconWallet],
-  // **ورقمُ الطلبات حسب الدوام وموظّفوه** — كدرج التطبيق، **والموظّفُ لا يرى بابَ الموظّفين.**
-  ["/store/order-phones", N.orderPhones, IconPhone],
+  // **والموظّفُ لا يرى بابَ الموظّفين.**
   ["/store/team", N.staff, IconUsers],
+  ["/store/order-phones", N.orderPhones, IconPhone],
+  ["/store/complaints", N.complaints, IconChat],
+  ["/store/alerts", N.alerts, IconWarning],
+  ["/store/wallet", N.wallet, IconWallet],
 ];
 
 const PLATFORM: readonly (readonly [string, string])[] = [
@@ -81,7 +82,7 @@ export default function StoreMenu({ open, onClose }: { open: boolean; onClose: (
             {MINE.filter(([href]) => !(role === "staff" && href === "/store/team")).map(([href, label, Ico]) => (
               <li key={href}>
                 <Link href={href} onClick={onClose} className={ROW}>
-                  <Ico size={18} className="shrink-0 text-accent-text" />
+                  <Ico size={18} className="shrink-0 text-primary" />
                   {label}
                 </Link>
               </li>
@@ -93,7 +94,7 @@ export default function StoreMenu({ open, onClose }: { open: boolean; onClose: (
           <ul className="flex flex-col">
             <li>
               <a href={tutorial} target="_blank" rel="noopener noreferrer" onClick={onClose} className={ROW}>
-                <IconApp size={18} className="shrink-0 text-accent-text" />
+                <IconApp size={18} className="shrink-0 text-primary" />
                 {N.tutorial}
               </a>
             </li>

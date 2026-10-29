@@ -49,7 +49,6 @@ import com.rahalgo.ui.LoadState
 import com.rahalgo.ui.Note
 import com.rahalgo.ui.Refreshable
 import com.rahalgo.ui.Screen
-import com.rahalgo.ui.ScreenTitle
 import com.rahalgo.ui.money
 import kotlinx.coroutines.launch
 
@@ -110,7 +109,6 @@ class WarningsViewModel(app: Application) : AndroidViewModel(app) {
 fun WarningsScreen(vm: WarningsViewModel) {
     if (vm.loading || (vm.error.isNotEmpty() && vm.items.isEmpty())) {
         Screen {
-            ScreenTitle(stringResource(com.rahalgo.merchant.R.string.menu_warnings), "")
             LoadState(vm.loading, vm.error) { vm.load() }
         }
         return
@@ -118,11 +116,7 @@ fun WarningsScreen(vm: WarningsViewModel) {
 
     Refreshable(refreshing = false, onRefresh = { vm.load() }) {
         Screen {
-            ScreenTitle(
-                stringResource(com.rahalgo.merchant.R.string.menu_warnings),
-                stringResource(com.rahalgo.merchant.R.string.warnings_hint),
-            )
-            Spacer(Modifier.height(10.dp))
+            // **والعنوانُ في رأس الصفحة** (`OverlayPage`) — ولا سطرَ شرح.
 
             // **ولا إنذارَ خبرٌ سارّ** — فيُقال بلون العلامة لا بسطرٍ رماديّ.
             if (vm.items.isEmpty()) {
@@ -226,7 +220,6 @@ class MyReportsViewModel(app: Application) : AndroidViewModel(app) {
 fun MyReportsScreen(vm: MyReportsViewModel) {
     if (vm.loading || (vm.error.isNotEmpty() && vm.items.isEmpty())) {
         Screen {
-            ScreenTitle(stringResource(com.rahalgo.merchant.R.string.menu_reports), "")
             LoadState(vm.loading, vm.error) { vm.load() }
         }
         return
@@ -255,8 +248,9 @@ fun MyReportsScreen(vm: MyReportsViewModel) {
     }
     Refreshable(refreshing = false, onRefresh = { vm.load() }) {
         TicketsScreen(
-            title = stringResource(com.rahalgo.merchant.R.string.menu_reports),
-            hint = stringResource(com.rahalgo.merchant.R.string.reports_list_hint),
+            // **والعنوانُ في رأس الصفحة** (`OverlayPage`) — ولا سطرَ شرح.
+            title = "",
+            hint = "",
             mine = vm.items.map(toRow),
             mineEmpty = stringResource(com.rahalgo.merchant.R.string.reports_list_empty),
             againstMe = vm.against.map(toRow),
@@ -407,11 +401,7 @@ fun SalesScreen(vm: SalesViewModel) {
     val context = LocalContext.current
     Refreshable(refreshing = false, onRefresh = { vm.load() }) {
         Screen {
-            ScreenTitle(
-                stringResource(com.rahalgo.merchant.R.string.menu_sales),
-                stringResource(com.rahalgo.merchant.R.string.sales_hint),
-            )
-            Spacer(Modifier.height(10.dp))
+            // **والعنوانُ في رأس الصفحة** (`OverlayPage`) — ولا سطرَ شرح.
 
             Row(
                 Modifier.fillMaxWidth(),

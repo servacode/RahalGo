@@ -51,7 +51,7 @@ import com.rahalgo.ui.ConfirmDialog
  *  و«بانتظار سائق» خلّيها تومض ليشعر المتجر أنّه يتمّ البحث عن سائق».)
  *
  * - **شارةُ الحال بلونها**: برتقاليٌّ للانتظار · أزرقُ للطريق · أخضرُ للتسليم ·
- *   أحمرُ للإلغاء — **فيُقرأ الحالُ من بعيد قبل الكلمة.**
+ *   رماديٌّ للإلغاء — **فيُقرأ الحالُ من بعيد قبل الكلمة.**
  * - **«جاري البحث عن سائق…» بدوائرَ تنبض حول الموتور** ما دامت `dispatching`.
  * - **زرُّ الإلغاء أحمرُ بعرض البطاقة، ويسأل قبل أن يُلغي** — كان رابطاً باهتاً
  *   يُلغي من أوّل لمسة.
@@ -78,7 +78,8 @@ internal fun toneColor(t: Tone): Color = when (t) {
     Tone.Waiting -> Rahal.colors.accent
     Tone.Moving -> Rahal.colors.brand
     Tone.Done -> Rahal.colors.success
-    Tone.Ended -> Rahal.colors.danger
+    // **والمنتهيةُ والملغاةُ رماديّة** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) — الإلغاءُ ليس خطأ.
+    Tone.Ended -> Rahal.colors.inkMuted
 }
 
 @Composable
@@ -123,12 +124,12 @@ internal fun StatusPill(status: String) {
         Modifier
             .clip(CircleShape)
             .background(c.copy(alpha = 0.12f))
-            .padding(horizontal = 10.dp, vertical = 4.dp),
+            .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.xs),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (tone == Tone.Waiting) PulseDot(c, 8.dp)
         else Box(Modifier.size(8.dp).clip(CircleShape).background(c))
-        Spacer(Modifier.width(6.dp))
+        Spacer(Modifier.width(Rahal.space.xs))
         Text(
             deliveryStatusText(status),
             color = c,
@@ -162,7 +163,7 @@ internal fun SearchingBanner(compact: Boolean = false) {
             .clip(Rahal.shape.md)
             .background(c.copy(alpha = 0.08f))
             .border(Rahal.stroke.hair, c.copy(alpha = 0.35f), Rahal.shape.md)
-            .padding(if (compact) 10.dp else 14.dp),
+            .padding(if (compact) Rahal.space.sm else Rahal.space.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(box), contentAlignment = Alignment.Center) {
@@ -188,18 +189,13 @@ internal fun SearchingBanner(compact: Boolean = false) {
                 )
             }
         }
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(Rahal.space.md))
         Column(Modifier.weight(1f)) {
             Text(
                 stringResource(R.string.md_searching),
                 color = c,
                 fontWeight = FontWeight.Bold,
                 style = if (compact) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                stringResource(R.string.md_searching_hint),
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
             )
         }
     }
@@ -209,7 +205,7 @@ internal fun SearchingBanner(compact: Boolean = false) {
 @Composable
 internal fun InfoLine(icon: Int, text: String, strong: Boolean = false, muted: Boolean = false) {
     Row(
-        Modifier.fillMaxWidth().padding(vertical = 3.dp),
+        Modifier.fillMaxWidth().padding(vertical = Rahal.space.xs / 2),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -218,7 +214,7 @@ internal fun InfoLine(icon: Int, text: String, strong: Boolean = false, muted: B
             tint = Rahal.colors.inkMuted,
             modifier = Modifier.size(18.dp),
         )
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(Rahal.space.sm))
         Text(
             text,
             fontWeight = if (strong) FontWeight.Bold else FontWeight.Normal,
@@ -248,7 +244,7 @@ internal fun CancelDeliveryButton(busy: Boolean, onConfirm: () -> Unit) {
             contentDescription = null,
             modifier = Modifier.size(18.dp),
         )
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(Rahal.space.sm))
         Text(
             stringResource(if (busy) R.string.md_cancelling else R.string.md_cancel),
             fontWeight = FontWeight.Bold,
@@ -271,8 +267,8 @@ internal fun Hairline() {
     Box(
         Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp)
-            .height(1.dp)
+            .padding(vertical = Rahal.space.sm)
+            .height(Rahal.stroke.hair)
             .background(Rahal.colors.line),
     )
 }

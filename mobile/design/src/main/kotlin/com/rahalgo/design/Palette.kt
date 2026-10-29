@@ -64,6 +64,11 @@ data class RahalPalette(
     val onBrand: Color,
     /** **برتقاليُّ العلامة** — النقدُ والتنبيه. */
     val accent: Color,
+    /**
+     * **حبرٌ برتقاليٌّ للكتابة** — البرتقاليُّ نفسُه على الأبيض لا يُقرأ
+     * (تباينٌ قرابةَ ٢ من ٢١)، **فالنصُّ البرتقاليُّ يُكتب بهذا** لا بـ`accent`.
+     */
+    val accentInk: Color,
     /** **تمام** — مدفوعٌ ومُسلَّمٌ ومكافأة. */
     val success: Color,
     /** **خطأ** — اقبضْ، وتعذّر، وعقوبة. */
@@ -103,6 +108,7 @@ val LightPalette = RahalPalette(
     brand = Color(0xFF02678F),
     onBrand = Color(0xFFFFFFFF),
     accent = Color(0xFFFE9501),
+    accentInk = Color(0xFFA35F00),
     success = Color(0xFF1E9E5A),
     danger = Color(0xFFD64545),
     warnTint = Color(0xFFFFF4E5),
@@ -133,6 +139,8 @@ val DarkPalette = RahalPalette(
     brand = Color(0xFF4FB8E8),
     onBrand = Color(0xFF04222F),
     accent = Color(0xFFFFA726),
+    // **وعلى الكحليّ يُقرأ البرتقاليُّ الفاتحُ نفسُه** — فالحبرُ أفتحُ قليلاً لا أغمق.
+    accentInk = Color(0xFFFFB547),
     success = Color(0xFF3ECB86),
     danger = Color(0xFFFF7070),
     // **والتنبيهُ لا يُضاء بالأصفر الفاتح على الداكن** — يذوب البياضُ

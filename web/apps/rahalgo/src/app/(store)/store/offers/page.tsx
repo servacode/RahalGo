@@ -11,8 +11,9 @@
  *   يعود إلى القائمة.**
  * - **القائمة**: «أنشئ عرضاً» بارزٌ ثمّ البطاقات، **والإيقافُ يُسأل عنه قبل
  *   أن يقع.** والفراغُ رسمٌ وزرٌّ كبير.
- * - **النموذج**: نوعُ الخصم مربّعان متساويان، والصنفُ مربّعاتٌ بعلامة ✓،
- *   والقيمةُ حقلٌ بوحدته ونسبٌ سريعة، والمدّةُ مربّعات، ثمّ ملخّصٌ و«حفظ / إلغاء».
+ * - **النموذج**: الصنفُ أوّلاً (بحثٌ وثمانيةُ أصناف، وينطوي سطراً بعد الاختيار)،
+ *   ثمّ نوعُ الخصم مربّعان متساويان، والقيمةُ حقلٌ بوحدته ونسبٌ سريعة، والمدّةُ
+ *   مربّعات، ثمّ ملخّصٌ، **و«حفظ / إلغاء» في شريطٍ ثابتٍ أسفلَ الشاشة.**
  *   **ولا سطرَ شرح.**
  *
  * **والإنشاءُ مرّةً مهما أُعيد** (`Attempt.OFFER`) — **والمحرّكُ هو الحَكَم**
@@ -42,7 +43,7 @@ import type { MenuSection, StoreOffer } from "@/lib/store/types";
 import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
 import { fill } from "@/lib/customer/texts";
 import { useShopToast } from "@/components/customer/toast";
-import { CheckBadge, ToolHeader } from "@/components/store/ToolParts";
+import { CheckBadge, StickyBar, ToolHeader } from "@/components/store/ToolParts";
 
 const m = getMessages(defaultLocale);
 const O = m.store.offers;
@@ -52,6 +53,8 @@ const SLOT = "merchant_offer";
 const PRESET_HOURS = [1, 3, 6, 12, 24, 48, 72, 168] as const;
 /** **نسبٌ تُضغط ضغطةً** — والحقلُ باقٍ لما سواها. */
 const QUICK_PERCENTS = [10, 15, 20, 25, 30, 50] as const;
+/** **ما يُعرض قبل البحث** — متجرٌ بمئتي صنفٍ لا يُنزَل فيه (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩). */
+const FIRST_ITEMS = 8;
 
 /** **«٣ ساعات» و«يومان» لا «٤٨ ساعة»** — مرآةُ `OfferDuration.label` بجمع العربيّة. */
 function plural(n: number, f: { one: string; two: string; few: string; many: string }): string {
@@ -206,7 +209,7 @@ function NewOffer({
     for (const o of rows) if (LIVE.has(o.status) && o.menu_item_id) t.set(o.menu_item_id, o.status);
     return t;
   }, [rows]);
-  const shown = query.trim() ? items.filter((i) => i.name.includes(query.trim())) : items;
+  const shown = query.trim() ? items.filter((i) => i.name.includes(query.trim())) : items.slice(0, FIRST_ITEMS);
 
   async function create() {
     if (!store) return;
@@ -241,6 +244,53 @@ function NewOffer({
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-3" data-testid="offer-form">
       <ToolHeader title={O.newTitle} onBack={onCancel} />
 
+      {/* **الصنفُ أوّلاً والبحثُ أوّلُه** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) — تُعرض نتائجُ البحث
+          أو أوّلُ ثمانيةٍ لا أصنافُ المتجر كلُّها، **وبعد الاختيار ينطوي سطراً واحداً.** */}
+      <FormCard title={O.item}>
+        {item ? (
+          <div className="flex items-center gap-2" data-testid="offer-item-picked">
+            <span className="min-w-0 flex-1 truncate font-bold">{fill(O.pickedLine, { name: item.name })}</span>
+            <span className="shrink-0 text-sm text-ink-muted">{fmtMoney(item.price)}</span>
+            <Button variant="secondary" className="shrink-0" onClick={() => setPicked("")} data-testid="offer-item-change">
+              {O.change}
+            </Button>
+          </div>
+        ) : (
+          <>
+            <Input
+              type="search"
+              aria-label={O.search}
+              placeholder={O.search}
+              icon={<IconSearch size={16} />}
+              value={query}
+              onChange={(e) => setQuery(e.target.value.slice(0, 40))}
+            />
+            {shown.length === 0 && <p className="text-sm text-ink-muted">{query.trim() ? O.noMatch : O.noItems}</p>}
+            <div role="radiogroup" aria-label={O.item} className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+              {shown.map((i) => {
+                const note = taken.get(i.id);
+                return (
+                  <Tile key={i.id} on={false} onClick={() => setPicked(i.id)} testId="offer-item">
+                    <span className="line-clamp-2 pe-5 text-sm font-bold text-ink">{i.name}</span>
+                    <span className="text-xs text-ink-muted">{fmtMoney(i.price)}</span>
+                    {note && (
+                      <span className="mt-1 w-fit rounded-control bg-warning-tint px-1.5 py-0.5 text-2xs text-warning">
+                        {note === "scheduled" ? O.itemScheduled : O.itemTaken}
+                      </span>
+                    )}
+                  </Tile>
+                );
+              })}
+            </div>
+          </>
+        )}
+        {item && taken.get(item.id) && (
+          <p className="w-fit rounded-control bg-warning-tint px-1.5 py-0.5 text-2xs text-warning">
+            {taken.get(item.id) === "scheduled" ? O.itemScheduled : O.itemTaken}
+          </p>
+        )}
+      </FormCard>
+
       <FormCard title={O.fType}>
         <div role="radiogroup" aria-label={O.fType} className="grid grid-cols-2 gap-2">
           {(
@@ -271,35 +321,6 @@ function NewOffer({
                   {glyph}
                 </span>
                 <span className={`mt-1 self-center font-bold ${on ? "text-accent-text" : "text-ink"}`}>{label}</span>
-              </Tile>
-            );
-          })}
-        </div>
-      </FormCard>
-
-      <FormCard title={O.item}>
-        <Input
-          type="search"
-          aria-label={O.search}
-          placeholder={O.search}
-          icon={<IconSearch size={16} />}
-          value={query}
-          onChange={(e) => setQuery(e.target.value.slice(0, 40))}
-        />
-        {shown.length === 0 && <p className="text-sm text-ink-muted">{query.trim() ? O.noMatch : O.noItems}</p>}
-        <div role="radiogroup" aria-label={O.item} className="grid max-h-96 grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3">
-          {shown.map((i) => {
-            const on = picked === i.id;
-            const note = taken.get(i.id);
-            return (
-              <Tile key={i.id} on={on} onClick={() => setPicked(i.id)} testId="offer-item">
-                <span className={`line-clamp-2 pe-5 text-sm font-bold ${on ? "text-accent-text" : "text-ink"}`}>{i.name}</span>
-                <span className="text-xs text-ink-muted">{fmtMoney(i.price)}</span>
-                {note && (
-                  <span className="mt-1 w-fit rounded-control bg-warning-tint px-1.5 py-0.5 text-2xs text-warning">
-                    {note === "scheduled" ? O.itemScheduled : O.itemTaken}
-                  </span>
-                )}
               </Tile>
             );
           })}
@@ -379,14 +400,16 @@ function NewOffer({
         </FormCard>
       )}
 
-      {error && <Alert>{error}</Alert>}
-      <FormActions
-        onSave={() => void create()}
-        onCancel={onCancel}
-        busy={busy || !item || !valueOK}
-        saveIcon={<IconCheck size={18} />}
-        cancelIcon={<IconClose size={18} />}
-      />
+      <StickyBar>
+        {error && <Alert>{error}</Alert>}
+        <FormActions
+          onSave={() => void create()}
+          onCancel={onCancel}
+          busy={busy || !item || !valueOK}
+          saveIcon={<IconCheck size={18} />}
+          cancelIcon={<IconClose size={18} />}
+        />
+      </StickyBar>
     </div>
   );
 }

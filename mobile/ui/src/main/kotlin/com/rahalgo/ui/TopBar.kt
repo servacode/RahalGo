@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.Text
 import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
@@ -29,6 +30,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+
+/** **أدنى هدف لمس** — ومكانُ زرّ القائمة إن غاب بمقاسه. */
+private val TouchMin = 48.dp
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -127,7 +131,8 @@ fun TopBar(
         Modifier
             .fillMaxWidth()
             .statusBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            // **والارتفاعُ من أهداف اللمس (٤٨) لا من الحشوة** — فالحشوةُ العموديّة صغيرة.
+            .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.xs),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -145,6 +150,8 @@ fun TopBar(
         if (onMenu != null) {
             Box(
                 Modifier
+                    // **ولمسةٌ بـ٤٨** — والشكلُ كما كان (مراجعةُ ٢٠٢٦-١٠-٢٩).
+                    .minimumInteractiveComponentSize()
                     .clip(CircleShape)
                     .clickable(onClick = onMenu)
                     .padding(6.dp),
@@ -159,9 +166,9 @@ fun TopBar(
         } else {
             // **وفراغٌ بمقاسه** — وإلّا انزاح الرصيدُ والجرسُ إلى اليمين
             // كلّما دخل رحلةً وخرج منها: **شريطٌ يرقص لا يُقرأ ثابتا.**
-            Spacer(Modifier.size(34.dp))
+            Spacer(Modifier.size(TouchMin))
         }
-        Spacer(Modifier.size(4.dp))
+        Spacer(Modifier.size(Rahal.space.xs))
 
         // ══════════════════════════════════════════════════════════════
         // **وعنوانُ التوصيل — سطران يُضغطان**
@@ -194,7 +201,7 @@ fun TopBar(
                     .weight(1f)
                     .clip(Rahal.shape.pill)
                     .background(Rahal.colors.brand.copy(alpha = 0.08f))
-                    .border(1.dp, Rahal.colors.brand.copy(alpha = 0.35f), Rahal.shape.pill)
+                    .border(Rahal.stroke.hair, Rahal.colors.brand.copy(alpha = 0.35f), Rahal.shape.pill)
                     .clickable(onClick = onAddress)
                     .padding(horizontal = 10.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -205,7 +212,7 @@ fun TopBar(
                     tint = Rahal.colors.brand,
                     modifier = Modifier.size(20.dp),
                 )
-                Spacer(Modifier.size(8.dp))
+                Spacer(Modifier.size(Rahal.space.sm))
                 Column(Modifier.weight(1f)) {
                     Text(
                         text = stringResource(R.string.top_deliver_to),
@@ -283,7 +290,7 @@ fun TopBar(
                         // بلا لغة يكتب «٥٫٠» في جهاز عربيّ، **فيقع
                         // رقمان بخطّين في شريط واحد.**
                         text = "%.1f".format(java.util.Locale.US, rating),
-                        color = Rahal.colors.accent,
+                        color = Rahal.colors.accentInk,
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.bodyMedium,
                     )
@@ -309,10 +316,11 @@ fun TopBar(
             // شيئا.
             Row(
                 Modifier
+                    .minimumInteractiveComponentSize()
                     .clip(Rahal.shape.lg)
                     .background(Rahal.colors.brand.copy(alpha = 0.08f))
                     .clickable(onClick = onWallet)
-                    .padding(horizontal = 12.dp, vertical = 7.dp),
+                    .padding(horizontal = Rahal.space.md, vertical = 7.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
@@ -329,7 +337,7 @@ fun TopBar(
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
-            Spacer(Modifier.size(4.dp))
+            Spacer(Modifier.size(Rahal.space.xs))
 
             // ══════════════════════════════════════════════════════════
             // **والجرسُ في الطرف — بعد المحفظة**
@@ -346,9 +354,10 @@ fun TopBar(
             // واحدةٌ تقرؤهما.
             Box(
                 Modifier
+                    .minimumInteractiveComponentSize()
                     .clip(CircleShape)
                     .clickable(onClick = onNotifications)
-                    .padding(8.dp),
+                    .padding(Rahal.space.sm),
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_bell),

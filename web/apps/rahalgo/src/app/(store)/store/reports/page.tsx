@@ -21,6 +21,7 @@ import { api } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import type { StoreReport } from "@/lib/store/types";
 import { fill } from "@/lib/customer/texts";
+import { PageHeader } from "@/components/store/SetupParts";
 
 const m = getMessages(defaultLocale);
 const R = m.store.sales;
@@ -60,10 +61,9 @@ export default function ReportsPage() {
 
   return (
     <div className="flex flex-col gap-3">
-      <header className="print:hidden">
-        <h2 className="heading-page">{R.title}</h2>
-        <p className="text-sm text-ink-muted">{R.hint}</p>
-      </header>
+      <div className="print:hidden">
+        <PageHeader title={R.title} />
+      </div>
       <div className="print:hidden">
         <Chips
           wrap

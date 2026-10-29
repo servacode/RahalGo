@@ -61,7 +61,7 @@ import {
   Switch,
   Textarea,
 } from "@rahalgo/ui";
-import { ColumnLabel, CurrencyCircles, RowField, TagChip, ToolHeader } from "./ToolParts";
+import { ColumnLabel, CurrencyCircles, RowField, StickyBar, TagChip, ToolHeader } from "./ToolParts";
 import { api, mediaUrl } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import type {
@@ -93,6 +93,8 @@ const IMAGE_EDGE = 1600;
 /** **حدودُ الكتابة كالتطبيق** — والمحرّكُ يحرس فوقها (`catalog.MaxItemDescription`). */
 const NAME_TYPE_MAX = 120;
 const DESC_MAX = 500;
+/** **العدّادُ يظهر حين يبقى هذا أو أقلّ** — لا قبله. */
+const NAME_NEAR = 10;
 
 interface DraftOption {
   id?: string;
@@ -547,7 +549,8 @@ export default function ItemEditor({
               }}
               error={nameOver ? fill(I.nameOver, { max: itemNameMax, n: nameLen }) : undefined}
             />
-            {!nameOver && (
+            {/* **العدّادُ قربَ الحدّ وحدَه** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) — لا سطرٌ دائم. */}
+            {!nameOver && nameLen >= itemNameMax - NAME_NEAR && (
               <p className="mt-1 text-xs tabular-nums text-ink-muted" dir="ltr">{`${nameLen} / ${itemNameMax}`}</p>
             )}
           </div>
@@ -734,7 +737,7 @@ export default function ItemEditor({
                 disabled={busy}
                 onClick={() => removeGroup(gi)}
                 data-testid="item-group-remove"
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control border border-danger-edge text-danger hover:bg-danger-tint disabled:opacity-50"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control border border-line text-ink-muted hover:bg-row-hover hover:text-ink disabled:opacity-50"
               >
                 <IconDelete size={18} />
               </button>
@@ -899,18 +902,7 @@ export default function ItemEditor({
         {rateLost && <p className="text-xs text-danger">{I.usdNoRate}</p>}
       </section>
 
-      {/* ── ٥ · الحفظُ والإلغاء — ثمّ النسخُ والحذف ── */}
-      {error && <Alert>{error}</Alert>}
-      {!readOnly && (
-        <FormActions
-          submit
-          onCancel={() => router.push("/store/menu")}
-          busy={busy || nameOver}
-          saveIcon={<IconCheck size={18} />}
-          cancelIcon={<IconClose size={18} />}
-        />
-      )}
-
+      {/* ── ٥ · النسخُ والحذف في آخر الصفحة — والحفظُ في شريطٍ ثابتٍ تحتها ── */}
       {item && !readOnly && (
         <>
           <div className="flex gap-2">
@@ -948,12 +940,30 @@ export default function ItemEditor({
           />
         </>
       )}
+
+      {/* **«حفظ / إلغاء» ثابتان أسفلَ الشاشة** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) — أكثرُ
+          ما يُعدَّل السعرُ في الأعلى، **فلا يُنزَل إلى آخر الصفحة ليُحفظ.** */}
+      {(error || !readOnly) && (
+        <StickyBar>
+          {error && <Alert>{error}</Alert>}
+          {!readOnly && (
+            <FormActions
+              submit
+              onCancel={() => router.push("/store/menu")}
+              busy={busy || nameOver}
+              saveIcon={<IconCheck size={18} />}
+              cancelIcon={<IconClose size={18} />}
+            />
+          )}
+        </StickyBar>
+      )}
     </form>
   );
 }
 
 /**
- * **سطرُ خيارٍ واحد** — حقولُه ثمّ مفتاحُ التوفّر ثمّ حذفٌ أحمر.
+ * **سطرُ خيارٍ واحد** — حقولُه ثمّ مفتاحُ التوفّر ثمّ حذفٌ رماديّ.
+ * (**والأحمرُ لحذف الصنف وحدَه**، و«غير متوفر» رماديٌّ لا أحمر — ليس غلطاً.)
  *
  * **«نمرة ٤٢ خلصت» — يطفئها وحدَها** والصنفُ يبقى يُباع، وعند الزبون تطلع
  * رماديّةً لا تُختار.
@@ -992,7 +1002,7 @@ function OptionRow({
             }`}
           />
         </button>
-        <span className={`text-2xs font-bold ${available ? "text-success" : "text-danger"}`}>
+        <span className={`text-2xs font-bold ${available ? "text-success" : "text-ink-muted"}`}>
           {available ? I.optAvailable : I.unavailable}
         </span>
       </span>
@@ -1002,7 +1012,7 @@ function OptionRow({
         title={I.optDelete}
         disabled={busy}
         onClick={onDelete}
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control text-danger hover:bg-danger-tint disabled:opacity-50"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-row-hover hover:text-ink disabled:opacity-50"
       >
         <IconDelete size={18} />
       </button>

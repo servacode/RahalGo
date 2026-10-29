@@ -48,6 +48,19 @@ export function ToolHeader({
   );
 }
 
+/**
+ * **شريطُ حفظٍ ثابتٌ أسفلَ الشاشة** — «حفظ / إلغاء» لا ينزل إليه صاحبُ المتجر
+ * (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩، كمعالج الإعداد). **وعلى الجوّال فوق الشريط
+ * السفليّ** لا تحته — كسلّة الزبون.
+ */
+export function StickyBar({ children }: { children: ReactNode }) {
+  return (
+    <div className="surface sticky bottom-[calc(3.75rem+env(safe-area-inset-bottom))] z-30 flex flex-col gap-2 border-t border-line-soft p-3 md:bottom-0">
+      {children}
+    </div>
+  );
+}
+
 type Icon = ComponentType<{ size?: number; className?: string }>;
 
 /** **مربّعُ اختيار** — أيقونةٌ في دائرةٍ واسمٌ، والمختارُ بحدّ المنصّة وأرضِها. */

@@ -23,6 +23,7 @@ import { Alert, Button, Card, LoadingState, Select } from "@rahalgo/ui";
 import { api, apiFile } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import { fill } from "@/lib/customer/texts";
+import { PageHeader } from "@/components/store/SetupParts";
 
 const m = getMessages(defaultLocale);
 const P = m.store.priceSync;
@@ -246,8 +247,7 @@ export default function PriceSyncPage() {
   return (
     <div className="flex flex-col gap-3">
       <header>
-        <h2 className="heading-page">{P.title}</h2>
-        <p className="text-sm text-ink-muted">{P.hint}</p>
+        <PageHeader title={P.title} href="/store/menu" />
         {info?.last_run && (
           <p className="mt-1 text-xs text-ink-muted">
             {fill(P.last, { at: fmtDateTime(info.last_run.at) })}

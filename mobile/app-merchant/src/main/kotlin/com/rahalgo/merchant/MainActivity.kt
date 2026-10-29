@@ -121,6 +121,11 @@ import androidx.compose.ui.draw.drawBehind
  */
 class MainActivity : ComponentActivity() {
 
+    // **والأرقامُ بالأجنبيّة** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — انظر `WesternDigits`.
+    override fun attachBaseContext(base: android.content.Context) {
+        super.attachBaseContext(com.rahalgo.ui.WesternDigits.wrap(base))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         com.rahalgo.ui.Net.install(this)
@@ -392,7 +397,8 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
         // **ولا درجَ والمعالجُ مفتوح** — لا تبويبَ ولا بابَ قبل أن يكتمل الإعداد.
         gesturesEnabled = !wizardOn && DrawerGestures.enabledFor(drawer),
         drawerContent = {
-            ModalDrawerSheet(Modifier.width(200.dp)) {
+            // **عرضُ ٢٨٠** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) — ٢٠٠ كانت تقصّ «رقم الطلبات حسب الدوام».
+            ModalDrawerSheet(Modifier.width(280.dp)) {
                 Drawer(
                     // **والموظّفُ لا يرى بابَ الموظّفين** — المحرّكُ يردّه (`notStaff`).
                     items = MERCHANT_ITEMS.filter {
@@ -617,33 +623,43 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                     // **وسجلُّ الطلبات من الدرج** — قسمٌ منفصلٌ كما في الويب.
                     over is Overlay.Menu && over.key == MerchantItems.HISTORY -> {
                         LaunchedEffect(Unit) { historyVm.load() }
-                        HistoryScreen(historyVm)
+                        OverlayPage(stringResource(R.string.menu_history), onBack = { overlay.clear() }) {
+                            HistoryScreen(historyVm)
+                        }
                     }
 
                     // **وسجلُّ التوصيلات** — كلُّ «لدي توصيلة» أرسلها (الخطوة ١٨).
                     over is Overlay.Menu && over.key == MerchantItems.DELIVERIES -> {
                         val dhVm: com.rahalgo.merchant.delivery.DeliveryHistoryViewModel = viewModel()
-                        com.rahalgo.merchant.delivery.DeliveryHistoryScreen(dhVm)
+                        OverlayPage(stringResource(R.string.menu_deliveries), onBack = { overlay.clear() }) {
+                            com.rahalgo.merchant.delivery.DeliveryHistoryScreen(dhVm)
+                        }
                     }
 
                     // **وما عليه** — يُقرأ قبل أن يُحظر.
                     over is Overlay.Menu && over.key == MerchantItems.WARNINGS -> {
                         val warnVm: WarningsViewModel = viewModel()
-                        WarningsScreen(warnVm)
+                        OverlayPage(stringResource(R.string.menu_warnings), onBack = { overlay.clear() }) {
+                            WarningsScreen(warnVm)
+                        }
                     }
 
                     // **وما أرسله هو** — لا شكاوى الزبائن عليه.
                     over is Overlay.Menu && over.key == MerchantItems.REPORTS -> {
                         val repVm: MyReportsViewModel = viewModel()
                         LaunchedEffect(Unit) { repVm.load() }
-                        MyReportsScreen(repVm)
+                        OverlayPage(stringResource(R.string.menu_reports), onBack = { overlay.clear() }) {
+                            MyReportsScreen(repVm)
+                        }
                     }
 
                     // **ومدًى يختاره** — و«متجري» يقول يومَه وحدَه.
                     over is Overlay.Menu && over.key == MerchantItems.SALES -> {
                         val salesVm: SalesViewModel = viewModel()
                         LaunchedEffect(Unit) { salesVm.load() }
-                        SalesScreen(salesVm)
+                        OverlayPage(stringResource(R.string.menu_sales), onBack = { overlay.clear() }) {
+                            SalesScreen(salesVm)
+                        }
                     }
 
                     // **ورقمُ الطلبات حسب الدوام وموظّفوه** (٢٠٢٦-١٠-٢٠) — للمتجر المختار،
@@ -672,7 +688,8 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                         )
                     }
 
-                    over == Overlay.Wallet -> WalletScreen(vm = walletVm, payouts = true)
+                    // **والمحفظةُ ترسم رأسَها بسهمه** (`onBack`) — فلا تُلفّ بـ`OverlayPage`.
+                    over == Overlay.Wallet -> WalletScreen(vm = walletVm, payouts = true, onBack = { overlay.clear() })
 
                     over == Overlay.Inbox -> InboxSheet(
                         items = shell.inbox.orEmpty(),
@@ -926,5 +943,28 @@ private fun RoleBadge() {
                 .background(if (staff) Rahal.colors.line else Rahal.colors.brand.copy(alpha = 0.12f))
                 .padding(horizontal = Rahal.space.md, vertical = Rahal.space.xs),
         )
+    }
+}
+
+/**
+ * **صفحةٌ منبثقةٌ برأسٍ واحد — سهمُ رجوعٍ وعنوان** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩).
+ *
+ * **وكانت الإنذاراتُ والشكاوى والتقاريرُ والسجلّاتُ والمحفظةُ بلا سهم** — يفتحها من
+ * القائمة ولا يجد طريقَ رجوعٍ غيرَ زرّ الجوال. **فالرأسُ هنا مرّةً للجميع**، والصفحةُ
+ * تحته بلا عنوانٍ ثانٍ.
+ */
+@Composable
+private fun OverlayPage(title: String, onBack: () -> Unit, content: @Composable () -> Unit) {
+    Column(Modifier.fillMaxSize()) {
+        com.rahalgo.ui.PageHeader(
+            title = title,
+            onBack = onBack,
+            modifier = Modifier.padding(start = Rahal.space.lg, end = Rahal.space.lg, top = Rahal.space.sm),
+        )
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .weight(1f),
+        ) { content() }
     }
 }

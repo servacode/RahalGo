@@ -765,7 +765,7 @@ private fun MapCredit() {
 }
 
 @Composable
-private fun SectionTitle(text: String, color: androidx.compose.ui.graphics.Color = Rahal.colors.accent) {
+private fun SectionTitle(text: String, color: androidx.compose.ui.graphics.Color = Rahal.colors.accentInk) {
     Text(text, style = MaterialTheme.typography.titleMedium, color = color)
     Spacer(Modifier.height(10.dp))
 }

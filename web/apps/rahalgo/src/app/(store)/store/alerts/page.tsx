@@ -15,6 +15,7 @@ import { EmptyState, IconWarning, LoadingState, ReloadState, useLiveData } from 
 import { api } from "@/lib/api";
 import type { Warning } from "@/lib/store/types";
 import { fill } from "@/lib/customer/texts";
+import { PageHeader } from "@/components/store/SetupParts";
 
 const m = getMessages(defaultLocale);
 const W = m.store.alerts;
@@ -30,10 +31,7 @@ export default function AlertsPage() {
 
   return (
     <div className="flex flex-col gap-3">
-      <header>
-        <h2 className="heading-page">{W.title}</h2>
-        <p className="text-sm text-ink-muted">{W.hint}</p>
-      </header>
+      <PageHeader title={W.title} />
       {rows.length === 0 ? (
         <EmptyState icon={IconWarning} title={W.empty} tone="success" />
       ) : (

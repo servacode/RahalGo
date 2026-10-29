@@ -47,11 +47,14 @@ export function PageHeader({
   title,
   subtitle,
   actions,
+  leading,
 }: {
   icon?: IconType;
   title: string;
   subtitle?: string;
   actions?: ReactNode;
+  /** **ما يسبق العنوان** — سهمُ رجوعٍ في صفحةٍ فرعيّة (لوحةُ المتجر ٢٠٢٦-١٠-٢٩). */
+  leading?: ReactNode;
 }) {
   return (
     /* ══════════════════════════════════════════════════════════════════
@@ -70,12 +73,15 @@ export function PageHeader({
        **وشريطٌ لا صندوق**: الحشوةُ ضيّقةٌ والزاويةُ واحدة — **فهو أثاثُ
        العنوان لا كرتٌ جامعٌ عاد من الباب الخلفيّ.** */
     <div className="surface-lit flex flex-wrap items-center justify-between gap-3 surface px-4 py-3">
-      <div className="min-w-0">
-        <h1 className="heading-section flex items-center gap-2">
-          {Icon && <Icon size={20} className="text-primary" />}
-          {title}
-        </h1>
-        {subtitle && <p className="mt-1 text-sm text-ink-muted">{subtitle}</p>}
+      <div className="flex min-w-0 items-center gap-1">
+        {leading}
+        <div className="min-w-0">
+          <h1 className="heading-section flex items-center gap-2">
+            {Icon && <Icon size={20} className="text-primary" />}
+            {title}
+          </h1>
+          {subtitle && <p className="mt-1 text-sm text-ink-muted">{subtitle}</p>}
+        </div>
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>

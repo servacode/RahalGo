@@ -125,7 +125,7 @@ fun ResetScreen(state: ResetState, actions: ResetActions) {
             Spacer(Modifier.height(14.dp))
             Text(
                 text = state.error,
-                color = Rahal.colors.accent,
+                color = Rahal.colors.danger,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
             )

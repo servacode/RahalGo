@@ -262,10 +262,7 @@ export default function OrdersPage() {
 
   return (
     <div className="flex flex-col gap-3">
-      <header>
-        <h2 className="heading-page">{O.title}</h2>
-        {selfManage && <p className="text-sm text-ink-muted">{O.hint}</p>}
-      </header>
+      <h2 className="heading-page">{O.title}</h2>
       {!selfManage && <Alert tone="info">{O.platformMode}</Alert>}
       {orders.length === 0 ? (
         <EmptyState

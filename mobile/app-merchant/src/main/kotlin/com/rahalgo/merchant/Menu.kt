@@ -21,10 +21,10 @@ import com.rahalgo.ui.DrawerItem
  *
  * **وخمسةُ تبويباتٍ حدُّ ما يُقرأ بلمحة** — والسادسُ يضيّقها كلَّها.
  *
- * # وترتيبُها بحسب الإلحاح
+ * # وترتيبُها
  *
- * **الإنذارُ أوّلاً** — **وهو الوحيدُ الذي يُحظر المتجرُ إن أُهمل.**
- * ثمّ السجلُّ، ثمّ بلاغاتُه، ثمّ التقارير.
+ * العروضُ ← التقارير ← سجلُّ الطلبات ← سجلُّ التوصيلات ← الموظّفون ← أرقامُ الطلبات
+ * ← الشكاوى ← الإنذارات ← الفيديو (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩).
  */
 object MerchantItems {
     const val OFFERS = "Offers"
@@ -43,14 +43,8 @@ object MerchantItems {
 }
 
 val MERCHANT_ITEMS: List<DrawerItem> = listOf(
-    // **ومن أُنذر يرى إنذارَه** — إشعارٌ يمرّ في الشريط يُقرأ مرّةً
-    // ويُنسى، **ثمّ يُحظر المتجرُ ولم يعلم أنّ عليه شيئاً.**
-    DrawerItem(
-        MerchantItems.WARNINGS,
-        com.rahalgo.ui.R.string.menu_mine,
-        R.string.menu_warnings,
-        com.rahalgo.ui.R.drawable.ic_warning,
-    ),
+    // **الترتيبُ: ما يجيب بيعاً أوّلاً، والإنذاراتُ قبل الفيديو** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) —
+    // كان أوّلُ ما يراه صاحبُ المتجر شيئاً سلبيّاً والعروضُ مخبّأة.
     // ══════════════════════════════════════════════════════════════════
     // **وعروضُه يبنيها بنفسه** (`OF`، ٢٠٢٦-٠٩-١٥)
     // ══════════════════════════════════════════════════════════════════
@@ -66,6 +60,12 @@ val MERCHANT_ITEMS: List<DrawerItem> = listOf(
         R.drawable.ic_percent,
     ),
     DrawerItem(
+        MerchantItems.SALES,
+        com.rahalgo.ui.R.string.menu_mine,
+        R.string.menu_sales,
+        com.rahalgo.ui.R.drawable.ic_chart,
+    ),
+    DrawerItem(
         MerchantItems.HISTORY,
         com.rahalgo.ui.R.string.menu_mine,
         R.string.menu_history,
@@ -79,18 +79,11 @@ val MERCHANT_ITEMS: List<DrawerItem> = listOf(
         R.string.menu_deliveries,
         com.rahalgo.ui.R.drawable.ic_moto,
     ),
-    // **وبلاغاتُه هو لا شكاوى الزبائن عليه** — انظر `merchant_reports.go`.
     DrawerItem(
-        MerchantItems.REPORTS,
+        MerchantItems.STAFF,
         com.rahalgo.ui.R.string.menu_mine,
-        R.string.menu_reports,
-        com.rahalgo.ui.R.drawable.ic_chat,
-    ),
-    DrawerItem(
-        MerchantItems.SALES,
-        com.rahalgo.ui.R.string.menu_mine,
-        R.string.menu_sales,
-        com.rahalgo.ui.R.drawable.ic_chart,
+        R.string.menu_staff,
+        com.rahalgo.ui.R.drawable.ic_user,
     ),
     // **ورقمُ الطلبات حسب الدوام وموظّفوه** (قرارُ المالك ٢٠٢٦-١٠-٢٠) — كلوحة المتجر
     // بالويب، **والموظّفُ لا يرى بابَ الموظّفين** (`TeamAccess`).
@@ -100,11 +93,20 @@ val MERCHANT_ITEMS: List<DrawerItem> = listOf(
         R.string.menu_order_phones,
         com.rahalgo.ui.R.drawable.ic_phone,
     ),
+    // **وبلاغاتُه هو لا شكاوى الزبائن عليه** — انظر `merchant_reports.go`.
     DrawerItem(
-        MerchantItems.STAFF,
+        MerchantItems.REPORTS,
         com.rahalgo.ui.R.string.menu_mine,
-        R.string.menu_staff,
-        com.rahalgo.ui.R.drawable.ic_user,
+        R.string.menu_reports,
+        com.rahalgo.ui.R.drawable.ic_chat,
+    ),
+    // **ومن أُنذر يرى إنذارَه** — إشعارٌ يمرّ في الشريط يُقرأ مرّةً
+    // ويُنسى، **ثمّ يُحظر المتجرُ ولم يعلم أنّ عليه شيئاً.**
+    DrawerItem(
+        MerchantItems.WARNINGS,
+        com.rahalgo.ui.R.string.menu_mine,
+        R.string.menu_warnings,
+        com.rahalgo.ui.R.drawable.ic_warning,
     ),
     DrawerItem(
         MerchantItems.TUTORIAL,

@@ -492,7 +492,7 @@ private fun PresetCard(p: OptionPreset, on: Boolean, enabled: Boolean, onToggle:
                 Spacer(Modifier.width(Rahal.space.sm))
                 when (p.priceMode) {
                     PRICE_MODE_NONE -> TagChip(stringResource(R.string.mod_chip_none), Rahal.colors.inkMuted)
-                    PRICE_MODE_WEIGHT -> TagChip(stringResource(R.string.mod_chip_weight), Rahal.colors.accent)
+                    PRICE_MODE_WEIGHT -> TagChip(stringResource(R.string.mod_chip_weight), Rahal.colors.accentInk)
                     else -> TagChip(stringResource(R.string.mod_chip_priced), Rahal.colors.brand)
                 }
             }

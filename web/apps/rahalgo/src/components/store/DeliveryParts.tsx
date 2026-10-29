@@ -1,14 +1,14 @@
 "use client";
 
 /**
- * **قطعُ «لدي توصيلة» المشتركة** — صفُّ التوصيلة، وشارةُ حالها، وزرُّ
+ * **قطعُ «اطلب توصيلة» المشتركة** — صفُّ التوصيلة، وشارةُ حالها، وزرُّ
  * الإلغاء بسؤال. (مرآةُ `DeliveryUi.kt` وصفّ `DeliveryRow` في التطبيق.)
  */
 
 import Link from "next/link";
 import { useState } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtRelStamp } from "@rahalgo/i18n";
-import { Button, Confirm, IconClose, IconHourglass, IconLocation, IconMoto, IconNote, IconPhone, IconUser, IconWallet } from "@rahalgo/ui";
+import { getMessages, defaultLocale, fmtMoney, fmtNum, fmtRelStamp } from "@rahalgo/i18n";
+import { Button, Confirm, IconChevronDown, IconClose, IconLocation, IconMoto, IconNote, IconPhone, IconUser, IconWallet } from "@rahalgo/ui";
 import type { Delivery } from "@/lib/store/types";
 import { CANCELLABLE, amountText } from "@/lib/store/deliveries";
 import { fill } from "@/lib/customer/texts";
@@ -31,13 +31,14 @@ const PILL: Record<Tone, string> = {
   waiting: "bg-warning-tint text-warning",
   moving: "bg-accent-tint text-accent-text",
   done: "bg-success-tint text-success",
-  ended: "bg-danger-tint text-danger",
+  // **المنتهيةُ والملغاةُ رماديّة** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) — أُلغيت بيده غالباً، فليست خطأً.
+  ended: "bg-field text-ink-muted",
 };
 const EDGE: Record<Tone, string> = {
   waiting: "border-warning-edge",
   moving: "border-accent-edge",
   done: "border-success-edge",
-  ended: "border-danger-edge",
+  ended: "border-line",
 };
 
 export function statusText(status: string): string {
@@ -60,10 +61,7 @@ export function SearchingBanner() {
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-badge bg-warning text-on-bright motion-safe:animate-pulse">
         <IconMoto size={18} />
       </span>
-      <span className="min-w-0">
-        <span className="block text-sm font-bold text-warning">{D.searching}</span>
-        <span className="block text-xs text-ink-muted">{D.searchingHint}</span>
-      </span>
+      <span className="min-w-0 text-sm font-bold text-warning">{D.searching}</span>
     </div>
   );
 }
@@ -140,30 +138,50 @@ export function CancelDeliveryButton({ busy, onConfirm }: { busy: boolean; onCon
   );
 }
 
+/**
+ * **صفُّ التوصيلة مطويّاً** — رقمُها وحالُها، ثمّ المستلمُ والأجرة في سطر
+ * (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩: كانت كلُّ بطاقةٍ تحمل كلَّ شيء). **والضغطُ يفتحها**:
+ * التفاصيلُ والإلغاءُ ورابطُ المتابعة.
+ */
 export function DeliveryRow({ d, cancelling, onCancel }: { d: Delivery; cancelling: boolean; onCancel: () => void }) {
   const tone = toneOf(d.status);
+  const [open, setOpen] = useState(false);
   return (
     <article className={`surface flex flex-col gap-2 rounded-card border p-3 ${EDGE[tone]}`} data-testid="store-delivery">
-      <Link href={`/store/delivery/${d.id}`} className="flex flex-col gap-2">
-        <header className="flex items-center justify-between gap-2">
-          <span className="flex min-w-0 flex-col">
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-label={`${fill(D.trackTitle, { n: d.number })} · ${D.trackDetails}`}
+        onClick={() => setOpen((v) => !v)}
+        className="flex flex-col gap-1 text-start"
+        data-testid="store-delivery-toggle"
+      >
+        <span className="flex w-full items-center justify-between gap-2">
+          <span className="flex min-w-0 items-baseline gap-2">
             <span className="font-bold">{fill(D.trackTitle, { n: d.number })}</span>
-            {/* **ويومُها وساعتُها** (مرآةُ `Dates.stamp`، تدقيقُ ٢٠٢٦-١٠-٢٧) — كانت بلا تاريخ. */}
-            {d.created_at && <span className="text-xs text-ink-muted">{fmtRelStamp(d.created_at)}</span>}
+            {/* **ويومُها وساعتُها** (مرآةُ `Dates.stamp`، تدقيقُ ٢٠٢٦-١٠-٢٧). */}
+            {d.created_at && <span className="truncate text-xs text-ink-muted">{fmtRelStamp(d.created_at)}</span>}
           </span>
           <StatusPill status={d.status} />
-        </header>
-        {d.status === "dispatching" && <SearchingBanner />}
-        <DeliveryLines d={d} />
-        {/* **و«اضغط لمتابعتها» لِما يجري وحدَه** — المنتهيةُ لا تُتابَع. */}
-        {(tone === "waiting" || tone === "moving") && (
-          <span className="flex items-center gap-1 text-xs font-bold text-accent-text">
-            <IconHourglass size={12} />
-            {D.trackOpen}
+        </span>
+        <span className="flex w-full items-center justify-between gap-2 text-sm">
+          <span className="min-w-0 truncate">{d.customer_name}</span>
+          <span className="flex shrink-0 items-center gap-1 text-ink-muted">
+            <span className="tabular-nums">{fmtMoney(d.delivery_fee)}</span>
+            <IconChevronDown size={16} className={`transition-transform ${open ? "rotate-180" : ""}`} />
           </span>
-        )}
-      </Link>
-      {CANCELLABLE.has(d.status) && <CancelDeliveryButton busy={cancelling} onConfirm={onCancel} />}
+        </span>
+      </button>
+      {open && (
+        <>
+          {d.status === "dispatching" && <SearchingBanner />}
+          <DeliveryLines d={d} />
+          <Link href={`/store/delivery/${d.id}`} className="text-sm font-bold text-primary hover:underline">
+            {tone === "waiting" || tone === "moving" ? D.follow : D.trackDetails}
+          </Link>
+          {CANCELLABLE.has(d.status) && <CancelDeliveryButton busy={cancelling} onConfirm={onCancel} />}
+        </>
+      )}
     </article>
   );
 }

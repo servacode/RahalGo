@@ -53,7 +53,6 @@ import com.rahalgo.ui.RahalButton
 import com.rahalgo.ui.RahalTextButton
 import com.rahalgo.ui.Refreshable
 import com.rahalgo.ui.Screen
-import com.rahalgo.ui.ScreenTitle
 import kotlinx.coroutines.launch
 
 /**
@@ -216,7 +215,6 @@ class HistoryViewModel(app: Application) : AndroidViewModel(app) {
 fun HistoryScreen(vm: HistoryViewModel) {
     if (vm.loading || (vm.error.isNotEmpty() && vm.orders.isEmpty())) {
         Screen {
-            ScreenTitle(stringResource(com.rahalgo.merchant.R.string.menu_history), stringResource(com.rahalgo.merchant.R.string.history_hint))
             LoadState(vm.loading, vm.error) { vm.load() }
         }
         return
@@ -227,7 +225,7 @@ fun HistoryScreen(vm: HistoryViewModel) {
 
     Refreshable(refreshing = false, onRefresh = { vm.load() }) {
         Screen {
-            ScreenTitle(stringResource(com.rahalgo.merchant.R.string.menu_history), stringResource(com.rahalgo.merchant.R.string.history_hint))
+            // **والعنوانُ في رأس الصفحة** (`OverlayPage`) — بسهم رجوع، ولا سطرَ شرح.
 
             if (vm.orders.isEmpty()) {
                 Empty(stringResource(com.rahalgo.merchant.R.string.history_empty))

@@ -87,9 +87,12 @@ export function NotificationsPage({
   api,
   Link,
   app = "",
+  leading,
 }: {
   api: ApiFn;
   Link: LinkType;
+  /** **سهمُ رجوعٍ قبل العنوان** — لوحةُ المتجر تمرّره (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩). */
+  leading?: ReactNode;
   /** **صندوقُ هذا التطبيق وحدَه** — انظر `useLiveNotifications`. */
   app?: string;
 }) {
@@ -158,6 +161,7 @@ export function NotificationsPage({
     <PageContainer>
       <PageHeader
         icon={IconBell}
+        leading={leading}
         title={N.title}
         subtitle={data && data.unread > 0 ? N.unreadCount.replace("{n}", fmtNum(data.unread)) : undefined}
         actions={

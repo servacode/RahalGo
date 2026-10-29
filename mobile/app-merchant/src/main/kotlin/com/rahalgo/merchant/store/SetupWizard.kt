@@ -19,7 +19,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
@@ -117,7 +116,7 @@ private fun Welcome(steps: List<SetupStep>, onStart: () -> Unit) {
         Column(
             Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(bottomStart = Rahal.space.xxl, bottomEnd = Rahal.space.xxl))
+                .clip(Rahal.shape.lg.copy(topStart = androidx.compose.foundation.shape.CornerSize(0), topEnd = androidx.compose.foundation.shape.CornerSize(0)))
                 .background(Rahal.colors.brand)
                 .statusBarsPadding()
                 .padding(start = Rahal.space.xl, end = Rahal.space.xl, top = Rahal.space.xxl, bottom = Rahal.space.xxl),
@@ -322,9 +321,12 @@ private fun StepScreen(
 private class StepNext(val ok: Boolean, val label: Int? = null, val act: () -> Unit)
 
 @Composable
-private fun StepTitle(title: Int, hint: Int) {
+private fun StepTitle(title: Int, hint: Int? = null) {
     Text(stringResource(title), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.headlineSmall)
-    Text(stringResource(hint), color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodyMedium)
+    // **ولا سطرَ شرحٍ إلّا للقرارين الماليّين** — الاستلامُ والإرجاع (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩).
+    if (hint != null) {
+        Text(stringResource(hint), color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodyMedium)
+    }
 }
 
 // ── ١ · الشعار — اختياريّ ──
@@ -334,7 +336,7 @@ private fun ColumnScope.LogoStep(vm: StoreViewModel, advance: () -> Unit): StepN
     val store = vm.store ?: return StepNext(true, null, advance)
     val pick = com.rahalgo.ui.rememberImagePicker(crop = true) { bytes -> vm.setLogo(bytes) }
     val has = !store.logoThumbUrl.isNullOrBlank()
-    StepTitle(R.string.wz_logo_q, R.string.wz_logo_hint)
+    StepTitle(R.string.wz_logo_q)
     Spacer(Modifier.height(Rahal.space.sm))
     com.rahalgo.ui.RemoteImage(
         url = com.rahalgo.ui.AppCore.get().media(store.logoThumbUrl),
@@ -364,7 +366,7 @@ private fun SectionsStep(vm: StoreViewModel, advance: () -> Unit): StepNext {
     val next = StepNext(picked.isNotEmpty()) {
         if (picked.toSet() == current) advance() else vm.saveSections(picked) { advance() }
     }
-    StepTitle(R.string.wz_sections_q, R.string.wz_sections_hint)
+    StepTitle(R.string.wz_sections_q)
     if (vm.allSections.isEmpty()) {
         Text(stringResource(R.string.wz_sections_none), color = Rahal.colors.danger)
         return next
@@ -394,7 +396,7 @@ private fun AddressStep(
             vm.saveAddress(text, vm.pickedLat, vm.pickedLng) { vm.wizardAddress = null; advance() }
         }
     }
-    StepTitle(R.string.wz_address_q, R.string.wz_address_hint)
+    StepTitle(R.string.wz_address_q)
     OutlinedTextField(
         value = text,
         onValueChange = { vm.wizardAddress = it },
@@ -415,7 +417,7 @@ private fun HoursStep(vm: StoreViewModel, advance: () -> Unit): StepNext {
     val store = vm.store ?: return StepNext(false) {}
     val sorted = vm.hours.sortedBy { it.dayOfWeek }
     if (sorted.isEmpty()) {
-        StepTitle(R.string.wz_hours_q, R.string.wz_hours_hint)
+        StepTitle(R.string.wz_hours_q)
         LoadState(vm.loading, vm.error) { vm.load() }
         return StepNext(false) {}
     }
@@ -442,7 +444,7 @@ private fun HoursStep(vm: StoreViewModel, advance: () -> Unit): StepNext {
             },
         )
     }
-    StepTitle(R.string.wz_hours_q, R.string.wz_hours_hint)
+    StepTitle(R.string.wz_hours_q)
     HoursPlanner(plan)
     return next
 }

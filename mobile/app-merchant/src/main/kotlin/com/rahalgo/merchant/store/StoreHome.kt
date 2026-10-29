@@ -21,7 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -186,16 +186,17 @@ fun StoreScreen(
                         horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
                     ) {
                         // **«أضف صنفاً» تبويبٌ تحت — فمكانُه هنا للعروض** (تجربةُ المالك ٢٠٢٦-١٠-٢٩).
-                        QuickAction(com.rahalgo.ui.R.drawable.ic_offer, stringResource(R.string.home_quick_offers), Rahal.colors.brand, Modifier.weight(1f), onClick = onOffers)
+                        QuickAction(R.drawable.ic_percent, stringResource(R.string.home_quick_offers), Rahal.colors.brand, Modifier.weight(1f), onClick = onOffers)
                         QuickAction(
                             com.rahalgo.ui.R.drawable.ic_eye_off,
                             stringResource(R.string.home_quick_unavailable),
-                            Rahal.colors.accent,
+                            Rahal.colors.brand,
                             Modifier.weight(1f),
                             badge = unavailable,
                             onClick = onUnavailable,
                         )
-                        QuickAction(R.drawable.ic_percent, stringResource(R.string.home_quick_prices), Rahal.colors.success, Modifier.weight(1f), onClick = onPrices)
+                        // **تغييرُ الأسعار = أوراقٌ نقديّة في كلّ مكان، والنسبةُ للعروض وحدَها** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩).
+                        QuickAction(com.rahalgo.ui.R.drawable.ic_banknotes, stringResource(R.string.home_quick_prices), Rahal.colors.brand, Modifier.weight(1f), onClick = onPrices)
                         QuickAction(com.rahalgo.ui.R.drawable.ic_moto, stringResource(R.string.home_quick_delivery), Rahal.colors.brand, Modifier.weight(1f), onClick = onDelivery)
                     }
                 }
@@ -216,7 +217,7 @@ fun StoreScreen(
                             )
                             Tile(
                                 icon = R.drawable.ic_check,
-                                tint = Rahal.colors.success,
+                                tint = Rahal.colors.brand,
                                 value = r.summary.delivered.toString(),
                                 label = stringResource(R.string.home_delivered_today),
                                 modifier = Modifier.weight(1f),
@@ -226,15 +227,15 @@ fun StoreScreen(
                         Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
                             Tile(
                                 icon = com.rahalgo.ui.R.drawable.ic_chart,
-                                tint = Rahal.colors.accent,
-                                value = com.rahalgo.ui.grouped(r.summary.sales),
+                                tint = Rahal.colors.brand,
+                                value = com.rahalgo.ui.money(r.summary.sales),
                                 label = stringResource(R.string.home_sales_today),
                                 modifier = Modifier.weight(1f),
                             )
                             Tile(
                                 icon = com.rahalgo.ui.R.drawable.ic_wallet,
                                 tint = Rahal.colors.brand,
-                                value = com.rahalgo.ui.grouped(r.summary.due),
+                                value = com.rahalgo.ui.money(r.summary.due),
                                 label = stringResource(R.string.reports_due_today),
                                 modifier = Modifier.weight(1f),
                             )
@@ -247,7 +248,6 @@ fun StoreScreen(
                 SettingsGroup(stringResource(R.string.home_group_store)) {
                     SettingsRow(
                         icon = com.rahalgo.ui.R.drawable.ic_offer,
-                        tint = Rahal.colors.accent,
                         label = stringResource(R.string.store_sections),
                         value = vm.mySections.joinToString(" · ") { it.name }.ifBlank { notSet },
                         warn = vm.sectionsKnown && vm.mySections.isEmpty(),
@@ -255,14 +255,12 @@ fun StoreScreen(
                     val pointSet = store.lat != null && store.lng != null && store.addressText.isNotBlank()
                     SettingsRow(
                         icon = com.rahalgo.ui.R.drawable.ic_pin,
-                        tint = Rahal.colors.danger,
                         label = stringResource(R.string.home_row_address),
                         value = if (pointSet) store.addressText else notSet,
                         warn = !pointSet,
                     ) { vm.page = StorePage.Address }
                     SettingsRow(
                         icon = R.drawable.ic_image,
-                        tint = Rahal.colors.success,
                         label = stringResource(R.string.home_row_logo),
                         value = stringResource(
                             if (store.logoThumbUrl.isNullOrBlank()) R.string.home_val_logo_none else R.string.home_val_logo_set,
@@ -274,14 +272,12 @@ fun StoreScreen(
                 SettingsGroup(stringResource(R.string.home_group_hours_money)) {
                     SettingsRow(
                         icon = com.rahalgo.ui.R.drawable.ic_time,
-                        tint = Rahal.colors.brand,
                         label = stringResource(R.string.home_row_hours),
                         value = hoursValue(store, vm.hours) ?: notSet,
                         warn = !store.hasHours,
                     ) { vm.page = StorePage.Hours }
                     SettingsRow(
                         icon = com.rahalgo.ui.R.drawable.ic_wallet,
-                        tint = Rahal.colors.success,
                         label = stringResource(R.string.home_row_settlement),
                         value = when {
                             !store.settlementConfirmed -> notSet
@@ -292,7 +288,6 @@ fun StoreScreen(
                     ) { vm.page = StorePage.Settlement }
                     SettingsRow(
                         icon = R.drawable.ic_return,
-                        tint = Rahal.colors.accent,
                         label = stringResource(R.string.home_row_returns),
                         value = when {
                             !store.returnsConfirmed -> notSet
@@ -303,14 +298,12 @@ fun StoreScreen(
                     ) { vm.page = StorePage.Returns }
                     SettingsRow(
                         icon = com.rahalgo.ui.R.drawable.ic_chart,
-                        tint = Rahal.colors.brand,
-                        label = stringResource(R.string.home_row_rate),
+                        label = stringResource(R.string.home_row_rate_short),
                         value = store.exchangeRate?.let { com.rahalgo.ui.menu.usdText(it) } ?: notSet,
                     ) { vm.page = StorePage.Rate }
                     SettingsRow(
                         icon = com.rahalgo.ui.R.drawable.ic_work,
-                        tint = Rahal.colors.accent,
-                        label = stringResource(R.string.store_prep),
+                        label = stringResource(R.string.home_row_prep),
                         value = "${store.prepMinutes} ${stringResource(R.string.store_prep_unit)}",
                         last = true,
                     ) { vm.page = StorePage.Prep }
@@ -338,7 +331,7 @@ private fun HomeHeader(
     Row(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(bottomStart = Rahal.space.xl, bottomEnd = Rahal.space.xl))
+            .clip(Rahal.shape.lg.copy(topStart = CornerSize(0), topEnd = CornerSize(0)))
             .background(Rahal.colors.brand)
             .padding(Rahal.space.lg),
         verticalAlignment = Alignment.CenterVertically,
@@ -384,29 +377,8 @@ private fun HomeHeader(
                     }
                 }
             }
-            if (store.addressText.isNotBlank()) {
-                Text(
-                    store.addressText,
-                    color = Rahal.colors.onBrand.copy(alpha = 0.85f),
-                    style = MaterialTheme.typography.bodySmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-            if (!suspended) {
-                Text(
-                    stringResource(
-                        if (store.logoThumbUrl.isNullOrBlank()) com.rahalgo.ui.R.string.store_logo_add
-                        else R.string.home_change_logo,
-                    ),
-                    color = Rahal.colors.onBrand,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier
-                        .padding(top = Rahal.space.xs)
-                        .clickable(enabled = !saving, onClick = onLogo),
-                )
-            }
+            // **ولا عنوانَ ولا «تغيير الشعار» في الرأس** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) — الشعارُ
+            // نفسُه يُضغط، وسطرا «الشعار» و«العنوان» في الإعدادات تحت.
         }
         if (!suspended) {
             IconButton(onClick = onRename, modifier = Modifier.size(48.dp)) {
@@ -421,10 +393,10 @@ private fun HomeHeader(
 }
 
 /**
- * **شريطُ الحال — بعرض الشاشة وبلونها** (B5، ملاحظةُ المالك ٦أ).
+ * **شريطُ الحال — أرضيّةٌ فاتحةٌ من لون الحال** (B5، ومراجعةُ التصميم ٢٠٢٦-١٠-٢٩).
  *
  * أخضرُ «مفتوح الآن» · رماديٌّ «مغلق — يفتح الساعة …» · برتقاليٌّ «مغلق مؤقتاً»
- * (طارئ) · أحمرُ «موقوف». **والزرُّ تحته واضحاً**: «إغلاق طارئ» يُسأل قبل التنفيذ،
+ * (طارئ) · أحمرُ «موقوف». **والزرُّ آخرَ الشريط محدَّداً صغيراً**: «إغلاق طارئ» يُسأل قبل التنفيذ،
  * و«إعادة الفتح» في الطارئ بلا سؤال.
  */
 @Composable
@@ -454,66 +426,60 @@ private fun StatusBand(
         !store.openNow -> Rahal.colors.inkMuted
         else -> Rahal.colors.success
     }
-    val ink = Rahal.colors.onPanel
-    Column(
+    // **أرضيّةٌ فاتحةٌ من لون الحال وكتابةٌ غامقة** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) — الأبيضُ على
+    // البرتقاليّ لا يُقرأ في الشمس. **و«إغلاق طارئ» زرٌّ محدَّدٌ صغيرٌ آخرَ الشريط** لا البطل.
+    val ink = when {
+        suspended -> Rahal.colors.danger
+        store.emergencyClosed -> Rahal.colors.accentInk
+        !store.openNow -> Rahal.colors.ink
+        else -> Rahal.colors.success
+    }
+    Row(
         Modifier
             .fillMaxWidth()
             .clip(Rahal.shape.lg)
-            .background(color)
-            .padding(Rahal.space.lg),
+            .background(color.copy(alpha = 0.12f))
+            .border(Rahal.stroke.hair, color.copy(alpha = 0.35f), Rahal.shape.lg)
+            .padding(Rahal.space.md),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier
-                    .size(44.dp)
-                    .clip(Rahal.shape.pill)
-                    .background(ink.copy(alpha = 0.20f)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    painterResource(
-                        when {
-                            suspended -> com.rahalgo.ui.R.drawable.ic_lock
-                            store.emergencyClosed || !store.openNow -> com.rahalgo.ui.R.drawable.ic_power
-                            else -> com.rahalgo.ui.R.drawable.ic_store
-                        },
-                    ),
-                    contentDescription = null,
-                    tint = ink,
-                    modifier = Modifier.size(24.dp),
-                )
-            }
-            Spacer(Modifier.width(Rahal.space.md))
-            Column(Modifier.weight(1f)) {
-                Text(label, color = ink, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.headlineSmall)
-                Text(sub, color = ink.copy(alpha = 0.9f), style = MaterialTheme.typography.bodyMedium)
-            }
+        Box(
+            Modifier
+                .size(44.dp)
+                .clip(Rahal.shape.pill)
+                .background(color.copy(alpha = 0.18f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painterResource(
+                    when {
+                        suspended -> com.rahalgo.ui.R.drawable.ic_lock
+                        store.emergencyClosed || !store.openNow -> com.rahalgo.ui.R.drawable.ic_power
+                        else -> com.rahalgo.ui.R.drawable.ic_store
+                    },
+                ),
+                contentDescription = null,
+                tint = ink,
+                modifier = Modifier.size(24.dp),
+            )
+        }
+        Spacer(Modifier.width(Rahal.space.md))
+        Column(Modifier.weight(1f)) {
+            Text(label, color = ink, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
+            Text(sub, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
         }
         if (!suspended) {
-            Spacer(Modifier.height(Rahal.space.md))
+            Spacer(Modifier.width(Rahal.space.sm))
             val reopen = store.emergencyClosed
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
-                    .clip(Rahal.shape.md)
-                    .background(Rahal.colors.canvas)
-                    .clickable(enabled = !saving, role = Role.Button, onClick = if (reopen) onReopen else onEmergency),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically,
+            com.rahalgo.ui.RahalOutlineButton(
+                onClick = if (reopen) onReopen else onEmergency,
+                enabled = !saving,
+                tone = if (reopen) com.rahalgo.ui.Tone.Success else com.rahalgo.ui.Tone.Danger,
             ) {
-                Icon(
-                    painterResource(com.rahalgo.ui.R.drawable.ic_power),
-                    contentDescription = null,
-                    tint = if (reopen) Rahal.colors.success else Rahal.colors.danger,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(Modifier.width(Rahal.space.sm))
                 Text(
                     stringResource(if (reopen) R.string.home_reopen else R.string.store_emergency),
-                    color = if (reopen) Rahal.colors.success else Rahal.colors.danger,
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = MaterialTheme.typography.labelLarge,
                 )
             }
         }
@@ -786,17 +752,8 @@ internal fun ChoiceCard(
 /** **رأسُ صفحةٍ فرعيّة** — سهمُ رجوعٍ وعنوان. */
 @Composable
 internal fun PageHeader(title: String, onBack: () -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) {
-            Icon(
-                painterResource(com.rahalgo.ui.R.drawable.ic_arrow_back),
-                contentDescription = stringResource(R.string.home_back),
-                tint = Rahal.colors.ink,
-            )
-        }
-        Spacer(Modifier.width(Rahal.space.xs))
-        Text(title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
-    }
+    // **الرأسُ المشترك نفسُه** (`com.rahalgo.ui.PageHeader`) — لا نسخةٌ هنا ونسخةٌ في العروض.
+    com.rahalgo.ui.PageHeader(title = title, onBack = onBack)
     Spacer(Modifier.height(Rahal.space.sm))
 }
 
@@ -822,8 +779,8 @@ private fun StorePageScreen(
                     StorePage.Address -> R.string.home_row_address
                     StorePage.Settlement -> R.string.home_row_settlement
                     StorePage.Returns -> R.string.home_row_returns
-                    StorePage.Rate -> R.string.home_row_rate
-                    StorePage.Prep -> R.string.store_prep
+                    StorePage.Rate -> R.string.home_row_rate_short
+                    StorePage.Prep -> R.string.home_row_prep
                 },
             ),
             onBack = onBack,

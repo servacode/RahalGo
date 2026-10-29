@@ -17,6 +17,7 @@ import { WalletPage } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { SettlementCard } from "@/components/store/StoreSettings";
+import { PageHeader } from "@/components/store/SetupParts";
 
 const m = getMessages(defaultLocale);
 const S = m.store;
@@ -25,7 +26,7 @@ export default function StoreWallet() {
   const { user } = useAuth();
   return (
     <div className="flex flex-col gap-4">
-      <h2 className="heading-page">{S.wallet.title}</h2>
+      <PageHeader title={S.wallet.title} />
       <SettlementCard />
       <WalletPage
         api={api}

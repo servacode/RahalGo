@@ -9,7 +9,8 @@
 import Link from "next/link";
 import { NotificationsPage } from "@rahalgo/ui";
 import { api } from "@/lib/api";
+import { BackArrow } from "@/components/store/SetupParts";
 
 export default function Page() {
-  return <NotificationsPage api={api} Link={Link} app="merchant" />;
+  return <NotificationsPage api={api} Link={Link} app="merchant" leading={<BackArrow />} />;
 }

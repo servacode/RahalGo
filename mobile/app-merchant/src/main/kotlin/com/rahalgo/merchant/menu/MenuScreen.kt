@@ -112,7 +112,7 @@ fun MenuScreen(
 
     if (vm.loading || (vm.error.isNotEmpty() && vm.groups.isEmpty())) {
         Screen {
-            ScreenTitle(stringResource(R.string.menu_title), stringResource(R.string.menu_hint))
+            ScreenTitle(stringResource(R.string.menu_title))
             LoadState(vm.loading, vm.error) { vm.load() }
         }
         return

@@ -199,7 +199,7 @@ fun AuthScreen(
             Spacer(Modifier.height(12.dp))
             Text(
                 text = state.error,
-                color = Rahal.colors.accent,
+                color = Rahal.colors.danger,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -265,7 +265,7 @@ fun AuthScreen(
         // الشاشةَ له حسابٌ أصلا، **والتسجيلُ مرّةٌ في العمر.**
         if (signup) {
             RahalTextButton(onClick = actions.signup, enabled = !state.busy) {
-                Text(stringResource(R.string.signup_open), color = Rahal.colors.accent)
+                Text(stringResource(R.string.signup_open), color = Rahal.colors.accentInk)
             }
         }
         Spacer(Modifier.height(40.dp))

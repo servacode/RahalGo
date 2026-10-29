@@ -15,7 +15,6 @@
  * يقرأ ولا يعدّل.** (وبطاقةُ الإدارة القديمة باقيةٌ في `StoreStaffAdmin.tsx`.)
  */
 
-import Link from "next/link";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { getMessages, defaultLocale, errorText, fmtDateTime } from "@rahalgo/i18n";
 import {
@@ -27,7 +26,6 @@ import {
   IconDelete,
   IconHourglass,
   IconPhone,
-  IconPrev,
   IconUser,
   Input,
   LoadingState,
@@ -36,6 +34,7 @@ import {
 import { api, ApiError } from "@/lib/api";
 import { fill } from "@/lib/customer/texts";
 import { useStore } from "@/lib/store/context";
+import { PageHeader } from "./SetupParts";
 
 const m = getMessages(defaultLocale);
 const T = m.store.team;
@@ -43,22 +42,6 @@ const T = m.store.team;
 // ══════════════════════════════════════════════════════════════════════
 // **قِطَعُ الصفحتين**
 // ══════════════════════════════════════════════════════════════════════
-
-/** **رأسُ الصفحة** — سهمُ رجوعٍ إلى «متجري» وعنوان (`PageHeader` في التطبيق). */
-function TeamHeader({ title }: { title: string }) {
-  return (
-    <div className="flex items-center gap-1">
-      <Link
-        href="/store"
-        aria-label={T.back}
-        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-ink hover:bg-row-hover"
-      >
-        <IconPrev size={24} />
-      </Link>
-      <h2 className="heading-page">{title}</h2>
-    </div>
-  );
-}
 
 /** **بطاقةٌ بيضاءُ مدوّرةٌ بحدٍّ رفيع** — وعنوانٌ باهتٌ فوقها إن وُجد. */
 function WhiteCard({ title, children }: { title?: string; children: ReactNode }) {
@@ -298,7 +281,7 @@ export function StaffPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
-      <TeamHeader title={T.staffTitle} />
+      <PageHeader title={T.staffTitle} />
       {body}
       {removing && (
         <Confirm
@@ -374,7 +357,7 @@ export function OrderPhonesPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
-      <TeamHeader title={T.phonesTitle} />
+      <PageHeader title={T.phonesTitle} />
       {p == null ? (
         loadError ? <ReloadState label={loadError} onRetry={load} /> : <LoadingState variant="list" rows={2} />
       ) : (

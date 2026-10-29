@@ -53,6 +53,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -68,7 +69,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.painterResource
@@ -122,8 +122,11 @@ internal val TouchTarget = 44.dp
 /** **عرضُ حقل السعر وحقل الغرام** في سطر الخيار. */
 private val NumberFieldWidth = 84.dp
 
-/** **عمودُ مفتاح التوفّر** — يتّسع لـ«غير متوفر» تحت المفتاح. */
-private val AvailWidth = 64.dp
+/** **حقلُ سعر الخيار في سطره الثاني** — أعرضُ من حقل الغرام ليتّسع لتسميته. */
+private val PriceFieldWidth = 128.dp
+
+/** **العدّادُ يظهر حين يبقى من الحدّ هذا العددُ أو أقلّ.** */
+private const val NameWarnAt = 5
 
 /** **دائرةُ العملة.** */
 private val CurrencyCircle = 48.dp
@@ -197,219 +200,239 @@ fun ItemEditor(
     // **فرقُ خيارٍ لم يُحوَّل لغياب سعر الصرف** — يُقال ولا يُصفَّر بصمت.
     var rateLost by remember(d.itemId) { mutableStateOf(false) }
 
-    Screen {
-        ScreenTitle(
-            stringResource(if (d.itemId.isEmpty()) R.string.mn_item_new else R.string.mn_item_edit),
-            "",
-        )
+    // ══════════════════════════════════════════════════════════════
+    // **الحفظُ ثابتٌ تحت الشاشة** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩)
+    // ══════════════════════════════════════════════════════════════
+    // أكثرُ تعديلٍ هو السعرُ فوق، **وكان الحفظُ آخرَ الصفحة** بعد الأقسام والخيارات.
+    // فالصفحةُ تُمرَّر وشريطُ «حفظ / إلغاء» تحتها ثابت — كمعالج الإعداد.
+    Column(Modifier.fillMaxSize()) {
+        Screen(Modifier.weight(1f)) {
+            ScreenTitle(
+                stringResource(if (d.itemId.isEmpty()) R.string.mn_item_new else R.string.mn_item_edit),
+                "",
+            )
 
-        // ══════════════════════════════════════════════════════════════
-        // **١ · الصورةُ يميناً، والاسمُ والوصفُ عن يسارها**
-        // ══════════════════════════════════════════════════════════════
-        // **واسمُ الصنف بحدٍّ يُعدّ وهو يُكتب** (قرارُ المالك ٢٠٢٦-١٠-١٤: ٣٠ حرفاً).
-        val nameMax = ItemLimits.nameMax
-        val nameLen = d.name.trim().length
-        val nameOver = nameLen > nameMax
-        Row(verticalAlignment = Alignment.Top) {
-            ItemPhoto(d, busy, media, onPick = { pick() }, onClear = onClearImage)
-            Spacer(Modifier.width(Rahal.space.md))
-            Column(Modifier.weight(1f)) {
-                OutlinedTextField(
-                    value = d.name,
-                    onValueChange = { v -> onEdit { it.copy(name = v.take(120)) } },
-                    label = { Text(stringResource(R.string.mn_item_name)) },
-                    singleLine = true,
-                    isError = nameOver,
-                    supportingText = {
-                        Text(
-                            if (nameOver) stringResource(R.string.mn_name_over, nameMax.toString(), nameLen.toString())
-                            else "$nameLen / $nameMax",
-                            color = if (nameOver) Rahal.colors.danger else Rahal.colors.inkMuted,
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                OutlinedTextField(
-                    value = d.description,
-                    onValueChange = { v -> onEdit { it.copy(description = v.take(500)) } },
-                    label = { Text(stringResource(descLabel)) },
-                    maxLines = 3,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
-
-        // ══════════════════════════════════════════════════════════════
-        // **٢ · السعرُ وجنبه دائرتا العملة**
-        // ══════════════════════════════════════════════════════════════
-        // **وفروقُ الخيارات تُحوَّل مع العملة** (تدقيقُ ٢٠٢٦-١٠-٢٨) — لا تُصفَّر بصمت.
-        Spacer(Modifier.height(Rahal.space.md))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            if (!d.isUsd) {
-                OutlinedTextField(
-                    value = d.price,
-                    onValueChange = { v -> onEdit { it.copy(price = v.filter(Char::isDigit)) } },
-                    label = { Text(stringResource(priceLabel)) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.weight(1f),
-                )
+            // ══════════════════════════════════════════════════════════════
+            // **١ · الصورةُ يميناً، والاسمُ والوصفُ عن يسارها**
+            // ══════════════════════════════════════════════════════════════
+            // **واسمُ الصنف بحدٍّ يُعدّ وهو يُكتب** (قرارُ المالك ٢٠٢٦-١٠-١٤: ٣٠ حرفاً).
+            val nameMax = ItemLimits.nameMax
+            val nameLen = d.name.trim().length
+            val nameOver = nameLen > nameMax
+            // **والعدّادُ يظهر قربَ الحدّ أو بعده لا دائماً** — شرحٌ وقتَ الحاجة.
+            val nameCounter: (@Composable () -> Unit)? = if (nameLen >= nameMax - NameWarnAt) {
+                {
+                    Text(
+                        if (nameOver) stringResource(R.string.mn_name_over, nameMax.toString(), nameLen.toString())
+                        else "$nameLen / $nameMax",
+                        color = if (nameOver) Rahal.colors.danger else Rahal.colors.inkMuted,
+                    )
+                }
             } else {
-                OutlinedTextField(
-                    value = d.priceUsd,
-                    onValueChange = { v ->
-                        onEdit { it.copy(priceUsd = v.filter { c -> c.isDigit() || c == '.' || c == '٫' || c == ',' }.take(10)) }
+                null
+            }
+            Row(verticalAlignment = Alignment.Top) {
+                ItemPhoto(d, busy, media, onPick = { pick() }, onClear = onClearImage)
+                Spacer(Modifier.width(Rahal.space.md))
+                Column(Modifier.weight(1f)) {
+                    OutlinedTextField(
+                        value = d.name,
+                        onValueChange = { v -> onEdit { it.copy(name = v.take(120)) } },
+                        label = { Text(stringResource(R.string.mn_item_name)) },
+                        singleLine = true,
+                        isError = nameOver,
+                        supportingText = nameCounter,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    OutlinedTextField(
+                        value = d.description,
+                        onValueChange = { v -> onEdit { it.copy(description = v.take(500)) } },
+                        label = { Text(stringResource(descLabel)) },
+                        maxLines = 3,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+
+            // ══════════════════════════════════════════════════════════════
+            // **٢ · السعرُ وجنبه دائرتا العملة**
+            // ══════════════════════════════════════════════════════════════
+            // **وفروقُ الخيارات تُحوَّل مع العملة** (تدقيقُ ٢٠٢٦-١٠-٢٨) — لا تُصفَّر بصمت.
+            Spacer(Modifier.height(Rahal.space.md))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (!d.isUsd) {
+                    OutlinedTextField(
+                        value = d.price,
+                        onValueChange = { v -> onEdit { it.copy(price = v.filter(Char::isDigit)) } },
+                        label = { Text(stringResource(priceLabel)) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f),
+                    )
+                } else {
+                    OutlinedTextField(
+                        value = d.priceUsd,
+                        onValueChange = { v ->
+                            onEdit { it.copy(priceUsd = v.filter { c -> c.isDigit() || c == '.' || c == '٫' || c == ',' }.take(10)) }
+                        },
+                        label = { Text(stringResource(R.string.item_price_usd)) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+                Spacer(Modifier.width(Rahal.space.md))
+                CurrencyCircles(selected = d.currency, enabled = !busy) { c ->
+                    if (c != d.currency) {
+                        if (d.withCurrency(c, exchangeRate).second) rateLost = true
+                        onEdit { it.withCurrency(c, exchangeRate).first }
+                    }
+                }
+            }
+            if (d.isUsd) {
+                val usd = parseUsd(d.priceUsd)
+                val noRate = exchangeRate == null || exchangeRate <= 0
+                Text(
+                    when {
+                        noRate -> stringResource(rateMissing)
+                        usd == null -> stringResource(R.string.item_usd_rate_is, usdText(exchangeRate))
+                        else -> stringResource(R.string.item_usd_equals, usdToSyp(usd, exchangeRate!!), usdText(exchangeRate))
                     },
-                    label = { Text(stringResource(R.string.item_price_usd)) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.weight(1f),
+                    color = if (noRate) Rahal.colors.danger else Rahal.colors.inkMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = Rahal.space.xs),
                 )
             }
-            Spacer(Modifier.width(Rahal.space.md))
-            CurrencyCircles(selected = d.currency, enabled = !busy) { c ->
-                if (c != d.currency) {
-                    if (d.withCurrency(c, exchangeRate).second) rateLost = true
-                    onEdit { it.withCurrency(c, exchangeRate).first }
-                }
-            }
-        }
-        if (d.isUsd) {
-            val usd = parseUsd(d.priceUsd)
-            val noRate = exchangeRate == null || exchangeRate <= 0
-            Text(
-                when {
-                    noRate -> stringResource(rateMissing)
-                    usd == null -> stringResource(R.string.item_usd_rate_is, usdText(exchangeRate))
-                    else -> stringResource(R.string.item_usd_equals, usdToSyp(usd, exchangeRate!!), usdText(exchangeRate))
-                },
-                color = if (noRate) Rahal.colors.danger else Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(top = Rahal.space.xs),
-            )
-        }
 
-        // ══════════════════════════════════════════════════════════════
-        // **٣ · قسمُ السوق — مربّعاتٌ بصورها في الصفحة نفسِها، ثلاثةٌ بكلّ سطر**
-        // ══════════════════════════════════════════════════════════════
-        //
-        // (طلبُ المالك ٢٠٢٦-١٠-٢٩: «بلا القائمة المنسدلة… بالصفحة نفسها صور، كل سطر
-        //  ياخذ ٣ أقسام».) **فلا نافذةَ تُفتح** — يرى الأقسامَ ويضغط.
-        Spacer(Modifier.height(Rahal.space.md))
-        val missing = sectionHint != 0 && d.platformSectionId.isEmpty()
-        Text(
-            stringResource(sectionLabel),
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.labelLarge,
-            color = if (missing) Rahal.colors.accent else Rahal.colors.ink,
-        )
-        Spacer(Modifier.height(Rahal.space.sm))
-        if (sections.isEmpty()) {
-            Text(stringResource(R.string.item_section_empty), color = Rahal.colors.inkMuted)
-        }
-        sections.chunked(3).forEach { row ->
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
-            ) {
-                row.forEach { sec ->
-                    SectionTile(
-                        sec = sec,
-                        on = sec.id == d.platformSectionId,
-                        media = media,
-                        enabled = !busy,
-                        modifier = Modifier.weight(1f),
-                    ) { onEdit { it.copy(platformSectionId = sec.id) } }
-                }
-                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
-            }
+            // ══════════════════════════════════════════════════════════════
+            // **٣ · قسمُ السوق — مربّعاتٌ بصورها في الصفحة نفسِها، ثلاثةٌ بكلّ سطر**
+            // ══════════════════════════════════════════════════════════════
+            //
+            // (طلبُ المالك ٢٠٢٦-١٠-٢٩: «بلا القائمة المنسدلة… بالصفحة نفسها صور، كل سطر
+            //  ياخذ ٣ أقسام».) **فلا نافذةَ تُفتح** — يرى الأقسامَ ويضغط.
+            Spacer(Modifier.height(Rahal.space.md))
+            val missing = sectionHint != 0 && d.platformSectionId.isEmpty()
+            Text(
+                stringResource(sectionLabel),
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.labelLarge,
+                color = if (missing) Rahal.colors.accentInk else Rahal.colors.ink,
+            )
             Spacer(Modifier.height(Rahal.space.sm))
-        }
-
-        // ══════════════════════════════════════════════════════════════
-        // **٤ · الإضافاتُ والخيارات**
-        // ══════════════════════════════════════════════════════════════
-        ModifiersEditor(
-            d = d,
-            busy = busy,
-            presets = presets,
-            onEdit = onEdit,
-            itemPrice = d.itemPriceSyp(exchangeRate),
-            onAddPreset = { p ->
-                val (g, lost) = p.toGroup().forItemCurrency(d.isUsd, exchangeRate)
-                if (lost) rateLost = true
-                onEdit { dd -> dd.copy(modifiers = dd.modifiers + g) }
-            },
-        )
-        if (rateLost) {
-            Spacer(Modifier.height(Rahal.space.xs))
-            Text(
-                stringResource(R.string.mod_usd_no_rate),
-                color = Rahal.colors.danger,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-
-        // ══════════════════════════════════════════════════════════════
-        // **٥ · الحفظُ والإلغاء — ثمّ النسخُ والحذف**
-        // ══════════════════════════════════════════════════════════════
-        if (error.isNotEmpty()) {
-            Spacer(Modifier.height(Rahal.space.md))
-            Note(error, Rahal.colors.danger)
-        }
-        Spacer(Modifier.height(Rahal.space.lg))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
-            if (!readOnly) {
-                RahalButton(
-                    onClick = { onSave() },
-                    enabled = !busy && !nameOver,
-                    modifier = Modifier.weight(1f),
-                ) { IconText(R.drawable.ic_check_mark, stringResource(R.string.act_save)) }
+            if (sections.isEmpty()) {
+                Text(stringResource(R.string.item_section_empty), color = Rahal.colors.inkMuted)
             }
-            RahalOutlineButton(
-                onClick = { onCancel() },
-                enabled = !busy,
-                modifier = Modifier.weight(1f),
-            ) { IconText(R.drawable.ic_close, stringResource(R.string.act_cancel)) }
-        }
-
-        if (d.itemId.isNotEmpty() && !readOnly) {
-            Spacer(Modifier.height(Rahal.space.md))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
-                // **قميصٌ بخمسة ألوان يُعمل مرّةً ويُنسخ** (٢٠٢٦-١٠-٢٧).
-                if (onDuplicate != null) {
-                    RahalOutlineButton(
-                        onClick = { onDuplicate() },
-                        enabled = !busy && !dirty,
-                        modifier = Modifier.weight(1f),
-                    ) { IconText(R.drawable.ic_copy, stringResource(R.string.item_duplicate)) }
+            sections.chunked(3).forEach { row ->
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
+                ) {
+                    row.forEach { sec ->
+                        SectionTile(
+                            sec = sec,
+                            on = sec.id == d.platformSectionId,
+                            media = media,
+                            enabled = !busy,
+                            modifier = Modifier.weight(1f),
+                        ) { onEdit { it.copy(platformSectionId = sec.id) } }
+                    }
+                    repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
                 }
-                RahalOutlineButton(
-                    onClick = { confirmDelete = true },
-                    enabled = !busy,
-                    tone = Tone.Danger,
-                    modifier = Modifier.weight(1f),
-                ) { IconText(R.drawable.ic_trash, stringResource(R.string.item_delete)) }
+                Spacer(Modifier.height(Rahal.space.sm))
             }
-            if (dirty && onDuplicate != null) {
+
+            // ══════════════════════════════════════════════════════════════
+            // **٤ · الإضافاتُ والخيارات**
+            // ══════════════════════════════════════════════════════════════
+            ModifiersEditor(
+                d = d,
+                busy = busy,
+                presets = presets,
+                onEdit = onEdit,
+                itemPrice = d.itemPriceSyp(exchangeRate),
+                onAddPreset = { p ->
+                    val (g, lost) = p.toGroup().forItemCurrency(d.isUsd, exchangeRate)
+                    if (lost) rateLost = true
+                    onEdit { dd -> dd.copy(modifiers = dd.modifiers + g) }
+                },
+            )
+            if (rateLost) {
                 Spacer(Modifier.height(Rahal.space.xs))
                 Text(
-                    stringResource(R.string.item_duplicate_save_first),
-                    color = Rahal.colors.inkMuted,
+                    stringResource(R.string.mod_usd_no_rate),
+                    color = Rahal.colors.danger,
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
+
+            // ══════════════════════════════════════════════════════════════
+            // **٥ · النسخُ والحذف آخرَ الصفحة** — والحفظُ في الشريط الثابت تحتها.
+            // ══════════════════════════════════════════════════════════════
+            if (d.itemId.isNotEmpty() && !readOnly) {
+                Spacer(Modifier.height(Rahal.space.xl))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
+                    // **قميصٌ بخمسة ألوان يُعمل مرّةً ويُنسخ** (٢٠٢٦-١٠-٢٧).
+                    if (onDuplicate != null) {
+                        RahalOutlineButton(
+                            onClick = { onDuplicate() },
+                            enabled = !busy && !dirty,
+                            modifier = Modifier.weight(1f),
+                        ) { IconText(R.drawable.ic_copy, stringResource(R.string.item_duplicate)) }
+                    }
+                    RahalOutlineButton(
+                        onClick = { confirmDelete = true },
+                        enabled = !busy,
+                        tone = Tone.Danger,
+                        modifier = Modifier.weight(1f),
+                    ) { IconText(R.drawable.ic_trash, stringResource(R.string.item_delete)) }
+                }
+                if (dirty && onDuplicate != null) {
+                    Spacer(Modifier.height(Rahal.space.xs))
+                    Text(
+                        stringResource(R.string.item_duplicate_save_first),
+                        color = Rahal.colors.inkMuted,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+            if (confirmDelete) {
+                ConfirmDialog(
+                    title = stringResource(R.string.item_delete),
+                    body = stringResource(R.string.item_delete_ask),
+                    confirm = stringResource(R.string.item_delete),
+                    onConfirm = onDelete,
+                    onDismiss = { confirmDelete = false },
+                )
+            }
+            Spacer(Modifier.height(Rahal.space.xl))
         }
-        if (confirmDelete) {
-            ConfirmDialog(
-                title = stringResource(R.string.item_delete),
-                body = stringResource(R.string.item_delete_ask),
-                confirm = stringResource(R.string.item_delete),
-                onConfirm = onDelete,
-                onDismiss = { confirmDelete = false },
-            )
+        // ── الشريطُ الثابت: سببُ رفض الحفظ فوقه، ثمّ «حفظ» و«إلغاء» ──
+        HorizontalDivider(thickness = Rahal.stroke.hair, color = Rahal.colors.line)
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .background(Rahal.colors.canvas)
+                .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.sm),
+        ) {
+            if (error.isNotEmpty()) {
+                Note(error, Rahal.colors.danger)
+                Spacer(Modifier.height(Rahal.space.sm))
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
+                if (!readOnly) {
+                    RahalButton(
+                        onClick = { onSave() },
+                        enabled = !busy && d.name.trim().length <= ItemLimits.nameMax,
+                        modifier = Modifier.weight(1f),
+                    ) { IconText(R.drawable.ic_check_mark, stringResource(R.string.act_save)) }
+                }
+                RahalOutlineButton(
+                    onClick = { onCancel() },
+                    enabled = !busy,
+                    modifier = Modifier.weight(1f),
+                ) { IconText(R.drawable.ic_close, stringResource(R.string.act_cancel)) }
+            }
         }
-        Spacer(Modifier.height(Rahal.space.xl))
     }
 }
 
@@ -735,7 +758,7 @@ private fun GroupCard(
                 ) {
                     when (mode) {
                         PRICE_MODE_NONE -> TagChip(stringResource(R.string.mod_chip_none), Rahal.colors.inkMuted)
-                        PRICE_MODE_WEIGHT -> TagChip(stringResource(R.string.mod_chip_weight), Rahal.colors.accent)
+                        PRICE_MODE_WEIGHT -> TagChip(stringResource(R.string.mod_chip_weight), Rahal.colors.accentInk)
                         else -> TagChip(stringResource(R.string.mod_chip_priced), Rahal.colors.brand)
                     }
                     TagChip(
@@ -745,12 +768,14 @@ private fun GroupCard(
                 }
             }
             Spacer(Modifier.width(Rahal.space.sm))
-            com.rahalgo.ui.RahalOutlineButton(
-                onClick = onRemove,
-                enabled = !busy,
-                tone = com.rahalgo.ui.Tone.Danger,
-                modifier = Modifier.heightIn(min = TouchTarget),
-            ) { IconText(R.drawable.ic_trash, stringResource(R.string.mod_remove_group)) }
+            // **وحذفُ المجموعة رماديّ** — الأحمرُ لحذف الصنف وحدَه (مراجعةُ ٢٠٢٦-١٠-٢٩).
+            IconButton(onClick = onRemove, enabled = !busy, modifier = Modifier.size(TouchTarget)) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_trash),
+                    contentDescription = stringResource(R.string.mod_remove_group),
+                    tint = Rahal.colors.inkMuted,
+                )
+            }
         }
 
         // ── المجموعةُ الخاصّة: اسمُها وقاعدتُها بيده ──
@@ -783,27 +808,37 @@ private fun GroupCard(
         if (mode == PRICE_MODE_WEIGHT) {
             WeightOptions(g, itemPrice, busy, update)
         } else {
-            // **عناوينُ الأعمدة مرّةً فوق الأسطر** — لا تسميةٌ في كلّ حقل.
-            if (mode == PRICE_MODE_PRICED && g.options.isNotEmpty()) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    ColumnLabel(stringResource(R.string.mn_option_name), Modifier.weight(1f))
-                    Spacer(Modifier.width(Rahal.space.xs))
-                    ColumnLabel(
-                        stringResource(if (usd) R.string.mod_opt_price_usd else R.string.mod_opt_price),
-                        Modifier.width(NumberFieldWidth),
-                    )
-                    Spacer(Modifier.width(AvailWidth + TouchTarget + Rahal.space.xs * 2))
-                }
-            }
+            // **ولا عناوينَ أعمدة** — الاسمُ بسطرٍ كامل، والسعرُ تحته وتسميتُه داخلَ حقله.
+            val priceHint = stringResource(if (usd) R.string.mod_opt_price_usd else R.string.mod_opt_price)
             g.options.forEachIndexed { oi, o ->
                 val setOption: ((ModifierOption) -> ModifierOption) -> Unit = { f ->
                     update { gg -> gg.copy(options = gg.options.replaceAt(oi, f)) }
+                }
+                val priceField: @Composable RowScope.() -> Unit = {
+                    RowField(
+                        // **وبعملة صنفها** (٢٠٢٦-١٠-١٢): دولاريٌّ يُكتب بالدولار، **وبكسوره.**
+                        value = if (usd) o.usdText else if (o.priceDelta == 0L) "" else o.priceDelta.toString(),
+                        onChange = { v ->
+                            if (usd) {
+                                val t = v.filter { c -> c.isDigit() || c == '.' || c == '٫' || c == ',' }.take(8)
+                                setOption { it.copy(usdText = t) }
+                            } else {
+                                val n = v.filter { it.isDigit() }.take(12).toLongOrNull() ?: 0L
+                                setOption { it.copy(priceDelta = n) }
+                            }
+                        },
+                        placeholder = priceHint,
+                        keyboard = if (usd) KeyboardType.Decimal else KeyboardType.Number,
+                        enabled = !busy,
+                        modifier = Modifier.width(PriceFieldWidth),
+                    )
                 }
                 OptionRow(
                     available = o.available,
                     busy = busy,
                     onAvailable = { av -> setOption { it.copy(available = av) } },
                     onDelete = { update { gg -> gg.copy(options = gg.options.filterIndexed { i, _ -> i != oi }) } },
+                    second = if (mode == PRICE_MODE_PRICED) priceField else null,
                 ) {
                     RowField(
                         value = o.name,
@@ -812,26 +847,6 @@ private fun GroupCard(
                         enabled = !busy,
                         modifier = Modifier.weight(1f),
                     )
-                    if (mode == PRICE_MODE_PRICED) {
-                        Spacer(Modifier.width(Rahal.space.xs))
-                        RowField(
-                            // **وبعملة صنفها** (٢٠٢٦-١٠-١٢): دولاريٌّ يُكتب بالدولار، **وبكسوره.**
-                            value = if (usd) o.usdText else if (o.priceDelta == 0L) "" else o.priceDelta.toString(),
-                            onChange = { v ->
-                                if (usd) {
-                                    val t = v.filter { c -> c.isDigit() || c == '.' || c == '٫' || c == ',' }.take(8)
-                                    setOption { it.copy(usdText = t) }
-                                } else {
-                                    val n = v.filter { it.isDigit() }.take(12).toLongOrNull() ?: 0L
-                                    setOption { it.copy(priceDelta = n) }
-                                }
-                            },
-                            placeholder = "0",
-                            keyboard = if (usd) KeyboardType.Decimal else KeyboardType.Number,
-                            enabled = !busy,
-                            modifier = Modifier.width(NumberFieldWidth),
-                        )
-                    }
                 }
             }
         }
@@ -861,41 +876,57 @@ private fun OptionRow(
     busy: Boolean,
     onAvailable: (Boolean) -> Unit,
     onDelete: () -> Unit,
+    /**
+     * **السطرُ الثاني** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩): السعرُ والمفتاحُ تحت الاسم
+     * فيأخذ الاسمُ عرضَ السطر كلَّه. و`null` = سطرٌ واحدٌ والمفتاحُ بجانب الحقول.
+     */
+    second: (@Composable RowScope.() -> Unit)? = null,
     fields: @Composable RowScope.() -> Unit,
 ) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        fields()
-        Spacer(Modifier.width(Rahal.space.xs))
-        Column(
-            Modifier.width(AvailWidth),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Switch(
-                checked = available,
-                enabled = !busy,
-                onCheckedChange = onAvailable,
-                modifier = Modifier.scale(0.8f),
-            )
-            Text(
-                stringResource(if (available) R.string.mn_available else R.string.mn_unavailable),
-                color = if (available) Rahal.colors.success else Rahal.colors.danger,
-                style = MaterialTheme.typography.labelSmall,
-                maxLines = 1,
-            )
+    Column(Modifier.fillMaxWidth().padding(vertical = Rahal.space.xs)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            fields()
+            if (second == null) {
+                Spacer(Modifier.width(Rahal.space.xs))
+                AvailSwitch(available, busy, onAvailable)
+            }
+            // **والحذفُ رماديّ** — الأحمرُ لحذف الصنف وحدَه.
+            IconButton(onClick = onDelete, enabled = !busy, modifier = Modifier.size(TouchTarget)) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_trash),
+                    contentDescription = stringResource(R.string.mod_opt_delete),
+                    tint = Rahal.colors.inkMuted,
+                )
+            }
         }
-        Spacer(Modifier.width(Rahal.space.xs))
-        IconButton(onClick = onDelete, enabled = !busy, modifier = Modifier.size(TouchTarget)) {
-            Icon(
-                painter = painterResource(R.drawable.ic_trash),
-                contentDescription = stringResource(R.string.mod_opt_delete),
-                tint = Rahal.colors.danger,
-            )
+        if (second != null) {
+            Spacer(Modifier.height(Rahal.space.xs))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                second()
+                Spacer(Modifier.weight(1f))
+                AvailSwitch(available, busy, onAvailable)
+                // **محاذاةٌ مع السطر الأوّل** — المفتاحُ يقف حيث يقف تحت السلّة.
+                Spacer(Modifier.width(TouchTarget))
+            }
         }
+    }
+}
+
+/**
+ * **مفتاحُ توفّر الخيار وكلمتُه بجانبه** — و«غير متوفر» رماديّة لا حمراء:
+ * غيرُ المتوفّر حالٌ لا خطأ (كما في شبكة الأصناف).
+ */
+@Composable
+private fun AvailSwitch(available: Boolean, busy: Boolean, onAvailable: (Boolean) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            stringResource(if (available) R.string.mn_available else R.string.mn_unavailable),
+            color = if (available) Rahal.colors.success else Rahal.colors.inkMuted,
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = 1,
+        )
+        Spacer(Modifier.width(Rahal.space.xs))
+        Switch(checked = available, enabled = !busy, onCheckedChange = onAvailable)
     }
 }
 

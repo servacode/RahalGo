@@ -7,12 +7,10 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,6 +28,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Switch
@@ -50,7 +49,6 @@ import com.rahalgo.design.Rahal
 import com.rahalgo.ui.Empty
 import com.rahalgo.ui.R
 import com.rahalgo.ui.RahalButton
-import com.rahalgo.ui.RahalOutlineButton
 import com.rahalgo.ui.RemoteImage
 
 /**
@@ -79,8 +77,8 @@ data class GridGroup(val name: String, val items: List<GridItem>)
  * **شبكةُ الأصناف — التصميمُ المعتمد ٢٠٢٦-١٠-٢٩، للمتجر والمندوب**
  * ══════════════════════════════════════════════════════════════════════
  *
- * من فوق لتحت: **البحث · مربّعا الأرقام · الأدوات الثلاث · «أضف صنفاً» و«أنشئ عرضاً»
- * · رقائقُ الأقسام · ثمّ الأصناف بطاقتين في كلّ سطر.**
+ * من فوق لتحت: **البحث (وبجانبه «أضف») · الأدواتُ رقائقَ بسطر · «الكل» و«غير المتوفرة»
+ * والأقسامُ رقائق · ثمّ الأصناف بطاقتين في كلّ سطر.**
  *
  * **نسخةٌ واحدةٌ للتطبيقين** (طلبُ المالك ٢٠٢٦-١٠-٢٩: «تطبيق المندوب يطبق عليه كلشي
  * تطبق على المتجر») — ومن غيّر أحدَهما وحدَه أعاد الفرق.
@@ -100,7 +98,8 @@ fun MenuItemsGrid(
     onBulk: () -> Unit,
     onDrinks: () -> Unit,
     addLabel: String,
-    onAdd: () -> Unit,
+    /** **«أضف صنفاً»** مربّعاً بجانب البحث — و`null` لا زرّ (للمتجر تبويبُ إضافة). */
+    onAdd: (() -> Unit)?,
     offerLabel: String,
     onOffer: (() -> Unit)?,
     emptyText: String,
@@ -127,83 +126,74 @@ fun MenuItemsGrid(
         verticalArrangement = Arrangement.spacedBy(Rahal.space.md),
     ) {
         header?.invoke(this)
-        // ── ١ · البحث ──
+        // ══════════════════════════════════════════════════════════════
+        // **رأسٌ بثلاثة أسطرٍ قصيرة لا خمسة** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩)
+        // ══════════════════════════════════════════════════════════════
+        // كان قبل أوّل صنفٍ: بحثٌ ومربّعا أرقامٍ وثلاثُ أدواتٍ وزرّان ورقائق —
+        // **فيطلع أوّلُ صنفٍ تحت نصف الشاشة**. فصار: البحثُ (وبجانبه «أضف» إن
+        // مُرِّر)، ثمّ الأدواتُ رقائقَ صغيرةً بسطرٍ واحد، ثمّ الأقسام — و«الكل»
+        // و«غير المتوفرة» أوّلُ رقاقتين بعدّهما بدل مربّعَي الأرقام.
+        // ── ١ · البحث، و«أضف صنفاً» مربّعاً بجانبه ──
         item(span = full) {
-            OutlinedTextField(
-                value = query,
-                onValueChange = { onQuery(it.take(60)) },
-                placeholder = { Text(stringResource(R.string.ow_search)) },
-                leadingIcon = {
-                    Icon(painterResource(R.drawable.ic_search), contentDescription = null, tint = Rahal.colors.inkMuted)
-                },
-                trailingIcon = if (query.isNotEmpty()) {
-                    {
-                        IconButton(onClick = { onQuery("") }) {
-                            Icon(
-                                painterResource(R.drawable.ic_close),
-                                contentDescription = stringResource(R.string.act_cancel),
-                                tint = Rahal.colors.inkMuted,
-                            )
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                OutlinedTextField(
+                    value = query,
+                    onValueChange = { onQuery(it.take(60)) },
+                    placeholder = { Text(stringResource(R.string.ow_search)) },
+                    leadingIcon = {
+                        Icon(painterResource(R.drawable.ic_search), contentDescription = null, tint = Rahal.colors.inkMuted)
+                    },
+                    trailingIcon = if (query.isNotEmpty()) {
+                        {
+                            IconButton(onClick = { onQuery("") }) {
+                                Icon(
+                                    painterResource(R.drawable.ic_close),
+                                    contentDescription = stringResource(R.string.act_cancel),
+                                    tint = Rahal.colors.inkMuted,
+                                )
+                            }
                         }
+                    } else {
+                        null
+                    },
+                    singleLine = true,
+                    shape = Rahal.shape.md,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        unfocusedContainerColor = Rahal.colors.field,
+                        focusedContainerColor = Rahal.colors.field,
+                        unfocusedBorderColor = Color.Transparent,
+                    ),
+                    modifier = Modifier.weight(1f),
+                )
+                if (showTools && onAdd != null) {
+                    Spacer(Modifier.width(Rahal.space.sm))
+                    RahalButton(
+                        onClick = onAdd,
+                        modifier = Modifier.size(AddSize),
+                        compact = true,
+                    ) {
+                        Icon(painterResource(R.drawable.ic_plus), contentDescription = addLabel, modifier = Modifier.size(Rahal.space.xl))
                     }
-                } else {
-                    null
-                },
-                singleLine = true,
-                shape = Rahal.shape.md,
-                colors = OutlinedTextFieldDefaults.colors(
-                    unfocusedContainerColor = Rahal.colors.field,
-                    focusedContainerColor = Rahal.colors.field,
-                    unfocusedBorderColor = Color.Transparent,
-                ),
-                modifier = Modifier.fillMaxWidth(),
-            )
-        }
-        // ── ٢ · مربّعا الأرقام — و«غير المتوفرة» يصفّي بضغطة ──
-        item(span = full) {
-            Row(
-                Modifier.fillMaxWidth().height(IntrinsicSize.Min),
-                horizontalArrangement = Arrangement.spacedBy(Rahal.space.md),
-            ) {
-                StatBox(R.drawable.ic_store, stringResource(R.string.grid_stat_total), all.size, Rahal.colors.brand, false, Modifier.weight(1f), onAll)
-                StatBox(
-                    R.drawable.ic_block,
-                    stringResource(R.string.grid_stat_off),
-                    off,
-                    if (off > 0) Rahal.colors.danger else Rahal.colors.inkMuted,
-                    onlyOff,
-                    Modifier.weight(1f),
-                ) { if (onlyOff) onAll() else onOnlyOff() }
+                }
             }
         }
         if (showTools) {
-            // ── ٣ · الأدواتُ الثلاث ──
+            // ── ٢ · الأدواتُ رقائقَ صغيرةً بسطرٍ واحد ──
+            // **وأيقونةُ كلّ فعلٍ واحدةٌ في كلّ مكان**: الأسعارُ أوراقٌ نقديّة،
+            // والمشروباتُ كأس، والعروضُ أيقونتُها.
             item(span = full) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
-                    ToolTile(R.drawable.ic_custom, stringResource(R.string.presets_title), Modifier.weight(1f), onPresets)
-                    ToolTile(R.drawable.ic_banknotes, stringResource(R.string.bulk_title), Modifier.weight(1f), onBulk)
-                    ToolTile(R.drawable.ic_cart, stringResource(R.string.grid_drinks), Modifier.weight(1f), onDrinks)
-                }
-            }
-            // ── ٤ · «أضف صنفاً» و«أنشئ عرضاً» ──
-            item(span = full) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.md)) {
-                    RahalButton(onClick = onAdd, modifier = Modifier.weight(1f).height(52.dp)) {
-                        Icon(painterResource(R.drawable.ic_plus), contentDescription = null, modifier = Modifier.size(18.dp))
-                        Spacer(Modifier.width(Rahal.space.sm))
-                        Text(addLabel, fontWeight = FontWeight.Bold, maxLines = 1)
-                    }
-                    if (onOffer != null) {
-                        RahalOutlineButton(onClick = onOffer, modifier = Modifier.weight(1f).height(52.dp)) {
-                            Icon(painterResource(R.drawable.ic_offer), contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(Rahal.space.sm))
-                            Text(offerLabel, fontWeight = FontWeight.Bold, maxLines = 1)
-                        }
-                    }
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
+                ) {
+                    ToolChip(R.drawable.ic_banknotes, stringResource(R.string.bulk_title), onBulk)
+                    if (onOffer != null) ToolChip(R.drawable.ic_offer, offerLabel, onOffer)
+                    ToolChip(R.drawable.ic_cup, stringResource(R.string.grid_drinks), onDrinks)
+                    ToolChip(R.drawable.ic_custom, stringResource(R.string.presets_title), onPresets)
                 }
             }
         }
-        // ── ٥ · رقائقُ الأقسام ──
+        // ── ٣ · الرقائق: «الكل» ثمّ «غير المتوفرة» ثمّ الأقسام ──
         if (groups.isNotEmpty() && q.isEmpty()) {
             item(span = full) {
                 Row(
@@ -211,13 +201,16 @@ fun MenuItemsGrid(
                     horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
                 ) {
                     SectionChip(stringResource(R.string.grid_all), all.size, openName == null && !onlyOff, onAll)
+                    if (off > 0 || onlyOff) {
+                        SectionChip(stringResource(R.string.grid_stat_off), off, onlyOff) { if (onlyOff) onAll() else onOnlyOff() }
+                    }
                     groups.forEach { g ->
                         SectionChip(g.name, g.items.size, openName == g.name && !onlyOff) { onOpen(g.name) }
                     }
                 }
             }
         }
-        // ── ٦ · الأصناف — بطاقتان في كلّ سطر ──
+        // ── ٤ · الأصناف — بطاقتان في كلّ سطر ──
         when {
             groups.isEmpty() -> item(span = full) { Empty(emptyText) }
             shown.isEmpty() -> item(span = full) {
@@ -235,82 +228,37 @@ fun MenuItemsGrid(
     }
 }
 
-/** **مربّعُ رقم** — أيقونةٌ في دائرة، والرقمُ كبيراً، واسمُه تحته. والمختارُ بحدّ لونه. */
+/** **مربّعُ «أضف» بجانب البحث** — بارتفاع حقل البحث. */
+private val AddSize = 56.dp
+
+/** **رقاقةُ أداة** — أيقونةٌ واسمُها بسطرٍ واحد، بأرضٍ فاتحةٍ وحدٍّ رفيع. */
 @Composable
-private fun StatBox(
-    icon: Int,
-    label: String,
-    value: Int,
-    tint: Color,
-    selected: Boolean,
-    modifier: Modifier,
-    onClick: () -> Unit,
-) {
+private fun ToolChip(icon: Int, label: String, onClick: () -> Unit) {
     Row(
-        modifier
-            .fillMaxHeight()
-            .clip(Rahal.shape.lg)
-            .background(if (selected) tint.copy(alpha = 0.08f) else Rahal.colors.surface)
-            .border(
-                if (selected) Rahal.stroke.focus else Rahal.stroke.hair,
-                if (selected) tint else Rahal.colors.line,
-                Rahal.shape.lg,
-            )
+        Modifier
+            .minimumInteractiveComponentSize()
+            .clip(Rahal.shape.pill)
+            .background(Rahal.colors.surface)
+            .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.pill)
             .clickable(onClick = onClick)
-            .padding(Rahal.space.md),
+            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            Modifier.size(40.dp).clip(Rahal.shape.pill).background(tint.copy(alpha = 0.12f)),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(painterResource(icon), contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
-        }
-        Spacer(Modifier.width(Rahal.space.md))
-        Column(Modifier.weight(1f)) {
-            Text(
-                value.toString(),
-                color = Rahal.colors.ink,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.headlineSmall,
-                maxLines = 1,
-            )
-            Text(
-                label,
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
+        Icon(painterResource(icon), contentDescription = null, tint = Rahal.colors.brand, modifier = Modifier.size(ToolIcon))
+        Spacer(Modifier.width(Rahal.space.xs))
+        Text(label, style = MaterialTheme.typography.labelLarge, color = Rahal.colors.ink, maxLines = 1)
     }
 }
 
-/** **زرُّ أداة** — أيقونةٌ فوق اسمها في مربّعٍ فاتح. */
-@Composable
-private fun ToolTile(icon: Int, label: String, modifier: Modifier, onClick: () -> Unit) {
-    Column(
-        modifier
-            .height(68.dp)
-            .clip(Rahal.shape.md)
-            .background(Rahal.colors.surface)
-            .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
-            .clickable(onClick = onClick)
-            .padding(horizontal = Rahal.space.xs),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Icon(painterResource(icon), contentDescription = null, tint = Rahal.colors.brand, modifier = Modifier.size(22.dp))
-        Spacer(Modifier.height(Rahal.space.xs))
-        Text(label, style = MaterialTheme.typography.labelMedium, color = Rahal.colors.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
-    }
-}
+/** **أيقونةُ رقاقة الأداة.** */
+private val ToolIcon = 18.dp
 
 /** **رقاقةُ قسم** — اسمُه وعددُه؛ المختارةُ ممتلئةٌ بلون العلامة، والباقيةُ مؤطَّرة. */
 @Composable
 private fun SectionChip(text: String, count: Int, selected: Boolean, onClick: () -> Unit) {
     Row(
         Modifier
+            .minimumInteractiveComponentSize()
             .clip(Rahal.shape.pill)
             .background(if (selected) Rahal.colors.brand else Rahal.colors.canvas)
             .border(Rahal.stroke.hair, if (selected) Rahal.colors.brand else Rahal.colors.line, Rahal.shape.pill)
@@ -365,7 +313,8 @@ private fun ItemCard(item: GridItem, toggleEnabled: Boolean, onToggle: () -> Uni
             if (badge != null) {
                 Text(
                     badge,
-                    color = Rahal.colors.onBrand,
+                    // **حبرٌ يُقرأ على أرضه**: غامقٌ على البرتقاليّ، و`onBrand` على الأحمر.
+                    color = if (item.rejected) Rahal.colors.onBrand else Rahal.colors.onLight,
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,

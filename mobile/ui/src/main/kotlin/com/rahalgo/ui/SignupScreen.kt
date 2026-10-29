@@ -186,7 +186,7 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
                 if (password2.isNotEmpty() && password2 != password) {
                     Text(
                         text = stringResource(R.string.signup_password_mismatch),
-                        color = Rahal.colors.accent,
+                        color = Rahal.colors.danger,
                         style = MaterialTheme.typography.bodySmall,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -260,7 +260,7 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
                 Spacer(Modifier.height(14.dp))
                 Text(
                     text = state.error,
-                    color = Rahal.colors.accent,
+                    color = Rahal.colors.danger,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth(),
                 )

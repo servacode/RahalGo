@@ -1001,6 +1001,8 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                         items = home.inbox.orEmpty(),
                         onMarkAll = home::markAllRead,
                         onOpen = home::markOneRead,
+                        // **وعلى الخريطة لا شريطَ فوقه** — فيدفع نفسَه عن شريط النظام.
+                        statusBarInset = tab == 0,
                     )
                     is Overlay.Menu ->
                         // **وبنودُ المنصّة أوّلا** — شاشتُها من الوحدة،

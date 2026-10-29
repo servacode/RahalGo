@@ -1124,6 +1124,7 @@
     <string name="ow_back_to_list">رجوع للعروض</string>
     <string name="ow_created_top">✓ تم إنشاء العرض — هو أول القائمة</string>
     <string name="ow_f_item">الصنف</string>
+    <string name="ow_item_change">تغيير</string>
     <string name="ow_f_discount">الخصم</string>
     <string name="ow_all_sections">الكل</string>
     <string name="ow_preview_title">المعاينة</string>
