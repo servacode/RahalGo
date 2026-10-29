@@ -248,6 +248,11 @@ type Order struct {
 	PartnerCommission *pricing.Percent2 `json:"partner_commission_percent_exact"`
 	// CustomStorePaid **ما دفعه السائقُ للمتجر عن المشتريات** — يُكتب عند التسليم، للمكتب وحدَه.
 	CustomStorePaid *int64 `json:"custom_store_paid"`
+	// ExtStoreMerchantName **المتجرُ الذي كان الطلبُ منه قبل أن يُقلب «من متجرٍ غير تابع»**
+	// (قرارُ المالك ٢٠٢٦-١٠-٢٩، `external_store.go`) — ومتى ولماذا. للمكتب وحدَه.
+	ExtStoreMerchantName string     `json:"ext_store_merchant_name"`
+	ExtStoreAt           *time.Time `json:"ext_store_at"`
+	ExtStoreReason       string     `json:"ext_store_reason"`
 	// حلقة المطبخ: كم دقيقة قال المتجر، ومتى أعلن الجاهزية فعلاً
 	PrepMinutes *int `json:"prep_minutes"`
 	// DeliveryEstimateMin تقديرُ زمن الطريق بالدقائق — **من الإعدادات لا من

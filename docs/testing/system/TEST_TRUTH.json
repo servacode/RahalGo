@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 595,
+    "routes": 596,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 106,
-    "notify_targeted": 48,
+    "notify_sites": 109,
+    "notify_targeted": 51,
     "publish_rooms": [
       "customer",
       "driver",
@@ -32,9 +32,9 @@
     ],
     "setting_defs": 251,
     "behaviour_settings": 206,
-    "order_fields": 120,
-    "test_files": 672,
-    "test_funcs": 2596
+    "order_fields": 123,
+    "test_files": 673,
+    "test_funcs": 2602
   },
   "flows": [
     {
@@ -16540,6 +16540,42 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestEXTSTORE_001_EachAllowedStatusConverts",
+      "file": "internal/qa/external_store_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestEXTSTORE_002_Refusals",
+      "file": "internal/qa/external_store_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestEXTSTORE_003_CouponReleased",
+      "file": "internal/qa/external_store_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestEXTSTORE_004_FullFlowMoney",
+      "file": "internal/qa/external_store_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestEXTSTORE_005_StoreNoLongerSeesOrder",
+      "file": "internal/qa/external_store_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestEXTSTORE_006_StoreNotifiedOnlyWhenSelfManaged",
+      "file": "internal/qa/external_store_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestExtraSourceFee_DistanceTiers",

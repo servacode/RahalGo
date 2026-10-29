@@ -189,6 +189,10 @@ interface OrderRow {
   /** **المتجرُ التابعُ في المشتريات** (قرارُ المالك ٢٠٢٦-١٠-١٥) — وفراغٌ: لا ربط. */
   partner_merchant_id?: string;
   partner_merchant_name?: string;
+  /** **«من متجر غير تابع لنا»** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — المتجرُ الذي كان منه الطلبُ قبل قلبه مشتريات. */
+  ext_store_merchant_name?: string;
+  ext_store_at?: string | null;
+  ext_store_reason?: string;
   /** نسبتُه ملقوطةً لحظةَ الربط. */
   partner_commission_percent?: number | null;
   /** **بمنزلتين** (١٫٥) — والصحيحةُ مقرَّبة (٢٠٢٦-١٠-١٨). */
@@ -2786,6 +2790,11 @@ function OrderActions({
    */
   const [undelivering, setUndelivering] = useState(false);
   /**
+   * **«من متجر غير تابع لنا»** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — طلبٌ عاديٌّ نقديٌّ يُقلب مشتريات،
+   * بسببٍ إلزاميّ، **والخادمُ يحرس الشروطَ والمال** (`orders/external_store.go`).
+   */
+  const [extStoring, setExtStoring] = useState(false);
+  /**
    * **تعديلُ عرض الطلب الخاصّ** — نموذجٌ يُملأ، ثمّ مراجعةٌ تُؤكَّد قبل الإرسال.
    *
    * **خطوتان لا واحدة** (قرارٌ ٣): يفتح الزرُّ النموذجَ فتُملأ الأرقام،
@@ -3042,6 +3051,33 @@ function OrderActions({
     }
   }
 
+  async function submitExtStore() {
+    if (reason.trim() === "") {
+      setErr(BOARD.reasonMissing);
+      return;
+    }
+    setBusy("ext-store");
+    setErr("");
+    try {
+      await api(`/api/v1/admin/orders/${o.id}/external-store`, {
+        method: "POST",
+        body: JSON.stringify({ reason: reason.trim() }),
+      });
+      setExtStoring(false);
+      setReason("");
+      setNotice(m.admin.ordersPage.extStoreDone);
+      onChanged();
+    } catch (e) {
+      setErr(
+        e instanceof ApiError
+          ? translateKey(e.body.message_key)
+          : m.errors.internal,
+      );
+    } finally {
+      setBusy("");
+    }
+  }
+
   async function submitUndeliver() {
     if (reason.trim() === "") {
       setErr(BOARD.reasonMissing);
@@ -3129,6 +3165,43 @@ function OrderActions({
             setErr("");
           }}
           saveLabel={m.common.confirm}
+        />
+      </div>
+    );
+  }
+
+  if (extStoring) {
+    return (
+      <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
+        <p className="text-xs font-medium text-danger">
+          {m.admin.ordersPage.extStoreTitle}
+        </p>
+        <p className="text-xs text-ink-muted">
+          {m.admin.ordersPage.extStoreHint}
+        </p>
+        <Textarea
+          id={`ext-store-${o.id}`}
+          autoFocus
+          autoGrow
+          rows={2}
+          value={reason}
+          onChange={(e) => {
+            setReason(e.target.value);
+            setErr("");
+          }}
+          placeholder={m.admin.ordersPage.extStoreReason}
+        />
+        {err && <p className="text-xs text-danger">{err}</p>}
+        <FormActions
+          busy={busy !== ""}
+          onSave={() => void submitExtStore()}
+          onCancel={() => {
+            setExtStoring(false);
+            setReason("");
+            setErr("");
+          }}
+          saveLabel={m.admin.ordersPage.extStoreConfirm}
+          tone="danger"
         />
       </div>
     );
@@ -3505,6 +3578,12 @@ function OrderActions({
           </Button>
         )}
 
+      {/* **«كان من: …»** — طلبٌ قُلب «من متجرٍ غير تابع» يقول متجرَه الأوّل (٢٠٢٦-١٠-٢٩). */}
+      {o.ext_store_merchant_name && (
+        <p className="w-full text-xs text-ink-muted">
+          {m.admin.ordersPage.extStoreWasFrom.replace("{name}", o.ext_store_merchant_name)}
+        </p>
+      )}
       {/* **مشترياتٌ من متجرٍ تابعٍ إلنا** (قرارُ المالك ٢٠٢٦-١٠-١٥) — يُربط قبل توثيق الثمن،
           ويُرسَل له الطلبُ على واتساب بالبابين القائمين. **والخادمُ يحرس الشروط.** */}
       {o.kind === "custom" &&
@@ -3740,6 +3819,24 @@ function OrderActions({
             <IconSwap size={15} />
             {m.admin.ordersPage.transfer}
           </span>
+        </Button>
+      )}
+      {/* **«من متجر غير تابع لنا»** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — بجانب التحويل: الطلبُ العاديُّ
+          النقديُّ يصير مشتريات. **والخادمُ يردّ ما تحرّك فيه مال.** */}
+      {canIntervene && TRANSFERABLE.has(o.status) &&
+        o.kind === "standard" &&
+        o.payment_method === "cash" &&
+        (o.wallet_paid ?? 0) === 0 && (
+        <Button
+          variant="danger"
+          disabled={busy !== ""}
+          onClick={() => {
+            setReason("");
+            setErr("");
+            setExtStoring(true);
+          }}
+        >
+          {m.admin.ordersPage.extStoreButton}
         </Button>
       )}
 

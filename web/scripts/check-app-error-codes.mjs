@@ -191,6 +191,8 @@ const SERVER_ADMIN = new Set([
   "roles_manage_owner_only", "role_not_deletable", "role_not_empty",
   // **ومن يتحمّل نصيبَ المندوب عند الاسترجاع** (قرارُ المالك ٢٠٢٦-١٠-١٦) — بابُ اللوحة وحدَه.
   "refund_bad_rep_share", "refund_rep_share_no_party",
+  // **«من متجر غير تابع لنا»** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — زرُّ بطاقة الطلب في اللوحة وحدَه.
+  "ext_store_not_standard", "ext_store_bad_status", "ext_store_wallet", "ext_store_money_moved",
 ]);
 
 const found = new Map();

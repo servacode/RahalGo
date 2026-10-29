@@ -1528,6 +1528,10 @@ func (s *Server) Router() http.Handler {
 				Post("/orders/{id}/partner", s.handleLinkPartner)
 			r.With(s.RequireCapability(authz.OrdersIntervene)).
 				Delete("/orders/{id}/partner", s.handleUnlinkPartner)
+			// **«من متجر غير تابع لنا»** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — طلبٌ عاديٌّ نقديٌّ يُقلب
+			// مشترياتٍ ويمشي في مسارها القائم. انظر `orders/external_store.go`.
+			r.With(s.RequireCapability(authz.OrdersIntervene)).
+				Post("/orders/{id}/external-store", s.handleOrderExternalStore)
 
 			// ══════════════════════════════════════════════════
 			// **وإدارةُ الأدوار بقدرتها لا بكونه `admin`** — `ADG-1`

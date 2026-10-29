@@ -4137,6 +4137,28 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/external-store",
+      "handler": "handleOrderExternalStore",
+      "auth": true,
+      "capability": "orders.intervene",
+      "request": [
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "order",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/admin/orders/{id}/goods",
       "handler": "handleGoods",
       "auth": true,

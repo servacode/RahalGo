@@ -118,6 +118,7 @@ var adminPolicy = []Rule{
 	{"POST", "/orders/{id}/items/{itemID}/unavailable", OrdersIntervene}, // صنفٌ غيرُ متوفّر (٢٠٢٦-١٠-١٥)
 	{"POST", "/orders/{id}/partner", OrdersIntervene},                    // ربطُ متجرٍ تابعٍ بالمشتريات (٢٠٢٦-١٠-١٥)
 	{"DELETE", "/orders/{id}/partner", OrdersIntervene},                  // وفكُّه
+	{"POST", "/orders/{id}/external-store", OrdersIntervene},             // «من متجر غير تابع لنا» (٢٠٢٦-١٠-٢٩)
 	{"POST", "/orders/{id}/assign", OrdersIntervene},
 	{"POST", "/orders/{id}/transfer", OrdersIntervene},
 	// **ومرشّحو التحويل يُقرؤون لمن يحوّل** — فيهم أسعارُ الشراء.

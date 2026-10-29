@@ -53,6 +53,8 @@ var t = struct {
 	// **«لدي توصيلة» تمرّ بالمكتب** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — **والمتجرُ
 	// يُخبَر بقرار المكتب** فيها، والمكتبُ بوصولها.
 	mdNewOps, mdAccepted, mdRejected, mdCancelled, mdAssigned, mdPickedUp string
+	// **«من متجر غير تابع لنا»** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — الطلبُ صار مشتريات.
+	extStoreCustomer, extStoreDriver, extStoreMerchant string
 }{
 	offerDriver:      "طلب جديد بانتظارك",
 	assignedDriver:   "طلب أُسند إليك",
@@ -98,6 +100,9 @@ var t = struct {
 	mdCancelled:               "أُلغيت توصيلتك",
 	mdAssigned:                "سائق في طريقه لاستلام توصيلتك",
 	mdPickedUp:                "استلم السائق التوصيلة",
+	extStoreCustomer:          "سيُشترى طلبك من متجرٍ آخر",
+	extStoreDriver:            "صار الطلب مشتريات",
+	extStoreMerchant:          "طلبٌ لم يعد من متجرك",
 }
 
 // endedByLabel من أنهى الطلب — بلفظٍ يُقرأ لا برمزٍ يُفكّ.

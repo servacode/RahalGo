@@ -41,6 +41,8 @@ const orderSelect = `
 	       -- **والمتجرُ التابعُ في المشتريات** (قرارُ المالك ٢٠٢٦-١٠-١٥) — ونسبتُه وما دُفع له.
 	       COALESCE(o.partner_merchant_id::text, ''), COALESCE(ptn.name, ''),
 	       o.partner_commission_percent, o.custom_store_paid,
+	       -- **«من متجر غير تابع لنا»** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — المتجرُ الذي كان منه ومتى ولماذا.
+	       COALESCE(ext.name, ''), o.ext_store_at, COALESCE(o.ext_store_reason, ''),
 	       o.driver_id, dr.phone, NULLIF(dr.full_name, ''),
 	       o.status, o.address_text,
 	       ST_Y(o.dropoff::geometry), ST_X(o.dropoff::geometry),
@@ -158,6 +160,7 @@ const orderSelect = `
 	-- «غير موجود» — وهو مكتوبٌ في القاعدة.)
 	LEFT JOIN merchants mr ON mr.id = o.merchant_id
 	LEFT JOIN merchants ptn ON ptn.id = o.partner_merchant_id
+	LEFT JOIN merchants ext ON ext.id = o.ext_store_merchant_id
 	LEFT JOIN media lm ON lm.id = mr.logo_media_id
 	LEFT JOIN users dr ON dr.id = o.driver_id
 	LEFT JOIN users od ON od.id = o.offered_driver_id
@@ -176,6 +179,7 @@ func scanOrder(row pgx.Row) (*Order, error) {
 		&o.CustomMode, &o.CustomGoodsPending, &o.DriverFee,
 		&o.MerchantID, &o.MerchantName,
 		&o.PartnerMerchantID, &o.PartnerMerchantName, &o.PartnerCommission, &o.CustomStorePaid,
+		&o.ExtStoreMerchantName, &o.ExtStoreAt, &o.ExtStoreReason,
 		&o.DriverID, &o.DriverPhone, &o.DriverName,
 		&o.Status, &o.AddressText, &o.Lat, &o.Lng, &o.ZoneID, &o.ZoneName,
 		&o.PaymentMethod, &o.Subtotal, &o.DeliveryFee, &o.FreeWaived, &o.Discount, &o.Total,

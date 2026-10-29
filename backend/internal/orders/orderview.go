@@ -417,6 +417,10 @@ var audienceAllow = map[Audience]map[string]bool{
 		"partner_commission_percent":       true,
 		"partner_commission_percent_exact": true,
 		"custom_store_paid":                true,
+		// **و«من متجر غير تابع لنا»** — المتجرُ الأوّلُ ومتى ولماذا (٢٠٢٦-١٠-٢٩).
+		"ext_store_merchant_name": true,
+		"ext_store_at":            true,
+		"ext_store_reason":        true,
 		// **وموقعُ الزبون المباشر** (٢٠٢٦-١٠-١٦) — يُلحَق في ردّ الطلب الواحد وحدَه.
 		"customer_live": true,
 	},

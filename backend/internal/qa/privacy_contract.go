@@ -163,8 +163,13 @@ var OrderPrivacy = map[string]FieldRule{
 	// **والنسبةُ بمنزلتين** (قرارُ المالك ٢٠٢٦-١٠-١٨) — نظيرةُ المقرَّبة بحدودها نفسِها.
 	"partner_commission_percent_exact": {Ref: "نسبةُ عمولة المتجر التابع بمنزلتين — ماليٌّ للمكتب", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
 	"custom_store_paid":                {Ref: "ما دفعه السائقُ للمتجر عن المشتريات — ماليٌّ للمكتب", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
-	"merchant_net":                     {Ref: "مستحقُّ المتجر — لا يخصّ زبوناً ولا سائقاً ولا مندوباً", Vis: v(VisForbidden, VisAllowed, VisForbidden, VisForbidden, VisAllowed)},
-	"prep_minutes":                     {Ref: "مهلةُ التحضير", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
+	// **«من متجر غير تابع لنا»** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — أثرٌ للمكتب وحدَه: الزبونُ لا يعرف
+	// من أين تُشترى بضاعتُه، والسائقُ يشتري من حيث يُقال له.
+	"ext_store_merchant_name": {Ref: "المتجرُ الذي قُلب عنه الطلب (٢٠٢٦-١٠-٢٩)", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	"ext_store_at":            {Ref: "متى قُلب الطلبُ «من متجرٍ غير تابع»", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	"ext_store_reason":        {Ref: "سببُ قلب الطلب — للمكتب", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	"merchant_net":            {Ref: "مستحقُّ المتجر — لا يخصّ زبوناً ولا سائقاً ولا مندوباً", Vis: v(VisForbidden, VisAllowed, VisForbidden, VisForbidden, VisAllowed)},
+	"prep_minutes":            {Ref: "مهلةُ التحضير", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
 
 	// ── السائق ────────────────────────────────────────────────────
 	"driver_id":       {Ref: "merchant_privacy.go:44 · MD-4", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},

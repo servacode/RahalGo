@@ -42,7 +42,9 @@ func (s *Server) handleDeleteMerchant(w http.ResponseWriter, r *http.Request) {
 	var busy bool
 	err = tx.QueryRow(ctx, `
 		SELECT m.name, m.number, m.owner_user_id::text,
-		       EXISTS (SELECT 1 FROM orders o WHERE o.merchant_id = m.id OR o.partner_merchant_id = m.id)
+		       -- **والطلبُ الذي قُلب «من متجرٍ غير تابع» يبقى أثرُه على متجره الأوّل** (٢٠٢٦-١٠-٢٩).
+		       EXISTS (SELECT 1 FROM orders o WHERE o.merchant_id = m.id OR o.partner_merchant_id = m.id
+		                                         OR o.ext_store_merchant_id = m.id)
 		       OR EXISTS (SELECT 1 FROM merchant_settlements ms WHERE ms.merchant_id = m.id)
 		FROM merchants m WHERE m.id::text = $1 FOR UPDATE`, id).Scan(&name, &number, &owner, &busy)
 	if errors.Is(err, pgx.ErrNoRows) {
