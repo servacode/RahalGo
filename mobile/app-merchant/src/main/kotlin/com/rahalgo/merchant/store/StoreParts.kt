@@ -515,26 +515,22 @@ internal fun HoursPlanner(plan: HoursPlan, enabled: Boolean = true) {
 
     ChoiceCard(
         title = stringResource(R.string.hours_mode_24),
-        sub = stringResource(R.string.wz_hours_24_sub),
+        sub = "",
         selected = plan.mode == "24",
         enabled = enabled,
     ) { plan.chooseMode("24") }
     Spacer(Modifier.height(Rahal.space.sm))
     ChoiceCard(
         title = stringResource(R.string.wz_hours_custom),
-        sub = stringResource(R.string.wz_hours_custom_sub),
+        sub = "",
         selected = plan.mode == "custom",
         enabled = enabled,
     ) { plan.chooseMode("custom") }
 
-    if (plan.mode == "custom") {
-        Spacer(Modifier.height(Rahal.space.lg))
-        Text(
-            stringResource(R.string.hours_days_title),
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.titleSmall,
-        )
-        Spacer(Modifier.height(Rahal.space.sm))
+    // **والأيّامُ تحت «ساعات محددة» مباشرةً وساعاتُها ظاهرة** (تجربةُ المالك ٢٠٢٦-١٠-٢٩) —
+    // ولا تُخفى إلّا بـ«مفتوح 24 ساعة». **وضغطُ يومٍ يختار «ساعات محددة».**
+    if (plan.mode != "24") {
+        Spacer(Modifier.height(Rahal.space.xs))
         Column(
             Modifier
                 .fillMaxWidth()
@@ -548,14 +544,14 @@ internal fun HoursPlanner(plan: HoursPlan, enabled: Boolean = true) {
                 DayRow(
                     d = d,
                     enabled = enabled,
-                    onToggle = { open -> plan.update(d.copy(closed = !open)) },
-                    onTime = { editing = d },
+                    onToggle = { open -> plan.chooseMode("custom"); plan.update(d.copy(closed = !open)) },
+                    onTime = { plan.chooseMode("custom"); editing = d },
                 )
             }
         }
         Spacer(Modifier.height(Rahal.space.sm))
         RahalOutlineButton(
-            onClick = { applyingAll = true },
+            onClick = { plan.chooseMode("custom"); applyingAll = true },
             enabled = enabled && plan.draft.any { !it.closed },
             modifier = Modifier.fillMaxWidth(),
         ) { Text(stringResource(R.string.hours_apply_same), fontWeight = FontWeight.Bold) }
@@ -568,11 +564,6 @@ internal fun HoursPlanner(plan: HoursPlan, enabled: Boolean = true) {
             stringResource(R.string.hours_friday_q),
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.titleMedium,
-        )
-        Text(
-            stringResource(R.string.hours_friday_hint),
-            color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodySmall,
         )
         Spacer(Modifier.height(Rahal.space.sm))
         IconChoicePair(

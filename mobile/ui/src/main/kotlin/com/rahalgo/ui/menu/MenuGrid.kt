@@ -9,6 +9,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -182,8 +185,9 @@ fun MenuItemsGrid(
             // **وأيقونةُ كلّ فعلٍ واحدةٌ في كلّ مكان**: الأسعارُ أوراقٌ نقديّة،
             // والمشروباتُ كأس، والعروضُ أيقونتُها.
             item(span = full) {
+                // **والأربعةُ ظاهرةٌ معاً بلا سحب** (تجربةُ المالك ٢٠٢٦-١٠-٢٩) — من لم يسحب صدفةً لم يعرف بها.
                 Row(
-                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                    Modifier.fillMaxWidth().height(IntrinsicSize.Min),
                     horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
                 ) {
                     ToolChip(R.drawable.ic_banknotes, stringResource(R.string.bulk_title), onBulk)
@@ -233,25 +237,33 @@ private val AddSize = 56.dp
 
 /** **رقاقةُ أداة** — أيقونةٌ واسمُها بسطرٍ واحد، بأرضٍ فاتحةٍ وحدٍّ رفيع. */
 @Composable
-private fun ToolChip(icon: Int, label: String, onClick: () -> Unit) {
-    Row(
+private fun RowScope.ToolChip(icon: Int, label: String, onClick: () -> Unit) {
+    Column(
         Modifier
-            .minimumInteractiveComponentSize()
-            .clip(Rahal.shape.pill)
+            .weight(1f)
+            .fillMaxHeight()
+            .clip(Rahal.shape.md)
             .background(Rahal.colors.surface)
-            .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.pill)
+            .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
             .clickable(onClick = onClick)
-            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
-        verticalAlignment = Alignment.CenterVertically,
+            .padding(horizontal = Rahal.space.xs, vertical = Rahal.space.sm),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
     ) {
         Icon(painterResource(icon), contentDescription = null, tint = Rahal.colors.brand, modifier = Modifier.size(ToolIcon))
-        Spacer(Modifier.width(Rahal.space.xs))
-        Text(label, style = MaterialTheme.typography.labelLarge, color = Rahal.colors.ink, maxLines = 1)
+        Spacer(Modifier.height(Rahal.space.xs))
+        Text(
+            label,
+            style = MaterialTheme.typography.labelMedium,
+            color = Rahal.colors.ink,
+            maxLines = 2,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
     }
 }
 
 /** **أيقونةُ رقاقة الأداة.** */
-private val ToolIcon = 18.dp
+private val ToolIcon = 22.dp
 
 /** **رقاقةُ قسم** — اسمُه وعددُه؛ المختارةُ ممتلئةٌ بلون العلامة، والباقيةُ مؤطَّرة. */
 @Composable

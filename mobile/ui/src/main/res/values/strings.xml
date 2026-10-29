@@ -845,8 +845,6 @@
     <string name="item_section_empty">لا توجد أقسام حالياً</string>
     <string name="mod_hint_short">اختر ما يناسب الصنف، ثم عدّل الأسماء والأسعار.</string>
     <string name="mod_drinks_switch">أضف مشروباتي</string>
-    <string name="mod_drinks_on">تظهر قائمة مشروباتك مع هذا الصنف</string>
-    <string name="mod_drinks_off">لا تظهر المشروبات مع هذا الصنف</string>
     <string name="mod_chip_none">بلا سعر</string>
     <string name="mod_chip_weight">حسب الوزن</string>
     <string name="mod_chip_priced">بسعر إضافي</string>

@@ -388,14 +388,6 @@ fun PointMapCard(
                 Spacer(Modifier.width(Rahal.space.sm))
                 Text(stringResource(R.string.map_locate_exact), fontWeight = FontWeight.Bold)
             }
-            Spacer(Modifier.height(Rahal.space.xs))
-            Text(
-                stringResource(R.string.map_locate_hint),
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth(),
-            )
         }
     }
 }

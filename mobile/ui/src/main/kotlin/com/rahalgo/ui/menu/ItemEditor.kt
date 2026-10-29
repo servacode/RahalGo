@@ -662,11 +662,6 @@ private fun ModifiersEditor(
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.bodyLarge,
             )
-            Text(
-                stringResource(if (d.storeDrinks) R.string.mod_drinks_on else R.string.mod_drinks_off),
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
-            )
         }
         Switch(
             checked = d.storeDrinks,

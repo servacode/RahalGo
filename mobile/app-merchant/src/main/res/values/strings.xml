@@ -519,9 +519,7 @@
     <string name="wz_sections_none">لا توجد أقسام سوق متاحة الآن. تواصل مع إدارة المنصة.</string>
     <string name="wz_address_q">أين يقع متجرك؟</string>
     <string name="wz_hours_q">متى يفتح متجرك؟</string>
-    <string name="wz_hours_24_sub">كل أيام الأسبوع، ويوم الجمعة حسب اختيارك</string>
     <string name="wz_hours_custom">ساعات محددة</string>
-    <string name="wz_hours_custom_sub">تحدّد ساعات الدوام لكل يوم</string>
     <string name="wz_hours_all">كل الأيام</string>
     <string name="wz_hours_edit_day">+ تعديل يوم بعينه</string>
     <string name="wz_hours_hide_days">إخفاء الأيام</string>
@@ -562,7 +560,6 @@
     <string name="hours_on">دوام</string>
     <string name="hours_off">عطلة</string>
     <string name="hours_friday_q">يوم الجمعة؟</string>
-    <string name="hours_friday_hint">هل يعمل متجرك يوم الجمعة؟</string>
     <string name="hours_friday_on_sub">يعمل يوم الجمعة</string>
     <string name="hours_friday_off_sub">مغلق يوم الجمعة</string>
     <string name="hours_apply_same">طبّق نفس الساعات على كل الأيام</string>
@@ -570,7 +567,6 @@
     <string name="hours_done">تم</string>
     <string name="hours_day_24">24 ساعة</string>
     <string name="hours_day_specific">ساعات محددة</string>
-    <string name="hours_days_title">أيام الأسبوع</string>
     <string name="wz_pay_cash">نقدي</string>
     <string name="wz_pay_wallet">المحفظة</string>
     <string name="wz_returns_yes">نعم، أقبل الإرجاع</string>

@@ -48,7 +48,6 @@
     <string name="map_zoom_out">تصغير الخريطة</string>
     <string name="map_point_set">موقع المتجر محدّد على الخريطة</string>
     <string name="map_locate_exact">حدّد موقعي بدقة</string>
-    <string name="map_locate_hint">يُحدَّد موقعك فوراً، ثم تتحسّن الدقة تلقائياً خلال ثوانٍ</string>
     <string name="map_located_refining">تم تحديد موقعك — الدقة %1$s م · جارٍ تحسين الدقة…</string>
     <string name="map_point_none">لم يُحدَّد بعد</string>
 </resources>

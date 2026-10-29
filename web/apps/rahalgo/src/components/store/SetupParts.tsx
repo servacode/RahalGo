@@ -578,17 +578,23 @@ export function HoursPlanner({ plan, disabled }: { plan: HoursPlan; disabled?: b
         />
       </div>
 
-      {plan.mode === "custom" && (
-        <>
-          <h3 className="heading-card pt-2">{H.daysTitle}</h3>
+      {/* **والأيّامُ تحت «ساعات محددة» مباشرةً وساعاتُها ظاهرة** (تجربةُ المالك ٢٠٢٦-١٠-٢٩) — وضغطُ يومٍ يختارها. */}
+      {plan.mode !== "24" && (
+        <div className="-mt-2 flex flex-col gap-2">
           <div className="surface flex flex-col divide-y divide-line overflow-hidden rounded-card p-0">
             {week.map((d) => (
               <DayRow
                 key={d.day_of_week}
                 d={d}
                 disabled={disabled}
-                onToggle={(open) => plan.update({ ...d, closed: !open })}
-                onTime={() => setEditing(d)}
+                onToggle={(open) => {
+                  plan.chooseMode("custom");
+                  plan.update({ ...d, closed: !open });
+                }}
+                onTime={() => {
+                  plan.chooseMode("custom");
+                  setEditing(d);
+                }}
               />
             ))}
           </div>
@@ -596,11 +602,14 @@ export function HoursPlanner({ plan, disabled }: { plan: HoursPlan; disabled?: b
             variant="secondary"
             className="w-full font-bold"
             disabled={disabled || !plan.draft.some((d) => !d.closed)}
-            onClick={() => setApplying(true)}
+            onClick={() => {
+              plan.chooseMode("custom");
+              setApplying(true);
+            }}
           >
             {H.applySame}
           </Button>
-        </>
+        </div>
       )}
 
       {plan.mode !== "" && (

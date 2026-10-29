@@ -74,12 +74,12 @@ function ToolPill({ icon: Ico, label, href, testId, primary = false }: { icon: I
     <Link
       href={href}
       data-testid={testId}
-      className={`flex h-10 shrink-0 items-center gap-1.5 rounded-full border px-3 text-sm font-bold transition-colors ${
+      className={`flex min-h-16 min-w-0 flex-1 basis-0 flex-col items-center justify-center gap-1 rounded-card border px-1 py-2 text-center text-xs font-bold transition-colors ${
         primary ? "border-accent bg-accent text-on-bright hover:opacity-90" : "border-line bg-surface text-ink hover:bg-row-hover"
       }`}
     >
-      <Ico size={18} className={primary ? "" : "text-primary"} />
-      <span className="whitespace-nowrap">{label}</span>
+      <Ico size={20} className={primary ? "" : "text-primary"} />
+      <span className="line-clamp-2">{label}</span>
     </Link>
   );
 }
@@ -303,9 +303,9 @@ export default function MenuPage() {
         )}
       </div>
 
-      {/* ── ٢ · الأدواتُ في صفٍّ واحد ── */}
+      {/* ── ٢ · الأدواتُ كلُّها ظاهرةٌ بلا سحب (تجربةُ المالك ٢٠٢٦-١٠-٢٩) ── */}
       {!suspended && (
-        <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1 sm:-mx-4 sm:px-4">
+        <div className="flex gap-2">
           <ToolPill
             icon={IconAdd}
             label={M.add}
