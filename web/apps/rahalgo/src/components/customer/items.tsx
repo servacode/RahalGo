@@ -34,7 +34,6 @@ import {
   IconStore,
   ImageViewer,
   IconZoomIn,
-  IconFullscreen,
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import {
@@ -124,17 +123,6 @@ export function ItemCard({
             onRequireLogin={fav.needLogin}
             size="sm"
           />
-          {/* **ملءُ الشاشة جنب القلب** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — الصورةُ نظيفةٌ بلا عدسة. */}
-          {full && (
-            <button
-              type="button"
-              onClick={() => setViewing(true)}
-              aria-label={`${item.name} — ${I.zoomBtn}`}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-ink-muted hover:text-accent-text"
-            >
-              <IconFullscreen size={18} />
-            </button>
-          )}
           <span className="ms-auto flex min-w-0 items-baseline gap-1 whitespace-nowrap">
             {item.price_usd != null ? (
               <>
@@ -153,9 +141,11 @@ export function ItemCard({
         </div>
         {/* **والصورةُ وعدسةُ التكبير أخوان لا متداخلان** — زرٌّ في زرٍّ لا يصحّ. */}
         <div className="relative">
+        {/* **الضغطُ على الصورة يكبّرها** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — و«اطلب» والاسمُ يفتحان الصنف. */}
         <button
           type="button"
-          onClick={() => onOpen(item)}
+          onClick={() => (full ? setViewing(true) : onOpen(item))}
+          aria-label={full ? `${item.name} — ${I.zoomBtn}` : undefined}
           className="flex w-full min-w-0 flex-col text-start transition-transform active:scale-[0.98]"
         >
           {/* **مربّعٌ ثابتٌ مهما كانت الصورة** (ملاحظةُ المالك ٢٠٢٦-١٠-١٩) — صورةٌ طويلةٌ كانت تمطّ

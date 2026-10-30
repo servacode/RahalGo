@@ -871,23 +871,6 @@ internal fun ItemCard(
                         modifier = Modifier.size(20.dp),
                     )
                 }
-                // **وملءُ الشاشة جنب القلب** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — الصورةُ نظيفةٌ بلا عدسة.
-                if (!full.isNullOrEmpty()) {
-                    Box(
-                        Modifier
-                            .clip(CircleShape)
-                            .clickable(onClick = { zoom = full })
-                            .size(36.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            painter = painterResource(com.rahalgo.ui.R.drawable.ic_fullscreen),
-                            contentDescription = stringResource(R.string.shop_zoom_btn),
-                            tint = Rahal.colors.inkMuted,
-                            modifier = Modifier.size(20.dp),
-                        )
-                    }
-                }
                 Spacer(Modifier.weight(1f))
                 // **والليرةُ فوق مع الدولار لا تحت الاسم** (ملاحظةُ المالك ٢٠٢٦-١٠-١٥:
                 // «تحت اسم الصنف ما رح يكون واضح») — **يقرأ الزبونُ ما سيدفعه بلمحةٍ
@@ -917,9 +900,12 @@ internal fun ItemCard(
 
             // **لا وصفَ للصنف عند الزبون** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — فلا قلبَ للصورة؛
             // **الضغطُ يفتح نافذةَ الصنف**، والعدسةُ تفتح الصورةَ كاملة.
+            // **الضغطُ على الصورة يكبّرها** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — كما يفعل الناسُ في كلّ
+            // تطبيق، بلا أيقونةٍ تشرح. **و«اطلب» والاسمُ يفتحان الصنف.** وبلا صورةٍ: يفتح الصنف.
+            val imageTap: (() -> Unit)? = if (!full.isNullOrEmpty()) ({ zoom = full }) else onOpen
             Box(
-                if (onOpen != null) {
-                    Modifier.clickable(onClickLabel = stringResource(R.string.shop_open_item), onClick = onOpen)
+                if (imageTap != null) {
+                    Modifier.clickable(onClickLabel = stringResource(R.string.shop_zoom_btn), onClick = imageTap)
                 } else {
                     Modifier
                 },
