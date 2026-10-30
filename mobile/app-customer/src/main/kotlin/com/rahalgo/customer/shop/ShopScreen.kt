@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.absoluteOffset
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
@@ -619,6 +620,30 @@ fun ShopScreen(
  * **وتقرؤه المفضّلةُ معها** — **شبكتان بعددين تجعلان الصنفَ سلعةً في
  * شاشةٍ وسطرَ جدولٍ في أخرى.**
  */
+/** **زرٌّ مكتوبٌ صغيرٌ في بطاقة الصنف** — «تكبير» بإطار و«اطلب» معبّى. */
+@Composable
+private fun CardButton(text: String, filled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Box(
+        modifier
+            .fillMaxHeight()
+            .clip(Rahal.shape.sm)
+            .then(
+                if (filled) Modifier.background(Rahal.colors.brand)
+                else Modifier.border(Rahal.stroke.hair, Rahal.colors.brand, Rahal.shape.sm),
+            )
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = text,
+            color = if (filled) Rahal.colors.onBrand else Rahal.colors.brand,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.labelSmall,
+            maxLines = 1,
+        )
+    }
+}
+
 const val ShopCols = 3
 
 /**
@@ -928,34 +953,21 @@ internal fun ItemCard(
                     }
                 }
 
-                // ══════════════════════════════════════════════════════
-                // **عدسةُ التكبير على الصورة — بلا فتح الصنف** (قرارُ المالك ٢٠٢٦-١٠-٣٠)
-                // ══════════════════════════════════════════════════════
-                //
-                // **ضغطتُها تفتح الصورةَ كاملةً** (`ImageViewer` بالقرص واللمسة المزدوجة)،
-                // **وباقي البطاقة يفتح نافذةَ الصنف كما كان.** والكاملةُ لا المصغّرة.
-                val full = media(item.imageUrl ?: item.imageThumbUrl)
-                if (!full.isNullOrEmpty()) {
-                    com.rahalgo.ui.ZoomBadge(
-                        Modifier.align(Alignment.BottomEnd).padding(Rahal.space.xs),
-                        onClick = { zoom = full },
-                    )
-                }
             }
             zoom?.let { com.rahalgo.ui.ImageViewer(url = it, onClose = { zoom = null }) }
 
             // ══════════════════════════════════════════════════════════
-            // **الشريطُ الأسفل — اسمُ المتجر و«+» في نهايته**
+            // **سطرٌ لاسم المتجر، وسطرٌ لزرّين مكتوبين** (قرارُ المالك ٢٠٢٦-١٠-٣٠)
             // ══════════════════════════════════════════════════════════
             //
-            // **وارتفاعُه ثابتٌ ولو غاب الاسمُ أو الزرّ** — وإلّا تفاوتت بطاقاتُ
-            // الصفّ الواحد. **و«+» لا يُعرض لمغلق** — من ضغطه فلم يقع شيءٌ ظنّ
-            // التطبيقَ معطوبا.
+            // **كانت عدسةُ التكبير على الصورة تشوّهها، و«+» لا يفهمها الكلّ** —
+            // فصار الزرّان كلمتين: «تكبير» (إطار) و«اطلب» (معبّى). **ولا «اطلب»
+            // لمغلق**، ويبقى السطرُ بارتفاعه ولو غاب الزرّان كي لا تتفاوت البطاقات.
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .heightIn(min = 40.dp)
-                    .padding(start = Rahal.space.sm, end = Rahal.space.xs),
+                    .heightIn(min = 28.dp)
+                    .padding(horizontal = Rahal.space.sm),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 val toStore = onStore?.takeIf { !item.merchantName.isNullOrBlank() && item.merchantId.isNotBlank() }
@@ -969,7 +981,6 @@ internal fun ItemCard(
                     style = nameStyle,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    // **وأصغرُ خطٍّ ٩ لا ٧** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧) — ٧ لا يُقرأ على شاشةٍ صغيرة.
                     autoSize = TextAutoSize.StepBased(minFontSize = 9.sp, maxFontSize = nameStyle.fontSize),
                     modifier = Modifier
                         .weight(1f)
@@ -984,32 +995,30 @@ internal fun ItemCard(
                             },
                         ),
                 )
+            }
+            val full = media(item.imageUrl ?: item.imageThumbUrl)
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .height(40.dp)
+                    .padding(start = Rahal.space.xs, end = Rahal.space.xs, bottom = Rahal.space.xs),
+                horizontalArrangement = Arrangement.spacedBy(Rahal.space.xs),
+            ) {
+                if (!full.isNullOrEmpty()) {
+                    CardButton(
+                        text = stringResource(R.string.shop_zoom_btn),
+                        filled = false,
+                        onClick = { zoom = full },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
                 if (!closed && onAdd != null) {
-                    Spacer(Modifier.width(Rahal.space.xs))
-                    // **دائرةٌ ٣٢ ومساحةُ لمسٍ ٤٠** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧) — كانت ٢٥
-                    // فيُضغط على الصورة فتنقلب بدل أن يُضاف الصنف.
-                    Box(
-                        Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .clickable(onClick = onAdd),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Box(
-                            Modifier
-                                .size(32.dp)
-                                .clip(CircleShape)
-                                .background(Rahal.colors.brand),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                painter = painterResource(com.rahalgo.ui.R.drawable.ic_plus),
-                                contentDescription = stringResource(R.string.shop_add),
-                                tint = Rahal.colors.onBrand,
-                                modifier = Modifier.size(18.dp),
-                            )
-                        }
-                    }
+                    CardButton(
+                        text = stringResource(R.string.shop_order_btn),
+                        filled = true,
+                        onClick = onAdd,
+                        modifier = Modifier.weight(1f),
+                    )
                 }
             }
         }

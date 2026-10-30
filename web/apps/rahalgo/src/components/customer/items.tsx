@@ -162,22 +162,11 @@ export function ItemCard({
             )}
           </div>
         </button>
-        {/* **عدسةُ التكبير — الصورةُ بملء الشاشة بلا فتح الصنف** (قرارُ المالك ٢٠٢٦-١٠-٣٠) —
-            مرآةُ `ItemCard` في التطبيق؛ وباقي البطاقة يفتح نافذةَ الصنف كما كان. */}
-        {full && (
-          <button
-            type="button"
-            onClick={() => setViewing(true)}
-            aria-label={`${item.name} — ${m.common.media.zoomHint}`}
-            className="absolute bottom-2 end-2 flex h-9 w-9 items-center justify-center rounded-full border border-line bg-paper text-primary-solid shadow-e2"
-          >
-            <IconZoomIn size={20} />
-          </button>
-        )}
         </div>
         {full && viewing && <ImageViewer src={full} alt={item.name} onClose={() => setViewing(false)} />}
-        {/* ── الشريطُ السفليّ: اسمُ المتجر (رابطٌ لصفحته) و«+» — خارجَ زرّ الصورة: رابطٌ في زرٍّ لا يصحّ ── */}
-        <div className="flex min-h-10 w-full min-w-0 items-center gap-1 px-2 py-1">
+        {/* ── سطرٌ لاسم المتجر (رابطٌ لصفحته)، وسطرٌ لزرّين مكتوبين «تكبير» و«اطلب» —
+            قرارُ المالك ٢٠٢٦-١٠-٣٠: العدسةُ على الصورة كانت تشوّهها و«+» لا يفهمها الكلّ. ── */}
+        <div className="flex min-h-7 w-full min-w-0 items-center px-2 pt-1">
           {storeLink && item.merchant_id && item.merchant_name ? (
             <Link
               href={`/stores/${item.merchant_id}`}
@@ -189,14 +178,24 @@ export function ItemCard({
           ) : (
             <span className="flex-1 truncate text-2xs text-ink-muted">{item.merchant_name ?? ""}</span>
           )}
+        </div>
+        <div className="flex h-10 w-full min-w-0 gap-1 px-1.5 pb-1.5">
+          {full && (
+            <button
+              type="button"
+              onClick={() => setViewing(true)}
+              className="flex-1 rounded-control border border-accent text-xs font-bold text-accent-text"
+            >
+              {I.zoomBtn}
+            </button>
+          )}
           {!closed && (
             <button
               type="button"
-              aria-label={I.add}
               onClick={() => onOpen(item)}
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-accent text-on-bright"
+              className="flex-1 rounded-control bg-accent text-xs font-bold text-on-bright"
             >
-              <IconAdd size={15} />
+              {I.orderBtn}
             </button>
           )}
         </div>

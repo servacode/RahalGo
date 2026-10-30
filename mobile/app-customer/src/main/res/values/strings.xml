@@ -365,4 +365,6 @@
     <string name="cart_why_unavailable_many">%1$d أصناف غير متوفرة في سلتك — احذفها لتكمل</string>
     <!-- **ضغطةُ البطاقة تفتح نافذةَ الصنف** (٢٠٢٦-١٠-٣٠). -->
     <string name="shop_open_item">عرض الصنف</string>
+    <string name="shop_zoom_btn">تكبير</string>
+    <string name="shop_order_btn">اطلب</string>
 </resources>
