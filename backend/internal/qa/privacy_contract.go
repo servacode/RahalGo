@@ -225,7 +225,10 @@ var OrderPrivacy = map[string]FieldRule{
 	// خُصم من طلبه ونسبتُه** — **ولا يرى ما اقتُطع من غيره ولا ربحَ
 	// المنصّة جملةً.** **والمندوبُ يبقى ممنوعاً** (`XG-16`).
 	"platform_commission": {Ref: "شفافيّةُ تسوية المتجر (قرارُ المالك ٢٠٢٦-٠٩-٠٩) — ما اقتُطع من طلبه · وRQ-7/XG-16 يمنعانه عن المندوب", Vis: v(VisForbidden, VisAllowed, VisForbidden, VisForbidden, VisAllowed)},
-	"commission_percent":  {Ref: "شفافيّةُ تسوية المتجر (قرارُ المالك ٢٠٢٦-٠٩-٠٩) — بأيّ نسبةٍ اقتُطع · وRQ-7 يمنعها عن المندوب", Vis: v(VisForbidden, VisAllowed, VisForbidden, VisForbidden, VisAllowed)},
+	// **وما خُزّن من العمولة وما مُحي منها** (٢٠٢٦-١٠-٣٠) — كرتُ سجلّ اللوحة وحدَه: «أجرة · عمولة».
+	"commission_taken":   {Ref: "كرتُ سجلّ اللوحة (قرارُ المالك ٢٠٢٦-١٠-٣٠) — العمولةُ المخزّنةُ للطلب المسلَّم · للأدمن وحدَه", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	"commission_waived":  {Ref: "كرتُ سجلّ اللوحة (قرارُ المالك ٢٠٢٦-١٠-٣٠) — ما مُحي بـ«ما استلمت العمولة» · للأدمن وحدَه", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	"commission_percent": {Ref: "شفافيّةُ تسوية المتجر (قرارُ المالك ٢٠٢٦-٠٩-٠٩) — بأيّ نسبةٍ اقتُطع · وRQ-7 يمنعها عن المندوب", Vis: v(VisForbidden, VisAllowed, VisForbidden, VisForbidden, VisAllowed)},
 	// **والنسبةُ بمنزلتين** (قرارُ المالك ٢٠٢٦-١٠-١٨: «١٫٥٪») — **و`commission_percent`
 	// تبقى عدداً صحيحاً مقرَّباً لتطبيق المتجر القديم**. والحدودُ نفسُها.
 	"commission_percent_exact": {Ref: "شفافيّةُ تسوية المتجر بمنزلتين (٢٠٢٦-١٠-١٨) — نظيرةُ commission_percent · وRQ-7 يمنعها عن المندوب", Vis: v(VisForbidden, VisAllowed, VisForbidden, VisForbidden, VisAllowed)},

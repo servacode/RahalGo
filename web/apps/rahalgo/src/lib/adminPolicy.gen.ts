@@ -54,6 +54,7 @@ export const ADMIN_POLICY: ReadonlyArray<readonly [string, string, string]> = [
   ["", "/districts/{id}", "settings.general.manage"],
   ["GET", "/drivers", "drivers.read"],
   ["GET", "/drivers/{id}/cash", "finance.read"],
+  ["GET", "/drivers/{id}/delivered", "finance.read"],
   ["POST", "/drivers/{id}/end-shift", "drivers.manage"],
   ["POST", "/drivers/{id}/settle", "finance.manage"],
   ["GET", "/emergencies", "emergencies.manage"],

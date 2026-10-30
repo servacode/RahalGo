@@ -1412,6 +1412,30 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/v1/admin/drivers/{id}/delivered",
+      "handler": "handleDriverDelivered",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "from",
+          "type": "unknown"
+        },
+        {
+          "name": "orders",
+          "type": "unknown"
+        },
+        {
+          "name": "to",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "POST",
       "path": "/api/v1/admin/drivers/{id}/end-shift",
       "handler": "handleAdminEndShift",

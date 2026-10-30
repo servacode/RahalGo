@@ -103,6 +103,37 @@ func (s *Server) handleDriverCashStatement(w http.ResponseWriter, r *http.Reques
 	httpx.JSON(w, http.StatusOK, st)
 }
 
+// handleDriverDelivered **كلُّ ما سلّمه السائقُ بين وقتين** — نقداً أو من محفظةٍ أو مجاناً
+// (قرارُ المالك ٢٠٢٦-١٠-٣٠). كشفُ النقد يرى المقبوضَ نقداً وحدَه، **فطلبٌ دفعه المتجرُ من
+// محفظته غاب عنه فظُنّ ضائعاً.** قراءةٌ للعرض فقط — `from`/`to` بصيغة RFC3339، وغيابُ `to` = الآن،
+// وغيابُ `from` = قبل يومين.
+func (s *Server) handleDriverDelivered(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if !isUUID(id) {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	q := r.URL.Query()
+	to := time.Now()
+	if v := q.Get("to"); v != "" {
+		if t, err := time.Parse(time.RFC3339, v); err == nil {
+			to = t
+		}
+	}
+	from := to.Add(-48 * time.Hour)
+	if v := q.Get("from"); v != "" {
+		if t, err := time.Parse(time.RFC3339, v); err == nil && t.Before(to) {
+			from = t
+		}
+	}
+	list, err := s.cashbox.Delivered(r.Context(), id, from, to)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"orders": list, "from": from, "to": to})
+}
+
 // تسليم الصندوق (كلياً أو جزئياً) — أدمن/مالية فقط.
 func (s *Server) handleDriverSettle(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[struct {

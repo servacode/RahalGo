@@ -24,17 +24,15 @@
  */
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtMoney, fmtDate, fmtDateTime, errorText } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtMoney, fmtDate, fmtDateTime } from "@rahalgo/i18n";
 import {
   Alert,
   Badge,
   Button,
   Chips,
-  FormActions,
   Input,
   LoadingState,
   Modal,
-  Money,
   PageContainer,
   ReloadState,
   useLiveData,
@@ -53,6 +51,8 @@ import { OpenLink } from "@/components/admin/OpenLink";
 import { useCanOpen } from "@/lib/policy";
 import { PageHero } from "@/components/admin/PageHero";
 import { Tile } from "@/components/admin/DashParts";
+import { WaiveCommissionDialog } from "@/components/admin/orders/WaiveCommissionDialog";
+import { orderKindLabel, payerGroup, payerLabel, payerOf, type PayerGroup } from "@/components/admin/orders/payer";
 
 const m = getMessages(defaultLocale);
 const C = m.admin.cashOutstanding;
@@ -228,6 +228,43 @@ interface CashEntry {
 }
 
 type Statement = { held: number; limit: number; entries: CashEntry[]; open_cash: number; total?: number };
+
+/**
+ * **طلبٌ سلّمه السائق — نقداً كان أم لا** (قرارُ المالك ٢٠٢٦-١٠-٣٠). كشفُ النقد يرى المقبوضَ نقداً
+ * وحدَه، فطلبٌ دفعه المتجرُ من محفظته غاب عنه وظُنّ ضائعاً. من `/admin/drivers/{id}/delivered`.
+ */
+interface Delivered {
+  order_id: string;
+  number: number;
+  kind: string;
+  custom_mode: string;
+  delivery_mode: string;
+  fee_payer: string;
+  payment_method: string;
+  wallet_paid: number;
+  cash_due: number;
+  delivery_fee: number;
+  platform_commission: number;
+  commission_waived: number;
+  free_waived: number;
+  merchant_name: string;
+  delivered_at: string;
+  /** ما قُيّد بذمّته من هذا الطلب — وصفرٌ لما لم يُقبض نقداً. */
+  cash_collected: number;
+}
+
+/** **في أيّ خانةٍ من ملخّص اليوم** — ما قُيّد بذمّته نقدٌ أيًّا كان دافعُه. */
+function deliveredGroup(d: Delivered): PayerGroup {
+  return d.cash_collected > 0 ? "cash" : payerGroup(payerOf(d));
+}
+
+/** «سلّم طلب واحد» · «سلّم طلبين» · «سلّم 5 طلبات» · «سلّم 12 طلب». */
+function deliveredCountLabel(n: number): string {
+  if (n === 1) return C.dayDeliveredOne;
+  if (n === 2) return C.dayDeliveredTwo;
+  if (n <= 10) return C.dayDeliveredFew.replace("{n}", fmtNum(n));
+  return C.dayDeliveredMany.replace("{n}", fmtNum(n));
+}
 
 /** «من ٥ دقائق» · «من ٣ ساعات» · «من يومين» — مدّةٌ تُقرأ لا كلمةُ «اليوم» وحدها. */
 function sinceLabel(iso: string | null): string {
@@ -526,6 +563,22 @@ function DriverPanel({
     [h.driver_id, limit],
   );
   const [waive, setWaive] = useState<CashEntry | null>(null);
+  // **وكلُّ ما سلّمه من أقدم يومٍ في الكشف — لا النقديُّ وحدَه** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
+  const fromISO = useMemo(() => {
+    const today = accountDay(new Date().toISOString(), dayHour);
+    const oldest = (st.data?.entries ?? []).reduce((a, e) => {
+      const k = accountDay(e.created_at, dayHour);
+      return k < a ? k : a;
+    }, today);
+    return dayStartISO(oldest, dayHour);
+  }, [st.data, dayHour]);
+  const dl = useLiveData<{ orders: Delivered[] }>(
+    () => api(`/api/v1/admin/drivers/${h.driver_id}/delivered?from=${encodeURIComponent(fromISO)}`),
+    ["wallet", "order"],
+    [h.driver_id, fromISO],
+  );
+  // **الأيّامُ اللي انسلّمت بالسجلّ** — مطويّةٌ تحت زرّ (قرارُ المالك ٢٠٢٦-١٠-٣٠).
+  const [showHistory, setShowHistory] = useState(false);
   const KIND = m.admin.users.profile.roleTabs.cashKinds as Record<string, string>;
   // **واللوحةُ تُبنى من جديد لكلّ سائق** (`key`) — فلا تبقى أرقامُ السابق لحظةَ التبديل.
   const held = st.data?.held ?? h.held;
@@ -638,7 +691,7 @@ function DriverPanel({
           ) : (
             <LoadingState variant="text" />
           )
-        ) : st.data.entries.length === 0 ? (
+        ) : st.data.entries.length === 0 && (dl.data?.orders.length ?? 0) === 0 ? (
           <div className="flex flex-col items-center gap-2 rounded-card border border-line-soft p-6 text-center">
             <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-success-solid text-on-solid">
               <IconWallet size={22} />
@@ -647,70 +700,46 @@ function DriverPanel({
           </div>
         ) : (
           <div className="space-y-4">
-            {groupByAccountDay(st.data.entries.filter((e) => e.kind !== "commission_waived"), dayHour, held).map((g) => {
-              const settled = g.left <= 0 && g.cash > 0;
-              const urgent = !g.current && g.left > 0;
-              return (
-                <div key={g.key} className="space-y-2">
-                  <div
-                    className={`flex flex-wrap items-center justify-between gap-2 rounded-control px-3 py-2 ${
-                      urgent ? "bg-warning-tint" : "bg-field"
-                    }`}
-                  >
-                    <span className="min-w-0">
-                      <span className="block text-sm font-bold">{dayRangeLabel(g.key, dayHour)}</span>
-                      <span className={`block text-2xs ${settled ? "font-bold text-success" : "text-ink-muted"}`}>
-                        {settled
-                          ? C.daySettled
-                          : (g.current ? (damascusHour() < dayHour ? C.dayOpenToday : C.dayOpen) : C.dayDue).replaceAll("{h}", fmtNum(dayHour))}
-                      </span>
-                    </span>
-                    <span className="shrink-0 text-end text-sm">
-                      <span className="block">
-                        {C.dayOrders.replace("{n}", fmtNum(g.orders))}
-                        {g.free > 0 && <span className="text-success"> · {C.splitFreeCount.replace("{n}", fmtNum(g.free))}</span>}
-                      </span>
-                      {settled ? (
-                        <b className="tabular-nums text-ink-muted">{fmtMoney(g.cash)}</b>
-                      ) : g.left < g.cash ? (
-                        <span className="block text-xs">
-                          <b className="tabular-nums text-warning">{C.dayLeft.replace("{n}", fmtMoney(g.left))}</b>
-                          <span className="text-ink-muted"> · {C.dayOf.replace("{n}", fmtMoney(g.cash))}</span>
-                        </span>
-                      ) : (
-                        <b className="tabular-nums text-warning">{fmtMoney(g.cash)}</b>
-                      )}
-                    </span>
-                  </div>
-                  <ul className="grid grid-cols-1 gap-2 xl:grid-cols-2">
-                    {g.entries.map((e) =>
-                      e.kind === "order_collection" ? (
-                        <OrderCashCard key={e.id} e={e} canOrder={canOrder} canWaive={canSettle} onWaive={() => setWaive(e)} />
-                      ) : (
-                        <li key={e.id} className="flex items-center gap-3 rounded-card border border-line-soft bg-field px-4 py-3 text-sm">
-                          <span
-                            className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
-                              e.amount >= 0 ? "bg-warning-tint text-warning" : "bg-success-tint text-success"
-                            }`}
-                          >
-                            <IconWallet size={16} />
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block font-bold">{KIND[e.kind] ?? e.kind}</span>
-                            {e.note && <span className="block truncate text-xs text-ink-muted">{e.note}</span>}
-                            <span className="block text-2xs text-ink-muted" dir="ltr">{fmtDateTime(e.created_at)}</span>
-                          </span>
-                          <span className={`shrink-0 font-bold tabular-nums ${e.amount >= 0 ? "text-warning" : "text-success"}`} dir="ltr">
-                            {e.amount >= 0 ? "+" : "−"}
-                            {fmtMoney(Math.abs(e.amount))}
-                          </span>
-                        </li>
-                      ),
-                    )}
-                  </ul>
-                </div>
+            {(() => {
+              // **الظاهرُ ما لسّا ما انسلّم وحدَه** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — اليومُ الجاري وكلُّ يومٍ
+              // بقي منه شي بذمّته. **وما انسلّم بالسجلّ** تحت زرّ.
+              const groups = groupByAccountDay(
+                st.data.entries.filter((e) => e.kind !== "commission_waived"),
+                dayHour,
+                held,
+                dl.data?.orders ?? [],
               );
-            })}
+              const open = groups.filter((g) => g.current || g.left > 0);
+              const past = groups.filter((g) => !(g.current || g.left > 0));
+              const view = (g: DayGroup) => (
+                <DayGroupView
+                  key={g.key}
+                  g={g}
+                  dayHour={dayHour}
+                  canOrder={canOrder}
+                  canSettle={canSettle}
+                  kinds={KIND}
+                  onWaive={setWaive}
+                />
+              );
+              return (
+                <>
+                  {open.length === 0 ? (
+                    <p className="rounded-card border border-line-soft p-4 text-center text-sm font-bold text-success">{C.openNone}</p>
+                  ) : (
+                    open.map(view)
+                  )}
+                  {past.length > 0 && (
+                    <div className="space-y-4">
+                      <Button variant="secondary" className="w-full" onClick={() => setShowHistory((v) => !v)} aria-expanded={showHistory}>
+                        {showHistory ? C.historyHide : C.historyShow.replace("{n}", fmtNum(past.length))}
+                      </Button>
+                      {showHistory && past.map(view)}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
             {total > shown && (
               <div className="space-y-2 text-center">
                 <p className="text-xs text-ink-muted">
@@ -730,8 +759,10 @@ function DriverPanel({
       </div>
 
       {waive && (
-        <WaiveCommission
-          e={waive}
+        <WaiveCommissionDialog
+          orderId={waive.order_id ?? ""}
+          orderNumber={waive.order_number}
+          commission={waive.commission_part ?? 0}
           onClose={() => setWaive(null)}
           onDone={(amount) => {
             setWaive(null);
@@ -762,6 +793,11 @@ function accountDay(iso: string, hour: number): string {
   return new Date(t).toISOString().slice(0, 10);
 }
 
+/** **بدايةُ يوم الحساب** بصيغة ISO — لطلب ما سلّمه من ذلك اليوم. */
+function dayStartISO(key: string, hour: number): string {
+  return new Date(`${key}T${String(hour).padStart(2, "0")}:00:00+03:00`).toISOString();
+}
+
 /** «من ٩ الصبح ٢٦/١٠ لـ ٩ الصبح ٢٧/١٠». */
 function dayRangeLabel(key: string, hour: number): string {
   const from = new Date(`${key}T${String(hour).padStart(2, "0")}:00:00+03:00`);
@@ -777,16 +813,32 @@ function dayRangeLabel(key: string, hour: number): string {
  * «لازم ينسلّم» بمجموعه الكامل ولو سُلّم من زمان. **والأقدمُ يُسدَّد أوّلاً**، فما بيده
  * يُوزَّع على الأيّام من الأحدث: يومٌ لم يبقَ منه شيءٌ قد انسلّم.
  */
-function groupByAccountDay(entries: CashEntry[], hour: number, held: number) {
+interface DayGroup {
+  key: string;
+  current: boolean;
+  entries: CashEntry[];
+  orders: number;
+  free: number;
+  cash: number;
+  left: number;
+  /** **كلُّ ما سلّمه بهاليوم** — نقداً ومن المحافظ ومجاناً (٢٠٢٦-١٠-٣٠). */
+  delivered: Delivered[];
+}
+
+function groupByAccountDay(entries: CashEntry[], hour: number, held: number, delivered: Delivered[] = []) {
   const today = accountDay(new Date().toISOString(), hour);
-  const out: { key: string; current: boolean; entries: CashEntry[]; orders: number; free: number; cash: number; left: number }[] = [];
-  for (const e of entries) {
-    const key = accountDay(e.created_at, hour);
+  const out: DayGroup[] = [];
+  const at = (key: string) => {
     let g = out.find((x) => x.key === key);
     if (!g) {
-      g = { key, current: key === today, entries: [], orders: 0, free: 0, cash: 0, left: 0 };
+      g = { key, current: key === today, entries: [], orders: 0, free: 0, cash: 0, left: 0, delivered: [] };
       out.push(g);
     }
+    return g;
+  };
+  for (const d of delivered) at(accountDay(d.delivered_at, hour)).delivered.push(d);
+  for (const e of entries) {
+    const g = at(accountDay(e.created_at, hour));
     g.entries.push(e);
     if (e.kind === "order_collection") {
       g.orders += 1;
@@ -794,7 +846,8 @@ function groupByAccountDay(entries: CashEntry[], hour: number, held: number) {
       g.cash += e.amount - (e.commission_waived ?? 0);
     }
   }
-  // القيودُ من الأحدث (`id DESC`) — فالأيّامُ كذلك.
+  // **الأحدثُ أوّلاً** — والتسليمُ يُسدّد الأقدمَ، فما بيده يُوزَّع من الأحدث.
+  out.sort((a, b) => b.key.localeCompare(a.key));
   let rest = Math.max(0, held);
   for (const g of out) {
     g.left = Math.min(Math.max(0, g.cash), rest);
@@ -803,14 +856,173 @@ function groupByAccountDay(entries: CashEntry[], hour: number, held: number) {
   return out;
 }
 
+/**
+ * **يومُ حسابٍ واحد** — رأسُه بملخّص ما سلّم ومين دفع (قرارُ المالك ٢٠٢٦-١٠-٣٠: «سلّم 5 طلبات · 3 نقداً
+ * بذمّته 445 · 2 دفعها المتجر من محفظته»)، ثمّ **كلُّ طلبٍ سلّمه** — النقديُّ بكرته وزرّ «ما استلمت
+ * العمولة»، وما دُفع من محفظةٍ باهتاً وبذمّته صفر — ثمّ باقي الحركات (تسليمٌ للمكتب، عكسٌ…).
+ */
+function DayGroupView({
+  g,
+  dayHour,
+  canOrder,
+  canSettle,
+  kinds,
+  onWaive,
+}: {
+  g: DayGroup;
+  dayHour: number;
+  canOrder: boolean;
+  canSettle: boolean;
+  kinds: Record<string, string>;
+  onWaive: (e: CashEntry) => void;
+}) {
+  const settled = g.left <= 0 && g.cash > 0;
+  const urgent = !g.current && g.left > 0;
+  const counts: Record<PayerGroup, number> = { cash: 0, customerWallet: 0, merchantWallet: 0, free: 0 };
+  for (const d of g.delivered) counts[deliveredGroup(d)] += 1;
+  const summary: string[] = [];
+  if (g.delivered.length > 0) {
+    summary.push(deliveredCountLabel(g.delivered.length));
+    if (counts.cash > 0) summary.push(C.daySumCash.replace("{n}", fmtNum(counts.cash)).replace("{amt}", fmtMoney(g.cash)));
+    if (counts.customerWallet > 0) summary.push(C.daySumCustomerWallet.replace("{n}", fmtNum(counts.customerWallet)));
+    if (counts.merchantWallet > 0) summary.push(C.daySumMerchantWallet.replace("{n}", fmtNum(counts.merchantWallet)));
+    if (counts.free > 0) summary.push(C.daySumFree.replace("{n}", fmtNum(counts.free)));
+  }
+  // **كرتُ النقد لطلبه** — أوّلُ قيد تحصيلٍ لكلّ طلب، والباقي يُعرض كما كان.
+  const byOrder = new Map<string, CashEntry>();
+  for (const e of g.entries) {
+    if (e.kind === "order_collection" && e.order_id && !byOrder.has(e.order_id)) byOrder.set(e.order_id, e);
+  }
+  const used = new Set<number>();
+  const rows = [...g.delivered].sort((a, b) => b.delivered_at.localeCompare(a.delivered_at));
+  return (
+    <div className="space-y-2">
+      <div className={`space-y-1 rounded-control px-3 py-2 ${urgent ? "bg-warning-tint" : "bg-field"}`}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="min-w-0">
+            <span className="block text-sm font-bold">{dayRangeLabel(g.key, dayHour)}</span>
+            <span className={`block text-2xs ${settled ? "font-bold text-success" : "text-ink-muted"}`}>
+              {settled
+                ? C.daySettled
+                : (g.current ? (damascusHour() < dayHour ? C.dayOpenToday : C.dayOpen) : C.dayDue).replaceAll("{h}", fmtNum(dayHour))}
+            </span>
+          </span>
+          <span className="shrink-0 text-end text-sm">
+            {summary.length === 0 && (
+              <span className="block">
+                {C.dayOrders.replace("{n}", fmtNum(g.orders))}
+                {g.free > 0 && <span className="text-success"> · {C.splitFreeCount.replace("{n}", fmtNum(g.free))}</span>}
+              </span>
+            )}
+            {settled ? (
+              <b className="tabular-nums text-ink-muted">{fmtMoney(g.cash)}</b>
+            ) : g.left < g.cash ? (
+              <span className="block text-xs">
+                <b className="tabular-nums text-warning">{C.dayLeft.replace("{n}", fmtMoney(g.left))}</b>
+                <span className="text-ink-muted"> · {C.dayOf.replace("{n}", fmtMoney(g.cash))}</span>
+              </span>
+            ) : (
+              <b className="tabular-nums text-warning">{fmtMoney(g.cash)}</b>
+            )}
+          </span>
+        </div>
+        {summary.length > 0 && <p className="text-sm font-bold">{summary.join(" · ")}</p>}
+      </div>
+      <ul className="grid grid-cols-1 gap-2 xl:grid-cols-2">
+        {rows.map((d) => {
+          const e = byOrder.get(d.order_id);
+          if (e) {
+            used.add(e.id);
+            return <OrderCashCard key={e.id} e={e} d={d} canOrder={canOrder} canWaive={canSettle} onWaive={() => onWaive(e)} />;
+          }
+          return <DeliveredRow key={d.order_id} d={d} canOrder={canOrder} />;
+        })}
+        {g.entries
+          .filter((e) => !used.has(e.id))
+          .map((e) =>
+            e.kind === "order_collection" ? (
+              <OrderCashCard key={e.id} e={e} canOrder={canOrder} canWaive={canSettle} onWaive={() => onWaive(e)} />
+            ) : (
+              <li key={e.id} className="flex items-center gap-3 rounded-card border border-line-soft bg-field px-4 py-3 text-sm">
+                <span
+                  className={`inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+                    e.amount >= 0 ? "bg-warning-tint text-warning" : "bg-success-tint text-success"
+                  }`}
+                >
+                  <IconWallet size={16} />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-bold">{kinds[e.kind] ?? e.kind}</span>
+                  {e.note && <span className="block truncate text-xs text-ink-muted">{e.note}</span>}
+                  <span className="block text-2xs text-ink-muted" dir="ltr">{fmtDateTime(e.created_at)}</span>
+                </span>
+                <span className={`shrink-0 font-bold tabular-nums ${e.amount >= 0 ? "text-warning" : "text-success"}`} dir="ltr">
+                  {e.amount >= 0 ? "+" : "−"}
+                  {fmtMoney(Math.abs(e.amount))}
+                </span>
+              </li>
+            ),
+          )}
+      </ul>
+    </div>
+  );
+}
+
+/**
+ * **طلبٌ سلّمه بلا نقدٍ بذمّته** — دفعه المتجرُ أو الزبونُ من محفظته، أو مجانيّ. باهتٌ رماديّ،
+ * وبذمّته صفر، **ليُرى أنّه سُلّم ولم يضع** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
+ */
+function DeliveredRow({ d, canOrder }: { d: Delivered; canOrder: boolean }) {
+  return (
+    <li className="surface-inset space-y-2 p-4 text-sm text-ink-muted">
+      <div className="flex items-start gap-3">
+        <span className="min-w-0 flex-1">
+          <span className="block truncate font-bold">{d.merchant_name || orderKindLabel(d)}</span>
+          <span className="block truncate text-xs">
+            {orderKindLabel(d)} ·{" "}
+            <OpenLink allowed={canOrder} href={`/dashboard/orders?id=${d.order_id}`} dir="ltr" className="font-bold hover:underline">
+              #{d.number}
+            </OpenLink>
+          </span>
+        </span>
+        <span className="shrink-0 text-2xs" dir="ltr">
+          {fmtDateTime(d.delivered_at)}
+        </span>
+      </div>
+      <p className="flex justify-between gap-2 text-xs">
+        <span>{C.rowPayer}</span>
+        <b className="text-accent-text">{payerLabel(d)}</b>
+      </p>
+      <div className="grid grid-cols-2 gap-1.5 text-center sm:grid-cols-3">
+        <span className="rounded-control bg-field px-2 py-1.5">
+          <span className="block text-2xs">{C.splitFee}</span>
+          <b className="tabular-nums">{fmtMoney(d.delivery_fee)}</b>
+        </span>
+        <span className="rounded-control bg-field px-2 py-1.5">
+          <span className="block text-2xs">{C.splitCommission}</span>
+          <b className="tabular-nums">{fmtMoney(d.platform_commission)}</b>
+        </span>
+        <span className="rounded-control bg-field px-2 py-1.5">
+          <span className="block text-2xs">{C.rowOwed}</span>
+          <b className="tabular-nums">{fmtMoney(0)}</b>
+        </span>
+      </div>
+      <p className="text-2xs">{C.rowNotCash}</p>
+    </li>
+  );
+}
+
 /** **كرتُ طلبٍ في كشف النقد** — الزبون والمتجر ورقمُ الطلب، والتاريخ، وأجرةُ التوصيل والعمولة والمجموع. */
 function OrderCashCard({
   e,
+  d,
   canOrder,
   canWaive,
   onWaive,
 }: {
   e: CashEntry;
+  /** **الطلبُ كما سُلّم** — نوعُه ومين دفع (٢٠٢٦-١٠-٣٠)، ويغيب لقيدٍ خارجَ المدّة. */
+  d?: Delivered;
   canOrder: boolean;
   canWaive: boolean;
   onWaive: () => void;
@@ -842,6 +1054,15 @@ function OrderCashCard({
           {fmtDateTime(e.created_at)}
         </span>
       </div>
+      {d && (
+        <p className="flex flex-wrap justify-between gap-2 text-xs">
+          <span className="text-ink-muted">{orderKindLabel(d)}</span>
+          <span>
+            <span className="text-ink-muted">{C.rowPayer}: </span>
+            <b className="text-warning">{payerLabel(d)}</b>
+          </span>
+        </p>
+      )}
       {hasSplit ? (
         <div className={`grid grid-cols-2 gap-1.5 text-center ${other !== 0 ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}>
           <span className={`rounded-control px-2 py-1.5 ${free ? "bg-success-tint" : "bg-surface"}`}>
@@ -859,7 +1080,7 @@ function OrderCashCard({
             </span>
           )}
           <span className="rounded-control bg-warning-tint px-2 py-1.5">
-            <span className="block text-2xs text-ink-muted">{C.splitTotal}</span>
+            <span className="block text-2xs text-ink-muted">{C.rowOwed}</span>
             <b className="tabular-nums text-warning">{fmtMoney(total)}</b>
           </span>
         </div>
@@ -881,60 +1102,6 @@ function OrderCashCard({
         </Button>
       )}
     </li>
-  );
-}
-
-/** **«ما استلمت العمولة»** — قرارُ المالك ٢٠٢٦-١٠-٢٦: تُمسح نهائيّاً بقيدٍ عكسيّ، وبسببٍ مكتوب. */
-function WaiveCommission({ e, onClose, onDone }: { e: CashEntry; onClose: () => void; onDone: (amount: number) => void }) {
-  const [reason, setReason] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-  const commission = e.commission_part ?? 0;
-  return (
-    <Modal open onClose={onClose} title={C.waiveTitle.replace("{o}", String(e.order_number ?? ""))}>
-      <form
-        className="space-y-3"
-        onSubmit={(ev) => {
-          ev.preventDefault();
-          if (!reason.trim()) {
-            setError(C.waiveNeedReason);
-            return;
-          }
-          setBusy(true);
-          setError("");
-          void (async () => {
-            try {
-              await api(`/api/v1/admin/orders/${e.order_id}/waive-commission`, {
-                method: "POST",
-                body: JSON.stringify({ reason: reason.trim() }),
-              });
-              onDone(commission);
-            } catch (err) {
-              setError(errorText(err));
-              setBusy(false);
-            }
-          })();
-        }}
-      >
-        <p className="flex items-center justify-between rounded-control bg-field px-3 py-2 text-sm">
-          <span className="text-ink-muted">{C.splitCommission}</span>
-          <Money value={commission} small />
-        </p>
-        <p className="text-sm text-ink-muted">{C.waiveHint}</p>
-        <Input
-          id="waive-reason"
-          label={C.waiveReason}
-          placeholder={C.waiveReasonPh}
-          required
-          autoFocus
-          maxLength={300}
-          value={reason}
-          onChange={(ev) => setReason(ev.target.value)}
-        />
-        {error && <Alert>{error}</Alert>}
-        <FormActions submit onCancel={onClose} busy={busy} saveLabel={C.waiveConfirm} />
-      </form>
-    </Modal>
   );
 }
 

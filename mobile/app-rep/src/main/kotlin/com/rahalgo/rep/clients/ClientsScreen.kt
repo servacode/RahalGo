@@ -205,9 +205,11 @@ fun ClientsScreen(
                 if (shown.isEmpty()) {
                     Empty(stringResource(R.string.cl_no_match))
                 }
-                shown.forEach { m ->
+                shown.forEachIndexed { i, m ->
                     MerchantCard(
                         m = m,
+                        // **وكلُّ متجرٍ بلونٍ خفيفٍ يميّزه عن جاره** (قرارُ المالك ٢٠٢٦-١٠-٣٠: «فايتين ببعض»).
+                        tone = cardTones()[i % 3],
                         media = { path -> Backend.of(context).media(path) },
                         onOpen = { vm.openDetail(m.id) },
                         onAddItem = { onOpenMenu(m.id, m.name) },
@@ -396,12 +398,13 @@ private fun MerchantCard(
     onOpen: () -> Unit,
     onAddItem: () -> Unit,
     onMakeOffer: () -> Unit,
+    tone: androidx.compose.ui.graphics.Color? = null,
 ) {
-    Spacer(Modifier.height(10.dp))
+    Spacer(Modifier.height(Rahal.space.md))
     // **وضغطُ البطاقة يفتح تفصيلَه** — (طلبُ المالك
     // ٢٠٢٦-٠٨-١٤: «إذا ضغطتُ على اسم العميل يجب أن أعرف كلَّ
     // التفاصيل التي تخصّني كمندوب»).
-    Card(modifier = Modifier.clickable(onClick = onOpen)) {
+    Card(modifier = Modifier.clickable(onClick = onOpen), tone = tone) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             RemoteImage(
                 url = media(m.logoThumbUrl),
@@ -548,3 +551,7 @@ private fun MerchantCard(
         }
     }
 }
+
+/** **ثلاثةُ ألوانٍ هادئةٍ تتناوب** — بطاقتان متجاورتان لا تتشابهان. */
+@Composable
+private fun cardTones() = listOf(Rahal.colors.brand, Rahal.colors.accent, Rahal.colors.success)

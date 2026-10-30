@@ -57,3 +57,39 @@ func (s *Server) fillOrderCommission(ctx context.Context, list []orders.Order) {
 		list[i].CommissionExact = pricing.Percent2Ptr(p)
 	}
 }
+
+// fillCommissionTaken **العمولةُ المخزّنةُ وما مُحي منها للطلب المسلَّم** — كرتُ السجلّ في اللوحة
+// (قرارُ المالك ٢٠٢٦-١٠-٣٠: «أجرة X · عمولة Y» تحت الإجمالي). قراءةٌ للعرض، وتعذّرُها لا يُسقط القائمة.
+func (s *Server) fillCommissionTaken(ctx context.Context, list []orders.Order) {
+	ids := make([]string, 0, len(list))
+	for i := range list {
+		if list[i].Status == orders.StDelivered {
+			ids = append(ids, list[i].ID)
+		}
+	}
+	if len(ids) == 0 {
+		return
+	}
+	rows, err := s.pg.Query(ctx, `
+		SELECT id::text, platform_commission, commission_waived FROM orders WHERE id = ANY($1)`, ids)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+	type row struct{ taken, waived int64 }
+	got := map[string]row{}
+	for rows.Next() {
+		var id string
+		var r row
+		if rows.Scan(&id, &r.taken, &r.waived) == nil {
+			got[id] = r
+		}
+	}
+	for i := range list {
+		if r, ok := got[list[i].ID]; ok {
+			taken := r.taken
+			list[i].CommissionTaken = &taken
+			list[i].CommissionWaived = r.waived
+		}
+	}
+}

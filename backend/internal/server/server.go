@@ -1658,6 +1658,8 @@ func (s *Server) Router() http.Handler {
 			// السائقون والصندوق النقدي
 			r.Get("/drivers", s.handleListDrivers)
 			r.Get("/drivers/{id}/cash", s.handleDriverCashStatement)
+			// **وكلُّ ما سلّمه — لا النقديُّ وحدَه** (٢٠٢٦-١٠-٣٠) — للعرض فقط.
+			r.Get("/drivers/{id}/delivered", s.handleDriverDelivered)
 			// **وإغلاقُ دوامٍ نُسي** — من ذهب إلى بيته وعلَمُه مرفوعٌ يبقى في
 			// الدور، فيتأخّر كلُّ طلبٍ بمقدار غيابه. **إغلاقٌ فقط لا تشغيل.**
 			r.Post("/drivers/{id}/end-shift", s.handleAdminEndShift)

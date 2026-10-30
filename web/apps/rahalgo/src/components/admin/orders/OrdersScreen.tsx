@@ -8,6 +8,7 @@ import {
   getMessages,
   defaultLocale,
   fmtNum,
+  fmtMoney,
   fmtDateTime,
   fmtTime,
   fmtSpan, errorText, damascusDay, storeLabel } from "@rahalgo/i18n";
@@ -70,6 +71,9 @@ import { TransferPanel } from "./TransferPanel";
 import { AssignDialog } from "./AssignDialog";
 import { GoodsBox } from "./GoodsBox";
 import { OrderDetailPanel } from "./OrderDetailPanel";
+import { payerIsCash, payerLabel, payerOf } from "./payer";
+import { WaiveCommissionDialog, WAIVE_ROUTE } from "./WaiveCommissionDialog";
+import { useCanCall } from "@/lib/policy";
 import {
   BoardCounters,
   COUNTER_FILTERS,
@@ -258,6 +262,9 @@ interface OrderRow {
   cash_due: number;
   /** **عمولةُ المنصّة من المتجر ونسبتُها وما يدفعه السائقُ للمتجر** — للّوحة (٢٠٢٦-١٠-٢٦). */
   platform_commission?: number;
+  /** **العمولةُ كما خُزّنت للطلب المسلَّم، وما مُحي منها** — لكرت السجلّ (٢٠٢٦-١٠-٣٠). */
+  commission_taken?: number;
+  commission_waived?: number;
   commission_percent_exact?: number;
   merchant_net?: number;
   pay_merchant?: number;
@@ -472,7 +479,6 @@ function SectionHead({ role, o }: { role: keyof typeof SEC_LOOK; o?: OrderRow })
   );
 }
 const ACTION_LABELS: Record<string, string> = m.admin.ordersPage.actions;
-const PAYMENT_LABELS: Record<string, string> = m.orders.payment;
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -2593,8 +2599,27 @@ function HistoryCard({
   const reason = o.cancel_reason || (o.fail_reason ? (DOOR_REPORTS[o.fail_reason] ?? FAILS[o.fail_reason] ?? o.fail_reason) : "");
   const who = o.ended_by ? (ENDED_BY[o.ended_by] ?? o.ended_by) : H.endedBySystem;
   const row = "flex items-start justify-between gap-3";
+  // **الملغى والمرفوض باهتٌ رماديّ** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — فلا يختلط بالمسلَّم.
+  const muted = o.status === "cancelled" || o.status === "rejected";
+  // **مين دفع وكيف** — بدلَ «الدفع عند الاستلام» على كلّ كرت.
+  const payer = payerOf(o);
+  const OP = m.admin.ordersPage;
+  const commission = o.commission_taken ?? o.platform_commission ?? 0;
+  const [waivedNow, setWaivedNow] = useState(0);
+  const waived = (o.commission_waived ?? 0) || waivedNow;
+  // **«ما استلمت العمولة» على الكرت كمان** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — بشروط المحرّك نفسِها:
+  // طلبٌ عاديٌّ مسلَّم، عمولتُه فوق الصفر ولم تُمحَ، وانقبض نقداً بيد السائق. والمحرّكُ هو الحَكَم.
+  const canWaive = useCanCall()(...WAIVE_ROUTE);
+  const [waiving, setWaiving] = useState(false);
+  const waivable =
+    canWaive &&
+    o.status === "delivered" &&
+    (o.kind ?? "standard") === "standard" &&
+    (o.commission_taken ?? 0) > 0 &&
+    waived === 0 &&
+    (o.cash_due ?? 0) > 0;
   return (
-    <li className={`surface flex flex-col gap-3 p-4 ${focused ? "ring-2 ring-accent" : ""}`}>
+    <li className={`surface flex flex-col gap-3 p-4 ${focused ? "ring-2 ring-accent" : ""} ${muted ? "bg-field opacity-75" : ""}`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <span className="flex flex-wrap items-center gap-2">
           <OrderRef number={o.number} at={o.created_at} />
@@ -2653,15 +2678,29 @@ function HistoryCard({
         )}
       </div>
 
-      {/* **والإجماليُّ كبيراً ومعه طريقةُ الدفع.** */}
-      <div className="flex items-end justify-between gap-2 rounded-control bg-field px-3 py-2.5">
+      {/* **والإجماليُّ كبيراً، ومين دفع وكيف، وتحته الأجرةُ والعمولة** (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}
+      <div className={`flex items-end justify-between gap-2 rounded-control px-3 py-2.5 ${muted ? "bg-surface" : "bg-field"}`}>
         <span>
-          <span className="block text-2xs text-ink-muted">{m.admin.ordersPage.total}</span>
-          <Money value={o.total} className="figure block" />
+          <span className="block text-2xs text-ink-muted">{OP.total}</span>
+          <Money value={o.total} className={`figure block ${muted ? "text-ink-muted line-through" : ""}`} />
+          <span className="mt-0.5 block text-xs text-ink-muted">
+            {OP.cardFee.replace("{n}", fmtMoney(o.delivery_fee))}
+            {" · "}
+            {waived > 0 ? (
+              <span className="font-bold text-warning">{OP.cardCommissionWaived.replace("{n}", fmtMoney(waived))}</span>
+            ) : commission > 0 ? (
+              OP.cardCommission.replace("{n}", fmtMoney(commission))
+            ) : (
+              OP.cardNoCommission
+            )}
+          </span>
         </span>
-        <span className="text-end text-xs text-ink-muted">
-          {PAYMENT_LABELS[o.payment_method]}
-          {(o.free_waived ?? 0) > 0 && <span className="block font-bold text-success">{m.admin.ordersPage.freeDelivery}</span>}
+        <span className="text-end text-xs">
+          <span className="block text-2xs text-ink-muted">{OP.cardHowPaid}</span>
+          <span className={`block font-bold ${muted ? "text-ink-muted" : payerIsCash(payer) ? "text-warning" : "text-accent-text"}`}>
+            {payerLabel(o)}
+          </span>
+          {(o.free_waived ?? 0) > 0 && payer !== "free" && <span className="block font-bold text-success">{OP.freeDelivery}</span>}
         </span>
       </div>
 
@@ -2678,6 +2717,24 @@ function HistoryCard({
 
       {/* **أفعالُ ما بعد الفشل** (تسويةُ البضاعة) — وتغيب حين لا شيء. */}
       <div className="flex flex-wrap gap-2 empty:hidden">{actions}</div>
+
+      {waivable && (
+        <Button variant="secondary" className="w-full" onClick={() => setWaiving(true)}>
+          {m.admin.cashOutstanding.waiveBtn}
+        </Button>
+      )}
+      {waiving && (
+        <WaiveCommissionDialog
+          orderId={o.id}
+          orderNumber={o.number}
+          commission={o.commission_taken ?? 0}
+          onClose={() => setWaiving(false)}
+          onDone={(amount) => {
+            setWaiving(false);
+            setWaivedNow(amount);
+          }}
+        />
+      )}
 
       <div className="mt-auto grid grid-cols-1 gap-2 border-t border-line-soft pt-3 sm:grid-cols-2">
         <Button variant="secondary" className="w-full" onClick={onDetails}>
@@ -4553,7 +4610,8 @@ function InvoiceList({
           الباب — **وسؤالٌ يُسأل وحدَه يُجاب في سطرٍ وحدَه.** */}
       <li className="flex items-center justify-between text-xs text-ink-muted">
         <span>{m.admin.ordersPage.payment}</span>
-        <span>{PAYMENT_LABELS[o.payment_method]}</span>
+        {/* **مين دفع بالضبط** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — لا «الدفع عند الاستلام» لكلّ طلب. */}
+        <span>{payerLabel(o)}</span>
       </li>
       <DriverMoneyBox o={o} />
     </ul>

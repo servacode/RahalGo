@@ -359,6 +359,11 @@ type Order struct {
 	//
 	// **وتُملآن في `handleMerchantOrders` بعد المسح** — انظر هناك.
 	PlatformCommission int64 `json:"platform_commission,omitempty"`
+	// CommissionTaken **العمولةُ كما خُزّنت فعلاً** (`orders.platform_commission`) — للطلب المسلَّم
+	// وحدَه وللوحة وحدَها (قرارُ المالك ٢٠٢٦-١٠-٣٠: «أجرة X · عمولة Y» على كرت السجلّ). عرضٌ لا حساب.
+	CommissionTaken *int64 `json:"commission_taken,omitempty"`
+	// CommissionWaived **ما مُحي من عمولته** («ما استلمت العمولة») — للوحة وحدَها، وصفرٌ يغيب.
+	CommissionWaived int64 `json:"commission_waived,omitempty"`
 	// **صافي المتجر** — `subtotal - commission`. **ويُحسب في المحرّك
 	// لا في التطبيق**: أربعةُ تطبيقاتٍ تحسبه أربعَ مرّاتٍ وتختلف.
 	MerchantNet int64 `json:"merchant_net,omitempty"`

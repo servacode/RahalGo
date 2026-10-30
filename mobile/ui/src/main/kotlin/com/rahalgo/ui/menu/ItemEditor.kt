@@ -79,6 +79,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.rahalgo.design.Rahal
@@ -122,7 +124,7 @@ internal val TouchTarget = 44.dp
 private val NumberFieldWidth = 84.dp
 
 /** **حقلُ سعر الخيار في سطره الثاني** — أعرضُ من حقل الغرام ليتّسع لتسميته. */
-private val PriceFieldWidth = 92.dp
+private val PriceFieldWidth = 104.dp
 
 /** **العدّادُ يظهر حين يبقى من الحدّ هذا العددُ أو أقلّ.** */
 private const val NameWarnAt = 5
@@ -906,15 +908,21 @@ private fun OptionRow(
  */
 @Composable
 private fun AvailSwitch(available: Boolean, busy: Boolean, onAvailable: (Boolean) -> Unit) {
+    // **بجانب المفتاح وبخطٍّ أصغر** (قرارُ المالك ٢٠٢٦-١٠-٣٠: «صغّر الخط ويمشي الحال»).
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
             stringResource(if (available) R.string.mn_available else R.string.mn_unavailable),
             color = if (available) Rahal.colors.success else Rahal.colors.danger,
-            style = MaterialTheme.typography.labelSmall,
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
             maxLines = 1,
         )
-        Spacer(Modifier.width(Rahal.space.xs))
-        Switch(checked = available, enabled = !busy, onCheckedChange = onAvailable)
+        Spacer(Modifier.width(2.dp))
+        Switch(
+            checked = available,
+            enabled = !busy,
+            onCheckedChange = onAvailable,
+            modifier = Modifier.scale(0.85f),
+        )
     }
 }
 

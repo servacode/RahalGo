@@ -230,6 +230,7 @@ var adminPolicy = []Rule{
 	// ── السائقون ────────────────────────────────────────────────
 	{"POST", "/drivers/{id}/settle", FinanceManage},
 	{"GET", "/drivers/{id}/cash", FinanceRead},
+	{"GET", "/drivers/{id}/delivered", FinanceRead},
 	{"GET", "/cash/outstanding", FinanceRead},
 	{"GET", "/cash/outstanding/export", FinanceExport},
 	{"GET", "/cash/merchant-dues", FinanceRead},

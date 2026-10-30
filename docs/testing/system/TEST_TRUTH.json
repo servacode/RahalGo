@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 599,
+    "routes": 600,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -32,9 +32,9 @@
     ],
     "setting_defs": 251,
     "behaviour_settings": 206,
-    "order_fields": 123,
-    "test_files": 675,
-    "test_funcs": 2605
+    "order_fields": 125,
+    "test_files": 676,
+    "test_funcs": 2606
   },
   "flows": [
     {
@@ -7634,6 +7634,12 @@
     {
       "name": "TestSettle_RejectsMoreThanHeld",
       "file": "internal/cashbox/cashbox_test.go",
+      "package": "cashbox_test",
+      "orphan": true
+    },
+    {
+      "name": "TestDelivered_ListsCashAndWalletOrders",
+      "file": "internal/cashbox/delivered_test.go",
       "package": "cashbox_test",
       "orphan": true
     },
