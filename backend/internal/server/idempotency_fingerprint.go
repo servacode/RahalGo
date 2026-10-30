@@ -114,6 +114,9 @@ type fpCustomOrder struct {
 	Lng           float64 `json:"lng"`
 	PaymentMethod string  `json:"payment_method"`
 	Notes         string  `json:"notes"`
+	// PickupLat/Lng **موقعُ الأمانة** (٢٠٢٦-١٠-٣٠) — بـ`omitempty` فبصمةُ ما قبله لا تتبدّل.
+	PickupLat *float64 `json:"pickup_lat,omitempty"`
+	PickupLng *float64 `json:"pickup_lng,omitempty"`
 }
 
 func fingerprintCustomOrder(body []byte) []byte {

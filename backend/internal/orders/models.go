@@ -204,6 +204,10 @@ type Order struct {
 	// (٢٠٢٦-١٠-٠٢). **وكانت تصل السائقَ التالي حين التُقط موضعٌ وحدَه**، فبلا
 	// موضعٍ يذهب إلى مطعمٍ سلّم بضاعتَه وقبض ثمنَها.
 	PickupNote string `json:"pickup_note,omitempty"`
+	// AmanahPickupLat/Lng **موقعُ الأمانة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — حدّده الزبونُ على الخريطة.
+	// **في الأمانة وحدَها** — ويُقرأ من `pickup_override`.
+	AmanahPickupLat *float64 `json:"amanah_pickup_lat,omitempty"`
+	AmanahPickupLng *float64 `json:"amanah_pickup_lng,omitempty"`
 	// Kind **نوعُ الطلب** — `standard` من متجر، و`custom` طلبٌ خاصٌّ بلا متجر.
 	Kind string `json:"kind"`
 	// CustomRequest ما طلبه الزبونُ بلفظه — في الخاصّ وحدَه.

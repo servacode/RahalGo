@@ -35,7 +35,7 @@ import com.rahalgo.design.Rahal
 import com.rahalgo.merchant.R
 import com.rahalgo.shared.merchant.MerchantOrder
 import com.rahalgo.shared.merchant.commissionLabel
-import com.rahalgo.shared.merchant.OrderLine
+import com.rahalgo.ui.toInvoiceLine
 import com.rahalgo.ui.Card
 import com.rahalgo.ui.SumLine
 import com.rahalgo.ui.StatRow
@@ -267,7 +267,8 @@ private fun OrderCard(
             color = Rahal.colors.inkMuted,
             style = MaterialTheme.typography.labelSmall,
         )
-        order.items.forEach { Line(it) }
+        // **الفاتورةُ بشكلها الواحد** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — «شاورما دبل × 3 ...... 90 ل.س».
+        com.rahalgo.ui.InvoiceLines(order.items.map { it.toInvoiceLine() })
 
         // **وملاحظةُ الزبون تُقرأ قبل الصنع لا بعده** — «بلا بصل»
         // تُقرأ بعد أن يُصنع تعني إعادةَ صنعه.
@@ -574,45 +575,6 @@ private fun NextAction(
         )
     }
 }
-
-/** **سطرُ صنفٍ بخياراته** — والخياراتُ جزءٌ ممّا يُصنع لا زينة. */
-@Composable
-private fun Line(line: OrderLine) {
-    Column(Modifier.fillMaxWidth()) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                "${line.qty}×",
-                fontWeight = FontWeight.Bold,
-                color = Rahal.colors.brand,
-                style = MaterialTheme.typography.bodyMedium,
-            )
-            Spacer(Modifier.size(6.dp))
-            Text(line.name, style = MaterialTheme.typography.bodyMedium)
-        }
-        // ══════════════════════════════════════════════════════════════
-        // **والخياراتُ تُقرأ أو يُصنع الطلبُ ناقصاً**
-        // ══════════════════════════════════════════════════════════════
-        //
-        // «كبيرة» و«بلا بصل» و«جبنة إضافيّة» — **من لم يرها صنع صغيرةً
-        // بالبصل بلا جبنة**، فيُردّ الطلبُ ويُحسب عليه.
-        if (line.options.isNotEmpty()) {
-            Text(
-                line.options.joinToString("، ") { it.name },
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-        if (line.note.isNotBlank()) {
-            Text(
-                line.note,
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-        Spacer(Modifier.height(4.dp))
-    }
-}
-
 
 /** **اسمُ الحالة كما يراها صاحبُ المتجر** — لا كما يسمّيها المحرّك. */
 @Composable

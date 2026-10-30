@@ -36,7 +36,6 @@
     <string name="ord_delivery">التوصيل</string>
     <string name="ord_discount">الحسم</string>
     <string name="ord_total">الإجمالي</string>
-    <string name="ord_unit_each">%1$s للواحد</string>
     <string name="ord_placed">وقت الطلب</string>
     <string name="ord_payment">طريقة الدفع</string>
     <string name="ord_address">التوصيل إلى</string>
@@ -113,6 +112,7 @@
     <string name="ord_load_more">تحميل المزيد</string>
     <string name="cst_send">أرسل الطلب</string>
     <string name="cst_need_point">اختر عنوان التوصيل ليعرف السائق أين يوصل</string>
+    <string name="cst_amanah_place">موقع الأمانة</string>    <string name="cst_need_amanah_point">ناقص: موقع الأمانة</string>
     <string name="cst_done">تم إرسال طلبك رقم %1$s — تابعه في «طلباتي»</string>
     <!-- ── الطلب المخصّص: تحديد التكلفة وتأكيدها (Batch 2c) ── -->
     <string name="cst_fee_on_deal">سيتم تحديد أجرة التوصيل بعد قبول السائق.</string>

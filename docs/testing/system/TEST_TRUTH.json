@@ -32,9 +32,9 @@
     ],
     "setting_defs": 251,
     "behaviour_settings": 206,
-    "order_fields": 125,
-    "test_files": 677,
-    "test_funcs": 2610
+    "order_fields": 127,
+    "test_files": 678,
+    "test_funcs": 2611
   },
   "flows": [
     {
@@ -12465,6 +12465,12 @@
     {
       "name": "TestALT_010_DecisionDivergenceInContract",
       "file": "internal/qa/alternatives_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAmanahPickup_DriverSeesPoint",
+      "file": "internal/qa/amanah_pickup_test.go",
       "package": "qa",
       "orphan": true
     },

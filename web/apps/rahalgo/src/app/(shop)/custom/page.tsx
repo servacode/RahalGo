@@ -19,7 +19,7 @@
  */
 
 import Link from "next/link";
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, errorText, fmtMoney, fmtRef } from "@rahalgo/i18n";
 import { Alert, Button, LoadingState, Textarea } from "@rahalgo/ui";
@@ -42,6 +42,9 @@ const MAX_NOTES = 500;
 
 type Mode = "purchase" | "amanah";
 
+/** **خريطةُ الدبّوس الثابت نفسُها التي في «عنوان التوصيل»** — تُحمَّل حين تُطلب. */
+const CenterPinMap = lazy(() => import("@rahalgo/ui/map").then((mod) => ({ default: mod.CenterPinMap })));
+
 export default function CustomOrderPage() {
   const { user, loading } = useAuth();
   const { address, platform, freeDelivery } = useCustomer();
@@ -53,6 +56,8 @@ export default function CustomOrderPage() {
   const [mode, setMode] = useState<Mode>("purchase");
   const [request, setRequest] = useState("");
   const [notes, setNotes] = useState("");
+  // **موقعُ الأمانة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — يحدّده الزبونُ على الخريطة فيراه السائقُ على خريطته.
+  const [pickup, setPickup] = useState<{ lat: number; lng: number } | null>(null);
   const [pickAddr, setPickAddr] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -73,8 +78,11 @@ export default function CustomOrderPage() {
   // **ونصُّ المالك يغلب** (مرآةُ `CustomScreen.kt` ٢٠٢٦-١٠-٢٧) — من كتب في اللوحة سببَه قُرئ كما كتبه.
   const closedText = closed ? platform?.launch.notice.trim() || K.closed : "";
 
+  // **والأمانةُ بلا موقعٍ لا تُرسَل** — المالكُ يريد السائقَ أن يراه. مرآةُ `CustomScreen.kt`.
+  const needAmanahPoint = mode === "amanah" && !pickup;
+
   const send = async () => {
-    if (!address || busy) return;
+    if (!address || busy || needAmanahPoint) return;
     setBusy(true);
     setError("");
     setCode("");
@@ -90,12 +98,14 @@ export default function CustomOrderPage() {
           notes: notes.trim(),
           payment_method: "cash",
           custom_mode: mode,
+          ...(mode === "amanah" && pickup ? { pickup_lat: pickup.lat, pickup_lng: pickup.lng } : {}),
         }),
       });
       clearAttempt(SLOT);
       setRequest("");
       setNotes("");
       setMode("purchase");
+      setPickup(null);
       toast(fill(K.done, { n: fmtRef(ref.number) }));
       router.push(ref.id ? `/orders/${ref.id}` : "/orders");
     } catch (err) {
@@ -150,6 +160,21 @@ export default function CustomOrderPage() {
 
       <AddressChip onOpen={() => setPickAddr(true)} />
 
+      {/* **موقعُ الأمانة على الخريطة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — يلغي «السائقُ يسأل بالدردشة».
+          النقطةُ وحدَها، **و«حدّد موقعي بدقة» في الخريطة نفسِها.** */}
+      {mode === "amanah" && (
+        <section className="surface flex flex-col gap-2 p-4">
+          <h2 className="text-sm font-bold">{K.amanahPlace}</h2>
+          <Suspense fallback={<div className="h-64 w-full animate-pulse rounded-card bg-field" />}>
+            <CenterPinMap
+              lat={pickup?.lat ?? null}
+              lng={pickup?.lng ?? null}
+              onMove={(la: number, ln: number) => setPickup({ lat: la, lng: ln })}
+            />
+          </Suspense>
+        </section>
+      )}
+
       <section className="surface flex flex-col gap-3 p-4">
         <Textarea
           id="custom-notes"
@@ -194,11 +219,12 @@ export default function CustomOrderPage() {
       <Button
         className="w-full py-3 text-base"
         onClick={send}
-        disabled={busy || !request.trim() || !address || !ordering.open || closed || gate.kind === "blocked"}
+        disabled={busy || !request.trim() || !address || needAmanahPoint || !ordering.open || closed || gate.kind === "blocked"}
       >
         {busy ? K.sending : K.send}
       </Button>
       {!address && <p className="text-xs text-ink-muted">{K.needAddress}</p>}
+      {needAmanahPoint && <p className="text-xs text-ink-muted">{K.needAmanahPoint}</p>}
       {error && (
         <Alert>
           {error}

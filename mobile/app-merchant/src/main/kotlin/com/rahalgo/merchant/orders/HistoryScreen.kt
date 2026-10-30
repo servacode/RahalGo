@@ -1,6 +1,7 @@
 package com.rahalgo.merchant.orders
 
 import com.rahalgo.merchant.noStoreMsg
+import com.rahalgo.ui.toInvoiceLine
 import android.app.Application
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -308,16 +309,11 @@ private fun HistoryCard(o: MerchantOrder, reportable: Boolean, onReport: () -> U
         }
         if (o.items.isNotEmpty()) {
             Spacer(Modifier.height(4.dp))
-            Text(
-                // **وبما اختاره الزبون** (تجربةُ المالك ٢٠٢٦-١٠-٢٩) — «بندورة» بلا «كيلو» لا تُجهَّز.
-                o.items.joinToString("\n") { l ->
-                    val opts = l.options.joinToString("، ") { it.name }
-                    "${l.qty}× ${l.name}" + (if (opts.isNotBlank()) " ($opts)" else "") +
-                        (if (l.note.isNotBlank()) " — ${l.note}" else "")
-                },
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
-            )
+            // **الفاتورةُ بشكلها الواحد** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — «بندورة × 1 كيلو ...... 600 ل.س»،
+            // **وبما اختاره الزبون** (تجربةُ المالك ٢٠٢٦-١٠-٢٩) — «بندورة» بلا «كيلو» لا تُجهَّز.
+            com.rahalgo.ui.InvoiceLines(o.items.map { it.toInvoiceLine() })
+            Spacer(Modifier.height(6.dp))
+            HorizontalDivider()
         }
         Spacer(Modifier.height(6.dp))
         // **وثلاثةُ أرقامٍ بشفافية** (بلاغُ المالك ٢٠٢٦-٠٨-٢٦) — **إلّا طلباً انتهى بلا بيع**:

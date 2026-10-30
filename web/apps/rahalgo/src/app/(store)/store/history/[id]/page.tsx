@@ -8,8 +8,8 @@
 
 import { useCallback } from "react";
 import { useParams } from "next/navigation";
-import { getMessages, defaultLocale, fmtMoney, fmtRelStamp } from "@rahalgo/i18n";
-import { LoadingState, ReloadState, useLiveData } from "@rahalgo/ui";
+import { getMessages, defaultLocale, fmtRelStamp } from "@rahalgo/i18n";
+import { InvoiceLines, LoadingState, ReloadState, useLiveData } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import type { MerchantOrder } from "@/lib/store/types";
 import { fill } from "@/lib/customer/texts";
@@ -40,22 +40,8 @@ export default function HistoryOrderPage() {
       <p className="text-xs text-ink-muted">{fmtRelStamp(o.closed_at ?? o.created_at)}</p>
       <section className="surface flex flex-col gap-2 rounded-card p-3">
         <h3 className="heading-card">{S.orders.items}</h3>
-        <ul className="flex flex-col divide-y divide-line">
-          {o.items.map((l) => (
-            <li key={l.id} className="flex flex-col gap-0.5 py-2 text-sm">
-              <span className="flex justify-between gap-2">
-                <span className="font-bold">{`${l.qty}× ${l.name}`}</span>
-                <span>{fmtMoney(l.unit_price * l.qty)}</span>
-              </span>
-              {l.options.length > 0 && (
-                <span className="text-xs text-ink-muted">
-                  {l.options.map((op) => `${op.group}: ${op.name}`).join(m.common.listSep)}
-                </span>
-              )}
-              {l.note && <span className="text-xs text-ink-muted">{l.note}</span>}
-            </li>
-          ))}
-        </ul>
+        {/* **سطرٌ لكلّ عنصر** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — «شاورما دبل × 3 ...... 90 ل.س». */}
+        <InvoiceLines items={o.items} />
         {o.notes && (
           <p className="rounded-control bg-field p-2 text-sm">
             <span className="font-bold">{S.orders.note}: </span>

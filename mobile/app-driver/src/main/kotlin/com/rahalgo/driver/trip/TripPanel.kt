@@ -227,8 +227,20 @@ internal fun TripPanel(state: TripState, arrived: Boolean = false) {
             // (الخادمُ لا يردّه)، **فانتظارٌ لا ينتهي يُقرأ عطباً.**
             // **ولا «جاري حساب الطريق…» في الخاصّ قبل الشراء** (٢٠٢٦-١٠-٠٣) — لا متجرَ يُقصد،
             // **فالعبارةُ تقول ما يفعله**: «اشترِ الطلب، ثمّ يُرسم الطريقُ إلى الزبون».
-            val customBefore = state.order?.kind == "custom" &&
+            // **إلّا أمانةً حدّد الزبونُ موقعَها** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — فالطريقُ إليه يُرسم ويُقال اسمُه.
+            val amanahPoint = state.order?.kind == "custom" && state.order?.customMode == "amanah" &&
+                state.order?.navLat != null && state.order?.navLng != null
+            val customBefore = state.order?.kind == "custom" && !amanahPoint &&
                 state.order?.status in setOf("assigned", "dispatching")
+            if (amanahPoint && state.step < TripStep.PICKED_UP && !arrived) {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    stringResource(R.string.amanah_place),
+                    color = Rahal.colors.brand,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
             if (noPoint || arrived) {
                 Unit
             } else if (customBefore) {

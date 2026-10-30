@@ -505,6 +505,12 @@ data class NewCustom(
     @SerialName("payment_method") val paymentMethod: String = "cash",
     /** **أمانةٌ أم مشتريات** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — `amanah` بلا ثمنِ بضاعة. */
     @SerialName("custom_mode") val customMode: String = "purchase",
+    /**
+     * **موقعُ الأمانة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — الزبونُ يحدّده على الخريطة والسائقُ يراه
+     * على خريطته. **في الأمانة وحدَها**، وفارغٌ لا يُرسَل (`explicitNulls = false`).
+     */
+    @SerialName("pickup_lat") val pickupLat: Double? = null,
+    @SerialName("pickup_lng") val pickupLng: Double? = null,
 )
 
 /** **تأكيدُ عرض السعر** — الطريقةُ، والمبلغُ والنسخةُ اللذان رآهما الزبون. */

@@ -9932,6 +9932,14 @@
         {
           "name": "custom_mode",
           "type": "string"
+        },
+        {
+          "name": "pickup_lat",
+          "type": "?float64"
+        },
+        {
+          "name": "pickup_lng",
+          "type": "?float64"
         }
       ]
     },

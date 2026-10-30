@@ -13,6 +13,7 @@
 
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime, withPlatform } from "@rahalgo/i18n";
 import { Money } from "./money";
+import { InvoiceLines } from "./InvoiceLines";
 import { Button } from "./components";
 import { SheetHeader } from "./layout";
 import { usePlatform } from "./platform";
@@ -28,6 +29,7 @@ export interface InvoiceItem {
   qty: number;
   note?: string;
   options?: { group: string; name: string; price_delta: number }[];
+  drink_for?: string | null;
 }
 
 export interface InvoiceOrder {
@@ -194,58 +196,9 @@ export function Invoice({
           </div>
         )}
 
-        {items.length > 0 && (
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                {/* **رأسٌ يُميَّز بحدٍّ لا بلونٍ**: الألوانُ لا تُطبع، ورأسُ
-                    جدولٍ يذوب في صفوفه يجعل العمودَ الأوّل يُقرأ مبلغاً. */}
-                <tr className="border-b-2 border-line-soft text-2xs uppercase tracking-wide text-ink-muted">
-                  <th className="py-2 text-start font-bold">{V.colItem}</th>
-                  <th className="w-16 py-2 text-end font-bold">{V.colQty}</th>
-                  <th className="w-24 py-2 text-end font-bold">{V.colUnit}</th>
-                  <th className="w-28 py-2 text-end font-bold">{V.colLine}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((it) => (
-                  <tr key={it.id} className="border-b border-line-soft">
-                    <td className="py-2 align-top">
-                      {it.name}
-                      {!!it.options?.length && (
-                        <span className="block text-xs text-ink-muted">
-                          {it.options.map((o) => o.name).join(m.common.listSeparator)}
-                        </span>
-                      )}
-                      {it.note && <span className="block text-xs text-ink-muted">{it.note}</span>}
-                    </td>
-                    {/* **و`dir` على المحتوى لا على الخانة.**
-
-                        (شكوى المالك ٢٠٢٦-٠٨-٠٩ بلقطةِ فاتورة: «المحاذاة مو
-                         مضبوطة» — الرؤوسُ في جهةٍ والأرقامُ في أخرى.)
-
-                        **الخانةُ كانت `dir="ltr"` و`text-end` معاً** — و«النهاية»
-                        تتبع الاتّجاه: **في الرأس (RTL) هي اليسار، وفي الخانة
-                        (LTR) هي اليمين.** فصفٌّ واحدٌ بمحاذاتين.
-
-                        **والاتّجاهُ إنّما أُريد للرقم نفسِه** — ليُقرأ
-                        `30,000` لا معكوساً. **فيُلفّ الرقمُ وحدَه**، وتبقى
-                        الخانةُ على اتّجاه الجدول فتحاذي رأسَها. */}
-                    <td className="py-2 text-end align-top tabular-nums">
-                      <span dir="ltr">{fmtNum(it.qty)}</span>
-                    </td>
-                    <td className="py-2 text-end align-top tabular-nums text-ink-muted">
-                      <span dir="ltr">{fmtNum(it.unit_price)}</span>
-                    </td>
-                    <td className="py-2 text-end align-top font-bold tabular-nums">
-                      <span dir="ltr">{fmtNum(it.unit_price * it.qty)}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        {/* **سطرٌ لكلّ عنصر** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — «شاورما دبل × 3 ...... 90 ل.س»،
+            بلا جدولِ أعمدةٍ ولا سطرِ خياراتٍ ولا «للواحد». */}
+        {items.length > 0 && <InvoiceLines items={items} className="border-b border-line-soft pb-3" />}
 
         {/* الحساب: كل سطر يُجمع مع ما قبله فيبلغ الإجمالي — يُراجَع لا يُصدَّق */}
         {/* **المجاميعُ كتلةٌ إلى المنتهى لا شريطٌ بعرض الورقة.**

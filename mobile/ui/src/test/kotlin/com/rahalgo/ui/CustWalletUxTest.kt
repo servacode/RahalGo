@@ -36,44 +36,32 @@ class CustWalletUxTest {
     private val cart = "app-customer/src/main/kotlin/com/rahalgo/customer/cart/CartScreen.kt"
     private val main = "app-customer/src/main/kotlin/com/rahalgo/customer/MainActivity.kt"
 
-    /** **CUST-WAL-011 · الخيارُ معطّلٌ حين الرصيدُ أقلُّ من المستحقّ.** */
+    /**
+     * **CUST-WAL-011 · المحفظةُ لا تُعرض حين لا يكفي رصيدُها** (قرارُ المالك ٢٠٢٦-١٠-٣٠:
+     * «من محفظتي ما تطلع أبداً إلّا إذا الرصيد بيكفي» — كانت خياراً معطّلاً).
+     */
     @Test
-    fun walletOptionDisabledWhenInsufficient() {
+    fun walletOptionHiddenWhenInsufficient() {
         val s = read(cart)
         assertTrue(
             "**لا يُحسَب `walletBlocked` من الإجماليّ المستحقّ**",
-            s.contains("val walletBlocked = payableTotal != null && walletBalance < payableTotal"),
+            s.contains("val walletBlocked = payableTotal == null || walletBalance < payableTotal"),
         )
         assertTrue(
-            "**خيارُ المحفظة لا يُعطَّل** (`enabled = !walletBlocked`)",
-            s.contains("enabled = !walletBlocked"),
-        )
-        // **والمعطّلُ لا يُضغط** — `PayChoice(enabled=false)` بلا `clickable`
-        val pay = s.substring(s.indexOf("private fun PayChoice("))
-        assertTrue(
-            "**الخيارُ المعطّلُ ما زال قابلاً للضغط**",
-            pay.contains("if (enabled) Modifier.clickable(onClick = onPick) else Modifier"),
+            "**المحفظةُ لا تغيب حين لا تكفي** — يجب سطرُ «نقداً عند الاستلام» بدل الخيارين",
+            s.contains("if (walletBlocked) {") && s.contains("R.string.ord_pay_cash_only"),
         )
     }
 
     /**
-     * **CUST-WAL-012 · جملةٌ واحدةٌ موجزةٌ بالرصيد + بديلُ النقد** (تصحيحُ المالك
-     * ٢٠٢٦-٠٩-٢١): «رصيد محفظتك {balance} ل.س غير كافٍ لإتمام الطلب» + «يمكنك الدفع
-     * نقدًا عند الاستلام».
+     * **CUST-WAL-012 · ولا رسالةَ رصيدٍ تُخيف** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — لا «رصيد محفظتك
+     * غير كافٍ» ولا «يمكنك الدفع نقدًا»: الزبونُ لا يظنّ أنّ عليه شحنَ محفظته ليطلب.
      */
     @Test
-    fun showsBalanceAndReason() {
+    fun noInsufficientBalanceMessage() {
         val s = read(cart)
-        // السببُ والرصيدُ في جملةٍ واحدةٍ ديناميكيّة (لا سطرَين)
-        assertTrue(
-            "**السببُ لا يحمل الرصيدَ ديناميكيّاً** — يجب `cart_wallet_insufficient, money(walletBalance)`",
-            s.contains("R.string.cart_wallet_insufficient, money(walletBalance)"),
-        )
-        // بديلُ الدفع نقداً يُقال حين المحفظةُ لا تكفي (والنقدُ صالح)
-        assertTrue(
-            "**لا يُذكَر بديلُ الدفع نقداً عند الاستلام**",
-            s.contains("cart_wallet_cod_hint"),
-        )
+        assertFalse("**عادت رسالةُ «رصيدك غير كافٍ»**", s.contains("R.string.cart_wallet_insufficient"))
+        assertFalse("**عاد سطرُ «يمكنك الدفع نقدًا»**", s.contains("R.string.cart_wallet_cod_hint"))
     }
 
     /**

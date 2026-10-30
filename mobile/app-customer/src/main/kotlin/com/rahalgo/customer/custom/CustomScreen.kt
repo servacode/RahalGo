@@ -83,6 +83,9 @@ fun CustomScreen(
     // **أمانةٌ أم مشتريات** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — «إذا أمانة النظامُ يفهم أنّه ما في حقُّ
     // بضاعة، وإذا مشتريات في حقُّ بضاعة».
     var mode by vm::draftMode
+    // **موقعُ الأمانة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — يُحدَّد على الخريطة فيراه السائقُ على خريطته.
+    var pickupLat by vm::draftPickupLat
+    var pickupLng by vm::draftPickupLng
     // ══════════════════════════════════════════════════════════════════
     // **ولا تُختار طريقةُ الدفع هنا** — Batch 2c (قرارُ المالك)
     // ══════════════════════════════════════════════════════════════════
@@ -135,6 +138,8 @@ fun CustomScreen(
     LaunchedEffect(vm.sent) {
         if (vm.sent == 0) return@LaunchedEffect
         mode = "purchase"
+        pickupLat = null
+        pickupLng = null
         request = ""
         notes = ""
         vm.consumeSent()
@@ -217,6 +222,32 @@ fun CustomScreen(
         Spacer(Modifier.height(12.dp))
         AddressCard(address, onOpenAddresses)
 
+        // ══════════════════════════════════════════════════════════════
+        // **موقعُ الأمانة على الخريطة** (قرارُ المالك ٢٠٢٦-١٠-٣٠)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **يلغي قرارَ ٢٠٢٦-١٠-١٦** («لا خانات استلام، السائقُ يسأل بالدردشة»): الزبونُ
+        // يضع الدبّوسَ حيث الأمانة، **والسائقُ يراه على خريطته ويُقاد إليه.** النقطةُ وحدَها —
+        // لا اسمَ ولا رقم. **والخريطةُ نفسُها التي في «عنوان التوصيل»** (`PointMapCard`).
+        if (mode == "amanah") {
+            Spacer(Modifier.height(12.dp))
+            Text(
+                stringResource(R.string.cst_amanah_place),
+                style = MaterialTheme.typography.labelLarge,
+            )
+            Spacer(Modifier.height(4.dp))
+            com.rahalgo.map.PointMapCard(
+                lat = pickupLat,
+                lng = pickupLng,
+                pending = false,
+                enabled = !vm.busy,
+                onPoint = { la, ln ->
+                    pickupLat = la
+                    pickupLng = ln
+                },
+            )
+        }
+
         Spacer(Modifier.height(10.dp))
         OutlinedTextField(
             value = notes,
@@ -281,16 +312,21 @@ fun CustomScreen(
         }
         }
         Spacer(Modifier.height(16.dp))
+        // **والأمانةُ بلا موقعٍ لا تُرسَل** — المالكُ يريد السائقَ أن يراه.
+        val needAmanahPoint = mode == "amanah" && (pickupLat == null || pickupLng == null)
         RahalButton(
             onClick = {
                 address?.let {
                     // **بلا اختيار دفعٍ من الزبون** — المحرّكُ يستعمل نقداً
                     // افتراضاً آمناً، والاختيارُ الحقيقيُّ عند تأكيد العرض.
-                    vm.send(request.trim(), it.text, it.lat, it.lng, notes.trim(), "cash", mode)
+                    vm.send(
+                        request.trim(), it.text, it.lat, it.lng, notes.trim(), "cash", mode,
+                        pickupLat.takeIf { mode == "amanah" }, pickupLng.takeIf { mode == "amanah" },
+                    )
                 }
             },
             // **والإغلاقُ يُطفئ الزرَّ والسببُ فوقُ مكتوب** — لا يُرَدّ بعد الكتابة.
-            enabled = !vm.busy && request.isNotBlank() && address != null &&
+            enabled = !vm.busy && request.isNotBlank() && address != null && !needAmanahPoint &&
                 Serving.available && Serving.customOrdersOpen,
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -325,6 +361,14 @@ fun CustomScreen(
                 style = MaterialTheme.typography.bodySmall,
             )
         }
+        if (needAmanahPoint) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.cst_need_amanah_point),
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
         Spacer(Modifier.height(28.dp))
     }
 }
@@ -335,6 +379,8 @@ class CustomViewModel(app: Application) : AndroidViewModel(app) {
     var draftRequest by mutableStateOf("")
     var draftNotes by mutableStateOf("")
     var draftMode by mutableStateOf("purchase")
+    var draftPickupLat by mutableStateOf<Double?>(null)
+    var draftPickupLng by mutableStateOf<Double?>(null)
 
     private val api = CustomerApi(AppCore.get().api)
 
@@ -408,6 +454,8 @@ class CustomViewModel(app: Application) : AndroidViewModel(app) {
         notes: String,
         payment: String,
         mode: String = "purchase",
+        pickupLat: Double? = null,
+        pickupLng: Double? = null,
     ) {
         if (busy) return
         busy = true
@@ -421,7 +469,10 @@ class CustomViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 val ref = api.createCustom(
-                    NewCustom(request, address, lat, lng, notes, payment, customMode = mode),
+                    NewCustom(
+                        request, address, lat, lng, notes, payment, customMode = mode,
+                        pickupLat = pickupLat, pickupLng = pickupLng,
+                    ),
                     attemptKey = key,
                 )
                 com.rahalgo.ui.Attempt.clear(com.rahalgo.ui.Attempt.CUSTOM)

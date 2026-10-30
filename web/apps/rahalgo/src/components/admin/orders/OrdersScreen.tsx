@@ -54,6 +54,8 @@ import {
   IconSwap,
   IconWarning,
   Invoice,
+  invoiceLineText,
+  invoiceOrder,
   FormActions,
   SearchSelect,
   Radio,
@@ -286,6 +288,8 @@ interface OrderRow {
     qty: number;
     note: string;
     options: { group: string; name: string; price_delta: number }[];
+    /** **مشروبُ بندٍ آخر** (`drink_for`، ٢٠٢٦-١٠-٣٠) — سطرٌ بعد صنفه. */
+    drink_for?: string | null;
   }[];
   events?: {
     from_status: string;
@@ -606,31 +610,6 @@ const PROOF_STATUSES = new Set(["delivered", "refunded"]);
  * **وهي القاعدةُ نفسُها التي أخفت إثباتَ التسليم**: حقلٌ يظهر فارغاً قبل أوانه
  * **يُتعلَّم تجاهلُه، ثمّ يمتلئ يوماً فلا يُنظر إليه.**
  */
-
-/**
- * **سعرُ الصنف عارياً من إضافاته.**
- *
- * # وتصحيحُ خطأ
- *
- * `order_items.unit_price` **يشمل فروقَ الخيارات أصلاً**: المحرّكُ يجمعها فيه
- * عند الإنشاء (`it.UnitPrice += delta` في `priceItems`)، **و`subtotal` حاصلُ
- * ضربه في الكمّية.**
- *
- * فكتبتُ دالّةً تجمعها **مرّةً ثانية**، فظهر السطرُ `٣٧٬٥٠٠` وقيمةُ الطلب
- * `٣٢٬٥٠٠` — **ورقمان لواقعةٍ واحدةٍ يتناقضان في شاشةٍ واحدة.** كشفه المالكُ
- * في فاتورته (٢٠٢٦-٠٨-٠٤).
- *
- * **والصوابُ الطرحُ لا الجمع**: الصنفُ عارياً = المحفوظ − مجموعُ الفروق.
- */
-function basePrice(it: {
-  unit_price: number;
-  options?: { price_delta: number }[];
-}): number {
-  return (
-    it.unit_price -
-    (it.options ?? []).reduce((s, x) => s + (x.price_delta || 0), 0)
-  );
-}
 
 // أزرار الانتقال المتاحة للعمليات/الأدمن حسب الحالة (مرآة لخارطة الخادم)
 const OPS_NEXT: Record<string, string[]> = {
@@ -4439,75 +4418,41 @@ function InvoiceList({
 
   return (
     <ul className="space-y-1.5">
-      {(o.items ?? []).map((it) => {
-        /** **الخياراتُ صنفان**: ما لا سعرَ له يُلحق بالاسم، وما له سعرٌ
-                يُفرد سطراً. **و«عادي» ليس بنداً في الفاتورة** — هو وصفٌ للصنف،
-                **و«جبنة» بند** لأنّها زادت الحساب. */
-        const free = (it.options ?? []).filter((x) => !x.price_delta);
-        const paid = (it.options ?? []).filter((x) => x.price_delta > 0);
-        return (
-          <li key={it.id}>
-            <span className="flex items-start gap-2">
-              <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-badge bg-primary" />
-              <span className="min-w-0 flex-1">
-                <span className="font-medium">{it.name}</span>
-                {free.length > 0 && (
-                  <span className="text-ink-muted">
-                    {" "}
-                    {free.map((x) => x.name).join(m.common.listSeparator)}
-                  </span>
-                )}
-                <span className="font-bold text-primary-dark">
-                  {" "}
-                  ×{fmtNum(it.qty)}
+      {/* **سطرٌ لكلّ عنصر** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — «شاورما دبل × 3 ...... 90 ل.س»: قيمُ الخيارات
+          مع الاسم (والوزنُ والنمرةُ بعد العدد)، **ومجموعُ السطر = سعرُ الوحدة × العدد**، والمشروبُ سطرٌ
+          بعد صنفه. لا سطرَ إضافاتٍ ولا «للواحد». */}
+      {invoiceOrder(o.items ?? []).map((it) => (
+        <li key={it.id}>
+          <span className="flex items-start gap-2">
+            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-badge bg-primary" />
+            <span className="min-w-0 flex-1">
+              <span className="font-medium">{invoiceLineText(it.name, it.qty, it.options)}</span>
+              {it.note && (
+                <span className="block text-xs text-accent-dark">
+                  <IconEdit size={11} className="inline align-[-1px]" />{" "}
+                  {it.note}
                 </span>
-                {it.note && (
-                  <span className="block text-xs text-accent-dark">
-                    <IconEdit size={11} className="inline align-[-1px]" />{" "}
-                    {it.note}
-                  </span>
-                )}
-              </span>
-              {/* **و«غير متوفر» في الوسط والسعرُ آخرَ السطر** (المالك ٢٠٢٦-١٠-٢٢) — فتصطفّ
-                  المبالغُ كلُّها تحت بعضها. */}
-              {canUnavail && (
-                <button
-                  type="button"
-                  className="shrink-0 rounded-control px-1.5 text-2xs text-danger hover:bg-row-hover"
-                  onClick={() => {
-                    setUnavail({ id: it.id, name: it.name, qty: it.qty });
-                    setUnavailQty("");
-                    setUnavailErr("");
-                  }}
-                >
-                  {OP.itemUnavailable}
-                </button>
               )}
-              {/* **سعرُ الصنف عارياً × الكمّية** — والإضافاتُ تحته بأسعارها،
-               **فمجموعُ السطور يبلغ قيمةَ الطلب بلا نقصٍ ولا فائض.** */}
-              <Money
-                value={basePrice(it) * it.qty}
-                small
-                className="shrink-0"
-              />
             </span>
-
-            {/* **وكلُّ إضافةٍ بسطرها وسعرها** — قرارُ المالك (٢٠٢٦-٠٨-٠٤). */}
-            {paid.map((x, i) => (
-              <span key={i} className="flex items-center gap-2 ps-4 text-sm">
-                <span className="min-w-0 flex-1 text-ink-muted">
-                  + {x.name}
-                </span>
-                <Money
-                  value={x.price_delta * it.qty}
-                  small
-                  className="shrink-0 text-accent-dark"
-                />
-              </span>
-            ))}
-          </li>
-        );
-      })}
+            {/* **و«غير متوفر» في الوسط والسعرُ آخرَ السطر** (المالك ٢٠٢٦-١٠-٢٢) — فتصطفّ
+                المبالغُ كلُّها تحت بعضها. */}
+            {canUnavail && (
+              <button
+                type="button"
+                className="shrink-0 rounded-control px-1.5 text-2xs text-danger hover:bg-row-hover"
+                onClick={() => {
+                  setUnavail({ id: it.id, name: it.name, qty: it.qty });
+                  setUnavailQty("");
+                  setUnavailErr("");
+                }}
+              >
+                {OP.itemUnavailable}
+              </button>
+            )}
+            <Money value={it.unit_price * it.qty} small className="shrink-0" />
+          </span>
+        </li>
+      ))}
       {(o.items ?? []).length === 0 && <li className="text-ink-muted">—</li>}
       <Modal
         open={unavail != null}

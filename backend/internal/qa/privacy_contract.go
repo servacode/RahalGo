@@ -236,11 +236,13 @@ var OrderPrivacy = map[string]FieldRule{
 	// ── الطلبُ الخاصّ ──────────────────────────────────────────────
 	// **«لدي توصيلة»** (الخطوة ١٨) — للسائق والإدارة، **وللمتجر في توصيلته وحدَها**
 	// (`AudienceMerchantDelivery`) لا في جمهوره العامّ.
-	"parcel_note":   {Ref: "ما يحمله السائق — كتبه المتجر", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
-	"driver_fee":    {Ref: "قسمةُ الأجرة بين السائق والمنصّة — للمكتب وحدَه (٢٠٢٦-١٠-١٣)", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
-	"fee_payer":     {Ref: "من يدفع الأجرة — ومن يقبض منه السائق", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
-	"pickup_note":   {Ref: "أين البضاعةُ بعد طارئ — للسائق التالي (٢٠٢٦-١٠-٠٢)", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
-	"dropoff_known": {Ref: "أنقطةُ التسليم معروفة — وإلّا لا يُتبَع المسار", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"parcel_note":       {Ref: "ما يحمله السائق — كتبه المتجر", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"driver_fee":        {Ref: "قسمةُ الأجرة بين السائق والمنصّة — للمكتب وحدَه (٢٠٢٦-١٠-١٣)", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	"fee_payer":         {Ref: "من يدفع الأجرة — ومن يقبض منه السائق", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"pickup_note":       {Ref: "أين البضاعةُ بعد طارئ — للسائق التالي (٢٠٢٦-١٠-٠٢)", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"amanah_pickup_lat": {Ref: "موقعُ الأمانة — حدّده الزبون ويراه السائق (٢٠٢٦-١٠-٣٠)", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"amanah_pickup_lng": {Ref: "موقعُ الأمانة — حدّده الزبون ويراه السائق (٢٠٢٦-١٠-٣٠)", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"dropoff_known":     {Ref: "أنقطةُ التسليم معروفة — وإلّا لا يُتبَع المسار", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	// **ووضعُ التوصيلة والمبلغُ الذي يُقبض من المستلِم** (قرارُ المالك ٢٠٢٦-١٠-١٥) — للسائق والإدارة،
 	// **وللمتجر في توصيلته وحدَها** (`AudienceMerchantDelivery`). والمبلغُ عرضٌ لا يدخل الدفتر.
 	"delivery_mode":  {Ref: "توصيلٌ أم إحضار — ترتيبُ وقفتَي السائق", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},

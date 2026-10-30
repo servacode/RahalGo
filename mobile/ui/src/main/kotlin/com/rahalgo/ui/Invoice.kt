@@ -1,0 +1,152 @@
+package com.rahalgo.ui
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.rahalgo.design.Rahal
+import com.rahalgo.shared.merchant.OrderLine
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **الفاتورةُ سطرٌ لكلّ عنصر — بشكلٍ واحدٍ في كلّ التطبيقات** (قرارُ المالك ٢٠٢٦-١٠-٣٠)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * «شاورما دبل × 3 ........ 90 ل.س» · «بندورة × 1 كيلو ........ 600 ل.س» ·
+ * «بوط أسود × 1 نمرة 40 ........ 9,100 ل.س»: **النصُّ في البداية ومجموعُ السطر
+ * في النهاية** — لا سطرَ خياراتٍ ولا «للواحد» ولا عمودَ عدد. **ولا يُكتب اسمُ
+ * مجموعة الخيار** («وزن ثقيل»، «الحجم»). **والمشروبُ (`drink_for`) سطرٌ بعد صنفه.**
+ */
+data class InvoiceLine(
+    val id: String = "",
+    val drinkFor: String? = null,
+    val text: String,
+    /** **مجموعُ السطر** = سعرُ الوحدة × العدد — و`null`: لا يرى صاحبُ الشاشة السعر. */
+    val amount: Long? = null,
+    /** **ملاحظةُ الزبون على الصنف** («بلا بصل») — تُقرأ قبل الصنع. */
+    val note: String = "",
+)
+
+private val weightWord = Regex("كيلو|كغ|غرام|(^|\\s|[0-9٠-٩])غ$")
+private val numberOnly = Regex("^[0-9٠-٩]+([.,٫][0-9٠-٩]+)?$")
+
+/**
+ * **نصُّ سطر الفاتورة — القاعدةُ في مكانٍ واحد.**
+ *
+ * - **الوزنُ** (مجموعةٌ فيها «وزن» أو قيمةٌ بالكيلو/الغرام) بعد العدد كما هو: «× 1 كيلو».
+ * - **الرقمُ المجرّد** (نمرةُ حذاء) بعد العدد: «× 1 نمرة 40» — ولمجموعةٍ رقميّةٍ غيرِها
+ *   اسمُها مختصراً بلا «ال».
+ * - **وكلُّ قيمةٍ غيرِها** (دبل، أسود، L) تُلحق بالاسم.
+ *
+ * `options` أزواجُ (المجموعة، القيمة)، والمجموعةُ قد تكون فارغةً لمن لا يعرفها.
+ */
+fun invoiceLineText(name: String, qty: Int, options: List<Pair<String, String>>): String {
+    val plain = ArrayList<String>()
+    val after = ArrayList<String>()
+    options.forEach { (rawGroup, rawValue) ->
+        val group = rawGroup.trim()
+        val value = rawValue.trim()
+        if (value.isEmpty()) return@forEach
+        when {
+            group.contains("وزن") || weightWord.containsMatchIn(value) -> after += value
+            numberOnly.matches(value) -> {
+                val short = group.removePrefix("ال").trim()
+                after += when {
+                    short.startsWith("نمرة") -> "نمرة $value"
+                    short.isNotEmpty() -> "$short $value"
+                    else -> value
+                }
+            }
+            else -> plain += value
+        }
+    }
+    val head = if (plain.isEmpty()) name.trim() else name.trim() + " " + plain.joinToString("، ")
+    val tail = if (after.isEmpty()) "" else " " + after.joinToString(" ")
+    return "$head × $qty$tail"
+}
+
+/**
+ * **كلُّ صنفٍ ثمّ مشروباتُه** — المحرّكُ يرسلها هكذا (`ORDER BY COALESCE(drink_for, id)`)،
+ * **والترتيبُ هنا حارسٌ.** ومشروبٌ لا صنفَ له في القائمة يُلحق آخراً ولا يضيع.
+ */
+fun invoiceOrder(lines: List<InvoiceLine>): List<InvoiceLine> {
+    val drinks = lines.filter { it.drinkFor != null }.groupBy { it.drinkFor }
+    val out = ArrayList<InvoiceLine>(lines.size)
+    lines.filter { it.drinkFor == null }.forEach { item ->
+        out += item
+        if (item.id.isNotEmpty()) drinks[item.id]?.let { out += it }
+    }
+    lines.filter { it.drinkFor != null && it !in out }.forEach { out += it }
+    return out
+}
+
+/** **بندُ طلبٍ من المحرّك سطراً في الفاتورة** — المتجرُ يرى سعرَ البيع كما اليوم. */
+fun OrderLine.toInvoiceLine(): InvoiceLine = InvoiceLine(
+    id = id,
+    drinkFor = drinkFor,
+    text = invoiceLineText(name, qty, options.map { it.group to it.name }),
+    amount = unitPrice * qty,
+    note = note,
+)
+
+/** **أسطرُ الأصناف** — كلٌّ في سطرٍ: النصُّ في البداية والمبلغُ في النهاية. */
+@Composable
+fun InvoiceLines(lines: List<InvoiceLine>, modifier: Modifier = Modifier) {
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        invoiceOrder(lines).forEach { l ->
+            Column(Modifier.fillMaxWidth()) {
+                InvoiceRow(l.text, l.amount?.let { money(it) }, bold = true)
+                if (l.note.isNotBlank()) {
+                    Text(
+                        l.note,
+                        color = Rahal.colors.inkMuted,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * **سطرٌ واحد** — للأصناف وللمجموع والتوصيل والخصم والإجماليّ تحت الخطّ.
+ * `strong` للإجماليّ، و`amount` فارغٌ: سطرٌ بلا مبلغ.
+ */
+@Composable
+fun InvoiceRow(
+    label: String,
+    amount: String?,
+    strong: Boolean = false,
+    bold: Boolean = false,
+    amountColor: Color = Color.Unspecified,
+) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            label,
+            color = if (strong || bold) Rahal.colors.ink else Rahal.colors.inkMuted,
+            fontWeight = if (strong || bold) FontWeight.Bold else FontWeight.Normal,
+            style = if (strong) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.bodySmall,
+            modifier = Modifier.weight(1f),
+        )
+        if (amount != null) {
+            Spacer(Modifier.width(12.dp))
+            Text(
+                amount,
+                color = if (amountColor != Color.Unspecified) amountColor else if (strong) Rahal.colors.brand else Rahal.colors.ink,
+                fontWeight = if (strong) FontWeight.Bold else FontWeight.Normal,
+                style = (if (strong) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.bodySmall)
+                    .copy(fontFeatureSettings = "tnum"),
+            )
+        }
+    }
+}

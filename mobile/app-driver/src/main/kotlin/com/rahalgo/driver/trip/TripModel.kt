@@ -645,9 +645,17 @@ fun fixedCustomFee(order: DriverOrder): Long? =
         null
     }
 
-/** **الأصنافُ سطراً سطراً** — «وجبة شاورما × ٢ (دبل، جبنة)». */
+/**
+ * **الأصنافُ سطراً سطراً بشكل الفاتورة الواحد** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — «شاورما دبل × 2»،
+ * «بندورة × 1 كيلو». **والمحرّكُ لا يرسل للسائق سعرَ البند** فلا مبلغَ في آخر السطر،
+ * **ولا اسمَ المجموعة** (الخياراتُ نصٌّ واحدٌ بـ«، ») فالقاعدةُ تُطبَّق على القيم وحدَها.
+ */
 fun itemsText(order: DriverOrder): String = order.items.joinToString("\n") { it ->
-    it.name + " × " + it.qty + if (it.options.isNotBlank()) " (" + it.options + ")" else ""
+    com.rahalgo.ui.invoiceLineText(
+        it.name,
+        it.qty,
+        it.options.split("، ").map { v -> "" to v }.filter { p -> p.second.isNotBlank() },
+    )
 }
 
 fun cashFrom(order: DriverOrder, pickedUp: Boolean): CashFrom {

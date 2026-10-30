@@ -318,6 +318,8 @@ private fun OrderCard(
         // **و`kind` من المحرّك لا من الاسم**: متجرٌ يسمّي نفسَه «طلب
         // خاصّ» يُقرأ خاصّاً لو قيس بالاسم.
         val custom = order.kind == "custom"
+        // **وموقعُ الأمانة على الخريطة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — حدّده الزبون، فتُقال المسافةُ إليه.
+        val amanahPoint = custom && order.customMode == "amanah" && order.navLat != null && order.navLng != null
 
         // ══════════════════════════════════════════════════════════════
         // **الرأس ثلاثة: المتجر · الشارة · الرقم**
@@ -518,12 +520,13 @@ private fun OrderCard(
         // **ولا سطرَ إلى متجرٍ لا وجودَ له** — الخاصُّ لا مصدرَ له حتّى
         // يقوله الزبون. **وكان يُكتب «المسافة إلى (طلب خاصّ)» بلا مسافةٍ
         // ولا عنوان** — سطرٌ يشغل مكاناً ولا يقول شيئا.
-        if (!custom) Leg(
+        if (!custom || amanahPoint) Leg(
             label = stringResource(
                 R.string.card_dist_to,
-                order.merchantName.ifBlank { stringResource(R.string.nav_custom_order) },
+                if (amanahPoint) stringResource(R.string.amanah_place)
+                else order.merchantName.ifBlank { stringResource(R.string.nav_custom_order) },
             ),
-            value = order.pickupAddress,
+            value = if (amanahPoint) "" else order.pickupAddress,
             far = if (order.toPickupM >= 0) distance(order.toPickupM) else "",
             // **والزمن بجانب المسافة** — (قرار المالك ٢٠٢٦-٠٨-١٢).
             //

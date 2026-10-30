@@ -15,12 +15,12 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { getMessages, defaultLocale, errorText, fmtMoney, fmtNum, fmtRef, fmtSpan } from "@rahalgo/i18n";
-import { Alert, Button, Chips, Confirm, Money } from "@rahalgo/ui";
+import { getMessages, defaultLocale, errorText, fmtRef, fmtSpan } from "@rahalgo/i18n";
+import { Alert, Button, Chips, Confirm, InvoiceLines, Money } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
 import { fill, stageLabel } from "@/lib/customer/texts";
-import { ENDED, type MyOrder, type MyOrderLine } from "@/lib/customer/types";
+import { ENDED, type MyOrder } from "@/lib/customer/types";
 
 const m = getMessages(defaultLocale);
 const O = m.shop.orders;
@@ -388,102 +388,67 @@ export function QuoteDialog({
   );
 }
 
-/**
- * **ترتيبُ البنود: كلُّ صنفٍ ثمّ مشروباتُه** — مرآةُ `invoiceOrder`. المحرّكُ يرسلها هكذا
- * أصلاً، **والترتيبُ هنا حارسٌ**؛ ومشروبٌ لا صنفَ له يُلحق آخراً ولا يضيع.
- */
-export function invoiceOrder(lines: MyOrderLine[]): MyOrderLine[] {
-  const out: MyOrderLine[] = [];
-  for (const item of lines.filter((l) => !l.drink_for)) {
-    out.push(item);
-    out.push(...lines.filter((l) => l.drink_for === item.id));
-  }
-  out.push(...lines.filter((l) => l.drink_for && !out.includes(l)));
-  return out;
-}
-
-/** **سطرُ الخيارات تحت الاسم** — «الحجم: عادي، حار». مرآةُ `invoiceOptions`. */
-export function invoiceOptions(l: MyOrderLine): string {
-  return (l.options ?? [])
-    .filter((o) => o.name.trim() !== "")
-    .map((o) => (o.group && o.group.trim() !== "" ? `${o.group}: ${o.name}` : o.name))
-    .join(m.common.listSep);
+/** **سطرٌ واحد** — النصُّ في البداية والمبلغُ في النهاية. */
+function Line({ label, className = "", children }: { label: string; className?: string; children: React.ReactNode }) {
+  return (
+    <div className={`flex items-baseline justify-between gap-3 ${className}`}>
+      <span className="min-w-0">{label}</span>
+      <span className="shrink-0 tabular-nums">{children}</span>
+    </div>
+  );
 }
 
 /**
  * ══════════════════════════════════════════════════════════════════════
- * **الفاتورةُ جدولٌ — كلُّ عنصرٍ بسطره** (قرارُ المالك ٢٠٢٦-١٠-٣٠، الثانية) — مرآةُ `InvoiceTable`
+ * **الفاتورةُ سطرٌ لكلّ عنصر — بقاعدة الشاشات كلِّها** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — مرآةُ `InvoiceTable`
  * ══════════════════════════════════════════════════════════════════════
  *
- * ثلاثةُ أعمدةٍ في شبكةٍ واحدة: **الاسمُ عريضاً** · «× العدد» بالوسط · مجموعُ البند في النهاية
- * بأرقامٍ متساوية العرض. **والخياراتُ سطرٌ صغيرٌ باهتٌ تحت الاسم**، **والمشروبُ (`drink_for`)
- * سطرٌ مثلُ الأصناف** بعد صنفه. ثمّ خطٌّ فالمجموعُ والتوصيلُ والخصمُ والإجماليُّ **في الأعمدة
- * نفسِها** (`totals`). **والفاتورةُ كلُّها تُرى** — لا «الفاتورة كاملة».
+ * «شاورما دبل × 3 ........ 90 ل.س» · «بندورة × 1 كيلو» · «بوط أسود × 1 نمرة 40». **والنصُّ
+ * من `InvoiceLines`/`invoiceLineText` المشترك** (`@rahalgo/ui`) — لا اسمَ مجموعة خيار، والوزنُ
+ * والنمرةُ بعد العدد، والمشروبُ سطرٌ بعد صنفه. ثمّ خطٌّ فالمجموعُ والتوصيلُ والخصمُ والإجماليّ
+ * (`totals`). **والفاتورةُ كلُّها تُرى.**
  */
 export function OrderInvoice({ order, totals = false }: { order: MyOrder; totals?: boolean }) {
-  const lines = invoiceOrder(order.items ?? []);
+  const lines = order.items ?? [];
   if (lines.length === 0) return null;
-  const amount = "text-end tabular-nums whitespace-nowrap";
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_2.75rem_auto] items-start gap-x-2 gap-y-2 text-sm">
-      {lines.map((l) => {
-        const opts = invoiceOptions(l);
-        return (
-          <div key={l.id} className="contents">
-            <span className="flex min-w-0 flex-col">
-              <span className="font-bold">{l.name}</span>
-              {opts && <span className="text-xs text-ink-muted">{opts}</span>}
-              {l.qty > 1 && (
-                <span className="text-xs text-ink-muted tabular-nums">
-                  {fill(O.unitEach, { amount: fmtMoney(l.unit_price) })}
-                </span>
-              )}
-            </span>
-            <span className="text-center tabular-nums">× {fmtNum(l.qty)}</span>
-            <Money value={l.unit_price * l.qty} className={amount} />
-          </div>
-        );
-      })}
+    <div className="flex flex-col gap-1.5 text-sm">
+      <InvoiceLines items={lines} />
       {totals && (
-        <>
-          <span className="col-span-3 border-t border-line-soft" aria-hidden />
+        <div className="mt-1 flex flex-col gap-1 border-t border-line-soft pt-2">
           {order.subtotal > 0 && (
-            <>
-              <span className="text-ink-muted">{O.subtotal}</span>
-              <span />
-              <Money value={order.subtotal} className={amount} />
-            </>
+            <Line label={O.subtotal} className="text-ink-muted">
+              <Money value={order.subtotal} className="text-ink" />
+            </Line>
           )}
-          <span className="text-ink-muted">{O.delivery}</span>
-          <span />
-          {(order.free_waived ?? 0) > 0 ? (
-            <span className="flex flex-col items-end">
-              <s className="text-xs text-ink-muted tabular-nums">
-                <Money value={order.delivery_fee + (order.free_waived ?? 0)} small />
-              </s>
-              {order.delivery_fee > 0 ? (
-                <Money value={order.delivery_fee} className={amount} />
-              ) : (
-                <span className="font-bold text-success">{m.shop.free.badge}</span>
-              )}
-            </span>
-          ) : (
-            <Money value={order.delivery_fee} className={amount} />
-          )}
+          <Line label={O.delivery} className="text-ink-muted">
+            {(order.free_waived ?? 0) > 0 ? (
+              <span className="flex items-baseline gap-2">
+                <s className="text-xs">
+                  <Money value={order.delivery_fee + (order.free_waived ?? 0)} small />
+                </s>
+                {order.delivery_fee > 0 ? (
+                  <Money value={order.delivery_fee} className="text-ink" />
+                ) : (
+                  <span className="font-bold text-success">{m.shop.free.badge}</span>
+                )}
+              </span>
+            ) : (
+              <Money value={order.delivery_fee} className="text-ink" />
+            )}
+          </Line>
           {order.discount > 0 && (
-            <>
-              <span className="text-ink-muted">{O.discount}</span>
-              <span />
-              <span className={`text-success ${amount}`}>
+            <Line label={O.discount} className="text-ink-muted">
+              <span className="text-success">
                 {"− "}
                 <Money value={order.discount} />
               </span>
-            </>
+            </Line>
           )}
-          <span className="text-base font-bold">{O.total}</span>
-          <span />
-          <Money value={order.total} className={`text-base font-bold text-accent-text ${amount}`} />
-        </>
+          <Line label={O.total} className="text-base font-bold">
+            <Money value={order.total} className="text-accent-text" />
+          </Line>
+        </div>
       )}
     </div>
   );

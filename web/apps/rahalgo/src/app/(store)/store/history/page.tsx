@@ -16,7 +16,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtDamascusTime, fmtRelDay } from "@rahalgo/i18n";
-import { Button, Chips, EmptyState, IconReceipt, IconWarning, LoadingState, ReloadState } from "@rahalgo/ui";
+import { Button, Chips, EmptyState, IconReceipt, IconWarning, InvoiceLines, LoadingState, ReloadState } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import type { MerchantOrder, OrdersPage } from "@/lib/store/types";
@@ -103,16 +103,10 @@ export default function HistoryPage() {
                   {orderStatus(o.status)}
                 </span>
               </header>
+              {/* **سطرٌ لكلّ عنصر ثمّ الحسبة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — «بندورة × 1 كيلو ...... 600 ل.س»،
+                  **وبما اختاره الزبون** (تجربةُ المالك ٢٠٢٦-١٠-٢٩) — «بندورة» بلا «كيلو» لا تُجهَّز. */}
+              {o.items.length > 0 && <InvoiceLines items={o.items} className="border-b border-line-soft pb-2" />}
               <MoneyLines o={o} />
-              {o.items.length > 0 && (
-                <p className="text-xs text-ink-muted">{o.items
-                    .map((l) => {
-                      // **وبما اختاره الزبون** (تجربةُ المالك ٢٠٢٦-١٠-٢٩) — «بندورة» بلا «كيلو» لا تُجهَّز.
-                      const opts = (l.options ?? []).map((x) => x.name).join(m.common.listSep);
-                      return `${l.qty}× ${l.name}${opts ? ` (${opts})` : ""}${l.note ? ` — ${l.note}` : ""}`;
-                    })
-                    .join(m.common.listSep)}</p>
-              )}
             </Link>
             {reportable.has(o.id) && (
               <Button variant="ghost" className="flex w-fit items-center gap-1 text-danger" onClick={() => setReporting(o)}>

@@ -39,7 +39,6 @@ import com.rahalgo.design.Rahal
 import com.rahalgo.shared.customer.MyOrder
 import com.rahalgo.shared.customer.MyOrderLine
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import com.rahalgo.ui.Card
 import com.rahalgo.ui.Chip
 import com.rahalgo.ui.KeyValue
@@ -730,165 +729,68 @@ private fun stageLabel(key: String, amanah: Boolean = false): String = when (key
 
 /**
  * ══════════════════════════════════════════════════════════════════════
- * **الفاتورةُ جدولٌ — كلُّ عنصرٍ بسطره** (قرارُ المالك ٢٠٢٦-١٠-٣٠، الثانية)
+ * **الفاتورةُ سطرٌ لكلّ عنصر — بقاعدة التطبيقات كلِّها** (قرارُ المالك ٢٠٢٦-١٠-٣٠)
  * ══════════════════════════════════════════════════════════════════════
  *
- * ثلاثةُ أعمدة: **الاسمُ عريضاً** في البداية · «× العدد» في عمودٍ ثابتٍ بالوسط ·
- * مجموعُ البند في النهاية بأرقامٍ متساوية العرض. **وخياراتُ الصنف سطرٌ صغيرٌ باهتٌ
- * تحت اسمه** («الحجم: عادي»)، **والمشروبُ (`drink_for`) سطرٌ مثلُ الأصناف** بعد صنفه.
- * ثمّ خطٌّ فالمجموعُ والتوصيلُ والخصمُ والإجماليُّ **في الأعمدة نفسِها.**
- *
- * **والفاتورةُ كلُّها تُرى** — لا «الفاتورة كاملة» (كانت تطوي ما بعد ثلاثة أسطر).
- * والطلبُ القديمُ مشروبُه داخل خياراته فيظهر تحت الاسم مع سائر الخيارات.
+ * «شاورما دبل × 3 ........ 90 ل.س» · «بندورة × 1 كيلو ........ 600 ل.س» ·
+ * «بوط أسود × 1 نمرة 40 ........ 9,100 ل.س». **والنصُّ من `invoiceLineText` المشترك**
+ * (`mobile/ui/Invoice.kt`) — لا يُكتب اسمُ مجموعة الخيار، والوزنُ والنمرةُ بعد العدد،
+ * وباقي القيم تُلحق بالاسم. **والمشروبُ (`drink_for`) سطرٌ بعد صنفه.** ثمّ خطٌّ فالمجموعُ
+ * والتوصيلُ والخصمُ والإجماليّ. **والفاتورةُ كلُّها تُرى.**
  */
 @Composable
 internal fun InvoiceTable(order: MyOrder) {
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        invoiceOrder(order.items.orEmpty()).forEach { InvoiceRow(it) }
-    }
+    com.rahalgo.ui.InvoiceLines(order.items.orEmpty().map { it.toInvoiceLine() })
     Spacer(Modifier.height(8.dp))
     HorizontalDivider()
     Spacer(Modifier.height(6.dp))
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (order.subtotal > 0) {
-            InvoiceSum(stringResource(R.string.ord_subtotal)) { InvoiceAmount(money(order.subtotal)) }
+            com.rahalgo.ui.InvoiceRow(stringResource(R.string.ord_subtotal), money(order.subtotal))
         }
-        InvoiceSum(stringResource(R.string.ord_delivery)) {
-            if (order.freeWaived > 0) {
-                // **والأجرةُ المُعفاةُ: الأصلُ مشطوبٌ فوق ما يُدفع** — كـ`DeliveryFeeRow`.
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        money(order.deliveryFee + order.freeWaived),
-                        color = Rahal.colors.inkMuted,
-                        style = invoiceNumSmall(),
-                        textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough,
-                    )
-                    if (order.deliveryFee > 0) {
-                        InvoiceAmount(money(order.deliveryFee))
-                    } else {
-                        Text(
-                            stringResource(R.string.free_badge),
-                            color = Rahal.colors.success,
-                            fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
-                }
-            } else {
-                InvoiceAmount(money(order.deliveryFee))
-            }
-        }
-        if (order.discount > 0) {
-            InvoiceSum(stringResource(R.string.ord_discount)) {
-                InvoiceAmount("-" + money(order.discount), color = Rahal.colors.success)
-            }
-        }
-        Spacer(Modifier.height(2.dp))
-        InvoiceSum(stringResource(R.string.ord_total), strong = true) {
-            Text(
-                money(order.total),
-                color = Rahal.colors.brand,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodyLarge.copy(fontFeatureSettings = "tnum"),
-                textAlign = androidx.compose.ui.text.style.TextAlign.End,
-            )
-        }
-    }
-}
-
-/** **عرضُ عمود «× العدد»** — ثابتٌ ليقع العددُ تحت العدد في كلّ سطر. */
-private val INVOICE_QTY_COL = 44.dp
-
-/** **عرضُ عمود المبلغ** — يسع «1,250,000 ل.س» ولا يُزيح العمودَ الأوسط. */
-private val INVOICE_AMOUNT_COL = 100.dp
-
-/** **أرقامٌ متساويةُ العرض** — فتقع الخاناتُ فوق بعضها. */
-@Composable
-private fun invoiceNum() = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum")
-
-@Composable
-private fun invoiceNumSmall() = MaterialTheme.typography.labelSmall.copy(fontFeatureSettings = "tnum")
-
-/**
- * **ترتيبُ البنود: كلُّ صنفٍ ثمّ مشروباتُه** — المحرّكُ يرسلها هكذا أصلاً
- * (`ORDER BY COALESCE(drink_for, id)`)، **والترتيبُ هنا حارسٌ لا يُعوَّل عليه وحدَه.**
- * ومشروبٌ لا صنفَ له في القائمة يُلحق آخراً ولا يضيع.
- */
-internal fun invoiceOrder(lines: List<MyOrderLine>): List<MyOrderLine> {
-    val drinks = lines.filter { it.drinkFor != null }.groupBy { it.drinkFor }
-    val out = ArrayList<MyOrderLine>(lines.size)
-    lines.filter { it.drinkFor == null }.forEach { item ->
-        out += item
-        drinks[item.id]?.let { out += it }
-    }
-    lines.filter { it.drinkFor != null && it !in out }.forEach { out += it }
-    return out
-}
-
-/** **سطرُ الخيارات تحت الاسم** — «الحجم: عادي، الإضافات: جبنة»، وخيارٌ بلا مجموعةٍ باسمه. */
-internal fun invoiceOptions(l: MyOrderLine): String =
-    l.options.orEmpty()
-        .filter { it.name.isNotBlank() }
-        .joinToString("، ") { if (it.group.isNotBlank()) it.group + ": " + it.name else it.name }
-
-@Composable
-private fun InvoiceRow(l: MyOrderLine) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
-        Column(Modifier.weight(1f)) {
-            Text(
-                l.name,
-                color = Rahal.colors.ink,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodySmall,
-            )
-            invoiceOptions(l).takeIf { it.isNotEmpty() }?.let {
-                Text(it, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.labelSmall)
-            }
-            if (l.qty > 1) {
+        if (order.freeWaived > 0) {
+            // **والأجرةُ المُعفاةُ: الأصلُ مشطوبٌ جنب ما يُدفع** — كـ`DeliveryFeeRow`.
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    stringResource(R.string.ord_unit_each, money(l.unitPrice)),
+                    stringResource(R.string.ord_delivery),
                     color = Rahal.colors.inkMuted,
-                    style = invoiceNumSmall(),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    money(order.deliveryFee + order.freeWaived),
+                    color = Rahal.colors.inkMuted,
+                    style = MaterialTheme.typography.labelSmall,
+                    textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough,
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    if (order.deliveryFee > 0) money(order.deliveryFee) else stringResource(R.string.free_badge),
+                    color = if (order.deliveryFee > 0) Rahal.colors.ink else Rahal.colors.success,
+                    fontWeight = if (order.deliveryFee > 0) FontWeight.Normal else FontWeight.Bold,
+                    style = MaterialTheme.typography.bodySmall.copy(fontFeatureSettings = "tnum"),
                 )
             }
+        } else {
+            com.rahalgo.ui.InvoiceRow(stringResource(R.string.ord_delivery), money(order.deliveryFee))
         }
-        Text(
-            "× " + l.qty,
-            color = Rahal.colors.ink,
-            style = invoiceNum(),
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-            modifier = Modifier.width(INVOICE_QTY_COL),
-        )
-        InvoiceAmount(money(l.unitPrice * l.qty))
+        if (order.discount > 0) {
+            com.rahalgo.ui.InvoiceRow(
+                stringResource(R.string.ord_discount),
+                "-" + money(order.discount),
+                amountColor = Rahal.colors.success,
+            )
+        }
+        Spacer(Modifier.height(2.dp))
+        com.rahalgo.ui.InvoiceRow(stringResource(R.string.ord_total), money(order.total), strong = true)
     }
 }
 
-/** **سطرُ مجموعٍ** — العنوانُ في عمود الاسم، والوسطُ فارغ، والمبلغُ في عمود المبلغ. */
-@Composable
-private fun InvoiceSum(label: String, strong: Boolean = false, amount: @Composable () -> Unit) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            label,
-            color = if (strong) Rahal.colors.ink else Rahal.colors.inkMuted,
-            fontWeight = if (strong) FontWeight.Bold else FontWeight.Normal,
-            style = if (strong) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.bodySmall,
-            modifier = Modifier.weight(1f),
-        )
-        Spacer(Modifier.width(INVOICE_QTY_COL))
-        androidx.compose.foundation.layout.Box(
-            Modifier.widthIn(min = INVOICE_AMOUNT_COL),
-            contentAlignment = Alignment.CenterEnd,
-        ) { amount() }
-    }
-}
-
-@Composable
-private fun InvoiceAmount(text: String, color: androidx.compose.ui.graphics.Color = Rahal.colors.ink) {
-    Text(
-        text,
-        color = color,
-        style = invoiceNum(),
-        textAlign = androidx.compose.ui.text.style.TextAlign.End,
-        modifier = Modifier.widthIn(min = INVOICE_AMOUNT_COL),
-    )
-}
+/** **بندُ طلب الزبون سطراً في الفاتورة** — بالقاعدة المشتركة (`invoiceLineText`). */
+internal fun MyOrderLine.toInvoiceLine(): com.rahalgo.ui.InvoiceLine = com.rahalgo.ui.InvoiceLine(
+    id = id,
+    drinkFor = drinkFor,
+    text = com.rahalgo.ui.invoiceLineText(name, qty, options.orEmpty().map { it.group to it.name }),
+    amount = unitPrice * qty,
+    note = note,
+)

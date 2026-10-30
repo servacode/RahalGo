@@ -567,6 +567,8 @@ data class OrderLine(
     val note: String = "",
     /** **ما اختاره الزبون** — حجمٌ وإضافات، وبلاها يُصنع الطلبُ ناقصاً. */
     val options: List<LineOption> = emptyList(),
+    /** **مشروبُ بندٍ آخر** (`drink_for`، ٢٠٢٦-١٠-٣٠) — سطرٌ مستقلٌّ بعد صنفه، و`null` بندٌ عاديّ. */
+    @SerialName("drink_for") val drinkFor: String? = null,
 )
 
 @Serializable

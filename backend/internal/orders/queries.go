@@ -206,6 +206,10 @@ func scanOrder(row pgx.Row) (*Order, error) {
 	// أصنافٌ لا تُفكّ لا تُسقط الطلب: البطاقة تعرض ما بقي وتُخفي القائمة وحدها.
 	if pkLat != nil && pkLng != nil {
 		o.PickupPt = &[2]float64{*pkLat, *pkLng}
+		// **وموقعُ الأمانة لصاحبها** (٢٠٢٦-١٠-٣٠) — لا متجرَ فيها، فنقطةُ الاستلام هي ما حدّده.
+		if o.Kind == "custom" && o.CustomMode == CustomModeAmanah {
+			o.AmanahPickupLat, o.AmanahPickupLng = pkLat, pkLng
+		}
 	}
 	if drLat != nil && drLng != nil {
 		o.DriverPt = &[2]float64{*drLat, *drLng}

@@ -47,6 +47,11 @@ func (s *Server) handleCreateCustomOrder(w http.ResponseWriter, r *http.Request)
 		Notes string `json:"notes"`
 		// Mode **أمانةٌ أم مشتريات** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — وما عداهما مشتريات.
 		Mode string `json:"custom_mode"`
+		// PickupLat/Lng **موقعُ الأمانة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — الزبونُ يحدّده على الخريطة
+		// والسائقُ يراه على خريطته. **للأمانة وحدَها** — ويُهمَل في المشتريات (السائقُ يختار
+		// من أين يشتري). **واختياريٌّ في الخادم** — فالتطبيقُ القديمُ لا يرسله.
+		PickupLat *float64 `json:"pickup_lat"`
+		PickupLng *float64 `json:"pickup_lng"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -83,6 +88,14 @@ func (s *Server) handleCreateCustomOrder(w http.ResponseWriter, r *http.Request)
 				o.CustomFeeSnapshot = fee
 			}
 			o.CustomMode = orders.CustomModeAmanah
+			if req.PickupLat != nil && req.PickupLng != nil {
+				if err := s.orders.SetAmanahPickupTx(ctx, q, o.ID, *req.PickupLat, *req.PickupLng); err != nil {
+					return IdempotentBody{}, err
+				}
+				lat, lng := *req.PickupLat, *req.PickupLng
+				o.AmanahPickupLat, o.AmanahPickupLng = &lat, &lng
+				o.PickupNote = orders.AmanahPickupNote
+			}
 		}
 		// **وردُّ الخاصّ يُشكَّل كالعاديّ** — **ولا بابَ يُعفى.**
 		view, err := orderView(orders.AudienceCustomer, o)

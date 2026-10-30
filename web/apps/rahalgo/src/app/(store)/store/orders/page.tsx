@@ -24,7 +24,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, errorText, fmtMoney, fmtNum, fmtSpan } from "@rahalgo/i18n";
-import { Alert, Button, EmptyState, IconOrder, IconWarning, LoadingState, Modal, ReloadState, Textarea } from "@rahalgo/ui";
+import { Alert, Button, EmptyState, IconOrder, IconWarning, InvoiceLines, LoadingState, Modal, ReloadState, Textarea } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import { useStoreOrders } from "@/lib/store/orders";
@@ -112,19 +112,8 @@ function OrderCard({
 
       <div>
         <p className="text-xs text-ink-muted">{O.items}</p>
-        <ul className="mt-1 flex flex-col gap-1">
-          {order.items.map((l) => (
-            <li key={l.id}>
-              <p className="text-sm">
-                <span className="font-bold text-accent-text">{fmtNum(l.qty)}×</span> {l.name}
-              </p>
-              {l.options.length > 0 && (
-                <p className="text-xs text-ink-muted">{l.options.map((o) => o.name).join(m.common.listSep)}</p>
-              )}
-              {l.note.trim() && <p className="text-xs text-ink-muted">{l.note}</p>}
-            </li>
-          ))}
-        </ul>
+        {/* **سطرٌ لكلّ عنصر** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — «شاورما دبل × 3 ...... 90 ل.س»، كتطبيق المتجر. */}
+        <InvoiceLines items={order.items} className="mt-1" />
       </div>
 
       {/* **وملاحظةُ الزبون في صندوقٍ بأيقونة تنبيهٍ وخطٍّ عريض** (تدقيقُ ٢٠٢٦-١٠-٢٧) —
