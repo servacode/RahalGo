@@ -620,7 +620,7 @@ fun ShopScreen(
  * **وتقرؤه المفضّلةُ معها** — **شبكتان بعددين تجعلان الصنفَ سلعةً في
  * شاشةٍ وسطرَ جدولٍ في أخرى.**
  */
-/** **زرٌّ مكتوبٌ صغيرٌ في بطاقة الصنف** — «تكبير» بإطار و«اطلب» معبّى. */
+/** **زرٌّ مكتوبٌ في بطاقة الصنف** — «اطلب». */
 @Composable
 private fun CardButton(text: String, filled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Box(
@@ -825,6 +825,8 @@ internal fun ItemCard(
     onOpen: (() -> Unit)? = null,
 ) {
     val closed = item.sourceClosed || !item.available
+    var zoom by remember(item.id) { mutableStateOf<String?>(null) }
+    val full = media(item.imageUrl ?: item.imageThumbUrl)
     Column {
         Column(
             Modifier
@@ -869,6 +871,23 @@ internal fun ItemCard(
                         modifier = Modifier.size(20.dp),
                     )
                 }
+                // **وملءُ الشاشة جنب القلب** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — الصورةُ نظيفةٌ بلا عدسة.
+                if (!full.isNullOrEmpty()) {
+                    Box(
+                        Modifier
+                            .clip(CircleShape)
+                            .clickable(onClick = { zoom = full })
+                            .size(36.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            painter = painterResource(com.rahalgo.ui.R.drawable.ic_fullscreen),
+                            contentDescription = stringResource(R.string.shop_zoom_btn),
+                            tint = Rahal.colors.inkMuted,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
                 Spacer(Modifier.weight(1f))
                 // **والليرةُ فوق مع الدولار لا تحت الاسم** (ملاحظةُ المالك ٢٠٢٦-١٠-١٥:
                 // «تحت اسم الصنف ما رح يكون واضح») — **يقرأ الزبونُ ما سيدفعه بلمحةٍ
@@ -898,7 +917,6 @@ internal fun ItemCard(
 
             // **لا وصفَ للصنف عند الزبون** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — فلا قلبَ للصورة؛
             // **الضغطُ يفتح نافذةَ الصنف**، والعدسةُ تفتح الصورةَ كاملة.
-            var zoom by remember(item.id) { mutableStateOf<String?>(null) }
             Box(
                 if (onOpen != null) {
                     Modifier.clickable(onClickLabel = stringResource(R.string.shop_open_item), onClick = onOpen)
@@ -996,22 +1014,13 @@ internal fun ItemCard(
                         ),
                 )
             }
-            val full = media(item.imageUrl ?: item.imageThumbUrl)
+            // **«اطلب» زرٌّ عريضٌ وحدَه** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — والسطرُ بارتفاعه ولو غاب.
             Row(
                 Modifier
                     .fillMaxWidth()
                     .height(40.dp)
                     .padding(start = Rahal.space.xs, end = Rahal.space.xs, bottom = Rahal.space.xs),
-                horizontalArrangement = Arrangement.spacedBy(Rahal.space.xs),
             ) {
-                if (!full.isNullOrEmpty()) {
-                    CardButton(
-                        text = stringResource(R.string.shop_zoom_btn),
-                        filled = false,
-                        onClick = { zoom = full },
-                        modifier = Modifier.weight(1f),
-                    )
-                }
                 if (!closed && onAdd != null) {
                     CardButton(
                         text = stringResource(R.string.shop_order_btn),

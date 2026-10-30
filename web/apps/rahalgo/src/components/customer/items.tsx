@@ -34,6 +34,7 @@ import {
   IconStore,
   ImageViewer,
   IconZoomIn,
+  IconFullscreen,
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import {
@@ -123,6 +124,17 @@ export function ItemCard({
             onRequireLogin={fav.needLogin}
             size="sm"
           />
+          {/* **ملءُ الشاشة جنب القلب** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — الصورةُ نظيفةٌ بلا عدسة. */}
+          {full && (
+            <button
+              type="button"
+              onClick={() => setViewing(true)}
+              aria-label={`${item.name} — ${I.zoomBtn}`}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-ink-muted hover:text-accent-text"
+            >
+              <IconFullscreen size={18} />
+            </button>
+          )}
           <span className="ms-auto flex min-w-0 items-baseline gap-1 whitespace-nowrap">
             {item.price_usd != null ? (
               <>
@@ -164,7 +176,7 @@ export function ItemCard({
         </button>
         </div>
         {full && viewing && <ImageViewer src={full} alt={item.name} onClose={() => setViewing(false)} />}
-        {/* ── سطرٌ لاسم المتجر (رابطٌ لصفحته)، وسطرٌ لزرّين مكتوبين «تكبير» و«اطلب» —
+        {/* ── سطرٌ لاسم المتجر (رابطٌ لصفحته)، وسطرٌ لزرّين مكتوبين «اطلب» —
             قرارُ المالك ٢٠٢٦-١٠-٣٠: العدسةُ على الصورة كانت تشوّهها و«+» لا يفهمها الكلّ. ── */}
         <div className="flex min-h-7 w-full min-w-0 items-center px-2 pt-1">
           {storeLink && item.merchant_id && item.merchant_name ? (
@@ -180,15 +192,6 @@ export function ItemCard({
           )}
         </div>
         <div className="flex h-10 w-full min-w-0 gap-1 px-1.5 pb-1.5">
-          {full && (
-            <button
-              type="button"
-              onClick={() => setViewing(true)}
-              className="flex-1 rounded-control border border-accent text-xs font-bold text-accent-text"
-            >
-              {I.zoomBtn}
-            </button>
-          )}
           {!closed && (
             <button
               type="button"
