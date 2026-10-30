@@ -201,9 +201,15 @@ func (s *Service) quoteLine(ctx context.Context, orderID, senderID, role, line s
 		Scan(&driverID); err != nil || driverID == nil {
 		return
 	}
+	// **ولا يتكرّر السطرُ نفسُه** (تجربةُ المالك ٢٠٢٦-١٠-٣٠: سطرُ السعر ظهر خمسَ مرّاتٍ في دقيقة) —
+	// حفظُ السعر نفسِه مرّةً ثانية (ضغطٌ مكرّرٌ أو إعادةُ محاولة) لا يكتب سطراً ثانياً إن كان
+	// آخرُ سطرٍ في الحديث هو هو.
 	if _, err := s.db.Exec(ctx, `
 		INSERT INTO order_messages (order_id, sender_id, sender_role, body, driver_id, auto)
-		VALUES ($1, $2, $3, $4, $5, true)`, orderID, senderID, role, line, *driverID); err != nil {
+		SELECT $1, $2, $3, $4, $5, true
+		 WHERE COALESCE((SELECT body FROM order_messages WHERE order_id = $1
+		                  ORDER BY created_at DESC, id DESC LIMIT 1), '') <> $4`,
+		orderID, senderID, role, line, *driverID); err != nil {
 		s.logger.Error("تعذّر كتبُ سطر التوثيق", "order", orderID, "error", err)
 	}
 }
