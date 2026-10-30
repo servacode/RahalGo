@@ -1005,30 +1005,46 @@ private fun SignedIn(
                     over is Overlay.Menu && PlatformPages.has(over.key) ->
                         // **وتعليماتُ الزبون لا تعليماتُ السائق** —
                         // سلّةٌ وعنوانٌ مقابلَ ورديّةٍ وصندوق.
-                        PlatformScreen(vm = pagesVm, key = over.key, role = HelpRole.Customer)
+                        // **وسهمُ رجوعٍ فوقها** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
+                        PlatformScreen(
+                            vm = pagesVm,
+                            key = over.key,
+                            role = HelpRole.Customer,
+                            onBack = { overlay.clear() },
+                        )
 
                     // **وسجلُّ الطلبات يقرأ نموذجَ الطلبات نفسَه** —
                     // بابٌ واحدٌ بشرطٍ مختلف، **ونموذجان يعنيان نسختين
                     // من ترجمة الحال ومن حسبة المهلة.**
                     over is Overlay.Menu && over.key == CustomerItems.HISTORY ->
-                        HistoryScreen(ordersVm)
+                        OverlayPage(menuTitle(over.key), onBack = { overlay.clear() }) {
+                            HistoryScreen(ordersVm)
+                        }
 
                     over is Overlay.Menu && over.key == CustomerItems.CHATS -> {
                         androidx.compose.runtime.LaunchedEffect(Unit) { chatsVm.load() }
-                        ChatsScreen(chatsVm)
+                        OverlayPage(menuTitle(over.key), onBack = { overlay.clear() }) {
+                            ChatsScreen(chatsVm, titled = false)
+                        }
                     }
 
-                    over is Overlay.Menu -> MineScreen(
-                        mineVm, over.key,
-                        address = selectedAddress(accountVm.state.addresses),
-                        // **واسمُ المتجر يعيده إلى السوق على صفحة المتجر** (٢٠٢٦-١٠-١٨).
-                        onOpenStore = { id ->
-                            overlay.clear()
-                            tab = Tab.Shop
-                            shopVm.openStore(id)
-                        },
-                        onBrowse = { overlay.clear(); tab = Tab.Shop },
-                    )
+                    // **وخيطُ الشكوى المفتوح له رأسُه وسهمُه** — فلا رأسان فوق بعض.
+                    over is Overlay.Menu && over.key == CustomerItems.TICKETS && mineVm.openTicketId != null ->
+                        MineScreen(mineVm, over.key)
+
+                    over is Overlay.Menu -> OverlayPage(menuTitle(over.key), onBack = { overlay.clear() }) {
+                        MineScreen(
+                            mineVm, over.key,
+                            address = selectedAddress(accountVm.state.addresses),
+                            // **واسمُ المتجر يعيده إلى السوق على صفحة المتجر** (٢٠٢٦-١٠-١٨).
+                            onOpenStore = { id ->
+                                overlay.clear()
+                                tab = Tab.Shop
+                                shopVm.openStore(id)
+                            },
+                            onBrowse = { overlay.clear(); tab = Tab.Shop },
+                        )
+                    }
 
                     // ══════════════════════════════════════════════
                     // **والمحفظةُ شاشةُ السائق نفسُها — بلا سحب**
@@ -1046,6 +1062,8 @@ private fun SignedIn(
                     over == Overlay.Wallet -> WalletScreen(
                         vm = walletVm,
                         payouts = false,
+                        // **وسهمُ رجوعٍ فوقها** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
+                        onBack = { overlay.clear() },
                     )
 
                     // **والصندوقُ يُقرأ ثمّ يُغلق** — وفارغٌ حتّى يصل،
@@ -1406,6 +1424,33 @@ private fun SignedIn(
  * تغطّي آخرَ صفٍّ منها**، ومن نزل إلى آخر الأصناف لم يرَ ما تحتها.
  */
 private enum class Tab { Shop, Cart, Orders, Custom, Account }
+
+/** **اسمُ بند القائمة** — عنوانُ رأس صفحته هو اسمُه في القائمة نفسِها. */
+@Composable
+private fun menuTitle(key: String): String =
+    CUSTOMER_ITEMS.firstOrNull { it.key == key }?.let { stringResource(it.label) }.orEmpty()
+
+/**
+ * **صفحةٌ من القائمة برأسٍ واحد — سهمُ رجوعٍ وعنوان** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
+ *
+ * **كان بعضُها بلا سهم** — يفتحها من القائمة ولا يجد طريقَ رجوعٍ غيرَ زرّ الجوال.
+ * **فالرأسُ هنا مرّةً للجميع** (كتطبيق المتجر)، والصفحةُ تحته بلا عنوانٍ ثانٍ.
+ */
+@Composable
+private fun OverlayPage(title: String, onBack: () -> Unit, content: @Composable () -> Unit) {
+    Column(Modifier.fillMaxSize()) {
+        com.rahalgo.ui.PageHeader(
+            title = title,
+            onBack = onBack,
+            modifier = Modifier.padding(start = Rahal.space.lg, end = Rahal.space.lg, top = Rahal.space.sm),
+        )
+        Box(
+            Modifier
+                .fillMaxSize()
+                .weight(1f),
+        ) { content() }
+    }
+}
 
 /** **بندٌ برسمٍ واسم** — وثلاثةُ نسخٍ منه في شريطٍ واحدٍ حشوٌ يُنسخ. */
 @Composable

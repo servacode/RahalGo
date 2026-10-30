@@ -15,7 +15,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { getMessages, defaultLocale, errorText, fmtClock, fmtRef, fmtSpan } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, errorText, fmtRef, fmtSpan } from "@rahalgo/i18n";
 import { Alert, Button, Chips, Confirm, Money } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
@@ -106,24 +106,57 @@ export function DeliveryCode({ order }: { order: MyOrder }) {
   );
 }
 
-/** **زرُّ الإلغاء ما دامت المهلة** — والمهلةُ من الخادم لا من حسبةِ الشاشة. */
-export function CancelOrder({ order, onDone }: { order: MyOrder; onDone: () => void }) {
+/**
+ * **مهلةُ الإلغاء بكلامٍ مفهوم** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — مرآةُ `CancelCountdown.within`:
+ * «46 ثانية» · «دقيقة و10 ثوانٍ» · «دقيقتين»، **بأرقامٍ غربيّة.**
+ */
+export function cancelWithin(secs: number): string {
+  if (secs <= 0) return "";
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  const W = O.within;
+  const unit = (n: number, one: string, two: string, few: string, many: string) =>
+    n === 0 ? "" : n === 1 ? one : n === 2 ? two : fill(n <= 10 ? few : many, { n: String(n) });
+  const min = unit(m, W.minOne, W.minTwo, W.minFew, W.minMany);
+  const sec = unit(s, W.secOne, W.secTwo, W.secFew, W.secMany);
+  if (!min) return sec;
+  if (!sec) return min;
+  return fill(W.and, { a: min, b: sec });
+}
+
+/** **الثواني الباقية من مهلة الإلغاء — تمشي والصفحةُ مفتوحة.** و`-1` «بلا مهلة». */
+function useCancelLeft(order: MyOrder): number {
   const [left, setLeft] = useState(order.cancel_seconds_left);
-  const [ask, setAsk] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
   useEffect(() => setLeft(order.cancel_seconds_left), [order.cancel_seconds_left]);
   useEffect(() => {
     if (left <= 0) return;
     const t = setInterval(() => setLeft((s) => s - 1), 1000);
     return () => clearInterval(t);
   }, [left > 0]); // eslint-disable-line react-hooks/exhaustive-deps
+  return left;
+}
+
+/**
+ * **«يمكنك إلغاء الطلب خلال 46 ثانية» جنبَ الحال** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — والزرُّ تحت
+ * بلا عدّاد. **ويغيب مع الزرّ حين تنقضي المهلة.**
+ */
+export function CancelNote({ order }: { order: MyOrder }) {
+  const left = useCancelLeft(order);
+  if (ENDED.has(order.status) || left <= 0) return null;
+  return <span className="text-xs text-danger tabular-nums">{fill(O.cancelWithin, { t: cancelWithin(left) })}</span>;
+}
+
+/** **زرُّ الإلغاء ما دامت المهلة** — والمهلةُ من الخادم لا من حسبةِ الشاشة. */
+export function CancelOrder({ order, onDone }: { order: MyOrder; onDone: () => void }) {
+  const left = useCancelLeft(order);
+  const [ask, setAsk] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   if (ENDED.has(order.status) || left === 0 || left < -1) return null;
   return (
     <div className="space-y-2">
       <Button variant="danger" className="w-full" onClick={() => setAsk(true)} disabled={busy}>
         {O.cancel}
-        {left > 0 && <span className="ms-2 text-xs opacity-80">{fmtClock(left)}</span>}
       </Button>
       {error && <Alert>{error}</Alert>}
       <Confirm
@@ -271,16 +304,21 @@ export function QuotePanel({
   return (
     <div className="space-y-3">
       {order.quote_confirmed_version != null && <p className="text-sm">{O.raisedNote}</p>}
-      <p className="text-sm font-bold">{O.confirmPrompt}</p>
-      <Chips<"cash" | "wallet">
-        items={[
-          { id: "cash", label: m.shop.cart.cash },
-          ...(walletOk ? [{ id: "wallet" as const, label: m.shop.cart.wallet }] : []),
-        ]}
-        value={pay}
-        onChange={setMethod}
-      />
-      {!walletOk && <p className="text-xs text-ink-muted">{O.walletShort}</p>}
+      <p className="text-sm font-bold">{walletOk ? O.confirmPrompt : O.confirmAmount}</p>
+      {/* **والمحفظةُ خيارٌ فقط إن غطّت المبلغ** — وإلّا سطرٌ واحدٌ «الدفع: نقداً عند الاستلام»
+          (قرارُ المالك ٢٠٢٦-١٠-٣٠)، والطريقةُ تبقى نقداً. مرآةُ `QuoteConfirmPanel`. */}
+      {walletOk ? (
+        <Chips<"cash" | "wallet">
+          items={[
+            { id: "cash", label: m.shop.cart.cash },
+            { id: "wallet", label: m.shop.cart.wallet },
+          ]}
+          value={pay}
+          onChange={setMethod}
+        />
+      ) : (
+        <p className="text-sm">{O.payCashOnly}</p>
+      )}
       {error && <Alert>{error}</Alert>}
       <button
         type="button"

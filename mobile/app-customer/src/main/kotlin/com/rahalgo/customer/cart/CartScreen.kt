@@ -161,16 +161,43 @@ fun CartScreen(
     // **كان الزرُّ في آخر صفحةٍ طويلة** — عنوانٌ وكودٌ ودفعٌ وملاحظات — فيُمرَّر
     // إليه، **وإن كان معطّلاً لم يُعرف لماذا.** فصار الإجماليُّ والزرُّ ثابتين،
     // **وسببُ التعطيل سطرٌ فوقهما.** **والتفاصيلُ تبقى في الصفحة كما هي.**
+    // ══════════════════════════════════════════════════════════════════
+    // **والصنفُ الذي يمنع الإرسالَ يُعلَّم في سطره** (قرارُ المالك ٢٠٢٦-١٠-٣٠)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **كانت السلّةُ تقول «انظر السبب في الأعلى» ولا سببَ ظاهر** والإجماليُّ «—».
+    // والمحرّكُ يسمّي الصنفَ في `changes` (`product_unavailable`…) — **فيُعلَّم سطرُه
+    // «غير متوفر — احذفه»، ويُسمّى السببُ تحت.** والإجماليُّ يبقى «—»: المحرّكُ لا
+    // يسعّر سلّةً فيها صنفٌ معطوبٌ عمداً (`QuoteResult.Blocked`).
+    val badLines: Map<String, com.rahalgo.shared.model.CartChange> = vm.changes
+        .filter {
+            it.type == com.rahalgo.ui.CartChanges.PRODUCT_UNAVAILABLE ||
+                it.type == com.rahalgo.ui.CartChanges.PRODUCT_REMOVED ||
+                it.type == com.rahalgo.ui.CartChanges.QUANTITY_INVALID
+        }
+        .associateBy { it.menuItemId }
     Column(Modifier.fillMaxSize()) {
     Screen(Modifier.weight(1f)) {
-        ScreenTitle(stringResource(R.string.cart_title), stringResource(R.string.cart_hint))
+        // **ولا سطرَ شرحٍ تحت العنوان** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
+        ScreenTitle(stringResource(R.string.cart_title))
 
         // **والخطأُ لا يُرسم هنا** — يُرسم فوق زرّ الطلب. انظر أدناه.
         Spacer(Modifier.height(10.dp))
         Card {
             Cart.lines.forEach { line ->
+                val bad = badLines[line.item.id]
                 Row(
-                    Modifier.fillMaxWidth(),
+                    Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (bad != null) {
+                                Modifier
+                                    .clip(Rahal.shape.sm)
+                                    .background(Rahal.colors.danger.copy(alpha = 0.08f))
+                            } else {
+                                Modifier
+                            },
+                        ),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -202,6 +229,20 @@ fun CartScreen(
                             color = Rahal.colors.brand,
                             style = MaterialTheme.typography.bodySmall,
                         )
+                        bad?.let { c ->
+                            Text(
+                                text = when {
+                                    c.type == com.rahalgo.ui.CartChanges.QUANTITY_INVALID ->
+                                        stringResource(R.string.cart_line_qty_invalid)
+                                    c.option.isNotBlank() ->
+                                        stringResource(R.string.cart_line_option_unavailable, c.option)
+                                    else -> stringResource(R.string.cart_line_unavailable)
+                                },
+                                color = Rahal.colors.danger,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
                     }
                     // **والعدُّ يُبدَّل هنا** — ومن أراد صنفين لا يعود
                     // إلى السوق ليضغط مرّتين.
@@ -259,6 +300,26 @@ fun CartScreen(
                     }
                 }
                 HorizontalDivider()
+            }
+        }
+
+        // **وإفراغُ السلّة كلِّها — تحت الأصناف مباشرةً حيث يُرى** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
+        // **وإفراغُ السلّة كلِّها** — (طلبُ المالك ٢٠٢٦-٠٨-١٨).
+        //
+        // **ونصٌّ لا زرٌّ مملوء**: فعلٌ يُندَم عليه لا يُوضع في زرٍّ
+        // يلمع، **ومن أفرغها بالخطأ يعيد بناءها صنفاً صنفا.**
+        if (Cart.lines.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            // **زرٌّ واضحٌ بأيقونة سلّة المهملات** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — لا رابطٌ نصّيّ،
+            // **ويبقى السؤالُ قبله** (`askClear`).
+            com.rahalgo.ui.RahalOutlineButton(onClick = { askClear = true }, tone = Tone.Danger) {
+                Icon(
+                    painter = painterResource(com.rahalgo.ui.R.drawable.ic_trash),
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
+                Spacer(Modifier.size(8.dp))
+                Text(stringResource(R.string.cart_clear))
             }
         }
 
@@ -348,25 +409,35 @@ fun CartScreen(
             val fee0 = cut0?.deliveryFee ?: it.deliveryFee
             if (cut0 == null) it.total else maxOf(0L, it.subtotal + fee0 - cut0.discount)
         }
-        val walletBlocked = payableTotal != null && walletBalance < payableTotal
+        // **والمحفظةُ لا تُعرض أصلاً حتّى يغطّي رصيدُها الإجماليَّ** (قرارُ المالك ٢٠٢٦-١٠-٣٠) —
+        // ولا إجماليَّ بعد ⇒ لا محفظة. وإن صار الرصيدُ كافياً ظهرت.
+        val walletBlocked = payableTotal == null || walletBalance < payableTotal
         // **وخيارٌ معطّلٌ لا يبقى مختاراً** — من اختار المحفظةَ ثمّ ارتفع
         // الإجماليُّ فوق رصيده يُعاد إلى النقد، فلا يُرسَل بما لا يُقبَل.
         LaunchedEffect(walletBlocked) {
             if (walletBlocked && vm.wallet) vm.wallet = false
         }
         Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            PayChoice(
-                text = stringResource(R.string.cart_cash),
-                on = !vm.wallet,
-                modifier = Modifier.weight(1f),
-            ) { vm.wallet = false }
-            PayChoice(
-                text = stringResource(R.string.cart_wallet),
-                on = vm.wallet,
-                enabled = !walletBlocked,
-                modifier = Modifier.weight(1f),
-            ) { vm.wallet = true }
+        if (walletBlocked) {
+            // **سطرٌ واحدٌ لا خيارٌ مطفأٌ ولا «رصيدك لا يكفي»** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
+            Text(
+                stringResource(R.string.ord_pay_cash_only),
+                color = Rahal.colors.ink,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        } else {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                PayChoice(
+                    text = stringResource(R.string.cart_cash),
+                    on = !vm.wallet,
+                    modifier = Modifier.weight(1f),
+                ) { vm.wallet = false }
+                PayChoice(
+                    text = stringResource(R.string.cart_wallet),
+                    on = vm.wallet,
+                    modifier = Modifier.weight(1f),
+                ) { vm.wallet = true }
+            }
         }
         // ══════════════════════════════════════════════════════════════
         // **جملةٌ واحدةٌ موجزةٌ بالرصيد** (تصحيحُ المالك ٢٠٢٦-٠٩-٢١)
@@ -377,25 +448,8 @@ fun CartScreen(
         // **والنقدُ عند الاستلام بديلٌ صالحٌ للسلّة العاديّة دائماً** (خيارُ
         // النقد غيرُ محكومٍ هنا) — **فيُقال صراحةً أنّ بابَ الدفعِ لم يُغلَق.**
         // (ولو مُنع النقدُ لطلبٍ ما لَما ظهر هذا السطر — الخيارُ نفسُه يغيب.)
-        if (walletBlocked) {
-            Spacer(Modifier.height(6.dp))
-            Note(
-                stringResource(R.string.cart_wallet_insufficient, money(walletBalance)),
-                Rahal.colors.danger,
-            )
-            Note(stringResource(R.string.cart_wallet_cod_hint), Rahal.colors.inkMuted)
-        }
+        // **ولا «رصيدك لا يكفي» ولا «ادفع نقداً»** — المحفظةُ تغيب بصمت (قرارُ المالك ٢٠٢٦-١٠-٣٠).
 
-        // **وإفراغُ السلّة كلِّها** — (طلبُ المالك ٢٠٢٦-٠٨-١٨).
-        //
-        // **ونصٌّ لا زرٌّ مملوء**: فعلٌ يُندَم عليه لا يُوضع في زرٍّ
-        // يلمع، **ومن أفرغها بالخطأ يعيد بناءها صنفاً صنفا.**
-        if (Cart.lines.isNotEmpty()) {
-            Spacer(Modifier.height(6.dp))
-            RahalTextButton(onClick = { askClear = true }, tone = Tone.Danger) {
-                Text(stringResource(R.string.cart_clear))
-            }
-        }
 
         Spacer(Modifier.height(14.dp))
         Card {
@@ -423,17 +477,7 @@ fun CartScreen(
                 )
             } else if (q.blocked) {
                 // **سلّةٌ موقوفةٌ لا مجموعَ لها** (تدقيقُ ٢٠٢٦-١٠-٢٨) — المحرّكُ يردّ الأرقامَ
-                // صفراً عمداً حتّى يُحسَم ما تبدّل (`QuoteResult.Blocked`)، **و«الإجمالي 0 ل.س»
-                // يُقرأ سعراً.** فلا توصيلَ ولا إجماليَّ بل «—».
-                Spacer(Modifier.height(4.dp))
-                HorizontalDivider()
-                Spacer(Modifier.height(4.dp))
-                com.rahalgo.ui.SumLine(
-                    stringResource(R.string.ord_total),
-                    "—",
-                    strong = true,
-                    color = Rahal.colors.inkMuted,
-                )
+                // صفراً عمداً (`QuoteResult.Blocked`). والإجماليُّ «—» في الشريط تحت وحدَه.
             } else {
                 // ══════════════════════════════════════════════════════
                 // **والحسمُ يُطرح من الإجماليّ فورَ تطبيقه**
@@ -496,15 +540,8 @@ fun CartScreen(
                 // **بمعادلة المحرّك نفسِها** (`validatePromo`) — فلا يفترقان.
                 // **والإجماليُّ أبرزُ سطرٍ تحت خطٍّ فاصل** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧) — كان
                 // بحجم باقي الأسطر ولونُه وحدَه يفرّقه.
-                Spacer(Modifier.height(4.dp))
-                HorizontalDivider()
-                Spacer(Modifier.height(4.dp))
-                com.rahalgo.ui.SumLine(
-                    stringResource(R.string.ord_total),
-                    money(if (cut == null) q.total else maxOf(0L, q.subtotal + fee - cut.discount)),
-                    strong = true,
-                    color = Rahal.colors.brand,
-                )
+                // **والإجماليُّ مرّةً واحدة — في الشريط الثابت جنب «أرسل الطلب»** (قرارُ المالك
+                // ٢٠٢٦-١٠-٣٠): كان يُكتب هنا وهناك. **وبمعادلته نفسِها** (`barTotal`).
             }
         }
 
@@ -732,11 +769,31 @@ fun CartScreen(
     val closedNow = !Serving.available || !Serving.ordersOpen ||
         bq?.outOfZone == true || bq?.zoneClosed == true || bq?.blocked == true ||
         bq?.availability?.available == false
+    // **والسببُ يُسمّى في الشريط نفسِه** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — لا «انظر في الأعلى».
+    val whyCtx = LocalContext.current
+    val avBad = bq?.availability?.takeIf { !it.available }
     val why: String = when {
         vm.busy -> ""
         address == null -> stringResource(R.string.cart_why_address)
         !com.rahalgo.ui.Net.online -> stringResource(R.string.cart_why_offline)
-        closedNow -> stringResource(R.string.cart_why_closed)
+        badLines.isNotEmpty() ->
+            if (badLines.size == 1) stringResource(R.string.cart_why_unavailable)
+            else stringResource(R.string.cart_why_unavailable_many, badLines.size)
+        !Serving.available -> servingText(whyCtx)
+        !Serving.ordersOpen ->
+            Serving.launchNotice.trim().ifEmpty { stringResource(R.string.cart_orders_closed) }
+        avBad != null -> avBad.let { av ->
+            com.rahalgo.ui.ServiceReason.text(
+                whyCtx,
+                reason = av.reason,
+                message = av.message,
+                placeName = av.placeName,
+                nextAvailableAt = av.nextAvailableAt,
+            )
+        }
+        bq?.outOfZone == true -> stringResource(R.string.cart_out_of_zone)
+        bq?.zoneClosed == true -> zoneClosedText(whyCtx, bq)
+        closedNow -> stringResource(com.rahalgo.ui.R.string.cc_blocked)
         bq?.tooManySources == true -> tooManySourcesText(bq.maxSources)
         bq == null -> stringResource(R.string.cart_why_pricing)
         !vm.canSubmit -> stringResource(R.string.cart_why_review)
@@ -754,7 +811,7 @@ fun CartScreen(
                 text = why,
                 color = Rahal.colors.danger,
                 style = MaterialTheme.typography.bodySmall,
-                maxLines = 2,
+                maxLines = 3,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
             )
             Spacer(Modifier.height(6.dp))

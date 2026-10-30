@@ -150,7 +150,8 @@ export default function CartPage() {
   // **وسلّةٌ موقوفةٌ (`blocked`) لا مجموعَ لها** — المحرّكُ يصفّرها عمداً، و«0 ل.س» يُقرأ سعراً (مرآةُ `CartScreen.kt`).
   const priced = quote && !quote.blocked ? quote : null;
   const payable = priced ? (cut ? Math.max(0, priced.subtotal + fee - cut.discount) : priced.total) : null;
-  const walletBlocked = payable != null && available < payable;
+  // **والمحفظةُ لا تُعرض حتّى يغطّي رصيدُها الإجماليَّ** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — مرآةُ `CartScreen.kt`.
+  const walletBlocked = payable == null || available < payable;
 
   useEffect(() => {
     if (walletBlocked && wallet) setWallet(false);
@@ -258,15 +259,33 @@ export default function CartPage() {
     quote?.zone_closed === true ||
     quote?.blocked === true ||
     av?.available === false;
-  // **سببُ تعطيل الإرسال سطرٌ واحدٌ فوق الزرّ** — مرآةُ `why` في `CartScreen.kt`.
+  // ══ **والصنفُ الذي يمنع الإرسالَ يُعلَّم في سطره** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — مرآةُ `badLines`
+  //    في `CartScreen.kt`: كانت «انظر السبب في الأعلى» ولا سببَ ظاهر. والمحرّكُ يسمّي الصنفَ في `changes`. ══
+  const badLines = new Map<string, CartChange>();
+  for (const c of changes) {
+    if (c.type === "product_unavailable" || c.type === "product_removed" || c.type === "quantity_invalid") {
+      badLines.set(c.menu_item_id, c);
+    }
+  }
+  const lineProblem = (c: CartChange): string =>
+    c.type === "quantity_invalid" ? C.lineQtyInvalid : c.option ? fill(C.lineOptionUnavailable, { option: c.option }) : C.lineUnavailable;
+  // **سببُ تعطيل الإرسال يُسمّى في الشريط نفسِه** — مرآةُ `why` في `CartScreen.kt`، لا «انظر في الأعلى».
+  const closedWhy = (): string => {
+    if (badLines.size > 0) return badLines.size === 1 ? C.whyUnavailable : fill(C.whyUnavailableMany, { n: fmtNum(badLines.size) });
+    if (!ordering.open) return ordering.text;
+    if (av && !av.available) return serviceText(av.reason, av.message, av.next_available_at);
+    if (quote?.out_of_zone) return C.outOfZone;
+    if (quote?.zone_closed) return serviceText("zone_closed_now", "", quote.next_available_at);
+    return C.whyBlocked;
+  };
   const why = busy
     ? ""
     : !address
       ? C.whyAddress
       : !online
         ? C.whyOffline
-        : closedNow
-          ? C.whyClosed
+        : closedNow || badLines.size > 0
+          ? closedWhy()
           : quote?.too_many_sources
             ? quote.max_sources <= 1
               ? C.tooManyOne
@@ -281,16 +300,14 @@ export default function CartPage() {
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] lg:items-start">
         <section className="flex flex-col gap-3">
-          <div>
-            <h1 className="heading-page">{C.title}</h1>
-            <p className="text-sm text-ink-muted">{C.hint}</p>
-          </div>
+          <h1 className="heading-page">{C.title}</h1>
           <ul className="surface divide-y divide-line-soft">
             {cart.lines.map((l) => {
               const k = lineKey(l);
               const img = mediaUrl(l.item.image_thumb_url ?? l.item.image_url);
+              const bad = badLines.get(l.item.id);
               return (
-                <li key={k} className="flex items-center gap-3 p-3">
+                <li key={k} className={`flex items-center gap-3 p-3 ${bad ? "bg-danger-tint" : ""}`}>
                   <span className="h-14 w-14 shrink-0 overflow-hidden rounded-control bg-field">
                     {img && <img src={img} alt="" loading="lazy" className="h-full w-full object-cover" />}
                   </span>
@@ -306,6 +323,7 @@ export default function CartPage() {
                       </p>
                     )}
                     <Money value={unitPrice(l) * l.qty} className="text-sm font-bold text-accent-text" />
+                    {bad && <p className="text-xs font-bold text-danger">{lineProblem(bad)}</p>}
                   </div>
                   <div className="flex shrink-0 items-center gap-0.5 rounded-control bg-field p-0.5">
                     <button
@@ -338,7 +356,13 @@ export default function CartPage() {
               );
             })}
           </ul>
-          <button type="button" onClick={() => setAskClear(true)} className="w-fit text-sm text-danger hover:underline">
+          {/* **زرٌّ واضحٌ بأيقونة سلّة المهملات تحت الأصناف مباشرةً** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — لا رابطٌ نصّيّ. */}
+          <button
+            type="button"
+            onClick={() => setAskClear(true)}
+            className="flex w-fit items-center gap-2 rounded-control border border-danger px-4 py-2 text-sm font-bold text-danger transition-colors hover:bg-danger-tint"
+          >
+            <IconDelete size={16} />
             {C.clear}
           </button>
           {/* **وإفراغُ السلّة يُسأل قبله** — ضغطةٌ غلطٌ تطيّر سلّةً كاملة. */}
@@ -396,28 +420,27 @@ export default function CartPage() {
                   </p>
                 )}
 
-                <fieldset className="flex flex-col gap-2">
-                  <legend className="mb-1 text-sm font-medium">{C.payment}</legend>
-                  <Radio id="pay-cash" name="pay" checked={!wallet} onChange={() => setWallet(false)} label={C.cash} />
-                  <Radio
-                    id="pay-wallet"
-                    name="pay"
-                    checked={wallet}
-                    disabled={walletBlocked}
-                    onChange={() => setWallet(true)}
-                    label={
-                      <span>
-                        {C.wallet}
-                        <span className="ms-2 text-xs text-ink-muted">{fill(C.walletBalance, { amount: fmtMoney(available) })}</span>
-                      </span>
-                    }
-                  />
-                  {walletBlocked && (
-                    <p className="text-xs text-ink-muted">
-                      {fill(C.walletShort, { amount: fmtMoney(available) })} {C.codHint}
-                    </p>
-                  )}
-                </fieldset>
+                {/* **سطرٌ واحدٌ حين لا تكفي المحفظة — لا خيارٌ مطفأٌ ولا «رصيدك لا يكفي»** (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}
+                {walletBlocked ? (
+                  <p className="text-sm">{m.shop.orders.payCashOnly}</p>
+                ) : (
+                  <fieldset className="flex flex-col gap-2">
+                    <legend className="mb-1 text-sm font-medium">{C.payment}</legend>
+                    <Radio id="pay-cash" name="pay" checked={!wallet} onChange={() => setWallet(false)} label={C.cash} />
+                    <Radio
+                      id="pay-wallet"
+                      name="pay"
+                      checked={wallet}
+                      onChange={() => setWallet(true)}
+                      label={
+                        <span>
+                          {C.wallet}
+                          <span className="ms-2 text-xs text-ink-muted">{fill(C.walletBalance, { amount: fmtMoney(available) })}</span>
+                        </span>
+                      }
+                    />
+                  </fieldset>
+                )}
 
                 <Textarea
                   id="notes"
@@ -439,12 +462,7 @@ export default function CartPage() {
             </div>
             {!quote ? (
               <p className="text-xs text-ink-muted">{quoting ? C.quoting : C.needAddress}</p>
-            ) : quote.blocked ? (
-              <div className="flex justify-between border-t border-line-soft pt-2 font-bold">
-                <span>{C.total}</span>
-                <span className="text-ink-muted">—</span>
-              </div>
-            ) : (
+            ) : quote.blocked ? null : (
               <>
                 <div className="flex justify-between">
                   <span className="text-ink-muted">{C.delivery}</span>
@@ -479,10 +497,7 @@ export default function CartPage() {
                     </span>
                   </div>
                 )}
-                <div className="flex justify-between border-t border-line-soft pt-2 font-bold">
-                  <span>{C.total}</span>
-                  <Money value={payable ?? quote.total} className="text-accent-text" />
-                </div>
+                {/* **والإجماليُّ مرّةً واحدة — في الشريط الثابت جنب «أرسل الطلب»** (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}
               </>
             )}
           </div>
@@ -553,7 +568,7 @@ export default function CartPage() {
           **كان الزرُّ آخرَ صفحةٍ طويلة، وإن كان معطّلاً لم يُعرف لماذا.** والإجماليُّ بمعادلة الملخّص حرفاً. */}
       {user && (
         <div className="surface sticky bottom-[calc(3.75rem+env(safe-area-inset-bottom))] z-30 flex flex-col gap-2 p-3 md:bottom-0">
-          {why && <p className="line-clamp-2 text-xs text-danger">{why}</p>}
+          {why && <p className="line-clamp-3 text-xs text-danger">{why}</p>}
           <div className="flex items-center gap-3">
             <div className="min-w-0 flex-1">
               <p className="text-xs text-ink-muted">{C.total}</p>

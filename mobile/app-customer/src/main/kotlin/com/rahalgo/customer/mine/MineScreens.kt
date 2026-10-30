@@ -52,7 +52,6 @@ import com.rahalgo.ui.LoadState
 import com.rahalgo.ui.RemoteImage
 import com.rahalgo.ui.Screen
 import com.rahalgo.ui.ScreenPad
-import com.rahalgo.ui.ScreenTitle
 import com.rahalgo.ui.money
 import com.rahalgo.ui.TicketMessage
 import com.rahalgo.ui.TicketRow
@@ -142,6 +141,13 @@ private fun Favorites(
             onStore = com.rahalgo.customer.shop.StoreLink.target(target, null)
                 ?.let { id -> { picking = null; onOpenStore(id) } },
             media = backend::media,
+            // **والبطاقةُ تفتحها للقراءة ولو كان مغلقاً** (٢٠٢٦-١٠-٣٠) — فالسببُ مكانَ «أضف».
+            blockedReason = when {
+                target.sourceClosed -> stringResource(R.string.shop_closed_now)
+                !target.available -> stringResource(com.rahalgo.ui.R.string.mn_unavailable)
+                blocked -> blockedText
+                else -> null
+            },
         )
     }
     // ══════════════════════════════════════════════════════════════════
@@ -165,8 +171,7 @@ private fun Favorites(
             .fillMaxSize()
             .padding(ScreenPad),
     ) {
-        // **ولا سطرَ شرحٍ تحته** — **واسمُه يقول ما فيه.**
-        ScreenTitle(stringResource(R.string.menu_favorites_title))
+        // **والعنوانُ في رأس الصفحة بسهم رجوع** (`MainActivity`، ٢٠٢٦-١٠-٣٠) — لا هنا.
         if (list.isEmpty()) {
             // **والفراغُ يقول الخطوةَ التالية** (شرطُ المالك ٢٠٢٦-٠٩-١٣).
             Empty(
@@ -201,6 +206,7 @@ private fun Favorites(
                         if (item.hasOptions && !blocked) picking = item
                         else addOne(item, 1, emptyList())
                     },
+                    onOpen = { picking = item },
                     onLike = { vm.toggleFavorite(item.id) },
                     // **واسمُ المتجر يفتح صفحتَه** كما في السوق (٢٠٢٦-١٠-١٨).
                     onStore = com.rahalgo.customer.shop.StoreLink.target(item, null)
@@ -271,10 +277,7 @@ private fun Offers(
     }
 
     Screen {
-        ScreenTitle(
-            stringResource(R.string.menu_offers_title),
-            stringResource(R.string.soon_offers),
-        )
+        // **والعنوانُ في رأس الصفحة بسهم رجوع، ولا سطرَ شرح** (٢٠٢٦-١٠-٣٠).
         // ══════════════════════════════════════════════════════════════
         // **والعرضُ الذي جاء به الخبرُ يُرفَع إلى أوّلها** (`DLINK-03`)
         // ══════════════════════════════════════════════════════════════
@@ -494,11 +497,8 @@ private fun Invite(vm: MineViewModel) {
     }
     val context = LocalContext.current
     Screen {
-        ScreenTitle(
-            stringResource(R.string.menu_invite_title),
-            stringResource(R.string.soon_invite),
-        )
-        Spacer(Modifier.height(12.dp))
+        // **والعنوانُ في رأس الصفحة بسهم رجوع، ولا سطرَ شرح** (٢٠٢٦-١٠-٣٠).
+        Spacer(Modifier.height(4.dp))
         Card {
             Text(
                 text = stringResource(R.string.inv_earn, money(r.nextReward)),
@@ -626,8 +626,9 @@ private fun Tickets(vm: MineViewModel) {
     // يُفترَض أنّ الزبونَ لا يُشتكى عليه — **والسائقُ يُبلّغ عنه**، فبلاغُه كان
     // يتسلّل إلى قائمة شكاواه (تسريب). فصار له تبويبٌ مُقنَّعٌ (بلا اسمِ مُبلِّغ).
     TicketsScreen(
-        title = stringResource(R.string.menu_tickets_title),
-        hint = stringResource(R.string.soon_tickets),
+        // **والعنوانُ في رأس الصفحة بسهم رجوع، ولا سطرَ شرح** (٢٠٢٦-١٠-٣٠).
+        title = "",
+        hint = "",
         mine = list.map { t ->
             TicketRow(
                 id = t.id,

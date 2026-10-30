@@ -15,6 +15,7 @@ import { ComplaintCard, ComplaintGrid, EmptyState, LoadingState, ReloadState, Ic
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { NeedLogin } from "@/components/customer/NeedLogin";
+import { ShopPageHeader } from "@/components/customer/ShopPageHeader";
 
 const m = getMessages(defaultLocale);
 const Q = m.shop.complaint;
@@ -39,10 +40,7 @@ export default function ComplaintsPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="heading-page">{Q.listTitle}</h1>
-        <p className="text-sm text-ink-muted">{Q.listHint}</p>
-      </div>
+      <ShopPageHeader title={Q.listTitle} />
       {error && !rows ? (
         <ReloadState label={error} onRetry={load} />
       ) : rows === null ? (

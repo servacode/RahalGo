@@ -433,6 +433,7 @@
     <string name="crop_frame_square">مربّعة</string>
     <string name="crop_frame_portrait">طولية</string>
     <string name="image_viewer_close">إغلاق الصورة</string>
+    <string name="image_zoom_hint">اضغط لتكبير الصورة</string>
     <string name="acc_photo_remove">إزالة الصورة</string>
     <string name="acc_pw_change">تغيير كلمة المرور</string>
     <string name="acc_pw_changed">تم تغيير كلمة المرور بنجاح</string>

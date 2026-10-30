@@ -81,6 +81,12 @@ fun ItemOptionsSheet(
     onStore: (() -> Unit)? = null,
     /** **عنوانُ الصور** — وبه تُرسم صورةُ الصنف عريضةً فوق النافذة، و`null` بلا صورة. */
     media: ((String?) -> String?)? = null,
+    /**
+     * **لماذا لا يُضاف الآن** (٢٠٢٦-١٠-٣٠) — المتجرُ مغلق، أو الصنفُ غيرُ متوفّر، أو العنوانُ
+     * خارجَ التغطية. **والنافذةُ تُفتح من البطاقة كلِّها فتُقرأ ولو لم يُضَف**؛ والسببُ
+     * يُقال فوق زرٍّ مطفأ. و`null` يعني أنّ الإضافةَ مفتوحة.
+     */
+    blockedReason: String? = null,
 ) {
     var groups by remember(item.id) { mutableStateOf<List<ModifierGroup>?>(null) }
     var failed by remember(item.id) { mutableStateOf(false) }
@@ -108,7 +114,8 @@ fun ItemOptionsSheet(
     val unit = item.price + picked.sumOf { it.priceDelta }
 
     // **وناقصٌ واحدٌ يكفي لإطفاء الزرّ.**
-    val ready = groups?.all { g -> (chosen[g.id]?.size ?: 0) >= g.minSelect } == true
+    // **وصنفٌ بلا خياراتٍ جاهزٌ فوراً** (٢٠٢٦-١٠-٣٠) — يُفتح الآن من البطاقة، ولا ينتظر جلبَ خياراتٍ ليست له.
+    val ready = !item.hasOptions || groups?.all { g -> (chosen[g.id]?.size ?: 0) >= g.minSelect } == true
 
     // **ومجموعةٌ إلزاميّةٌ كلُّ خياراتها نافدةٌ تُطفئ الزرَّ للأبد** (تدقيقُ ٢٠٢٦-١٠-٢٨) —
     // **فيُقال لماذا** بدل زرٍّ مطفأٍ بلا سبب.
@@ -126,6 +133,8 @@ fun ItemOptionsSheet(
                 com.rahalgo.ui.FullPhoto(
                     url = media(item.imageUrl ?: item.imageThumbUrl),
                     name = item.name,
+                    // **وعدسةٌ صغيرةٌ تقول «تُكبَّر»** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
+                    zoomHint = true,
                 )
                 Spacer(Modifier.height(12.dp))
             }
@@ -154,9 +163,21 @@ fun ItemOptionsSheet(
                     },
                 )
             }
+            // **ووصفُ الصنف هنا** (٢٠٢٦-١٠-٣٠) — كان يُقرأ بقلب صورة البطاقة، والبطاقةُ
+            // صارت تفتح النافذة.
+            item.description.trim().takeIf { it.isNotEmpty() }?.let { desc ->
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    desc,
+                    color = Rahal.colors.inkMuted,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
             Spacer(Modifier.height(16.dp))
 
             when {
+                !item.hasOptions && (failed || groups.isNullOrEmpty()) -> Unit
+
                 failed -> Text(
                     stringResource(R.string.options_failed),
                     color = Rahal.colors.inkMuted,
@@ -199,6 +220,15 @@ fun ItemOptionsSheet(
             }
 
             Spacer(Modifier.height(20.dp))
+            blockedReason?.let { why ->
+                Text(
+                    why,
+                    color = Rahal.colors.danger,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+                Spacer(Modifier.height(8.dp))
+            }
             allOut?.let { g ->
                 Text(
                     stringResource(R.string.options_all_out, g.name),
@@ -223,7 +253,7 @@ fun ItemOptionsSheet(
             RahalButton(
                 onClick = { onAdd(picked, qty) },
                 modifier = Modifier.weight(1f),
-                enabled = ready,
+                enabled = ready && blockedReason == null,
             ) {
                 // **وبالدولار لمتجرٍ اختاره، والليرةُ بجانبه** — هي ما يُدفع (٢٠٢٦-١٠-١٢).
                 // **والدولارُ جمعُ دولار الصنف وإضافاته** — لا الليرةُ مقسومة، فيطابق

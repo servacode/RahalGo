@@ -15,6 +15,7 @@ import { useFav } from "@/lib/customer/favorites";
 import type { Item } from "@/lib/customer/types";
 import { ItemGrid, ItemSheet } from "@/components/customer/items";
 import { NeedLogin } from "@/components/customer/NeedLogin";
+import { ShopPageHeader } from "@/components/customer/ShopPageHeader";
 
 const m = getMessages(defaultLocale);
 const F = m.shop.favorites;
@@ -29,7 +30,7 @@ export default function FavoritesPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="heading-page">{F.title}</h1>
+      <ShopPageHeader title={F.title} />
       {fav.rows === null ? (
         <LoadingState variant="list" rows={3} />
       ) : fav.rows.length === 0 ? (

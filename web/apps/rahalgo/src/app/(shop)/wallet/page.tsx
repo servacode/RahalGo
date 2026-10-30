@@ -12,6 +12,7 @@ import { LoadingState, WalletPage } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { NeedLogin } from "@/components/customer/NeedLogin";
+import { ShopPageHeader } from "@/components/customer/ShopPageHeader";
 
 const m = getMessages(defaultLocale);
 const W = m.shop.wallet;
@@ -22,7 +23,7 @@ export default function WalletRoute() {
   if (!user) return <NeedLogin />;
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="heading-page">{W.title}</h1>
+      <ShopPageHeader title={W.title} />
       <WalletPage
         api={api}
         path="/api/v1/my/wallet"

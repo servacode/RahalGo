@@ -100,7 +100,8 @@ class CustDef005Test {
         val src = read(cart)
         assertTrue(
             "**الإجماليُّ لا يعكس محاسبةَ المحرّك بأرضيّتها**",
-            src.contains("money(if (cut == null) q.total else maxOf(0L, q.subtotal + fee - cut.discount))"),
+            // **والإجماليُّ مرّةً واحدةً في الشريط الثابت** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — بالمعادلة نفسِها.
+            src.contains("if (bcut == null) it.total else maxOf(0L, it.subtotal + bfee - bcut.discount)"),
         )
         assertFalse(
             "**الإجماليُّ ما زال يُشتقّ من `Cart.subtotal` المخزَّن (العطب)**",
@@ -117,7 +118,7 @@ class CustDef005Test {
     fun noPromoTotalIsExactQuoteTotal() {
         assertTrue(
             "**بلا كودٍ لا يُعرَض `q.total` مباشرةً**",
-            read(cart).contains("if (cut == null) q.total"),
+            read(cart).contains("if (bcut == null) it.total"),
         )
     }
 

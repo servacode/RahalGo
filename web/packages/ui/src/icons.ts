@@ -183,4 +183,7 @@ export {
   // **أدواتُ الأصناف** (تصميمُ ٢٠٢٦-١٠-٢٩) — «تغيير الأسعار» و«خيارات الأصناف».
   Banknote as IconBanknote,
   SlidersHorizontal as IconOptions,
+  // **تكبيرُ الصورة وتصغيرُها** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
+  ZoomIn as IconZoomIn,
+  ZoomOut as IconZoomOut,
 } from "lucide-react";

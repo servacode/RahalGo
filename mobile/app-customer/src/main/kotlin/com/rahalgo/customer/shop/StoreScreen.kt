@@ -177,6 +177,8 @@ internal fun StoreScreen(
     onLike: (Item) -> Unit,
     onAdd: (Item) -> Unit,
     onBack: () -> Unit,
+    /** **ضغطةُ البطاقة تفتح نافذةَ الصنف** (٢٠٢٦-١٠-٣٠) — كما في السوق. */
+    onOpen: (Item) -> Unit = {},
     /**
      * **لافتةُ السوق نفسُها حين يُطفأ «+»** — عنوانٌ خارجَ التغطية أو استعراض
      * (`ServiceBlockNotice`)، **ولا «+» يُطفأ بصمت.**
@@ -317,6 +319,7 @@ internal fun StoreScreen(
                             media = media,
                             liked = item.id in liked,
                             onAdd = { onAdd(item) },
+                            onOpen = { onOpen(item) },
                             onLike = { onLike(item) },
                             // **ولا رابطَ إلى الصفحة التي هو فيها** (`StoreLink`).
                             onStore = StoreLink.target(item, vm.storeId)?.let { id -> { vm.openStore(id) } },

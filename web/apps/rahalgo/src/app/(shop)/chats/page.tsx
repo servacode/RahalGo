@@ -11,6 +11,7 @@ import { ChatArchive, LoadingState } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { NeedLogin } from "@/components/customer/NeedLogin";
+import { ShopPageHeader } from "@/components/customer/ShopPageHeader";
 
 const m = getMessages(defaultLocale);
 const C = m.shop.chats;
@@ -21,10 +22,7 @@ export default function ChatsPage() {
   if (!user) return <NeedLogin />;
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
-      <div>
-        <h1 className="heading-page">{C.title}</h1>
-        <p className="text-sm text-ink-muted">{C.hint}</p>
-      </div>
+      <ShopPageHeader title={C.title} />
       <ChatArchive api={api} bare />
     </div>
   );

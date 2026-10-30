@@ -22,7 +22,7 @@ import { useAuth } from "@/lib/auth";
 import { customFee, fill, freeCustomOn, statusLabel } from "@/lib/customer/texts";
 import { useCustomer } from "@/lib/customer/context";
 import { ENDED, type MyOrder } from "@/lib/customer/types";
-import { CancelOrder, DeliveryCode, OrderEta, OrderStages, QuoteAmounts } from "@/components/customer/orderParts";
+import { CancelNote, CancelOrder, DeliveryCode, OrderEta, OrderStages, QuoteAmounts } from "@/components/customer/orderParts";
 import { statusTone } from "@/components/customer/OrderSummary";
 import { NeedLogin } from "@/components/customer/NeedLogin";
 import { useShopToast } from "@/components/customer/toast";
@@ -106,7 +106,11 @@ export default function OrderPage() {
           <h1 className="heading-page tabular-nums" dir="ltr">
             #{fmtRef(order.number)}
           </h1>
-          <Badge variant={statusTone(order.status)}>{statusLabel(order.status)}</Badge>
+          {/* **ومهلةُ الإلغاء جنبَ الحال** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — والزرُّ تحت بلا عدّاد. */}
+          <span className="flex flex-wrap items-center justify-end gap-2">
+            <CancelNote order={order} />
+            <Badge variant={statusTone(order.status)}>{statusLabel(order.status)}</Badge>
+          </span>
         </div>
         {!ended && (
           <>
@@ -159,13 +163,16 @@ export default function OrderPage() {
               {!ended && freeCustomOn(freeDelivery, order.custom_mode) && (
                 <p className="text-xs font-bold text-success">{m.shop.free.customPending}</p>
               )}
-              <p className="text-xs text-ink-muted">
-                {adminFee
-                  ? order.custom_mode === "amanah"
-                    ? m.shop.custom.amanahPay
-                    : m.shop.custom.totalPending
-                  : O.awaitingQuote}
-              </p>
+              {/* **وطلبٌ انتهى لا يُقال له «الإجمالي يُعرف بعد…»** (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}
+              {!ended && (
+                <p className="text-xs text-ink-muted">
+                  {adminFee
+                    ? order.custom_mode === "amanah"
+                      ? m.shop.custom.amanahPay
+                      : m.shop.custom.totalPending
+                    : O.awaitingQuote}
+                </p>
+              )}
             </>
           ) : (
             <>

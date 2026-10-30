@@ -188,9 +188,13 @@ fun ShopScreen(
             item = target,
             api = vm.customerApi,
             onAdd = { chosen, n ->
-                // **ولا تُضاف من النافذة ما مُنع من البطاقة** —
-                // **وبابان لفعلٍ واحدٍ أحدُهما بلا حارسٍ بابٌ مفتوح.**
-                if (!blocked) {
+                // **والنافذةُ تُفتح الآن من البطاقة كلِّها** (٢٠٢٦-١٠-٣٠) — فمن لا عنوانَ
+                // له يُسأل هنا كما يُسأل من «+» (`PC-02`).
+                if (!previewing && action == AddAction.NEED_ADDRESS) {
+                    onNeedAddress()
+                } else if (!blocked && target.available && !target.sourceClosed) {
+                    // **ولا تُضاف من النافذة ما مُنع من البطاقة** —
+                    // **وبابان لفعلٍ واحدٍ أحدُهما بلا حارسٍ بابٌ مفتوح.**
                     val inc = Cart.add(target, qty = n, options = chosen)
                     com.rahalgo.customer.cart.SourceNotice.afterAdd(sourceScope, vm.customerApi, address, inc)
                     com.rahalgo.ui.Flash.ok(
@@ -208,8 +212,19 @@ fun ShopScreen(
                 { picking = null; vm.openStore(id) }
             },
             media = media,
+            // **والمغلقُ والممنوعُ يُفتحان للقراءة** — والسببُ مكانَ زرٍّ لا يعمل.
+            blockedReason = when {
+                target.sourceClosed -> stringResource(R.string.shop_closed_now)
+                !target.available -> stringResource(com.rahalgo.ui.R.string.mn_unavailable)
+                blocked -> stringResource(R.string.offer_add_blocked)
+                else -> null
+            },
         )
     }
+
+    // **ضغطةُ البطاقة تفتح النافذةَ نفسَها** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — للقراءة
+    // والاختيار، **والإضافةُ تمرّ بحارس «أضف» في النافذة.**
+    val openItem: (Item) -> Unit = { item -> picking = item }
 
     // **وما يقع عند «+»** — **موضعٌ واحدٌ للقرار** يقرؤه السوقُ وصفحةُ المتجر:
     // **وبابان لفعلٍ واحدٍ أحدُهما بلا حارسٍ بابٌ مفتوح.**
@@ -305,6 +320,7 @@ fun ShopScreen(
             liked = liked,
             onLike = onLike,
             onAdd = addItem,
+            onOpen = openItem,
             onBack = vm::closeStore,
             notice = addNotice,
         )
@@ -568,6 +584,7 @@ fun ShopScreen(
                         media = media,
                         liked = item.id in liked,
                         onAdd = { addItem(item) },
+                        onOpen = { openItem(item) },
                         onLike = { onLike(item) },
                         // **واسمُ المتجر يفتح صفحتَه** (٢٠٢٦-١٠-١٨).
                         onStore = StoreLink.target(item, vm.storeId)?.let { id -> { vm.openStore(id) } },
@@ -769,6 +786,11 @@ internal fun ItemCard(
      * المتجر نفسِها وحيث لا صفحةَ تُفتح.
      */
     onStore: (() -> Unit)? = null,
+    /**
+     * **ضغطةُ البطاقة (الصورة أو الاسم) تفتح نافذةَ الصنف** (قرارُ المالك ٢٠٢٦-١٠-٣٠) —
+     * كانت «+» الصغيرةُ وحدَها تفتحها. و`null` يُبقي قلبَ الصورة للوصف كما كان.
+     */
+    onOpen: (() -> Unit)? = null,
 ) {
     val closed = item.sourceClosed || !item.available
     Column {
@@ -869,7 +891,9 @@ internal fun ItemCard(
                         rotationY = turn
                         cameraDistance = 12f * density
                     }
-                    .clickable { flipped = !flipped },
+                    .clickable(onClickLabel = if (onOpen != null) stringResource(R.string.shop_open_item) else null) {
+                        if (onOpen != null) onOpen() else flipped = !flipped
+                    },
             ) {
               if (turn > 90f) {
                 Box(
@@ -1026,7 +1050,9 @@ internal fun ItemCard(
             maxLines = 2,
             overflow = TextOverflow.Visible,
             textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(if (onOpen != null) Modifier.clickable(onClick = onOpen) else Modifier),
         )
 
         // **والمشطوبُ وحدَه ينزل سطرا** — ولا يقع إلّا في المحسوم.

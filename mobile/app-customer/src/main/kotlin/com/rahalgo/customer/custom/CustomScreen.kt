@@ -142,10 +142,9 @@ fun CustomScreen(
     }
 
     Screen {
-        ScreenTitle(
-            stringResource(R.string.nav_custom_order),
-            stringResource(R.string.soon_custom),
-        )
+        // **«اطلب أي شيء…» هي العنوان، ولا «طلب خاص» فوقها** (قرارُ المالك ٢٠٢٦-١٠-٣٠) —
+        // واسمُ التبويب تحت يبقى «طلب خاص».
+        ScreenTitle(stringResource(R.string.cst_heading))
 
         // ══════════════════════════════════════════════════════════════
         // **والإغلاقُ يُقال قبل أن يكتب لا بعد أن يُرسل** (تدقيقُ ٢٠٢٦-١٠-٢٧)
@@ -164,9 +163,8 @@ fun CustomScreen(
             com.rahalgo.ui.ServiceClosedBanner(closedText)
         }
 
+        // **ولا «نوع الطلب» فوق الخيارين** — «مشتريات/أمانة» تشرح نفسَها (قرارُ المالك ٢٠٢٦-١٠-٣٠).
         Spacer(Modifier.height(12.dp))
-        Text(stringResource(R.string.cst_mode_title), fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
-        Spacer(Modifier.height(6.dp))
         androidx.compose.foundation.layout.Row(
             Modifier.fillMaxWidth(),
             horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
@@ -183,27 +181,22 @@ fun CustomScreen(
                 }
             }
         }
-        Spacer(Modifier.height(4.dp))
-        Text(
-            stringResource(if (mode == "amanah") R.string.cst_mode_amanah_hint else R.string.cst_mode_purchase_hint),
-            color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodySmall,
-        )
+        // **ولا سطرَ شرحٍ تحت النوع** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
         Spacer(Modifier.height(12.dp))
         // **وحقلُ الطلب واسعٌ** — من يكتب «كيلو لحمة من ملحمة أبو أحمد
         // ونصف كيلو خبز» في سطرٍ واحدٍ لا يرى ما كتب.
+        // **والمثالُ نصٌّ رماديٌّ داخلَ الحقل يزول بالكتابة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) —
+        // **والعنوانُ فوق الحقل لا داخلَه**: عنوانٌ داخلَه يُخفي المثالَ حتّى يُلمس.
+        Text(
+            stringResource(R.string.cst_what),
+            style = MaterialTheme.typography.labelLarge,
+        )
+        Spacer(Modifier.height(4.dp))
         OutlinedTextField(
             value = request,
             // **وبحدّ المحرّك** — انظر `TextLimits`.
             onValueChange = { request = TextLimits.fit(it, TextLimits.CUSTOM_REQUEST) },
-            label = { Text(stringResource(R.string.cst_what)) },
-            // **والمثالُ يقول ما يُطلب** — **وسؤالٌ مفتوحٌ بلا مثالٍ
-            // يُوقف من لا يعرف ما تقبله المنصّة.**
-            //
-            // **وتحت الحقل لا داخلَه**: `placeholder` في Material لا
-            // يظهر إلّا بعد أن يُلمس الحقل — **ومن لم يلمسه لم يره
-            // فلم يعرف ماذا يكتب**، وهو الموقفُ نفسُه الذي أُصلح.
-            supportingText = { Text(stringResource(R.string.cst_what_hint)) },
+            placeholder = { Text(stringResource(R.string.cst_what_hint), color = Rahal.colors.inkMuted) },
             minLines = 3,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -266,15 +259,17 @@ fun CustomScreen(
                     Text(it, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
                 }
             }
-            Spacer(Modifier.height(4.dp))
-            // **والأمانةُ لا مشترياتَ فيها** (٢٠٢٦-١٠-١٤) — كانت تقول «الإجماليُّ
-            // بعد تحديد قيمة المشتريات» لأمانةٍ إجماليُّها الأجرةُ وحدَها.
-            Text(
-                if (mode == "amanah") stringResource(R.string.cst_amanah_total, money(fee - waive))
-                else stringResource(R.string.cst_total_pending),
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
-            )
+            // **والأمانةُ لا مشترياتَ فيها** (٢٠٢٦-١٠-١٤) — إجماليُّها الأجرةُ وحدَها.
+            // **وللمشتريات لا سطرَ تحت الأجرة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — كان «الإجمالي
+            // يُعرف بعد تحديد قيمة المشتريات».
+            if (mode == "amanah") {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    stringResource(R.string.cst_amanah_total, money(fee - waive)),
+                    color = Rahal.colors.inkMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
         } else {
             Text(
                 stringResource(R.string.cst_fee_on_deal),
@@ -294,16 +289,16 @@ fun CustomScreen(
             }
         }
         }
-        Spacer(Modifier.height(8.dp))
         // **وأمانةٌ بأجرةٍ من المنصّة لا عرضَ يُؤكَّد بعدها** — تُدفع نقداً للسائق.
-        Text(
-            stringResource(
-                if (mode == "amanah" && Serving.customFeeAdminDefined) R.string.cst_amanah_pay
-                else R.string.cst_pay_after_cost,
-            ),
-            color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodySmall,
-        )
+        // **ولا «طريقة الدفع تُحدد لاحقاً»** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — تُختار عند تأكيد العرض كما كانت.
+        if (mode == "amanah" && Serving.customFeeAdminDefined) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                stringResource(R.string.cst_amanah_pay),
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
 
         Spacer(Modifier.height(16.dp))
         RahalButton(

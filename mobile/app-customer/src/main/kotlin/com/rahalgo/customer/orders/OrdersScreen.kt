@@ -71,7 +71,8 @@ fun OrdersScreen(
         vm = vm,
         list = if (showHistory) vm.history else vm.open,
         title = stringResource(R.string.nav_orders_mine),
-        hint = stringResource(R.string.soon_orders),
+        // **ولا سطرَ شرحٍ تحت العنوان** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
+        hint = "",
         empty = stringResource(if (showHistory) R.string.ord_none_history else R.string.ord_none_open),
         history = showHistory,
         // **والسجلُّ منتهٍ — لا تأكيدَ عرضٍ فيه، فلا حاجةَ لرصيد.**
@@ -147,8 +148,9 @@ fun HistoryScreen(vm: OrdersViewModel) {
     OrdersList(
         vm = vm,
         list = vm.history,
-        title = stringResource(R.string.menu_history),
-        hint = stringResource(R.string.soon_history),
+        // **والعنوانُ في رأس الصفحة بسهم رجوع، ولا سطرَ شرح** (٢٠٢٦-١٠-٣٠).
+        title = "",
+        hint = "",
         empty = stringResource(R.string.ord_none_history),
         history = true,
         // **والسجلُّ منتهٍ — لا تأكيدَ عرضٍ فيه، فلا حاجةَ لرصيد.**
@@ -243,9 +245,10 @@ private fun OrdersList(
             val left = if (history) 0 else cancelLeft(o.cancelSecondsLeft, vm.loadedAt)
             OrderCard(
                 order = o,
-                // **والعدّادُ على الزرّ** — «إلغاء الطلب (باقي 0:45)»، ويختفي عند الصفر.
-                cancelLabel = if (left > 0) {
-                    stringResource(R.string.ord_cancel_left, "%d:%02d".format(java.util.Locale.US, left / 60, left % 60))
+                // **والمهلةُ سطرٌ مفهومٌ جنب الحال** (قرارُ المالك ٢٠٢٦-١٠-٣٠) —
+                // «يمكنك إلغاء الطلب خلال 46 ثانية»، ويغيب مع الزرّ عند الصفر.
+                cancelHint = if (left > 0) {
+                    stringResource(R.string.ord_cancel_within, CancelCountdown.within(left))
                 } else {
                     null
                 },

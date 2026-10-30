@@ -13,7 +13,7 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { createPortal } from "react-dom";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { IconClose } from "./icons";
+import { IconClose, IconZoomIn, IconZoomOut } from "./icons";
 
 const m = getMessages(defaultLocale);
 
@@ -177,6 +177,33 @@ export function ImageViewer({ src, alt = "", onClose }: { src: string; alt?: str
       >
         <IconClose size={24} />
       </button>
+      {/* **وزرّا تكبيرٍ وتصغيرٍ لمن لا إصبعين ولا عجلةَ له** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — حول المركز. */}
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center gap-2"
+        style={{ marginBottom: "env(safe-area-inset-bottom)" }}
+      >
+        {(
+          [
+            [m.common.media.zoomOut, IconZoomOut, 1 / 1.5, scale <= 1],
+            [m.common.media.zoomIn, IconZoomIn, 1.5, scale >= MAX_ZOOM],
+          ] as const
+        ).map(([label, Icon, f, off]) => (
+          <button
+            key={label}
+            type="button"
+            aria-label={label}
+            title={label}
+            disabled={off}
+            onClick={() => {
+              const { cx, cy } = size();
+              zoomAt(scale * f, { x: cx, y: cy });
+            }}
+            className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full bg-scrim text-on-solid disabled:opacity-40"
+          >
+            <Icon size={22} />
+          </button>
+        ))}
+      </div>
     </div>,
     document.body,
   );

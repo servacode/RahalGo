@@ -141,6 +141,11 @@ fun FullPhoto(
     shape: Shape = Rahal.shape.md,
     minHeight: Dp = 160.dp,
     maxHeight: Dp = 320.dp,
+    /**
+     * **عدسةٌ صغيرةٌ في الزاوية تقول «اضغط للتكبير»** (قرارُ المالك ٢٠٢٦-١٠-٣٠) —
+     * والضغطُ عليها كالضغط على الصورة. **ومطفأةٌ افتراضاً** فلا تتبدّل شاشاتٌ لم تطلبها.
+     */
+    zoomHint: Boolean = false,
 ) {
     var ratio by remember(url) { mutableStateOf<Float?>(null) }
     var failed by remember(url) { mutableStateOf(false) }
@@ -170,6 +175,24 @@ fun FullPhoto(
                     },
                     onError = { failed = true },
                 )
+                if (zoomHint) {
+                    Box(
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(Rahal.space.sm)
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.55f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            painterResource(R.drawable.ic_zoom_in),
+                            contentDescription = stringResource(R.string.image_zoom_hint),
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+                }
             }
         }
     }

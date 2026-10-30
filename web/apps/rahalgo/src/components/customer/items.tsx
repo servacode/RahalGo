@@ -33,6 +33,7 @@ import {
   IconMinus,
   IconStore,
   ImageViewer,
+  IconZoomIn,
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useCart, unitPrice } from "@/lib/customer/cart";
@@ -406,10 +407,17 @@ export function ItemSheet({
             <button
               type="button"
               onClick={() => setViewing(true)}
-              aria-label={view.name}
-              className="flex w-full items-center justify-center overflow-hidden rounded-card bg-field"
+              aria-label={`${view.name} — ${m.common.media.zoomHint}`}
+              className="relative flex w-full items-center justify-center overflow-hidden rounded-card bg-field"
             >
               <img src={img} alt="" className="max-h-80 w-auto max-w-full object-contain" />
+              {/* **عدسةٌ صغيرةٌ تقول «تُكبَّر»** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — مرآةُ `FullPhoto(zoomHint)`. */}
+              <span
+                aria-hidden
+                className="absolute bottom-2 end-2 flex h-9 w-9 items-center justify-center rounded-full bg-scrim text-on-solid"
+              >
+                <IconZoomIn size={20} />
+              </span>
             </button>
           )}
           {img && viewing && <ImageViewer src={img} alt={view.name} onClose={() => setViewing(false)} />}

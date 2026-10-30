@@ -20,6 +20,7 @@ import { useBrowseQuery, useCustomer } from "@/lib/customer/context";
 import { fill, freeOfferLines } from "@/lib/customer/texts";
 import type { FreeDelivery, Item, Offer } from "@/lib/customer/types";
 import { ItemSheet } from "@/components/customer/items";
+import { ShopPageHeader } from "@/components/customer/ShopPageHeader";
 
 const m = getMessages(defaultLocale);
 const F = m.shop.offers;
@@ -99,10 +100,7 @@ export default function OffersPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="heading-page">{F.title}</h1>
-        <p className="text-sm text-ink-muted">{F.hint}</p>
-      </div>
+      <ShopPageHeader title={F.title} />
       {free && <FreeOfferCard fd={free} />}
       {error && !offers ? (
         <ReloadState label={error} onRetry={load} />

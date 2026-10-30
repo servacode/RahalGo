@@ -17,6 +17,7 @@ import { useAuth } from "@/lib/auth";
 import { fill } from "@/lib/customer/texts";
 import type { Referral } from "@/lib/customer/types";
 import { NeedLogin } from "@/components/customer/NeedLogin";
+import { ShopPageHeader } from "@/components/customer/ShopPageHeader";
 
 const m = getMessages(defaultLocale);
 const V = m.customer.invite;
@@ -58,7 +59,7 @@ export default function InvitePage() {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
       <div>
-        <h1 className="heading-page">{V.title}</h1>
+        <ShopPageHeader title={V.title} />
         <p className="text-sm text-ink-muted">
           {r.next_reward > 0 ? fill(V.subtitle, { n: fmtNum(r.next_reward) }) : V.subtitleNoReward}
         </p>

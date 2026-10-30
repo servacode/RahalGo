@@ -88,8 +88,11 @@ fun OrderCard(
     confirming: Boolean = false,
     /** **يرفض السعرَ الجديد** بعد الاستلام — و`null` لا رفضَ هنا. */
     onRejectQuote: (() -> Unit)? = null,
-    /** **نصُّ زرّ الإلغاء بالعدّاد** — «إلغاء الطلب (باقي 0:45)»، و`null` النصُّ العاديّ. */
-    cancelLabel: String? = null,
+    /**
+     * **مهلةُ الإلغاء جنب الحال في رأس البطاقة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — «يمكنك إلغاء
+     * الطلب خلال 46 ثانية»، والزرُّ تحت بلا عدّاد. و`null` بلا مهلةٍ تُعرض.
+     */
+    cancelHint: String? = null,
 ) {
     Card {
         // **الحالُ أبرزُ ما في الرأس ورقمُ الطلب صغيرٌ جنبها** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧)
@@ -110,6 +113,16 @@ fun OrderCard(
                     .background(tone.copy(alpha = 0.12f))
                     .padding(horizontal = 12.dp, vertical = 5.dp),
             )
+            if (onCancel != null && cancelHint != null) {
+                Text(
+                    text = cancelHint,
+                    color = Rahal.colors.danger,
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 8.dp),
+                )
+            }
             Text(
                 // **ورقمُه كما يعرفه الجميع** — لا ستّةُ أحرفٍ من
                 // معرّفه: **رقمٌ لا يعرفه صاحبُه ولا المكتبُ لا يُستعمل
@@ -314,7 +327,7 @@ fun OrderCard(
                     onClick = it,
                     tone = Tone.Danger,
                     modifier = Modifier.weight(1f),
-                ) { Text(cancelLabel ?: stringResource(R.string.ord_cancel), maxLines = 1) }
+                ) { Text(stringResource(R.string.ord_cancel), maxLines = 1) }
             }
             onRate?.let {
                 RahalButton(onClick = it, modifier = Modifier.weight(1f)) {
@@ -380,18 +393,22 @@ private fun CustomQuoteSection(
                 fontWeight = FontWeight.Bold,
             )
         }
-        Spacer(Modifier.height(6.dp))
-        Text(
-            stringResource(
-                when {
-                    fixed && order.customMode == "amanah" -> R.string.cst_amanah_pay
-                    fixed -> R.string.cst_total_pending
-                    else -> R.string.ord_awaiting_quote
-                },
-            ),
-            color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodySmall,
-        )
+        // **وطلبٌ انتهى (أُلغي أو تعذّر) لا يُقال له «الإجمالي يُعرف بعد…»** (قرارُ المالك
+        // ٢٠٢٦-١٠-٣٠) — سطرٌ ينتظر ما لن يأتي.
+        if (!ended(order.status)) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                stringResource(
+                    when {
+                        fixed && order.customMode == "amanah" -> R.string.cst_amanah_pay
+                        fixed -> R.string.cst_total_pending
+                        else -> R.string.ord_awaiting_quote
+                    },
+                ),
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
         return
     }
 
@@ -524,33 +541,33 @@ private fun QuoteConfirmPanel(
     HorizontalDivider()
     Spacer(Modifier.height(8.dp))
     Text(
-        stringResource(R.string.ord_confirm_prompt),
+        stringResource(if (walletOk) R.string.ord_confirm_prompt else R.string.ord_confirm_amount),
         color = Rahal.colors.ink,
         style = MaterialTheme.typography.bodyMedium,
         fontWeight = FontWeight.Bold,
     )
     Spacer(Modifier.height(6.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        FilterChip(
-            selected = method == "cash",
-            onClick = { method = "cash" },
-            label = { Text(stringResource(R.string.cart_cash)) },
-        )
-        // **والمحفظةُ خيارٌ فقط إن غطّى رصيدُها المبلغَ** — وإلّا نصٌّ لا زرّ.
-        if (walletOk) {
+    // **والمحفظةُ خيارٌ فقط إن غطّى رصيدُها المبلغَ** — وإلّا سطرٌ واحدٌ «الدفع: نقداً
+    // عند الاستلام» لا رقاقةٌ وحيدةٌ وسطرُ «رصيدك لا يكفي» (قرارُ المالك ٢٠٢٦-١٠-٣٠).
+    // والطريقةُ تبقى `cash` كما كانت.
+    if (walletOk) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FilterChip(
+                selected = method == "cash",
+                onClick = { method = "cash" },
+                label = { Text(stringResource(R.string.cart_cash)) },
+            )
             FilterChip(
                 selected = method == "wallet",
                 onClick = { method = "wallet" },
                 label = { Text(stringResource(R.string.cart_wallet)) },
             )
         }
-    }
-    if (!walletOk) {
-        Spacer(Modifier.height(6.dp))
+    } else {
         Text(
-            stringResource(R.string.ord_wallet_short),
-            color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodySmall,
+            stringResource(R.string.ord_pay_cash_only),
+            color = Rahal.colors.ink,
+            style = MaterialTheme.typography.bodyMedium,
         )
     }
     Spacer(Modifier.height(10.dp))

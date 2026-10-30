@@ -114,15 +114,13 @@ export default function CustomOrderPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
-      <div>
-        <h1 className="heading-page">{K.title}</h1>
-        <p className="text-sm text-ink-muted">{K.subtitle}</p>
-      </div>
+      {/* **«اطلب أي شيء…» هي العنوان، ولا «طلب خاص» فوقها** (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}
+      <h1 className="heading-page">{K.subtitle}</h1>
 
       {closed && <Alert tone="warning">{closedText}</Alert>}
 
       <section className="surface flex flex-col gap-3 p-4">
-        <p className="text-sm font-bold">{K.modeTitle}</p>
+        {/* **ولا «نوع الطلب» ولا سطرَ شرحٍ** — الخياران يشرحان نفسَيهما (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}
         <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={K.modeTitle}>
           {modes.map((it) => (
             <Button
@@ -137,19 +135,17 @@ export default function CustomOrderPage() {
             </Button>
           ))}
         </div>
-        <p className="text-xs text-ink-muted">{mode === "amanah" ? K.amanahHint : K.purchaseHint}</p>
 
-        <div>
-          <Textarea
-            id="custom-request"
-            label={K.what}
-            value={request}
-            onChange={(e) => setRequest(e.target.value.slice(0, MAX_REQUEST))}
-            rows={4}
-            maxLength={MAX_REQUEST}
-          />
-          <p className="mt-1 text-xs text-ink-muted">{K.whatHint}</p>
-        </div>
+        {/* **والمثالُ نصٌّ رماديٌّ داخلَ الحقل يزول بالكتابة** (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}
+        <Textarea
+          id="custom-request"
+          label={K.what}
+          placeholder={K.whatHint}
+          value={request}
+          onChange={(e) => setRequest(e.target.value.slice(0, MAX_REQUEST))}
+          rows={4}
+          maxLength={MAX_REQUEST}
+        />
       </section>
 
       <AddressChip onOpen={() => setPickAddr(true)} />
@@ -180,9 +176,10 @@ export default function CustomOrderPage() {
               ) : (
                 <p className="text-sm font-bold">{fill(K.feeValue, { amount: fmtMoney(fee) })}</p>
               )}
-              <p className="text-xs text-ink-muted">
-                {mode === "amanah" ? fill(K.amanahTotal, { amount: fmtMoney(fee - waive) }) : K.totalPending}
-              </p>
+              {/* **وللمشتريات لا سطرَ تحت الأجرة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — مرآةُ `CustomScreen.kt`. */}
+              {mode === "amanah" && (
+                <p className="text-xs text-ink-muted">{fill(K.amanahTotal, { amount: fmtMoney(fee - waive) })}</p>
+              )}
             </>
           ) : (
             <>
@@ -191,7 +188,8 @@ export default function CustomOrderPage() {
               {freeOn && <p className="text-xs font-bold text-success">{m.shop.free.customPending}</p>}
             </>
           )}
-          <p className="text-xs text-ink-muted">{mode === "amanah" && adminFee ? K.amanahPay : K.payAfterCost}</p>
+          {/* **ولا «طريقة الدفع تُحدد لاحقاً»** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — تُختار عند تأكيد العرض كما كانت. */}
+          {mode === "amanah" && adminFee && <p className="text-xs text-ink-muted">{K.amanahPay}</p>}
         </div>
       </section>
 
