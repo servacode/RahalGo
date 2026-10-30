@@ -192,7 +192,7 @@ fun ShopScreen(
         ItemOptionsSheet(
             item = target,
             api = vm.customerApi,
-            onAdd = { chosen, n, drinks ->
+            onAdd = { picks ->
                 // **والنافذةُ تُفتح الآن من البطاقة كلِّها** (٢٠٢٦-١٠-٣٠) — فمن لا عنوانَ
                 // له يُسأل هنا كما يُسأل من «+» (`PC-02`).
                 if (!previewing && action == AddAction.NEED_ADDRESS) {
@@ -200,7 +200,7 @@ fun ShopScreen(
                 } else if (!blocked && target.available && !target.sourceClosed) {
                     // **ولا تُضاف من النافذة ما مُنع من البطاقة** —
                     // **وبابان لفعلٍ واحدٍ أحدُهما بلا حارسٍ بابٌ مفتوح.**
-                    val inc = Cart.add(target, qty = n, options = chosen, drinks = drinks)
+                    val inc = Cart.addAll(target, picks)
                     com.rahalgo.customer.cart.SourceNotice.afterAdd(sourceScope, vm.customerApi, address, inc)
                     com.rahalgo.ui.Flash.ok(
                         context.getString(

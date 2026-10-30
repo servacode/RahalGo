@@ -646,15 +646,58 @@ fun fixedCustomFee(order: DriverOrder): Long? =
     }
 
 /**
- * **الأصنافُ سطراً سطراً بشكل الفاتورة الواحد** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — «شاورما دبل × 2»،
- * «بندورة × 1 كيلو». **والمحرّكُ لا يرسل للسائق سعرَ البند** فلا مبلغَ في آخر السطر،
- * **ولا اسمَ المجموعة** (الخياراتُ نصٌّ واحدٌ بـ«، ») فالقاعدةُ تُطبَّق على القيم وحدَها.
+ * **الأصنافُ سطراً سطراً بشكل الفاتورة الواحد** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — «شاورما دبل × 2
+ * ........ 90 ل.س»، «بندورة × 1 كيلو ........ 600 ل.س»، والمشروبُ بعد صنفه.
+ *
+ * **والسائقُ يرى الفاتورةَ كاملة** (قرارُ المالك ٢٠٢٦-١٠-٣٠): سعرُ البيع ومجموعاتُ الخيارات
+ * من المحرّك. **وخادمٌ قديمٌ لا يرسلها** — فلا مبلغَ في آخر السطر، والخياراتُ نصٌّ واحدٌ بـ«، »
+ * تُطبَّق القاعدةُ على قيمه وحدَها، **كما كان.**
  */
-fun itemsText(order: DriverOrder): String = order.items.joinToString("\n") { it ->
-    com.rahalgo.ui.invoiceLineText(
-        it.name,
-        it.qty,
-        it.options.split("، ").map { v -> "" to v }.filter { p -> p.second.isNotBlank() },
+fun driverInvoiceLines(order: DriverOrder): List<com.rahalgo.ui.InvoiceLine> = order.items.map { it ->
+    val options = if (it.optionList.isNotEmpty()) {
+        it.optionList.map { o -> o.group to o.name }
+    } else {
+        it.options.split("، ").map { v -> "" to v }.filter { p -> p.second.isNotBlank() }
+    }
+    com.rahalgo.ui.InvoiceLine(
+        id = it.id,
+        drinkFor = it.drinkFor,
+        text = com.rahalgo.ui.invoiceLineText(it.name, it.qty, options),
+        amount = it.unitPrice?.let { p -> p * it.qty },
+    )
+}
+
+/** **نصُّ الأصناف سطراً سطراً** — بلا مبالغ، لمن يعرضها نصّاً. */
+fun itemsText(order: DriverOrder): String =
+    com.rahalgo.ui.invoiceOrder(driverInvoiceLines(order)).joinToString("\n") { it.text }
+
+/**
+ * **كتلةُ المال تحت الأصناف** — المجموع · التوصيل · (الخصم) · الإجمالي (قرارُ المالك ٢٠٢٦-١٠-٣٠).
+ *
+ * **و`null`: لا كتلة** — خادمٌ قديمٌ بلا أسعار، أو طلبٌ ليس من متجر (خاصٌّ أو توصيلة):
+ * أرقامٌ مبنيّةٌ على صفرٍ تكذب.
+ */
+data class DriverInvoiceTotals(
+    val subtotal: Long,
+    /** **ما دفعه الزبونُ توصيلاً** — وصفرٌ مع `free`: مجانيّ. */
+    val delivery: Long,
+    val free: Boolean,
+    val discount: Long,
+    val total: Long,
+)
+
+fun driverInvoiceTotals(order: DriverOrder): DriverInvoiceTotals? {
+    if (order.kind != "standard" || order.items.isEmpty()) return null
+    if (order.items.any { it.unitPrice == null }) return null
+    val lines = order.items.sumOf { (it.unitPrice ?: 0) * it.qty }
+    // **والسائقُ يقرأ أجرتَه كاملةً في `deliveryFee`** — والزبونُ دفعها ناقصةَ الإعفاء.
+    val delivery = (order.deliveryFee - order.freeWaived).coerceAtLeast(0)
+    return DriverInvoiceTotals(
+        subtotal = if (order.subtotal > 0) order.subtotal else lines,
+        delivery = delivery,
+        free = order.freeWaived > 0 && delivery == 0L,
+        discount = order.discount,
+        total = order.total,
     )
 }
 

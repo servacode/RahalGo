@@ -962,11 +962,6 @@ private fun WeightOptions(
             modifier = Modifier.width(NumberFieldWidth),
         )
     }
-    Text(
-        stringResource(R.string.mod_weight_hint),
-        color = Rahal.colors.inkMuted,
-        style = MaterialTheme.typography.bodySmall,
-    )
     Spacer(Modifier.height(Rahal.space.xs))
     g.options.forEachIndexed { oi, o ->
         OptionRow(

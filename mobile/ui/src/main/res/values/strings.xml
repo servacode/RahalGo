@@ -832,7 +832,6 @@
     <string name="item_usd_need_rate">اكتب سعر الصرف في صفحة «متجري» أولاً</string>
     <string name="mod_title">الإضافات والخيارات</string>
     <string name="mod_none_hint">هذه الخيارات بلا سعر — اختر الموجود منها وأوقف غير المتوفر</string>
-    <string name="mod_weight_hint">سعر الصنف يخص الوزن المكتوب هنا، ويُحسب سعر كل وزن منه تلقائياً</string>
     <string name="mod_weight_base">سعر الصنف لوزن (غرام)</string>
     <string name="mod_weight_grams">الوزن (غرام)</string>
     <string name="mod_weight_price">السعر %1$s</string>

@@ -75,7 +75,10 @@ fun ItemOptionsSheet(
      * **ما اختاره والعدد والمشروبات** — «أضف» يحمل الكمّيّةَ كلَّها بضغطةٍ واحدة.
      * والمشروباتُ بأعدادها منفصلةً (قرارُ المالك ٢٠٢٦-١٠-٣٠): لا تُضرب بعدد الصنف.
      */
-    onAdd: (List<ModifierOption>, Int, List<com.rahalgo.customer.cart.Cart.DrinkPick>) -> Unit,
+    /**
+     * و**سطرٌ لكلّ خيارٍ بعدّاده** (قرارُ المالك ٢٠٢٦-١٠-٣٠، `OptionSplit`) — «٢ عادي + ١ دبل» سطران.
+     */
+    onAdd: (List<com.rahalgo.customer.cart.Cart.Pick>) -> Unit,
     onClose: () -> Unit,
     /**
      * **اسمُ المتجر بابُ صفحته** (قرارُ المالك ٢٠٢٦-١٠-١٨) — كما في البطاقة.
@@ -100,34 +103,45 @@ fun ItemOptionsSheet(
     var chosen by remember(item.id) { mutableStateOf<Map<String, List<ModifierOption>>>(emptyMap()) }
     // **وعددُ كلِّ مشروب** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — يبدأ صفراً ولا يتبع عددَ الصنف.
     var drinkQty by remember(item.id) { mutableStateOf<Map<String, Int>>(emptyMap()) }
+    // **وعددُ كلِّ خيارٍ في مجموعة العدّادات** (`OptionSplit`) — يبدأ صفراً.
+    var splitQty by remember(item.id) { mutableStateOf<Map<String, Int>>(emptyMap()) }
 
     LaunchedEffect(item.id) {
         runCatching { api.itemDetail(item.id) }
             .onSuccess { d ->
                 groups = d.modifiers
+                val split = com.rahalgo.customer.cart.OptionSplit.group(d.modifiers)
                 // **والمجموعةُ الإلزاميّةُ بخيارٍ واحدٍ يُختار أوّلُ متوفّرٍ فيها** — مرآةُ الويب
                 // (`items.tsx`): «الحجم: عادي» بلا ضغطةٍ إضافيّة.
                 chosen = d.modifiers.mapNotNull { g ->
                     val first = g.options.firstOrNull { it.available }
-                    if (!g.isDrinks && g.minSelect > 0 && g.maxSelect == 1 && first != null) g.id to listOf(first) else null
+                    if (g.id != split?.id && !g.isDrinks && g.minSelect > 0 && g.maxSelect == 1 && first != null) g.id to listOf(first) else null
                 }.toMap()
             }
             .onFailure { failed = true }
     }
 
-    val picked = chosen.values.flatten()
-    val unit = item.price + picked.sumOf { it.priceDelta }
+    // **مجموعةُ العدّادات** — وفي وجودها يختفي العددُ العامّ، ويصير كلُّ خيارٍ سطراً.
+    val split = groups?.let { com.rahalgo.customer.cart.OptionSplit.group(it) }
+    val picked = chosen.filterKeys { it != split?.id }.values.flatten()
     val drinkOptions = groups.orEmpty().filter { it.isDrinks }.flatMap { it.options }
     val drinks = drinkOptions.mapNotNull { o ->
         drinkQty[o.id]?.takeIf { it > 0 }?.let { com.rahalgo.customer.cart.Cart.DrinkPick(o, it) }
     }
-    // **الإجمالي**: الصنفُ بعدده وخياراته، ثمّ كلُّ مشروبٍ بعدده هو.
-    val drinksTotal = drinks.sumOf { it.option.priceDelta * it.qty }
+    val picks = if (split != null) {
+        com.rahalgo.customer.cart.OptionSplit.picks(split, splitQty, picked, drinks)
+    } else {
+        listOf(com.rahalgo.customer.cart.Cart.Pick(picked, qty, drinks))
+    }
 
     // **وناقصٌ واحدٌ يكفي لإطفاء الزرّ.**
     // **وصنفٌ بلا خياراتٍ جاهزٌ فوراً** (٢٠٢٦-١٠-٣٠) — يُفتح الآن من البطاقة، ولا ينتظر جلبَ خياراتٍ ليست له.
     val ready = !item.hasOptions || groups?.all { g ->
-        val n = if (g.isDrinks) g.options.count { (drinkQty[it.id] ?: 0) > 0 } else chosen[g.id]?.size ?: 0
+        val n = when {
+            g.isDrinks -> g.options.count { (drinkQty[it.id] ?: 0) > 0 }
+            g.id == split?.id -> if (splitQty.values.any { it > 0 }) 1 else 0
+            else -> chosen[g.id]?.size ?: 0
+        }
         n >= g.minSelect
     } == true
 
@@ -211,10 +225,26 @@ fun ItemOptionsSheet(
                 ) {
                     groups.orEmpty().forEach { g ->
                         if (g.isDrinks) {
-                            DrinksBlock(
+                            CounterBlock(
                                 group = g,
                                 counts = drinkQty,
+                                max = com.rahalgo.customer.cart.Cart.MAX_DRINK,
+                                priceText = { o -> o.priceDeltaUsd?.let { com.rahalgo.ui.dollars(it) } ?: money(o.priceDelta) },
                                 onCount = { id, n -> drinkQty = drinkQty + (id to n) },
+                            )
+                            return@forEach
+                        }
+                        if (g.id == split?.id) {
+                            // **عدّادٌ جنب كلّ خيارٍ بسعره كاملاً** — «عادي ٢٠ ل.س (− ٢ +)».
+                            CounterBlock(
+                                group = g,
+                                counts = splitQty,
+                                max = com.rahalgo.customer.cart.OptionSplit.MAX_PER_OPTION,
+                                priceText = { o ->
+                                    item.priceUsd?.let { com.rahalgo.ui.dollars(it + (o.priceDeltaUsd ?: 0.0)) }
+                                        ?: money(item.price + o.priceDelta)
+                                },
+                                onCount = { id, n -> splitQty = splitQty + (id to n) },
                             )
                             return@forEach
                         }
@@ -260,8 +290,8 @@ fun ItemOptionsSheet(
                 Spacer(Modifier.height(8.dp))
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
-            // **أداةُ الكمّيّة جنب الزرّ** — والسعرُ على الزرّ يتبعها.
-            Row(
+            // **أداةُ الكمّيّة جنب الزرّ** — والسعرُ على الزرّ يتبعها. ولا تُرسم مع العدّادات.
+            if (split == null) Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .clip(Rahal.shape.pill)
@@ -271,25 +301,24 @@ fun ItemOptionsSheet(
                 Text(qty.toString(), fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp))
                 SheetQty(com.rahalgo.ui.R.drawable.ic_plus, stringResource(R.string.cart_qty_more), enabled = qty < 99) { qty += 1 }
             }
-            Spacer(Modifier.size(12.dp))
+            if (split == null) Spacer(Modifier.size(12.dp))
             RahalButton(
-                onClick = { onAdd(picked, qty, drinks) },
+                onClick = { onAdd(picks) },
                 modifier = Modifier.weight(1f),
-                enabled = ready && blockedReason == null,
+                enabled = ready && blockedReason == null && picks.any { it.qty > 0 },
             ) {
                 // **وبالدولار لمتجرٍ اختاره، والليرةُ بجانبه** — هي ما يُدفع (٢٠٢٦-١٠-١٢).
                 // **والدولارُ جمعُ دولار الصنف وإضافاته** — لا الليرةُ مقسومة، فيطابق
                 // ما رآه على البطاقة والخيارات (ملاحظةُ المالك ٢٠٢٦-١٠-١٢).
-                val usdUnit = item.priceUsd?.let { base ->
-                    base + picked.sumOf { it.priceDeltaUsd ?: 0.0 }
-                }
-                val usdDrinks = drinks.sumOf { (it.option.priceDeltaUsd ?: 0.0) * it.qty }
+                // **والإجماليُّ جمعُ السطور** — كلُّ خيارٍ بعدده (`OptionSplit.total`).
+                val total = com.rahalgo.customer.cart.OptionSplit.total(item.price, picks)
+                val usdTotal = item.priceUsd?.let { com.rahalgo.customer.cart.OptionSplit.totalUsd(it, picks) }
                 Text(
                     stringResource(
                         R.string.options_add,
-                        if (usdUnit != null) {
-                            com.rahalgo.ui.dollars(usdUnit * qty + usdDrinks) + " (≈ " + money(unit * qty + drinksTotal) + ")"
-                        } else money(unit * qty + drinksTotal),
+                        if (usdTotal != null) {
+                            com.rahalgo.ui.dollars(usdTotal) + " (≈ " + money(total) + ")"
+                        } else money(total),
                     ),
                     maxLines = 2,
                 )
@@ -320,15 +349,17 @@ private fun SheetQty(icon: Int, label: String, enabled: Boolean, onClick: () -> 
 }
 
 /**
- * **مشروباتُ المتجر — كلُّ مشروبٍ بعدّاده** (قرارُ المالك ٢٠٢٦-١٠-٣٠)
+ * **مجموعةٌ بعدّادٍ لكلّ خيار** (قرارُ المالك ٢٠٢٦-١٠-٣٠)
  *
- * «− ٠ +» لكلّ مشروب، يبدأ صفراً وسقفُه ٢٠. **ولا يُضرب بعدد الصنف**: من طلب
- * ثلاث شاورما وعيراناً واحداً يدفع عيراناً واحداً.
+ * مشروباتُ المتجر: «− ٠ +» لكلّ مشروب، يبدأ صفراً وسقفُه ٢٠، **ولا يُضرب بعدد الصنف**.
+ * ومجموعةُ العدّادات (`OptionSplit`): «عادي ٢٠ ل.س (− ٢ +)» — كلُّ خيارٍ سطرٌ في السلّة.
  */
 @Composable
-private fun DrinksBlock(
+private fun CounterBlock(
     group: ModifierGroup,
     counts: Map<String, Int>,
+    max: Int,
+    priceText: (ModifierOption) -> String,
     onCount: (String, Int) -> Unit,
 ) {
     Column {
@@ -366,7 +397,7 @@ private fun DrinksBlock(
                         if (!o.available) {
                             stringResource(R.string.options_unavailable)
                         } else {
-                            o.priceDeltaUsd?.let { com.rahalgo.ui.dollars(it) } ?: money(o.priceDelta)
+                            priceText(o)
                         },
                         color = if (o.available) Rahal.colors.inkMuted else Rahal.colors.danger,
                         style = MaterialTheme.typography.bodySmall,
@@ -390,7 +421,7 @@ private fun DrinksBlock(
                     SheetQty(
                         com.rahalgo.ui.R.drawable.ic_plus,
                         stringResource(R.string.cart_qty_more),
-                        enabled = o.available && n < com.rahalgo.customer.cart.Cart.MAX_DRINK,
+                        enabled = o.available && n < max,
                     ) { onCount(o.id, n + 1) }
                 }
             }

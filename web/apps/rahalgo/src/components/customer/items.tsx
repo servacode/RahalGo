@@ -15,7 +15,7 @@
  * الصنفُ غيرُ متوفّر. **ولا زرَّ إضافةٍ عليهما.**
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { getMessages, defaultLocale, errorText, fmtNum } from "@rahalgo/i18n";
 import {
@@ -36,7 +36,18 @@ import {
   IconZoomIn,
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
-import { useCart, unitPrice, MAX_DRINK, type DrinkPick } from "@/lib/customer/cart";
+import {
+  useCart,
+  unitPrice,
+  MAX_DRINK,
+  MAX_PER_OPTION,
+  splitGroup,
+  splitPicks,
+  picksTotal,
+  picksTotalUsd,
+  type DrinkPick,
+  type Pick,
+} from "@/lib/customer/cart";
 import { useFav } from "@/lib/customer/favorites";
 import { isDrinksGroup, type Item, type ItemDetail, type ModifierGroup, type ModifierOption } from "@/lib/customer/types";
 import { dollars, fill, backAt } from "@/lib/customer/texts";
@@ -226,9 +237,17 @@ function missingGroup(
   groups: ModifierGroup[],
   picked: Record<string, string[]>,
   drinkQty: Record<string, number>,
+  split: ModifierGroup | null,
+  splitQty: Record<string, number>,
 ): ModifierGroup | null {
   for (const g of groups) {
-    const n = isDrinksGroup(g) ? g.options.filter((o) => (drinkQty[o.id] ?? 0) > 0).length : (picked[g.id]?.length ?? 0);
+    const n = isDrinksGroup(g)
+      ? g.options.filter((o) => (drinkQty[o.id] ?? 0) > 0).length
+      : g.id === split?.id
+        ? Object.values(splitQty).some((x) => x > 0)
+          ? 1
+          : 0
+        : (picked[g.id]?.length ?? 0);
     if (g.min_select > 0 && n < g.min_select) return g;
   }
   return null;
@@ -260,6 +279,8 @@ export function ItemSheet({
   const [qty, setQty] = useState(1);
   // **وعددُ كلِّ مشروب** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — يبدأ صفراً ولا يتبع عددَ الصنف.
   const [drinkQty, setDrinkQty] = useState<Record<string, number>>({});
+  // **وعددُ كلِّ خيارٍ في مجموعة العدّادات** (`splitGroup`) — يبدأ صفراً.
+  const [splitQty, setSplitQty] = useState<Record<string, number>>({});
   const [warn, setWarn] = useState("");
   const [askOther, setAskOther] = useState(false);
   const fav = useFav();
@@ -277,6 +298,7 @@ export function ItemSheet({
     setPicked({});
     setQty(1);
     setDrinkQty({});
+    setSplitQty({});
     setWarn("");
     setViewing(false);
     if (!item) return;
@@ -288,9 +310,10 @@ export function ItemSheet({
         /* **والمجموعةُ الإلزاميّةُ بخيارٍ واحدٍ تُختار وحدَها** — «الحجم:
            عادي» بلا ضغطةٍ إضافيّة. */
         const pre: Record<string, string[]> = {};
+        const sg = splitGroup(d.modifiers ?? []);
         for (const g of d.modifiers ?? []) {
           const first = g.options.find((o) => o.available);
-          if (!isDrinksGroup(g) && g.min_select > 0 && g.max_select === 1 && first) pre[g.id] = [first.id];
+          if (g.id !== sg?.id && !isDrinksGroup(g) && g.min_select > 0 && g.max_select === 1 && first) pre[g.id] = [first.id];
         }
         setPicked(pre);
       })
@@ -302,14 +325,16 @@ export function ItemSheet({
 
   const view = detail?.item ?? item;
   const groups = useMemo(() => detail?.modifiers ?? [], [detail]);
+  // **مجموعةُ العدّادات** — وفي وجودها يختفي العددُ العامّ، ويصير كلُّ خيارٍ سطراً.
+  const split = useMemo(() => splitGroup(groups), [groups]);
   const options: ModifierOption[] = useMemo(() => {
     const out: ModifierOption[] = [];
     for (const g of groups) {
-      if (isDrinksGroup(g)) continue;
+      if (isDrinksGroup(g) || g.id === split?.id) continue;
       for (const o of g.options) if (picked[g.id]?.includes(o.id)) out.push(o);
     }
     return out;
-  }, [groups, picked]);
+  }, [groups, picked, split]);
   const drinks: DrinkPick[] = useMemo(() => {
     const out: DrinkPick[] = [];
     for (const g of groups) {
@@ -328,19 +353,21 @@ export function ItemSheet({
   const usdUnit =
     view.price_usd != null ? view.price_usd + options.reduce((s, o) => s + (o.price_delta_usd ?? 0), 0) : null;
   const img = mediaUrl(view.image_url ?? view.image_thumb_url);
-  // **الإجمالي**: الصنفُ بعدده وخياراته، ثمّ كلُّ مشروبٍ بعدده هو.
-  const drinksSum = drinks.reduce((s, d) => s + d.option.price_delta * d.qty, 0);
-  const drinksUsd = drinks.reduce((s, d) => s + (d.option.price_delta_usd ?? 0) * d.qty, 0);
+  // **السطور**: سطرٌ لكلّ خيارٍ بعدّاده، أو سطرٌ واحدٌ بالعدد العامّ — والإجماليُّ جمعُها.
+  const picks: Pick[] = split ? splitPicks(split, splitQty, options, drinks) : [{ options, qty, drinks }];
+  const total = picksTotal(view, picks);
+  const totalUsd = view.price_usd != null ? picksTotalUsd(view.price_usd, picks) : null;
+  const nothing = !picks.some((p) => p.qty > 0);
 
   const doAdd = () => {
     if (gate.kind !== "ok") return;
-    cart.add(view, qty, options, drinks);
+    for (const p of picks) if (p.qty > 0) cart.add(view, p.qty, p.options, p.drinks);
     toast(I.added);
     onClose();
   };
 
   const tryAdd = () => {
-    const miss = missingGroup(groups, picked, drinkQty);
+    const miss = missingGroup(groups, picked, drinkQty, split, splitQty);
     if (miss) {
       /* **ومجموعةٌ إلزاميّةٌ كلُّ خياراتها نافدةٌ لا يُقال لها «اختر»** — لا شيءَ يُختار. */
       const out = !miss.options.some((o) => o.available);
@@ -399,6 +426,8 @@ export function ItemSheet({
             </div>
           ) : (
             <div className="flex items-center gap-3">
+              {/* **والعددُ العامُّ لا يُرسم مع العدّادات** — كلُّ خيارٍ بعدّاده. */}
+              {!split && (
               <div className="flex items-center gap-1 rounded-control bg-field p-1">
                 <button
                   type="button"
@@ -420,23 +449,28 @@ export function ItemSheet({
                   <IconAdd size={16} />
                 </button>
               </div>
-              <Button className="flex-1 py-3" onClick={tryAdd} disabled={item.has_options && !detail && !loadError}>
+              )}
+              <Button
+                className="flex-1 py-3"
+                onClick={tryAdd}
+                disabled={(item.has_options && !detail && !loadError) || (!!split && nothing)}
+              >
                 <span className="flex items-center justify-center gap-2">
                   {I.add}
                   <span aria-hidden>·</span>
                   {/* **والدولارُ يتبع العدد كالليرة** — كان سعرَ الواحد مهما زاد العدد. */}
-                  {usdUnit != null ? (
+                  {totalUsd != null ? (
                     <span className="inline-flex items-baseline gap-1.5">
                       <span dir="ltr" className="tabular-nums">
-                        {dollars(usdUnit * qty + drinksUsd)}
+                        {dollars(totalUsd)}
                       </span>
                       <span className="text-xs opacity-80">
                         {"≈ "}
-                        <Money value={unit * qty + drinksSum} small />
+                        <Money value={total} small />
                       </span>
                     </span>
                   ) : (
-                    <Money value={unit * qty + drinksSum} />
+                    <Money value={total} />
                   )}
                 </span>
               </Button>
@@ -492,13 +526,34 @@ export function ItemSheet({
           {loadError && <Alert>{loadError}</Alert>}
           {groups.map((g) =>
             isDrinksGroup(g) ? (
-              <DrinksBlock
+              <CounterBlock
                 key={g.id}
                 group={g}
                 counts={drinkQty}
+                max={MAX_DRINK}
+                price={(o) => (o.price_delta_usd != null ? dollars(o.price_delta_usd) : <Money value={o.price_delta} small />)}
                 onCount={(id, n) => {
                   setWarn("");
                   setDrinkQty((cur) => ({ ...cur, [id]: Math.max(0, Math.min(MAX_DRINK, n)) }));
+                }}
+              />
+            ) : g.id === split?.id ? (
+              /* **عدّادٌ جنب كلّ خيارٍ بسعره كاملاً** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — «عادي ٢٠ ل.س (− ٢ +)». */
+              <CounterBlock
+                key={g.id}
+                group={g}
+                counts={splitQty}
+                max={MAX_PER_OPTION}
+                price={(o) =>
+                  view.price_usd != null ? (
+                    dollars(view.price_usd + (o.price_delta_usd ?? 0))
+                  ) : (
+                    <Money value={view.price + o.price_delta} small />
+                  )
+                }
+                onCount={(id, n) => {
+                  setWarn("");
+                  setSplitQty((cur) => ({ ...cur, [id]: Math.max(0, Math.min(MAX_PER_OPTION, n)) }));
                 }}
               />
             ) : (
@@ -581,17 +636,22 @@ export function ItemSheet({
 }
 
 /**
- * **مشروباتُ المتجر — كلُّ مشروبٍ بعدّاده** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — مرآةُ `DrinksBlock` في التطبيق.
+ * **مجموعةٌ بعدّادٍ لكلّ خيار** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — مرآةُ `CounterBlock` في التطبيق.
  *
- * «− ٠ +» لكلّ مشروب، يبدأ صفراً وسقفُه ٢٠، **ولا يُضرب بعدد الصنف.**
+ * المشروبات: «− ٠ +» لكلّ مشروب، يبدأ صفراً وسقفُه ٢٠، **ولا يُضرب بعدد الصنف.**
+ * ومجموعةُ العدّادات (`splitGroup`): كلُّ خيارٍ بسعره كاملاً وعدّاده، وكلُّ خيارٍ سطرٌ في السلّة.
  */
-function DrinksBlock({
+function CounterBlock({
   group,
   counts,
+  max,
+  price,
   onCount,
 }: {
   group: ModifierGroup;
   counts: Record<string, number>;
+  max: number;
+  price: (o: ModifierOption) => ReactNode;
   onCount: (id: string, n: number) => void;
 }) {
   return (
@@ -607,9 +667,7 @@ function DrinksBlock({
             <span className="flex min-w-0 flex-col">
               <span className={`${o.available ? "" : "text-ink-dim line-through"} ${n > 0 ? "font-bold" : ""}`}>{o.name}</span>
               {o.available ? (
-                <span className="text-xs text-ink-muted">
-                  {o.price_delta_usd != null ? dollars(o.price_delta_usd) : <Money value={o.price_delta} small />}
-                </span>
+                <span className="text-xs text-ink-muted">{price(o)}</span>
               ) : (
                 <span className="text-xs text-danger">{I.unavailable}</span>
               )}
@@ -631,7 +689,7 @@ function DrinksBlock({
                 type="button"
                 aria-label={I.plus}
                 onClick={() => onCount(o.id, n + 1)}
-                disabled={!o.available || n >= MAX_DRINK}
+                disabled={!o.available || n >= max}
                 className="taparea flex h-8 w-8 items-center justify-center rounded-control hover:bg-row-hover disabled:opacity-40"
               >
                 <IconAdd size={14} />

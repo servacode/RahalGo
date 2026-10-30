@@ -40,7 +40,7 @@ import {
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { useCart, lineKey, linePayload, unitPrice } from "@/lib/customer/cart";
+import { useCart, lineKey, linePayload, unitPrice, MAX_DRINK } from "@/lib/customer/cart";
 import { useCustomer } from "@/lib/customer/context";
 import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
 import { changeText, fill, serviceText } from "@/lib/customer/texts";
@@ -307,60 +307,47 @@ export default function CartPage() {
               const img = mediaUrl(l.item.image_thumb_url ?? l.item.image_url);
               const bad = badLines.get(l.item.id);
               return (
-                <li key={k} className={`flex items-center gap-3 p-3 ${bad ? "bg-danger-tint" : ""}`}>
-                  <span className="h-14 w-14 shrink-0 overflow-hidden rounded-control bg-field">
-                    {img && <img src={img} alt="" loading="lazy" className="h-full w-full object-cover" />}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-bold">{l.item.name}</p>
-                    {l.options.length > 0 && (
-                      <p className="truncate text-xs text-ink-muted">{l.options.map((o) => o.name).join(m.common.listSep)}</p>
-                    )}
-                    {l.item.merchant_name && (
-                      <p className="flex items-center gap-1 truncate text-xs text-ink-muted">
-                        <IconStore size={11} />
-                        {l.item.merchant_name}
-                      </p>
-                    )}
-                    <Money value={unitPrice(l) * l.qty} className="text-sm font-bold text-accent-text" />
-                    {/* **وكلُّ مشروبٍ سطرٌ تحت صنفه بعدده هو** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — مرآةُ `CartScreen.kt`. */}
-                    {(l.drinks ?? []).map((d) => (
-                      <p key={d.option.id} className="flex items-center justify-between gap-2 text-xs">
-                        <span className="truncate">
-                          {d.option.name} × {fmtNum(d.qty)}
-                        </span>
-                        <Money value={d.option.price_delta * d.qty} small className="text-accent-text" />
-                      </p>
-                    ))}
-                    {bad && <p className="text-xs font-bold text-danger">{lineProblem(bad)}</p>}
+                <li key={k} className={`flex flex-col gap-2 p-3 ${bad ? "bg-danger-tint" : ""}`}>
+                  <div className="flex items-center gap-3">
+                    <span className="h-14 w-14 shrink-0 overflow-hidden rounded-control bg-field">
+                      {img && <img src={img} alt="" loading="lazy" className="h-full w-full object-cover" />}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-bold">{l.item.name}</p>
+                      {l.options.length > 0 && (
+                        <p className="truncate text-xs text-ink-muted">{l.options.map((o) => o.name).join(m.common.listSep)}</p>
+                      )}
+                      {l.item.merchant_name && (
+                        <p className="flex items-center gap-1 truncate text-xs text-ink-muted">
+                          <IconStore size={11} />
+                          {l.item.merchant_name}
+                        </p>
+                      )}
+                      {bad && <p className="text-xs font-bold text-danger">{lineProblem(bad)}</p>}
+                    </div>
+                    {/* **السعرُ والعدّادُ والحذفُ في مكانٍ واحدٍ آخرَ السطر** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — مرآةُ `LineControls`. */}
+                    <LineControls
+                      price={unitPrice(l) * l.qty}
+                      qty={l.qty}
+                      onLess={() => cart.setQty(k, l.qty - 1)}
+                      onMore={() => cart.setQty(k, l.qty + 1)}
+                      onRemove={() => cart.setQty(k, 0)}
+                    />
                   </div>
-                  <div className="flex shrink-0 items-center gap-0.5 rounded-control bg-field p-0.5">
-                    <button
-                      type="button"
-                      aria-label={m.shop.item.minus}
-                      onClick={() => cart.setQty(k, l.qty - 1)}
-                      className="taparea flex h-8 w-8 items-center justify-center rounded-control hover:bg-row-hover"
-                    >
-                      <IconMinus size={14} />
-                    </button>
-                    <span className="min-w-6 text-center text-sm font-bold tabular-nums">{fmtNum(l.qty)}</span>
-                    <button
-                      type="button"
-                      aria-label={m.shop.item.plus}
-                      onClick={() => cart.setQty(k, l.qty + 1)}
-                      className="taparea flex h-8 w-8 items-center justify-center rounded-control hover:bg-row-hover"
-                    >
-                      <IconAdd size={14} />
-                    </button>
-                  </div>
-                  <button
-                    type="button"
-                    aria-label={C.remove}
-                    onClick={() => cart.setQty(k, 0)}
-                    className="taparea flex h-8 w-8 shrink-0 items-center justify-center rounded-control text-danger hover:bg-row-hover"
-                  >
-                    <IconDelete size={16} />
-                  </button>
+                  {/* **وكلُّ مشروبٍ سطرٌ تحت صنفه بعدّاده وحذفه** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — يُرسَل في `option_qty` لسطره. */}
+                  {(l.drinks ?? []).map((d) => (
+                    <div key={d.option.id} className="flex items-center gap-3 ps-17">
+                      <span className="min-w-0 flex-1 truncate text-sm">{d.option.name}</span>
+                      <LineControls
+                        price={d.option.price_delta * d.qty}
+                        qty={d.qty}
+                        onLess={() => cart.setDrinkQty(k, d.option.id, d.qty - 1)}
+                        onMore={() => cart.setDrinkQty(k, d.option.id, d.qty + 1)}
+                        moreDisabled={d.qty >= MAX_DRINK}
+                        onRemove={() => cart.setDrinkQty(k, d.option.id, 0)}
+                      />
+                    </div>
+                  ))}
                 </li>
               );
             })}
@@ -594,6 +581,62 @@ export default function CartPage() {
         </div>
       )}
       <AddressSheet open={pickAddr} onClose={() => setPickAddr(false)} />
+    </div>
+  );
+}
+
+/**
+ * **آخرُ سطر السلّة: السعرُ وتحته «− n +» والحذف** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — مرآةُ `LineControls` في التطبيق.
+ * واحدٌ للصنف وللمشروب، فتصطفّ الأسعارُ والعدّاداتُ عموداً واحداً.
+ */
+function LineControls({
+  price,
+  qty,
+  onLess,
+  onMore,
+  onRemove,
+  moreDisabled = false,
+}: {
+  price: number;
+  qty: number;
+  onLess: () => void;
+  onMore: () => void;
+  onRemove: () => void;
+  moreDisabled?: boolean;
+}) {
+  return (
+    <div className="flex shrink-0 flex-col items-end gap-1">
+      <Money value={price} className="text-sm font-bold text-accent-text" />
+      <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5 rounded-control bg-field p-0.5">
+          <button
+            type="button"
+            aria-label={m.shop.item.minus}
+            onClick={onLess}
+            className="taparea flex h-8 w-8 items-center justify-center rounded-control hover:bg-row-hover"
+          >
+            <IconMinus size={14} />
+          </button>
+          <span className="min-w-6 text-center text-sm font-bold tabular-nums">{fmtNum(qty)}</span>
+          <button
+            type="button"
+            aria-label={m.shop.item.plus}
+            onClick={onMore}
+            disabled={moreDisabled}
+            className="taparea flex h-8 w-8 items-center justify-center rounded-control hover:bg-row-hover disabled:opacity-40"
+          >
+            <IconAdd size={14} />
+          </button>
+        </div>
+        <button
+          type="button"
+          aria-label={C.remove}
+          onClick={onRemove}
+          className="taparea flex h-8 w-8 shrink-0 items-center justify-center rounded-control text-danger hover:bg-row-hover"
+        >
+          <IconDelete size={16} />
+        </button>
+      </div>
     </div>
   );
 }

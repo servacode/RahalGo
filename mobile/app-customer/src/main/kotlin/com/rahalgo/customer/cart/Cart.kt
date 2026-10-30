@@ -116,6 +116,25 @@ object Cart {
     }
 
     /**
+     * **سطورُ نافذةِ الصنف دفعةً واحدة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — «٢ عادي + ١ دبل»
+     * سطران في السلّة. **و`true` إن زاد أيٌّ منها سطراً قائماً.**
+     */
+    fun addAll(item: Item, picks: List<Pick>): Boolean {
+        var increased = false
+        picks.filter { it.qty > 0 }.forEach { p ->
+            if (add(item, p.qty, p.options, p.drinks)) increased = true
+        }
+        return increased
+    }
+
+    /** **سطرٌ تُخرجه نافذةُ الصنف** — خياراتُه وعددُه ومشروباتُه. */
+    data class Pick(
+        val options: List<ModifierOption>,
+        val qty: Int,
+        val drinks: List<DrinkPick> = emptyList(),
+    )
+
+    /**
      * **يُنقص أو يُحذف** — والصفرُ يعني «ارفعه من السلّة».
      *
      * **وبمفتاح السطر لا بمعرّف الصنف** — **ولو كان بالمعرّف لَحذف
@@ -127,6 +146,34 @@ object Cart {
         } else {
             lines.map { if (it.key == key) it.copy(qty = qty) else it }
         }
+        save()
+    }
+
+    /**
+     * **عددُ مشروبٍ في سطره** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — يُبدَّل من «سلّتي» مباشرةً،
+     * **والصفرُ يرفع المشروبَ وحدَه** لا الصنف. ويُرسَل بعدها في `option_qty` للسطر.
+     * **وسطرٌ صار مطابقاً لآخر يُدمج فيه** — فلا يظهر سطران متطابقان.
+     */
+    fun setDrinkQty(key: String, optionId: String, qty: Int) {
+        val at = lines.indexOfFirst { it.key == key }
+        if (at < 0) return
+        val line = lines[at]
+        val drinks = line.drinks.mapNotNull { d ->
+            when {
+                d.option.id != optionId -> d
+                qty <= 0 -> null
+                else -> d.copy(qty = minOf(MAX_DRINK, qty))
+            }
+        }
+        val updated = line.copy(drinks = drinks)
+        val rest = lines.toMutableList().also { it.removeAt(at) }
+        val same = rest.indexOfFirst { it.key == updated.key }
+        if (same >= 0) {
+            rest[same] = rest[same].copy(qty = rest[same].qty + updated.qty)
+        } else {
+            rest.add(at, updated)
+        }
+        lines = rest
         save()
     }
 

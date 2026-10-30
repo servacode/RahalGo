@@ -589,6 +589,12 @@
     <string name="total_paid_customer">مدفوع — لا تقبض شيئاً</string>
     <string name="total_purchase_fixed">تقبض ثمن البضاعة + %1$s أجرة التوصيل</string>
     <string name="trip_order_items">الطلب:</string>
+    <!-- كتلةُ الفاتورة تحت الأصناف (قرارُ المالك ٢٠٢٦-١٠-٣٠) -->
+    <string name="trip_invoice_subtotal">المجموع</string>
+    <string name="trip_invoice_delivery">التوصيل</string>
+    <string name="trip_invoice_free">مجاني</string>
+    <string name="trip_invoice_discount">الخصم</string>
+    <string name="trip_invoice_total">الإجمالي</string>
     <string name="trip_collect_later">تقبض من الزبون عند التسليم</string>
     <string name="trip_pay_merchant">ادفع للمتجر</string>
     <string name="trip_pay_merchant_named">ادفع لـ%1$s</string>

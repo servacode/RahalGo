@@ -214,7 +214,7 @@ var OrderPrivacy = map[string]FieldRule{
 	"subtotal":     {Ref: "شفافيّةُ تسوية المتجر (قرارُ المالك ٢٠٢٦-٠٩-٠٩) — ما بِيع من عنده · وRQ-7 يجيزه للمندوب", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisAllowed, VisAllowed)},
 	"delivery_fee": {Ref: "merchant_privacy.go:49 · وأجرُ السائق", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisAllowed, VisAllowed)},
 	"free_waived":  {Ref: "models.go · إعفاءُ التوصيل المجانيّ — كأجرة التوصيل", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisAllowed, VisAllowed)},
-	"discount":     {Ref: "merchant_privacy.go:49", Vis: v(VisAllowed, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	"discount":     {Ref: "merchant_privacy.go:49 · والسائقُ يرى الفاتورةَ كاملةً (قرارُ المالك ٢٠٢٦-١٠-٣٠)", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"total":        {Ref: "merchant_privacy.go:49 · وRQ-7", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisAllowed, VisAllowed)},
 	"wallet_paid":  {Ref: "merchant_privacy.go:50", Vis: v(VisAllowed, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
 	"cash_due":     {Ref: "merchant_privacy.go:50 · والسائقُ يقبضه", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
@@ -283,7 +283,8 @@ var OrderPrivacy = map[string]FieldRule{
 	"custom_goods_pending": {Ref: "ثمنُ البضاعة لم يُوثَّق بعد", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 
 	// ── الأصنافُ والتوقيتات ───────────────────────────────────────
-	"items":                 {Ref: "الأصناف — والمتجرُ يحضّرها", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
+	// **والسائقُ يراها بأسعار البيع ومشروباتها وخياراتها** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — لا سعرَ الشراء.
+	"items":                 {Ref: "الأصناف — والمتجرُ يحضّرها · والسائقُ يرى فاتورتَها (٢٠٢٦-١٠-٣٠)", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
 	"items_count":           all(VisAllowed, "عددُ الأصناف"),
 	"items_preview":         {Ref: "معاينةٌ نصّيّة", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
 	"delivery_estimate_min": all(VisAllowed, "الزمنُ المتوقَّع"),

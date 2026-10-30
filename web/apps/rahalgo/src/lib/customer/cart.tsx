@@ -12,7 +12,7 @@
  */
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import type { Item, ModifierOption } from "./types";
+import { isDrinksGroup, type Item, type ModifierGroup, type ModifierOption } from "./types";
 import { readJSON, writeJSON } from "./storage";
 
 /** **مشروبٌ وعددُه** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — لا يُضرب بعدد الصنف. مرآةُ `Cart.DrinkPick`. */
@@ -79,6 +79,59 @@ function mergeDrinks(a: DrinkPick[], b: DrinkPick[]): DrinkPick[] {
   return [...out.values()];
 }
 
+/** **سطرٌ تُخرجه نافذةُ الصنف** — مرآةُ `Cart.Pick`. */
+export interface Pick {
+  options: ModifierOption[];
+  qty: number;
+  drinks: DrinkPick[];
+}
+
+/** **سقفُ الخيار الواحد في العدّادات** — مرآةُ `OptionSplit.MAX_PER_OPTION`. */
+export const MAX_PER_OPTION = 20;
+
+/**
+ * **مجموعةُ العدّادات** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — مرآةُ `OptionSplit.group`.
+ * مجموعةٌ إلزاميّةٌ واحدةٌ بخيارٍ واحد (الحجم، الوزن، النمرة)، بلا «مشروبات» ولا الاختياريّة؛
+ * **ويُختار منها بعدّادٍ جنب كلّ خيار**، وكلُّ خيارٍ سطرٌ في السلّة. و`null` = كما كانت.
+ */
+export function splitGroup(groups: ModifierGroup[]): ModifierGroup | null {
+  const req = groups.filter((g) => !isDrinksGroup(g) && g.min_select > 0);
+  const g = req.length === 1 ? req[0] : undefined;
+  if (!g) return null;
+  return g.min_select === 1 && g.max_select === 1 ? g : null;
+}
+
+/** **سطرٌ لكلّ خيارٍ عددُه فوق الصفر** — الإضافاتُ لكلّها، والمشروباتُ لأوّلها وحدَه. */
+export function splitPicks(
+  g: ModifierGroup,
+  counts: Record<string, number>,
+  extras: ModifierOption[],
+  drinks: DrinkPick[],
+): Pick[] {
+  const out: Pick[] = [];
+  for (const o of g.options) {
+    const n = counts[o.id] ?? 0;
+    if (n > 0) out.push({ options: [o, ...extras], qty: n, drinks: out.length === 0 ? drinks.filter((d) => d.qty > 0) : [] });
+  }
+  return out;
+}
+
+/** **ثمنُ السطور كلّها** — مرآةُ `OptionSplit.total`. */
+export function picksTotal(item: Item, picks: Pick[]): number {
+  return picks.reduce((s, p) => s + unitPrice({ item, options: p.options }) * p.qty + drinksTotal(p), 0);
+}
+
+/** **ثمنُها بالدولار** لمتجرٍ يعرض به. */
+export function picksTotalUsd(baseUsd: number, picks: Pick[]): number {
+  return picks.reduce(
+    (s, p) =>
+      s +
+      (baseUsd + p.options.reduce((a, o) => a + (o.price_delta_usd ?? 0), 0)) * p.qty +
+      p.drinks.reduce((a, d) => a + (d.option.price_delta_usd ?? 0) * d.qty, 0),
+    0,
+  );
+}
+
 interface CartState {
   lines: CartLine[];
   count: number;
@@ -86,6 +139,8 @@ interface CartState {
   ready: boolean;
   add: (item: Item, qty?: number, options?: ModifierOption[], drinks?: DrinkPick[]) => void;
   setQty: (key: string, qty: number) => void;
+  /** **عددُ مشروبٍ في سطره** — والصفرُ يرفعه وحدَه (قرارُ المالك ٢٠٢٦-١٠-٣٠). */
+  setDrinkQty: (key: string, optionId: string, qty: number) => void;
   clear: () => void;
   /** **متجرُ السلّة** — ومنه يُعرف أنّ صنفاً جديداً من متجرٍ آخر. */
   merchantId: string;
@@ -138,6 +193,27 @@ export function CartProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  /* **وسطرٌ صار مطابقاً لآخر يُدمج فيه** — مرآةُ `Cart.setDrinkQty`. */
+  const setDrinkQty = useCallback((key: string, optionId: string, qty: number) => {
+    setLines((cur) => {
+      const at = cur.findIndex((l) => lineKey(l) === key);
+      const line = cur[at];
+      if (!line) return cur;
+      const drinks = (line.drinks ?? [])
+        .map((d) => (d.option.id === optionId ? { ...d, qty: Math.min(MAX_DRINK, qty) } : d))
+        .filter((d) => d.qty > 0);
+      const updated: CartLine = { ...line, drinks };
+      const rest = cur.filter((_, i) => i !== at);
+      const k = lineKey(updated);
+      const same = rest.find((l) => lineKey(l) === k);
+      const merged = same
+        ? rest.map((l) => (l === same ? { ...l, qty: l.qty + updated.qty } : l))
+        : [...rest.slice(0, at), updated, ...rest.slice(at)];
+      writeJSON(KEY, merged);
+      return merged;
+    });
+  }, []);
+
   const clear = useCallback(() => save([]), [save]);
 
   const value = useMemo<CartState>(
@@ -149,9 +225,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
       merchantId: lines[0]?.item.merchant_id ?? "",
       add,
       setQty,
+      setDrinkQty,
       clear,
     }),
-    [lines, ready, add, setQty, clear],
+    [lines, ready, add, setQty, setDrinkQty, clear],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

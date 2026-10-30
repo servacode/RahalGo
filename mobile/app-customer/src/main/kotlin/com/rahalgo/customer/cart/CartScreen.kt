@@ -224,11 +224,6 @@ fun CartScreen(
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         }
-                        Text(
-                            money(line.unitPrice * line.qty),
-                            color = Rahal.colors.brand,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
                         bad?.let { c ->
                             Text(
                                 text = when {
@@ -244,77 +239,38 @@ fun CartScreen(
                             )
                         }
                     }
-                    // **والعدُّ يُبدَّل هنا** — ومن أراد صنفين لا يعود
-                    // إلى السوق ليضغط مرّتين.
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        // **وأداةُ الكمّيّة حبّةٌ واحدة: «−  2  +» بأيقوناتٍ وأزرارِ ٣٦**
-                        // (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧) — كانت حرفين في زرّين نصّيّين.
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .clip(Rahal.shape.pill)
-                                .border(1.dp, Rahal.colors.line, Rahal.shape.pill),
-                        ) {
-                            QtyButton(
-                                icon = R.drawable.ic_minus,
-                                label = stringResource(R.string.cart_qty_less),
-                            ) { Cart.setQty(line.key, line.qty - 1) }
-                            Text(
-                                line.qty.toString(),
-                                fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 4.dp),
-                            )
-                            QtyButton(
-                                icon = com.rahalgo.ui.R.drawable.ic_plus,
-                                label = stringResource(R.string.cart_qty_more),
-                            ) { Cart.setQty(line.key, line.qty + 1) }
-                        }
-
-                        // ══════════════════════════════════════════════
-                        // **وسلّةٌ يُحذف منها بضغطةٍ لا بالإنقاص**
-                        // ══════════════════════════════════════════════
-                        //
-                        // (طلبُ المالك ٢٠٢٦-٠٨-١٨: «بسلّتي أضف أيقونةَ
-                        //  حذفٍ لحذف عناصر السلّة وإفراغها».)
-                        //
-                        // **وكان الحذفُ بالإنقاص حتّى الصفر** — ومن
-                        // أضاف خمسةً يضغط خمساً ليُلغيها، **وضغطةٌ
-                        // تُعاد خمساً تُقرأ عناداً في التطبيق.**
-                        // **ومساحةُ لمسِ السلّة ٤٨** — كانت ٣٠ فتُخطَأ.
-                        Box(
-                            Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .clickable { Cart.setQty(line.key, 0) },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(
-                                painter = painterResource(
-                                    com.rahalgo.ui.R.drawable.ic_trash,
-                                ),
-                                contentDescription = stringResource(R.string.cart_remove),
-                                tint = Rahal.colors.danger,
-                                modifier = Modifier.size(18.dp),
-                            )
-                        }
-                    }
+                    // **والعدُّ يُبدَّل هنا** — ومن أراد صنفين لا يعود إلى السوق ليضغط مرّتين.
+                    // **والسعرُ والعدّادُ والحذفُ في مكانٍ واحدٍ آخرَ السطر** (قرارُ المالك ٢٠٢٦-١٠-٣٠)
+                    // — كلُّ سطرٍ بالترتيب نفسِه، صنفاً كان أو مشروباً.
+                    LineControls(
+                        price = money(line.unitPrice * line.qty),
+                        qty = line.qty,
+                        onLess = { Cart.setQty(line.key, line.qty - 1) },
+                        onMore = { Cart.setQty(line.key, line.qty + 1) },
+                        // **والسلّةُ تحذف السطرَ بمشروباته** (طلبُ المالك ٢٠٢٦-٠٨-١٨).
+                        onRemove = { Cart.setQty(line.key, 0) },
+                    )
                 }
-                // **وكلُّ مشروبٍ سطرٌ تحت صنفه** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — «عيران × 1 — 5 ل.س»،
-                // بعدده هو لا بعدد الصنف.
+                // **وكلُّ مشروبٍ سطرٌ تحت صنفه بعدّاده وحذفه** (قرارُ المالك ٢٠٢٦-١٠-٣٠) —
+                // بعدده هو لا بعدد الصنف، ويُرسَل في `option_qty` لسطره.
                 line.drinks.forEach { d ->
                     Row(
-                        Modifier.fillMaxWidth().padding(start = 66.dp, end = 8.dp, bottom = 6.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        Modifier.fillMaxWidth().padding(start = 66.dp, bottom = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            d.option.name + " × " + d.qty,
+                            d.option.name,
                             color = Rahal.colors.ink,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f),
                         )
-                        Text(
-                            money(d.option.priceDelta * d.qty),
-                            color = Rahal.colors.brand,
-                            style = MaterialTheme.typography.bodySmall,
+                        LineControls(
+                            price = money(d.option.priceDelta * d.qty),
+                            qty = d.qty,
+                            onLess = { Cart.setDrinkQty(line.key, d.option.id, d.qty - 1) },
+                            onMore = { Cart.setDrinkQty(line.key, d.option.id, d.qty + 1) },
+                            moreEnabled = d.qty < Cart.MAX_DRINK,
+                            onRemove = { Cart.setDrinkQty(line.key, d.option.id, 0) },
                         )
                     }
                 }
@@ -897,20 +853,80 @@ fun CartScreen(
 
 /** **زرُّ الكمّيّة** — دائرةٌ ٣٦ بأيقونةٍ حقيقيّة لا حرف. */
 @Composable
-private fun QtyButton(icon: Int, label: String, onClick: () -> Unit) {
+private fun QtyButton(icon: Int, label: String, enabled: Boolean = true, onClick: () -> Unit) {
     Box(
         Modifier
             .size(36.dp)
             .clip(CircleShape)
-            .clickable(onClickLabel = label, onClick = onClick),
+            .clickable(enabled = enabled, onClickLabel = label, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Icon(
             painter = painterResource(icon),
             contentDescription = label,
-            tint = Rahal.colors.brand,
+            tint = if (enabled) Rahal.colors.brand else Rahal.colors.line,
             modifier = Modifier.size(18.dp),
         )
+    }
+}
+
+/**
+ * **آخرُ سطر السلّة: السعرُ وتحته «− n +» وسلّةُ الحذف** (قرارُ المالك ٢٠٢٦-١٠-٣٠)
+ *
+ * واحدٌ للصنف وللمشروب — فتصطفّ الأسعارُ والعدّاداتُ عموداً واحداً.
+ * **ومساحةُ لمسِ الحذف ٤٠** — كانت ٣٠ فتُخطَأ (طلبُ المالك ٢٠٢٦-٠٨-١٨).
+ */
+@Composable
+private fun LineControls(
+    price: String,
+    qty: Int,
+    onLess: () -> Unit,
+    onMore: () -> Unit,
+    onRemove: () -> Unit,
+    moreEnabled: Boolean = true,
+) {
+    Column(horizontalAlignment = Alignment.End) {
+        Text(
+            price,
+            color = Rahal.colors.brand,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clip(Rahal.shape.pill)
+                    .border(1.dp, Rahal.colors.line, Rahal.shape.pill),
+            ) {
+                QtyButton(R.drawable.ic_minus, stringResource(R.string.cart_qty_less), onClick = onLess)
+                Text(
+                    qty.toString(),
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 4.dp),
+                )
+                QtyButton(
+                    com.rahalgo.ui.R.drawable.ic_plus,
+                    stringResource(R.string.cart_qty_more),
+                    enabled = moreEnabled,
+                    onClick = onMore,
+                )
+            }
+            Box(
+                Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .clickable(onClick = onRemove),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    painter = painterResource(com.rahalgo.ui.R.drawable.ic_trash),
+                    contentDescription = stringResource(R.string.cart_remove),
+                    tint = Rahal.colors.danger,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+        }
     }
 }
 

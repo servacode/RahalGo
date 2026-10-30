@@ -192,8 +192,11 @@ data class DriverOrder(
      */
     @SerialName("partner_merchant_name") val partnerMerchantName: String = "",
     @SerialName("items_count") val itemsCount: Int = 0,
-    /** **ما يستلمه باسمه وكميّته** (٢٠٢٦-١٠-١٢) — بلا أسعار. */
+    /** **ما يستلمه باسمه وكميّته** (٢٠٢٦-١٠-١٢) — وبأسعار البيع منذ ٢٠٢٦-١٠-٣٠. */
     val items: List<DriverItem> = emptyList(),
+    /** **مجموعُ الأصناف وخصمُ الزبون** — لكتلة الفاتورة (٢٠٢٦-١٠-٣٠)، وصفرٌ من خادمٍ قديم. */
+    val subtotal: Long = 0,
+    val discount: Long = 0,
     /** **ما يكسبه هو** — لا ما يقبضه للمتجر. */
     @SerialName("delivery_fee") val deliveryFee: Long = 0,
     /**
@@ -275,12 +278,29 @@ data class StorePay(
     val amount: Long = 0,
 )
 
-/** **سطرٌ مما يستلمه السائق** — الاسمُ والكميّةُ والخيارات. */
+/**
+ * **سطرٌ مما يستلمه السائق** — الاسمُ والكميّةُ والخيارات.
+ *
+ * **ومنذ ٢٠٢٦-١٠-٣٠ بسعر البيع ومشروبه وخياراته بمجموعاتها** (قرارُ المالك: «السائق يشوف
+ * الفاتورة كاملة»). **وخادمٌ قديمٌ لا يرسلها**: `unitPrice` فارغٌ فلا مبلغ، و`optionList`
+ * فارغةٌ فيُقرأ `options` النصّيّ كما كان.
+ */
 @Serializable
 data class DriverItem(
+    val id: String = "",
     val name: String = "",
     val qty: Int = 1,
     val options: String = "",
+    @SerialName("unit_price") val unitPrice: Long? = null,
+    @SerialName("drink_for") val drinkFor: String? = null,
+    @SerialName("option_list") val optionList: List<DriverOption> = emptyList(),
+)
+
+/** **خيارٌ بمجموعته** — «النمرة» و«40». */
+@Serializable
+data class DriverOption(
+    val group: String = "",
+    val name: String = "",
 )
 
 @Serializable

@@ -1758,6 +1758,8 @@ private fun TripCard(
                     if (order.addressText.isNotBlank()) {
                         InfoBox(icon = R.drawable.ic_pin, text = order.addressText, tint = Rahal.colors.brand)
                     }
+                    // **والفاتورةُ عند الباب كذلك** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — لمن يسأله «شو بالطلب؟ وقديش؟».
+                    if (order.kind == "standard" && order.items.isNotEmpty()) InvoiceBox(order)
                 } else if (order.kind != "custom") {
                     // **وقبل الاستلام: متى يجهز** — بأيقونة ساعة. **ولا «جاهز في المتجر» في
                     // «إحضار»** — يستلم من مكانٍ لا من المتجر (ملاحظةُ المالك ٢٠٢٦-١٠-١٦).
@@ -1776,13 +1778,8 @@ private fun TripCard(
                         PrepState.Unknown -> Unit
                     }
                     // **وما يستلمه باسمه** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢: «السائق اصلا مايعرف شو الطلب»).
-                    if (order.items.isNotEmpty()) {
-                        InfoBox(
-                            icon = com.rahalgo.ui.R.drawable.ic_cart,
-                            text = stringResource(R.string.trip_order_items) + "\n" + itemsText(order),
-                            tint = Rahal.colors.brand,
-                        )
-                    }
+                    // **والفاتورةُ كاملةً بشكلها الواحد** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
+                    if (order.items.isNotEmpty()) InvoiceBox(order)
                     // **وكم يدفع للمتجر عند الاستلام** (قرارُ المالك ٢٠٢٦-١٠-١٥) — من سلفة
                     // المكتب، **ولكلّ متجرٍ سطرُه** إن كان الطلبُ من مصدرين.
                     if (order.kind == "standard" && order.payMerchant > 0) {
@@ -2158,6 +2155,57 @@ private fun InfoBox(icon: Int, text: String, tint: Color, bold: Boolean = false)
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1f),
         )
+    }
+}
+
+/**
+ * **مربّعُ الفاتورة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — سطرٌ لكلّ عنصرٍ بالقاعدة الواحدة (`InvoiceLines`)،
+ * **ثمّ المجموع · التوصيل · (الخصم) · الإجمالي.** وخادمٌ قديمٌ بلا أسعار: الأسطرُ وحدَها كما كانت.
+ */
+@Composable
+private fun InvoiceBox(order: DriverOrder) {
+    val tint = Rahal.colors.brand
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(Rahal.shape.md)
+            .background(tint.copy(alpha = 0.10f))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                painter = painterResource(com.rahalgo.ui.R.drawable.ic_cart),
+                contentDescription = null,
+                tint = tint,
+                modifier = Modifier.size(20.dp),
+            )
+            Spacer(Modifier.width(10.dp))
+            Text(
+                stringResource(R.string.trip_order_items),
+                color = Rahal.colors.ink,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+        com.rahalgo.ui.InvoiceLines(driverInvoiceLines(order))
+        driverInvoiceTotals(order)?.let { t ->
+            HorizontalDivider(color = Rahal.colors.ink.copy(alpha = 0.12f))
+            com.rahalgo.ui.InvoiceRow(stringResource(R.string.trip_invoice_subtotal), money(t.subtotal))
+            com.rahalgo.ui.InvoiceRow(
+                stringResource(R.string.trip_invoice_delivery),
+                if (t.free) stringResource(R.string.trip_invoice_free) else money(t.delivery),
+                amountColor = if (t.free) Rahal.colors.success else Color.Unspecified,
+            )
+            if (t.discount > 0) {
+                com.rahalgo.ui.InvoiceRow(
+                    stringResource(R.string.trip_invoice_discount),
+                    "- " + money(t.discount),
+                    amountColor = Rahal.colors.success,
+                )
+            }
+            com.rahalgo.ui.InvoiceRow(stringResource(R.string.trip_invoice_total), money(t.total), strong = true)
+        }
     }
 }
 

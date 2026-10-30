@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -302,10 +303,14 @@ type driverOrder struct {
 	// يأخذ أجرتَه كاملةً (قرارُ المالك ٢٠٢٦-١٠-٢٦: «السائق ايضا يعرف ان التوصيلة مجانية
 	// او مدفوعة»). و`delivery_fee` أعلاه الأجرةُ الكاملةُ لا ما دفعه الزبون.
 	FreeWaived int64 `json:"free_waived"`
+	// Subtotal و Discount **مجموعُ الأصناف وخصمُ الزبون** — لكتلة الفاتورة تحت الأصناف
+	// (قرارُ المالك ٢٠٢٦-١٠-٣٠: «المجموع / التوصيل / الخصم / الإجمالي»).
+	Subtotal int64 `json:"subtotal"`
+	Discount int64 `json:"discount"`
 	// Items **ما يستلمه من المتجر باسمه وكميّته** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢: «بالبطاقة
 	// لازم يكون واضح ع السائق شو هو الطلب… هيك السائق اصلا مايعرف شو الطلب»). كان
-	// `items_count` وحدَه يصل — **فيقف عند المتجر لا يعرف أيَّ كيسٍ له.** والأسعارُ لا
-	// تُرسَل: المالُ في `cash_due`.
+	// `items_count` وحدَه يصل — **فيقف عند المتجر لا يعرف أيَّ كيسٍ له.** **ومنذ ٢٠٢٦-١٠-٣٠
+	// بأسعار البيع** — الفاتورةُ كاملةً كما يراها الزبون (قرارُ المالك).
 	Items []driverItem `json:"items"`
 	// PickupAddress **عنوانُ الاستلام كما كُتب** — لا اسمُ منطقةٍ:
 	// **المنطقةُ وحدةُ تسعيرٍ قد تشمل المدينةَ كلَّها**، فيقرأ السائقُ
@@ -580,7 +585,9 @@ const driverOrderSelect = `
 	         ORDER BY a.entrance_set_at DESC LIMIT 1),
 	       (SELECT ST_X(a.entrance::geometry) FROM user_addresses a
 	         WHERE a.user_id = o.customer_id AND a.entrance IS NOT NULL AND ST_DWithin(a.location, o.dropoff, 30)
-	         ORDER BY a.entrance_set_at DESC LIMIT 1)
+	         ORDER BY a.entrance_set_at DESC LIMIT 1),
+	       -- **ومجموعُ الأصناف والخصم** — لكتلة الفاتورة (قرارُ المالك ٢٠٢٦-١٠-٣٠).
+	       o.subtotal, o.discount
 	FROM orders o
 	LEFT JOIN merchants m ON m.id = o.merchant_id
 	-- **والتوصيلةُ بلا زبون** — ضمٌّ صلبٌ يُخفيها عن السائق فلا يراها أبداً.
@@ -625,7 +632,8 @@ func (s *Server) loadDriverOrders(r *http.Request, sql string, args ...any) ([]d
 			&o.DeliveryCodeRequired, &o.PartnerMerchantName,
 			&o.DeliveryMode, &o.CollectAmount,
 			&o.FetchAmount, &o.FetchAmountVersion, &o.FetchAmountStatus,
-			&o.AmountCurrency, &o.EntranceLat, &o.EntranceLng); err != nil {
+			&o.AmountCurrency, &o.EntranceLat, &o.EntranceLng,
+			&o.Subtotal, &o.Discount); err != nil {
 			return nil, err
 		}
 		if o.ReturnTo != "" {
@@ -680,10 +688,25 @@ func (s *Server) attachPayMerchants(ctx context.Context, list []driverOrder) err
 }
 
 // driverItem **سطرٌ مما يستلمه السائق** — الاسمُ والكميّةُ والخياراتُ بأسمائها.
+//
+// **والفاتورةُ كاملةً للسائق** (قرارُ المالك ٢٠٢٦-١٠-٣٠): سعرُ البيع للوحدة
+// (`unit_price` — ما يدفعه الزبون، لا سعرُ الشراء) · والمشروبُ وصنفُه (`drink_for`) ·
+// والخياراتُ بمجموعاتها (`option_list`) — **فيُكتب السطرُ بالقاعدة الواحدة**
+// («بوط أسود × 1 نمرة 40 ........ 9,100»). **و`options` النصّيُّ باقٍ** لنسخ السائق القديمة.
 type driverItem struct {
-	Name    string `json:"name"`
-	Qty     int    `json:"qty"`
-	Options string `json:"options"`
+	ID         string         `json:"id"`
+	Name       string         `json:"name"`
+	Qty        int            `json:"qty"`
+	Options    string         `json:"options"`
+	UnitPrice  int64          `json:"unit_price"`
+	DrinkFor   *string        `json:"drink_for,omitempty"`
+	OptionList []driverOption `json:"option_list"`
+}
+
+// driverOption **خيارٌ بمجموعته** — بشكل `orders.OptionSnapshot` بلا معرّفٍ ولا فرقِ سعر.
+type driverOption struct {
+	Group string `json:"group"`
+	Name  string `json:"name"`
 }
 
 // attachDriverItems **يُلحق بكلّ طلبٍ أصنافَه** — باستعلامٍ واحدٍ للقائمة كلِّها.
@@ -698,12 +721,17 @@ func (s *Server) attachDriverItems(ctx context.Context, list []driverOrder) erro
 		at[list[i].ID] = i
 	}
 	rows, err := s.pg.Query(ctx, `
-		SELECT oi.order_id::text, oi.name, oi.qty,
+		SELECT oi.order_id::text, oi.id::text, oi.name, oi.qty,
 		       COALESCE((SELECT string_agg(e->>'name', '، ')
-		                 FROM jsonb_array_elements(oi.options) e), '')
+		                 FROM jsonb_array_elements(COALESCE(oi.options, '[]'::jsonb)) e), ''),
+		       oi.unit_price, oi.drink_for::text,
+		       COALESCE((SELECT jsonb_agg(jsonb_build_object(
+		                           'group', COALESCE(e->>'group', ''), 'name', COALESCE(e->>'name', '')))
+		                 FROM jsonb_array_elements(COALESCE(oi.options, '[]'::jsonb)) e), '[]'::jsonb)
 		FROM order_items oi
 		WHERE oi.order_id = ANY($1::uuid[])
-		ORDER BY oi.order_id, oi.name`, ids)
+		-- **كلُّ صنفٍ ثمّ مشروباتُه** — كما في قراءة الطلب (orders/queries.go).
+		ORDER BY oi.order_id, COALESCE(oi.drink_for, oi.id), oi.drink_for IS NOT NULL, oi.id`, ids)
 	if err != nil {
 		return err
 	}
@@ -711,7 +739,13 @@ func (s *Server) attachDriverItems(ctx context.Context, list []driverOrder) erro
 	for rows.Next() {
 		var id string
 		var it driverItem
-		if err := rows.Scan(&id, &it.Name, &it.Qty, &it.Options); err != nil {
+		var opts []byte
+		if err := rows.Scan(&id, &it.ID, &it.Name, &it.Qty, &it.Options,
+			&it.UnitPrice, &it.DrinkFor, &opts); err != nil {
+			return err
+		}
+		it.OptionList = []driverOption{}
+		if err := json.Unmarshal(opts, &it.OptionList); err != nil {
 			return err
 		}
 		if i, ok := at[id]; ok {
