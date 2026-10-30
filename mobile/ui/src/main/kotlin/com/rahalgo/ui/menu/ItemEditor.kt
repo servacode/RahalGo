@@ -1065,12 +1065,13 @@ internal fun RowField(
             ) {
                 Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                     if (value.isEmpty()) {
+                        // **والتلميحُ بخطٍّ أصغر فيُقرأ كاملاً** (تجربةُ المالك ٢٠٢٦-١٠-٣٠: «السعر الإضافي» مقصوص).
                         Text(
                             placeholder,
                             color = Rahal.colors.inkMuted,
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
+                            softWrap = false,
                         )
                     }
                     inner()
