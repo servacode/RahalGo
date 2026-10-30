@@ -54,6 +54,7 @@ import {
   IconSwap,
   IconWarning,
   Invoice,
+  InvoiceLines,
   invoiceLineText,
   invoiceOrder,
   FormActions,
@@ -215,6 +216,13 @@ interface OrderRow {
   custom_driver_may_change_fee?: boolean;
   /** متى استُلمت البضاعة — وبه يُقفل السعرُ على الخفض بعده. */
   picked_up_at?: string | null;
+  /** **أوقاتُ الطلب** — لسطر «كيف مشى» في كرت السجلّ. */
+  accepted_at?: string | null;
+  ready_at?: string | null;
+  delivered_at?: string | null;
+  /** **صاحبُ الأمانة** — اسمُه ورقمه. */
+  holder_name?: string;
+  holder_phone?: string;
   driver_name: string | null;
   /** **آخرُ ظهورٍ للسائق** — متى وصل آخرُ موضعٍ منه، وفارغٌ «لم يظهر». */
   driver_seen_at?: string | null;
@@ -320,6 +328,15 @@ interface BoardInfo {
   cases?: number;
   transferred?: boolean;
   late?: boolean;
+  /** **مالُ الطلب واسمُ من أنهاه** — لكرت السجلّ وحدَه (`FillHistory`، ٢٠٢٦-١٠-٣٠). */
+  money?: {
+    rep: number;
+    platform: number;
+    lines: number;
+    offer_platform: number;
+    offer_merchant: number;
+  };
+  ended_by_name?: string;
 }
 
 /** **إعداداتُ اللوحة من الخادم** (`GET /orders/board`) — لا من `/settings` (المشكلة ٣٢). */
@@ -2459,7 +2476,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           {!data && loading ? (
             <LoadingState />
           ) : (
-            <ul className="flex flex-col gap-1.5">
+            <ul className="grid grid-cols-1 items-start gap-3 md:grid-cols-2 xl:grid-cols-3">
               {rows.map((o) => (
                 <HistoryCard
                   key={o.id}
@@ -2629,20 +2646,19 @@ function HistoryCard({
   actions: React.ReactNode;
   onDetails: () => void;
 }) {
+  const C = H.card;
   const closed = CLOSED_STATUSES.has(o.status);
+  const delivered = o.status === "delivered" || o.status === "refunded";
   const ended = closed && o.status !== "delivered";
   const reason = o.cancel_reason || (o.fail_reason ? (DOOR_REPORTS[o.fail_reason] ?? FAILS[o.fail_reason] ?? o.fail_reason) : "");
   const who = o.ended_by ? (ENDED_BY[o.ended_by] ?? o.ended_by) : H.endedBySystem;
-  // **الملغى والمرفوض باهتٌ رماديّ** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — فلا يختلط بالمسلَّم.
   const muted = o.status === "cancelled" || o.status === "rejected";
-  // **مين دفع وكيف** — بدلَ «الدفع عند الاستلام» على كلّ سطر.
-  const payer = payerOf(o);
   const OP = m.admin.ordersPage;
   const commission = o.commission_taken ?? o.platform_commission ?? 0;
   const [waivedNow, setWaivedNow] = useState(0);
   const waived = (o.commission_waived ?? 0) || waivedNow;
-  // **«ما استلمت العمولة» على السطر كمان** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — بشروط المحرّك نفسِها:
-  // طلبٌ عاديٌّ مسلَّم، عمولتُه فوق الصفر ولم تُمحَ، وانقبض نقداً بيد السائق. والمحرّكُ هو الحَكَم.
+  // **«ما استلمت العمولة»** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — بشروط المحرّك نفسِها: طلبٌ عاديٌّ مسلَّم، عمولتُه
+  // فوق الصفر ولم تُمحَ، وانقبض نقداً بيد السائق. والمحرّكُ هو الحَكَم.
   const canWaive = useCanCall()(...WAIVE_ROUTE);
   const [waiving, setWaiving] = useState(false);
   const waivable =
@@ -2652,6 +2668,13 @@ function HistoryCard({
     (o.commission_taken ?? 0) > 0 &&
     waived === 0 &&
     (o.cash_due ?? 0) > 0;
+  // **«⋯» للأفعال النادرة** — يظهر حين يكون فيها شيءٌ فعلاً: تُرسم الأفعالُ مخفيّةً ويُعدّ ما رُسم.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const actionsRef = useRef<HTMLDivElement>(null);
+  const [hasActions, setHasActions] = useState(false);
+  useEffect(() => {
+    setHasActions((actionsRef.current?.childElementCount ?? 0) > 0);
+  });
   const stars = o.board?.platform_stars ?? 0;
   const F = H.flags;
   const flags: { k: string; label: string; v: "warning" | "danger" | "accent" | "violet" }[] = [
@@ -2660,25 +2683,60 @@ function HistoryCard({
     ...(o.board?.late ? [{ k: "late", label: F.late, v: "warning" as const }] : []),
     ...(waived > 0 ? [{ k: "waived", label: F.waived, v: "violet" as const }] : []),
   ];
-  const endedLine = [who, reason, o.fault ? `${H.fault} ${FAULT_LABELS[o.fault] ?? o.fault}` : ""]
-    .filter(Boolean)
-    .join(" · ");
-  // ══════════════════════════════════════════════════════════════════
-  // **سطرٌ بعرض الصفحة لا كرتٌ طويل** (قرارُ المالك ٢٠٢٦-١٠-٣٠: «الشكل بشع») — عشرةُ طلباتٍ
-  // على شاشةٍ واحدة: الرقمُ والنوعُ والنهاية، ثمّ من لمين والسائق، والمبلغُ وطريقةُ الدفع جانباً،
-  // والأزرارُ آخرَ السطر. **وعلى الجوّال تنزل الأجزاءُ تحت بعضها.**
-  // ══════════════════════════════════════════════════════════════════
+
+  // ── «كيف مشى»: خطواتٌ بأوقاتها والمدّةِ من التي قبلها ──
+  const lateAt = new Set<number>();
+  (o.ops_stage_late ?? []).forEach((late, i) => {
+    const at = o.ops_stage_times?.[i];
+    if (late && at) lateAt.add(Date.parse(at));
+  });
+  const endLabel = OFFICE_STATUS[o.status] ?? STATUS_LABELS[o.status] ?? o.status;
+  const steps = [
+    { k: "order", label: C.stepOrder, at: o.created_at },
+    { k: "accept", label: C.stepAccept, at: o.accepted_at },
+    { k: "ready", label: C.stepReady, at: o.ready_at },
+    { k: "pickup", label: C.stepPickup, at: o.picked_up_at },
+    delivered
+      ? { k: "deliver", label: C.stepDeliver, at: o.delivered_at ?? o.closed_at }
+      : { k: "end", label: endLabel, at: o.closed_at },
+  ].filter((s): s is { k: string; label: string; at: string } => !!s.at);
+
+  // ── «المال» ──
+  const pay = o.pay_merchant ?? 0;
+  const cash = o.payment_method === "cash" || (o.cash_due ?? 0) > 0 ? (o.cash_due ?? 0) : 0;
+  const office = Math.max(0, cash - pay);
+  const money = o.board?.money;
+  const payText =
+    o.kind === "merchant_delivery" || payerOf(o) === "free"
+      ? payerLabel(o)
+      : o.wallet_paid > 0 && o.cash_due > 0
+        ? C.payMixed.replace("{w}", fmtMoney(o.wallet_paid)).replace("{c}", fmtMoney(o.cash_due))
+        : o.wallet_paid > 0 || o.payment_method === "wallet"
+          ? C.payWallet
+          : C.payCash;
+  const items = invoiceOrder(o.items ?? []);
+  const shown = items.slice(0, 6);
+  const sep = <span aria-hidden className="text-ink-muted"> · </span>;
+
   return (
     <li
-      className={`surface flex flex-col gap-2 px-3 py-2.5 lg:flex-row lg:items-center lg:gap-4 ${
+      className={`flex flex-col gap-2.5 rounded-control border border-line-soft bg-surface p-3 text-sm ${
         focused ? "ring-2 ring-accent" : ""
-      } ${muted ? "bg-field opacity-75" : ""}`}
+      }`}
     >
-      <div className="min-w-0 flex-1 space-y-1 text-sm">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <OrderRef number={o.number} at={o.created_at} />
+      {/* ── الرأس ── */}
+      <div className="space-y-1.5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <span className="flex flex-wrap items-center gap-2">
+            <OrderRef number={o.number} />
+            <span dir="ltr" className="text-xs tabular-nums text-ink-muted">
+              {fmtDateTime(o.created_at)}
+            </span>
+          </span>
           <KindBadge o={o} />
-          {closed ? <EndBadge o={o} /> : <Badge variant="accent">{OFFICE_STATUS[o.status] ?? o.status}</Badge>}
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {closed ? <EndBadge o={o} /> : <Badge variant="accent">{endLabel}</Badge>}
           {focused && <Badge variant="accent">{BOARD.focused}</Badge>}
           {stars > 0 && <Stars value={stars} size="sm" />}
           {flags.map((f) => (
@@ -2687,7 +2745,11 @@ function HistoryCard({
             </Badge>
           ))}
         </div>
-        <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+      </div>
+
+      {/* ── الطلب ── */}
+      <CardSection title={C.order}>
+        <p className="flex flex-wrap items-center gap-x-1.5">
           <IconStore size={14} className="shrink-0 text-warning" />
           <span className="font-medium">{o.kind === "custom" ? kindLabel(o) : o.merchant_name || "—"}</span>
           <span aria-hidden className="text-ink-muted">←</span>
@@ -2696,74 +2758,201 @@ function HistoryCard({
           <span dir="ltr" className="text-xs text-ink-muted">
             {o.customer_phone || o.customer_phone_masked}
           </span>
-          {o.driver_name && (
-            <>
-              <span aria-hidden className="text-ink-muted">·</span>
-              <IconMoto size={14} className="shrink-0 text-success" />
-              <span>{o.driver_name}</span>
-              {o.driver_phone && (
-                <span dir="ltr" className="text-xs text-ink-muted">
-                  {o.driver_phone}
-                </span>
-              )}
-            </>
-          )}
         </p>
-        {ended && (
-          <p className="text-xs">
-            <span className="text-ink-muted">{H.endedBy}: </span>
-            {endedLine}
+        {(o.zone_name || o.address_text) && (
+          <p className="flex items-start gap-1.5 text-xs">
+            <IconLocation size={13} className="mt-0.5 shrink-0 text-ink-muted" />
+            <span>{[o.zone_name, o.address_text].filter(Boolean).join(m.common.listSeparator)}</span>
           </p>
+        )}
+        {o.notes && <p className="text-xs text-ink-muted">{o.notes}</p>}
+        {o.driver_name && (
+          <p className="flex flex-wrap items-center gap-x-1.5">
+            <IconMoto size={14} className="shrink-0 text-success" />
+            <span>{o.driver_name}</span>
+            {o.driver_phone && (
+              <span dir="ltr" className="text-xs text-ink-muted">
+                {o.driver_phone}
+              </span>
+            )}
+          </p>
+        )}
+        {shown.length > 0 && (
+          <div className="rounded-control bg-field px-2.5 py-1.5">
+            <InvoiceLines items={shown} />
+            {items.length > shown.length && (
+              <p className="mt-1 text-xs text-ink-muted">{C.moreItems.replace("{n}", fmtNum(items.length - shown.length))}</p>
+            )}
+          </div>
+        )}
+        {o.custom_request && (
+          <p className="text-xs">
+            <span className="text-ink-muted">{C.request}: </span>
+            {o.custom_request}
+          </p>
+        )}
+        {o.parcel_note && (
+          <p className="text-xs">
+            <span className="text-ink-muted">{C.parcel}: </span>
+            {o.parcel_note}
+          </p>
+        )}
+        {o.holder_name && (
+          <p className="text-xs">
+            <span className="text-ink-muted">{C.holder}: </span>
+            {o.holder_name}
+            {o.holder_phone && (
+              <span dir="ltr" className="ms-1.5 text-ink-muted">
+                {o.holder_phone}
+              </span>
+            )}
+          </p>
+        )}
+        {o.custom_goods_amount != null && o.custom_goods_amount > 0 && (
+          <p className="flex items-center gap-1.5 text-xs">
+            <span className="text-ink-muted">{C.goodsAmount}:</span>
+            <Money value={o.custom_goods_amount} small />
+          </p>
+        )}
+        {ended && (
+          <div className="space-y-0.5 rounded-control border border-line-soft px-2.5 py-1.5 text-xs">
+            <p>
+              <span className="font-medium">{who}</span>
+              {o.board?.ended_by_name && <span className="text-ink-muted"> — {o.board.ended_by_name}</span>}
+            </p>
+            {reason && (
+              <p>
+                <span className="text-ink-muted">{H.reason}: </span>
+                {reason}
+              </p>
+            )}
+            {o.fault && (
+              <p>
+                <span className="text-ink-muted">{H.fault}: </span>
+                {FAULT_LABELS[o.fault] ?? o.fault}
+              </p>
+            )}
+          </div>
         )}
         {goods && <div className="text-xs">{goods}</div>}
         {proof && (
           <div className="flex flex-wrap items-center gap-2 text-xs">
             <span className="inline-flex items-center gap-1 text-ink-muted">
               <IconCamera size={13} />
-              {m.admin.ordersPage.proof}
+              {OP.proof}
             </span>
             {proof}
           </div>
         )}
-      </div>
+      </CardSection>
 
-      {/* **المبلغُ وطريقةُ الدفع** — وتحتهما الأجرةُ والعمولة (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}
-      <div className="flex shrink-0 flex-wrap items-baseline justify-between gap-x-3 lg:w-56 lg:flex-col lg:flex-nowrap lg:items-end lg:gap-0.5 lg:text-end">
-        <Money value={o.total} className={`text-base font-bold ${muted ? "text-ink-muted line-through" : ""}`} />
-        <span
-          className={`text-xs font-bold ${muted ? "text-ink-muted" : payerIsCash(payer) ? "text-warning" : "text-accent-text"}`}
-        >
-          {payerLabel(o)}
-          {(o.free_waived ?? 0) > 0 && payer !== "free" && <span className="ms-1 text-success">{OP.freeDelivery}</span>}
-        </span>
-        <span className="text-2xs text-ink-muted">
-          {OP.cardFee.replace("{n}", fmtMoney(o.delivery_fee))}
-          {" · "}
-          {waived > 0 ? (
-            <span className="font-bold text-warning">{OP.cardCommissionWaived.replace("{n}", fmtMoney(waived))}</span>
-          ) : commission > 0 ? (
-            OP.cardCommission.replace("{n}", fmtMoney(commission))
-          ) : (
-            OP.cardNoCommission
-          )}
-        </span>
-      </div>
+      {/* ── كيف مشى ── */}
+      {steps.length > 0 && (
+        <CardSection title={C.how}>
+          <p className="flex flex-wrap items-center gap-y-0.5 text-xs leading-relaxed">
+            {steps.map((st, i) => {
+              const prev = i > 0 ? steps[i - 1] : null;
+              const gap = prev ? (Date.parse(st.at) - Date.parse(prev.at)) / 1000 : null;
+              const late = lateAt.has(Date.parse(st.at)) || (st.k === "deliver" && !!o.board?.late);
+              return (
+                <span key={st.k} className={late ? "font-bold text-warning" : ""}>
+                  {i > 0 && sep}
+                  {st.label}{" "}
+                  <span dir="ltr" className="tabular-nums">
+                    {fmtTime(st.at)}
+                  </span>
+                  {gap != null && gap > 0 && <span className="text-ink-muted"> ({fmtSpan(gap)})</span>}
+                  {late && ` ${F.late}`}
+                </span>
+              );
+            })}
+          </p>
+        </CardSection>
+      )}
 
-      {/* **الأزرارُ آخرَ السطر** — ملفُّ الطلب والفاتورة، ثمّ محوُ العمولة وما يلزم بعد الفشل. */}
-      <div className="flex shrink-0 flex-wrap items-center gap-1.5 lg:max-w-xs lg:justify-end">
+      {/* ── المال ── عرضٌ لا حساب: أرقامُ الخادم كما هي (`DriverMoneyBox` نفسُه). */}
+      <CardSection title={C.money}>
+        <MoneyLine label={C.customer}>
+          <Money value={o.total} small className={`font-bold ${muted ? "text-ink-muted line-through" : ""}`} />
+          <span className="text-ink-muted"> {payText}</span>
+        </MoneyLine>
+        {(o.discount > 0 || (money?.offer_platform ?? 0) > 0 || (money?.offer_merchant ?? 0) > 0 || (o.free_waived ?? 0) > 0) && (
+          <MoneyLine label={C.discounts}>
+            {[
+              o.discount > 0
+                ? `${C.discount} ${fmtMoney(o.discount)}${o.promo_code ? ` (${o.promo_code})` : ""}`
+                : "",
+              (money?.offer_platform ?? 0) > 0 ? C.offerPlatform.replace("{n}", fmtMoney(money?.offer_platform ?? 0)) : "",
+              (money?.offer_merchant ?? 0) > 0 ? C.offerMerchant.replace("{n}", fmtMoney(money?.offer_merchant ?? 0)) : "",
+              (o.free_waived ?? 0) > 0 ? C.freeDelivery.replace("{n}", fmtMoney(o.free_waived ?? 0)) : "",
+            ]
+              .filter(Boolean)
+              .join(m.common.listSeparator)}
+          </MoneyLine>
+        )}
+        {(o.merchant_net ?? 0) > 0 || commission > 0 || waived > 0 ? (
+          <MoneyLine label={C.merchant}>
+            {(o.merchant_net ?? 0) > 0 && C.net.replace("{n}", fmtMoney(o.merchant_net ?? 0))}
+            {(o.merchant_net ?? 0) > 0 && (commission > 0 || waived > 0) && sep}
+            {waived > 0 ? (
+              <span className="font-bold text-warning">{OP.cardCommissionWaived.replace("{n}", fmtMoney(waived))}</span>
+            ) : (
+              commission > 0 && OP.cardCommission.replace("{n}", fmtMoney(commission))
+            )}
+          </MoneyLine>
+        ) : null}
+        {((o.driver_fee ?? 0) > 0 || cash > 0) && (
+          <MoneyLine label={C.driver}>
+            {[
+              (o.driver_fee ?? 0) > 0 ? C.driverFee.replace("{n}", fmtMoney(o.driver_fee ?? 0)) : "",
+              cash > 0 ? C.driverCash.replace("{n}", fmtMoney(cash)) : "",
+              pay > 0 ? C.driverPaid.replace("{n}", fmtMoney(pay)) : "",
+              cash > 0 ? C.driverOffice.replace("{n}", fmtMoney(office)) : "",
+            ]
+              .filter(Boolean)
+              .join(m.common.listSeparator)}
+          </MoneyLine>
+        )}
+        {money && money.lines > 0 && (
+          <MoneyLine label={C.split}>
+            {C.rep.replace("{n}", fmtMoney(money.rep))}
+            {sep}
+            <span className="font-bold">{C.platform.replace("{n}", fmtMoney(money.platform))}</span>
+          </MoneyLine>
+        )}
+      </CardSection>
+
+      {/* ── الأزرار ── الفاتورة، وملفُّ الطلب، و«⋯» للأفعال النادرة بصلاحيّاتها نفسِها. */}
+      <div className="mt-auto flex flex-wrap items-center gap-1.5 border-t border-line-soft pt-2.5">
+        {!NO_INVOICE.has(o.status) && <InvoiceButton order={o} compact />}
         <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={onDetails}>
           <span className="flex items-center gap-1">
             <IconRoute size={14} />
             {H.detailsBtn}
           </span>
         </Button>
-        {!NO_INVOICE.has(o.status) && <InvoiceButton order={o} compact />}
+        {(hasActions || waivable) && (
+          <Button
+            variant={menuOpen ? "primary" : "secondary"}
+            className="!px-3 !py-1.5 text-xs"
+            aria-expanded={menuOpen}
+            aria-label={C.more}
+            title={C.more}
+            onClick={() => setMenuOpen(!menuOpen)}
+          >
+            ⋯
+          </Button>
+        )}
+      </div>
+      <div className={`flex flex-wrap gap-1.5 rounded-control bg-field p-2 ${menuOpen ? "" : "hidden"}`}>
         {waivable && (
           <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => setWaiving(true)}>
             {m.admin.cashOutstanding.waiveBtn}
           </Button>
         )}
-        <div className="flex flex-wrap gap-1.5 empty:hidden">{actions}</div>
+        <div ref={actionsRef} className="flex flex-wrap gap-1.5">
+          {actions}
+        </div>
       </div>
       {waiving && (
         <WaiveCommissionDialog
@@ -2778,6 +2967,26 @@ function HistoryCard({
         />
       )}
     </li>
+  );
+}
+
+/** **قسمٌ في كرت السجلّ** — عنوانٌ صغيرٌ وخطٌّ رفيعٌ فوقه. */
+function CardSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-1 border-t border-line-soft pt-2">
+      <h4 className="text-xs font-bold text-ink-muted">{title}</h4>
+      {children}
+    </section>
+  );
+}
+
+/** **سطرُ مالٍ** — الطرفُ يميناً وما له في سطرٍ واحدٍ يلتفّ. */
+function MoneyLine({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <p className="flex flex-wrap items-baseline gap-x-1.5 text-xs">
+      <span className="shrink-0 font-medium">{label}:</span>
+      <span className="min-w-0">{children}</span>
+    </p>
   );
 }
 

@@ -141,4 +141,40 @@ func TestORDERFILE_AdminDetailAndHistoryFilters(t *testing.T) {
 	if res := h.GET("/api/v1/admin/orders?closed=1&pay=card", admin.Token); res.Code != 400 {
 		t.Errorf("طريقةُ دفعٍ لا تُعرف: %s", res)
 	}
+
+	// ── كرتُ السجلّ يحمل كلَّ شيء (٢٠٢٦-١٠-٣٠): البنودُ والمالُ ومن أنهاه — بلا نداءٍ لكلّ كرت ──
+	card := func(path string) map[string]any {
+		t.Helper()
+		res := h.GET(path, admin.Token)
+		if res.Code != 200 {
+			t.Fatalf("القائمة: %s", res)
+		}
+		list, _ := res.JSON()["orders"].([]any)
+		for _, o := range list {
+			if row, _ := o.(map[string]any); row["id"] == oid {
+				return row
+			}
+		}
+		t.Fatalf("الطلبُ ليس في %s", path)
+		return nil
+	}
+	row := card("/api/v1/admin/orders?closed=1&counts=1&per_page=100&merchant_id=" + m.ID)
+	items, _ := row["items"].([]any)
+	cb, _ := row["board"].(map[string]any)
+	money, _ := cb["money"].(map[string]any)
+	if len(items) == 0 {
+		t.Errorf("**كرتُ السجلّ بلا بنود**: %v", row["items"])
+	}
+	if money == nil || num(money["lines"]) == 0 || num(money["offer_merchant"]) != 50*num(items[0].(map[string]any)["qty"]) ||
+		num(money["offer_platform"]) != 0 || money["rep"] == nil || money["platform"] == nil {
+		t.Errorf("**مالُ كرت السجلّ**: %v", money)
+	}
+	if cb["ended_by_name"] != drv.Name {
+		t.Errorf("**من أنهى الطلب**: %v — يُنتظر %s", cb["ended_by_name"], drv.Name)
+	}
+	// **ولوحةُ العمل لا تحملها** — بلا `counts=1`.
+	live := card("/api/v1/admin/orders?closed=1&per_page=100&merchant_id=" + m.ID)
+	if lb, _ := live["board"].(map[string]any); lb["money"] != nil || lb["ended_by_name"] != nil {
+		t.Errorf("**ملءُ السجلّ وصل لوحةَ العمل**: %v · %v", lb["money"], lb["ended_by_name"])
+	}
 }

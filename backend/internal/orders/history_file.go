@@ -9,6 +9,8 @@ package orders
 // **شرطٌ واحدٌ للفلتر وللعلامة على الكرت** — «متأخّر» و«عمولته ممحيّة» و«مُحوَّل»
 // تُكتب هنا مرّةً، **فلا يقول الكرتُ «متأخّر» والفلترُ لا يجده.**
 
+import "context"
+
 // StoreTransferNote **أوّلُ ملاحظة حدث «تحويلٌ إلى متجرٍ آخر»** — يكتبها التحويلُ
 // (`server/order_transfer.go`) ويقرؤها السجلّ ليقول «مُحوَّل».
 const StoreTransferNote = "تحويلٌ إلى متجرٍ آخر"
@@ -46,4 +48,66 @@ func staffSearchName(p string) string {
 	return `EXISTS (SELECT 1 FROM users sd WHERE sd.id = o.driver_id AND sd.full_name ILIKE '%' || ` + p + ` || '%' ESCAPE '\')
 		OR EXISTS (SELECT 1 FROM merchants sm WHERE sm.id = o.merchant_id AND sm.name ILIKE '%' || ` + p + ` || '%' ESCAPE '\')
 		OR COALESCE(o.promo_code, '') ILIKE '%' || ` + p + ` || '%' ESCAPE '\'`
+}
+
+// HistoryMoney **مالُ الطلب على كرت السجلّ** (قرارُ المالك ٢٠٢٦-١٠-٣٠: «كلّ شي عن الطلب على الكرت») —
+// نصيبُ المندوب وربحُ المنصّة من الدفتر (قراءةٌ لا كتابة)، وخصمُ العروض بمن تحمّله.
+type HistoryMoney struct {
+	Rep           int64 `json:"rep"`
+	Platform      int64 `json:"platform"`
+	Lines         int   `json:"lines"`
+	OfferPlatform int64 `json:"offer_platform"`
+	OfferMerchant int64 `json:"offer_merchant"`
+}
+
+// FillHistory **يملأ ما يحتاجه كرتُ السجلّ لصفحةٍ كاملة** — في رحلةٍ واحدة لا رحلةٍ لكلّ كرت:
+// مالُ كلّ طلبٍ واسمُ من أنهاه. (والبنودُ في استعلام القائمة أصلاً.) **وتعذّرُه لا يُسقط القائمة.**
+func (s *Service) FillHistory(ctx context.Context, list []Order) error {
+	if len(list) == 0 {
+		return nil
+	}
+	ids := make([]string, len(list))
+	at := map[string]int{}
+	for i := range list {
+		ids[i] = list[i].ID
+		at[list[i].ID] = i
+		if list[i].Board == nil {
+			list[i].Board = &BoardInfo{}
+		}
+	}
+	mRows, err := s.db.Query(ctx, `
+		SELECT o.id::text,
+		       COALESCE(sum(wt.amount) FILTER (WHERE wt.kind = 'commission'), 0),
+		       COALESCE(sum(wt.amount) FILTER (WHERE wt.kind = 'platform_profit'), 0),
+		       count(wt.id)::int,
+		       COALESCE((SELECT sum(oi.offer_cut * oi.qty) FROM order_items oi
+		                 WHERE oi.order_id = o.id AND oi.offer_borne_by = 'platform'), 0),
+		       COALESCE((SELECT sum(oi.offer_cut * oi.qty) FROM order_items oi
+		                 WHERE oi.order_id = o.id AND oi.offer_borne_by = 'merchant'), 0),
+		       COALESCE((SELECT NULLIF(u.full_name, '') FROM order_events e JOIN users u ON u.id = e.actor_id
+		                 WHERE e.order_id = o.id AND e.to_status = o.status
+		                 ORDER BY e.id DESC LIMIT 1), '')
+		FROM orders o
+		LEFT JOIN wallet_transactions wt ON wt.ref = o.id::text
+		WHERE o.id = ANY($1::uuid[])
+		GROUP BY o.id`, ids)
+	if err != nil {
+		return err
+	}
+	defer mRows.Close()
+	for mRows.Next() {
+		var oid string
+		var hm HistoryMoney
+		var endedBy string
+		if err := mRows.Scan(&oid, &hm.Rep, &hm.Platform, &hm.Lines, &hm.OfferPlatform, &hm.OfferMerchant,
+			&endedBy); err != nil {
+			return err
+		}
+		if i, ok := at[oid]; ok {
+			m := hm
+			list[i].Board.Money = &m
+			list[i].Board.EndedByName = endedBy
+		}
+	}
+	return mRows.Err()
 }

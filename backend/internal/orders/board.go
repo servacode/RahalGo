@@ -253,6 +253,9 @@ type BoardInfo struct {
 	Cases         int  `json:"cases"`
 	Transferred   bool `json:"transferred"`
 	Late          bool `json:"late"`
+	// Money و EndedByName **لكرت السجلّ وحدَه** (`FillHistory`) — وغائبان عن لوحة العمل.
+	Money       *HistoryMoney `json:"money,omitempty"`
+	EndedByName string        `json:"ended_by_name,omitempty"`
 }
 
 // BoardInfoOf **معلوماتُ المكتب لصفحةٍ من الطلبات** — في رحلةٍ واحدة.
