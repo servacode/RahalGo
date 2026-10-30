@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.rahalgo.design.Rahal
 
 /**
@@ -179,6 +180,8 @@ fun RahalOutlineButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     tone: Tone = Tone.Brand,
+    /** **حشوةٌ ضيّقة** — لزرٍّ في صفٍّ من ثلاثة، كـ`RahalButton`. */
+    compact: Boolean = false,
     content: @Composable RowScope.() -> Unit,
 ) {
     val c = tone.inkColor()
@@ -187,7 +190,7 @@ fun RahalOutlineButton(
         modifier = modifier,
         enabled = enabled,
         shape = Rahal.shape.md,
-        contentPadding = Pad,
+        contentPadding = if (compact) PadTight else Pad,
         border = BorderStroke(Rahal.stroke.hair, c),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = c),
         content = content,
@@ -215,5 +218,20 @@ fun RahalTextButton(
         shape = Rahal.shape.md,
         colors = ButtonDefaults.textButtonColors(contentColor = tone.inkColor()),
         content = content,
+    )
+}
+
+/**
+ * **نصُّ زرٍّ يصغر حتّى يسع ولا يُقصّ** (بلاغُ المالك ٢٠٢٦-١٠-٣٠: «افة صنف» و«شاء عرض») —
+ * لأزرارٍ ثلاثةٍ في صفٍّ على شاشةٍ ضيّقة.
+ */
+@Composable
+fun FitButtonText(text: String) {
+    val style = androidx.compose.material3.MaterialTheme.typography.labelLarge.copy(color = androidx.compose.material3.LocalContentColor.current)
+    androidx.compose.foundation.text.BasicText(
+        text = text,
+        style = style,
+        maxLines = 1,
+        autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 10.sp, maxFontSize = style.fontSize),
     )
 }

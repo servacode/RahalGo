@@ -190,15 +190,18 @@ fun ClientDetail(
                 RahalOutlineButton(
                     onClick = { onOpenItems(vm.openId, head.name) },
                     modifier = Modifier.weight(1f).height(48.dp),
-                ) { Text(stringResource(R.string.mn_items), maxLines = 1, softWrap = false) }
+                compact = true,
+                ) { com.rahalgo.ui.FitButtonText(stringResource(R.string.mn_items)) }
                 RahalButton(
                     onClick = { onOpenMenu(vm.openId, head.name) },
                     modifier = Modifier.weight(1f).height(48.dp),
-                ) { Text(stringResource(R.string.mn_add_item), maxLines = 1, softWrap = false) }
+                compact = true,
+                ) { com.rahalgo.ui.FitButtonText(stringResource(R.string.mn_add_item)) }
                 RahalOutlineButton(
                     onClick = { onOpenOffers(vm.openId, head.name) },
                     modifier = Modifier.weight(1f).height(48.dp),
-                ) { Text(stringResource(R.string.mn_make_offer), maxLines = 1, softWrap = false) }
+                compact = true,
+                ) { com.rahalgo.ui.FitButtonText(stringResource(R.string.mn_make_offer)) }
             }
         }
 
