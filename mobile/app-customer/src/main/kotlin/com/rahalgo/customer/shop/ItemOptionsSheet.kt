@@ -193,16 +193,6 @@ fun ItemOptionsSheet(
                     },
                 )
             }
-            // **ووصفُ الصنف هنا** (٢٠٢٦-١٠-٣٠) — كان يُقرأ بقلب صورة البطاقة، والبطاقةُ
-            // صارت تفتح النافذة.
-            item.description.trim().takeIf { it.isNotEmpty() }?.let { desc ->
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    desc,
-                    color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
             Spacer(Modifier.height(16.dp))
 
             when {

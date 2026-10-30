@@ -235,7 +235,10 @@ fun UpdateGate(
                 RahalButton(
                     onClick = {
                         val activity = ctx as? android.app.Activity
-                        if (activity == null) {
+                        if (!installedFromPlay(ctx)) {
+                            // **من نزّل من موقعنا: الملفُّ ينزل على جهازه** (٢٠٢٦-١٠-٣٠).
+                            if (!ApkDownload.start(ctx, SelfUpdate.apkUrl("customer"), "rahalgo-update.apk")) openDirect()
+                        } else if (activity == null) {
                             openMarket()
                         } else {
                             PlayUpdate.start(activity, onUnavailable = openMarket)

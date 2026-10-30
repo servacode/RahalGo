@@ -56,10 +56,8 @@ function priceLine(it: MenuItem): string {
     : fmtMoney(it.price);
 }
 
-/** **الوصفُ — أو أسماءُ مجموعات خياراته إن خلا** (مرآةُ `ItemsList` في التطبيق). */
+/** **أسماءُ مجموعات خياراته** — لا وصفَ للصنف (قرارُ المالك ٢٠٢٦-١٠-٣٠)؛ مرآةُ `MenuScreen` في التطبيق. */
 function descOf(it: MenuItem): string {
-  const d = it.description.trim();
-  if (d) return d;
   return (it.modifiers ?? [])
     .map((g) => g.name.trim())
     .filter(Boolean)

@@ -84,8 +84,8 @@ const PAIRS = [
   [web.editItem, "mn_item_edit"],
   [web.itemName, "mn_item_name"],
   // **وألفاظُ المندوب هي ألفاظُ المتجر** (مراجعةُ المالك ٢٠٢٦-١٠-٣٠): «السعر»
-  // و«قسم السوق» و«وصف مختصر» — من `:ui` لا من نسخةٍ خاصّةٍ بالمندوب.
-  [web.itemDescription, "item_desc"],
+  // و«قسم السوق» — من `:ui` لا من نسخةٍ خاصّةٍ بالمندوب. **ولا «وصف مختصر»**:
+  // رُفع حقلُ الوصف من المحرّرين (قرارُ المالك ٢٠٢٦-١٠-٣٠).
   [web.itemImage, "item_pick_image"],
   [web.price, "item_price"],
   [web.available, "mn_available"],

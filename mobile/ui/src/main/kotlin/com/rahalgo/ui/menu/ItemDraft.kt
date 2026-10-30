@@ -37,7 +37,6 @@ data class ItemDraft(
     /** **فارغٌ يعني صنفاً جديداً** — وغيرُ الفارغ تعديلُ قائم. */
     val itemId: String = "",
     val name: String = "",
-    val description: String = "",
     /** **نصٌّ لا رقم** — الحقلُ يُكتب فيه، والتحويلُ عند الحفظ. */
     val price: String = "",
     /** **قسمُ السوق** — بلاه لا يظهر الصنفُ للزبون. */

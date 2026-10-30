@@ -285,7 +285,8 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
         Spacer(Modifier.height(14.dp))
 
         MapPrepStatus(
-            downloading = OfflineMap.downloading && !OfflineMap.ready,
+            // **وطلبتها الورديّةُ أو طلبٌ مقبول** (٢٠٢٦-١٠-٣٠) — تُرى ولو لم يبدأ العاملُ بعد.
+            downloading = (OfflineMap.downloading || MapPackageWorker.tripWanted) && !OfflineMap.ready,
             failed = OfflineMap.failed,
             failure = OfflineMap.failure,
             onRetry = { MapPackageWorker.enqueue(context) },

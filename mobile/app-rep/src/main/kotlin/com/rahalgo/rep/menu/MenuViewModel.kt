@@ -331,7 +331,6 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
             // **وسعرُ المتجر لا سعرُ البيع** — هو ما يملك تغييرَه.
             // **والصفرُ يُعرض صفراً** (قرارُ المالك ٢٠٢٦-١٠-٢٨: «مسموح للكل»).
             price = if (item.merchantPrice >= 0) item.merchantPrice.toString() else "",
-            description = item.description,
             platformSectionId = item.platformSectionId.orEmpty(),
             modifiers = item.modifiers.map { it.withUsdText() },
             imageThumb = item.imageThumbUrl,
@@ -476,7 +475,6 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
         // النموذج تحت مختار القسم** — كما في الويب حرفاً.
         val input = ItemInput(
             name = d.name.trim(),
-            description = d.description.trim(),
             price = price,
             // **والفراغُ الصريحُ يرفع التصنيف** — يقرؤه المحرّك «ارفع»
             // لا «بلا تغيير»، كما ترسله لوحةُ الويب حرفا.

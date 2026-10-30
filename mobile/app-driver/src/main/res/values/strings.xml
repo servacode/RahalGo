@@ -679,4 +679,23 @@
     <string name="chat_quick_five_min">أصل بعد 5 دقائق</string>
     <string name="setup_progress">أنجزت %1$d من %2$d</string>
     <string name="rate_title">تقييمي</string>
+    <!-- الرحلة بلا إنترنت (قرار المالك 2026-10-30) -->
+    <string name="offline_map_trip_banner">جارٍ تنزيل خريطة %1$s للعمل بلا إنترنت</string>
+    <string name="step_queued">سيُرسَل عند عودة الإنترنت</string>
+    <string name="step_queued_rejected">لم تُقبل خطوة محفوظة: %1$s</string>
+    <string name="deliver_needs_net">التسليم يحتاج إنترنت — تابع وسلّم حين يعود الاتصال</string>
+    <string name="open_google_maps">افتح في خرائط غوغل</string>
+    <string name="offline_follow_customer">لا إنترنت — اتبع الخط إلى الزبون</string>
+    <string name="offline_follow_store">لا إنترنت — اتبع الخط إلى المتجر</string>
+    <string name="offline_straight">%1$s · %2$s · باتجاه %3$s</string>
+    <string-array name="compass_dirs">
+        <item>الشمال</item>
+        <item>الشمال الشرقي</item>
+        <item>الشرق</item>
+        <item>الجنوب الشرقي</item>
+        <item>الجنوب</item>
+        <item>الجنوب الغربي</item>
+        <item>الغرب</item>
+        <item>الشمال الغربي</item>
+    </string-array>
 </resources>

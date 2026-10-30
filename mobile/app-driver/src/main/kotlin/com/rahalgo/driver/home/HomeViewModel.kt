@@ -180,6 +180,8 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 backend.driver.setShift(on)
+                // **والخريطةُ تُنزَّل مع فتح الورديّة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — لتعمل بلا إنترنت.
+                if (on) launch { com.rahalgo.driver.trip.MapPackageWorker.ensureForTrip(getApplication()) }
                 // **والطابورُ يُقرأ من جديد** — ما نزل قبل الفتح لا يصله دفعٌ.
                 com.rahalgo.driver.orders.QueuePulse.bump()
                 // **ثمّ يُعاد قراءة الحال كاملا** — فتح الوردية يحرّك
@@ -332,6 +334,8 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
                 // **والخدمةُ تقف مع الخروج** — إشعارُ ورديّةٍ لحسابٍ خرج يبقى في
                 // الشريط وموقعُه يُرسَل، وهو ما لا يقبله أحد.
                 LocationService.stop(getApplication())
+                // **ولا تبقى رحلةٌ محفوظةٌ لحسابٍ خرج** (٢٠٢٦-١٠-٣٠) — ولا خطواتٌ تنتظر.
+                com.rahalgo.driver.orders.TripStore.clear(app.filesDir)
                 proceed()
             } finally {
                 loggingOut = false

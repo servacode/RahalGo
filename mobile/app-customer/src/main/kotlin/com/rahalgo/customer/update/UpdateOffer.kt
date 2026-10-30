@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.rahalgo.customer.BuildConfig
 import com.rahalgo.customer.R
+import com.rahalgo.ui.ApkDownload
 import com.rahalgo.ui.Flash
 import com.rahalgo.ui.PlayUpdate
 import com.rahalgo.ui.installedFromPlay
@@ -105,10 +106,21 @@ object UpdateOffer {
                 Flash.fail(context.getString(R.string.update_play_unreachable))
                 openUrl(context, "market://details?id=" + context.packageName)
             }
-        } else {
+        } else if (!downloadApk(context)) {
             openUrl(context, DOWNLOAD_PAGE)
         }
     }
+
+    /**
+     * **من نزّل من موقعنا: الملفُّ ينزل على جهازه مباشرة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) —
+     * لا صفحةٌ في المتصفّح. منزّلُ أندرويد يُظهر إشعاراً، **ويكبس عليه فيثبّت بيده.**
+     * ولا إذنَ تثبيتٍ في التطبيق — غوغل بلاي يمنعه، والتثبيتُ يقوم به أندرويد نفسُه.
+     */
+    private fun downloadApk(context: Context): Boolean = ApkDownload.start(
+        context,
+        BuildConfig.API_BASE_URL + "/api/v1/public/app/customer",
+        "rahalgo-${newer ?: "update"}.apk",
+    )
 
     private fun openUrl(context: Context, url: String) {
         runCatching {

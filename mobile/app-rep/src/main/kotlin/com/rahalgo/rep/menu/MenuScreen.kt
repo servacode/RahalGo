@@ -210,9 +210,7 @@ fun MenuScreen(vm: MenuViewModel, onOffers: () -> Unit = {}) {
                     com.rahalgo.ui.menu.GridItem(
                         id = item.id,
                         name = item.name,
-                        description = item.description.trim().ifBlank {
-                            item.modifiers.map { it.name }.filter { it.isNotBlank() }.joinToString(" · ")
-                        },
+                        description = item.modifiers.map { it.name }.filter { it.isNotBlank() }.joinToString(" · "),
                         imageUrl = media(item.imageThumbUrl),
                         // **والدولاريُّ بدولاره وليرته** (٢٠٢٦-١٠-١٢).
                         price = com.rahalgo.ui.menu.priceLine(merchant, item.merchantPriceUsd),

@@ -1,6 +1,8 @@
 package com.rahalgo.driver.trip
 
 import android.content.Context
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.work.CoroutineWorker
 import androidx.work.Constraints
 import androidx.work.Data
@@ -234,6 +236,32 @@ class MapPackageWorker(
                 else ExistingWorkPolicy.KEEP,
                 request,
             )
+        }
+
+        /**
+         * **طُلبت الخريطةُ للرحلة ولم تجهز بعد** — تُعرض بها لافتةُ «جارٍ تنزيل خريطة…».
+         */
+        var tripWanted by androidx.compose.runtime.mutableStateOf(false)
+            private set
+
+        /**
+         * ══════════════════════════════════════════════════════════════
+         * **الخريطةُ شرطٌ قبل الرحلة** (قرارُ المالك ٢٠٢٦-١٠-٣٠)
+         * ══════════════════════════════════════════════════════════════
+         *
+         * **عند فتح الورديّة أو قبول طلب**: إن لم تكن الحزمةُ مركّبةً تُنزَّل الآن بطلبٍ صريح
+         * (`USER` — على بيانات الجوّال أيضاً؛ الرقّةُ نحو ٢ ميغا)، **فلا تنقطع الشبكةُ في
+         * الطريق والخريطةُ فارغة.** ولا يُمنع السائقُ من العمل — لافتةٌ صغيرةٌ وحدَها.
+         */
+        suspend fun ensureForTrip(context: Context) {
+            val app = context.applicationContext
+            withContext(Dispatchers.IO) { runCatching { OfflineMap.check(app) } }
+            if (OfflineMap.ready) {
+                tripWanted = false
+                return
+            }
+            tripWanted = true
+            if (!OfflineMap.downloading) enqueue(app, trigger = Trigger.USER)
         }
 
         fun cancel(context: Context) {

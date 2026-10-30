@@ -1,6 +1,7 @@
 package com.rahalgo.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -25,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
@@ -39,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil3.compose.AsyncImage
+import com.rahalgo.design.LightPalette
 import com.rahalgo.design.Rahal
 
 private const val MAX_ZOOM = 5f
@@ -176,25 +179,39 @@ fun FullPhoto(
                     onError = { failed = true },
                 )
                 if (zoomHint) {
-                    Box(
-                        Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(Rahal.space.sm)
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.55f)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            painterResource(R.drawable.ic_zoom_in),
-                            contentDescription = stringResource(R.string.image_zoom_hint),
-                            tint = Color.White,
-                            modifier = Modifier.size(22.dp),
-                        )
-                    }
+                    ZoomBadge(Modifier.align(Alignment.BottomEnd).padding(Rahal.space.sm))
                 }
             }
         }
     }
     if (open) ImageViewer(url = url, onClose = { open = false })
+}
+
+/**
+ * **زرُّ «اضغط للتكبير» على زاوية الصورة** — قرارُ المالك ٢٠٢٦-١٠-٣٠:
+ * دائرةٌ **بيضاء** بحدٍّ رفيعٍ وظلٍّ خفيف، وفيها العدسةُ بلون العلامة —
+ * **تُقرأ على الصورة الفاتحة والغامقة معاً.** الضغطُ عليها كالضغط على الصورة.
+ * **وألوانُها من اللوحة الفاتحة في الوضعين** — الدائرةُ بيضاءُ دائماً، وسماويُّ
+ * الوضع الليليّ الفاتحُ لا يُقرأ على الأبيض.
+ */
+@Composable
+fun ZoomBadge(modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
+    val label = stringResource(R.string.image_zoom_hint)
+    Box(
+        modifier
+            .size(36.dp)
+            .shadow(3.dp, CircleShape)
+            .clip(CircleShape)
+            .background(LightPalette.canvas)
+            .border(1.dp, LightPalette.line, CircleShape)
+            .then(if (onClick != null) Modifier.clickable(onClickLabel = label, role = Role.Button, onClick = onClick) else Modifier),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            painterResource(R.drawable.ic_zoom_in),
+            contentDescription = label,
+            tint = LightPalette.brand,
+            modifier = Modifier.size(20.dp),
+        )
+    }
 }

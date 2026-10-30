@@ -1120,6 +1120,8 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                         retryEmergency = orders::retryEmergency,
                         dismissEmergency = orders::dismissEmergency,
                         toggleVoice = orders::toggleVoice,
+                        // **«افتح في خرائط غوغل»** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — تعمل بخرائطها المحفوظة بلا إنترنت.
+                        openMaps = { openMaps(context, orders.trip(LastPoint.value)) },
                         toOrders = { tab = 1 },
                         // ══════════════════════════════════════════════
                         // **اختيارُ المسار** — إغلاقُ واجهة ٧
@@ -1234,14 +1236,19 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
  */
 private fun openMaps(context: android.content.Context, trip: TripState) {
     val target = if (trip.step >= com.rahalgo.driver.trip.TripStep.PICKED_UP) {
-        trip.dropoff
+        trip.door ?: trip.dropoff
     } else {
         trip.pickup ?: trip.dropoff
     } ?: return
-    val uri = android.net.Uri.parse("geo:${target.latitude},${target.longitude}?q=${target.latitude},${target.longitude}")
-    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
+    val at = "${target.latitude},${target.longitude}"
+    // **ملاحةُ غوغل مباشرةً إن وُجدت** — وإلّا أيُّ تطبيق خرائط في الجهاز.
+    val google = android.content.Intent(
+        android.content.Intent.ACTION_VIEW,
+        android.net.Uri.parse("google.navigation:q=$at"),
+    ).setPackage("com.google.android.apps.maps")
+    val any = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("geo:$at?q=$at"))
     // **ولو لم يكن في الجهاز تطبيق خرائط** — لا يسقط التطبيق.
-    runCatching { context.startActivity(intent) }
+    runCatching { context.startActivity(google) }.onFailure { runCatching { context.startActivity(any) } }
 }
 
 /**

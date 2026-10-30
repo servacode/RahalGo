@@ -28,6 +28,7 @@ import java.io.IOException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -286,8 +287,36 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     }
 
 
+    // ══════════════════════════════════════════════════════════════════
+    // **الرحلةُ بلا إنترنت** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — انظر `TripStore` و`StepQueue`
+    // ══════════════════════════════════════════════════════════════════
+
+    private val dataDir: java.io.File get() = getApplication<Application>().filesDir
+
+    /** **خطواتٌ تنتظر الشبكة** — تُقرأ من القرص عند الإقلاع، وتُرسَل بترتيبها حين تعود. */
+    var pending by mutableStateOf(StepQueue.read(getApplication<Application>().filesDir))
+        private set
+
+    private val pendingLock = kotlinx.coroutines.sync.Mutex()
+
+    /** **كاتبٌ واحدٌ للقرص** — فلا تتسابق كتابتان على ملفٍّ واحد. */
+    private val diskWriter = kotlinx.coroutines.Dispatchers.IO.limitedParallelism(1)
+
+    /** **آخرُ ما كُتب بلا وقته** — فلا يُكتب الملفُّ نفسُه كلَّ عشر ثوان. */
+    private var savedBody: String? = null
+    private var savedAtMs = 0L
+
+    /** **جُرّبت الاستعادةُ مرّةً** — عند أوّل قراءةٍ فاشلةٍ بعد الإقلاع وحدَها. */
+    private var restoreTried = false
+
     init {
         refresh()
+        // **وعودةُ الشبكة تُرسل ما انتظر** — لا ينتظر نبضةَ الخمسَ عشرةَ ثانية.
+        viewModelScope.launch {
+            androidx.compose.runtime.snapshotFlow { com.rahalgo.ui.Net.online }.drop(1).collect { up ->
+                if (up) refresh()
+            }
+        }
         // ══════════════════════════════════════════════════════════════
         // **والقائمة تتحدّث بنفسها**
         // ══════════════════════════════════════════════════════════════
@@ -508,6 +537,8 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         // **وشارةُ الحديث تُقرأ مع كلّ تحديث** — والوصلةُ الحيّة تنادي
         // التحديث، **فما يصل يُرى في ثانيته لا في فتحةٍ تالية.**
         loadChatBadge()
+        // **وما انتظر الشبكةَ يُرسَل قبل القراءة** — فلا تُعيد القراءةُ الشاشةَ خطوةً إلى الوراء.
+        if (pending.isNotEmpty()) flushPending()
         // ══════════════════════════════════════════════════════════════
         // **والدورةُ نفسُها في `OrdersLoader` — لتُختبر**
         // ══════════════════════════════════════════════════════════════
@@ -527,7 +558,8 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         } else {
             state.copy(
                 offers = out.offers,
-                mine = out.mine,
+                // **وما زال ينتظر الشبكةَ يبقى ظاهراً** — انظر `StepQueue.overlay`.
+                mine = StepQueue.overlay(out.mine, pending),
                 // **والحال كاملا لا الوردية وحدها** — شاشة «لماذا
                 // لا تصلني طلبات» تُبنى منه.
                 me = out.me ?: state.me,
@@ -539,13 +571,120 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         }
         // **والوجهةُ بعد الاستلام قبل حفظ الطريق** — فإن تحوّلت إلى الزبون أو عادت إلى
         // الدبّوس رأى `keepRoute` ساقاً جديدةً فطلب طريقَها.
-        if (out.error == null) updateLiveTarget(out.mine)
-        keepRoute(out.route, out.mine)
+        if (out.error == null) updateLiveTarget(state.mine)
+        // **ودورةٌ فشلت لا تمسّ الطريق** (٢٠٢٦-١٠-٣٠) — انظر `routeKeep`.
+        keepRoute(out)
         if (out.error == null) {
+            restoreTried = true
             forgetNetworkError()
-            forgetStaleNotice(out.mine)
-            autoFollow(out.mine)
-            trackDepartures(out.mine)
+            forgetStaleNotice(state.mine)
+            autoFollow(state.mine)
+            trackDepartures(state.mine)
+            persistTrip()
+        } else {
+            restoreTrip()
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **الرحلةُ تُحفظ وتُستعاد** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — انظر `TripStore`
+    // ══════════════════════════════════════════════════════════════════
+
+    /** **يكتب الرحلةَ القائمةَ على القرص** — أو يمحوها إن لم تبقَ رحلة. */
+    private fun persistTrip() {
+        val active = state.mine.filter { it.status !in FINISHED || com.rahalgo.driver.trip.isReturnTrip(it) }
+        val dir = dataDir
+        if (active.isEmpty()) {
+            if (savedBody == "") return
+            savedBody = ""
+            viewModelScope.launch(diskWriter) { java.io.File(dir, TripStore.FILE).delete() }
+            return
+        }
+        val now = System.currentTimeMillis()
+        val trip = SavedTrip(active, route, routeLeg, liveOpenId(), now)
+        val body = TripStore.encode(trip.copy(savedAtMs = 0L))
+        if (body == savedBody && now - savedAtMs < 5 * 60_000L) return
+        savedBody = body
+        savedAtMs = now
+        val text = TripStore.encode(trip)
+        viewModelScope.launch(diskWriter) {
+            runCatching { TripStore.write(dir, text) }.onFailure { Log.w("RahalGo/offline", "تعذّر حفظ الرحلة", it) }
+        }
+    }
+
+    /**
+     * **أوّلُ قراءةٍ فشلت والقائمةُ فارغة** — تُستعاد آخرُ رحلةٍ محفوظة: الطلبُ ووجهتُه وطريقُه،
+     * **فيُكمل السائقُ طريقَه ولو فُتح التطبيقُ بلا إنترنت.**
+     */
+    private suspend fun restoreTrip() {
+        if (restoreTried || state.mine.isNotEmpty()) return
+        restoreTried = true
+        val dir = dataDir
+        val t = kotlinx.coroutines.withContext(diskWriter) {
+            TripStore.read(dir, System.currentTimeMillis())
+        } ?: return
+        Log.i("RahalGo/offline", "استُعيدت رحلةٌ محفوظة: " + t.mine.size + " طلب")
+        state = state.copy(mine = StepQueue.overlay(t.mine, pending), loading = false)
+        if (route == null && t.route != null && t.leg != null && t.leg == legOf(state.mine)) {
+            route = t.route
+            routeLeg = t.leg
+        }
+        autoFollow(state.mine)
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **الخطواتُ بلا إنترنت** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — انظر `StepQueue`
+    // ══════════════════════════════════════════════════════════════════
+
+    private fun savePending() {
+        val dir = dataDir
+        val snapshot = pending
+        viewModelScope.launch(diskWriter) {
+            runCatching { StepQueue.write(dir, snapshot) }.onFailure { Log.w("RahalGo/offline", "تعذّر حفظ الخطوات", it) }
+        }
+    }
+
+    /** **يحفظ الخطوةَ وتتقدّم الشاشةُ** — و«استلمت» يتبعها «انطلقت» كما في الشبكة. */
+    private fun queueStep(id: String, to: String, key: String, at: Pair<Double, Double>? = null) {
+        val add = mutableListOf(PendingStep(id, to, key, at?.first, at?.second))
+        if (to == "picked_up") add += PendingStep(id, "on_the_way", StepRetry.newKey())
+        pending = pending + add
+        Log.i("RahalGo/offline", "خطوةٌ محفوظةٌ حتّى تعود الشبكة: " + to)
+        savePending()
+        val before = legOf(state.mine)
+        state = state.copy(mine = StepQueue.overlay(state.mine, pending))
+        state.mine.firstOrNull { it.id == openId }?.let { detail = detail.copy(order = it) }
+        if (state.mine.none { it.id == openId }) openId = null
+        // **وساقٌ جديدةٌ بلا طريقها** — طريقُ المتجر لا يُقاد به إلى الزبون؛ فيُرسم المستقيم.
+        if (legOf(state.mine) != before) {
+            route = null
+            routeLeg = null
+        }
+        persistTrip()
+    }
+
+    /** **يُرسل ما انتظر بترتيبه وبمفاتيحه** — ورفضُ الخادم يُقال للسائق. */
+    private suspend fun flushPending() {
+        pendingLock.withLock {
+            val snapshot = pending
+            if (snapshot.isEmpty()) return@withLock
+            val r = StepQueue.replay(snapshot) { p ->
+                if (p.to == StepQueue.GOODS) {
+                    backend.driver.goodsHanded(p.orderId, p.lat, p.lng)
+                } else {
+                    backend.driver.transition(p.orderId, p.to, idempotencyKey = p.key)
+                }
+            }
+            val dead = r.rejected.map { it.first.orderId }.toSet()
+            // **وما أُضيف أثناء الإرسال يبقى** — يُضاف في آخر الطابور.
+            pending = r.remaining + pending.drop(snapshot.size).filterNot { it.orderId in dead }
+            savePending()
+            r.rejected.firstOrNull()?.let { (_, e) ->
+                Log.w("RahalGo/offline", "رفض الخادم خطوةً محفوظة", e)
+                state = state.copy(
+                    actionError = getApplication<Application>().getString(R.string.step_queued_rejected, describe(e)),
+                )
+            }
         }
     }
 
@@ -709,18 +848,23 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    private fun keepRoute(fresh: OrderRoute?, mine: List<com.rahalgo.shared.model.DriverOrder>) {
-        val leg = legOf(mine)
-        when {
+    private fun keepRoute(out: LoadOutcome) {
+        // **وساقُ قراءةٍ فاشلةٍ لا تُحسب** — قائمتُها فارغةٌ لأنّ الشبكةَ سقطت.
+        val leg = if (out.error == null) legOf(state.mine) else routeLeg
+        when (val k = routeKeep(out, leg, routeLeg, route)) {
+            RouteKeep.Hold -> Unit
             // **وطريقُ الساق القديمة لا يُركَّب على الجديدة** — إن كان المُعادُ هو
             // المحفوظَ نفسَه (لم يُطلب لأنّ الحالَ المحلّيّ لم يتبدّل بعد) يُطلب من جديد.
-            leg != routeLeg && fresh != null && fresh === route -> {
+            RouteKeep.Refetch -> {
                 route = null
                 routeLeg = null
                 refresh()
             }
-            leg != routeLeg -> { route = fresh; routeLeg = leg }
-            fresh != null && route == null -> route = fresh
+            is RouteKeep.Swap -> {
+                route = k.route
+                routeLeg = k.leg
+            }
+            is RouteKeep.Fill -> route = k.route
         }
     }
 
@@ -817,6 +961,8 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 return@launch
             }
             state = state.copy(acceptingId = null)
+            // **والخريطةُ تُنزَّل قبل الطريق** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — لافتةٌ لا حاجز.
+            launch { com.rahalgo.driver.trip.MapPackageWorker.ensureForTrip(getApplication()) }
             // **والقائمة أوّلا ثمّ النقل** — لا شاشةَ رحلةٍ فارغة.
             load()
             openId = orderId
@@ -1189,14 +1335,51 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         detail = detail.copy(busy = true, error = "")
         val code = if (to == "delivered") deliveryCode else ""
         viewModelScope.launch {
+            // ══════════════════════════════════════════════════════════
+            // **بلا إنترنت: الخطوةُ تُحفظ والشاشةُ تتقدّم** (قرارُ المالك ٢٠٢٦-١٠-٣٠)
+            // ══════════════════════════════════════════════════════════
+            //
+            // **وما سبقها ينتظر يُرسَل أوّلاً** — فلا تصل خطوةٌ قبل التي قبلها.
+            val queueable = to in StepQueue.QUEUEABLE
+            if (pending.isNotEmpty()) flushPending()
+            if (pending.any { it.orderId == id } || (queueable && !com.rahalgo.ui.Net.online)) {
+                if (queueable) {
+                    queueStep(id, to, StepRetry.newKey())
+                    detail = detail.copy(busy = false)
+                } else {
+                    detail = detail.copy(
+                        busy = false,
+                        error = if (to == "delivered") {
+                            offlineDeliverText()
+                        } else {
+                            getApplication<Application>().getString(com.rahalgo.ui.R.string.err_network)
+                        },
+                    )
+                }
+                return@launch
+            }
+            val stepKey = StepRetry.newKey()
             try {
                 // **بمفتاحٍ يُعاد بعينه إن ضاع الردّ** — انظر `StepRetry`.
-                StepRetry.send(StepRetry.newKey()) { key ->
+                StepRetry.send(stepKey) { key ->
                     backend.driver.transition(id, to, idempotencyKey = key, deliveryCode = code)
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // **والانقطاعُ يحفظ الخطوةَ بمفتاحها نفسِه** — فإن كانت ثبتت وضاع ردُّها ردّ
+                // الخادمُ على الإعادة بالطلب كما هو. **و«سلّمت» لا تُحفظ** — كودُ الزبون يُفحص هناك.
+                if (StepRetry.retriable(e)) {
+                    if (queueable) {
+                        queueStep(id, to, stepKey)
+                        detail = detail.copy(busy = false)
+                        return@launch
+                    }
+                    if (to == "delivered") {
+                        detail = detail.copy(busy = false, error = offlineDeliverText())
+                        return@launch
+                    }
+                }
                 detail = detail.copy(busy = false, error = describe(e))
                 // **وبعد الخطأ تُقرأ الحالُ من المحرّك** (٢٠٢٦-١٠-٠٢) — قد تكون
                 // الخطوةُ ثبتت، أو أُلغي الطلبُ، **وشاشةٌ تبقى على ما كان تُضغط ثانيةً.**
@@ -1226,9 +1409,18 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             // الزمنيّ لا واحدة — **ووقتُ الانطلاق يُقرأ في الشكوى**،
             // إنّما تقعان بضغطةٍ واحدة.
             if (to == "picked_up") {
-                runCatching {
-                    StepRetry.send(StepRetry.newKey()) { key ->
+                val goKey = StepRetry.newKey()
+                try {
+                    StepRetry.send(goKey) { key ->
                         backend.driver.transition(id, "on_the_way", idempotencyKey = key)
+                    }
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    // **وانقطعت بين الخطوتين** — «انطلقت» تُحفظ وتُرسَل حين تعود.
+                    if (StepRetry.retriable(e)) {
+                        pending = pending + PendingStep(id, "on_the_way", goKey)
+                        savePending()
                     }
                 }
             }
@@ -1258,11 +1450,20 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val at = navSession.lastGoodFix?.let { it.lat to it.lng }
                 ?: LastPoint.value?.let { it.lat to it.lng }
+            if (pending.isNotEmpty()) flushPending()
+            val offlineNow = pending.any { it.orderId == id } || !com.rahalgo.ui.Net.online
             try {
+                if (offlineNow) throw java.io.IOException("offline")
                 backend.driver.goodsHanded(id, at?.first, at?.second)
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
+                // **بلا إنترنت يُحفظ ويُرسَل حين تعود** (٢٠٢٦-١٠-٣٠) — والمشوارُ يُغلق أمامه.
+                if (StepRetry.retriable(e)) {
+                    queueStep(id, StepQueue.GOODS, StepRetry.newKey(), at)
+                    detail = detail.copy(busy = false)
+                    return@launch
+                }
                 detail = detail.copy(busy = false, error = describe(e))
                 refresh()
                 return@launch
@@ -1689,6 +1890,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             // التطبيق** — ثمّ يُعاد الضغطُ ويُعاد.
             error = detail.error.ifEmpty { state.actionError },
             suspended = state.me?.suspended == true,
+            queued = pending.any { it.orderId == order.id },
         )
     }
 
@@ -1778,7 +1980,11 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
-                detail = detail.copy(busy = false, error = describe(e))
+                // **«سلّمت» لا تُحفظ** — تحتاج الخادمَ يفحص الكود. فيُقال للسائق بوضوح.
+                detail = detail.copy(
+                    busy = false,
+                    error = if (StepRetry.retriable(e)) offlineDeliverText() else describe(e),
+                )
                 refresh()
                 return@launch
             }
@@ -1786,6 +1992,9 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             reload()
         }
     }
+
+    private fun offlineDeliverText(): String =
+        getApplication<Application>().getString(R.string.deliver_needs_net)
 
 
     // ══════════════════════════════════════════════════════════════════
@@ -2489,13 +2698,15 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     private fun reload() {
         viewModelScope.launch {
             try {
-                val (offers, mine) = reloadLists(feed)
+                val (offers, served) = reloadLists(feed)
+                val mine = StepQueue.overlay(served, pending)
                 state = state.copy(
                     offers = offers,
                     mine = mine,
                     loading = false,
                     error = "",
                 )
+                persistTrip()
                 forgetNetworkError()
                 val id = openId
                 if (id != null) {

@@ -874,6 +874,23 @@ fun TripScreen(
                 TopNotice(stringResource(R.string.suspended_banner), Rahal.colors.danger)
             }
             // ══════════════════════════════════════════════════════════
+            // **الرحلةُ بلا إنترنت** (قرارُ المالك ٢٠٢٦-١٠-٣٠)
+            // ══════════════════════════════════════════════════════════
+            //
+            // **الخريطةُ تُنزَّل قبل الطريق** — لافتةٌ صغيرةٌ حتّى تجهز، لا حاجز.
+            if (!OfflineMap.ready && !OfflineMap.failed && (OfflineMap.downloading || MapPackageWorker.tripWanted)) {
+                TopNotice(
+                    stringResource(
+                        R.string.offline_map_trip_banner,
+                        OfflineMap.status.name.ifEmpty { stringResource(R.string.offline_map_fallback_region) },
+                    ),
+                    Rahal.colors.warnTint,
+                )
+            }
+            // **وخطوةٌ تنتظر الشبكة** — تقدّمت الشاشةُ وتُرسَل حين تعود.
+            if (state.queued) TopNotice(stringResource(R.string.step_queued), Rahal.colors.warnTint)
+            OfflineGuide(state, navSession)
+            // ══════════════════════════════════════════════════════════
             // **وموقعُ الزبون المباشر يُقال بكلمة** (قرارُ المالك ٢٠٢٦-١٠-١٦)
             // ══════════════════════════════════════════════════════════
             //
@@ -881,7 +898,12 @@ fun TripScreen(
             // سببٍ يظنّ الملاحةَ معطوبة. **وشاخ موقعُه فعاد إلى الدبّوس؟ يُقال كذلك.**
             if (state.step >= TripStep.PICKED_UP) LiveCustomerNotice(state, actions.requestLive)
             // **«الطريق مسكّر؟»** (قرارُ المالك ٢٠٢٦-١٠-٢١) — من موقعه، فيتجنّبه التوجيهُ لكلّ السائقين.
-            if (state.order != null) RoadClosureButton(actions.reportClosure)
+            if (state.order != null) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    RoadClosureButton(actions.reportClosure)
+                    OpenMapsButton(actions.openMaps)
+                }
+            }
             // ══════════════════════════════════════════════════════════
             // **وخطأُ الخطوة يُرى ولو طُويت البطاقة** (٢٠٢٦-١٠-٠٢)
             // ══════════════════════════════════════════════════════════
@@ -1187,8 +1209,9 @@ private fun OnRouteBanner(
             // **وأجرتُه هو لا نقدُ الزبون** (٢٠٢٦-١٠-٠٢) — كان يُعرض `cash_due`
             // فيقرأ ما يقبضه للمتجر على أنّه ما يكسبه. **وكما في بطاقة الطلب**:
             // الخاصُّ أجرتُه تُتّفق لاحقاً.
-            text = stringResource(kindLabel(offer)) + " · " +
-                offer.merchantName.ifBlank { stringResource(kindLabel(offer)) } +
+            // **ولا تتكرّر كلمةُ النوع** (ملاحظةُ المالك A6): بلا اسم متجرٍ يُذكر النوعُ مرّةً.
+            text = stringResource(kindLabel(offer)) +
+                (if (offer.merchantName.isBlank()) "" else " · " + offer.merchantName) +
                 " · " + stringResource(R.string.card_fee) + " " +
                 when {
                     fixedCustomFee(offer) != null -> money(fixedCustomFee(offer) ?: 0)
@@ -1297,6 +1320,77 @@ data class Stop(val id: String, val number: Long)
 /**
  * **«الطريق مسكّر؟»** — زرٌّ صغيرٌ ونافذةُ السبب. **والموقعُ من الجهاز**: هو واقفٌ عند المسكَّر.
  */
+/**
+ * **«افتح في خرائط غوغل»** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — المتجرُ قبل الاستلام والزبونُ بعده.
+ * **وخرائطُ غوغل المحفوظةُ في الجهاز تعمل بلا إنترنت.**
+ */
+@Composable
+private fun OpenMapsButton(onOpen: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .padding(top = 10.dp, bottom = 4.dp)
+            .clip(Rahal.shape.sm)
+            .background(Rahal.colors.warnTint)
+            .clickable(onClick = onOpen)
+            .heightIn(min = 44.dp)
+            .padding(horizontal = 14.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = stringResource(R.string.open_google_maps),
+            color = Rahal.colors.ink,
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **لا إنترنت — اتبع الخط** (قرارُ المالك ٢٠٢٦-١٠-٣٠)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **خرج عن الطريق أو سقط حسابُه من جديد وهو بلا شبكة** — يُقال له أن يتبع الخطَّ القديم،
+ * **والخطُّ باقٍ** (لا يُمحى بفشل). **ولا طريقَ أصلاً؟** فالخطُّ المستقيمُ ومسافتُه واتّجاهُه.
+ */
+@Composable
+private fun OfflineGuide(state: TripState, nav: com.rahalgo.navigation.NavigationSession) {
+    if (com.rahalgo.ui.Net.online && com.rahalgo.ui.Net.reachable) return
+    if (state.order == null) return
+    val toCustomer = state.step >= TripStep.PICKED_UP
+    val head = stringResource(if (toCustomer) R.string.offline_follow_customer else R.string.offline_follow_store)
+    if (nav.route != null || state.routeLine.isNotEmpty()) {
+        val s = nav.nav
+        if (s != null && (s.reroute != com.rahalgo.navigation.RerouteStatus.NONE || s.isOffRoute)) {
+            TopNotice(head, Rahal.colors.warnTint)
+        }
+        return
+    }
+    val here = state.driver
+    val target = if (toCustomer) state.door ?: state.dropoff else state.pickup
+    if (here == null || target == null) {
+        TopNotice(head, Rahal.colors.warnTint)
+        return
+    }
+    val meters = com.rahalgo.navigation.GpsQuality.metersBetween(
+        here.latitude, here.longitude, target.latitude, target.longitude,
+    )
+    val dirs = androidx.compose.ui.res.stringArrayResource(R.array.compass_dirs)
+    val dir = dirs[compassIndex(here.latitude, here.longitude, target.latitude, target.longitude) % dirs.size]
+    TopNotice(stringResource(R.string.offline_straight, head, distanceText(meters), dir), Rahal.colors.warnTint)
+}
+
+/** **أيُّ الجهات الثماني** — صفرٌ الشمال ثمّ مع عقارب الساعة. */
+internal fun compassIndex(fromLat: Double, fromLng: Double, toLat: Double, toLng: Double): Int {
+    val p1 = Math.toRadians(fromLat)
+    val p2 = Math.toRadians(toLat)
+    val dl = Math.toRadians(toLng - fromLng)
+    val y = kotlin.math.sin(dl) * kotlin.math.cos(p2)
+    val x = kotlin.math.cos(p1) * kotlin.math.sin(p2) - kotlin.math.sin(p1) * kotlin.math.cos(p2) * kotlin.math.cos(dl)
+    val deg = (Math.toDegrees(kotlin.math.atan2(y, x)) + 360.0) % 360.0
+    return ((deg + 22.5) / 45.0).toInt() % 8
+}
+
 @Composable
 private fun RoadClosureButton(onReport: (String) -> Unit) {
     var open by remember { mutableStateOf(false) }

@@ -138,3 +138,35 @@ suspend fun loadOnce(feed: OrdersFeed, openId: String?): LoadOutcome = kotlinx.c
     }
     LoadOutcome(offers, mine, me, route)
 }
+
+/**
+ * **ما يُفعل بالطريق المحفوظ بعد دورة** (قرارُ المالك ٢٠٢٦-١٠-٣٠: «الرحلة تكمّل بلا إنترنت»).
+ *
+ * **ودورةٌ فشلت لا تمسّ الطريق** — كانت تُحسب ساقُها من قائمةٍ فارغة فيُمحى الطريقُ والإرشادُ
+ * والصوت بعد ١٥ ثانية من انقطاع الشبكة.
+ */
+sealed interface RouteKeep {
+    /** **يبقى كما هو.** */
+    data object Hold : RouteKeep
+
+    /** **طريقُ الساق القديمة رجع نفسَه** — يُمسح ويُطلب من جديد. */
+    data object Refetch : RouteKeep
+
+    /** **ساقٌ جديدة** — يُستبدل الطريقُ وساقُه. */
+    data class Swap(val route: OrderRoute?, val leg: String?) : RouteKeep
+
+    /** **الساقُ نفسُها ولا طريقَ عندنا** — يُملأ. */
+    data class Fill(val route: OrderRoute) : RouteKeep
+}
+
+fun routeKeep(out: LoadOutcome, leg: String?, heldLeg: String?, held: OrderRoute?): RouteKeep {
+    // **والفشلُ لا يُحكم به** — قائمتُه فارغةٌ لأنّ الشبكةَ سقطت لا لأنّ الطلبَ انتهى.
+    if (out.error != null) return RouteKeep.Hold
+    val fresh = out.route
+    return when {
+        leg != heldLeg && fresh != null && fresh === held -> RouteKeep.Refetch
+        leg != heldLeg -> RouteKeep.Swap(fresh, leg)
+        fresh != null && held == null -> RouteKeep.Fill(fresh)
+        else -> RouteKeep.Hold
+    }
+}

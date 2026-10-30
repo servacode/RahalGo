@@ -35,7 +35,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.runtime.remember
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -872,60 +871,16 @@ internal fun ItemCard(
                 }
             }
 
-            // ══════════════════════════════════════════════════════════
-            // **ضغطةٌ تقلب الصورةَ فيظهر وصفُ الصنف** (قرارُ المالك ٢٠٢٦-١٠-٢١)
-            // ══════════════════════════════════════════════════════════
-            //
-            // «عملية قلب للصورة بنفس الحجم وينكتب الوصف» — **لا تكبيرَ ولا شاشةٌ كاملة.**
-            // **وترجع وحدَها** بعد ثوانٍ تكفي لقراءته (خمسٌ، وأطولُ للطويل، لا أكثرَ من
-            // عشر) — «اذا نسى الزبون ماتظل عالقة»؛ **وتمريرُها خارجَ الشاشة يُعيدها**
-            // (الحالُ يُنسى مع البطاقة). **وبلا وصفٍ يُقال ذلك** لا ظهرٌ فارغ.
-            var flipped by remember(item.id) { mutableStateOf(false) }
+            // **لا وصفَ للصنف عند الزبون** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — فلا قلبَ للصورة؛
+            // **الضغطُ يفتح نافذةَ الصنف**، والعدسةُ تفتح الصورةَ كاملة.
             var zoom by remember(item.id) { mutableStateOf<String?>(null) }
-            val turn by androidx.compose.animation.core.animateFloatAsState(
-                targetValue = if (flipped) 180f else 0f,
-                animationSpec = androidx.compose.animation.core.tween(450),
-                label = "itemFlip",
-            )
-            val desc = item.description.trim()
-            androidx.compose.runtime.LaunchedEffect(flipped) {
-                if (flipped) {
-                    kotlinx.coroutines.delay((5_000L + desc.length * 40L).coerceAtMost(10_000L))
-                    flipped = false
-                }
-            }
             Box(
-                Modifier
-                    .graphicsLayer {
-                        rotationY = turn
-                        cameraDistance = 12f * density
-                    }
-                    .clickable(onClickLabel = if (onOpen != null) stringResource(R.string.shop_open_item) else null) {
-                        if (onOpen != null) onOpen() else flipped = !flipped
-                    },
-            ) {
-              if (turn > 90f) {
-                Box(
+                if (onOpen != null) {
+                    Modifier.clickable(onClickLabel = stringResource(R.string.shop_open_item), onClick = onOpen)
+                } else {
                     Modifier
-                        .fillMaxWidth()
-                        .aspectRatio(1f)
-                        // **والظهرُ يُدار ثانيةً** — وإلّا قُرئ النصُّ معكوساً.
-                        .graphicsLayer { rotationY = 180f }
-                        .background(Rahal.colors.brand)
-                        .padding(Rahal.space.sm),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        text = desc.ifEmpty { stringResource(R.string.shop_no_description) },
-                        color = if (desc.isEmpty()) Rahal.colors.onBrand.copy(alpha = 0.75f) else Rahal.colors.onBrand,
-                        style = if (desc.length > 80) MaterialTheme.typography.labelSmall
-                        else MaterialTheme.typography.labelMedium,
-                        textAlign = TextAlign.Center,
-                        maxLines = 8,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-              } else {
+                },
+            ) {
                 RemoteImage(
                     // **والمصغّرةُ أوّلاً — لا الكاملة** (شكوى المالك ٢٠٢٦-٠٨-١٨):
                     // **قِيس على الخادم**: الكاملةُ ٢٦٣ ك.ب والمصغّرةُ ٤٠ — ستّةُ أضعافٍ
@@ -981,25 +936,11 @@ internal fun ItemCard(
                 // **وباقي البطاقة يفتح نافذةَ الصنف كما كان.** والكاملةُ لا المصغّرة.
                 val full = media(item.imageUrl ?: item.imageThumbUrl)
                 if (!full.isNullOrEmpty()) {
-                    Box(
-                        Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(Rahal.space.xs)
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.55f))
-                            .clickable(onClickLabel = stringResource(com.rahalgo.ui.R.string.image_zoom_hint)) { zoom = full },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            painterResource(com.rahalgo.ui.R.drawable.ic_zoom_in),
-                            contentDescription = stringResource(com.rahalgo.ui.R.string.image_zoom_hint),
-                            tint = Color.White,
-                            modifier = Modifier.size(18.dp),
-                        )
-                    }
+                    com.rahalgo.ui.ZoomBadge(
+                        Modifier.align(Alignment.BottomEnd).padding(Rahal.space.xs),
+                        onClick = { zoom = full },
+                    )
                 }
-              }
             }
             zoom?.let { com.rahalgo.ui.ImageViewer(url = it, onClose = { zoom = null }) }
 

@@ -169,9 +169,9 @@ export function ItemCard({
             type="button"
             onClick={() => setViewing(true)}
             aria-label={`${item.name} — ${m.common.media.zoomHint}`}
-            className="absolute bottom-2 end-2 flex h-8 w-8 items-center justify-center rounded-full bg-scrim text-on-solid"
+            className="absolute bottom-2 end-2 flex h-9 w-9 items-center justify-center rounded-full border border-line bg-paper text-primary-solid shadow-e2"
           >
-            <IconZoomIn size={18} />
+            <IconZoomIn size={20} />
           </button>
         )}
         </div>
@@ -489,10 +489,10 @@ export function ItemSheet({
               className="relative flex w-full items-center justify-center overflow-hidden rounded-card bg-field"
             >
               <img src={img} alt="" className="max-h-80 w-auto max-w-full object-contain" />
-              {/* **عدسةٌ صغيرةٌ تقول «تُكبَّر»** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — مرآةُ `FullPhoto(zoomHint)`. */}
+              {/* **عدسةٌ في دائرةٍ بيضاء تقول «تُكبَّر»** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — مرآةُ `ZoomBadge` في التطبيق. */}
               <span
                 aria-hidden
-                className="absolute bottom-2 end-2 flex h-9 w-9 items-center justify-center rounded-full bg-scrim text-on-solid"
+                className="absolute bottom-2 end-2 flex h-9 w-9 items-center justify-center rounded-full border border-line bg-paper text-primary-solid shadow-e2"
               >
                 <IconZoomIn size={20} />
               </span>
@@ -522,7 +522,6 @@ export function ItemSheet({
                 {view.merchant_name}
               </p>
             ))}
-          {view.description && <p className="text-sm leading-relaxed text-ink-muted">{view.description}</p>}
           {item.has_options && !detail && !loadError && <LoadingState variant="inline" />}
           {loadError && <Alert>{loadError}</Alert>}
           {groups.map((g) =>

@@ -202,9 +202,7 @@ private fun ItemsList(
                     com.rahalgo.ui.menu.GridItem(
                         id = item.id,
                         name = item.name,
-                        description = item.description.trim().ifBlank {
-                            item.modifiers.map { it.name }.filter { it.isNotBlank() }.joinToString(" · ")
-                        },
+                        description = item.modifiers.map { it.name }.filter { it.isNotBlank() }.joinToString(" · "),
                         imageUrl = media(item.imageThumbUrl ?: item.imageUrl),
                         // **والدولاريُّ بدولاره وليرته** (٢٠٢٦-١٠-١٢).
                         price = com.rahalgo.ui.menu.priceLine(item.price, item.merchantPriceUsd),

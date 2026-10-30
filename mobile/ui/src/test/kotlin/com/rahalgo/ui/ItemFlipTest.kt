@@ -1,13 +1,13 @@
 package com.rahalgo.ui
 
-import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Test
 import java.io.File
 
 /**
- * **قلبُ صورة الصنف إلى وصفه** (قرارُ المالك ٢٠٢٦-١٠-٢١): ضغطةٌ تقلبها بنفس الحجم،
- * «لا يوجد وصف لهذا الصنف» حين يغيب، **وترجع وحدَها** — «ماتظل عالقة ع وصف».
- * حراسةُ مصدرٍ كأخواتها — الدورانُ يحتاج جهازاً.
+ * **لا وصفَ للصنف** (قرارُ المالك ٢٠٢٦-١٠-٣٠): لا يُكتب في المحرّر ولا يُعرض للزبون —
+ * **فلا قلبَ للصورة إلى وصفها**، ولا سطرَ وصفٍ في نافذة الصنف، **ولا يُرسَل الحقلُ**
+ * فيبقى ما كُتب قبلاً في القاعدة لا يُمحى بفراغ. حراسةُ مصدرٍ كأخواتها.
  */
 class ItemFlipTest {
 
@@ -21,11 +21,23 @@ class ItemFlipTest {
     }
 
     @Test
-    fun cardFlipsToDescriptionAndReturnsByItself() {
-        val s = read("app-customer/src/main/kotlin/com/rahalgo/customer/shop/ShopScreen.kt")
-        assertTrue("**لا قلبَ للصورة**", s.contains("rotationY = turn"))
-        assertTrue("**الظهرُ لا يقرأ الوصف**", s.contains("item.description.trim()"))
-        assertTrue("**بلا وصفٍ لا يُقال شيء**", s.contains("R.string.shop_no_description"))
-        assertTrue("**لا رجوعَ تلقائيّاً**", s.contains("coerceAtMost(10_000L)") && s.contains("flipped = false"))
+    fun customerNeverSeesItemDescription() {
+        val card = read("app-customer/src/main/kotlin/com/rahalgo/customer/shop/ShopScreen.kt")
+        val sheet = read("app-customer/src/main/kotlin/com/rahalgo/customer/shop/ItemOptionsSheet.kt")
+        assertFalse("**البطاقةُ ما زالت تقلب الصورة**", card.contains("rotationY = turn"))
+        assertFalse("**البطاقةُ تقرأ الوصف**", card.contains("item.description"))
+        assertFalse("**النافذةُ تقرأ الوصف**", sheet.contains("item.description"))
+    }
+
+    @Test
+    fun editorHasNoDescriptionField() {
+        val editor = read("ui/src/main/kotlin/com/rahalgo/ui/menu/ItemEditor.kt")
+        assertFalse("**المحرّرُ ما زال يكتب الوصف**", editor.contains("d.description"))
+        for (vm in listOf(
+            "app-merchant/src/main/kotlin/com/rahalgo/merchant/menu/MenuViewModel.kt",
+            "app-rep/src/main/kotlin/com/rahalgo/rep/menu/MenuViewModel.kt",
+        )) {
+            assertFalse("**$vm يُرسل الوصف** — فراغُه يمحو المكتوب", read(vm).contains("description ="))
+        }
     }
 }

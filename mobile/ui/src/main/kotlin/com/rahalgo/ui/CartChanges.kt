@@ -1,5 +1,8 @@
 package com.rahalgo.ui
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+
 import android.content.Context
 import com.rahalgo.shared.model.CartChange
 
@@ -128,7 +131,9 @@ object CartChanges {
 class ReviewGate {
 
     /** **بصمةُ الحال التي وافق عليها** — وفارغٌ يعني لم يوافق. */
-    var acknowledged: String = ""
+    // **حالٌ تراقبها الشاشة** (تجربةُ المالك ٢٠٢٦-١٠-٣٠: «متابعة بالقيم الحالية ما يعمل شي») —
+    // كانت متغيّراً عاديّاً فتُسجَّل الموافقةُ ولا تُعاد رسمُ السلّة، فيبقى الزرُّ كأنّه لم يُضغط.
+    var acknowledged: String by androidx.compose.runtime.mutableStateOf("")
         private set
 
     /** **يوافق على ما بين يديه الآن.** */

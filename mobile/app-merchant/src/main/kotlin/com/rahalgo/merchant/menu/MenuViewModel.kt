@@ -394,7 +394,6 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
         editing = ItemDraft(
             itemId = item.id,
             name = item.name,
-            description = item.description,
             // **والصفرُ يُعرض صفراً** (قرارُ المالك ٢٠٢٦-١٠-٢٨: «مسموح للكل»).
             price = if (item.price >= 0) item.price.toString() else "",
             platformSectionId = item.platformSectionId.orEmpty(),
@@ -499,7 +498,6 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             val input = MenuItemInput(
                 name = d.name.trim(),
-                description = d.description.trim(),
                 price = price,
                 platformSectionId = d.platformSectionId,
                 imageMediaId = d.imageMediaId,

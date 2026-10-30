@@ -400,7 +400,7 @@ private fun OrderCard(
                 )
                 Spacer(Modifier.size(6.dp))
                 Text(
-                    text = order.merchantName.ifBlank { stringResource(com.rahalgo.driver.trip.kindLabel(order)) },
+                    text = order.merchantName.ifBlank { order.holderName.ifBlank { stringResource(com.rahalgo.driver.trip.kindLabel(order)) } },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     // ══════════════════════════════════════════════════

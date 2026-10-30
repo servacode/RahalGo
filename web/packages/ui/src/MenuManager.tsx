@@ -433,9 +433,6 @@ export function MenuManager({
                         >
                           {item.name}
                         </p>
-                        {item.description && (
-                          <p className="text-sm text-ink-muted">{item.description}</p>
-                        )}
                         {item.modifiers.length > 0 && (
                           <div className="mt-1 flex flex-wrap gap-1">
                             {item.modifiers.map((g, i) => (
@@ -558,7 +555,6 @@ export function ItemModal({
 }) {
   const item = editing.item;
   const [name, setName] = useState(item?.name ?? "");
-  const [description, setDescription] = useState(item?.description ?? "");
   // **المُحرَّرُ سعرُ الشراء لا سعرُ البيع.**
   //
   // **ولو حُرِّر سعرُ البيع لَضاع الهامشُ في أوّل تعديل**: يفتح المتجرُ الصنفَ
@@ -628,7 +624,6 @@ export function ItemModal({
     setError("");
     const body = {
       name,
-      description,
       price_currency: currency,
       ...(usd ? { price_usd: usdValue } : { price: Number(price) || 0 }),
       // **والفراغُ الصريح يرفع التصنيف** — يقرؤه الخادمُ «ارفع» لا «بلا تغيير».
@@ -778,12 +773,6 @@ export function ItemModal({
           </div>
         )}
         </div>
-        <Input
-          id="i-desc"
-          label={L.itemDescription}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-        />
         {imageUpload?.(item?.image_thumb_url, setImageID)}
 
         <div>

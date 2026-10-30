@@ -177,7 +177,6 @@ fun ItemEditor(
     // **وما اختلف بين المتجر والمندوب يُمرَّر، وما اتّفق يبقى هنا** —
     // المتجرُ يقرأ «السعر» والمندوبُ «سعر المتجر» (`pnpm check:menu-parity`).
     @StringRes priceLabel: Int = R.string.item_price,
-    @StringRes descLabel: Int = R.string.item_desc,
     @StringRes sectionLabel: Int = R.string.item_section,
     /** **تنبيهُ «بلا قسم»** — وصفرٌ يعني لا تنبيه. */
     @StringRes sectionHint: Int = 0,
@@ -216,7 +215,7 @@ fun ItemEditor(
             )
 
             // ══════════════════════════════════════════════════════════════
-            // **١ · الصورةُ يميناً، والاسمُ والوصفُ عن يسارها**
+            // **١ · الصورةُ يميناً، والاسمُ عن يسارها** — ولا وصفَ (قرارُ المالك ٢٠٢٦-١٠-٣٠)
             // ══════════════════════════════════════════════════════════════
             // **واسمُ الصنف بحدٍّ يُعدّ وهو يُكتب** (قرارُ المالك ٢٠٢٦-١٠-١٤: ٣٠ حرفاً).
             val nameMax = ItemLimits.nameMax
@@ -245,13 +244,6 @@ fun ItemEditor(
                         singleLine = true,
                         isError = nameOver,
                         supportingText = nameCounter,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    OutlinedTextField(
-                        value = d.description,
-                        onValueChange = { v -> onEdit { it.copy(description = v.take(500)) } },
-                        label = { Text(stringResource(descLabel)) },
-                        maxLines = 3,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }

@@ -59,7 +59,6 @@ import {
   MediaThumb,
   Modal,
   Switch,
-  Textarea,
 } from "@rahalgo/ui";
 import { ColumnLabel, CurrencyCircles, RowField, StickyBar, TagChip, ToolHeader } from "./ToolParts";
 import { api, mediaUrl } from "@/lib/api";
@@ -93,7 +92,6 @@ const SLOT = "merchant_item";
 const IMAGE_EDGE = 1600;
 /** **حدودُ الكتابة كالتطبيق** — والمحرّكُ يحرس فوقها (`catalog.MaxItemDescription`). */
 const NAME_TYPE_MAX = 120;
-const DESC_MAX = 500;
 /** **العدّادُ يظهر حين يبقى هذا أو أقلّ** — لا قبله. */
 const NAME_NEAR = 10;
 
@@ -278,7 +276,6 @@ export default function ItemEditor({
   const rate = store?.exchange_rate ?? null;
 
   const [name, setName] = useState(item?.name ?? "");
-  const [description, setDescription] = useState(item?.description ?? "");
   const [currency, setCurrency] = useState<"SYP" | "USD">(
     item?.price_currency === "USD" ? "USD" : "SYP",
   );
@@ -439,7 +436,6 @@ export default function ItemEditor({
     }));
     const body = {
       name: name.trim(),
-      description: description.trim(),
       platform_section_id: section,
       modifiers,
       store_drinks: storeDrinks,
@@ -520,7 +516,7 @@ export default function ItemEditor({
     >
       <ToolHeader title={item ? I.edit : I.new} href="/store/menu" />
 
-      {/* ── ١ · الصورةُ يميناً، والاسمُ والوصفُ عن يسارها ── */}
+      {/* ── ١ · الصورةُ يميناً، والاسمُ عن يسارها — ولا وصفَ (قرارُ المالك ٢٠٢٦-١٠-٣٠) ── */}
       <div className="flex items-start gap-3">
         <ImageUpload
           kind="menu_item"
@@ -557,16 +553,6 @@ export default function ItemEditor({
               <p className="mt-1 text-xs tabular-nums text-ink-muted" dir="ltr">{`${nameLen} / ${itemNameMax}`}</p>
             )}
           </div>
-          <Textarea
-            id="item-desc"
-            label={I.desc}
-            rows={3}
-            value={description}
-            onChange={(e) => {
-              setDescription(e.target.value.slice(0, DESC_MAX));
-              dirty();
-            }}
-          />
         </div>
       </div>
 

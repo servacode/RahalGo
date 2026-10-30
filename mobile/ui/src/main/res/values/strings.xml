@@ -132,6 +132,8 @@
     <!-- **بوّابةُ التحديث** — (طلبُ المالك ٢٠٢٦-٠٨-٢٥). -->
     <string name="update_title">يوجد إصدار جديد</string>
     <string name="update_body">حدّثنا التطبيق وأضفنا مزايا جديدة. حدّث نسختك لتتمكن من الطلب.</string>
+    <string name="update_download_title">تحديث رحّال غو</string>
+    <string name="update_download_started">جارٍ تنزيل التحديث — اكبس على الإشعار لما يخلص وثبّته</string>
     <string name="update_action">تحديث الآن</string>
     <!-- **زرّان صريحان** (قرار المالك ٢٠٢٦-٠٩-٢٦): غوغل بلاي، والتنزيل المباشر. -->
     <string name="update_play">تحديث عبر Google Play</string>
@@ -766,7 +768,6 @@
     <string name="item_clear_image">أزل الصورة</string>
     <string name="item_delete">احذف الصنف</string>
     <string name="item_delete_ask">يُحذف من السوق ولا يعود — أمتأكد؟</string>
-    <string name="item_desc">وصف مختصر</string>
     <string name="item_pick_image">اختر صورة</string>
     <string name="item_price">السعر</string>
     <string name="item_section">قسم السوق</string>
