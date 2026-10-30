@@ -176,10 +176,7 @@ export default function CustomOrderPage() {
               ) : (
                 <p className="text-sm font-bold">{fill(K.feeValue, { amount: fmtMoney(fee) })}</p>
               )}
-              {/* **وللمشتريات لا سطرَ تحت الأجرة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — مرآةُ `CustomScreen.kt`. */}
-              {mode === "amanah" && (
-                <p className="text-xs text-ink-muted">{fill(K.amanahTotal, { amount: fmtMoney(fee - waive) })}</p>
-              )}
+              {/* **ولا سطرَ تحت الأجرة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — «أجرة التوصيل: X» تكفي. مرآةُ `CustomScreen.kt`. */}
             </>
           ) : (
             <>
@@ -188,8 +185,6 @@ export default function CustomOrderPage() {
               {freeOn && <p className="text-xs font-bold text-success">{m.shop.free.customPending}</p>}
             </>
           )}
-          {/* **ولا «طريقة الدفع تُحدد لاحقاً»** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — تُختار عند تأكيد العرض كما كانت. */}
-          {mode === "amanah" && adminFee && <p className="text-xs text-ink-muted">{K.amanahPay}</p>}
         </div>
       </section>
 

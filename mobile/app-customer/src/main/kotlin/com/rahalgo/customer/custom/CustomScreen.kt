@@ -259,17 +259,8 @@ fun CustomScreen(
                     Text(it, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
                 }
             }
-            // **والأمانةُ لا مشترياتَ فيها** (٢٠٢٦-١٠-١٤) — إجماليُّها الأجرةُ وحدَها.
-            // **وللمشتريات لا سطرَ تحت الأجرة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — كان «الإجمالي
-            // يُعرف بعد تحديد قيمة المشتريات».
-            if (mode == "amanah") {
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    stringResource(R.string.cst_amanah_total, money(fee - waive)),
-                    color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
+            // **ولا سطرَ تحت الأجرة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — لا «الإجمالي… أجرة التوصيل
+            // فقط» للأمانة ولا «يُعرف بعد تحديد قيمة المشتريات» للمشتريات: «أجرة التوصيل: X» تكفي.
         } else {
             Text(
                 stringResource(R.string.cst_fee_on_deal),
@@ -289,17 +280,6 @@ fun CustomScreen(
             }
         }
         }
-        // **وأمانةٌ بأجرةٍ من المنصّة لا عرضَ يُؤكَّد بعدها** — تُدفع نقداً للسائق.
-        // **ولا «طريقة الدفع تُحدد لاحقاً»** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — تُختار عند تأكيد العرض كما كانت.
-        if (mode == "amanah" && Serving.customFeeAdminDefined) {
-            Spacer(Modifier.height(8.dp))
-            Text(
-                stringResource(R.string.cst_amanah_pay),
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-
         Spacer(Modifier.height(16.dp))
         RahalButton(
             onClick = {

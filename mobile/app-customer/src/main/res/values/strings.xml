@@ -32,12 +32,11 @@
     <string name="ord_wanted">المطلوب:</string>
     <string name="ord_driver">السائق</string>
     <string name="ord_subtotal">المجموع</string>
-    <string name="ord_invoice_full">الفاتورة كاملة (%1$d)</string>
-    <string name="ord_invoice_less">إخفاء التفاصيل</string>
     <string name="ord_goods">قيمة المشتريات</string>
     <string name="ord_delivery">التوصيل</string>
     <string name="ord_discount">الحسم</string>
     <string name="ord_total">الإجمالي</string>
+    <string name="ord_unit_each">%1$s للواحد</string>
     <string name="ord_placed">وقت الطلب</string>
     <string name="ord_payment">طريقة الدفع</string>
     <string name="ord_address">التوصيل إلى</string>
@@ -118,7 +117,6 @@
     <!-- ── الطلب المخصّص: تحديد التكلفة وتأكيدها (Batch 2c) ── -->
     <string name="cst_fee_on_deal">سيتم تحديد أجرة التوصيل بعد قبول السائق.</string>
     <string name="cst_total_pending">الإجمالي يُعرف بعد تحديد قيمة المشتريات.</string>
-    <string name="cst_amanah_total">الإجمالي %1$s — أجرة التوصيل فقط، دون أي مبلغ آخر.</string>
     <string name="cst_amanah_pay">تدفع الأجرة نقداً للسائق.</string>
     <string name="ord_awaiting_quote">بانتظار تحديد تكلفة الطلب</string>
     <string name="ord_fee_value">أجرة التوصيل: %1$s</string>

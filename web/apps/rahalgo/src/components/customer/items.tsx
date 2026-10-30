@@ -96,6 +96,8 @@ export function ItemCard({
 }) {
   const closed = item.source_closed || !item.available;
   const img = mediaUrl(item.image_thumb_url ?? item.image_url);
+  const full = mediaUrl(item.image_url ?? item.image_thumb_url);
+  const [viewing, setViewing] = useState(false);
   const fav = useFav();
   return (
     <div className="flex min-w-0 flex-col gap-1.5">
@@ -125,10 +127,12 @@ export function ItemCard({
             )}
           </span>
         </div>
+        {/* **والصورةُ وعدسةُ التكبير أخوان لا متداخلان** — زرٌّ في زرٍّ لا يصحّ. */}
+        <div className="relative">
         <button
           type="button"
           onClick={() => onOpen(item)}
-          className="flex min-w-0 flex-col text-start transition-transform active:scale-[0.98]"
+          className="flex w-full min-w-0 flex-col text-start transition-transform active:scale-[0.98]"
         >
           {/* **مربّعٌ ثابتٌ مهما كانت الصورة** (ملاحظةُ المالك ٢٠٢٦-١٠-١٩) — صورةٌ طويلةٌ كانت تمطّ
               بطاقتَها، **فالصورةُ مطلقةٌ داخلَ المربّع وتُقصّ**، والبطاقاتُ بطولٍ واحد. */}
@@ -146,6 +150,20 @@ export function ItemCard({
             )}
           </div>
         </button>
+        {/* **عدسةُ التكبير — الصورةُ بملء الشاشة بلا فتح الصنف** (قرارُ المالك ٢٠٢٦-١٠-٣٠) —
+            مرآةُ `ItemCard` في التطبيق؛ وباقي البطاقة يفتح نافذةَ الصنف كما كان. */}
+        {full && (
+          <button
+            type="button"
+            onClick={() => setViewing(true)}
+            aria-label={`${item.name} — ${m.common.media.zoomHint}`}
+            className="absolute bottom-2 end-2 flex h-8 w-8 items-center justify-center rounded-full bg-scrim text-on-solid"
+          >
+            <IconZoomIn size={18} />
+          </button>
+        )}
+        </div>
+        {full && viewing && <ImageViewer src={full} alt={item.name} onClose={() => setViewing(false)} />}
         {/* ── الشريطُ السفليّ: اسمُ المتجر (رابطٌ لصفحته) و«+» — خارجَ زرّ الصورة: رابطٌ في زرٍّ لا يصحّ ── */}
         <div className="flex min-h-10 w-full min-w-0 items-center gap-1 px-2 py-1">
           {storeLink && item.merchant_id && item.merchant_name ? (

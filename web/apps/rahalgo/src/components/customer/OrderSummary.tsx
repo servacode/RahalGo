@@ -34,8 +34,8 @@ export function statusTone(status: string): "success" | "danger" | "warning" | "
 export function OrderSummary({ order }: { order: MyOrder }) {
   const live = !ENDED.has(order.status);
   const href = `/orders/${order.id}`;
-  /* **فاتورةٌ مفصّلةٌ في البطاقة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — بدل «شاورما دجاج، شاورما دجاج».
-     **وزرُّ «الفاتورة كاملة» لا يكون داخل رابط** — فالبطاقةُ رابطان حوله. */
+  /* **فاتورةٌ جدولٌ كاملٌ في البطاقة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — بدل «شاورما دجاج، شاورما دجاج»،
+     بنودُها ومجاميعُها في الأعمدة نفسِها (`OrderInvoice`). */
   const invoice = order.kind !== "custom" && (order.items ?? []).length > 0;
   return (
     <div className="surface flex flex-col gap-3 p-4">

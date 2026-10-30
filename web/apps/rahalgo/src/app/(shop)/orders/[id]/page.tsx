@@ -186,12 +186,11 @@ export default function OrderPage() {
           )
         ) : (
           <>
-            {/* **الفاتورةُ بنداً بنداً فوق المجموع** (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}
-            {(order.items ?? []).length > 0 && (
-              <div className="border-b border-line-soft pb-2">
-                <OrderInvoice order={order} all />
-              </div>
-            )}
+            {/* **الفاتورةُ جدولٌ كاملٌ بمجاميعها** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — كبطاقة «طلباتي». */}
+            {(order.items ?? []).length > 0 ? (
+              <OrderInvoice order={order} totals />
+            ) : (
+            <>
             {order.subtotal > 0 && (
               <Row label={O.subtotal}>
                 <Money value={order.subtotal} />
@@ -225,6 +224,8 @@ export default function OrderPage() {
               <span>{O.total}</span>
               <Money value={order.total} className="text-accent-text" />
             </div>
+            </>
+            )}
           </>
         )}
         {order.wallet_paid > 0 && (

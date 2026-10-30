@@ -881,6 +881,7 @@ internal fun ItemCard(
             // عشر) — «اذا نسى الزبون ماتظل عالقة»؛ **وتمريرُها خارجَ الشاشة يُعيدها**
             // (الحالُ يُنسى مع البطاقة). **وبلا وصفٍ يُقال ذلك** لا ظهرٌ فارغ.
             var flipped by remember(item.id) { mutableStateOf(false) }
+            var zoom by remember(item.id) { mutableStateOf<String?>(null) }
             val turn by androidx.compose.animation.core.animateFloatAsState(
                 targetValue = if (flipped) 180f else 0f,
                 animationSpec = androidx.compose.animation.core.tween(450),
@@ -971,8 +972,36 @@ internal fun ItemCard(
                         Chip("-$it٪", Rahal.colors.accent)
                     }
                 }
+
+                // ══════════════════════════════════════════════════════
+                // **عدسةُ التكبير على الصورة — بلا فتح الصنف** (قرارُ المالك ٢٠٢٦-١٠-٣٠)
+                // ══════════════════════════════════════════════════════
+                //
+                // **ضغطتُها تفتح الصورةَ كاملةً** (`ImageViewer` بالقرص واللمسة المزدوجة)،
+                // **وباقي البطاقة يفتح نافذةَ الصنف كما كان.** والكاملةُ لا المصغّرة.
+                val full = media(item.imageUrl ?: item.imageThumbUrl)
+                if (!full.isNullOrEmpty()) {
+                    Box(
+                        Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(Rahal.space.xs)
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.55f))
+                            .clickable(onClickLabel = stringResource(com.rahalgo.ui.R.string.image_zoom_hint)) { zoom = full },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            painterResource(com.rahalgo.ui.R.drawable.ic_zoom_in),
+                            contentDescription = stringResource(com.rahalgo.ui.R.string.image_zoom_hint),
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
               }
             }
+            zoom?.let { com.rahalgo.ui.ImageViewer(url = it, onClose = { zoom = null }) }
 
             // ══════════════════════════════════════════════════════════
             // **الشريطُ الأسفل — اسمُ المتجر و«+» في نهايته**
