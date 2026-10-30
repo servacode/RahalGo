@@ -27,14 +27,29 @@ class InvoiceLineTextTest {
     }
 
     @Test
-    fun drinkLineFollowsItsItemAndTotalIsUnitTimesQty() {
+    fun drinksGoBelowAllItemsAndTotalIsUnitTimesQty() {
         val lines = listOf(
             OrderLine(id = "a", name = "شاورما", qty = 1, unitPrice = 25, options = listOf(LineOption("الحجم", "عادي"))),
             OrderLine(id = "b", name = "بطاطا", qty = 1, unitPrice = 10),
             OrderLine(id = "c", name = "عيران", qty = 2, unitPrice = 25, drinkFor = "a"),
         ).map { it.toInvoiceLine() }
         val out = invoiceOrder(lines)
-        assertEquals(listOf("شاورما عادي × 1", "عيران × 2", "بطاطا × 1"), out.map { it.text })
-        assertEquals(listOf(25L, 50L, 10L), out.map { it.amount })
+        assertEquals(listOf("شاورما عادي × 1", "بطاطا × 1", "عيران × 2"), out.map { it.text })
+        assertEquals(listOf(25L, 10L, 50L), out.map { it.amount })
+    }
+
+    /** **المشروبُ نفسُه مع صنفين سطرٌ واحدٌ بعدده ومجموعه** — تحت كلّ الأصناف. */
+    @Test
+    fun sameDrinkAcrossTwoItemsIsOneRow() {
+        val lines = listOf(
+            OrderLine(id = "a", name = "شاورما", qty = 2, unitPrice = 20, options = listOf(LineOption("الحجم", "عادي"))),
+            OrderLine(id = "d1", name = "عيران", qty = 1, unitPrice = 5, drinkFor = "a"),
+            OrderLine(id = "d2", name = "ببسي", qty = 1, unitPrice = 7, drinkFor = "a"),
+            OrderLine(id = "b", name = "شاورما", qty = 3, unitPrice = 30, options = listOf(LineOption("الحجم", "دبل"))),
+            OrderLine(id = "d3", name = "عيران", qty = 2, unitPrice = 5, drinkFor = "b"),
+        ).map { it.toInvoiceLine() }
+        val out = invoiceOrder(lines)
+        assertEquals(listOf("شاورما عادي × 2", "شاورما دبل × 3", "عيران × 3", "ببسي × 1"), out.map { it.text })
+        assertEquals(listOf(40L, 90L, 15L, 7L), out.map { it.amount })
     }
 }

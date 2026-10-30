@@ -356,6 +356,9 @@ private val CODES: Map<String, Int> = mapOf(
     // **«اطلب الموقع من المستلم»** (٢٠٢٦-١٠-٢٩) — وتطبيقُ المتجر يقولها بنصّه الأدقّ.
     "location_request_too_soon" to R.string.err_rate_limited,
     "location_request_limit" to R.string.err_rate_limited,
+    // **الأمانة: صاحبُها ورقمُه وطلبُ موقعه** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
+    "amanah_holder_required" to R.string.err_amanah_holder_required,
+    "location_request_invalid" to R.string.err_location_request_invalid,
     "live_request_stage" to R.string.err_live_request_stage,
     "too_many_attempts" to R.string.err_rate_limited,
     "validation" to R.string.err_validation,
@@ -552,6 +555,8 @@ private val CODES: Map<String, Int> = mapOf(
     "multi_source_order" to R.string.err_multi_source_order,
     "too_many_sources" to R.string.err_too_many_sources,
     "item_unavailable" to R.string.err_item_unavailable,
+    // **المشروباتُ للمطاعم وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
+    "drinks_not_allowed" to R.string.err_drinks_not_allowed,
     "invalid_items" to R.string.err_invalid_items,
     "out_of_zone" to R.string.err_out_of_zone,
     // ── السلطةُ الإداريّةُ عند الإنشاء (Batch 3a) ──

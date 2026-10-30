@@ -135,10 +135,11 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
     // **قائمةُ المشروبات** (قرارُ المالك ٢٠٢٦-١٠-١٩) — محرّرُها مشتركٌ مع المندوب (`DrinksState`).
     val drinks = com.rahalgo.ui.menu.DrinksState(
         scope = viewModelScope,
-        load = { api.drinks(storeId) },
+        load = { api.drinksInfo(storeId) },
         save = { api.setDrinks(storeId, it) },
         itemCount = { groups.sumOf { g -> g.items.size } },
         errText = { err(it) },
+        upload = { api.uploadItemImage("drink.jpg", it) },
     )
 
     // **خياراتُ الأصناف والأسعارُ دفعةً واحدة** (طلبُ المالك ٢٠٢٦-١٠-٢٧) — مشتركةٌ مع المندوب.
@@ -291,6 +292,7 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                     if (presetsFor != null) presets.reset()
                     presetsFor = storeId
                     presets.refresh()
+                    drinks.refresh()
                 }
             }.onFailure { error = err(it) }
             loading = false

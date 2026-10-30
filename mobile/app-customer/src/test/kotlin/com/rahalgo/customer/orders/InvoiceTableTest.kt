@@ -18,11 +18,26 @@ class InvoiceTableTest {
         MyOrderLine(id = id, name = id, unitPrice = 10, qty = 1, drinkFor = drinkFor)
 
     @Test
-    fun drinksFollowTheirItem() {
+    fun drinksGoBelowAllItems() {
         val out = invoiceOrder(
-            listOf(line("a"), line("b"), line("d1", "a"), line("d2", "b"), line("x", "gone")).map { it.toInvoiceLine() },
+            listOf(line("a"), line("d1", "a"), line("b"), line("d2", "b"), line("x", "gone")).map { it.toInvoiceLine() },
         ).map { it.id }
-        assertEquals(listOf("a", "d1", "b", "d2", "x"), out)
+        assertEquals(listOf("a", "b", "d1", "d2", "x"), out)
+    }
+
+    /** **عيرانٌ مع العادي وعيرانٌ مع الدبل سطرٌ واحد** (قرارُ المالك ٢٠٢٦-١٠-٣٠). */
+    @Test
+    fun sameDrinkAcrossItemsIsCombined() {
+        val out = invoiceOrder(
+            listOf(
+                MyOrderLine(id = "a", name = "شاورما", qty = 2, unitPrice = 20, options = listOf(MyOrderOption(group = "الحجم", name = "عادي"))),
+                MyOrderLine(id = "d1", name = "عيران", qty = 1, unitPrice = 5, drinkFor = "a"),
+                MyOrderLine(id = "b", name = "شاورما", qty = 1, unitPrice = 30, options = listOf(MyOrderOption(group = "الحجم", name = "دبل"))),
+                MyOrderLine(id = "d2", name = "عيران", qty = 2, unitPrice = 5, drinkFor = "b"),
+            ).map { it.toInvoiceLine() },
+        )
+        assertEquals(listOf("شاورما عادي × 2", "شاورما دبل × 1", "عيران × 3"), out.map { it.text })
+        assertEquals(listOf(40L, 30L, 15L), out.map { it.amount })
     }
 
     @Test

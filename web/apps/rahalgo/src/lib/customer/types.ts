@@ -118,6 +118,8 @@ export interface ModifierOption {
   available: boolean;
   /** **وزنُ الخيار بالغرام** لمجموعة «حسب الوزن» (٢٠٢٦-١٠-٢٨). */
   grams?: number | null;
+  /** **صورةُ المشروب مصغّرةً** (٢٠٢٦-١٠-٣٠) — غائبةٌ إن لم تُرفع؛ وسلّةٌ قديمةٌ بلاها. */
+  image_thumb_url?: string | null;
 }
 
 export interface ModifierGroup {

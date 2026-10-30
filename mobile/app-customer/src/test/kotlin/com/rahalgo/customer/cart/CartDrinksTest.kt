@@ -62,6 +62,38 @@ class CartDrinksTest {
         assertEquals(50L, legacy.total)
     }
 
+    /** CART-DRK-006 **المشروبُ نفسُه مع سطرين سطرٌ واحدٌ في السلّة** — و«+»/«−»/الحذفُ على سطوره. */
+    @Test
+    fun `المشروبُ نفسُه مع سطرين سطرٌ واحد`() {
+        val ayran2 = ModifierOption(id = "ayran-b", name = "ayran", priceDelta = 5)
+        Cart.add(shawarma, 2, listOf(normal), listOf(Cart.DrinkPick(ayran, 1)))
+        Cart.add(shawarma, 1, listOf(dbl), listOf(Cart.DrinkPick(ayran2, 2), Cart.DrinkPick(pepsi, 1)))
+        val rows = Cart.drinkRows()
+        assertEquals(listOf("ayran", "pepsi"), rows.map { it.name })
+        assertEquals(3, rows[0].qty)
+        assertEquals(15L, rows[0].total)
+
+        // «+» على أوّل سطرٍ يحمله.
+        Cart.moreDrink("ayran")
+        assertEquals(4, Cart.drinkRows()[0].qty)
+        assertEquals(2, Cart.lines.first { it.options == listOf(normal) }.drinks.single().qty)
+
+        // «−» ينقص الأوّل حتّى الصفر ثمّ ينتقل إلى التالي.
+        Cart.lessDrink("ayran")
+        Cart.lessDrink("ayran")
+        assertTrue(Cart.lines.first { it.options == listOf(normal) }.drinks.isEmpty())
+        Cart.lessDrink("ayran")
+        assertEquals(1, Cart.drinkRows().first { it.name == "ayran" }.qty)
+
+        // الحذفُ يرفعه من كلّ السطور والأصنافُ تبقى.
+        Cart.add(shawarma, 1, listOf(normal), listOf(Cart.DrinkPick(ayran, 1)))
+        Cart.removeDrink("ayran")
+        assertEquals(listOf("pepsi"), Cart.drinkRows().map { it.name })
+        assertEquals(4, Cart.count)
+        // **والسطرُ الذي صار مطابقاً لآخر يُدمج فيه.**
+        assertEquals(2, Cart.lines.size)
+    }
+
     /** CART-DRK-005 **ومجموعةُ «مشروبات» تُعرف باسمها حين لا علَم.** */
     @Test
     fun `مجموعةُ المشروبات تُعرف`() {

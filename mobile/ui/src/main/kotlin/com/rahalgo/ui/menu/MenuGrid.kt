@@ -101,6 +101,8 @@ fun MenuItemsGrid(
     onBulk: () -> Unit,
     onDrinks: () -> Unit,
     addLabel: String,
+    /** **المشروباتُ للمطاعم وحدَها** (٢٠٢٦-١٠-٣٠) — `false`: لا أداةَ «المشروبات». */
+    drinksAllowed: Boolean = true,
     /** **«أضف صنفاً»** مربّعاً بجانب البحث — و`null` لا زرّ (للمتجر تبويبُ إضافة). */
     onAdd: (() -> Unit)?,
     offerLabel: String,
@@ -192,7 +194,7 @@ fun MenuItemsGrid(
                 ) {
                     ToolChip(R.drawable.ic_banknotes, stringResource(R.string.bulk_title), onBulk)
                     if (onOffer != null) ToolChip(R.drawable.ic_offer, offerLabel, onOffer)
-                    ToolChip(R.drawable.ic_cup, stringResource(R.string.grid_drinks), onDrinks)
+                    if (drinksAllowed) ToolChip(R.drawable.ic_cup, stringResource(R.string.grid_drinks), onDrinks)
                     ToolChip(R.drawable.ic_custom, stringResource(R.string.presets_title), onPresets)
                 }
             }

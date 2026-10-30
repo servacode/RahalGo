@@ -69,6 +69,8 @@ func TestPLD02_CustomOrdersOpenAlone(t *testing.T) {
 	for _, mode := range []string{"purchase", "amanah"} {
 		b := zoneCustomBody(m.dropLat, m.dropLng)
 		b["custom_mode"] = mode
+		// **والأمانةُ بصاحبها ورقمه** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
+		b["holder_name"], b["holder_phone"] = "أبو علي", "0933123456"
 		r := h.POSTKey("/api/v1/orders/custom", cust.Token, uniq("pld02"+mode), b)
 		if r.Code != http.StatusCreated {
 			t.Fatalf("**%s لم يُنشأ والمخصّصُ مفتوح** — %d %s", mode, r.Code, r.Err())

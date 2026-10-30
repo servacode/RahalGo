@@ -190,7 +190,7 @@ class PerfFlowTest {
         assertTrue("**ذهبت ذاكرةُ القرص**", img.contains("DiskCache.Builder()"))
         assertTrue("**ذهبت ذاكرةُ الرام**", img.contains("MemoryCache.Builder()"))
         val remote = read("ui/src/main/kotlin/com/rahalgo/ui/RemoteImage.kt")
-        assertTrue("**لا بديلَ لصورةٍ سقطت**", remote.contains("error = { Fallback(name) }"))
+        assertTrue("**لا بديلَ لصورةٍ سقطت**", remote.contains("error = { Fallback(name, fallbackIcon) }"))
     }
 
     /**

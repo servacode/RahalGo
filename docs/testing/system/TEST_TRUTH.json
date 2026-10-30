@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 600,
+    "routes": 602,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -32,9 +32,9 @@
     ],
     "setting_defs": 251,
     "behaviour_settings": 206,
-    "order_fields": 127,
+    "order_fields": 129,
     "test_files": 678,
-    "test_funcs": 2611
+    "test_funcs": 2617
   },
   "flows": [
     {
@@ -7680,6 +7680,18 @@
       "orphan": true
     },
     {
+      "name": "TestDrinks_ImageReachesItemOption",
+      "file": "internal/catalog/drinks_test.go",
+      "package": "catalog",
+      "orphan": true
+    },
+    {
+      "name": "TestDrinks_RestaurantsOnly",
+      "file": "internal/catalog/drinks_test.go",
+      "package": "catalog",
+      "orphan": true
+    },
+    {
       "name": "TestUpdateMerchant_Featured",
       "file": "internal/catalog/featured_test.go",
       "package": "catalog",
@@ -12469,7 +12481,31 @@
       "orphan": true
     },
     {
-      "name": "TestAmanahPickup_DriverSeesPoint",
+      "name": "TestAmanahHolder_OldAppWithoutHolder",
+      "file": "internal/qa/amanah_pickup_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAmanahHolder_RequiredAndVisible",
+      "file": "internal/qa/amanah_pickup_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAmanahHolder_SharedAfterSend",
+      "file": "internal/qa/amanah_pickup_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAmanahHolder_SharedBeforeSend",
+      "file": "internal/qa/amanah_pickup_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAmanahPickup_ExplicitPointStillWorks",
       "file": "internal/qa/amanah_pickup_test.go",
       "package": "qa",
       "orphan": true

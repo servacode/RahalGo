@@ -64,6 +64,7 @@ import {
 import { ColumnLabel, CurrencyCircles, RowField, StickyBar, TagChip, ToolHeader } from "./ToolParts";
 import { api, mediaUrl } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
+import { useDrinksAllowed } from "@/lib/store/drinks";
 import type {
   MenuItem,
   ModifierGroup,
@@ -309,6 +310,8 @@ export default function ItemEditor({
   const [presets, setPresets] = useState<PresetDef[] | null>(null);
   const [presetsFailed, setPresetsFailed] = useState(false);
   const storeId = store?.id ?? "";
+  // **«أضف مشروباتي» للمطاعم وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
+  const drinksAllowed = useDrinksAllowed(storeId);
 
   useEffect(() => {
     if (!storeId) return;
@@ -642,17 +645,19 @@ export default function ItemEditor({
       <section className="flex flex-col gap-3" aria-label={I.modTitle}>
         <h3 className="heading-card">{I.modTitle}</h3>
         {/* **«أضف مشروباتي»** (هجرة 0483) — أتظهر قائمةُ المشروبات مع هذا الصنف. */}
-        <div className="rounded-control bg-accent-tint px-3 py-2" data-testid="item-drinks">
-          <Switch
-            checked={storeDrinks}
-            disabled={busy}
-            onChange={(v) => {
-              setStoreDrinks(v);
-              dirty();
-            }}
-            label={I.drinksSwitch}
-          />
-        </div>
+        {drinksAllowed === true && (
+          <div className="rounded-control bg-accent-tint px-3 py-2" data-testid="item-drinks">
+            <Switch
+              checked={storeDrinks}
+              disabled={busy}
+              onChange={(v) => {
+                setStoreDrinks(v);
+                dirty();
+              }}
+              label={I.drinksSwitch}
+            />
+          </div>
+        )}
         {presetsFailed && <p className="text-xs text-warning">{I.presetsFailed}</p>}
         {/* **مجموعاتٌ جاهزةٌ — مربّعاتٌ متساويةٌ فوق بعض.** */}
         <div className="flex flex-col gap-2" data-testid="item-presets">

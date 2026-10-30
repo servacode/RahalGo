@@ -117,6 +117,10 @@ type fpCustomOrder struct {
 	// PickupLat/Lng **موقعُ الأمانة** (٢٠٢٦-١٠-٣٠) — بـ`omitempty` فبصمةُ ما قبله لا تتبدّل.
 	PickupLat *float64 `json:"pickup_lat,omitempty"`
 	PickupLng *float64 `json:"pickup_lng,omitempty"`
+	// صاحبُ الأمانة وطلبُ موقعه (٢٠٢٦-١٠-٣٠) — بـ`omitempty` كذلك.
+	HolderName        string `json:"holder_name,omitempty"`
+	HolderPhone       string `json:"holder_phone,omitempty"`
+	LocationRequestID string `json:"location_request_id,omitempty"`
 }
 
 func fingerprintCustomOrder(body []byte) []byte {

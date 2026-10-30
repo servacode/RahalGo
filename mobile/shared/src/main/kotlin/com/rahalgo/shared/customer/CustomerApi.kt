@@ -237,6 +237,18 @@ class CustomerApi(private val api: ApiClient) {
         api.call("/api/v1/orders/custom", HttpMethod.Post, input, idempotencyKey = attemptKey)
 
     /**
+     * **«اطلب الموقع منه» في الأمانة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — كـ«إحضار» المتجر: يصل صاحبَ
+     * الأمانة رابطُ «أرسل موقعي» بالواتساب، **وإن لم تصل الرسالةُ** (`whatsappSent=false`)
+     * يشاركه الزبونُ بنفسه (`waUrl`).
+     */
+    suspend fun requestHolderLocation(phone: String): com.rahalgo.shared.merchant.LocationRequest =
+        api.call("/api/v1/my/location-requests", HttpMethod.Post, HolderLocationInput(phone))
+
+    /** **أوصل موقعُ صاحب الأمانة؟** — يُسأل كلَّ ثوانٍ ما دام ينتظر. */
+    suspend fun holderLocationRequest(id: String): com.rahalgo.shared.merchant.LocationRequestStatus =
+        api.call("/api/v1/my/location-requests/$id")
+
+    /**
      * **الزبونُ يؤكّد عرضَ الطلب المخصَّص ويختار طريقةَ الدفع** (Batch 2c).
      *
      * **يُرسِل ما رآه** — المبلغَ والنسخة — **فإن تبدّل العرضُ بينهما ردّ
@@ -511,7 +523,18 @@ data class NewCustom(
      */
     @SerialName("pickup_lat") val pickupLat: Double? = null,
     @SerialName("pickup_lng") val pickupLng: Double? = null,
+    /**
+     * **صاحبُ الأمانة ورقمُه** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — يلغي الخريطة: الزبونُ لا يعرف أين
+     * الأمانة، **والسائقُ يتّصل بصاحبها.** إلزاميّان في الأمانة، وفارغان لا يُرسَلان.
+     */
+    @SerialName("holder_name") val holderName: String? = null,
+    @SerialName("holder_phone") val holderPhone: String? = null,
+    /** **«اطلب الموقع منه»** — طلبُ موقعٍ أُنشئ قبل الإرسال، فنقطتُه نقطةُ الاستلام الآن أو حين تصل. */
+    @SerialName("location_request_id") val locationRequestId: String? = null,
 )
+
+@Serializable
+private data class HolderLocationInput(val phone: String)
 
 /** **تأكيدُ عرض السعر** — الطريقةُ، والمبلغُ والنسخةُ اللذان رآهما الزبون. */
 @Serializable

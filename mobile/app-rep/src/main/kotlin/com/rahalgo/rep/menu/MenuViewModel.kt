@@ -207,10 +207,13 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
     // **قائمةُ المشروبات كما عند المتجر** (طلبُ المالك ٢٠٢٦-١٠-١٩).
     val drinks = com.rahalgo.ui.menu.DrinksState(
         scope = viewModelScope,
-        load = { api.drinks(merchantID) },
+        load = { api.drinksInfo(merchantID) },
         save = { api.setDrinks(merchantID, it) },
         itemCount = { groups.sumOf { g -> g.items.size } },
         errText = { apiError(getApplication(), it) },
+        upload = { bytes ->
+            api.uploadItemImage("drink.jpg", bytes).let { r -> com.rahalgo.shared.merchant.MediaRef(r.id, r.thumbUrl) }
+        },
     )
 
     // **خياراتُ الأصناف والأسعارُ دفعةً واحدة كما عند المتجر** (٢٠٢٦-١٠-٢٧).
@@ -289,6 +292,7 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                 if (presetsFor != merchantID || !presets.loaded) {
                     presetsFor = merchantID
                     presets.refresh()
+                    drinks.refresh()
                 }
             } catch (e: Exception) {
                 // **والخطأُ يُكتب في حاله لا في ومضةٍ وحدَها** (٢٠٢٦-١٠-٢٧) — **وكانت

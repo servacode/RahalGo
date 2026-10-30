@@ -208,6 +208,10 @@ type Order struct {
 	// **في الأمانة وحدَها** — ويُقرأ من `pickup_override`.
 	AmanahPickupLat *float64 `json:"amanah_pickup_lat,omitempty"`
 	AmanahPickupLng *float64 `json:"amanah_pickup_lng,omitempty"`
+	// HolderName/HolderPhone **صاحبُ الأمانة ورقمُه** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — كتبهما الزبونُ،
+	// والسائقُ يتّصل به ويطلب موقعَه. **في الأمانة وحدَها** — للزبون والسائق والإدارة.
+	HolderName  string `json:"holder_name,omitempty"`
+	HolderPhone string `json:"holder_phone,omitempty"`
 	// Kind **نوعُ الطلب** — `standard` من متجر، و`custom` طلبٌ خاصٌّ بلا متجر.
 	Kind string `json:"kind"`
 	// CustomRequest ما طلبه الزبونُ بلفظه — في الخاصّ وحدَه.

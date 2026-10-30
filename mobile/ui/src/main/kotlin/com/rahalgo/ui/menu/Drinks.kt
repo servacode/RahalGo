@@ -2,6 +2,8 @@ package com.rahalgo.ui.menu
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,7 +18,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,12 +34,15 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.rahalgo.design.Rahal
 import com.rahalgo.shared.merchant.Drink
+import com.rahalgo.shared.merchant.DrinksInfo
 import com.rahalgo.ui.AppCore
+import com.rahalgo.ui.DrinkThumb
 import com.rahalgo.ui.Flash
 import com.rahalgo.ui.R
 import com.rahalgo.ui.RahalButton
 import com.rahalgo.ui.RahalOutlineButton
 import com.rahalgo.ui.Screen
+import com.rahalgo.ui.rememberImagePicker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
@@ -52,14 +59,31 @@ import kotlinx.coroutines.launch
  */
 class DrinksState(
     private val scope: CoroutineScope,
-    private val load: suspend () -> List<Drink>,
+    private val load: suspend () -> DrinksInfo,
     private val save: suspend (List<Drink>) -> List<Drink>,
     /** **كم صنفاً في القائمة** — لرسالة «انضافت لـN صنف». */
     private val itemCount: () -> Int,
     private val errText: (Throwable) -> String,
+    /**
+     * **رفعُ صورة المشروب** (طلبُ المالك ٢٠٢٦-١٠-٣٠) — بابُ رفع صور الأصناف نفسُه
+     * (`kind=menu_item`)، و`null`: لا زرَّ صورة.
+     */
+    private val upload: (suspend (ByteArray) -> com.rahalgo.shared.merchant.MediaRef)? = null,
 ) {
-    /** **سطرٌ في المحرّر** — النصُّ كما يُكتب، والمحرّكُ يحسب. */
-    data class Row(val name: String = "", val syp: String = "", val usd: String = "")
+    /**
+     * **سطرٌ في المحرّر** — النصُّ كما يُكتب، والمحرّكُ يحسب.
+     * و`mediaId`/`thumb` صورتُه الاختياريّة: تُحفظ كما هي ما لم تُبدَّل.
+     */
+    data class Row(
+        val name: String = "",
+        val syp: String = "",
+        val usd: String = "",
+        val mediaId: String? = null,
+        val thumb: String? = null,
+    )
+
+    /** **أفي المحرّر زرُّ صورة** — للمتجر والمندوب كليهما. */
+    val canPickImage: Boolean get() = upload != null
 
     var rows by mutableStateOf<List<Row>>(emptyList())
         private set
@@ -71,6 +95,21 @@ class DrinksState(
     var busy by mutableStateOf(false)
         private set
 
+    /**
+     * **أمسموحةٌ لهذا المتجر** (قرارُ المالك ٢٠٢٦-١٠-٣٠: المشروباتُ للمطاعم وحدَها) —
+     * `false`: تُخفى أداةُ «المشروبات» ومفتاحُ «أضف مشروباتي». **والافتراضُ مسموح**
+     * حتّى يقول المحرّكُ غيرَه.
+     */
+    var allowed by mutableStateOf(true)
+        private set
+
+    /** **يقرأ «أمسموحة»** — عند فتح القائمة وعند تبديل المتجر. */
+    fun refresh() {
+        scope.launch {
+            runCatching { load() }.onSuccess { allowed = it.allowed }
+        }
+    }
+
     private fun fill(list: List<Drink>) {
         usd = list.any { it.priceUsd != null }
         rows = list.map { d ->
@@ -78,6 +117,8 @@ class DrinksState(
                 name = d.name,
                 syp = d.price.toString(),
                 usd = d.priceUsd?.let { v -> if (v == Math.floor(v)) v.toLong().toString() else v.toString() }.orEmpty(),
+                mediaId = d.imageMediaId?.takeIf { it.isNotBlank() },
+                thumb = (d.imageThumbUrl ?: d.imageUrl)?.takeIf { it.isNotBlank() },
             )
         }
     }
@@ -87,7 +128,10 @@ class DrinksState(
         open = true
         scope.launch {
             runCatching { load() }
-                .onSuccess { fill(it) }
+                .onSuccess {
+                    allowed = it.allowed
+                    fill(it.drinks)
+                }
                 .onFailure { error = errText(it) }
         }
     }
@@ -109,6 +153,31 @@ class DrinksState(
         rows = rows.filterIndexed { j, _ -> j != i }
     }
 
+    /**
+     * **يرفع صورةَ المشروب ويعلّقها على سطره** — والمصغّرةُ تُعرض فورَ الرفع
+     * كصورة الصنف. **والسطرُ يُقرأ من `rows` الحاليّة** لا من نسخةٍ قبل الرفع.
+     */
+    fun pickImage(i: Int, bytes: ByteArray) {
+        val up = upload ?: return
+        error = ""
+        busy = true
+        scope.launch {
+            runCatching { up(bytes) }
+                .onSuccess { ref ->
+                    rows = rows.mapIndexed { j, r ->
+                        if (j == i) r.copy(mediaId = ref.id, thumb = ref.thumbUrl.ifBlank { null }) else r
+                    }
+                }
+                .onFailure { error = errText(it) }
+            busy = false
+        }
+    }
+
+    /** **يمحو صورةَ المشروب** — فيُحفظ بلا صورة. */
+    fun clearImage(i: Int) {
+        rows = rows.mapIndexed { j, r -> if (j == i) r.copy(mediaId = null, thumb = null) else r }
+    }
+
     fun submit() {
         val app = AppCore.get().app
         if (rows.any { it.name.isBlank() }) {
@@ -118,10 +187,15 @@ class DrinksState(
         busy = true
         scope.launch {
             val body = rows.map { r ->
+                val image = r.mediaId?.takeIf { it.isNotBlank() }
                 if (usd) {
-                    Drink(name = r.name.trim(), priceUsd = r.usd.replace('٫', '.').replace(',', '.').toDoubleOrNull() ?: 0.0)
+                    Drink(
+                        name = r.name.trim(),
+                        priceUsd = r.usd.replace('٫', '.').replace(',', '.').toDoubleOrNull() ?: 0.0,
+                        imageMediaId = image,
+                    )
                 } else {
-                    Drink(name = r.name.trim(), price = r.syp.toLongOrNull() ?: 0L)
+                    Drink(name = r.name.trim(), price = r.syp.toLongOrNull() ?: 0L, imageMediaId = image)
                 }
             }
             runCatching { save(body) }
@@ -169,6 +243,11 @@ fun DrinksEditor(
     // ويبقى الوسيطُ فلا ينكسر نداءُ المندوب.
     @Suppress("UNUSED_PARAMETER") hint: Int = R.string.drinks_hint,
 ) {
+    // **منتقٍ واحدٌ لكلّ الأسطر** — ويُحفظ السطرُ الذي طلبه.
+    var target by remember { mutableIntStateOf(-1) }
+    val pick = rememberImagePicker(crop = true) { bytes ->
+        if (target >= 0) state.pickImage(target, bytes)
+    }
     Screen {
         ToolHeader(stringResource(R.string.drinks_title)) { state.close() }
         // ── العملة: «ليرة / دولار» زرّان متساويان ──
@@ -203,6 +282,7 @@ fun DrinksEditor(
         } else {
             // **عناوينُ الأعمدة مرّةً فوق الأسطر** — كسطور خيارات الصنف.
             Row(verticalAlignment = Alignment.CenterVertically) {
+                if (state.canPickImage) Spacer(Modifier.width(RowFieldHeight + Rahal.space.xs))
                 ColumnLabel(stringResource(R.string.drinks_name), Modifier.weight(1f))
                 Spacer(Modifier.width(Rahal.space.xs))
                 ColumnLabel(
@@ -219,6 +299,18 @@ fun DrinksEditor(
                     .padding(vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                if (state.canPickImage) {
+                    DrinkPhoto(
+                        thumb = r.thumb,
+                        enabled = !state.busy,
+                        onPick = {
+                            target = i
+                            pick()
+                        },
+                        onClear = { state.clearImage(i) },
+                    )
+                    Spacer(Modifier.width(Rahal.space.xs))
+                }
                 RowField(
                     value = r.name,
                     onChange = { state.edit(i, r.copy(name = it)) },
@@ -264,6 +356,43 @@ fun DrinksEditor(
             cancelEnabled = !state.busy,
             onCancel = { state.close() },
         )
+    }
+}
+
+/**
+ * **صورةُ المشروب الاختياريّة** — مربّعٌ بارتفاع الحقل يُضغط فيفتح الاختيار،
+ * **وبلا صورةٍ كوبٌ**، **و✕ صغيرةٌ في زاويته تُزيلها** إن وُجدت.
+ */
+@Composable
+private fun DrinkPhoto(thumb: String?, enabled: Boolean, onPick: () -> Unit, onClear: () -> Unit) {
+    Box(Modifier.size(RowFieldHeight)) {
+        Box(
+            Modifier
+                .size(RowFieldHeight)
+                .clip(Rahal.shape.sm)
+                .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.sm)
+                .clickable(enabled = enabled, onClickLabel = stringResource(R.string.item_pick_image)) { onPick() },
+        ) {
+            DrinkThumb(url = AppCore.get().media(thumb), size = RowFieldHeight)
+        }
+        if (thumb != null) {
+            Box(
+                Modifier
+                    .align(Alignment.TopEnd)
+                    .size(18.dp)
+                    .clip(CircleShape)
+                    .background(Rahal.colors.panel.copy(alpha = 0.72f))
+                    .clickable(enabled = enabled, onClickLabel = stringResource(R.string.item_clear_image)) { onClear() },
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_close),
+                    contentDescription = stringResource(R.string.item_clear_image),
+                    tint = Rahal.colors.onPanel,
+                    modifier = Modifier.size(12.dp),
+                )
+            }
+        }
     }
 }
 

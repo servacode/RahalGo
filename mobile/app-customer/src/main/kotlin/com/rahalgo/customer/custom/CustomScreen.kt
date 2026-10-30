@@ -83,9 +83,10 @@ fun CustomScreen(
     // **أمانةٌ أم مشتريات** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — «إذا أمانة النظامُ يفهم أنّه ما في حقُّ
     // بضاعة، وإذا مشتريات في حقُّ بضاعة».
     var mode by vm::draftMode
-    // **موقعُ الأمانة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — يُحدَّد على الخريطة فيراه السائقُ على خريطته.
-    var pickupLat by vm::draftPickupLat
-    var pickupLng by vm::draftPickupLng
+    // **صاحبُ الأمانة ورقمُه** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — يلغي خريطةَ الصباح: الزبونُ لا يعرف
+    // أين الأمانة، **فيكتب من هي عنده ويطلب الموقعَ منه** كـ«إحضار» المتجر.
+    var holderName by vm::draftHolderName
+    var holderPhone by vm::draftHolderPhone
     // ══════════════════════════════════════════════════════════════════
     // **ولا تُختار طريقةُ الدفع هنا** — Batch 2c (قرارُ المالك)
     // ══════════════════════════════════════════════════════════════════
@@ -138,8 +139,9 @@ fun CustomScreen(
     LaunchedEffect(vm.sent) {
         if (vm.sent == 0) return@LaunchedEffect
         mode = "purchase"
-        pickupLat = null
-        pickupLng = null
+        holderName = ""
+        holderPhone = ""
+        vm.resetAsk()
         request = ""
         notes = ""
         vm.consumeSent()
@@ -223,29 +225,40 @@ fun CustomScreen(
         AddressCard(address, onOpenAddresses)
 
         // ══════════════════════════════════════════════════════════════
-        // **موقعُ الأمانة على الخريطة** (قرارُ المالك ٢٠٢٦-١٠-٣٠)
+        // **صاحبُ الأمانة ورقمُه، و«اطلب الموقع منه»** (قرارُ المالك ٢٠٢٦-١٠-٣٠)
         // ══════════════════════════════════════════════════════════════
         //
-        // **يلغي قرارَ ٢٠٢٦-١٠-١٦** («لا خانات استلام، السائقُ يسأل بالدردشة»): الزبونُ
-        // يضع الدبّوسَ حيث الأمانة، **والسائقُ يراه على خريطته ويُقاد إليه.** النقطةُ وحدَها —
-        // لا اسمَ ولا رقم. **والخريطةُ نفسُها التي في «عنوان التوصيل»** (`PointMapCard`).
+        // **كـ«إحضار» المتجر تماماً**: يصل صاحبَ الأمانة رابطُ «أرسل موقعي» بالواتساب،
+        // **ونقطتُه تصير نقطةَ الاستلام** فيراها السائقُ على خريطته — قبل الإرسال أو بعده.
+        // **وإن لم يرسله** يتّصل به السائقُ من رقمه.
         if (mode == "amanah") {
             Spacer(Modifier.height(12.dp))
-            Text(
-                stringResource(R.string.cst_amanah_place),
-                style = MaterialTheme.typography.labelLarge,
-            )
-            Spacer(Modifier.height(4.dp))
-            com.rahalgo.map.PointMapCard(
-                lat = pickupLat,
-                lng = pickupLng,
-                pending = false,
+            OutlinedTextField(
+                value = holderName,
+                onValueChange = { holderName = TextLimits.fit(it, 80) },
+                label = { Text(stringResource(R.string.cst_holder_name)) },
+                singleLine = true,
                 enabled = !vm.busy,
-                onPoint = { la, ln ->
-                    pickupLat = la
-                    pickupLng = ln
-                },
+                modifier = Modifier.fillMaxWidth(),
             )
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = holderPhone,
+                onValueChange = { v ->
+                    holderPhone = v.filter { it.isDigit() || it == '+' || it == ' ' }.take(20)
+                    // **ورقمٌ تبدّل يُسقط طلبَ الموقع القديم** — كان لرقمٍ آخر.
+                    vm.phoneChanged(holderPhone)
+                },
+                label = { Text(stringResource(R.string.cst_holder_phone)) },
+                singleLine = true,
+                enabled = !vm.busy,
+                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                    keyboardType = androidx.compose.ui.text.input.KeyboardType.Phone,
+                ),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(8.dp))
+            HolderAskCard(vm, holderPhone)
         }
 
         Spacer(Modifier.height(10.dp))
@@ -312,8 +325,12 @@ fun CustomScreen(
         }
         }
         Spacer(Modifier.height(16.dp))
-        // **والأمانةُ بلا موقعٍ لا تُرسَل** — المالكُ يريد السائقَ أن يراه.
-        val needAmanahPoint = mode == "amanah" && (pickupLat == null || pickupLng == null)
+        // **والأمانةُ بلا صاحبها ورقمه لا تُرسَل** — السائقُ يتّصل به. **والموقعُ ليس شرطاً.**
+        val missing = if (mode != "amanah") emptyList() else buildList {
+            if (holderName.isBlank()) add(stringResource(R.string.cst_holder_name))
+            if (holderPhone.count { it.isDigit() } < 9) add(stringResource(R.string.cst_holder_phone))
+        }
+        val needHolder = missing.isNotEmpty()
         RahalButton(
             onClick = {
                 address?.let {
@@ -321,12 +338,13 @@ fun CustomScreen(
                     // افتراضاً آمناً، والاختيارُ الحقيقيُّ عند تأكيد العرض.
                     vm.send(
                         request.trim(), it.text, it.lat, it.lng, notes.trim(), "cash", mode,
-                        pickupLat.takeIf { mode == "amanah" }, pickupLng.takeIf { mode == "amanah" },
+                        holderName.trim().takeIf { mode == "amanah" },
+                        holderPhone.trim().takeIf { mode == "amanah" },
                     )
                 }
             },
             // **والإغلاقُ يُطفئ الزرَّ والسببُ فوقُ مكتوب** — لا يُرَدّ بعد الكتابة.
-            enabled = !vm.busy && request.isNotBlank() && address != null && !needAmanahPoint &&
+            enabled = !vm.busy && request.isNotBlank() && address != null && !needHolder &&
                 Serving.available && Serving.customOrdersOpen,
             modifier = Modifier.fillMaxWidth(),
         ) {
@@ -361,10 +379,10 @@ fun CustomScreen(
                 style = MaterialTheme.typography.bodySmall,
             )
         }
-        if (needAmanahPoint) {
+        if (needHolder) {
             Spacer(Modifier.height(8.dp))
             Text(
-                text = stringResource(R.string.cst_need_amanah_point),
+                text = stringResource(R.string.cst_missing, missing.joinToString("، ")),
                 color = Rahal.colors.inkMuted,
                 style = MaterialTheme.typography.bodySmall,
             )
@@ -379,10 +397,86 @@ class CustomViewModel(app: Application) : AndroidViewModel(app) {
     var draftRequest by mutableStateOf("")
     var draftNotes by mutableStateOf("")
     var draftMode by mutableStateOf("purchase")
-    var draftPickupLat by mutableStateOf<Double?>(null)
-    var draftPickupLng by mutableStateOf<Double?>(null)
+    var draftHolderName by mutableStateOf("")
+    var draftHolderPhone by mutableStateOf("")
 
     private val api = CustomerApi(AppCore.get().api)
+
+    // ══════════════════════════════════════════════════════════════════
+    // **«اطلب الموقع منه»** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — مرآةُ `DeliveryViewModel.askLocation`
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // يصل صاحبَ الأمانة بالواتساب رابطُ «أرسل موقعي»، **ويُسأل الخادمُ كلَّ أربع ثوانٍ**
+    // حتّى تصل النقطة. **ويُرسَل رقمُ الطلب مع الأمانة** فتُربط به: وصلت قبلها؟ نقطةُ استلام.
+    // وإلّا كُتبت حين تصل. **والسؤالُ يتوقّف بعد نصف ساعة** — والربطُ في الخادم باقٍ.
+    var ask by mutableStateOf(HolderAsk.Idle)
+        private set
+    var askReq by mutableStateOf<com.rahalgo.shared.merchant.LocationRequest?>(null)
+        private set
+    var askError by mutableStateOf("")
+        private set
+    private var askPhone = ""
+    private var askJob: kotlinx.coroutines.Job? = null
+
+    fun askLocation(phone: String) {
+        if (ask == HolderAsk.Sending) return
+        askError = ""
+        if (phone.count { it.isDigit() } < 9) {
+            askError = getApplication<Application>().getString(R.string.cst_ask_need_phone)
+            return
+        }
+        askJob?.cancel()
+        ask = HolderAsk.Sending
+        askJob = viewModelScope.launch {
+            val req = try {
+                api.requestHolderLocation(phone.trim())
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                ask = HolderAsk.Idle
+                askError = apiError(
+                    getApplication(), e,
+                    mapOf(
+                        "location_request_too_soon" to R.string.cst_ask_too_soon,
+                        "location_request_limit" to R.string.cst_ask_limit,
+                    ),
+                )
+                return@launch
+            }
+            askReq = req
+            askPhone = phone.trim()
+            ask = HolderAsk.Waiting
+            repeat(450) {
+                kotlinx.coroutines.delay(4000)
+                val st = runCatching { api.holderLocationRequest(req.id) }.getOrNull() ?: return@repeat
+                if (st.status == "received") {
+                    ask = HolderAsk.Received
+                    return@launch
+                }
+                if (st.status == "expired") {
+                    ask = HolderAsk.Expired
+                    return@launch
+                }
+            }
+        }
+    }
+
+    /** **رقمٌ تبدّل** — طلبُ الموقع كان للقديم فيُنسى. */
+    fun phoneChanged(phone: String) {
+        if (askReq != null && phone.trim() != askPhone) resetAsk()
+    }
+
+    fun resetAsk() {
+        askJob?.cancel()
+        ask = HolderAsk.Idle
+        askReq = null
+        askError = ""
+        askPhone = ""
+    }
+
+    /** **رقمُ طلب الموقع الذي يُربط بالأمانة** — ما لم ينتهِ. */
+    private fun linkedRequestId(): String? =
+        askReq?.id?.takeIf { ask == HolderAsk.Waiting || ask == HolderAsk.Received }
 
     var busy by mutableStateOf(false)
         private set
@@ -454,8 +548,8 @@ class CustomViewModel(app: Application) : AndroidViewModel(app) {
         notes: String,
         payment: String,
         mode: String = "purchase",
-        pickupLat: Double? = null,
-        pickupLng: Double? = null,
+        holderName: String? = null,
+        holderPhone: String? = null,
     ) {
         if (busy) return
         busy = true
@@ -471,7 +565,8 @@ class CustomViewModel(app: Application) : AndroidViewModel(app) {
                 val ref = api.createCustom(
                     NewCustom(
                         request, address, lat, lng, notes, payment, customMode = mode,
-                        pickupLat = pickupLat, pickupLng = pickupLng,
+                        holderName = holderName, holderPhone = holderPhone,
+                        locationRequestId = if (mode == "amanah") linkedRequestId() else null,
                     ),
                     attemptKey = key,
                 )
@@ -492,7 +587,15 @@ class CustomViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 // **ويبقى تحت الزرّ** — انظر الشاشة. **والومضةُ معه** لمن
                 // نزل عن الزرّ في شاشةٍ طويلة.
-                error = apiError(getApplication(), e)
+                error = apiError(
+                    getApplication(), e,
+                    mapOf(
+                        "amanah_holder_required" to R.string.cst_holder_required,
+                        // **طلبُ موقعٍ رُبط بأمانةٍ قبلها** — يُطلب من جديد.
+                        "location_request_invalid" to R.string.cst_ask_expired,
+                    ),
+                )
+                if ((e as? com.rahalgo.shared.net.ApiClient.ApiException)?.body?.code == "location_request_invalid") resetAsk()
                 Flash.fail(error)
             }
             busy = false
@@ -512,5 +615,67 @@ class CustomViewModel(app: Application) : AndroidViewModel(app) {
     /** **يُنسى ما مضى** — حين يعود إلى الشاشة بعد نجاح. */
     fun clearDone() {
         done = ""
+    }
+}
+
+/** **حالُ «اطلب الموقع منه»** — مرآةُ `AskState` في تطبيق المتجر. */
+enum class HolderAsk { Idle, Sending, Waiting, Received, Expired }
+
+/**
+ * **«اطلب الموقع منه»** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — زرٌّ وحالُه تحته، كبطاقة المتجر:
+ * يُرسَل · ينتظر (ومشاركةُ الرابط بالواتساب إن لم تصل الرسالة) · **«وصلنا موقعه ✓»** · انتهى.
+ */
+@Composable
+private fun HolderAskCard(vm: CustomViewModel, phone: String) {
+    val uri = androidx.compose.ui.platform.LocalUriHandler.current
+    val waiting = vm.ask == HolderAsk.Sending || vm.ask == HolderAsk.Waiting
+    if (vm.ask != HolderAsk.Received) {
+        com.rahalgo.ui.RahalOutlineButton(
+            onClick = { vm.askLocation(phone) },
+            enabled = !vm.busy && !waiting,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(
+                stringResource(if (vm.ask == HolderAsk.Sending) R.string.cst_ask_sending else R.string.cst_ask_loc),
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+            )
+        }
+    }
+    val req = vm.askReq
+    when {
+        vm.ask == HolderAsk.Waiting && req != null -> {
+            Spacer(Modifier.height(4.dp))
+            Text(
+                stringResource(if (req.whatsappSent) R.string.cst_ask_waiting else R.string.cst_ask_not_sent),
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodySmall,
+            )
+            // **ولم تصل الرسالة** (البوتُ غيرُ مقترن) — يشارك الرابطَ بنفسه بلمسة.
+            if (!req.whatsappSent && req.waUrl.isNotEmpty()) {
+                com.rahalgo.ui.RahalTextButton(onClick = { runCatching { uri.openUri(req.waUrl) } }) {
+                    Text(stringResource(R.string.cst_ask_share), fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                }
+            }
+        }
+        vm.ask == HolderAsk.Received -> Text(
+            stringResource(R.string.cst_ask_received),
+            color = Rahal.colors.success,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        vm.ask == HolderAsk.Expired -> Text(
+            stringResource(R.string.cst_ask_expired),
+            color = Rahal.colors.inkMuted,
+            style = MaterialTheme.typography.bodySmall,
+        )
+        vm.ask == HolderAsk.Idle && vm.askError.isEmpty() -> Text(
+            stringResource(R.string.cst_ask_hint),
+            color = Rahal.colors.inkMuted,
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
+    if (vm.askError.isNotEmpty()) {
+        Spacer(Modifier.height(4.dp))
+        com.rahalgo.ui.Note(vm.askError, Rahal.colors.danger)
     }
 }

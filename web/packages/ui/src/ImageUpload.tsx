@@ -66,6 +66,8 @@ export function ImageUpload({
   cropFrames = LOGO_CROP_FRAMES,
   fit = false,
   tile,
+  compact,
+  disabled = false,
 }: {
   kind: MediaKind;
   label: string;
@@ -108,6 +110,13 @@ export function ImageUpload({
    * في التطبيق: شريطٌ أسفلَه يقول ما يفعله الضغط، **و✕ في زاويته يُزيلها.**
    */
   tile?: { pick: string; change: string; clear: string };
+  /**
+   * **مربّعٌ صغيرٌ في سطر** (صورةُ المشروب، ٢٠٢٦-١٠-٣٠) — ٤٤ بكسل، يُضغط ليختار صورة، **و✕ صغيرةٌ
+   * في زاويته تُزيلها.** والخطأُ يُقال تحته.
+   */
+  compact?: { pick: string; change: string; clear: string };
+  /** **معطّلٌ** — متجرٌ موقوفٌ أو قارئٌ بلا إذن تعديل (للمربّع الصغير). */
+  disabled?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(mediaUrl(initialUrl));
@@ -193,6 +202,47 @@ export function ImageUpload({
       )}
     </>
   );
+
+  if (compact) {
+    return (
+      <div className="relative h-11 w-11 shrink-0">
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={busy || disabled}
+          aria-label={preview ? compact.change : compact.pick}
+          title={preview ? compact.change : compact.pick}
+          data-testid="image-compact"
+          className="flex h-full w-full items-center justify-center overflow-hidden rounded-control border border-dashed border-line bg-field text-ink-muted transition-colors hover:border-primary hover:text-primary disabled:opacity-50"
+        >
+          {busy ? (
+            <IconLoading size={18} className="animate-spin" />
+          ) : preview ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={preview} alt="" loading="lazy" className="h-full w-full object-cover" />
+          ) : (
+            <IconCamera size={18} />
+          )}
+        </button>
+        {preview && !busy && !disabled && (
+          <button
+            type="button"
+            aria-label={compact.clear}
+            title={compact.clear}
+            onClick={() => {
+              setPreview(null);
+              onChange("");
+              resetInput();
+            }}
+            className="absolute -end-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-scrim text-on-solid"
+          >
+            <IconClose size={12} />
+          </button>
+        )}
+        {picker}
+      </div>
+    );
+  }
 
   if (tile) {
     return (

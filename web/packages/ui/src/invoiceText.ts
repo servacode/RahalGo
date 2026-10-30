@@ -19,6 +19,8 @@ export interface InvoiceLineItem {
   options?: { group?: string; name: string }[] | null;
   /** **مشروبُ بندٍ آخر** — معرّفُ الصنف الذي طُلب معه. */
   drink_for?: string | null;
+  /** **سطرُ مشروبٍ مدموج** — معرّفاتُ الأسطر التي جُمعت فيه (`invoiceOrder`). */
+  merged_ids?: string[];
 }
 
 const WEIGHT = /كيلو|كغ|غرام|(^|\s|[0-9٠-٩])غ$/;
@@ -56,17 +58,48 @@ export function invoiceLineText(
   return `${head} × ${qty}${after.length ? " " + after.join(" ") : ""}`;
 }
 
+/** **مفتاحُ دمج المشروب** — اسمُه وقيمُ خياراته؛ فـ«كولا» مع صنفين سطرٌ واحد. */
+function drinkKey(l: InvoiceLineItem): string {
+  const opts = (l.options ?? []).map((o) => (o.name ?? "").trim()).filter(Boolean).sort();
+  return [l.name.trim(), ...opts].join("|");
+}
+
 /**
- * **كلُّ صنفٍ ثمّ مشروباتُه** — المحرّكُ يرسلها هكذا (`ORDER BY COALESCE(drink_for, id)`)،
- * **والترتيبُ هنا حارسٌ.** ومشروبٌ لا صنفَ له في القائمة يُلحق آخراً ولا يضيع.
+ * **الأصنافُ كلُّها أوّلاً، ثمّ المشروباتُ كلُّها تحتها** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — لا تحت كلّ صنف.
+ *
+ * **والمشروبُ نفسُه مع أكثرَ من صنفٍ سطرٌ واحد**: عددُه مجموعٌ ومجموعُه مجموع
+ * (`unit_price` = المجموع ÷ العدد إن اختلف سعرُه)، **و`merged_ids` معرّفاتُ أسطره**.
+ * وترتيبُ المشروبات بأوّل ظهورها. **وطلبٌ قديمٌ مشروبُه داخل خيارات الصنف لا يتغيّر.**
  */
-export function invoiceOrder<T extends InvoiceLineItem>(lines: T[]): T[] {
-  const out: T[] = [];
-  const drinks = lines.filter((l) => l.drink_for);
-  for (const item of lines.filter((l) => !l.drink_for)) {
-    out.push(item);
-    if (item.id) out.push(...drinks.filter((d) => d.drink_for === item.id));
+export function invoiceOrder<T extends InvoiceLineItem>(lines: T[]): (T & { merged_ids?: string[] })[] {
+  const items = lines.filter((l) => !l.drink_for);
+  const drinks = new Map<string, { first: T; qty: number; total: number; ids: string[]; n: number; samePrice: boolean }>();
+  for (const d of lines) {
+    if (!d.drink_for) continue;
+    const k = drinkKey(d);
+    const was = drinks.get(k);
+    if (!was) {
+      drinks.set(k, { first: d, qty: d.qty, total: d.unit_price * d.qty, ids: d.id ? [d.id] : [], n: 1, samePrice: true });
+    } else {
+      was.n += 1;
+      was.qty += d.qty;
+      was.total += d.unit_price * d.qty;
+      if (d.id) was.ids.push(d.id);
+      if (d.unit_price !== was.first.unit_price) was.samePrice = false;
+    }
   }
-  for (const d of drinks) if (!out.includes(d)) out.push(d);
-  return out;
+  const merged: (T & { merged_ids?: string[] })[] = [];
+  for (const g of drinks.values()) {
+    if (g.n === 1) {
+      merged.push(g.first);
+      continue;
+    }
+    merged.push({
+      ...g.first,
+      qty: g.qty,
+      unit_price: g.samePrice || g.qty === 0 ? g.first.unit_price : g.total / g.qty,
+      merged_ids: g.ids,
+    });
+  }
+  return [...items, ...merged];
 }

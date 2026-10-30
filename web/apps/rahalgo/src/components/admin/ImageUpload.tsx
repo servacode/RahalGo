@@ -24,6 +24,9 @@ export default function ImageUpload(props: {
   /** **نقطةُ الرفع** — صفحةُ السوق ترفع من بابها (`/admin/market/media`، قرارُ
    *  المالك ٢٠٢٦-١٠-٠٥) **فلا يلزم موظّفَها `content.manage`.** */
   path?: string;
+  /** **مربّعٌ صغيرٌ في سطر** — صورةُ المشروب (٢٠٢٦-١٠-٣٠). */
+  compact?: { pick: string; change: string; clear: string };
+  disabled?: boolean;
 }) {
   return <Central {...props} api={api} mediaUrl={mediaUrl} errorText={errorText} />;
 }

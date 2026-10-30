@@ -245,6 +245,11 @@ data class ModifierOption(
     @SerialName("price_delta_usd") val priceDeltaUsd: Double? = null,
     /** **وزنُ الخيار بالغرام** لمجموعة «حسب الوزن». */
     val grams: Int? = null,
+    /**
+     * **مصغّرةُ صورة المشروب** (طلبُ المالك ٢٠٢٦-١٠-٣٠) — من قائمة مشروبات المتجر،
+     * وغيابُها: أيقونةُ الكوب. **وتُحفظ مع السلّة** وسلّةٌ قديمةٌ بلاها تُقرأ `null`.
+     */
+    @SerialName("image_thumb_url") val imageThumbUrl: String? = null,
 )
 
 /** **صنفٌ بتفصيله** — هو وخياراتُه معاً في نداءٍ واحد. */

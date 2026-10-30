@@ -405,7 +405,7 @@ function Line({ label, className = "", children }: { label: string; className?: 
  *
  * «شاورما دبل × 3 ........ 90 ل.س» · «بندورة × 1 كيلو» · «بوط أسود × 1 نمرة 40». **والنصُّ
  * من `InvoiceLines`/`invoiceLineText` المشترك** (`@rahalgo/ui`) — لا اسمَ مجموعة خيار، والوزنُ
- * والنمرةُ بعد العدد، والمشروبُ سطرٌ بعد صنفه. ثمّ خطٌّ فالمجموعُ والتوصيلُ والخصمُ والإجماليّ
+ * والنمرةُ بعد العدد، والمشروباتُ كلُّها بعد الأصناف. ثمّ خطٌّ فالمجموعُ والتوصيلُ والخصمُ والإجماليّ
  * (`totals`). **والفاتورةُ كلُّها تُرى.**
  */
 export function OrderInvoice({ order, totals = false }: { order: MyOrder; totals?: boolean }) {

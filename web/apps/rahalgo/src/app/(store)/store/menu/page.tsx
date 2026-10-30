@@ -40,6 +40,7 @@ import {
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
+import { useDrinksAllowed } from "@/lib/store/drinks";
 import type { MenuItem, MenuSection, SectionRef } from "@/lib/store/types";
 import { dollars } from "@/lib/customer/texts";
 import { useShopToast } from "@/components/customer/toast";
@@ -189,6 +190,8 @@ function ItemCard({ item, disabled, onToggle }: { item: MenuItem; disabled: bool
 export default function MenuPage() {
   const { store } = useStore();
   const id = store?.id ?? "";
+  // **أداةُ المشروبات للمطاعم وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
+  const drinksAllowed = useDrinksAllowed(id);
   const toast = useShopToast();
   const load = useCallback(() => api<MenuSection[]>(`/api/v1/merchant/stores/${id}/menu`), [id]);
   const { data, loading, error, reload, setData } = useLiveData(load, ["menu"], [id]);
@@ -316,7 +319,9 @@ export default function MenuPage() {
           <ToolPill icon={IconPromos} label={M.addOffer} href="/store/offers?new=1" testId="menu-offer" />
           <ToolPill icon={IconBanknote} label={M.toolBulk} href="/store/menu/prices" testId="menu-tool-prices" />
           <ToolPill icon={IconOptions} label={M.toolPresets} href="/store/menu/options" testId="menu-tool-options" />
-          <ToolPill icon={IconCatDrinks} label={M.toolDrinks} href="/store/menu/drinks" testId="menu-tool-drinks" />
+          {drinksAllowed === true && (
+            <ToolPill icon={IconCatDrinks} label={M.toolDrinks} href="/store/menu/drinks" testId="menu-tool-drinks" />
+          )}
         </div>
       )}
 

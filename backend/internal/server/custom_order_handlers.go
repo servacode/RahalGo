@@ -9,8 +9,10 @@ package server
 import (
 	"context"
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
+	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/orders"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -52,6 +54,13 @@ func (s *Server) handleCreateCustomOrder(w http.ResponseWriter, r *http.Request)
 		// من أين يشتري). **واختياريٌّ في الخادم** — فالتطبيقُ القديمُ لا يرسله.
 		PickupLat *float64 `json:"pickup_lat"`
 		PickupLng *float64 `json:"pickup_lng"`
+		// HolderName/HolderPhone **صاحبُ الأمانة ورقمُه** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — يلغي «الخريطة»:
+		// الزبونُ لا يعرف أين الأمانة. **إلزاميّان في الأمانة**، ويُهملان في المشتريات.
+		HolderName  string `json:"holder_name"`
+		HolderPhone string `json:"holder_phone"`
+		// LocationRequestID **«اطلب الموقع منه»** — طلبُ موقعٍ أنشأه قبل الإرسال
+		// (`POST /my/location-requests`)، **فيُربط بالطلب**: نقطتُه نقطةُ الاستلام الآن أو حين تصل.
+		LocationRequestID string `json:"location_request_id"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -62,9 +71,28 @@ func (s *Server) handleCreateCustomOrder(w http.ResponseWriter, r *http.Request)
 		tf("request", &req.Request, maxCustomRequest, textguard.Notes),
 		tf("address_text", &req.AddressText, maxAddressText, textguard.Address),
 		tf("notes", &req.Notes, maxOrderNotes, textguard.Notes),
+		tf("holder_name", &req.HolderName, maxPersonName, textguard.Name),
 	); err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	// **والأمانةُ بلا صاحبها ورقمه لا تُرسَل** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — السائقُ يتّصل به.
+	// **والرقمُ يُفحص كبقيّة الأرقام** ويُخزَّن دوليّاً.
+	var holderPhone string
+	// **والتطبيقُ القديمُ لا يرسلهما** — فيُقبل بلاهما (السائقُ يسأل بالدردشة كما كان)؛ **ومن أرسل
+	// أحدَهما فليرسل الآخر.** والإلزامُ في التطبيق الجديد نفسِه.
+	hasName, hasPhone := strings.TrimSpace(req.HolderName) != "", strings.TrimSpace(req.HolderPhone) != ""
+	if req.Mode == orders.CustomModeAmanah && (hasName || hasPhone) {
+		if !hasName || !hasPhone {
+			s.respondErr(w, errAmanahHolder)
+			return
+		}
+		p, ok := identity.NormalizePhone(req.HolderPhone)
+		if !ok {
+			s.respondErr(w, identity.ErrInvalidPhone)
+			return
+		}
+		holderPhone = p
 	}
 	// **العملُ وعلامةُ تثبيتِ منع التكرار في معاملةٍ واحدة** — `XG-33`.
 	s.WithIdempotentTx(w, r, func(ctx context.Context, q dbtx.Querier) (IdempotentBody, error) {
@@ -88,10 +116,34 @@ func (s *Server) handleCreateCustomOrder(w http.ResponseWriter, r *http.Request)
 				o.CustomFeeSnapshot = fee
 			}
 			o.CustomMode = orders.CustomModeAmanah
-			if req.PickupLat != nil && req.PickupLng != nil {
-				if err := s.orders.SetAmanahPickupTx(ctx, q, o.ID, *req.PickupLat, *req.PickupLng); err != nil {
+			holderName := strings.TrimSpace(req.HolderName)
+			if _, err := q.Exec(ctx, `UPDATE orders SET amanah_holder_name = $2, amanah_holder_phone = $3
+				WHERE id = $1`, o.ID, holderName, holderPhone); err != nil {
+				return IdempotentBody{}, err
+			}
+			o.HolderName, o.HolderPhone = holderName, holderPhone
+			// **وموقعُه إن طلبه منه** — وصل قبل الإرسال؟ نقطةُ استلامٍ الآن. وإلّا كُتب حين يصل.
+			shared := false
+			if req.LocationRequestID != "" {
+				lat, lng, err := linkAmanahLocationTx(ctx, q, req.LocationRequestID, userIDFrom(r), o.ID)
+				if err != nil {
 					return IdempotentBody{}, err
 				}
+				if lat != nil && lng != nil && req.PickupLat == nil {
+					req.PickupLat, req.PickupLng, shared = lat, lng, true
+				}
+			}
+			if req.PickupLat != nil && req.PickupLng != nil {
+				if err := s.orders.SetAmanahPickupTx(ctx, q, o.ID, *req.PickupLat, *req.PickupLng); err != nil {
+					// **وموقعٌ شاركه صاحبُها خارجَ التغطية لا يُسقط الطلب** — السائقُ يتّصل به.
+					if !shared {
+						return IdempotentBody{}, err
+					}
+					s.logger.Warn("موقعُ الأمانة المُشارَك لم يُقبل نقطةَ استلام", "order", o.ID, "error", err)
+					req.PickupLat, req.PickupLng = nil, nil
+				}
+			}
+			if req.PickupLat != nil && req.PickupLng != nil {
 				lat, lng := *req.PickupLat, *req.PickupLng
 				o.AmanahPickupLat, o.AmanahPickupLng = &lat, &lng
 				o.PickupNote = orders.AmanahPickupNote

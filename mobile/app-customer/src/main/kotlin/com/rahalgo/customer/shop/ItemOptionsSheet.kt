@@ -125,6 +125,8 @@ fun ItemOptionsSheet(
     val split = groups?.let { com.rahalgo.customer.cart.OptionSplit.group(it) }
     val picked = chosen.filterKeys { it != split?.id }.values.flatten()
     val drinkOptions = groups.orEmpty().filter { it.isDrinks }.flatMap { it.options }
+    val sheetCtx = androidx.compose.ui.platform.LocalContext.current
+    val drinkMedia: (String?) -> String? = media ?: { p -> com.rahalgo.customer.Backend.of(sheetCtx).media(p) }
     val drinks = drinkOptions.mapNotNull { o ->
         drinkQty[o.id]?.takeIf { it > 0 }?.let { com.rahalgo.customer.cart.Cart.DrinkPick(o, it) }
     }
@@ -231,6 +233,8 @@ fun ItemOptionsSheet(
                                 max = com.rahalgo.customer.cart.Cart.MAX_DRINK,
                                 priceText = { o -> o.priceDeltaUsd?.let { com.rahalgo.ui.dollars(it) } ?: money(o.priceDelta) },
                                 onCount = { id, n -> drinkQty = drinkQty + (id to n) },
+                                // **ومصغّرةُ المشروب جنب اسمه** (طلبُ المالك ٢٠٢٦-١٠-٣٠) — وبلاها كوب.
+                                thumb = { o -> drinkMedia(o.imageThumbUrl) },
                             )
                             return@forEach
                         }
@@ -361,6 +365,8 @@ private fun CounterBlock(
     max: Int,
     priceText: (ModifierOption) -> String,
     onCount: (String, Int) -> Unit,
+    /** **مصغّرةُ الخيار** — للمشروبات وحدَها؛ و`null`: بلا عمود صورة. */
+    thumb: ((ModifierOption) -> String?)? = null,
 ) {
     Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -385,6 +391,10 @@ private fun CounterBlock(
                 Modifier.fillMaxWidth().padding(vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                if (thumb != null) {
+                    com.rahalgo.ui.DrinkThumb(thumb(o))
+                    Spacer(Modifier.size(10.dp))
+                }
                 Column(Modifier.weight(1f)) {
                     Text(
                         o.name,

@@ -735,7 +735,7 @@ private fun stageLabel(key: String, amanah: Boolean = false): String = when (key
  * «شاورما دبل × 3 ........ 90 ل.س» · «بندورة × 1 كيلو ........ 600 ل.س» ·
  * «بوط أسود × 1 نمرة 40 ........ 9,100 ل.س». **والنصُّ من `invoiceLineText` المشترك**
  * (`mobile/ui/Invoice.kt`) — لا يُكتب اسمُ مجموعة الخيار، والوزنُ والنمرةُ بعد العدد،
- * وباقي القيم تُلحق بالاسم. **والمشروبُ (`drink_for`) سطرٌ بعد صنفه.** ثمّ خطٌّ فالمجموعُ
+ * وباقي القيم تُلحق بالاسم. **والمشروباتُ (`drink_for`) كلُّها تحت الأصناف مجموعةً** (`invoiceOrder`). ثمّ خطٌّ فالمجموعُ
  * والتوصيلُ والخصمُ والإجماليّ. **والفاتورةُ كلُّها تُرى.**
  */
 @Composable
@@ -793,4 +793,7 @@ internal fun MyOrderLine.toInvoiceLine(): com.rahalgo.ui.InvoiceLine = com.rahal
     text = com.rahalgo.ui.invoiceLineText(name, qty, options.orEmpty().map { it.group to it.name }),
     amount = unitPrice * qty,
     note = note,
+    name = name,
+    qty = qty,
+    options = options.orEmpty().map { it.group to it.name },
 )

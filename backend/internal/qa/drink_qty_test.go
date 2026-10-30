@@ -24,6 +24,12 @@ type drinkFx struct {
 func newDrinkFx(t *testing.T, h *Harness, name string) drinkFx {
 	t.Helper()
 	m := newMDFxBare(t, h, name)
+	// **المشروباتُ للمطاعم وحدَها** (هجرة 0488) — فتصنيفُ متجر الشاهد مطعم.
+	if _, err := h.Pool.Exec(ctxBG(), `
+		UPDATE categories SET has_drinks = true
+		 WHERE id = (SELECT category_id FROM merchants WHERE id = $1::uuid)`, m.fx.M.ID); err != nil {
+		t.Fatal(err)
+	}
 	patchItem(t, h, m.fx.Tok, m.fx.Item.ID, map[string]any{"price": 20, "modifiers": []any{
 		map[string]any{"name": "الحجم", "min_select": 1, "max_select": 1, "options": []any{
 			map[string]any{"name": "عادي", "price_delta": 0},

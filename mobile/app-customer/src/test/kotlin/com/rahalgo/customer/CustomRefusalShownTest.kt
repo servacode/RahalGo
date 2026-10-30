@@ -39,7 +39,7 @@ class CustomRefusalShownTest {
         val custom = read("app-customer/src/main/kotlin/com/rahalgo/customer/custom/CustomScreen.kt")
         assertTrue(
             "**الطلبُ الخاصّ يقول السببَ ومضةً تختفي**",
-            custom.contains("error = apiError(getApplication(), e)") && custom.contains("Note(vm.error"),
+            custom.contains("error = apiError(") && custom.contains("getApplication(), e,") && custom.contains("Note(vm.error"),
         )
         val cart = read("app-customer/src/main/kotlin/com/rahalgo/customer/cart/CartScreen.kt")
         assertTrue(

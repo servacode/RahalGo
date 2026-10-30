@@ -77,6 +77,9 @@ type ModifierOption struct {
 	// Grams **وزنُ الخيار بالغرام** لمجموعة «حسب الوزن» (٢٠٢٦-١٠-٢٨) — وفرقُه
 	// محسوبٌ في القاعدة من سعر الصنف. انظر `option_modes.go`.
 	Grams *int `json:"grams,omitempty"`
+	// ImageThumbURL **مصغّرةُ صورة المشروب** (٢٠٢٦-١٠-٣٠) — منسوخةٌ من قائمة
+	// المشروبات، **وتغيب عن كلّ خيارٍ بلا صورة.**
+	ImageThumbURL *string `json:"image_thumb_url,omitempty"`
 }
 
 type ModifierGroup struct {
@@ -857,9 +860,11 @@ func (s *Service) ItemModifiers(ctx context.Context, itemID string) ([]ModifierG
 	}
 
 	rows, err = s.db.Query(ctx, `
-		SELECT o.id, o.group_id, o.name, o.price_delta, o.available, o.sort_order, o.price_delta_usd_cents, o.grams
+		SELECT o.id, o.group_id, o.name, o.price_delta, o.available, o.sort_order, o.price_delta_usd_cents, o.grams,
+		       COALESCE(om.thumb_path, om.path)
 		FROM modifier_options o
 		JOIN modifier_groups g ON g.id = o.group_id
+		LEFT JOIN media om ON om.id = o.image_media_id
 		WHERE g.item_id = $1 ORDER BY o.sort_order`, itemID)
 	if err != nil {
 		return nil, err
@@ -869,9 +874,10 @@ func (s *Service) ItemModifiers(ctx context.Context, itemID string) ([]ModifierG
 		var o ModifierOption
 		var groupID string
 		var optUSD *int64
-		if err := rows.Scan(&o.ID, &groupID, &o.Name, &o.PriceDelta, &o.Available, &o.SortOrder, &optUSD, &o.Grams); err != nil {
+		if err := rows.Scan(&o.ID, &groupID, &o.Name, &o.PriceDelta, &o.Available, &o.SortOrder, &optUSD, &o.Grams, &o.ImageThumbURL); err != nil {
 			return nil, err
 		}
+		o.ImageThumbURL = media.URLForPtr(o.ImageThumbURL)
 		if optUSD != nil {
 			d := float64(*optUSD) / 100
 			o.PriceDeltaUSD = &d

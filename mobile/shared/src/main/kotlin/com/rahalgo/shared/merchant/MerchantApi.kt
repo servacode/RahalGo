@@ -337,8 +337,11 @@ class MerchantApi(private val api: ApiClient) {
      * **قائمةُ المشروبات** (قرارُ المالك ٢٠٢٦-١٠-١٩) — تُكتب مرّةً وينسخها المحرّكُ
      * إلى كلّ الأصناف، **ويتبع الدولاريُّ سعرَ الصرف.**
      */
-    suspend fun drinks(storeId: String): List<Drink> =
-        api.call<DrinksBody>("/api/v1/merchant/stores/$storeId/drinks").drinks
+    suspend fun drinks(storeId: String): List<Drink> = drinksInfo(storeId).drinks
+
+    /** **القائمةُ ومعها «أمسموحةٌ لهذا المتجر»** — للمطاعم وحدَها. */
+    suspend fun drinksInfo(storeId: String): DrinksInfo =
+        api.call<DrinksInfo>("/api/v1/merchant/stores/$storeId/drinks")
 
     suspend fun setDrinks(storeId: String, drinks: List<Drink>): List<Drink> =
         api.call<DrinksBody>("/api/v1/merchant/stores/$storeId/drinks", HttpMethod.Put, DrinksBody(drinks)).drinks
@@ -727,10 +730,25 @@ data class Drink(
     val name: String = "",
     val price: Long = 0,
     @SerialName("price_usd") val priceUsd: Double? = null,
+    /** **صورةُ المشروب** (اختياريّة، ٢٠٢٦-١٠-٣٠) — المعرّفُ يُرسَل، و`null`: بلا صورة. */
+    @SerialName("image_media_id") val imageMediaId: String? = null,
+    @SerialName("image_url") val imageUrl: String? = null,
+    @SerialName("image_thumb_url") val imageThumbUrl: String? = null,
 )
 
 @Serializable
 data class DrinksBody(val drinks: List<Drink> = emptyList())
+
+/** **ما يردّه جلبُ القائمة** — المشروباتُ و«أمسموحةٌ لهذا المتجر». */
+@Serializable
+data class DrinksInfo(
+    val drinks: List<Drink> = emptyList(),
+    /**
+     * **المشروباتُ للمطاعم وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — `false`: لا أداةَ ولا مفتاح.
+     * **وغيابُه (خادمٌ قديم) يعني مسموحاً** كما كان.
+     */
+    val allowed: Boolean = true,
+)
 
 /**
  * **مجموعةُ خياراتٍ ترافق الصنفَ في الحفظ** — «الحجم» و«يُضاف».

@@ -647,7 +647,7 @@ fun fixedCustomFee(order: DriverOrder): Long? =
 
 /**
  * **الأصنافُ سطراً سطراً بشكل الفاتورة الواحد** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — «شاورما دبل × 2
- * ........ 90 ل.س»، «بندورة × 1 كيلو ........ 600 ل.س»، والمشروبُ بعد صنفه.
+ * ........ 90 ل.س»، «بندورة × 1 كيلو ........ 600 ل.س»، والمشروباتُ كلُّها تحت الأصناف.
  *
  * **والسائقُ يرى الفاتورةَ كاملة** (قرارُ المالك ٢٠٢٦-١٠-٣٠): سعرُ البيع ومجموعاتُ الخيارات
  * من المحرّك. **وخادمٌ قديمٌ لا يرسلها** — فلا مبلغَ في آخر السطر، والخياراتُ نصٌّ واحدٌ بـ«، »
@@ -664,6 +664,9 @@ fun driverInvoiceLines(order: DriverOrder): List<com.rahalgo.ui.InvoiceLine> = o
         drinkFor = it.drinkFor,
         text = com.rahalgo.ui.invoiceLineText(it.name, it.qty, options),
         amount = it.unitPrice?.let { p -> p * it.qty },
+        name = it.name,
+        qty = it.qty,
+        options = options,
     )
 }
 

@@ -54,6 +54,7 @@ import { dollars, fill, backAt } from "@/lib/customer/texts";
 import { useShopToast } from "./toast";
 import { useAddGate, AvailabilityNotice } from "./ServiceNotices";
 import { AddressSheet } from "./AddressSheet";
+import { DrinkThumb } from "./DrinkThumb";
 import { useCustomer } from "@/lib/customer/context";
 import { useAuth } from "@/lib/auth";
 
@@ -531,6 +532,7 @@ export function ItemSheet({
                 group={g}
                 counts={drinkQty}
                 max={MAX_DRINK}
+                thumbs
                 price={(o) => (o.price_delta_usd != null ? dollars(o.price_delta_usd) : <Money value={o.price_delta} small />)}
                 onCount={(id, n) => {
                   setWarn("");
@@ -647,10 +649,13 @@ function CounterBlock({
   max,
   price,
   onCount,
+  thumbs = false,
 }: {
   group: ModifierGroup;
   counts: Record<string, number>;
   max: number;
+  /** **صورةُ كلّ مشروبٍ جنبه** (٢٠٢٦-١٠-٣٠) — أو أيقونةُ الكأس. */
+  thumbs?: boolean;
   price: (o: ModifierOption) => ReactNode;
   onCount: (id: string, n: number) => void;
 }) {
@@ -664,6 +669,8 @@ function CounterBlock({
         const n = counts[o.id] ?? 0;
         return (
           <div key={o.id} className="flex items-center justify-between gap-3">
+            <span className="flex min-w-0 items-center gap-2">
+            {thumbs && <DrinkThumb url={o.image_thumb_url} />}
             <span className="flex min-w-0 flex-col">
               <span className={`${o.available ? "" : "text-ink-dim line-through"} ${n > 0 ? "font-bold" : ""}`}>{o.name}</span>
               {o.available ? (
@@ -671,6 +678,7 @@ function CounterBlock({
               ) : (
                 <span className="text-xs text-danger">{I.unavailable}</span>
               )}
+            </span>
             </span>
             <span className="flex shrink-0 items-center gap-0.5 rounded-control bg-field p-0.5">
               <button

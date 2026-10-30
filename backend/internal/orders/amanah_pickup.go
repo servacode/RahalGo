@@ -36,3 +36,38 @@ func (s *Service) SetAmanahPickupTx(ctx context.Context, q dbtx.Querier, orderID
 		orderID, lat, lng, AmanahPickupNote)
 	return err
 }
+
+// ApplyAmanahShared **صاحبُ الأمانة شارك موقعَه بعد إنشاء الطلب** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
+//
+// الزبونُ طلب الموقعَ منه («اطلب الموقع منه») ثمّ أرسل الطلبَ قبل أن يصل — **فالنقطةُ تُكتب
+// في الطلب حين تصل** وتُبثّ لغرفة السائق والزبون والمكتب، فتظهر على خريطة السائق بلا تحديث.
+//
+// **وبعد الاستلام أو الإقفال لا تُمسّ** — الأمانةُ صارت في يد السائق. ويردّ أكُتبت.
+func (s *Service) ApplyAmanahShared(ctx context.Context, orderID string, lat, lng float64) (bool, error) {
+	if !ValidPoint(lat, lng) {
+		return false, ErrBadPoint
+	}
+	if err := s.requirePlaceLaunched(ctx, s.db, lat, lng); err != nil {
+		return false, err
+	}
+	if _, err := s.RequireServiceable(ctx, s.db, lat, lng); err != nil {
+		return false, err
+	}
+	tag, err := s.db.Exec(ctx, `
+		UPDATE orders
+		   SET pickup_override = ST_SetSRID(ST_MakePoint($3, $2), 4326)::geography,
+		       pickup_override_note = $4
+		 WHERE id = $1 AND kind = 'custom' AND custom_mode = 'amanah'
+		   AND picked_up_at IS NULL AND closed_at IS NULL`,
+		orderID, lat, lng, AmanahPickupNote)
+	if err != nil {
+		return false, err
+	}
+	if tag.RowsAffected() == 0 {
+		return false, nil
+	}
+	if o, err := s.GetByID(ctx, orderID); err == nil {
+		s.publishOrder(o)
+	}
+	return true, nil
+}

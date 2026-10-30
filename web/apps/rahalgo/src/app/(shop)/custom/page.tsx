@@ -19,11 +19,11 @@
  */
 
 import Link from "next/link";
-import { lazy, Suspense, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, errorText, fmtMoney, fmtRef } from "@rahalgo/i18n";
-import { Alert, Button, LoadingState, Textarea } from "@rahalgo/ui";
-import { api } from "@/lib/api";
+import { Alert, Button, IconLocation, Input, LoadingState, Textarea } from "@rahalgo/ui";
+import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useCustomer } from "@/lib/customer/context";
 import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
@@ -42,8 +42,11 @@ const MAX_NOTES = 500;
 
 type Mode = "purchase" | "amanah";
 
-/** **خريطةُ الدبّوس الثابت نفسُها التي في «عنوان التوصيل»** — تُحمَّل حين تُطلب. */
-const CenterPinMap = lazy(() => import("@rahalgo/ui/map").then((mod) => ({ default: mod.CenterPinMap })));
+/** **«اطلب الموقع منه»** — ردُّ الخادم وحالُه (مرآةُ «إحضار» المتجر). */
+type AskReq = { id: string; whatsapp_sent: boolean; link: string; wa_url: string };
+type AskState = "idle" | "sending" | "waiting" | "received" | "expired";
+/** **حدُّ اسم الشخص في المحرّك** (`maxPersonName`). */
+const MAX_NAME = 80;
 
 export default function CustomOrderPage() {
   const { user, loading } = useAuth();
@@ -56,12 +59,40 @@ export default function CustomOrderPage() {
   const [mode, setMode] = useState<Mode>("purchase");
   const [request, setRequest] = useState("");
   const [notes, setNotes] = useState("");
-  // **موقعُ الأمانة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — يحدّده الزبونُ على الخريطة فيراه السائقُ على خريطته.
-  const [pickup, setPickup] = useState<{ lat: number; lng: number } | null>(null);
+  // **صاحبُ الأمانة ورقمُه، و«اطلب الموقع منه»** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — يلغي خريطةَ الصباح:
+  // الزبونُ لا يعرف أين الأمانة. **كـ«إحضار» المتجر**: يصل صاحبَها رابطُ «أرسل موقعي»، ونقطتُه
+  // تصير نقطةَ الاستلام قبل الإرسال أو بعده. مرآةُ `CustomScreen.kt`.
+  const [holderName, setHolderName] = useState("");
+  const [holderPhone, setHolderPhone] = useState("");
+  const [ask, setAsk] = useState<AskState>("idle");
+  const [askReq, setAskReq] = useState<AskReq | null>(null);
+  const [askPhone, setAskPhone] = useState("");
+  const [askError, setAskError] = useState("");
   const [pickAddr, setPickAddr] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [code, setCode] = useState("");
+
+  // **ويُسأل كلَّ أربع ثوانٍ** ما دام ينتظر — **ويتوقّف بعد نصف ساعة** (الربطُ في الخادم باقٍ).
+  useEffect(() => {
+    if (ask !== "waiting" || !askReq) return;
+    const id = askReq.id;
+    const started = Date.now();
+    const timer = setInterval(async () => {
+      if (Date.now() - started > 30 * 60 * 1000) {
+        clearInterval(timer);
+        return;
+      }
+      try {
+        const st = await api<{ status: string }>(`/api/v1/my/location-requests/${id}`);
+        if (st.status === "received") setAsk("received");
+        else if (st.status === "expired") setAsk("expired");
+      } catch {
+        /* **وتعثّرُ سؤالٍ واحدٍ لا يوقف الانتظار.** */
+      }
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [ask, askReq]);
 
   if (loading) return <LoadingState variant="list" rows={3} />;
   if (!user) return <NeedLogin />;
@@ -78,11 +109,45 @@ export default function CustomOrderPage() {
   // **ونصُّ المالك يغلب** (مرآةُ `CustomScreen.kt` ٢٠٢٦-١٠-٢٧) — من كتب في اللوحة سببَه قُرئ كما كتبه.
   const closedText = closed ? platform?.launch.notice.trim() || K.closed : "";
 
-  // **والأمانةُ بلا موقعٍ لا تُرسَل** — المالكُ يريد السائقَ أن يراه. مرآةُ `CustomScreen.kt`.
-  const needAmanahPoint = mode === "amanah" && !pickup;
+  // **والأمانةُ بلا صاحبها ورقمه لا تُرسَل** — السائقُ يتّصل به. **والموقعُ ليس شرطاً.**
+  const phoneDigits = holderPhone.replace(/\D/g, "").length;
+  const missing =
+    mode === "amanah"
+      ? [!holderName.trim() ? K.holderName : "", phoneDigits < 9 ? K.holderPhone : ""].filter(Boolean)
+      : [];
+  const needHolder = missing.length > 0;
+
+  const resetAsk = () => {
+    setAsk("idle");
+    setAskReq(null);
+    setAskPhone("");
+    setAskError("");
+  };
+
+  const askLocation = async () => {
+    if (ask === "sending") return;
+    setAskError("");
+    if (phoneDigits < 9) {
+      setAskError(K.askNeedPhone);
+      return;
+    }
+    setAsk("sending");
+    try {
+      const r = await api<AskReq>("/api/v1/my/location-requests", {
+        method: "POST",
+        body: JSON.stringify({ phone: holderPhone.trim() }),
+      });
+      setAskReq(r);
+      setAskPhone(holderPhone.trim());
+      setAsk("waiting");
+    } catch (e) {
+      setAsk("idle");
+      setAskError(errorText(e));
+    }
+  };
 
   const send = async () => {
-    if (!address || busy || needAmanahPoint) return;
+    if (!address || busy || needHolder) return;
     setBusy(true);
     setError("");
     setCode("");
@@ -98,20 +163,31 @@ export default function CustomOrderPage() {
           notes: notes.trim(),
           payment_method: "cash",
           custom_mode: mode,
-          ...(mode === "amanah" && pickup ? { pickup_lat: pickup.lat, pickup_lng: pickup.lng } : {}),
+          ...(mode === "amanah"
+            ? {
+                holder_name: holderName.trim(),
+                holder_phone: holderPhone.trim(),
+                ...(askReq && (ask === "waiting" || ask === "received") ? { location_request_id: askReq.id } : {}),
+              }
+            : {}),
         }),
       });
       clearAttempt(SLOT);
       setRequest("");
       setNotes("");
       setMode("purchase");
-      setPickup(null);
+      setHolderName("");
+      setHolderPhone("");
+      resetAsk();
       toast(fill(K.done, { n: fmtRef(ref.number) }));
       router.push(ref.id ? `/orders/${ref.id}` : "/orders");
     } catch (err) {
       if (isDecided(err)) clearAttempt(SLOT);
       setError(errorText(err));
-      setCode((err as { body?: { code?: string } })?.body?.code ?? "");
+      const c = (err as { body?: { code?: string } })?.body?.code ?? "";
+      setCode(c);
+      // **طلبُ موقعٍ رُبط بأمانةٍ قبلها** — يُطلب من جديد.
+      if (err instanceof ApiError && c === "location_request_invalid") resetAsk();
     } finally {
       setBusy(false);
     }
@@ -160,18 +236,62 @@ export default function CustomOrderPage() {
 
       <AddressChip onOpen={() => setPickAddr(true)} />
 
-      {/* **موقعُ الأمانة على الخريطة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — يلغي «السائقُ يسأل بالدردشة».
-          النقطةُ وحدَها، **و«حدّد موقعي بدقة» في الخريطة نفسِها.** */}
+      {/* **صاحبُ الأمانة ورقمُه، و«اطلب الموقع منه»** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — كـ«إحضار» المتجر. */}
       {mode === "amanah" && (
-        <section className="surface flex flex-col gap-2 p-4">
-          <h2 className="text-sm font-bold">{K.amanahPlace}</h2>
-          <Suspense fallback={<div className="h-64 w-full animate-pulse rounded-card bg-field" />}>
-            <CenterPinMap
-              lat={pickup?.lat ?? null}
-              lng={pickup?.lng ?? null}
-              onMove={(la: number, ln: number) => setPickup({ lat: la, lng: ln })}
-            />
-          </Suspense>
+        <section className="surface flex flex-col gap-3 p-4">
+          <Input
+            id="holder-name"
+            label={K.holderName}
+            value={holderName}
+            maxLength={MAX_NAME}
+            disabled={busy}
+            onChange={(e) => setHolderName(e.target.value.slice(0, MAX_NAME))}
+          />
+          <Input
+            id="holder-phone"
+            label={K.holderPhone}
+            value={holderPhone}
+            dir="ltr"
+            inputMode="tel"
+            autoComplete="off"
+            disabled={busy}
+            onChange={(e) => {
+              const v = e.target.value.replace(/[^\d+ ]/g, "").slice(0, 20);
+              setHolderPhone(v);
+              // **ورقمٌ تبدّل يُسقط طلبَ الموقع القديم** — كان لرقمٍ آخر.
+              if (askReq && v.trim() !== askPhone) resetAsk();
+            }}
+          />
+          {ask !== "received" && (
+            <Button
+              type="button"
+              variant="secondary"
+              className="flex w-full items-center justify-center gap-2"
+              disabled={busy || ask === "sending" || ask === "waiting"}
+              onClick={() => void askLocation()}
+            >
+              <IconLocation size={18} />
+              <span>{ask === "sending" ? K.askSending : K.askLoc}</span>
+            </Button>
+          )}
+          {ask === "idle" && !askError && <p className="text-xs text-ink-muted">{K.askHint}</p>}
+          {ask === "waiting" && askReq && (
+            <div className="flex flex-col gap-2 rounded-control border border-line bg-field p-3">
+              <p className="text-xs text-ink-muted">{askReq.whatsapp_sent ? K.askWaiting : K.askNotSent}</p>
+              {!askReq.whatsapp_sent && (
+                <a className="text-sm font-bold text-accent-text" href={askReq.wa_url} target="_blank" rel="noreferrer">
+                  {K.askShare}
+                </a>
+              )}
+            </div>
+          )}
+          {ask === "received" && (
+            <div className="rounded-control border border-success-edge bg-success-tint p-3">
+              <p className="text-sm font-bold text-success">{K.askReceived}</p>
+            </div>
+          )}
+          {ask === "expired" && <p className="text-xs text-danger">{K.askExpired}</p>}
+          {askError && <p className="text-xs text-danger">{askError}</p>}
         </section>
       )}
 
@@ -219,12 +339,12 @@ export default function CustomOrderPage() {
       <Button
         className="w-full py-3 text-base"
         onClick={send}
-        disabled={busy || !request.trim() || !address || needAmanahPoint || !ordering.open || closed || gate.kind === "blocked"}
+        disabled={busy || !request.trim() || !address || needHolder || !ordering.open || closed || gate.kind === "blocked"}
       >
         {busy ? K.sending : K.send}
       </Button>
       {!address && <p className="text-xs text-ink-muted">{K.needAddress}</p>}
-      {needAmanahPoint && <p className="text-xs text-ink-muted">{K.needAmanahPoint}</p>}
+      {needHolder && <p className="text-xs text-ink-muted">{fill(K.missing, { list: missing.join(K.listSep) })}</p>}
       {error && (
         <Alert>
           {error}

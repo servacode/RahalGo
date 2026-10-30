@@ -242,6 +242,8 @@ var OrderPrivacy = map[string]FieldRule{
 	"pickup_note":       {Ref: "أين البضاعةُ بعد طارئ — للسائق التالي (٢٠٢٦-١٠-٠٢)", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"amanah_pickup_lat": {Ref: "موقعُ الأمانة — حدّده الزبون ويراه السائق (٢٠٢٦-١٠-٣٠)", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"amanah_pickup_lng": {Ref: "موقعُ الأمانة — حدّده الزبون ويراه السائق (٢٠٢٦-١٠-٣٠)", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"holder_name":       {Ref: "صاحبُ الأمانة — كتبه الزبون ويتّصل به السائق (٢٠٢٦-١٠-٣٠)", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"holder_phone":      {Ref: "رقمُ صاحب الأمانة — كتبه الزبون ويتّصل به السائق (٢٠٢٦-١٠-٣٠)", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"dropoff_known":     {Ref: "أنقطةُ التسليم معروفة — وإلّا لا يُتبَع المسار", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	// **ووضعُ التوصيلة والمبلغُ الذي يُقبض من المستلِم** (قرارُ المالك ٢٠٢٦-١٠-١٥) — للسائق والإدارة،
 	// **وللمتجر في توصيلته وحدَها** (`AudienceMerchantDelivery`). والمبلغُ عرضٌ لا يدخل الدفتر.

@@ -35,13 +35,29 @@ class DriverInvoiceTest {
     )
 
     @Test
-    fun `lines carry prices and the drink follows its item`() {
+    fun `lines carry prices and drinks go below all items`() {
         val lines = invoiceOrder(driverInvoiceLines(order))
         assertEquals(
-            listOf("كولا × 1", "شاورما دبل × 3", "عيران × 2", "بوط أسود × 1 نمرة 40"),
+            listOf("كولا × 1", "شاورما دبل × 3", "بوط أسود × 1 نمرة 40", "عيران × 2"),
             lines.map { it.text },
         )
-        assertEquals(listOf(50L, 90L, 50L, 9100L), lines.map { it.amount })
+        assertEquals(listOf(50L, 90L, 9100L, 50L), lines.map { it.amount })
+    }
+
+    @Test
+    fun `the same drink with two items is one combined row`() {
+        val two = order.copy(
+            items = order.items + listOf(
+                DriverItem(id = "s2", name = "شاورما", qty = 1, unitPrice = 20, options = "عادي", optionList = listOf(DriverOption("الحجم", "عادي"))),
+                DriverItem(id = "d2", name = "عيران", qty = 1, unitPrice = 25, drinkFor = "s2"),
+            ),
+        )
+        val lines = invoiceOrder(driverInvoiceLines(two))
+        assertEquals(
+            listOf("كولا × 1", "شاورما دبل × 3", "بوط أسود × 1 نمرة 40", "شاورما عادي × 1", "عيران × 3"),
+            lines.map { it.text },
+        )
+        assertEquals(75L, lines.last().amount)
     }
 
     @Test

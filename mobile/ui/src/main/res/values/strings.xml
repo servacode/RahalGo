@@ -89,6 +89,8 @@
     <string name="err_no_dropoff_suggestion">لا يوجد تعديل مقترح لهذا العنوان</string>
     <string name="err_live_request_stage">لا يمكنك طلب موقع الزبون في هذه المرحلة من الطلب</string>
     <string name="err_rate_limited">محاولات كثيرة — انتظر قليلا</string>
+    <string name="err_amanah_holder_required">ناقص: اسم صاحب الأمانة ورقمه</string>
+    <string name="err_location_request_invalid">انتهى طلب الموقع — اطلب الموقع منه من جديد</string>
     <string name="err_too_many_active">معك طلبات بعدد حدك</string>
     <string name="err_unauthorized">رقم الهاتف أو كلمة المرور غير صحيحة</string>
     <string name="err_unexpected">تعذر إتمام الطلب</string>
@@ -653,6 +655,7 @@
     <string name="err_multi_source_order">تعذر تحديد مصدر بعض الأصناف</string>
     <string name="err_too_many_sources">أصناف سلتك من مصادر أكثر من المسموح</string>
     <string name="err_item_unavailable">أحد الأصناف غير متوفر حاليا</string>
+    <string name="err_drinks_not_allowed">المشروبات متاحة للمطاعم فقط</string>
     <string name="err_invalid_items">تحقق من البيانات المدخلة</string>
     <string name="err_out_of_zone">العنوان خارج مناطق التغطية الحالية</string>
     <string name="err_below_min_order">قيمة الطلب أقل من الحد الأدنى لهذه المنطقة</string>

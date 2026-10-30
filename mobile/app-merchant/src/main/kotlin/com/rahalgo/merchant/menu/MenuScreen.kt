@@ -141,6 +141,8 @@ fun MenuScreen(
             dirty = vm.dirty,
             // **والموقوفُ يرى ولا يحفظ ولا يحذف** (تدقيقُ ٢٠٢٦-١٠-٢٨).
             readOnly = vm.suspended,
+            // **المشروباتُ للمطاعم وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
+            drinksAllowed = vm.drinks.allowed,
         )
         return
     }
@@ -225,6 +227,7 @@ private fun ItemsList(
         onPresets = { vm.presets.show() },
         onBulk = { vm.bulk.show() },
         onDrinks = { vm.drinks.show() },
+        drinksAllowed = vm.drinks.allowed,
         addLabel = stringResource(R.string.item_add),
         onAdd = {
             // **ومن داخل قسمٍ يُضاف إليه** — فلا يُعيد اختيارَ ما هو فيه.

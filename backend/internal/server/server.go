@@ -784,6 +784,11 @@ func (s *Server) Router() http.Handler {
 			// **ويرفض السعرَ الجديدَ إن رفعه المكتب** (قرارُ المالك ٢٠٢٦-١٠-١٥) — الطلبُ
 			// يبقى حيث هو، **والمكتبُ يرى العلامةَ ويقرّر.**
 			r.Post("/orders/{id}/reject-quote", s.handleRejectQuote)
+			// **«اطلب الموقع منه» في الأمانة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — كـ«إحضار» المتجر:
+			// يصل صاحبَ الأمانة رابطُ `/loc/<رمز>`، **ونقطتُه تصير نقطةَ استلام الطلب.**
+			// انظر `recipient_location.go`.
+			r.Post("/my/location-requests", s.handleCustomerRequestLocation)
+			r.Get("/my/location-requests/{id}", s.handleCustomerLocationRequest)
 			// **ويشارك موقعَه المباشرَ مع الكابتن** (قرارُ المالك ٢٠٢٦-١٠-١٦) — آخرُ نقطةٍ وحدَها،
 			// **ويوقفها متى شاء.** انظر `live_location.go`.
 			r.Post("/orders/{id}/live-location", s.handleCustomerLiveLocation)

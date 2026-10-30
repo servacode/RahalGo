@@ -34,6 +34,12 @@ data class DriverOrder(
      * **فاتّصالٌ وواتساب** بدل الحديث. **وفارغٌ في العاديّ والخاصّ.**
      */
     @SerialName("recipient_phone") val recipientPhone: String = "",
+    /**
+     * **صاحبُ الأمانة ورقمُه** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — كتبهما الزبون، **فاتّصالٌ وواتساب**
+     * ليعرف السائقُ أين الأمانة إن لم يشارك صاحبُها موقعَه. للسائق المُسنَد وحدَه، وفارغان لغيرها.
+     */
+    @SerialName("holder_name") val holderName: String = "",
+    @SerialName("holder_phone") val holderPhone: String = "",
     val status: String = "",
     /**
      * **نوعه** — `standard` أو `custom`.

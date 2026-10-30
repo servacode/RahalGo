@@ -2,6 +2,8 @@ package catalog
 
 import (
 	"context"
+	"errors"
+	"strings"
 	"testing"
 )
 
@@ -121,5 +123,105 @@ func TestDrinks_CopiedToAllItems(t *testing.T) {
 		if n, _ := drinkGroups(t, f, id); n != 0 {
 			t.Fatalf("القائمةُ الفارغة لم تمحُ المشروبات من %s", id)
 		}
+	}
+}
+
+// TestDrinks_ImageReachesItemOption **صورةُ المشروب تصل الزبونَ مع الصنف** (قرارُ المالك
+// ٢٠٢٦-١٠-٣٠): تُحفظ في القائمة، وتُنسخ إلى الخيار، **وتخرج مصغّرتُها من خيارات الصنف.
+// والمشروبُ بلا صورةٍ يبقى كما كان — بلا رابط.**
+func TestDrinks_ImageReachesItemOption(t *testing.T) {
+	f := newMenuFixture(t)
+	ctx := context.Background()
+	var mediaID string
+	if err := f.pool.QueryRow(ctx, `
+		INSERT INTO media (kind, path, thumb_path, width, height, bytes)
+		VALUES ('menu_item', 'test/drink.jpg', 'test/drink_thumb.jpg', 10, 10, 8)
+		RETURNING id::text`).Scan(&mediaID); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_, _ = f.pool.Exec(context.Background(), `DELETE FROM merchant_drinks WHERE merchant_id = $1`, f.merchantID)
+		_, _ = f.pool.Exec(context.Background(), `DELETE FROM media WHERE id = $1`, mediaID)
+	})
+	item := f.item(t, "شاورما", nil)
+
+	ds, err := f.svc.SetDrinks(ctx, f.actorID, f.merchantID, []Drink{
+		{Name: "عيران", Price: 5, ImageMediaID: &mediaID}, {Name: "ببسي", Price: 7},
+	}, "127.0.0.1")
+	if err != nil {
+		t.Fatalf("حفظُ القائمة: %v", err)
+	}
+	if len(ds) != 2 || ds[0].ImageMediaID == nil || *ds[0].ImageMediaID != mediaID ||
+		ds[0].ImageThumbURL == nil || !strings.HasSuffix(*ds[0].ImageThumbURL, "test/drink_thumb.jpg") ||
+		ds[1].ImageMediaID != nil || ds[1].ImageThumbURL != nil {
+		t.Fatalf("القائمةُ لم تحمل الصورة كما يجب: %+v", ds)
+	}
+
+	groups, err := f.svc.ItemModifiers(ctx, item)
+	if err != nil {
+		t.Fatal(err)
+	}
+	seen := 0
+	for _, g := range groups {
+		if g.Name != DrinksGroupName {
+			continue
+		}
+		for _, o := range g.Options {
+			switch o.Name {
+			case "عيران":
+				seen++
+				if o.ImageThumbURL == nil || !strings.HasSuffix(*o.ImageThumbURL, "test/drink_thumb.jpg") {
+					t.Fatalf("خيارُ العيران بلا مصغّرة: %+v", o)
+				}
+			case "ببسي":
+				seen++
+				if o.ImageThumbURL != nil {
+					t.Fatalf("ببسي بلا صورةٍ خرج برابط: %s", *o.ImageThumbURL)
+				}
+			}
+		}
+	}
+	if seen != 2 {
+		t.Fatalf("خياراتُ المشروبات في الصنف: %d — والمطلوب ٢", seen)
+	}
+
+	// **ومعرّفٌ لا يوجد يُردّ تحقّقاً** — لا ٥٠٠ من المفتاح الأجنبيّ.
+	bad := "00000000-0000-0000-0000-000000000001"
+	if _, err := f.svc.SetDrinks(ctx, f.actorID, f.merchantID, []Drink{{Name: "عيران", Price: 5, ImageMediaID: &bad}}, "127.0.0.1"); !errors.Is(err, ErrNameRequired) {
+		t.Fatalf("صورةٌ لا توجد: %v — والمطلوب تحقّق", err)
+	}
+}
+
+// TestDrinks_RestaurantsOnly **المشروباتُ للمطاعم وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٣٠):
+// متجرٌ تصنيفُه بلا `has_drinks` **لا تُنسخ إلى أصنافه، ولا تُحفظ له، وقائمتُه فارغة.**
+func TestDrinks_RestaurantsOnly(t *testing.T) {
+	f := newMenuFixture(t)
+	ctx := context.Background()
+	if _, err := f.pool.Exec(ctx, `
+		UPDATE categories SET has_drinks = false
+		 WHERE id = (SELECT category_id FROM merchants WHERE id = $1)`, f.merchantID); err != nil {
+		t.Fatal(err)
+	}
+	if ok, err := f.svc.DrinksAllowed(ctx, f.merchantID); err != nil || ok {
+		t.Fatalf("متجرٌ غيرُ مطعمٍ مسموحٌ له: %v %v", ok, err)
+	}
+	if _, err := f.svc.SetDrinks(ctx, f.actorID, f.merchantID, []Drink{{Name: "عيران", Price: 5}}, "127.0.0.1"); !errors.Is(err, ErrDrinksNotAllowed) {
+		t.Fatalf("حفظُ مشروباتٍ لغير مطعم: %v — والمطلوب drinks_not_allowed", err)
+	}
+
+	// **وقائمةٌ بقيت من قبل لا تُنسخ** — صنفٌ جديدٌ يُنشأ بلا مجموعة.
+	if _, err := f.pool.Exec(ctx, `
+		INSERT INTO merchant_drinks (merchant_id, name, price, sort_order) VALUES ($1, 'عيران', 5, 0)`, f.merchantID); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_, _ = f.pool.Exec(context.Background(), `DELETE FROM merchant_drinks WHERE merchant_id = $1`, f.merchantID)
+	})
+	item := f.item(t, "حذاء", nil)
+	if n, _ := drinkGroups(t, f, item); n != 0 {
+		t.Fatalf("غيرُ المطعم نال مجموعةَ مشروبات: %d", n)
+	}
+	if ds, err := f.svc.Drinks(ctx, f.merchantID); err != nil || len(ds) != 0 {
+		t.Fatalf("قائمةُ غير المطعم: %+v %v — والمطلوب فارغة", ds, err)
 	}
 }

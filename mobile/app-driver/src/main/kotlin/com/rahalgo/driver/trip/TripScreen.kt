@@ -2067,6 +2067,31 @@ private fun TripCard(
                 // **ورقمُ المستلم بعد الاستلام وحدَه** (قرارُ المالك ٢٠٢٦-١٠-٠٦: «الاتصال ما لازم يطلع… إلا بعد ما
                 // نستلم الطلب من المتجر»).
                 val recipient = order.recipientPhone.takeIf { order.kind == "merchant_delivery" && it.isNotBlank() && pickedUp }
+                // **وصاحبُ الأمانة قبل الاستلام** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — الزبونُ كتب اسمَه ورقمَه،
+                // **فيتّصل به السائقُ أو يراسله** ليعرف أين الأمانة إن لم يشارك موقعَه.
+                val holder = order.holderPhone.takeIf {
+                    order.kind == "custom" && order.customMode == "amanah" && it.isNotBlank() && !pickedUp
+                }
+                if (holder != null) {
+                    Text(
+                        stringResource(R.string.amanah_holder_line, order.holderName.ifBlank { "—" }, holder),
+                        color = Rahal.colors.ink,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ContactButton(
+                            icon = com.rahalgo.ui.R.drawable.ic_phone,
+                            label = R.string.recipient_call,
+                            modifier = Modifier.weight(1f),
+                        ) { dial(ctx, holder) }
+                        ContactButton(
+                            icon = com.rahalgo.ui.R.drawable.ic_whatsapp,
+                            label = R.string.recipient_whatsapp,
+                            modifier = Modifier.weight(1f),
+                        ) { openWhatsApp(ctx, holder, "") }
+                    }
+                }
                 if (storePhone != null || recipient != null) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         // **قبل الاستلام: المتجرُ اتّصالاً وواتساب** (قرارُ المالك ٢٠٢٦-١٠-٠٦) — والرأسُ

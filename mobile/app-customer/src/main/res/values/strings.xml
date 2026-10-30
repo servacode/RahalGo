@@ -112,7 +112,22 @@
     <string name="ord_load_more">تحميل المزيد</string>
     <string name="cst_send">أرسل الطلب</string>
     <string name="cst_need_point">اختر عنوان التوصيل ليعرف السائق أين يوصل</string>
-    <string name="cst_amanah_place">موقع الأمانة</string>    <string name="cst_need_amanah_point">ناقص: موقع الأمانة</string>
+    <!-- ── الأمانة: صاحبها ورقمه و«اطلب الموقع منه» (قرار المالك ٢٠٢٦-١٠-٣٠) ── -->
+    <string name="cst_holder_name">اسم صاحب الأمانة</string>
+    <string name="cst_holder_phone">رقمه</string>
+    <string name="cst_missing">ناقص: %1$s</string>
+    <string name="cst_holder_required">ناقص: اسم صاحب الأمانة ورقمه</string>
+    <string name="cst_ask_loc">اطلب الموقع منه</string>
+    <string name="cst_ask_sending">جاري الإرسال…</string>
+    <string name="cst_ask_hint">يصله رابط بالواتساب ليرسل موقعه، فيراه السائق على الخريطة. وإن لم يرسله يتصل به السائق.</string>
+    <string name="cst_ask_waiting">وصلته رسالة واتساب — بانتظار أن يرسل موقعه</string>
+    <string name="cst_ask_not_sent">لم تصل الرسالة تلقائياً — أرسل له الرابط بنفسك</string>
+    <string name="cst_ask_share">أرسل الرابط بالواتساب</string>
+    <string name="cst_ask_received">وصلنا موقعه ✓</string>
+    <string name="cst_ask_expired">انتهت صلاحية الرابط — اطلب الموقع منه من جديد</string>
+    <string name="cst_ask_need_phone">اكتب رقمه أولاً</string>
+    <string name="cst_ask_too_soon">انتظر دقيقة قبل أن تطلب الموقع مرة ثانية</string>
+    <string name="cst_ask_limit">طلبت الموقع مرات كثيرة — حاول بعد ساعة</string>
     <string name="cst_done">تم إرسال طلبك رقم %1$s — تابعه في «طلباتي»</string>
     <!-- ── الطلب المخصّص: تحديد التكلفة وتأكيدها (Batch 2c) ── -->
     <string name="cst_fee_on_deal">سيتم تحديد أجرة التوصيل بعد قبول السائق.</string>

@@ -177,6 +177,79 @@ object Cart {
         save()
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    // **المشروباتُ تحت كلّ الأصناف — سطرٌ لكلّ مشروب** (قرارُ المالك ٢٠٢٦-١٠-٣٠)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // «شاورما عادي» ثمّ «شاورما دبل» ثمّ المشروباتُ تحتهما — **وعيرانٌ مع العادي وعيرانٌ
+    // مع الدبل سطرٌ واحدٌ بعددهما معاً.** والمشروبُ يبقى محفوظاً في سطر صنفه
+    // (`option_qty` لسطره)، **والجمعُ للعرض وحدَه.**
+
+    /** **مشروبٌ في سطرٍ من السلّة** — مفتاحُ السطر ومعرّفُ الخيار وعددُه. */
+    data class DrinkEntry(val lineKey: String, val optionId: String, val qty: Int)
+
+    /** **سطرُ مشروبٍ مجموعٌ** — باسمه، بعدد كلّ سطوره ومجموعِ ثمنها. */
+    data class DrinkRow(
+        val name: String,
+        val thumb: String?,
+        val qty: Int,
+        val total: Long,
+        val entries: List<DrinkEntry>,
+    )
+
+    /** **المشروباتُ مجموعةً بالاسم** بترتيب أوّل ظهورها في السلّة. */
+    fun drinkRows(from: List<Line> = lines): List<DrinkRow> {
+        val out = LinkedHashMap<String, DrinkRow>()
+        from.forEach { line ->
+            line.drinks.forEach { d ->
+                val name = d.option.name.trim()
+                val e = DrinkEntry(line.key, d.option.id, d.qty)
+                val was = out[name]
+                out[name] = if (was == null) {
+                    DrinkRow(name, d.option.imageThumbUrl, d.qty, d.option.priceDelta * d.qty, listOf(e))
+                } else {
+                    was.copy(
+                        thumb = was.thumb ?: d.option.imageThumbUrl,
+                        qty = was.qty + d.qty,
+                        total = was.total + d.option.priceDelta * d.qty,
+                        entries = was.entries + e,
+                    )
+                }
+            }
+        }
+        return out.values.toList()
+    }
+
+    /** **«+» على سطر المشروب** — يزيد أوّلَ سطرٍ لم يبلغ السقف. */
+    fun moreDrink(name: String) {
+        val row = drinkRows().firstOrNull { it.name == name.trim() } ?: return
+        val e = row.entries.firstOrNull { it.qty < MAX_DRINK } ?: return
+        setDrinkQty(e.lineKey, e.optionId, e.qty + 1)
+    }
+
+    /** **أيُزاد** — ما دام في سطوره ما لم يبلغ السقف. */
+    fun canMoreDrink(row: DrinkRow): Boolean = row.entries.any { it.qty < MAX_DRINK }
+
+    /** **«−» على سطر المشروب** — ينقص أوّلَ سطر، وإن صار صفراً انتقل التالي إلى أوّلٍ. */
+    fun lessDrink(name: String) {
+        val row = drinkRows().firstOrNull { it.name == name.trim() } ?: return
+        val e = row.entries.firstOrNull() ?: return
+        setDrinkQty(e.lineKey, e.optionId, e.qty - 1)
+    }
+
+    /** **سلّةُ الحذف على سطر المشروب** — يرفعه من كلّ الأصناف، **والأصنافُ تبقى.** */
+    fun removeDrink(name: String) {
+        val n = name.trim()
+        val out = ArrayList<Line>(lines.size)
+        lines.forEach { l ->
+            val updated = l.copy(drinks = l.drinks.filter { it.option.name.trim() != n })
+            val same = out.indexOfFirst { it.key == updated.key }
+            if (same >= 0) out[same] = out[same].copy(qty = out[same].qty + updated.qty) else out += updated
+        }
+        lines = out
+        save()
+    }
+
     fun clear() {
         lines = emptyList()
         save()

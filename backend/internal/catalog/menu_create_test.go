@@ -69,7 +69,7 @@ func newMenuFixture(t *testing.T) *menuFixture {
 
 	var catID string
 	if err := pool.QueryRow(ctx, `
-		INSERT INTO categories (name, icon, sort_order) VALUES ('فئةُ اختبار', '', 900)
+		INSERT INTO categories (name, icon, sort_order, has_drinks) VALUES ('فئةُ اختبار', '', 900, true)
 		RETURNING id`).Scan(&catID); err != nil {
 		t.Fatalf("تعذّر إنشاء الفئة: %v", err)
 	}

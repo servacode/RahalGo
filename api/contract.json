@@ -8918,15 +8918,6 @@
       "auth": true,
       "roles": [
         "merchant"
-      ],
-      "response": [
-        {
-          "name": "drinks",
-          "type": "unknown"
-        }
-      ],
-      "statuses": [
-        "StatusOK"
       ]
     },
     {
@@ -9708,6 +9699,66 @@
       ]
     },
     {
+      "method": "POST",
+      "path": "/api/v1/my/location-requests",
+      "handler": "handleCustomerRequestLocation",
+      "auth": true,
+      "request": [
+        {
+          "name": "phone",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "expires_at",
+          "type": "unknown"
+        },
+        {
+          "name": "id",
+          "type": "unknown"
+        },
+        {
+          "name": "link",
+          "type": "unknown"
+        },
+        {
+          "name": "share_text",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "string"
+        },
+        {
+          "name": "wa_url",
+          "type": "unknown"
+        },
+        {
+          "name": "whatsapp_sent",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/my/location-requests/{id}",
+      "handler": "handleCustomerLocationRequest",
+      "auth": true,
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "GET",
       "path": "/api/v1/my/orders",
       "handler": "handleMyOrders",
@@ -9940,6 +9991,18 @@
         {
           "name": "pickup_lng",
           "type": "?float64"
+        },
+        {
+          "name": "holder_name",
+          "type": "string"
+        },
+        {
+          "name": "holder_phone",
+          "type": "string"
+        },
+        {
+          "name": "location_request_id",
+          "type": "string"
         }
       ]
     },
@@ -11300,15 +11363,6 @@
       "auth": true,
       "roles": [
         "sales"
-      ],
-      "response": [
-        {
-          "name": "drinks",
-          "type": "unknown"
-        }
-      ],
-      "statuses": [
-        "StatusOK"
       ]
     },
     {

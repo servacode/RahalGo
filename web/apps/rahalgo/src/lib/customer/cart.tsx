@@ -79,6 +79,57 @@ function mergeDrinks(a: DrinkPick[], b: DrinkPick[]): DrinkPick[] {
   return [...out.values()];
 }
 
+/**
+ * **سطرُ مشروبٍ في أسفل السلّة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — المشروبُ نفسُه (باسمه) من كلّ الأسطر
+ * سطرٌ واحدٌ بعددٍ ومجموعٍ مجموعين، و`refs` أماكنُه بترتيب الأسطر: «+» و«−» لأوّلها.
+ */
+export interface DrinkRow {
+  name: string;
+  thumb: string | null;
+  qty: number;
+  total: number;
+  refs: { key: string; optionId: string; qty: number }[];
+}
+
+const drinkName = (o: ModifierOption) => o.name.trim();
+
+export function drinkRows(lines: CartLine[]): DrinkRow[] {
+  const out = new Map<string, DrinkRow>();
+  for (const l of lines) {
+    const key = lineKey(l);
+    for (const d of l.drinks ?? []) {
+      if (d.qty <= 0) continue;
+      const name = drinkName(d.option);
+      const row = out.get(name) ?? { name: d.option.name, thumb: null, qty: 0, total: 0, refs: [] };
+      row.qty += d.qty;
+      row.total += d.option.price_delta * d.qty;
+      row.thumb = row.thumb ?? d.option.image_thumb_url ?? null;
+      row.refs.push({ key, optionId: d.option.id, qty: d.qty });
+      out.set(name, row);
+    }
+  }
+  return [...out.values()];
+}
+
+/** **مشروباتُ سطرين يُدمجان** — وسطرا ما قبل العدّادات (بلا `drinks`) يبقيان بلاها. */
+function joinDrinks(a: { drinks?: DrinkPick[] }, b: { drinks?: DrinkPick[] }): DrinkPick[] | undefined {
+  return a.drinks || b.drinks ? mergeDrinks(a.drinks ?? [], b.drinks ?? []) : undefined;
+}
+
+/** **أسطرٌ صارت متطابقةً تُدمج** — بعد حذف مشروبٍ منها. */
+function mergeSame(lines: CartLine[]): CartLine[] {
+  const out: CartLine[] = [];
+  for (const l of lines) {
+    const k = lineKey(l);
+    const at = out.findIndex((x) => lineKey(x) === k);
+    // **ومشروباتُ الاثنين تُجمع** — وإلّا ضاع مشروبُ أحدهما.
+    const was = at >= 0 ? out[at] : undefined;
+    if (was) out[at] = { ...was, qty: was.qty + l.qty, drinks: joinDrinks(was, l) };
+    else out.push(l);
+  }
+  return out;
+}
+
 /** **سطرٌ تُخرجه نافذةُ الصنف** — مرآةُ `Cart.Pick`. */
 export interface Pick {
   options: ModifierOption[];
@@ -141,6 +192,8 @@ interface CartState {
   setQty: (key: string, qty: number) => void;
   /** **عددُ مشروبٍ في سطره** — والصفرُ يرفعه وحدَه (قرارُ المالك ٢٠٢٦-١٠-٣٠). */
   setDrinkQty: (key: string, optionId: string, qty: number) => void;
+  /** **حذفُ مشروبٍ (باسمه) من كلّ الأسطر** — سلّةُ المهملات في سطر المشروبات أسفلَ السلّة. */
+  removeDrink: (name: string) => void;
   clear: () => void;
   /** **متجرُ السلّة** — ومنه يُعرف أنّ صنفاً جديداً من متجرٍ آخر. */
   merchantId: string;
@@ -207,10 +260,26 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const k = lineKey(updated);
       const same = rest.find((l) => lineKey(l) === k);
       const merged = same
-        ? rest.map((l) => (l === same ? { ...l, qty: l.qty + updated.qty } : l))
+        ? rest.map((l) =>
+            l === same ? { ...l, qty: l.qty + updated.qty, drinks: joinDrinks(l, updated) } : l,
+          )
         : [...rest.slice(0, at), updated, ...rest.slice(at)];
       writeJSON(KEY, merged);
       return merged;
+    });
+  }, []);
+
+  const removeDrink = useCallback((name: string) => {
+    setLines((cur) => {
+      const next = mergeSame(
+        cur.map((l) =>
+          l.drinks?.some((d) => drinkName(d.option) === name.trim())
+            ? { ...l, drinks: l.drinks.filter((d) => drinkName(d.option) !== name.trim()) }
+            : l,
+        ),
+      );
+      writeJSON(KEY, next);
+      return next;
     });
   }, []);
 
@@ -226,9 +295,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
       add,
       setQty,
       setDrinkQty,
+      removeDrink,
       clear,
     }),
-    [lines, ready, add, setQty, setDrinkQty, clear],
+    [lines, ready, add, setQty, setDrinkQty, removeDrink, clear],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

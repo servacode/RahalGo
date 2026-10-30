@@ -40,6 +40,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/orders"
@@ -84,8 +85,13 @@ func (s *Server) locReqLink(token string) string {
 // locReqText **رسالةُ الواتساب** — ولا اسمَ منصّةٍ فيها (قاعدةُ المالك).
 func locReqText(store, mode, link string) string {
 	why := "لتوصيل طلبك إليك"
-	if mode == "fetch" {
+	switch mode {
+	case "fetch":
 		why = "ليصل إليك السائق ويستلم الغرض"
+	case "amanah":
+		// **الأمانةُ يطلبها زبونٌ لا متجر** (٢٠٢٦-١٠-٣٠) — فيُذكر اسمُه لا «متجر».
+		return "مرحباً، يطلب منك «" + store + "» موقعك ليصل إليك السائق ويستلم الأمانة.\n" +
+			"اضغط الرابط ثمّ «أرسل موقعي»:\n" + link
 	}
 	return "مرحباً، يطلب منك متجر «" + store + "» موقعك " + why + ".\n" +
 		"اضغط الرابط ثمّ «أرسل موقعي»:\n" + link
@@ -265,8 +271,11 @@ func (s *Server) handlePublicLocationRequest(w http.ResponseWriter, r *http.Requ
 	var received *time.Time
 	var expires time.Time
 	err := s.pg.QueryRow(r.Context(), `
-		SELECT m.name, l.mode, l.received_at, l.expires_at
-		  FROM recipient_location_requests l JOIN merchants m ON m.id = l.merchant_id
+		SELECT COALESCE(m.name, NULLIF(cu.full_name, ''), ''), l.mode, l.received_at, l.expires_at
+		  FROM recipient_location_requests l
+		  -- **وطلبُ الأمانة صاحبُه زبون** (٢٠٢٦-١٠-٣٠) — فاسمُه لا اسمُ متجر.
+		  LEFT JOIN merchants m ON m.id = l.merchant_id
+		  LEFT JOIN users cu ON cu.id = l.customer_id
 		 WHERE l.token_hash = $1`, locReqHash(token)).Scan(&store, &mode, &received, &expires)
 	if errors.Is(err, pgx.ErrNoRows) {
 		s.respondErr(w, httpx.ErrNotFound)
@@ -316,15 +325,15 @@ func (s *Server) handlePublicSubmitLocation(w http.ResponseWriter, r *http.Reque
 		acc = &v
 	}
 	hash := locReqHash(token)
-	var ownerID string
+	var ownerID, customerID, orderID string
 	err = s.pg.QueryRow(r.Context(), `
 		UPDATE recipient_location_requests l
 		   SET lat = $2, lng = $3, accuracy_m = $4, received_at = now()
-		  FROM merchants m
-		 WHERE l.token_hash = $1 AND m.id = l.merchant_id
+		 WHERE l.token_hash = $1
 		   AND l.received_at IS NULL AND l.expires_at > now()
-		RETURNING COALESCE(m.owner_user_id::text, '')`,
-		hash, *req.Lat, *req.Lng, acc).Scan(&ownerID)
+		RETURNING COALESCE((SELECT m.owner_user_id::text FROM merchants m WHERE m.id = l.merchant_id), ''),
+		          COALESCE(l.customer_id::text, ''), COALESCE(l.order_id::text, '')`,
+		hash, *req.Lat, *req.Lng, acc).Scan(&ownerID, &customerID, &orderID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		var exists bool
 		_ = s.pg.QueryRow(r.Context(),
@@ -345,5 +354,170 @@ func (s *Server) handlePublicSubmitLocation(w http.ResponseWriter, r *http.Reque
 	if strings.TrimSpace(ownerID) != "" {
 		s.touchUser(ownerID, "deliveries")
 	}
+	// **وفي الأمانة: الطلبُ أُنشئ قبل أن يصل الموقع** (٢٠٢٦-١٠-٣٠) — فتُكتب النقطةُ فيه
+	// نقطةَ استلامٍ وتُبثّ للسائق. **ونقطةٌ خارجَ التغطية لا تُسقط الصفحة**: يتّصل به السائق.
+	if orderID != "" {
+		if _, err := s.orders.ApplyAmanahShared(r.Context(), orderID, *req.Lat, *req.Lng); err != nil {
+			s.logger.Warn("موقعُ الأمانة: تعذّرت كتابتُه في الطلب", "order", orderID, "error", err)
+		}
+	}
+	if customerID != "" {
+		s.touchUser(customerID, "location_request", "orders")
+	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"ok": true})
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **«اطلب الموقع منه» في الأمانة** (قرارُ المالك ٢٠٢٦-١٠-٣٠)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **الزبونُ لا يعرف أين الأمانة** — يكتب اسمَ صاحبها ورقمَه ويضغط الزرّ، فيصل صاحبَها
+// الرابطُ نفسُه الذي يصل مستلِمَ «إحضار» المتجر. **والتدفّقُ مرآةُ المتجر**:
+//
+//	١ · `POST /my/location-requests` قبل الإرسال — يردّ `id` ورابطَ واتساب احتياطاً.
+//	٢ · التطبيقُ يسأل `GET /my/location-requests/{id}` ويقول «وصلنا موقعه ✓».
+//	٣ · الطلبُ يُرسَل ومعه `location_request_id` — فيُربط الطلبُ به (`order_id`):
+//	    وصل الموقعُ قبلها؟ يُكتب نقطةَ استلامٍ في معاملة الإنشاء. **وإن وصل بعدها**
+//	    كُتب حين يصل (`handlePublicSubmitLocation` ← `ApplyAmanahShared`) وبُثّ للسائق.
+//
+// **والحدّان كحدَّي المتجر** — دقيقةٌ بين طلبين للرقم نفسِه، وعشرون في الساعة للزبون.
+
+// handleCustomerRequestLocation — `POST /my/location-requests`.
+func (s *Server) handleCustomerRequestLocation(w http.ResponseWriter, r *http.Request) {
+	customerID := userIDFrom(r)
+	req, err := decode[struct {
+		Phone string `json:"phone"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	phone, ok := identity.NormalizePhone(req.Phone)
+	if !ok {
+		s.respondErr(w, identity.ErrInvalidPhone)
+		return
+	}
+	ctx := r.Context()
+	var recent, hourly int
+	if err := s.pg.QueryRow(ctx, `
+		SELECT count(*) FILTER (WHERE phone = $2 AND created_at > now() - make_interval(secs => $3)),
+		       count(*) FILTER (WHERE created_at > now() - interval '1 hour')
+		  FROM recipient_location_requests WHERE customer_id = $1`,
+		customerID, phone, int(locReqGap.Seconds())).Scan(&recent, &hourly); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if recent > 0 {
+		e := *errLocReqTooSoon
+		e.Details = map[string]any{"retry_after_sec": int(locReqGap.Seconds())}
+		s.respondErr(w, &e)
+		return
+	}
+	if hourly >= locReqPerHour {
+		s.respondErr(w, errLocReqLimit)
+		return
+	}
+	raw := make([]byte, 18)
+	if _, err := rand.Read(raw); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	token := base64.RawURLEncoding.EncodeToString(raw)
+	var id, name string
+	var expires time.Time
+	if err := s.pg.QueryRow(ctx, `
+		INSERT INTO recipient_location_requests
+		       (customer_id, requested_by, phone, mode, token_hash, expires_at)
+		VALUES ($1, $1, $2, 'amanah', $3, now() + make_interval(secs => $4))
+		RETURNING id::text, expires_at,
+		          COALESCE((SELECT full_name FROM users WHERE id = $1), '')`,
+		customerID, phone, locReqHash(token), int(locReqTTL.Seconds())).
+		Scan(&id, &expires, &name); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	link := s.locReqLink(token)
+	text := locReqText(name, "amanah", link)
+	sendCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
+	defer cancel()
+	sent := s.sendText(sendCtx, phone, text)
+	if sent {
+		if _, err := s.pg.Exec(ctx,
+			`UPDATE recipient_location_requests SET whatsapp_sent = true WHERE id = $1`, id); err != nil {
+			s.logger.Warn("طلبُ موقع الأمانة: تعليمُ الإرسال سقط", "error", err)
+		}
+	}
+	httpx.JSON(w, http.StatusCreated, map[string]any{
+		"id":            id,
+		"status":        "pending",
+		"whatsapp_sent": sent,
+		"link":          link,
+		"share_text":    text,
+		"wa_url": "https://wa.me/" + strings.TrimPrefix(phone, "+") +
+			"?text=" + url.QueryEscape(text),
+		"expires_at": expires.Format(time.RFC3339),
+	})
+}
+
+// handleCustomerLocationRequest **أوصل موقعُ صاحب الأمانة؟** — `GET /my/location-requests/{id}`.
+func (s *Server) handleCustomerLocationRequest(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if !isUUID(id) {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	var lat, lng, acc *float64
+	var received *time.Time
+	var expires time.Time
+	var sent bool
+	err := s.pg.QueryRow(r.Context(), `
+		SELECT lat, lng, accuracy_m, received_at, expires_at, whatsapp_sent
+		  FROM recipient_location_requests WHERE id = $1 AND customer_id = $2`,
+		id, userIDFrom(r)).Scan(&lat, &lng, &acc, &received, &expires, &sent)
+	if errors.Is(err, pgx.ErrNoRows) {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	out := map[string]any{
+		"id":            id,
+		"status":        locReqStatus(received, expires),
+		"whatsapp_sent": sent,
+		"lat":           lat,
+		"lng":           lng,
+		"accuracy_m":    acc,
+		"received_at":   nil,
+	}
+	if received != nil {
+		out["received_at"] = received.Format(time.RFC3339)
+	}
+	httpx.JSON(w, http.StatusOK, out)
+}
+
+// errAmanahLocReq **طلبُ الموقع ليس له أو رُبط بطلبٍ آخر.**
+var errAmanahLocReq = httpx.NewError(http.StatusUnprocessableEntity,
+	"location_request_invalid", "errors.location_request_invalid")
+
+// errAmanahHolder **الأمانةُ بلا اسم صاحبها أو رقمه** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
+var errAmanahHolder = httpx.NewError(http.StatusUnprocessableEntity,
+	"amanah_holder_required", "errors.amanah_holder_required")
+
+// linkAmanahLocationTx **يربط طلبَ الموقع بالأمانة في معاملة الإنشاء** — ويردّ النقطةَ إن
+// وصلت قبلها. **طلبُ الزبون نفسِه وحدَه، وغيرُ مربوطٍ بطلبٍ آخر.**
+func linkAmanahLocationTx(ctx context.Context, q dbtx.Querier, reqID, customerID, orderID string) (lat, lng *float64, err error) {
+	if !isUUID(reqID) {
+		return nil, nil, errAmanahLocReq
+	}
+	err = q.QueryRow(ctx, `
+		UPDATE recipient_location_requests
+		   SET order_id = $3
+		 WHERE id = $1 AND customer_id = $2 AND mode = 'amanah' AND order_id IS NULL
+		RETURNING lat, lng`, reqID, customerID, orderID).Scan(&lat, &lng)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil, errAmanahLocReq
+	}
+	return lat, lng, err
 }

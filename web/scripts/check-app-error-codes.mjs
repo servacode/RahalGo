@@ -104,6 +104,9 @@ const SERVER_MOBILE = new Set([
   // **«اطلب الموقع من المستلم»** — حدّا تطبيق المتجر (٢٠٢٦-١٠-٢٩).
   "location_request_too_soon",
   "location_request_limit",
+  // **الأمانة: صاحبُها ورقمُه وطلبُ موقعه** — تطبيقُ الزبون (٢٠٢٦-١٠-٣٠).
+  "amanah_holder_required",
+  "location_request_invalid",
 ]);
 
 /** **ما لا يبلغ هاتفاً** — أبوابُ الإدارة واللوحات. */

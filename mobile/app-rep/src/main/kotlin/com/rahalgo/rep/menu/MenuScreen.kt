@@ -132,6 +132,8 @@ fun MenuScreen(vm: MenuViewModel, onOffers: () -> Unit = {}) {
         // سطراً بينهما يفعلان الشيءَ نفسَه.**
         ItemEditor(
             d = vm.editing!!,
+            // **المشروباتُ للمطاعم وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
+            drinksAllowed = vm.drinks.allowed,
             exchangeRate = vm.exchangeRate,
             rateMissing = com.rahalgo.ui.R.string.item_usd_need_rate_rep,
             // ══════════════════════════════════════════════════════════
@@ -236,6 +238,7 @@ fun MenuScreen(vm: MenuViewModel, onOffers: () -> Unit = {}) {
         onPresets = { vm.presets.show() },
         onBulk = { vm.bulk.show() },
         onDrinks = { vm.drinks.show() },
+        drinksAllowed = vm.drinks.allowed,
         addLabel = stringResource(R.string.mn_add_item),
         onAdd = {
             // **ومن داخل قسمٍ يُضاف إليه** — بمعرّفه، والاسمُ احتياطٌ لقسمٍ قديم.

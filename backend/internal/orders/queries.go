@@ -143,7 +143,9 @@ const orderSelect = `
 	       o.live_requested_at, o.live_request_count,
 	       -- **وبابُ البناية من عنوان الزبون** (٢٠٢٦-١٠-٢١) — والعنوانُ ما نُسخت منه نقطةُ الطلب.
 	       ent.lat, ent.lng,
-	       ST_Y(o.dropoff_suggest::geometry), ST_X(o.dropoff_suggest::geometry)
+	       ST_Y(o.dropoff_suggest::geometry), ST_X(o.dropoff_suggest::geometry),
+	       -- **وصاحبُ الأمانة ورقمُه** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
+	       COALESCE(o.amanah_holder_name, ''), COALESCE(o.amanah_holder_phone, '')
 	FROM orders o
 	LEFT JOIN LATERAL (
 		SELECT ST_Y(a.entrance::geometry) AS lat, ST_X(a.entrance::geometry) AS lng
@@ -199,7 +201,8 @@ func scanOrder(row pgx.Row) (*Order, error) {
 		&o.DeliveryMode, &o.CollectAmount,
 		&o.FetchAmount, &o.FetchAmountVersion, &o.FetchAmountStatus,
 		&o.AmountCurrency, &o.NearLandmark, &o.LiveRequestedAt, &o.LiveRequestCount,
-		&o.EntranceLat, &o.EntranceLng, &o.DropoffSuggestLat, &o.DropoffSuggestLng)
+		&o.EntranceLat, &o.EntranceLng, &o.DropoffSuggestLat, &o.DropoffSuggestLng,
+		&o.HolderName, &o.HolderPhone)
 	if err != nil {
 		return nil, err
 	}

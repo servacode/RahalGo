@@ -285,6 +285,10 @@ type driverOrder struct {
 	// التطبيق، **فاتّصالٌ وواتساب** بدل الحديث. **وفي الطلب العاديّ والخاصّ لا يُرسَل**: الزبونُ
 	// يُوصَل إليه بالحديث، ورقمُه لا يصل السائق.
 	RecipientPhone string `json:"recipient_phone,omitempty"`
+	// HolderName/HolderPhone **صاحبُ الأمانة ورقمُه** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — كتبهما الزبون،
+	// **فاتّصالٌ وواتساب** ليعرف أين الأمانة إن لم يشارك موقعَه. وفارغان لغير الأمانة.
+	HolderName  string `json:"holder_name,omitempty"`
+	HolderPhone string `json:"holder_phone,omitempty"`
 	// **ولا رقمَ للزبون هنا — ولا في أيّ حمولةٍ تبلغ سائقاً.**
 	//
 	// (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «لازم الاثنان لا يقدران يوصلان لبعض إلّا
@@ -587,7 +591,13 @@ const driverOrderSelect = `
 	         WHERE a.user_id = o.customer_id AND a.entrance IS NOT NULL AND ST_DWithin(a.location, o.dropoff, 30)
 	         ORDER BY a.entrance_set_at DESC LIMIT 1),
 	       -- **ومجموعُ الأصناف والخصم** — لكتلة الفاتورة (قرارُ المالك ٢٠٢٦-١٠-٣٠).
-	       o.subtotal, o.discount
+	       o.subtotal, o.discount,
+	       -- **وصاحبُ الأمانة ورقمُه** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — للأمانة وحدَها.
+	       -- **وللسائق المُسنَد وحدَه** — لا لمن يرى الطلبَ في الطابور ($1 السائلُ نفسُه).
+	       CASE WHEN o.kind = 'custom' AND o.custom_mode = 'amanah' AND o.driver_id = $1::uuid
+	            THEN COALESCE(o.amanah_holder_name, '') ELSE '' END,
+	       CASE WHEN o.kind = 'custom' AND o.custom_mode = 'amanah' AND o.driver_id = $1::uuid
+	            THEN COALESCE(o.amanah_holder_phone, '') ELSE '' END
 	FROM orders o
 	LEFT JOIN merchants m ON m.id = o.merchant_id
 	-- **والتوصيلةُ بلا زبون** — ضمٌّ صلبٌ يُخفيها عن السائق فلا يراها أبداً.
@@ -633,7 +643,7 @@ func (s *Server) loadDriverOrders(r *http.Request, sql string, args ...any) ([]d
 			&o.DeliveryMode, &o.CollectAmount,
 			&o.FetchAmount, &o.FetchAmountVersion, &o.FetchAmountStatus,
 			&o.AmountCurrency, &o.EntranceLat, &o.EntranceLng,
-			&o.Subtotal, &o.Discount); err != nil {
+			&o.Subtotal, &o.Discount, &o.HolderName, &o.HolderPhone); err != nil {
 			return nil, err
 		}
 		if o.ReturnTo != "" {

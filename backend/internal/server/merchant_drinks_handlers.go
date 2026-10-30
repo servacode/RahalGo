@@ -17,12 +17,7 @@ func (s *Server) handleMerchantGetDrinks(w http.ResponseWriter, r *http.Request)
 		s.respondErr(w, errForbidden)
 		return
 	}
-	drinks, err := s.catalog.Drinks(r.Context(), merchantID)
-	if err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"drinks": drinks})
+	s.respondDrinks(w, r, merchantID)
 }
 
 // handleMerchantSetDrinks **يستبدل القائمةَ وينسخها إلى كلّ الأصناف.**
@@ -40,12 +35,24 @@ func (s *Server) handleMerchantSetDrinks(w http.ResponseWriter, r *http.Request)
 // handleRepGetDrinks **قائمةُ مشروبات عميله** — والحارسُ `repMenuGuard` على المسار
 // (طلبُ المالك ٢٠٢٦-١٠-١٩: «تطبيق المندوب لازم يكون مطابق للمتجر»).
 func (s *Server) handleRepGetDrinks(w http.ResponseWriter, r *http.Request) {
-	drinks, err := s.catalog.Drinks(r.Context(), chi.URLParam(r, "id"))
+	s.respondDrinks(w, r, chi.URLParam(r, "id"))
+}
+
+// respondDrinks **القائمةُ ومعها `allowed`** — هل هذا المتجرُ مطعم (قرارُ المالك
+// ٢٠٢٦-١٠-٣٠: المشروباتُ للمطاعم وحدَها). **فتُخفي التطبيقاتُ أداةَ المشروبات
+// ومفتاحَ «أضف مشروباتي» لغيره**، ولغيره القائمةُ فارغة.
+func (s *Server) respondDrinks(w http.ResponseWriter, r *http.Request, merchantID string) {
+	allowed, err := s.catalog.DrinksAllowed(r.Context(), merchantID)
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"drinks": drinks})
+	drinks, err := s.catalog.Drinks(r.Context(), merchantID)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"drinks": drinks, "allowed": allowed})
 }
 
 // handleRepSetDrinks **يكتبها المندوبُ لعميله كما يكتبها صاحبُه** — المنطقُ واحد.
@@ -76,7 +83,12 @@ func (s *Server) writeDrinks(w http.ResponseWriter, r *http.Request, merchantID 
 		return
 	}
 	s.touch("menu", "merchant:"+merchantID)
-	httpx.JSON(w, http.StatusOK, map[string]any{"drinks": drinks})
+	allowed, err := s.catalog.DrinksAllowed(r.Context(), merchantID)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"drinks": drinks, "allowed": allowed})
 }
 
 // handleAdminGetDrinks **قائمةُ مشروبات المتجر للإدارة** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «المجموعات بتطبيق

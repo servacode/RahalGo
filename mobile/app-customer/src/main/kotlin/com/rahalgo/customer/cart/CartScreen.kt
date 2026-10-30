@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
@@ -198,7 +199,6 @@ fun CartScreen(
                                 Modifier
                             },
                         ),
-                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     // **وصورةٌ مصغّرةٌ أوّلَ السطر** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧) — اسمٌ وسعرٌ بلا
@@ -251,28 +251,38 @@ fun CartScreen(
                         onRemove = { Cart.setQty(line.key, 0) },
                     )
                 }
-                // **وكلُّ مشروبٍ سطرٌ تحت صنفه بعدّاده وحذفه** (قرارُ المالك ٢٠٢٦-١٠-٣٠) —
-                // بعدده هو لا بعدد الصنف، ويُرسَل في `option_qty` لسطره.
-                line.drinks.forEach { d ->
-                    Row(
-                        Modifier.fillMaxWidth().padding(start = 66.dp, bottom = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            d.option.name,
-                            color = Rahal.colors.ink,
-                            style = MaterialTheme.typography.bodyMedium,
-                            modifier = Modifier.weight(1f),
-                        )
-                        LineControls(
-                            price = money(d.option.priceDelta * d.qty),
-                            qty = d.qty,
-                            onLess = { Cart.setDrinkQty(line.key, d.option.id, d.qty - 1) },
-                            onMore = { Cart.setDrinkQty(line.key, d.option.id, d.qty + 1) },
-                            moreEnabled = d.qty < Cart.MAX_DRINK,
-                            onRemove = { Cart.setDrinkQty(line.key, d.option.id, 0) },
-                        )
+                HorizontalDivider()
+            }
+            // ══════════════════════════════════════════════════════════
+            // **والمشروباتُ كلُّها تحت الأصناف — سطرٌ لكلّ مشروب** (قرارُ المالك ٢٠٢٦-١٠-٣٠)
+            // ══════════════════════════════════════════════════════════
+            //
+            // عيرانٌ مع «عادي» وعيرانٌ مع «دبل» سطرٌ واحدٌ بعددهما. **و«+» و«−» على أوّل
+            // سطرٍ يحمله، وسلّةُ الحذف ترفعه من كلّ الأصناف.** ويبقى محفوظاً في سطر صنفه.
+            Cart.drinkRows().forEach { d ->
+                Row(
+                    Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // **بعرض صورة الصنف** — فتصطفّ الأسماءُ تحت بعضها.
+                    Box(Modifier.width(56.dp), contentAlignment = Alignment.Center) {
+                        com.rahalgo.ui.DrinkThumb(media(d.thumb))
                     }
+                    Spacer(Modifier.size(10.dp))
+                    Text(
+                        d.name,
+                        color = Rahal.colors.ink,
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    LineControls(
+                        price = money(d.total),
+                        qty = d.qty,
+                        onLess = { Cart.lessDrink(d.name) },
+                        onMore = { Cart.moreDrink(d.name) },
+                        moreEnabled = Cart.canMoreDrink(d),
+                        onRemove = { Cart.removeDrink(d.name) },
+                    )
                 }
                 HorizontalDivider()
             }
@@ -873,7 +883,8 @@ private fun QtyButton(icon: Int, label: String, enabled: Boolean = true, onClick
 /**
  * **آخرُ سطر السلّة: السعرُ وتحته «− n +» وسلّةُ الحذف** (قرارُ المالك ٢٠٢٦-١٠-٣٠)
  *
- * واحدٌ للصنف وللمشروب — فتصطفّ الأسعارُ والعدّاداتُ عموداً واحداً.
+ * واحدٌ للصنف وللمشروب — **وبعرضٍ ثابتٍ والسعرُ في آخره بأرقامٍ متساوية العرض**،
+ * فتقع الأسعارُ كلُّها في عمودٍ واحدٍ لا تنزاح من سطرٍ لسطر.
  * **ومساحةُ لمسِ الحذف ٤٠** — كانت ٣٠ فتُخطَأ (طلبُ المالك ٢٠٢٦-٠٨-١٨).
  */
 @Composable
@@ -885,12 +896,15 @@ private fun LineControls(
     onRemove: () -> Unit,
     moreEnabled: Boolean = true,
 ) {
-    Column(horizontalAlignment = Alignment.End) {
+    Column(Modifier.width(LineControlsWidth), horizontalAlignment = Alignment.End) {
         Text(
             price,
             color = Rahal.colors.brand,
             fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.bodyMedium,
+            style = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = "tnum"),
+            textAlign = androidx.compose.ui.text.style.TextAlign.End,
+            maxLines = 1,
+            modifier = Modifier.fillMaxWidth(),
         )
         Row(verticalAlignment = Alignment.CenterVertically) {
             Row(
@@ -929,6 +943,9 @@ private fun LineControls(
         }
     }
 }
+
+/** **عرضُ عمود السعر والعدّاد والحذف** — العدّادُ (٣٦+عدد+٣٦) وسلّةُ الحذف ٤٠. */
+private val LineControlsWidth = 140.dp
 
 /** **سقفُ المتاجر نصّاً** — «متجر واحد بس» حين السقفُ واحد. */
 @Composable

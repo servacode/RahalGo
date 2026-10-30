@@ -129,8 +129,11 @@ class RepApi(private val api: ApiClient) {
     }
 
     /** **مشروباتُ عميله** — كما عند المتجر (٢٠٢٦-١٠-١٩). */
-    suspend fun drinks(merchantID: String): List<com.rahalgo.shared.merchant.Drink> =
-        api.call<com.rahalgo.shared.merchant.DrinksBody>("/api/v1/rep/stores/$merchantID/drinks").drinks
+    suspend fun drinks(merchantID: String): List<com.rahalgo.shared.merchant.Drink> = drinksInfo(merchantID).drinks
+
+    /** **القائمةُ ومعها «أمسموحةٌ لهذا المتجر»** — للمطاعم وحدَها (٢٠٢٦-١٠-٣٠). */
+    suspend fun drinksInfo(merchantID: String): com.rahalgo.shared.merchant.DrinksInfo =
+        api.call<com.rahalgo.shared.merchant.DrinksInfo>("/api/v1/rep/stores/$merchantID/drinks")
 
     suspend fun setDrinks(merchantID: String, drinks: List<com.rahalgo.shared.merchant.Drink>): List<com.rahalgo.shared.merchant.Drink> =
         api.call<com.rahalgo.shared.merchant.DrinksBody>(

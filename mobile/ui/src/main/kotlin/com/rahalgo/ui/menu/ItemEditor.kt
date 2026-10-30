@@ -195,6 +195,8 @@ fun ItemEditor(
     dirty: Boolean = false,
     /** **متجرٌ موقوف** — يرى صنفَه ولا يحفظ ولا يحذف ولا ينسخ. */
     readOnly: Boolean = false,
+    /** **المشروباتُ للمطاعم وحدَها** (٢٠٢٦-١٠-٣٠) — `false`: لا مفتاحَ «أضف مشروباتي». */
+    drinksAllowed: Boolean = true,
 ) {
     val pick = rememberImagePicker(crop = true, cropFrames = com.rahalgo.ui.ItemCropFrames) { bytes -> onPickImage(bytes) }
     var confirmDelete by remember { mutableStateOf(false) }
@@ -351,6 +353,7 @@ fun ItemEditor(
                 presets = presets,
                 onEdit = onEdit,
                 itemPrice = d.itemPriceSyp(exchangeRate),
+                drinksAllowed = drinksAllowed,
                 onAddPreset = { p ->
                     val (g, lost) = p.toGroup().forItemCurrency(d.isUsd, exchangeRate)
                     if (lost) rateLost = true
@@ -634,6 +637,7 @@ private fun ModifiersEditor(
     itemPrice: Long?,
     /** **مجموعةٌ جاهزةٌ تُضاف** — بعملة الصنف (انظر `forItemCurrency`). */
     onAddPreset: (OptionPreset) -> Unit,
+    drinksAllowed: Boolean = true,
 ) {
     Spacer(Modifier.height(Rahal.space.xl))
     Text(
@@ -649,6 +653,8 @@ private fun ModifiersEditor(
     // ══════════════════════════════════════════════════════════════
     // قائمةُ المشروبات يكتبها المتجرُ مرّةً («قائمة المشروبات»)، **وهذا
     // المفتاحُ يقول: أتظهر مع هذا الصنف أم لا.** والافتراضُ نعم كما كان.
+    // **وللمطاعم وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — غيرُها لا يرى المفتاح.
+    if (drinksAllowed) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -671,6 +677,7 @@ private fun ModifiersEditor(
         )
     }
     Spacer(Modifier.height(Rahal.space.md))
+    }
 
     // ══════════════════════════════════════════════════════════════
     // **مجموعاتٌ جاهزةٌ من تصنيف المتجر** (قرارُ المالك ٢٠٢٦-١٠-٢٧) — **مربّعاتٌ

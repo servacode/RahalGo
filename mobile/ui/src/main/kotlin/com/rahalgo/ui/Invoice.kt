@@ -25,7 +25,8 @@ import com.rahalgo.shared.merchant.OrderLine
  * «شاورما دبل × 3 ........ 90 ل.س» · «بندورة × 1 كيلو ........ 600 ل.س» ·
  * «بوط أسود × 1 نمرة 40 ........ 9,100 ل.س»: **النصُّ في البداية ومجموعُ السطر
  * في النهاية** — لا سطرَ خياراتٍ ولا «للواحد» ولا عمودَ عدد. **ولا يُكتب اسمُ
- * مجموعة الخيار** («وزن ثقيل»، «الحجم»). **والمشروبُ (`drink_for`) سطرٌ بعد صنفه.**
+ * مجموعة الخيار** («وزن ثقيل»، «الحجم»). **والمشروباتُ (`drink_for`) كلُّها تحت الأصناف،
+ * والمشروبُ نفسُه مع أكثرَ من صنفٍ سطرٌ واحدٌ بعدده ومجموعه** (`invoiceOrder`).
  */
 data class InvoiceLine(
     val id: String = "",
@@ -35,6 +36,13 @@ data class InvoiceLine(
     val amount: Long? = null,
     /** **ملاحظةُ الزبون على الصنف** («بلا بصل») — تُقرأ قبل الصنع. */
     val note: String = "",
+    /**
+     * **اسمُ البند وعددُه وخياراتُه** — ليُجمع المشروبُ نفسُه من أكثرَ من صنفٍ ويُعاد
+     * نصُّه بالعدد المجموع. **وفراغُ الاسم**: يُجمع بنصّه المطابق وحدَه.
+     */
+    val name: String = "",
+    val qty: Int = 0,
+    val options: List<Pair<String, String>> = emptyList(),
 )
 
 private val weightWord = Regex("كيلو|كغ|غرام|(^|\\s|[0-9٠-٩])غ$")
@@ -76,18 +84,39 @@ fun invoiceLineText(name: String, qty: Int, options: List<Pair<String, String>>)
 }
 
 /**
- * **كلُّ صنفٍ ثمّ مشروباتُه** — المحرّكُ يرسلها هكذا (`ORDER BY COALESCE(drink_for, id)`)،
- * **والترتيبُ هنا حارسٌ.** ومشروبٌ لا صنفَ له في القائمة يُلحق آخراً ولا يضيع.
+ * **الأصنافُ كلُّها أوّلاً ثمّ المشروباتُ كلُّها تحتها** (قرارُ المالك ٢٠٢٦-١٠-٣٠) —
+ * «شاورما عادي» ثمّ «شاورما دبل» ثمّ «عيران × 2». **والمشروبُ نفسُه مع أكثرَ من صنفٍ
+ * سطرٌ واحد** بعدده ومجموعه. وترتيبُ المشروبات بترتيب أصنافها، ومشروبٌ لا صنفَ له
+ * في القائمة يُلحق آخراً ولا يضيع. **وواحدةٌ للزبون والمتجر والسائق.**
  */
 fun invoiceOrder(lines: List<InvoiceLine>): List<InvoiceLine> {
-    val drinks = lines.filter { it.drinkFor != null }.groupBy { it.drinkFor }
-    val out = ArrayList<InvoiceLine>(lines.size)
-    lines.filter { it.drinkFor == null }.forEach { item ->
-        out += item
-        if (item.id.isNotEmpty()) drinks[item.id]?.let { out += it }
+    val items = lines.filter { it.drinkFor == null }
+    val byItem = lines.filter { it.drinkFor != null }.groupBy { it.drinkFor }
+    val drinks = ArrayList<InvoiceLine>()
+    items.forEach { item -> if (item.id.isNotEmpty()) byItem[item.id]?.let { drinks += it } }
+    lines.filter { it.drinkFor != null && it !in drinks }.forEach { drinks += it }
+
+    val merged = LinkedHashMap<String, InvoiceLine>()
+    drinks.forEach { d ->
+        val key = if (d.name.isNotBlank()) {
+            "n:" + d.name.trim() + "|" + d.options.joinToString(",") { it.first.trim() + "=" + it.second.trim() }
+        } else {
+            "t:" + d.text
+        }
+        val was = merged[key]
+        merged[key] = if (was == null) {
+            d
+        } else {
+            val qty = was.qty + d.qty
+            was.copy(
+                qty = qty,
+                text = if (was.name.isNotBlank()) invoiceLineText(was.name, qty, was.options) else was.text,
+                amount = if (was.amount != null && d.amount != null) was.amount + d.amount else null,
+                note = listOf(was.note, d.note).filter { it.isNotBlank() }.distinct().joinToString(" · "),
+            )
+        }
     }
-    lines.filter { it.drinkFor != null && it !in out }.forEach { out += it }
-    return out
+    return items + merged.values
 }
 
 /** **بندُ طلبٍ من المحرّك سطراً في الفاتورة** — المتجرُ يرى سعرَ البيع كما اليوم. */
@@ -97,6 +126,9 @@ fun OrderLine.toInvoiceLine(): InvoiceLine = InvoiceLine(
     text = invoiceLineText(name, qty, options.map { it.group to it.name }),
     amount = unitPrice * qty,
     note = note,
+    name = name,
+    qty = qty,
+    options = options.map { it.group to it.name },
 )
 
 /** **أسطرُ الأصناف** — كلٌّ في سطرٍ: النصُّ في البداية والمبلغُ في النهاية. */

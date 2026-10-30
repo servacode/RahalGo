@@ -28,7 +28,7 @@ const L = m.locShare;
 
 const PickMap = lazy(() => import("@rahalgo/ui/map").then((mod) => ({ default: mod.PickMap })));
 
-type Info = { store_name: string; mode: "send" | "fetch"; status: "pending" | "received" | "expired" };
+type Info = { store_name: string; mode: "send" | "fetch" | "amanah"; status: "pending" | "received" | "expired" };
 type Phase = "loading" | "ready" | "done" | "closed" | "missing";
 
 export default function LocationSharePage() {
@@ -132,7 +132,7 @@ export default function LocationSharePage() {
 
         {phase === "ready" && (
           <>
-            <h1 className="heading-page">{fill(info?.mode === "fetch" ? L.titleFetch : L.title, { store })}</h1>
+            <h1 className="heading-page">{fill(info?.mode === "amanah" ? L.titleAmanah : info?.mode === "fetch" ? L.titleFetch : L.title, { store })}</h1>
             <p className="text-sm text-ink-muted">{L.hint}</p>
             <Button size="lg" className="w-full" disabled={locating || busy} onClick={locate}>
               {locating ? L.locating : busy && !mapOpen ? L.sending : L.send}
