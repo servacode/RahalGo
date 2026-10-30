@@ -24,7 +24,7 @@
 
          **والنصوص من معجم الويب حرفا بحرف** — فلا تقول المنصّة شيئا
          في المتصفّح وغيره في الهاتف. -->
-    <string name="login_welcome">أهلا %1$s</string>
+    <string name="login_welcome">أهلاً %1$s</string>
 
     <!-- **رسائل الخطأ بمفاتيح المحرّك** — يرسل `message_key` لا نصا
          (`GROUND-RULES.md` §1.1)، **والواجهة تترجمه.** ومفتاح لا ترجمة
@@ -33,7 +33,7 @@
     <!-- رموز المحرّك — من `identity/service.go`، لا من الذاكرة -->
     <!-- بابا الدخول -->
     <!-- لوحة السائق -->
-    <string name="home_delivered">سلمت</string>
+    <string name="home_delivered">سلّمت</string>
     <string name="home_earned">كسبت</string>
     <!-- **وشريطُ صندوقه وهدفه في لوحته** — (قرارُ المالك ٢٠٢٦-٠٨-١٣:
          «المالُ نحذفه ما يلزم — موجودٌ فوق أساساً · نحطّ شريطَ صندوقي
@@ -54,7 +54,11 @@
     <string name="home_cash_bar">مدين للمكتب بـ</string>
     <string name="home_cash_left">يبقى %1$s</string>
     <string name="home_cash_over">تجاوزت السقف</string>
-    <string name="home_target_left">يبقى %1$s طلبا</string>
+    <string name="home_target_left_one">يبقى طلب واحد</string>
+    <string name="home_target_left_two">يبقى طلبان</string>
+    <string name="home_target_left_few">يبقى %1$s طلبات</string>
+    <string name="home_target_left_many">يبقى %1$s طلباً</string>
+    <string name="home_target_left_other">يبقى %1$s طلب</string>
     <!-- **«مكافأة بلوغ الهدف الشهريّ»** — تصحيحُ المالك ٢٠٢٦-٠٨-٢٣.
 
          **و«البلوغ» وحدَها لا تقول بلوغَ ماذا** — والسطرُ الذي فوقها
@@ -88,15 +92,15 @@
     <string name="detail_customer">الزبون</string>
     <string name="detail_items">عدد الأصناف</string>
     <string name="detail_total">إجمالي الطلب</string>
-    <string name="detail_failed">تعذر الطلب</string>
+    <string name="detail_failed">تعذّر الطلب</string>
     <string name="detail_release">أعد الطلب للطابور</string>
-    <string name="detail_fail_title">لماذا تعذر؟</string>
+    <string name="detail_fail_title">لماذا تعذّر؟</string>
     <string name="detail_no_reasons">لا سبب متاح في هذه الحالة</string>
     <string name="step_at_pickup">وصلت المتجر</string>
     <string name="step_picked_up">استلمت الطلب</string>
     <string name="step_on_the_way">انطلقت إلى الزبون</string>
     <string name="step_at_dropoff">وصلت الزبون</string>
-    <string name="step_delivered">سلمت الطلب</string>
+    <string name="step_delivered">سلّمت الطلب</string>
     <string name="status_at_pickup">عند المتجر</string>
     <string name="status_at_dropoff">عند الزبون</string>
     <string name="reason_customer_absent">الزبون غير موجود</string>
@@ -162,12 +166,12 @@
     <string name="why_cash_full">بلغ النقد الذي معك السقف — سلّمه للمكتب لتعود إليك الطلبات النقدية</string>
     <string name="why_too_many">معك الحد الأقصى من الطلبات — سلّم أحدها ليصلك غيره</string>
     <string name="why_all_good">كل شيء جاهز — لا يوجد طلب الآن</string>
-    <string name="offline_title">تعذر الاتصال</string>
+    <string name="offline_title">تعذّر الاتصال</string>
     <string name="offline_text">حسابك محفوظ — تحقق من الشبكة وحاول مرة أخرى</string>
     <!-- الرحلة -->
     <string name="nav_trip">الرحلة</string>
     <string name="trip_none">لا رحلة الآن</string>
-    <string name="trip_none_hint">خذ طلبا من الطلبات وتبدأ رحلتك</string>
+    <string name="trip_none_hint">خذ طلباً من الطلبات وتبدأ رحلتك</string>
     <!-- ══════════════════════════════════════════════════════════════
          **زرٌّ يخرجك من التطبيق — فليقل ذلك**
          ══════════════════════════════════════════════════════════════
@@ -207,7 +211,7 @@
     <string name="trip_s_picked_up">استلمت الطلب</string>
     <string name="trip_s_to_customer">إلى الزبون</string>
     <string name="trip_s_at_customer">وصلت الزبون</string>
-    <string name="trip_s_delivered">سلمت</string>
+    <string name="trip_s_delivered">سلّمت</string>
     <string name="trip_due_from">إجمالي المبلغ المطلوب من %1$s</string>
     <string name="trip_prepaid_note">مدفوع مسبقاً — لا تقبض شيئاً</string>
     <string name="trip_collect_from">اقبض من %1$s</string>
@@ -239,7 +243,7 @@
     <string name="trip_speed_kmh">%1$s كم/س</string>
     <string name="trip_p_to_customer">الطريق إلى %1$s</string>
     <string name="trip_p_at_customer">وصلت الزبون</string>
-    <string name="trip_p_delivered">سلمت الطلب</string>
+    <string name="trip_p_delivered">سلّمت الطلب</string>
     <!-- الإشعارات -->
     <string name="push_ch_offer">طلب جديد</string>
     <string name="push_ch_news">أخبار الحساب</string>
@@ -389,7 +393,7 @@
     <string name="hist_report_note">تفصيل إضافي (اختياري)</string>
     <string name="hist_report_hint">يصل البلاغ غرفة العمليات ويتابع</string>
     <string name="hist_report_sent">وصل بلاغك — ستتابعه العمليات</string>
-    <string name="hist_reasons_error">تعذر جلب الأسباب — ولا يرسل بلاغ بلا سبب</string>
+    <string name="hist_reasons_error">تعذّر جلب الأسباب — ولا يرسل بلاغ بلا سبب</string>
     <string name="hist_not_yours">هذا الطلب ليس لك</string>
     <string name="hist_rate">قيم المتجر</string>
     <string name="hist_rated">قيمته</string>
@@ -411,7 +415,6 @@
     <!-- ══ أقسامُ القائمة — نصوصُها ══ -->
 
     <!-- صندوقي — النصوصُ نفسُها التي في شاشة الويب -->
-    <string name="cash_hint">النقد الذي قبضته ولم تسلمه بعد</string>
     <!-- **وكذلك في صندوقي** — واللفظُ واحدٌ في الشاشتين: **ولفظان
          لمعنًى واحدٍ يجعلان السائقَ يظنّهما رقمين.** -->
     <string name="cash_held">مدين للمكتب الآن بـ</string>
@@ -425,7 +428,7 @@
     <string name="cash_k_order_collection">قبضت من زبون</string>
     <!-- **ومِمَّن قبض باسمه** — والصفةُ أعلاه تبقى لقيدٍ بلا طلب. -->
     <string name="cash_from">قبضت من %1$s</string>
-    <string name="cash_k_settlement">سلمت للمكتب</string>
+    <string name="cash_k_settlement">سلّمت للمكتب</string>
     <string name="cash_k_commission_waived">أُلغيت العمولة — لم يخصمها المتجر</string>
     <string name="cash_k_recipient_cash_returned">أعدت النقد للمستلم — لم تتم التوصيلة</string>
     <string name="cash_k_collection_reversed">أُلغي قبض طلب سُجّل تسليمه خطأً</string>
@@ -435,17 +438,14 @@
     <!-- الشكاوى والبلاغات -->
     <!-- **والتلميحُ لا يسمّي وجهاً دون وجه** — صار تبويبين، **وتلميحٌ
          يقول «ما رفع عليك» فوق تبويبين يجعل من فتح الآخرَ يظنّه خطأ. -->
-    <string name="tik_hint">ما عليك وما رفعتَه — وأين صار كلٌّ منهما</string>
-    <string name="tik_none">لا شكوى عليك</string>
-    <string name="tik_none_hint">وهذا خبر جيد — حافظ عليه</string>
-    <string name="tik_mine_empty">لم ترفع بلاغا بعد — ولك أن تبلغ من «سجل الطلبات»</string>
+    <string name="tik_none">لا شكاوى عليك</string>
+    <string name="tik_mine_empty">لم ترفع بلاغاً بعد — ولك أن تبلغ من «سجل الطلبات»</string>
 
     <!-- دردشاتي السابقة -->
 
     <!-- صفحاتُ المنصّة -->
 
     <!-- تواصل معنا -->
-    <string name="hist_hint">ما نفذته — تم التسليم أو تعذر</string>
 
     <!-- الطلبُ الخاصّ — بطاقتُه تقول حقيقته -->
     <string name="card_custom_price">السعر يتفق عليه</string>
@@ -467,7 +467,7 @@
          والجوابُ «وصلت» في الحالين. -->
 
     <!-- إرجاعُ البضاعة -->
-    <string name="hist_return">سلمت البضاعة للمتجر</string>
+    <string name="hist_return">سلّمت البضاعة للمتجر</string>
     <string name="hist_returned">أعيدت البضاعة للمتجر</string>
     <string name="hist_returned_done">سجل إرجاع البضاعة</string>
 
@@ -624,7 +624,6 @@
     <string name="closure_other">غير ذلك</string>
     <string name="closure_sent">وصل البلاغ — سنُبعد السائقين عن هذا الطريق</string>
     <string name="menu_add_landmark">أضف معلماً</string>
-    <string name="landmark_title">أضف معلماً من مكانك الحالي</string>
     <string name="landmark_hint">قف عند المعلم واكتب اسمه، مثلاً: صيدلية الشفاء</string>
     <string name="landmark_name">اسم المعلم</string>
     <string name="landmark_send">أضف المعلم</string>

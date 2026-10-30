@@ -993,7 +993,9 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                         showAddresses = false,
                     )
                     Overlay.Rating -> RatingScreen(vm = ratingVm)
-                    Overlay.Wallet -> WalletScreen(vm = walletVm, neutralCompensation = true)
+                    // **وكلُّ صفحةٍ تُفتح من القائمة أو الشريط ترجع بسهم** (مراجعةُ المالك
+                    // ٢٠٢٦-١٠-٣٠)، **والإشعاراتُ وحدَها بلا سهم** — بقرارِه.
+                    Overlay.Wallet -> WalletScreen(vm = walletVm, neutralCompensation = true, onBack = { overlay.clear() })
                     // **وصندوقُ الإشعارات يُقرأ ثمّ يُغلق** — وفارغٌ
                     // حتّى يصل، **فلا تُعرض قائمةٌ فارغةٌ على أنّها
                     // «لا إشعارات».**
@@ -1008,7 +1010,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                         // **وبنودُ المنصّة أوّلا** — شاشتُها من الوحدة،
                         // **ولا يعرفها تعدادُ السائق أصلا.**
                         if (PlatformPages.has(over.key)) {
-                            PlatformScreen(vm = pagesVm, key = over.key, role = HelpRole.Driver)
+                            PlatformScreen(vm = pagesVm, key = over.key, role = HelpRole.Driver, onBack = { overlay.clear() })
                         } else {
                             when (
                                 val item = MenuItem.entries.firstOrNull { it.name == over.key }
@@ -1017,23 +1019,31 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                                 // فوق يمنع وقوعَها، **وهذه لأنّ `when`
                                 // يجب أن تُتمّ.**
                                 null -> Unit
-                                MenuItem.History -> HistoryScreen(vm = historyVm)
+                                MenuItem.History -> OverlayPage(stringResource(R.string.menu_history), onBack = { overlay.clear() }) {
+                                    HistoryScreen(vm = historyVm)
+                                }
                                 // **والفتحُ يطلب القائمة** (بلاغُ المالك ٢٠٢٦-١٠-٠٣: «يتمّ تحميلُ
                                 // الصفحة وتتأخّر… تعذّر التحميل») — **كان لا يُطلَب شيءٌ أصلاً**،
                                 // فتدور الدوّارةُ عشرين ثانيةً ثمّ «تعذّر»، وزرُّ الإعادة وحدَه يحمّل.
                                 MenuItem.Chats -> {
                                     LaunchedEffect(Unit) { chatsVm.load(force = true) }
-                                    ChatsScreen(chatsVm)
+                                    OverlayPage(stringResource(com.rahalgo.ui.R.string.menu_chats), onBack = { overlay.clear() }) {
+                                        ChatsScreen(chatsVm, titled = false)
+                                    }
                                 }
                                 MenuItem.Rewards -> {
                                     LaunchedEffect(Unit) { goalsVm.load() }
-                                    IncentivesScreen(goalsVm)
+                                    IncentivesScreen(goalsVm, onBack = { overlay.clear() })
                                 }
-                                MenuItem.AddLandmark -> com.rahalgo.driver.menu.AddLandmarkScreen(
-                                    onSend = { name, kind -> orders.suggestLandmark(name, kind) { overlay.clear() } },
-                                    sending = orders.landmarkSending,
-                                )
-                                else -> MenuScreen(vm = sectionsVm, item = item)
+                                MenuItem.AddLandmark -> OverlayPage(stringResource(R.string.menu_add_landmark), onBack = { overlay.clear() }) {
+                                    com.rahalgo.driver.menu.AddLandmarkScreen(
+                                        onSend = { name, kind -> orders.suggestLandmark(name, kind) { overlay.clear() } },
+                                        sending = orders.landmarkSending,
+                                    )
+                                }
+                                else -> OverlayPage(stringResource(item.label), onBack = { overlay.clear() }) {
+                                    MenuScreen(vm = sectionsVm, item = item)
+                                }
                             }
                         }
                     Overlay.None -> Unit
@@ -1232,4 +1242,24 @@ private fun openMaps(context: android.content.Context, trip: TripState) {
     val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
     // **ولو لم يكن في الجهاز تطبيق خرائط** — لا يسقط التطبيق.
     runCatching { context.startActivity(intent) }
+}
+
+/**
+ * **صفحةٌ من القائمة برأسٍ بسهم** — كما في المتجر (`OverlayPage` هناك). **والرأسُ فوق
+ * الصفحة لا فيها**، فيبقى السهمُ ظاهراً وهي تحمّل.
+ */
+@Composable
+private fun OverlayPage(title: String, onBack: () -> Unit, content: @Composable () -> Unit) {
+    Column(Modifier.fillMaxSize()) {
+        com.rahalgo.ui.PageHeader(
+            title = title,
+            onBack = onBack,
+            modifier = Modifier.padding(start = Rahal.space.lg, end = Rahal.space.lg, top = Rahal.space.sm),
+        )
+        Box(
+            Modifier
+                .fillMaxSize()
+                .weight(1f),
+        ) { content() }
+    }
 }

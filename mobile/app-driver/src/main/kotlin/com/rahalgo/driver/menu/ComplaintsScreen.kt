@@ -74,8 +74,9 @@ fun ComplaintsScreen(vm: SectionsViewModel) {
     // قبل أن يقرأ سطراً.** (وأصلُ الفصل بلاغُ المالك ٢٠٢٦-٠٨-١٣ بعد أن
     // قرأ بلاغَه شكوى عليه — **والفصلُ باقٍ، وشكلُه هو الذي تبدّل.**)
     TicketsScreen(
-        title = stringResource(com.rahalgo.ui.R.string.menu_tickets),
-        hint = stringResource(R.string.tik_hint),
+        // **والعنوانُ رأسٌ بسهمٍ فوق الصفحة** — فلا عنوانَ ثانٍ ولا شرح (٢٠٢٦-١٠-٣٠).
+        title = "",
+        hint = "",
         mine = rep.reports.map { r ->
             TicketRow(
                 key = "#" + r.number,
@@ -97,8 +98,7 @@ fun ComplaintsScreen(vm: SectionsViewModel) {
             )
         },
         // **وفراغُها خبرٌ سارٌّ يُقال** — لا قائمةٌ فارغةٌ صامتة.
-        againstMeEmpty = stringResource(R.string.tik_none) + " — " +
-            stringResource(R.string.tik_none_hint),
+        againstMeEmpty = stringResource(R.string.tik_none),
     )
 }
 /** **سببُ البلاغ بعربيّته** — والمجهولُ «سبب آخر» لا رمزُه (٢٠٢٦-١٠-١٨، `RawCodeTest`). */

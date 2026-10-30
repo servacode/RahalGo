@@ -29,7 +29,7 @@ class DriverCompensationWordingTest {
         val main = File(mobileRoot(), "app-driver/src/main/kotlin/com/rahalgo/driver/MainActivity.kt").readText()
         assertTrue(
             "تطبيقُ السائق لا يمرّر neutralCompensation = true",
-            main.contains("WalletScreen(vm = walletVm, neutralCompensation = true)"),
+            main.contains("WalletScreen(vm = walletVm, neutralCompensation = true"),
         )
     }
 

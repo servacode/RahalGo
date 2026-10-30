@@ -1,7 +1,6 @@
 package com.rahalgo.driver.history
 
 import android.app.Application
-import com.rahalgo.ui.ScreenTitle
 import com.rahalgo.design.Rahal
 import android.util.Log
 import androidx.compose.foundation.clickable
@@ -346,10 +345,8 @@ fun HistoryScreen(vm: HistoryViewModel) {
             //
             // **ومن فتحه من القائمة يعرف أين هو**، ومن فتحه بضغطةٍ
             // خاطئةٍ **لا يعرف ما يقرأ.**
-            ScreenTitle(
-                stringResource(R.string.menu_history),
-                stringResource(R.string.hist_hint),
-            )
+            // **والعنوانُ صار رأساً بسهمٍ فوق الصفحة** (`OverlayPage`) — ولا سطرَ شرحٍ تحته
+            // (مراجعةُ المالك ٢٠٢٦-١٠-٣٠).
             if (s.error.isNotEmpty()) {
                 Text(s.error, color = Rahal.colors.danger, textAlign = TextAlign.Center)
                 Spacer(Modifier.height(10.dp))

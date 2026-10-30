@@ -61,8 +61,8 @@ fun AddLandmarkScreen(onSend: (name: String, kind: String) -> Unit, sending: Boo
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // **وبعنوان شاشات القائمة نفسِه** (`ScreenTitle`) — لا شكلٌ ثانٍ.
-        ScreenTitle(stringResource(R.string.landmark_title), stringResource(R.string.landmark_hint))
+        // **والعنوانُ رأسٌ بسهمٍ فوق الصفحة** — ويبقى سطرُ التعليمة لأنّه طريقةُ الاستعمال.
+        ScreenTitle("", stringResource(R.string.landmark_hint))
         OutlinedTextField(
             value = name,
             onValueChange = { if (it.length <= 80) name = it },

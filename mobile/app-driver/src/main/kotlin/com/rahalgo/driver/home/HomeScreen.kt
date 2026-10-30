@@ -780,10 +780,7 @@ private fun GoalBar(done: Int, target: Int, reached: Boolean, reward: Long) {
     ) {
         if (!reached) {
             Text(
-                text = stringResource(
-                    R.string.home_target_left,
-                    grouped((target - done).toLong()),
-                ),
+                text = targetLeftText(target - done),
                 color = Rahal.colors.inkMuted,
                 style = MaterialTheme.typography.bodySmall,
             )
@@ -799,5 +796,22 @@ private fun GoalBar(done: Int, target: Int, reached: Boolean, reward: Long) {
                 style = MaterialTheme.typography.bodySmall,
             )
         }
+    }
+}
+
+/**
+ * **«يبقى …» بعدده الصحيح** — طلب واحد · طلبان · ٣–١٠ طلبات · ١١–٩٩ طلباً · ١٠٠ طلب
+ * (مراجعةُ المالك ٢٠٢٦-١٠-٣٠، كـ`goalPendingText` عند المندوب).
+ */
+@Composable
+private fun targetLeftText(n: Int): String {
+    val r = n % 100
+    val num = grouped(n.toLong())
+    return when {
+        n == 1 -> stringResource(R.string.home_target_left_one)
+        n == 2 -> stringResource(R.string.home_target_left_two)
+        r in 3..10 -> stringResource(R.string.home_target_left_few, num)
+        r in 11..99 -> stringResource(R.string.home_target_left_many, num)
+        else -> stringResource(R.string.home_target_left_other, num)
     }
 }

@@ -150,17 +150,23 @@ class ChatsViewModel(app: Application) : AndroidViewModel(app) {
  * فلم يجد موضعَه في القائمة.**
  */
 @Composable
-fun ChatsScreen(vm: ChatsViewModel) {
+fun ChatsScreen(
+    vm: ChatsViewModel,
+    /** **بلا عنوانٍ ولا شرح** — حين يلفّها التطبيقُ برأسٍ بسهم (السائق ٢٠٢٦-١٠-٣٠). */
+    titled: Boolean = true,
+) {
     val list = vm.rows
     if (list == null) {
         LoadState(vm.busy, vm.error) { vm.load(force = true) }
         return
     }
     Screen {
-        ScreenTitle(
-            stringResource(R.string.menu_chats),
-            stringResource(R.string.chats_hint),
-        )
+        if (titled) {
+            ScreenTitle(
+                stringResource(R.string.menu_chats),
+                stringResource(R.string.chats_hint),
+            )
+        }
         if (list.isEmpty()) {
             Empty(stringResource(R.string.chats_none))
             return@Screen

@@ -134,15 +134,26 @@ private val DATE_FMT = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd"
 private val TIME_FMT = java.time.format.DateTimeFormatter.ofPattern("HH:mm", java.util.Locale.US)
 
 /**
- * **تاريخُ الحركة ووقتُها** — كما يقرؤها صاحبُها: «2026-08-13 · 03:12».
+ * **تاريخُ الحركة ووقتُها** — كما يقرؤها صاحبُها: «28 تشرين الأول · 03:12»،
+ * و«اليوم · 03:12» و«أمس · 03:12»، والسنةُ حين لا تكون سنتَنا (مراجعةُ المالك
+ * ٢٠٢٦-١٠-٣٠: الدردشاتُ تقول «2026-10-28» والسجلُّ «28 تشرين الأول» — **صيغةٌ واحدة**).
  *
  * **والمحرّكُ يرسله بصيغة ISO** — وهي صيغةُ آلةٍ لا تُعرض. **ويُحوَّل إلى
  * توقيت سوريا** (`syriaTime`). **وما لا يُحلَّل يُقصّ كما كان** — ولا يُخترَع.
  */
-fun whenText(iso: String): String {
-    syriaTime(iso)?.let { return it.format(DATE_FMT) + " · " + it.format(TIME_FMT) }
+fun whenText(iso: String, today: java.time.LocalDate = java.time.LocalDate.now(SYRIA_ZONE)): String {
+    syriaTime(iso)?.let { return dayText(iso, today) + " · " + it.format(TIME_FMT) }
     if (iso.length < 16) return iso
     return iso.substring(0, 10) + " · " + iso.substring(11, 16)
+}
+
+/**
+ * **التاريخُ بالأرقام** — «2026-08-13» بتوقيت دمشق، لكشفٍ يُطبع ويُحفظ: **و«اليوم» في ورقةٍ
+ * تُقرأ بعد شهرٍ لا تقول أيَّ يوم.**
+ */
+fun dateText(iso: String): String {
+    syriaTime(iso)?.let { return it.format(DATE_FMT) }
+    return iso.take(10)
 }
 
 /** **الوقتُ وحدَه** — «03:12»، لِما يقع تحت عنوان يومٍ يقول تاريخَه. */

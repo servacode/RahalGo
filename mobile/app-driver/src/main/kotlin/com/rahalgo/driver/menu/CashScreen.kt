@@ -29,7 +29,6 @@ import com.rahalgo.ui.Empty
 import com.rahalgo.ui.LoadState
 import com.rahalgo.ui.Note
 import com.rahalgo.ui.Screen
-import com.rahalgo.ui.ScreenTitle
 import com.rahalgo.ui.dayText
 import com.rahalgo.ui.money
 import com.rahalgo.ui.timeText
@@ -71,10 +70,7 @@ fun CashScreen(vm: SectionsViewModel) {
     }
 
     Screen {
-        ScreenTitle(
-            stringResource(R.string.menu_cash),
-            stringResource(R.string.cash_hint),
-        )
+        // **والعنوانُ رأسٌ بسهمٍ فوق الصفحة** — ولا سطرَ شرح (مراجعةُ المالك ٢٠٢٦-١٠-٣٠).
 
         val held = me.cashHeld
         val limit = me.cashLimit
