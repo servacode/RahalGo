@@ -147,6 +147,15 @@ type OrderItem struct {
 	// تُكتب مع البند ولا تصل الزبون.
 	OfferCut     int64  `json:"-"`
 	OfferBorneBy string `json:"-"`
+	// DrinkFor **بندُ المشروب** (قرارُ المالك ٢٠٢٦-١٠-٣٠): معرّفُ بند الصنف الذي
+	// طُلب معه. **وغيابُه يعني بنداً عاديّاً.** وبندُ المشروب سطرٌ كسائر البنود:
+	// `name` اسمُ المشروب، `unit_price` سعرُه، `qty` عددُه، `menu_item_id` فارغ.
+	DrinkFor *string `json:"drink_for,omitempty"`
+	// DrinkOptionID **معرّفُ خيار المشروب** — لإعادة الطلب: يُرسل في `option_qty`
+	// لصنف `drink_for`.
+	DrinkOptionID *string `json:"drink_option_id,omitempty"`
+	// drinks **مشروباتُ هذا الصنف** قبل الإدراج — لا تُرسل.
+	drinks []OrderItem
 }
 
 type Event struct {
@@ -637,7 +646,23 @@ type ItemInput struct {
 	Qty        int      `json:"qty"`
 	Note       string   `json:"note"`
 	OptionIDs  []string `json:"option_ids"`
+	// OptionQty **عددُ كلِّ مشروبٍ من قائمة المتجر** (قرارُ المالك ٢٠٢٦-١٠-٣٠):
+	// `{"<option_id>": 1}`.
+	//
+	// **حين يُرسَل الحقل** (ولو `{}`): خيارُ مجموعة المشروبات يُحسب بعدده هنا
+	// **لا بعدد الصنف**، ويصير بنداً مستقلّاً في الطلب (`drink_for`). وعددُه
+	// ١..٢٠ (وإلّا `quantity_invalid`)، **والصفرُ أو الغيابُ يعني «لم يُختر»** —
+	// ولو كان معرّفُه في `option_ids`. **ومفتاحٌ ليس مشروباً لهذا الصنف يُردّ.**
+	// والمشروبُ يُعرف من مفتاحه هنا، فلا يلزم تكرارُه في `option_ids`.
+	//
+	// **وحين يغيب** (العميلُ القديم): **السلوكُ القديمُ كما هو** — المشروبُ في
+	// `option_ids` يُضرب بعدد الصنف، فلا يتبدّل سعرٌ على تطبيقٍ لم يُحدَّث.
+	// **والخياراتُ الأخرى لا تتأثّر أبداً.**
+	OptionQty map[string]int `json:"option_qty,omitempty"`
 }
+
+// maxDrinkQty **سقفُ عدد المشروب الواحد في السطر.**
+const maxDrinkQty = 20
 
 func marshalOptions(opts []OptionSnapshot) []byte {
 	b, _ := json.Marshal(opts)

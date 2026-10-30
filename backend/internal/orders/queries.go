@@ -117,8 +117,10 @@ const orderSelect = `
 	                          'id', oi.id, 'menu_item_id', oi.menu_item_id,
 	                          'name', oi.name, 'unit_price', oi.unit_price,
 	                          'qty', oi.qty, 'note', oi.note,
-	                          'options', COALESCE(oi.options, '[]'::jsonb))
-	                        ORDER BY oi.id)
+	                          'options', COALESCE(oi.options, '[]'::jsonb),
+	                          'drink_for', oi.drink_for, 'drink_option_id', oi.drink_option_id)
+	                        -- **والمشروبُ بعد صنفه** — وترتيبُ غيره كما كان.
+	                        ORDER BY COALESCE(oi.drink_for, oi.id), oi.drink_for IS NOT NULL, oi.id)
 	                 FROM order_items oi WHERE oi.order_id = o.id), '[]'::json),
 	       -- **ووصفُ الغرض ومن يدفع** — للتوصيلة وحدَها، وفراغٌ لغيرها.
 	       COALESCE(o.parcel_note, ''), COALESCE(o.fee_payer, ''), o.dropoff_known,
@@ -249,7 +251,8 @@ func (s *Service) getByID(ctx context.Context, db dbtx.Querier, id string) (*Ord
 	// **وبنودُ الطلب من منفّذِ نداءه** — `XG-46`: **كان يُمرَّر المنفّذ
 	// ثمّ تُقرأ البنودُ من المَسبَح**، **فوصلةٌ ثانيةٌ داخلَ معاملة.**
 	rows, err := db.Query(ctx, `
-		SELECT id, menu_item_id, name, unit_price, qty, note, options
+		SELECT id, menu_item_id, name, unit_price, qty, note, options,
+		       drink_for::text, drink_option_id::text
 		FROM order_items WHERE order_id = $1`, id)
 	if err != nil {
 		return nil, err
@@ -258,7 +261,8 @@ func (s *Service) getByID(ctx context.Context, db dbtx.Querier, id string) (*Ord
 	for rows.Next() {
 		var it OrderItem
 		var opts []byte
-		if err := rows.Scan(&it.ID, &it.MenuItemID, &it.Name, &it.UnitPrice, &it.Qty, &it.Note, &opts); err != nil {
+		if err := rows.Scan(&it.ID, &it.MenuItemID, &it.Name, &it.UnitPrice, &it.Qty, &it.Note, &opts,
+			&it.DrinkFor, &it.DrinkOptionID); err != nil {
 			rows.Close()
 			return nil, err
 		}
@@ -270,6 +274,7 @@ func (s *Service) getByID(ctx context.Context, db dbtx.Querier, id string) (*Ord
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
+	o.Items = drinksAfterParents(o.Items)
 
 	eRows, err := db.Query(ctx, `
 		SELECT from_status, to_status, actor_id, note, created_at
@@ -716,4 +721,37 @@ func (s *Service) List(ctx context.Context, f ListFilter) (*OrderPage, error) {
 		page.Counts = counts
 	}
 	return page, nil
+}
+
+// drinksAfterParents **يضع بندَ المشروب بعد صنفه** — وترتيبُ غيره كما قُرئ.
+func drinksAfterParents(items []OrderItem) []OrderItem {
+	byParent := map[string][]OrderItem{}
+	hasDrinks := false
+	for _, it := range items {
+		if it.DrinkFor != nil {
+			byParent[*it.DrinkFor] = append(byParent[*it.DrinkFor], it)
+			hasDrinks = true
+		}
+	}
+	if !hasDrinks {
+		return items
+	}
+	out := make([]OrderItem, 0, len(items))
+	for _, it := range items {
+		if it.DrinkFor != nil {
+			continue
+		}
+		out = append(out, it)
+		out = append(out, byParent[it.ID]...)
+		delete(byParent, it.ID)
+	}
+	// **ومشروبٌ بلا صنفٍ ظاهرٍ لا يُسقط** — يُلحق آخراً.
+	for _, it := range items {
+		if it.DrinkFor != nil {
+			if _, left := byParent[*it.DrinkFor]; left {
+				out = append(out, it)
+			}
+		}
+	}
+	return out
 }

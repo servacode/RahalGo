@@ -141,8 +141,11 @@ func (s *Service) MarkItemUnavailable(ctx context.Context, actorID, orderID, ite
 		res.RemovedQty = qty
 	}
 	var allQty int
+	// **ومشروباتُ الصنف تُمحى بمحوه** (`drink_for ... ON DELETE CASCADE`) —
+	// فلا تُعدّ باقيةً حين يخرج صنفُها كلُّه.
 	if err := tx.QueryRow(ctx,
-		`SELECT COALESCE(sum(qty), 0) FROM order_items WHERE order_id = $1`, orderID).
+		`SELECT COALESCE(sum(qty) FILTER (WHERE NOT ($3 AND drink_for IS NOT DISTINCT FROM $2::uuid)), 0)
+		 FROM order_items WHERE order_id = $1`, orderID, itemID, res.RemovedQty == lineQty).
 		Scan(&allQty); err != nil {
 		return nil, res, err
 	}

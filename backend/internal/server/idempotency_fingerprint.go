@@ -66,6 +66,8 @@ type fpItem struct {
 	Qty        int      `json:"qty"`
 	Note       string   `json:"note"`
 	OptionIDs  []string `json:"option_ids"`
+	// **وعددُ كلِّ مشروب** (٢٠٢٦-١٠-٣٠) — `omitempty` فبصمةُ العميل القديم كما كانت.
+	OptionQty map[string]int `json:"option_qty,omitempty"`
 }
 
 // fpNormalOrder الصورةُ القانونيّةُ للطلب العاديّ.

@@ -154,7 +154,7 @@ func (s *Server) handleTransferOrder(w http.ResponseWriter, r *http.Request) {
 			FROM order_items oi
 			LEFT JOIN menu_items ni
 			       ON ni.merchant_id = $2 AND ni.name = oi.name AND ni.available
-			WHERE oi.order_id = $1`, orderID, req.MerchantID)
+			WHERE oi.order_id = $1 AND oi.drink_for IS NULL`, orderID, req.MerchantID)
 		if err != nil {
 			s.respondErr(w, err)
 			return
@@ -197,6 +197,14 @@ func (s *Server) handleTransferOrder(w http.ResponseWriter, r *http.Request) {
 			s.respondErr(w, err)
 			return
 		}
+	}
+	// **وبنودُ المشروبات تتبع صنفَها إلى المتجر الجديد** (٢٠٢٦-١٠-٣٠) — لا تُطابَق
+	// بالاسم، وسعرُها كما رآه الزبون.
+	if _, err := tx.Exec(r.Context(),
+		`UPDATE order_items SET merchant_id = $2::uuid
+		  WHERE order_id = $1 AND drink_for IS NOT NULL`, orderID, req.MerchantID); err != nil {
+		s.respondErr(w, err)
+		return
 	}
 	if _, err := tx.Exec(r.Context(),
 		`UPDATE orders SET merchant_id = $2, sent_to_merchant_at = NULL,
@@ -356,7 +364,8 @@ func (s *Server) transferMapping(r *http.Request, tx pgx.Tx, orderID, merchantID
 	type orderItem struct{ id, name string }
 	items := []orderItem{}
 	irows, err := tx.Query(ctx,
-		`SELECT id::text, name FROM order_items WHERE order_id = $1 ORDER BY name, id`, orderID)
+		`SELECT id::text, name FROM order_items WHERE order_id = $1 AND drink_for IS NULL
+		  ORDER BY name, id`, orderID)
 	if err != nil {
 		return nil, nil, err
 	}

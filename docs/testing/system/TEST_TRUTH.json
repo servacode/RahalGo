@@ -33,8 +33,8 @@
     "setting_defs": 251,
     "behaviour_settings": 206,
     "order_fields": 125,
-    "test_files": 676,
-    "test_funcs": 2606
+    "test_files": 677,
+    "test_funcs": 2610
   },
   "flows": [
     {
@@ -16265,6 +16265,30 @@
     {
       "name": "TestDLC8_PackageIdsMatchGradle",
       "file": "internal/qa/download_center_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDrinkQty_1177_OldClientUnchanged",
+      "file": "internal/qa/drink_qty_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDrinkQty_1177_PerDrink",
+      "file": "internal/qa/drink_qty_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDrinkQty_ItemUnavailableTakesDrinks",
+      "file": "internal/qa/drink_qty_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDrinkQty_Validation",
+      "file": "internal/qa/drink_qty_test.go",
       "package": "qa",
       "orphan": true
     },

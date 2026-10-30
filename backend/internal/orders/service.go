@@ -776,15 +776,29 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 		if method == "" {
 			method = "cash"
 		}
-		if _, err := tx.Exec(ctx, `
+		var lineID string
+		if err := tx.QueryRow(ctx, `
 			INSERT INTO order_items (order_id, menu_item_id, name, unit_price,
 			                         merchant_price, merchant_id, qty, note, options,
 			                         merchant_settlement_method, offer_cut, offer_borne_by)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NULLIF($12,''))`,
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NULLIF($12,''))
+			RETURNING id`,
 			orderID, it.MenuItemID, it.Name, it.UnitPrice, it.MerchantPrice,
 			it.MerchantID, it.Qty, it.Note,
-			marshalOptions(it.Options), method, it.OfferCut, it.OfferBorneBy); err != nil {
+			marshalOptions(it.Options), method, it.OfferCut, it.OfferBorneBy).Scan(&lineID); err != nil {
 			return nil, nil, err
+		}
+		// **ومشروباتُه بنودٌ بعده** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — بمتجره وطريقةِ تسويته.
+		for _, d := range it.drinks {
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO order_items (order_id, name, unit_price, merchant_price, merchant_id,
+				                         qty, options, merchant_settlement_method,
+				                         drink_for, drink_option_id)
+				VALUES ($1, $2, $3, $4, $5, $6, '[]', $7, $8, $9)`,
+				orderID, d.Name, d.UnitPrice, d.MerchantPrice, d.MerchantID, d.Qty,
+				method, lineID, d.DrinkOptionID); err != nil {
+				return nil, nil, err
+			}
 		}
 	}
 
@@ -969,21 +983,54 @@ func (s *Service) priceItems(ctx context.Context, q dbtx.Querier, inputs []ItemI
 		}
 		gRows.Close()
 
-		for _, optID := range in.OptionIDs {
+		// **المشروبُ بعدده** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — انظر `ItemInput.OptionQty`.
+		// **والحقلُ الغائبُ هو العميلُ القديم**: السلوكُ القديمُ كما هو.
+		perDrink := in.OptionQty != nil
+		optIDs := in.OptionIDs
+		if perDrink {
+			// **والمشروبُ يُعرف من مفتاحه** — يُضاف ما ليس في `option_ids`، بترتيبٍ
+			// ثابتٍ (فسطران متطابقان يُدمجان).
+			listed := map[string]bool{}
+			for _, id := range in.OptionIDs {
+				listed[id] = true
+			}
+			extra := make([]string, 0, len(in.OptionQty))
+			for id, n := range in.OptionQty {
+				if n < 0 || n > maxDrinkQty {
+					return nil, 0, ErrBadQty
+				}
+				if !listed[id] {
+					extra = append(extra, id)
+				}
+			}
+			sort.Strings(extra)
+			optIDs = append(append([]string{}, in.OptionIDs...), extra...)
+		}
+
+		for _, optID := range optIDs {
 			var groupID, groupName, optName string
 			var delta int64
-			var optAvailable bool
+			var optAvailable, isDrink bool
 			err := q.QueryRow(ctx, `
-				SELECT g.id, g.name, o.name, o.price_delta, o.available
+				SELECT g.id, g.name, o.name, o.price_delta, o.available, g.store_drinks
 				FROM modifier_options o
 				JOIN modifier_groups g ON g.id = o.group_id
 				WHERE o.id = $1 AND g.item_id = $2`, optID, in.MenuItemID).
-				Scan(&groupID, &groupName, &optName, &delta, &optAvailable)
+				Scan(&groupID, &groupName, &optName, &delta, &optAvailable, &isDrink)
 			if errors.Is(err, pgx.ErrNoRows) {
 				return nil, 0, ErrBadItems
 			}
 			if err != nil {
 				return nil, 0, err
+			}
+			dQty, hasQty := in.OptionQty[optID]
+			if perDrink && hasQty && !isDrink {
+				// **والعددُ للمشروب وحدَه** — خيارٌ آخرُ يتبع عددَ الصنف دائماً.
+				return nil, 0, ErrBadItems
+			}
+			if perDrink && isDrink && dQty == 0 {
+				// **صفرٌ أو غيابٌ = لم يُختر.**
+				continue
 			}
 			if !optAvailable {
 				// **والخيارُ يُسمّى** (تدقيقُ ٢٠٢٦-١٠-٢٨) — كان يُقال «الصنفُ نفد»
@@ -991,6 +1038,18 @@ func (s *Service) priceItems(ctx context.Context, q dbtx.Querier, inputs []ItemI
 				return nil, 0, &OptionUnavailableError{Option: optName}
 			}
 			rules[groupID].chosen++
+			if perDrink && isDrink {
+				// **بندٌ مستقلٌّ بعدده** — سعرُ البيع وسعرُ الشراء فرقُ الخيار نفسُه
+				// كما كان يُضاف إليهما، **فلا هامشَ عليه ولا خصمَ عرضٍ**؛ والمتجرُ
+				// يقبض ثمنَ ما صنعه بالضبط.
+				oid := optID
+				it.drinks = append(it.drinks, OrderItem{
+					Name: optName, UnitPrice: delta, MerchantPrice: delta,
+					MerchantID: it.MerchantID, Qty: dQty, Options: []OptionSnapshot{},
+					DrinkOptionID: &oid,
+				})
+				continue
+			}
 			// **الفارقُ يُضاف إلى السعرين معاً.**
 			//
 			// «جبنة إضافية +٢٠٠٠» ثمنٌ يقبضه المتجرُ كما يقبض أصلَ الصنف،
@@ -1007,6 +1066,9 @@ func (s *Service) priceItems(ctx context.Context, q dbtx.Querier, inputs []ItemI
 		}
 
 		subtotal += it.UnitPrice * int64(it.Qty)
+		for _, d := range it.drinks {
+			subtotal += d.UnitPrice * int64(d.Qty)
+		}
 		items = append(items, it)
 	}
 	return mergeSame(items), subtotal, nil
@@ -1042,12 +1104,40 @@ func mergeSame(items []OrderItem) []OrderItem {
 		for i := range out {
 			if sameLine(&out[i], &it) {
 				out[i].Qty += it.Qty
+				out[i].drinks = append(out[i].drinks, it.drinks...)
 				merged = true
 				break
 			}
 		}
 		if !merged {
 			out = append(out, it)
+		}
+	}
+	// **ومشروباتُ الصنف الواحد تُدمج بخيارها** — «عيران ×٢» لا «عيران» مرّتين.
+	for i := range out {
+		out[i].drinks = mergeDrinks(out[i].drinks)
+	}
+	return out
+}
+
+// mergeDrinks يجمع مشروباً تكرّر تحت صنفٍ واحد — **ما لم يتجاوز سقفَ البند (٥٠).**
+func mergeDrinks(ds []OrderItem) []OrderItem {
+	if len(ds) < 2 {
+		return ds
+	}
+	out := make([]OrderItem, 0, len(ds))
+	for _, d := range ds {
+		merged := false
+		for i := range out {
+			if *out[i].DrinkOptionID == *d.DrinkOptionID && out[i].UnitPrice == d.UnitPrice &&
+				out[i].Qty+d.Qty <= 50 {
+				out[i].Qty += d.Qty
+				merged = true
+				break
+			}
+		}
+		if !merged {
+			out = append(out, d)
 		}
 	}
 	return out
