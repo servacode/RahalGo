@@ -579,6 +579,8 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                         // **«إضافة صنف» تفتح محرّرَ صنفٍ جديد مباشرةً** (مراجعةُ المالك ٢٠٢٦-١٠-٣٠)
                         // — والإلغاءُ يرجع إلى أصناف العميل.
                         onOpenMenu = { id, name -> menuVm.open(id, name); menuVm.newItem() },
+                        // **و«الأصناف» تفتح القائمةَ بأدواتها** (٢٠٢٦-١٠-٣٠).
+                        onOpenItems = { id, name -> menuVm.open(id, name) },
                         onOpenOffers = { id, name -> newOffer(id, name) },
                         // **والقائمةُ الفارغةُ تنقله إلى حيث يُسجَّل** (٢٠٢٦-١٠-٢٧).
                         onAddClient = { tab = Tab.AddClient; leaveStore() },

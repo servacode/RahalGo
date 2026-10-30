@@ -398,8 +398,27 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
      * **و«نفد الصنف» تقع عشرَ مرّاتٍ في اليوم** — **ومن فتح لها نموذجاً
      * بثمانية حقولٍ لم يقلبها**، فيبقى الصنفُ يُطلب وهو ناقص.
      */
-    fun toggleAvailable(item: MenuItem) = write {
-        api.updateItem(item.id, ItemInput(available = !item.available))
+    /**
+     * **يقلب توفّرَ صنفٍ واحدٍ فوراً ثمّ يُرسل** (بلاغُ المالك ٢٠٢٦-١٠-٣٠: «يتأثّر الزرُّ الثاني») —
+     * كان يُعطّل مفاتيحَ الأصناف كلِّها وينتظر الشبكةَ ثمّ يُعيد قراءةَ القائمة، فتهتزّ.
+     * **كما في تطبيق المتجر**: لا يُمسّ غيرُه، **وإن ردّ المحرّكُ خطأً عاد وقيلت الرسالة.**
+     */
+    fun toggleAvailable(item: MenuItem) {
+        val next = !item.available
+        val before = sections
+        sections = sections?.map { s ->
+            s.copy(items = s.items.map { if (it.id == item.id) it.copy(available = next) else it })
+        }
+        regroup()
+        viewModelScope.launch {
+            runCatching { api.updateItem(item.id, ItemInput(available = next)) }
+                .onSuccess { Refresh.bump() }
+                .onFailure {
+                    sections = before
+                    regroup()
+                    Flash.fail(apiError(getApplication(), it as? Exception ?: Exception(it)))
+                }
+        }
     }
 
     /**

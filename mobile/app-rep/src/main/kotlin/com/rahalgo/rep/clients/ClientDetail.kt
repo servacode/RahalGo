@@ -74,6 +74,7 @@ fun ClientDetail(
     vm: ClientsViewModel,
     onOpenMenu: (String, String) -> Unit,
     onOpenOffers: (String, String) -> Unit = { _, _ -> },
+    onOpenItems: (String, String) -> Unit = { _, _ -> },
 ) {
     val d = vm.detail
     if (d == null) {
@@ -186,14 +187,18 @@ fun ClientDetail(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                RahalOutlineButton(
+                    onClick = { onOpenItems(vm.openId, head.name) },
+                    modifier = Modifier.weight(1f).height(48.dp),
+                ) { Text(stringResource(R.string.mn_items), maxLines = 1, softWrap = false) }
                 RahalButton(
                     onClick = { onOpenMenu(vm.openId, head.name) },
-                    modifier = Modifier.weight(1f),
-                ) { Text(stringResource(R.string.mn_add_item)) }
+                    modifier = Modifier.weight(1f).height(48.dp),
+                ) { Text(stringResource(R.string.mn_add_item), maxLines = 1, softWrap = false) }
                 RahalOutlineButton(
                     onClick = { onOpenOffers(vm.openId, head.name) },
-                    modifier = Modifier.weight(1f),
-                ) { Text(stringResource(R.string.mn_make_offer)) }
+                    modifier = Modifier.weight(1f).height(48.dp),
+                ) { Text(stringResource(R.string.mn_make_offer), maxLines = 1, softWrap = false) }
             }
         }
 

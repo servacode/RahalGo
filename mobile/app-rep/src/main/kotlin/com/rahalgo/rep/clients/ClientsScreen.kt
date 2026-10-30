@@ -80,6 +80,7 @@ import com.rahalgo.ui.money
 fun ClientsScreen(
     vm: ClientsViewModel,
     onOpenMenu: (String, String) -> Unit = { _, _ -> },
+    onOpenItems: (String, String) -> Unit = { _, _ -> },
     /**
      * **وبابُ عروضه من بطاقته** — (طلبُ المالك ٢٠٢٦-٠٩-٣٠).
      *
@@ -102,7 +103,7 @@ fun ClientsScreen(
             return
         }
         BackHandler { vm.closeDetail() }
-        ClientDetail(vm, onOpenMenu, onOpenOffers)
+        ClientDetail(vm, onOpenMenu, onOpenOffers, onOpenItems)
         return
     }
 
@@ -213,6 +214,7 @@ fun ClientsScreen(
                         media = { path -> Backend.of(context).media(path) },
                         onOpen = { vm.openDetail(m.id) },
                         onAddItem = { onOpenMenu(m.id, m.name) },
+                        onItems = { onOpenItems(m.id, m.name) },
                         onMakeOffer = { onOpenOffers(m.id, m.name) },
                     )
                 }
@@ -398,6 +400,8 @@ private fun MerchantCard(
     onOpen: () -> Unit,
     onAddItem: () -> Unit,
     onMakeOffer: () -> Unit,
+    /** **«الأصناف» — قائمةُ المتجر بأدواتها** (٢٠٢٦-١٠-٣٠): «إضافة صنف» صار يفتح صنفاً جديداً مباشرة. */
+    onItems: () -> Unit,
     tone: androidx.compose.ui.graphics.Color? = null,
 ) {
     Spacer(Modifier.height(Rahal.space.md))
@@ -539,15 +543,19 @@ private fun MerchantCard(
             Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            RahalOutlineButton(
+                onClick = onItems,
+                modifier = Modifier.weight(1f).height(48.dp),
+            ) { Text(stringResource(R.string.mn_items), maxLines = 1, softWrap = false) }
             RahalButton(
                 onClick = onAddItem,
-                modifier = Modifier.weight(1f),
-            ) { Text(stringResource(R.string.mn_add_item)) }
+                modifier = Modifier.weight(1f).height(48.dp),
+            ) { Text(stringResource(R.string.mn_add_item), maxLines = 1, softWrap = false) }
 
             RahalOutlineButton(
                 onClick = onMakeOffer,
-                modifier = Modifier.weight(1f),
-            ) { Text(stringResource(R.string.mn_make_offer)) }
+                modifier = Modifier.weight(1f).height(48.dp),
+            ) { Text(stringResource(R.string.mn_make_offer), maxLines = 1, softWrap = false) }
         }
     }
 }
