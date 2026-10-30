@@ -218,7 +218,7 @@ func (s *Server) handleTransferOrder(w http.ResponseWriter, r *http.Request) {
 	if _, err := tx.Exec(r.Context(), `
 		INSERT INTO order_events (order_id, from_status, to_status, actor_id, note)
 		VALUES ($1, $2, $2, $3, $4)`,
-		orderID, status, actor, "تحويلٌ إلى متجرٍ آخر — "+note); err != nil {
+		orderID, status, actor, orders.StoreTransferNote+" — "+note); err != nil {
 		s.respondErr(w, err)
 		return
 	}

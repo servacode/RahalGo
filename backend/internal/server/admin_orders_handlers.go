@@ -123,8 +123,14 @@ func (s *Server) handleListOrders(w http.ResponseWriter, r *http.Request) {
 		AnySource: true,
 		// **والأعدادُ تتبع البحثَ والفلاتر** — يطلبها السجلّ.
 		WithCounts: q.Get("counts") == "1",
-		Page:       page,
-		PerPage:    perPage,
+		// **وبحثُ اللوحة أعرض، وفلاترُ السجلّ الثلاثة** (قرارُ المالك ٢٠٢٦-١٠-٣٠): طريقةُ الدفع،
+		// والمتأخّر، والعمولةُ الممحيّة.
+		StaffSearch: true,
+		Pay:         q.Get("pay"),
+		Late:        q.Get("late") == "1",
+		Waived:      q.Get("waived") == "1",
+		Page:        page,
+		PerPage:     perPage,
 	})
 	if err != nil {
 		s.respondErr(w, err)
@@ -257,6 +263,9 @@ func (s *Server) handleGetOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	one := []orders.Order{*o}
 	s.fillBoard(r, one)
+	// **وعمولتُه وصافي المتجر كما على كرت السجلّ** — لقسم «المال» في ملفّ الطلب (٢٠٢٦-١٠-٣٠).
+	s.fillOrderCommission(r.Context(), one)
+	s.fillCommissionTaken(r.Context(), one)
 	strip := s.maskOrderDetails(r, one)
 	o = &one[0]
 	// **وموقعُ الزبون المباشر لمن يرى عنوانَه** (قرارُ المالك ٢٠٢٦-١٠-١٦) — ومن حُجب عنه
@@ -282,11 +291,14 @@ func (s *Server) handleGetOrder(w http.ResponseWriter, r *http.Request) {
 		_ = s.pg.QueryRow(r.Context(),
 			`SELECT delivery_code FROM orders WHERE id = $1`, o.ID).Scan(&code)
 	}
+	// **ومتى جهّز المتجرُ الطلب خطوةٌ في المسار** — وملحقُ ملفّ الطلب (`admin_order_file.go`).
+	steps := withReadyStep(s.timeline(r.Context(), o.ID, true), o.ReadyAt, o.MerchantName)
 	s.writeOrdersJSON(w, strip, struct {
 		*orders.Order
 		Timeline     []TimelineStep `json:"timeline"`
 		DeliveryCode *string        `json:"delivery_code,omitempty"`
-	}{o, s.timeline(r.Context(), o.ID, true), code})
+		File         orderFile      `json:"file"`
+	}{o, steps, code, s.orderFileOf(r.Context(), o)})
 }
 
 // requiresReason الانتقالاتُ التي لا تُقبل بلا تعليل.

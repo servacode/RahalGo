@@ -57,8 +57,17 @@ func (s *Server) handleOrdersExport(w http.ResponseWriter, r *http.Request) {
 		To:         to,
 		Kind:       q.Get("kind"),
 		AnySource:  true,
+		// **وفلاترُ السجلّ كما في الشاشة** (٢٠٢٦-١٠-٣٠) — فالرقمُ في الشاشة هو الرقمُ في الملف.
+		StaffSearch: true,
+		Pay:         q.Get("pay"),
+		Late:        q.Get("late") == "1",
+		Waived:      q.Get("waived") == "1",
 	}
-	where, args, err := orders.ListWhere(f, orders.StuckLimits{})
+	var lim orders.StuckLimits
+	if f.Late {
+		lim = s.orders.StuckLimitsOf(r.Context())
+	}
+	where, args, err := orders.ListWhere(f, lim)
 	if err != nil {
 		s.respondErr(w, err)
 		return

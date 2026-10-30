@@ -33,8 +33,8 @@
     "setting_defs": 251,
     "behaviour_settings": 206,
     "order_fields": 129,
-    "test_files": 678,
-    "test_funcs": 2617
+    "test_files": 681,
+    "test_funcs": 2621
   },
   "flows": [
     {
@@ -10377,6 +10377,12 @@
       "orphan": true
     },
     {
+      "name": "TestListWhere_HistoryFileFilters",
+      "file": "internal/orders/history_file_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
       "name": "TestHistoryFilters_SearchSourcesCountsKind",
       "file": "internal/orders/history_filters_test.go",
       "package": "orders_test",
@@ -20621,6 +20627,12 @@
       "orphan": true
     },
     {
+      "name": "TestORDERFILE_AdminDetailAndHistoryFilters",
+      "file": "internal/qa/order_file_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestCDEF003_ForeignMerchantCannotBecomeCommissionStore",
       "file": "internal/qa/order_merchant_trust_test.go",
       "package": "qa",
@@ -27121,6 +27133,18 @@
     {
       "name": "TestMerchantProfile_SeesHisStore",
       "file": "internal/server/admin_merchant_profile_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestLateDelivery",
+      "file": "internal/server/admin_order_file_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestWithReadyStep",
+      "file": "internal/server/admin_order_file_test.go",
       "package": "server",
       "orphan": true
     },

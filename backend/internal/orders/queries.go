@@ -374,8 +374,17 @@ type ListFilter struct {
 	AnySource bool
 	// WithCounts **أعدادُ الحالات بالشرط نفسِه** — تتبع البحثَ والفلاتر.
 	WithCounts bool
-	Page       int
-	PerPage    int
+	// StaffSearch **البحثُ الأعرض للوحة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — باسم السائق وهاتفه،
+	// واسم المتجر وهاتفه، وكود الخصم. **وبوّابةُ المتجر والزبون لا تطلبه.**
+	StaffSearch bool
+	// Pay **طريقةُ الدفع** — `cash` · `wallet`، وفارغُه الكلّ (`payFilters`).
+	Pay string
+	// Late **سُلّم متأخّراً** (`LateDeliverySQL`) — **ويحتاج المهلَ** (`StuckLimits`).
+	Late bool
+	// Waived **عمولتُه ممحيّة** («ما استلمت العمولة»).
+	Waived  bool
+	Page    int
+	PerPage int
 }
 
 // errDateRangeInverted **«من» بعد «إلى»** — يُردّ ولا يُعرض سجلٌّ فارغٌ صامت.
@@ -432,6 +441,9 @@ func ListWhere(f ListFilter, lim StuckLimits) (string, []any, error) {
 	if f.Kind != "" && !listKinds[f.Kind] {
 		return "", nil, errBadDateRange
 	}
+	if f.Pay != "" && payFilters[f.Pay] == "" {
+		return "", nil, errBadDateRange
+	}
 	var args []any
 	arg := func(v any) string {
 		args = append(args, v)
@@ -477,12 +489,20 @@ func ListWhere(f ListFilter, lim StuckLimits) (string, []any, error) {
 			or = append(or, `o.number = `+arg(t.Number))
 		}
 		if t.Phone != "" {
+			p := arg(EscapeLike(t.Phone))
 			or = append(or, `COALESCE(cu.phone::text, o.recipient_phone, '') LIKE '%' || `+
-				arg(EscapeLike(t.Phone))+` || '%' ESCAPE '\'`)
+				p+` || '%' ESCAPE '\'`)
+			if f.StaffSearch {
+				or = append(or, staffSearchPhone(p))
+			}
 		}
 		if t.Name != "" {
+			p := arg(t.Name)
 			or = append(or, `COALESCE(cu.full_name, o.recipient_name, '') ILIKE '%' || `+
-				arg(t.Name)+` || '%' ESCAPE '\'`)
+				p+` || '%' ESCAPE '\'`)
+			if f.StaffSearch {
+				or = append(or, staffSearchName(p))
+			}
 		}
 		and(`(` + strings.Join(or, ` OR `) + `)`)
 	}
@@ -506,6 +526,15 @@ func ListWhere(f ListFilter, lim StuckLimits) (string, []any, error) {
 	}
 	if f.SalesOnly {
 		and(`o.kind <> 'merchant_delivery'`)
+	}
+	if f.Pay != "" {
+		and(payFilters[f.Pay])
+	}
+	if f.Late {
+		and(LateDeliverySQL(lim))
+	}
+	if f.Waived {
+		and(`o.commission_waived > 0`)
 	}
 	if f.AwaitingOffice {
 		and(awaitingOfficeSQL())
@@ -624,7 +653,7 @@ func (s *Service) List(ctx context.Context, f ListFilter) (*OrderPage, error) {
 	}
 	// **والمهلُ تُقرأ مرّةً للنداء** — للفلتر وللترتيب معاً.
 	var lim StuckLimits
-	if f.Board != "" || f.Priority {
+	if f.Board != "" || f.Priority || f.Late {
 		lim = s.StuckLimitsOf(ctx)
 	}
 	base, args, err := ListWhere(f, lim)

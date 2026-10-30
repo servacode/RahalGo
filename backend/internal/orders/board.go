@@ -246,6 +246,13 @@ type BoardInfo struct {
 	// طلبٌ سُلّم قبل أن يصير الكودُ إلزاميّاً لا يُقال عنه «بالكود» (تدقيقُ السجلّ ٢٠٢٦-١٠-٢٧).
 	// **والكودُ نفسُه لا يُرسل هنا.**
 	DeliveredByCode bool `json:"delivered_by_code"`
+	// **علاماتُ كرت السجلّ** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — بشروط فلاتره نفسِها (`history_file.go`):
+	// تقييمُ الزبون إن قيّم، وكم شكوى ومطالبةً وطارئاً عليه، وأحُوّل لمتجرٍ آخر، وأتأخّر تسليمُه.
+	PlatformStars *int `json:"platform_stars,omitempty"`
+	DriverStars   *int `json:"driver_stars,omitempty"`
+	Cases         int  `json:"cases"`
+	Transferred   bool `json:"transferred"`
+	Late          bool `json:"late"`
 }
 
 // BoardInfoOf **معلوماتُ المكتب لصفحةٍ من الطلبات** — في رحلةٍ واحدة.
@@ -270,8 +277,11 @@ func (s *Service) BoardInfoOf(ctx context.Context, ids []string) (map[string]*Bo
 		                 WHERE wt.ref = o.id::text AND wt.kind = 'compensation'
 		                   AND mm.id = o.merchant_id), 0),
 		       to_char(o.office_seen_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
-		       (o.status IN ('delivered', 'refunded') AND o.delivery_code IS NOT NULL)
-		FROM orders o WHERE o.id = ANY($1::uuid[])`, ids)
+		       (o.status IN ('delivered', 'refunded') AND o.delivery_code IS NOT NULL),
+		       rt.platform_stars, rt.driver_stars,
+		       `+CasesSQL+`, `+TransferredSQL+`, `+LateDeliverySQL(l)+`
+		FROM orders o LEFT JOIN order_ratings rt ON rt.order_id = o.id
+		WHERE o.id = ANY($1::uuid[])`, ids)
 	if err != nil {
 		return nil, err
 	}
@@ -282,7 +292,8 @@ func (s *Service) BoardInfoOf(ctx context.Context, ids []string) (map[string]*Bo
 		var since *string
 		if err := rows.Scan(&id, &b.AlertReason, &since, &b.EmergencyOpen,
 			&b.OfferExpiresAt, &b.OfferPassed, &b.GoodsCost, &b.StoreCompensated, &b.SeenAt,
-			&b.DeliveredByCode); err != nil {
+			&b.DeliveredByCode, &b.PlatformStars, &b.DriverStars,
+			&b.Cases, &b.Transferred, &b.Late); err != nil {
 			return nil, err
 		}
 		if b.AlertReason != "" {

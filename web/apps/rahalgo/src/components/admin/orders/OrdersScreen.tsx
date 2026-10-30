@@ -60,6 +60,7 @@ import {
   SearchSelect,
   Radio,
   LoadingState,
+  Stars,
 } from "@rahalgo/ui";
 import { api, apiFile, ApiError, mediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -73,6 +74,7 @@ import { TransferPanel } from "./TransferPanel";
 import { AssignDialog } from "./AssignDialog";
 import { GoodsBox } from "./GoodsBox";
 import { OrderDetailPanel } from "./OrderDetailPanel";
+import { DriverMoneyBox } from "./DriverMoneyBox";
 import { payerIsCash, payerLabel, payerOf } from "./payer";
 import { WaiveCommissionDialog, WAIVE_ROUTE } from "./WaiveCommissionDialog";
 import { useCanCall } from "@/lib/policy";
@@ -310,6 +312,12 @@ interface BoardInfo {
   seen_at: string | null;
   /** **سُلّم بكود التسليم فعلاً** — من الطلب نفسِه لا من الإعداد الحاليّ (تدقيقُ السجلّ ٢٠٢٦-١٠-٢٧). */
   delivered_by_code?: boolean;
+  /** **علاماتُ كرت السجلّ** (٢٠٢٦-١٠-٣٠) — تقييمُ الزبون، والشكاوى، والتحويل، والتأخير. */
+  platform_stars?: number | null;
+  driver_stars?: number | null;
+  cases?: number;
+  transferred?: boolean;
+  late?: boolean;
 }
 
 /** **إعداداتُ اللوحة من الخادم** (`GET /orders/board`) — لا من `/settings` (المشكلة ٣٢). */
@@ -996,6 +1004,10 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
   const [driversState, setDriversState] = useState<"ok" | "failed" | "denied">("ok");
   /** **نوعُ الطلب** — عاديٌّ أو خاصٌّ أو توصيلة (سجلُّ الطلبات ٢٠٢٦-١٠-٠٤). */
   const [kind, setKind] = useState(params.get("kind") ?? "");
+  /** **طريقةُ الدفع والمتأخّرُ والعمولةُ الممحيّة** — فلاترُ السجلّ (ملفُّ الطلب ٢٠٢٦-١٠-٣٠). */
+  const [pay, setPay] = useState(params.get("pay") ?? "");
+  const [lateOnly, setLateOnly] = useState(params.get("late") === "1");
+  const [waivedOnly, setWaivedOnly] = useState(params.get("waived") === "1");
   /** **الطلبُ المفتوحُ في اللوحة الجانبيّة** — `?order=` رابطٌ يُرسَل لزميل (البند ٤). */
   const [panelId, setPanelId] = useState(params.get("order") ?? "");
   /** **ما زال يُحمَّل** — كلُّ تغيير فلترٍ يقول ذلك (المشكلة ١٧). */
@@ -1136,6 +1148,9 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         driver_id: live ? "" : driverId,
         // **ونوعُ الطلب** (المشكلة ٢٠) **والأعدادُ تتبع البحثَ والفلاتر** (المشكلة ٨).
         kind: live ? "" : kind,
+        pay: live ? "" : pay,
+        late: !live && lateOnly ? "1" : "",
+        waived: !live && waivedOnly ? "1" : "",
         counts: live ? "" : "1",
         page: String(page),
         // **وخمسةٌ وعشرون في السجلّ** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — يُقرأ ولا
@@ -1172,7 +1187,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
     } catch {
       setOnShift(null);
     }
-  }, [status, awaiting, stage, board, query, live, searching, page, from, to, merchantId, driverId, kind, inverted]);
+  }, [status, awaiting, stage, board, query, live, searching, page, from, to, merchantId, driverId, kind, pay, lateOnly, waivedOnly, inverted]);
 
   // **والرابطُ يتبع الشاشة** — `replace` لا `push`: كلُّ حرفٍ في البحث لا
   // يصير صفحةً في سجلّ المتصفّح يُرجَع إليها.
@@ -1195,12 +1210,15 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       put("merchant", merchantId);
       put("driver", driverId);
       put("kind", kind);
+      put("pay", pay);
+      if (lateOnly) qs.set("late", "1");
+      if (waivedOnly) qs.set("waived", "1");
       put("order", panelId);
     }
     if (page > 1) qs.set("page", String(page));
     const next = qs.toString();
     router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
-  }, [router, pathname, live, query, status, awaiting, stage, board, focusId, from, to, merchantId, driverId, kind, panelId, page]);
+  }, [router, pathname, live, query, status, awaiting, stage, board, focusId, from, to, merchantId, driverId, kind, pay, lateOnly, waivedOnly, panelId, page]);
 
   // ══════════════════════════════════════════════════════════════════
   // **وقائمتا المتجر والسائق — كاملتين، لمن يملك قراءتهما**
@@ -1267,7 +1285,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
   const [customRange, setCustomRange] = useState(false);
   const showDates = customRange || ((from !== "" || to !== "") && activePreset === "");
   const filtered =
-    from !== "" || to !== "" || merchantId !== "" || driverId !== "" || kind !== "";
+    from !== "" || to !== "" || merchantId !== "" || driverId !== "" || kind !== "" || pay !== "" || lateOnly || waivedOnly;
   /** **امسح الفلاترَ كلَّها** — والبحثَ والحال (المشكلة ١٨). */
   const clearAll = () => {
     setFrom("");
@@ -1275,6 +1293,9 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
     setMerchantId("");
     setDriverId("");
     setKind("");
+    setPay("");
+    setLateOnly(false);
+    setWaivedOnly(false);
     setStatus("");
     setQuery("");
     setPage(1);
@@ -1300,6 +1321,9 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       put("merchant_id", merchantId);
       put("driver_id", driverId);
       put("kind", kind);
+      put("pay", pay);
+      if (lateOnly) qs.set("late", "1");
+      if (waivedOnly) qs.set("waived", "1");
       const res = await apiFile(`/api/v1/admin/orders/export?${qs}`);
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -1977,6 +2001,15 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
     { id: "custom_amanah", label: H.kindAmanah },
     { id: "merchant_delivery", label: H.kindDelivery },
   ];
+  const payChips = [
+    { id: "", label: H.payAll },
+    { id: "cash", label: H.payCash },
+    { id: "wallet", label: H.payWallet },
+  ];
+  const moreChips = [
+    { id: "late", label: H.lateOnly },
+    { id: "waived", label: H.waivedOnly },
+  ];
   const periodChips = [
     { id: "", label: m.admin.ordersPage.range.all },
     ...presets.map((p) => ({ id: p.id, label: p.label })),
@@ -2227,6 +2260,32 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
               value={kind}
               onChange={(v) => {
                 setKind(v);
+                setPage(1);
+              }}
+              wrap
+            />
+          </div>
+          {/* **طريقةُ الدفع، والمتأخّرةُ والممحيّةُ عمولتُها** (ملفُّ الطلب ٢٠٢٦-١٠-٣٠). */}
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs text-ink-muted">{H.payLabel}</span>
+            <Chips
+              items={payChips}
+              value={pay}
+              onChange={(v) => {
+                setPay(v);
+                setPage(1);
+              }}
+              wrap
+            />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs text-ink-muted">{H.moreLabel}</span>
+            <Chips
+              items={moreChips}
+              value={[...(lateOnly ? ["late"] : []), ...(waivedOnly ? ["waived"] : [])]}
+              onChange={(id) => {
+                if (id === "late") setLateOnly(!lateOnly);
+                else setWaivedOnly(!waivedOnly);
                 setPage(1);
               }}
               wrap
@@ -2545,7 +2604,7 @@ function EndBadge({ o }: { o: OrderRow }) {
   return (
     <span className={`rounded-badge px-2.5 py-1 text-xs font-bold text-on-solid ${END_TINT[o.status] ?? "bg-ink-muted"}`}>
       {OFFICE_STATUS[o.status] ?? STATUS_LABELS[o.status] ?? o.status}
-      {o.status === "delivered" && o.closed_at && ` · ${tookText(o.created_at, o.closed_at)}`}
+      {o.closed_at && ` · ${tookText(o.created_at, o.closed_at)}`}
     </span>
   );
 }
@@ -2597,6 +2656,14 @@ function HistoryCard({
     (o.commission_taken ?? 0) > 0 &&
     waived === 0 &&
     (o.cash_due ?? 0) > 0;
+  const stars = o.board?.platform_stars ?? 0;
+  const F = H.flags;
+  const flags: { k: string; label: string; v: "warning" | "danger" | "accent" | "violet" }[] = [
+    ...(o.board?.transferred ? [{ k: "transferred", label: F.transferred, v: "accent" as const }] : []),
+    ...((o.board?.cases ?? 0) > 0 ? [{ k: "cases", label: F.cases, v: "danger" as const }] : []),
+    ...(o.board?.late ? [{ k: "late", label: F.late, v: "warning" as const }] : []),
+    ...(waived > 0 ? [{ k: "waived", label: F.waived, v: "violet" as const }] : []),
+  ];
   return (
     <li className={`surface flex flex-col gap-3 p-4 ${focused ? "ring-2 ring-accent" : ""} ${muted ? "bg-field opacity-75" : ""}`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -2656,6 +2723,19 @@ function HistoryCard({
           </p>
         )}
       </div>
+
+      {/* **تقييمُ الزبون وعلاماتٌ صغيرة** (ملفُّ الطلب ٢٠٢٦-١٠-٣٠) — محوّل · عليه شكوى · متأخر ·
+          العمولة ممحية. **وتغيب حين لا شيء.** */}
+      {(stars > 0 || flags.length > 0) && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {stars > 0 && <Stars value={stars} size="sm" />}
+          {flags.map((f) => (
+            <Badge key={f.k} variant={f.v}>
+              {f.label}
+            </Badge>
+          ))}
+        </div>
+      )}
 
       {/* **والإجماليُّ كبيراً، ومين دفع وكيف، وتحته الأجرةُ والعمولة** (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}
       <div className={`flex items-end justify-between gap-2 rounded-control px-3 py-2.5 ${muted ? "bg-surface" : "bg-field"}`}>
@@ -4636,59 +4716,3 @@ function InvoiceButton({ order }: { order: OrderRow }) {
   );
 }
 
-/**
- * **حسابُ السائق والمتجر في الطلب** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «لازم يكون واضح شقد العمولة مشان السائق
- * يعرف شقد يعطي للمتجر وشقد يسلّم للمكتب»). من أرقام الخادم نفسِها: عمولةُ المنصّة من المتجر، وما
- * يدفعه السائقُ للمتجر عند الاستلام (`pay_merchant` — للمتاجر النقديّة)، وما يقبضه من الزبون، والباقي
- * للمكتب — **وأجرتُه كاملةً ولو كان التوصيلُ مجّانيّاً على المنصّة.**
- */
-function DriverMoneyBox({ o }: { o: OrderRow }) {
-  const OP = m.admin.ordersPage;
-  const com = o.platform_commission ?? 0;
-  const pay = o.pay_merchant ?? 0;
-  const cash = o.payment_method === "cash" ? o.cash_due ?? 0 : 0;
-  if (com <= 0 && pay <= 0 && cash <= 0) return null;
-  const office = Math.max(0, cash - pay);
-  const row = "flex items-center justify-between gap-2";
-  return (
-    <li className="mt-2 list-none rounded-control border border-line-soft bg-field p-2.5 text-sm">
-      <p className="mb-1.5 text-xs font-bold">{OP.moneyBox}</p>
-      <ul className="space-y-1">
-        {com > 0 && (
-          <li className={row}>
-            <span className="text-ink-muted">
-              {OP.storeCommission.replace("{p}", fmtNum(o.commission_percent_exact ?? 0))}
-            </span>
-            <Money value={com} small />
-          </li>
-        )}
-        {cash > 0 && (
-          <li className={row}>
-            <span className="text-ink-muted">{OP.driverCollects}</span>
-            <Money value={cash} small />
-          </li>
-        )}
-        {pay > 0 && (
-          <li className={row}>
-            <span className="text-ink-muted">{OP.driverPaysStore}</span>
-            <span className="flex items-center gap-1">
-              −<Money value={pay} small />
-            </span>
-          </li>
-        )}
-        {cash > 0 && (
-          <li className={`${row} border-t border-line-soft pt-1 font-bold`}>
-            <span>{OP.driverToOffice}</span>
-            <Money value={office} small />
-          </li>
-        )}
-        {(o.driver_fee ?? 0) > 0 && (
-          <li className={`${row} text-success`}>
-            <span>{(o.free_waived ?? 0) > 0 ? OP.driverEarnsFree : OP.driverEarns}</span>
-            <Money value={o.driver_fee ?? 0} small />
-          </li>
-        )}
-      </ul>
-    </li>
-  );
-}
