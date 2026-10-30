@@ -71,8 +71,11 @@ import com.rahalgo.ui.money
 fun ItemOptionsSheet(
     item: Item,
     api: CustomerApi,
-    /** **ما اختاره والعدد** — «أضف» يحمل الكمّيّةَ كلَّها بضغطةٍ واحدة. */
-    onAdd: (List<ModifierOption>, Int) -> Unit,
+    /**
+     * **ما اختاره والعدد والمشروبات** — «أضف» يحمل الكمّيّةَ كلَّها بضغطةٍ واحدة.
+     * والمشروباتُ بأعدادها منفصلةً (قرارُ المالك ٢٠٢٦-١٠-٣٠): لا تُضرب بعدد الصنف.
+     */
+    onAdd: (List<ModifierOption>, Int, List<com.rahalgo.customer.cart.Cart.DrinkPick>) -> Unit,
     onClose: () -> Unit,
     /**
      * **اسمُ المتجر بابُ صفحته** (قرارُ المالك ٢٠٢٦-١٠-١٨) — كما في البطاقة.
@@ -95,6 +98,8 @@ fun ItemOptionsSheet(
 
     // **المختارُ محفوظٌ بالمجموعة** — فمجموعةٌ تُبدَّل لا تمسّ أختَها.
     var chosen by remember(item.id) { mutableStateOf<Map<String, List<ModifierOption>>>(emptyMap()) }
+    // **وعددُ كلِّ مشروب** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — يبدأ صفراً ولا يتبع عددَ الصنف.
+    var drinkQty by remember(item.id) { mutableStateOf<Map<String, Int>>(emptyMap()) }
 
     LaunchedEffect(item.id) {
         runCatching { api.itemDetail(item.id) }
@@ -104,7 +109,7 @@ fun ItemOptionsSheet(
                 // (`items.tsx`): «الحجم: عادي» بلا ضغطةٍ إضافيّة.
                 chosen = d.modifiers.mapNotNull { g ->
                     val first = g.options.firstOrNull { it.available }
-                    if (g.minSelect > 0 && g.maxSelect == 1 && first != null) g.id to listOf(first) else null
+                    if (!g.isDrinks && g.minSelect > 0 && g.maxSelect == 1 && first != null) g.id to listOf(first) else null
                 }.toMap()
             }
             .onFailure { failed = true }
@@ -112,10 +117,19 @@ fun ItemOptionsSheet(
 
     val picked = chosen.values.flatten()
     val unit = item.price + picked.sumOf { it.priceDelta }
+    val drinkOptions = groups.orEmpty().filter { it.isDrinks }.flatMap { it.options }
+    val drinks = drinkOptions.mapNotNull { o ->
+        drinkQty[o.id]?.takeIf { it > 0 }?.let { com.rahalgo.customer.cart.Cart.DrinkPick(o, it) }
+    }
+    // **الإجمالي**: الصنفُ بعدده وخياراته، ثمّ كلُّ مشروبٍ بعدده هو.
+    val drinksTotal = drinks.sumOf { it.option.priceDelta * it.qty }
 
     // **وناقصٌ واحدٌ يكفي لإطفاء الزرّ.**
     // **وصنفٌ بلا خياراتٍ جاهزٌ فوراً** (٢٠٢٦-١٠-٣٠) — يُفتح الآن من البطاقة، ولا ينتظر جلبَ خياراتٍ ليست له.
-    val ready = !item.hasOptions || groups?.all { g -> (chosen[g.id]?.size ?: 0) >= g.minSelect } == true
+    val ready = !item.hasOptions || groups?.all { g ->
+        val n = if (g.isDrinks) g.options.count { (drinkQty[it.id] ?: 0) > 0 } else chosen[g.id]?.size ?: 0
+        n >= g.minSelect
+    } == true
 
     // **ومجموعةٌ إلزاميّةٌ كلُّ خياراتها نافدةٌ تُطفئ الزرَّ للأبد** (تدقيقُ ٢٠٢٦-١٠-٢٨) —
     // **فيُقال لماذا** بدل زرٍّ مطفأٍ بلا سبب.
@@ -196,6 +210,14 @@ fun ItemOptionsSheet(
                     verticalArrangement = Arrangement.spacedBy(18.dp),
                 ) {
                     groups.orEmpty().forEach { g ->
+                        if (g.isDrinks) {
+                            DrinksBlock(
+                                group = g,
+                                counts = drinkQty,
+                                onCount = { id, n -> drinkQty = drinkQty + (id to n) },
+                            )
+                            return@forEach
+                        }
                         GroupBlock(
                             group = g,
                             itemPrice = item.price,
@@ -251,7 +273,7 @@ fun ItemOptionsSheet(
             }
             Spacer(Modifier.size(12.dp))
             RahalButton(
-                onClick = { onAdd(picked, qty) },
+                onClick = { onAdd(picked, qty, drinks) },
                 modifier = Modifier.weight(1f),
                 enabled = ready && blockedReason == null,
             ) {
@@ -261,12 +283,13 @@ fun ItemOptionsSheet(
                 val usdUnit = item.priceUsd?.let { base ->
                     base + picked.sumOf { it.priceDeltaUsd ?: 0.0 }
                 }
+                val usdDrinks = drinks.sumOf { (it.option.priceDeltaUsd ?: 0.0) * it.qty }
                 Text(
                     stringResource(
                         R.string.options_add,
                         if (usdUnit != null) {
-                            com.rahalgo.ui.dollars(usdUnit * qty) + " (≈ " + money(unit * qty) + ")"
-                        } else money(unit * qty),
+                            com.rahalgo.ui.dollars(usdUnit * qty + usdDrinks) + " (≈ " + money(unit * qty + drinksTotal) + ")"
+                        } else money(unit * qty + drinksTotal),
                     ),
                     maxLines = 2,
                 )
@@ -293,6 +316,85 @@ private fun SheetQty(icon: Int, label: String, enabled: Boolean, onClick: () -> 
             tint = if (enabled) Rahal.colors.brand else Rahal.colors.line,
             modifier = Modifier.size(18.dp),
         )
+    }
+}
+
+/**
+ * **مشروباتُ المتجر — كلُّ مشروبٍ بعدّاده** (قرارُ المالك ٢٠٢٦-١٠-٣٠)
+ *
+ * «− ٠ +» لكلّ مشروب، يبدأ صفراً وسقفُه ٢٠. **ولا يُضرب بعدد الصنف**: من طلب
+ * ثلاث شاورما وعيراناً واحداً يدفع عيراناً واحداً.
+ */
+@Composable
+private fun DrinksBlock(
+    group: ModifierGroup,
+    counts: Map<String, Int>,
+    onCount: (String, Int) -> Unit,
+) {
+    Column {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                group.name,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Spacer(Modifier.size(8.dp))
+            Text(
+                stringResource(
+                    if (group.minSelect > 0) R.string.options_required else R.string.act_optional,
+                ),
+                color = if (group.minSelect > 0) Rahal.colors.accent else Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.labelSmall,
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        group.options.forEach { o ->
+            val n = counts[o.id] ?: 0
+            Row(
+                Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        o.name,
+                        color = if (o.available) Rahal.colors.ink else Rahal.colors.inkMuted,
+                        fontWeight = if (n > 0) FontWeight.Bold else FontWeight.Normal,
+                        style = MaterialTheme.typography.bodyLarge,
+                        textDecoration = if (o.available) null else androidx.compose.ui.text.style.TextDecoration.LineThrough,
+                    )
+                    Text(
+                        if (!o.available) {
+                            stringResource(R.string.options_unavailable)
+                        } else {
+                            o.priceDeltaUsd?.let { com.rahalgo.ui.dollars(it) } ?: money(o.priceDelta)
+                        },
+                        color = if (o.available) Rahal.colors.inkMuted else Rahal.colors.danger,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(Rahal.shape.pill)
+                        .border(1.dp, if (n > 0) Rahal.colors.brand else Rahal.colors.line, Rahal.shape.pill),
+                ) {
+                    SheetQty(R.drawable.ic_minus, stringResource(R.string.cart_qty_less), enabled = n > 0) {
+                        onCount(o.id, n - 1)
+                    }
+                    Text(
+                        n.toString(),
+                        fontWeight = FontWeight.Bold,
+                        color = if (n > 0) Rahal.colors.brand else Rahal.colors.inkMuted,
+                        modifier = Modifier.padding(horizontal = 2.dp),
+                    )
+                    SheetQty(
+                        com.rahalgo.ui.R.drawable.ic_plus,
+                        stringResource(R.string.cart_qty_more),
+                        enabled = o.available && n < com.rahalgo.customer.cart.Cart.MAX_DRINK,
+                    ) { onCount(o.id, n + 1) }
+                }
+            }
+        }
     }
 }
 

@@ -22,7 +22,7 @@ import { useAuth } from "@/lib/auth";
 import { customFee, fill, freeCustomOn, statusLabel } from "@/lib/customer/texts";
 import { useCustomer } from "@/lib/customer/context";
 import { ENDED, type MyOrder } from "@/lib/customer/types";
-import { CancelNote, CancelOrder, DeliveryCode, OrderEta, OrderStages, QuoteAmounts } from "@/components/customer/orderParts";
+import { CancelNote, CancelOrder, DeliveryCode, OrderEta, OrderInvoice, OrderStages, QuoteAmounts } from "@/components/customer/orderParts";
 import { statusTone } from "@/components/customer/OrderSummary";
 import { NeedLogin } from "@/components/customer/NeedLogin";
 import { useShopToast } from "@/components/customer/toast";
@@ -143,7 +143,9 @@ export default function OrderPage() {
 
       <dl className="surface flex flex-col gap-2 p-4">
         {order.driver_name && !ended && <Row label={O.driver}>{order.driver_name}</Row>}
-        {order.items_preview && <Row label={fill(O.items, { n: fmtNum(order.items_count) })}>{order.items_preview}</Row>}
+        {order.items_preview && (order.items ?? []).length === 0 && (
+          <Row label={fill(O.items, { n: fmtNum(order.items_count) })}>{order.items_preview}</Row>
+        )}
         <Row label={O.placed}>{fmtDateTime(order.created_at)}</Row>
         <Row label={O.payment}>{order.payment_method === "wallet" ? m.shop.cart.wallet : m.shop.cart.cash}</Row>
         {order.address_text && <Row label={O.address}>{order.address_text}</Row>}
@@ -184,6 +186,12 @@ export default function OrderPage() {
           )
         ) : (
           <>
+            {/* **الفاتورةُ بنداً بنداً فوق المجموع** (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}
+            {(order.items ?? []).length > 0 && (
+              <div className="border-b border-line-soft pb-2">
+                <OrderInvoice order={order} all />
+              </div>
+            )}
             {order.subtotal > 0 && (
               <Row label={O.subtotal}>
                 <Money value={order.subtotal} />

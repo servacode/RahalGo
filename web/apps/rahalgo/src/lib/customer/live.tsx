@@ -42,6 +42,20 @@ export const MAX_SHARE_MS = 45 * 60 * 1000;
 export const ASK_STATUS = "on_the_way";
 
 const DECIDED_KEY = "rahalgo_live_decided";
+const AUTO_KEY = "rahalgo_live_auto";
+
+/**
+ * **«شارك موقعي المباشر مع السائق أثناء الطلب»** — تفضيلٌ على هذا المتصفّح، **مفعّلٌ
+ * افتراضاً** (قرارُ المالك ٢٠٢٦-١٠-٣٠، مرآةُ `LiveAuto.kt`). وما دام مفعّلاً تبدأ المشاركةُ
+ * وحدَها حين يصير الطلبُ «بالطريق» — **والإيقافُ في لافتة المشاركة.**
+ */
+export function liveAutoOn(): boolean {
+  return readJSON<boolean>(AUTO_KEY, true) !== false;
+}
+
+export function setLiveAuto(on: boolean): void {
+  writeJSON(AUTO_KEY, on);
+}
 const MAX_REMEMBERED = 50;
 
 export interface Reading {
@@ -119,6 +133,8 @@ export function LiveShareProvider({ open, children }: { open: MyOrder[] | null; 
   const [activeId, setActiveId] = useState("");
   const [decided, setDecided] = useState<string[]>([]);
   const [problem, setProblem] = useState<"" | "denied" | "unsupported">("");
+  /* **ولا تلقائيّةَ قبل قراءة ما قُرِّر** — وإلّا عادت لطلبٍ أوقفها صاحبُه. */
+  const [decidedReady, setDecidedReady] = useState(false);
   const filter = useRef(new LiveSendFilter());
   const watchId = useRef<number | null>(null);
   const last = useRef<Reading | null>(null);
@@ -129,6 +145,7 @@ export function LiveShareProvider({ open, children }: { open: MyOrder[] | null; 
   useEffect(() => {
     const saved = readJSON<string[]>(DECIDED_KEY, []);
     setDecided(Array.isArray(saved) ? saved.filter((x) => typeof x === "string") : []);
+    setDecidedReady(true);
   }, []);
 
   const decide = useCallback((orderId: string) => {
@@ -236,6 +253,15 @@ export function LiveShareProvider({ open, children }: { open: MyOrder[] | null; 
     },
     [send, stop, teardown],
   );
+
+  /* **والمشاركةُ التلقائيّة** — طلبٌ «بالطريق» لم يُقرَّر فيه والتفضيلُ مفعّل: تبدأ بلا سؤال. */
+  useEffect(() => {
+    if (!decidedReady || activeId || !open || !liveAutoOn()) return;
+    const o = pendingAsk(open, decided);
+    if (!o) return;
+    decide(o.id);
+    start(o.id);
+  }, [decidedReady, open, decided, activeId, decide, start]);
 
   /* **ووصل الطلبُ أو انتهى فتقف** — في لحظة القراءة لا بعد نقطةٍ تُردّ. */
   useEffect(() => {

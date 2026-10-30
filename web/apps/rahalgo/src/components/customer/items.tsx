@@ -36,9 +36,9 @@ import {
   IconZoomIn,
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
-import { useCart, unitPrice } from "@/lib/customer/cart";
+import { useCart, unitPrice, MAX_DRINK, type DrinkPick } from "@/lib/customer/cart";
 import { useFav } from "@/lib/customer/favorites";
-import type { Item, ItemDetail, ModifierGroup, ModifierOption } from "@/lib/customer/types";
+import { isDrinksGroup, type Item, type ItemDetail, type ModifierGroup, type ModifierOption } from "@/lib/customer/types";
 import { dollars, fill, backAt } from "@/lib/customer/texts";
 import { useShopToast } from "./toast";
 import { useAddGate, AvailabilityNotice } from "./ServiceNotices";
@@ -204,9 +204,14 @@ export function ItemGrid({
 }
 
 /** **أيُّ مجموعةٍ إلزاميّةٍ لم يُختر منها؟** — والمحرّكُ يردّ السلّةَ كلَّها إن نقصت. */
-function missingGroup(groups: ModifierGroup[], picked: Record<string, string[]>): ModifierGroup | null {
+function missingGroup(
+  groups: ModifierGroup[],
+  picked: Record<string, string[]>,
+  drinkQty: Record<string, number>,
+): ModifierGroup | null {
   for (const g of groups) {
-    if (g.min_select > 0 && (picked[g.id]?.length ?? 0) < g.min_select) return g;
+    const n = isDrinksGroup(g) ? g.options.filter((o) => (drinkQty[o.id] ?? 0) > 0).length : (picked[g.id]?.length ?? 0);
+    if (g.min_select > 0 && n < g.min_select) return g;
   }
   return null;
 }
@@ -235,6 +240,8 @@ export function ItemSheet({
   const [loadError, setLoadError] = useState("");
   const [picked, setPicked] = useState<Record<string, string[]>>({});
   const [qty, setQty] = useState(1);
+  // **وعددُ كلِّ مشروب** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — يبدأ صفراً ولا يتبع عددَ الصنف.
+  const [drinkQty, setDrinkQty] = useState<Record<string, number>>({});
   const [warn, setWarn] = useState("");
   const [askOther, setAskOther] = useState(false);
   const fav = useFav();
@@ -251,6 +258,7 @@ export function ItemSheet({
     setLoadError("");
     setPicked({});
     setQty(1);
+    setDrinkQty({});
     setWarn("");
     setViewing(false);
     if (!item) return;
@@ -264,7 +272,7 @@ export function ItemSheet({
         const pre: Record<string, string[]> = {};
         for (const g of d.modifiers ?? []) {
           const first = g.options.find((o) => o.available);
-          if (g.min_select > 0 && g.max_select === 1 && first) pre[g.id] = [first.id];
+          if (!isDrinksGroup(g) && g.min_select > 0 && g.max_select === 1 && first) pre[g.id] = [first.id];
         }
         setPicked(pre);
       })
@@ -278,9 +286,23 @@ export function ItemSheet({
   const groups = useMemo(() => detail?.modifiers ?? [], [detail]);
   const options: ModifierOption[] = useMemo(() => {
     const out: ModifierOption[] = [];
-    for (const g of groups) for (const o of g.options) if (picked[g.id]?.includes(o.id)) out.push(o);
+    for (const g of groups) {
+      if (isDrinksGroup(g)) continue;
+      for (const o of g.options) if (picked[g.id]?.includes(o.id)) out.push(o);
+    }
     return out;
   }, [groups, picked]);
+  const drinks: DrinkPick[] = useMemo(() => {
+    const out: DrinkPick[] = [];
+    for (const g of groups) {
+      if (!isDrinksGroup(g)) continue;
+      for (const o of g.options) {
+        const n = drinkQty[o.id] ?? 0;
+        if (n > 0) out.push({ option: o, qty: n });
+      }
+    }
+    return out;
+  }, [groups, drinkQty]);
 
   if (!item || !view) return null;
   const closed = view.source_closed || !view.available;
@@ -288,16 +310,19 @@ export function ItemSheet({
   const usdUnit =
     view.price_usd != null ? view.price_usd + options.reduce((s, o) => s + (o.price_delta_usd ?? 0), 0) : null;
   const img = mediaUrl(view.image_url ?? view.image_thumb_url);
+  // **الإجمالي**: الصنفُ بعدده وخياراته، ثمّ كلُّ مشروبٍ بعدده هو.
+  const drinksSum = drinks.reduce((s, d) => s + d.option.price_delta * d.qty, 0);
+  const drinksUsd = drinks.reduce((s, d) => s + (d.option.price_delta_usd ?? 0) * d.qty, 0);
 
   const doAdd = () => {
     if (gate.kind !== "ok") return;
-    cart.add(view, qty, options);
+    cart.add(view, qty, options, drinks);
     toast(I.added);
     onClose();
   };
 
   const tryAdd = () => {
-    const miss = missingGroup(groups, picked);
+    const miss = missingGroup(groups, picked, drinkQty);
     if (miss) {
       /* **ومجموعةٌ إلزاميّةٌ كلُّ خياراتها نافدةٌ لا يُقال لها «اختر»** — لا شيءَ يُختار. */
       const out = !miss.options.some((o) => o.available);
@@ -385,15 +410,15 @@ export function ItemSheet({
                   {usdUnit != null ? (
                     <span className="inline-flex items-baseline gap-1.5">
                       <span dir="ltr" className="tabular-nums">
-                        {dollars(usdUnit * qty)}
+                        {dollars(usdUnit * qty + drinksUsd)}
                       </span>
                       <span className="text-xs opacity-80">
                         {"≈ "}
-                        <Money value={unit * qty} small />
+                        <Money value={unit * qty + drinksSum} small />
                       </span>
                     </span>
                   ) : (
-                    <Money value={unit * qty} />
+                    <Money value={unit * qty + drinksSum} />
                   )}
                 </span>
               </Button>
@@ -447,7 +472,18 @@ export function ItemSheet({
           {view.description && <p className="text-sm leading-relaxed text-ink-muted">{view.description}</p>}
           {item.has_options && !detail && !loadError && <LoadingState variant="inline" />}
           {loadError && <Alert>{loadError}</Alert>}
-          {groups.map((g) => (
+          {groups.map((g) =>
+            isDrinksGroup(g) ? (
+              <DrinksBlock
+                key={g.id}
+                group={g}
+                counts={drinkQty}
+                onCount={(id, n) => {
+                  setWarn("");
+                  setDrinkQty((cur) => ({ ...cur, [id]: Math.max(0, Math.min(MAX_DRINK, n)) }));
+                }}
+              />
+            ) : (
             <fieldset key={g.id} className="surface-inset space-y-2 p-3">
               <legend className="flex w-full items-center justify-between gap-2 text-sm font-bold">
                 <span>{g.name}</span>
@@ -504,7 +540,8 @@ export function ItemSheet({
                 );
               })}
             </fieldset>
-          ))}
+            ),
+          )}
           {warn && <Alert tone="warning">{warn}</Alert>}
         </div>
       </Sheet>
@@ -522,5 +559,69 @@ export function ItemSheet({
         }}
       />
     </>
+  );
+}
+
+/**
+ * **مشروباتُ المتجر — كلُّ مشروبٍ بعدّاده** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — مرآةُ `DrinksBlock` في التطبيق.
+ *
+ * «− ٠ +» لكلّ مشروب، يبدأ صفراً وسقفُه ٢٠، **ولا يُضرب بعدد الصنف.**
+ */
+function DrinksBlock({
+  group,
+  counts,
+  onCount,
+}: {
+  group: ModifierGroup;
+  counts: Record<string, number>;
+  onCount: (id: string, n: number) => void;
+}) {
+  return (
+    <fieldset className="surface-inset space-y-2 p-3">
+      <legend className="flex w-full items-center justify-between gap-2 text-sm font-bold">
+        <span>{group.name}</span>
+        <span className="text-xs font-normal text-ink-muted">{group.min_select > 0 ? I.required : I.optional}</span>
+      </legend>
+      {group.options.map((o) => {
+        const n = counts[o.id] ?? 0;
+        return (
+          <div key={o.id} className="flex items-center justify-between gap-3">
+            <span className="flex min-w-0 flex-col">
+              <span className={`${o.available ? "" : "text-ink-dim line-through"} ${n > 0 ? "font-bold" : ""}`}>{o.name}</span>
+              {o.available ? (
+                <span className="text-xs text-ink-muted">
+                  {o.price_delta_usd != null ? dollars(o.price_delta_usd) : <Money value={o.price_delta} small />}
+                </span>
+              ) : (
+                <span className="text-xs text-danger">{I.unavailable}</span>
+              )}
+            </span>
+            <span className="flex shrink-0 items-center gap-0.5 rounded-control bg-field p-0.5">
+              <button
+                type="button"
+                aria-label={I.minus}
+                onClick={() => onCount(o.id, n - 1)}
+                disabled={n <= 0}
+                className="taparea flex h-8 w-8 items-center justify-center rounded-control hover:bg-row-hover disabled:opacity-40"
+              >
+                <IconMinus size={14} />
+              </button>
+              <span className={`min-w-6 text-center text-sm font-bold tabular-nums ${n > 0 ? "text-accent-text" : "text-ink-muted"}`}>
+                {fmtNum(n)}
+              </span>
+              <button
+                type="button"
+                aria-label={I.plus}
+                onClick={() => onCount(o.id, n + 1)}
+                disabled={!o.available || n >= MAX_DRINK}
+                className="taparea flex h-8 w-8 items-center justify-center rounded-control hover:bg-row-hover disabled:opacity-40"
+              >
+                <IconAdd size={14} />
+              </button>
+            </span>
+          </div>
+        );
+      })}
+    </fieldset>
   );
 }

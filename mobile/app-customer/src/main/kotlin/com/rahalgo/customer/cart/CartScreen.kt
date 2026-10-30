@@ -299,6 +299,25 @@ fun CartScreen(
                         }
                     }
                 }
+                // **وكلُّ مشروبٍ سطرٌ تحت صنفه** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — «عيران × 1 — 5 ل.س»،
+                // بعدده هو لا بعدد الصنف.
+                line.drinks.forEach { d ->
+                    Row(
+                        Modifier.fillMaxWidth().padding(start = 66.dp, end = 8.dp, bottom = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(
+                            d.option.name + " × " + d.qty,
+                            color = Rahal.colors.ink,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Text(
+                            money(d.option.priceDelta * d.qty),
+                            color = Rahal.colors.brand,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
                 HorizontalDivider()
             }
         }

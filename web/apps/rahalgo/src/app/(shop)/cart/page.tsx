@@ -323,6 +323,15 @@ export default function CartPage() {
                       </p>
                     )}
                     <Money value={unitPrice(l) * l.qty} className="text-sm font-bold text-accent-text" />
+                    {/* **وكلُّ مشروبٍ سطرٌ تحت صنفه بعدده هو** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — مرآةُ `CartScreen.kt`. */}
+                    {(l.drinks ?? []).map((d) => (
+                      <p key={d.option.id} className="flex items-center justify-between gap-2 text-xs">
+                        <span className="truncate">
+                          {d.option.name} × {fmtNum(d.qty)}
+                        </span>
+                        <Money value={d.option.price_delta * d.qty} small className="text-accent-text" />
+                      </p>
+                    ))}
                     {bad && <p className="text-xs font-bold text-danger">{lineProblem(bad)}</p>}
                   </div>
                   <div className="flex shrink-0 items-center gap-0.5 rounded-control bg-field p-0.5">

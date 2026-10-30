@@ -32,6 +32,8 @@
     <string name="ord_wanted">المطلوب:</string>
     <string name="ord_driver">السائق</string>
     <string name="ord_subtotal">المجموع</string>
+    <string name="ord_invoice_full">الفاتورة كاملة (%1$d)</string>
+    <string name="ord_invoice_less">إخفاء التفاصيل</string>
     <string name="ord_goods">قيمة المشتريات</string>
     <string name="ord_delivery">التوصيل</string>
     <string name="ord_discount">الحسم</string>
@@ -287,6 +289,17 @@
     <string name="live_stop">أوقف المشاركة</string>
     <string name="live_channel">مشاركة الموقع مع السائق</string>
     <string name="live_card_sharing">أنت تشارك موقعك المباشر مع السائق</string>
+    <!-- **صفحةُ «عنوان التوصيل»** (٢٠٢٦-١٠-٣٠). -->
+    <string name="addrp_title">عنوان التوصيل</string>
+    <string name="addrp_detail">العنوان التفصيلي</string>
+    <string name="addrp_detail_hint">حي الثكنة، بناية الأمل، الطابق 2، جنب صيدلية الشفاء</string>
+    <string name="addrp_live">شارك موقعي المباشر مع السائق أثناء الطلب</string>
+    <!-- **«ادعُ صديقاً» أوضح** (٢٠٢٦-١٠-٣٠). -->
+    <string name="inv_drawer">ادعُ صديقاً — اربح %1$s</string>
+    <string name="inv_home">ادعُ صديقك واربح %1$s</string>
+    <string name="inv_home_after">عجبتك الخدمة؟ ادعُ صديقاً واربح %1$s</string>
+    <string name="inv_share_code">شارك رمزك</string>
+    <string name="inv_hide">إخفاء</string>
     <string name="live_denied">لا يمكننا مشاركة موقعك دون إذن الموقع</string>
     <!-- **«موقعك الصح هون؟»** (قرارُ المالك ٢٠٢٦-١٠-٢١). -->
     <string name="dropoff_fix_title">هل هذا عنوانك الصحيح؟</string>

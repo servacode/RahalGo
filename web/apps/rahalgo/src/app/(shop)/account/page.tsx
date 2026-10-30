@@ -23,7 +23,6 @@ import {
   IconBell,
   IconChat,
   IconHeart,
-  IconLink,
   IconLocation,
   IconLogout,
   IconNext,
@@ -39,6 +38,7 @@ import WebPushCard from "@/components/WebPushCard";
 import { useAuth } from "@/lib/auth";
 import { useCustomer } from "@/lib/customer/context";
 import { AddressSheet } from "@/components/customer/AddressSheet";
+import { InviteMenuRow } from "@/components/customer/InviteNudge";
 import { NeedLogin } from "@/components/customer/NeedLogin";
 import { useShopToast } from "@/components/customer/toast";
 import { WhatsAppSection } from "@/components/customer/WhatsAppSection";
@@ -77,12 +77,13 @@ function Mine() {
     ["/favorites", A.favorites, IconHeart],
     ["/offers", A.offers, IconPromos],
     ["/chats", A.chats, IconChat],
-    ["/invite", A.invite, IconLink],
     ["/complaints", A.tickets, IconSupport],
   ] as const;
   return (
     <nav className="surface flex flex-col divide-y divide-line-soft" aria-label={A.mine}>
       <p className="px-4 pb-2 pt-3 text-xs font-bold text-ink-muted">{A.mine}</p>
+      {/* **«ادعُ صديقاً» أوّلاً بلونٍ ومبلغ** (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}
+      <InviteMenuRow />
       {items.map(([href, label, Icon]) => (
         <Link key={href} href={href} className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-row-hover">
           <Icon size={17} className="shrink-0 text-accent-text" />

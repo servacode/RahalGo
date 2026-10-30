@@ -35,7 +35,7 @@ import { getMessages, defaultLocale } from "@rahalgo/i18n";
 // والثيمُ صار سماويّاً، **فكانت الخريطةُ ترسم بألوان منصّةٍ أخرى** ولا يظهر
 // خطأً. (انظر `cssvar.ts`.)
 import { themeColor } from "./cssvar";
-import { IconLocateMe, IconAdd, IconClose } from "./icons";
+import { IconLocateMe, IconAdd, IconClose, IconLocation } from "./icons";
 import { resolveMapSource, MAP_ATTRIBUTION_FALLBACK } from "./mapconfig";
 import { loadMapEngine } from "./mapengine";
 
@@ -412,6 +412,223 @@ export function PickMap({
           </p>
         )}
       </div>
+    </div>
+  );
+}
+
+/** **التحسينُ يقف بعد هذه المدّة** — كـ`REFINE_MS` في أندرويد. */
+const REFINE_MS = 20_000;
+/** **ويقف حين تبلغ الدقّةُ هذا** — كـ`CONFIRM_ACCURACY_M`. */
+const GOOD_ACCURACY_M = 15;
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **خريطةٌ بدبّوسٍ ثابتٍ في الوسط** — مرآةُ `PointMapCard` في أندرويد
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (قرارُ المالك ٢٠٢٦-١٠-٣٠ لصفحة «عنوان التوصيل».) **الخريطةُ تتحرّك تحت الدبّوس**،
+ * وما تحته حين تستقرّ بإصبعه هو النقطة (`onMove`). **و«حدّد موقعي بدقة» تحتها**: قراءةٌ
+ * سريعةٌ أوّلاً ثمّ تتحسّن وحدَها حتّى ١٥ م أو ٢٠ ثانية، **وسحبُ الخريطة يوقف التحسين.**
+ * **و`autoLocate` يحدّد عند الفتح بلا ضغطة** — ومن رفض الإذنَ لا يُرى خطأً.
+ */
+export function CenterPinMap({
+  lat,
+  lng,
+  onMove,
+  autoLocate = false,
+  height = "h-64",
+}: {
+  lat: number | null;
+  lng: number | null;
+  onMove: (lat: number, lng: number) => void;
+  autoLocate?: boolean;
+  height?: string;
+}) {
+  const holder = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<import("maplibre-gl").Map | null>(null);
+  const moveRef = useRef(onMove);
+  moveRef.current = onMove;
+  const watch = useRef<number | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const best = useRef<number | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [acc, setAcc] = useState<number | null>(null);
+  const [denied, setDenied] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
+
+  const source = resolveMapSource();
+
+  const stopWatch = () => {
+    if (watch.current != null) {
+      try {
+        navigator.geolocation.clearWatch(watch.current);
+      } catch {
+        /* أُغلقت */
+      }
+    }
+    watch.current = null;
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+    setLocating(false);
+  };
+
+  useEffect(() => {
+    if (!source.ok) {
+      setFailed(source.reason);
+      return;
+    }
+    const node = holder.current;
+    if (!node) return;
+    let cancelled = false;
+    let map: import("maplibre-gl").Map | null = null;
+    let observer: ResizeObserver | null = null;
+    const start: [number, number] = lat != null && lng != null ? [lat, lng] : RAQQA_CENTER;
+
+    loadMapEngine(source.styleUrl)
+      .then((maplibregl) => {
+        if (cancelled || !holder.current) return;
+        const instance = new maplibregl.Map({
+          container: holder.current,
+          style: source.styleUrl,
+          center: [start[1], start[0]],
+          zoom: lat != null ? 16 : 13,
+          attributionControl: { compact: true },
+          dragRotate: false,
+          pitchWithRotate: false,
+        });
+        map = instance;
+        mapRef.current = instance;
+        instance.on("error", (e: unknown) => {
+          const msg = String((e as { error?: { message?: string } })?.error?.message ?? "");
+          if (msg.includes("style") || msg.includes("Failed to fetch")) {
+            if (!cancelled) setFailed("unreachable");
+          }
+        });
+        /* **حرّكها بإصبعه** — فيقف التحسين، **وما يختاره بيده يغلب.** */
+        instance.on("dragstart", () => {
+          stopWatch();
+          best.current = null;
+          setAcc(null);
+        });
+        instance.on("moveend", (e: { originalEvent?: unknown }) => {
+          if (!e.originalEvent) return;
+          const c = instance.getCenter();
+          moveRef.current(c.lat, c.lng);
+        });
+        const ro = new ResizeObserver(() => instance.resize());
+        if (holder.current) ro.observe(holder.current);
+        observer = ro;
+      })
+      .catch(() => {
+        if (!cancelled) setFailed("unreachable");
+      });
+
+    return () => {
+      cancelled = true;
+      observer?.disconnect();
+      map?.remove();
+      mapRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [source.ok, source.ok ? source.styleUrl : ""]);
+
+  /** **نقطةٌ أدقُّ ممّا وُضع** — تُوضع وتطير الخريطةُ إليها. */
+  const take = (la: number, ln: number, a: number | null) => {
+    const prev = best.current;
+    const accuracy = a ?? Number.MAX_VALUE;
+    if (prev != null && accuracy >= prev) return;
+    best.current = accuracy;
+    setAcc(a);
+    mapRef.current?.flyTo({ center: [ln, la], zoom: 17, duration: 600 });
+    moveRef.current(la, ln);
+    if (a != null && a <= GOOD_ACCURACY_M) stopWatch();
+  };
+
+  function locate(quiet = false) {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      if (!quiet) setDenied(true);
+      return;
+    }
+    stopWatch();
+    setDenied(false);
+    best.current = null;
+    setAcc(null);
+    setLocating(true);
+    const fail = (e: GeolocationPositionError) => {
+      if (e.code === e.PERMISSION_DENIED) {
+        stopWatch();
+        if (!quiet) setDenied(true);
+      }
+    };
+    const read = (p: GeolocationPosition) =>
+      take(p.coords.latitude, p.coords.longitude, Number.isFinite(p.coords.accuracy) ? p.coords.accuracy : null);
+    /* **قراءةٌ سريعةٌ أوّلاً** — آخرُ موضعٍ يعرفه الجهازُ إن كان حديثاً. */
+    navigator.geolocation.getCurrentPosition(read, fail, {
+      enableHighAccuracy: false,
+      maximumAge: 120_000,
+      timeout: 8_000,
+    });
+    /* **ثمّ تتحسّن وحدَها.** */
+    try {
+      watch.current = navigator.geolocation.watchPosition(read, fail, {
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: REFINE_MS,
+      });
+    } catch {
+      /* المتصفّحُ رفض */
+    }
+    timer.current = setTimeout(stopWatch, REFINE_MS);
+  }
+
+  useEffect(() => {
+    if (autoLocate) locate(true);
+    return stopWatch;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const located = acc != null ? m.map.located.replace("{n}", String(Math.ceil(acc))) : "";
+
+  return (
+    <div className="space-y-2">
+      <div className="relative overflow-hidden rounded-card border border-line">
+        <div ref={holder} data-testid="center-pin-map" className={`${height} w-full`} />
+        {failed && (
+          <div
+            role="status"
+            className={`${height} absolute inset-0 flex flex-col items-center justify-center gap-1 bg-surface-2 px-4 text-center`}
+          >
+            <p className="text-sm font-bold text-ink">{m.map.unavailable}</p>
+            <p className="text-xs text-ink-soft" dangerouslySetInnerHTML={{ __html: MAP_ATTRIBUTION_FALLBACK }} />
+          </div>
+        )}
+        {!failed && (
+          <>
+            {/* **ورأسُ الدبّوس هو النقطة** — فيُرفع بطوله. */}
+            <IconLocation
+              size={36}
+              aria-hidden
+              className="pointer-events-none absolute left-1/2 top-1/2 z-[999] -translate-x-1/2 -translate-y-full text-accent"
+            />
+            <ZoomControls onZoom={(d) => mapRef.current?.zoomTo((mapRef.current?.getZoom() ?? 13) + d)} />
+          </>
+        )}
+      </div>
+      {denied ? (
+        <p className="text-xs text-danger">{m.map.denied}</p>
+      ) : locating ? (
+        <p className="text-sm font-bold text-accent-text">{located || m.map.locating}</p>
+      ) : located ? (
+        <p className="text-sm font-bold text-success">{located}</p>
+      ) : null}
+      <button
+        type="button"
+        onClick={() => locate(false)}
+        className="flex w-full items-center justify-center gap-2 rounded-control border border-line px-4 py-2.5 text-sm font-bold text-ink transition-colors hover:bg-row-hover"
+      >
+        <IconLocateMe size={17} className={locating ? "animate-pulse text-accent-text" : "text-accent-text"} />
+        {m.map.locateExact}
+      </button>
     </div>
   );
 }

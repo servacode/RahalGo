@@ -118,11 +118,11 @@ private fun Favorites(
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     com.rahalgo.customer.cart.SourceNoticeDialog()
     var picking by remember { mutableStateOf<Item?>(null) }
-    val addOne: (Item, Int, List<com.rahalgo.shared.model.ModifierOption>) -> Unit = { it, n, chosen ->
+    val addOne: (Item, Int, List<com.rahalgo.shared.model.ModifierOption>, List<Cart.DrinkPick>) -> Unit = { it, n, chosen, drinks ->
         if (blocked) {
             Flash.fail(blockedText)
         } else {
-            val inc = Cart.add(it, qty = n, options = chosen)
+            val inc = Cart.add(it, qty = n, options = chosen, drinks = drinks)
             com.rahalgo.customer.cart.SourceNotice.afterAdd(scope, vm.customerApi, address, inc)
             Flash.ok(
                 context.getString(
@@ -136,7 +136,7 @@ private fun Favorites(
         com.rahalgo.customer.shop.ItemOptionsSheet(
             item = target,
             api = vm.customerApi,
-            onAdd = { chosen, n -> addOne(target, n, chosen); picking = null },
+            onAdd = { chosen, n, drinks -> addOne(target, n, chosen, drinks); picking = null },
             onClose = { picking = null },
             onStore = com.rahalgo.customer.shop.StoreLink.target(target, null)
                 ?.let { id -> { picking = null; onOpenStore(id) } },
@@ -204,7 +204,7 @@ private fun Favorites(
                     liked = true,
                     onAdd = {
                         if (item.hasOptions && !blocked) picking = item
-                        else addOne(item, 1, emptyList())
+                        else addOne(item, 1, emptyList(), emptyList())
                     },
                     onOpen = { picking = item },
                     onLike = { vm.toggleFavorite(item.id) },
@@ -259,11 +259,11 @@ private fun Offers(
         com.rahalgo.customer.shop.ItemOptionsSheet(
             item = target,
             api = vm.customerApi,
-            onAdd = { chosen, n ->
+            onAdd = { chosen, n, drinks ->
                 if (blocked) {
                     Flash.fail(blockedText)
                 } else {
-                    val inc = Cart.add(target, qty = n, options = chosen)
+                    val inc = Cart.add(target, qty = n, options = chosen, drinks = drinks)
                     com.rahalgo.customer.cart.SourceNotice.afterAdd(sourceScope, vm.customerApi, address, inc)
                     Flash.ok(addedText)
                 }

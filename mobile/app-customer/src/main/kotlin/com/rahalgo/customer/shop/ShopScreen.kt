@@ -138,6 +138,11 @@ fun ShopScreen(
     // شائخاً. (والعمرُ يبقى للاستطلاع الروتينيّ في تبدّل النقطة.)
     val freeScope = androidx.compose.runtime.rememberCoroutineScope()
     androidx.compose.runtime.LaunchedEffect(Unit) { com.rahalgo.customer.FreeOffer.refresh(freeScope) }
+    // **«ادعُ صديقاً» تحت البحث** (٢٠٢٦-١٠-٣٠) — مبلغُها من المحرّك.
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        com.rahalgo.customer.InviteNudge.load(context)
+        com.rahalgo.customer.InviteNudge.refresh(freeScope)
+    }
     run {
         val shopOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
         androidx.compose.runtime.DisposableEffect(shopOwner, point) {
@@ -187,7 +192,7 @@ fun ShopScreen(
         ItemOptionsSheet(
             item = target,
             api = vm.customerApi,
-            onAdd = { chosen, n ->
+            onAdd = { chosen, n, drinks ->
                 // **والنافذةُ تُفتح الآن من البطاقة كلِّها** (٢٠٢٦-١٠-٣٠) — فمن لا عنوانَ
                 // له يُسأل هنا كما يُسأل من «+» (`PC-02`).
                 if (!previewing && action == AddAction.NEED_ADDRESS) {
@@ -195,7 +200,7 @@ fun ShopScreen(
                 } else if (!blocked && target.available && !target.sourceClosed) {
                     // **ولا تُضاف من النافذة ما مُنع من البطاقة** —
                     // **وبابان لفعلٍ واحدٍ أحدُهما بلا حارسٍ بابٌ مفتوح.**
-                    val inc = Cart.add(target, qty = n, options = chosen)
+                    val inc = Cart.add(target, qty = n, options = chosen, drinks = drinks)
                     com.rahalgo.customer.cart.SourceNotice.afterAdd(sourceScope, vm.customerApi, address, inc)
                     com.rahalgo.ui.Flash.ok(
                         context.getString(
@@ -451,6 +456,9 @@ fun ShopScreen(
                     )
             }
         }
+
+        // **بطاقةُ «ادعُ صديقك» تحت البحث** — تُخفى بـ✕ للأبد (٢٠٢٦-١٠-٣٠).
+        if (!vm.searching && !previewing) com.rahalgo.customer.InviteHomeCard()
 
         if (!vm.searching && vm.visibleSections.isNotEmpty()) {
             // ══════════════════════════════════════════════════════

@@ -14,7 +14,7 @@
  * `mapconfig`) — **ومصدرٌ واحدٌ للبلاطات في الويب كلِّه.**
  */
 
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
 import {
   Alert,
@@ -23,10 +23,11 @@ import {
   Confirm,
   EmptyState,
   FormActions,
-  Input,
   LoadingState,
-  Radio,
+  Chips,
   Sheet,
+  Switch,
+  Textarea,
   IconLocation,
   IconCheck,
   IconDelete,
@@ -35,13 +36,14 @@ import {
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useCustomer } from "@/lib/customer/context";
+import { liveAutoOn, setLiveAuto } from "@/lib/customer/live";
 import type { Address } from "@/lib/customer/types";
 import { useShopToast } from "./toast";
 
 const m = getMessages(defaultLocale);
 const A = m.shop.address;
 
-const PickMap = lazy(() => import("@rahalgo/ui/map").then((mod) => ({ default: mod.PickMap })));
+const CenterPinMap = lazy(() => import("@rahalgo/ui/map").then((mod) => ({ default: mod.CenterPinMap })));
 
 const KINDS = [
   ["home", A.kindHome],
@@ -50,10 +52,19 @@ const KINDS = [
 ] as const;
 
 /**
- * **نموذجُ العنوان — للجديد وللتعديل** (قرارُ المالك ٢٠٢٦-٠٨-١٨: «من أخطأ في
- * طابقه كان يحذف وينشئ» فيفقد كونَه الافتراضيّ). **والتعديلُ `PATCH` بالأجزاء
- * نفسِها**، والسطرُ المركّبُ يعيد المحرّكُ صنعَه.
+ * **صفحةُ «عنوان التوصيل» — للجديد وللتعديل** (قرارُ المالك ٢٠٢٦-١٠-٣٠، مرآةُ
+ * `AddressPage.kt`): العنوانُ التفصيليُّ (الإلزاميُّ الوحيد) · خريطةٌ بدبّوسٍ ثابتٍ تحدّد
+ * موقعَه وحدَها عند الفتح · «حدّد موقعي بدقة» · النوع · «شارك موقعي المباشر» · الحفظ.
+ *
+ * **والمحرّكُ يريد `area_building` ونقطةً** — فالنصُّ يُرسَل منطقةً والشارعُ والطابقُ
+ * فارغان، **والنقطةُ تُرسَل دائماً.** **والتعديلُ `PATCH`** فلا يضيع كونُه الافتراضيّ.
  */
+function initialText(a?: Address | null): string {
+  if (!a) return "";
+  if (!a.street?.trim() && !a.floor?.trim()) return a.area_building ?? "";
+  return a.address_text || a.area_building || "";
+}
+
 function AddressForm({
   initial,
   onDone,
@@ -66,24 +77,25 @@ function AddressForm({
   const [pin, setPin] = useState<{ lat: number; lng: number } | null>(
     initial ? { lat: initial.lat, lng: initial.lng } : null,
   );
-  const [area, setArea] = useState(initial?.area_building ?? "");
-  const [street, setStreet] = useState(initial?.street ?? "");
-  const [floor, setFloor] = useState(initial?.floor ?? "");
+  const [text, setText] = useState(initialText(initial));
   const [kind, setKind] = useState<string>(initial?.kind || "home");
+  const [live, setLive] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
+  useEffect(() => setLive(liveAutoOn()), []);
+
   const save = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!pin) return setError(A.needPoint);
-    if (!area.trim()) return setError(A.needArea);
+    if (!text.trim()) return setError(A.needDetail);
+    if (!pin) return setError(A.needPin);
     setBusy(true);
     setError("");
     try {
       const body = JSON.stringify({
-        area_building: area.trim(),
-        street: street.trim(),
-        floor: floor.trim(),
+        area_building: text.trim().slice(0, 150),
+        street: "",
+        floor: "",
         kind,
         lat: pin.lat,
         lng: pin.lng,
@@ -103,65 +115,45 @@ function AddressForm({
   };
 
   return (
-    <form onSubmit={save} className="space-y-3">
-      <p className="text-xs text-ink-muted">{A.confirmHint}</p>
+    <form onSubmit={save} className="space-y-4">
+      <Textarea
+        id="addr-detail"
+        label={A.detail}
+        placeholder={A.detailHint}
+        required
+        autoGrow
+        rows={2}
+        maxLength={150}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+      />
       <Suspense fallback={<div className="h-64 w-full animate-pulse rounded-card bg-field" />}>
-        <PickMap
+        <CenterPinMap
           lat={pin?.lat ?? null}
           lng={pin?.lng ?? null}
-          height="h-64"
-          api={api}
-          onPick={(la: number, ln: number) => {
+          autoLocate={!initial}
+          onMove={(la: number, ln: number) => {
             setPin({ lat: la, lng: ln });
             setError("");
           }}
-          onLocated={(la: number, ln: number) => setPin({ lat: la, lng: ln })}
         />
       </Suspense>
-      <Input
-        id="addr-area"
-        label={A.area}
-        placeholder={A.areaHint}
-        required
-        value={area}
-        onChange={(e) => setArea(e.target.value)}
+      <Chips
+        wrap
+        items={KINDS.map(([k, label]) => ({ id: k, label }))}
+        value={kind as (typeof KINDS)[number][0]}
+        onChange={(k) => setKind(k)}
       />
-      <div className="flex gap-2">
-        <Input
-          id="addr-street"
-          label={A.street}
-          placeholder={A.streetHint}
-          value={street}
-          onChange={(e) => setStreet(e.target.value)}
-          wrapperClassName="min-w-0 flex-1"
-        />
-        <Input
-          id="addr-floor"
-          label={A.floor}
-          placeholder={A.floorHint}
-          inputMode="numeric"
-          value={floor}
-          onChange={(e) => setFloor(e.target.value)}
-          wrapperClassName="w-24 shrink-0"
-        />
-      </div>
-      <div>
-        <p className="mb-1.5 text-sm font-medium">{A.kind}</p>
-        <div className="flex flex-wrap gap-4">
-          {KINDS.map(([k, label]) => (
-            <Radio
-              key={k}
-              id={`addr-kind-${k}`}
-              name="addr-kind"
-              checked={kind === k}
-              onChange={() => setKind(k)}
-              label={label}
-            />
-          ))}
-        </div>
-      </div>
+      <Switch
+        checked={live}
+        label={A.liveAuto}
+        onChange={(on) => {
+          setLive(on);
+          setLiveAuto(on);
+        }}
+      />
       {error && <Alert>{error}</Alert>}
-      <FormActions submit onCancel={onCancel} busy={busy} />
+      <FormActions submit saveLabel={A.save} onCancel={onCancel} busy={busy} />
     </form>
   );
 }
@@ -200,7 +192,7 @@ export function AddressSheet({ open, onClose }: { open: boolean; onClose: () => 
 
   return (
     <>
-      <Sheet open onClose={close} title={editing ? A.editTitle : adding ? A.newTitle : A.title}>
+      <Sheet open onClose={close} title={editing || adding ? A.pageTitle : A.title}>
         {editing ? (
           <AddressForm
             key={editing.id}

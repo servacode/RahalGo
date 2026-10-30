@@ -237,7 +237,14 @@ fun OrderCard(
         //
         // **ونداءٌ لكلّ بطاقةٍ ليُعرض تفصيلُها** يعني عشرةَ نداءاتٍ في
         // شاشةٍ واحدة.
-        if (order.itemsPreview.isNotEmpty()) {
+        val lines = order.items.orEmpty()
+        if (order.kind != "custom" && lines.isNotEmpty()) {
+            // **فاتورةٌ مفصّلة لا «شاورما دجاج، شاورما دجاج»** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
+            Spacer(Modifier.height(10.dp))
+            HorizontalDivider()
+            Spacer(Modifier.height(8.dp))
+            InvoiceLines(lines)
+        } else if (order.itemsPreview.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
             HorizontalDivider()
             Spacer(Modifier.height(8.dp))
@@ -712,4 +719,75 @@ private fun stageLabel(key: String, amanah: Boolean = false): String = when (key
     "arrived" -> stringResource(R.string.stg_arrived)
     "delivered" -> stringResource(R.string.stg_delivered)
     else -> ""
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **الفاتورةُ بنداً بنداً** (قرارُ المالك ٢٠٢٦-١٠-٣٠)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * «اسم (الخيارات) × العدد — سعرُ الواحد — المجموع»، **وكلُّ مشروبٍ سطرٌ تحت صنفه**
+ * (`drink_for`) بعدده هو. والطلبُ القديمُ مشروبُه داخل خياراته فيُعرض كما كان.
+ *
+ * **وأوّلُ ثلاثة أسطرٍ تُرى، والباقي بـ«الفاتورة كاملة»** — بطاقةٌ بعشرين سطراً
+ * تدفن الحالَ والأزرار.
+ */
+@Composable
+internal fun InvoiceLines(lines: List<com.rahalgo.shared.customer.MyOrderLine>) {
+    var open by rememberSaveable(lines.firstOrNull()?.id) { mutableStateOf(false) }
+    val shown = if (open || lines.size <= INVOICE_PEEK) lines else lines.take(INVOICE_PEEK)
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        shown.forEach { l -> InvoiceRow(l) }
+        if (lines.size > INVOICE_PEEK) {
+            RahalTextButton(onClick = { open = !open }) {
+                Text(
+                    if (open) stringResource(R.string.ord_invoice_less)
+                    else stringResource(R.string.ord_invoice_full, lines.size),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+    }
+}
+
+/** **أسطرٌ تُرى قبل «الفاتورة كاملة».** */
+internal const val INVOICE_PEEK = 3
+
+/** **عنوانُ البند** — «شاورما دجاج (دبل) × 3»، والمشروبُ «عيران × 1». */
+internal fun invoiceTitle(l: com.rahalgo.shared.customer.MyOrderLine): String {
+    val opts = l.options.orEmpty().map { it.name }.filter { it.isNotBlank() }
+    val base = if (l.drinkFor == null && opts.isNotEmpty()) l.name + " (" + opts.joinToString("، ") + ")" else l.name
+    return base + " × " + l.qty
+}
+
+@Composable
+private fun InvoiceRow(l: com.rahalgo.shared.customer.MyOrderLine) {
+    val drink = l.drinkFor != null
+    Row(
+        Modifier.fillMaxWidth().padding(start = if (drink) 16.dp else 0.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Top,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                invoiceTitle(l),
+                color = if (drink) Rahal.colors.inkMuted else Rahal.colors.ink,
+                style = MaterialTheme.typography.bodySmall,
+                fontWeight = if (drink) FontWeight.Normal else FontWeight.Bold,
+            )
+            if (!drink && l.qty > 1) {
+                Text(
+                    money(l.unitPrice) + " × " + l.qty,
+                    color = Rahal.colors.inkMuted,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
+        }
+        Spacer(Modifier.size(8.dp))
+        Text(
+            money(l.unitPrice * l.qty),
+            color = if (drink) Rahal.colors.inkMuted else Rahal.colors.ink,
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
 }

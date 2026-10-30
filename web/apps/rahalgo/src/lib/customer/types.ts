@@ -129,6 +129,19 @@ export interface ModifierGroup {
   /** **طريقةُ السعر** «priced» «none» «weight» — و«weight» يُعرض سعرُها كاملاً. */
   price_mode?: string;
   base_grams?: number | null;
+  /** **مجموعةُ مشروبات المتجر** — إن أرسلها المحرّك؛ وإلّا تُعرف باسمها (`isDrinksGroup`). */
+  store_drinks?: boolean;
+}
+
+/** **اسمُ مجموعة مشروبات المتجر** — مرآةُ `DrinksGroupName` في المحرّك. */
+export const DRINKS_GROUP = "مشروبات";
+
+/**
+ * **مشروباتُ المتجر** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — كلُّ مشروبٍ بعدّاده، ولا يُضرب بعدد الصنف.
+ * مرآةُ `ModifierGroup.isDrinks` في التطبيق.
+ */
+export function isDrinksGroup(g: ModifierGroup): boolean {
+  return !!g.store_drinks || g.name.trim() === DRINKS_GROUP;
 }
 
 export interface ItemDetail {
@@ -271,6 +284,8 @@ export interface MyOrder {
   driver_assigned?: boolean;
   items_count: number;
   items_preview: string;
+  /** **بنودُ الطلب للفاتورة** (٢٠٢٦-١٠-٣٠) — والمشروبُ بندٌ مستقلٌّ بعد صنفه (`drink_for`). */
+  items?: MyOrderLine[] | null;
   wallet_paid: number;
   cash_due: number;
   stages: string[];
@@ -279,6 +294,22 @@ export interface MyOrder {
   to_door_eta_sec?: number | null;
   /** **مدّةُ التوصيل المتوقّعة بالدقائق** — من المحرّك، وصفرٌ لا تقدير. */
   delivery_estimate_min?: number;
+}
+
+/**
+ * **بندٌ في طلب الزبون** — صنفٌ أو مشروبٌ طُلب معه. مرآةُ `MyOrderLine` في التطبيق.
+ * **و`drink_for` يعني «مشروبٌ لبند كذا»**؛ وطلبٌ قديمٌ مشروبُه داخل خيارات الصنف.
+ */
+export interface MyOrderLine {
+  id: string;
+  menu_item_id: string | null;
+  name: string;
+  unit_price: number;
+  qty: number;
+  note?: string;
+  options?: { id?: string; group?: string; name: string; price_delta: number }[] | null;
+  drink_for?: string | null;
+  drink_option_id?: string | null;
 }
 
 export interface MyOrdersPage {

@@ -15,12 +15,12 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { getMessages, defaultLocale, errorText, fmtRef, fmtSpan } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, errorText, fmtNum, fmtRef, fmtSpan } from "@rahalgo/i18n";
 import { Alert, Button, Chips, Confirm, Money } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
 import { fill, stageLabel } from "@/lib/customer/texts";
-import { ENDED, type MyOrder } from "@/lib/customer/types";
+import { ENDED, type MyOrder, type MyOrderLine } from "@/lib/customer/types";
 
 const m = getMessages(defaultLocale);
 const O = m.shop.orders;
@@ -385,5 +385,93 @@ export function QuoteDialog({
       </div>
     </div>,
     document.body,
+  );
+}
+
+/** **أسطرٌ تُرى قبل «الفاتورة كاملة»** — مرآةُ `INVOICE_PEEK` في التطبيق. */
+const INVOICE_PEEK = 3;
+
+/** **عنوانُ البند** — «شاورما دجاج (دبل) × 3»، والمشروبُ «عيران × 1». مرآةُ `invoiceTitle`. */
+function invoiceTitle(l: MyOrderLine): string {
+  const opts = (l.options ?? []).map((o) => o.name).filter((n) => n.trim() !== "");
+  const base = !l.drink_for && opts.length > 0 ? `${l.name} (${opts.join(m.common.listSep)})` : l.name;
+  return `${base} × ${fmtNum(l.qty)}`;
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **الفاتورةُ بنداً بنداً** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — مرآةُ `InvoiceLines` في التطبيق
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * «اسم (الخيارات) × العدد — سعرُ الواحد — المجموع»، **وكلُّ مشروبٍ سطرٌ تحت صنفه**.
+ * وفي البطاقة أوّلُ ثلاثةٍ و«الفاتورة كاملة»؛ وفي صفحة الطلب كلُّها (`all`).
+ * **و`totals` يضيف المجموعَ والتوصيلَ والإجماليَّ تحتها** — للبطاقة.
+ */
+export function OrderInvoice({ order, all = false, totals = false }: { order: MyOrder; all?: boolean; totals?: boolean }) {
+  const [open, setOpen] = useState(false);
+  const lines = order.items ?? [];
+  if (lines.length === 0) return null;
+  const shown = all || open || lines.length <= INVOICE_PEEK ? lines : lines.slice(0, INVOICE_PEEK);
+  return (
+    <div className="flex flex-col gap-1.5 text-sm">
+      {shown.map((l) => {
+        const drink = !!l.drink_for;
+        return (
+          <div key={l.id} className={`flex items-start justify-between gap-3 ${drink ? "ps-4 text-ink-muted" : ""}`}>
+            <span className="flex min-w-0 flex-col">
+              <span className={drink ? "text-xs" : "font-bold"}>{invoiceTitle(l)}</span>
+              {!drink && l.qty > 1 && (
+                <span className="text-xs text-ink-muted">
+                  <Money value={l.unit_price} small /> × {fmtNum(l.qty)}
+                </span>
+              )}
+            </span>
+            <Money value={l.unit_price * l.qty} small className={drink ? "text-xs" : ""} />
+          </div>
+        );
+      })}
+      {!all && lines.length > INVOICE_PEEK && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setOpen((v) => !v);
+          }}
+          className="w-fit text-xs font-bold text-accent-text hover:underline"
+        >
+          {open ? O.invoiceLess : fill(O.invoiceFull, { n: fmtNum(lines.length) })}
+        </button>
+      )}
+      {totals && (
+        <div className="mt-1 flex flex-col gap-1 border-t border-line-soft pt-2 text-xs">
+          <span className="flex justify-between gap-2">
+            <span className="text-ink-muted">{O.subtotal}</span>
+            <Money value={order.subtotal} small />
+          </span>
+          <span className="flex justify-between gap-2">
+            <span className="text-ink-muted">{O.delivery}</span>
+            {(order.free_waived ?? 0) > 0 && order.delivery_fee === 0 ? (
+              <span className="font-bold text-success">{m.shop.free.badge}</span>
+            ) : (
+              <Money value={order.delivery_fee} small />
+            )}
+          </span>
+          {order.discount > 0 && (
+            <span className="flex justify-between gap-2">
+              <span className="text-ink-muted">{O.discount}</span>
+              <span className="text-success">
+                {"− "}
+                <Money value={order.discount} small />
+              </span>
+            </span>
+          )}
+          <span className="flex justify-between gap-2 text-sm font-bold">
+            <span>{O.total}</span>
+            <Money value={order.total} className="text-accent-text" />
+          </span>
+        </div>
+      )}
+    </div>
   );
 }

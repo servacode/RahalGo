@@ -139,6 +139,11 @@ fun PointMapCard(
     pending: Boolean,
     enabled: Boolean,
     onPoint: (Double, Double) -> Unit,
+    /**
+     * **يحدّد موقعَه وحدَه عند الفتح** — بلا ضغطة (صفحةُ «عنوان التوصيل» عند الزبون).
+     * **ومن رفض الإذنَ لا يُرى خطأً** — تبقى الخريطةُ على المدينة ويحرّكها بيده.
+     */
+    autoLocate: Boolean = false,
 ) {
     val context = LocalContext.current
     val set = lat != null && lng != null
@@ -155,6 +160,8 @@ fun PointMapCard(
     // أو حرّك الخريطةَ بيده بعدها.
     val fixAcc = remember { mutableStateOf<Float?>(null) }
     var problem by remember { mutableStateOf<Locating.Problem?>(null) }
+    // **أهو طلبُ الإذن التلقائيُّ عند الفتح؟** — فرفضُه لا يُقال خطأً.
+    var quietAsk by remember { mutableStateOf(false) }
     var jump by remember { mutableStateOf<LatLng?>(null) }
     var zoomTick by remember { mutableIntStateOf(0) }
     var zoomStep by remember { mutableDoubleStateOf(0.0) }
@@ -230,7 +237,10 @@ fun PointMapCard(
     val askPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { ok ->
+        val quiet = quietAsk
+        quietAsk = false
         when {
+            !ok && quiet -> problem = null
             !ok -> problem = context.findActivity()?.let { Here.deniedProblem(it) }
                 ?: Locating.Problem.PERMISSION_DENIED
             locationServiceEnabled(context) -> startGps()
@@ -248,6 +258,13 @@ fun PointMapCard(
                 enableLocation()
             }
             else -> startGps()
+        }
+    }
+    // **وتحديدُ الموقع عند الفتح** — مرّةً واحدة، ولا يُعاد مع كلّ رسم.
+    if (autoLocate && enabled) {
+        LaunchedEffect(Unit) {
+            if (!Here.granted(context)) quietAsk = true
+            locate()
         }
     }
     // **ومن شغّل الموقعَ من الشريط العلويّ يُكمَل له** — بلا ضغطةٍ ثانية.

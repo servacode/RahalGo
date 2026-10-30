@@ -220,7 +220,19 @@ data class ModifierGroup(
      * لا «+فرق»، و«none» بلا سعر. وغيابُه (محرّكٌ قديم) «priced».
      */
     @SerialName("price_mode") val priceMode: String = "priced",
-)
+    /** **مجموعةُ مشروبات المتجر** — إن أرسلها المحرّك؛ وإلّا تُعرف باسمها. */
+    @SerialName("store_drinks") val storeDrinks: Boolean = false,
+) {
+    /**
+     * **مشروباتُ المتجر** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — كلُّ مشروبٍ بعدّاده،
+     * ولا يُضرب بعدد الصنف. والمحرّكُ يعرفها بعلَمها، والنافذةُ باسمها.
+     */
+    val isDrinks: Boolean get() = storeDrinks || name.trim() == DRINKS_GROUP
+
+    companion object {
+        const val DRINKS_GROUP = "مشروبات"
+    }
+}
 
 /** **خيارٌ واحدٌ وفرقُ سعره** — والفرقُ يُضاف إلى ثمن الصنف. */
 @Serializable

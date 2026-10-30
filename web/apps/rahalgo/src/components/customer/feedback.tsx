@@ -26,6 +26,7 @@ import { readJSON, writeJSON } from "@/lib/customer/storage";
 import { fill } from "@/lib/customer/texts";
 import type { ComplaintReason, MyOrder, MyOrdersPage, RatingRow } from "@/lib/customer/types";
 import { useShopToast } from "./toast";
+import { markInviteDelivered } from "./InviteNudge";
 
 const m = getMessages(defaultLocale);
 const R = m.shop.rate;
@@ -167,6 +168,8 @@ export function RatingWatcher() {
     api<MyOrdersPage>("/api/v1/my/orders?open_only=false&page=1&per_page=30")
       .then((p) => {
         if (!alive || askedThisSession) return;
+        /* **وصله طلبٌ** — فتعود بطاقةُ «عجبتك الخدمة؟ ادعُ صديقاً» مرّةً (٢٠٢٦-١٠-٣٠). */
+        if ((p.orders ?? []).some((o) => o.status === "delivered")) markInviteDelivered();
         const prompted = readJSON<string[]>(PROMPTED_KEY, []);
         const seen = Array.isArray(prompted) ? prompted : [];
         const cand = (p.orders ?? []).find((o) => o.status === "delivered" && !rated.has(o.id) && !seen.includes(o.id));

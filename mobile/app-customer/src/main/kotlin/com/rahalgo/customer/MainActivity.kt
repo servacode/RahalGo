@@ -600,6 +600,12 @@ private fun SignedIn(
         com.rahalgo.ui.Refresh.tick.collect { Serving.refresh(scope, force = true) }
     }
 
+    // **مبلغُ «ادعُ صديقاً» لصاحب الحساب** — والضيفُ لا يُعرض له شيء (٢٠٢٦-١٠-٣٠).
+    LaunchedEffect(guest) {
+        InviteNudge.load(context)
+        if (guest) InviteNudge.clear() else InviteNudge.refresh(scope)
+    }
+
     LaunchedEffect(tab, guest) {
         // **وفتحُ «حسابي» فرصةٌ ثانية** — لمن مُنح الإذنَ من الإعدادات
         // بعد رفضه، **فيُقرأ موضعُه بلا أن يُسأل ثانية.**
@@ -625,6 +631,17 @@ private fun SignedIn(
     //
     // **وقبل الدرج والهيكل** — صفحةُ الخريطة تملأ الشاشة، **وشريطٌ
     // علويٌّ فوقها يجعلها جزءاً من شاشةٍ أخرى.**
+    // **وصفحةُ «عنوان التوصيل» الواحدة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — للإضافة والتعديل،
+    // **واختيارُ المحفوظ يبقى في لوحة `AddressHost`.**
+    if (DeliveryAddress.editing.isNotEmpty()) {
+        com.rahalgo.customer.address.AddressPage(
+            vm = accountVm,
+            existing = accountVm.state.addresses.firstOrNull { it.id == DeliveryAddress.editing },
+            selectNew = DeliveryAddress.fromSheet,
+            onDone = { DeliveryAddress.close() },
+        )
+        return
+    }
     if (AddressHost(accountVm, mapPicker)) return
 
     ModalNavigationDrawer(
@@ -674,7 +691,8 @@ private fun SignedIn(
                     // **والضيفُ يرى المنصّةَ والقانونيّةَ وحدَهما** —
                     // **وبنودٌ تُعرض لتقول «تحتاج حساباً» تُطيل القائمةَ
                     // ولا تُفيد.**
-                    items = (if (guest) emptyList() else CUSTOMER_ITEMS) +
+                    // **و«ادعُ صديقاً» أوّلُ سطرٍ ملوّنٍ فوق القائمة** (٢٠٢٦-١٠-٣٠) — فلا تتكرّر فيها.
+                    items = (if (guest) emptyList() else CUSTOMER_ITEMS.filter { it.key != CustomerItems.INVITE }) +
                         (if (tutorialUrl.isNotBlank()) listOf(TUTORIAL_ITEM) else emptyList()) +
                         PlatformPages.items,
                     onPick = { item ->
@@ -705,13 +723,22 @@ private fun SignedIn(
                     //
                     // **ولا يُرسم قبل أن تصل المدن** — **وسطرٌ يقول
                     // «لم تُحدَّد» ثمّ يتبدّل بعد ثانيةٍ يُقرأ ارتباكا.**
-                    header = if (citiesVm.cities.isEmpty()) {
+                    header = if (citiesVm.cities.isEmpty() && guest) {
                         null
                     } else {
                         {
-                            CityRow(CityScope.nameOf(citiesVm.cities)) {
-                                cityOpen = true
-                                scope.launch { drawer.close() }
+                            if (!guest) {
+                                InviteDrawerRow {
+                                    overlay.show(Overlay.Menu(CustomerItems.INVITE))
+                                    scope.launch { drawer.close() }
+                                }
+                                androidx.compose.foundation.layout.Spacer(Modifier.height(6.dp))
+                            }
+                            if (citiesVm.cities.isNotEmpty()) {
+                                CityRow(CityScope.nameOf(citiesVm.cities)) {
+                                    cityOpen = true
+                                    scope.launch { drawer.close() }
+                                }
                             }
                         }
                     },
@@ -1272,7 +1299,21 @@ private fun SignedIn(
                         danger = false,
                     )
                 }
-                pendingLive?.let { o ->
+                // **والمشاركةُ التلقائيّة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — ما دام تفضيلُ «شارك موقعي
+                // المباشر» مفعّلاً والإذنُ والموقعُ جاهزَين تبدأ بلا سؤال، **والإيقافُ في بطاقة
+                // الطلب والإشعار.** وبلا إذنٍ تُسأل النافذةُ كما كانت.
+                val autoLive = pendingLive != null &&
+                    com.rahalgo.customer.live.LiveAuto.load(liveCtx) &&
+                    com.rahalgo.map.Here.granted(liveCtx) &&
+                    com.rahalgo.ui.locationServiceEnabled(liveCtx)
+                if (autoLive) {
+                    val o = pendingLive!!
+                    LaunchedEffect(o.id, o.liveRequestedAt) {
+                        ordersVm.decideLiveShare(o)
+                        com.rahalgo.customer.live.LiveShare.start(liveCtx, o.id)
+                    }
+                }
+                pendingLive?.takeIf { !autoLive }?.let { o ->
                     com.rahalgo.customer.live.LiveShareDialog(
                         onShare = {
                             ordersVm.decideLiveShare(o)
@@ -1296,6 +1337,8 @@ private fun SignedIn(
                     // الإقلاعِ/العودةِ/النبضةِ/إعادةِ الوصل. **واليدويُّ في بطاقة
                     // الطلب** (`OrdersScreen.onRate`) لمن أراد بعد الإغلاق.
                     ordersVm.askRate?.let { o ->
+                        // **وصله طلبٌ** — فتعود بطاقةُ «عجبتك الخدمة؟ ادعُ صديقاً» مرّةً (٢٠٢٦-١٠-٣٠).
+                        LaunchedEffect(Unit) { InviteNudge.markDelivered(context) }
                         RateDialog(
                             hasDriver = !o.driverName.isNullOrEmpty(),
                             sending = ordersVm.acting,

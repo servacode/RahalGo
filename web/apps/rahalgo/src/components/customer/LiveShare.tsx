@@ -18,7 +18,7 @@ import { createPortal } from "react-dom";
 import { getMessages, defaultLocale, withPlatform } from "@rahalgo/i18n";
 import { Alert, Button, IconLocation, usePlatform } from "@rahalgo/ui";
 import { useActiveOrders } from "@/lib/customer/active";
-import { pendingAsk, useLiveShare } from "@/lib/customer/live";
+import { liveAutoOn, pendingAsk, useLiveShare } from "@/lib/customer/live";
 import { quotePending } from "./orderParts";
 
 const m = getMessages(defaultLocale);
@@ -31,6 +31,8 @@ export function LiveAsk() {
   const { name } = usePlatform();
   if (!open || typeof document === "undefined") return null;
   if (open.some(quotePending)) return null;
+  /* **والتفضيلُ مفعّلٌ فتبدأ وحدَها** — لا سؤال (انظر `liveAutoOn`). */
+  if (liveAutoOn()) return null;
   const o = live.activeId ? null : pendingAsk(open, live.decided);
   if (!o) return null;
   return createPortal(

@@ -439,6 +439,12 @@ data class CartLine(
      * سلّةً كاملةً برمزٍ لا يقول أيَّ صنفٍ هو.
      */
     @SerialName("option_ids") val optionIds: List<String> = emptyList(),
+    /**
+     * **عددُ كلِّ مشروب** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — `{"<option_id>": n}`.
+     * **يُرسَل دائماً من التطبيق الجديد ولو فارغاً**: حضورُه يقول للمحرّك «المشروبُ
+     * بعدده لا بعدد الصنف». و`null` (سلّةٌ قديمةٌ محفوظة) يُبقي السلوكَ القديم.
+     */
+    @SerialName("option_qty") val optionQty: Map<String, Int>? = null,
 )
 
 @Serializable
@@ -736,6 +742,11 @@ data class MyOrder(
     /** **ما في الطلب باختصار** — يرسله المحرّكُ نصّاً لا قائمة. */
     @SerialName("items_count") val itemsCount: Int = 0,
     @SerialName("items_preview") val itemsPreview: String = "",
+    /**
+     * **بنودُ الطلب للفاتورة** (٢٠٢٦-١٠-٣٠) — والمشروبُ بندٌ مستقلٌّ بعد صنفه
+     * (`drink_for`). و`null` لطلبٍ بلا بنود (الخاص).
+     */
+    val items: List<MyOrderLine>? = null,
     @SerialName("wallet_paid") val walletPaid: Long = 0,
     @SerialName("cash_due") val cashDue: Long = 0,
     /**
@@ -765,6 +776,34 @@ data class MyOrder(
      */
     val stages: List<String> = emptyList(),
     @SerialName("stage_at") val stageAt: Int = -1,
+)
+
+/**
+ * **بندٌ في طلب الزبون** — صنفٌ أو مشروبٌ طُلب معه.
+ *
+ * **و`drinkFor` يعني «مشروبٌ لبند كذا»**: اسمُه وسعرُه وعددُه، بلا صنفٍ في القائمة.
+ * وطلبٌ قديمٌ مشروبُه داخل خيارات الصنف، فيُعرض كما كان.
+ */
+@Serializable
+data class MyOrderLine(
+    val id: String = "",
+    @SerialName("menu_item_id") val menuItemId: String? = null,
+    val name: String = "",
+    @SerialName("unit_price") val unitPrice: Long = 0,
+    val qty: Int = 0,
+    val note: String = "",
+    val options: List<MyOrderOption>? = null,
+    @SerialName("drink_for") val drinkFor: String? = null,
+    @SerialName("drink_option_id") val drinkOptionId: String? = null,
+)
+
+/** **خيارٌ كما حُفظ مع البند** — لقطةٌ لا قراءةٌ لاحقة. */
+@Serializable
+data class MyOrderOption(
+    val id: String? = null,
+    val group: String = "",
+    val name: String = "",
+    @SerialName("price_delta") val priceDelta: Long = 0,
 )
 
 /** **ما يُرسَل لمعاينة الخصم.** */

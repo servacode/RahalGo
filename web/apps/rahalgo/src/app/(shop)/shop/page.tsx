@@ -42,6 +42,7 @@ import type { HomePage, Item } from "@/lib/customer/types";
 import { AddressChip, AddressSheet } from "@/components/customer/AddressSheet";
 import { ItemGrid, ItemSheet } from "@/components/customer/items";
 import { FeaturedStrip } from "@/components/customer/stores";
+import { InviteHomeCard } from "@/components/customer/InviteNudge";
 
 const m = getMessages(defaultLocale);
 const H = m.shop.home;
@@ -148,6 +149,9 @@ export default function ShopPage() {
         onChange={(e) => search.setQ(e.target.value)}
         aria-label={H.search}
       />
+
+      {/* **«ادعُ صديقك» تحت البحث** — تُخفى بـ✕ للأبد (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}
+      {user && !searching && <InviteHomeCard />}
 
       {searching ? (
         <section className="flex flex-col gap-3">

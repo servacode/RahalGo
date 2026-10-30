@@ -49,7 +49,7 @@ object Cart {
     val count: Int get() = lines.sumOf { it.qty }
 
     /** **ما يُقرأ قبل التسعيرة** — والمحرّكُ يُعيد الحسابَ عند الإرسال. */
-    val subtotal: Long get() = lines.sumOf { it.unitPrice * it.qty }
+    val subtotal: Long get() = lines.sumOf { it.total }
 
     // ══════════════════════════════════════════════════════════════════
     // **والقرصُ يُلمس مرّةً عند الإقلاع ثمّ عند كلّ تبديل**
@@ -73,7 +73,7 @@ object Cart {
         store = prefs
         val raw = prefs.getString(KEY, null) ?: return
         lines = runCatching {
-            json.decodeFromString<List<Saved>>(raw).map { Line(it.item, it.qty, it.options) }
+            json.decodeFromString<List<Saved>>(raw).map { it.toLine() }
         }.getOrElse {
             // **وسلّةٌ لا تُقرأ تُمحى ولا تُسقط الإقلاع** — **صنفٌ تبدّل
             // حقلُه في المحرّك يكسر الفكَّ**، ولا يُترك التطبيقُ لا يفتح.
@@ -95,12 +95,19 @@ object Cart {
      * **فالمفتاحُ هو المعرّفُ وخياراتُه معاً** لا المعرّفَ وحدَه.
      */
     /** **يُرجع `true` إن زاد كميّةَ صنفٍ قائمٍ** — ليختار المنادي رسالةَ التأكيد. */
-    fun add(item: Item, qty: Int = 1, options: List<ModifierOption> = emptyList()): Boolean {
-        val line = Line(item, qty, options)
+    fun add(
+        item: Item,
+        qty: Int = 1,
+        options: List<ModifierOption> = emptyList(),
+        /** **المشروباتُ بأعدادها** (٢٠٢٦-١٠-٣٠) — لا تُضرب بعدد الصنف. */
+        drinks: List<DrinkPick> = emptyList(),
+    ): Boolean {
+        val line = Line(item, qty, options, drinks.filter { it.qty > 0 })
         val at = lines.indexOfFirst { it.key == line.key }
         val increased = at >= 0
         lines = if (increased) {
-            lines.toMutableList().also { it[at] = it[at].copy(qty = it[at].qty + qty) }
+            // **والمشروباتُ تُجمع كما يُجمع العدد** — من أضاف «شاورما وعيران» مرّتين أراد عيرانين.
+            lines.toMutableList().also { it[at] = it[at].copy(qty = it[at].qty + qty, drinks = it[at].drinks.plusDrinks(line.drinks)) }
         } else {
             lines + line
         }
@@ -137,7 +144,7 @@ object Cart {
     private fun save() {
         val prefs = store ?: return
         val raw = runCatching {
-            json.encodeToString(lines.map { Saved(it.item, it.qty, it.options) })
+            json.encodeToString(lines.map { Saved(it.item, it.qty, it.options, if (it.legacy) null else it.drinks) })
         }.getOrNull() ?: return
         prefs.edit().putString(KEY, raw).apply()
     }
@@ -156,6 +163,14 @@ object Cart {
         val qty: Int,
         /** **ما اختاره** — حجمٌ وإضافات، فارغةٌ لصنفٍ بلا خيارات. */
         val options: List<ModifierOption> = emptyList(),
+        /** **المشروباتُ بأعدادها** — كلٌّ يُحسب بعدده هو لا بعدد الصنف. */
+        val drinks: List<DrinkPick> = emptyList(),
+        /**
+         * **سطرٌ من سلّةٍ حُفظت قبل عدّاد المشروبات** — مشروبُه (إن كان) داخل
+         * `options` ويُضرب بعدد الصنف. **فلا يُرسَل له `option_qty`** ليبقى سعرُه
+         * كما رآه، ولا يضيع مشروبُه بصمت.
+         */
+        val legacy: Boolean = false,
     ) {
         /**
          * **هويّةُ السطر** — المعرّفُ وخياراتُه مرتَّبةً.
@@ -164,10 +179,17 @@ object Cart {
          * واحد، **ولو لم يُرتَّب لَصارا سطرين في السلّة.**
          */
         val key: String
-            get() = item.id + "|" + options.map { it.id }.sorted().joinToString(",")
+            get() = item.id + "|" + options.map { it.id }.sorted().joinToString(",") +
+                (if (drinks.isEmpty()) "" else "|" + drinks.map { it.option.id + "x" + it.qty }.sorted().joinToString(","))
 
         /** **ثمنُ الواحد بخياراته** — والفرقُ يُضاف كما يُضاف في المحرّك. */
         val unitPrice: Long get() = item.price + options.sumOf { it.priceDelta }
+
+        /** **ثمنُ المشروبات** — كلٌّ بسعره وعدده، ولا يُضرب بعدد الصنف. */
+        val drinksTotal: Long get() = drinks.sumOf { it.option.priceDelta * it.qty }
+
+        /** **ثمنُ السطر كاملاً** — الصنفُ بعدده وخياراته، ثمّ المشروبات. */
+        val total: Long get() = unitPrice * qty + drinksTotal
 
         /**
          * **صورةُ السطر كما يقرؤها المحرّك.**
@@ -177,8 +199,30 @@ object Cart {
          * بغيرها — **ويدفع الزبونُ غيرَ ما رأى.**
          */
         fun toPayload(): CartLine =
-            CartLine(menuItemId = item.id, qty = qty, optionIds = options.map { it.id })
+            CartLine(
+                menuItemId = item.id,
+                qty = qty,
+                optionIds = options.map { it.id },
+                optionQty = if (legacy) null else drinks.associate { it.option.id to it.qty },
+            )
     }
+
+    /** **مشروبٌ وعددُه** — من مجموعة «مشروبات» في نافذة الصنف. */
+    @Serializable
+    data class DrinkPick(val option: ModifierOption, val qty: Int)
+
+    /** **يجمع مشروبين بالمعرّف نفسِه** — والسقفُ ٢٠ كما في المحرّك. */
+    private fun List<DrinkPick>.plusDrinks(more: List<DrinkPick>): List<DrinkPick> {
+        val out = LinkedHashMap<String, DrinkPick>()
+        (this + more).forEach { d ->
+            val was = out[d.option.id]
+            out[d.option.id] = if (was == null) d else was.copy(qty = minOf(MAX_DRINK, was.qty + d.qty))
+        }
+        return out.values.toList()
+    }
+
+    /** **سقفُ المشروب الواحد في السطر** — مرآةُ `maxDrinkQty` في المحرّك. */
+    const val MAX_DRINK = 20
 
     /** **صورةُ السطر على القرص** — والشاشةُ لا تعرفها. */
     @Serializable
@@ -186,5 +230,9 @@ object Cart {
         val item: Item,
         val qty: Int,
         val options: List<ModifierOption> = emptyList(),
-    )
+        /** **غيابُه = سلّةٌ قديمة** — انظر `Line.legacy`. */
+        val drinks: List<DrinkPick>? = null,
+    ) {
+        fun toLine(): Line = Line(item, qty, options, drinks.orEmpty(), legacy = drinks == null)
+    }
 }
