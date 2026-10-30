@@ -61,6 +61,8 @@ import {
   Radio,
   LoadingState,
   Stars,
+  Select,
+  Checkbox,
 } from "@rahalgo/ui";
 import { api, apiFile, ApiError, mediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -937,7 +939,6 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
    */
   const [delivery, setDelivery] = useState({ photo: false, code: false });
   const [serverToday, setServerToday] = useState("");
-  const [dayHour, setDayHour] = useState<number | null>(null);
   const params = useSearchParams();
   const initialQ = params.get("q") ?? "";
   const [data, setData] = useState<OrderPage | null>(null);
@@ -1078,7 +1079,6 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       setSelfManage(r.meta.orders_mode === "merchants");
       setDelivery({ photo: !!r.meta.require_delivery_photo, code: !!r.meta.delivery_code_required });
       if (r.meta.today) setServerToday(r.meta.today);
-      if (typeof r.meta.day_start_hour === "number") setDayHour(r.meta.day_start_hour);
     } catch {
       setCountsFailed(true);
       setSelfManage((v) => (v === null ? false : v));
@@ -1984,13 +1984,13 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
     { k: "reports", icon: IconWarning, hot: "danger" },
     { k: "stuck", icon: IconError, hot: "danger" },
   ];
-  const HISTORY_TILES: { k: string; label: string; icon: typeof IconBell; hot: TileTone }[] = [
-    { k: "delivered", label: H.tileDelivered, icon: IconSuccess, hot: "success" },
-    { k: "failed", label: H.tileFailed, icon: IconError, hot: "danger" },
-    { k: "cancelled", label: OFFICE_STATUS.cancelled ?? "", icon: IconClose, hot: "warning" },
-    { k: "rejected", label: OFFICE_STATUS.rejected ?? "", icon: IconClose, hot: "warning" },
+  const HISTORY_COUNTS: { k: string; label: string }[] = [
+    { k: "delivered", label: H.countDelivered },
+    { k: "failed", label: H.countFailed },
+    { k: "cancelled", label: H.countCancelled },
+    { k: "rejected", label: H.countRejected },
     // **و«مسترجع» صفرٌ دائماً اليوم** — لا استرجاعَ من الشاشة؛ فيغيب حين لا شيءَ فيه.
-    ...((C.refunded ?? 0) > 0 ? [{ k: "refunded", label: H.tileRefunded, icon: IconSwap, hot: "accent" as TileTone }] : []),
+    ...((C.refunded ?? 0) > 0 ? [{ k: "refunded", label: H.countRefunded }] : []),
   ];
   const kindChips = [
     { id: "", label: H.kindAll },
@@ -2005,10 +2005,6 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
     { id: "", label: H.payAll },
     { id: "cash", label: H.payCash },
     { id: "wallet", label: H.payWallet },
-  ];
-  const moreChips = [
-    { id: "late", label: H.lateOnly },
-    { id: "waived", label: H.waivedOnly },
   ];
   const periodChips = [
     { id: "", label: m.admin.ordersPage.range.all },
@@ -2043,7 +2039,6 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         <PageHero<string>
           icon={IconOrder}
           title={m.admin.ordersPage.historyTitle}
-          subtitle={H.subtitle}
           actions={
             <>
               {can("finance.export") && (
@@ -2119,28 +2114,27 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           ))}
         </div>
       )}
+      {/* **أعدادُ الحالات سطرٌ صغير** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — «الكل 9 · تسلّم 4 · فشل 2 …»، وكلُّ رقمٍ
+          يُضغط فيفلتر، والمختارُ مُعلَّم. **و«مسترجع» يغيب حين لا شيءَ فيه.** */}
       {!live && counts && !inverted && (
-        <div className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
-          <div className={`grid ${status === "" ? "rounded-card ring-2 ring-accent" : ""}`}>
-            <Tile
-              icon={IconOrder}
-              label={H.tileAll}
-              value={fmtNum(closedTotal)}
-              tone={closedTotal > 0 ? "accent" : "muted"}
-              onClick={() => pickStatus("")}
-            />
-          </div>
-          {HISTORY_TILES.map(({ k, label, icon, hot }) => (
-            <div key={k} className={`grid ${status === k ? "rounded-card ring-2 ring-accent" : ""}`}>
-              <Tile
-                icon={icon}
-                label={label}
-                value={fmtNum(C[k] ?? 0)}
-                tone={tone(C[k], hot)}
-                onClick={() => pickStatus(k)}
-              />
-            </div>
-          ))}
+        <div className="mb-3 flex flex-wrap items-center gap-1 text-sm">
+          {[{ k: "", label: H.countAll, n: closedTotal }, ...HISTORY_COUNTS.map((c) => ({ ...c, n: C[c.k] ?? 0 }))].map(
+            ({ k, label, n }, i) => (
+              <span key={k || "all"} className="inline-flex items-center gap-1">
+                {i > 0 && <span aria-hidden className="text-ink-muted">·</span>}
+                <button
+                  type="button"
+                  aria-pressed={status === k}
+                  onClick={() => pickStatus(k)}
+                  className={`rounded-badge px-2 py-0.5 ${
+                    status === k ? "bg-accent-tint font-bold text-accent" : "text-ink-muted hover:text-ink"
+                  }`}
+                >
+                  {label} <span className="font-bold tabular-nums">{fmtNum(n)}</span>
+                </button>
+              </span>
+            ),
+          )}
         </div>
       )}
 
@@ -2211,10 +2205,13 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         </section>
       )}
 
-      {/* **مُرشِّحاتُ السجلّ** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — بحثٌ ومدّةٌ بأزرار، و«تاريخ مخصّص» يفتح
-          الخانتين، ونوعٌ بأزرار، ومتجرٌ وسائق. **وتلتفّ على الجوال ولا تُزيح الصفحة.** */}
+      {/* ══════════════════════════════════════════════════════════
+          **مُرشِّحاتُ السجلّ في سطرٍ واحد** (قرارُ المالك ٢٠٢٦-١٠-٣٠: «الشكل بشع») — البحثُ بعرض
+          الصفحة، وتحته المدّةُ والنوعُ والدفعُ والمتجرُ والسائقُ قوائمَ صغيرة، ومربّعا «متأخرة» و«العمولة
+          ممحية». **ولا سطرَ شرحٍ تحتها**، وتلتفّ على الجوّال وحدَه.
+          ══════════════════════════════════════════════════════════ */}
       {!live && (
-        <section className="surface relative z-30 mb-4 flex flex-col gap-3 p-3">
+        <section className="surface relative z-30 mb-3 flex flex-col gap-2 p-3">
           <Input
             icon={<IconSearch />}
             placeholder={H.searchPlaceholder}
@@ -2224,123 +2221,124 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
               setPage(1);
             }}
           />
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs text-ink-muted">{H.periodLabel}</span>
-            <Chips items={periodChips} value={periodValue} onChange={pickPeriod} wrap />
-          </div>
-          {showDates && (
-            <div className="grid grid-cols-1 gap-2 sm:max-w-md sm:grid-cols-2">
-              <Input
-                id="h-from"
-                label={m.admin.ordersPage.range.from}
-                type="date"
-                value={from}
-                onChange={(e) => {
-                  setFrom(e.target.value);
-                  setPage(1);
-                }}
-              />
-              <Input
-                id="h-to"
-                label={m.admin.ordersPage.range.to}
-                type="date"
-                value={to}
-                onChange={(e) => {
-                  setTo(e.target.value);
-                  setPage(1);
-                }}
-              />
-            </div>
-          )}
-          {/* **ونوعُ الطلب بأزرار** — بأسماء البطاقة نفسِها (تدقيقُ السجلّ ٢٠٢٦-١٠-٢٧). */}
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs text-ink-muted">{H.kindLabel}</span>
-            <Chips
-              items={kindChips}
-              value={kind}
-              onChange={(v) => {
-                setKind(v);
-                setPage(1);
-              }}
-              wrap
-            />
-          </div>
-          {/* **طريقةُ الدفع، والمتأخّرةُ والممحيّةُ عمولتُها** (ملفُّ الطلب ٢٠٢٦-١٠-٣٠). */}
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs text-ink-muted">{H.payLabel}</span>
-            <Chips
-              items={payChips}
-              value={pay}
-              onChange={(v) => {
-                setPay(v);
-                setPage(1);
-              }}
-              wrap
-            />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs text-ink-muted">{H.moreLabel}</span>
-            <Chips
-              items={moreChips}
-              value={[...(lateOnly ? ["late"] : []), ...(waivedOnly ? ["waived"] : [])]}
-              onChange={(id) => {
-                if (id === "late") setLateOnly(!lateOnly);
-                else setWaivedOnly(!waivedOnly);
-                setPage(1);
-              }}
-              wrap
-            />
-          </div>
-          {((storesState === "ok" && storeList.length > 0) || (driversState === "ok" && driverList.length > 0)) && (
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:max-w-2xl">
-              {storesState === "ok" && storeList.length > 0 && (
-                <SearchSelect
-                  ariaLabel={m.admin.ordersPage.range.allStores}
-                  allLabel={m.admin.ordersPage.range.allStores}
-                  value={merchantId}
-                  options={storeList.map((x) => ({ value: x.id, label: storeLabel(x.name, x.number) }))}
-                  onChange={(v) => {
-                    setMerchantId(v);
+          <div className="flex flex-wrap items-center gap-2">
+            <Select
+              aria-label={H.periodLabel}
+              className="!w-auto"
+              value={periodValue}
+              onChange={(e) => pickPeriod(e.target.value)}
+            >
+              {periodChips.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.id === "" ? `${H.periodLabel}: ${c.label}` : c.label}
+                </option>
+              ))}
+            </Select>
+            {showDates && (
+              <span className="flex flex-wrap items-center gap-1.5">
+                <input
+                  id="h-from"
+                  type="date"
+                  aria-label={m.admin.ordersPage.range.from}
+                  className="rounded-control border border-line bg-field px-2 py-1.5 text-sm outline-none focus:border-primary"
+                  value={from}
+                  onChange={(e) => {
+                    setFrom(e.target.value);
                     setPage(1);
                   }}
                 />
-              )}
-              {driversState === "ok" && driverList.length > 0 && (
-                <SearchSelect
-                  ariaLabel={m.admin.ordersPage.range.allDrivers}
-                  allLabel={m.admin.ordersPage.range.allDrivers}
-                  value={driverId}
-                  options={driverList.map((d) => ({ value: d.id, label: d.full_name || d.phone }))}
-                  onChange={(v) => {
-                    setDriverId(v);
+                <span aria-hidden className="text-ink-muted">←</span>
+                <input
+                  id="h-to"
+                  type="date"
+                  aria-label={m.admin.ordersPage.range.to}
+                  className="rounded-control border border-line bg-field px-2 py-1.5 text-sm outline-none focus:border-primary"
+                  value={to}
+                  onChange={(e) => {
+                    setTo(e.target.value);
                     setPage(1);
                   }}
                 />
-              )}
-            </div>
-          )}
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="flex flex-col gap-0.5">
-              {/* **واليومُ يومُ الحساب** — يبدأ بساعة فتح الدوام كما يفلتر الخادم. */}
-              <span className="text-2xs text-ink-muted">
-                {dayHour != null ? H.dayStartsAt.replace("{h}", fmtNum(dayHour)) : H.byOrderTime}
               </span>
-              {/* **وما غاب من المرشِّحات يُقال لماذا** (المشكلة ١٩). */}
-              {(storesState !== "ok" || driversState !== "ok") && (
-                <span className="text-2xs text-ink-muted">
-                  {[
-                    storesState === "denied" ? H.noStoresPerm : storesState === "failed" ? H.storesFailed : "",
-                    driversState === "denied" ? H.noDriversPerm : driversState === "failed" ? H.driversFailed : "",
-                  ]
-                    .filter(Boolean)
-                    .join(m.common.listSeparator)}
-                </span>
-              )}
-            </span>
+            )}
+            <Select
+              aria-label={H.kindLabel}
+              className="!w-auto"
+              value={kind}
+              onChange={(e) => {
+                setKind(e.target.value);
+                setPage(1);
+              }}
+            >
+              {kindChips.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                </option>
+              ))}
+            </Select>
+            <Select
+              aria-label={H.payLabel}
+              className="!w-auto"
+              value={pay}
+              onChange={(e) => {
+                setPay(e.target.value);
+                setPage(1);
+              }}
+            >
+              {payChips.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                </option>
+              ))}
+            </Select>
+            {storesState === "ok" && storeList.length > 0 && (
+              <SearchSelect
+                className="w-full sm:w-52"
+                ariaLabel={m.admin.ordersPage.range.allStores}
+                allLabel={m.admin.ordersPage.range.allStores}
+                value={merchantId}
+                options={storeList.map((x) => ({ value: x.id, label: storeLabel(x.name, x.number) }))}
+                onChange={(v) => {
+                  setMerchantId(v);
+                  setPage(1);
+                }}
+              />
+            )}
+            {driversState === "ok" && driverList.length > 0 && (
+              <SearchSelect
+                className="w-full sm:w-52"
+                ariaLabel={m.admin.ordersPage.range.allDrivers}
+                allLabel={m.admin.ordersPage.range.allDrivers}
+                value={driverId}
+                options={driverList.map((d) => ({ value: d.id, label: d.full_name || d.phone }))}
+                onChange={(v) => {
+                  setDriverId(v);
+                  setPage(1);
+                }}
+              />
+            )}
+            <Checkbox
+              id="h-late"
+              label={H.lateOnly}
+              checked={lateOnly}
+              onChange={(e) => {
+                setLateOnly(e.target.checked);
+                setPage(1);
+              }}
+            />
+            <Checkbox
+              id="h-waived"
+              label={H.waivedOnly}
+              checked={waivedOnly}
+              onChange={(e) => {
+                setWaivedOnly(e.target.checked);
+                setPage(1);
+              }}
+            />
             {historyFiltered && (
-              <Button variant="secondary" onClick={clearHistory}>
+              <button type="button" className="text-xs font-medium text-accent-text underline" onClick={clearHistory}>
                 {H.clearFilters}
-              </Button>
+              </button>
             )}
           </div>
         </section>
@@ -2436,7 +2434,6 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           <EmptyBox
             tone={historyFiltered ? "muted" : "success"}
             title={historyFiltered ? H.emptyFiltered : H.emptyAll}
-            hint={historyFiltered ? H.emptyHint : H.emptyAllHint}
             action={
               historyFiltered ? (
                 <Button variant="secondary" onClick={clearHistory}>
@@ -2462,7 +2459,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           {!data && loading ? (
             <LoadingState />
           ) : (
-            <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+            <ul className="flex flex-col gap-1.5">
               {rows.map((o) => (
                 <HistoryCard
                   key={o.id}
@@ -2567,7 +2564,7 @@ function EmptyBox({
 }: {
   tone: "success" | "muted";
   title: string;
-  hint: string;
+  hint?: string;
   action?: React.ReactNode;
 }) {
   return (
@@ -2580,7 +2577,7 @@ function EmptyBox({
         {tone === "success" ? <IconSuccess size={28} /> : <IconSearch size={28} />}
       </span>
       <h2 className="heading-section">{title}</h2>
-      <p className="max-w-md text-sm text-ink-muted">{hint}</p>
+      {hint && <p className="max-w-md text-sm text-ink-muted">{hint}</p>}
       {action}
     </section>
   );
@@ -2604,7 +2601,7 @@ function EndBadge({ o }: { o: OrderRow }) {
   return (
     <span className={`rounded-badge px-2.5 py-1 text-xs font-bold text-on-solid ${END_TINT[o.status] ?? "bg-ink-muted"}`}>
       {OFFICE_STATUS[o.status] ?? STATUS_LABELS[o.status] ?? o.status}
-      {o.closed_at && ` · ${tookText(o.created_at, o.closed_at)}`}
+      {o.status === "delivered" && o.closed_at && ` · ${tookText(o.created_at, o.closed_at)}`}
     </span>
   );
 }
@@ -2636,16 +2633,15 @@ function HistoryCard({
   const ended = closed && o.status !== "delivered";
   const reason = o.cancel_reason || (o.fail_reason ? (DOOR_REPORTS[o.fail_reason] ?? FAILS[o.fail_reason] ?? o.fail_reason) : "");
   const who = o.ended_by ? (ENDED_BY[o.ended_by] ?? o.ended_by) : H.endedBySystem;
-  const row = "flex items-start justify-between gap-3";
   // **الملغى والمرفوض باهتٌ رماديّ** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — فلا يختلط بالمسلَّم.
   const muted = o.status === "cancelled" || o.status === "rejected";
-  // **مين دفع وكيف** — بدلَ «الدفع عند الاستلام» على كلّ كرت.
+  // **مين دفع وكيف** — بدلَ «الدفع عند الاستلام» على كلّ سطر.
   const payer = payerOf(o);
   const OP = m.admin.ordersPage;
   const commission = o.commission_taken ?? o.platform_commission ?? 0;
   const [waivedNow, setWaivedNow] = useState(0);
   const waived = (o.commission_waived ?? 0) || waivedNow;
-  // **«ما استلمت العمولة» على الكرت كمان** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — بشروط المحرّك نفسِها:
+  // **«ما استلمت العمولة» على السطر كمان** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — بشروط المحرّك نفسِها:
   // طلبٌ عاديٌّ مسلَّم، عمولتُه فوق الصفر ولم تُمحَ، وانقبض نقداً بيد السائق. والمحرّكُ هو الحَكَم.
   const canWaive = useCanCall()(...WAIVE_ROUTE);
   const [waiving, setWaiving] = useState(false);
@@ -2664,70 +2660,26 @@ function HistoryCard({
     ...(o.board?.late ? [{ k: "late", label: F.late, v: "warning" as const }] : []),
     ...(waived > 0 ? [{ k: "waived", label: F.waived, v: "violet" as const }] : []),
   ];
+  const endedLine = [who, reason, o.fault ? `${H.fault} ${FAULT_LABELS[o.fault] ?? o.fault}` : ""]
+    .filter(Boolean)
+    .join(" · ");
+  // ══════════════════════════════════════════════════════════════════
+  // **سطرٌ بعرض الصفحة لا كرتٌ طويل** (قرارُ المالك ٢٠٢٦-١٠-٣٠: «الشكل بشع») — عشرةُ طلباتٍ
+  // على شاشةٍ واحدة: الرقمُ والنوعُ والنهاية، ثمّ من لمين والسائق، والمبلغُ وطريقةُ الدفع جانباً،
+  // والأزرارُ آخرَ السطر. **وعلى الجوّال تنزل الأجزاءُ تحت بعضها.**
+  // ══════════════════════════════════════════════════════════════════
   return (
-    <li className={`surface flex flex-col gap-3 p-4 ${focused ? "ring-2 ring-accent" : ""} ${muted ? "bg-field opacity-75" : ""}`}>
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <span className="flex flex-wrap items-center gap-2">
+    <li
+      className={`surface flex flex-col gap-2 px-3 py-2.5 lg:flex-row lg:items-center lg:gap-4 ${
+        focused ? "ring-2 ring-accent" : ""
+      } ${muted ? "bg-field opacity-75" : ""}`}
+    >
+      <div className="min-w-0 flex-1 space-y-1 text-sm">
+        <div className="flex flex-wrap items-center gap-1.5">
           <OrderRef number={o.number} at={o.created_at} />
           <KindBadge o={o} />
-        </span>
-        <span className="flex flex-wrap items-center justify-end gap-1">
           {closed ? <EndBadge o={o} /> : <Badge variant="accent">{OFFICE_STATUS[o.status] ?? o.status}</Badge>}
           {focused && <Badge variant="accent">{BOARD.focused}</Badge>}
-        </span>
-      </div>
-
-      {/* **شو صار وليش** — مين أنهاه، والسبب، والذنب على مين. */}
-      {ended && (
-        <div className="space-y-1 rounded-control border border-line-soft bg-field px-3 py-2 text-sm">
-          <p className={row}>
-            <span className="shrink-0 text-ink-muted">{H.endedBy}</span>
-            <span className="text-end font-medium">{who}</span>
-          </p>
-          {reason && (
-            <p className={row}>
-              <span className="shrink-0 text-ink-muted">{H.reason}</span>
-              <span className="min-w-0 text-end">{reason}</span>
-            </p>
-          )}
-          {o.fault && (
-            <p className={row}>
-              <span className="shrink-0 text-ink-muted">{H.fault}</span>
-              <span className="text-end">{FAULT_LABELS[o.fault] ?? o.fault}</span>
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* **من أين لمين** — المتجرُ ← الزبون، والسائقُ تحتهما. */}
-      <div className="space-y-1.5 text-sm">
-        <p className="flex flex-wrap items-center gap-1.5">
-          <IconStore size={14} className="shrink-0 text-warning" />
-          <span className="font-medium">{o.kind === "custom" ? kindLabel(o) : o.merchant_name || "—"}</span>
-          <span aria-hidden className="text-ink-muted">←</span>
-          <IconUser size={14} className="shrink-0 text-accent-text" />
-          <span className="font-medium">{o.customer_name || "—"}</span>
-          <span dir="ltr" className="text-xs text-ink-muted" title={o.customer_phone ? undefined : H.maskedPhone}>
-            {o.customer_phone || o.customer_phone_masked}
-          </span>
-        </p>
-        {o.driver_name && (
-          <p className="flex flex-wrap items-center gap-1.5">
-            <IconMoto size={14} className="shrink-0 text-success" />
-            <span>{o.driver_name}</span>
-            {o.driver_phone && (
-              <span dir="ltr" className="text-xs text-ink-muted">
-                {o.driver_phone}
-              </span>
-            )}
-          </p>
-        )}
-      </div>
-
-      {/* **تقييمُ الزبون وعلاماتٌ صغيرة** (ملفُّ الطلب ٢٠٢٦-١٠-٣٠) — محوّل · عليه شكوى · متأخر ·
-          العمولة ممحية. **وتغيب حين لا شيء.** */}
-      {(stars > 0 || flags.length > 0) && (
-        <div className="flex flex-wrap items-center gap-1.5">
           {stars > 0 && <Stars value={stars} size="sm" />}
           {flags.map((f) => (
             <Badge key={f.k} variant={f.v}>
@@ -2735,53 +2687,84 @@ function HistoryCard({
             </Badge>
           ))}
         </div>
-      )}
+        <p className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+          <IconStore size={14} className="shrink-0 text-warning" />
+          <span className="font-medium">{o.kind === "custom" ? kindLabel(o) : o.merchant_name || "—"}</span>
+          <span aria-hidden className="text-ink-muted">←</span>
+          <IconUser size={14} className="shrink-0 text-accent-text" />
+          <span className="font-medium">{o.customer_name || "—"}</span>
+          <span dir="ltr" className="text-xs text-ink-muted">
+            {o.customer_phone || o.customer_phone_masked}
+          </span>
+          {o.driver_name && (
+            <>
+              <span aria-hidden className="text-ink-muted">·</span>
+              <IconMoto size={14} className="shrink-0 text-success" />
+              <span>{o.driver_name}</span>
+              {o.driver_phone && (
+                <span dir="ltr" className="text-xs text-ink-muted">
+                  {o.driver_phone}
+                </span>
+              )}
+            </>
+          )}
+        </p>
+        {ended && (
+          <p className="text-xs">
+            <span className="text-ink-muted">{H.endedBy}: </span>
+            {endedLine}
+          </p>
+        )}
+        {goods && <div className="text-xs">{goods}</div>}
+        {proof && (
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="inline-flex items-center gap-1 text-ink-muted">
+              <IconCamera size={13} />
+              {m.admin.ordersPage.proof}
+            </span>
+            {proof}
+          </div>
+        )}
+      </div>
 
-      {/* **والإجماليُّ كبيراً، ومين دفع وكيف، وتحته الأجرةُ والعمولة** (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}
-      <div className={`flex items-end justify-between gap-2 rounded-control px-3 py-2.5 ${muted ? "bg-surface" : "bg-field"}`}>
-        <span>
-          <span className="block text-2xs text-ink-muted">{OP.total}</span>
-          <Money value={o.total} className={`figure block ${muted ? "text-ink-muted line-through" : ""}`} />
-          <span className="mt-0.5 block text-xs text-ink-muted">
-            {OP.cardFee.replace("{n}", fmtMoney(o.delivery_fee))}
-            {" · "}
-            {waived > 0 ? (
-              <span className="font-bold text-warning">{OP.cardCommissionWaived.replace("{n}", fmtMoney(waived))}</span>
-            ) : commission > 0 ? (
-              OP.cardCommission.replace("{n}", fmtMoney(commission))
-            ) : (
-              OP.cardNoCommission
-            )}
-          </span>
+      {/* **المبلغُ وطريقةُ الدفع** — وتحتهما الأجرةُ والعمولة (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}
+      <div className="flex shrink-0 flex-wrap items-baseline justify-between gap-x-3 lg:w-56 lg:flex-col lg:flex-nowrap lg:items-end lg:gap-0.5 lg:text-end">
+        <Money value={o.total} className={`text-base font-bold ${muted ? "text-ink-muted line-through" : ""}`} />
+        <span
+          className={`text-xs font-bold ${muted ? "text-ink-muted" : payerIsCash(payer) ? "text-warning" : "text-accent-text"}`}
+        >
+          {payerLabel(o)}
+          {(o.free_waived ?? 0) > 0 && payer !== "free" && <span className="ms-1 text-success">{OP.freeDelivery}</span>}
         </span>
-        <span className="text-end text-xs">
-          <span className="block text-2xs text-ink-muted">{OP.cardHowPaid}</span>
-          <span className={`block font-bold ${muted ? "text-ink-muted" : payerIsCash(payer) ? "text-warning" : "text-accent-text"}`}>
-            {payerLabel(o)}
-          </span>
-          {(o.free_waived ?? 0) > 0 && payer !== "free" && <span className="block font-bold text-success">{OP.freeDelivery}</span>}
+        <span className="text-2xs text-ink-muted">
+          {OP.cardFee.replace("{n}", fmtMoney(o.delivery_fee))}
+          {" · "}
+          {waived > 0 ? (
+            <span className="font-bold text-warning">{OP.cardCommissionWaived.replace("{n}", fmtMoney(waived))}</span>
+          ) : commission > 0 ? (
+            OP.cardCommission.replace("{n}", fmtMoney(commission))
+          ) : (
+            OP.cardNoCommission
+          )}
         </span>
       </div>
 
-      {goods && <div className="text-sm">{goods}</div>}
-      {proof && (
-        <div className="flex flex-wrap items-center gap-2 text-sm">
-          <span className="inline-flex items-center gap-1.5 text-ink-muted">
-            <IconCamera size={14} />
-            {m.admin.ordersPage.proof}
+      {/* **الأزرارُ آخرَ السطر** — ملفُّ الطلب والفاتورة، ثمّ محوُ العمولة وما يلزم بعد الفشل. */}
+      <div className="flex shrink-0 flex-wrap items-center gap-1.5 lg:max-w-xs lg:justify-end">
+        <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={onDetails}>
+          <span className="flex items-center gap-1">
+            <IconRoute size={14} />
+            {H.detailsBtn}
           </span>
-          {proof}
-        </div>
-      )}
-
-      {/* **أفعالُ ما بعد الفشل** (تسويةُ البضاعة) — وتغيب حين لا شيء. */}
-      <div className="flex flex-wrap gap-2 empty:hidden">{actions}</div>
-
-      {waivable && (
-        <Button variant="secondary" className="w-full" onClick={() => setWaiving(true)}>
-          {m.admin.cashOutstanding.waiveBtn}
         </Button>
-      )}
+        {!NO_INVOICE.has(o.status) && <InvoiceButton order={o} compact />}
+        {waivable && (
+          <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => setWaiving(true)}>
+            {m.admin.cashOutstanding.waiveBtn}
+          </Button>
+        )}
+        <div className="flex flex-wrap gap-1.5 empty:hidden">{actions}</div>
+      </div>
       {waiving && (
         <WaiveCommissionDialog
           orderId={o.id}
@@ -2794,16 +2777,6 @@ function HistoryCard({
           }}
         />
       )}
-
-      <div className="mt-auto grid grid-cols-1 gap-2 border-t border-line-soft pt-3 sm:grid-cols-2">
-        <Button variant="secondary" className="w-full" onClick={onDetails}>
-          <span className="flex items-center justify-center gap-1.5">
-            <IconRoute size={15} />
-            {H.detailsBtn}
-          </span>
-        </Button>
-        {!NO_INVOICE.has(o.status) && <InvoiceButton order={o} />}
-      </div>
     </li>
   );
 }
@@ -4658,21 +4631,21 @@ function InvoiceList({
  * والشارة والرقم، **وكلمةٌ رابعةٌ تُلوي السطر.** ومن لم يعرف الأيقونةَ
  * وقف عليها فقرأ.
  */
-function InvoiceButton({ order }: { order: OrderRow }) {
+function InvoiceButton({ order, compact = false }: { order: OrderRow; compact?: boolean }) {
   const [open, setOpen] = useState(false);
   return (
     <>
       {/* **زرٌّ بعرض البطاقة بكلمته وأيقونته** (تدقيقُ السجلّ ٢٠٢٦-١٠-٢٧) — كان طابعةً صغيرةً بلا كتابة. */}
       <Button
         variant="secondary"
-        className="w-full"
+        className={compact ? "!px-3 !py-1.5 text-xs" : "w-full"}
         onClick={(e) => {
           e.stopPropagation();
           setOpen(true);
         }}
       >
         <span className="flex items-center justify-center gap-1.5">
-          <IconPrint size={15} />
+          <IconPrint size={compact ? 14 : 15} />
           {m.admin.ordersPage.history.invoiceBtn}
         </span>
       </Button>
