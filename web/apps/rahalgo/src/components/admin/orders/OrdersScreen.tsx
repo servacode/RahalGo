@@ -2134,23 +2134,35 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       {/* **أعدادُ الحالات سطرٌ صغير** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — «الكل 9 · تسلّم 4 · فشل 2 …»، وكلُّ رقمٍ
           يُضغط فيفلتر، والمختارُ مُعلَّم. **و«مسترجع» يغيب حين لا شيءَ فيه.** */}
       {!live && counts && !inverted && (
-        <div className="mb-3 flex flex-wrap items-center gap-1 text-sm">
+        <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
           {[{ k: "", label: H.countAll, n: closedTotal }, ...HISTORY_COUNTS.map((c) => ({ ...c, n: C[c.k] ?? 0 }))].map(
-            ({ k, label, n }, i) => (
-              <span key={k || "all"} className="inline-flex items-center gap-1">
-                {i > 0 && <span aria-hidden className="text-ink-muted">·</span>}
+            ({ k, label, n }) => {
+              const on = status === k;
+              // **ولكلّ حالةٍ لونُها** (ملاحظةُ المالك ٢٠٢٦-١٠-٣١) — نقطةٌ صغيرةٌ قبل الاسم.
+              const dot =
+                k === "delivered" ? "text-success" : k === "failed" ? "text-danger" : k === "cancelled" ? "text-warning" : "text-ink-muted";
+              return (
                 <button
+                  key={k || "all"}
                   type="button"
-                  aria-pressed={status === k}
+                  aria-pressed={on}
                   onClick={() => pickStatus(k)}
-                  className={`rounded-badge px-2 py-0.5 ${
-                    status === k ? "bg-accent-tint font-bold text-accent" : "text-ink-muted hover:text-ink"
+                  className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 transition-colors ${
+                    on ? "border-accent bg-accent font-bold text-on-bright" : "border-line-soft bg-surface text-ink hover:border-accent"
                   }`}
                 >
-                  {label} <span className="font-bold tabular-nums">{fmtNum(n)}</span>
+                  {k && <span aria-hidden className={`h-2 w-2 rounded-full bg-current ${on ? "" : dot}`} />}
+                  <span>{label}</span>
+                  <span
+                    className={`min-w-6 rounded-full px-1.5 text-center text-xs font-bold tabular-nums ${
+                      on ? "bg-surface text-accent-text" : "bg-field text-ink"
+                    }`}
+                  >
+                    {fmtNum(n)}
+                  </span>
                 </button>
-              </span>
-            ),
+              );
+            },
           )}
         </div>
       )}
