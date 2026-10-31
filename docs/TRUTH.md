@@ -1237,6 +1237,7 @@ kosom` |
 | `orders.accept_timeout_min` | التوزيع والتنبيهات | int | `5` |
 | `orders.auto_accept_min` | التوزيع والتنبيهات | int | `0` |
 | `orders.unattended_auto_accept_min` | التوزيع والتنبيهات | int | `10` |
+| `orders.no_whatsapp_dispatch_min` | التوزيع والتنبيهات | int | `2` |
 | `orders.staff_presence_min` | التوزيع والتنبيهات | int | `5` |
 | `orders.manual_assign_after_min` | التوزيع والتنبيهات | int | `10` |
 | `ops.stuck_reminder_min` | التوزيع والتنبيهات | int | `15` |

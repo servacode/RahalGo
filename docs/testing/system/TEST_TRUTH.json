@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 251,
-    "behaviour_settings": 206,
+    "setting_defs": 252,
+    "behaviour_settings": 207,
     "order_fields": 129,
-    "test_files": 681,
-    "test_funcs": 2622
+    "test_files": 682,
+    "test_funcs": 2629
   },
   "flows": [
     {
@@ -6069,6 +6069,24 @@
         "customer",
         "driver",
         "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.no_whatsapp_dispatch_min",
+      "group": "dispatch",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
       ],
       "tests": null,
       "status": "NO_REGRESSION_TEST_YET"
@@ -19446,6 +19464,48 @@
     {
       "name": "TestNearLandmark_DriverSeesItCustomerDoesNot",
       "file": "internal/qa/near_landmark_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNWD01_StandardPendingReachesDrivers",
+      "file": "internal/qa/no_whatsapp_dispatch_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNWD02_AcceptedNotSentReachesDrivers",
+      "file": "internal/qa/no_whatsapp_dispatch_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNWD03_CustomPendingReachesDrivers",
+      "file": "internal/qa/no_whatsapp_dispatch_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNWD04_MerchantDeliveryReachesDrivers",
+      "file": "internal/qa/no_whatsapp_dispatch_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNWD05_MerchantDeliveryUnpaidIsFlagged",
+      "file": "internal/qa/no_whatsapp_dispatch_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNWD06_OffFreshAndSelfManageUntouched",
+      "file": "internal/qa/no_whatsapp_dispatch_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestNWD07_OldForgottenOrderUntouched",
+      "file": "internal/qa/no_whatsapp_dispatch_test.go",
       "package": "qa",
       "orphan": true
     },

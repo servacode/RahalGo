@@ -352,8 +352,11 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	//
 	// **و٢٠٦ مع `platform.day_start_hour`** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — **ساعةُ فتح الدوام
 	// التي يبدأ بها يومُ الحساب** (افتراضُها ٩).
-	if d.BehaviourSettings != 206 {
-		t.Errorf("إعداداتُ السلوك = %d لا 206 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	//
+	// **و٢٠٧ مع `orders.no_whatsapp_dispatch_min`** (قرارُ المالك ٢٠٢٦-١٠-٣١) — **الطلب
+	// بينزل للسائقين لحاله بلا واتساب** إذا ما انقبل أو ما انبعت للمتجر خلال المهلة.
+	if d.BehaviourSettings != 207 {
+		t.Errorf("إعداداتُ السلوك = %d لا 207 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

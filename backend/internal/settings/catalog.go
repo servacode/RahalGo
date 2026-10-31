@@ -1845,6 +1845,15 @@ var Catalog = []Def{
 	// للموظّفين في المنصّة** — فهذه أصدقُ إشارةٍ قائمة.
 	{Key: "orders.unattended_auto_accept_min", Group: GroupDispatch, Kind: KindInt,
 		Min: 0, Max: 120, Unit: "minute", Default: 10},
+	// ══════════════════════════════════════════════════════════════════
+	// **الطلب ما بيعلق عند المكتب ولا عند الواتساب** (قرار المالك ٢٠٢٦-١٠-٣١)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// بوضع المنصّة: بعد هالدقايق من إنشاء الطلب، إذا ما حدا قبله أو انقبل وما
+	// انبعت للمتجر، **بينزل للسائقين لحاله بلا واتساب** — كل الأنواع.
+	// وصفره «لا». انظر `orders/no_whatsapp_dispatch.go`.
+	{Key: "orders.no_whatsapp_dispatch_min", Group: GroupDispatch, Kind: KindInt,
+		Min: 0, Max: 120, Unit: "minute", Default: 2},
 	// **ومتى يُعدّ المكتبُ فارغاً** — دقائقُ بلا ظهورٍ لأحدٍ يملك القبول.
 	{Key: "orders.staff_presence_min", Group: GroupDispatch, Kind: KindInt,
 		Min: 1, Max: 60, Unit: "minute", Default: 5},
