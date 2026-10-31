@@ -276,3 +276,37 @@ func TestDrinkQty_ItemUnavailableTakesDrinks(t *testing.T) {
 		t.Fatalf("**بقيت مشروباتُ صنفٍ محذوف**: %d", left)
 	}
 }
+
+// **مجموعةٌ صنعها المتجرُ بيده باسم «مشروبات»** (بلاغُ المالك ٢٠٢٦-١٠-٣١، «امبراطور الشاورما»
+// من متصفّح الآيفون) — التطبيقُ والموقعُ يرسلان أعدادَها، **فتُقبل مشروباتٍ بأعدادها** ولا يُردّ
+// الطلبُ «تحقّق من البيانات».
+func TestDrinkQty_HandMadeDrinksGroupByName(t *testing.T) {
+	h := New(t)
+	m := newMDFxBare(t, h, "DRQ-HAND")
+	patchItem(t, h, m.fx.Tok, m.fx.Item.ID, map[string]any{"price": 300, "store_drinks": false, "modifiers": []any{
+		map[string]any{"name": "الحجم", "min_select": 1, "max_select": 1, "options": []any{
+			map[string]any{"name": "عادي", "price_delta": 0},
+		}},
+		map[string]any{"name": "مشروبات", "min_select": 0, "max_select": 3, "options": []any{
+			map[string]any{"name": "ببسي تنك", "price_delta": 50},
+		}},
+	}})
+	var reg, pepsi string
+	if err := h.Pool.QueryRow(ctxBG(), `
+		SELECT (SELECT o.id::text FROM modifier_options o JOIN modifier_groups g ON g.id = o.group_id
+		         WHERE g.item_id = $1 AND o.name = 'عادي'),
+		       (SELECT o.id::text FROM modifier_options o JOIN modifier_groups g ON g.id = o.group_id
+		         WHERE g.item_id = $1 AND o.name = 'ببسي تنك')`, m.fx.Item.ID).Scan(&reg, &pepsi); err != nil {
+		t.Fatal(err)
+	}
+	items := []map[string]any{{"menu_item_id": m.fx.Item.ID, "qty": 1,
+		"option_ids": []string{reg}, "option_qty": map[string]int{pepsi: 2}}}
+	r := h.POST("/api/v1/public/quote", "", map[string]any{"items": items, "lat": m.z.Lat, "lng": m.z.Lng})
+	if r.Code != http.StatusOK {
+		t.Fatalf("**التسعيرةُ رُدّت**: %s", r)
+	}
+	// ٣٠٠ + ٢ × ٥٠ = ٤٠٠ — كما عرضت السلّة.
+	if v, _ := r.JSON()["subtotal"].(float64); int64(v) != 400 {
+		t.Fatalf("**المجموع %v والمنتظَر ٤٠٠**", v)
+	}
+}

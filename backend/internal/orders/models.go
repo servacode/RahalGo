@@ -10,6 +10,10 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 )
 
+// drinksGroupName **اسمُ مجموعة المشروبات** — مرآةُ `catalog.DrinksGroupName` وقاعدةِ
+// التطبيق والموقع (`isDrinks`): المجموعةُ بهذا الاسم مشروباتٌ بأعدادها ولو صنعها المتجرُ بيده.
+const drinksGroupName = "مشروبات"
+
 var (
 	ErrMerchantClosed = httpx.NewError(http.StatusConflict, "merchant_closed", "errors.merchant_closed")
 	// ErrMultiSource أصنافٌ من مصدرٍ لا وجودَ له.

@@ -34,7 +34,7 @@
     "behaviour_settings": 206,
     "order_fields": 129,
     "test_files": 681,
-    "test_funcs": 2621
+    "test_funcs": 2622
   },
   "flows": [
     {
@@ -16324,6 +16324,12 @@
     },
     {
       "name": "TestDrinkQty_1177_PerDrink",
+      "file": "internal/qa/drink_qty_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDrinkQty_HandMadeDrinksGroupByName",
       "file": "internal/qa/drink_qty_test.go",
       "package": "qa",
       "orphan": true

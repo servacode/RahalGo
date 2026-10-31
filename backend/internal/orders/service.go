@@ -1012,10 +1012,14 @@ func (s *Service) priceItems(ctx context.Context, q dbtx.Querier, inputs []ItemI
 			var delta int64
 			var optAvailable, isDrink bool
 			err := q.QueryRow(ctx, `
-				SELECT g.id, g.name, o.name, o.price_delta, o.available, g.store_drinks
+				SELECT g.id, g.name, o.name, o.price_delta, o.available,
+				       -- **والمشروبُ بعلَمه أو باسمه** (بلاغُ المالك ٢٠٢٦-١٠-٣١) — التطبيقُ
+				       -- والموقعُ يعرفانه بالاسم «مشروبات»، فمجموعةٌ صنعها المتجرُ بيده
+				       -- بهذا الاسم كانت تُرسَل بأعدادها فيُردّ الطلبُ كلُّه «تحقّق من البيانات».
+				       (g.store_drinks OR btrim(g.name) = $3)
 				FROM modifier_options o
 				JOIN modifier_groups g ON g.id = o.group_id
-				WHERE o.id = $1 AND g.item_id = $2`, optID, in.MenuItemID).
+				WHERE o.id = $1 AND g.item_id = $2`, optID, in.MenuItemID, drinksGroupName).
 				Scan(&groupID, &groupName, &optName, &delta, &optAvailable, &isDrink)
 			if errors.Is(err, pgx.ErrNoRows) {
 				return nil, 0, ErrBadItems
