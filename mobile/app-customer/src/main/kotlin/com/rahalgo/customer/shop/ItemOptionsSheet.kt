@@ -157,6 +157,9 @@ fun ItemOptionsSheet(
         containerColor = Rahal.colors.canvas,
     ) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp)) {
+            // **ما فوق الزرّ يتمرّر، والزرُّ والعددُ ثابتان تحته** (بلاغُ المالك ٢٠٢٦-١٠-٣١:
+            // صنفٌ بخياراتٍ كثيرةٍ كان يدفع «أضف» خارج الشاشة فلا يُطلب).
+            Column(Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState())) {
             // **وصورةُ الصنف عريضةٌ فوق** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧) — يرى ما يختار له.
             if (media != null && (item.imageThumbUrl ?: item.imageUrl) != null) {
                 // **والصورةُ كاملةً بأبعادها، والنقرُ يفتحها بملء الشاشة** (قرارُ المالك ٢٠٢٦-١٠-٢٩).
@@ -212,7 +215,6 @@ fun ItemOptionsSheet(
                 }
 
                 else -> Column(
-                    Modifier.verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(18.dp),
                 ) {
                     groups.orEmpty().forEach { g ->
@@ -283,6 +285,8 @@ fun ItemOptionsSheet(
                 )
                 Spacer(Modifier.height(8.dp))
             }
+            }
+            Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
             // **أداةُ الكمّيّة جنب الزرّ** — والسعرُ على الزرّ يتبعها. ولا تُرسم مع العدّادات.
             if (split == null) Row(
