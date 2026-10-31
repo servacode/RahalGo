@@ -110,6 +110,9 @@
     "rawButton": 10,
     "statusColor": 5
   },
+  "apps/rahalgo/src/components/admin/AutoModeToggle.tsx": {
+    "tinyText": 1
+  },
   "apps/rahalgo/src/components/admin/CreditPicker.tsx": {
     "rawButton": 1
   },
@@ -240,8 +243,19 @@
   "apps/rahalgo/src/components/admin/money/goodsCompensation.tsx": {
     "tinyText": 3
   },
+  "apps/rahalgo/src/components/admin/orders/BoardWidgets.tsx": {
+    "rawButton": 1
+  },
+  "apps/rahalgo/src/components/admin/orders/OrderDetailPanel.tsx": {
+    "tinyText": 3,
+    "statusColor": 5
+  },
   "apps/rahalgo/src/components/admin/orders/OrdersScreen.tsx": {
-    "rawButton": 2
+    "tinyText": 5,
+    "rawButton": 4,
+    "handEmpty": 2,
+    "statusColor": 5,
+    "subtitle": 1
   },
   "apps/rahalgo/src/components/admin/roles/RolesScreen.tsx": {
     "tinyText": 2,

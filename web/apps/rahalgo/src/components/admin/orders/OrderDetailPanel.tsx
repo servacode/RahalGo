@@ -32,7 +32,6 @@ import {
   InvoiceLines,
   LoadingState,
   Money,
-  statusMeta,
   Stars,
   Timeline,
   type TimelineNode,
@@ -65,6 +64,15 @@ const FAILS: Record<string, string> = m.common.failReasons;
 const DOOR_REPORTS: Record<string, string> = m.admin.ordersPage.door.reports;
 /** **ترتيبُ الأطراف في القيود** — الزبونُ يدفع، ثمّ من يقبض، ثمّ المنصّة، ثمّ ما سواها. */
 const PARTY_ORDER = ["customer", "merchant", "driver", "sales", "platform", "other"];
+
+/** **لونُ الحالة** — أخضرُ للمسلَّم، أحمرُ للفاشل، برتقاليٌّ للملغى والمرفوض (تدقيقُ السجلّ ٢٠٢٦-١٠-٢٧). */
+const STATUS_VARIANT: Record<string, "success" | "danger" | "warning" | "violet" | "accent"> = {
+  delivered: "success",
+  failed: "danger",
+  cancelled: "warning",
+  rejected: "warning",
+  refunded: "violet",
+};
 
 /** **صفحةُ كلّ قضيّة** — الشكاوى والمطالبات في «الدعم»، والطارئُ في صفحته. */
 function caseHref(kind: string, id: string): string {
@@ -286,7 +294,7 @@ export function OrderDetailPanel({
           {/* **كلُّ سطرٍ بعنوانه وأيقونته** (تدقيقُ السجلّ ٢٠٢٦-١٠-٢٧). */}
           <div className="space-y-2 text-sm">
             <p className="flex flex-wrap items-center gap-2">
-              <Badge variant={statusMeta("order", order.status).badge}>
+              <Badge variant={STATUS_VARIANT[order.status] ?? "accent"}>
                 {OFFICE_STATUS[order.status] ?? order.status}
               </Badge>
               <Badge variant="neutral">{orderKindLabel(order)}</Badge>
@@ -343,7 +351,7 @@ export function OrderDetailPanel({
                         {senderLabel(l)}
                       </Badge>
                       <span className="min-w-0 flex-1">{l.body}</span>
-                      <span dir="ltr" className="shrink-0 text-xs text-ink-muted">
+                      <span dir="ltr" className="shrink-0 text-2xs text-ink-muted">
                         {fmtDateTime(l.created_at)}
                       </span>
                     </li>
@@ -381,14 +389,14 @@ export function OrderDetailPanel({
                                 {party !== "platform" && party !== "other" && l.name && (
                                   <span className="text-ink-muted"> — {l.name}</span>
                                 )}
-                                {l.note && <span className="block text-xs text-ink-muted">{l.note}</span>}
+                                {l.note && <span className="block text-2xs text-ink-muted">{l.note}</span>}
                               </span>
                               <span
                                 className={`flex shrink-0 items-center gap-1.5 ${
                                   l.amount < 0 ? "text-danger" : "text-success"
                                 }`}
                               >
-                                <span className="text-xs">{l.amount < 0 ? H.debit : H.credit}</span>
+                                <span className="text-2xs">{l.amount < 0 ? H.debit : H.credit}</span>
                                 <Money value={Math.abs(l.amount)} small />
                               </span>
                             </li>

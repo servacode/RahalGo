@@ -18,7 +18,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
-import { Alert, Card, ConfirmDanger, Switch, useLiveRefresh } from "@rahalgo/ui";
+import { Alert, Card, Switch, useLiveRefresh } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useCanCall } from "@/lib/policy";
 
@@ -37,7 +37,6 @@ export function AutoModeToggle({
   className = "mb-4",
   minutesKey,
   compact = false,
-  confirmOn,
 }: {
   settingKey: string;
   label: string;
@@ -46,8 +45,6 @@ export function AutoModeToggle({
   minutesKey?: string;
   /** **مفتاحٌ صغيرٌ في رأس الصفحة** بدل بطاقةٍ كاملة (قرارُ المالك ٢٠٢٦-١٠-٢٦: «تصميم احترافي»). */
   compact?: boolean;
-  /** **تأكيدٌ قبل التشغيل وحدَه** — الإطفاءُ لا يحتاج سؤالاً (إعادةُ تصميم اللوحة، ٢٠٢٦-١٠-٣١). */
-  confirmOn?: { title: string; body: string; confirm: string };
 }) {
   const kind = KIND[settingKey];
   const canCall = useCanCall();
@@ -56,7 +53,6 @@ export function AutoModeToggle({
   const [minutes, setMinutes] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [asking, setAsking] = useState(false);
 
   const load = useCallback(async () => {
     if (!canRead) return;
@@ -107,25 +103,11 @@ ${minutes > 0 ? A.unattended.replace("{n}", String(minutes)) : A.unattendedOff}`
       >
         <Switch
           checked={row.on}
-          onChange={(v: boolean) => (v && confirmOn ? setAsking(true) : void toggle(v))}
+          onChange={(v: boolean) => void toggle(v)}
           label={`${A.title}: ${row.on ? A.on : A.off}`}
           disabled={busy}
         />
-        {error && <p className="text-xs text-danger">{error}</p>}
-        {confirmOn && (
-          <ConfirmDanger
-            open={asking}
-            title={confirmOn.title}
-            body={confirmOn.body}
-            confirmLabel={confirmOn.confirm}
-            busy={busy}
-            onCancel={() => setAsking(false)}
-            onConfirm={() => {
-              setAsking(false);
-              void toggle(true);
-            }}
-          />
-        )}
+        {error && <p className="text-2xs text-danger">{error}</p>}
       </div>
     );
   }

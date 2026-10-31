@@ -1,7 +1,7 @@
 "use client";
 
 import { amountText } from "@/lib/store/deliveries";
-import { useCallback, useEffect, useState, useRef, forwardRef, useImperativeHandle, type ComponentType } from "react";
+import { useCallback, useEffect, useState, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -11,24 +11,12 @@ import {
   fmtMoney,
   fmtDateTime,
   fmtTime,
-  fmtSpan, fmtRef, errorText, damascusDay, storeLabel } from "@rahalgo/i18n";
+  fmtSpan, errorText, damascusDay, storeLabel } from "@rahalgo/i18n";
 import {
-  AdminPage,
-  AdminCard,
-  AdminEmpty,
-  AdminLoading,
-  AdminReload,
-  FilterBar,
-  FilterSelect,
-  FilterField,
-  PeriodPicker,
-  Fact,
-  MoreMenu,
-  StatusBadge,
-  statusMeta,
-  type AdminTab,
-  type ActionMenuItem,
+  BrandMark,
+  OrderRef,
   Money,
+  Pagination,
   Alert,
   IconNote,
   IconEdit,
@@ -37,15 +25,21 @@ import {
   Button,
   Input,
   Textarea,
+  Chips,
   Badge,
   Modal,
+  DataView,
   type DataColumn,
   OrderTrackV,
   IconOrder,
   IconPrint,
   IconSearch,
   IconSuccess,
+  IconError,
+  IconClose,
+  IconHourglass,
   IconRoute,
+  IconBell,
   IconKey,
   IconUser,
   IconMoto,
@@ -66,6 +60,7 @@ import {
   FormActions,
   SearchSelect,
   Radio,
+  LoadingState,
   Stars,
   Select,
   Checkbox,
@@ -73,6 +68,8 @@ import {
 import { api, apiFile, ApiError, mediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useRinger } from "@/lib/ringer";
+import { PageHero } from "@/components/admin/PageHero";
+import { Tile, type TileTone } from "@/components/admin/DashParts";
 import { AutoModeToggle } from "@/components/admin/AutoModeToggle";
 import { DoorPanel, type DoorView } from "./DoorPanel";
 import { TransferPanel } from "./TransferPanel";
@@ -84,6 +81,7 @@ import { payerIsCash, payerLabel, payerOf } from "./payer";
 import { WaiveCommissionDialog, WAIVE_ROUTE } from "./WaiveCommissionDialog";
 import { useCanCall } from "@/lib/policy";
 import {
+  BoardCounters,
   COUNTER_FILTERS,
   DriverLine,
   AttentionCard,
@@ -395,7 +393,121 @@ function tookText(from: string, to: string): string {
   return O_DONE.took.replace("{t}", text);
 }
 
+/** **يومٌ بالتقويم مزاحاً بأيّام** — `YYYY-MM-DD` بلا منطقةٍ زمنيّة (يومُ الحساب من الخادم). */
+function shiftDay(day: string, by: number): string {
+  const [y, mo, d] = day.split("-").map(Number);
+  if (!y || !mo || !d) return day;
+  return new Date(Date.UTC(y, mo - 1, d + by)).toISOString().slice(0, 10);
+}
+
+/**
+ * **رأسُ قسمٍ في بطاقة الطلب** (ملاحظةُ المالك ٢٠٢٦-١٠-٢٢: «لازم يكون بالكرت فصل بين معلومات
+ * الزبون والسائق… والتفاصيل») — خطٌّ فاصلٌ وعنوانٌ بلونه وأيقونته. **وينسخ قرارَ ٢٠٢٦-٠٨-١٢**
+ * («لا كلمة الزبون في البطاقة»): صار فيها سطران بالشكل نفسه فالتبسا.
+ */
 const SEC = m.admin.ordersPage.sections;
+const SEC_LOOK = {
+  customer: { tone: "text-accent-text", Icon: IconUser },
+  driver: { tone: "text-success", Icon: IconMoto },
+  merchant: { tone: "text-warning", Icon: IconStore },
+  details: { tone: "text-ink-muted", Icon: IconOrder },
+} as const;
+const SEC_BOX = {
+  customer: "bg-accent-tint border-accent-edge",
+  driver: "bg-success-tint border-success-edge",
+  merchant: "bg-warning-tint border-warning-edge",
+  details: "bg-ink-faint border-line-soft",
+} as const;
+
+/**
+ * **يجمع رأسَ كلِّ قسمٍ وسطورَه في عمودٍ واحدٍ يُرسم صندوقاً ملوّناً.** والسطرُ المسمّى
+ * (العنوان والمسافة) يبقى بتسميته داخل الصندوق. **وما ليس في قسمٍ يبقى كما هو.**
+ */
+function boxSections(cols: DataColumn<OrderRow>[]): DataColumn<OrderRow>[] {
+  const out: DataColumn<OrderRow>[] = [];
+  const boxes: { role: "customer" | "driver" | "merchant"; head: DataColumn<OrderRow>; members: DataColumn<OrderRow>[] }[] = [];
+  let at = -1;
+  for (let i = 0; i < cols.length; i++) {
+    const c = cols[i]!;
+    const m0 = /^sec_(customer|driver|merchant)$/.exec(c.id);
+    if (!m0) {
+      out.push(c);
+      continue;
+    }
+    const members: DataColumn<OrderRow>[] = [];
+    for (let next = cols[i + 1]; next && !next.block && !next.id.startsWith("sec_"); next = cols[i + 1]) {
+      members.push(next);
+      i++;
+    }
+    if (at < 0) at = out.length;
+    boxes.push({ role: m0[1] as "customer" | "driver" | "merchant", head: c, members });
+  }
+  const shown = (b: (typeof boxes)[number], o: OrderRow) =>
+    !b.head.hide?.(o) && !b.members.every((x) => !!x.hide?.(o));
+  const box = (b: (typeof boxes)[number], o: OrderRow) => (
+    <div key={b.role} className={`flex flex-col gap-1.5 rounded-control border p-2.5 ${SEC_BOX[b.role]}`}>
+      <SectionHead role={b.role} o={o} />
+      {b.members
+        .filter((x) => !x.hide?.(o))
+        .map((x) =>
+          x.noLabel || x.header === SEC[b.role] ? (
+            <div key={x.id} className="font-medium">{x.cell(o)}</div>
+          ) : (
+            <div key={x.id} className="flex items-start justify-between gap-3">
+              <span className="inline-flex shrink-0 items-center gap-1.5 text-ink-muted [&>svg]:h-4 [&>svg]:w-4">
+                {x.icon}
+                {x.header}
+              </span>
+              <span className="min-w-0 text-end">{x.cell(o)}</span>
+            </div>
+          ),
+        )}
+    </div>
+  );
+  // **والترتيبُ ترتيبُ الطريق** (المالك ٢٠٢٦-١٠-٢٢: «اذا الزبون اول شي معناها نجيب من الزبون،
+  // واذا المتجر اول شي ناخذ من المتجر») — من نأخذ منه أوّلاً، ثمّ من نوصّل له، ثمّ السائق.
+  const sequence = (o: OrderRow): ("customer" | "driver" | "merchant")[] =>
+    o.kind === "merchant_delivery" && o.delivery_mode === "fetch"
+      ? ["customer", "merchant", "driver"]
+      : ["merchant", "customer", "driver"];
+  if (at >= 0) {
+    out.splice(at, 0, {
+      id: "boxes",
+      header: SEC.details,
+      noLabel: true,
+      cell: (o) => (
+        <div className="flex flex-col gap-2">
+          {sequence(o)
+            .map((r) => boxes.find((b) => b.role === r))
+            .filter((b): b is (typeof boxes)[number] => !!b && shown(b, o))
+            .map((b) => box(b, o))}
+        </div>
+      ),
+    });
+  }
+  return out;
+}
+
+function SectionHead({ role, o }: { role: keyof typeof SEC_LOOK; o?: OrderRow }) {
+  const { tone, Icon } = SEC_LOOK[role];
+  // **«لدي توصيلة» تقول اتّجاهها** (المالك ٢٠٢٦-١٠-٢٢: «مو مبين اذا بدنا نجيب للمتجر او
+  // بدنا ناخذ من المتجر») — من نأخذ منه ولمن نوصّل.
+  const md = o?.kind === "merchant_delivery";
+  const fetchMode = md && o?.delivery_mode === "fetch";
+  const title = !md
+    ? SEC[role]
+    : role === "customer"
+      ? fetchMode ? SEC.mdSender : SEC.mdRecipient
+      : role === "merchant"
+        ? fetchMode ? SEC.mdStoreTo : SEC.mdStoreFrom
+        : SEC[role];
+  return (
+    <span className={`flex items-center gap-1.5 text-xs font-bold ${tone}`}>
+      <Icon size={13} />
+      {title}
+    </span>
+  );
+}
 const ACTION_LABELS: Record<string, string> = m.admin.ordersPage.actions;
 
 /**
@@ -1167,7 +1279,27 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
     }
   }, [live, can]);
 
+  /**
+   * **مدىً جاهز — بيوم الحساب لا بنصف الليل** (تدقيقُ السجلّ ٢٠٢٦-١٠-٢٧). «اليوم» من الخادم
+   * (`account_day(now())`): يبدأ بساعة فتح الدوام كما يفلتر هو (`account_day_start`) — فالساعة ٢ بالليل
+   * «اليوم» هو يومُ الأمس بالتقويم. **وتعذّرُه يُرجع إلى يوم دمشق.**
+   */
   const today = serverToday || damascusDay();
+  const presets: { id: string; label: string; from: string; to: string }[] = [
+    { id: "today", label: m.admin.ordersPage.range.today, from: today, to: today },
+    {
+      id: "yesterday",
+      label: m.admin.ordersPage.range.yesterday,
+      from: shiftDay(today, -1),
+      to: shiftDay(today, -1),
+    },
+    { id: "last7", label: m.admin.ordersPage.range.last7, from: shiftDay(today, -6), to: today },
+    { id: "month", label: m.admin.ordersPage.range.month, from: `${today.slice(0, 8)}01`, to: today },
+  ];
+  const activePreset = presets.find((p) => p.from === from && p.to === to)?.id ?? "";
+  /** **«تاريخ مخصّص» يفتح الخانتين** — ومدىً لا يطابق زرّاً يفتحهما من نفسه. */
+  const [customRange, setCustomRange] = useState(false);
+  const showDates = customRange || ((from !== "" || to !== "") && activePreset === "");
   const filtered =
     from !== "" || to !== "" || merchantId !== "" || driverId !== "" || kind !== "" || pay !== "" || lateOnly || waivedOnly;
   /** **امسح الفلاترَ كلَّها** — والبحثَ والحال (المشكلة ١٨). */
@@ -1373,6 +1505,59 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
 
   const columns: DataColumn<OrderRow>[] = [
     {
+      // **الرقمُ يميناً والحالةُ يساراً في سطرٍ واحد.**
+      //
+      // قرارُ المالك (٢٠٢٦-٠٨-٠٤): «الحالةُ فوق بالأعلى يسار رقم الطلب أفضل
+      // وأحترافيّ، وتحته الوقتُ والتاريخُ الذي تمّ به الطلب».
+      //
+      // **وسطرٌ مُعنوَنٌ للحالة كان يُنزلها بين الحقول** — ومن يمسح عشرين
+      // بطاقةً يقرأ الحالةَ من طرف عينه، **لا يبحث عنها في قائمةِ حقول.**
+      id: "number",
+      header: m.admin.ordersPage.number,
+      icon: <IconOrder />,
+      primary: true,
+      // ══════════════════════════════════════════════════════════════
+      // **والرقمُ يسارا بشكله الواحد — وتحته تاريخُه**
+      // ══════════════════════════════════════════════════════════════
+      //
+      // (قرارُ المالك ٢٠٢٦-٠٨-١٢: «رقم الطلب على اليسار كما اتّفقنا،
+      //  بنفس المربّع الصغير وبنفس اللون، وتحته التاريخ والوقت».)
+      //
+      // **وكان نصّاً غليظاً يمينا** — والزبونُ يراه مربّعاً بالنبرة
+      // يسارا. **وشكلان لشيءٍ واحدٍ في لوحتين** يجعلان من يعمل عليهما
+      // يقرأ رقمين مختلفَي الشكل لطلبٍ واحد.
+      //
+      // **والحالةُ تسبقه في السطر** — أوّلُ الصفّ يمينا، **وهي ما يُمسح
+      // به عمودُ الطلبات**: أيُّها ينتظر فعلا.
+      // **سطران مرتّبان** (المالك ٢٠٢٦-١٠-٢٢: «طلب عادي ومكتمل… والتفاصيل وطباعة لازم يترتبو
+      // بشكل افضل») — فوق: الرقمُ والنوعُ يميناً والحالةُ يساراً، كلٌّ بسطرٍ واحد؛ وتحت: الأزرار.
+      cell: (o) => (
+        // **والسطرُ يلتفّ على الجوّال** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كان `whitespace-nowrap` على الطرفين
+        // فيخرج رأسُ البطاقة عن عرض شاشةٍ ٣٦٠ بكسلاً مع نوعٍ طويل.
+        <span className="flex w-full flex-wrap items-start justify-between gap-2">
+          <span className="flex flex-wrap items-center gap-2">
+            <OrderRef number={o.number} at={o.created_at} />
+            <KindBadge o={o} />
+          </span>
+          <span className="flex flex-wrap items-center justify-end gap-1">
+            {CLOSED_STATUSES.has(o.status) && <EndBadge o={o} />}
+            {/* **والطلبُ الذي فُتح بالرابط يُعلَّم** (المشكلة ٢١). */}
+            {focusId === o.id && <Badge variant="accent">{BOARD.focused}</Badge>}
+            {o.board?.emergency_open && (
+              <Badge variant="danger">{BOARD.emergencyBadge}</Badge>
+            )}
+            {live && o.board?.alert_reason && !o.board.emergency_open && (
+              <Badge variant="danger">
+                {(m.admin.ordersPage.alertReasons as Record<string, string>)[
+                  o.board.alert_reason
+                ] ?? o.board.alert_reason}
+              </Badge>
+            )}
+          </span>
+        </span>
+      ),
+    },
+    {
       // **وعلى الجوّال مرحلةُ الطلب سطراً** (البند ١٥) — العمودُ الجانبيُّ يُطوى هناك.
       id: "mobileStage",
       header: BOARD.mobileStage,
@@ -1398,6 +1583,60 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           </span>
         );
       },
+    },
+    {
+      // **قسمٌ بعنوانه** (ملاحظةُ المالك ٢٠٢٦-١٠-٢٢: «نفصل بين الزبون والسائق والتفاصيل»).
+      id: "sec_customer",
+      header: SEC.customer,
+      noLabel: true,
+      only: "cards",
+      cell: () => <SectionHead role="customer" />,
+    },
+    {
+      id: "customer",
+      header: m.admin.ordersPage.customer,
+      icon: <IconUser />,
+      // **ولا كلمةَ «الزبون» في البطاقة** — (قرارُ المالك ٢٠٢٦-٠٨-١٢).
+      // **واسمٌ ورقمُ هاتفٍ لا يُسأل عمّن هما**، والتسميةُ تشغل نصفَ
+      // السطر وتقول ما هو ظاهر. **ويبقى رأسُ العمود في الجدول.**
+      noLabel: true,
+      // ══════════════════════════════════════════════════════════════
+      // **والزبونُ سطرٌ فوق المتجر — لا ترويسةٌ فوق البطاقة**
+      // ══════════════════════════════════════════════════════════════
+      //
+      // (قرارُ المالك ٢٠٢٦-٠٨-١٢: «اسم الزبون ورقم هاتفه فوق المتجر
+      //  بسطرٍ واحد، يمين ويسار مثل المتجر».)
+      //
+      // **وطرفا الطلب يُقرآن معا**: من هو ومن أين. **وكان أحدُهما في
+      // الترويسة والآخرُ في السطور** — فتُقرأ البطاقةُ في موضعين.
+      //
+      // **والرقمُ بجانب اسمه في السطر نفسِه**: كان تحته — **وثلاثةُ
+      // أرقامٍ تتراكب في ترويسةٍ واحدة** (رقمُ الطلب وتاريخُه ورقمُ
+      // هاتفه) **لا يفرّق بينها شيء.** وقد صار للرقم مربّعُه وللتاريخ
+      // موضعُه، **فبقي هاتفُه وحدَه** فلا يلتبس.
+      //
+      // **وأيقونةُ هاتفٍ عليه** — فيُعرف أنّه رقمُ اتّصالٍ لا رقمُ طلب.
+      cell: (o) => (
+        <span className="flex items-center justify-between gap-2">
+          {/* **وأيقونةُ شخصٍ على الاسم** — (قرارُ المالك ٢٠٢٦-٠٨-١٢).
+              **ورُفعت التسميةُ ومعها أيقونتُها**، فبقي السطرُ بلا ما
+              يقول ما هو. **والشكلُ يقوله بلا كلمة.** */}
+          <span className="flex min-w-0 items-center gap-1.5">
+            <IconUser size={13} className="shrink-0 text-ink-dim" />
+            <span className="truncate">{o.customer_name || "—"}</span>
+          </span>
+          {/* **ولا أيقونةَ على الرقم** — (قرارُ المالك ٢٠٢٦-٠٨-١٢).
+              **ورقمٌ بهذا الشكل لا يُقرأ إلّا هاتفا**: أربعةَ عشرَ رقماً
+              تبدأ بعلامة زائد، **ورقمُ الطلب في مربّعه فوق.** */}
+          <span
+            dir="ltr"
+            className="shrink-0 text-xs text-ink-muted"
+            title={o.customer_phone ? undefined : H.maskedPhone}
+          >
+            {o.customer_phone || o.customer_phone_masked}
+          </span>
+        </span>
+      ),
     },
     // ══════════════════════════════════════════════════════════════
     // **العنوانُ والمسافة** (طلبُ المالك ٢٠٢٦-١٠-٢٠: «لازم نعرف عنوان الزبون والمسافة بين
@@ -1449,6 +1688,18 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       cell: (o) => <span className="text-xs text-accent-dark">{o.notes}</span>,
     },
     {
+      // **قسمٌ بعنوانه** (ملاحظةُ المالك ٢٠٢٦-١٠-٢٢: «نفصل بين الزبون والسائق والتفاصيل»).
+      id: "sec_driver",
+      header: SEC.driver,
+      noLabel: true,
+      only: "cards",
+      hide: (o: OrderRow) =>
+        !o.driver_name &&
+        !(o.status === "dispatching" &&
+          (o.offered_driver_name || (o.board?.offer_passed ?? 0) > 0)),
+      cell: () => <SectionHead role="driver" />,
+    },
+    {
       // ══════════════════════════════════════════════════════════════
       // **سطرُ السائق تحت الترويسة** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٤)
       // ══════════════════════════════════════════════════════════════
@@ -1481,6 +1732,27 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
             passed={o.board?.offer_passed ?? 0}
           />
         ),
+    },
+    {
+      // **قسمٌ بعنوانه** (ملاحظةُ المالك ٢٠٢٦-١٠-٢٢: «نفصل بين الزبون والسائق والتفاصيل»).
+      id: "sec_merchant",
+      header: SEC.merchant,
+      noLabel: true,
+      only: "cards",
+      hide: (o: OrderRow) => o.kind === "custom",
+      cell: () => <SectionHead role="merchant" />,
+    },
+    {
+      id: "merchant",
+      header: m.admin.ordersPage.merchant,
+      icon: <IconStore />,
+      // **ولا متجرَ في الطلب الخاصّ** — (قرارُ المالك ٢٠٢٦-٠٨-١٠).
+      //
+      // **كان يُعرض فارغاً**: أيقونةٌ وكلمةُ «المتجر» وبعدَها لا شيء —
+      // **فيُقرأ عطباً في القراءة** لا «طلبٌ بلا متجر»، ويُسأل مرّتين:
+      // أضاع الاسمُ أم لم يكن؟
+      hide: (o: OrderRow) => o.kind === "custom",
+      cell: (o) => o.merchant_name,
     },
     {
       // ══════════════════════════════════════════════════════════════
@@ -1568,7 +1840,9 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       // **وزرٌّ يفتح ما هو مفتوحٌ فوقه** ضغطةٌ بلا خبرٍ جديد.
       // **والفاتورةُ صندوقٌ بلونها** (المالك ٢٠٢٦-١٠-٢٢) — كالزبون والسائق والمتجر.
       cell: (o) => (
-        <InvoiceList o={o} onChanged={load} canEdit={can("orders.intervene")} />
+        <div className="rounded-control border border-violet-edge bg-violet-tint p-2.5">
+          <InvoiceList o={o} onChanged={load} canEdit={can("orders.intervene")} />
+        </div>
       ),
     },
     {
@@ -1655,7 +1929,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
                 </Badge>
               )}
               {o.proof_taken_at && (
-                <span className="text-xs text-ink-muted" dir="ltr">
+                <span className="text-2xs text-ink-muted" dir="ltr">
                   {fmtDateTime(o.proof_taken_at)}
                 </span>
               )}
@@ -1666,21 +1940,28 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
     },
   ];
 
+  // **وكلُّ قسمٍ مربّعٌ بلونه** (المالك ٢٠٢٦-١٠-٢٢: «معلومات الزبون ضمن مربع بلون مختلف وايضا
+  // معلومات السائق») — رأسُ القسم وسطورُه في صندوقٍ واحد، لا سطورٌ متتاليةٌ بخطوطٍ بينها.
+  const cardColumns = boxSections(columns);
   /** **سطرُ إثبات التسليم** — نفسُه في بطاقة السجلّ الخفيفة. */
   const proofCol = columns.find((c) => c.id === "proof");
   const goodsCol = columns.find((c) => c.id === "goodsReturn");
 
   // ══════════════════════════════════════════════════════════════════
-  // **التصميمُ الاحترافيّ** (قرارُ المالك ٢٠٢٦-١٠-٢٧، وإعادةُ تصميم اللوحة ٢٠٢٦-١٠-٣١)
+  // **التصميمُ الاحترافيّ** (قرارُ المالك ٢٠٢٦-١٠-٢٧: «بدي الصبح لاقي اللوحة كلها احترافية»)
   // ══════════════════════════════════════════════════════════════════
   //
-  // قالبُ اللوحة المركزيّ (`AdminPage`): رأسٌ بسطرٍ واحد · تبويباتٌ بأعدادها · شريطُ فلاتر ·
-  // بطاقةٌ لكلّ طلب · حالاتٌ بشكلٍ واحد. **والشروطُ كلُّها في الخادم كما كانت، والرابطُ هو هو.**
+  // رأسٌ موحّدٌ بسطر شرح · أرقامٌ تُضغط فتفلتر · فلاترُ في بطاقةٍ واحدة · بطاقةٌ لكلّ طلب ·
+  // وفراغٌ بدائرةٍ ملوّنةٍ وجملةٍ تساعد. **والشروطُ كلُّها في الخادم كما كانت.**
   const rows = data?.orders ?? [];
   const C = counts ?? {};
   const closedTotal = Object.values(C).reduce((x, y) => x + y, 0);
   const historyFiltered = filtered || searching || status !== "";
   const liveFiltered = !!(awaiting || status || stage || board || focusId);
+  const pickStatus = (k: string) => {
+    setStatus(status === k ? "" : k);
+    setPage(1);
+  };
   const pickBoard = (k: string) => {
     setBoard(board === k ? "" : k);
     setStatus("");
@@ -1710,17 +1991,14 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         : focusId
           ? BOARD.focused
           : (OFFICE_STATUS[status] ?? status);
-  /** **الفلترُ الفعّالُ تُظهره التبويباتُ وحدَها** — وغيرُها (مرحلةٌ من الرئيسيّة، طلبٌ بعينه) شريحةٌ تُمسح. */
-  const tabCovered =
-    !!board && (COUNTER_FILTERS as readonly string[]).includes(board) && !awaiting && !status && !stage && !focusId;
-  const LIVE_TABS: AdminTab<string>[] = [
-    { key: "", label: BOARD.tileAll },
-    ...COUNTER_FILTERS.map((k) => ({
-      key: k as string,
-      label: (BOARD.counters as Record<string, string>)[k] ?? k,
-      count: counts0 ? (counts0[k] ?? 0) : null,
-      attention: k !== "on_the_way" && k !== "awaiting_driver",
-    })),
+  const tone = (n: number | undefined, hot: TileTone): TileTone => ((n ?? 0) > 0 ? hot : "muted");
+  const LIVE_TILES: { k: (typeof COUNTER_FILTERS)[number]; icon: typeof IconBell; hot: TileTone }[] = [
+    { k: "awaiting_accept", icon: IconBell, hot: "accent" },
+    { k: "awaiting_driver", icon: IconHourglass, hot: "warning" },
+    { k: "on_the_way", icon: IconMoto, hot: "success" },
+    { k: "at_door", icon: IconLocation, hot: "warning" },
+    { k: "reports", icon: IconWarning, hot: "danger" },
+    { k: "stuck", icon: IconError, hot: "danger" },
   ];
   const HISTORY_COUNTS: { k: string; label: string }[] = [
     { k: "delivered", label: H.countDelivered },
@@ -1729,10 +2007,6 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
     { k: "rejected", label: H.countRejected },
     // **و«مسترجع» صفرٌ دائماً اليوم** — لا استرجاعَ من الشاشة؛ فيغيب حين لا شيءَ فيه.
     ...((C.refunded ?? 0) > 0 ? [{ k: "refunded", label: H.countRefunded }] : []),
-  ];
-  const HISTORY_TABS: AdminTab<string>[] = [
-    { key: "", label: H.countAll, count: counts ? closedTotal : null },
-    ...HISTORY_COUNTS.map((c) => ({ key: c.k, label: c.label, count: counts ? (C[c.k] ?? 0) : null })),
   ];
   const kindChips = [
     { id: "", label: H.kindAll },
@@ -1748,64 +2022,374 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
     { id: "cash", label: H.payCash },
     { id: "wallet", label: H.payWallet },
   ];
-  /** **يُعاد بناءُ مختار الفترة عند المسح** — فلا يبقى «تاريخ مخصّص» مفتوحاً بخانتين فارغتين. */
-  const [periodKey, setPeriodKey] = useState(0);
+  const periodChips = [
+    { id: "", label: m.admin.ordersPage.range.all },
+    ...presets.map((p) => ({ id: p.id, label: p.label })),
+    { id: "custom", label: m.admin.ordersPage.range.custom },
+  ];
+  const periodValue = customRange || showDates ? "custom" : activePreset;
+  const pickPeriod = (id: string) => {
+    setPage(1);
+    if (id === "custom") {
+      setCustomRange(true);
+      return;
+    }
+    setCustomRange(false);
+    const p = presets.find((x) => x.id === id);
+    setFrom(p ? p.from : "");
+    setTo(p ? p.to : "");
+  };
   const clearHistory = () => {
-    setPeriodKey((k) => k + 1);
+    setCustomRange(false);
     clearAll();
   };
-  const moreActive = [pay !== "", merchantId !== "", driverId !== "", lateOnly, waivedOnly].filter(Boolean).length;
   const showEmpty =
     !inverted && !(error && rows.length === 0) && !!data && rows.length === 0 && (live || !loading);
-  /** **ما تحتاجه أفعالُ كلّ بطاقة** — وحدةٌ واحدةٌ للشاشتين. */
-  const actionProps = {
-    onChanged: load,
-    // **والفراغُ أثناء التحميل يُقرأ «المنصة تدير»** — فلا يومض زرٌّ ثمّ يختفي.
-    selfManage: selfManage === true,
-    isAdmin,
-    assignAfterMin,
-    onShift,
-    now,
-    requirePhoto: delivery.photo,
-    codeRequired: delivery.code,
-  };
 
-  const notices = (
-    <>
-      {live && countsFailed && !counts0 && (
-        <Alert tone="warning">
-          <span className="flex flex-wrap items-center gap-2">
-            {BOARD.countersFailed}
-            <Button variant="secondary" size="sm" onClick={() => void loadBoard()}>
-              {BOARD.retry}
-            </Button>
-          </span>
-        </Alert>
+  return (
+    <div>
+      {/* ══════════════════════════════════════════════════════════
+          **الرأس** — العنوانُ وسطرُ الشرح، والأفعالُ تلتفّ على الجوّال
+          ══════════════════════════════════════════════════════════ */}
+      {!live && (
+        <PageHero<string>
+          icon={IconOrder}
+          title={m.admin.ordersPage.historyTitle}
+          actions={
+            <>
+              {can("finance.export") && (
+                <Button
+                  variant="secondary"
+                  disabled={exporting || inverted}
+                  title={H.exportHint}
+                  onClick={() => void exportList()}
+                >
+                  {H.export}
+                </Button>
+              )}
+              <Button variant="secondary" onClick={() => void load()}>
+                {H.refresh}
+              </Button>
+            </>
+          }
+        />
       )}
+      {live && (
+        <PageHero<string>
+          icon={IconOrder}
+          title={m.admin.ordersPage.title}
+          subtitle={BOARD.subtitle}
+          /* **زرُّ «تحديث» كالسجلّ** — اللوحةُ تتحدّث وحدَها، والزرُّ لمن فاته حدث (دفعةُ التصميم ١). */
+          actions={
+            <Button variant="secondary" onClick={refreshAll}>
+              {H.refresh}
+            </Button>
+          }
+          titleExtra={
+            <Badge variant={liveConnected ? "success" : "danger"} className="gap-1.5 py-1">
+              <span className={`h-2 w-2 rounded-badge ${liveConnected ? "animate-pulse bg-success" : "bg-danger"}`} />
+              {liveConnected ? m.admin.ordersPage.live : m.admin.ordersPage.liveOff}
+            </Badge>
+          }
+        >
+          {/* **والمفتاحان في سطرٍ يلتفّ** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كانا على طرف الرأس فيخرجان عن الشاشة. */}
+          <div className="flex flex-wrap items-center gap-2">
+            <AutoModeToggle
+              compact
+              className=""
+              settingKey="orders.auto_transfer"
+              minutesKey="orders.unattended_auto_accept_min"
+              label={m.admin.autoMode.ordersLabel}
+              hint={m.admin.autoMode.ordersHint}
+            />
+            {/* **وزرُّ الصوت أوّلَ الدوام** — المتصفّحُ لا يُسمع شيئاً قبل ضغطة (البند ٥). */}
+            {canAck && (
+              <SoundButton
+                enabled={ringer.enabled}
+                unlocked={ringer.unlocked}
+                onEnable={ringer.unlock}
+                onToggle={ringer.setEnabled}
+              />
+            )}
+          </div>
+        </PageHero>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════
+          **الأرقامُ تُضغط فتفلتر** — بشرط الخادم نفسِه الذي عدّها
+          ══════════════════════════════════════════════════════════ */}
+      {live && countsFailed && !counts0 && (
+        <BoardCounters counts={null} active={board} failed onRetry={() => void loadBoard()} onPick={() => undefined} />
+      )}
+      {live && counts0 && (
+        <div role="group" aria-label={BOARD.countersLabel} className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+          {LIVE_TILES.map(({ k, icon, hot }) => (
+            <div key={k} className={`grid ${board === k ? "rounded-card ring-2 ring-accent" : ""}`}>
+              <Tile
+                icon={icon}
+                label={(BOARD.counters as Record<string, string>)[k] ?? k}
+                value={fmtNum(counts0[k] ?? 0)}
+                tone={tone(counts0[k], hot)}
+                onClick={() => pickBoard(k)}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+      {/* **أعدادُ الحالات سطرٌ صغير** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — «الكل 9 · تسلّم 4 · فشل 2 …»، وكلُّ رقمٍ
+          يُضغط فيفلتر، والمختارُ مُعلَّم. **و«مسترجع» يغيب حين لا شيءَ فيه.** */}
+      {!live && counts && !inverted && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
+          {[{ k: "", label: H.countAll, n: closedTotal }, ...HISTORY_COUNTS.map((c) => ({ ...c, n: C[c.k] ?? 0 }))].map(
+            ({ k, label, n }) => {
+              const on = status === k;
+              // **ولكلّ حالةٍ لونُها** (ملاحظةُ المالك ٢٠٢٦-١٠-٣١) — نقطةٌ صغيرةٌ قبل الاسم.
+              const dot =
+                k === "delivered" ? "text-success" : k === "failed" ? "text-danger" : k === "cancelled" ? "text-warning" : "text-ink-muted";
+              return (
+                <button
+                  key={k || "all"}
+                  type="button"
+                  aria-pressed={on}
+                  onClick={() => pickStatus(k)}
+                  className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 transition-colors ${
+                    on ? "border-accent bg-accent font-bold text-on-bright" : "border-line-soft bg-surface text-ink hover:border-accent"
+                  }`}
+                >
+                  {k && <span aria-hidden className={`h-2 w-2 rounded-full bg-current ${on ? "" : dot}`} />}
+                  <span>{label}</span>
+                  <span
+                    className={`min-w-6 rounded-full px-1.5 text-center text-xs font-bold tabular-nums ${
+                      on ? "bg-surface text-accent-text" : "bg-field text-ink"
+                    }`}
+                  >
+                    {fmtNum(n)}
+                  </span>
+                </button>
+              );
+            },
+          )}
+        </div>
+      )}
+
+      {/* **ولا شريطَ طوارئ هنا** — شريطُ اللوحة العامّ (`layout.tsx`) يظهر لكلّ من يملك الطوارئ،
+          وكان يُرسم هنا مرّةً ثانيةً لمن لا يملك الدعم (دفعةُ التصميم ١). */}
+
+      {/* **«بدها انتباهك» بطاقةٌ واحدة** (تدقيقُ ٢٠٢٦-١٠-٢٧) — الجديدةُ والعالقةُ بقسمين، بدل شرائطَ
+          فوق بعضها قبل أن تصل الطلبات. */}
+      {live && (
+        <AttentionCard
+          newOrders={newOrders}
+          newTotal={newTotal}
+          alerts={alerts}
+          alertsFailed={alertsFailed}
+          onRetryAlerts={() => void loadAlerts()}
+          now={now}
+          canAck={canAck}
+          onAcked={refreshAll}
+          onOpen={(id, number) => openOrder(id, number)}
+          officeStatus={OFFICE_STATUS}
+          alertReasons={m.admin.ordersPage.alertReasons as Record<string, string>}
+        />
+      )}
+
       {!live && stale && (
-        <Alert tone="info">
+        <Alert tone="info" className="mb-4">
           <span className="flex flex-wrap items-center gap-2">
             {H.newStrip}
-            <Button variant="secondary" size="sm" onClick={() => void load()}>
+            <Button variant="secondary" onClick={() => void load()}>
               {H.refresh}
             </Button>
           </span>
         </Alert>
       )}
       {exportErr && (
-        <Alert tone="warning" onDismiss={() => setExportErr("")}>
+        <Alert tone="warning" className="mb-4" onDismiss={() => setExportErr("")}>
           {exportErr}
         </Alert>
       )}
-      {inverted && <Alert tone="warning">{H.invertedRange}</Alert>}
-      {/* **وفشلُ التحديث بعد تغيير الفلتر يُقال** — والقائمةُ القديمةُ باقية. */}
-      {error && rows.length > 0 && (
-        <Alert>
+
+      {/* ══════════════════════════════════════════════════════════
+          **الفلاترُ في بطاقةٍ واحدة** — البحثُ أوّلاً ثمّ ما يضيّق
+          ══════════════════════════════════════════════════════════ */}
+      {live && (
+        <section className="surface mb-4 flex flex-wrap items-center gap-2 p-3">
+          <div className="w-full sm:w-72">
+            <Input
+              icon={<IconSearch />}
+              placeholder={m.admin.ordersPage.searchPlaceholder}
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+          {/* **والفلترُ الفعّالُ شريحةٌ تُمسح** — من الرئيسيّة أو من رقمٍ ضُغط. */}
+          {liveFiltered && (
+            <span className="inline-flex flex-wrap items-center gap-2 text-sm">
+              <span className="text-ink-muted">{BOARD.activeFilter}:</span>
+              <Badge variant="accent">{liveFilterLabel}</Badge>
+              <Button variant="secondary" onClick={clearLive}>
+                {BOARD.showAll}
+              </Button>
+            </span>
+          )}
+        </section>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════
+          **مُرشِّحاتُ السجلّ في سطرٍ واحد** (قرارُ المالك ٢٠٢٦-١٠-٣٠: «الشكل بشع») — البحثُ بعرض
+          الصفحة، وتحته المدّةُ والنوعُ والدفعُ والمتجرُ والسائقُ قوائمَ صغيرة، ومربّعا «متأخرة» و«العمولة
+          ممحية». **ولا سطرَ شرحٍ تحتها**، وتلتفّ على الجوّال وحدَه.
+          ══════════════════════════════════════════════════════════ */}
+      {!live && (
+        <section className="surface relative z-30 mb-3 flex flex-col gap-2 p-3">
+          <Input
+            icon={<IconSearch />}
+            placeholder={H.searchPlaceholder}
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              setPage(1);
+            }}
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            <Select
+              aria-label={H.periodLabel}
+              className="!w-auto"
+              value={periodValue}
+              onChange={(e) => pickPeriod(e.target.value)}
+            >
+              {periodChips.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.id === "" ? `${H.periodLabel}: ${c.label}` : c.label}
+                </option>
+              ))}
+            </Select>
+            {showDates && (
+              <span className="flex flex-wrap items-center gap-1.5">
+                <input
+                  id="h-from"
+                  type="date"
+                  aria-label={m.admin.ordersPage.range.from}
+                  className="rounded-control border border-line bg-field px-2 py-1.5 text-sm outline-none focus:border-primary"
+                  value={from}
+                  onChange={(e) => {
+                    setFrom(e.target.value);
+                    setPage(1);
+                  }}
+                />
+                <span aria-hidden className="text-ink-muted">←</span>
+                <input
+                  id="h-to"
+                  type="date"
+                  aria-label={m.admin.ordersPage.range.to}
+                  className="rounded-control border border-line bg-field px-2 py-1.5 text-sm outline-none focus:border-primary"
+                  value={to}
+                  onChange={(e) => {
+                    setTo(e.target.value);
+                    setPage(1);
+                  }}
+                />
+              </span>
+            )}
+            <Select
+              aria-label={H.kindLabel}
+              className="!w-auto"
+              value={kind}
+              onChange={(e) => {
+                setKind(e.target.value);
+                setPage(1);
+              }}
+            >
+              {kindChips.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                </option>
+              ))}
+            </Select>
+            <Select
+              aria-label={H.payLabel}
+              className="!w-auto"
+              value={pay}
+              onChange={(e) => {
+                setPay(e.target.value);
+                setPage(1);
+              }}
+            >
+              {payChips.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                </option>
+              ))}
+            </Select>
+            {storesState === "ok" && storeList.length > 0 && (
+              <SearchSelect
+                className="w-full sm:w-52"
+                ariaLabel={m.admin.ordersPage.range.allStores}
+                allLabel={m.admin.ordersPage.range.allStores}
+                value={merchantId}
+                options={storeList.map((x) => ({ value: x.id, label: storeLabel(x.name, x.number) }))}
+                onChange={(v) => {
+                  setMerchantId(v);
+                  setPage(1);
+                }}
+              />
+            )}
+            {driversState === "ok" && driverList.length > 0 && (
+              <SearchSelect
+                className="w-full sm:w-52"
+                ariaLabel={m.admin.ordersPage.range.allDrivers}
+                allLabel={m.admin.ordersPage.range.allDrivers}
+                value={driverId}
+                options={driverList.map((d) => ({ value: d.id, label: d.full_name || d.phone }))}
+                onChange={(v) => {
+                  setDriverId(v);
+                  setPage(1);
+                }}
+              />
+            )}
+            <Checkbox
+              id="h-late"
+              label={H.lateOnly}
+              checked={lateOnly}
+              onChange={(e) => {
+                setLateOnly(e.target.checked);
+                setPage(1);
+              }}
+            />
+            <Checkbox
+              id="h-waived"
+              label={H.waivedOnly}
+              checked={waivedOnly}
+              onChange={(e) => {
+                setWaivedOnly(e.target.checked);
+                setPage(1);
+              }}
+            />
+            {historyFiltered && (
+              <button type="button" className="text-xs font-medium text-accent-text underline" onClick={clearHistory}>
+                {H.clearFilters}
+              </button>
+            )}
+          </div>
+        </section>
+      )}
+
+      {inverted && (
+        <Alert tone="warning" className="mb-4">
+          {H.invertedRange}
+        </Alert>
+      )}
+
+      {error && (
+        <Alert className="mb-4">
           <span className="flex flex-wrap items-center gap-2">
             {BOARD.loadFailed}
             {m.common.listSeparator}
             {error}
-            <Button variant="secondary" size="sm" onClick={() => void load()}>
+            <Button variant="secondary" onClick={() => void load()}>
               {BOARD.retry}
             </Button>
           </span>
@@ -1813,7 +2397,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       )}
       {/* **وحالٌ منتهيةٌ على شاشة العمل تُفسَّر** (المشكلة ٣٠) — كانت تعود فارغةً بلا كلمة. */}
       {live && status && CLOSED_STATUSES.has(status) && (
-        <Alert tone="info">
+        <Alert tone="info" className="mb-4">
           <span className="flex flex-wrap items-center gap-2">
             {BOARD.closedOnLive}
             <Link href={`/dashboard/history?status=${status}`} className="font-medium underline">
@@ -1822,13 +2406,18 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           </span>
         </Alert>
       )}
-      {focusMissing && <Alert tone="warning">{BOARD.focusMissing}</Alert>}
+      {focusMissing && (
+        <Alert tone="warning" className="mb-4">
+          {BOARD.focusMissing}
+        </Alert>
+      )}
 
       {/* **وبعد «عُد إلى المكتب» تبقى البضاعةُ معلّقة** — تُسوّى حين تصل
           المكتب، **ومن يملك المالَ يسوّيها من الطلب نفسِه.** */}
       {returnedNumber !== null && (
         <Alert
           tone="info"
+          className="mb-4"
           // **ورقمُ الطلب بلا فاصلة آلاف** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كما يُكتب في كلّ مكانٍ ويُبحث به.
           title={m.admin.ordersPage.door.returnedTitle.replace("{n}", `#${returnedNumber}`)}
           onDismiss={() => setReturnedNumber(null)}
@@ -1852,513 +2441,201 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         </Alert>
       )}
 
-      {/* **ولا شريطَ طوارئ هنا** — شريطُ اللوحة العامّ (`layout.tsx`) يظهر لكلّ من يملك الطوارئ.
-          **و«بدها انتباهك» لوحٌ واحد** — الجديدةُ والعالقةُ صفوفٌ فيه. */}
-      {live && (
-        <AttentionCard
-          newOrders={newOrders}
-          newTotal={newTotal}
-          alerts={alerts}
-          alertsFailed={alertsFailed}
-          onRetryAlerts={() => void loadAlerts()}
-          now={now}
-          canAck={canAck}
-          onAcked={refreshAll}
-          onOpen={(id, number) => openOrder(id, number)}
-          officeStatus={OFFICE_STATUS}
-          alertReasons={m.admin.ordersPage.alertReasons as Record<string, string>}
+      {/* **والخطأُ وحدَه لا «لا طلبات» تحته** (المشكلة ١٦) · **وفراغُ الفلتر يقول
+          «امسح الفلاتر»** (المشكلة ١٨) · **والمدى المقلوبُ لا قائمةَ له.** */}
+      {inverted || (error && rows.length === 0) ? null : showEmpty ? (
+        live ? (
+          <EmptyBox
+            tone={liveFiltered || searching ? "muted" : "success"}
+            title={liveFiltered || searching ? BOARD.emptyFiltered : BOARD.emptyLive}
+            hint={liveFiltered || searching ? BOARD.emptyFilteredHint : BOARD.emptyLiveHint}
+            action={
+              liveFiltered || searching ? (
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    clearLive();
+                    setQuery("");
+                  }}
+                >
+                  {BOARD.showAll}
+                </Button>
+              ) : undefined
+            }
+          />
+        ) : (
+          <EmptyBox
+            tone={historyFiltered ? "muted" : "success"}
+            title={historyFiltered ? H.emptyFiltered : H.emptyAll}
+            action={
+              historyFiltered ? (
+                <Button variant="secondary" onClick={clearHistory}>
+                  {H.clearFilters}
+                </Button>
+              ) : undefined
+            }
+          />
+        )
+      ) : !live ? (
+        // ══════════════════════════════════════════════════════════
+        // **بطاقةُ السجلّ الخفيفة** (تدقيقُ السجلّ ٢٠٢٦-١٠-٢٧) — شو صار وليش، ومن أين لمين،
+        // والإجماليُّ كبيراً، وزرّان بعرض البطاقة. **والفاتورةُ والمسارُ من «التفاصيل».**
+        // **والقائمةُ القديمةُ تبقى ظاهرةً وقت التحميل** — فلا ترجف مع كلّ حرفٍ في البحث.
+        // ══════════════════════════════════════════════════════════
+        <>
+          {loading && data && (
+            <p className="mb-2 flex items-center gap-1.5 text-xs text-ink-muted" aria-live="polite">
+              <span className="h-2 w-2 animate-pulse rounded-badge bg-accent" />
+              {H.updating}
+            </p>
+          )}
+          {!data && loading ? (
+            <LoadingState />
+          ) : (
+            <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {rows.map((o) => (
+                <HistoryCard
+                  key={o.id}
+                  o={o}
+                  focused={focusId === o.id}
+                  proof={proofCol && !proofCol.hide?.(o) ? proofCol.cell(o) : null}
+                  goods={goodsCol && !goodsCol.hide?.(o) ? goodsCol.cell(o) : null}
+                  onDetails={() => {
+                    // **وفتحُ التفاصيل يُسكت رنينَ طلبٍ جديدٍ ظهر بالبحث** — لمن يملك التدخّل وحدَه
+                    // (تدقيقُ السجلّ ٢٠٢٦-١٠-٢٧: كان يُردّ ٤٠٣ صامتاً للماليّة).
+                    if (canAck && o.status === "pending" && o.board && !o.board.seen_at) {
+                      void api(`/api/v1/admin/orders/${o.id}/seen`, { method: "POST", body: "{}" }).catch(() => {});
+                    }
+                    setPanelId(o.id);
+                  }}
+                  actions={
+                    <OrderActions
+                      o={o}
+                      onChanged={load}
+                      selfManage={selfManage === true}
+                      isAdmin={isAdmin}
+                      assignAfterMin={assignAfterMin}
+                      onShift={onShift}
+                      now={now}
+                      requirePhoto={delivery.photo}
+                      codeRequired={delivery.code}
+                    />
+                  }
+                />
+              ))}
+            </ul>
+          )}
+        </>
+      ) : (
+        <DataView
+          items={rows}
+          loading={data === null && !error}
+          getKey={(o) => o.id}
+          columns={cardColumns}
+          // **والبطاقاتُ وحدَها** — (قرارُ المالك ٢٠٢٦-٠٨-١٢: «ألغِ عرضَ
+          // الجدول من قسم الطلبات وسجلّه»).
+          view="cards"
+          // **ومسارُ الطلب عمودٌ في طرف البطاقة** (قرارُ المالك ٢٠٢٦-٠٨-١٢) — والمراحلُ من
+          // المحرّك (`ops_stages`)، **وطلبٌ بلا مسارٍ لا يُرسم له عمودٌ فارغ.**
+          rail={(o) =>
+            o.ops_stages?.length ? (
+              <OrderTrackV
+                stages={o.ops_stages.map((id, i) => ({
+                  id,
+                  label: STAGE_LABELS[id] ?? id,
+                  // **والساعةُ تُنسَّق في المعجم** — منطقةُ دمشق وصيغتُها موضعٌ واحد.
+                  at: o.ops_stage_times?.[i] ? fmtTime(o.ops_stage_times[i]!) : null,
+                  // **والمدّةُ فرقُ طابعَي وقت** — والحكمُ بالتأخير من المحرّك.
+                  span: spanOf(o.ops_stage_times, i),
+                  late: o.ops_stage_late?.[i] ?? null,
+                  // **ولا اسمَ سائقٍ في العمود** (البند ٤) — سطرُه تحت ترويسة البطاقة.
+                  note: null,
+                }))}
+                current={o.ops_stage_at ?? -1}
+              />
+            ) : null
+          }
+          empty={BOARD.emptyLive}
+          actions={(o) => (
+            <OrderActions
+              o={o}
+              onChanged={load}
+              // **والفراغُ أثناء التحميل يُقرأ «المنصة تدير»** — فلا يومض زرٌّ ثمّ يختفي.
+              selfManage={selfManage === true}
+              isAdmin={isAdmin}
+              assignAfterMin={assignAfterMin}
+              onShift={onShift}
+              now={now}
+              requirePhoto={delivery.photo}
+              codeRequired={delivery.code}
+            />
+          )}
         />
       )}
-    </>
-  );
 
-  const liveToolbar = (
-    <FilterBar
-      search={{
-        id: "orders-search",
-        value: query,
-        onChange: (v) => {
-          setQuery(v);
-          setPage(1);
-        },
-        placeholder: m.admin.ordersPage.searchPlaceholder,
-      }}
-      filtered={liveFiltered}
-      onClear={clearLive}
-    >
-      {/* **والفلترُ الفعّالُ خارج التبويبات شريحةٌ** — من الرئيسيّة أو من رابط. */}
-      {liveFiltered && !tabCovered && <Badge variant="accent">{liveFilterLabel}</Badge>}
-    </FilterBar>
-  );
-
-  const historyToolbar = (
-    <FilterBar
-      search={{
-        id: "orders-search",
-        value: query,
-        onChange: (v) => {
-          setQuery(v);
-          setPage(1);
-        },
-        placeholder: H.searchPlaceholder,
-      }}
-      more={
-        <>
-          <FilterField id="h-pay" label={H.payLabel}>
-            <Select
-              id="h-pay"
-              value={pay}
-              onChange={(e) => {
-                setPay(e.target.value);
-                setPage(1);
-              }}
-            >
-              {payChips.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.label}
-                </option>
-              ))}
-            </Select>
-          </FilterField>
-          {storesState === "ok" && storeList.length > 0 && (
-            <FilterField label={H.infoStore}>
-              <SearchSelect
-                className="w-full"
-                ariaLabel={m.admin.ordersPage.range.allStores}
-                allLabel={m.admin.ordersPage.range.allStores}
-                value={merchantId}
-                options={storeList.map((x) => ({ value: x.id, label: storeLabel(x.name, x.number) }))}
-                onChange={(v) => {
-                  setMerchantId(v);
-                  setPage(1);
-                }}
-              />
-            </FilterField>
-          )}
-          {driversState === "ok" && driverList.length > 0 && (
-            <FilterField label={H.infoDriver}>
-              <SearchSelect
-                className="w-full"
-                ariaLabel={m.admin.ordersPage.range.allDrivers}
-                allLabel={m.admin.ordersPage.range.allDrivers}
-                value={driverId}
-                options={driverList.map((d) => ({ value: d.id, label: d.full_name || d.phone }))}
-                onChange={(v) => {
-                  setDriverId(v);
-                  setPage(1);
-                }}
-              />
-            </FilterField>
-          )}
-          <Checkbox
-            id="h-late"
-            label={H.lateOnly}
-            checked={lateOnly}
-            onChange={(e) => {
-              setLateOnly(e.target.checked);
-              setPage(1);
-            }}
-          />
-          <Checkbox
-            id="h-waived"
-            label={H.waivedOnly}
-            checked={waivedOnly}
-            onChange={(e) => {
-              setWaivedOnly(e.target.checked);
-              setPage(1);
-            }}
-          />
-        </>
-      }
-      moreActive={moreActive}
-      filtered={historyFiltered}
-      onClear={clearHistory}
-    >
-      {/* **الفترةُ بيوم الحساب من الخادم** (تدقيقُ السجلّ ٢٠٢٦-١٠-٢٧) — لا بنصف الليل. */}
-      <PeriodPicker
-        key={periodKey}
-        id="h-period"
-        from={from}
-        to={to}
-        today={today}
-        onChange={(f, t) => {
-          setFrom(f);
-          setTo(t);
-          setPage(1);
-        }}
-      />
-      <FilterSelect
-        id="h-kind"
-        label={H.kindLabel}
-        value={kind}
-        onChange={(v) => {
-          setKind(v);
-          setPage(1);
-        }}
-      >
-        {kindChips.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.label}
-          </option>
-        ))}
-      </FilterSelect>
-    </FilterBar>
-  );
-
-  /** **أيُّ شيءٍ تُعرض الصفحةُ الآن** — خطأٌ · تحميلٌ · فراغٌ · قائمة. */
-  const body = inverted ? null : error && rows.length === 0 ? (
-    <AdminReload
-      onRetry={() => void load()}
-      label={`${BOARD.loadFailed}${m.common.listSeparator}${error}`}
-    />
-  ) : !data || (rows.length === 0 && loading) ? (
-    <AdminLoading />
-  ) : showEmpty ? (
-    live ? (
-      <AdminEmpty
-        icon={liveFiltered || searching ? IconSearch : IconSuccess}
-        title={liveFiltered || searching ? BOARD.emptyFiltered : BOARD.emptyLive}
-        action={
-          liveFiltered || searching ? (
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => {
-                clearLive();
-                setQuery("");
-              }}
-            >
-              {BOARD.showAll}
-            </Button>
-          ) : undefined
-        }
-      />
-    ) : (
-      <AdminEmpty
-        icon={historyFiltered ? IconSearch : IconSuccess}
-        title={historyFiltered ? H.emptyFiltered : H.emptyAll}
-        action={
-          historyFiltered ? (
-            <Button variant="secondary" size="sm" onClick={clearHistory}>
-              {H.clearFilters}
-            </Button>
-          ) : undefined
-        }
-      />
-    )
-  ) : live ? (
-    <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
-      {rows.map((o) => {
-        // **خلايا الأعمدة نفسُها** — إخفاءُ الحقل بقاعدته لكلّ طلب.
-        const col = (id: string) => {
-          const c = columns.find((x) => x.id === id);
-          return c && !c.hide?.(o) ? c.cell(o) : null;
-        };
-        return (
-          <LiveCard
-            key={o.id}
-            o={o}
-            focused={focusId === o.id}
-            col={col}
-            // **ومسارُ الطلب عمودٌ في طرف البطاقة** (قرارُ المالك ٢٠٢٦-٠٨-١٢) — والمراحلُ من
-            // المحرّك (`ops_stages`)، **وطلبٌ بلا مسارٍ لا يُرسم له عمودٌ فارغ.**
-            rail={
-              o.ops_stages?.length ? (
-                <OrderTrackV
-                  stages={o.ops_stages.map((id, i) => ({
-                    id,
-                    label: STAGE_LABELS[id] ?? id,
-                    // **والساعةُ تُنسَّق في المعجم** — منطقةُ دمشق وصيغتُها موضعٌ واحد.
-                    at: o.ops_stage_times?.[i] ? fmtTime(o.ops_stage_times[i]!) : null,
-                    // **والمدّةُ فرقُ طابعَي وقت** — والحكمُ بالتأخير من المحرّك.
-                    span: spanOf(o.ops_stage_times, i),
-                    late: o.ops_stage_late?.[i] ?? null,
-                    // **ولا اسمَ سائقٍ في العمود** (البند ٤) — سطرُه تحت ترويسة البطاقة.
-                    note: null,
-                  }))}
-                  current={o.ops_stage_at ?? -1}
-                />
-              ) : null
-            }
-            actions={<OrderActions o={o} {...actionProps} />}
-          />
-        );
-      })}
-    </ul>
-  ) : (
-    // ══════════════════════════════════════════════════════════
-    // **بطاقةُ السجلّ** — شو صار وليش، ومن أين لمين، والمالُ مفصَّلاً، وأزرارٌ بعرض البطاقة.
-    // **والقائمةُ القديمةُ تبقى ظاهرةً وقت التحميل** — فلا ترجف مع كلّ حرفٍ في البحث.
-    // ══════════════════════════════════════════════════════════
-    <>
-      {loading && (
-        <p className="flex items-center gap-2 text-xs text-ink-muted" aria-live="polite">
-          <span className="h-2 w-2 animate-pulse rounded-badge bg-accent" />
-          {H.updating}
-        </p>
-      )}
-      <ul className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {rows.map((o) => (
-          <HistoryCard
-            key={o.id}
-            o={o}
-            focused={focusId === o.id}
-            proof={proofCol && !proofCol.hide?.(o) ? proofCol.cell(o) : null}
-            goods={goodsCol && !goodsCol.hide?.(o) ? goodsCol.cell(o) : null}
-            onDetails={() => {
-              // **وفتحُ التفاصيل يُسكت رنينَ طلبٍ جديدٍ ظهر بالبحث** — لمن يملك التدخّل وحدَه
-              // (تدقيقُ السجلّ ٢٠٢٦-١٠-٢٧: كان يُردّ ٤٠٣ صامتاً للماليّة).
-              if (canAck && o.status === "pending" && o.board && !o.board.seen_at) {
-                void api(`/api/v1/admin/orders/${o.id}/seen`, { method: "POST", body: "{}" }).catch(() => {});
-              }
-              setPanelId(o.id);
-            }}
-            actionProps={actionProps}
-          />
-        ))}
-      </ul>
-    </>
-  );
-
-  return (
-    <AdminPage<string>
-      icon={IconOrder}
-      title={live ? m.admin.ordersPage.title : m.admin.ordersPage.historyTitle}
-      count={data && !inverted ? data.total : null}
-      badge={
-        live ? (
-          <Badge variant={liveConnected ? "success" : "danger"} className="gap-1.5 py-1">
-            <span className={`h-2 w-2 rounded-badge ${liveConnected ? "animate-pulse bg-success" : "bg-danger"}`} />
-            {liveConnected ? m.admin.ordersPage.live : m.admin.ordersPage.liveOff}
-          </Badge>
-        ) : undefined
-      }
-      actions={
-        live ? (
-          <>
-            {/* **وزرُّ الصوت أوّلَ الدوام** — المتصفّحُ لا يُسمع شيئاً قبل ضغطة (البند ٥). */}
-            {canAck && (
-              <SoundButton
-                enabled={ringer.enabled}
-                unlocked={ringer.unlocked}
-                onEnable={ringer.unlock}
-                onToggle={ringer.setEnabled}
-              />
-            )}
-            <AutoModeToggle
-              compact
-              className=""
-              settingKey="orders.auto_transfer"
-              minutesKey="orders.unattended_auto_accept_min"
-              label={m.admin.autoMode.ordersLabel}
-              hint={m.admin.autoMode.ordersHint}
-              confirmOn={{
-                title: m.admin.autoMode.confirmOrdersTitle,
-                body: m.admin.autoMode.confirmOrdersBody,
-                confirm: m.admin.autoMode.confirmOrdersBtn,
-              }}
-            />
-            {/* **زرُّ «تحديث»** — اللوحةُ تتحدّث وحدَها، والزرُّ لمن فاته حدث. */}
-            <Button variant="secondary" size="sm" onClick={refreshAll}>
-              {H.refresh}
-            </Button>
-          </>
-        ) : (
-          <>
-            {can("finance.export") && (
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={exporting || inverted}
-                title={H.exportHint}
-                onClick={() => void exportList()}
-              >
-                {H.export}
-              </Button>
-            )}
-            <Button variant="secondary" size="sm" onClick={() => void load()}>
-              {H.refresh}
-            </Button>
-          </>
-        )
-      }
-      tabs={live ? LIVE_TABS : HISTORY_TABS}
-      tab={live ? board : status}
-      onTab={
-        live
-          ? pickBoard
-          : (k) => {
-              setStatus(k);
-              setPage(1);
-            }
-      }
-      notices={notices}
-      toolbar={live ? liveToolbar : historyToolbar}
-      pagination={
-        data && !inverted ? { page, total: data.total, perPage: data.per_page, onChange: setPage } : undefined
-      }
-    >
-      {body}
       {!live && panelId && <OrderDetailPanel orderId={panelId} onClose={() => setPanelId("")} />}
-    </AdminPage>
-  );
-}
 
-/** **رقمُ الطلب** — مربّعٌ واحدٌ بشكلٍ واحدٍ في الشاشتين. */
-function RefPill({ number }: { number: number }) {
-  return (
-    <span dir="ltr" className="rounded-control bg-accent px-2.5 py-1 text-sm font-bold tabular-nums text-on-bright">
-      #{fmtRef(number)}
-    </span>
-  );
-}
-
-/**
- * **حالةُ الطلب بلفظ المكتب** — النبرةُ والأيقونةُ من القاموس الواحد (`statusMeta`)،
- * **والاسمُ بلفظ المكتب** لا «في الطريق إليك» (المشكلة ٢٣). وللمسلَّم مدّتُه (المالك ٢٠٢٦-١٠-٢٢).
- */
-function OfficeStatusBadge({ o }: { o: OrderRow }) {
-  const s = statusMeta("order", o.status);
-  const Icon = s.icon;
-  return (
-    <>
-      <Badge variant={s.badge} className="gap-1">
-        <Icon size={12} className="shrink-0" />
-        {OFFICE_STATUS[o.status] ?? s.label}
-      </Badge>
-      {o.status === "delivered" && o.closed_at && (
-        <span className="text-xs text-ink-muted">{tookText(o.created_at, o.closed_at)}</span>
+      {/* **ولا سطرَ إجماليٍّ تحت القائمة** (قرارُ المالك ٢٠٢٦-٠٨-١٣) — والترقيمُ من المكوّن المشترك،
+          **ولا يظهر لصفحةٍ واحدة.** */}
+      {data && !inverted && data.total > data.per_page && (
+        <div className="mt-4 flex justify-center">
+          <Pagination page={page} total={data.total} perPage={data.per_page} onChange={setPage} />
+        </div>
       )}
-    </>
+    </div>
   );
 }
 
 /**
- * **بطاقةُ الطلب الجاري** (إعادةُ تصميم اللوحة ٢٠٢٦-١٠-٣١) — رأسٌ (رقمٌ · نوعٌ · حالةٌ · وقت)،
- * ثمّ معلوماتٌ بخاناتها، ثمّ الفاتورة، **وفي القاع الخطوةُ التالية وما بعدها خلف «⋯».**
+ * **فراغٌ يساعد** (تدقيقُ ٢٠٢٦-١٠-٢٧) — دائرةٌ ملوّنةٌ وعنوانٌ وجملةٌ تقول ماذا تفعل، كصفحة السحوبات.
  */
-function LiveCard({
-  o,
-  focused,
-  col,
-  rail,
-  actions,
+function EmptyBox({
+  tone,
+  title,
+  hint,
+  action,
 }: {
-  o: OrderRow;
-  focused: boolean;
-  /** خليّةُ عمودٍ بقاعدة إخفائه — وفارغةٌ حين لا معنى له في هذا الطلب. */
-  col: (id: string) => React.ReactNode;
-  rail: React.ReactNode;
-  actions: React.ReactNode;
+  tone: "success" | "muted";
+  title: string;
+  hint?: string;
+  action?: React.ReactNode;
 }) {
-  const OP = m.admin.ordersPage;
-  const md = o.kind === "merchant_delivery";
-  const fetchMode = md && o.delivery_mode === "fetch";
-  // **«لدي توصيلة» تقول اتّجاهها** (المالك ٢٠٢٦-١٠-٢٢) — من نأخذ منه ولمن نوصّل.
-  const customerLabel = md ? (fetchMode ? SEC.mdSender : SEC.mdRecipient) : SEC.customer;
-  const storeLabelText = md ? (fetchMode ? SEC.mdStoreTo : SEC.mdStoreFrom) : SEC.merchant;
-  const alertText =
-    o.board?.alert_reason && !o.board.emergency_open
-      ? ((OP.alertReasons as Record<string, string>)[o.board.alert_reason] ?? o.board.alert_reason)
-      : "";
-  const hasStore = o.kind !== "custom";
-  const span = hasStore ? "" : "col-span-2";
-  const customer = (
-    <Fact label={customerLabel} className={span}>
-      <span className="block truncate font-medium">{o.customer_name || "—"}</span>
-      {(o.customer_phone || o.customer_phone_masked) && (
-        <span
-          dir="ltr"
-          className="inline-block text-xs text-ink-muted"
-          title={o.customer_phone ? undefined : H.maskedPhone}
-        >
-          {o.customer_phone || o.customer_phone_masked}
-        </span>
-      )}
-    </Fact>
-  );
-  // **والترتيبُ ترتيبُ الطريق** (المالك ٢٠٢٦-١٠-٢٢) — من نأخذ منه أوّلاً، ثمّ من نوصّل له.
-  const store = hasStore ? (
-    <Fact label={storeLabelText}>
-      <span className="block truncate font-medium">{o.merchant_name || "—"}</span>
-    </Fact>
-  ) : null;
-  const driver = col("driverLine");
-  const note = col("note");
-  const stage = col("mobileStage");
-  const goods = col("goodsReturn");
-  const door = col("door");
-  const proof = col("proof");
   return (
-    <AdminCard as="li" className={`flex flex-col gap-4 ${focused ? "ring-2 ring-accent" : ""}`}>
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-        <div className="flex min-w-0 flex-wrap items-center gap-2">
-          <RefPill number={o.number} />
-          <KindBadge o={o} />
-          <OfficeStatusBadge o={o} />
-          {/* **والطلبُ الذي فُتح بالرابط يُعلَّم** (المشكلة ٢١). */}
-          {focused && <Badge variant="accent">{BOARD.focused}</Badge>}
-          {o.board?.emergency_open && <Badge variant="danger">{BOARD.emergencyBadge}</Badge>}
-          {alertText && <Badge variant="danger">{alertText}</Badge>}
-        </div>
-        <span dir="ltr" className="text-xs tabular-nums text-ink-muted">
-          {fmtDateTime(o.created_at)}
-        </span>
-      </div>
+    <section className="surface flex flex-col items-center gap-3 p-8 text-center">
+      <span
+        className={`inline-flex h-16 w-16 items-center justify-center rounded-full ${
+          tone === "success" ? "bg-success-solid text-on-solid" : "bg-field text-ink-muted"
+        }`}
+      >
+        {tone === "success" ? <IconSuccess size={28} /> : <IconSearch size={28} />}
+      </span>
+      <h2 className="heading-section">{title}</h2>
+      {hint && <p className="max-w-md text-sm text-ink-muted">{hint}</p>}
+      {action}
+    </section>
+  );
+}
 
-      {o.blocked_reason && <Alert tone="warning">{o.blocked_reason}</Alert>}
+/** **لونُ النهاية** — أخضرُ للمسلَّم، أحمرُ للفشل، برتقاليٌّ للملغى والمرفوض، بنفسجيٌّ للمسترجع. */
+const END_TINT: Record<string, string> = {
+  delivered: "bg-success-solid",
+  failed: "bg-danger-solid",
+  cancelled: "bg-warning-solid",
+  rejected: "bg-warning-solid",
+  refunded: "bg-violet-solid",
+};
 
-      <div className="flex flex-1 items-stretch gap-4">
-        <div className="flex min-w-0 flex-1 flex-col gap-4">
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-3">
-            {fetchMode ? (
-              <>
-                {customer}
-                {store}
-              </>
-            ) : (
-              <>
-                {store}
-                {customer}
-              </>
-            )}
-            {driver && (
-              <Fact label={BOARD.driverLine} className="col-span-2">
-                {driver}
-              </Fact>
-            )}
-            <Fact label={H.file.address} className="col-span-2">
-              {col("where")}
-            </Fact>
-            {note && (
-              <Fact label={OP.customerNote} className="col-span-2">
-                {note}
-              </Fact>
-            )}
-          </dl>
-
-          {/* **وعلى الجوّال مرحلةُ الطلب سطراً** (البند ١٥) — العمودُ الجانبيُّ يُطوى هناك. */}
-          {stage && <div className="sm:hidden">{stage}</div>}
-          {goods && <div className="text-sm">{goods}</div>}
-          {door}
-
-          <section className="border-t border-line-soft pt-3">
-            <h3 className="mb-2 text-xs font-bold text-ink-muted">{OP.invoice}</h3>
-            {col("items")}
-          </section>
-
-          {proof && (
-            <section className="border-t border-line-soft pt-3">
-              <h3 className="mb-2 text-xs font-bold text-ink-muted">{OP.proof}</h3>
-              {proof}
-            </section>
-          )}
-        </div>
-        {rail && <div className="hidden w-28 shrink-0 sm:block">{rail}</div>}
-      </div>
-
-      <div className="mt-auto border-t border-line-soft pt-3">{actions}</div>
-    </AdminCard>
+/**
+ * **شارةُ ما انتهى إليه الطلب** (تدقيقُ السجلّ ٢٠٢٦-١٠-٢٧) — الحالةُ نفسُها بلونها، لا «من أنهاه» وحدَه:
+ * كان الفاشلُ يُقرأ «أنهته الإدارة» بالأحمر فلا يُعرف أفشل أم أُلغي. **ومع المسلَّم مدّتُه** (المالك
+ * ٢٠٢٦-١٠-٢٢: «كم دقيقة استغرق من أول الطلب للتسليم»)، **والكتابةُ بيضاءُ على تعبئة** (المالك ٢٠٢٦-١٠-٢٢).
+ */
+function EndBadge({ o }: { o: OrderRow }) {
+  return (
+    <span className={`rounded-badge px-2.5 py-1 text-xs font-bold text-on-solid ${END_TINT[o.status] ?? "bg-ink-muted"}`}>
+      {OFFICE_STATUS[o.status] ?? STATUS_LABELS[o.status] ?? o.status}
+      {o.status === "delivered" && o.closed_at && ` · ${tookText(o.created_at, o.closed_at)}`}
+    </span>
   );
 }
 
@@ -2375,14 +2652,14 @@ function HistoryCard({
   focused,
   proof,
   goods,
-  actionProps,
+  actions,
   onDetails,
 }: {
   o: OrderRow;
   focused: boolean;
   proof: React.ReactNode;
   goods: React.ReactNode;
-  actionProps: Omit<React.ComponentProps<typeof OrderActions>, "o" | "lead" | "extraItems" | "compact">;
+  actions: React.ReactNode;
   onDetails: () => void;
 }) {
   const C = H.card;
@@ -2407,6 +2684,13 @@ function HistoryCard({
     (o.commission_taken ?? 0) > 0 &&
     waived === 0 &&
     (o.cash_due ?? 0) > 0;
+  // **«⋯» للأفعال النادرة** — يظهر حين يكون فيها شيءٌ فعلاً: تُرسم الأفعالُ مخفيّةً ويُعدّ ما رُسم.
+  const [menuOpen, setMenuOpen] = useState(false);
+  const actionsRef = useRef<HTMLDivElement>(null);
+  const [hasActions, setHasActions] = useState(false);
+  useEffect(() => {
+    setHasActions((actionsRef.current?.childElementCount ?? 0) > 0);
+  });
   const stars = o.board?.platform_stars ?? 0;
   const F = H.flags;
   const flags: { k: string; label: string; v: "warning" | "danger" | "accent" | "violet" }[] = [
@@ -2453,32 +2737,24 @@ function HistoryCard({
   return (
     // **كروتُ الصفّ بطولٍ واحدٍ وأقسامُها على خطٍّ واحد** (ملاحظةُ المالك ٢٠٢٦-١٠-٣١) —
     // خمسةُ صفوفٍ مشتركة (الرأس · الطلب · كيف مشى · المال · الأزرار) بـ`subgrid`.
-    <AdminCard
-      as="li"
-      className={`row-span-5 grid grid-rows-subgrid gap-y-3 text-sm ${focused ? "ring-2 ring-accent" : ""}`}
+    <li
+      className={`row-span-5 grid grid-rows-subgrid gap-y-2.5 rounded-control border border-line-soft bg-surface p-3 text-sm ${
+        focused ? "ring-2 ring-accent" : ""
+      }`}
     >
       {/* ── الرأس ── */}
-      <div className="space-y-2">
+      <div className="space-y-1.5">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="flex flex-wrap items-center gap-2">
-            <RefPill number={o.number} />
+            <OrderRef number={o.number} />
             <span dir="ltr" className="text-xs tabular-nums text-ink-muted">
               {fmtDateTime(o.created_at)}
             </span>
           </span>
           <KindBadge o={o} />
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {closed ? (
-            <>
-              <StatusBadge domain="order" status={o.status} />
-              {o.status === "delivered" && o.closed_at && (
-                <span className="text-xs text-ink-muted">{tookText(o.created_at, o.closed_at)}</span>
-              )}
-            </>
-          ) : (
-            <OfficeStatusBadge o={o} />
-          )}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {closed ? <EndBadge o={o} /> : <Badge variant="accent">{endLabel}</Badge>}
           {focused && <Badge variant="accent">{BOARD.focused}</Badge>}
           {stars > 0 && <Stars value={stars} size="sm" />}
           {flags.map((f) => (
@@ -2618,13 +2894,12 @@ function HistoryCard({
 
       {/* ── المال ── عرضٌ لا حساب: أرقامُ الخادم كما هي (`DriverMoneyBox` نفسُه). */}
       <CardSection title={C.money}>
-       <dl className="grid grid-cols-2 gap-x-4 gap-y-2">
-        <Fact label={C.customer}>
+        <MoneyLine label={C.customer}>
           <Money value={o.total} small className={`font-bold ${muted ? "text-ink-muted line-through" : ""}`} />
-          <span className="block text-xs text-ink-muted">{payText}</span>
-        </Fact>
+          <span className="text-ink-muted"> {payText}</span>
+        </MoneyLine>
         {(o.discount > 0 || (money?.offer_platform ?? 0) > 0 || (money?.offer_merchant ?? 0) > 0 || (o.free_waived ?? 0) > 0) && (
-          <Fact label={C.discounts} className="col-span-2">
+          <MoneyLine label={C.discounts}>
             {[
               o.discount > 0
                 ? `${C.discount} ${fmtMoney(o.discount)}${o.promo_code ? ` (${o.promo_code})` : ""}`
@@ -2635,10 +2910,10 @@ function HistoryCard({
             ]
               .filter(Boolean)
               .join(m.common.listSeparator)}
-          </Fact>
+          </MoneyLine>
         )}
         {(o.merchant_net ?? 0) > 0 || commission > 0 || waived > 0 ? (
-          <Fact label={C.merchant}>
+          <MoneyLine label={C.merchant}>
             {(o.merchant_net ?? 0) > 0 && C.net.replace("{n}", fmtMoney(o.merchant_net ?? 0))}
             {(o.merchant_net ?? 0) > 0 && (commission > 0 || waived > 0) && sep}
             {waived > 0 ? (
@@ -2646,10 +2921,10 @@ function HistoryCard({
             ) : (
               commission > 0 && OP.cardCommission.replace("{n}", fmtMoney(commission))
             )}
-          </Fact>
+          </MoneyLine>
         ) : null}
         {((o.driver_fee ?? 0) > 0 || cash > 0) && (
-          <Fact label={C.driver} className="col-span-2">
+          <MoneyLine label={C.driver}>
             {[
               (o.driver_fee ?? 0) > 0 ? C.driverFee.replace("{n}", fmtMoney(o.driver_fee ?? 0)) : "",
               cash > 0 ? C.driverCash.replace("{n}", fmtMoney(cash)) : "",
@@ -2658,41 +2933,49 @@ function HistoryCard({
             ]
               .filter(Boolean)
               .join(m.common.listSeparator)}
-          </Fact>
+          </MoneyLine>
         )}
         {money && money.lines > 0 && (
-          <Fact label={C.split} className="col-span-2">
+          <MoneyLine label={C.split}>
             {C.rep.replace("{n}", fmtMoney(money.rep))}
             {sep}
             <span className="font-bold">{C.platform.replace("{n}", fmtMoney(money.platform))}</span>
-          </Fact>
+          </MoneyLine>
         )}
-       </dl>
       </CardSection>
 
-      {/* ── الأزرار ── الفاتورة، وملفُّ الطلب، و«⋯» لكلّ ما عداهما بصلاحيّاتها نفسِها. */}
-      <div className="flex flex-col justify-end border-t border-line-soft pt-3">
-        <OrderActions
-          o={o}
-          {...actionProps}
-          compact
-          lead={
-            <>
-              {!NO_INVOICE.has(o.status) && <InvoiceButton order={o} compact />}
-              <Button variant="secondary" size="sm" onClick={onDetails}>
-                <span className="flex items-center gap-1.5">
-                  <IconRoute size={14} />
-                  {H.detailsBtn}
-                </span>
-              </Button>
-            </>
-          }
-          extraItems={
-            waivable
-              ? [{ key: "waive", label: m.admin.cashOutstanding.waiveBtn, onSelect: () => setWaiving(true) }]
-              : []
-          }
-        />
+      {/* ── الأزرار ── الفاتورة، وملفُّ الطلب، و«⋯» للأفعال النادرة بصلاحيّاتها نفسِها. */}
+      <div className="flex flex-col justify-end gap-2.5">
+      <div className="mt-auto flex flex-wrap items-center gap-1.5 border-t border-line-soft pt-2.5">
+        {!NO_INVOICE.has(o.status) && <InvoiceButton order={o} compact />}
+        <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={onDetails}>
+          <span className="flex items-center gap-1">
+            <IconRoute size={14} />
+            {H.detailsBtn}
+          </span>
+        </Button>
+        {(hasActions || waivable) && (
+          <Button
+            variant={menuOpen ? "primary" : "secondary"}
+            className="!px-3 !py-1.5 text-xs"
+            aria-expanded={menuOpen}
+            aria-label={C.more}
+            title={C.more}
+            onClick={() => setMenuOpen(!menuOpen)}
+          >
+            ⋯
+          </Button>
+        )}
+      </div>
+      <div className={`flex flex-wrap gap-1.5 rounded-control bg-field p-2 ${menuOpen ? "" : "hidden"}`}>
+        {waivable && (
+          <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => setWaiving(true)}>
+            {m.admin.cashOutstanding.waiveBtn}
+          </Button>
+        )}
+        <div ref={actionsRef} className="flex flex-wrap gap-1.5">
+          {actions}
+        </div>
       </div>
       {waiving && (
         <WaiveCommissionDialog
@@ -2706,17 +2989,28 @@ function HistoryCard({
           }}
         />
       )}
-    </AdminCard>
+      </div>
+    </li>
   );
 }
 
 /** **قسمٌ في كرت السجلّ** — عنوانٌ صغيرٌ وخطٌّ رفيعٌ فوقه. */
 function CardSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="space-y-2 border-t border-line-soft pt-3">
+    <section className="space-y-1 border-t border-line-soft pt-2">
       <h4 className="text-xs font-bold text-ink-muted">{title}</h4>
       {children}
     </section>
+  );
+}
+
+/** **سطرُ مالٍ** — الطرفُ يميناً وما له في سطرٍ واحدٍ يلتفّ. */
+function MoneyLine({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <p className="flex flex-wrap items-baseline gap-x-1.5 text-xs">
+      <span className="shrink-0 font-medium">{label}:</span>
+      <span className="min-w-0">{children}</span>
+    </p>
   );
 }
 
@@ -2746,18 +3040,9 @@ function OrderActions({
   now,
   requirePhoto,
   codeRequired,
-  lead,
-  extraItems = [],
-  compact = false,
 }: {
   o: OrderRow;
   onChanged: () => void;
-  /** **أزرارٌ تسبق أفعالَ البطاقة** (الفاتورة وملفُّ الطلب في السجلّ). */
-  lead?: React.ReactNode;
-  /** **بنودٌ تُضاف إلى «⋯»** (ما استلمت العمولة في السجلّ). */
-  extraItems?: ActionMenuItem[];
-  /** **السجلُّ: كلُّ الأفعال خلف «⋯»** فتتساوى البطاقات. */
-  compact?: boolean;
   /**
    * **إعدادا التسليم من `GET /orders/board`** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كانا من `/settings` فيُردّ ٤٠٣
    * لمن لا يملك قراءتها ويُفترض «صورةٌ مُلزَمة، بلا كود».
@@ -2821,9 +3106,6 @@ function OrderActions({
   const [err, setErr] = useState("");
   // **إذنُ استثناء إثبات التسليم — بيدِ العمليّات لا السائق** (٢٠٢٦-٠٩-٢٧).
   const [proofExcepting, setProofExcepting] = useState(false);
-  /** **صندوقُ تسوية البضاعة** — يُفتح من «⋯» ولا يشغل البطاقة دائماً. */
-  const [showGoods, setShowGoods] = useState(false);
-  const partnerRef = useRef<PartnerHandle>(null);
   /**
    * **«تصحيح: الطلب انلغى»** (قرارُ المالك ٢٠٢٦-١٠-٢٨) — السائقُ ضغط «تم التسليم» خطأً والطلبُ
    * أُلغي فعلاً. للأدمن وحدَه، بسببٍ إلزاميّ، **والخادمُ يقرّر المالَ كلَّه** (`orders/undeliver.go`).
@@ -3182,7 +3464,6 @@ function OrderActions({
   // أثراً**: هو ما يُقال للزبون، وما يُقاس به متجرٌ يُكثر الرفض أو موظّفٌ يُكثر
   // الإلغاء. **وطلبٌ يُلغى بلا كلمة يترك الجميع يخمّنون.**
 
-  const panel = (() => {
   if (proofExcepting) {
     return (
       <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
@@ -3545,293 +3826,120 @@ function OrderActions({
     );
   }
 
-    return null;
-  })();
-  if (panel) {
-    return (
-      <div className="flex w-full flex-col gap-3">
-        {lead && <div className="flex flex-wrap items-center gap-2">{lead}</div>}
-        {panel}
-      </div>
-    );
-  }
-
-  // ══════════════════════════════════════════════════════════════════
-  // **الأفعال: الخطوةُ التالية ظاهرة (واحدةٌ أو اثنتان)، والباقي خلف «⋯»**
-  // ══════════════════════════════════════════════════════════════════
-  //
-  // (إعادةُ تصميم اللوحة ٢٠٢٦-١٠-٣١.) **الشروطُ كلُّها كما كانت حرفاً حرفاً** — تغيّر موضعُ الزرّ فقط:
-  // الأمامُ (قبول · تحويل للمتجر · إسناد · كود · إذن بلا صورة) ظاهر، والهدّامُ (رفض · إلغاء · فشل · استرجاع ·
-  // تصحيح · «من متجر غير تابع» · «أرسلها مع سائق آخر») **بالأحمر في آخر القائمة وتأكيدُه كما هو**،
-  // والنادرُ (تبديل المتجر · تعديل العرض · المتجر التابع · التسوية) بلا لون.
-  const OP = m.admin.ordersPage;
-  const idle = busy === "";
-  type Act = {
-    key: string;
-    label: string;
-    icon?: ComponentType<{ size?: number; className?: string }>;
-    run: () => void;
-    /** **زرٌّ هادئ** — لا يُملأ حتّى لو كان الأوّل. */
-    quiet?: boolean;
-    disabled?: boolean;
-  };
-  const forward: Act[] = [];
-  const more: ActionMenuItem[] = [];
-  const risky: ActionMenuItem[] = [];
-
-  // **وتبديلُ حالِ الطلب تدخّلٌ تشغيليّ** (٢٠٢٦-٠٩-١٣) — **الماليّةُ لا تملك `orders.intervene`
-  // فلا ترى «قبول» ولا «رفض»**. وخارطةُ `opsNext` تقول أيَّ انتقالٍ يصلح، وهذه من يملك أن ينتقل.
-  const steps = canIntervene && next.map((to) => ({ to, destructive: DESTRUCTIVE.has(to) }));
-  for (const { to, destructive } of steps || []) {
-    if (destructive) {
-      risky.push({ key: `to-${to}`, label: ACTION_LABELS[to] ?? to, danger: true, onSelect: () => setAsking(to) });
-    } else {
-      forward.push({ key: `to-${to}`, label: ACTION_LABELS[to] ?? to, run: () => void go(to, "") });
-    }
-  }
-
-  // **التحويلُ إلى المتجر — في الوضعين**، و«حوّل بدون واتساب» (قرارُ المالك ٢٠٢٦-١٠-٢٦) معه. ويَسِم الطلبَ فهو تدخّل.
-  const forwardable = canIntervene && (o.status === "accepted" || o.status === "preparing");
-  if (forwardable) {
-    forward.push({
-      key: "wa",
-      label: o.sent_to_merchant_at ? OP.sentWhatsApp : OP.sendWhatsApp,
-      icon: IconWhatsApp,
-      run: askThenForward,
-      quiet: !!o.sent_to_merchant_at || selfManage,
-    });
-    if (!o.sent_to_merchant_at) {
-      forward.push({ key: "manual", label: OP.sendManual, run: () => void forwardManual(), quiet: true });
-    }
-  }
-
-  // **الإسنادُ اليدويّ احتياطٌ لا أصل** — يظهر بعد المهلة، وقبلها بندٌ مطفأٌ يقول متى.
-  if (canAssign && assignReady) {
-    forward.push({ key: "assign", label: OP.assignHere, run: () => setAssigning(true), quiet: true });
-  } else if (canAssign) {
-    more.push({
-      key: "assign",
-      label: OP.assignHere,
-      disabled: true,
-      hint: BOARD.assignAfter.replace(
-        "{n}",
-        fmtNum(Math.max(1, Math.ceil((assignAfterMin * 60_000 - (now - new Date(waitingSince).getTime())) / 60_000))),
-      ),
-      onSelect: () => undefined,
-    });
-  }
-
-  // **كودُ التسليم لمن يملك التدخّل** (المالك ٢٠٢٦-١٠-٠٦) — يُعرض بضغطة، يقرؤه الموظّفُ للسائق.
-  const codeShown =
-    codeRequired && canIntervene && (o.status === "picked_up" || o.status === "on_the_way" || o.status === "at_dropoff");
-  if (codeShown && code === null) {
-    forward.push({
-      key: "code",
-      label: BOARD.showCode,
-      icon: IconKey,
-      run: () => void showCode(),
-      quiet: true,
-      disabled: codeBusy,
-    });
-  }
-
-  // **إذنُ استثناءِ إثبات التسليم — للعمليّاتِ وحدَها** (٢٠٢٦-٠٩-٢٧).
-  if (o.status === "at_dropoff" && !o.proof_url && canIntervene && (requirePhoto || codeRequired)) {
-    forward.push({
-      key: "proof",
-      label: OP.proofExceptionButton,
-      run: () => {
-        setReason("");
-        setProofExcepting(true);
-      },
-      quiet: true,
-    });
-  }
-
-  // **«أعد الإرسال على واتساب» بعد التحويل وقبل الاستلام** (المالك ٢٠٢٦-١٠-٢٥) — الرسالةُ لم تصل أو ضاعت.
-  if (
-    canIntervene &&
-    !!o.sent_to_merchant_at &&
-    o.kind !== "custom" &&
-    o.kind !== "merchant_delivery" &&
-    (o.status === "dispatching" || o.status === "assigned" || o.status === "at_pickup")
-  ) {
-    forward.push({
-      key: "resend",
-      label: OP.resendWhatsApp,
-      icon: IconWhatsApp,
-      run: () => void forwardToMerchant(),
-      quiet: true,
-    });
-  }
-
-  // **الخطوتان الظاهرتان**، وما زاد على الحدّ (وكلُّ شيءٍ في السجلّ) خلف «⋯».
-  const limit = compact ? 0 : 2;
-  const visible = forward.slice(0, limit);
-  const overflow: ActionMenuItem[] = forward.slice(limit).map((a) => ({
-    key: a.key,
-    label: a.label,
-    icon: a.icon,
-    disabled: a.disabled,
-    onSelect: a.run,
-  }));
-
-  // **تعديلُ عرض الطلب الخاصّ** — بعد توثيق الأجرة وقبل الاستلام وحدَهما (المالك ٢٠٢٦-١٠-٢٢).
-  if (o.kind === "custom" && canIntervene && o.custom_fee != null && !o.picked_up_at && !CLOSED_STATUSES.has(o.status)) {
-    more.push({
-      key: "override",
-      label: OP.overrideBtn,
-      onSelect: () => {
-        setOverrideGoods(String(o.custom_goods_amount ?? 0));
-        setOverrideFee(String(o.custom_fee ?? 0));
-        setReason("");
-        setErr("");
-        setOverriding(true);
-      },
-    });
-  }
-
-  // **التحويلُ إلى متجرٍ آخر — قاعدةٌ احتياطية** (قرارُ المالك ٢٠٢٦-٠٨-٠٤)، **وليس أحمر**: ليس هدّاماً.
-  if (
-    canIntervene &&
-    TRANSFERABLE.has(o.status) &&
-    o.kind !== "custom" &&
-    // **و«لدي توصيلة» لا تُحوَّل** (البند ١١) — **وعند المتجر ببلاغٍ الزرُّ في لوحة «الطلب مع السائق»**.
-    o.kind !== "merchant_delivery" &&
-    !(o.status === "at_pickup" && doorVisible(o))
-  ) {
-    more.push({ key: "transfer", label: OP.transfer, icon: IconSwap, onSelect: () => setTransferring(true) });
-  }
-
-  // **المتجرُ التابعُ في المشتريات** (قرارُ المالك ٢٠٢٦-١٠-١٥) — يُربط قبل توثيق الثمن، ويُفكّ حتّى التسليم.
-  const partnerOn =
-    o.kind === "custom" && o.custom_mode === "purchase" && canIntervene && !CLOSED_STATUSES.has(o.status);
-  const partnerLinked = !!o.partner_merchant_id;
-  const partnerGoodsDone = o.custom_goods_amount != null && !o.custom_goods_pending;
-  if (partnerOn && !partnerLinked && !partnerGoodsDone) {
-    more.push({
-      key: "partner-link",
-      label: OP.partnerLinkBtn,
-      icon: IconStore,
-      onSelect: () => partnerRef.current?.openPicker(),
-    });
-  }
-  if (partnerOn && partnerLinked) {
-    more.push({
-      key: "partner-send",
-      label: o.sent_to_merchant_at ? OP.partnerSent : OP.partnerSend,
-      icon: IconWhatsApp,
-      onSelect: () => void forwardToMerchant(),
-    });
-    more.push({ key: "partner-unlink", label: OP.partnerUnlink, onSelect: () => partnerRef.current?.unlink() });
-  }
-
-  // **تسويةُ بضاعة طلبٍ فشل** — العمليّاتُ تؤكّد مكانها، والماليّةُ تكتب التعويض (البندان ١٢–١٤).
-  const goodsOn = o.status === "failed" && (canIntervene || can("finance.manage"));
-  if (goodsOn) {
-    more.push({ key: "goods", label: BOARD.goodsMenu, onSelect: () => setShowGoods((v) => !v) });
-  }
-
-  // **الهدّامُ بالأحمر في آخر القائمة** — وتأكيدُه (سببٌ إلزاميّ) كما كان.
-  if (canIntervene && isAdmin && o.status === "delivered" && o.kind === "standard") {
-    risky.push({
-      key: "undeliver",
-      label: OP.undeliverButton,
-      danger: true,
-      onSelect: () => {
-        setReason("");
-        setErr("");
-        setUndelivering(true);
-      },
-    });
-  }
-  if (canIntervene && TRANSFERABLE.has(o.status) && o.kind === "standard" && o.payment_method === "cash" && (o.wallet_paid ?? 0) === 0) {
-    risky.push({
-      key: "ext-store",
-      label: OP.extStoreButton,
-      danger: true,
-      onSelect: () => {
-        setReason("");
-        setErr("");
-        setExtStoring(true);
-      },
-    });
-  }
-  if (
-    canIntervene &&
-    o.board?.emergency_open &&
-    (o.status === "picked_up" || o.status === "on_the_way" || o.status === "at_dropoff")
-  ) {
-    risky.push({
-      key: "release",
-      label: BOARD.release.button,
-      danger: true,
-      onSelect: () => {
-        setReason("");
-        setErr("");
-        setReleasing(true);
-      },
-    });
-  }
-
-  const items: ActionMenuItem[] = [...overflow, ...more, ...extraItems, ...risky].map((it) => ({
-    ...it,
-    disabled: it.disabled || (!idle && it.key !== "waive"),
-  }));
-
   return (
-    <div className="flex w-full flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-2">
-        {lead}
-        {visible.map((a, i) => (
+    <>
+      {/* ══════════════════════════════════════════════════════════════
+        * **وتبديلُ حالِ الطلب تدخّلٌ تشغيليّ** (٢٠٢٦-٠٩-١٣)
+        * ══════════════════════════════════════════════════════════════
+        *
+        * **وقِيس في متصفّحٍ على التجهيز**: **الماليّةُ رأت «قبول»
+        * و«رفض» و«فشل التوصيل»** — **وهي لا تملك `orders.intervene`،
+        * فكلُّ ضغطةٍ تُردّ ٤٠٣.** **وشرطُ المالك (بندُ ٨) ألّا تراها.**
+        *
+        * **وخارطةُ `opsNext` تقول أيَّ انتقالٍ يصلح** — **وهذه تقول
+        * من يملك أن ينتقل.** */}
+      {canIntervene && next.map((to) => {
+        const destructive = DESTRUCTIVE.has(to);
+        return (
           <Button
-            key={a.key}
-            size="sm"
-            variant={i === 0 && !a.quiet ? "primary" : "secondary"}
-            disabled={!idle || a.disabled}
-            onClick={a.run}
+            key={to}
+            variant={destructive ? "danger" : "primary"}
+            disabled={busy !== ""}
+            onClick={() => (destructive ? setAsking(to) : void go(to, ""))}
           >
-            {a.icon ? (
-              <span className="flex items-center gap-1.5">
-                <a.icon size={14} />
-                {a.label}
-              </span>
-            ) : (
-              a.label
-            )}
+            {ACTION_LABELS[to] ?? to}
           </Button>
-        ))}
-        {codeShown && code !== null && (
-          <span className="inline-flex items-center gap-2 rounded-control border border-line px-3 py-1.5 text-sm">
-            <IconKey size={14} className="text-ink-muted" />
-            {code ? (
-              <>
-                <span className="text-ink-muted">{BOARD.codeLabel}:</span>
-                <b dir="ltr" className="tabular-nums tracking-widest">{code}</b>
-              </>
-            ) : (
-              <span className="text-ink-muted">{BOARD.codeNone}</span>
-            )}
-          </span>
-        )}
-        {items.length > 0 && (
-          <span className="ms-auto">
-            <MoreMenu items={items} />
-          </span>
-        )}
-      </div>
-
-      {notice && (
-        <p className="rounded-control bg-success-tint px-3 py-2 text-sm text-success">{notice}</p>
+        );
+      })}
+      {/* **«تصحيح: الطلب انلغى»** — بجانب «استرجاع»، للأدمن وحدَه وعلى الطلب العاديّ المسلَّم
+          (قرارُ المالك ٢٠٢٦-١٠-٢٨). الخاصُّ و«لدي توصيلة» يردّهما الخادم. */}
+      {canIntervene && isAdmin && o.status === "delivered" && o.kind === "standard" && (
+        <Button
+          variant="danger"
+          disabled={busy !== ""}
+          onClick={() => {
+            setReason("");
+            setErr("");
+            setUndelivering(true);
+          }}
+        >
+          {m.admin.ordersPage.undeliverButton}
+        </Button>
       )}
+      {notice && (
+        <span className="rounded-control bg-success-tint px-2.5 py-1 text-xs text-success">
+          {notice}
+        </span>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════
+          **تعديلُ عرض الطلب الخاصّ — بيدِ من يملك التدخّل**
+          ══════════════════════════════════════════════════════════════
+
+          **ولا يُعرض إلّا على خاصٍّ قائم**: الخادمُ يردّ `custom_locked` على
+          طلبٍ أُغلق، **وزرٌّ يُعرض ولا يفعل أسوأُ من زرٍّ غائب.** */}
+      {/* **وبعد توثيق الأجرة وقبل الاستلام وحدَهما** (المالك ٢٠٢٦-١٠-٢٢) — قبلها لا سعرَ
+          يُعدَّل، وبعدها يقفله الخادم (`custom_locked`). */}
+      {o.kind === "custom" &&
+        canIntervene &&
+        o.custom_fee != null &&
+        !o.picked_up_at &&
+        !CLOSED_STATUSES.has(o.status) && (
+          <Button
+            variant="secondary"
+            disabled={busy !== ""}
+            onClick={() => {
+              setOverrideGoods(String(o.custom_goods_amount ?? 0));
+              setOverrideFee(String(o.custom_fee ?? 0));
+              setReason("");
+              setErr("");
+              setOverriding(true);
+            }}
+          >
+            {m.admin.ordersPage.overrideBtn}
+          </Button>
+        )}
+
       {/* **«كان من: …»** — طلبٌ قُلب «من متجرٍ غير تابع» يقول متجرَه الأوّل (٢٠٢٦-١٠-٢٩). */}
       {o.ext_store_merchant_name && (
-        <p className="text-sm text-ink-muted">
-          {OP.extStoreWasFrom.replace("{name}", o.ext_store_merchant_name)}
+        <p className="w-full text-xs text-ink-muted">
+          {m.admin.ordersPage.extStoreWasFrom.replace("{name}", o.ext_store_merchant_name)}
         </p>
       )}
-      {partnerOn && <PartnerStoreBox ref={partnerRef} o={o} onChanged={onChanged} />}
-      {goodsOn && showGoods && (
+      {/* **مشترياتٌ من متجرٍ تابعٍ إلنا** (قرارُ المالك ٢٠٢٦-١٠-١٥) — يُربط قبل توثيق الثمن،
+          ويُرسَل له الطلبُ على واتساب بالبابين القائمين. **والخادمُ يحرس الشروط.** */}
+      {o.kind === "custom" &&
+        o.custom_mode === "purchase" &&
+        canIntervene &&
+        !CLOSED_STATUSES.has(o.status) && (
+          <PartnerStoreBox
+            o={o}
+            busy={busy !== ""}
+            onSend={() => void forwardToMerchant()}
+            onChanged={onChanged}
+          />
+        )}
+
+      {/* **ما بعد الفشل — سؤالان لا يُجيبهما النظام وحده.**
+
+          طلبٌ فشل يترك طعاماً مطبوخاً ورحلةً مقطوعة. والقيدُ المالي لا يقع
+          تلقائياً لأنّ الجواب ليس في القاعدة: **أاستردّ المتجرُ بضاعته؟ وكم
+          يستحقّ السائقُ عن مشوارٍ لم يُثمر؟** يجيبهما من رأى، لا من حسب. */}
+      {/* ══════════════════════════════════════════════════════════════
+        * **وتسويةُ البضاعة قيدٌ ماليّ** (٢٠٢٦-٠٩-١٣)
+        * ══════════════════════════════════════════════════════════════
+        *
+        * **و`POST /orders/{id}/settle-goods` بـ`finance.manage`** —
+        * **وقِيس: موظّفُ العمليّات كان يرى «إلى المكتب — المنصة
+        * تتحمل» وكلُّ ضغطةٍ تُردّ ٤٠٣.**
+        *
+        * **والجوابُ عن «أاستردّ المتجرُ؟» يُعطيه من رأى** — **لكنّ
+        * القيدَ يكتبه من يملك المال.** **ومن رأى ولا يملك يُبلّغ ولا
+        * يقيّد.** */}
+      {/* **والبضاعةُ الراجعةُ في صندوقها** (`GoodsBox`، قرارُ المالك ٢٠٢٦-١٠-٠٤،
+          البنود ١٢–١٤): **العمليّاتُ تؤكّد مكانها بعد «سلّمت البضاعة»، والماليّةُ
+          تكتب تعويضَ المتجر بسقفٍ وتأكيد.** كانت الصلاحيّةُ معكوسة. */}
+      {o.status === "failed" && (canIntervene || can("finance.manage")) && (
         <GoodsBox
           orderId={o.id}
           settledTo={o.goods_settled_to}
@@ -3846,22 +3954,236 @@ function OrderActions({
         />
       )}
 
+      {/* ══════════════════════════════════════════════════════════════
+        * **إذنُ استثناءِ إثبات التسليم — للعمليّات وحدَها** (٢٠٢٦-٠٩-٢٧)
+        * ══════════════════════════════════════════════════════════════
+        *
+        * **يظهر عند «وصل إلى العنوان» بلا صورةٍ بعد** — كاميرا السائق
+        * معطّلةٌ فيأذن العملياتُ (قدرةُ `orders.intervene`) بالتسليم بلا
+        * صورة بسببٍ إلزاميٍّ ومُدقَّق. **والسائقُ لا يأذن لنفسه.** */}
+      {o.status === "at_dropoff" && !o.proof_url && canIntervene && (requirePhoto || codeRequired) && (
+        <Button
+          variant="secondary"
+          disabled={busy !== ""}
+          onClick={() => {
+            setReason("");
+            setProofExcepting(true);
+          }}
+        >
+          {m.admin.ordersPage.proofExceptionButton}
+        </Button>
+      )}
+
+      {/* **كودُ التسليم لمن يملك التدخّل** (قرارُ المالك ٢٠٢٦-١٠-٠٦؛ تدقيقُ ٢٠٢٦-١٠-٢٧) — يُرسله الخادمُ
+          ولا شاشةَ كانت تعرضه. **ويُعرض بضغطةٍ لا دائماً**: يقرؤه الموظّفُ للسائق بعد التحقّق من الزبون. */}
+      {codeRequired && canIntervene && (o.status === "picked_up" || o.status === "on_the_way" || o.status === "at_dropoff") &&
+        (code === null ? (
+          <Button variant="secondary" disabled={busy !== "" || codeBusy} onClick={() => void showCode()}>
+            <span className="flex items-center gap-1.5">
+              <IconKey size={15} />
+              {BOARD.showCode}
+            </span>
+          </Button>
+        ) : (
+          <span className="inline-flex items-center gap-2 rounded-control border border-line px-3 py-1.5 text-sm">
+            <IconKey size={15} className="text-ink-muted" />
+            {code ? (
+              <>
+                <span className="text-ink-muted">{BOARD.codeLabel}:</span>
+                <b dir="ltr" className="tabular-nums tracking-widest">{code}</b>
+              </>
+            ) : (
+              <span className="text-ink-muted">{BOARD.codeNone}</span>
+            )}
+          </span>
+        ))}
+
+      {/* **التحويلُ إلى المتجر — في الوضعين لا في وضعٍ واحد.**
+
+          في «المنصة تدير» هو الفعلُ الأساسيّ: تقبل العملياتُ نيابةً عن المتجر
+          ثم تُحوّل إليه الطلب، ولا تعلن بدء تحضيرٍ لم تبدأه.
+
+          وفي «المتجر يدير» يبقى بيدها: **المطعمُ لا يردّ على بوّابته أحياناً**
+          — والطلبُ الذي في الشاشة لا يُطبخ حتى يراه أحد. فتُحوّله على واتساب
+          حيث يعمل صاحبُه أصلاً، وهو ثانويٌّ هنا لا أساسيّ.
+
+          والنافذةُ حتى `preparing`: بعد بدء الطبخ لم يعد المطبخُ يحتاج خبراً. */}
+      {/* **وإخبارُ المتجر يَسِم الطلبَ** (`POST /orders/{id}/whatsapp`)
+        * — **فهو تدخّلٌ لا قراءة.** */}
+      {canIntervene && (o.status === "accepted" || o.status === "preparing") && (
+        <Button
+          variant={
+            o.sent_to_merchant_at || selfManage ? "secondary" : "primary"
+          }
+          disabled={busy !== ""}
+          onClick={askThenForward}
+        >
+          {/* **والأيقونةُ تقول القناة قبل الكلمة.**
+
+              «تحويلٌ إلى المتجر» لا تقول كيف — **ومن ضغطها أوّلَ مرّةٍ فوجئ
+              بنافذة واتساب تُفتح.** والرمزُ يقولها في نظرة. */}
+          <span className="flex items-center gap-1.5">
+            <IconWhatsApp size={15} />
+            {o.sent_to_merchant_at
+              ? m.admin.ordersPage.sentWhatsApp
+              : m.admin.ordersPage.sendWhatsApp}
+          </span>
+        </Button>
+      )}
+      {canIntervene && !o.sent_to_merchant_at && (o.status === "accepted" || o.status === "preparing") && (
+        <Button variant="secondary" disabled={busy !== ""} onClick={() => void forwardManual()}>
+          {m.admin.ordersPage.sendManual}
+        </Button>
+      )}
+
+      {/* **«أعد الإرسال على واتساب» بعد التحويل وقبل الاستلام** (المالك ٢٠٢٦-١٠-٢٥: «لازم يطلع لأنّ
+          أحياناً تفشل») — الرسالةُ لم تصل أو ضاعت عند المتجر. **ولا يُعيد الإنزالَ ولا يفكّ السائق**
+          (يحرسه المحرّك: الإنزالُ من «مقبول/تحضير» وحدَهما). */}
+      {canIntervene &&
+        !!o.sent_to_merchant_at &&
+        o.kind !== "custom" &&
+        o.kind !== "merchant_delivery" &&
+        (o.status === "dispatching" || o.status === "assigned" || o.status === "at_pickup") && (
+          <Button variant="secondary" disabled={busy !== ""} onClick={() => void forwardToMerchant()}>
+            <span className="flex items-center gap-1.5">
+              <IconWhatsApp size={15} />
+              {m.admin.ordersPage.resendWhatsApp}
+            </span>
+          </Button>
+        )}
+
       <Modal
         open={noDriverWarn}
         onClose={() => setNoDriverWarn(false)}
-        title={OP.noDriverTitle}
+        title={m.admin.ordersPage.noDriverTitle}
       >
-        <p className="mb-4 text-sm text-ink-muted">{OP.noDriverBody}</p>
+        <p className="mb-4 text-sm text-ink-muted">
+          {m.admin.ordersPage.noDriverBody}
+        </p>
         <div className="flex gap-2">
           <Button variant="secondary" onClick={() => setNoDriverWarn(false)}>
-            {OP.noDriverWait}
+            {m.admin.ordersPage.noDriverWait}
           </Button>
           {/* **والتحويلُ يبقى متاحاً** — المنعُ يقرّر عن المالك ما لا يعرفه. */}
           <Button variant="primary" onClick={() => void forwardToMerchant()}>
-            {OP.noDriverAnyway}
+            {m.admin.ordersPage.noDriverAnyway}
           </Button>
         </div>
       </Modal>
+      {/* **الإسنادُ اليدويّ احتياطٌ لا أصل.**
+
+          **وزرٌّ متاحٌ دائماً يُستعمل دائماً** — فيصير هو الطريقَ ويصير ترتيبُ
+          السائقين زينة. فلا يظهر إلّا حين **يعجز الطابورُ**: مضت المهلةُ ولم
+          يلتقطه أحد.
+
+          والأدمنُ يراه دائماً — تجاوزُ المالك. */}
+      {/* **ولماذا لا يلتقطه أحد — يُقال هنا لا في تنبيهٍ بعد عشر دقائق.**
+
+          طلبٌ فوق سقف النقد لا يظهر لسائقٍ أبداً، **والعملياتُ ترى «جارٍ إسناد
+          سائق» وتنتظر من لن يأتي.** والصمتُ أسوأُ من الرفض: الرفضُ يُقرأ
+          ويُعالَج، **والصمتُ يُنتظَر.** */}
+      {o.blocked_reason && <Alert tone="warning">{o.blocked_reason}</Alert>}
+
+      {/* **التحويلُ إلى متجرٍ آخر — قاعدةٌ احتياطية.**
+
+          سياسةُ الإخفاء تمنع الحاجةَ إليه: صنفٌ غيرُ متاحٍ لا يُعرض. **لكنّ
+          الطارئَ يبقى** — والمتجرُ قد يعتذر على الواتساب.
+
+          **ولا يظهر بعد خروج البضاعة**: المتجرُ الأوّلُ قبض عند الاستلام،
+          فتحويلٌ بعدها **طلبان لا واحد.** */}
+      {/* **ويُعرض في الوضعين — والمنصةُ تديرُ أشدَّ حاجةً إليه.**
+
+          كان محجوباً في «المنصة تدير» بحجّة أنّ **«لا رفضَ من متجرٍ فيه
+          أصلاً»** — فالمتجرُ خارج النظام لا يملك زرَّ رفض.
+
+          **والحجّةُ تقلب نفسَها**: المتجرُ خارج النظام **يرفض بالكلام لا
+          بالزرّ** — يعتذر على واتساب، أو ينقطع خطُّه، أو لا يردّ أصلاً.
+          **ولا أثرَ لذلك في الشاشة**، فالمنصةُ وحدَها من يعلم، **وهي وحدَها
+          من يستطيع أن يُنقذ الطلب.**
+
+          **وزرٌّ محجوبٌ في الوضع الذي يحتاجه أكثر** يترك الطلبَ عالقاً بين
+          متجرٍ لا يردّ وزبونٍ ينتظر — **ولا مخرجَ إلّا إلغاءٌ منعناه.**
+
+          (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «بعد تحويل الطلب للمتجر يجب أن يظهر تبديل
+          المتجر — ربّما المتجرُ يرفض أو يحصل شيء، إنترنت فصل، مشكلة حدثت».)
+
+          **ويقف عند خروج البضاعة**: المتجرُ الأوّلُ قبض عند الاستلام،
+          **فتحويلٌ بعدها طلبان لا واحد.** */}
+      {/* **وزرٌّ مرئيٌّ لا خافت.**
+
+          كان `ghost` — نصّاً بلا إطارٍ ولا لون، **يُقرأ رابطاً ثانويّاً لا
+          فعلاً.** ومن يبحث عنه في طارئٍ (المتجرُ لا يردّ، الزبونُ ينتظر)
+          **يمرّ عليه بعينه ولا يراه.**
+
+          **والفعلُ الاحتياطيُّ ليس فعلاً ثانويّاً**: يُستعمل نادراً،
+          **ويُحتاج إليه حين لا يكون ثمّة بديل.** (قرارُ المالك ٢٠٢٦-٠٨-٠٤:
+          «خلّيه زرّاً واضحاً ليكون واضحاً بصريّاً».) */}
+      {/* **ولا تبديلَ لمتجرٍ لا وجودَ له** — (قرارُ المالك ٢٠٢٦-٠٨-١٠:
+          «هون بالطلب الخاصّ لا يوجد داعٍ لزرّ تبديل متجر أساساً»).
+
+          **وزرٌّ يُعرض ولا يفعل شيئاً أسوأُ من زرٍّ غائب**: من ضغطه في
+          طارئٍ فتح قائمةَ متاجرَ لا علاقةَ لها بطلبٍ اشتراه سائقٌ من سوق،
+          **فيظنّ أنّ الشاشةَ انكسرت أو أنّه أخطأ الطلب.** */}
+      {canIntervene && TRANSFERABLE.has(o.status) &&
+        o.kind !== "custom" &&
+        // **و«لدي توصيلة» لا تُحوَّل** (البند ١١) — **وعند المتجر ببلاغٍ الزرُّ في
+        // لوحة «الطلب مع السائق»** فلا يُعرض زرّان بالاسم نفسِه (المشكلة ٤).
+        o.kind !== "merchant_delivery" &&
+        !(o.status === "at_pickup" && doorVisible(o)) && (
+        <Button
+          variant="secondary"
+          disabled={busy !== ""}
+          onClick={() => setTransferring(true)}
+        >
+          {/* **وسهمان متبادلان يقولان «تبديل» قبل الكلمة** — وسهمٌ واحدٌ
+              يُقرأ «إرسالاً» لا «استبدالاً». */}
+          <span className="flex items-center gap-1.5">
+            <IconSwap size={15} />
+            {m.admin.ordersPage.transfer}
+          </span>
+        </Button>
+      )}
+      {/* **«من متجر غير تابع لنا»** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — بجانب التحويل: الطلبُ العاديُّ
+          النقديُّ يصير مشتريات. **والخادمُ يردّ ما تحرّك فيه مال.** */}
+      {canIntervene && TRANSFERABLE.has(o.status) &&
+        o.kind === "standard" &&
+        o.payment_method === "cash" &&
+        (o.wallet_paid ?? 0) === 0 && (
+        <Button
+          variant="danger"
+          disabled={busy !== ""}
+          onClick={() => {
+            setReason("");
+            setErr("");
+            setExtStoring(true);
+          }}
+        >
+          {m.admin.ordersPage.extStoreButton}
+        </Button>
+      )}
+
+      {/* **«دقّق حساب هذا الطلب» شيل من الكرت** (قرارُ المالك ٢٠٢٦-١٠-٢٧: «ماله فايدة») — الحسابُ
+          يُصحَّح مع كلّ انتقال، وصحّةُ الدفتر تكشف الخلل. **والبابُ باقٍ في المحرّك**
+          (`POST /admin/orders/{id}/recompute`) لمن احتاجه بعد إصلاح معادلة. */}
+
+      {canAssign && assignReady && (
+        <Button
+          variant="secondary"
+          disabled={busy !== ""}
+          onClick={() => setAssigning(true)}
+        >
+          {m.admin.ordersPage.assignHere}
+        </Button>
+      )}
+      {/* **ومتى يظهر الإسنادُ يُقال قبل أوانه** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كان الزرُّ يظهر فجأةً بلا كلمة. */}
+      {canAssign && !assignReady && (
+        <p className="w-full text-xs text-ink-muted">
+          {BOARD.assignAfter.replace(
+            "{n}",
+            fmtNum(Math.max(1, Math.ceil((assignAfterMin * 60_000 - (now - new Date(waitingSince).getTime())) / 60_000))),
+          )}
+        </p>
+      )}
       {assigning && (
         <AssignDialog
           orderId={o.id}
@@ -3873,9 +4195,24 @@ function OrderActions({
           }}
         />
       )}
-      {err && <p className="text-sm text-danger">{err}</p>}
-      {note && <p className="text-sm text-ink-muted">{note}</p>}
-    </div>
+      {canIntervene &&
+        o.board?.emergency_open &&
+        (o.status === "picked_up" || o.status === "on_the_way" || o.status === "at_dropoff") && (
+          <Button
+            variant="danger"
+            disabled={busy !== ""}
+            onClick={() => {
+              setReason("");
+              setErr("");
+              setReleasing(true);
+            }}
+          >
+            {BOARD.release.button}
+          </Button>
+        )}
+      {err && <p className="w-full text-xs text-danger">{err}</p>}
+      {note && <p className="w-full text-xs text-muted">{note}</p>}
+    </>
   );
 }
 
@@ -3895,13 +4232,17 @@ function OrderActions({
  * **وبعد الربط**: اسمُه ونسبتُه، وزرُّ الإرسال على واتساب (البابُ القائمُ نفسُه)،
  * و«إلغاء الربط». **والنسبةُ والشروطُ من الخادم** — والشاشةُ تعرض ما ردّه.
  */
-/** **ما يُطلب من خارج الصندوق** — الأفعالُ في «⋯» البطاقة، والصندوقُ يحمل حالتَه ونافذتَه. */
-type PartnerHandle = { openPicker: () => void; unlink: () => void };
-
-const PartnerStoreBox = forwardRef<PartnerHandle, { o: OrderRow; onChanged: () => void }>(function PartnerStoreBox(
-  { o, onChanged },
-  ref,
-) {
+function PartnerStoreBox({
+  o,
+  busy,
+  onSend,
+  onChanged,
+}: {
+  o: OrderRow;
+  busy: boolean;
+  onSend: () => void;
+  onChanged: () => void;
+}) {
   const OP = m.admin.ordersPage;
   const [picking, setPicking] = useState(false);
   const [pickQuery, setPickQuery] = useState("");
@@ -3950,14 +4291,19 @@ const PartnerStoreBox = forwardRef<PartnerHandle, { o: OrderRow; onChanged: () =
     }
   }
 
-  useImperativeHandle(ref, () => ({ openPicker: () => void openPicker(), unlink: () => void change("") }));
-
   if (!linked && goodsDone) return null;
   // **سطرٌ كاملٌ فوق الأزرار** (المالك ٢٠٢٦-١٠-٢٢: «الأزرار يخرب شكلها، لازم يظل الشكل نفسه»)
   // — كان صندوقاً بعرض زرٍّ بين الأزرار، فيلتفّ ما فيه ويصغر.
   return (
-    <div className="flex flex-col gap-1.5">
-      {!linked ? null : (
+    <div className="order-first flex basis-full flex-col gap-1.5">
+      {!linked ? (
+        <Button variant="secondary" disabled={busy || working} onClick={() => void openPicker()}>
+          <span className="flex items-center gap-1.5">
+            <IconStore size={15} />
+            {OP.partnerLinkBtn}
+          </span>
+        </Button>
+      ) : (
         <>
           <p className="text-xs font-bold text-ink">
             {OP.partnerLinked
@@ -3987,6 +4333,21 @@ const PartnerStoreBox = forwardRef<PartnerHandle, { o: OrderRow; onChanged: () =
               {OP.partnerStorePaid}: <Money value={o.custom_store_paid} />
             </p>
           )}
+          <div className="flex gap-1.5">
+            {/* **بشكل الأزرار الثانويّة** (المالك ٢٠٢٦-١٠-٢٢: «كل زر شكله مختلف») — المملوءُ
+                للخطوة الأساسيّة وحدَها، والأحمرُ للرفض. */}
+            <Button variant="secondary" disabled={busy || working} onClick={onSend}>
+              <span className="flex items-center gap-1.5">
+                <IconWhatsApp size={15} />
+                {o.sent_to_merchant_at ? OP.partnerSent : OP.partnerSend}
+              </span>
+            </Button>
+            {!ended && (
+              <Button variant="secondary" disabled={busy || working} onClick={() => void change("")}>
+                {OP.partnerUnlink}
+              </Button>
+            )}
+          </div>
         </>
       )}
       {err && <p className="text-xs text-danger">{err}</p>}
@@ -4025,7 +4386,7 @@ const PartnerStoreBox = forwardRef<PartnerHandle, { o: OrderRow; onChanged: () =
       </Modal>
     </div>
   );
-});
+}
 
 /**
  * **نوعُ الطلب بلونه وأيقونته** (ملاحظةُ المالك ٢٠٢٦-١٠-٢٢: «لازم يكون بشكل مرتب واضح أكثر»)
@@ -4033,22 +4394,23 @@ const PartnerStoreBox = forwardRef<PartnerHandle, { o: OrderRow; onChanged: () =
  * والأحمرُ للمشاكل** فلا يلتبس.
  */
 function KindBadge({ o }: { o: OrderRow }) {
-  // **هادئةٌ بنبرتها** (إعادةُ تصميم اللوحة ٢٠٢٦-١٠-٣١) — كانت تعبئةً صلبةً تصرخ فوق الحالة.
+  // **تعبئةٌ صلبةٌ والنصُّ والأيقونةُ أبيضان** (المالك ٢٠٢٦-١٠-٢٢: «لون ابيض والايقونة وخلفية
+  // البطاقة ملونة»).
   const look =
     o.kind === "merchant_delivery"
       ? o.delivery_mode === "fetch"
-        ? { v: "primary" as const, Icon: IconSwap }
-        : { v: "primary" as const, Icon: IconStore }
+        ? { bg: "bg-primary-solid", Icon: IconSwap }
+        : { bg: "bg-sky-solid", Icon: IconStore }
       : o.kind === "custom"
         ? o.custom_mode === "amanah"
-          ? { v: "violet" as const, Icon: IconCatOther }
-          : { v: "accent" as const, Icon: IconBag }
-        : { v: "neutral" as const, Icon: IconCart };
+          ? { bg: "bg-violet-solid", Icon: IconCatOther }
+          : { bg: "bg-warning-solid", Icon: IconBag }
+        : { bg: "bg-info-solid", Icon: IconCart };
   return (
-    <Badge variant={look.v} className="gap-1">
-      <look.Icon size={12} className="shrink-0" />
+    <span className={`inline-flex items-center gap-1 rounded-badge px-2.5 py-1 text-sm font-bold text-on-solid ${look.bg}`}>
+      <look.Icon size={14} />
       {kindLabel(o)}
-    </Badge>
+    </span>
   );
 }
 
@@ -4266,7 +4628,7 @@ function InvoiceList({
     return (
       <div className="space-y-2">
         <div className="rounded-control bg-field px-3 py-2">
-          <p className="text-xs text-ink-muted">{OP.customWhat}</p>
+          <p className="text-2xs text-ink-muted">{OP.customWhat}</p>
           <p className="whitespace-pre-wrap text-sm font-medium">{o.custom_request || "—"}</p>
         </div>
         <ul className="space-y-1.5 text-sm">
@@ -4283,7 +4645,7 @@ function InvoiceList({
           <li className={row}>
             <span className="text-ink-muted">
               {OP.customFee}{" "}
-              <span className="text-xs">({fixed ? OP.feeFixedTag : OP.feeDriverTag})</span>
+              <span className="text-2xs">({fixed ? OP.feeFixedTag : OP.feeDriverTag})</span>
             </span>
             {fee != null ? (
               <Money value={fee} small />
@@ -4334,7 +4696,7 @@ function InvoiceList({
               <Money value={o.custom_reserved_amount ?? 0} small />
             </li>
           )}
-          {!amanah && <li className="pt-1 text-xs text-ink-muted">{OP.customNote}</li>}
+          {!amanah && <li className="pt-1 text-2xs text-ink-muted">{OP.customNote}</li>}
         </ul>
       </div>
     );
@@ -4364,7 +4726,7 @@ function InvoiceList({
             {canUnavail && (it.merged_ids?.length ?? 0) <= 1 && (
               <button
                 type="button"
-                className="shrink-0 rounded-control px-1.5 text-xs text-danger hover:bg-row-hover"
+                className="shrink-0 rounded-control px-1.5 text-2xs text-danger hover:bg-row-hover"
                 onClick={() => {
                   setUnavail({ id: it.id, name: it.name, qty: it.qty });
                   setUnavailQty("");
@@ -4509,15 +4871,14 @@ function InvoiceButton({ order, compact = false }: { order: OrderRow; compact?: 
       {/* **زرٌّ بعرض البطاقة بكلمته وأيقونته** (تدقيقُ السجلّ ٢٠٢٦-١٠-٢٧) — كان طابعةً صغيرةً بلا كتابة. */}
       <Button
         variant="secondary"
-        size={compact ? "sm" : "md"}
-        className={compact ? "" : "w-full"}
+        className={compact ? "!px-3 !py-1.5 text-xs" : "w-full"}
         onClick={(e) => {
           e.stopPropagation();
           setOpen(true);
         }}
       >
         <span className="flex items-center justify-center gap-1.5">
-          <IconPrint size={14} />
+          <IconPrint size={compact ? 14 : 15} />
           {m.admin.ordersPage.history.invoiceBtn}
         </span>
       </Button>

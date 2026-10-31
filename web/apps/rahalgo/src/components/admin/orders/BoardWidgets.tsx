@@ -17,16 +17,12 @@
 import { useEffect, useState } from "react";
 import { getMessages, defaultLocale, fmtNum, errorText } from "@rahalgo/i18n";
 import {
-  AdminCard,
+  Alert,
   Badge,
   Button,
   IconBell,
   IconBellOff,
   IconPhone,
-  IconWarning,
-  Row,
-  RowGroupTitle,
-  RowIcon,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
@@ -67,6 +63,77 @@ export const COUNTER_FILTERS = [
 ] as const;
 
 /**
+ * **عدّاداتُ المراحل** — كلٌّ يُضغط فيفتح القائمةَ بالشرط الذي عدّه بعينه.
+ *
+ * **والضغطةُ الثانيةُ لا تُطفئ** — زرُّ «عرض الكلّ» بجانب البحث يقولها صراحةً.
+ */
+export function BoardCounters({
+  counts,
+  active,
+  onPick,
+  failed,
+  onRetry,
+}: {
+  counts: Record<string, number> | null;
+  active: string;
+  onPick: (filter: string) => void;
+  failed: boolean;
+  onRetry: () => void;
+}) {
+  if (failed && !counts) {
+    return (
+      <Alert className="mb-4" tone="warning">
+        <span className="flex flex-wrap items-center gap-2">
+          {B.countersFailed}
+          <Button variant="secondary" onClick={onRetry}>
+            {B.retry}
+          </Button>
+        </span>
+      </Alert>
+    );
+  }
+  return (
+    <div
+      role="group"
+      aria-label={B.countersLabel}
+      className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6"
+    >
+      {COUNTER_FILTERS.map((k) => {
+        const on = active === k;
+        const n = counts?.[k];
+        const hot = (k === "stuck" || k === "reports") && (n ?? 0) > 0;
+        return (
+          <button
+            key={k}
+            type="button"
+            aria-pressed={on}
+            onClick={() => onPick(k)}
+            className={`rounded-card border p-3 text-start transition-colors ${
+              on
+                ? "border-accent bg-accent-tint"
+                : hot
+                  ? "border-danger-edge bg-danger-tint"
+                  : "border-line-soft bg-surface hover:bg-field"
+            }`}
+          >
+            <span className="block text-xs text-ink-muted">
+              {(B.counters as Record<string, string>)[k]}
+            </span>
+            <span
+              className={`figure block ${
+                on ? "text-accent-text" : hot ? "text-danger" : "text-ink"
+              }`}
+            >
+              {n === undefined ? "—" : fmtNum(n)}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
  * **زرُّ الصوت** — المتصفّحُ لا يُسمع شيئاً قبل ضغطة، **فيُقال ذلك بزرٍّ لا بصمت.**
  */
 export function SoundButton({
@@ -82,7 +149,7 @@ export function SoundButton({
 }) {
   if (enabled && !unlocked) {
     return (
-      <Button variant="primary" size="sm" onClick={onEnable} title={B.soundHint}>
+      <Button variant="primary" onClick={onEnable} title={B.soundHint}>
         <span className="flex items-center gap-1.5">
           <IconBell size={15} />
           {B.soundEnable}
@@ -93,7 +160,6 @@ export function SoundButton({
   return (
     <Button
       variant="secondary"
-      size="sm"
       aria-pressed={enabled}
       onClick={() => onToggle(!enabled)}
     >
@@ -179,84 +245,79 @@ export function AttentionCard({
   }
 
   return (
-    <div role="alert">
-      <AdminCard title={B.attentionTitle} padded={false}>
-        <ul className="admin-rows border-t border-line-soft">
-          {newOrders.length > 0 && (
-            <RowGroupTitle icon={IconBell}>
-              {B.attentionNew} · {fmtNum(Math.max(newTotal, newOrders.length))}
-            </RowGroupTitle>
-          )}
-          {newOrders.map((o) => (
-            <Row
-              key={o.id}
-              leading={<RowIcon icon={IconBell} tone="attention" />}
-              title={
-                <span className="flex flex-wrap items-center gap-x-2">
-                  <span dir="ltr" className="tabular-nums">#{o.number}</span>
-                  <span className="min-w-0 truncate font-medium">{o.merchant_name}</span>
+    <section className="surface mb-4 overflow-hidden" role="alert">
+      <h2 className="heading-card flex items-center gap-2 border-b border-line-soft px-4 py-3">
+        <span className="h-2.5 w-2.5 animate-pulse rounded-badge bg-danger" />
+        {B.attentionTitle}
+      </h2>
+
+      {newOrders.length > 0 && (
+        <div className="border-b border-line-soft bg-accent-tint px-4 py-3 last:border-b-0">
+          <p className="mb-1 flex flex-wrap items-center gap-2 text-sm font-bold text-accent-text">
+            {B.attentionNew}
+            <Badge variant="accent">{fmtNum(Math.max(newTotal, newOrders.length))}</Badge>
+          </p>
+          <p className="mb-2 text-xs text-ink-muted">{B.newTitle}</p>
+          <ul className="space-y-1.5">
+            {newOrders.map((o) => (
+              <li key={o.id} className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="font-bold text-accent-text">#{o.number}</span>
+                <span className="min-w-0 flex-1 truncate text-ink">{o.merchant_name}</span>
+                <span className="text-xs text-ink-muted">
+                  {B.since.replace("{n}", fmtNum(minutesSince(o.created_at, now) ?? 0))}
                 </span>
-              }
-              meta={B.since.replace("{n}", fmtNum(minutesSince(o.created_at, now) ?? 0))}
-              trailing={
-                <Button size="sm" onClick={() => void openNew(o)}>
+                <Button variant="primary" onClick={() => void openNew(o)}>
                   {B.open}
                 </Button>
-              }
-            />
-          ))}
+              </li>
+            ))}
+          </ul>
+          {err && <p className="mt-2 text-xs text-danger">{err}</p>}
+        </div>
+      )}
 
-          {alerts.length > 0 && (
-            <RowGroupTitle icon={IconWarning}>
-              {B.attentionStuck} · {fmtNum(alerts.length)}
-            </RowGroupTitle>
-          )}
-          {alerts.map((a) => (
-            <Row
-              key={a.order_id + a.reason}
-              leading={<RowIcon icon={IconWarning} tone="danger" />}
-              title={
-                <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span dir="ltr" className="tabular-nums">#{a.number}</span>
-                  <span className="min-w-0 truncate font-medium">{a.merchant_name}</span>
-                  <Badge variant="danger">{alertReasons[a.reason] ?? a.reason}</Badge>
+      {alerts.length > 0 && (
+        <div className="bg-danger-tint px-4 py-3">
+          <p className="mb-2 flex flex-wrap items-center gap-2 text-sm font-bold text-danger">
+            {B.attentionStuck}
+            <Badge variant="danger">{fmtNum(alerts.length)}</Badge>
+          </p>
+          <ul className="space-y-2">
+            {alerts.map((a) => (
+              <li key={a.order_id + a.reason} className="flex flex-wrap items-center gap-2 text-sm">
+                <span className="font-bold text-danger">#{a.number}</span>
+                <Badge variant="danger">{alertReasons[a.reason] ?? a.reason}</Badge>
+                <span className="min-w-0 truncate">{a.merchant_name}</span>
+                {(a.customer_phone || a.customer_phone_masked) && (
+                  <span dir="ltr" className="text-xs text-ink-muted">
+                    {a.customer_phone || a.customer_phone_masked}
+                  </span>
+                )}
+                {/* **والدقائقُ تُعدّ في الشاشة من لحظة السبب** (المشكلة ١٩). */}
+                <span className="text-xs text-ink-muted">
+                  {B.since.replace("{n}", fmtNum(minutesSince(a.since, now) ?? a.minutes))}
                 </span>
-              }
-              meta={
-                <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  {/* **بلفظ المكتب لا الزبون** (المشكلة ٢٣). */}
-                  <span>{officeStatus[a.status] ?? a.status}</span>
-                  {(a.customer_phone || a.customer_phone_masked) && (
-                    <span dir="ltr">{a.customer_phone || a.customer_phone_masked}</span>
-                  )}
-                  {/* **والدقائقُ تُعدّ في الشاشة من لحظة السبب** (المشكلة ١٩). */}
-                  <span>{B.since.replace("{n}", fmtNum(minutesSince(a.since, now) ?? a.minutes))}</span>
-                </span>
-              }
-              trailing={
-                <Button size="sm" variant="secondary" onClick={() => onOpen(a.order_id, a.number)}>
+                {/* **بلفظ المكتب لا الزبون** (المشكلة ٢٣). */}
+                <Badge variant="warning">{officeStatus[a.status] ?? a.status}</Badge>
+                <Button variant="secondary" className="ms-auto" onClick={() => onOpen(a.order_id, a.number)}>
                   {B.open}
                 </Button>
-              }
-            />
-          ))}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
-          {/* **وفشلُ جلب التنبيهات يُقال** (المشكلة ٣١) — لا يختفي القسمُ كأنّ شيئاً لم يعلق. */}
-          {alertsFailed && (
-            <Row
-              leading={<RowIcon icon={IconWarning} tone="attention" />}
-              title={<span className="font-medium">{B.alertsFailed}</span>}
-              trailing={
-                <Button size="sm" variant="secondary" onClick={onRetryAlerts}>
-                  {B.retry}
-                </Button>
-              }
-            />
-          )}
-        </ul>
-        {err && <p className="border-t border-line-soft px-4 py-3 text-sm text-danger lg:px-5">{err}</p>}
-      </AdminCard>
-    </div>
+      {/* **وفشلُ جلب التنبيهات يُقال** (المشكلة ٣١) — لا يختفي القسمُ كأنّ شيئاً لم يعلق. */}
+      {alertsFailed && (
+        <div className="flex flex-wrap items-center gap-2 px-4 py-3 text-sm text-warning">
+          {B.alertsFailed}
+          <Button variant="secondary" onClick={onRetryAlerts}>
+            {B.retry}
+          </Button>
+        </div>
+      )}
+    </section>
   );
 }
 
