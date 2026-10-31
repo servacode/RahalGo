@@ -71,7 +71,6 @@ import { useRinger } from "@/lib/ringer";
 import { PageHero } from "@/components/admin/PageHero";
 import { Tile, type TileTone } from "@/components/admin/DashParts";
 import { AutoModeToggle } from "@/components/admin/AutoModeToggle";
-import { EmergencyBanner } from "@/components/admin/EmergencyBanner";
 import { DoorPanel, type DoorView } from "./DoorPanel";
 import { TransferPanel } from "./TransferPanel";
 import { AssignDialog } from "./AssignDialog";
@@ -2080,6 +2079,12 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           icon={IconOrder}
           title={m.admin.ordersPage.title}
           subtitle={BOARD.subtitle}
+          /* **زرُّ «تحديث» كالسجلّ** — اللوحةُ تتحدّث وحدَها، والزرُّ لمن فاته حدث (دفعةُ التصميم ١). */
+          actions={
+            <Button variant="secondary" onClick={refreshAll}>
+              {H.refresh}
+            </Button>
+          }
           titleExtra={
             <Badge variant={liveConnected ? "success" : "danger"} className="gap-1.5 py-1">
               <span className={`h-2 w-2 rounded-badge ${liveConnected ? "animate-pulse bg-success" : "bg-danger"}`} />
@@ -2167,9 +2172,8 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         </div>
       )}
 
-      {/* **والطارئُ لمن يبلغه ولا يرى شريطَ اللوحة العامّ** — موظّفُ العمليّات
-          يملك الطوارئ (البند ٧) والشريطُ أعلى الصفحات لمن يملك الدعم. */}
-      {live && can("emergencies.manage") && !can("support.manage") && <EmergencyBanner />}
+      {/* **ولا شريطَ طوارئ هنا** — شريطُ اللوحة العامّ (`layout.tsx`) يظهر لكلّ من يملك الطوارئ،
+          وكان يُرسم هنا مرّةً ثانيةً لمن لا يملك الدعم (دفعةُ التصميم ١). */}
 
       {/* **«بدها انتباهك» بطاقةٌ واحدة** (تدقيقُ ٢٠٢٦-١٠-٢٧) — الجديدةُ والعالقةُ بقسمين، بدل شرائطَ
           فوق بعضها قبل أن تصل الطلبات. */}

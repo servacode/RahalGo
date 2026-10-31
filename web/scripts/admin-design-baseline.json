@@ -1,0 +1,327 @@
+{
+  "apps/rahalgo/src/app/dashboard/account/page.tsx": {
+    "subtitle": 1
+  },
+  "apps/rahalgo/src/app/dashboard/cash/page.tsx": {
+    "tinyText": 17,
+    "rawButton": 1,
+    "handEmpty": 2,
+    "subtitle": 1
+  },
+  "apps/rahalgo/src/app/dashboard/emergencies/[id]/page.tsx": {
+    "tinyText": 9,
+    "rawButton": 1
+  },
+  "apps/rahalgo/src/app/dashboard/emergencies/page.tsx": {
+    "tinyText": 3,
+    "handEmpty": 2,
+    "subtitle": 1
+  },
+  "apps/rahalgo/src/app/dashboard/expansion/page.tsx": {
+    "tinyText": 6,
+    "handEmpty": 2,
+    "subtitle": 1
+  },
+  "apps/rahalgo/src/app/dashboard/expenses/page.tsx": {
+    "tinyText": 8,
+    "rawButton": 3,
+    "handEmpty": 1,
+    "statusColor": 4,
+    "subtitle": 1
+  },
+  "apps/rahalgo/src/app/dashboard/incentives/page.tsx": {
+    "tinyText": 12,
+    "rawButton": 2,
+    "handEmpty": 2,
+    "subtitle": 1
+  },
+  "apps/rahalgo/src/app/dashboard/leads/page.tsx": {
+    "tinyText": 5,
+    "handEmpty": 1,
+    "statusColor": 2,
+    "subtitle": 1
+  },
+  "apps/rahalgo/src/app/dashboard/merchants/[id]/page.tsx": {
+    "rawButton": 3,
+    "handEmpty": 1
+  },
+  "apps/rahalgo/src/app/dashboard/obligations/page.tsx": {
+    "tinyText": 8,
+    "rawButton": 1,
+    "handEmpty": 1,
+    "statusColor": 4,
+    "subtitle": 1
+  },
+  "apps/rahalgo/src/app/dashboard/ops/page.tsx": {
+    "tinyText": 3,
+    "subtitle": 1
+  },
+  "apps/rahalgo/src/app/dashboard/opsmap/page.tsx": {
+    "tinyText": 2,
+    "rawButton": 4,
+    "handEmpty": 1,
+    "subtitle": 1
+  },
+  "apps/rahalgo/src/app/dashboard/page.tsx": {
+    "tinyText": 3,
+    "rawButton": 2,
+    "handEmpty": 1,
+    "subtitle": 1
+  },
+  "apps/rahalgo/src/app/dashboard/profits/page.tsx": {
+    "tinyText": 8,
+    "handEmpty": 2,
+    "subtitle": 1
+  },
+  "apps/rahalgo/src/app/dashboard/promos/page.tsx": {
+    "tinyText": 5,
+    "rawButton": 1,
+    "handEmpty": 2,
+    "statusColor": 1,
+    "subtitle": 1
+  },
+  "apps/rahalgo/src/app/dashboard/reports/page.tsx": {
+    "tinyText": 7,
+    "rawButton": 2,
+    "handEmpty": 1,
+    "subtitle": 1
+  },
+  "apps/rahalgo/src/app/dashboard/sections/[id]/page.tsx": {
+    "rawButton": 1
+  },
+  "apps/rahalgo/src/app/dashboard/sections/page.tsx": {
+    "subtitle": 1
+  },
+  "apps/rahalgo/src/app/dashboard/settings/page.tsx": {
+    "tinyText": 1,
+    "rawButton": 2,
+    "handEmpty": 2,
+    "subtitle": 2
+  },
+  "apps/rahalgo/src/app/dashboard/tickets/page.tsx": {
+    "tinyText": 1,
+    "rawButton": 1
+  },
+  "apps/rahalgo/src/app/dashboard/treasury/page.tsx": {
+    "subtitle": 1
+  },
+  "apps/rahalgo/src/app/dashboard/users/[id]/page.tsx": {
+    "tinyText": 6,
+    "rawButton": 10,
+    "statusColor": 5
+  },
+  "apps/rahalgo/src/components/admin/AutoModeToggle.tsx": {
+    "tinyText": 1
+  },
+  "apps/rahalgo/src/components/admin/CreditPicker.tsx": {
+    "rawButton": 1
+  },
+  "apps/rahalgo/src/components/admin/DashParts.tsx": {
+    "tinyText": 1,
+    "rawButton": 1
+  },
+  "apps/rahalgo/src/components/admin/DiscountsTab.tsx": {
+    "tinyText": 4,
+    "rawButton": 1,
+    "handEmpty": 2
+  },
+  "apps/rahalgo/src/components/admin/FreeDeliveryTab.tsx": {
+    "rawButton": 3
+  },
+  "apps/rahalgo/src/components/admin/HoursModal.tsx": {
+    "tinyText": 1
+  },
+  "apps/rahalgo/src/components/admin/ManageRolesModal.tsx": {
+    "tinyText": 1
+  },
+  "apps/rahalgo/src/components/admin/MerchantAnnounce.tsx": {
+    "rawButton": 1
+  },
+  "apps/rahalgo/src/components/admin/MerchantSettlement.tsx": {
+    "tinyText": 1,
+    "rawButton": 1
+  },
+  "apps/rahalgo/src/components/admin/PageHero.tsx": {
+    "rawButton": 1
+  },
+  "apps/rahalgo/src/components/admin/PinSection.tsx": {
+    "rawButton": 3
+  },
+  "apps/rahalgo/src/components/admin/PlaceDemandPanel.tsx": {
+    "tinyText": 2
+  },
+  "apps/rahalgo/src/components/admin/PriceSyncAdmin.tsx": {
+    "rawButton": 1
+  },
+  "apps/rahalgo/src/components/admin/ProfileRoleTabs.tsx": {
+    "tinyText": 5,
+    "rawButton": 2,
+    "statusColor": 15
+  },
+  "apps/rahalgo/src/components/admin/PromoReferralsTab.tsx": {
+    "tinyText": 4,
+    "handEmpty": 2
+  },
+  "apps/rahalgo/src/components/admin/SiteStatsSection.tsx": {
+    "tinyText": 2,
+    "rawButton": 1
+  },
+  "apps/rahalgo/src/components/admin/StoreActions.tsx": {
+    "tinyText": 1
+  },
+  "apps/rahalgo/src/components/admin/StoreStaffAdmin.tsx": {
+    "rawButton": 1
+  },
+  "apps/rahalgo/src/components/admin/WalletRequests.tsx": {
+    "tinyText": 1,
+    "rawButton": 2,
+    "handEmpty": 1
+  },
+  "apps/rahalgo/src/components/admin/accounts/ProfileParts.tsx": {
+    "rawButton": 3
+  },
+  "apps/rahalgo/src/components/admin/accounts/WarningsSection.tsx": {
+    "tinyText": 1
+  },
+  "apps/rahalgo/src/components/admin/accounts/all.tsx": {
+    "rawButton": 1,
+    "handEmpty": 1,
+    "subtitle": 1
+  },
+  "apps/rahalgo/src/components/admin/market/AddItemModal.tsx": {
+    "rawButton": 1
+  },
+  "apps/rahalgo/src/components/admin/market/CategoriesTab.tsx": {
+    "handEmpty": 1
+  },
+  "apps/rahalgo/src/components/admin/market/DrinksAdmin.tsx": {
+    "rawButton": 1
+  },
+  "apps/rahalgo/src/components/admin/market/ItemsTab.tsx": {
+    "tinyText": 5,
+    "rawButton": 3
+  },
+  "apps/rahalgo/src/components/admin/market/MarketParts.tsx": {
+    "rawButton": 1,
+    "handEmpty": 1
+  },
+  "apps/rahalgo/src/components/admin/market/QualityTab.tsx": {
+    "tinyText": 2
+  },
+  "apps/rahalgo/src/components/admin/market/SectionsTab.tsx": {
+    "rawButton": 2
+  },
+  "apps/rahalgo/src/components/admin/market/SetupTab.tsx": {
+    "rawButton": 2
+  },
+  "apps/rahalgo/src/components/admin/market/StateBadge.tsx": {
+    "tinyText": 1
+  },
+  "apps/rahalgo/src/components/admin/market/StoresTab.tsx": {
+    "tinyText": 1,
+    "rawButton": 1
+  },
+  "apps/rahalgo/src/components/admin/money/CompensationsView.tsx": {
+    "tinyText": 3,
+    "rawButton": 2,
+    "handEmpty": 1,
+    "subtitle": 1
+  },
+  "apps/rahalgo/src/components/admin/money/StatTile.tsx": {
+    "tinyText": 1,
+    "rawButton": 1
+  },
+  "apps/rahalgo/src/components/admin/money/caseTable.tsx": {
+    "tinyText": 6,
+    "handEmpty": 1,
+    "statusColor": 2
+  },
+  "apps/rahalgo/src/components/admin/money/disputes.tsx": {
+    "tinyText": 1,
+    "rawButton": 2
+  },
+  "apps/rahalgo/src/components/admin/money/goodsCompensation.tsx": {
+    "tinyText": 3
+  },
+  "apps/rahalgo/src/components/admin/orders/BoardWidgets.tsx": {
+    "rawButton": 1
+  },
+  "apps/rahalgo/src/components/admin/orders/OrderDetailPanel.tsx": {
+    "tinyText": 3,
+    "statusColor": 5
+  },
+  "apps/rahalgo/src/components/admin/orders/OrdersScreen.tsx": {
+    "tinyText": 5,
+    "rawButton": 4,
+    "handEmpty": 2,
+    "statusColor": 5,
+    "subtitle": 1
+  },
+  "apps/rahalgo/src/components/admin/roles/RolesScreen.tsx": {
+    "tinyText": 2,
+    "rawButton": 1,
+    "subtitle": 1
+  },
+  "apps/rahalgo/src/components/admin/settings/PlatformSwitch.tsx": {
+    "tinyText": 2,
+    "rawButton": 1
+  },
+  "apps/rahalgo/src/components/admin/settings/app-status.tsx": {
+    "rawButton": 1
+  },
+  "apps/rahalgo/src/components/admin/settings/banners.tsx": {
+    "handEmpty": 1
+  },
+  "apps/rahalgo/src/components/admin/settings/cities.tsx": {
+    "rawButton": 2,
+    "handEmpty": 1
+  },
+  "apps/rahalgo/src/components/admin/settings/release.tsx": {
+    "tinyText": 1
+  },
+  "apps/rahalgo/src/components/admin/settings/whatsapp.tsx": {
+    "tinyText": 2
+  },
+  "apps/rahalgo/src/components/admin/settings/zones.tsx": {
+    "rawButton": 2,
+    "handEmpty": 1
+  },
+  "apps/rahalgo/src/components/admin/support/RatingsList.tsx": {
+    "tinyText": 5,
+    "handEmpty": 2
+  },
+  "apps/rahalgo/src/components/admin/support/ratings.tsx": {
+    "tinyText": 3,
+    "rawButton": 4
+  },
+  "apps/rahalgo/src/components/admin/support/tickets.tsx": {
+    "tinyText": 8,
+    "rawButton": 2,
+    "handEmpty": 1,
+    "statusColor": 8
+  },
+  "apps/rahalgo/src/components/admin/treasury/Approvals.tsx": {
+    "tinyText": 4,
+    "rawButton": 2
+  },
+  "apps/rahalgo/src/components/admin/treasury/Cashbox.tsx": {
+    "tinyText": 8
+  },
+  "apps/rahalgo/src/components/admin/treasury/Health.tsx": {
+    "tinyText": 4
+  },
+  "apps/rahalgo/src/components/admin/treasury/Overview.tsx": {
+    "tinyText": 4
+  },
+  "apps/rahalgo/src/components/admin/treasury/Statement.tsx": {
+    "tinyText": 3,
+    "rawButton": 1
+  },
+  "apps/rahalgo/src/components/admin/treasury/Topup.tsx": {
+    "tinyText": 1
+  },
+  "apps/rahalgo/src/components/admin/treasury/shared.tsx": {
+    "tinyText": 2,
+    "handEmpty": 1
+  }
+}

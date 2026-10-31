@@ -23,7 +23,6 @@ export function PageHero<K extends string>({
   icon: Icon,
   title,
   titleExtra,
-  subtitle,
   actions,
   children,
   tabs,
@@ -34,6 +33,10 @@ export function PageHero<K extends string>({
   title: string;
   /** **شيءٌ بجانب العنوان** — شارةُ «مباشر» مثلاً. */
   titleExtra?: ReactNode;
+  /**
+   * @deprecated **لا يُرسم** — قرارُ المالك: لا سطرَ شرحٍ تحت العناوين (دفعةُ تصميم اللوحة ١).
+   * باقٍ في النوع كي لا تنكسر الصفحاتُ التي لم تُنقل بعد إلى `AdminPage`، والحارسُ يعدّه.
+   */
   subtitle?: ReactNode;
   actions?: ReactNode;
   children?: ReactNode;
@@ -53,7 +56,6 @@ export function PageHero<K extends string>({
               {title}
               {titleExtra}
             </h1>
-            {subtitle && <p className="text-xs text-ink-muted">{subtitle}</p>}
           </div>
         </div>
         {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
@@ -78,7 +80,7 @@ export function PageHero<K extends string>({
                 {label}
                 {count != null && (
                   <span
-                    className={`min-w-[1.5rem] rounded-full px-1.5 py-0.5 text-center text-2xs tabular-nums ${
+                    className={`min-w-[1.5rem] rounded-full px-1.5 py-0.5 text-center text-xs tabular-nums ${
                       warn && count > 0
                         ? "bg-warning-solid text-on-solid"
                         : on

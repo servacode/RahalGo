@@ -21,6 +21,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth";
 import { getMessages, defaultLocale, fmtNum, fmtDate, errorText, fmtStoreNo } from "@rahalgo/i18n";
 import {
   Tabs,
@@ -123,6 +124,8 @@ export default function MerchantProfilePage() {
   // المالية تصل الصفحةَ من ملفّ صاحب المتجر، فكانت تُردّ ٤٠٣ وتُعرض
   // رسالةَ الخطأ حمراءَ بدل «غير مسموح».
   const canCall = useCanCall();
+  const { can } = useAuth();
+  const canMarket = can("market.manage");
   const canRead = canCall("GET", "/merchants/{id}");
   const canEditMenu = canCall("POST", "/merchants/{id}/menu/items");
   const canEdit = canCall("PATCH", "/merchants/{id}");
@@ -330,7 +333,11 @@ export default function MerchantProfilePage() {
         <OrderPhonesAdmin merchantId={mr.id} canManage={canCall("PUT", "/merchants/{id}/order-phones")} />
         {canEditMenu && <PriceSyncAdmin merchantId={mr.id} />}
         {canCall("DELETE", "/merchants/{id}") && (
-          <DeleteMerchantButton merchantId={mr.id} name={mr.name} onDeleted={() => router.push("/dashboard/merchants")} />
+          <DeleteMerchantButton merchantId={mr.id} name={mr.name} onDeleted={() =>
+            /* **بعد الحذف إلى قائمة المتاجر الموجودة** — `/dashboard/merchants` بلا صفحةٍ فكان يردّ ٤٠٤
+               (دفعةُ التصميم ١). تبويبُ «المتاجر» في السوق لمن يملكه، وإلّا الحساباتُ مفلترةً بأصحاب المتاجر. */
+            router.push(canMarket ? "/dashboard/sections?tab=stores" : "/dashboard/users?role=merchant")
+          } />
         )}
         </>
       )}

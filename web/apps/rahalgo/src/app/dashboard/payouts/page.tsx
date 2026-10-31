@@ -36,26 +36,32 @@ import {
   Alert,
   Badge,
   Button,
-  Chips,
   Input,
   Modal,
-  PageContainer,
-  LoadingState,
-  ReloadState,
-  Pagination,
   useLiveData,
   IconWallet,
-  IconUser,
   IconStatus,
   IconWarning,
+  IconHourglass,
   Money,
   FormActions,
+  AdminPage,
+  AdminCard,
+  AdminEmpty,
+  AdminLoading,
+  AdminReload,
+  Fact,
+  FilterBar,
+  FilterSelect,
+  MoreMenu,
+  StatusBadge,
+  SummaryStrip,
+  type AdminTab,
+  type SummaryItem,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { isOwner, roleLabelByCode } from "@/lib/rolemeta";
-import { PageHero } from "@/components/admin/PageHero";
-import { Tile } from "@/components/admin/DashParts";
 
 const m = getMessages(defaultLocale);
 const P = m.shared.payout;
@@ -107,14 +113,7 @@ const TAB_STATUSES: Status[] = ["pending", "processing", "paid", "rejected"];
 const CLOSED: Status[] = ["paid", "rejected", "failed", "reversed"];
 const ROLES: Role[] = ["driver", "merchant", "sales"];
 
-const VARIANT: Record<Status, "warning" | "info" | "success" | "danger" | "neutral" | "violet"> = {
-  pending: "warning",
-  processing: "info",
-  paid: "success",
-  rejected: "neutral",
-  failed: "danger",
-  reversed: "violet",
-};
+/* **ولونُ الحالة من القاموس الواحد** (`StatusBadge` بـ`domain="payout"`) — لا خريطةَ ألوانٍ هنا. */
 
 /** **الأفعالُ حسب الحال** — آلةُ الخادم نفسُها (`payout_handlers.go`). */
 type Action = "paid" | "rejected" | "processing" | "failed" | "reversed";
@@ -181,9 +180,8 @@ export default function PayoutsPage() {
   const [deciding, setDeciding] = useState<{ p: Payout; action: Action } | null>(null);
 
   /** **وتغييرُ الفلتر يرجع للصفحة الأولى** — كانت الصفحةُ الثالثةُ تبقى فيظهر «لا طلبات». */
-  function setStatus(s: string, onlyMonth = false) {
+  function setStatus(s: string) {
     setStatusRaw(s);
-    setMonthRaw(onlyMonth);
     setPage(1);
   }
   function clearFilters() {
@@ -194,6 +192,10 @@ export default function PayoutsPage() {
   }
   function setRole(r: string) {
     setRoleRaw(r);
+    setPage(1);
+  }
+  function setMonth(on: boolean) {
+    setMonthRaw(on);
     setPage(1);
   }
 
@@ -210,131 +212,131 @@ export default function PayoutsPage() {
     stats: Stats;
   }>(() => api(`/api/v1/admin/payouts?${qs.toString()}`), ["wallet"], [status, role, month, page]);
 
-  if (loading) return <LoadingState />;
   const rows = data?.payouts ?? [];
   const st = data?.stats;
   const filtered = status !== "" || role !== "" || month;
   // **رقمُ «بانتظار المالية» للمعلَّق وحدَه** — والخادمُ القديمُ بلا الحقل: الفرق.
   const pendingCount = st ? (st.pending_count ?? st.waiting_count - st.processing_count) : undefined;
-
-  const roleChips = [
-    { id: "", label: A.allRoles },
-    ...ROLES.map((r) => ({ id: r, label: roleLabelByCode(r) })),
-  ];
-
   const count = (n: number) => A.cardCount.replace("{n}", fmtNum(n));
 
-  // **تصميمٌ احترافيّ بلا جداول** (المالك ٢٠٢٦-١٠-٢٦: «امسح العرض بالجداول وتصميم احترافي») —
-  // رأسٌ موحّدٌ بتبويبات الحالات، أربعةُ أرقامٍ تُضغط، وكرتٌ لكلّ طلبِ سحبٍ بأفعاله.
+  // ══════════════════════════════════════════════════════════════════
+  // **دفعةُ التصميم ١ (٢٠٢٦-١٠-٣١):** قالبُ اللوحة الواحد — رأسٌ بسطرٍ وتبويباتٌ خطّاً، شريطُ فلاتر
+  // (الدور + هالشهر)، أربعةُ أرقامٍ **لا تُفلتر** (التبويباتُ هي الفلتر)، وبطاقةٌ لكلّ طلبٍ بلا صناديقَ
+  // داخلها. **والرفضُ والفشلُ والارتدادُ خلف «⋯»** — لا أحمرَ بعرض البطاقة بجانب «اصرف».
+  // ══════════════════════════════════════════════════════════════════
+  const tabs: AdminTab[] = [
+    { key: "all", label: A.allStatuses },
+    ...TAB_STATUSES.map((s) => ({
+      key: s,
+      label: A.status[s],
+      count: s === "pending" ? pendingCount : s === "processing" ? st?.processing_count : undefined,
+      attention: s === "pending",
+    })),
+    { key: FAILED_OR_REVERSED, label: A.failedOrReversed },
+    // **«بانتظار الصرف» تبويبٌ يظهر حين يفتحه رابطُه** — كي لا يبقى الرأسُ بلا تبويبٍ مختار.
+    ...(status === WAITING ? [{ key: WAITING, label: A.waitingTab }] : []),
+    // **وكذلك «فشل» أو «مرتجع» وحدَهما من رابطٍ قديم.**
+    ...(status === "failed" || status === "reversed" ? [{ key: status, label: A.status[status] }] : []),
+  ];
+
+  const waiting = st?.waiting_count ?? 0;
+  const summary: SummaryItem[] = [
+    {
+      key: "waiting",
+      icon: IconHourglass,
+      label: A.cardWaiting,
+      value: fmtMoney(st?.waiting_sum ?? 0),
+      meta:
+        (st?.processing_count ?? 0) > 0
+          ? A.waitingSplit.replace("{a}", fmtNum(pendingCount ?? 0)).replace("{b}", fmtNum(st?.processing_count ?? 0))
+          : count(waiting),
+      tone: waiting > 0 ? "attention" : "muted",
+    },
+    {
+      key: "processing",
+      icon: IconStatus,
+      label: A.cardProcessing,
+      value: fmtMoney(st?.processing_sum ?? 0),
+      meta: count(st?.processing_count ?? 0),
+      tone: (st?.processing_count ?? 0) > 0 ? "neutral" : "muted",
+    },
+    {
+      key: "paid",
+      icon: IconWallet,
+      label: A.cardPaidMonth,
+      value: fmtMoney(st?.paid_month_sum ?? 0),
+      meta: count(st?.paid_month_count ?? 0),
+      tone: (st?.paid_month_count ?? 0) > 0 ? "good" : "muted",
+    },
+    {
+      key: "returned",
+      icon: IconWarning,
+      label: A.cardReturnedMonth,
+      value: fmtMoney(st?.returned_month_sum ?? 0),
+      meta: count(st?.returned_month_count ?? 0),
+      tone: (st?.returned_month_count ?? 0) > 0 ? "danger" : "muted",
+    },
+  ];
+
   return (
-    <PageContainer>
-      <PageHero<string>
-        icon={IconWallet}
-        title={P.adminTitle}
-        subtitle={A.pageHint}
-        tabs={[
-          { key: "all", label: A.allStatuses },
-          ...TAB_STATUSES.map((s) => ({
-            key: s,
-            label: A.status[s],
-            count: s === "pending" ? pendingCount : s === "processing" ? st?.processing_count : undefined,
-            warn: s === "pending" && (pendingCount ?? 0) > 0,
-          })),
-          { key: FAILED_OR_REVERSED, label: A.failedOrReversed },
-          // **«بانتظار الصرف» تبويبٌ يظهر حين تفتحه بطاقتُه** — كي لا يبقى الرأسُ بلا تبويبٍ مختار.
-          ...(status === WAITING ? [{ key: WAITING, label: A.waitingTab }] : []),
-          // **وكذلك «فشل» أو «مرتجع» وحدَهما من رابطٍ قديم.**
-          ...(status === "failed" || status === "reversed" ? [{ key: status, label: A.status[status] }] : []),
-        ]}
-        value={status || "all"}
-        onChange={(k) => setStatus(k === "all" ? "" : k)}
-      />
-
-      {/* **الأرقامُ الأربعة** — و«بانتظار الصرف» يشمل «قيد الصرف»: مالٌ محجوزٌ لم يخرج،
-          ويفتح الحالتين معاً · وبطاقتا «هالشهر» تفتحان قرارات الشهر وحدَها. */}
-      <div className="mb-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
-        <Tile
-          icon={IconWallet}
-          label={A.cardWaiting}
-          value={fmtMoney(st?.waiting_sum ?? 0)}
-          sub={
-            (st?.processing_count ?? 0) > 0
-              ? A.waitingSplit
-                  .replace("{a}", fmtNum(pendingCount ?? 0))
-                  .replace("{b}", fmtNum(st?.processing_count ?? 0))
-              : count(st?.waiting_count ?? 0)
-          }
-          tone={(st?.waiting_count ?? 0) > 0 ? "warning" : "muted"}
-          onClick={() => setStatus(WAITING)}
-        />
-        <Tile
-          icon={IconStatus}
-          label={A.cardProcessing}
-          value={fmtMoney(st?.processing_sum ?? 0)}
-          sub={count(st?.processing_count ?? 0)}
-          tone={(st?.processing_count ?? 0) > 0 ? "accent" : "muted"}
-          onClick={() => setStatus("processing")}
-        />
-        <Tile
-          icon={IconWallet}
-          label={A.cardPaidMonth}
-          value={fmtMoney(st?.paid_month_sum ?? 0)}
-          sub={count(st?.paid_month_count ?? 0)}
-          tone={(st?.paid_month_count ?? 0) > 0 ? "success" : "muted"}
-          onClick={() => setStatus("paid", true)}
-        />
-        <Tile
-          icon={IconWarning}
-          label={A.cardReturnedMonth}
-          value={fmtMoney(st?.returned_month_sum ?? 0)}
-          sub={count(st?.returned_month_count ?? 0)}
-          tone={(st?.returned_month_count ?? 0) > 0 ? "danger" : "muted"}
-          onClick={() => setStatus(FAILED_OR_REVERSED, true)}
-        />
-      </div>
-
-      <section className="surface mb-4 flex flex-col gap-2 p-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-ink-muted">{A.roleCol}:</span>
-          <Chips items={roleChips} value={role} onChange={setRole} wrap />
-        </div>
-        {/* **وحصرُ الشهر يُقال** — كي لا يظنّ القارئُ أنّ ما يراه كلُّ ما صُرف. */}
-        {month && (
-          <div className="flex flex-wrap items-center gap-2 border-t border-line-soft pt-2 text-sm">
-            <span className="text-ink-muted">{A.monthOnly}</span>
-            <Button variant="secondary" onClick={() => setStatus(status, false)}>
-              {A.allMonths}
-            </Button>
-          </div>
-        )}
-      </section>
-
-      {/* **وفشلُ التحديث بعد تغيير الفلتر يُقال** — كانت الكروتُ القديمةُ تبقى بلا كلمة. */}
-      {error && data && (
-        <Alert tone="warning" className="mb-4">
-          {A.staleData}
-        </Alert>
-      )}
-
-      {error && !data ? (
-        <ReloadState onRetry={reload} label={A.loadError} />
-      ) : rows.length === 0 ? (
-        <section className="surface flex flex-col items-center gap-3 p-8 text-center">
-          <span
-            className={`inline-flex h-16 w-16 items-center justify-center rounded-full ${
-              filtered ? "bg-accent text-on-bright" : "bg-success-solid text-on-solid"
-            }`}
+    <AdminPage
+      icon={IconWallet}
+      title={P.adminTitle}
+      count={data ? data.total : null}
+      tabs={tabs}
+      tab={status || "all"}
+      onTab={(k) => setStatus(k === "all" ? "" : k)}
+      notices={
+        /* **وفشلُ التحديث بعد تغيير الفلتر يُقال** — كانت الكروتُ القديمةُ تبقى بلا كلمة. */
+        error && data ? <Alert tone="warning">{A.staleData}</Alert> : undefined
+      }
+      toolbar={
+        <FilterBar
+          filtered={role !== "" || month}
+          onClear={() => {
+            setRole("");
+            setMonth(false);
+          }}
+        >
+          <FilterSelect id="payout-role" label={A.roleCol} value={role} onChange={setRole}>
+            <option value="">{A.allRoles}</option>
+            {ROLES.map((r) => (
+              <option key={r} value={r}>
+                {roleLabelByCode(r)}
+              </option>
+            ))}
+          </FilterSelect>
+          {/* **وحصرُ الشهر قائمةٌ ظاهرة** — كان يُفتح من البطاقتين وحدَهما فيُنسى مفعّلاً. */}
+          <FilterSelect
+            id="payout-month"
+            label={m.admin.kit.period.label}
+            value={month ? "month" : ""}
+            onChange={(v) => setMonth(v === "month")}
           >
-            <IconWallet size={28} />
-          </span>
-          <h2 className="heading-section">{emptyTitle(status, filtered)}</h2>
-          <p className="max-w-md text-sm text-ink-muted">{filtered ? A.emptyFilterHint : A.emptyHint}</p>
-          {filtered && (
-            <Button variant="secondary" onClick={clearFilters}>
-              {A.clearFilter}
-            </Button>
-          )}
-        </section>
+            <option value="">{A.scopeAll}</option>
+            <option value="month">{A.scopeMonth}</option>
+          </FilterSelect>
+        </FilterBar>
+      }
+      summary={<SummaryStrip items={summary} />}
+      pagination={data ? { page, total: data.total, perPage: data.per_page, onChange: setPage } : undefined}
+    >
+      {loading && !data ? (
+        <AdminLoading />
+      ) : error && !data ? (
+        <AdminReload onRetry={reload} label={A.loadError} />
+      ) : rows.length === 0 ? (
+        <AdminEmpty
+          icon={IconWallet}
+          title={emptyTitle(status, filtered)}
+          action={
+            filtered ? (
+              <Button variant="secondary" size="sm" onClick={clearFilters}>
+                {A.clearFilter}
+              </Button>
+            ) : undefined
+          }
+        />
       ) : (
         <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
           {rows.map((p) => (
@@ -349,13 +351,6 @@ export default function PayoutsPage() {
         </ul>
       )}
 
-      {/* **ولا يظهر لصفحةٍ واحدة** — عنصرٌ لا يفعل شيئاً يزاحم ما يفعل. */}
-      {data && data.total > data.per_page && (
-        <div className="mt-4 flex justify-center">
-          <Pagination page={page} total={data.total} perPage={data.per_page} onChange={setPage} />
-        </div>
-      )}
-
       {deciding && (
         <DecideModal
           payout={deciding.p}
@@ -367,18 +362,9 @@ export default function PayoutsPage() {
           }}
         />
       )}
-    </PageContainer>
+    </AdminPage>
   );
 }
-
-const STATUS_TINT: Record<Status, string> = {
-  pending: "bg-warning-solid text-on-solid",
-  processing: "bg-accent text-on-bright",
-  paid: "bg-success-solid text-on-solid",
-  rejected: "bg-field text-ink-muted",
-  failed: "bg-danger-solid text-on-solid",
-  reversed: "bg-field text-ink",
-};
 
 /** **كرتُ طلب سحب** — مين طلب، قديش، شو متاح بمحفظته، ملاحظتُه وقرارُ الماليّة، ومين قرّر — وأفعالُه. */
 function PayoutCard({
@@ -397,75 +383,62 @@ function PayoutCard({
   const closed = CLOSED.includes(p.status);
   // **المتاحُ بعد حجز هذا الطلب** — فالنقصُ الحقيقيُّ متاحٌ سالب (الرصيدُ نقص بعد الحجز).
   const short = !closed && p.available < 0;
-  // **«اصرف» وحدَه بسطرٍ كامل** والباقي جنب بعض — والأعمدةُ بعدد الأزرار.
-  const lead = acts.length === 3 ? acts[0] : undefined;
-  const rest = lead ? acts.slice(1) : acts;
+  // **الأفعالُ العاديّةُ أزرار، والخطِرةُ (رفض · فشل · ارتداد) خلف «⋯»** — زرٌّ أساسيٌّ واحد.
+  const plain = acts.filter((a) => !NEEDS_REASON.includes(a));
+  const risky = acts.filter((a) => NEEDS_REASON.includes(a));
   return (
-    <li className="surface flex flex-col gap-3 p-4">
-      <div className="flex items-start gap-3">
-        <span className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${STATUS_TINT[p.status]}`}>
-          <IconUser size={20} />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate font-bold">{p.user_name || p.user_phone}</span>
+    <AdminCard as="li" className="flex flex-col gap-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="truncate font-bold">{p.user_name || p.user_phone}</p>
           {p.user_name && p.user_name !== p.user_phone && (
-            <span className="block text-2xs text-ink-muted" dir="ltr">
+            <p className="text-sm text-ink-muted" dir="ltr">
               {p.user_phone}
-            </span>
+            </p>
           )}
-        </span>
-        <span className="flex shrink-0 flex-col items-end gap-1">
-          <Badge variant={VARIANT[p.status]}>{A.status[p.status]}</Badge>
+        </div>
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
           {p.user_role && <Badge variant="neutral">{roleLabelByCode(p.user_role)}</Badge>}
-        </span>
+          <StatusBadge domain="payout" status={p.status} />
+        </div>
       </div>
 
-      <div className="flex items-end justify-between gap-2 rounded-control bg-field px-3 py-2.5">
-        <span>
-          <span className="block text-2xs text-ink-muted">{P.amount}</span>
-          <span className="figure block">{fmtMoney(p.amount)}</span>
-          {p.paid_via && (
-            <span className="block text-2xs text-ink-muted">{p.paid_via === "cash" ? A.paidViaCash : A.paidViaTransfer}</span>
-          )}
-        </span>
-        {/* **والمحجوزُ والمتاحُ يُعرَضان** — `XG-12`: الماليّةُ تقرّر على ما يجوز صرفُه.
-            وللطلبات المفتوحة وحدَها: المسكّرُ لا قرارَ فيه، ومحفظةُ اليوم لا تخصّه. */}
-        {!closed && (
-          <span className="text-end text-sm">
-            <span className="block text-2xs text-ink-muted">
-              {A.walletNow} · {m.terms.walletAvailable}
-            </span>
-            <b className={`tabular-nums ${short ? "text-danger" : ""}`}>{fmtMoney(p.available)}</b>
-            <span className="block text-2xs text-ink-muted">
-              {m.terms.walletBalance} {fmtMoney(p.balance)} · {m.terms.walletReserved} {fmtMoney(p.reserved)}
-            </span>
-            <span className="block text-2xs text-ink-muted">
-              {A.reservedForThis.replace("{amount}", fmtMoney(p.amount))}
-            </span>
-          </span>
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <p className="text-xs text-ink-muted">{P.amount}</p>
+          <p className="admin-figure">{fmtMoney(p.amount)}</p>
+        </div>
+        {p.paid_via && (
+          <Badge variant="neutral">{p.paid_via === "cash" ? A.paidViaCash : A.paidViaTransfer}</Badge>
         )}
       </div>
+
+      {/* **والمحجوزُ والمتاحُ يُعرَضان** — `XG-12`: الماليّةُ تقرّر على ما يجوز صرفُه.
+          وللطلبات المفتوحة وحدَها: المسكّرُ لا قرارَ فيه، ومحفظةُ اليوم لا تخصّه. */}
+      {!closed && (
+        <dl className="grid grid-cols-2 gap-3 border-t border-line-soft pt-3 sm:grid-cols-3">
+          <Fact label={m.terms.walletAvailable}>
+            <b className={`tabular-nums ${short ? "text-danger" : ""}`}>{fmtMoney(p.available)}</b>
+          </Fact>
+          <Fact label={m.terms.walletBalance}>
+            <span className="tabular-nums">{fmtMoney(p.balance)}</span>
+          </Fact>
+          <Fact label={m.terms.walletReserved}>
+            <span className="tabular-nums">{fmtMoney(p.reserved)}</span>
+          </Fact>
+        </dl>
+      )}
       {short && <Alert tone="error">{A.shortfall}</Alert>}
 
       {/* **ملاحظةُ الطالب وقرارُ المالية سطران** — كانت الأولى تختفي بعد القرار. */}
       {(p.note || p.decision) && (
-        <div className="space-y-1 text-sm">
-          {p.note && (
-            <p className="border-s-2 border-line ps-2">
-              <span className="text-2xs text-ink-muted">{A.requesterNote}: </span>
-              {p.note}
-            </p>
-          )}
-          {p.decision && (
-            <p className="border-s-2 border-line ps-2">
-              <span className="text-2xs text-ink-muted">{A.financeNote}: </span>
-              {p.decision}
-            </p>
-          )}
-        </div>
+        <dl className="space-y-2 border-t border-line-soft pt-3">
+          {p.note && <Fact label={A.requesterNote}>{p.note}</Fact>}
+          {p.decision && <Fact label={A.financeNote}>{p.decision}</Fact>}
+        </dl>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-2 text-2xs text-ink-muted">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-ink-muted">
         <span>
           {m.terms.date}: <span dir="ltr">{fmtDateTime(p.created_at)}</span>
         </span>
@@ -481,39 +454,32 @@ function PayoutCard({
       )}
 
       {acts.length > 0 && (
-        <div className="mt-auto flex flex-col gap-2 border-t border-line-soft pt-3">
-          {lead && <ActButton a={lead} from={p.status} onAct={onAct} />}
-          <div className={`grid gap-2 ${rest.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
-            {rest.map((a) => (
-              <ActButton key={a} a={a} from={p.status} onAct={onAct} />
-            ))}
-          </div>
+        <div className="mt-auto flex items-center gap-2 border-t border-line-soft pt-3">
+          {plain.map((a) => (
+            <Button key={a} size="sm" variant={a === "paid" ? "primary" : "secondary"} onClick={() => onAct(a)}>
+              {actionLabel(a, p.status)}
+            </Button>
+          ))}
+          {risky.length > 0 && (
+            <div className="ms-auto">
+              <MoreMenu
+                items={risky.map((a) => ({
+                  key: a,
+                  label: actionLabel(a, p.status),
+                  danger: true,
+                  onSelect: () => onAct(a),
+                }))}
+              />
+            </div>
+          )}
         </div>
       )}
-    </li>
-  );
-}
-
-function ActButton({ a, from, onAct }: { a: Action; from: Status; onAct: (a: Action) => void }) {
-  return (
-    <Button
-      className="w-full"
-      variant={a === "paid" ? "primary" : NEEDS_REASON.includes(a) ? "danger" : "secondary"}
-      onClick={() => onAct(a)}
-    >
-      {actionLabel(a, from)}
-    </Button>
+    </AdminCard>
   );
 }
 
 /** **لونُ الأثر** — مالٌ يخرج أو يرتدّ أصفر، ومالٌ يرجع لصاحبه أو يبقى محجوزاً معلومة. */
-const IMPACT_TONE: Record<Action, "warning" | "info"> = {
-  paid: "warning",
-  reversed: "warning",
-  processing: "info",
-  rejected: "info",
-  failed: "info",
-};
+const impactTone = (a: Action): "warning" | "info" => (a === "paid" || a === "reversed" ? "warning" : "info");
 
 /** **جملةُ الأثر** — ماذا سيحدث للمال، بالأرقام، قبل التأكيد. */
 function impactOf(p: Payout, action: Action, method: "cash" | "transfer" | ""): string[] {
@@ -580,60 +546,65 @@ function DecideModal({
   return (
     <Modal open onClose={onClose} title={actionLabel(action, payout.status)}>
       <form onSubmit={submit} className="space-y-4">
-        {/* **والنافذةُ تقول كلَّ ما يلزم القرار** — الدورُ والرقمُ والمحفظةُ وملاحظةُ الطالب. */}
-        <div className="space-y-1 rounded-control border border-line bg-field px-3 py-2 text-sm">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="font-bold">{payout.user_name || payout.user_phone}</span>
+        {/* **والنافذةُ تقول كلَّ ما يلزم القرار** — الدورُ والرقمُ والمحفظةُ وملاحظةُ الطالب.
+            (دفعةُ التصميم ١: بلا صندوقٍ داخل النافذة — خطٌّ يفصله عمّا تحته.) */}
+        <div className="space-y-3 border-b border-line-soft pb-4">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="font-bold">{payout.user_name || payout.user_phone}</p>
+              {payout.user_name && payout.user_name !== payout.user_phone && (
+                <p className="text-sm text-ink-muted" dir="ltr">
+                  {payout.user_phone}
+                </p>
+              )}
+            </div>
             {payout.user_role && <Badge variant="neutral">{roleLabelByCode(payout.user_role)}</Badge>}
           </div>
-          {payout.user_name && payout.user_name !== payout.user_phone && (
-            <p className="text-2xs text-ink-muted" dir="ltr">
-              {payout.user_phone}
-            </p>
-          )}
-          <p className="figure">
+          <p className="admin-figure">
             <Money value={payout.amount} />
           </p>
           {!CLOSED.includes(payout.status) && (
-            <p className="text-2xs text-ink-muted">
-              {A.walletNow}: {m.terms.walletBalance} {fmtMoney(payout.balance)} · {m.terms.walletReserved}{" "}
-              {fmtMoney(payout.reserved)} · {m.terms.walletAvailable} {fmtMoney(payout.available)}
-            </p>
+            <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              <Fact label={m.terms.walletAvailable}>
+                <span className="tabular-nums">{fmtMoney(payout.available)}</span>
+              </Fact>
+              <Fact label={m.terms.walletBalance}>
+                <span className="tabular-nums">{fmtMoney(payout.balance)}</span>
+              </Fact>
+              <Fact label={m.terms.walletReserved}>
+                <span className="tabular-nums">{fmtMoney(payout.reserved)}</span>
+              </Fact>
+            </dl>
           )}
           {payout.note && (
-            <p className="border-s-2 border-line ps-2">
-              <span className="text-2xs text-ink-muted">{A.requesterNote}: </span>
-              {payout.note}
-            </p>
+            <dl>
+              <Fact label={A.requesterNote}>{payout.note}</Fact>
+            </dl>
           )}
         </div>
         {action === "paid" && (
           <fieldset className="space-y-2">
             <legend className="mb-1 text-sm font-medium">{A.methodLabel}</legend>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {/* **زرّان من العُدّة لا أزرارٌ مبنيّةٌ باليد** — وأثرُ النقد يقوله سطرُ الأثر تحت. */}
+            <div className="grid grid-cols-2 gap-2">
               {(["cash", "transfer"] as const).map((v) => (
-                <button
+                <Button
                   key={v}
                   type="button"
                   aria-pressed={method === v}
+                  variant={method === v ? "primary" : "secondary"}
                   onClick={() => {
                     setMethod(v);
                     setError("");
                   }}
-                  className={`rounded-control border px-3 py-2.5 text-start transition-colors ${
-                    method === v ? "border-primary bg-primary-tint" : "border-line bg-surface hover:bg-row-hover"
-                  }`}
                 >
-                  <span className="block text-sm font-bold">{v === "cash" ? A.paidViaCash : A.paidViaTransfer}</span>
-                  <span className="block text-2xs text-ink-muted">
-                    {v === "cash" ? A.methodCashHint : A.methodTransferHint}
-                  </span>
-                </button>
+                  {v === "cash" ? A.paidViaCash : A.paidViaTransfer}
+                </Button>
               ))}
             </div>
           </fieldset>
         )}
-        <Alert tone={IMPACT_TONE[action]}>
+        <Alert tone={impactTone(action)}>
           {impactOf(payout, action, method).map((line) => (
             <span key={line} className="block">
               {line}

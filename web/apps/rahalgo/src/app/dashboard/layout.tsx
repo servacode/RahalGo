@@ -412,8 +412,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <OutageBanner
         canOpen={capabilities.includes("orders.read") || capabilities.includes("observability.read")}
       />
+      {/* **وهو الموضعُ الوحيدُ لشريط الطوارئ** — كان يُرسم ثانيةً في لوحة الطلبات لمن لا يملك الدعم (دفعةُ التصميم ١). */}
       {capabilities.includes("emergencies.manage") && <EmergencyBanner />}
-      {children}
+      {/* **`data-admin` يحصر شكلَ اللوحة الجديد فيها** — `/shop` و`/store` لا يحملانه (دفعةُ التصميم ١). */}
+      <div data-admin>{children}</div>
     </DashboardChrome>
     </PasswordGate>
   );

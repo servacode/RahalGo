@@ -585,7 +585,7 @@ export default function OpsMonitorPage() {
                     value={data.disputes_waiting == null ? O.unknown : fmtNum(data.disputes_waiting)}
                     sub={O.disputesTileSub}
                     tone={data.disputes_waiting == null || data.disputes_waiting === 0 ? "muted" : "danger"}
-                    onClick={() => router.push("/dashboard/losses")}
+                    onClick={() => router.push("/dashboard/tickets?tab=disputes")}
                   />
                 </div>
               </Panel>

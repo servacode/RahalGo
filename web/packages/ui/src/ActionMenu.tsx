@@ -35,6 +35,8 @@ export function ActionMenu({
   variant = "secondary",
   ariaLabel,
   width = 240,
+  chevron = true,
+  size = "md",
 }: {
   label: ReactNode;
   icon?: ComponentType<{ size?: number; className?: string }>;
@@ -42,6 +44,10 @@ export function ActionMenu({
   variant?: "primary" | "secondary" | "ghost";
   ariaLabel?: string;
   width?: number;
+  /** **بلا سهم** — زرُّ «⋯» لا يحتاج سهماً تحته (دفعةُ تصميم اللوحة ١). */
+  chevron?: boolean;
+  /** **`sm` للصفوف والبطاقات** — كمقاس `Button`. */
+  size?: "sm" | "md";
 }) {
   const [open, setOpen] = useState(false);
   const [at, setAt] = useState({ top: 0, left: 0 });
@@ -130,11 +136,11 @@ export function ActionMenu({
         aria-expanded={open}
         aria-label={ariaLabel}
         onClick={() => setOpen((v) => !v)}
-        className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-control px-2.5 py-2 text-sm font-medium transition-colors ${tone}`}
+        className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-control text-sm font-medium transition-colors ${size === "sm" ? "px-2 py-1.5" : "px-2.5 py-2"} ${tone}`}
       >
         {Icon && <Icon size={15} />}
         {label}
-        <IconChevronDown size={14} className={`transition-transform ${open ? "rotate-180" : ""}`} />
+        {chevron && <IconChevronDown size={14} className={`transition-transform ${open ? "rotate-180" : ""}`} />}
       </button>
       {open &&
         typeof document !== "undefined" &&

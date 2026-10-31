@@ -82,6 +82,38 @@ export {
   type ReputationLabels,
 } from "./Reputation";
 export { DashboardChrome, type ChromeNavItem } from "./DashboardChrome";
+/** **عُدّةُ لوحة الإدارة** — قالبُ الصفحة وشريطُ الفلاتر والأرقامُ والصفوفُ والحالات (دفعةُ التصميم ١). */
+export {
+  AdminPage,
+  AdminTabs,
+  FilterBar,
+  FilterSelect,
+  FilterField,
+  PeriodPicker,
+  periodRange,
+  periodOf,
+  shiftIsoDay,
+  SummaryStrip,
+  Stat,
+  AdminCard,
+  RowList,
+  RowGroupTitle,
+  Row,
+  RowIcon,
+  Fact,
+  AdminLoading,
+  AdminReload,
+  AdminEmpty,
+  MoreMenu,
+  ConfirmDanger,
+  type AdminTab,
+  type PeriodKey,
+  type SummaryItem,
+  type StatTone,
+} from "./admin";
+/** **قاموسُ الحالات الواحد** — اسمٌ ونبرةٌ وأيقونة. */
+export { StatusBadge, statusMeta, type StatusDomain, type StatusTone, type StatusMeta } from "./status";
+
 export {
   PageContainer,
   PageHeader,

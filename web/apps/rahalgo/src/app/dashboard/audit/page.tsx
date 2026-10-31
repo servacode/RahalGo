@@ -25,28 +25,24 @@
  * - **الرابطُ لمن يُفتح له** — وغيرُه يرى الهدفَ نصّاً.
  */
 
-import { useCallback, useEffect, useMemo, useState, type ComponentType, type ReactNode } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import {
   getMessages, defaultLocale, fmtDateTime, fmtNum, fmtMoney, fmtTime, fmtLongDate, errorText, damascusDay,
 } from "@rahalgo/i18n";
 import {
-  Alert, Badge, Button, Input, Checkbox, Chips, LoadingState,
-  Pagination, Select, Sheet,
-  IconShieldCheck, IconSettings, IconUser, IconStatus, IconWallet, IconClose, IconSearch,
-  IconDate, IconOverview, IconLock, IconWarning,
+  Alert, Button, Checkbox, Select, Sheet,
+  IconShieldCheck, IconSettings, IconUser, IconStatus, IconWallet, IconDate, IconOverview,
+  AdminPage, AdminEmpty, AdminLoading, AdminReload, FilterBar, FilterField, FilterSelect, PeriodPicker,
+  Row, RowGroupTitle, RowIcon, RowList, SummaryStrip, type AdminTab, type SummaryItem,
 } from "@rahalgo/ui";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useCanCall, useCanOpen } from "@/lib/policy";
 import { roleLabelByCode, classifyRole } from "@/lib/rolemeta";
-import { PageHero } from "@/components/admin/PageHero";
-import { Tile } from "@/components/admin/DashParts";
 
 const m = getMessages(defaultLocale);
 const A = m.admin.audit;
-/** **واسما التاريخين من معجم الكشف** — لا يُترجَمان مرّتين. */
-const ST = m.shared.statement;
 
 interface Entry {
   id: number;
@@ -206,16 +202,9 @@ const settingValue = (v: unknown): string => {
   return JSON.stringify(v);
 };
 
-/** الأفعال المالية تُبرَز: هي ما يُبحث عنه حين يُبحث في هذا السجلّ. */
-const toneOf = (action: string): "danger" | "warning" | "neutral" =>
-  action.startsWith("finance.") ? "danger"
-    : action.startsWith("ops.") || action.startsWith("admin.") ? "warning"
-      : "neutral";
-const CIRCLE: Record<ReturnType<typeof toneOf>, string> = {
-  danger: "bg-danger-solid text-on-solid",
-  warning: "bg-warning-solid text-on-solid",
-  neutral: "bg-field text-ink-muted",
-};
+/** **الأفعالُ الماليّةُ تُبرَز** — هي ما يُبحث عنه حين يُبحث في هذا السجلّ. وتُقال بأيقونة المحفظة
+    مع اللون (دفعةُ التصميم ١) — لا دائرةٌ حمراءُ مصمتةٌ لكلّ حركة مال. */
+const isFinance = (action: string) => action.startsWith("finance.");
 
 /** **الهدفُ مقروءاً ورابطاً** (المشكلةُ الرابعة: «تغيير حالة طلب» بلا طلب). */
 function targetOf(e: Entry): { text: string; href?: string } | null {
@@ -504,21 +493,22 @@ function DetailPanel({
         </Button>
       ) : undefined}>
       <div className="flex flex-col">
-        <div className="mb-2 flex items-center gap-3 rounded-control bg-field px-3 py-2.5">
-          <span className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${CIRCLE[toneOf(e.action)]}`}>
-            {e.actor_id ? <IconUser size={18} /> : <IconSettings size={18} />}
-          </span>
+        <div className="mb-2 flex items-center gap-3 border-b border-line-soft pb-3">
+          <RowIcon
+            icon={isFinance(e.action) ? IconWallet : e.actor_id ? IconUser : IconSettings}
+            tone={isFinance(e.action) ? "attention" : "neutral"}
+          />
           <span className="min-w-0">
             <span className="block font-bold">{actionText(e.action)}</span>
             <span className="block text-xs text-ink-muted" dir="ltr">{fmtDateTime(e.created_at)}</span>
           </span>
         </div>
         {amt && (
-          <div className="mb-2 rounded-control border border-line-soft px-3 py-2.5">
-            <span className="block text-2xs text-ink-muted">
+          <div className="mb-2 border-b border-line-soft pb-3">
+            <span className="block text-xs text-ink-muted">
               {A.amount}{amt.dir ? ` · ${amt.dir === "debit" ? A.debit : A.credit}` : ""}
             </span>
-            <span className={`figure block ${amt.dir === "debit" ? "text-danger" : amt.dir === "credit" ? "text-success" : ""}`}>
+            <span className={`admin-figure block ${amt.dir === "debit" ? "text-danger" : amt.dir === "credit" ? "text-success" : ""}`}>
               {amt.dir === "debit" ? "− " : amt.dir === "credit" ? "+ " : ""}{fmtMoney(amt.value)}
             </span>
           </div>
@@ -553,7 +543,7 @@ function DetailPanel({
             ))}
           </div>
         )}
-        <details className="mt-3 rounded-control bg-field px-3 py-2">
+        <details className="mt-3 border-t border-line-soft pt-3">
           <summary className="cursor-pointer text-xs font-bold text-ink-muted">{A.tech}</summary>
           <div className="mt-1 flex flex-col">
             {row(A.deviceShort, deviceText(e.user_agent))}
@@ -566,22 +556,17 @@ function DetailPanel({
   );
 }
 
-type Range = "all" | "today" | "yesterday" | "last7" | "custom";
-
 /** **يومُ المنصّة لحدث** — بطرح ساعة فتح الدوام، كما يحسبه الخادم. */
 const platformDay = (iso: string, startHour: number) => damascusDay(new Date(iso).getTime() - startHour * 3_600_000);
 
 export default function AuditPage() {
   const mayOpen = useMayOpen();
   const [group, setGroup] = useState<Group>("sensitive");
-  const [showMore, setShowMore] = useState(false);
   const [q, setQ] = useState("");
   const [actor, setActor] = useState("");
   const [action, setAction] = useState("");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const [customRange, setCustomRange] = useState(false);
-  const [showExtra, setShowExtra] = useState(false);
   /** **والتجديدُ مخفيٌّ افتراضاً** — تكتبه الساعةُ لا الإنسان. ويُعرض خيارُه في مجموعة الدخول. */
   const [withRefresh, setWithRefresh] = useState(false);
   const [page, setPage] = useState(1);
@@ -677,43 +662,16 @@ export default function AuditPage() {
   };
 
   /**
-   * **مدىً جاهز — بيوم المنصّة من الخادم** (تدقيقُ ٢٠٢٦-١٠-٢٧): «اليوم» يبدأ بساعة فتح
-   * الدوام كبقيّة اللوحة. وقبل وصول الجواب الأوّل يُقدَّر بيوم دمشق.
+   * **يومُ المنصّة من الخادم** (تدقيقُ ٢٠٢٦-١٠-٢٧): «اليوم» يبدأ بساعة فتح الدوام كبقيّة اللوحة —
+   * ومختارُ الفترة الواحد (`PeriodPicker`) يبني عليه. وقبل وصول الجواب الأوّل يُقدَّر بيوم دمشق.
    */
   const startHour = data?.day_start_hour ?? 0;
   const today = data?.today ?? damascusDay(Date.now() - startHour * 3_600_000);
   const yesterday = data?.yesterday ?? damascusDay(Date.now() - startHour * 3_600_000 - 86_400_000);
-  const weekFrom = data?.week_from ?? damascusDay(Date.now() - startHour * 3_600_000 - 6 * 86_400_000);
-  const presets: Record<Exclude<Range, "all" | "custom">, [string, string]> = {
-    today: [today, today],
-    yesterday: [yesterday, yesterday],
-    last7: [weekFrom, today],
-  };
-  const range: Range = customRange
-    ? "custom"
-    : !from && !to
-      ? "all"
-      : (Object.entries(presets).find(([, [f, t]]) => f === from && t === to)?.[0] as Range | undefined) ?? "custom";
-  const pickRange = (r: Range) => {
-    setPage(1);
-    if (r === "custom") {
-      setCustomRange(true);
-      return;
-    }
-    setCustomRange(false);
-    if (r === "all") {
-      setFrom("");
-      setTo("");
-      return;
-    }
-    const [f, t] = presets[r];
-    setFrom(f);
-    setTo(t);
-  };
 
   const filtered = q !== "" || actor !== "" || action !== "" || from !== "" || to !== "" || scoped;
   const clearAll = () => {
-    setQ(""); setActor(""); setAction(""); setFrom(""); setTo(""); setCustomRange(false); setPage(1);
+    setQ(""); setActor(""); setAction(""); setFrom(""); setTo(""); setPage(1);
     clearTarget();
   };
   function clearTarget() {
@@ -725,22 +683,6 @@ export default function AuditPage() {
     }
     setPage(1);
   }
-
-  /** **خانةُ رأس الصفحة تفتح قائمتَها** — فيطابق العددُ ما يُعرض. */
-  type TileKey = "sensitive" | "finance" | "settings" | "all";
-  const pickTile = (k: TileKey) => {
-    clearTarget();
-    setQ(""); setActor(""); setCustomRange(false);
-    setFrom(today); setTo(today);
-    setGroup(k === "sensitive" ? "sensitive" : k === "finance" ? "finance" : "all");
-    setAction(k === "settings" ? "admin.setting_update" : "");
-    setPage(1);
-  };
-  const tileOn = (k: TileKey) =>
-    !scoped && from === today && to === today && !q && !actor &&
-    (k === "settings"
-      ? action === "admin.setting_update" && group === "all"
-      : !action && group === (k === "sensitive" ? "sensitive" : k === "finance" ? "finance" : "all"));
 
   /** **قائمةُ الأفعال مجمّعةً بمجموعتها** — بأسمائها العربيّة. */
   const actionOptions = useMemo(() => {
@@ -777,7 +719,7 @@ export default function AuditPage() {
     setExporting(false);
   }
 
-  const list = data?.entries ?? [];
+  const list = useMemo(() => data?.entries ?? [], [data]);
   /** **الأحداثُ بعناوين أيّامها** — اليوم · أمس · ثمّ التاريخ. */
   const byDay = useMemo(() => {
     const out: { day: string; items: Entry[] }[] = [];
@@ -801,277 +743,239 @@ export default function AuditPage() {
     })?.text ?? T.other);
   const actorName = actor === "system" ? A.personSystem : actors.find((a) => a.id === actor)?.name ?? A.unknown;
   const counts = data?.today_counts;
-  const tiles: { k: TileKey; icon: ComponentType<{ size?: number; className?: string }>; tone: "danger" | "warning" | "accent" | "default" }[] = [
-    { k: "sensitive", icon: IconShieldCheck, tone: "danger" },
-    { k: "finance", icon: IconWallet, tone: "warning" },
-    { k: "settings", icon: IconSettings, tone: "accent" },
-    { k: "all", icon: IconOverview, tone: "default" },
+  // ══════════════════════════════════════════════════════════════════
+  // **دفعةُ التصميم ١ (٢٠٢٦-١٠-٣١):** كانت الصفحةُ خارجَ الحاوية، بستّة أسطرِ فلاتر وخمسين بطاقةً منفصلة
+  // وخاناتٍ داخل الرأس. **صارت**: رأسٌ بسطرٍ والمجموعاتُ المهمّةُ تبويباتٌ خطّاً · شريطٌ واحد (بحث ·
+  // الفترة · الشخص · «فلاتر» للباقي · «امسح») · أربعةُ أرقامٍ لليوم **لا تُفلتر** · وصفوفٌ في لوحٍ واحدٍ
+  // بعناوين الأيّام.
+  // ══════════════════════════════════════════════════════════════════
+  const n = (k: "sensitive" | "finance" | "settings" | "all") => counts?.[k] ?? 0;
+  const summary: SummaryItem[] = [
+    { key: "sensitive", icon: IconShieldCheck, label: A.tiles.sensitive, value: counts ? fmtNum(n("sensitive")) : "—", tone: n("sensitive") > 0 ? "attention" : "muted" },
+    { key: "finance", icon: IconWallet, label: A.tiles.finance, value: counts ? fmtNum(n("finance")) : "—", tone: n("finance") > 0 ? "neutral" : "muted" },
+    { key: "settings", icon: IconSettings, label: A.tiles.settings, value: counts ? fmtNum(n("settings")) : "—", tone: n("settings") > 0 ? "neutral" : "muted" },
+    { key: "all", icon: IconOverview, label: A.tiles.all, value: counts ? fmtNum(n("all")) : "—", tone: n("all") > 0 ? "neutral" : "muted" },
   ];
+  const moreGroup = MORE_GROUPS.includes(group);
+  const tabs: AdminTab<Group>[] = [
+    ...MAIN_GROUPS.map((g) => ({ key: g, label: GROUP_LABEL[g] })),
+    // **ومجموعةٌ من «المزيد» تظهر تبويباً حين تُختار** — كي لا يبقى الرأسُ بلا تبويبٍ مختار.
+    ...(moreGroup ? [{ key: group, label: GROUP_LABEL[group] }] : []),
+  ];
+  const moreActive = (action ? 1 : 0) + (moreGroup ? 1 : 0) + (withRefresh && effGroup === "login" ? 1 : 0);
+  const countText = data
+    ? data.total_capped
+      ? A.countCapped.replace("{n}", fmtNum(data.total))
+      : A.count.replace("{n}", fmtNum(data.total))
+    : undefined;
 
   return (
-    <div>
-      <PageHero
-        icon={IconShieldCheck}
-        title={A.title}
-        subtitle={A.subtitle}
-        actions={data?.can_export ? (
-          <Button variant="secondary" onClick={exportCsv} disabled={exporting}>
+    <AdminPage<Group>
+      icon={IconShieldCheck}
+      title={A.title}
+      actions={
+        data?.can_export ? (
+          <Button variant="secondary" size="sm" onClick={exportCsv} disabled={exporting}>
             {exporting ? A.exporting : A.export}
           </Button>
-        ) : undefined}
-      >
-        <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-          {tiles.map((t) => {
-            const n = counts?.[t.k] ?? 0;
-            return (
-              <div key={t.k} className={tileOn(t.k) ? "rounded-card ring-2 ring-accent" : ""}>
-                <Tile
-                  icon={t.icon}
-                  label={A.tiles[t.k]}
-                  value={counts ? fmtNum(n) : "—"}
-                  tone={n > 0 ? t.tone : "muted"}
-                  onClick={() => pickTile(t.k)}
-                />
-              </div>
-            );
-          })}
-        </div>
-        {data && !data.money_visible && (
-          <p className="mt-2 flex items-center gap-1.5 text-xs text-ink-muted">
-            <IconLock size={13} />
-            {A.moneyHidden}
-          </p>
-        )}
-        {exportNote && (
-          <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-warning" role="status">
-            <IconWarning size={13} />
-            {exportNote}
-          </p>
-        )}
-      </PageHero>
-
-      {/* ── الفلاترُ في بطاقةٍ واحدة ── */}
-      <section className="surface mb-4 space-y-3 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="heading-card">
-            {A.filtersTitle}
-            {data && (
-              <span className="ms-2 text-sm font-normal text-ink-muted">
-                {data.total_capped ? A.countCapped.replace("{n}", fmtNum(data.total)) : A.count.replace("{n}", fmtNum(data.total))}
-              </span>
-            )}
-          </h2>
-          {filtered && (
-            <Button variant="ghost" onClick={clearAll}>{A.clear}</Button>
-          )}
-        </div>
-
-        {/* **التقييدُ ظاهرٌ ويُشال** — رابطُ «السجل» من الإعدادات، أو شخصٌ بعينه. */}
-        {(scoped || actor) && (
-          <div className="flex flex-wrap gap-2">
+        ) : undefined
+      }
+      tabs={scoped ? undefined : tabs}
+      tab={group}
+      onTab={(g) => reset(setGroup)(g)}
+      notices={
+        (scoped || actor || exportNote || error || (data && !data.money_visible)) ? (
+          <div className="space-y-2">
+            {/* **التقييدُ ظاهرٌ ويُشال** — رابطُ «السجل» من الإعدادات، أو شخصٌ بعينه. */}
             {scoped && (
-              <button type="button" onClick={clearTarget} title={A.scopedClear}
-                className="inline-flex items-center gap-2 rounded-full bg-accent-tint px-3 py-1.5 text-sm font-medium text-accent">
+              <Alert tone="info" onDismiss={clearTarget}>
                 {target.entity === "setting"
                   ? A.scopedSetting.replace("{name}", scopeName)
                   : A.scopedOther.replace("{name}", scopeName)}
-                <IconClose size={14} />
-              </button>
+              </Alert>
             )}
             {actor && (
-              <button type="button" onClick={() => reset(setActor)("")} title={A.scopedClear}
-                className="inline-flex items-center gap-2 rounded-full bg-primary-tint px-3 py-1.5 text-sm font-medium text-primary">
+              <Alert tone="info" onDismiss={() => reset(setActor)("")}>
                 {A.actorChip.replace("{name}", actorName)}
-                <IconClose size={14} />
-              </button>
+              </Alert>
+            )}
+            {data && !data.money_visible && <Alert tone="info">{A.moneyHidden}</Alert>}
+            {exportNote && (
+              <Alert tone="warning" onDismiss={() => setExportNote("")}>
+                {exportNote}
+              </Alert>
+            )}
+            {error && data && (
+              <Alert tone="error" title={A.loadFailed}>
+                <span className="flex flex-wrap items-center gap-2">
+                  {error}
+                  <Button variant="secondary" size="sm" onClick={load}>
+                    {m.admin.kit.retry}
+                  </Button>
+                </span>
+              </Alert>
             )}
           </div>
-        )}
-
-        {!scoped && (
-          <div className="space-y-1.5">
-            <span className="block text-xs font-bold text-ink-muted">{A.groupLabel}</span>
-            <Chips
-              wrap
-              items={[
-                ...MAIN_GROUPS.map((g) => ({ id: g, label: GROUP_LABEL[g] })),
-                ...(showMore || MORE_GROUPS.includes(group) ? MORE_GROUPS.map((g) => ({ id: g, label: GROUP_LABEL[g] })) : []),
-              ]}
-              value={group}
-              onChange={(g) => reset(setGroup)(g)}
-            />
-            {!MORE_GROUPS.includes(group) && (
-              <Button variant="ghost" onClick={() => setShowMore((v) => !v)}>
-                {showMore ? A.less : A.more}
-              </Button>
-            )}
-          </div>
-        )}
-
-        <div className="space-y-1.5">
-          <span className="block text-xs font-bold text-ink-muted">{A.dateLabel}</span>
-          <Chips
-            wrap
-            items={[
-              { id: "all" as Range, label: A.rangeAll },
-              { id: "today" as Range, label: A.rangeToday },
-              { id: "yesterday" as Range, label: A.rangeYesterday },
-              { id: "last7" as Range, label: A.rangeLast7 },
-              { id: "custom" as Range, label: A.rangeCustom },
-            ]}
-            value={range}
-            onChange={pickRange}
+        ) : undefined
+      }
+      toolbar={
+        <FilterBar
+          search={{ id: "aud-q", value: q, onChange: (v) => reset(setQ)(v), placeholder: A.searchPlaceholder }}
+          filtered={filtered}
+          onClear={clearAll}
+          moreActive={moreActive}
+          end={countText}
+          more={
+            <>
+              {!scoped && (
+                <FilterField id="aud-group" label={A.more}>
+                  <Select
+                    id="aud-group"
+                    value={moreGroup ? group : ""}
+                    onChange={(e) => reset(setGroup)((e.target.value || "sensitive") as Group)}
+                  >
+                    <option value="">{A.all}</option>
+                    {MORE_GROUPS.map((g) => (
+                      <option key={g} value={g}>
+                        {GROUP_LABEL[g]}
+                      </option>
+                    ))}
+                  </Select>
+                </FilterField>
+              )}
+              <FilterField id="aud-action" label={A.actionType}>
+                <Select id="aud-action" value={action} onChange={(e) => reset(setAction)(e.target.value)}>
+                  <option value="">{A.actionAll}</option>
+                  {actionOptions.map((o) => (
+                    <optgroup key={o.group} label={GROUP_LABEL[o.group]}>
+                      {o.items.map(([k, label]) => (
+                        <option key={k} value={k}>
+                          {label}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </Select>
+              </FilterField>
+              {effGroup === "login" && (
+                <Checkbox
+                  id="aud-refresh"
+                  label={A.showRefresh}
+                  checked={withRefresh}
+                  onChange={(e) => reset(setWithRefresh)(e.target.checked)}
+                />
+              )}
+            </>
+          }
+        >
+          <PeriodPicker
+            id="aud-period"
+            from={from}
+            to={to}
+            today={data?.today ?? ""}
+            onChange={(f, t) => {
+              setFrom(f);
+              setTo(t);
+              setPage(1);
+            }}
           />
-          {range === "custom" && (
-            <div className="grid grid-cols-2 gap-2 sm:max-w-md">
-              <Input id="aud-from" type="date" label={ST.from} value={from}
-                onChange={(e) => reset(setFrom)(e.target.value)} />
-              <Input id="aud-to" type="date" label={ST.to} value={to}
-                onChange={(e) => reset(setTo)(e.target.value)} />
-            </div>
-          )}
-          {range !== "all" && data?.day_start_hour ? (
-            <p className="text-2xs text-ink-muted">{A.dayStartNote.replace("{h}", fmtNum(data.day_start_hour))}</p>
-          ) : null}
-        </div>
-
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <Input
-            id="aud-q"
-            type="search"
-            icon={<IconSearch size={15} />}
-            aria-label={A.search}
-            placeholder={A.searchPlaceholder}
-            value={q}
-            onChange={(e) => reset(setQ)(e.target.value)}
-          />
-          <Select id="aud-actor" aria-label={A.person} value={actor}
-            onChange={(e) => reset(setActor)(e.target.value)}>
+          <FilterSelect id="aud-actor" label={A.person} value={actor} onChange={(v) => reset(setActor)(v)}>
             <option value="">{A.personAll}</option>
             <option value="system">{A.personSystem}</option>
-            {actors.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+            {actors.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
             {actor && actor !== "system" && !actors.some((a) => a.id === actor) && (
               <option value={actor}>{A.unknown}</option>
             )}
-          </Select>
-        </div>
-
-        <div>
-          <Button variant="ghost" onClick={() => setShowExtra((v) => !v)} aria-expanded={showExtra || action !== ""}>
-            {A.extraFilters}
-          </Button>
-          {(showExtra || action !== "" || (withRefresh && effGroup === "login")) && (
-            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <Select id="aud-action" aria-label={A.actionType} value={action}
-                onChange={(e) => reset(setAction)(e.target.value)}>
-                <option value="">{A.actionAll}</option>
-                {actionOptions.map((o) => (
-                  <optgroup key={o.group} label={GROUP_LABEL[o.group]}>
-                    {o.items.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
-                  </optgroup>
-                ))}
-              </Select>
-              {effGroup === "login" && (
-                <div className="flex items-center">
-                  <Checkbox
-                    id="aud-refresh"
-                    label={A.showRefresh}
-                    checked={withRefresh}
-                    onChange={(e) => reset(setWithRefresh)(e.target.checked)}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </section>
-
-      {error && (
-        <Alert tone="error" title={A.loadFailed} className="mb-3">
-          <span className="flex flex-wrap items-center gap-2">
-            {error}
-            <Button variant="secondary" onClick={load}>{m.common.retry}</Button>
-          </span>
-        </Alert>
-      )}
-
-      {error && !data ? null : !data && loading ? (
-        <LoadingState />
+          </FilterSelect>
+        </FilterBar>
+      }
+      summary={<SummaryStrip items={summary} />}
+      pagination={
+        data ? { page, total: data.total, perPage: data.per_page, onChange: setPage, busy: loading } : undefined
+      }
+    >
+      {error && !data ? (
+        <AdminReload onRetry={load} label={A.loadFailed} />
+      ) : !data && loading ? (
+        <AdminLoading />
       ) : !loading && list.length === 0 ? (
-        <section className="surface flex flex-col items-center gap-3 p-8 text-center">
-          <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-success-solid text-on-solid">
-            <IconStatus size={28} />
-          </span>
-          <h2 className="heading-section">{A.empty}</h2>
-          <p className="max-w-md text-sm text-ink-muted">{filtered ? A.emptyFiltered : A.emptyGroup}</p>
-          {filtered && <Button variant="secondary" onClick={clearAll}>{A.clear}</Button>}
-        </section>
+        <AdminEmpty
+          icon={IconStatus}
+          title={filtered ? A.empty : A.emptyGroup}
+          action={
+            filtered ? (
+              <Button variant="secondary" size="sm" onClick={clearAll}>
+                {A.clear}
+              </Button>
+            ) : undefined
+          }
+        />
       ) : (
         <div className={loading ? "opacity-60 transition-opacity" : ""} aria-busy={loading}>
-          {byDay.map(({ day, items }) => (
-            <section key={day} className="mb-4">
-              <h2 className="heading-card mb-2 flex items-center gap-2">
-                <IconDate size={16} className="text-ink-muted" />
-                {dayTitle(day)}
-              </h2>
-              <ul className="space-y-2">
+          <RowList>
+            {byDay.map(({ day, items }) => (
+              <Fragment key={day}>
+                <RowGroupTitle icon={IconDate}>{dayTitle(day)}</RowGroupTitle>
                 {items.map((e) => {
                   const t = targetOf(e);
                   const amt = amountOf(e);
                   const sum = summaryOf(e);
                   const role = topRole(e);
+                  const fin = e.action.startsWith("finance.");
                   return (
-                    <li key={e.id}>
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => setOpen(e)}
-                        onKeyDown={(ev) => {
-                          if (ev.key === "Enter" || ev.key === " ") {
-                            ev.preventDefault();
-                            setOpen(e);
-                          }
-                        }}
-                        className="surface flex cursor-pointer items-start gap-3 p-3 transition-colors hover:bg-row-hover"
-                      >
-                        <span className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${CIRCLE[toneOf(e.action)]}`}>
-                          {e.actor_id ? <IconUser size={18} /> : <IconSettings size={18} />}
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className="block font-bold">{actionText(e.action)}</span>
-                          <span className="block text-sm">
-                            <span>{actorText(e)}</span>
-                            {role && <span className="text-ink-muted">{m.common.nameSeparator}{role}</span>}
+                    <Row
+                      key={e.id}
+                      label={actionText(e.action)}
+                      onOpen={() => setOpen(e)}
+                      leading={
+                        <RowIcon
+                          icon={fin ? IconWallet : e.actor_id ? IconUser : IconSettings}
+                          tone={fin ? "attention" : "neutral"}
+                        />
+                      }
+                      title={actionText(e.action)}
+                      meta={
+                        <>
+                          <span className="block">
+                            <span className="text-ink">{actorText(e)}</span>
+                            {role && <span>{m.common.nameSeparator}{role}</span>}
                             {t && (
                               <>
-                                <span className="text-ink-muted"> ← </span>
+                                <span> ← </span>
                                 <TargetLink t={t} mayOpen={mayOpen} />
                               </>
                             )}
                           </span>
-                          {sum && <span className="mt-0.5 line-clamp-2 block text-xs text-ink-muted">{sum}</span>}
-                        </span>
-                        <span className="shrink-0 text-end">
+                          {sum && <span className="mt-0.5 line-clamp-2 block text-xs">{sum}</span>}
+                        </>
+                      }
+                      trailing={
+                        <>
                           {amt && (
-                            <span className={`block font-bold tabular-nums ${amt.dir === "debit" ? "text-danger" : amt.dir === "credit" ? "text-success" : ""}`}>
-                              {amt.dir === "debit" ? "− " : amt.dir === "credit" ? "+ " : ""}{fmtMoney(amt.value)}
+                            <span
+                              className={`block font-bold tabular-nums ${
+                                amt.dir === "debit" ? "text-danger" : amt.dir === "credit" ? "text-success" : ""
+                              }`}
+                            >
+                              {amt.dir === "debit" ? "− " : amt.dir === "credit" ? "+ " : ""}
+                              {fmtMoney(amt.value)}
                             </span>
                           )}
-                          <time dir="ltr" className="block text-2xs text-ink-muted">{fmtTime(e.created_at)}</time>
-                        </span>
-                      </div>
-                    </li>
+                          <time dir="ltr" className="block text-xs text-ink-muted">
+                            {fmtTime(e.created_at)}
+                          </time>
+                        </>
+                      }
+                    />
                   );
                 })}
-              </ul>
-            </section>
-          ))}
-        </div>
-      )}
-
-      {data && data.total > data.per_page && (
-        <div className="mt-4 flex justify-center">
-          <Pagination page={page} total={data.total} perPage={data.per_page} onChange={setPage} busy={loading} />
+              </Fragment>
+            ))}
+          </RowList>
         </div>
       )}
 
@@ -1083,12 +987,12 @@ export default function AuditPage() {
           /* **«كل أفعال هذا الشخص» تبدأ نظيفة** — لا بحثٌ ولا فعلٌ ولا تاريخٌ باقٍ يُفرغ القائمة. */
           setOpen(null);
           clearTarget();
-          setQ(""); setAction(""); setFrom(""); setTo(""); setCustomRange(false);
+          setQ(""); setAction(""); setFrom(""); setTo("");
           setActor(id);
           setGroup("all");
           setPage(1);
         }}
       />
-    </div>
+    </AdminPage>
   );
 }

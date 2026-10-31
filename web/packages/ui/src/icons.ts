@@ -183,6 +183,8 @@ export {
   // **أدواتُ الأصناف** (تصميمُ ٢٠٢٦-١٠-٢٩) — «تغيير الأسعار» و«خيارات الأصناف».
   Banknote as IconBanknote,
   SlidersHorizontal as IconOptions,
+  // **«⋯» — قائمةُ الأفعال النادرة** (دفعةُ تصميم اللوحة ١).
+  Ellipsis as IconMore,
   // **تكبيرُ الصورة وتصغيرُها** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
   ZoomIn as IconZoomIn,
   ZoomOut as IconZoomOut,
