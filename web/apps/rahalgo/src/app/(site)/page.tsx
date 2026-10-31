@@ -611,6 +611,21 @@ export default async function HomePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(ld) }}
       />
+      {/* **واسمُ الموقع في نتائج غوغل** (طلبُ المالك ٢٠٢٦-١٠-٣١: «بدل الرابط يطلع رحّال غو») —
+          غوغل يقرأ اسمَ الموقع من `WebSite` في الرئيسيّة، **وبلاها يكتب الدومين.** */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            name,
+            alternateName: [H.siteAltName, "RahalGo"],
+            url: SITE() + "/",
+            inLanguage: "ar",
+          }),
+        }}
+      />
       {/* ══════════════════════════════════════════════════════════════
           **العرضُ الافتتاحيّ — جملةٌ تقول ما نفعل وزرٌّ يبدأ**
           ══════════════════════════════════════════════════════════════
