@@ -202,7 +202,7 @@ const walk = (d, out = []) => {
     ["components/admin/orders/OrdersScreen.tsx", 'o.status === "failed" && (canIntervene || can("finance.manage"))', "تسويةُ البضاعة"],
     ["components/admin/orders/GoodsBox.tsx", "if (!canIntervene) {", "وجهةُ البضاعة للعمليّات"],
     ["components/admin/orders/GoodsBox.tsx", "compensated === 0 && canFinance", "تعويضُ المتجر للماليّة"],
-    ["components/admin/orders/OrdersScreen.tsx", "{canAssign && assignReady && (", "الإسنادُ اليدويّ"],
+    ["components/admin/orders/OrdersScreen.tsx", "canAssign && assignReady", "الإسنادُ اليدويّ"],
     ["components/admin/orders/OrdersScreen.tsx", 'canIntervene && (o.status === "accepted"', "إخبارُ المتجر"],
     // **وإنهاءُ الباب بقدرة التدخّل** (مساءَ ٢٠٢٦-١٠-٠٢، البند ١) — المحرّكُ
     // يردّ ٤٠٣ لمن لا يملكها، **فلا يُعرض له زرٌّ يُعتذر عنه.**

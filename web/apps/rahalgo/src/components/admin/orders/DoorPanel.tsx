@@ -94,7 +94,7 @@ function PhoneLink({ label, phone }: { label: string; phone: string }) {
       <span className="text-xs text-ink-muted">{label}</span>
       <a
         href={`tel:${phone}`}
-        className="inline-flex items-center gap-1.5 rounded-control border border-line px-3 py-1.5 text-sm text-ink"
+        className="inline-flex items-center gap-2 rounded-control border border-line px-3 py-1.5 text-sm text-ink"
       >
         <IconPhone size={15} />
         <span dir="ltr">{phone}</span>
@@ -300,14 +300,14 @@ export function DoorPanel({
   return (
     // **وضغطُ اللوحة لا يصل البطاقةَ تحتها** — ولا ما في نوافذها.
     <div
-      className={`w-full space-y-3 rounded-control border-2 p-3 ${
-        urgent ? "border-danger-edge bg-danger-tint" : "border-accent-edge bg-accent-tint"
+      className={`w-full space-y-3 rounded-control border p-3 ${
+        urgent ? "border-danger-edge bg-danger-tint" : "border-line-soft bg-field"
       }`}
       onClick={(e) => e.stopPropagation()}
     >
       {/* **والعنوانُ تسميةُ الحقل فوق اللوحة** (`header` في البطاقة) —
        **فأوّلُ سطرٍ فيها كم ينتظر رجلٌ في الشارع.** */}
-      <p className={`text-sm font-semibold ${urgent ? "text-danger" : "text-accent-text"}`}>
+      <p className={`text-sm font-bold ${urgent ? "text-danger" : "text-ink"}`}>
         {beforeStore
           ? D.beforeStore
           : atStore
@@ -320,15 +320,6 @@ export function DoorPanel({
               : door && door.waited_min >= 0
                 ? D.waited.replace("{n}", fmtNum(door.waited_min))
                 : D.waitedUnknown}
-      </p>
-      <p className="text-xs text-ink-muted">
-        {beforeStore
-          ? D.hintBefore
-          : atStore
-            ? D.hintStore
-            : atDoor
-              ? D.hint
-              : D.hintTrip}
       </p>
 
       <div className="space-y-1 text-sm">
@@ -394,7 +385,7 @@ export function DoorPanel({
 
       {canResolve && (
         <div className="flex flex-wrap gap-2">
-          <Button disabled={busy} onClick={() => open("deliver")}>
+          <Button size="sm" disabled={busy} onClick={() => open("deliver")}>
             {beforeStore
               ? D.keep
               : atStore
@@ -405,6 +396,7 @@ export function DoorPanel({
           </Button>
           {beforeStore && canCancel && (
             <Button
+              size="sm"
               variant="danger"
               disabled={busy}
               onClick={() => open("cancel")}
@@ -415,7 +407,8 @@ export function DoorPanel({
           {/* **وعند المتجر: التحويلُ الذكيُّ والسائقُ معه** — لا عودةَ إلى المكتب. */}
           {atStore && canTransfer && (
             <Button
-              variant="danger"
+              size="sm"
+              variant="secondary"
               disabled={busy}
               onClick={() => {
                 setNotice("");
@@ -429,6 +422,7 @@ export function DoorPanel({
               ٢٠٢٦-١٠-٠٤، البند ١١). كانت «استلم» وحدَها والمتجرُ مغلق. */}
           {atStore && !canTransfer && canCancel && (
             <Button
+              size="sm"
               variant="danger"
               disabled={busy}
               onClick={() => open("cancel")}
@@ -438,6 +432,7 @@ export function DoorPanel({
           )}
           {!beforeStore && !atStore && (
             <Button
+              size="sm"
               variant="danger"
               disabled={busy}
               onClick={() => open("return")}
