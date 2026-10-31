@@ -2,6 +2,12 @@
   "apps/rahalgo/src/app/dashboard/account/page.tsx": {
     "subtitle": 1
   },
+  "apps/rahalgo/src/app/dashboard/audit/page.tsx": {
+    "tinyText": 3,
+    "rawButton": 2,
+    "handEmpty": 1,
+    "subtitle": 1
+  },
   "apps/rahalgo/src/app/dashboard/cash/page.tsx": {
     "tinyText": 17,
     "rawButton": 1,
@@ -66,6 +72,13 @@
     "tinyText": 3,
     "rawButton": 2,
     "handEmpty": 1,
+    "subtitle": 1
+  },
+  "apps/rahalgo/src/app/dashboard/payouts/page.tsx": {
+    "tinyText": 13,
+    "rawButton": 1,
+    "handEmpty": 1,
+    "statusColor": 15,
     "subtitle": 1
   },
   "apps/rahalgo/src/app/dashboard/profits/page.tsx": {
