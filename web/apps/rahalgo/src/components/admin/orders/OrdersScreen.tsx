@@ -2476,7 +2476,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           {!data && loading ? (
             <LoadingState />
           ) : (
-            <ul className="grid grid-cols-1 items-start gap-3 md:grid-cols-2 xl:grid-cols-3">
+            <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
               {rows.map((o) => (
                 <HistoryCard
                   key={o.id}
@@ -2719,8 +2719,10 @@ function HistoryCard({
   const sep = <span aria-hidden className="text-ink-muted"> · </span>;
 
   return (
+    // **كروتُ الصفّ بطولٍ واحدٍ وأقسامُها على خطٍّ واحد** (ملاحظةُ المالك ٢٠٢٦-١٠-٣١) —
+    // خمسةُ صفوفٍ مشتركة (الرأس · الطلب · كيف مشى · المال · الأزرار) بـ`subgrid`.
     <li
-      className={`flex flex-col gap-2.5 rounded-control border border-line-soft bg-surface p-3 text-sm ${
+      className={`row-span-5 grid grid-rows-subgrid gap-y-2.5 rounded-control border border-line-soft bg-surface p-3 text-sm ${
         focused ? "ring-2 ring-accent" : ""
       }`}
     >
@@ -2846,8 +2848,12 @@ function HistoryCard({
         )}
       </CardSection>
 
-      {/* ── كيف مشى ── */}
-      {steps.length > 0 && (
+      {/* ── كيف مشى ── والقسمُ حاضرٌ دائماً كي لا تنزاح الأقسامُ عن جيرانها. */}
+      {steps.length === 0 ? (
+        <CardSection title={C.how}>
+          <p className="text-xs text-ink-muted">—</p>
+        </CardSection>
+      ) : (
         <CardSection title={C.how}>
           <p className="flex flex-wrap items-center gap-y-0.5 text-xs leading-relaxed">
             {steps.map((st, i) => {
@@ -2923,6 +2929,7 @@ function HistoryCard({
       </CardSection>
 
       {/* ── الأزرار ── الفاتورة، وملفُّ الطلب، و«⋯» للأفعال النادرة بصلاحيّاتها نفسِها. */}
+      <div className="flex flex-col justify-end gap-2.5">
       <div className="mt-auto flex flex-wrap items-center gap-1.5 border-t border-line-soft pt-2.5">
         {!NO_INVOICE.has(o.status) && <InvoiceButton order={o} compact />}
         <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={onDetails}>
@@ -2966,6 +2973,7 @@ function HistoryCard({
           }}
         />
       )}
+      </div>
     </li>
   );
 }
