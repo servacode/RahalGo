@@ -34,6 +34,7 @@ import {
   IconShieldCheck,
   wsBase,
   useLiveData,
+  AdminLinkProvider,
 } from "@rahalgo/ui";
 import { PasswordGate } from "@rahalgo/auth";
 import { api, mediaUrl, tokenStore } from "@/lib/api";
@@ -415,7 +416,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* **وهو الموضعُ الوحيدُ لشريط الطوارئ** — كان يُرسم ثانيةً في لوحة الطلبات لمن لا يملك الدعم (دفعةُ التصميم ١). */}
       {capabilities.includes("emergencies.manage") && <EmergencyBanner />}
       {/* **`data-admin` يحصر شكلَ اللوحة الجديد فيها** — `/shop` و`/store` لا يحملانه (دفعةُ التصميم ١). */}
-      <div data-admin>{children}</div>
+      {/* **روابطُ العُدّة (أرقامٌ تنكبس، بطاقاتٌ تُفتح) تمرّ من `next/link`** — إعادةُ تصميم اللوحة ٢٠٢٦-١١-٠٣. */}
+      <AdminLinkProvider Link={Link}>
+        <div data-admin>{children}</div>
+      </AdminLinkProvider>
     </DashboardChrome>
     </PasswordGate>
   );

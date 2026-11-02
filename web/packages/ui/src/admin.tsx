@@ -26,6 +26,7 @@ import { Pagination } from "./navigation";
 import { Sheet } from "./overlay";
 import { ActionMenu, type ActionMenuItem } from "./ActionMenu";
 import { IconMore, IconOptions, IconSearch, IconWarning } from "./icons";
+import { AdminLink } from "./adminlink";
 
 const m = getMessages(defaultLocale);
 const K = m.admin.kit;
@@ -92,6 +93,7 @@ export function AdminPage<T extends string = string>({
   icon: Icon,
   count,
   badge,
+  meta,
   actions,
   tabs,
   tab,
@@ -108,6 +110,8 @@ export function AdminPage<T extends string = string>({
   count?: number | null;
   /** **شارةٌ بجانب العنوان** — «مباشر» مثلاً. */
   badge?: ReactNode;
+  /** **سطرُ معلومةٍ حيّةٍ تحت العنوان** — تاريخٌ وآخرُ تحديث (لا شرحَ ولا تعليمات). */
+  meta?: ReactNode;
   /** **الأفعالُ في آخر السطر** — زرٌّ أساسيٌّ واحدٌ على الأكثر، والنادرُ في `MoreMenu`. */
   actions?: ReactNode;
   tabs?: readonly AdminTab<T>[];
@@ -137,6 +141,7 @@ export function AdminPage<T extends string = string>({
           </div>
           {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
         </div>
+        {meta && <p className="admin-meta">{meta}</p>}
         {hasTabs && <AdminTabs items={tabs} value={tab} onChange={onTab} />}
       </header>
       {notices}
@@ -404,10 +409,12 @@ export interface SummaryItem {
   meta?: ReactNode;
   /** **ينقل لصفحةٍ أخرى** — ولا يُستعمل فلتراً ثانياً لما في الصفحة. */
   onOpen?: () => void;
+  /** **رابطٌ للصفحة التي وراء الرقم** (يغني عن `onOpen`) — كلُّ رقمٍ ينكبس. */
+  href?: string;
 }
 
 /** **رقمٌ واحد** — تسميةٌ فوقه وسطرٌ صغيرٌ تحته، ونبرتُه خطٌّ على طرفه (والتسميةُ تقول المعنى). */
-export function Stat({ label, value, icon: Icon, tone = "neutral", meta, onOpen }: Omit<SummaryItem, "key">) {
+export function Stat({ label, value, icon: Icon, tone = "neutral", meta, onOpen, href }: Omit<SummaryItem, "key">) {
   const body = (
     <>
       <span className="flex items-center justify-between gap-2 text-sm text-ink-muted">
@@ -425,6 +432,15 @@ export function Stat({ label, value, icon: Icon, tone = "neutral", meta, onOpen 
     </>
   );
   const cls = "admin-panel admin-stat";
+  if (href) {
+    return (
+      <AdminLink href={href} className="block min-w-0">
+        <div className={`${cls} h-full transition-colors hover:bg-row-hover`} data-tone={tone}>
+          {body}
+        </div>
+      </AdminLink>
+    );
+  }
   if (!onOpen) {
     return (
       <div className={cls} data-tone={tone}>
@@ -439,11 +455,12 @@ export function Stat({ label, value, icon: Icon, tone = "neutral", meta, onOpen 
   );
 }
 
-/** **شريطُ الأرقام** — أربعةٌ على الأكثر: عمودان على الجوّال وأربعةٌ على الشاشة. */
-export function SummaryStrip({ items }: { items: readonly SummaryItem[] }) {
+/** **شريطُ الأرقام** — أربعةٌ افتراضاً (ثلاثةٌ أو ستّةٌ بـ`max`): عمودان على الجوّال وأربعةٌ على الشاشة. */
+export function SummaryStrip({ items, max = 4 }: { items: readonly SummaryItem[]; max?: 3 | 4 | 6 }) {
+  const cols = max === 3 ? "lg:grid-cols-3" : max === 6 ? "lg:grid-cols-6" : "lg:grid-cols-4";
   return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      {items.slice(0, 4).map(({ key, ...it }) => (
+    <div className={`grid grid-cols-2 gap-3 ${cols}`}>
+      {items.slice(0, max).map(({ key, ...it }) => (
         <Stat key={key} {...it} />
       ))}
     </div>

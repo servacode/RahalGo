@@ -1232,6 +1232,91 @@
       "loadFailed": "صار خطأ — جرّب مرة تانية",
       "retry": "جرّب مرة تانية",
       "moreActions": "إجراءات تانية",
+      "confirm": "تأكيد",
+      "sure": "متأكد؟",
+      "cancel": "تراجع",
+      "callPhone": "اتصال",
+      "whatsapp": "واتساب",
+      "noPhone": "ما في رقم",
+      "openProfile": "فتح الملف",
+      "back": "رجوع",
+      "emptyList": "ما في شي هون",
+      "ago": "قبل {t}",
+      "updatedAgo": "تحدّث قبل {t}",
+      "listSep": "، ",
+      "unit": { "s": "ث", "m": "د", "h": "س", "d": "يوم" },
+      "live": "مباشر",
+      "attention": {
+        "title": "بدّه منك انتباه",
+        "clear": "كل شي تمام — ما في شي ناطرك",
+        "stuckOrders": "طلبات علقانة",
+        "unassigned": "طلبات بلا سائق",
+        "storeSilent": "متاجر ما عم ترد",
+        "cashOver": "سائقين نقدهم فوق الحد",
+        "payouts": "سحوبات ناطرة",
+        "complaints": "شكاوى مفتوحة",
+        "emergencies": "طوارئ مفتوحة"
+      },
+      "pulse": {
+        "title": "نبض المنصة هلّق",
+        "driversOnline": "سائقين متصلين",
+        "driversBusy": "مشغولين",
+        "driversFree": "فاضيين",
+        "storesOpen": "متاجر فاتحة",
+        "ordersOnWay": "طلبات بالطريق",
+        "avgDelivery": "متوسط التوصيل اليوم"
+      },
+      "money": {
+        "title": "المال اليوم",
+        "sales": "المبيعات",
+        "commission": "عمولة المنصة",
+        "cashWithDrivers": "النقد عند السائقين",
+        "cashDiff": "فرق الصندوق"
+      },
+      "presence": {
+        "online": "متصل",
+        "busy": "مشغول",
+        "free": "فاضي",
+        "offline": "غير متصل"
+      },
+      "storeState": {
+        "open": "فاتح",
+        "closed": "سكرّان",
+        "paused": "موقوف مؤقتاً",
+        "banned": "محظور"
+      },
+      "lead": {
+        "new": "جديد",
+        "contacted": "تم التواصل",
+        "approved": "انقبل",
+        "rejected": "انرفض"
+      },
+      "story": {
+        "title": "شو صار بالطلب",
+        "by": "بواسطة {name}",
+        "system": "النظام",
+        "empty": "ما في أحداث بعد"
+      },
+      "palette": {
+        "open": "بحث سريع",
+        "placeholder": "رقم طلب، تلفون، اسم متجر أو شخص",
+        "none": "ما لقينا شي",
+        "hint": "اكتب حرفين على الأقل",
+        "hintKeys": "Ctrl + K",
+        "groups": {
+          "orders": "طلبات",
+          "people": "ناس",
+          "stores": "متاجر",
+          "pages": "صفحات"
+        }
+      },
+      "nav": {
+        "groupDaily": "الشغل اليومي",
+        "groupPeople": "الناس والمتاجر",
+        "groupMoney": "المال",
+        "groupGrowth": "النمو",
+        "groupSystem": "النظام"
+      },
       "period": {
         "label": "الفترة",
         "all": "كل الأيام",

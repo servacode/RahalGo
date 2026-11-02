@@ -37,6 +37,11 @@ const RULES = {
     `\\b(?:${STATUS_KEYS})\\s*:\\s*["'\`](?:warning|info|success|danger|neutral|violet|accent|primary|[^"'\`]*\\b(?:bg|text|border)-(?:warning|info|success|danger|violet|accent|primary))\\b`,
     "g",
   ),
+  // **ثلاثةُ حرّاسٍ جدد** (إعادةُ تصميم اللوحة ٢٠٢٦-١١-٠٣) — سطرُ الشرح كان يهرب من الحارس بأسماءٍ أخرى:
+  //   helperText   `note=` على Panel · `sub=` على Tile · `pageHint` · `intro` — كلُّها شرحٌ تحت عنوان
+  //   rawContact   `tel:` أو `wa.me` مبنيٌّ باليد — والبديلُ `ContactButtons`/`telHref`/`waHref`
+  helperText: /<(?:Panel|Tile)\b[^>]*?\b(?:note|sub)=|\b(?:pageHint|intro|helperText)=/g,
+  rawContact: /["'`]tel:|https:\/\/wa\.me\//g,
 };
 /** **سطرُ الشرح** — يُقرأ في وسم الرأس كاملاً (قد يمتدّ أسطراً). */
 const HEADER = /<(?:PageHero|PageHeader|AdminPage)\b[\s\S]*?(?:\/>|\n\s*>)/g;
@@ -101,6 +106,8 @@ const FIX = {
   rawButton: "Button بمقاسه sm|md|lg · والنادرُ في MoreMenu",
   handEmpty: "AdminEmpty · AdminReload · AdminLoading",
   statusColor: "StatusBadge أو statusMeta من @rahalgo/ui (status.tsx)",
+  helperText: "لا سطرَ شرحٍ — احذفه (العنوانُ القصيرُ يكفي)",
+  rawContact: "ContactButtons أو telHref/waHref من @rahalgo/ui",
 };
 
 if (up.length) {

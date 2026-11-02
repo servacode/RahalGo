@@ -12,20 +12,25 @@
     "tinyText": 17,
     "rawButton": 1,
     "handEmpty": 2,
+    "helperText": 2,
     "subtitle": 1
   },
   "apps/rahalgo/src/app/dashboard/emergencies/[id]/page.tsx": {
     "tinyText": 9,
-    "rawButton": 1
+    "rawButton": 1,
+    "rawContact": 1
   },
   "apps/rahalgo/src/app/dashboard/emergencies/page.tsx": {
     "tinyText": 3,
     "handEmpty": 2,
+    "helperText": 3,
+    "rawContact": 1,
     "subtitle": 1
   },
   "apps/rahalgo/src/app/dashboard/expansion/page.tsx": {
     "tinyText": 6,
     "handEmpty": 2,
+    "helperText": 3,
     "subtitle": 1
   },
   "apps/rahalgo/src/app/dashboard/expenses/page.tsx": {
@@ -33,6 +38,7 @@
     "rawButton": 3,
     "handEmpty": 1,
     "statusColor": 4,
+    "helperText": 3,
     "subtitle": 1
   },
   "apps/rahalgo/src/app/dashboard/incentives/page.tsx": {
@@ -45,6 +51,7 @@
     "tinyText": 5,
     "handEmpty": 1,
     "statusColor": 2,
+    "rawContact": 1,
     "subtitle": 1
   },
   "apps/rahalgo/src/app/dashboard/merchants/[id]/page.tsx": {
@@ -56,22 +63,27 @@
     "rawButton": 1,
     "handEmpty": 1,
     "statusColor": 4,
+    "helperText": 1,
     "subtitle": 1
   },
   "apps/rahalgo/src/app/dashboard/ops/page.tsx": {
     "tinyText": 3,
+    "helperText": 5,
     "subtitle": 1
   },
   "apps/rahalgo/src/app/dashboard/opsmap/page.tsx": {
     "tinyText": 2,
     "rawButton": 4,
     "handEmpty": 1,
+    "helperText": 4,
+    "rawContact": 3,
     "subtitle": 1
   },
   "apps/rahalgo/src/app/dashboard/page.tsx": {
     "tinyText": 3,
     "rawButton": 2,
     "handEmpty": 1,
+    "helperText": 10,
     "subtitle": 1
   },
   "apps/rahalgo/src/app/dashboard/payouts/page.tsx": {
@@ -79,11 +91,13 @@
     "rawButton": 1,
     "handEmpty": 1,
     "statusColor": 15,
+    "helperText": 4,
     "subtitle": 1
   },
   "apps/rahalgo/src/app/dashboard/profits/page.tsx": {
     "tinyText": 8,
     "handEmpty": 2,
+    "helperText": 5,
     "subtitle": 1
   },
   "apps/rahalgo/src/app/dashboard/promos/page.tsx": {
@@ -97,18 +111,21 @@
     "tinyText": 7,
     "rawButton": 2,
     "handEmpty": 1,
+    "helperText": 2,
     "subtitle": 1
   },
   "apps/rahalgo/src/app/dashboard/sections/[id]/page.tsx": {
     "rawButton": 1
   },
   "apps/rahalgo/src/app/dashboard/sections/page.tsx": {
+    "helperText": 1,
     "subtitle": 1
   },
   "apps/rahalgo/src/app/dashboard/settings/page.tsx": {
     "tinyText": 1,
     "rawButton": 2,
     "handEmpty": 2,
+    "helperText": 2,
     "subtitle": 2
   },
   "apps/rahalgo/src/app/dashboard/tickets/page.tsx": {
@@ -121,7 +138,8 @@
   "apps/rahalgo/src/app/dashboard/users/[id]/page.tsx": {
     "tinyText": 6,
     "rawButton": 10,
-    "statusColor": 5
+    "statusColor": 5,
+    "helperText": 1
   },
   "apps/rahalgo/src/components/admin/AutoModeToggle.tsx": {
     "tinyText": 1
@@ -177,7 +195,8 @@
   },
   "apps/rahalgo/src/components/admin/SiteStatsSection.tsx": {
     "tinyText": 2,
-    "rawButton": 1
+    "rawButton": 1,
+    "helperText": 3
   },
   "apps/rahalgo/src/components/admin/StoreActions.tsx": {
     "tinyText": 1
@@ -238,6 +257,7 @@
     "tinyText": 3,
     "rawButton": 2,
     "handEmpty": 1,
+    "helperText": 2,
     "subtitle": 1
   },
   "apps/rahalgo/src/components/admin/money/StatTile.tsx": {
@@ -257,7 +277,11 @@
     "tinyText": 3
   },
   "apps/rahalgo/src/components/admin/orders/BoardWidgets.tsx": {
-    "rawButton": 1
+    "rawButton": 1,
+    "rawContact": 1
+  },
+  "apps/rahalgo/src/components/admin/orders/DoorPanel.tsx": {
+    "rawContact": 1
   },
   "apps/rahalgo/src/components/admin/orders/OrderDetailPanel.tsx": {
     "tinyText": 3,
@@ -324,7 +348,8 @@
     "tinyText": 4
   },
   "apps/rahalgo/src/components/admin/treasury/Overview.tsx": {
-    "tinyText": 4
+    "tinyText": 4,
+    "helperText": 3
   },
   "apps/rahalgo/src/components/admin/treasury/Statement.tsx": {
     "tinyText": 3,

@@ -111,8 +111,29 @@ export {
   type SummaryItem,
   type StatTone,
 } from "./admin";
+/** **عُدّةُ اللوحة، الجزءُ الثاني** — بطاقةُ الكيان وبدّه-انتباه والاتصال وقصّةُ الطلب والبحثُ السريع (إعادةُ التصميم ٢٠٢٦-١١-٠٣). */
+export {
+  AdminEntityCard,
+  AdminEntityGrid,
+  ConfirmedMenu,
+  AttentionStrip,
+  ContactButtons,
+  StoryTimeline,
+  AdminAsync,
+  useRememberedFilters,
+  CommandPalette,
+  useCtrlK,
+  Presence,
+  agoText,
+  type EntityFact,
+  type ConfirmItem,
+  type AttentionItem,
+  type StoryEvent,
+  type PaletteResult,
+} from "./admin-extra";
+export { AdminLink, AdminLinkProvider, telHref, waHref, intlDigits } from "./adminlink";
 /** **قاموسُ الحالات الواحد** — اسمٌ ونبرةٌ وأيقونة. */
-export { StatusBadge, statusMeta, type StatusDomain, type StatusTone, type StatusMeta } from "./status";
+export { StatusBadge, statusMeta, TONE_TEXT, type StatusDomain, type StatusTone, type StatusMeta } from "./status";
 
 export {
   PageContainer,

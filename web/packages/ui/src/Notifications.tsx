@@ -196,7 +196,13 @@ export function useLiveRefresh(kinds: string[], onEvent: () => unknown) {
  *
  * **ومن مرّر مُرشِّحاً في العنوان يمرّره هنا.**
  */
-export function useLiveData<T>(load: () => Promise<T>, kinds: string[] = [], deps: unknown[] = []) {
+export function useLiveData<T>(
+  load: () => Promise<T>,
+  kinds: string[] = [],
+  deps: unknown[] = [],
+  /** **دمجُ الأحداث المتلاحقة** بجلبٍ واحد (مللي ثانية) — للصفحات الثقيلة كالرئيسيّة. صفرٌ = فوراً. */
+  debounceMs = 0,
+) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -227,7 +233,19 @@ export function useLiveData<T>(load: () => Promise<T>, kinds: string[] = [], dep
   }, deps);
 
   useEffect(() => reload(), [reload]);
-  useLiveRefresh(kinds, reload);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onEvent = useCallback(() => {
+    if (debounceMs <= 0) return reload();
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(reload, debounceMs);
+  }, [reload, debounceMs]);
+  useEffect(
+    () => () => {
+      if (timer.current) clearTimeout(timer.current);
+    },
+    [],
+  );
+  useLiveRefresh(kinds, onEvent);
 
   return { data, loading, error, reload, setData };
 }

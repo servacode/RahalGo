@@ -21,7 +21,18 @@ const m = getMessages(defaultLocale);
 
 /** **النبرةُ معنًى لا لون** — وكلُّ نبرةٍ لها شارةٌ وأيقونة. */
 export type StatusTone = "attention" | "progress" | "good" | "bad" | "neutral" | "special";
-export type StatusDomain = "order" | "payout" | "debt" | "complaint" | "emergency";
+export type StatusDomain =
+  | "order"
+  | "payout"
+  | "debt"
+  | "complaint"
+  | "emergency"
+  /** **حضورُ السائق** — متصل · مشغول · فاضي · غير متصل. */
+  | "presence"
+  /** **حالةُ المتجر** — فاتح · سكرّان · موقوف · محظور. */
+  | "store"
+  /** **طلبُ انضمام**. */
+  | "lead";
 
 type IconT = ComponentType<{ size?: number; className?: string }>;
 
@@ -85,6 +96,10 @@ const TONES: Record<StatusDomain, Record<string, StatusTone>> = {
     acked: "attention",
     resolved: "good",
   },
+  // **الأخضرُ تمام · الأصفرُ ناطر · الأحمرُ مشكلة · الأزرقُ شغلٌ جارٍ · الرماديُّ لا يعنينا.**
+  presence: { online: "good", busy: "progress", free: "good", offline: "neutral" },
+  store: { open: "good", closed: "neutral", paused: "attention", banned: "bad" },
+  lead: { new: "attention", contacted: "progress", approved: "good", rejected: "neutral" },
 };
 
 const LABELS: Record<StatusDomain, Record<string, string>> = {
@@ -93,6 +108,9 @@ const LABELS: Record<StatusDomain, Record<string, string>> = {
   debt: m.admin.obligations.states as Record<string, string>,
   complaint: m.admin.tickets.status as Record<string, string>,
   emergency: m.admin.kit.emergency as Record<string, string>,
+  presence: m.admin.kit.presence as Record<string, string>,
+  store: m.admin.kit.storeState as Record<string, string>,
+  lead: m.admin.kit.lead as Record<string, string>,
 };
 
 export interface StatusMeta {
@@ -133,3 +151,16 @@ export function StatusBadge({
   );
 }
 
+
+/**
+ * **لونُ النبرة نصّاً وحافّةً** — للأرقام والحواف، حتى لا تكتب صفحةٌ لوناً بيدها.
+ * (`good` أخضر · `attention` أصفر · `bad` أحمر · `progress` أزرق · الباقي هادئ.)
+ */
+export const TONE_TEXT: Record<StatusTone, string> = {
+  good: "text-success",
+  attention: "text-warning",
+  bad: "text-danger",
+  progress: "text-info",
+  special: "text-violet",
+  neutral: "text-ink-muted",
+};
