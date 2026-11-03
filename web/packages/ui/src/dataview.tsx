@@ -356,7 +356,7 @@ export function DataView<T>({
                     {c.hide?.(item) ? null : c.cell(item)}
                   </div>
                 ))}
-                <div onClick={(e) => e.stopPropagation()} className="self-end grid grid-flow-row-dense grid-cols-3 gap-2 border-t border-line-soft pt-3 [&>*:not(button)]:col-span-3 [&>button:only-of-type]:col-span-3 [&>button]:inline-flex [&>button]:min-h-11 [&>button]:w-full [&>button]:min-w-0 [&>button]:items-center [&>button]:justify-center [&>button]:gap-2 [&>button]:overflow-hidden [&>button]:!px-2 [&>button]:text-center [&>button[data-variant=primary]]:order-first [&>button[data-variant=danger]]:order-1 [&>button[data-variant=danger-outline]]:order-1">
+                <div onClick={(e) => e.stopPropagation()} className="self-end grid grid-flow-row-dense grid-cols-2 sm:grid-cols-3 gap-2 border-t border-line-soft pt-3 [&>*:not(button)]:col-span-full [&>button:only-of-type]:col-span-full [&>button]:inline-flex [&>button]:min-h-11 [&>button]:w-full [&>button]:min-w-0 [&>button]:items-center [&>button]:justify-center [&>button]:gap-2 [&>button]:overflow-hidden [&>button]:!px-2 [&>button]:text-center [&>button[data-variant=primary]]:order-first [&>button[data-variant=danger]]:order-1 [&>button[data-variant=danger-outline]]:order-1">
                   {actions ? actions(item) : null}
                 </div>
               </div>
@@ -528,7 +528,7 @@ export function DataView<T>({
                    تفيض خارج البطاقة — النصوص العربية تطول ولا تُقصّ. */
                   className={
                     actionsLayout === "grid"
-                      ? "mt-auto grid grid-flow-row-dense grid-cols-3 gap-2 border-t border-line-soft pt-3 [&>*:not(button)]:col-span-3 [&>button:only-of-type]:col-span-3 [&>button]:inline-flex [&>button]:min-h-11 [&>button]:w-full [&>button]:min-w-0 [&>button]:items-center [&>button]:justify-center [&>button]:gap-2 [&>button]:overflow-hidden [&>button]:!px-2 [&>button]:text-center [&>button[data-variant=primary]]:order-first [&>button[data-variant=danger]]:order-1 [&>button[data-variant=danger-outline]]:order-1"
+                      ? "mt-auto grid grid-flow-row-dense grid-cols-2 sm:grid-cols-3 gap-2 border-t border-line-soft pt-3 [&>*:not(button)]:col-span-full [&>button:only-of-type]:col-span-full [&>button]:inline-flex [&>button]:min-h-11 [&>button]:w-full [&>button]:min-w-0 [&>button]:items-center [&>button]:justify-center [&>button]:gap-2 [&>button]:overflow-hidden [&>button]:!px-2 [&>button]:text-center [&>button[data-variant=primary]]:order-first [&>button[data-variant=danger]]:order-1 [&>button[data-variant=danger-outline]]:order-1"
                       : "mt-auto flex flex-wrap gap-1.5 border-t border-line-soft pt-3 [&_button]:min-h-11 [&_button]:min-w-[6.5rem] [&_button]:flex-1 [&_button]:justify-center [&_button]:whitespace-nowrap [&_button]:!px-2 [&_button]:text-center"
                   }
                 >
