@@ -236,6 +236,9 @@ var adminPolicy = []Rule{
 	{"GET", "/cash/merchant-dues", FinanceRead},
 	{"POST", "/drivers/{id}/end-shift", DriversManage},
 	{"GET", "/drivers", DriversRead},
+	// **مراقبةُ حركتهم** — قدرتُها وحدَها (قرارُ المالك ٢٠٢٦-١١-٠٣).
+	{"GET", "/driver-monitor", DriversMonitor},
+	{"GET", "/driver-monitor/{id}", DriversMonitor},
 
 	// ── المال ───────────────────────────────────────────────────
 	{"POST", "/payouts/{id}/decide", PayoutsDecide},
@@ -474,6 +477,13 @@ var adminPolicy = []Rule{
 	{"DELETE", "/ops-map/road-closures/{id}", SettingsGeneralManage},
 	{"GET", "/ops-map/landmark-suggestions", OrdersRead},
 	{"POST", "/ops-map/landmark-suggestions/{id}/decide", SettingsGeneralManage},
+	// **الخريطةُ من حركة السائقين** (٢٠٢٦-١١-٠٣) — تُقرأ بـ`orders.read` كأخواتها، والقرارُ والتشغيلُ والتصديرُ بالتغطية.
+	{"GET", "/ops-map/street-candidates", OrdersRead},
+	{"GET", "/ops-map/street-candidates/summary", OrdersRead},
+	{"GET", "/ops-map/street-candidates/heat", OrdersRead},
+	{"GET", "/ops-map/street-candidates/export", SettingsGeneralManage},
+	{"POST", "/ops-map/street-candidates/run", SettingsGeneralManage},
+	{"POST", "/ops-map/street-candidates/{id}/decide", SettingsGeneralManage},
 
 	// ── الحوافز ─────────────────────────────────────────────────
 	{"GET", "/incentives/{role}", FinanceRead},

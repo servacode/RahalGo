@@ -111,6 +111,11 @@ const SERVER_MOBILE = new Set([
 
 /** **ما لا يبلغ هاتفاً** — أبوابُ الإدارة واللوحات. */
 const SERVER_ADMIN = new Set([
+  // **الخريطةُ من حركة السائقين** (٢٠٢٦-١١-٠٣) — أبوابُ اللوحة وحدَها.
+  "candidate_decided",
+  "bad_format",
+  "map_learning_busy",
+  "map_learning_no_roads",
   // **رابطُ «أرسل موقعي» انتهى** — صفحةُ المستلِم العامّة على الويب وحدَها (٢٠٢٦-١٠-٢٩).
   "location_request_closed",
   "free_delivery_invalid",

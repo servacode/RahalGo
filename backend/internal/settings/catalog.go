@@ -1167,6 +1167,17 @@ var Catalog = []Def{
 	{Key: "drivers.location_ping_active_sec", Group: GroupDrivers, Kind: KindInt,
 		Min: 3, Max: 10, Unit: "second", Default: 4},
 
+	// ══════════════════════════════════════════════════════════════════
+	// **مراقبة حركة السائقين** (قرار المالك ٢٠٢٦-١١-٠٣) — `internal/drivermonitor`
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// كم يوم بيبقى أثر السائق (نقطة كل ٢٠ ثانية أو ٢٥ متر وهو على الدوام)، وكم كيلو
+	// بلا طلب باليوم بيعلّم السائق بالقائمة.
+	{Key: "drivers.trail_retention_days", Group: GroupDrivers, Kind: KindInt,
+		Min: 1, Max: 365, Unit: "day", Default: 30},
+	{Key: "drivers.monitor_km_alert", Group: GroupDrivers, Kind: KindInt,
+		Min: 0, Max: 1000, Unit: "km", Default: 10},
+
 	// **ومتوسّطُ سرعة السائق — منه يُحسب الوقتُ المتوقَّع.**
 	//
 	// (جردُ ٢٠٢٦-٠٨-٠٩: البطاقةُ تقول «٤٠٠ متر» ولا تقول كم يأخذ.)

@@ -1264,6 +1264,14 @@ func (s *Server) Router() http.Handler {
 				r.Get("/landmark-suggestions", s.requirePerm(opsmap.PermViewMap, s.handleAdminLandmarkSuggestions))
 				r.Post("/landmark-suggestions/{id}/decide", s.requirePerm(opsmap.PermManageCoverage, s.handleAdminDecideLandmark))
 
+				// **الخريطةُ من حركة السائقين** (قرارُ المالك ٢٠٢٦-١١-٠٣) — كثافةٌ وشوارعُ مقترحة.
+				r.Get("/street-candidates", s.requirePerm(opsmap.PermViewMap, s.handleStreetCandidates))
+				r.Get("/street-candidates/summary", s.requirePerm(opsmap.PermViewMap, s.handleMapLearningSummary))
+				r.Get("/street-candidates/heat", s.requirePerm(opsmap.PermViewMap, s.handleMapLearningHeat))
+				r.Get("/street-candidates/export", s.requirePerm(opsmap.PermManageCoverage, s.handleStreetCandidatesExport))
+				r.Post("/street-candidates/run", s.requirePerm(opsmap.PermManageCoverage, s.handleMapLearningRun))
+				r.Post("/street-candidates/{id}/decide", s.requirePerm(opsmap.PermManageCoverage, s.handleStreetCandidateDecide))
+
 				// **والتغطيةُ تُقرأ لمن يفتح الخريطة، وتُكتب لمن
 				// يملكها** — **رسمُ مضلَّعٍ يبدّل من تصله المنصّة.**
 				r.Get("/coverage", s.requirePerm(opsmap.PermViewMap, s.handleOpsMapCoverage))
@@ -1662,6 +1670,9 @@ func (s *Server) Router() http.Handler {
 
 			// السائقون والصندوق النقدي
 			r.Get("/drivers", s.handleListDrivers)
+			// **مراقبةُ حركة السائقين** (قرارُ المالك ٢٠٢٦-١١-٠٣) — `drivers.monitor`.
+			r.Get("/driver-monitor", s.handleDriverMonitorList)
+			r.Get("/driver-monitor/{id}", s.handleDriverMonitorDay)
 			r.Get("/drivers/{id}/cash", s.handleDriverCashStatement)
 			// **وكلُّ ما سلّمه — لا النقديُّ وحدَه** (٢٠٢٦-١٠-٣٠) — للعرض فقط.
 			r.Get("/drivers/{id}/delivered", s.handleDriverDelivered)

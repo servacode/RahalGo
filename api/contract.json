@@ -1373,6 +1373,82 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/driver-monitor",
+      "handler": "handleDriverMonitorList",
+      "auth": true,
+      "capability": "drivers.monitor",
+      "response": [
+        {
+          "name": "day",
+          "type": "unknown"
+        },
+        {
+          "name": "drivers",
+          "type": "unknown"
+        },
+        {
+          "name": "km_alert",
+          "type": "unknown"
+        },
+        {
+          "name": "retention_days",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/driver-monitor/{id}",
+      "handler": "handleDriverMonitorDay",
+      "auth": true,
+      "capability": "drivers.monitor",
+      "response": [
+        {
+          "name": "alert",
+          "type": "unknown"
+        },
+        {
+          "name": "day",
+          "type": "unknown"
+        },
+        {
+          "name": "driver",
+          "type": "object"
+        },
+        {
+          "name": "events",
+          "type": "unknown"
+        },
+        {
+          "name": "km_alert",
+          "type": "unknown"
+        },
+        {
+          "name": "orders",
+          "type": "unknown"
+        },
+        {
+          "name": "path",
+          "type": "unknown"
+        },
+        {
+          "name": "stores",
+          "type": "unknown"
+        },
+        {
+          "name": "summary",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/drivers",
       "handler": "handleListDrivers",
       "auth": true,
@@ -3708,6 +3784,48 @@
       "handler": "requirePerm",
       "auth": true,
       "capability": "orders.read"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ops-map/street-candidates",
+      "handler": "requirePerm",
+      "auth": true,
+      "capability": "orders.read"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ops-map/street-candidates/export",
+      "handler": "requirePerm",
+      "auth": true,
+      "capability": "settings.general.manage"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ops-map/street-candidates/heat",
+      "handler": "requirePerm",
+      "auth": true,
+      "capability": "orders.read"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/ops-map/street-candidates/run",
+      "handler": "requirePerm",
+      "auth": true,
+      "capability": "settings.general.manage"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ops-map/street-candidates/summary",
+      "handler": "requirePerm",
+      "auth": true,
+      "capability": "orders.read"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/ops-map/street-candidates/{id}/decide",
+      "handler": "requirePerm",
+      "auth": true,
+      "capability": "settings.general.manage"
     },
     {
       "method": "GET",

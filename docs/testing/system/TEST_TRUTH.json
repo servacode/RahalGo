@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 602,
+    "routes": 610,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 252,
-    "behaviour_settings": 207,
+    "setting_defs": 254,
+    "behaviour_settings": 209,
     "order_fields": 129,
-    "test_files": 682,
-    "test_funcs": 2629
+    "test_files": 684,
+    "test_funcs": 2642
   },
   "flows": [
     {
@@ -4573,6 +4573,27 @@
       "status": "REGRESSION_TEST_PRESENT"
     },
     {
+      "key": "drivers.monitor_km_alert",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "drivers.monthly_target",
       "group": "drivers",
       "kind": "int",
@@ -4869,6 +4890,27 @@
       "kind": "money",
       "sensitive": false,
       "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.trail_retention_days",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
       "flows": [
         "F-07",
         "F-08",
@@ -9087,6 +9129,48 @@
       "name": "TestMachinePlatformNeverWiderThanMerchants",
       "file": "internal/machinedoc/machinedoc_test.go",
       "package": "machinedoc",
+      "orphan": true
+    },
+    {
+      "name": "TestDetect_BlobAndScatterRejected",
+      "file": "internal/maplearn/detect_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestDetect_CurvedAlleyFollowsTheTurn",
+      "file": "internal/maplearn/detect_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestDetect_DeterministicAndEmpty",
+      "file": "internal/maplearn/detect_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestDetect_OneDayOnlyIsNotCandidate",
+      "file": "internal/maplearn/detect_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestDetect_StraightStreetOnThreeDays",
+      "file": "internal/maplearn/detect_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestDetect_TwoSeparateStreets",
+      "file": "internal/maplearn/detect_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestExport_OSMAndGeoJSON",
+      "file": "internal/maplearn/detect_test.go",
+      "package": "maplearn",
       "orphan": true
     },
     {
@@ -16379,6 +16463,42 @@
     {
       "name": "TestDriverLocationWatch_NotifiesNeverEndsShift",
       "file": "internal/qa/driver_location_watch_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverMonitor_ClassifiesDayAndCatchesBehindTheBackDelivery",
+      "file": "internal/qa/driver_monitor_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverMonitor_ListSortedWorstFirstAndAlert",
+      "file": "internal/qa/driver_monitor_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverMonitor_LocationHandlersKeepDownsampledTrail",
+      "file": "internal/qa/driver_monitor_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverMonitor_RequiresCapability",
+      "file": "internal/qa/driver_monitor_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverMonitor_RetentionPrunes",
+      "file": "internal/qa/driver_monitor_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverMonitor_SameMovesWithAnOrderAreNotSuspicious",
+      "file": "internal/qa/driver_monitor_test.go",
       "package": "qa",
       "orphan": true
     },

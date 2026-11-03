@@ -15,6 +15,7 @@ import {
   IconUsers,
   IconStore,
   IconZones,
+  IconRoute,
   IconLocation,
   IconPromos,
   IconSupport,
@@ -131,6 +132,9 @@ const ALL_NAV: NavItem[] = [
   // رسمٍ فقط**، ومن رآه ولا يملك شيئاً فيه رأى صفحةَ «لا صلاحية».
   { href: "/dashboard/opsmap", label: m.admin.nav.opsMap, icon: IconZones,
     caps: ["orders.read"] },
+  // **مراقبةُ حركة السائقين** (قرارُ المالك ٢٠٢٦-١١-٠٣) — بقدرتها وحدَها، **أثرٌ شخصيٌّ حسّاس**.
+  { href: "/dashboard/driver-monitor", label: m.admin.nav.driverMonitor, icon: IconRoute,
+    caps: ["drivers.monitor"] },
   // **«طلباتُ التوسّع» قسمٌ مستقلّ** — «مو مخفيّة تحت الخريطة» (قرارُ المالك
   // ٢٠٢٦-١٠-٠٤). **وقراءتُها بـ`orders.read`** كبابها في المحرّك — قسمٌ لموظّف
   // العمليّات لا تقريرٌ للمدير (قرارُ المالك ٢٠٢٦-١٠-٠٥).
