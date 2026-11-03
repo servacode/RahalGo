@@ -12,6 +12,8 @@
  *	٢ · **وجملةُ ما بعد الاستلام تطابق الخادم** — لا «لا زيادة».
  *	٣ · **«تعديل الطلب» للعاديّ قائمٌ في الكرت** ببابه في المحرّك، **ومعاينتُه من الخادم**
  *	    (`dry_run`) لا حسبةٌ في الشاشة — رقمٌ يُحسب في موضعين يفترق.
+ *	٤ · **ما رجّعه الزبونُ بعد الاستلام يُقال بكلمته** في كلّ فاتورة (`returned`): الفاتورةُ
+ *	    المشتركةُ على الويب (الزبونُ والمتجرُ واللوحة) وفي التطبيقات — لا يُقرأ صنفاً مجّانيّاً.
  */
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -75,9 +77,22 @@ if (ar === "") problems.push("القاموسُ لم يُقرأ");
   if (!/"order_edit_reason_required"/.test(ar)) problems.push("رسالةُ «اكتب سبب التعديل» غائبةٌ عن القاموس");
 }
 
+// ── ٤ · المرتجعُ في الفواتير ─────────────────────────────────────────────
+{
+  const repo = join(web, "..");
+  const lines = strip(read(join(web, "packages", "ui", "src", "InvoiceLines.tsx")));
+  if (!lines.includes("it.returned") || !lines.includes("returnedByCustomer")) {
+    problems.push("الفاتورةُ المشتركة على الويب لا تقول «رجّعه الزبون»");
+  }
+  const kt = read(join(repo, "mobile", "ui", "src", "main", "kotlin", "com", "rahalgo", "ui", "Invoice.kt"));
+  if (!kt.includes("R.string.inv_returned")) problems.push("فاتورةُ التطبيقات لا تقول «رجّعه الزبون»");
+  const drv = read(join(repo, "backend", "internal", "server", "driver_handlers.go"));
+  if (!/oi\.returned/.test(drv)) problems.push("أصنافُ السائق لا تحمل علَمَ المرتجع (`oi.returned`)");
+}
+
 if (problems.length) {
   console.error("✗ تعديلُ الطلب:");
   for (const p of problems) console.error("  - " + p);
   process.exit(1);
 }
-console.log("✓ تعديلُ الطلب: زرُّ الخاصّ قائمٌ حتّى التسليم، ومحرّرُ العاديّ بمعاينةٍ من الخادم");
+console.log("✓ تعديلُ الطلب: زرُّ الخاصّ قائمٌ حتّى التسليم، ومحرّرُ العاديّ بمعاينةٍ من الخادم، والمرتجعُ يُقال في كلّ فاتورة");

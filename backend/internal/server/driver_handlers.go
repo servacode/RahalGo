@@ -711,6 +711,8 @@ type driverItem struct {
 	UnitPrice  int64          `json:"unit_price"`
 	DrinkFor   *string        `json:"drink_for,omitempty"`
 	OptionList []driverOption `json:"option_list"`
+	// Returned **رجّعه الزبونُ بعد الاستلام** (قرارُ المالك ٢٠٢٦-١١-٠٣) — سعرُه صفر، لا يُقبض.
+	Returned bool `json:"returned,omitempty"`
 }
 
 // driverOption **خيارٌ بمجموعته** — بشكل `orders.OptionSnapshot` بلا معرّفٍ ولا فرقِ سعر.
@@ -737,7 +739,8 @@ func (s *Server) attachDriverItems(ctx context.Context, list []driverOrder) erro
 		       oi.unit_price, oi.drink_for::text,
 		       COALESCE((SELECT jsonb_agg(jsonb_build_object(
 		                           'group', COALESCE(e->>'group', ''), 'name', COALESCE(e->>'name', '')))
-		                 FROM jsonb_array_elements(COALESCE(oi.options, '[]'::jsonb)) e), '[]'::jsonb)
+		                 FROM jsonb_array_elements(COALESCE(oi.options, '[]'::jsonb)) e), '[]'::jsonb),
+		       oi.returned
 		FROM order_items oi
 		WHERE oi.order_id = ANY($1::uuid[])
 		-- **كلُّ صنفٍ ثمّ مشروباتُه** — كما في قراءة الطلب (orders/queries.go).
@@ -751,7 +754,7 @@ func (s *Server) attachDriverItems(ctx context.Context, list []driverOrder) erro
 		var it driverItem
 		var opts []byte
 		if err := rows.Scan(&id, &it.ID, &it.Name, &it.Qty, &it.Options,
-			&it.UnitPrice, &it.DrinkFor, &opts); err != nil {
+			&it.UnitPrice, &it.DrinkFor, &opts, &it.Returned); err != nil {
 			return err
 		}
 		it.OptionList = []driverOption{}

@@ -824,6 +824,8 @@ data class MyOrderLine(
     val options: List<MyOrderOption>? = null,
     @SerialName("drink_for") val drinkFor: String? = null,
     @SerialName("drink_option_id") val drinkOptionId: String? = null,
+    /** **رجّعه الزبونُ بعد الاستلام** (٢٠٢٦-١١-٠٣) — سعرُه صفر، **ولا يُعاد طلبُه.** */
+    val returned: Boolean = false,
 )
 
 /** **خيارٌ كما حُفظ مع البند** — لقطةٌ لا قراءةٌ لاحقة. */

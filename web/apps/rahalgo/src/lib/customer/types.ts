@@ -312,6 +312,8 @@ export interface MyOrderLine {
   options?: { id?: string; group?: string; name: string; price_delta: number }[] | null;
   drink_for?: string | null;
   drink_option_id?: string | null;
+  /** **رجّعه الزبونُ بعد الاستلام** (٢٠٢٦-١١-٠٣) — سعرُه صفر. */
+  returned?: boolean;
 }
 
 export interface MyOrdersPage {

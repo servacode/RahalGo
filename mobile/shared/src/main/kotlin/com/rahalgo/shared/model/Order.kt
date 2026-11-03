@@ -300,6 +300,8 @@ data class DriverItem(
     @SerialName("unit_price") val unitPrice: Long? = null,
     @SerialName("drink_for") val drinkFor: String? = null,
     @SerialName("option_list") val optionList: List<DriverOption> = emptyList(),
+    /** **رجّعه الزبونُ بعد الاستلام** (٢٠٢٦-١١-٠٣) — لا يُقبض ثمنُه. */
+    val returned: Boolean = false,
 )
 
 /** **خيارٌ بمجموعته** — «النمرة» و«40». */

@@ -11,6 +11,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -43,6 +44,11 @@ data class InvoiceLine(
     val name: String = "",
     val qty: Int = 0,
     val options: List<Pair<String, String>> = emptyList(),
+    /**
+     * **رجّعه الزبونُ بعد الاستلام** (قرارُ المالك ٢٠٢٦-١١-٠٣) — سعرُه للزبون صفر والمنصّةُ
+     * تتحمّله. يُعرض مشطوباً بكلمته، **ولا يُدمج مشروبٌ مرتجعٌ مع غير المرتجع.**
+     */
+    val returned: Boolean = false,
 )
 
 private val weightWord = Regex("كيلو|كغ|غرام|(^|\\s|[0-9٠-٩])غ$")
@@ -98,11 +104,11 @@ fun invoiceOrder(lines: List<InvoiceLine>): List<InvoiceLine> {
 
     val merged = LinkedHashMap<String, InvoiceLine>()
     drinks.forEach { d ->
-        val key = if (d.name.isNotBlank()) {
+        val key = (if (d.name.isNotBlank()) {
             "n:" + d.name.trim() + "|" + d.options.joinToString(",") { it.first.trim() + "=" + it.second.trim() }
         } else {
             "t:" + d.text
-        }
+        }) + if (d.returned) "|returned" else ""
         val was = merged[key]
         merged[key] = if (was == null) {
             d
@@ -129,6 +135,7 @@ fun OrderLine.toInvoiceLine(): InvoiceLine = InvoiceLine(
     name = name,
     qty = qty,
     options = options.map { it.group to it.name },
+    returned = returned,
 )
 
 /** **أسطرُ الأصناف** — كلٌّ في سطرٍ: النصُّ في البداية والمبلغُ في النهاية. */
@@ -137,7 +144,15 @@ fun InvoiceLines(lines: List<InvoiceLine>, modifier: Modifier = Modifier) {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         invoiceOrder(lines).forEach { l ->
             Column(Modifier.fillMaxWidth()) {
-                InvoiceRow(l.text, l.amount?.let { money(it) }, bold = true)
+                InvoiceRow(l.text, l.amount?.let { money(it) }, bold = !l.returned)
+                // **ما رجّعه الزبونُ يُقال بكلمته** — لا يُقرأ صنفاً مجّانيّاً.
+                if (l.returned) {
+                    Text(
+                        stringResource(R.string.inv_returned),
+                        color = Rahal.colors.danger,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
                 if (l.note.isNotBlank()) {
                     Text(
                         l.note,

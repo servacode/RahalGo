@@ -11,8 +11,11 @@
  * **والقاعدةُ نفسُها في تطبيقات أندرويد** (`mobile/ui/.../Invoice.kt`، `invoiceLineText`).
  */
 
+import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { Money } from "./money";
 import { invoiceLineText, invoiceOrder, type InvoiceLineItem } from "./invoiceText";
+
+const m = getMessages(defaultLocale);
 
 export { invoiceLineText, invoiceOrder, type InvoiceLineItem };
 
@@ -32,11 +35,13 @@ export function InvoiceLines({
       {invoiceOrder(items).map((it, i) => (
         <li key={it.id || i}>
           <div className="flex items-baseline justify-between gap-3">
-            <span className="min-w-0 break-words font-medium">
+            <span className={`min-w-0 break-words font-medium ${it.returned ? "text-ink-muted line-through" : ""}`}>
               {invoiceLineText(it.name, it.qty, it.options)}
             </span>
             <Money value={it.unit_price * it.qty} small className="shrink-0 tabular-nums" />
           </div>
+          {/* **ما رجّعه الزبونُ بعد الاستلام يُقال بكلمته** (٢٠٢٦-١١-٠٣) — لا يُقرأ صنفاً مجّانيّاً. */}
+          {it.returned && <p className="text-xs font-bold text-danger">{m.common.returnedByCustomer}</p>}
           {it.note && <p className="text-xs text-ink-muted">{it.note}</p>}
         </li>
       ))}

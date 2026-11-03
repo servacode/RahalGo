@@ -671,6 +671,7 @@ fun driverInvoiceLines(order: DriverOrder): List<com.rahalgo.ui.InvoiceLine> = o
         name = it.name,
         qty = it.qty,
         options = options,
+        returned = it.returned,
     )
 }
 

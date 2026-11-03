@@ -796,4 +796,5 @@ internal fun MyOrderLine.toInvoiceLine(): com.rahalgo.ui.InvoiceLine = com.rahal
     name = name,
     qty = qty,
     options = options.orEmpty().map { it.group to it.name },
+    returned = returned,
 )

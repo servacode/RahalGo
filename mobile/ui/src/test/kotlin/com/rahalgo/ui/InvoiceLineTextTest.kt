@@ -52,4 +52,18 @@ class InvoiceLineTextTest {
         assertEquals(listOf("شاورما عادي × 2", "شاورما دبل × 3", "عيران × 3", "ببسي × 1"), out.map { it.text })
         assertEquals(listOf(40L, 90L, 15L, 7L), out.map { it.amount })
     }
+
+    /** **ما رجّعه الزبونُ بعد الاستلام** (٢٠٢٦-١١-٠٣) — يصل علَمُه، ولا يُدمج مشروبٌ مرتجعٌ مع غيره. */
+    @Test
+    fun returnedLineKeepsItsFlagAndIsNotMerged() {
+        val lines = listOf(
+            OrderLine(id = "a", name = "شاورما", qty = 1, unitPrice = 25),
+            OrderLine(id = "r", name = "شاورما", qty = 1, unitPrice = 0, returned = true),
+            OrderLine(id = "d1", name = "عيران", qty = 1, unitPrice = 5, drinkFor = "a"),
+            OrderLine(id = "d2", name = "عيران", qty = 1, unitPrice = 0, drinkFor = "a", returned = true),
+        ).map { it.toInvoiceLine() }
+        val out = invoiceOrder(lines)
+        assertEquals(listOf(false, true, false, true), out.map { it.returned })
+        assertEquals(listOf(25L, 0L, 5L, 0L), out.map { it.amount })
+    }
 }
