@@ -2160,7 +2160,7 @@
       "overrideGoodsLabel": "قيمة المشتريات",
       "overrideFeeLabel": "أجرة التوصيل",
       "overrideReasonLabel": "سبب التعديل",
-      "overridePostPickupHint": "بعد الاستلام: خفض أو تصحيح فقط — لا زيادة.",
+      "overridePostPickupHint": "بعد الاستلام: الخفض يسري فوراً، والزيادة توقف التسليم حتى يؤكّدها الزبون.",
       "overrideConfirmTitle": "تأكيد تعديل العرض",
       "overrideTotalLabel": "الإجمالي",
       "overrideInvalidateWarn": "سيُلغى تأكيد الزبون، وعليه أن يؤكّد المبلغ من جديد.",

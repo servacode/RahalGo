@@ -3824,7 +3824,7 @@ function OrderActions({
             setErr("");
           }}
         />
-        {/* **وبعد الاستلام لا زيادة** — يقولها قبل أن يردّها الخادمُ خطأً. */}
+        {/* **وبعد الاستلام الزيادةُ تنتظر الزبون** — كما يفعل الخادم (`AdminOverrideCustomQuote`). */}
         {o.picked_up_at && (
           <p className="text-xs text-ink-muted">
             {m.admin.ordersPage.overridePostPickupHint}
@@ -3910,12 +3910,12 @@ function OrderActions({
 
           **ولا يُعرض إلّا على خاصٍّ قائم**: الخادمُ يردّ `custom_locked` على
           طلبٍ أُغلق، **وزرٌّ يُعرض ولا يفعل أسوأُ من زرٍّ غائب.** */}
-      {/* **وبعد توثيق الأجرة وقبل الاستلام وحدَهما** (المالك ٢٠٢٦-١٠-٢٢) — قبلها لا سعرَ
-          يُعدَّل، وبعدها يقفله الخادم (`custom_locked`). */}
+      {/* **وبعد توثيق الأجرة وحتّى التسليم** (المالك ٢٠٢٦-١١-٠٣، ناقضاً «قبل الاستلام وحدَه»
+          ٢٠٢٦-١٠-٢٢) — قبلها لا سعرَ يُعدَّل، وبعد الانتهاء يقفله الخادم (`custom_locked`).
+          **وبعد الاستلام**: النقصُ فوراً، والزيادةُ توقف التسليمَ حتّى يؤكّدها الزبون. */}
       {o.kind === "custom" &&
         canIntervene &&
         o.custom_fee != null &&
-        !o.picked_up_at &&
         !CLOSED_STATUSES.has(o.status) && (
           <Button
             variant="secondary"
