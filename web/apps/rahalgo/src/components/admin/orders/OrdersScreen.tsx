@@ -64,11 +64,18 @@ import {
   Stars,
   Select,
   Checkbox,
+  AdminPage,
+  AdminLink,
+  ContactButtons,
+  FilterBar,
+  FilterSelect,
+  FilterField,
+  PeriodPicker,
+  useRememberedFilters,
 } from "@rahalgo/ui";
 import { api, apiFile, ApiError, mediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useRinger } from "@/lib/ringer";
-import { PageHero } from "@/components/admin/PageHero";
 import { Tile, type TileTone } from "@/components/admin/DashParts";
 import { AutoModeToggle } from "@/components/admin/AutoModeToggle";
 import { DoorPanel, type DoorView } from "./DoorPanel";
@@ -93,6 +100,8 @@ import {
 } from "./BoardWidgets";
 
 const m = getMessages(defaultLocale);
+const K = m.admin.kit;
+const KO = m.admin.kit.ops;
 
 // ---------- الأنواع ----------
 
@@ -131,6 +140,9 @@ interface OrderRow {
    */
   customer_phone_masked?: string;
   customer_name: string;
+  /** **للروابط** — ملفُّ الزبون والسائق (الخادمُ يردّهما أصلاً). */
+  customer_id?: string;
+  driver_id?: string | null;
   /** **مسارُ المكتب** — يحسبه المحرّك، **ولا يُطوى كما يُطوى للزبون.** */
   ops_stages?: string[];
   ops_stage_at?: number;
@@ -1029,6 +1041,8 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
   const [panelId, setPanelId] = useState(params.get("order") ?? "");
   /** **ما زال يُحمَّل** — كلُّ تغيير فلترٍ يقول ذلك (المشكلة ١٧). */
   const [loading, setLoading] = useState(true);
+  /** **متى وصل آخرُ جلب** — سطرُ «تحدّث قبل…» تحت العنوان. */
+  const [loadedAt, setLoadedAt] = useState<number | null>(null);
   /**
    * **في طلباتٍ جديدة** — السجلُّ لا يتحدّث وحدَه (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٦):
    * يُقرأ ولا يُعمَل عليه، **وقائمةٌ تتحرّك تحت عين من يقرأ تُضيّعه.** فيُقال إنّ
@@ -1160,11 +1174,13 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         sort: live ? "priority" : "",
         from: live ? "" : from,
         to: live ? "" : to,
-        merchant_id: live ? "" : merchantId,
-        driver_id: live ? "" : driverId,
+        // **والمتجرُ والسائقُ والنوعُ والدفعُ لشاشة العمل أيضاً** (إعادةُ تصميم اللوحة ٢٠٢٦-١١-٠٣) —
+        // الخادمُ يفلتر بها الجاريَ كما المنتهي.
+        merchant_id: merchantId,
+        driver_id: driverId,
         // **ونوعُ الطلب** (المشكلة ٢٠) **والأعدادُ تتبع البحثَ والفلاتر** (المشكلة ٨).
-        kind: live ? "" : kind,
-        pay: live ? "" : pay,
+        kind,
+        pay,
         late: !live && lateOnly ? "1" : "",
         waived: !live && waivedOnly ? "1" : "",
         counts: live ? "" : "1",
@@ -1177,6 +1193,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       setData(await api<OrderPage>(`/api/v1/admin/orders?${params}`));
       setError("");
       setStale(false);
+      setLoadedAt(Date.now());
     } catch (err) {
       setError(errorText(err));
     }
@@ -1220,16 +1237,17 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       put("filter", board);
       put("id", focusId);
     }
+    put("merchant", merchantId);
+    put("driver", driverId);
+    put("kind", kind);
+    put("pay", pay);
+    // **وملفُّ الطلب في الرابط على الشاشتين** — رابطٌ يُرسَل لزميل (البند ٤).
+    put("order", panelId);
     if (!live) {
       put("from", from);
       put("to", to);
-      put("merchant", merchantId);
-      put("driver", driverId);
-      put("kind", kind);
-      put("pay", pay);
       if (lateOnly) qs.set("late", "1");
       if (waivedOnly) qs.set("waived", "1");
-      put("order", panelId);
     }
     if (page > 1) qs.set("page", String(page));
     const next = qs.toString();
@@ -1245,7 +1263,6 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
   // متجراً وحدَها** ولو قُرئ. **فتُقرأ الصفحاتُ كلُّها بالغلاف.** وتُجلب مرّةً عند
   // الفتح لا مع كلّ حركة (البند ٦).
   useEffect(() => {
-    if (live) return;
     if (!can("merchants.read")) {
       setStoresState("denied");
     } else {
@@ -1277,7 +1294,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         })
         .catch(() => setDriversState("failed"));
     }
-  }, [live, can]);
+  }, [can]);
 
   /**
    * **مدىً جاهز — بيوم الحساب لا بنصف الليل** (تدقيقُ السجلّ ٢٠٢٦-١٠-٢٧). «اليوم» من الخادم
@@ -1354,10 +1371,53 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
     setExporting(false);
   }
 
+  // ══════════════════════════════════════════════════════════════════
+  // **الفلاترُ كما تركتَها** — النوعُ والدفعُ والمتجرُ والسائقُ (والمتأخّرةُ والعمولةُ الممحيّةُ في السجلّ).
+  // **والرابطُ يغلب المحفوظ**، **ولا تُحفَظ التواريخُ** — «اليوم» يتغيّر وخانتاه المحفوظتان تكذبان غداً.
+  // **ولا جلبَ قبل القراءة** وإلّا جلبنا بالافتراضيّ ثمّ أعدنا بالمحفوظ.
+  // ══════════════════════════════════════════════════════════════════
+  const fromUrl: Record<string, string> = {};
+  for (const k of ["kind", "pay", "merchant", "driver"]) if (params.get(k)) fromUrl[k] = params.get(k) as string;
+  if (params.get("late") === "1") fromUrl.late = "1";
+  if (params.get("waived") === "1") fromUrl.waived = "1";
+  const remembered = useRememberedFilters(
+    `orders-${mode}`,
+    { kind: "", pay: "", merchant: "", driver: "", late: "", waived: "" },
+    fromUrl,
+  );
+  const [restored, setRestored] = useState(false);
   useEffect(() => {
+    if (!remembered.ready || restored) return;
+    const f = remembered.filters;
+    if (Object.keys(fromUrl).length === 0) {
+      setKind(f.kind);
+      setPay(f.pay);
+      setMerchantId(f.merchant);
+      setDriverId(f.driver);
+      setLateOnly(f.late === "1");
+      setWaivedOnly(f.waived === "1");
+    }
+    setRestored(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [remembered.ready]);
+  const rememberSet = remembered.set;
+  useEffect(() => {
+    if (!restored) return;
+    rememberSet({
+      kind,
+      pay,
+      merchant: merchantId,
+      driver: driverId,
+      late: lateOnly ? "1" : "",
+      waived: waivedOnly ? "1" : "",
+    });
+  }, [restored, rememberSet, kind, pay, merchantId, driverId, lateOnly, waivedOnly]);
+
+  useEffect(() => {
+    if (!restored) return;
     const t = setTimeout(load, 250);
     return () => clearTimeout(t);
-  }, [load]);
+  }, [load, restored]);
 
   // ══════════════════════════════════════════════════════════════════
   // **التنبيهاتُ — وفشلُها يُقال** (المشكلة ٣١)
@@ -1623,17 +1683,16 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
               يقول ما هو. **والشكلُ يقوله بلا كلمة.** */}
           <span className="flex min-w-0 items-center gap-1.5">
             <IconUser size={13} className="shrink-0 text-ink-dim" />
-            <span className="truncate">{o.customer_name || "—"}</span>
+            <PersonName href={o.customer_id ? `/dashboard/users/${o.customer_id}` : ""} name={o.customer_name} className="truncate" />
           </span>
           {/* **ولا أيقونةَ على الرقم** — (قرارُ المالك ٢٠٢٦-٠٨-١٢).
               **ورقمٌ بهذا الشكل لا يُقرأ إلّا هاتفا**: أربعةَ عشرَ رقماً
               تبدأ بعلامة زائد، **ورقمُ الطلب في مربّعه فوق.** */}
-          <span
-            dir="ltr"
-            className="shrink-0 text-xs text-ink-muted"
-            title={o.customer_phone ? undefined : H.maskedPhone}
-          >
-            {o.customer_phone || o.customer_phone_masked}
+          <span className="flex shrink-0 items-center gap-1.5">
+            <span dir="ltr" className="text-xs text-ink-muted" title={o.customer_phone ? undefined : H.maskedPhone}>
+              {o.customer_phone || o.customer_phone_masked}
+            </span>
+            <ContactButtons phone={o.customer_phone} name={o.customer_name} />
           </span>
         </span>
       ),
@@ -1718,6 +1777,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       cell: (o) =>
         o.driver_name ? (
           <DriverLine
+            href={o.driver_id ? `/dashboard/users/${o.driver_id}` : ""}
             name={o.driver_name}
             phone={o.driver_phone}
             seenAt={o.driver_seen_at}
@@ -1752,7 +1812,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       // **فيُقرأ عطباً في القراءة** لا «طلبٌ بلا متجر»، ويُسأل مرّتين:
       // أضاع الاسمُ أم لم يكن؟
       hide: (o: OrderRow) => o.kind === "custom",
-      cell: (o) => o.merchant_name,
+      cell: (o) => <PersonName href={o.merchant_id ? `/dashboard/merchants/${o.merchant_id}` : ""} name={o.merchant_name} />,
     },
     {
       // ══════════════════════════════════════════════════════════════
@@ -2046,54 +2106,174 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
   const showEmpty =
     !inverted && !(error && rows.length === 0) && !!data && rows.length === 0 && (live || !loading);
 
-  return (
-    <div>
-      {/* ══════════════════════════════════════════════════════════
-          **الرأس** — العنوانُ وسطرُ الشرح، والأفعالُ تلتفّ على الجوّال
-          ══════════════════════════════════════════════════════════ */}
-      {!live && (
-        <PageHero<string>
-          icon={IconOrder}
-          title={m.admin.ordersPage.historyTitle}
-          actions={
+  // ══════════════════════════════════════════════════════════════════
+  // **قالبُ الصفحة الواحد** (إعادةُ تصميم اللوحة ٢٠٢٦-١١-٠٣) — رأسٌ بسطرٍ واحدٍ وسطرِ «تحدّث قبل…»، ثمّ
+  // الأرقام، ثمّ شريطُ فلاترٍ واحد، ثمّ البطاقات. **ولا سطرَ شرحٍ تحت العنوان.**
+  // ══════════════════════════════════════════════════════════════════
+  const metaLine =
+    loadedAt === null
+      ? undefined
+      : now - loadedAt < 60_000
+        ? KO.updatedNow
+        : K.updatedAgo.replace("{t}", fmtSpan((now - loadedAt) / 1000));
+  const extraFiltered = merchantId !== "" || driverId !== "" || kind !== "" || pay !== "";
+  const barFiltered = live ? liveFiltered || searching || extraFiltered : historyFiltered;
+  const clearBar = () => {
+    if (live) {
+      clearLive();
+      setQuery("");
+      setKind("");
+      setPay("");
+      setMerchantId("");
+      setDriverId("");
+    } else {
+      clearHistory();
+    }
+  };
+  const sheetActive =
+    (merchantId !== "" ? 1 : 0) +
+    (driverId !== "" ? 1 : 0) +
+    (live ? 0 : (pay !== "" ? 1 : 0) + (lateOnly ? 1 : 0) + (waivedOnly ? 1 : 0));
+  const kindSelect = (
+    <FilterSelect
+      id="ord-kind"
+      label={H.kindLabel}
+      value={kind}
+      onChange={(v) => {
+        setKind(v);
+        setPage(1);
+      }}
+    >
+      {kindChips.map((c) => (
+        <option key={c.id} value={c.id}>
+          {c.label}
+        </option>
+      ))}
+    </FilterSelect>
+  );
+  const paySelect = (
+    <FilterSelect
+      id="ord-pay"
+      label={H.payLabel}
+      value={pay}
+      onChange={(v) => {
+        setPay(v);
+        setPage(1);
+      }}
+    >
+      {payChips.map((c) => (
+        <option key={c.id} value={c.id}>
+          {c.label}
+        </option>
+      ))}
+    </FilterSelect>
+  );
+  const toolbar = (
+    <FilterBar
+      search={{
+        id: "ord-search",
+        value: query,
+        placeholder: live ? m.admin.ordersPage.searchPlaceholder : H.searchPlaceholder,
+        onChange: (v) => {
+          setQuery(v);
+          setPage(1);
+        },
+      }}
+      filtered={barFiltered}
+      onClear={clearBar}
+      moreActive={sheetActive}
+      end={liveFiltered && live ? <Badge variant="accent">{liveFilterLabel}</Badge> : undefined}
+      more={
+        <>
+          {!live && <FilterField label={H.payLabel}>{paySelect}</FilterField>}
+          {storesState === "ok" && storeList.length > 0 && (
+            <FilterField label={m.admin.ordersPage.range.allStores}>
+              <SearchSelect
+                ariaLabel={m.admin.ordersPage.range.allStores}
+                allLabel={m.admin.ordersPage.range.allStores}
+                value={merchantId}
+                options={storeList.map((x) => ({ value: x.id, label: storeLabel(x.name, x.number) }))}
+                onChange={(v) => {
+                  setMerchantId(v);
+                  setPage(1);
+                }}
+              />
+            </FilterField>
+          )}
+          {driversState === "ok" && driverList.length > 0 && (
+            <FilterField label={m.admin.ordersPage.range.allDrivers}>
+              <SearchSelect
+                ariaLabel={m.admin.ordersPage.range.allDrivers}
+                allLabel={m.admin.ordersPage.range.allDrivers}
+                value={driverId}
+                options={driverList.map((d) => ({ value: d.id, label: d.full_name || d.phone }))}
+                onChange={(v) => {
+                  setDriverId(v);
+                  setPage(1);
+                }}
+              />
+            </FilterField>
+          )}
+          {!live && (
             <>
-              {can("finance.export") && (
-                <Button
-                  variant="secondary"
-                  disabled={exporting || inverted}
-                  title={H.exportHint}
-                  onClick={() => void exportList()}
-                >
-                  {H.export}
-                </Button>
-              )}
-              <Button variant="secondary" onClick={() => void load()}>
-                {H.refresh}
-              </Button>
+              <Checkbox
+                id="h-late"
+                label={H.lateOnly}
+                checked={lateOnly}
+                onChange={(e) => {
+                  setLateOnly(e.target.checked);
+                  setPage(1);
+                }}
+              />
+              <Checkbox
+                id="h-waived"
+                label={H.waivedOnly}
+                checked={waivedOnly}
+                onChange={(e) => {
+                  setWaivedOnly(e.target.checked);
+                  setPage(1);
+                }}
+              />
             </>
-          }
+          )}
+        </>
+      }
+    >
+      {!live && (
+        <PeriodPicker
+          id="ord-period"
+          from={from}
+          to={to}
+          today={today}
+          onChange={(f, t) => {
+            setFrom(f);
+            setTo(t);
+            setPage(1);
+          }}
         />
       )}
-      {live && (
-        <PageHero<string>
-          icon={IconOrder}
-          title={m.admin.ordersPage.title}
-          subtitle={BOARD.subtitle}
-          /* **زرُّ «تحديث» كالسجلّ** — اللوحةُ تتحدّث وحدَها، والزرُّ لمن فاته حدث (دفعةُ التصميم ١). */
-          actions={
-            <Button variant="secondary" onClick={refreshAll}>
-              {H.refresh}
-            </Button>
-          }
-          titleExtra={
-            <Badge variant={liveConnected ? "success" : "danger"} className="gap-1.5 py-1">
-              <span className={`h-2 w-2 rounded-badge ${liveConnected ? "animate-pulse bg-success" : "bg-danger"}`} />
-              {liveConnected ? m.admin.ordersPage.live : m.admin.ordersPage.liveOff}
-            </Badge>
-          }
-        >
-          {/* **والمفتاحان في سطرٍ يلتفّ** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كانا على طرف الرأس فيخرجان عن الشاشة. */}
-          <div className="flex flex-wrap items-center gap-2">
+      {kindSelect}
+      {live && paySelect}
+    </FilterBar>
+  );
+
+  return (
+    <AdminPage
+      title={live ? m.admin.ordersPage.title : m.admin.ordersPage.historyTitle}
+      icon={IconOrder}
+      count={data ? data.total : null}
+      meta={metaLine}
+      badge={
+        live ? (
+          <Badge variant={liveConnected ? "success" : "danger"} className="gap-1.5 py-1">
+            <span className={`h-2 w-2 rounded-badge ${liveConnected ? "animate-pulse bg-success" : "bg-danger"}`} />
+            {liveConnected ? m.admin.ordersPage.live : m.admin.ordersPage.liveOff}
+          </Badge>
+        ) : undefined
+      }
+      actions={
+        live ? (
+          <>
             <AutoModeToggle
               compact
               className=""
@@ -2111,280 +2291,135 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
                 onToggle={ringer.setEnabled}
               />
             )}
-          </div>
-        </PageHero>
-      )}
-
-      {/* ══════════════════════════════════════════════════════════
-          **الأرقامُ تُضغط فتفلتر** — بشرط الخادم نفسِه الذي عدّها
-          ══════════════════════════════════════════════════════════ */}
-      {live && countsFailed && !counts0 && (
-        <BoardCounters counts={null} active={board} failed onRetry={() => void loadBoard()} onPick={() => undefined} />
-      )}
-      {live && counts0 && (
-        <div role="group" aria-label={BOARD.countersLabel} className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
-          {LIVE_TILES.map(({ k, icon, hot }) => (
-            <div key={k} className={`grid ${board === k ? "rounded-card ring-2 ring-accent" : ""}`}>
-              <Tile
-                icon={icon}
-                label={(BOARD.counters as Record<string, string>)[k] ?? k}
-                value={fmtNum(counts0[k] ?? 0)}
-                tone={tone(counts0[k], hot)}
-                onClick={() => pickBoard(k)}
-              />
-            </div>
-          ))}
-        </div>
-      )}
-      {/* **أعدادُ الحالات سطرٌ صغير** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — «الكل 9 · تسلّم 4 · فشل 2 …»، وكلُّ رقمٍ
-          يُضغط فيفلتر، والمختارُ مُعلَّم. **و«مسترجع» يغيب حين لا شيءَ فيه.** */}
-      {!live && counts && !inverted && (
-        <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
-          {[{ k: "", label: H.countAll, n: closedTotal }, ...HISTORY_COUNTS.map((c) => ({ ...c, n: C[c.k] ?? 0 }))].map(
-            ({ k, label, n }) => {
-              const on = status === k;
-              // **ولكلّ حالةٍ لونُها** (ملاحظةُ المالك ٢٠٢٦-١٠-٣١) — نقطةٌ صغيرةٌ قبل الاسم.
-              const dot =
-                k === "delivered" ? "text-success" : k === "failed" ? "text-danger" : k === "cancelled" ? "text-warning" : "text-ink-muted";
-              return (
-                <button
-                  key={k || "all"}
-                  type="button"
-                  aria-pressed={on}
-                  onClick={() => pickStatus(k)}
-                  className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 transition-colors ${
-                    on ? "border-accent bg-accent font-bold text-on-bright" : "border-line-soft bg-surface text-ink hover:border-accent"
-                  }`}
-                >
-                  {k && <span aria-hidden className={`h-2 w-2 rounded-full bg-current ${on ? "" : dot}`} />}
-                  <span>{label}</span>
-                  <span
-                    className={`min-w-6 rounded-full px-1.5 text-center text-xs font-bold tabular-nums ${
-                      on ? "bg-surface text-accent-text" : "bg-field text-ink"
-                    }`}
-                  >
-                    {fmtNum(n)}
-                  </span>
-                </button>
-              );
-            },
-          )}
-        </div>
-      )}
-
-      {/* **ولا شريطَ طوارئ هنا** — شريطُ اللوحة العامّ (`layout.tsx`) يظهر لكلّ من يملك الطوارئ،
-          وكان يُرسم هنا مرّةً ثانيةً لمن لا يملك الدعم (دفعةُ التصميم ١). */}
-
-      {/* **«بدها انتباهك» بطاقةٌ واحدة** (تدقيقُ ٢٠٢٦-١٠-٢٧) — الجديدةُ والعالقةُ بقسمين، بدل شرائطَ
-          فوق بعضها قبل أن تصل الطلبات. */}
-      {live && (
-        <AttentionCard
-          newOrders={newOrders}
-          newTotal={newTotal}
-          alerts={alerts}
-          alertsFailed={alertsFailed}
-          onRetryAlerts={() => void loadAlerts()}
-          now={now}
-          canAck={canAck}
-          onAcked={refreshAll}
-          onOpen={(id, number) => openOrder(id, number)}
-          officeStatus={OFFICE_STATUS}
-          alertReasons={m.admin.ordersPage.alertReasons as Record<string, string>}
-        />
-      )}
-
-      {!live && stale && (
-        <Alert tone="info" className="mb-4">
-          <span className="flex flex-wrap items-center gap-2">
-            {H.newStrip}
+            <Button variant="secondary" onClick={refreshAll}>
+              {H.refresh}
+            </Button>
+          </>
+        ) : (
+          <>
+            {can("finance.export") && (
+              <Button variant="secondary" disabled={exporting || inverted} onClick={() => void exportList()}>
+                {H.export}
+              </Button>
+            )}
             <Button variant="secondary" onClick={() => void load()}>
               {H.refresh}
             </Button>
-          </span>
-        </Alert>
-      )}
-      {exportErr && (
-        <Alert tone="warning" className="mb-4" onDismiss={() => setExportErr("")}>
-          {exportErr}
-        </Alert>
-      )}
-
-      {/* ══════════════════════════════════════════════════════════
-          **الفلاترُ في بطاقةٍ واحدة** — البحثُ أوّلاً ثمّ ما يضيّق
-          ══════════════════════════════════════════════════════════ */}
-      {live && (
-        <section className="surface mb-4 flex flex-wrap items-center gap-2 p-3">
-          <div className="w-full sm:w-72">
-            <Input
-              icon={<IconSearch />}
-              placeholder={m.admin.ordersPage.searchPlaceholder}
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setPage(1);
-              }}
+          </>
+        )
+      }
+      notices={
+        <>
+          {/* **«بدها انتباهك» بطاقةٌ واحدة** (تدقيقُ ٢٠٢٦-١٠-٢٧) — الجديدةُ والعالقةُ بقسمين. */}
+          {live && (
+            <AttentionCard
+              newOrders={newOrders}
+              newTotal={newTotal}
+              alerts={alerts}
+              alertsFailed={alertsFailed}
+              onRetryAlerts={() => void loadAlerts()}
+              now={now}
+              canAck={canAck}
+              onAcked={refreshAll}
+              onOpen={(id, number) => openOrder(id, number)}
+              officeStatus={OFFICE_STATUS}
+              alertReasons={m.admin.ordersPage.alertReasons as Record<string, string>}
             />
-          </div>
-          {/* **والفلترُ الفعّالُ شريحةٌ تُمسح** — من الرئيسيّة أو من رقمٍ ضُغط. */}
-          {liveFiltered && (
-            <span className="inline-flex flex-wrap items-center gap-2 text-sm">
-              <span className="text-ink-muted">{BOARD.activeFilter}:</span>
-              <Badge variant="accent">{liveFilterLabel}</Badge>
-              <Button variant="secondary" onClick={clearLive}>
-                {BOARD.showAll}
-              </Button>
-            </span>
           )}
-        </section>
-      )}
-
-      {/* ══════════════════════════════════════════════════════════
-          **مُرشِّحاتُ السجلّ في سطرٍ واحد** (قرارُ المالك ٢٠٢٦-١٠-٣٠: «الشكل بشع») — البحثُ بعرض
-          الصفحة، وتحته المدّةُ والنوعُ والدفعُ والمتجرُ والسائقُ قوائمَ صغيرة، ومربّعا «متأخرة» و«العمولة
-          ممحية». **ولا سطرَ شرحٍ تحتها**، وتلتفّ على الجوّال وحدَه.
-          ══════════════════════════════════════════════════════════ */}
-      {!live && (
-        <section className="surface relative z-30 mb-3 flex flex-col gap-2 p-3">
-          <Input
-            icon={<IconSearch />}
-            placeholder={H.searchPlaceholder}
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setPage(1);
-            }}
-          />
-          <div className="flex flex-wrap items-center gap-2">
-            <Select
-              aria-label={H.periodLabel}
-              className="!w-auto"
-              value={periodValue}
-              onChange={(e) => pickPeriod(e.target.value)}
-            >
-              {periodChips.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.id === "" ? `${H.periodLabel}: ${c.label}` : c.label}
-                </option>
-              ))}
-            </Select>
-            {showDates && (
-              <span className="flex flex-wrap items-center gap-1.5">
-                <input
-                  id="h-from"
-                  type="date"
-                  aria-label={m.admin.ordersPage.range.from}
-                  className="rounded-control border border-line bg-field px-2 py-1.5 text-sm outline-none focus:border-primary"
-                  value={from}
-                  onChange={(e) => {
-                    setFrom(e.target.value);
-                    setPage(1);
-                  }}
-                />
-                <span aria-hidden className="text-ink-muted">←</span>
-                <input
-                  id="h-to"
-                  type="date"
-                  aria-label={m.admin.ordersPage.range.to}
-                  className="rounded-control border border-line bg-field px-2 py-1.5 text-sm outline-none focus:border-primary"
-                  value={to}
-                  onChange={(e) => {
-                    setTo(e.target.value);
-                    setPage(1);
-                  }}
-                />
+          {!live && stale && (
+            <Alert tone="info">
+              <span className="flex flex-wrap items-center gap-2">
+                {H.newStrip}
+                <Button variant="secondary" onClick={() => void load()}>
+                  {H.refresh}
+                </Button>
               </span>
-            )}
-            <Select
-              aria-label={H.kindLabel}
-              className="!w-auto"
-              value={kind}
-              onChange={(e) => {
-                setKind(e.target.value);
-                setPage(1);
-              }}
-            >
-              {kindChips.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.label}
-                </option>
+            </Alert>
+          )}
+          {exportErr && (
+            <Alert tone="warning" onDismiss={() => setExportErr("")}>
+              {exportErr}
+            </Alert>
+          )}
+        </>
+      }
+      toolbar={toolbar}
+      summary={
+        <>
+          {/* ══════════════════════════════════════════════════════════
+              **الأرقامُ تُضغط فتفلتر** — بشرط الخادم نفسِه الذي عدّها
+              ══════════════════════════════════════════════════════════ */}
+          {live && countsFailed && !counts0 && (
+            <BoardCounters counts={null} active={board} failed onRetry={() => void loadBoard()} onPick={() => undefined} />
+          )}
+          {live && counts0 && (
+            <div role="group" aria-label={BOARD.countersLabel} className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+              {LIVE_TILES.map(({ k, icon, hot }) => (
+                <div key={k} className={`grid ${board === k ? "rounded-card ring-2 ring-accent" : ""}`}>
+                  <Tile
+                    icon={icon}
+                    label={(BOARD.counters as Record<string, string>)[k] ?? k}
+                    value={fmtNum(counts0[k] ?? 0)}
+                    tone={tone(counts0[k], hot)}
+                    onClick={() => pickBoard(k)}
+                  />
+                </div>
               ))}
-            </Select>
-            <Select
-              aria-label={H.payLabel}
-              className="!w-auto"
-              value={pay}
-              onChange={(e) => {
-                setPay(e.target.value);
-                setPage(1);
-              }}
-            >
-              {payChips.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.label}
-                </option>
-              ))}
-            </Select>
-            {storesState === "ok" && storeList.length > 0 && (
-              <SearchSelect
-                className="w-full sm:w-52"
-                ariaLabel={m.admin.ordersPage.range.allStores}
-                allLabel={m.admin.ordersPage.range.allStores}
-                value={merchantId}
-                options={storeList.map((x) => ({ value: x.id, label: storeLabel(x.name, x.number) }))}
-                onChange={(v) => {
-                  setMerchantId(v);
-                  setPage(1);
-                }}
-              />
-            )}
-            {driversState === "ok" && driverList.length > 0 && (
-              <SearchSelect
-                className="w-full sm:w-52"
-                ariaLabel={m.admin.ordersPage.range.allDrivers}
-                allLabel={m.admin.ordersPage.range.allDrivers}
-                value={driverId}
-                options={driverList.map((d) => ({ value: d.id, label: d.full_name || d.phone }))}
-                onChange={(v) => {
-                  setDriverId(v);
-                  setPage(1);
-                }}
-              />
-            )}
-            <Checkbox
-              id="h-late"
-              label={H.lateOnly}
-              checked={lateOnly}
-              onChange={(e) => {
-                setLateOnly(e.target.checked);
-                setPage(1);
-              }}
-            />
-            <Checkbox
-              id="h-waived"
-              label={H.waivedOnly}
-              checked={waivedOnly}
-              onChange={(e) => {
-                setWaivedOnly(e.target.checked);
-                setPage(1);
-              }}
-            />
-            {historyFiltered && (
-              <button type="button" className="text-xs font-medium text-accent-text underline" onClick={clearHistory}>
-                {H.clearFilters}
-              </button>
-            )}
-          </div>
-        </section>
-      )}
+            </div>
+          )}
+          {/* **أعدادُ الحالات سطرٌ صغير** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — «الكل 9 · تسلّم 4 · فشل 2 …»، وكلُّ رقمٍ
+              يُضغط فيفلتر، والمختارُ مُعلَّم. **و«مسترجع» يغيب حين لا شيءَ فيه.** */}
+          {!live && counts && !inverted && (
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              {[{ k: "", label: H.countAll, n: closedTotal }, ...HISTORY_COUNTS.map((c) => ({ ...c, n: C[c.k] ?? 0 }))].map(
+                ({ k, label, n }) => {
+                  const on = status === k;
+                  // **ولكلّ حالةٍ لونُها** (ملاحظةُ المالك ٢٠٢٦-١٠-٣١) — نقطةٌ صغيرةٌ قبل الاسم.
+                  const dot =
+                    k === "delivered" ? "text-success" : k === "failed" ? "text-danger" : k === "cancelled" ? "text-warning" : "text-ink-muted";
+                  return (
+                    <button
+                      key={k || "all"}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => pickStatus(k)}
+                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 transition-colors ${
+                        on ? "border-accent bg-accent font-bold text-on-bright" : "border-line-soft bg-surface text-ink hover:border-accent"
+                      }`}
+                    >
+                      {k && <span aria-hidden className={`h-2 w-2 rounded-full bg-current ${on ? "" : dot}`} />}
+                      <span>{label}</span>
+                      <span
+                        className={`min-w-6 rounded-full px-1.5 text-center text-xs font-bold tabular-nums ${
+                          on ? "bg-surface text-accent-text" : "bg-field text-ink"
+                        }`}
+                      >
+                        {fmtNum(n)}
+                      </span>
+                    </button>
+                  );
+                },
+              )}
+            </div>
+          )}
+        </>
+      }
+      pagination={
+        data && !inverted
+          ? { page, total: data.total, perPage: data.per_page, onChange: setPage }
+          : undefined
+      }
+    >
+      {/* **ولا شريطَ طوارئ هنا** — شريطُ اللوحة العامّ (`layout.tsx`) يظهر لكلّ من يملك الطوارئ. */}
 
       {inverted && (
-        <Alert tone="warning" className="mb-4">
+        <Alert tone="warning">
           {H.invertedRange}
         </Alert>
       )}
 
       {error && (
-        <Alert className="mb-4">
+        <Alert>
           <span className="flex flex-wrap items-center gap-2">
             {BOARD.loadFailed}
             {m.common.listSeparator}
@@ -2397,7 +2432,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       )}
       {/* **وحالٌ منتهيةٌ على شاشة العمل تُفسَّر** (المشكلة ٣٠) — كانت تعود فارغةً بلا كلمة. */}
       {live && status && CLOSED_STATUSES.has(status) && (
-        <Alert tone="info" className="mb-4">
+        <Alert tone="info">
           <span className="flex flex-wrap items-center gap-2">
             {BOARD.closedOnLive}
             <Link href={`/dashboard/history?status=${status}`} className="font-medium underline">
@@ -2407,7 +2442,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         </Alert>
       )}
       {focusMissing && (
-        <Alert tone="warning" className="mb-4">
+        <Alert tone="warning">
           {BOARD.focusMissing}
         </Alert>
       )}
@@ -2417,7 +2452,6 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       {returnedNumber !== null && (
         <Alert
           tone="info"
-          className="mb-4"
           // **ورقمُ الطلب بلا فاصلة آلاف** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كما يُكتب في كلّ مكانٍ ويُبحث به.
           title={m.admin.ordersPage.door.returnedTitle.replace("{n}", `#${returnedNumber}`)}
           onDismiss={() => setReturnedNumber(null)}
@@ -2557,6 +2591,8 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           }
           empty={BOARD.emptyLive}
           actions={(o) => (
+            <>
+            <StoryButton o={o} onOpen={() => setPanelId(o.id)} />
             <OrderActions
               o={o}
               onChanged={load}
@@ -2569,20 +2605,13 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
               requirePhoto={delivery.photo}
               codeRequired={delivery.code}
             />
+            </>
           )}
         />
       )}
 
-      {!live && panelId && <OrderDetailPanel orderId={panelId} onClose={() => setPanelId("")} />}
-
-      {/* **ولا سطرَ إجماليٍّ تحت القائمة** (قرارُ المالك ٢٠٢٦-٠٨-١٣) — والترقيمُ من المكوّن المشترك،
-          **ولا يظهر لصفحةٍ واحدة.** */}
-      {data && !inverted && data.total > data.per_page && (
-        <div className="mt-4 flex justify-center">
-          <Pagination page={page} total={data.total} perPage={data.per_page} onChange={setPage} />
-        </div>
-      )}
-    </div>
+      {panelId && <OrderDetailPanel orderId={panelId} onClose={() => setPanelId("")} />}
+    </AdminPage>
   );
 }
 
@@ -2647,6 +2676,39 @@ const FAULT_LABELS: Record<string, string> = m.admin.ordersPage.door.faults;
  * **بطاقةُ طلبٍ في السجلّ** — للقراءة السريعة: الرقمُ والنوعُ وما انتهى إليه، ثمّ مين أنهاه وليش،
  * ثمّ من المتجر للزبون والسائق، ثمّ الإجماليُّ كبيراً، وزرّان بعرض البطاقة.
  */
+/** **اسمٌ يفتح ملفَّه** — بلا معرّفٍ يبقى نصّاً. */
+function PersonName({ href, name, className = "" }: { href: string; name: string; className?: string }) {
+  const text = name || "—";
+  if (!href || !name) return <span className={className}>{text}</span>;
+  return (
+    <AdminLink href={href} className={`${className} hover:text-accent-text hover:underline`}>
+      {text}
+    </AdminLink>
+  );
+}
+
+/** **«قصة الطلب» على بطاقة شاشة العمل** — يفتح الملفَّ نفسَه الذي في السجلّ. */
+function StoryButton({ o, onOpen }: { o: OrderRow; onOpen: () => void }) {
+  return (
+    <>
+      <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={onOpen}>
+        <span className="flex items-center gap-1">
+          <IconRoute size={14} />
+          {KO.story}
+        </span>
+      </Button>
+      {o.customer_phone && (
+        <AdminLink
+          href={`/dashboard/history?q=${encodeURIComponent(o.customer_phone)}`}
+          className="inline-flex items-center rounded-control border border-line-soft px-3 py-1.5 text-xs hover:bg-row-hover"
+        >
+          {KO.allOfCustomer}
+        </AdminLink>
+      )}
+    </>
+  );
+}
+
 function HistoryCard({
   o,
   focused,
@@ -2769,13 +2831,18 @@ function HistoryCard({
       <CardSection title={C.order}>
         <p className="flex flex-wrap items-center gap-x-1.5">
           <IconStore size={14} className="shrink-0 text-warning" />
-          <span className="font-medium">{o.kind === "custom" ? kindLabel(o) : o.merchant_name || "—"}</span>
+          {o.kind === "custom" ? (
+            <span className="font-medium">{kindLabel(o)}</span>
+          ) : (
+            <PersonName href={o.merchant_id ? `/dashboard/merchants/${o.merchant_id}` : ""} name={o.merchant_name} className="font-medium" />
+          )}
           <span aria-hidden className="text-ink-muted">←</span>
           <IconUser size={14} className="shrink-0 text-accent-text" />
-          <span className="font-medium">{o.customer_name || "—"}</span>
+          <PersonName href={o.customer_id ? `/dashboard/users/${o.customer_id}` : ""} name={o.customer_name} className="font-medium" />
           <span dir="ltr" className="text-xs text-ink-muted">
             {o.customer_phone || o.customer_phone_masked}
           </span>
+          <ContactButtons phone={o.customer_phone} name={o.customer_name} />
         </p>
         {(o.zone_name || o.address_text) && (
           <p className="flex items-start gap-1.5 text-xs">
@@ -2787,12 +2854,13 @@ function HistoryCard({
         {o.driver_name && (
           <p className="flex flex-wrap items-center gap-x-1.5">
             <IconMoto size={14} className="shrink-0 text-success" />
-            <span>{o.driver_name}</span>
+            <PersonName href={o.driver_id ? `/dashboard/users/${o.driver_id}` : ""} name={o.driver_name} />
             {o.driver_phone && (
               <span dir="ltr" className="text-xs text-ink-muted">
                 {o.driver_phone}
               </span>
             )}
+            <ContactButtons phone={o.driver_phone} name={o.driver_name} />
           </p>
         )}
         {shown.length > 0 && (
@@ -2954,6 +3022,14 @@ function HistoryCard({
             {H.detailsBtn}
           </span>
         </Button>
+        {o.customer_phone && (
+          <AdminLink
+            href={`/dashboard/history?q=${encodeURIComponent(o.customer_phone)}`}
+            className="inline-flex items-center rounded-control border border-line-soft px-3 py-1.5 text-xs hover:bg-row-hover"
+          >
+            {KO.allOfCustomer}
+          </AdminLink>
+        )}
         {(hasActions || waivable) && (
           <Button
             variant={menuOpen ? "primary" : "secondary"}

@@ -26,6 +26,8 @@ import {
 } from "@rahalgo/i18n";
 import {
   Alert,
+  AdminLink,
+  ContactButtons,
   Badge,
   Button,
   Drawer,
@@ -125,6 +127,9 @@ interface Detail {
   kind?: string;
   delivery_mode?: string;
   custom_mode?: string;
+  customer_id?: string;
+  merchant_id?: string;
+  driver_id?: string | null;
   customer_name: string;
   customer_phone?: string;
   customer_phone_masked?: string;
@@ -303,24 +308,25 @@ export function OrderDetailPanel({
               </span>
             </p>
             <InfoRow icon={<IconUser size={15} />} label={H.infoCustomer}>
-              {order.customer_name || "—"}
-              <span dir="ltr" className="ms-2 text-xs text-ink-muted">
-                {order.customer_phone || order.customer_phone_masked || ""}
+              <span className="inline-flex flex-wrap items-center gap-2">
+                <WhoLink href={order.customer_id ? `/dashboard/users/${order.customer_id}` : ""} name={order.customer_name} />
+                <span dir="ltr" className="text-xs text-ink-muted">
+                  {order.customer_phone || order.customer_phone_masked || ""}
+                </span>
+                <ContactButtons phone={order.customer_phone} name={order.customer_name} />
               </span>
             </InfoRow>
             {order.merchant_name && (
               <InfoRow icon={<IconStore size={15} />} label={H.infoStore}>
-                {order.merchant_name}
+                <WhoLink href={order.merchant_id ? `/dashboard/merchants/${order.merchant_id}` : ""} name={order.merchant_name} />
               </InfoRow>
             )}
             {order.driver_name && (
               <InfoRow icon={<IconMoto size={15} />} label={H.infoDriver}>
-                {order.driver_name}
-                {order.driver_phone && (
-                  <span dir="ltr" className="ms-2 text-xs text-ink-muted">
-                    {order.driver_phone}
-                  </span>
-                )}
+                <span className="inline-flex flex-wrap items-center gap-2">
+                  <WhoLink href={order.driver_id ? `/dashboard/users/${order.driver_id}` : ""} name={order.driver_name} />
+                  <ContactButtons phone={order.driver_phone} name={order.driver_name} showNumber />
+                </span>
               </InfoRow>
             )}
             {order.customer_live && (
@@ -788,6 +794,16 @@ function MoneySection({ o }: { o: Detail }) {
 }
 
 /** **سطرٌ بعنوانه وأيقونته** — العنوانُ يميناً والقيمةُ يساراً. */
+function WhoLink({ href, name }: { href: string; name: string }) {
+  const text = name || "—";
+  if (!href || !name) return <span>{text}</span>;
+  return (
+    <AdminLink href={href} className="hover:text-accent-text hover:underline">
+      {text}
+    </AdminLink>
+  );
+}
+
 function InfoRow({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-start justify-between gap-3">

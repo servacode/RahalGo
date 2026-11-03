@@ -16,16 +16,12 @@
     "subtitle": 1
   },
   "apps/rahalgo/src/app/dashboard/emergencies/[id]/page.tsx": {
-    "tinyText": 9,
-    "rawButton": 1,
-    "rawContact": 1
+    "tinyText": 8,
+    "rawButton": 1
   },
   "apps/rahalgo/src/app/dashboard/emergencies/page.tsx": {
     "tinyText": 3,
-    "handEmpty": 2,
-    "helperText": 3,
-    "rawContact": 1,
-    "subtitle": 1
+    "handEmpty": 2
   },
   "apps/rahalgo/src/app/dashboard/expansion/page.tsx": {
     "tinyText": 6,
@@ -67,17 +63,15 @@
     "subtitle": 1
   },
   "apps/rahalgo/src/app/dashboard/ops/page.tsx": {
-    "tinyText": 3,
-    "helperText": 5,
-    "subtitle": 1
+    "tinyText": 2,
+    "helperText": 4
   },
   "apps/rahalgo/src/app/dashboard/opsmap/page.tsx": {
     "tinyText": 2,
     "rawButton": 4,
     "handEmpty": 1,
     "helperText": 4,
-    "rawContact": 3,
-    "subtitle": 1
+    "rawContact": 3
   },
   "apps/rahalgo/src/app/dashboard/payouts/page.tsx": {
     "tinyText": 13,
@@ -120,10 +114,6 @@
     "handEmpty": 2,
     "helperText": 2,
     "subtitle": 2
-  },
-  "apps/rahalgo/src/app/dashboard/tickets/page.tsx": {
-    "tinyText": 1,
-    "rawButton": 1
   },
   "apps/rahalgo/src/app/dashboard/treasury/page.tsx": {
     "subtitle": 1
@@ -270,8 +260,7 @@
     "tinyText": 3
   },
   "apps/rahalgo/src/components/admin/orders/BoardWidgets.tsx": {
-    "rawButton": 1,
-    "rawContact": 1
+    "rawButton": 1
   },
   "apps/rahalgo/src/components/admin/orders/DoorPanel.tsx": {
     "rawContact": 1
@@ -282,10 +271,9 @@
   },
   "apps/rahalgo/src/components/admin/orders/OrdersScreen.tsx": {
     "tinyText": 5,
-    "rawButton": 4,
+    "rawButton": 3,
     "handEmpty": 2,
-    "statusColor": 5,
-    "subtitle": 1
+    "statusColor": 5
   },
   "apps/rahalgo/src/components/admin/roles/RolesScreen.tsx": {
     "tinyText": 2,
@@ -325,8 +313,8 @@
     "rawButton": 4
   },
   "apps/rahalgo/src/components/admin/support/tickets.tsx": {
-    "tinyText": 8,
-    "rawButton": 2,
+    "tinyText": 5,
+    "rawButton": 1,
     "handEmpty": 1,
     "statusColor": 8
   },

@@ -22,7 +22,8 @@ import {
   Button,
   IconBell,
   IconBellOff,
-  IconPhone,
+  AdminLink,
+  ContactButtons,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
@@ -82,7 +83,7 @@ export function BoardCounters({
 }) {
   if (failed && !counts) {
     return (
-      <Alert className="mb-4" tone="warning">
+      <Alert tone="warning">
         <span className="flex flex-wrap items-center gap-2">
           {B.countersFailed}
           <Button variant="secondary" onClick={onRetry}>
@@ -96,7 +97,7 @@ export function BoardCounters({
     <div
       role="group"
       aria-label={B.countersLabel}
-      className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6"
+      className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6"
     >
       {COUNTER_FILTERS.map((k) => {
         const on = active === k;
@@ -245,7 +246,7 @@ export function AttentionCard({
   }
 
   return (
-    <section className="surface mb-4 overflow-hidden" role="alert">
+    <section className="surface overflow-hidden" role="alert">
       <h2 className="heading-card flex items-center gap-2 border-b border-line-soft px-4 py-3">
         <span className="h-2.5 w-2.5 animate-pulse rounded-badge bg-danger" />
         {B.attentionTitle}
@@ -336,6 +337,7 @@ function seenTone(mins: number | null, staleMin: number): "success" | "warning" 
  * الرسم وحدَها**، فسائقٌ اختفى عشرين دقيقة يُرى أحمرَ ولو لم يقع حدث.
  */
 export function DriverLine({
+  href = "",
   name,
   phone,
   seenAt,
@@ -343,6 +345,8 @@ export function DriverLine({
   staleMin,
   hideSeen = false,
 }: {
+  /** ملفُّ السائق — بلا رابطٍ يبقى الاسمُ نصّاً. */
+  href?: string;
   name: string;
   phone: string | null;
   seenAt: string | null | undefined;
@@ -358,20 +362,14 @@ export function DriverLine({
       className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm"
       onClick={(e) => e.stopPropagation()}
     >
-      <span className="font-medium text-ink">{name}</span>
-      {phone && (
-        <a
-          href={`tel:${phone}`}
-          aria-label={m.admin.ordersPage.callDriver}
-          title={m.admin.ordersPage.callDriver}
-          className="inline-flex items-center gap-1 text-accent-text"
-        >
-          <IconPhone size={14} />
-          <span dir="ltr" className="text-xs">
-            {phone}
-          </span>
-        </a>
+      {href ? (
+        <AdminLink href={href} className="font-medium text-ink hover:text-accent-text hover:underline">
+          {name}
+        </AdminLink>
+      ) : (
+        <span className="font-medium text-ink">{name}</span>
       )}
+      {phone && <ContactButtons phone={phone} name={name} showNumber />}
       {!hideSeen && (
       <Badge variant={tone}>
         {mins === null

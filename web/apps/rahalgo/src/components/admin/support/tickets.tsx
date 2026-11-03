@@ -14,6 +14,10 @@ import {
 } from "@rahalgo/i18n";
 import {
   Pagination,
+  AdminLink,
+  ContactButtons,
+  FilterBar,
+  FilterSelect,
   Alert,
   useLiveRefresh,
   Button,
@@ -227,86 +231,46 @@ export function TicketsView() {
   const tickets = data?.tickets ?? [];
   const filtered = status !== "";
   const lateN = data?.late ?? 0;
-  const lateH = data?.late_hours ?? 2;
   /** **وتغييرُ الفلتر يرجع للصفحة الأولى.** */
   const pickStatus = (s: string) => {
     setStatus(s);
     setPage(1);
   };
 
-  // **تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦)** — رقمان يُضغطان، والشرحُ وزرُّ الشكوى الجديدة
-  // والفلترُ في بطاقةٍ واحدة، وكرتٌ لكلّ شكوى بأفعالها. **ولا جدول.**
+  // **قالبُ اللوحة الواحد** — شريطُ فلاترٍ واحد (الحالةُ قائمة، و«المتأخّرة» بعددها)، ثمّ بطاقةٌ لكلّ شكوى.
+  const statusOptions = [
+    { id: "", label: T.allStatuses },
+    { id: "unresolved", label: T.filterUnresolved },
+    { id: "late", label: lateN > 0 ? `${T.filterLate} (${fmtNum(lateN)})` : T.filterLate },
+    ...Object.entries(STATUS_LABELS).map(([k, v]) => ({ id: k, label: v })),
+  ];
   return (
-    <div>
-      {/* **رأسٌ واحدٌ احترافيّ** (المالك ٢٠٢٦-١٠-٢٧: «هذا التصميم اعمله احترافي») — العنوانُ والعددُ وزرُّ
-          الشكوى الجديدة بسطر، وتحته الحالاتُ أزرارٌ تُضغط بدل القائمة المنسدلة، و«المتأخّرة» بعددها وبالأحمر. */}
-      <section className="surface mb-4 overflow-hidden">
-        <div className="flex flex-wrap items-center gap-3 p-4">
-          <span className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-accent text-on-bright">
-            <IconSupport size={22} />
-          </span>
-          <div className="min-w-0 flex-1">
-            <h2 className="heading-card flex flex-wrap items-center gap-2">
-              {T.headTitle}
-              <Badge variant="neutral">{data ? T.headCount.replace("{n}", fmtNum(data.total)) : "\u2026"}</Badge>
-              {lateN > 0 && (
-                <button type="button" onClick={() => pickStatus("late")}>
-                  <Badge variant="danger">{T.headLate.replace("{n}", fmtNum(lateN))}</Badge>
-                </button>
-              )}
-            </h2>
-            <p className="text-sm text-ink-muted">{T.intro}</p>
-          </div>
-          <Button
-            onClick={() => setCreating(true)}
-            className="flex w-full items-center justify-center gap-1.5 sm:w-auto"
-          >
+    <div className="space-y-4">
+      <FilterBar
+        filtered={filtered}
+        onClear={() => pickStatus("")}
+        end={
+          <Button onClick={() => setCreating(true)} className="flex items-center justify-center gap-1.5">
             <IconAdd size={16} />
             {T.newTicket}
           </Button>
-        </div>
-        <div className="flex flex-wrap gap-1.5 border-t border-line-soft bg-field px-4 py-3">
-          {[
-            { id: "", label: T.allStatuses },
-            { id: "unresolved", label: T.filterUnresolved },
-            { id: "late", label: T.filterLate, late: true },
-            ...Object.entries(STATUS_LABELS).map(([k, v]) => ({ id: k, label: v })),
-          ].map((c) => {
-            const on = status === c.id;
-            const isLate = "late" in c && c.late;
-            return (
-              <button
-                key={c.id || "all"}
-                type="button"
-                onClick={() => pickStatus(c.id)}
-                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-bold transition-colors ${
-                  on
-                    ? isLate
-                      ? "bg-danger-solid text-on-solid"
-                      : "bg-accent text-on-bright"
-                    : "border border-line-soft text-ink-muted hover:bg-row-hover hover:text-ink"
-                }`}
-              >
-                {c.label}
-                {isLate && (
-                  <span
-                    className={`rounded-full px-1.5 text-2xs tabular-nums ${
-                      on ? "bg-surface text-danger" : lateN > 0 ? "bg-danger-solid text-on-solid" : "bg-field"
-                    }`}
-                  >
-                    {fmtNum(lateN)}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-        <p className="border-t border-line-soft px-4 py-2 text-2xs text-ink-muted">
-          {T.lateRule.replace("{h}", fmtNum(lateH))}
-        </p>
-      </section>
+        }
+      >
+        <FilterSelect id="tk-status" label={T.allStatuses} value={status} onChange={pickStatus}>
+          {statusOptions.map((c) => (
+            <option key={c.id || "all"} value={c.id}>
+              {c.label}
+            </option>
+          ))}
+        </FilterSelect>
+        {lateN > 0 && status !== "late" && (
+          <button type="button" onClick={() => pickStatus("late")}>
+            <Badge variant="danger">{T.headLate.replace("{n}", fmtNum(lateN))}</Badge>
+          </button>
+        )}
+      </FilterBar>
 
-      {error && <Alert className="mb-4">{error}</Alert>}
+      {error && <Alert>{error}</Alert>}
 
       {data === null && !error ? (
         <LoadingState variant="text" />
@@ -317,7 +281,6 @@ export function TicketsView() {
               <IconSupport size={28} />
             </span>
             <h2 className="heading-section">{filtered ? T.empty : T.emptyAll}</h2>
-            <p className="max-w-md text-sm text-ink-muted">{filtered ? T.emptyFilteredHint : T.emptyHint}</p>
           </section>
         )
       ) : (
@@ -330,7 +293,7 @@ export function TicketsView() {
 
       {/* **ولا سطرَ للإجمالي** (قرارُ المالك ٢٠٢٦-٠٨-١٦) — والترقيمُ لا يظهر لصفحةٍ واحدة. */}
       {data && data.total > data.per_page && (
-        <div className="mt-4 flex justify-center">
+        <div className="flex justify-center">
           <Pagination page={page} total={data.total} perPage={data.per_page} onChange={setPage} />
         </div>
       )}
@@ -395,12 +358,21 @@ function TicketCard({ t, onOpen }: { t: Ticket; onOpen: () => void }) {
         </span>
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-1.5">
-            <span className="truncate font-bold">{who}</span>
+            {t.complainant_id && (t.complainant_kind === "customer" || t.complainant_kind === "driver") ? (
+              <AdminLink href={`/dashboard/users/${t.complainant_id}`} className="truncate font-bold hover:text-accent-text hover:underline">
+                {who}
+              </AdminLink>
+            ) : (
+              <span className="truncate font-bold">{who}</span>
+            )}
             {t.complainant_kind && <Badge variant="neutral">{KIND_LABELS[t.complainant_kind]}</Badge>}
           </span>
           {phone && (
-            <span className="block text-2xs text-ink-muted" dir="ltr">
-              {phone}
+            <span className="mt-1 flex items-center gap-2">
+              <span className="text-xs text-ink-muted" dir="ltr">
+                {phone}
+              </span>
+              <ContactButtons phone={phone} name={who} />
             </span>
           )}
         </span>
@@ -439,7 +411,7 @@ function TicketCard({ t, onOpen }: { t: Ticket; onOpen: () => void }) {
           {t.order_number ? (
             <OpenLink
               allowed={canOrder}
-              href={`/dashboard/orders?q=${t.order_number}`}
+              href={t.order_id ? `/dashboard/history?order=${t.order_id}` : `/dashboard/orders?q=${t.order_number}`}
               dir="ltr"
               className="mt-0.5 block text-sm font-bold tabular-nums text-primary hover:underline"
             >

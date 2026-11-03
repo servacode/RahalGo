@@ -52,7 +52,8 @@ import {
   Textarea,
   useLiveData,
   IconWarning,
-  IconPhone,
+  AdminLink,
+  ContactButtons,
   IconCheck,
   IconLocation,
   IconNote,
@@ -78,6 +79,7 @@ const PickMap = dynamic(() => import("@rahalgo/ui/map").then((mod) => mod.PickMa
 
 const m = getMessages(defaultLocale);
 const R = m.admin.emergencyRoom;
+const KO = m.admin.kit.ops;
 const statusText = (s: string) => (m.orders.status as Record<string, string>)[s] ?? s;
 const paymentText = (s: string) => (m.orders.payment as Record<string, string>)[s] ?? s;
 const ago = (iso: string) => fmtSpan(Math.max(0, (Date.now() - Date.parse(iso)) / 1000));
@@ -165,10 +167,10 @@ const OUTCOME_ICON: Record<Outcome, typeof IconRoute> = {
 function Call({ phone, label }: { phone: string | undefined; label: string }) {
   if (!phone) return null;
   return (
-    <ButtonLink href={`tel:${phone}`} variant="secondary" className="w-full">
-      <IconPhone size={15} />
-      {label}
-    </ButtonLink>
+    <span className="flex items-center justify-between gap-2 rounded-control border border-line-soft px-3 py-1.5">
+      <span className="text-sm">{label}</span>
+      <ContactButtons phone={phone} showNumber />
+    </span>
   );
 }
 
@@ -305,7 +307,6 @@ export default function EmergencyPage() {
       doneText: byAt(d.acknowledged_by, d.acknowledged_at),
       body: (
         <>
-          <p className="text-sm text-ink-muted">{R.ackHint}</p>
           <Button variant="danger" className="w-full" disabled={busy !== ""} onClick={() => void post("ack", "ack", {})}>
             {R.ack}
           </Button>
@@ -321,10 +322,6 @@ export default function EmergencyPage() {
       doneText: byAt(d.driver_ok_by, d.driver_ok_at),
       body: (
         <>
-          <p className="text-sm text-ink-muted">
-            {R.driverOkHint}
-            {d.kind === "accident" && ` ${R.driverOkAccidentHint}`}
-          </p>
           <Call phone={d.driver?.phone} label={R.callDriver} />
           <Input
             id="emg-driver-note"
@@ -354,7 +351,6 @@ export default function EmergencyPage() {
         ) : undefined,
         body: (
           <>
-            <p className="text-sm text-ink-muted">{R.outcomeHint}</p>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {(Object.keys(R.outcomes) as Outcome[]).map((k) => {
                 const Icon = OUTCOME_ICON[k];
@@ -438,7 +434,6 @@ export default function EmergencyPage() {
         ) : undefined,
         body: (
           <>
-            <p className="text-sm text-ink-muted">{autoPays ? R.moneyHintAuto : R.moneyHintStaff}</p>
             <Input
               id="emg-money-amount"
               type="number"
@@ -519,7 +514,6 @@ export default function EmergencyPage() {
             value={resolution}
             onChange={(e) => setResolution(e.target.value)}
           />
-          <p className="text-2xs text-ink-muted">{R.resolutionHint}</p>
           <Button
             className="w-full"
             disabled={busy !== "" || !resolution.trim()}
@@ -562,18 +556,6 @@ export default function EmergencyPage() {
             )}
           </>
         }
-        subtitle={
-          <>
-            {R.since.replace("{t}", ago(d.created_at))}
-            {d.order && (
-              <>
-                {m.common.listSeparator}
-                {R.order} <span dir="ltr">#{fmtRef(d.order.number)}</span>
-              </>
-            )}
-            {d.stage && `${m.common.listSeparator}${R.stages[d.stage]}`}
-          </>
-        }
         actions={
           <ButtonLink href="/dashboard/emergencies" variant="secondary">
             <IconPrev size={15} className="rtl:rotate-180" />
@@ -590,6 +572,20 @@ export default function EmergencyPage() {
             {fmtDateTime(d.created_at)}
           </span>
         </div>
+        {/* **منذ متى وأيّ طلبٍ وأين وقف** — كانت في `subtitle` والرأسُ لا يرسمه فضاعت. */}
+        <p className="mt-2 text-sm font-medium">
+          {R.since.replace("{t}", ago(d.created_at))}
+          {d.order && (
+            <>
+              {m.common.listSeparator}
+              {R.order}{" "}
+              <AdminLink href={`/dashboard/history?order=${d.order.id}`} className="hover:underline">
+                <span dir="ltr">#{fmtRef(d.order.number)}</span>
+              </AdminLink>
+            </>
+          )}
+          {d.stage && `${m.common.listSeparator}${R.stages[d.stage]}`}
+        </p>
         {d.note && (
           <p className="mt-3 rounded-control bg-field px-3 py-2 text-sm">
             <span className="block text-2xs text-ink-muted">{R.noteTitle}</span>
@@ -650,6 +646,9 @@ export default function EmergencyPage() {
           {/* ── السائقُ وموقعُه الحيّ ───────────────────────────────── */}
           {d.driver && (
             <Section icon={IconDriver} title={d.driver.name || d.driver.phone}>
+              <AdminLink href={`/dashboard/users/${d.driver.id}`} className="text-sm font-medium text-accent-text hover:underline">
+                {KO.openDriver}
+              </AdminLink>
               <div className="rounded-control bg-field px-3 py-2.5">
                 <span className="block text-2xs text-ink-muted">{R.cashHeld}</span>
                 <span className="figure block">{fmtMoney(d.driver.cash_held)}</span>
@@ -751,7 +750,7 @@ export default function EmergencyPage() {
               {d.order.store && <KV k={R.store} v={d.order.store.name} />}
               <KV k={R.newDriver} v={d.order.new_driver ? d.order.new_driver.name : R.noNewDriver} />
               <div className="grid grid-cols-1 gap-2 border-t border-line-soft pt-3 sm:grid-cols-2">
-                <ButtonLink href={`/dashboard/orders?id=${d.order.id}`} className="w-full sm:col-span-2">
+                <ButtonLink href={`/dashboard/history?order=${d.order.id}`} className="w-full sm:col-span-2">
                   <IconOrder size={15} />
                   {R.openOrder}
                 </ButtonLink>
@@ -773,6 +772,11 @@ export default function EmergencyPage() {
                 </Badge>
               }
             >
+              {d.merchant.id && (
+                <AdminLink href={`/dashboard/merchants/${d.merchant.id}`} className="text-sm font-medium text-accent-text hover:underline">
+                  {KO.openStore}
+                </AdminLink>
+              )}
               <Call phone={d.merchant.phone} label={R.callStore} />
               <h3 className="pt-1 text-sm font-bold">{R.storeOrders}</h3>
               {d.store_orders.length === 0 ? (
@@ -878,7 +882,6 @@ export default function EmergencyPage() {
               </span>
               {cancelling.customer && `${m.common.listSeparator}${cancelling.customer}`}
             </p>
-            <p className="text-sm text-ink-muted">{R.cancelHint}</p>
             <Input
               id="emg-cancel-reason"
               label={R.cancelReason}

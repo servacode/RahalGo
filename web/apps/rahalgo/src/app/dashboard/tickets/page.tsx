@@ -20,9 +20,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import {
-  PageContainer,
+  AdminPage,
   useLiveRefresh,
   IconSupport,
   IconStar,
@@ -107,62 +107,26 @@ export default function ProblemsPage() {
   }, [loadCounts]);
   useLiveRefresh(["ticket", "dispute", "order", "wallet"], loadCounts);
 
+  const tabItems = tabs.map((t) => ({
+    key: t.key,
+    label: t.label,
+    count: counts[t.key]?.n ?? null,
+    attention: !!counts[t.key]?.danger,
+  }));
   return (
-    <PageContainer>
-      {/* **رأسٌ واحدٌ مرتّب** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «التصميم الاحترافي») — العنوانُ بأيقونته وتحته
-          التبويباتُ بسطرٍ واحد، **ولا عنوانَ ثانٍ داخل التبويب.** */}
-      <section className="surface overflow-hidden">
-        <div className="flex items-center gap-3 p-4">
-          <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-on-bright">
-            <IconSupport size={22} />
-          </span>
-          <div className="min-w-0">
-            <h1 className="heading-page">{m.admin.nav.problems}</h1>
-            <p className="text-xs text-ink-muted">{m.admin.tickets.pageHint}</p>
-          </div>
-        </div>
-        {tabs.length > 1 && active && (
-          <nav className="flex gap-1 overflow-x-auto border-t border-line-soft px-2" role="tablist">
-            {tabs.map(({ key, label, icon: Icon }) => {
-              const on = active === key;
-              const c = counts[key];
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  role="tab"
-                  aria-selected={on}
-                  onClick={() => pick(key)}
-                  className={`relative inline-flex shrink-0 items-center gap-2 px-3 py-3 text-sm font-bold transition-colors ${
-                    on ? "text-ink" : "text-ink-muted hover:text-ink"
-                  }`}
-                >
-                  <Icon size={16} />
-                  {label}
-                  {c && c.n > 0 && (
-                    <span
-                      className={`rounded-full px-1.5 text-2xs tabular-nums ${
-                        c.danger ? "bg-danger-solid text-on-solid" : "bg-warning-solid text-on-solid"
-                      }`}
-                    >
-                      {fmtNum(c.n)}
-                    </span>
-                  )}
-                  {on && <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-accent" />}
-                </button>
-              );
-            })}
-          </nav>
-        )}
-      </section>
-      <div>
-        {active === "tickets" && <TicketsView />}
-        {active === "ratings" && <RatingsView />}
-        {active === "losses" && <LossesView />}
-        {active === "disputes" && <DisputesView />}
-        {active === "goods" && <GoodsCompensationView />}
-        {active === "compensations" && <CompensationsView embedded />}
-      </div>
-    </PageContainer>
+    <AdminPage<Tab>
+      title={m.admin.nav.problems}
+      icon={IconSupport}
+      tabs={tabItems}
+      tab={(active || "tickets") as Tab}
+      onTab={pick}
+    >
+      {active === "tickets" && <TicketsView />}
+      {active === "ratings" && <RatingsView />}
+      {active === "losses" && <LossesView />}
+      {active === "disputes" && <DisputesView />}
+      {active === "goods" && <GoodsCompensationView />}
+      {active === "compensations" && <CompensationsView embedded />}
+    </AdminPage>
   );
 }

@@ -23,27 +23,28 @@ import {
   Badge,
   Button,
   ButtonLink,
-  Chips,
-  PageContainer,
-  Pagination,
+  AdminPage,
+  AdminLink,
+  ContactButtons,
+  FilterBar,
+  FilterSelect,
   LoadingState,
   ReloadState,
   useLiveData,
   IconWarning,
-  IconPhone,
   IconStatus,
   IconCheck,
   IconHourglass,
   IconSuccess,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
-import { PageHero } from "@/components/admin/PageHero";
 import { Tile } from "@/components/admin/DashParts";
 import { kindVariant, kindTint } from "@/components/admin/emergency/kinds";
 
 const m = getMessages(defaultLocale);
 const E = m.admin.emergencies;
 const R = m.admin.emergencyRoom;
+const KO = m.admin.kit.ops;
 
 interface EmergencyListRow {
   id: string;
@@ -159,55 +160,58 @@ export default function EmergenciesPage() {
   ];
 
   return (
-    <PageContainer>
-      <PageHero<Tab>
-        icon={IconWarning}
-        title={E.title}
-        subtitle={E.hint}
-        tabs={[
-          { key: "open", label: E.tabOpen, icon: IconWarning, count: c?.open ?? null, warn: true },
-          { key: "resolved", label: E.tabResolved, icon: IconStatus },
-        ]}
-        value={tab}
-        onChange={setTab}
-      />
-
-      {/* **الأرقامُ الثلاثة تُضغط فتفلتر** — و«متأخرة» بمهلة الإعداد نفسِها. */}
-      <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
-        <Tile
-          icon={IconWarning}
-          label={E.tileOpen}
-          value={fmtNum(c?.open ?? 0)}
-          sub={E.tileOpenSub}
-          tone={(c?.open ?? 0) > 0 ? "warning" : "success"}
-          onClick={() => setOnly("")}
-        />
-        <Tile
-          icon={IconHourglass}
-          label={E.tileUnacked}
-          value={fmtNum(c?.unacked ?? 0)}
-          sub={E.tileUnackedSub}
-          tone={(c?.unacked ?? 0) > 0 ? "danger" : "muted"}
-          onClick={() => setOnly("unacked")}
-        />
-        <Tile
-          icon={IconWarning}
-          label={E.tileStale}
-          value={fmtNum(c?.stale ?? 0)}
-          sub={E.tileStaleSub.replace("{n}", fmtNum(c?.stale_after_min ?? 10))}
-          tone={(c?.stale ?? 0) > 0 ? "danger" : "muted"}
-          onClick={() => setOnly("stale")}
-        />
-      </div>
-
-      {tab === "open" && (
-        <section className="surface mb-4 flex flex-wrap items-center gap-2 p-3">
-          <span className="text-sm text-ink-muted">{E.filterLabel}:</span>
-          <Chips items={onlyChips} value={only} onChange={(v) => setOnly(v as Only)} wrap />
-        </section>
-      )}
-
-      {error && <Alert className="mb-3">{error}</Alert>}
+    <AdminPage<Tab>
+      icon={IconWarning}
+      title={E.title}
+      meta={list.data ? KO.updatedNow : undefined}
+      tabs={[
+        { key: "open", label: E.tabOpen, count: c?.open ?? null, attention: true },
+        { key: "resolved", label: E.tabResolved },
+      ]}
+      tab={tab}
+      onTab={setTab}
+      toolbar={
+        tab === "open" ? (
+          <FilterBar filtered={only !== ""} onClear={() => setOnly("")}>
+            <FilterSelect id="em-only" label={E.filterLabel} value={only} onChange={(v) => setOnly(v as Only)}>
+              {onlyChips.map((x) => (
+                <option key={x.id || "all"} value={x.id}>
+                  {x.label}
+                </option>
+              ))}
+            </FilterSelect>
+          </FilterBar>
+        ) : undefined
+      }
+      summary={
+        /* **الأرقامُ الثلاثة تُضغط فتفلتر** — و«متأخرة» بمهلة الإعداد نفسِها. */
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <Tile
+            icon={IconWarning}
+            label={E.tileOpen}
+            value={fmtNum(c?.open ?? 0)}
+            tone={(c?.open ?? 0) > 0 ? "danger" : "success"}
+            onClick={() => setOnly("")}
+          />
+          <Tile
+            icon={IconHourglass}
+            label={E.tileUnacked}
+            value={fmtNum(c?.unacked ?? 0)}
+            tone={(c?.unacked ?? 0) > 0 ? "danger" : "muted"}
+            onClick={() => setOnly("unacked")}
+          />
+          <Tile
+            icon={IconWarning}
+            label={E.tileStale}
+            value={fmtNum(c?.stale ?? 0)}
+            tone={(c?.stale ?? 0) > 0 ? "danger" : "muted"}
+            onClick={() => setOnly("stale")}
+          />
+        </div>
+      }
+      pagination={fresh ? { page, total: fresh.total, perPage: fresh.per_page, onChange: setPage } : undefined}
+    >
+      {error && <Alert>{error}</Alert>}
 
       {list.error && !fresh ? (
         <section className="surface">
@@ -225,30 +229,24 @@ export default function EmergenciesPage() {
         </ul>
       )}
 
-      {fresh && fresh.total > fresh.per_page && (
-        <div className="mt-4 flex justify-center">
-          <Pagination page={page} total={fresh.total} perPage={fresh.per_page} onChange={setPage} />
-        </div>
-      )}
-    </PageContainer>
+    </AdminPage>
   );
 }
 
 /** **فارغٌ لكلّ تبويب** — كان «المسكّرة» الفارغُ يقول «لا بلاغات مفتوحة». */
 function Empty({ tab, filtered }: { tab: Tab; filtered: boolean }) {
-  const [title, hint, tint] =
+  const [title, tint] =
     tab === "resolved"
-      ? [E.emptyResolved, E.emptyResolvedHint, "bg-field text-ink-muted"]
+      ? [E.emptyResolved, "bg-field text-ink-muted"]
       : filtered
-        ? [E.emptyFiltered, E.emptyFilteredHint, "bg-field text-ink-muted"]
-        : [E.emptyOpen, E.emptyOpenHint, "bg-success-solid text-on-solid"];
+        ? [E.emptyFiltered, "bg-field text-ink-muted"]
+        : [E.emptyOpen, "bg-success-solid text-on-solid"];
   return (
     <section className="surface flex flex-col items-center gap-3 p-8 text-center">
       <span className={`inline-flex h-16 w-16 items-center justify-center rounded-full ${tint}`}>
         {tab === "open" && !filtered ? <IconSuccess size={28} /> : <IconStatus size={28} />}
       </span>
       <h2 className="heading-section">{title}</h2>
-      <p className="max-w-md text-sm text-ink-muted">{hint}</p>
     </section>
   );
 }
@@ -281,7 +279,10 @@ function EmergencyCard({ x, busy, onAck }: { x: EmergencyListRow; busy: boolean;
           <span className="mt-1 block truncate font-bold">{who}</span>
           {x.order_number !== null && (
             <span className="block text-2xs text-ink-muted">
-              {E.orderNo} <span dir="ltr">#{fmtRef(x.order_number)}</span>
+              {E.orderNo}{" "}
+              <AdminLink href={`/dashboard/history?q=${x.order_number}`} className="hover:underline">
+                <span dir="ltr">#{fmtRef(x.order_number)}</span>
+              </AdminLink>
             </span>
           )}
         </span>
@@ -344,10 +345,10 @@ function EmergencyCard({ x, busy, onAck }: { x: EmergencyListRow; busy: boolean;
           {R.open}
         </ButtonLink>
         {x.driver_phone && (
-          <ButtonLink href={`tel:${x.driver_phone}`} variant="secondary" className="w-full">
-            <IconPhone size={15} />
-            {R.callDriver}
-          </ButtonLink>
+          <span className="flex items-center justify-center gap-2 rounded-control border border-line-soft px-2">
+            <span className="text-xs text-ink-muted">{R.callDriver}</span>
+            <ContactButtons phone={x.driver_phone} name={x.driver_name ?? undefined} />
+          </span>
         )}
       </div>
     </li>

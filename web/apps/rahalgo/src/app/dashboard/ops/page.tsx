@@ -470,7 +470,6 @@ export default function OpsMonitorPage() {
       <PageHero
         icon={IconStatus}
         title={O.title}
-        subtitle={O.subtitle}
         actions={
           <>
             <span className="text-xs text-ink-muted">
@@ -546,7 +545,7 @@ export default function OpsMonitorPage() {
           {data && (
             <>
               {/* **كلُّ رقمٍ بابٌ** — والصفرُ رماديٌّ، والانتظارُ برتقاليّ، والعاجلُ أحمر (المالك ٢٠٢٦-١٠-٢٦). */}
-              <Panel title={O.flowTitle} note={O.flowHint}>
+              <Panel title={O.flowTitle}>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
                   {FLOW.map((k) => {
                     const v = data.flow[k];
@@ -680,7 +679,6 @@ export default function OpsMonitorPage() {
                             </Button>
                           )}
                         </div>
-                        {canAck && !a.acked_at && <p className="text-2xs text-ink-muted">{O.ackHint}</p>}
                       </li>
                     ))}
                   </ul>
@@ -724,7 +722,6 @@ export default function OpsMonitorPage() {
                   className={`surface p-4 ${data.emergencies_open ? "border-danger" : ""}`}
                 >
                   <h2 className="heading-card mb-1">{O.emergenciesTitle}</h2>
-                  <p className="mb-3 text-xs text-ink-muted">{O.emergenciesCardNote}</p>
                   <div className="flex items-center gap-4">
                     <span
                       className={`inline-flex h-16 w-16 shrink-0 items-center justify-center rounded-full ${
@@ -768,8 +765,7 @@ export default function OpsMonitorPage() {
 
           {/* ── ٣ · حالةُ النظام ── سطرٌ لكلّ جزءٍ بنقطةٍ ملوّنةٍ وكلمة (المالك ٢٠٢٦-١٠-٢٦). */}
           <section id="system" className="surface p-4">
-            <h2 className="heading-card mb-1">{O.systemTitle}</h2>
-            <p className="mb-3 text-xs text-ink-muted">{O.systemNote}</p>
+            <h2 className="heading-card mb-3">{O.systemTitle}</h2>
             {partsOk && <AllClear text={O.systemOk} />}
             <ul className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
               {PARTS.map((p) => {
@@ -846,7 +842,6 @@ export default function OpsMonitorPage() {
                       <Counters map={health.push} labels={(k) => PUSH_LABELS[k] ?? k} />
                     </Block>
                     <Block title={O.secClients}>
-                      <p className="mb-1 text-xs text-ink-muted">{O.clientsHint}</p>
                       <Counters map={health.clients} labels={appLabel} />
                       <Row label={O.clientsDropped} value={num(health.clients_dropped)} />
                     </Block>

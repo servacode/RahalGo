@@ -1377,6 +1377,8 @@
         "driver": "السائق",
         "store": "المتجر",
         "allOfCustomer": "كل طلباته",
+        "openDriver": "ملف السائق",
+        "openStore": "ملف المتجر",
         "story": "قصة الطلب",
         "contact": "اتصال",
         "noStorePhone": "ما في رقم للمتجر",

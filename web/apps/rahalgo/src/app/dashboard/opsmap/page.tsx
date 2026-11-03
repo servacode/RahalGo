@@ -1736,7 +1736,6 @@ export default function OpsMapPage() {
       <PageHero
         icon={IconLocation}
         title={T.title}
-        subtitle={T.subtitle}
         actions={
           <Button variant="secondary" onClick={() => setFull(true)}>
             <IconFullscreen size={16} aria-hidden />
@@ -1894,7 +1893,6 @@ export default function OpsMapPage() {
         {/* ── الطبقاتُ الإضافيّة حبّاتٌ بعددها ── */}
         <div className="flex flex-col gap-1.5">
           <h2 className="heading-card">{P.controlsTitle}</h2>
-          <p className="text-xs text-ink-muted">{P.controlsHint}</p>
           <Chips
             items={layerChips.map((c) => ({ id: c.id, label: c.label, count: c.count }))}
             value={layerOn}
