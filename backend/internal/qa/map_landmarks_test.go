@@ -86,6 +86,10 @@ func TestMapLandmarks_BboxClassAndDedupe(t *testing.T) {
 		t.Fatalf("stores=0 لم يُقصِ المتجر: %s", without)
 	}
 
+	// بلا نطاقٍ: كلُّ المغطّى (وهو ما تقرؤه التطبيقات) — كان 500.
+	if all := h.GET("/api/v1/public/map/landmarks?format=geojson&stores=0", ""); all.Code != 200 || !strings.Contains(string(all.Body), far) {
+		t.Fatalf("بلا نطاق: %s", all)
+	}
 	if bad := h.GET("/api/v1/public/map/landmarks?bbox=1,2,3", ""); bad.Code != 400 {
 		t.Fatalf("نطاقٌ فاسد يجب 400: %d", bad.Code)
 	}

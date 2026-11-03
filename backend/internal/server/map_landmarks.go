@@ -143,7 +143,8 @@ func (s *Server) handlePublicMapLandmarks(w http.ResponseWriter, r *http.Request
 		limit = min(n, 15000)
 	}
 	// ‫`bbox` يُحلَّل ويُتحقَّق منه — وغيرُ الصالح 400 لا يُتجاهل.‬
-	minLng, minLat, maxLng, maxLat := -180.0, -90.0, 180.0, 90.0
+	// الافتراضيُّ العالمُ كلُّه (والمقارنةُ هندسيّةٌ لا جغرافيّة: غلافُ `geography` بهذا الاتّساع ينقلب فارغاً).
+	minLng, minLat, maxLng, maxLat := -179.0, -85.0, 179.0, 85.0
 	if bb := strings.TrimSpace(q.Get("bbox")); bb != "" {
 		parts := strings.Split(bb, ",")
 		vals := make([]float64, 0, 4)
@@ -158,20 +159,25 @@ func (s *Server) handlePublicMapLandmarks(w http.ResponseWriter, r *http.Request
 			s.respondErr(w, httpx.NewError(http.StatusBadRequest, "bad_request", "errors.bad_request"))
 			return
 		}
-		minLng, minLat, maxLng, maxLat = vals[0], vals[1], vals[2], vals[3]
+		minLng, minLat = max(vals[0], -179), max(vals[1], -85)
+		maxLng, maxLat = min(vals[2], 179), min(vals[3], 85)
+		if minLng >= maxLng || minLat >= maxLat {
+			s.respondErr(w, httpx.NewError(http.StatusBadRequest, "bad_request", "errors.bad_request"))
+			return
+		}
 	}
 	withStores := q.Get("stores") != "0"
 
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT 'l' || id::text, name, kind, ST_Y(point::geometry), ST_X(point::geometry), 0
 		  FROM map_landmarks
-		 WHERE point && ST_MakeEnvelope($1,$2,$3,$4,4326)::geography
+		 WHERE point::geometry && ST_MakeEnvelope($1,$2,$3,$4,4326)
 		   AND btrim(name) <> ''
 		UNION ALL
 		SELECT 's' || m.id::text, m.name, 'shop=store', ST_Y(m.location::geometry), ST_X(m.location::geometry), 1
 		  FROM merchants m
 		 WHERE $5 AND m.status = 'active' AND m.location IS NOT NULL
-		   AND m.location && ST_MakeEnvelope($1,$2,$3,$4,4326)::geography
+		   AND m.location::geometry && ST_MakeEnvelope($1,$2,$3,$4,4326)
 		 LIMIT 40000`, minLng, minLat, maxLng, maxLat, withStores)
 	if err != nil {
 		s.respondErr(w, err)
