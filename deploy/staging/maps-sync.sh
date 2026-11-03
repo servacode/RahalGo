@@ -22,7 +22,7 @@
 # # والنمطُ وحدَه يسمّي المضيف
 #
 # **قِيس ٢٠٢٦-٠٩-١٩**: من كلّ الآثار **ملفٌّ واحدٌ** يذكر `maps.rahalgo.com` —
-# `map-resources/1/style.online.json` (النقوشُ والخطوطُ ومصدرُ `pmtiles`).
+# `map-resources/N/style.online.json` (النقوشُ والخطوطُ ومصدرُ `pmtiles`).
 # **فيُعاد كتابتُه في النسخة وحدَها** — **ولا يُمَسّ ملفُّ الإنتاج.**
 set -euo pipefail
 
@@ -49,13 +49,19 @@ for p in "${PARTS[@]}"; do
 	fi
 done
 
-STYLE="$DST/map-resources/1/style.online.json"
-[ -f "$STYLE" ] || { echo "✗ لا نمطَ في $STYLE" >&2; exit 3; }
-sed -i "s#${FROM}#${TO}#g" "$STYLE"
-
-# **والمضغوطُ مسبقاً يحمل المضيفَ القديم** — و`precompressed br gzip` يقدّمه
-# على الأصل لمن يقبله، **فيبقى النمطُ القديمُ لأكثر المتصفّحات.**
-rm -f "$STYLE.gz" "$STYLE.br"
+# **كلُّ إصدارٍ من الموارد له نمطُه** — فيُعاد كتابةُ المضيف في كلّها لا في
+# الأوّل وحدَه. **وكان الأوّلُ وحدَه فبقي الويبُ على نمطه القديم** (`1`)
+# **وفيه محاذاةُ دورانِ النصّ `viewport-glyph`: فتقف حروفُ أسماء الشوارع
+# المائلةِ منتصبةً مفكَّكةً** (شكوى المالك ٢٠٢٦-١١-٠٣).
+shopt -s nullglob
+STYLES=("$DST"/map-resources/*/style.online.json)
+[ "${#STYLES[@]}" -gt 0 ] || { echo "✗ لا نمطَ في $DST/map-resources" >&2; exit 3; }
+for STYLE in "${STYLES[@]}"; do
+	sed -i "s#${FROM}#${TO}#g" "$STYLE"
+	# **والمضغوطُ مسبقاً يحمل المضيفَ القديم** — و`precompressed br gzip` يقدّمه
+	# على الأصل لمن يقبله، **فيبقى النمطُ القديمُ لأكثر المتصفّحات.**
+	rm -f "$STYLE.gz" "$STYLE.br"
+done
 
 # ── ولا يُنهى والإنتاجُ مذكور ────────────────────────────────────────
 #

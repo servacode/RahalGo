@@ -244,7 +244,7 @@ services:
       #
       # **فللتجهيز خرائطُه** — آثارٌ منسوخةٌ (`maps-sync.sh`) تُخدَم تحت
       # `/maps/` على مضيف التجهيز (`Caddyfile.staging`)، **ونمطٌ يشير إليها.**
-      RAHALGO_MAP_STYLE_URL: ${STAGING_MAP_STYLE_URL:-https://staging-api.rahalgo.com/maps/map-resources/1/style.online.json}
+      RAHALGO_MAP_STYLE_URL: ${STAGING_MAP_STYLE_URL:-https://staging-api.rahalgo.com/maps/map-resources/5/style.online.json}
     depends_on:
       - api
 
