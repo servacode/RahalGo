@@ -510,7 +510,10 @@ export function OpsMapCanvas({
               ...(spec.labelField
                 ? {
                     "text-field": ["get", spec.labelField] as never,
-                    "text-size": 13,
+                    // **خطٌّ عريضٌ وأكبر** (المالك ٢٠٢٦-١١-٠٣: «الاسم ما بيبين») — وبلا `text-font` كان يقع على خطّ
+                    // افتراضيٍّ رفيعٍ ليس في حزمة الخريطة.
+                    "text-font": ["RahalGo Bold"] as never,
+                    "text-size": 15,
                     "text-anchor": "bottom",
                     "text-offset": [0, -1.4] as never,
                     "text-allow-overlap": !!spec.labelOverlap,
@@ -524,7 +527,8 @@ export function OpsMapCanvas({
                     // **داكنٌ بحاشيةٍ بيضاء** — الخريطةُ فاتحةٌ في الثيمين (٢٠٢٦-١٠-٢٣).
                     "text-color": themeColor("map-label"),
                     "text-halo-color": themeColor("map-label-halo"),
-                    "text-halo-width": 2.2,
+                    "text-halo-width": 2.8,
+                    "text-halo-blur": 0.4,
                   },
                 }
               : {}),
