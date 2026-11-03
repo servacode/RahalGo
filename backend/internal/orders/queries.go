@@ -37,7 +37,7 @@ const orderSelect = `
 	       o.custom_mode, o.custom_goods_pending, COALESCE(o.driver_fee, 0),
 	       -- **وفراغٌ لا NULL** — (الطلبُ الخاصّ ٢٠٢٦-٠٨-٠٩): الحقلان نصّان
 	       -- في البنية، **وNULL فيهما يُسقط المسحَ كلَّه** لا هذا الحقلَ وحدَه.
-	       COALESCE(o.merchant_id::text, ''), COALESCE(mr.name, ''),
+	       COALESCE(o.merchant_id::text, ''), COALESCE(mr.name, ''), COALESCE(mo.phone::text, ''),
 	       -- **والمتجرُ التابعُ في المشتريات** (قرارُ المالك ٢٠٢٦-١٠-١٥) — ونسبتُه وما دُفع له.
 	       COALESCE(o.partner_merchant_id::text, ''), COALESCE(ptn.name, ''),
 	       o.partner_commission_percent, o.custom_store_paid,
@@ -164,6 +164,8 @@ const orderSelect = `
 	-- الطلبُ كأنّه لم يكن.** (ووقع: أوّلُ طلبٍ خاصٍّ أُنشئ ثمّ ردّ الخادمُ
 	-- «غير موجود» — وهو مكتوبٌ في القاعدة.)
 	LEFT JOIN merchants mr ON mr.id = o.merchant_id
+	-- **وهاتفُ صاحب المتجر للمكتب** (المالك ٢٠٢٦-١١-٠٣: زرُّ اتّصالٍ جنب المتجر على البطاقة).
+	LEFT JOIN users mo ON mo.id = mr.owner_user_id
 	LEFT JOIN merchants ptn ON ptn.id = o.partner_merchant_id
 	LEFT JOIN merchants ext ON ext.id = o.ext_store_merchant_id
 	LEFT JOIN media lm ON lm.id = mr.logo_media_id
@@ -182,7 +184,7 @@ func scanOrder(row pgx.Row) (*Order, error) {
 		&o.QuoteRejectedAt,
 		&o.CustomReservedAmount, &o.CustomFeeSource, &o.CustomFeeSnapshot, &o.CustomDriverMayChangeFee,
 		&o.CustomMode, &o.CustomGoodsPending, &o.DriverFee,
-		&o.MerchantID, &o.MerchantName,
+		&o.MerchantID, &o.MerchantName, &o.MerchantPhone,
 		&o.PartnerMerchantID, &o.PartnerMerchantName, &o.PartnerCommission, &o.CustomStorePaid,
 		&o.ExtStoreMerchantName, &o.ExtStoreAt, &o.ExtStoreReason,
 		&o.DriverID, &o.DriverPhone, &o.DriverName,

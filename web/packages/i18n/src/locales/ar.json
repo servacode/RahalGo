@@ -1846,6 +1846,12 @@
       "driverSeen": "آخر ظهور قبل {n} د",
       "driverNeverSeen": "لم يظهر موقعه بعد",
       "callDriver": "اتصال بالسائق",
+      "callCustomerShort": "اتصال بالزبون",
+      "callStoreShort": "اتصال بالمتجر",
+      "waChat": "واتساب",
+      "ageMin": "من {n} د",
+      "ageHour": "من {h} س {n} د",
+      "quoteRejected": "الزبون رفض السعر الجديد",
       "range": {
         "today": "اليوم",
         "yesterday": "أمس",

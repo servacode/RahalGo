@@ -259,6 +259,8 @@ type Order struct {
 	CustomDriverMayChangeFee bool   `json:"custom_driver_may_change_fee"`
 	MerchantID               string `json:"merchant_id"`
 	MerchantName             string `json:"merchant_name"`
+	// MerchantPhone **هاتفُ صاحب المتجر** — للمكتب وحدَه (`orderview.go`)، زرُّ اتّصالٍ على البطاقة.
+	MerchantPhone string `json:"merchant_phone"`
 	// PartnerMerchantID **المتجرُ التابعُ في طلب المشتريات** (قرارُ المالك ٢٠٢٦-١٠-١٥) — يربطه
 	// المكتبُ ويأخذ عمولتَه، **وفراغٌ: يشتري السائقُ من حيث شاء.** (`partner_store.go`)
 	PartnerMerchantID   string `json:"partner_merchant_id"`

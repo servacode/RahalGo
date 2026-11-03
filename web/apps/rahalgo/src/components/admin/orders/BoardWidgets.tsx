@@ -23,6 +23,7 @@ import {
   IconBell,
   IconBellOff,
   IconPhone,
+  IconWhatsApp,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
@@ -319,18 +320,11 @@ export function DriverLine({
     >
       <span className="font-medium text-ink">{name}</span>
       {phone && (
-        <a
-          href={`tel:${phone}`}
-          aria-label={m.admin.ordersPage.callDriver}
-          title={m.admin.ordersPage.callDriver}
-          className="inline-flex items-center gap-1 text-accent-text"
-        >
-          <IconPhone size={14} />
-          <span dir="ltr" className="text-xs">
-            {phone}
-          </span>
-        </a>
+        <span dir="ltr" className="text-xs text-ink-muted">
+          {phone}
+        </span>
       )}
+      <ContactLinks phone={phone} callLabel={m.admin.ordersPage.callDriver} />
       {!hideSeen && (
       <Badge variant={tone}>
         {mins === null
@@ -370,4 +364,62 @@ export function OfferLine({
   return (
     <span className="text-xs text-ink-muted">{parts.join(m.common.listSeparator)}</span>
   );
+}
+
+/** **رقمٌ للواتساب** — أرقامُه وحدها بلا «+» (`wa.me`). */
+function waDigits(phone: string): string {
+  return phone.replace(/[^0-9]/g, "");
+}
+
+/**
+ * **زرّا اتّصالٍ وواتساب جنب كلّ طرف** (قرارُ المالك ٢٠٢٦-١١-٠٣) — المتجرُ والزبونُ والسائق
+ * على البطاقة نفسِها، بلا فتحِ لوحةٍ أخرى.
+ */
+export function ContactLinks({ phone, callLabel }: { phone: string | null | undefined; callLabel: string }) {
+  if (!phone) return null;
+  const P = m.admin.ordersPage;
+  const cls =
+    "inline-flex h-8 w-8 items-center justify-center rounded-control border border-line-soft bg-surface text-accent-text hover:bg-row-hover";
+  return (
+    <span className="flex shrink-0 items-center gap-1" onClick={(e) => e.stopPropagation()}>
+      <a href={`tel:${phone}`} aria-label={callLabel} title={callLabel} className={cls}>
+        <IconPhone size={15} />
+      </a>
+      <a
+        href={`https://wa.me/${waDigits(phone)}`}
+        target="_blank"
+        rel="noreferrer"
+        aria-label={P.waChat}
+        title={P.waChat}
+        className={cls}
+      >
+        <IconWhatsApp size={15} />
+      </a>
+    </span>
+  );
+}
+
+/**
+ * **عمرُ الطلب بالرأس** (قرارُ المالك ٢٠٢٦-١١-٠٣) — «من ١٢ د»، **وأحمرُ إن تأخّر** (حكمُ المحرّك على
+ * المرحلة الحاليّة) وأصفرُ إن فات نصفَ مهلة التوصيل.
+ */
+export function AgeBadge({
+  createdAt,
+  now,
+  late,
+  warnAfterMin,
+}: {
+  createdAt: string;
+  now: number;
+  late: boolean;
+  warnAfterMin: number;
+}) {
+  const mins = minutesSince(createdAt, now) ?? 0;
+  const P = m.admin.ordersPage;
+  const text =
+    mins >= 60
+      ? P.ageHour.replace("{h}", fmtNum(Math.floor(mins / 60))).replace("{n}", fmtNum(mins % 60))
+      : P.ageMin.replace("{n}", fmtNum(mins));
+  const tone = late ? "danger" : warnAfterMin > 0 && mins >= warnAfterMin ? "warning" : "neutral";
+  return <Badge variant={tone}>{text}</Badge>;
 }

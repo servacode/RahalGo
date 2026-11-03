@@ -7,7 +7,7 @@
 > **ومعها ملفٌّ يُقرأ بالآلة**: `docs/testing/system/AUTHZ_CONTRACT.json`.
 
 <!-- gen:counts -->
-**41 قدرةً · 334 صفَّ سياسةٍ للمسارات · 3 استثناءً · 38 فعلاً حسّاساً · 8 حقلاً محروساً · 2 قدرةً حقليّةً لا تحرس باباً · 0 قدرةً لا تحرس شيئاً.**
+**41 قدرةً · 334 صفَّ سياسةٍ للمسارات · 3 استثناءً · 38 فعلاً حسّاساً · 9 حقلاً محروساً · 2 قدرةً حقليّةً لا تحرس باباً · 0 قدرةً لا تحرس شيئاً.**
 <!-- /gen:counts -->
 
 ---
@@ -91,7 +91,7 @@
 | `support.manage` | 7 | — | التذاكر والنزاعات والتقييمات |
 | `treasury.manage` | 4 | — | سحب مدير المنصة من رصيد الخزينة واعتماد نقص صندوق المكتب خسارة |
 | `users.cashban.lift` | 1 | — | رفع منع الدفع نقدا عن زبون |
-| `users.contact.read` | **0** | **7** | رؤية أرقام الهواتف |
+| `users.contact.read` | **0** | **8** | رؤية أرقام الهواتف |
 | `users.export` | 1 | — | تصدير دليل الحسابات ملفا |
 | `users.read` | 10 | — | قراءة الحسابات |
 | `users.sensitive.read` | 2 | — | رؤية عناوين الشخص وسجل تحركاته |
@@ -114,6 +114,7 @@
 |---|---|
 | `customer_phone` | `users.contact.read` |
 | `driver_phone` | `users.contact.read` |
+| `merchant_phone` | `users.contact.read` |
 | `owner_phone` | `users.contact.read` |
 | `party_phone` | `users.contact.read` |
 | `phone` | `users.contact.read` |

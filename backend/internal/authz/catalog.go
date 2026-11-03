@@ -291,6 +291,7 @@ var FieldPolicy = map[string]Capability{
 	"phone":          UsersContactRead,
 	"customer_phone": UsersContactRead,
 	"driver_phone":   UsersContactRead,
+	"merchant_phone": UsersContactRead,
 	// **وأسماءٌ أخرى للهاتف نفسِه تُسرَّب من أبوابٍ لا تملك `contact.read`**
 	// (جردُ الأمن ٢٠٢٦-٠٩-٢٧): `party_phone` في النزاعات (يبلغه `finance`
 	// بـ`support.manage`)، `user_phone` في السحوبات (`finance.read`)،

@@ -383,6 +383,7 @@ var audienceAllow = map[Audience]map[string]bool{
 		"merchant_id":                  true,
 		"merchant_logo_thumb_url":      true,
 		"merchant_name":                true,
+		"merchant_phone":               true,
 		"merchant_net":                 true,
 		"notes":                        true,
 		"number":                       true,

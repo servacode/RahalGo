@@ -149,6 +149,7 @@ var OrderPrivacy = map[string]FieldRule{
 	// هذا العقد، **فلم يُمسّ حكمُ الطلب هنا.**
 	"merchant_id":              {Ref: "customer_privacy.go:41", Vis: v(VisForbidden, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
 	"merchant_name":            {Ref: "customer_privacy.go:42", Vis: v(VisForbidden, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
+	"merchant_phone":           {Ref: "هاتفُ صاحب المتجر — للمكتب وحدَه، زرُّ اتّصالٍ على البطاقة (٢٠٢٦-١١-٠٣)", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
 	"merchant_logo_thumb_url":  {Ref: "customer_privacy.go:43", Vis: v(VisForbidden, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
 	"merchant_accepts_returns": {Ref: "سياسةُ متجرٍ عامّة", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
 	// **ما يدفعه السائقُ لكلّ متجرٍ عند الاستلام** (قرارُ المالك ٢٠٢٦-١٠-١٥) — للسائق

@@ -198,6 +198,7 @@
    "guards_fields": [
     "customer_phone",
     "driver_phone",
+    "merchant_phone",
     "owner_phone",
     "party_phone",
     "phone",
@@ -234,6 +235,10 @@
   },
   {
    "field": "driver_phone",
+   "need": "users.contact.read"
+  },
+  {
+   "field": "merchant_phone",
    "need": "users.contact.read"
   },
   {

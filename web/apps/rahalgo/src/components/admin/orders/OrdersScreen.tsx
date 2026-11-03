@@ -88,6 +88,8 @@ import {
   COUNTER_FILTERS,
   DriverLine,
   OfferLine,
+  ContactLinks,
+  AgeBadge,
   SoundButton,
   minutesSince,
   useNow,
@@ -148,6 +150,8 @@ interface OrderRow {
   ops_stage_late?: (boolean | null)[];
   closed_at?: string | null;
   merchant_name: string;
+  /** **هاتفُ صاحب المتجر** — للمكتب، زرُّ اتّصالٍ جنب المتجر (٢٠٢٦-١١-٠٣). */
+  merchant_phone?: string;
   merchant_id: string;
   driver_phone: string | null;
   /** **نوعُ الطلب** — `custom` طلبٌ خاصٌّ بلا متجر. */
@@ -569,6 +573,8 @@ const STAGE_LABELS: Record<string, string> = m.admin.ordersPage.stage;
 /** **أسماءُ الحالات بلفظ المكتب** — لا «في الطريق إليك» (المشكلة ٢٣). */
 const OFFICE_STATUS: Record<string, string> = m.admin.ordersPage.board.status;
 const BOARD = m.admin.ordersPage.board;
+/** **بعد كم دقيقة يصير عمرُ الطلب أصفر** — والأحمرُ من حكم المحرّك على المرحلة. */
+const AGE_WARN_MIN = 30;
 const REP_SHARE_T = m.admin.ordersPage.refundRepShare;
 /** **نصوصُ سجلّ الطلبات** — قراراتُ المالك ٢٠٢٦-١٠-٠٤. */
 const H = m.admin.ordersPage.history;
@@ -1575,6 +1581,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       cell: (o) => (
         // **والسطرُ يلتفّ على الجوّال** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كان `whitespace-nowrap` على الطرفين
         // فيخرج رأسُ البطاقة عن عرض شاشةٍ ٣٦٠ بكسلاً مع نوعٍ طويل.
+        <span className="flex w-full flex-col gap-2">
         <span className="flex w-full flex-wrap items-start justify-between gap-2">
           <span className="flex flex-wrap items-center gap-2">
             <OrderRef number={o.number} at={o.created_at} />
@@ -1584,17 +1591,28 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
             {CLOSED_STATUSES.has(o.status) && <EndBadge o={o} />}
             {/* **والطلبُ الذي فُتح بالرابط يُعلَّم** (المشكلة ٢١). */}
             {focusId === o.id && <Badge variant="accent">{BOARD.focused}</Badge>}
-            {o.board?.emergency_open && (
-              <Badge variant="danger">{BOARD.emergencyBadge}</Badge>
-            )}
-            {live && o.board?.alert_reason && !o.board.emergency_open && (
-              <Badge variant="danger">
-                {(m.admin.ordersPage.alertReasons as Record<string, string>)[
-                  o.board.alert_reason
-                ] ?? o.board.alert_reason}
-              </Badge>
+            {/* **وعمرُ الطلب** (قرارُ المالك ٢٠٢٦-١١-٠٣) — للجاري وحدَه. */}
+            {live && !o.closed_at && (
+              <AgeBadge
+                createdAt={o.created_at}
+                now={now}
+                late={o.ops_stage_late?.[o.ops_stage_at ?? -1] === true}
+                warnAfterMin={AGE_WARN_MIN}
+              />
             )}
           </span>
+        </span>
+        {/* **سطرُ التنبيه تحت الرأس — بلونه، ويغيب حين لا مشكلة** (قرارُ المالك ٢٠٢٦-١١-٠٣). */}
+        {(o.board?.emergency_open || (live && o.board?.alert_reason) || (!o.closed_at && o.quote_rejected_at)) && (
+          <span className="flex w-full items-center gap-2 rounded-control border border-danger-edge bg-danger-tint px-3 py-2 text-sm font-bold text-danger">
+            <IconWarning size={16} />
+            {o.board?.emergency_open
+              ? BOARD.emergencyBadge
+              : live && o.board?.alert_reason
+                ? ((m.admin.ordersPage.alertReasons as Record<string, string>)[o.board.alert_reason] ?? o.board.alert_reason)
+                : m.admin.ordersPage.quoteRejected}
+          </span>
+        )}
         </span>
       ),
     },
@@ -1669,12 +1687,15 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           {/* **ولا أيقونةَ على الرقم** — (قرارُ المالك ٢٠٢٦-٠٨-١٢).
               **ورقمٌ بهذا الشكل لا يُقرأ إلّا هاتفا**: أربعةَ عشرَ رقماً
               تبدأ بعلامة زائد، **ورقمُ الطلب في مربّعه فوق.** */}
-          <span
-            dir="ltr"
-            className="shrink-0 text-xs text-ink-muted"
-            title={o.customer_phone ? undefined : H.maskedPhone}
-          >
-            {o.customer_phone || o.customer_phone_masked}
+          <span className="flex shrink-0 items-center gap-2">
+            <span
+              dir="ltr"
+              className="text-xs text-ink-muted"
+              title={o.customer_phone ? undefined : H.maskedPhone}
+            >
+              {o.customer_phone || o.customer_phone_masked}
+            </span>
+            {live && <ContactLinks phone={o.customer_phone} callLabel={m.admin.ordersPage.callCustomerShort} />}
           </span>
         </span>
       ),
@@ -1793,7 +1814,12 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       // **فيُقرأ عطباً في القراءة** لا «طلبٌ بلا متجر»، ويُسأل مرّتين:
       // أضاع الاسمُ أم لم يكن؟
       hide: (o: OrderRow) => o.kind === "custom",
-      cell: (o) => o.merchant_name,
+      cell: (o) => (
+        <span className="flex items-center justify-between gap-2">
+          <span className="min-w-0 truncate">{o.merchant_name}</span>
+          {live && <ContactLinks phone={o.merchant_phone} callLabel={m.admin.ordersPage.callStoreShort} />}
+        </span>
+      ),
     },
     {
       // ══════════════════════════════════════════════════════════════
