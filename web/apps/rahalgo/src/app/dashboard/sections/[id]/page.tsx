@@ -32,31 +32,31 @@
 
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
 import {
+  Alert,
   Button,
-  Chips,
-  Input,
-  PageContainer,
-  Pagination,
-  LoadingState,
+  AdminPage,
+  AdminAsync,
+  AdminEmpty,
+  AdminEntityGrid,
+  AdminLink,
+  FilterBar,
   useLiveData,
-  IconStore,
   IconPrev,
-  IconSearch,
   IconOrder,
   IconGrid,
   IconCamera,
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import StateBadge from "@/components/admin/market/StateBadge";
-import { LoadError, StateBox } from "@/components/admin/market/MarketParts";
 import { NotAllowed } from "@/components/admin/accounts/ProfileParts";
 import { useCanCall } from "@/lib/policy";
 
 const m = getMessages(defaultLocale);
 const S = m.admin.sections;
 const U = m.admin.market.ui;
+const PE = m.admin.kit.people.section;
 
 interface Section {
   id: string;
@@ -73,6 +73,7 @@ interface SectionItem {
   /** **سعرُ الشراء** — ما وضعه المتجر، وأصلُ الحسبتين. */
   merchant_price: number;
   available: boolean;
+  merchant_id?: string;
   merchant_name: string;
   merchant_status: string;
   thumb_url: string | null;
@@ -111,6 +112,8 @@ function itemState(it: SectionItem): { label: string; variant: "success" | "warn
   return { label: S.itemLive, variant: "success" };
 }
 
+type StateKey = "all" | "live" | "out" | "store_off";
+
 export default function SectionPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -121,11 +124,14 @@ export default function SectionPage() {
       لم يره.** */
   const [page, setPage] = useState(1);
   const [q, setQ] = useState("");
-  const [state, setState] = useState("");
+  const [state, setState] = useState<StateKey>("all");
+  const [busyId, setBusyId] = useState("");
+  const [actionError, setActionError] = useState("");
   // **ومن لا يملك السوقَ لا يُنادي أبوابَه** (فحصُ المتصفّح ٢٠٢٦-١٠-٠٥):
   // المالية تفتح رابطَ قسمٍ فتُردّ ٤٠٣ وتُعرض رسالةُ الخطأ حمراء.
   const canCall = useCanCall();
   const canRead = canCall("GET", "/sections");
+  const canToggle = canCall("PATCH", "/market/items/{itemID}");
 
   // **القسمُ من قائمته** — والقائمةُ قصيرةٌ دائماً، **ونقطةٌ ثانيةٌ لصفٍّ واحدٍ سطحٌ يُصان بلا حاجة.**
   // **وتُجلب وحدَها** — لا مع كلّ حرفٍ في البحث.
@@ -142,7 +148,7 @@ export default function SectionPage() {
   // الصفحة الثالثة **قرأ «لا أصناف»**، فيُضيفه مرّتين.
   const qs = new URLSearchParams({ page: String(page) });
   if (q.trim()) qs.set("q", q.trim());
-  if (state) qs.set("state", state);
+  if (state !== "all") qs.set("state", state);
   const items = useLiveData<ItemsRes>(
     () => (canRead ? api(`/api/v1/admin/sections/${id}/items?${qs}`) : Promise.reject(new Error("forbidden"))),
     ["menu", "catalog"],
@@ -151,154 +157,139 @@ export default function SectionPage() {
 
   if (!canRead) return <NotAllowed />;
 
-  const back = (
-    <button
-      onClick={() => router.push("/dashboard/sections")}
-      className="mb-3 flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink"
-    >
-      <IconPrev size={15} />
-      {S.backToMarket}
-    </button>
-  );
+  const sec = (secs.data?.sections ?? []).find((x) => x.id === id) ?? null;
+  const res = items.data;
 
-  // **والخطأُ بشكل حالة الخطأ** — لا سطرٌ أحمرُ يستبدل الصفحةَ بلا رجوعٍ ولا إعادة (تدقيقُ السوق ٢٠٢٦-١٠-٢٧).
-  if ((secs.error && !secs.data) || (items.error && !items.data)) {
+  // **قسمٌ انحذف أو رابطٌ قديم يُقال** — كان الدولابُ يلفّ للأبد.
+  if (secs.data && !sec) {
     return (
-      <PageContainer width="full">
-        {back}
-        <LoadError
-          onRetry={() => {
-            secs.reload();
-            items.reload();
-          }}
-        />
-      </PageContainer>
-    );
-  }
-  if (!secs.data) return <LoadingState />;
-  const sec = (secs.data.sections ?? []).find((x) => x.id === id) ?? null;
-  // **وقسمٌ انحذف أو رابطٌ قديم يُقال** — كان الدولابُ يلفّ للأبد.
-  if (!sec) {
-    return (
-      <PageContainer width="full">
-        {back}
-        <StateBox
+      <AdminPage title={S.backToMarket}>
+        <AdminEmpty
           icon={IconGrid}
-          tone="muted"
           title={U.sectionGoneTitle}
-          hint={U.sectionGoneHint}
           action={<Button onClick={() => router.push("/dashboard/sections")}>{S.backToMarket}</Button>}
         />
-      </PageContainer>
+      </AdminPage>
     );
   }
-  if (!items.data) return <LoadingState />;
 
   // **ولا ترشيحَ هنا** — المحرّكُ رشّح وعدّ، **وترشيحٌ فوق ترشيحٍ يُنقص ما رُشِّح أصلاً.**
-  const res = items.data;
-  const shown = res.items ?? [];
-  const perPage = res.per_page || 50;
-  const all = res.all ?? 0;
-  const live = res.live ?? 0;
+  const shown = res?.items ?? [];
+  const perPage = res?.per_page || 50;
+  const all = res?.all ?? 0;
+  const live = res?.live ?? 0;
   // **و«غير متوفر» و«المتجر موقوف» عدّان** — كان الثالثُ «الكلّ ناقص المعروض» فيُخلط بهما.
-  const out = res.out ?? 0;
-  const storeOff = res.store_off ?? 0;
-  const filtered = q.trim() !== "" || state !== "";
-  const pick = (v: string) => {
+  const out = res?.out ?? 0;
+  const storeOff = res?.store_off ?? 0;
+  const filtered = q.trim() !== "" || state !== "all";
+  const pick = (v: StateKey) => {
     setState(v);
     setPage(1);
   };
 
+  /** **تبديلُ التوفّر من البطاقة** — `PATCH /market/items/{id}` نفسُه الذي يستعمله تبويبُ الأصناف. */
+  const toggle = async (it: SectionItem) => {
+    setBusyId(it.id);
+    setActionError("");
+    try {
+      await api(`/api/v1/admin/market/items/${it.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ available: !it.available }),
+      });
+      items.reload();
+    } catch (err) {
+      setActionError(errorText(err));
+    } finally {
+      setBusyId("");
+    }
+  };
+
   return (
-    <PageContainer width="full">
-      {back}
-
-      {/* **رأسُ القسم بطاقةٌ واحدة** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «بطريقة احترافية»): الصورة، والاسم، والحالة،
-          **والأعدادُ أزرارُ فلترة** (تدقيقُ السوق ٢٠٢٦-١٠-٢٧) — ولا تتأثّر بالبحث. */}
-      <div className="surface mb-4 flex flex-wrap items-center gap-4 p-4">
-        <span className="h-24 w-24 shrink-0 overflow-hidden rounded-card bg-field ring-1 ring-line sm:h-28 sm:w-28">
-          {sec.image_url || sec.image_thumb_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={mediaUrl(sec.image_url ?? sec.image_thumb_url) ?? ""}
-              alt={sec.name}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <span className="flex h-full items-center justify-center">
-              <IconStore size={26} className="text-ink-muted" />
-            </span>
-          )}
-        </span>
-        <div className="min-w-0 flex-1 space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="heading-page truncate">{sec.name}</h1>
-            <StateBadge label={sec.active ? S.available : S.unavailable} variant={sec.active ? "success" : "warning"} />
-          </div>
-          <Chips
-            wrap
-            items={[
-              { id: "", label: S.statAll, count: all },
-              { id: "live", label: S.itemLive, count: live },
-              { id: "out", label: S.itemOut, count: out },
-              { id: "store_off", label: S.itemStoreOff, count: storeOff },
-            ]}
-            value={state}
-            onChange={pick}
-          />
-        </div>
-      </div>
-
-      <div className="mb-4 max-w-md">
-        <Input
-          id="sec-q"
-          icon={<IconSearch />}
-          placeholder={S.searchItems}
-          value={q}
-          onChange={(e) => {
-            setQ(e.target.value);
-            setPage(1);
+    <AdminPage
+      title={sec?.name ?? S.backToMarket}
+      icon={IconGrid}
+      badge={
+        sec ? (
+          <StateBadge label={sec.active ? S.available : S.unavailable} variant={sec.active ? "success" : "warning"} />
+        ) : undefined
+      }
+      actions={
+        <Button variant="ghost" size="sm" onClick={() => router.push("/dashboard/sections")}>
+          <span className="flex items-center gap-1.5">
+            <IconPrev size={15} />
+            {S.backToMarket}
+          </span>
+        </Button>
+      }
+      tabs={[
+        { key: "all", label: S.statAll, count: all },
+        { key: "live", label: S.itemLive, count: live },
+        { key: "out", label: S.itemOut, count: out, attention: true },
+        { key: "store_off", label: S.itemStoreOff, count: storeOff, attention: true },
+      ]}
+      tab={state}
+      onTab={pick}
+      notices={actionError ? <Alert tone="warning">{actionError}</Alert> : undefined}
+      toolbar={
+        <FilterBar
+          search={{
+            id: "sec-q",
+            value: q,
+            onChange: (v) => {
+              setQ(v);
+              setPage(1);
+            },
+            placeholder: S.searchItems,
+          }}
+          filtered={filtered}
+          onClear={() => {
+            setQ("");
+            pick("all");
           }}
         />
-      </div>
-
-      {/* **بطاقةٌ لكلّ صنفٍ بصورته — كبطاقة القسم.**
-          (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «لازم يكون كرت يحوي على صورة لكلّ طعام
-          واسمِ المتجر الخاصّ بالصنف والسعر ومعروضٌ أو لا».) */}
-      {shown.length === 0 ? (
-        <StateBox
-          icon={IconOrder}
-          tone={filtered ? "muted" : "accent"}
-          title={filtered ? U.sectionNoMatch : S.noItems}
-          hint={filtered ? U.itemsEmptyFilteredHint : U.sectionEmptyHint}
-          action={
-            filtered ? (
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setQ("");
-                  pick("");
-                }}
-              >
-                {U.clearFilters}
-              </Button>
-            ) : (
-              <Button onClick={() => router.push("/dashboard/sections?tab=items")}>{U.goAddItem}</Button>
-            )
-          }
-        />
-      ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+      }
+      pagination={res ? { page, total: res.count, perPage, onChange: setPage } : undefined}
+    >
+      <AdminAsync
+        loading={items.loading || secs.loading}
+        error={items.error || secs.error}
+        onRetry={() => {
+          secs.reload();
+          items.reload();
+        }}
+        hasData={!!res}
+        empty={!!res && shown.length === 0}
+        emptyTitle={filtered ? U.sectionNoMatch : S.noItems}
+        emptyIcon={IconOrder}
+        emptyAction={
+          filtered ? (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setQ("");
+                pick("all");
+              }}
+            >
+              {U.clearFilters}
+            </Button>
+          ) : (
+            <Button onClick={() => router.push("/dashboard/sections?tab=items")}>{U.goAddItem}</Button>
+          )
+        }
+      >
+        {/* **بطاقةٌ لكلّ صنفٍ بصورته — كبطاقة القسم.**
+            (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «لازم يكون كرت يحوي على صورة لكلّ طعام
+            واسمِ المتجر الخاصّ بالصنف والسعر ومعروضٌ أو لا».) */}
+        <AdminEntityGrid>
           {shown.map((it) => {
             const st = itemState(it);
             return (
-              <div
+              <article
                 key={it.id}
-                className={`flex flex-col overflow-hidden surface transition-shadow hover:elev-2 ${
-                  st.variant === "success" ? "" : "opacity-70"
-                }`}
+                className="admin-panel flex flex-col overflow-hidden"
+                data-tone={st.variant === "success" ? "good" : st.variant === "warning" ? "attention" : "danger"}
               >
-                <div className="relative flex aspect-square items-center justify-center bg-field">
+                <div className="relative flex aspect-[4/3] items-center justify-center bg-field">
                   {it.image_url || it.thumb_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -309,37 +300,50 @@ export default function SectionPage() {
                   ) : (
                     /* **ونقصُ الصورة يُقال لا يُملأ برمز** — رمزٌ رماديٌّ يجعل
                        الصنفَ يبدو تامّاً وهو ناقص، فيُنسى أنّ صورتَه لم تُرفع. */
-                    <span className="flex flex-col items-center gap-1 text-xs text-ink-muted">
+                    <span className="flex flex-col items-center gap-1 text-sm text-ink-muted">
                       <IconCamera size={18} />
                       {S.noImage}
                     </span>
                   )}
                   {/* **الحالُ فوق الصورة** — تُقرأ قبل الاسم، وهي أوّلُ ما يُسأل عنه. */}
-                  <span className="absolute end-1.5 top-1.5">
+                  <span className="absolute end-2 top-2">
                     <StateBadge label={st.label} variant={st.variant} />
                   </span>
                 </div>
 
-                <div className="flex flex-1 flex-col gap-2 p-3">
-                  <div>
+                <div className="flex flex-1 flex-col gap-3 p-3">
+                  <div className="min-w-0">
                     <p className="truncate font-bold">{it.name}</p>
-                    {/* **واسمُ المتجر يبقى هنا وحدَه** — شاشتُنا لا شاشةُ الزبون. */}
-                    <p className="truncate text-xs text-ink-muted">{it.merchant_name}</p>
+                    {/* **واسمُ المتجر رابطٌ لملفّه** — كان نصّاً ميتاً. */}
+                    <p className="truncate text-sm text-ink-muted">
+                      {it.merchant_id ? (
+                        <AdminLink href={`/dashboard/merchants/${it.merchant_id}`} className="hover:underline">
+                          {it.merchant_name}
+                        </AdminLink>
+                      ) : (
+                        it.merchant_name
+                      )}
+                    </p>
                   </div>
+                  {canToggle && it.merchant_status === "active" && (
+                    <div className="mt-auto">
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        disabled={busyId === it.id}
+                        onClick={() => void toggle(it)}
+                      >
+                        {it.available ? PE.markOut : PE.markAvailable}
+                      </Button>
+                    </div>
+                  )}
                 </div>
-              </div>
+              </article>
             );
           })}
-        </div>
-      )}
-
-      {/* **والترقيمُ من المكوّن المشترك** — ولا يظهر لصفحةٍ واحدة. */}
-      {res.count > perPage && (
-        <div className="mt-4 flex justify-center">
-          <Pagination page={page} total={res.count} perPage={perPage} onChange={setPage} />
-        </div>
-      )}
-    </PageContainer>
+        </AdminEntityGrid>
+      </AdminAsync>
+    </AdminPage>
   );
 }
 

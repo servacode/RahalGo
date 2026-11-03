@@ -22,14 +22,15 @@ import {
   ButtonLink,
   Badge,
   CategoryIcon,
-  Pagination,
-  PageContainer,
-  LoadingState,
-  ReloadState,
+  AdminPage,
+  AdminAsync,
+  FilterBar,
+  FilterSelect,
+  PeriodPicker,
+  ContactButtons,
   IconStore,
   IconUser,
   IconPromos,
-  IconStatus,
   IconLink,
   IconLocation,
   IconSuccess,
@@ -38,11 +39,9 @@ import {
   IconSearch,
   IconHourglass,
   IconWarning,
-  IconWhatsApp,
   IconDate,
   Modal,
   Input,
-  Select,
   Alert,
   Confirm,
   FormActions,
@@ -50,8 +49,6 @@ import {
   Switch,
 } from "@rahalgo/ui";
 import { TempPasswordNote } from "@/components/admin/accounts/TempPasswordNote";
-import { PageHero } from "@/components/admin/PageHero";
-import { Tile, type TileTone } from "@/components/admin/DashParts";
 import { api } from "@/lib/api";
 import { useCanCall, useCanOpen } from "@/lib/policy";
 
@@ -119,58 +116,9 @@ const STATUS_TINT: Record<LeadStatus, string> = {
   rejected: "bg-field text-ink-muted",
 };
 
-const STATUS_ICON: Record<LeadStatus | "all", ComponentType<{ size?: number; className?: string }>> = {
-  new: IconHourglass,
-  needs_info: IconWarning,
-  converted: IconSuccess,
-  rejected: IconBlock,
-  all: IconStatus,
-};
-
-const TILE_TONE: Record<LeadStatus, TileTone> = {
-  new: "warning",
-  needs_info: "accent",
-  converted: "success",
-  rejected: "danger",
-};
-
 /** مفاتيحُ الرابط — **الفلاترُ تُحفظ فيه** فيُشارَك ويُعاد إليه. */
 const KEYS = ["status", "q", "rep_id", "governorate_id", "category_id", "from", "to", "page"] as const;
 type Key = (typeof KEYS)[number];
-
-type Period = "all" | "today" | "week" | "month" | "custom";
-
-/** **حسابُ التواريخ نصّاً** — `YYYY-MM-DD` من يوم المنصّة الذي يرسله الخادم، بلا منطقةٍ زمنيّة. */
-function shiftDay(day: string, delta: number): string {
-  const d = new Date(`${day}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + delta);
-  return d.toISOString().slice(0, 10);
-}
-
-function periodRange(p: Period, today: string): { from: string; to: string } {
-  switch (p) {
-    case "today":
-      return { from: today, to: today };
-    case "week":
-      return { from: shiftDay(today, -6), to: today };
-    case "month":
-      return { from: `${today.slice(0, 8)}01`, to: today };
-    default:
-      return { from: "", to: "" };
-  }
-}
-
-/** **أيُّ حبّةٍ تطابق الرابط** — ومدىً لا يطابق أيّاً منها «تواريخ مخصّصة». */
-function periodOf(from: string, to: string, today: string): Period {
-  if (!from && !to) return "all";
-  if (today) {
-    for (const p of ["today", "week", "month"] as const) {
-      const r = periodRange(p, today);
-      if (r.from === from && r.to === to) return p;
-    }
-  }
-  return "custom";
-}
 
 /** «ينتظر منذ» — أيّامٌ إن بلغ يوماً، وإلّا ساعاتٌ ودقائق. */
 function waitingFor(iso: string): string {
@@ -185,10 +133,6 @@ function prettyPhone(raw: string): string {
   if (d.startsWith("963")) d = `0${d.slice(3)}`;
   if (d.length === 10) return `${d.slice(0, 4)} ${d.slice(4, 7)} ${d.slice(7)}`;
   return raw;
-}
-
-function waLink(raw: string): string {
-  return `https://wa.me/${raw.replace(/[^\d]/g, "").replace(/^0/, "963")}`;
 }
 
 /**
@@ -269,8 +213,6 @@ function LeadsScreen() {
   const [busy, setBusy] = useState("");
   /** حقلُ البحث يُكتب محلّيّاً ثمّ يُرسَل للرابط بعد توقّفٍ قصير. */
   const [q, setQ] = useState(get("q"));
-  /** **«تواريخ مخصّصة» تُفتح قبل أن يُختار تاريخ** — وإلّا لا تظهر الخانتان. */
-  const [customOpen, setCustomOpen] = useState(false);
 
   /** الطلبُ الذي يُوافَق عليه الآن — **لا موافقةَ بلا تأكيد.** */
   const [approving, setApproving] = useState<Lead | null>(null);
@@ -362,209 +304,148 @@ function LeadsScreen() {
   const count = data?.total ?? 0;
   const perPage = data?.per_page || 20;
   const filtered = KEYS.some((k) => k !== "status" && k !== "page" && params.get(k));
-  const period = customOpen ? "custom" : periodOf(get("from"), get("to"), today);
   const allCount = STATUSES.reduce((s, k) => s + (counts[k] ?? 0), 0);
 
   function clearFilters() {
     setQ("");
-    setCustomOpen(false);
     setParams({ q: "", rep_id: "", governorate_id: "", category_id: "", from: "", to: "" });
   }
 
-  function pickPeriod(p: Period) {
-    if (p === "custom") {
-      setCustomOpen(true);
-      return;
-    }
-    setCustomOpen(false);
-    setParams(periodRange(p, today));
-  }
-
-  if (!loaded) return <LoadingState />;
-
-  const repChips = [{ id: "", label: L.allReps }, ...reps.map((r) => ({ id: r.id, label: r.name }))];
-  const periodChips = (["all", "today", "week", "month", "custom"] as const)
-    // **ولا حبّاتُ مدىً قبل أن يُعرف يومُ المنصّة** — «اليوم» بيوم الجهاز يخالف فلترَ الخادم.
-    .filter((p) => p === "all" || p === "custom" || today !== "")
-    .map((p) => ({ id: p, label: L.periods[p] }));
+  const repOptions = reps.length > 1;
 
   return (
-    <PageContainer>
-      <PageHero<string>
-        icon={IconLink}
-        title={L.title}
-        subtitle={L.subtitle}
-        actions={
-          auto.row?.editable ? (
-            <div className="rounded-full border border-line px-3 py-1.5">
-              <Switch
-                checked={auto.row.on}
-                disabled={auto.busy}
-                label={`${L.autoTitle}: ${auto.row.on ? L.autoOn : L.autoOff}`}
-                // **التشغيلُ بتأكيد، والإطفاءُ فوراً** — الإطفاءُ يُرجع المراجعة ولا يفتح شيئاً.
-                onChange={(v) => (v ? setAutoConfirm(true) : void auto.set(false))}
-              />
-            </div>
-          ) : undefined
-        }
-        tabs={[
-          ...STATUSES.map((s) => ({
-            key: s,
-            label: L.st[s],
-            icon: STATUS_ICON[s],
-            count: data?.counts ? (counts[s] ?? 0) : null,
-            warn: s === "new",
-          })),
-          { key: "all", label: L.filterAll, icon: STATUS_ICON.all, count: data?.counts ? allCount : null },
-        ]}
-        value={status}
-        onChange={(k) => setParams({ status: k === "new" ? "" : k })}
-      />
-
-      {/* **وهو شغّالٌ يُقال بوضوح** — لا تلميحٌ مخفيّ. */}
-      {auto.row?.on && (
-        <Alert tone="warning" className="mb-4">
-          {L.autoOnBanner}
-        </Alert>
-      )}
-      {auto.error && (
-        <Alert className="mb-4" onDismiss={auto.clearError}>
-          {auto.error}
-        </Alert>
-      )}
-
-      {/* **أربعةُ أرقامٍ تُضغط** — عددُ كلّ حالةٍ بالفلاتر نفسِها، و«جديدة» هي الأهمّ. */}
-      {data?.counts && (
-        <div className="mb-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
-          {STATUSES.map((s) => (
-            <Tile
-              key={s}
-              icon={STATUS_ICON[s]}
-              label={L.tiles[s]}
-              value={fmtNum(counts[s] ?? 0)}
-              tone={(counts[s] ?? 0) > 0 ? TILE_TONE[s] : "muted"}
-              onClick={() => setParams({ status: s === "new" ? "" : s })}
+    <AdminPage<string>
+      icon={IconLink}
+      title={L.title}
+      count={data?.counts ? allCount : null}
+      actions={
+        auto.row?.editable ? (
+          <div className="rounded-full border border-line px-3 py-1.5">
+            <Switch
+              checked={auto.row.on}
+              disabled={auto.busy}
+              label={`${L.autoTitle}: ${auto.row.on ? L.autoOn : L.autoOff}`}
+              // **التشغيلُ بتأكيد، والإطفاءُ فوراً** — الإطفاءُ يُرجع المراجعة ولا يفتح شيئاً.
+              onChange={(v) => (v ? setAutoConfirm(true) : void auto.set(false))}
             />
-          ))}
-        </div>
-      )}
-
-      {/* **وسببُ الخادم يُعرض بنصّه** — جوابٌ يُصلَح به. */}
-      {error && data && (
-        <Alert className="mb-4" onDismiss={() => setError("")}>
-          {error}
-        </Alert>
-      )}
-      {notice && (
-        <Alert tone={notice.tone} className="mb-4" onDismiss={() => setNotice(null)}>
-          {notice.text}
-          <TempPasswordNote value={notice.temp} />
-          {canProfile && notice.owner && (
-            <>
-              {" — "}
-              <Link href={`/dashboard/users/${notice.owner}`} className="font-medium underline">
-                {L.openOwner}
-              </Link>
-            </>
-          )}
-        </Alert>
-      )}
-
-      {/* **الفلاترُ ببطاقةٍ واحدة** — عنوانٌ وعددُ النتائج، بحثٌ بعرضها، والمندوبُ والمدّةُ حبّات. */}
-      <section className="surface mb-4 space-y-3 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="heading-card">
-            {L.filtersTitle}
-            <span className="ms-2 text-xs font-normal text-ink-muted">{L.resultsCount.replace("{n}", fmtNum(count))}</span>
-          </h2>
-          {(filtered || customOpen) && (
-            <Button variant="ghost" onClick={clearFilters}>
-              {L.clear}
-            </Button>
-          )}
-        </div>
-        <Input
-          id="lead-search"
-          icon={<IconSearch size={16} />}
-          placeholder={L.search}
-          aria-label={L.search}
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-        />
-        {reps.length > 1 && (
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-ink-muted">{L.rep}:</span>
-            <Chips wrap items={repChips} value={get("rep_id")} onChange={(id) => setParams({ rep_id: id })} />
           </div>
-        )}
-        {/* **والمحافظةُ والتصنيفُ ممّا في الطلبات نفسِها** — ويُخفى المرشِّحُ إن لم يبقَ فيه إلّا خيارٌ واحد. */}
-        {(govs.length > 1 || cats.length > 1) && (
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {govs.length > 1 && (
-              <Select
-                aria-label={L.allGovs}
-                value={get("governorate_id")}
-                onChange={(e) => setParams({ governorate_id: e.target.value })}
-              >
-                <option value="">{L.allGovs}</option>
-                {govs.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.name}
-                  </option>
-                ))}
-              </Select>
-            )}
-            {cats.length > 1 && (
-              <Select aria-label={L.category} value={get("category_id")} onChange={(e) => setParams({ category_id: e.target.value })}>
-                <option value="">{L.allCats}</option>
-                {cats.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </Select>
-            )}
-          </div>
-        )}
+        ) : undefined
+      }
+      tabs={[
+        ...STATUSES.map((s) => ({
+          key: s as string,
+          label: L.st[s],
+          count: data?.counts ? (counts[s] ?? 0) : null,
+          attention: s === "new",
+        })),
+        { key: "all", label: L.filterAll, count: data?.counts ? allCount : null },
+      ]}
+      tab={status}
+      onTab={(k) => setParams({ status: k === "new" ? "" : k })}
+      notices={
+        <>
+          {/* **وهو شغّالٌ يُقال بوضوح** — لا تلميحٌ مخفيّ. */}
+          {auto.row?.on && <Alert tone="warning">{L.autoOnBanner}</Alert>}
+          {auto.error && <Alert onDismiss={auto.clearError}>{auto.error}</Alert>}
+          {/* **وسببُ الخادم يُعرض بنصّه** — جوابٌ يُصلَح به. */}
+          {error && data && <Alert onDismiss={() => setError("")}>{error}</Alert>}
+          {notice && (
+            <Alert tone={notice.tone} onDismiss={() => setNotice(null)}>
+              {notice.text}
+              <TempPasswordNote value={notice.temp} />
+              {canProfile && notice.owner && (
+                <>
+                  {" — "}
+                  <Link href={`/dashboard/users/${notice.owner}`} className="font-medium underline">
+                    {L.openOwner}
+                  </Link>
+                </>
+              )}
+            </Alert>
+          )}
+        </>
+      }
+      toolbar={
+        <FilterBar
+          search={{ id: "lead-search", value: q, onChange: setQ, placeholder: L.search }}
+          filtered={filtered}
+          onClear={clearFilters}
+          end={L.resultsCount.replace("{n}", fmtNum(count))}
+        >
+          {repOptions && (
+            <FilterSelect id="lead-rep" label={L.rep} value={get("rep_id")} onChange={(v) => setParams({ rep_id: v })}>
+              <option value="">{L.allReps}</option>
+              {reps.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
+            </FilterSelect>
+          )}
+          <PeriodPicker
+            id="lead-period"
+            from={get("from")}
+            to={get("to")}
+            today={today}
+            onChange={(f, t) => setParams({ from: f, to: t })}
+          />
+        </FilterBar>
+      }
+      pagination={{ page, total: count, perPage, onChange: (p) => setParams({ page: p > 1 ? String(p) : "" }) }}
+    >
+      {/* **والمحافظةُ والتصنيفُ ممّا في الطلبات نفسِها** — ويُخفى المرشِّحُ إن لم يبقَ فيه إلّا خيارٌ واحد. */}
+      {(govs.length > 1 || cats.length > 1) && (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-ink-muted">{L.period}:</span>
-          <Chips wrap items={periodChips} value={period} onChange={pickPeriod} />
+          {govs.length > 1 && (
+            <FilterSelect
+              id="lead-gov"
+              label={L.allGovs}
+              value={get("governorate_id")}
+              onChange={(v) => setParams({ governorate_id: v })}
+            >
+              <option value="">{L.allGovs}</option>
+              {govs.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+            </FilterSelect>
+          )}
+          {cats.length > 1 && (
+            <FilterSelect
+              id="lead-cat"
+              label={L.category}
+              value={get("category_id")}
+              onChange={(v) => setParams({ category_id: v })}
+            >
+              <option value="">{L.allCats}</option>
+              {cats.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </FilterSelect>
+          )}
         </div>
-        {period === "custom" && (
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <Input id="lead-from" type="date" label={L.from} value={get("from")} onChange={(e) => setParams({ from: e.target.value })} />
-            <Input id="lead-to" type="date" label={L.to} value={get("to")} onChange={(e) => setParams({ to: e.target.value })} />
-          </div>
-        )}
-        {/* **والتاريخُ بيوم المنصّة** — طلبُ الثالثة فجراً يُحسب على اليوم السابق، فيُقال ذلك. */}
-        {period !== "all" && data?.day_start_hour != null && (
-          <p className="text-2xs text-ink-muted">{L.dayStartNote.replace("{h}", fmtNum(data.day_start_hour))}</p>
-        )}
-      </section>
+      )}
 
-      {error && !data ? (
-        <ReloadState onRetry={() => void load()} label={L.loadError} />
-      ) : leads.length === 0 ? (
-        <section className="surface flex flex-col items-center gap-3 p-8 text-center">
-          <span
-            className={`inline-flex h-16 w-16 items-center justify-center rounded-full ${
-              filtered ? "bg-field text-ink-muted" : "bg-success-solid text-on-solid"
-            }`}
-          >
-            {filtered ? <IconSearch size={28} /> : <IconStore size={28} />}
-          </span>
-          <h2 className="heading-section">
-            {filtered ? L.emptyFiltered : L.emptyByStatus[status as LeadStatus | "all"] ?? L.empty}
-          </h2>
-          <p className="max-w-md text-sm text-ink-muted">{filtered ? L.emptyFilteredHint : L.emptyHint}</p>
-          {filtered && (
+      <AdminAsync
+        loading={!loaded}
+        error={!!error && !data}
+        onRetry={() => void load()}
+        hasData={!!data}
+        empty={leads.length === 0}
+        emptyTitle={filtered ? L.emptyFiltered : (L.emptyByStatus[status as LeadStatus | "all"] ?? L.empty)}
+        emptyIcon={filtered ? IconSearch : IconStore}
+        emptyAction={
+          filtered ? (
             <Button variant="secondary" onClick={clearFilters}>
               {L.clear}
             </Button>
-          )}
-        </section>
-      ) : (
-        <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+          ) : undefined
+        }
+      >
+        <ul className="admin-grid">
           {leads.map((l) => (
             <LeadCard
               key={l.id}
@@ -578,14 +459,7 @@ function LeadsScreen() {
             />
           ))}
         </ul>
-      )}
-
-      {/* **والترقيمُ من المكوّن المشترك** — ولا يظهر لصفحةٍ واحدة. */}
-      {count > perPage && (
-        <div className="mt-4 flex justify-center">
-          <Pagination page={page} total={count} perPage={perPage} onChange={(p) => setParams({ page: p > 1 ? String(p) : "" })} />
-        </div>
-      )}
+      </AdminAsync>
 
       {/* **تأكيدٌ قبل الموافقة** — يقول ما سيقع والتحذيرات وملاحظةَ المندوب قبل الضغط. */}
       <Confirm
@@ -682,14 +556,14 @@ function LeadsScreen() {
           </div>
         </Modal>
       )}
-    </PageContainer>
+    </AdminPage>
   );
 }
 
 function NoteLine({ label, text }: { label: string; text: string }) {
   return (
     <p className="border-s-2 border-line ps-2 text-sm">
-      <span className="text-2xs text-ink-muted">{label}: </span>
+      <span className="text-xs text-ink-muted">{label}: </span>
       {text}
     </p>
   );
@@ -755,7 +629,7 @@ function LeadCard({
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate font-bold">{l.store_name}</span>
-          {l.category_name && <span className="block text-2xs text-ink-muted">{l.category_name}</span>}
+          {l.category_name && <span className="block text-xs text-ink-muted">{l.category_name}</span>}
         </span>
         <Badge variant={STATUS_VARIANT[l.status]}>{L.st[l.status]}</Badge>
       </div>
@@ -764,7 +638,7 @@ function LeadCard({
           (قرارُ المالك ٢٠٢٦-١٠-٢٦: «لازم هذا تاريخ التسجيل والانضمام»). */}
       <div className="flex items-end justify-between gap-2 rounded-control bg-field px-3 py-2.5">
         <span className="min-w-0">
-          <span className="block text-2xs text-ink-muted">{pending ? L.waiting : L.registered}</span>
+          <span className="block text-xs text-ink-muted">{pending ? L.waiting : L.registered}</span>
           {pending ? (
             <span className="figure block text-warning">{waitingFor(l.created_at)}</span>
           ) : (
@@ -774,7 +648,7 @@ function LeadCard({
           )}
         </span>
         {pending && (
-          <span className="text-end text-2xs text-ink-muted">
+          <span className="text-end text-xs text-ink-muted">
             <span className="flex items-center justify-end gap-1">
               <IconDate size={12} />
               {L.registered}
@@ -795,10 +669,7 @@ function LeadCard({
               </span>
             </span>
           </span>
-          <ButtonLink href={waLink(l.phone)} target="_blank" rel="noreferrer" variant="secondary" className="shrink-0 !px-3 !py-1.5">
-            <IconWhatsApp size={15} className="text-success" />
-            {L.whatsapp}
-          </ButtonLink>
+          <ContactButtons phone={l.phone} name={l.owner_name} />
         </div>
 
         <div className="flex items-center justify-between gap-2">

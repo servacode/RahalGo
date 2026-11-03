@@ -38,7 +38,17 @@ import {
 import {
   Chips,
   Alert,
-  PageContainer,
+  AdminPage,
+  AdminCard,
+  AdminEmpty,
+  AdminLoading,
+  AdminReload,
+  AdminLink,
+  FilterBar,
+  Stat,
+  type AdminTab,
+  IconPrev,
+  IconNext,
   Button,
   ButtonLink,
   Badge,
@@ -50,7 +60,6 @@ import {
   LoadingState,
   ReloadState,
   IconStar,
-  IconDriver,
   IconUser,
   IconTarget,
   IconWallet,
@@ -65,8 +74,6 @@ import {
 import { api, apiFile, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useCanCall, useCanOpen } from "@/lib/policy";
-import { PageHero, type HeroTab } from "@/components/admin/PageHero";
-import { Tile } from "@/components/admin/DashParts";
 
 const m = getMessages(defaultLocale);
 const P = m.admin.incentives;
@@ -468,9 +475,9 @@ export default function IncentivesPage() {
       }));
   }, [ledger, month]);
 
-  const TABS: HeroTab<Role>[] = [
-    { key: "driver", label: P.tabDrivers, icon: IconDriver },
-    { key: "sales", label: P.tabSales, icon: IconUser },
+  const TABS: AdminTab<Role>[] = [
+    { key: "driver", label: P.tabDrivers },
+    { key: "sales", label: P.tabSales },
   ];
   const unit = role === "driver" ? P.unitDriver : P.unitSales;
   const settingsHref = `/dashboard/settings?topic=${SETTINGS_TOPIC[role]}`;
@@ -523,157 +530,137 @@ export default function IncentivesPage() {
   const prev = shiftMonth(now, -1);
 
   // تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦ ثمّ ٢٠٢٦-١٠-٢٧) — رأسٌ موحّدٌ بتبويبَي الدور، أرقامٌ تُضغط
-  // فتفلتر، وفلاترُ ببطاقةٍ واحدة، وكرتٌ لكلّ شخصٍ ولكلّ تنبيهٍ ولكلّ طلب.
+  // فتفلتر، وفلاترُ بسطرٍ واحد، وكرتٌ لكلّ شخصٍ ولكلّ تنبيهٍ ولكلّ طلب.
   return (
-    <PageContainer>
-      <PageHero<Role>
-        icon={IconStar}
-        title={P.title}
-        subtitle={P.subtitle}
-        actions={
-          <Button variant="secondary" onClick={() => void exportCsv()} className="flex items-center gap-1.5">
-            <IconArrowOut size={16} />
-            {P.export}
-          </Button>
-        }
-        tabs={TABS}
-        value={role}
-        onChange={setRole}
-      />
-
-      {/* ── الفلاتر ببطاقةٍ واحدة: الشهر، والبحث، ومن يطلع ── */}
-      <section className="surface flex flex-col gap-3 p-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-ink-muted">{P.month}:</span>
-          <Chips
-            items={[
-              { id: now, label: P.monthThis },
-              { id: prev, label: P.monthPrev },
-            ]}
-            value={month}
-            onChange={setMonth}
-            wrap
-          />
-          {/* **وأيُّ شهرٍ بأسهم** — بدل خانة الشهر التي يختلف شكلُها من متصفّحٍ لآخر. */}
-          <span className="ms-auto inline-flex items-center gap-1">
-            <Button variant="secondary" aria-label={P.monthBack} onClick={() => setMonth(shiftMonth(month, -1))}>
-              {"→"}
-            </Button>
-            <span className="min-w-[8.5rem] text-center text-sm font-bold">{monthName(month)}</span>
-            <Button
-              variant="secondary"
-              aria-label={P.monthForward}
-              disabled={month >= now}
-              onClick={() => setMonth(shiftMonth(month, 1))}
-            >
-              {"←"}
-            </Button>
-          </span>
-        </div>
-        <Input
-          id="incentives-search"
-          label={P.search}
-          icon={<IconSearch size={16} />}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-        {ready && (
-          <div className="flex flex-wrap items-center gap-2 border-t border-line-soft pt-3">
-            <span className="text-sm text-ink-muted">{P.show}:</span>
-            <Chips items={showChips} value={show} onChange={setShow} wrap />
-            {stageShow > 0 && (
-              <button
-                type="button"
-                onClick={() => setShow("all")}
-                className="inline-flex items-center gap-1.5 rounded-full bg-accent px-3 py-1 text-sm font-medium text-on-bright"
+    <AdminPage<Role>
+      icon={IconStar}
+      title={P.title}
+      actions={
+        <Button variant="secondary" onClick={() => void exportCsv()} className="flex items-center gap-1.5">
+          <IconArrowOut size={16} />
+          {P.export}
+        </Button>
+      }
+      tabs={TABS}
+      tab={role}
+      onTab={setRole}
+      notices={
+        <>
+          {pageError && <Alert>{pageError}</Alert>}
+          {notice && <Alert tone="success">{notice}</Alert>}
+        </>
+      }
+      toolbar={
+        <div className="space-y-3">
+          <FilterBar
+            search={{ id: "incentives-search", value: query, onChange: setQuery, placeholder: P.search }}
+            filtered={filtered}
+            onClear={() => {
+              setShow("all");
+              setQuery("");
+            }}
+            end={filtered && ready ? fill(P.shown, { n: fmtNum(rows.length), total: fmtNum(counts.all) }) : undefined}
+          >
+            {/* **أيُّ شهرٍ بأسهم** — بدل خانة الشهر التي يختلف شكلُها من متصفّحٍ لآخر. */}
+            <span className="inline-flex items-center gap-1">
+              <Button variant="secondary" aria-label={P.monthBack} onClick={() => setMonth(shiftMonth(month, -1))}>
+                <IconPrev size={16} />
+              </Button>
+              <span className="min-w-[8.5rem] text-center text-sm font-bold">{monthName(month)}</span>
+              <Button
+                variant="secondary"
+                aria-label={P.monthForward}
+                disabled={month >= now}
+                onClick={() => setMonth(shiftMonth(month, 1))}
               >
-                {fill(P.fStage, { n: fmtNum(stageShow) })}
-                <IconClose size={14} />
-                <span className="sr-only">{P.clearFilter}</span>
-              </button>
-            )}
-            {filtered && (
-              <span className="ms-auto text-xs text-ink-muted">
-                {fill(P.shown, { n: fmtNum(rows.length), total: fmtNum(counts.all) })}
-              </span>
-            )}
-          </div>
-        )}
-      </section>
-
-      {pageError && <Alert>{pageError}</Alert>}
-      {notice && <Alert tone="success">{notice}</Alert>}
-
-      {data === null ? (
-        <LoadingState variant="stats" />
-      ) : data === "failed" ? (
-        <ReloadState onRetry={load} />
-      ) : data === "nostages" ? (
-        <section className="surface flex flex-col items-center gap-3 p-8 text-center">
-          <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-warning-solid text-on-solid">
-            <IconTarget size={28} />
-          </span>
-          <h2 className="heading-section">{P.noStagesTitle}</h2>
-          <p className="max-w-md text-sm text-ink-muted">{canSettings ? P.noStagesHint : P.noStagesHintAsk}</p>
-          {canSettings && (
-            <ButtonLink href={settingsHref} variant="secondary">
-              <IconSettings size={14} />
-              {P.editInSettings}
-            </ButtonLink>
+                <IconNext size={16} />
+              </Button>
+            </span>
+          </FilterBar>
+          {ready && (
+            <div className="flex flex-wrap items-center gap-2">
+              <Chips items={showChips} value={show} onChange={setShow} wrap />
+              {stageShow > 0 && (
+                <Button variant="secondary" size="sm" onClick={() => setShow("all")}>
+                  <span className="flex items-center gap-1.5">
+                    {fill(P.fStage, { n: fmtNum(stageShow) })}
+                    <IconClose size={14} />
+                    <span className="sr-only">{P.clearFilter}</span>
+                  </span>
+                </Button>
+              )}
+            </div>
           )}
-        </section>
+        </div>
+      }
+    >
+      {data === null ? (
+        <AdminLoading rows={4} />
+      ) : data === "failed" ? (
+        <AdminReload onRetry={load} />
+      ) : data === "nostages" ? (
+        <AdminEmpty
+          icon={IconTarget}
+          title={P.noStagesTitle}
+          action={
+            canSettings ? (
+              <ButtonLink href={settingsHref} variant="secondary">
+                <IconSettings size={14} />
+                {P.editInSettings}
+              </ButtonLink>
+            ) : undefined
+          }
+        />
       ) : (
         <>
           {/* ── الأرقام: كلُّ مرحلة · الآليّ · اليدويّ · العقوبات — وكلُّ مربّعٍ يفلتر ── */}
-          <div className="grid grid-cols-2 gap-2 lg:grid-cols-3 2xl:grid-cols-6">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 2xl:grid-cols-6">
             {data.summary.reached_per_level.map((n, i) => (
-              <Tile
+              <Stat
                 key={i}
                 icon={IconTarget}
                 label={fill(P.cardStage, { n: fmtNum(i + 1) })}
                 value={fmtNum(n)}
-                tone={n > 0 ? "accent" : "muted"}
-                onClick={() => toggleShow(`stage${i + 1}`)}
+                tone={n > 0 ? "neutral" : "muted"}
+                onOpen={() => toggleShow(`stage${i + 1}`)}
               />
             ))}
-            <Tile
+            <Stat
               icon={IconWallet}
-              tone={data.summary.auto_paid > 0 ? "success" : "muted"}
+              tone={data.summary.auto_paid > 0 ? "good" : "muted"}
               label={P.cardAuto}
               value={fmtMoney(data.summary.auto_paid)}
-              onClick={() => toggleShow("reached")}
+              onOpen={() => toggleShow("reached")}
             />
-            <Tile
+            <Stat
               icon={IconStar}
-              tone={data.summary.manual_paid > 0 ? "success" : "muted"}
+              tone={data.summary.manual_paid > 0 ? "good" : "muted"}
               label={P.cardManual}
               value={fmtMoney(data.summary.manual_paid)}
-              onClick={() => toggleShow("manual")}
+              onOpen={() => toggleShow("manual")}
             />
-            <Tile
+            <Stat
               icon={IconWarning}
               tone={data.summary.penalties > 0 ? "danger" : "muted"}
               label={P.cardPenalties}
               value={fmtMoney(data.summary.penalties)}
-              onClick={() => toggleShow("penalized")}
+              onOpen={() => toggleShow("penalized")}
             />
           </div>
 
           {/* ── مراحلُ الهدف — الوعدُ كما هو، وتعديلُه من الإعدادات ── */}
-          <section className="surface p-4">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <div className="min-w-0">
-                <h2 className="heading-card">{P.stagesTitle}</h2>
-                <p className="text-xs text-ink-muted">{P.stagesHint}</p>
-              </div>
-              {/* **ولمن يفتح الإعدادات وحدَه** (قرارُ المالك ٢٠٢٦-١٠-٠٥): الماليّةُ لا تراها. */}
-              {canSettings && (
+          <AdminCard
+            title={P.stagesTitle}
+            actions={
+              /* **ولمن يفتح الإعدادات وحدَه** (قرارُ المالك ٢٠٢٦-١٠-٠٥): الماليّةُ لا تراها. */
+              canSettings ? (
                 <ButtonLink href={settingsHref} variant="secondary">
                   <IconSettings size={14} />
                   {P.editInSettings}
                 </ButtonLink>
-              )}
-            </div>
+              ) : undefined
+            }
+          >
             {data.levels.length === 0 ? (
               <p className="text-sm text-ink-muted">{P.noStages}</p>
             ) : (
@@ -684,7 +671,7 @@ export default function IncentivesPage() {
                       {fmtNum(l.n)}
                     </span>
                     <span className="min-w-0">
-                      <span className="block text-2xs text-ink-muted">{fill(P.stageN, { n: fmtNum(l.n) })}</span>
+                      <span className="block text-xs text-ink-muted">{fill(P.stageN, { n: fmtNum(l.n) })}</span>
                       <span className="block font-bold tabular-nums">
                         {fmtNum(l.target)} {unit}
                       </span>
@@ -696,20 +683,15 @@ export default function IncentivesPage() {
                 ))}
               </ol>
             )}
-          </section>
+          </AdminCard>
 
           {/* ── التنبيهات — كرتٌ لكلّ واحد، والماليّةُ تقرّر ── */}
           {data.alerts.length > 0 && (
-            <section className="surface p-4">
-              <div className="mb-3">
-                <h2 className="heading-card flex items-center gap-2 text-danger">
-                  <IconWarning size={18} />
-                  {P.alertsTitle}
-                  <Badge variant="danger">{fmtNum(data.alerts.length)}</Badge>
-                </h2>
-                <p className="text-xs text-ink-muted">{P.alertsHint}</p>
-              </div>
-              <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            <AdminCard
+              title={P.alertsTitle}
+              actions={<Badge variant="danger">{fmtNum(data.alerts.length)}</Badge>}
+            >
+              <ul className="admin-grid">
                 {data.alerts.map((a) => (
                   <AlertCard
                     key={a.incentive_id ?? a.failure_id}
@@ -721,21 +703,16 @@ export default function IncentivesPage() {
                   />
                 ))}
               </ul>
-            </section>
+            </AdminCard>
           )}
 
           {/* ── الطلباتُ المعلّقة — كرتٌ لكلّ طلب، والمبلغُ كبير ── */}
           {roleRequests.length > 0 && (
-            <section className="surface p-4">
-              <div className="mb-3">
-                <h2 className="heading-card flex items-center gap-2">
-                  <IconWallet size={18} />
-                  {P.pendingTitle}
-                  <Badge variant="warning">{fmtNum(roleRequests.length)}</Badge>
-                </h2>
-                <p className="text-xs text-ink-muted">{P.pendingHint}</p>
-              </div>
-              <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            <AdminCard
+              title={P.pendingTitle}
+              actions={<Badge variant="warning">{fmtNum(roleRequests.length)}</Badge>}
+            >
+              <ul className="admin-grid">
                 {roleRequests.map((r) => (
                   <li key={r.id} className="flex flex-col gap-2 rounded-card border border-line-soft p-3 text-sm">
                     <div className="flex flex-wrap items-center gap-2">
@@ -748,9 +725,13 @@ export default function IncentivesPage() {
                     >
                       {fmtMoney(r.amount)}
                     </p>
-                    <p className="font-bold">{r.user_name}</p>
+                    <p className="font-bold">
+                      <AdminLink href={`/dashboard/users/${r.user_id}`} className="hover:underline">
+                        {r.user_name}
+                      </AdminLink>
+                    </p>
                     {r.note && <p className="border-s-2 border-line ps-2">{r.note}</p>}
-                    <p className="text-2xs text-ink-muted">
+                    <p className="text-xs text-ink-muted">
                       {fill(P.proposedBy, { name: r.proposer_name, when: fmtDateTime(r.created_at) })}
                     </p>
                     {canDecide && (
@@ -774,37 +755,30 @@ export default function IncentivesPage() {
                   </li>
                 ))}
               </ul>
-            </section>
+            </AdminCard>
           )}
 
           {/* ── الأشخاص — كرتٌ لكلّ واحد ── */}
           {rows.length === 0 ? (
-            <section className="surface flex flex-col items-center gap-3 p-8 text-center">
-              <span
-                className={`inline-flex h-16 w-16 items-center justify-center rounded-full ${
-                  data.standings.length === 0 ? "bg-field text-ink-muted" : "bg-accent text-on-bright"
-                }`}
-              >
-                {data.standings.length === 0 ? <IconUser size={28} /> : <IconSearch size={28} />}
-              </span>
-              <h2 className="heading-section">{data.standings.length === 0 ? P.empty : P.noResults}</h2>
-              <p className="max-w-md text-sm text-ink-muted">
-                {data.standings.length === 0 ? P.emptyHint : P.noResultsHint}
-              </p>
-              {data.standings.length > 0 && filtered && (
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    setShow("all");
-                    setQuery("");
-                  }}
-                >
-                  {P.clearFilter}
-                </Button>
-              )}
-            </section>
+            <AdminEmpty
+              icon={data.standings.length === 0 ? IconUser : IconSearch}
+              title={data.standings.length === 0 ? P.empty : P.noResults}
+              action={
+                data.standings.length > 0 && filtered ? (
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setShow("all");
+                      setQuery("");
+                    }}
+                  >
+                    {P.clearFilter}
+                  </Button>
+                ) : undefined
+              }
+            />
           ) : (
-            <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+            <ul className="admin-grid">
               {rows.map((x) => (
                 <PersonCard
                   key={x.user_id}
@@ -850,9 +824,6 @@ export default function IncentivesPage() {
                   }`}
                 >
                   <span className="block font-bold">{kindLabel(k)}</span>
-                  <span className="block text-2xs text-ink-muted">
-                    {k === "reward" ? P.kindRewardHint : P.kindPenaltyHint}
-                  </span>
                 </button>
               );
             })}
@@ -871,7 +842,6 @@ export default function IncentivesPage() {
                   </span>
                 )}
               </p>
-              <p className="mt-1 text-xs text-ink-muted">{P.debtHint}</p>
             </div>
           )}
           <Input
@@ -992,7 +962,6 @@ export default function IncentivesPage() {
               <IconWallet size={24} />
             </span>
             <h3 className="heading-card">{P.ledgerEmpty}</h3>
-            <p className="text-sm text-ink-muted">{P.ledgerEmptyHint}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -1003,7 +972,7 @@ export default function IncentivesPage() {
                     {monthName(g.month)}
                     {g.month === month && <Badge variant="primary">{P.ledgerSelected}</Badge>}
                   </p>
-                  <p className="mt-0.5 flex flex-wrap gap-x-3 text-2xs text-ink-muted">
+                  <p className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-ink-muted">
                     <span>
                       {P.auto}: <span className="font-bold text-success">{fmtMoney(g.auto)}</span>
                     </span>
@@ -1045,7 +1014,7 @@ export default function IncentivesPage() {
           </div>
         )}
       </Drawer>
-    </PageContainer>
+    </AdminPage>
   );
 }
 
@@ -1081,7 +1050,7 @@ function AlertCard({
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate font-bold">{a.name}</span>
-          <span className="block text-2xs text-ink-muted">{failed ? P.alertDue : P.alertPaid}</span>
+          <span className="block text-xs text-ink-muted">{failed ? P.alertDue : P.alertPaid}</span>
         </span>
         <span className="figure shrink-0 tabular-nums" dir="ltr">
           {fmtMoney(a.amount)}
@@ -1158,7 +1127,7 @@ function PersonCard({
         <span className="min-w-0 flex-1">
           <span className="block truncate font-bold">{name}</span>
           {x.name && (
-            <span className="block text-2xs text-ink-muted" dir="ltr">
+            <span className="block text-xs text-ink-muted" dir="ltr">
               {x.phone}
             </span>
           )}
@@ -1174,7 +1143,7 @@ function PersonCard({
         {x.target > 0 ? (
           <>
             <div className="flex items-baseline justify-between gap-2">
-              <span className="text-2xs text-ink-muted">{P.progress}</span>
+              <span className="text-xs text-ink-muted">{P.progress}</span>
               {/* **والوحدةُ بوحدة الدور** — عملاءُ للمندوب لا متاجر (٢٠٢٦-١٠-١٥). */}
               <span className="font-bold tabular-nums">
                 {fill(P.progressOf, { done: fmtNum(x.done), target: fmtNum(x.target), unit })}
@@ -1187,7 +1156,7 @@ function PersonCard({
               />
             </div>
             {x.levels > 0 && (
-              <p className="mt-1.5 text-2xs text-ink-muted">
+              <p className="mt-1.5 text-xs text-ink-muted">
                 {next
                   ? remaining > 0
                     ? fill(P.nextStage, { n: fmtNum(remaining), unit, stage: fmtNum(next.n) })
@@ -1200,25 +1169,25 @@ function PersonCard({
           <span className="text-xs text-ink-muted">{P.noTarget}</span>
         )}
         {(x.pending ?? 0) > 0 && (
-          <p className="mt-1 text-2xs text-warning">{fill(P.pendingStores, { n: fmtNum(x.pending ?? 0) })}</p>
+          <p className="mt-1 text-xs text-warning">{fill(P.pendingStores, { n: fmtNum(x.pending ?? 0) })}</p>
         )}
       </div>
 
       <div className="flex gap-2 text-center">
         <span className="min-w-0 flex-1 rounded-control border border-line-soft px-2 py-2">
-          <span className="block text-2xs text-ink-muted">{P.auto}</span>
+          <span className="block text-xs text-ink-muted">{P.auto}</span>
           <span className="block font-bold tabular-nums text-success" dir="ltr">
             {fmtMoney(x.auto_paid)}
           </span>
         </span>
         <span className="min-w-0 flex-1 rounded-control border border-line-soft px-2 py-2">
-          <span className="block text-2xs text-ink-muted">{P.manual}</span>
+          <span className="block text-xs text-ink-muted">{P.manual}</span>
           <span className="block font-bold tabular-nums text-success" dir="ltr">
             {fmtMoney(x.manual_paid)}
           </span>
         </span>
         <span className="min-w-0 flex-1 rounded-control border border-line-soft px-2 py-2">
-          <span className="block text-2xs text-ink-muted">{P.penalized}</span>
+          <span className="block text-xs text-ink-muted">{P.penalized}</span>
           <span className="block font-bold tabular-nums text-danger" dir="ltr">
             {fmtMoney(x.penalized)}
           </span>

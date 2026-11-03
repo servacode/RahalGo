@@ -5,7 +5,9 @@ import { getMessages, defaultLocale, fmtNum, fmtDate, fmtMoney, errorText } from
 import {
   Chips,
   Alert,
-  PageContainer,
+  AdminPage,
+  SummaryStrip,
+  type AdminTab,
   Button,
   Input,
   Badge,
@@ -14,11 +16,7 @@ import {
   LoadingState,
   IconPromos,
   IconAdd,
-  IconWallet,
   IconDate,
-  IconStore,
-  IconUsers,
-  IconMoto,
   IconSearch,
   IconHourglass,
   Checkbox,
@@ -32,8 +30,6 @@ import { useAuth } from "@/lib/auth";
 import DiscountsTab from "@/components/admin/DiscountsTab";
 import PromoReferralsTab from "@/components/admin/PromoReferralsTab";
 import FreeDeliveryTab from "@/components/admin/FreeDeliveryTab";
-import { PageHero, type HeroTab } from "@/components/admin/PageHero";
-import { Tile } from "@/components/admin/DashParts";
 
 const m = getMessages(defaultLocale);
 const O = m.admin.promosOwner;
@@ -135,105 +131,99 @@ function PromosHub() {
   // (`auto_approve` من `approval.AutoApplies`) لا من اسم دور، فلا تقول لهما النافذةُ «بيروح لموافقة المالية».
   const autoApprove = summary?.auto_approve ?? false;
 
-  const tabs: HeroTab<PromoTab>[] = [
-    { key: "codes", label: m.admin.promos.tabCodes, icon: IconPromos },
-    { key: "discounts", label: m.admin.promos.tabDiscounts, icon: IconStore },
-    { key: "referrals", label: O.tabReferrals, icon: IconUsers },
-    { key: "free", label: m.admin.promos.tabFreeDelivery, icon: IconMoto },
+  const tabs: AdminTab<PromoTab>[] = [
+    { key: "codes", label: m.admin.promos.tabCodes },
+    { key: "discounts", label: m.admin.promos.tabDiscounts },
+    { key: "referrals", label: O.tabReferrals },
+    { key: "free", label: m.admin.promos.tabFreeDelivery },
   ];
 
-  // تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦) — رأسٌ موحّدٌ بالتبويبات، أربعةُ أرقامٍ بمربّعات،
+  // تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦) — رأسٌ موحّدٌ بالتبويبات، أرقامٌ تُضغط،
   // وكرتٌ لكلّ كودٍ بدل الجدول.
   return (
-    <PageContainer>
-      <PageHero<PromoTab>
-        icon={IconPromos}
-        title={m.admin.promos.title}
-        subtitle={O.pageHint}
-        tabs={tabs}
-        value={tab}
-        onChange={setTab}
-      />
-
-      {summary && (
-        <div className="space-y-2">
-          <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-            <Tile
-              icon={IconPromos}
-              label={O.sumActiveCodes}
-              value={fmtNum(summary.active_codes)}
-              tone={summary.active_codes > 0 ? "success" : "muted"}
-              onClick={() => setTab("codes")}
+    <AdminPage<PromoTab>
+      icon={IconPromos}
+      title={m.admin.promos.title}
+      tabs={tabs}
+      tab={tab}
+      onTab={setTab}
+      notices={
+        /* **وموافقاتُ المالية في صفحة الموافقات الموحّدة** (الخزينة) — لا تبويبَ هنا. */
+        summary && summary.pending_approvals > 0 ? (
+          <p className="flex items-center gap-2 rounded-control bg-field px-3 py-2 text-sm">
+            <IconHourglass size={16} className="shrink-0 text-warning" />
+            {isFinance ? (
+              <Link href="/dashboard/treasury?tab=approvals" className="font-bold underline">
+                {O.sumPending.replace("{n}", fmtNum(summary.pending_approvals))}
+              </Link>
+            ) : (
+              O.sumPending.replace("{n}", fmtNum(summary.pending_approvals))
+            )}
+          </p>
+        ) : undefined
+      }
+      summary={
+        summary ? (
+          <div className="space-y-3">
+            <SummaryStrip
+              items={[
+                {
+                  key: "codes",
+                  label: O.sumActiveCodes,
+                  value: fmtNum(summary.active_codes),
+                  tone: summary.active_codes > 0 ? "good" : "muted",
+                  onOpen: () => setTab("codes"),
+                },
+                {
+                  key: "discounts",
+                  label: O.sumActiveDiscounts,
+                  value: fmtNum(summary.active_discounts),
+                  tone: summary.active_discounts > 0 ? "good" : "muted",
+                  onOpen: () => setTab("discounts"),
+                },
+                {
+                  key: "platform",
+                  label: O.sumPlatformCost,
+                  value: fmtMoney(summary.platform_cost),
+                  tone: summary.platform_cost > 0 ? "attention" : "muted",
+                  onOpen: () => setTab("codes"),
+                },
+                {
+                  key: "stores",
+                  label: O.sumStoresCost,
+                  value: fmtMoney(summary.stores_cost),
+                  tone: summary.stores_cost > 0 ? "neutral" : "muted",
+                  onOpen: () => setTab("discounts"),
+                },
+              ]}
             />
-            <Tile
-              icon={IconStore}
-              label={O.sumActiveDiscounts}
-              value={fmtNum(summary.active_discounts)}
-              tone={summary.active_discounts > 0 ? "success" : "muted"}
-              onClick={() => setTab("discounts")}
-            />
-            <Tile
-              icon={IconWallet}
-              label={O.sumPlatformCost}
-              value={fmtMoney(summary.platform_cost)}
-              tone={summary.platform_cost > 0 ? "accent" : "muted"}
-            />
-            <Tile
-              icon={IconStore}
-              label={O.sumStoresCost}
-              value={fmtMoney(summary.stores_cost)}
-              tone={summary.stores_cost > 0 ? "default" : "muted"}
-              onClick={() => setTab("discounts")}
-            />
-          </div>
-          {/* **ومن وين إجت كلفة المنصة** — أربعُ خاناتٍ بأرقامها، وكلُّ خانةٍ تفتح تبويبها
-              (كانت سطراً تحت الرقم يُقطع على الجوّال فلا يُقرأ). */}
-          <section className="surface p-3">
-            <p className="mb-2 text-xs font-bold text-ink-muted">{O.costBreakdown}</p>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {(
+            {/* **ومن وين إجت كلفة المنصة** — أربعُ خاناتٍ بأرقامها، وكلُّ خانةٍ تفتح تبويبها. */}
+            <h2 className="admin-h2">{O.costBreakdown}</h2>
+            <SummaryStrip
+              items={(
                 [
                   { k: "codes", label: O.costCodes, v: summary.codes },
                   { k: "free", label: O.costFree, v: summary.free_delivery },
                   { k: "discounts", label: O.costItems, v: summary.platform_items },
                   { k: "referrals", label: O.costRefs, v: summary.referrals },
                 ] as { k: PromoTab; label: string; v: number }[]
-              ).map((c) => (
-                <button
-                  key={c.k}
-                  type="button"
-                  onClick={() => setTab(c.k)}
-                  className={`rounded-control border px-3 py-2 text-start transition-colors hover:bg-row-hover ${
-                    tab === c.k ? "border-accent" : "border-line-soft"
-                  }`}
-                >
-                  <span className="block text-2xs text-ink-muted">{c.label}</span>
-                  <span className={`block font-bold tabular-nums ${c.v > 0 ? "" : "text-ink-muted"}`}>{fmtMoney(c.v)}</span>
-                </button>
-              ))}
-            </div>
-          </section>
-          {/* **وموافقاتُ المالية في صفحة الموافقات الموحّدة** (الخزينة) — لا تبويبَ هنا. */}
-          {summary.pending_approvals > 0 && (
-            <p className="flex items-center gap-2 rounded-control bg-field px-3 py-2 text-sm">
-              <IconHourglass size={16} className="shrink-0 text-warning" />
-              {isFinance ? (
-                <Link href="/dashboard/treasury?tab=approvals" className="text-primary underline">
-                  {O.sumPending.replace("{n}", fmtNum(summary.pending_approvals))}
-                </Link>
-              ) : (
-                O.sumPending.replace("{n}", fmtNum(summary.pending_approvals))
-              )}
-            </p>
-          )}
-        </div>
-      )}
-
+              ).map((c) => ({
+                key: c.k,
+                label: c.label,
+                value: fmtMoney(c.v),
+                tone: c.v > 0 ? "neutral" : "muted",
+                onOpen: () => setTab(c.k),
+              }))}
+            />
+          </div>
+        ) : undefined
+      }
+    >
       {tab === "codes" && <CodesTab isAdmin={isAdmin} autoApprove={autoApprove} onChanged={loadSummary} />}
       {tab === "discounts" && <DiscountsTab onChanged={loadSummary} autoApprove={autoApprove} />}
       {tab === "referrals" && <PromoReferralsTab />}
       {tab === "free" && <FreeDeliveryTab />}
-    </PageContainer>
+    </AdminPage>
   );
 }
 
@@ -486,18 +476,18 @@ function PromoCard({
 
       <div className="flex items-end justify-between gap-2 rounded-control bg-field px-3 py-2.5">
         <span className="min-w-0">
-          <span className="block text-2xs text-ink-muted">{p.kind === "free_delivery" ? O.kindLabel : KIND_LABEL[p.kind]}</span>
+          <span className="block text-xs text-ink-muted">{p.kind === "free_delivery" ? O.kindLabel : KIND_LABEL[p.kind]}</span>
           <span className="figure block tabular-nums">{valueText(p) || KIND_LABEL[p.kind]}</span>
         </span>
         <span className="text-end">
-          <span className="block text-2xs text-ink-muted">{m.admin.promos.minOrder}</span>
+          <span className="block text-xs text-ink-muted">{m.admin.promos.minOrder}</span>
           <span className="block text-sm tabular-nums">{p.min_order > 0 ? fmtMoney(p.min_order) : O.noMinOrder}</span>
         </span>
       </div>
 
       <div>
         <div className="flex items-baseline justify-between gap-2 text-sm">
-          <span className="text-2xs text-ink-muted">{m.admin.promos.usedCount}</span>
+          <span className="text-xs text-ink-muted">{m.admin.promos.usedCount}</span>
           <span className="tabular-nums">
             {p.max_uses
               ? O.usageOf.replace("{used}", fmtNum(p.used_count)).replace("{max}", fmtNum(p.max_uses))
@@ -521,7 +511,7 @@ function PromoCard({
         </div>
       )}
 
-      <div className="grid grid-cols-1 gap-x-3 gap-y-1 text-2xs text-ink-muted sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-x-3 gap-y-1 text-xs text-ink-muted sm:grid-cols-2">
         <span className="flex items-center gap-1">
           <IconDate size={12} className="shrink-0" />
           {O.endsCol}: {p.expires_at ? fmtDate(p.expires_at) : m.admin.promos.noExpiry}
@@ -650,10 +640,19 @@ function PromoModal({
     setBusy(true);
     setError("");
     try {
+      // **رقمٌ غيرُ مقروءٍ يُرفض ولا يصير صفراً بصمت** — كان «e» أو «-» يُحفظ كودَ خصمٍ بقيمة 0.
+      const parse = (v: string, empty: number) => (v.trim() === "" ? empty : Number(v));
+      const valueN = kind === "free_delivery" ? 0 : parse(value, NaN);
+      const minN = parse(minOrder, 0);
+      const capN = kind === "percent" && cap !== "" ? parse(cap, NaN) : null;
+      if (![valueN, minN, ...(capN === null ? [] : [capN])].every(Number.isFinite) || (uses !== null && !Number.isFinite(uses))) {
+        setError(m.admin.kit.people.common.badNumber);
+        return;
+      }
       const common = {
-        value: kind === "free_delivery" ? 0 : Number(value) || 0,
-        max_discount: kind === "percent" && cap !== "" ? Number(cap) : null,
-        min_order: Number(minOrder) || 0,
+        value: valueN,
+        max_discount: capN,
+        min_order: minN,
         first_order_only: firstOnly,
         once_per_user: oncePerUser,
       };

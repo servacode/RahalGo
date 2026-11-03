@@ -1,93 +1,10 @@
-"use client";
+import { redirect } from "next/navigation";
 
-/** أصناف متجر — المحرّر المركزي نفسه بمسارات الإدارة. */
-
-import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import {
-  MenuManager,
-  PageContainer,
-  Button,
-  IconPrev,
-  IconStore,
-  type MenuPaths,
-} from "@rahalgo/ui";
-import { api, mediaUrl } from "@/lib/api";
-import ImageUpload, { MediaThumb } from "@/components/admin/ImageUpload";
-import { NotAllowed } from "@/components/admin/accounts/ProfileParts";
-import { useCanCall } from "@/lib/policy";
-
-const m = getMessages(defaultLocale);
-
-/** مسارات الإدارة — الحارس دورٌ لا ملكية. */
-const PATHS: MenuPaths = {
-  menu: (id) => `/api/v1/admin/merchants/${id}/menu`,
-  items: (id) => `/api/v1/admin/merchants/${id}/menu/items`,
-  item: (id) => `/api/v1/admin/menu/items/${id}`,
-  platformSections: () => `/api/v1/admin/sections`,
-};
-
-interface Merchant {
-  id: string;
-  name: string;
-}
-
-export default function AdminMenuPage() {
-  const { id } = useParams<{ id: string }>();
-  const router = useRouter();
-  const [name, setName] = useState("");
-  // **ومن لا يقرأ قائمةَ المتجر لا يُعرض له محرّرُها** (فحصُ المتصفّح
-  // ٢٠٢٦-١٠-٠٥): كانت المالية ترى «صنف جديد» والصفحةُ تنادي أربعةَ أبوابٍ
-  // كلُّها ٤٠٣.
-  const canCall = useCanCall();
-  const canRead = canCall("GET", "/merchants/{id}/menu");
-  const canEdit = canCall("POST", "/merchants/{id}/menu/items");
-
-  useEffect(() => {
-    if (!canRead) return;
-    api<{ merchants: Merchant[] }>("/api/v1/admin/merchants?per_page=100")
-      .then((p) => setName(p.merchants.find((x) => x.id === id)?.name ?? ""))
-      .catch(() => undefined);
-  }, [id, canRead]);
-
-  return (
-    <PageContainer>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="heading-section flex items-center gap-2">
-          <IconStore className="text-primary" />
-          {m.terms.menu}
-          {name && <span className="font-normal text-ink-muted">— {name}</span>}
-        </h1>
-        <Button
-          variant="secondary"
-          /* **والرجوعُ إلى بابٍ موجود** — كانت الصفحةُ تردّ 404،
-             والمتاجرُ تُدار في صفحة الحسابات بتبويبٍ لها. (٢٠٢٦-٠٨-٠٧.) */
-          onClick={() => router.push("/dashboard/users")}
-          className="flex items-center gap-1.5"
-        >
-          <IconPrev size={15} />
-          {m.admin.merchants.title}
-        </Button>
-      </div>
-
-      {!canRead ? <NotAllowed /> : <MenuManager
-        showSalePrice
-        readOnly={!canEdit}
-        api={api}
-        paths={PATHS}
-        merchantID={id}
-        imageUpload={(initialUrl, onChange) => (
-          <ImageUpload
-            kind="menu_item"
-            label={m.shared.menuEditor.itemImage}
-            initialUrl={initialUrl}
-            onChange={onChange}
-          />
-        )}
-        thumb={(url, alt) => <MediaThumb url={url} alt={alt} fallback={alt} size={48} />}
-        mediaUrl={mediaUrl}
-      />}
-    </PageContainer>
-  );
+/**
+ * **قائمةُ المتجر صارت تبويباً في ملفّه** — هذا المسارُ يوجّه إليه فقط، فلا قائمتان تُصلَحان معاً
+ * (وكان يجلب المتاجرَ بـ`per_page=100` ليقرأ الاسمَ فيضيع بعد المتجر المئة).
+ */
+export default async function MerchantMenuRedirect({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  redirect(`/dashboard/merchants/${encodeURIComponent(id)}?tab=menu`);
 }

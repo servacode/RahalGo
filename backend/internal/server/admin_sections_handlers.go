@@ -443,7 +443,7 @@ func (s *Server) handleSectionItems(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT i.id::text, i.name, i.merchant_price, i.available,
 		       m.name, m.status, im.thumb_path, im.path,
-		       m.commission_percent, i.margin_override, ps.margin_override
+		       m.commission_percent, i.margin_override, ps.margin_override, m.id::text
 		FROM menu_items i
 		JOIN merchants m ON m.id = i.merchant_id
 		JOIN platform_sections ps ON ps.id = i.platform_section_id
@@ -465,6 +465,7 @@ func (s *Server) handleSectionItems(w http.ResponseWriter, r *http.Request) {
 		// MerchantPrice **سعرُ الشراء** — ما وضعه المتجر، وأصلُ الحسبتين.
 		MerchantPrice  int64   `json:"merchant_price"`
 		Available      bool    `json:"available"`
+		MerchantID     string  `json:"merchant_id"`
 		MerchantName   string  `json:"merchant_name"`
 		MerchantStatus string  `json:"merchant_status"`
 		ThumbURL       *string `json:"thumb_url"`
@@ -512,7 +513,7 @@ func (s *Server) handleSectionItems(w http.ResponseWriter, r *http.Request) {
 		var commOverride *pricing.Percent2
 		if err := rows.Scan(&x.ID, &x.Name, &x.MerchantPrice, &x.Available,
 			&x.MerchantName, &x.MerchantStatus, &x.ThumbURL, &x.ImageURL,
-			&commOverride, &x.MarginOverride, &sectionMargin); err != nil {
+			&commOverride, &x.MarginOverride, &sectionMargin, &x.MerchantID); err != nil {
 			s.respondErr(w, err)
 			return
 		}

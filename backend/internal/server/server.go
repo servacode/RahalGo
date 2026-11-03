@@ -1397,6 +1397,7 @@ func (s *Server) Router() http.Handler {
 			// **ومتجرٌ بعينه لملفّه** — كان يُبحث عنه بالاسم في القائمة،
 			// **ومتجران متشابها الاسم يُخلطان.**
 			r.Get("/merchants/{id}", s.handleAdminGetMerchant)
+			r.Get("/merchants/{id}/pulse", s.handleAdminMerchantPulse)
 			r.Get("/merchants/{id}/menu", s.handleGetMenu)
 			// **ومشروباتُ المتجر للإدارة** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — المنطقُ نفسُه الذي للمتجر والمندوب.
 			r.Get("/merchants/{id}/drinks", s.handleAdminGetDrinks)

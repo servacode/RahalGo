@@ -27,24 +27,21 @@ import {
   Button,
   ButtonLink,
   Alert,
-  Chips,
   Confirm,
-  PageContainer,
-  LoadingState,
-  ReloadState,
+  AdminPage,
+  AdminAsync,
+  AdminCard,
+  FilterBar,
+  FilterSelect,
+  SummaryStrip,
   useLiveData,
   IconLocation,
-  IconUsers,
-  IconTrendUp,
   IconZones,
-  IconHourglass,
   IconSend,
   IconCheck,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useCanCall } from "@/lib/policy";
-import { PageHero } from "@/components/admin/PageHero";
-import { Tile } from "@/components/admin/DashParts";
 
 const m = getMessages(defaultLocale);
 const T = m.admin.expansion;
@@ -191,7 +188,6 @@ export default function ExpansionPage() {
     }
   };
 
-  const statusChips = FILTERS.map((f) => ({ id: f, label: FILTER_LABEL[f], count: s ? countOf(f) : undefined }));
   const kindChips = (["all", "coverage_request", "service_interest"] as const).map((k) => ({
     id: k,
     label: k === "all" ? T.kindAll : k === "coverage_request" ? T.kindCoverage : T.kindInterest,
@@ -199,96 +195,100 @@ export default function ExpansionPage() {
   }));
 
   const cities = s?.by_city ?? [];
+  const filtered = filter !== "all" || kind !== "all";
+  const showAll = () => {
+    setFilter("all");
+    setKind("all");
+  };
 
   return (
-    <PageContainer>
-      <PageHero icon={IconLocation} title={T.title} subtitle={T.subtitle} />
-
-      {/* **الأرقامُ الأربعة تُضغط** — وما يحتاج فعلاً برتقاليّ. */}
-      <div className="mb-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
-        <Tile
-          icon={IconUsers}
-          label={T.people}
-          value={s ? fmtNum(s.people) : "—"}
-          sub={s ? n(T.citiesSub, s.cities) : undefined}
-          tone={s && s.people > 0 ? "default" : "muted"}
-          onClick={() => {
-            pick("all");
-            setByCityOpen(true);
-          }}
+    <AdminPage<Filter>
+      icon={IconLocation}
+      title={T.title}
+      count={s ? (s.rows ?? []).length : null}
+      tabs={FILTERS.map((f) => ({
+        key: f,
+        label: FILTER_LABEL[f],
+        count: s ? countOf(f) : null,
+        attention: f === "ready" || f === "waiting",
+      }))}
+      tab={filter}
+      onTab={setFilter}
+      notices={
+        msg ? (
+          <Alert tone={msg.tone} onDismiss={() => setMsg(null)}>
+            {msg.text}
+          </Alert>
+        ) : undefined
+      }
+      toolbar={
+        <FilterBar filtered={filtered} onClear={showAll}>
+          <FilterSelect id="exp-kind" label={T.filterKind} value={kind} onChange={(v) => setKind(v as KindFilter)}>
+            {kindChips.map((k) => (
+              <option key={k.id} value={k.id}>
+                {k.count != null ? `${k.label} (${fmtNum(k.count)})` : k.label}
+              </option>
+            ))}
+          </FilterSelect>
+        </FilterBar>
+      }
+      summary={
+        <SummaryStrip
+          items={[
+            {
+              key: "people",
+              label: T.people,
+              value: s ? fmtNum(s.people) : "—",
+              meta: s ? n(T.citiesSub, s.cities) : undefined,
+              onOpen: () => {
+                pick("all");
+                setByCityOpen(true);
+              },
+            },
+            {
+              key: "week",
+              label: T.newWeek,
+              value: s ? fmtNum(s.new_this_week) : "—",
+              tone: s && s.new_this_week > 0 ? "attention" : "muted",
+              onOpen: () => pick("all"),
+            },
+            {
+              key: "waiting",
+              label: T.waitingNotNotified,
+              value: s ? fmtNum(s.waiting_not_notified) : "—",
+              meta: s ? n(T.placesSub, (s.rows ?? []).filter((r) => matches(r, "waiting")).length) : undefined,
+              tone: s && s.waiting_not_notified > 0 ? "attention" : "muted",
+              onOpen: () => pick("waiting"),
+            },
+            {
+              key: "ready",
+              label: T.readyTile,
+              value: s ? fmtNum(s.pending_notify) : "—",
+              meta: s ? n(T.placesSub, s.ready_places) : undefined,
+              tone: s && s.pending_notify > 0 ? "attention" : "muted",
+              onOpen: () => pick("ready"),
+            },
+          ]}
         />
-        <Tile
-          icon={IconTrendUp}
-          label={T.newWeek}
-          value={s ? fmtNum(s.new_this_week) : "—"}
-          tone={s && s.new_this_week > 0 ? "accent" : "muted"}
-        />
-        <Tile
-          icon={IconHourglass}
-          label={T.waitingNotNotified}
-          value={s ? fmtNum(s.waiting_not_notified) : "—"}
-          sub={s ? n(T.placesSub, (s.rows ?? []).filter((r) => matches(r, "waiting")).length) : undefined}
-          tone={s && s.waiting_not_notified > 0 ? "accent" : "muted"}
-          onClick={() => pick("waiting")}
-        />
-        <Tile
-          icon={IconSend}
-          label={T.readyTile}
-          value={s ? fmtNum(s.pending_notify) : "—"}
-          sub={s ? n(T.placesSub, s.ready_places) : undefined}
-          tone={s && s.pending_notify > 0 ? "warning" : "muted"}
-          onClick={() => pick("ready")}
-        />
-      </div>
-
-      {msg && (
-        <Alert tone={msg.tone} className="mb-4" onDismiss={() => setMsg(null)}>
-          {msg.text}
-        </Alert>
-      )}
-
-      {/* **التذكير** — مكانٌ مغطّى وناسُه لسا ما انبلغوا، وزرٌّ كاملٌ يفتحهم. */}
-      {s && s.pending_notify > 0 && filter !== "ready" && (
-        <section className="mb-4 flex flex-col gap-3 rounded-card border border-warning bg-warning-tint p-4 sm:flex-row sm:items-center">
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-warning-solid text-on-solid">
-            <IconSend size={18} />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block font-bold">{T.reminderTitle}</span>
-            <span className="block text-sm text-ink-muted">{n(T.reminderBody, s.pending_notify, s.ready_places)}</span>
-          </span>
-          <Button variant="primary" className="w-full sm:w-auto" onClick={() => pick("ready")}>
-            {T.reminderAction}
-          </Button>
-        </section>
-      )}
-
-      {/* **الفلاترُ ببطاقةٍ واحدة** — الحالُ ثمّ النوع، ولكلّ حبّةٍ عدُّ ما تُظهره. */}
-      <section className="surface mb-4 flex flex-col gap-3 p-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-ink-muted">{T.filterStatus}:</span>
-          <Chips items={statusChips} value={filter} onChange={setFilter} wrap />
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-ink-muted">{T.filterKind}:</span>
-          <Chips items={kindChips} value={kind} onChange={setKind} wrap />
-        </div>
-      </section>
-
-      {data.error && !s ? (
-        <ReloadState onRetry={data.reload} label={T.loadError} />
-      ) : data.loading && !s ? (
-        <LoadingState />
-      ) : rows.length === 0 ? (
-        <EmptyCard
-          filtered={filter !== "all" || kind !== "all"}
-          onShowAll={() => {
-            setFilter("all");
-            setKind("all");
-          }}
-        />
-      ) : (
-        <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+      }
+    >
+      <AdminAsync
+        loading={data.loading}
+        error={data.error}
+        onRetry={data.reload}
+        hasData={!!s}
+        empty={!!s && rows.length === 0}
+        emptyTitle={filtered ? T.emptyFilterTitle : T.emptyTitle}
+        emptyIcon={IconLocation}
+        emptyAction={
+          filtered ? (
+            <Button variant="secondary" onClick={showAll}>
+              {T.showAll}
+            </Button>
+          ) : undefined
+        }
+      >
+        <ul className="admin-grid">
           {rows.map((r) => (
             <PlaceCard
               key={r.key}
@@ -300,22 +300,20 @@ export default function ExpansionPage() {
             />
           ))}
         </ul>
-      )}
+      </AdminAsync>
 
       {/* **حسب المدينة والمحافظة** — مطويّ، ومن الردّ نفسِه فلا يفترق رقمُه عن رقم الأماكن. */}
       {cities.length > 0 && (
-        <section className="surface mt-4 p-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="heading-card flex min-w-0 flex-wrap items-baseline gap-x-2">
-              {T.byCityTitle}
-              <span className="text-xs font-normal text-ink-muted">{T.byCityNote}</span>
-            </h2>
-            <Button variant="secondary" onClick={() => setByCityOpen((v) => !v)}>
+        <AdminCard
+          title={T.byCityTitle}
+          actions={
+            <Button variant="secondary" size="sm" onClick={() => setByCityOpen((v) => !v)}>
               {byCityOpen ? T.byCityHide : T.byCityShow}
             </Button>
-          </div>
+          }
+        >
           {byCityOpen && (
-            <ul className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            <ul className="admin-grid">
               {cities.map((c) => (
                 <li
                   key={c.city_id || `gov:${c.governorate_id}`}
@@ -323,7 +321,7 @@ export default function ExpansionPage() {
                 >
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-bold">{c.city_name || c.governorate_name || T.unresolved}</span>
-                    <span className="block truncate text-2xs text-ink-muted">
+                    <span className="block truncate text-xs text-ink-muted">
                       {c.city_name ? c.governorate_name || T.unresolved : ""}
                       {c.city_name ? " · " : ""}
                       {n(T.placesN, c.places)} · {n(T.requestsN, c.requests)}
@@ -331,13 +329,13 @@ export default function ExpansionPage() {
                   </span>
                   <span className="shrink-0 text-end">
                     <span className="figure block leading-none">{fmtNum(c.people)}</span>
-                    <span className="block text-2xs text-ink-muted">{T.peopleBig}</span>
+                    <span className="block text-xs text-ink-muted">{T.peopleBig}</span>
                   </span>
                 </li>
               ))}
             </ul>
           )}
-        </section>
+        </AdminCard>
       )}
 
       <Confirm
@@ -350,29 +348,7 @@ export default function ExpansionPage() {
         onConfirm={() => asking && void notify(asking)}
         onCancel={() => setAsking(null)}
       />
-    </PageContainer>
-  );
-}
-
-/** **حالةٌ فارغة** — دائرةٌ ملوّنةٌ وعنوانٌ وجملةٌ تساعد، وزرُّ «اعرض الكل» حين الفلتر يخفي شيئاً. */
-function EmptyCard({ filtered, onShowAll }: { filtered: boolean; onShowAll: () => void }) {
-  return (
-    <section className="surface flex flex-col items-center gap-3 p-8 text-center">
-      <span
-        className={`inline-flex h-16 w-16 items-center justify-center rounded-full ${
-          filtered ? "bg-field text-ink-muted" : "bg-accent text-on-bright"
-        }`}
-      >
-        <IconLocation size={28} />
-      </span>
-      <h2 className="heading-section">{filtered ? T.emptyFilterTitle : T.emptyTitle}</h2>
-      <p className="max-w-md text-sm text-ink-muted">{filtered ? T.emptyFilterHint : T.emptyHint}</p>
-      {filtered && (
-        <Button variant="secondary" onClick={onShowAll}>
-          {T.showAll}
-        </Button>
-      )}
-    </section>
+    </AdminPage>
   );
 }
 
@@ -402,14 +378,14 @@ function PlaceCard({
   const showNotify = canNotify && r.status !== "uncovered" && r.notifiable > 0;
 
   return (
-    <li className="surface flex flex-col gap-3 p-4">
+    <li className="admin-panel flex flex-col gap-3 p-4">
       <div className="flex items-start gap-3">
         <span className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${STATUS_TINT[r.status]}`}>
           {r.kind === "coverage_request" ? <IconZones size={20} /> : <IconLocation size={20} />}
         </span>
         <span className="min-w-0 flex-1">
           <span className="block truncate text-base font-bold">{name}</span>
-          <span className="block truncate text-2xs text-ink-muted">
+          <span className="block truncate text-xs text-ink-muted">
             {where.length > 0 ? where.join(" · ") : T.unresolved}
           </span>
         </span>
@@ -424,11 +400,11 @@ function PlaceCard({
       <div className="flex items-end justify-between gap-2 rounded-control bg-field px-3 py-2.5">
         <span>
           <span className="figure block leading-none">{fmtNum(r.people)}</span>
-          <span className="mt-1 block text-2xs text-ink-muted">
+          <span className="mt-1 block text-xs text-ink-muted">
             {T.peopleBig} · {n(T.requestsN, r.requests)}
           </span>
         </span>
-        <span className="text-end text-2xs">
+        <span className="text-end text-xs">
           {r.status === "ready" ? (
             <b className="text-warning">{n(T.notifyN, r.notifiable)}</b>
           ) : r.status === "covered" ? (
@@ -445,7 +421,7 @@ function PlaceCard({
         </span>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 text-2xs text-ink-muted">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-ink-muted">
         <span>
           {T.firstAt}: <span dir="ltr">{fmtDate(r.first_at)}</span>
         </span>

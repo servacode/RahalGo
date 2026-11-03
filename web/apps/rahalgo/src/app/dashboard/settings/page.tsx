@@ -39,6 +39,7 @@ import {
 } from "@rahalgo/i18n";
 import {
   Tabs,
+  Chips,
   Alert,
   Confirm,
   Button,
@@ -69,15 +70,17 @@ import {
   IconUser,
   IconTrendUp,
   LoadingState,
-  ReloadState,
-  PageContainer,
+  AdminPage,
+  AdminReload,
+  FilterBar,
+  SummaryStrip,
+  type StatTone,
 } from "@rahalgo/ui";
 import ImageUpload from "@/components/admin/ImageUpload";
 import { FileUpload, useLiveRefresh } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import dynamic from "next/dynamic";
-import { PageHero } from "@/components/admin/PageHero";
 import { Tile, type TileTone } from "@/components/admin/DashParts";
 import ZonesPanel from "@/components/admin/settings/zones";
 import HoursPanel from "@/components/admin/settings/hours";
@@ -440,10 +443,9 @@ export default function SettingsPage() {
 
   if (!list && error) {
     return (
-      <PageContainer>
-        <PageHero icon={IconSettings} title={m.admin.settingsPage.title} subtitle={U.heroSubtitle} />
-        <ReloadState label={`${U.loadFailed}: ${error}`} onRetry={() => void load()} />
-      </PageContainer>
+      <AdminPage icon={IconSettings} title={m.admin.settingsPage.title}>
+        <AdminReload label={`${U.loadFailed}: ${error}`} onRetry={() => void load()} />
+      </AdminPage>
     );
   }
   if (!list) return <LoadingState variant="text" />;
@@ -486,112 +488,93 @@ export default function SettingsPage() {
   const waTone: TileTone =
     wa === null || wa === "err" ? "muted" : wa.provider === "dev" ? "default" : wa.logged_in ? "success" : "danger";
 
+  const statTone = (t: TileTone): StatTone =>
+    t === "success" ? "good" : t === "danger" ? "danger" : t === "warning" ? "attention" : t === "muted" ? "muted" : "neutral";
+
   return (
-    <PageContainer>
-      <PageHero icon={IconSettings} title={m.admin.settingsPage.title} subtitle={U.heroSubtitle}>
-        <div className={`grid grid-cols-2 gap-2 ${canWa ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
-          <Tile
-            icon={IconStatus}
-            label={T.appStatus}
-            value={launchText}
-            sub={T.appStatusSub}
-            tone={launchTone}
-            onClick={() => goTopic("launch")}
-          />
-          <Tile
-            icon={IconDate}
-            label={T.hours}
-            value={hoursText}
-            tone={hoursTone}
-            onClick={() => goTopic("launch")}
-          />
-          {canWa && (
-            <Tile
-              icon={IconChat}
-              label={T.whatsapp}
-              value={waText}
-              tone={waTone}
-              onClick={() => goTopic("whatsapp")}
+    <AdminPage
+      icon={IconSettings}
+      title={m.admin.settingsPage.title}
+      notices={
+        <>
+          {error && <Alert>{error}</Alert>}
+          {readOnlyAll && <Alert tone="info">{U.readOnly.replace("{cap}", capName("settings.general.manage"))}</Alert>}
+        </>
+      }
+      toolbar={
+        <div className="space-y-3">
+          <FilterBar search={{ id: "settings-search", value: q, onChange: setQ, placeholder: S.searchPlaceholder }} />
+          {found === null && (
+            <Chips
+              wrap
+              items={allTopics.map((t) => {
+                const Icon = TOPIC_ICON[t] ?? IconSettings;
+                return {
+                  id: t,
+                  label: (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Icon size={15} />
+                      {topicLabel(t)}
+                    </span>
+                  ),
+                  count: counts[t] || undefined,
+                };
+              })}
+              value={active}
+              onChange={(t) => goTopic(t)}
             />
           )}
-          <Tile
-            icon={IconUser}
-            label={T.lastChange}
-            value={last?.updated_at ? fmtDate(last.updated_at) : T.noChange}
-            sub={
-              last?.updated_at
-                ? T.lastChangeSub.replace("{what}", label(last.key)).replace("{when}", fmtTime(last.updated_at))
-                : undefined
-            }
-            tone={last ? "default" : "muted"}
-            onClick={() =>
-              router.push(
-                last
-                  ? `/dashboard/audit?entity=setting&entity_id=${encodeURIComponent(last.key)}`
-                  : "/dashboard/audit?entity=setting",
-              )
-            }
-          />
         </div>
-      </PageHero>
-
-      {error && <Alert className="mb-4">{error}</Alert>}
-      {readOnlyAll && (
-        <Alert tone="info" className="mb-4">
-          {U.readOnly.replace("{cap}", capName("settings.general.manage"))}
-        </Alert>
-      )}
-
-      {/* ── البحثُ والمواضيعُ في كرتٍ واحد ── */}
-      <section className="surface mb-4 space-y-3 p-4">
-        <Input
-          id="settings-search"
-          aria-label={U.searchLabel}
-          icon={<IconSearch size={15} />}
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder={S.searchPlaceholder}
+      }
+      summary={
+        <SummaryStrip
+          max={4}
+          items={[
+            {
+              key: "launch",
+              icon: IconStatus,
+              label: T.appStatus,
+              value: launchText,
+              tone: statTone(launchTone),
+              onOpen: () => goTopic("launch"),
+            },
+            {
+              key: "hours",
+              icon: IconDate,
+              label: T.hours,
+              value: hoursText,
+              tone: statTone(hoursTone),
+              onOpen: () => goTopic("launch"),
+            },
+            ...(canWa
+              ? [
+                  {
+                    key: "wa",
+                    icon: IconChat,
+                    label: T.whatsapp,
+                    value: waText,
+                    tone: statTone(waTone),
+                    onOpen: () => goTopic("whatsapp"),
+                  },
+                ]
+              : []),
+            {
+              key: "last",
+              icon: IconUser,
+              label: T.lastChange,
+              value: last?.updated_at ? fmtDate(last.updated_at) : T.noChange,
+              meta: last?.updated_at
+                ? T.lastChangeSub.replace("{what}", label(last.key)).replace("{when}", fmtTime(last.updated_at))
+                : undefined,
+              tone: last ? "neutral" : "muted",
+              href: last
+                ? `/dashboard/audit?entity=setting&entity_id=${encodeURIComponent(last.key)}`
+                : "/dashboard/audit?entity=setting",
+            },
+          ]}
         />
-        {found === null && (
-          <div className="space-y-1.5">
-            <span className="block text-xs font-bold text-ink-muted">{U.topicsLabel}</span>
-            <nav className="flex flex-wrap gap-2">
-              {allTopics.map((t) => {
-                const on = active === t;
-                const Icon = TOPIC_ICON[t] ?? IconSettings;
-                const n = counts[t];
-                return (
-                  <button
-                    key={t}
-                    type="button"
-                    aria-pressed={on}
-                    onClick={() => goTopic(t)}
-                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                      on
-                        ? "border-accent bg-accent font-bold text-on-bright"
-                        : "border-line-soft text-ink-muted hover:bg-row-hover hover:text-ink"
-                    }`}
-                  >
-                    <Icon size={15} />
-                    {topicLabel(t)}
-                    {n ? (
-                      <span
-                        className={`min-w-[1.25rem] rounded-full px-1.5 text-center text-2xs tabular-nums ${
-                          on ? "bg-surface text-ink" : "bg-field text-ink-muted"
-                        }`}
-                        title={U.topicCount.replace("{n}", fmtNum(n))}
-                      >
-                        {fmtNum(n)}
-                      </span>
-                    ) : null}
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
-        )}
-      </section>
-
+      }
+    >
       {found !== null ? (
         found.keys.length === 0 && found.panels.length === 0 ? (
           <EmptyBlock icon={IconSearch} title={S.searchNoResults} text={U.emptySearchHint} />
@@ -651,7 +634,7 @@ export default function SettingsPage() {
           />
         </div>
       )}
-    </PageContainer>
+    </AdminPage>
   );
 }
 
@@ -684,7 +667,7 @@ function TopicBody({
     (s) => s.topic === topic && !s.hidden && !s.panel && visibleIn(s, list) && !companions.has(s.key),
   );
 
-  if (topic === "roles") return <RolesScreen />;
+  if (topic === "roles") return <RolesScreen embedded />;
 
   if (topic === "coverage") {
     const tabs = PANELS.filter((p) => p.topic === "coverage");
@@ -1105,30 +1088,15 @@ function SettingRow({
               </span>
             </div>
           ) : s.kind === "choice" ? (
-            <div className="flex flex-wrap gap-2">
-              {(s.options ?? []).map((o) => {
-                const on = String(s.value ?? "") === o;
-                return (
-                  <button
-                    key={o}
-                    type="button"
-                    disabled={!editable || busy}
-                    aria-pressed={on}
-                    onClick={() => {
-                      if (on) return;
-                      requestSave(o);
-                    }}
-                    className={`rounded-full border px-3 py-1.5 text-sm transition-colors disabled:opacity-50 ${
-                      on
-                        ? "border-accent bg-accent font-bold text-on-bright"
-                        : "border-line-soft text-ink-muted hover:bg-row-hover hover:text-ink"
-                    }`}
-                  >
-                    {choiceText(o)}
-                  </button>
-                );
-              })}
-            </div>
+            <Chips
+              wrap
+              items={(s.options ?? []).map((o) => ({ id: o, label: choiceText(o) }))}
+              value={String(s.value ?? "")}
+              onChange={(o) => {
+                if (!editable || busy || o === String(s.value ?? "")) return;
+                requestSave(o);
+              }}
+            />
           ) : s.kind === "percent" ? (
             /* **والشريطُ يحترم حدَّ الفهرس** (البند ١٣) — حصّةُ المنصّة تسعون لا
                مئة. **ويُحفظ عند الإفلات وحدَه، وبلا تغييرٍ لا يُحفظ** (البند ١٤). */

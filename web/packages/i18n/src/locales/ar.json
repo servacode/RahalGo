@@ -1232,6 +1232,45 @@
       "loadFailed": "صار خطأ — جرّب مرة تانية",
       "retry": "جرّب مرة تانية",
       "moreActions": "إجراءات تانية",
+      "people": {
+        "store": {
+          "openNow": "مفتوح هلأ",
+          "closedNow": "مسكّر هلأ",
+          "opensAt": "بيفتح {when}",
+          "ordersToday": "طلبات اليوم",
+          "ordersLive": "طلبات جارية",
+          "delivered": "سُلّم اليوم {n}",
+          "itemsOff": "غير متوفر",
+          "itemsOffOf": "من {n} صنف",
+          "prep": "وقت التحضير",
+          "prepValue": "{n} دقيقة",
+          "rejected": "رفض آخر ٣٠ يوم",
+          "rejectedOf": "{r} من {s}",
+          "cashDue": "مستحق نقداً",
+          "contacts": "التواصل",
+          "ownerLabel": "صاحب المتجر",
+          "repLabel": "المندوب",
+          "storeLabel": "المتجر",
+          "latest": "آخر الطلبات",
+          "allOrders": "كل الطلبات",
+          "noOrders": "ما في طلبات",
+          "loadFailed": "تعذّر تحميل المتجر",
+          "emergencyClosed": "إغلاق طارئ"
+        },
+        "section": {
+          "markOut": "خلّيه غير متوفر",
+          "markAvailable": "خلّيه متوفر"
+        },
+        "driver": {
+          "receiveCash": "استلام نقد"
+        },
+        "common": {
+          "badNumber": "في رقم مكتوب غلط، راجع الأرقام وجرّب مرة تانية"
+        },
+        "roles": {
+          "accounts": "الحسابات"
+        }
+      },
       "confirm": "تأكيد",
       "sure": "متأكد؟",
       "cancel": "تراجع",

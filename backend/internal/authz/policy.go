@@ -219,6 +219,7 @@ var adminPolicy = []Rule{
 	// `read` في الهجرة، **فلا أحدَ فقد ما كان يراه.**
 	{"GET", "/merchants", MerchantsRead},
 	{"GET", "/merchants/{id}", MerchantsRead},
+	{"GET", "/merchants/{id}/pulse", MerchantsRead},
 	{"GET", "/merchants/{id}/announce", MerchantsRead},
 	{"GET", "/merchants/{id}/price-sync", MerchantsRead},
 	{"GET", "/merchants/{id}/staff", MerchantsRead},

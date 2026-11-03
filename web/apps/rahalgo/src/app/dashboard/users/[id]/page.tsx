@@ -3,13 +3,17 @@
 /** صفحة تفاصيل الحساب: الملف، مؤشرات حسب أدواره، سجل المحفظة الكامل،
  *  وأدوات الأدمن (عمليات المحفظة، إعادة تعيين كلمة المرور). */
 
-import { useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDate, fmtDateTime, errorText} from "@rahalgo/i18n";
 import { roleLabelByCode } from "@/lib/rolemeta";
 import {
   Tabs,
   Alert,
+  AdminLink,
+  ContactButtons,
+  Presence,
+  useLiveRefresh,
   Badge,
   Button,
   Select,
@@ -74,6 +78,8 @@ import { MediaThumb } from "@/components/admin/ImageUpload";
 import RoleBadge from "@/components/admin/RoleBadge";
 import { Tile, type TileTone } from "@/components/admin/DashParts";
 import { isDeletedAccount } from "@/components/admin/accounts/all";
+import { DriverCashReceive } from "@/components/admin/DriverCashReceive";
+import { useUrlTab } from "@/components/admin/useUrlTab";
 
 type IconT = React.ComponentType<{ size?: number; className?: string }>;
 
@@ -232,6 +238,38 @@ interface Tx {
 
 
 export default function UserProfilePage() {
+  return (
+    <Suspense fallback={null}>
+      <UserProfile />
+    </Suspense>
+  );
+}
+
+type ProfileTab =
+  | "overview"
+  | "orders"
+  | "addresses"
+  | "cashbox"
+  | "stores"
+  | "wallet"
+  | "financials"
+  | "feedback"
+  | "chats"
+  | "activity";
+const PROFILE_TABS: readonly ProfileTab[] = [
+  "overview",
+  "orders",
+  "addresses",
+  "cashbox",
+  "stores",
+  "wallet",
+  "financials",
+  "feedback",
+  "chats",
+  "activity",
+];
+
+function UserProfile() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { user: me, can } = useAuth();
@@ -250,6 +288,7 @@ export default function UserProfilePage() {
   const canResend = canCall("POST", "/users/{id}/resend-welcome");
   const canWalletRead = canCall("GET", "/users/{id}/wallet");
   const canWalletPropose = canCall("POST", "/users/{id}/wallet");
+  const canSettle = canCall("POST", "/drivers/{id}/settle");
 
   const [p, setP] = useState<Profile | null>(null);
   const [txs, setTxs] = useState<Tx[]>([]);
@@ -301,18 +340,9 @@ export default function UserProfilePage() {
   const [phoneOpen, setPhoneOpen] = useState(false);
   const [statusModal, setStatusModal] = useState<string | null>(null);
   const [fin, setFin] = useState<FinData | null>(null);
-  const [tab, setTab] = useState<
-    | "overview"
-    | "orders"
-    | "addresses"
-    | "cashbox"
-    | "stores"
-    | "wallet"
-    | "financials"
-    | "feedback"
-    | "chats"
-    | "activity"
-  >("overview");
+  // **التبويبُ في الرابط** — يُشارَك برابطٍ يفتح التبويبَ نفسَه، ويعود إليه الرجوع.
+  const [tab, setTab] = useUrlTab<ProfileTab>(PROFILE_TABS, "overview");
+  const [cashOpen, setCashOpen] = useState(false);
   const [notice, setNotice] = useState("");
   const [feedbackError, setFeedbackError] = useState("");
   const [walletError, setWalletError] = useState("");
@@ -365,6 +395,8 @@ export default function UserProfilePage() {
   useEffect(() => {
     void loadFeedback();
   }, [loadFeedback]);
+  // **الملفُّ حيٌّ** — دوامُ السائق ونقدُه وحالةُ الحساب والرصيدُ تتجدّد دون إعادة فتح الصفحة.
+  useLiveRefresh(["account", "wallet", "shift", "cash"], load);
 
   /**
    * **وسجلُّ النشاط يُجلَب وحدَه — بصفحته.**
@@ -632,14 +664,12 @@ export default function UserProfilePage() {
 
   return (
     <div>
-      <button
-        type="button"
-        onClick={() => router.push("/dashboard/users")}
-        className="mb-3 flex items-center gap-1 text-sm text-ink-muted hover:text-primary"
-      >
-        <IconPrev size={15} />
-        {U.back}
-      </button>
+      <Button variant="ghost" size="sm" className="mb-3" onClick={() => router.back()}>
+        <span className="flex items-center gap-1.5">
+          <IconPrev size={15} />
+          {U.back}
+        </span>
+      </Button>
 
       {/* ══════════════════════════════════════════════════════════════
           **رأسُ الملفّ على نمط رأس الصفحة الموحّد** (التصميمُ الاحترافيّ ٢٠٢٦-١٠-٢٧)
@@ -679,6 +709,10 @@ export default function UserProfilePage() {
                   <RoleBadge key={r} role={r} />
                 ))}
                 {statusBadge}
+                {/* **حالةُ السائق الآن** — متّصلٌ مشغولٌ أو فاضٍ أو خارجَ الدوام. */}
+                {has("driver") && !gone && (
+                  <Presence state={!p.on_shift ? "offline" : p.open_orders > 0 ? "busy" : "free"} />
+                )}
                 {p.invite_code && (
                   <Badge variant="accent" dir="ltr" className="px-1.5 font-mono">
                     {p.invite_code}
@@ -696,8 +730,16 @@ export default function UserProfilePage() {
               </div>
             </div>
           </div>
-          {!gone && ((canWalletRead || canWalletPropose) || actions.length > 0) && (
+          {!gone && ((canWalletRead || canWalletPropose) || actions.length > 0 || p.phone) && (
             <div className="flex flex-wrap items-center gap-2 whitespace-nowrap">
+              <ContactButtons phone={p.phone} name={p.full_name} />
+              {/* **استلامُ النقد بزرٍّ ظاهرٍ** — كان في تبويب الصندوق وحدَه. والنافذةُ نفسُها (طريقٌ واحد). */}
+              {has("driver") && canSettle && p.driver_cash > 0 && (
+                <Button variant="secondary" onClick={() => setCashOpen(true)} className="flex items-center gap-1.5">
+                  <IconBalance size={16} />
+                  {m.admin.kit.people.driver.receiveCash}
+                </Button>
+              )}
               {(canWalletRead || canWalletPropose) && (
                 <Button onClick={() => setWalletOpen(true)} className="flex items-center gap-1.5">
                   <IconWallet size={16} />
@@ -871,16 +913,11 @@ export default function UserProfilePage() {
           {/* **ومتجرُه يُفتح** — ملفُّ المتجر بابُه. */}
           <div className="flex flex-wrap gap-2">
             {p.stores.map((st) => (
-              <button
-                key={st.id}
-                type="button"
-                onClick={() => router.push(`/dashboard/merchants/${st.id}`)}
-                className="rounded-badge"
-              >
+              <AdminLink key={st.id} href={`/dashboard/merchants/${st.id}`} className="rounded-badge">
                 <Badge variant={st.status === "active" ? "primary" : st.status === "suspended" ? "danger" : "neutral"}>
                   {st.name}
                 </Badge>
-              </button>
+              </AdminLink>
             ))}
           </div>
         </div>
@@ -1407,6 +1444,19 @@ export default function UserProfilePage() {
           )}
         </FormSection>
       </div>
+      )}
+
+      {cashOpen && (
+        <DriverCashReceive
+          driverID={p.id}
+          driverName={p.full_name}
+          held={p.driver_cash}
+          onClose={() => setCashOpen(false)}
+          onDone={() => {
+            setCashOpen(false);
+            void load();
+          }}
+        />
       )}
 
       {statusModal && (

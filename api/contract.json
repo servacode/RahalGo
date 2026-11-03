@@ -3134,6 +3134,22 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/v1/admin/merchants/{id}/pulse",
+      "handler": "handleAdminMerchantPulse",
+      "auth": true,
+      "capability": "merchants.read",
+      "response": [
+        {
+          "name": "@p",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "PATCH",
       "path": "/api/v1/admin/merchants/{id}/settlement-method",
       "handler": "handleSetMerchantSettlementMethod",

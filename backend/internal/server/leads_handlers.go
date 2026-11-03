@@ -213,7 +213,9 @@ func (s *Server) handleAdminLeads(w http.ResponseWriter, r *http.Request) {
 	}
 	rows, err := s.pg.Query(r.Context(),
 		adminLeadSelect+leadWhere+`
-		ORDER BY l.created_at DESC LIMIT $9 OFFSET $10`,
+		ORDER BY (l.status NOT IN ('new','needs_info')),
+		         CASE WHEN l.status IN ('new','needs_info') THEN l.created_at END ASC,
+		         l.created_at DESC LIMIT $9 OFFSET $10`,
 		append(args, pg.PerPage, pg.Offset)...)
 	if err != nil {
 		s.respondErr(w, err)

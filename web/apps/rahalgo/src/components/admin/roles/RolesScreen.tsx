@@ -33,10 +33,10 @@ import {
   LoadingState,
   Modal,
   Select,
-  PageContainer,
-  PageHeader,
+  AdminPage,
+  AdminTabs,
+  AdminLink,
   FormActions,
-  Tabs,
   Textarea,
   IconRoles,
   IconCheck,
@@ -84,7 +84,39 @@ function RiskBadge({ risk }: { risk?: string }) {
   return null;
 }
 
-export default function RolesPage() {
+/** **إطارُ الشاشة** — صفحةٌ بقالبها حين تقوم وحدَها، وبلا رأسٍ حين تُدمَج في الإعدادات (فلا رأسان متراكبان). */
+function Shell({
+  embedded,
+  createBtn,
+  alerts,
+  tabItems,
+  tab,
+  setTab,
+  children,
+}: {
+  embedded: boolean;
+  createBtn: React.ReactNode;
+  alerts: React.ReactNode;
+  tabItems: { key: TabKey; label: string; count?: number }[];
+  tab: TabKey;
+  setTab: (k: TabKey) => void;
+  children: React.ReactNode;
+}) {
+  return embedded ? (
+    <div className="space-y-4">
+      <div className="flex justify-end">{createBtn}</div>
+      {alerts}
+      <AdminTabs<TabKey> items={tabItems} value={tab} onChange={setTab} />
+      {children}
+    </div>
+  ) : (
+    <AdminPage<TabKey> icon={IconRoles} title={t.title} actions={createBtn} notices={alerts} tabs={tabItems} tab={tab} onTab={setTab}>
+      {children}
+    </AdminPage>
+  );
+}
+
+export default function RolesPage({ embedded = false }: { embedded?: boolean } = {}) {
   const [roles, setRoles] = useState<Role[] | null>(null);
   const [caps, setCaps] = useState<Capability[]>([]);
   const [err, setErr] = useState("");
@@ -203,30 +235,24 @@ export default function RolesPage() {
       .replace("{cap}", capName(grant.cap));
   })();
 
-  return (
-    <PageContainer>
-      <PageHeader
-        title={t.title}
-        subtitle={t.subtitle}
-        actions={<Button onClick={() => setCreateOpen(true)}>{t.create}</Button>}
-      />
-
+  const createBtn = <Button onClick={() => setCreateOpen(true)}>{t.create}</Button>;
+  const tabItems = [
+    { key: "roles" as TabKey, label: t.tabRoles, count: roles?.length },
+    { key: "matrix" as TabKey, label: t.tabMatrix },
+  ];
+  const alerts = (
+    <>
       {err ? <Alert>{err}</Alert> : null}
       {note ? (
         <Alert tone="success" onDismiss={() => setNote("")}>
           {note}
         </Alert>
       ) : null}
-
-      <Tabs<TabKey>
-        items={[
-          { key: "roles", label: t.tabRoles, count: roles?.length },
-          { key: "matrix", label: t.tabMatrix },
-        ]}
-        value={tab}
-        onChange={setTab}
-      />
-
+    </>
+  );
+  const frame = { embedded, createBtn, alerts, tabItems, tab, setTab };
+  return (
+    <Shell {...frame}>
       {roles === null ? (
         <LoadingState variant="text" />
       ) : roles.length === 0 ? (
@@ -261,7 +287,7 @@ export default function RolesPage() {
                           <span className="text-xs text-ink-muted">{t.protectedNote}</span>
                         ) : null}
                         {/* **والرمزُ سطرٌ باهتٌ لحاله** — لا يُخلط بالاسم العربيّ في سطرٍ واحد. */}
-                        <span className="text-[11px] opacity-50" dir="ltr">
+                        <span className="text-xs opacity-50" dir="ltr">
                           {r.code}
                         </span>
                       </span>
@@ -272,6 +298,11 @@ export default function RolesPage() {
                         <Button variant="secondary" onClick={() => openMembers(r.code)}>
                           {t.holdersCount.replace("{n}", fmtNum(r.members))}
                         </Button>
+                        <AdminLink href={`/dashboard/users?role=${encodeURIComponent(r.code)}`}>
+                          <span className="inline-flex h-11 items-center rounded-control border border-line px-3 text-sm font-medium hover:bg-row-hover">
+                            {m.admin.kit.people.roles.accounts}
+                          </span>
+                        </AdminLink>
                         {r.class !== "account_type" ? (
                           <Button
                             variant="secondary"
@@ -298,7 +329,6 @@ export default function RolesPage() {
         </div>
       ) : (
         <div className="grid gap-2">
-          <p className="text-xs text-ink-muted">{t.matrixHint}</p>
           <div className="overflow-x-auto rounded-card border">
             <table className="w-full border-collapse text-sm">
               <thead>
@@ -415,7 +445,7 @@ export default function RolesPage() {
                         <RiskBadge risk={capRisk(c)} />
                       </span>
                       <span className="text-xs text-ink-muted">{capDesc(c)}</span>
-                      <code className="text-[11px] opacity-50" dir="ltr">
+                      <code className="text-xs opacity-50" dir="ltr">
                         {c}
                       </code>
                     </span>
@@ -582,6 +612,6 @@ export default function RolesPage() {
           </ul>
         )}
       </Modal>
-    </PageContainer>
+    </Shell>
   );
 }
