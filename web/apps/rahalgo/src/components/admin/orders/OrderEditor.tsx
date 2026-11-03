@@ -7,6 +7,11 @@
  * **بسببٍ إجباريّ.** خطوتان: يُملأ التعديل، ثمّ **معاينةٌ يحسبها الخادمُ كلَّها**
  * (`dry_run`) فيُقرأ المجموعُ الجديدُ وما يُردّ أو يُقبض قبل أن يقع. **والحسبةُ كلُّها
  * في المحرّك** (`orders/order_edit.go`) — الشاشةُ تسأل وتُظهر ما ردّه.
+ *
+ * **ومن بطاقة اللوحة يُفتح مملوءاً** (قرارُ المالك ٢٠٢٦-١١-٠٣): ضغطةُ «−/+/حذف» على سطرٍ
+ * تفتحه بكمّيّته الجديدة (`initialQty`)، و«+ صنف» تفتحه على الإضافة — **والسببُ والمعاينةُ
+ * والتأكيدُ كما هي.** **وصنفٌ من خارج القائمة** يُكتب اسمُه وسعرُه (`custom`) — سعرُ المتجر
+ * فيه سعرُ الزبون والعمولةُ تُقتطع كأيّ سطر (`EditCustom` في المحرّك).
  */
 import { useEffect, useMemo, useState } from "react";
 import { getMessages, defaultLocale, errorText, fmtNum } from "@rahalgo/i18n";
@@ -90,6 +95,8 @@ export interface EditResult {
 }
 interface AddRow {
   key: number;
+  /** **صنفٌ من خارج القائمة** — بلا `menu_item_id`، باسمه وسعره. */
+  custom?: boolean;
   menu_item_id: string;
   name: string;
   price: number;
@@ -101,6 +108,7 @@ export function OrderEditor({
   orderId,
   orderNumber,
   afterPickup,
+  initialQty,
   onClose,
   onDone,
 }: {
@@ -108,6 +116,8 @@ export function OrderEditor({
   orderNumber: number;
   /** **بعد الاستلام** — يُسأل مَن يتحمّل النقص (قرارُ المالك، البند ٢). */
   afterPickup: boolean;
+  /** **كمّيّاتٌ مبدئيّة** — من ضغطةٍ على سطرٍ في البطاقة (صفرٌ = حذف). */
+  initialQty?: Record<string, number>;
   onClose: () => void;
   onDone: (res: EditResult) => void;
 }) {
@@ -118,6 +128,8 @@ export function OrderEditor({
   const [adds, setAdds] = useState<AddRow[]>([]);
   const [pick, setPick] = useState("");
   const [pickOpts, setPickOpts] = useState<Record<string, string>>({});
+  const [customName, setCustomName] = useState("");
+  const [customPrice, setCustomPrice] = useState("");
   const [reason, setReason] = useState("");
   const [storeRefunded, setStoreRefunded] = useState(false);
   const [review, setReview] = useState<EditResult | null>(null);
@@ -133,7 +145,14 @@ export function OrderEditor({
         if (!live) return;
         setLines(c.lines);
         setStores(c.stores);
-        setQty(Object.fromEntries(c.lines.map((l) => [l.id, l.qty])));
+        setQty({
+          ...Object.fromEntries(c.lines.map((l) => [l.id, l.qty])),
+          ...Object.fromEntries(
+            Object.entries(initialQty ?? {}).filter(([id]) =>
+              c.lines.some((l) => l.id === id),
+            ),
+          ),
+        });
         setPrice(
           Object.fromEntries(
             c.lines.map((l) => [l.id, String(l.merchant_price)]),
@@ -144,6 +163,8 @@ export function OrderEditor({
     return () => {
       live = false;
     };
+    // **والكمّيّاتُ المبدئيّةُ تُقرأ مرّةً عند الفتح** — لا يُعاد الجلبُ إن تغيّر كائنُها.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId]);
 
   const items = useMemo(
@@ -177,11 +198,16 @@ export function OrderEditor({
     return JSON.stringify({
       reason: reason.trim(),
       lines: changed,
-      add: adds.map((a) => ({
-        menu_item_id: a.menu_item_id,
-        qty: a.qty,
-        option_ids: a.option_ids,
-      })),
+      add: adds
+        .filter((a) => !a.custom)
+        .map((a) => ({
+          menu_item_id: a.menu_item_id,
+          qty: a.qty,
+          option_ids: a.option_ids,
+        })),
+      custom: adds
+        .filter((a) => a.custom)
+        .map((a) => ({ name: a.name, qty: a.qty, price: a.price })),
       store_refunded: afterPickup && storeRefunded,
       dry_run: dryRun,
     });
@@ -237,6 +263,22 @@ export function OrderEditor({
     ]);
     setPick("");
     setPickOpts({});
+    setErr("");
+  }
+
+  function addCustom() {
+    const name = customName.trim();
+    const p = Math.round(Number(customPrice));
+    if (!name || !Number.isFinite(p) || p < 1) {
+      setErr(E.customInvalid);
+      return;
+    }
+    setAdds((a) => [
+      ...a,
+      { key: Date.now(), custom: true, menu_item_id: "", name, price: p, qty: 1, option_ids: [] },
+    ]);
+    setCustomName("");
+    setCustomPrice("");
     setErr("");
   }
 
@@ -498,6 +540,31 @@ export function OrderEditor({
             >
               {E.addButton}
             </Button>
+          </div>
+
+          <div className="space-y-2 rounded-control bg-field p-3">
+            <p className="text-xs font-medium">{E.customTitle}</p>
+            <div className="flex flex-wrap items-end gap-2">
+              <Input
+                wrapperClassName="min-w-0 flex-1 basis-40"
+                placeholder={E.customName}
+                aria-label={E.customName}
+                value={customName}
+                onChange={(e) => setCustomName(e.target.value)}
+              />
+              <Input
+                type="number"
+                inputMode="numeric"
+                wrapperClassName="w-28 shrink-0"
+                placeholder={E.customPrice}
+                aria-label={E.customPrice}
+                value={customPrice}
+                onChange={(e) => setCustomPrice(e.target.value)}
+              />
+              <Button variant="secondary" size="sm" onClick={addCustom}>
+                {E.addButton}
+              </Button>
+            </div>
           </div>
 
           {afterPickup && (

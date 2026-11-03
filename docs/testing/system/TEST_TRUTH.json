@@ -32,9 +32,9 @@
     ],
     "setting_defs": 254,
     "behaviour_settings": 209,
-    "order_fields": 130,
-    "test_files": 696,
-    "test_funcs": 2695
+    "order_fields": 133,
+    "test_files": 697,
+    "test_funcs": 2699
   },
   "flows": [
     {
@@ -11081,6 +11081,30 @@
     {
       "name": "TestOrderEditAP_WalletStoreDebt",
       "file": "internal/orders/order_edit_after_pickup_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestOrderEditAP_CashStoreCustomLine",
+      "file": "internal/orders/order_edit_custom_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestOrderEditAP_WalletStoreCustomLine",
+      "file": "internal/orders/order_edit_custom_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestOrderEdit_CustomLine_BeforePickup",
+      "file": "internal/orders/order_edit_custom_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestOrderEdit_CustomLine_ThenDeliverGreen",
+      "file": "internal/orders/order_edit_custom_test.go",
       "package": "orders_test",
       "orphan": true
     },

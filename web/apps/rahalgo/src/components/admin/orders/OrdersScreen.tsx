@@ -18,8 +18,10 @@ import {
   Money,
   Pagination,
   Alert,
-  IconNote,
   IconEdit,
+  IconAdd,
+  IconMinus,
+  IconDelete,
   useLiveEvent,
   useLiveStatus,
   Button,
@@ -78,17 +80,23 @@ import { TransferPanel } from "./TransferPanel";
 import { AssignDialog } from "./AssignDialog";
 import { GoodsBox } from "./GoodsBox";
 import { OrderDetailPanel } from "./OrderDetailPanel";
-import { DriverMoneyBox } from "./DriverMoneyBox";
 import { payerIsCash, payerLabel, payerOf } from "./payer";
 import { WaiveCommissionDialog, WAIVE_ROUTE } from "./WaiveCommissionDialog";
 import { OrderEditor } from "./OrderEditor";
+import {
+  CommissionSection,
+  CustomerSection,
+  EtaSection,
+  RouteLine,
+  StoreSection,
+  hasPickupSection,
+} from "./CardSections";
 import { useCanCall } from "@/lib/policy";
 import {
   BoardCounters,
   COUNTER_FILTERS,
   DriverLine,
   OfferLine,
-  ContactLinks,
   AgeBadge,
   SoundButton,
   minutesSince,
@@ -240,6 +248,16 @@ interface OrderRow {
   proof_meters?: number;
   /** طولُ المشوار من المتجر إلى الباب — **بالمتر، وسالبٌ يعني «لا يُعرف»**. */
   leg_m?: number;
+  /** **نقطةُ الزبون** — زرُّ الخريطة في قسمه (٢٠٢٦-١١-٠٣). */
+  lat?: number | null;
+  lng?: number | null;
+  /** **نقطةُ الاستلام وعنوانُ المتجر المفصّل** — للمكتب وحدَه (٢٠٢٦-١١-٠٣). */
+  pickup_lat?: number | null;
+  pickup_lng?: number | null;
+  pickup_address?: string;
+  /** **زمنا الطريق كما قالتهما الخريطة** — للمتجر لحظةَ الإسناد، وللباب لحظةَ الاستلام. */
+  to_store_eta_sec?: number | null;
+  to_door_eta_sec?: number | null;
   /** كم كان بين السائق ونقطة الاستلام — **جوابُ «لماذا هذا السائق؟»**. */
   driver_to_pickup_m?: number;
   /** **كم بين السائق وباب الزبون الآن** — بعد الاستلام أو حين لا متجرَ معروف. */
@@ -408,114 +426,8 @@ function shiftDay(day: string, by: number): string {
   return new Date(Date.UTC(y, mo - 1, d + by)).toISOString().slice(0, 10);
 }
 
-/**
- * **رأسُ قسمٍ في بطاقة الطلب** (ملاحظةُ المالك ٢٠٢٦-١٠-٢٢: «لازم يكون بالكرت فصل بين معلومات
- * الزبون والسائق… والتفاصيل») — خطٌّ فاصلٌ وعنوانٌ بلونه وأيقونته. **وينسخ قرارَ ٢٠٢٦-٠٨-١٢**
- * («لا كلمة الزبون في البطاقة»): صار فيها سطران بالشكل نفسه فالتبسا.
- */
-const SEC = m.admin.ordersPage.sections;
-const SEC_LOOK = {
-  customer: { tone: "text-accent-text", Icon: IconUser },
-  driver: { tone: "text-success", Icon: IconMoto },
-  merchant: { tone: "text-warning", Icon: IconStore },
-  details: { tone: "text-ink-muted", Icon: IconOrder },
-} as const;
-const SEC_BOX = {
-  customer: "bg-accent-tint border-accent-edge",
-  driver: "bg-success-tint border-success-edge",
-  merchant: "bg-warning-tint border-warning-edge",
-  details: "bg-ink-faint border-line-soft",
-} as const;
-
-/**
- * **يجمع رأسَ كلِّ قسمٍ وسطورَه في عمودٍ واحدٍ يُرسم صندوقاً ملوّناً.** والسطرُ المسمّى
- * (العنوان والمسافة) يبقى بتسميته داخل الصندوق. **وما ليس في قسمٍ يبقى كما هو.**
- */
-function boxSections(cols: DataColumn<OrderRow>[]): DataColumn<OrderRow>[] {
-  const out: DataColumn<OrderRow>[] = [];
-  const boxes: { role: "customer" | "driver" | "merchant"; head: DataColumn<OrderRow>; members: DataColumn<OrderRow>[] }[] = [];
-  let at = -1;
-  for (let i = 0; i < cols.length; i++) {
-    const c = cols[i]!;
-    const m0 = /^sec_(customer|driver|merchant)$/.exec(c.id);
-    if (!m0) {
-      out.push(c);
-      continue;
-    }
-    const members: DataColumn<OrderRow>[] = [];
-    for (let next = cols[i + 1]; next && !next.block && !next.id.startsWith("sec_"); next = cols[i + 1]) {
-      members.push(next);
-      i++;
-    }
-    if (at < 0) at = out.length;
-    boxes.push({ role: m0[1] as "customer" | "driver" | "merchant", head: c, members });
-  }
-  const shown = (b: (typeof boxes)[number], o: OrderRow) =>
-    !b.head.hide?.(o) && !b.members.every((x) => !!x.hide?.(o));
-  const box = (b: (typeof boxes)[number], o: OrderRow) => (
-    <div key={b.role} className={`flex flex-col gap-1.5 rounded-control border p-2.5 ${SEC_BOX[b.role]}`}>
-      <SectionHead role={b.role} o={o} />
-      {b.members
-        .filter((x) => !x.hide?.(o))
-        .map((x) =>
-          x.noLabel || x.header === SEC[b.role] ? (
-            <div key={x.id} className="font-medium">{x.cell(o)}</div>
-          ) : (
-            <div key={x.id} className="flex items-start justify-between gap-3">
-              <span className="inline-flex shrink-0 items-center gap-1.5 text-ink-muted [&>svg]:h-4 [&>svg]:w-4">
-                {x.icon}
-                {x.header}
-              </span>
-              <span className="min-w-0 text-end">{x.cell(o)}</span>
-            </div>
-          ),
-        )}
-    </div>
-  );
-  // **والترتيبُ ترتيبُ الطريق** (المالك ٢٠٢٦-١٠-٢٢: «اذا الزبون اول شي معناها نجيب من الزبون،
-  // واذا المتجر اول شي ناخذ من المتجر») — من نأخذ منه أوّلاً، ثمّ من نوصّل له، ثمّ السائق.
-  const sequence = (o: OrderRow): ("customer" | "driver" | "merchant")[] =>
-    o.kind === "merchant_delivery" && o.delivery_mode === "fetch"
-      ? ["customer", "merchant", "driver"]
-      : ["merchant", "customer", "driver"];
-  if (at >= 0) {
-    out.splice(at, 0, {
-      id: "boxes",
-      header: SEC.details,
-      noLabel: true,
-      cell: (o) => (
-        <div className="flex flex-col gap-2">
-          {sequence(o)
-            .map((r) => boxes.find((b) => b.role === r))
-            .filter((b): b is (typeof boxes)[number] => !!b && shown(b, o))
-            .map((b) => box(b, o))}
-        </div>
-      ),
-    });
-  }
-  return out;
-}
-
-function SectionHead({ role, o }: { role: keyof typeof SEC_LOOK; o?: OrderRow }) {
-  const { tone, Icon } = SEC_LOOK[role];
-  // **«لدي توصيلة» تقول اتّجاهها** (المالك ٢٠٢٦-١٠-٢٢: «مو مبين اذا بدنا نجيب للمتجر او
-  // بدنا ناخذ من المتجر») — من نأخذ منه ولمن نوصّل.
-  const md = o?.kind === "merchant_delivery";
-  const fetchMode = md && o?.delivery_mode === "fetch";
-  const title = !md
-    ? SEC[role]
-    : role === "customer"
-      ? fetchMode ? SEC.mdSender : SEC.mdRecipient
-      : role === "merchant"
-        ? fetchMode ? SEC.mdStoreTo : SEC.mdStoreFrom
-        : SEC[role];
-  return (
-    <span className={`flex items-center gap-1.5 text-xs font-bold ${tone}`}>
-      <Icon size={13} />
-      {title}
-    </span>
-  );
-}
+/** **أقسامُ بطاقة اللوحة** — نصوصُها (قرارُ المالك ٢٠٢٦-١١-٠٣، `CardSections.tsx`). */
+const CARD = m.admin.ordersPage.card;
 const ACTION_LABELS: Record<string, string> = m.admin.ordersPage.actions;
 
 /**
@@ -1671,121 +1583,38 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
         );
       },
     },
+    // ══════════════════════════════════════════════════════════════
+    // **ترتيبُ البطاقة** (قرارُ المالك ٢٠٢٦-١١-٠٣): الطريق ← المتجر ← الوقت المقدّر ← الزبون ←
+    // الفاتورة ← عمولةُ المنصّة ← الأزرار. والأقسامُ في `CardSections.tsx`.
+    // ══════════════════════════════════════════════════════════════
     {
-      // **قسمٌ بعنوانه** (ملاحظةُ المالك ٢٠٢٦-١٠-٢٢: «نفصل بين الزبون والسائق والتفاصيل»).
-      id: "sec_customer",
-      header: SEC.customer,
+      id: "route",
+      header: CARD.route,
       noLabel: true,
       only: "cards",
-      cell: () => <SectionHead role="customer" />,
+      cell: (o) => <RouteLine o={o} />,
+    },
+    {
+      id: "store",
+      header: CARD.store,
+      noLabel: true,
+      only: "cards",
+      hide: (o: OrderRow) => !hasPickupSection(o),
+      cell: (o) => <StoreSection o={o} live={live} />,
+    },
+    {
+      id: "eta",
+      header: CARD.eta,
+      noLabel: true,
+      only: "cards",
+      cell: (o) => <EtaSection o={o} />,
     },
     {
       id: "customer",
-      header: m.admin.ordersPage.customer,
-      icon: <IconUser />,
-      // **ولا كلمةَ «الزبون» في البطاقة** — (قرارُ المالك ٢٠٢٦-٠٨-١٢).
-      // **واسمٌ ورقمُ هاتفٍ لا يُسأل عمّن هما**، والتسميةُ تشغل نصفَ
-      // السطر وتقول ما هو ظاهر. **ويبقى رأسُ العمود في الجدول.**
-      noLabel: true,
-      // ══════════════════════════════════════════════════════════════
-      // **والزبونُ سطرٌ فوق المتجر — لا ترويسةٌ فوق البطاقة**
-      // ══════════════════════════════════════════════════════════════
-      //
-      // (قرارُ المالك ٢٠٢٦-٠٨-١٢: «اسم الزبون ورقم هاتفه فوق المتجر
-      //  بسطرٍ واحد، يمين ويسار مثل المتجر».)
-      //
-      // **وطرفا الطلب يُقرآن معا**: من هو ومن أين. **وكان أحدُهما في
-      // الترويسة والآخرُ في السطور** — فتُقرأ البطاقةُ في موضعين.
-      //
-      // **والرقمُ بجانب اسمه في السطر نفسِه**: كان تحته — **وثلاثةُ
-      // أرقامٍ تتراكب في ترويسةٍ واحدة** (رقمُ الطلب وتاريخُه ورقمُ
-      // هاتفه) **لا يفرّق بينها شيء.** وقد صار للرقم مربّعُه وللتاريخ
-      // موضعُه، **فبقي هاتفُه وحدَه** فلا يلتبس.
-      //
-      // **وأيقونةُ هاتفٍ عليه** — فيُعرف أنّه رقمُ اتّصالٍ لا رقمُ طلب.
-      cell: (o) => (
-        <span className="flex items-center justify-between gap-2">
-          {/* **وأيقونةُ شخصٍ على الاسم** — (قرارُ المالك ٢٠٢٦-٠٨-١٢).
-              **ورُفعت التسميةُ ومعها أيقونتُها**، فبقي السطرُ بلا ما
-              يقول ما هو. **والشكلُ يقوله بلا كلمة.** */}
-          <span className="flex min-w-0 items-center gap-1.5">
-            <IconUser size={13} className="shrink-0 text-ink-dim" />
-            <span className="truncate">{o.customer_name || "—"}</span>
-          </span>
-          {/* **ولا أيقونةَ على الرقم** — (قرارُ المالك ٢٠٢٦-٠٨-١٢).
-              **ورقمٌ بهذا الشكل لا يُقرأ إلّا هاتفا**: أربعةَ عشرَ رقماً
-              تبدأ بعلامة زائد، **ورقمُ الطلب في مربّعه فوق.** */}
-          <span className="flex shrink-0 items-center gap-2">
-            <span
-              dir="ltr"
-              className="text-xs text-ink-muted"
-              title={o.customer_phone ? undefined : H.maskedPhone}
-            >
-              {o.customer_phone || o.customer_phone_masked}
-            </span>
-            {live && <ContactLinks phone={o.customer_phone} callLabel={m.admin.ordersPage.callCustomerShort} />}
-          </span>
-        </span>
-      ),
-    },
-    // ══════════════════════════════════════════════════════════════
-    // **العنوانُ والمسافة** (طلبُ المالك ٢٠٢٦-١٠-٢٠: «لازم نعرف عنوان الزبون والمسافة بين
-    // المتجر والزبون والسائق والمتجر») — من حقولٍ يردّها الخادمُ أصلاً: `leg_m` طولُ
-    // المشوار، و`driver_to_pickup_m` بُعدُ السائق عن نقطة الاستلام لحظةَ السؤال.
-    // **وسالبٌ لا يُعرف فلا يُكتب** — لا «٠ م» يُقرأ وصولاً.
-    // ══════════════════════════════════════════════════════════════
-    {
-      id: "where",
-      header: m.admin.ordersPage.where,
-      icon: <IconLocation />,
-      cell: (o) => {
-        const P = m.admin.ordersPage;
-        const dist = (v?: number) =>
-          v == null || v < 0
-            ? ""
-            : v < 1000
-              ? P.meters.replace("{n}", fmtNum(Math.round(v / 10) * 10))
-              : P.km.replace("{n}", fmtNum(Math.round(v / 100) / 10));
-        // **وطلبٌ انتهى لا مسافاتٍ له** (تدقيقُ السجلّ ٢٠٢٦-١٠-٢٧) — بُعدُ السائق عن المتجر بعد التسليم لا معنى له.
-        const parts = o.closed_at ? [] : [
-          dist(o.leg_m) && P.legDist.replace("{d}", dist(o.leg_m)),
-          o.driver_name && !o.picked_up_at && dist(o.driver_to_pickup_m) && P.driverDist.replace("{d}", dist(o.driver_to_pickup_m)),
-          // **وبُعدُ السائق عن الزبون** (المالك ٢٠٢٦-١٠-٢٥) — بعد الاستلام، أو حين لا نقطةَ استلامٍ معروفة.
-          o.driver_name && !o.closed_at && (o.picked_up_at || !dist(o.driver_to_pickup_m)) && dist(o.driver_to_drop_m) &&
-            P.driverToCustomerDist.replace("{d}", dist(o.driver_to_drop_m)),
-        ].filter(Boolean);
-        return (
-          <span className="flex flex-col gap-0.5">
-            {/* **العنوانُ كاملاً** (المالك ٢٠٢٦-١٠-٢٥: «العنوان ناقص») — كان يُقصّ على سطرين. */}
-            <span className="whitespace-pre-line break-words">{o.address_text || "—"}</span>
-            {/* **واسمُ المنطقة بجانب العنوان** (تدقيقُ الطلبات ٢٠٢٦-١٠-٢٧) — كان في الردّ ولا يُعرض. */}
-            {o.zone_name && <span className="text-xs font-medium text-accent-text">{o.zone_name}</span>}
-            {parts.length > 0 && <span className="text-xs text-ink-muted">{parts.join(" · ")}</span>}
-          </span>
-        );
-      },
-    },
-    /* **ولا حديثَ في البطاقة** — (قرارُ المالك ٢٠٢٦-٠٨-١٢: «دردشاتي
-       السابقة احذفها من الكرت الخاصّ بالطلبات»). **والمحادثةُ تُراجَع حين
-       تُطلب**، ولا تُفتح مع كلّ صفٍّ يُقرأ. */
-    {
-      id: "note",
-      header: m.admin.ordersPage.customerNote,
-      icon: <IconNote />,
-      // **داخل صندوق الزبون، وتغيب حين لا ملاحظة** (تدقيقُ الطلبات ٢٠٢٦-١٠-٢٧) — كانت صندوقاً بعرض
-      // البطاقة يقول «—» في أغلب الطلبات.
-      hide: (o: OrderRow) => !o.notes,
-      cell: (o) => <span className="text-xs text-accent-dark">{o.notes}</span>,
-    },
-    {
-      // **قسمٌ بعنوانه** (ملاحظةُ المالك ٢٠٢٦-١٠-٢٢: «نفصل بين الزبون والسائق والتفاصيل»).
-      id: "sec_driver",
-      header: SEC.driver,
+      header: CARD.customer,
       noLabel: true,
       only: "cards",
-      // **السائقُ صار بالرأس** (٢٠٢٦-١١-٠٣) — فلا قسمَ له تحت.
-      hide: () => true,
-      cell: () => <SectionHead role="driver" />,
+      cell: (o) => <CustomerSection o={o} live={live} />,
     },
     {
       // ══════════════════════════════════════════════════════════════
@@ -1821,32 +1650,6 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
             passed={o.board?.offer_passed ?? 0}
           />
         ),
-    },
-    {
-      // **قسمٌ بعنوانه** (ملاحظةُ المالك ٢٠٢٦-١٠-٢٢: «نفصل بين الزبون والسائق والتفاصيل»).
-      id: "sec_merchant",
-      header: SEC.merchant,
-      noLabel: true,
-      only: "cards",
-      hide: (o: OrderRow) => o.kind === "custom",
-      cell: () => <SectionHead role="merchant" />,
-    },
-    {
-      id: "merchant",
-      header: m.admin.ordersPage.merchant,
-      icon: <IconStore />,
-      // **ولا متجرَ في الطلب الخاصّ** — (قرارُ المالك ٢٠٢٦-٠٨-١٠).
-      //
-      // **كان يُعرض فارغاً**: أيقونةٌ وكلمةُ «المتجر» وبعدَها لا شيء —
-      // **فيُقرأ عطباً في القراءة** لا «طلبٌ بلا متجر»، ويُسأل مرّتين:
-      // أضاع الاسمُ أم لم يكن؟
-      hide: (o: OrderRow) => o.kind === "custom",
-      cell: (o) => (
-        <span className="flex items-center justify-between gap-2">
-          <span className="min-w-0 truncate">{o.merchant_name}</span>
-          {live && <ContactLinks phone={o.merchant_phone} callLabel={m.admin.ordersPage.callStoreShort} />}
-        </span>
-      ),
     },
     {
       // ══════════════════════════════════════════════════════════════
@@ -1935,9 +1738,30 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       // **والفاتورةُ صندوقٌ بلونها** (المالك ٢٠٢٦-١٠-٢٢) — كالزبون والسائق والمتجر.
       cell: (o) => (
         <div className="rounded-control border border-violet-edge bg-violet-tint p-2.5">
-          <InvoiceList o={o} onChanged={load} canEdit={can("orders.intervene")} />
+          <InvoiceList
+            o={o}
+            onChanged={load}
+            canEdit={can("orders.intervene")}
+            // **وتُعدَّل من البطاقة** (قرارُ المالك ٢٠٢٦-١١-٠٣) — بشرط زرّ «تعديل الطلب» نفسِه.
+            editable={
+              can("orders.intervene") &&
+              o.kind === "standard" &&
+              !CLOSED_STATUSES.has(o.status) &&
+              (!o.picked_up_at || can("orders.edit_after_pickup"))
+            }
+          />
         </div>
       ),
+    },
+    {
+      // **عمولةُ المنصّة تحت الفاتورة** (قرارُ المالك ٢٠٢٦-١١-٠٣) — من التوصيل ومن المتجر،
+      // ثمّ ما يقبضه السائقُ وما يسلّمه للمكتب كما كان.
+      id: "commission",
+      header: CARD.commissions,
+      icon: <IconOrder />,
+      block: true,
+      only: "cards",
+      cell: (o) => <CommissionSection o={o} />,
     },
     {
       // **السائق وأجرُه — أو أجرةُ التوصيل قبل أن يُسنَد أحد.**
@@ -2034,9 +1858,8 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
     },
   ];
 
-  // **وكلُّ قسمٍ مربّعٌ بلونه** (المالك ٢٠٢٦-١٠-٢٢: «معلومات الزبون ضمن مربع بلون مختلف وايضا
-  // معلومات السائق») — رأسُ القسم وسطورُه في صندوقٍ واحد، لا سطورٌ متتاليةٌ بخطوطٍ بينها.
-  const cardColumns = boxSections(columns);
+  // **وكلُّ قسمٍ مربّعٌ بلونه** (المالك ٢٠٢٦-١٠-٢٢) — يرسمه قسمُه نفسُه (`CardSections.tsx`).
+  const cardColumns = columns;
   /** **سطرُ إثبات التسليم** — نفسُه في بطاقة السجلّ الخفيفة. */
   const proofCol = columns.find((c) => c.id === "proof");
   const goodsCol = columns.find((c) => c.id === "goodsReturn");
@@ -4536,26 +4359,6 @@ function kindLabel(o: OrderRow): string {
 }
 
 /**
- * **الأجرةُ مقسومة: للسائق وللمنصّة** (٢٠٢٦-١٠-١٣) — صار لكلّ نوعٍ حصّتُه، **فيُرى أين ذهبت.**
- * ولا يُعرض قبل أن يُعرف أجرُ السائق.
- */
-function FeeSplit({ fee, driver, assigned }: { fee: number; driver?: number; assigned: boolean }) {
-  const OP = m.admin.ordersPage;
-  // **وقبل الإسناد لا عمولة** (المالك ٢٠٢٦-١٠-٢٢: «اجرة التوصيل 100 عمولة المنصة 100 مافي
-  // هيك شي») — أجرُ السائق صفرٌ قبل أن يُسنَد فيُقرأ الفرقُ كلُّه عمولة.
-  if (!assigned || driver == null || fee <= 0) return null;
-  const platform = Math.max(0, fee - driver);
-  // **«عمولة المنصة» سطرٌ والرقمُ يساراً** (المالك ٢٠٢٦-١٠-٢٢) — و«للسائق» حُذف: «التوصيل»
-  // فوقه يقولها، **وما يبقى للسائق هو الأجرةُ ناقصَ هذا السطر.**
-  return (
-    <li className="flex items-center justify-between gap-2 text-ink-muted">
-      <span>{OP.platformCommission}</span>
-      <Money value={platform} small />
-    </li>
-  );
-}
-
-/**
  * **الحالاتُ التي يُحذف فيها صنفٌ غيرُ متوفّر** — كلُّها قبل الاستلام، **والخادمُ
  * يحرسها** (`item_unavailable_too_late`). وزرٌّ لا يُعرض حيث لا يفعل.
  */
@@ -4572,13 +4375,20 @@ function InvoiceList({
   o,
   onChanged,
   canEdit = false,
+  editable = false,
 }: {
   o: OrderRow;
   onChanged?: () => void;
   /** **من يملك التدخّل** (`orders.intervene`) — يرى «غير متوفر» على كلّ سطر. */
   canEdit?: boolean;
+  /**
+   * **تُعدَّل الفاتورةُ من البطاقة** (قرارُ المالك ٢٠٢٦-١١-٠٣) — «−/+/حذف» على كلّ سطرٍ و«+ صنف»
+   * تفتح «تعديل الطلب» مملوءاً: **السببُ والمعاينةُ من الخادم والتأكيدُ كما هي.**
+   */
+  editable?: boolean;
 }) {
   const OP = m.admin.ordersPage;
+  const [editQty, setEditQty] = useState<Record<string, number> | null>(null);
   // ══════════════════════════════════════════════════════════════════
   // **صنفٌ غيرُ متوفّر — يحذفه المكتبُ بتأكيد** (قرارُ المالك ٢٠٢٦-١٠-١٥)
   // ══════════════════════════════════════════════════════════════════
@@ -4673,7 +4483,6 @@ function InvoiceList({
           <span className="text-ink-muted">{OP.mdFee}</span>
           <Money value={o.delivery_fee} small />
         </li>
-        <FeeSplit fee={o.delivery_fee} driver={o.driver_fee} assigned={!!o.driver_name} />
         {/* **وما يقبضه من المستلِم للمتجر** — خارجَ الحساب، يُعرض وحدَه. **وفي «إحضار» تقديرُ
             المتجر** (٢٠٢٦-١٠-١٦) والمبلغُ الحقيقيُّ تحته بحال موافقته. */}
         {o.collect_amount ? (
@@ -4767,7 +4576,6 @@ function InvoiceList({
               <span className="text-xs text-ink-muted">{OP.feeAwaitDriver}</span>
             )}
           </li>
-          {fee != null && <FeeSplit fee={fee} driver={o.driver_fee} assigned={!!o.driver_name} />}
           {/* **والتوصيلُ المجانيُّ يُقال** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — كان المجموعُ يُعرض بالأجرة كاملةً
               والزبونُ لا يدفعها، فيُحصّل الموظّفُ أو السائقُ ما ليس له. */}
           {(o.free_waived ?? 0) > 0 && (
@@ -4839,27 +4647,93 @@ function InvoiceList({
                 </span>
               )}
             </span>
-            {/* **و«غير متوفر» في الوسط والسعرُ آخرَ السطر** (المالك ٢٠٢٦-١٠-٢٢) — فتصطفّ
-                المبالغُ كلُّها تحت بعضها. */}
-            {/* **وسطرُ مشروبٍ مدموجٍ من أكثر من بند لا يُعلَّم «غير متوفر»** — البندُ الواحدُ لا يُعرف منه. */}
-            {canUnavail && !it.returned && (it.merged_ids?.length ?? 0) <= 1 && (
-              <button
-                type="button"
-                className="shrink-0 rounded-control px-1.5 text-2xs text-danger hover:bg-row-hover"
-                onClick={() => {
-                  setUnavail({ id: it.id, name: it.name, qty: it.qty });
-                  setUnavailQty("");
-                  setUnavailErr("");
-                }}
-              >
-                {OP.itemUnavailable}
-              </button>
-            )}
             <Money value={it.unit_price * it.qty} small className="shrink-0" />
           </span>
+          {/* **أفعالُ السطر تحته** (قرارُ المالك ٢٠٢٦-١١-٠٣) — «−/+» والحذفُ تفتح «تعديل الطلب» بالكمّيّة
+              الجديدة، و«غير متوفر» قبل الاستلام بابُه كما كان. **وسطرُ مشروبٍ مدموجٍ من أكثر من بند
+              لا يُعدَّل من هنا** — البندُ الواحدُ لا يُعرف منه. */}
+          {!it.returned && (it.merged_ids?.length ?? 0) <= 1 && (editable || canUnavail) && (
+            <span className="ms-3.5 mt-1 flex flex-wrap items-center gap-1.5">
+              {editable && (
+                <>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="!px-2"
+                    aria-label={OP.card.lineLess}
+                    title={OP.card.lineLess}
+                    disabled={it.qty <= 1}
+                    onClick={() => setEditQty({ [it.id]: it.qty - 1 })}
+                  >
+                    <IconMinus size={14} />
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="!px-2"
+                    aria-label={OP.card.lineMore}
+                    title={OP.card.lineMore}
+                    disabled={it.qty >= 50}
+                    onClick={() => setEditQty({ [it.id]: it.qty + 1 })}
+                  >
+                    <IconAdd size={14} />
+                  </Button>
+                </>
+              )}
+              {canUnavail && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="!px-2 text-danger"
+                  onClick={() => {
+                    setUnavail({ id: it.id, name: it.name, qty: it.qty });
+                    setUnavailQty("");
+                    setUnavailErr("");
+                  }}
+                >
+                  {OP.itemUnavailable}
+                </Button>
+              )}
+              {editable && (
+                <Button
+                  variant="danger-outline"
+                  size="sm"
+                  className="!px-2"
+                  aria-label={OP.card.lineRemove}
+                  title={OP.card.lineRemove}
+                  onClick={() => setEditQty({ [it.id]: 0 })}
+                >
+                  <IconDelete size={14} />
+                </Button>
+              )}
+            </span>
+          )}
         </li>
       ))}
       {(o.items ?? []).length === 0 && <li className="text-ink-muted">—</li>}
+      {editable && (
+        <li>
+          <Button variant="secondary" size="sm" onClick={() => setEditQty({})}>
+            <span className="inline-flex items-center gap-1">
+              <IconAdd size={14} />
+              {OP.card.addItem}
+            </span>
+          </Button>
+        </li>
+      )}
+      {editQty != null && (
+        <OrderEditor
+          orderId={o.id}
+          orderNumber={o.number}
+          afterPickup={!!o.picked_up_at}
+          initialQty={editQty}
+          onClose={() => setEditQty(null)}
+          onDone={() => {
+            setEditQty(null);
+            onChanged?.();
+          }}
+        />
+      )}
       <Modal
         open={unavail != null}
         onClose={() => setUnavail(null)}
@@ -4918,7 +4792,6 @@ function InvoiceList({
             بعد الإعفاء، فكانت «التوصيل ٠» ثمّ «توصيل مجاني −١٠٠» والإجماليُّ لا يطابق ما فوقه. */}
         <Money value={o.delivery_fee + (o.free_waived ?? 0)} small />
       </li>
-      <FeeSplit fee={o.delivery_fee + (o.free_waived ?? 0)} driver={o.driver_fee} assigned={!!o.driver_name} />
       {(o.free_waived ?? 0) > 0 && (
         <li className="flex items-center justify-between text-sm font-bold text-success">
           <span>{OP.freeDelivery}</span>
@@ -4964,7 +4837,6 @@ function InvoiceList({
         {/* **مين دفع بالضبط** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — لا «الدفع عند الاستلام» لكلّ طلب. */}
         <span>{payerLabel(o)}</span>
       </li>
-      <DriverMoneyBox o={o} />
     </ul>
   );
 }

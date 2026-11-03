@@ -30,6 +30,11 @@ package orders
 //
 // **مستحقُّ المتجر وعمولتُه يُحسبان عند الاستلام من البنود** — فتعديلُها قبله يجعلهما
 // يتبعانها بلا سطرٍ زائد. **وبعد الاستلام قُيّد المال** — وبابُه المرحلةُ الثانية.
+//
+// # وصنفٌ من خارج القائمة
+//
+// يكتب المكتبُ اسمَه وسعرَه (`EditCustom`) — **سعرُ المتجر فيه سعرُ الزبون**، ويمرّ بالحسبة
+// نفسِها كأيّ سطر.
 
 import (
 	"context"
@@ -87,16 +92,40 @@ type EditAdd struct {
 	OptionIDs  []string `json:"option_ids,omitempty"`
 }
 
+// EditCustom **صنفٌ من خارج القائمة** — اسمُه وسعرُه يكتبهما المكتب (قرارُ المالك ٢٠٢٦-١١-٠٣:
+// «صنف مو موجود بالمتجر»).
+//
+// # قاعدةُ ماله — الأسلمُ والمتّسق
+//
+//   - **سعرُ المتجر = سعرُ الزبون** (`merchant_price = unit_price`): لا هامشَ منصّةٍ على صنفٍ
+//     لم تسعّره المنصّة — فلا يُخترع ربحٌ بلا قاعدة، ولا يُقصّ حقُّ المتجر بلا قاعدة.
+//   - **وعمولةُ المتجر تُقتطع منه كأيّ سطر** — يدخل `merchantShares` بسعر شرائه، فحقُّ المتجر
+//     = السعرُ ناقصَ نسبته، **والمعادلةُ واحدةٌ قبل الاستلام وبعده** (قيدُ التصحيح نفسُه).
+//   - **ومتجرُه من متاجر الطلب** — المذكورُ إن كان في الطلب، وإلّا متجرُ الطلب. وطريقةُ تسويته
+//     لقطةُ سطور متجره نفسِها.
+//   - **ولا `menu_item_id`** (العمودُ يقبل الفراغ منذ `0011`) — **ولا خياراتٍ ولا عرض.**
+//
+// ولمن أراد سعرَ متجرٍ أقلّ: يعدّله بعدها بسعر المتجر للسطر (`EditLine.MerchantPrice`)
+// — والهامشُ الصفريُّ يبقى صفراً فيتبعه سعرُ الزبون.
+type EditCustom struct {
+	Name       string `json:"name"`
+	Qty        int    `json:"qty"`
+	Price      int64  `json:"price"`
+	MerchantID string `json:"merchant_id,omitempty"`
+}
+
 // EditRequest **طلبُ التعديل كاملاً** — والسببُ إجباريّ.
 //
 // `StoreRefunded` **للنقص بعد الاستلام وحدَه** (قرارُ المالك ٢٠٢٦-١١-٠٣، البند ٢): افتراضاً
 // المتجرُ يأخذ حقَّه كاملاً والمنصّةُ تتحمّل، **وإن رجّع المتجرُ المصاري نقص حقُّه.**
 type EditRequest struct {
-	Reason        string     `json:"reason"`
-	Lines         []EditLine `json:"lines"`
-	Add           []EditAdd  `json:"add"`
-	StoreRefunded bool       `json:"store_refunded"`
-	DryRun        bool       `json:"dry_run"`
+	Reason string     `json:"reason"`
+	Lines  []EditLine `json:"lines"`
+	Add    []EditAdd  `json:"add"`
+	// Custom **أصنافٌ من خارج القائمة** — انظر `EditCustom`.
+	Custom        []EditCustom `json:"custom,omitempty"`
+	StoreRefunded bool         `json:"store_refunded"`
+	DryRun        bool         `json:"dry_run"`
 }
 
 // EditChange **سطرٌ تغيّر** — يُقرأ في الحدث والإشعار والتدقيق.
@@ -163,7 +192,7 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 	if utf8.RuneCountInString(req.Reason) > 500 {
 		return nil, res, httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
 	}
-	if len(req.Lines) == 0 && len(req.Add) == 0 {
+	if len(req.Lines) == 0 && len(req.Add) == 0 && len(req.Custom) == 0 {
 		return nil, res, ErrOrderEditNoChange
 	}
 	if _, err := uuid.Parse(orderID); err != nil {
@@ -180,6 +209,19 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 	for _, a := range req.Add {
 		if _, err := uuid.Parse(a.MenuItemID); err != nil || a.Qty < 1 || a.Qty > 50 {
 			return nil, res, httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
+		}
+	}
+	for i, c := range req.Custom {
+		c.Name = strings.TrimSpace(c.Name)
+		req.Custom[i].Name = c.Name
+		if c.Name == "" || utf8.RuneCountInString(c.Name) > 120 || c.Qty < 1 || c.Qty > 50 ||
+			c.Price < 1 || c.Price > 1_000_000_000 {
+			return nil, res, httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
+		}
+		if c.MerchantID != "" {
+			if _, err := uuid.Parse(c.MerchantID); err != nil {
+				return nil, res, httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
+			}
 		}
 	}
 
@@ -368,6 +410,35 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 				Name: it.Name, OldQty: 0, NewQty: it.Qty, NewPrice: it.UnitPrice,
 			})
 		}
+	}
+	// ── ٣ب · أصنافٌ من خارج القائمة — سعرُ المتجر سعرُ الزبون (`EditCustom`) ─────
+	for _, c := range req.Custom {
+		mid := c.MerchantID
+		if mid == "" {
+			mid = o.merchantID
+		}
+		if mid == "" || !storesBefore[mid] {
+			return nil, res, ErrOrderEditStore
+		}
+		var method string
+		if err := tx.QueryRow(ctx, `
+			SELECT COALESCE(
+			         (SELECT max(merchant_settlement_method) FROM order_items
+			           WHERE order_id = $1 AND COALESCE(merchant_id::text, $3) = $2),
+			         (SELECT settlement_method FROM merchants WHERE id = $2::uuid))`,
+			orderID, mid, o.merchantID).Scan(&method); err != nil {
+			return nil, res, err
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO order_items (order_id, menu_item_id, name, unit_price,
+			                         merchant_price, merchant_id, qty, note, options,
+			                         merchant_settlement_method, offer_cut)
+			VALUES ($1, NULL, $2, $3, $3, $4::uuid, $5, '', '[]'::jsonb, $6, 0)`,
+			orderID, c.Name, c.Price, mid, c.Qty, method); err != nil {
+			return nil, res, err
+		}
+		touched[mid] = true
+		res.Changes = append(res.Changes, EditChange{Name: c.Name, OldQty: 0, NewQty: c.Qty, NewPrice: c.Price})
 	}
 	if len(res.Changes) == 0 {
 		return nil, res, ErrOrderEditNoChange

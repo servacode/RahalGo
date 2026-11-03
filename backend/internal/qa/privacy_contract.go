@@ -147,9 +147,14 @@ var OrderPrivacy = map[string]FieldRule{
 	// **وهذا حكمُ حمولة الطلب وحدَها.** قرارُ المالك ٢٠٢٦-١٠-١٥ أظهر اسمَ
 	// المتجر في **التصفّح والعروض** (`publicItem` و`offers.Offer`) — وهما خارجَ
 	// هذا العقد، **فلم يُمسّ حكمُ الطلب هنا.**
-	"merchant_id":              {Ref: "customer_privacy.go:41", Vis: v(VisForbidden, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
-	"merchant_name":            {Ref: "customer_privacy.go:42", Vis: v(VisForbidden, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
-	"merchant_phone":           {Ref: "هاتفُ صاحب المتجر — للمكتب وحدَه، زرُّ اتّصالٍ على البطاقة (٢٠٢٦-١١-٠٣)", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	"merchant_id":    {Ref: "customer_privacy.go:41", Vis: v(VisForbidden, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
+	"merchant_name":  {Ref: "customer_privacy.go:42", Vis: v(VisForbidden, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
+	"merchant_phone": {Ref: "هاتفُ صاحب المتجر — للمكتب وحدَه، زرُّ اتّصالٍ على البطاقة (٢٠٢٦-١١-٠٣)", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	// **عنوانُ المتجر المفصّل ونقطةُ الاستلام** — للمكتب وحدَه: زرُّ خريطةٍ في قسم المتجر على بطاقة
+	// اللوحة (٢٠٢٦-١١-٠٣). والسائقُ يأخذ وجهتَه من بابه (`pickup_address`/`nav_*` في `driver_handlers.go`).
+	"pickup_address":           {Ref: "عنوانُ المتجر المفصّل — للمكتب وحدَه (٢٠٢٦-١١-٠٣)", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	"pickup_lat":               {Ref: "نقطةُ الاستلام — زرُّ الخريطة للمكتب وحدَه (٢٠٢٦-١١-٠٣)", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	"pickup_lng":               {Ref: "نقطةُ الاستلام — زرُّ الخريطة للمكتب وحدَه (٢٠٢٦-١١-٠٣)", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
 	"merchant_logo_thumb_url":  {Ref: "customer_privacy.go:43", Vis: v(VisForbidden, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
 	"merchant_accepts_returns": {Ref: "سياسةُ متجرٍ عامّة", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
 	// **ما يدفعه السائقُ لكلّ متجرٍ عند الاستلام** (قرارُ المالك ٢٠٢٦-١٠-١٥) — للسائق

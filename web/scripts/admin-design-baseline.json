@@ -263,8 +263,8 @@
     "statusColor": 5
   },
   "apps/rahalgo/src/components/admin/orders/OrdersScreen.tsx": {
-    "tinyText": 5,
-    "rawButton": 4,
+    "tinyText": 4,
+    "rawButton": 3,
     "handEmpty": 2,
     "statusColor": 5,
     "subtitle": 1

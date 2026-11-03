@@ -499,6 +499,12 @@ type Order struct {
 	// (`json:"-"`)؛ تقرؤها اللوحةُ لتحسب المسافاتِ **على الطريق** (المالك ٢٠٢٦-١٠-٢٥).
 	PickupPt *[2]float64 `json:"-"`
 	DriverPt *[2]float64 `json:"-"`
+	// PickupLat · PickupLng · PickupAddress **نقطةُ الاستلام وعنوانُ المتجر المفصّل** — للمكتب وحدَه
+	// (`orderview.go`): زرُّ خريطةٍ وعنوانٌ في قسم المتجر على بطاقة اللوحة (قرارُ المالك ٢٠٢٦-١١-٠٣).
+	// **من النقطة نفسِها التي تُقاس منها المسافات** (`pickup_override` ثمّ المتجرُ ثمّ التابع).
+	PickupLat     *float64 `json:"pickup_lat,omitempty"`
+	PickupLng     *float64 `json:"pickup_lng,omitempty"`
+	PickupAddress string   `json:"pickup_address,omitempty"`
 	// AcceptsReturns أيستردّ كلُّ متاجر هذا الطلب بضاعتَهم؟
 	//
 	// **سياسةُ متجرٍ لا قاعدةُ منصة** — وعليها يظهر زرُّ «رُدّت للمتجر». وفي

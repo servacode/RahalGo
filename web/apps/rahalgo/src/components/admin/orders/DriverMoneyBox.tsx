@@ -22,9 +22,13 @@ export interface DriverMoneyInput {
  * يدفعه السائقُ للمتجر عند الاستلام (`pay_merchant` — للمتاجر النقديّة)، وما يقبضه من الزبون، والباقي
  * للمكتب — **وأجرتُه كاملةً ولو كان التوصيلُ مجّانيّاً على المنصّة.**
  */
-export function DriverMoneyBox({ o }: { o: DriverMoneyInput }) {
+export function DriverMoneyBox({ o, hideCommission = false }: {
+  o: DriverMoneyInput;
+  /** **بطاقةُ اللوحة تقول العمولةَ في سطرها فوقه** (٢٠٢٦-١١-٠٣) — فلا تُكرَّر هنا. */
+  hideCommission?: boolean;
+}) {
   const OP = m.admin.ordersPage;
-  const com = o.platform_commission ?? 0;
+  const com = hideCommission ? 0 : o.platform_commission ?? 0;
   const pay = o.pay_merchant ?? 0;
   const cash = o.payment_method === "cash" ? o.cash_due ?? 0 : 0;
   if (com <= 0 && pay <= 0 && cash <= 0) return null;

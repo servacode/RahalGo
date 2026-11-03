@@ -146,7 +146,9 @@ const orderSelect = `
 	       ent.lat, ent.lng,
 	       ST_Y(o.dropoff_suggest::geometry), ST_X(o.dropoff_suggest::geometry),
 	       -- **وصاحبُ الأمانة ورقمُه** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
-	       COALESCE(o.amanah_holder_name, ''), COALESCE(o.amanah_holder_phone, '')
+	       COALESCE(o.amanah_holder_name, ''), COALESCE(o.amanah_holder_phone, ''),
+	       -- **وعنوانُ المتجر المفصّل** (قرارُ المالك ٢٠٢٦-١١-٠٣) — للمكتب، تحت اسم المتجر على البطاقة.
+	       COALESCE(NULLIF(mr.address_text, ''), ptn.address_text, '')
 	FROM orders o
 	LEFT JOIN LATERAL (
 		SELECT ST_Y(a.entrance::geometry) AS lat, ST_X(a.entrance::geometry) AS lng
@@ -205,13 +207,14 @@ func scanOrder(row pgx.Row) (*Order, error) {
 		&o.FetchAmount, &o.FetchAmountVersion, &o.FetchAmountStatus,
 		&o.AmountCurrency, &o.NearLandmark, &o.LiveRequestedAt, &o.LiveRequestCount,
 		&o.EntranceLat, &o.EntranceLng, &o.DropoffSuggestLat, &o.DropoffSuggestLng,
-		&o.HolderName, &o.HolderPhone)
+		&o.HolderName, &o.HolderPhone, &o.PickupAddress)
 	if err != nil {
 		return nil, err
 	}
 	// أصنافٌ لا تُفكّ لا تُسقط الطلب: البطاقة تعرض ما بقي وتُخفي القائمة وحدها.
 	if pkLat != nil && pkLng != nil {
 		o.PickupPt = &[2]float64{*pkLat, *pkLng}
+		o.PickupLat, o.PickupLng = pkLat, pkLng
 		// **وموقعُ الأمانة لصاحبها** (٢٠٢٦-١٠-٣٠) — لا متجرَ فيها، فنقطةُ الاستلام هي ما حدّده.
 		if o.Kind == "custom" && o.CustomMode == CustomModeAmanah {
 			o.AmanahPickupLat, o.AmanahPickupLng = pkLat, pkLng
