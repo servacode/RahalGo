@@ -84,7 +84,6 @@ import {
   BoardCounters,
   COUNTER_FILTERS,
   DriverLine,
-  AttentionCard,
   OfferLine,
   SoundButton,
   minutesSince,
@@ -2177,21 +2176,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
 
       {/* **«بدها انتباهك» بطاقةٌ واحدة** (تدقيقُ ٢٠٢٦-١٠-٢٧) — الجديدةُ والعالقةُ بقسمين، بدل شرائطَ
           فوق بعضها قبل أن تصل الطلبات. */}
-      {live && (
-        <AttentionCard
-          newOrders={newOrders}
-          newTotal={newTotal}
-          alerts={alerts}
-          alertsFailed={alertsFailed}
-          onRetryAlerts={() => void loadAlerts()}
-          now={now}
-          canAck={canAck}
-          onAcked={refreshAll}
-          onOpen={(id, number) => openOrder(id, number)}
-          officeStatus={OFFICE_STATUS}
-          alertReasons={m.admin.ordersPage.alertReasons as Record<string, string>}
-        />
-      )}
+      {/* **ولا بطاقةَ «بدها انتباهك»** (قرارُ المالك ٢٠٢٦-١١-٠٣: «كلها ماتلزم اصلا») — العالقُ له عدّادُه فوق. */}
 
       {!live && stale && (
         <Alert tone="info" className="mb-4">

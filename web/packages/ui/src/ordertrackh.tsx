@@ -32,20 +32,23 @@ export function OrderTrackH({
           <li key={s.id} className="relative flex min-w-0 flex-1 flex-col items-center text-center" title={s.at ?? undefined}>
             {/* نصفُ الخطّ قبل النقطة ونصفُه بعدها — فالأوّلُ والأخيرُ لا يخرجان عن البطاقة. */}
             {i > 0 && (
-              <span aria-hidden className={`absolute top-[7px] h-0.5 w-1/2 start-0 ${reached ? "bg-accent" : "bg-line"}`} />
+              <span aria-hidden className={`absolute top-[7px] h-0.5 w-1/2 start-0 ${reached ? "bg-success" : "bg-line"}`} />
             )}
             {i < last && (
-              <span aria-hidden className={`absolute top-[7px] h-0.5 w-1/2 end-0 ${passed ? "bg-accent" : "bg-line"}`} />
+              <span aria-hidden className={`absolute top-[7px] h-0.5 w-1/2 end-0 ${passed ? "bg-success" : "bg-line"}`} />
             )}
+            {/* **والمرحلةُ اللي خلصت إشارةُ صحٍّ خضرا** (قرارُ المالك ٢٠٢٦-١١-٠٣). */}
             <span
-              className={`relative z-10 h-4 w-4 rounded-badge border-2 ${
+              className={`relative z-10 flex h-4 w-4 items-center justify-center rounded-badge border-2 ${
                 now
                   ? "border-accent bg-accent ring-4 ring-accent-tint"
-                  : reached
-                    ? "border-accent bg-accent"
+                  : passed
+                    ? "border-success bg-success text-on-bright"
                     : "border-line bg-surface"
               }`}
-            />
+            >
+              {passed && <IconCheck size={10} strokeWidth={3} />}
+            </span>
             <span
               className={`mt-1.5 px-0.5 text-2xs leading-tight ${
                 now ? "font-bold text-ink" : reached ? "text-ink-muted" : "text-ink-dim opacity-70"
