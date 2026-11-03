@@ -207,6 +207,7 @@ export function DataView<T>({
   onRowClick,
   card,
   rail,
+  strip,
   loading = false,
 }: {
   items: T[];
@@ -253,6 +254,8 @@ export function DataView<T>({
    * **زرٌّ يخصّ الطلبَ كلَّه لا نصفَه.**
    */
   rail?: (item: T) => ReactNode;
+  /** **شريطٌ بعرض البطاقة تحت الترويسة** — مسارُ الطلب أفقيّاً (قرارُ المالك ٢٠٢٦-١١-٠٣). */
+  strip?: (item: T) => ReactNode;
   /**
    * **ما زال يُحمَّل — فلا «لا يوجد»** (تدقيقُ اللوحة ٢٠٢٦-١٠-٠٣، الحالاتُ الأربع في
    * `GROUND-RULES` §٧): كانت كلُّ قائمةٍ تقول «لا طلبات» لحظةَ الفتح، **وعلى خطٍّ بطيءٍ يظنّ
@@ -304,7 +307,7 @@ export function DataView<T>({
          **ومن لا عمودَ له يبقى على أربع** — لا شيءَ يأكل عرضَه. */
       <div
         className={`grid grid-cols-1 gap-4 sm:grid-cols-2 ${
-          rail ? "xl:grid-cols-3" : "lg:grid-cols-3 xl:grid-cols-4"
+          (rail || strip) ? "xl:grid-cols-3" : "lg:grid-cols-3 xl:grid-cols-4"
         }`}
       >
         {items.map((item) => {
@@ -390,6 +393,7 @@ export function DataView<T>({
                       </div>
                     ))}
                   </div>
+                  {strip && (() => { const st = strip(item); return st ? <div className="mb-3 border-b border-line-soft pb-3">{st}</div> : null; })()}
                   {/* كل حقل سطرٌ مفصول بخطّ خفيف: بلا فاصل تسيح الحقول في كتلة واحدة
                 فيُقرأ عنوانٌ مع قيمة جارِه — والبطاقة تُمسح بالعين لا تُدرَس. */}
                   {/* ══════════════════════════════════════════════════════════

@@ -204,14 +204,10 @@ export interface StuckAlert {
  * «مابدي هالزر اصلا») — فيسكت عند المكتب كلِّه لا عند من ضغط وحدَه.
  */
 export function AttentionCard({
-  newOrders,
-  newTotal,
   alerts,
   alertsFailed,
   onRetryAlerts,
   now,
-  canAck,
-  onAcked,
   onOpen,
   officeStatus,
   alertReasons,
@@ -228,21 +224,9 @@ export function AttentionCard({
   officeStatus: Record<string, string>;
   alertReasons: Record<string, string>;
 }) {
-  const [err, setErr] = useState("");
-  if (newOrders.length === 0 && alerts.length === 0 && !alertsFailed) return null;
-
-  async function openNew(o: NewOrder) {
-    setErr("");
-    if (canAck) {
-      try {
-        await api(`/api/v1/admin/orders/${o.id}/seen`, { method: "POST", body: "{}" });
-        onAcked();
-      } catch (e) {
-        setErr(errorText(e) || B.ackFailed);
-      }
-    }
-    onOpen(o.id, o.number);
-  }
+  // **ولا قسمَ «جديدة»** (قرارُ المالك ٢٠٢٦-١١-٠٣: «هي مالا لازم اصلا») — الجديدُ ظاهرٌ بكرته وعدّاده،
+  // **والرنينُ يسكت أوّلَ ما ينقبل أو ينرفض.**
+  if (alerts.length === 0 && !alertsFailed) return null;
 
   return (
     <section className="surface mb-4 overflow-hidden" role="alert">
@@ -250,31 +234,6 @@ export function AttentionCard({
         <span className="h-2.5 w-2.5 animate-pulse rounded-badge bg-danger" />
         {B.attentionTitle}
       </h2>
-
-      {newOrders.length > 0 && (
-        <div className="border-b border-line-soft bg-accent-tint px-4 py-3 last:border-b-0">
-          <p className="mb-1 flex flex-wrap items-center gap-2 text-sm font-bold text-accent-text">
-            {B.attentionNew}
-            <Badge variant="accent">{fmtNum(Math.max(newTotal, newOrders.length))}</Badge>
-          </p>
-          <p className="mb-2 text-xs text-ink-muted">{B.newTitle}</p>
-          <ul className="space-y-1.5">
-            {newOrders.map((o) => (
-              <li key={o.id} className="flex flex-wrap items-center gap-2 text-sm">
-                <span className="font-bold text-accent-text">#{o.number}</span>
-                <span className="min-w-0 flex-1 truncate text-ink">{o.merchant_name}</span>
-                <span className="text-xs text-ink-muted">
-                  {B.since.replace("{n}", fmtNum(minutesSince(o.created_at, now) ?? 0))}
-                </span>
-                <Button variant="primary" onClick={() => void openNew(o)}>
-                  {B.open}
-                </Button>
-              </li>
-            ))}
-          </ul>
-          {err && <p className="mt-2 text-xs text-danger">{err}</p>}
-        </div>
-      )}
 
       {alerts.length > 0 && (
         <div className="bg-danger-tint px-4 py-3">

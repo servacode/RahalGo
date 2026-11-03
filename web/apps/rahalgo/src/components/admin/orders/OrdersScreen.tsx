@@ -30,7 +30,7 @@ import {
   Modal,
   DataView,
   type DataColumn,
-  OrderTrackV,
+  OrderTrackH,
   IconOrder,
   IconPrint,
   IconSearch,
@@ -2537,9 +2537,9 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           view="cards"
           // **ومسارُ الطلب عمودٌ في طرف البطاقة** (قرارُ المالك ٢٠٢٦-٠٨-١٢) — والمراحلُ من
           // المحرّك (`ops_stages`)، **وطلبٌ بلا مسارٍ لا يُرسم له عمودٌ فارغ.**
-          rail={(o) =>
+          strip={(o) =>
             o.ops_stages?.length ? (
-              <OrderTrackV
+              <OrderTrackH
                 stages={o.ops_stages.map((id, i) => ({
                   id,
                   label: STAGE_LABELS[id] ?? id,
