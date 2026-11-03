@@ -121,7 +121,7 @@
   {
    "code": "orders.intervene",
    "description": "التدخل في طلب: تحويله أو إلغاؤه أو استرجاعه",
-   "guards_routes": 19
+   "guards_routes": 21
   },
   {
    "code": "orders.read",
@@ -254,7 +254,7 @@
   }
  ],
  "route_policy": {
-  "rules": 331,
+  "rules": 333,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",

@@ -629,6 +629,13 @@
     <string name="err_item_unavailable_too_late">لا يُحذف صنف بعد استلام الطلب أو انتهائه.</string>
     <string name="err_item_unavailable_last_item">هذا آخر صنف في الطلب — ألغِ الطلب بدل حذفه.</string>
     <string name="err_item_unavailable_not_standard">حذف الأصناف للطلب العادي وحده.</string>
+    <string name="err_order_edit_not_standard">تعديل الطلب للطلب العادي وحده.</string>
+    <string name="err_order_edit_closed">لا يُعدَّل طلب بعد تسليمه أو انتهائه.</string>
+    <string name="err_order_edit_after_pickup">تعديل الطلب بعد الاستلام للإدارة وحدها.</string>
+    <string name="err_order_edit_last_item">لا يبقى طلب بلا أصناف.</string>
+    <string name="err_order_edit_store_not_in_order">يُضاف الصنف من متجر موجود في الطلب فقط.</string>
+    <string name="err_order_edit_no_change">لم يتغيّر شيء في الطلب.</string>
+    <string name="err_order_edit_reason_required">اكتب سبب التعديل.</string>
     <string name="err_partner_not_purchase">الربط بمتجر تابع لطلبات المشتريات وحدها.</string>
     <string name="err_partner_goods_documented">ثمن البضاعة موثق — لا ربط ولا إلغاء ربط بعده.</string>
     <string name="err_partner_merchant_inactive">المتجر غير فعال — اختر متجرا فعالا.</string>

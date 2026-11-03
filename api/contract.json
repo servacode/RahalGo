@@ -4349,6 +4349,42 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/edit",
+      "handler": "handleOrderEdit",
+      "auth": true,
+      "capability": "orders.intervene",
+      "response": [
+        {
+          "name": "order",
+          "type": "unknown"
+        },
+        {
+          "name": "result",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/orders/{id}/edit-catalog",
+      "handler": "handleOrderEditCatalog",
+      "auth": true,
+      "capability": "orders.intervene",
+      "response": [
+        {
+          "name": "@cat",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/admin/orders/{id}/external-store",
       "handler": "handleOrderExternalStore",
       "auth": true,

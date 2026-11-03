@@ -81,6 +81,7 @@ import { OrderDetailPanel } from "./OrderDetailPanel";
 import { DriverMoneyBox } from "./DriverMoneyBox";
 import { payerIsCash, payerLabel, payerOf } from "./payer";
 import { WaiveCommissionDialog, WAIVE_ROUTE } from "./WaiveCommissionDialog";
+import { OrderEditor } from "./OrderEditor";
 import { useCanCall } from "@/lib/policy";
 import {
   BoardCounters,
@@ -3147,6 +3148,11 @@ function OrderActions({
    */
   const [extStoring, setExtStoring] = useState(false);
   /**
+   * **«تعديل الطلب»** (قرارُ المالك ٢٠٢٦-١١-٠٣) — الطلبُ العاديُّ لحتّى التسليم: كمّيّةٌ وحذفٌ
+   * وإضافةٌ وسعر، بسببٍ إجباريّ ومعاينةٍ يحسبها الخادم. انظر `OrderEditor.tsx`.
+   */
+  const [editing, setEditing] = useState(false);
+  /**
    * **تعديلُ عرض الطلب الخاصّ** — نموذجٌ يُملأ، ثمّ مراجعةٌ تُؤكَّد قبل الإرسال.
    *
    * **خطوتان لا واحدة** (قرارٌ ٣): يفتح الزرُّ النموذجَ فتُملأ الأرقام،
@@ -4164,6 +4170,33 @@ function OrderActions({
               يُقرأ «إرسالاً» لا «استبدالاً». */}
           <BtnLabel icon={IconSwap}>{m.admin.ordersPage.transfer}</BtnLabel>
         </Button>
+      )}
+      {/* **«تعديل الطلب»** (قرارُ المالك ٢٠٢٦-١١-٠٣) — العاديُّ قبل الاستلام بيد من يملك التدخّل.
+          **والخادمُ يقرّر المالَ كلَّه** ويردّ ما لا يجوز. */}
+      {canIntervene &&
+        o.kind === "standard" &&
+        !CLOSED_STATUSES.has(o.status) &&
+        !o.picked_up_at && (
+        <Button
+          variant="secondary"
+          disabled={busy !== ""}
+          onClick={() => setEditing(true)}
+        >
+          <BtnLabel icon={IconEdit}>{m.admin.ordersPage.orderEdit.button}</BtnLabel>
+        </Button>
+      )}
+      {editing && (
+        <OrderEditor
+          orderId={o.id}
+          orderNumber={o.number}
+          afterPickup={!!o.picked_up_at}
+          onClose={() => setEditing(false)}
+          onDone={(res) => {
+            setEditing(false);
+            setNotice(m.admin.ordersPage.orderEdit.done.replace("{total}", fmtMoney(res.new_total)));
+            onChanged();
+          }}
+        />
       )}
       {/* **«من متجر غير تابع لنا»** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — بجانب التحويل: الطلبُ العاديُّ
           النقديُّ يصير مشتريات. **والخادمُ يردّ ما تحرّك فيه مال.** */}

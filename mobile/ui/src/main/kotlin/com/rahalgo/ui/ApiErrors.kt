@@ -530,6 +530,14 @@ private val CODES: Map<String, Int> = mapOf(
     "item_unavailable_too_late" to R.string.err_item_unavailable_too_late,
     "item_unavailable_last_item" to R.string.err_item_unavailable_last_item,
     "item_unavailable_not_standard" to R.string.err_item_unavailable_not_standard,
+    // **تعديلُ الطلب العاديّ** (قرارُ المالك ٢٠٢٦-١١-٠٣) — بابُ اللوحة، ويُترجم إن بلغ هاتفاً.
+    "order_edit_not_standard" to R.string.err_order_edit_not_standard,
+    "order_edit_closed" to R.string.err_order_edit_closed,
+    "order_edit_after_pickup" to R.string.err_order_edit_after_pickup,
+    "order_edit_last_item" to R.string.err_order_edit_last_item,
+    "order_edit_store_not_in_order" to R.string.err_order_edit_store_not_in_order,
+    "order_edit_no_change" to R.string.err_order_edit_no_change,
+    "order_edit_reason_required" to R.string.err_order_edit_reason_required,
     // ── مشترياتٌ من متجرٍ تابع (قرارُ المالك ٢٠٢٦-١٠-١٥) ──
     "partner_not_purchase" to R.string.err_partner_not_purchase,
     "partner_goods_documented" to R.string.err_partner_goods_documented,

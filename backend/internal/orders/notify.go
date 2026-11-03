@@ -39,12 +39,14 @@ var t = struct {
 	// liveLocationRequested **السائقُ طلب موقعَ الزبون المباشر** (٢٠٢٦-١٠-٢١).
 	liveLocationRequested string
 	// **صنفٌ غيرُ متوفّر** (قرارُ المالك ٢٠٢٦-١٠-١٥).
-	itemUnavailable                       string
-	rejected, cancelled, failed, refunded string
-	merchantDelivered, commission         string
-	targetReached                         string
-	violationsWarn, violationsBanned      string
-	endedOps, warningIssued               string
+	itemUnavailable string
+	// **تعديلُ المكتب للطلب العاديّ** (قرارُ المالك ٢٠٢٦-١١-٠٣) — الزبونُ والسائقُ والمتجر.
+	orderEdited, orderEditedDriver, orderEditedMerchant string
+	rejected, cancelled, failed, refunded               string
+	merchantDelivered, commission                       string
+	targetReached                                       string
+	violationsWarn, violationsBanned                    string
+	endedOps, warningIssued                             string
 	// **عناوينُ حركات المحفظة** — (قرارُ المالك ٢٠٢٦-٠٨-١١: «الرصيد
 	// يتغيّر وما حدا بيعرف ليش»).
 	driverEarned, merchantEarned, refunded2, compensated string
@@ -77,6 +79,9 @@ var t = struct {
 	customQuoteRejectedDriver: "رفض الزبون السعر — تواصل معه بالدردشة وعدّل السعر",
 	liveLocationRequested:     "الكابتن طالب موقعك المباشر ليوصلك بالضبط — افتح التطبيق وشارك موقعك",
 	itemUnavailable:           "صنف غير متوفر في طلبك",
+	orderEdited:               "تعدّل طلبك",
+	orderEditedDriver:         "تعدّل الطلب الذي معك",
+	orderEditedMerchant:       "تعدّل طلب من متجرك",
 	driverAssignedToCustomer:  "أُسند سائقٌ لطلبك",
 	rejected:                  "اعتذر المتجر عن طلبك",
 	cancelled:                 "أُلغي طلبك",

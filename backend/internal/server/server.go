@@ -1552,6 +1552,12 @@ func (s *Server) Router() http.Handler {
 			// ويُعاد حسابُ الطلب. انظر `order_item_unavailable.go`.
 			r.With(s.RequireCapability(authz.OrdersIntervene)).
 				Post("/orders/{id}/items/{itemID}/unavailable", s.handleItemUnavailable)
+			// **تعديلُ الطلب العاديّ لحتّى التسليم** (قرارُ المالك ٢٠٢٦-١١-٠٣) — كمّيّةٌ وحذفٌ
+			// وإضافةٌ وسعر، بسببٍ إجباريّ. انظر `order_edit.go`.
+			r.With(s.RequireCapability(authz.OrdersIntervene)).
+				Get("/orders/{id}/edit-catalog", s.handleOrderEditCatalog)
+			r.With(s.RequireCapability(authz.OrdersIntervene)).
+				Post("/orders/{id}/edit", s.handleOrderEdit)
 			// **مشترياتٌ من متجرٍ تابعٍ إلنا** (قرارُ المالك ٢٠٢٦-١٠-١٥) — يُربط قبل توثيق الثمن
 			// ويُفكّ، والإرسالُ له بالبابين القائمين. انظر `order_partner.go`.
 			r.With(s.RequireCapability(authz.OrdersIntervene)).
