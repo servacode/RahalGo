@@ -84,7 +84,8 @@ export function MapLink({ lat, lng }: { lat?: number | null; lng?: number | null
   if (lat == null || lng == null) return null;
   return (
     <a
-      href={`https://www.google.com/maps?q=${lat},${lng}`}
+      // **خريطتُنا لا غوغل** (قرارُ المالك ٢٠٢٦-١١-٠٣) — خريطةُ العمليّات على النقطة، والمتجرُ والزبونُ والسائقُ عليها.
+      href={`/dashboard/opsmap?focus=${lat},${lng}`}
       target="_blank"
       rel="noreferrer"
       aria-label={C.map}
@@ -97,13 +98,11 @@ export function MapLink({ lat, lng }: { lat?: number | null; lng?: number | null
   );
 }
 
-const BOX = {
-  store: { box: "bg-warning-tint border-warning-edge", tone: "text-warning" },
-  customer: { box: "bg-accent-tint border-accent-edge", tone: "text-accent-text" },
-  plain: { box: "bg-ink-faint border-line-soft", tone: "text-ink-muted" },
-} as const;
+/** **صندوقٌ واحدُ الشكل لكلّ الأقسام** (قرارُ المالك ٢٠٢٦-١١-٠٣: «وحّد شكل الكرت») — نفسُ اللون والإطار والحشوة والعنوان. */
+const SAME = { box: "bg-ink-faint border-line-soft", tone: "text-accent-text" };
+const BOX = { store: SAME, customer: SAME, plain: SAME } as const;
 
-function Box({
+export function Box({
   look,
   icon,
   title,
@@ -115,7 +114,7 @@ function Box({
   children: React.ReactNode;
 }) {
   return (
-    <div className={`flex flex-col gap-1.5 rounded-control border p-2.5 ${BOX[look].box}`}>
+    <div className={`flex h-full flex-col gap-2 rounded-control border p-3 ${BOX[look].box}`}>
       <span className={`flex items-center gap-1.5 text-xs font-bold ${BOX[look].tone}`}>
         {icon}
         {title}

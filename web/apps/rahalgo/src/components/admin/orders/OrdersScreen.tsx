@@ -88,6 +88,7 @@ import {
   CustomerSection,
   EtaSection,
   RouteLine,
+  Box,
   StoreSection,
   hasPickupSection,
 } from "./CardSections";
@@ -1592,7 +1593,11 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       header: CARD.route,
       noLabel: true,
       only: "cards",
-      cell: (o) => <RouteLine o={o} />,
+      cell: (o) => (
+        <div className="rounded-control border border-line-soft bg-ink-faint p-3">
+          <RouteLine o={o} />
+        </div>
+      ),
     },
     {
       id: "store",
@@ -1736,8 +1741,9 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       // من الكرت الخاصّ بالطلبات»). **والقائمةُ تحته تقول ما فيه**،
       // **وزرٌّ يفتح ما هو مفتوحٌ فوقه** ضغطةٌ بلا خبرٍ جديد.
       // **والفاتورةُ صندوقٌ بلونها** (المالك ٢٠٢٦-١٠-٢٢) — كالزبون والسائق والمتجر.
+      noLabel: true,
       cell: (o) => (
-        <div className="rounded-control border border-violet-edge bg-violet-tint p-2.5">
+        <Box look="plain" icon={<IconOrder size={14} />} title={m.admin.ordersPage.invoice}>
           <InvoiceList
             o={o}
             onChanged={load}
@@ -1750,7 +1756,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
               (!o.picked_up_at || can("orders.edit_after_pickup"))
             }
           />
-        </div>
+        </Box>
       ),
     },
     {
@@ -1761,7 +1767,12 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       icon: <IconOrder />,
       block: true,
       only: "cards",
-      cell: (o) => <CommissionSection o={o} />,
+      noLabel: true,
+      cell: (o) => (
+        <Box look="plain" icon={<IconOrder size={14} />} title={CARD.commissions}>
+          <CommissionSection o={o} />
+        </Box>
+      ),
     },
     {
       // **السائق وأجرُه — أو أجرةُ التوصيل قبل أن يُسنَد أحد.**
@@ -2461,6 +2472,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           }
           empty={BOARD.emptyLive}
           actionsLayout="grid"
+          stack
           actions={(o) => (
             <OrderActions
               o={o}

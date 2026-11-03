@@ -210,6 +210,7 @@ export function DataView<T>({
   strip,
   loading = false,
   actionsLayout = "wrap",
+  stack = false,
 }: {
   items: T[];
   getKey: (item: T) => string;
@@ -261,6 +262,12 @@ export function DataView<T>({
    * **زرٌّ يخصّ الطلبَ كلَّه لا نصفَه.**
    */
   rail?: (item: T) => ReactNode;
+  /**
+   * **أقسامُ البطاقة متوازيةٌ بين البطاقات** (قرارُ المالك ٢٠٢٦-١١-٠٣: «الترتيب نفسه بكل الكروت بحيث
+   * تكون متوازية») — كلُّ قسمٍ صفٌّ في شبكةٍ فرعيّة (`subgrid`) فيبدأ على الخطّ نفسِه في كلّ البطاقات،
+   * بفراغٍ واحدٍ بلا خطوطٍ فاصلة. **وقسمٌ غائبٌ في كلّ البطاقات لا صفَّ له.**
+   */
+  stack?: boolean;
   /** **شريطٌ بعرض البطاقة تحت الترويسة** — مسارُ الطلب أفقيّاً (قرارُ المالك ٢٠٢٦-١١-٠٣). */
   strip?: (item: T) => ReactNode;
   /**
@@ -294,6 +301,8 @@ export function DataView<T>({
     const primaries = forCards.filter((c) => c.primary);
     const rest = forCards.filter((c) => !c.primary && !c.block);
     const blocks = forCards.filter((c) => !c.primary && c.block);
+    // **وفي البطاقات المتوازية: كلُّ ما ليس رأساً بترتيب الأعمدة، وما يغيب عن الجميع يُطوى.**
+    const stackFields = forCards.filter((c) => !c.primary && items.some((it) => !c.hide?.(it)));
     return (
       /* ══════════════════════════════════════════════════════════
          **والبطاقةُ ذاتُ العمود تأخذ عرضاً أوسع**
@@ -325,6 +334,34 @@ export function DataView<T>({
           // بياضٌ بعرض أربعةٍ وعشرين** لا شيءَ فيه — **وهو أسوأُ من ألّا
           // يكون**: يُقرأ خبراً غاب لا خبراً لا وجودَ له.
           const side = rail?.(item);
+          if (stack) {
+            const st = strip?.(item);
+            return (
+              <div
+                key={getKey(item)}
+                onClick={onRowClick ? () => onRowClick(item) : undefined}
+                style={{ gridRow: `span ${stackFields.length + 3}` }}
+                className={`grid grid-rows-subgrid gap-3 surface p-4 transition-shadow hover:elev-2 ${onRowClick ? "cursor-pointer" : ""}`}
+              >
+                <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                  {primaries.map((c) => (
+                    <div key={c.id} className={`min-w-0 ${primaries.length === 1 ? "w-full" : ""}`}>
+                      {c.cell(item)}
+                    </div>
+                  ))}
+                </div>
+                <div className="min-w-0">{st ?? null}</div>
+                {stackFields.map((c) => (
+                  <div key={c.id} className={`min-w-0 text-sm ${c.mobileOnly ? "sm:hidden" : ""}`}>
+                    {c.hide?.(item) ? null : c.cell(item)}
+                  </div>
+                ))}
+                <div onClick={(e) => e.stopPropagation()} className="self-end grid grid-flow-row-dense grid-cols-2 gap-2 border-t border-line-soft pt-3 [&>*:not(button)]:col-span-2 [&>button:only-of-type]:col-span-2 [&>button]:inline-flex [&>button]:min-h-11 [&>button]:w-full [&>button]:min-w-0 [&>button]:items-center [&>button]:justify-center [&>button]:gap-2 [&>button]:overflow-hidden [&>button]:!px-2 [&>button]:text-center [&>button[data-variant=primary]]:order-first [&>button[data-variant=danger]]:order-1 [&>button[data-variant=danger-outline]]:order-1">
+                  {actions ? actions(item) : null}
+                </div>
+              </div>
+            );
+          }
           return (
             <div
               key={getKey(item)}
