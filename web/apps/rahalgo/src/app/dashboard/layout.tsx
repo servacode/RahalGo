@@ -135,6 +135,9 @@ const ALL_NAV: NavItem[] = [
   // **مراقبةُ حركة السائقين** (قرارُ المالك ٢٠٢٦-١١-٠٣) — بقدرتها وحدَها، **أثرٌ شخصيٌّ حسّاس**.
   { href: "/dashboard/driver-monitor", label: m.admin.nav.driverMonitor, icon: IconRoute,
     caps: ["drivers.monitor"] },
+  // **الخريطة من السائقين** (قرارُ المالك ٢٠٢٦-١١-٠٣) — كثافةُ المشي وشوارعُ مرشَّحة للموافقة.
+  { href: "/dashboard/map-learning", label: m.admin.nav.mapLearning, icon: IconRoute,
+    caps: ["orders.read"] },
   // **«طلباتُ التوسّع» قسمٌ مستقلّ** — «مو مخفيّة تحت الخريطة» (قرارُ المالك
   // ٢٠٢٦-١٠-٠٤). **وقراءتُها بـ`orders.read`** كبابها في المحرّك — قسمٌ لموظّف
   // العمليّات لا تقريرٌ للمدير (قرارُ المالك ٢٠٢٦-١٠-٠٥).

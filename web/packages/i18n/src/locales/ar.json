@@ -1689,6 +1689,7 @@
       "groupBuild": "البناء والإعداد",
       "opsMap": "خريطة العمليات",
       "driverMonitor": "مراقبة السائقين",
+      "mapLearning": "الخريطة من السائقين",
       "expansion": "طلبات التوسع",
       "problems": "المشاكل والتعويضات",
       "problemsHint": "الشكاوى والتقييمات، والطلبات الفاشلة والنزاعات وتعويض البضاعة — بمكان واحد"
@@ -6353,6 +6354,34 @@
       "signals": "مرّات",
       "unresolved": "غير محدَّد إداريّاً",
       "empty": "لا طلبَ توسّعٍ بعد."
+    },
+    "mapLearning": {
+      "title": "الخريطة من السائقين",
+      "unnamed": "شارع بلا اسم",
+      "rowStats": "{len} م · {days} أيام · {pts} نقطة",
+      "nameLabel": "اسم الشارع",
+      "approve": "موافقة",
+      "reject": "رفض",
+      "statusApproved": "موافَق عليه",
+      "statusRejected": "مرفوض",
+      "run": "تحليل الآن",
+      "running": "جاري التحليل",
+      "exportOsm": "تصدير OSM",
+      "exportGeojson": "تصدير GeoJSON",
+      "noRoads": "ما في محرك توجيه مضبوط لقياس البعد عن الطرق",
+      "heatLayer": "كثافة المشي",
+      "farOnly": "البعيد عن الطرق فقط",
+      "daysN": "{n} يوم",
+      "empty": "ما في شوارع مرشحة",
+      "mapUnavailable": "الخريطة مو شغالة هلق",
+      "tabs": { "pending": "بالانتظار", "approved": "موافَق عليها", "rejected": "مرفوضة" },
+      "tiles": {
+        "points": "نقاط المشي",
+        "far": "نقاط بعيدة عن الطرق",
+        "pending": "شوارع بالانتظار",
+        "approved": "شوارع موافَق عليها",
+        "rejected": "شوارع مرفوضة"
+      }
     },
     "driverMonitor": {
       "title": "مراقبة السائقين",
