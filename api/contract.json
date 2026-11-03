@@ -3745,6 +3745,27 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/ops-map/oneway-candidates",
+      "handler": "requirePerm",
+      "auth": true,
+      "capability": "orders.read"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ops-map/oneway-candidates/export",
+      "handler": "requirePerm",
+      "auth": true,
+      "capability": "settings.general.manage"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/ops-map/oneway-candidates/{id}/decide",
+      "handler": "requirePerm",
+      "auth": true,
+      "capability": "settings.general.manage"
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/ops-map/opportunities",
       "handler": "requirePerm",
       "auth": true,
@@ -3798,6 +3819,34 @@
       "handler": "requirePerm",
       "auth": true,
       "capability": "settings.general.manage"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/ops-map/road-learning/run",
+      "handler": "requirePerm",
+      "auth": true,
+      "capability": "settings.general.manage"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ops-map/road-learning/summary",
+      "handler": "requirePerm",
+      "auth": true,
+      "capability": "orders.read"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ops-map/road-speeds",
+      "handler": "requirePerm",
+      "auth": true,
+      "capability": "orders.read"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ops-map/road-speeds/summary",
+      "handler": "requirePerm",
+      "auth": true,
+      "capability": "orders.read"
     },
     {
       "method": "GET",

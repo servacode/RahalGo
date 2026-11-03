@@ -126,7 +126,7 @@
   {
    "code": "orders.read",
    "description": "قراءة الطلبات ولوحة العمليات",
-   "guards_routes": 28
+   "guards_routes": 32
   },
   {
    "code": "payouts.decide",
@@ -156,7 +156,7 @@
   {
    "code": "settings.general.manage",
    "description": "إعدادات عامة: المناطق والمدن ودوام المنصة",
-   "guards_routes": 29
+   "guards_routes": 32
   },
   {
    "code": "settings.read",
@@ -254,7 +254,7 @@
   }
  ],
  "route_policy": {
-  "rules": 324,
+  "rules": 331,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",

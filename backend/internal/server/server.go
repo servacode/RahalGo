@@ -1272,6 +1272,15 @@ func (s *Server) Router() http.Handler {
 				r.Post("/street-candidates/run", s.requirePerm(opsmap.PermManageCoverage, s.handleMapLearningRun))
 				r.Post("/street-candidates/{id}/decide", s.requirePerm(opsmap.PermManageCoverage, s.handleStreetCandidateDecide))
 
+				// **تعلّم الطرق: اتّجاه واحد وسرعة حقيقية** (قرارُ المالك ٢٠٢٦-١١-٠٣).
+				r.Get("/oneway-candidates", s.requirePerm(opsmap.PermViewMap, s.handleOnewayCandidates))
+				r.Get("/oneway-candidates/export", s.requirePerm(opsmap.PermManageCoverage, s.handleOnewayExport))
+				r.Post("/oneway-candidates/{id}/decide", s.requirePerm(opsmap.PermManageCoverage, s.handleOnewayDecide))
+				r.Get("/road-speeds", s.requirePerm(opsmap.PermViewMap, s.handleRoadSpeeds))
+				r.Get("/road-speeds/summary", s.requirePerm(opsmap.PermViewMap, s.handleRoadSpeedsSummary))
+				r.Get("/road-learning/summary", s.requirePerm(opsmap.PermViewMap, s.handleRoadLearningSummary))
+				r.Post("/road-learning/run", s.requirePerm(opsmap.PermManageCoverage, s.handleRoadLearningRun))
+
 				// **أماكنُ بلا اسمٍ وأسامي** (قرارُ المالك ٢٠٢٦-١١-٠٣) — مرشَّحو معالمَ من وقفات السائقين وعناوين الزبائن.
 				r.Get("/place-candidates", s.requirePerm(opsmap.PermViewMap, s.handlePlaceCandidates))
 				r.Post("/place-candidates/run", s.requirePerm(opsmap.PermManageCoverage, s.handlePlaceCandidatesRun))

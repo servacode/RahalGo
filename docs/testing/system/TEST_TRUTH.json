@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 613,
+    "routes": 620,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -33,8 +33,8 @@
     "setting_defs": 254,
     "behaviour_settings": 209,
     "order_fields": 129,
-    "test_files": 687,
-    "test_funcs": 2653
+    "test_files": 689,
+    "test_funcs": 2662
   },
   "flows": [
     {
@@ -9206,6 +9206,48 @@
     {
       "name": "TestSanitizeSample",
       "file": "internal/maplearn/places_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestCanonEdge_SameKeyBothDirections",
+      "file": "internal/maplearn/roadlearn_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestChunks_CleansAndSplits",
+      "file": "internal/maplearn/roadlearn_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestDetectOneWay",
+      "file": "internal/maplearn/roadlearn_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestPasses_SpeedHourAndEdges",
+      "file": "internal/maplearn/roadlearn_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestPolyline6_RoundTrip",
+      "file": "internal/maplearn/roadlearn_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestSlowFromCounts",
+      "file": "internal/maplearn/roadlearn_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestValhallaMatcher_ParsesTraceAttributes",
+      "file": "internal/maplearn/roadlearn_test.go",
       "package": "maplearn",
       "orphan": true
     },
@@ -18766,6 +18808,18 @@
     {
       "name": "TestPlaces_StopsDetector_ApproveInsertsLandmark",
       "file": "internal/qa/map_places_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRoads_OnewayAndSpeeds",
+      "file": "internal/qa/map_roads_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRoads_Permissions",
+      "file": "internal/qa/map_roads_test.go",
       "package": "qa",
       "orphan": true
     },

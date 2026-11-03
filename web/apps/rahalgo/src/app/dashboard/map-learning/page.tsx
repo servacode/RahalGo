@@ -35,6 +35,7 @@ import { useCanCall } from "@/lib/policy";
 import type { FeatureCollection, LayerSpec } from "@/components/admin/opsmap/canvas";
 import { mapIcons, toneColor } from "@/components/admin/opsmap/palette";
 import { PlacesPanel } from "./PlacesPanel";
+import { OnewayPanel, SpeedsPanel } from "./RoadsPanel";
 
 const OpsMapCanvas = dynamic(
   () => import("@/components/admin/opsmap/canvas").then((x) => x.OpsMapCanvas),
@@ -45,7 +46,7 @@ const m = getMessages(defaultLocale);
 const T = m.admin.mapLearning;
 
 type Status = "pending" | "approved" | "rejected";
-type Section = "streets" | "places";
+type Section = "streets" | "places" | "oneway" | "speeds";
 
 interface Summary {
   points: number;
@@ -146,6 +147,8 @@ export default function MapLearningPage() {
   const [section, setSection] = useState<Section>("streets");
   const [placesTick, setPlacesTick] = useState(0);
   const [placesRunning, setPlacesRunning] = useState(false);
+  const [roadsTick, setRoadsTick] = useState(0);
+  const [roadsRunning, setRoadsRunning] = useState(false);
   const [stores, setStores] = useState<Array<{ id: string; name: string; lat: number; lng: number }>>([]);
 
   useEffect(() => {
@@ -307,6 +310,41 @@ export default function MapLearningPage() {
     }
   }
 
+  async function runRoads() {
+    setBusy(true);
+    setActionErr("");
+    try {
+      await api("/api/v1/admin/ops-map/road-learning/run", { method: "POST" });
+      setRoadsRunning(true);
+      for (let i = 0; i < 120; i++) {
+        await new Promise((r) => setTimeout(r, 3000));
+        const r = await api<{ running: boolean }>("/api/v1/admin/ops-map/road-learning/summary");
+        if (!r.running) break;
+      }
+    } catch (e) {
+      setActionErr(errorText(e));
+    } finally {
+      setRoadsRunning(false);
+      setBusy(false);
+      setRoadsTick((x) => x + 1);
+    }
+  }
+
+  async function downloadOneway(format: "osm" | "geojson") {
+    setActionErr("");
+    try {
+      const res = await apiFile(`/api/v1/admin/ops-map/oneway-candidates/export?format=${format}`);
+      const url = URL.createObjectURL(await res.blob());
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `rahalgo-oneway.${format}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setActionErr(errorText(e));
+    }
+  }
+
   async function download(format: "osm" | "geojson") {
     setActionErr("");
     try {
@@ -328,7 +366,23 @@ export default function MapLearningPage() {
         icon={IconRoute}
         title={T.title}
         actions={
-          canManage && section === "places" ? (
+          canManage && (section === "oneway" || section === "speeds") ? (
+            <>
+              <Button variant="secondary" size="sm" disabled={busy || roadsRunning} onClick={runRoads}>
+                {roadsRunning ? T.oneway.running : T.oneway.run}
+              </Button>
+              {section === "oneway" && (
+                <>
+                  <Button variant="secondary" size="sm" onClick={() => downloadOneway("osm")}>
+                    {T.oneway.exportOsm}
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => downloadOneway("geojson")}>
+                    {T.oneway.exportList}
+                  </Button>
+                </>
+              )}
+            </>
+          ) : canManage && section === "places" ? (
             <Button variant="secondary" size="sm" disabled={busy || placesRunning} onClick={runPlaces}>
               {placesRunning ? T.places.running : T.places.run}
             </Button>
@@ -349,7 +403,7 @@ export default function MapLearningPage() {
       />
       {actionErr && <Alert tone="error">{actionErr}</Alert>}
       <div className="mb-3 flex gap-2">
-        {(["streets", "places"] as Section[]).map((s) => (
+        {(["streets", "places", "oneway", "speeds"] as Section[]).map((s) => (
           <Button key={s} size="sm" variant={section === s ? "primary" : "secondary"} onClick={() => setSection(s)}>
             {T.sections[s]}
           </Button>
@@ -357,6 +411,10 @@ export default function MapLearningPage() {
       </div>
       {section === "places" ? (
         <PlacesPanel canManage={canManage} runSignal={placesTick} />
+      ) : section === "oneway" ? (
+        <OnewayPanel canManage={canManage} runSignal={roadsTick} stores={stores} />
+      ) : section === "speeds" ? (
+        <SpeedsPanel runSignal={roadsTick} stores={stores} />
       ) : err ? (
         <ReloadState label={err} onRetry={() => setTick((x) => x + 1)} />
       ) : !sum || !cands ? (

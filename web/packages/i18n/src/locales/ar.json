@@ -6374,7 +6374,7 @@
       "daysN": "{n} يوم",
       "empty": "ما في شوارع مرشحة",
       "mapUnavailable": "الخريطة مو شغالة هلق",
-      "sections": { "streets": "شوارع", "places": "أماكن وأسامي" },
+      "sections": { "streets": "شوارع", "places": "أماكن وأسامي", "oneway": "اتجاه واحد", "speeds": "السرعة الحقيقية" },
       "places": {
         "sources": { "all": "الكل", "stops": "وقفات السائقين", "addresses": "أسماء من العناوين" },
         "sourceBadge": { "stops": "وقفات", "addresses": "عناوين" },
@@ -6401,6 +6401,51 @@
         "lastRun": "آخر تحليل: {stops} مكان من الوقفات و{names} من العناوين",
         "lastRunFailed": "آخر تحليل تعثر",
         "tiles": { "pending": "أماكن بالانتظار", "approved": "أماكن موافَق عليها", "rejected": "أماكن مرفوضة" }
+      },
+      "oneway": {
+        "run": "حلّل الطرق",
+        "running": "عم يتحلل الأثر",
+        "exportOsm": "تصدير الاتجاه الواحد OSM",
+        "exportList": "تصدير الاتجاه الواحد قائمة",
+        "unnamed": "شارع بلا اسم",
+        "toward": "باتجاه {dir}",
+        "dirs": {
+          "n": "الشمال",
+          "s": "الجنوب",
+          "e": "الشرق",
+          "w": "الغرب"
+        },
+        "stats": "{pct}٪ باتجاه واحد · {main} عبور باتجاهه و{opp} عكسه · {drivers} سائق · {days} يوم",
+        "empty": "ما في طرق مقترحة",
+        "noMatcher": "ما في خدمة مطابقة على الطرق (Valhalla)، فتحليل الأثر الجديد ما رح يشتغل",
+        "lastRun": "آخر تحليل: {days} يوم و{passes} عبور و{oneway} طريق مقترح",
+        "lastRunFailed": "آخر تحليل فشل",
+        "tiles": {
+          "days": "أيام محلّلة",
+          "edges": "قطع طرق مقيسة"
+        }
+      },
+      "speeds": {
+        "hourLabel": "الساعة",
+        "allHours": "كل الساعات",
+        "hourN": "{h}:00",
+        "dayLabel": "الأيام",
+        "allDays": "كل الأيام",
+        "weekday": "أيام العمل",
+        "weekend": "الجمعة والسبت",
+        "onlySlow": "البطيء باستمرار فقط",
+        "legendSlow": "بطيء",
+        "legendFast": "سريع",
+        "slowBadge": "بطيء باستمرار",
+        "kmh": "{n} كم/س",
+        "rowStats": "{kmh} كم/س · {passes} عبور",
+        "empty": "ما في قياسات سرعة بعد",
+        "tiles": {
+          "edges": "قطع طرق مقيسة",
+          "slow": "بطيئة باستمرار",
+          "cityAvg": "متوسط سرعة المدينة",
+          "passes": "عدد القياسات"
+        }
       },
       "tabs": { "pending": "بالانتظار", "approved": "موافَق عليها", "rejected": "مرفوضة" },
       "tiles": {
