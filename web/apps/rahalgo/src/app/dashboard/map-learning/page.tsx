@@ -33,7 +33,8 @@ import { Tile } from "@/components/admin/DashParts";
 import { api, apiFile } from "@/lib/api";
 import { useCanCall } from "@/lib/policy";
 import type { FeatureCollection, LayerSpec } from "@/components/admin/opsmap/canvas";
-import { toneColor } from "@/components/admin/opsmap/palette";
+import { mapIcons, toneColor } from "@/components/admin/opsmap/palette";
+import { PlacesPanel } from "./PlacesPanel";
 
 const OpsMapCanvas = dynamic(
   () => import("@/components/admin/opsmap/canvas").then((x) => x.OpsMapCanvas),
@@ -44,6 +45,7 @@ const m = getMessages(defaultLocale);
 const T = m.admin.mapLearning;
 
 type Status = "pending" | "approved" | "rejected";
+type Section = "streets" | "places";
 
 interface Summary {
   points: number;
@@ -141,6 +143,10 @@ export default function MapLearningPage() {
   const [actionErr, setActionErr] = useState<string>("");
   const [busy, setBusy] = useState(false);
   const [tick, setTick] = useState(0);
+  const [section, setSection] = useState<Section>("streets");
+  const [placesTick, setPlacesTick] = useState(0);
+  const [placesRunning, setPlacesRunning] = useState(false);
+  const [stores, setStores] = useState<Array<{ id: string; name: string; lat: number; lng: number }>>([]);
 
   useEffect(() => {
     let alive = true;
@@ -170,8 +176,37 @@ export default function MapLearningPage() {
     };
   }, [days, farOnly, tick]);
 
+  // أسماءُ المتاجر على الخريطة (طلبُ المالك) — تأتي مع رد الأماكن، والمقروءُ منه المتاجرُ وحدَها.
+  useEffect(() => {
+    let alive = true;
+    api<{ stores: Array<{ id: string; name: string; lat: number; lng: number }> }>(
+      "/api/v1/admin/ops-map/place-candidates?status=approved&source=stops",
+    )
+      .then((r) => alive && setStores(r.stores))
+      .catch(() => alive && setStores([]));
+    return () => {
+      alive = false;
+    };
+  }, []);
+
   const layers = useMemo<LayerSpec[]>(() => {
     const out: LayerSpec[] = [
+      {
+        id: "stores",
+        kind: "symbol",
+        order: 20,
+        visible: true,
+        color: toneColor("store-open"),
+        labelField: "name",
+        data: {
+          type: "FeatureCollection",
+          features: stores.map((s) => ({
+            type: "Feature" as const,
+            geometry: { type: "Point", coordinates: [s.lng, s.lat] },
+            properties: { id: s.id, name: s.name, icon: "store-open" },
+          })),
+        },
+      },
       {
         id: "heat",
         kind: "heat",
@@ -214,7 +249,7 @@ export default function MapLearningPage() {
       },
     });
     return out;
-  }, [heat, cands, picked, showHeat, status]);
+  }, [heat, cands, picked, showHeat, status, stores]);
 
   const focus = useMemo(() => {
     const c = (cands ?? []).find((x) => x.id === picked);
@@ -252,6 +287,26 @@ export default function MapLearningPage() {
     }
   }
 
+  async function runPlaces() {
+    setBusy(true);
+    setActionErr("");
+    try {
+      await api("/api/v1/admin/ops-map/place-candidates/run", { method: "POST" });
+      setPlacesRunning(true);
+      for (let i = 0; i < 60; i++) {
+        await new Promise((r) => setTimeout(r, 3000));
+        const r = await api<{ running: boolean }>("/api/v1/admin/ops-map/place-candidates?status=pending");
+        if (!r.running) break;
+      }
+    } catch (e) {
+      setActionErr(errorText(e));
+    } finally {
+      setPlacesRunning(false);
+      setBusy(false);
+      setPlacesTick((x) => x + 1);
+    }
+  }
+
   async function download(format: "osm" | "geojson") {
     setActionErr("");
     try {
@@ -273,7 +328,11 @@ export default function MapLearningPage() {
         icon={IconRoute}
         title={T.title}
         actions={
-          canManage ? (
+          canManage && section === "places" ? (
+            <Button variant="secondary" size="sm" disabled={busy || placesRunning} onClick={runPlaces}>
+              {placesRunning ? T.places.running : T.places.run}
+            </Button>
+          ) : canManage ? (
             <>
               <Button variant="secondary" size="sm" disabled={busy || !sum?.can_measure || sum?.running} onClick={run}>
                 {sum?.running ? T.running : T.run}
@@ -289,7 +348,16 @@ export default function MapLearningPage() {
         }
       />
       {actionErr && <Alert tone="error">{actionErr}</Alert>}
-      {err ? (
+      <div className="mb-3 flex gap-2">
+        {(["streets", "places"] as Section[]).map((s) => (
+          <Button key={s} size="sm" variant={section === s ? "primary" : "secondary"} onClick={() => setSection(s)}>
+            {T.sections[s]}
+          </Button>
+        ))}
+      </div>
+      {section === "places" ? (
+        <PlacesPanel canManage={canManage} runSignal={placesTick} />
+      ) : err ? (
         <ReloadState label={err} onRetry={() => setTick((x) => x + 1)} />
       ) : !sum || !cands ? (
         <LoadingState />
@@ -305,7 +373,7 @@ export default function MapLearningPage() {
           {!sum.can_measure && <Alert tone="warning">{T.noRoads}</Alert>}
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
             <div className="surface relative h-[65vh] overflow-hidden lg:col-span-2">
-              <OpsMapCanvas layers={layers} icons={[]} unavailableLabel={T.mapUnavailable} focus={focus} />
+              <OpsMapCanvas layers={layers} icons={mapIcons()} unavailableLabel={T.mapUnavailable} focus={focus} />
             </div>
             <div className="surface p-3">
               <div className="mb-3 flex flex-wrap items-end gap-2">

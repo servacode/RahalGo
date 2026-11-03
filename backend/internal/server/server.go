@@ -1272,6 +1272,11 @@ func (s *Server) Router() http.Handler {
 				r.Post("/street-candidates/run", s.requirePerm(opsmap.PermManageCoverage, s.handleMapLearningRun))
 				r.Post("/street-candidates/{id}/decide", s.requirePerm(opsmap.PermManageCoverage, s.handleStreetCandidateDecide))
 
+				// **أماكنُ بلا اسمٍ وأسامي** (قرارُ المالك ٢٠٢٦-١١-٠٣) — مرشَّحو معالمَ من وقفات السائقين وعناوين الزبائن.
+				r.Get("/place-candidates", s.requirePerm(opsmap.PermViewMap, s.handlePlaceCandidates))
+				r.Post("/place-candidates/run", s.requirePerm(opsmap.PermManageCoverage, s.handlePlaceCandidatesRun))
+				r.Post("/place-candidates/{id}/decide", s.requirePerm(opsmap.PermManageCoverage, s.handlePlaceCandidateDecide))
+
 				// **والتغطيةُ تُقرأ لمن يفتح الخريطة، وتُكتب لمن
 				// يملكها** — **رسمُ مضلَّعٍ يبدّل من تصله المنصّة.**
 				r.Get("/coverage", s.requirePerm(opsmap.PermViewMap, s.handleOpsMapCoverage))

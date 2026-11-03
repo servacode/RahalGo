@@ -484,6 +484,10 @@ var adminPolicy = []Rule{
 	{"GET", "/ops-map/street-candidates/export", SettingsGeneralManage},
 	{"POST", "/ops-map/street-candidates/run", SettingsGeneralManage},
 	{"POST", "/ops-map/street-candidates/{id}/decide", SettingsGeneralManage},
+	// **أماكنُ بلا اسمٍ وأسامي** (٢٠٢٦-١١-٠٣) — القراءةُ بـ`orders.read`، والتشغيلُ والقرارُ بالتغطية.
+	{"GET", "/ops-map/place-candidates", OrdersRead},
+	{"POST", "/ops-map/place-candidates/run", SettingsGeneralManage},
+	{"POST", "/ops-map/place-candidates/{id}/decide", SettingsGeneralManage},
 
 	// ── الحوافز ─────────────────────────────────────────────────
 	{"GET", "/incentives/{role}", FinanceRead},

@@ -54,6 +54,8 @@ func (s *Server) RunMapLearning(ctx context.Context, interval time.Duration) {
 }
 
 func (s *Server) mapLearningOnce(ctx context.Context) {
+	// الأماكنُ بلا اسمٍ لا تحتاج محرّكَ خرائط — تعمل ولو غاب.
+	s.mapPlacesOnce(ctx)
 	rf := s.roadFinder()
 	if rf == nil {
 		return

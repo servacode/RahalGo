@@ -113,6 +113,7 @@ const SERVER_MOBILE = new Set([
 const SERVER_ADMIN = new Set([
   // **الخريطةُ من حركة السائقين** (٢٠٢٦-١١-٠٣) — أبوابُ اللوحة وحدَها.
   "candidate_decided",
+  "place_decided",
   "bad_format",
   "map_learning_busy",
   "map_learning_no_roads",

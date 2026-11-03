@@ -414,3 +414,25 @@ func nearestStore(stores []Store, lat, lng, radius float64) string {
 	}
 	return ""
 }
+
+// Stop وقفةٌ مكتشفة للاستعمال خارج الحزمة (الأماكن بلا اسم).
+type Stop struct {
+	Start, End time.Time
+	Lat, Lng   float64
+}
+
+// FindStops وقفاتُ نقاطٍ مرتّبة بالزمن: متتاليةٌ ضمن `radius` من أولها لمدة ≥ `minDur` بلا صمتٍ أطولَ من `gap`.
+// النقاطُ المزيَّفة تُهمل.
+func FindStops(pts []Point, minDur time.Duration, radius float64, gap time.Duration) []Stop {
+	clean := make([]Point, 0, len(pts))
+	for _, p := range pts {
+		if !p.Mocked {
+			clean = append(clean, p)
+		}
+	}
+	var out []Stop
+	for _, s := range findStops(clean, minDur, radius, gap) {
+		out = append(out, Stop{Start: s.start, End: s.end, Lat: s.lat, Lng: s.lng})
+	}
+	return out
+}

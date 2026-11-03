@@ -227,7 +227,9 @@ function DayView({ driverID, day, onBack }: { driverID: string; day: string; onB
         if (e.to_lat != null && e.to_lng != null)
           flags.push(pt(e.to_lng, e.to_lat, { name: e.to_place ?? "", icon: "order-stuck" }));
       } else if (e.kind === "gap" && e.flagged) {
-        flags.push(pt(e.lng, e.lat, { name: mins(e.minutes ?? 0), icon: "driver-idle" }));
+        flags.push(pt(e.lng, e.lat, { name: data.driver.name + " — " + mins(e.minutes ?? 0), icon: "driver-idle" }));
+      } else if (e.kind === "stop_at_store" && e.place) {
+        flags.push(pt(e.lng, e.lat, { name: data.driver.name + " — " + e.place + " — " + mins(e.minutes ?? 0), icon: "driver-idle" }));
       }
     }
     out.push({

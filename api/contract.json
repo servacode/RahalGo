@@ -3759,6 +3759,27 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/ops-map/place-candidates",
+      "handler": "requirePerm",
+      "auth": true,
+      "capability": "orders.read"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/ops-map/place-candidates/run",
+      "handler": "requirePerm",
+      "auth": true,
+      "capability": "settings.general.manage"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/ops-map/place-candidates/{id}/decide",
+      "handler": "requirePerm",
+      "auth": true,
+      "capability": "settings.general.manage"
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/ops-map/reps",
       "handler": "requirePerm",
       "auth": true,
