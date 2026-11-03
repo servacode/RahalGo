@@ -237,6 +237,9 @@ var adminPolicy = []Rule{
 	{"GET", "/cash/merchant-dues", FinanceRead},
 	{"POST", "/drivers/{id}/end-shift", DriversManage},
 	{"GET", "/drivers", DriversRead},
+	// **مراقبةُ حركتهم** — قدرتُها وحدَها (قرارُ المالك ٢٠٢٦-١١-٠٣).
+	{"GET", "/driver-monitor", DriversMonitor},
+	{"GET", "/driver-monitor/{id}", DriversMonitor},
 
 	// ── المال ───────────────────────────────────────────────────
 	{"POST", "/payouts/{id}/decide", PayoutsDecide},
@@ -475,6 +478,24 @@ var adminPolicy = []Rule{
 	{"DELETE", "/ops-map/road-closures/{id}", SettingsGeneralManage},
 	{"GET", "/ops-map/landmark-suggestions", OrdersRead},
 	{"POST", "/ops-map/landmark-suggestions/{id}/decide", SettingsGeneralManage},
+	// **الخريطةُ من حركة السائقين** (٢٠٢٦-١١-٠٣) — تُقرأ بـ`orders.read` كأخواتها، والقرارُ والتشغيلُ والتصديرُ بالتغطية.
+	{"GET", "/ops-map/street-candidates", OrdersRead},
+	{"GET", "/ops-map/street-candidates/summary", OrdersRead},
+	{"GET", "/ops-map/street-candidates/heat", OrdersRead},
+	{"GET", "/ops-map/street-candidates/export", SettingsGeneralManage},
+	{"POST", "/ops-map/street-candidates/run", SettingsGeneralManage},
+	{"POST", "/ops-map/street-candidates/{id}/decide", SettingsGeneralManage},
+	// **أماكنُ بلا اسمٍ وأسامي** (٢٠٢٦-١١-٠٣) — القراءةُ بـ`orders.read`، والتشغيلُ والقرارُ بالتغطية.
+	{"GET", "/ops-map/place-candidates", OrdersRead},
+	{"POST", "/ops-map/place-candidates/run", SettingsGeneralManage},
+	{"POST", "/ops-map/place-candidates/{id}/decide", SettingsGeneralManage},
+	{"GET", "/ops-map/oneway-candidates", OrdersRead},
+	{"GET", "/ops-map/oneway-candidates/export", SettingsGeneralManage},
+	{"POST", "/ops-map/oneway-candidates/{id}/decide", SettingsGeneralManage},
+	{"GET", "/ops-map/road-speeds", OrdersRead},
+	{"GET", "/ops-map/road-speeds/summary", OrdersRead},
+	{"GET", "/ops-map/road-learning/summary", OrdersRead},
+	{"POST", "/ops-map/road-learning/run", SettingsGeneralManage},
 
 	// ── الحوافز ─────────────────────────────────────────────────
 	{"GET", "/incentives/{role}", FinanceRead},

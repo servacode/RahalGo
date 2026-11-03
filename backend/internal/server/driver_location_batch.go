@@ -186,6 +186,8 @@ func (s *Server) handleDriverLocationBatch(w http.ResponseWriter, r *http.Reques
 	for _, p := range traces {
 		s.saveMapTrace(r.Context(), p.Lat, p.Lng, p.AccuracyM, p.SpeedMps, p.BearingDeg)
 	}
+	// **وأثرُ اليوم لمراقبة السائقين** (`driver_monitor.go`) — بعد حفظ الموضع، وتعثّرُه لا يُسقط الدفعة.
+	s.recordTrail(r, uid, trailPoints(kept))
 	// **«الكابتن قريب منك»** (قرارُ المالك ٢٠٢٦-١٠-١٦، `near_notice.go`) — **من أحدث نقطةٍ
 	// وحدَها وإن كانت حديثة**: دفعةٌ أفرغها طابورٌ بعد انقطاعٍ تقول أين كان لا أين هو.
 	if last := kept[len(kept)-1]; now.Sub(last.At) <= orders.LiveFreshFor {

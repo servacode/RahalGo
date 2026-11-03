@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 602,
+    "routes": 622,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 252,
-    "behaviour_settings": 207,
+    "setting_defs": 254,
+    "behaviour_settings": 209,
     "order_fields": 129,
-    "test_files": 682,
-    "test_funcs": 2629
+    "test_files": 691,
+    "test_funcs": 2666
   },
   "flows": [
     {
@@ -4573,6 +4573,27 @@
       "status": "REGRESSION_TEST_PRESENT"
     },
     {
+      "key": "drivers.monitor_km_alert",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "drivers.monthly_target",
       "group": "drivers",
       "kind": "int",
@@ -4869,6 +4890,27 @@
       "kind": "money",
       "sensitive": false,
       "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.trail_retention_days",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
       "flows": [
         "F-07",
         "F-08",
@@ -9087,6 +9129,126 @@
       "name": "TestMachinePlatformNeverWiderThanMerchants",
       "file": "internal/machinedoc/machinedoc_test.go",
       "package": "machinedoc",
+      "orphan": true
+    },
+    {
+      "name": "TestDetect_BlobAndScatterRejected",
+      "file": "internal/maplearn/detect_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestDetect_CurvedAlleyFollowsTheTurn",
+      "file": "internal/maplearn/detect_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestDetect_DeterministicAndEmpty",
+      "file": "internal/maplearn/detect_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestDetect_OneDayOnlyIsNotCandidate",
+      "file": "internal/maplearn/detect_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestDetect_StraightStreetOnThreeDays",
+      "file": "internal/maplearn/detect_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestDetect_TwoSeparateStreets",
+      "file": "internal/maplearn/detect_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestExport_OSMAndGeoJSON",
+      "file": "internal/maplearn/detect_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestClusterNames",
+      "file": "internal/maplearn/places_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestClusterStops",
+      "file": "internal/maplearn/places_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestExtractNames",
+      "file": "internal/maplearn/places_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestNameMatches",
+      "file": "internal/maplearn/places_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestNormalizeUnifiesArabicForms",
+      "file": "internal/maplearn/places_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestSanitizeSample",
+      "file": "internal/maplearn/places_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestCanonEdge_SameKeyBothDirections",
+      "file": "internal/maplearn/roadlearn_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestChunks_CleansAndSplits",
+      "file": "internal/maplearn/roadlearn_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestDetectOneWay",
+      "file": "internal/maplearn/roadlearn_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestPasses_SpeedHourAndEdges",
+      "file": "internal/maplearn/roadlearn_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestPolyline6_RoundTrip",
+      "file": "internal/maplearn/roadlearn_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestSlowFromCounts",
+      "file": "internal/maplearn/roadlearn_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestValhallaMatcher_ParsesTraceAttributes",
+      "file": "internal/maplearn/roadlearn_test.go",
+      "package": "maplearn",
       "orphan": true
     },
     {
@@ -16383,6 +16545,42 @@
       "orphan": true
     },
     {
+      "name": "TestDriverMonitor_ClassifiesDayAndCatchesBehindTheBackDelivery",
+      "file": "internal/qa/driver_monitor_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverMonitor_ListSortedWorstFirstAndAlert",
+      "file": "internal/qa/driver_monitor_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverMonitor_LocationHandlersKeepDownsampledTrail",
+      "file": "internal/qa/driver_monitor_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverMonitor_RequiresCapability",
+      "file": "internal/qa/driver_monitor_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverMonitor_RetentionPrunes",
+      "file": "internal/qa/driver_monitor_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverMonitor_SameMovesWithAnOrderAreNotSuspicious",
+      "file": "internal/qa/driver_monitor_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestDriverTodayEarned_ByDeliveryDay",
       "file": "internal/qa/driver_today_earned_test.go",
       "package": "qa",
@@ -18580,6 +18778,48 @@
     {
       "name": "TestRoadClosure_ReportConfirmAndClear",
       "file": "internal/qa/map_contrib_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMapLearning_ApproveRejectExport",
+      "file": "internal/qa/map_learning_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMapLearning_RequiresCapability",
+      "file": "internal/qa/map_learning_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPlaces_AddressNamesDetector",
+      "file": "internal/qa/map_places_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPlaces_Permissions",
+      "file": "internal/qa/map_places_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestPlaces_StopsDetector_ApproveInsertsLandmark",
+      "file": "internal/qa/map_places_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRoads_OnewayAndSpeeds",
+      "file": "internal/qa/map_roads_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRoads_Permissions",
+      "file": "internal/qa/map_roads_test.go",
       "package": "qa",
       "orphan": true
     },
@@ -27197,8 +27437,32 @@
       "orphan": true
     },
     {
+      "name": "TestMenuCounts_ExemptWithReason",
+      "file": "internal/server/admin_menu_counts_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMenuCounts_NumbersFollowCapabilities",
+      "file": "internal/server/admin_menu_counts_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestMerchantProfile_SeesHisStore",
       "file": "internal/server/admin_merchant_profile_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMerchantPulse_NumbersMatchTheDatabase",
+      "file": "internal/server/admin_merchant_pulse_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestMerchantPulse_UnknownStoreIs404",
+      "file": "internal/server/admin_merchant_pulse_test.go",
       "package": "server",
       "orphan": true
     },

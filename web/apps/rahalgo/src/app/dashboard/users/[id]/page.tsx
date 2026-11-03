@@ -4,6 +4,7 @@
  *  وأدوات الأدمن (عمليات المحفظة، إعادة تعيين كلمة المرور). */
 
 import { Suspense, useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDate, fmtDateTime, errorText} from "@rahalgo/i18n";
 import { roleLabelByCode } from "@/lib/rolemeta";
@@ -30,6 +31,7 @@ import {
   IconLock,
   IconRoles,
   IconLink,
+  IconRoute,
   IconPrev,
   IconLogout,
   IconStatus,
@@ -888,6 +890,15 @@ function UserProfile() {
       {tab === "overview" && (
       <>
       {p.money_hidden && <p className="mb-2 text-xs text-ink-muted">{A.moneyHidden}</p>}
+      {has("driver") && can("drivers.monitor") && (
+        <Link
+          className="mb-3 inline-flex items-center gap-1.5 text-sm font-bold text-primary"
+          href={`/dashboard/driver-monitor?driver=${p.id}`}
+        >
+          <IconRoute size={15} />
+          {m.admin.driverMonitor.monitorLink}
+        </Link>
+      )}
       {has("driver") && (
         <DriverPanel
           d={p}

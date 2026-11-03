@@ -15,6 +15,7 @@ import {
   IconUsers,
   IconStore,
   IconZones,
+  IconRoute,
   IconLocation,
   IconPromos,
   IconSupport,
@@ -109,6 +110,10 @@ const ALL_NAV: NavItem[] = [
   { section: "daily", href: "/dashboard/history", label: m.admin.nav.history, icon: IconHistory, caps: ["orders.read"] },
   // **خريطةُ العمليات — «أين» لا «كم»**، والصلاحيةُ في الخادم (`opsmap.Perm`).
   { section: "daily", href: "/dashboard/opsmap", label: m.admin.nav.opsMap, icon: IconZones, caps: ["orders.read"] },
+  // **مراقبةُ حركة السائقين** (قرارُ المالك ٢٠٢٦-١١-٠٣) — بقدرتها وحدَها، **أثرٌ شخصيٌّ حسّاس**.
+  { section: "daily", href: "/dashboard/driver-monitor", label: m.admin.nav.driverMonitor, icon: IconRoute, caps: ["drivers.monitor"] },
+  // **الخريطة من السائقين** (قرارُ المالك ٢٠٢٦-١١-٠٣) — كثافةُ المشي وشوارعُ وأماكنُ مرشَّحة للموافقة.
+  { section: "daily", href: "/dashboard/map-learning", label: m.admin.nav.mapLearning, icon: IconRoute, caps: ["orders.read"] },
   // **«المشاكل والتعويضات»** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — الشكاوى والتقييماتُ والخسائرُ والنزاعاتُ وتعويضُ البضاعة.
   {
     section: "daily",

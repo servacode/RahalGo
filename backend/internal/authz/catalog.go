@@ -80,6 +80,11 @@ const (
 	// عمله. (`ADG-2` — مصالحةُ دورةِ ٢٦.)
 	DriversRead Capability = "drivers.read"
 
+	// DriversMonitor **مراقبةُ حركة السائقين** (قرارُ المالك ٢٠٢٦-١١-٠٣): كم مشى كلُّ
+	// سائقٍ باليوم بطلبٍ وبلا طلب، وما يُشبه طلباً من وراء المنصّة. **أثرٌ شخصيٌّ حسّاس**
+	// فلا يُمنح لمن يقرأ السجلّ — للمالك ومدير المنصّة افتراضاً، ويُعطى لغيرهما صراحةً.
+	DriversMonitor Capability = "drivers.monitor"
+
 	// ── الإعدادات — قراءةٌ وثلاثُ درجاتِ كتابةٍ بحسب الأثر ───────
 	//
 	// **وتصنيفُ الكتابة من دورةِ ٢١ لا يُخترَع ثانيةً** — انظر
@@ -321,6 +326,7 @@ var catalog = map[Capability]string{
 	MerchantsRead:            "قراءة سجل المتاجر وقوائمها",
 	DriversManage:            "إدارة السائقين وتشغيلهم",
 	DriversRead:              "قراءة سجل السائقين ومواقعهم",
+	DriversMonitor:           "مراقبة حركة السائقين اليومية: الكيلومترات والوقفات والانقطاع",
 	SettingsRead:             "قراءة الإعدادات",
 	SettingsGeneralManage:    "إعدادات عامة: المناطق والمدن ودوام المنصة",
 	SettingsFinancialManage:  "إعدادات تدخل بحساب المال: العمولات والرسوم والسقوف",
@@ -392,7 +398,7 @@ var groupOf = map[Capability]Group{
 
 	MerchantsManage: GroupStoresDrivers, MerchantsRead: GroupStoresDrivers,
 	MerchantsVerify: GroupStoresDrivers, DriversManage: GroupStoresDrivers,
-	DriversRead: GroupStoresDrivers,
+	DriversRead: GroupStoresDrivers, DriversMonitor: GroupStoresDrivers,
 
 	SettingsRead: GroupSettings, SettingsGeneralManage: GroupSettings,
 	SettingsFinancialManage: GroupSettings, SettingsSecurityManage: GroupSettings,

@@ -17,6 +17,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/servacode/rahalgo/backend/internal/drivermonitor"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/routing"
@@ -164,6 +165,11 @@ func (s *Server) handleDriverLocation(w http.ResponseWriter, r *http.Request) {
 		req.Mocked != nil && *req.Mocked, at); err != nil {
 		s.logger.Warn("التعقّب: تعذّر كتابةُ الأثر", "driver", uid, "error", err)
 	}
+
+	// **وأثرُ اليوم لمراقبة السائقين** (قرارُ المالك ٢٠٢٦-١١-٠٣، `driver_monitor.go`) — جدولٌ
+	// ثانٍ مخفَّفٌ يُحفظ أياماً؛ **وتعثّرُه لا يُسقط شيئاً**.
+	s.recordTrail(r, uid, []drivermonitor.Point{{At: at, Lat: req.Lat, Lng: req.Lng,
+		AccuracyM: req.AccuracyM, SpeedMps: req.SpeedMps, Mocked: req.Mocked != nil && *req.Mocked}})
 
 	// **ويُقلَّم مع كلّ كتابة** — **وجدولٌ يحفظ نبضةً كلَّ دقيقةٍ لكلّ سائقٍ
 	// إلى الأبد يبلغ الملايين في شهر** ولا يُسأل منه إلّا الذيل.

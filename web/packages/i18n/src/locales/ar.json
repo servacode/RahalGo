@@ -146,6 +146,7 @@
       "merchants.verify": "مراجعة المتاجر",
       "drivers.manage": "إدارة السائقين",
       "drivers.read": "قراءة السائقين",
+      "drivers.monitor": "مراقبة حركة السائقين",
       "settings.read": "قراءة الإعدادات",
       "settings.general.manage": "إعدادات عامة",
       "settings.financial.manage": "إعدادات المال",
@@ -202,6 +203,7 @@
       "merchants.verify": "مراجعة المتاجر المرشحة والقوائم قبل النشر",
       "drivers.manage": "إدارة السائقين وتشغيلهم",
       "drivers.read": "قراءة سجل السائقين ومواقعهم",
+      "drivers.monitor": "كم مشى كل سائق باليوم بطلب وبلا طلب، ووقفاته عند المتاجر وانقطاعه",
       "settings.read": "قراءة الإعدادات",
       "settings.general.manage": "المناطق والمدن ودوام المنصة",
       "settings.financial.manage": "العمولات والرسوم والسقوف",
@@ -1884,6 +1886,8 @@
       "groupMoney": "المال",
       "groupBuild": "البناء والإعداد",
       "opsMap": "خريطة العمليات",
+      "driverMonitor": "مراقبة السائقين",
+      "mapLearning": "الخريطة من السائقين",
       "expansion": "طلبات التوسع",
       "problems": "المشاكل والتعويضات",
       "problemsHint": "الشكاوى والتقييمات، والطلبات الفاشلة والنزاعات وتعويض البضاعة — بمكان واحد"
@@ -4291,6 +4295,14 @@
           "label": "تكرار إرسال موقع السائق أثناء التوصيل",
           "hint": "ما دام مع السائق طلب شغال يرسل موقعه بهذه الفترة، فيتحرك على خريطة العمليات مباشرة. وخارج الطلب يرجع للفترة العادية ليوفر البطارية."
         },
+        "drivers.trail_retention_days": {
+          "label": "مدة حفظ أثر السائق",
+          "hint": "كم يوم نخزّن مسار السائق وهو على الدوام لمراقبة الحركة، وبعدها يُمحى."
+        },
+        "drivers.monitor_km_alert": {
+          "label": "حد الكيلومترات بلا طلب باليوم",
+          "hint": "السائق اللي بيمشي أكتر من هالرقم بلا طلب باليوم بيطلع معلَّم بأعلى القائمة. وصفر يعني بلا تعليم."
+        },
         "drivers.target_reward": {
           "label": "مكافأة بلوغ الهدف",
           "hint": "تدفع آليا عند إتمام الهدف، وتعرض على شاشة السائق قبل أن يبلغه. وصفر يعني بلا مكافأة آلية."
@@ -6540,6 +6552,163 @@
       "signals": "مرّات",
       "unresolved": "غير محدَّد إداريّاً",
       "empty": "لا طلبَ توسّعٍ بعد."
+    },
+    "mapLearning": {
+      "title": "الخريطة من السائقين",
+      "unnamed": "شارع بلا اسم",
+      "rowStats": "{len} م · {days} أيام · {pts} نقطة",
+      "nameLabel": "اسم الشارع",
+      "approve": "موافقة",
+      "reject": "رفض",
+      "statusApproved": "موافَق عليه",
+      "statusRejected": "مرفوض",
+      "run": "تحليل الآن",
+      "running": "جاري التحليل",
+      "exportOsm": "تصدير OSM",
+      "exportGeojson": "تصدير GeoJSON",
+      "noRoads": "ما في محرك توجيه مضبوط لقياس البعد عن الطرق",
+      "heatLayer": "كثافة المشي",
+      "farOnly": "البعيد عن الطرق فقط",
+      "daysN": "{n} يوم",
+      "empty": "ما في شوارع مرشحة",
+      "mapUnavailable": "الخريطة مو شغالة هلق",
+      "sections": { "streets": "شوارع", "places": "أماكن وأسامي", "oneway": "اتجاه واحد", "speeds": "السرعة الحقيقية" },
+      "places": {
+        "sources": { "all": "الكل", "stops": "وقفات السائقين", "addresses": "أسماء من العناوين" },
+        "sourceBadge": { "stops": "وقفات", "addresses": "عناوين" },
+        "run": "تحليل الأماكن",
+        "running": "جاري التحليل",
+        "unnamed": "مكان بلا اسم",
+        "nameLabel": "اسم المكان",
+        "kindLabel": "النوع",
+        "kinds": {
+          "mosque": "جامع",
+          "pharmacy": "صيدلية",
+          "school": "مدرسة",
+          "hospital": "مشفى",
+          "shop": "محل",
+          "roundabout": "دوار",
+          "other": "غير ذلك"
+        },
+        "stopStats": "{visits} وقفة · {drivers} سائق · {days} يوم",
+        "addrStats": "{customers} زبون · {evidence} عبارة",
+        "seen": "من {first} إلى {last}",
+        "samples": "من عناوين الزبائن",
+        "storesLayer": "أسماء المتاجر",
+        "empty": "ما في أماكن مرشحة",
+        "lastRun": "آخر تحليل: {stops} مكان من الوقفات و{names} من العناوين",
+        "lastRunFailed": "آخر تحليل تعثر",
+        "tiles": { "pending": "أماكن بالانتظار", "approved": "أماكن موافَق عليها", "rejected": "أماكن مرفوضة" }
+      },
+      "oneway": {
+        "run": "حلّل الطرق",
+        "running": "عم يتحلل الأثر",
+        "exportOsm": "تصدير الاتجاه الواحد OSM",
+        "exportList": "تصدير الاتجاه الواحد قائمة",
+        "unnamed": "شارع بلا اسم",
+        "toward": "باتجاه {dir}",
+        "dirs": {
+          "n": "الشمال",
+          "s": "الجنوب",
+          "e": "الشرق",
+          "w": "الغرب"
+        },
+        "stats": "{pct}٪ باتجاه واحد · {main} عبور باتجاهه و{opp} عكسه · {drivers} سائق · {days} يوم",
+        "empty": "ما في طرق مقترحة",
+        "noMatcher": "ما في خدمة مطابقة على الطرق (Valhalla)، فتحليل الأثر الجديد ما رح يشتغل",
+        "lastRun": "آخر تحليل: {days} يوم و{passes} عبور و{oneway} طريق مقترح",
+        "lastRunFailed": "آخر تحليل فشل",
+        "tiles": {
+          "days": "أيام محلّلة",
+          "edges": "قطع طرق مقيسة"
+        }
+      },
+      "speeds": {
+        "hourLabel": "الساعة",
+        "allHours": "كل الساعات",
+        "hourN": "{h}:00",
+        "dayLabel": "الأيام",
+        "allDays": "كل الأيام",
+        "weekday": "أيام العمل",
+        "weekend": "الجمعة والسبت",
+        "onlySlow": "البطيء باستمرار فقط",
+        "legendSlow": "بطيء",
+        "legendFast": "سريع",
+        "slowBadge": "بطيء باستمرار",
+        "kmh": "{n} كم/س",
+        "rowStats": "{kmh} كم/س · {passes} عبور",
+        "empty": "ما في قياسات سرعة بعد",
+        "tiles": {
+          "edges": "قطع طرق مقيسة",
+          "slow": "بطيئة باستمرار",
+          "cityAvg": "متوسط سرعة المدينة",
+          "passes": "عدد القياسات"
+        }
+      },
+      "tabs": { "pending": "بالانتظار", "approved": "موافَق عليها", "rejected": "مرفوضة" },
+      "tiles": {
+        "points": "نقاط المشي",
+        "far": "نقاط بعيدة عن الطرق",
+        "pending": "شوارع بالانتظار",
+        "approved": "شوارع موافَق عليها",
+        "rejected": "شوارع مرفوضة"
+      }
+    },
+    "driverMonitor": {
+      "title": "مراقبة السائقين",
+      "day": "اليوم",
+      "today": "اليوم",
+      "driver": "السائق",
+      "back": "كل السائقين",
+      "empty": "ما في أثر لأي سائق بهالنهار",
+      "emptyDriver": "ما في أثر لهالسائق بهالنهار",
+      "loadFailed": "تعذّر تحميل البيانات",
+      "overLimit": "فوق الحد",
+      "orders": "طلبات",
+      "cols": {
+        "kmNoOrder": "كم بلا طلب",
+        "kmWithOrder": "كم بطلب",
+        "patterns": "يشبه طلباً",
+        "gaps": "انقطاع",
+        "mocked": "موقع مزيّف",
+        "stops": "وقفات عند متاجر"
+      },
+      "tiles": {
+        "kmWithOrder": "كم بطلب",
+        "kmToPickup": "كم للاستلام",
+        "kmNoOrder": "كم بلا طلب",
+        "stoppedMinutes": "دقائق وقوف",
+        "gapMinutes": "دقائق انقطاع",
+        "mocked": "نقاط موقع مزيّف"
+      },
+      "km": "{n} كم",
+      "min": "{n} د",
+      "legend": {
+        "with_order": "بطلب",
+        "to_pickup": "للاستلام",
+        "no_order": "بلا طلب",
+        "stopped": "واقف",
+        "pattern": "يشبه طلباً",
+        "gap": "انقطاع"
+      },
+      "story": "قصة اليوم",
+      "noStory": "ما في شي مريب بهالنهار",
+      "profile": "حسابه",
+      "ev": {
+        "stop_at_store": "{driver} وقف عند {store} {min} دقيقة الساعة {time} وما معه طلب",
+        "pattern": "{driver} وقف عند {store} {min} دقيقة الساعة {time}، ومشى {dist} متر، ووقف {toMin} دقيقة{toPlace} الساعة {toTime} وما معه طلب{back}",
+        "patternTo": " عند {store}",
+        "patternBack": "، ورجع للمتجر",
+        "gap": "{driver} انقطع {min} دقيقة من {time}{place}",
+        "gapFlagged": "{driver} انقطع {min} دقيقة من {time}{place} وكان {why}",
+        "gapAt": " قرب {store}",
+        "whyMoving": "عم يمشي",
+        "whyOrder": "معه طلب",
+        "whyFar": "رجع من مكان بعيد",
+        "mocked": "{driver} فيه {n} نقطة موقع مزيّف من الساعة {time}"
+      },
+      "mapUnavailable": "الخريطة مو شغالة هلق",
+      "monitorLink": "تحركاته اليوم"
     },
     "opsMap": {
       "title": "خريطة العمليات",
