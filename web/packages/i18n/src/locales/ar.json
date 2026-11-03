@@ -2306,6 +2306,7 @@
         "driverSeenNow": "ظاهر الآن",
         "driverNever": "لم يظهر موقعه بعد",
         "driverLine": "السائق",
+        "noDriverYet": "بلا سائق",
         "emptyLive": "لا طلبات مفتوحة الآن",
         "emptyFiltered": "لا طلبات بهذا الفلتر الآن",
         "closedOnLive": "هذه حالة منتهية — الطلبات المنتهية في سجل الطلبات",

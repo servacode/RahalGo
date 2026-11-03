@@ -1602,6 +1602,34 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
             )}
           </span>
         </span>
+        {/* **سطرُ السائق بالرأس** (قرارُ المالك ٢٠٢٦-١١-٠٣: «الرقم واخر ظهور والاتصال كلها تصير فوق») —
+            اسمُه ورقمُه وآخرُ ظهوره والاتّصال، أو لمن معروضٌ الطلب، أو «بلا سائق». */}
+        {o.driver_name ? (
+          <span className="flex w-full items-center gap-2 rounded-control bg-success-tint px-2 py-1.5">
+            <IconMoto size={16} className="shrink-0 text-success" aria-hidden />
+            <DriverLine
+              name={o.driver_name}
+              phone={o.driver_phone}
+              seenAt={o.driver_seen_at}
+              now={now}
+              staleMin={staleMin}
+              hideSeen={!!o.closed_at}
+            />
+          </span>
+        ) : live && !o.closed_at ? (
+          <span className="flex w-full items-center gap-2 rounded-control bg-ink-faint px-2 py-1.5 text-sm text-ink-muted">
+            <IconMoto size={16} className="shrink-0" aria-hidden />
+            {o.status === "dispatching" && (o.offered_driver_name || (o.board?.offer_passed ?? 0) > 0) ? (
+              <OfferLine
+                name={o.offered_driver_name}
+                expiresAt={o.board?.offer_expires_at}
+                passed={o.board?.offer_passed ?? 0}
+              />
+            ) : (
+              BOARD.noDriverYet
+            )}
+          </span>
+        ) : null}
         {/* **سطرُ التنبيه تحت الرأس — بلونه، ويغيب حين لا مشكلة** (قرارُ المالك ٢٠٢٦-١١-٠٣). */}
         {(o.board?.emergency_open || (live && o.board?.alert_reason) || (!o.closed_at && o.quote_rejected_at)) && (
           <span className="flex w-full items-center gap-2 rounded-control border border-danger-edge bg-danger-tint px-3 py-2 text-sm font-bold text-danger">
@@ -1755,10 +1783,8 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       header: SEC.driver,
       noLabel: true,
       only: "cards",
-      hide: (o: OrderRow) =>
-        !o.driver_name &&
-        !(o.status === "dispatching" &&
-          (o.offered_driver_name || (o.board?.offer_passed ?? 0) > 0)),
+      // **السائقُ صار بالرأس** (٢٠٢٦-١١-٠٣) — فلا قسمَ له تحت.
+      hide: () => true,
       cell: () => <SectionHead role="driver" />,
     },
     {
@@ -1773,6 +1799,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       header: BOARD.driverLine,
       icon: <IconUser />,
       noLabel: true,
+      only: "table",
       hide: (o: OrderRow) =>
         !o.driver_name &&
         !(o.status === "dispatching" &&
