@@ -25,7 +25,10 @@ import {
   ButtonLink,
   Chips,
   Input,
-  PageContainer,
+  AdminPage,
+  type AdminTab,
+  FilterBar,
+  PeriodPicker,
   LoadingState,
   ReloadState,
   Pagination,
@@ -47,7 +50,6 @@ import {
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useCanOpen } from "@/lib/policy";
-import { PageHero, type HeroTab } from "@/components/admin/PageHero";
 import { Panel, Tile, type TileTone } from "@/components/admin/DashParts";
 
 const m = getMessages(defaultLocale);
@@ -379,12 +381,12 @@ export default function ProfitsPage() {
     return () => ctl.current?.abort();
   }, [load]);
 
-  const tabs: HeroTab<Tab>[] = [
-    { key: "platform", label: P.tabPlatform, icon: IconWallet },
-    { key: "customers", label: P.tabCustomers, icon: IconUser },
-    { key: "reps", label: P.tabReps, icon: IconStatus },
-    { key: "drivers", label: P.tabDrivers, icon: IconDriver },
-    { key: "merchants", label: P.tabMerchants, icon: IconStore },
+  const tabs: AdminTab<Tab>[] = [
+    { key: "platform", label: P.tabPlatform },
+    { key: "customers", label: P.tabCustomers },
+    { key: "reps", label: P.tabReps },
+    { key: "drivers", label: P.tabDrivers },
+    { key: "merchants", label: P.tabMerchants },
   ];
 
   /** التصدير بالمدّة والتبويب المعروضين — كلّ الصفوف لا الصفحة وحدها. */
@@ -448,68 +450,39 @@ export default function ProfitsPage() {
   // **تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦)** — رأسٌ موحّدٌ بتبويبات الأطراف، المدّةُ في كرتٍ واحد،
   // والكشفُ أقسامٌ واضحة (دخل · خصومات بمجموعات · صافي) بدل قائمةٍ طويلة، والأشخاصُ كروتٌ لا جدول.
   return (
-    <PageContainer>
-      <PageHero<Tab>
-        icon={IconWallet}
-        title={P.titlePl}
-        subtitle={P.hintPl}
-        actions={
-          <Button
-            variant="secondary"
-            onClick={() => void exportCsv()}
-            disabled={inverted || loading || exporting || data === null}
-          >
-            {P.export}
-          </Button>
-        }
-        tabs={tabs}
-        value={tab}
-        onChange={(k) => {
-          setTab(k);
-          setPage(1);
-          setData(null);
-        }}
-      />
-
-      {notice && (
-        <Alert tone="success" className="mb-4" onDismiss={() => setNotice("")}>
-          {notice}
-        </Alert>
-      )}
-
-      {/* ── المدّة في كرتٍ واحد ── */}
-      <section className="surface mb-4 space-y-3 p-4">
-        <Chips<Preset | "">
-          items={PRESETS.map((id) => ({ id, label: PRESET_LABEL[id] }))}
-          value={activePreset}
-          onChange={(id) => {
-            if (!id) return;
-            setPreset(id);
-            setPage(1);
-          }}
-          wrap
-        />
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <Input
-            id="pf-from"
-            type="date"
-            icon={<IconDate />}
-            label={m.shared.statement.from}
-            value={from}
-            onChange={(e) => setDates(e.target.value, to)}
-          />
-          <Input
-            id="pf-to"
-            type="date"
-            icon={<IconDate />}
-            label={m.shared.statement.to}
-            value={to}
-            onChange={(e) => setDates(from, e.target.value)}
-          />
-        </div>
-        <p className="text-2xs text-ink-muted">{P.basis.replace("{h}", fmtNum(dayHour ?? GUESS_HOUR))}</p>
-      </section>
-
+    <AdminPage<Tab>
+      icon={IconWallet}
+      title={P.titlePl}
+      actions={
+        <Button
+          variant="secondary"
+          onClick={() => void exportCsv()}
+          disabled={inverted || loading || exporting || data === null}
+        >
+          {P.export}
+        </Button>
+      }
+      tabs={tabs}
+      tab={tab}
+      onTab={(k) => {
+        setTab(k);
+        setPage(1);
+        setData(null);
+      }}
+      notices={
+        notice ? (
+          <Alert tone="success" onDismiss={() => setNotice("")}>
+            {notice}
+          </Alert>
+        ) : undefined
+      }
+      toolbar={
+        // **المدّةُ بقائمةٍ واحدة** — يومُ الحساب من الخادم، فلا يختلف معنى «اليوم» بين الصفحات.
+        <FilterBar>
+          <PeriodPicker id="pf-period" from={from} to={to} today={today} onChange={(f, t) => setDates(f, t)} />
+        </FilterBar>
+      }
+    >
       {inverted ? (
         <Alert className="mb-4">{P.inverted}</Alert>
       ) : failed ? (
@@ -548,7 +521,7 @@ export default function ProfitsPage() {
           )}
         </div>
       )}
-    </PageContainer>
+    </AdminPage>
   );
 }
 
@@ -731,7 +704,6 @@ function PlatformView({
           label={P.cardIncome}
           value={signedText(d.income, false)}
           tone={toneOf(d.income)}
-          sub={P.sectionTap}
           onClick={scrollTo("pf-income")}
         />
         <Tile
@@ -739,7 +711,6 @@ function PlatformView({
           label={P.cardOut}
           value={signedText(out, false)}
           tone={toneOf(out)}
-          sub={P.sectionTap}
           onClick={scrollTo("pf-out")}
         />
         <Tile
@@ -755,7 +726,6 @@ function PlatformView({
           label={P.pending}
           value={signedText(d.pending, false)}
           tone={d.pending !== 0 ? "warning" : "muted"}
-          sub={P.sectionTap}
           onClick={scrollTo("pf-outside")}
         />
       </div>
@@ -763,7 +733,7 @@ function PlatformView({
       {/* ── الكشف قسمين: دخل ثمّ خصومات بمجموعاتٍ بعناوين ── */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <div id="pf-income" className="scroll-mt-4">
-          <Panel title={P.cardIncome} note={P.incomeNote}>
+          <Panel title={P.cardIncome}>
             <ul className="divide-y divide-line-soft">
               {income.map((l) => (
                 <Line key={l.key} label={LINE_LABEL[l.key] ?? l.key} v={l.amount} />
@@ -773,7 +743,7 @@ function PlatformView({
           </Panel>
         </div>
         <div id="pf-out" className="scroll-mt-4">
-          <Panel title={P.cardOut} note={P.costsNote}>
+          <Panel title={P.cardOut}>
             <div className="space-y-3">
               {groups.map((g) => (
                 <div key={g.key}>

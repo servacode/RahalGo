@@ -34,15 +34,21 @@ import {
 } from "@rahalgo/i18n";
 import {
   Alert,
-  Badge,
   Button,
-  Chips,
   Input,
   Modal,
-  PageContainer,
-  LoadingState,
-  ReloadState,
-  Pagination,
+  Badge,
+  AdminPage,
+  AdminAsync,
+  AdminEntityCard,
+  AdminEntityGrid,
+  ContactButtons,
+  FilterBar,
+  FilterSelect,
+  StatusBadge,
+  SummaryStrip,
+  agoText,
+  useRememberedFilters,
   useLiveData,
   IconWallet,
   IconUser,
@@ -54,8 +60,6 @@ import {
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { isOwner, roleLabelByCode } from "@/lib/rolemeta";
-import { PageHero } from "@/components/admin/PageHero";
-import { Tile } from "@/components/admin/DashParts";
 
 const m = getMessages(defaultLocale);
 const P = m.shared.payout;
@@ -106,15 +110,6 @@ const TAB_STATUSES: Status[] = ["pending", "processing", "paid", "rejected"];
 /** **الحالاتُ المسكّرة** — لا قرارَ بعدها، فلا تُعرض محفظتُه الحاليّة. */
 const CLOSED: Status[] = ["paid", "rejected", "failed", "reversed"];
 const ROLES: Role[] = ["driver", "merchant", "sales"];
-
-const VARIANT: Record<Status, "warning" | "info" | "success" | "danger" | "neutral" | "violet"> = {
-  pending: "warning",
-  processing: "info",
-  paid: "success",
-  rejected: "neutral",
-  failed: "danger",
-  reversed: "violet",
-};
 
 /** **الأفعالُ حسب الحال** — آلةُ الخادم نفسُها (`payout_handlers.go`). */
 type Action = "paid" | "rejected" | "processing" | "failed" | "reversed";
@@ -173,27 +168,32 @@ export default function PayoutsPage() {
   // **ولا أحدَ يقرّر في سحبه هو** — الخادمُ يرفضه (`approval.Check` بـ`OwnFunds`) إلّا المالك.
   const meId = user?.id ?? "";
   const owner = isOwner(user?.roles ?? []);
-  // **والفلترُ من الرابط عند الفتح** — بطاقةُ «بانتظار قرارك» في الرئيسيّة.
-  const [status, setStatusRaw] = useState(() => validStatus(readParam("status")));
-  const [role, setRoleRaw] = useState(() => validRole(readParam("role")));
-  const [month, setMonthRaw] = useState(() => readParam("month") === "1");
+  // **والفلترُ من الرابط يغلب المحفوظَ** — بطاقةُ «بانتظار قرارك» في الرئيسيّة تفتح فلتراً بعينه.
+  const [fromUrl] = useState(() => {
+    const u: Partial<Record<"status" | "role" | "month", string>> = {};
+    if (readParam("status")) u.status = validStatus(readParam("status"));
+    if (readParam("role")) u.role = validRole(readParam("role"));
+    if (readParam("month") === "1") u.month = "1";
+    return u;
+  });
+  const rem = useRememberedFilters("payouts", { status: "", role: "", month: "" }, fromUrl);
+  const status = validStatus(rem.filters.status);
+  const role = validRole(rem.filters.role);
+  const month = rem.filters.month === "1";
   const [page, setPage] = useState(1);
   const [deciding, setDeciding] = useState<{ p: Payout; action: Action } | null>(null);
 
   /** **وتغييرُ الفلتر يرجع للصفحة الأولى** — كانت الصفحةُ الثالثةُ تبقى فيظهر «لا طلبات». */
   function setStatus(s: string, onlyMonth = false) {
-    setStatusRaw(s);
-    setMonthRaw(onlyMonth);
+    rem.set({ status: s, month: onlyMonth ? "1" : "" });
     setPage(1);
   }
   function clearFilters() {
-    setStatusRaw("");
-    setRoleRaw("");
-    setMonthRaw(false);
+    rem.reset();
     setPage(1);
   }
   function setRole(r: string) {
-    setRoleRaw(r);
+    rem.set({ role: r });
     setPage(1);
   }
 
@@ -202,141 +202,137 @@ export default function PayoutsPage() {
   if (role) qs.set("role", role);
   if (month) qs.set("month", "1");
 
-  const { data, loading, error, reload } = useLiveData<{
-    payouts: Payout[];
-    total: number;
-    per_page: number;
-    pending_total: number;
-    stats: Stats;
-  }>(() => api(`/api/v1/admin/payouts?${qs.toString()}`), ["wallet"], [status, role, month, page]);
+  const { data, loading, error, reload } = useLiveData<PayoutsData | null>(
+    // **ولا جلبَ قبل قراءة المحفوظ** — وإلّا جلبنا بالافتراضيّ ثم أعدنا.
+    () => (rem.ready ? api<PayoutsData>(`/api/v1/admin/payouts?${qs.toString()}`) : new Promise<null>(() => {})),
+    ["wallet"],
+    [status, role, month, page, rem.ready],
+  );
 
-  if (loading) return <LoadingState />;
   const rows = data?.payouts ?? [];
   const st = data?.stats;
   const filtered = status !== "" || role !== "" || month;
   // **رقمُ «بانتظار المالية» للمعلَّق وحدَه** — والخادمُ القديمُ بلا الحقل: الفرق.
   const pendingCount = st ? (st.pending_count ?? st.waiting_count - st.processing_count) : undefined;
 
-  const roleChips = [
-    { id: "", label: A.allRoles },
-    ...ROLES.map((r) => ({ id: r, label: roleLabelByCode(r) })),
-  ];
-
   const count = (n: number) => A.cardCount.replace("{n}", fmtNum(n));
 
-  // **تصميمٌ احترافيّ بلا جداول** (المالك ٢٠٢٦-١٠-٢٦: «امسح العرض بالجداول وتصميم احترافي») —
-  // رأسٌ موحّدٌ بتبويبات الحالات، أربعةُ أرقامٍ تُضغط، وكرتٌ لكلّ طلبِ سحبٍ بأفعاله.
+  // **الأرقامُ الأربعة** — و«بانتظار الصرف» يشمل «قيد الصرف»: مالٌ محجوزٌ لم يخرج،
+  // ويفتح الحالتين معاً · وبطاقتا «هالشهر» تفتحان قرارات الشهر وحدَها.
+  // **والألوانُ بمعنى واحد**: أصفرُ ينتظر · أخضرُ تمّ · أحمرُ مشكلة (المرتجعُ) · والباقي رمادي.
   return (
-    <PageContainer>
-      <PageHero<string>
-        icon={IconWallet}
-        title={P.adminTitle}
-        subtitle={A.pageHint}
-        tabs={[
-          { key: "all", label: A.allStatuses },
-          ...TAB_STATUSES.map((s) => ({
-            key: s,
-            label: A.status[s],
-            count: s === "pending" ? pendingCount : s === "processing" ? st?.processing_count : undefined,
-            warn: s === "pending" && (pendingCount ?? 0) > 0,
-          })),
-          { key: FAILED_OR_REVERSED, label: A.failedOrReversed },
-          // **«بانتظار الصرف» تبويبٌ يظهر حين تفتحه بطاقتُه** — كي لا يبقى الرأسُ بلا تبويبٍ مختار.
-          ...(status === WAITING ? [{ key: WAITING, label: A.waitingTab }] : []),
-          // **وكذلك «فشل» أو «مرتجع» وحدَهما من رابطٍ قديم.**
-          ...(status === "failed" || status === "reversed" ? [{ key: status, label: A.status[status] }] : []),
-        ]}
-        value={status || "all"}
-        onChange={(k) => setStatus(k === "all" ? "" : k)}
-      />
-
-      {/* **الأرقامُ الأربعة** — و«بانتظار الصرف» يشمل «قيد الصرف»: مالٌ محجوزٌ لم يخرج،
-          ويفتح الحالتين معاً · وبطاقتا «هالشهر» تفتحان قرارات الشهر وحدَها. */}
-      <div className="mb-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
-        <Tile
-          icon={IconWallet}
-          label={A.cardWaiting}
-          value={fmtMoney(st?.waiting_sum ?? 0)}
-          sub={
-            (st?.processing_count ?? 0) > 0
-              ? A.waitingSplit
-                  .replace("{a}", fmtNum(pendingCount ?? 0))
-                  .replace("{b}", fmtNum(st?.processing_count ?? 0))
-              : count(st?.waiting_count ?? 0)
-          }
-          tone={(st?.waiting_count ?? 0) > 0 ? "warning" : "muted"}
-          onClick={() => setStatus(WAITING)}
-        />
-        <Tile
-          icon={IconStatus}
-          label={A.cardProcessing}
-          value={fmtMoney(st?.processing_sum ?? 0)}
-          sub={count(st?.processing_count ?? 0)}
-          tone={(st?.processing_count ?? 0) > 0 ? "accent" : "muted"}
-          onClick={() => setStatus("processing")}
-        />
-        <Tile
-          icon={IconWallet}
-          label={A.cardPaidMonth}
-          value={fmtMoney(st?.paid_month_sum ?? 0)}
-          sub={count(st?.paid_month_count ?? 0)}
-          tone={(st?.paid_month_count ?? 0) > 0 ? "success" : "muted"}
-          onClick={() => setStatus("paid", true)}
-        />
-        <Tile
-          icon={IconWarning}
-          label={A.cardReturnedMonth}
-          value={fmtMoney(st?.returned_month_sum ?? 0)}
-          sub={count(st?.returned_month_count ?? 0)}
-          tone={(st?.returned_month_count ?? 0) > 0 ? "danger" : "muted"}
-          onClick={() => setStatus(FAILED_OR_REVERSED, true)}
-        />
-      </div>
-
-      <section className="surface mb-4 flex flex-col gap-2 p-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-ink-muted">{A.roleCol}:</span>
-          <Chips items={roleChips} value={role} onChange={setRole} wrap />
-        </div>
-        {/* **وحصرُ الشهر يُقال** — كي لا يظنّ القارئُ أنّ ما يراه كلُّ ما صُرف. */}
-        {month && (
-          <div className="flex flex-wrap items-center gap-2 border-t border-line-soft pt-2 text-sm">
-            <span className="text-ink-muted">{A.monthOnly}</span>
+    <AdminPage<string>
+      icon={IconWallet}
+      title={P.adminTitle}
+      tabs={[
+        { key: "all", label: A.allStatuses },
+        ...TAB_STATUSES.map((s) => ({
+          key: s,
+          label: A.status[s],
+          count: s === "pending" ? pendingCount : s === "processing" ? st?.processing_count : undefined,
+          attention: s === "pending" && (pendingCount ?? 0) > 0,
+        })),
+        { key: FAILED_OR_REVERSED, label: A.failedOrReversed },
+        // **«بانتظار الصرف» تبويبٌ يظهر حين تفتحه بطاقتُه** — كي لا يبقى الرأسُ بلا تبويبٍ مختار.
+        ...(status === WAITING ? [{ key: WAITING, label: A.waitingTab }] : []),
+        // **وكذلك «فشل» أو «مرتجع» وحدَهما من رابطٍ قديم.**
+        ...(status === "failed" || status === "reversed" ? [{ key: status, label: A.status[status] }] : []),
+      ]}
+      tab={status || "all"}
+      onTab={(k) => setStatus(k === "all" ? "" : k)}
+      notices={
+        // **وفشلُ التحديث بعد تغيير الفلتر يُقال** — كانت الكروتُ القديمةُ تبقى بلا كلمة.
+        error && data ? <Alert tone="warning">{A.staleData}</Alert> : undefined
+      }
+      toolbar={
+        <FilterBar filtered={filtered} onClear={clearFilters} end={data ? fmtNum(data.total) : undefined}>
+          <FilterSelect id="payouts-role" label={A.roleCol} value={role} onChange={setRole}>
+            <option value="">{A.allRoles}</option>
+            {ROLES.map((r) => (
+              <option key={r} value={r}>
+                {roleLabelByCode(r)}
+              </option>
+            ))}
+          </FilterSelect>
+          {/* **وحصرُ الشهر يُقال** — كي لا يظنّ القارئُ أنّ ما يراه كلُّ ما صُرف. */}
+          {month && (
             <Button variant="secondary" onClick={() => setStatus(status, false)}>
-              {A.allMonths}
+              {A.monthOnly} · {A.allMonths}
             </Button>
-          </div>
-        )}
-      </section>
-
-      {/* **وفشلُ التحديث بعد تغيير الفلتر يُقال** — كانت الكروتُ القديمةُ تبقى بلا كلمة. */}
-      {error && data && (
-        <Alert tone="warning" className="mb-4">
-          {A.staleData}
-        </Alert>
-      )}
-
-      {error && !data ? (
-        <ReloadState onRetry={reload} label={A.loadError} />
-      ) : rows.length === 0 ? (
-        <section className="surface flex flex-col items-center gap-3 p-8 text-center">
-          <span
-            className={`inline-flex h-16 w-16 items-center justify-center rounded-full ${
-              filtered ? "bg-accent text-on-bright" : "bg-success-solid text-on-solid"
-            }`}
-          >
-            <IconWallet size={28} />
-          </span>
-          <h2 className="heading-section">{emptyTitle(status, filtered)}</h2>
-          <p className="max-w-md text-sm text-ink-muted">{filtered ? A.emptyFilterHint : A.emptyHint}</p>
-          {filtered && (
+          )}
+        </FilterBar>
+      }
+      summary={
+        <SummaryStrip
+          items={[
+            {
+              key: "waiting",
+              icon: IconWallet,
+              label: A.cardWaiting,
+              value: fmtMoney(st?.waiting_sum ?? 0),
+              meta:
+                (st?.processing_count ?? 0) > 0
+                  ? A.waitingSplit
+                      .replace("{a}", fmtNum(pendingCount ?? 0))
+                      .replace("{b}", fmtNum(st?.processing_count ?? 0))
+                  : count(st?.waiting_count ?? 0),
+              tone: (st?.waiting_count ?? 0) > 0 ? "attention" : "muted",
+              onOpen: () => setStatus(WAITING),
+            },
+            {
+              key: "processing",
+              icon: IconStatus,
+              label: A.cardProcessing,
+              value: fmtMoney(st?.processing_sum ?? 0),
+              meta: count(st?.processing_count ?? 0),
+              tone: (st?.processing_count ?? 0) > 0 ? "neutral" : "muted",
+              onOpen: () => setStatus("processing"),
+            },
+            {
+              key: "paid",
+              icon: IconWallet,
+              label: A.cardPaidMonth,
+              value: fmtMoney(st?.paid_month_sum ?? 0),
+              meta: count(st?.paid_month_count ?? 0),
+              tone: (st?.paid_month_count ?? 0) > 0 ? "good" : "muted",
+              onOpen: () => setStatus("paid", true),
+            },
+            {
+              key: "returned",
+              icon: IconWarning,
+              label: A.cardReturnedMonth,
+              value: fmtMoney(st?.returned_month_sum ?? 0),
+              meta: count(st?.returned_month_count ?? 0),
+              tone: (st?.returned_month_count ?? 0) > 0 ? "danger" : "muted",
+              onOpen: () => setStatus(FAILED_OR_REVERSED, true),
+            },
+          ]}
+        />
+      }
+      pagination={{
+        page,
+        total: data?.total ?? 0,
+        perPage: data?.per_page ?? 1,
+        onChange: setPage,
+      }}
+    >
+      <AdminAsync
+        loading={loading}
+        error={error}
+        onRetry={reload}
+        hasData={!!data}
+        empty={rows.length === 0}
+        emptyTitle={emptyTitle(status, filtered)}
+        emptyIcon={IconWallet}
+        emptyAction={
+          filtered ? (
             <Button variant="secondary" onClick={clearFilters}>
               {A.clearFilter}
             </Button>
-          )}
-        </section>
-      ) : (
-        <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+          ) : undefined
+        }
+      >
+        <AdminEntityGrid>
           {rows.map((p) => (
             <PayoutCard
               key={p.id}
@@ -346,15 +342,8 @@ export default function PayoutsPage() {
               onAct={(a) => setDeciding({ p, action: a })}
             />
           ))}
-        </ul>
-      )}
-
-      {/* **ولا يظهر لصفحةٍ واحدة** — عنصرٌ لا يفعل شيئاً يزاحم ما يفعل. */}
-      {data && data.total > data.per_page && (
-        <div className="mt-4 flex justify-center">
-          <Pagination page={page} total={data.total} perPage={data.per_page} onChange={setPage} />
-        </div>
-      )}
+        </AdminEntityGrid>
+      </AdminAsync>
 
       {deciding && (
         <DecideModal
@@ -367,20 +356,22 @@ export default function PayoutsPage() {
           }}
         />
       )}
-    </PageContainer>
+    </AdminPage>
   );
 }
 
-const STATUS_TINT: Record<Status, string> = {
-  pending: "bg-warning-solid text-on-solid",
-  processing: "bg-accent text-on-bright",
-  paid: "bg-success-solid text-on-solid",
-  rejected: "bg-field text-ink-muted",
-  failed: "bg-danger-solid text-on-solid",
-  reversed: "bg-field text-ink",
-};
+interface PayoutsData {
+  payouts: Payout[];
+  total: number;
+  per_page: number;
+  pending_total: number;
+  stats: Stats;
+}
 
-/** **كرتُ طلب سحب** — مين طلب، قديش، شو متاح بمحفظته، ملاحظتُه وقرارُ الماليّة، ومين قرّر — وأفعالُه. */
+/**
+ * **كرتُ طلب سحب** — مين طلب (اسمُه رابطٌ لحسابه)، قديش، شو متاح بمحفظته، ملاحظتُه وقرارُ الماليّة،
+ * ومين قرّر — وأفعالُه: فعلان ظاهران على الأكثر، و«ارتدّ السحب» (الخطِر) تحت «⋯» بتأكيد.
+ */
 function PayoutCard({
   p,
   canDecide,
@@ -397,107 +388,109 @@ function PayoutCard({
   const closed = CLOSED.includes(p.status);
   // **المتاحُ بعد حجز هذا الطلب** — فالنقصُ الحقيقيُّ متاحٌ سالب (الرصيدُ نقص بعد الحجز).
   const short = !closed && p.available < 0;
-  // **«اصرف» وحدَه بسطرٍ كامل** والباقي جنب بعض — والأعمدةُ بعدد الأزرار.
-  const lead = acts.length === 3 ? acts[0] : undefined;
-  const rest = lead ? acts.slice(1) : acts;
+  const visible: Action[] = acts.filter((a) => a !== "reversed").slice(0, 2);
+  const more = acts
+    .filter((a) => !visible.includes(a))
+    .map((a) => ({
+      key: a,
+      label: actionLabel(a, p.status),
+      danger: NEEDS_REASON.includes(a),
+      onSelect: () => onAct(a),
+    }));
+  const name = p.user_name || p.user_phone;
+  const tone =
+    short || p.status === "failed"
+      ? "danger"
+      : p.status === "pending" || p.status === "processing"
+        ? "attention"
+        : p.status === "paid"
+          ? "good"
+          : "neutral";
   return (
-    <li className="surface flex flex-col gap-3 p-4">
-      <div className="flex items-start gap-3">
-        <span className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${STATUS_TINT[p.status]}`}>
-          <IconUser size={20} />
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="block truncate font-bold">{p.user_name || p.user_phone}</span>
-          {p.user_name && p.user_name !== p.user_phone && (
-            <span className="block text-2xs text-ink-muted" dir="ltr">
-              {p.user_phone}
-            </span>
-          )}
-        </span>
-        <span className="flex shrink-0 flex-col items-end gap-1">
-          <Badge variant={VARIANT[p.status]}>{A.status[p.status]}</Badge>
-          {p.user_role && <Badge variant="neutral">{roleLabelByCode(p.user_role)}</Badge>}
-        </span>
-      </div>
-
-      <div className="flex items-end justify-between gap-2 rounded-control bg-field px-3 py-2.5">
-        <span>
-          <span className="block text-2xs text-ink-muted">{P.amount}</span>
-          <span className="figure block">{fmtMoney(p.amount)}</span>
-          {p.paid_via && (
-            <span className="block text-2xs text-ink-muted">{p.paid_via === "cash" ? A.paidViaCash : A.paidViaTransfer}</span>
-          )}
-        </span>
-        {/* **والمحجوزُ والمتاحُ يُعرَضان** — `XG-12`: الماليّةُ تقرّر على ما يجوز صرفُه.
-            وللطلبات المفتوحة وحدَها: المسكّرُ لا قرارَ فيه، ومحفظةُ اليوم لا تخصّه. */}
-        {!closed && (
-          <span className="text-end text-sm">
-            <span className="block text-2xs text-ink-muted">
-              {A.walletNow} · {m.terms.walletAvailable}
-            </span>
-            <b className={`tabular-nums ${short ? "text-danger" : ""}`}>{fmtMoney(p.available)}</b>
-            <span className="block text-2xs text-ink-muted">
-              {m.terms.walletBalance} {fmtMoney(p.balance)} · {m.terms.walletReserved} {fmtMoney(p.reserved)}
-            </span>
-            <span className="block text-2xs text-ink-muted">
-              {A.reservedForThis.replace("{amount}", fmtMoney(p.amount))}
-            </span>
-          </span>
-        )}
-      </div>
+    <AdminEntityCard
+      tone={tone}
+      leading={<IconUser size={20} className="text-ink-muted" />}
+      eyebrow={
+        <>
+          {p.user_role ? `${roleLabelByCode(p.user_role)} · ` : ""}
+          <span title={fmtDateTime(p.created_at)}>{agoText(p.created_at)}</span>
+        </>
+      }
+      title={name}
+      href={`/dashboard/users/${p.user_id}`}
+      status={<StatusBadge domain="payout" status={p.status} />}
+      facts={[
+        { key: "amount", label: P.amount, value: fmtMoney(p.amount) },
+        { key: "date", label: m.terms.date, value: <span dir="ltr">{fmtDateTime(p.created_at)}</span> },
+        ...(!closed
+          ? [
+              {
+                key: "avail",
+                label: m.terms.walletAvailable,
+                value: <span className={short ? "text-danger" : ""}>{fmtMoney(p.available)}</span>,
+                href: `/dashboard/users/${p.user_id}?tab=wallet`,
+              },
+              {
+                key: "bal",
+                label: `${m.terms.walletBalance} · ${m.terms.walletReserved}`,
+                value: `${fmtMoney(p.balance)} · ${fmtMoney(p.reserved)}`,
+              },
+            ]
+          : [
+              ...(p.paid_via
+                ? [{ key: "method", label: A.methodLabel, value: p.paid_via === "cash" ? A.paidViaCash : A.paidViaTransfer }]
+                : []),
+              ...(p.decided_at
+                ? [
+                    {
+                      key: "decided",
+                      label: A.decidedCol,
+                      value: `${p.decided_by_name || "—"} · ${fmtDateTime(p.decided_at)}`,
+                      wide: true,
+                    },
+                  ]
+                : []),
+            ]),
+      ]}
+      primary={
+        visible.length > 0 ? (
+          <>
+            {visible.map((a) => (
+              <ActButton key={a} a={a} from={p.status} onAct={onAct} />
+            ))}
+          </>
+        ) : undefined
+      }
+      more={more}
+    >
       {short && <Alert tone="error">{A.shortfall}</Alert>}
-
       {/* **ملاحظةُ الطالب وقرارُ المالية سطران** — كانت الأولى تختفي بعد القرار. */}
       {(p.note || p.decision) && (
         <div className="space-y-1 text-sm">
           {p.note && (
             <p className="border-s-2 border-line ps-2">
-              <span className="text-2xs text-ink-muted">{A.requesterNote}: </span>
+              <span className="text-xs text-ink-muted">{A.requesterNote}: </span>
               {p.note}
             </p>
           )}
           {p.decision && (
             <p className="border-s-2 border-line ps-2">
-              <span className="text-2xs text-ink-muted">{A.financeNote}: </span>
+              <span className="text-xs text-ink-muted">{A.financeNote}: </span>
               {p.decision}
             </p>
           )}
         </div>
       )}
-
-      <div className="flex flex-wrap items-center justify-between gap-2 text-2xs text-ink-muted">
-        <span>
-          {m.terms.date}: <span dir="ltr">{fmtDateTime(p.created_at)}</span>
-        </span>
-        {p.decided_at && (
-          <span>
-            {A.decidedCol}: {p.decided_by_name || "—"} · <span dir="ltr">{fmtDateTime(p.decided_at)}</span>
-          </span>
-        )}
-      </div>
-
-      {own && canDecide && ACTIONS[p.status].length > 0 && (
-        <p className="mt-auto border-t border-line-soft pt-3 text-sm text-ink-muted">{A.ownRequest}</p>
-      )}
-
-      {acts.length > 0 && (
-        <div className="mt-auto flex flex-col gap-2 border-t border-line-soft pt-3">
-          {lead && <ActButton a={lead} from={p.status} onAct={onAct} />}
-          <div className={`grid gap-2 ${rest.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
-            {rest.map((a) => (
-              <ActButton key={a} a={a} from={p.status} onAct={onAct} />
-            ))}
-          </div>
-        </div>
-      )}
-    </li>
+      <ContactButtons phone={p.user_phone} name={name} showNumber />
+      {own && canDecide && ACTIONS[p.status].length > 0 && <p className="text-sm text-ink-muted">{A.ownRequest}</p>}
+    </AdminEntityCard>
   );
 }
 
 function ActButton({ a, from, onAct }: { a: Action; from: Status; onAct: (a: Action) => void }) {
   return (
     <Button
-      className="w-full"
+      size="sm"
       variant={a === "paid" ? "primary" : NEEDS_REASON.includes(a) ? "danger" : "secondary"}
       onClick={() => onAct(a)}
     >

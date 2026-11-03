@@ -34,12 +34,16 @@ import {
   Select,
   Modal,
   FormActions,
-  Chips,
   Alert,
-  PageContainer,
-  Pagination,
-  LoadingState,
-  ReloadState,
+  AdminPage,
+  AdminAsync,
+  AdminEntityCard,
+  AdminEntityGrid,
+  FilterBar,
+  FilterField,
+  FilterSelect,
+  StatusBadge,
+  SummaryStrip,
   useLiveData,
   IconBalance,
   IconWallet,
@@ -52,11 +56,10 @@ import {
 import { api } from "@/lib/api";
 import { useCanOpen } from "@/lib/policy";
 import { OpenLink } from "@/components/admin/OpenLink";
-import { PageHero } from "@/components/admin/PageHero";
-import { Tile } from "@/components/admin/DashParts";
 
 const m = getMessages(defaultLocale);
 const O = m.admin.obligations;
+const F = m.admin.kit.finance;
 
 type Kind = "" | "merchant" | "rep" | "driver";
 /** **«مفتوح» هو الافتراض** — الشغلُ اليوميّ؛ و«الكل» يُكتب صراحةً. («مغلق» شِيل لأنّه مجموعُ التلاتة.) */
@@ -238,9 +241,6 @@ function buildCsv(rows: Obligation[]): string {
 const partyHref = (o: Obligation) =>
   o.party_kind === "merchant" ? `/dashboard/merchants/${o.party_id}` : `/dashboard/users/${o.party_id}`;
 
-/** **الخانةُ المختارة** — إطارٌ ملوّنٌ حولها، فيُعرف أيّ فلترٍ شغّال. */
-const ring = (on: boolean) => (on ? "rounded-card ring-2 ring-accent" : "");
-
 export default function ObligationsPage() {
   // **وملفُّ الطرف والطلبُ لمن يُفتحان له** (قرارُ المالك ٢٠٢٦-١٠-٠٥).
   const canOpen = useCanOpen();
@@ -272,6 +272,14 @@ export default function ObligationsPage() {
     const u = query(f, true);
     window.history.replaceState(null, "", u ? `?${u}` : window.location.pathname);
   }, [f, ready]);
+
+  // **البحثُ يُرسَل بعد توقّف الكتابة** — لا نداءَ مع كلّ حرف.
+  useEffect(() => {
+    if (!ready || typed === f.q) return;
+    const t = setTimeout(() => pick({ q: typed }), 450);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [typed, ready]);
 
   const qs = query(f);
   /** **في فلترٌ غيرُ الافتراض؟** — يُظهر «امسح الفلاتر» ويختار نصَّ الحالة الفاضية. */
@@ -342,8 +350,6 @@ export default function ObligationsPage() {
     }
   }
 
-  if (!ready || (loading && !data)) return <LoadingState />;
-
   const rows = data?.obligations ?? [];
   const sum = data?.summary;
   const alertDays = data?.alert_days ?? 30;
@@ -357,392 +363,311 @@ export default function ObligationsPage() {
     { k: "driver" as const, icon: IconUser, label: O.driversTotal, total: sum?.drivers_total ?? 0 },
   ];
 
-  // **تصميمٌ احترافيّ** (المالك ٢٠٢٦-١٠-٢٦) — رأسٌ موحّد، أرقامٌ تُضغط وهي نفسُها الفلتر،
-  // فلاترُ في كرت، وكرتٌ لكلّ دينٍ بمبلغه وما بقي وأفعاله.
-  return (
-    <PageContainer>
-      <PageHero
-        icon={IconBalance}
-        title={O.title}
-        subtitle={O.hint}
-        actions={
-          <>
-            <ButtonLink variant="secondary" href="/dashboard/treasury">
-              {O.treasuryLink}
-            </ButtonLink>
-            {data?.can_export && (
-              <Button variant="secondary" onClick={exportCsv} disabled={exporting}>
-                {exporting ? O.exporting : O.export}
-              </Button>
-            )}
-          </>
-        }
-      />
+  const allActive = f.kind === "" && f.state === "open" && !f.overdue && !f.pending;
+  const nearLimit = sum?.near_limit ?? 0;
 
-      {error && !data ? (
-        <ReloadState label={O.loadFailed} onRetry={reload} />
-      ) : (
+  // **رأسٌ موحّد، وأرقامٌ تُضغط وهي نفسُها الفلتر**، وشريطُ فلاترٍ بسطرٍ واحد، وكرتٌ لكلّ دينٍ
+  // بمبلغه وما بقي وأفعاله. **وكلُّ الأرقام الستّة بنبرةٍ واحدةٍ لمعنى واحد**: أحمرُ للمتأخّر فقط.
+  return (
+    <AdminPage
+      icon={IconBalance}
+      title={O.title}
+      actions={
         <>
-          {error && (
-            <Alert tone="error" className="mb-3">
-              {O.loadFailed}
-            </Alert>
+          <ButtonLink variant="secondary" href="/dashboard/treasury">
+            {O.treasuryLink}
+          </ButtonLink>
+          {data?.can_export && (
+            <Button variant="secondary" onClick={exportCsv} disabled={exporting}>
+              {exporting ? O.exporting : O.export}
+            </Button>
           )}
+        </>
+      }
+      notices={
+        <>
+          {error && data && <Alert tone="error">{O.loadFailed}</Alert>}
           {notice && (
-            <Alert tone="info" className="mb-3" onDismiss={() => setNotice("")}>
+            <Alert tone="info" onDismiss={() => setNotice("")}>
               {notice}
             </Alert>
           )}
-
-          {/* **كلُّ المفتوح بأنواعه** — لا الصفحةُ المعروضة. **والخانةُ هي الفلتر**: تكبسها فتُعرض
-              ديونُ هالطرف المفتوحة، وتكبسها تاني فترجع للكل. */}
-          <div className="mb-2 grid grid-cols-2 gap-2 lg:grid-cols-4">
-            <div className={ring(f.kind === "" && f.state === "open" && !f.overdue && !f.pending)}>
-              <Tile
-                icon={IconWallet}
-                label={O.outstandingTotal}
-                value={fmtMoney(sum?.outstanding_total ?? 0)}
-                sub={O.debtorsSub.replace("{n}", fmtNum(sum?.debtors ?? 0))}
-                tone={(sum?.outstanding_total ?? 0) > 0 ? "warning" : "muted"}
-                onClick={() => pick({ kind: "", state: "open", overdue: false, pending: false })}
-              />
-            </div>
-            {partyTiles.map((t) => (
-              <div key={t.k} className={ring(f.kind === t.k)}>
-                <Tile
-                  icon={t.icon}
-                  label={t.label}
-                  value={fmtMoney(t.total)}
-                  tone={t.total > 0 ? "default" : "muted"}
-                  onClick={() => pick(f.kind === t.k ? { kind: "" } : { kind: t.k, state: "open" })}
-                />
-              </div>
-            ))}
-          </div>
-          <div className={`mb-2 grid grid-cols-1 gap-2 ${alertOn ? "sm:grid-cols-2" : ""}`}>
-            {alertOn && (
-              <div className={ring(f.overdue)}>
-                <Tile
-                  icon={IconDate}
-                  label={O.overdue.replace("{n}", fmtNum(alertDays))}
-                  value={fmtNum(sum?.overdue ?? 0)}
-                  tone={(sum?.overdue ?? 0) > 0 ? "danger" : "muted"}
-                  onClick={() => pick({ overdue: !f.overdue })}
-                />
-              </div>
-            )}
-            <div className={ring(f.pending)}>
-              <Tile
-                icon={IconStatus}
-                label={O.pendingRequests}
-                value={fmtNum(sum?.pending_requests ?? 0)}
-                tone={(sum?.pending_requests ?? 0) > 0 ? "accent" : "muted"}
-                onClick={() => pick({ pending: !f.pending })}
-              />
-            </div>
-          </div>
-          {/* **قربُ سقف الدين معلومةٌ لا زرّ** — ما إله فلتر، فما بينكتب على خانةٍ بتنكبس. */}
-          {(sum?.near_limit ?? 0) > 0 && (
-            <p className="mb-2 flex items-center gap-2 text-xs font-medium text-danger">
-              <IconStore size={14} />
-              {O.nearLimitNote.replace("{n}", fmtNum(sum?.near_limit ?? 0))}
-            </p>
-          )}
-
-          {/* ── الفلاتر في كرتٍ واحد ── */}
-          <form
-            className="surface mb-4 mt-2 space-y-3 p-4"
-            onSubmit={(e) => {
-              e.preventDefault();
-              pick({ q: typed });
-            }}
-          >
-            <div className="space-y-1.5">
-              <span className="block text-xs font-bold text-ink-muted">{O.stateLabel}</span>
-              <Chips
-                wrap
-                items={STATE_PILLS.map((st) => ({ id: st, label: O.states[st] }))}
-                value={f.state}
-                onChange={(st) => pick({ state: st })}
-              />
-            </div>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              <Input
-                id="obl-search"
-                icon={<IconUser size={15} />}
-                value={typed}
-                placeholder={O.search}
-                onChange={(e) => setTyped(e.target.value)}
-                onBlur={() => typed !== f.q && pick({ q: typed })}
-              />
-              <Select aria-label={O.causeAll} value={f.cause} onChange={(e) => pick({ cause: e.target.value })}>
-                <option value="">{O.causeAll}</option>
-                {Object.entries(O.causes).map(([k, v]) => (
-                  <option key={k} value={k}>
-                    {v}
-                  </option>
-                ))}
-              </Select>
-              <div className="grid grid-cols-2 gap-2">
-                <Input type="date" aria-label={O.from} title={O.from} value={f.from} onChange={(e) => pick({ from: e.target.value })} />
-                <Input type="date" aria-label={O.to} title={O.to} value={f.to} onChange={(e) => pick({ to: e.target.value })} />
-              </div>
-            </div>
-            {(f.from || f.to) && data?.day_start_hour ? (
-              <p className="text-2xs text-ink-muted">{O.dayStartNote.replace("{h}", fmtNum(data.day_start_hour))}</p>
-            ) : null}
-            <div className="flex flex-wrap items-center gap-2">
-              {alertOn && (
-                <Button
-                  type="button"
-                  variant={f.overdue ? "primary" : "secondary"}
-                  onClick={() => pick({ overdue: !f.overdue })}
-                >
-                  {O.overdueOnly}
-                </Button>
-              )}
-              <Button
-                type="button"
-                variant={f.pending ? "primary" : "secondary"}
-                onClick={() => pick({ pending: !f.pending })}
-              >
-                {O.pendingOnly}
-              </Button>
-              {f.party && <Badge variant="neutral">{O.partyFiltered}</Badge>}
-              {filtered && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => {
-                    setTyped("");
-                    pick(EMPTY);
-                  }}
-                >
-                  {O.clear}
-                </Button>
-              )}
-            </div>
-          </form>
-
-          {stale || loading ? (
-            <LoadingState />
-          ) : rows.length === 0 ? (
-            <section className="surface flex flex-col items-center gap-3 p-8 text-center">
-              <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-success-solid text-on-solid">
-                <IconBalance size={28} />
-              </span>
-              <h2 className="heading-section">{O.empty}</h2>
-              <p className="max-w-md text-sm text-ink-muted">
-                {filtered ? O.emptyFiltered : (sum?.outstanding_total ?? 0) === 0 ? O.emptyHint : O.emptyOpen}
-              </p>
-            </section>
-          ) : (
-            <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-              {rows.map((o) => {
-                const paidPart = o.amount - o.outstanding;
-                const pct = o.amount > 0 ? Math.round((paidPart / o.amount) * 100) : 0;
-                const p = o.pending;
-                // **القرارُ لمن يملكه**: الدفعةُ بإدارة المال، والشطبُ — رفضاً كموافقة — لمدير المنصّة.
-                const canDecide = !!p && !!data?.can_manage && (p.kind === "office_cash" || !!data?.can_approve_writeoff);
-                const busy = !!p && deciding === p.id;
-                return (
-                  <li key={o.id} className="surface flex flex-col gap-3 p-4">
-                    <div className="flex items-start gap-3">
-                      <span
-                        className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${
-                          o.state === "open"
-                            ? isOverdue(o)
-                              ? "bg-danger-solid text-on-solid"
-                              : "bg-warning-solid text-on-solid"
-                            : o.state === "paid"
-                              ? "bg-success-solid text-on-solid"
-                              : "bg-field text-ink-muted"
-                        }`}
-                      >
-                        {o.party_kind === "merchant" ? <IconStore size={20} /> : <IconUser size={20} />}
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <OpenLink
-                          allowed={o.party_kind === "merchant" ? canOpen.merchant : canOpen.user}
-                          href={partyHref(o)}
-                          className="block truncate font-bold hover:underline"
-                          title={O.openParty}
-                        >
-                          {o.party_name || "—"}
-                        </OpenLink>
-                        <span className="block truncate text-sm text-ink-muted">
-                          {O.kinds[o.party_kind]} · {causeText(o.cause)}
-                        </span>
-                      </span>
-                      <span className="shrink-0">
-                        <Badge variant={STATE_VARIANT[o.state]}>{O.states[o.state]}</Badge>
-                      </span>
-                    </div>
-
-                    <div className="space-y-2 rounded-control bg-field px-3 py-2.5">
-                      <div className="flex items-end justify-between gap-2">
-                        <span>
-                          <span className="block text-2xs text-ink-muted">{O.outstanding}</span>
-                          <span className={`figure block ${o.outstanding > 0 ? "text-warning" : "text-ink-muted"}`}>
-                            {fmtMoney(o.outstanding)}
-                          </span>
-                        </span>
-                        <span className="text-end text-sm">
-                          <span className="block text-2xs text-ink-muted">{O.amount}</span>
-                          <b className="tabular-nums">{fmtMoney(o.amount)}</b>
-                        </span>
-                      </div>
-                      {o.amount > 0 && o.state === "open" && paidPart > 0 && (
-                        <span className="block h-1.5 w-full overflow-hidden rounded-full bg-surface" aria-hidden>
-                          <span className="block h-full rounded-full bg-success" style={{ width: `${pct}%` }} />
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-2xs text-ink-muted">
-                      <span className="flex items-center gap-1">
-                        <IconDate size={12} />
-                        <span dir="ltr">{fmtDateTime(o.created_at)}</span>
-                      </span>
-                      <span className={isOverdue(o) ? "font-bold text-danger" : ""}>
-                        {O.ageDays.replace("{n}", fmtNum(o.age_days))}
-                      </span>
-                      {o.order_number != null && o.order_id && (
-                        <OpenLink
-                          allowed={canOpen.order}
-                          href={`/dashboard/orders?id=${o.order_id}`}
-                          dir="ltr"
-                          title={O.openOrder}
-                          className="flex items-center gap-1 hover:underline"
-                        >
-                          <IconOrder size={12} />#{fmtRef(o.order_number)}
-                        </OpenLink>
-                      )}
-                      {!f.party && (
-                        <button type="button" className="hover:underline" onClick={() => pick({ party: o.party_id })}>
-                          {O.partyFilter}
-                        </button>
-                      )}
-                    </div>
-
-                    {/* **طلبٌ ينتظر** — مين طلبه وإيمتى وقديش، ويوافق عليه غيرُ مقترِحه (والخادمُ يحكم). */}
-                    {p && (
-                      <div className="space-y-2 rounded-control border border-accent px-3 py-2.5 text-sm">
-                        <span className="flex items-center justify-between gap-2">
-                          <span className="font-medium">
-                            {p.kind === "office_cash" ? O.pendingCashLabel : O.pendingWriteOff}
-                          </span>
-                          <Money value={p.amount} className="font-bold tabular-nums" />
-                        </span>
-                        {(p.proposer_name || p.created_at) && (
-                          <span className="block text-2xs text-ink-muted">
-                            {O.proposedBy
-                              .replace("{name}", p.proposer_name || "—")
-                              .replace("{time}", p.created_at ? fmtDateTime(p.created_at) : "")}
-                          </span>
-                        )}
-                        {p.note && <span className="block text-xs text-ink-muted">{p.note}</span>}
-                        {!canDecide ? (
-                          <span className="block text-xs font-medium text-ink-muted">{O.waitingAdmin}</span>
-                        ) : rejecting === p.id ? (
-                          <span className="block space-y-2">
-                            <span className="block text-xs font-bold text-danger">{O.rejectConfirm}</span>
-                            <span className="grid grid-cols-2 gap-2">
-                              <Button className="w-full" variant="danger" disabled={busy} onClick={() => decide(p, false)}>
-                                {O.rejectYes}
-                              </Button>
-                              <Button className="w-full" variant="secondary" disabled={busy} onClick={() => setRejecting(null)}>
-                                {O.rejectNo}
-                              </Button>
-                            </span>
-                          </span>
-                        ) : (
-                          <span className="grid grid-cols-2 gap-2">
-                            <Button className="w-full" disabled={busy} onClick={() => decide(p, true)}>
-                              {O.approve}
-                            </Button>
-                            <Button className="w-full" variant="danger" disabled={busy} onClick={() => setRejecting(p.id)}>
-                              {O.reject}
-                            </Button>
-                          </span>
-                        )}
-                      </div>
-                    )}
-
-                    {/* **شو انسدّ منه بطريقته** — انقطع من مستحق · دفع بالمكتب · انشطب. */}
-                    {open === o.id && (
-                      <ul className="space-y-1.5">
-                        {o.settlements.map((st, i) => (
-                          <li key={i} className="flex flex-wrap items-center justify-between gap-2 rounded-control bg-field px-3 py-2 text-sm">
-                            <span className="min-w-0">
-                              <span className="block font-medium">{O.methods[st.method] ?? st.method}</span>
-                              <span className="block text-2xs text-ink-muted">
-                                <span dir="ltr">{fmtDateTime(st.created_at)}</span>
-                                {st.order_number != null && <span dir="ltr"> · #{fmtRef(st.order_number)}</span>}
-                              </span>
-                            </span>
-                            <span className="text-end">
-                              <Money
-                                value={st.amount}
-                                className={`font-bold tabular-nums ${
-                                  st.method === "voided" || st.method === "written_off"
-                                    ? "text-ink-muted line-through"
-                                    : "text-success"
-                                }`}
-                              />
-                              <span className="block text-2xs text-ink-muted">
-                                {O.remaining} {fmtMoney(st.remaining)}
-                              </span>
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-
-                    {(o.settlements.length > 0 || (o.state === "open" && !p && data?.can_manage)) && (
-                      <div className="mt-auto flex flex-wrap gap-2 border-t border-line-soft pt-3">
-                        {o.state === "open" && !p && data?.can_manage && (
-                          <>
-                            <Button className="flex-1" onClick={() => setAct({ o, kind: "office_cash" })}>
-                              {O.officeCash}
-                            </Button>
-                            <Button className="flex-1" variant="secondary" onClick={() => setAct({ o, kind: "write_off" })}>
-                              {O.writeOff}
-                            </Button>
-                          </>
-                        )}
-                        {o.settlements.length > 0 && (
-                          <Button
-                            className="w-full sm:w-auto"
-                            variant="ghost"
-                            onClick={() => setOpen((cur) => (cur === o.id ? null : o.id))}
-                          >
-                            {O.history} ({fmtNum(o.settlements.length)})
-                          </Button>
-                        )}
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-
-          {data && data.total > data.per_page && (
-            <div className="mt-4 flex justify-center">
-              <Pagination
-                page={page}
-                total={data.total}
-                perPage={data.per_page}
-                onChange={(pg) => {
-                  setShownKey("");
-                  setPage(pg);
-                }}
-              />
-            </div>
-          )}
         </>
-      )}
+      }
+      summary={
+        // **كلُّ المفتوح بأنواعه** — لا الصفحةُ المعروضة. **والخانةُ هي الفلتر**: تكبسها فتُعرض
+        // ديونُ هالطرف المفتوحة، وتكبسها تاني فترجع للكل.
+        <SummaryStrip
+          max={6}
+          items={[
+            {
+              key: "total",
+              icon: IconWallet,
+              label: O.outstandingTotal,
+              value: fmtMoney(sum?.outstanding_total ?? 0),
+              meta:
+                O.debtorsSub.replace("{n}", fmtNum(sum?.debtors ?? 0)) +
+                (nearLimit > 0 ? ` · ${O.nearLimitNote.replace("{n}", fmtNum(nearLimit))}` : ""),
+              tone: (sum?.outstanding_total ?? 0) > 0 ? "neutral" : "muted",
+              active: allActive,
+              onOpen: () => pick({ kind: "", state: "open", overdue: false, pending: false }),
+            },
+            ...partyTiles.map((t) => ({
+              key: t.k,
+              icon: t.icon,
+              label: t.label,
+              value: fmtMoney(t.total),
+              tone: (t.total > 0 ? "neutral" : "muted") as "neutral" | "muted",
+              active: f.kind === t.k,
+              onOpen: () => pick(f.kind === t.k ? { kind: "" } : { kind: t.k, state: "open" }),
+            })),
+            ...(alertOn
+              ? [
+                  {
+                    key: "overdue",
+                    icon: IconDate,
+                    label: O.overdue.replace("{n}", fmtNum(alertDays)),
+                    value: fmtNum(sum?.overdue ?? 0),
+                    tone: ((sum?.overdue ?? 0) > 0 ? "danger" : "muted") as "danger" | "muted",
+                    active: f.overdue,
+                    onOpen: () => pick({ overdue: !f.overdue }),
+                  },
+                ]
+              : []),
+            {
+              key: "pending",
+              icon: IconStatus,
+              label: O.pendingRequests,
+              value: fmtNum(sum?.pending_requests ?? 0),
+              tone: (sum?.pending_requests ?? 0) > 0 ? "attention" : "muted",
+              active: f.pending,
+              onOpen: () => pick({ pending: !f.pending }),
+            },
+          ]}
+        />
+      }
+      toolbar={
+        <FilterBar
+          search={{ id: "obl-search", value: typed, onChange: setTyped, placeholder: O.search }}
+          filtered={filtered}
+          onClear={() => {
+            setTyped("");
+            pick(EMPTY);
+          }}
+          moreActive={(f.from ? 1 : 0) + (f.to ? 1 : 0) + (f.cause ? 1 : 0)}
+          more={
+            <>
+              <FilterField id="obl-cause" label={O.causeAll}>
+                <Select id="obl-cause" aria-label={O.causeAll} value={f.cause} onChange={(e) => pick({ cause: e.target.value })}>
+                  <option value="">{O.causeAll}</option>
+                  {Object.entries(O.causes).map(([k, v]) => (
+                    <option key={k} value={k}>
+                      {v}
+                    </option>
+                  ))}
+                </Select>
+              </FilterField>
+              <FilterField id="obl-from" label={O.from}>
+                <Input id="obl-from" type="date" value={f.from} onChange={(e) => pick({ from: e.target.value })} />
+              </FilterField>
+              <FilterField id="obl-to" label={O.to}>
+                <Input id="obl-to" type="date" value={f.to} onChange={(e) => pick({ to: e.target.value })} />
+              </FilterField>
+            </>
+          }
+          end={f.party ? <Badge variant="neutral">{O.partyFiltered}</Badge> : undefined}
+        >
+          <FilterSelect id="obl-state" label={O.stateLabel} value={f.state} onChange={(st) => pick({ state: st as Filters["state"] })}>
+            {STATE_PILLS.map((st) => (
+              <option key={st} value={st}>
+                {O.states[st]}
+              </option>
+            ))}
+          </FilterSelect>
+        </FilterBar>
+      }
+      pagination={
+        data
+          ? {
+              page,
+              total: data.total,
+              perPage: data.per_page,
+              onChange: (pg) => {
+                setShownKey("");
+                setPage(pg);
+              },
+            }
+          : undefined
+      }
+    >
+      <AdminAsync
+        loading={!ready || loading || stale}
+        error={error}
+        onRetry={reload}
+        hasData={!!data && !stale}
+        empty={rows.length === 0}
+        emptyTitle={O.empty}
+        emptyIcon={IconBalance}
+      >
+        <AdminEntityGrid>
+          {rows.map((o) => {
+            const paidPart = o.amount - o.outstanding;
+            const pct = o.amount > 0 ? Math.round((paidPart / o.amount) * 100) : 0;
+            const p = o.pending;
+            // **القرارُ لمن يملكه**: الدفعةُ بإدارة المال، والشطبُ — رفضاً كموافقة — لمدير المنصّة.
+            const canDecide = !!p && !!data?.can_manage && (p.kind === "office_cash" || !!data?.can_approve_writeoff);
+            const busy = !!p && deciding === p.id;
+            const canAct = o.state === "open" && !p && !!data?.can_manage;
+            return (
+              <AdminEntityCard
+                key={o.id}
+                tone={isOverdue(o) ? "danger" : o.state === "open" ? "attention" : o.state === "paid" ? "good" : "neutral"}
+                leading={
+                  o.party_kind === "merchant" ? (
+                    <IconStore size={20} className="text-ink-muted" />
+                  ) : (
+                    <IconUser size={20} className="text-ink-muted" />
+                  )
+                }
+                eyebrow={`${O.kinds[o.party_kind]} · ${causeText(o.cause)}`}
+                title={o.party_name || "—"}
+                href={(o.party_kind === "merchant" ? canOpen.merchant : canOpen.user) ? partyHref(o) : undefined}
+                status={<StatusBadge domain="debt" status={o.state} />}
+                facts={[
+                  { key: "left", label: O.outstanding, value: fmtMoney(o.outstanding) },
+                  { key: "amount", label: O.amount, value: fmtMoney(o.amount) },
+                  {
+                    key: "date",
+                    label: m.terms.date,
+                    value: <span dir="ltr">{fmtDateTime(o.created_at)}</span>,
+                  },
+                  {
+                    key: "age",
+                    label: F.age,
+                    value: <span className={isOverdue(o) ? "text-danger" : ""}>{O.ageDays.replace("{n}", fmtNum(o.age_days))}</span>,
+                  },
+                  ...(o.order_number != null && o.order_id && canOpen.order
+                    ? [
+                        {
+                          key: "order",
+                          label: O.openOrder,
+                          value: <span dir="ltr">#{fmtRef(o.order_number)}</span>,
+                          href: `/dashboard/history?order=${o.order_id}`,
+                        },
+                      ]
+                    : []),
+                  ...(!f.party
+                    ? [
+                        {
+                          key: "party",
+                          label: O.partyFilter,
+                          value: (
+                            <button type="button" className="hover:underline" onClick={() => pick({ party: o.party_id })}>
+                              {O.partyFilter}
+                            </button>
+                          ),
+                        },
+                      ]
+                    : []),
+                ]}
+                primary={
+                  canAct ? (
+                    <>
+                      <Button size="sm" onClick={() => setAct({ o, kind: "office_cash" })}>
+                        {O.officeCash}
+                      </Button>
+                      <Button size="sm" variant="secondary" onClick={() => setAct({ o, kind: "write_off" })}>
+                        {O.writeOff}
+                      </Button>
+                    </>
+                  ) : undefined
+                }
+              >
+                {o.amount > 0 && o.state === "open" && paidPart > 0 && (
+                  <span className="block h-1.5 w-full overflow-hidden rounded-full bg-field" aria-hidden>
+                    <span className="block h-full rounded-full bg-success" style={{ width: `${pct}%` }} />
+                  </span>
+                )}
+
+                {/* **طلبٌ ينتظر** — مين طلبه وإيمتى وقديش، ويوافق عليه غيرُ مقترِحه (والخادمُ يحكم). */}
+                {p && (
+                  <div className="space-y-2 rounded-control border border-warning px-3 py-2.5 text-sm">
+                    <span className="flex items-center justify-between gap-2">
+                      <span className="font-medium">{p.kind === "office_cash" ? O.pendingCashLabel : O.pendingWriteOff}</span>
+                      <Money value={p.amount} className="font-bold tabular-nums" />
+                    </span>
+                    {(p.proposer_name || p.created_at) && (
+                      <span className="block text-xs text-ink-muted">
+                        {O.proposedBy
+                          .replace("{name}", p.proposer_name || "—")
+                          .replace("{time}", p.created_at ? fmtDateTime(p.created_at) : "")}
+                      </span>
+                    )}
+                    {p.note && <span className="block text-xs text-ink-muted">{p.note}</span>}
+                    {!canDecide ? (
+                      <span className="block text-xs font-medium text-ink-muted">{O.waitingAdmin}</span>
+                    ) : rejecting === p.id ? (
+                      <span className="block space-y-2">
+                        <span className="block text-xs font-bold text-danger">{O.rejectConfirm}</span>
+                        <span className="grid grid-cols-2 gap-2">
+                          <Button className="w-full" variant="danger" disabled={busy} onClick={() => decide(p, false)}>
+                            {O.rejectYes}
+                          </Button>
+                          <Button className="w-full" variant="secondary" disabled={busy} onClick={() => setRejecting(null)}>
+                            {O.rejectNo}
+                          </Button>
+                        </span>
+                      </span>
+                    ) : (
+                      <span className="grid grid-cols-2 gap-2">
+                        <Button className="w-full" disabled={busy} onClick={() => decide(p, true)}>
+                          {O.approve}
+                        </Button>
+                        <Button className="w-full" variant="danger" disabled={busy} onClick={() => setRejecting(p.id)}>
+                          {O.reject}
+                        </Button>
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* **شو انسدّ منه بطريقته** — انقطع من مستحق · دفع بالمكتب · انشطب. */}
+                {o.settlements.length > 0 && (
+                  <Button variant="ghost" size="sm" onClick={() => setOpen((cur) => (cur === o.id ? null : o.id))}>
+                    {O.history} ({fmtNum(o.settlements.length)})
+                  </Button>
+                )}
+                {open === o.id && (
+                  <ul className="space-y-1.5">
+                    {o.settlements.map((st, i) => (
+                      <li key={i} className="flex flex-wrap items-center justify-between gap-2 rounded-control bg-field px-3 py-2 text-sm">
+                        <span className="min-w-0">
+                          <span className="block font-medium">{O.methods[st.method] ?? st.method}</span>
+                          <span className="block text-xs text-ink-muted">
+                            <span dir="ltr">{fmtDateTime(st.created_at)}</span>
+                            {st.order_number != null && <span dir="ltr"> · #{fmtRef(st.order_number)}</span>}
+                          </span>
+                        </span>
+                        <span className="text-end">
+                          <Money
+                            value={st.amount}
+                            className={`font-bold tabular-nums ${
+                              st.method === "voided" || st.method === "written_off" ? "text-ink-muted line-through" : "text-success"
+                            }`}
+                          />
+                          <span className="block text-xs text-ink-muted">
+                            {O.remaining} {fmtMoney(st.remaining)}
+                          </span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </AdminEntityCard>
+            );
+          })}
+        </AdminEntityGrid>
+      </AdminAsync>
 
       {act && (
         <ActionModal
@@ -758,7 +683,7 @@ export default function ObligationsPage() {
           }}
         />
       )}
-    </PageContainer>
+    </AdminPage>
   );
 }
 

@@ -1232,6 +1232,24 @@
       "loadFailed": "صار خطأ — جرّب مرة تانية",
       "retry": "جرّب مرة تانية",
       "moreActions": "إجراءات تانية",
+      "finance": {
+        "ordersOf": "طلباته",
+        "storeOrders": "طلباتهم",
+        "openOrder": "افتح الطلب",
+        "endShift": "إنهاء الدوام",
+        "storeDueSince": "أقدم مبلغ",
+        "lastPaid": "آخر دفعة",
+        "none": "ما في",
+        "compareLabel": "قبل",
+        "history": "السجل",
+        "viewHistory": "سجل هالحساب",
+        "ledger": "الدفتر",
+        "vsPrev": "عن الفترة السابقة",
+        "up": "أكثر",
+        "down": "أقل",
+        "same": "متل ما هو",
+        "age": "العمر"
+      },
       "people": {
         "store": {
           "openNow": "مفتوح هلأ",

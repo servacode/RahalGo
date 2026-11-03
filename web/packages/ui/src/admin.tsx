@@ -411,10 +411,12 @@ export interface SummaryItem {
   onOpen?: () => void;
   /** **رابطٌ للصفحة التي وراء الرقم** (يغني عن `onOpen`) — كلُّ رقمٍ ينكبس. */
   href?: string;
+  /** **الفلترُ الذي يفتحه الرقمُ شغّالٌ الآن** — إطارٌ بالنبرة حوله. */
+  active?: boolean;
 }
 
 /** **رقمٌ واحد** — تسميةٌ فوقه وسطرٌ صغيرٌ تحته، ونبرتُه خطٌّ على طرفه (والتسميةُ تقول المعنى). */
-export function Stat({ label, value, icon: Icon, tone = "neutral", meta, onOpen, href }: Omit<SummaryItem, "key">) {
+export function Stat({ label, value, icon: Icon, tone = "neutral", meta, onOpen, href, active }: Omit<SummaryItem, "key">) {
   const body = (
     <>
       <span className="flex items-center justify-between gap-2 text-sm text-ink-muted">
@@ -431,7 +433,7 @@ export function Stat({ label, value, icon: Icon, tone = "neutral", meta, onOpen,
       {meta && <span className="truncate text-xs text-ink-muted">{meta}</span>}
     </>
   );
-  const cls = "admin-panel admin-stat";
+  const cls = `admin-panel admin-stat${active ? " ring-2 ring-accent" : ""}`;
   if (href) {
     return (
       <AdminLink href={href} className="block min-w-0">

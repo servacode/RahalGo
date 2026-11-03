@@ -51,6 +51,7 @@ import {
   IconDate,
   IconCamera,
   IconEdit,
+  ButtonLink,
 } from "@rahalgo/ui";
 import { useUrlTab } from "@/components/admin/useUrlTab";
 import DrinksAdmin from "@/components/admin/market/DrinksAdmin";
@@ -270,6 +271,11 @@ function MerchantProfile() {
               {m.admin.kit.back}
             </span>
           </Button>
+          {can("audit.read") && (
+            <ButtonLink variant="secondary" size="sm" href={`/dashboard/audit?entity=merchant&entity_id=${mr.id}`}>
+              {m.admin.kit.finance.viewHistory}
+            </ButtonLink>
+          )}
           {/* **وتعديلُ المتجر من صفحته** (بلاغُ المالك ٢٠٢٦-١٠-٠٧: «ما في خيار تعديل»). */}
           {canEdit && (
             <Button variant="secondary" size="sm" onClick={() => setEditOpen(true)}>

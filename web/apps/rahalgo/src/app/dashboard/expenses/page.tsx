@@ -61,7 +61,13 @@ import {
   Select,
   Modal,
   Textarea,
-  PageContainer,
+  AdminPage,
+  FilterBar,
+  FilterField,
+  FilterSelect,
+  PeriodPicker,
+  useRememberedFilters,
+  useLiveRefresh,
   LoadingState,
   ReloadState,
   Pagination,
@@ -86,7 +92,6 @@ import {
 } from "@rahalgo/ui";
 import { api, apiFile, mediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { PageHero } from "@/components/admin/PageHero";
 import { Panel, Tile } from "@/components/admin/DashParts";
 
 const m = getMessages(defaultLocale);
@@ -238,8 +243,12 @@ export default function ExpensesPage() {
   const [today] = useState(() => damascusDay());
   const [range, setRange] = useState<Range>(() => monthAt(today, 0));
   const [customOpen, setCustomOpen] = useState(false);
-  const [category, setCategory] = useState("");
-  const [status, setStatus] = useState<"" | Status>("");
+  // **الباب والحالةُ يُحفظان كما تركهما الموظّف** — والمدّةُ دائماً هالشهر عند الفتح.
+  const rem = useRememberedFilters("expenses", { category: "", status: "" });
+  const category = rem.filters.category;
+  const status = rem.filters.status as "" | Status;
+  const setCategory = (v: string) => rem.set({ category: v });
+  const setStatus = (v: "" | Status) => rem.set({ status: v });
   // **البحثُ بتأخيرٍ صغير** — كان كلُّ حرفٍ نداءً، **وجوابٌ قديمٌ يصل بعد الجديد يُعرض.**
   const [qInput, setQInput] = useState("");
   const [q, setQ] = useState("");
@@ -290,7 +299,7 @@ export default function ExpensesPage() {
   }, [range, page, category, status, q]);
 
   const load = useCallback(() => {
-    if (inverted) return;
+    if (inverted || !rem.ready) return;
     // **والجوابُ القديمُ يُهمل** — لا يُعرض إلّا جوابُ آخرِ نداء.
     const my = ++seq.current;
     setRefreshing(true);
@@ -305,12 +314,11 @@ export default function ExpensesPage() {
         setLoadErr(errorText(e));
         // **وما عُرض قبلاً يبقى** مع رسالةٍ فوقه — لا تُمحى الصفحةُ لسقوط تحديثٍ واحد.
         setData((prev) => (prev && prev !== "failed" ? prev : "failed"));
-        setError(errorText(e));
       })
       .finally(() => {
         if (my === seq.current) setRefreshing(false);
       });
-  }, [qs, inverted]);
+  }, [qs, inverted, rem.ready]);
 
   const loadCats = useCallback(() => {
     api<{ categories: Cat[] }>("/api/v1/admin/expenses/categories")
@@ -319,6 +327,8 @@ export default function ExpensesPage() {
   }, []);
 
   useEffect(load, [load]);
+  // **وتحديثٌ حيٌّ** عند أيّ حركةِ مال.
+  useLiveRefresh(["wallet"], load);
   useEffect(loadCats, [loadCats]);
 
   function exportCsv() {
@@ -355,8 +365,7 @@ export default function ExpensesPage() {
     setPage(1);
   }
   function clearFilters() {
-    setCategory("");
-    setStatus("");
+    rem.set({ category: "", status: "" });
     setQInput("");
     setQ("");
     pickRange(monthAt(today, 0));
@@ -397,12 +406,10 @@ export default function ExpensesPage() {
   ];
 
   return (
-    <PageContainer>
-      <PageHero
-        icon={IconWallet}
-        title={X.title}
-        subtitle={X.hint}
-        actions={
+    <AdminPage
+      icon={IconWallet}
+      title={X.title}
+      actions={
           <div className="flex flex-wrap gap-2">
             {canExport && (
               <Button variant="secondary" onClick={exportCsv} disabled={inverted}>
@@ -422,17 +429,45 @@ export default function ExpensesPage() {
             )}
           </div>
         }
-      />
-
-      {error && <Alert className="mb-3">{error}</Alert>}
-      {notice && (
-        <Alert tone="success" className="mb-3">
-          {notice}
-        </Alert>
-      )}
-
-      {/* ── أربعةُ أرقامٍ تُضغط فترشّح ── */}
-      <div className="mb-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
+      notices={
+        <>
+          {error && <Alert>{error}</Alert>}
+          {notice && <Alert tone="success">{notice}</Alert>}
+        </>
+      }
+      toolbar={
+        <FilterBar
+          search={{ id: "exp-search", value: qInput, onChange: setQInput, placeholder: X.search }}
+          filtered={anyFilter}
+          onClear={clearFilters}
+          moreActive={category ? 1 : 0}
+          more={
+            <FilterField id="exp-filter-cat" label={X.colCategory}>
+              <Select id="exp-filter-cat" aria-label={X.colCategory} value={category} onChange={(e) => pickCategory(e.target.value)}>
+                <option value="">{X.allCategories}</option>
+                {cats.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.active ? c.name : `${c.name} ${X.catOffSuffix}`}
+                  </option>
+                ))}
+              </Select>
+            </FilterField>
+          }
+          end={refreshing ? X.refreshing : undefined}
+        >
+          <PeriodPicker id="exp-period" from={range.from} to={range.to} today={today} allowAll={false} onChange={(f, t) => pickRange({ from: f, to: t })} />
+          <FilterSelect id="exp-status" label={X.statusLabel} value={status || "all"} onChange={(k) => pickStatus(k === "all" ? "" : (k as Status))}>
+            {statusChips.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.label}
+                {c.count ? ` (${fmtNum(c.count)})` : ""}
+              </option>
+            ))}
+          </FilterSelect>
+        </FilterBar>
+      }
+      summary={
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Tile
           icon={IconWallet}
           label={X.periodTotal}
@@ -476,96 +511,8 @@ export default function ExpensesPage() {
           onClick={() => pickStatus("pending")}
         />
       </div>
-
-      {/* ── الفلاتر في كرتٍ واحد: المدّةُ والحالةُ حبّات، والبابُ قائمةٌ لأنّ الأبوابَ كثيرة ── */}
-      <section className="surface mb-4 flex flex-col gap-3 p-3 sm:p-4">
-        <div className="flex flex-col gap-1.5">
-          <span className="text-xs text-ink-muted">{X.periodLabel}</span>
-          <Chips<Preset>
-            items={PRESETS.map((p) => ({ id: p, label: X.period[p] }))}
-            value={activePreset}
-            onChange={(p) => {
-              if (p === "custom") {
-                setCustomOpen(true);
-                return;
-              }
-              pickRange(presetRange(p, today));
-            }}
-            wrap
-          />
-          {activePreset === "custom" && (
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <Input
-                id="exp-from"
-                type="date"
-                icon={<IconDate />}
-                label={m.shared.statement.from}
-                value={range.from}
-                onChange={(e) => {
-                  setRange({ ...range, from: e.target.value });
-                  setPage(1);
-                }}
-              />
-              <Input
-                id="exp-to"
-                type="date"
-                icon={<IconDate />}
-                label={m.shared.statement.to}
-                value={range.to}
-                onChange={(e) => {
-                  setRange({ ...range, to: e.target.value });
-                  setPage(1);
-                }}
-              />
-            </div>
-          )}
-        </div>
-        <div className="flex flex-col gap-1.5 border-t border-line-soft pt-3">
-          <span className="text-xs text-ink-muted">{X.statusLabel}</span>
-          <Chips<"all" | Status>
-            items={statusChips}
-            value={status || "all"}
-            onChange={(k) => pickStatus(k === "all" ? "" : k)}
-            wrap
-          />
-        </div>
-        <div className="grid grid-cols-1 gap-2 border-t border-line-soft pt-3 sm:grid-cols-2">
-          <Select
-            id="exp-filter-cat"
-            label={X.colCategory}
-            value={category}
-            onChange={(e) => pickCategory(e.target.value)}
-          >
-            <option value="">{X.allCategories}</option>
-            {cats.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.active ? c.name : `${c.name} ${X.catOffSuffix}`}
-              </option>
-            ))}
-          </Select>
-          <Input
-            id="exp-search"
-            icon={<IconSearch size={15} />}
-            label={X.search}
-            value={qInput}
-            onChange={(e) => setQInput(e.target.value)}
-          />
-        </div>
-        {(anyFilter || refreshing) && (
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-xs text-ink-muted" aria-live="polite">
-              {refreshing ? X.refreshing : ""}
-            </span>
-            {anyFilter && (
-              <Button variant="ghost" className="flex items-center gap-1 !px-2 text-xs" onClick={clearFilters}>
-                <IconClose size={13} />
-                {X.clearFilters}
-              </Button>
-            )}
-          </div>
-        )}
-      </section>
-
+      }
+    >
       {inverted && <Alert className="mb-3">{X.invertedRange}</Alert>}
 
       <div className={`transition-opacity ${refreshing ? "opacity-60" : ""}`} aria-busy={refreshing}>
@@ -737,7 +684,7 @@ export default function ExpensesPage() {
           }}
         />
       )}
-    </PageContainer>
+    </AdminPage>
   );
 }
 

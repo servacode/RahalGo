@@ -30,7 +30,7 @@ import {
   getMessages, defaultLocale, fmtDateTime, fmtNum, fmtMoney, fmtTime, fmtLongDate, errorText, damascusDay,
 } from "@rahalgo/i18n";
 import {
-  Alert, Badge, Button, Input, Checkbox, Chips, LoadingState,
+  Alert, Badge, AdminPage, AdminEmpty, FilterBar, FilterField, FilterSelect, SummaryStrip, Button, Input, Checkbox, Chips, LoadingState,
   Pagination, Select, Sheet,
   IconShieldCheck, IconSettings, IconUser, IconStatus, IconWallet, IconClose, IconSearch,
   IconDate, IconOverview, IconLock, IconWarning,
@@ -40,7 +40,6 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useCanCall, useCanOpen } from "@/lib/policy";
 import { roleLabelByCode, classifyRole } from "@/lib/rolemeta";
-import { PageHero } from "@/components/admin/PageHero";
 import { Tile } from "@/components/admin/DashParts";
 
 const m = getMessages(defaultLocale);
@@ -808,89 +807,132 @@ export default function AuditPage() {
     { k: "all", icon: IconOverview, tone: "default" },
   ];
 
+  const rangeOptions: { id: Range; label: string }[] = [
+    { id: "all", label: A.rangeAll },
+    { id: "today", label: A.rangeToday },
+    { id: "yesterday", label: A.rangeYesterday },
+    { id: "last7", label: A.rangeLast7 },
+    { id: "custom", label: A.rangeCustom },
+  ];
+
   return (
-    <div>
-      <PageHero
-        icon={IconShieldCheck}
-        title={A.title}
-        subtitle={A.subtitle}
-        actions={data?.can_export ? (
-          <Button variant="secondary" onClick={exportCsv} disabled={exporting}>
-            {exporting ? A.exporting : A.export}
-          </Button>
-        ) : undefined}
-      >
-        <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-          {tiles.map((t) => {
-            const n = counts?.[t.k] ?? 0;
-            return (
-              <div key={t.k} className={tileOn(t.k) ? "rounded-card ring-2 ring-accent" : ""}>
-                <Tile
-                  icon={t.icon}
-                  label={A.tiles[t.k]}
-                  value={counts ? fmtNum(n) : "—"}
-                  tone={n > 0 ? t.tone : "muted"}
-                  onClick={() => pickTile(t.k)}
-                />
-              </div>
-            );
-          })}
-        </div>
-        {data && !data.money_visible && (
-          <p className="mt-2 flex items-center gap-1.5 text-xs text-ink-muted">
-            <IconLock size={13} />
-            {A.moneyHidden}
-          </p>
-        )}
-        {exportNote && (
-          <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-warning" role="status">
-            <IconWarning size={13} />
-            {exportNote}
-          </p>
-        )}
-      </PageHero>
-
-      {/* ── الفلاترُ في بطاقةٍ واحدة ── */}
-      <section className="surface mb-4 space-y-3 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="heading-card">
-            {A.filtersTitle}
-            {data && (
-              <span className="ms-2 text-sm font-normal text-ink-muted">
-                {data.total_capped ? A.countCapped.replace("{n}", fmtNum(data.total)) : A.count.replace("{n}", fmtNum(data.total))}
-              </span>
-            )}
-          </h2>
-          {filtered && (
-            <Button variant="ghost" onClick={clearAll}>{A.clear}</Button>
+    <AdminPage
+      icon={IconShieldCheck}
+      title={A.title}
+      count={data ? data.total : undefined}
+      actions={data?.can_export ? (
+        <Button variant="secondary" onClick={exportCsv} disabled={exporting}>
+          {exporting ? A.exporting : A.export}
+        </Button>
+      ) : undefined}
+      notices={
+        <>
+          {data && !data.money_visible && (
+            <Alert tone="info">{A.moneyHidden}</Alert>
           )}
-        </div>
-
-        {/* **التقييدُ ظاهرٌ ويُشال** — رابطُ «السجل» من الإعدادات، أو شخصٌ بعينه. */}
-        {(scoped || actor) && (
-          <div className="flex flex-wrap gap-2">
-            {scoped && (
-              <button type="button" onClick={clearTarget} title={A.scopedClear}
-                className="inline-flex items-center gap-2 rounded-full bg-accent-tint px-3 py-1.5 text-sm font-medium text-accent">
-                {target.entity === "setting"
-                  ? A.scopedSetting.replace("{name}", scopeName)
-                  : A.scopedOther.replace("{name}", scopeName)}
-                <IconClose size={14} />
-              </button>
-            )}
-            {actor && (
-              <button type="button" onClick={() => reset(setActor)("")} title={A.scopedClear}
-                className="inline-flex items-center gap-2 rounded-full bg-primary-tint px-3 py-1.5 text-sm font-medium text-primary">
-                {A.actorChip.replace("{name}", actorName)}
-                <IconClose size={14} />
-              </button>
-            )}
-          </div>
-        )}
-
-        {!scoped && (
-          <div className="space-y-1.5">
-            <span className="block text-xs font-bold text-ink-muted">{A.groupLabel}</span>
+          {exportNote && <Alert tone="warning">{exportNote}</Alert>}
+          {error && (
+            <Alert tone="error" title={A.loadFailed}>
+              <span className="flex flex-wrap items-center gap-2">
+                {error}
+                <Button variant="secondary" onClick={load}>{m.common.retry}</Button>
+              </span>
+            </Alert>
+          )}
+        </>
+      }
+      summary={
+        <SummaryStrip
+          items={tiles.map((t) => {
+            const n = counts?.[t.k] ?? 0;
+            return {
+              key: t.k,
+              icon: t.icon,
+              label: A.tiles[t.k],
+              value: counts ? fmtNum(n) : "—",
+              tone: n > 0 && t.k === "sensitive" ? "danger" : "neutral",
+              active: tileOn(t.k),
+              onOpen: () => pickTile(t.k),
+            };
+          })}
+        />
+      }
+      toolbar={
+        <div className="space-y-3">
+          {/* **التقييدُ ظاهرٌ ويُشال** — رابطُ «السجل» من الكيان، أو شخصٌ بعينه. */}
+          {(scoped || actor) && (
+            <div className="flex flex-wrap gap-2">
+              {scoped && (
+                <Button variant="secondary" size="sm" onClick={clearTarget} title={A.scopedClear}>
+                  <span className="flex items-center gap-2">
+                    {target.entity === "setting"
+                      ? A.scopedSetting.replace("{name}", scopeName)
+                      : A.scopedOther.replace("{name}", scopeName)}
+                    <IconClose size={14} />
+                  </span>
+                </Button>
+              )}
+              {actor && (
+                <Button variant="secondary" size="sm" onClick={() => reset(setActor)("")} title={A.scopedClear}>
+                  <span className="flex items-center gap-2">
+                    {A.actorChip.replace("{name}", actorName)}
+                    <IconClose size={14} />
+                  </span>
+                </Button>
+              )}
+            </div>
+          )}
+          <FilterBar
+            search={{ id: "aud-q", value: q, onChange: reset(setQ), placeholder: A.searchPlaceholder }}
+            filtered={filtered}
+            onClear={clearAll}
+            moreActive={(action !== "" ? 1 : 0) + (range === "custom" ? 1 : 0)}
+            more={
+              <>
+                {range === "custom" && (
+                  <>
+                    <FilterField id="aud-from" label={ST.from}>
+                      <Input id="aud-from" type="date" value={from} onChange={(e) => reset(setFrom)(e.target.value)} />
+                    </FilterField>
+                    <FilterField id="aud-to" label={ST.to}>
+                      <Input id="aud-to" type="date" value={to} onChange={(e) => reset(setTo)(e.target.value)} />
+                    </FilterField>
+                  </>
+                )}
+                <FilterField id="aud-action" label={A.actionType}>
+                  <Select id="aud-action" aria-label={A.actionType} value={action} onChange={(e) => reset(setAction)(e.target.value)}>
+                    <option value="">{A.actionAll}</option>
+                    {actionOptions.map((o) => (
+                      <optgroup key={o.group} label={GROUP_LABEL[o.group]}>
+                        {o.items.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+                      </optgroup>
+                    ))}
+                  </Select>
+                </FilterField>
+                {effGroup === "login" && (
+                  <Checkbox
+                    id="aud-refresh"
+                    label={A.showRefresh}
+                    checked={withRefresh}
+                    onChange={(e) => reset(setWithRefresh)(e.target.checked)}
+                  />
+                )}
+              </>
+            }
+          >
+            <FilterSelect id="aud-range" label={A.dateLabel} value={range} onChange={(v) => pickRange(v as Range)}>
+              {rangeOptions.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+            </FilterSelect>
+            <FilterSelect id="aud-actor" label={A.person} value={actor} onChange={reset(setActor)}>
+              <option value="">{A.personAll}</option>
+              <option value="system">{A.personSystem}</option>
+              {actors.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
+              {actor && actor !== "system" && !actors.some((a) => a.id === actor) && (
+                <option value={actor}>{A.unknown}</option>
+              )}
+            </FilterSelect>
+          </FilterBar>
+          {!scoped && (
             <Chips
               wrap
               items={[
@@ -900,112 +942,18 @@ export default function AuditPage() {
               value={group}
               onChange={(g) => reset(setGroup)(g)}
             />
-            {!MORE_GROUPS.includes(group) && (
-              <Button variant="ghost" onClick={() => setShowMore((v) => !v)}>
-                {showMore ? A.less : A.more}
-              </Button>
-            )}
-          </div>
-        )}
-
-        <div className="space-y-1.5">
-          <span className="block text-xs font-bold text-ink-muted">{A.dateLabel}</span>
-          <Chips
-            wrap
-            items={[
-              { id: "all" as Range, label: A.rangeAll },
-              { id: "today" as Range, label: A.rangeToday },
-              { id: "yesterday" as Range, label: A.rangeYesterday },
-              { id: "last7" as Range, label: A.rangeLast7 },
-              { id: "custom" as Range, label: A.rangeCustom },
-            ]}
-            value={range}
-            onChange={pickRange}
-          />
-          {range === "custom" && (
-            <div className="grid grid-cols-2 gap-2 sm:max-w-md">
-              <Input id="aud-from" type="date" label={ST.from} value={from}
-                onChange={(e) => reset(setFrom)(e.target.value)} />
-              <Input id="aud-to" type="date" label={ST.to} value={to}
-                onChange={(e) => reset(setTo)(e.target.value)} />
-            </div>
-          )}
-          {range !== "all" && data?.day_start_hour ? (
-            <p className="text-2xs text-ink-muted">{A.dayStartNote.replace("{h}", fmtNum(data.day_start_hour))}</p>
-          ) : null}
-        </div>
-
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <Input
-            id="aud-q"
-            type="search"
-            icon={<IconSearch size={15} />}
-            aria-label={A.search}
-            placeholder={A.searchPlaceholder}
-            value={q}
-            onChange={(e) => reset(setQ)(e.target.value)}
-          />
-          <Select id="aud-actor" aria-label={A.person} value={actor}
-            onChange={(e) => reset(setActor)(e.target.value)}>
-            <option value="">{A.personAll}</option>
-            <option value="system">{A.personSystem}</option>
-            {actors.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
-            {actor && actor !== "system" && !actors.some((a) => a.id === actor) && (
-              <option value={actor}>{A.unknown}</option>
-            )}
-          </Select>
-        </div>
-
-        <div>
-          <Button variant="ghost" onClick={() => setShowExtra((v) => !v)} aria-expanded={showExtra || action !== ""}>
-            {A.extraFilters}
-          </Button>
-          {(showExtra || action !== "" || (withRefresh && effGroup === "login")) && (
-            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-              <Select id="aud-action" aria-label={A.actionType} value={action}
-                onChange={(e) => reset(setAction)(e.target.value)}>
-                <option value="">{A.actionAll}</option>
-                {actionOptions.map((o) => (
-                  <optgroup key={o.group} label={GROUP_LABEL[o.group]}>
-                    {o.items.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
-                  </optgroup>
-                ))}
-              </Select>
-              {effGroup === "login" && (
-                <div className="flex items-center">
-                  <Checkbox
-                    id="aud-refresh"
-                    label={A.showRefresh}
-                    checked={withRefresh}
-                    onChange={(e) => reset(setWithRefresh)(e.target.checked)}
-                  />
-                </div>
-              )}
-            </div>
           )}
         </div>
-      </section>
-
-      {error && (
-        <Alert tone="error" title={A.loadFailed} className="mb-3">
-          <span className="flex flex-wrap items-center gap-2">
-            {error}
-            <Button variant="secondary" onClick={load}>{m.common.retry}</Button>
-          </span>
-        </Alert>
-      )}
-
+      }
+    >
       {error && !data ? null : !data && loading ? (
         <LoadingState />
       ) : !loading && list.length === 0 ? (
-        <section className="surface flex flex-col items-center gap-3 p-8 text-center">
-          <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-success-solid text-on-solid">
-            <IconStatus size={28} />
-          </span>
-          <h2 className="heading-section">{A.empty}</h2>
-          <p className="max-w-md text-sm text-ink-muted">{filtered ? A.emptyFiltered : A.emptyGroup}</p>
-          {filtered && <Button variant="secondary" onClick={clearAll}>{A.clear}</Button>}
-        </section>
+        <AdminEmpty
+          icon={IconStatus}
+          title={A.empty}
+          action={filtered ? <Button variant="secondary" onClick={clearAll}>{A.clear}</Button> : undefined}
+        />
       ) : (
         <div className={loading ? "opacity-60 transition-opacity" : ""} aria-busy={loading}>
           {byDay.map(({ day, items }) => (
@@ -1089,6 +1037,6 @@ export default function AuditPage() {
           setPage(1);
         }}
       />
-    </div>
+    </AdminPage>
   );
 }

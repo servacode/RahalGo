@@ -9,7 +9,12 @@ import {
   Button,
   Select,
   Chips,
-  PageContainer,
+  AdminPage,
+  FilterBar,
+  FilterSelect,
+  PeriodPicker,
+  Stat,
+  type StatTone,
   IconOrder,
   IconWallet,
   IconStore,
@@ -36,7 +41,6 @@ import {
 import { api, apiFile } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useCanOpen } from "@/lib/policy";
-import { PageHero } from "@/components/admin/PageHero";
 import { Panel, type TileTone } from "@/components/admin/DashParts";
 import { OpenLink } from "@/components/admin/OpenLink";
 
@@ -183,22 +187,22 @@ function share(part: number, total: number): string | undefined {
   return m.admin.reports.summary.ofOrders.replace("{p}", fmtNum(Math.round((part / total) * 100)));
 }
 
-const TONE_ICON: Record<TileTone, string> = {
-  default: "bg-field text-ink",
-  muted: "bg-field text-ink-muted",
-  danger: "bg-danger-solid text-on-solid",
-  warning: "bg-warning-solid text-on-solid",
-  accent: "bg-accent text-on-bright",
-  success: "bg-success-solid text-on-solid",
+const STAT_TONE: Record<TileTone, StatTone> = {
+  default: "neutral",
+  muted: "muted",
+  danger: "danger",
+  warning: "attention",
+  accent: "neutral",
+  success: "good",
 };
 
 /**
- * **بطاقةُ رقمٍ بمقارنة** — شكلُ `Tile` نفسُه (أيقونةٌ في دائرةٍ ورقمٌ ولفظ)، وتحتها سطرُ التغيّر
+ * **بطاقةُ رقمٍ بمقارنة** — `Stat` من العُدّة (شكلٌ واحدٌ في اللوحة كلِّها)، وتحتها سطرُ التغيّر
  * ملوّناً: أخضرُ للأحسن وأحمرُ للأسوأ — **والأحسنُ في الملغى والمستردّ والوقت النزول** (`lowerIsBetter`).
- * **وبـ`onClick` تصير زرّاً** يفتح ما وراء الرقم؛ وبلاه رقمٌ هادئ. و`wide` تأخذ سطراً كاملاً على الجوّال.
+ * **وبـ`onClick` تصير زرّاً** يفتح ما وراء الرقم؛ وبلاه رقمٌ هادئ.
  */
 function StatTile({
-  icon: Icon,
+  icon,
   label,
   value,
   sub,
@@ -206,7 +210,6 @@ function StatTile({
   tone = "default",
   lowerIsBetter = false,
   onClick,
-  wide = false,
 }: {
   icon: React.ComponentType<{ size?: number; className?: string }>;
   label: string;
@@ -221,40 +224,29 @@ function StatTile({
   const good = delta && ((delta.dir === "up" && !lowerIsBetter) || (delta.dir === "down" && lowerIsBetter));
   const bad = delta && ((delta.dir === "down" && !lowerIsBetter) || (delta.dir === "up" && lowerIsBetter));
   const TrendIcon = delta?.dir === "up" ? IconTrendUp : delta?.dir === "down" ? IconTrendDown : null;
-  const cls = `flex items-center gap-3 rounded-card border p-3 text-start ${wide ? "col-span-2 sm:col-span-1" : ""} ${
-    onClick ? "transition-colors hover:bg-row-hover" : ""
-  } ${tone === "danger" ? "border-danger" : tone === "warning" ? "border-warning" : "border-line-soft"}`;
-  const body = (
-    <>
-      <span className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${TONE_ICON[tone]}`}>
-        <Icon size={18} />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span
-          className={`figure block leading-none ${tone === "muted" ? "text-ink-muted" : tone === "danger" ? "text-danger" : ""}`}
-        >
-          {value}
-        </span>
-        <span className="mt-1 line-clamp-2 text-xs text-ink-muted">{label}</span>
-        {sub && <span className="line-clamp-2 text-2xs text-ink-muted">{sub}</span>}
-        {delta && (
-          <span
-            className={`mt-0.5 flex items-center gap-1 text-2xs ${
-              good ? "font-bold text-success" : bad ? "font-bold text-danger" : "text-ink-muted"
-            }`}
-          >
-            {TrendIcon && <TrendIcon size={12} />}
-            {delta.text}
-          </span>
-        )}
-      </span>
-    </>
-  );
-  if (!onClick) return <div className={cls}>{body}</div>;
   return (
-    <button type="button" onClick={onClick} className={cls}>
-      {body}
-    </button>
+    <Stat
+      icon={icon}
+      label={label}
+      value={value}
+      tone={STAT_TONE[tone]}
+      onOpen={onClick}
+      meta={
+        sub || delta ? (
+          <>
+            {sub}
+            {delta && (
+              <span
+                className={`flex items-center gap-1 ${good ? "font-bold text-success" : bad ? "font-bold text-danger" : ""}`}
+              >
+                {TrendIcon && <TrendIcon size={12} />}
+                {delta.text}
+              </span>
+            )}
+          </>
+        ) : undefined
+      }
+    />
   );
 }
 
@@ -592,13 +584,10 @@ export default function ReportsPage() {
   const exportOff = !report || !!rangeError || exporting !== null;
 
   return (
-    <PageContainer>
-      {/* **رأسٌ موحّد** — والتنزيلُ لمن يملك `finance.export` وحدَه، كما كان. */}
-      <PageHero
-        icon={IconTrendUp}
-        title={r.title}
-        subtitle={r.subtitle}
-        actions={
+    <AdminPage
+      icon={IconTrendUp}
+      title={r.title}
+      actions={
           canExport ? (
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" onClick={() => download("orders")} disabled={exportOff}>
@@ -610,96 +599,49 @@ export default function ReportsPage() {
             </div>
           ) : undefined
         }
-      />
-
-      {/* **الفترةُ والفلاترُ ببطاقةٍ واحدة** — حبوبٌ تلتفّ على الجوال ولا تُزيح الصفحة. */}
-      <section className="surface space-y-3 p-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm text-ink-muted">{r.periodLabel}:</span>
-          <Chips
-            wrap
-            items={presets.map((x) => ({ id: x.id, label: x.label }))}
-            value={activePreset}
-            onChange={(id) => {
-              const x = presets.find((y) => y.id === id);
-              if (!x) return;
-              setFrom(x.from);
-              setTo(x.to);
+      meta={
+        report?.previous_from && report.previous_to
+          ? r.comparingWith.replace("{from}", dayText(report.previous_from)).replace("{to}", dayText(report.previous_to))
+          : undefined
+      }
+      toolbar={
+        <FilterBar filtered={!!kind || !!city} onClear={() => { setKind(""); setCity(""); }}>
+          <PeriodPicker
+            id="r-period"
+            from={effFrom}
+            to={effTo}
+            today={today}
+            allowAll={false}
+            onChange={(f, t) => {
+              setFrom(f);
+              setTo(t);
             }}
           />
-        </div>
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-end">
-          <div className="sm:w-44">
-            <Input
-              id="r-from"
-              label={r.from}
-              icon={<IconDate />}
-              type="date"
-              value={effFrom}
-              onChange={(e) => {
-                setFrom(e.target.value);
-                if (!to && report) setTo(report.to);
-              }}
-            />
-          </div>
-          <div className="sm:w-44">
-            <Input
-              id="r-to"
-              label={r.to}
-              icon={<IconDate />}
-              type="date"
-              value={effTo}
-              onChange={(e) => {
-                setTo(e.target.value);
-                if (!from && report) setFrom(report.from);
-              }}
-            />
-          </div>
-        </div>
-        {rangeError && (
-          <p role="alert" className="flex items-center gap-1.5 text-xs font-bold text-danger">
-            <IconWarning size={14} />
-            {rangeError}
-          </p>
-        )}
-        <Chips wrap items={kinds} value={kind || "all"} onChange={(id) => setKind(id === "all" ? "" : id)} />
-        {cities.length > 1 &&
-          (cities.length <= 3 ? (
-            <Chips
-              wrap
-              items={[{ id: "all", label: r.cityAll }, ...cities.map((c) => ({ id: c.id, label: c.name }))]}
-              value={city || "all"}
-              onChange={(id) => setCity(id === "all" ? "" : id)}
-            />
-          ) : (
-            <div className="sm:w-56">
-              <Select aria-label={r.cityAll} value={city} onChange={(e) => setCity(e.target.value)}>
-                <option value="">{r.cityAll}</option>
-                {cities.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          ))}
-        <div className="space-y-1 text-2xs text-ink-muted">
-          <p className="flex items-center gap-1.5">
-            <IconHourglass size={12} />
-            {r.byOrderDay}
-          </p>
-          {report?.previous_from && report.previous_to && (
-            <p className="flex items-center gap-1.5">
-              <IconCompare size={12} />
-              {r.comparingWith
-                .replace("{from}", dayText(report.previous_from))
-                .replace("{to}", dayText(report.previous_to))}
-            </p>
+          <FilterSelect id="r-kind" label={r.title} value={kind || "all"} onChange={(id) => setKind(id === "all" ? "" : id)}>
+            {kinds.map((k) => (
+              <option key={k.id} value={k.id}>
+                {k.label}
+              </option>
+            ))}
+          </FilterSelect>
+          {cities.length > 1 && (
+            <FilterSelect id="r-city" label={r.cityAll} value={city} onChange={setCity}>
+              <option value="">{r.cityAll}</option>
+              {cities.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </FilterSelect>
           )}
-          {canExport && city && <p>{r.exportAllCities}</p>}
-        </div>
-      </section>
-
+        </FilterBar>
+      }
+      notices={
+        rangeError ? (
+          <Alert>{rangeError}</Alert>
+        ) : undefined
+      }
+    >
       {error && (
         <Alert>
           <span className="flex flex-wrap items-center gap-2">
@@ -927,6 +869,6 @@ export default function ReportsPage() {
           </Panel>
         </div>
       )}
-    </PageContainer>
+    </AdminPage>
   );
 }

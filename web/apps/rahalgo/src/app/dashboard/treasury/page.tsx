@@ -16,13 +16,9 @@
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  PageContainer,
+  AdminPage,
+  type AdminTab,
   IconWallet,
-  IconOverview,
-  IconReceipt,
-  IconBalance,
-  IconCheck,
-  IconShieldCheck,
 } from "@rahalgo/ui";
 import { T } from "@/components/admin/treasury/shared";
 import { OverviewTab } from "@/components/admin/treasury/Overview";
@@ -32,7 +28,6 @@ import { ApprovalsTab } from "@/components/admin/treasury/Approvals";
 import { HealthTab } from "@/components/admin/treasury/Health";
 import { TopupTab } from "@/components/admin/treasury/Topup";
 import { useCanCall } from "@/lib/policy";
-import { PageHero, type HeroTab } from "@/components/admin/PageHero";
 
 type Tab = "overview" | "statement" | "cashbox" | "approvals" | "topup" | "health";
 const TABS: Tab[] = ["overview", "statement", "cashbox", "approvals", "topup", "health"];
@@ -58,38 +53,30 @@ function TreasuryHub() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fromUrl]);
 
-  // **سطرٌ واحد** (طلبُ المالك ٢٠٢٦-١٠-٢٣): تبويباتُ الخزينة وروابطُ صفحات المال
-  // في صفٍّ واحد — والرابطُ مفتاحُه مسارُه، فيُفتح بابُه بدل أن يُبدَّل التبويب.
+  // **تبويباتُ الخزينة بسطرٍ واحد** — وصفحاتُ المال الأخرى في القائمة الجانبيّة.
   function go(k: Tab | string) {
-    if (k.startsWith("/")) {
-      router.push(k);
-      return;
-    }
     if (!TABS.includes(k as Tab)) return;
     setTab(k as Tab);
     router.replace(`/dashboard/treasury?tab=${k}`);
   }
 
-  const tabs: HeroTab<string>[] = [
-    { key: "overview", label: T.tabs.overview, icon: IconOverview },
-    { key: "statement", label: T.tabs.statement, icon: IconReceipt },
-    { key: "cashbox", label: T.tabs.cashbox, icon: IconBalance },
-    { key: "approvals", label: T.tabs.approvals, icon: IconCheck },
-    ...(canTopup ? [{ key: "topup", label: T.topup.tab, icon: IconWallet }] : []),
-    { key: "health", label: T.tabs.health, icon: IconShieldCheck },
+  const tabs: AdminTab<string>[] = [
+    { key: "overview", label: T.tabs.overview },
+    { key: "statement", label: T.tabs.statement },
+    { key: "cashbox", label: T.tabs.cashbox },
+    { key: "approvals", label: T.tabs.approvals },
+    ...(canTopup ? [{ key: "topup", label: T.topup.tab }] : []),
+    { key: "health", label: T.tabs.health },
   ];
 
   return (
-    <PageContainer>
-      {/* **رأسٌ موحّد** (قرارُ المالك ٢٠٢٦-١٠-٢٦: «الخزينة بالتصميم الجديد») — تبويباتُ الخزينة بسطرٍ واحد،
-          **وصفحاتُ المال التي لها بابُها روابطُ صغيرةٌ فوقها** (كانت مخلوطةً بالتبويبات، ٢٠٢٦-١٠-٢٣). */}
-      <PageHero<string> icon={IconWallet} title={T.title} subtitle={T.subtitle} tabs={tabs} value={tab} onChange={go} />
+    <AdminPage<string> icon={IconWallet} title={T.title} tabs={tabs} tab={tab} onTab={go}>
       {tab === "overview" && <OverviewTab onTab={go} />}
       {tab === "statement" && <StatementTab />}
       {tab === "cashbox" && <CashboxTab />}
       {tab === "approvals" && <ApprovalsTab />}
       {tab === "topup" && canTopup && <TopupTab />}
       {tab === "health" && <HealthTab />}
-    </PageContainer>
+    </AdminPage>
   );
 }

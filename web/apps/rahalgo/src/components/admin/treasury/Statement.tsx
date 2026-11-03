@@ -29,6 +29,7 @@ import {
   IconArrowIn,
   IconArrowOut,
   useLiveData,
+  AdminLink,
 } from "@rahalgo/ui";
 import { api, apiFile } from "@/lib/api";
 import { useCanCall } from "@/lib/policy";
@@ -355,6 +356,11 @@ export function StatementTab() {
                     {isOpen && l.order_id && (
                       <div className="border-t border-line-soft bg-field">
                         <OrderBreakdown orderID={l.order_id} range={range.toString()} />
+                        <div className="px-3 pb-3">
+                          <AdminLink href={`/dashboard/history?order=${l.order_id}`} className="text-sm font-medium hover:underline">
+                            {m.admin.kit.finance.openOrder}
+                          </AdminLink>
+                        </div>
                       </div>
                     )}
                   </li>

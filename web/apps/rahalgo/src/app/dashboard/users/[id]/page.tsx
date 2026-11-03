@@ -47,6 +47,7 @@ import {
   ActionMenu,
   IconChevronDown,
   type ActionMenuItem,
+  ButtonLink,
 } from "@rahalgo/ui";
 import { api, type AuthUser } from "@/lib/api";
 import { WarningsSection } from "@/components/admin/accounts/WarningsSection";
@@ -733,6 +734,11 @@ function UserProfile() {
           {!gone && ((canWalletRead || canWalletPropose) || actions.length > 0 || p.phone) && (
             <div className="flex flex-wrap items-center gap-2 whitespace-nowrap">
               <ContactButtons phone={p.phone} name={p.full_name} />
+              {can("audit.read") && (
+                <ButtonLink variant="secondary" href={`/dashboard/audit?entity=user&entity_id=${p.id}`}>
+                  {m.admin.kit.finance.viewHistory}
+                </ButtonLink>
+              )}
               {/* **استلامُ النقد بزرٍّ ظاهرٍ** — كان في تبويب الصندوق وحدَه. والنافذةُ نفسُها (طريقٌ واحد). */}
               {has("driver") && canSettle && p.driver_cash > 0 && (
                 <Button variant="secondary" onClick={() => setCashOpen(true)} className="flex items-center gap-1.5">

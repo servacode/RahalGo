@@ -1,20 +1,12 @@
-"use client";
-
 /**
  * **الخسائرُ والنزاعاتُ وتعويضُ البضاعة صارت في «المشاكل والتعويضات»** (قرارُ المالك
  * ٢٠٢٦-١٠-٢٥). **والرابطُ القديمُ يفتح تبويبَ الخسائر هناك** — روابطُ الموافقات والأحداث
- * والإشعارات تبقى تعمل.
+ * والإشعارات تبقى تعمل. **والتحويلُ من الخادم** فلا ومضةَ تحميلٍ في المتصفّح.
  */
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { LoadingState } from "@rahalgo/ui";
+import { redirect } from "next/navigation";
 
-export default function LossesRedirect() {
-  const router = useRouter();
-  useEffect(() => {
-    const t = new URLSearchParams(window.location.search).get("tab");
-    router.replace(`/dashboard/tickets?tab=${t === "disputes" || t === "goods" ? t : "losses"}`);
-  }, [router]);
-  return <LoadingState variant="text" />;
+export default async function LossesRedirect({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+  const { tab } = await searchParams;
+  redirect(`/dashboard/tickets?tab=${tab === "disputes" || tab === "goods" ? tab : "losses"}`);
 }

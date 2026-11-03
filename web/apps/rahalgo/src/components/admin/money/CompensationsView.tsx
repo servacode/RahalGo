@@ -41,7 +41,9 @@ import {
   Input,
   Textarea,
   Modal,
-  PageContainer,
+  AdminPage,
+  type AdminTab,
+  SummaryStrip,
   LoadingState,
   Pagination,
   useLiveData,
@@ -60,8 +62,6 @@ import {
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useCanCall, useCanOpen } from "@/lib/policy";
-import { PageHero } from "@/components/admin/PageHero";
-import { Tile } from "@/components/admin/DashParts";
 import { OpenLink } from "@/components/admin/OpenLink";
 import { PeriodPicker } from "./PeriodPicker";
 
@@ -231,19 +231,12 @@ export function CompensationsView({ embedded = false }: { embedded?: boolean }) 
   // تصميمٌ احترافيّ (المالك ٢٠٢٦-١٠-٢٦: «ألغِ عرض الجداول») — رأسٌ موحّدٌ بتبويبات الحالة، أربعةُ أرقامٍ
   // تُضغط، الفلاترُ بكرتٍ واحد، وكرتُ موافقةٍ لكلّ تعويضٍ ولكلّ طلبِ حركة محفظة.
   return (
-    <Wrap embedded={embedded}>
-      {embedded ? (
-        <p className="text-sm text-ink-muted">{C.hintAll}</p>
-      ) : (
-        <PageHero<Tab>
-          icon={IconWallet}
-          title={C.titleAll}
-          subtitle={C.hintAll}
-          tabs={tabs}
-          value={filters.status}
-          onChange={(k) => set("status", k)}
-        />
-      )}
+    <Wrap
+      embedded={embedded}
+      tabs={tabs.map((t) => ({ key: t.key, label: t.label, count: t.count, attention: t.warn && (t.count ?? 0) > 0 }))}
+      tab={filters.status}
+      onTab={(k) => set("status", k)}
+    >
 
       {error && (
         <Alert>
@@ -255,41 +248,51 @@ export function CompensationsView({ embedded = false }: { embedded?: boolean }) 
       )}
 
       {sum && (
-        <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-          <Tile
-            icon={IconHourglass}
-            label={C.cardPending}
-            value={fmtNum(sum.pending_count)}
-            sub={C.cardPendingSub.replace("{amount}", fmtMoney(sum.pending_sum))}
-            tone={sum.overdue_count > 0 ? "danger" : sum.pending_count > 0 ? "accent" : "muted"}
-            onClick={() => set("status", "pending")}
-          />
-          <Tile
-            icon={IconCheck}
-            label={C.cardApproved}
-            value={fmtMoney(sum.approved_month_sum)}
-            sub={C.cardApprovedSub.replace("{n}", fmtNum(sum.approved_month_count))}
-            tone="success"
-            onClick={() => set("status", "approved")}
-          />
-          <Tile
-            icon={IconBlock}
-            label={C.cardRejected}
-            value={fmtNum(sum.rejected_month_count)}
-            tone="muted"
-            onClick={() => set("status", "rejected")}
-          />
-          <Tile
-            icon={IconWarning}
-            label={C.cardOverdue.replace("{h}", fmtNum(sum.overdue_hours))}
-            value={fmtNum(sum.overdue_count)}
-            tone={sum.overdue_count > 0 ? "danger" : "muted"}
-            onClick={() => {
-              setFilters((f) => ({ ...f, status: "pending", overdue: "1" }));
-              setPage(1);
-            }}
-          />
-        </div>
+        <SummaryStrip
+          items={[
+            {
+              key: "pending",
+              icon: IconHourglass,
+              label: C.cardPending,
+              value: fmtNum(sum.pending_count),
+              meta: C.cardPendingSub.replace("{amount}", fmtMoney(sum.pending_sum)),
+              tone: sum.overdue_count > 0 ? "danger" : sum.pending_count > 0 ? "attention" : "muted",
+              active: filters.status === "pending" && filters.overdue !== "1",
+              onOpen: () => set("status", "pending"),
+            },
+            {
+              key: "approved",
+              icon: IconCheck,
+              label: C.cardApproved,
+              value: fmtMoney(sum.approved_month_sum),
+              meta: C.cardApprovedSub.replace("{n}", fmtNum(sum.approved_month_count)),
+              tone: "good",
+              active: filters.status === "approved",
+              onOpen: () => set("status", "approved"),
+            },
+            {
+              key: "rejected",
+              icon: IconBlock,
+              label: C.cardRejected,
+              value: fmtNum(sum.rejected_month_count),
+              tone: "muted",
+              active: filters.status === "rejected",
+              onOpen: () => set("status", "rejected"),
+            },
+            {
+              key: "overdue",
+              icon: IconWarning,
+              label: C.cardOverdue.replace("{h}", fmtNum(sum.overdue_hours)),
+              value: fmtNum(sum.overdue_count),
+              tone: sum.overdue_count > 0 ? "danger" : "muted",
+              active: filters.overdue === "1",
+              onOpen: () => {
+                setFilters((f) => ({ ...f, status: "pending", overdue: "1" }));
+                setPage(1);
+              },
+            },
+          ]}
+        />
       )}
 
       {filters.overdue === "1" && (
@@ -412,7 +415,6 @@ export function CompensationsView({ embedded = false }: { embedded?: boolean }) 
           </span>
           <div className="min-w-0">
             <h2 className="heading-section">{m.admin.acc.requestsTitle}</h2>
-            <p className="text-xs text-ink-muted">{m.admin.acc.requestsHint}</p>
           </div>
         </div>
         <WalletRequestsList />
@@ -433,10 +435,28 @@ export function CompensationsView({ embedded = false }: { embedded?: boolean }) 
   );
 }
 
-function Wrap({ embedded, children }: { embedded: boolean; children: React.ReactNode }) {
+function Wrap({
+  embedded,
+  tabs,
+  tab,
+  onTab,
+  children,
+}: {
+  embedded: boolean;
+  tabs: readonly AdminTab<Tab>[];
+  tab: Tab;
+  onTab: (k: Tab) => void;
+  children: React.ReactNode;
+}) {
   // **وفراغٌ بين الأجزاء في التبويب أيضاً** (فحصُ ٢٠٢٦-١٠-٢٧) — كان `div` عارياً فالتصقت المربّعاتُ
   // والفلاترُ والبطاقاتُ ببعضها؛ والصفحةُ المستقلّةُ تأخذه من `PageContainer`.
-  return embedded ? <div className="space-y-5">{children}</div> : <PageContainer width="full">{children}</PageContainer>;
+  return embedded ? (
+    <div className="space-y-5">{children}</div>
+  ) : (
+    <AdminPage<Tab> icon={IconWallet} title={C.titleAll} tabs={tabs} tab={tab} onTab={onTab}>
+      {children}
+    </AdminPage>
+  );
 }
 
 /** **لونُ النوع في رأس البطاقة** — يُعرف النوعُ بنظرة. */

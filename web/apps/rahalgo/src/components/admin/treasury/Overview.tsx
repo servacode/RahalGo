@@ -158,10 +158,9 @@ export function OverviewTab({ onTab }: { onTab: (tab: "approvals" | "cashbox") =
           <span className={`figure text-3xl ${d.treasury_balance < 0 ? "text-danger" : "text-success"}`}>
             {fmtMoney(d.treasury_balance)}
           </span>
-          <span className="text-xs text-ink-muted">{O.balanceHint}</span>
         </section>
         {(d.profit_cards ?? []).length > 0 && (
-          <Panel title={O.profitTitle} note={O.profitHint} className="xl:col-span-2">
+          <Panel title={O.profitTitle} className="xl:col-span-2">
             <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
               {(d.profit_cards ?? []).map((c) => (
                 <Tile
@@ -235,10 +234,10 @@ export function OverviewTab({ onTab }: { onTab: (tab: "approvals" | "cashbox") =
             <Tile
               icon={IconCheck}
               label={O.pendingApprovals}
-              value={String(d.pending_count)}
+              value={fmtNum(d.pending_count)}
               sub={
                 (d.pending_undecided ?? 0) > 0
-                  ? `${fmtMoney(d.pending_total)} · ${O.undecided.replace("{n}", String(d.pending_undecided))}`
+                  ? `${fmtMoney(d.pending_total)} · ${O.undecided.replace("{n}", fmtNum(d.pending_undecided ?? 0))}`
                   : fmtMoney(d.pending_total)
               }
               tone={d.pending_count > 0 ? "warning" : "muted"}

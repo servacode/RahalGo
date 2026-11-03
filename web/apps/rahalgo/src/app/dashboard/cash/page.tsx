@@ -33,7 +33,13 @@ import {
   Input,
   LoadingState,
   Modal,
-  PageContainer,
+  AdminPage,
+  AdminEmpty,
+  ContactButtons,
+  SummaryStrip,
+  AdminLink,
+  AdminEntityCard,
+  AdminEntityGrid,
   ReloadState,
   useLiveData,
   IconDate,
@@ -49,13 +55,13 @@ import { DriverCashReceive } from "@/components/admin/DriverCashReceive";
 import { MerchantSettlement } from "@/components/admin/MerchantSettlement";
 import { OpenLink } from "@/components/admin/OpenLink";
 import { useCanOpen } from "@/lib/policy";
-import { PageHero } from "@/components/admin/PageHero";
-import { Tile } from "@/components/admin/DashParts";
+import { EndShiftButton } from "@/components/admin/ProfileRoleTabs";
 import { WaiveCommissionDialog } from "@/components/admin/orders/WaiveCommissionDialog";
 import { orderKindLabel, payerGroup, payerLabel, payerOf, type PayerGroup } from "@/components/admin/orders/payer";
 
 const m = getMessages(defaultLocale);
 const C = m.admin.cashOutstanding;
+const F = m.admin.kit.finance;
 
 interface Holder {
   driver_id: string;
@@ -168,31 +174,24 @@ function writeURL(tab: Tab, filter: Filter) {
   window.history.replaceState(null, "", s ? `?${s}` : window.location.pathname);
 }
 
-/** **المربّعُ الذي ترشيحُه شغّال يُرى شغّالاً** — إطارٌ بالنبرة حوله. */
-function Active({ on, children }: { on: boolean; children: ReactNode }) {
-  return <div className={`rounded-card ${on ? "ring-2 ring-accent" : ""}`}>{children}</div>;
-}
-
 export default function CashPage() {
   const [tab, setTab] = useState<Tab>(() => readURL().tab);
   const [filter, setFilter] = useState<Filter>(() => readURL().filter);
   useEffect(() => writeURL(tab, filter), [tab, filter]);
 
   return (
-    <PageContainer>
-      <PageHero<Tab>
-        icon={IconWallet}
-        title={C.tabTitle}
-        subtitle={C.tabHint}
-        tabs={[
-          { key: "drivers", label: C.tabDrivers, icon: IconUser },
-          { key: "stores", label: C.tabStores, icon: IconStore },
-        ]}
-        value={tab}
-        onChange={setTab}
-      />
+    <AdminPage<Tab>
+      icon={IconWallet}
+      title={C.tabTitle}
+      tabs={[
+        { key: "drivers", label: C.tabDrivers },
+        { key: "stores", label: C.tabStores },
+      ]}
+      tab={tab}
+      onTab={setTab}
+    >
       {tab === "drivers" ? <DriversCash filter={filter} setFilter={setFilter} /> : <StoresCash />}
-    </PageContainer>
+    </AdminPage>
   );
 }
 
@@ -385,42 +384,56 @@ function DriversCash({ filter, setFilter }: { filter: Filter; setFilter: (f: Fil
 
   return (
     <>
-      <div className="mb-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
-        <Active on={filter === "all"}>
-          <Tile icon={IconWallet} label={C.total} value={fmtMoney(data.total)} tone={data.total > 0 ? "warning" : "muted"} onClick={() => setFilter("all")} />
-        </Active>
-        <Active on={filter === "holding"}>
-          <Tile
-            icon={IconUser}
-            label={C.holders}
-            value={fmtNum(holders.length)}
-            sub={roster.length ? C.holdersSub.replace("{n}", fmtNum(roster.length)) : undefined}
-            tone={holders.length ? "accent" : "muted"}
-            onClick={() => toggle("holding")}
-          />
-        </Active>
-        <Active on={filter === "over"}>
-          <Tile icon={IconWarning} label={C.overCount} value={fmtNum(data.over_count)} tone={data.over_count > 0 ? "danger" : "muted"} onClick={() => toggle("over")} />
-        </Active>
-        <Active on={filter === "overdue"}>
-          <Tile
-            icon={IconDate}
-            label={C.oldestAge}
-            value={oldestAt ? sinceLabel(oldestAt) : "—"}
-            sub={data.overdue_count > 0 ? `${overdueLabel(data.overdue_days)}: ${fmtNum(data.overdue_count)}` : undefined}
-            tone={data.overdue_count > 0 ? "danger" : oldestDays >= 1 ? "warning" : oldestAt ? "default" : "muted"}
-            onClick={() => toggle("overdue")}
-          />
-        </Active>
-      </div>
+      <SummaryStrip
+        items={[
+          {
+            key: "total",
+            icon: IconWallet,
+            label: C.total,
+            value: fmtMoney(data.total),
+            tone: data.total > 0 ? "neutral" : "muted",
+            active: filter === "all",
+            onOpen: () => setFilter("all"),
+          },
+          {
+            key: "holders",
+            icon: IconUser,
+            label: C.holders,
+            value: fmtNum(holders.length),
+            meta: roster.length ? C.holdersSub.replace("{n}", fmtNum(roster.length)) : undefined,
+            tone: holders.length ? "neutral" : "muted",
+            active: filter === "holding",
+            onOpen: () => toggle("holding"),
+          },
+          {
+            key: "over",
+            icon: IconWarning,
+            label: C.overCount,
+            value: fmtNum(data.over_count),
+            tone: data.over_count > 0 ? "danger" : "muted",
+            active: filter === "over",
+            onOpen: () => toggle("over"),
+          },
+          {
+            key: "overdue",
+            icon: IconDate,
+            label: C.oldestAge,
+            value: oldestAt ? sinceLabel(oldestAt) : "—",
+            meta: data.overdue_count > 0 ? `${overdueLabel(data.overdue_days)}: ${fmtNum(data.overdue_count)}` : undefined,
+            tone: data.overdue_count > 0 ? "danger" : oldestDays >= 1 ? "attention" : "muted",
+            active: filter === "overdue",
+            onOpen: () => toggle("overdue"),
+          },
+        ]}
+      />
 
       {done && (
-        <Alert tone="success" className="mb-3" onDismiss={() => setDone("")}>
+        <Alert tone="success" className="my-3" onDismiss={() => setDone("")}>
           {done}
         </Alert>
       )}
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(16rem,22rem)_1fr]">
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[minmax(16rem,22rem)_1fr]">
         {/* ── قائمةُ السائقين ── */}
         <section className="surface flex max-h-[75vh] flex-col overflow-hidden">
           <div className="space-y-2 border-b border-line-soft p-3">
@@ -436,18 +449,13 @@ function DriversCash({ filter, setFilter }: { filter: Filter; setFilter: (f: Fil
               value={filter}
               onChange={setFilter}
             />
-            <p className="flex items-center gap-1.5 text-2xs text-ink-muted">
+            <p className="flex items-center gap-1.5 text-xs text-ink-muted">
               <span className="h-2 w-2 rounded-full bg-success" aria-hidden />
               {C.onShiftLegend}
             </p>
           </div>
           {list.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 p-6 text-center">
-              <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-field text-ink-muted">
-                <IconStatus size={22} />
-              </span>
-              <span className="font-bold">{C.noMatch}</span>
-            </div>
+            <AdminEmpty icon={IconStatus} title={C.noMatch} />
           ) : (
             <ul className="flex-1 overflow-y-auto">
               {list.map((h) => {
@@ -471,7 +479,7 @@ function DriversCash({ filter, setFilter }: { filter: Filter; setFilter: (f: Fil
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className={`block truncate ${on ? "font-bold" : "font-medium"}`}>{h.name || h.phone}</span>
-                        <span className="block text-2xs text-ink-muted" dir="ltr">{h.phone}</span>
+                        <span className="block text-xs text-ink-muted" dir="ltr">{h.phone}</span>
                         {hot && (
                           <span className="mt-0.5 block">
                             <Badge variant="danger">{h.over_limit ? C.overCap : C.atLimit}</Badge>
@@ -480,7 +488,7 @@ function DriversCash({ filter, setFilter }: { filter: Filter; setFilter: (f: Fil
                       </span>
                       <span
                         className={`shrink-0 text-sm font-bold tabular-nums ${
-                          hot ? "text-danger" : h.held > 0 ? "text-warning" : "text-ink-muted"
+                          hot || h.overdue ? "text-danger" : "text-ink"
                         }`}
                       >
                         {fmtMoney(h.held)}
@@ -504,18 +512,14 @@ function DriversCash({ filter, setFilter }: { filter: Filter; setFilter: (f: Fil
               canSettle={canSettle}
               onReceive={(held) => setTarget({ ...sel, held })}
               dayHour={data.day_start_hour ?? 9}
+              onShiftEnded={reload}
               onWaived={(msg) => {
                 setDone(msg);
                 reload();
               }}
             />
           ) : (
-            <section className="surface flex flex-col items-center gap-3 p-8 text-center">
-              <span className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-field text-ink-muted">
-                <IconUser size={26} />
-              </span>
-              <span className="font-bold">{C.pickDriver}</span>
-            </section>
+            <AdminEmpty icon={IconUser} title={C.pickDriver} />
           )}
         </div>
       </div>
@@ -545,6 +549,7 @@ function DriverPanel({
   canSettle,
   onReceive,
   onWaived,
+  onShiftEnded,
   dayHour,
 }: {
   h: Holder;
@@ -553,6 +558,7 @@ function DriverPanel({
   canSettle: boolean;
   onReceive: (held: number) => void;
   onWaived: (msg: string) => void;
+  onShiftEnded: () => void;
   dayHour: number;
 }) {
   // **والكشفُ يُقلَّب** — خمسون حركةً ثمّ «عرض أقدم» حتّى مئتين (حدُّ الخادم).
@@ -606,7 +612,16 @@ function DriverPanel({
           <OpenLink allowed={canUser} href={`/dashboard/users/${h.driver_id}`} className="hover:underline">
             <h2 className="heading-section truncate">{h.name || h.phone}</h2>
           </OpenLink>
-          <p className="text-sm text-ink-muted" dir="ltr">{h.phone}</p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            <ContactButtons phone={h.phone} name={h.name} showNumber />
+            <AdminLink
+              href={`/dashboard/history?driver=${h.driver_id}`}
+              className="inline-flex h-9 items-center rounded-control border border-line-soft px-2.5 text-sm hover:bg-row-hover"
+            >
+              {F.ordersOf}
+            </AdminLink>
+            {h.on_shift && <EndShiftButton userID={h.driver_id} onDone={onShiftEnded} />}
+          </div>
         </div>
         <span className="flex flex-wrap gap-1">
           <Badge variant={h.on_shift ? "success" : "neutral"}>{h.on_shift ? C.onShift : C.offShift}</Badge>
@@ -616,7 +631,7 @@ function DriverPanel({
       </div>
 
       {/* ── ما يسلّمه للمكتب — رقمٌ واحدٌ كبيرٌ مفصّل ── */}
-      <div className={`space-y-3 rounded-card p-4 sm:p-5 ${held > 0 ? "bg-warning-tint" : "bg-field"}`}>
+      <div className={`space-y-3 rounded-card p-4 sm:p-5 ${held > 0 && h.overdue ? "bg-warning-tint" : "bg-field"}`}>
         <div className="flex items-center gap-4">
           <span
             className={`inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full ${
@@ -1142,115 +1157,103 @@ function StoresCash() {
   );
   const oldestDays = daysHeld(oldestAt);
 
-  // **تصميمٌ احترافيّ** (المالك ٢٠٢٦-١٠-٢٦) — أرقامٌ بنظرة، وكرتٌ لكلّ متجرٍ بمبلغه وزرِّ دفعه.
+  // **أرقامٌ بنظرة، وكرتٌ لكلّ متجرٍ** بمبلغه وزرِّ دفعه — والأرقامُ تفرز، والمتجرُ رابطٌ لملفّه وطلباتُه لسجلّه.
   return (
     <>
-      <div className="mb-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
-        <Active on={rows.length > 1 && sort === "amount"}>
-          <Tile
-            icon={IconWallet}
-            label={C.storesTotal}
-            value={fmtMoney(data.total)}
-            tone={data.total > 0 ? "warning" : "muted"}
-            onClick={rows.length > 1 ? () => setSort("amount") : undefined}
-          />
-        </Active>
-        <Tile icon={IconStore} label={C.storesCountLabel} value={fmtNum(rows.length)} tone={rows.length ? "default" : "muted"} />
-        <Tile icon={IconStatus} label={C.storesOrdersLabel} value={fmtNum(orders)} tone={orders ? "default" : "muted"} />
-        <Active on={rows.length > 1 && sort === "oldest"}>
-          <Tile
-            icon={IconDate}
-            label={C.storesOldest}
-            value={oldestAt ? sinceLabel(oldestAt) : "—"}
-            tone={oldestDays >= 3 ? "danger" : oldestDays >= 1 ? "warning" : oldestAt ? "default" : "muted"}
-            onClick={rows.length > 1 ? () => setSort("oldest") : undefined}
-          />
-        </Active>
-      </div>
+      <SummaryStrip
+        items={[
+          {
+            key: "total",
+            icon: IconWallet,
+            label: C.storesTotal,
+            value: fmtMoney(data.total),
+            tone: data.total > 0 ? "neutral" : "muted",
+            active: rows.length > 1 && sort === "amount",
+            onOpen: rows.length > 1 ? () => setSort("amount") : undefined,
+          },
+          {
+            key: "count",
+            icon: IconStore,
+            label: C.storesCountLabel,
+            value: fmtNum(rows.length),
+            tone: rows.length ? "neutral" : "muted",
+          },
+          {
+            key: "orders",
+            icon: IconStatus,
+            label: C.storesOrdersLabel,
+            value: fmtNum(orders),
+            tone: orders ? "neutral" : "muted",
+          },
+          {
+            key: "oldest",
+            icon: IconDate,
+            label: C.storesOldest,
+            value: oldestAt ? sinceLabel(oldestAt) : "—",
+            tone: oldestDays >= 3 ? "danger" : oldestDays >= 1 ? "attention" : oldestAt ? "neutral" : "muted",
+            active: rows.length > 1 && sort === "oldest",
+            onOpen: rows.length > 1 ? () => setSort("oldest") : undefined,
+          },
+        ]}
+      />
 
-      <section className="surface mb-4 space-y-3 p-4">
-        <div className="flex items-start gap-3">
-          <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-field text-ink-muted">
-            <IconStore size={18} />
-          </span>
-          <span className="min-w-0">
-            <span className="block font-bold">{C.storesWhatTitle}</span>
-            <span className="block text-sm text-ink-muted">{C.storesHint}</span>
-          </span>
+      {rows.length > 1 && (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="text-sm text-ink-muted">{C.sortLabel}:</span>
+          <Chips
+            wrap
+            items={[
+              { id: "oldest" as StoreSort, label: C.sortOldest },
+              { id: "amount" as StoreSort, label: C.sortAmount },
+            ]}
+            value={sort}
+            onChange={setSort}
+          />
         </div>
-        {rows.length > 1 && (
-          <div className="flex flex-wrap items-center gap-2 border-t border-line-soft pt-3">
-            <span className="text-sm text-ink-muted">{C.sortLabel}:</span>
-            <Chips
-              wrap
-              items={[
-                { id: "oldest" as StoreSort, label: C.sortOldest },
-                { id: "amount" as StoreSort, label: C.sortAmount },
-              ]}
-              value={sort}
-              onChange={setSort}
-            />
-          </div>
-        )}
-      </section>
-
-      {rows.length === 0 ? (
-        <section className="surface flex flex-col items-center gap-3 p-8 text-center">
-          <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-success-solid text-on-solid">
-            <IconStore size={28} />
-          </span>
-          <h2 className="heading-section text-success">{C.storesEmpty}</h2>
-          <p className="max-w-md text-sm text-ink-muted">{C.storesEmptyHint}</p>
-        </section>
-      ) : (
-        <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {rows.map((d) => {
-            const days = daysHeld(d.oldest_at);
-            return (
-              <li key={d.merchant_id} className="surface flex flex-col gap-3 p-4">
-                <div className="flex items-start gap-3">
-                  <span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-warning-tint text-warning">
-                    <IconStore size={20} />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <OpenLink allowed={canMerchant} href={`/dashboard/merchants/${d.merchant_id}`} className="block truncate font-bold hover:underline">
-                      {d.name}
-                    </OpenLink>
-                    <span className="mt-1 flex flex-wrap items-center gap-1">
-                      <Badge variant={days >= 3 ? "danger" : days >= 1 ? "warning" : "neutral"}>{sinceLabel(d.oldest_at)}</Badge>
-                    </span>
-                    {/* **الطريقةُ اليومَ بخطٍّ صغير** — «محفظة» وحدَها على كرتِ مستحقٍّ نقديٍّ كانت تُربك. */}
-                    <span className="mt-1 block text-2xs text-ink-muted">
-                      {d.settlement_method === "wallet" ? C.methodNowWallet : C.methodNowCash}
-                    </span>
-                  </span>
-                </div>
-                <div className="flex items-end justify-between gap-2 rounded-control bg-field px-3 py-2.5">
-                  <span>
-                    <span className="block text-2xs text-ink-muted">{C.storeOutstanding}</span>
-                    <span className="figure block text-warning">{fmtMoney(d.outstanding)}</span>
-                  </span>
-                  <span className="text-end text-sm">
-                    <span className="block text-2xs text-ink-muted">{C.storeCount}</span>
-                    <b className="tabular-nums">{fmtNum(d.count)}</b>
-                  </span>
-                </div>
-                {canPay ? (
-                  <Button className="w-full" onClick={() => setPaying(d)}>
-                    {C.storePayAmount.replace("{n}", fmtMoney(d.outstanding))}
-                  </Button>
-                ) : (
-                  canPayView && (
-                    <Button variant="secondary" className="w-full" onClick={() => setPaying(d)}>
-                      {C.storeView}
-                    </Button>
-                  )
-                )}
-              </li>
-            );
-          })}
-        </ul>
       )}
+
+      <div className="mt-4">
+        {rows.length === 0 ? (
+          <AdminEmpty icon={IconStore} title={C.storesEmpty} />
+        ) : (
+          <AdminEntityGrid>
+            {rows.map((d) => {
+              const days = daysHeld(d.oldest_at);
+              return (
+                <AdminEntityCard
+                  key={d.merchant_id}
+                  tone={days >= 3 ? "danger" : days >= 1 ? "attention" : "neutral"}
+                  leading={<IconStore size={20} className="text-ink-muted" />}
+                  eyebrow={d.settlement_method === "wallet" ? C.methodNowWallet : C.methodNowCash}
+                  title={d.name}
+                  href={canMerchant ? `/dashboard/merchants/${d.merchant_id}` : undefined}
+                  status={<Badge variant={days >= 3 ? "danger" : days >= 1 ? "warning" : "neutral"}>{sinceLabel(d.oldest_at)}</Badge>}
+                  facts={[
+                    { key: "due", label: C.storeOutstanding, value: fmtMoney(d.outstanding) },
+                    {
+                      key: "count",
+                      label: C.storeCount,
+                      value: fmtNum(d.count),
+                      href: `/dashboard/history?merchant=${d.merchant_id}`,
+                    },
+                  ]}
+                  primary={
+                    canPay ? (
+                      <Button size="sm" onClick={() => setPaying(d)}>
+                        {C.storePayAmount.replace("{n}", fmtMoney(d.outstanding))}
+                      </Button>
+                    ) : canPayView ? (
+                      <Button size="sm" variant="secondary" onClick={() => setPaying(d)}>
+                        {C.storeView}
+                      </Button>
+                    ) : undefined
+                  }
+                />
+              );
+            })}
+          </AdminEntityGrid>
+        )}
+      </div>
       {paying && (
         <Modal open size="lg" onClose={() => setPaying(null)} title={C.storePayTitle.replace("{name}", paying.name)}>
           <MerchantSettlement merchantId={paying.merchant_id} method={paying.settlement_method} onChanged={reload} variant="pay" />
