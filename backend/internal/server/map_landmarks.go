@@ -156,13 +156,13 @@ func (s *Server) handlePublicMapLandmarks(w http.ResponseWriter, r *http.Request
 			vals = append(vals, v)
 		}
 		if len(vals) != 4 || vals[0] >= vals[2] || vals[1] >= vals[3] {
-			s.respondErr(w, httpx.NewError(http.StatusBadRequest, "bad_request", "errors.bad_request"))
+			s.respondErr(w, httpx.NewError(http.StatusBadRequest, "bad_bbox", "errors.bad_request"))
 			return
 		}
 		minLng, minLat = max(vals[0], -179), max(vals[1], -85)
 		maxLng, maxLat = min(vals[2], 179), min(vals[3], 85)
 		if minLng >= maxLng || minLat >= maxLat {
-			s.respondErr(w, httpx.NewError(http.StatusBadRequest, "bad_request", "errors.bad_request"))
+			s.respondErr(w, httpx.NewError(http.StatusBadRequest, "bad_bbox", "errors.bad_request"))
 			return
 		}
 	}

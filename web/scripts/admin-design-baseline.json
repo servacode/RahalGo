@@ -65,8 +65,7 @@
   "apps/rahalgo/src/app/dashboard/opsmap/page.tsx": {
     "tinyText": 2,
     "rawButton": 4,
-    "handEmpty": 1,
-    "subtitle": 1
+    "handEmpty": 1
   },
   "apps/rahalgo/src/app/dashboard/page.tsx": {
     "tinyText": 3,

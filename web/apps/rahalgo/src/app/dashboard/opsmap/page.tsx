@@ -2925,9 +2925,9 @@ function StatPill({
   );
   const cls = "inline-flex min-h-10 items-center gap-1.5 rounded-control border border-line-soft bg-surface px-2.5 text-sm";
   return onClick ? (
-    <button type="button" className={`${cls} hover:bg-row-hover`} onClick={onClick}>
+    <Button variant="secondary" size="sm" className="inline-flex min-h-10 items-center gap-1.5" onClick={onClick}>
       {body}
-    </button>
+    </Button>
   ) : (
     <span className={cls}>{body}</span>
   );

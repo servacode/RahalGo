@@ -137,7 +137,7 @@ const ALL_NAV: NavItem[] = [
     caps: ["drivers.monitor"] },
   // **الخريطة من السائقين** (قرارُ المالك ٢٠٢٦-١١-٠٣) — كثافةُ المشي وشوارعُ مرشَّحة للموافقة.
   { href: "/dashboard/map-learning", label: m.admin.nav.mapLearning, icon: IconRoute,
-    caps: ["orders.read"] },
+    caps: ["settings.general.manage"] },
   // **«طلباتُ التوسّع» قسمٌ مستقلّ** — «مو مخفيّة تحت الخريطة» (قرارُ المالك
   // ٢٠٢٦-١٠-٠٤). **وقراءتُها بـ`orders.read`** كبابها في المحرّك — قسمٌ لموظّف
   // العمليّات لا تقريرٌ للمدير (قرارُ المالك ٢٠٢٦-١٠-٠٥).
