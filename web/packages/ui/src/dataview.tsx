@@ -209,11 +209,18 @@ export function DataView<T>({
   rail,
   strip,
   loading = false,
+  actionsLayout = "wrap",
 }: {
   items: T[];
   getKey: (item: T) => string;
   columns: DataColumn<T>[];
   actions?: (item: T) => ReactNode;
+  /**
+   * **تخطيطُ أزرار الكرت.** `wrap` (الأصل): تتقاسم السطرَ وتلتفّ. `grid`: عمودان متساويان،
+   * كلُّ زرٍّ أيقونةٌ وكلمةٌ في سطرٍ واحد، **والأساسيُّ أوّلاً والهدّامُ آخراً**، وما ليس زرّاً
+   * (لوحاتُ التأكيد والتنبيهات) بعرض العمودين. (طلبُ المالك ٢٠٢٦-١١-٠٣، لوحة الطلبات.)
+   */
+  actionsLayout?: "wrap" | "grid";
   empty: string;
   view: ViewMode;
   onRowClick?: (item: T) => void;
@@ -482,7 +489,11 @@ export function DataView<T>({
                   onClick={(e) => e.stopPropagation()}
                   /* الأزرار تتقاسم السطر ما دامت تتسع، وتنزل سطراً جديداً بدل أن
                    تفيض خارج البطاقة — النصوص العربية تطول ولا تُقصّ. */
-                  className="mt-auto flex flex-wrap gap-1.5 border-t border-line-soft pt-3 [&_button]:min-h-11 [&_button]:min-w-[6.5rem] [&_button]:flex-1 [&_button]:justify-center [&_button]:whitespace-nowrap [&_button]:!px-2 [&_button]:text-center"
+                  className={
+                    actionsLayout === "grid"
+                      ? "mt-auto grid grid-flow-row-dense grid-cols-2 gap-2 border-t border-line-soft pt-3 [&>*:not(button)]:col-span-2 [&>button:only-of-type]:col-span-2 [&>button]:inline-flex [&>button]:min-h-11 [&>button]:w-full [&>button]:min-w-0 [&>button]:items-center [&>button]:justify-center [&>button]:gap-2 [&>button]:overflow-hidden [&>button]:!px-2 [&>button]:text-center [&>button[data-variant=primary]]:order-first [&>button[data-variant=danger]]:order-1 [&>button[data-variant=danger-outline]]:order-1"
+                      : "mt-auto flex flex-wrap gap-1.5 border-t border-line-soft pt-3 [&_button]:min-h-11 [&_button]:min-w-[6.5rem] [&_button]:flex-1 [&_button]:justify-center [&_button]:whitespace-nowrap [&_button]:!px-2 [&_button]:text-center"
+                  }
                 >
                   {actions(item)}
                 </div>

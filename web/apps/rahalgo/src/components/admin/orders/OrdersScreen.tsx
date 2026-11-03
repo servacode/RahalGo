@@ -51,6 +51,8 @@ import {
   IconCamera,
   IconPhone,
   IconWhatsApp,
+  IconCheck,
+  IconReturn,
   IconSwap,
   IconWarning,
   Invoice,
@@ -508,6 +510,40 @@ function SectionHead({ role, o }: { role: keyof typeof SEC_LOOK; o?: OrderRow })
   );
 }
 const ACTION_LABELS: Record<string, string> = m.admin.ordersPage.actions;
+
+/**
+ * **أيقونةُ كلِّ انتقال** — الصورةُ تسبق الكلمة في زرّ البطاقة (طلبُ المالك ٢٠٢٦-١١-٠٣).
+ * وما لم يُذكر هنا يأخذ الأيقونةَ العامّة فلا يخرج زرٌّ بلا رمز.
+ */
+type BtnIcon = React.ComponentType<{ size?: number; className?: string }>;
+
+const ACTION_ICONS: Record<string, BtnIcon> = {
+  accepted: IconCheck,
+  rejected: IconClose,
+  preparing: IconHourglass,
+  dispatching: IconMoto,
+  at_pickup: IconStore,
+  picked_up: IconBag,
+  on_the_way: IconRoute,
+  at_dropoff: IconLocation,
+  delivered: IconSuccess,
+  failed: IconWarning,
+  cancelled: IconClose,
+  refunded: IconReturn,
+};
+
+/**
+ * **محتوى زرّ البطاقة: أيقونةٌ وكلمةٌ في سطرٍ واحد** — والكلمةُ تنزل لسطرين على الجوّال
+ * (الخلية ضيّقة) وتُقصّ بعدهما ولا تفيض، **والأيقونةُ لا تنضغط.**
+ */
+function BtnLabel({ icon: Icon, children }: { icon: BtnIcon; children: React.ReactNode }) {
+  return (
+    <span className="inline-flex max-w-full min-w-0 items-center justify-center gap-2">
+      <Icon size={16} className="shrink-0" />
+      <span className="line-clamp-2 leading-tight">{children}</span>
+    </span>
+  );
+}
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -2544,6 +2580,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
             ) : null
           }
           empty={BOARD.emptyLive}
+          actionsLayout="grid"
           actions={(o) => (
             <OrderActions
               o={o}
@@ -3830,16 +3867,18 @@ function OrderActions({
         *
         * **وخارطةُ `opsNext` تقول أيَّ انتقالٍ يصلح** — **وهذه تقول
         * من يملك أن ينتقل.** */}
-      {canIntervene && next.map((to) => {
+      {canIntervene && next.map((to, i) => {
         const destructive = DESTRUCTIVE.has(to);
+        // **الأساسيُّ واحد**: أوّلُ انتقالٍ غيرِ هدّام، وما بعده ثانويّ.
+        const main = !destructive && next.findIndex((t) => !DESTRUCTIVE.has(t)) === i;
         return (
           <Button
             key={to}
-            variant={destructive ? "danger" : "primary"}
+            variant={destructive ? "danger-outline" : main ? "primary" : "secondary"}
             disabled={busy !== ""}
             onClick={() => (destructive ? setAsking(to) : void go(to, ""))}
           >
-            {ACTION_LABELS[to] ?? to}
+            <BtnLabel icon={ACTION_ICONS[to] ?? IconCheck}>{ACTION_LABELS[to] ?? to}</BtnLabel>
           </Button>
         );
       })}
@@ -3847,7 +3886,7 @@ function OrderActions({
           (قرارُ المالك ٢٠٢٦-١٠-٢٨). الخاصُّ و«لدي توصيلة» يردّهما الخادم. */}
       {canIntervene && isAdmin && o.status === "delivered" && o.kind === "standard" && (
         <Button
-          variant="danger"
+          variant="danger-outline"
           disabled={busy !== ""}
           onClick={() => {
             setReason("");
@@ -3855,7 +3894,7 @@ function OrderActions({
             setUndelivering(true);
           }}
         >
-          {m.admin.ordersPage.undeliverButton}
+          <BtnLabel icon={IconReturn}>{m.admin.ordersPage.undeliverButton}</BtnLabel>
         </Button>
       )}
       {notice && (
@@ -3888,7 +3927,7 @@ function OrderActions({
               setOverriding(true);
             }}
           >
-            {m.admin.ordersPage.overrideBtn}
+            <BtnLabel icon={IconEdit}>{m.admin.ordersPage.overrideBtn}</BtnLabel>
           </Button>
         )}
 
@@ -3962,7 +4001,7 @@ function OrderActions({
             setProofExcepting(true);
           }}
         >
-          {m.admin.ordersPage.proofExceptionButton}
+          <BtnLabel icon={IconCamera}>{m.admin.ordersPage.proofExceptionButton}</BtnLabel>
         </Button>
       )}
 
@@ -3971,13 +4010,10 @@ function OrderActions({
       {codeRequired && canIntervene && (o.status === "picked_up" || o.status === "on_the_way" || o.status === "at_dropoff") &&
         (code === null ? (
           <Button variant="secondary" disabled={busy !== "" || codeBusy} onClick={() => void showCode()}>
-            <span className="flex items-center gap-1.5">
-              <IconKey size={15} />
-              {BOARD.showCode}
-            </span>
+            <BtnLabel icon={IconKey}>{BOARD.showCode}</BtnLabel>
           </Button>
         ) : (
-          <span className="inline-flex items-center gap-2 rounded-control border border-line px-3 py-1.5 text-sm">
+          <span className="inline-flex min-h-11 items-center justify-center gap-2 rounded-control border border-line px-3 py-1.5 text-sm">
             <IconKey size={15} className="text-ink-muted" />
             {code ? (
               <>
@@ -4014,17 +4050,16 @@ function OrderActions({
 
               «تحويلٌ إلى المتجر» لا تقول كيف — **ومن ضغطها أوّلَ مرّةٍ فوجئ
               بنافذة واتساب تُفتح.** والرمزُ يقولها في نظرة. */}
-          <span className="flex items-center gap-1.5">
-            <IconWhatsApp size={15} />
+          <BtnLabel icon={IconWhatsApp}>
             {o.sent_to_merchant_at
               ? m.admin.ordersPage.sentWhatsApp
               : m.admin.ordersPage.sendWhatsApp}
-          </span>
+          </BtnLabel>
         </Button>
       )}
       {canIntervene && !o.sent_to_merchant_at && (o.status === "accepted" || o.status === "preparing") && (
         <Button variant="secondary" disabled={busy !== ""} onClick={() => void forwardManual()}>
-          {m.admin.ordersPage.sendManual}
+          <BtnLabel icon={IconCheck}>{m.admin.ordersPage.sendManual}</BtnLabel>
         </Button>
       )}
 
@@ -4037,10 +4072,7 @@ function OrderActions({
         o.kind !== "merchant_delivery" &&
         (o.status === "dispatching" || o.status === "assigned" || o.status === "at_pickup") && (
           <Button variant="secondary" disabled={busy !== ""} onClick={() => void forwardToMerchant()}>
-            <span className="flex items-center gap-1.5">
-              <IconWhatsApp size={15} />
-              {m.admin.ordersPage.resendWhatsApp}
-            </span>
+            <BtnLabel icon={IconWhatsApp}>{m.admin.ordersPage.resendWhatsApp}</BtnLabel>
           </Button>
         )}
 
@@ -4129,10 +4161,7 @@ function OrderActions({
         >
           {/* **وسهمان متبادلان يقولان «تبديل» قبل الكلمة** — وسهمٌ واحدٌ
               يُقرأ «إرسالاً» لا «استبدالاً». */}
-          <span className="flex items-center gap-1.5">
-            <IconSwap size={15} />
-            {m.admin.ordersPage.transfer}
-          </span>
+          <BtnLabel icon={IconSwap}>{m.admin.ordersPage.transfer}</BtnLabel>
         </Button>
       )}
       {/* **«من متجر غير تابع لنا»** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — بجانب التحويل: الطلبُ العاديُّ
@@ -4142,7 +4171,7 @@ function OrderActions({
         o.payment_method === "cash" &&
         (o.wallet_paid ?? 0) === 0 && (
         <Button
-          variant="danger"
+          variant="danger-outline"
           disabled={busy !== ""}
           onClick={() => {
             setReason("");
@@ -4150,7 +4179,7 @@ function OrderActions({
             setExtStoring(true);
           }}
         >
-          {m.admin.ordersPage.extStoreButton}
+          <BtnLabel icon={IconStore}>{m.admin.ordersPage.extStoreButton}</BtnLabel>
         </Button>
       )}
 
@@ -4164,7 +4193,7 @@ function OrderActions({
           disabled={busy !== ""}
           onClick={() => setAssigning(true)}
         >
-          {m.admin.ordersPage.assignHere}
+          <BtnLabel icon={IconMoto}>{m.admin.ordersPage.assignHere}</BtnLabel>
         </Button>
       )}
       {/* **ومتى يظهر الإسنادُ يُقال قبل أوانه** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كان الزرُّ يظهر فجأةً بلا كلمة. */}
@@ -4188,14 +4217,14 @@ function OrderActions({
         />
       )}
       {canIntervene && onEnd && !doorVisible(o) && (o.status === "picked_up" || o.status === "on_the_way") && (
-        <Button variant="danger" disabled={busy !== ""} onClick={onEnd}>
-          {BOARD.endOrder}
+        <Button variant="danger-outline" disabled={busy !== ""} onClick={onEnd}>
+          <BtnLabel icon={IconClose}>{BOARD.endOrder}</BtnLabel>
         </Button>
       )}
       {canIntervene &&
         (o.status === "picked_up" || o.status === "on_the_way" || o.status === "at_dropoff") && (
           <Button
-            variant="danger"
+            variant="danger-outline"
             disabled={busy !== ""}
             onClick={() => {
               setReason("");
@@ -4203,11 +4232,11 @@ function OrderActions({
               setReleasing(true);
             }}
           >
-            {BOARD.release.button}
+            <BtnLabel icon={IconSwap}>{BOARD.release.button}</BtnLabel>
           </Button>
         )}
-      {err && <p className="w-full text-xs text-danger">{err}</p>}
-      {note && <p className="w-full text-xs text-muted">{note}</p>}
+      {err && <p className="order-2 w-full text-xs text-danger">{err}</p>}
+      {note && <p className="order-2 w-full text-xs text-muted">{note}</p>}
     </>
   );
 }
@@ -4293,11 +4322,13 @@ function PartnerStoreBox({
   return (
     <div className="order-first flex basis-full flex-col gap-1.5">
       {!linked ? (
-        <Button variant="secondary" disabled={busy || working} onClick={() => void openPicker()}>
-          <span className="flex items-center gap-1.5">
-            <IconStore size={15} />
-            {OP.partnerLinkBtn}
-          </span>
+        <Button
+          variant="secondary"
+          className="inline-flex min-h-11 w-full items-center justify-center gap-2"
+          disabled={busy || working}
+          onClick={() => void openPicker()}
+        >
+          <BtnLabel icon={IconStore}>{OP.partnerLinkBtn}</BtnLabel>
         </Button>
       ) : (
         <>
@@ -4329,18 +4360,15 @@ function PartnerStoreBox({
               {OP.partnerStorePaid}: <Money value={o.custom_store_paid} />
             </p>
           )}
-          <div className="flex gap-1.5">
-            {/* **بشكل الأزرار الثانويّة** (المالك ٢٠٢٦-١٠-٢٢: «كل زر شكله مختلف») — المملوءُ
-                للخطوة الأساسيّة وحدَها، والأحمرُ للرفض. */}
+          <div className="grid grid-cols-2 gap-2 [&>button]:inline-flex [&>button]:min-h-11 [&>button]:w-full [&>button]:min-w-0 [&>button]:items-center [&>button]:justify-center [&>button]:!px-2">
+            {/* **بشكل أزرار البطاقة** (المالك ٢٠٢٦-١١-٠٣) — المملوءُ للخطوة الأساسيّة وحدَها،
+                والأحمرُ بإطارٍ للفكّ. */}
             <Button variant="secondary" disabled={busy || working} onClick={onSend}>
-              <span className="flex items-center gap-1.5">
-                <IconWhatsApp size={15} />
-                {o.sent_to_merchant_at ? OP.partnerSent : OP.partnerSend}
-              </span>
+              <BtnLabel icon={IconWhatsApp}>{o.sent_to_merchant_at ? OP.partnerSent : OP.partnerSend}</BtnLabel>
             </Button>
             {!ended && (
-              <Button variant="secondary" disabled={busy || working} onClick={() => void change("")}>
-                {OP.partnerUnlink}
+              <Button variant="danger-outline" disabled={busy || working} onClick={() => void change("")}>
+                <BtnLabel icon={IconClose}>{OP.partnerUnlink}</BtnLabel>
               </Button>
             )}
           </div>

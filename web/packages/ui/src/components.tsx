@@ -36,6 +36,10 @@ const buttonVariants = {
      **و`danger-solid` مصنوعٌ للتعبئة**: الأبيضُ عليه ٤٫٨٣ — **وهو التوكنُ
      نفسُه في عدّاد الإشعارات وأيقونات الخطر.** */
   danger: "bg-danger-solid text-on-solid hover:opacity-90",
+  /* **الخطرُ بإطارٍ أحمر لا بتعبئة** — للفعل الهدّام بين أزرارٍ كثيرة (لوحةُ الطلبات): يُرى
+     ولا يصرخ، **والتعبئةُ تبقى للخطوة الأساسيّة وحدَها.** */
+  "danger-outline":
+    "border border-danger-edge bg-surface text-danger hover:bg-danger-tint",
   ghost: "text-ink-muted hover:bg-row-hover hover:text-ink",
 } as const;
 
@@ -64,6 +68,7 @@ export function Button({
 }) {
   return (
     <button
+      data-variant={variant}
       {...props}
       className={`rounded-control font-medium transition-colors disabled:pointer-events-none disabled:opacity-60 ${buttonSizes[size]} ${buttonVariants[variant]} ${className}`}
     />
