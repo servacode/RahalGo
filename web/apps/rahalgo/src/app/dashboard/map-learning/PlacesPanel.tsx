@@ -42,13 +42,15 @@ const T = getMessages(defaultLocale).admin.mapLearning;
 const P = T.places;
 
 type Status = "pending" | "approved" | "rejected";
-type Source = "" | "stops" | "addresses";
+type Source = "" | "stops" | "addresses" | "neighbourhoods" | "streets";
+type AreaSource = "neighbourhoods" | "streets";
+const isArea = (s: string): s is AreaSource => s === "neighbourhoods" || s === "streets";
 const KINDS = ["mosque", "pharmacy", "school", "hospital", "shop", "roundabout", "other"] as const;
 type Kind = (typeof KINDS)[number];
 
 interface Place {
   id: number;
-  source: "stops" | "addresses";
+  source: Exclude<Source, "">;
   status: Status;
   name: string;
   kind: string;
@@ -62,6 +64,9 @@ interface Place {
   samples: string[];
   first_seen: string | null;
   last_seen: string | null;
+  /** غلافُ الحيّ (Polygon) أو خطوطُ الشارع (MultiLineString) — فارغٌ لغيرهما. */
+  geometry: { type: string; coordinates: unknown } | null;
+  way_ids: number[];
 }
 interface Store {
   id: string;
@@ -74,7 +79,14 @@ interface Resp {
   counts: Record<Status, number>;
   stores: Store[];
   running: boolean;
-  last_run?: { at: string; stop_places: number; name_places: number; failed: boolean };
+  last_run?: {
+    at: string;
+    stop_places: number;
+    name_places: number;
+    neighbourhoods: number;
+    streets: number;
+    failed: boolean;
+  };
 }
 
 const pt = (lng: number, lat: number, properties: Record<string, unknown>) => ({
@@ -110,7 +122,10 @@ function PlaceRow({
           .replace("{visits}", fmtNum(c.visits))
           .replace("{drivers}", fmtNum(c.drivers))
           .replace("{days}", fmtNum(c.days))
-      : P.addrStats.replace("{customers}", fmtNum(c.customers)).replace("{evidence}", fmtNum(c.evidence));
+      : c.source === "streets"
+        ? P.streetStats.replace("{customers}", fmtNum(c.customers)).replace("{ways}", fmtNum(c.way_ids.length))
+        : P.addrStats.replace("{customers}", fmtNum(c.customers)).replace("{evidence}", fmtNum(c.evidence));
+  const area = isArea(c.source);
   return (
     <li className={`rounded-control border px-2 py-2 text-sm ${active ? "border-accent" : "border-line-soft"}`}>
       <Button variant="ghost" size="sm" className="w-full justify-start text-start" onClick={onPick}>
@@ -137,18 +152,20 @@ function PlaceRow({
         <div className="mt-2 flex flex-wrap items-end gap-2">
           <Input
             id={`place-name-${c.id}`}
-            label={P.nameLabel}
+            label={area ? P.areaNameLabel : P.nameLabel}
             value={name}
             maxLength={80}
             onChange={(e) => setName(e.target.value)}
           />
-          <Select id={`place-kind-${c.id}`} label={P.kindLabel} value={kind} onChange={(e) => setKind(asKind(e.target.value))}>
-            {KINDS.map((k) => (
-              <option key={k} value={k}>
-                {P.kinds[k]}
-              </option>
-            ))}
-          </Select>
+          {!area && (
+            <Select id={`place-kind-${c.id}`} label={P.kindLabel} value={kind} onChange={(e) => setKind(asKind(e.target.value))}>
+              {KINDS.map((k) => (
+                <option key={k} value={k}>
+                  {P.kinds[k]}
+                </option>
+              ))}
+            </Select>
+          )}
           <Button size="sm" disabled={busy || name.trim().length < 2} onClick={() => onDecide(true, name, kind)}>
             <IconCheck size={14} /> {T.approve}
           </Button>
@@ -203,6 +220,62 @@ export function PlacesPanel({ canManage, runSignal }: { canManage: boolean; runS
         data: fc((data?.stores ?? []).map((s) => pt(s.lng, s.lat, { id: s.id, name: s.name, icon: "store-open" }))),
       },
       {
+        id: "hood-areas",
+        kind: "fill",
+        order: 20,
+        visible: true,
+        color: toneColor("order"),
+        fillOpacity: 0.12,
+        lineWidth: 1.5,
+        data: fc(
+          list
+            .filter((c) => c.source === "neighbourhoods" && c.geometry && c.id !== picked)
+            .map((c) => ({ type: "Feature" as const, geometry: c.geometry, properties: { id: c.id, name: c.name } })),
+        ),
+      },
+      {
+        id: "street-lines",
+        kind: "line",
+        order: 25,
+        visible: true,
+        color: toneColor("store-open"),
+        lineWidth: 4,
+        dashed: false,
+        data: fc(
+          list
+            .filter((c) => c.source === "streets" && c.geometry && c.id !== picked)
+            .map((c) => ({ type: "Feature" as const, geometry: c.geometry, properties: { id: c.id, name: c.name } })),
+        ),
+      },
+      {
+        id: "hood-picked",
+        kind: "fill",
+        order: 55,
+        visible: true,
+        color: toneColor("order-stuck"),
+        fillOpacity: 0.2,
+        lineWidth: 3,
+        data: fc(
+          list
+            .filter((c) => c.id === picked && c.source === "neighbourhoods" && c.geometry)
+            .map((c) => ({ type: "Feature" as const, geometry: c.geometry, properties: { id: c.id, name: c.name } })),
+        ),
+      },
+      {
+        id: "street-picked",
+        kind: "line",
+        order: 56,
+        visible: true,
+        color: toneColor("order-stuck"),
+        lineWidth: 5,
+        dashed: false,
+        data: fc(
+          list
+            .filter((c) => c.id === picked && c.source === "streets" && c.geometry)
+            .map((c) => ({ type: "Feature" as const, geometry: c.geometry, properties: { id: c.id, name: c.name } })),
+        ),
+      },
+      {
         id: "places",
         kind: "symbol",
         order: 50,
@@ -241,7 +314,7 @@ export function PlacesPanel({ canManage, runSignal }: { canManage: boolean; runS
 
   const focus = useMemo(() => {
     const c = list.find((x) => x.id === picked);
-    return c ? { lng: c.lng, lat: c.lat, zoom: 18 } : undefined;
+    return c ? { lng: c.lng, lat: c.lat, zoom: isArea(c.source) ? 15 : 18 } : undefined;
   }, [list, picked]);
 
   const decide = useCallback(async (id: number, approve: boolean, name: string, kind: Kind) => {
@@ -273,7 +346,9 @@ export function PlacesPanel({ canManage, runSignal }: { canManage: boolean; runS
             ? P.lastRunFailed
             : P.lastRun
                 .replace("{stops}", fmtNum(data.last_run.stop_places))
-                .replace("{names}", fmtNum(data.last_run.name_places))}
+                .replace("{names}", fmtNum(data.last_run.name_places))
+                .replace("{hoods}", fmtNum(data.last_run.neighbourhoods ?? 0))
+                .replace("{streets}", fmtNum(data.last_run.streets ?? 0))}
         </Alert>
       )}
       <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -288,7 +363,7 @@ export function PlacesPanel({ canManage, runSignal }: { canManage: boolean; runS
         <div className="surface p-3">
           <div className="mb-3 flex flex-wrap items-end gap-2">
             <Checkbox id="pl-stores" label={P.storesLayer} checked={showStores} onChange={(e) => setShowStores(e.target.checked)} />
-            {(["", "stops", "addresses"] as Source[]).map((s) => (
+            {(["", "stops", "addresses", "neighbourhoods", "streets"] as Source[]).map((s) => (
               <Button
                 key={s || "all"}
                 size="sm"

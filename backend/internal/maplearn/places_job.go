@@ -219,30 +219,8 @@ func nameKnown(ctx context.Context, q pgx.Tx, c NameCluster) (bool, error) {
 
 // namePlaces يقرأ عناوينَ الزبائن المسلَّمة ويقترح الأسماء المتّفق عليها.
 func namePlaces(ctx context.Context, pg *pgxpool.Pool, p PlaceParams) (int, error) {
-	rows, err := pg.Query(ctx, `
-		SELECT o.customer_id::text, o.address_text || ' | ' || o.notes,
-		       ST_Y(o.dropoff::geometry), ST_X(o.dropoff::geometry)
-		  FROM orders o
-		 WHERE o.status = 'delivered' AND o.dropoff IS NOT NULL AND o.dropoff_known
-		   AND o.created_at >= now() - interval '1 year'
-		UNION ALL
-		SELECT ua.user_id::text, ua.address_text,
-		       ST_Y(COALESCE(ua.entrance, ua.location)::geometry), ST_X(COALESCE(ua.entrance, ua.location)::geometry)
-		  FROM user_addresses ua`)
+	ev, err := loadAddressEvidence(ctx, pg)
 	if err != nil {
-		return 0, err
-	}
-	var ev []AddrEvidence
-	for rows.Next() {
-		var e AddrEvidence
-		if err := rows.Scan(&e.Customer, &e.Text, &e.Lat, &e.Lng); err != nil {
-			rows.Close()
-			return 0, err
-		}
-		ev = append(ev, e)
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
 		return 0, err
 	}
 	clusters := ClusterNames(ev, p)

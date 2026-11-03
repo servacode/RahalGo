@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 622,
+    "routes": 625,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -33,8 +33,8 @@
     "setting_defs": 254,
     "behaviour_settings": 209,
     "order_fields": 129,
-    "test_files": 692,
-    "test_funcs": 2674
+    "test_files": 695,
+    "test_funcs": 2687
   },
   "flows": [
     {
@@ -9129,6 +9129,60 @@
       "name": "TestMachinePlatformNeverWiderThanMerchants",
       "file": "internal/machinedoc/machinedoc_test.go",
       "package": "machinedoc",
+      "orphan": true
+    },
+    {
+      "name": "TestClusterHoods_LongerNameWhenMajorityAgrees",
+      "file": "internal/maplearn/areas_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestClusterHoods_ThreeCustomersAndVariants",
+      "file": "internal/maplearn/areas_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestConvexHullAndMedoid",
+      "file": "internal/maplearn/areas_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestExtractAreas_HoodsAndVariants",
+      "file": "internal/maplearn/areas_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestExtractAreas_StopsAtBoundaries",
+      "file": "internal/maplearn/areas_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestGroupAndResolveStreets",
+      "file": "internal/maplearn/areas_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestHullAndLinesWKT",
+      "file": "internal/maplearn/areas_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestResolveStreet_BudgetAndFarPoints",
+      "file": "internal/maplearn/areas_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestWithinOneEditAndMerge",
+      "file": "internal/maplearn/areas_test.go",
+      "package": "maplearn",
       "orphan": true
     },
     {
@@ -18806,6 +18860,24 @@
       "orphan": false
     },
     {
+      "name": "TestAreas_HoodsApproveReadExport",
+      "file": "internal/qa/map_areas_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAreas_Permissions",
+      "file": "internal/qa/map_areas_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAreas_StreetsSnapApproveExport",
+      "file": "internal/qa/map_areas_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestDelivery_FarFromPinAsksCustomer",
       "file": "internal/qa/map_contrib_test.go",
       "package": "qa",
@@ -18832,6 +18904,12 @@
     {
       "name": "TestRoadClosure_ReportConfirmAndClear",
       "file": "internal/qa/map_contrib_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMapLandmarks_BboxClassAndDedupe",
+      "file": "internal/qa/map_landmarks_test.go",
       "package": "qa",
       "orphan": true
     },

@@ -3568,6 +3568,13 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/ops-map/area-names/export",
+      "handler": "requirePerm",
+      "auth": true,
+      "capability": "settings.general.manage"
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/ops-map/areas",
       "handler": "requirePerm",
       "auth": true,
@@ -10813,6 +10820,12 @@
       "method": "GET",
       "path": "/api/v1/public/map-style.json",
       "handler": "handleMapStyle",
+      "auth": false
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/public/map/areas",
+      "handler": "handlePublicMapAreas",
       "auth": false
     },
     {

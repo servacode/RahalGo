@@ -11,7 +11,8 @@
     "./zonesmap": "./src/zonesmap.tsx",
     "./mapconfig": "./src/mapconfig.ts",
     "./mapengine": "./src/mapengine.ts",
-    "./landmarks": "./src/landmarks.ts"
+    "./landmarks": "./src/landmarks.ts",
+    "./areanames": "./src/areanames.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

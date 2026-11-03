@@ -161,6 +161,7 @@ export const ADMIN_POLICY: ReadonlyArray<readonly [string, string, string]> = [
   ["", "/offers", "offers.manage"],
   ["GET", "/offers/audience", "offers.manage"],
   ["", "/offers/{id}/active", "offers.manage"],
+  ["GET", "/ops-map/area-names/export", "settings.general.manage"],
   ["", "/ops-map/areas", "settings.general.manage"],
   ["GET", "/ops-map/areas", "orders.read"],
   ["", "/ops-map/areas/{id}", "settings.general.manage"],

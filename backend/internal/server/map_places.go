@@ -2,6 +2,8 @@ package server
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -33,6 +35,13 @@ func (s *Server) mapPlacesOnce(ctx context.Context) {
 		return
 	}
 	s.logger.Info("الأماكن بلا اسم: انتهت الجولة", "stop_places", res.StopPlaces, "name_places", res.NamePlaces)
+	// وأسماءُ الأحياء والشوارع من العناوين — الأحياءُ بلا محرّك، والشوارعُ تحتاج Valhalla (وإلّا تُترك).
+	ar, err := maplearn.RunAreas(runCtx, s.pg, maplearn.NewLocator(s.cfg.ValhallaURL), maplearn.DefaultAreaParams())
+	if err != nil {
+		s.logger.Warn("أسماء الأحياء والشوارع: تعثّرت الجولة", "error", err)
+		return
+	}
+	s.logger.Info("أسماء الأحياء والشوارع: انتهت الجولة", "neighbourhoods", ar.Neighbourhoods, "streets", ar.Streets)
 }
 
 type placeCandidate struct {
@@ -51,6 +60,10 @@ type placeCandidate struct {
 	Samples   []string `json:"samples"`
 	FirstSeen *string  `json:"first_seen"`
 	LastSeen  *string  `json:"last_seen"`
+	// للحيّ غلافٌ محدَّب (Polygon)، وللشارع خطوطُ طرقه (MultiLineString)، ولغيرهما لا شيء.
+	Geometry json.RawMessage `json:"geometry"`
+	RadiusM  float64         `json:"radius_m"`
+	WayIDs   []int64         `json:"way_ids"`
 }
 
 type placeStore struct {
@@ -60,7 +73,7 @@ type placeStore struct {
 	Lng  float64 `json:"lng"`
 }
 
-// handlePlaceCandidates GET /ops-map/place-candidates?status=pending|approved|rejected&source=stops|addresses
+// handlePlaceCandidates GET /ops-map/place-candidates?status=pending|approved|rejected&source=stops|addresses|neighbourhoods|streets
 // — المرشَّحون وأعدادُهم وآخرُ جولة وأسماءُ المتاجر (تُرسم أسماؤها على الخريطة).
 func (s *Server) handlePlaceCandidates(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -69,12 +82,13 @@ func (s *Server) handlePlaceCandidates(w http.ResponseWriter, r *http.Request) {
 		status = "pending"
 	}
 	source := r.URL.Query().Get("source")
-	if source != "stops" && source != "addresses" {
+	if source != "stops" && source != "addresses" && source != "neighbourhoods" && source != "streets" {
 		source = ""
 	}
 	rows, err := s.pg.Query(ctx, `
 		SELECT id, source, status, name, kind, ST_Y(point::geometry), ST_X(point::geometry),
-		       visits, drivers, customers, days, evidence, samples, first_seen::text, last_seen::text
+		       visits, drivers, customers, days, evidence, samples, first_seen::text, last_seen::text,
+		       COALESCE(ST_AsGeoJSON(geom::geometry)::text, ''), radius_m, way_ids
 		  FROM map_place_candidates
 		 WHERE status = $1 AND ($2 = '' OR source = $2)
 		 ORDER BY GREATEST(visits, evidence) DESC, id LIMIT 500`, status, source)
@@ -85,11 +99,18 @@ func (s *Server) handlePlaceCandidates(w http.ResponseWriter, r *http.Request) {
 	cands := []placeCandidate{}
 	for rows.Next() {
 		var c placeCandidate
+		var geo string
 		if err := rows.Scan(&c.ID, &c.Source, &c.Status, &c.Name, &c.Kind, &c.Lat, &c.Lng, &c.Visits, &c.Drivers,
-			&c.Customers, &c.Days, &c.Evidence, &c.Samples, &c.FirstSeen, &c.LastSeen); err != nil {
+			&c.Customers, &c.Days, &c.Evidence, &c.Samples, &c.FirstSeen, &c.LastSeen, &geo, &c.RadiusM, &c.WayIDs); err != nil {
 			rows.Close()
 			s.respondErr(w, err)
 			return
+		}
+		if geo != "" {
+			c.Geometry = json.RawMessage(geo)
+		}
+		if c.WayIDs == nil {
+			c.WayIDs = []int64{}
 		}
 		if c.Samples == nil {
 			c.Samples = []string{}
@@ -146,11 +167,12 @@ func (s *Server) handlePlaceCandidates(w http.ResponseWriter, r *http.Request) {
 	}
 	var at *time.Time
 	var errTxt string
-	var sp, np int
+	var sp, np, nh, st int
 	if err := s.pg.QueryRow(ctx, `
-		SELECT finished_at, stop_places, name_places, error FROM map_place_runs
-		 WHERE finished_at IS NOT NULL ORDER BY id DESC LIMIT 1`).Scan(&at, &sp, &np, &errTxt); err == nil {
-		out["last_run"] = map[string]any{"at": at, "stop_places": sp, "name_places": np, "failed": errTxt != ""}
+		SELECT finished_at, stop_places, name_places, neighbourhoods, streets, error FROM map_place_runs
+		 WHERE finished_at IS NOT NULL ORDER BY id DESC LIMIT 1`).Scan(&at, &sp, &np, &nh, &st, &errTxt); err == nil {
+		out["last_run"] = map[string]any{"at": at, "stop_places": sp, "name_places": np,
+			"neighbourhoods": nh, "streets": st, "failed": errTxt != ""}
 	}
 	httpx.JSON(w, http.StatusOK, out)
 }
@@ -184,20 +206,35 @@ func (s *Server) handlePlaceCandidateDecide(w http.ResponseWriter, r *http.Reque
 	}
 	name := strings.TrimSpace(req.Name)
 	kind := req.Kind
+	ctx := r.Context()
+	// الحيّ والشارع لا نوعَ لهما يختاره المدير: يُقرّان في `map_area_names` لا في `map_landmarks`.
+	var candSource string
+	switch err := s.pg.QueryRow(ctx, `SELECT source FROM map_place_candidates WHERE id = $1`, id).Scan(&candSource); {
+	case errors.Is(err, pgx.ErrNoRows):
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	case err != nil:
+		s.respondErr(w, err)
+		return
+	}
+	isArea := candSource == "neighbourhoods" || candSource == "streets"
 	if req.Approve {
 		if n := len([]rune(name)); n < 2 || n > 80 {
 			s.respondErr(w, errLandmarkName)
 			return
 		}
-		if kind == "" {
-			kind = "other"
-		}
-		if _, ok := landmarkKinds[kind]; !ok {
-			s.respondErr(w, errLandmarkKind)
-			return
+		if isArea {
+			kind = ""
+		} else {
+			if kind == "" {
+				kind = "other"
+			}
+			if _, ok := landmarkKinds[kind]; !ok {
+				s.respondErr(w, errLandmarkKind)
+				return
+			}
 		}
 	}
-	ctx := r.Context()
 	tx, err := s.pg.Begin(ctx)
 	if err != nil {
 		s.respondErr(w, err)
@@ -212,7 +249,7 @@ func (s *Server) handlePlaceCandidateDecide(w http.ResponseWriter, r *http.Reque
 	err = tx.QueryRow(ctx, `
 		UPDATE map_place_candidates
 		   SET status = $2, name = CASE WHEN $2 = 'approved' THEN $3 ELSE name END,
-		       kind = CASE WHEN $2 = 'approved' THEN $4 ELSE kind END,
+		       kind = CASE WHEN $2 = 'approved' AND $4 <> '' THEN $4 ELSE kind END,
 		       decided_by = $5::uuid, decided_at = now(), updated_at = now()
 		 WHERE id = $1 AND status = 'pending' RETURNING id`, id, status, name, kind, userIDFrom(r)).Scan(&got)
 	if err == pgx.ErrNoRows {
@@ -230,7 +267,19 @@ func (s *Server) handlePlaceCandidateDecide(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	var lmID int64
-	if req.Approve {
+	if req.Approve && isArea {
+		if err := tx.QueryRow(ctx, `
+			INSERT INTO map_area_names (kind, name, name_key, point, geom, radius_m, way_ids, candidate_id, created_by)
+			SELECT kind, name, name_key, point, geom, radius_m, way_ids, id, $2::uuid
+			  FROM map_place_candidates WHERE id = $1 RETURNING id`, id, userIDFrom(r)).Scan(&lmID); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		if _, err := tx.Exec(ctx, `UPDATE map_place_candidates SET landmark_id = $2 WHERE id = $1`, id, lmID); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+	} else if req.Approve {
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO map_landmarks (name, kind, point, source)
 			SELECT name, $2, point, 'drivers' FROM map_place_candidates WHERE id = $1 RETURNING id`,

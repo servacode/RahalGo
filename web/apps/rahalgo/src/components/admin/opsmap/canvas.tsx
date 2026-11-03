@@ -46,6 +46,7 @@ import { createRoot } from "react-dom/client";
 import { resolveMapSource, MAP_ATTRIBUTION_FALLBACK } from "@rahalgo/ui/mapconfig";
 import { loadMapEngine } from "@rahalgo/ui/mapengine";
 import { installLandmarks, setLandmarksVisible } from "@rahalgo/ui/landmarks";
+import { installAreaNames, setAreaNamesVisible } from "@rahalgo/ui/areanames";
 import { themeColor } from "@rahalgo/ui";
 import { TWEEN_MS, anyMoved, easeInOut, positionsOf, tweenPoints, type LngLat } from "./live";
 
@@ -300,7 +301,10 @@ export function OpsMapCanvas({
   const landmarksRef = useRef(landmarks);
   landmarksRef.current = landmarks;
   useEffect(() => {
-    if (map.current && ready) setLandmarksVisible(map.current as never, landmarks);
+    if (map.current && ready) {
+      setLandmarksVisible(map.current as never, landmarks);
+      setAreaNamesVisible(map.current as never, landmarks);
+    }
   }, [landmarks, ready]);
   const iconsRef = useRef(icons);
   iconsRef.current = icons;
@@ -340,6 +344,7 @@ export function OpsMapCanvas({
         }
         instance.on("load", async () => {
           installLandmarks(instance as never, { stores: false, visible: landmarksRef.current });
+          installAreaNames(instance as never, { visible: landmarksRef.current });
           // **والرموزُ قبل الطبقات** — طبقةٌ تطلب صورةً لم تُسجَّل ترسم فراغاً.
           for (const ic of iconsRef.current) {
             const data = await drawIcon(ic);

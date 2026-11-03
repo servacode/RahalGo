@@ -6431,12 +6431,19 @@
       "mapUnavailable": "الخريطة مو شغالة هلق",
       "sections": { "streets": "شوارع", "places": "أماكن وأسامي", "oneway": "اتجاه واحد", "speeds": "السرعة الحقيقية" },
       "places": {
-        "sources": { "all": "الكل", "stops": "وقفات السائقين", "addresses": "أسماء من العناوين" },
-        "sourceBadge": { "stops": "وقفات", "addresses": "عناوين" },
+        "sources": {
+          "all": "الكل",
+          "stops": "وقفات السائقين",
+          "addresses": "أسماء من العناوين",
+          "neighbourhoods": "أحياء",
+          "streets": "شوارع"
+        },
+        "sourceBadge": { "stops": "وقفات", "addresses": "عناوين", "neighbourhoods": "حي", "streets": "شارع" },
         "run": "تحليل الأماكن",
         "running": "جاري التحليل",
         "unnamed": "مكان بلا اسم",
         "nameLabel": "اسم المكان",
+        "areaNameLabel": "الاسم",
         "kindLabel": "النوع",
         "kinds": {
           "mosque": "جامع",
@@ -6449,11 +6456,12 @@
         },
         "stopStats": "{visits} وقفة · {drivers} سائق · {days} يوم",
         "addrStats": "{customers} زبون · {evidence} عبارة",
+        "streetStats": "{customers} زبون على {ways} طريق",
         "seen": "من {first} إلى {last}",
         "samples": "من عناوين الزبائن",
         "storesLayer": "أسماء المتاجر",
         "empty": "ما في أماكن مرشحة",
-        "lastRun": "آخر تحليل: {stops} مكان من الوقفات و{names} من العناوين",
+        "lastRun": "آخر تحليل: {stops} مكان من الوقفات و{names} من العناوين و{hoods} حي و{streets} شارع",
         "lastRunFailed": "آخر تحليل تعثر",
         "tiles": { "pending": "أماكن بالانتظار", "approved": "أماكن موافَق عليها", "rejected": "أماكن مرفوضة" }
       },

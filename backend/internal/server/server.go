@@ -692,6 +692,8 @@ func (s *Server) Router() http.Handler {
 		r.Get("/public/map/stores", s.handlePublicMapStores)
 		// **ومعالمُ الخريطة** (٢٠٢٦-١١-٠٣) — مساجدُ ومستشفياتٌ ومدارسُ… بمفردات البلاطة، `map_landmarks.go`.
 		r.Get("/public/map/landmarks", s.handlePublicMapLandmarks)
+		// **وأسماءُ الأحياء والشوارع المُقرَّة من عناوين الزبائن** (٢٠٢٦-١١-٠٣) — `map_areas.go`.
+		r.Get("/public/map/areas", s.handlePublicMapAreas)
 		r.Get("/public/search/items", s.handleSearchItems)
 		r.Get("/public/search", s.handlePublicSearch)
 		// ══════════════════════════════════════════════════════════
@@ -1287,6 +1289,8 @@ func (s *Server) Router() http.Handler {
 				r.Get("/place-candidates", s.requirePerm(opsmap.PermViewMap, s.handlePlaceCandidates))
 				r.Post("/place-candidates/run", s.requirePerm(opsmap.PermManageCoverage, s.handlePlaceCandidatesRun))
 				r.Post("/place-candidates/{id}/decide", s.requirePerm(opsmap.PermManageCoverage, s.handlePlaceCandidateDecide))
+				// **والمُقَرُّ من أسماء الأحياء والشوارع** يُصدَّر لدفعة بناء البلاطات التالية.
+				r.Get("/area-names/export", s.requirePerm(opsmap.PermManageCoverage, s.handleAreaNamesExport))
 
 				// **والتغطيةُ تُقرأ لمن يفتح الخريطة، وتُكتب لمن
 				// يملكها** — **رسمُ مضلَّعٍ يبدّل من تصله المنصّة.**

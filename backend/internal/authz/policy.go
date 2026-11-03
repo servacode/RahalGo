@@ -490,6 +490,7 @@ var adminPolicy = []Rule{
 	{"GET", "/ops-map/place-candidates", OrdersRead},
 	{"POST", "/ops-map/place-candidates/run", SettingsGeneralManage},
 	{"POST", "/ops-map/place-candidates/{id}/decide", SettingsGeneralManage},
+	{"GET", "/ops-map/area-names/export", SettingsGeneralManage},
 	{"GET", "/ops-map/oneway-candidates", OrdersRead},
 	{"GET", "/ops-map/oneway-candidates/export", SettingsGeneralManage},
 	{"POST", "/ops-map/oneway-candidates/{id}/decide", SettingsGeneralManage},
