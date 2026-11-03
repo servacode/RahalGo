@@ -2566,7 +2566,8 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
               <OrderTrackH
                 stages={o.ops_stages.map((id, i) => ({
                   id,
-                  label: STAGE_LABELS[id] ?? id,
+                  // **أسماءٌ قصيرة بالشريط** (قرارُ المالك ٢٠٢٦-١١-٠٣: «اختصرهن») — كانت تنزل لثلاثة أسطر.
+                  label: (m.admin.ordersPage.stageShort as Record<string, string>)[id] ?? STAGE_LABELS[id] ?? id,
                   // **والساعةُ تُنسَّق في المعجم** — منطقةُ دمشق وصيغتُها موضعٌ واحد.
                   at: o.ops_stage_times?.[i] ? fmtTime(o.ops_stage_times[i]!) : null,
                   // **والمدّةُ فرقُ طابعَي وقت** — والحكمُ بالتأخير من المحرّك.

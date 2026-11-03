@@ -2182,6 +2182,19 @@
         "buying": "شراء الطلب",
         "taking": "استلام الأمانة"
       },
+      "stageShort": {
+        "waiting": "القبول",
+        "preparing": "التجهيز",
+        "seeking_driver": "سائق",
+        "to_store": "للمتجر",
+        "on_the_way": "للزبون",
+        "arrived": "عند الباب",
+        "delivered": "تسلّم",
+        "waiting_platform": "الموافقة",
+        "agreeing": "السعر",
+        "buying": "الشراء",
+        "taking": "الاستلام"
+      },
       "recomputeChanged": "صُحِّح: {n} ل.س",
       "recomputeNone": "لا شيءَ لتصحيحه — الحسابُ سليم",
       "rating": {
