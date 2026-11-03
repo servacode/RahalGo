@@ -302,7 +302,7 @@ func (s *Service) clawBackGoods(ctx context.Context, q wallet.Querier, orderID, 
 func (s *Service) clawBackCashGoods(ctx context.Context, q wallet.Querier, orderID, actorID string) error {
 	rows, err := q.Query(ctx, `
 		SELECT ms.id::text, ms.merchant_id::text, m.owner_user_id::text,
-		       ms.amount, ms.amount - ms.reversed_amount, ms.state
+		       ms.amount + ms.adjusted_amount, ms.amount + ms.adjusted_amount - ms.reversed_amount, ms.state
 		FROM merchant_settlements ms
 		JOIN merchants m ON m.id = ms.merchant_id
 		WHERE ms.order_id = $1 AND ms.method = 'cash'
@@ -393,6 +393,16 @@ func (s *Service) goodsShares(ctx context.Context, q wallet.Querier, orderID str
 	rows.Close()
 	if err := rows.Err(); err != nil {
 		return nil, err
+	}
+	// **ودَينُ تعديل الطلب يُطرح** (٢٠٢٦-١١-٠٣) — نقصٌ لم يكفِه رصيدُ المتجر صار ديناً قائماً
+	// عليه، **فلا يُسترَدّ منه مرّةً ثانيةً هنا.**
+	debts, err := editDebtsByOwner(ctx, q, orderID)
+	if err != nil {
+		return nil, err
+	}
+	for owner, d := range debts {
+		posted[owner] -= d
+		postedTotal -= d
 	}
 	if postedTotal <= 0 {
 		return nil, nil // لم يُقبض شيءٌ بعد — لا استرجاعَ له

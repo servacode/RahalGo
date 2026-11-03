@@ -64,6 +64,8 @@ interface EditChange {
   new_qty: number;
   old_price: number;
   new_price: number;
+  /** **ما رجّعه الزبونُ والمنصّةُ تتحمّله** — يبقى للمتجر حقُّه. */
+  returned?: number;
 }
 interface StoreDelta {
   merchant_id: string;
@@ -124,13 +126,19 @@ export function OrderEditor({
 
   useEffect(() => {
     let live = true;
-    api<{ lines: CatalogLine[]; stores: CatalogStore[] }>(`/api/v1/admin/orders/${orderId}/edit-catalog`)
+    api<{ lines: CatalogLine[]; stores: CatalogStore[] }>(
+      `/api/v1/admin/orders/${orderId}/edit-catalog`,
+    )
       .then((c) => {
         if (!live) return;
         setLines(c.lines);
         setStores(c.stores);
         setQty(Object.fromEntries(c.lines.map((l) => [l.id, l.qty])));
-        setPrice(Object.fromEntries(c.lines.map((l) => [l.id, String(l.merchant_price)])));
+        setPrice(
+          Object.fromEntries(
+            c.lines.map((l) => [l.id, String(l.merchant_price)]),
+          ),
+        );
       })
       .catch((e) => live && setErr(errorText(e)));
     return () => {
@@ -141,7 +149,11 @@ export function OrderEditor({
   const items = useMemo(
     () =>
       stores.flatMap((s) =>
-        s.items.map((it) => ({ ...it, store: s.name, multi: stores.length > 1 })),
+        s.items.map((it) => ({
+          ...it,
+          store: s.name,
+          multi: stores.length > 1,
+        })),
       ),
     [stores],
   );
@@ -152,15 +164,24 @@ export function OrderEditor({
       .map((l) => {
         const q = qty[l.id] ?? l.qty;
         const p = Math.round(Number(price[l.id]));
-        const priceChanged = Number.isFinite(p) && p >= 0 && p !== l.merchant_price;
+        const priceChanged =
+          Number.isFinite(p) && p >= 0 && p !== l.merchant_price;
         if (q === l.qty && !priceChanged) return null;
-        return { item_id: l.id, qty: q, ...(priceChanged ? { merchant_price: p } : {}) };
+        return {
+          item_id: l.id,
+          qty: q,
+          ...(priceChanged ? { merchant_price: p } : {}),
+        };
       })
       .filter(Boolean);
     return JSON.stringify({
       reason: reason.trim(),
       lines: changed,
-      add: adds.map((a) => ({ menu_item_id: a.menu_item_id, qty: a.qty, option_ids: a.option_ids })),
+      add: adds.map((a) => ({
+        menu_item_id: a.menu_item_id,
+        qty: a.qty,
+        option_ids: a.option_ids,
+      })),
       store_refunded: afterPickup && storeRefunded,
       dry_run: dryRun,
     });
@@ -170,10 +191,13 @@ export function OrderEditor({
     setBusy(true);
     setErr("");
     try {
-      const r = await api<{ result: EditResult }>(`/api/v1/admin/orders/${orderId}/edit`, {
-        method: "POST",
-        body: body(dryRun),
-      });
+      const r = await api<{ result: EditResult }>(
+        `/api/v1/admin/orders/${orderId}/edit`,
+        {
+          method: "POST",
+          body: body(dryRun),
+        },
+      );
       if (dryRun) setReview(r.result);
       else onDone(r.result);
     } catch (e) {
@@ -191,7 +215,9 @@ export function OrderEditor({
       return;
     }
     const extra = groups.reduce(
-      (sum, g) => sum + (g.options.find((op) => op.id === pickOpts[g.id])?.price_delta ?? 0),
+      (sum, g) =>
+        sum +
+        (g.options.find((op) => op.id === pickOpts[g.id])?.price_delta ?? 0),
       0,
     );
     const optNames = groups
@@ -242,20 +268,26 @@ export function OrderEditor({
   if (review) {
     const row = "flex items-center justify-between gap-2";
     return (
-      <Modal open onClose={onClose} title={E.reviewTitle.replace("{n}", String(orderNumber))}>
+      <Modal
+        open
+        onClose={onClose}
+        title={E.reviewTitle.replace("{n}", String(orderNumber))}
+      >
         <div className="space-y-3 text-sm">
           <ul className="space-y-1">
             {review.changes.map((c, i) => (
               <li key={i} className={row}>
                 <span className="min-w-0 flex-1">{c.name}</span>
                 <span className="shrink-0 text-ink-muted">
-                  {c.new_qty === 0
-                    ? E.removed
-                    : c.old_qty === 0
-                      ? `${E.added} ×${fmtNum(c.new_qty)}`
-                      : c.old_qty !== c.new_qty
-                        ? `×${fmtNum(c.old_qty)} ← ×${fmtNum(c.new_qty)}`
-                        : E.priceChanged}
+                  {c.returned
+                    ? `${E.returnedLabel} ×${fmtNum(c.returned)}`
+                    : c.new_qty === 0
+                      ? E.removed
+                      : c.old_qty === 0
+                        ? `${E.added} ×${fmtNum(c.new_qty)}`
+                        : c.old_qty !== c.new_qty
+                          ? `×${fmtNum(c.old_qty)} ← ×${fmtNum(c.new_qty)}`
+                          : E.priceChanged}
                 </span>
               </li>
             ))}
@@ -289,9 +321,14 @@ export function OrderEditor({
             </span>
           </div>
           {(review.stores ?? []).map((s) => (
-            <div key={s.merchant_id} className="space-y-1 rounded-control bg-field px-3 py-2">
+            <div
+              key={s.merchant_id}
+              className="space-y-1 rounded-control bg-field px-3 py-2"
+            >
               <div className={row}>
-                <span className="text-ink-muted">{E.storeDue.replace("{name}", s.name)}</span>
+                <span className="text-ink-muted">
+                  {E.storeDue.replace("{name}", s.name)}
+                </span>
                 <span className="flex items-center gap-1.5">
                   <Money value={s.old_due} small />
                   <span aria-hidden>←</span>
@@ -336,9 +373,18 @@ export function OrderEditor({
   }
 
   return (
-    <Modal open onClose={onClose} title={E.title.replace("{n}", String(orderNumber))} size="lg">
+    <Modal
+      open
+      onClose={onClose}
+      title={E.title.replace("{n}", String(orderNumber))}
+      size="lg"
+    >
       {lines == null ? (
-        err ? <Alert tone="error">{err}</Alert> : <LoadingState />
+        err ? (
+          <Alert tone="error">{err}</Alert>
+        ) : (
+          <LoadingState />
+        )
       ) : (
         <div className="space-y-4 text-sm">
           <ul className="space-y-2">
@@ -349,10 +395,13 @@ export function OrderEditor({
                   key={l.id}
                   className={`flex flex-wrap items-center gap-2 ${q === 0 ? "opacity-50" : ""}`}
                 >
-                  <span className={`min-w-0 flex-1 font-medium ${q === 0 ? "line-through" : ""}`}>
+                  <span
+                    className={`min-w-0 flex-1 font-medium ${q === 0 ? "line-through" : ""}`}
+                  >
                     {l.name}
                   </span>
-                  {q > 0 && stepper(q, (n) => setQty((s) => ({ ...s, [l.id]: n })), 1)}
+                  {q > 0 &&
+                    stepper(q, (n) => setQty((s) => ({ ...s, [l.id]: n })), 1)}
                   <label className="flex shrink-0 items-center gap-1 text-xs text-ink-muted">
                     {E.storePrice}
                     <Input
@@ -361,13 +410,17 @@ export function OrderEditor({
                       className="w-24"
                       value={price[l.id] ?? ""}
                       disabled={q === 0}
-                      onChange={(e) => setPrice((s) => ({ ...s, [l.id]: e.target.value }))}
+                      onChange={(e) =>
+                        setPrice((s) => ({ ...s, [l.id]: e.target.value }))
+                      }
                     />
                   </label>
                   <Button
                     variant={q === 0 ? "secondary" : "danger-outline"}
                     size="sm"
-                    onClick={() => setQty((s) => ({ ...s, [l.id]: q === 0 ? l.qty : 0 }))}
+                    onClick={() =>
+                      setQty((s) => ({ ...s, [l.id]: q === 0 ? l.qty : 0 }))
+                    }
                   >
                     {q === 0 ? E.undo : <IconDelete size={14} />}
                   </Button>
@@ -376,14 +429,25 @@ export function OrderEditor({
             })}
             {adds.map((a) => (
               <li key={a.key} className="flex flex-wrap items-center gap-2">
-                <span className="min-w-0 flex-1 font-medium text-success">{a.name}</span>
-                {stepper(a.qty, (n) => setAdds((s) => s.map((x) => (x.key === a.key ? { ...x, qty: n } : x))), 1)}
+                <span className="min-w-0 flex-1 font-medium text-success">
+                  {a.name}
+                </span>
+                {stepper(
+                  a.qty,
+                  (n) =>
+                    setAdds((s) =>
+                      s.map((x) => (x.key === a.key ? { ...x, qty: n } : x)),
+                    ),
+                  1,
+                )}
                 <Money value={a.price * a.qty} small className="shrink-0" />
                 <Button
                   variant="danger-outline"
                   size="sm"
                   aria-label={E.remove}
-                  onClick={() => setAdds((s) => s.filter((x) => x.key !== a.key))}
+                  onClick={() =>
+                    setAdds((s) => s.filter((x) => x.key !== a.key))
+                  }
                 >
                   <IconDelete size={14} />
                 </Button>
@@ -413,7 +477,9 @@ export function OrderEditor({
                 key={g.id}
                 label={g.name}
                 value={pickOpts[g.id] ?? ""}
-                onChange={(e) => setPickOpts((s) => ({ ...s, [g.id]: e.target.value }))}
+                onChange={(e) =>
+                  setPickOpts((s) => ({ ...s, [g.id]: e.target.value }))
+                }
               >
                 <option value="">{E.pickOption}</option>
                 {g.options.map((op) => (
@@ -424,7 +490,12 @@ export function OrderEditor({
                 ))}
               </Select>
             ))}
-            <Button variant="secondary" size="sm" disabled={!picked} onClick={addPicked}>
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={!picked}
+              onClick={addPicked}
+            >
               {E.addButton}
             </Button>
           </div>

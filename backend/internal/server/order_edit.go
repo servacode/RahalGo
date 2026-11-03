@@ -15,6 +15,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/servacode/rahalgo/backend/internal/authz"
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/orders"
@@ -38,7 +39,9 @@ func (s *Server) handleOrderEdit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	orderID := chi.URLParam(r, "id")
-	o, res, err := s.orders.EditOrder(r.Context(), userIDFrom(r), orderID, req, false,
+	// **وبعد الاستلام قدرةٌ أضيق** (قرارُ المالك، البند ٤) — يقرّرها الخادمُ بالطلب لا الشاشة.
+	o, res, err := s.orders.EditOrder(r.Context(), userIDFrom(r), orderID, req,
+		s.hasCapability(r, authz.OrdersEditAfterPickup),
 		func(ctx context.Context, q dbtx.Querier, res orders.EditResult) error {
 			if res.DryRun {
 				return nil

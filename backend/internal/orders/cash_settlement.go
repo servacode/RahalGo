@@ -68,8 +68,10 @@ func (s *Service) validateSettlement(ctx context.Context, q wallet.Querier,
 	var exMethod, exState string
 	var exAmount int64
 	var earningTx, accruedTx, paidTx *int64
+	// **والحقُّ الحاليُّ بتصحيحاته** (تعديلُ الطلب بعد الاستلام، ٢٠٢٦-١١-٠٣) — `amount` الأصليُّ
+	// لا يُمسّ، والتصحيحاتُ في `adjusted_amount`.
 	err := q.QueryRow(ctx, `
-		SELECT method, state, amount, earning_tx_id, accrued_tx_id, paid_tx_id
+		SELECT method, state, amount + adjusted_amount, earning_tx_id, accrued_tx_id, paid_tx_id
 		FROM merchant_settlements
 		WHERE order_id = $1 AND merchant_id = $2
 		FOR UPDATE`, orderID, merchantID).
@@ -232,7 +234,7 @@ func cashReversalNote(cause string) string {
 //   - `cash_reversed`: لا شيء.
 func (s *Service) reverseCashSettlements(ctx context.Context, q wallet.Querier, orderID, actorID string) error {
 	rows, err := q.Query(ctx, `
-		SELECT id::text, merchant_id::text, amount - reversed_amount, state, commission_waived
+		SELECT id::text, merchant_id::text, amount + adjusted_amount - reversed_amount, state, commission_waived
 		FROM merchant_settlements
 		WHERE order_id = $1 AND method = 'cash'
 		FOR UPDATE`, orderID)
@@ -363,13 +365,24 @@ func (s *Service) payCashByDriver(ctx context.Context, q wallet.Querier,
 
 // driverPaidFor **ما دفعه السائقون للمتاجر عن هذا الطلب** — كلُّه، وما دفعه هذا
 // السائقُ وحدَه. **من الدفتر لا من الصفّ**: قيدُ الدفع هو ما خرج فعلاً.
+//
+// **ومعها فروقُ تعديل الطلب بعد الاستلام** (`merchant_settlement_adjustments`، ٢٠٢٦-١١-٠٣):
+// السائقُ دفع الفرقَ للمتجر (سالبٌ في الدفتر) أو ردّه المتجرُ له (موجب) — **فيُجمع موقَّعاً.**
 func driverPaidFor(ctx context.Context, q wallet.Querier, orderID, driverID string) (all, mine int64, err error) {
 	err = q.QueryRow(ctx, `
-		SELECT COALESCE(-sum(t.amount), 0)::bigint,
-		       COALESCE(-sum(t.amount) FILTER (WHERE ms.paid_by = $2::uuid), 0)::bigint
-		FROM merchant_settlements ms
-		JOIN wallet_transactions t ON t.id = ms.paid_tx_id
-		WHERE ms.order_id = $1 AND ms.paid_via = 'driver'`, orderID, driverID).Scan(&all, &mine)
+		SELECT COALESCE(-sum(p.amount), 0)::bigint,
+		       COALESCE(-sum(p.amount) FILTER (WHERE p.paid_by = $2::uuid), 0)::bigint
+		FROM (
+			SELECT t.amount, ms.paid_by
+			FROM merchant_settlements ms
+			JOIN wallet_transactions t ON t.id = ms.paid_tx_id
+			WHERE ms.order_id = $1 AND ms.paid_via = 'driver'
+			UNION ALL
+			SELECT t.amount, a.paid_by
+			FROM merchant_settlement_adjustments a
+			JOIN wallet_transactions t ON t.id = a.paid_tx_id
+			WHERE a.order_id = $1 AND a.paid_via = 'driver'
+		) p`, orderID, driverID).Scan(&all, &mine)
 	return all, mine, err
 }
 

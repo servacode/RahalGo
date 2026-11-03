@@ -55,8 +55,9 @@ var (
 	// ErrOrderEditClosed **لا تعديلَ بعد التسليم أو الانتهاء** — بابُه الاسترجاعُ أو التعويض.
 	ErrOrderEditClosed = httpx.NewError(http.StatusConflict,
 		"order_edit_closed", "errors.order_edit_closed")
-	// ErrOrderEditAfterPickup **بعد الاستلام قُيّد المال** — ولا يُعدَّل إلّا بقيدٍ يصحّحه.
-	ErrOrderEditAfterPickup = httpx.NewError(http.StatusConflict,
+	// ErrOrderEditAfterPickup **بعد الاستلام قُيّد المال** — ولا يعدّله إلّا من يملك قيدَ تصحيحه
+	// (قرارُ المالك ٢٠٢٦-١١-٠٣، البند ٤: المالكُ والأدمن).
+	ErrOrderEditAfterPickup = httpx.NewError(http.StatusForbidden,
 		"order_edit_after_pickup", "errors.order_edit_after_pickup")
 	// ErrOrderEditLast **لا يبقى طلبٌ بلا بضاعة** — يُنهى الطلبُ بدلَ حذف آخر صنف.
 	ErrOrderEditLast = httpx.NewError(http.StatusConflict,
@@ -105,6 +106,8 @@ type EditChange struct {
 	NewQty   int    `json:"new_qty"`
 	OldPrice int64  `json:"old_price"`
 	NewPrice int64  `json:"new_price"`
+	// Returned **ما رجّعه الزبونُ بعد الاستلام والمنصّةُ تتحمّله** — يبقى للمتجر حقُّه.
+	Returned int `json:"returned,omitempty"`
 }
 
 // EditStoreDelta **فرقُ حقّ متجرٍ بعد الاستلام** — ما كان وما صار.
@@ -140,6 +143,7 @@ type editLineRow struct {
 	id, name, merchantID string
 	qty                  int
 	unit, cost           int64
+	returned             bool
 }
 
 // EditOrder **يعدّل طلباً عاديّاً ويعيد حسابَه** — ذرّيّاً.
@@ -228,10 +232,21 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 		return nil, res, err
 	}
 	res.AfterPickup = settled || pastPickup[o.status]
-	if res.AfterPickup {
+	if res.AfterPickup && !afterPickupAllowed {
 		return nil, res, ErrOrderEditAfterPickup
 	}
-	_ = afterPickupAllowed
+	if res.AfterPickup {
+		// **طلبٌ سُوّي قبل صفوف التسوية** (التراث) لا يُصحَّح آليّاً — لا صفَّ يُقيَّد عليه.
+		var rowsExist bool
+		if err := tx.QueryRow(ctx,
+			`SELECT EXISTS(SELECT 1 FROM merchant_settlements WHERE order_id = $1)`, orderID).
+			Scan(&rowsExist); err != nil {
+			return nil, res, err
+		}
+		if settled && !rowsExist {
+			return nil, res, ErrOrderEditSettlement
+		}
+	}
 
 	storesBefore, err := orderStoreSet(ctx, tx, orderID, o.merchantID)
 	if err != nil {
@@ -243,14 +258,18 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 	for _, l := range req.Lines {
 		var r editLineRow
 		err := tx.QueryRow(ctx, `
-			SELECT id::text, name, COALESCE(merchant_id::text, $3), qty, unit_price, merchant_price
+			SELECT id::text, name, COALESCE(merchant_id::text, $3), qty, unit_price, merchant_price, returned
 			FROM order_items WHERE id = $1 AND order_id = $2 FOR UPDATE`, l.ItemID, orderID, o.merchantID).
-			Scan(&r.id, &r.name, &r.merchantID, &r.qty, &r.unit, &r.cost)
+			Scan(&r.id, &r.name, &r.merchantID, &r.qty, &r.unit, &r.cost, &r.returned)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, res, httpx.ErrNotFound
 		}
 		if err != nil {
 			return nil, res, err
+		}
+		// **وسطرٌ رجّعه الزبونُ لا يُعدَّل** — أثرُه قُيّد.
+		if r.returned {
+			return nil, res, httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
 		}
 		newUnit, newCost := r.unit, r.cost
 		if l.MerchantPrice != nil && *l.MerchantPrice != r.cost {
@@ -264,7 +283,40 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 		if l.Qty == r.qty && newUnit == r.unit && newCost == r.cost {
 			continue
 		}
-		if l.Qty == 0 {
+		change := EditChange{Name: r.name, OldQty: r.qty, NewQty: l.Qty, OldPrice: r.unit, NewPrice: newUnit}
+		// ══════════════════════════════════════════════════════════════
+		// **نقصٌ بعد الاستلام والمتجرُ لم يردّ المال** (قرارُ المالك، البند ٢)
+		// ══════════════════════════════════════════════════════════════
+		//
+		// الزبونُ رجّع الصنفَ بعد أن استلمه السائق: **المتجرُ يأخذ حقَّه كاملاً والمنصّةُ
+		// تتحمّل.** فيبقى ما رجّع سطراً بسعر متجره (لا يتغيّر حقُّه ولا عمولتُه) **وسعرُ
+		// الزبون فيه صفر** — والمجموعُ ينقص وحدَه، والفرقُ على الخزينة.
+		if res.AfterPickup && !req.StoreRefunded && l.Qty < r.qty {
+			back := r.qty - l.Qty
+			change.Returned = back
+			if l.Qty == 0 {
+				if _, err := tx.Exec(ctx, `
+					UPDATE order_items SET returned = true, unit_price = 0, offer_cut = 0
+					 WHERE id = $1 OR drink_for = $1`, r.id); err != nil {
+					return nil, res, err
+				}
+			} else {
+				if _, err := tx.Exec(ctx, `
+					INSERT INTO order_items (order_id, menu_item_id, name, unit_price, merchant_price,
+					                         merchant_id, qty, note, options, merchant_settlement_method,
+					                         offer_cut, offer_borne_by, returned)
+					SELECT order_id, menu_item_id, name, 0, merchant_price, merchant_id, $2, note, options,
+					       merchant_settlement_method, 0, offer_borne_by, true
+					FROM order_items WHERE id = $1`, r.id, back); err != nil {
+					return nil, res, err
+				}
+				if _, err := tx.Exec(ctx, `
+					UPDATE order_items SET qty = $2, unit_price = $3, merchant_price = $4 WHERE id = $1`,
+					r.id, l.Qty, newUnit, newCost); err != nil {
+					return nil, res, err
+				}
+			}
+		} else if l.Qty == 0 {
 			// **ومشروباتُ الصنف تُمحى بمحوه** (`drink_for ... ON DELETE CASCADE`).
 			if _, err := tx.Exec(ctx, `DELETE FROM order_items WHERE id = $1`, r.id); err != nil {
 				return nil, res, err
@@ -275,9 +327,7 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 			return nil, res, err
 		}
 		touched[r.merchantID] = true
-		res.Changes = append(res.Changes, EditChange{
-			Name: r.name, OldQty: r.qty, NewQty: l.Qty, OldPrice: r.unit, NewPrice: newUnit,
-		})
+		res.Changes = append(res.Changes, change)
 	}
 
 	// ── ٣ · الأصنافُ المضافة — بسعر اليوم ومن متاجر الطلب ─────────────────
@@ -326,7 +376,7 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 	// ── ٤ · لا يبقى طلبٌ بلا بضاعة ──────────────────────────────────────
 	var left int
 	if err := tx.QueryRow(ctx,
-		`SELECT COALESCE(sum(qty), 0) FROM order_items WHERE order_id = $1`,
+		`SELECT COALESCE(sum(qty) FILTER (WHERE NOT returned), 0) FROM order_items WHERE order_id = $1`,
 		orderID).Scan(&left); err != nil {
 		return nil, res, err
 	}
@@ -447,7 +497,19 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 		return nil, res, err
 	}
 
-	// ── ٧ · الأثر: حدثٌ وإشعاراتٌ وتدقيق — في المعاملة نفسِها ─────────────
+	// ── ٧ · بعد الاستلام: حقُّ كلِّ متجرٍ يُصحَّح بقيدٍ جديد، ثمّ الخزينة ────────
+	if res.AfterPickup {
+		stores, err := s.correctSettlementsTx(ctx, tx, orderID, actorID, o.driverID, req.Reason)
+		if err != nil {
+			return nil, res, err
+		}
+		res.Stores = stores
+		if err := s.creditTreasury(ctx, tx, orderID, actorID); err != nil {
+			return nil, res, err
+		}
+	}
+
+	// ── ٨ · الأثر: حدثٌ وإشعاراتٌ وتدقيق — في المعاملة نفسِها ─────────────
 	if err := s.editTrailTx(ctx, tx, actorID, orderID, o.status, o.number, o.customerID,
 		o.driverID, touched, res); err != nil {
 		return nil, res, err
@@ -662,7 +724,7 @@ func (s *Service) EditCatalog(ctx context.Context, orderID string) (EditCatalogR
 	}
 	lrows, err := s.db.Query(ctx, `
 		SELECT id::text, name, qty, unit_price, merchant_price, COALESCE(merchant_id::text, $2), drink_for::text
-		FROM order_items WHERE order_id = $1
+		FROM order_items WHERE order_id = $1 AND NOT returned
 		ORDER BY (drink_for IS NOT NULL), name, id`, orderID, orderMerchant)
 	if err != nil {
 		return res, err

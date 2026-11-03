@@ -158,6 +158,9 @@ type OrderItem struct {
 	// DrinkOptionID **معرّفُ خيار المشروب** — لإعادة الطلب: يُرسل في `option_qty`
 	// لصنف `drink_for`.
 	DrinkOptionID *string `json:"drink_option_id,omitempty"`
+	// Returned **سطرٌ رجّعه الزبونُ بعد الاستلام والمنصّةُ تتحمّله** (قرارُ المالك ٢٠٢٦-١١-٠٣) —
+	// سعرُه للزبون صفر، **ويبقى للمتجر حقُّه فيه.** يُعرض «مرتجع» لا يُحسب.
+	Returned bool `json:"returned,omitempty"`
 	// drinks **مشروباتُ هذا الصنف** قبل الإدراج — لا تُرسل.
 	drinks []OrderItem
 }

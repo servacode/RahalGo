@@ -33,8 +33,8 @@
     "setting_defs": 254,
     "behaviour_settings": 209,
     "order_fields": 129,
-    "test_files": 695,
-    "test_funcs": 2687
+    "test_files": 696,
+    "test_funcs": 2695
   },
   "flows": [
     {
@@ -11034,6 +11034,54 @@
       "name": "TestOpsCustomTimesTakeAgreementForBuying",
       "file": "internal/orders/opscustom_test.go",
       "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestOrderEditAP_CashStoreAddItem",
+      "file": "internal/orders/order_edit_after_pickup_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestOrderEditAP_CashStoreRefundedThenRefund",
+      "file": "internal/orders/order_edit_after_pickup_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestOrderEditAP_CustomerReturnedPlatformBears",
+      "file": "internal/orders/order_edit_after_pickup_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestOrderEditAP_Guards",
+      "file": "internal/orders/order_edit_after_pickup_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestOrderEditAP_NeedsCapability",
+      "file": "internal/orders/order_edit_after_pickup_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestOrderEditAP_ThenUndeliver",
+      "file": "internal/orders/order_edit_after_pickup_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestOrderEditAP_WalletCustomerShortfallBecomesCash",
+      "file": "internal/orders/order_edit_after_pickup_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestOrderEditAP_WalletStoreDebt",
+      "file": "internal/orders/order_edit_after_pickup_test.go",
+      "package": "orders_test",
       "orphan": true
     },
     {

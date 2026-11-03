@@ -47,6 +47,9 @@ const (
 	// ── الطلبات ──────────────────────────────────────────────────
 	OrdersRead      Capability = "orders.read"
 	OrdersIntervene Capability = "orders.intervene"
+	// OrdersEditAfterPickup **«تعديل الطلب» بعد الاستلام** — يكتب قيدَ تصحيحٍ لحقّ المتجر
+	// (قرارُ المالك ٢٠٢٦-١١-٠٣، البند ٤): **للمالك والأدمن وحدَهما**، كـ`finance.recompute`.
+	OrdersEditAfterPickup Capability = "orders.edit_after_pickup"
 
 	// ── الحسابات والموظّفون ──────────────────────────────────────
 	UsersRead         Capability = "users.read"
@@ -316,6 +319,7 @@ var FieldPolicy = map[string]Capability{
 var catalog = map[Capability]string{
 	OrdersRead:               "قراءة الطلبات ولوحة العمليات",
 	OrdersIntervene:          "التدخل في طلب: تحويله أو إلغاؤه أو استرجاعه",
+	OrdersEditAfterPickup:    "تعديل الطلب بعد استلامه من المتجر",
 	UsersRead:                "قراءة الحسابات",
 	UsersStatusManage:        "إيقاف حساب أو حظره أو تعديل بياناته",
 	RolesManage:              "إدارة الأدوار والصلاحيات — أقوى صلاحية بالمنصة، تعطي صاحبها كل شيء",
@@ -382,7 +386,7 @@ var Groups = []Group{GroupOrders, GroupAccounts, GroupMoney, GroupStoresDrivers,
 	GroupSettings, GroupContent, GroupSecurity}
 
 var groupOf = map[Capability]Group{
-	OrdersRead: GroupOrders, OrdersIntervene: GroupOrders,
+	OrdersRead: GroupOrders, OrdersIntervene: GroupOrders, OrdersEditAfterPickup: GroupOrders,
 	OrdersCommunicationsRead: GroupOrders, OrdersCustomerDetailsRead: GroupOrders,
 	SupportManage: GroupOrders, EmergenciesManage: GroupOrders,
 	DisputesManage: GroupMoney,
@@ -428,7 +432,7 @@ const (
 )
 
 var riskOf = map[Capability]Risk{
-	FinanceManage: RiskMoney, PayoutsDecide: RiskMoney, FinanceRecompute: RiskMoney,
+	FinanceManage: RiskMoney, PayoutsDecide: RiskMoney, FinanceRecompute: RiskMoney, OrdersEditAfterPickup: RiskMoney,
 	TreasuryManage:          RiskMoney,
 	FinanceWriteoffApprove:  RiskMoney,
 	SettingsFinancialManage: RiskMoney, UsersCashBanLift: RiskMoney,

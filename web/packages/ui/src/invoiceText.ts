@@ -21,6 +21,8 @@ export interface InvoiceLineItem {
   drink_for?: string | null;
   /** **سطرُ مشروبٍ مدموج** — معرّفاتُ الأسطر التي جُمعت فيه (`invoiceOrder`). */
   merged_ids?: string[];
+  /** **رجّعه الزبونُ بعد الاستلام** (٢٠٢٦-١١-٠٣) — سعرُه صفر، ولا يُدمج مع غير المرتجع. */
+  returned?: boolean;
 }
 
 const WEIGHT = /كيلو|كغ|غرام|(^|\s|[0-9٠-٩])غ$/;
@@ -61,7 +63,7 @@ export function invoiceLineText(
 /** **مفتاحُ دمج المشروب** — اسمُه وقيمُ خياراته؛ فـ«كولا» مع صنفين سطرٌ واحد. */
 function drinkKey(l: InvoiceLineItem): string {
   const opts = (l.options ?? []).map((o) => (o.name ?? "").trim()).filter(Boolean).sort();
-  return [l.name.trim(), ...opts].join("|");
+  return [l.name.trim(), ...opts, l.returned ? "returned" : ""].join("|");
 }
 
 /**

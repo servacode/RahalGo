@@ -119,6 +119,14 @@
    "field_scoped_only": true
   },
   {
+   "code": "orders.edit_after_pickup",
+   "description": "تعديل الطلب بعد استلامه من المتجر",
+   "guards_routes": 0,
+   "guards_in_handler": [
+    "POST /orders/{id}/edit"
+   ]
+  },
+  {
    "code": "orders.intervene",
    "description": "التدخل في طلب: تحويله أو إلغاؤه أو استرجاعه",
    "guards_routes": 21

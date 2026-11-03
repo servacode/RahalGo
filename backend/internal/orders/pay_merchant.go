@@ -75,7 +75,7 @@ func (s *Service) payMerchantsFor(ctx context.Context, q dbtx.Querier, orderID s
 		var method, state string
 		var amount, reversed int64
 		err := q.QueryRow(ctx, `
-			SELECT method, state, amount, reversed_amount FROM merchant_settlements
+			SELECT method, state, amount + adjusted_amount, reversed_amount FROM merchant_settlements
 			 WHERE order_id = $1 AND merchant_id = $2`, orderID, sh.merchantID).
 			Scan(&method, &state, &amount, &reversed)
 		switch {

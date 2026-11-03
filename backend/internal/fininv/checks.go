@@ -335,10 +335,14 @@ var All = []Check{
 		// **والسالبُ لا يُعَدّ** — العكسُ واقتطاعُ الدَّين يكتبان بالنوع نفسِه
 		// والمرجع نفسِه (transitions.go:1089 و:923)، **والسؤالُ عن استحقاقٍ
 		// قُيّد مرّتين لا عن قيدٍ ثانٍ يُنقص.**
+		// **وقيدُ تصحيحٍ بتعديل الطلب بعد الاستلام ليس تكراراً** (٢٠٢٦-١١-٠٣) — يُعرف بسطره
+		// في merchant_settlement_adjustments، **ويحرسه FI-14.h بمقداره.**
 		SQL: `
 			SELECT t.ref, t.user_id::text, count(*)::bigint AS مرّات
 			FROM wallet_transactions t
 			WHERE t.kind = 'merchant_earning' AND t.amount > 0
+			  AND NOT EXISTS (SELECT 1 FROM merchant_settlement_adjustments a
+			                  WHERE a.earning_tx_id = t.id)
 			GROUP BY t.ref, t.user_id HAVING count(*) > 1`,
 	},
 	{
@@ -490,7 +494,10 @@ var All = []Check{
 				                  WHERE ms.paid_tx_id = t.id AND ms.paid_via = 'driver')
 				       -- **وعمولةٌ محيت أخذها المتجرُ من السائق** (٢٠٢٦-١٠-٢٦) — من نقد الطلب كذلك.
 				       OR EXISTS (SELECT 1 FROM merchant_settlements ms
-				                  WHERE ms.waived_paid_tx_id = t.id))
+				                  WHERE ms.waived_paid_tx_id = t.id)
+				       -- **وفرقُ حقّ المتجر بتعديل الطلب** (٢٠٢٦-١١-٠٣) — دفعه السائقُ أو ردّه المتجرُ له.
+				       OR EXISTS (SELECT 1 FROM merchant_settlement_adjustments a
+				                  WHERE a.paid_tx_id = t.id AND a.paid_via = 'driver'))
 			) l ON true
 			-- **وسطرُ «ما استلمت العمولة» يُنقص نقدَ الطلب في صندوقه** (قرارُ المالك ٢٠٢٦-١٠-٢٦):
 			-- المتجرُ أخذها منه فلم تبقَ بيده — ومقابلُها في الدفتر دفعُها للمتجر وعكسُ الخزينة.
@@ -512,10 +519,16 @@ var All = []Check{
 			-- **وطلبٌ في الطريق دفع سائقُه للمتجر ولم يُختم بعد** — المدفوعُ سلفةٌ
 			-- قائمةٌ بيده لا نقدٌ محصَّل؛ تُحسم عند الختام (تحصيلٌ أو ردُّ سلفة).
 			LEFT JOIN LATERAL (
-				SELECT -sum(t.amount) AS paid FROM merchant_settlements ms
-				JOIN wallet_transactions t ON t.id = ms.paid_tx_id
-				WHERE ms.order_id = o.id AND ms.paid_via = 'driver'
-				  AND o.status NOT IN ('delivered', 'refunded', 'failed', 'cancelled', 'rejected')
+				SELECT -sum(x.amount) AS paid FROM (
+					SELECT t.amount FROM merchant_settlements ms
+					JOIN wallet_transactions t ON t.id = ms.paid_tx_id
+					WHERE ms.order_id = o.id AND ms.paid_via = 'driver'
+					UNION ALL
+					SELECT t.amount FROM merchant_settlement_adjustments a
+					JOIN wallet_transactions t ON t.id = a.paid_tx_id
+					WHERE a.order_id = o.id AND a.paid_via = 'driver'
+				) x
+				WHERE o.status NOT IN ('delivered', 'refunded', 'failed', 'cancelled', 'rejected')
 			) d ON true
 			WHERE EXISTS (SELECT 1 FROM wallets WHERE is_treasury)
 			  AND EXISTS (SELECT 1 FROM wallet_transactions p
@@ -585,13 +598,23 @@ var All = []Check{
 				SELECT sum(oi.merchant_price * oi.qty) AS cost
 				FROM order_items oi WHERE oi.order_id = o.id
 			) k ON true
+			-- **والمستحقُّ الأصليُّ بلا قيود التصحيح، ثمّ التصحيحُ بمقداره** (تعديلُ الطلب بعد الاستلام،
+			-- ٢٠٢٦-١١-٠٣): قيدُ النقص سالبٌ، وما لم يكفِه رصيدُ المتجر دينٌ لا قيد — فيُقرأ الفرقُ
+			-- من سطر التصحيح لا من الدفتر.
 			LEFT JOIN LATERAL (
 				SELECT sum(t.amount) AS due FROM wallet_transactions t
 				WHERE t.ref = o.id::text AND t.kind = 'merchant_earning' AND t.amount > 0
+				  AND NOT EXISTS (SELECT 1 FROM merchant_settlement_adjustments a
+				                  WHERE a.earning_tx_id = t.id)
 			) m ON true
+			LEFT JOIN LATERAL (
+				SELECT sum(a.delta) AS adj FROM merchant_settlement_adjustments a
+				JOIN merchant_settlements ms ON ms.id = a.settlement_id
+				WHERE a.order_id = o.id AND ms.method = 'wallet'
+			) j ON true
 			WHERE o.status = 'delivered' AND o.kind <> 'custom'
 			  AND COALESCE(m.due, 0) > 0
-			  AND o.platform_commission <> COALESCE(k.cost, 0) - COALESCE(m.due, 0)`,
+			  AND o.platform_commission <> COALESCE(k.cost, 0) - COALESCE(m.due, 0) - COALESCE(j.adj, 0)`,
 	},
 	{
 		ID: "FI-06.c", Family: FI06, Status: ProvableNow, Ops: true,
@@ -669,6 +692,12 @@ var All = []Check{
 			         JOIN wallet_transactions t ON t.id = ms.paid_tx_id
 			         WHERE ms.order_id = o.id AND ms.paid_via = 'driver'
 			           AND ms.paid_by = e.driver_id), 0)
+			       -- **وفرقُ حقّ المتجر بتعديل الطلب** (٢٠٢٦-١١-٠٣) — دفعه هذا السائقُ أو قبضه.
+			       - COALESCE((
+			         SELECT -sum(t.amount) FROM merchant_settlement_adjustments a
+			         JOIN wallet_transactions t ON t.id = a.paid_tx_id
+			         WHERE a.order_id = o.id AND a.paid_via = 'driver'
+			           AND a.paid_by = e.driver_id), 0)
 			       -- **وما دفعه للمتجر في المشتريات** (قرارُ المالك ٢٠٢٦-١٠-١٥) — والقديمُ بلاه.
 			       - COALESCE(o.custom_store_paid, 0), 0)`,
 	},
@@ -1005,12 +1034,12 @@ var All = []Check{
 		Kinds: []string{"merchant_cash_accrued", "merchant_cash_paid"},
 		SQL: `
 			SELECT w.user_id, w.balance,
-			       COALESCE((SELECT sum(amount - reversed_amount)
+			       COALESCE((SELECT sum(amount + adjusted_amount - reversed_amount)
 			                 FROM merchant_settlements
 			                 WHERE method = 'cash' AND state = 'cash_due'), 0) AS outstanding
 			FROM wallets w
 			WHERE w.is_cash_holding
-			  AND w.balance <> COALESCE((SELECT sum(amount - reversed_amount)
+			  AND w.balance <> COALESCE((SELECT sum(amount + adjusted_amount - reversed_amount)
 			                             FROM merchant_settlements
 			                             WHERE method = 'cash' AND state = 'cash_due'), 0)`,
 	},
@@ -1091,7 +1120,7 @@ var All = []Check{
 			SELECT paid.total AS paid_out, due.total AS settled_due
 			FROM (SELECT COALESCE(-sum(amount), 0) AS total
 			        FROM wallet_transactions WHERE kind = 'merchant_cash_paid') paid,
-			     (SELECT COALESCE(sum(amount - reversed_amount + commission_waived), 0) AS total
+			     (SELECT COALESCE(sum(amount + adjusted_amount - reversed_amount + commission_waived), 0) AS total
 			        FROM merchant_settlements
 			       WHERE method = 'cash' AND state = 'cash_paid') due
 			WHERE paid.total <> due.total`,
@@ -1114,6 +1143,38 @@ var All = []Check{
 			    OR COALESCE((SELECT -wt.amount FROM wallet_transactions wt
 			                  WHERE wt.id = ms.waived_paid_tx_id
 			                    AND wt.kind = 'merchant_cash_paid'), 0) <> ms.commission_waived)`,
+	},
+	{
+		ID: "FI-14.h", Family: FI14, Status: ProvableNow, Ops: true,
+		Name: "تصحيحُ حقّ المتجر بتعديل الطلب = قيودُه",
+		Why: "**تعديلُ الطلب بعد الاستلام** (قرارُ المالك ٢٠٢٦-١١-٠٣) يقيّد فرقَ حقّ المتجر بقيدٍ " +
+			"جديد. **فمجموعُ التصحيحات على الصفّ = سطورُها، وكلُّ سطرٍ = قيودُه**: محفظةً قيدُ " +
+			"مستحقٍّ ودينُ ما لم يكفِه الرصيد، ونقداً قيدُ احتباسٍ بالفرق ودفعٌ بعكسه من السائق. " +
+			"**وافتراقُها حقٌّ مكتوبٌ للمتجر لا مالَ يقابله، أو مالٌ خرج بلا سطر.**",
+		Kinds: []string{"merchant_earning", "merchant_cash_accrued", "merchant_cash_paid"},
+		SQL: `
+			SELECT ms.id::text, ms.adjusted_amount, COALESCE(sum(a.delta), 0)::bigint AS السطور
+			FROM merchant_settlements ms
+			LEFT JOIN merchant_settlement_adjustments a ON a.settlement_id = ms.id
+			GROUP BY ms.id, ms.adjusted_amount
+			HAVING ms.adjusted_amount <> COALESCE(sum(a.delta), 0)
+			UNION ALL
+			SELECT a.id::text, a.delta, NULL
+			FROM merchant_settlement_adjustments a
+			JOIN merchant_settlements ms ON ms.id = a.settlement_id
+			WHERE (ms.method = 'wallet'
+			        AND (a.accrued_tx_id IS NOT NULL OR a.paid_tx_id IS NOT NULL
+			          OR COALESCE((SELECT t.amount FROM wallet_transactions t
+			                        WHERE t.id = a.earning_tx_id AND t.kind = 'merchant_earning'), 0)
+			             - a.debt <> a.delta))
+			   OR (ms.method = 'cash'
+			        AND (a.earning_tx_id IS NOT NULL OR a.debt <> 0
+			          OR COALESCE((SELECT t.amount FROM wallet_transactions t
+			                        WHERE t.id = a.accrued_tx_id AND t.kind = 'merchant_cash_accrued'), 0)
+			             <> a.delta
+			          OR COALESCE((SELECT -t.amount FROM wallet_transactions t
+			                        WHERE t.id = a.paid_tx_id AND t.kind = 'merchant_cash_paid'), 0)
+			             <> a.delta))`,
 	},
 
 	// ═══════════════════════════════════════════════════════════════════

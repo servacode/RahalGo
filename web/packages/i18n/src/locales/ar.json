@@ -124,6 +124,7 @@
       "observability.read": "عرض مراقبة النظام",
       "orders.read": "قراءة الطلبات",
       "orders.intervene": "التدخل في الطلبات",
+      "orders.edit_after_pickup": "تعديل الطلب بعد الاستلام",
       "orders.communications.read": "محادثات الطلبات",
       "orders.customer_details.read": "تفاصيل زبون الطلب",
       "support.manage": "التذاكر والنزاعات",
@@ -181,6 +182,7 @@
     "capabilityDescriptions": {
       "orders.read": "قراءة الطلبات ولوحة العمليات",
       "orders.intervene": "تحويل الطلب أو إلغاؤه أو استرجاعه نيابة عن أطرافه",
+      "orders.edit_after_pickup": "تعديل أصناف الطلب وأسعاره بعد استلامه من المتجر، مع تصحيح حق المتجر",
       "orders.communications.read": "قراءة محادثات الطلب ورسائله",
       "orders.customer_details.read": "هاتف زبون الطلب وموقعه وصورة التسليم",
       "support.manage": "التذاكر والنزاعات والتقييمات — وحل التذكرة قد يدفع تعويضا",
@@ -676,6 +678,7 @@
       "stamp": "{day} · {time}"
     },
     "listSeparator": "، ",
+    "returnedByCustomer": "رجّعه الزبون",
     "nameSeparator": "، ",
     "failReasons": {
       "customer_absent": "الزبون غير موجود",
@@ -1054,6 +1057,8 @@
     "order_edit_store_not_in_order": "يُضاف الصنف من متجر موجود في الطلب فقط.",
     "order_edit_no_change": "لم يتغيّر شيء في الطلب.",
     "order_edit_reason_required": "اكتب سبب التعديل.",
+    "order_edit_settlement_state": "حق هذا المتجر في حال لا يُصحَّح آلياً — راجع المالية.",
+    "order_edit_needs_driver": "الطلب بلا سائق يدفع فرق المتجر أو يستلمه — أسنده لسائق أولاً.",
     "partner_not_purchase": "الربط بمتجر تابع لطلبات المشتريات وحدها.",
     "partner_goods_documented": "ثمن البضاعة موثق — لا ربط ولا إلغاء ربط بعده.",
     "partner_merchant_inactive": "المتجر غير فعال — اختر متجرا فعالا.",
@@ -2191,6 +2196,7 @@
         "chooseOption": "اختر الخيارات المطلوبة أولاً",
         "addButton": "إضافة",
         "storeRefunded": "المتجر رجّع المصاري",
+        "returnedLabel": "رجّعه الزبون",
         "reason": "سبب التعديل",
         "next": "التالي",
         "confirm": "تأكيد التعديل",
@@ -5853,7 +5859,8 @@
         "delivery_failed_recipient": "أجرة توصيلة فشلت بذنب المستلم",
         "waived_rep_commission": "عمولة مندوب من طلب انمسحت عمولته",
         "refund_rep_share": "نصيب المندوب من طلب مسترجع",
-        "undelivered_order": "أجر أو عمولة طلب سُجّل تسليمه خطأً ثم أُلغي"
+        "undelivered_order": "أجر أو عمولة طلب سُجّل تسليمه خطأً ثم أُلغي",
+        "order_edit": "نقص حق المتجر بتعديل الطلب بعد الاستلام"
       },
       "causeAll": "كل الأسباب",
       "methods": {

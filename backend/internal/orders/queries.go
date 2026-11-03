@@ -118,7 +118,8 @@ const orderSelect = `
 	                          'name', oi.name, 'unit_price', oi.unit_price,
 	                          'qty', oi.qty, 'note', oi.note,
 	                          'options', COALESCE(oi.options, '[]'::jsonb),
-	                          'drink_for', oi.drink_for, 'drink_option_id', oi.drink_option_id)
+	                          'drink_for', oi.drink_for, 'drink_option_id', oi.drink_option_id,
+	                          'returned', oi.returned)
 	                        -- **والمشروبُ بعد صنفه** — وترتيبُ غيره كما كان.
 	                        ORDER BY COALESCE(oi.drink_for, oi.id), oi.drink_for IS NOT NULL, oi.id)
 	                 FROM order_items oi WHERE oi.order_id = o.id), '[]'::json),
@@ -259,7 +260,7 @@ func (s *Service) getByID(ctx context.Context, db dbtx.Querier, id string) (*Ord
 	// ثمّ تُقرأ البنودُ من المَسبَح**، **فوصلةٌ ثانيةٌ داخلَ معاملة.**
 	rows, err := db.Query(ctx, `
 		SELECT id, menu_item_id, name, unit_price, qty, note, options,
-		       drink_for::text, drink_option_id::text
+		       drink_for::text, drink_option_id::text, returned
 		FROM order_items WHERE order_id = $1`, id)
 	if err != nil {
 		return nil, err
@@ -269,7 +270,7 @@ func (s *Service) getByID(ctx context.Context, db dbtx.Querier, id string) (*Ord
 		var it OrderItem
 		var opts []byte
 		if err := rows.Scan(&it.ID, &it.MenuItemID, &it.Name, &it.UnitPrice, &it.Qty, &it.Note, &opts,
-			&it.DrinkFor, &it.DrinkOptionID); err != nil {
+			&it.DrinkFor, &it.DrinkOptionID, &it.Returned); err != nil {
 			rows.Close()
 			return nil, err
 		}

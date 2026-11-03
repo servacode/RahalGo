@@ -661,6 +661,10 @@ type HandlerRule struct {
 var handlerChecks = []HandlerRule{
 	{"POST", "/obligation-requests/{id}/approve", FinanceWriteoffApprove,
 		"server/obligations_actions.go handleDecideObligationRequest"},
+	// **تعديلُ الطلب بعد الاستلام** (قرارُ المالك ٢٠٢٦-١١-٠٣، البند ٤) — المسارُ بـ`orders.intervene`
+	// وبعد الاستلام يكتب قيدَ تصحيحٍ لحقّ المتجر، **فقدرةٌ أضيق تُسأل داخلَه.**
+	{"POST", "/orders/{id}/edit", OrdersEditAfterPickup,
+		"server/order_edit.go handleOrderEdit"},
 }
 
 // HandlerChecks القدراتُ التي تُسأل داخلَ المعالِج — **للعقد والحرّاس.**

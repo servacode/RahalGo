@@ -1514,6 +1514,14 @@ func (s *Service) reverseCommissions(ctx context.Context, q wallet.Querier, orde
 	// # ولا يُعفى المتجر
 	//
 	// **ما عجز عنه رصيدُه يبقى عليه** — **ولا يمحوه عجزُه.**
+	// **ودَينُ تعديل الطلب يُطرح** (٢٠٢٦-١١-٠٣) — قائمٌ على المتجر أصلاً، فلا يُسترَدّ مرّتين.
+	editDebts, err := editDebtsByOwner(ctx, q, orderID)
+	if err != nil {
+		return err
+	}
+	for i := range paidList {
+		paidList[i].amount -= editDebts[paidList[i].userID]
+	}
 	for _, p := range paidList {
 		if p.amount <= 0 {
 			continue

@@ -303,6 +303,8 @@ interface OrderRow {
     options: { group: string; name: string; price_delta: number }[];
     /** **مشروبُ بندٍ آخر** (`drink_for`، ٢٠٢٦-١٠-٣٠) — سطرٌ بعد صنفه. */
     drink_for?: string | null;
+    /** **رجّعه الزبونُ بعد الاستلام** (٢٠٢٦-١١-٠٣) — سعرُه صفر وحقُّ المتجر باقٍ. */
+    returned?: boolean;
   }[];
   events?: {
     from_status: string;
@@ -4171,12 +4173,13 @@ function OrderActions({
           <BtnLabel icon={IconSwap}>{m.admin.ordersPage.transfer}</BtnLabel>
         </Button>
       )}
-      {/* **«تعديل الطلب»** (قرارُ المالك ٢٠٢٦-١١-٠٣) — العاديُّ قبل الاستلام بيد من يملك التدخّل.
-          **والخادمُ يقرّر المالَ كلَّه** ويردّ ما لا يجوز. */}
+      {/* **«تعديل الطلب»** (قرارُ المالك ٢٠٢٦-١١-٠٣) — العاديُّ قبل الاستلام بيد من يملك التدخّل،
+          **وبعده لحتّى التسليم بقدرةٍ أضيق** (`orders.edit_after_pickup`: المالكُ والأدمن) لأنّه يكتب
+          قيدَ تصحيحٍ لحقّ المتجر. **والخادمُ يقرّر المالَ كلَّه** ويردّ ما لا يجوز. */}
       {canIntervene &&
         o.kind === "standard" &&
         !CLOSED_STATUSES.has(o.status) &&
-        !o.picked_up_at && (
+        (!o.picked_up_at || can("orders.edit_after_pickup")) && (
         <Button
           variant="secondary"
           disabled={busy !== ""}
@@ -4770,7 +4773,12 @@ function InvoiceList({
           <span className="flex items-start gap-2">
             <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-badge bg-primary" />
             <span className="min-w-0 flex-1">
-              <span className="font-medium">{invoiceLineText(it.name, it.qty, it.options)}</span>
+              <span className={`font-medium ${it.returned ? "text-ink-muted line-through" : ""}`}>
+                {invoiceLineText(it.name, it.qty, it.options)}
+              </span>
+              {it.returned && (
+                <span className="ms-2 text-xs font-bold text-warning">{m.common.returnedByCustomer}</span>
+              )}
               {it.note && (
                 <span className="block text-xs text-accent-dark">
                   <IconEdit size={11} className="inline align-[-1px]" />{" "}
@@ -4781,7 +4789,7 @@ function InvoiceList({
             {/* **و«غير متوفر» في الوسط والسعرُ آخرَ السطر** (المالك ٢٠٢٦-١٠-٢٢) — فتصطفّ
                 المبالغُ كلُّها تحت بعضها. */}
             {/* **وسطرُ مشروبٍ مدموجٍ من أكثر من بند لا يُعلَّم «غير متوفر»** — البندُ الواحدُ لا يُعرف منه. */}
-            {canUnavail && (it.merged_ids?.length ?? 0) <= 1 && (
+            {canUnavail && !it.returned && (it.merged_ids?.length ?? 0) <= 1 && (
               <button
                 type="button"
                 className="shrink-0 rounded-control px-1.5 text-2xs text-danger hover:bg-row-hover"

@@ -142,7 +142,8 @@
         "FI-14.d",
         "FI-14.e",
         "FI-14.f",
-        "FI-14.g"
+        "FI-14.g",
+        "FI-14.h"
       ]
     },
     {
@@ -1109,6 +1110,18 @@
       ]
     },
     {
+      "id": "FI-14.h",
+      "family": "FI-14",
+      "name": "تصحيحُ حقّ المتجر بتعديل الطلب = قيودُه",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "kinds": [
+        "merchant_earning",
+        "merchant_cash_accrued",
+        "merchant_cash_paid"
+      ]
+    },
+    {
       "id": "FI-15.a",
       "family": "FI-15",
       "name": "نقدٌ سلّمه سائقٌ دخل صندوقَ المكتب",
@@ -1242,7 +1255,8 @@
       "path": "تسويةُ التسليم · وPOST /admin/orders/{id}/waive-commission",
       "creators": [
         "internal/orders/transitions.go:988",
-        "internal/orders/commission_waiver.go"
+        "internal/orders/commission_waiver.go",
+        "internal/orders/undeliver.go"
       ],
       "invariants": [
         "FI-01.d",
@@ -1297,7 +1311,8 @@
       "path": "تسويةُ التسليم",
       "creators": [
         "internal/orders/transitions.go:1236",
-        "internal/orders/custom.go:282"
+        "internal/orders/custom.go:282",
+        "internal/orders/undeliver.go"
       ],
       "invariants": [
         "FI-01.d",
@@ -1510,7 +1525,8 @@
       "path": "انتقالُ حالةٍ إلى نهايةٍ غيرِ التسليم",
       "creators": [
         "internal/orders/transitions.go:659",
-        "internal/orders/transitions.go:739"
+        "internal/orders/transitions.go:739",
+        "internal/orders/undeliver.go"
       ],
       "invariants": [
         "FI-01.d",
@@ -1530,7 +1546,8 @@
         "internal/incentives/incentives.go:277",
         "internal/incentives/target.go:237",
         "internal/referrals/referrals.go:314",
-        "internal/referrals/referrals.go:443"
+        "internal/referrals/referrals.go:443",
+        "internal/orders/undeliver.go"
       ],
       "invariants": [
         "FI-03.a",
@@ -1573,8 +1590,8 @@
   ],
   "counts": {
     "families": 15,
-    "checks": 84,
-    "provable_now": 78,
+    "checks": 85,
+    "provable_now": 79,
     "not_implemented": 3,
     "deferred_p5": 1,
     "deferred_p6": 2,

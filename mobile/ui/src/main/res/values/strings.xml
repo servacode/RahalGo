@@ -314,6 +314,8 @@
     <string name="wal_debt_dispute">المتبقي من مطالبة أكبر من رصيدك</string>
     <string name="wal_debt_waived_rep">عمولة طلب أُلغيت لأن الإدارة أعفت المتجر منها</string>
     <string name="wal_debt_undelivered">طلب سُجّل تسليمه خطأً ثم أُلغي</string>
+    <string name="wal_debt_order_edit">نقص حقك بتعديل طلب بعد استلامه</string>
+    <string name="inv_returned">رجّعه الزبون</string>
     <string name="wal_closing">رصيد آخر المدة</string>
     <string name="wal_doc_title">كشف حساب المحفظة</string>
     <string name="wal_k_adjustment">تسوية من الإدارة</string>
@@ -636,6 +638,8 @@
     <string name="err_order_edit_store_not_in_order">يُضاف الصنف من متجر موجود في الطلب فقط.</string>
     <string name="err_order_edit_no_change">لم يتغيّر شيء في الطلب.</string>
     <string name="err_order_edit_reason_required">اكتب سبب التعديل.</string>
+    <string name="err_order_edit_settlement_state">حق هذا المتجر لا يُصحَّح آلياً.</string>
+    <string name="err_order_edit_needs_driver">الطلب بلا سائق.</string>
     <string name="err_partner_not_purchase">الربط بمتجر تابع لطلبات المشتريات وحدها.</string>
     <string name="err_partner_goods_documented">ثمن البضاعة موثق — لا ربط ولا إلغاء ربط بعده.</string>
     <string name="err_partner_merchant_inactive">المتجر غير فعال — اختر متجرا فعالا.</string>

@@ -538,6 +538,8 @@ private val CODES: Map<String, Int> = mapOf(
     "order_edit_store_not_in_order" to R.string.err_order_edit_store_not_in_order,
     "order_edit_no_change" to R.string.err_order_edit_no_change,
     "order_edit_reason_required" to R.string.err_order_edit_reason_required,
+    "order_edit_settlement_state" to R.string.err_order_edit_settlement_state,
+    "order_edit_needs_driver" to R.string.err_order_edit_needs_driver,
     // ── مشترياتٌ من متجرٍ تابع (قرارُ المالك ٢٠٢٦-١٠-١٥) ──
     "partner_not_purchase" to R.string.err_partner_not_purchase,
     "partner_goods_documented" to R.string.err_partner_goods_documented,
