@@ -1069,6 +1069,9 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
   // **الأدمن فوق قاعدة «عينٌ لا يد»** — تجاوزُ المالك، وكلُّ فعلٍ له مُسجَّل.
   const { user: me, can } = useAuth();
   const isAdmin = !!me?.roles.includes("admin");
+  // **«إنهاء الطلب» من لحظة الاستلام** (قرارُ المالك ٢٠٢٦-١١-٠٣: «الإدارة تتحكم بكلشي لحتى ما يكتمل الطلب») —
+  // يفتح لوحةَ «الطلب مع السائق» بالطريق ولو ما بلّغ السائق.
+  const [ending, setEnding] = useState<Set<string>>(() => new Set());
 
   // ══════════════════════════════════════════════════════════════════
   // **عدّاداتُ اللوحة وإعداداتُها من بابٍ واحد** (`GET /orders/board`)
@@ -1768,7 +1771,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       // الدردشة — «وين ألاقي الموضوع بلوحة الإدارة مشان أحلّه؟»). **وبلا بلاغٍ
       // لا لوحة** — كلُّ طلبٍ في الطريق لا يحتاج قراراً.
       // **وعند المتجر حين يُبلّغ** (٢٠٢٦-١٠-٠٣: «ينتظر الإدارة تحلّ المشكلة»).
-      hide: (o: OrderRow) => !doorVisible(o),
+      hide: (o: OrderRow) => !doorVisible(o) && !ending.has(o.id),
       cell: (o) => (
         <DoorPanel
           orderId={o.id}
@@ -2553,6 +2556,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
               now={now}
               requirePhoto={delivery.photo}
               codeRequired={delivery.code}
+              onEnd={() => setEnding((prev) => new Set(prev).add(o.id))}
             />
           )}
         />
@@ -3025,9 +3029,12 @@ function OrderActions({
   now,
   requirePhoto,
   codeRequired,
+  onEnd,
 }: {
   o: OrderRow;
   onChanged: () => void;
+  /** **«إنهاء الطلب» بالطريق** — يفتح لوحةَ «الطلب مع السائق» على البطاقة. */
+  onEnd?: () => void;
   /**
    * **إعدادا التسليم من `GET /orders/board`** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كانا من `/settings` فيُردّ ٤٠٣
    * لمن لا يملك قراءتها ويُفترض «صورةٌ مُلزَمة، بلا كود».
@@ -4180,8 +4187,12 @@ function OrderActions({
           }}
         />
       )}
+      {canIntervene && onEnd && !doorVisible(o) && (o.status === "picked_up" || o.status === "on_the_way") && (
+        <Button variant="danger" disabled={busy !== ""} onClick={onEnd}>
+          {BOARD.endOrder}
+        </Button>
+      )}
       {canIntervene &&
-        o.board?.emergency_open &&
         (o.status === "picked_up" || o.status === "on_the_way" || o.status === "at_dropoff") && (
           <Button
             variant="danger"
