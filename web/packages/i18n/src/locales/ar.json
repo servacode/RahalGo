@@ -6599,7 +6599,8 @@
         "demand": "كثافة الطلب",
         "opportunities": "فرص التوسّع",
         "closures": "طرق مسكّرة",
-        "landmarks": "معالم بانتظار الموافقة"
+        "landmarks": "معالم بانتظار الموافقة",
+        "poiLandmarks": "معالم الخريطة"
       },
       "freshness": {
         "LIVE": "موقعه حي هلق",

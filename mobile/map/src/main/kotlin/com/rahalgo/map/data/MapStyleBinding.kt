@@ -122,6 +122,7 @@ object MapStyleBinding {
         metadata.put("rahalgo:binding", binding)
         style.put("metadata", metadata)
 
+        addLandmarks(style, sources)
         addStores(style, sources)
 
         return Bound(
@@ -145,6 +146,28 @@ object MapStyleBinding {
      * واسمٌ من التقريب ١٥. **وبلا عنوانٍ لا شيء** (`MapStores.url` فارغ)، **وبلا اتّصالٍ
      * يفشل المصدرُ صامتاً** والخريطةُ كما هي.
      */
+    private fun addLandmarks(style: JSONObject, sources: JSONObject) {
+        val url = MapStores.landmarksUrl
+        if (url.isBlank()) return
+        val layers = style.optJSONArray("layers") ?: return
+        // **بمفردات البلاطة نفسِها** (`class`) — فتُستنسَخ طبقتا `poi-label` و`poi-other-label` كما هما:
+        // الأيقونةُ والخطُّ واللونُ نفسُها. **وطبقتُنا فوقَ البلاطة فالمكرَّرُ يحجبه التزاحم.**
+        val clones = ArrayList<JSONObject>()
+        for (i in 0 until layers.length()) {
+            val l = layers.optJSONObject(i) ?: continue
+            val id = l.optString("id")
+            if (id != "poi-label" && id != "poi-other-label") continue
+            val c = JSONObject(l.toString())
+            c.put("id", "rahalgo-lm-$id")
+            c.put("source", "rahalgo-landmarks")
+            c.remove("source-layer")
+            clones += c
+        }
+        if (clones.isEmpty()) return
+        sources.put("rahalgo-landmarks", JSONObject().put("type", "geojson").put("data", url))
+        clones.forEach { layers.put(it) }
+    }
+
     private fun addStores(style: JSONObject, sources: JSONObject) {
         val url = MapStores.url
         if (url.isBlank()) return

@@ -10817,6 +10817,21 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/public/map/landmarks",
+      "handler": "handlePublicMapLandmarks",
+      "auth": false,
+      "response": [
+        {
+          "name": "landmarks",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/public/map/stores",
       "handler": "handlePublicMapStores",
       "auth": false,

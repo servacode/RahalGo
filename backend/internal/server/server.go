@@ -690,6 +690,8 @@ func (s *Server) Router() http.Handler {
 		r.Get("/public/suggest", s.handleSuggestWith)
 		// **متاجرُنا نقاطٌ على الخريطة** (قرارُ المالك ٢٠٢٦-١٠-٢١) — الجديدُ يظهر وحدَه.
 		r.Get("/public/map/stores", s.handlePublicMapStores)
+		// **ومعالمُ الخريطة** (٢٠٢٦-١١-٠٣) — مساجدُ ومستشفياتٌ ومدارسُ… بمفردات البلاطة، `map_landmarks.go`.
+		r.Get("/public/map/landmarks", s.handlePublicMapLandmarks)
 		r.Get("/public/search/items", s.handleSearchItems)
 		r.Get("/public/search", s.handlePublicSearch)
 		// ══════════════════════════════════════════════════════════

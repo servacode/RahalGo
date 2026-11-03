@@ -54,6 +54,8 @@ class RepApplication : Application() {
         // الحالة التي نحتاجها.**
         com.rahalgo.ui.PushChannels.ensure(this)
 
+        // **ومعالمُ الخريطة** (٢٠٢٦-١١-٠٣).
+        com.rahalgo.map.data.MapStores.landmarksUrl = Backend.BASE_URL + "/api/v1/public/map/landmarks?format=geojson"
         MapStyleRepository.init(this, MapConfig(baseUrl = Backend.MAPS_BASE_URL))
     }
 

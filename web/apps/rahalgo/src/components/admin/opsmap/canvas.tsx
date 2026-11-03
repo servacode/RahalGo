@@ -45,6 +45,7 @@ import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { resolveMapSource, MAP_ATTRIBUTION_FALLBACK } from "@rahalgo/ui/mapconfig";
 import { loadMapEngine } from "@rahalgo/ui/mapengine";
+import { installLandmarks, setLandmarksVisible } from "@rahalgo/ui/landmarks";
 import { themeColor } from "@rahalgo/ui";
 import { TWEEN_MS, anyMoved, easeInOut, positionsOf, tweenPoints, type LngLat } from "./live";
 
@@ -219,6 +220,7 @@ export function OpsMapCanvas({
   unavailableLabel,
   focus,
   bounds,
+  landmarks = true,
 }: {
   layers: LayerSpec[];
   /** **صورُ الرموز** — تُرسم مرّةً عند الإقلاع قبل أوّل طبقة. */
@@ -241,6 +243,11 @@ export function OpsMapCanvas({
    * `[غرب، جنوب، شرق، شمال]`. تُفتح عليها الخريطةُ ولا تُسحَب خارجها (هامشٌ صغيرٌ حولها).
    */
   bounds?: [number, number, number, number];
+  /**
+   * **معالمُ الخريطة** (٢٠٢٦-١١-٠٣) — مساجدُ ومستشفياتٌ ومدارسُ وما أضافه السائقون، تحتَ كلّ الطبقات.
+   * **ومتاجرُنا ليست فيها** — لها طبقتُها هنا.
+   */
+  landmarks?: boolean;
 }) {
   const box = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
@@ -290,6 +297,11 @@ export function OpsMapCanvas({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boundsKey, ready]);
+  const landmarksRef = useRef(landmarks);
+  landmarksRef.current = landmarks;
+  useEffect(() => {
+    if (map.current && ready) setLandmarksVisible(map.current as never, landmarks);
+  }, [landmarks, ready]);
   const iconsRef = useRef(icons);
   iconsRef.current = icons;
 
@@ -327,6 +339,7 @@ export function OpsMapCanvas({
           observer.observe(box.current);
         }
         instance.on("load", async () => {
+          installLandmarks(instance as never, { stores: false, visible: landmarksRef.current });
           // **والرموزُ قبل الطبقات** — طبقةٌ تطلب صورةً لم تُسجَّل ترسم فراغاً.
           for (const ic of iconsRef.current) {
             const data = await drawIcon(ic);

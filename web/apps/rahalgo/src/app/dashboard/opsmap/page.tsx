@@ -405,6 +405,8 @@ const DEFAULT_VISIBLE: Record<string, boolean> = {
   customers: true,
   reps: true,
   office: true,
+  /** **معالمُ الخريطة** (٢٠٢٦-١١-٠٣) — مفتوحةٌ افتراضاً، وتُطفأ من «الطبقات». */
+  poiLandmarks: true,
 };
 
 /**
@@ -479,7 +481,7 @@ export default function OpsMapPage() {
   const toggle = useCallback(
     (id: string) => {
       setVisible((prev) => {
-        const next = { ...prev, [id]: !prev[id], ...ALWAYS_ON };
+        const next = { ...prev, [id]: !(prev[id] ?? DEFAULT_VISIBLE[id]), ...ALWAYS_ON };
         try {
           window.localStorage.setItem(storeKey, JSON.stringify(next));
         } catch {
@@ -1723,9 +1725,10 @@ export default function OpsMapPage() {
   layerChips.push(
     { id: "closures", label: T.layer.closures, count: visible.closures ? closures.data?.count : undefined },
     { id: "landmarks", label: T.layer.landmarks, count: visible.landmarks ? landmarks.data?.count : undefined },
+    { id: "poiLandmarks", label: T.layer.poiLandmarks },
     { id: "branches", label: T.layer.branches, count: visible.branches ? branches.data?.count : undefined },
   );
-  const layerOn = layerChips.filter((c) => visible[c.id]).map((c) => c.id);
+  const layerOn = layerChips.filter((c) => visible[c.id] ?? DEFAULT_VISIBLE[c.id]).map((c) => c.id);
 
   const rangeName = range === "today" ? T.demandWhen.today : range === "7d" ? T.demandWhen.d7 : T.demandWhen.d30;
   const maxScore = Math.max(1, ...(opportunities.data?.opportunities ?? []).map((o) => o.score));
@@ -2024,6 +2027,7 @@ export default function OpsMapPage() {
           unavailableLabel={T.unavailable}
           focus={focus}
           bounds={coverageBounds}
+          landmarks={visible.poiLandmarks ?? true}
         />
 
         {/* ── أدواتُ الخريطة — ملءُ الشاشة والرجوعُ إلى المكتب ── */}

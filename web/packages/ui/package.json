@@ -10,7 +10,8 @@
     "./map": "./src/map.tsx",
     "./zonesmap": "./src/zonesmap.tsx",
     "./mapconfig": "./src/mapconfig.ts",
-    "./mapengine": "./src/mapengine.ts"
+    "./mapengine": "./src/mapengine.ts",
+    "./landmarks": "./src/landmarks.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

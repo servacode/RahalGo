@@ -38,6 +38,7 @@ import { themeColor } from "./cssvar";
 import { IconLocateMe, IconAdd, IconClose, IconLocation } from "./icons";
 import { resolveMapSource, MAP_ATTRIBUTION_FALLBACK } from "./mapconfig";
 import { loadMapEngine } from "./mapengine";
+import { installLandmarks } from "./landmarks";
 
 const m = getMessages(defaultLocale);
 const RAQQA_CENTER: [number, number] = [35.9528, 39.0079];
@@ -155,6 +156,8 @@ export function PickMap({
         map = instance;
         mapRef.current = instance;
         instance.on("load", () => {
+          // **معالمُ الخريطة** (٢٠٢٦-١١-٠٣) — قبل طبقة الدبّوس فيبقى فوقَها.
+          installLandmarks(instance);
           if (!cancelled) setReady(true);
         });
         // **وخطأُ المصدر يُعرض ولا يُعاد** — ولا حلقةَ محاولات.
@@ -504,6 +507,7 @@ export function CenterPinMap({
             if (!cancelled) setFailed("unreachable");
           }
         });
+        instance.on("load", () => installLandmarks(instance));
         /* **حرّكها بإصبعه** — فيقف التحسين، **وما يختاره بيده يغلب.** */
         instance.on("dragstart", () => {
           stopWatch();

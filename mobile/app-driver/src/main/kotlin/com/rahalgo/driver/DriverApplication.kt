@@ -57,6 +57,9 @@ class DriverApplication : Application() {
         // **ومتاجرُنا نقاطٌ على الخريطة** (قرارُ المالك ٢٠٢٦-١٠-٢١) — قبل أوّل ربطٍ للنمط.
         com.rahalgo.map.data.MapStores.url =
             com.rahalgo.driver.data.Backend.BASE_URL + "/api/v1/public/map/stores?format=geojson"
+        // **ومعالمُ الخريطة** (٢٠٢٦-١١-٠٣) — بلا متاجر: لها طبقتُها.
+        com.rahalgo.map.data.MapStores.landmarksUrl =
+            com.rahalgo.driver.data.Backend.BASE_URL + "/api/v1/public/map/landmarks?format=geojson&stores=0"
         MapStyleRepository.init(
             this,
                 // **والثقبُ مشروطٌ بشرطين معاً**: بناءٌ تجريبيّ،

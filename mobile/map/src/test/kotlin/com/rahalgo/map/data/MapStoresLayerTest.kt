@@ -20,6 +20,7 @@ class MapStoresLayerTest {
     @After
     fun reset() {
         MapStores.url = ""
+        MapStores.landmarksUrl = ""
     }
 
     private fun bound(): JSONObject = JSONObject(
@@ -44,5 +45,30 @@ class MapStoresLayerTest {
         val name = layers.getJSONObject(layers.length() - 1)
         assertEquals("rahalgo-stores-name", name.getString("id"))
         assertTrue(name.getJSONObject("layout").getJSONArray("text-font").getString(0) == "RahalGo Regular")
+    }
+
+    @Test
+    fun landmarksClonePoiLayersFromTheStyle() {
+        MapStores.landmarksUrl = "https://api.example/api/v1/public/map/landmarks?format=geojson"
+        val withPoi = """
+            {"version":8,"sources":{"base":{"type":"vector"}},
+             "layers":[{"id":"poi-label","type":"symbol","source":"base","source-layer":"poi","minzoom":15,
+                        "layout":{"text-font":["RahalGo Regular"]}}]}
+        """.trimIndent()
+        val s = JSONObject(
+            MapStyleBinding.online(withPoi, "https://maps.example/base.pmtiles", "https://maps.example/res", "").json,
+        )
+        assertTrue(s.getJSONObject("sources").has("rahalgo-landmarks"))
+        val layers = s.getJSONArray("layers")
+        val last = layers.getJSONObject(layers.length() - 1)
+        assertEquals("rahalgo-lm-poi-label", last.getString("id"))
+        assertEquals("rahalgo-landmarks", last.getString("source"))
+        assertFalse(last.has("source-layer"))
+    }
+
+    @Test
+    fun landmarksWithoutPoiLayerAddNothing() {
+        MapStores.landmarksUrl = "https://api.example/x"
+        assertFalse(bound().getJSONObject("sources").has("rahalgo-landmarks"))
     }
 }
