@@ -33,8 +33,8 @@
     "setting_defs": 254,
     "behaviour_settings": 209,
     "order_fields": 129,
-    "test_files": 684,
-    "test_funcs": 2642
+    "test_files": 685,
+    "test_funcs": 2644
   },
   "flows": [
     {
@@ -18700,6 +18700,18 @@
     {
       "name": "TestRoadClosure_ReportConfirmAndClear",
       "file": "internal/qa/map_contrib_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMapLearning_ApproveRejectExport",
+      "file": "internal/qa/map_learning_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMapLearning_RequiresCapability",
+      "file": "internal/qa/map_learning_test.go",
       "package": "qa",
       "orphan": true
     },
