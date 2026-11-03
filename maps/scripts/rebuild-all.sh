@@ -62,6 +62,17 @@ step "merge"
 osmium merge syria.osm.pbf buildings.osm.pbf -o merged.osm.pbf --overwrite
 step "merged: $(stat -c %s merged.osm.pbf) bytes"
 
+# ── 3b · الأسماءُ العربيّة ───────────────────────────────────────────
+# (قرارُ المالك ٢٠٢٦-١١-٠٣: «كلشي بالعربي لازم».) كلُّ عنصرٍ اسمُه في
+# maps/config/name-ar-overrides.csv ولا name:ar له يأخذ name:ar قبل Planetiler.
+step "name:ar overrides"
+osmium tags-filter merged.osm.pbf nwr/name -o named.osm.pbf --overwrite
+osmium cat named.osm.pbf -f osm -o named.osm --overwrite
+python3 name-ar-to-osc.py named.osm names.osc
+osmium apply-changes merged.osm.pbf names.osc -o merged-ar.osm.pbf --overwrite
+mv -f merged-ar.osm.pbf merged.osm.pbf
+rm -f named.osm.pbf named.osm names.osc
+
 # ── 4 · tiles ────────────────────────────────────────────────────────
 if [ ! -f planetiler.jar ]; then
   step "download planetiler"

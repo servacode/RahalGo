@@ -11,11 +11,32 @@
 
     الاستعمال:  python maps/scripts/make-style.py
 """
+import csv
 import json
 from pathlib import Path
 
-OUT = Path(__file__).resolve().parent.parent / "style" / "rahalgo.style.json"
-NAME = ["coalesce", ["get", "name:ar"], ["get", "name"]]
+OUT = Path(__import__("os").environ.get("STYLE_OUT") or (Path(__file__).resolve().parent.parent / "style" / "rahalgo.style.json"))
+
+
+def arabic_name_expr():
+    """**كلُّ اسمٍ على الخريطة عربيّ** (قرارُ المالك ٢٠٢٦-١١-٠٣: «كلشي بالعربي لازم»).
+
+    الترتيب: `name:ar` ← `name_ar` ← جدولُ التعريب (`maps/config/name-ar-overrides.csv`)
+    ← `name:nonlatin` (اسمٌ غير لاتينيّ في البلاطة = عربيّ) ← لا شيء.
+    **ولا يُقرأ `name` الخام أبداً** — فاللاتينيُّ لا يظهر. ويُسقَط الاسم إن لم يوجد له
+    تعريبٌ بدل أن يظهر بحروف لاتينيّة.
+    """
+    path = Path(__file__).resolve().parent.parent / "config" / "name-ar-overrides.csv"
+    with open(path, encoding="utf-8", newline="") as f:
+        rows = [(r["name"], r["name_ar"]) for r in csv.DictReader(f) if r["name"] and r["name_ar"]]
+    match = ["match", ["to-string", ["get", "name"]]]
+    for latin, ar in sorted(rows):
+        match += [latin, ar]
+    match.append(["get", "name:nonlatin"])
+    return ["coalesce", ["get", "name:ar"], ["get", "name_ar"], match]
+
+
+NAME = arabic_name_expr()
 Z = ["zoom"]
 
 
@@ -194,18 +215,29 @@ layers = [
                 "icon-size": 0.75, "icon-rotation-alignment": "map",
                 "icon-allow-overlap": True, "icon-ignore-placement": True}},
 
+    # **أسماءُ الشوارع** — الكبرى من ١٣ والصغرى من ١٥ (طلبُ المالك ٢٠٢٦-١١-٠٣).
     {"id": "road-label", "type": "symbol", "source": "base",
      "source-layer": "transportation_name", "minzoom": 13,
+     "filter": cls_in("motorway", "trunk", "primary", "secondary", "tertiary"),
      "layout": {
          "symbol-placement": "line", "text-field": NAME,
          # **مصفوفةُ أسماءٍ لا تعبير** — قارئُ النمط في التطبيق (`fontstacksOf`)
          # يقرأ أسماءً، والتعبيرُ أسقط الربطَ كلَّه: «بياناتُ الخريطة غيرُ متاحة».
          "text-font": ["RahalGo Regular"],
          "text-size": lin(13, 10, 16, 12, 19, 15),
-         "text-rotation-alignment": "map", "symbol-spacing": 420, "text-padding": 12},
+         "text-rotation-alignment": "map", "symbol-spacing": 320, "text-padding": 6},
      "paint": {"text-color": ["case", cls_in("primary", "trunk", "motorway"), "#3C4043",
                               "#5F6368"],
                "text-halo-color": "#FFFFFF", "text-halo-width": 1.6}},
+    {"id": "road-label-minor", "type": "symbol", "source": "base",
+     "source-layer": "transportation_name", "minzoom": 15,
+     "filter": ["!", cls_in("motorway", "trunk", "primary", "secondary", "tertiary")],
+     "layout": {
+         "symbol-placement": "line", "text-field": NAME,
+         "text-font": ["RahalGo Regular"],
+         "text-size": lin(15, 11, 17, 12, 19, 14),
+         "text-rotation-alignment": "map", "symbol-spacing": 280, "text-padding": 4},
+     "paint": {"text-color": "#5F6368", "text-halo-color": "#FFFFFF", "text-halo-width": 1.6}},
 
     # **وأرقامُ البنايات** — قليلةٌ في سوريا اليوم، **وتظهر حيث وُجدت.**
     {"id": "housenumber", "type": "symbol", "source": "base", "source-layer": "housenumber",
@@ -225,11 +257,20 @@ layers = [
     poi_layer("poi-other-label", 16,
               ["all", ["!", cls_in(*POI_MAJOR)], ["!", cls_in(*POI_HIDDEN)]], 0.85),
 
+    # **الأحياءُ فوق القرى** — تُرسم بعدها فتأخذ أولويةَ الوضع قبلها وقبل المعالم.
     {"id": "place-village", "type": "symbol", "source": "base", "source-layer": "place",
-     "minzoom": 11, "filter": cls_in("village", "suburb", "neighbourhood", "quarter", "hamlet"),
+     "minzoom": 11, "filter": cls_in("village", "hamlet"),
      "layout": {"text-field": NAME, "text-font": ["RahalGo Regular"],
-                "text-size": lin(11, 11, 16, 14), "text-max-width": 9, "text-padding": 4},
+                "text-size": lin(11, 11, 16, 14), "text-max-width": 9, "text-padding": 4,
+                "symbol-sort-key": ["match", ["get", "class"], "village", 2, 3]},
      "paint": {"text-color": "#5F6368", "text-halo-color": "#FFFFFF", "text-halo-width": 1.6}},
+    {"id": "place-neighbourhood", "type": "symbol", "source": "base", "source-layer": "place",
+     "minzoom": 11, "filter": cls_in("suburb", "neighbourhood", "quarter"),
+     "layout": {"text-field": NAME, "text-font": ["RahalGo Regular"],
+                "text-size": lin(11, 12, 14, 14, 17, 16), "text-max-width": 9,
+                "text-padding": 3,
+                "symbol-sort-key": ["match", ["get", "class"], "suburb", 1, 2]},
+     "paint": {"text-color": "#3C4043", "text-halo-color": "#FFFFFF", "text-halo-width": 1.8}},
     {"id": "place-city", "type": "symbol", "source": "base", "source-layer": "place",
      "minzoom": 4, "filter": cls_in("city", "town"),
      "layout": {"text-field": NAME, "text-font": ["RahalGo Bold"],

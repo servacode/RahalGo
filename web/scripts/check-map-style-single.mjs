@@ -37,6 +37,7 @@
  */
 
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { requiredRanges } from '../../maps/scripts/glyph-ranges.mjs';
@@ -133,6 +134,35 @@ if (!vectorRaw) {
     if (!field.includes('name:ar')) {
       problems.push(`طبقةُ الأسماء ${l.id} لا تقرأ name:ar`);
     }
+  }
+  // **ولا اسمَ لاتينيّ يُقرأ** (قرارُ المالك ٢٠٢٦-١١-٠٣): الحقلُ يمرّ بجدول التعريب
+  // و`name:nonlatin` ولا يرتدّ إلى `name` الخام، **والجدولُ في الويب هو CSV المرجعيّ حرفاً.**
+  for (const l of labels) {
+    const field = JSON.stringify(l.layout?.['text-field'] ?? '');
+    if (!field.includes('"name"') && !field.includes('"name:')) continue;
+    if (!field.includes('name:nonlatin')) {
+      problems.push(`طبقةُ الأسماء ${l.id} تقرأ name الخامَ — قد يظهر لاتينيّاً`);
+    }
+  }
+  try {
+    const sync = join(ROOT, 'maps', 'scripts', 'name-ar-sync.mjs');
+    const r = spawnSync(process.execPath, [sync, '--check'], { encoding: 'utf8' });
+    if (r.status !== 0) {
+      problems.push('web/packages/ui/src/mapNameAr.ts لا يطابق maps/config/name-ar-overrides.csv — شغّل node maps/scripts/name-ar-sync.mjs');
+    }
+    const csv = readFileSync(join(ROOT, 'maps', 'config', 'name-ar-overrides.csv'), 'utf8');
+    for (const line of csv.split(/\r?\n/).slice(1)) {
+      if (!line.trim()) continue;
+      const ar = line.slice(line.lastIndexOf(',') + 1);
+      if (/[A-Za-z]/.test(ar)) problems.push(`تعريبٌ فيه حروفٌ لاتينيّة: ${line}`);
+    }
+    const first = v.layers.find((l) => l.id === 'road-label');
+    const flat = JSON.stringify(first?.layout?.['text-field'] ?? '');
+    if (!flat.includes('Tell Abiad Street')) {
+      problems.push('النمطُ المتّجه لا يحمل جدولَ التعريب — شغّل python maps/scripts/make-style.py');
+    }
+  } catch (e) {
+    problems.push(`فحصُ جدول التعريب سقط: ${e}`);
   }
   notes.push(`النمطُ المتّجه: ${v.layers.length} طبقة · ${labels.length} طبقةَ أسماء · ` +
     `${Object.keys(v._anchors ?? {}).length} مراسٍ`);
