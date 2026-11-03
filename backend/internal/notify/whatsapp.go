@@ -93,8 +93,10 @@ type WhatsAppSender struct {
 	inbound func(ctx context.Context, from, text string) string
 	// self **أمرٌ يكتبه صاحبُ رقم البوت في محادثته مع نفسه** («وضع المنصة» — ٢٠٢٦-١٠-٠٩).
 	// **والردُّ الفارغُ يعني: لا تردّ** — فملاحظاتُه لنفسه لا يُجاب عليها.
-	self    func(ctx context.Context, text string) string
-	hooksMu sync.RWMutex
+	self func(ctx context.Context, text string) string
+	// inboundLoc — «ردّ بموقعك»: موقعٌ وارد ⇒ ردّ (انظر wa_location.go).
+	inboundLoc func(ctx context.Context, from string, loc InboundLocation) string
+	hooksMu    sync.RWMutex
 
 	// ══════════════════════════════════════════════════════════════════
 	// **pairWanted — ولا رمزَ إلّا بطلب**
@@ -751,6 +753,25 @@ func isSelfChat(c *whatsmeow.Client, msg *events.Message) bool {
 func (s *WhatsAppSender) onInbound(ctx context.Context, c *whatsmeow.Client, msg *events.Message) {
 	if msg == nil || msg.Info.IsGroup {
 		return
+	}
+	// **«ردّ بموقعك»** — موقعٌ وارد من غير النفس يُسلَّم للخادم قبل مسار النصّ.
+	if !msg.Info.IsFromMe {
+		if reply, isLoc := s.locationReply(ctx, msg, c.Store.LIDs); isLoc {
+			if strings.TrimSpace(reply) != "" {
+				jid := msg.Info.Sender.ToNonAD()
+				if msg.Info.Chat.User != "" {
+					jid = msg.Info.Chat.ToNonAD()
+				}
+				go func() {
+					if _, err := c.SendMessage(ctx, jid, &waE2E.Message{
+						Conversation: proto.String(reply),
+					}); err != nil {
+						s.logger.Warn("whatsapp: تعذّر الردّ على موقع", "error", err)
+					}
+				}()
+			}
+			return
+		}
 	}
 	s.hooksMu.RLock()
 	inbound, self := s.inbound, s.self

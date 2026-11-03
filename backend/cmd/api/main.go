@@ -385,6 +385,10 @@ func run(logger *slog.Logger) error {
 			go srv.RunStoreAnnounce(ctx, 10*time.Minute)
 			if waBot != nil {
 				waBot.SetSelfCommand(srv.ReportForSelf)
+				// **«ردّ بموقعك»** (٢٠٢٦-١١-٠٣): موقعٌ وارد يملأ أحدثَ طلبٍ مفتوحٍ لرقمه.
+				waBot.SetInboundLocation(func(c context.Context, from string, l notify.InboundLocation) string {
+					return srv.HandleWALocation(c, from, l.Lat, l.Lng, l.AccuracyM)
+				})
 				waBot.SetInbound(func(c context.Context, from, text string) string {
 					if r := srv.ReportForPhone(c, from, text); r != "" {
 						return r

@@ -83,18 +83,83 @@ func (s *Server) locReqLink(token string) string {
 }
 
 // locReqText **رسالةُ الواتساب** — ولا اسمَ منصّةٍ فيها (قاعدةُ المالك).
+//
+// (قرارُ المالك ٢٠٢٦-١١-٠٣ «ردّ بموقعك».) **الناسُ تخاف الروابط** — فالتعليمةُ الأولى
+// أن يردّ المستلِمُ على المحادثة بموقعه من زرّ المشبك في واتساب نفسِه، **والرابطُ سطرٌ
+// أخيرٌ احتياطيّ.** والبوتُ يلتقط الموقعَ الوارد (`HandleWALocation`).
 func locReqText(store, mode, link string) string {
-	why := "لتوصيل طلبك إليك"
+	who := "متجر «" + store + "»"
+	why := "ليوصل السائق لعندك"
 	switch mode {
 	case "fetch":
-		why = "ليصل إليك السائق ويستلم الغرض"
+		why = "ليوصل السائق ويستلم الغرض"
 	case "amanah":
 		// **الأمانةُ يطلبها زبونٌ لا متجر** (٢٠٢٦-١٠-٣٠) — فيُذكر اسمُه لا «متجر».
-		return "مرحباً، يطلب منك «" + store + "» موقعك ليصل إليك السائق ويستلم الأمانة.\n" +
-			"اضغط الرابط ثمّ «أرسل موقعي»:\n" + link
+		who = "«" + store + "»"
+		why = "ليوصل السائق ويستلم الأمانة"
 	}
-	return "مرحباً، يطلب منك متجر «" + store + "» موقعك " + why + ".\n" +
-		"اضغط الرابط ثمّ «أرسل موقعي»:\n" + link
+	return "مرحباً 👋 " + who + " بدو موقعك " + why + ".\n" +
+		"ردّ على هالرسالة بموقعك:\n" +
+		"اضغط 📎 ← الموقع ← أرسل موقعك الحالي\n\n" +
+		"أو من هون: " + link
+}
+
+// locReqAcc **تُنظّف الدقّة** — اختياريّة، وما خرج عن المعقول يُهمَل.
+func locReqAcc(v *float64) *float64 {
+	if v == nil || *v <= 0 || *v >= 100000 || math.IsNaN(*v) {
+		return nil
+	}
+	r := math.Round(*v)
+	return &r
+}
+
+// locReqReceived **ما يلي وصولَ الموقع** — واحدٌ للرابط وللردّ بالواتساب فلا يختلفان:
+// نبضةٌ لصاحب المتجر، وكتابةُ نقطة الاستلام في طلب الأمانة وبثُّها للسائق، ونبضةٌ للزبون.
+func (s *Server) locReqReceived(ctx context.Context, ownerID, customerID, orderID string, lat, lng float64) {
+	// **ونبضةٌ لصاحب المتجر** — شاشتُه تقرأ من جديد ولا تنتظر دورةَ السؤال.
+	if strings.TrimSpace(ownerID) != "" {
+		s.touchUser(ownerID, "deliveries")
+	}
+	// **وفي الأمانة: الطلبُ أُنشئ قبل أن يصل الموقع** (٢٠٢٦-١٠-٣٠) — فتُكتب النقطةُ فيه
+	// نقطةَ استلامٍ وتُبثّ للسائق. **ونقطةٌ خارجَ التغطية لا تُسقط الصفحة**: يتّصل به السائق.
+	if orderID != "" {
+		if _, err := s.orders.ApplyAmanahShared(ctx, orderID, lat, lng); err != nil {
+			s.logger.Warn("موقعُ الأمانة: تعذّرت كتابتُه في الطلب", "order", orderID, "error", err)
+		}
+	}
+	if customerID != "" {
+		s.touchUser(customerID, "location_request", "orders")
+	}
+}
+
+// HandleWALocation **المستلِمُ ردّ على رسالة البوت بموقعه** (قرارُ المالك ٢٠٢٦-١١-٠٣).
+// يملأ **أحدثَ** طلبٍ مفتوحٍ لرقمه (لم يصل ولم ينتهِ) بالمسار نفسِه الذي يملأ به الرابط.
+// **ولا طلبَ مفتوحاً ⇒ سلسلةٌ فارغة** (لا ردَّ، والرسالةُ تمرّ كما كانت).
+func (s *Server) HandleWALocation(ctx context.Context, from string, lat, lng, accuracy float64) string {
+	phone, ok := identity.NormalizePhone(from)
+	if !ok || !orders.ValidPoint(lat, lng) {
+		return ""
+	}
+	var ownerID, customerID, orderID string
+	err := s.pg.QueryRow(ctx, `
+		UPDATE recipient_location_requests l
+		   SET lat = $2, lng = $3, accuracy_m = $4, received_at = now()
+		 WHERE l.id = (SELECT id FROM recipient_location_requests
+		                WHERE phone = $1 AND received_at IS NULL AND expires_at > now()
+		                ORDER BY created_at DESC LIMIT 1)
+		   AND l.received_at IS NULL AND l.expires_at > now()
+		RETURNING COALESCE((SELECT m.owner_user_id::text FROM merchants m WHERE m.id = l.merchant_id), ''),
+		          COALESCE(l.customer_id::text, ''), COALESCE(l.order_id::text, '')`,
+		phone, lat, lng, locReqAcc(&accuracy)).Scan(&ownerID, &customerID, &orderID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ""
+	}
+	if err != nil {
+		s.logger.Warn("ردُّ الموقع بالواتساب: التحديثُ سقط", "error", err)
+		return ""
+	}
+	s.locReqReceived(ctx, ownerID, customerID, orderID, lat, lng)
+	return "وصلنا موقعك ✅ شكراً، السائق رح يوصل لعندك."
 }
 
 // handleMerchantRequestLocation **يطلب موقعَ المستلِم برسالة واتساب** —
@@ -318,12 +383,7 @@ func (s *Server) handlePublicSubmitLocation(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	// **والدقّةُ اختياريّة** — ومن الخريطة لا دقّة. وما خرج عن المعقول يُهمَل.
-	var acc *float64
-	if req.AccuracyM != nil && *req.AccuracyM > 0 && *req.AccuracyM < 100000 &&
-		!math.IsNaN(*req.AccuracyM) {
-		v := math.Round(*req.AccuracyM)
-		acc = &v
-	}
+	acc := locReqAcc(req.AccuracyM)
 	hash := locReqHash(token)
 	var ownerID, customerID, orderID string
 	err = s.pg.QueryRow(r.Context(), `
@@ -350,20 +410,7 @@ func (s *Server) handlePublicSubmitLocation(w http.ResponseWriter, r *http.Reque
 		s.respondErr(w, err)
 		return
 	}
-	// **ونبضةٌ لصاحب المتجر** — شاشتُه تقرأ من جديد ولا تنتظر دورةَ السؤال.
-	if strings.TrimSpace(ownerID) != "" {
-		s.touchUser(ownerID, "deliveries")
-	}
-	// **وفي الأمانة: الطلبُ أُنشئ قبل أن يصل الموقع** (٢٠٢٦-١٠-٣٠) — فتُكتب النقطةُ فيه
-	// نقطةَ استلامٍ وتُبثّ للسائق. **ونقطةٌ خارجَ التغطية لا تُسقط الصفحة**: يتّصل به السائق.
-	if orderID != "" {
-		if _, err := s.orders.ApplyAmanahShared(r.Context(), orderID, *req.Lat, *req.Lng); err != nil {
-			s.logger.Warn("موقعُ الأمانة: تعذّرت كتابتُه في الطلب", "order", orderID, "error", err)
-		}
-	}
-	if customerID != "" {
-		s.touchUser(customerID, "location_request", "orders")
-	}
+	s.locReqReceived(r.Context(), ownerID, customerID, orderID, *req.Lat, *req.Lng)
 	httpx.JSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
