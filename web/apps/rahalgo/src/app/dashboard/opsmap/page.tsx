@@ -87,8 +87,6 @@ import {
   useLiveEvent,
 } from "@rahalgo/ui";
 import { AssignDialog } from "@/components/admin/orders/AssignDialog";
-import { PageHero } from "@/components/admin/PageHero";
-import { Tile } from "@/components/admin/DashParts";
 import { api, mediaUrl, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useCanCall, useCanOpen } from "@/lib/policy";
@@ -522,6 +520,7 @@ export default function OpsMapPage() {
   }, []);
   const [selected, setSelected] = useState<Picked | null>(null);
   const [legendOpen, setLegendOpen] = useState(false);
+  const [layersOpen, setLayersOpen] = useState(false);
   const [fly, setFly] = useState<FlyRequest | undefined>(undefined);
   const [assigning, setAssigning] = useState<OrderPin | null>(null);
 
@@ -1733,152 +1732,211 @@ export default function OpsMapPage() {
 
   return (
     <PageContainer>
-      <PageHero
-        icon={IconLocation}
-        title={T.title}
-        subtitle={T.subtitle}
-        actions={
-          <Button variant="secondary" onClick={() => setFull(true)}>
-            <IconFullscreen size={16} aria-hidden />
-            {T.bar.fullscreen}
-          </Button>
-        }
-      />
-
-      {/* ══ الأرقامُ الأربعة — تُضغط، والتركيزُ فيها ══════════════════ */}
-      {(S?.drivers || S?.orders || S?.merchants) && (
-        <div className="mb-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
-          {S?.drivers && (
-            <Tile
-              icon={IconMoto}
-              label={P.tileAvailable}
-              value={fmtNum(S.drivers.available)}
-              sub={P.subAvailable}
-              tone={S.drivers.available > 0 ? "success" : "muted"}
-              onClick={() => setFocusMode(focusMode === "available" ? "" : "available")}
-              extra={focusMode === "available" ? <Badge variant="success">{P.focusOn}</Badge> : undefined}
-            />
-          )}
-          {S?.orders && (
-            <Tile
-              icon={IconOrder}
-              label={P.tileMoving}
-              value={fmtNum(S.orders.active)}
-              sub={focusMode ? P.subMoving : undefined}
-              tone={S.orders.active > 0 ? "accent" : "muted"}
-              onClick={focusMode ? () => setFocusMode("") : undefined}
-            />
-          )}
-          {S?.orders && (
-            <div className={`rounded-card ${flash ? "animate-pulse ring-2 ring-danger" : ""}`}>
-              <Tile
-                icon={IconWarning}
-                label={P.tileStuck}
-                value={fmtNum(stuckN)}
-                sub={stuckN > 0 ? P.subStuck : P.subStuckNone}
-                tone={stuckN > 0 ? "danger" : "muted"}
-                onClick={
-                  stuckN > 0
-                    ? () => {
-                        if (focusMode === "stuck") {
-                          setFocusMode("");
-                        } else {
-                          setFocusMode("stuck");
-                          goStuck();
-                        }
-                      }
-                    : undefined
-                }
-                extra={focusMode === "stuck" ? <Badge variant="danger">{P.focusOn}</Badge> : undefined}
-              />
-            </div>
-          )}
-          {S?.merchants && (
-            <Tile
-              icon={IconStore}
-              label={P.tileOpen}
-              value={fmtNum(S.merchants.open)}
-              sub={P.subOpen.replace("{n}", fmtNum(S.merchants.total))}
-              tone={S.merchants.open > 0 ? "accent" : "muted"}
-            />
-          )}
-          {/* **ومضةُ العالق الجديد تُقال لقارئ الشاشة أيضاً.** */}
-          <span className="sr-only" role="status" aria-live="polite">
-            {flash ? T.counter.newStuck : ""}
-          </span>
-        </div>
-      )}
-
       {/* ══ ملءُ الشاشة — سطحُ التحكّم والخريطةُ معاً ════════════════════ */}
       <div className={full ? "fixed inset-0 z-40" : ""}>
       <div className={full ? "surface-raised flex h-full flex-col gap-2 overflow-hidden rounded-none p-2" : "flex flex-col gap-3"}>
       {/* ══ سطحُ التحكّم — بحثٌ وطبقاتٌ ومدّةٌ ودليل ══════════════════════ */}
       {/* `relative z-30` يرفع نتائجَ البحث فوق لوح الخريطة الذي يليه. */}
-      <section className={`surface relative z-30 flex flex-col gap-3 p-3 ${full ? "shrink-0" : ""}`}>
-        {/* ── ابحث واذهب ── */}
-        <div className="relative w-full">
-          <Input
-            icon={<IconSearch size={16} aria-hidden />}
-            placeholder={T.searchGo}
-            aria-label={T.searchGo}
-            value={hunt}
-            onChange={(e) => {
-              setHunt(e.target.value);
-              setHuntOpen(true);
-              setHuntAt(0);
-            }}
-            onFocus={() => setHuntOpen(true)}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") {
-                setHuntOpen(false);
-              } else if (e.key === "ArrowDown") {
-                e.preventDefault();
-                setHuntAt((i) => Math.min(i + 1, Math.max(goItems.length - 1, 0)));
-              } else if (e.key === "ArrowUp") {
-                e.preventDefault();
-                setHuntAt((i) => Math.max(i - 1, 0));
-              } else if (e.key === "Enter" && goItems[huntAt]) {
-                e.preventDefault();
-                goTo(goItems[huntAt]);
-              }
-            }}
-          />
-          {huntOpen && hunt.trim() !== "" && (
-            <>
-              <button
-                type="button"
-                aria-label={T.close}
-                className="fixed inset-0 z-20 cursor-default"
-                onClick={() => setHuntOpen(false)}
+      {/* ══ سطرٌ واحدٌ للتحكّم (قرارُ المالك ٢٠٢٦-١١-٠٣: «نختصر كل الاختيارات بسطر والباقي للخريطة») —
+          الأرقامُ حبّاتٌ تُضغط، والبحث، والطبقاتُ والألوانُ قائمتان تنفتحان، ورسمُ التغطية. ══ */}
+      <section className={`surface relative z-30 flex flex-col gap-2 p-2 ${full ? "shrink-0" : ""}`}>
+        <div className="flex flex-wrap items-center gap-2">
+        {(S?.drivers || S?.orders || S?.merchants) && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {S?.drivers && (
+              <StatPill
+                icon={IconMoto}
+                label={P.tileAvailable}
+                value={fmtNum(S.drivers.available)}
+                sub={P.subAvailable}
+                tone={S.drivers.available > 0 ? "success" : "muted"}
+                onClick={() => setFocusMode(focusMode === "available" ? "" : "available")}
+                extra={focusMode === "available" ? <Badge variant="success">{P.focusOn}</Badge> : undefined}
               />
-              <ul
-                role="listbox"
-                className="surface-raised absolute inset-x-0 top-full z-30 mt-1 max-h-80 overflow-y-auto p-1 text-sm"
-              >
-                {goItems.length === 0 ? (
-                  <li className="px-2 py-1.5 text-xs text-ink-muted">{T.searchNone}</li>
-                ) : (
-                  goItems.map((x, i) => (
-                    <li key={`${x.kind}-${x.id}`} role="option" aria-selected={i === huntAt}>
-                      <button
-                        type="button"
-                        onMouseEnter={() => setHuntAt(i)}
-                        onClick={() => goTo(x)}
-                        className={`flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-start ${
-                          i === huntAt ? "bg-row-hover" : ""
-                        }`}
-                      >
-                        <span className="truncate">{x.label}</span>
-                        <span className="ms-auto shrink-0 text-xs text-ink-muted">{kindLabel(x.kind)}</span>
-                      </button>
-                    </li>
-                  ))
+            )}
+            {S?.orders && (
+              <StatPill
+                icon={IconOrder}
+                label={P.tileMoving}
+                value={fmtNum(S.orders.active)}
+                sub={focusMode ? P.subMoving : undefined}
+                tone={S.orders.active > 0 ? "accent" : "muted"}
+                onClick={focusMode ? () => setFocusMode("") : undefined}
+              />
+            )}
+            {S?.orders && (
+              <div className={`rounded-control ${flash ? "animate-pulse ring-2 ring-danger" : ""}`}>
+                <StatPill
+                  icon={IconWarning}
+                  label={P.tileStuck}
+                  value={fmtNum(stuckN)}
+                  sub={stuckN > 0 ? P.subStuck : P.subStuckNone}
+                  tone={stuckN > 0 ? "danger" : "muted"}
+                  onClick={
+                    stuckN > 0
+                      ? () => {
+                          if (focusMode === "stuck") {
+                            setFocusMode("");
+                          } else {
+                            setFocusMode("stuck");
+                            goStuck();
+                          }
+                        }
+                      : undefined
+                  }
+                  extra={focusMode === "stuck" ? <Badge variant="danger">{P.focusOn}</Badge> : undefined}
+                />
+              </div>
+            )}
+            {S?.merchants && (
+              <StatPill
+                icon={IconStore}
+                label={P.tileOpen}
+                value={fmtNum(S.merchants.open)}
+                sub={P.subOpen.replace("{n}", fmtNum(S.merchants.total))}
+                tone={S.merchants.open > 0 ? "accent" : "muted"}
+              />
+            )}
+            {/* **ومضةُ العالق الجديد تُقال لقارئ الشاشة أيضاً.** */}
+            <span className="sr-only" role="status" aria-live="polite">
+              {flash ? T.counter.newStuck : ""}
+            </span>
+          </div>
+        )}
+          {/* ── ابحث واذهب ── */}
+          <div className="relative min-w-48 flex-1">
+            <Input
+              icon={<IconSearch size={16} aria-hidden />}
+              placeholder={T.searchGo}
+              aria-label={T.searchGo}
+              value={hunt}
+              onChange={(e) => {
+                setHunt(e.target.value);
+                setHuntOpen(true);
+                setHuntAt(0);
+              }}
+              onFocus={() => setHuntOpen(true)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") {
+                  setHuntOpen(false);
+                } else if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setHuntAt((i) => Math.min(i + 1, Math.max(goItems.length - 1, 0)));
+                } else if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setHuntAt((i) => Math.max(i - 1, 0));
+                } else if (e.key === "Enter" && goItems[huntAt]) {
+                  e.preventDefault();
+                  goTo(goItems[huntAt]);
+                }
+              }}
+            />
+            {huntOpen && hunt.trim() !== "" && (
+              <>
+                <button
+                  type="button"
+                  aria-label={T.close}
+                  className="fixed inset-0 z-20 cursor-default"
+                  onClick={() => setHuntOpen(false)}
+                />
+                <ul
+                  role="listbox"
+                  className="surface-raised absolute inset-x-0 top-full z-30 mt-1 max-h-80 overflow-y-auto p-1 text-sm"
+                >
+                  {goItems.length === 0 ? (
+                    <li className="px-2 py-1.5 text-xs text-ink-muted">{T.searchNone}</li>
+                  ) : (
+                    goItems.map((x, i) => (
+                      <li key={`${x.kind}-${x.id}`} role="option" aria-selected={i === huntAt}>
+                        <button
+                          type="button"
+                          onMouseEnter={() => setHuntAt(i)}
+                          onClick={() => goTo(x)}
+                          className={`flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-start ${
+                            i === huntAt ? "bg-row-hover" : ""
+                          }`}
+                        >
+                          <span className="truncate">{x.label}</span>
+                          <span className="ms-auto shrink-0 text-xs text-ink-muted">{kindLabel(x.kind)}</span>
+                        </button>
+                      </li>
+                    ))
+                  )}
+                </ul>
+              </>
+            )}
+          </div>
+          <div className="relative">
+            <Button variant="secondary" className="inline-flex items-center gap-1.5" aria-expanded={layersOpen} onClick={() => { setLayersOpen((o) => !o); setLegendOpen(false); }}>
+              <IconOverview size={16} aria-hidden />
+              {P.barLayers}
+              {layerOn.length > 0 && <Badge variant="accent">{fmtNum(layerOn.length)}</Badge>}
+            </Button>
+            {layersOpen && (
+              <div className="absolute end-0 top-full z-30 mt-1 flex w-[min(32rem,90vw)] flex-col gap-2 rounded-card border border-line bg-shell p-3 elev-2">
+                {visible.office && office.data && !office.data.has_location && (
+                  <p className="text-xs text-ink-muted">{T.office.noLocation}</p>
                 )}
-              </ul>
-            </>
+                <Chips
+                  items={layerChips.map((c) => ({ id: c.id, label: c.label, count: c.count }))}
+                  value={layerOn}
+                  onChange={toggle}
+                  wrap
+                />
+                {/* ── المدّةُ وساعاتُ اليوم — حين تُفتح الكثافةُ أو الفرصُ وحدَهما ── */}
+                {can("VIEW_DEMAND_ANALYTICS") && (visible.demand || visible.opportunities) && (
+                  <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-ink-muted">{P.when}</span>
+                      <Chips
+                        items={[
+                          { id: "today", label: T.demandWhen.today },
+                          { id: "7d", label: T.demandWhen.d7 },
+                          { id: "30d", label: T.demandWhen.d30 },
+                        ]}
+                        value={range}
+                        onChange={(k) => setRange(k as typeof range)}
+                        wrap
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-ink-muted">{P.hours}</span>
+                      <Chips
+                        items={[
+                          { id: "all", label: T.demandWhen.all },
+                          { id: "morning", label: T.demandWhen.morning },
+                          { id: "noon", label: T.demandWhen.noon },
+                          { id: "evening", label: T.demandWhen.evening },
+                          { id: "night", label: T.demandWhen.night },
+                        ]}
+                        value={dayPart}
+                        onChange={(k) => setDayPart(k as typeof dayPart)}
+                        wrap
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="relative">
+            <Button variant="secondary" className="inline-flex items-center gap-1.5" aria-expanded={legendOpen} onClick={() => { setLegendOpen((o) => !o); setLayersOpen(false); }}>
+              {P.barLegend}
+            </Button>
+            {legendOpen && (
+              <div className="absolute end-0 top-full z-30 mt-1 w-[min(28rem,90vw)] rounded-card border border-line bg-shell p-3 elev-2">
+                <Legend />
+              </div>
+            )}
+          </div>
+          {/* **ولا يظهر الرسمُ لمن لا يملكه** — ورؤيةُ زرٍّ يردّ `403` أسوأُ من غيابه. */}
+          {can("MANAGE_COVERAGE") && !drawing && (
+            <Button variant="secondary" className="inline-flex items-center gap-1.5" onClick={() => { setDrawing(true); setDraft([]); }}>
+              <IconZones size={16} aria-hidden />
+              {P.barDraw}
+            </Button>
           )}
         </div>
-
         {/* ── فلترُ الرابط — يُرى ويُشال (تدقيقُ ٢٠٢٦-١٠-٢٧) ── */}
         {urlBits.length > 0 && (
           <div className="flex flex-wrap items-center gap-2 rounded-control bg-warning-tint px-3 py-2 text-sm">
@@ -1891,70 +1949,6 @@ export default function OpsMapPage() {
           </div>
         )}
 
-        {/* ── الطبقاتُ الإضافيّة حبّاتٌ بعددها ── */}
-        <div className="flex flex-col gap-1.5">
-          <h2 className="heading-card">{P.controlsTitle}</h2>
-          <p className="text-xs text-ink-muted">{P.controlsHint}</p>
-          <Chips
-            items={layerChips.map((c) => ({ id: c.id, label: c.label, count: c.count }))}
-            value={layerOn}
-            onChange={toggle}
-            wrap
-          />
-        </div>
-
-        {/* ── المدّةُ وساعاتُ اليوم — حين تُفتح الكثافةُ أو الفرصُ وحدَهما ── */}
-        {can("VIEW_DEMAND_ANALYTICS") && (visible.demand || visible.opportunities) && (
-          <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-ink-muted">{P.when}</span>
-              <Chips
-                items={[
-                  { id: "today", label: T.demandWhen.today },
-                  { id: "7d", label: T.demandWhen.d7 },
-                  { id: "30d", label: T.demandWhen.d30 },
-                ]}
-                value={range}
-                onChange={(k) => setRange(k as typeof range)}
-                wrap
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-ink-muted">{P.hours}</span>
-              <Chips
-                items={[
-                  { id: "all", label: T.demandWhen.all },
-                  { id: "morning", label: T.demandWhen.morning },
-                  { id: "noon", label: T.demandWhen.noon },
-                  { id: "evening", label: T.demandWhen.evening },
-                  { id: "night", label: T.demandWhen.night },
-                ]}
-                value={dayPart}
-                onChange={(k) => setDayPart(k as typeof dayPart)}
-                wrap
-              />
-            </div>
-          </div>
-        )}
-
-        {/* ── معنى الألوان · ورسمُ التغطية — زرّان باسميهما ── */}
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <Button variant="secondary" className="w-full" aria-expanded={legendOpen} onClick={() => setLegendOpen((o) => !o)}>
-            {legendOpen ? P.legendHide : P.legendShow}
-          </Button>
-          {/* **ولا يظهر الرسمُ لمن لا يملكه** — ورؤيةُ زرٍّ يردّ `403` أسوأُ من غيابه. */}
-          {can("MANAGE_COVERAGE") && !drawing && (
-            <Button variant="secondary" className="w-full" onClick={() => { setDrawing(true); setDraft([]); }}>
-              <IconZones size={16} aria-hidden />
-              {P.draw}
-            </Button>
-          )}
-        </div>
-        {legendOpen && <Legend />}
-
-        {visible.office && office.data && !office.data.has_location && (
-          <p className="text-xs text-ink-muted">{T.office.noLocation}</p>
-        )}
       </section>
 
       {/* ══ شريطُ الرسم — فوق الخريطة لا تحتها (تدقيقُ ٢٠٢٦-١٠-٢٧) ══════════ */}
@@ -2014,7 +2008,7 @@ export default function OpsMapPage() {
         className={
           full
             ? "relative min-h-0 w-full flex-1"
-            : "relative h-[60vh] w-full lg:h-[calc(100vh-16rem)]"
+            : "relative h-[70vh] w-full lg:h-[calc(100vh-11rem)]"
         }
       >
         <OpsMapCanvas
@@ -2895,5 +2889,42 @@ function Row({ k, v, danger }: { k: string; v: string; danger?: boolean }) {
       <dt className="text-ink-muted">{k}</dt>
       <dd className={`ms-auto text-end font-medium ${danger ? "text-danger" : ""}`}>{v}</dd>
     </div>
+  );
+}
+
+/** **رقمٌ صغيرٌ بسطر التحكّم** — أيقونةٌ ورقمٌ واسمٌ قصير، ويُضغط إن كان له فعل (بدل البلاطات الأربع الكبيرة). */
+function StatPill({
+  icon: Icon,
+  label,
+  value,
+  tone,
+  onClick,
+  extra,
+}: {
+  icon: ComponentType<{ size?: number; className?: string }>;
+  label: string;
+  value: string;
+  sub?: string;
+  tone?: "success" | "accent" | "danger" | "muted";
+  onClick?: () => void;
+  extra?: ReactNode;
+}) {
+  const color =
+    tone === "success" ? "text-success" : tone === "danger" ? "text-danger" : tone === "accent" ? "text-accent-text" : "text-ink-muted";
+  const body = (
+    <>
+      <Icon size={16} className={color} />
+      <b className={`tabular-nums ${color}`}>{value}</b>
+      <span className="text-ink-muted">{label}</span>
+      {extra}
+    </>
+  );
+  const cls = "inline-flex min-h-10 items-center gap-1.5 rounded-control border border-line-soft bg-surface px-2.5 text-sm";
+  return onClick ? (
+    <button type="button" className={`${cls} hover:bg-row-hover`} onClick={onClick}>
+      {body}
+    </button>
+  ) : (
+    <span className={cls}>{body}</span>
   );
 }

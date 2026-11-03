@@ -6872,6 +6872,9 @@
         }
       },
       "pro": {
+        "barLayers": "الطبقات",
+        "barLegend": "الألوان",
+        "barDraw": "منطقة تغطية",
         "tileAvailable": "سائق متاح",
         "tileMoving": "طلب ماشي",
         "tileStuck": "طلب عالق",
