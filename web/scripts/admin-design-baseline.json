@@ -79,13 +79,6 @@
     "rawContact": 3,
     "subtitle": 1
   },
-  "apps/rahalgo/src/app/dashboard/page.tsx": {
-    "tinyText": 3,
-    "rawButton": 2,
-    "handEmpty": 1,
-    "helperText": 10,
-    "subtitle": 1
-  },
   "apps/rahalgo/src/app/dashboard/payouts/page.tsx": {
     "tinyText": 13,
     "rawButton": 1,

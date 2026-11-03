@@ -2649,6 +2649,22 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/v1/admin/menu-counts",
+      "handler": "handleMenuCounts",
+      "auth": true,
+      "capability": "«بحسب المفتاح»",
+      "response": [
+        {
+          "name": "@buildMenuCounts",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "DELETE",
       "path": "/api/v1/admin/menu/items/{itemID}",
       "handler": "handleDeleteItem",

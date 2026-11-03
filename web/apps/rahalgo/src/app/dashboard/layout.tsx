@@ -2,7 +2,7 @@
 
 /** لوحة الإدارة — تستخدم الهيكل العائم المشترك (نسخة واحدة مركزية). */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
@@ -41,6 +41,8 @@ import { api, mediaUrl, tokenStore } from "@/lib/api";
 import { useAuth, canAccessPanel } from "@/lib/auth";
 import { EmergencyBanner } from "@/components/admin/EmergencyBanner";
 import { OutageBanner } from "@/components/admin/OutageBanner";
+import { AdminSearch } from "@/components/admin/AdminSearch";
+import { MenuCountsProvider, useMenuCounts } from "@/components/admin/MenuCounts";
 
 const m = getMessages(defaultLocale);
 
@@ -64,180 +66,134 @@ const m = getMessages(defaultLocale);
 //
 // **وذاك `ADG-1` في العرض**: اسمُ الدور حقيقةٌ ثانيةٌ في العميل تفترق
 // يوماً — **وقد افترقت في الوجود من قبل.**
-type NavItem = ChromeNavItem & { roles?: string[]; caps?: string[] };
+/** **المجموعاتُ الخمس** (قرارُ المالك ٢٠٢٦-١١-٠٣) — عنوانُها يركب أوّلَ بندٍ ظاهرٍ منها (`navFor`). */
+type NavSection = "daily" | "people" | "money" | "growth" | "system";
+type NavItem = ChromeNavItem & { roles?: string[]; caps?: string[]; section: NavSection };
 
-const ALL_NAV: NavItem[] = [
-  // **الرئيسيّةُ لمدير المنصّة وحدَه** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — فيها المالُ
-  // كلُّه، **وبقيّةُ الموظّفين يهبطون على أوّل بابٍ يملكونه** كما كانوا.
-  { href: "/dashboard", label: m.terms.dashboard, icon: IconDashboard,
-    caps: ["platform.overview"] },
-  // التشغيل اليومي — مشتركٌ بين الثلاثة
-  { href: "/dashboard/orders", label: m.terms.orders, icon: IconOrder,
-    caps: ["orders.read"] },
-  // **والسجلُّ بابٌ ثانٍ** — «ماذا جرى؟» سؤالٌ غيرُ «ما الذي يحتاجني الآن؟».
-  { href: "/dashboard/history", label: m.admin.nav.history, icon: IconHistory,
-    caps: ["orders.read"] },
-  // ══════════════════════════════════════════════════════════════════
-  // **والحساباتُ ثالثاً — أهمُّ ما بعد الطلبات اليوم**
-  // ══════════════════════════════════════════════════════════════════
-  //
-  // (قرارُ المالك ٢٠٢٦-٠٨-٠٨: «الحسابات انقلها فوق السوق لأنّها تهمّنا أكثرَ
-  //  شيءٍ بعد الطلبات».)
-  //
-  // **وكان السوقُ هنا بقرارٍ سابقٍ صحيحٍ يومَه** (٢٠٢٦-٠٨-٠٤: «انقل السوق
-  // تحت سجلّ الطلبات، لأنّه أكثرُ شيءٍ يهمّنا بعد الطلبات») — **والمنصّةُ
-  // يومَها تعمل، واليومَ تُبنى**: تُفتح الحساباتُ كلَّ يومٍ لإنشاء مندوبٍ
-  // وسائقٍ ومتجر، **والسوقُ ينتظر أصنافاً لم تُضَف بعد.**
-  //
-  // **وترتيبُ القائمة يقول ما يهمّ** — ومن وضع بابَه اليوميَّ في آخرها مرّر
-  // عينَه على عشرة أبوابٍ ليصل إليه، **ثمّ حفظ موضعَه فصار لا يقرأ القائمة
-  // أصلاً.**
-  //
-  // **وبابٌ واحدٌ لكلّ من في المنصة**: الزبائنُ والمتاجرُ والسائقون
-  // والمندوبون تبويباتٌ فيه — بجداولهم كما هي.
-  // **وملفُّ المتجر تابعٌ للحسابات** — يُلوّن بندَها (`activeAlso`) فلا يضيع الموظّفُ مكانَه.
-  { href: "/dashboard/users", label: m.terms.accounts, icon: IconUsers,
-    caps: ["users.read"], activeAlso: ["/dashboard/merchants"] },
-  // **والأدوارُ والصلاحيّاتُ في الإعدادات لا هنا** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — تُضبط مرّةً
-  // وتُترك، **وبابُها `/dashboard/roles` باقٍ** (موضوعُ «الأدوار والصلاحيات» في الإعدادات).
-  // **والسوقُ يليها** — ما يُعرض وما نفد وما ينتظر المراجعة.
-  // **وبقدرته لا بقدرة المحتوى** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — موظّفُ العمليّات يرتّبه.
-  { href: "/dashboard/sections", label: m.admin.nav.sections, icon: IconStore,
-    caps: ["market.manage"] },
-  // **الشكاوى والتقييماتُ بابٌ واحد** — جوابان لسؤالٍ واحد: «ما رأيُ الناس
-  // بنا؟». ومن رأى سائقاً هبط تقييمُه يقرأ شكاواه في المكان نفسِه.
-  // (قرارُ المالك ٢٠٢٦-٠٨-٠٨.)
-  // **«المشاكل والتعويضات» — الشكاوى والتقييمات والخسائر والنزاعات وتعويض البضاعة بقسمٍ واحد**
-  // (قرارُ المالك ٢٠٢٦-١٠-٢٥). وكلُّ تبويبٍ فيه بقدرته.
-  { href: "/dashboard/tickets", label: m.admin.nav.problems, icon: IconSupport,
-    caps: ["support.manage", "finance.read", "disputes.manage"],
-    // **والروابطُ القديمةُ لتبويباته تلوّنه** — التعويضاتُ والخسائرُ صارت تبويباتٍ فيه.
-    activeAlso: ["/dashboard/compensations", "/dashboard/losses"] },
-  // **الطارئُ يبقى ظاهراً حتى يُغلقه إنسان** — والوقتُ لا يطمئنّ على أحد.
-  { href: "/dashboard/emergencies", label: m.admin.nav.emergencies, icon: IconWarning,
-    caps: ["emergencies.manage"] },
-  { href: "/dashboard/leads", label: m.terms.leads, icon: IconSignup,
-    caps: ["merchants.verify"] },
-  // ══════════════════════════════════════════════════════════════════
-  // **خريطةُ العمليات — «أين» لا «كم»**
-  // ══════════════════════════════════════════════════════════════════
-  //
-  // **والجداولُ كلُّها تجيب «كم»** — وسؤالُ «أين السائقون الآن؟ وأيُّ
-  // طلبٍ ينتظر بعيداً عنهم؟» **لا يُجاب بجدول.**
-  //
-  // **وموضعُها بعد التشغيل اليوميّ وقبل المال**: تُفتح مع الطلبات لا
-  // مع التقارير.
-  //
-  // **والصلاحيّةُ في الخادم لا هنا** — `opsmap.Perm`. **وهذا سطرُ
-  // رسمٍ فقط**، ومن رآه ولا يملك شيئاً فيه رأى صفحةَ «لا صلاحية».
-  { href: "/dashboard/opsmap", label: m.admin.nav.opsMap, icon: IconZones,
-    caps: ["orders.read"] },
-  // **«طلباتُ التوسّع» قسمٌ مستقلّ** — «مو مخفيّة تحت الخريطة» (قرارُ المالك
-  // ٢٠٢٦-١٠-٠٤). **وقراءتُها بـ`orders.read`** كبابها في المحرّك — قسمٌ لموظّف
-  // العمليّات لا تقريرٌ للمدير (قرارُ المالك ٢٠٢٦-١٠-٠٥).
-  { href: "/dashboard/expansion", label: m.admin.nav.expansion, icon: IconLocation,
-    caps: ["orders.read"] },
-  // **خزينةُ المنصة — أصلُ كلّ حركة.**
-  //
-  // **لا يُدفع لأحدٍ إلّا وخرج منها، ولا يدخل مالٌ إلّا ودخلها.** (قرارُ
-  // المالك ٢٠٢٦-٠٨-٠٤.) وهي محفظةُ الحساب الحامل لها — فيراها صاحبُها
-  // كشفاً كاملاً، **ويرى غيرُه محفظتَه هو.**
-  //
-  // **وصار قسماً موحّداً** (قرارُ المالك ٢٠٢٦-١٠-٠٤ — الخزينة): نظرةٌ عامّة · كشفٌ برصيدٍ
-  // جارٍ · النقدُ والصندوق · الموافقات · صحّةُ الدفتر، **وصفحاتُ المال تُفتح منه** —
-  // المصروفاتُ والأرباحُ والنقدُ والسحوباتُ والتعويضاتُ لم تعد بنوداً في القائمة.
-  { href: "/dashboard/treasury", label: m.admin.treasury.title, icon: IconWallet,
-    caps: ["finance.read"], activeAlso: ["/dashboard/wallet"] },
-  // **وصفحاتُ المال رجعت بنوداً بالقائمة** (قرارُ المالك ٢٠٢٦-١٠-٢٧: «كل واحد قسم لحاله، نرجعهن ع
-  // القائمة مشان ما نفوت من مكان لمكان») — وصفُّ روابطها شيل من رأس الخزينة.
-  { href: "/dashboard/cash", label: m.admin.treasury.links.cash, icon: IconMoto,
-    caps: ["finance.read"] },
-  { href: "/dashboard/payouts", label: m.admin.treasury.links.payouts, icon: IconArrowOut,
-    caps: ["finance.read"] },
-  { href: "/dashboard/obligations", label: m.admin.treasury.links.obligations, icon: IconBalance,
-    caps: ["finance.read"] },
-  { href: "/dashboard/profits", label: m.admin.treasury.links.profits, icon: IconTrendUp,
-    caps: ["finance.read"] },
-  { href: "/dashboard/expenses", label: m.admin.treasury.links.expenses, icon: IconReceipt,
-    caps: ["finance.read"] },
-  // **والديونُ من الخزينة وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٢٥: «موجود بالقائمة وبالخزينة… نخلّيه بالخزينة»).
-  // **والخسائرُ والنزاعاتُ وتعويضُ البضاعة صارت تبويباتٍ في «المشاكل والتعويضات»** (٢٠٢٦-١٠-٢٥).
-  { href: "/dashboard/audit", label: m.admin.audit.title, icon: IconShieldCheck,
-    caps: ["audit.read"] },
-  { href: "/dashboard/reports", label: m.terms.reports, icon: IconReports,
-    caps: ["analytics.read"] },
-  // **الأهدافُ والمكافآت** — الشاشةُ تقول من بلغ، **والمكافأةُ بيدٍ لا بمعادلة.**
-  { href: "/dashboard/incentives", label: m.admin.incentives.title, icon: IconTarget,
-    caps: ["finance.read"] },
-  // **صفحةٌ واحدةٌ لثلاثة أشكال**: كودٌ يُكتب · ولافتةٌ تُرى · وخصمٌ
-  // يُطبَّق في الدفتر. **وشاشتان لغرضٍ واحدٍ تجعلان من يبحث يفتح الاثنتين.**
-  // **وبقدرتها لا بقدرة المحتوى** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — قسمٌ للماليّة، ولا
-  // تنال معه اللافتاتِ ولا الحملاتِ ولا البثّ.
-  { href: "/dashboard/promos", label: m.admin.promos.title, icon: IconPromos,
-    caps: ["offers.manage"] },
-  // ══════════════════════════════════════════════════════════════════
-  // **مراقبةُ التشغيل — «هل النظام يعمل؟»**
-  // ══════════════════════════════════════════════════════════════════
-  //
-  // **وبابُها القدرةُ لا اسمُ الدور** (`observability.read`): **فأيُّ
-  // دورٍ يُمنَح القدرةَ غداً يرى البابَ**، ولا يُكتب اسمُه هنا.
-  //
-  // **وموضعُها قبل الإعدادات**: سؤالُ صحّةٍ لا سؤالُ تهيئة — **ويُفتح
-  // عند الشكوى لا كلَّ يوم.**
-  // **وصارت شاشةَ المراقب** (قرارُ المالك ٢٠٢٦-١٠-٠٤): سيرُ الطلبات لمن يملك
-  // `orders.read` — موظّفُ العمليّات — والتفاصيلُ التقنيّةُ داخلها لـ`observability.read`.
-  {
-    href: "/dashboard/ops",
-    label: m.admin.ops.navTitle,
-    icon: IconMonitor,
-    caps: ["orders.read", "observability.read"],
-  },
-  // **الإعداداتُ لمن يملك تعديلَ قسمٍ منها** — والأدوارُ موضوعٌ فيها (٢٠٢٦-١٠-٢٥) فتلوّنها.
-  { href: "/dashboard/settings", label: m.terms.settings, icon: IconSettings,
-    caps: ["settings.general.manage", "settings.financial.manage", "settings.security.manage"],
-    activeAlso: ["/dashboard/roles"] },
+const SECTION_TITLE: Record<NavSection, string> = {
+  daily: m.admin.kit.nav.groupDaily,
+  people: m.admin.kit.nav.groupPeople,
+  money: m.admin.kit.nav.groupMoney,
+  growth: m.admin.kit.nav.groupGrowth,
+  system: m.admin.kit.nav.groupSystem,
+};
+
+/**
+ * **من يرى الرئيسيّةَ**: كلُّ من يملك كتلةً فيها (انتباه · نبض · مال) — لا مديرُ المنصّة وحدَه.
+ * (كان القرار ٢٠٢٦-١٠-٠٤ «الرئيسيّةُ للمدير وحدَه» — **نُسخ بإعادة تصميم اللوحة ٢٠٢٦-١١-٠٣**: لكلّ دورٍ
+ * رئيسيّتُه بكتله فقط، وكلُّ كتلةٍ بقدرة بياناتها.)
+ */
+const HOME_CAPS = [
+  "platform.overview",
+  "orders.read",
+  "finance.read",
+  "support.manage",
+  "emergencies.manage",
+  "merchants.verify",
 ];
 
 /**
- * navFor ما يراه صاحبُ هذه الأدوار.
+ * **خريطةُ ما يملكه من يقف أمامها، في خمس مجموعات** — الشغلُ اليوميّ · الناسُ والمتاجر · المال · النموّ · النظام.
  *
- * # ولا عناوينَ مجموعاتٍ بعد اليوم
+ * **وبابٌ بقدرته لا باسم دور** (٢٠٢٦-٠٩-١٣): دورٌ جديدٌ يحمل قدرةً يرى بابَها بلا أن يُكتب اسمُه هنا.
+ * **ورؤيةُ بابٍ لا يُفتح أسوأُ من عدم رؤيته** (`R-34`) — والمحرّكُ هو الحارس، وهذه عينٌ لا يد (`ADG-2`).
  *
- * (قرارُ المالك ٢٠٢٦-٠٨-٠٨: «التشغيلُ اليوميّ · المال · البناءُ والإعداد —
- *  لا داعيَ لهما، احذفها من السايدبار».)
- *
- * **واثنان وعشرون بنداً مرتّبةً لا تحتاج ثلاثةَ عناوينَ تفصلها** — والترتيبُ
- * نفسُه يقول ما يهمّ: الطلباتُ أوّلاً والإعداداتُ آخراً.
- *
- * **ومعها ذهب فخٌّ كان يلزم إغلاقه**: عنوانُ المجموعة يركب أوّلَ بندٍ منها،
- * فإن حُجب البندُ عن دورٍ **ضاع العنوانُ وبقي ما تحته معلَّقاً بلا رأس** —
- * فكان يُنقل إلى أوّل من نجا. **ولا عنوانَ اليومَ فلا فخّ**، والترشيحُ سطرٌ.
+ * **والتفاصيلُ بلا بندٍ خاصٍّ** تلوّن أمَّها بـ`activeAlso`: ملفُّ الحساب والمتجر للحسابات، التعويضاتُ والخسائرُ
+ * للمشاكل، والأدوارُ للإعدادات. **والإشعاراتُ في الجرس** لا في القائمة.
  */
+const ALL_NAV: NavItem[] = [
+  // ── الشغل اليومي ──
+  { section: "daily", href: "/dashboard", label: m.terms.dashboard, icon: IconDashboard, caps: HOME_CAPS },
+  { section: "daily", href: "/dashboard/orders", label: m.terms.orders, icon: IconOrder, caps: ["orders.read"] },
+  // **والسجلُّ بابٌ ثانٍ** — «ماذا جرى؟» سؤالٌ غيرُ «ما الذي يحتاجني الآن؟».
+  { section: "daily", href: "/dashboard/history", label: m.admin.nav.history, icon: IconHistory, caps: ["orders.read"] },
+  // **خريطةُ العمليات — «أين» لا «كم»**، والصلاحيةُ في الخادم (`opsmap.Perm`).
+  { section: "daily", href: "/dashboard/opsmap", label: m.admin.nav.opsMap, icon: IconZones, caps: ["orders.read"] },
+  // **«المشاكل والتعويضات»** (قرارُ المالك ٢٠٢٦-١٠-٢٥) — الشكاوى والتقييماتُ والخسائرُ والنزاعاتُ وتعويضُ البضاعة.
+  {
+    section: "daily",
+    href: "/dashboard/tickets",
+    label: m.admin.nav.problems,
+    icon: IconSupport,
+    caps: ["support.manage", "finance.read", "disputes.manage"],
+    activeAlso: ["/dashboard/compensations", "/dashboard/losses"],
+  },
+  // **الطارئُ يبقى ظاهراً حتى يُغلقه إنسان.**
+  { section: "daily", href: "/dashboard/emergencies", label: m.admin.nav.emergencies, icon: IconWarning, caps: ["emergencies.manage"] },
+
+  // ── الناس والمتاجر ──
+  // **بابٌ واحدٌ لكلّ من في المنصة** (زبائن · متاجر · سائقون · مناديب) — **وملفُّ المتجر تابعٌ له** (`activeAlso`).
+  {
+    section: "people",
+    href: "/dashboard/users",
+    label: m.terms.accounts,
+    icon: IconUsers,
+    caps: ["users.read"],
+    activeAlso: ["/dashboard/merchants"],
+  },
+  // **السوقُ بقدرته لا بقدرة المحتوى** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — موظّفُ العمليّات يرتّبه.
+  { section: "people", href: "/dashboard/sections", label: m.admin.nav.sections, icon: IconStore, caps: ["market.manage"] },
+  { section: "people", href: "/dashboard/leads", label: m.terms.leads, icon: IconSignup, caps: ["merchants.verify"] },
+
+  // ── المال ──
+  // **خزينةُ المنصة — أصلُ كلّ حركة** (قرارُ المالك ٢٠٢٦-٠٨-٠٤). **وصفحاتُ المال بنودٌ بالقائمة** (٢٠٢٦-١٠-٢٧).
+  { section: "money", href: "/dashboard/treasury", label: m.admin.treasury.title, icon: IconWallet, caps: ["finance.read"], activeAlso: ["/dashboard/wallet"] },
+  { section: "money", href: "/dashboard/cash", label: m.admin.treasury.links.cash, icon: IconMoto, caps: ["finance.read"] },
+  { section: "money", href: "/dashboard/payouts", label: m.admin.treasury.links.payouts, icon: IconArrowOut, caps: ["finance.read"] },
+  { section: "money", href: "/dashboard/obligations", label: m.admin.treasury.links.obligations, icon: IconBalance, caps: ["finance.read"] },
+  { section: "money", href: "/dashboard/profits", label: m.admin.treasury.links.profits, icon: IconTrendUp, caps: ["finance.read"] },
+  { section: "money", href: "/dashboard/expenses", label: m.admin.treasury.links.expenses, icon: IconReceipt, caps: ["finance.read"] },
+  { section: "money", href: "/dashboard/reports", label: m.terms.reports, icon: IconReports, caps: ["analytics.read"] },
+
+  // ── النموّ ──
+  // **كودٌ يُكتب · ولافتةٌ تُرى · وخصمٌ يُطبَّق** في صفحةٍ واحدة، **بقدرتها** (قرارُ المالك ٢٠٢٦-١٠-٠٥).
+  { section: "growth", href: "/dashboard/promos", label: m.admin.promos.title, icon: IconPromos, caps: ["offers.manage"] },
+  // **الأهدافُ والمكافآت** — الشاشةُ تقول من بلغ، والمكافأةُ بيدٍ لا بمعادلة.
+  { section: "growth", href: "/dashboard/incentives", label: m.admin.incentives.title, icon: IconTarget, caps: ["finance.read"] },
+  // **«طلباتُ التوسّع» قسمٌ مستقلّ** (قرارُ المالك ٢٠٢٦-١٠-٠٤) بـ`orders.read` كبابها في المحرّك.
+  { section: "growth", href: "/dashboard/expansion", label: m.admin.nav.expansion, icon: IconLocation, caps: ["orders.read"] },
+
+  // ── النظام ──
+  // **الإعداداتُ لمن يملك تعديلَ قسمٍ منها** — والأدوارُ موضوعٌ فيها (٢٠٢٦-١٠-٢٥) فتلوّنها.
+  {
+    section: "system",
+    href: "/dashboard/settings",
+    label: m.terms.settings,
+    icon: IconSettings,
+    caps: ["settings.general.manage", "settings.financial.manage", "settings.security.manage"],
+    activeAlso: ["/dashboard/roles"],
+  },
+  { section: "system", href: "/dashboard/audit", label: m.admin.audit.title, icon: IconShieldCheck, caps: ["audit.read"] },
+  // **مراقبةُ التشغيل صارت صفحةَ المهندس وحدَه** (إعادةُ التصميم ٢٠٢٦-١١-٠٣): ما كان يراه موظّفُ العمليّات
+  // (سيرُ الطلبات والعالق) انتقل إلى الرئيسيّة، **وبقي هنا التفصيلُ التقنيّ** بقدرة الرصد (`observability.read`).
+  { section: "system", href: "/dashboard/ops", label: m.admin.ops.navTitle, icon: IconMonitor, caps: ["observability.read"] },
+];
+
+/**
+ * navFor ما يراه صاحبُ هذه القدرات — **وعناوينُ المجموعات الخمس** (قرارُ المالك ٢٠٢٦-١١-٠٣،
+ * **وهو ينسخ «بلا عناوين مجموعات» ٢٠٢٦-٠٨-٠٨**).
+ *
+ * **وعنوانُ المجموعة يركب أوّلَ بندٍ من المجموعة بعد الترشيح**: لو حُجب أوّلُ بندٍ عن دورٍ ضاع العنوانُ
+ * وبقي ما تحته معلَّقاً بلا رأس — فيُلصق هنا بعد الترشيح لا قبله. **ومجموعةٌ لا يبقى منها بندٌ لا عنوانَ لها.**
+ *
+ * **كلُّ بابٍ بقدرته — ولا اسمَ دورٍ في شرطِ ظهور** (٢٠٢٦-٠٩-١٣).
+ */
+function visibleNav(caps: readonly string[]): NavItem[] {
+  const can = (c: string) => caps.includes(c);
+  return ALL_NAV.filter((i) => !!i.caps && i.caps.some(can));
+}
+
 function navFor(
   roles: string[] | undefined,
   caps: readonly string[],
 ): ChromeNavItem[] {
   void roles;
-  // ══════════════════════════════════════════════════════════════════
-  // **كلُّ بابٍ بقدرته — ولا اسمَ دورٍ في شرطِ ظهور** (٢٠٢٦-٠٩-١٣)
-  // ══════════════════════════════════════════════════════════════════
-  //
-  // **وكانت اثنتان وعشرون بنداً تُبوَّب بالاسم**: تسعةٌ بلا شرطٍ
-  // أصلاً — **يراها كلُّ من دخل اللوحة** — **وبندا «النقد» و«الخسائر»
-  // بـ`ops`**، **وهو دورٌ صفرُ حامليه في الإنتاج** (قِيس ٢٠٢٦-٠٩-١٣)،
-  // **فموظّفُ `operations` لا يراهما وهما له في الورق.**
-  //
-  // **ودورٌ مخصَّصٌ يُنشَأ غداً بالقدرة نفسِها يرى بابَها** — **ولا
-  // يُنتظَر مهندسٌ يضيف اسمَه في مصفوفة.** (وهو عقدُ المالك:
-  // `NO-CODE FOR OPERATIONS`.)
-  //
-  // **ورؤيةُ بابٍ لا يُفتح أسوأُ من عدم رؤيته** (`R-34`) — **وقِيس
-  // ثلاثةٌ منها**: سجلُّ التدقيق للماليّة، وزرُّ إغلاق التذكرة لها،
-  // **وكلاهما يُردّ ٤٠٣ من المحرّك.**
-  //
-  // **والمحرّكُ هو الحارس** — **وهذه عينٌ لا يد** (`ADG-2`).
-  const can = (c: string) => caps.includes(c);
-  return ALL_NAV.filter((i) => !!i.caps && i.caps.some(can));
+  const seen = new Set<NavSection>();
+  return visibleNav(caps).map(({ section, ...item }) => {
+    if (seen.has(section)) return item;
+    seen.add(section);
+    return { ...item, group: SECTION_TITLE[section] };
+  });
 }
 
 /**
@@ -256,6 +212,17 @@ function landingFor(nav: ChromeNavItem[]): ChromeNavItem | undefined {
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const { user, capabilities, capsLoaded, loading } = useAuth();
+  // **الأرقامُ لا تُطلب قبل وصول القدرات ولا لمن لا يدخل اللوحة** — فلا ضجيجَ ٤٠٣ عند الإقلاع.
+  const enabled = !loading && capsLoaded && canAccessPanel(user, capabilities);
+  return (
+    <MenuCountsProvider enabled={enabled}>
+      <DashboardShell>{children}</DashboardShell>
+    </MenuCountsProvider>
+  );
+}
+
+function DashboardShell({ children }: { children: React.ReactNode }) {
   const { user, capabilities, capsLoaded, loading, logout } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
@@ -271,40 +238,42 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     [canMarket],
   );
   const inMarket = pathname.startsWith("/dashboard/sections");
-  // **عدّادُ الطوارئ المفتوحة** (قرارُ المالك ٢٠٢٦-١٠-٠٤ — غرفةُ الطوارئ): **ويحمرّ فوراً**
-  // إن كان فيها طارئٌ ما استلمه حدا (`unacked`) — قرارُ المالك ٢٠٢٦-١٠-٢٧؛ كان ينتظر مهلةَ
-  // `ops.emergency_unacked_red_min`، والمهلةُ باقيةٌ لسطر الغرفة ودبّوس الخريطة.
-  const canEmergencies = capabilities.includes("emergencies.manage");
-  // **ويُعاد السؤالُ كلَّ دقيقة** — احتياطاً لحدثٍ فات.
-  const [minuteTick, setMinuteTick] = useState(0);
-  useEffect(() => {
-    if (!canEmergencies) return;
-    const t = window.setInterval(() => setMinuteTick((x) => x + 1), 60_000);
-    return () => window.clearInterval(t);
-  }, [canEmergencies]);
-  const { data: emergencyCount } = useLiveData<{ open: number; unacked: number; stale: number }>(
-    () =>
-      canEmergencies
-        ? api("/api/v1/admin/emergencies/count")
-        : Promise.resolve({ open: 0, unacked: 0, stale: 0 }),
-    ["emergency"],
-    [canEmergencies, minuteTick],
-  );
-  const navShown = useMemo(
-    () =>
-      nav.map((i) => {
-        if (i.href === "/dashboard/sections")
+  // **عدّاداتُ القائمة كلُّها من نداءٍ واحد** (`GET /admin/menu-counts`) — يغذّي معها شريطَ الانتباه في الرئيسيّة
+  // (`MenuCountsProvider`). **والصفرُ لا يُرسم**، **والأحمرُ لما ينتظر يداً الآن**: عالقٌ، نقدٌ فوق السقف،
+  // شكوى متأخرة، طارئٌ ما استلمه أحد (قرارُ المالك ٢٠٢٦-١٠-٢٧).
+  const { data: counts } = useMenuCounts();
+  const navShown = useMemo(() => {
+    const a = counts?.attention;
+    const n = (v: number | null | undefined) => v ?? 0;
+    return nav.map((i) => {
+      switch (i.href) {
+        case "/dashboard/sections":
           return { ...i, badge: inMarket ? 0 : (marketNew?.count ?? 0) };
-        if (i.href === "/dashboard/emergencies")
+        case "/dashboard/orders":
+          return { ...i, badge: n(a?.stuck_orders), badgeTone: n(a?.stuck_orders) > 0 ? ("danger" as const) : undefined };
+        case "/dashboard/tickets":
           return {
             ...i,
-            badge: emergencyCount?.open ?? 0,
-            badgeTone: (emergencyCount?.unacked ?? 0) > 0 ? ("danger" as const) : undefined,
+            badge: n(a?.tickets_open) + n(a?.compensations_pending),
+            badgeTone: n(a?.tickets_late) > 0 ? ("danger" as const) : undefined,
           };
-        return i;
-      }),
-    [nav, marketNew, inMarket, emergencyCount],
-  );
+        case "/dashboard/emergencies":
+          return { ...i, badge: n(a?.emergencies_open), badgeTone: n(a?.emergencies_unacked) > 0 ? ("danger" as const) : undefined };
+        case "/dashboard/leads":
+          return { ...i, badge: n(a?.leads_new) };
+        case "/dashboard/cash":
+          return { ...i, badge: n(a?.cash_over), badgeTone: "danger" as const };
+        case "/dashboard/payouts":
+          return { ...i, badge: n(a?.payouts_pending) };
+        case "/dashboard/obligations":
+          return { ...i, badge: n(a?.obligations_overdue) + n(a?.obligation_requests) };
+        case "/dashboard/expansion":
+          return { ...i, badge: n(a?.expansion_waiting) };
+        default:
+          return i;
+      }
+    });
+  }, [nav, marketNew, inMarket, counts]);
 
   useEffect(() => {
     if (!loading && capsLoaded && !canAccessPanel(user, capabilities))
@@ -315,8 +284,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // **ومن هبط على بابٍ لا يملكه يُنزَل على أوّلِ ما يملك**
   // ══════════════════════════════════════════════════════════════════
   //
-  // **و«الرئيسيّة» تنادي `/admin/overview` فتُردّ ٤٠٣** لمن لا يملك
-  // `platform.overview` — **فمن هبط عليها رأى عطباً لا شاشة.**
+  // **والرئيسيّةُ صارت لكلّ دورٍ يملك كتلةً فيها** (`HOME_CAPS`) — ومن لا يملك أيَّ كتلةٍ لا بابَ له فيها،
+  // **ومن هبط على بابٍ لا يملكه رأى عطباً لا شاشة.**
   //
   // **والشرطُ من القائمة لا من اسم دور**: **ما ليس في قائمته لا
   // يملكه** — **ودورٌ مخصَّصٌ يُنشَأ غداً يُنزَل على بابه بلا سطرٍ
@@ -385,6 +354,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
          يعرف** وتأخذ سطراً من قائمةٍ طويلة. **وتبقى في البوّابات الأربع.** */
       showBrand={false}
       nav={navShown}
+      /* **البحثُ السريع (Ctrl+K)** في شريط الصفحة — رقمُ طلب، تلفون، اسمُ متجرٍ أو شخص، أو صفحة. */
+      topbarStart={<AdminSearch nav={nav} />}
       pathname={pathname}
       homeHref="/dashboard"
       accountHref="/dashboard/account"
@@ -411,7 +382,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* **شريطُ الطوارئ أعلى كلّ صفحة** (قرارُ المالك ٢٠٢٦-١٠-٠٤) — لمن يملكها. */}
       {/* **وشريطُ تعطّل الخادم لكلّ موظّف** (قرارُ المالك ٢٠٢٦-١٠-٠٤ — «مراقبة التشغيل»). */}
       <OutageBanner
-        canOpen={capabilities.includes("orders.read") || capabilities.includes("observability.read")}
+        canOpen={capabilities.includes("observability.read")}
       />
       {/* **وهو الموضعُ الوحيدُ لشريط الطوارئ** — كان يُرسم ثانيةً في لوحة الطلبات لمن لا يملك الدعم (دفعةُ التصميم ١). */}
       {capabilities.includes("emergencies.manage") && <EmergencyBanner />}

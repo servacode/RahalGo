@@ -383,7 +383,7 @@ export function DashboardChrome({
       )}
 
       <nav className="flex-1 space-y-1 overflow-y-auto p-3">
-        {nav.map((item) => {
+        {nav.map((item, idx) => {
           const active = isActive(item);
           const Icon = item.icon;
           return (
@@ -394,7 +394,7 @@ export function DashboardChrome({
                   كلّ مجموعةٍ يجعل القائمةَ سلسلةَ صناديق** — وهي عينُ ما
                   خرجنا منه في الشريط العلويّ. */}
               {item.group && (
-                <p className="px-3 pt-4 pb-1.5 text-xs font-bold text-ink-muted first:pt-0">
+                <p className={`px-3 pb-1.5 text-xs font-bold text-ink-muted ${idx === 0 ? "pt-0" : "pt-4"}`}>
                   {item.group}
                 </p>
               )}

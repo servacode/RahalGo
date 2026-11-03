@@ -2,29 +2,29 @@
 
 /**
  * ══════════════════════════════════════════════════════════════════════
- * **رئيسيّةُ مدير المنصّة — كلُّ ما يجري في صفحةٍ واحدة**
+ * **الرئيسيّة — مركزُ القيادة، لكلّ دورٍ ما يملكه**
  * ══════════════════════════════════════════════════════════════════════
  *
- * (قرارُ المالك ٢٠٢٦-١٠-٠٤: «لازم أفهم كلّ شي عم يصير بالمنصّة لأصغر تفصيل
- *  بدون ما أتنقّل بين الصفحات» · «الرئيسيّة لمدير المنصّة وحدَه».)
+ * (إعادةُ تصميم اللوحة ٢٠٢٦-١١-٠٣ — **وهي تنسخ «الرئيسيّةُ للمدير وحدَه» ٢٠٢٦-١٠-٠٤**.)
  *
- * **من أعلى إلى أسفل**: بانتظار قرارك · هلق · حركةُ المال اليوم والرصيدُ هلق ·
- * اليوم مقابل أمس · أسبابُ الفشل · آخر الأحداث · المنصّة بالأرقام · زوّارُ الموقع.
- * **وشريطُ الطوارئ فوقها في كلّ صفحة** (`EmergencyBanner` في `layout.tsx`).
+ * تجيب على ثلاثة أسئلة من أوّل نظرة: **شو بدّه مني هلّق؟ · المال تمام؟ · المنصة عايشة؟**
+ *
+ *   ١ · بدّه منك انتباه   (`AttentionStrip`)  — عدّاداتٌ فوق الصفر، كلٌّ رابطٌ للحلّ.
+ *   ٢ · نبضُ المنصة هلّق  (`SummaryStrip`)    — سائقون · متاجر · طلباتٌ جارية · متوسّط التوصيل.
+ *   ٣ · المال اليوم       (`SummaryStrip`)    — لمن يملك المال.
+ *   ثمّ ما تحتها: لكلّ دورٍ قائمتُه (عالقٌ · سحوبٌ ناطرة · شكاوى) ولمدير المنصّة تفاصيلُ اليوم.
  *
  * # القواعد
  *
- *  - **كلُّ رقمٍ بابٌ** يفتح صفحةً فيها الرقمُ نفسُه — والمحرّكُ يعدّ بشرط
- *    صفحته (`admin_overview_handlers.go`)، **واختبارٌ يقارن الرقمين.**
- *    **وبابٌ لا يملكه صاحبُ الجلسة يُرسَم رقماً لا زرّاً** (تدقيقُ ٢٠٢٦-١٠-٢٧).
- *  - **الرقمُ الذي لم يُقرأ «غير معروف»** لا صفرٌ أخضر.
- *  - **الصفرُ رماديٌّ هادئ**، والأحمرُ للمستعجل وحدَه — **والأصفارُ تحت «عرض الكل».**
- *  - **فشلُ التحديث لا يمحو الصفحة** — تبقى آخرُ أرقامٍ وصلت ومعها سطرٌ يقول ذلك.
- *  - **«اليوم» يومُ المنصّة** — يبدأ بساعة فتح الدوام (`day_start_hour` من المحرّك)،
- *    **والروابطُ تحمل اليومَ نفسَه** (`today`) لا يومَ المتصفّح.
+ *  - **كلُّ كتلةٍ بقدرة بياناتها** — لا نداءَ ٤٠٣: الانتباهُ والنبضُ والرصيدُ من `/admin/menu-counts`
+ *    (يردّ لكلّ موظّفٍ ما يملكه ويُنزل الباقيَ `null`)، وتفاصيلُ المدير من `/admin/overview`.
+ *  - **كلُّ رقمٍ رابطٌ** يفتح قائمةً فيها الرقمُ نفسُه — وفتحُ الرابط بقدرته (`mayOpen`).
+ *  - **الرقمُ الذي لم يُقرأ «غير معروف»** لا صفرٌ أخضر. **والصفرُ هادئ.**
+ *  - **حيّةٌ**: بلا زرّ تحديث — تتحدّث مع الأحداث وكلَّ دقيقة، وفشلُ التحديث لا يمحو ما وصل.
+ *  - **اليومُ يومُ المنصّة** — يبدأ بساعة فتح الدوام، والروابطُ تحمل اليومَ نفسَه.
  */
 
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -33,56 +33,68 @@ import {
   fmtNum,
   fmtMoney,
   fmtSpan,
-  fmtTime,
   fmtDateTime,
   fmtLongDate,
   damascusDay,
-  errorText,
 } from "@rahalgo/i18n";
 import {
-  useLiveRefresh,
+  AdminAsync,
+  AdminCard,
+  AdminEntityCard,
+  AdminEntityGrid,
+  AdminLink,
+  AdminPage,
+  AttentionStrip,
   Alert,
   Button,
-  IconWarning,
+  ContactButtons,
+  Row,
+  StatusBadge,
+  StoryTimeline,
+  SummaryStrip,
+  TONE_TEXT,
+  agoText,
+  useLiveData,
+  IconGrid,
   IconOrder,
   IconDriver,
   IconStore,
   IconWallet,
   IconBalance,
-  IconSupport,
-  IconLink,
-  IconZones,
-  IconGrid,
+  IconTrendDown,
   IconSuccess,
-  IconPrev,
+  IconWarning,
+  IconHourglass,
   IconUsers,
   IconUser,
   IconStar,
-  IconHourglass,
   IconPromos,
   IconLocation,
-  IconTrendUp,
-  IconTrendDown,
-  IconTrendFlat,
-  IconStatus,
   IconRoles,
+  IconSupport,
+  type AttentionItem,
+  type StoryEvent,
+  type SummaryItem,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { useCanCall, useCanOpen } from "@/lib/policy";
+import { useCanOpen } from "@/lib/policy";
 import { roleLabelByCode } from "@/lib/rolemeta";
 import ContactTestAlert from "@/components/admin/settings/contact-check";
 import SiteStatsSection from "@/components/admin/SiteStatsSection";
 import PlatformSwitch from "@/components/admin/settings/PlatformSwitch";
-import { PageHero } from "@/components/admin/PageHero";
-import { Panel, Tile, type TileTone } from "@/components/admin/DashParts";
+import { LIVE_KINDS, useMenuCounts, type MenuCountsData } from "@/components/admin/MenuCounts";
 
 const m = getMessages(defaultLocale);
 const H = m.admin.home;
+const K = m.admin.kit;
+const KA = K.attention;
+const KH = K.home;
 const ACTIONS = m.admin.audit.actions as Record<string, string>;
 const STATUS = m.orders.status as Record<string, string>;
 const FAIL = m.common.failReasons as Record<string, string>;
 const SETTING_KEYS = m.admin.settings.keys as Record<string, { label?: string } | undefined>;
+const ALERT_REASONS = m.admin.ordersPage.alertReasons as Record<string, string>;
 
 type N = number | null | undefined;
 
@@ -108,34 +120,7 @@ interface Overview {
   generated_at: string;
   today: string;
   day_start_hour?: number;
-  ticket_late_hours?: number;
   missing: string[];
-  awaiting: Record<
-    | "reports_waiting"
-    | "emergencies_open"
-    | "orders_unassigned"
-    | "compensations_pending"
-    | "payouts_pending"
-    | "drivers_over_cash"
-    | "drivers_cash_overdue"
-    | "tickets_open"
-    | "tickets_late"
-    | "leads_new"
-    | "expansion_waiting"
-    | "obligations_overdue"
-    | "obligation_requests",
-    N
-  >;
-  live: {
-    stages: Record<string, N>;
-    orders_open: N;
-    orders_stuck: N;
-    drivers_on_shift: N;
-    drivers_free: N;
-    drivers_busy: N;
-    stores_open_now: N;
-    stores_active: N;
-  };
   health: { api: string; database: string; whatsapp: string; routing: string };
   today_stats: Day;
   yesterday_stats: Day;
@@ -172,53 +157,52 @@ interface Overview {
   };
 }
 
+interface StuckAlert {
+  order_id: string;
+  number: number;
+  status: string;
+  merchant_name: string;
+  customer_phone: string;
+  customer_phone_masked?: string;
+  reason: string;
+  minutes: number;
+  since?: string;
+}
+
+interface PayoutRow {
+  id: string;
+  user_id: string;
+  user_name: string;
+  user_role: string;
+  amount: number;
+  available: number;
+  created_at: string;
+}
+
+interface TicketRow {
+  id: string;
+  number: number;
+  subject: string;
+  customer_name: string;
+  order_number: number | null;
+  status: string;
+  late?: boolean;
+  created_at: string;
+}
+
 type IconT = typeof IconWarning;
 
 /** **رقمٌ أو «غير معروف»** — ولا صفرَ مكانَ ما لم يُقرأ. */
 const known = (n: N): n is number => typeof n === "number";
 const show = (n: N, f: (x: number) => string = fmtNum) => (known(n) ? f(n) : H.unknown);
-
-/**
- * **نبرةُ البطاقة**: غائبٌ عاديّ · صفرٌ رماديّ · وفوق الصفر بنبرة أهمّيّته.
- * **والأحمرُ للمستعجل وحدَه** — ما ينتظره إنسانٌ في الشارع.
- */
-const toneOf = (n: N, urgent: boolean): TileTone =>
-  !known(n) ? "default" : n === 0 ? "muted" : urgent ? "danger" : "warning";
-
-/** **ترتيبُ «بانتظار قرارك»**: المستعجلُ الذي فيه رقمٌ · ثمّ العاديُّ الذي فيه رقم · ثمّ الأصفار. */
-const rank = (c: { urgent: boolean; n: N }) => ((c.n ?? 0) > 0 ? (c.urgent ? 2 : 1) : 0);
+const num = (n: N) => (known(n) ? n : 0);
 
 /** **الصفرُ يهدأ** — رقمٌ صفريٌّ رماديّ، وما عداه عاديّ. */
-const zeroMuted = (n: N): TileTone => (known(n) && n === 0 ? "muted" : "default");
-
-/** **نبرةُ رقمٍ له إشارة** — الربحُ أخضر والخسارةُ حمراء والصفرُ رماديّ. */
-const signTone = (n: N): TileTone => (!known(n) ? "default" : n > 0 ? "success" : n < 0 ? "danger" : "muted");
+const zeroMuted = (n: N): SummaryItem["tone"] => (known(n) && n === 0 ? "muted" : "neutral");
+/** **نبرةُ رقمٍ له إشارة** — الخسارةُ حمراء، والصفرُ هادئ، والباقي عاديّ. */
+const lossTone = (n: N): SummaryItem["tone"] => (!known(n) ? "neutral" : n < 0 ? "danger" : n === 0 ? "muted" : "neutral");
 
 const HOUR = 3600_000;
-
-/**
- * **أيُّ صفحةٍ يفتحها صاحبُ الجلسة** — بقدرات بنود القائمة نفسِها (`layout.tsx`). **و`platform.overview`
- * قد تُمنح لدورٍ مخصَّص** — فبطاقةٌ تفتح باباً لا يملكه تُرسم رقماً لا زرّاً.
- */
-const PAGE_CAPS: [string, string[]][] = [
-  ["/dashboard/emergencies", ["emergencies.manage"]],
-  ["/dashboard/orders", ["orders.read"]],
-  ["/dashboard/history", ["orders.read"]],
-  ["/dashboard/opsmap", ["orders.read"]],
-  ["/dashboard/expansion", ["orders.read"]],
-  ["/dashboard/ops", ["orders.read", "observability.read"]],
-  ["/dashboard/tickets", ["support.manage", "finance.read", "disputes.manage"]],
-  ["/dashboard/treasury", ["finance.read"]],
-  ["/dashboard/cash", ["finance.read"]],
-  ["/dashboard/payouts", ["finance.read"]],
-  ["/dashboard/obligations", ["finance.read"]],
-  ["/dashboard/profits", ["finance.read"]],
-  ["/dashboard/leads", ["merchants.verify"]],
-  ["/dashboard/users", ["users.read"]],
-  ["/dashboard/sections", ["market.manage"]],
-  ["/dashboard/promos", ["offers.manage"]],
-  ["/dashboard/settings", ["settings.general.manage", "settings.financial.manage", "settings.security.manage"]],
-];
 
 /** **رابطُ الحدث إلى كيانه.** */
 function eventHref(e: Overview["events"][number]): string | null {
@@ -259,28 +243,24 @@ function eventWhat(e: Overview["events"][number]): string {
     .join(m.common.nameSeparator);
 }
 
-const AWAITING: {
-  key: keyof Overview["awaiting"];
-  label: string;
-  href: string;
-  urgent: boolean;
-  icon: IconT;
-}[] = [
-  { key: "emergencies_open", label: H.emergenciesOpen, href: "/dashboard/emergencies", urgent: true, icon: IconWarning },
-  { key: "reports_waiting", label: H.reportsWaiting, href: "/dashboard/orders?awaiting=1", urgent: true, icon: IconWarning },
-  { key: "orders_unassigned", label: H.ordersUnassigned, href: "/dashboard/orders?filter=no_driver", urgent: true, icon: IconOrder },
-  { key: "tickets_late", label: "", href: "/dashboard/tickets?late=1", urgent: true, icon: IconSupport },
-  { key: "drivers_over_cash", label: H.driversOverCash, href: "/dashboard/cash?filter=over", urgent: true, icon: IconBalance },
-  // **نقدٌ لم يُسلَّم منذ أيّام** — بعد عدد الأيّام في الإعدادات (قرارُ المالك ٢٠٢٦-١٠-٠٤).
-  { key: "drivers_cash_overdue", label: H.driversCashOverdue, href: "/dashboard/cash?filter=overdue", urgent: true, icon: IconBalance },
-  { key: "tickets_open", label: H.ticketsOpen, href: "/dashboard/tickets?status=unresolved", urgent: false, icon: IconSupport },
-  // **والتعويضاتُ تبويبٌ في «المشاكل والتعويضات»** (٢٠٢٦-١٠-٢٧) — لا صفحتُها القديمة.
-  { key: "compensations_pending", label: H.compensationsPending, href: "/dashboard/tickets?tab=compensations", urgent: false, icon: IconWallet },
-  { key: "payouts_pending", label: H.payoutsPending, href: "/dashboard/payouts?status=pending", urgent: false, icon: IconWallet },
-  { key: "leads_new", label: H.leadsNew, href: "/dashboard/leads", urgent: false, icon: IconLink },
-  { key: "expansion_waiting", label: H.expansionWaiting, href: "/dashboard/expansion?filter=waiting", urgent: false, icon: IconZones },
-  { key: "obligations_overdue", label: H.obligationsOverdue, href: "/dashboard/obligations?overdue=1", urgent: false, icon: IconBalance },
-  { key: "obligation_requests", label: H.obligationRequests, href: "/dashboard/obligations?pending=1", urgent: false, icon: IconBalance },
+/** **قدراتُ فتح الصفحات** — كلُّ رابطٍ بقدرة بابه في المحرّك، وإلّا رُسم الرقمُ رقماً لا زرّاً. */
+const PAGE_CAPS: [string, string[]][] = [
+  ["/dashboard/emergencies", ["emergencies.manage"]],
+  ["/dashboard/orders", ["orders.read"]],
+  ["/dashboard/history", ["orders.read"]],
+  ["/dashboard/opsmap", ["orders.read"]],
+  ["/dashboard/expansion", ["orders.read"]],
+  ["/dashboard/tickets", ["support.manage", "finance.read", "disputes.manage"]],
+  ["/dashboard/treasury", ["finance.read"]],
+  ["/dashboard/cash", ["finance.read"]],
+  ["/dashboard/payouts", ["finance.read"]],
+  ["/dashboard/obligations", ["finance.read"]],
+  ["/dashboard/profits", ["finance.read"]],
+  ["/dashboard/leads", ["merchants.verify"]],
+  ["/dashboard/users", ["users.read"]],
+  ["/dashboard/sections", ["market.manage"]],
+  ["/dashboard/promos", ["offers.manage"]],
+  ["/dashboard/settings", ["settings.general.manage", "settings.financial.manage", "settings.security.manage"]],
 ];
 
 const STAGES = ["at_store_prep", "dispatching", "to_store", "at_store", "to_customer"] as const;
@@ -303,157 +283,577 @@ const GROUP_ICON: Record<string, IconT> = {
   promos: IconPromos,
 };
 
-/** **حالُ الصفحة قبل الأرقام** — الرأسُ نفسُه وهيكلُ بطاقاتٍ، أو دائرةٌ وجملةٌ وزرٌّ بعرضٍ كامل. */
-function Shell({ children }: { children: ReactNode }) {
+/** **عنوانُ كتلة** — واحدٌ لكلّ كتلة، بلا شرحٍ تحته. */
+function Block({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="space-y-4">
-      <PageHero icon={IconGrid} title={H.title} actions={<PlatformSwitch compact />} />
+    <section className="space-y-3" aria-label={title}>
+      <h2 className="admin-h2">{title}</h2>
       {children}
-    </div>
+    </section>
   );
+}
+
+/** **«بدّه منك انتباه» من عدّادات المحرّك** — كلُّ عدّادٍ بقدرته (`null` لمن لا يملكها فلا يُرسم). */
+function attentionItems(a: MenuCountsData["attention"]): AttentionItem[] {
+  return [
+    { key: "emergencies", label: KA.emergencies, count: num(a.emergencies_open), href: "/dashboard/emergencies", tone: "danger" },
+    { key: "stuck", label: KA.stuckOrders, count: num(a.stuck_orders), href: "/dashboard/orders?filter=stuck", tone: "danger" },
+    { key: "unassigned", label: KA.unassigned, count: num(a.unassigned_orders), href: "/dashboard/orders?filter=no_driver", tone: "danger" },
+    { key: "reports", label: KA.reports, count: num(a.reports_waiting), href: "/dashboard/orders?awaiting=1", tone: "danger" },
+    {
+      key: "silent",
+      label: KA.storeSilent,
+      count: num(a.stores_silent),
+      href: "/dashboard/orders?filter=awaiting_accept",
+      names: a.stores_silent_names ?? undefined,
+    },
+    {
+      key: "cashOver",
+      label: KA.cashOver,
+      count: num(a.cash_over),
+      href: "/dashboard/cash?filter=over",
+      tone: "danger",
+      names: a.cash_over_names ?? undefined,
+    },
+    { key: "cashOverdue", label: KA.cashOverdue, count: num(a.cash_overdue), href: "/dashboard/cash?filter=overdue", tone: "danger" },
+    { key: "ticketsLate", label: KA.complaintsLate, count: num(a.tickets_late), href: "/dashboard/tickets?late=1", tone: "danger" },
+    { key: "tickets", label: KA.complaints, count: num(a.tickets_open), href: "/dashboard/tickets?status=unresolved" },
+    { key: "payouts", label: KA.payouts, count: num(a.payouts_pending), href: "/dashboard/payouts?status=pending" },
+    { key: "compensations", label: KA.compensations, count: num(a.compensations_pending), href: "/dashboard/tickets?tab=compensations" },
+    { key: "obligations", label: KA.obligations, count: num(a.obligations_overdue), href: "/dashboard/obligations?overdue=1" },
+    { key: "obligationRequests", label: KA.obligationRequests, count: num(a.obligation_requests), href: "/dashboard/obligations?pending=1" },
+    { key: "leads", label: KA.leads, count: num(a.leads_new), href: "/dashboard/leads" },
+    { key: "expansion", label: KA.expansion, count: num(a.expansion_waiting), href: "/dashboard/expansion?filter=waiting" },
+  ];
 }
 
 export default function DashboardPage() {
   const router = useRouter();
   const { can } = useAuth();
-  const canCall = useCanCall();
   const canOpen = useCanOpen();
-  const [data, setData] = useState<Overview | null>(null);
-  const [error, setError] = useState("");
-  const [loadedAt, setLoadedAt] = useState<number | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [showZeros, setShowZeros] = useState(false);
-  const [, tick] = useState(0);
+  const hasOverview = can("platform.overview");
+  const canOrders = can("orders.read");
+  const canFinance = can("finance.read");
+  const canSupport = can("support.manage");
 
-  // ══════════════════════════════════════════════════════════════════
-  // **والفشلُ لا يمحو ما وصل** — تبقى الأرقامُ ومعها سطرٌ يقول إنّها قديمة.
-  // ══════════════════════════════════════════════════════════════════
-  const load = useCallback(() => {
-    setBusy(true);
-    api<Overview>("/api/v1/admin/overview")
-      .then((d) => {
-        setData(d);
-        setError("");
-        setLoadedAt(Date.now());
-      })
-      .catch((e) => setError(errorText(e)))
-      .finally(() => setBusy(false));
+  // **الانتباهُ والنبضُ والرصيدُ من نداء الهيكل الواحد** (القائمةُ تقرأ منه أيضاً).
+  const { data: mc, loading: mcLoading, error: mcError, reload: reloadMc, loadedAt: mcAt } = useMenuCounts();
+
+  // **وكلَّ دقيقة احتياطاً لحدثٍ فات** — والعالقُ والشكاوى المتأخرةُ تتبدّل مع الوقت ولو لم يقع حدث.
+  const [tick, setTick] = useState(0);
+  const [, clock] = useState(0);
+  useEffect(() => {
+    const r = setInterval(() => {
+      if (document.visibilityState === "visible") setTick((x) => x + 1);
+    }, 60_000);
+    // **و«تحدّث قبل…» يمشي وحدَه** كلَّ نصف دقيقة.
+    const c = setInterval(() => clock((x) => x + 1), 30_000);
+    return () => {
+      clearInterval(r);
+      clearInterval(c);
+    };
   }, []);
 
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  // **و«آخر تحديث قبل…» يمشي وحدَه** — كلَّ نصف دقيقة. **والأرقامُ نفسُها كلَّ دقيقة**: العالقُ والمتاجرُ
-  // الفاتحةُ والشكاوى المتأخّرةُ تتبدّل مع الوقت ولو لم يقع حدث (تدقيقُ ٢٠٢٦-١٠-٢٧).
-  useEffect(() => {
-    const t = setInterval(() => tick((x) => x + 1), 30_000);
-    const r = setInterval(() => {
-      if (document.visibilityState === "visible") load();
-    }, 60_000);
-    return () => {
-      clearInterval(t);
-      clearInterval(r);
-    };
-  }, [load]);
-
-  // **حيّةٌ على كلّ ما يغيّر أرقامَها** — والشكوى (`ticket`) كانت غائبة.
-  useLiveRefresh(
-    ["order", "orders", "account", "lead", "wallet", "alerts", "ticket", "emergency",
-      "driver", "merchant", "dispute", "settings", "user"],
-    load,
+  const [ovAt, setOvAt] = useState<number | null>(null);
+  const ov = useLiveData<Overview | null>(
+    async () => {
+      if (!hasOverview) return null;
+      const d = await api<Overview>("/api/v1/admin/overview");
+      setOvAt(Date.now());
+      return d;
+    },
+    LIVE_KINDS,
+    [hasOverview, tick],
+    800,
   );
 
-  /** **أيفتح صاحبُ الجلسة هذا الرابط؟** — وإلّا رُسمت البطاقةُ رقماً. */
+  // **قوائمُ الدور** — لمن لا يملك الرئيسيّةَ الكاملة: أقدمُ عالق · سحوبٌ ناطرة · شكاوى مفتوحة.
+  const listRole = !hasOverview;
+  const stuck = useLiveData<StuckAlert[]>(
+    () => (listRole && canOrders ? api<StuckAlert[]>("/api/v1/admin/orders/alerts") : Promise.resolve([])),
+    ["order", "orders", "alerts"],
+    [listRole, canOrders, tick],
+    800,
+  );
+  const payouts = useLiveData<{ payouts?: PayoutRow[] }>(
+    () =>
+      listRole && canFinance
+        ? api<{ payouts?: PayoutRow[] }>("/api/v1/admin/payouts?status=pending&per_page=5")
+        : Promise.resolve({ payouts: [] }),
+    ["wallet", "payout"],
+    [listRole, canFinance, tick],
+    800,
+  );
+  const tickets = useLiveData<{ tickets?: TicketRow[] }>(
+    () =>
+      listRole && canSupport
+        ? api<{ tickets?: TicketRow[] }>("/api/v1/admin/tickets?status=unresolved&per_page=5")
+        : Promise.resolve({ tickets: [] }),
+    ["ticket"],
+    [listRole, canSupport, tick],
+    800,
+  );
+
+  /** **أيفتح صاحبُ الجلسة هذا الرابط؟** — وإلّا رُسم الرقمُ رقماً. */
   const mayOpen = (href: string): boolean => {
-    const [path = "", qs = ""] = href.split("?");
+    const path = href.split("?")[0] ?? "";
     if (/^\/dashboard\/users\/[^/]+$/.test(path)) return canOpen.user;
     if (/^\/dashboard\/merchants\/[^/]+$/.test(path)) return canOpen.merchant;
-    if (path === "/dashboard/tickets") {
-      const tab = new URLSearchParams(qs).get("tab");
-      if (tab === "disputes") return canCall("GET", "/disputes");
-      if (tab === "compensations") return canCall("GET", "/compensations");
-      if (!tab && !new URLSearchParams(qs).get("t")) return canCall("GET", "/tickets");
-    }
     const hit = PAGE_CAPS.find(([p]) => path === p);
     return hit ? hit[1].some((c) => can(c)) : false;
   };
-  const go = (href: string) => (mayOpen(href) ? () => router.push(href) : undefined);
+  /** الرابطُ إن فُتح، وإلّا `undefined` (فيُرسم الرقمُ بلا رابط). */
+  const link = (href: string) => (mayOpen(href) ? href : undefined);
 
-  if (!data) {
-    return (
-      <Shell>
-        {error ? (
-          <section className="surface flex flex-col items-center gap-3 p-8 text-center">
-            <span className="inline-flex h-16 w-16 items-center justify-center rounded-full bg-danger-solid text-on-solid">
-              <IconWarning size={28} />
-            </span>
-            <h2 className="heading-section">{H.loadFailedTitle}</h2>
-            <p className="max-w-md text-sm text-ink-muted">{H.loadFailedHint}</p>
-            <p className="max-w-md text-xs text-ink-muted">{error}</p>
-            <Button className="w-full sm:max-w-xs" onClick={load} disabled={busy}>
-              {H.retry}
-            </Button>
-          </section>
-        ) : (
-          <div className="space-y-4" aria-busy="true">
-            {[8, 4, 6].map((n, i) => (
-              <section key={i} className="surface p-4">
-                <span className="mb-3 block h-4 w-32 animate-pulse rounded-control bg-field" />
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
-                  {Array.from({ length: n }, (_, j) => (
-                    <span key={j} className="block h-16 animate-pulse rounded-card bg-field" />
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
-        )}
-      </Shell>
-    );
-  }
-
-  const a = data.awaiting;
-  const lv = data.live;
-  const t = data.today_stats;
-  const y = data.yesterday_stats;
-  const ys = data.yesterday_same_time;
-  const startHour = data.day_start_hour ?? 0;
-  const lateHours = data.ticket_late_hours ?? 2;
-  const today = data.today;
-  const hourText = fmtNum(startHour);
-  const ago =
-    loadedAt === null
-      ? ""
-      : Date.now() - loadedAt < 60_000
-        ? H.updatedNow
-        : H.updatedAgo.replace("{t}", fmtSpan((Date.now() - loadedAt) / 1000));
-  const dayLine = H.dayLine.replace("{date}", fmtLongDate(`${today}T12:00:00Z`)).replace("{h}", hourText);
-  /** **يومُ المنصّة لحدثٍ** — بمنطقتها ومن ساعة بدئها، **كالمحرّك** (`overviewDays`). */
+  const o = ov.data;
+  const a = mc?.attention;
+  const pulse = mc?.pulse ?? null;
+  const today = o?.today ?? mc?.today ?? "";
+  const startHour = o?.day_start_hour ?? mc?.day_start_hour ?? 0;
   const platformDayOf = (iso: string) => damascusDay(Date.parse(iso) - startHour * HOUR);
-  const weekFrom = damascusDay(Date.parse(`${today}T12:00:00Z`) - 6 * 24 * HOUR);
-  const profitsToday = `/dashboard/profits?from=${today}&to=${today}`;
+  const weekFrom = today ? damascusDay(Date.parse(`${today}T12:00:00Z`) - 6 * 24 * HOUR) : "";
+  const todayRange = `from=${today}&to=${today}`;
 
-  // ── بانتظار قرارك: ما فيه رقمٌ أوّلاً، والأصفارُ تحت «عرض الكل» ──
-  const awaitingItems = AWAITING.map((c) => ({
-    ...c,
-    label: c.key === "tickets_late" ? H.ticketsLate.replace("{h}", fmtNum(lateHours)) : c.label,
-    n: a[c.key],
-  })).sort((x, z) => rank(z) - rank(x));
-  const zeros = awaitingItems.filter((c) => known(c.n) && c.n === 0);
-  const pending = awaitingItems.filter((c) => !(known(c.n) && c.n === 0));
-  const allClear = pending.length === 0;
-  const visibleAwaiting = showZeros ? awaitingItems : pending;
+  // ── سطرُ الرأس الحيّ: اليومُ وساعةُ بدئه وآخرُ تحديث ──
+  const at = hasOverview ? ovAt : mcAt;
+  const ago =
+    at === null
+      ? ""
+      : Date.now() - at < 60_000
+        ? H.updatedNow
+        : H.updatedAgo.replace("{t}", fmtSpan((Date.now() - at) / 1000));
+  const dayLine = today
+    ? H.dayLine.replace("{date}", fmtLongDate(`${today}T12:00:00Z`)).replace("{h}", fmtNum(startHour))
+    : "";
+  const meta = [dayLine, ago].filter(Boolean).join(m.common.nameSeparator);
+
+  const refreshFailed = hasOverview ? ov.error && !!o : mcError && !!mc;
+
+  // ══ ١ · بدّه منك انتباه ══
+  const attention = a ? attentionItems(a) : [];
+
+  // ══ ٢ · نبضُ المنصة ══
+  const opsLink = link("/dashboard/opsmap");
+  const ordersLink = link("/dashboard/orders");
+  const pulseItems: SummaryItem[] = pulse
+    ? [
+        {
+          key: "online",
+          label: K.pulse.driversOnline,
+          value: show(pulse.drivers_on_shift),
+          icon: IconDriver,
+          tone: zeroMuted(pulse.drivers_on_shift),
+          href: opsLink && "/dashboard/opsmap?on_shift=true&status=active",
+        },
+        {
+          key: "busy",
+          label: K.pulse.driversBusy,
+          value: show(pulse.drivers_busy),
+          icon: IconDriver,
+          tone: zeroMuted(pulse.drivers_busy),
+          href: opsLink && "/dashboard/opsmap?on_shift=true&status=active&has_active=true",
+        },
+        {
+          key: "free",
+          label: K.pulse.driversFree,
+          value: show(pulse.drivers_free),
+          icon: IconDriver,
+          tone: zeroMuted(pulse.drivers_free),
+          href: opsLink && "/dashboard/opsmap?on_shift=true&status=active&has_active=false",
+        },
+        {
+          key: "stores",
+          label: K.pulse.storesOpen,
+          value: show(pulse.stores_open_now),
+          icon: IconStore,
+          tone: zeroMuted(pulse.stores_open_now),
+          meta: known(pulse.stores_active) ? H.storesOf.replace("{n}", fmtNum(pulse.stores_active)) : undefined,
+          href: opsLink,
+        },
+        {
+          key: "onWay",
+          label: K.pulse.ordersOnWay,
+          value: show(pulse.stages.to_customer),
+          icon: IconOrder,
+          tone: zeroMuted(pulse.stages.to_customer),
+          href: ordersLink && "/dashboard/orders?stage=to_customer",
+        },
+        {
+          key: "avg",
+          label: K.pulse.avgDelivery,
+          value: known(pulse.avg_delivery_min) ? H.minutes.replace("{n}", fmtNum(pulse.avg_delivery_min)) : "—",
+          icon: IconHourglass,
+          tone: known(pulse.avg_delivery_min) ? "neutral" : "muted",
+          href: today ? link("/dashboard/history") && `/dashboard/history?status=delivered&${todayRange}` : undefined,
+        },
+      ]
+    : [];
+
+  const flowItems: SummaryItem[] = pulse
+    ? [
+        {
+          key: "open",
+          label: KH.flowOpen,
+          value: show(pulse.orders_open),
+          icon: IconOrder,
+          tone: zeroMuted(pulse.orders_open),
+          href: ordersLink,
+        },
+        ...STAGES.map<SummaryItem>((s) => ({
+          key: s,
+          label: H.stage[s],
+          value: show(pulse.stages[s]),
+          tone: zeroMuted(pulse.stages[s]),
+          href: ordersLink && `/dashboard/orders?stage=${s}`,
+        })),
+      ]
+    : [];
+
+  // ══ ٣ · المال اليوم ══
+  const profitsLink = today ? link("/dashboard/profits") && `/dashboard/profits?${todayRange}` : undefined;
+  const cashLink = link("/dashboard/cash");
+  const treasuryLink = link("/dashboard/treasury") && "/dashboard/treasury?tab=statement";
+  const moneyItems: SummaryItem[] = o
+    ? [
+        {
+          key: "sales",
+          label: K.money.sales,
+          value: show(o.money.sales, fmtMoney),
+          icon: IconBalance,
+          tone: zeroMuted(o.money.sales),
+          href: profitsLink,
+        },
+        {
+          key: "net",
+          label: H.net,
+          value: show(o.money.net, fmtMoney),
+          icon: IconWallet,
+          tone: lossTone(o.money.net),
+          href: profitsLink,
+        },
+        {
+          key: "losses",
+          label: H.losses,
+          value: show(o.money.losses, fmtMoney),
+          icon: IconTrendDown,
+          tone: known(o.money.losses) && o.money.losses > 0 ? "attention" : zeroMuted(o.money.losses),
+          href: profitsLink,
+        },
+        {
+          key: "comp",
+          label: H.compensations,
+          value: show(o.money.compensations_amount, fmtMoney),
+          tone: zeroMuted(o.money.compensations_amount),
+          meta: known(o.money.compensations_count) ? H.compensationsSub.replace("{n}", fmtNum(o.money.compensations_count)) : undefined,
+          href: link("/dashboard/tickets") && "/dashboard/tickets?tab=compensations",
+        },
+        {
+          key: "cash",
+          label: K.money.cashWithDrivers,
+          value: show(o.money.cash_held, fmtMoney),
+          icon: IconDriver,
+          tone: zeroMuted(o.money.cash_held),
+          href: cashLink,
+        },
+        {
+          key: "treasury",
+          label: H.treasury,
+          value: show(o.money.treasury_balance, fmtMoney),
+          icon: IconWallet,
+          tone: known(o.money.treasury_balance) && o.money.treasury_balance < 0 ? "danger" : "neutral",
+          href: treasuryLink,
+        },
+      ]
+    : mc?.money
+      ? [
+          {
+            key: "cash",
+            label: K.money.cashWithDrivers,
+            value: show(mc.money.cash_held, fmtMoney),
+            icon: IconDriver,
+            tone: zeroMuted(mc.money.cash_held),
+            href: cashLink,
+          },
+          {
+            key: "treasury",
+            label: H.treasury,
+            value: show(mc.money.treasury_balance, fmtMoney),
+            icon: IconWallet,
+            tone: known(mc.money.treasury_balance) && mc.money.treasury_balance < 0 ? "danger" : "neutral",
+            href: treasuryLink,
+          },
+        ]
+      : [];
+
+  // ── صحّةُ النظام: نقطةٌ بلونها لكلّ خدمة، والضغطُ يفتح المراقبة لمن يملكها ──
+  const healthRow = o
+    ? (
+        [
+          [H.healthApi, o.health.api],
+          [H.healthDb, o.health.database],
+          [H.healthWa, o.health.whatsapp],
+          [H.healthRouting, o.health.routing],
+        ] as const
+      ).map(([label, st]) => {
+        const tone = st === "ok" || st === "dev" ? "good" : st === "down" ? "bad" : "attention";
+        const dot = tone === "good" ? "bg-success" : tone === "bad" ? "bg-danger" : "bg-warning";
+        const body = (
+          <>
+            <span aria-hidden className={`h-2 w-2 shrink-0 rounded-full ${dot}`} />
+            {label}
+            <span className={TONE_TEXT[tone]}>{(H.healthState as Record<string, string>)[st] ?? H.unknown}</span>
+          </>
+        );
+        const cls = "inline-flex items-center gap-1.5 rounded-full border border-line-soft px-3 py-1 text-sm";
+        return can("observability.read") ? (
+          <AdminLink key={label} href="/dashboard/ops" className={`${cls} hover:bg-row-hover`}>
+            {body}
+          </AdminLink>
+        ) : (
+          <span key={label} className={cls}>
+            {body}
+          </span>
+        );
+      })
+    : [];
+
+  const notices = (
+    <>
+      {refreshFailed && <Alert tone="warning">{H.refreshFailed}</Alert>}
+      {o && o.missing.length > 0 && <Alert tone="warning">{H.missing}</Alert>}
+      {/* **بياناتُ التواصل التجريبيّة** — قرارُ المالك ٢٠٢٦-١٠-٠٤ (الإعدادات ١٥). */}
+      {hasOverview && <ContactTestAlert />}
+    </>
+  );
+
+  const orderHref = (id: string) => (canOpen.order ? `/dashboard/history?order=${id}` : undefined);
+
+  return (
+    <AdminPage
+      title={H.title}
+      icon={IconGrid}
+      meta={meta || undefined}
+      actions={hasOverview ? <PlatformSwitch compact /> : undefined}
+      notices={notices}
+    >
+      {/* ══ ١ · بدّه منك انتباه ══ */}
+      {mcError && !mc ? (
+        <AdminAsync loading={false} error onRetry={reloadMc}>
+          {null}
+        </AdminAsync>
+      ) : (
+        <AttentionStrip items={attention} loading={mcLoading && !mc} />
+      )}
+
+      {/* ══ ٢ · نبضُ المنصة هلّق ══ */}
+      {pulse && (
+        <Block title={K.pulse.title}>
+          <SummaryStrip items={pulseItems} max={6} />
+          <SummaryStrip items={flowItems} max={6} />
+          {healthRow.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-sm font-bold text-ink-muted">{KH.health}</span>
+              {healthRow}
+            </div>
+          )}
+        </Block>
+      )}
+
+      {/* ══ ٣ · المال اليوم ══ */}
+      {moneyItems.length > 0 && (
+        <Block title={K.money.title}>
+          <SummaryStrip items={moneyItems} max={moneyItems.length > 4 ? 6 : 3} />
+        </Block>
+      )}
+
+      {/* ══ قوائمُ الدور ══ */}
+      {listRole && canOrders && (
+        <Block title={KH.stuckList}>
+          <AdminAsync
+            loading={stuck.loading}
+            error={stuck.error}
+            onRetry={() => void stuck.reload()}
+            hasData={!!stuck.data}
+            empty={(stuck.data ?? []).length === 0}
+            emptyTitle={KH.noStuck}
+            emptyIcon={IconSuccess}
+            rows={2}
+          >
+            <AdminEntityGrid>
+              {(stuck.data ?? []).slice(0, 5).map((s) => {
+                const tone = s.reason === "emergency" || s.reason === "no_driver" ? "danger" : "attention";
+                const href = orderHref(s.order_id);
+                return (
+                  <AdminEntityCard
+                    key={s.order_id}
+                    tone={tone}
+                    eyebrow={KH.orderNumber.replace("{n}", String(s.number))}
+                    title={s.merchant_name}
+                    href={href}
+                    status={
+                      <span className={`text-sm font-bold ${TONE_TEXT[tone === "danger" ? "bad" : "attention"]}`}>
+                        {ALERT_REASONS[s.reason] ?? s.reason}
+                      </span>
+                    }
+                    facts={[
+                      { key: "since", label: KH.waiting, value: fmtSpan(s.minutes * 60) },
+                      { key: "status", label: KH.status, value: STATUS[s.status] ?? s.status },
+                    ]}
+                    primary={
+                      href && (
+                        <Button size="sm" variant="secondary" onClick={() => router.push(href)}>
+                          {KH.openOrder}
+                        </Button>
+                      )
+                    }
+                  >
+                    {!s.customer_phone_masked && s.customer_phone && <ContactButtons phone={s.customer_phone} />}
+                  </AdminEntityCard>
+                );
+              })}
+            </AdminEntityGrid>
+          </AdminAsync>
+        </Block>
+      )}
+
+      {listRole && canFinance && (
+        <Block title={KH.payoutsList}>
+          <AdminAsync
+            loading={payouts.loading}
+            error={payouts.error}
+            onRetry={() => void payouts.reload()}
+            hasData={!!payouts.data}
+            empty={(payouts.data?.payouts ?? []).length === 0}
+            emptyTitle={KH.noPayouts}
+            emptyIcon={IconSuccess}
+            rows={2}
+          >
+            <AdminEntityGrid>
+              {(payouts.data?.payouts ?? []).slice(0, 5).map((p) => (
+                <AdminEntityCard
+                  key={p.id}
+                  tone="attention"
+                  eyebrow={agoText(p.created_at)}
+                  title={p.user_name}
+                  href={canOpen.user ? `/dashboard/users/${p.user_id}` : undefined}
+                  facts={[
+                    { key: "amount", label: KH.amount, value: fmtMoney(p.amount) },
+                    { key: "available", label: KH.available, value: fmtMoney(p.available) },
+                    { key: "role", label: KH.role, value: roleLabelByCode(p.user_role), wide: true },
+                  ]}
+                  primary={
+                    <Button size="sm" variant="secondary" onClick={() => router.push("/dashboard/payouts?status=pending")}>
+                      {KH.review}
+                    </Button>
+                  }
+                />
+              ))}
+            </AdminEntityGrid>
+          </AdminAsync>
+        </Block>
+      )}
+
+      {listRole && canSupport && (
+        <Block title={KH.ticketsList}>
+          <AdminAsync
+            loading={tickets.loading}
+            error={tickets.error}
+            onRetry={() => void tickets.reload()}
+            hasData={!!tickets.data}
+            empty={(tickets.data?.tickets ?? []).length === 0}
+            emptyTitle={KH.noTickets}
+            emptyIcon={IconSupport}
+            rows={2}
+          >
+            <AdminEntityGrid>
+              {(tickets.data?.tickets ?? []).slice(0, 5).map((t) => (
+                <AdminEntityCard
+                  key={t.id}
+                  tone={t.late ? "danger" : "attention"}
+                  eyebrow={`${KH.ticketNumber.replace("{n}", String(t.number))}${m.common.nameSeparator}${agoText(t.created_at)}`}
+                  title={t.subject || t.customer_name}
+                  href={`/dashboard/tickets?t=${t.id}`}
+                  status={<StatusBadge domain="complaint" status={t.status} />}
+                  facts={[
+                    { key: "customer", label: KH.customer, value: t.customer_name || "—" },
+                    {
+                      key: "order",
+                      label: KH.order,
+                      value: t.order_number != null ? `#${t.order_number}` : "—",
+                      href: t.order_number != null && canOpen.order ? `/dashboard/history?q=${t.order_number}` : undefined,
+                    },
+                  ]}
+                  primary={
+                    <Button size="sm" variant="secondary" onClick={() => router.push(`/dashboard/tickets?t=${t.id}`)}>
+                      {KH.review}
+                    </Button>
+                  }
+                />
+              ))}
+            </AdminEntityGrid>
+          </AdminAsync>
+        </Block>
+      )}
+
+      {/* ══ تفاصيلُ اليوم — لمدير المنصّة ══ */}
+      {hasOverview && (
+        <AdminAsync loading={ov.loading} error={ov.error} onRetry={() => void ov.reload()} hasData={!!o} rows={4}>
+          {o && (
+            <OverviewDetails
+              o={o}
+              today={today}
+              weekFrom={weekFrom}
+              todayRange={todayRange}
+              platformDayOf={platformDayOf}
+              link={link}
+              mayOpen={mayOpen}
+              onGo={(href) => router.push(href)}
+            />
+          )}
+        </AdminAsync>
+      )}
+    </AdminPage>
+  );
+}
+
+// ═════════════════════════════════════════════════════════════════════
+//  تفاصيلُ اليوم: اليوم مقابل أمس · أسبابُ الفشل · آخرُ الأحداث · المنصّة بالأرقام · الزوّار
+// ═════════════════════════════════════════════════════════════════════
+
+function OverviewDetails({
+  o,
+  today,
+  weekFrom,
+  todayRange,
+  platformDayOf,
+  link,
+  mayOpen,
+  onGo,
+}: {
+  o: Overview;
+  today: string;
+  weekFrom: string;
+  todayRange: string;
+  platformDayOf: (iso: string) => string;
+  link: (href: string) => string | undefined;
+  mayOpen: (href: string) => boolean;
+  onGo: (href: string) => void;
+}) {
+  const t = o.today_stats;
+  const y = o.yesterday_stats;
+  const ys = o.yesterday_same_time;
+  const historyLink = link("/dashboard/history");
+  const usersLink = link("/dashboard/users");
 
   // ── اليوم مقابل أمس ──
-  const dayRows: { label: string; key: keyof Day; icon: IconT; bad?: boolean; f?: (x: number) => string }[] = [
-    { label: H.rowOrders, key: "orders", icon: IconOrder },
-    { label: H.rowDelivered, key: "delivered", icon: IconSuccess },
-    { label: H.rowFailed, key: "failed", icon: IconWarning, bad: true },
-    { label: H.rowAvgDelivery, key: "avg_delivery_min", icon: IconHourglass, bad: true, f: (x) => H.minutes.replace("{n}", fmtNum(x)) },
-    { label: H.rowNewCustomers, key: "new_customers", icon: IconUsers },
-    { label: H.rowPlatformRating, key: "avg_platform_rating", icon: IconStar, f: (x) => H.stars.replace("{n}", fmtNum(x)) },
-    { label: H.rowDriverRating, key: "avg_driver_rating", icon: IconStar, f: (x) => H.stars.replace("{n}", fmtNum(x)) },
+  const dayRows: { key: keyof Day; label: string; icon: IconT; f?: (x: number) => string; href?: string }[] = [
+    { key: "orders", label: H.rowOrders, icon: IconOrder, href: historyLink && `/dashboard/history?${todayRange}` },
+    { key: "delivered", label: H.rowDelivered, icon: IconSuccess, href: historyLink && `/dashboard/history?status=delivered&${todayRange}` },
+    { key: "failed", label: H.rowFailed, icon: IconWarning, href: historyLink && `/dashboard/history?${todayRange}` },
+    { key: "avg_delivery_min", label: H.rowAvgDelivery, icon: IconHourglass, f: (x) => H.minutes.replace("{n}", fmtNum(x)) },
+    { key: "new_customers", label: H.rowNewCustomers, icon: IconUsers, href: usersLink && "/dashboard/users?role=customer" },
+    { key: "avg_platform_rating", label: H.rowPlatformRating, icon: IconStar, f: (x) => H.stars.replace("{n}", fmtNum(x)) },
+    { key: "avg_driver_rating", label: H.rowDriverRating, icon: IconStar, f: (x) => H.stars.replace("{n}", fmtNum(x)) },
   ];
   // **ومتوسّطٌ بلا مادّةٍ ليس مجهولاً** — لا تسليمَ ولا تقييمَ اليوم: شرطةٌ هادئة.
   const dayCell = (d: Day | undefined, r: (typeof dayRows)[number]) => {
@@ -462,424 +862,145 @@ export default function DashboardPage() {
     if (v === null && r.key.startsWith("avg_") && known(d.orders)) return "—";
     return show(v, r.f);
   };
+  const dayItems: SummaryItem[] = dayRows.map((r) => {
+    const tv = t[r.key];
+    return {
+      key: r.key,
+      label: r.label,
+      value: dayCell(t, r),
+      icon: r.icon,
+      tone: known(tv) && tv === 0 ? "muted" : "neutral",
+      // **أمسِ لنفس الساعة** — اليومُ لم ينتهِ، ومقارنتُه بيومٍ كاملٍ تقول «تراجع» كلَّ صباح.
+      meta: ys ? KH.trend.replace("{v}", dayCell(ys, r)) : H.yesterdayFull.replace("{v}", dayCell(y, r)),
+      href: r.href,
+    };
+  });
 
-  const health = (
-    [
-      [H.healthApi, data.health.api],
-      [H.healthDb, data.health.database],
-      [H.healthWa, data.health.whatsapp],
-      [H.healthRouting, data.health.routing],
-    ] as const
-  ).map(([label, st]) => (
-    <Link
-      key={label}
-      href="/dashboard/ops"
-      className="inline-flex items-center gap-1.5 rounded-full border border-line-soft px-2.5 py-1 hover:bg-row-hover"
-    >
-      <span
-        className={`h-2 w-2 shrink-0 rounded-full ${
-          st === "ok" || st === "dev" ? "bg-success" : st === "down" ? "bg-danger" : "bg-warning"
-        }`}
-      />
-      {label}
-      <span className="text-ink-muted">{(H.healthState as Record<string, string>)[st] ?? H.unknown}</span>
-    </Link>
-  ));
+  // ── المنصّة بالأرقام ──
+  const pill = (c: Count) =>
+    `${H.newToday.replace("{n}", fmtNum(c.today))}${m.common.nameSeparator}${H.newWeek.replace("{n}", fmtNum(c.week))}`;
+  const groupItems: SummaryItem[] = o.platform.groups.map((g) => ({
+    key: g.key,
+    label: (H.group as Record<string, string>)[g.key] ?? g.key,
+    value: fmtNum(g.total),
+    icon: GROUP_ICON[g.key] ?? IconGrid,
+    tone: g.total === 0 ? "muted" : "neutral",
+    meta: pill(g),
+    href: GROUP_HREF[g.key] ? link(GROUP_HREF[g.key]!) : undefined,
+  }));
+  const staffItems: SummaryItem[] = o.platform.staff.map((g) => ({
+    key: g.key,
+    label: roleLabelByCode(g.key),
+    value: fmtNum(g.total),
+    icon: IconRoles,
+    tone: g.total === 0 ? "muted" : "neutral",
+    meta: pill(g),
+    href: usersLink && `/dashboard/users?role=${g.key}`,
+  }));
+  const p = o.platform;
+  const accountItems: SummaryItem[] = [
+    { key: "ordered", label: H.customersOrderedWeek, value: show(p.customers_ordered_week), icon: IconOrder, tone: zeroMuted(p.customers_ordered_week), href: weekFrom ? historyLink && `/dashboard/history?from=${weekFrom}&to=${today}` : undefined },
+    { key: "dActive", label: H.driversActive, value: show(p.drivers_active), icon: IconDriver, tone: zeroMuted(p.drivers_active), href: usersLink && "/dashboard/users?role=driver&status=active" },
+    { key: "dSusp", label: H.driversSuspended, value: show(p.drivers_suspended), icon: IconDriver, tone: known(p.drivers_suspended) && p.drivers_suspended > 0 ? "attention" : zeroMuted(p.drivers_suspended), href: usersLink && "/dashboard/users?role=driver&status=suspended" },
+    { key: "dBlock", label: H.driversBlocked, value: show(p.drivers_blocked), icon: IconDriver, tone: known(p.drivers_blocked) && p.drivers_blocked > 0 ? "danger" : zeroMuted(p.drivers_blocked), href: usersLink && "/dashboard/users?role=driver&status=blocked" },
+    // **وأعدادُ المتاجر رقمٌ بلا رابط** — لا قائمةَ فيها العددُ نفسُه.
+    { key: "sActive", label: H.storesActive, value: show(p.stores_active), icon: IconStore, tone: zeroMuted(p.stores_active) },
+    { key: "sNot", label: H.storesNotActive, value: show(p.stores_not_active), icon: IconStore, tone: zeroMuted(p.stores_not_active) },
+  ];
 
-  const stuckOn = known(lv.orders_stuck) && lv.orders_stuck > 0;
-  const treasuryNeg = known(data.money.treasury_balance) && data.money.treasury_balance < 0;
-  const netNeg = known(data.money.net) && data.money.net < 0;
+  // ── آخرُ الأحداث ──
+  const events: StoryEvent[] = o.events.map((e) => {
+    const raw = eventHref(e);
+    const href = raw && mayOpen(raw) ? raw : null;
+    const what = eventWhat(e);
+    return {
+      id: String(e.id),
+      at: e.created_at,
+      title: href ? (
+        <Link href={href} className="hover:underline">
+          {what}
+        </Link>
+      ) : (
+        what
+      ),
+      actor: e.actor_name || undefined,
+      // **والحدثُ القديمُ بتاريخه** — «2:05 م» وحدَها تبدو اليوم وهي من أسبوع.
+      note: platformDayOf(e.created_at) === today ? undefined : fmtDateTime(e.created_at),
+    };
+  });
 
   return (
-    <div className="space-y-4">
-      {/* **رأسٌ موحّد** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — اليومُ وساعةُ بدئه وآخرُ تحديث، والدوامُ أوّلُ ما يُرى
-          (طلبُ المالك ٢٠٢٦-١٠-١٨)، والتحديثُ بجانبه. */}
-      <PageHero
-        icon={IconGrid}
-        title={H.title}
-        subtitle={
-          <>
-            {dayLine}
-            {ago && (
-              <>
-                {m.common.nameSeparator}
-                {ago}
-              </>
-            )}
-          </>
-        }
-        actions={
-          <>
-            <PlatformSwitch compact />
-            <Button variant="secondary" onClick={load} disabled={busy}>
-              {H.refresh}
-            </Button>
-          </>
-        }
-      >
-        {/* **صحّةُ النظام سطرٌ صغيرٌ في الرأس** — نقطةٌ بلونها لكلّ خدمة، والضغطُ يفتح المراقبة. */}
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="font-bold text-ink-muted">{H.health}:</span>
-          {health}
-        </div>
-      </PageHero>
-      {error && <Alert tone="warning">{H.refreshFailed}</Alert>}
-      {data.missing.length > 0 && <Alert tone="warning">{H.missing}</Alert>}
-      {/* **بياناتُ التواصل التجريبيّة** — قرارُ المالك ٢٠٢٦-١٠-٠٤ (الإعدادات ١٥). */}
-      <ContactTestAlert />
+    <>
+      <Block title={H.today}>
+        <SummaryStrip items={dayItems.slice(0, 4)} max={4} />
+        <SummaryStrip items={dayItems.slice(4)} max={4} />
+      </Block>
 
-      {/* ══ ١ · بانتظار قرارك ══ — ما فيه رقمٌ وحدَه، المستعجلُ أحمرُ أوّلاً والعاديُّ برتقاليّ. */}
-      <Panel
-        title={H.awaiting}
-        note={allClear ? undefined : H.awaitingHint}
-        actions={
-          zeros.length > 0 && (
-            <Button variant="ghost" onClick={() => setShowZeros((v) => !v)}>
-              {showZeros ? H.hideZeros : H.showZeros.replace("{n}", fmtNum(zeros.length))}
-            </Button>
-          )
-        }
-      >
-        {allClear && (
-          <div className={`flex items-center gap-3 rounded-card bg-success-tint p-3 ${showZeros ? "mb-3" : ""}`}>
-            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-success-solid text-on-solid">
-              <IconSuccess size={20} />
-            </span>
-            <div className="min-w-0">
-              <p className="text-sm font-bold">{H.allClear}</p>
-              <p className="text-xs text-ink-muted">{H.allClearHint}</p>
-            </div>
-          </div>
-        )}
-        {visibleAwaiting.length > 0 && (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-            {visibleAwaiting.map((c) => (
-              <Tile
-                key={c.key}
-                icon={c.icon}
-                label={c.label}
-                value={show(c.n)}
-                tone={toneOf(c.n, c.urgent)}
-                onClick={go(c.href)}
-              />
-            ))}
-          </div>
-        )}
-      </Panel>
-
-      {/* ══ ٢ · هلق ══ — مسارُ الطلب مراحلَ (عموديّةً على الجوّال)، والعالقُ تحته، والسائقون والمتاجرُ بعناوينهم. */}
-      <Panel title={H.now}>
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <div className="xl:col-span-2">
-            <p className="mb-2 text-xs font-bold text-ink-muted">
-              {H.ordersTitle}
-              {m.common.nameSeparator}
-              {show(lv.orders_open)}
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        {/* **أسبابُ الفشل تُضغط** — كلُّ سطرٍ يفتح السجلَّ على اليوم وبحالته، والفشلُ بلا سببٍ يُعلَّم. */}
+        <AdminCard title={H.failuresTitle} padded={false}>
+          {o.missing.includes("failures") ? (
+            <p className="px-4 pb-4 text-sm text-ink-muted lg:px-5">{H.unknown}</p>
+          ) : o.failures_today.length === 0 ? (
+            <p className={`flex items-center gap-2 px-4 pb-4 text-sm font-bold lg:px-5 ${TONE_TEXT.good}`}>
+              <IconSuccess size={16} />
+              {H.noFailures}
             </p>
-            <div className="flex flex-col gap-1.5 sm:flex-row sm:items-stretch">
-              {STAGES.map((s, i) => {
-                const n = lv.stages[s];
-                const on = known(n) && n > 0;
-                const href = `/dashboard/orders?stage=${s}`;
-                const open = go(href);
-                return (
-                  <div key={s} className="flex items-center gap-1.5 sm:min-w-0 sm:flex-1">
-                    <button
-                      type="button"
-                      onClick={open}
-                      disabled={!open}
-                      className={`flex flex-1 items-center gap-3 rounded-card border p-3 text-start transition-colors enabled:hover:bg-row-hover sm:flex-col sm:gap-1 sm:text-center ${
-                        on ? "border-accent" : "border-line-soft"
-                      }`}
-                    >
-                      <span className={`figure leading-none ${on ? "" : "text-ink-muted"}`}>{show(n)}</span>
-                      <span className="text-xs text-ink-muted">{H.stage[s]}</span>
-                    </button>
-                    {i < STAGES.length - 1 && <IconPrev size={14} className="hidden shrink-0 text-ink-muted sm:block" />}
-                  </div>
-                );
-              })}
-            </div>
-            {/* **والعالقُ يفتح فلترَ «عالق» نفسَه** — كان يفتح كلَّ الطلبات (تدقيقُ ٢٠٢٦-١٠-٢٧). */}
-            <div className="mt-2">
-              <Tile
-                icon={IconWarning}
-                label={H.stuck}
-                value={show(lv.orders_stuck)}
-                sub={stuckOn ? H.stuckHint : undefined}
-                tone={!known(lv.orders_stuck) ? "default" : stuckOn ? "danger" : "muted"}
-                onClick={go("/dashboard/orders?filter=stuck")}
-              />
-            </div>
-          </div>
-          <div className="space-y-3">
-            <div>
-              <p className="mb-2 text-xs font-bold text-ink-muted">
-                {H.drivers}
-                <span className="font-normal">
-                  {m.common.nameSeparator}
-                  {H.driversNote}
-                </span>
-              </p>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-2">
-                <Tile icon={IconDriver} label={H.driversOnShift} value={show(lv.drivers_on_shift)} tone={zeroMuted(lv.drivers_on_shift)} onClick={go("/dashboard/opsmap?on_shift=true&status=active")} />
-                <Tile icon={IconDriver} label={H.driversFree} value={show(lv.drivers_free)} tone={known(lv.drivers_free) && lv.drivers_free > 0 ? "success" : zeroMuted(lv.drivers_free)} onClick={go("/dashboard/opsmap?on_shift=true&status=active&has_active=false")} />
-                <Tile icon={IconDriver} label={H.driversBusy} value={show(lv.drivers_busy)} tone={zeroMuted(lv.drivers_busy)} onClick={go("/dashboard/opsmap?on_shift=true&status=active&has_active=true")} />
-              </div>
-            </div>
-            <div>
-              <p className="mb-2 text-xs font-bold text-ink-muted">{H.storesTitle}</p>
-              <Tile
-                icon={IconStore}
-                label={H.storesOpen}
-                value={show(lv.stores_open_now)}
-                sub={known(lv.stores_active) ? H.storesOf.replace("{n}", fmtNum(lv.stores_active)) : undefined}
-                tone={zeroMuted(lv.stores_open_now)}
-                onClick={go("/dashboard/opsmap")}
-              />
-            </div>
-          </div>
-        </div>
-      </Panel>
-
-      {/* ══ ٣ · المال ══ — حركةُ اليوم (تفتح الأرباحَ على اليوم نفسِه) والرصيدُ هلق، كلٌّ بلوحته. */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Panel title={H.money} note={H.moneyNote} className="lg:col-span-2">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <Tile
-              icon={IconWallet}
-              label={H.net}
-              value={show(data.money.net, fmtMoney)}
-              sub={netNeg ? H.netNegative : H.netHint}
-              tone={signTone(data.money.net)}
-              onClick={go(profitsToday)}
-            />
-            <Tile icon={IconBalance} label={H.sales} value={show(data.money.sales, fmtMoney)} tone={zeroMuted(data.money.sales)} onClick={go(profitsToday)} />
-            <Tile icon={IconTrendDown} label={H.losses} value={show(data.money.losses, fmtMoney)} tone={known(data.money.losses) && data.money.losses > 0 ? "warning" : zeroMuted(data.money.losses)} onClick={go(profitsToday)} />
-            <Tile
-              icon={IconWallet}
-              label={H.compensations}
-              value={show(data.money.compensations_amount, fmtMoney)}
-              sub={known(data.money.compensations_count) ? H.compensationsSub.replace("{n}", fmtNum(data.money.compensations_count)) : undefined}
-              tone={zeroMuted(data.money.compensations_amount)}
-              onClick={go("/dashboard/tickets?tab=compensations")}
-            />
-          </div>
-        </Panel>
-        <Panel title={H.balanceNow} note={H.balanceNote}>
-          <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
-            <Tile
-              icon={IconWallet}
-              label={H.treasury}
-              value={show(data.money.treasury_balance, fmtMoney)}
-              sub={treasuryNeg ? H.treasuryNegative : undefined}
-              tone={treasuryNeg ? "danger" : "accent"}
-              onClick={go("/dashboard/treasury?tab=statement")}
-            />
-            <Tile icon={IconBalance} label={H.cashHeld} value={show(data.money.cash_held, fmtMoney)} tone={zeroMuted(data.money.cash_held)} onClick={go("/dashboard/cash")} />
-          </div>
-        </Panel>
-      </div>
-
-      {/* ══ ٤ · اليوم مقابل أمس ══ — رقمُ اليوم كبيرٌ، **ويُقارَن بأمس لنفس الساعة** (اليومُ لم ينتهِ بعد،
-          ومقارنتُه بيومٍ كاملٍ تقول «تراجع» كلَّ صباح)، وأمسُ كلُّه سطرٌ رماديّ. */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Panel title={H.today} note={H.todayNote.replace("{h}", hourText)} className="lg:col-span-2">
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
-            {dayRows.map((r) => {
-              const tv = t[r.key];
-              const cmp = ys ? ys[r.key] : undefined;
-              const both = known(tv) && known(cmp);
-              const up = both && tv > cmp;
-              const down = both && tv < cmp;
-              const good = (up && !r.bad) || (down && r.bad);
-              const Trend = up ? IconTrendUp : down ? IconTrendDown : IconTrendFlat;
-              return (
-                <Tile
-                  key={r.key}
-                  icon={r.icon}
-                  label={r.label}
-                  value={dayCell(t, r)}
-                  tone={known(tv) && tv === 0 ? "muted" : "default"}
-                  sub={H.yesterdayFull.replace("{v}", dayCell(y, r))}
-                  extra={
-                    ys && (
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-2xs font-bold ${
-                          !both || (!up && !down) ? "bg-field text-ink-muted" : good ? "bg-success-tint text-success" : "bg-danger-tint text-danger"
-                        }`}
-                      >
-                        <Trend size={12} />
-                        {H.yesterdaySameTime.replace("{v}", dayCell(ys, r))}
-                      </span>
-                    )
-                  }
-                />
-              );
-            })}
-          </div>
-        </Panel>
-
-        {/* **أسبابُ الفشل تُضغط** — كلُّ سطرٍ يفتح السجلَّ على اليوم وبحالته، **والفشلُ بلا سببٍ برتقاليّ** يُفحص. */}
-        <Panel title={H.failuresTitle}>
-          {data.missing.includes("failures") ? (
-            <p className="text-sm text-ink-muted">{H.unknown}</p>
-          ) : data.failures_today.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-4 text-center">
-              <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-success-solid text-on-solid">
-                <IconSuccess size={22} />
-              </span>
-              <p className="text-sm font-bold">{H.noFailures}</p>
-              <p className="text-xs text-ink-muted">{H.noFailuresHint}</p>
-            </div>
           ) : (
-            <ul className="space-y-1.5 text-sm">
-              {data.failures_today.map((f) => {
-                const href = `/dashboard/history?status=${f.status}&from=${today}&to=${today}`;
-                const open = go(href);
+            <ul className="admin-rows">
+              {o.failures_today.map((f) => {
+                const href = historyLink && `/dashboard/history?status=${f.status}&${todayRange}`;
                 const noReason = !f.reason;
                 return (
-                  <li key={f.status + f.reason}>
-                    <button
-                      type="button"
-                      onClick={open}
-                      disabled={!open}
-                      className={`flex w-full items-center gap-2 rounded-card border px-3 py-2 text-start transition-colors enabled:hover:bg-row-hover ${
-                        noReason ? "border-warning bg-warning-tint" : "border-line-soft"
-                      }`}
-                    >
-                      <span className="min-w-0 flex-1">
+                  <Row
+                    key={f.status + f.reason}
+                    title={
+                      <>
                         {STATUS[f.status] ?? f.status}
                         {m.common.nameSeparator}
                         {noReason ? H.noReason : (FAIL[f.reason] ?? f.reason)}
-                        {noReason && <span className="block text-2xs font-bold text-warning">{H.noReasonWarn}</span>}
-                      </span>
-                      <span className="rounded-full bg-danger-solid px-2 py-0.5 text-xs font-bold text-on-solid">{fmtNum(f.count)}</span>
-                    </button>
-                  </li>
+                      </>
+                    }
+                    meta={noReason ? <span className={`font-bold ${TONE_TEXT.attention}`}>{H.noReasonWarn}</span> : undefined}
+                    trailing={<span className={`font-bold tabular-nums ${TONE_TEXT.bad}`}>{fmtNum(f.count)}</span>}
+                    onOpen={href ? () => onGo(href) : undefined}
+                  />
                 );
               })}
             </ul>
           )}
-        </Panel>
+        </AdminCard>
+
+        <AdminCard title={H.events}>
+          {o.missing.includes("events") ? (
+            <p className="text-sm text-ink-muted">{H.unknown}</p>
+          ) : o.events.length === 0 ? (
+            <p className="text-sm text-ink-muted">{H.noEvents}</p>
+          ) : (
+            <StoryTimeline events={events} />
+          )}
+        </AdminCard>
       </div>
 
-      {/* ══ ٥ · آخر الأحداث + المنصّة بالأرقام ══ */}
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <Panel title={H.events}>
-          {data.missing.includes("events") ? (
-            <p className="text-sm text-ink-muted">{H.unknown}</p>
-          ) : data.events.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-6 text-center">
-              <span className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-accent text-on-bright">
-                <IconStatus size={22} />
-              </span>
-              <p className="text-sm font-bold">{H.noEvents}</p>
-              <p className="text-xs text-ink-muted">{H.noEventsHint}</p>
-            </div>
-          ) : (
-            <ol className="relative space-y-3 border-s border-line-soft ps-4 text-sm">
-              {data.events.map((e) => {
-                const raw = eventHref(e);
-                const href = raw && mayOpen(raw) ? raw : null;
-                const what = eventWhat(e);
-                // **والحدثُ القديمُ بتاريخه** — «2:05 م» وحدَها تبدو اليوم وهي من أسبوع.
-                const when = platformDayOf(e.created_at) === today ? fmtTime(e.created_at) : fmtDateTime(e.created_at);
-                return (
-                  <li key={e.id} className="relative">
-                    <span className="absolute -start-[1.3rem] top-1.5 h-2 w-2 rounded-full bg-accent" />
-                    <div className="flex flex-wrap items-baseline gap-x-2">
-                      {href ? (
-                        <Link href={href} className="min-w-0 flex-1 font-medium hover:underline">
-                          {what}
-                        </Link>
-                      ) : (
-                        <span className="min-w-0 flex-1 font-medium">{what}</span>
-                      )}
-                      <span className="text-xs text-ink-muted">{when}</span>
-                    </div>
-                    {e.actor_name && <p className="text-xs text-ink-muted">{H.by.replace("{name}", e.actor_name)}</p>}
-                  </li>
-                );
-              })}
-            </ol>
+      {!o.missing.includes("platform") && (
+        <Block title={H.platform}>
+          <SummaryStrip items={groupItems.slice(0, 4)} max={4} />
+          <SummaryStrip items={groupItems.slice(4)} max={4} />
+          {staffItems.length > 0 && (
+            <>
+              <h3 className="text-sm font-bold text-ink-muted">{H.staffTitle}</h3>
+              <SummaryStrip items={staffItems.slice(0, 4)} max={4} />
+              {staffItems.length > 4 && <SummaryStrip items={staffItems.slice(4, 8)} max={4} />}
+            </>
           )}
-        </Panel>
-
-        {/* **بطاقةٌ لكلّ نوع** — المجموعُ كبيرٌ وتحته شارتا الجديد، بدل الجدولين. */}
-        <Panel title={H.platform}>
-          {data.missing.includes("platform") ? (
-            <p className="text-sm text-ink-muted">{H.unknown}</p>
-          ) : (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {data.platform.groups.map((g) => (
-                  <CountTile
-                    key={g.key}
-                    c={g}
-                    icon={GROUP_ICON[g.key] ?? IconGrid}
-                    label={(H.group as Record<string, string>)[g.key] ?? g.key}
-                    onClick={GROUP_HREF[g.key] ? go(GROUP_HREF[g.key]!) : undefined}
-                  />
-                ))}
-              </div>
-              {data.platform.staff.length > 0 && (
-                <div>
-                  <p className="mb-2 text-xs font-bold text-ink-muted">{H.staffTitle}</p>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {data.platform.staff.map((g) => (
-                      <CountTile key={g.key} c={g} icon={IconRoles} label={roleLabelByCode(g.key)} onClick={go(`/dashboard/users?role=${g.key}`)} />
-                    ))}
-                  </div>
-                </div>
-              )}
-              <div>
-                <p className="mb-2 text-xs font-bold text-ink-muted">{H.accountsTitle}</p>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  <Tile icon={IconOrder} label={H.customersOrderedWeek} value={show(data.platform.customers_ordered_week)} tone={zeroMuted(data.platform.customers_ordered_week)} onClick={go(`/dashboard/history?from=${weekFrom}&to=${today}`)} />
-                  <Tile icon={IconDriver} label={H.driversActive} value={show(data.platform.drivers_active)} tone={zeroMuted(data.platform.drivers_active)} onClick={go("/dashboard/users?role=driver&status=active")} />
-                  <Tile icon={IconDriver} label={H.driversSuspended} value={show(data.platform.drivers_suspended)} tone={known(data.platform.drivers_suspended) && data.platform.drivers_suspended > 0 ? "warning" : zeroMuted(data.platform.drivers_suspended)} onClick={go("/dashboard/users?role=driver&status=suspended")} />
-                  <Tile icon={IconDriver} label={H.driversBlocked} value={show(data.platform.drivers_blocked)} tone={known(data.platform.drivers_blocked) && data.platform.drivers_blocked > 0 ? "danger" : zeroMuted(data.platform.drivers_blocked)} onClick={go("/dashboard/users?role=driver&status=blocked")} />
-                  {/* **وأعدادُ المتاجر رقمٌ بلا رابط** — لا قائمةَ فيها العددُ نفسُه (كانت تفتح الخريطة). */}
-                  <Tile icon={IconStore} label={H.storesActive} value={show(data.platform.stores_active)} tone={zeroMuted(data.platform.stores_active)} />
-                  <Tile icon={IconStore} label={H.storesNotActive} value={show(data.platform.stores_not_active)} tone={zeroMuted(data.platform.stores_not_active)} />
-                </div>
-              </div>
-            </div>
-          )}
-        </Panel>
-      </div>
+          <h3 className="text-sm font-bold text-ink-muted">{H.accountsTitle}</h3>
+          <SummaryStrip items={accountItems.slice(0, 3)} max={3} />
+          <SummaryStrip items={accountItems.slice(3)} max={3} />
+        </Block>
+      )}
 
       {/* ── زوّارُ الموقع والتحميلات (طلبُ المالك ٢٠٢٦-١٠-٠٧) ── */}
       <SiteStatsSection />
-    </div>
-  );
-}
-
-/** **بطاقةُ عدد** — المجموعُ كبيرٌ وتحته شارتان: جديدُ اليوم وجديدُ آخر ٧ أيّام. */
-function CountTile({ c, icon, label, onClick }: { c: Count; icon: IconT; label: string; onClick?: () => void }) {
-  const pill = (n: number, text: string) => (
-    <span
-      className={`inline-flex rounded-full px-2 py-0.5 text-2xs font-bold ${
-        n > 0 ? "bg-success-tint text-success" : "bg-field text-ink-muted"
-      }`}
-    >
-      {text.replace("{n}", fmtNum(n))}
-    </span>
-  );
-  return (
-    <Tile
-      icon={icon}
-      label={label}
-      value={fmtNum(c.total)}
-      tone={c.total === 0 ? "muted" : "default"}
-      onClick={onClick}
-      extra={
-        <>
-          {pill(c.today, H.newToday)}
-          {pill(c.week, H.newWeek)}
-        </>
-      }
-    />
+    </>
   );
 }

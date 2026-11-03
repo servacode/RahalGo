@@ -1255,7 +1255,15 @@
         "cashOver": "سائقين نقدهم فوق الحد",
         "payouts": "سحوبات ناطرة",
         "complaints": "شكاوى مفتوحة",
-        "emergencies": "طوارئ مفتوحة"
+        "emergencies": "طوارئ مفتوحة",
+        "leads": "طلبات انضمام جديدة",
+        "expansion": "مناطق ناطرة رد",
+        "obligations": "ديون متأخرة",
+        "obligationRequests": "دفع أو شطب دين ناطر موافقة",
+        "compensations": "تعويضات ناطرة موافقة",
+        "reports": "بلاغات سائقين ناطرة المكتب",
+        "cashOverdue": "سائقين ما سلّموا النقد من كم يوم",
+        "complaintsLate": "شكاوى متأخرة بلا رد"
       },
       "pulse": {
         "title": "نبض المنصة هلّق",
@@ -1310,6 +1318,36 @@
           "pages": "صفحات"
         }
       },
+      "home": {
+        "flow": "الطلبات الجارية بمراحلها",
+        "flowOpen": "كل الجارية",
+        "stuckList": "أقدم الطلبات العلقانة",
+        "payoutsList": "سحوبات ناطرة",
+        "ticketsList": "أقدم شكاوى مفتوحة",
+        "viewAll": "عرض الكل",
+        "openOrder": "افتح الطلب",
+        "review": "راجع",
+        "health": "صحة النظام",
+        "noStuck": "ما في طلبات علقانة",
+        "noPayouts": "ما في سحوبات ناطرة",
+        "noTickets": "ما في شكاوى مفتوحة",
+        "trend": "أمس لهالوقت: {v}",
+        "orderNumber": "طلب #{n}",
+        "ticketNumber": "شكوى #{n}",
+        "amount": "المبلغ",
+        "available": "المتاح بالمحفظة",
+        "role": "الدور",
+        "order": "الطلب",
+        "customer": "الزبون",
+        "reason": "السبب",
+        "waiting": "ناطر من",
+        "status": "الحالة",
+        "subject": "الموضوع",
+        "age": "عمرها"
+      },
+      "search": {
+        "button": "بحث"
+      },
       "nav": {
         "groupDaily": "الشغل اليومي",
         "groupPeople": "الناس والمتاجر",
@@ -1332,6 +1370,22 @@
         "open": "ما حدا استلمه",
         "acked": "حدا عليه",
         "resolved": "مسكّر"
+      },
+      "ops": {
+        "updatedNow": "تحدّث هلّق",
+        "customer": "الزبون",
+        "driver": "السائق",
+        "store": "المتجر",
+        "allOfCustomer": "كل طلباته",
+        "story": "قصة الطلب",
+        "contact": "اتصال",
+        "noStorePhone": "ما في رقم للمتجر",
+        "ticketSearch": "رقم الشكوى أو الطلب أو الهاتف أو الاسم",
+        "ticketsAll": "الكل",
+        "ticketsUnresolved": "غير محلولة",
+        "ticketsLate": "متأخرة",
+        "emergencyKind": "كل الأنواع",
+        "mapSearchHint": "اسم أو رقم طلب أو هاتف"
       }
     },
     "sliderPanel": {
