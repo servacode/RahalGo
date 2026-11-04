@@ -43,7 +43,7 @@ import {
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { roleLabelByCode } from "@/lib/rolemeta";
+import { OrderChatView } from "./OrderChat";
 import { DriverMoneyBox } from "./DriverMoneyBox";
 import { orderKindLabel, payerLabel } from "./payer";
 
@@ -78,11 +78,6 @@ const STATUS_VARIANT: Record<string, "success" | "danger" | "warning" | "violet"
 function caseHref(kind: string, id: string): string {
   if (kind === "emergency") return `/dashboard/emergencies/${id}`;
   return kind === "dispute" ? "/dashboard/tickets?tab=disputes" : "/dashboard/tickets?tab=tickets";
-}
-
-/** **اسمُ المرسِل** — وحين يغيب يُقال دورُه بالعربيّ لا رمزُه (`driver`). */
-function senderLabel(l: { sender: string; role: string }): string {
-  return l.sender || PARTIES[l.role] || roleLabelByCode(l.role);
 }
 
 /** **الفرقُ بين وقتين بالثواني** — و`null` إن غاب أحدُهما. */
@@ -214,14 +209,6 @@ function liveLine(live: NonNullable<Detail["customer_live"]>, nowMs: number): st
   return live.precise ? line : line + H.liveApprox;
 }
 
-interface ChatLine {
-  id: string;
-  body: string;
-  role: string;
-  sender: string;
-  created_at: string;
-}
-
 interface MoneyBreakdown {
   lines: { party: string; name: string; kind: string; amount: number; note: string }[];
 }
@@ -253,9 +240,6 @@ export function OrderDetailPanel({
 }) {
   const { can } = useAuth();
   const order = useLoad<Detail>(`/api/v1/admin/orders/${orderId}`);
-  const chat = useLoad<{ lines: ChatLine[] }>(
-    can("orders.communications.read") ? `/api/v1/admin/orders/${orderId}/chat` : null,
-  );
   const money = useLoad<MoneyBreakdown>(
     can("finance.read") ? `/api/v1/admin/orders/${orderId}/breakdown` : null,
   );
@@ -338,26 +322,7 @@ export function OrderDetailPanel({
           {can("orders.communications.read") && (
             <section>
               <h3 className="mb-2 text-sm font-bold">{H.chat}</h3>
-              {chat === null && <LoadingState variant="text" />}
-              {chat === "failed" && <Alert tone="warning">{m.errors.offline}</Alert>}
-              {chat && chat !== "failed" && chat.lines.length === 0 && (
-                <p className="text-sm text-ink-muted">{H.chatEmpty}</p>
-              )}
-              {chat && chat !== "failed" && chat.lines.length > 0 && (
-                <ul className="space-y-1.5">
-                  {chat.lines.map((l) => (
-                    <li key={l.id} className="flex items-start gap-2 text-sm">
-                      <Badge variant={l.role === "driver" ? "primary" : "neutral"}>
-                        {senderLabel(l)}
-                      </Badge>
-                      <span className="min-w-0 flex-1">{l.body}</span>
-                      <span dir="ltr" className="shrink-0 text-2xs text-ink-muted">
-                        {fmtDateTime(l.created_at)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <OrderChatView orderId={orderId} />
             </section>
           )}
 

@@ -258,8 +258,11 @@
   "apps/rahalgo/src/components/admin/orders/BoardWidgets.tsx": {
     "rawButton": 1
   },
+  "apps/rahalgo/src/components/admin/orders/OrderChat.tsx": {
+    "tinyText": 1
+  },
   "apps/rahalgo/src/components/admin/orders/OrderDetailPanel.tsx": {
-    "tinyText": 3,
+    "tinyText": 2,
     "statusColor": 5
   },
   "apps/rahalgo/src/components/admin/orders/OrdersScreen.tsx": {

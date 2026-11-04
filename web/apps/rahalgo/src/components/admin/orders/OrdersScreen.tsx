@@ -53,12 +53,12 @@ import {
   IconCamera,
   IconPhone,
   IconWhatsApp,
+  IconChat,
   IconCheck,
   IconReturn,
   IconSwap,
   IconWarning,
   Invoice,
-  InvoiceLines,
   invoiceLineText,
   invoiceOrder,
   FormActions,
@@ -80,6 +80,7 @@ import { TransferPanel } from "./TransferPanel";
 import { AssignDialog } from "./AssignDialog";
 import { GoodsBox } from "./GoodsBox";
 import { OrderDetailPanel } from "./OrderDetailPanel";
+import { OrderChatModal } from "./OrderChat";
 import { payerIsCash, payerLabel, payerOf } from "./payer";
 import { WaiveCommissionDialog, WAIVE_ROUTE } from "./WaiveCommissionDialog";
 import { OrderEditor } from "./OrderEditor";
@@ -2412,6 +2413,8 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
                   key={o.id}
                   o={o}
                   focused={focusId === o.id}
+                  now={now}
+                  staleMin={staleMin}
                   proof={proofCol && !proofCol.hide?.(o) ? proofCol.cell(o) : null}
                   goods={goodsCol && !goodsCol.hide?.(o) ? goodsCol.cell(o) : null}
                   onDetails={() => {
@@ -2572,6 +2575,8 @@ function HistoryCard({
   goods,
   actions,
   onDetails,
+  now,
+  staleMin,
 }: {
   o: OrderRow;
   focused: boolean;
@@ -2579,8 +2584,12 @@ function HistoryCard({
   goods: React.ReactNode;
   actions: React.ReactNode;
   onDetails: () => void;
+  now: number;
+  staleMin: number;
 }) {
   const C = H.card;
+  const { can } = useAuth();
+  const [chatOpen, setChatOpen] = useState(false);
   const closed = CLOSED_STATUSES.has(o.status);
   const delivered = o.status === "delivered" || o.status === "refunded";
   const ended = closed && o.status !== "delivered";
@@ -2602,13 +2611,6 @@ function HistoryCard({
     (o.commission_taken ?? 0) > 0 &&
     waived === 0 &&
     (o.cash_due ?? 0) > 0;
-  // **«⋯» للأفعال النادرة** — يظهر حين يكون فيها شيءٌ فعلاً: تُرسم الأفعالُ مخفيّةً ويُعدّ ما رُسم.
-  const [menuOpen, setMenuOpen] = useState(false);
-  const actionsRef = useRef<HTMLDivElement>(null);
-  const [hasActions, setHasActions] = useState(false);
-  useEffect(() => {
-    setHasActions((actionsRef.current?.childElementCount ?? 0) > 0);
-  });
   const stars = o.board?.platform_stars ?? 0;
   const F = H.flags;
   const flags: { k: string; label: string; v: "warning" | "danger" | "accent" | "violet" }[] = [
@@ -2648,281 +2650,264 @@ function HistoryCard({
         : o.wallet_paid > 0 || o.payment_method === "wallet"
           ? C.payWallet
           : C.payCash;
-  const items = invoiceOrder(o.items ?? []);
-  const shown = items.slice(0, 6);
   const sep = <span aria-hidden className="text-ink-muted"> · </span>;
 
+  // ── «أرسل الفاتورة واتساب»: للزبون وحدَه، والنصُّ من المعجم بأرقام الطلب نفسِها ──
+  const customerWaDigits = (o.customer_phone ?? "").replace(/[^0-9]/g, "");
+  function sendInvoiceWa() {
+    const W = C.waInvoice;
+    const items = invoiceOrder(o.items ?? []);
+    const lines = [
+      W.head.replace("{name}", o.customer_name || "").replace("{n}", `#${o.number}`).replace("{store}", o.merchant_name || ""),
+      ...items.map((it) =>
+        W.itemLine
+          .replace("{line}", invoiceLineText(it.name, it.qty, it.options))
+          .replace("{price}", fmtMoney(it.unit_price * it.qty)),
+      ),
+      ...(items.length > 0 ? [W.subtotalLine.replace("{n}", fmtMoney(o.subtotal))] : []),
+      W.feeLine.replace("{n}", fmtMoney(o.delivery_fee + (o.free_waived ?? 0))),
+      ...((o.free_waived ?? 0) > 0 ? [W.freeLine.replace("{n}", fmtMoney(o.free_waived ?? 0))] : []),
+      ...(o.discount > 0 ? [W.discountLine.replace("{n}", fmtMoney(o.discount))] : []),
+      W.totalLine.replace("{n}", fmtMoney(o.total)),
+      W.payLine.replace("{pay}", payerLabel(o)),
+      W.thanks,
+    ];
+    const url = new URL("https://web.whatsapp.com/send");
+    url.searchParams.set("phone", customerWaDigits);
+    url.searchParams.set("text", lines.join("\n"));
+    // **تبويبٌ واحدٌ باسمٍ ثابت** — كالتحويل للمتجر، فلا يتراكم واتساب ويب.
+    window.open(url.toString(), "rahalgo-whatsapp");
+  }
+
   return (
-    // **كروتُ الصفّ بطولٍ واحدٍ وأقسامُها على خطٍّ واحد** (ملاحظةُ المالك ٢٠٢٦-١٠-٣١) —
-    // خمسةُ صفوفٍ مشتركة (الرأس · الطلب · كيف مشى · المال · الأزرار) بـ`subgrid`.
+    // **بطاقةُ السجلّ بشكل بطاقة اللوحة الحيّة** (قرارُ المالك ٢٠٢٦-١١-٠٤) — نفسُ الصناديق (`Box`) ونفسُ
+    // شبكة الأزرار. **وأقسامُ الصفّ على خطٍّ واحد**: ثمانيةُ صفوفٍ مشتركة بـ`subgrid`
+    // (الرأس · الطريق · المتجر · الزبون · الفاتورة · كيف مشى · المال · الأزرار) — **وقسمٌ غائبٌ يبقى صفُّه فارغاً**
+    // كي لا تنزاح الأقسامُ عن جاراتها.
     <li
-      className={`row-span-5 grid grid-rows-subgrid gap-y-2.5 rounded-control border border-line-soft bg-surface p-3 text-sm ${
-        focused ? "ring-2 ring-accent" : ""
-      }`}
+      className={`row-span-8 grid grid-rows-subgrid gap-y-3 surface p-4 text-sm ${focused ? "ring-2 ring-accent" : ""}`}
     >
-      {/* ── الرأس ── */}
-      <div className="space-y-1.5">
-        <div className="flex flex-wrap items-center justify-between gap-2">
+      {/* ── الرأس: الرقمُ والنوعُ والنهاية والنجوم والوسوم، ثمّ سطرُ السائق ── */}
+      <div className="flex min-w-0 flex-col gap-2">
+        <div className="flex w-full flex-wrap items-start justify-between gap-2">
           <span className="flex flex-wrap items-center gap-2">
-            <OrderRef number={o.number} />
-            <span dir="ltr" className="text-xs tabular-nums text-ink-muted">
-              {fmtDateTime(o.created_at)}
-            </span>
+            <OrderRef number={o.number} at={o.created_at} />
+            <KindBadge o={o} />
           </span>
-          <KindBadge o={o} />
+          <span className="flex flex-wrap items-center justify-end gap-1">
+            {closed ? <EndBadge o={o} /> : <Badge variant="accent">{endLabel}</Badge>}
+            {focused && <Badge variant="accent">{BOARD.focused}</Badge>}
+            {stars > 0 && <Stars value={stars} size="sm" />}
+            {flags.map((f) => (
+              <Badge key={f.k} variant={f.v}>
+                {f.label}
+              </Badge>
+            ))}
+          </span>
         </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          {closed ? <EndBadge o={o} /> : <Badge variant="accent">{endLabel}</Badge>}
-          {focused && <Badge variant="accent">{BOARD.focused}</Badge>}
-          {stars > 0 && <Stars value={stars} size="sm" />}
-          {flags.map((f) => (
-            <Badge key={f.k} variant={f.v}>
-              {f.label}
-            </Badge>
-          ))}
-        </div>
+        {o.driver_name ? (
+          <span className="flex w-full items-center gap-2 rounded-control bg-success-tint px-2 py-1.5">
+            <IconMoto size={16} className="shrink-0 text-success" aria-hidden />
+            <DriverLine
+              name={o.driver_name}
+              phone={o.driver_phone}
+              seenAt={o.driver_seen_at}
+              now={now}
+              staleMin={staleMin}
+              hideSeen={!!o.closed_at}
+            />
+          </span>
+        ) : (
+          <span className="flex w-full items-center gap-2 rounded-control bg-ink-faint px-2 py-1.5 text-sm text-ink-muted">
+            <IconMoto size={16} className="shrink-0" aria-hidden />
+            {C.noDriver}
+          </span>
+        )}
       </div>
 
-      {/* ── الطلب ── */}
-      <CardSection title={C.order}>
-        <p className="flex flex-wrap items-center gap-x-1.5">
-          <IconStore size={14} className="shrink-0 text-warning" />
-          <span className="font-medium">{o.kind === "custom" ? kindLabel(o) : o.merchant_name || "—"}</span>
-          <span aria-hidden className="text-ink-muted">←</span>
-          <IconUser size={14} className="shrink-0 text-accent-text" />
-          <span className="font-medium">{o.customer_name || "—"}</span>
-          <span dir="ltr" className="text-xs text-ink-muted">
-            {o.customer_phone || o.customer_phone_masked}
-          </span>
-        </p>
-        {(o.zone_name || o.address_text) && (
-          <p className="flex items-start gap-1.5 text-xs">
-            <IconLocation size={13} className="mt-0.5 shrink-0 text-ink-muted" />
-            <span>{[o.zone_name, o.address_text].filter(Boolean).join(m.common.listSeparator)}</span>
-          </p>
-        )}
-        {o.notes && <p className="text-xs text-ink-muted">{o.notes}</p>}
-        {o.driver_name && (
-          <p className="flex flex-wrap items-center gap-x-1.5">
-            <IconMoto size={14} className="shrink-0 text-success" />
-            <span>{o.driver_name}</span>
-            {o.driver_phone && (
-              <span dir="ltr" className="text-xs text-ink-muted">
-                {o.driver_phone}
-              </span>
-            )}
-          </p>
-        )}
-        {shown.length > 0 && (
-          <div className="rounded-control bg-field px-2.5 py-1.5">
-            <InvoiceLines items={shown} />
-            {items.length > shown.length && (
-              <p className="mt-1 text-xs text-ink-muted">{C.moreItems.replace("{n}", fmtNum(items.length - shown.length))}</p>
-            )}
-          </div>
-        )}
-        {o.custom_request && (
-          <p className="text-xs">
-            <span className="text-ink-muted">{C.request}: </span>
-            {o.custom_request}
-          </p>
-        )}
-        {o.parcel_note && (
-          <p className="text-xs">
-            <span className="text-ink-muted">{C.parcel}: </span>
-            {o.parcel_note}
-          </p>
-        )}
-        {o.holder_name && (
-          <p className="text-xs">
-            <span className="text-ink-muted">{C.holder}: </span>
-            {o.holder_name}
-            {o.holder_phone && (
-              <span dir="ltr" className="ms-1.5 text-ink-muted">
-                {o.holder_phone}
-              </span>
-            )}
-          </p>
-        )}
-        {o.custom_goods_amount != null && o.custom_goods_amount > 0 && (
-          <p className="flex items-center gap-1.5 text-xs">
-            <span className="text-ink-muted">{C.goodsAmount}:</span>
-            <Money value={o.custom_goods_amount} small />
-          </p>
-        )}
-        {ended && (
-          <div className="space-y-0.5 rounded-control border border-line-soft px-2.5 py-1.5 text-xs">
-            <p>
-              <span className="font-medium">{who}</span>
-              {o.board?.ended_by_name && <span className="text-ink-muted"> — {o.board.ended_by_name}</span>}
-            </p>
-            {reason && (
-              <p>
-                <span className="text-ink-muted">{H.reason}: </span>
-                {reason}
-              </p>
-            )}
-            {o.fault && (
-              <p>
-                <span className="text-ink-muted">{H.fault}: </span>
-                {FAULT_LABELS[o.fault] ?? o.fault}
-              </p>
-            )}
-          </div>
-        )}
-        {goods && <div className="text-xs">{goods}</div>}
-        {proof && (
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="inline-flex items-center gap-1 text-ink-muted">
-              <IconCamera size={13} />
-              {OP.proof}
-            </span>
-            {proof}
-          </div>
-        )}
-      </CardSection>
+      {/* ── الطريق ── */}
+      <div className="min-w-0 rounded-control border border-line-soft bg-ink-faint p-3">
+        <RouteLine o={o} />
+      </div>
 
-      {/* ── كيف مشى ── والقسمُ حاضرٌ دائماً كي لا تنزاح الأقسامُ عن جيرانها. */}
-      {steps.length === 0 ? (
-        <CardSection title={C.how}>
-          <p className="text-xs text-ink-muted">—</p>
-        </CardSection>
-      ) : (
-        <CardSection title={C.how}>
-          <p className="flex flex-wrap items-center gap-y-0.5 text-xs leading-relaxed">
-            {steps.map((st, i) => {
-              const prev = i > 0 ? steps[i - 1] : null;
-              const gap = prev ? (Date.parse(st.at) - Date.parse(prev.at)) / 1000 : null;
-              const late = lateAt.has(Date.parse(st.at)) || (st.k === "deliver" && !!o.board?.late);
-              return (
-                <span key={st.k} className={late ? "font-bold text-warning" : ""}>
-                  {i > 0 && sep}
-                  {st.label}{" "}
-                  <span dir="ltr" className="tabular-nums">
-                    {fmtTime(st.at)}
+      {/* ── المتجر ── والصفُّ حاضرٌ دائماً. */}
+      <div className="min-w-0">{hasPickupSection(o) ? <StoreSection o={o} live /> : null}</div>
+
+      {/* ── الزبون ── */}
+      <div className="min-w-0">
+        <CustomerSection o={o} live />
+      </div>
+
+      {/* ── الفاتورة كاملةً بلا قصّ ── */}
+      <div className="min-w-0">
+        <Box look="plain" icon={<IconOrder size={14} />} title={C.invoiceBox}>
+          <InvoiceList o={o} />
+          {o.kind === "custom" && o.parcel_note && (
+            <p className="text-xs">
+              <span className="text-ink-muted">{C.parcel}: </span>
+              {o.parcel_note}
+            </p>
+          )}
+        </Box>
+      </div>
+
+      {/* ── كيف مشى ── الخطواتُ بأوقاتها، ومن أنهاه وليش، وإثباتُ التسليم. */}
+      <div className="min-w-0">
+        <Box look="plain" icon={<IconHourglass size={13} />} title={C.how}>
+          {steps.length === 0 ? (
+            <p className="text-xs text-ink-muted">—</p>
+          ) : (
+            <p className="flex flex-wrap items-center gap-y-0.5 text-xs leading-relaxed">
+              {steps.map((st, i) => {
+                const prev = i > 0 ? steps[i - 1] : null;
+                const gap = prev ? (Date.parse(st.at) - Date.parse(prev.at)) / 1000 : null;
+                const late = lateAt.has(Date.parse(st.at)) || (st.k === "deliver" && !!o.board?.late);
+                return (
+                  <span key={st.k} className={late ? "font-bold text-warning" : ""}>
+                    {i > 0 && sep}
+                    {st.label}{" "}
+                    <span dir="ltr" className="tabular-nums">
+                      {fmtTime(st.at)}
+                    </span>
+                    {gap != null && gap > 0 && <span className="text-ink-muted"> ({fmtSpan(gap)})</span>}
+                    {late && ` ${F.late}`}
                   </span>
-                  {gap != null && gap > 0 && <span className="text-ink-muted"> ({fmtSpan(gap)})</span>}
-                  {late && ` ${F.late}`}
-                </span>
-              );
-            })}
-          </p>
-        </CardSection>
-      )}
+                );
+              })}
+            </p>
+          )}
+          {ended && (
+            <div className="space-y-0.5 border-t border-line-soft pt-2 text-xs">
+              <p>
+                <span className="font-medium">{who}</span>
+                {o.board?.ended_by_name && <span className="text-ink-muted"> — {o.board.ended_by_name}</span>}
+              </p>
+              {reason && (
+                <p>
+                  <span className="text-ink-muted">{H.reason}: </span>
+                  {reason}
+                </p>
+              )}
+              {o.fault && (
+                <p>
+                  <span className="text-ink-muted">{H.fault}: </span>
+                  {FAULT_LABELS[o.fault] ?? o.fault}
+                </p>
+              )}
+            </div>
+          )}
+          {goods && <div className="text-xs">{goods}</div>}
+          {proof && (
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="inline-flex items-center gap-1 text-ink-muted">
+                <IconCamera size={13} />
+                {OP.proof}
+              </span>
+              {proof}
+            </div>
+          )}
+        </Box>
+      </div>
 
       {/* ── المال ── عرضٌ لا حساب: أرقامُ الخادم كما هي (`DriverMoneyBox` نفسُه). */}
-      <CardSection title={C.money}>
-        <MoneyLine label={C.customer}>
-          <Money value={o.total} small className={`font-bold ${muted ? "text-ink-muted line-through" : ""}`} />
-          <span className="text-ink-muted"> {payText}</span>
-        </MoneyLine>
-        {(o.discount > 0 || (money?.offer_platform ?? 0) > 0 || (money?.offer_merchant ?? 0) > 0 || (o.free_waived ?? 0) > 0) && (
-          <MoneyLine label={C.discounts}>
-            {[
-              o.discount > 0
-                ? `${C.discount} ${fmtMoney(o.discount)}${o.promo_code ? ` (${o.promo_code})` : ""}`
-                : "",
-              (money?.offer_platform ?? 0) > 0 ? C.offerPlatform.replace("{n}", fmtMoney(money?.offer_platform ?? 0)) : "",
-              (money?.offer_merchant ?? 0) > 0 ? C.offerMerchant.replace("{n}", fmtMoney(money?.offer_merchant ?? 0)) : "",
-              (o.free_waived ?? 0) > 0 ? C.freeDelivery.replace("{n}", fmtMoney(o.free_waived ?? 0)) : "",
-            ]
-              .filter(Boolean)
-              .join(m.common.listSeparator)}
+      <div className="min-w-0">
+        <Box look="plain" icon={<IconOrder size={14} />} title={C.money}>
+          <MoneyLine label={C.customer}>
+            <Money value={o.total} small className={`font-bold ${muted ? "text-ink-muted line-through" : ""}`} />
+            <span className="text-ink-muted"> {payText}</span>
           </MoneyLine>
-        )}
-        {(o.merchant_net ?? 0) > 0 || commission > 0 || waived > 0 ? (
-          <MoneyLine label={C.merchant}>
-            {(o.merchant_net ?? 0) > 0 && C.net.replace("{n}", fmtMoney(o.merchant_net ?? 0))}
-            {(o.merchant_net ?? 0) > 0 && (commission > 0 || waived > 0) && sep}
-            {waived > 0 ? (
-              <span className="font-bold text-warning">{OP.cardCommissionWaived.replace("{n}", fmtMoney(waived))}</span>
-            ) : (
-              commission > 0 && OP.cardCommission.replace("{n}", fmtMoney(commission))
-            )}
-          </MoneyLine>
-        ) : null}
-        {((o.driver_fee ?? 0) > 0 || cash > 0) && (
-          <MoneyLine label={C.driver}>
-            {[
-              (o.driver_fee ?? 0) > 0 ? C.driverFee.replace("{n}", fmtMoney(o.driver_fee ?? 0)) : "",
-              cash > 0 ? C.driverCash.replace("{n}", fmtMoney(cash)) : "",
-              pay > 0 ? C.driverPaid.replace("{n}", fmtMoney(pay)) : "",
-              cash > 0 ? C.driverOffice.replace("{n}", fmtMoney(office)) : "",
-            ]
-              .filter(Boolean)
-              .join(m.common.listSeparator)}
-          </MoneyLine>
-        )}
-        {money && money.lines > 0 && (
-          <MoneyLine label={C.split}>
-            {C.rep.replace("{n}", fmtMoney(money.rep))}
-            {sep}
-            <span className="font-bold">{C.platform.replace("{n}", fmtMoney(money.platform))}</span>
-          </MoneyLine>
-        )}
-      </CardSection>
+          {(o.discount > 0 || (money?.offer_platform ?? 0) > 0 || (money?.offer_merchant ?? 0) > 0 || (o.free_waived ?? 0) > 0) && (
+            <MoneyLine label={C.discounts}>
+              {[
+                o.discount > 0
+                  ? `${C.discount} ${fmtMoney(o.discount)}${o.promo_code ? ` (${o.promo_code})` : ""}`
+                  : "",
+                (money?.offer_platform ?? 0) > 0 ? C.offerPlatform.replace("{n}", fmtMoney(money?.offer_platform ?? 0)) : "",
+                (money?.offer_merchant ?? 0) > 0 ? C.offerMerchant.replace("{n}", fmtMoney(money?.offer_merchant ?? 0)) : "",
+                (o.free_waived ?? 0) > 0 ? C.freeDelivery.replace("{n}", fmtMoney(o.free_waived ?? 0)) : "",
+              ]
+                .filter(Boolean)
+                .join(m.common.listSeparator)}
+            </MoneyLine>
+          )}
+          {(o.merchant_net ?? 0) > 0 || commission > 0 || waived > 0 ? (
+            <MoneyLine label={C.merchant}>
+              {(o.merchant_net ?? 0) > 0 && C.net.replace("{n}", fmtMoney(o.merchant_net ?? 0))}
+              {(o.merchant_net ?? 0) > 0 && (commission > 0 || waived > 0) && sep}
+              {waived > 0 ? (
+                <span className="font-bold text-warning">{OP.cardCommissionWaived.replace("{n}", fmtMoney(waived))}</span>
+              ) : (
+                commission > 0 && OP.cardCommission.replace("{n}", fmtMoney(commission))
+              )}
+            </MoneyLine>
+          ) : null}
+          {((o.driver_fee ?? 0) > 0 || cash > 0) && (
+            <MoneyLine label={C.driver}>
+              {[
+                (o.driver_fee ?? 0) > 0 ? C.driverFee.replace("{n}", fmtMoney(o.driver_fee ?? 0)) : "",
+                cash > 0 ? C.driverCash.replace("{n}", fmtMoney(cash)) : "",
+                pay > 0 ? C.driverPaid.replace("{n}", fmtMoney(pay)) : "",
+                cash > 0 ? C.driverOffice.replace("{n}", fmtMoney(office)) : "",
+              ]
+                .filter(Boolean)
+                .join(m.common.listSeparator)}
+            </MoneyLine>
+          )}
+          {money && money.lines > 0 && (
+            <MoneyLine label={C.split}>
+              {C.rep.replace("{n}", fmtMoney(money.rep))}
+              {sep}
+              <span className="font-bold">{C.platform.replace("{n}", fmtMoney(money.platform))}</span>
+            </MoneyLine>
+          )}
+        </Box>
+      </div>
 
-      {/* ── الأزرار ── الفاتورة، وملفُّ الطلب، و«⋯» للأفعال النادرة بصلاحيّاتها نفسِها. */}
-      <div className="flex flex-col justify-end gap-2.5">
-      <div className="mt-auto flex flex-wrap items-center gap-1.5 border-t border-line-soft pt-2.5">
-        {!NO_INVOICE.has(o.status) && <InvoiceButton order={o} compact />}
-        <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={onDetails}>
-          <span className="flex items-center gap-1">
-            <IconRoute size={14} />
-            {H.detailsBtn}
-          </span>
+      {/* ── الأزرار ── بشبكة بطاقة اللوحة نفسِها: الأساسيُّ أوّلاً والهدّامُ آخراً (`order` في الشبكة). */}
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="self-end grid grid-flow-row-dense grid-cols-2 sm:grid-cols-3 gap-2 border-t border-line-soft pt-3 [&>*:not(button)]:col-span-full [&>button:only-of-type]:col-span-full [&>button]:inline-flex [&>button]:min-h-11 [&>button]:w-full [&>button]:min-w-0 [&>button]:items-center [&>button]:justify-center [&>button]:gap-2 [&>button]:overflow-hidden [&>button]:!px-2 [&>button]:text-center [&>button[data-variant=primary]]:order-first [&>button[data-variant=danger]]:order-1 [&>button[data-variant=danger-outline]]:order-1"
+      >
+        <Button variant="secondary" onClick={onDetails}>
+          <IconRoute size={14} />
+          {H.detailsBtn}
         </Button>
-        {(hasActions || waivable) && (
-          <Button
-            variant={menuOpen ? "primary" : "secondary"}
-            className="!px-3 !py-1.5 text-xs"
-            aria-expanded={menuOpen}
-            aria-label={C.more}
-            title={C.more}
-            onClick={() => setMenuOpen(!menuOpen)}
-          >
-            ⋯
+        {!NO_INVOICE.has(o.status) && <InvoiceButton order={o} />}
+        {can("orders.communications.read") && (
+          <Button variant="secondary" onClick={() => setChatOpen(true)}>
+            <IconChat size={14} />
+            {C.chatBtn}
           </Button>
         )}
-      </div>
-      <div className={`flex flex-wrap gap-1.5 rounded-control bg-field p-2 ${menuOpen ? "" : "hidden"}`}>
+        {!NO_INVOICE.has(o.status) && customerWaDigits !== "" && (
+          <Button variant="secondary" onClick={sendInvoiceWa}>
+            <IconWhatsApp size={14} />
+            {C.sendInvoiceWa}
+          </Button>
+        )}
         {waivable && (
-          <Button variant="secondary" className="!px-3 !py-1.5 text-xs" onClick={() => setWaiving(true)}>
+          <Button variant="secondary" onClick={() => setWaiving(true)}>
             {m.admin.cashOutstanding.waiveBtn}
           </Button>
         )}
-        <div ref={actionsRef} className="flex flex-wrap gap-1.5">
-          {actions}
-        </div>
-      </div>
-      {waiving && (
-        <WaiveCommissionDialog
-          orderId={o.id}
-          orderNumber={o.number}
-          commission={o.commission_taken ?? 0}
-          onClose={() => setWaiving(false)}
-          onDone={(amount) => {
-            setWaiving(false);
-            setWaivedNow(amount);
-          }}
-        />
-      )}
+        {actions}
+        {chatOpen && <OrderChatModal orderId={o.id} orderNumber={o.number} onClose={() => setChatOpen(false)} />}
+        {waiving && (
+          <WaiveCommissionDialog
+            orderId={o.id}
+            orderNumber={o.number}
+            commission={o.commission_taken ?? 0}
+            onClose={() => setWaiving(false)}
+            onDone={(amount) => {
+              setWaiving(false);
+              setWaivedNow(amount);
+            }}
+          />
+        )}
       </div>
     </li>
   );
 }
-
-/** **قسمٌ في كرت السجلّ** — عنوانٌ صغيرٌ وخطٌّ رفيعٌ فوقه. */
-function CardSection({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="space-y-1 border-t border-line-soft pt-2">
-      <h4 className="text-xs font-bold text-ink-muted">{title}</h4>
-      {children}
-    </section>
-  );
-}
-
-/** **سطرُ مالٍ** — الطرفُ يميناً وما له في سطرٍ واحدٍ يلتفّ. */
 function MoneyLine({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <p className="flex flex-wrap items-baseline gap-x-1.5 text-xs">
