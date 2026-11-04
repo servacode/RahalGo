@@ -32,8 +32,6 @@ package server
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/base64"
 	"errors"
 	"net/http"
 	"strconv"
@@ -53,7 +51,7 @@ const (
 	feedbackAfter = 10 * time.Minute
 	// feedbackWindow **أقدمُ تسليمٍ يُسأل عنه** — يومٌ، فلا تُغرَق الطلباتُ القديمة.
 	feedbackWindow = 24 * time.Hour
-	// feedbackTTL **عمرُ الرابط.**
+	// feedbackTTL **عمرُ الطلب**: عمرُ الروابط القديمة (٧ أيّام).
 	feedbackTTL = 7 * 24 * time.Hour
 	// feedbackBatch **حدُّ الجولة** — رسائلُ البوت ليست مجّانيّةً على الرقم.
 	feedbackBatch = 20
@@ -70,19 +68,12 @@ var feedbackSendGap = 3 * time.Second
 var errFeedbackClosed = httpx.NewError(http.StatusGone,
 	"feedback_request_closed", "errors.feedback_request_closed")
 
-// feedbackText **رسالةُ الواتساب** — ولا اسمَ منصّةٍ فيها (قاعدةُ المالك).
-func feedbackText(number int64, link string) string {
-	return "وصلك طلبك رقم " + strconv.FormatInt(number, 10) + "؟ كيف كانت الخدمة؟ " +
-		"رأيك بيفرق معنا 🌷\n" + link
-}
-
-// feedbackLink **رابطُ الصفحة العامّة** — من أصل الموقع المسموح، وفي التطوير موقعُ الزبون.
-func (s *Server) feedbackLink(token string) string {
-	base := s.siteBase()
-	if base == "" {
-		base = s.siteURL()
-	}
-	return base + "/rate/" + token
+// feedbackText **رسالةُ الواتساب** — **بلا أيّ رابط** (قرارُ المالك ٢٠٢٦-١١-٠٤: «الناس تخاف الروابط»):
+// الزبونُ يردّ عليها بكلامه في الواتساب نفسِه ويقرؤه المالك.
+func feedbackText(number int64) string {
+	return "وصلك طلبك رقم " + strconv.FormatInt(number, 10) + "؟\n" +
+		"كيف كانت الخدمة؟ رأيك بيفرق معنا 🌷\n" +
+		"مع تحيات إدارة تطبيق رحّال غو"
 }
 
 // RunOrderFeedbackSweeper **يسأل الزبائنَ عن رأيهم** — دورةٌ كلَّ دقيقة تكفي.
@@ -147,18 +138,13 @@ func (s *Server) SweepOrderFeedback(ctx context.Context) int {
 		if ctx.Err() != nil {
 			break
 		}
-		raw := make([]byte, 18)
-		if _, err := rand.Read(raw); err != nil {
-			s.logger.Warn("طلبُ الرأي: الرمزُ لم يُولَّد", "error", err)
-			return sent
-		}
-		token := base64.RawURLEncoding.EncodeToString(raw)
-		// **الحجزُ قبل الإرسال** — من خسر السباقَ لا يصله شيء.
+		// **الحجزُ قبل الإرسال** — من خسر السباقَ لا يصله شيء. **ولا رمزَ ولا رابط**: العمودُ
+		// `token_hash` فريدٌ فيُملأ بقيمةٍ مشتقّةٍ من الطلب (الصفحةُ العامّةُ للروابط القديمة تبقى).
 		tag, err := s.pg.Exec(ctx, `
 			INSERT INTO order_feedback_requests (order_id, token_hash, expires_at)
 			VALUES ($1, $2, now() + make_interval(secs => $3))
-			ON CONFLICT (order_id) DO NOTHING`,
-			c.orderID, locReqHash(token), int(feedbackTTL.Seconds()))
+			ON CONFLICT DO NOTHING`,
+			c.orderID, "nolink-"+c.orderID, int(feedbackTTL.Seconds()))
 		if err != nil {
 			s.logger.Warn("طلبُ الرأي: الحجزُ سقط", "order", c.orderID, "error", err)
 			continue
@@ -167,7 +153,7 @@ func (s *Server) SweepOrderFeedback(ctx context.Context) int {
 			continue
 		}
 		sendCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
-		ok := s.sendText(sendCtx, c.phone, feedbackText(c.number, s.feedbackLink(token)))
+		ok := s.sendText(sendCtx, c.phone, feedbackText(c.number))
 		cancel()
 		if !ok {
 			s.logger.Warn("طلبُ الرأي: الرسالةُ لم تصل — لا إعادة", "order", c.orderID)

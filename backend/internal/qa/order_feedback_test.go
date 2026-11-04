@@ -6,8 +6,10 @@ package qa
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
-	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -43,7 +45,16 @@ func (n *recNotifier) to(phone string) []recMsg {
 	return out
 }
 
-var feedbackTokenRe = regexp.MustCompile(`/rate/([A-Za-z0-9_-]+)`)
+// seedOldLink **رابطٌ قديمٌ أُرسل قبل قرار «بلا رابط»** — الصفحةُ العامّةُ تبقى له حتّى ينتهي.
+func seedOldLink(t *testing.T, h *Harness, orderID, token string) {
+	t.Helper()
+	sum := sha256.Sum256([]byte(token))
+	if _, err := h.Pool.Exec(ctxBG(), `
+		INSERT INTO order_feedback_requests (order_id, token_hash, sent_at, expires_at)
+		VALUES ($1::uuid, $2, now(), now() + interval '7 days')`, orderID, hex.EncodeToString(sum[:])); err != nil {
+		t.Fatal(err)
+	}
+}
 
 // feedbackFixture **طلبٌ مُسلَّمٌ قبل `ago` دقيقة**، وكلُّ ما سواه مسدودٌ عن الكانس
 // (القاعدةُ مشتركةٌ بين الفحوص والكانسُ عامّ).
@@ -100,10 +111,15 @@ func TestOrderFeedback_SweepSendsOnce(t *testing.T) {
 	if len(msgs) != 1 {
 		t.Fatalf("وصل الزبونَ %d رسالة — والمنتظَر 1", len(msgs))
 	}
-	if !strings.Contains(msgs[0].text, "وصلك طلبك رقم") || !strings.Contains(msgs[0].text, "/rate/") {
-		t.Fatalf("نصُّ الرسالة: %q", msgs[0].text)
+	want := "وصلك طلبك رقم " + strconv.FormatInt(number, 10) + "؟\n" +
+		"كيف كانت الخدمة؟ رأيك بيفرق معنا 🌷\n" +
+		"مع تحيات إدارة تطبيق رحّال غو"
+	if msgs[0].text != want {
+		t.Fatalf("نصُّ الرسالة: %q — والمنتظَر %q", msgs[0].text, want)
 	}
-	_ = number
+	if strings.Contains(msgs[0].text, "http") || strings.Contains(msgs[0].text, "/rate/") {
+		t.Fatalf("في الرسالة رابط: %q", msgs[0].text)
+	}
 	if got := h.API.SweepOrderFeedback(ctxBG()); got != 0 {
 		t.Fatalf("الجولةُ الثانية أرسلت %d — مرّةٌ لكلّ طلب", got)
 	}
@@ -160,16 +176,9 @@ func TestOrderFeedback_SweepSkips(t *testing.T) {
 func TestOrderFeedback_SubmitWritesRatingOnceAndShowsInAdmin(t *testing.T) {
 	h := New(t)
 	oid, cust, _ := feedbackFixture(t, h, 20)
-	blockOthers(t, h, oid)
-	n := armFeedback(t, h, true)
-	if got := h.API.SweepOrderFeedback(ctxBG()); got != 1 {
-		t.Fatalf("الإرسال: %d", got)
-	}
-	m := feedbackTokenRe.FindStringSubmatch(n.to(cust.Phone)[0].text)
-	if m == nil {
-		t.Fatal("لا رمزَ في الرابط")
-	}
-	path := "/api/v1/public/feedback-requests/" + m[1]
+	_ = cust
+	seedOldLink(t, h, oid, "old-link-token-aaaaaaaaaaaa")
+	path := "/api/v1/public/feedback-requests/old-link-token-aaaaaaaaaaaa"
 
 	info := h.GET(path, "")
 	if info.Code != http.StatusOK || info.JSON()["status"] != "pending" || info.JSON()["has_driver"] != true {
@@ -227,12 +236,14 @@ func TestOrderFeedback_ExpiredAndAlreadyRated(t *testing.T) {
 	h := New(t)
 	oid, cust, _ := feedbackFixture(t, h, 20)
 	oid2, cust2, _ := feedbackFixture(t, h, 20)
-	blockOthers(t, h, oid, oid2)
-	n := armFeedback(t, h, true)
-	if got := h.API.SweepOrderFeedback(ctxBG()); got != 2 {
-		t.Fatalf("الإرسال: %d", got)
+	seedOldLink(t, h, oid, "old-link-token-bbbbbbbbbbbb")
+	seedOldLink(t, h, oid2, "old-link-token-cccccccccccc")
+	tok := func(c *User) string {
+		if c == cust {
+			return "old-link-token-bbbbbbbbbbbb"
+		}
+		return "old-link-token-cccccccccccc"
 	}
-	tok := func(c *User) string { return feedbackTokenRe.FindStringSubmatch(n.to(c.Phone)[0].text)[1] }
 
 	if _, err := h.Pool.Exec(ctxBG(),
 		`UPDATE order_feedback_requests SET expires_at = now() - interval '1 minute' WHERE order_id = $1::uuid`, oid); err != nil {
