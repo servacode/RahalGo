@@ -112,19 +112,9 @@ export function ItemCard({
   const [viewing, setViewing] = useState(false);
   const fav = useFav();
   return (
-    <div className="relative flex min-w-0 flex-col gap-1.5 pt-2.5">
-      {/* ── القلبُ قرصٌ صغيرٌ يطفو على زاوية البطاقة العليا (بدايةُ الاتجاه)، نصفُه خارجَ الإطار —
-          قرارُ المالك ٢٠٢٦-١١-٠٤: ليأخذ شريطُ السعر العرضَ كلَّه ويظهر «$ ≈ ل.س» كاملاً. ── */}
-      <FavoriteButton
-        itemID={item.id}
-        on={fav.has(item.id)}
-        onToggle={fav.toggle}
-        onRequireLogin={fav.needLogin}
-        size="sm"
-        className="absolute -start-2.5 top-0 z-10 rounded-full! bg-surface shadow-card"
-      />
+    <div className="flex min-w-0 flex-col gap-1.5">
       <div className="surface flex min-w-0 flex-col overflow-hidden">
-        {/* ── شريطُ السعر بعرض البطاقة كلِّه — والليرةُ تنزل تحت الدولار إن ضاق ولا تُقصّ ── */}
+        {/* ── شريطُ السعر وحدَه بعرض البطاقة — والليرةُ تنزل تحت الدولار إن ضاق ولا تُقصّ ── */}
         <div className="flex min-w-0 items-center px-1.5 py-1">
           <span className="ms-auto flex min-w-0 flex-wrap items-baseline justify-end gap-x-1">
             {item.price_usd != null ? (
@@ -184,7 +174,16 @@ export function ItemCard({
             <span className="flex-1 truncate text-2xs text-ink-muted">{item.merchant_name ?? ""}</span>
           )}
         </div>
-        <div className="flex h-10 w-full min-w-0 gap-1 px-1.5 pb-1.5">
+        {/* ── «اطلب» عريضٌ والقلبُ جنبه (اقتراحُ المالك ٢٠٢٦-١١-٠٤) — والشريطُ الأعلى للسعر وحدَه ── */}
+        <div className="flex h-10 w-full min-w-0 items-center gap-1 px-1.5 pb-1.5">
+          <FavoriteButton
+            itemID={item.id}
+            on={fav.has(item.id)}
+            onToggle={fav.toggle}
+            onRequireLogin={fav.needLogin}
+            size="sm"
+            className="shrink-0 rounded-full! border border-line-soft"
+          />
           {!closed && (
             <button
               type="button"

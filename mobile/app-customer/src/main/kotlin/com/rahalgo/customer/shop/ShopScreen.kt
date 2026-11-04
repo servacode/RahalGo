@@ -830,12 +830,7 @@ internal fun ItemCard(
     val closed = item.sourceClosed || !item.available
     var zoom by remember(item.id) { mutableStateOf<String?>(null) }
     val full = media(item.imageUrl ?: item.imageThumbUrl)
-    // **القلبُ قرصٌ صغيرٌ يطفو على زاوية البطاقة العليا (بدايةُ الاتجاه)، ثلثُه خارجَ الإطار**
-    // (قرارُ المالك ٢٠٢٦-١١-٠٤) — ليأخذ شريطُ السعر العرضَ كلَّه ويظهر «$ ≈ ل.س» كاملاً.
-    Box {
-    // **ولا حشوةَ يميناً ويساراً** (المالك ٢٠٢٦-١١-٠٤: «بادينك كبير بين الأصناف ما يلزم»)
-    // — فوقُ ٦ فقط، والقرصُ ينتأ ٦ إلى جانبه في الفراغ بين البطاقات (٨) فلا يُقصّ.
-    Column(Modifier.padding(top = 6.dp)) {
+    Column {
         Column(
             Modifier
                 .fillMaxWidth()
@@ -843,8 +838,9 @@ internal fun ItemCard(
                 .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
                 .background(Rahal.colors.surface),
         ) {
-            // **شريطُ السعر بعرض البطاقة كلِّه** — والقلبُ طافٍ على الزاوية خارجَه.
-            // **والليرةُ تنزل تحت الدولار إن ضاق العرضُ ولا تُقصّ** (لا نقاطَ على مال).
+            // **شريطُ السعر وحدَه فوق، بعرض البطاقة** (اقتراحُ المالك ٢٠٢٦-١١-٠٤: «زر المفضلة
+            // جنب زر اطلب وهيك الشريط الفوق يصير للسعر») — والليرةُ تنزل تحت الدولار إن ضاق
+            // العرضُ ولا تُقصّ (لا نقاطَ على مال).
             @OptIn(ExperimentalLayoutApi::class)
             FlowRow(
                 Modifier
@@ -867,6 +863,7 @@ internal fun ItemCard(
                         text = "≈ " + money(item.price),
                         color = Rahal.colors.inkMuted,
                         style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
                     )
                 }
             }
@@ -973,13 +970,37 @@ internal fun ItemCard(
                         ),
                 )
             }
-            // **«اطلب» زرٌّ عريضٌ وحدَه** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — والسطرُ بارتفاعه ولو غاب.
+            // **«اطلب» عريضٌ والقلبُ جنبه** (اقتراحُ المالك ٢٠٢٦-١١-٠٤) — والسطرُ بارتفاعه ولو غاب «اطلب».
             Row(
                 Modifier
                     .fillMaxWidth()
                     .height(40.dp)
                     .padding(start = Rahal.space.xs, end = Rahal.space.xs, bottom = Rahal.space.xs),
+                horizontalArrangement = Arrangement.spacedBy(Rahal.space.xs),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
+                // **والقلبُ: مساحةُ لمسٍ ٣٦** — أحمرُ حين يُضغط ورماديٌّ حين لا (ملاحظةُ المالك
+                // ٢٠٢٦-٠٨-١٨)، **ووصفُه يتبع الحال** لمن يسمع ولا يرى.
+                Box(
+                    Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .border(Rahal.stroke.hair, Rahal.colors.line, CircleShape)
+                        .clickable(onClick = onLike),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painter = painterResource(
+                            if (liked) com.rahalgo.ui.R.drawable.ic_heart
+                            else com.rahalgo.ui.R.drawable.ic_heart_off,
+                        ),
+                        contentDescription = stringResource(
+                            if (liked) R.string.shop_unlike else R.string.shop_like,
+                        ),
+                        tint = if (liked) Rahal.colors.danger else Rahal.colors.inkMuted,
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
                 if (!closed && onAdd != null) {
                     CardButton(
                         text = stringResource(R.string.shop_order_btn),
@@ -1020,38 +1041,5 @@ internal fun ItemCard(
                 maxLines = 1,
             )
         }
-    }
-    // **القلبُ: مساحةُ لمسٍ ٣٦ وفيها قرصٌ مرئيٌّ ٢٨** — أحمرُ حين يُضغط ورماديٌّ حين لا
-    // (ملاحظةُ المالك ٢٠٢٦-٠٨-١٨)، **ووصفُه يتبع الحال** لمن يسمع ولا يرى.
-    Box(
-        Modifier
-            .align(Alignment.TopStart)
-            .offset(x = (-6).dp)
-            .size(36.dp)
-            .clip(CircleShape)
-            .clickable(onClick = onLike),
-        contentAlignment = Alignment.TopStart,
-    ) {
-        Box(
-            Modifier
-                .size(28.dp)
-                .shadow(2.dp, CircleShape)
-                .background(Rahal.colors.surface, CircleShape)
-                .border(Rahal.stroke.hair, Rahal.colors.line, CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                painter = painterResource(
-                    if (liked) com.rahalgo.ui.R.drawable.ic_heart
-                    else com.rahalgo.ui.R.drawable.ic_heart_off,
-                ),
-                contentDescription = stringResource(
-                    if (liked) R.string.shop_unlike else R.string.shop_like,
-                ),
-                tint = if (liked) Rahal.colors.danger else Rahal.colors.inkMuted,
-                modifier = Modifier.size(16.dp),
-            )
-        }
-    }
     }
 }
