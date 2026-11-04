@@ -115,6 +115,9 @@
     <string name="err_price_sync_empty">الملف فارغ أو كبير جداً — يجب أن يحتوي على مواد (حتى ٥٠ ألف مادة)</string>
     <string name="err_price_sync_file_type">تعذّرت قراءة الملف. احفظه من الأمين بصيغة Excel (xlsx) أو CSV وحاول مرة أخرى</string>
     <string name="err_price_sync_mapping">يوجد عمود مختار غير موجود في الملف — اختر الأعمدة من جديد</string>
+    <string name="err_external_code_taken">هذا الرقم مربوط بصنف آخر</string>
+    <string name="err_external_code_taken_name">هذا الرقم مربوط بصنف آخر: %1$s</string>
+    <string name="err_external_code_invalid">رقم المادة لازم يكون بلا فراغات وبحد أقصى ٦٤ حرفاً</string>
     <string name="err_item_price_too_high">السعر أعلى من الحد المسموح للصنف — راجع الأصفار</string>
     <string name="err_bulk_amount_invalid">اكتب مبلغاً صحيحاً أكبر من صفر</string>
     <string name="err_bulk_percent_invalid">يجب أن تكون النسبة من ١ إلى ١٠٠ للزيادة، أو من ١ إلى ٥٠ للتخفيض</string>
@@ -799,6 +802,9 @@
     <string name="item_currency_syp">ل.س</string>
     <string name="item_currency_usd">$ دولار</string>
     <string name="item_price_usd">السعر بالدولار</string>
+    <string name="item_amen_code">رقم المادة بالأمين</string>
+    <string name="item_amen_code_hint">اتركه فارغاً إن لم يكن الصنف مربوطاً ببرنامج الأمين. بالرقم تتحدّث أسعار الصنف من ملف الأمين.</string>
+    <string name="item_barcode">الباركود (اختياري)</string>
     <string name="mod_opt_price_usd">+ دولار</string>
     <!-- خيارات الأصناف ونسخ الصنف وتغيير الأسعار (٢٠٢٦-١٠-٢٧) -->
     <string name="mod_custom_group">+ مجموعة خاصة</string>

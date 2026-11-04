@@ -150,6 +150,7 @@ func (s *Server) handleMerchantPriceSyncFile(w http.ResponseWriter, r *http.Requ
 	dry := r.FormValue("dry_run") == "1"
 	rep, err := s.catalog.SyncPrices(r.Context(), merchantID, rows, catalog.SyncOptions{
 		Currency: m.Currency, DryRun: dry, Source: "file", ActorID: userIDFrom(r),
+		CreateMissing: m.CreateMissing,
 	})
 	if err != nil {
 		s.respondErr(w, err)
@@ -202,6 +203,8 @@ func (s *Server) handlePriceSyncAgent(w http.ResponseWriter, r *http.Request) {
 		Rows     []catalog.SyncRow `json:"rows"`
 		Currency string            `json:"currency"`
 		DryRun   bool              `json:"dry_run"`
+		// CreateMissing **أنشئ غير الموجود أصنافاً مخفيّة** (٢٠٢٦-١١-٠٤).
+		CreateMissing bool `json:"create_missing"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -211,6 +214,7 @@ func (s *Server) handlePriceSyncAgent(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	rep, err := s.catalog.SyncPrices(ctx, merchantID, req.Rows, catalog.SyncOptions{
 		Currency: req.Currency, DryRun: req.DryRun, Source: "agent",
+		CreateMissing: req.CreateMissing || s.syncCreateMissing(r.Context(), merchantID),
 	})
 	if err != nil {
 		s.respondErr(w, err)
@@ -237,6 +241,13 @@ func (s *Server) syncAgentMerchant(w http.ResponseWriter, r *http.Request) (stri
 		return "", false
 	}
 	return merchantID, true
+}
+
+// syncCreateMissing **أضبط فريقُ المنصّة «أنشئ غير الموجود» لهذا المتجر؟** (٢٠٢٦-١١-٠٤)
+func (s *Server) syncCreateMissing(ctx context.Context, merchantID string) bool {
+	var on bool
+	_ = s.pg.QueryRow(ctx, `SELECT price_sync_create_missing FROM merchants WHERE id = $1`, merchantID).Scan(&on)
+	return on
 }
 
 // agentSynced **زامن الساعي** — تُمحى «مزامنة الآن» وتُبلَّغ الشاشات.
@@ -322,6 +333,7 @@ func (s *Server) handlePriceSyncAgentFile(w http.ResponseWriter, r *http.Request
 	dry := r.FormValue("dry_run") == "1"
 	rep, err := s.catalog.SyncPrices(r.Context(), merchantID, rows, catalog.SyncOptions{
 		Currency: m.Currency, DryRun: dry, Source: "agent",
+		CreateMissing: m.CreateMissing || s.syncCreateMissing(r.Context(), merchantID),
 	})
 	if err != nil {
 		s.respondErr(w, err)

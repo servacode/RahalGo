@@ -19,7 +19,7 @@ import {
   fmtNum,
   fmtDateTime,
 } from "@rahalgo/i18n";
-import { Alert, Button, Card, LoadingState, Select } from "@rahalgo/ui";
+import { Alert, Button, Card, Checkbox, LoadingState, Select } from "@rahalgo/ui";
 import { api, apiFile } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import { fill } from "@/lib/customer/texts";
@@ -35,6 +35,8 @@ interface Mapping {
   price: string;
   qty?: string;
   currency?: "SYP" | "USD";
+  /** **أنشئ غير الموجود أصنافاً مخفيّة** (٢٠٢٦-١١-٠٤) — مُطفأٌ افتراضاً. */
+  create_missing?: boolean;
 }
 interface Issue {
   row: number;
@@ -52,6 +54,10 @@ interface Report {
   linked_by_name: number;
   unchanged: number;
   unmatched: number;
+  created?: number;
+  created_zero_price?: number;
+  create_skipped?: number;
+  zero_price?: number;
   skipped: Issue[];
   unmatched_sample: Issue[];
 }
@@ -140,13 +146,13 @@ export default function PriceSyncPage() {
     }
   }
 
-  async function run(dry: boolean) {
+  async function run(dry: boolean, use: Mapping = map) {
     if (!file) return;
-    if (!map.price || (!map.code && !map.name)) return setError(P.vMap);
+    if (!use.price || (!use.code && !use.name)) return setError(P.vMap);
     setBusy(true);
     setError("");
     try {
-      setReport(await send(file, map, dry));
+      setReport(await send(file, use, dry));
       if (!dry) {
         setPreview(null);
         load();
@@ -275,6 +281,27 @@ export default function PriceSyncPage() {
 
       {error && <Alert>{error}</Alert>}
 
+      {/* **أنشئ المواد غير الموجودة أصنافاً مخفية** (٢٠٢٦-١١-٠٤) — يُبدَّل فيُعاد «جرّب» ليُرى العدد. */}
+      {file && (
+        <Card>
+          <div className="flex flex-col gap-1 p-4">
+            <Checkbox
+              id="sync-create-missing"
+              data-testid="sync-create-missing"
+              checked={!!map.create_missing}
+              disabled={busy}
+              onChange={(e) => {
+                const next = { ...map, create_missing: e.target.checked };
+                setMap(next);
+                if (report || info?.mapping) void run(true, next);
+              }}
+              label={<span className="font-bold">{P.createMissing}</span>}
+            />
+            <p className="text-xs text-ink-muted">{P.createMissingHint}</p>
+          </div>
+        </Card>
+      )}
+
       {preview && (
         <Card>
           <div className="flex flex-col gap-3 p-4">
@@ -351,6 +378,23 @@ export default function PriceSyncPage() {
             {report.linked_by_name > 0 && (
               <p>
                 {fill(P.linkedByName, { n: fmtNum(report.linked_by_name) })}
+              </p>
+            )}
+            {(report.created ?? 0) > 0 && (
+              <p className="font-bold" data-testid="sync-created">
+                {fill(report.dry_run ? P.createdDry : P.created, {
+                  n: fmtNum(report.created ?? 0),
+                })}
+              </p>
+            )}
+            {(report.zero_price ?? 0) > 0 && (
+              <p className="text-warning">
+                {fill(P.zeroPrice, { n: fmtNum(report.zero_price ?? 0) })}
+              </p>
+            )}
+            {(report.create_skipped ?? 0) > 0 && (
+              <p className="text-ink-muted">
+                {fill(P.createSkipped, { n: fmtNum(report.create_skipped ?? 0) })}
               </p>
             )}
             <p className="text-ink-muted">

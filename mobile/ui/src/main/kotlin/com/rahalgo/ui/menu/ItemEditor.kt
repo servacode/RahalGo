@@ -196,6 +196,8 @@ fun ItemEditor(
     readOnly: Boolean = false,
     /** **المشروباتُ للمطاعم وحدَها** (٢٠٢٦-١٠-٣٠) — `false`: لا مفتاحَ «أضف مشروباتي». */
     drinksAllowed: Boolean = true,
+    /** **رقمُ المادّة بالأمين** (٢٠٢٦-١١-٠٤) — للمتجر؛ `false`: لا حقلَ (المندوب). */
+    amenLinkAllowed: Boolean = false,
 ) {
     val pick = rememberImagePicker(crop = true, cropFrames = com.rahalgo.ui.ItemCropFrames) { bytes -> onPickImage(bytes) }
     var confirmDelete by remember { mutableStateOf(false) }
@@ -334,6 +336,31 @@ fun ItemEditor(
                     repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
                 }
                 Spacer(Modifier.height(Rahal.space.sm))
+            }
+
+            // ══════════════════════════════════════════════════════════════
+            // **٣ب · رقمُ المادّة بالأمين والباركود** (٢٠٢٦-١١-٠٤) — يربط الصنفَ بملف الأسعار.
+            // **ومرآتُه `ItemEditor.tsx` في الويب.**
+            // ══════════════════════════════════════════════════════════════
+            if (amenLinkAllowed) {
+                Spacer(Modifier.height(Rahal.space.md))
+                OutlinedTextField(
+                    value = d.externalCode,
+                    onValueChange = { v -> onEdit { it.copy(externalCode = v.filterNot(Char::isWhitespace).take(64)) } },
+                    label = { Text(stringResource(R.string.item_amen_code)) },
+                    supportingText = { Text(stringResource(R.string.item_amen_code_hint)) },
+                    singleLine = true,
+                    enabled = !busy,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                OutlinedTextField(
+                    value = d.barcode,
+                    onValueChange = { v -> onEdit { it.copy(barcode = v.filterNot(Char::isWhitespace).take(64)) } },
+                    label = { Text(stringResource(R.string.item_barcode)) },
+                    singleLine = true,
+                    enabled = !busy,
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
 
             // ══════════════════════════════════════════════════════════════

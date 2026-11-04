@@ -232,6 +232,8 @@ func (s *Server) handleAdminPriceSyncGet(w http.ResponseWriter, r *http.Request)
 		Currency      string           `json:"currency"`
 		Stop          bool             `json:"stop"`
 		WantSchema    bool             `json:"want_schema"`
+		CreateMissing bool             `json:"create_missing"`
+		LastRun       *json.RawMessage `json:"last_run"`
 		AgentSeenAt   *time.Time       `json:"agent_seen_at"`
 		AgentVersion  *string          `json:"agent_version"`
 		AgentError    *string          `json:"agent_error"`
@@ -239,17 +241,23 @@ func (s *Server) handleAdminPriceSyncGet(w http.ResponseWriter, r *http.Request)
 		Schema        *json.RawMessage `json:"schema"`
 		SchemaAt      *time.Time       `json:"schema_at"`
 	}
-	var status, schema []byte
+	var status, schema, lastRun []byte
 	if err := s.pg.QueryRow(r.Context(), `
 		SELECT price_sync_sql_query, price_sync_sql_connection, price_sync_probe_table, price_sync_folder,
 		       price_sync_currency, price_sync_stop, price_sync_want_schema, price_sync_agent_seen_at,
 		       price_sync_agent_version, price_sync_agent_error, price_sync_agent_status,
-		       price_sync_schema, price_sync_schema_at
+		       price_sync_schema, price_sync_schema_at, price_sync_create_missing,
+		       (SELECT jsonb_build_object('source', source, 'report', report, 'at', created_at)
+		          FROM price_sync_runs WHERE merchant_id = merchants.id ORDER BY created_at DESC LIMIT 1)
 		  FROM merchants WHERE id = $1`, id).Scan(&out.SQLQuery, &out.SQLConnection, &out.ProbeTable, &out.Folder,
 		&out.Currency, &out.Stop, &out.WantSchema, &out.AgentSeenAt, &out.AgentVersion, &out.AgentError,
-		&status, &schema, &out.SchemaAt); err != nil {
+		&status, &schema, &out.SchemaAt, &out.CreateMissing, &lastRun); err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	if len(lastRun) > 0 {
+		m := json.RawMessage(lastRun)
+		out.LastRun = &m
 	}
 	if len(status) > 0 {
 		m := json.RawMessage(status)
@@ -272,6 +280,8 @@ func (s *Server) handleAdminPriceSyncPut(w http.ResponseWriter, r *http.Request)
 		Folder        *string `json:"folder"`
 		Currency      *string `json:"currency"`
 		WantSchema    *bool   `json:"want_schema"`
+		// CreateMissing **أنشئ غير الموجود أصنافاً مخفيّة** (٢٠٢٦-١١-٠٤) — للساعي.
+		CreateMissing *bool `json:"create_missing"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -292,8 +302,9 @@ func (s *Server) handleAdminPriceSyncPut(w http.ResponseWriter, r *http.Request)
 			price_sync_probe_table    = COALESCE(NULLIF($4, ''), price_sync_probe_table),
 			price_sync_folder         = COALESCE(NULLIF($5, ''), CASE WHEN $5 = '' THEN NULL ELSE price_sync_folder END),
 			price_sync_currency       = COALESCE($6, price_sync_currency),
-			price_sync_want_schema    = COALESCE($7, price_sync_want_schema)
-		 WHERE id = $1`, id, req.SQLQuery, req.SQLConnection, req.ProbeTable, req.Folder, req.Currency, req.WantSchema); err != nil {
+			price_sync_want_schema    = COALESCE($7, price_sync_want_schema),
+			price_sync_create_missing = COALESCE($8, price_sync_create_missing)
+		 WHERE id = $1`, id, req.SQLQuery, req.SQLConnection, req.ProbeTable, req.Folder, req.Currency, req.WantSchema, req.CreateMissing); err != nil {
 		s.respondErr(w, err)
 		return
 	}

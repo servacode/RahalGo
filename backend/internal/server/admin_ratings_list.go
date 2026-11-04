@@ -31,6 +31,8 @@ type ratingRow struct {
 	MerchantName  string    `json:"merchant_name"`
 	StoreSpeed    *int      `json:"store_speed"`
 	StoreConduct  *int      `json:"store_conduct"`
+	// AppFeedback **كلمةُ الزبون عن التطبيق** (٢٠٢٦-١١-٠٤، هجرة ٠٤٩٨) — لا تضيع.
+	AppFeedback string `json:"app_feedback"`
 }
 
 func (s *Server) handleAdminRatingsList(w http.ResponseWriter, r *http.Request) {
@@ -81,7 +83,8 @@ func (s *Server) handleAdminRatingsList(w http.ResponseWriter, r *http.Request) 
 		       COALESCE(o.customer_id::text, ''), COALESCE(cu.full_name, o.recipient_name, ''),
 		       rt.platform_stars,
 		       COALESCE(o.driver_id::text, ''), COALESCE(dr.full_name, ''), rt.driver_stars,
-		       COALESCE(m.id::text, ''), COALESCE(m.name, ''), mr.speed_stars, mr.conduct_stars
+		       COALESCE(m.id::text, ''), COALESCE(m.name, ''), mr.speed_stars, mr.conduct_stars,
+		       COALESCE(rt.app_feedback, '')
 		`+base+`
 		ORDER BY GREATEST(rt.created_at, mr.created_at) DESC
 		LIMIT $2 OFFSET $3`, low, perPage, (page-1)*perPage, kind, driverID, merchantID)
@@ -95,7 +98,7 @@ func (s *Server) handleAdminRatingsList(w http.ResponseWriter, r *http.Request) 
 		var x ratingRow
 		if err := rows.Scan(&x.OrderID, &x.OrderNumber, &x.CreatedAt, &x.CustomerID, &x.CustomerName,
 			&x.PlatformStars, &x.DriverID, &x.DriverName, &x.DriverStars,
-			&x.MerchantID, &x.MerchantName, &x.StoreSpeed, &x.StoreConduct); err != nil {
+			&x.MerchantID, &x.MerchantName, &x.StoreSpeed, &x.StoreConduct, &x.AppFeedback); err != nil {
 			s.respondErr(w, err)
 			return
 		}

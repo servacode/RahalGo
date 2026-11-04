@@ -734,6 +734,9 @@ func (s *Server) Router() http.Handler {
 		// ولا تكشف إلّا اسمَ المتجر. انظر `recipient_location.go`.
 		r.Get("/public/location-requests/{token}", s.handlePublicLocationRequest)
 		r.Post("/public/location-requests/{token}", s.handlePublicSubmitLocation)
+		// **ورأيُ الزبون بعد التسليم** (٢٠٢٦-١١-٠٤) — برمزٍ لمرّةٍ واحدة. انظر `order_feedback.go`.
+		r.Get("/public/feedback-requests/{token}", s.handlePublicFeedbackRequest)
+		r.Post("/public/feedback-requests/{token}", s.handlePublicSubmitFeedback)
 
 		// ══════════════════════════════════════════════════════════
 		// **ونيّةُ التوسّع تُسجَّل بعد أن يُعيد الخادمُ الحكم** (`CR`)

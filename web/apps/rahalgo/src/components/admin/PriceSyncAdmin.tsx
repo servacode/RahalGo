@@ -18,7 +18,7 @@ import {
   fmtDateTime,
   fmtNum,
 } from "@rahalgo/i18n";
-import { Alert, Button, Card, Input, Select, Textarea } from "@rahalgo/ui";
+import { Alert, Button, Card, Checkbox, Input, Select, Textarea } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { fill } from "@/lib/customer/texts";
 
@@ -37,6 +37,13 @@ interface Config {
   folder: string | null;
   currency: "SYP" | "USD";
   want_schema: boolean;
+  /** **أنشئ غير الموجود أصنافاً مخفيّة** (٢٠٢٦-١١-٠٤) — لقراءة الساعي. */
+  create_missing: boolean;
+  last_run: {
+    source: string;
+    at: string;
+    report: { matched: number; created?: number; zero_price?: number };
+  } | null;
   agent_seen_at: string | null;
   agent_version: string | null;
   agent_error: string | null;
@@ -72,6 +79,7 @@ export default function PriceSyncAdmin({ merchantId }: { merchantId: string }) {
           probe_table: c.probe_table,
           folder: c.folder ?? "",
           currency: c.currency,
+          create_missing: c.create_missing,
           ...extra,
         }),
       });
@@ -152,6 +160,24 @@ export default function PriceSyncAdmin({ merchantId }: { merchantId: string }) {
             <option value="USD">{P.usd}</option>
           </Select>
         </div>
+        <Checkbox
+          id="ps-create-missing"
+          data-testid="ps-create-missing"
+          checked={c.create_missing}
+          onChange={(e) => setC({ ...c, create_missing: e.target.checked })}
+          label={<span className="font-bold">{P.createMissing}</span>}
+        />
+        <p className="-mt-2 text-xs text-ink-muted">{P.createMissingHint}</p>
+        {c.last_run && (
+          <p className="text-xs text-ink-muted" data-testid="ps-last-run">
+            {fill(P.lastRun, {
+              at: fmtDateTime(c.last_run.at),
+              matched: fmtNum(c.last_run.report.matched ?? 0),
+              created: fmtNum(c.last_run.report.created ?? 0),
+              zero: fmtNum(c.last_run.report.zero_price ?? 0),
+            })}
+          </p>
+        )}
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => void save()} disabled={busy}>
             {P.save}

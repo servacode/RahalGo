@@ -145,6 +145,11 @@ type MenuItem struct {
 	// StoreDrinks **«أضف مشروباتي»** (ملاحظاتُ المالك ٢٠٢٦-١٠-٢٩، هجرة 0483) —
 	// تُنسخ قائمةُ مشروبات المتجر إلى هذا الصنف أم لا. **وافتراضُه نعم.**
 	StoreDrinks bool `json:"store_drinks"`
+	// ExternalCode **رقمُ المادّة في الأمين** و`Barcode` الباركود (قرارُ المالك
+	// ٢٠٢٦-١١-٠٤) — به يُربط الصنفُ بمادّته فتُحدَّث أسعارُه من الملفّ. **وفارغُه «غيرُ
+	// مربوط».** للمتجر والمندوب والإدارة وحدَهم — **ولا يصل زبوناً.**
+	ExternalCode string `json:"external_code"`
+	Barcode      string `json:"barcode"`
 }
 
 type MenuSection struct {
@@ -266,7 +271,7 @@ func (s *Service) GetMenu(ctx context.Context, merchantID string) ([]MenuSection
 		       i.merchant_price, i.margin_override, ps.margin_override,
 		       i.platform_section_id, COALESCE(ps.name, ''),
 		       im.path, im.thumb_path, i.available, i.sort_order, i.price_usd_cents,
-		       NOT i.drinks_off
+		       NOT i.drinks_off, COALESCE(i.external_code, ''), COALESCE(i.barcode, '')
 		FROM menu_items i
 		LEFT JOIN platform_sections ps ON ps.id = i.platform_section_id
 		LEFT JOIN media im ON im.id = i.image_media_id
@@ -281,7 +286,7 @@ func (s *Service) GetMenu(ctx context.Context, merchantID string) ([]MenuSection
 			&it.MerchantPrice, &it.MarginOverride, &sectionMargin,
 			&it.PlatformSectionID, &it.PlatformSectionName,
 			&it.ImageURL, &it.ImageThumbURL, &it.Available, &it.SortOrder, &usdCents,
-			&it.StoreDrinks); err != nil {
+			&it.StoreDrinks, &it.ExternalCode, &it.Barcode); err != nil {
 			rows.Close()
 			return nil, err
 		}
@@ -532,6 +537,11 @@ type MenuItemInput struct {
 	// StoreDrinks **«أضف مشروباتي»** (هجرة 0483) — غيرُ مُرسَلٍ يعني بلا تغيير،
 	// **فالنسخةُ القديمة من التطبيق لا تمسّه.** وفي الإنشاء افتراضُه نعم.
 	StoreDrinks *bool `json:"store_drinks"`
+	// ExternalCode **رقمُ المادّة بالأمين** و`Barcode` الباركود — غيرُ مُرسَلٍ بلا تغيير،
+	// **وفارغٌ صريحٌ «افصل الربط».** ورقمٌ مربوطٌ بصنفٍ آخرَ لمتجرٍ واحدٍ يُردّ
+	// (`external_code_taken`) باسم ذاك الصنف.
+	ExternalCode *string `json:"external_code"`
+	Barcode      *string `json:"barcode"`
 }
 
 func (s *Service) CreateItem(ctx context.Context, actorID, merchantID string, in MenuItemInput, ip string) (string, error) {
@@ -603,23 +613,39 @@ func (s *Service) CreateItemIn(ctx context.Context, tx dbtx.Querier, merchantID 
 	if plan.set {
 		usdCents = &plan.cents
 	}
+	// **رقمُ الأمين والباركود** (٢٠٢٦-١١-٠٤) — يُشذَّبان ويُسأل عن الرقم قبل الكتابة.
+	code, err := cleanLink(in.ExternalCode)
+	if err != nil {
+		return "", err
+	}
+	barcode, err := cleanLink(in.Barcode)
+	if err != nil {
+		return "", err
+	}
+	if code != nil {
+		if err := ensureCodeFree(ctx, tx, merchantID, "", *code); err != nil {
+			return "", err
+		}
+	}
 	err = tx.QueryRow(ctx, `
 		INSERT INTO menu_items (merchant_id, name, description,
 		                        merchant_price, price, image_media_id, sort_order,
-		                        platform_section_id, price_usd_cents, drinks_off)
+		                        platform_section_id, price_usd_cents, drinks_off,
+		                        external_code, barcode)
 		SELECT $1, $2, COALESCE($3,''), $4, $4, NULLIF(COALESCE($5, ''), '')::uuid,
 		       COALESCE((SELECT max(sort_order)+1 FROM menu_items
 		                 WHERE merchant_id=$1 AND platform_section_id=$6::uuid), 1),
-		       $6::uuid, $7, NOT COALESCE($8::bool, true)
+		       $6::uuid, $7, NOT COALESCE($8::bool, true),
+		       NULLIF($9::text, ''), NULLIF($10::text, '')
 		WHERE EXISTS (SELECT 1 FROM platform_sections WHERE id = $6::uuid AND active)
 		RETURNING id`,
 		merchantID, *in.Name, in.Description, *in.Price, in.ImageMediaID,
-		*in.PlatformSectionID, usdCents, in.StoreDrinks).Scan(&id)
+		*in.PlatformSectionID, usdCents, in.StoreDrinks, code, barcode).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", httpx.ErrNotFound
 	}
 	if err != nil {
-		return "", err
+		return "", mapCodeDup(err)
 	}
 	if in.Modifiers != nil {
 		if err := insertModifiers(ctx, tx, id, *in.Modifiers); err != nil {
@@ -686,6 +712,20 @@ func (s *Service) UpdateItem(ctx context.Context, actorID, itemID string, in Men
 	if err := s.checkItemBounds(ctx, in); err != nil {
 		return err
 	}
+	// **رقمُ الأمين والباركود** (٢٠٢٦-١١-٠٤) — غيرُ المُرسَل لا يُمسّ، والفارغُ يفصل الربط.
+	code, err := cleanLink(in.ExternalCode)
+	if err != nil {
+		return err
+	}
+	barcode, err := cleanLink(in.Barcode)
+	if err != nil {
+		return err
+	}
+	if code != nil {
+		if err := ensureCodeFree(ctx, tx, merchantID, itemID, *code); err != nil {
+			return err
+		}
+	}
 
 	// ══════════════════════════════════════════════════════════════════
 	// **ووسيطٌ يُمرَّر ولا يُذكر يُسقط الاستعلام كلَّه**
@@ -736,13 +776,16 @@ func (s *Service) UpdateItem(ctx context.Context, actorID, itemID string, in Men
 			price_usd_cents = CASE WHEN $9::bool THEN $10::bigint
 			                       WHEN $11::bool THEN NULL
 			                       ELSE price_usd_cents END,
+			-- **ورقمُ الأمين والباركود**: غيرُ المُرسَل بلا تغيير، والفارغُ يفصل.
+			external_code = CASE WHEN $12::text IS NULL THEN external_code ELSE NULLIF($12, '') END,
+			barcode       = CASE WHEN $13::text IS NULL THEN barcode ELSE NULLIF($13, '') END,
 			updated_at  = now()
 		WHERE id = $1`,
 		itemID, in.Name, in.Description, in.Price, in.Available,
 		in.ImageMediaID, in.MarginOverride, in.PlatformSectionID,
-		plan.set, plan.cents, plan.clear)
+		plan.set, plan.cents, plan.clear, code, barcode)
 	if err != nil {
-		return err
+		return mapCodeDup(err)
 	}
 	if tag.RowsAffected() == 0 {
 		return httpx.ErrNotFound

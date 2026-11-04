@@ -36,6 +36,9 @@ type SyncMapping struct {
 	Price    string `json:"price"`
 	Qty      string `json:"qty,omitempty"`
 	Currency string `json:"currency,omitempty"`
+	// CreateMissing **أنشئ المواد غير الموجودة أصنافاً مخفيّة** (٢٠٢٦-١١-٠٤) — يُحفظ مع
+	// الاختيار فيسري على ملفّ الساعي أيضاً.
+	CreateMissing bool `json:"create_missing,omitempty"`
 }
 
 // Sheet **الملفُّ مقروءاً** — الرأسُ ثمّ الصفوف.

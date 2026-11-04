@@ -120,6 +120,8 @@ const SERVER_ADMIN = new Set([
   "map_learning_no_roads",
   // **رابطُ «أرسل موقعي» انتهى** — صفحةُ المستلِم العامّة على الويب وحدَها (٢٠٢٦-١٠-٢٩).
   "location_request_closed",
+  // **رابطُ رأي الزبون بعد التسليم انتهى** — صفحةُ الويب العامّة وحدَها (٢٠٢٦-١١-٠٤).
+  "feedback_request_closed",
   "free_delivery_invalid",
   // **قرارُ معلمٍ قُرّر من قبل** — لوحةُ العمليّات (٢٠٢٦-١٠-٢١).
   "landmark_decided",

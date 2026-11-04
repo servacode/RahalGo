@@ -196,6 +196,10 @@ fun detailedErrorRes(code: String, details: Map<String, String>): Pair<Int, List
     "promo_min_order" -> details["min_order"]?.toLongOrNull()?.takeIf { it > 0 }?.let {
         R.string.err_promo_min_order_x to listOf(money(it))
     }
+    // **ورقمُ الأمين المربوطُ يقول بأيّ صنفٍ ارتبط** (٢٠٢٦-١١-٠٤).
+    "external_code_taken" -> details["name"]?.trim()?.takeIf { it.isNotEmpty() }?.let {
+        R.string.err_external_code_taken_name to listOf(it)
+    }
     // **وعرضُ المنصّة يقول إلى متى** — «في عرض من رحّال غو على هالصنف لحد {date}».
     "offer_platform_live" -> details["until"]?.trim()?.takeIf { it.isNotEmpty() }?.let {
         R.string.err_offer_platform_live_until to listOf(it)
@@ -380,6 +384,9 @@ private val CODES: Map<String, Int> = mapOf(
     // **وعرضُ رحّال غو يغلب عرضَ المتجر** (قرارُ المالك ٢٠٢٦-١٠-١٥) — يبلغ تطبيقَي المتجر والمندوب.
     "offer_platform_live" to R.string.err_offer_platform_live,
     "item_price_too_high" to R.string.err_item_price_too_high,
+    // **رقمُ المادّة بالأمين** (٢٠٢٦-١١-٠٤) — `catalog/item_link.go`.
+    "external_code_taken" to R.string.err_external_code_taken,
+    "external_code_invalid" to R.string.err_external_code_invalid,
     "bulk_percent_invalid" to R.string.err_bulk_percent_invalid,
     "bulk_amount_invalid" to R.string.err_bulk_amount_invalid,
     "preset_invalid" to R.string.err_preset_invalid,

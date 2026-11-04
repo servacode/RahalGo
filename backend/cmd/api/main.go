@@ -313,6 +313,9 @@ func run(logger *slog.Logger) error {
 			// المسارُ الحيّ.
 			go srv.RunAutoTransferSweeper(ctx, 30*time.Second)
 
+			// **ورأيُ الزبون بعد التسليم بعشر دقائق** (٢٠٢٦-١١-٠٤) — `order_feedback.go`.
+			go srv.RunOrderFeedbackSweeper(ctx, time.Minute)
+
 			// **ومكافآتُ دعوةٍ فاتت** (٢٠٢٦-١٠-٠٦) — مرّةً عند الإقلاع، والختمُ يمنع التكرار.
 			go func() {
 				if n := srv.SettleMissedReferrals(ctx); n > 0 {

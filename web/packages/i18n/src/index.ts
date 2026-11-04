@@ -151,8 +151,15 @@ export function errorText(
   messages: Messages = locales[defaultLocale].messages,
 ): string {
   const errs = messages.errors as unknown as Record<string, string>;
-  const key = (err as { body?: { message_key?: string } })?.body?.message_key;
+  const body = (err as { body?: { message_key?: string; details?: Record<string, unknown> } })?.body;
+  const key = body?.message_key;
   if (typeof key !== "string" || !key) return errs.internal ?? "";
+  /** **ونصٌّ فيه `{name}` يُملأ من `details`** (٢٠٢٦-١١-٠٤) — «مربوط بصنف آخر: {name}». */
+  const fill = (text: string) =>
+    text.replace(/\{(\w+)\}/g, (_m, k: string) => {
+      const v = body?.details?.[k];
+      return typeof v === "string" || typeof v === "number" ? String(v) : "";
+    });
   // **والمفتاحُ يُقرأ كاملاً ثمّ بآخر جزئه** — الخادمُ يرسل `errors.x`
   // و`auth.otpInvalid`، **والمعجمُ يعرف الاثنين في موضعين.**
   const direct = key
@@ -164,7 +171,7 @@ export function errorText(
           : undefined,
       messages as unknown,
     );
-  if (typeof direct === "string" && direct) return direct;
+  if (typeof direct === "string" && direct) return fill(direct);
   const last = key.split(".").pop() ?? "";
-  return errs[last] || errs.internal || "";
+  return fill(errs[last] || errs.internal || "");
 }

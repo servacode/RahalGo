@@ -623,6 +623,9 @@ data class MenuItem(
     val modifiers: List<ModifierGroup> = emptyList(),
     /** **«أضف مشروباتي»** (٢٠٢٦-١٠-٢٩) — قائمةُ مشروبات المتجر على هذا الصنف. ومحرّكٌ قديمٌ لا يرسله ⇒ نعم. */
     @SerialName("store_drinks") val storeDrinks: Boolean = true,
+    /** **رقمُ المادّة بالأمين والباركود** (٢٠٢٦-١١-٠٤) — وفارغُهما غيرُ مربوط. */
+    @SerialName("external_code") val externalCode: String = "",
+    val barcode: String = "",
 )
 
 @Serializable
@@ -886,6 +889,9 @@ data class MenuItemInput(
     @SerialName("price_usd") val priceUsd: Double? = null,
     /** **«أضف مشروباتي»** (٢٠٢٦-١٠-٢٩) — و`null` بلا تغيير. */
     @SerialName("store_drinks") val storeDrinks: Boolean? = null,
+    /** **رقمُ المادّة بالأمين والباركود** (٢٠٢٦-١١-٠٤) — `null` بلا تغيير، والفارغُ يفصل الربط. */
+    @SerialName("external_code") val externalCode: String? = null,
+    val barcode: String? = null,
 )
 
 /** **سعرُ صرف المتجر** — `PATCH /merchant/stores/{id}/exchange-rate`. */

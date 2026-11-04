@@ -93,6 +93,9 @@ export interface MenuItem {
   /** **عملةُ الصنف** «SYP» أو «USD» — وبالدولار سعرُه `merchant_price_usd`. */
   price_currency?: string;
   merchant_price_usd?: number | null;
+  /** **رقمُ المادّة بالأمين** والباركود (٢٠٢٦-١١-٠٤) — وفارغُه غيرُ مربوط. */
+  external_code?: string;
+  barcode?: string;
 }
 /** قسمُ منصةٍ كما تراه شاشةُ التحرير — الاسمُ وحدَه يلزم. */
 export interface PlatformSection {
@@ -599,6 +602,9 @@ export function ItemModal({
   const [imageID, setImageID] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  /** **رقمُ المادّة بالأمين والباركود** (٢٠٢٦-١١-٠٤) — وفارغُهما يفصل الربط. */
+  const [amenCode, setAmenCode] = useState(item?.external_code ?? "");
+  const [barcode, setBarcode] = useState(item?.barcode ?? "");
 
   function updateGroup(i: number, patch: Partial<ModifierGroup>) {
     setGroups((gs) => gs.map((g, gi) => (gi === i ? { ...g, ...patch } : g)));
@@ -628,6 +634,8 @@ export function ItemModal({
       ...(usd ? { price_usd: usdValue } : { price: Number(price) || 0 }),
       // **والفراغُ الصريح يرفع التصنيف** — يقرؤه الخادمُ «ارفع» لا «بلا تغيير».
       platform_section_id: psID,
+      external_code: amenCode.trim(),
+      barcode: barcode.trim(),
       modifiers: groups.map((g) => ({
         ...g,
         options: g.options.map(({ _usd, price_delta_usd: _old, ...rest }) => {
@@ -774,6 +782,28 @@ export function ItemModal({
         )}
         </div>
         {imageUpload?.(item?.image_thumb_url, setImageID)}
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" data-testid="item-amen-link">
+          <div>
+            <Input
+              id="i-amen-code"
+              label={IT.amenCode}
+              dir="ltr"
+              maxLength={64}
+              value={amenCode}
+              onChange={(e) => setAmenCode(e.target.value)}
+            />
+            <p className="mt-1 text-2xs text-ink-muted">{IT.amenCodeHint}</p>
+          </div>
+          <Input
+            id="i-barcode"
+            label={IT.barcodeLabel}
+            dir="ltr"
+            maxLength={64}
+            value={barcode}
+            onChange={(e) => setBarcode(e.target.value)}
+          />
+        </div>
 
         <div>
           <span className="mb-1 block text-sm font-medium">{L.modifiers}</span>

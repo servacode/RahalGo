@@ -42,6 +42,8 @@ interface Row {
   merchant_name: string;
   store_speed: number | null;
   store_conduct: number | null;
+  /** **كلمةُ الزبون عن التطبيق** (من رابط ما بعد التسليم) — لا تضيع. */
+  app_feedback: string;
 }
 
 /** **لونُ الرقم** — المنخفضُ أحمر، والمتوسّطُ أصفر، والجيّدُ أخضر. */
@@ -310,6 +312,13 @@ export function RatingsList({
                     </div>
                   )}
                 </div>
+
+                {r.app_feedback && (
+                  <div className="rounded-control bg-field px-3 py-2">
+                    <p className="text-sm text-ink-muted">{L.appFeedback}</p>
+                    <p className="mt-1 whitespace-pre-wrap break-words">{r.app_feedback}</p>
+                  </div>
+                )}
               </li>
             );
           })}

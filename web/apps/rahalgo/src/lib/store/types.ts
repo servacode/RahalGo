@@ -136,6 +136,9 @@ export interface MenuItem {
   modifiers?: ModifierGroup[];
   /** **«أضف مشروباتي»** (هجرة 0483) — تُنسخ قائمةُ مشروبات المتجر إلى الصنف أم لا. وغيابُه نعم. */
   store_drinks?: boolean;
+  /** **رقمُ المادّة بالأمين** والباركود (٢٠٢٦-١١-٠٤) — وفارغُه غيرُ مربوط. */
+  external_code?: string;
+  barcode?: string;
 }
 
 /** **مجموعةُ إضافات** — `catalog.ModifierGroup`، **وتُستبدل كلُّها عند الحفظ.** */

@@ -60,6 +60,9 @@ data class ItemDraft(
      * إلى هذا الصنف أم لا. **وافتراضُه نعم** كما كان قبل المفتاح.
      */
     val storeDrinks: Boolean = true,
+    /** **رقمُ المادّة بالأمين والباركود** (٢٠٢٦-١١-٠٤) — وفارغُهما غيرُ مربوط. */
+    val externalCode: String = "",
+    val barcode: String = "",
 ) {
     val isNew: Boolean get() = itemId.isEmpty()
     val isUsd: Boolean get() = currency == CURRENCY_USD

@@ -298,6 +298,9 @@ export default function ItemEditor({
   );
   /** **«أضف مشروباتي»** — وافتراضُه نعم كما كان. */
   const [storeDrinks, setStoreDrinks] = useState(item?.store_drinks !== false);
+  /** **رقمُ المادّة بالأمين والباركود** (٢٠٢٦-١١-٠٤) — وفارغُهما يفصل الربط. */
+  const [amenCode, setAmenCode] = useState(item?.external_code ?? "");
+  const [barcode, setBarcode] = useState(item?.barcode ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [askDelete, setAskDelete] = useState(false);
@@ -439,6 +442,8 @@ export default function ItemEditor({
       platform_section_id: section,
       modifiers,
       store_drinks: storeDrinks,
+      external_code: amenCode.trim(),
+      barcode: barcode.trim(),
       price_currency: currency,
       ...(usd ? { price_usd: usdValue } : { price: syp }),
       ...(imageId !== null ? { image_media_id: imageId } : {}),
@@ -622,6 +627,37 @@ export default function ItemEditor({
           disabled={busy}
           onPick={(id) => {
             setSection(id);
+            dirty();
+          }}
+        />
+      </div>
+
+      {/* ── ٣ب · رقمُ المادّة بالأمين — يربط الصنفَ بملف الأسعار (٢٠٢٦-١١-٠٤) ── */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" data-testid="item-amen-link">
+        <div>
+          <Input
+            id="item-amen-code"
+            label={I.amenCode}
+            dir="ltr"
+            maxLength={64}
+            disabled={busy}
+            value={amenCode}
+            onChange={(e) => {
+              setAmenCode(e.target.value);
+              dirty();
+            }}
+          />
+          <p className="mt-1 text-xs text-ink-muted">{I.amenCodeHint}</p>
+        </div>
+        <Input
+          id="item-barcode"
+          label={I.barcodeLabel}
+          dir="ltr"
+          maxLength={64}
+          disabled={busy}
+          value={barcode}
+          onChange={(e) => {
+            setBarcode(e.target.value);
             dirty();
           }}
         />

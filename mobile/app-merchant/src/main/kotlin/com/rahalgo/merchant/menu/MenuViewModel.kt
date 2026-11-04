@@ -406,6 +406,8 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
             currency = item.priceCurrency,
             priceUsd = com.rahalgo.ui.menu.usdText(item.merchantPriceUsd),
             storeDrinks = item.storeDrinks,
+            externalCode = item.externalCode,
+            barcode = item.barcode,
         )
         loadedDraft = editing
     }
@@ -506,6 +508,9 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                 priceCurrency = d.currency,
                 priceUsd = usd,
                 storeDrinks = d.storeDrinks,
+                // **ورقمُ الأمين يُرسل دائماً** — والفارغُ يفصل الربط (٢٠٢٦-١١-٠٤).
+                externalCode = d.externalCode.trim(),
+                barcode = d.barcode.trim(),
             )
             runCatching {
                 if (d.itemId.isEmpty()) {

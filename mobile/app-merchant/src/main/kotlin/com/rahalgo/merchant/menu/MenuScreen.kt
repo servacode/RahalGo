@@ -143,6 +143,8 @@ fun MenuScreen(
             readOnly = vm.suspended,
             // **المشروباتُ للمطاعم وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
             drinksAllowed = vm.drinks.allowed,
+            // **ورقمُ المادّة بالأمين** (٢٠٢٦-١١-٠٤) — كالويب.
+            amenLinkAllowed = true,
         )
         return
     }

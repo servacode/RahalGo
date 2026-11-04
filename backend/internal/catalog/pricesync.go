@@ -20,8 +20,9 @@ package catalog
 //   - **السعرُ سعرُ البيع في الأمين** = سعرُ المتجر عندنا، وعمولةُ المنصّة عليه كأيّ صنف.
 //     **وبالدولار إن كانت أسعارُ المول دولاراً** — فيتبع سعرَ الصرف كالأصناف.
 //   - **والكميّةُ تحكم التوفّر** (قرارُ المالك): صفرٌ ⇒ «غير متوفر»، وفوقه ⇒ «متوفر».
-//   - **ولا يُنشأ صنفٌ جديدٌ هنا** — مادّةٌ لا مقابلَ لها تُذكر في التقرير. **وإنشاؤها
-//     ينتظر ملفَّ مولٍ حقيقيّ** يُرى فيه كيف تُقسَم موادُّه، فتوضع في أقسام السوق.
+//   - **ولا يُنشأ صنفٌ جديدٌ ما لم يُطلب صراحةً** (`CreateMissing`، ٢٠٢٦-١١-٠٤): مادّةٌ لا
+//     مقابلَ لها تُذكر في التقرير، **وبالخيار تصير صنفاً مخفيّاً** في قسم انتظار
+//     (`pricesync_create.go`).
 //
 // **و«جرّب» لا يكتب شيئاً** — يقول ما سيتغيّر قبل أن يتغيّر.
 
@@ -54,6 +55,9 @@ type SyncOptions struct {
 	Source string
 	// ActorID **من رفعها** — وفارغٌ للساعي.
 	ActorID string
+	// CreateMissing **«أنشئ المواد غير الموجودة أصنافاً مخفيّة»** (٢٠٢٦-١١-٠٤) — مُطفأٌ
+	// افتراضاً. انظر `pricesync_create.go`.
+	CreateMissing bool
 }
 
 // SyncIssue **مادّةٌ لم تُطبَّق** ولماذا.
@@ -66,16 +70,25 @@ type SyncIssue struct {
 
 // SyncReport **ما وقع — أو ما سيقع في «جرّب».**
 type SyncReport struct {
-	DryRun          bool        `json:"dry_run"`
-	Rows            int         `json:"rows"`
-	Matched         int         `json:"matched"`
-	PriceChanged    int         `json:"price_changed"`
-	MadeAvailable   int         `json:"made_available"`
-	MadeUnavailable int         `json:"made_unavailable"`
-	LinkedByName    int         `json:"linked_by_name"`
-	Unchanged       int         `json:"unchanged"`
-	Unmatched       int         `json:"unmatched"`
-	Skipped         []SyncIssue `json:"skipped"`
+	DryRun          bool `json:"dry_run"`
+	Rows            int  `json:"rows"`
+	Matched         int  `json:"matched"`
+	PriceChanged    int  `json:"price_changed"`
+	MadeAvailable   int  `json:"made_available"`
+	MadeUnavailable int  `json:"made_unavailable"`
+	LinkedByName    int  `json:"linked_by_name"`
+	Unchanged       int  `json:"unchanged"`
+	Unmatched       int  `json:"unmatched"`
+	// Created **أصنافٌ جديدةٌ مخفيّة** (أو ما سيُنشأ في «جرّب»)، وCreatedZeroPrice منها
+	// ما سعرُه صفرٌ أو غائب. CreateSkipped **مادّةٌ بلا رقمٍ أو بلا اسم** فلم تُنشأ.
+	// ZeroPrice **كلُّ صفٍّ سعرُه صفر** مطابَقاً كان أو جديداً.
+	Created          int `json:"created"`
+	CreatedZeroPrice int `json:"created_zero_price"`
+	CreateSkipped    int `json:"create_skipped"`
+	ZeroPrice        int `json:"zero_price"`
+	// CreatedSample **أوّلُ ما أُنشئ** للعرض.
+	CreatedSample []SyncIssue `json:"created_sample"`
+	Skipped       []SyncIssue `json:"skipped"`
 	// UnmatchedSample **أوّلُ ما لم يُطابَق** — لا كلُّه: قائمةُ مولٍ آلافُ مادّة.
 	UnmatchedSample []SyncIssue `json:"unmatched_sample"`
 }
@@ -165,7 +178,9 @@ func (s *Service) SyncPrices(ctx context.Context, merchantID string, rows []Sync
 		byName[n] = append(byName[n], i)
 	}
 
-	rep := &SyncReport{DryRun: opt.DryRun, Rows: len(rows), Skipped: []SyncIssue{}, UnmatchedSample: []SyncIssue{}}
+	rep := &SyncReport{DryRun: opt.DryRun, Rows: len(rows), Skipped: []SyncIssue{}, UnmatchedSample: []SyncIssue{}, CreatedSample: []SyncIssue{}}
+	var toCreate []newItem
+	createdCodes := map[string]bool{}
 	skip := func(i int, r SyncRow, why string) {
 		if len(rep.Skipped) < maxSample {
 			rep.Skipped = append(rep.Skipped, SyncIssue{Row: i + 1, Code: r.Code, Name: r.Name, Reason: why})
@@ -179,8 +194,46 @@ func (s *Service) SyncPrices(ctx context.Context, merchantID string, rows []Sync
 			idx = j
 		} else if j, ok := byBarcode[r.Barcode]; ok && r.Barcode != "" {
 			idx = j
+		} else if hits := byName[normName(CleanItemName(r.Name))]; r.Name != "" && len(hits) == 1 {
+			idx, byNameHit = hits[0], true
 		} else if hits := byName[normName(r.Name)]; r.Name != "" && len(hits) == 1 {
 			idx, byNameHit = hits[0], true
+		}
+		if idx < 0 && opt.CreateMissing {
+			name := CleanItemName(r.Name)
+			switch {
+			case r.Code == "" || name == "":
+				rep.CreateSkipped++
+				skip(i, r, "no_code_or_name")
+			case createdCodes[r.Code]:
+				skip(i, r, "duplicate")
+			default:
+				n := newItem{code: r.Code, name: name}
+				if r.Price != nil && *r.Price > 0 && !math.IsNaN(*r.Price) && !math.IsInf(*r.Price, 0) {
+					if usd {
+						c := dollarsToCents(*r.Price)
+						if c > 0 {
+							n.cents, n.price = &c, USDToSYP(c, rate)
+						}
+					} else {
+						n.price = int64(math.Round(*r.Price))
+					}
+				}
+				if max > 0 && n.price > max {
+					skip(i, r, "price_too_high")
+					continue
+				}
+				if n.price == 0 {
+					rep.ZeroPrice++
+					rep.CreatedZeroPrice++
+				}
+				createdCodes[r.Code] = true
+				toCreate = append(toCreate, n)
+				if len(rep.CreatedSample) < maxSample {
+					rep.CreatedSample = append(rep.CreatedSample, SyncIssue{Row: i + 1, Code: r.Code, Name: name, Reason: "created"})
+				}
+			}
+			continue
 		}
 		if idx < 0 {
 			rep.Unmatched++
@@ -203,6 +256,9 @@ func (s *Service) SyncPrices(ctx context.Context, merchantID string, rows []Sync
 		if r.Price != nil {
 			p := *r.Price
 			if p <= 0 || math.IsNaN(p) || math.IsInf(p, 0) {
+				if p == 0 {
+					rep.ZeroPrice++
+				}
 				skip(i, r, "bad_price")
 				continue
 			}
@@ -267,9 +323,15 @@ func (s *Service) SyncPrices(ctx context.Context, merchantID string, rows []Sync
 		}
 	}
 
+	rep.Created = len(toCreate)
 	if opt.DryRun {
 		return rep, nil
 	}
+	made, err := insertNewItems(ctx, tx, merchantID, toCreate)
+	if err != nil {
+		return nil, err
+	}
+	rep.Created = made
 	raw, _ := json.Marshal(rep)
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO price_sync_runs (merchant_id, source, report, created_by)

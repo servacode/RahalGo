@@ -3181,6 +3181,10 @@
         {
           "name": "want_schema",
           "type": "?bool"
+        },
+        {
+          "name": "create_missing",
+          "type": "?bool"
         }
       ],
       "response": [
@@ -10654,6 +10658,58 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/public/feedback-requests/{token}",
+      "handler": "handlePublicFeedbackRequest",
+      "auth": false,
+      "response": [
+        {
+          "name": "has_driver",
+          "type": "unknown"
+        },
+        {
+          "name": "order_number",
+          "type": "unknown"
+        },
+        {
+          "name": "status",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/public/feedback-requests/{token}",
+      "handler": "handlePublicSubmitFeedback",
+      "auth": false,
+      "request": [
+        {
+          "name": "service_stars",
+          "type": "int"
+        },
+        {
+          "name": "driver_stars",
+          "type": "?int"
+        },
+        {
+          "name": "feedback",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "ok",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/public/governorates",
       "handler": "handlePublicGovernorates",
       "auth": false
@@ -11000,6 +11056,10 @@
         },
         {
           "name": "dry_run",
+          "type": "bool"
+        },
+        {
+          "name": "create_missing",
           "type": "bool"
         }
       ],
