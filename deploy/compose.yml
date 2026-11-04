@@ -176,7 +176,7 @@ services:
       RAHALGO_API_INTERNAL_URL: http://api:8080
       RAHALGO_SITE_URL: https://rahalgo.com
       RAHALGO_ENVIRONMENT: production
-      RAHALGO_MAP_STYLE_URL: https://maps.rahalgo.com/map-resources/1/style.online.json
+      RAHALGO_MAP_STYLE_URL: https://maps.rahalgo.com/map-resources/5/style.online.json
     depends_on:
       - api
 
