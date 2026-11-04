@@ -832,9 +832,10 @@ internal fun ItemCard(
     val full = media(item.imageUrl ?: item.imageThumbUrl)
     // **القلبُ قرصٌ صغيرٌ يطفو على زاوية البطاقة العليا (بدايةُ الاتجاه)، ثلثُه خارجَ الإطار**
     // (قرارُ المالك ٢٠٢٦-١١-٠٤) — ليأخذ شريطُ السعر العرضَ كلَّه ويظهر «$ ≈ ل.س» كاملاً.
-    // **والحشوةُ الخارجيّةُ بقدر النتوء** كي لا يُقصّ القرصُ ولا يلتصق ببطاقةٍ مجاورة.
     Box {
-    Column(Modifier.padding(start = 10.dp, end = 10.dp, top = 10.dp)) {
+    // **ولا حشوةَ يميناً ويساراً** (المالك ٢٠٢٦-١١-٠٤: «بادينك كبير بين الأصناف ما يلزم»)
+    // — فوقُ ٦ فقط، والقرصُ ينتأ ٦ إلى جانبه في الفراغ بين البطاقات (٨) فلا يُقصّ.
+    Column(Modifier.padding(top = 6.dp)) {
         Column(
             Modifier
                 .fillMaxWidth()
@@ -1025,6 +1026,7 @@ internal fun ItemCard(
     Box(
         Modifier
             .align(Alignment.TopStart)
+            .offset(x = (-6).dp)
             .size(36.dp)
             .clip(CircleShape)
             .clickable(onClick = onLike),
