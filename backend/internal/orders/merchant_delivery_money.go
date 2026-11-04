@@ -182,8 +182,10 @@ func (s *Service) settleMerchantDelivery(ctx context.Context, q wallet.Querier,
 	case in.to == StAccepted && in.from == StPending:
 		var merchantID, payer string
 		var fee int64
+		// **وطلبُ الواتساب بلا متجرٍ مربوط** (٢٠٢٦-١١-٠٥) — فراغٌ لا NULL يُسقط القراءة. ولا
+		// يمرّ من هنا أصلاً (يولد في الطابور)، **والقراءةُ تصمد إن مرّ.**
 		if err := q.QueryRow(ctx, `
-			SELECT merchant_id::text, COALESCE(fee_payer, ''), delivery_fee
+			SELECT COALESCE(merchant_id::text, ''), COALESCE(fee_payer, ''), delivery_fee
 			  FROM orders WHERE id = $1`, in.orderID).Scan(&merchantID, &payer, &fee); err != nil {
 			return err
 		}
@@ -229,13 +231,17 @@ func (s *Service) settleMerchantDelivery(ctx context.Context, q wallet.Querier,
 		return s.creditTreasury(ctx, q, in.orderID, in.actorID)
 
 	case refundOnEnter(in.to) && in.from != StDelivered:
-		var merchantID, ownerID, payer, fault, reason string
+		var merchantID, ownerID, payer, fault, reason, origin string
 		var fee int64
+		// **ضمٌّ يساريّ** — طلبُ الواتساب بلا متجرٍ مربوط (قرارُ المالك ٢٠٢٦-١١-٠٥)، **وضمٌّ صلبٌ
+		// يردّ «لا صفوف» فيسقط إلغاؤه كلُّه.**
 		if err := q.QueryRow(ctx, `
-			SELECT o.merchant_id::text, m.owner_user_id::text, COALESCE(o.fee_payer, ''),
-			       COALESCE(o.fault, ''), COALESCE(o.fail_reason, ''), o.delivery_fee
-			  FROM orders o JOIN merchants m ON m.id = o.merchant_id
-			 WHERE o.id = $1`, in.orderID).Scan(&merchantID, &ownerID, &payer, &fault, &reason, &fee); err != nil {
+			SELECT COALESCE(o.merchant_id::text, ''), COALESCE(m.owner_user_id::text, ''),
+			       COALESCE(o.fee_payer, ''), COALESCE(o.fault, ''), COALESCE(o.fail_reason, ''),
+			       o.delivery_fee, o.origin
+			  FROM orders o LEFT JOIN merchants m ON m.id = o.merchant_id
+			 WHERE o.id = $1`, in.orderID).
+			Scan(&merchantID, &ownerID, &payer, &fault, &reason, &fee, &origin); err != nil {
 			return err
 		}
 		collected, err := merchantDeliveryCollected(ctx, q, in.orderID)
@@ -243,6 +249,11 @@ func (s *Service) settleMerchantDelivery(ctx context.Context, q wallet.Querier,
 			return err
 		}
 		afterPickup := in.to == StFailed && in.driverID != nil && pastPickup[in.from]
+
+		// **وطلبُ الواتساب لا متجرَ يُردّ له ولا يُحمَّل** — فرعُه وحدَه (`settleWhatsAppEnded`).
+		if origin == OriginWhatsApp {
+			return s.settleWhatsAppEnded(ctx, q, in, out, fault, reason, collected, afterPickup)
+		}
 
 		// ══════════════════════════════════════════════════════════════
 		// **فشلٌ بعد الاستلام بذنب المستلِم أو المتجر ⇒ كأنّها سُلّمت** (قرارُ المالك ٢٠٢٦-١٠-١٥)
@@ -313,6 +324,42 @@ func (s *Service) settleMerchantDelivery(ctx context.Context, q wallet.Querier,
 		return s.creditTreasury(ctx, q, in.orderID, in.actorID)
 	}
 	return nil
+}
+
+// settleWhatsAppEnded **طلبُ واتسابٍ انتهى بلا تسليم** (قرارُ المالك ٢٠٢٦-١١-٠٥).
+//
+// **لا متجرَ مربوطاً يُردّ له أو يُحمَّل، ولا محفظةَ خُصمت** (`orders_whatsapp_shape`):
+// المستلِمُ يدفع الأجرةَ نقداً عند التسليم، **والبضاعةُ خارجَ الدفتر** — دفعها السائقُ للمتجر
+// من جيبه ويُعيدها للمكتب. **فلا ردَّ ولا دينَ على أحد، والسائقُ وحدَه قد يستحقّ.**
+//
+//	قبل الاستلام                ⇐ لا شيء
+//	بعد الاستلام بذنب السائق    ⇐ لا أجرَ ولا تعويض — ومن يتحمّل الكلفةَ يختاره المكتبُ عند الباب
+//	بعد الاستلام بغير ذنبه      ⇐ طلبُ تعويضٍ معلَّقٌ يوافق عليه إنسان (بذنبه الحقيقيّ، وفارغُه المنصّة)
+//
+// **ولا يمرّ بـ`merchantBearsFailedDelivery`**: كان يخصم من محفظة متجرٍ لا وجودَ له أو يكتب
+// عليه ديناً. **ولا يُخلَق قيد**: الخزينةُ تُحاسَب على ما قُبض فعلاً (صفرٌ هنا).
+func (s *Service) settleWhatsAppEnded(ctx context.Context, q wallet.Querier,
+	in settlement, out *settled, fault, reason string, collected int64, afterPickup bool) error {
+	// **ونقدٌ قُبض من المستلِم يُردّ له إن لم يكن الذنبُ ذنبَه** — لا يقع اليوم (يدفع عند
+	// التسليم)، **ويصمد إن وقع.**
+	if fault != FaultCustomer && collected > 0 {
+		if err := s.returnRecipientCash(ctx, q, in.orderID, collected, in.actorID); err != nil {
+			return err
+		}
+	}
+	if afterPickup && fault != FaultDriver {
+		compFault := FaultPlatform
+		if fault == FaultCustomer || fault == FaultMerchant {
+			compFault = fault
+		}
+		created, err := s.requestDriverCompensation(ctx, q, in.orderID, in.driverID,
+			compFault, reason, in.deliveryFee)
+		if err != nil {
+			return err
+		}
+		out.compensationRequested = out.compensationRequested || created
+	}
+	return s.creditTreasury(ctx, q, in.orderID, in.actorID)
 }
 
 // merchantBearsFailedDelivery **المتجرُ يدفع الأجرةَ كأنّها سُلّمت** — فشلٌ بعد الاستلام

@@ -55,8 +55,9 @@ func TestSelectDefaultsToProvable(t *testing.T) {
 	if len(Select()) == len(All) {
 		t.Fatal("الانتقاءُ لم يستثنِ شيئاً — والحارسُ بلا معنى")
 	}
-	if got := Select("FI-06"); len(got) != 4 {
-		t.Errorf("FI-06 ردّت %d فحصاً — يُنتظر 4", len(got))
+	// **وخامسُها FI-06.e** — طلبُ الواتساب لا يحرّك إلّا الأجرة (٢٠٢٦-١١-٠٥).
+	if got := Select("FI-06"); len(got) != 5 {
+		t.Errorf("FI-06 ردّت %d فحصاً — يُنتظر 5", len(got))
 	}
 	if got := Select("FI-06.a"); len(got) != 1 {
 		t.Errorf("انتقاءُ فحصٍ بعينه ردّ %d", len(got))
