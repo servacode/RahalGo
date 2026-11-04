@@ -1317,7 +1317,7 @@ kosom` |
 | `merchants.cancel_ban_count` | المتاجر | int | `5` |
 | `merchants.cancel_ban_days` | المتاجر | int | `30` |
 | `merchants.default_prep_minutes` | المتاجر | int | `20` |
-| `merchants.max_item_price` | المتاجر | int | `1000` |
+| `merchants.max_item_price` | المتاجر | int | `0` |
 | `app.min_version.rep` | المندوبون | int | `0` |
 | `sales.require_whatsapp` | المندوبون | bool | `true` |
 | `leads.auto_approve` | المندوبون | bool | `false` |
