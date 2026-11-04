@@ -67,7 +67,7 @@ export function FeaturedStrip({ stores }: { stores: FeaturedStore[] }) {
           <li key={s.id} className="w-20 shrink-0 snap-start">
             <Link href={`/stores/${s.id}`} className="flex flex-col items-center gap-1.5 text-center">
               <StoreLogo name={s.name} logo={s.logo_thumb_url ?? s.logo_url} className={`h-20 w-20 ${s.open_now ? "" : "opacity-70"}`} />
-              <span className="line-clamp-2 w-full text-xs font-medium leading-snug">{s.name}</span>
+              <span className="w-full text-2xs font-medium leading-tight [overflow-wrap:anywhere]">{s.name}</span>
             </Link>
           </li>
         ))}

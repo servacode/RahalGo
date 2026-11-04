@@ -122,13 +122,17 @@ private fun FeaturedName(name: String) {
         color = Rahal.colors.ink,
         textAlign = TextAlign.Center,
     )
+    // **والاسمُ يطلع كاملاً دائماً** (طلبُ المالك ٢٠٢٦-١١-٠٤: «لازم تطلع كاملة نصغّر الخط
+    // بشكل مناسب») — سطرٌ واحدٌ يصغر حتّى ٩، **وما لا يسعه ولو صغر ينزل لسطرٍ ثانٍ** بدل النقاط.
+    var twoLines by remember(name) { mutableStateOf(false) }
     BasicText(
         text = name,
         style = base,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        // **وأصغرُ خطٍّ ١٠** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧) — ٨ ما بينقرا على شاشة صغيرة.
-        autoSize = TextAutoSize.StepBased(minFontSize = 10.sp, maxFontSize = base.fontSize),
+        maxLines = if (twoLines) 2 else 1,
+        softWrap = twoLines,
+        overflow = TextOverflow.Clip,
+        autoSize = TextAutoSize.StepBased(minFontSize = 9.sp, maxFontSize = base.fontSize),
+        onTextLayout = { r -> if (!twoLines && r.hasVisualOverflow) twoLines = true },
         modifier = Modifier.fillMaxWidth(),
     )
 }
