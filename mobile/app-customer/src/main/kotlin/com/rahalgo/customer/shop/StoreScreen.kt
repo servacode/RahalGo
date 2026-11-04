@@ -82,6 +82,7 @@ internal fun FeaturedStrip(
             modifier = Modifier.padding(horizontal = 14.dp),
         )
         Spacer(Modifier.height(Rahal.space.sm))
+        val nameSize = rememberFeaturedNameSize(stores.map { it.name }, 76.dp)
         LazyRow(
             contentPadding = PaddingValues(horizontal = 14.dp),
             horizontalArrangement = Arrangement.spacedBy(Rahal.space.md),
@@ -105,7 +106,7 @@ internal fun FeaturedStrip(
                             .alpha(if (s.openNow) 1f else 0.7f),
                     )
                     Spacer(Modifier.height(Rahal.space.xs))
-                    FeaturedName(s.name)
+                    FeaturedName(s.name, nameSize)
                 }
             }
         }
@@ -113,26 +114,50 @@ internal fun FeaturedStrip(
 }
 
 /**
- * **اسمُ المتجر المميّز بسطرٍ واحد** (طلبُ المالك ٢٠٢٦-١٠-١٩: «بدي بسطر واحد بس يصغر خطه
- * اذا كان طويل شوي») — **يصغر الخطُّ حتّى يسع**، وما لا يسعه ولو صغر يُختم بنقاط.
+ * **حجمُ خطٍّ واحدٌ لكلّ أسماء الشريط** (قرارُ المالك ٢٠٢٦-١١-٠٤: «خط واحد للكل») — **أكبرُ حجمٍ
+ * يسع عنده كلُّ اسمٍ في سطرين على عرض المربّع**، يُحسب مرّةً للقائمة بقياس النصّ فعلاً، وأرضيّتُه ٩.
+ * **ولا نقاطَ في آخر الاسم أبداً** — ينزل لسطرٍ ثانٍ.
  */
 @Composable
-private fun FeaturedName(name: String) {
-    val base = MaterialTheme.typography.labelMedium.copy(
-        color = Rahal.colors.ink,
-        textAlign = TextAlign.Center,
-    )
-    // **والاسمُ يطلع كاملاً دائماً** (طلبُ المالك ٢٠٢٦-١١-٠٤: «لازم تطلع كاملة نصغّر الخط
-    // بشكل مناسب») — سطرٌ واحدٌ يصغر حتّى ٩، **وما لا يسعه ولو صغر ينزل لسطرٍ ثانٍ** بدل النقاط.
-    var twoLines by remember(name) { mutableStateOf(false) }
+private fun rememberFeaturedNameSize(names: List<String>, tile: androidx.compose.ui.unit.Dp): androidx.compose.ui.unit.TextUnit {
+    val base = MaterialTheme.typography.labelMedium
+    val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    return remember(names, tile, density, base) {
+        val widthPx = with(density) { tile.roundToPx() }
+        val top = base.fontSize.value
+        var size = top
+        while (size > FEATURED_MIN_SP) {
+            val fits = names.all { n ->
+                val r = measurer.measure(
+                    text = n,
+                    style = base.copy(fontSize = size.sp, textAlign = TextAlign.Center),
+                    maxLines = 2,
+                    softWrap = true,
+                    constraints = androidx.compose.ui.unit.Constraints(maxWidth = widthPx),
+                )
+                !r.didOverflowHeight && !r.didOverflowWidth
+            }
+            if (fits) break
+            size -= 0.5f
+        }
+        size.coerceAtLeast(FEATURED_MIN_SP).sp
+    }
+}
+
+private const val FEATURED_MIN_SP = 9f
+
+@Composable
+private fun FeaturedName(name: String, size: androidx.compose.ui.unit.TextUnit) {
     BasicText(
         text = name,
-        style = base,
-        maxLines = if (twoLines) 2 else 1,
-        softWrap = twoLines,
+        style = MaterialTheme.typography.labelMedium.copy(
+            color = Rahal.colors.ink,
+            textAlign = TextAlign.Center,
+            fontSize = size,
+        ),
+        softWrap = true,
         overflow = TextOverflow.Clip,
-        autoSize = TextAutoSize.StepBased(minFontSize = 9.sp, maxFontSize = base.fontSize),
-        onTextLayout = { r -> if (!twoLines && r.hasVisualOverflow) twoLines = true },
         modifier = Modifier.fillMaxWidth(),
     )
 }
@@ -313,7 +338,7 @@ internal fun StoreScreen(
 
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(ShopCols),
-                    contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 96.dp),
+                    contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 16.dp + com.rahalgo.ui.LocalChatFabInset.current),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
@@ -327,6 +352,7 @@ internal fun StoreScreen(
                             onLike = { onLike(item) },
                             // **ولا رابطَ إلى الصفحة التي هو فيها** (`StoreLink`).
                             onStore = StoreLink.target(item, vm.storeId)?.let { id -> { vm.openStore(id) } },
+                            showStoreName = false,
                         )
                     }
                 }

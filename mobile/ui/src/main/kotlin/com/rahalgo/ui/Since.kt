@@ -50,13 +50,61 @@ object Since {
      */
     fun text(context: Context, iso: String, now: Instant = Instant.now()): String {
         val minutes = minutes(iso, now) ?: return ""
-        val amount = when {
-            minutes < 60 -> "$minutes " + context.getString(R.string.ord_min)
-            minutes < 60 * HOURS_IN_DAY -> "${minutes / 60} " + context.getString(R.string.ord_hr)
-            else -> "${minutes / (60 * HOURS_IN_DAY)} " + context.getString(R.string.ord_day)
+        // **كلماتٌ كاملةٌ لا حروفٌ** (٢٠٢٦-١١-٠٤): «منذ 1 ي» لم يفهمها الزبون — «منذ دقيقة / ٥ دقائق /
+        // ساعتين / يومين»، **وما جاوز يومين تاريخٌ ووقتٌ بتوقيت دمشق.**
+        val age = age(minutes)
+        val amount = when (age.unit) {
+            Part.DATE -> return runCatching {
+                java.time.OffsetDateTime.parse(iso).atZoneSameInstant(SYRIA_ZONE).format(DATE_TIME)
+            }.getOrNull() ?: runCatching {
+                Instant.parse(iso).atZone(SYRIA_ZONE).format(DATE_TIME)
+            }.getOrDefault("")
+            Part.MIN -> plural(
+                context, age.n, R.string.since_min_one, R.string.since_min_two,
+                R.string.since_min_few, R.string.since_min_many,
+            )
+            Part.HR -> plural(
+                context, age.n, R.string.since_hr_one, R.string.since_hr_two,
+                R.string.since_hr_few, R.string.since_hr_many,
+            )
+            Part.DAY -> plural(
+                context, age.n, R.string.since_day_one, R.string.since_day_two,
+                R.string.since_day_few, R.string.since_day_many,
+            )
         }
         return context.getString(R.string.ord_since, amount)
     }
+
+    /** **وحدةُ العمر** — تُحسَب بلا سياقٍ لتُختبر. */
+    enum class Part { MIN, HR, DAY, DATE }
+
+    data class Age(val unit: Part, val n: Long)
+
+    /** **دقائقٌ ← وحدةٌ وعدد**: دقائق دون الساعة، ساعاتٌ دون اليوم، يومان كحدٍّ أقصى، وبعدها تاريخ. */
+    fun age(minutes: Long): Age = when {
+        minutes < 60 -> Age(Part.MIN, minutes)
+        minutes < 60 * HOURS_IN_DAY -> Age(Part.HR, minutes / 60)
+        minutes < 60 * HOURS_IN_DAY * 3 -> Age(Part.DAY, minutes / (60 * HOURS_IN_DAY))
+        else -> Age(Part.DATE, 0)
+    }
+
+    /** **صيغةُ العدد العربيّة**: ١ مفرد، ٢ مثنّى، ٣–١٠ جمع، وما فوق تمييز مفرد. */
+    fun form(n: Long): Int = when {
+        n == 1L -> 1
+        n == 2L -> 2
+        n in 3..10 -> 3
+        else -> 4
+    }
+
+    private fun plural(c: Context, n: Long, one: Int, two: Int, few: Int, many: Int): String =
+        when (form(n)) {
+            1 -> c.getString(one)
+            2 -> c.getString(two)
+            3 -> c.getString(few, n)
+            else -> c.getString(many, n)
+        }
+
+    private val DATE_TIME = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
 
     /**
      * **الدقائقُ الماضية** — أو فارغٌ إن لم يُفهم الوقت.

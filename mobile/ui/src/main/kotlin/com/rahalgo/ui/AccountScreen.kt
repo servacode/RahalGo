@@ -173,7 +173,8 @@ fun AccountScreen(
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+            .padding(16.dp)
+            .padding(bottom = LocalChatFabInset.current),
     ) {
 
         Identity(vm, s, worker, whatsapp)

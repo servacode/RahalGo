@@ -162,7 +162,12 @@ export function ChatBubble({
                     }`}
                   >
                     #{t.number}
-                    {t.unread > 0 ? ` (${t.unread})` : ""}
+                    {/* **نقطةٌ بعدّادها على كلّ مربّعٍ فيه جديد** — لا يفتح الزبونُ كلَّ طلبٍ ليعرف. */}
+                    {t.unread > 0 && t.id !== picked && (
+                      <span className="ms-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-2xs font-bold text-on-bright">
+                        {t.unread}
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>

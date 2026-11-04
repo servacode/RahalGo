@@ -40,7 +40,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getMessages, defaultLocale, fmtTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtTime, fmtRelDay } from "@rahalgo/i18n";
 import { Alert } from "./feedback";
 import { IconChat, IconSend, IconCheck, IconCheckAll } from "./icons";
 import { useLiveRefresh } from "./Notifications";
@@ -157,9 +157,18 @@ export function OrderChat({
       {thread.messages.length === 0 ? (
         <p className="py-8 text-center text-sm text-ink-muted">{C.empty}</p>
       ) : (
-        thread.messages.map((x) => (
+        thread.messages.map((x, i) => (
+          <div key={x.id} className="space-y-3">
+            {/* **وفاصلُ اليوم بين رسائل أيّامٍ مختلفة** (بتوقيت دمشق) — فلا تُقرأ ٣:٠٥ اليوم بعد ٣:٢٩ أمس
+                كأنّها من يومٍ واحد. */}
+            {(i === 0 || fmtRelDay(thread.messages[i - 1]!.created_at) !== fmtRelDay(x.created_at)) && (
+              <p className="flex justify-center">
+                <span className="rounded-control bg-field px-2.5 py-0.5 text-2xs text-ink-muted">
+                  {fmtRelDay(x.created_at)}
+                </span>
+              </p>
+            )}
           <div
-            key={x.id}
             className={`flex flex-col ${x.mine ? "items-end" : "items-start"}`}
           >
             {/* ══════════════════════════════════════════════════════════
@@ -214,6 +223,7 @@ export function OrderChat({
                   <IconCheck size={14} className="text-ink-muted" aria-label={C.sent} />
                 ))}
             </p>
+          </div>
           </div>
         ))
       )}

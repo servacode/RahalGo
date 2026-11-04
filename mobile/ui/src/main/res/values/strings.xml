@@ -914,6 +914,18 @@
     <!-- **كم مضى** — انظر `Since.kt`. والحرفُ لا الكلمة: البطاقةُ ضيّقة. -->
     <string name="ord_since">منذ %1$s</string>
     <string name="ord_min">د</string>
+    <string name="since_min_one">دقيقة</string>
+    <string name="since_min_two">دقيقتين</string>
+    <string name="since_min_few">%1$d دقائق</string>
+    <string name="since_min_many">%1$d دقيقة</string>
+    <string name="since_hr_one">ساعة</string>
+    <string name="since_hr_two">ساعتين</string>
+    <string name="since_hr_few">%1$d ساعات</string>
+    <string name="since_hr_many">%1$d ساعة</string>
+    <string name="since_day_one">يوم</string>
+    <string name="since_day_two">يومين</string>
+    <string name="since_day_few">%1$d أيام</string>
+    <string name="since_day_many">%1$d يوماً</string>
     <string name="ord_hr">س</string>
     <string name="ord_day">ي</string>
     <!-- **توفيرُ الطاقة يقتل الخدمة** — انظر `BatteryGuard.kt`. -->

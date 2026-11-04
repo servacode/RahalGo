@@ -73,6 +73,11 @@ class LiveChatViewModel : ViewModel() {
     var openId by mutableStateOf<String?>(null)
 
 
+    companion object {
+        /** **مجموعُ ما لم يُقرأ عبر الأحاديث المعروضة** — وهو ما تقوله الشارة. */
+        fun totalUnread(chats: List<Live>): Int = chats.sumOf { it.unread }
+    }
+
     /** **أمفتوحٌ لوحٌ؟** — **وبه تُكتم الرنّةُ عمّن يقرأ الآن.** */
     val open: Boolean get() = openId != null
 
@@ -95,7 +100,7 @@ class LiveChatViewModel : ViewModel() {
      * فيجد واحدةً، والاثنتان في طلبٍ لا يعلم به** (`CU-CHAT-04`).
      */
     val badge: Int
-        get() = if (chats.size == 1) chats[0].unread else unread
+        get() = totalUnread(chats)
 
     private val api = CustomerApi(AppCore.get().api)
     private val chatApi = ChatApi(AppCore.get().api)
@@ -120,9 +125,20 @@ class LiveChatViewModel : ViewModel() {
             runCatching { api.orders(openOnly = true).orders }
                 .onSuccess { orders ->
                     val live = orders.filter { !it.driverName.isNullOrEmpty() }
-                    val byOrder = counts.orEmpty().associate { it.orderId to it.unread }
+                    // **وإن سقط نداءُ العدّاد يبقى آخرُ عددٍ معروف** — لا يُصفَّر ولا يرنّ بعده.
+                    val byOrder = counts?.associate { it.orderId to it.unread }
+                        ?: this@LiveChatViewModel.chats.associate { it.orderId to it.unread }
                     this@LiveChatViewModel.chats =
                         live.map { Live(it.id, byOrder[it.id] ?: 0, it.number) }
+                    // **والعدّادُ من الأحاديث المعروضة نفسِها** — لا من خيوطٍ لا يراها القرص.
+                    // (٢٠٢٦-١١-٠٤: كان يُحسب من `open` على كلّ الخيوط ولا يُكتب إلّا مع `context`،
+                    // **فلا يتّفق مع ما يفتحه القرص، ولا يتبدّل إن نوديت `load()` بلا سياق.**)
+                    val n = totalUnread(this@LiveChatViewModel.chats)
+                    if (counts != null) {
+                        if (context != null && lastSeen >= 0 && n > lastSeen && !open) ring(context)
+                        lastSeen = n
+                    }
+                    unread = n
                     Log.i("RahalGo/chat", "طلبات=" + orders.size +
                         " أحاديثُ جارية=" + live.size)
                 }
@@ -130,12 +146,6 @@ class LiveChatViewModel : ViewModel() {
                     Log.w("RahalGo/chat", "تعذّرت قراءةُ الطلبات لقرص الحديث", it)
                     this@LiveChatViewModel.chats = emptyList()
                 }
-            if (counts != null && context != null) {
-                val n = counts.filter { it.open }.sumOf { it.unread }
-                if (lastSeen >= 0 && n > lastSeen && !open) ring(context)
-                lastSeen = n
-                unread = n
-            }
         }
     }
 

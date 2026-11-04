@@ -132,6 +132,9 @@ function Live({ children }: { children: ReactNode }) {
 function Shell({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const cart = useCart();
+  // **وفقّاعةُ المحادثة تطفو فوق آخر المحتوى** — يُترك لها ذيلٌ ما دامت ظاهرة (٢٠٢٦-١١-٠٤).
+  const { open: activeOrders } = useActiveOrders();
+  const chatShown = !!user && (activeOrders ?? []).some((o) => !!o.driver_name);
   const path = usePathname() ?? "/shop";
 
   const nav: NavItem[] = user
@@ -202,7 +205,7 @@ function Shell({ children }: { children: ReactNode }) {
           </Link>
         )}
       </TopBar>
-      <main className="flex min-w-0 flex-1 flex-col gap-3 px-3 pb-4 pt-3 sm:px-4">
+      <main className={`flex min-w-0 flex-1 flex-col gap-3 px-3 pt-3 sm:px-4 ${chatShown ? "pb-24" : "pb-4"}`}>
         <PwaHints />
         <OrderingBanner />
         <ServiceBlockBanner />

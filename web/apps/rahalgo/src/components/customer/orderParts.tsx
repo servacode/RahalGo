@@ -73,7 +73,9 @@ export function etaText(o: MyOrder): string {
   if (ENDED.has(o.status)) return "";
   const door = o.to_door_eta_sec ?? 0;
   if (door > 0 && (o.status === "picked_up" || o.status === "on_the_way")) {
-    return fill(O.etaDoor, { t: fmtSpan(Math.ceil(door / 60) * 60) });
+    // **وما لا متجرَ له (أمانة/مشترى حرّ) لا «من المتجر»** (٢٠٢٦-١١-٠٤، مرآةُ التطبيق).
+    const noStore = o.kind === "custom";
+    return fill(noStore ? O.etaDoorNoStore : O.etaDoor, { t: fmtSpan(Math.ceil(door / 60) * 60) });
   }
   const est = o.delivery_estimate_min ?? 0;
   if (est > 0 && o.status !== "at_dropoff") return fill(O.etaEstimate, { t: fmtSpan(est * 60) });

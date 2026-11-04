@@ -11,8 +11,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Badge
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Icon
@@ -195,6 +197,8 @@ fun OrderChatSheet(
      * نفسها تفتح، وفي مربّع صغير فوق لكل طلب نضغط عليه تتغيّر المحادثة»). **وواحدٌ لا مربّعاتَ له.**
      */
     tabs: List<Pair<String, Long>> = emptyList(),
+    /** **وما لم يُقرأ في كلّ مربّع** (معرّف الطلب ← العدد) — يُرسَم نقطةً/عدّاداً على المربّع. */
+    tabUnread: Map<String, Int> = emptyMap(),
     onSwitch: (String) -> Unit = {},
     onClose: () -> Unit,
 ) {
@@ -305,16 +309,26 @@ fun OrderChatSheet(
                     ) {
                         tabs.forEach { (id, number) ->
                             val on = id == orderId
-                            Text(
-                                text = "#$number",
-                                fontWeight = FontWeight.Bold,
-                                color = if (on) Rahal.colors.onBrand else Rahal.colors.brand,
+                            // **ومربّعٌ فيه رسائلُ جديدةٌ يقول ذلك** — لا يفتح الزبونُ كلَّ مربّعٍ ليعرف.
+                            val fresh = if (on) 0 else (tabUnread[id] ?: 0)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
                                 modifier = Modifier
                                     .clip(Rahal.shape.pill)
                                     .background(if (on) Rahal.colors.brand else Rahal.colors.brand.copy(alpha = 0.12f))
                                     .clickable(enabled = !on) { onSwitch(id) }
                                     .padding(horizontal = 14.dp, vertical = 6.dp),
-                            )
+                            ) {
+                                Text(
+                                    text = "#$number",
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (on) Rahal.colors.onBrand else Rahal.colors.brand,
+                                )
+                                if (fresh > 0) {
+                                    Spacer(Modifier.width(6.dp))
+                                    Badge { Text(if (fresh > 99) "99+" else "$fresh") }
+                                }
+                            }
                         }
                     }
                 }
@@ -352,7 +366,17 @@ fun OrderChatSheet(
                             }
                             Column(
                                 Modifier.fillMaxWidth().verticalScroll(scroll),
-                            ) { vm.messages.forEach { ChatBubble(it) } }
+                            ) {
+                                // **وفاصلُ اليوم بين رسائل أيّامٍ مختلفة** (بتوقيت دمشق) — فلا تُقرأ
+                                // ٣:٠٥ اليوم بعد ٣:٢٩ أمس كأنّها من يومٍ واحد.
+                                vm.messages.forEachIndexed { i, m ->
+                                    val day = chatDay(m.createdAt)
+                                    if (i == 0 || chatDay(vm.messages[i - 1].createdAt) != day) {
+                                        ChatDayChip(day)
+                                    }
+                                    ChatBubble(m)
+                                }
+                            }
                         }
                     }
                 }

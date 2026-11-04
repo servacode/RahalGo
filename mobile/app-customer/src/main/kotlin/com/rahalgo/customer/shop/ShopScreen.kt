@@ -584,7 +584,8 @@ fun ShopScreen(
                 // **والذيلُ في الحشوة لا في عنصرٍ فارغٍ آخرَ القائمة** —
                 // فيبقى التمريرُ ينتهي حيث ينتهي المحتوى.
                 contentPadding = PaddingValues(
-                    start = 12.dp, end = 12.dp, top = 12.dp, bottom = 96.dp,
+                    start = 12.dp, end = 12.dp, top = 12.dp,
+                    bottom = 16.dp + com.rahalgo.ui.LocalChatFabInset.current,
                 ),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -826,6 +827,8 @@ internal fun ItemCard(
      * كانت «+» الصغيرةُ وحدَها تفتحها. و`null` يُبقي قلبَ الصورة للوصف كما كان.
      */
     onOpen: (() -> Unit)? = null,
+    /** **وداخل صفحة المتجر نفسِها لا يتكرّر اسمُه تحت كلّ صنف** (٢٠٢٦-١١-٠٤). */
+    showStoreName: Boolean = true,
 ) {
     val closed = item.sourceClosed || !item.available
     var zoom by remember(item.id) { mutableStateOf<String?>(null) }
@@ -937,7 +940,7 @@ internal fun ItemCard(
             // **كانت عدسةُ التكبير على الصورة تشوّهها، و«+» لا يفهمها الكلّ** —
             // فصار الزرّان كلمتين: «تكبير» (إطار) و«اطلب» (معبّى). **ولا «اطلب»
             // لمغلق**، ويبقى السطرُ بارتفاعه ولو غاب الزرّان كي لا تتفاوت البطاقات.
-            Row(
+            if (showStoreName) Row(
                 Modifier
                     .fillMaxWidth()
                     .heightIn(min = 28.dp)

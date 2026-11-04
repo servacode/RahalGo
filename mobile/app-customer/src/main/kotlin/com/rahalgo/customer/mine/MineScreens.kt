@@ -185,6 +185,7 @@ private fun Favorites(
         // **وعددُ الأعمدة عددُ السوق** — لا رقمٌ ثانٍ يفترق عنه.
         LazyVerticalGrid(
             columns = GridCells.Fixed(ShopCols),
+            contentPadding = PaddingValues(bottom = com.rahalgo.ui.LocalChatFabInset.current),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {

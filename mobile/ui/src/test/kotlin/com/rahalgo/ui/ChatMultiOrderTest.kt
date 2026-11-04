@@ -111,7 +111,7 @@ class ChatMultiOrderTest {
     fun `الشارةُ لا تجمع ما لا يُفتَح`() {
         assertTrue(
             "**تبدّل عقدُ الشارة**",
-            read(liveChat).contains("if (chats.size == 1) chats[0].unread else unread"),
+            read(liveChat).contains("get() = totalUnread(chats)"),
         )
         assertTrue(
             "**عاد المجموعُ إلى القرص**",

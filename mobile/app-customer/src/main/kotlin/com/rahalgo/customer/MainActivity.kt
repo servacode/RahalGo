@@ -987,6 +987,12 @@ private fun SignedIn(
                 }
             },
         ) { padding ->
+            // **حشوةٌ مركزيّةٌ لقرص الحديث** — كلُّ شاشةٍ قابلةٍ للتمرير تقرؤها (`LocalChatFabInset`)
+            // فيرتفع آخرُ محتواها فوق القرص، **وتصفَّر حين يختفي القرص.**
+            androidx.compose.runtime.CompositionLocalProvider(
+                com.rahalgo.ui.LocalChatFabInset provides
+                    (if (!guest && liveChat.chats.isNotEmpty()) com.rahalgo.ui.ChatFabInset else 0.dp),
+            ) {
             Box(
                 Modifier
                     .fillMaxSize()
@@ -1447,10 +1453,12 @@ private fun SignedIn(
                                 tab = Tab.Orders
                             },
                             tabs = liveChat.chats.map { it.orderId to it.number },
+                            tabUnread = liveChat.chats.associate { it.orderId to it.unread },
                             onSwitch = { liveChat.openId = it },
                         ) { liveChat.openId = null }
                     }
                 }
+            }
             }
         }
     }

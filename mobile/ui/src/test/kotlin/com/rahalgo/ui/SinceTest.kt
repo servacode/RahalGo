@@ -35,6 +35,16 @@ class SinceTest {
         assertEquals(1L, Since.minutes("2026-09-02T12:03:00Z", now))
     }
 
+    @Test
+    fun `الوحدةُ والصيغةُ بالكلمات`() {
+        assertEquals(Since.Age(Since.Part.MIN, 1), Since.age(1))
+        assertEquals(Since.Age(Since.Part.HR, 2), Since.age(130))
+        assertEquals(Since.Age(Since.Part.DAY, 1), Since.age(60 * 24 + 5))
+        assertEquals(Since.Age(Since.Part.DAY, 2), Since.age(60 * 48 + 5))
+        assertEquals(Since.Part.DATE, Since.age(60 * 24 * 3).unit)
+        assertEquals(listOf(1, 2, 3, 4), listOf(1L, 2L, 5L, 11L).map { Since.form(it) })
+    }
+
     /** **وصيغةُ الإزاحة تُقرأ كذلك** — لا `Z` وحدَها. */
     @Test
     fun `الإزاحةُ الزمنيّة تُقرأ`() {

@@ -55,6 +55,7 @@
     <string name="ord_cancel_within">يمكنك إلغاء الطلب خلال %1$s</string>
     <!-- **الوقت المتوقّع للتوصيل** — من المحرّك، تقريبي. -->
     <string name="ord_eta_door">الطريق من المتجر إليك يستغرق تقريباً %1$s</string>
+    <string name="ord_eta_door_nostore">الطريق إليك يستغرق تقريباً %1$s</string>
     <string name="ord_eta_estimate">مدة التوصيل المتوقعة تقريباً %1$s</string>
     <string name="ord_rate_title">كيف كانت الخدمة؟</string>
     <string name="ord_rate_service">تقييم الخدمة</string>
@@ -193,6 +194,8 @@
     <!-- **السلّة** -->
     <!-- خياراتُ الصنف — الحجمُ والإضافات -->
     <string name="options_required">مطلوب</string>
+    <string name="options_drinks_show_all">عرض كل المشروبات (%1$d)</string>
+    <string name="options_drinks_hide">إخفاء بعض المشروبات</string>
     <string name="options_add">أضف — %1$s</string>
     <string name="options_failed">تعذّر جلبُ الخيارات — تحقّق من الاتصال</string>
     <string name="options_unavailable">غير متوفر</string>

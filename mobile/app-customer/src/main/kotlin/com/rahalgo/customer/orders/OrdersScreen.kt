@@ -214,6 +214,7 @@ private fun OrdersList(
     Refreshable(refreshing = vm.refreshing, onRefresh = vm::refresh) {
     LazyColumn(
         Modifier.fillMaxSize().padding(ScreenPad),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = com.rahalgo.ui.LocalChatFabInset.current),
     ) {
         item {
             ScreenTitle(title, hint)

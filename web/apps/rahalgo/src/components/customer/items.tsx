@@ -161,8 +161,10 @@ export function ItemCard({
         {full && viewing && <ImageViewer src={full} alt={item.name} onClose={() => setViewing(false)} />}
         {/* ── سطرٌ لاسم المتجر (رابطٌ لصفحته)، وسطرٌ لزرّين مكتوبين «اطلب» —
             قرارُ المالك ٢٠٢٦-١٠-٣٠: العدسةُ على الصورة كانت تشوّهها و«+» لا يفهمها الكلّ. ── */}
+        {/* **وداخل صفحة المتجر نفسِها لا اسمَ تحت كلّ صنف** (٢٠٢٦-١١-٠٤). */}
+        {storeLink && (
         <div className="flex min-h-7 w-full min-w-0 items-center px-2 pt-1">
-          {storeLink && item.merchant_id && item.merchant_name ? (
+          {item.merchant_id && item.merchant_name ? (
             <Link
               href={`/stores/${item.merchant_id}`}
               aria-label={`${S.openStore} — ${item.merchant_name}`}
@@ -174,6 +176,7 @@ export function ItemCard({
             <span className="flex-1 truncate text-2xs text-ink-muted">{item.merchant_name ?? ""}</span>
           )}
         </div>
+        )}
         {/* ── «اطلب» عريضٌ والقلبُ جنبه (اقتراحُ المالك ٢٠٢٦-١١-٠٤) — والشريطُ الأعلى للسعر وحدَه ── */}
         <div className="flex h-10 w-full min-w-0 items-center gap-1 px-1.5 pb-1.5">
           <FavoriteButton
@@ -652,13 +655,20 @@ function CounterBlock({
   price: (o: ModifierOption) => ReactNode;
   onCount: (id: string, n: number) => void;
 }) {
+  /* **المشروباتُ الكثيرة تُطوى بعد خمسة** — وما عدّه الزبونُ يبقى ظاهراً ولو طُويت. */
+  const [expanded, setExpanded] = useState(false);
+  const collapsible = thumbs && group.options.length > DRINKS_COLLAPSED;
+  const shown =
+    !collapsible || expanded
+      ? group.options
+      : group.options.filter((o, i) => i < DRINKS_COLLAPSED || (counts[o.id] ?? 0) > 0);
   return (
     <fieldset className="surface-inset space-y-2 p-3">
       <legend className="flex w-full items-center justify-between gap-2 text-sm font-bold">
         <span>{group.name}</span>
         <span className="text-xs font-normal text-ink-muted">{group.min_select > 0 ? I.required : I.optional}</span>
       </legend>
-      {group.options.map((o) => {
+      {shown.map((o) => {
         const n = counts[o.id] ?? 0;
         return (
           <div key={o.id} className="flex items-center justify-between gap-3">
@@ -699,6 +709,18 @@ function CounterBlock({
           </div>
         );
       })}
+      {collapsible && (
+        <button
+          type="button"
+          onClick={() => setExpanded((v) => !v)}
+          className="w-full rounded-control py-2 text-sm font-bold text-accent-text hover:bg-row-hover"
+        >
+          {expanded ? I.drinksHide : I.drinksShowAll.replace("{n}", fmtNum(group.options.length))}
+        </button>
+      )}
     </fieldset>
   );
 }
+
+/** **كم مشروباً يظهر قبل «عرض الكل».** */
+const DRINKS_COLLAPSED = 5;

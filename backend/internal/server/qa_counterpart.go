@@ -337,6 +337,9 @@ func (s *Server) qaOrderChatSend(w http.ResponseWriter, r *http.Request, uid, or
 		s.respondErr(w, err)
 		return
 	}
+	// **وإشارةٌ حيّةٌ للزبون كما في المسار الحقيقيّ** — وإلّا لا يتبدّل عدّادُ قرص الحديث حتّى
+	// الإنعاش التالي (٢٠٢٦-١١-٠٤).
+	s.touchUser(p.PeerID, "order")
 	s.logger.Warn("QA driver chat sent (staging-only)", "order", orderID, "driver", *driverID)
 	httpx.JSON(w, http.StatusOK, map[string]any{"order_id": orderID, "sent": true, "message_id": msg.ID})
 }

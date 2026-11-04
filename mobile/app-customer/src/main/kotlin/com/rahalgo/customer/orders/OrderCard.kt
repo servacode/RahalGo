@@ -173,8 +173,10 @@ fun OrderCard(
                 it > 0 && order.status in setOf("picked_up", "on_the_way")
             }
             val etaText = when {
+                // **وما لا متجرَ له (أمانة/مشترى حرّ) لا «من المتجر»** (٢٠٢٦-١١-٠٤).
                 door != null -> stringResource(
-                    R.string.ord_eta_door,
+                    if (order.kind == "custom") R.string.ord_eta_door_nostore
+                    else R.string.ord_eta_door,
                     com.rahalgo.ui.minutes(((door + 59) / 60).toLong()),
                 )
                 order.deliveryEstimateMin > 0 && order.status != "at_dropoff" -> stringResource(
