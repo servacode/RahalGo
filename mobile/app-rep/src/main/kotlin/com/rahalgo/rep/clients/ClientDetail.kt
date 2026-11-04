@@ -166,6 +166,8 @@ fun ClientDetail(
             // الذي في تطبيق المتجر (`ClientHours`).
             Spacer(Modifier.height(8.dp))
             HoursRow(vm)
+            // **وأقسامُ السوق التي يظهر فيها متجرُه** (قرارُ المالك ٢٠٢٦-١١-٠٤).
+            SectionsRow(vm)
 
             // ══════════════════════════════════════════════════════════
             // **وبابُ أصنافه — يبنيها نيابةً عنه**
@@ -326,6 +328,35 @@ private fun HoursRow(vm: ClientsViewModel) {
  * **سطرُ طلب** — رقمُه وحالُه وقيمتُه وعمولةُ المنصّة ونصيبُه.
  *
  * **وثلاثُ دِلاءٍ لا أربعَ عشرةَ حالة**: «السائقُ في المتجر» و«جارٍ
+/** **سطرُ «أقسام المتجر بالسوق»** — يفتح صفحةَ الاختيار. */
+@Composable
+private fun SectionsRow(vm: ClientsViewModel) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(Rahal.shape.sm)
+            .clickable { vm.openSections() }
+            .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            stringResource(R.string.cd_sections),
+            color = Rahal.colors.ink,
+            fontWeight = FontWeight.Bold,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.weight(1f),
+        )
+        androidx.compose.material3.Icon(
+            androidx.compose.ui.res.painterResource(com.rahalgo.ui.R.drawable.ic_arrow_back),
+            contentDescription = null,
+            tint = Rahal.colors.inkMuted,
+            modifier = Modifier
+                .size(18.dp)
+                .graphicsLayer { rotationZ = 180f },
+        )
+    }
+}
+
  * إسنادُ سائق» تفاصيلُ تشغيلٍ **لا تعني المندوبَ ولا يملك تغييرَها.**
  *
  * **ويعنيه سؤالان**: أتمَّ الطلبُ فقبضتُ عمولتَه؟ أم ضاع؟

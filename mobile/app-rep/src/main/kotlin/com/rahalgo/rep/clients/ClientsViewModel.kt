@@ -112,6 +112,8 @@ class ClientsViewModel(app: Application) : AndroidViewModel(app) {
         openId = id
         detail = null
         hoursOpen = false
+        sectionsOpen = false
+        mySections = emptyList()
         loadHours(id)
         busy = true
         viewModelScope.launch {
@@ -208,6 +210,7 @@ class ClientsViewModel(app: Application) : AndroidViewModel(app) {
         openId = ""
         detail = null
         hoursOpen = false
+        sectionsOpen = false
     }
 
     // ══════════════════════════════════════════════════════════════════
@@ -272,6 +275,67 @@ class ClientsViewModel(app: Application) : AndroidViewModel(app) {
                 com.rahalgo.ui.Flash.fail(apiError(getApplication(), e))
             }
             hoursSaving = false
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **أقسامُ السوق لمتجر عميله** (قرارُ المالك ٢٠٢٦-١١-٠٤)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **أقسامُ المنصّة التي يظهر فيها المتجرُ** (شاورما · برغر · مشاوي…) — لا أقسامُ قائمته.
+    // **والمسوّدةُ محلّيّةٌ حتّى يُضغط «حفظ»**، والمحرّكُ يستبدل القائمةَ كلَّها.
+
+    var sectionsOpen by mutableStateOf(false)
+
+    /** **أقسامُ السوق الفعّالة للاختيار.** */
+    var allSections by mutableStateOf<List<com.rahalgo.shared.rep.PlatformSection>>(emptyList())
+        private set
+
+    /** **ما اختاره متجرُه الآن.** */
+    var mySections by mutableStateOf<List<com.rahalgo.shared.rep.PlatformSection>>(emptyList())
+        private set
+
+    var sectionsLoading by mutableStateOf(false)
+        private set
+    var sectionsSaving by mutableStateOf(false)
+        private set
+    var sectionsError by mutableStateOf("")
+        private set
+
+    fun openSections() {
+        val id = openId
+        if (id.isEmpty()) return
+        sectionsOpen = true
+        sectionsLoading = true
+        sectionsError = ""
+        viewModelScope.launch {
+            try {
+                val all = api.platformSections()
+                val mine = api.storeSections(id)
+                if (openId == id) {
+                    allSections = all
+                    mySections = mine
+                }
+            } catch (e: Exception) {
+                if (openId == id) sectionsError = apiError(getApplication(), e)
+            }
+            sectionsLoading = false
+        }
+    }
+
+    fun saveSections(ids: List<String>) {
+        val id = openId
+        if (id.isEmpty()) return
+        sectionsSaving = true
+        viewModelScope.launch {
+            try {
+                api.setStoreSections(id, ids)
+                if (openId == id) mySections = allSections.filter { it.id in ids }
+                com.rahalgo.ui.Flash.ok(getApplication<android.app.Application>().getString(com.rahalgo.rep.R.string.cd_sections_saved))
+            } catch (e: Exception) {
+                com.rahalgo.ui.Flash.fail(apiError(getApplication(), e))
+            }
+            sectionsSaving = false
         }
     }
 

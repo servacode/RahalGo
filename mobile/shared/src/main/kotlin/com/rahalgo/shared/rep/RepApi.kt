@@ -185,6 +185,15 @@ class RepApi(private val api: ApiClient) {
     suspend fun storeSections(merchantID: String): List<PlatformSection> =
         api.call<PlatformSections>("/api/v1/rep/stores/$merchantID/sections").sections
 
+    /** **يبدّل أقسامَ السوق لمتجر عميله** (قرارُ المالك ٢٠٢٦-١١-٠٤) — القائمةُ كلُّها تُستبدل. */
+    suspend fun setStoreSections(merchantID: String, ids: List<String>) {
+        api.call<kotlinx.serialization.json.JsonObject>(
+            "/api/v1/rep/stores/$merchantID/sections",
+            io.ktor.http.HttpMethod.Put,
+            mapOf("sections" to ids),
+        )
+    }
+
     suspend fun createItem(merchantID: String, input: ItemInput, idempotencyKey: String? = null): CreatedID =
         api.call("/api/v1/rep/stores/$merchantID/menu/items", HttpMethod.Post, input, idempotencyKey = idempotencyKey)
 

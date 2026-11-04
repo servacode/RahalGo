@@ -36,6 +36,11 @@
     <string name="ac_resent_title">تم إرسال التعديل</string>
     <string name="ac_resent_body">عاد الطلب إلى الإدارة كطلب جديد وهو بانتظار الموافقة.</string>
     <string name="cl_working">يعمل</string>
+    <string name="cd_sections">أقسام المتجر بالسوق</string>
+    <string name="cd_sections_hint">اختر الأقسام التي يظهر فيها المتجر في السوق</string>
+    <string name="cd_sections_empty">لا قسم مختار — المتجر لا يظهر تحت قسم بعد</string>
+    <string name="cd_sections_none">لا أقسام متاحة الآن</string>
+    <string name="cd_sections_saved">✓ حُفظت أقسام المتجر</string>
     <string name="cl_stopped">متوقف</string>
     <!-- هدفُ المندوب: يُحسب المتجرُ حين تكتمل شروطُه (قرارُ المالك ٢٠٢٦-١٠-١٣) -->
     <string name="cl_goal_counted">محسوب في هدفك</string>

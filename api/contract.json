@@ -11869,6 +11869,30 @@
       "auth": false
     },
     {
+      "method": "PUT",
+      "path": "/api/v1/rep/stores/{id}/sections",
+      "handler": "handleRepSetStoreSections",
+      "auth": true,
+      "roles": [
+        "sales"
+      ],
+      "request": [
+        {
+          "name": "sections",
+          "type": "[]string"
+        }
+      ],
+      "response": [
+        {
+          "name": "saved",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "GET",
       "path": "/healthz",
       "handler": "handleHealth",

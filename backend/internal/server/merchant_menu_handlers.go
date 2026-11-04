@@ -324,19 +324,43 @@ func (s *Server) handleMerchantSetStoreSections(w http.ResponseWriter, r *http.R
 		s.respondErr(w, err)
 		return
 	}
-	tx, err := s.pg.Begin(r.Context())
+	if err := s.saveStoreSections(r, storeID, in.Sections, "merchant"); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"saved": true})
+}
+
+// handleRepSetStoreSections **المندوبُ يبدّل أقسامَ السوق لمتجر عميله** (قرارُ المالك
+// ٢٠٢٦-١١-٠٤) — **المنطقُ نفسُه** (`saveStoreSections`)، والحارسُ `repMenuGuard` قبله.
+func (s *Server) handleRepSetStoreSections(w http.ResponseWriter, r *http.Request) {
+	in, err := decode[struct {
+		Sections []string `json:"sections"`
+	}](r)
 	if err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	if err := s.saveStoreSections(r, chi.URLParam(r, "id"), in.Sections, "rep"); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"saved": true})
+}
+
+// saveStoreSections **الكتابةُ الواحدةُ للمتجر والمندوب** — تسجَّل في السجلّ بمن كتب.
+func (s *Server) saveStoreSections(r *http.Request, storeID string, sections []string, by string) error {
+	tx, err := s.pg.Begin(r.Context())
+	if err != nil {
+		return err
 	}
 	defer tx.Rollback(r.Context())
 
 	if _, err := tx.Exec(r.Context(),
 		`DELETE FROM store_sections WHERE store_id = $1`, storeID); err != nil {
-		s.respondErr(w, err)
-		return
+		return err
 	}
-	for _, id := range in.Sections {
+	for _, id := range sections {
 		if id == "" {
 			continue
 		}
@@ -348,13 +372,14 @@ func (s *Server) handleMerchantSetStoreSections(w http.ResponseWriter, r *http.R
 			  SELECT 1 FROM platform_sections WHERE id = $2::uuid AND active
 			)
 			ON CONFLICT DO NOTHING`, storeID, id); err != nil {
-			s.respondErr(w, err)
-			return
+			return err
 		}
 	}
 	if err := tx.Commit(r.Context()); err != nil {
-		s.respondErr(w, err)
-		return
+		return err
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"saved": true})
+	s.auditCtx(r.Context(), userIDFrom(r), clientIP(r), "merchant.sections_update", "merchant", storeID,
+		map[string]any{"sections": sections, "by": by})
+	s.touch("menu", "merchant:"+storeID)
+	return nil
 }

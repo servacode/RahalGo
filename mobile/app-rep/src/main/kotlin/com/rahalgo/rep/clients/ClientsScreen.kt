@@ -102,6 +102,11 @@ fun ClientsScreen(
             ClientHours(vm)
             return
         }
+        if (vm.sectionsOpen) {
+            BackHandler { vm.sectionsOpen = false }
+            ClientSections(vm)
+            return
+        }
         BackHandler { vm.closeDetail() }
         ClientDetail(vm, onOpenMenu, onOpenOffers, onOpenItems)
         return

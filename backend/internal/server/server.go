@@ -934,6 +934,9 @@ func (s *Server) Router() http.Handler {
 				r.Use(s.repMenuGuard)
 				r.Get("/stores/{id}/menu", s.handleRepMenu)
 				r.Get("/stores/{id}/sections", s.handleRepStoreSections)
+				// **وأقسامُ السوق التي يظهر فيها متجرُ عميله** (قرارُ المالك ٢٠٢٦-١١-٠٤) — الباب نفسُه
+				// عند المتجر، **والحارسُ يحصره بالمندوب الحاليّ لمتجره.**
+				r.Put("/stores/{id}/sections", s.handleRepSetStoreSections)
 				r.Get("/stores/{id}/hours", s.handleRepGetHours)
 				r.Put("/stores/{id}/hours", s.handleRepSetHours)
 				// **ولا يكتب المندوبُ سعرَ الصرف** (قرارُ المالك ٢٠٢٦-١٠-١٢: «المندوب ما يغيّره

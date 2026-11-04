@@ -77,6 +77,7 @@ func TestRepMediaRoute_NotBehindMenuGuard(t *testing.T) {
 		`r.Get("/stores/{id}/drinks", s.handleRepGetDrinks)`,
 		`r.Put("/stores/{id}/drinks", s.handleRepSetDrinks)`,
 		`r.Put("/stores/{id}/logo", s.handleRepSetLogo)`,
+		`r.Put("/stores/{id}/sections", s.handleRepSetStoreSections)`,
 	} {
 		if !strings.Contains(guarded, route) {
 			t.Fatalf("بابُ مشروبات المندوب خارجَ `repMenuGuard`: %s", route)
