@@ -67,6 +67,14 @@
     <!-- **تفصيلُ العميل — شفافيّةُ العمولة** -->
     <string name="cd_owner_phone">رقم صاحب المتجر</string>
     <string name="cd_joined">انضم في</string>
+    <!-- نسبةُ عمولة المتجر يضبطها المندوب (قرارُ المالك ٢٠٢٦-١١-٠٤) -->
+    <string name="cd_commission_title">نسبة عمولة المتجر</string>
+    <string name="cd_commission_value">%1$s٪</string>
+    <string name="cd_commission_edit">تعديل</string>
+    <string name="cd_commission_field">النسبة الجديدة ٪</string>
+    <string name="cd_commission_range">المسموح من %1$s٪ إلى %2$s٪ · تسري فوراً، والطلبات المسلّمة ما بتتغيّر</string>
+    <string name="cd_commission_saved">✓ حُفظت نسبة العمولة</string>
+    <string name="cd_commission_cancel">إلغاء</string>
     <string name="cd_more">عرض المزيد (%1$s من %2$s)</string>
     <string name="cd_sum_orders">إجمالي الطلبات</string>
     <!-- **ولفظُ المنصّة** — (قرارُ المالك ٢٠٢٦-٠٨-٣١: «تم التسليم تُفهم

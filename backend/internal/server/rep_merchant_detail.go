@@ -42,18 +42,21 @@ func (s *Server) handleRepMerchantDetail(w http.ResponseWriter, r *http.Request)
 		OwnerPhone   *string `json:"owner_phone"`
 		// ExchangeRate سعرُ صرف المتجر — يكتبه المندوبُ وهو يجهّزه (٢٠٢٦-١٠-١٢).
 		ExchangeRate *float64 `json:"exchange_rate"`
+		// **نسبةُ عمولة متجره وحدّا ما يضبطه منها** (قرارُ المالك ٢٠٢٦-١١-٠٤) — لا هامشَ المنصّة (`RQ-7`).
+		repCommissionView
 	}
+	var override *pricing.Percent2
 	err := s.pg.QueryRow(ctx, `
 		SELECT m.name, c.icon, c.name, lm.thumb_path, m.status,
 		       m.created_at::date::text,
-		       NULLIF(ou.phone::text, ''), m.exchange_rate::float8
+		       NULLIF(ou.phone::text, ''), m.exchange_rate::float8, m.commission_percent
 		FROM merchants m
 		JOIN categories c ON c.id = m.category_id
 		LEFT JOIN users ou ON ou.id = m.owner_user_id
 		LEFT JOIN media lm ON lm.id = m.logo_media_id
 		WHERE m.id = $1 AND m.sales_rep_user_id = $2`, merchantID, uid).
 		Scan(&head.Name, &head.CategoryIcon, &head.CategoryName, &head.LogoThumbURL,
-			&head.Status, &head.JoinedAt, &head.OwnerPhone, &head.ExchangeRate)
+			&head.Status, &head.JoinedAt, &head.OwnerPhone, &head.ExchangeRate, &override)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// نفس ردّ «غير موجود» لمتجرٍ ليس له: لا نكشف وجود متاجر الآخرين
 		s.respondErr(w, httpx.ErrNotFound)
@@ -64,6 +67,7 @@ func (s *Server) handleRepMerchantDetail(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	head.LogoThumbURL = media.URLForPtr(head.LogoThumbURL)
+	head.repCommissionView = s.repCommissionOf(ctx, override)
 
 	// نسبةُ المندوب وعمولةُ المتجر — **من مخزن الإعدادات لا من SQL.**
 	//

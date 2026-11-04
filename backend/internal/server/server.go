@@ -974,6 +974,9 @@ func (s *Server) Router() http.Handler {
 				r.Post("/menu/items/{itemID}/duplicate", s.handleRepDuplicateItem)
 				// **وشعارُ متجر عميله** (طلبُ المالك ٢٠٢٦-١٠-١٩).
 				r.Put("/stores/{id}/logo", s.handleRepSetLogo)
+				// **ونسبةُ عمولة متجر عميله** (قرارُ المالك ٢٠٢٦-١١-٠٤: «بين ال0 وال10 بالمية») —
+				// فوراً بلا موافقة المكتب، وبحدَّين من الإعدادات، وكلُّ تبديلٍ مقيَّدٌ بقيمتيه.
+				r.Patch("/stores/{id}/commission", s.handleRepSetCommission)
 			})
 			// ══════════════════════════════════════════════════════════
 			// **ورفعُ الصورة خارجَ الحارس — ولا بدّ**

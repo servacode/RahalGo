@@ -673,6 +673,7 @@ private val CODES: Map<String, Int> = mapOf(
     "temp_password_expired" to R.string.err_temp_password_expired,
     "rep_inactive" to R.string.err_rep_inactive,
     "merchant_ban_locked" to R.string.err_merchant_ban_locked,
+    "rep_commission_out_of_range" to R.string.err_rep_commission_out_of_range,
     "accident_check_required" to R.string.err_accident_check_required,
     "never_picked_up" to R.string.err_never_picked_up,
     "payout_below_min" to R.string.err_payout_below_min,

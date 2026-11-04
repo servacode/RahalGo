@@ -95,6 +95,8 @@ var auditSensitiveExtra = []string{
 	"ops.emergency_driver_ok", "ops.emergency_outcome", "ops.emergency_money", "ops.emergency_note",
 	// ── مالٌ أو أثرُه ─────────────────────────────────────────────
 	"admin.merchant_rep_transfer", "merchant.settlement_update",
+	// **ونسبةُ عمولة المتجر بقيمتيها** — من المكتب أو المندوب (قرارُ المالك ٢٠٢٦-١١-٠٤).
+	"merchant.commission_change",
 	"admin.launch_preset",
 	// ── والتصديرُ نفسُه (القرارُ السادس) ──────────────────────────
 	"admin.audit_exported",

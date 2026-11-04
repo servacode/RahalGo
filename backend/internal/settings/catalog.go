@@ -2049,6 +2049,14 @@ var Catalog = []Def{
 	{Key: "sales.min_items", Group: GroupSales, Kind: KindInt,
 		Min: 0, Max: 500, Unit: "item", Default: 10},
 
+	// **حدّا ما يضبطه المندوبُ من نسبة عمولة متجر عميله** (قرارُ المالك ٢٠٢٦-١١-٠٤: «بين ال0
+	// وال10 بالمية») — فوراً بلا موافقة المكتب، **وبمنزلتين كحقل الأدمن** (`KindDecimal`).
+	// **والأدمنُ لا يتقيّد بهما** — بابُه من صفرٍ إلى مئة كما كان.
+	{Key: "sales.rep_commission_min", Group: GroupSales, Kind: KindDecimal,
+		Min: 0, Max: 100, Unit: "percent", Default: 0, Sensitive: true},
+	{Key: "sales.rep_commission_max", Group: GroupSales, Kind: KindDecimal,
+		Min: 0, Max: 100, Unit: "percent", Default: 10, Sensitive: true},
+
 	// ══════════════════════════════════════════════════════════════════
 	// **ستّةَ عشرَ مقبضاً كان في المحرّك ولا يُدار**
 	// ══════════════════════════════════════════════════════════════════

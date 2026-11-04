@@ -445,6 +445,10 @@ data class RepMerchantHead(
     val status: String = "",
     /** **سعرُ صرف المتجر** — وفراغُه: لم يُكتب (٢٠٢٦-١٠-١٢). */
     @SerialName("exchange_rate") val exchangeRate: Double? = null,
+    /** **نسبةُ عمولة متجره وحدّا ما يضبطه منها** (قرارُ المالك ٢٠٢٦-١١-٠٤) — لا ربحَ المنصّة. */
+    @SerialName("store_commission_percent") val storeCommissionPercent: Double = 0.0,
+    @SerialName("store_commission_min") val storeCommissionMin: Double = 0.0,
+    @SerialName("store_commission_max") val storeCommissionMax: Double = 10.0,
     @SerialName("joined_at") val joinedAt: String = "",
     @SerialName("owner_phone") val ownerPhone: String? = null,
 )

@@ -115,6 +115,9 @@ var FinancialSettings = []string{
 	"compensations.cap_merchant_goods",
 	"compensations.cap_complaint",
 	"finance.expense_approval_threshold",
+	// **حدّا ما يضبطه المندوبُ من عمولة متجره** (قرارُ المالك ٢٠٢٦-١١-٠٤) — rep_commission_handlers.go.
+	"sales.rep_commission_min",
+	"sales.rep_commission_max",
 }
 
 // Snapshot يبني الصورة.

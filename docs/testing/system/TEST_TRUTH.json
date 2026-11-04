@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 627,
+    "routes": 629,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 254,
-    "behaviour_settings": 209,
+    "setting_defs": 256,
+    "behaviour_settings": 211,
     "order_fields": 133,
-    "test_files": 700,
-    "test_funcs": 2709
+    "test_files": 702,
+    "test_funcs": 2712
   },
   "flows": [
     {
@@ -6867,6 +6867,42 @@
       "kind": "int",
       "sensitive": false,
       "money": false,
+      "flows": [
+        "F-21",
+        "F-23"
+      ],
+      "apps": [
+        "admin",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "sales.rep_commission_max",
+      "group": "sales",
+      "kind": "decimal",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-21",
+        "F-23"
+      ],
+      "apps": [
+        "admin",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "sales.rep_commission_min",
+      "group": "sales",
+      "kind": "decimal",
+      "sensitive": true,
+      "money": true,
       "flows": [
         "F-21",
         "F-23"
@@ -23234,6 +23270,24 @@
     {
       "name": "TestRepQualify_ThreeConditionsThenCountedOnce",
       "file": "internal/qa/rep_qualify_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRepStoreCommission_DeliveredOrderUnchanged_NoProfitLeak",
+      "file": "internal/qa/rep_store_commission_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRepStoreCommission_SetBoundsAuditAndIDOR",
+      "file": "internal/qa/rep_store_commission_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRepStoreSections_SetOnlyForOwnClient",
+      "file": "internal/qa/rep_store_sections_test.go",
       "package": "qa",
       "orphan": true
     },

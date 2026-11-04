@@ -724,8 +724,40 @@ var ErrMerchantBanLocked = httpx.NewError(http.StatusConflict,
 	"merchant_ban_locked", "errors.merchant_ban_locked")
 
 func (s *Service) UpdateMerchant(ctx context.Context, actorID, id string, in MerchantInput, ip string) (*Merchant, error) {
+	return s.updateMerchant(ctx, actorID, id, in, ip, CommissionByAdmin)
+}
+
+// CommissionByAdmin و CommissionByRep **من غيّر نسبةَ عمولة المتجر** — يُكتبان في حدث
+// `merchant.commission_change` ليُعرف أهو المكتب أم المندوب (قرارُ المالك ٢٠٢٦-١١-٠٤).
+const (
+	CommissionByAdmin = "admin"
+	CommissionByRep   = "rep"
+)
+
+// SetMerchantCommissionByRep **المندوبُ يضبط نسبةَ عمولة متجر عميله** (قرارُ المالك ٢٠٢٦-١١-٠٤:
+// «بين ال0 وال10 بالمية»، فوراً بلا موافقة المكتب). **الطريقُ نفسُه الذي يكتب به الأدمن**
+// (`updateMerchant`) فلا تفترق الكتابتان، والحدودُ يفحصها الخادمُ من الإعدادات قبله.
+//
+// **والطلبُ المفتوحُ يُسوّى بالنسبة الحاليّة عند التسليم، والمسلَّمُ لا يُمسّ** — كتعديل الأدمن
+// تماماً (قرارُ المالك ٢٠٢٦-١١-٠٤، الخيار الأوّل).
+func (s *Service) SetMerchantCommissionByRep(ctx context.Context, repID, id string, pct pricing.Percent2, ip string) (*Merchant, error) {
+	return s.updateMerchant(ctx, repID, id, MerchantInput{CommissionPct: &pct}, ip, CommissionByRep)
+}
+
+func (s *Service) updateMerchant(ctx context.Context, actorID, id string, in MerchantInput, ip, by string) (*Merchant, error) {
 	if err := validCommission(in.CommissionPct, true); err != nil {
 		return nil, err
+	}
+	// **ونسبتُه قبل التعديل** — ليُقيَّد التبديلُ بقيمتيه (قرارُ المالك ٢٠٢٦-١١-٠٤).
+	var oldCommission *pricing.Percent2
+	if in.CommissionPct != nil {
+		if err := s.db.QueryRow(ctx,
+			`SELECT commission_percent FROM merchants WHERE id = $1`, id).Scan(&oldCommission); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return nil, httpx.ErrNotFound
+			}
+			return nil, err
+		}
 	}
 	// **ترتيبُ الشريط من صفرٍ إلى ١٠٠٠٠** — والسالبُ خطأُ كتابةٍ لا ترتيب.
 	if in.FeaturedOrder != nil && (*in.FeaturedOrder < 0 || *in.FeaturedOrder > 10000) {
@@ -876,7 +908,17 @@ func (s *Service) UpdateMerchant(ctx context.Context, actorID, id string, in Mer
 	if tag.RowsAffected() == 0 {
 		return nil, httpx.ErrNotFound
 	}
-	s.audit(ctx, actorID, "admin.merchant_update", "merchant", id, ip)
+	if by == CommissionByAdmin {
+		s.audit(ctx, actorID, "admin.merchant_update", "merchant", id, ip)
+	}
+	if in.CommissionPct != nil {
+		var newCommission *pricing.Percent2
+		if *in.CommissionPct >= 0 {
+			v := *in.CommissionPct
+			newCommission = &v
+		}
+		s.auditCommissionChange(ctx, actorID, id, ip, by, oldCommission, newCommission)
+	}
 	// **وتبديلُ «متجر مميّز» أو ترتيبِه حدثٌ مستقلٌّ بالقيمتين** — من أظهر متجراً
 	// في رأس السوق ومتى سؤالٌ يُسأل بعد شهر.
 	if featuredTouched {
@@ -1063,6 +1105,17 @@ func (s *Service) auditDetail(ctx context.Context, actorID, action, entity, enti
 	_, _ = s.db.Exec(ctx, `
 		INSERT INTO audit_log (actor_user_id, action, entity, entity_id, ip, details)
 		VALUES ($1, $2, $3, $4, $5, $6)`, actorID, action, entity, entityID, ip, raw)
+}
+
+// auditCommissionChange **حدثُ تبديلِ نسبة عمولة المتجر بقيمتيه** (قرارُ المالك ٢٠٢٦-١١-٠٤) —
+// للمكتب والمندوب معاً: من غيّر، ومن كم إلى كم، ومتى (وقتُ الصفّ). و`null` تعني «اتبع العامّ».
+// **ولا حدثَ حين لا يتغيّر شيء.**
+func (s *Service) auditCommissionChange(ctx context.Context, actorID, id, ip, by string, from, to *pricing.Percent2) {
+	if (from == nil && to == nil) || (from != nil && to != nil && *from == *to) {
+		return
+	}
+	s.auditDetail(ctx, actorID, "merchant.commission_change", "merchant", id, ip,
+		map[string]any{"merchant_id": id, "from": from, "to": to, "by": by})
 }
 
 // ErrOwnerRequired **لا متجرَ بلا صاحب** — (قرارُ المالك ٢٠٢٦-٠٨-١٥).

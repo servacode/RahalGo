@@ -1329,6 +1329,8 @@ kosom` |
 | `sales.target_3` | المندوبون | int | `0` |
 | `sales.reward_3` | المندوبون | money | `0` |
 | `sales.min_items` | المندوبون | int | `10` |
+| `sales.rep_commission_min` | المندوبون | decimal | `0` |
+| `sales.rep_commission_max` | المندوبون | decimal | `10` |
 <!-- /gen:settings -->
 
 ---

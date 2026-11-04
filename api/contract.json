@@ -11669,6 +11669,30 @@
       ]
     },
     {
+      "method": "PATCH",
+      "path": "/api/v1/rep/stores/{id}/commission",
+      "handler": "handleRepSetCommission",
+      "auth": true,
+      "roles": [
+        "sales"
+      ],
+      "request": [
+        {
+          "name": "percent",
+          "type": "?pricing.Percent2"
+        }
+      ],
+      "response": [
+        {
+          "name": "@repCommissionOf",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "GET",
       "path": "/api/v1/rep/stores/{id}/drinks",
       "handler": "handleRepGetDrinks",
@@ -11845,30 +11869,6 @@
       ]
     },
     {
-      "method": "GET",
-      "path": "/api/v1/rep/wallet",
-      "handler": "handleRepWallet",
-      "auth": true,
-      "roles": [
-        "sales"
-      ],
-      "response": [
-        {
-          "name": "@out",
-          "type": "unknown"
-        }
-      ],
-      "statuses": [
-        "StatusOK"
-      ]
-    },
-    {
-      "method": "GET",
-      "path": "/api/v1/ws",
-      "handler": "handleWS",
-      "auth": false
-    },
-    {
       "method": "PUT",
       "path": "/api/v1/rep/stores/{id}/sections",
       "handler": "handleRepSetStoreSections",
@@ -11891,6 +11891,30 @@
       "statuses": [
         "StatusOK"
       ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/rep/wallet",
+      "handler": "handleRepWallet",
+      "auth": true,
+      "roles": [
+        "sales"
+      ],
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ws",
+      "handler": "handleWS",
+      "auth": false
     },
     {
       "method": "GET",

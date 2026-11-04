@@ -1650,6 +1650,8 @@
     "compensations.cap_driver",
     "compensations.cap_merchant_goods",
     "compensations.cap_complaint",
-    "finance.expense_approval_threshold"
+    "finance.expense_approval_threshold",
+    "sales.rep_commission_min",
+    "sales.rep_commission_max"
   ]
 }
