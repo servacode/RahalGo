@@ -1,0 +1,81 @@
+package drivermonitor
+
+import "time"
+
+// عتبات الحالة الحيّة (طلب المالك ٢٠٢٦-١١-٠٤: «يمشي ولا متوقف»).
+const (
+	// LiveMoveWindow نافذة قياس الإزاحة: يمشي إن ابتعد أكثر من LiveMoveM خلالها.
+	LiveMoveWindow = 2 * time.Minute
+	// LiveMoveM إزاحة ٥٠ م خلال النافذة تعني الحركة، وما دونها رجفة GPS.
+	LiveMoveM = 50.0
+	// LiveMoveSpeedMps سرعة مبلَّغة فوق ١٫٥ م/ث (~٥ كم/س) تعني الحركة.
+	LiveMoveSpeedMps = 1.5
+	// LiveOfflineAfter لا نقطة منذ ٥ دقائق = غير متصل (النبضة الواقفة كل دقيقة).
+	LiveOfflineAfter = 5 * time.Minute
+	// LiveLookback مدى النقاط المقروءة؛ يحدّ أيضا «متوقف منذ» بساعة.
+	LiveLookback = 60 * time.Minute
+)
+
+// الحالات الحيّة.
+const (
+	LiveMoving  = "moving"
+	LiveStopped = "stopped"
+	LiveOffline = "offline"
+)
+
+// Live الحالة الحيّة لسائق.
+type Live struct {
+	State    string     `json:"state"`
+	Since    *time.Time `json:"since"`
+	LastSeen *time.Time `json:"last_seen"`
+	OnShift  bool       `json:"on_shift"`
+	HasOrder bool       `json:"has_order"`
+}
+
+// movingAt هل كانت النقطة i متحرّكة؟ سرعتها فوق العتبة، أو ابتعدت عن نقاط نافذتها.
+func movingAt(pts []Point, i int) bool {
+	p := pts[i]
+	if p.SpeedMps != nil && *p.SpeedMps > LiveMoveSpeedMps {
+		return true
+	}
+	for j := i - 1; j >= 0 && p.At.Sub(pts[j].At) <= LiveMoveWindow; j-- {
+		if Dist(pts[j], p) > LiveMoveM {
+			return true
+		}
+	}
+	return false
+}
+
+// DeriveLive **دالة صافية**: تشتق الحالة من نقاط مرتّبة بالزمن (نقاط آخر ساعة).
+func DeriveLive(pts []Point, now time.Time) Live {
+	if len(pts) == 0 {
+		return Live{State: LiveOffline}
+	}
+	n := len(pts) - 1
+	last := pts[n]
+	seen := last.At
+	lv := Live{LastSeen: &seen}
+	if now.Sub(last.At) > LiveOfflineAfter {
+		lv.State = LiveOffline
+		lv.Since = &seen
+		return lv
+	}
+	if movingAt(pts, n) && now.Sub(last.At) <= LiveMoveWindow {
+		lv.State = LiveMoving
+		i := n
+		for i > 0 && movingAt(pts, i-1) {
+			i--
+		}
+		since := pts[i].At
+		lv.Since = &since
+		return lv
+	}
+	lv.State = LiveStopped
+	i := n
+	for i > 0 && Dist(pts[i-1], last) <= LiveMoveM {
+		i--
+	}
+	since := pts[i].At
+	lv.Since = &since
+	return lv
+}

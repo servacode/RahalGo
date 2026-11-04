@@ -41,6 +41,8 @@ import {
 import { PageHero } from "@/components/admin/PageHero";
 import { Tile } from "@/components/admin/DashParts";
 import { api } from "@/lib/api";
+import { Box } from "@/components/admin/orders/CardSections";
+import { ContactLinks, minutesSince, useNow } from "@/components/admin/orders/BoardWidgets";
 import type { FeatureCollection, LayerSpec } from "@/components/admin/opsmap/canvas";
 import { mapIcons, toneColor } from "@/components/admin/opsmap/palette";
 
@@ -74,6 +76,15 @@ interface Row {
   flagged_gaps: number;
   alert: boolean;
   score: number;
+  /** الحالة الحيّة — null لأيام ماضية. */
+  live: Live | null;
+}
+interface Live {
+  state: "moving" | "stopped" | "offline";
+  since: string | null;
+  last_seen: string | null;
+  on_shift: boolean;
+  has_order: boolean;
 }
 interface ListResp {
   day: string;
@@ -351,12 +362,104 @@ function DayView({ driverID, day, onBack }: { driverID: string; day: string; onB
   );
 }
 
+const LIVE_ORDER = { moving: 0, stopped: 1, offline: 2 } as const;
+
+/** يمشي أولاً ثم متوقف ثم غير متصل، والتنبيه يعلو داخل كل فئة، ثم الأخطر. */
+function sortRows(rows: Row[]): Row[] {
+  const rank = (r: Row) => (r.live ? LIVE_ORDER[r.live.state] : 0);
+  return [...rows].sort((a, b) => rank(a) - rank(b) || Number(b.alert) - Number(a.alert) || b.score - a.score);
+}
+
+function LiveBadge({ live, now }: { live: Live; now: number }) {
+  const L = T.live;
+  if (live.state === "moving") return <Badge variant="success" className="!px-3 !py-1 !text-base !font-bold">{L.moving}</Badge>;
+  if (live.state === "stopped") {
+    const n = minutesSince(live.since, now);
+    return (
+      <Badge variant="warning" className="!px-3 !py-1 !text-base !font-bold">
+        {n ? L.stopped.replace("{n}", fmtNum(n)) : L.stoppedNow}
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="neutral" className="!px-3 !py-1 !text-base !font-bold">
+      {live.last_seen ? L.offline.replace("{time}", fmtDamascusTime(live.last_seen)) : L.offlineNever}
+    </Badge>
+  );
+}
+
+function Stat({ label, value, tone }: { label: string; value: React.ReactNode; tone?: boolean }) {
+  return (
+    <div className="flex items-center justify-between gap-2">
+      <span className="text-ink-muted">{label}</span>
+      <span className={`font-bold ${tone ? "text-danger" : ""}`}>{value}</span>
+    </div>
+  );
+}
+
+function DriverCard({ r, now, onOpen }: { r: Row; now: number; onOpen: () => void }) {
+  const L = T.live;
+  const s = r.summary;
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onOpen()}
+      className={`surface cursor-pointer space-y-3 p-3 hover:bg-surface-soft ${r.alert ? "border-danger-edge" : ""}`}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+        <span className="min-w-0 flex-1 basis-28 truncate font-bold">
+          {r.name}
+          {r.alert && (
+            <Badge variant="danger" className="ms-2">
+              {T.overLimit}
+            </Badge>
+          )}
+        </span>
+        <span className="ms-auto flex shrink-0 items-center gap-1.5">
+          <span dir="ltr" className="text-xs text-ink-muted">
+            {r.phone}
+          </span>
+          <ContactLinks phone={r.phone} callLabel={L.call} />
+        </span>
+      </div>
+      {r.live && (
+        <div className="flex flex-wrap items-center gap-2">
+          <LiveBadge live={r.live} now={now} />
+          <Badge variant={r.live.has_order ? "info" : "neutral"}>{r.live.has_order ? L.hasOrder : L.noOrder}</Badge>
+          <Badge variant={r.live.on_shift ? "success" : "neutral"}>{r.live.on_shift ? L.onShift : L.offShift}</Badge>
+        </div>
+      )}
+      <Box look="plain" icon={<IconRoute size={14} />} title={T.title}>
+        <div className="space-y-1 text-sm">
+          <Stat label={T.cols.kmNoOrder} value={km(s.km_no_order)} tone={r.alert} />
+          <Stat label={T.cols.kmWithOrder} value={km(s.km_with_order + s.km_to_pickup)} />
+          <Stat label={T.cols.patterns} value={s.patterns > 0 ? fmtNum(s.patterns) : "—"} tone={s.patterns > 0} />
+          <Stat label={T.cols.stops} value={s.store_stops > 0 ? fmtNum(s.store_stops) : "—"} />
+          <Stat label={T.cols.gaps} value={s.gaps > 0 ? fmtNum(s.gaps) : "—"} tone={r.flagged_gaps > 0} />
+          <Stat label={T.cols.mocked} value={s.mocked > 0 ? fmtNum(s.mocked) : "—"} tone={s.mocked > 0} />
+        </div>
+      </Box>
+    </div>
+  );
+}
+
 export default function DriverMonitorPage() {
   const [day, setDay] = useState(() => damascusDay());
   const [driver, setDriver] = useState<string | null>(null);
   const [list, setList] = useState<ListResp | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
+  const now = useNow();
+  const isToday = day === damascusDay();
+
+  // اليوم الحالي: تحديث الحالة الحيّة كل ٣٠ ثانية.
+  useEffect(() => {
+    if (driver || !isToday) return;
+    const id = setInterval(() => setTick((x) => x + 1), 30_000);
+    return () => clearInterval(id);
+  }, [driver, isToday]);
 
   useEffect(() => {
     const sp = new URLSearchParams(window.location.search);
@@ -369,7 +472,6 @@ export default function DriverMonitorPage() {
   useEffect(() => {
     if (driver) return;
     let alive = true;
-    setList(null);
     setErr(null);
     api<ListResp>(`/api/v1/admin/driver-monitor?day=${day}`)
       .then((r) => alive && setList(r))
@@ -378,6 +480,9 @@ export default function DriverMonitorPage() {
       alive = false;
     };
   }, [day, driver, tick]);
+
+  // تبديل اليوم يفرّغ القائمة (التحديث الدوري لا يفرّغها).
+  useEffect(() => setList(null), [day]);
 
   return (
     <PageContainer>
@@ -406,50 +511,10 @@ export default function DriverMonitorPage() {
           ) : list.drivers.length === 0 ? (
             <AdminEmpty icon={IconRoute} title={T.empty} />
           ) : (
-            <div className="surface overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-line-soft text-start text-ink-muted">
-                    <th className="p-3 text-start font-bold">{T.driver}</th>
-                    <th className="p-3 text-start font-bold">{T.cols.kmNoOrder}</th>
-                    <th className="p-3 text-start font-bold">{T.cols.kmWithOrder}</th>
-                    <th className="p-3 text-start font-bold">{T.cols.patterns}</th>
-                    <th className="p-3 text-start font-bold">{T.cols.stops}</th>
-                    <th className="p-3 text-start font-bold">{T.cols.gaps}</th>
-                    <th className="p-3 text-start font-bold">{T.cols.mocked}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {list.drivers.map((r) => (
-                    <tr
-                      key={r.driver_id}
-                      className="cursor-pointer border-b border-line-soft last:border-0 hover:bg-surface-soft"
-                      onClick={() => setDriver(r.driver_id)}
-                    >
-                      <td className="p-3 font-bold">
-                        {r.name}
-                        {r.alert && (
-                          <Badge variant="danger" className="ms-2">
-                            {T.overLimit}
-                          </Badge>
-                        )}
-                      </td>
-                      <td className="p-3">{km(r.summary.km_no_order)}</td>
-                      <td className="p-3">{km(r.summary.km_with_order + r.summary.km_to_pickup)}</td>
-                      <td className="p-3">{r.summary.patterns > 0 ? <Badge variant="danger">{fmtNum(r.summary.patterns)}</Badge> : "—"}</td>
-                      <td className="p-3">{r.summary.store_stops > 0 ? fmtNum(r.summary.store_stops) : "—"}</td>
-                      <td className="p-3">
-                        {r.summary.gaps > 0 ? (
-                          <Badge variant={r.flagged_gaps > 0 ? "warning" : "neutral"}>{fmtNum(r.summary.gaps)}</Badge>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td className="p-3">{r.summary.mocked > 0 ? <Badge variant="danger">{fmtNum(r.summary.mocked)}</Badge> : "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {sortRows(list.drivers).map((r) => (
+                <DriverCard key={r.driver_id} r={r} now={now} onOpen={() => setDriver(r.driver_id)} />
+              ))}
             </div>
           )}
         </>

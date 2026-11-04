@@ -6636,7 +6636,19 @@
         "mocked": "{driver} فيه {n} نقطة موقع مزيّف من الساعة {time}"
       },
       "mapUnavailable": "الخريطة مو شغالة هلق",
-      "monitorLink": "تحركاته اليوم"
+      "monitorLink": "تحركاته اليوم",
+      "live": {
+        "moving": "يمشي",
+        "stopped": "متوقف منذ {n} د",
+        "stoppedNow": "متوقف الآن",
+        "offline": "غير متصل · آخر ظهور {time}",
+        "offlineNever": "غير متصل",
+        "hasOrder": "بطلب",
+        "noOrder": "بلا طلب",
+        "onShift": "بالدوام",
+        "offShift": "خارج الدوام",
+        "call": "اتصال بالسائق"
+      }
     },
     "opsMap": {
       "title": "خريطة العمليات",

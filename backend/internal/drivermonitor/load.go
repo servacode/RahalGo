@@ -144,6 +144,8 @@ type Row struct {
 	Flagged  int     `json:"flagged_gaps"`
 	Alert    bool    `json:"alert"`
 	Score    float64 `json:"score"`
+	// Live الحالة الحيّة — null لأيام ماضية. (قرار المالك ٢٠٢٦-١١-٠٤)
+	Live *Live `json:"live"`
 }
 
 // Overview سائقو اليوم الذين لهم أثر، الأخطر أولا.
@@ -152,21 +154,28 @@ func Overview(ctx context.Context, db DB, day string, alertKm float64, now time.
 	if err != nil {
 		return nil, err
 	}
+	// اليوم الحالي: يدخل كل سائق على الدوام ولو بلا أثر بعد، ليرى المالك كل العاملين.
+	isToday := day == Today(now)
 	rows, err := db.Query(ctx, `
-		SELECT u.id::text, u.full_name, u.phone
+		SELECT u.id::text, u.full_name, u.phone, u.on_shift
 		  FROM users u
 		 WHERE EXISTS (SELECT 1 FROM driver_trail t
-		                WHERE t.driver_id = u.id AND t.recorded_at >= $1 AND t.recorded_at < $2)`, from, to)
+		                WHERE t.driver_id = u.id AND t.recorded_at >= $1 AND t.recorded_at < $2)
+		    OR ($3 AND u.on_shift AND EXISTS (SELECT 1 FROM user_roles ur
+		                WHERE ur.user_id = u.id AND ur.role_code = 'driver'))`, from, to, isToday)
 	if err != nil {
 		return nil, err
 	}
 	var out []Row
+	onShift := map[string]bool{}
 	for rows.Next() {
 		var r Row
-		if err := rows.Scan(&r.DriverID, &r.Name, &r.Phone); err != nil {
+		var shift bool
+		if err := rows.Scan(&r.DriverID, &r.Name, &r.Phone, &shift); err != nil {
 			rows.Close()
 			return nil, err
 		}
+		onShift[r.DriverID] = shift
 		out = append(out, r)
 	}
 	rows.Close()
@@ -178,9 +187,23 @@ func Overview(ctx context.Context, db DB, day string, alertKm float64, now time.
 		return nil, err
 	}
 	for i := range out {
-		res, _, err := DriverDay(ctx, db, out[i].DriverID, day, stores, now)
+		res, wins, err := DriverDay(ctx, db, out[i].DriverID, day, stores, now)
 		if err != nil {
 			return nil, err
+		}
+		if isToday {
+			recent, err := LoadPoints(ctx, db, out[i].DriverID, now.Add(-LiveLookback), now.Add(time.Second))
+			if err != nil {
+				return nil, err
+			}
+			lv := DeriveLive(recent, now)
+			lv.OnShift = onShift[out[i].DriverID]
+			for _, w := range wins {
+				if w.EndAt == nil {
+					lv.HasOrder = true
+				}
+			}
+			out[i].Live = &lv
 		}
 		out[i].Summary = res.Summary
 		out[i].Flagged = res.FlaggedGaps()
