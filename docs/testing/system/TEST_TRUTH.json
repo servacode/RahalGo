@@ -33,8 +33,8 @@
     "setting_defs": 254,
     "behaviour_settings": 209,
     "order_fields": 133,
-    "test_files": 699,
-    "test_funcs": 2708
+    "test_files": 700,
+    "test_funcs": 2709
   },
   "flows": [
     {
@@ -16751,6 +16751,12 @@
     {
       "name": "TestDriverLocationWatch_NotifiesNeverEndsShift",
       "file": "internal/qa/driver_location_watch_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverMonitor_LiveStateMovingStoppedOffline",
+      "file": "internal/qa/driver_monitor_live_test.go",
       "package": "qa",
       "orphan": true
     },
