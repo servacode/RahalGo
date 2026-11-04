@@ -9,6 +9,8 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -44,6 +46,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -827,7 +830,11 @@ internal fun ItemCard(
     val closed = item.sourceClosed || !item.available
     var zoom by remember(item.id) { mutableStateOf<String?>(null) }
     val full = media(item.imageUrl ?: item.imageThumbUrl)
-    Column {
+    // **القلبُ قرصٌ صغيرٌ يطفو على زاوية البطاقة العليا (بدايةُ الاتجاه)، ثلثُه خارجَ الإطار**
+    // (قرارُ المالك ٢٠٢٦-١١-٠٤) — ليأخذ شريطُ السعر العرضَ كلَّه ويظهر «$ ≈ ل.س» كاملاً.
+    // **والحشوةُ الخارجيّةُ بقدر النتوء** كي لا يُقصّ القرصُ ولا يلتصق ببطاقةٍ مجاورة.
+    Box {
+    Column(Modifier.padding(start = 10.dp, end = 10.dp, top = 10.dp)) {
         Column(
             Modifier
                 .fillMaxWidth()
@@ -835,66 +842,31 @@ internal fun ItemCard(
                 .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
                 .background(Rahal.colors.surface),
         ) {
-            // ══════════════════════════════════════════════════════════
-            // **الشريطُ الأعلى — القلبُ في البداية والسعرُ في النهاية**
-            // ══════════════════════════════════════════════════════════
-            //
-            // **وزرّان في طرفين لا في زاوية** — زرّان متلاصقان يُضغط أحدُهما
-            // مكان الآخر.
-            Row(
+            // **شريطُ السعر بعرض البطاقة كلِّه** — والقلبُ طافٍ على الزاوية خارجَه.
+            // **والليرةُ تنزل تحت الدولار إن ضاق العرضُ ولا تُقصّ** (لا نقاطَ على مال).
+            @OptIn(ExperimentalLayoutApi::class)
+            FlowRow(
                 Modifier
                     .fillMaxWidth()
                     .padding(horizontal = Rahal.space.xs, vertical = Rahal.space.xs),
-                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Rahal.space.xs, Alignment.End),
+                verticalArrangement = Arrangement.Center,
+                itemVerticalAlignment = Alignment.CenterVertically,
             ) {
-                // **وأحمرُ حين يُضغط ورماديٌّ حين لا** (ملاحظةُ المالك ٢٠٢٦-٠٨-١٨) —
-                // **والأحمرُ لغةُ المفضّلة في كلّ تطبيق.**
-                // **ومساحةُ لمسه ٣٦ لا ٢٦** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧) — الإصبعُ أعرضُ من الأيقونة.
-                Box(
-                    Modifier
-                        .clip(CircleShape)
-                        .clickable(onClick = onLike)
-                        .size(36.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        painter = painterResource(
-                            if (liked) com.rahalgo.ui.R.drawable.ic_heart
-                            else com.rahalgo.ui.R.drawable.ic_heart_off,
-                        ),
-                        // **والوصفُ يتبع الحال** — **ومن يسمع ولا يرى
-                        // لا يعرف أنّ ضغطتَه وقعت.**
-                        contentDescription = stringResource(
-                            if (liked) R.string.shop_unlike else R.string.shop_like,
-                        ),
-                        tint = if (liked) Rahal.colors.danger else Rahal.colors.inkMuted,
-                        modifier = Modifier.size(20.dp),
-                    )
-                }
-                Spacer(Modifier.weight(1f))
-                // **والليرةُ فوق مع الدولار لا تحت الاسم** (ملاحظةُ المالك ٢٠٢٦-١٠-١٥:
-                // «تحت اسم الصنف ما رح يكون واضح») — **يقرأ الزبونُ ما سيدفعه بلمحةٍ
-                // واحدة** — **وفي سطرٍ واحدٍ مع الدولار** (ملاحظتُه الثانية في اليوم نفسِه):
-                // `$1.8 ≈ 235 ل.س`. والليرةُ أصغرُ خطّاً، وإن ضاق العرضُ تُختصر هي لا الدولار.
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    // **وبالدولار لمتجرٍ اختاره** (الخيار ١، ٢٠٢٦-١٠-١٢).
+                    text = item.priceUsd?.let { com.rahalgo.ui.dollars(it) } ?: money(item.price),
+                    color = Rahal.colors.brand,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    style = MaterialTheme.typography.labelMedium,
+                )
+                if (item.priceUsd != null) {
                     Text(
-                        // **وبالدولار لمتجرٍ اختاره** (الخيار ١، ٢٠٢٦-١٠-١٢).
-                        text = item.priceUsd?.let { com.rahalgo.ui.dollars(it) } ?: money(item.price),
-                        color = Rahal.colors.brand,
-                        fontWeight = FontWeight.Bold,
-                        maxLines = 1,
-                        style = MaterialTheme.typography.labelMedium,
+                        text = "≈ " + money(item.price),
+                        color = Rahal.colors.inkMuted,
+                        style = MaterialTheme.typography.labelSmall,
                     )
-                    if (item.priceUsd != null) {
-                        Spacer(Modifier.width(Rahal.space.xs))
-                        Text(
-                            text = "≈ " + money(item.price),
-                            color = Rahal.colors.inkMuted,
-                            style = MaterialTheme.typography.labelSmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
                 }
             }
 
@@ -1047,5 +1019,37 @@ internal fun ItemCard(
                 maxLines = 1,
             )
         }
+    }
+    // **القلبُ: مساحةُ لمسٍ ٣٦ وفيها قرصٌ مرئيٌّ ٢٨** — أحمرُ حين يُضغط ورماديٌّ حين لا
+    // (ملاحظةُ المالك ٢٠٢٦-٠٨-١٨)، **ووصفُه يتبع الحال** لمن يسمع ولا يرى.
+    Box(
+        Modifier
+            .align(Alignment.TopStart)
+            .size(36.dp)
+            .clip(CircleShape)
+            .clickable(onClick = onLike),
+        contentAlignment = Alignment.TopStart,
+    ) {
+        Box(
+            Modifier
+                .size(28.dp)
+                .shadow(2.dp, CircleShape)
+                .background(Rahal.colors.surface, CircleShape)
+                .border(Rahal.stroke.hair, Rahal.colors.line, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painter = painterResource(
+                    if (liked) com.rahalgo.ui.R.drawable.ic_heart
+                    else com.rahalgo.ui.R.drawable.ic_heart_off,
+                ),
+                contentDescription = stringResource(
+                    if (liked) R.string.shop_unlike else R.string.shop_like,
+                ),
+                tint = if (liked) Rahal.colors.danger else Rahal.colors.inkMuted,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+    }
     }
 }

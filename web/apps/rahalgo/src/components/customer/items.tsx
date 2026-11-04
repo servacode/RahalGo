@@ -112,24 +112,27 @@ export function ItemCard({
   const [viewing, setViewing] = useState(false);
   const fav = useFav();
   return (
-    <div className="flex min-w-0 flex-col gap-1.5">
+    <div className="relative flex min-w-0 flex-col gap-1.5 pt-2.5">
+      {/* ── القلبُ قرصٌ صغيرٌ يطفو على زاوية البطاقة العليا (بدايةُ الاتجاه)، نصفُه خارجَ الإطار —
+          قرارُ المالك ٢٠٢٦-١١-٠٤: ليأخذ شريطُ السعر العرضَ كلَّه ويظهر «$ ≈ ل.س» كاملاً. ── */}
+      <FavoriteButton
+        itemID={item.id}
+        on={fav.has(item.id)}
+        onToggle={fav.toggle}
+        onRequireLogin={fav.needLogin}
+        size="sm"
+        className="absolute -start-2.5 top-0 z-10 rounded-full! bg-surface shadow-card"
+      />
       <div className="surface flex min-w-0 flex-col overflow-hidden">
-        {/* ── الشريطُ العلويّ: القلبُ والسعر ── */}
-        <div className="flex min-w-0 items-center gap-1 px-1.5 py-1">
-          <FavoriteButton
-            itemID={item.id}
-            on={fav.has(item.id)}
-            onToggle={fav.toggle}
-            onRequireLogin={fav.needLogin}
-            size="sm"
-          />
-          <span className="ms-auto flex min-w-0 items-baseline gap-1 whitespace-nowrap">
+        {/* ── شريطُ السعر بعرض البطاقة كلِّه — والليرةُ تنزل تحت الدولار إن ضاق ولا تُقصّ ── */}
+        <div className="flex min-w-0 items-center px-1.5 py-1">
+          <span className="ms-auto flex min-w-0 flex-wrap items-baseline justify-end gap-x-1">
             {item.price_usd != null ? (
               <>
                 <span dir="ltr" className="text-sm font-bold text-accent-text tabular-nums">
                   {dollars(item.price_usd)}
                 </span>
-                <span className="truncate text-2xs text-ink-muted">
+                <span className="whitespace-nowrap text-2xs text-ink-muted">
                   {"≈ "}
                   <Money value={item.price} small />
                 </span>
