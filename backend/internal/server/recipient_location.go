@@ -21,7 +21,7 @@ package server
 //
 // # والصفحةُ العامّة لا تكشف شيئاً
 //
-// **اسمُ المتجر وحدَه** — لا رقمَ ولا عنوانَ ولا اسمَ مستلِم. **والرمزُ لا يُخزَّن**
+// **اسمُ المنصّة وحدَه** (لا اسمَ متجرٍ منذ ٢٠٢٦-١١-٠٦) — لا رقمَ ولا عنوانَ ولا اسمَ مستلِم. **والرمزُ لا يُخزَّن**
 // (بصمتُه وحدَها)، **وينتهي بعد ٢٤ ساعة أو عند أوّل إرسال.** وحدُّ معدّلٍ بالعنوان.
 
 import (
@@ -67,6 +67,9 @@ var (
 		"location_request_closed", "errors.location_request_closed")
 )
 
+// locReqPlatformName **ما يراه المستلِمُ اسماً** — لا اسمَ متجر (قرارُ المالك ٢٠٢٦-١١-٠٦).
+const locReqPlatformName = "رحّال غو"
+
 // locReqHash **بصمةُ الرمز** — والرمزُ نفسُه لا يُخزَّن.
 func locReqHash(token string) string {
 	sum := sha256.Sum256([]byte(token))
@@ -86,15 +89,19 @@ func (s *Server) locReqLink(token string) string {
 // توصيلةُ المتجر و«إحضار» والأمانةُ وطلبُ الواتساب من المكتب. **ويُلغي قاعدةَ «لا اسمَ منصّةٍ
 // فيها»** — المالكُ كتبها باسم التطبيق: «طبعا هي الرسالة تصبح للكل وقت الامانة والاحضار والتوصيل».
 //
-// (قرارُ المالك ٢٠٢٦-١١-٠٣ «ردّ بموقعك» باقٍ.) **الناسُ تخاف الروابط** — فالتعليمةُ أن يردّ
-// المستلِمُ على المحادثة بموقعه من زرّ المشبك في واتساب نفسِه، **والرابطُ سطرٌ أخيرٌ احتياطيّ.**
-// والبوتُ يلتقط الموقعَ الوارد (`HandleWALocation`).
-func locReqText(link string) string {
+// **ولا رابطَ ولا اسمَ متجر** (قرارُ المالك ٢٠٢٦-١١-٠٦): «الناس بسوريا تخاف من روابط الهكر»
+// و«دائما لديك امانة او طلب من تطبيق رحال غو … مشان اي شخص جديد يسال شو هو رحال غو». فالمستلِمُ
+// يردّ على المحادثة بموقعه الحاليّ أو المباشر من زرّ المشبك، **والبوتُ يلتقطه** (`HandleWALocation`).
+// **وصفحةُ `/loc` باقيةٌ لرسائلَ وصلت قبل القرار** — لكنّ رابطَها لا يُكتب في رسالةٍ جديدة.
+func locReqText(mode string) string {
+	what := "لديك طلب"
+	if mode == "amanah" {
+		what = "لديك أمانة"
+	}
 	return "السلام عليكم ورحمة الله وبركاته\n" +
-		"معك تطبيق رحّال غو للتسوق وطلبات التوصيل بالرقة\n" +
+		what + " من تطبيق رحّال غو للتسوق وطلبات التوصيل بالرقة\n" +
 		"ياريت تشارك موقعك أو ترسله عبر الواتساب لنقدر نوصل إليك بسهولة:\n" +
-		"ردّ على هالرسالة بموقعك: اضغط 📎 ← الموقع ← أرسل موقعك الحالي\n" +
-		"أو من هون: " + link
+		"ردّ على هالرسالة بموقعك: اضغط 📎 ← الموقع ← أرسل موقعك الحالي أو المباشر"
 }
 
 // locReqAcc **تُنظّف الدقّة** — اختياريّة، وما خرج عن المعقول يُهمَل.
@@ -142,6 +149,10 @@ func (s *Server) locReqReceived(ctx context.Context, ownerID, customerID, orderI
 // HandleWALocation **المستلِمُ ردّ على رسالة البوت بموقعه** (قرارُ المالك ٢٠٢٦-١١-٠٣).
 // يملأ **أحدثَ** طلبٍ مفتوحٍ لرقمه (لم يصل ولم ينتهِ) بالمسار نفسِه الذي يملأ به الرابط.
 // **ولا طلبَ مفتوحاً ⇒ سلسلةٌ فارغة** (لا ردَّ، والرسالةُ تمرّ كما كانت).
+//
+// **والموقعُ المباشر كالعاديّ** (٢٠٢٦-١١-٠٦) — البوتُ يقرأ الاثنين (`notify.LocationFromMessage`).
+// **أوّلُ نقطةٍ تملأ الطلب**، وتحديثاتُه اللاحقة لا تجد طلباً مفتوحاً (`received_at IS NULL`)
+// فلا ردَّ ولا نبضةَ ولا نقطةً جديدةً للسائق.
 func (s *Server) HandleWALocation(ctx context.Context, from string, lat, lng, accuracy float64) string {
 	phone, ok := identity.NormalizePhone(from)
 	if !ok || !orders.ValidPoint(lat, lng) {
@@ -235,16 +246,16 @@ func (s *Server) handleMerchantRequestLocation(w http.ResponseWriter, r *http.Re
 		s.respondErr(w, err)
 		return
 	}
-	httpx.JSON(w, http.StatusCreated, s.locReqSend(ctx, id, phone, token, expires))
+	httpx.JSON(w, http.StatusCreated, s.locReqSend(ctx, id, phone, mode, token, expires))
 }
 
 // locReqSend **يرسل الرسالةَ الواحدة ويعلّم وصولَها** — ويردّ ما تعرضه الشاشة. **واحدٌ للمتجر
 // وللأمانة ولطلب الواتساب من المكتب** فلا تفترق رسالتان (قرارُ المالك ٢٠٢٦-١١-٠٥).
 //
 // **والإرسالُ بانتظاره** — الشاشةُ تقول «وصلت الرسالة» أو تعرض زرَّ المشاركة.
-func (s *Server) locReqSend(ctx context.Context, id, phone, token string, expires time.Time) map[string]any {
+func (s *Server) locReqSend(ctx context.Context, id, phone, mode, token string, expires time.Time) map[string]any {
 	link := s.locReqLink(token)
-	text := locReqText(link)
+	text := locReqText(mode)
 	sendCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
 	defer cancel()
 	sent := s.sendText(sendCtx, phone, text)
@@ -258,7 +269,7 @@ func (s *Server) locReqSend(ctx context.Context, id, phone, token string, expire
 		"id":            id,
 		"status":        "pending",
 		"whatsapp_sent": sent,
-		// **والرابطُ له** — إن لم تصل الرسالةُ يشاركه بنفسه.
+		// **والرابطُ للموظّف وحدَه** (نسخُه يدوياً) — لا يُكتب في الرسالة (قرارُ المالك ٢٠٢٦-١١-٠٦).
 		"link":       link,
 		"share_text": text,
 		// **ورابطُ واتساب جاهزٌ برقمه الدوليّ** — المكتوبُ في النموذج قد يكون محلّيّاً.
@@ -334,7 +345,7 @@ func (s *Server) locPublicAllowed(r *http.Request) bool {
 }
 
 // handlePublicLocationRequest **ما تعرضه صفحةُ المستلِم** — `GET /public/location-requests/{token}`.
-// **اسمُ المتجر والنوعُ والحال لا غير.**
+// **اسمُ المنصّة والنوعُ والحال لا غير.**
 func (s *Server) handlePublicLocationRequest(w http.ResponseWriter, r *http.Request) {
 	if !s.locPublicAllowed(r) {
 		s.respondErr(w, ErrInviteClaimRateLimited)
@@ -345,17 +356,13 @@ func (s *Server) handlePublicLocationRequest(w http.ResponseWriter, r *http.Requ
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
-	var store, mode string
+	var mode string
 	var received *time.Time
 	var expires time.Time
 	err := s.pg.QueryRow(r.Context(), `
-		SELECT COALESCE(m.name, NULLIF(cu.full_name, ''), NULLIF(l.store_label, ''), ''),
-		       l.mode, l.received_at, l.expires_at
+		SELECT l.mode, l.received_at, l.expires_at
 		  FROM recipient_location_requests l
-		  -- **وطلبُ الأمانة صاحبُه زبون** (٢٠٢٦-١٠-٣٠) — فاسمُه لا اسمُ متجر.
-		  LEFT JOIN merchants m ON m.id = l.merchant_id
-		  LEFT JOIN users cu ON cu.id = l.customer_id
-		 WHERE l.token_hash = $1`, locReqHash(token)).Scan(&store, &mode, &received, &expires)
+		 WHERE l.token_hash = $1`, locReqHash(token)).Scan(&mode, &received, &expires)
 	if errors.Is(err, pgx.ErrNoRows) {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
@@ -364,13 +371,9 @@ func (s *Server) handlePublicLocationRequest(w http.ResponseWriter, r *http.Requ
 		s.respondErr(w, err)
 		return
 	}
-	// **وطلبُ الواتساب من المكتب بلا متجرٍ مكتوبٍ باسم المنصّة** (٢٠٢٦-١١-٠٥) — لا عنوانٌ فارغ.
-	// والاسمُ من الإعدادات، **وفارغُها اسمُ التطبيق كما كتبه المالكُ في رسالته** (`locReqText`).
-	if store == "" && mode == locReqModeWhatsApp {
-		if store = strings.TrimSpace(s.settings.GetString(r.Context(), "platform.name")); store == "" {
-			store = "رحّال غو"
-		}
-	}
+	// **اسمُ المنصّة وحدَه — لا اسمُ متجرٍ ولا زبونٍ ولا ما كتبه المكتب** (قرارُ المالك ٢٠٢٦-١١-٠٦:
+	// «الافضل مانذكر اسم المتجر»). والحقلُ باسمه القديم (`store_name`) فلا تنكسر الصفحة.
+	store := locReqPlatformName
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"store_name": store,
 		"mode":       mode,
@@ -503,7 +506,7 @@ func (s *Server) handleCustomerRequestLocation(w http.ResponseWriter, r *http.Re
 		s.respondErr(w, err)
 		return
 	}
-	httpx.JSON(w, http.StatusCreated, s.locReqSend(ctx, id, phone, token, expires))
+	httpx.JSON(w, http.StatusCreated, s.locReqSend(ctx, id, phone, "amanah", token, expires))
 }
 
 // handleCustomerLocationRequest **أوصل موقعُ صاحب الأمانة؟** — `GET /my/location-requests/{id}`.

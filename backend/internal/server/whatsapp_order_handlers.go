@@ -486,7 +486,7 @@ func (s *Server) handleWhatsAppRequestLocation(w http.ResponseWriter, r *http.Re
 		s.respondErr(w, err)
 		return
 	}
-	httpx.JSON(w, http.StatusCreated, s.locReqSend(ctx, id, phone, token, expires))
+	httpx.JSON(w, http.StatusCreated, s.locReqSend(ctx, id, phone, locReqModeWhatsApp, token, expires))
 }
 
 // handleWhatsAppLocationRequest `GET /admin/whatsapp-orders/location-requests/{id}` — **أوصل الموقع؟**
