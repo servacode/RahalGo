@@ -76,6 +76,19 @@ class LiveChatViewModel : ViewModel() {
     companion object {
         /** **مجموعُ ما لم يُقرأ عبر الأحاديث المعروضة** — وهو ما تقوله الشارة. */
         fun totalUnread(chats: List<Live>): Int = chats.sumOf { it.unread }
+
+        /**
+         * **الأحاديثُ بعد أن قرأ الزبونُ واحداً منها** — يُصفَّر عدُّ ذاك الطلب وحدَه،
+         * وعدُّ غيره يبقى كما هو.
+         *
+         * **وإن لم يكن فيه ما يُصفَّر تعود القائمةُ نفسُها** — فلا إعادةَ رسمٍ بلا سبب.
+         */
+        fun afterRead(chats: List<Live>, orderId: String): List<Live> =
+            if (chats.none { it.orderId == orderId && it.unread > 0 }) {
+                chats
+            } else {
+                chats.map { if (it.orderId == orderId) it.copy(unread = 0) else it }
+            }
     }
 
     /** **أمفتوحٌ لوحٌ؟** — **وبه تُكتم الرنّةُ عمّن يقرأ الآن.** */
@@ -161,6 +174,27 @@ class LiveChatViewModel : ViewModel() {
             val uri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
             RingtoneManager.getRingtone(context.applicationContext, uri)?.play()
         }.onFailure { Log.w("RahalGo/chat", "تعذّرت الرنّة", it) }
+    }
+
+    /**
+     * **من فتح حديثاً أو بدّل إليه فقد قرأه** — يسقط عدُّه الآن: شارةُ مربّعه وشارةُ القرص معاً.
+     *
+     * **والمحرّكُ يَسِمُ الرسائلَ مقروءةً مع قراءة الحديث نفسِها، لكنّه لا يبعث للزبون شيئاً**
+     * (النبضةُ تذهب إلى الطرف الآخر وحدَه). **فبلا هذا يبقى العددُ القديمُ حتّى تصل نبضةٌ أخرى**:
+     * يظهر على مربّعٍ قُرئ، وتبقى شارةُ القرص، ويفتح القرصُ طلباً قُرئ.
+     *
+     * **ثمّ تُقرأ الحقيقةُ من المحرّك بعد وصول الحديث** (`load` بلا سياق)، فإن اختلفت ربحت الحقيقة.
+     * **واللوحُ هو من يُنادي الاثنتين** (`onOpened` ثمّ `onLoaded` في `OrderChatSheet`) من كلّ بابٍ يفتحه:
+     * القرصُ العائم و«دردشاتي» وبطاقةُ الطلب.
+     */
+    fun markRead(orderId: String) {
+        val next = afterRead(chats, orderId)
+        if (next === chats) return
+        chats = next
+        val n = totalUnread(next)
+        unread = n
+        // **ويُنزَّل مرجعُ الرنّة معه** — وإلّا لم ترنّ رسالةٌ جديدةٌ حتّى يتجاوز المجموعُ ما كان قبل القراءة.
+        lastSeen = minOf(lastSeen, n)
     }
 
     /** **ويُطفأ عند الخروج** — وإلّا بقي قرصُ حسابٍ مضى فوق شاشةِ ضيف. */

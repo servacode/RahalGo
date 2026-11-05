@@ -86,14 +86,14 @@ function Bell() {
 
 /** **فقّاعةُ المحادثة** — لكلّ طلبٍ جارٍ أُسند له سائق، **وعدّادُه من المحرّك.** */
 function Chats() {
-  const { open, chats, reload } = useActiveOrders();
+  const { open, chats, reload, markRead } = useActiveOrders();
   const threads = useMemo(() => {
     const unread = new Map(chats.map((c) => [c.order_id, c.unread]));
     return (open ?? [])
       .filter((o) => !!o.driver_name)
       .map((o) => ({ id: o.id, number: o.number, peer: o.driver_name ?? "", unread: unread.get(o.id) ?? 0 }));
   }, [open, chats]);
-  return <ChatBubble api={api} threads={threads} onRead={reload} />;
+  return <ChatBubble api={api} threads={threads} onRead={reload} onOpen={markRead} />;
 }
 
 /**

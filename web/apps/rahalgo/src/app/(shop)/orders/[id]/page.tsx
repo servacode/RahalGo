@@ -20,6 +20,7 @@ import { Alert, Badge, Button, LoadingState, Money, OrderChat, ReloadState, Shee
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { customFee, fill, freeCustomOn, statusLabel } from "@/lib/customer/texts";
+import { useActiveOrders } from "@/lib/customer/active";
 import { useCustomer } from "@/lib/customer/context";
 import { ENDED, type MyOrder } from "@/lib/customer/types";
 import { CancelNote, CancelOrder, DeliveryCode, OrderEta, OrderInvoice, OrderStages, QuoteAmounts } from "@/components/customer/orderParts";
@@ -49,6 +50,8 @@ export default function OrderPage() {
   const { user, loading } = useAuth();
   const toast = useShopToast();
   const { platform, freeDelivery } = useCustomer();
+  // **وقارئُ الحديث من هنا يُخبر الفقّاعةَ الطافية** — انظر `onLoaded` أدناه.
+  const { reload: reloadActive } = useActiveOrders();
   const [order, setOrder] = useState<MyOrder | null>(null);
   const [error, setError] = useState("");
   const [chat, setChat] = useState(false);
@@ -251,7 +254,9 @@ export default function OrderPage() {
       <ComplaintBox order={order} />
       {chat && (
         <Sheet open onClose={() => setChat(false)} title={O.chat}>
-          <OrderChat api={api} orderId={order.id} bare streamClass="min-h-60 max-h-[55vh]" />
+          {/* **ووصولُ الحديث هو وسمُ القراءة في المحرّك** — فتُقرأ الحقيقةُ بعده لتسقط شارةُ
+              الفقّاعة الطافية وعدُّها على المربّع، ولا تبقى على الرقم القديم حتّى نبضةٍ أخرى. */}
+          <OrderChat api={api} orderId={order.id} bare streamClass="min-h-60 max-h-[55vh]" onLoaded={reloadActive} />
         </Sheet>
       )}
     </div>

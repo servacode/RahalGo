@@ -26,9 +26,17 @@ interface ActiveState {
   /** **عدّادُ ما لم يُقرأ في كلّ حديث** — من `/my/chats`. */
   chats: ChatRow[];
   reload: () => void;
+  /**
+   * **حديثٌ فتحه صاحبُه فقرأه** — يسقط عدُّه الآن لا مع النبضة التالية.
+   *
+   * **والمحرّكُ يَسِمُ الرسائلَ مقروءةً مع قراءة الحديث لكنّه لا يبعث للقارئ شيئاً**،
+   * فيبقى العددُ القديمُ على المربّع وعلى الفقّاعة حتّى تأتي قراءةٌ أخرى. **وتأتي
+   * الحقيقةُ من `reload` بعد وصول الحديث** فإن اختلفت ربحت.
+   */
+  markRead: (orderId: string) => void;
 }
 
-const Ctx = createContext<ActiveState>({ open: null, chats: [], reload: () => undefined });
+const Ctx = createContext<ActiveState>({ open: null, chats: [], reload: () => undefined, markRead: () => undefined });
 
 export function ActiveOrdersProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState<MyOrder[] | null>(null);
@@ -44,6 +52,15 @@ export function ActiveOrdersProvider({ children }: { children: ReactNode }) {
       .catch(() => undefined);
   }, []);
 
+  const markRead = useCallback((orderId: string) => {
+    // **وإن لم يكن فيه ما يُصفَّر تعود القائمةُ نفسُها** — فلا إعادةَ رسمٍ بلا سبب.
+    setChats((rows) =>
+      rows.some((r) => r.order_id === orderId && r.unread > 0)
+        ? rows.map((r) => (r.order_id === orderId ? { ...r, unread: 0 } : r))
+        : rows,
+    );
+  }, []);
+
   useEffect(() => {
     reload();
     const t = setInterval(reload, EVERY_MS);
@@ -57,7 +74,7 @@ export function ActiveOrdersProvider({ children }: { children: ReactNode }) {
 
   useLiveRefresh(["order"], reload);
 
-  const value = useMemo(() => ({ open, chats, reload }), [open, chats, reload]);
+  const value = useMemo(() => ({ open, chats, reload, markRead }), [open, chats, reload, markRead]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

@@ -1057,7 +1057,14 @@ private fun SignedIn(
                     over is Overlay.Menu && over.key == CustomerItems.CHATS -> {
                         androidx.compose.runtime.LaunchedEffect(Unit) { chatsVm.load() }
                         OverlayPage(menuTitle(over.key), onBack = { overlay.clear() }) {
-                            ChatsScreen(chatsVm, titled = false)
+                            ChatsScreen(
+                                chatsVm,
+                                titled = false,
+                                // **ومن قرأ حديثاً من «دردشاتي» يسقط عدُّه من القرص أيضاً** — كالقرص العائم نفسِه
+                                // (انظر `OrderChatSheet`)، وإلّا بقيت شارتُه على الرقم القديم حتّى نبضةٍ أخرى.
+                                onOpened = liveChat::markRead,
+                                onLoaded = { liveChat.load() },
+                            )
                         }
                     }
 
@@ -1455,6 +1462,18 @@ private fun SignedIn(
                             tabs = liveChat.chats.map { it.orderId to it.number },
                             tabUnread = liveChat.chats.associate { it.orderId to it.unread },
                             onSwitch = { liveChat.openId = it },
+                            // ══════════════════════════════════════════
+                            // **ومن فتح حديثاً أو بدّل إليه فقد قرأه**
+                            // ══════════════════════════════════════════
+                            //
+                            // **يسقط عدُّه الآن** — شارةُ مربّعه وشارةُ القرص — ولا ينتظر نبضةً:
+                            // المحرّكُ يَسِمُ الرسائلَ مقروءةً مع قراءة الحديث لكنّه لا يبعث للزبون شيئاً.
+                            // **ثمّ تُقرأ الحقيقةُ كلَّما وصل الحديثُ** — فوصولُه هو وسمُ القراءة في المحرّك،
+                            // وما اختلف عن الصفر المحلّيّ تربحه الحقيقة. (بلا سياقٍ: فلا رنّةَ لمن يقرأ الآن.)
+                            // **واللوحُ هو من يُنادي** — فكلُّ بابٍ يفتحه يُخبر القرصَ بلا تكرار: «دردشاتي»
+                            // (`ChatsScreen`) وبطاقةُ الطلب (`OrdersScreen`) يمرّران الاثنتين نفسَيهما.
+                            onOpened = liveChat::markRead,
+                            onLoaded = { liveChat.load() },
                         ) { liveChat.openId = null }
                     }
                 }

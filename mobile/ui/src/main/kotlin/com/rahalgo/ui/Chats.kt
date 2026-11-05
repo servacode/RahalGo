@@ -154,6 +154,13 @@ fun ChatsScreen(
     vm: ChatsViewModel,
     /** **بلا عنوانٍ ولا شرح** — حين يلفّها التطبيقُ برأسٍ بسهم (السائق ٢٠٢٦-١٠-٣٠). */
     titled: Boolean = true,
+    /**
+     * **وقراءةُ الحديث تصل صاحبَ الشارة** (فحصُ ما قبل الإصدار ٢٠٢٦-١١-٠٥) — يُنادى عند فتح لوحٍ على
+     * طلبٍ جارٍ، ثمّ كلَّما وصل حديثُه. **وهذا بابٌ ثانٍ لما يفتحه القرصُ العائم** فلا يُنسى أن يُخبر مثله.
+     * **وفارغُهما «لا شارةَ تتبع هذه الشاشة»** — كتطبيق السائق. انظر `OrderChatSheet`.
+     */
+    onOpened: (orderId: String) -> Unit = {},
+    onLoaded: (orderId: String) -> Unit = {},
 ) {
     val list = vm.rows
     if (list == null) {
@@ -180,7 +187,7 @@ fun ChatsScreen(
         var writing by remember { mutableStateOf("") }
         if (writing.isNotEmpty()) {
             val chatVm: OrderChatViewModel = viewModel()
-            OrderChatSheet(vm = chatVm, orderId = writing) { writing = "" }
+            OrderChatSheet(vm = chatVm, orderId = writing, onOpened = onOpened, onLoaded = onLoaded) { writing = "" }
         }
         list.forEach { row ->
             Spacer(Modifier.height(8.dp))

@@ -29,6 +29,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import com.rahalgo.customer.R
+import com.rahalgo.customer.chat.LiveChatViewModel
 import com.rahalgo.design.Rahal
 import com.rahalgo.shared.customer.ComplaintReason
 import com.rahalgo.shared.customer.MyOrder
@@ -190,7 +191,22 @@ private fun OrdersList(
     // **ولوحُ الحديث فوق القائمة** — (شكوى المالك ٢٠٢٦-٠٨-١٨).
     chatId?.let { id ->
         val chatVm: OrderChatViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
-        OrderChatSheet(vm = chatVm, orderId = id) { chatId = null }
+        // ══════════════════════════════════════════════════════════════
+        // **وقارئُ الحديث من هنا يُخبر القرصَ كالقرص العائم** (فحصُ ما قبل الإصدار ٢٠٢٦-١١-٠٥)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **والنموذجُ هو نفسُه الذي في `MainActivity`** — الغلافُ كلُّه نشاطٌ واحد بلا تنقّل.
+        // وبلا هذا يبقى عدُّ الطلب على القرص حتّى نبضةٍ أخرى وقد قُرئ حديثُه.
+        //
+        // (والبابُ مُغلقٌ اليوم — `onChat = null` أدناه بقرار المالك — لكنّه يُفتح بسطرٍ واحد،
+        //  فلا يُترك لمن يفتحه أن يتذكّر.)
+        val liveChat: LiveChatViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+        OrderChatSheet(
+            vm = chatVm,
+            orderId = id,
+            onOpened = liveChat::markRead,
+            onLoaded = { liveChat.load() },
+        ) { chatId = null }
     }
 
     // ══════════════════════════════════════════════════════════════════

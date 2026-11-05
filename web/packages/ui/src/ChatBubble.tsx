@@ -45,11 +45,14 @@ export function ChatBubble({
   api,
   threads,
   onRead,
+  onOpen,
 }: {
   api: ApiFn;
   /** الطلباتُ المفتوحةُ التي لها طرفٌ ثانٍ — يبنيها من يعرف شاشتَه. */
   threads: ChatThread[];
   onRead?: () => void;
+  /** حديثٌ فُتح أو بُدِّل إليه — **صاحبُ `threads` يُصفِّر عدَّه الآن** ثمّ تأتي الحقيقةُ من `onRead`. */
+  onOpen?: (orderId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [picked, setPicked] = useState<string>("");
@@ -69,6 +72,18 @@ export function ChatBubble({
   useLiveRefresh(["order"], refresh);
 
   /**
+   * **ومن فتح حديثاً أو بدّل إليه قرأه** — يسقط عدُّه (شارةُ مربّعه وشارةُ الفقّاعة) الآن.
+   *
+   * **والمحرّكُ يَسِمُ الرسائلَ مقروءةً مع قراءة الحديث لكنّه لا يبعث للقارئ شيئاً**: بلا هذا
+   * يبقى العددُ القديمُ على مربّعٍ قُرئ، وتبقى الفقّاعةُ على مجموعها القديم حتّى تأتي قراءةٌ
+   * أخرى. **وما يصل والحديثُ مفتوحٌ يُقرأ حيّاً** — فيسقط كذلك.
+   */
+  const pickedUnread = threads.find((t) => t.id === picked)?.unread ?? 0;
+  useEffect(() => {
+    if (open && picked && pickedUnread > 0) onOpen?.(picked);
+  }, [open, picked, pickedUnread, onOpen]);
+
+  /**
    * **وتُفتح وحدَها عند أوّل رسالةٍ ويُنبَّه بصوت.**
    *
    * (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «وفتح الدردشة بشكلٍ تلقائيٍّ مع صوتٍ للتنبيه».)
@@ -78,11 +93,16 @@ export function ChatBubble({
    *
    * **ولا تُفتح إلّا على جديدٍ حقيقيّ**: تُقارَن بما كان لا بما هو —
    * **ونافذةٌ تفتح نفسَها كلَّ تحديثٍ تُغلَق بغضبٍ ثمّ لا تُفتح.**
+   *
+   * **والحديثُ المعروضُ في اللوح المفتوح لا يدخل العدّ**: صاحبُه يقرؤه الآن، **وعدُّه يرجع قديماً
+   * مرّةً بعد مرّة** — جلبٌ تأخّر عن وسم القراءة، أو تبديلٌ سريعٌ بين المربّعات، أو قناةٌ حيّةٌ
+   * مقطوعةٌ لا يُعاد معها جلبُ الحديث — **ورنّةٌ عن رسالةٍ يقرؤها كاذبة.** وكذا في التطبيق: الرنّةُ
+   * ساكتةٌ ما دام اللوحُ مفتوحاً. **أمّا رسالةٌ على مربّعٍ آخرَ فتبقى تُنبّه.**
    */
   const seen = useRef<number | null>(null);
   const chime = useChime();
   useEffect(() => {
-    const total = threads.reduce((n, t) => n + t.unread, 0);
+    const total = threads.reduce((n, t) => n + (open && t.id === picked ? 0 : t.unread), 0);
     // **وأوّلُ قراءةٍ تُسجَّل ولا تُنبّه** — من فتح شاشتَه لا يُفاجَأ برنّةٍ
     // عن رسالةٍ قرأها أمس.
     if (seen.current === null) {
@@ -94,7 +114,7 @@ export function ChatBubble({
       chime();
     }
     seen.current = total;
-  }, [threads, chime]);
+  }, [threads, chime, open, picked]);
 
   if (threads.length === 0) return null;
   const unread = threads.reduce((n, t) => n + t.unread, 0);
@@ -178,7 +198,8 @@ export function ChatBubble({
               <IconClose size={18} />
             </Button>
           </div>
-          {picked && <OrderChat api={api} orderId={picked} bare streamClass="min-h-40" />}
+          {/* **وبعد وصول الحديث تُقرأ الحقيقةُ من المحرّك** — فوصولُه هو وسمُ القراءة. */}
+          {picked && <OrderChat api={api} orderId={picked} bare streamClass="min-h-40" onLoaded={refresh} />}
         </div>
       )}
     </>

@@ -152,9 +152,10 @@ class ChatMultiOrderTest {
      */
     @Test
     fun `الجاري يُفتَح للكتابة في اللوح نفسِه`() {
+        // **وبلا قفل القوس** — صار اللوحُ يأخذ منادِيَي القراءة (`onOpened` و`onLoaded`) بعد الطلب.
         assertTrue(
             "**لا كتابةَ من القائمة**",
-            read(chats).contains("OrderChatSheet(vm = chatVm, orderId = writing)"),
+            read(chats).contains("OrderChatSheet(vm = chatVm, orderId = writing"),
         )
     }
 

@@ -81,11 +81,17 @@ export function OrderChat({
   bare = false,
   /** ارتفاعُ منطقة الرسائل — **لوحُ الفقّاعة يعطيها ما بقي من طوله.** */
   streamClass = "max-h-72",
+  /**
+   * **يُنادى حين يصل الحديثُ من المحرّك** — **ووصولُه هو وسمُ القراءة هناك.** يقرأ به صاحبُ
+   * الشارة حقيقةَ العدّاد بعد القراءة لا قبلها.
+   */
+  onLoaded,
 }: {
   api: ApiFn;
   orderId: string;
   bare?: boolean;
   streamClass?: string;
+  onLoaded?: () => void;
 }) {
   const [thread, setThread] = useState<Thread | null>(null);
   const [draft, setDraft] = useState("");
@@ -94,18 +100,27 @@ export function OrderChat({
   const endRef = useRef<HTMLDivElement | null>(null);
   const boxRef = useRef<HTMLTextAreaElement | null>(null);
 
+  // **ودالّةُ «وصل الحديث» في مرجعٍ** — كي لا يُعاد الجلبُ كلَّما تبدّلت هويّتُها.
+  const loadedRef = useRef(onLoaded);
+  loadedRef.current = onLoaded;
+
   const load = useCallback(async () => {
     try {
       const t = await api<Thread>(`/api/v1/orders/${orderId}/messages`);
       setThread(t);
+      return true;
     } catch {
       // **وقناةٌ لا تُفتح لا تُسقط الشاشة** — الطلبُ يُقرأ بلا حديثه.
       setThread(null);
+      return false;
     }
   }, [api, orderId]);
 
   useEffect(() => {
-    void load();
+    // **عند الفتح والتبديل وحدَهما** — لا مع كلّ نبضة: النبضةُ تُنعش العدّادَ بنفسها.
+    void load().then((ok) => {
+      if (ok) loadedRef.current?.();
+    });
   }, [load]);
 
   // **حيٌّ**: الرسالةُ تصل وصاحبُها ينظر — **وشاشةٌ لا تتحدّث تجعله يكتب
