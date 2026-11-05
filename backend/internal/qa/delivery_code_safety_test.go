@@ -70,7 +70,7 @@ func TestDCODE_WhatsAppCarriesSafetyNotice(t *testing.T) {
 	var body string
 	if err := h.Pool.QueryRow(ctxBG(), `
 		SELECT body FROM notifications
-		WHERE user_id = $1::uuid AND entity_id = $2::uuid AND body LIKE '%' || $3 || '%'
+		WHERE user_id = $1::uuid AND entity_id = $2 AND body LIKE '%' || $3 || '%'
 		ORDER BY created_at DESC LIMIT 1`, cust.ID, oid, *code).Scan(&body); err != nil {
 		t.Fatalf("إشعارُ الكود في التطبيق: %v", err)
 	}
