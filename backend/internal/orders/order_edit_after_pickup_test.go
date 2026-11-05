@@ -325,3 +325,60 @@ func TestOrderEditAP_Guards(t *testing.T) {
 	}
 	f.green(t, "بعد الردود")
 }
+
+// ── مشروبٌ رجع بعضُه ثمّ حُذف صنفُه و«المتجر رجّع المصاري»: المرتجعُ يبقى حقَّ المتجر ──
+// سطرُ «رجّعه الزبون» لمشروبٍ رجع بعضُه **لا يُربط بصنفه** (`drink_for` فارغ): العمودُ
+// `ON DELETE CASCADE`، **فلو رُبط لمُحي مع صنفه** حين يُحذف الصنفُ بعدها، **فيُسحب من المتجر ما
+// تحمّلته المنصّةُ عنه** (قرارُ المالك ٢٠٢٦-١١-٠٣، البند ٢). وثوابتُ FI خضراءُ في الحالين —
+// **فهذا الاختبارُ حارسُه.** (وعرضُ «عيران ×٢» بين الأصناف لا تحت المشروبات عيبٌ شكليٌّ مؤجّل.)
+func TestOrderEditAP_PartlyReturnedDrinkKeepsStoreDue(t *testing.T) {
+	f := newCashFixture(t)
+	m, _ := f.merchant(t, "cash", 10)
+	oid := f.order(t, m, 50_000, 10_000, "cash")
+	ctx := context.Background()
+	parent := f.line(t, oid) // «صنف» ٥٠٬٠٠٠
+	// صنفٌ ثانٍ (فحذفُ الأوّل ليس حذفَ آخرِ بضاعة)، و«عيران ×٣» مع الأوّل — كما يكتبه إنشاءُ الطلب.
+	f.exec(t, `
+		INSERT INTO order_items (order_id, name, unit_price, merchant_price, merchant_id, qty, options,
+		                         merchant_settlement_method)
+		VALUES ($1, 'صنف ثان', 10000, 10000, $2, 1, '[]', 'cash')
+		RETURNING id::text`, oid, m)
+	drink := f.exec(t, `
+		INSERT INTO order_items (order_id, name, unit_price, merchant_price, merchant_id, qty, options,
+		                         merchant_settlement_method, drink_for, drink_option_id)
+		VALUES ($1, 'عيران', 2000, 2000, $2, 3, '[]', 'cash', $3::uuid, gen_random_uuid())
+		RETURNING id::text`, oid, m, parent)
+	if _, err := f.pool.Exec(ctx, `
+		UPDATE orders SET subtotal = subtotal + 16000, total = total + 16000, cash_due = cash_due + 16000
+		 WHERE id = $1`, oid); err != nil {
+		t.Fatal(err)
+	}
+	f.pickup(t, oid) // حقُّ المتجر ٩٠٪ من ٦٦٬٠٠٠ = ٥٩٬٤٠٠
+
+	// ١ · الزبونُ رجّع عيرانَين والمنصّةُ تتحمّل — حقُّ المتجر كما هو.
+	res := f.edit(t, oid, orders.EditRequest{Lines: []orders.EditLine{{ItemID: drink, Qty: 1}}})
+	if len(res.Stores) != 0 || len(res.Changes) != 1 || res.Changes[0].Returned != 2 || f.adjusted(t, oid, m) != 0 {
+		t.Fatalf("المرتجع: %+v — يُنتظر بلا فرقٍ للمتجر", res)
+	}
+	f.green(t, "بعد المرتجع")
+
+	// ٢ · حُذف الصنفُ والمتجرُ رجّع مصاريه — ينقص حقُّه بالصنف (٤٥٬٠٠٠) وعيرانِه الباقي (١٬٨٠٠)
+	// وحدَهما، **والعيرانان المرتجعان (٣٬٦٠٠) باقيان له.**
+	res = f.edit(t, oid, orders.EditRequest{StoreRefunded: true,
+		Lines: []orders.EditLine{{ItemID: parent, Qty: 0}}})
+	var back int
+	if err := f.pool.QueryRow(ctx, `
+		SELECT COALESCE(sum(qty), 0) FROM order_items
+		 WHERE order_id = $1 AND returned AND name = 'عيران' AND merchant_price = 2000`, oid).
+		Scan(&back); err != nil || back != 2 {
+		t.Fatalf("سطرُ «رجّعه الزبون» مُحي مع صنفه: %d (%v)", back, err)
+	}
+	if len(res.Stores) != 1 || res.Stores[0].NewDue != 12_600 || f.adjusted(t, oid, m) != -46_800 {
+		t.Fatalf("حقُّ المتجر: %+v — يُنتظر 12600 (adjusted -46800)، وما دونه سحبٌ لما تحمّلته المنصّة", res.Stores)
+	}
+	f.green(t, "بعد حذف الصنف")
+	for _, st := range []string{"on_the_way", "at_dropoff", "delivered"} {
+		f.transition(t, oid, st)
+	}
+	f.green(t, "بعد التسليم")
+}

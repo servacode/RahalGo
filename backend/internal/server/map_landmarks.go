@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"math"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 )
@@ -118,6 +120,50 @@ func landmarkRank(class string) int {
 		return 60
 	}
 	return 40
+}
+
+var (
+	// labelLatinRun **كلمةٌ لاتينيّةٌ بما التصق بها** من أرقامٍ وشرطةٍ ونقطة:
+	// «Al-Bakkor» · «Bra3em» · «Kozmetik.basmacioglu» · «-Hbaebna».
+	labelLatinRun = regexp.MustCompile(`[-_.'’&0-9]*\p{Latin}[\p{Latin}\p{M}0-9_.'’&-]*`)
+	// labelBareBrackets **قوسان لم يبقَ بينهما عربيّ** — «مطعم (Pizza)» ← «مطعم ( )».
+	labelBareBrackets = regexp.MustCompile(`[(\[{][^()\[\]{}\p{Arabic}]*[)\]}]`)
+	// labelSepRun **فاصلان تجاورا بعد الإسقاط** — يبقى الأوّل: «قطن - Coton - دول» ← «قطن - دول».
+	labelSepRun   = regexp.MustCompile(`([-–—/\\|,،:;·•])(?:[\s\p{Zs}]*[-–—/\\|,،:;·•])+`)
+	labelSpaceRun = regexp.MustCompile(`[\s\p{Zs}]+`)
+	// labelWrapped **التسميةُ كلُّها بين قوسين** — «Al Buder (قطن حلو الشعيب)» ← «(قطن حلو الشعيب)».
+	labelWrapped = regexp.MustCompile(`^[(\[{]([^()\[\]{}]*)[)\]}]$`)
+)
+
+// labelEdge **فاصلٌ لا تبدأ به تسميةٌ ولا تنتهي** — بعد إسقاط اللاتينيّ.
+func labelEdge(r rune) bool {
+	return unicode.IsSpace(r) || strings.ContainsRune(`-–—/\|,،:;·•_+=&*`, r)
+}
+
+// landmarkLabel **تسميةُ المعلم على الخريطة — عربيّةٌ وحدَها** (قرارُ المالك ٢٠٢٦-١١-٠٣: «كلشي
+// بالعربي لازم»، ونمطُ f85a48e6 لا يعرض `name` الخامَ أبداً). وأسماءُ Overture مخلوطة:
+//
+//	«مستشفى الرازّي - Alrazzi hospital»  ←  «مستشفى الرازّي»
+//	«Stirk complex / مجمع سترك»          ←  «مجمع سترك»
+//
+// **الكلمةُ اللاتينيّةُ تُسقَط بما التصق بها، ثمّ ما تيتّم بعدها** من فواصلَ وأقواسٍ ومسافات.
+// **وما لا حرفَ عربيَّ فيه يُردّ فارغاً** — فلا تسميةَ له والأيقونةُ باقية. **والعربيُّ الخالصُ كما هو.**
+// **ولأسماء `map_landmarks` وحدَها** — اسمُ متجرِنا لا يمرّ بها.
+func landmarkLabel(name string) string {
+	s := strings.TrimSpace(name)
+	if strings.IndexFunc(s, func(r rune) bool { return unicode.Is(unicode.Latin, r) }) >= 0 {
+		s = labelLatinRun.ReplaceAllString(s, " ")
+		s = labelBareBrackets.ReplaceAllString(s, " ")
+		s = labelSepRun.ReplaceAllString(s, "$1")
+		s = strings.TrimFunc(labelSpaceRun.ReplaceAllString(s, " "), labelEdge)
+		if m := labelWrapped.FindStringSubmatch(s); m != nil {
+			s = strings.TrimFunc(m[1], labelEdge)
+		}
+	}
+	if strings.IndexFunc(s, func(r rune) bool { return unicode.IsLetter(r) && unicode.Is(unicode.Arabic, r) }) < 0 {
+		return ""
+	}
+	return s
 }
 
 type landmarkOut struct {
@@ -243,14 +289,26 @@ func (s *Server) handlePublicMapLandmarks(w http.ResponseWriter, r *http.Request
 	if q.Get("format") == "geojson" {
 		feats := make([]map[string]any, 0, len(out))
 		for _, x := range out {
+			// `class` و`name:ar` و`rank` بمفردات البلاطة — فتُستعار طبقتُها كما هي.
+			props := map[string]any{
+				"id": x.ID, "name": x.Name,
+				"class": x.Class, "category": x.Cat, "rank": x.Rank,
+			}
+			// **وتسميةُ المعلم عربيّةٌ وحدَها** (`landmarkLabel`) — وما لا عربيَّ فيه بلا `name:ar` فلا اسمَ يُرسم.
+			// و`name` الخامُ باقٍ: النمطُ لا يعرضه، يقرؤه مفتاحاً لجدول التعريب وحدَه.
+			// **ومتجرُنا (`s…`) باسمه كما كتبه صاحبُه** — القرارُ عن بيانات الخريطة لا عن اسم المحلّ،
+			// وتطبيقا الزبون والسائق يرسمانه خاماً من `/public/map/stores`: «KFC الرقة» لا «الرقة».
+			label := x.Name
+			if strings.HasPrefix(x.ID, "l") {
+				label = landmarkLabel(x.Name)
+			}
+			if label != "" {
+				props["name:ar"] = label
+			}
 			feats = append(feats, map[string]any{
-				"type":     "Feature",
-				"geometry": map[string]any{"type": "Point", "coordinates": []float64{x.Lng, x.Lat}},
-				// `class` و`name:ar` و`rank` بمفردات البلاطة — فتُستعار طبقتُها كما هي.
-				"properties": map[string]any{
-					"id": x.ID, "name": x.Name, "name:ar": x.Name,
-					"class": x.Class, "category": x.Cat, "rank": x.Rank,
-				},
+				"type":       "Feature",
+				"geometry":   map[string]any{"type": "Point", "coordinates": []float64{x.Lng, x.Lat}},
+				"properties": props,
 			})
 		}
 		w.Header().Set("Content-Type", "application/geo+json")
