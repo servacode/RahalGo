@@ -77,12 +77,18 @@ function LocationField({
   onPoint,
   disabled,
   error,
+  clearable,
 }: {
   label: string;
   point: Point | null;
   onPoint: (p: Point | null) => void;
   disabled: boolean;
   error?: boolean;
+  /**
+   * **«امسح النقطة»** — موقعُ المستلِم اختياريّ (ملحقُ المالك ٢٠٢٦-١١-٠٥، ب): نقطةٌ غلطٌ أو خارجَ
+   * التغطية تُمسح فيُرسَل الطلبُ بالعنوان المكتوب.
+   */
+  clearable?: boolean;
 }) {
   const [link, setLink] = useState("");
   const [state, setState] = useState<LinkState>("idle");
@@ -137,6 +143,20 @@ function LocationField({
       {state === "checking" && <p className="text-sm text-ink-muted">{W.linkChecking}</p>}
       {state === "found" && <p className="text-sm text-success">{W.linkFound}</p>}
       {state === "notFound" && <p className="text-sm text-warning">{W.linkNotFound}</p>}
+      {clearable && point && (
+        <Button
+          size="sm"
+          variant="ghost"
+          disabled={disabled}
+          onClick={() => {
+            onPoint(null);
+            setLink("");
+            setState("idle");
+          }}
+        >
+          {W.clearPoint}
+        </Button>
+      )}
     </div>
   );
 }
@@ -195,6 +215,14 @@ export function WhatsAppOrderForm({ onSent }: { onSent: (o: { id: string; number
   const [askFollow, setAskFollow] = useState(false);
   const [askError, setAskError] = useState("");
   const [copied, setCopied] = useState(false);
+  // **طلبُ الموقع لرقمٍ بعينه** — رقمُه، ورقمُ الطلب الحاليّ (جوابُ سؤالٍ قديمٍ لا يُكتب)، والنقطةُ
+  // التي جاءت منه (تُمسح معه إن تغيّر الرقم).
+  const askPhone = useRef("");
+  const askId = useRef<string | null>(null);
+  const askPoint = useRef<Point | null>(null);
+  // **ودورُ الطلب** — ردٌّ وصل بعد أن سقط طلبُه (تغيّر الرقمُ وهو يُرسَل) يُهمَل؛ ورقمُ ما يُرسَل الآن.
+  const askSeq = useRef(0);
+  const askPending = useRef("");
 
   // ── الأجرة: كلّما تحدّد المتجر — بموقع المستلِم أو بلاه ─────────────
   const pickup: { storeId?: string; at?: Point } | null =
@@ -228,19 +256,27 @@ export function WhatsAppOrderForm({ onSent }: { onSent: (o: { id: string; number
       return;
     }
     setAsk("sending");
+    const asked = phone.trim();
+    askPending.current = asked;
+    const my = ++askSeq.current;
     try {
       const r = await api<AskReq>("/api/v1/admin/whatsapp-orders/location-requests", {
         method: "POST",
         body: JSON.stringify({
-          phone: phone.trim(),
+          phone: asked,
           store_name: storeKind === "ours" ? (store?.name ?? "") : storeName.trim(),
         }),
       });
+      if (my !== askSeq.current) return;
+      askPhone.current = asked;
+      askId.current = r.id;
+      askPoint.current = null;
       setAskReq(r);
       setAskAcc(null);
       setAskFollow(false);
       setAsk("waiting");
     } catch (e) {
+      if (my !== askSeq.current) return;
       setAsk(askReq ? "waiting" : "idle");
       setAskError(errorText(e));
     }
@@ -253,9 +289,13 @@ export function WhatsAppOrderForm({ onSent }: { onSent: (o: { id: string; number
     const timer = setInterval(async () => {
       try {
         const st = await api<AskStatus>(`/api/v1/admin/whatsapp-orders/location-requests/${id}`);
+        // **جوابُ طلبٍ أُسقط** (تغيّر الرقمُ والسؤالُ في الطريق) — لا يُكتب.
+        if (askId.current !== id) return;
         if (st.followup_sent) setAskFollow(true);
         if (st.status === "received" && st.lat != null && st.lng != null) {
-          setPoint({ lat: st.lat, lng: st.lng });
+          const p = { lat: st.lat, lng: st.lng };
+          askPoint.current = p;
+          setPoint(p);
           setAskAcc(st.accuracy_m);
           setAsk("received");
         } else if (st.status === "expired") {
@@ -267,6 +307,34 @@ export function WhatsAppOrderForm({ onSent }: { onSent: (o: { id: string; number
     }, 4000);
     return () => clearInterval(timer);
   }, [ask, askReq]);
+
+  /** **سقوطُ طلب الموقع** — ونقطتُه معه ما دامت كما جاءت منه. */
+  function dropAsk() {
+    if (askPoint.current && point === askPoint.current) setPoint(null);
+    askSeq.current++;
+    askPhone.current = "";
+    askPending.current = "";
+    askId.current = null;
+    askPoint.current = null;
+    setAsk("idle");
+    setAskReq(null);
+    setAskAcc(null);
+    setAskFollow(false);
+    setAskError("");
+    setCopied(false);
+  }
+
+  /**
+   * **رقمُ المستلِم تغيّر بعد «اطلب الموقع»** — الطلبُ لرقمٍ آخر فيسقط: الخادمُ لا يربطه بطلبٍ لرقمٍ
+   * غيرِه (`location_request_invalid`)، **ونقطةُ صاحب الرقم الأوّل ليست نقطةَ هذا المستلِم.**
+   * والمقارنةُ بآخر تسعة أرقام — `09…` و`+9639…` رقمٌ واحد.
+   */
+  function onPhone(v: string) {
+    setPhone(v);
+    const tail = (s: string) => s.replace(/\D/g, "").slice(-9);
+    const asked = ask === "sending" ? askPending.current : askPhone.current;
+    if ((askReq || ask === "sending") && tail(v) !== tail(asked)) dropAsk();
+  }
 
   async function copyLink() {
     if (!askReq) return;
@@ -347,6 +415,11 @@ export function WhatsAppOrderForm({ onSent }: { onSent: (o: { id: string; number
     setAskAcc(null);
     setAskFollow(false);
     setAskError("");
+    askSeq.current++;
+    askPhone.current = "";
+    askPending.current = "";
+    askId.current = null;
+    askPoint.current = null;
     setRound((r) => r + 1);
   }
 
@@ -385,14 +458,16 @@ export function WhatsAppOrderForm({ onSent }: { onSent: (o: { id: string; number
         body.store_lng = storePoint!.lng;
       }
       if (feeValue != null && (noPoint || (quote && feeValue !== quote.fee))) body.fee = feeValue;
-      const r = await api<{ id: string; number: number }>("/api/v1/admin/whatsapp-orders", {
+      const r = await api<{ id: string; number: number; has_point?: boolean }>("/api/v1/admin/whatsapp-orders", {
         method: "POST",
         headers: { "Idempotency-Key": attemptKey(SLOT) },
         body: JSON.stringify(body),
       });
       clearAttempt(SLOT);
       reset();
-      onSent({ ...r, noPoint });
+      // **«نزل بالعنوان المكتوب» من الخادم لا من الشاشة** — موقعٌ وصل بين جولتين من السؤال كتبه
+      // الخادمُ في الطلب والشاشةُ لم تره بعد.
+      onSent({ id: r.id, number: r.number, noPoint: r.has_point === undefined ? noPoint : !r.has_point });
     } catch (e) {
       if (isDecided(e)) clearAttempt(SLOT);
       setError(errorText(e));
@@ -509,7 +584,7 @@ export function WhatsAppOrderForm({ onSent }: { onSent: (o: { id: string; number
               value={phone}
               disabled={busy}
               error={tried && !phone.trim() ? W.required : undefined}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => onPhone(e.target.value)}
             />
             <p className="text-sm text-ink-muted">{W.recipientPhoneHint}</p>
             {openFor != null && <Alert tone="warning">{fill(W.openForPhone, { n: openFor })}</Alert>}
@@ -560,7 +635,7 @@ export function WhatsAppOrderForm({ onSent }: { onSent: (o: { id: string; number
             {ask === "expired" && <p className="text-sm text-danger">{W.askLocExpired}</p>}
             {askError && <p className="text-sm text-danger">{askError}</p>}
           </div>
-          <LocationField key={`drop-${round}`} label={W.recipientMap} point={point} onPoint={setPoint} disabled={busy} />
+          <LocationField key={`drop-${round}`} label={W.recipientMap} point={point} onPoint={setPoint} disabled={busy} clearable />
           <Textarea label={W.driverNote} value={driverNote} maxLength={500} autoGrow disabled={busy} onChange={(e) => setDriverNote(e.target.value)} />
         </div>
       </AdminCard>

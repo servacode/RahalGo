@@ -163,7 +163,12 @@ func TestWAORD024_NoPointThenLocationArrives(t *testing.T) {
 		t.Fatalf("**أجرةٌ صفرٌ بلا موقع**: %d / %s", r.Code, r.Err())
 	}
 	b["fee"] = 650
-	id := waCreated(t, waPost(t, h, ops.Token, b))
+	r0 := waPost(t, h, ops.Token, b)
+	id := waCreated(t, r0)
+	// **والردُّ يقول أعليه موقع** — من الخادم لا من الشاشة (مراجعةُ ٢٠٢٦-١١-٠٥).
+	if hp, ok := r0.JSON()["has_point"].(bool); !ok || hp {
+		t.Fatalf("**ردُّ الإنشاء بلا موقع لا يقول has_point=false**: %s", r0)
+	}
 	lat, lng, known, fee := waOrderPoint(t, h, id)
 	if known || fee != 650 || !nearF(lat, w.storeLat) || !nearF(lng, w.storeLng) {
 		t.Fatalf("**الطلبُ بلا موقع**: معروفة %v · أجرة %d · نقطة %v,%v (المنتظَر نقطةُ المتجر غيرَ معروفة)",
@@ -232,7 +237,12 @@ func TestWAORD024_NoPointThenLocationArrives(t *testing.T) {
 	delete(b3, "lng")
 	b3["recipient_phone"] = phone3
 	b3["location_request_id"] = req3
-	id3 := waCreated(t, waPost(t, h, ops.Token, b3))
+	r3 := waPost(t, h, ops.Token, b3)
+	id3 := waCreated(t, r3)
+	// **والشاشةُ لم ترَ الموقعَ بعد** (وصل بين جولتين من سؤالها) — **والردُّ يقول إنّه على الطلب.**
+	if r3.JSON()["has_point"] != true {
+		t.Fatalf("**ردُّ الإنشاء لا يقول إنّ الموقعَ الواصلَ صار على الطلب**: %s", r3)
+	}
 	lat, _, known, fee = waOrderPoint(t, h, id3)
 	if !known || !nearF(lat, w.md.dropLat) || fee != 500 {
 		t.Fatalf("**الموقعُ الواصلُ قبل الإنشاء لم يملأ النقطة**: %v · %v · %d", known, lat, fee)
@@ -283,6 +293,15 @@ func TestWAORD025_FollowUpOnceForOfficeRequests(t *testing.T) {
 	sr := h.POST(w.md.url("/location-requests"), w.md.fx.Tok, map[string]any{"phone": store})
 	storeID, _ := sr.JSON()["id"].(string)
 	backdate(storeID, 4)
+	// **وطلبٌ حدّد الموظّفُ نقطتَه على الخريطة** — مربوطٌ بطلب الموقع ولم يصل موقعٌ، **فلا يُسأل
+	// المستلِمُ عن عنوانه** (مراجعةُ ٢٠٢٦-١١-٠٥).
+	pinned := uniqPhone()
+	pinID, _, _ := waLocReq(t, h, ops.Token, pinned, "")
+	pb := w.body()
+	pb["recipient_phone"] = pinned
+	pb["location_request_id"] = pinID
+	waCreated(t, waPost(t, h, ops.Token, pb))
+	backdate(pinID, 4)
 
 	if got := h.API.SweepWALocationFollowUp(ctxBG()); got != 1 {
 		t.Fatalf("**الجولةُ بعثت %d — والمنتظَر 1** (المنتظِرُ بعد ٣ دقائق وحدَه)", got)
@@ -291,7 +310,8 @@ func TestWAORD025_FollowUpOnceForOfficeRequests(t *testing.T) {
 	if msgs := n.to(waiting); len(msgs) != 2 || msgs[1].text != want {
 		t.Fatalf("**رسالةُ المتابعة**: %+v", msgs)
 	}
-	for name, p := range map[string]string{"الحديث": fresh, "من ردّ": answered, "طلب المتجر": store} {
+	for name, p := range map[string]string{"الحديث": fresh, "من ردّ": answered, "طلب المتجر": store,
+		"طلبٌ بنقطة": pinned} {
 		if msgs := n.to(p); len(msgs) != 1 {
 			t.Errorf("**وصلت المتابعةُ %s**: %d رسائل", name, len(msgs))
 		}

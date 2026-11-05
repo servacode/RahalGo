@@ -549,9 +549,10 @@ func (s *Service) WhatsAppStores(ctx context.Context, q string, limit int) ([]Wh
 	return out, rows.Err()
 }
 
-// WhatsAppOrders **آخرُ طلبات الواتساب** — الأحدثُ أوّلاً، للّوحة. **و`phone` يحصرها في رقم
-// مستلِمٍ** (والجاريةُ وحدَها مع `openOnly`): «في طلب واتساب مفتوح لهالرقم» — كي لا يُرسَل
-// سائقان إلى بابٍ واحد.
+// WhatsAppOrders **آخرُ طلبات الواتساب** — **الجاريةُ أوّلاً** ثمّ المنتهية، والأحدثُ أوّلاً في
+// كلٍّ، للّوحة: طلبٌ مفتوحٌ أقدمُ من آخر المنتهية يبقى في القائمة فيُصحَّح عنوانُه منها.
+// **و`phone` يحصرها في رقم مستلِمٍ** (والجاريةُ وحدَها مع `openOnly`): «في طلب واتساب مفتوح
+// لهالرقم» — كي لا يُرسَل سائقان إلى بابٍ واحد.
 func (s *Service) WhatsAppOrders(ctx context.Context, phone string, openOnly bool, limit int) ([]Order, error) {
 	if limit <= 0 || limit > 50 {
 		limit = 20
@@ -565,7 +566,8 @@ func (s *Service) WhatsAppOrders(ctx context.Context, phone string, openOnly boo
 	if openOnly {
 		where += ` AND o.closed_at IS NULL`
 	}
-	rows, err := s.db.Query(ctx, orderSelect+where+` ORDER BY o.created_at DESC LIMIT $1`, args...)
+	rows, err := s.db.Query(ctx, orderSelect+where+
+		` ORDER BY (o.closed_at IS NULL) DESC, o.created_at DESC LIMIT $1`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -636,20 +638,50 @@ const (
 // لحظته** (البثُّ وإشعارٌ يوقظ الهاتف). **والأجرةُ لا تتبدّل** — كُتبت عند الإنشاء.
 //
 // **ونقطةٌ خارجَ التغطية تُكتب أيضاً ويُخبَر المكتب** — المستلِمُ أعلمُ بمكانه، والسائقُ في
-// الطريق؛ والمكتبُ يقرّر. ويردّ أكُتبت.
+// الطريق؛ والمكتبُ يقرّر. **ومنطقةُ الطلب منطقةُ النقطة الواصلة إن كانت داخلَ التغطية** — طلبٌ
+// أُنشئ بلا موقعٍ كان على منطقة المتجر، **كما يُنشأ بالموقع على منطقة المستلِم.** ويردّ أكُتبت.
 func (s *Service) ApplyWhatsAppShared(ctx context.Context, orderID string, lat, lng float64) (bool, error) {
+	return s.applyWhatsAppShared(ctx, orderID, lat, lng, false)
+}
+
+// FillWhatsAppShared **يكتب الموقعَ الواصلَ في طلبٍ بلا نقطةٍ معروفةٍ وحدَه** — لا فوق نقطةٍ
+// معروفة. **لما يُكتب بعد وقته**: موقعٌ وصل قبل الإنشاء خارجَ التغطية (يُنشأ الطلبُ بلا نقطةٍ ثمّ
+// يُكتب)، **وجولةُ الإصلاح** لموقعٍ وصل وسقطت كتابتُه. **فكاتبان معاً لا يُخبران السائقَ مرّتين**:
+// الثاني يجد النقطةَ معروفةً فلا يكتب.
+func (s *Service) FillWhatsAppShared(ctx context.Context, orderID string, lat, lng float64) (bool, error) {
+	return s.applyWhatsAppShared(ctx, orderID, lat, lng, true)
+}
+
+// waPointOutside **أخارجَ التغطية يقيناً؟** — فحصٌ سقط ليس «خارجها»: **لا يُخبَر المكتبُ بظنّ.**
+func waPointOutside(covered bool, err error) bool { return err == nil && !covered }
+
+func (s *Service) applyWhatsAppShared(ctx context.Context, orderID string, lat, lng float64,
+	onlyUnknown bool) (bool, error) {
 	if !ValidPoint(lat, lng) {
 		return false, ErrBadPoint
+	}
+	// **والتغطيةُ تُفحص ولا تمنع** — نقطةٌ خارجها تُكتب والمكتبُ يُخبَر. **وداخلَها منطقتُها منطقةُ
+	// الطلب**؛ وفحصٌ سقط يُبقي المنطقةَ كما هي.
+	covered, cerr := s.CoverableAt(ctx, s.db, lat, lng)
+	if cerr != nil {
+		s.logger.Warn("طلب واتساب: فحصُ تغطية الموقع الواصل سقط", "order", orderID, "error", cerr)
+	}
+	var zoneID *string
+	if cerr == nil && covered {
+		if z, err := s.ZoneAt(ctx, s.db, lat, lng); err == nil && z.ID != "" {
+			zoneID = &z.ID
+		}
 	}
 	var number int64
 	var driverID *string
 	err := s.db.QueryRow(ctx, `
 		UPDATE orders
 		   SET dropoff = ST_SetSRID(ST_MakePoint($3, $2), 4326)::geography,
-		       dropoff_known = true, updated_at = now()
+		       dropoff_known = true, zone_id = COALESCE($4::uuid, zone_id), updated_at = now()
 		 WHERE id = $1 AND origin = 'whatsapp'
 		   AND delivered_at IS NULL AND closed_at IS NULL
-		RETURNING number, driver_id::text`, orderID, lat, lng).Scan(&number, &driverID)
+		   AND (NOT $5 OR NOT dropoff_known)
+		RETURNING number, driver_id::text`, orderID, lat, lng, zoneID, onlyUnknown).Scan(&number, &driverID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
@@ -658,12 +690,7 @@ func (s *Service) ApplyWhatsAppShared(ctx context.Context, orderID string, lat, 
 	}
 	s.afterWhatsAppRecipientChange(ctx, orderID, driverID, number, waLocationArrivedTitle, "")
 
-	// **والتغطيةُ تُفحص بعد الكتابة لا قبلها** — نقطةٌ خارجها لا تُردّ، والمكتبُ يُخبَر.
-	covered, cerr := s.CoverableAt(ctx, s.db, lat, lng)
-	if cerr != nil {
-		s.logger.Warn("طلب واتساب: فحصُ تغطية الموقع الواصل سقط", "order", orderID, "error", cerr)
-	}
-	if !covered && s.notify != nil {
+	if waPointOutside(covered, cerr) && s.notify != nil {
 		s.notify.NotifyOps(ctx, notifications.Input{
 			Kind: notifications.KindOrder, Title: waLocationOutsideTitle,
 			Body:   "#" + itoa(number) + " — الموقع انكتب بالطلب ووصل للسائق، شوفوا إذا بيقدر يوصل",

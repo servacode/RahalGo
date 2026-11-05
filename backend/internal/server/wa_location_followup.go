@@ -19,7 +19,14 @@ package server
 //   - **وصل الموقع**، أو انتهى الرابط، أو الصفرُ في الإعداد.
 //   - **رسالةُ الطلب الأولى لم تصل** (`whatsapp_sent`) — ثانيةٌ بلا أولى لا تُفهم.
 //   - **الطلبُ المربوطُ انتهى** (سُلّم أو أُلغي) — لا يُسأل عن عنوانٍ لا يُوصَل إليه.
+//   - **الطلبُ المربوطُ له نقطةٌ معروفة** — حدّدها الموظّفُ على الخريطة، فلا يُسأل عن عنوانه.
 //   - **طلبٌ قديمٌ قبل اشتعال الإعداد** — نافذةُ ساعتين، فمن أشعله اليوم لا يُراسل طلباتِ الأمس.
+//
+// # وجولةُ إصلاحٍ قبلها
+//
+// **«وصل» يُثبَّت على طلب الموقع ثمّ تُكتب النقطةُ في الطلب** (`locReqReceived`) — خطوتان، فإن
+// سقطت الثانية (عطلُ القاعدة) بقي الطلبُ بلا نقطةٍ وطلبُ الموقع يقول «وصل». **فالجولةُ تكتبها**
+// (`repairWALocations`) — كلَّ دورةٍ، **مهما كان الإعدادُ أو البوت.**
 
 import (
 	"context"
@@ -49,11 +56,68 @@ func (s *Server) RunWALocationFollowUp(ctx context.Context, interval time.Durati
 	}
 }
 
+// waLocRepairGrace **ما يُنتظر قبل أن تُعدّ الكتابةُ ساقطة** — الكتابةُ الحيّةُ تلي «وصل» في لحظتها.
+const waLocRepairGrace = time.Minute
+
+// repairWALocations **موقعٌ وصل ولم يُكتب في طلبه الجاري** — يُكتب الآن (`FillWhatsAppShared`:
+// لا فوق نقطةٍ معروفة) ويُبثّ للسائق كما لو وصل الآن. ويردّ كم كُتب.
+func (s *Server) repairWALocations(ctx context.Context) int {
+	rows, err := s.pg.Query(ctx, `
+		SELECT l.order_id::text, l.lat, l.lng
+		  FROM recipient_location_requests l
+		  JOIN orders o ON o.id = l.order_id
+		 WHERE l.mode = 'whatsapp' AND l.received_at IS NOT NULL
+		   AND l.lat IS NOT NULL AND l.lng IS NOT NULL
+		   AND l.received_at <  now() - make_interval(secs => $1)
+		   AND l.received_at >  now() - interval '1 day'
+		   AND o.origin = 'whatsapp' AND NOT o.dropoff_known
+		   AND o.delivered_at IS NULL AND o.closed_at IS NULL
+		 ORDER BY l.received_at
+		 LIMIT $2`, int(waLocRepairGrace.Seconds()), waLocFollowUpBatch)
+	if err != nil {
+		s.logger.Warn("إصلاحُ موقع طلب الواتساب: قراءةُ المرشَّحين سقطت", "error", err)
+		return 0
+	}
+	type cand struct {
+		order    string
+		lat, lng float64
+	}
+	var cands []cand
+	for rows.Next() {
+		var c cand
+		if err := rows.Scan(&c.order, &c.lat, &c.lng); err != nil {
+			rows.Close()
+			s.logger.Warn("إصلاحُ موقع طلب الواتساب: قراءةُ صفٍّ سقطت", "error", err)
+			return 0
+		}
+		cands = append(cands, c)
+	}
+	rows.Close()
+	n := 0
+	for _, c := range cands {
+		if ctx.Err() != nil {
+			break
+		}
+		ok, err := s.orders.FillWhatsAppShared(ctx, c.order, c.lat, c.lng)
+		if err != nil {
+			s.logger.Warn("إصلاحُ موقع طلب الواتساب: الكتابةُ سقطت ثانيةً", "order", c.order, "error", err)
+			continue
+		}
+		if ok {
+			s.logger.Info("إصلاحُ موقع طلب الواتساب: كُتب الموقعُ الواصل", "order", c.order)
+			n++
+		}
+	}
+	return n
+}
+
 // SweepWALocationFollowUp **جولةٌ واحدة** — ويردّ عددَ الرسائل التي وصلت. **يُنادى من الفحص مباشرةً.**
+// **وأوّلُها الإصلاح** (`repairWALocations`) — قبل الإعداد والبوت، فلا يوقفه إطفاؤهما.
 //
 // **الحجزُ قبل الإرسال** (`followup_sent_at`) — جولتان متزامنتان لا تبعثان مرّتين، **ورسالةٌ لم
 // تصل لا تُعاد** (كرسالة الرأي): المستلِمُ لا يُلاحَق.
 func (s *Server) SweepWALocationFollowUp(ctx context.Context) int {
+	s.repairWALocations(ctx)
 	minutes := s.settings.GetInt(ctx, "orders.whatsapp_location_followup_min")
 	if minutes <= 0 {
 		return 0
@@ -72,7 +136,8 @@ func (s *Server) SweepWALocationFollowUp(ctx context.Context) int {
 		   AND l.created_at >  now() - make_interval(secs => $2)
 		   AND (l.order_id IS NULL OR EXISTS (
 		        SELECT 1 FROM orders o
-		         WHERE o.id = l.order_id AND o.delivered_at IS NULL AND o.closed_at IS NULL))
+		         WHERE o.id = l.order_id AND o.delivered_at IS NULL AND o.closed_at IS NULL
+		           AND NOT o.dropoff_known))
 		 ORDER BY l.created_at
 		 LIMIT $3`, minutes, int(waLocFollowUpWindow.Seconds()), waLocFollowUpBatch)
 	if err != nil {

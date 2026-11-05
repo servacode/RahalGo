@@ -9,7 +9,7 @@ package server
 // والإنشاءُ في الطابور — **والتدقيقُ في معاملة الإنشاء نفسِها.** وكلُّها بقدرة `orders.whatsapp`
 // (جدولُ السياسة).
 //
-//	GET  /whatsapp-orders                 آخرُ طلبات الواتساب (و`?open=1&q=<رقم>` للتلميح)
+//	GET  /whatsapp-orders                 آخرُ طلبات الواتساب، الجاريةُ أوّلاً (و`?open=1&q=<رقم>` للتلميح)
 //	GET  /whatsapp-orders/stores?q=       بحثٌ في متاجرنا الفعّالة ذات الموقع
 //	GET  /whatsapp-orders/quote           الأجرةُ قبل الإرسال
 //	POST /whatsapp-orders/resolve-location رابطُ موقعٍ ← نقطة
@@ -91,7 +91,8 @@ func (s *Server) handleListWhatsAppOrders(w http.ResponseWriter, r *http.Request
 		}
 		phone = p
 	}
-	list, err := s.orders.WhatsAppOrders(r.Context(), phone, r.URL.Query().Get("open") == "1", 20)
+	// **خمسون والجاريةُ أوّلاً** — طلبٌ مفتوحٌ يوم العجقة لا يغيب عن «تعديل العنوان».
+	list, err := s.orders.WhatsAppOrders(r.Context(), phone, r.URL.Query().Get("open") == "1", 50)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -232,6 +233,7 @@ func (s *Server) handleCreateWhatsAppOrder(w http.ResponseWriter, r *http.Reques
 		Fee *int64 `json:"fee"`
 		// LocationRequestID **«اطلب الموقع» من النموذج** (ملحقُ المالك ٢٠٢٦-١١-٠٥، أ) — يُربط بالطلب:
 		// وصل الموقعُ قبلها؟ نقطتُه نقطةُ التسليم إن لم تُحدَّد. **وإن وصل بعدها كُتب حين يصل.**
+		// **ولرقم المستلِم نفسِه وحدَه** — طلبُ موقعٍ لرقمٍ آخرَ لا يُربط.
 		LocationRequestID string `json:"location_request_id"`
 	}](r)
 	if err != nil {
@@ -280,15 +282,26 @@ func (s *Server) handleCreateWhatsAppOrder(w http.ResponseWriter, r *http.Reques
 	locReqID := strings.TrimSpace(req.LocationRequestID)
 	s.WithIdempotentTx(w, r, func(ctx context.Context, q dbtx.Querier) (IdempotentBody, error) {
 		in := in
+		// late **موقعٌ وصل قبل الإنشاء خارجَ التغطية** — لا يُردّ به الطلب: يُنشأ بالعنوان المكتوب
+		// (والأجرةُ يكتبها الموظّف)، **ثمّ تُكتب النقطةُ بعد التثبيت ويُخبَر المكتب** (البند ب).
+		var late *[2]float64
 		// **طلبُ الموقع يُقفَل قبل الإنشاء** — فموقعٌ يصل في اللحظة نفسِها ينتظر الربطَ ثمّ يُكتب
 		// في الطلب (`ApplyWhatsAppShared`)، **ولا يضيع بينهما.**
 		if locReqID != "" {
-			lat, lng, err := lockWhatsAppLocReqTx(ctx, q, locReqID)
+			lat, lng, err := lockWhatsAppLocReqTx(ctx, q, locReqID, phone)
 			if err != nil {
 				return IdempotentBody{}, err
 			}
 			if in.Lat == nil && in.Lng == nil && lat != nil && lng != nil {
-				in.Lat, in.Lng = lat, lng
+				covered, err := s.orders.CoverableAt(ctx, q, *lat, *lng)
+				if err != nil {
+					return IdempotentBody{}, err
+				}
+				if covered {
+					in.Lat, in.Lng = lat, lng
+				} else {
+					late = &[2]float64{*lat, *lng}
+				}
 			}
 		}
 		c, err := s.orders.CreateWhatsAppOrderIn(ctx, q, actor, in)
@@ -312,15 +325,26 @@ func (s *Server) handleCreateWhatsAppOrder(w http.ResponseWriter, r *http.Reques
 			"amount_currency":    in.Currency,
 			"has_point":          c.HasPoint,
 			"location_request":   locReqID,
+			"point_after_create": late != nil,
 		}); err != nil {
 			return IdempotentBody{}, err
 		}
 		id := c.ID
 		return IdempotentBody{
-			Status:  http.StatusCreated,
-			Payload: map[string]any{"id": id, "number": c.Number},
+			Status: http.StatusCreated,
+			// has_point **أعلى الطلب موقعُ المستلِم** — من الخادم لا من الشاشة: موقعٌ وصل بين جولتين
+			// من سؤال النموذج كُتب في الطلب، **فلا تقول الشاشةُ «نزل بالعنوان المكتوب».**
+			Payload: map[string]any{"id": id, "number": c.Number, "has_point": c.HasPoint || late != nil},
 			AfterCommit: func() {
-				if _, err := s.orders.AfterWhatsAppOrder(context.WithoutCancel(r.Context()), id); err != nil {
+				ctx := context.WithoutCancel(r.Context())
+				// **والموقعُ الواصلُ خارجَ التغطية يُكتب قبل العرض على السائقين** — ويُخبَر المكتب.
+				// وإن سقطت كتابتُه أعادتها جولةُ طلبات الموقع (`SweepWALocationFollowUp`).
+				if late != nil {
+					if _, err := s.orders.FillWhatsAppShared(ctx, id, late[0], late[1]); err != nil {
+						s.logger.Warn("طلب واتساب: كتابةُ الموقع الواصل قبل الإنشاء سقطت", "order", id, "error", err)
+					}
+				}
+				if _, err := s.orders.AfterWhatsAppOrder(ctx, id); err != nil {
 					s.logger.Error("طلب واتساب: بعد الإنشاء", "order", id, "error", err)
 				}
 				s.touch("orders", "ops")
@@ -382,14 +406,18 @@ const locReqModeWhatsApp = "whatsapp"
 const waLocReqPerHour = 60
 
 // lockWhatsAppLocReqTx **يقفل طلبَ موقعٍ للمكتب غيرَ مربوطٍ بطلب** — ويردّ نقطتَه إن وصلت.
-func lockWhatsAppLocReqTx(ctx context.Context, q dbtx.Querier, id string) (lat, lng *float64, err error) {
+//
+// **ولرقم المستلِم نفسِه وحدَه** (`phone` مُطبَّعاً): موظّفٌ طلب الموقعَ من رقمٍ غلط ثمّ صحّح الرقمَ
+// في النموذج **لا يُربط طلبُه بالطلب** — وإلّا ذهبت المتابعةُ إلى الرقم الغلط، ونقطةُ صاحبه (إن
+// بعثها) صارت نقطةَ التسليم وبلغت السائق.
+func lockWhatsAppLocReqTx(ctx context.Context, q dbtx.Querier, id, phone string) (lat, lng *float64, err error) {
 	if !isUUID(id) {
 		return nil, nil, errAmanahLocReq
 	}
 	err = q.QueryRow(ctx, `
 		SELECT lat, lng FROM recipient_location_requests
-		 WHERE id = $1 AND mode = 'whatsapp' AND order_id IS NULL
-		 FOR UPDATE`, id).Scan(&lat, &lng)
+		 WHERE id = $1 AND mode = 'whatsapp' AND order_id IS NULL AND phone = $2
+		 FOR UPDATE`, id, phone).Scan(&lat, &lng)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil, errAmanahLocReq
 	}

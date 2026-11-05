@@ -14,10 +14,13 @@
  * **و«تعديل العنوان» قبل التسليم** (ملحقُ المالك ٢٠٢٦-١١-٠٥، د: «نحن رح نعبيه يدوي») — المستلِمُ
  * كتب عنوانَه بالتفصيل على الواتساب فيعبّيه الموظّف (`POST /admin/whatsapp-orders/{id}/address`)،
  * ويصل السائقَ في لحظته. **و«بلا موقع» على الطلب الذي لم يصل موقعُ مستلِمه بعد.**
+ *
+ * **والجاريةُ أوّلاً وخمسون** (الخادم) — طلبٌ مفتوحٌ يوم العجقة لا يغيب خلف المنتهية. **والقائمةُ
+ * حيّة**: كلُّ حركةٍ في طلب واتساب (وصولُ الموقع، سائقٌ أخذه، تسليم) تُعيد قراءتها.
  */
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getMessages, defaultLocale, errorText, fmtDamascusTime, fmtMoney } from "@rahalgo/i18n";
 import {
   AdminCard,
@@ -33,6 +36,7 @@ import {
   RowList,
   StatusBadge,
   Textarea,
+  useLiveEvent,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { fill } from "@/lib/customer/texts";
@@ -83,6 +87,23 @@ export function RecentWhatsAppOrders({ refresh }: { refresh: number }) {
   useEffect(() => {
     void load();
   }, [load, refresh]);
+
+  // **حيّةٌ بلا تحديث** — حركةُ طلب واتساب أو إشارةُ المكتب (`touch("orders")`) تُعيد القراءة،
+  // **مجمّعةً بنصف ثانية** فلا تُقرأ عشرَ مرّاتٍ لعشر حركات.
+  const pending = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useLiveEvent((event) => {
+    const origin = (event.order as { origin?: string } | undefined)?.origin;
+    if ((event.type === "order" && origin === "whatsapp") || event.type === "orders") {
+      if (pending.current) clearTimeout(pending.current);
+      pending.current = setTimeout(() => void load(), 500);
+    }
+  });
+  useEffect(
+    () => () => {
+      if (pending.current) clearTimeout(pending.current);
+    },
+    [],
+  );
 
   async function cancel() {
     if (!target || busy) return;
