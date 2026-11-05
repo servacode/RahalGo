@@ -472,7 +472,8 @@ func TestWAORD002_OldDriverAppReadsTypedStore(t *testing.T) {
 		got.FeePayer != "recipient" {
 		t.Fatalf("**الأصلُ والنوع**: %q / %q / %q / %q", got.Origin, got.Kind, got.DeliveryMode, got.FeePayer)
 	}
-	if got.RecipientPhone != "+963935111222" || got.CustomerName != "أبو أحمد" ||
+	// **ولا رقمَ للمستلِم عند السائق أبداً** (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٧) — ولو بعد الإسناد.
+	if got.RecipientPhone != "" || got.CustomerName != "أبو أحمد" ||
 		got.ParcelNote != "2 شاورما دبل بدون ثوم" || got.DriverNote != "اتصل قبل الوصول" {
 		t.Fatalf("**المستلِمُ وما يشتريه**: %+v", got)
 	}

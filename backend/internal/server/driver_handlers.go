@@ -484,7 +484,11 @@ const driverOrderSelect = `
 	       concat_ws(' · ', NULLIF(o.address_text, ''), NULLIF(o.near_landmark, '')),
 	       ST_Y(o.dropoff::geometry), ST_X(o.dropoff::geometry),
 	       COALESCE(cu.full_name, o.recipient_name, ''),
-	       CASE WHEN o.kind = 'merchant_delivery' THEN COALESCE(o.recipient_phone, '') ELSE '' END,
+	       -- **ولا رقمَ لمستلِم طلب الواتساب أبداً** (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٧): «السائق
+	       -- ما فيه ياخذ رقم أي زبون بشكل خارجي» — لا في الطابور ولا بعد القبول. **والتطبيقُ
+	       -- يُخفي زرَّي الاتّصال والواتساب حين يصله فارغاً**، والسائقُ يتّصل بالمكتب.
+	       CASE WHEN o.kind = 'merchant_delivery' AND o.origin <> 'whatsapp'
+	            THEN COALESCE(o.recipient_phone, '') ELSE '' END,
 	       o.total, o.cash_due,
 	       COALESCE((SELECT sum(oi.qty) FROM order_items oi WHERE oi.order_id = o.id), 0),
 	       o.ready_at, o.prep_minutes, o.accepted_at, o.created_at,
