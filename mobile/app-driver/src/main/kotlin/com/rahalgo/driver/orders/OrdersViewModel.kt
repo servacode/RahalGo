@@ -1518,6 +1518,43 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         }?.let { it.latitude to it.longitude }
     }.getOrNull()
 
+    /**
+     * **موضعُ المعلم يُقاس الآن** (مراجعة ٢٠٢٦-١١-٠٥، `pickLandmarkHere`) — `LastPoint` وقتُ
+     * وصولٍ لا قياس، وبين الطلبات تُجمَّع القراءاتُ حتّى دقيقتين. **فالملاحةُ ما دامت شغّالة،
+     * وإلّا قراءةٌ عمرُها عشرُ ثوانٍ فأقلّ في مهلة عشر ثوانٍ، وإلّا آخرُ موضعٍ حديث.**
+     */
+    @android.annotation.SuppressLint("MissingPermission")
+    private suspend fun landmarkHere(): Pair<Double, Double>? {
+        val nav = navSession.lastGoodFix?.let { it.lat to it.lng }
+        val fresh = if (following && nav != null) null else runCatching {
+            kotlinx.coroutines.withTimeoutOrNull(HERE_FRESH_TIMEOUT_MS) {
+                kotlinx.coroutines.suspendCancellableCoroutine<android.location.Location?> { cont ->
+                    val cancel = com.google.android.gms.tasks.CancellationTokenSource()
+                    cont.invokeOnCancellation { cancel.cancel() }
+                    val req = com.google.android.gms.location.CurrentLocationRequest.Builder()
+                        .setPriority(com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY)
+                        .setMaxUpdateAgeMillis(HERE_FRESH_MAX_AGE_MS)
+                        .setDurationMillis(HERE_FRESH_TIMEOUT_MS)
+                        .build()
+                    com.google.android.gms.location.LocationServices.getFusedLocationProviderClient(getApplication<Application>())
+                        .getCurrentLocation(req, cancel.token)
+                        .addOnCompleteListener { t ->
+                            if (cont.isActive) cont.resumeWith(Result.success(if (t.isSuccessful) t.result else null))
+                        }
+                }
+            }?.takeIf {
+                measuredJustNow(it.elapsedRealtimeNanos, android.os.SystemClock.elapsedRealtimeNanos())
+            }?.let { it.latitude to it.longitude }
+        }.getOrNull()
+        return pickLandmarkHere(
+            following = following,
+            nav = nav,
+            fresh = fresh,
+            last = LastPoint.value,
+            nowElapsedMs = android.os.SystemClock.elapsedRealtime(),
+        )
+    }
+
     fun saveEntrance() {
         val id = askEntranceFor ?: return
         askEntranceFor = null
@@ -1605,7 +1642,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         val app = getApplication<Application>()
         viewModelScope.launch {
             try {
-                val at = hereFresh()
+                val at = landmarkHere()
                 if (at == null) {
                     com.rahalgo.ui.Flash.fail(app.getString(R.string.map_need_location))
                     return@launch

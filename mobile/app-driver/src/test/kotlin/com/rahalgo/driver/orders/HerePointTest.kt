@@ -2,7 +2,9 @@ package com.rahalgo.driver.orders
 
 import com.rahalgo.ui.LastPoint
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 /**
@@ -33,5 +35,43 @@ class HerePointTest {
         assertNull("موضعٌ من المستقبل ساعةٌ أُعيد ضبطُها", pickHere(false, delivery, last(now + 1), now))
         assertNull(pickHere(false, null, null, now))
         assertNull("الملاحةُ شغّالةٌ بلا قراءةٍ بعد", pickHere(true, null, last(now - HERE_MAX_AGE_MS - 1), now))
+    }
+
+    /**
+     * **المعلمُ من قراءةٍ تُقاس الآن قبل آخر موضعٍ وصل** (مراجعة ٢٠٢٦-١١-٠٥) — `atMs` وقتُ الوصول،
+     * والقراءاتُ تُجمَّع حتّى دقيقتين: **موضعٌ «عمرُه» ٩٠ ثانيةً قد يكون قبل الجامع بمئات الأمتار.**
+     */
+    @Test
+    fun landmarkPrefersAFixMeasuredNow() {
+        val atMosque = 35.9700 to 39.0300
+        assertEquals(
+            "قراءةُ الآن تغلب آخرَ موضعٍ وصل قبل ٩٠ ثانية",
+            atMosque,
+            pickLandmarkHere(following = false, nav = delivery, fresh = atMosque, last = last(now - 90_000), nowElapsedMs = now),
+        )
+        assertEquals(
+            "والملاحةُ الشغّالةُ تغلب — قراءتُها كلَّ ثانية",
+            delivery,
+            pickLandmarkHere(following = true, nav = delivery, fresh = atMosque, last = last(now - 5_000), nowElapsedMs = now),
+        )
+        assertEquals(
+            "لا إشارةَ في عشر ثوانٍ ⇒ آخرُ موضعٍ حديث",
+            35.9600 to 39.0200,
+            pickLandmarkHere(following = false, nav = delivery, fresh = null, last = last(now - 30_000), nowElapsedMs = now),
+        )
+        assertNull(
+            "ولا قراءةُ ملاحةٍ مطفأة",
+            pickLandmarkHere(following = false, nav = delivery, fresh = null, last = last(now - HERE_MAX_AGE_MS - 1), nowElapsedMs = now),
+        )
+    }
+
+    /** **عمرُ القراءة من لحظة قياسها** — مخبوءٌ قديمٌ من `getCurrentLocation` لا يُقبل. */
+    @Test
+    fun freshFixAgeIsFromMeasurement() {
+        val nowNs = 5_000_000_000_000L
+        assertTrue(measuredJustNow(nowNs - 3_000_000_000L, nowNs))
+        assertFalse("عمرُها ١١ ثانية", measuredJustNow(nowNs - 11_000_000_000L, nowNs))
+        assertFalse("بلا وقت", measuredJustNow(0L, nowNs))
+        assertFalse("من المستقبل", measuredJustNow(nowNs + 1, nowNs))
     }
 }
