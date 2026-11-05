@@ -456,7 +456,7 @@ private fun OrderCard(
         // **و«لدي توصيلة»: ما يحمله قبل أن يقبل** (٢٠٢٦-١٠-١٢) — كان يظهر بعد القبول وحدَه.
         if (order.kind == "merchant_delivery" && order.parcelNote.isNotBlank()) {
             Spacer(Modifier.height(10.dp))
-            WhatBox(stringResource(R.string.detail_parcel), order.parcelNote)
+            WhatBox(stringResource(com.rahalgo.driver.trip.parcelLabel(order)), order.parcelNote)
         }
         // **ومالٌ يدفعه من جيبه قبل أن يقبل** (قرارُ المالك ٢٠٢٦-١٠-١٥) — «ادفع للمتجر X من
         // جيبك، واقبض من المستلم X»: يعرفه قبل أن يقبل لا عند المتجر.

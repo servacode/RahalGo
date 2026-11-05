@@ -37,7 +37,10 @@ const orderSelect = `
 	       o.custom_mode, o.custom_goods_pending, COALESCE(o.driver_fee, 0),
 	       -- **وفراغٌ لا NULL** — (الطلبُ الخاصّ ٢٠٢٦-٠٨-٠٩): الحقلان نصّان
 	       -- في البنية، **وNULL فيهما يُسقط المسحَ كلَّه** لا هذا الحقلَ وحدَه.
-	       COALESCE(o.merchant_id::text, ''), COALESCE(mr.name, ''), COALESCE(mo.phone::text, ''),
+	       -- **وطلبُ الواتساب بلا متجرٍ مربوط** (قرارُ المالك ٢٠٢٦-١١-٠٥) — اسمُ المتجر ورقمُه
+	       -- منسوخان على الطلب (pickup_name و pickup_phone)، فتقرؤهما كلُّ شاشةٍ حيث اعتادت.
+	       COALESCE(o.merchant_id::text, ''), COALESCE(mr.name, o.pickup_name, ''),
+	       COALESCE(NULLIF(mo.phone::text, ''), o.pickup_phone, ''),
 	       -- **والمتجرُ التابعُ في المشتريات** (قرارُ المالك ٢٠٢٦-١٠-١٥) — ونسبتُه وما دُفع له.
 	       COALESCE(o.partner_merchant_id::text, ''), COALESCE(ptn.name, ''),
 	       o.partner_commission_percent, o.custom_store_paid,
@@ -148,7 +151,12 @@ const orderSelect = `
 	       -- **وصاحبُ الأمانة ورقمُه** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
 	       COALESCE(o.amanah_holder_name, ''), COALESCE(o.amanah_holder_phone, ''),
 	       -- **وعنوانُ المتجر المفصّل** (قرارُ المالك ٢٠٢٦-١١-٠٣) — للمكتب، تحت اسم المتجر على البطاقة.
-	       COALESCE(NULLIF(mr.address_text, ''), ptn.address_text, '')
+	       -- **وفي طلب الواتساب العنوانُ المكتوب** (٢٠٢٦-١١-٠٥).
+	       COALESCE(NULLIF(mr.address_text, ''), NULLIF(ptn.address_text, ''), o.pickup_address, ''),
+	       -- **وأصلُ الطلب ومن كتبه ومتجرُ متاجرنا المنسوخ** (قرارُ المالك ٢٠٢٦-١١-٠٥).
+	       o.origin,
+	       COALESCE((SELECT NULLIF(cb.full_name, '') FROM users cb WHERE cb.id = o.created_by), ''),
+	       COALESCE(o.pickup_merchant_id::text, '')
 	FROM orders o
 	LEFT JOIN LATERAL (
 		SELECT ST_Y(a.entrance::geometry) AS lat, ST_X(a.entrance::geometry) AS lng
@@ -207,7 +215,8 @@ func scanOrder(row pgx.Row) (*Order, error) {
 		&o.FetchAmount, &o.FetchAmountVersion, &o.FetchAmountStatus,
 		&o.AmountCurrency, &o.NearLandmark, &o.LiveRequestedAt, &o.LiveRequestCount,
 		&o.EntranceLat, &o.EntranceLng, &o.DropoffSuggestLat, &o.DropoffSuggestLng,
-		&o.HolderName, &o.HolderPhone, &o.PickupAddress)
+		&o.HolderName, &o.HolderPhone, &o.PickupAddress,
+		&o.Origin, &o.CreatedByName, &o.PickupMerchantID)
 	if err != nil {
 		return nil, err
 	}
@@ -401,8 +410,11 @@ var errDateRangeInverted = httpx.NewError(http.StatusBadRequest, "validation", "
 // و`custom_purchase` و`custom_amanah` **شطرا الطلب الخاصّ** بـ`custom_mode` —
 // (قرارُ المالك ٢٠٢٦-١٠-٢٧: «مشتريات» و«أمانة» فلتران منفصلان.) **و`custom`
 // باقٍ للروابط القديمة** — يجمع الشطرين كما كان.
+//
+// **و`whatsapp` طلباتُ الواتساب** (قرارُ المالك ٢٠٢٦-١١-٠٥) — بأصلها لا بنوعها، **و`merchant_delivery`
+// صار «توصيلات المتاجر» وحدَها** (أصلُها التطبيق): طلبُ الواتساب لا يُعدّ توصيلةً أرسلها متجر.
 var listKinds = map[string]bool{"standard": true, "custom": true, "merchant_delivery": true,
-	"custom_purchase": true, "custom_amanah": true}
+	"custom_purchase": true, "custom_amanah": true, "whatsapp": true}
 
 // customModeKinds **فلترُ الشطر ← قيمةُ `custom_mode`.**
 var customModeKinds = map[string]string{"custom_purchase": "purchase", "custom_amanah": "amanah"}
@@ -527,6 +539,10 @@ func ListWhere(f ListFilter, lim StuckLimits) (string, []any, error) {
 	}
 	if mode, ok := customModeKinds[f.Kind]; ok {
 		and(`o.kind = 'custom' AND o.custom_mode = ` + arg(mode))
+	} else if f.Kind == "whatsapp" {
+		and(`o.origin = 'whatsapp'`)
+	} else if f.Kind == KindMerchantDelivery {
+		and(`o.kind = 'merchant_delivery' AND o.origin = 'app'`)
 	} else if f.Kind != "" {
 		and(`o.kind = ` + arg(f.Kind))
 	}

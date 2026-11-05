@@ -67,6 +67,9 @@ var FinancialSettings = []string{
 	// **مفاتيحُ أجرة «لدي توصيلة» وحدَها** (قرارُ المالك ٢٠٢٦-١٠-١٦) — pricing.MerchantDeliveryFeeKeys.
 	"delivery.merchant_base_fee", "delivery.merchant_by_distance",
 	"delivery.merchant_per_km", "delivery.merchant_max_fee",
+	// **ومفاتيحُ أجرة «طلب واتساب» وحدَه** (قرارُ المالك ٢٠٢٦-١١-٠٥) — pricing.WhatsAppFeeKeys.
+	"delivery.whatsapp_base_fee", "delivery.whatsapp_by_distance",
+	"delivery.whatsapp_per_km", "delivery.whatsapp_max_fee",
 	"delivery.per_km",                       // pricing.go:229
 	"delivery.max_fee",                      // pricing.go:236
 	"delivery.by_distance",                  // pricing.go:226
@@ -106,6 +109,7 @@ var FinancialSettings = []string{
 	"delivery.share_merchant", "delivery.share_merchant_mode",
 	"delivery.share_purchase", "delivery.share_purchase_mode",
 	"delivery.share_amanah", "delivery.share_amanah_mode",
+	"delivery.share_whatsapp", "delivery.share_whatsapp_mode", // «طلب واتساب» (٢٠٢٦-١١-٠٥)
 	"delivery.custom_fee_amanah", // أجرةُ الأمانة حين تحدّدها المنصّة (٢٠٢٦-١٠-١٣)
 	"delivery.custom_fee_min",    // orders/custom.go — أدنى أجرةِ الخاصّ
 	"delivery.custom_fee_max",    // orders/custom.go — أعلاها

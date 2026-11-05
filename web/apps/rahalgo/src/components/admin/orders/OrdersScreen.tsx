@@ -220,6 +220,12 @@ interface OrderRow {
   ext_store_merchant_name?: string;
   ext_store_at?: string | null;
   ext_store_reason?: string;
+  /** **أصلُ الطلب** — `whatsapp` لطلبٍ كتبه المكتبُ من رسالة واتساب (قرارُ المالك ٢٠٢٦-١١-٠٥). */
+  origin?: string;
+  /** **من كتب طلبَ الواتساب** من الموظّفين. */
+  created_by_name?: string;
+  /** **متجرٌ من متاجرنا نُسخ على طلب الواتساب** — أثرٌ لا ربط. */
+  pickup_merchant_id?: string;
   /** نسبتُه ملقوطةً لحظةَ الربط. */
   partner_commission_percent?: number | null;
   /** **بمنزلتين** (١٫٥) — والصحيحةُ مقرَّبة (٢٠٢٦-١٠-١٨). */
@@ -1947,6 +1953,8 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
     { id: "custom_purchase", label: H.kindPurchase },
     { id: "custom_amanah", label: H.kindAmanah },
     { id: "merchant_delivery", label: H.kindDelivery },
+    // **«طلبات الواتساب»** (قرارُ المالك ٢٠٢٦-١١-٠٥) — و«توصيلات المتاجر» لم تعد تشملها.
+    { id: "whatsapp", label: H.kindWhatsApp },
   ];
   const payChips = [
     { id: "", label: H.payAll },
@@ -3822,6 +3830,14 @@ function OrderActions({
           {m.admin.ordersPage.extStoreWasFrom.replace("{name}", o.ext_store_merchant_name)}
         </p>
       )}
+      {/* **«طلب واتساب · أنشأه …»** — من كتبه من الموظّفين (قرارُ المالك ٢٠٢٦-١١-٠٥). */}
+      {o.origin === "whatsapp" && (
+        <p className="w-full text-xs text-ink-muted">
+          {o.created_by_name
+            ? m.admin.ordersPage.whatsAppBy.replace("{name}", o.created_by_name)
+            : m.admin.ordersPage.kindWhatsApp}
+        </p>
+      )}
       {/* **مشترياتٌ من متجرٍ تابعٍ إلنا** (قرارُ المالك ٢٠٢٦-١٠-١٥) — يُربط قبل توثيق الثمن،
           ويُرسَل له الطلبُ على واتساب بالبابين القائمين. **والخادمُ يحرس الشروط.** */}
       {o.kind === "custom" &&
@@ -4333,8 +4349,11 @@ function PartnerStoreBox({
 function KindBadge({ o }: { o: OrderRow }) {
   // **تعبئةٌ صلبةٌ والنصُّ والأيقونةُ أبيضان** (المالك ٢٠٢٦-١٠-٢٢: «لون ابيض والايقونة وخلفية
   // البطاقة ملونة»).
+  // **«طلب واتساب» بلونه** (قرارُ المالك ٢٠٢٦-١١-٠٥) — كتبه المكتبُ من رسالة واتساب.
   const look =
-    o.kind === "merchant_delivery"
+    o.origin === "whatsapp"
+      ? { bg: "bg-teal-solid", Icon: IconWhatsApp }
+      : o.kind === "merchant_delivery"
       ? o.delivery_mode === "fetch"
         ? { bg: "bg-primary-solid", Icon: IconSwap }
         : { bg: "bg-sky-solid", Icon: IconStore }
@@ -4353,6 +4372,7 @@ function KindBadge({ o }: { o: OrderRow }) {
 
 function kindLabel(o: OrderRow): string {
   const OP = m.admin.ordersPage;
+  if (o.origin === "whatsapp") return OP.kindWhatsApp;
   if (o.kind === "merchant_delivery") return o.delivery_mode === "fetch" ? OP.kindMdFetch : OP.kindMdSend;
   if (o.kind === "custom") return o.custom_mode === "amanah" ? OP.kindAmanah : OP.kindPurchase;
   return OP.kindStd;

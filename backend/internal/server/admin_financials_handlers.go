@@ -269,7 +269,7 @@ func (s *Server) handleAdminUserFinancials(w http.ResponseWriter, r *http.Reques
 		// **والمتجرُ يُضمّ يساراً** — **والطلبُ الخاصُّ لا متجرَ له**، وضمٌّ
 		// صلبٌ يُسقطه من كشف السائق بلا خطأ.
 		rows, err := s.pg.Query(ctx, `
-			SELECT o.number::text, COALESCE(m.name, ''), o.delivery_fee, o.created_at
+			SELECT o.number::text, COALESCE(m.name, o.pickup_name, ''), o.delivery_fee, o.created_at
 			FROM orders o LEFT JOIN merchants m ON m.id = o.merchant_id
 			WHERE o.driver_id = $1 AND o.status = 'delivered' AND o.delivery_fee > 0
 			ORDER BY o.created_at DESC LIMIT `+strconv.Itoa(finLimit), id)

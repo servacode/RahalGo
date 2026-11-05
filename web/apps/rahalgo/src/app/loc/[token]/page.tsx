@@ -28,7 +28,7 @@ const L = m.locShare;
 
 const PickMap = lazy(() => import("@rahalgo/ui/map").then((mod) => ({ default: mod.PickMap })));
 
-type Info = { store_name: string; mode: "send" | "fetch" | "amanah"; status: "pending" | "received" | "expired" };
+type Info = { store_name: string; mode: "send" | "fetch" | "amanah" | "whatsapp"; status: "pending" | "received" | "expired" };
 type Phase = "loading" | "ready" | "done" | "closed" | "missing";
 
 export default function LocationSharePage() {

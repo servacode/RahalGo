@@ -1938,7 +1938,7 @@ private fun TripCard(
                 if (order.parcelNote.isNotEmpty() && !pickedUp) {
                     InfoBox(
                         icon = com.rahalgo.ui.R.drawable.ic_cart,
-                        text = stringResource(R.string.detail_parcel) + ": " + order.parcelNote,
+                        text = stringResource(parcelLabel(order)) + ": " + order.parcelNote,
                         tint = Rahal.colors.brand,
                     )
                 }
@@ -2159,8 +2159,8 @@ private fun TripCard(
                 val ctx = LocalContext.current
                 val storePhone = order.merchantPhone?.takeIf { it.isNotBlank() && !pickedUp && order.kind != "custom" }
                 // **ورقمُ المستلم بعد الاستلام وحدَه** (قرارُ المالك ٢٠٢٦-١٠-٠٦: «الاتصال ما لازم يطلع… إلا بعد ما
-                // نستلم الطلب من المتجر»).
-                val recipient = order.recipientPhone.takeIf { order.kind == "merchant_delivery" && it.isNotBlank() && pickedUp }
+                // نستلم الطلب من المتجر») — **ولا رقمَ في طلب الواتساب أبداً** (٢٠٢٦-١١-٠٥، البند ٧).
+                val recipient = recipientContactPhone(order, pickedUp)
                 // **وصاحبُ الأمانة قبل الاستلام** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — الزبونُ كتب اسمَه ورقمَه،
                 // **فيتّصل به السائقُ أو يراسله** ليعرف أين الأمانة إن لم يشارك موقعَه.
                 val holder = order.holderPhone.takeIf {

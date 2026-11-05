@@ -647,6 +647,28 @@ var All = []Check{
 			                           AND f.cause = 'undelivered_order'), 0)
 			         ELSE o.driver_fee END`,
 	},
+	{
+		ID: "FI-06.e", Family: FI06, Status: ProvableNow, Ops: true,
+		Name: "طلبُ الواتساب لا يحرّك إلّا الأجرة",
+		Why: "**ثمنُ بضاعته خارجَ الدفتر** (قرارُ المالك ٢٠٢٦-١١-٠٥): السائقُ يدفعه للمتجر ويقبضه " +
+			"من المستلِم. **فقيدٌ آخرُ عليه — مستحقُّ متجرٍ أو دفعُ محفظةٍ أو استرجاع — مالٌ " +
+			"قُيّد لطرفٍ لم يُبَع منه شيء**، ومتجرٌ غيرُ تابعٍ يصير دائناً للمنصّة.",
+		Flows: []string{"F-14"},
+		Kinds: []string{"driver_earning", "platform_profit", "compensation", "platform_expense"},
+		// **أجرُ السائق وحصّةُ المنصّة عند التسليم، وتعويضُه ومصروفُه إن فشل بغير ذنبه** — وما
+		// سواها خرق. **وتسويةُ متجرٍ عليه خرقٌ كذلك** (لا متجرَ مربوطاً).
+		SQL: `
+			SELECT o.number, t.kind, t.amount
+			FROM orders o
+			JOIN wallet_transactions t ON t.ref = o.id::text
+			WHERE o.origin = 'whatsapp'
+			  AND t.kind NOT IN ('driver_earning', 'platform_profit', 'compensation', 'platform_expense')
+			UNION ALL
+			SELECT o.number, 'merchant_settlement', ms.amount
+			FROM orders o
+			JOIN merchant_settlements ms ON ms.order_id = o.id
+			WHERE o.origin = 'whatsapp'`,
+	},
 
 	// ═══════════════════════════════════════════════════════════════════
 	// FI-10 — مطابقةُ نقدِ السائق

@@ -129,6 +129,7 @@ const ReturnTripMax = 2 * time.Hour
 // **والطلبُ بلا سطر إسنادٍ باسمه** (قبل ٠١٧٢) يُقرأ كما كان: من حامله الحالي.
 func LoadTenures(ctx context.Context, db DB, driverID string, from, to, now time.Time) ([]Window, error) {
 	rows, err := db.Query(ctx, `
+		-- **وطلبُ الواتساب باسم متجره المكتوب** (قرارُ المالك ٢٠٢٦-١١-٠٥) — نافذةُ طلبٍ كغيرها.
 		WITH cand AS (
 		     SELECT e.order_id FROM order_events e
 		      WHERE e.driver_id = $1::uuid AND e.created_at >= $2::timestamptz - interval '24 hours'
@@ -136,7 +137,7 @@ func LoadTenures(ctx context.Context, db DB, driverID string, from, to, now time
 		     UNION
 		     SELECT o.id FROM orders o WHERE o.driver_id = $1::uuid AND o.closed_at IS NULL
 		)
-		SELECT o.id::text, o.number, COALESCE(m.name, ''), a.created_at,
+		SELECT o.id::text, o.number, COALESCE(m.name, o.pickup_name, ''), a.created_at,
 		       COALESCE(pk.created_at,
 		                CASE WHEN o.driver_id = $1::uuid AND o.picked_up_at >= a.created_at
 		                      AND (en.created_at IS NULL OR o.picked_up_at <= en.created_at)
@@ -166,7 +167,7 @@ func LoadTenures(ctx context.Context, db DB, driverID string, from, to, now time
 		   AND COALESCE(en.created_at, o.goods_handed_at, o.returned_at, o.delivered_at, o.closed_at, $3)
 		       + CASE WHEN o.return_to IS NOT NULL THEN interval '2 hours' ELSE interval '0' END > $2
 		UNION ALL
-		SELECT o.id::text, o.number, COALESCE(m.name, ''),
+		SELECT o.id::text, o.number, COALESCE(m.name, o.pickup_name, ''),
 		       COALESCE(o.accepted_at, o.dispatched_at, o.picked_up_at), o.picked_up_at,
 		       NULL::timestamptz, '', true, o.status, o.closed_at, o.delivered_at,
 		       o.returned_at, o.return_to IS NOT NULL, o.goods_handed_at

@@ -1529,6 +1529,8 @@ func (s *Server) Router() http.Handler {
 
 			// الطلبات — غرفة العمليات تدير ولا تُنشئ (قرار 18):
 			// الإنشاء حصراً عبر واجهات الزبون (الموقع/التطبيق)
+			// **إلّا طلبَ الواتساب** (قرارُ المالك ٢٠٢٦-١١-٠٥): يكتبه الموظّفُ من رسالةٍ وصلته
+			// فينزل للسائقين مباشرةً — `/whatsapp-orders` أدناه بقدرته (`orders.whatsapp`).
 			r.Get("/orders", s.handleListOrders)
 			r.Get("/orders/alerts", s.handleOrderAlerts)
 			// **عدّاداتُ لوحة الطلبات وإعداداتُها** — بشرط فلاترها (قرارُ المالك ٢٠٢٦-١٠-٠٤).
@@ -1593,6 +1595,18 @@ func (s *Server) Router() http.Handler {
 			// مشترياتٍ ويمشي في مسارها القائم. انظر `orders/external_store.go`.
 			r.With(s.RequireCapability(authz.OrdersIntervene)).
 				Post("/orders/{id}/external-store", s.handleOrderExternalStore)
+			// **«طلبات الواتساب»** (قرارُ المالك ٢٠٢٦-١١-٠٥) — الموظّفُ يكتب طلباً وصله على الواتساب
+			// فينزل للسائقين مباشرةً بلا موافقة. والقدرةُ في الجدول. انظر `whatsapp_order_handlers.go`.
+			r.Get("/whatsapp-orders", s.handleListWhatsAppOrders)
+			r.Post("/whatsapp-orders", s.idempotent(s.handleCreateWhatsAppOrder))
+			r.Get("/whatsapp-orders/stores", s.handleWhatsAppStores)
+			r.Get("/whatsapp-orders/quote", s.handleWhatsAppQuote)
+			r.Post("/whatsapp-orders/resolve-location", s.handleWhatsAppResolveLocation)
+			r.Post("/whatsapp-orders/{id}/cancel", s.handleCancelWhatsAppOrder)
+			// **و«اطلب الموقع» وتصحيحُ العنوان** (ملحقُ المالك ٢٠٢٦-١١-٠٥، أ ود).
+			r.Post("/whatsapp-orders/{id}/address", s.handleWhatsAppOrderAddress)
+			r.Post("/whatsapp-orders/location-requests", s.handleWhatsAppRequestLocation)
+			r.Get("/whatsapp-orders/location-requests/{id}", s.handleWhatsAppLocationRequest)
 
 			// ══════════════════════════════════════════════════
 			// **وإدارةُ الأدوار بقدرتها لا بكونه `admin`** — `ADG-1`

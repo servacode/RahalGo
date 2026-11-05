@@ -279,6 +279,14 @@ type Order struct {
 	ExtStoreMerchantName string     `json:"ext_store_merchant_name"`
 	ExtStoreAt           *time.Time `json:"ext_store_at"`
 	ExtStoreReason       string     `json:"ext_store_reason"`
+	// Origin **أصلُ الطلب** — `app` أو `whatsapp` (قرارُ المالك ٢٠٢٦-١١-٠٥): طلبٌ كتبه الموظّفُ
+	// من رسالة واتساب، **ويُعرض «طلب واتساب» للسائق وفي اللوحة.**
+	Origin string `json:"origin"`
+	// CreatedByName **من كتبه من الموظّفين** — لطلب الواتساب وحدَه، للمكتب.
+	CreatedByName string `json:"created_by_name,omitempty"`
+	// PickupMerchantID **متجرٌ من متاجرنا نُسخ اسمُه وموقعُه على طلب الواتساب** — أثرٌ لا ربط:
+	// لا يُسوّى له شيء ولا يرى الطلب (`whatsapp_order.go`). للمكتب وحدَه.
+	PickupMerchantID string `json:"pickup_merchant_id,omitempty"`
 	// حلقة المطبخ: كم دقيقة قال المتجر، ومتى أعلن الجاهزية فعلاً
 	PrepMinutes *int `json:"prep_minutes"`
 	// DeliveryEstimateMin تقديرُ زمن الطريق بالدقائق — **من الإعدادات لا من

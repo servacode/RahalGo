@@ -181,6 +181,8 @@ func (s *Service) StatementPage(ctx context.Context, driverID string, limit, pag
 		             WHERE oi.order_id = o.id),
 		           (SELECT m.name FROM merchants m
 		             WHERE m.id = COALESCE(o.merchant_id, o.partner_merchant_id)),
+		           -- **وطلبُ الواتساب باسم متجره المكتوب** (٢٠٢٦-١١-٠٥).
+		           NULLIF(o.pickup_name, ''),
 		           '') END,
 		       o.delivery_fee,
 		       o.platform_commission + o.commission_waived,

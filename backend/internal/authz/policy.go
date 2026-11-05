@@ -111,6 +111,21 @@ var adminPolicy = []Rule{
 	{"GET", "/customers", UsersRead},
 	{"GET", "/salesreps", UsersRead},
 
+	// ── طلباتُ الواتساب (قرارُ المالك ٢٠٢٦-١١-٠٥) ───────────────
+	//
+	// **الموظّفُ يكتب طلباً وصله على الواتساب فينزل للسائقين مباشرةً** — بقدرته وحدَها، فدورٌ
+	// يُمنَحها من اللوحة يكتب ويُلغي قبل الاستلام ويرى آخرَ ما كُتب. `whatsapp_order_handlers.go`.
+	{"GET", "/whatsapp-orders", OrdersWhatsApp},
+	{"POST", "/whatsapp-orders", OrdersWhatsApp},
+	{"GET", "/whatsapp-orders/stores", OrdersWhatsApp},
+	{"GET", "/whatsapp-orders/quote", OrdersWhatsApp},
+	{"POST", "/whatsapp-orders/resolve-location", OrdersWhatsApp},
+	{"POST", "/whatsapp-orders/{id}/cancel", OrdersWhatsApp},
+	// **و«اطلب الموقع» من رقم المستلِم وتصحيحُ عنوانه** (ملحقُ المالك ٢٠٢٦-١١-٠٥، أ ود).
+	{"POST", "/whatsapp-orders/{id}/address", OrdersWhatsApp},
+	{"POST", "/whatsapp-orders/location-requests", OrdersWhatsApp},
+	{"GET", "/whatsapp-orders/location-requests/{id}", OrdersWhatsApp},
+
 	// ── الطلبات ─────────────────────────────────────────────────
 	{"POST", "/orders/{id}/transition", OrdersIntervene},
 	{"POST", "/orders/{id}/undeliver", OrdersIntervene},                  // «تصحيح: الطلب انلغى» — للأدمن وحدَه (٢٠٢٦-١٠-٢٨)

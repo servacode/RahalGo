@@ -66,7 +66,7 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 	var from string
 	var driverID *string
 	var walletPaid, cashDue, deliveryFee, customReserved int64
-	var customerID, promoCode, kind string
+	var customerID, promoCode, kind, origin string
 	// **و`deliveryFee` هنا أجرُ السائقِ المعتمَد (`driver_fee`) لا ما يدفعه
 	// الزبون** (٢٠٢٦-٠٩-٢٧): يُقرأ لتسويةِ أجرِ السائق وتعويضِه وحدَهما، **فعرضُ
 	// «توصيلٌ مجّانيّ» يُصفّر `delivery_fee` (دفعُ الزبون) ولا يُصفّر أجرَ من
@@ -76,10 +76,10 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 		       -- **والتوصيلةُ بلا زبون** («لدي توصيلة») — NULL في نصٍّ يُسقط
 		       -- كلَّ انتقالٍ لها: قبولَ السائق واستلامَه وتسليمَه.
 		       COALESCE(customer_id::text, ''),
-		       COALESCE(promo_code,''), kind, custom_reserved_amount
+		       COALESCE(promo_code,''), kind, custom_reserved_amount, origin
 		FROM orders WHERE id = $1 FOR UPDATE`, orderID).
 		Scan(&from, &driverID, &walletPaid, &cashDue, &deliveryFee, &customerID, &promoCode,
-			&kind, &customReserved)
+			&kind, &customReserved, &origin)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound
 	}
@@ -120,6 +120,13 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 	if kind == KindMerchantDelivery && to == StCancelled &&
 		slices.Contains(actorRoles, "merchant") && !slices.Contains(effRoles, "merchant") {
 		effRoles = append(effRoles, "merchant")
+	}
+	// **وطلبُ الواتساب منشئُه المكتب** (قرارُ المالك ٢٠٢٦-١١-٠٥) — يولد في الطابور بلا «تحويلٍ لمتجر»،
+	// **فلا يُسقَط دورُ العمليّات حين تُلغيه قبل الاستلام** كما لا يُسقَط دورُ المتجر في توصيلته.
+	// (وإلّا فـ«بعد التحويل لا تُلغي العمليّات» تجعل طلباً كتبه الموظّفُ لا يلغيه إلّا المالك.)
+	if origin == OriginWhatsApp && to == StCancelled && !pastPickup[from] &&
+		slices.Contains(actorRoles, "ops") && !slices.Contains(effRoles, "ops") {
+		effRoles = append(effRoles, "ops")
 	}
 	if !canTransition(kind, from, to, effRoles) {
 		return nil, ErrBadTransition

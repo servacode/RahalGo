@@ -40,6 +40,11 @@ data class DriverOrder(
      */
     @SerialName("holder_name") val holderName: String = "",
     @SerialName("holder_phone") val holderPhone: String = "",
+    /**
+     * **أصلُ الطلب** — `app` أو `whatsapp` (قرارُ المالك ٢٠٢٦-١١-٠٥): طلبٌ كتبه المكتبُ من رسالة
+     * واتساب، **فتقول البطاقةُ «طلب واتساب»**. وفارغٌ من خادمٍ قديم.
+     */
+    val origin: String = "",
     val status: String = "",
     /**
      * **نوعه** — `standard` أو `custom`.

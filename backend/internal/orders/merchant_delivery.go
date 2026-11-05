@@ -347,6 +347,8 @@ const (
 	ShareMerchant = "merchant"
 	SharePurchase = "purchase"
 	ShareAmanah   = "amanah"
+	// ShareWhatsApp **«طلب واتساب»** (قرارُ المالك ٢٠٢٦-١١-٠٥) — حصّتُه وحدَه لا حصّةُ «لدي توصيلة».
+	ShareWhatsApp = "whatsapp"
 )
 
 // SettingShare **مفتاحُ قيمة الحصّة لنوع** — و`SettingShare(t)+"_mode"` طريقتُها.
@@ -359,8 +361,8 @@ const platformDeliveryPercentMax = PlatformSharePercentMax
 // برسالةٍ واضحة (قرارُ المالك ٢٠٢٦-١٠-٢٧) بدل أن تُقصّ هنا صامتة.
 const PlatformSharePercentMax = 90
 
-// ShareKinds **الأنواعُ الأربعة** — لكلٍّ حصّتُه وطريقتُها.
-var ShareKinds = []string{ShareStandard, ShareMerchant, SharePurchase, ShareAmanah}
+// ShareKinds **الأنواعُ الخمسة** — لكلٍّ حصّتُه وطريقتُها (وحدُّ التسعين في بابِ الإعدادات لها كلِّها).
+var ShareKinds = []string{ShareStandard, ShareMerchant, SharePurchase, ShareAmanah, ShareWhatsApp}
 
 // platformShare **حصّةُ المنصّة النافذةُ الآن لنوع** — نسبةٌ أو مبلغ (والآخرُ صفر).
 func (s *Service) platformShare(ctx context.Context, q dbtx.Querier, t string) (pct, fixed int64) {
@@ -566,12 +568,10 @@ const (
 //     ٢٠٢٦-١٠-٠٥) — **وصفرُه «لا أجرةَ خاصّة» لا «مجّاناً».**
 func (s *Service) merchantDeliveryFee(ctx context.Context, q dbtx.Querier, merchantID string,
 	lat, lng float64, hasPoint bool, mode string) (fee int64, distanceM float64, basis string, err error) {
-	st := s.settings.On(q)
-	if own := st.GetInt(ctx, SettingMerchantDeliveryFee); own > 0 {
-		return own, 0, FeeBasisFlat, nil
+	flat, rule := s.merchantFeeRule(ctx, q)
+	if flat > 0 {
+		return flat, 0, FeeBasisFlat, nil
 	}
-	// **ومفاتيحُها هي لا مفاتيحُ العاديّ** (قرارُ المالك ٢٠٢٦-١٠-١٦) — `pricing.MerchantDeliveryFeeKeys`.
-	rule := pricing.RuleOf(ctx, st, pricing.MerchantDeliveryFeeKeys)
 	if !hasPoint {
 		return rule.Base, 0, FeeBasisNoPoint, nil
 	}
@@ -584,6 +584,20 @@ func (s *Service) merchantDeliveryFee(ctx context.Context, q dbtx.Querier, merch
 		distanceM *= 2
 	}
 	return rule.At(distanceM), distanceM, FeeBasisDistance, nil
+}
+
+// merchantFeeRule **أجرةُ «لدي توصيلة» الخاصّةُ إن ضُبطت، وإلّا قاعدتُها** — موضعٌ واحدٌ
+// يقرؤه الإنشاءُ وعرضُ السعر، **فلا تفترق حسبتان يومَ تُعدَّل إحداهما.** (وطلبُ الواتساب له
+// مفاتيحُه منذ ٢٠٢٦-١١-٠٥ — `whatsAppFeeRule`.)
+//
+// **و`delivery.merchant_fee` فوق الصفر أجرةٌ ثابتةٌ تسبق القاعدة** (`flat`)، **وصفرُه «لا أجرةَ
+// خاصّة»** — ومفاتيحُ القاعدة هي لا مفاتيحُ العاديّ (قرارُ المالك ٢٠٢٦-١٠-١٦).
+func (s *Service) merchantFeeRule(ctx context.Context, q dbtx.Querier) (flat int64, rule pricing.FeeRule) {
+	st := s.settings.On(q)
+	if own := st.GetInt(ctx, SettingMerchantDeliveryFee); own > 0 {
+		return own, pricing.FeeRule{}
+	}
+	return 0, pricing.RuleOf(ctx, st, pricing.MerchantDeliveryFeeKeys)
 }
 
 // SettingMerchantDebtOpen **مفتاحٌ متروكٌ لا يُقرأ** (قرارُ المالك ٢٠٢٦-١٠-١٥: لا دينَ على

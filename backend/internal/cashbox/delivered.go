@@ -44,6 +44,8 @@ func (s *Service) Delivered(ctx context.Context, driverID string, from, to time.
 		             WHERE oi.order_id = o.id),
 		           (SELECT m.name FROM merchants m
 		             WHERE m.id = COALESCE(o.merchant_id, o.partner_merchant_id)),
+		           -- **وطلبُ الواتساب باسم متجره المكتوب** (٢٠٢٦-١١-٠٥).
+		           NULLIF(o.pickup_name, ''),
 		           ''),
 		       o.delivered_at,
 		       COALESCE((SELECT sum(e.amount) FROM driver_cash_entries e

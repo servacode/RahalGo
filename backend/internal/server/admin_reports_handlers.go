@@ -40,7 +40,10 @@ var (
 )
 
 // reportKinds أنواعُ الطلب المقبولةُ في الفلتر.
-var reportKinds = map[string]bool{"standard": true, "custom": true, "merchant_delivery": true}
+//
+// **و`whatsapp` طلباتُ الواتساب بأصلها** (قرارُ المالك ٢٠٢٦-١١-٠٥)، **و`merchant_delivery` توصيلاتُ
+// المتاجر وحدَها** — كفلتر سجلّ الطلبات (`orders.ListWhere`).
+var reportKinds = map[string]bool{"standard": true, "custom": true, "merchant_delivery": true, "whatsapp": true}
 
 // reportFilter **ما يُقرأ من الرابط** — يومان بيوم دمشق ونوعٌ ومدينة.
 type reportFilter struct {
@@ -119,7 +122,10 @@ func parseReportFilter(q map[string][]string, now time.Time) (reportFilter, erro
 const reportScopeSQL = `
 		WHERE o.created_at >= account_day_start($1::date)
 		  AND o.created_at < account_day_start($2::date + 1)
-		  AND ($3::text = '' OR o.kind = $3::text)
+		  AND ($3::text = '' OR CASE $3::text
+		        WHEN 'whatsapp' THEN o.origin = 'whatsapp'
+		        WHEN 'merchant_delivery' THEN o.kind = 'merchant_delivery' AND o.origin = 'app'
+		        ELSE o.kind = $3::text END)
 		  AND ($4::text = '' OR (CASE WHEN o.merchant_id IS NOT NULL
 		        THEN mr.city_id = NULLIF($4::text, '')::uuid
 		        ELSE EXISTS (SELECT 1 FROM cities c

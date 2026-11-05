@@ -36,6 +36,8 @@ import (
 var createRoutes = []string{
 	`r.Post("/orders"`,
 	`r.Post("/orders/custom"`,
+	// **وطلبُ الواتساب من اللوحة** (قرارُ المالك ٢٠٢٦-١١-٠٥) — ضغطتان تُرسلان سائقين.
+	`r.Post("/whatsapp-orders"`,
 }
 
 func TestCreateRoutes_AreIdempotent(t *testing.T) {

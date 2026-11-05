@@ -39,14 +39,18 @@ var payFilters = map[string]string{
 
 // staffSearchPhone و staffSearchName **بحثُ الموظّفين الأعرض** — هاتفُ السائق والمتجر،
 // واسمُ السائق والمتجر وكودُ الخصم. `p` رقمُ معاملٍ مُعدٌّ سلفاً.
+//
+// **وطلبُ الواتساب باسم متجره ورقمه المكتوبين** (قرارُ المالك ٢٠٢٦-١١-٠٥) — لا متجرَ مربوطاً له.
 func staffSearchPhone(p string) string {
 	return `EXISTS (SELECT 1 FROM users sd WHERE sd.id = o.driver_id AND sd.phone::text LIKE '%' || ` + p + ` || '%' ESCAPE '\')
-		OR EXISTS (SELECT 1 FROM merchants sm WHERE sm.id = o.merchant_id AND sm.phone::text LIKE '%' || ` + p + ` || '%' ESCAPE '\')`
+		OR EXISTS (SELECT 1 FROM merchants sm WHERE sm.id = o.merchant_id AND sm.phone::text LIKE '%' || ` + p + ` || '%' ESCAPE '\')
+		OR COALESCE(o.pickup_phone, '') LIKE '%' || ` + p + ` || '%' ESCAPE '\'`
 }
 
 func staffSearchName(p string) string {
 	return `EXISTS (SELECT 1 FROM users sd WHERE sd.id = o.driver_id AND sd.full_name ILIKE '%' || ` + p + ` || '%' ESCAPE '\')
 		OR EXISTS (SELECT 1 FROM merchants sm WHERE sm.id = o.merchant_id AND sm.name ILIKE '%' || ` + p + ` || '%' ESCAPE '\')
+		OR COALESCE(o.pickup_name, '') ILIKE '%' || ` + p + ` || '%' ESCAPE '\'
 		OR COALESCE(o.promo_code, '') ILIKE '%' || ` + p + ` || '%' ESCAPE '\'`
 }
 

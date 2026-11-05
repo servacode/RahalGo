@@ -169,6 +169,12 @@ func (s *Service) openMerchantClaim(ctx context.Context, q wallet.Querier,
 	// المكتب حيّاً ثمّ قد يفشل لاحقاً بسببٍ آخر («الزبون غير موجود»)، **فيُطالَب
 	// المتجرُ بذنبٍ ليس ذنبَه.** والسببُ الصادقُ ما كُتب في طلب التعويض الذي
 	// ذنبُه على المتجر.
+	//
+	// # ولا مطالبةَ بلا متجرٍ مربوط (قرارُ المالك ٢٠٢٦-١١-٠٥)
+	//
+	// **طلبُ الواتساب يحمل اسمَ متجرٍ منسوخاً لا متجراً** (`merchant_id` فارغ)، ومثلُه طلبٌ
+	// خاصٌّ بلا متجر. **ونزاعٌ بلا طرفٍ يخرق `disputes_party_present`** — فكانت موافقةُ
+	// الماليّة على تعويض السائق تسقط كلُّها. **فالتعويضُ يُدفع والمطالبةُ لا تُكتب.**
 	_, err = q.Exec(ctx, `
 		INSERT INTO disputes (party_role, merchant_id, order_id, warning_id, reason, amount)
 		SELECT 'merchant', o.merchant_id, o.id, $3,
@@ -176,7 +182,7 @@ func (s *Service) openMerchantClaim(ctx context.Context, q wallet.Querier,
 		                  WHERE r.order_id = o.id AND r.fault = 'merchant'
 		                  ORDER BY r.decided_at DESC NULLS FIRST, r.created_at DESC LIMIT 1),
 		                o.fail_reason, 'merchant_refused'), $2
-		FROM orders o WHERE o.id = $1
+		FROM orders o WHERE o.id = $1 AND o.merchant_id IS NOT NULL
 		ON CONFLICT (order_id, party_role) WHERE order_id IS NOT NULL AND status = 'open'
 		DO UPDATE SET amount = disputes.amount + $2`,
 		orderID, amount, warningID)

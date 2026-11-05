@@ -433,6 +433,9 @@ type driverOrder struct {
 	// **فاتّصالٌ وواتساب** ليعرف أين الأمانة إن لم يشارك موقعَه. وفارغان لغير الأمانة.
 	HolderName  string `json:"holder_name,omitempty"`
 	HolderPhone string `json:"holder_phone,omitempty"`
+	// Origin **أصلُ الطلب** — `app` أو `whatsapp` (قرارُ المالك ٢٠٢٦-١١-٠٥): التطبيقُ الجديدُ يكتب
+	// «طلب واتساب» على البطاقة، **والقديمُ يتجاهل الحقل** (`ignoreUnknownKeys`) ويقرأ «لدي توصيلة».
+	Origin string `json:"origin"`
 	// **ولا رقمَ للزبون هنا — ولا في أيّ حمولةٍ تبلغ سائقاً.**
 	//
 	// (قرارُ المالك ٢٠٢٦-٠٨-٠٩: «لازم الاثنان لا يقدران يوصلان لبعض إلّا
@@ -602,7 +605,9 @@ const driverOrderSelect = `
 	SELECT o.id, o.number, o.status,
 	       -- **واسمُ المتجر فارغٌ في الطلب الخاصّ** — لا متجرَ له.
 	       -- **وNULL في حقلٍ نصّيٍّ يُسقط مسحَ الصفّ كلِّه** لا هذا الحقل.
-	       COALESCE(m.name, ''),
+	       -- **وفي طلب الواتساب الاسمُ المنسوخ** (قرارُ المالك ٢٠٢٦-١١-٠٥) — فيقرؤه التطبيقُ
+	       -- القديمُ حيث اعتاد، بلا تحديث.
+	       COALESCE(m.name, o.pickup_name, ''),
 	       -- ══════════════════════════════════════════════════════════════
 	       -- **ورقمٌ واحدٌ لا رقمان**
 	       -- ══════════════════════════════════════════════════════════════
@@ -616,13 +621,18 @@ const driverOrderSelect = `
 	       --
 	       -- **والعمودُ باقٍ في القاعدة ولا يُقرأ** — وحذفُ عمودٍ فيه
 	       -- بياناتٌ قرارُ مالكٍ لا تنظيفُ شيفرة.
-	       NULLIF(mo.phone::text, ''),
+	       -- **وفي طلب الواتساب رقمُ المتجر المكتوب** — زرُّ الاتّصال عند السائق (٢٠٢٦-١١-٠٥).
+	       COALESCE(NULLIF(mo.phone::text, ''), NULLIF(o.pickup_phone, '')),
 	       -- **وأقربُ معلمٍ ملصقاً بالعنوان** (قرارُ المالك ٢٠٢٦-١٠-٢١، هجرة ٠٤٦٧) —
 	       -- كما في orders.ViewFor للسائق: الحقلُ نفسُه فلا تحديثَ للتطبيق.
 	       concat_ws(' · ', NULLIF(o.address_text, ''), NULLIF(o.near_landmark, '')),
 	       ST_Y(o.dropoff::geometry), ST_X(o.dropoff::geometry),
 	       COALESCE(cu.full_name, o.recipient_name, ''),
-	       CASE WHEN o.kind = 'merchant_delivery' THEN COALESCE(o.recipient_phone, '') ELSE '' END,
+	       -- **ولا رقمَ لمستلِم طلب الواتساب أبداً** (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٧): «السائق
+	       -- ما فيه ياخذ رقم أي زبون بشكل خارجي» — لا في الطابور ولا بعد القبول. **والتطبيقُ
+	       -- يُخفي زرَّي الاتّصال والواتساب حين يصله فارغاً**، والسائقُ يتّصل بالمكتب.
+	       CASE WHEN o.kind = 'merchant_delivery' AND o.origin <> 'whatsapp'
+	            THEN COALESCE(o.recipient_phone, '') ELSE '' END,
 	       o.total, o.cash_due,
 	       COALESCE((SELECT sum(oi.qty) FROM order_items oi WHERE oi.order_id = o.id), 0),
 	       o.ready_at, o.prep_minutes, o.accepted_at, o.created_at,
@@ -706,7 +716,8 @@ const driverOrderSelect = `
 	           -- كان يكتبها ولا تظهر — **فيذهب التالي إلى مطعمٍ سلّم بضاعتَه.**
 	           WHEN COALESCE(o.pickup_override_note, '') <> ''
 	               THEN o.pickup_override_note
-	           ELSE COALESCE(m.address_text, '')
+	           -- **وفي طلب الواتساب العنوانُ المكتوب** (٢٠٢٦-١١-٠٥).
+	           ELSE COALESCE(NULLIF(m.address_text, ''), o.pickup_address, '')
 	       END,
 	       -- **وحقولُ «لدي توصيلة»** — فارغةٌ لغيرها، و«معروفة» صحيحٌ لغيرها.
 	       o.dropoff_known, COALESCE(o.parcel_note, ''), COALESCE(o.fee_payer, ''),
@@ -741,7 +752,9 @@ const driverOrderSelect = `
 	       CASE WHEN o.kind = 'custom' AND o.custom_mode = 'amanah' AND o.driver_id = $1::uuid
 	            THEN COALESCE(o.amanah_holder_name, '') ELSE '' END,
 	       CASE WHEN o.kind = 'custom' AND o.custom_mode = 'amanah' AND o.driver_id = $1::uuid
-	            THEN COALESCE(o.amanah_holder_phone, '') ELSE '' END
+	            THEN COALESCE(o.amanah_holder_phone, '') ELSE '' END,
+	       -- **وأصلُ الطلب** — «طلب واتساب» على البطاقة (قرارُ المالك ٢٠٢٦-١١-٠٥).
+	       o.origin
 	FROM orders o
 	LEFT JOIN merchants m ON m.id = o.merchant_id
 	-- **والتوصيلةُ بلا زبون** — ضمٌّ صلبٌ يُخفيها عن السائق فلا يراها أبداً.
@@ -787,7 +800,7 @@ func (s *Server) loadDriverOrders(r *http.Request, sql string, args ...any) ([]d
 			&o.DeliveryMode, &o.CollectAmount,
 			&o.FetchAmount, &o.FetchAmountVersion, &o.FetchAmountStatus,
 			&o.AmountCurrency, &o.EntranceLat, &o.EntranceLng,
-			&o.Subtotal, &o.Discount, &o.HolderName, &o.HolderPhone); err != nil {
+			&o.Subtotal, &o.Discount, &o.HolderName, &o.HolderPhone, &o.Origin); err != nil {
 			return nil, err
 		}
 		if o.ReturnTo != "" {
@@ -1666,6 +1679,8 @@ func (s *Server) handleDriverCash(w http.ResponseWriter, r *http.Request) {
 		             WHERE oi.order_id = od.id),
 		           (SELECT m.name FROM merchants m
 		             WHERE m.id = COALESCE(od.merchant_id, od.partner_merchant_id)),
+		           -- **وطلبُ الواتساب باسم متجره المكتوب** (٢٠٢٦-١١-٠٥).
+		           NULLIF(od.pickup_name, ''),
 		           '') END,
 		       od.delivery_fee,
 		       od.platform_commission + od.commission_waived,

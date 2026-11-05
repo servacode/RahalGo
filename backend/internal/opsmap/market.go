@@ -275,7 +275,8 @@ func ActiveOrders(ctx context.Context, q Querier, box *BBox, f OrderFilter,
 	sql := `
 		SELECT o.id::text, o.number, o.status, o.kind,
 		       ST_Y(o.dropoff::geometry), ST_X(o.dropoff::geometry), o.address_text,
-		       m.id::text, m.name,
+		       -- **وطلبُ الواتساب باسم متجره المكتوب ونقطتِه** (قرارُ المالك ٢٠٢٦-١١-٠٥).
+		       m.id::text, COALESCE(m.name, o.pickup_name),
 		       ST_Y(COALESCE(o.pickup_override, m.location)::geometry),
 		       ST_X(COALESCE(o.pickup_override, m.location)::geometry),
 		       d.id::text, d.full_name,
