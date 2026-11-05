@@ -1128,14 +1128,17 @@ func (s *Service) settleMerchant(ctx context.Context, q wallet.Querier, orderID,
 			continue
 		}
 		// **بوّابةُ الهُويّة لكلّ (طلب، متجر)** — «مرّةً واحدة» للطريقتين، وXOR بنيويّ.
+		//
+		// **والنسبةُ التي سُوّي بها تُكتب في الصفّ** (خلل PD-1، الهجرة 0506) — فتُقرأ منه في
+		// كلّ نداءٍ بعده (`merchantShares`) ولو بُدّلت نسبةُ المتجر.
 		var settleID string
 		err := q.QueryRow(ctx, `
 			INSERT INTO merchant_settlements
-			       (order_id, merchant_id, owner_user_id, method, amount, state)
-			VALUES ($1, $2, $3, $4, $5, $6)
+			       (order_id, merchant_id, owner_user_id, method, amount, state, commission_percent)
+			VALUES ($1, $2, $3, $4, $5, $6, $7)
 			ON CONFLICT (order_id, merchant_id) DO NOTHING
 			RETURNING id::text`,
-			orderID, sh.merchantID, *sh.ownerID, sh.method, sh.due, initialState(sh.method)).
+			orderID, sh.merchantID, *sh.ownerID, sh.method, sh.due, initialState(sh.method), sh.pct).
 			Scan(&settleID)
 		if errors.Is(err, pgx.ErrNoRows) {
 			// **تعارضٌ = تسويةٌ قائمة ⇒ تُتحقَّق ولا تُتجاوَز عمياءَ** (البند ١).
@@ -1189,6 +1192,23 @@ type sourceShare struct {
 	commission int64
 	due        int64
 	method     string
+	// pct **النسبةُ التي حُسبت بها العمولة** — تُكتب في صفّ التسوية فتتثبّت (PD-1).
+	pct pricing.Percent2
+}
+
+// settledPct **نسبةُ عمولة المتجر في هذا الطلب كما يُسوّى بها.**
+//
+// **ومتجرٌ له صفُّ تسويةٍ يحمل نسبتَه يُسوّى بها** (خلل PD-1، ٢٠٢٦-١١-٠٥): سُوّي عند الاستلام،
+// **فيُطابَق عند التسليم ويُصحَّح بعد تعديل الطلب بنسبة استلامه** — ولو بدّلها المندوبُ أو الأدمنُ
+// بينهما. **والنسبةُ الجديدةُ تسري على كلّ طلبٍ لم يُستلم من المتجر بعد.** وما لا صفَّ له، أو صفٌّ
+// أقدمُ من الهجرة 0506 بلا نسبة، **على `orderPct` كما كان** (تجاوزُ المتجر ثمّ لقطةُ الطلب).
+//
+// **ولا تردّ عدماً أبداً** — فلا تُبلَغ قراءةُ الإعداد من معاملة الانتقال (`XG-48`).
+func settledPct(override, frozen *pricing.Percent2, snap EconomicsSnapshot) *pricing.Percent2 {
+	if frozen != nil {
+		return frozen
+	}
+	return orderPct(override, snap)
 }
 
 // merchantShares **حصصُ المتاجر من الطلب كما تُسوّى** — مصدرٌ واحدٌ لـ`settleMerchant`
@@ -1203,16 +1223,20 @@ func (s *Service) merchantShares(ctx context.Context, q wallet.Querier, orderID 
 	// **ولقطةُ طريقةِ التسوية لكلّ مصدرٍ من `order_items`** — كلُّ بنودِ مصدرٍ
 	// تحمل طريقتَه نفسَها (تُكتب في الإنشاء)، فـ`max` تلتقطها، وإعدادُ المتجر
 	// اليومَ احتياطٌ لطلبٍ قديمٍ بلا لقطة.
+	//
+	// **ونسبةُ صفّ التسوية إن وُجد** (`ms.commission_percent`) — انظر `settledPct`.
 	rows, err := q.Query(ctx, `
 		SELECT COALESCE(oi.merchant_id, o.merchant_id)::text,
 		       m.commission_percent, m.owner_user_id::text,
 		       sum(oi.merchant_price * oi.qty),
-		       COALESCE(max(oi.merchant_settlement_method), m.settlement_method)
+		       COALESCE(max(oi.merchant_settlement_method), m.settlement_method),
+		       ms.commission_percent
 		FROM order_items oi
 		JOIN orders o ON o.id = oi.order_id
 		JOIN merchants m ON m.id = COALESCE(oi.merchant_id, o.merchant_id)
+		LEFT JOIN merchant_settlements ms ON ms.order_id = oi.order_id AND ms.merchant_id = m.id
 		WHERE oi.order_id = $1
-		GROUP BY 1, 2, 3, m.settlement_method`, orderID)
+		GROUP BY 1, 2, 3, m.settlement_method, ms.commission_percent`, orderID)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -1221,17 +1245,19 @@ func (s *Service) merchantShares(ctx context.Context, q wallet.Querier, orderID 
 	for rows.Next() {
 		var merchantID string
 		// **وعمودُ العمولة تجاوزٌ لا نسخة** — فراغُه «اتبع العامّ».
-		var pct *pricing.Percent2
+		var pct, frozen *pricing.Percent2
 		var owner *string
 		var cost int64
 		var method string
-		if err := rows.Scan(&merchantID, &pct, &owner, &cost, &method); err != nil {
+		if err := rows.Scan(&merchantID, &pct, &owner, &cost, &method, &frozen); err != nil {
 			rows.Close()
 			return nil, 0, err
 		}
-		c := pricing.MerchantCommission(ctx, s.settings, orderPct(pct, snap)).Of(cost)
+		p := settledPct(pct, frozen, snap)
+		c := pricing.MerchantCommission(ctx, s.settings, p).Of(cost)
 		totalCommission += c
-		shares = append(shares, sourceShare{merchantID: merchantID, ownerID: owner, commission: c, due: cost - c, method: method})
+		shares = append(shares, sourceShare{merchantID: merchantID, ownerID: owner, commission: c,
+			due: cost - c, method: method, pct: *p})
 	}
 	rows.Close()
 	if err := rows.Err(); err != nil {
@@ -1243,18 +1269,22 @@ func (s *Service) merchantShares(ctx context.Context, q wallet.Querier, orderID 
 	if len(shares) == 0 {
 		var fallbackID string
 		var subtotal int64
-		var pct *pricing.Percent2
+		var pct, frozen *pricing.Percent2
 		var owner *string
 		var method string
 		if err := q.QueryRow(ctx, `
-			SELECT m.id::text, o.subtotal, m.commission_percent, m.owner_user_id::text, m.settlement_method
+			SELECT m.id::text, o.subtotal, m.commission_percent, m.owner_user_id::text, m.settlement_method,
+			       ms.commission_percent
 			FROM orders o JOIN merchants m ON m.id = o.merchant_id
-			WHERE o.id = $1`, orderID).Scan(&fallbackID, &subtotal, &pct, &owner, &method); err != nil {
+			LEFT JOIN merchant_settlements ms ON ms.order_id = o.id AND ms.merchant_id = m.id
+			WHERE o.id = $1`, orderID).Scan(&fallbackID, &subtotal, &pct, &owner, &method, &frozen); err != nil {
 			return nil, 0, err
 		}
-		c := pricing.MerchantCommission(ctx, s.settings, orderPct(pct, snap)).Of(subtotal)
+		p := settledPct(pct, frozen, snap)
+		c := pricing.MerchantCommission(ctx, s.settings, p).Of(subtotal)
 		totalCommission = c
-		shares = append(shares, sourceShare{merchantID: fallbackID, ownerID: owner, commission: c, due: subtotal - c, method: method})
+		shares = append(shares, sourceShare{merchantID: fallbackID, ownerID: owner, commission: c,
+			due: subtotal - c, method: method, pct: *p})
 	}
 
 	return shares, totalCommission, nil
