@@ -14,6 +14,7 @@ package qa
 
 import (
 	"net/http"
+	"os"
 	"testing"
 )
 
@@ -135,4 +136,103 @@ func TestCommissionChangeAfterPickupStillDelivers(t *testing.T) {
 			assertNewViolations(t, h, base)
 		})
 	}
+}
+
+// pd1Pct **نسبةُ صفّ التسوية نصّاً** — فارغةٌ إن لم تُكتب.
+func pd1Pct(t *testing.T, h *Harness, oid, merchantID string) string {
+	t.Helper()
+	_, _, pct := pd1Row(t, h, oid, merchantID)
+	return pct
+}
+
+// TestSettlementPercentBackfill **صفوفُ ما قبل الهجرة 0506 في طلبٍ لم يُسلَّم تُعبّأ نسبتُها.**
+//
+// طلبٌ استُلم قبل النشر صفُّه بلا نسبة، **فيبقى على الحيّة** — وتبديلُها قبل التسليم يُسقطه بـ
+// XS-1 كما كان (خلل PD-1). **فالهجرةُ تكتب النسبةَ لصفوف الطلبات المفتوحة** — وتكتبها حيث تُعيد
+// مبلغَ الصفّ بعينه وحدَه: **صفٌّ لا تطابقه النسبةُ الحاليّة** (بُدّلت بين الاستلام والنشر) **يبقى
+// فارغاً** فلا تُثبَّت عليه نسبةٌ لم يُسوَّ بها، ويبقى علاجُه القديم (إعادةُ النسبة) نافعاً.
+// **والمسلَّمُ لا يُمسّ.**
+func TestSettlementPercentBackfill(t *testing.T) {
+	h := New(t)
+	treasury(t, h)
+	h.Setting("merchants.commission_percent", "10")
+	f := h.Factory()
+	admin := h.NewUser("admin")
+	open := f.Merchant(Commission(10))
+	coSetCash(t, h, open.ID)
+	moved := f.Merchant(Commission(10))
+	itemOpen := h.NewItemFor(open, 10_000)
+	itemMoved := h.NewItemFor(moved, 10_000)
+	base := financialBaseline(t, h)
+	cust := h.Customer()
+
+	place := func(item *Item, key string) (string, *User) {
+		t.Helper()
+		made := h.POSTKey("/api/v1/orders", cust.Token, uniq(key), orderBody(item, 1))
+		if made.Code >= 400 {
+			t.Fatalf("إنشاءُ الطلب: %s", made)
+		}
+		oid, _ := made.JSON()["id"].(string)
+		return oid, h.driverOf(oid)
+	}
+	// أ: مستلَمٌ من متجرٍ نقديّ — نسبتُه لم تتبدّل.
+	oidA, drvA := place(itemOpen, "bfA")
+	pd1Steps(t, h, oidA, drvA, "at_pickup", "picked_up")
+	// ب: مستلَمٌ، **ونسبةُ متجره بُدّلت قبل النشر.**
+	oidB, drvB := place(itemMoved, "bfB")
+	pd1Steps(t, h, oidB, drvB, "at_pickup", "picked_up")
+	// ج: مسلَّم.
+	oidC, drvC := place(itemOpen, "bfC")
+	deliverOrder(t, h, oidC, drvC)
+
+	// **صفوفٌ كأنّها كُتبت قبل الهجرة** — بلا نسبة.
+	if _, err := h.Pool.Exec(ctxBG(), `
+		UPDATE merchant_settlements SET commission_percent = NULL
+		 WHERE order_id = ANY($1::uuid[])`, []string{oidA, oidB, oidC}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.Pool.Exec(ctxBG(),
+		`UPDATE merchants SET commission_percent = 5 WHERE id = $1::uuid`, moved.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	raw, err := os.ReadFile("../migrate/migrations/0506_settlement_percent.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.Pool.Exec(ctxBG(), string(raw)); err != nil {
+		t.Fatalf("الهجرة 0506: %v", err)
+	}
+
+	if got := pd1Pct(t, h, oidA, open.ID); got != "10.00" {
+		t.Errorf("أ (مفتوحٌ، نسبتُه كما سُوّي) بعد الهجرة %q — يُنتظر 10.00", got)
+	}
+	if got := pd1Pct(t, h, oidB, moved.ID); got != "" {
+		t.Errorf("ب (نسبتُه بُدّلت قبل النشر) بعد الهجرة %q — يُنتظر فارغاً: 5 لا تُعيد مبلغَ صفّه", got)
+	}
+	if got := pd1Pct(t, h, oidC, open.ID); got != "" {
+		t.Errorf("ج (مسلَّم) بعد الهجرة %q — يُنتظر فارغاً: المسلَّمُ لا يُمسّ", got)
+	}
+
+	// **والتسليمُ بعد تبديل النسبة يمرّ** — كان يُردّ ٥٠٠ (XS-1: 9000 ≠ 9500).
+	if r := h.PATCH("/api/v1/admin/merchants/"+open.ID, admin.Token,
+		map[string]any{"commission_percent": 5}); r.Code != http.StatusOK {
+		t.Fatalf("تبديلُ النسبة: %s", r)
+	}
+	pd1Steps(t, h, oidA, drvA, "on_the_way", "at_dropoff", "delivered")
+	if amount, _, pct := pd1Row(t, h, oidA, open.ID); amount != 9_000 || pct != "10.00" {
+		t.Errorf("أ بعد التسليم: %d بنسبة %q — يُنتظر 9000 بنسبة 10.00", amount, pct)
+	}
+	if _, _, _, _, commission := coOrderMoney(t, h, oidA); commission != 1_000 {
+		t.Errorf("عمولةُ أ %d — يُنتظر 1000 (نسبةُ الاستلام)", commission)
+	}
+
+	// **وعلاجُ ب القديمُ باقٍ**: تُعاد النسبةُ فيُسلَّم.
+	if _, err := h.Pool.Exec(ctxBG(),
+		`UPDATE merchants SET commission_percent = 10 WHERE id = $1::uuid`, moved.ID); err != nil {
+		t.Fatal(err)
+	}
+	pd1Steps(t, h, oidB, drvB, "on_the_way", "at_dropoff", "delivered")
+
+	assertNewViolations(t, h, base)
 }
