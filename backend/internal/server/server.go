@@ -1182,6 +1182,10 @@ func (s *Server) Router() http.Handler {
 			r.Get("/stores/{id}/delivery-quote", s.handleMerchantDeliveryQuote)
 			r.Get("/stores/{id}/deliveries", s.handleMerchantDeliveries)
 			r.Post("/stores/{id}/deliveries", s.idempotent(s.handleMerchantCreateDelivery))
+			// **مستلموه السابقون يُقترحون وقتَ الكتابة** (قرارُ المالك ٢٠٢٦-١١-٠٥) —
+			// merchant_recipients_handlers.go
+			r.Get("/stores/{id}/delivery-recipients", s.handleMerchantDeliveryRecipients)
+			r.Delete("/stores/{id}/delivery-recipients/{phone}", s.handleMerchantHideDeliveryRecipient)
 			// **ورابطُ موقع المستلِم يُقرأ نقطة** (٢٠٢٦-١٠-٠٨) — merchant_location_link.go
 			r.Post("/stores/{id}/resolve-location", s.handleMerchantResolveLocation)
 			// **«اطلب الموقع من المستلم»** (٢٠٢٦-١٠-٢٩) — رسالةُ واتساب برابطٍ، recipient_location.go
