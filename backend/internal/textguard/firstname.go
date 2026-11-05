@@ -22,8 +22,28 @@ var firstNameJoiners = map[string]bool{
 	"abd": true, "abdul": true, "abu": true, "abo": true, "um": true, "umm": true, "ibn": true, "bin": true,
 }
 
+// firstNameTitles **لقبٌ قبل الاسم لا يقوم اسماً** — «د. أحمد» يراه السائقُ
+// «أحمد» لا «د.». **ويُقارَن مطبَّعاً بلا نقطته.**
+var firstNameTitles = map[string]bool{
+	"دكتور": true, "الدكتور": true, "مهندس": true, "المهندس": true, "استاذ": true, "الاستاذ": true,
+	"استاذه": true, "الاستاذه": true, "الشيخ": true, "شيخ": true, "السيد": true, "السيده": true,
+	"dr": true, "eng": true, "mr": true, "mrs": true, "ms": true, "miss": true, "prof": true,
+}
+
+// isNameTitle **هل الكلمةُ لقب؟** — من القائمة، **أو حرفٌ أو حرفان بعدهما
+// نقطة** («د.» «م.» «أ.»)، **أو حرفٌ واحدٌ وحده** (لا اسمَ من حرف).
+func isNameTitle(w string) bool {
+	bare := strings.TrimRight(w, ".")
+	n := len([]rune(bare))
+	if n <= 1 || (bare != w && n <= 2) {
+		return true
+	}
+	return firstNameTitles[normalizeWord(bare)]
+}
+
 // FirstName **الاسمُ الأوّل** — الكلمةُ الأولى، **أو الأوليان** إن كانت
-// الأولى «عبد/أبو/أم/ابن/بن/الحاج» وبعدها كلمة.
+// الأولى «عبد/أبو/أم/ابن/بن/الحاج» وبعدها كلمة. **واللقبُ قبله يُتخطّى**
+// («د. أحمد علي» ← «أحمد») — **إلّا أن يكون وحده** فيبقى كما كُتب.
 //
 // **وكلُّ كلمةٍ فيها رقمٌ تُسقط** — فمن كتب رقمَه مكانَ اسمه (أو بجانبه)
 // لا يصل رقمُه إلى السائق من هذا الباب. **والفارغُ فارغ.**
@@ -37,6 +57,13 @@ func FirstName(full string) string {
 	}
 	if len(words) == 0 {
 		return ""
+	}
+	k := 0
+	for k < len(words) && isNameTitle(words[k]) {
+		k++
+	}
+	if k < len(words) {
+		words = words[k:]
 	}
 	if len(words) >= 2 && firstNameJoiners[normalizeWord(words[0])] {
 		return words[0] + " " + words[1]
