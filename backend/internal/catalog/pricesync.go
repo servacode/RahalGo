@@ -91,6 +91,11 @@ type SyncReport struct {
 	Skipped       []SyncIssue `json:"skipped"`
 	// UnmatchedSample **أوّلُ ما لم يُطابَق** — لا كلُّه: قائمةُ مولٍ آلافُ مادّة.
 	UnmatchedSample []SyncIssue `json:"unmatched_sample"`
+	// LinkRejected **رقمٌ أو باركودٌ لم يُحفظ** (٢٠٢٦-١١-٠٥) — فيه فراغٌ أو أطولُ من الحدّ
+	// (`validLink`)، **وصفُّه طُبّق سعرُه وكميّتُه** فلا يُذكر في Skipped («لم تُطبَّق»).
+	// وLinkRejectedSample أوّلُه بسببه: `bad_code` · `bad_barcode`.
+	LinkRejected       int         `json:"link_rejected"`
+	LinkRejectedSample []SyncIssue `json:"link_rejected_sample"`
 }
 
 // maxSyncRows **سقفُ القائمة الواحدة** — مولٌ كبيرٌ عشرةُ آلاف، والسقفُ فوقه بكثير.
@@ -146,10 +151,12 @@ func (s *Service) SyncPrices(ctx context.Context, merchantID string, rows []Sync
 		}
 	}
 
+	// **والأقدمُ أوّلاً** — انظر «والأقدمُ يملك» تحت.
 	dbRows, err := tx.Query(ctx, `
 		SELECT id::text, name, COALESCE(external_code, ''), COALESCE(barcode, ''),
 		       merchant_price, price_usd_cents, available
-		  FROM menu_items WHERE merchant_id = $1::uuid`, merchantID)
+		  FROM menu_items WHERE merchant_id = $1::uuid
+		 ORDER BY created_at, id`, merchantID)
 	if err != nil {
 		return nil, err
 	}
@@ -166,19 +173,31 @@ func (s *Service) SyncPrices(ctx context.Context, merchantID string, rows []Sync
 	if err := dbRows.Err(); err != nil {
 		return nil, err
 	}
+	// **والمطابقةُ بأرقامٍ لاتينيّةٍ في الطرفين** (`linkText`، ٢٠٢٦-١١-٠٥) — رقمٌ حُفظ «٠١٧٠٦٤»
+	// يطابق «017064» في الملفّ، **وملفٌّ بأرقامٍ هنديّةٍ يطابق المحفوظَ لاتينيّاً.**
+	//
+	// **والأقدمُ يملك الرقمَ والباركود إن تشاركهما صنفان** (مراجعةُ ما قبل الإصدار ٢٠٢٦-١١-٠٥).
+	// صنفُ المتجر حُفظ رقمُه «٠١٧٠٦٤» بيده، **و«أنشئ غير الموجود» صنعت قبل التحويل نسخةً
+	// مخفيّةً برقم «017064»** — رقمٌ واحدٌ بعد `linkText`. **وكان الاستعلامُ بلا ترتيبٍ والأخيرُ
+	// يكتب فوق الأوّل**، فيربح أيُّهما اتّفق: والأرجحُ النسخةُ الأحدث، فتتحدّث هي لا صنفُ المتجر.
 	byCode, byBarcode, byName := map[string]int{}, map[string]int{}, map[string][]int{}
 	for i, it := range items {
-		if it.code != "" {
-			byCode[it.code] = i
+		if c := linkText(it.code); c != "" {
+			if _, taken := byCode[c]; !taken {
+				byCode[c] = i
+			}
 		}
-		if it.barcode != "" {
-			byBarcode[it.barcode] = i
+		if b := linkText(it.barcode); b != "" {
+			if _, taken := byBarcode[b]; !taken {
+				byBarcode[b] = i
+			}
 		}
 		n := normName(it.name)
 		byName[n] = append(byName[n], i)
 	}
 
-	rep := &SyncReport{DryRun: opt.DryRun, Rows: len(rows), Skipped: []SyncIssue{}, UnmatchedSample: []SyncIssue{}, CreatedSample: []SyncIssue{}}
+	rep := &SyncReport{DryRun: opt.DryRun, Rows: len(rows), Skipped: []SyncIssue{}, UnmatchedSample: []SyncIssue{},
+		CreatedSample: []SyncIssue{}, LinkRejectedSample: []SyncIssue{}}
 	var toCreate []newItem
 	createdCodes := map[string]bool{}
 	skip := func(i int, r SyncRow, why string) {
@@ -186,9 +205,15 @@ func (s *Service) SyncPrices(ctx context.Context, merchantID string, rows []Sync
 			rep.Skipped = append(rep.Skipped, SyncIssue{Row: i + 1, Code: r.Code, Name: r.Name, Reason: why})
 		}
 	}
+	rejectLink := func(i int, r SyncRow, why string) {
+		rep.LinkRejected++
+		if len(rep.LinkRejectedSample) < maxSample {
+			rep.LinkRejectedSample = append(rep.LinkRejectedSample, SyncIssue{Row: i + 1, Code: r.Code, Name: r.Name, Reason: why})
+		}
+	}
 	touched := map[int]bool{}
 	for i, r := range rows {
-		r.Code, r.Barcode = strings.TrimSpace(r.Code), strings.TrimSpace(r.Barcode)
+		r.Code, r.Barcode = linkText(r.Code), linkText(r.Barcode)
 		idx, byNameHit := -1, false
 		if j, ok := byCode[r.Code]; ok && r.Code != "" {
 			idx = j
@@ -205,6 +230,10 @@ func (s *Service) SyncPrices(ctx context.Context, merchantID string, rows []Sync
 			case r.Code == "" || name == "":
 				rep.CreateSkipped++
 				skip(i, r, "no_code_or_name")
+			// **ولا صنفَ برقمٍ لا يقبله النموذج** (`validLink`، ٢٠٢٦-١١-٠٥) — وإلّا وُلد صنفٌ
+			// لا يُحفظ تعديلُه: عمودُ الاسم يُختار رقماً فتصير الأسماءُ أرقاماً بفراغاتها.
+			case !validLink(r.Code):
+				skip(i, r, "bad_code")
 			case createdCodes[r.Code]:
 				skip(i, r, "duplicate")
 			default:
@@ -278,8 +307,27 @@ func (s *Service) SyncPrices(ctx context.Context, merchantID string, rows []Sync
 		if r.Qty != nil {
 			newAvail = *r.Qty > 0
 		}
-		link := byNameHit || (it.code == "" && r.Code != "") || (it.barcode == "" && r.Barcode != "")
-		if byNameHit {
+		// **ورقمٌ أو باركودٌ لا يقبله النموذج لا يُكتب — والصفُّ يُطبَّق** (`validLink`، ٢٠٢٦-١١-٠٥).
+		// فراغٌ في وسطه (باركودان بخانة) أو أطولُ من الحدّ **كان يُكتب فيُردّ بعدها كلُّ حفظٍ
+		// للصنف.** فيُترك هو وحدَه ويُذكر (`LinkRejected`)، **والسعرُ والكميّةُ يُطبَّقان كما كانا**:
+		// تركُ الصفّ كلِّه كان يُبقي صنفاً خلص بالأمين «متوفراً» بسعرٍ قديم في كلّ مزامنة.
+		// **وما للصنف رقمُه لا يُكتب فوقه أصلاً** — فلا يُفحص.
+		orig := r
+		rejected := false
+		if it.code == "" && !validLink(r.Code) {
+			rejectLink(i, orig, "bad_code")
+			r.Code = ""
+			rejected = true
+		}
+		if it.barcode == "" && !validLink(r.Barcode) {
+			rejectLink(i, orig, "bad_barcode")
+			r.Barcode = ""
+			rejected = true
+		}
+		// **ومطابقٌ بالاسم رُفض رابطُه ولم يُحفظ له شيءٌ لا يُعدّ «رُبط بالاسم»** — فالمرّةُ القادمةُ
+		// بالاسم أيضاً، لا بالرقم كما تقول الصفحة.
+		link := (byNameHit && !rejected) || (it.code == "" && r.Code != "") || (it.barcode == "" && r.Barcode != "")
+		if byNameHit && link {
 			rep.LinkedByName++
 		}
 

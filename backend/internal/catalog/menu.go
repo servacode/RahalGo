@@ -698,8 +698,10 @@ func (s *Service) UpdateItem(ctx context.Context, actorID, itemID string, in Men
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	// **والدولارُ يُحلّ إلى ليرةٍ قبل الكتابة** (٢٠٢٦-١٠-١٢) — انظر `usd.go`.
-	var merchantID string
-	if err := tx.QueryRow(ctx, `SELECT merchant_id::text FROM menu_items WHERE id = $1`, itemID).Scan(&merchantID); err != nil {
+	var merchantID, storedCode, storedBarcode string
+	if err := tx.QueryRow(ctx, `
+		SELECT merchant_id::text, COALESCE(external_code, ''), COALESCE(barcode, '')
+		  FROM menu_items WHERE id = $1`, itemID).Scan(&merchantID, &storedCode, &storedBarcode); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return httpx.ErrNotFound
 		}
@@ -713,11 +715,12 @@ func (s *Service) UpdateItem(ctx context.Context, actorID, itemID string, in Men
 		return err
 	}
 	// **رقمُ الأمين والباركود** (٢٠٢٦-١١-٠٤) — غيرُ المُرسَل لا يُمسّ، والفارغُ يفصل الربط.
-	code, err := cleanLink(in.ExternalCode)
+	// **والمُرسَلُ كما حُفظ لا يُفحص** (`changedLink`، ٢٠٢٦-١١-٠٥) — فرقمٌ قديمٌ لا يمنع الحفظ.
+	code, err := cleanLink(changedLink(in.ExternalCode, storedCode))
 	if err != nil {
 		return err
 	}
-	barcode, err := cleanLink(in.Barcode)
+	barcode, err := cleanLink(changedLink(in.Barcode, storedBarcode))
 	if err != nil {
 		return err
 	}

@@ -105,6 +105,7 @@ import com.rahalgo.ui.RemoteImage
 import com.rahalgo.ui.Screen
 import com.rahalgo.ui.ScreenTitle
 import com.rahalgo.ui.Tone
+import com.rahalgo.ui.WesternDigits
 import com.rahalgo.ui.money
 import com.rahalgo.ui.rememberImagePicker
 
@@ -146,6 +147,15 @@ private val SectionGridMax = 460.dp
 
 /** **حشوةُ الزرّ الصغير** — «حذف المجموعة» في رأسها. */
 private val SmallButtonPad = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+
+/**
+ * **رقمُ الأمين والباركود كما يُكتبان** — بلا فراغات، وبحدّ الخادم (٦٤)، **وأرقامُهما
+ * لاتينيّة** (مراجعةُ ما قبل الإصدار ٢٠٢٦-١١-٠٥): الكيبوردُ العربيّ يكتب «٠١٧٠٦٤» وملفُّ
+ * الأمين «017064»، فلا يتطابقان. **ومرآتُه `westernDigits` في `ItemEditor.tsx`، والخادمُ
+ * يحوّل كذلك** (`linkText`).
+ */
+internal fun amenCodeInput(v: String): String =
+    WesternDigits.text(v).filterNot(Char::isWhitespace).take(64)
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -344,20 +354,24 @@ fun ItemEditor(
             // ══════════════════════════════════════════════════════════════
             if (amenLinkAllowed) {
                 Spacer(Modifier.height(Rahal.space.md))
+                // **وكيبوردٌ لاتينيّ** (`Ascii`) — الرقمُ أرقامٌ وحروفٌ لاتينيّة، لا كلماتٌ عربيّة.
+                // **وبلا تصحيحٍ تلقائيّ** — كـ`autoCorrect="off"` في الويب: الرقمُ ليس كلمة.
                 OutlinedTextField(
                     value = d.externalCode,
-                    onValueChange = { v -> onEdit { it.copy(externalCode = v.filterNot(Char::isWhitespace).take(64)) } },
+                    onValueChange = { v -> onEdit { it.copy(externalCode = amenCodeInput(v)) } },
                     label = { Text(stringResource(R.string.item_amen_code)) },
                     supportingText = { Text(stringResource(R.string.item_amen_code_hint)) },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii, autoCorrectEnabled = false),
                     enabled = !busy,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = d.barcode,
-                    onValueChange = { v -> onEdit { it.copy(barcode = v.filterNot(Char::isWhitespace).take(64)) } },
+                    onValueChange = { v -> onEdit { it.copy(barcode = amenCodeInput(v)) } },
                     label = { Text(stringResource(R.string.item_barcode)) },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Ascii, autoCorrectEnabled = false),
                     enabled = !busy,
                     modifier = Modifier.fillMaxWidth(),
                 )

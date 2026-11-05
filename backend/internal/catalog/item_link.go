@@ -43,15 +43,55 @@ func errExternalCodeTaken(name string) error {
 }
 
 // cleanLink **يشذّب الرقمَ المُرسَل** — `nil` يبقى `nil` (بلا تغيير)، والفارغُ فصلُ الربط.
+// **وأرقامُه لاتينيّةٌ قبل الفحص والحفظ** (`linkText`).
 func cleanLink(p *string) (*string, error) {
 	if p == nil {
 		return nil, nil
 	}
-	v := strings.TrimSpace(*p)
-	if utf8.RuneCountInString(v) > maxLinkLen || strings.ContainsAny(v, " \t\r\n") {
+	v := linkText(*p)
+	if !validLink(v) {
 		return nil, ErrExternalCodeInvalid
 	}
 	return &v, nil
+}
+
+// changedLink **المُرسَلُ إن خالف المحفوظ** — وإلّا `nil` (بلا تغيير: لا فحصَ ولا كتابة).
+//
+// (مراجعةُ ما قبل الإصدار ٢٠٢٦-١١-٠٥.) **التطبيقُ والويبُ يرسلان الحقلين مع كلّ حفظ**،
+// **ورقمٌ قديمٌ لا يقبله النموذج** (كتبته المزامنةُ بفراغٍ في وسطه) **كان يردّ كلَّ تعديلٍ
+// على الصنف** — ولو غيّر صاحبُه السعرَ وحدَه.
+func changedLink(p *string, stored string) *string {
+	if p != nil && strings.TrimSpace(*p) == stored {
+		return nil
+	}
+	return p
+}
+
+// linkText **الرقمُ كما يُقارَن ويُحفظ** — مشذَّباً، **وأرقامُه الهنديّةُ والفارسيّةُ لاتينيّة**
+// و«٬» «,» و«٫» «.» (مرآةُ `WesternDigits.text` في التطبيق و`westernDigits` في الويب).
+//
+// (مراجعةُ ما قبل الإصدار ٢٠٢٦-١١-٠٥.) **الكيبوردُ العربيّ يكتب «٠١٧٠٦٤» وملفُّ الأمين
+// «017064»** — فلو حُفظ كما كُتب لم يتطابقا أبداً. **وهو للنموذج وللمزامنة معاً.**
+func linkText(s string) string {
+	return strings.Map(func(r rune) rune {
+		switch {
+		case r >= '٠' && r <= '٩':
+			return '0' + (r - '٠')
+		case r >= '۰' && r <= '۹':
+			return '0' + (r - '۰')
+		case r == '٬':
+			return ','
+		case r == '٫':
+			return '.'
+		}
+		return r
+	}, strings.TrimSpace(s))
+}
+
+// validLink **أيُحفظ هذا الرقم؟** — بلا فراغٍ في وسطه ولا أطولَ من الحدّ. والفارغُ يصلح (فصل).
+// **وقاعدتُه واحدةٌ للنموذج والمزامنة** — وإلّا كتبت المزامنةُ ما لا يُحفظ تعديلُه بعدها.
+func validLink(v string) bool {
+	return utf8.RuneCountInString(v) <= maxLinkLen && !strings.ContainsAny(v, " \t\r\n")
 }
 
 // ensureCodeFree **يسأل: أمربوطٌ هذا الرقمُ بصنفٍ غيرِ هذا في المتجر؟**
@@ -59,10 +99,13 @@ func ensureCodeFree(ctx context.Context, q dbtx.Querier, merchantID, itemID, cod
 	if code == "" {
 		return nil
 	}
+	// **والمحفوظُ يُقارَن بأرقامٍ لاتينيّة** (`linkText`) — رقمٌ حُفظ «٠١٧٠٦٤» قبل التحويل
+	// (٢٠٢٦-١١-٠٥) **هو «017064» نفسُه**، فلا يُربط بصنفٍ ثانٍ.
 	var name string
 	err := q.QueryRow(ctx, `
 		SELECT name FROM menu_items
-		 WHERE merchant_id = $1::uuid AND external_code = $2
+		 WHERE merchant_id = $1::uuid AND external_code IS NOT NULL AND external_code <> ''
+		   AND translate(external_code, '٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹٬٫', '01234567890123456789,.') = $2
 		   AND ($3::text = '' OR id::text <> $3)
 		 LIMIT 1`, merchantID, code, itemID).Scan(&name)
 	if errors.Is(err, pgx.ErrNoRows) {

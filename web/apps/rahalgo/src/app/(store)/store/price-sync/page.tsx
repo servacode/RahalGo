@@ -60,6 +60,9 @@ interface Report {
   zero_price?: number;
   skipped: Issue[];
   unmatched_sample: Issue[];
+  /** **رقمٌ أو باركودٌ لم يُحفظ** (٢٠٢٦-١١-٠٥) — وصفُّه طُبّق، فلا يُذكر في «لم تُطبَّق». */
+  link_rejected?: number;
+  link_rejected_sample?: Issue[];
 }
 interface Info {
   mapping: Mapping | null;
@@ -410,6 +413,22 @@ export default function PriceSyncPage() {
                   {report.unmatched_sample.map((u) => (
                     <li key={u.row}>
                       {[u.code, u.name].filter(Boolean).join(" · ")}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+            {(report.link_rejected ?? 0) > 0 && (
+              <details data-testid="sync-link-rejected">
+                <summary className="cursor-pointer text-warning">
+                  {fill(P.linkRejected, { n: fmtNum(report.link_rejected ?? 0) })}
+                </summary>
+                <ul className="mt-1 list-disc ps-5 text-xs">
+                  {(report.link_rejected_sample ?? []).map((u) => (
+                    <li key={`${u.row}-${u.reason}`}>
+                      {[u.code, u.name].filter(Boolean).join(" · ")} —{" "}
+                      {(P as Record<string, string>)[`why_${u.reason}`] ??
+                        u.reason}
                     </li>
                   ))}
                 </ul>

@@ -297,6 +297,34 @@ if (dict.admin && dict.admin.menu) {
   );
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// **ورقمُ الأمين والباركود يُكتبان بالقاعدة نفسِها**
+// ══════════════════════════════════════════════════════════════════════
+//
+// (مراجعةُ ما قبل الإصدار ٢٠٢٦-١١-٠٥.) **التطبيقُ يحوّل الأرقامَ ويشيل الفراغات**
+// (`amenCodeInput` في `ItemEditor.kt`)، **والويبُ كان يحوّل وحدَه** — فباركودٌ يُلصق وفيه
+// فراغٌ يمرّ في التطبيق ويُردّ عند الحفظ في الويب.
+const appEditor = readFileSync(
+  join(repo, "mobile/ui/src/main/kotlin/com/rahalgo/ui/menu/ItemEditor.kt"),
+  "utf8",
+);
+const webEditor = readFileSync(
+  join(here, "..", "apps/rahalgo/src/components/store/ItemEditor.tsx"),
+  "utf8",
+);
+if (!/fun amenCodeInput\(v: String\): String =\s*WesternDigits\.text\(v\)\.filterNot\(Char::isWhitespace\)/.test(appEditor)) {
+  problems.push("«amenCodeInput» في التطبيق تغيّر — راجع مرآته في «ItemEditor.tsx» بالويب");
+}
+const webClean = webEditor.match(/function amenCodeInput\(v: string\): string \{([^}]*)\}/);
+if (!webClean || !webClean[1].includes("westernDigits(") || !webClean[1].includes('.replace(/\\s/g, "")')) {
+  problems.push("«amenCodeInput» في الويب لا يحوّل الأرقام أو لا يشيل الفراغات — والتطبيقُ يفعل الاثنين");
+}
+for (const setter of ["setAmenCode", "setBarcode"]) {
+  if (!webEditor.includes(`${setter}(amenCodeInput(e.target.value))`)) {
+    problems.push(`«${setter}» في محرّر الويب لا يمرّ بـ«amenCodeInput» — والتطبيقُ يمرّ به`);
+  }
+}
+
 if (problems.length > 0) {
   console.error("محرّرُ الأصناف يختلف بين الويب والتطبيق:");
   for (const p of problems) console.error("  · " + p);

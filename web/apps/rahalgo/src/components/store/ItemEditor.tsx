@@ -40,7 +40,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { getMessages, defaultLocale, errorText, fmtMoney } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, errorText, fmtMoney, westernDigits } from "@rahalgo/i18n";
 import {
   Alert,
   Button,
@@ -94,6 +94,17 @@ const IMAGE_EDGE = 1600;
 const NAME_TYPE_MAX = 120;
 /** **العدّادُ يظهر حين يبقى هذا أو أقلّ** — لا قبله. */
 const NAME_NEAR = 10;
+/** **أطولُ رقمٍ أو باركود** — مرآةُ `maxLinkLen` في المحرّك. */
+const LINK_MAX = 64;
+
+/**
+ * **رقمُ الأمين والباركود كما يُكتبان** — مرآةُ `amenCodeInput` في `ItemEditor.kt`:
+ * أرقامُهما لاتينيّة، **وبلا فراغات** (باركودٌ يُلصق وفيه فراغٌ كان يُردّ عند الحفظ
+ * برسالة رقم المادّة ولو كان الغلطُ في الباركود)، وبحدّ المحرّك.
+ */
+function amenCodeInput(v: string): string {
+  return westernDigits(v).replace(/\s/g, "").slice(0, LINK_MAX);
+}
 
 interface DraftOption {
   id?: string;
@@ -632,18 +643,22 @@ export default function ItemEditor({
         />
       </div>
 
-      {/* ── ٣ب · رقمُ المادّة بالأمين — يربط الصنفَ بملف الأسعار (٢٠٢٦-١١-٠٤) ── */}
+      {/* ── ٣ب · رقمُ المادّة بالأمين — يربط الصنفَ بملف الأسعار (٢٠٢٦-١١-٠٤)، وأرقامُه لاتينيّةٌ
+          كما تُكتب (مرآةُ `amenCodeInput` في التطبيق، ٢٠٢٦-١١-٠٥): «٠١٧٠٦٤» لا يطابق ملفَّ الأمين ── */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" data-testid="item-amen-link">
         <div>
           <Input
             id="item-amen-code"
             label={I.amenCode}
             dir="ltr"
-            maxLength={64}
+            maxLength={LINK_MAX}
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
             disabled={busy}
             value={amenCode}
             onChange={(e) => {
-              setAmenCode(e.target.value);
+              setAmenCode(amenCodeInput(e.target.value));
               dirty();
             }}
           />
@@ -653,11 +668,14 @@ export default function ItemEditor({
           id="item-barcode"
           label={I.barcodeLabel}
           dir="ltr"
-          maxLength={64}
+          maxLength={LINK_MAX}
+          autoCapitalize="off"
+          autoCorrect="off"
+          spellCheck={false}
           disabled={busy}
           value={barcode}
           onChange={(e) => {
-            setBarcode(e.target.value);
+            setBarcode(amenCodeInput(e.target.value));
             dirty();
           }}
         />
