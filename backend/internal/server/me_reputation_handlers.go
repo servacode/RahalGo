@@ -186,6 +186,9 @@ func (s *Server) handleMeReputation(w http.ResponseWriter, r *http.Request) {
 		`+ownerJoin+`
 		WHERE `+ownerCond+complaintCond+`
 		  AND (t.against_user_id IS NULL OR t.against_user_id = $1)
+		  -- **وبلاغُ «طلب رقمي» لا يُرى في سمعة السائق** (قرارُ المالك ٢٠٢٦-١١-٠٥):
+		  -- يعرف رقمَ الطلب فيعرف من بلّغ. **والإدارةُ تراه في ملفّه وصفحة الشكاوى.**
+		  AND COALESCE(t.reason, '') <> 'off_platform'
 		  -- ══════════════════════════════════════════════════════════
 		  -- **وما كتبتُه أنا لا يكون شكوى عليّ**
 		  -- ══════════════════════════════════════════════════════════

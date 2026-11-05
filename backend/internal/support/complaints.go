@@ -86,8 +86,16 @@ var ComplaintReasons = []ComplaintReason{
 	// ومن تعذّر تسليمُه وهو في بيته يشكو.
 	{Code: "driver_conduct", Against: "driver"},
 	{Code: "money", Delivered: false},
+	// **«السائق طلب رقمي أو عرض يوصّلني برّا التطبيق»** (قرارُ المالك ٢٠٢٦-١١-٠٥) —
+	// على كلّ طلبٍ مغلقٍ كان له سائق، **ولو نُزع منه بعدها** (`againstFor`). **والرمزُ
+	// مكتوبٌ هنا حرفاً** لا باسم ثابته: حارسا التطبيقين يقرآن هذه القائمةَ نصّاً.
+	{Code: "off_platform", Against: "driver"},
 	{Code: "other"},
 }
+
+// ReasonOffPlatform **رمزُ «السائق طلب رقمي»** — يقرؤه الخادمُ في كلّ موضعٍ يخصّه
+// (التنبيه · السمعة · المراقبة · المكافأة).
+const ReasonOffPlatform = "off_platform"
 
 // ReasonsFor ما يُعرض على طلبٍ بحالته.
 func ReasonsFor(status string) []ComplaintReason {
@@ -126,6 +134,8 @@ func ReasonAr(code string) string {
 		return "تعاملُ السائق"
 	case "money":
 		return "مبلغٌ غيرُ صحيح"
+	case ReasonOffPlatform:
+		return "السائق طلب رقم الزبون أو عرض يوصّله برّا التطبيق"
 	case "other":
 		return "سببٌ آخر"
 	}
@@ -163,6 +173,15 @@ func (s *Service) againstFor(ctx context.Context, orderID, reason string) *strin
 	if target == "merchant" {
 		q = `SELECT m.owner_user_id::text FROM orders o
 		     JOIN merchants m ON m.id = o.merchant_id WHERE o.id = $1`
+	}
+	// **«طلب رقمي» على من حمل الطلبَ ولو تُرك أو نُزع منه** — آخرُ سائقٍ في سجلّ الطلب
+	// (`order_events.driver_id`) إن فرغ الصفّ. **فالسائقُ لا يفلت ببلاغٍ بتركه الطلب.**
+	if reason == ReasonOffPlatform {
+		q = `SELECT COALESCE(o.driver_id,
+		            (SELECT e.driver_id FROM order_events e
+		              WHERE e.order_id = o.id AND e.driver_id IS NOT NULL
+		              ORDER BY e.created_at DESC LIMIT 1))::text
+		     FROM orders o WHERE o.id = $1`
 	}
 	if err := s.db.QueryRow(ctx, q, orderID).Scan(&id); err != nil {
 		return nil
@@ -230,6 +249,10 @@ func (s *Service) Complaint(ctx context.Context, customerID, orderID, reason, no
 	// **وبلاها كانت الشكوى تُعرض على كلّ من على الطلب**: يقرؤها السائقُ
 	// وصاحبُ المتجر كلاهما وكأنّها عليه.
 	against := s.againstFor(ctx, orderID, reason)
+	// **ولا «طلب رقمي» على طلبٍ لم يحمله سائقٌ قطّ** — بلاغٌ بلا من يُبلَّغ عنه.
+	if reason == ReasonOffPlatform && against == nil {
+		return nil, ErrBadReason
+	}
 	err = s.db.QueryRow(ctx, `
 		INSERT INTO tickets (customer_id, order_id, subject, reason, created_by,
 		                     opened_by_customer, against_user_id)

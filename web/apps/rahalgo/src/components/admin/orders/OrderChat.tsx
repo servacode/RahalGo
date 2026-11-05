@@ -64,7 +64,7 @@ export function OrderChatView({ orderId }: { orderId: string }) {
                 <span className={l.flagged ? "text-danger" : ""}>{l.body}</span>
                 {/* **وما أُخفي يُقال للإدارة بنصّه** — الرقمُ أو اللفظ — ليُحسم البلاغ. */}
                 {l.flagged && l.flag_word && (
-                  <span className="ms-2 text-2xs text-danger">({l.flag_word})</span>
+                  <span className="ms-2 text-xs text-danger">({l.flag_word})</span>
                 )}
                 {l.contact_leak && (
                   <span className="ms-2 inline-block">

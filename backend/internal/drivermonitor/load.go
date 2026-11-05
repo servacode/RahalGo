@@ -146,6 +146,53 @@ type Row struct {
 	Score    float64 `json:"score"`
 	// Live الحالة الحيّة — null لأيام ماضية. (قرار المالك ٢٠٢٦-١١-٠٤)
 	Live *Live `json:"live"`
+	// OffPlatform **بلاغاتُ «السائق طلب رقمي» عليه** — آخرُ ثلاثين يوماً، و
+	// ContactLeaks **رسائلُه التي أُخفي منها رقمٌ أو واتساب** (قرارُ المالك ٢٠٢٦-١١-٠٥).
+	OffPlatform  int `json:"off_platform_reports"`
+	ContactLeaks int `json:"contact_leaks"`
+}
+
+// AntiPoachWindow **نافذةُ عدّ بلاغات «طلب رقمي» والأرقام المخفيّة.**
+const AntiPoachWindow = 30 * 24 * time.Hour
+
+// fillAntiPoach **يعدّ لكلّ سائقٍ في القائمة بلاغاتِه ورسائلَه المخفيّة** — باستعلامٍ واحد.
+// **ويرفعهما في الترتيب** فيطلع صاحبُهما فوق: بلاغٌ ثقيلٌ ورقمٌ مخفيٌّ أخفّ.
+func fillAntiPoach(ctx context.Context, db DB, out []Row, now time.Time) error {
+	if len(out) == 0 {
+		return nil
+	}
+	ids := make([]string, len(out))
+	at := make(map[string]int, len(out))
+	for i := range out {
+		ids[i] = out[i].DriverID
+		at[out[i].DriverID] = i
+	}
+	since := now.Add(-AntiPoachWindow)
+	rows, err := db.Query(ctx, `
+		SELECT u.id::text,
+		       (SELECT count(*) FROM tickets t
+		         WHERE t.against_user_id = u.id AND t.reason = 'off_platform' AND t.created_at > $2),
+		       (SELECT count(*) FROM order_messages m
+		         WHERE m.driver_id = u.id AND m.sender_role = 'driver'
+		           AND m.contact_leak AND m.created_at > $2)
+		  FROM users u WHERE u.id = ANY($1::uuid[])`, ids, since)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var id string
+		var reports, leaks int
+		if err := rows.Scan(&id, &reports, &leaks); err != nil {
+			return err
+		}
+		if i, ok := at[id]; ok {
+			out[i].OffPlatform = reports
+			out[i].ContactLeaks = leaks
+			out[i].Score += 400*float64(reports) + 100*float64(leaks)
+		}
+	}
+	return rows.Err()
 }
 
 // Overview سائقو اليوم الذين لهم أثر، الأخطر أولا.
@@ -212,6 +259,9 @@ func Overview(ctx context.Context, db DB, day string, alertKm float64, now time.
 		if out[i].Alert {
 			out[i].Score += 300
 		}
+	}
+	if err := fillAntiPoach(ctx, db, out, now); err != nil {
+		return nil, err
 	}
 	sort.SliceStable(out, func(a, b int) bool { return out[a].Score > out[b].Score })
 	return out, nil

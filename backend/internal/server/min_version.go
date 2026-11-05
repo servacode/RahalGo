@@ -11,6 +11,33 @@ import (
 // versionHeader **رقمُ نسخة التطبيق** — يرسله كلُّ نداءٍ من أندرويد.
 const versionHeader = "X-RahalGo-Version"
 
+// requestAppBuild **أيُّ تطبيقٍ وأيُّ بناءٍ يطرق الباب** — من الترويستين نفسيهما اللتين
+// تقرؤهما بوّابةُ التحديث (`X-RahalGo-Client` و`X-RahalGo-Version`). **والويبُ وأدواتُ
+// الفحص لا يرسلانهما** فيردّ ("", 0): لا تطبيقَ يُحكم عليه بنسخته.
+//
+// **ومنه تعرف الأبوابُ أيَّ ما تعرضه يفهمه التطبيق** — سببُ شكوى جديد لا يعرض على
+// تطبيقٍ يقرؤه «أخرى»، وقفلُ الشروط لا يقع على تطبيقٍ لا شاشةَ موافقةٍ فيه.
+func requestAppBuild(r *http.Request) (kind string, build int) {
+	have, err := strconv.Atoi(r.Header.Get(versionHeader))
+	if err != nil || have <= 0 {
+		return "", 0
+	}
+	client := r.Header.Get(clientKindHeader)
+	switch {
+	case strings.HasSuffix(client, "-customer"):
+		kind = "customer"
+	case strings.HasSuffix(client, "-driver"):
+		kind = "driver"
+	case strings.HasSuffix(client, "-merchant"):
+		kind = "merchant"
+	case strings.HasSuffix(client, "-rep"):
+		kind = "rep"
+	default:
+		return "", 0
+	}
+	return kind, have
+}
+
 // minVersion **بوّابةُ التحديث — تردّ 426 لمن تخلّف.**
 //
 // (طلبُ المالك 2026-08-25: «مو معقول التطبيق يتحدّث والمستخدم ما عنده
@@ -53,30 +80,10 @@ const versionHeader = "X-RahalGo-Version"
 // `release.<app>.auto_force` مشغّلاً (الافتراض). **فرفعُ نسخةٍ أحدث يكفي.**
 func (s *Server) minVersion(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		raw := r.Header.Get(versionHeader)
-		if raw == "" {
-			// **وما لا يرسل نسخةً ليس تطبيقاً** — لوحةُ الإدارة وأدواتُ
-			// الفحص. **ولا تُحبس بما لا يخصّها.**
-			next.ServeHTTP(w, r)
-			return
-		}
-		have, err := strconv.Atoi(raw)
-		if err != nil || have <= 0 {
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		kind := ""
-		switch {
-		case strings.HasSuffix(r.Header.Get(clientKindHeader), "-customer"):
-			kind = "customer"
-		case strings.HasSuffix(r.Header.Get(clientKindHeader), "-driver"):
-			kind = "driver"
-		case strings.HasSuffix(r.Header.Get(clientKindHeader), "-merchant"):
-			kind = "merchant"
-		case strings.HasSuffix(r.Header.Get(clientKindHeader), "-rep"):
-			kind = "rep"
-		default:
+		// **وما لا يرسل نسخةً ليس تطبيقاً** — لوحةُ الإدارة وأدواتُ
+		// الفحص. **ولا تُحبس بما لا يخصّها.**
+		kind, have := requestAppBuild(r)
+		if kind == "" {
 			next.ServeHTTP(w, r)
 			return
 		}

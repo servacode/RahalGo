@@ -77,6 +77,7 @@
     <string name="cr_quality">جودة سيئة</string>
     <string name="cr_late">تأخر كثيرا</string>
     <string name="cr_money">مشكلة في المبلغ</string>
+    <string name="cr_off_platform">السائق طلب رقمي أو عرض يوصّلني برّا التطبيق</string>
     <string name="cr_other">أخرى</string>
     <string name="ord_complain_what">ما الذي حدث بالضبط؟</string>
     <string name="ord_complain_note">تفاصيل (اختياري)</string>

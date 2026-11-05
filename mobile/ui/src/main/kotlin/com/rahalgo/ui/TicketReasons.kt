@@ -33,6 +33,8 @@ object TicketReasons {
         "quality" -> R.string.tr_quality
         "late" -> R.string.tr_late
         "driver_conduct" -> R.string.rs_driver_conduct
+        // **«السائق طلب رقم الزبون»** (قرارُ المالك ٢٠٢٦-١١-٠٥).
+        "off_platform" -> R.string.tr_off_platform
         "money" -> R.string.tr_money
         // بلاغُ السائق
         "merchant_slow" -> R.string.tr_merchant_slow

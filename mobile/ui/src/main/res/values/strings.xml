@@ -1211,6 +1211,7 @@
     <string name="tr_quality">جودة سيئة</string>
     <string name="tr_late">تأخير في التوصيل</string>
     <string name="tr_money">مشكلة في المبلغ</string>
+    <string name="tr_off_platform">السائق طلب رقم الزبون أو عرض توصيل برّا التطبيق</string>
     <string name="tr_merchant_slow">تأخير في تجهيز الطلب عند المتجر</string>
     <string name="tr_merchant_refused">المتجر رفض تسليم الطلب</string>
     <string name="tr_merchant_wrong_goods">بضاعة غير مطابقة</string>
