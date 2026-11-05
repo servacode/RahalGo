@@ -202,6 +202,14 @@ fun OrderCard(
         order.driverName?.takeIf { it.isNotEmpty() && !ended(order.status) }?.let {
             Spacer(Modifier.height(10.dp))
             KeyValue(stringResource(R.string.ord_driver), it)
+            // **«لحمايتك: لا تتعامل مع السائق برّا التطبيق»** (قرارُ المالك ٢٠٢٦-١١-٠٥) —
+            // سطرٌ باهتٌ ما دام الطلبُ مع سائق، **ونفسُه في /shop.**
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.ord_safety_notice),
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodySmall,
+            )
         }
 
         // ══════════════════════════════════════════════════════════════

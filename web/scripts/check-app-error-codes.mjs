@@ -205,6 +205,8 @@ const SERVER_ADMIN = new Set([
   "refund_bad_rep_share", "refund_rep_share_no_party",
   // **«من متجر غير تابع لنا»** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — زرُّ بطاقة الطلب في اللوحة وحدَه.
   "ext_store_not_standard", "ext_store_bad_status", "ext_store_wallet", "ext_store_money_moved",
+  // **مكافأةُ بلاغ «طلب رقمي»** (قرارُ المالك ٢٠٢٦-١١-٠٥) — زرُّ التذكرة في اللوحة وحدَه.
+  "reward_not_eligible", "reward_already_granted",
 ]);
 
 const found = new Map();

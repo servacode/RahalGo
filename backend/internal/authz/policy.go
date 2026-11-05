@@ -307,6 +307,8 @@ var adminPolicy = []Rule{
 	{"GET", "/tickets/{id}", SupportManage},
 	{"POST", "/tickets/{id}/replies", SupportManage},
 	{"POST", "/tickets/{id}/resolve", SupportManage},
+	// **مكافأةُ بلاغ «طلب رقمي»** (٢٠٢٦-١١-٠٥) — والبابُ يطلب `offers.manage` معها.
+	{"POST", "/tickets/{id}/reward-free-delivery", SupportManage},
 	// **والطوارئُ بقدرتها** — يبلغها الدعمُ والعمليّاتُ معاً (قرارُ المالك ٢٠٢٦-١٠-٠٤،
 	// قسمُ «الطلبات»، البند ٧): **من يوزّع الطلبات يرى الحادث ويستلمه.**
 	{"GET", "/emergencies", EmergenciesManage},

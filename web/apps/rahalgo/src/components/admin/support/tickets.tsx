@@ -31,10 +31,11 @@ import {
   IconWarning,
   IconReply,
   IconCheck,
+  IconPromos,
   Money,
   FormActions,
 } from "@rahalgo/ui";
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useCanOpen } from "@/lib/policy";
 import { OpenLink } from "@/components/admin/OpenLink";
@@ -612,6 +613,9 @@ function TicketDetailModal({
   // للماليّة وهي لا تملكها فيُردّ ٤٠٣**، **ويُخفى عن موظّف الدعم
   // وهو صاحبُه.** (قِيس ٢٠٢٦-٠٩-١٣.)
   const canResolve = can("support.manage");
+  // **ومكافأةُ البلاغ كودُ توصيلٍ مجّانيّ** (قرارُ المالك ٢٠٢٦-١١-٠٥) — بقدرتي الدعم
+  // والعروض معاً، **والخادمُ هو الحَكَم.**
+  const canReward = can("support.manage") && can("offers.manage");
 
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [reply, setReply] = useState("");
@@ -651,6 +655,31 @@ function TicketDetailModal({
       onChanged();
     } catch (err) {
       setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  // **«امنح الزبون توصيلة مجانية»** — كودٌ لمرّةٍ واحدةٍ يصل الزبونَ ردّاً على بلاغه.
+  // **والمرّةُ الثانية تُقال بالكود الموجود** (`reward_already_granted`) لا خطأً عامّاً.
+  async function grantReward() {
+    const R = m.admin.tickets.reward;
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const r = await api<{ code: string }>(`/api/v1/admin/tickets/${ticketID}/reward-free-delivery`, {
+        method: "POST",
+      });
+      setNotice(R.done.replace("{code}", r.code));
+      await load();
+      onChanged();
+    } catch (err) {
+      if (err instanceof ApiError && err.body.code === "reward_already_granted") {
+        setNotice(R.already.replace("{code}", String(err.body.details?.code ?? "")));
+      } else {
+        setError(errorText(err));
+      }
     } finally {
       setBusy(false);
     }
@@ -770,6 +799,17 @@ function TicketDetailModal({
             </form>
           )}
         </FormSection>
+
+        {ticket.reason === "off_platform" && ticket.opened_by_customer && canReward && (
+          <FormSection title={m.admin.tickets.reward.title} icon={<IconPromos />}>
+            <p className="text-xs text-ink-muted">{m.admin.tickets.reward.hint}</p>
+            <div className="mt-2 flex justify-end">
+              <Button type="button" variant="secondary" disabled={busy} onClick={grantReward}>
+                {m.admin.tickets.reward.button}
+              </Button>
+            </div>
+          </FormSection>
+        )}
 
         {ticket.status === "resolved" || ticket.status === "awaiting_finance" ? (
           <FormSection title={m.admin.tickets.resolveTitle} icon={<IconCheck />}>

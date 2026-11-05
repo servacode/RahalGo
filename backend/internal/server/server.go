@@ -1702,6 +1702,8 @@ func (s *Server) Router() http.Handler {
 			r.Get("/tickets/{id}", s.handleGetTicket)
 			r.Post("/tickets/{id}/replies", s.handleTicketReply)
 			r.Post("/tickets/{id}/resolve", s.handleTicketResolve)
+			// **مكافأةُ بلاغ «طلب رقمي» — كودُ توصيلٍ مجّانيّ** (قرارُ المالك ٢٠٢٦-١١-٠٥).
+			r.Post("/tickets/{id}/reward-free-delivery", s.handleTicketRewardFreeDelivery)
 
 			// السائقون والصندوق النقدي
 			r.Get("/drivers", s.handleListDrivers)
