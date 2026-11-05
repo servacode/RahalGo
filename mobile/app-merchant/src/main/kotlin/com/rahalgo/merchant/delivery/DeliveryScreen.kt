@@ -30,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -44,6 +45,8 @@ import com.rahalgo.merchant.SelectedStore
 import com.rahalgo.shared.merchant.DeliveriesApi
 import com.rahalgo.shared.merchant.Delivery
 import com.rahalgo.shared.merchant.DeliveryQuote
+import com.rahalgo.shared.merchant.DeliveryRecipient
+import com.rahalgo.shared.merchant.RecipientSuggest
 import com.rahalgo.shared.merchant.MerchantApi
 import com.rahalgo.shared.merchant.NewDelivery
 import com.rahalgo.ui.AppCore
@@ -184,6 +187,100 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private var pointFromLink = false
+
+    // ══════════════════════════════════════════════════════════════════
+    // **مستلموه السابقون يُقترحون وقتَ الكتابة** (قرارُ المالك ٢٠٢٦-١١-٠٥)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // «بمجرد ما يكتب اسم الزبون يتعبى باقي المعلومات بشكل تلقائي عنوان موقع رقم وكلشي».
+    // **حرفان في الاسم أو الرقم ⇒ قائمةٌ تحت الحقل** (`RecipientSuggest`)، واللمسةُ تملأ
+    // الاسمَ والرقمَ والعنوانَ والنقطةَ إن عُرفت — **ويبقى كلُّ شيءٍ قابلاً للتعديل.**
+    // **وتعثّرُ الاقتراح صامت**: النموذجُ يعمل كما كان بلاه.
+
+    /** **الحقلُ الذي تظهر تحته القائمة** — `name` · `phone` · وفارغٌ لا قائمة. */
+    var suggestFor by mutableStateOf("")
+        private set
+    var suggestions by mutableStateOf<List<DeliveryRecipient>>(emptyList())
+        private set
+
+    /** **النقطةُ من آخر توصيلةٍ لمستلِمٍ اختير** — تُقال تحت العنوان وتُزال بلمسة. */
+    var pointFromSaved by mutableStateOf(false)
+        private set
+    private var suggestJob: kotlinx.coroutines.Job? = null
+
+    /** **يكتب في الاسم** — والقائمةُ تتبع ما كُتب. */
+    fun onName(v: String) {
+        name = v
+        touched()
+        suggest("name", v)
+    }
+
+    /**
+     * **يكتب في الرقم** — والرقمُ أدقّ (قرارُ المالك). **والأرقامُ الهنديّةُ لاتينيّة**
+     * (`WesternDigits.text`) — كان الخادمُ يردّ «٠٩٣٣…» رقماً غيرَ صالح، ومثلُه الموقع.
+     */
+    fun onPhone(v: String) {
+        phone = com.rahalgo.ui.WesternDigits.text(v)
+        touched()
+        suggest("phone", phone)
+    }
+
+    /** **خرج من الحقل** — فتُطوى قائمتُه (إلّا إن انتقل إلى حقلٍ آخرَ له قائمته). */
+    fun leaveField(field: String) {
+        if (suggestFor == field) closeSuggestions()
+    }
+
+    private fun suggest(field: String, text: String) {
+        suggestJob?.cancel()
+        if (storeId.isEmpty() || !RecipientSuggest.shouldSearch(text)) {
+            closeSuggestions()
+            return
+        }
+        suggestJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(RecipientSuggest.DEBOUNCE_MS)
+            // **وتعثّرُه لا يُقال** — قائمةٌ لا تظهر خيرٌ من خطأٍ فوق نموذجٍ يعمل.
+            val got = runCatching { api.recipients(storeId, text).recipients }.getOrNull().orEmpty()
+            suggestFor = if (got.isEmpty()) "" else field
+            suggestions = got
+        }
+    }
+
+    fun closeSuggestions() {
+        suggestJob?.cancel()
+        suggestFor = ""
+        suggestions = emptyList()
+    }
+
+    /** **اللمسةُ تملأ كلَّ شيء** — والنقطةُ إن عُرفت، وإلّا بلا نقطةٍ كما اليوم. */
+    fun pickRecipient(r: DeliveryRecipient) {
+        val f = RecipientSuggest.fill(r)
+        closeSuggestions()
+        name = f.name
+        phone = f.phone
+        address = f.address
+        val p = f.point
+        if (p != null) {
+            // **ونقطتُه تحلّ محلّ رابطٍ أو طلبِ موقعٍ سابق** — لا تبقى «✓ وصل» فوق غيرها.
+            linkJob?.cancel()
+            link = ""
+            linkState = LinkState.Idle
+            resetAsk()
+            setPoint(p.first, p.second, "")
+            pointFromSaved = true
+        } else if (pointFromSaved) {
+            // **ونقطةُ مستلِمٍ سابقٍ لا تبقى لمستلِمٍ بلا نقطة.**
+            clearPoint()
+        }
+        touched()
+    }
+
+    /** **«شيلو من القائمة»** — يختفي الآن، ويرجع وحدَه إن بعث له من جديد. */
+    fun hideRecipient(r: DeliveryRecipient) {
+        suggestions = suggestions.filterNot { it.phone == r.phone }
+        if (suggestions.isEmpty()) suggestFor = ""
+        val id = storeId
+        viewModelScope.launch { runCatching { api.hideRecipient(id, r.phone) } }
+    }
 
     var quote by mutableStateOf<DeliveryQuote?>(null)
         private set
@@ -352,6 +449,7 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
 
     fun setPoint(lat: Double, lng: Double, label: String) {
         pointFromLink = false
+        pointFromSaved = false
         point = lat to lng
         pointLabel = label.ifEmpty { String.format(java.util.Locale.US, "%.5f، %.5f", lat, lng) }
         touched()
@@ -361,6 +459,7 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
     /** **النقطةُ اختياريّة** — ومن أزالها عادت الأجرةُ لمنطقة المتجر. */
     fun clearPoint() {
         pointFromLink = false
+        pointFromSaved = false
         point = null
         pointLabel = ""
         touched()
@@ -472,6 +571,8 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
                 linkState = LinkState.Idle
                 point = null
                 pointLabel = ""
+                pointFromSaved = false
+                closeSuggestions()
                 resetAsk()
                 load()
                 Refresh.bump()
@@ -630,22 +731,29 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
         OutlinedTextField(
             shape = Rahal.shape.md,
             value = vm.name,
-            onValueChange = { vm.name = it; vm.touched() },
+            onValueChange = { vm.onName(it) },
             label = { Text(stringResource(if (fetch) R.string.md_name_fetch else R.string.md_name)) },
             leadingIcon = { FieldIcon(com.rahalgo.ui.R.drawable.ic_user) },
             isError = tried && vm.name.isBlank(),
             singleLine = true,
             enabled = !vm.busy,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .onFocusChanged { if (!it.isFocused) vm.leaveField("name") },
         )
+        // **مستلموه السابقون تحت الحقل الذي يكتب فيه** (قرارُ المالك ٢٠٢٦-١١-٠٥) — وتُطوى
+        // حين يخرج منه.
+        if (vm.suggestFor == "name") RecipientSuggestions(vm)
         Spacer(Modifier.height(Rahal.space.sm))
         // **والرقمُ بحقل الهاتف المشترك** — بأيقونته ومثاله.
         PhoneField(
             value = vm.phone,
-            onChange = { vm.phone = it; vm.touched() },
+            onChange = { vm.onPhone(it) },
             enabled = !vm.busy,
             label = if (fetch) R.string.md_phone_fetch else R.string.md_phone,
+            modifier = Modifier.onFocusChanged { if (!it.isFocused) vm.leaveField("phone") },
         )
+        if (vm.suggestFor == "phone") RecipientSuggestions(vm)
         Spacer(Modifier.height(Rahal.space.sm))
         OutlinedTextField(
             shape = Rahal.shape.md,
@@ -657,6 +765,29 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
             enabled = !vm.busy,
             modifier = Modifier.fillMaxWidth(),
         )
+        // **ونقطةُ آخر توصيلةٍ لمن اختير تُقال** — وتُزال بلمسة فتعود الأجرةُ بلا نقطة.
+        if (vm.pointFromSaved) {
+            Spacer(Modifier.height(Rahal.space.xs))
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(Rahal.shape.md)
+                    .background(Rahal.colors.success.copy(alpha = 0.10f))
+                    .padding(horizontal = Rahal.space.md, vertical = Rahal.space.xs),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(if (fetch) R.string.md_saved_point_fetch else R.string.md_saved_point),
+                    color = Rahal.colors.success,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f),
+                )
+                RahalTextButton(onClick = { vm.clearPoint() }, enabled = !vm.busy) {
+                    Text(stringResource(R.string.md_saved_point_remove))
+                }
+            }
+        }
 
         // ── موقعُ المستلِم: «اطلب الموقع» وجنبه «لصق رابط» بصفٍّ واحد (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) ──
         // **وحقلُ الرابط مخفيٌّ حتّى يُطلب** — ولا سطرَ شرح («مافي داعي للشرح»).
@@ -1087,6 +1218,82 @@ private fun AskLocationCard(vm: DeliveryViewModel, fetch: Boolean, linkOpen: Boo
     }
     if (vm.askError.isNotEmpty()) {
         Text(vm.askError, color = Rahal.colors.danger, style = MaterialTheme.typography.bodySmall)
+    }
+}
+
+/**
+ * **مستلموه السابقون تحت الحقل** (قرارُ المالك ٢٠٢٦-١١-٠٥) — الاسمُ ثمّ «الرقم — العنوان»،
+ * **وعلامةُ موقعٍ إن عُرفت نقطتُه**، و✕ «شيلو من القائمة». واللمسةُ تملأ النموذج.
+ */
+@Composable
+private fun RecipientSuggestions(vm: DeliveryViewModel) {
+    Spacer(Modifier.height(Rahal.space.xs))
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(Rahal.shape.md)
+            .background(Rahal.colors.surface)
+            .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md),
+    ) {
+        Text(
+            stringResource(R.string.md_saved_title),
+            color = Rahal.colors.inkMuted,
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(horizontal = Rahal.space.md, vertical = Rahal.space.xs),
+        )
+        vm.suggestions.forEach { r ->
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clickable(enabled = !vm.busy) { vm.pickRecipient(r) }
+                    .padding(start = Rahal.space.md, top = Rahal.space.xs, bottom = Rahal.space.xs),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    painterResource(com.rahalgo.ui.R.drawable.ic_user),
+                    contentDescription = null,
+                    tint = Rahal.colors.brand,
+                )
+                Spacer(Modifier.width(Rahal.space.sm))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        r.name,
+                        fontWeight = FontWeight.Bold,
+                        color = Rahal.colors.ink,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        stringResource(R.string.md_saved_line, RecipientSuggest.localPhone(r.phone), r.addressText),
+                        color = Rahal.colors.inkMuted,
+                        style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    )
+                }
+                if (r.lat != null && r.lng != null) {
+                    Icon(
+                        painterResource(com.rahalgo.ui.R.drawable.ic_pin),
+                        contentDescription = stringResource(R.string.md_saved_has_point),
+                        tint = Rahal.colors.success,
+                    )
+                }
+                androidx.compose.foundation.layout.Box(
+                    Modifier
+                        .size(44.dp)
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .clickable(enabled = !vm.busy) { vm.hideRecipient(r) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painterResource(com.rahalgo.ui.R.drawable.ic_close),
+                        contentDescription = stringResource(R.string.md_saved_hide),
+                        tint = Rahal.colors.inkMuted,
+                    )
+                }
+            }
+        }
     }
 }
 

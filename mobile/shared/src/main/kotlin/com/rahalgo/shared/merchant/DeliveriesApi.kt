@@ -2,6 +2,7 @@ package com.rahalgo.shared.merchant
 
 import com.rahalgo.shared.net.ApiClient
 import io.ktor.http.HttpMethod
+import io.ktor.http.encodeURLParameter
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -149,6 +150,30 @@ private data class LocationRequestInput(val phone: String, val mode: String)
 @Serializable
 private data class FetchDecision(@SerialName("expected_version") val expectedVersion: Long)
 
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **مستلِمٌ سابقٌ للمتجر — يُقترح وقتَ الكتابة** (قرارُ المالك ٢٠٢٦-١١-٠٥)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * «اذا رجع بعث مره ثانية بمجرد ما يكتب اسم الزبون يتعبى باقي المعلومات بشكل تلقائي».
+ * **من آخر توصيلةٍ لرقمه** — والنقطةُ إن حُدّدت يومها وحدَها (`lat`/`lng` فارغتان وإلّا).
+ */
+@Serializable
+data class DeliveryRecipient(
+    val name: String = "",
+    /** **بصيغته المخزَّنة** `+9639XXXXXXXX`. */
+    val phone: String = "",
+    @SerialName("address_text") val addressText: String = "",
+    val lat: Double? = null,
+    val lng: Double? = null,
+    @SerialName("last_used_at") val lastUsedAt: String = "",
+    /** **كم توصيلةً بعث له.** */
+    val times: Int = 0,
+)
+
+@Serializable
+data class DeliveryRecipients(val recipients: List<DeliveryRecipient> = emptyList())
+
 class DeliveriesApi(private val api: ApiClient) {
 
     /** **يقرأ رابطَ موقعٍ شاركه الزبونُ** — نقطةً على خريطتنا (٢٠٢٦-١٠-٠٨). */
@@ -187,6 +212,24 @@ class DeliveriesApi(private val api: ApiClient) {
             HttpMethod.Post,
             body,
             idempotencyKey = idempotencyKey,
+        )
+
+    /**
+     * **مستلموه السابقون الأقربُ لما كُتب** — اسمٌ أو رقم، ثمانيةٌ على الأكثر، الأحدثُ أوّلاً
+     * (قرارُ المالك ٢٠٢٦-١١-٠٥). **والنصُّ يُرمَّز** — فيه عربيٌّ وقد يكون فيه `+` أو `&`.
+     */
+    suspend fun recipients(storeId: String, query: String): DeliveryRecipients =
+        api.call(
+            "/api/v1/merchant/stores/$storeId/delivery-recipients?q=" +
+                query.trim().encodeURLParameter(),
+        )
+
+    /** **«شيلو من القائمة»** — ويرجع وحدَه إن بعث له من جديد. **والرقمُ أرقاماً بلا `+`.** */
+    suspend fun hideRecipient(storeId: String, phone: String): Ack =
+        api.call(
+            "/api/v1/merchant/stores/$storeId/delivery-recipients/" + phone.filter { it in '0'..'9' },
+            HttpMethod.Delete,
+            null,
         )
 
     /** **صفحةً صفحة** — خمسون في كلّ صفحة، الأحدثُ أوّلاً. */
