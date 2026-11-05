@@ -139,8 +139,10 @@ type Window struct {
 	AssignedAt *time.Time
 	PickedUpAt *time.Time
 	EndAt      *time.Time // خرج من يده؛ فارغ = ما زال معه
-	// EndKind كيف انتهت: delivered · failed · returned · cancelled · released · other
+	// EndKind كيف انتهت: delivered · failed · returned · cancelled · released · store_failed · other
 	EndKind string
+	// EndEventAt **وقتُ السطر الذي أنهاها** — قبل أن يمدّها مشوارُ الإرجاع (`EndAt` بعده).
+	EndEventAt *time.Time
 }
 
 // Store متجر مسجّل له موقع.

@@ -154,7 +154,9 @@ function CorrectDialog({ r, onClose, onDone }: { r: OdoReading; onClose: () => v
             try {
               await api(`/api/v1/admin/driver-odometer/${r.id}`, {
                 method: "PATCH",
-                body: JSON.stringify({ km: Number(km), note: note.trim() }),
+                // **النصُّ كما كُتب** — المحرّكُ يقرأ الأرقامَ العربيّة والفاصلة (١٢٥٠ · 1250,5)،
+                // و`Number` يجعلها NaN فتصل null ويُردّ الرقم.
+                body: JSON.stringify({ km: km.trim(), note: note.trim() }),
               });
               onDone();
             } catch (err) {

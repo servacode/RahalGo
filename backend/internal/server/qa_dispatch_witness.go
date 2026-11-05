@@ -76,7 +76,7 @@ func (s *Server) qaDriverShift(w http.ResponseWriter, r *http.Request, on bool, 
 		// فيسبق أيَّ مرشّحٍ آخرَ في `ORDER BY last_assigned_at NULLS FIRST,
 		// shift_started_at`. **فيُختار هو ويُرسَل إليه العرضُ الحقيقيّ.**
 		// **والدوامُ من بابه الواحد** (`internal/shifts`) — ثمّ بقيّةُ الشروط.
-		if _, err := shifts.Open(ctx, s.pg, uid, 0); err != nil {
+		if _, err := shifts.Open(ctx, s.pg, uid, 0, false); err != nil {
 			s.respondErr(w, err)
 			return
 		}

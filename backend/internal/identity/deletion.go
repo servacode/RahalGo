@@ -103,9 +103,11 @@ func (s *Service) ConfirmAccountDeletion(ctx context.Context, userID, code, ip s
 	if err := s.repo.AnonymizeUser(ctx, user.ID); err != nil {
 		return err
 	}
-	// **ودوامُ سائقٍ حذف حسابه يُسكَّر بسببه** (قرار المالك ٢٠٢٦-١١-٠٥).
+	// **ودوامُ سائقٍ حذف حسابه يُسكَّر بسببه** (قرار المالك ٢٠٢٦-١١-٠٥). **وتعذّرُه يُسجَّل ولا
+	// يوقف ما بعده** — حسابٌ جُرّد من هويّته وجلساتُه حيّةٌ أسوأ من دوامٍ بقي مفتوحاً (والموقوفُ
+	// لا تصله طلبات: الترتيبُ يطلب `status = 'active'`). كما في `afterStatus`.
 	if _, err := shifts.Close(ctx, s.repo.db, user.ID, shifts.ReasonAccount); err != nil {
-		return err
+		s.logger.Error("تعذّر إغلاقُ الدوام بعد حذف الحساب", "user", user.ID, "error", err)
 	}
 	// إقفال فوري: إبطال الجلسات ومسح كاش الحالة كي يُرفض أي توكن قائم
 	if err := s.revokeAllSessions(ctx, user.ID, ReasonBlocked); err != nil {

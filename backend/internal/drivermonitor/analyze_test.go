@@ -334,3 +334,44 @@ func TestMergeTenures(t *testing.T) {
 		t.Fatalf("x = %d ولاية والمتوقَّع ١", x)
 	}
 }
+
+// TestShiftTenures_CarriedOnlyWhenEndedInShift **ولايةٌ بدأت قبل الدوام** (دوامٌ سابقٌ سُكّر
+// والطلبُ بيده) تدخل الدوامَ الجديد **إن أنهاها فيه تسليماً أو فشلاً** وحدَه: ما أعادته
+// العمليّات للطابور، أو أُلغي، أو بقي مفتوحاً، أو انتهى قبل الفتح أو بعد السكّر — لا يدخل.
+// ومشوارُ إرجاعٍ يُقاس بوقت الفشل لا بنهاية المشوار. وما بدأ في الدوام يدخل كلُّه.
+func TestShiftTenures_CarriedOnlyWhenEndedInShift(t *testing.T) {
+	open, closed := t0.Add(time.Hour), t0.Add(3*time.Hour)
+	s := ShiftSpan{OpenedAt: open, ClosedAt: &closed}
+	before := t0.Add(10 * time.Minute)
+	in := t0.Add(2 * time.Hour)
+	after := t0.Add(4 * time.Hour)
+	ws := []Window{
+		{OrderID: "delivered_in", AssignedAt: tp(before), EndAt: tp(in), EndEventAt: tp(in), EndKind: "delivered"},
+		{OrderID: "failed_in", AssignedAt: tp(before), EndAt: tp(in), EndEventAt: tp(in), EndKind: "failed"},
+		// فشل داخل الدوام ومشوارُ الإرجاع بعد سكّره — يدخل (بوقت الفشل)
+		{OrderID: "returned_in", AssignedAt: tp(before), EndAt: tp(after), EndEventAt: tp(in), EndKind: "returned"},
+		{OrderID: "requeued", AssignedAt: tp(before), EndAt: tp(in), EndEventAt: tp(in), EndKind: "released"},
+		{OrderID: "cancelled", AssignedAt: tp(before), EndAt: tp(in), EndEventAt: tp(in), EndKind: "cancelled"},
+		{OrderID: "still_open", AssignedAt: tp(before)},
+		{OrderID: "delivered_after", AssignedAt: tp(before), EndAt: tp(after), EndEventAt: tp(after), EndKind: "delivered"},
+		{OrderID: "delivered_before", AssignedAt: tp(before), EndAt: tp(before.Add(time.Minute)), EndEventAt: tp(before.Add(time.Minute)), EndKind: "delivered"},
+		// بدأ في الدوام — يدخل أيّاً كانت نهايتُه
+		{OrderID: "own_released", AssignedAt: tp(in), EndAt: tp(in.Add(time.Minute)), EndKind: "released"},
+		{OrderID: "own_open", AssignedAt: tp(in)},
+	}
+	got := map[string]bool{}
+	for _, w := range ShiftTenures(ws, s) {
+		got[w.OrderID] = true
+	}
+	want := map[string]bool{"delivered_in": true, "failed_in": true, "returned_in": true,
+		"own_released": true, "own_open": true}
+	for _, w := range ws {
+		if got[w.OrderID] != want[w.OrderID] {
+			t.Errorf("%s: دخل=%v والمتوقَّع %v", w.OrderID, got[w.OrderID], want[w.OrderID])
+		}
+	}
+	// **ودوامٌ مفتوح**: تسليمٌ بعد فتحه يدخل
+	if n := len(ShiftTenures(ws[:1], ShiftSpan{OpenedAt: open})); n != 1 {
+		t.Errorf("دوامٌ مفتوح وتسليمٌ بعد فتحه: %d والمتوقَّع ١", n)
+	}
+}

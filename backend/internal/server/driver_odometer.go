@@ -11,8 +11,11 @@ package server
 //	١ · **الرقمُ المكتوبُ عليه الحساب، والصورةُ دليلُه** — `POST /driver/odometer`.
 //	٢ · **رقمٌ أقلُّ من آخر رقمٍ له مرفوض** (`odometer_lower`) — وقفزةٌ فوق
 //	    `drivers.odometer_max_jump_km` تُسأل ويؤكّدها (`odometer_check`).
-//	٣ · **لا يُفتح الدوامُ ولا يُسكَّر بلاها** في وضع «إلزامي» — **للنسخ التي تعرفها وحدَها**
-//	    (`odometerMinBuild`): ٠٫٧ و٠٫٨ تفتحان وتسكّران كما كانتا حتّى يُفرض التحديث.
+//	٣ · **لا يُفتح الدوامُ ولا يُسكَّر بلاها** في وضع «إلزامي» — **للتطبيق الذي أعلن أنّه
+//	    يعرفها وحدَه** (`odometer_capable` بجسم `/driver/shift`، لا رقمُ النسخة): ٠٫٧ و٠٫٨،
+//	    وأيُّ تصليحٍ سريعٍ بلا الورقة، تفتح وتسكّر كما كانت حتّى يُفرض التحديث.
+//	٧ · **ولا موقعَ مع القراءة** — الرقمُ لا يحتاجه، وصورةُ الفتح تُؤخذ والدوامُ مسكَّر،
+//	    ونصُّ الخصوصيّة يَعِد بالموقع «ما دامت ورديّتُك مفتوحة» وحدَها.
 //	٤ · **وما سكّره غيرُ السائق** (ترك · طارئ · حادث · عمليّات · حساب) يُكتب بسببه، ويُرى
 //	    أحمرَ بالمراقبة: «ما صوّر عند الإغلاق».
 //	٥ · **وسماحُ العمليّات** يفتح الدوامَ بلا صورةٍ مرّةً واحدة (`drivers.manage`، بسبب).
@@ -37,10 +40,6 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 )
 
-// odometerMinBuild **أوّلُ نسخةٍ من تطبيق السائق تعرف العدّاد** (٠٫٩٫٠). وما دونها يفتح
-// الدوامَ ويسكّره كما كان — **فتشغيلُ «إلزامي» قبل فرض التحديث لا يقفل على قديمٍ دوامَه.**
-const odometerMinBuild = 22
-
 // odometerReadingTTL **كم تبقى قراءةُ البداية صالحةً لفتح الدوام** — رُفض الفتحُ (رقمٌ لم
 // يُوثَّق مثلاً) فتُعاد القراءةُ نفسها ولا تُطلب صورةٌ ثانية.
 const odometerReadingTTL = 30 * time.Minute
@@ -52,7 +51,6 @@ var (
 	errOdometerRequired = httpx.NewError(http.StatusConflict, "odometer_required", "errors.odometer_required")
 	errOdometerBadKm    = httpx.NewError(http.StatusBadRequest, "odometer_bad_km", "errors.odometer_bad_km")
 	errOdometerPhoto    = httpx.NewError(http.StatusBadRequest, "odometer_photo_required", "errors.odometer_photo_required")
-	errOdometerMocked   = httpx.NewError(http.StatusUnprocessableEntity, "odometer_mocked", "errors.odometer_mocked")
 	errOdometerPhase    = httpx.NewError(http.StatusConflict, "odometer_wrong_phase", "errors.odometer_wrong_phase")
 	errOdometerNote     = httpx.NewError(http.StatusBadRequest, "odometer_note_required", "errors.odometer_note_required")
 	errOdometerNotFound = httpx.NewError(http.StatusNotFound, "not_found", "errors.not_found")
@@ -121,13 +119,10 @@ func parseOdometerKm(raw string) (float64, bool) {
 	return v, true
 }
 
-// odometerMode **وضعُ العدّاد لهذا النداء** — `off` لنسخةٍ لا تعرفه (والويب والاختبارات بلا
-// ترويسة)، وإلّا الإعداد (`drivers.odometer_mode`).
-func (s *Server) odometerMode(r *http.Request) string {
-	if appBuild(r) < odometerMinBuild {
-		return "off"
-	}
-	switch m := s.settings.GetString(r.Context(), "drivers.odometer_mode"); m {
+// odometerMode **وضعُ العدّاد** (`drivers.odometer_mode`) — والفرضُ لمن أعلن `odometer_capable`
+// وحدَه (`handleDriverShift`)، فالتطبيقُ القديمُ لا يُقفل عليه شيء أيّاً كان الإعداد.
+func (s *Server) odometerMode(ctx context.Context) string {
+	switch m := s.settings.GetString(ctx, "drivers.odometer_mode"); m {
 	case "off", "ask", "require":
 		return m
 	}
@@ -150,7 +145,8 @@ func lastOdometerKm(ctx context.Context, q dbtx.Querier, driverID string) (*floa
 }
 
 // handleDriverOdometer **POST /driver/odometer** — صورةُ العدّاد ورقمُه (متعدّد الأجزاء:
-// `file` · `km` · `phase` start|end · `lat` · `lng` · `accuracy` · `mocked` · `confirm`).
+// `file` · `km` · `phase` start|end · `confirm`). **ولا موقع**: ما يُرسَل منه (نسخةٌ تجريبيّةٌ
+// سابقة) يُهمَل ولا يُحفظ.
 //
 // **والفحوصُ قبل حفظ الصورة** — قراءةٌ مرفوضةٌ لا تترك ملفّاً بلا صاحب (كإثبات التسليم).
 func (s *Server) handleDriverOdometer(w http.ResponseWriter, r *http.Request) {
@@ -168,23 +164,6 @@ func (s *Server) handleDriverOdometer(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		s.respondErr(w, errOdometerBadKm)
 		return
-	}
-	// **والموقعُ المزيَّف يُرفض** — كصورة التسليم (قرارُ المالك ٢٠٢٦-١٠-٠٣).
-	if r.FormValue("mocked") == "true" {
-		s.audit(r, "driver.odometer_rejected", "user", uid, map[string]any{"why": "mocked", "phase": phase})
-		s.respondErr(w, errOdometerMocked)
-		return
-	}
-	var lat, lng, acc *float64
-	if la, err1 := strconv.ParseFloat(r.FormValue("lat"), 64); err1 == nil {
-		if ln, err2 := strconv.ParseFloat(r.FormValue("lng"), 64); err2 == nil &&
-			!math.IsNaN(la) && !math.IsNaN(ln) && !math.IsInf(la, 0) && !math.IsInf(ln, 0) &&
-			la >= -90 && la <= 90 && ln >= -180 && ln <= 180 {
-			lat, lng = &la, &ln
-		}
-	}
-	if a, err := strconv.ParseFloat(r.FormValue("accuracy"), 64); err == nil && a > 0 && !math.IsInf(a, 0) {
-		acc = &a
 	}
 	confirm := r.FormValue("confirm") == "true"
 
@@ -252,10 +231,9 @@ func (s *Server) handleDriverOdometer(w http.ResponseWriter, r *http.Request) {
 	}
 	var id string
 	if err := s.pg.QueryRow(ctx, `
-		INSERT INTO driver_odometer_readings (driver_id, phase, km, check_status, prev_km, media_id,
-		                                      lat, lng, accuracy_m, app_build)
-		VALUES ($1::uuid, $2, $3, $4, $5, $6::uuid, $7, $8, $9, $10)
-		RETURNING id::text`, uid, phase, km, check, last, md.ID, lat, lng, acc, build).Scan(&id); err != nil {
+		INSERT INTO driver_odometer_readings (driver_id, phase, km, check_status, prev_km, media_id, app_build)
+		VALUES ($1::uuid, $2, $3, $4, $5, $6::uuid, $7)
+		RETURNING id::text`, uid, phase, km, check, last, md.ID, build).Scan(&id); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -431,18 +409,19 @@ func (s *Server) handleAdminOdometerExemption(w http.ResponseWriter, r *http.Req
 // **صورُ العدّاد تُمحى بعد مدّة حفظها، والرقمُ يبقى** — مرّةً بالساعة من كانس المسافات
 // ══════════════════════════════════════════════════════════════════════
 
-var odoPruneGate struct {
+// odoPruneGate **مرّةً بالساعة** — لكلّ خادمٍ بوّابتُه (لا متغيّرٌ عامّ يتقاسمه خادما اختبارين).
+type odoPruneGate struct {
 	sync.Mutex
 	last time.Time
 }
 
 func (s *Server) pruneOdometerPhotos(ctx context.Context, now time.Time) {
-	odoPruneGate.Lock()
-	due := now.Sub(odoPruneGate.last) >= time.Hour
+	s.odoPrune.Lock()
+	due := now.Sub(s.odoPrune.last) >= time.Hour
 	if due {
-		odoPruneGate.last = now
+		s.odoPrune.last = now
 	}
-	odoPruneGate.Unlock()
+	s.odoPrune.Unlock()
 	if !due || s.media == nil {
 		return
 	}

@@ -74,9 +74,11 @@ func (s *Server) handleDriverHistory(w http.ResponseWriter, r *http.Request) {
 	type drive struct{ toPickup, withOrder int }
 	drives := map[string]drive{}
 	if len(ids) > 0 {
+		// **وطلبٌ امتدّ على دوامين** له قطعتان — مسافتُه مجموعُهما.
 		rows, err := s.pg.Query(r.Context(), `
-			SELECT order_id::text, to_pickup_m, with_order_m FROM order_drives
-			 WHERE driver_id = $1 AND order_id = ANY($2::uuid[])`, userIDFrom(r), ids)
+			SELECT order_id::text, sum(to_pickup_m)::int, sum(with_order_m)::int FROM order_drives
+			 WHERE driver_id = $1 AND order_id = ANY($2::uuid[])
+			 GROUP BY order_id`, userIDFrom(r), ids)
 		if err == nil {
 			for rows.Next() {
 				var id string

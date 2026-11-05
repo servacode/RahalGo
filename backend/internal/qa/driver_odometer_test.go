@@ -10,6 +10,7 @@ package qa
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"image"
@@ -18,6 +19,8 @@ import (
 	"math"
 	"mime/multipart"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -58,7 +61,7 @@ func odoUpload(t *testing.T, h *Harness, token string, fields map[string]string,
 // odoReading يرفع قراءةً صالحة ويردّ معرّفها.
 func odoReading(t *testing.T, h *Harness, drv *User, phase, km string) string {
 	t.Helper()
-	r := odoUpload(t, h, drv.Token, map[string]string{"phase": phase, "km": km, "lat": "35.95", "lng": "39.01"}, true, driverApp("22"))
+	r := odoUpload(t, h, drv.Token, map[string]string{"phase": phase, "km": km}, true, driverApp("22"))
 	if r.Code != http.StatusCreated {
 		t.Fatalf("قراءة %s %s: %s", phase, km, r)
 	}
@@ -69,17 +72,18 @@ func odoReading(t *testing.T, h *Harness, drv *User, phase, km string) string {
 	return id
 }
 
-func odoShift(t *testing.T, h *Harness, drv *User, on bool, readingID, build string) Res {
+// odoShift يفتح الدوام أو يسكّره — `capable` **التطبيقُ يعلن أنّه يعرف ورقةَ العدّاد**
+// (`odometer_capable`)، ومنه وحدَه يُطبَّق «إلزامي». ورقمُ النسخة في الترويسة للمعلومة.
+func odoShift(t *testing.T, h *Harness, drv *User, on bool, readingID string, capable bool) Res {
 	t.Helper()
 	body := map[string]any{"on": on}
 	if readingID != "" {
 		body["odometer_id"] = readingID
 	}
-	var hdr map[string]string
-	if build != "" {
-		hdr = driverApp(build)
+	if capable {
+		body["odometer_capable"] = true
 	}
-	return h.Call("POST", "/api/v1/driver/shift", drv.Token, body, hdr)
+	return h.Call("POST", "/api/v1/driver/shift", drv.Token, body, driverApp("22"))
 }
 
 // odoErrDetails تفصيلُ الخطأ.
@@ -93,9 +97,9 @@ func odoErrDetails(r Res) map[string]any {
 	return e.Error.Details
 }
 
-// TestOdometer_UploadValidation **الرقمُ والصورةُ والموقع**: حروفٌ وسالبٌ وثماني خاناتٍ
-// ومنزلتان ⇒ ٤٠٠ · موقعٌ مزيَّف ⇒ ٤٢٢ · بلا صورة ⇒ ٤٠٠ · سكّرٌ والدوامُ مسكَّر ⇒ ٤٠٩ ·
-// وأرقامٌ عربيّة ⇒ ٢٠١ «أوّل قراءة» بصنف `odometer` محميّ لا يُفتح برابطٍ عارٍ.
+// TestOdometer_UploadValidation **الرقمُ والصورة**: حروفٌ وسالبٌ وثماني خاناتٍ ومنزلتان ⇒ ٤٠٠ ·
+// بلا صورة ⇒ ٤٠٠ · سكّرٌ والدوامُ مسكَّر ⇒ ٤٠٩ · وأرقامٌ عربيّة ⇒ ٢٠١ «أوّل قراءة» بصنف
+// `odometer` محميّ لا يُفتح برابطٍ عارٍ.
 func TestOdometer_UploadValidation(t *testing.T) {
 	h := New(t)
 	h.Setting("launch.driver_work", "true")
@@ -105,9 +109,6 @@ func TestOdometer_UploadValidation(t *testing.T) {
 		if r.Code != 400 || r.Err() != "odometer_bad_km" {
 			t.Errorf("km=%q: %s — المتوقَّع 400 odometer_bad_km", km, r)
 		}
-	}
-	if r := odoUpload(t, h, drv.Token, map[string]string{"phase": "start", "km": "1250", "mocked": "true"}, true, nil); r.Code != 422 || r.Err() != "odometer_mocked" {
-		t.Errorf("مزيَّف: %s", r)
 	}
 	if r := odoUpload(t, h, drv.Token, map[string]string{"phase": "start", "km": "1250"}, false, nil); r.Code != 400 || r.Err() != "odometer_photo_required" {
 		t.Errorf("بلا صورة: %s", r)
@@ -147,6 +148,40 @@ func TestOdometer_UploadValidation(t *testing.T) {
 	}
 }
 
+// TestOdometer_ReadingCarriesNoLocation **قراءةُ العدّاد بلا موقع**: صورةُ الفتح تُؤخذ والدوامُ
+// مسكَّر (والموقعُ واقف)، فما يرسله تطبيقٌ قديمٌ من موقعٍ — **وعلمُ «مزيَّف» من نقطةٍ قديمة** —
+// لا يردّ القراءة ولا يُحفظ: لا أعمدةَ موقعٍ في الجدول أصلاً. (ونصُّ الخصوصيّة يَعِد بالموقع
+// «ما دامت ورديّتُك مفتوحة» وحدَها.)
+func TestOdometer_ReadingCarriesNoLocation(t *testing.T) {
+	h := New(t)
+	h.Setting("launch.driver_work", "true")
+	drv := h.NewUser("driver")
+	r := odoUpload(t, h, drv.Token, map[string]string{"phase": "start", "km": "1250",
+		"lat": "35.95", "lng": "39.01", "accuracy": "12", "mocked": "true"}, true, driverApp("22"))
+	if r.Code != http.StatusCreated {
+		t.Fatalf("قراءةٌ مع موقعٍ قديمٍ «مزيَّف»: %s — المتوقَّع 201 (الموقعُ لا يُقرأ)", r)
+	}
+	var cols []string
+	rows, err := h.Pool.Query(ctxBG(), `
+		SELECT column_name FROM information_schema.columns
+		 WHERE table_name = 'driver_odometer_readings'
+		   AND column_name IN ('lat', 'lng', 'accuracy_m', 'mocked')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for rows.Next() {
+		var c string
+		if err := rows.Scan(&c); err != nil {
+			t.Fatal(err)
+		}
+		cols = append(cols, c)
+	}
+	rows.Close()
+	if len(cols) > 0 {
+		t.Fatalf("أعمدةُ موقعٍ في قراءات العدّاد: %v — القراءةُ بلا موقع", cols)
+	}
+}
+
 // TestOdometer_LowerRefusedJumpNeedsConfirm **الأقلّ مرفوض ولو أكّده، والقفزةُ تُؤكَّد**.
 func TestOdometer_LowerRefusedJumpNeedsConfirm(t *testing.T) {
 	h := New(t)
@@ -154,7 +189,7 @@ func TestOdometer_LowerRefusedJumpNeedsConfirm(t *testing.T) {
 	h.Setting("drivers.odometer_max_jump_km", "150")
 	drv := h.NewUser("driver")
 	start := odoReading(t, h, drv, "start", "1250")
-	if r := odoShift(t, h, drv, true, start, "22"); r.Code != 200 {
+	if r := odoShift(t, h, drv, true, start, true); r.Code != 200 {
 		t.Fatalf("فتح الدوام بقراءة: %s", r)
 	}
 	for _, confirm := range []string{"", "true"} {
@@ -179,29 +214,43 @@ func TestOdometer_LowerRefusedJumpNeedsConfirm(t *testing.T) {
 	}
 }
 
-// TestOdometer_RequireRespectsAppBuild **«إلزامي» للنسخة التي تعرفه وحدها**: ٢٢ بلا قراءة ⇒ ٤٠٩ ·
-// ٢١ (والويب بلا ترويسة) ⇒ ٢٠٠ كما كان · ٢٢ بقراءة ⇒ تُربط بالدوام · قراءةٌ عمرها ٣١ دقيقة ⇒ ٤٠٩.
-func TestOdometer_RequireRespectsAppBuild(t *testing.T) {
+// TestOdometer_RequireOnlyForCapableApps **«إلزامي» لمن أعلن أنّه يعرف الورقة وحدَه** (لا رقمُ
+// النسخة): مُعلِنٌ بلا قراءة ⇒ ٤٠٩ · نسخةٌ برقم ٢٢ أو ٩٩ لا تُعلن (تصليحٌ سريعٌ بلا الورقة)
+// ⇒ ٢٠٠ كما كان، وصفُّها `opened_capable = false` · والويبُ بلا ترويسة ⇒ ٢٠٠ · مُعلِنٌ بقراءة ⇒
+// تُربط بالدوام · قراءةٌ عمرها ٣١ دقيقة ⇒ ٤٠٩ · والسائقُ يقرأ الوضعَ كما هو بالإعداد.
+func TestOdometer_RequireOnlyForCapableApps(t *testing.T) {
 	h := New(t)
 	h.Setting("launch.driver_work", "true")
 	h.Setting("drivers.odometer_mode", `"require"`)
 	drv := h.NewUser("driver")
-	if r := odoShift(t, h, drv, true, "", "22"); r.Code != 409 || r.Err() != "odometer_required" {
-		t.Fatalf("نسخة ٢٢ بلا قراءة: %s — المتوقَّع 409 odometer_required", r)
+	if r := odoShift(t, h, drv, true, "", true); r.Code != 409 || r.Err() != "odometer_required" {
+		t.Fatalf("تطبيقٌ يعرف الورقة بلا قراءة: %s — المتوقَّع 409 odometer_required", r)
 	}
 	if onShiftOf(t, h, drv.ID) {
 		t.Fatal("فُتح الدوام بلا قراءة")
 	}
-	if r := odoShift(t, h, drv, true, "", "21"); r.Code != 200 {
-		t.Fatalf("نسخة ٢١ بلا قراءة: %s — القديمة تفتح كما كانت", r)
+	// **نسخةٌ أحدثُ رقماً بلا الورقة** — لا تُقفل.
+	for _, build := range []string{"22", "99"} {
+		open := h.Call("POST", "/api/v1/driver/shift", drv.Token, map[string]any{"on": true}, driverApp(build))
+		if open.Code != 200 {
+			t.Fatalf("نسخة %s لا تعلن الورقة: %s — تفتح كما كانت", build, open)
+		}
+		var capable *bool
+		if err := h.Pool.QueryRow(ctxBG(), `SELECT opened_capable FROM driver_shifts
+			WHERE driver_id = $1::uuid AND closed_at IS NULL`, drv.ID).Scan(&capable); err != nil {
+			t.Fatal(err)
+		}
+		if capable == nil || *capable {
+			t.Fatalf("نسخة %s: opened_capable = %v والمتوقَّع false", build, capable)
+		}
+		if r := h.Call("POST", "/api/v1/driver/shift", drv.Token, map[string]any{"on": false}, driverApp(build)); r.Code != 200 {
+			t.Fatalf("نسخة %s تسكّر: %s", build, r)
+		}
 	}
-	if r := odoShift(t, h, drv, false, "", "21"); r.Code != 200 {
-		t.Fatalf("نسخة ٢١ تسكّر: %s", r)
-	}
-	if r := odoShift(t, h, drv, true, "", ""); r.Code != 200 {
+	if r := h.POST("/api/v1/driver/shift", drv.Token, map[string]any{"on": true}); r.Code != 200 {
 		t.Fatalf("بلا ترويسة (الويب): %s", r)
 	}
-	if r := odoShift(t, h, drv, false, "", ""); r.Code != 200 {
+	if r := h.POST("/api/v1/driver/shift", drv.Token, map[string]any{"on": false}); r.Code != 200 {
 		t.Fatal(r)
 	}
 	// قراءةٌ قديمة ⇒ لا تُقبل
@@ -209,58 +258,60 @@ func TestOdometer_RequireRespectsAppBuild(t *testing.T) {
 	if _, err := h.Pool.Exec(ctxBG(), `UPDATE driver_odometer_readings SET created_at = now() - interval '31 minutes' WHERE id = $1::uuid`, stale); err != nil {
 		t.Fatal(err)
 	}
-	if r := odoShift(t, h, drv, true, stale, "22"); r.Code != 409 || r.Err() != "odometer_required" {
+	if r := odoShift(t, h, drv, true, stale, true); r.Code != 409 || r.Err() != "odometer_required" {
 		t.Fatalf("قراءة عمرها ٣١ دقيقة: %s", r)
 	}
 	fresh := odoReading(t, h, drv, "start", "1001")
-	if r := odoShift(t, h, drv, true, fresh, "22"); r.Code != 200 {
-		t.Fatalf("نسخة ٢٢ بقراءة: %s", r)
+	if r := odoShift(t, h, drv, true, fresh, true); r.Code != 200 {
+		t.Fatalf("تطبيقٌ يعرف الورقة بقراءة: %s", r)
 	}
 	var attached string
-	if err := h.Pool.QueryRow(ctxBG(), `SELECT COALESCE(start_reading_id::text, '') FROM driver_shifts
-		WHERE driver_id = $1::uuid AND closed_at IS NULL`, drv.ID).Scan(&attached); err != nil || attached != fresh {
+	var capable *bool
+	if err := h.Pool.QueryRow(ctxBG(), `SELECT COALESCE(start_reading_id::text, ''), opened_capable FROM driver_shifts
+		WHERE driver_id = $1::uuid AND closed_at IS NULL`, drv.ID).Scan(&attached, &capable); err != nil || attached != fresh {
 		t.Fatalf("القراءة ما انربطت بالدوام: %q %v", attached, err)
 	}
+	if capable == nil || !*capable {
+		t.Fatalf("opened_capable = %v والمتوقَّع true", capable)
+	}
 	// **وقراءةٌ مربوطةٌ لا تُستعمل مرّتين**
-	if r := odoShift(t, h, drv, false, "", "21"); r.Code != 200 {
+	if r := odoShift(t, h, drv, false, odoReading(t, h, drv, "end", "1010"), true); r.Code != 200 {
 		t.Fatal(r)
 	}
-	if r := odoShift(t, h, drv, true, fresh, "22"); r.Code != 409 {
+	if r := odoShift(t, h, drv, true, fresh, true); r.Code != 409 {
 		t.Fatalf("قراءةٌ مربوطة فتحت دواماً ثانياً: %s", r)
 	}
-	// والسائق يرى وضعه
-	me := h.Call("GET", "/api/v1/driver/me", drv.Token, nil, driverApp("22"))
-	if me.JSON()["odometer_mode"] != "require" {
-		t.Errorf("odometer_mode للنسخة ٢٢ = %v", me.JSON()["odometer_mode"])
-	}
-	if last, _ := me.JSON()["odometer_last_km"].(float64); last != 1001 {
-		t.Errorf("odometer_last_km = %v والمتوقَّع 1001", me.JSON()["odometer_last_km"])
-	}
-	old := h.GET("/api/v1/driver/me", drv.Token)
-	if old.JSON()["odometer_mode"] != "off" {
-		t.Errorf("odometer_mode بلا نسخة = %v والمتوقَّع off", old.JSON()["odometer_mode"])
+	// والسائق يرى الوضعَ كما هو بالإعداد — والتطبيقُ القديم لا يقرؤه
+	for _, hdr := range []map[string]string{driverApp("22"), nil} {
+		me := h.Call("GET", "/api/v1/driver/me", drv.Token, nil, hdr)
+		if me.JSON()["odometer_mode"] != "require" {
+			t.Errorf("odometer_mode = %v والمتوقَّع require", me.JSON()["odometer_mode"])
+		}
+		if last, _ := me.JSON()["odometer_last_km"].(float64); last != 1010 {
+			t.Errorf("odometer_last_km = %v والمتوقَّع 1010", me.JSON()["odometer_last_km"])
+		}
 	}
 }
 
-// TestOdometer_CloseNeedsPhotoForNewApp **صورةُ الليل حصراً** (قرار المالك): «إلزامي» ونسخة ٢٢
-// تسكّر بلا قراءة ⇒ ٤٠٩ ويبقى بالدوام؛ وبقراءة ⇒ سبب «السائق» والقراءة مربوطة. و«يطلب» بلا
-// قراءة ⇒ «سكّره بلا صورة». والقديمة تسكّر كما كانت.
+// TestOdometer_CloseNeedsPhotoForNewApp **صورةُ الليل حصراً** (قرار المالك): «إلزامي» وتطبيقٌ يعرف
+// الورقة يسكّر بلا قراءة ⇒ ٤٠٩ ويبقى بالدوام؛ وبقراءة ⇒ سبب «السائق» والقراءة مربوطة. و«يطلب» بلا
+// قراءة ⇒ «سكّره بلا صورة». والقديمُ يسكّر كما كان.
 func TestOdometer_CloseNeedsPhotoForNewApp(t *testing.T) {
 	h := New(t)
 	h.Setting("launch.driver_work", "true")
 	h.Setting("drivers.odometer_mode", `"require"`)
 	drv := h.NewUser("driver")
-	if r := odoShift(t, h, drv, true, odoReading(t, h, drv, "start", "500"), "22"); r.Code != 200 {
+	if r := odoShift(t, h, drv, true, odoReading(t, h, drv, "start", "500"), true); r.Code != 200 {
 		t.Fatal(r)
 	}
-	if r := odoShift(t, h, drv, false, "", "22"); r.Code != 409 || r.Err() != "odometer_required" {
-		t.Fatalf("سكّر بلا صورة (٢٢): %s — المتوقَّع 409", r)
+	if r := odoShift(t, h, drv, false, "", true); r.Code != 409 || r.Err() != "odometer_required" {
+		t.Fatalf("سكّر بلا صورة (يعرف الورقة): %s — المتوقَّع 409", r)
 	}
 	if !onShiftOf(t, h, drv.ID) {
 		t.Fatal("سُكّر الدوام بلا صورة الليل")
 	}
 	end := odoReading(t, h, drv, "end", "540")
-	if r := odoShift(t, h, drv, false, end, "22"); r.Code != 200 {
+	if r := odoShift(t, h, drv, false, end, true); r.Code != 200 {
 		t.Fatalf("سكّر بصورة: %s", r)
 	}
 	var reason, endID string
@@ -273,10 +324,10 @@ func TestOdometer_CloseNeedsPhotoForNewApp(t *testing.T) {
 	}
 	// «يطلب»: يُسمح بالتخطّي
 	h.Setting("drivers.odometer_mode", `"ask"`)
-	if r := odoShift(t, h, drv, true, "", "22"); r.Code != 200 {
+	if r := odoShift(t, h, drv, true, "", true); r.Code != 200 {
 		t.Fatalf("«يطلب» يفتح بلا صورة: %s", r)
 	}
-	if r := odoShift(t, h, drv, false, "", "22"); r.Code != 200 {
+	if r := odoShift(t, h, drv, false, "", true); r.Code != 200 {
 		t.Fatalf("«يطلب» يسكّر بلا صورة: %s", r)
 	}
 	if _, reason := lastReason(t, h, drv.ID); reason != "driver_skipped" {
@@ -284,10 +335,10 @@ func TestOdometer_CloseNeedsPhotoForNewApp(t *testing.T) {
 	}
 	// القديمة
 	h.Setting("drivers.odometer_mode", `"require"`)
-	if r := odoShift(t, h, drv, true, "", "21"); r.Code != 200 {
+	if r := odoShift(t, h, drv, true, "", false); r.Code != 200 {
 		t.Fatal(r)
 	}
-	if r := odoShift(t, h, drv, false, "", "21"); r.Code != 200 {
+	if r := odoShift(t, h, drv, false, "", false); r.Code != 200 {
 		t.Fatalf("القديمة تسكّر بلا صورة: %s", r)
 	}
 }
@@ -305,13 +356,13 @@ func TestOdometer_ReadingSurvivesRejectedOpen(t *testing.T) {
 		t.Fatal(err)
 	}
 	id := odoReading(t, h, drv, "start", "700")
-	if r := odoShift(t, h, drv, true, id, "22"); r.Err() != "whatsapp_required" {
+	if r := odoShift(t, h, drv, true, id, true); r.Err() != "whatsapp_required" {
 		t.Fatalf("فتحٌ بلا توثيق: %s — المتوقَّع whatsapp_required", r)
 	}
 	if _, err := h.Pool.Exec(ctxBG(), `UPDATE users SET whatsapp_verified_at = now() WHERE id = $1::uuid`, drv.ID); err != nil {
 		t.Fatal(err)
 	}
-	if r := odoShift(t, h, drv, true, id, "22"); r.Code != 200 {
+	if r := odoShift(t, h, drv, true, id, true); r.Code != 200 {
 		t.Fatalf("الفتح بالقراءة نفسها بعد التوثيق: %s", r)
 	}
 }
@@ -527,7 +578,7 @@ func TestOdometer_ExemptionOneOpen(t *testing.T) {
 	if me.JSON()["odometer_exempt"] != true {
 		t.Errorf("odometer_exempt = %v", me.JSON()["odometer_exempt"])
 	}
-	if r := odoShift(t, h, drv, true, "", "22"); r.Code != 200 {
+	if r := odoShift(t, h, drv, true, "", true); r.Code != 200 {
 		t.Fatalf("فتحٌ بالسماح: %s", r)
 	}
 	var by, why string
@@ -538,17 +589,130 @@ func TestOdometer_ExemptionOneOpen(t *testing.T) {
 	if by != ops.ID || why != "الكاميرا مكسورة" {
 		t.Fatalf("الدوام بلا أثر السماح: %q %q", by, why)
 	}
-	if r := odoShift(t, h, drv, false, "", "22"); r.Err() != "odometer_required" {
+	if r := odoShift(t, h, drv, false, "", true); r.Err() != "odometer_required" {
 		t.Fatalf("السكّر بالسماح: %s — صورة الليل حصراً", r)
 	}
-	if r := odoShift(t, h, drv, false, odoReading(t, h, drv, "end", "900"), "22"); r.Code != 200 {
+	if r := odoShift(t, h, drv, false, odoReading(t, h, drv, "end", "900"), true); r.Code != 200 {
 		t.Fatal(r)
 	}
-	if r := odoShift(t, h, drv, true, "", "22"); r.Err() != "odometer_required" {
+	if r := odoShift(t, h, drv, true, "", true); r.Err() != "odometer_required" {
 		t.Fatalf("الفتح الثاني بلا صورة: %s — السماح لمرّة واحدة", r)
 	}
 	// والسائق لا يسمح لنفسه
 	if r := h.POST("/api/v1/admin/drivers/"+drv.ID+"/odometer-exemption", drv.Token, map[string]any{"reason": "x"}); r.Code != 403 {
 		t.Errorf("السائق سمح لنفسه: %d", r.Code)
+	}
+}
+
+// odoDayOf يومُ السائق بالمراقبة.
+func odoDayOf(t *testing.T, h *Harness, admin, driver, day string) odoDayResp {
+	t.Helper()
+	res := h.GET(fmt.Sprintf("/api/v1/admin/driver-monitor/%s?day=%s", driver, day), admin)
+	if res.Code != 200 {
+		t.Fatalf("يوم السائق %s: %s", day, res)
+	}
+	var env struct {
+		Data odoDayResp `json:"data"`
+	}
+	if err := json.Unmarshal(res.Body, &env); err != nil {
+		t.Fatal(err)
+	}
+	return env.Data
+}
+
+// TestDriverMonitor_ShiftCountedOnOneDay **الدوامُ ليومٍ واحد**: يومُ الحساب يبدأ ٩ والدوامُ فُتح
+// ٨ وسُكّر ٨ المساء (١٠٠٠ → ١٠٥٠) ⇒ يُعدّ بيوم سكّره وحدَه، لا بيومين؛ و«مشى خارج الدوام» من سكّر
+// دوام الأمس (٩٩٠) إلى فتحه = ١٠ كم يظهر بيومه — **و«الدوامُ اللي قبله» ليس الدوامَ نفسَه.**
+func TestDriverMonitor_ShiftCountedOnOneDay(t *testing.T) {
+	h := New(t)
+	h.Setting("platform.day_start_hour", "9")
+	admin := h.NewUser("admin")
+	drv := h.NewUser("driver")
+	day, base := rdDayBase() // يوم D الساعة ١٠
+	prevDay := base.AddDate(0, 0, -1).Format("2006-01-02")
+	shift := func(opened, closed time.Time, startKm, endKm float64) {
+		s := odoInsertReading(t, h, drv.ID, "start", startKm, opened, nil)
+		e := odoInsertReading(t, h, drv.ID, "end", endKm, closed, nil)
+		if _, err := h.Pool.Exec(ctxBG(), `
+			INSERT INTO driver_shifts (driver_id, opened_at, closed_at, close_reason, start_reading_id,
+			                           end_reading_id, opened_build, opened_capable)
+			VALUES ($1::uuid, $2, $3, 'driver', $4::uuid, $5::uuid, 22, true)`,
+			drv.ID, opened, closed, s, e); err != nil {
+			t.Fatal(err)
+		}
+	}
+	shift(base.Add(-16*time.Hour), base.Add(-12*time.Hour), 980, 990) // أمس ١٨ ← ٢٢
+	shift(base.Add(-2*time.Hour), base.Add(10*time.Hour), 1000, 1050) // D ٨ ← ٢٠ (عبر الساعة ٩)
+
+	today := odoDayOf(t, h, admin.Token, drv.ID, day)
+	if today.Odometer.OnKm == nil || *today.Odometer.OnKm != 50 {
+		t.Errorf("يوم D: حسب العدّاد = %v والمتوقَّع 50", today.Odometer.OnKm)
+	}
+	if today.Odometer.OffKm == nil || *today.Odometer.OffKm != 10 {
+		t.Errorf("يوم D: خارج الدوام = %v والمتوقَّع 10 (من سكّر الأمس ٩٩٠ لفتح ١٠٠٠)", today.Odometer.OffKm)
+	}
+	prev := odoDayOf(t, h, admin.Token, drv.ID, prevDay)
+	if prev.Odometer.OnKm == nil || *prev.Odometer.OnKm != 10 {
+		t.Errorf("يوم D-1: حسب العدّاد = %v والمتوقَّع 10 — دوامُ D انعدّ بيومين", prev.Odometer.OnKm)
+	}
+}
+
+// TestOdometer_PhotoPurgedNumberKept **صورةُ العدّاد تُمحى بعد مدّة حفظها والرقمُ يبقى**: صورةٌ
+// عمرها مئة يوم (والمدّةُ تسعون) ⇒ كانسُ المسافات يمحو صفَّ الوسيط وملفّاته، و`media_id` يصير
+// فارغاً، والرقمُ باقٍ؛ وصورةُ اليوم لا تُمسّ.
+func TestOdometer_PhotoPurgedNumberKept(t *testing.T) {
+	h := New(t)
+	h.Setting("launch.driver_work", "true")
+	h.Setting("drivers.odometer_photo_retention_days", "90")
+	drv := h.NewUser("driver")
+	old := odoReading(t, h, drv, "start", "1250")
+	fresh := odoReading(t, h, drv, "start", "1260")
+	paths := func(reading string) (string, []string) {
+		var mediaID, path, thumb string
+		if err := h.Pool.QueryRow(ctxBG(), `
+			SELECT m.id::text, m.path, m.thumb_path FROM driver_odometer_readings r
+			  JOIN media m ON m.id = r.media_id WHERE r.id = $1::uuid`, reading).Scan(&mediaID, &path, &thumb); err != nil {
+			t.Fatalf("وسيطُ القراءة %s: %v", reading, err)
+		}
+		return mediaID, []string{filepath.Join(h.MediaDir, filepath.FromSlash(path)),
+			filepath.Join(h.MediaDir, filepath.FromSlash(thumb))}
+	}
+	oldMedia, oldFiles := paths(old)
+	_, freshFiles := paths(fresh)
+	for _, f := range append(append([]string{}, oldFiles...), freshFiles...) {
+		if _, err := os.Stat(f); err != nil {
+			t.Fatalf("ملفّ الصورة غير موجود قبل الكنس: %s", f)
+		}
+	}
+	if _, err := h.Pool.Exec(ctxBG(), `UPDATE media SET created_at = now() - interval '100 days' WHERE id = $1::uuid`, oldMedia); err != nil {
+		t.Fatal(err)
+	}
+	h.API.SweepDrives(context.Background(), time.Now())
+
+	var left int
+	if err := h.Pool.QueryRow(ctxBG(), `SELECT count(*)::int FROM media WHERE id = $1::uuid`, oldMedia).Scan(&left); err != nil {
+		t.Fatal(err)
+	}
+	if left != 0 {
+		t.Fatal("صفُّ وسيطِ الصورة القديمة باقٍ بعد الكنس")
+	}
+	for _, f := range oldFiles {
+		if _, err := os.Stat(f); !os.IsNotExist(err) {
+			t.Errorf("ملفُّ الصورة القديمة باقٍ: %s (%v)", f, err)
+		}
+	}
+	var km float64
+	var mediaID *string
+	if err := h.Pool.QueryRow(ctxBG(), `SELECT km::float8, media_id::text FROM driver_odometer_readings WHERE id = $1::uuid`, old).
+		Scan(&km, &mediaID); err != nil {
+		t.Fatal(err)
+	}
+	if km != 1250 || mediaID != nil {
+		t.Fatalf("القراءة بعد المحو: رقم=%v وسيط=%v — المتوقَّع 1250 وبلا وسيط", km, mediaID)
+	}
+	for _, f := range freshFiles {
+		if _, err := os.Stat(f); err != nil {
+			t.Errorf("صورةُ اليوم مُحيت: %s", f)
+		}
 	}
 }

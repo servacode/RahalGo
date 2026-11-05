@@ -30,9 +30,8 @@ CREATE TABLE IF NOT EXISTS driver_odometer_readings (
     check_status    text NOT NULL DEFAULT 'ok' CHECK (check_status IN ('ok', 'first', 'jump_confirmed')),
     prev_km         numeric(8, 1),
     media_id        uuid REFERENCES media (id) ON DELETE SET NULL,
-    lat             double precision,
-    lng             double precision,
-    accuracy_m      real,
+    -- **ولا موقع** — الرقمُ لا يحتاجه، والصورةُ تُؤخذ والدوامُ مسكَّر، ونصُّ الخصوصيّة
+    -- يَعِد بالموقع «ما دامت ورديّتُك مفتوحة» وحدَها.
     app_build       int,
     created_at      timestamptz NOT NULL DEFAULT now()
 );
@@ -48,10 +47,15 @@ CREATE TABLE IF NOT EXISTS driver_shifts (
     -- driver سكّره السائق · driver_skipped سكّره بلا صورة (وضع «يطلب ويسمح بالتخطّي») ·
     -- logout بالخروج من التطبيق · release لما ترك طلب · emergency بطارئ · accident بعد حادث ·
     -- ops سكّرته العمليات · account انوقف الحساب · qa تجربة
+    -- stale صفٌّ بقي مفتوحاً والدوام مسكَّر بغير بابه (تنظيفُ التجهيز، أو المحرّكُ القديم بنافذة النشر)
+    -- فيُسكَّر عند الفتح التالي
     close_reason     text CHECK (close_reason IN ('driver', 'driver_skipped', 'logout', 'release',
-                                                  'emergency', 'accident', 'ops', 'account', 'qa')),
-    -- نسخة التطبيق اللي فتحه (فارغ = قديم أو غير معروف)
+                                                  'emergency', 'accident', 'ops', 'account', 'qa', 'stale')),
+    -- نسخة التطبيق اللي فتحه (فارغ = قديم أو غير معروف) — للمعلومة وحدها
     opened_build     int,
+    -- **التطبيقُ أعلن أنّه يعرف ورقةَ العدّاد** (`odometer_capable`) — منه وحدَه يُطبَّق «إلزامي»،
+    -- لا من رقم النسخة (تصليحٌ سريعٌ بلا الورقة يأخذ رقماً أكبر). فارغ = فتحٌ من النظام.
+    opened_capable   boolean,
     -- كان مفتوحاً يوم نزلت الميزة
     migrated         boolean NOT NULL DEFAULT false,
     start_reading_id uuid REFERENCES driver_odometer_readings (id) ON DELETE SET NULL,
@@ -78,16 +82,22 @@ CREATE INDEX IF NOT EXISTS driver_shifts_pending_idx ON driver_shifts (computed_
 --
 -- «من بداية استلام الطلب الى انتهاء الطلب»: من قبوله (للمتجر) لحتى خرج من يده (للزبون،
 -- ومعه مشوار إرجاع البضاعة). **وطلبٌ تركه السائق له صفّ كمان** — مشواره للمتجر.
+--
+-- **صفٌّ لكلّ طلب × سائق × دوام** (قطعة): طلبٌ امتدّ على دوامين (طارئٌ بعد الاستلام ثمّ فتحٌ
+-- جديدٌ وتسليم) له قطعتان، **ومسافتُه مجموعُهما** — لا يكتب دوامٌ فوق حصّة الآخر.
 CREATE TABLE IF NOT EXISTS order_drives (
     order_id     uuid NOT NULL REFERENCES orders (id) ON DELETE CASCADE,
     driver_id    uuid NOT NULL REFERENCES users (id) ON DELETE CASCADE,
-    shift_id     uuid REFERENCES driver_shifts (id) ON DELETE SET NULL,
+    shift_id     uuid NOT NULL REFERENCES driver_shifts (id) ON DELETE CASCADE,
     started_at   timestamptz NOT NULL,
     picked_up_at timestamptz,
-    -- فارغ = الطلب لسّا معه (والرقم «لحد هلق»)
+    -- فارغ = الطلب لسّا معه (والرقم «لحد هلق») — **ولا يكون إلّا بدوامٍ مفتوح**: دوامٌ مسكَّر
+    -- يقصّ قطعتَه عند سكّره (`shift_closed`).
     ended_at     timestamptz,
+    -- store_failed تعذّر عند المتجر فعاد الطلب للمكتب · shift_closed انسكّر الدوام والطلبُ معه
     end_kind     text NOT NULL DEFAULT 'open'
-                 CHECK (end_kind IN ('open', 'delivered', 'failed', 'returned', 'cancelled', 'released', 'other')),
+                 CHECK (end_kind IN ('open', 'delivered', 'failed', 'returned', 'cancelled', 'released',
+                                     'store_failed', 'shift_closed', 'other')),
     to_pickup_m  int NOT NULL DEFAULT 0,
     with_order_m int NOT NULL DEFAULT 0,
     shared       boolean NOT NULL DEFAULT false,
@@ -95,7 +105,7 @@ CREATE TABLE IF NOT EXISTS order_drives (
     points       int NOT NULL DEFAULT 0,
     computed_at  timestamptz NOT NULL DEFAULT now(),
     final        boolean NOT NULL DEFAULT false,
-    PRIMARY KEY (order_id, driver_id)
+    PRIMARY KEY (order_id, driver_id, shift_id)
 );
 CREATE INDEX IF NOT EXISTS order_drives_driver_ended_idx ON order_drives (driver_id, ended_at);
 

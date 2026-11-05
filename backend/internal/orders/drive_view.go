@@ -27,7 +27,7 @@ type DriveView struct {
 	WithOrderM int  `json:"with_order_m"`
 	Shared     bool `json:"shared"`
 	GapMin     int  `json:"gap_min"`
-	// Final ثبت الرقم (بعد ساعتين وعشر دقائق من سكّر الدوام).
+	// Final ثبت الرقم — كلُّ قطعه ثبتت (بعد ساعتين وعشر دقائق من نهاية كلٍّ منها).
 	Final bool `json:"final"`
 }
 
@@ -42,14 +42,20 @@ func (s *Service) FillDrives(ctx context.Context, list []Order) error {
 		ids[i] = list[i].ID
 		at[list[i].ID] = i
 	}
+	// **وقطعُ الطلب الواحد لسائقه تُجمع** — طلبٌ امتدّ على دوامين (طارئٌ ثمّ فتحٌ جديدٌ وتسليم)
+	// مسافتُه مجموعُ قطعه، ونهايتُه آخرُها (والمفتوحةُ تغلب)، ويثبت حين تثبت كلُّها.
 	rows, err := s.db.Query(ctx, `
-		SELECT d.order_id::text, d.driver_id::text, COALESCE(u.full_name, ''), d.started_at,
-		       d.picked_up_at, d.ended_at, d.end_kind, d.to_pickup_m, d.with_order_m, d.shared,
-		       d.gap_min, d.final
+		SELECT d.order_id::text, d.driver_id::text, COALESCE(u.full_name, ''), min(d.started_at),
+		       min(d.picked_up_at),
+		       CASE WHEN bool_or(d.ended_at IS NULL) THEN NULL ELSE max(d.ended_at) END,
+		       (array_agg(d.end_kind ORDER BY d.ended_at DESC NULLS FIRST))[1],
+		       sum(d.to_pickup_m)::int, sum(d.with_order_m)::int, bool_or(d.shared),
+		       sum(d.gap_min)::int, bool_and(d.final)
 		  FROM order_drives d
 		  LEFT JOIN users u ON u.id = d.driver_id
 		 WHERE d.order_id = ANY($1::uuid[])
-		 ORDER BY d.started_at`, ids)
+		 GROUP BY d.order_id, d.driver_id, u.full_name
+		 ORDER BY min(d.started_at)`, ids)
 	if err != nil {
 		return err
 	}

@@ -110,14 +110,32 @@ const ReturnTripMax = 2 * time.Hour
 
 // LoadTenures **ولايات السائق على الطلبات التي تمسّ المدى** — من سجلّ الطلب لا من حامله الآن.
 //
-// البداية: سطر `assigned` باسمه. والنهاية أول سطرٍ بعدها يُخرج الطلب من يده: رجوعٌ
-// للطابور (تَرَكه، أو استُرجع منه، أو حُوّل لغيره) أو نهايةُ الطلب. **والفاشلُ بمشوار
-// إرجاع** يمتدّ حتى «سلّمت البضاعة» (أو «أُعيدت للمتجر» في المسار القديم)، ومفتوحُه
-// يُقصّ بـ`ReturnTripMax`.
+// **من الانتقالات الحقيقيّة وحدَها** (`from_status <> to_status`): سطرٌ حالُه ما تغيّرت ملاحظةٌ
+// (تعديلُ الطلب، صنفٌ غيرُ متوفّر، مبلغُ الإحضار، تحويلُ المتجر…) لا يبدأ ولايةً ولا ينهيها.
+//
+// البداية: انتقالٌ إلى `assigned` باسمه. والنهاية أول انتقالٍ بعدها يُخرج الطلب من يده:
+// رجوعٌ للطابور (تَرَكه، أو استُرجع منه، أو أعادته العمليّات)، **أو «تعذّر» عند المتجر**
+// (`→ accepted` باسمه — `orders/merchant_blocked.go`)، أو إسنادٌ **لسائقٍ آخرَ معلوم**، أو نهايةُ
+// الطلب. **و`at_pickup → assigned` بلا سائق** (تحويلُ المتجر — `server/order_transfer.go`،
+// `orders/external_store.go`) **لا ينهيها**: السائقُ نفسُه يكمل للمتجر الجديد.
+//
+// **والفاشلُ بمشوار إرجاع** يمتدّ حتى «سلّمت البضاعة» (أو «أُعيدت للمتجر» في المسار القديم)،
+// ومفتوحُه يُقصّ بـ`ReturnTripMax`.
+//
+// **والطلباتُ المرشّحة من فهرسين** لا من تاريخ السائق كلّه: سطورُه في السجلّ منذ يومٍ قبل
+// المدى (`order_events_driver_idx`) والطلباتُ المفتوحة بيده (`orders_driver_idx`) — فلا يكبر
+// الاستعلامُ مع عمره في المنصّة وهو يُنادى كلّ ثلاثين ثانية.
 //
 // **والطلبُ بلا سطر إسنادٍ باسمه** (قبل ٠١٧٢) يُقرأ كما كان: من حامله الحالي.
 func LoadTenures(ctx context.Context, db DB, driverID string, from, to, now time.Time) ([]Window, error) {
 	rows, err := db.Query(ctx, `
+		WITH cand AS (
+		     SELECT e.order_id FROM order_events e
+		      WHERE e.driver_id = $1::uuid AND e.created_at >= $2::timestamptz - interval '24 hours'
+		        AND e.created_at < $3
+		     UNION
+		     SELECT o.id FROM orders o WHERE o.driver_id = $1::uuid AND o.closed_at IS NULL
+		)
 		SELECT o.id::text, o.number, COALESCE(m.name, ''), a.created_at,
 		       COALESCE(pk.created_at,
 		                CASE WHEN o.driver_id = $1::uuid AND o.picked_up_at >= a.created_at
@@ -126,21 +144,25 @@ func LoadTenures(ctx context.Context, db DB, driverID string, from, to, now time
 		       en.created_at, COALESCE(en.to_status, ''),
 		       COALESCE(o.driver_id = $1::uuid, false), o.status, o.closed_at, o.delivered_at,
 		       o.returned_at, o.return_to IS NOT NULL, o.goods_handed_at
-		  FROM order_events a
+		  FROM cand c
+		  JOIN order_events a ON a.order_id = c.order_id
 		  JOIN orders o ON o.id = a.order_id
 		  LEFT JOIN merchants m ON m.id = o.merchant_id
 		  LEFT JOIN LATERAL (
 		       SELECT x.id, x.created_at, x.to_status FROM order_events x
-		        WHERE x.order_id = a.order_id AND x.id > a.id
+		        WHERE x.order_id = a.order_id AND x.id > a.id AND x.from_status <> x.to_status
 		          AND (x.to_status IN ('dispatching','delivered','failed','cancelled','rejected','refunded')
-		               OR (x.to_status = 'assigned' AND x.driver_id IS DISTINCT FROM $1::uuid))
+		               OR (x.to_status = 'accepted' AND x.driver_id = $1::uuid)
+		               OR (x.to_status = 'assigned' AND x.driver_id IS NOT NULL AND x.driver_id <> $1::uuid))
 		        ORDER BY x.id LIMIT 1) en ON true
 		  LEFT JOIN LATERAL (
 		       SELECT x.created_at FROM order_events x
 		        WHERE x.order_id = a.order_id AND x.id > a.id AND x.to_status = 'picked_up'
+		          AND x.from_status <> x.to_status
 		          AND (en.id IS NULL OR x.id < en.id)
 		        ORDER BY x.id LIMIT 1) pk ON true
-		 WHERE a.driver_id = $1::uuid AND a.to_status = 'assigned' AND a.created_at < $3
+		 WHERE a.driver_id = $1::uuid AND a.to_status = 'assigned' AND a.from_status <> a.to_status
+		   AND a.created_at < $3
 		   AND COALESCE(en.created_at, o.goods_handed_at, o.returned_at, o.delivered_at, o.closed_at, $3)
 		       + CASE WHEN o.return_to IS NOT NULL THEN interval '2 hours' ELSE interval '0' END > $2
 		UNION ALL
@@ -151,8 +173,10 @@ func LoadTenures(ctx context.Context, db DB, driverID string, from, to, now time
 		  FROM orders o
 		  LEFT JOIN merchants m ON m.id = o.merchant_id
 		 WHERE o.driver_id = $1::uuid
+		   AND o.created_at >= $2::timestamptz - interval '7 days'
 		   AND NOT EXISTS (SELECT 1 FROM order_events e
-		                    WHERE e.order_id = o.id AND e.driver_id = $1::uuid AND e.to_status = 'assigned')
+		                    WHERE e.order_id = o.id AND e.driver_id = $1::uuid AND e.to_status = 'assigned'
+		                      AND e.from_status <> e.to_status)
 		   AND COALESCE(o.picked_up_at, o.accepted_at, o.dispatched_at, o.created_at) < $3
 		   AND COALESCE(o.delivered_at, o.returned_at, o.closed_at, $3) > $2`, driverID, from, to)
 	if err != nil {
@@ -186,6 +210,8 @@ func LoadTenures(ctx context.Context, db DB, driverID string, from, to, now time
 			// **خرج من يده بلا سطرٍ يُقرأ** — ولايةٌ بطول صفر خيرٌ من ولايةٍ مفتوحةٍ للأبد.
 			w.EndAt, w.EndKind = start, "other"
 		}
+		// **ووقتُ ما أنهاها** قبل أن يمدّها مشوارُ الإرجاع — منه يُعرف بأيّ دوامٍ انتهت.
+		w.EndEventAt = w.EndAt
 		// **ومشوار إرجاع البضاعة جزءٌ من الطلب** (قرار المالك ٢٠٢٦-١٠-٠٣).
 		if w.EndKind == "failed" && w.EndAt != nil {
 			back := handedAt
@@ -227,6 +253,9 @@ func endKindOf(status string) string {
 		return "cancelled"
 	case "dispatching", "assigned":
 		return "released"
+	case "accepted":
+		// **«تعذّر» عند المتجر** — عاد الطلبُ للمكتب وخرج من يده (`orders/merchant_blocked.go`).
+		return "store_failed"
 	}
 	return "other"
 }
@@ -246,7 +275,7 @@ func mergeTenures(ws []Window) []Window {
 			p := &out[n-1]
 			if p.EndAt == nil || !timeOr(w.AssignedAt).After(*p.EndAt) {
 				if p.EndAt != nil && (w.EndAt == nil || w.EndAt.After(*p.EndAt)) {
-					p.EndAt, p.EndKind = w.EndAt, w.EndKind
+					p.EndAt, p.EndKind, p.EndEventAt = w.EndAt, w.EndKind, w.EndEventAt
 				}
 				if p.PickedUpAt == nil {
 					p.PickedUpAt = w.PickedUpAt

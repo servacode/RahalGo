@@ -1040,7 +1040,6 @@
     "odometer_required": "صوّر العدّاد واكتب رقمه أولاً",
     "odometer_bad_km": "اكتب رقم العدّاد بالأرقام فقط",
     "odometer_photo_required": "صوّر العدّاد قبل ما تبعت الرقم",
-    "odometer_mocked": "برنامج تغيير الموقع يعمل — أطفئه ثمّ صوّر العدّاد",
     "odometer_wrong_phase": "حالة العمل تغيّرت — حدّث الشاشة وحاول مرّة أخرى",
     "odometer_lower": "الرقم أقل من آخر رقم سجّله السائق — صوّر العدّاد من جديد",
     "odometer_check": "تأكّد من رقم العدّاد",
@@ -5231,7 +5230,6 @@
         "customer.complaint_opened": "فتح زبون شكوى",
         "driver.delivery_proof": "رفع سائق إثبات تسليم",
         "driver.odometer_reading": "قراءة عدّاد",
-        "driver.odometer_rejected": "رُفضت قراءة عدّاد",
         "ops.odometer_corrected": "تصحيح قراءة عدّاد",
         "ops.odometer_exemption": "سماح بفتح الدوام بلا صورة عدّاد",
         "driver.delivery_proof_skipped": "تخطي إثبات التسليم",
@@ -6722,7 +6720,8 @@
           "accident": "انسكّر بعد حادث",
           "ops": "سكّرته العمليات",
           "account": "انسكّر لما انوقف الحساب",
-          "qa": "تجربة"
+          "qa": "تجربة",
+          "stale": "انسكّر بطريقة ما انسجّلت"
         },
         "flags": {
           "big_gap": "فرق كبير بين العدّاد والتطبيق",
@@ -6757,6 +6756,8 @@
           "returned": "رجّع البضاعة",
           "cancelled": "انلغى",
           "released": "تركه",
+          "store_failed": "تعذّر عند المتجر",
+          "shift_closed": "انسكّر الدوام والطلب معه",
           "other": "طلع من إيده",
           "open": "لسّا معه"
         }

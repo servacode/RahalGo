@@ -100,7 +100,7 @@ func (s *Server) measureShift(ctx context.Context, sp drivermonitor.ShiftSpan, n
 		return err
 	}
 	final := sp.ClosedAt != nil && !sp.ClosedAt.After(now.Add(-drivermonitor.FinalAfter))
-	// **أيُّ طلبٍ انتهى منذ آخر حساب؟** — منه وحده يُنبَّه تطبيقُ السائق (عدّادُه يزيد)،
+	// **أيُّ قطعةٍ انتهت منذ آخر حساب؟** — منها وحدها يُنبَّه تطبيقُ السائق (عدّادُه يزيد)،
 	// لا مع كلّ دقيقةٍ وطلبٌ بيده.
 	newlyEnded := false
 	if len(drives) > 0 {
@@ -114,8 +114,9 @@ func (s *Server) measureShift(ctx context.Context, sp drivermonitor.ShiftSpan, n
 			var known int
 			if err := s.pg.QueryRow(ctx, `
 				SELECT count(*)::int FROM order_drives
-				 WHERE driver_id = $1::uuid AND order_id = ANY($2::uuid[]) AND ended_at IS NOT NULL`,
-				sp.DriverID, ids).Scan(&known); err == nil {
+				 WHERE driver_id = $1::uuid AND shift_id = $2::uuid AND order_id = ANY($3::uuid[])
+				   AND ended_at IS NOT NULL`,
+				sp.DriverID, sp.ID, ids).Scan(&known); err == nil {
 				newlyEnded = known < len(ids)
 			}
 		}
@@ -136,13 +137,16 @@ func (s *Server) measureShift(ctx context.Context, sp drivermonitor.ShiftSpan, n
 	}
 	b := &pgx.Batch{}
 	for _, d := range drives {
+		// **وقطعةُ الطلب تثبت بعد ساعتين وعشر دقائق من نهايتها** — لا من سكّر الدوام: دوامٌ
+		// مفتوحٌ طويلاً لا يُبقي طلباتِه القديمة تُعاد كتابتُها.
+		pieceFinal := d.EndedAt != nil && !d.EndedAt.After(now.Add(-drivermonitor.FinalAfter))
 		b.Queue(`
 			INSERT INTO order_drives (order_id, driver_id, shift_id, started_at, picked_up_at, ended_at,
 			                          end_kind, to_pickup_m, with_order_m, shared, gap_min, points,
 			                          computed_at, final)
 			VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-			ON CONFLICT (order_id, driver_id) DO UPDATE SET
-			       shift_id = EXCLUDED.shift_id, started_at = EXCLUDED.started_at,
+			ON CONFLICT (order_id, driver_id, shift_id) DO UPDATE SET
+			       started_at = EXCLUDED.started_at,
 			       picked_up_at = EXCLUDED.picked_up_at, ended_at = EXCLUDED.ended_at,
 			       end_kind = EXCLUDED.end_kind, to_pickup_m = EXCLUDED.to_pickup_m,
 			       with_order_m = EXCLUDED.with_order_m, shared = EXCLUDED.shared,
@@ -150,7 +154,7 @@ func (s *Server) measureShift(ctx context.Context, sp drivermonitor.ShiftSpan, n
 			       computed_at = EXCLUDED.computed_at, final = EXCLUDED.final
 			 WHERE NOT order_drives.final`,
 			d.OrderID, sp.DriverID, sp.ID, d.StartedAt, d.PickedUpAt, d.EndedAt, d.EndKind,
-			d.ToPickupM, d.WithOrderM, d.Shared, d.GapMin, d.Points, now, final && d.EndedAt != nil)
+			d.ToPickupM, d.WithOrderM, d.Shared, d.GapMin, d.Points, now, pieceFinal)
 	}
 	if len(drives) > 0 {
 		br := tx.SendBatch(ctx, b)

@@ -42,6 +42,9 @@ const (
 	ReasonAccount Reason = "account"
 	// ReasonQA شاهد التجربة على التجهيز.
 	ReasonQA Reason = "qa"
+	// ReasonStale **صفٌّ بقي مفتوحاً والدوامُ مسكَّرٌ بغير هذا الباب** (تنظيفُ التجهيز
+	// `scripts/clean-slate.sql`، أو المحرّكُ القديم بنافذة النشر) — يُسكَّر عند الفتح التالي.
+	ReasonStale Reason = "stale"
 )
 
 // precedence **أيُّ سببٍ يغلب إن سكّر مساران الدوام بنداءٍ واحد** — الأخير أغلب
@@ -57,11 +60,23 @@ type Closed struct {
 
 // Open **يفتح الدوام** — العمودان والصفّ بجملة واحدة. ونداءٌ ثانٍ والدوام مفتوح = الصفّ نفسه.
 //
-// `build` نسخة التطبيق من ترويسته (صفر = غير معروف).
-func Open(ctx context.Context, q dbtx.Querier, driverID string, build int) (string, error) {
+// `build` نسخة التطبيق من ترويسته (صفر = غير معروف)، و`capable` **أعلن التطبيقُ أنّه يعرف
+// ورقةَ العدّاد** (`odometer_capable`) — ومنه يُعلَّم «تطبيق قديم» بالمراقبة.
+//
+// **وصفٌّ بقي مفتوحاً والدوامُ مسكَّر** (`on_shift = false` — تنظيفُ التجهيز، أو المحرّكُ القديم
+// بنافذة النشر) **يُسكَّر أوّلاً بسبب `stale`** ثمّ يُفتح صفٌّ جديد — لا يكمل «الدوامُ الجديد»
+// من قبل أيّام، ولا تضيع قراءةُ فتحه على صفٍّ قديمٍ له قراءتُه.
+func Open(ctx context.Context, q dbtx.Querier, driverID string, build int, capable bool) (string, error) {
 	var b any
 	if build > 0 {
 		b = build
+	}
+	if _, err := q.Exec(ctx, `
+		UPDATE driver_shifts SET closed_at = now(), close_reason = $2
+		 WHERE driver_id = $1::uuid AND closed_at IS NULL
+		   AND NOT EXISTS (SELECT 1 FROM users WHERE id = $1::uuid AND on_shift)`,
+		driverID, string(ReasonStale)); err != nil {
+		return "", err
 	}
 	var id string
 	err := q.QueryRow(ctx, `
@@ -70,15 +85,15 @@ func Open(ctx context.Context, q dbtx.Querier, driverID string, build int) (stri
 			 WHERE id = $1::uuid
 			RETURNING id
 		), ins AS (
-			INSERT INTO driver_shifts (driver_id, opened_build)
-			SELECT id, $2::int FROM u
+			INSERT INTO driver_shifts (driver_id, opened_build, opened_capable)
+			SELECT id, $2::int, $3::boolean FROM u
 			ON CONFLICT (driver_id) WHERE closed_at IS NULL DO NOTHING
 			RETURNING id
 		)
 		SELECT id::text FROM ins
 		UNION ALL
 		SELECT s.id::text FROM driver_shifts s WHERE s.driver_id = $1::uuid AND s.closed_at IS NULL
-		LIMIT 1`, driverID, b).Scan(&id)
+		LIMIT 1`, driverID, b, capable).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// **ضغطتان معاً**: صفُّ الأخرى كُتب بعد لقطة هذه الجملة — يُقرأ الآن.
 		err = q.QueryRow(ctx, `SELECT id::text FROM driver_shifts
@@ -91,15 +106,22 @@ func Open(ctx context.Context, q dbtx.Querier, driverID string, build int) (stri
 //
 // **ودوامٌ مفتوح بلا صفّ** (قبل الميزة، أو فكسچر) يُكتب له صفٌّ مسكَّر من `shift_started_at`.
 // **وما كان مسكّراً قبل ثوانٍ** بمسارٍ آخر في النداء نفسه يأخذ السببَ الأغلب.
+//
+// **وصفُّ السائق يُقفل أوّلاً** (`FOR UPDATE`): سكّران بلحظةٍ واحدة (العمليّاتُ والسائق، أو
+// الحظرُ والمفتاح) — الثاني ينتظر الأوّل ثمّ يقرأ حالَه بعده (`on_shift = false`)، **فلا
+// يكتب صفّاً «قديماً» مكرّراً** من لقطةٍ قرأها قبل أن يُسكَّر الدوام.
 func Close(ctx context.Context, q dbtx.Querier, driverID string, reason Reason) (Closed, error) {
 	var out Closed
 	var id *string
 	err := q.QueryRow(ctx, `
 		WITH prev AS (
-			SELECT on_shift, shift_started_at FROM users WHERE id = $1::uuid
+			SELECT on_shift, shift_started_at FROM users WHERE id = $1::uuid FOR UPDATE
 		), u AS (
+			-- والقفلُ قبل الكتابة: EXISTS (prev) يُقرأ قبل أن يُكتب الصفّ — ولو كُتب أوّلاً
+			-- لم يرجع prev (صفٌّ عدّله الأمرُ نفسُه يُتخطّى) فضاع «كان بالدوام» على Reopen.
 			UPDATE users SET on_shift = false, shift_started_at = NULL, updated_at = now()
 			 WHERE id = $1::uuid AND (on_shift OR shift_started_at IS NOT NULL)
+			   AND EXISTS (SELECT 1 FROM prev)
 			RETURNING id
 		), c AS (
 			UPDATE driver_shifts SET closed_at = now(), close_reason = $2

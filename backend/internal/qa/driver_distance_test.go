@@ -420,3 +420,131 @@ func TestDriverMonitor_ReturnTripIsOrderKm(t *testing.T) {
 		}
 	}
 }
+
+// TestDriverMonitor_StoreTransferKeepsHold **تحويلُ المتجر لا يقطع ولايةَ السائق**: قَبِل ومشى
+// ١ كم للمتجر الأوّل، فحوّلت العمليّاتُ الطلبَ لمتجرٍ آخر — والطلبُ «مقبول» ومرّةً «عند المتجر» —
+// فمشى ١٫٥ كم للجديد واستلم ومشى ٢ كم للزبون ⇒ ٢٫٥ للمتجر و٢ للزبون، **ولا شيء «بلا طلب».**
+//
+// والسجلُّ كما يكتبه بابُ التحويل حرفاً (`server/order_transfer.go`): ملاحظةٌ حالُها ما تغيّرت
+// **بلا سائق**، وعند المتجر `at_pickup → assigned` **بلا سائق** — والسائقُ نفسُه ما زال ماسكَه.
+func TestDriverMonitor_StoreTransferKeepsHold(t *testing.T) {
+	h := New(t)
+	admin := h.NewUser("admin")
+	f := h.Factory()
+	m := f.Merchant()
+	day, base := rdDayBase()
+	for i, atPickup := range []bool{false, true} {
+		name := "assigned"
+		if atPickup {
+			name = "at_pickup"
+		}
+		t.Run(name, func(t *testing.T) {
+			drv := f.Driver()
+			start := rdPoint{at: base.Add(time.Duration(i) * 3 * time.Hour), lat: 35.66 + float64(i)*0.1, lng: 38.75, acc: rdF(6), spd: rdF(5)}
+			trail := append([]rdPoint{start}, rdDrive(start, 1000, 5, 10*time.Second)...)
+			transfer := rdLast(trail).at
+			trail = append(trail, rdDrive(rdLast(trail), 1500, 5, 10*time.Second)...)
+			picked := rdLast(trail).at
+			trail = append(trail, rdDrive(rdLast(trail), 2000, 5, 10*time.Second)...)
+			delivered := rdLast(trail).at
+			rdPut(t, h, drv.ID, trail)
+
+			id := drv.ID
+			oid := rdOrderRow(t, h, &id, m.ID, "delivered", map[string]time.Time{
+				"accepted": start.at, "picked": picked, "delivered": delivered, "closed": delivered,
+			})
+			rdEvent(t, h, oid, "dispatching", "assigned", drv.ID, start.at)
+			status := "assigned"
+			if atPickup {
+				rdEvent(t, h, oid, "assigned", "at_pickup", drv.ID, transfer.Add(-30*time.Second))
+				status = "at_pickup"
+			}
+			// **كما يكتبه بابُ التحويل**: ملاحظةٌ بلا سائق، وعند المتجر رجوعٌ «في الطريق» بلا سائق.
+			rdEvent(t, h, oid, status, status, "", transfer)
+			if atPickup {
+				rdEvent(t, h, oid, "at_pickup", "assigned", "", transfer)
+			}
+			rdEvent(t, h, oid, "assigned", "at_pickup", drv.ID, picked.Add(-30*time.Second))
+			rdEvent(t, h, oid, "at_pickup", "picked_up", drv.ID, picked)
+			rdEvent(t, h, oid, "at_dropoff", "delivered", drv.ID, delivered)
+
+			got := rdFetch(t, h, admin.Token, drv.ID, day)
+			if math.Abs(got.Summary.DriveKmToPickup-2.5) > 0.03 || math.Abs(got.Summary.DriveKmWithOrder-2.0) > 0.03 {
+				t.Errorf("للمتجر = %.3f وللزبون = %.3f والمتوقَّع ٢٫٥ و٢ — التحويلُ قطع الولاية",
+					got.Summary.DriveKmToPickup, got.Summary.DriveKmWithOrder)
+			}
+			if got.Summary.DriveKmNoOrder > 0.02 {
+				t.Errorf("بلا طلب = %.3f والمتوقَّع ٠ — مشوارُ المتجر الجديد والزبون صار «بلا طلب»", got.Summary.DriveKmNoOrder)
+			}
+		})
+	}
+}
+
+// TestDriverMonitor_StoreFailureEndsHold **«تعذّر» عند المتجر ينهي ولاية السائق** (Q4): قَبِل
+// ومشى ٢ كم للمتجر، فأعادت العمليّاتُ الطلبَ للمكتب من بابها الحقيقيّ (`door-resolution` ⇒
+// `orders/merchant_blocked.go`: `at_pickup → accepted` باسمه) ومشى ٣ كم بعدها، ثمّ نزل الطلب
+// للطابور وسلّمه غيرُه ⇒ للسائق الأوّل ٢ كم «للمتجر» و٣ كم «بلا طلب».
+func TestDriverMonitor_StoreFailureEndsHold(t *testing.T) {
+	h := New(t)
+	admin := h.NewUser("admin")
+	day, base := rdDayBase()
+
+	oid, d1 := h.assignedOrder(t)
+	d2 := h.NewUser("driver")
+	rdEvent(t, h, oid, "dispatching", "assigned", d1.ID, base)
+	if r := h.POST("/api/v1/driver/orders/"+oid+"/transition", d1.Token, map[string]any{"to": "at_pickup"}); r.Code >= 400 {
+		t.Fatalf("وصل المتجر: %s", r)
+	}
+	if r := h.POST("/api/v1/admin/orders/"+oid+"/door-resolution", admin.Token, map[string]any{
+		"action": "return_to_office", "fault": "merchant", "reason": "merchant_closed", "note": "المتجر مسكّر",
+	}); r.Code >= 400 {
+		t.Fatalf("تعذّر عند المتجر: %s", r)
+	}
+	var status string
+	var holder *string
+	var storeFailedBy *string
+	if err := h.Pool.QueryRow(ctxBG(), `
+		SELECT o.status, o.driver_id::text,
+		       (SELECT e.driver_id::text FROM order_events e
+		         WHERE e.order_id = o.id AND e.from_status = 'at_pickup' AND e.to_status = 'accepted'
+		         ORDER BY e.id DESC LIMIT 1)
+		  FROM orders o WHERE o.id = $1::uuid`, oid).Scan(&status, &holder, &storeFailedBy); err != nil {
+		t.Fatal(err)
+	}
+	if status != "accepted" || holder != nil || storeFailedBy == nil || *storeFailedBy != d1.ID {
+		t.Fatalf("بعد «تعذّر»: حال=%s حامل=%v سطرُ السجلّ باسم=%v — المتوقَّع accepted بلا حامل وباسم السائق", status, holder, storeFailedBy)
+	}
+
+	start := rdPoint{at: base, lat: 35.68, lng: 38.77, acc: rdF(6), spd: rdF(5)}
+	trail := append([]rdPoint{start}, rdDrive(start, 2000, 5, 10*time.Second)...)
+	atStore := rdLast(trail).at
+	failed := atStore.Add(time.Minute)
+	last := rdLast(trail)
+	trail = append(trail, rdPoint{at: failed, lat: last.lat, lng: last.lng, acc: rdF(6), spd: rdF(0)})
+	trail = append(trail, rdDrive(rdLast(trail), 3000, 5, 10*time.Second)...)
+	requeued := rdLast(trail).at.Add(5 * time.Minute)
+	rdPut(t, h, d1.ID, trail)
+	// **أزمنةُ ما كتبه البابان الحقيقيّان تُنقل إلى خطّ الفكسچر** — السطورُ نفسُها بحاملها.
+	if _, err := h.Pool.Exec(ctxBG(), `
+		UPDATE order_events SET created_at = CASE to_status WHEN 'at_pickup' THEN $2::timestamptz ELSE $3::timestamptz END
+		 WHERE order_id = $1::uuid AND to_status IN ('at_pickup', 'accepted') AND from_status <> to_status`,
+		oid, atStore, failed); err != nil {
+		t.Fatal(err)
+	}
+	rdEvent(t, h, oid, "accepted", "dispatching", "", requeued)
+	rdEvent(t, h, oid, "dispatching", "assigned", d2.ID, requeued.Add(time.Minute))
+	rdEvent(t, h, oid, "at_dropoff", "delivered", d2.ID, requeued.Add(20*time.Minute))
+
+	got := rdFetch(t, h, admin.Token, d1.ID, day)
+	if math.Abs(got.Summary.DriveKmToPickup-2.0) > 0.03 {
+		t.Errorf("للمتجر = %.3f كم والمتوقَّع ٢ — «تعذّر» ما أنهى الولاية", got.Summary.DriveKmToPickup)
+	}
+	if math.Abs(got.Summary.DriveKmNoOrder-3.0) > 0.03 {
+		t.Errorf("بلا طلب = %.3f كم والمتوقَّع ٣ — ما بعد «تعذّر» انحسب على الطلب", got.Summary.DriveKmNoOrder)
+	}
+	for _, o := range got.Orders {
+		if o.ID == oid && o.EndKind != "store_failed" {
+			t.Errorf("نوع نهاية الطلب = %q والمتوقَّع store_failed", o.EndKind)
+		}
+	}
+}

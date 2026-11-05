@@ -659,7 +659,6 @@
     <string name="err_odometer_required">صوّر العدّاد واكتب رقمه أولاً</string>
     <string name="err_odometer_bad_km">اكتب رقم العدّاد بالأرقام فقط</string>
     <string name="err_odometer_photo_required">صوّر العدّاد قبل ما تبعت الرقم</string>
-    <string name="err_odometer_mocked">برنامج تغيير الموقع يعمل — أطفئه ثمّ صوّر العدّاد</string>
     <string name="err_odometer_wrong_phase">حالة العمل تغيّرت — حدّث الشاشة وحاول مرّة أخرى</string>
     <string name="err_odometer_lower">الرقم أقل من آخر رقم سجّلته — صوّر العدّاد من جديد</string>
     <string name="err_odometer_check">تأكّد من رقم العدّاد</string>

@@ -16,6 +16,10 @@ package server
 // **والأحمر**: فرقٌ كبير بين العدّاد والتطبيق (كيلو ونسبة معاً، من الإعدادات)، وسكّرٌ بلا
 // صورة («ما صوّر عند الإغلاق» — صار بلا السائق: ترك أو طارئ أو عمليّات أو حساب أو جوال
 // مطفي)، ومشيٌ وهو خارج الدوام.
+//
+// **وكلُّ دوامٍ ليومٍ واحد**: يومُ سكّره (والمفتوحُ يومُه اليوم) — فدوامٌ عبر ساعةَ بداية يوم
+// الحساب (فتح ٨ واليوم يبدأ ٩) لا يُعدّ عدّادُه وتطبيقُه بيومين. **و«الدوامُ اللي قبله»** آخرُ
+// دوامٍ فُتح قبل أوّل دوامٍ في اليوم — لا قبل بداية اليوم (فيرجع الدوامُ نفسُه).
 
 import (
 	"context"
@@ -50,7 +54,9 @@ type monitorShift struct {
 	ClosedAt    *time.Time `json:"closed_at"`
 	CloseReason string     `json:"close_reason"`
 	OpenedBuild *int       `json:"opened_build"`
-	Migrated    bool       `json:"migrated"`
+	// OpenedCapable التطبيقُ الذي فتحه أعلن أنّه يعرف ورقةَ العدّاد (فارغ = فتحٌ من النظام).
+	OpenedCapable *bool `json:"opened_capable"`
+	Migrated      bool  `json:"migrated"`
 	// أرقام التطبيق (متر) — القيادة الفعلية وتقسيمها.
 	DriveM      int  `json:"drive_m"`
 	OrdersM     int  `json:"orders_m"`
@@ -110,24 +116,28 @@ func (t odoThresholds) bigGap(odoKm, unseenKm float64) bool {
 	return t.gapKm > 0 && unseenKm >= t.gapKm && odoKm > 0 && unseenKm*100 >= t.gapPct*odoKm
 }
 
-// monitorShifts دوامات السائق التي تمسّ [from, to) — بقراءاتها وأعلامها. `measure` يحسب
-// أرقام التطبيق الآن (يوم السائق)، وبلاه تُقرأ من حساب الكانس (القائمة).
+// monitorShifts دوامات السائق التي سُكّرت في [from, to) (والمفتوحُ يُعدّ بـ`now`) — بقراءاتها
+// وأعلامها. `measure` يحسب أرقام التطبيق الآن (يوم السائق)، وبلاه تُقرأ من حساب الكانس (القائمة).
 func (s *Server) monitorShifts(ctx context.Context, driverID string, from, to, now time.Time, measure bool) ([]monitorShift, odoDay, error) {
-	// **والدوامُ قبلها وبعدها** — لـ«خارج الدوام» و«التقريبي».
+	// **والدوامُ قبلها وبعدها** — لـ«خارج الدوام» و«التقريبي»: جارا أوّلِ دوامٍ وآخرِه بالترتيب.
 	rows, err := s.pg.Query(ctx, `
 		WITH win AS (
 			SELECT s.* FROM driver_shifts s
-			 WHERE s.driver_id = $1::uuid AND s.opened_at < $3 AND COALESCE(s.closed_at, $4) >= $2
+			 WHERE s.driver_id = $1::uuid
+			   AND COALESCE(s.closed_at, $4) >= $2 AND COALESCE(s.closed_at, $4) < $3
 		), around AS (
 			SELECT * FROM win
 			UNION
-			(SELECT s.* FROM driver_shifts s WHERE s.driver_id = $1::uuid AND s.opened_at < $2
+			(SELECT s.* FROM driver_shifts s WHERE s.driver_id = $1::uuid
+			    AND s.opened_at < (SELECT min(opened_at) FROM win)
 			  ORDER BY s.opened_at DESC LIMIT 1)
 			UNION
-			(SELECT s.* FROM driver_shifts s WHERE s.driver_id = $1::uuid AND s.opened_at >= $3
+			(SELECT s.* FROM driver_shifts s WHERE s.driver_id = $1::uuid
+			    AND s.opened_at > (SELECT max(opened_at) FROM win)
 			  ORDER BY s.opened_at LIMIT 1)
 		)
 		SELECT a.id::text, a.opened_at, a.closed_at, COALESCE(a.close_reason, ''), a.opened_build,
+		       a.opened_capable,
 		       a.migrated, a.final, COALESCE(a.drive_m, 0), COALESCE(a.orders_m, 0),
 		       COALESCE(a.no_order_m, 0), COALESCE(a.not_driving_m, 0), COALESCE(a.gap_min, 0),
 		       COALESCE(a.orders_n, 0), COALESCE(eu.full_name, ''), a.exempt_reason,
@@ -159,7 +169,7 @@ func (s *Server) monitorShifts(ctx context.Context, driverID string, from, to, n
 		var sAt, eAt *time.Time
 		var sBuild, eBuild *int
 		m := &x.m
-		if err := rows.Scan(&m.ID, &m.OpenedAt, &m.ClosedAt, &m.CloseReason, &m.OpenedBuild, &m.Migrated,
+		if err := rows.Scan(&m.ID, &m.OpenedAt, &m.ClosedAt, &m.CloseReason, &m.OpenedBuild, &m.OpenedCapable, &m.Migrated,
 			&m.Final, &m.DriveM, &m.OrdersM, &m.NoOrderM, &m.NotDrivingM, &m.GapMin, &m.OrdersN,
 			&m.ExemptByName, &m.ExemptReason, &x.inside, &x.computed,
 			&sID, &sKm, &sCor, &sCheck, &sNote, &sPath, &sThumb, &sAt, &sBuild,
@@ -238,7 +248,8 @@ func (s *Server) monitorShifts(ctx context.Context, driverID string, from, to, n
 			(m.EndReading != nil && m.EndReading.CheckStatus == "jump_confirmed") {
 			flag("jump_confirmed")
 		}
-		if m.OpenedBuild == nil || *m.OpenedBuild < odometerMinBuild {
+		// **«تطبيق قديم»**: فُتح من تطبيقٍ لا يعرف ورقةَ العدّاد (لا رقمُ نسخته).
+		if !m.Migrated && (m.OpenedCapable == nil || !*m.OpenedCapable) {
 			flag("old_app")
 		}
 		if m.ExemptByName != "" || m.ExemptReason != "" {

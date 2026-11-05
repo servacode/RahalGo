@@ -2,12 +2,14 @@ package server
 
 import (
 	"context"
+	"errors"
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"net/http"
 	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
@@ -258,10 +260,19 @@ func (s *Server) handleAdminEndShift(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// **ومن ليس في دوامه لا يُغلق له شيء** — ٤٠٤ كما كان.
+	// **ومن ليس في دوامه لا يُغلق له شيء** — ٤٠٤ كما كان. **وعطبُ القاعدة عطبٌ** (٥٠٠) لا
+	// «ليس بالدوام».
 	var onShift bool
 	if err := s.pg.QueryRow(r.Context(),
-		`SELECT on_shift FROM users WHERE id = $1`, id).Scan(&onShift); err != nil || !onShift {
+		`SELECT on_shift FROM users WHERE id = $1`, id).Scan(&onShift); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			s.respondErr(w, httpx.ErrNotFound)
+			return
+		}
+		s.respondErr(w, err)
+		return
+	}
+	if !onShift {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}

@@ -73,6 +73,8 @@ type Server struct {
 	media      *media.Service
 	hub        *realtime.Hub
 	geo        *geo.Service
+	// odoPrune **محوُ صور العدّاد مرّةً بالساعة** (`driver_odometer.go`).
+	odoPrune odoPruneGate
 	// route **محرّكُ المسارات** — وفارغٌ يعني الخطَّ المستقيم.
 	// route **محرّكُ المسارات بعقده لا بصنفه** — المرحلة ٨أ.
 	//

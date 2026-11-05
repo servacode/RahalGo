@@ -138,7 +138,8 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 		// ── عدّادُ الدرّاجة (قرارُ المالك ٢٠٢٦-١١-٠٥) ─────────────────────
 		//
 		// OdometerMode **أتُطلب صورةُ العدّاد ورقمُه عند فتح الدوام وسكّره؟** — `off` · `ask`
-		// (ويُسمح بالتخطّي) · `require`. **لنسختِه هو** (`odometerMinBuild`): القديمةُ تقرأ `off`.
+		// (ويُسمح بالتخطّي) · `require`. **الإعدادُ كما هو**: التطبيقُ الذي يعرف الورقة يعمل به،
+		// والقديمُ لا يقرؤه — **والفرضُ في المحرّك لمن أعلن `odometer_capable` وحدَه.**
 		OdometerMode string `json:"odometer_mode"`
 		// OdometerExempt **سمحت العمليّاتُ بفتح الدوام بلا صورةٍ مرّةً واحدة.**
 		OdometerExempt bool `json:"odometer_exempt"`
@@ -202,16 +203,25 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// **ومسافةُ طلباته اليوم** — من `order_drives` لا من الأثر (لا يُقاس هنا مرّةً ثانية).
+	// قطعٌ انتهت اليوم، **وقطعةٌ مفتوحةٌ ما دام الطلبُ فعلاً بيده** (أو مشوارُ إرجاعه قائم) —
+	// فصفٌّ بقي «لسّا معه» بلا سبب لا يُضاف لكلّ يومٍ للأبد. وطلبٌ له قطعتان يُعدّ مرّة.
 	// وتعذّرُها لا يُسقط شاشته: صفرٌ خيرٌ من شاشةٍ بيضاء.
 	if err := s.pg.QueryRow(r.Context(), `
-		SELECT COALESCE(sum(to_pickup_m + with_order_m), 0)::int, count(*)::int
-		  FROM order_drives
-		 WHERE driver_id = $1 AND COALESCE(ended_at, now()) >= account_day_start(account_day(now()))`,
+		SELECT COALESCE(sum(d.to_pickup_m + d.with_order_m), 0)::int, count(DISTINCT d.order_id)::int
+		  FROM order_drives d
+		 WHERE d.driver_id = $1
+		   AND CASE WHEN d.ended_at IS NOT NULL
+		            THEN d.ended_at >= account_day_start(account_day(now()))
+		            ELSE EXISTS (SELECT 1 FROM orders o
+		                          WHERE o.id = d.order_id AND o.driver_id = d.driver_id
+		                            AND (o.closed_at IS NULL
+		                                 OR (o.return_to IS NOT NULL AND o.goods_handed_at IS NULL)))
+		       END`,
 		uid).Scan(&out.TodayDriveM, &out.TodayDriveOrders); err != nil {
 		s.logger.Warn("مسافة اليوم: تعذّرت القراءة", "driver", uid, "error", err)
 	}
-	// **وعدّادُ الدرّاجة** — الوضعُ لنسخته، وسماحُ العمليّات، وآخرُ رقم.
-	out.OdometerMode = s.odometerMode(r)
+	// **وعدّادُ الدرّاجة** — الوضع، وسماحُ العمليّات، وآخرُ رقم.
+	out.OdometerMode = s.odometerMode(r.Context())
 	if exID, _, _, err := s.pendingExemption(r.Context(), uid); err == nil {
 		out.OdometerExempt = exID != ""
 	}
@@ -245,6 +255,10 @@ func (s *Server) handleDriverShift(w http.ResponseWriter, r *http.Request) {
 		Via string `json:"via"`
 		// OdometerID **قراءةُ العدّاد** المرفوعة قبله (`POST /driver/odometer`) — تُربط بالدوام.
 		OdometerID string `json:"odometer_id"`
+		// OdometerCapable **التطبيقُ فيه ورقةُ العدّاد** — يرسله التطبيقُ الذي يعرفها وحدَه، ومنه
+		// وحدَه يُطبَّق «إلزامي». **لا رقمُ النسخة**: تصليحٌ سريعٌ بلا الورقة قد يأخذ رقماً أكبر،
+		// فلو حُكم بالرقم لَانقفل على السائق دوامُه ولا شاشةَ عنده للصورة.
+		OdometerCapable bool `json:"odometer_capable"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -304,13 +318,16 @@ func (s *Server) handleDriverShift(w http.ResponseWriter, r *http.Request) {
 	// **وعدّادُ الدرّاجة عند الفتح وعند السكّر** (قرارُ المالك ٢٠٢٦-١١-٠٥)
 	// ══════════════════════════════════════════════════════════════════
 	//
-	// **في «إلزامي» لا يُفتح الدوامُ ولا يُسكَّر بلا قراءة** — «حصراً الصورة بالليل» — **للنسخة
-	// التي تعرفه وحدَها** (`odometerMode`): القديمةُ تفتح وتسكّر كما كانت حتّى يُفرض التحديث.
-	// وسماحُ العمليّات يفتح بلا صورةٍ مرّةً واحدة؛ **ولا سماحَ بالسكّر** (تسكّره العمليّات).
-	// **وقراءةٌ صالحةٌ تُربط بالدوام أيّاً كان الوضع.**
+	// **في «إلزامي» لا يُفتح الدوامُ ولا يُسكَّر بلا قراءة** — «حصراً الصورة بالليل» — **للتطبيق
+	// الذي أعلن أنّه يعرف الورقة وحدَه** (`odometer_capable`): القديمُ — وأيُّ نسخةٍ بلا الورقة —
+	// يفتح ويسكّر كما كان حتّى يُفرض التحديث. وسماحُ العمليّات يفتح بلا صورةٍ مرّةً واحدة؛
+	// **ولا سماحَ بالسكّر** (تسكّره العمليّات). **وقراءةٌ صالحةٌ تُربط بالدوام أيّاً كان الوضع.**
 	ctx := r.Context()
 	uid := userIDFrom(r)
-	mode := s.odometerMode(r)
+	mode := "off"
+	if req.OdometerCapable {
+		mode = s.odometerMode(ctx)
+	}
 	phase := "end"
 	if req.On {
 		phase = "start"
@@ -333,7 +350,7 @@ func (s *Server) handleDriverShift(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		shiftID, err := shifts.Open(ctx, s.pg, uid, appBuild(r))
+		shiftID, err := shifts.Open(ctx, s.pg, uid, appBuild(r), req.OdometerCapable)
 		if err != nil {
 			s.respondErr(w, err)
 			return

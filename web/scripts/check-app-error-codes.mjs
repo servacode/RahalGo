@@ -111,7 +111,6 @@ const SERVER_MOBILE = new Set([
   "odometer_required",
   "odometer_bad_km",
   "odometer_photo_required",
-  "odometer_mocked",
   "odometer_wrong_phase",
   "odometer_lower",
   "odometer_check",

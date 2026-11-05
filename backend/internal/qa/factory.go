@@ -389,7 +389,7 @@ func (f *Factory) Driver(opts ...DriverOpt) *User {
 	if s.onShift {
 		// **والورديّةُ من بابها الواحد** (`internal/shifts`) — العمودان وصفُّ سجلّ الدوام معاً،
 		// **ثمّ تُرجَع بدايتُها ساعةً** كما كانت الفكسچرُ تكتبها.
-		if _, err := shifts.Open(f.ctx(), f.h.Pool, u.ID, 0); err != nil {
+		if _, err := shifts.Open(f.ctx(), f.h.Pool, u.ID, 0, false); err != nil {
 			f.fatal("تعذّر فتحُ الورديّة: %v", err)
 		}
 		if _, err := f.h.Pool.Exec(f.ctx(), `

@@ -560,7 +560,6 @@ private val CODES: Map<String, Int> = mapOf(
     "odometer_required" to R.string.err_odometer_required,
     "odometer_bad_km" to R.string.err_odometer_bad_km,
     "odometer_photo_required" to R.string.err_odometer_photo_required,
-    "odometer_mocked" to R.string.err_odometer_mocked,
     "odometer_wrong_phase" to R.string.err_odometer_wrong_phase,
     "odometer_lower" to R.string.err_odometer_lower,
     "odometer_check" to R.string.err_odometer_check,

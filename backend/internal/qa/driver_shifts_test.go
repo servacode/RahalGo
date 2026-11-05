@@ -12,9 +12,12 @@ import (
 	"context"
 	"encoding/json"
 	"math"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/servacode/rahalgo/backend/internal/shifts"
 )
 
 // shiftRows صفوف دوام السائق: (مفتوح؟، السبب) بالترتيب.
@@ -425,7 +428,9 @@ func TestOrderDrive_LatePointsThenFrozen(t *testing.T) {
 }
 
 // TestDriverMe_TodayDriveFollowsAccountDay **يومُ العدّاد يومُ الحساب**: طلبٌ انتهى قبل ساعة
-// فتح الدوام اليوم يُحسب على أمس، وما انتهى بعدها (أو ما زال معه) على اليوم.
+// فتح الدوام اليوم يُحسب على أمس، وما انتهى بعدها (أو ما زال معه) على اليوم. **وصفٌّ بقي
+// «لسّا معه» والطلبُ خرج من يده لا يُحسب** — لا يُضاف لكلّ يومٍ للأبد. **وطلبٌ له قطعتان**
+// (دوامان) مسافتُه مجموعُهما ويُعدّ طلباً واحداً.
 func TestDriverMe_TodayDriveFollowsAccountDay(t *testing.T) {
 	h := New(t)
 	f := h.Factory()
@@ -435,42 +440,349 @@ func TestDriverMe_TodayDriveFollowsAccountDay(t *testing.T) {
 	if err := h.Pool.QueryRow(ctxBG(), `SELECT account_day_start(account_day(now()))`).Scan(&dayStart); err != nil {
 		t.Fatal(err)
 	}
-	put := func(ended *time.Time, toPickup, withOrder int) {
+	early := dayStart.Add(-2 * time.Hour)
+	shiftA := odShift(t, h, drv.ID, dayStart.Add(-5*time.Hour), &early)
+	shiftB := odShift(t, h, drv.ID, dayStart.Add(-time.Hour), nil)
+	order := func(status string, closed bool) string {
 		cust := h.Customer()
 		var oid string
+		var closedAt any
+		if closed {
+			closedAt = dayStart.Add(-10 * time.Minute)
+		}
 		if err := h.Pool.QueryRow(ctxBG(), `
 			INSERT INTO orders (customer_id, merchant_id, driver_id, status, address_text, dropoff,
-			                    payment_method, subtotal, delivery_fee, total)
-			VALUES ($1::uuid, $2::uuid, $3::uuid, 'assigned', 'الرقة',
-			        ST_SetSRID(ST_MakePoint(38.5110,35.5000),4326)::geography, 'cash', 10, 5, 15)
-			RETURNING id::text`, cust.ID, m.ID, drv.ID).Scan(&oid); err != nil {
+			                    payment_method, subtotal, delivery_fee, total, closed_at)
+			VALUES ($1::uuid, $2::uuid, $3::uuid, $4, 'الرقة',
+			        ST_SetSRID(ST_MakePoint(38.5110,35.5000),4326)::geography, 'cash', 10, 5, 15, $5)
+			RETURNING id::text`, cust.ID, m.ID, drv.ID, status, closedAt).Scan(&oid); err != nil {
 			t.Fatal(err)
 		}
 		t.Cleanup(func() { _, _ = h.Pool.Exec(ctxBG(), `DELETE FROM orders WHERE id = $1::uuid`, oid) })
+		return oid
+	}
+	put := func(oid, shift string, ended *time.Time, toPickup, withOrder int) {
 		started := dayStart.Add(-3 * time.Hour)
 		kind := "delivered"
 		if ended == nil {
 			kind = "open"
 		}
 		if _, err := h.Pool.Exec(ctxBG(), `
-			INSERT INTO order_drives (order_id, driver_id, started_at, ended_at, end_kind, to_pickup_m, with_order_m)
-			VALUES ($1::uuid, $2::uuid, $3, $4, $5, $6, $7)`, oid, drv.ID, started, ended, kind, toPickup, withOrder); err != nil {
+			INSERT INTO order_drives (order_id, driver_id, shift_id, started_at, ended_at, end_kind, to_pickup_m, with_order_m)
+			VALUES ($1::uuid, $2::uuid, $3::uuid, $4, $5, $6, $7, $8)`,
+			oid, drv.ID, shift, started, ended, kind, toPickup, withOrder); err != nil {
 			t.Fatal(err)
 		}
 	}
 	yesterday := dayStart.Add(-30 * time.Minute)
 	today := dayStart.Add(time.Minute)
-	put(&yesterday, 700, 800) // أمس — لا يُحسب
-	put(&today, 1000, 2000)   // اليوم
-	put(nil, 300, 0)          // لسّا معه — «لحد هلق»
+	put(order("delivered", true), shiftA, &yesterday, 700, 800) // أمس — لا يُحسب
+	put(order("delivered", false), shiftB, &today, 1000, 2000)  // اليوم
+	put(order("assigned", false), shiftB, nil, 300, 0)          // لسّا معه — «لحد هلق»
+	// **صفٌّ عالق**: «لسّا معه» والطلبُ مُسلَّمٌ مُغلق — لا يُحسب
+	put(order("delivered", true), shiftB, nil, 5000, 5000)
+	// **طلبٌ بقطعتين**: قطعةٌ بدوام أمس (انسكّر قبل اليوم) وقطعةٌ اليوم — يُحسب ما انتهى اليوم
+	two := order("delivered", false)
+	put(two, shiftA, &early, 400, 0)
+	put(two, shiftB, &today, 0, 600)
 	me := h.GET("/api/v1/driver/me", drv.Token)
 	if me.Code != 200 {
 		t.Fatal(me)
 	}
-	if got, _ := me.JSON()["today_drive_m"].(float64); got != 3300 {
-		t.Fatalf("today_drive_m = %v والمتوقَّع ٣٣٠٠ (اليوم ٣٠٠٠ + الجاري ٣٠٠، وأمس لا)", got)
+	if got, _ := me.JSON()["today_drive_m"].(float64); got != 3900 {
+		t.Fatalf("today_drive_m = %v والمتوقَّع ٣٩٠٠ (اليوم ٣٠٠٠ + الجاري ٣٠٠ + قطعة اليوم ٦٠٠، وأمس والعالق لا)", got)
 	}
-	if n, _ := me.JSON()["today_drive_orders"].(float64); n != 2 {
-		t.Fatalf("today_drive_orders = %v والمتوقَّع ٢", n)
+	if n, _ := me.JSON()["today_drive_orders"].(float64); n != 3 {
+		t.Fatalf("today_drive_orders = %v والمتوقَّع ٣", n)
+	}
+}
+
+// odShiftWhy صفُّ دوامٍ مسكَّرٍ بسببه.
+func odShiftWhy(t *testing.T, h *Harness, driver string, opened, closed time.Time, reason string) string {
+	t.Helper()
+	var id string
+	if err := h.Pool.QueryRow(ctxBG(), `
+		INSERT INTO driver_shifts (driver_id, opened_at, closed_at, close_reason)
+		VALUES ($1::uuid, $2, $3, $4) RETURNING id::text`, driver, opened, closed, reason).Scan(&id); err != nil {
+		t.Fatalf("صفّ الدوام: %v", err)
+	}
+	return id
+}
+
+type odPiece struct {
+	shift     string
+	toPickup  int
+	withOrder int
+	kind      string
+	ended     *time.Time
+	final     bool
+}
+
+func odPieces(t *testing.T, h *Harness, order, driver string) []odPiece {
+	t.Helper()
+	rows, err := h.Pool.Query(ctxBG(), `
+		SELECT shift_id::text, to_pickup_m, with_order_m, end_kind, ended_at, final FROM order_drives
+		 WHERE order_id = $1::uuid AND driver_id = $2::uuid ORDER BY started_at`, order, driver)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var out []odPiece
+	for rows.Next() {
+		var p odPiece
+		if err := rows.Scan(&p.shift, &p.toPickup, &p.withOrder, &p.kind, &p.ended, &p.final); err != nil {
+			t.Fatal(err)
+		}
+		out = append(out, p)
+	}
+	return out
+}
+
+// TestOrderDrive_HoldsAcrossShifts **طلبٌ امتدّ على دوامين** (Q14): طارئٌ بعد الاستلام سكّر
+// الدوام والطلبُ معه، ثمّ فتح دواماً جديداً وسلّمه ⇒ قطعتان: الأولى تنتهي بالسكّر (للمتجر ١٠٠٠ +
+// للزبون ١٠٠٠) والثانية من الفتح للتسليم (١٥٠٠) — **ومسافتُه ٣٥٠٠ لا إحداهما فوق الأخرى.**
+// وطلبٌ ثانٍ أُسند قبل الطارئ وأعادته العمليّاتُ للطابور بعد الفتح الجديد **لا يأخذ من الدوام
+// الجديد شيئاً**: ٢٠٠٠ م قادها بعد التسليم «بلا طلب».
+func TestOrderDrive_HoldsAcrossShifts(t *testing.T) {
+	h := New(t)
+	f := h.Factory()
+	drv := f.Driver()
+	m := f.Merchant()
+	admin := h.NewUser("admin")
+	t0 := time.Now().Add(-5 * time.Hour).Truncate(time.Second)
+
+	// ── الدوام الأوّل: قبول ١٠٠٠ م للمتجر، استلام، ١٠٠٠ م للزبون، ثمّ طارئ ──
+	p := rdPoint{at: t0.Add(time.Minute), lat: 35.86, lng: 38.94, acc: rdF(6), spd: rdF(5)}
+	trail := append([]rdPoint{p}, rdDrive(p, 1000, 5, 10*time.Second)...)
+	picked := t0.Add(5 * time.Minute)
+	last := rdLast(trail)
+	trail = append(trail, rdPoint{at: picked, lat: last.lat, lng: last.lng, acc: rdF(6), spd: rdF(0)})
+	trail = append(trail, rdDrive(rdLast(trail), 1000, 5, 10*time.Second)...)
+	closeA := t0.Add(15 * time.Minute)
+	// ── الدوام الثاني: ١٥٠٠ م للزبون ثمّ التسليم، ثمّ ٢٠٠٠ م بلا طلب ──
+	openB := t0.Add(60 * time.Minute)
+	last = rdLast(trail)
+	q := rdPoint{at: openB.Add(time.Minute), lat: last.lat + 0.001, lng: last.lng, acc: rdF(6), spd: rdF(5)}
+	trail = append(trail, q)
+	trail = append(trail, rdDrive(q, 1500, 5, 10*time.Second)...)
+	delivered := t0.Add(67 * time.Minute)
+	last = rdLast(trail)
+	trail = append(trail, rdPoint{at: delivered, lat: last.lat, lng: last.lng, acc: rdF(6), spd: rdF(0)})
+	r := rdPoint{at: t0.Add(68 * time.Minute), lat: last.lat, lng: last.lng, acc: rdF(6), spd: rdF(5)}
+	trail = append(trail, r)
+	trail = append(trail, rdDrive(r, 2000, 5, 10*time.Second)...)
+	rdPut(t, h, drv.ID, trail)
+
+	shiftA := odShiftWhy(t, h, drv.ID, t0, closeA, "emergency")
+	shiftB := odShiftWhy(t, h, drv.ID, openB, t0.Add(120*time.Minute), "driver")
+	x, _ := odOrder(t, h, drv.ID, m.ID, t0.Add(time.Minute), picked, delivered)
+	y := rdOrderRow(t, h, nil, m.ID, "dispatching", map[string]time.Time{})
+	rdEvent(t, h, y, "dispatching", "assigned", drv.ID, t0.Add(12*time.Minute))
+	rdEvent(t, h, y, "assigned", "dispatching", drv.ID, t0.Add(90*time.Minute)) // العمليّات أعادته
+
+	now := time.Now()
+	sweepUntil(t, h, shiftA, now)
+	sweepUntil(t, h, shiftB, now)
+
+	px := odPieces(t, h, x, drv.ID)
+	if len(px) != 2 || px[0].shift != shiftA || px[1].shift != shiftB {
+		t.Fatalf("قطع الطلب الأوّل: %+v — المتوقَّع قطعة بكلّ دوام", px)
+	}
+	if px[0].kind != "shift_closed" || px[0].ended == nil || !px[0].ended.Equal(closeA) {
+		t.Errorf("القطعة الأولى: %+v — المتوقَّع shift_closed عند سكّر الدوام %v", px[0], closeA)
+	}
+	if px[1].kind != "delivered" {
+		t.Errorf("القطعة الثانية: %+v — المتوقَّع delivered", px[1])
+	}
+	total := 0
+	for _, pc := range px {
+		total += pc.toPickup + pc.withOrder
+	}
+	if math.Abs(float64(total)-3500) > 60 || math.Abs(float64(px[0].toPickup)-1000) > 30 {
+		t.Fatalf("مسافة الطلب = %d (للمتجر %d) والمتوقَّع ~٣٥٠٠ (للمتجر ~١٠٠٠)", total, px[0].toPickup)
+	}
+	ytotal := 0
+	for _, pc := range odPieces(t, h, y, drv.ID) {
+		if pc.shift == shiftB {
+			t.Errorf("طلبٌ أعادته العمليّات أخذ قطعةً من الدوام الجديد: %+v", pc)
+		}
+		ytotal += pc.toPickup + pc.withOrder
+	}
+	if ytotal > 50 {
+		t.Errorf("الطلب المُعاد للطابور = %d م والمتوقَّع ~٠ — بلع قيادة الدوام الجديد", ytotal)
+	}
+	var ordersB, noOrderB int
+	if err := h.Pool.QueryRow(ctxBG(), `SELECT orders_m, no_order_m FROM driver_shifts WHERE id = $1::uuid`, shiftB).
+		Scan(&ordersB, &noOrderB); err != nil {
+		t.Fatal(err)
+	}
+	if math.Abs(float64(ordersB)-1500) > 40 || math.Abs(float64(noOrderB)-2000) > 40 {
+		t.Errorf("الدوام الثاني: بطلب=%d بلا طلب=%d والمتوقَّع ~١٥٠٠/~٢٠٠٠", ordersB, noOrderB)
+	}
+	// ── وملفُّ الطلب للمكتب يجمع القطعتين ──
+	file := h.GET("/api/v1/admin/orders/"+x, admin.Token)
+	var env struct {
+		Data struct {
+			Drive []struct {
+				ToPickupM  int    `json:"to_pickup_m"`
+				WithOrderM int    `json:"with_order_m"`
+				EndKind    string `json:"end_kind"`
+			} `json:"drive"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(file.Body, &env); err != nil || file.Code != 200 {
+		t.Fatalf("ملف الطلب: %s", file)
+	}
+	if len(env.Data.Drive) != 1 || env.Data.Drive[0].ToPickupM+env.Data.Drive[0].WithOrderM != total ||
+		env.Data.Drive[0].EndKind != "delivered" {
+		t.Fatalf("ملف الطلب drive = %+v والمتوقَّع سطرٌ واحد بمجموع %d ونهاية delivered", env.Data.Drive, total)
+	}
+}
+
+// TestOrderDrive_ClosedShiftNeverLeavesOpenRow **دوامٌ ثبت لا يترك صفّاً «لسّا معه»**: طارئٌ بعد
+// الاستلام قبل يومين والطلبُ ما زال بيده ولم يفتح دواماً بعده ⇒ قطعتُه تنتهي بسكّر الدوام
+// (`shift_closed`) وتثبت — **ولا تُضاف لعدّاد كلّ يومٍ بعدها.**
+func TestOrderDrive_ClosedShiftNeverLeavesOpenRow(t *testing.T) {
+	h := New(t)
+	f := h.Factory()
+	drv := f.Driver()
+	m := f.Merchant()
+	var dayStart time.Time
+	if err := h.Pool.QueryRow(ctxBG(), `SELECT account_day_start(account_day(now()))`).Scan(&dayStart); err != nil {
+		t.Fatal(err)
+	}
+	opened := dayStart.Add(-26 * time.Hour)
+	closed := opened.Add(time.Hour)
+	p := rdPoint{at: opened.Add(2 * time.Minute), lat: 35.88, lng: 38.96, acc: rdF(6), spd: rdF(5)}
+	trail := append([]rdPoint{p}, rdDrive(p, 1000, 5, 10*time.Second)...)
+	picked := opened.Add(6 * time.Minute)
+	last := rdLast(trail)
+	trail = append(trail, rdPoint{at: picked, lat: last.lat, lng: last.lng, acc: rdF(6), spd: rdF(0)})
+	trail = append(trail, rdDrive(rdLast(trail), 1000, 5, 10*time.Second)...)
+	rdPut(t, h, drv.ID, trail)
+	shift := odShiftWhy(t, h, drv.ID, opened, closed, "emergency")
+	id := drv.ID
+	z := rdOrderRow(t, h, &id, m.ID, "picked_up", map[string]time.Time{"accepted": p.at, "picked": picked})
+	rdEvent(t, h, z, "dispatching", "assigned", drv.ID, p.at)
+	rdEvent(t, h, z, "at_pickup", "picked_up", drv.ID, picked)
+
+	sweepUntil(t, h, shift, time.Now())
+	pz := odPieces(t, h, z, drv.ID)
+	if len(pz) != 1 || pz[0].ended == nil || !pz[0].ended.Equal(closed) || pz[0].kind != "shift_closed" || !pz[0].final {
+		t.Fatalf("قطعة الطلب: %+v — المتوقَّع نهايتُها سكّرُ الدوام %v، shift_closed، ثابتة", pz, closed)
+	}
+	if got := pz[0].toPickup + pz[0].withOrder; math.Abs(float64(got)-2000) > 40 {
+		t.Fatalf("مسافة القطعة = %d والمتوقَّع ~٢٠٠٠", got)
+	}
+	me := h.GET("/api/v1/driver/me", drv.Token)
+	if got, _ := me.JSON()["today_drive_m"].(float64); got != 0 {
+		t.Fatalf("today_drive_m = %v والمتوقَّع ٠ — طلبُ أوّل أمس يُضاف لليوم", got)
+	}
+}
+
+// TestShifts_ConcurrentClosesWriteOneRow **سكّران بلحظةٍ واحدة لا يكتبان صفّين**: العمليّاتُ تسكّر
+// (ومعاملتُها لم تُثبَّت بعد) والحظرُ يسكّر بالوقت نفسه ⇒ الثاني ينتظر ثمّ يقرأ الدوامَ مسكَّراً
+// — صفُّ دوامٍ واحد، **لا صفٌّ «قديمٌ» مكرّرٌ ببدايته نفسها** (فتتضاعف كيلومتراتُه بالمراقبة).
+func TestShifts_ConcurrentClosesWriteOneRow(t *testing.T) {
+	h := New(t)
+	h.Setting("launch.driver_work", "true")
+	drv := h.NewUser("driver")
+	openShiftFor(t, h, drv)
+	ctx := context.Background()
+	tx, err := h.Pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	if _, err := shifts.Close(ctx, tx, drv.ID, shifts.ReasonOps); err != nil {
+		t.Fatalf("السكّر الأوّل: %v", err)
+	}
+	done := make(chan error, 1)
+	go func() {
+		_, err := shifts.Close(ctx, h.Pool, drv.ID, shifts.ReasonAccount)
+		done <- err
+	}()
+	// **الثاني ينتظر قفلَ الأوّل** — ثمّ يُثبَّت الأوّل.
+	deadline := time.Now().Add(20 * time.Second)
+	for {
+		var waiting int
+		if err := h.Pool.QueryRow(ctx, `
+			SELECT count(*)::int FROM pg_stat_activity
+			 WHERE wait_event_type = 'Lock' AND state = 'active' AND query LIKE '%legacy AS%'`).Scan(&waiting); err != nil {
+			t.Fatal(err)
+		}
+		if waiting > 0 {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("السكّر الثاني ما انتظر قفلَ الأوّل")
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-done; err != nil {
+		t.Fatalf("السكّر الثاني: %v", err)
+	}
+	got := shiftRows(t, h, drv.ID)
+	if len(got) != 1 || got[0].open || got[0].reason != "ops" {
+		t.Fatalf("صفوف الدوام بعد سكّرين متزامنين: %+v — المتوقَّع صفٌّ واحدٌ مسكَّر سببه ops", got)
+	}
+}
+
+// TestShifts_StaleOpenRowClosedOnNextOpen **صفٌّ بقي مفتوحاً والدوامُ مسكَّر** (تنظيفُ التجهيز يصفّر
+// `on_shift` وحده) ⇒ الفتحُ التالي يسكّره بسبب `stale` ويفتح صفّاً جديداً — **لا يكمل «الدوامُ
+// الجديد» من قبل أيّام**، وقراءةُ فتحه تُربط بالصفّ الجديد.
+func TestShifts_StaleOpenRowClosedOnNextOpen(t *testing.T) {
+	h := New(t)
+	h.Setting("launch.driver_work", "true")
+	drv := h.NewUser("driver")
+	openShiftFor(t, h, drv)
+	var oldID string
+	if err := h.Pool.QueryRow(ctxBG(), `SELECT id::text FROM driver_shifts
+		WHERE driver_id = $1::uuid AND closed_at IS NULL`, drv.ID).Scan(&oldID); err != nil {
+		t.Fatal(err)
+	}
+	// **كما يفعل `scripts/clean-slate.sql`** — العمودان وحدهما.
+	if _, err := h.Pool.Exec(ctxBG(), `UPDATE users SET on_shift = false, shift_started_at = NULL
+		WHERE id = $1::uuid`, drv.ID); err != nil {
+		t.Fatal(err)
+	}
+	reading := odoReading(t, h, drv, "start", "800")
+	if r := odoShift(t, h, drv, true, reading, true); r.Code != 200 {
+		t.Fatalf("الفتح بعد التنظيف: %s", r)
+	}
+	got := shiftRows(t, h, drv.ID)
+	if len(got) != 2 || got[0].open || got[0].reason != "stale" || !got[1].open {
+		t.Fatalf("صفوف الدوام: %+v — المتوقَّع القديمُ مسكَّراً بـstale وصفٌّ جديدٌ مفتوح", got)
+	}
+	var newID, attached string
+	if err := h.Pool.QueryRow(ctxBG(), `SELECT id::text, COALESCE(start_reading_id::text, '') FROM driver_shifts
+		WHERE driver_id = $1::uuid AND closed_at IS NULL`, drv.ID).Scan(&newID, &attached); err != nil {
+		t.Fatal(err)
+	}
+	if newID == oldID || attached != reading {
+		t.Fatalf("الصفّ المفتوح %s (القديم %s) وقراءته %q — المتوقَّع صفٌّ جديدٌ بقراءة %s", newID, oldID, attached, reading)
+	}
+}
+
+// TestAccountDeletion_ShiftCloseFailureStillRevokes **تعذّرُ سكّر الدوام لا يُبقي جلساتِ حسابٍ
+// مُجرَّد**: سائقٌ بدوامه يحذف حسابه وسكّرُ الدوام يسقط ⇒ الحذفُ يُكمل وتُبطَل جلساتُه.
+func TestAccountDeletion_ShiftCloseFailureStillRevokes(t *testing.T) {
+	h := New(t)
+	h.Setting("launch.driver_work", "true")
+	drv := h.NewUser("driver")
+	openShiftFor(t, h, drv)
+	if got := h.POST("/api/v1/auth/account/delete/request", drv.Token, map[string]any{}); got.Code >= 400 {
+		t.Fatalf("طلب الحذف: %s", got)
+	}
+	code := plantOTP(t, h, drv.ID, "delete")
+	h.Arm("shift-close-fails", "driver_shifts", "UPDATE", 1, "driver_id", drv.ID)
+	if got := h.POST("/api/v1/auth/account/delete/confirm", drv.Token, map[string]any{"code": code}); got.Code >= 400 {
+		t.Fatalf("تأكيد الحذف وسكّرُ الدوام يسقط: %s — المتوقَّع أن يُكمل", got)
+	}
+	if me := h.GET("/api/v1/driver/me", drv.Token); me.Code < http.StatusBadRequest {
+		t.Fatalf("جلسةُ حسابٍ محذوف ما زالت تمرّ: %d", me.Code)
 	}
 }
