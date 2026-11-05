@@ -22,13 +22,15 @@ import (
 //
 //	«0991234567» «099 123 4567» «+963 991…»   رقمٌ من سبع خاناتٍ فأكثر
 //	«٠٩٩١٢٣٤٥٦٧» «۰۹۹…» «٠٩٩1234567»          بأيّ أرقامٍ كُتب، ومخلوطاً
-//	«0 9 9 1 2 3 4 5 6 7» «099-123-4567»        مفصولاً بمسافةٍ أو شَرطةٍ أو نقطة
+//	«0 9 9 1 2 3 4 5 6 7» «099 - 123 - 4567»    مفصولاً بمسافةٍ أو شَرطةٍ أو نقطة
+//	«099/123/4567» «٠٩٩،١٢٣،٤٥٦٧»              أو بمائلةٍ أو فاصلة
 //	«wa.me/…» «api.whatsapp.com/…»             رابطُ الواتساب
 //	«واتس» «الواتس» «بالواتساب» «WhatsApp»      الكلمةُ بسوابقها، و«و ا ت س» مفرّقة
 //
 // **ولا يُمسّ العدديُّ العاديّ**: سعرٌ («25000») وكميّةٌ ورقمُ بناءٍ ورقمُ طلبٍ
-// («#123456») — كلُّها دون سبع خانات — **والفاصلةُ والشَّرطةُ المائلةُ
-// والنقطتان ليست فواصلَ رقم**: «1,250,000» و«5/11/2026» و«10:30» تمرّ.
+// («#123456») — كلُّها دون سبع خانات. **والمفصولُ يُخفى إن أشبه رقماً سوريّاً
+// وحده** (`phoneLike`): «25000-30000» و«1,250,000» و«1 250 000» و«5-11-2026»
+// و«05.11.2026» و«10.30-11.45» و«10:30» تمرّ.
 
 // ContactHit **ما أُخفي ونصُّه الأصليّ** — للإدارة وحدها، لا للطرف الآخر.
 type ContactHit struct {
@@ -130,13 +132,13 @@ func ContactSummary(h []ContactHit) string {
 
 // ── الأرقام ──────────────────────────────────────────────────────────
 
-// phoneSep **فاصلٌ يُقبل بين خانات الرقم** — مسافةٌ وشَرطةٌ ونقطةٌ وقوسٌ
-// وشَرطةٌ سفليّة. **لا الفاصلةُ ولا المائلةُ ولا النقطتان** — تلك أعدادٌ
-// وتواريخُ وأوقات. **ولا السطرُ الجديد** — رقمٌ على سطرين ثغرةٌ معروفة،
-// وإمساكُه يُمسك «السعر 25000» فوق «12 قطعة».
-func phoneSep(r rune) bool {
+// phoneJoin **ما يُقبل بين مجموعتَي خانات** — مسافةٌ وشَرطةٌ (بأنواعها)
+// ونقطةٌ وقوسٌ وشَرطةٌ سفليّةٌ ومائلةٌ وفاصلةٌ (لاتينيّةً وعربيّةً وفاصلةَ
+// آلاف). **ولا النقطتان** — «10:30» وقتٌ لا يُضمّ. **ولا السطرُ الجديد** —
+// رقمٌ على سطرين ثغرةٌ معروفة، وإمساكُه يُمسك «السعر 25000» فوق «12 قطعة».
+func phoneJoin(r rune) bool {
 	switch r {
-	case '-', '.', '(', ')', '_', '\u2212':
+	case '-', '.', '(', ')', '_', '/', ',', '\u2212', '\u060C', '\u066B', '\u066C', '\uFF0C', '\u2044':
 		return true
 	case '\n', '\r':
 		return false
@@ -147,79 +149,196 @@ func phoneSep(r rune) bool {
 	return unicode.IsSpace(r)
 }
 
+// phoneJoinMax **أطولُ فاصلٍ بين مجموعتين** — «099 - 123» فاصلٌ واحدٌ من
+// ثلاثة حروف، و«099) - (123» من خمسة. **وأكثرُ من ثلاث علاماتٍ ليس فاصلاً.**
+const (
+	phoneJoinMax     = 6
+	phoneJoinMaxMark = 3
+)
+
 // phoneIgnorable **ما يلتصق بالخانة ولا يفصلها** — محدِّدُ الإيموجي ومفتاحُها
 // («0\uFE0F\u20E39…»).
 func phoneIgnorable(r rune) bool { return r == 0xFE0F || r == 0x20E3 }
 
 func isPlus(r rune) bool { return r == '+' || r == '\uFF0B' }
 
-// phoneSpans **مواضعُ الأرقام الطويلة** — خاناتٌ (بأيّ نظام أرقام) بينها
-// فاصلان على الأكثر، **وسبعُ خاناتٍ فأكثر.** **و`+` قبلها يُخفى معها.**
+// digitValue **قيمةُ الخانة بأيّ نظام أرقام** — «٧» و«۷» و«7» سبعة. **وكتلُ
+// الأرقام في يونيكود عشراتٌ متتالية**: يُرجع إلى أوّل الكتلة ويُؤخذ الباقي.
+func digitValue(r rune) int {
+	if r >= '0' && r <= '9' {
+		return int(r - '0')
+	}
+	z := r
+	for k := 0; k < 60 && unicode.IsDigit(z-1); k++ {
+		z--
+	}
+	return int(r-z) % 10
+}
+
+// dgroup **مجموعةُ خاناتٍ متلاصقة** — بموضعها ونصِّها بالأرقام اللاتينيّة،
+// **وعلاماتِ الفاصل الذي قبلها** (بلا مسافاته): «-» في «099 - 123».
+type dgroup struct {
+	start, end int // بالحروف، `end` خارجه (ومعه ما لصق بالخانة الأخيرة)
+	digits     string
+	join       string
+}
+
+// phoneSpans **مواضعُ أرقام التواصل.** — تُقرأ السلسلةُ مجموعاتٍ بينها فواصل،
+// **ثمّ يُبحث فيها عن أطول قطعةٍ تشبه رقماً** (`phoneLike`) — فعددٌ قبل الرقم
+// («السعر 25 099 123 4567») لا يحميه. **و`+` قبلها يُخفى معها.**
 func phoneSpans(rs []rune) []cspan {
 	var out []cspan
 	for i := 0; i < len(rs); {
-		start := -1
+		plus, start := -1, i
 		switch {
 		case unicode.IsDigit(rs[i]):
-			start = i
 		case isPlus(rs[i]):
 			j := i + 1
-			if j < len(rs) && unicode.IsSpace(rs[j]) && rs[j] != '\n' {
+			if j < len(rs) && unicode.IsSpace(rs[j]) && rs[j] != '\n' && rs[j] != '\r' {
 				j++
 			}
-			if j < len(rs) && unicode.IsDigit(rs[j]) {
-				start = i
+			if j >= len(rs) || !unicode.IsDigit(rs[j]) {
+				i++
+				continue
 			}
-		}
-		if start < 0 {
+			plus, start = i, j
+		default:
 			i++
 			continue
 		}
-		digits, last, seps := 0, -1, 0
-		j := start
-		if isPlus(rs[j]) {
-			j++
-		}
-		for j < len(rs) {
-			r := rs[j]
-			if unicode.IsDigit(r) {
-				digits++
-				last = j
-				seps = 0
-				j++
-				continue
-			}
-			if phoneIgnorable(r) {
-				j++
-				continue
-			}
-			if phoneSep(r) {
-				seps++
-				if seps > 2 {
-					break
-				}
-				j++
-				continue
-			}
-			break
-		}
-		if digits >= MinPhoneDigits && last >= 0 {
-			end := last + 1
-			for end < len(rs) && phoneIgnorable(rs[end]) {
-				end++
-			}
-			out = append(out, cspan{start: start, end: end, kind: "phone"})
-			i = end
-			continue
-		}
-		// **ولا رجوعَ إلى الوراء** — ما بعد آخر خانةٍ يُفحص من جديد.
-		next := last + 1
-		if next <= start {
-			next = start + 1
-		}
+		groups, next := readDigitRun(rs, start)
+		out = append(out, runPhones(groups, plus)...)
 		i = next
 	}
 	return out
+}
+
+// readDigitRun **يقرأ مجموعاتِ الخانات من `start`** — ويردّ أين يُستأنف البحث:
+// **بعد آخر خانة**، فما بعدها يُفحص من جديد.
+func readDigitRun(rs []rune, start int) ([]dgroup, int) {
+	var groups []dgroup
+	join := ""
+	j := start
+	for {
+		gs := j
+		var d strings.Builder
+		for j < len(rs) && (unicode.IsDigit(rs[j]) || (j > gs && phoneIgnorable(rs[j]))) {
+			if unicode.IsDigit(rs[j]) {
+				d.WriteByte(byte('0' + digitValue(rs[j])))
+			}
+			j++
+		}
+		groups = append(groups, dgroup{start: gs, end: j, digits: d.String(), join: join})
+		k, n, marks := j, 0, 0
+		var mb strings.Builder
+		for k < len(rs) && phoneJoin(rs[k]) {
+			n++
+			if !unicode.IsSpace(rs[k]) {
+				marks++
+				mb.WriteRune(rs[k])
+			}
+			k++
+		}
+		if n == 0 || n > phoneJoinMax || marks > phoneJoinMaxMark || k >= len(rs) || !unicode.IsDigit(rs[k]) {
+			return groups, j
+		}
+		join = mb.String()
+		j = k
+	}
+}
+
+// runPhones **أطولُ قطعةٍ تشبه رقماً من كلّ موضع** — وما أُخفي لا يُعاد فحصُه.
+func runPhones(gs []dgroup, plus int) []cspan {
+	var out []cspan
+	for i := 0; i < len(gs); {
+		found := -1
+		for j := len(gs) - 1; j >= i; j-- {
+			if phoneLike(gs[i:j+1], plus >= 0 && i == 0) && !hasDate(gs[i:j+1]) {
+				found = j
+				break
+			}
+		}
+		if found < 0 {
+			i++
+			continue
+		}
+		s := gs[i].start
+		if i == 0 && plus >= 0 {
+			s = plus
+		}
+		out = append(out, cspan{start: s, end: gs[found].end, kind: "phone"})
+		i = found + 1
+	}
+	return out
+}
+
+// phoneLike **هل تشبه هذه المجموعاتُ رقمَ تواصل؟**
+//
+//	ملتصقةً بلا فاصل، أو بعد «+»         سبعُ خاناتٍ فأكثر (كما كانت)
+//	مفصولةً وتبدأ بـ«00»                  ١٠–١٥ خانة   «00963 991 234 567»
+//	مفصولةً وتبدأ بـ«0»                   ٩–١١ خانة    «099 123 4567» «022 123456»
+//	مفصولةً وتبدأ بـ«963»                 ١١–١٣ خانة   «963 991 234 567»
+//	مفصولةً وتبدأ بـ«9»                   تسعُ خانات   «991 234 567»
+//
+// **وما سوى ذلك مفصولاً عددٌ لا رقم**: «25000-30000» و«1 250 000» و«10.30-11.45».
+func phoneLike(gs []dgroup, plus bool) bool {
+	var b strings.Builder
+	for _, g := range gs {
+		b.WriteString(g.digits)
+	}
+	n := b.String()
+	d := len(n)
+	if len(gs) == 1 {
+		return d >= MinPhoneDigits
+	}
+	if plus {
+		return d >= MinPhoneDigits && d <= 15
+	}
+	switch {
+	case strings.HasPrefix(n, "00"):
+		return d >= 10 && d <= 15
+	case strings.HasPrefix(n, "0"):
+		return d >= 9 && d <= 11
+	case strings.HasPrefix(n, "963"):
+		return d >= 11 && d <= 13
+	case strings.HasPrefix(n, "9"):
+		return d == 9
+	}
+	return false
+}
+
+// hasDate **هل في القطعة تاريخٌ بسنةٍ كاملة؟** — «05.11.2026» و«2026/11/05»:
+// ثلاثُ مجموعاتٍ بفاصلٍ واحدٍ متكرّر، يومٌ (١–٣١) وشهرٌ (١–١٢) وسنةٌ تبدأ
+// بـ«19» أو «20». **والتاريخُ لا يُخفى** ولو تلاه ما يكمّله إلى عشر خانات
+// («05.11.2026 10:30»).
+func hasDate(gs []dgroup) bool {
+	for k := 0; k+2 < len(gs); k++ {
+		a, m, c := gs[k].digits, gs[k+1].digits, gs[k+2].digits
+		if gs[k+1].join == "" || gs[k+1].join != gs[k+2].join {
+			continue
+		}
+		if isDay(a) && isMonth(m) && isYear(c) || isYear(a) && isMonth(m) && isDay(c) {
+			return true
+		}
+	}
+	return false
+}
+
+func smallNum(s string, lo, hi int) bool {
+	if len(s) < 1 || len(s) > 2 {
+		return false
+	}
+	v := 0
+	for _, c := range s {
+		v = v*10 + int(c-'0')
+	}
+	return v >= lo && v <= hi
+}
+
+func isDay(s string) bool   { return smallNum(s, 1, 31) }
+func isMonth(s string) bool { return smallNum(s, 1, 12) }
+func isYear(s string) bool {
+	return len(s) == 4 && (strings.HasPrefix(s, "19") || strings.HasPrefix(s, "20"))
 }
 
 // ── الروابط ──────────────────────────────────────────────────────────
