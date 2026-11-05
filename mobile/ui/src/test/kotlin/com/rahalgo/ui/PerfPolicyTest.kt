@@ -292,9 +292,13 @@ class PerfPolicyTest {
             vm.contains("if (me.onShift && LocationPermission.granted(app))"),
         )
         assertTrue("**لا تقف عند إغلاقها**", vm.contains("LocationService.stop(app)"))
+        // **والخروجُ يمرّ بـ`finishLogout`** (منذ ورقة العدّاد ٢٠٢٦-١١-٠٥) — بعد الصورة أو بلاها.
+        val finish = vm.substringAfter("private fun finishLogout(", "").substringBefore("\n    }")
+        assertTrue("**تبقى بعد الخروج**", finish.contains("LocationService.stop("))
         assertTrue(
-            "**تبقى بعد الخروج**",
-            vm.contains("LocationService.stop(getApplication())"),
+            "**الخروجُ لا يمرّ بإيقافها**",
+            vm.substringAfter("fun logout(", "").substringBefore("private fun finishLogout(")
+                .contains("finishLogout(proceed)"),
         )
     }
 
