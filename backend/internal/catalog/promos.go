@@ -22,6 +22,7 @@ import (
 	"unicode"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/offers"
@@ -294,19 +295,47 @@ func resolveExpiry(in PromoInput) (*time.Time, error) {
 
 // CreatePromo ينشئ كوداً — **وفوق حدّ المحتوى يُنشأ موقوفاً بانتظار الماليّة.**
 func (s *Service) CreatePromo(ctx context.Context, actorID string, in PromoInput, ip string) (*PromoCode, error) {
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	p, after, err := s.CreatePromoTx(ctx, tx, actorID, in, ip)
+	if err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	after()
+	return p, nil
+}
+
+// PromoTx **ما يلزم `CreatePromoTx` من المعاملة** — `pgx.Tx` يحقّقه.
+type PromoTx interface {
+	pgxQuerier
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
+}
+
+// CreatePromoTx **كـ`CreatePromo` في معاملةٍ مُمرَّرة** — ويردّ `after` يكتب أثرَ التدقيق
+// **بعد أن يُثبّت المنادي** (كـ`orders.CreateTx`). **ولمن يحتاج القفلَ والإنشاءَ في وصلةٍ
+// واحدة** (مكافأةُ البلاغ: قفلٌ على البلاغ ثمّ فحصٌ ثمّ إنشاء — مراجعةُ الفرع ٢٠٢٦-١١-٠٥).
+// **وتعارضُ الكود يُفسد المعاملة** في بوستغرس: من أراد المحاولةَ ثانيةً مرّرها نقطةَ حفظ.
+func (s *Service) CreatePromoTx(ctx context.Context, tx PromoTx, actorID string, in PromoInput,
+	ip string) (*PromoCode, func(), error) {
 	if in.Code == nil || in.Kind == nil {
-		return nil, ErrPromoCode
+		return nil, nil, ErrPromoCode
 	}
 	code, err := normCode(*in.Code)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	exp, err := resolveExpiry(in)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if exp != nil && !exp.After(time.Now()) {
-		return nil, ErrPromoExpired
+		return nil, nil, ErrPromoExpired
 	}
 	st := promoState{kind: *in.Kind, maxUses: in.MaxUses, expiresAt: exp,
 		firstOnly:   in.FirstOrderOnly != nil && *in.FirstOrderOnly,
@@ -324,7 +353,7 @@ func (s *Service) CreatePromo(ctx context.Context, actorID string, in PromoInput
 		st.value = 0
 	}
 	if err := st.validate(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	pending := st.needsApproval()
 	active := in.Active == nil || *in.Active
@@ -334,11 +363,6 @@ func (s *Service) CreatePromo(ctx context.Context, actorID string, in PromoInput
 		approval = offers.ApprovalPending
 	}
 
-	tx, err := s.db.Begin(ctx)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
 	var id string
 	err = tx.QueryRow(ctx, `
 		INSERT INTO promo_codes (code, kind, value, max_discount, min_order, first_order_only,
@@ -348,29 +372,28 @@ func (s *Service) CreatePromo(ctx context.Context, actorID string, in PromoInput
 		code, st.kind, st.value, st.maxDiscount, st.minOrder, in.FirstOrderOnly, in.OncePerUser,
 		st.maxUses, st.expiresAt, active, approval, actorID).Scan(&id)
 	if isUniqueViolationCatalog(err) {
-		return nil, ErrCodeTaken
+		return nil, nil, ErrCodeTaken
 	}
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if pending {
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO promo_approvals (target_kind, target_id, amount, note, proposed_by)
 			VALUES ('promo', $1::uuid, $2, $3, $4::uuid)`,
 			id, st.maxCost(), st.approvalNote(code), actorID); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 	}
 	p, err := s.getPromo(ctx, tx, id)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	if err := tx.Commit(ctx); err != nil {
-		return nil, err
+	after := func() {
+		s.auditDetail(ctx, actorID, "admin.promo_create", "promo", p.ID, ip,
+			map[string]any{"code": code, "kind": st.kind, "value": st.value, "pending_approval": pending})
 	}
-	s.auditDetail(ctx, actorID, "admin.promo_create", "promo", p.ID, ip,
-		map[string]any{"code": code, "kind": st.kind, "value": st.value, "pending_approval": pending})
-	return p, nil
+	return p, after, nil
 }
 
 // UpdatePromo يعدّل الكود — **وتعديلُ المال فوق الحدّ يعيده إلى الماليّة.**

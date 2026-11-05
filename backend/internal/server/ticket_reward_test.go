@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/go-chi/chi/v5"
@@ -131,5 +132,66 @@ func TestTicketReward_FreeDeliveryCodeOnce(t *testing.T) {
 	}
 	if n != 1 {
 		t.Errorf("أكوادُ البلاغ: %d", n)
+	}
+}
+
+// TestTicketReward_ConcurrentClicksMakeOneCode **ضغطاتٌ متزامنةٌ تُخرج كوداً واحداً** (مراجعةُ
+// الفرع). كان الفحصُ ثمّ الإنشاءُ بلا قفل — **فيجد كلٌّ منها «لا كود» ويُنشئ كودَه.**
+func TestTicketReward_ConcurrentClicksMakeOneCode(t *testing.T) {
+	f := newDriverFixture(t, 1)
+	d := f.drivers[0]
+	f.srv.support = support.NewService(f.pool, f.srv.identity, f.srv.wallet)
+	f.srv.notify = notifications.New(f.pool, f.srv.hub, f.srv.logger)
+	ctx := context.Background()
+	staff := testdb.NewUser(t, f.pool, "admin")
+	orderID := f.problemOrderAt(t, "on_the_way", d)
+	if _, err := f.pool.Exec(ctx, `UPDATE orders SET status = 'delivered', delivered_at = now(), closed_at = now() WHERE id = $1`, orderID); err != nil {
+		t.Fatal(err)
+	}
+	var customer string
+	if err := f.pool.QueryRow(ctx, `SELECT customer_id::text FROM orders WHERE id = $1`, orderID).Scan(&customer); err != nil {
+		t.Fatal(err)
+	}
+	tk, err := f.srv.support.Complaint(ctx, customer, orderID, support.ReasonOffPlatform, "طلب رقمي")
+	if err != nil {
+		t.Fatalf("البلاغ: %v", err)
+	}
+	prefix := "RG" + strconv.FormatInt(tk.Number, 10) + "-"
+	t.Cleanup(func() {
+		_, _ = f.pool.Exec(context.Background(), `DELETE FROM promo_codes WHERE code LIKE $1 || '%'`, prefix)
+	})
+
+	const clicks = 8
+	codes := make([]int, clicks)
+	var wg sync.WaitGroup
+	start := make(chan struct{})
+	for i := 0; i < clicks; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			<-start
+			w := f.callWithCaps(f.srv.handleTicketRewardFreeDelivery, tk.ID, staff,
+				[]string{"support.manage", "offers.manage"})
+			codes[i] = w.Code
+		}(i)
+	}
+	close(start)
+	wg.Wait()
+	created := 0
+	for _, c := range codes {
+		switch c {
+		case http.StatusCreated:
+			created++
+		case http.StatusConflict:
+		default:
+			t.Errorf("ردٌّ غيرُ متوقَّع: %d", c)
+		}
+	}
+	var n int
+	if err := f.pool.QueryRow(ctx, `SELECT count(*) FROM promo_codes WHERE code LIKE $1 || '%'`, prefix).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != 1 || created != 1 {
+		t.Fatalf("**أكوادُ البلاغ %d وردودُ الإنشاء %d** — والمتوقّعُ واحدٌ لكلٍّ منهما (%v)", n, created, codes)
 	}
 }

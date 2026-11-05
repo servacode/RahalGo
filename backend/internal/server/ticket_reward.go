@@ -21,6 +21,7 @@ package server
 // ويُردّ الكودُ نفسُه. **ولا جدولَ ربطٍ جديد.**
 
 import (
+	"context"
 	"crypto/rand"
 	"errors"
 	"math/big"
@@ -96,8 +97,28 @@ func (s *Server) handleTicketRewardFreeDelivery(w http.ResponseWriter, r *http.R
 		return
 	}
 	prefix := rewardCodePrefix(t.Number)
+	// ══════════════════════════════════════════════════════════════════
+	// **وقفلٌ على البلاغ، والفحصُ والإنشاءُ تحته في وصلةٍ واحدة** (مراجعةُ الفرع)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **كان فحصاً ثمّ إنشاءً بلا قفل** — فضغطتان متتاليتان أو موظّفان معاً يجدان «لا كود»
+	// كلاهما **فيخرج كودان للبلاغ نفسِه.** **فقفلُ معاملةٍ باسم البلاغ**: الثاني ينتظر حتّى
+	// يُثبَّت الأوّل، **ثمّ يجد كودَه فيردّ ٤٠٩ به.** ويُفكّ بإنهاء المعاملة أيّاً كان المخرج.
+	//
+	// **والإنشاءُ في المعاملة نفسِها** (`CreatePromoTx`) لا بوصلةٍ ثانية — **من أمسك وصلةً
+	// وطلب أخرى والمنتظرون يمسكون الباقي جمد المسبح** (`XG-46`).
+	tx, err := s.pg.Begin(ctx)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	defer func() { _ = tx.Rollback(context.Background()) }()
+	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtext('ticket_reward:' || $1))`, t.ID); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	var existing string
-	err = s.pg.QueryRow(ctx,
+	err = tx.QueryRow(ctx,
 		`SELECT code FROM promo_codes WHERE code LIKE $1 || '%' ORDER BY created_at LIMIT 1`,
 		prefix).Scan(&existing)
 	if err == nil {
@@ -116,6 +137,7 @@ func (s *Server) handleTicketRewardFreeDelivery(w http.ResponseWriter, r *http.R
 	until := time.Now().In(damascusLoc()).AddDate(0, 0, rewardValidDays).Format("2006-01-02")
 	kind, maxUses, once, active := "free_delivery", 1, true, true
 	var promo *catalog.PromoCode
+	var audited func()
 	for attempt := 0; attempt < 3; attempt++ {
 		tail, err := randomRewardTail(5)
 		if err != nil {
@@ -123,12 +145,22 @@ func (s *Server) handleTicketRewardFreeDelivery(w http.ResponseWriter, r *http.R
 			return
 		}
 		code := prefix + tail
-		promo, err = s.catalog.CreatePromo(ctx, userIDFrom(r), catalog.PromoInput{
+		// **ونقطةُ حفظٍ لكلّ محاولة** — تعارضُ الكود يُفسد المعاملةَ كلَّها بلاها.
+		sp, err := tx.Begin(ctx)
+		if err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		promo, audited, err = s.catalog.CreatePromoTx(ctx, sp, userIDFrom(r), catalog.PromoInput{
 			Code: &code, Kind: &kind, MaxUses: &maxUses, OncePerUser: &once,
 			ExpiresOn: &until, Active: &active,
 		}, clientIP(r))
 		if errors.Is(err, catalog.ErrCodeTaken) {
+			_ = sp.Rollback(ctx)
 			continue
+		}
+		if err == nil {
+			err = sp.Commit(ctx)
 		}
 		if err != nil {
 			s.respondErr(w, err)
@@ -140,6 +172,12 @@ func (s *Server) handleTicketRewardFreeDelivery(w http.ResponseWriter, r *http.R
 		s.respondErr(w, catalog.ErrCodeTaken)
 		return
 	}
+	// **والكودُ يُثبَّت فيُفكّ القفل** — لا ينتظر الثاني ردَّ التذكرة والإشعار.
+	if err := tx.Commit(ctx); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	audited()
 
 	// **والردُّ على البلاغ نفسِه** — يقرؤه الزبونُ في شكواه. **وتذكرةٌ حُلّت لا يُكتب
 	// فيها** (`ticket_resolved`): فيصله الكودُ بالإشعار وحدَه.
