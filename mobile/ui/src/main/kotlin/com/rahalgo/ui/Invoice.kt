@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import com.rahalgo.design.Rahal
 import com.rahalgo.shared.merchant.OrderLine
@@ -144,12 +145,14 @@ fun InvoiceLines(lines: List<InvoiceLine>, modifier: Modifier = Modifier) {
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         invoiceOrder(lines).forEach { l ->
             Column(Modifier.fillMaxWidth()) {
-                InvoiceRow(l.text, l.amount?.let { money(it) }, bold = !l.returned)
-                // **ما رجّعه الزبونُ يُقال بكلمته** — لا يُقرأ صنفاً مجّانيّاً.
+                // **المرتجعُ باهتٌ مشطوبٌ كما في الويب** (`InvoiceLines.tsx`): يُشطب النصُّ وحدَه لا المبلغ.
+                InvoiceRow(l.text, l.amount?.let { money(it) }, bold = !l.returned, strikethrough = l.returned)
+                // **ما رجّعه الزبونُ يُقال بكلمته** — لا يُقرأ صنفاً مجّانيّاً. وكلمتُه عريضةٌ بلون الخطر كالويب.
                 if (l.returned) {
                     Text(
                         stringResource(R.string.inv_returned),
                         color = Rahal.colors.danger,
+                        fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
@@ -168,6 +171,7 @@ fun InvoiceLines(lines: List<InvoiceLine>, modifier: Modifier = Modifier) {
 /**
  * **سطرٌ واحد** — للأصناف وللمجموع والتوصيل والخصم والإجماليّ تحت الخطّ.
  * `strong` للإجماليّ، و`amount` فارغٌ: سطرٌ بلا مبلغ.
+ * `strikethrough` للسطر المرتجع: يُشطب **النصُّ وحدَه** كما في الويب، ويبقى المبلغُ كما هو.
  */
 @Composable
 fun InvoiceRow(
@@ -176,12 +180,14 @@ fun InvoiceRow(
     strong: Boolean = false,
     bold: Boolean = false,
     amountColor: Color = Color.Unspecified,
+    strikethrough: Boolean = false,
 ) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(
             label,
             color = if (strong || bold) Rahal.colors.ink else Rahal.colors.inkMuted,
             fontWeight = if (strong || bold) FontWeight.Bold else FontWeight.Normal,
+            textDecoration = if (strikethrough) TextDecoration.LineThrough else null,
             style = if (strong) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.bodySmall,
             modifier = Modifier.weight(1f),
         )
