@@ -203,13 +203,22 @@ func Overview(ctx context.Context, db DB, day string, alertKm float64, now time.
 	}
 	// اليوم الحالي: يدخل كل سائق على الدوام ولو بلا أثر بعد، ليرى المالك كل العاملين.
 	isToday := day == Today(now)
+	// **ومن عليه بلاغُ «طلب رقمي» أو رسالةٌ أُخفي منها رقمٌ في الثلاثين يوماً يدخل كذلك**
+	// (مراجعةُ الفرع، البند ٣) — ولو لم يعمل اليوم: **كان يغيب من بلّغ عنه الزبائنُ ثمّ قعد
+	// في بيته**، والمالكُ طلب العدَّ لكلّ سائق. **وبجدولين مرّةً لا بسؤالٍ لكلّ مستخدم.**
 	rows, err := db.Query(ctx, `
 		SELECT u.id::text, u.full_name, u.phone, u.on_shift
 		  FROM users u
 		 WHERE EXISTS (SELECT 1 FROM driver_trail t
 		                WHERE t.driver_id = u.id AND t.recorded_at >= $1 AND t.recorded_at < $2)
 		    OR ($3 AND u.on_shift AND EXISTS (SELECT 1 FROM user_roles ur
-		                WHERE ur.user_id = u.id AND ur.role_code = 'driver'))`, from, to, isToday)
+		                WHERE ur.user_id = u.id AND ur.role_code = 'driver'))
+		    OR u.id IN (SELECT tk.against_user_id FROM tickets tk
+		                 WHERE tk.reason = 'off_platform' AND tk.against_user_id IS NOT NULL
+		                   AND tk.created_at > $4)
+		    OR u.id IN (SELECT m.driver_id FROM order_messages m
+		                 WHERE m.contact_leak AND m.sender_role = 'driver' AND m.created_at > $4)`,
+		from, to, isToday, now.Add(-AntiPoachWindow))
 	if err != nil {
 		return nil, err
 	}

@@ -11,6 +11,8 @@ import (
 	"encoding/json"
 	"testing"
 	"time"
+
+	"github.com/servacode/rahalgo/backend/internal/drivermonitor"
 )
 
 func TestDriverMonitor_CountsOffPlatformReportsAndContactLeaks(t *testing.T) {
@@ -92,5 +94,70 @@ func TestDriverMonitor_CountsOffPlatformReportsAndContactLeaks(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("**السائقُ ليس في القائمة**: %s", res)
+	}
+}
+
+// TestDriverMonitor_FlaggedDriverWithoutTraceIsListed **سائقٌ عليه بلاغُ «طلب رقمي» أو رقمٌ
+// مخفيٌّ في الثلاثين يوماً يُرى ولو لم يعمل اليوم** (مراجعةُ الفرع). كانت القائمةُ سائقي اليوم
+// وحدَهم (أثرٌ أو دوام) **فيغيب من بلّغ عنه الزبائنُ ثمّ قعد في بيته** — والمالكُ طلب العدَّ
+// لكلّ سائق.
+func TestDriverMonitor_FlaggedDriverWithoutTraceIsListed(t *testing.T) {
+	h := New(t)
+	admin := h.NewUser("admin")
+	f := h.Factory()
+	reported, leaker := f.Driver(), f.Driver()
+	m := f.Merchant()
+	now := time.Now()
+	days := func(n int) time.Time { return now.Add(-time.Duration(n) * 24 * time.Hour) }
+	dmOrder(t, h, reported.ID, m.ID, days(5).Add(-time.Hour), days(5).Add(-30*time.Minute), days(5))
+	dmOrder(t, h, leaker.ID, m.ID, days(3).Add(-time.Hour), days(3).Add(-30*time.Minute), days(3))
+	orderOf := func(drv string) (id, cust string) {
+		t.Helper()
+		if err := h.Pool.QueryRow(ctxBG(),
+			`SELECT id::text, customer_id::text FROM orders WHERE driver_id = $1::uuid`, drv).Scan(&id, &cust); err != nil {
+			t.Fatal(err)
+		}
+		return id, cust
+	}
+	o1, c1 := orderOf(reported.ID)
+	if _, err := h.Pool.Exec(ctxBG(), `
+		INSERT INTO tickets (customer_id, order_id, subject, reason, created_by, opened_by_customer, against_user_id, created_at)
+		VALUES ($1::uuid, $2::uuid, 'بلاغ', 'off_platform', $1::uuid, true, $3::uuid, $4)`,
+		c1, o1, reported.ID, days(4)); err != nil {
+		t.Fatalf("بلاغ: %v", err)
+	}
+	o2, _ := orderOf(leaker.ID)
+	if _, err := h.Pool.Exec(ctxBG(), `
+		INSERT INTO order_messages (order_id, sender_id, sender_role, body, driver_id, flagged, contact_leak, created_at)
+		VALUES ($1::uuid, $2::uuid, 'driver', '***', $2::uuid, true, true, $3)`,
+		o2, leaker.ID, days(3)); err != nil {
+		t.Fatalf("رسالة: %v", err)
+	}
+
+	res := h.GET("/api/v1/admin/driver-monitor?day="+drivermonitor.Today(now), admin.Token)
+	if res.Code != 200 {
+		t.Fatalf("القائمة: %s", res)
+	}
+	var env struct {
+		Data struct {
+			Drivers []struct {
+				ID           string `json:"driver_id"`
+				OffPlatform  int    `json:"off_platform_reports"`
+				ContactLeaks int    `json:"contact_leaks"`
+			} `json:"drivers"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(res.Body, &env); err != nil {
+		t.Fatal(err)
+	}
+	got := map[string][2]int{}
+	for _, d := range env.Data.Drivers {
+		got[d.ID] = [2]int{d.OffPlatform, d.ContactLeaks}
+	}
+	if c, ok := got[reported.ID]; !ok || c[0] != 1 {
+		t.Errorf("**المُبلَّغُ عنه غائبٌ أو بلا عدّ**: موجود=%v · العدّ=%v", ok, c)
+	}
+	if c, ok := got[leaker.ID]; !ok || c[1] != 1 {
+		t.Errorf("**صاحبُ الرقم المخفيّ غائبٌ أو بلا عدّ**: موجود=%v · العدّ=%v", ok, c)
 	}
 }
