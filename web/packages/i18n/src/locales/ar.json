@@ -3556,7 +3556,8 @@
         "meters": "م",
         "versionCode": "رقم نسخة",
         "notification": "إشعار",
-        "item": "صنف"
+        "item": "صنف",
+        "landmark": "معلم"
       },
       "choices": {
         "percent": "نسبة مئوية",
@@ -4240,6 +4241,22 @@
           "label": "حد الكيلومترات بلا طلب باليوم",
           "hint": "السائق اللي بيمشي أكتر من هالرقم بلا طلب باليوم بيطلع معلَّم بأعلى القائمة. وصفر يعني بلا تعليم."
         },
+        "drivers.landmarks_daily_quota": {
+          "label": "عدد المعالم المطلوبة من كل سائق باليوم",
+          "hint": "كم معلم جديد لازم يبعت كل سائق بيوم المنصة (من ساعة فتح الدوام لتاني يوم). المكرّر ما بينحسب. وصفر بيطفي العدّ والتذكير."
+        },
+        "drivers.landmarks_duplicate_radius_m": {
+          "label": "مسافة المعلم المكرّر",
+          "hint": "معلم بنفس الاسم والنوع ضمن هالمسافة بيعتبر موجود من قبل: بينقال للسائق وما بينحسب."
+        },
+        "drivers.landmarks_reminder_hour": {
+          "label": "ساعة تذكير المعالم",
+          "hint": "بهالساعة بتوقيت دمشق، السائق اللي على الدوام وما كمّل معالمه بيوصله تذكير. مرة وحدة باليوم."
+        },
+        "drivers.landmarks_remind_on_shift_end": {
+          "label": "تذكير المعالم عند إغلاق الدوام",
+          "hint": "لما السائق يسكّر دوامه وما كمّل معالمه بيوصله نفس التذكير. مرة وحدة باليوم."
+        },
         "drivers.target_reward": {
           "label": "مكافأة بلوغ الهدف",
           "hint": "تدفع آليا عند إتمام الهدف، وتعرض على شاشة السائق قبل أن يبلغه. وصفر يعني بلا مكافأة آلية."
@@ -4745,6 +4762,7 @@
         "orders.timeouts": "المهل",
         "drivers.work": "العمل",
         "drivers.targets": "الأهداف والمكافآت",
+        "drivers.landmarks": "معالم الخريطة",
         "support.complaints": "الشكاوى",
         "support.payouts": "السحوبات",
         "messages.templates": "القوالب",
@@ -6522,7 +6540,78 @@
       "daysN": "{n} يوم",
       "empty": "ما في شوارع مرشحة",
       "mapUnavailable": "الخريطة مو شغالة هلق",
-      "sections": { "streets": "شوارع", "places": "أماكن وأسامي", "oneway": "اتجاه واحد", "speeds": "السرعة الحقيقية" },
+      "sections": {
+        "streets": "شوارع",
+        "places": "أماكن وأسامي",
+        "landmarks": "معالم السائقين",
+        "oneway": "اتجاه واحد",
+        "speeds": "السرعة الحقيقية"
+      },
+      "landmarks": {
+        "day": "اليوم",
+        "loadFailed": "تعذّر تحميل معالم اليوم",
+        "tiles": {
+          "sent": "أرسلوا",
+          "new": "جديد",
+          "duplicate": "مكرّر",
+          "pending": "بانتظار",
+          "approved": "موافق",
+          "rejected": "مرفوض",
+          "completed": "كمّلوا الـ{quota}",
+          "completedValue": "{n} من {of} سائق"
+        },
+        "driversTitle": "السائقين بهاليوم",
+        "cols": {
+          "driver": "السائق",
+          "completed": "كمّل؟",
+          "sent": "أرسل",
+          "new": "جديد",
+          "duplicate": "مكرّر",
+          "pending": "بانتظار",
+          "approved": "موافق",
+          "rejected": "مرفوض",
+          "reminder": "التذكير"
+        },
+        "done": "✓ كمّل",
+        "progress": "{n} من {quota}",
+        "quotaOff": "العدّ مطفي",
+        "noName": "سائق بلا اسم",
+        "workedNoSend": "اشتغل وما بعت",
+        "remindedHour": "بالساعة {time}",
+        "remindedShiftEnd": "عند الإغلاق {time}",
+        "emptyDrivers": "ما في سائق اشتغل أو بعت معالم بهاليوم",
+        "queueTitle": "المعالم",
+        "total": "{n} معلم",
+        "status": {
+          "pending": "بانتظار الموافقة",
+          "approved": "موافَق عليها",
+          "rejected": "مرفوضة",
+          "duplicate": "مكرّرة"
+        },
+        "dayOnly": "هاليوم بس",
+        "emptyQueue": "ما في معالم هون",
+        "q": {
+          "name": "المعلم",
+          "driver": "السائق",
+          "at": "الوقت",
+          "location": "الموقع",
+          "dup": "مكرّر مع"
+        },
+        "fixedFromPing": "الموقع مصحّح من الخادم",
+        "unverified": "بلا تحقق",
+        "verified": "موقع متحقق",
+        "dupOf": "«{name}» على بعد {d} م",
+        "dupSource": {
+          "map": "على الخريطة",
+          "store": "متجر عنّا",
+          "suggestion": "سائق تاني",
+          "self": "هو نفسه"
+        },
+        "onMap": "على الخريطة",
+        "loadMore": "عرض المزيد",
+        "viewTable": "جدول",
+        "viewCards": "بطاقات"
+      },
       "places": {
         "sources": {
           "all": "الكل",

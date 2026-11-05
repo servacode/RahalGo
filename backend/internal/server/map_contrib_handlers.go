@@ -365,6 +365,9 @@ var landmarkKinds = map[string]string{
 }
 
 // handleDriverLandmark **«أضف معلم»** — من موقعه، وبانتظار الإدارة. POST /driver/landmarks
+//
+// **والمكرَّرُ يُقال ولا يُعدّ، والجديدُ يُعدّ بيوم المنصّة** (قرارُ المالك ٢٠٢٦-١١-٠٥) —
+// `landmark_quota.go`.
 func (s *Server) handleDriverLandmark(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[struct {
 		Name string  `json:"name"`
@@ -386,28 +389,56 @@ func (s *Server) handleDriverLandmark(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !validPoint(req.Lat, req.Lng) {
-		s.respondErr(w, httpx.NewError(http.StatusUnprocessableEntity, "bad_point", "errors.validation"))
+		// **ونصٌّ يقول ما يفعل** — كان «لم يُحدَّد موقع التوصيل»، وليس في المعلم توصيل.
+		s.respondErr(w, errLandmarkBadPoint())
 		return
 	}
-	var id int64
-	if err := s.pg.QueryRow(r.Context(), `
-		INSERT INTO landmark_suggestions (name, kind, point, suggested_by)
-		VALUES ($1, $2, ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography, $5::uuid) RETURNING id`,
-		name, req.Kind, req.Lng, req.Lat, userIDFrom(r)).Scan(&id); err != nil {
+	out, err := s.submitLandmark(r.Context(), userIDFrom(r),
+		landmarkSubmit{Name: name, Kind: req.Kind, Lat: req.Lat, Lng: req.Lng}, time.Now())
+	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
+	// **واللوحةُ تتحدّث في الحالين** — عدُّ اليوم يعدّ المكرَّرَ أيضاً.
 	s.touch("landmark", "ops")
-	httpx.JSON(w, http.StatusOK, map[string]any{"id": id, "status": "pending"})
+	if out.Dup != nil {
+		s.respondErr(w, out.existsError())
+		return
+	}
+	// **والحقولُ الجديدةُ تتجاهلها 0.7.0** — تفكّ الردَّ `JsonObject` وتعرض نصَّها الثابت.
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"id": out.ID, "status": "pending", "counted": true,
+		"today": out.Today, "quota": out.Quota, "day": out.Day,
+		"notice": out.notice(), "point_from_ping": out.FromPing,
+	})
 }
 
-// handleAdminLandmarkSuggestions **ما ينتظر الموافقة.** GET /admin/landmark-suggestions
+// handleAdminLandmarkSuggestions **اقتراحاتُ السائقين** — افتراضُها «بانتظار الموافقة» أقدمُها
+// أوّلاً كما كانت (خريطةُ العمليّات تقرؤها بلا مُعامِل)، **والمكرَّرُ لا يظهر فيها.** وتقبل
+// `status` (pending · approved · rejected · duplicate · all) و`day` و`driver` و`limit`/`offset`
+// (قرارُ المالك ٢٠٢٦-١١-٠٥، `landmark_admin.go`). GET /admin/landmark-suggestions
 func (s *Server) handleAdminLandmarkSuggestions(w http.ResponseWriter, r *http.Request) {
+	f, ok := parseLandmarkSuggestionsQuery(r)
+	if !ok {
+		s.respondErr(w, errValidation)
+		return
+	}
+	// **والطابورُ أقدمُه أوّلاً، وما سواه أحدثُه.**
+	order := "l.created_at, l.id"
+	if f.status != "pending" {
+		order = "l.created_at DESC, l.id DESC"
+	}
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT l.id, l.name, l.kind, ST_Y(l.point::geometry), ST_X(l.point::geometry), l.created_at,
-		       COALESCE(u.full_name, '')
+		       COALESCE(u.full_name, ''), COALESCE(l.suggested_by::text, ''), l.status, l.platform_day::text,
+		       l.point_from_ping, l.ping_gap_m IS NOT NULL, l.dup_source, l.dup_name, l.dup_distance_m,
+		       count(*) OVER ()
 		  FROM landmark_suggestions l LEFT JOIN users u ON u.id = l.suggested_by
-		 WHERE l.status = 'pending' ORDER BY l.created_at LIMIT 500`)
+		 WHERE ($1 = 'all' OR l.status = $1)
+		   AND ($2 = '' OR l.platform_day = NULLIF($2, '')::date)
+		   AND ($3 = '' OR l.suggested_by = NULLIF($3, '')::uuid)
+		 ORDER BY `+order+`
+		 LIMIT $4 OFFSET $5`, f.status, f.day, f.driver, f.limit, f.offset)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -421,17 +452,35 @@ func (s *Server) handleAdminLandmarkSuggestions(w http.ResponseWriter, r *http.R
 		Lng       float64   `json:"lng"`
 		CreatedAt time.Time `json:"created_at"`
 		By        string    `json:"suggested_by_name"`
+		ByID      string    `json:"suggested_by"`
+		Status    string    `json:"status"`
+		Day       string    `json:"platform_day"`
+		// FromPing **حُفظ على نبضة السائق** — نقطةُ التطبيق كانت قديمة.
+		FromPing bool `json:"point_from_ping"`
+		// Verified **قيست نقطتُه بنبضةٍ حديثة** — وغيابُها «بلا تحقّق» (خارجَ الدوام).
+		Verified  bool    `json:"verified"`
+		DupSource *string `json:"dup_source"`
+		DupName   *string `json:"dup_name"`
+		DupDistM  *int    `json:"dup_distance_m"`
 	}
 	out := []sugg{}
+	total := 0
 	for rows.Next() {
 		var x sugg
-		if err := rows.Scan(&x.ID, &x.Name, &x.Kind, &x.Lat, &x.Lng, &x.CreatedAt, &x.By); err != nil {
+		if err := rows.Scan(&x.ID, &x.Name, &x.Kind, &x.Lat, &x.Lng, &x.CreatedAt, &x.By, &x.ByID,
+			&x.Status, &x.Day, &x.FromPing, &x.Verified, &x.DupSource, &x.DupName, &x.DupDistM, &total); err != nil {
 			s.respondErr(w, err)
 			return
 		}
 		out = append(out, x)
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"suggestions": out, "count": len(out)})
+	if err := rows.Err(); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"suggestions": out, "count": len(out), "total": total, "has_more": f.offset+len(out) < total,
+	})
 }
 
 // handleAdminDecideLandmark **موافقةٌ أو رفض** — والموافَقُ يدخل «قرب المعلم» فوراً.

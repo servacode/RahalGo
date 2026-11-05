@@ -1178,6 +1178,23 @@ var Catalog = []Def{
 	{Key: "drivers.monitor_km_alert", Group: GroupDrivers, Kind: KindInt,
 		Min: 0, Max: 1000, Unit: "km", Default: 10},
 
+	// ══════════════════════════════════════════════════════════════════
+	// **معالمُ الخريطة: خمسةٌ جديدةٌ كلَّ يوم** (قرارُ المالك ٢٠٢٦-١١-٠٥) — `server/landmark_quota.go`
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// «لازم كل سائق باليوم يرسل اقل شي 5 معالم، واذا ارسلو شي قديم طالعه». **وصفرٌ يطفئ
+	// العدَّ والتذكير** — و«موجود من قبل» يبقى. **والمكرَّرُ** معلمٌ بالاسم والنوع نفسِهما
+	// ضمن المسافة: على الخريطة، أو متجرٌ لنا، أو أرسله سائقٌ (هو أو غيرُه) ولم يُرفض.
+	{Key: "drivers.landmarks_daily_quota", Group: GroupDrivers, Kind: KindInt,
+		Min: 0, Max: 50, Unit: "landmark", Default: 5},
+	{Key: "drivers.landmarks_duplicate_radius_m", Group: GroupDrivers, Kind: KindInt,
+		Min: 20, Max: 300, Unit: "meter", Default: 100},
+	// **والتذكيرُ** (`server/landmark_remind.go`): بساعةٍ ثابتةٍ بدمشق لمن على الدوام ولم يكمل،
+	// **وعند إغلاق دوامه بنفسه** — مرّةً لكلٍّ باليوم.
+	{Key: "drivers.landmarks_reminder_hour", Group: GroupDrivers, Kind: KindInt,
+		Min: 0, Max: 23, Unit: "hour", Default: 18},
+	{Key: "drivers.landmarks_remind_on_shift_end", Group: GroupDrivers, Kind: KindBool, Default: true},
+
 	// **ومتوسّطُ سرعة السائق — منه يُحسب الوقتُ المتوقَّع.**
 	//
 	// (جردُ ٢٠٢٦-٠٨-٠٩: البطاقةُ تقول «٤٠٠ متر» ولا تقول كم يأخذ.)

@@ -479,6 +479,9 @@ var adminPolicy = []Rule{
 	{"DELETE", "/ops-map/road-closures/{id}", SettingsGeneralManage},
 	{"GET", "/ops-map/landmark-suggestions", OrdersRead},
 	{"POST", "/ops-map/landmark-suggestions/{id}/decide", SettingsGeneralManage},
+	// **ومعالمُ السائقين بيومها وشارتُها** (قرارُ المالك ٢٠٢٦-١١-٠٥) — قراءةُ تشغيلٍ كأختها.
+	{"GET", "/ops-map/landmark-suggestions/count", OrdersRead},
+	{"GET", "/ops-map/landmarks/daily", OrdersRead},
 	// **الخريطةُ من حركة السائقين** (٢٠٢٦-١١-٠٣) — تُقرأ بـ`orders.read` كأخواتها، والقرارُ والتشغيلُ والتصديرُ بالتغطية.
 	{"GET", "/ops-map/street-candidates", OrdersRead},
 	{"GET", "/ops-map/street-candidates/summary", OrdersRead},

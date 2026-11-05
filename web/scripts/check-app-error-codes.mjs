@@ -100,6 +100,8 @@ const SERVER_MOBILE = new Set([
   "closure_reason",
   "landmark_name",
   "landmark_kind",
+  // **«موجود من قبل»** (قرارُ المالك ٢٠٢٦-١١-٠٥) — تطبيقُ السائق، ونصُّه في `notice`.
+  "landmark_exists",
   "no_dropoff_suggestion",
   // **«اطلب الموقع من المستلم»** — حدّا تطبيق المتجر (٢٠٢٦-١٠-٢٩).
   "location_request_too_soon",

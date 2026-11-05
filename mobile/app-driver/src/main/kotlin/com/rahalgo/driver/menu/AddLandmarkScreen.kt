@@ -49,10 +49,16 @@ internal val LandmarkKinds = listOf(
  *
  * **من مكانه الآن** — يقف عند المعلم ويكتب اسمَه ونوعَه. **ولا يظهر لأحدٍ قبل موافقة
  * الإدارة**، ثمّ يدخل «قرب المعلم» في طلبات السائقين.
+ *
+ * **وسطرُ «معالمك اليوم: ٢ من ٥»** (قرارُ المالك ٢٠٢٦-١١-٠٥) — والمكرَّرُ لا يُعدّ، يقوله الخادم.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun AddLandmarkScreen(onSend: (name: String, kind: String) -> Unit, sending: Boolean = false) {
+fun AddLandmarkScreen(
+    onSend: (name: String, kind: String) -> Unit,
+    sending: Boolean = false,
+    today: com.rahalgo.shared.driver.LandmarkToday? = null,
+) {
     var name by rememberSaveable { mutableStateOf("") }
     var kind by rememberSaveable { mutableStateOf("") }
     Column(
@@ -63,6 +69,14 @@ fun AddLandmarkScreen(onSend: (name: String, kind: String) -> Unit, sending: Boo
     ) {
         // **والعنوانُ رأسٌ بسهمٍ فوق الصفحة** — ويبقى سطرُ التعليمة لأنّه طريقةُ الاستعمال.
         ScreenTitle("", stringResource(R.string.landmark_hint))
+        // **والعدُّ المطفأُ لا سطرَ له.**
+        if (today != null && today.quota > 0) {
+            Text(
+                text = stringResource(R.string.landmark_today, today.today, today.quota),
+                color = if (today.today >= today.quota) Rahal.colors.brand else Rahal.colors.ink,
+                fontWeight = FontWeight.Bold,
+            )
+        }
         OutlinedTextField(
             value = name,
             onValueChange = { if (it.length <= 80) name = it },

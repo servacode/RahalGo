@@ -636,6 +636,7 @@
     <string name="landmark_name">اسم المعلم</string>
     <string name="landmark_send">أضف المعلم</string>
     <string name="landmark_sent">وصل المعلم — سيظهر بعد موافقة الإدارة</string>
+    <string name="landmark_today">معالمك اليوم: %1$d من %2$d</string>
     <string name="lm_mosque">جامع</string>
     <string name="lm_pharmacy">صيدلية</string>
     <string name="lm_school">مدرسة</string>

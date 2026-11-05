@@ -9,9 +9,12 @@
  * وشوارعُ مرشَّحة (نقاطٌ بعيدةٌ عن كلّ طريقٍ معروفٍ وتتكرّر بأكثر من يوم).
  * **والمدير يوافق على الخطّ أو يرفضه**، والموافَقُ عليه يُصدَّر ملفّاً تقرؤه إعادةُ بناء الخريطة.
  * والكشف كلُّه في الخادم (`internal/maplearn`) — هنا عرضٌ وقرار.
+ *
+ * **وقسمُ «معالم السائقين»** (قرارُ المالك ٢٠٢٦-١١-٠٥) — ما يرسلونه من «أضف معلماً» وعدُّ يومهم،
+ * **ويُفتح من رابط ملخّص الصبح** (`?section=landmarks&day=`).
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { getMessages, defaultLocale, fmtNum, errorText } from "@rahalgo/i18n";
 import {
@@ -27,6 +30,7 @@ import {
   IconRoute,
   IconCheck,
   IconClose,
+  useLiveData,
 } from "@rahalgo/ui";
 import { PageHero } from "@/components/admin/PageHero";
 import { Tile } from "@/components/admin/DashParts";
@@ -35,6 +39,7 @@ import { useCanCall } from "@/lib/policy";
 import type { FeatureCollection, LayerSpec } from "@/components/admin/opsmap/canvas";
 import { mapIcons, toneColor } from "@/components/admin/opsmap/palette";
 import { PlacesPanel } from "./PlacesPanel";
+import { LandmarksPanel } from "./LandmarksPanel";
 import { OnewayPanel, SpeedsPanel } from "./RoadsPanel";
 
 const OpsMapCanvas = dynamic(
@@ -46,7 +51,8 @@ const m = getMessages(defaultLocale);
 const T = m.admin.mapLearning;
 
 type Status = "pending" | "approved" | "rejected";
-type Section = "streets" | "places" | "oneway" | "speeds";
+type Section = "streets" | "places" | "landmarks" | "oneway" | "speeds";
+const SECTIONS: Section[] = ["streets", "places", "landmarks", "oneway", "speeds"];
 
 interface Summary {
   points: number;
@@ -131,6 +137,19 @@ function CandidateRow({
 export default function MapLearningPage() {
   const canCall = useCanCall();
   const canManage = canCall("POST", "/ops-map/street-candidates/run");
+  const canDecideLandmark = canCall("POST", "/ops-map/landmark-suggestions/{id}/decide");
+  // **وعددُ المعالم بانتظار الموافقة على زرّ قسمها** (مراجعة ٢٠٢٦-١١-٠٥) — كانت شارةُ القائمة
+  // الجانبيّة تفتح الصفحةَ على «شوارع» وزرُّ المعالم ثالثٌ بلا عدد. **والقراءةُ بصلاحيّة القائمة.**
+  const canSeeLandmarks = canCall("GET", "/ops-map/landmark-suggestions");
+  const { data: landmarkCount } = useLiveData<{ pending: number }>(
+    () =>
+      canSeeLandmarks
+        ? api<{ pending: number }>("/api/v1/admin/ops-map/landmark-suggestions/count")
+        : Promise.resolve({ pending: 0 }),
+    ["landmark"],
+    [canSeeLandmarks],
+  );
+  const landmarkPending = landmarkCount?.pending ?? 0;
 
   const [status, setStatus] = useState<Status>("pending");
   const [days, setDays] = useState(30);
@@ -150,6 +169,25 @@ export default function MapLearningPage() {
   const [roadsTick, setRoadsTick] = useState(0);
   const [roadsRunning, setRoadsRunning] = useState(false);
   const [stores, setStores] = useState<Array<{ id: string; name: string; lat: number; lng: number }>>([]);
+  const [landmarkDay, setLandmarkDay] = useState<string | undefined>(undefined);
+
+  // **رابطُ ملخّص الصبح يفتح قسمَ المعالم على يومه** — `?section=landmarks&day=`.
+  // **ومن جاء بلا قسمٍ والمعالمُ تنتظر فُتح على المعالم** — ما لم يختر قسماً بيده.
+  const sectionChosen = useRef(false);
+  const pickSection = useCallback((s: Section) => {
+    sectionChosen.current = true;
+    setSection(s);
+  }, []);
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    const asked = sp.get("section");
+    if (asked && (SECTIONS as string[]).includes(asked)) pickSection(asked as Section);
+    const d = sp.get("day");
+    if (d && /^\d{4}-\d{2}-\d{2}$/.test(d)) setLandmarkDay(d);
+  }, [pickSection]);
+  useEffect(() => {
+    if (landmarkPending > 0 && !sectionChosen.current) pickSection("landmarks");
+  }, [landmarkPending, pickSection]);
 
   useEffect(() => {
     let alive = true;
@@ -382,7 +420,7 @@ export default function MapLearningPage() {
                 </>
               )}
             </>
-          ) : canManage && section === "places" ? (
+          ) : section === "landmarks" ? undefined : canManage && section === "places" ? (
             <Button variant="secondary" size="sm" disabled={busy || placesRunning} onClick={runPlaces}>
               {placesRunning ? T.places.running : T.places.run}
             </Button>
@@ -403,14 +441,21 @@ export default function MapLearningPage() {
       />
       {actionErr && <Alert tone="error">{actionErr}</Alert>}
       <div className="mb-3 flex gap-2">
-        {(["streets", "places", "oneway", "speeds"] as Section[]).map((s) => (
-          <Button key={s} size="sm" variant={section === s ? "primary" : "secondary"} onClick={() => setSection(s)}>
+        {SECTIONS.map((s) => (
+          <Button key={s} size="sm" variant={section === s ? "primary" : "secondary"} onClick={() => pickSection(s)}>
             {T.sections[s]}
+            {s === "landmarks" && landmarkPending > 0 && (
+              <Badge variant="danger" className="ms-1">
+                {fmtNum(landmarkPending)}
+              </Badge>
+            )}
           </Button>
         ))}
       </div>
       {section === "places" ? (
         <PlacesPanel canManage={canManage} runSignal={placesTick} />
+      ) : section === "landmarks" ? (
+        <LandmarksPanel key={landmarkDay ?? ""} canDecide={canDecideLandmark} initialDay={landmarkDay} />
       ) : section === "oneway" ? (
         <OnewayPanel canManage={canManage} runSignal={roadsTick} stores={stores} />
       ) : section === "speeds" ? (

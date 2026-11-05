@@ -65,6 +65,16 @@ class ApiErrorsTest {
     }
 
     /**
+     * **«موجود من قبل» له نصُّه** (قرارُ المالك ٢٠٢٦-١١-٠٥) — والخادمُ يقول ما هو وكم بقي في
+     * `notice`، **وهذا نصُّه إن غاب** لا «تعذّر إتمام الطلب».
+     */
+    @Test
+    fun landmarkExistsHasItsOwnText() {
+        assertEquals(R.string.err_landmark_exists, resolveErrorRes("landmark_exists"))
+        assertNotEquals(R.string.err_internal, resolveErrorRes("landmark_exists"))
+    }
+
+    /**
      * **أسبابُ رفض العرض تُقال بأسمائها** — `OFFER-EXP`، ٢٠٢٦-٠٩-٣٠.
      *
      * **رآه المالك**: عرضٌ بالنسبة وآخرُ بالمبلغ على صنفٍ حجزه عرضٌ منتهٍ،

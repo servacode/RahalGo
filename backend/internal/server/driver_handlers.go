@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/cashbox"
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
@@ -259,15 +260,27 @@ func (s *Server) handleDriverShift(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if _, err := s.pg.Exec(r.Context(), `
+	// **وما كان قبل الضغطة يُقرأ معها** — تذكيرُ المعالم لمن سكّر دوامَه فعلاً لا لمن ضغط مرّتين.
+	var wasOn bool
+	var startedAt *time.Time
+	err = s.pg.QueryRow(r.Context(), `
+		WITH old AS (SELECT on_shift, shift_started_at FROM users WHERE id = $1)
 		UPDATE users SET on_shift = $2,
 			shift_started_at = CASE WHEN $2 THEN now() ELSE NULL END,
 			updated_at = now()
-		WHERE id = $1`, userIDFrom(r), req.On); err != nil {
+		WHERE id = $1
+		RETURNING (SELECT on_shift FROM old), (SELECT shift_started_at FROM old)`,
+		userIDFrom(r), req.On).Scan(&wasOn, &startedAt)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		s.respondErr(w, err)
 		return
 	}
 	s.touch("order", "ops") // العمليات ترى من يعمل الآن
+	// **«لم تكتمل المعالم الـ٥ الخاصة بك بعد» عند الإغلاق** (قرارُ المالك ٢٠٢٦-١١-٠٥) — بيده
+	// وحدَها: إغلاقُ الإدارة والطارئ والحادث وتركُ الطلب لا يُذكّر. `landmark_remind.go`.
+	if !req.On && wasOn {
+		s.remindLandmarksOnShiftEnd(r.Context(), userIDFrom(r), startedAt, time.Now())
+	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"on_shift": req.On})
 }
 

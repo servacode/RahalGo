@@ -1488,8 +1488,16 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     var askEntranceFor by mutableStateOf<String?>(null)
         private set
 
-    private fun hereNow(): Pair<Double, Double>? =
-        navSession.lastGoodFix?.let { it.lat to it.lng } ?: LastPoint.value?.let { it.lat to it.lng }
+    /**
+     * **مكانُه الآن** — قراءةُ الملاحة ما دامت شغّالة، وإلّا موضعُ الدوام إن كان حديثاً (`pickHere`).
+     * **كانت قراءةُ الملاحة تُؤخذ وهي مطفأة** فيُحفظ المعلمُ بين طلبين عند آخر زبون (٢٠٢٦-١١-٠٥).
+     */
+    private fun hereNow(): Pair<Double, Double>? = pickHere(
+        following = following,
+        nav = navSession.lastGoodFix?.let { it.lat to it.lng },
+        last = LastPoint.value,
+        nowElapsedMs = android.os.SystemClock.elapsedRealtime(),
+    )
 
     /**
      * **وموضعٌ جديدٌ من النظام إن لم يكن عندنا** — خارجَ الورديّة لا يُتتبَّع السائق (شُهد
@@ -1509,6 +1517,43 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             }
         }?.let { it.latitude to it.longitude }
     }.getOrNull()
+
+    /**
+     * **موضعُ المعلم يُقاس الآن** (مراجعة ٢٠٢٦-١١-٠٥، `pickLandmarkHere`) — `LastPoint` وقتُ
+     * وصولٍ لا قياس، وبين الطلبات تُجمَّع القراءاتُ حتّى دقيقتين. **فالملاحةُ ما دامت شغّالة،
+     * وإلّا قراءةٌ عمرُها عشرُ ثوانٍ فأقلّ في مهلة عشر ثوانٍ، وإلّا آخرُ موضعٍ حديث.**
+     */
+    @android.annotation.SuppressLint("MissingPermission")
+    private suspend fun landmarkHere(): Pair<Double, Double>? {
+        val nav = navSession.lastGoodFix?.let { it.lat to it.lng }
+        val fresh = if (following && nav != null) null else runCatching {
+            kotlinx.coroutines.withTimeoutOrNull(HERE_FRESH_TIMEOUT_MS) {
+                kotlinx.coroutines.suspendCancellableCoroutine<android.location.Location?> { cont ->
+                    val cancel = com.google.android.gms.tasks.CancellationTokenSource()
+                    cont.invokeOnCancellation { cancel.cancel() }
+                    val req = com.google.android.gms.location.CurrentLocationRequest.Builder()
+                        .setPriority(com.google.android.gms.location.Priority.PRIORITY_HIGH_ACCURACY)
+                        .setMaxUpdateAgeMillis(HERE_FRESH_MAX_AGE_MS)
+                        .setDurationMillis(HERE_FRESH_TIMEOUT_MS)
+                        .build()
+                    com.google.android.gms.location.LocationServices.getFusedLocationProviderClient(getApplication<Application>())
+                        .getCurrentLocation(req, cancel.token)
+                        .addOnCompleteListener { t ->
+                            if (cont.isActive) cont.resumeWith(Result.success(if (t.isSuccessful) t.result else null))
+                        }
+                }
+            }?.takeIf {
+                measuredJustNow(it.elapsedRealtimeNanos, android.os.SystemClock.elapsedRealtimeNanos())
+            }?.let { it.latitude to it.longitude }
+        }.getOrNull()
+        return pickLandmarkHere(
+            following = following,
+            nav = nav,
+            fresh = fresh,
+            last = LastPoint.value,
+            nowElapsedMs = android.os.SystemClock.elapsedRealtime(),
+        )
+    }
 
     fun saveEntrance() {
         val id = askEntranceFor ?: return
@@ -1571,19 +1616,43 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     var landmarkSending by mutableStateOf(false)
         private set
 
+    /**
+     * **معالمُه اليوم من المطلوب** (قرارُ المالك ٢٠٢٦-١١-٠٥: «كل سائق باليوم اقل شي 5 معالم») —
+     * سطرٌ فوق صفحة «أضف معلماً»، **ويُحدَّث من ردّ كلّ إرسال.** وفارغٌ قبل أن يُقرأ.
+     */
+    var landmarkToday by mutableStateOf<com.rahalgo.shared.driver.LandmarkToday?>(null)
+        private set
+
+    /** **يُقرأ عند فتح الصفحة** — وتعذُّرُه لا يمنع الإرسال: السطرُ يغيب وحسب. */
+    fun loadLandmarkToday() {
+        viewModelScope.launch {
+            try {
+                landmarkToday = backend.driver.landmarksToday()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                android.util.Log.w("RahalGo/معالم", "تعذّر عدُّ معالم اليوم", e)
+            }
+        }
+    }
+
     fun suggestLandmark(name: String, kind: String, done: () -> Unit) {
         if (landmarkSending) return
         landmarkSending = true
         val app = getApplication<Application>()
         viewModelScope.launch {
             try {
-                val at = hereFresh()
+                val at = landmarkHere()
                 if (at == null) {
                     com.rahalgo.ui.Flash.fail(app.getString(R.string.map_need_location))
                     return@launch
                 }
-                backend.driver.suggestLandmark(name.trim(), kind, at.first, at.second)
-                com.rahalgo.ui.Flash.ok(app.getString(R.string.landmark_sent))
+                val r = backend.driver.suggestLandmark(name.trim(), kind, at.first, at.second)
+                if (r.quota > 0 || r.today > 0) {
+                    landmarkToday = com.rahalgo.shared.driver.LandmarkToday(today = r.today, quota = r.quota)
+                }
+                // **ونصُّ الخادم يقول «انحسب ✓ — معالمك اليوم: ٣ من ٥»** — وغيابُه يقع على نصّنا.
+                com.rahalgo.ui.Flash.ok(r.notice.trim().ifEmpty { app.getString(R.string.landmark_sent) })
                 done()
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e

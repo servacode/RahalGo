@@ -86,6 +86,7 @@
     <string name="err_entrance_too_far">أنت بعيد جداً عن نقطة الزبون — لم يُحفظ الباب</string>
     <string name="err_landmark_name">اكتب اسم المعلم (حرفين على الأقل)</string>
     <string name="err_landmark_kind">اختر نوع المعلم</string>
+    <string name="err_landmark_exists">هالمعلم موجود من قبل — ما انحسب</string>
     <string name="err_no_dropoff_suggestion">لا يوجد تعديل مقترح لهذا العنوان</string>
     <string name="err_live_request_stage">لا يمكنك طلب موقع الزبون في هذه المرحلة من الطلب</string>
     <string name="err_rate_limited">محاولات كثيرة — انتظر قليلا</string>
