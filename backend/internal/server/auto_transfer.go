@@ -94,11 +94,22 @@ func (s *Server) autoTransfer(ctx context.Context, orderID, actorID string) {
 	// **وحالُ البوت نصفُ القناة، والعنوانُ نصفُها الآخر.**
 	//
 	// **فصار كالبوت غيرِ الجاهز**: يبقى `pending` بيد المكتب.
+	// ══════════════════════════════════════════════════════════════
+	// **والطلبُ بعدّة محطّات: هاتفُ كلّ متجرٍ قبل قبول أيّ شيء** (D8 · C12)
+	// ══════════════════════════════════════════════════════════════
+	//
+	// **متجرٌ واحدٌ بلا رقمٍ يُبقي الطلبَ كلَّه «بانتظار» عند المكتب** — كقاعدة `R24`
+	// لمتجرٍ واحد. **ثمّ يُقبل كلُّ قسم** (G1) **وتُرسل لكلّ متجرٍ تذكرتُه**، **والإنزالُ
+	// بعد آخرها** (`MarkPartSent`).
+	if !selfManage && s.orders.StopsOf(ctx, orderID) > 1 {
+		s.autoTransferParts(ctx, orderID, actorID)
+		return
+	}
 	var msg *orderMessage
 	var ph merchantPhones
 	if !selfManage {
 		var err error
-		msg, ph, err = s.loadOrderMessage(ctx, orderID)
+		msg, ph, err = s.loadOrderMessage(ctx, orderID, "")
 		if err != nil || strings.TrimSpace(ph.WhatsApp) == "" {
 			s.logger.Info("التحويلُ التلقائيّ: لا هاتفَ للمتجر — يبقى بيد المكتب",
 				"order", orderID)
@@ -157,3 +168,52 @@ func (s *Server) autoTransfer(ctx context.Context, orderID, actorID string) {
 
 // autoTransferNote يُقرأ في سجلّ الطلب — **ومن رأى «مقبول» بلا فاعلٍ يسأل من.**
 const autoTransferNote = "تحويلٌ تلقائيٌّ — طلبٌ بلغ العتبة"
+
+// autoTransferParts **التحويلُ التلقائيُّ لطلبٍ بعدّة محطّات** (D8 · C12).
+//
+// **هاتفُ كلّ متجرٍ يُقرأ قبل القبول** — ومتجرٌ واحدٌ بلا رقمٍ يُبقي الطلبَ «بانتظار» بيد
+// المكتب (`R24`). **ثمّ يُقبل كلُّ قسمٍ في معاملةٍ واحدة** (G1)، **ولكلّ متجرٍ تذكرتُه
+// ببنوده وحدَها** (G-07)، **والإنزالُ بعد آخر تذكرة** (`MarkPartSent` → `maybeDispatchParts`).
+// **وتذكرةٌ سقطت تبقى لقسمها** — المكتبُ يراها ويعيدها، والطلبُ لا يُنزَل قبلها.
+func (s *Server) autoTransferParts(ctx context.Context, orderID, actorID string) {
+	type ticket struct {
+		merchantID string
+		msg        *orderMessage
+		ph         merchantPhones
+	}
+	var tickets []ticket
+	for _, mid := range s.orders.PartStores(ctx, orderID) {
+		msg, ph, err := s.loadOrderMessage(ctx, orderID, mid)
+		if err != nil || strings.TrimSpace(ph.WhatsApp) == "" {
+			s.logger.Info("التحويلُ التلقائيّ: متجرٌ في الطلب بلا هاتف — يبقى بيد المكتب",
+				"order", orderID, "merchant", mid)
+			return
+		}
+		tickets = append(tickets, ticket{mid, msg, ph})
+	}
+	if len(tickets) == 0 {
+		return
+	}
+	if _, err := s.orders.Transition(ctx, actorID, []string{"ops"},
+		orderID, "accepted", autoTransferNote); err != nil {
+		s.logger.Warn("التحويلُ التلقائيّ: تعذّر القبول", "order", orderID, "error", err)
+		return
+	}
+	tpl := s.settings.GetString(ctx, "whatsapp.order_template")
+	for _, tk := range tickets {
+		if err := s.merchant.SendText(ctx, tk.ph.WhatsApp, buildMerchantMessage(tpl, tk.msg)); err != nil {
+			s.logger.Error("التحويلُ التلقائيّ: تعذّر إبلاغُ متجر", "order", orderID,
+				"merchant", tk.merchantID, "error", err)
+			if e := s.orders.NoteTransferFailure(ctx, orderID, actorID, err.Error()); e != nil {
+				s.logger.Error("التحويلُ التلقائيّ: تعذّر كتبُ أثر الفشل", "order", orderID, "error", e)
+			}
+			continue
+		}
+		if _, err := s.orders.MarkPartSent(ctx, "", orderID, tk.merchantID, "whatsapp"); err != nil {
+			s.logger.Error("التحويلُ التلقائيّ: تعذّر وسمُ إرسال قسم", "order", orderID,
+				"merchant", tk.merchantID, "error", err)
+		}
+		s.touch("order", "merchant:"+tk.merchantID)
+	}
+	s.touch("order", "ops")
+}

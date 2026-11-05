@@ -54,7 +54,7 @@ func TestOrderPhones_ShiftNumberOnWhatsApp(t *testing.T) {
 		t.Fatalf("الحفظُ ردّ %d", code)
 	}
 	order := f.dispatchingOrder(t, 20_000, 5_000)
-	_, ph, err := f.srv.loadOrderMessage(ctx, order)
+	_, ph, err := f.srv.loadOrderMessage(ctx, order, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -64,7 +64,7 @@ func TestOrderPhones_ShiftNumberOnWhatsApp(t *testing.T) {
 	if code := put(`{"mode":"full"}`); code != http.StatusOK {
 		t.Fatalf("العودةُ إلى دوامٍ كامل ردّت %d", code)
 	}
-	if _, ph, _ := f.srv.loadOrderMessage(ctx, order); ph.Shift != "" || ph.WhatsApp == "+963922222222" {
+	if _, ph, _ := f.srv.loadOrderMessage(ctx, order, ""); ph.Shift != "" || ph.WhatsApp == "+963922222222" {
 		t.Fatalf("الدوامُ الكاملُ بقي على رقم المسائيّ: %+v", ph)
 	}
 }

@@ -137,9 +137,18 @@ const orderShiftSQL = `CASE WHEN m.order_phone_mode = 'split' THEN
 	ELSE '' END`
 
 // loadOrderMessage يجمع ما يدخل الرسالة — ولا شيء غيره.
-func (s *Server) loadOrderMessage(ctx context.Context, orderID string) (*orderMessage, merchantPhones, error) {
+//
+// **و`merchantID` غيرُ الفارغ تذكرةُ قسمٍ في طلبٍ بعدّة محطّات** (G-07) — **بنودُ ذلك المتجر
+// وحدَها وهواتفُه هو**؛ وملاحظةُ الزبون العامّة تصل كلَّ متجر (Q13). **والفارغُ كما كان.**
+func (s *Server) loadOrderMessage(ctx context.Context, orderID, merchantID string) (*orderMessage, merchantPhones, error) {
 	var msg orderMessage
 	var ph merchantPhones
+	storeJoin := `JOIN merchants m ON m.id = COALESCE(o.merchant_id, o.partner_merchant_id)`
+	args := []any{orderID}
+	if merchantID != "" {
+		storeJoin = `JOIN merchants m ON m.id = $2::uuid`
+		args = append(args, merchantID)
+	}
 	if err := s.pg.QueryRow(ctx, `
 		SELECT o.number, o.notes,
 		       CASE WHEN o.kind = 'custom' THEN COALESCE(o.custom_request, '') ELSE '' END,
@@ -157,19 +166,23 @@ func (s *Server) loadOrderMessage(ctx context.Context, orderID string) (*orderMe
 		FROM orders o
 		-- **والمتجرُ التابعُ متجرُ الرسالة في المشتريات** (قرارُ المالك ٢٠٢٦-١٠-١٥) — والخاصُّ
 		-- بلا متجرٍ تابعٍ لا رسالةَ له: لا صفَّ فيُردّ «غير موجود».
-		JOIN merchants m ON m.id = COALESCE(o.merchant_id, o.partner_merchant_id)
+		`+storeJoin+`
 		LEFT JOIN users ou ON ou.id = m.owner_user_id
-		WHERE o.id = $1`, orderID).
+		WHERE o.id = $1`, args...).
 		Scan(&msg.Number, &msg.Notes, &msg.Request, &msg.Custom, &ph.SMS, &ph.WhatsApp, &ph.Shift); err != nil {
 		return nil, merchantPhones{}, err
 	}
 
+	itemsWhere := `oi.order_id = $1`
+	if merchantID != "" {
+		itemsWhere = `oi.order_id = $1 AND oi.merchant_id = $2::uuid`
+	}
 	rows, err := s.pg.Query(ctx, `
 		SELECT oi.name, oi.qty, oi.note,
 		       COALESCE((SELECT array_agg(x->>'name' ORDER BY ord)
 		                 FROM jsonb_array_elements(COALESCE(oi.options, '[]'::jsonb))
 		                      WITH ORDINALITY AS t(x, ord)), '{}')
-		FROM order_items oi WHERE oi.order_id = $1 ORDER BY oi.id`, orderID)
+		FROM order_items oi WHERE `+itemsWhere+` ORDER BY oi.id`, args...)
 	if err != nil {
 		return nil, merchantPhones{}, err
 	}
@@ -206,7 +219,17 @@ func waLink(phone, text string) string {
 //
 // **ما يُرسَل باسم المنصة يُقرأ قبل أن يُرسَل.**
 func (s *Server) handleOrderMessagePreview(w http.ResponseWriter, r *http.Request) {
-	msg, ph, err := s.loadOrderMessage(r.Context(), chi.URLParam(r, "id"))
+	orderID := chi.URLParam(r, "id")
+	// **والطلبُ بعدّة محطّات: تذكرةُ قسمٍ بعينه** (`?merchant_id=`) — وبلاه أوّلُ قسمٍ لم يُبلَّغ.
+	partID := ""
+	if s.orders.StopsOf(r.Context(), orderID) > 1 {
+		partID = s.orders.NextUnsentPart(r.Context(), orderID, r.URL.Query().Get("merchant_id"))
+		if partID == "" {
+			s.respondErr(w, httpx.ErrNotFound)
+			return
+		}
+	}
+	msg, ph, err := s.loadOrderMessage(r.Context(), orderID, partID)
 	if err != nil {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
@@ -235,13 +258,18 @@ func (s *Server) handleOrderMessagePreview(w http.ResponseWriter, r *http.Reques
 		onShift = -1 // **مجهولٌ لا صفر** — وصفرٌ كاذبٌ يوقف العمل بلا سبب
 	}
 
-	httpx.JSON(w, http.StatusOK, map[string]any{
+	out := map[string]any{
 		"text":             text,
 		"phone":            ph.WhatsApp,
 		"shift":            ph.Shift,
 		"wa_link":          waLink(ph.WhatsApp, text),
 		"drivers_on_shift": onShift,
-	})
+	}
+	// **وأيُّ متجرٍ هذه تذكرتُه** — للطلب بعدّة محطّات وحدَه.
+	if partID != "" {
+		out["merchant_id"] = partID
+	}
+	httpx.JSON(w, http.StatusOK, out)
 }
 
 // handleSendOrderToMerchant يُبلّغ المتجرَ بطلبه — بقناتين لا واحدة.
@@ -267,6 +295,8 @@ func (s *Server) handleSendOrderToMerchant(w http.ResponseWriter, r *http.Reques
 	orderID := chi.URLParam(r, "id")
 	req, err := decode[struct {
 		Channel string `json:"channel"`
+		// MerchantID **قسمُ أيّ متجر** — للطلب بعدّة محطّات (G-07)؛ وبلاه أوّلُ قسمٍ لم يُبلَّغ.
+		MerchantID string `json:"merchant_id"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -288,7 +318,15 @@ func (s *Server) handleSendOrderToMerchant(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	msg, ph, err := s.loadOrderMessage(r.Context(), orderID)
+	partID := ""
+	if s.orders.StopsOf(r.Context(), orderID) > 1 {
+		partID = s.orders.NextUnsentPart(r.Context(), orderID, req.MerchantID)
+		if partID == "" {
+			s.respondErr(w, httpx.ErrNotFound)
+			return
+		}
+	}
+	msg, ph, err := s.loadOrderMessage(r.Context(), orderID, partID)
 	if err != nil {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
@@ -296,6 +334,26 @@ func (s *Server) handleSendOrderToMerchant(w http.ResponseWriter, r *http.Reques
 	phone := ph.WhatsApp
 	if phone == "" && !manual {
 		s.respondErr(w, errNoMerchantPhone)
+		return
+	}
+	// ══════════════════════════════════════════════════════════════════
+	// **والطلبُ بعدّة محطّات: تذكرةٌ لكلّ متجر — والإنزالُ بعد آخرها** (G-07 · D5)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **يُوسَم قسمُ هذا المتجر وحدَه** (`MarkPartSent`) — **والطلبُ «أُبلغ» حين يُبلَّغ كلُّ
+	// قسمٍ حيّ**، وعندها يُنزَل (`maybeDispatchParts`) لا عند أوّل تذكرة.
+	if partID != "" {
+		s.audit(r, "ops.order_notify", "order", orderID, map[string]any{
+			"phone": phone, "number": msg.Number, "channel": req.Channel, "merchant_id": partID,
+		})
+		if _, err := s.orders.MarkPartSent(r.Context(), userIDFrom(r), orderID, partID, req.Channel); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		s.touch("order", "ops", "merchant:"+partID)
+		httpx.JSON(w, http.StatusOK, map[string]any{
+			"sent": true, "phone": phone, "channel": req.Channel, "merchant_id": partID,
+		})
 		return
 	}
 
