@@ -80,12 +80,25 @@ type Input struct {
 	// Now يقصّ الطلبات المفتوحة. فارغ = لا قصّ.
 	Now time.Time
 	Cfg Config
+	// Road أمتار الطريق المطابق (`road.go`، `LoadRoad`). **nil = متل قبل بالضبط**: خطوط مستقيمة.
+	Road *Road
 }
 
 // Part جزء من المسار بتصنيف واحد (للخريطة).
+//
+// **وبينقسم كمان** لما يتغيّر نوع الطريق أو الطلبات اللي معه — فطريق طلب واحد بيتلوّن لحاله.
 type Part struct {
 	Class  Class        `json:"class"`
 	Coords [][2]float64 `json:"coords"` // [lat, lng]
+	// Road ع الطريق المطابق (خط صلب). Inferred الشارع مقدَّر (منقّط). Straight المطابق حاول وما
+	// زبط ⇒ خط مستقيم (متقطّع). Pending لسّا ما انطابق. **وكلّن فاضيين = متل قبل.**
+	Road     bool `json:"road,omitempty"`
+	Inferred bool `json:"inferred,omitempty"`
+	Straight bool `json:"straight,omitempty"`
+	Pending  bool `json:"pending,omitempty"`
+	// From و To وقت أول وآخر نقطة بالجزء.
+	From time.Time `json:"from"`
+	To   time.Time `json:"to"`
 }
 
 // Event سطر من قصة اليوم.
@@ -126,6 +139,14 @@ type Summary struct {
 	Mocked         int     `json:"mocked"`
 	Points         int     `json:"points"`
 	StoppedMinutes int     `json:"stopped_minutes"`
+	// KmStraight نفس المقاطع المحسوبة بخط مستقيم — للمقارنة كم أسبوع بعد ما تشتغل المطابقة.
+	KmStraight float64 `json:"km_straight"`
+	// RoadShare حصّة الأمتار المحسوبة ع الطريق المطابق (٠–١).
+	RoadShare float64 `json:"road_share"`
+	// InferredKm منها: الشارع مقدَّر (نقطتين أبعد من ٥٠٠ م).
+	InferredKm float64 `json:"inferred_km"`
+	// PendingKm محسوبة بخط مستقيم لأنها لسّا ما انطابقت — **بس والمطابقة شغّالة** ⇒ الرقم تقريبي.
+	PendingKm float64 `json:"pending_km"`
 }
 
 // Result نتيجة تحليل سائق ليوم.
@@ -231,7 +252,7 @@ func Analyze(in Input) Result {
 	pts := Clean(raw, cfg)
 
 	// ── الوقفات ──
-	longStops := findStops(pts, cfg.StopMin, cfg.StopRadiusM, cfg.GapAfter)
+	longStops := longStops(pts, cfg)
 	inStop := make([]int, len(pts))
 	for i := range inStop {
 		inStop[i] = -1
@@ -243,8 +264,28 @@ func Analyze(in Input) Result {
 		res.Summary.StoppedMinutes += int(s.dur() / time.Minute)
 	}
 
-	// ── المقاطع: تصنيف + كيلومترات + مسار ──
+	// ── المقاطع: تصنيف + كيلومترات (ع الطريق إن انطابق) + مسار ──
+	// windowsAt مفتاح الطلبات اللي مع السائق بلحظة — الجزء بينقسم لما يتغيّر.
+	windowsAt := func(t time.Time) string {
+		key := ""
+		for _, w := range in.Windows {
+			start := w.AssignedAt
+			if start == nil {
+				start = w.PickedUpAt
+			}
+			if start == nil || t.Before(*start) {
+				continue
+			}
+			if w.EndAt != nil && t.After(*w.EndAt) {
+				continue
+			}
+			key += w.OrderID + ","
+		}
+		return key
+	}
 	var cur *Part
+	curKey := ""
+	var roadM, countedM float64
 	for k := 1; k < len(pts); k++ {
 		a, b := pts[k-1], pts[k]
 		cls := ClassNoOrder
@@ -261,7 +302,12 @@ func Analyze(in Input) Result {
 				cls = ClassToPickup
 			}
 		}
-		d := Dist(a, b)
+		counted := cls == ClassWithOrder || cls == ClassToPickup || cls == ClassNoOrder
+		seg := RoadSeg{Kind: SegNone, M: Dist(a, b), Line: [][2]float64{{a.Lat, a.Lng}, {b.Lat, b.Lng}}}
+		if counted && in.Road != nil {
+			seg = in.Road.Segment(a, b, cfg)
+		}
+		d := seg.M
 		switch cls {
 		case ClassWithOrder:
 			res.Summary.KmWithOrder += d / 1000
@@ -270,13 +316,44 @@ func Analyze(in Input) Result {
 		case ClassNoOrder:
 			res.Summary.KmNoOrder += d / 1000
 		}
-		if cur == nil || cur.Class != cls {
-			res.Path = append(res.Path, Part{Class: cls, Coords: [][2]float64{{a.Lat, a.Lng}}})
-			cur = &res.Path[len(res.Path)-1]
+		if counted {
+			res.Summary.KmStraight += Dist(a, b) / 1000
+			countedM += d
+			switch seg.Kind {
+			case SegRoad:
+				roadM += d
+			case SegInferred:
+				roadM += d
+				res.Summary.InferredKm += d / 1000
+			case SegPending:
+				res.Summary.PendingKm += d / 1000
+			}
 		}
-		cur.Coords = append(cur.Coords, [2]float64{b.Lat, b.Lng})
+		part := Part{Class: cls, Road: seg.Kind == SegRoad || seg.Kind == SegInferred,
+			Inferred: seg.Kind == SegInferred, Straight: seg.Kind == SegStraight, Pending: seg.Kind == SegPending}
+		key := ""
+		if counted {
+			key = windowsAt(a.At.Add(b.At.Sub(a.At) / 2))
+		}
+		if cur == nil || cur.Class != part.Class || cur.Road != part.Road || cur.Inferred != part.Inferred ||
+			cur.Straight != part.Straight || cur.Pending != part.Pending || curKey != key {
+			part.From, part.To = a.At, b.At
+			part.Coords = [][2]float64{seg.Line[0]}
+			res.Path = append(res.Path, part)
+			cur = &res.Path[len(res.Path)-1]
+			curKey = key
+		}
+		line := seg.Line
+		if n := len(cur.Coords); n > 0 && len(line) > 0 && cur.Coords[n-1] == line[0] {
+			line = line[1:]
+		}
+		cur.Coords = append(cur.Coords, line...)
+		cur.To = b.At
 	}
 	res.Summary.KmTotal = res.Summary.KmWithOrder + res.Summary.KmToPickup + res.Summary.KmNoOrder
+	if countedM > 0 {
+		res.Summary.RoadShare = roadM / countedM
+	}
 
 	// ── وقفات عند متاجر بلا طلب + نمط «طلب من ورا ضهري» ──
 	short := findStops(pts, cfg.PatternDropMin, cfg.StopRadiusM, cfg.GapAfter)
@@ -354,6 +431,24 @@ func (r Result) FlaggedGaps() int {
 		}
 	}
 	return n
+}
+
+// longStops الوقفات الطويلة اللي بيصنّفها `Analyze` «واقف» — على نقاط منظّفة (المزيَّفة ضمنها).
+func longStops(pts []Point, cfg Config) []stop {
+	return findStops(pts, cfg.StopMin, cfg.StopRadiusM, cfg.GapAfter)
+}
+
+// LongStops **نفس الوقفات الطويلة اللي بيشوفها `Analyze`** — على نقاط منظّفة بـ`Clean` ومرتّبة،
+// **والمزيَّفة ضمنها** (بعكس `FindStops`). المطابق بيقطّع عندها، فالاتنين بيشوفوا نفس الوقفات.
+func LongStops(pts []Point, cfg Config) []Stop {
+	if cfg.GapAfter == 0 {
+		cfg = DefaultConfig()
+	}
+	var out []Stop
+	for _, s := range longStops(pts, cfg) {
+		out = append(out, Stop{Start: s.start, End: s.end, Lat: s.lat, Lng: s.lng})
+	}
+	return out
 }
 
 // findStops وقفات: نقاط متتالية ضمن `radius` من أولها لمدة ≥ minDur بلا انقطاع.

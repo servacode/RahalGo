@@ -38,9 +38,10 @@ func (s *Server) roadFinder() maplearn.RoadFinder {
 	return maplearn.NewRoadFinder(s.cfg.RoutingEngine, s.cfg.OSRMURL, s.cfg.ValhallaURL)
 }
 
-// RunMapLearning **جولةٌ يوميّة** — الأولى بعد ساعةٍ من الإقلاع لا عنده.
+// RunMapLearning **جولةٌ يوميّة الساعة ٣ الفجر بتوقيت دمشق** (طلب المالك ٢٠٢٦-١١-٠٥، خطّة مسار السائق):
+// كانت بعد ساعةٍ من كلّ إقلاع — يعني وقتَ الذروة بعد ترقيةٍ نهاريّة، وخيطُ Valhalla الوحيد للملاحة.
 func (s *Server) RunMapLearning(ctx context.Context, interval time.Duration) {
-	timer := time.NewTimer(time.Hour)
+	timer := time.NewTimer(time.Until(nextDailyAt(time.Now(), 3)))
 	defer timer.Stop()
 	for {
 		select {

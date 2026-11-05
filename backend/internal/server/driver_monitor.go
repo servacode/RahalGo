@@ -17,6 +17,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/drivermonitor"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/roadmatch"
 )
 
 var errMonitorDriver = httpx.NewError(http.StatusNotFound, "not_found", "errors.not_found")
@@ -32,16 +33,39 @@ func trailPoints(pts []trackPoint) []drivermonitor.Point {
 }
 
 // recordTrail يكتب الأثر اليومي ويقلّم القديم مرة بالساعة. لا يُسقط شيئا.
+//
+// **ونقاط متأخرة** (دفعة الطابور بعد انقطاع) أقدم من مؤشّر المطابق ⇒ القطع من عندها بتنعاد
+// (`roadmatch.MarkDirty` — تحديث واحد للدفعة). النقطة الحيّة أحدث من ٣٠ ثانية ما بتحتاجه:
+// المطابق ما بيقرأ آخر ٣٠ ثانية أصلاً.
 func (s *Server) recordTrail(r *http.Request, driverID string, pts []drivermonitor.Point) {
 	ctx := r.Context()
-	if _, err := drivermonitor.Record(ctx, s.pg, driverID, pts); err != nil {
+	n, err := drivermonitor.Record(ctx, s.pg, driverID, pts)
+	if err != nil {
 		s.logger.Warn("مراقبة السائقين: تعذّر كتابةُ الأثر", "driver", driverID, "error", err)
 		return
 	}
-	if drivermonitor.PruneDue(time.Now()) {
+	now := time.Now()
+	if n > 0 {
+		oldest := pts[0].At
+		for _, p := range pts {
+			if p.At.Before(oldest) {
+				oldest = p.At
+			}
+		}
+		if oldest.Before(now.Add(-roadmatch.DefaultOptions().LiveLag)) {
+			if err := roadmatch.MarkDirty(ctx, s.pg, driverID, oldest); err != nil {
+				s.logger.Warn("مطابقة الطريق: تعذّر تعليمُ النقاط المتأخرة", "driver", driverID, "error", err)
+			}
+		}
+	}
+	if drivermonitor.PruneDue(now) {
 		days := int(s.settings.GetInt(ctx, "drivers.trail_retention_days"))
 		if _, err := drivermonitor.Prune(ctx, s.pg, days); err != nil {
 			s.logger.Warn("مراقبة السائقين: تعذّر التقليم", "error", err)
+		}
+		// قطع الطريق بتعيش قد الأثر بالضبط (قرار المالك: طريق الطلب بينمحى مع الأثر، والأرقام بتضل).
+		if _, err := roadmatch.Prune(ctx, s.pg, days); err != nil {
+			s.logger.Warn("مطابقة الطريق: تعذّر التقليم", "error", err)
 		}
 	}
 }
@@ -66,7 +90,7 @@ func (s *Server) handleDriverMonitorList(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	alert := float64(s.settings.GetInt(r.Context(), "drivers.monitor_km_alert"))
-	rows, err := drivermonitor.Overview(r.Context(), s.pg, day, alert, time.Now())
+	rows, err := drivermonitor.Overview(r.Context(), s.pg, day, alert, time.Now(), s.roadMatchOn(r.Context()))
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -104,7 +128,7 @@ func (s *Server) handleDriverMonitorDay(w http.ResponseWriter, r *http.Request) 
 		s.respondErr(w, err)
 		return
 	}
-	res, wins, err := drivermonitor.DriverDay(r.Context(), s.pg, id, day, stores, time.Now())
+	res, wins, err := drivermonitor.DriverDay(r.Context(), s.pg, id, day, stores, time.Now(), s.roadMatchOn(r.Context()))
 	if err != nil {
 		s.respondErr(w, err)
 		return

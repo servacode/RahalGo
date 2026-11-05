@@ -111,13 +111,46 @@ func LoadWindows(ctx context.Context, db DB, driverID string, from, to time.Time
 	return out, rows.Err()
 }
 
-// DriverDay تحليل سائق ليوم دمشقيّ.
-func DriverDay(ctx context.Context, db DB, driverID, day string, stores []Store, now time.Time) (Result, []Window, error) {
-	from, to, err := DayBounds(day)
-	if err != nil {
-		return Result{}, nil, err
-	}
+// ══════════════════════════════════════════════════════════════════════
+// **`Measure` — دالة المسافة الوحدة** (طلب المالك ٢٠٢٦-١١-٠٥: «الطريق يحسب حسب طريق السائق»)
+// ══════════════════════════════════════════════════════════════════════
+//
+// كل كيلومتر بالمنصّة بيطلع من هون: صفحة المراقبة (اليوم والقائمة)، وطريق السائق ورا الماركر
+// بخريطة العمليات، **وبعدين** كيلومترات الطلب والدوام وعدّاد السائق (خطّة العدّاد).
+// بتقرأ الأثر وقطع الطريق المخزّنة بالمدى وبتمرّرهن ع `Analyze` — ع الطريق وين انطابق،
+// وخط مستقيم بغير مكان.
+
+// Measure **مسافة سائق ومساره بين وقتين** [from, to): أثره + قطع الطريق المخزّنة + `Analyze`.
+//
+//   - `wins` نوافذ الطلبات (تصنيف بطلب/للاستلام/بلا طلب) — فاضية = كله «بلا طلب».
+//   - `stores` للوقفات عند المتاجر والنمط — ممكن nil.
+//   - `now` بيقصّ الطلبات المفتوحة (بيتقصّ لـ`to` إذا بعده).
+//   - `roadOn` = `drivers.road_match_enabled`: بس وقتها في «لسّا عم تنحسب» (`PendingKm`).
+//
+// الكيلومترات بـ`Result.Summary` (`KmTotal` و`KmWithOrder` و`KmToPickup` و`KmNoOrder`، و`KmStraight`
+// و`RoadShare` و`InferredKm` و`PendingKm`)، والخط بـ`Result.Path`.
+func Measure(ctx context.Context, db DB, driverID string, from, to time.Time, wins []Window, stores []Store,
+	now time.Time, roadOn bool) (Result, error) {
 	pts, err := LoadPoints(ctx, db, driverID, from, to)
+	if err != nil {
+		return Result{}, err
+	}
+	road, err := LoadRoad(ctx, db, driverID, from, to, roadOn)
+	if err != nil {
+		return Result{}, err
+	}
+	in := Input{Points: pts, Windows: wins, Stores: stores, Cfg: DefaultConfig(), Road: road}
+	if now.Before(to) {
+		in.Now = now
+	} else {
+		in.Now = to
+	}
+	return Analyze(in), nil
+}
+
+// DriverDay تحليل سائق ليوم دمشقيّ — `Measure` على حدود اليوم.
+func DriverDay(ctx context.Context, db DB, driverID, day string, stores []Store, now time.Time, roadOn bool) (Result, []Window, error) {
+	from, to, err := DayBounds(day)
 	if err != nil {
 		return Result{}, nil, err
 	}
@@ -126,13 +159,8 @@ func DriverDay(ctx context.Context, db DB, driverID, day string, stores []Store,
 	if err != nil {
 		return Result{}, nil, err
 	}
-	in := Input{Points: pts, Windows: wins, Stores: stores, Cfg: DefaultConfig()}
-	if now.Before(to) {
-		in.Now = now
-	} else {
-		in.Now = to
-	}
-	return Analyze(in), wins, nil
+	res, err := Measure(ctx, db, driverID, from, to, wins, stores, now, roadOn)
+	return res, wins, err
 }
 
 // Row سطر سائق في قائمة اليوم.
@@ -149,7 +177,7 @@ type Row struct {
 }
 
 // Overview سائقو اليوم الذين لهم أثر، الأخطر أولا.
-func Overview(ctx context.Context, db DB, day string, alertKm float64, now time.Time) ([]Row, error) {
+func Overview(ctx context.Context, db DB, day string, alertKm float64, now time.Time, roadOn bool) ([]Row, error) {
 	from, to, err := DayBounds(day)
 	if err != nil {
 		return nil, err
@@ -187,7 +215,7 @@ func Overview(ctx context.Context, db DB, day string, alertKm float64, now time.
 		return nil, err
 	}
 	for i := range out {
-		res, wins, err := DriverDay(ctx, db, out[i].DriverID, day, stores, now)
+		res, wins, err := DriverDay(ctx, db, out[i].DriverID, day, stores, now, roadOn)
 		if err != nil {
 			return nil, err
 		}
