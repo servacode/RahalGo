@@ -45,6 +45,9 @@ type AuditLine struct {
 	// كلمة، **والسطرُ الموسومُ يحسمها في ثانية.**
 	Flagged  bool   `json:"flagged"`
 	FlagWord string `json:"flag_word,omitempty"`
+	// ContactLeak **أُخفي منه رقمُ جوّالٍ أو واتساب** (قرارُ المالك ٢٠٢٦-١١-٠٥) —
+	// والأصلُ في `FlagWord`. **وللإدارة وحدَها.**
+	ContactLeak bool `json:"contact_leak,omitempty"`
 	// **حديثُ أيِّ سائقٍ هذا السطر** (الهجرة ٠١٧٢) — فتقرأ الإدارةُ كلَّ سائقٍ في
 	// قسمه لا خليطاً واحداً (بلاغُ المالك ٢٠٢٦-١٠-٠٢). وفارغٌ: سطرٌ قبل أيّ سائق.
 	DriverID   string `json:"driver_id,omitempty"`
@@ -76,7 +79,7 @@ func (s *Service) Audit(ctx context.Context, orderID string) (*AuditThread, erro
 	rows, err := s.db.Query(ctx, `
 		SELECT x.id::text, x.body, x.sender_role, COALESCE(u.full_name, ''),
 		       x.created_at, x.read_at, x.flagged, COALESCE(x.flag_word, ''),
-		       COALESCE(x.driver_id::text, ''), COALESCE(td.full_name, '')
+		       COALESCE(x.driver_id::text, ''), COALESCE(td.full_name, ''), x.contact_leak
 		FROM order_messages x
 		LEFT JOIN users u ON u.id = x.sender_id
 		LEFT JOIN users td ON td.id = x.driver_id
@@ -89,7 +92,7 @@ func (s *Service) Audit(ctx context.Context, orderID string) (*AuditThread, erro
 	for rows.Next() {
 		var l AuditLine
 		if err := rows.Scan(&l.ID, &l.Body, &l.Role, &l.Sender, &l.CreatedAt, &l.ReadAt,
-			&l.Flagged, &l.FlagWord, &l.DriverID, &l.DriverName); err != nil {
+			&l.Flagged, &l.FlagWord, &l.DriverID, &l.DriverName, &l.ContactLeak); err != nil {
 			return nil, err
 		}
 		out.Lines = append(out.Lines, l)

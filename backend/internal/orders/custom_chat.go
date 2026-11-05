@@ -39,6 +39,8 @@ package orders
 import (
 	"context"
 	"fmt"
+
+	"github.com/servacode/rahalgo/backend/internal/textguard"
 )
 
 // customGreeting **جوابُ السائق الأوّل — باسمه لأنّه واقعُه.**
@@ -103,12 +105,19 @@ func (s *Service) openCustomChat(ctx context.Context, orderID, customerID, drive
 	//
 	// **وفراغُ حديث هذا السائق لا حديثِ الطلب** (قرارُ المالك ٢٠٢٦-١٠-٠٢:
 	// حديثٌ جديدٌ لكلّ سائق) — **فالثاني يقرأ ما طُلب كما قرأه الأوّل.**
+	//
+	// **ورقمُ الزبون في نصّ طلبه يُخفى «***»** (قرارُ المالك ٢٠٢٦-١١-٠٥) — كان يمرّ
+	// إلى السائق بلا حارس. **ويُوسَم السطرُ كحديثٍ مُخفى** والأصلُ في `flag_word`
+	// للإدارة؛ **ولا تنبيهَ هنا**: كلامُ الزبون في طلبه، والوسمُ يكفي.
+	request, hits := textguard.MaskContacts(request, "***")
+	summary := textguard.ContactSummary(hits)
 	if _, err := s.db.Exec(ctx, `
-		INSERT INTO order_messages (order_id, sender_id, sender_role, body, driver_id, auto)
-		SELECT $1, $2, 'customer', $3, $4, true
+		INSERT INTO order_messages (order_id, sender_id, sender_role, body, driver_id, auto,
+		                            flagged, contact_leak, flag_word)
+		SELECT $1, $2, 'customer', $3, $4, true, $5, $5, NULLIF($6, '')
 		WHERE NOT EXISTS (SELECT 1 FROM order_messages
 		                  WHERE order_id = $1 AND driver_id = $4)`,
-		orderID, customerID, request, driverID); err != nil {
+		orderID, customerID, request, driverID, len(hits) > 0, summary); err != nil {
 		s.logger.Error("الطلب الخاصّ: تعذّرت كتابةُ نصّ الطلب في الحديث",
 			"order", orderID, "error", err)
 	}

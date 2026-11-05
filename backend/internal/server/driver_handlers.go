@@ -651,6 +651,10 @@ func (s *Server) loadDriverOrders(r *http.Request, sql string, args ...any) ([]d
 		// `orders.ViewFor` للسائق، **وقبل قلب «إحضار»**. و«لدي توصيلة» اسمُ مستلِمها كاملاً.
 		if o.Kind != orders.KindMerchantDelivery {
 			o.CustomerName = textguard.FirstName(o.CustomerName)
+			// **وما كتبه الزبونُ بلا رقم تواصل** (البند ١ج) — كما في `orders.ViewFor`،
+			// بالقراءة وحدَها والأصلُ للإدارة.
+			o.CustomRequest, _ = textguard.MaskContacts(o.CustomRequest, "***")
+			o.AddressText, _ = textguard.MaskContacts(o.AddressText, "***")
 		}
 		if o.ReturnTo != "" {
 			s.asReturnTrip(r.Context(), &o)

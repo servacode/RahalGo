@@ -107,6 +107,9 @@ var notifTitles = struct {
 	customAgreed string
 	// offensiveText **لفظٌ مسيءٌ أُخفي في حديثٍ أو شكوى** — للإدارة (٢٠٢٦-١٠-٠٣).
 	offensiveText string
+	// contactLeak **رقمٌ أو واتساب أُخفي في حديث طلب** — للإدارة، ومن كتبه في المتن
+	// (قرارُ المالك ٢٠٢٦-١١-٠٥). **ولا رقمَ في النصّ.**
+	contactLeak, contactLeakByDriver, contactLeakByCustomer string
 	// **قسمُ الحسابات** (قراراتُ المالك ٢٠٢٦-١٠-٠٤): طلبُ حركةٍ ينتظر الماليّة ·
 	// تغييرُ رقمٍ ينتظر شخصاً ثانياً · حظرُ المتجر ورفعُه · السائقُ بخيرٍ بعد حادث ·
 	// وإنذاراتٌ بلغت الحدَّ تنبّه الموظّفين ولا توقف أحداً.
@@ -139,6 +142,9 @@ var notifTitles = struct {
 	driverCleared:            "يمكنك فتح دوامك الآن — تأكدت الإدارة أنك بخير",
 	warningsThreshold:        "حساب بلغ حد الإنذارات — يحتاج قرار موظف",
 	offensiveText:            "لفظ مسيء في حديث أو شكوى — أُخفي عن الطرف الآخر",
+	contactLeak:              "رقم أو واتساب بمحادثة طلب — انخفى عن الطرف التاني",
+	contactLeakByDriver:      "من السائق",
+	contactLeakByCustomer:    "من الزبون",
 	warningOnYou:             "إنذار على حسابك",
 	emergencyResolved:        "تابعنا بلاغَ الطوارئ الخاصّ بك",
 	complaintOnYou:           "شكوى على خدمتك",

@@ -101,6 +101,15 @@ func (s *Server) handleSendOrderMessage(w http.ResponseWriter, r *http.Request) 
 		s.respondErr(w, err)
 		return
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **ورقمُ الجوال والواتساب يُخفيان «***» — بالاتّجاهين** (قرارُ المالك ٢٠٢٦-١١-٠٥)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **الحديثُ هو البابُ الوحيدُ بين السائق والزبون** — ورقمٌ يمرّ منه يأخذ الزبونَ
+	// برّا المنصّة. **فيُخفى كالشتيمة ويُوسَم ويُنبَّه به المكتب**، والرسالةُ تصل
+	// بلاه. **والإشعارُ للطرف الآخر يأخذ النصَّ المُخفى** (`msg.Body`) — لا الأصل.
+	body, contacts := textguard.MaskContacts(req.Body, "***")
+	req.Body = body
 	p, err := s.comms.Permit(r.Context(), chi.URLParam(r, "id"), userIDFrom(r))
 	if err != nil {
 		s.respondErr(w, err)
@@ -117,6 +126,13 @@ func (s *Server) handleSendOrderMessage(w http.ResponseWriter, r *http.Request) 
 			s.logger.Warn("الحديث: تعذّر وسمُ لفظٍ مسيء", "error", err)
 		}
 		s.alertOffensive(r.Context(), masked, orderRef(p.Number), "order", p.OrderID, "/dashboard/orders")
+	}
+	// **والرقمُ الأصليُّ في السجلّ للإدارة وحدَها** (`flag_word`) — لا في نصّ التنبيه.
+	if len(contacts) > 0 {
+		if err := s.comms.FlagContact(r.Context(), msg.ID, textguard.ContactSummary(contacts)); err != nil {
+			s.logger.Warn("الحديث: تعذّر وسمُ رقمٍ مخفيّ", "error", err)
+		}
+		s.alertContactLeak(r.Context(), p)
 	}
 
 	// ══════════════════════════════════════════════════════════════════

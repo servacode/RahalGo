@@ -296,3 +296,17 @@ func (s *Service) Flag(ctx context.Context, messageID, word string) error {
 		`UPDATE order_messages SET flagged = true, flag_word = $2 WHERE id = $1`, messageID, word)
 	return err
 }
+
+// FlagContact **يَسِم رسالةً أُخفي منها رقمُ جوّالٍ أو واتساب** — والرسالةُ تصل مُخفاة.
+//
+// (قرارُ المالك ٢٠٢٦-١١-٠٥: حتّى لا يأخذ السائقُ الزبونَ برّا المنصّة.) **والأصلُ
+// يُضمّ إلى `flag_word`** بعد لفظٍ مسيءٍ إن سبقه — دليلٌ للإدارة وحدَها: `List`
+// للطرفين لا يقرأ هذا العمود. **و`contact_leak` يُعدّ لكلّ سائقٍ في صفحة المراقبة.**
+func (s *Service) FlagContact(ctx context.Context, messageID, summary string) error {
+	_, err := s.db.Exec(ctx, `
+		UPDATE order_messages SET flagged = true, contact_leak = true,
+		       flag_word = CASE WHEN COALESCE(flag_word, '') = '' THEN $2
+		                        ELSE flag_word || ' · ' || $2 END
+		 WHERE id = $1`, messageID, summary)
+	return err
+}

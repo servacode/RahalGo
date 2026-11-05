@@ -525,8 +525,30 @@ func ViewFor(a Audience, o *Order) map[string]any {
 		if _, ok := out["customer_name"]; ok {
 			out["customer_name"] = textguard.FirstName(o.CustomerName)
 		}
+		maskDriverContacts(out)
 	}
 	return out
+}
+
+// maskDriverContacts **ما كتبه الزبونُ بيده يُقرأ للسائق بلا رقم تواصل** (قرارُ المالك
+// ٢٠٢٦-١١-٠٥، البند ١ج): الملاحظاتُ ونصُّ الطلب الخاصّ والعنوانُ وملاحظةُ كلّ صنف —
+// **فرقمٌ مُخفى في الحديث لا يصل من بطاقة الطلب.** **وبالقراءة وحدَها**: الأصلُ في
+// القاعدة للإدارة. **ولا يُمسّ رقمُ صاحب الأمانة** (`holder_phone`): السائقُ يتّصل به
+// بقرار المالك ٢٠٢٦-١٠-٣٠.
+func maskDriverContacts(out map[string]any) {
+	for _, k := range []string{"notes", "custom_request", "address_text"} {
+		if v, ok := out[k].(string); ok && v != "" {
+			out[k], _ = textguard.MaskContacts(v, "***")
+		}
+	}
+	items, _ := out["items"].([]any)
+	for _, x := range items {
+		if it, ok := x.(map[string]any); ok {
+			if n, ok := it["note"].(string); ok && n != "" {
+				it["note"], _ = textguard.MaskContacts(n, "***")
+			}
+		}
+	}
 }
 
 // CustomerDriverLabel **ما يراه الزبونُ مكانَ اسم السائق — في كلّ موضع.**
