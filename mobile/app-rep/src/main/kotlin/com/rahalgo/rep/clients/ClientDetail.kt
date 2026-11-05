@@ -167,7 +167,15 @@ fun ClientDetail(
             Spacer(Modifier.height(8.dp))
             HoursRow(vm)
             // **ونسبةُ عمولة متجره — يضبطها هو بين حدَّين** (قرارُ المالك ٢٠٢٦-١١-٠٤).
-            StoreCommissionRow(vm.openId, head)
+            // **والحفظُ في الـvm لا في السطر** — فيصل ردُّه التفصيلَ ولو فتح «ساعات الدوام» أو «الأقسام»
+            // أو «الأصناف» قبل أن يصل، وتبقى النسبةُ إن رجع.
+            val storeId = vm.openId
+            StoreCommissionRow(
+                merchantId = storeId,
+                head = head,
+                saving = vm.commissionSaving,
+                onSave = { percent, done -> vm.saveStoreCommission(storeId, percent, done) },
+            )
             // **وأقسامُ السوق التي يظهر فيها متجرُه** (قرارُ المالك ٢٠٢٦-١١-٠٤).
             SectionsRow(vm)
 

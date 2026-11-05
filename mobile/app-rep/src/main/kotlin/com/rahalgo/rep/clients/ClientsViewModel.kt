@@ -9,11 +9,14 @@ import androidx.lifecycle.viewModelScope
 import com.rahalgo.shared.merchant.DayHours
 import com.rahalgo.shared.rep.Lead
 import com.rahalgo.shared.rep.RepApi
+import com.rahalgo.shared.rep.RepCommissionApi
 import com.rahalgo.shared.rep.RepMerchant
 import com.rahalgo.shared.rep.RepMerchantDetail
+import com.rahalgo.shared.rep.RepStoreCommission
 import com.rahalgo.ui.AppCore
 import com.rahalgo.ui.Refresh
 import com.rahalgo.ui.apiError
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
@@ -170,6 +173,56 @@ class ClientsViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     // ══════════════════════════════════════════════════════════════════
+    // **نسبةُ عمولة متجر عميله — يضبطها المندوب** (قرارُ المالك ٢٠٢٦-١١-٠٤)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **والحفظُ هنا لا في سطر الشاشة** — كـ«ساعات الدوام» و«الأقسام».
+
+    /** **أحفظُ نسبةٍ جارٍ؟** — فلا يُرسَل طلبان معاً، ويُعطَّل زرُّ السطر. */
+    var commissionSaving by mutableStateOf(false)
+        private set
+
+    /**
+     * **يحفظ نسبةَ عمولة متجر عميلٍ ويُدخلها التفصيلَ** — و`onDone` بعد النجاح وحدَه: يُغلق خانةَ
+     * السطر إن بقي على الشاشة، وإلّا فلا أثرَ له.
+     *
+     * # ولماذا هنا لا في السطر
+     *
+     * **كان النداءُ في `rememberCoroutineScope` داخل السطر**: من ضغط «حفظ» ثمّ «ساعات الدوام» أو
+     * «الأقسام» أو «الأصناف» قبل أن يصل الردُّ **خرج السطرُ من الشاشة فأُلغي النداءُ** — فعُرض له
+     * «تعذّر إتمام الطلب» والمحرّكُ قد حفظ، **ولم تدخل النسبةُ التفصيلَ** فعاد السطرُ يقول القديمَ
+     * فيحفظ القديمَ ثانيةً. **و`viewModelScope` يعيش ما يعيشه النموذجُ** — فالردُّ يصل `detail` دائماً.
+     */
+    fun saveStoreCommission(id: String, percent: String, onDone: () -> Unit) {
+        if (id.isEmpty() || commissionSaving) return
+        commissionSaving = true
+        viewModelScope.launch {
+            try {
+                val got = RepCommissionApi(AppCore.get().api).setStoreCommission(id, percent)
+                applyStoreCommission(id, got)
+                com.rahalgo.ui.Flash.ok(getApplication<android.app.Application>().getString(com.rahalgo.rep.R.string.cd_commission_saved))
+                onDone()
+            } catch (e: CancellationException) {
+                // **والإلغاءُ ليس خطأً — يُعاد رميُه** فلا يُعرض عطباً (كما في بقيّة النماذج).
+                throw e
+            } catch (e: Exception) {
+                com.rahalgo.ui.Flash.fail(apiError(getApplication(), e))
+            } finally {
+                commissionSaving = false
+            }
+        }
+    }
+
+    /**
+     * **نسبةٌ حُفظت تدخل التفصيلَ المحفوظ هنا** — فصفحاتُ «ساعات الدوام» و«الأقسام» و«الأصناف» و«العروض»
+     * تغطّي شاشةَ التفصيل فتُمحى حالُ السطر ثمّ يُبنى من `detail`، **ولو بقي فيه القديمُ لَعادت الخانةُ
+     * تقول القديمَ والمحرّكُ على الجديد.** **ولا يُطبَّق على غير المفتوح** (`detailAfterCommissionSaved`).
+     */
+    private fun applyStoreCommission(id: String, saved: RepStoreCommission) {
+        detail = detailAfterCommissionSaved(detail, openId, id, saved)
+    }
+
+    // ══════════════════════════════════════════════════════════════════
     // **وطلباتُ العميل كلُّها لا أوّلُ عشرين** (٢٠٢٦-١٠-٢٧)
     // ══════════════════════════════════════════════════════════════════
     //
@@ -194,6 +247,9 @@ class ClientsViewModel(app: Application) : AndroidViewModel(app) {
                     // **ورقمُ الطلب مفتاحُه** — طلبٌ جديدٌ يُزيح الصفحاتِ سطراً فيتكرّر.
                     val seen = d.orders.map { it.number }.toSet()
                     detail = d.copy(
+                        // **ورأسُ العميل الحاليّ لا لقطةُ ما قبل الانتظار** — نسبةٌ حُفظت (`applyStoreCommission`)
+                        // والصفحةُ تُجلب لا تُردّ بها إلى قديمها.
+                        merchant = detail?.merchant ?: d.merchant,
                         orders = d.orders + next.orders.filter { it.number !in seen },
                         page = next.page,
                         total = next.total,
