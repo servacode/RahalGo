@@ -255,11 +255,17 @@ func (s *Server) handleTransferOrder(w http.ResponseWriter, r *http.Request) {
 	//
 	// **ولا يمرّ بجدول الانتقالات** — `at_pickup → assigned` ليس انتقالاً يطلبه أحد،
 	// **وإنّما أثرُ التحويل وحدَه**، فيُكتب هنا ويُسجَّل حدثاً باسمه.
+	//
+	// **ومهلةُ الصمت تُمحى معه** (خلل PD-4، ٢٠٢٦-١١-٠٥): الإسنادُ المباشر يكتب `offer_expires_at`
+	// (`assignDirectly`) ووصولُه إلى المتجر لا يمحوها، **فعودتُه إلى `assigned` بمهلةٍ منقضيةٍ
+	// يقرؤها كانسُ الإسنادات الصامتة صمتاً** (`reclaimSilentAssignments`) فينزع الطلبَ من سائقٍ
+	// واقفٍ عند المتجر. **وهو تحرّك فعلاً** — فلا صمتَ يُقاس عليه.
 	var driverID *string
 	if status == string(orders.StAtPickup) {
 		if err := tx.QueryRow(r.Context(), `
 			UPDATE orders SET status = 'assigned', updated_at = now(),
-			       door_instruction = '', door_instruction_note = '', door_instruction_at = NULL
+			       door_instruction = '', door_instruction_note = '', door_instruction_at = NULL,
+			       offer_expires_at = NULL
 			WHERE id = $1 RETURNING driver_id::text`, orderID).Scan(&driverID); err != nil {
 			s.respondErr(w, err)
 			return
