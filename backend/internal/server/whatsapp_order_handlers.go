@@ -15,15 +15,22 @@ package server
 //	POST /whatsapp-orders/resolve-location رابطُ موقعٍ ← نقطة
 //	POST /whatsapp-orders                 الإنشاء — مرّةً واحدةً بمفتاح المحاولة
 //	POST /whatsapp-orders/{id}/cancel     الإلغاءُ قبل الاستلام بسببٍ إلزاميّ
+//	POST /whatsapp-orders/{id}/address    تصحيحُ العنوان المكتوب قبل التسليم (ملحق ٢٠٢٦-١١-٠٥، د)
+//	POST /whatsapp-orders/location-requests      «اطلب الموقع» من رقم المستلِم (ملحق ٢٠٢٦-١١-٠٥، أ)
+//	GET  /whatsapp-orders/location-requests/{id} أوصل الموقع؟ — النموذجُ يسأل كلَّ ثوانٍ
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"errors"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/geolink"
@@ -50,6 +57,10 @@ var waErrors = []struct {
 		"wa_not_whatsapp", "errors.wa_not_whatsapp")},
 	{orders.ErrWACancelAfterPickup, httpx.NewError(http.StatusConflict,
 		"wa_cancel_after_pickup", "errors.wa_cancel_after_pickup")},
+	{orders.ErrWAFeeRequired, httpx.NewError(http.StatusUnprocessableEntity,
+		"wa_fee_required", "errors.wa_fee_required")},
+	{orders.ErrWAAddressClosed, httpx.NewError(http.StatusConflict,
+		"wa_address_closed", "errors.wa_address_closed")},
 }
 
 // waReply **علامةُ المحرّك ← ردُّ اللوحة** — وحدّا الأجرة في التفصيل نصّاً.
@@ -128,11 +139,13 @@ func (s *Server) handleWhatsAppQuote(w http.ResponseWriter, r *http.Request) {
 	lng, err2 := waFloat(r, "lng")
 	slat, err3 := waFloat(r, "pickup_lat")
 	slng, err4 := waFloat(r, "pickup_lng")
-	if err1 != nil || err2 != nil || err3 != nil || err4 != nil || lat == nil || lng == nil {
+	// **وبلا `lat/lng` للمستلِم عرضٌ بلا موقع** (ملحقُ المالك ٢٠٢٦-١١-٠٥، ب) — الأساسُ اقتراحاً
+	// والحدّان، **والأجرةُ يكتبها الموظّف** (`fee_required`).
+	if err1 != nil || err2 != nil || err3 != nil || err4 != nil || (lat == nil) != (lng == nil) {
 		s.respondErr(w, errValidation)
 		return
 	}
-	q, err := s.orders.QuoteWhatsAppOrder(r.Context(), r.URL.Query().Get("store_id"), slat, slng, *lat, *lng)
+	q, err := s.orders.QuoteWhatsAppOrder(r.Context(), r.URL.Query().Get("store_id"), slat, slng, lat, lng)
 	if err != nil {
 		s.respondErr(w, waReply(err))
 		return
@@ -215,8 +228,11 @@ func (s *Server) handleCreateWhatsAppOrder(w http.ResponseWriter, r *http.Reques
 		Lat            *float64 `json:"lat"`
 		Lng            *float64 `json:"lng"`
 		DriverNote     string   `json:"driver_note"`
-		// Fee **أجرةٌ عدّلها الموظّف** — وغيابُها: المحسوبة.
+		// Fee **أجرةٌ عدّلها الموظّف** — وغيابُها: المحسوبة. **وبلا `lat/lng` إلزاميّة.**
 		Fee *int64 `json:"fee"`
+		// LocationRequestID **«اطلب الموقع» من النموذج** (ملحقُ المالك ٢٠٢٦-١١-٠٥، أ) — يُربط بالطلب:
+		// وصل الموقعُ قبلها؟ نقطتُه نقطةُ التسليم إن لم تُحدَّد. **وإن وصل بعدها كُتب حين يصل.**
+		LocationRequestID string `json:"location_request_id"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -261,10 +277,29 @@ func (s *Server) handleCreateWhatsAppOrder(w http.ResponseWriter, r *http.Reques
 		in.GoodsAmount = &v
 	}
 	actor := userIDFrom(r)
+	locReqID := strings.TrimSpace(req.LocationRequestID)
 	s.WithIdempotentTx(w, r, func(ctx context.Context, q dbtx.Querier) (IdempotentBody, error) {
+		in := in
+		// **طلبُ الموقع يُقفَل قبل الإنشاء** — فموقعٌ يصل في اللحظة نفسِها ينتظر الربطَ ثمّ يُكتب
+		// في الطلب (`ApplyWhatsAppShared`)، **ولا يضيع بينهما.**
+		if locReqID != "" {
+			lat, lng, err := lockWhatsAppLocReqTx(ctx, q, locReqID)
+			if err != nil {
+				return IdempotentBody{}, err
+			}
+			if in.Lat == nil && in.Lng == nil && lat != nil && lng != nil {
+				in.Lat, in.Lng = lat, lng
+			}
+		}
 		c, err := s.orders.CreateWhatsAppOrderIn(ctx, q, actor, in)
 		if err != nil {
 			return IdempotentBody{}, waReply(err)
+		}
+		if locReqID != "" {
+			if _, err := q.Exec(ctx,
+				`UPDATE recipient_location_requests SET order_id = $2 WHERE id = $1`, locReqID, c.ID); err != nil {
+				return IdempotentBody{}, err
+			}
 		}
 		if err := s.auditTx(ctx, q, r, "ops.whatsapp_order_create", "order", c.ID, map[string]any{
 			"number":             c.Number,
@@ -275,6 +310,8 @@ func (s *Server) handleCreateWhatsAppOrder(w http.ResponseWriter, r *http.Reques
 			"driver_fee":         c.DriverFee,
 			"goods_amount":       in.GoodsAmount,
 			"amount_currency":    in.Currency,
+			"has_point":          c.HasPoint,
+			"location_request":   locReqID,
 		}); err != nil {
 			return IdempotentBody{}, err
 		}
@@ -313,6 +350,184 @@ func (s *Server) handleCancelWhatsAppOrder(w http.ResponseWriter, r *http.Reques
 		func(ctx context.Context, q dbtx.Querier) error {
 			return s.auditTx(ctx, q, r, "ops.whatsapp_order_cancel", "order", orderID, map[string]any{
 				"reason": strings.TrimSpace(req.Reason),
+			})
+		})
+	if err != nil {
+		s.respondErr(w, waReply(err))
+		return
+	}
+	s.touch("order", "ops")
+	view, err := orderView(orders.AudienceOps, o)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"order": view})
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **«اطلب الموقع» من نموذج الواتساب، وتصحيحُ العنوان** (ملحقُ المالك ٢٠٢٦-١١-٠٥)
+// ══════════════════════════════════════════════════════════════════════
+//
+// «من لوحة التحكم مثل توصيلة متجر وامانة نحط الرقم صاحب الطلب ويشارك موقعه ويجي لعندنا».
+// **الصفُّ نفسُه** (`recipient_location_requests`، هجرة ٠٤٨٤ ثمّ ٠٤٩٠ ثمّ ٠٥٠٧) **بنوع `whatsapp`**:
+// صاحبُه المكتبُ (`requested_by`) لا متجرٌ ولا زبون، **والرسالةُ الواحدةُ نفسُها** (`locReqText`)،
+// **والردُّ بالواتساب والرابطُ يملآنه كما يملآن غيرَه** (`locReqReceived`).
+
+// locReqModeWhatsApp **طلبُ موقعٍ من المكتب لطلب واتساب.**
+const locReqModeWhatsApp = "whatsapp"
+
+// waLocReqPerHour **حدُّ الموظّف في الساعة** — المكتبُ يكتب طلباتٍ أكثرَ من متجر، **ورسائلُ البوت
+// ليست مجّانيّةً على الرقم.**
+const waLocReqPerHour = 60
+
+// lockWhatsAppLocReqTx **يقفل طلبَ موقعٍ للمكتب غيرَ مربوطٍ بطلب** — ويردّ نقطتَه إن وصلت.
+func lockWhatsAppLocReqTx(ctx context.Context, q dbtx.Querier, id string) (lat, lng *float64, err error) {
+	if !isUUID(id) {
+		return nil, nil, errAmanahLocReq
+	}
+	err = q.QueryRow(ctx, `
+		SELECT lat, lng FROM recipient_location_requests
+		 WHERE id = $1 AND mode = 'whatsapp' AND order_id IS NULL
+		 FOR UPDATE`, id).Scan(&lat, &lng)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil, errAmanahLocReq
+	}
+	return lat, lng, err
+}
+
+// handleWhatsAppRequestLocation `POST /admin/whatsapp-orders/location-requests` —
+// `{"phone": "…", "store_name": "…"}`. **والرسالةُ الواحدةُ نفسُها** لكلّ طلب موقع.
+//
+// **والحدّان قبل الكتابة** — دقيقةٌ بين طلبين للرقم نفسِه من المكتب، وستّون في الساعة للموظّف.
+func (s *Server) handleWhatsAppRequestLocation(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		Phone     string `json:"phone"`
+		StoreName string `json:"store_name"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if _, err := s.guardText(r.Context(), tf("store_name", &req.StoreName, maxStoreName, textguard.Name)); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	phone, ok := identity.NormalizePhone(req.Phone)
+	if !ok {
+		s.respondErr(w, identity.ErrInvalidPhone)
+		return
+	}
+	ctx := r.Context()
+	actor := userIDFrom(r)
+	var recent, hourly int
+	if err := s.pg.QueryRow(ctx, `
+		SELECT count(*) FILTER (WHERE phone = $2 AND created_at > now() - make_interval(secs => $3)),
+		       count(*) FILTER (WHERE requested_by = NULLIF($1, '')::uuid)
+		  FROM recipient_location_requests
+		 WHERE mode = 'whatsapp' AND created_at > now() - interval '1 hour'`,
+		actor, phone, int(locReqGap.Seconds())).Scan(&recent, &hourly); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if recent > 0 {
+		e := *errLocReqTooSoon
+		e.Details = map[string]any{"retry_after_sec": int(locReqGap.Seconds())}
+		s.respondErr(w, &e)
+		return
+	}
+	if hourly >= waLocReqPerHour {
+		s.respondErr(w, errLocReqLimit)
+		return
+	}
+	raw := make([]byte, 18)
+	if _, err := rand.Read(raw); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	token := base64.RawURLEncoding.EncodeToString(raw)
+	var id string
+	var expires time.Time
+	if err := s.pg.QueryRow(ctx, `
+		INSERT INTO recipient_location_requests
+		       (requested_by, phone, mode, store_label, token_hash, expires_at)
+		VALUES (NULLIF($1, '')::uuid, $2, 'whatsapp', NULLIF($3, ''), $4, now() + make_interval(secs => $5))
+		RETURNING id::text, expires_at`,
+		actor, phone, strings.TrimSpace(req.StoreName), locReqHash(token), int(locReqTTL.Seconds())).
+		Scan(&id, &expires); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusCreated, s.locReqSend(ctx, id, phone, token, expires))
+}
+
+// handleWhatsAppLocationRequest `GET /admin/whatsapp-orders/location-requests/{id}` — **أوصل الموقع؟**
+// والنموذجُ يسأله كلَّ ثوانٍ ما دام ينتظر. **وطلباتُ المكتب وحدَها** (`mode='whatsapp'`).
+func (s *Server) handleWhatsAppLocationRequest(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if !isUUID(id) {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	var lat, lng, acc *float64
+	var received, followUp *time.Time
+	var expires time.Time
+	var sent bool
+	var orderID string
+	err := s.pg.QueryRow(r.Context(), `
+		SELECT lat, lng, accuracy_m, received_at, expires_at, whatsapp_sent, followup_sent_at,
+		       COALESCE(order_id::text, '')
+		  FROM recipient_location_requests WHERE id = $1 AND mode = 'whatsapp'`, id).
+		Scan(&lat, &lng, &acc, &received, &expires, &sent, &followUp, &orderID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		s.respondErr(w, httpx.ErrNotFound)
+		return
+	}
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	out := map[string]any{
+		"id":            id,
+		"status":        locReqStatus(received, expires),
+		"whatsapp_sent": sent,
+		"lat":           lat,
+		"lng":           lng,
+		"accuracy_m":    acc,
+		"received_at":   nil,
+		// followup_sent **أبعث البوتُ «اكتبلنا عنوانك بالتفصيل»** (ملحقُ المالك ٢٠٢٦-١١-٠٥، د).
+		"followup_sent": followUp != nil,
+		"order_id":      orderID,
+	}
+	if received != nil {
+		out["received_at"] = received.Format(time.RFC3339)
+	}
+	httpx.JSON(w, http.StatusOK, out)
+}
+
+// handleWhatsAppOrderAddress `POST /admin/whatsapp-orders/{id}/address` — `{"address_text": "…"}`.
+//
+// **المكتبُ يكتب العنوانَ التفصيليّ** الذي ردّ به المستلِمُ على الواتساب (ملحقُ المالك ٢٠٢٦-١١-٠٥،
+// د: «نحن رح نعبيه يدوي») — قبل التسليم، **بتدقيقٍ فيه القديمُ والجديد**، ويصل السائقَ في لحظته
+// **بلا رقم المستلِم.**
+func (s *Server) handleWhatsAppOrderAddress(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		AddressText string `json:"address_text"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if _, err := s.guardText(r.Context(), tf("address_text", &req.AddressText, maxAddressText, textguard.Address)); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	orderID := chi.URLParam(r, "id")
+	address := strings.TrimSpace(req.AddressText)
+	o, err := s.orders.UpdateWhatsAppAddress(r.Context(), orderID, address,
+		func(ctx context.Context, q dbtx.Querier, old string) error {
+			return s.auditTx(ctx, q, r, "ops.whatsapp_order_address", "order", orderID, map[string]any{
+				"old": old, "new": address,
 			})
 		})
 	if err != nil {

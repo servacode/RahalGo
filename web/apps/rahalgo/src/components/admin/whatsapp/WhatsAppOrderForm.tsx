@@ -10,8 +10,14 @@
  *
  *	المتجر    من متاجرنا (بحث) أو متجرٌ غيرُ تابع (اسمٌ ونقطةٌ على الخريطة)
  *	الطلب     تفاصيلُه، وثمنُ البضاعة إن عُرف — يدفعه السائقُ ويقبضه، خارجَ الحسابات
- *	المستلم   اسمُه ورقمُه وعنوانُه ونقطتُه على الخريطة
+ *	المستلم   اسمُه ورقمُه وعنوانُه ونقطتُه على الخريطة — أو «اطلب الموقع» منه
  *	الأجرة    تُحسب كالتوصيلات بالمسافة ويعدّلها الموظّف بحدّيها (البند ٣)
+ *
+ * # و«اطلب الموقع» والطلبُ لا ينتظره (ملحقُ المالك ٢٠٢٦-١١-٠٥)
+ *
+ * **رسالةُ المالك تصل رقمَ المستلِم** (`/admin/whatsapp-orders/location-requests`)، والنموذجُ يسأل
+ * كلَّ أربع ثوانٍ: وصل الموقعُ؟ تمتلئ الخريطة. **ولا ينتظره الطلب** — يُرسَل بالعنوان المكتوب
+ * وبأجرةٍ يكتبها الموظّف، وطلبُ الموقع مربوطٌ به: **حين يصل يُكتب في الطلب ويصل السائق.**
  *
  * **والحسبةُ والتحقّقُ في المحرّك** (`orders/whatsapp_order.go`) — الشاشةُ تعرض ما يقوله.
  * **والإرسالُ مرّةً واحدةً مهما أُعيد** — مفتاحُ المحاولة (`Idempotency-Key`).
@@ -21,7 +27,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getMessages, defaultLocale, errorText, fmtMoney, fmtNum } from "@rahalgo/i18n";
-import { AdminCard, Alert, Button, Input, Textarea, IconLink, IconSend } from "@rahalgo/ui";
+import { AdminCard, Alert, Button, Input, Textarea, IconLink, IconLocation, IconSend } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
 import { dollars, fill } from "@/lib/customer/texts";
@@ -48,7 +54,21 @@ interface WaQuote {
   platform_share: number;
   fee_min: number;
   fee_max: number;
+  /** **بلا موقعٍ للمستلِم** — `fee` أساسٌ اقتراحاً، والأجرةُ يكتبها الموظّف. */
+  has_point: boolean;
+  fee_required: boolean;
 }
+
+/** **«اطلب الموقع»** — ردُّ الطلب وحالُه كما يقولهما المحرّك. */
+type AskReq = { id: string; whatsapp_sent: boolean; link: string; wa_url: string };
+type AskStatus = {
+  status: "pending" | "received" | "expired";
+  lat: number | null;
+  lng: number | null;
+  accuracy_m: number | null;
+  followup_sent: boolean;
+};
+type AskState = "idle" | "sending" | "waiting" | "received" | "expired";
 
 /** **موقعٌ على الخريطة أو برابطٍ يُلصق** — للمتجر غير التابع وللمستلِم. */
 function LocationField({
@@ -143,7 +163,7 @@ function CurrencyPick({ value, onPick, disabled }: { value: "SYP" | "USD"; onPic
   );
 }
 
-export function WhatsAppOrderForm({ onSent }: { onSent: (o: { id: string; number: number }) => void }) {
+export function WhatsAppOrderForm({ onSent }: { onSent: (o: { id: string; number: number; noPoint: boolean }) => void }) {
   const [storeKind, setStoreKind] = useState<"ours" | "notOurs">("ours");
   const [store, setStore] = useState<WaStore | null>(null);
   const [storePhone, setStorePhone] = useState("");
@@ -168,25 +188,95 @@ export function WhatsAppOrderForm({ onSent }: { onSent: (o: { id: string; number
   const [tried, setTried] = useState(false);
   // **ومفتاحُ الخريطة يُبدَّل بعد الإرسال** — فتُرسم الخريطتان فارغتين للطلب التالي.
   const [round, setRound] = useState(0);
+  // ── «اطلب الموقع» (ملحقُ المالك ٢٠٢٦-١١-٠٥) ───────────────────────
+  const [ask, setAsk] = useState<AskState>("idle");
+  const [askReq, setAskReq] = useState<AskReq | null>(null);
+  const [askAcc, setAskAcc] = useState<number | null>(null);
+  const [askFollow, setAskFollow] = useState(false);
+  const [askError, setAskError] = useState("");
+  const [copied, setCopied] = useState(false);
 
-  // ── الأجرة: كلّما اكتملت النقطتان ─────────────────────────────────
+  // ── الأجرة: كلّما تحدّد المتجر — بموقع المستلِم أو بلاه ─────────────
   const pickup: { storeId?: string; at?: Point } | null =
     storeKind === "ours" ? (store ? { storeId: store.id } : null) : storePoint ? { at: storePoint } : null;
-  const quoteKey = pickup && point ? `${pickup.storeId ?? ""}|${pickup.at?.lat ?? ""},${pickup.at?.lng ?? ""}|${point.lat},${point.lng}` : "";
+  const quoteKey = pickup
+    ? `${pickup.storeId ?? ""}|${pickup.at?.lat ?? ""},${pickup.at?.lng ?? ""}|${point ? `${point.lat},${point.lng}` : "-"}`
+    : "";
   const fetchQuote = useCallback(async () => {
     setQuote(null);
     setQuoteError("");
-    if (!pickup || !point) return;
+    if (!pickup) return;
     const from = pickup.storeId
       ? `store_id=${encodeURIComponent(pickup.storeId)}`
       : `pickup_lat=${pickup.at!.lat}&pickup_lng=${pickup.at!.lng}`;
+    const to = point ? `&lat=${point.lat}&lng=${point.lng}` : "";
     try {
-      setQuote(await api<WaQuote>(`/api/v1/admin/whatsapp-orders/quote?${from}&lat=${point.lat}&lng=${point.lng}`));
+      setQuote(await api<WaQuote>(`/api/v1/admin/whatsapp-orders/quote?${from}${to}`));
     } catch (e) {
       setQuoteError(errorText(e));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- **المفتاحُ يجمع النقطتين**
   }, [quoteKey]);
+
+  /** **«اطلب الموقع من المستلم»** — رسالةُ المالك الواحدة تصل رقمَه، والرابطُ احتياطٌ إن لم تصل. */
+  async function askLocation() {
+    if (ask === "sending") return;
+    setAskError("");
+    setCopied(false);
+    if (!phone.trim()) {
+      setAskError(W.askLocNeedPhone);
+      return;
+    }
+    setAsk("sending");
+    try {
+      const r = await api<AskReq>("/api/v1/admin/whatsapp-orders/location-requests", {
+        method: "POST",
+        body: JSON.stringify({
+          phone: phone.trim(),
+          store_name: storeKind === "ours" ? (store?.name ?? "") : storeName.trim(),
+        }),
+      });
+      setAskReq(r);
+      setAskAcc(null);
+      setAskFollow(false);
+      setAsk("waiting");
+    } catch (e) {
+      setAsk(askReq ? "waiting" : "idle");
+      setAskError(errorText(e));
+    }
+  }
+
+  // **ويُسأل كلَّ أربع ثوانٍ** ما دام الطلبُ ينتظر — وتصل النقطةُ إلى الخريطة.
+  useEffect(() => {
+    if (ask !== "waiting" || !askReq) return;
+    const id = askReq.id;
+    const timer = setInterval(async () => {
+      try {
+        const st = await api<AskStatus>(`/api/v1/admin/whatsapp-orders/location-requests/${id}`);
+        if (st.followup_sent) setAskFollow(true);
+        if (st.status === "received" && st.lat != null && st.lng != null) {
+          setPoint({ lat: st.lat, lng: st.lng });
+          setAskAcc(st.accuracy_m);
+          setAsk("received");
+        } else if (st.status === "expired") {
+          setAsk("expired");
+        }
+      } catch {
+        /* **وتعثّرُ سؤالٍ واحدٍ لا يوقف الانتظار** — يُسأل بعد أربع ثوانٍ. */
+      }
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [ask, askReq]);
+
+  async function copyLink() {
+    if (!askReq) return;
+    try {
+      await navigator.clipboard.writeText(askReq.link);
+      setCopied(true);
+    } catch {
+      /* **ومتصفّحٌ يمنع النسخ** — زرُّ المشاركة باقٍ. */
+    }
+  }
   useEffect(() => {
     void fetchQuote();
   }, [fetchQuote]);
@@ -217,8 +307,11 @@ export function WhatsAppOrderForm({ onSent }: { onSent: (o: { id: string; number
           ? Math.round(Number(goods.replace(",", ".")) * 100) / 100
           : NaN
         : Number(goods.replace(/\D/g, "")) || NaN;
-  const feeValue = feeEdit && feeText.trim() !== "" ? Number(feeText.replace(/\D/g, "")) : null;
-  const fee = feeValue ?? quote?.fee ?? null;
+  // **وبلا موقعٍ للمستلِم الأجرةُ يكتبها الموظّف** (ملحقُ المالك ٢٠٢٦-١١-٠٥، ب) — لا مسافةَ تُحسب.
+  const noPoint = !point;
+  const feeTyped = (feeEdit || noPoint) && feeText.trim() !== "";
+  const feeValue = feeTyped ? Number(feeText.replace(/\D/g, "")) : null;
+  const fee = feeValue ?? (noPoint ? null : (quote?.fee ?? null));
   const goodsText = goodsValue != null && !Number.isNaN(goodsValue) ? (currency === "USD" ? dollars(goodsValue) : fmtMoney(goodsValue)) : "";
 
   const hasStore = storeKind === "ours" ? !!store : !!storeName.trim() && !!storePoint;
@@ -229,7 +322,7 @@ export function WhatsAppOrderForm({ onSent }: { onSent: (o: { id: string; number
     !name.trim() && W.recipientName,
     !phone.trim() && W.recipientPhone,
     !address.trim() && W.address,
-    !point && W.recipientMap,
+    noPoint && !feeTyped && W.fee,
   ].filter(Boolean) as string[];
 
   function reset() {
@@ -249,6 +342,11 @@ export function WhatsAppOrderForm({ onSent }: { onSent: (o: { id: string; number
     setFeeEdit(false);
     setFeeText("");
     setTried(false);
+    setAsk("idle");
+    setAskReq(null);
+    setAskAcc(null);
+    setAskFollow(false);
+    setAskError("");
     setRound((r) => r + 1);
   }
 
@@ -268,10 +366,14 @@ export function WhatsAppOrderForm({ onSent }: { onSent: (o: { id: string; number
         recipient_name: name.trim(),
         recipient_phone: phone.trim(),
         address_text: address.trim(),
-        lat: point!.lat,
-        lng: point!.lng,
         driver_note: driverNote.trim(),
       };
+      if (point) {
+        body.lat = point.lat;
+        body.lng = point.lng;
+      }
+      // **وطلبُ الموقع يُربط بالطلب** — يصل بعدها؟ يُكتب فيه ويصل السائق.
+      if (askReq && (ask === "waiting" || ask === "received")) body.location_request_id = askReq.id;
       if (storeKind === "ours" && store) {
         body.store_id = store.id;
         if (storePhone.trim() && storePhone.trim() !== store.phone) body.store_phone = storePhone.trim();
@@ -282,7 +384,7 @@ export function WhatsAppOrderForm({ onSent }: { onSent: (o: { id: string; number
         body.store_lat = storePoint!.lat;
         body.store_lng = storePoint!.lng;
       }
-      if (feeValue != null && quote && feeValue !== quote.fee) body.fee = feeValue;
+      if (feeValue != null && (noPoint || (quote && feeValue !== quote.fee))) body.fee = feeValue;
       const r = await api<{ id: string; number: number }>("/api/v1/admin/whatsapp-orders", {
         method: "POST",
         headers: { "Idempotency-Key": attemptKey(SLOT) },
@@ -290,7 +392,7 @@ export function WhatsAppOrderForm({ onSent }: { onSent: (o: { id: string; number
       });
       clearAttempt(SLOT);
       reset();
-      onSent(r);
+      onSent({ ...r, noPoint });
     } catch (e) {
       if (isDecided(e)) clearAttempt(SLOT);
       setError(errorText(e));
@@ -421,7 +523,44 @@ export function WhatsAppOrderForm({ onSent }: { onSent: (o: { id: string; number
             error={tried && !address.trim() ? W.required : undefined}
             onChange={(e) => setAddress(e.target.value)}
           />
-          <LocationField key={`drop-${round}`} label={W.recipientMap} point={point} onPoint={setPoint} disabled={busy} error={tried && !point} />
+          {/* **«اطلب الموقع من المستلم»** — والطلبُ لا ينتظره (ملحقُ المالك ٢٠٢٦-١١-٠٥). */}
+          <div className="space-y-2">
+            <Button
+              variant="secondary"
+              disabled={busy || ask === "sending" || ask === "waiting"}
+              onClick={() => void askLocation()}
+            >
+              <span className="inline-flex items-center gap-2">
+                <IconLocation size={18} />
+                {ask === "sending" ? W.askLocSending : W.askLoc}
+              </span>
+            </Button>
+            {ask === "waiting" && askReq && (
+              <div className="space-y-2 rounded-control border border-line bg-field p-3">
+                <p className="text-sm text-ink-muted">{askReq.whatsapp_sent ? W.askLocWaiting : W.askLocNotSent}</p>
+                {!askReq.whatsapp_sent && (
+                  <div className="flex flex-wrap gap-3">
+                    <a className="text-sm font-bold text-accent-text" href={askReq.wa_url} target="_blank" rel="noreferrer">
+                      {W.askLocShare}
+                    </a>
+                    <Button size="sm" variant="ghost" onClick={() => void copyLink()}>
+                      {copied ? W.askLocCopied : W.askLocCopy}
+                    </Button>
+                  </div>
+                )}
+                {askFollow && <p className="text-sm text-warning">{W.askLocFollowUp}</p>}
+              </div>
+            )}
+            {ask === "received" && (
+              <div className="rounded-control border border-success-edge bg-success-tint p-3">
+                <p className="text-sm font-bold text-success">{W.askLocReceived}</p>
+                {askAcc != null && <p className="text-xs">{fill(W.askLocAccuracy, { m: fmtNum(askAcc) })}</p>}
+              </div>
+            )}
+            {ask === "expired" && <p className="text-sm text-danger">{W.askLocExpired}</p>}
+            {askError && <p className="text-sm text-danger">{askError}</p>}
+          </div>
+          <LocationField key={`drop-${round}`} label={W.recipientMap} point={point} onPoint={setPoint} disabled={busy} />
           <Textarea label={W.driverNote} value={driverNote} maxLength={500} autoGrow disabled={busy} onChange={(e) => setDriverNote(e.target.value)} />
         </div>
       </AdminCard>
@@ -431,7 +570,28 @@ export function WhatsAppOrderForm({ onSent }: { onSent: (o: { id: string; number
         <div className="space-y-3">
           {!quote && !quoteError && <p className="text-sm text-ink-muted">{W.feeNeedsPoints}</p>}
           {quoteError && <Alert tone="error">{quoteError}</Alert>}
-          {quote && (
+          {/* **بلا موقعٍ للمستلِم الأجرةُ يكتبها الموظّف** — والأساسُ اقتراحٌ يُقال. */}
+          {quote && noPoint && (
+            <div className="space-y-2">
+              <p className={`text-sm font-medium ${tried && !feeTyped ? "text-danger" : ""}`}>{W.noPointFee}</p>
+              <div className="flex flex-wrap items-end gap-2">
+                <Input
+                  label={W.fee}
+                  inputMode="numeric"
+                  dir="ltr"
+                  value={feeText}
+                  disabled={busy}
+                  wrapperClassName="w-40"
+                  error={tried && !feeTyped ? W.required : undefined}
+                  onChange={(e) => setFeeText(e.target.value)}
+                />
+                <span className="pb-2 text-sm text-ink-muted">
+                  {fill(W.feeBase, { fee: fmtMoney(quote.fee) })} · {fill(W.feeRange, { min: fmtNum(quote.fee_min), max: fmtNum(quote.fee_max) })}
+                </span>
+              </div>
+            </div>
+          )}
+          {quote && !noPoint && (
             <div className="space-y-1 text-sm">
               <p className="font-bold">
                 {fill(W.feeLine, { fee: fmtMoney(quote.fee), km: fmtNum(Math.round(quote.distance_m / 100) / 10) })}
@@ -441,7 +601,7 @@ export function WhatsAppOrderForm({ onSent }: { onSent: (o: { id: string; number
               </p>
             </div>
           )}
-          {quote && (
+          {quote && !noPoint && (
             <div className="flex flex-wrap items-end gap-2">
               {feeEdit ? (
                 <>

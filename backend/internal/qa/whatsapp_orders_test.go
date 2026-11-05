@@ -833,7 +833,9 @@ func TestWAORD010_Validation(t *testing.T) {
 		{"بلا تفاصيل", with(func(b map[string]any) { b["details"] = "" }), "validation"},
 		{"بلا اسم المستلم", with(func(b map[string]any) { b["recipient_name"] = "" }), "validation"},
 		{"بلا عنوان", with(func(b map[string]any) { b["address_text"] = "" }), "validation"},
-		{"بلا نقطة المستلم", with(func(b map[string]any) { delete(b, "lat"); delete(b, "lng") }), "bad_point"},
+		// **وبلا نقطةٍ يُنشأ بالعنوان — بأجرةٍ يكتبها الموظّف** (ملحقُ المالك ٢٠٢٦-١١-٠٥، ب).
+		{"بلا نقطة المستلم ولا أجرة", with(func(b map[string]any) { delete(b, "lat"); delete(b, "lng") }), "wa_fee_required"},
+		{"نصفُ نقطة", with(func(b map[string]any) { delete(b, "lng") }), "bad_point"},
 		// **ورمزُ الرقم الفاسد رمزُ «لدي توصيلة» نفسُه** — لا يُخترَع ثانٍ.
 		{"رقمٌ فاسد", with(func(b map[string]any) { b["recipient_phone"] = "12" }), "invalid_phone"},
 	} {

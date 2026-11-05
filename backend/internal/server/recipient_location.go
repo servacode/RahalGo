@@ -82,25 +82,18 @@ func (s *Server) locReqLink(token string) string {
 	return base + "/loc/" + token
 }
 
-// locReqText **رسالةُ الواتساب** — ولا اسمَ منصّةٍ فيها (قاعدةُ المالك).
+// locReqText **رسالةُ الواتساب — واحدةٌ لكلّ طلب موقع** (قرارُ المالك ٢٠٢٦-١١-٠٥، نصُّه):
+// توصيلةُ المتجر و«إحضار» والأمانةُ وطلبُ الواتساب من المكتب. **ويُلغي قاعدةَ «لا اسمَ منصّةٍ
+// فيها»** — المالكُ كتبها باسم التطبيق: «طبعا هي الرسالة تصبح للكل وقت الامانة والاحضار والتوصيل».
 //
-// (قرارُ المالك ٢٠٢٦-١١-٠٣ «ردّ بموقعك».) **الناسُ تخاف الروابط** — فالتعليمةُ الأولى
-// أن يردّ المستلِمُ على المحادثة بموقعه من زرّ المشبك في واتساب نفسِه، **والرابطُ سطرٌ
-// أخيرٌ احتياطيّ.** والبوتُ يلتقط الموقعَ الوارد (`HandleWALocation`).
-func locReqText(store, mode, link string) string {
-	who := "متجر «" + store + "»"
-	why := "ليوصل السائق لعندك"
-	switch mode {
-	case "fetch":
-		why = "ليوصل السائق ويستلم الغرض"
-	case "amanah":
-		// **الأمانةُ يطلبها زبونٌ لا متجر** (٢٠٢٦-١٠-٣٠) — فيُذكر اسمُه لا «متجر».
-		who = "«" + store + "»"
-		why = "ليوصل السائق ويستلم الأمانة"
-	}
-	return "مرحباً 👋 " + who + " بدو موقعك " + why + ".\n" +
-		"ردّ على هالرسالة بموقعك:\n" +
-		"اضغط 📎 ← الموقع ← أرسل موقعك الحالي\n\n" +
+// (قرارُ المالك ٢٠٢٦-١١-٠٣ «ردّ بموقعك» باقٍ.) **الناسُ تخاف الروابط** — فالتعليمةُ أن يردّ
+// المستلِمُ على المحادثة بموقعه من زرّ المشبك في واتساب نفسِه، **والرابطُ سطرٌ أخيرٌ احتياطيّ.**
+// والبوتُ يلتقط الموقعَ الوارد (`HandleWALocation`).
+func locReqText(link string) string {
+	return "السلام عليكم ورحمة الله وبركاته\n" +
+		"معك تطبيق رحّال غو للتسوق وطلبات التوصيل بالرقة\n" +
+		"ياريت تشارك موقعك أو ترسله عبر الواتساب لنقدر نوصل إليك بسهولة:\n" +
+		"ردّ على هالرسالة بموقعك: اضغط 📎 ← الموقع ← أرسل موقعك الحالي\n" +
 		"أو من هون: " + link
 }
 
@@ -114,21 +107,35 @@ func locReqAcc(v *float64) *float64 {
 }
 
 // locReqReceived **ما يلي وصولَ الموقع** — واحدٌ للرابط وللردّ بالواتساب فلا يختلفان:
-// نبضةٌ لصاحب المتجر، وكتابةُ نقطة الاستلام في طلب الأمانة وبثُّها للسائق، ونبضةٌ للزبون.
-func (s *Server) locReqReceived(ctx context.Context, ownerID, customerID, orderID string, lat, lng float64) {
+// نبضةٌ لصاحب المتجر، وكتابةُ النقطة في الطلب المربوط وبثُّها للسائق، ونبضةٌ للزبون وللمكتب.
+//
+//	amanah    نقطةُ الاستلام في الأمانة (٢٠٢٦-١٠-٣٠)
+//	whatsapp  نقطةُ التسليم في طلب الواتساب (ملحقُ المالك ٢٠٢٦-١١-٠٥، ب)
+func (s *Server) locReqReceived(ctx context.Context, ownerID, customerID, orderID, mode string, lat, lng float64) {
 	// **ونبضةٌ لصاحب المتجر** — شاشتُه تقرأ من جديد ولا تنتظر دورةَ السؤال.
 	if strings.TrimSpace(ownerID) != "" {
 		s.touchUser(ownerID, "deliveries")
 	}
-	// **وفي الأمانة: الطلبُ أُنشئ قبل أن يصل الموقع** (٢٠٢٦-١٠-٣٠) — فتُكتب النقطةُ فيه
-	// نقطةَ استلامٍ وتُبثّ للسائق. **ونقطةٌ خارجَ التغطية لا تُسقط الصفحة**: يتّصل به السائق.
+	// **الطلبُ أُنشئ قبل أن يصل الموقع** — فتُكتب النقطةُ فيه وتُبثّ للسائق. **ونقطةٌ خارجَ
+	// التغطية لا تُسقط الصفحة**: في الأمانة يتّصل به السائق، وفي طلب الواتساب تُكتب ويُخبَر المكتب.
 	if orderID != "" {
-		if _, err := s.orders.ApplyAmanahShared(ctx, orderID, lat, lng); err != nil {
-			s.logger.Warn("موقعُ الأمانة: تعذّرت كتابتُه في الطلب", "order", orderID, "error", err)
+		switch mode {
+		case locReqModeWhatsApp:
+			if _, err := s.orders.ApplyWhatsAppShared(ctx, orderID, lat, lng); err != nil {
+				s.logger.Warn("موقعُ مستلِم طلب الواتساب: تعذّرت كتابتُه في الطلب", "order", orderID, "error", err)
+			}
+		default:
+			if _, err := s.orders.ApplyAmanahShared(ctx, orderID, lat, lng); err != nil {
+				s.logger.Warn("موقعُ الأمانة: تعذّرت كتابتُه في الطلب", "order", orderID, "error", err)
+			}
 		}
 	}
 	if customerID != "" {
 		s.touchUser(customerID, "location_request", "orders")
+	}
+	// **ونموذجُ الواتساب في اللوحة يقرأ من جديد** — لا ينتظر دورةَ السؤال.
+	if mode == locReqModeWhatsApp {
+		s.touch("orders", "ops")
 	}
 }
 
@@ -140,7 +147,7 @@ func (s *Server) HandleWALocation(ctx context.Context, from string, lat, lng, ac
 	if !ok || !orders.ValidPoint(lat, lng) {
 		return ""
 	}
-	var ownerID, customerID, orderID string
+	var ownerID, customerID, orderID, mode string
 	err := s.pg.QueryRow(ctx, `
 		UPDATE recipient_location_requests l
 		   SET lat = $2, lng = $3, accuracy_m = $4, received_at = now()
@@ -149,8 +156,8 @@ func (s *Server) HandleWALocation(ctx context.Context, from string, lat, lng, ac
 		                ORDER BY created_at DESC LIMIT 1)
 		   AND l.received_at IS NULL AND l.expires_at > now()
 		RETURNING COALESCE((SELECT m.owner_user_id::text FROM merchants m WHERE m.id = l.merchant_id), ''),
-		          COALESCE(l.customer_id::text, ''), COALESCE(l.order_id::text, '')`,
-		phone, lat, lng, locReqAcc(&accuracy)).Scan(&ownerID, &customerID, &orderID)
+		          COALESCE(l.customer_id::text, ''), COALESCE(l.order_id::text, ''), l.mode`,
+		phone, lat, lng, locReqAcc(&accuracy)).Scan(&ownerID, &customerID, &orderID, &mode)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ""
 	}
@@ -158,7 +165,7 @@ func (s *Server) HandleWALocation(ctx context.Context, from string, lat, lng, ac
 		s.logger.Warn("ردُّ الموقع بالواتساب: التحديثُ سقط", "error", err)
 		return ""
 	}
-	s.locReqReceived(ctx, ownerID, customerID, orderID, lat, lng)
+	s.locReqReceived(ctx, ownerID, customerID, orderID, mode, lat, lng)
 	return "وصلنا موقعك ✅ شكراً، السائق رح يوصل لعندك."
 }
 
@@ -216,43 +223,49 @@ func (s *Server) handleMerchantRequestLocation(w http.ResponseWriter, r *http.Re
 		return
 	}
 	token := base64.RawURLEncoding.EncodeToString(raw)
-	var id, store string
+	var id string
 	var expires time.Time
 	if err := s.pg.QueryRow(ctx, `
 		INSERT INTO recipient_location_requests
 		       (merchant_id, requested_by, phone, mode, token_hash, expires_at)
 		VALUES ($1, NULLIF($2, '')::uuid, $3, $4, $5, now() + make_interval(secs => $6))
-		RETURNING id::text, expires_at,
-		          (SELECT name FROM merchants WHERE id = $1)`,
+		RETURNING id::text, expires_at`,
 		merchantID, userIDFrom(r), phone, mode, locReqHash(token),
-		int(locReqTTL.Seconds())).Scan(&id, &expires, &store); err != nil {
+		int(locReqTTL.Seconds())).Scan(&id, &expires); err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	link := s.locReqLink(token)
+	httpx.JSON(w, http.StatusCreated, s.locReqSend(ctx, id, phone, token, expires))
+}
 
-	// **والإرسالُ بانتظاره** — الشاشةُ تقول «وصلت الرسالة» أو تعرض زرَّ المشاركة.
+// locReqSend **يرسل الرسالةَ الواحدة ويعلّم وصولَها** — ويردّ ما تعرضه الشاشة. **واحدٌ للمتجر
+// وللأمانة ولطلب الواتساب من المكتب** فلا تفترق رسالتان (قرارُ المالك ٢٠٢٦-١١-٠٥).
+//
+// **والإرسالُ بانتظاره** — الشاشةُ تقول «وصلت الرسالة» أو تعرض زرَّ المشاركة.
+func (s *Server) locReqSend(ctx context.Context, id, phone, token string, expires time.Time) map[string]any {
+	link := s.locReqLink(token)
+	text := locReqText(link)
 	sendCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
 	defer cancel()
-	sent := s.sendText(sendCtx, phone, locReqText(store, mode, link))
+	sent := s.sendText(sendCtx, phone, text)
 	if sent {
 		if _, err := s.pg.Exec(ctx,
 			`UPDATE recipient_location_requests SET whatsapp_sent = true WHERE id = $1`, id); err != nil {
 			s.logger.Warn("طلبُ الموقع: تعليمُ الإرسال سقط", "error", err)
 		}
 	}
-	httpx.JSON(w, http.StatusCreated, map[string]any{
+	return map[string]any{
 		"id":            id,
 		"status":        "pending",
 		"whatsapp_sent": sent,
 		// **والرابطُ له** — إن لم تصل الرسالةُ يشاركه بنفسه.
 		"link":       link,
-		"share_text": locReqText(store, mode, link),
+		"share_text": text,
 		// **ورابطُ واتساب جاهزٌ برقمه الدوليّ** — المكتوبُ في النموذج قد يكون محلّيّاً.
 		"wa_url": "https://wa.me/" + strings.TrimPrefix(phone, "+") +
-			"?text=" + url.QueryEscape(locReqText(store, mode, link)),
+			"?text=" + url.QueryEscape(text),
 		"expires_at": expires.Format(time.RFC3339),
-	})
+	}
 }
 
 // locReqStatus **حالُ الطلب** — `pending` · `received` · `expired`.
@@ -336,7 +349,8 @@ func (s *Server) handlePublicLocationRequest(w http.ResponseWriter, r *http.Requ
 	var received *time.Time
 	var expires time.Time
 	err := s.pg.QueryRow(r.Context(), `
-		SELECT COALESCE(m.name, NULLIF(cu.full_name, ''), ''), l.mode, l.received_at, l.expires_at
+		SELECT COALESCE(m.name, NULLIF(cu.full_name, ''), NULLIF(l.store_label, ''), ''),
+		       l.mode, l.received_at, l.expires_at
 		  FROM recipient_location_requests l
 		  -- **وطلبُ الأمانة صاحبُه زبون** (٢٠٢٦-١٠-٣٠) — فاسمُه لا اسمُ متجر.
 		  LEFT JOIN merchants m ON m.id = l.merchant_id
@@ -349,6 +363,13 @@ func (s *Server) handlePublicLocationRequest(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	// **وطلبُ الواتساب من المكتب بلا متجرٍ مكتوبٍ باسم المنصّة** (٢٠٢٦-١١-٠٥) — لا عنوانٌ فارغ.
+	// والاسمُ من الإعدادات، **وفارغُها اسمُ التطبيق كما كتبه المالكُ في رسالته** (`locReqText`).
+	if store == "" && mode == locReqModeWhatsApp {
+		if store = strings.TrimSpace(s.settings.GetString(r.Context(), "platform.name")); store == "" {
+			store = "رحّال غو"
+		}
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"store_name": store,
@@ -385,15 +406,15 @@ func (s *Server) handlePublicSubmitLocation(w http.ResponseWriter, r *http.Reque
 	// **والدقّةُ اختياريّة** — ومن الخريطة لا دقّة. وما خرج عن المعقول يُهمَل.
 	acc := locReqAcc(req.AccuracyM)
 	hash := locReqHash(token)
-	var ownerID, customerID, orderID string
+	var ownerID, customerID, orderID, mode string
 	err = s.pg.QueryRow(r.Context(), `
 		UPDATE recipient_location_requests l
 		   SET lat = $2, lng = $3, accuracy_m = $4, received_at = now()
 		 WHERE l.token_hash = $1
 		   AND l.received_at IS NULL AND l.expires_at > now()
 		RETURNING COALESCE((SELECT m.owner_user_id::text FROM merchants m WHERE m.id = l.merchant_id), ''),
-		          COALESCE(l.customer_id::text, ''), COALESCE(l.order_id::text, '')`,
-		hash, *req.Lat, *req.Lng, acc).Scan(&ownerID, &customerID, &orderID)
+		          COALESCE(l.customer_id::text, ''), COALESCE(l.order_id::text, ''), l.mode`,
+		hash, *req.Lat, *req.Lng, acc).Scan(&ownerID, &customerID, &orderID, &mode)
 	if errors.Is(err, pgx.ErrNoRows) {
 		var exists bool
 		_ = s.pg.QueryRow(r.Context(),
@@ -410,7 +431,7 @@ func (s *Server) handlePublicSubmitLocation(w http.ResponseWriter, r *http.Reque
 		s.respondErr(w, err)
 		return
 	}
-	s.locReqReceived(r.Context(), ownerID, customerID, orderID, *req.Lat, *req.Lng)
+	s.locReqReceived(r.Context(), ownerID, customerID, orderID, mode, *req.Lat, *req.Lng)
 	httpx.JSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
@@ -470,40 +491,19 @@ func (s *Server) handleCustomerRequestLocation(w http.ResponseWriter, r *http.Re
 		return
 	}
 	token := base64.RawURLEncoding.EncodeToString(raw)
-	var id, name string
+	var id string
 	var expires time.Time
 	if err := s.pg.QueryRow(ctx, `
 		INSERT INTO recipient_location_requests
 		       (customer_id, requested_by, phone, mode, token_hash, expires_at)
 		VALUES ($1, $1, $2, 'amanah', $3, now() + make_interval(secs => $4))
-		RETURNING id::text, expires_at,
-		          COALESCE((SELECT full_name FROM users WHERE id = $1), '')`,
+		RETURNING id::text, expires_at`,
 		customerID, phone, locReqHash(token), int(locReqTTL.Seconds())).
-		Scan(&id, &expires, &name); err != nil {
+		Scan(&id, &expires); err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	link := s.locReqLink(token)
-	text := locReqText(name, "amanah", link)
-	sendCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
-	defer cancel()
-	sent := s.sendText(sendCtx, phone, text)
-	if sent {
-		if _, err := s.pg.Exec(ctx,
-			`UPDATE recipient_location_requests SET whatsapp_sent = true WHERE id = $1`, id); err != nil {
-			s.logger.Warn("طلبُ موقع الأمانة: تعليمُ الإرسال سقط", "error", err)
-		}
-	}
-	httpx.JSON(w, http.StatusCreated, map[string]any{
-		"id":            id,
-		"status":        "pending",
-		"whatsapp_sent": sent,
-		"link":          link,
-		"share_text":    text,
-		"wa_url": "https://wa.me/" + strings.TrimPrefix(phone, "+") +
-			"?text=" + url.QueryEscape(text),
-		"expires_at": expires.Format(time.RFC3339),
-	})
+	httpx.JSON(w, http.StatusCreated, s.locReqSend(ctx, id, phone, token, expires))
 }
 
 // handleCustomerLocationRequest **أوصل موقعُ صاحب الأمانة؟** — `GET /my/location-requests/{id}`.

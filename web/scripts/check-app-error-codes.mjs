@@ -208,6 +208,8 @@ const SERVER_ADMIN = new Set([
   // **«طلبات الواتساب»** (قرارُ المالك ٢٠٢٦-١١-٠٥) — نموذجُ اللوحة وحدَه.
   "wa_store_required", "wa_store_conflict", "wa_store_unavailable", "wa_fee_out_of_range",
   "wa_fee_below_share", "wa_not_whatsapp", "wa_cancel_after_pickup",
+  // **طلبٌ بلا موقعٍ للمستلِم وتصحيحُ عنوانه** (ملحقُ المالك ٢٠٢٦-١١-٠٥).
+  "wa_fee_required", "wa_address_closed",
 ]);
 
 const found = new Map();

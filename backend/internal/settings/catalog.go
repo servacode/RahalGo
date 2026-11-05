@@ -1890,6 +1890,11 @@ var Catalog = []Def{
 	// وصفره «لا». انظر `orders/no_whatsapp_dispatch.go`.
 	{Key: "orders.no_whatsapp_dispatch_min", Group: GroupDispatch, Kind: KindInt,
 		Min: 0, Max: 120, Unit: "minute", Default: 2},
+	// **«ما وصل الموقع؟ اكتبلنا عنوانك»** (قرارُ المالك ٢٠٢٦-١١-٠٥: «مايصير عشر دقايق كثيرة، 3
+	// دقايق») — بعد هالدقايق من طلب الموقع **لطلب واتساب من المكتب وحدَه** بلا موقعٍ وصل، البوتُ
+	// يبعت مرّةً وحدة يطلب العنوانَ مكتوباً. وصفرُه «لا». انظر `server/wa_location_followup.go`.
+	{Key: "orders.whatsapp_location_followup_min", Group: GroupDispatch, Kind: KindInt,
+		Min: 0, Max: 60, Unit: "minute", Default: 3},
 	// **ومتى يُعدّ المكتبُ فارغاً** — دقائقُ بلا ظهورٍ لأحدٍ يملك القبول.
 	{Key: "orders.staff_presence_min", Group: GroupDispatch, Kind: KindInt,
 		Min: 1, Max: 60, Unit: "minute", Default: 5},

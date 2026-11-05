@@ -10,6 +10,10 @@
  * بعد الاستلام يُقال «الحلّ من بطاقة الطلب».
  *
  * **ومن هنا إلى لوحة الطلبات وسجلّها** بفلتر «طلبات الواتساب» — الطلبُ طلبٌ نظاميٌّ هناك.
+ *
+ * **و«تعديل العنوان» قبل التسليم** (ملحقُ المالك ٢٠٢٦-١١-٠٥، د: «نحن رح نعبيه يدوي») — المستلِمُ
+ * كتب عنوانَه بالتفصيل على الواتساب فيعبّيه الموظّف (`POST /admin/whatsapp-orders/{id}/address`)،
+ * ويصل السائقَ في لحظته. **و«بلا موقع» على الطلب الذي لم يصل موقعُ مستلِمه بعد.**
  */
 
 import Link from "next/link";
@@ -46,10 +50,14 @@ interface WaRow {
   customer_name: string;
   driver_name?: string | null;
   delivery_fee: number;
+  address_text?: string;
+  dropoff_known?: boolean;
 }
 
 /** **قبل الاستلام وحدَه** — والمحرّكُ يحرسه (`wa_cancel_after_pickup`). */
 const CANCELLABLE = new Set(["dispatching", "assigned", "at_pickup"]);
+/** **قبل التسليم** — والمحرّكُ يحرسه (`wa_address_closed`). */
+const ADDRESS_EDITABLE = new Set(["dispatching", "assigned", "at_pickup", "picked_up", "on_the_way", "at_dropoff"]);
 
 export function RecentWhatsAppOrders({ refresh }: { refresh: number }) {
   const [rows, setRows] = useState<WaRow[] | null>(null);
@@ -59,6 +67,8 @@ export function RecentWhatsAppOrders({ refresh }: { refresh: number }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [done, setDone] = useState("");
+  const [addrTarget, setAddrTarget] = useState<WaRow | null>(null);
+  const [addrText, setAddrText] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -90,6 +100,30 @@ export function RecentWhatsAppOrders({ refresh }: { refresh: number }) {
       setDone(fill(W.cancelled, { n: target.number }));
       setTarget(null);
       setReason("");
+      void load();
+    } catch (e) {
+      setErr(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** **«تعديل العنوان»** — يُحفظ ويصل السائقَ، والسجلُّ يحمل القديمَ والجديد. */
+  async function saveAddress() {
+    if (!addrTarget || busy) return;
+    if (!addrText.trim()) {
+      setErr(fill(W.missing, { fields: W.address }));
+      return;
+    }
+    setBusy(true);
+    setErr("");
+    try {
+      await api(`/api/v1/admin/whatsapp-orders/${addrTarget.id}/address`, {
+        method: "POST",
+        body: JSON.stringify({ address_text: addrText.trim() }),
+      });
+      setDone(fill(W.addressSaved, { n: addrTarget.number }));
+      setAddrTarget(null);
       void load();
     } catch (e) {
       setErr(errorText(e));
@@ -138,11 +172,28 @@ export function RecentWhatsAppOrders({ refresh }: { refresh: number }) {
                 <>
                   {o.merchant_name} ← {o.customer_name} · {fmtDamascusTime(o.created_at)} ·{" "}
                   {o.driver_name || W.noDriver}
+                  {o.dropoff_known === false && ADDRESS_EDITABLE.has(o.status) && (
+                    <span className="block text-warning">{W.noPoint}</span>
+                  )}
                 </>
               }
               trailing={
                 <span className="flex flex-col items-end gap-1">
                   <span className="font-bold">{fmtMoney(o.delivery_fee)}</span>
+                  {ADDRESS_EDITABLE.has(o.status) && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => {
+                        setAddrTarget(o);
+                        setAddrText(o.address_text ?? "");
+                        setErr("");
+                        setDone("");
+                      }}
+                    >
+                      {W.editAddress}
+                    </Button>
+                  )}
                   {CANCELLABLE.has(o.status) && (
                     <Button
                       size="sm"
@@ -174,6 +225,23 @@ export function RecentWhatsAppOrders({ refresh }: { refresh: number }) {
             busy={busy}
             tone="danger"
             saveLabel={W.cancelConfirm}
+          />
+        </div>
+      </Modal>
+
+      <Modal
+        open={addrTarget !== null}
+        onClose={() => setAddrTarget(null)}
+        title={addrTarget ? fill(W.editAddressTitle, { n: addrTarget.number }) : W.editAddress}
+      >
+        <div className="space-y-3">
+          <Textarea label={W.address} value={addrText} maxLength={300} autoGrow onChange={(e) => setAddrText(e.target.value)} />
+          {err && <Alert tone="error">{err}</Alert>}
+          <FormActions
+            onSave={() => void saveAddress()}
+            onCancel={() => setAddrTarget(null)}
+            busy={busy}
+            saveLabel={W.editAddressSave}
           />
         </div>
       </Modal>

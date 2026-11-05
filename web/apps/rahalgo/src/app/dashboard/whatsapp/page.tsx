@@ -24,7 +24,7 @@ const m = getMessages(defaultLocale);
 const W = m.admin.whatsappOrders;
 
 export default function WhatsAppOrdersPage() {
-  const [sent, setSent] = useState<{ id: string; number: number } | null>(null);
+  const [sent, setSent] = useState<{ id: string; number: number; noPoint: boolean } | null>(null);
   const [refresh, setRefresh] = useState(0);
 
   return (
@@ -38,6 +38,8 @@ export default function WhatsAppOrdersPage() {
               {fill(W.sent, { n: sent.number })}
               <OpenOrderLink id={sent.id} />
             </span>
+            {/* **بلا موقع: العنوانُ المكتوب، والموقعُ يصل السائقَ حين يبعته المستلِم** (ملحق ٢٠٢٦-١١-٠٥). */}
+            {sent.noPoint && <span className="mt-1 block">{W.sentNoPoint}</span>}
           </Alert>
         )
       }

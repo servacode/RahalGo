@@ -121,6 +121,10 @@ var adminPolicy = []Rule{
 	{"GET", "/whatsapp-orders/quote", OrdersWhatsApp},
 	{"POST", "/whatsapp-orders/resolve-location", OrdersWhatsApp},
 	{"POST", "/whatsapp-orders/{id}/cancel", OrdersWhatsApp},
+	// **و«اطلب الموقع» من رقم المستلِم وتصحيحُ عنوانه** (ملحقُ المالك ٢٠٢٦-١١-٠٥، أ ود).
+	{"POST", "/whatsapp-orders/{id}/address", OrdersWhatsApp},
+	{"POST", "/whatsapp-orders/location-requests", OrdersWhatsApp},
+	{"GET", "/whatsapp-orders/location-requests/{id}", OrdersWhatsApp},
 
 	// ── الطلبات ─────────────────────────────────────────────────
 	{"POST", "/orders/{id}/transition", OrdersIntervene},

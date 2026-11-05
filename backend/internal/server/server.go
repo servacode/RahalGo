@@ -1593,6 +1593,10 @@ func (s *Server) Router() http.Handler {
 			r.Get("/whatsapp-orders/quote", s.handleWhatsAppQuote)
 			r.Post("/whatsapp-orders/resolve-location", s.handleWhatsAppResolveLocation)
 			r.Post("/whatsapp-orders/{id}/cancel", s.handleCancelWhatsAppOrder)
+			// **و«اطلب الموقع» وتصحيحُ العنوان** (ملحقُ المالك ٢٠٢٦-١١-٠٥، أ ود).
+			r.Post("/whatsapp-orders/{id}/address", s.handleWhatsAppOrderAddress)
+			r.Post("/whatsapp-orders/location-requests", s.handleWhatsAppRequestLocation)
+			r.Get("/whatsapp-orders/location-requests/{id}", s.handleWhatsAppLocationRequest)
 
 			// ══════════════════════════════════════════════════
 			// **وإدارةُ الأدوار بقدرتها لا بكونه `admin`** — `ADG-1`
