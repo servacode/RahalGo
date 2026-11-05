@@ -15,19 +15,21 @@ import (
 	"testing"
 )
 
-// TestTransferAtPickupNotReclaimed **T0d — إسنادٌ مباشر، السائقُ عند المتجر، تحويلٌ، ثمّ
-// كانسُ المهل ⇒ الطلبُ يبقى معه.**
-func TestTransferAtPickupNotReclaimed(t *testing.T) {
-	f := newDriverFixture(t, 2)
+// atPickupRipeSilence **إسنادٌ مباشر، السائقُ عند المتجر، ومهلةُ الصمت منقضية** — الحالُ التي
+// يقع فيها خللُ PD-4 بكلّ مسارٍ يُعيد `at_pickup` إلى `assigned`. يردّ الطلبَ وسائقَه وموظّفَ
+// عمليّات.
+func atPickupRipeSilence(t *testing.T) (f *driverFixture, orderID, driverID, ops string) {
+	t.Helper()
+	f = newDriverFixture(t, 2)
 	ctx := context.Background()
 	armRotation(t, f, 60)
 	f.armDirect(t, true)
 	for _, d := range f.drivers {
 		f.onShift(t, d, true)
 	}
-	ops := f.armOps(t)
+	ops = f.armOps(t)
 
-	orderID := f.dispatchingOrder(t, 48_000, 10_000)
+	orderID = f.dispatchingOrder(t, 48_000, 10_000)
 	if err := f.srv.orders.OfferNext(ctx, orderID, nil); err != nil {
 		t.Fatalf("الإسناد فشل: %v", err)
 	}
@@ -45,6 +47,38 @@ func TestTransferAtPickupNotReclaimed(t *testing.T) {
 		orderID); err != nil {
 		t.Fatalf("تعذّر إنضاجُ المهلة: %v", err)
 	}
+	t.Cleanup(func() {
+		_, _ = f.pool.Exec(context.Background(), `DELETE FROM orders WHERE id = $1`, orderID)
+	})
+	return f, orderID, first, ops
+}
+
+// assertNotReclaimed **بعد كانس المهل: الطلبُ مع سائقه في `assigned`، ولا مهلةَ صمتٍ عليه.**
+func assertNotReclaimed(t *testing.T, f *driverFixture, orderID, first string) {
+	t.Helper()
+	var expires *string
+	if err := f.pool.QueryRow(context.Background(),
+		`SELECT offer_expires_at::text FROM orders WHERE id = $1`, orderID).Scan(&expires); err != nil {
+		t.Fatal(err)
+	}
+	if expires != nil {
+		t.Errorf("offer_expires_at=%s بعد العودة إلى assigned — يُنتظر NULL: مهلةُ الصمت انتهت بتحرّكه", *expires)
+	}
+
+	f.srv.orders.SweepExpiredOffers(context.Background())
+
+	still, status := f.assignedTo(t, orderID)
+	if still != first || status != "assigned" {
+		t.Fatalf("driver=%q status=%q بعد الكانس — **نُزع الطلبُ من سائقٍ واقفٍ عند المتجر** (يُنتظر %s)",
+			still, status, first)
+	}
+}
+
+// TestTransferAtPickupNotReclaimed **T0d — إسنادٌ مباشر، السائقُ عند المتجر، تحويلٌ، ثمّ
+// كانسُ المهل ⇒ الطلبُ يبقى معه.**
+func TestTransferAtPickupNotReclaimed(t *testing.T) {
+	f, orderID, first, ops := atPickupRipeSilence(t)
+	ctx := context.Background()
 
 	var other string
 	if err := f.pool.QueryRow(ctx, `
@@ -66,20 +100,26 @@ func TestTransferAtPickupNotReclaimed(t *testing.T) {
 	if d, st := f.assignedTo(t, orderID); d != first || st != "assigned" {
 		t.Fatalf("بعد التحويل driver=%q status=%q — يُنتظر معه في الطريق للمتجر الجديد", d, st)
 	}
-	var expires *string
-	if err := f.pool.QueryRow(ctx,
-		`SELECT offer_expires_at::text FROM orders WHERE id = $1`, orderID).Scan(&expires); err != nil {
-		t.Fatal(err)
-	}
-	if expires != nil {
-		t.Errorf("offer_expires_at=%s بعد التحويل — يُنتظر NULL: مهلةُ الصمت انتهت بتحرّكه", *expires)
-	}
+	assertNotReclaimed(t, f, orderID, first)
+}
 
-	f.srv.orders.SweepExpiredOffers(ctx)
-
-	still, status := f.assignedTo(t, orderID)
-	if still != first || status != "assigned" {
-		t.Fatalf("driver=%q status=%q بعد الكانس — **نُزع الطلبُ من سائقٍ واقفٍ عند المتجر** (يُنتظر %s)",
-			still, status, first)
+// TestExternalStoreAtPickupNotReclaimed **شقيقُ T0d — «من متجرٍ غير تابع» والسائقُ عند المتجر.**
+//
+// القلبُ (`ConvertToExternalStore`) يُعيد `at_pickup` إلى `assigned` بقيدٍ مباشرٍ كالتحويل،
+// **وكانسُ الصمت لا يفرّق بين الأنواع** — فيأخذ طلبَ المشتريات من سائقٍ واقفٍ عند المتجر ويُعيده
+// إلى الطابور. ⇒ يبقى معه.
+func TestExternalStoreAtPickupNotReclaimed(t *testing.T) {
+	f, orderID, first, ops := atPickupRipeSilence(t)
+	_, ch, err := f.srv.orders.ConvertToExternalStore(context.Background(), ops, orderID,
+		"المتجرُ مغلق والزبونُ يريده من غيره", nil)
+	if err != nil {
+		t.Fatalf("القلب: %v", err)
 	}
+	if ch.FromStatus != "at_pickup" || ch.ToStatus != "assigned" {
+		t.Fatalf("القلبُ من %q إلى %q — يُنتظر at_pickup ← assigned", ch.FromStatus, ch.ToStatus)
+	}
+	if d, st := f.assignedTo(t, orderID); d != first || st != "assigned" {
+		t.Fatalf("بعد القلب driver=%q status=%q — يُنتظر معه في الطريق", d, st)
+	}
+	assertNotReclaimed(t, f, orderID, first)
 }

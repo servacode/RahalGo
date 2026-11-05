@@ -178,6 +178,11 @@ func (s *Service) ConvertToExternalStore(ctx context.Context, actorID, orderID, 
 	// التوصيل المجانيّ يعود عند تثبيتها (`freeDeliveryForQuote`)، وبالكود ذهب مع الكود.
 	ch.FeeSnapshot = fee + waived
 
+	// **ومن عند المتجر تُمحى مهلةُ الصمت** (شقيقُ خلل PD-4، ٢٠٢٦-١١-٠٥): الإسنادُ المباشر يكتب
+	// `offer_expires_at` (`assignDirectly`) ووصولُه إلى المتجر لا يمحوها، **فعودتُه إلى `assigned`
+	// بمهلةٍ منقضيةٍ يقرؤها كانسُ الصمت** (`reclaimSilentAssignments`، ولا يفرّق بين الأنواع)
+	// **فينزع طلبَ المشتريات من سائقٍ واقفٍ عند المتجر.** وهو تحرّك فعلاً — فلا صمتَ يُقاس عليه.
+	// **وما كان `assigned` قبل القلب تبقى مهلتُه**: لم يتحرّك بعد.
 	if _, err := tx.Exec(ctx, `
 		UPDATE orders SET
 		       kind = 'custom', custom_mode = 'purchase', custom_request = $2,
@@ -200,6 +205,7 @@ func (s *Service) ConvertToExternalStore(ctx context.Context, actorID, orderID, 
 		       door_instruction = '', door_instruction_note = '', door_instruction_at = NULL,
 		       sent_to_merchant_at = NULL, prep_minutes = NULL, ready_at = NULL,
 		       pickup_override = NULL, pickup_override_note = '',
+		       offer_expires_at = CASE WHEN status = 'at_pickup' THEN NULL ELSE offer_expires_at END,
 		       status = $6,
 		       dispatched_at = CASE WHEN $6 = 'dispatching' AND status <> 'dispatching'
 		                            THEN now() ELSE dispatched_at END,
