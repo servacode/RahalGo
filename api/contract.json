@@ -9564,6 +9564,42 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/merchant/stores/{id}/delivery-recipients",
+      "handler": "handleMerchantDeliveryRecipients",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "recipients",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/merchant/stores/{id}/delivery-recipients/{phone}",
+      "handler": "handleMerchantHideDeliveryRecipient",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "hidden",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/merchant/stores/{id}/drinks",
       "handler": "handleMerchantGetDrinks",
       "auth": true,
