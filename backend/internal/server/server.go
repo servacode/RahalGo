@@ -1096,6 +1096,8 @@ func (s *Server) Router() http.Handler {
 			r.Post("/stores/{id}/emergency", s.handleMerchantEmergency)
 			r.Get("/orders/{id}", s.handleMerchantGetOrder)
 			r.Post("/orders/{id}/transition", s.handleMerchantTransition)
+			// **وبابُ القسم الصريح** — طلبٌ بعدّة محطّات، لمالكٍ له فيه فرعان (`merchant_parts.go`).
+			r.Post("/orders/{id}/parts/{storeID}/transition", s.handleMerchantPartTransition)
 			// حلقة المطبخ: الجاهزية علامةٌ يرفعها من يعرف، وساعاته وإعداداته بيده
 			r.Post("/orders/{id}/ready", s.handleMerchantReady)
 			// ══════════════════════════════════════════════════════════
