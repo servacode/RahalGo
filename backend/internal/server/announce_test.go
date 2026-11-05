@@ -19,6 +19,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
+
 	"github.com/servacode/rahalgo/backend/internal/realtime"
 )
 
@@ -109,6 +111,42 @@ func TestAnnounceWrites_IsWiredToBothGates(t *testing.T) {
 		}
 		if !strings.Contains(src[at:end], "r.Use(s.announceWrites)") {
 			t.Errorf("%s بلا `announceWrites` — ما يُكتب فيها لا يصل تطبيقاً مفتوحا", gate)
+		}
+	}
+}
+
+// TestAnnounceWrites_QuietRoutes **«شيلو من القائمة» لا يوقظ التطبيقات** — وكتابةٌ جارتُها
+// في المجموعة نفسِها تُبَثّ كما كانت. **وبموجّهٍ حقيقيّ** ليُقرأ نمطُ المسار كما في الخادم.
+func TestAnnounceWrites_QuietRoutes(t *testing.T) {
+	for _, c := range []struct {
+		method, path string
+		want         bool
+	}{
+		{http.MethodDelete, "/api/v1/merchant/stores/s1/delivery-recipients/963933111222", false},
+		{http.MethodPost, "/api/v1/merchant/stores/s1/deliveries", true},
+	} {
+		hub := realtime.NewHub(slog.New(slog.NewTextHandler(os.Stderr, nil)))
+		ch, done := hub.Subscribe([]string{realtime.TopicCatalog})
+		s := &Server{hub: hub}
+		ok := func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusOK) }
+		mux := chi.NewRouter()
+		mux.Route("/api/v1", func(r chi.Router) {
+			r.Route("/merchant", func(r chi.Router) {
+				r.Use(s.announceWrites)
+				r.Delete("/stores/{id}/delivery-recipients/{phone}", ok)
+				r.Post("/stores/{id}/deliveries", ok)
+			})
+		})
+		mux.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(c.method, c.path, nil))
+		var got bool
+		select {
+		case <-ch:
+			got = true
+		default:
+		}
+		done()
+		if got != c.want {
+			t.Fatalf("%s %s: بُثّ %v والمنتظَر %v", c.method, c.path, got, c.want)
 		}
 	}
 }

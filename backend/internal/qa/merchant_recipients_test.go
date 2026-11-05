@@ -21,7 +21,7 @@ import (
 )
 
 // mrSend **توصيلةٌ من باب المتجر بمستلِمٍ معلوم** — والنقطةُ اختياريّة.
-func mrSend(t *testing.T, h *Harness, m mdFx, tok, storeID, name, phone, addr string, point bool) {
+func mrSend(t *testing.T, h *Harness, m mdFx, tok, storeID, name, phone, addr string, point bool) string {
 	t.Helper()
 	body := map[string]any{
 		"recipient_name": name, "recipient_phone": phone, "address_text": addr,
@@ -33,6 +33,17 @@ func mrSend(t *testing.T, h *Harness, m mdFx, tok, storeID, name, phone, addr st
 	r := h.POSTKey("/api/v1/merchant/stores/"+storeID+"/deliveries", tok, uniq("mr"), body)
 	if r.Code != http.StatusCreated {
 		t.Fatalf("الإنشاء (%s): %d / %s", phone, r.Code, r)
+	}
+	id, _ := r.JSON()["id"].(string)
+	return id
+}
+
+// mrLegacyPhone **صفٌّ قديمٌ برقمٍ غيرِ موحّد** — كما لو كُتب قبل توحيد بوّابة الإنشاء أو من
+// غير الباب. **فبوّابةُ الإنشاء توحّد كلَّ ما يمرّ بها**، ولا يُقاس الجمعُ إلّا بصفٍّ لم يمرّ.
+func mrLegacyPhone(t *testing.T, h *Harness, orderID, phone string) {
+	t.Helper()
+	if _, err := h.Pool.Exec(ctxBG(), `UPDATE orders SET recipient_phone = $2 WHERE id = $1`, orderID, phone); err != nil {
+		t.Fatalf("صفٌّ قديم: %v", err)
 	}
 }
 
@@ -157,11 +168,12 @@ func TestMR02_LatestPerPhone(t *testing.T) {
 	m := newMDFx(t, h, "منطقةُ MR-02")
 	tok, sid := m.fx.Tok, m.fx.M.ID
 
-	// **الرقمُ نفسُه بثلاث صيغ** — `09…` و`+963…` و`00963 …` بمسافات.
+	// **الرقمُ نفسُه بثلاث صيغ مخزَّنة** — الأوّلُ من الباب (`+963…`)، والآخران صفّان قديمان
+	// لم يمرّا بتوحيده: أرقامٌ هنديّةٌ بمسافات، و`00963…`. **والجمعُ بالمفتاح لا بالمخزَّن.**
 	mrSend(t, h, m, tok, sid, "أبو خالد", "0935111222", "العنوان الأول", true)
 	mrSend(t, h, m, tok, sid, "سامر", "0966000111", "عنوان سامر", false)
-	mrSend(t, h, m, tok, sid, "أبو خالد الحلبي", "+963935111222", "العنوان الثاني", false)
-	mrSend(t, h, m, tok, sid, "خالد", "00963 935 111 222", "العنوان الأخير", true)
+	mrLegacyPhone(t, h, mrSend(t, h, m, tok, sid, "أبو خالد الحلبي", "0935111222", "العنوان الثاني", false), "٠٩٣٥ ١١١ ٢٢٢")
+	mrLegacyPhone(t, h, mrSend(t, h, m, tok, sid, "خالد", "0935111222", "العنوان الأخير", true), "00963935111222")
 
 	rows := mrRows(t, h, tok, sid, "")
 	if got := mrPhones(rows); len(got) != 2 || got[0] != "+963935111222" || got[1] != "+963966000111" {
@@ -331,5 +343,27 @@ func TestMR05_HideAndReturn(t *testing.T) {
 	}
 	if rows[0]["phone"] != "+963955123456" {
 		t.Fatalf("**الراجعُ ليس أوّلاً وهو الأحدث**: %v", mrPhones(rows))
+	}
+}
+
+// TestMR06_HideIsPerStore **إخفاءُ رقمٍ عند متجرٍ لا يُخفيه عند غيره** — ولو بعثا للرقم نفسِه.
+func TestMR06_HideIsPerStore(t *testing.T) {
+	h := New(t)
+	a := newMDFx(t, h, "منطقةُ MR-06")
+	b := a.f.Merchant()
+	bTok := h.TokenFor(b.Owner.ID, "merchant")
+
+	mrSend(t, h, a, a.fx.Tok, a.fx.M.ID, "زبون مشترك", "0977555444", "عند أ", false)
+	mrSend(t, h, a, bTok, b.ID, "زبون مشترك", "0977555444", "عند ب", false)
+
+	if r := h.DEL("/api/v1/merchant/stores/"+a.fx.M.ID+"/delivery-recipients/0977555444", a.fx.Tok); r.Code != http.StatusOK {
+		t.Fatalf("الإخفاء عند أ: %d / %s", r.Code, r)
+	}
+	if rows := mrRows(t, h, a.fx.Tok, a.fx.M.ID, ""); mrHas(rows, "+963977555444") != nil {
+		t.Fatalf("**لم يُخفَ عند أ**: %v", mrPhones(rows))
+	}
+	r := mrHas(mrRows(t, h, bTok, b.ID, ""), "+963977555444")
+	if r == nil || r["address_text"] != "عند ب" {
+		t.Fatalf("**إخفاءُ أ أخفاه عند ب**: %v", r)
 	}
 }

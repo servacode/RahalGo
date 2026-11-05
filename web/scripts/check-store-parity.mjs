@@ -247,6 +247,21 @@ if (typeof rs.shouldSearchRecipients !== "function" || typeof rs.localPhone !== 
   eq("رقم أجنبي بيضل متل ما هو", rs.localPhone("+90532123456"), "+90532123456");
   const f = rs.recipientFill?.({ name: "أحمد", phone: "+963933111222", address_text: "الثكنة", lat: null, lng: 1, last_used_at: "", times: 1 });
   eq("بلا نقطة كاملة ما في نقطة", f?.point ?? null, null);
+  // **النقطة المحفوظة بتسقط إذا تبدّل الرقم أو العنوان** — نفس حالات `RecipientSuggestTest`.
+  if (typeof rs.samePhone !== "function" || typeof rs.keepsSavedPoint !== "function") {
+    fail("recipientSuggest.ts ما فيها samePhone/keepsSavedPoint — النقطة القديمة بتضل لغير صاحبها");
+  } else {
+    eq("09 = +963", rs.samePhone("0933111222", "+963933111222"), true);
+    eq("هندي بمسافات = 00963", rs.samePhone("٠٩٣٣ ١١١ ٢٢٢", "00963933111222"), true);
+    eq("رقمين مختلفين", rs.samePhone("0933111222", "0933111223"), false);
+    eq("فاضي ما بيساوي فاضي", rs.samePhone("", ""), false);
+    const picked = { name: "أحمد", phone: "0933111222", address: "الثكنة", point: { lat: 35.95, lng: 39.01 } };
+    eq("نفس الرقم بصيغة تانية بتضل", rs.keepsSavedPoint(picked, "+963933111222", "الثكنة"), true);
+    eq("رقم تاني بتسقط", rs.keepsSavedPoint(picked, "0933111223", "الثكنة"), false);
+    eq("رقم عم ينمحى بتسقط", rs.keepsSavedPoint(picked, "093311122", "الثكنة"), false);
+    eq("عنوان تعدّل بتسقط", rs.keepsSavedPoint(picked, "0933111222", "الثكنة، البناية الثانية"), false);
+  }
+  if (!/fun keepsSavedPoint\(/.test(suggestKt)) fail("RecipientSuggest.kt ما فيها keepsSavedPoint — التطبيق بيخلّي النقطة القديمة");
 }
 
 const deliveryPage = strip(read(join(web, "apps", "rahalgo", "src", "app", "(store)", "store", "delivery", "page.tsx")));
@@ -257,6 +272,8 @@ if (!/\buseRecipientSuggest\(/.test(deliveryPage) || !/<RecipientSuggestions\b/.
   fail("صفحة «اطلب توصيلة» ما بتعرض المستلمين السابقين — التطبيق بيعرضهن");
 }
 if (!recipientsLib.includes("/delivery-recipients")) fail("lib/store/recipients.ts ما بيندَه delivery-recipients");
+if (!/\bkeepsSavedPoint\(/.test(deliveryPage)) fail("صفحة «اطلب توصيلة» ما بتسقّط النقطة المحفوظة لما يتبدّل الرقم أو العنوان");
+if (!/\bkeepsSavedPoint\(/.test(deliveryKt)) fail("DeliveryScreen.kt ما بيسقّط النقطة المحفوظة لما يتبدّل الرقم أو العنوان");
 if (!/\bRecipientSuggestions\(vm\)/.test(deliveryKt)) fail("DeliveryScreen.kt ما بيعرض المستلمين السابقين — الموقع بيعرضهن");
 if (!deliveriesApiKt.includes("/delivery-recipients")) fail("DeliveriesApi.kt ما بيندَه delivery-recipients");
 

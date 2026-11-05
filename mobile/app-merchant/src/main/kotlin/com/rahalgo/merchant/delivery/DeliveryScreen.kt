@@ -174,7 +174,15 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
         linkState = LinkState.Checking
         linkJob = viewModelScope.launch {
             kotlinx.coroutines.delay(400)
-            val r = runCatching { api.resolveLocation(storeId, link) }.getOrNull()
+            // **والإلغاءُ لا يُقرأ «رابطاً بلا موقع»** — نداءٌ أُلغي لأنّ غيرَه كُتب لا يكتب
+            // «ما قرينا الرابط» فوق نقطةٍ صحيحة (مراجعةُ ٢٠٢٦-١١-٠٦).
+            val r = try {
+                api.resolveLocation(storeId, link)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                null
+            }
             if (r != null && r.found) {
                 setPoint(r.lat, r.lng, "")
                 pointFromLink = true
@@ -208,6 +216,29 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
         private set
     private var suggestJob: kotlinx.coroutines.Job? = null
 
+    /** **الحقلُ الذي ينتظر اقتراحَه** — فيُلغى إن خرج منه قبل أن يصل. */
+    private var suggestPending = ""
+
+    /** **المستلِمُ المختار كما مُلئ** — وبه يُعرف أنّ الرقمَ أو العنوانَ تبدّل بعده. */
+    private var picked: RecipientSuggest.Fill? = null
+
+    /**
+     * **نقطةُ مستلِمٍ سابقٍ لا تبقى لغيره** (مراجعةُ ٢٠٢٦-١١-٠٦) — من بدّل الرقمَ أو كتب في
+     * العنوان بعد الاختيار فهو شخصٌ آخر أو مكانٌ آخر، **ونقطةٌ قديمةٌ تُرسل السائقَ إلى غير
+     * مكانه.** فتسقط ويعود بلا نقطةٍ كما اليوم، **وتُعاد الأجرة** (`clearPoint`).
+     */
+    private fun dropStaleSavedPoint() {
+        val p = picked ?: return
+        if (pointFromSaved && !RecipientSuggest.keepsSavedPoint(p, phone, address)) clearPoint()
+    }
+
+    /** **يكتب في العنوان.** */
+    fun onAddress(v: String) {
+        address = v
+        touched()
+        dropStaleSavedPoint()
+    }
+
     /** **يكتب في الاسم** — والقائمةُ تتبع ما كُتب. */
     fun onName(v: String) {
         name = v
@@ -222,12 +253,13 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
     fun onPhone(v: String) {
         phone = com.rahalgo.ui.WesternDigits.text(v)
         touched()
+        dropStaleSavedPoint()
         suggest("phone", phone)
     }
 
     /** **خرج من الحقل** — فتُطوى قائمتُه (إلّا إن انتقل إلى حقلٍ آخرَ له قائمته). */
     fun leaveField(field: String) {
-        if (suggestFor == field) closeSuggestions()
+        if (suggestFor == field || suggestPending == field) closeSuggestions()
     }
 
     private fun suggest(field: String, text: String) {
@@ -236,10 +268,19 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
             closeSuggestions()
             return
         }
+        suggestPending = field
         suggestJob = viewModelScope.launch {
             kotlinx.coroutines.delay(RecipientSuggest.DEBOUNCE_MS)
-            // **وتعثّرُه لا يُقال** — قائمةٌ لا تظهر خيرٌ من خطأٍ فوق نموذجٍ يعمل.
-            val got = runCatching { api.recipients(storeId, text).recipients }.getOrNull().orEmpty()
+            // **وتعثّرُه لا يُقال** — قائمةٌ لا تظهر خيرٌ من خطأٍ فوق نموذجٍ يعمل. **والإلغاءُ
+            // ليس تعثّراً**: نداءٌ أُلغي لأنّ حرفاً جديداً كُتب لا يكتب قائمةً فارغة (وميض).
+            val got = try {
+                api.recipients(storeId, text).recipients
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                emptyList()
+            }
+            suggestPending = ""
             suggestFor = if (got.isEmpty()) "" else field
             suggestions = got
         }
@@ -247,6 +288,7 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
 
     fun closeSuggestions() {
         suggestJob?.cancel()
+        suggestPending = ""
         suggestFor = ""
         suggestions = emptyList()
     }
@@ -258,6 +300,13 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
         name = f.name
         phone = f.phone
         address = f.address
+        picked = f
+        // **وطلبُ موقعٍ أُرسل لرقمٍ آخر يُنسى** (مراجعةُ ٢٠٢٦-١١-٠٦) — فلا يملأ موقعٌ يصل متأخّراً
+        // مستلِماً غيرَ الذي طُلب منه. **وما وصل منه لغيره يسقط** — هو مكانُ شخصٍ آخر.
+        if (ask != AskState.Idle && !RecipientSuggest.samePhone(askPhone, f.phone)) {
+            if (ask == AskState.Received && !pointFromSaved) clearPoint()
+            resetAsk()
+        }
         val p = f.point
         if (p != null) {
             // **ونقطتُه تحلّ محلّ رابطٍ أو طلبِ موقعٍ سابق** — لا تبقى «✓ وصل» فوق غيرها.
@@ -325,7 +374,8 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
         ask = AskState.Sending
         askJob = viewModelScope.launch {
             val req = try {
-                api.requestLocation(storeId, phone.trim(), mode.ifEmpty { "send" })
+                askPhone = phone.trim()
+                api.requestLocation(storeId, askPhone, mode.ifEmpty { "send" })
             } catch (e: Exception) {
                 ask = AskState.Idle
                 askError = apiError(
@@ -362,6 +412,9 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
             }
         }
     }
+
+    /** **الرقمُ الذي أُرسل له طلبُ الموقع.** */
+    private var askPhone = ""
 
     private fun resetAsk() {
         askJob?.cancel()
@@ -572,6 +625,7 @@ class DeliveryViewModel(app: Application) : AndroidViewModel(app) {
                 point = null
                 pointLabel = ""
                 pointFromSaved = false
+                picked = null
                 closeSuggestions()
                 resetAsk()
                 load()
@@ -758,7 +812,7 @@ fun DeliveryScreen(vm: DeliveryViewModel) {
         OutlinedTextField(
             shape = Rahal.shape.md,
             value = vm.address,
-            onValueChange = { vm.address = it; vm.touched() },
+            onValueChange = { vm.onAddress(it) },
             label = { Text(stringResource(if (fetch) R.string.md_address_fetch else R.string.md_address)) },
             leadingIcon = { FieldIcon(com.rahalgo.ui.R.drawable.ic_home) },
             isError = tried && vm.address.isBlank(),

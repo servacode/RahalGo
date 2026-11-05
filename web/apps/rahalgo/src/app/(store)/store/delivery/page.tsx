@@ -34,7 +34,7 @@ import { backAt, fill } from "@/lib/customer/texts";
 import { DeliveryRow, statusText, toneOf } from "@/components/store/DeliveryParts";
 import { RecipientSuggestions } from "@/components/store/RecipientSuggestions";
 import { useRecipientSuggest } from "@/lib/store/recipients";
-import { recipientFill } from "@/lib/store/recipientSuggest";
+import { keepsSavedPoint, recipientFill, samePhone, type RecipientFill } from "@/lib/store/recipientSuggest";
 
 const m = getMessages(defaultLocale);
 const D = m.store.delivery;
@@ -186,6 +186,12 @@ export default function DeliveryPage() {
   const saved = useRecipientSuggest(storeId);
   /** **النقطةُ من آخر توصيلةٍ لمستلِمٍ اختير** — تُقال تحت العنوان وتُزال بلمسة. */
   const [pointFromSaved, setPointFromSaved] = useState(false);
+  /** **المستلِمُ المختار كما مُلئ** — وبه يُعرف أنّ الرقمَ أو العنوانَ تبدّل بعده. */
+  const picked = useRef<RecipientFill | null>(null);
+  /** **رقمُ طلب الموقع ونسختُه** — فطلبٌ نُسي لا يملأ النموذجَ إن وصل ردُّه متأخّراً. */
+  const askPhone = useRef("");
+  const askSeq = useRef(0);
+  const askId = useRef("");
 
   const isFetch = mode === "fetch";
   const touched = () => {
@@ -290,7 +296,21 @@ export default function DeliveryPage() {
     setName(f.name);
     setPhone(f.phone);
     setAddress(f.address);
+    picked.current = f;
     touched();
+    // **وطلبُ موقعٍ أُرسل لرقمٍ آخر يُنسى** (مراجعةُ ٢٠٢٦-١١-٠٦) — فلا يملأ موقعٌ يصل متأخّراً
+    // مستلِماً غيرَ الذي طُلب منه. **وما وصل منه لغيره يسقط** — هو مكانُ شخصٍ آخر.
+    if (ask !== "idle" && !samePhone(askPhone.current, f.phone)) {
+      askSeq.current++;
+      askId.current = "";
+      setAsk("idle");
+      setAskReq(null);
+      setAskAcc(null);
+      if (ask === "received" && !pointFromSaved && !f.point) {
+        setPoint(null);
+        void fetchQuote(null, mode);
+      }
+    }
     if (f.point) {
       // **ونقطتُه تحلّ محلّ رابطٍ أو طلبِ موقعٍ سابق** — لا تبقى «✓ وصل» فوق غيرها.
       linkSeq.current++;
@@ -310,6 +330,18 @@ export default function DeliveryPage() {
       setPointFromSaved(false);
       void fetchQuote(null, mode);
     }
+  }
+
+  /**
+   * **نقطةُ مستلِمٍ سابقٍ لا تبقى لغيره** (مراجعةُ ٢٠٢٦-١١-٠٦) — مرآةُ `dropStaleSavedPoint`: من بدّل
+   * الرقمَ أو كتب في العنوان بعد الاختيار فهو شخصٌ آخر أو مكانٌ آخر، **فتسقط وتُعاد الأجرة.**
+   */
+  function dropStaleSavedPoint(nextPhone: string, nextAddress: string) {
+    const p = picked.current;
+    if (!p || !pointFromSaved || keepsSavedPoint(p, nextPhone, nextAddress)) return;
+    setPoint(null);
+    setPointFromSaved(false);
+    void fetchQuote(null, mode);
   }
 
   /** **«إزالة الموقع»** — فتعود الأجرةُ بلا نقطة. */
@@ -349,11 +381,15 @@ export default function DeliveryPage() {
       return;
     }
     setAsk("sending");
+    const seq = ++askSeq.current;
+    askPhone.current = phone.trim();
     try {
       const r = await api<AskReq>(`/api/v1/merchant/stores/${storeId}/location-requests`, {
         method: "POST",
         body: JSON.stringify({ phone: phone.trim(), mode: mode || "send" }),
       });
+      if (seq !== askSeq.current) return;
+      askId.current = r.id;
       setAskReq(r);
       setAskAcc(null);
       setAsk("waiting");
@@ -370,6 +406,7 @@ export default function DeliveryPage() {
     const timer = setInterval(async () => {
       try {
         const st = await api<AskStatus>(`/api/v1/merchant/location-requests/${id}`);
+        if (askId.current !== id) return;
         if (st.status === "received" && st.lat != null && st.lng != null) {
           const p = { lat: st.lat, lng: st.lng };
           linkSeq.current++;
@@ -462,6 +499,8 @@ export default function DeliveryPage() {
       setPoint(null);
       setPointFromSaved(false);
       saved.close();
+      picked.current = null;
+      askId.current = "";
       setAsk("idle");
       setAskReq(null);
       setAskAcc(null);
@@ -607,6 +646,7 @@ export default function DeliveryPage() {
                   .slice(0, 16);
                 setPhone(v);
                 touched();
+                dropStaleSavedPoint(v, address);
                 saved.type("phone", v);
               }}
             />
@@ -623,6 +663,7 @@ export default function DeliveryPage() {
             rows={2}
             onChange={(e) => {
               setAddress(e.target.value);
+              dropStaleSavedPoint(phone, e.target.value);
               touched();
             }}
           />
