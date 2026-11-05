@@ -85,7 +85,7 @@ func (s *Service) FillHistory(ctx context.Context, list []Order) error {
 		       COALESCE((SELECT sum(oi.offer_cut * oi.qty) FROM order_items oi
 		                 WHERE oi.order_id = o.id AND oi.offer_borne_by = 'merchant'), 0),
 		       COALESCE((SELECT NULLIF(u.full_name, '') FROM order_events e JOIN users u ON u.id = e.actor_id
-		                 WHERE e.order_id = o.id AND e.to_status = o.status
+		                 WHERE e.order_id = o.id AND e.to_status = o.status AND e.merchant_id IS NULL
 		                 ORDER BY e.id DESC LIMIT 1), '')
 		FROM orders o
 		LEFT JOIN wallet_transactions wt ON wt.ref = o.id::text

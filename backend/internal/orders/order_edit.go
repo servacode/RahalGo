@@ -137,6 +137,8 @@ type EditChange struct {
 	NewPrice int64  `json:"new_price"`
 	// Returned **ما رجّعه الزبونُ بعد الاستلام والمنصّةُ تتحمّله** — يبقى للمتجر حقُّه.
 	Returned int `json:"returned,omitempty"`
+	// merchantID **متجرُ السطر** — داخليٌّ لا يُرسَل: **كلُّ متجرٍ يُخبَر بما تغيّر عنده وحدَه** (G-24).
+	merchantID string
 }
 
 // EditStoreDelta **فرقُ حقّ متجرٍ بعد الاستلام** — ما كان وما صار.
@@ -325,7 +327,8 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 		if l.Qty == r.qty && newUnit == r.unit && newCost == r.cost {
 			continue
 		}
-		change := EditChange{Name: r.name, OldQty: r.qty, NewQty: l.Qty, OldPrice: r.unit, NewPrice: newUnit}
+		change := EditChange{Name: r.name, OldQty: r.qty, NewQty: l.Qty, OldPrice: r.unit, NewPrice: newUnit,
+			merchantID: r.merchantID}
 		// ══════════════════════════════════════════════════════════════
 		// **نقصٌ بعد الاستلام والمتجرُ لم يردّ المال** (قرارُ المالك، البند ٢)
 		// ══════════════════════════════════════════════════════════════
@@ -407,7 +410,7 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 			}
 			touched[it.MerchantID] = true
 			res.Changes = append(res.Changes, EditChange{
-				Name: it.Name, OldQty: 0, NewQty: it.Qty, NewPrice: it.UnitPrice,
+				Name: it.Name, OldQty: 0, NewQty: it.Qty, NewPrice: it.UnitPrice, merchantID: it.MerchantID,
 			})
 		}
 	}
@@ -438,7 +441,8 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 			return nil, res, err
 		}
 		touched[mid] = true
-		res.Changes = append(res.Changes, EditChange{Name: c.Name, OldQty: 0, NewQty: c.Qty, NewPrice: c.Price})
+		res.Changes = append(res.Changes, EditChange{Name: c.Name, OldQty: 0, NewQty: c.Qty, NewPrice: c.Price,
+			merchantID: mid})
 	}
 	if len(res.Changes) == 0 {
 		return nil, res, ErrOrderEditNoChange
@@ -714,6 +718,24 @@ func (s *Service) editTrailTx(ctx context.Context, q dbtx.Querier, actorID, orde
 			continue
 		}
 		body := fmt.Sprintf("طلب #%d: %s", number, changes)
+		// **وطلبٌ من أكثرَ من متجر: كلُّ متجرٍ بما تغيّر عنده وحدَه** (G-24) — لا أصنافُ غيره
+		// ولا أسعارُها. **ومتجرٌ لم يتغيّر عنده شيءٌ ولا حقُّه لا يُخبَر.**
+		if len(stores) > 1 {
+			var own []EditChange
+			for _, c := range res.Changes {
+				if strings.EqualFold(c.merchantID, mid) {
+					own = append(own, c)
+				}
+			}
+			d, moved := due[mid]
+			if len(own) == 0 && (!moved || d.NewDue == d.OldDue) {
+				continue
+			}
+			body = fmt.Sprintf("طلب #%d", number)
+			if len(own) > 0 {
+				body += ": " + editChangesText(own)
+			}
+		}
 		if d, ok := due[mid]; ok && d.NewDue != d.OldDue {
 			body += fmt.Sprintf(". صار حقك %s ل.س بدل %s", groupDigits(d.NewDue), groupDigits(d.OldDue))
 		}

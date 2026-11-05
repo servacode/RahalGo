@@ -105,7 +105,10 @@ func (s *Server) timeline(ctx context.Context, orderID string, full bool) []Time
 		JOIN orders o ON o.id = e.order_id
 		LEFT JOIN users u ON u.id = e.actor_id
 		WHERE e.order_id = $1
-		ORDER BY e.id`, orderID)
+		  -- **وأحداثُ الأقسام للمكتب وحدَه** (طلبٌ بعدّة محطّات) — الزبونُ لا يعرف من
+		  -- أين تُشترى بضاعتُه (P-1)، **والطلبُ عنده طلبٌ واحد.**
+		  AND ($2 OR e.merchant_id IS NULL)
+		ORDER BY e.id`, orderID, full)
 	if err != nil {
 		return []TimelineStep{}
 	}

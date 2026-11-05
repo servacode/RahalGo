@@ -668,6 +668,10 @@ private val CODES: Map<String, Int> = mapOf(
     "merchant_no_returns" to R.string.err_merchant_no_returns,
     "order_not_returnable" to R.string.err_order_not_returnable,
     "not_readyable" to R.string.err_not_readyable,
+    // ── طلبٌ واحدٌ بعدّة محطّات (قرارُ المالك ٢٠٢٦-١١-٠٥) ─────────────────
+    "use_part" to R.string.err_use_part,
+    "parts_pending" to R.string.err_parts_pending,
+    "part_removal_pending" to R.string.err_part_removal_pending,
     "reason_required" to R.string.err_reason_required,
     // ── قسمُ الحسابات (قراراتُ المالك ٢٠٢٦-١٠-٠٤) ─────────────────────
     "temp_password_expired" to R.string.err_temp_password_expired,
