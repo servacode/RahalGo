@@ -111,12 +111,17 @@ func partClosedSQL(p string) string {
 // StoreStatusSQL **حالُ الطلب كما يراه متجرٌ بعينه** — حالُ قسمه حين يفترق عن الطلب.
 //
 //	قسمٌ رُفض ⇒ rejected · قسمٌ أُزيل ⇒ cancelled · قبل قسمَه والطلبُ ينتظر غيرَه ⇒ accepted
+//	(**وpreparing في وضع «المتاجر تدير»** — كما يعرضه الإسقاطُ `projectOrder`، فيجد الفلترُ ما يُعرض)
 //
 // **وطلبُ المتجر الواحد بلا قسمٍ فحالُه حالُه.** على الاسم المستعار `o`.
-func StoreStatusSQL(p string) string {
+func StoreStatusSQL(p string, selfManage bool) string {
+	acceptedAs := StAccepted
+	if selfManage {
+		acceptedAs = StPreparing
+	}
 	return `COALESCE((SELECT CASE WHEN sp.status = 'rejected' THEN 'rejected'
 	                              WHEN sp.status = 'removed' THEN 'cancelled'
-	                              WHEN o.status = 'pending' AND sp.status = 'accepted' THEN 'accepted' END
+	                              WHEN o.status = 'pending' AND sp.status = 'accepted' THEN '` + acceptedAs + `' END
 	                  FROM order_parts sp WHERE sp.order_id = o.id AND sp.merchant_id = ` + p + `::uuid),
 	                 o.status)`
 }
@@ -254,8 +259,7 @@ func answerPartsTx(ctx context.Context, q dbtx.Querier, lo *lockedOrder, stores 
 
 // partGate **ما يقرّره بابُ الأقسام لانتقالٍ على الطلب كلِّه.**
 type partGate struct {
-	to, note  string
-	officeAll bool
+	to, note string
 }
 
 // partGatesTx **بوّاباتُ الطلب بعدّة محطّات لانتقالٍ لم يأتِ من فعل قسم** — G1 · G2 · G6.
@@ -290,7 +294,6 @@ func (s *Service) partGatesTx(ctx context.Context, tx pgx.Tx, lo *lockedOrder,
 					[]string{PartPending}); err != nil {
 					return g, err
 				}
-				g.officeAll = true
 				return g, nil
 			}
 		}
@@ -302,7 +305,6 @@ func (s *Service) partGatesTx(ctx context.Context, tx pgx.Tx, lo *lockedOrder,
 			[]string{PartPending, PartAccepted}); err != nil {
 			return g, err
 		}
-		g.officeAll = true
 	case to == StCancelled && endedBy == "merchant":
 		return g, ErrUsePart
 	case to == StDispatching && (lo.from == StAccepted || lo.from == StPreparing):
@@ -655,7 +657,8 @@ func (s *Service) MarkPartSent(ctx context.Context, actorID, orderID, merchantID
 	}
 	updated, _, err := s.partAction(ctx, orderID, func(ctx context.Context, tx pgx.Tx, unit *Service,
 		lo *lockedOrder, out *partOutcome) error {
-		if terminal(lo.from) {
+		// **ولا تذكرةَ بعد الاستلام** — البضاعةُ مع السائق، والإرسالُ حدثٌ يُقرأ.
+		if terminal(lo.from) || AfterPickup(lo.from) {
 			return ErrBadTransition
 		}
 		got, err := lockPartsTx(ctx, tx, lo.id, []string{merchantID}, "")

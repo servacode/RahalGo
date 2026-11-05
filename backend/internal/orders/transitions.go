@@ -187,8 +187,6 @@ type appliedTransition struct {
 	lateCancel bool
 	// blocked **تعذّرٌ عند باب المتجر** — `merchantBlocked` يُكمل بنفسه.
 	blocked bool
-	// officeAll **قبل المكتبُ (أو رفض) أقسامَ الطلب كلَّها بكبسة** (G1).
-	officeAll bool
 }
 
 // applyTransitionTx **جسمُ الانتقال داخلَ المعاملة** — من فحص الأدوار إلى الحدث والتسوية.
@@ -224,7 +222,6 @@ func (s *Service) applyTransitionTx(ctx context.Context, tx pgx.Tx, lo *lockedOr
 	//
 	// **ولا تتبدّل الآلةُ لطلب المتجر الواحد بحرف** (`stops = 1`). **وما جاء من
 	// فعل قسمٍ** (`fromParts`) كُتبت أقسامُه قبله فلا يُعاد.
-	officeAll := false
 	if lo.stops > 1 && !req.fromParts {
 		g, err := unit.partGatesTx(ctx, tx, lo, actorID, to, note, endedBy)
 		if err != nil {
@@ -234,7 +231,6 @@ func (s *Service) applyTransitionTx(ctx context.Context, tx pgx.Tx, lo *lockedOr
 			to, note = g.to, g.note
 			endedBy = authorizingRole(kind, from, to, effRoles)
 		}
-		officeAll = g.officeAll
 	}
 	// لا استلام بلا سائق مسند
 	if (to == StAtPickup || to == StPickedUp) && driverID == nil {
@@ -542,7 +538,13 @@ func (s *Service) applyTransitionTx(ctx context.Context, tx pgx.Tx, lo *lockedOr
 		// الاستعلامُ يعمل بالقديم عند غياب الصفّ. **وافتراضٌ في موضعين
 		// افتراضٌ لا يُعتمد عليه.**
 		var withinWindow bool
-		if err := tx.QueryRow(ctx, `
+		if lo.stops > 1 {
+			// **وفي الطلب بعدّة محطّات المهلةُ من أوّل قسمٍ قُبل** (G7) — لا من `accepted_at`
+			// الذي يُكتب حين يجيب آخرُ متجر، **فتنفتح المهلةُ من جديد والأوّلُ يطبخ.**
+			if withinWindow, err = partCancelWithinWindowTx(ctx, tx, orderID, unit.cancelWindowSec(ctx)); err != nil {
+				return nil, err
+			}
+		} else if err := tx.QueryRow(ctx, `
 			SELECT accepted_at IS NOT NULL
 			   AND accepted_at > now() - make_interval(secs => $2)
 			FROM orders WHERE id = $1`,
@@ -598,7 +600,7 @@ func (s *Service) applyTransitionTx(ctx context.Context, tx pgx.Tx, lo *lockedOr
 
 	return &appliedTransition{
 		lo: lo, req: req, to: to, note: note, endedBy: endedBy, effFault: effFault,
-		done: done, codeRt: codeRt, lateCancel: lateCancel, officeAll: officeAll,
+		done: done, codeRt: codeRt, lateCancel: lateCancel,
 	}, nil
 }
 
@@ -2080,9 +2082,12 @@ func (s *Service) CancelSecondsLeft(ctx context.Context, o *Order) int {
 		}
 	}
 	// **والطلبُ بعدّة محطّات «بانتظار» حتّى يجيب كلُّ متجر** — ومهلتُه من أوّل قبول (G7).
-	if o.Stops > 1 && o.Status == StPending {
+	if o.Stops > 1 && (o.Status == StPending || o.Status == StAccepted) {
 		first := s.firstPartAcceptedAt(ctx, o.ID)
 		if first == nil {
+			if o.Status == StAccepted {
+				return 0
+			}
 			return -1
 		}
 		left := s.cancelWindowSec(ctx) - int64(time.Since(*first).Seconds())

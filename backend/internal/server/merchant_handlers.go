@@ -292,7 +292,7 @@ func (s *Server) handleMerchantOrders(w http.ResponseWriter, r *http.Request) {
 	counts := map[string]int{}
 	// **وحالُ الطلب بعدّة محطّات حالُ قسمه** — قسمٌ رُفض يُعدّ «مرفوضاً» والطلبُ ماضٍ.
 	crows, err := s.pg.Query(r.Context(), `
-		SELECT `+orders.StoreStatusSQL("$1")+` AS st, count(*) FROM orders o
+		SELECT `+orders.StoreStatusSQL("$1", s.orders.MerchantsSelfManage(r.Context()))+` AS st, count(*) FROM orders o
 		WHERE `+orders.StoreOrdersSQL("$1")+`
 		  AND (o.closed_at IS NOT NULL OR EXISTS (SELECT 1 FROM order_parts op
 		       WHERE op.order_id = o.id AND op.merchant_id = $1 AND op.status IN ('rejected', 'removed')))
@@ -382,9 +382,10 @@ func (s *Server) merchantOwnsOrder(r *http.Request, orderID string) bool {
 // محطّات، ثمّ يُملأ مالُ متجره، ثمّ المرشَّح. **وطلبُ المتجر الواحد كما كان** (`fill`).
 func (s *Server) merchantOrderView(r *http.Request, o *orders.Order, fill bool) (map[string]any, error) {
 	list := []orders.Order{*o}
+	var stores []string
 	if o.Stops > 1 {
-		stores, err := s.orders.OwnerPartStores(r.Context(), o.ID, userIDFrom(r))
-		if err != nil {
+		var err error
+		if stores, err = s.orders.OwnerPartStores(r.Context(), o.ID, userIDFrom(r)); err != nil {
 			return nil, err
 		}
 		if err := s.orders.ProjectForStores(r.Context(), list, stores); err != nil {
@@ -392,10 +393,33 @@ func (s *Server) merchantOrderView(r *http.Request, o *orders.Order, fill bool) 
 		}
 		fill = true
 	}
-	if fill {
+	switch {
+	case fill && len(stores) > 1:
+		s.fillOwnerPartsMoney(r, stores, &list[0])
+	case fill:
 		s.fillMerchantMoney(r, list[0].MerchantID, list)
 	}
 	return orderView(orders.AudienceMerchant, &list[0])
+}
+
+// fillOwnerPartsMoney **مالكٌ له فرعان في الطلب الواحد يرى بنودَ الفرعين — فمالُه مالُ الفرعين.**
+//
+// كلُّ فرعٍ بحسبته (`fillMerchantMoney`، صفُّ تسويته هو) ثمّ يُجمع — **فلا تُعرض بنودُ
+// فرعين بمجموع فرعٍ واحد.** والنسبةُ تُشتقّ من المجموعين.
+func (s *Server) fillOwnerPartsMoney(r *http.Request, stores []string, o *orders.Order) {
+	var sub, cm int64
+	for _, id := range stores {
+		one := []orders.Order{*o}
+		s.fillMerchantMoney(r, id, one)
+		sub += one[0].Subtotal
+		cm += one[0].PlatformCommission
+	}
+	o.Subtotal, o.PlatformCommission, o.MerchantNet = sub, cm, sub-cm
+	if sub > 0 {
+		pct := pricing.Percent2(cm * 10000 / sub)
+		o.CommissionPct = int(pct.RoundedPercent())
+		o.CommissionExact = pricing.Percent2Ptr(pct)
+	}
 }
 
 func (s *Server) handleMerchantGetOrder(w http.ResponseWriter, r *http.Request) {
@@ -866,7 +890,7 @@ func storeSalesSQL(m, from, to string) string {
 		       CASE WHEN p.status IN ('rejected', 'removed') THEN NULL ELSE o.picked_up_at END,
 		       o.returned_at,
 		       own.cost,
-		       COALESCE((SELECT own.cost - (ms.amount + ms.adjusted_amount)
+		       COALESCE((SELECT own.cost - (ms.amount + ms.adjusted_amount + ms.commission_waived)
 		                   FROM merchant_settlements ms
 		                  WHERE ms.order_id = o.id AND ms.merchant_id = p.merchant_id), 0)
 		FROM orders o
@@ -1001,7 +1025,7 @@ func (s *Server) fillMerchantMoney(r *http.Request, merchantID string, list []or
 		       -- **وما قُيّد له من صفّ تسويته هو** (طلب، متجر) — لا مجموعُ قيود مالكه في الطلب،
 		       -- **فمالكٌ له فرعان في الطلب الواحد لا يُخلط ماله.**
 		       CASE WHEN o.stops > 1 THEN
-		            COALESCE((SELECT ms.amount + ms.adjusted_amount FROM merchant_settlements ms
+		            COALESCE((SELECT ms.amount + ms.adjusted_amount + ms.commission_waived FROM merchant_settlements ms
 		                       WHERE ms.order_id = o.id AND ms.merchant_id = $2), 0)
 		       ELSE COALESCE((SELECT sum(t.amount) FROM wallet_transactions t
 		                  WHERE t.ref = o.id::text AND t.kind = 'merchant_earning'

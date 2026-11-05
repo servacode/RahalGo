@@ -250,10 +250,16 @@ func (s *Service) againstDriverReport(ctx context.Context, orderID, reason, stop
 		// **والطلبُ بعدّة محطّات: متجرُ المحطّة التي يقف عندها** (C7) — وبلاها للمكتب.
 		q = `SELECT m.owner_user_id::text FROM orders o
 		     JOIN merchants m ON m.id = o.merchant_id WHERE o.id = $1 AND o.stops = 1`
+		// **و`stop` لا يُقرأ إلّا في طلبٍ بعدّة محطّات** — طلبُ المتجر الواحد بلا أقسام،
+		// **ونسخةُ سائقٍ ترسله في كلّ بلاغٍ لا تُضيّع على متجره بلاغَه.**
 		if stop != "" {
-			q = `SELECT m.owner_user_id::text FROM order_parts p
+			q = `SELECT m.owner_user_id::text FROM orders o
+			     JOIN merchants m ON m.id = o.merchant_id WHERE o.id = $1 AND o.stops = 1
+			     UNION ALL
+			     SELECT m.owner_user_id::text FROM orders o
+			     JOIN order_parts p ON p.order_id = o.id
 			     JOIN merchants m ON m.id = p.merchant_id
-			     WHERE p.order_id = $1 AND p.merchant_id::text = lower($2)`
+			     WHERE o.id = $1 AND o.stops > 1 AND p.merchant_id::text = lower($2)`
 			args = append(args, stop)
 		}
 	}

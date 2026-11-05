@@ -60,6 +60,8 @@ var t = struct {
 	// **طلبٌ بعدّة محطّات** (قرارُ المالك ٢٠٢٦-١١-٠٥) — قسمٌ قُبل والطلبُ ينتظر غيرَه،
 	// **ومتجرٌ رفض قسمَه يصل المكتب** (C13).
 	partAccepted, partRejectedOps string
+	// **والزبونُ ألغى ومتجرٌ قبل قسمَه** (G7) — قد بدأ يطبخ ولا يدري.
+	partCancelledByCustomer string
 }{
 	offerDriver:      "طلب جديد بانتظارك",
 	assignedDriver:   "طلب أُسند إليك",
@@ -113,6 +115,7 @@ var t = struct {
 	extStoreMerchant:          "طلبٌ لم يعد من متجرك",
 	partAccepted:              "قسم من طلبك انقبل",
 	partRejectedOps:           "متجر رفض قسمه من طلب",
+	partCancelledByCustomer:   "الزبون ألغى طلب قبلته",
 }
 
 // endedByLabel من أنهى الطلب — بلفظٍ يُقرأ لا برمزٍ يُفكّ.
@@ -442,6 +445,20 @@ func (s *Service) notifyTransition(ctx context.Context, orderID, to, note, ended
 		})
 	}
 
+	// **والزبونُ ألغى طلباً بعدّة محطّات ومتجرٌ قبل قسمَه** (G7) — **ربّما بدأ يطبخ**،
+	// وكان لا يعلم إلّا بإشارة البثّ أو حين يعيد التحميل. (طلبُ المتجر الواحد في وضع
+	// المتاجر لا يُلغيه الزبونُ بعد القبول — يصير «قيد التحضير» فوراً.)
+	if to == StCancelled && p.stops > 1 && endedBy == "customer" {
+		for _, owner := range s.livePartOwners(ctx, orderID) {
+			s.notify.Notify(ctx, notifications.Input{
+				UserID: owner, Kind: notifications.KindOrder,
+				Title: t.partCancelledByCustomer, Body: body,
+				Entity: "order", EntityID: orderID, Href: "/portal",
+				Apps: []string{notifications.AppMerchant},
+			})
+		}
+		return
+	}
 	// **والطلبُ بعدّة محطّات: كلُّ متجرٍ بقي قسمُه فيه** (G-17).
 	if to == StDelivered && p.stops > 1 {
 		for _, owner := range s.livePartOwners(ctx, orderID) {

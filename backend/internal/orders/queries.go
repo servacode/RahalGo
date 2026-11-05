@@ -703,7 +703,7 @@ func (s *Service) List(ctx context.Context, f ListFilter) (*OrderPage, error) {
 		wargs = append(wargs, f.MerchantID)
 		p := `$` + strconv.Itoa(len(wargs))
 		wargs = append(wargs, f.Status)
-		where += ` AND ` + StoreStatusSQL(p) + ` = $` + strconv.Itoa(len(wargs))
+		where += ` AND ` + StoreStatusSQL(p, s.MerchantsSelfManage(ctx)) + ` = $` + strconv.Itoa(len(wargs))
 	} else if f.Status != "" {
 		wargs = append(wargs, f.Status)
 		where += ` AND o.status = $` + strconv.Itoa(len(wargs))

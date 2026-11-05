@@ -186,7 +186,7 @@ func (s *Server) doorWaitedMinutes(ctx context.Context, orderID string) int64 {
 	var m *float64
 	if err := s.pg.QueryRow(ctx, `
 		SELECT floor(EXTRACT(EPOCH FROM now() - max(created_at)) / 60)
-		FROM order_events WHERE order_id = $1 AND to_status = 'at_dropoff'`,
+		FROM order_events WHERE order_id = $1 AND to_status = 'at_dropoff' AND merchant_id IS NULL`,
 		orderID).Scan(&m); err != nil || m == nil {
 		return -1
 	}

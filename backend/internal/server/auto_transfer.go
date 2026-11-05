@@ -174,7 +174,11 @@ const autoTransferNote = "تحويلٌ تلقائيٌّ — طلبٌ بلغ ال
 // **هاتفُ كلّ متجرٍ يُقرأ قبل القبول** — ومتجرٌ واحدٌ بلا رقمٍ يُبقي الطلبَ «بانتظار» بيد
 // المكتب (`R24`). **ثمّ يُقبل كلُّ قسمٍ في معاملةٍ واحدة** (G1)، **ولكلّ متجرٍ تذكرتُه
 // ببنوده وحدَها** (G-07)، **والإنزالُ بعد آخر تذكرة** (`MarkPartSent` → `maybeDispatchParts`).
-// **وتذكرةٌ سقطت تبقى لقسمها** — المكتبُ يراها ويعيدها، والطلبُ لا يُنزَل قبلها.
+// **وتذكرةٌ سقطت تبقى لقسمها** — المكتبُ يرى أثرَها ويعيدها. **ولا يُنزَل الطلبُ هنا قبلها،
+// لكنّ كانسَ التحويل (`SweepAutoTransfer`) يُنزله بعد دقيقةٍ كطلب المتجر الواحد** — قرارُ
+// المالك على «الإنزال بعد آخر تذكرة» (Q10) لم يُقل بعد، فبقي السلوكُ كطلب المتجر الواحد.
+//
+// **والفاعلُ النظام** (`""`) — لا الزبونُ الذي أنشأ الطلب: جوابُ الأقسام يُكتب باسمه ودوره.
 func (s *Server) autoTransferParts(ctx context.Context, orderID, actorID string) {
 	type ticket struct {
 		merchantID string
@@ -194,7 +198,7 @@ func (s *Server) autoTransferParts(ctx context.Context, orderID, actorID string)
 	if len(tickets) == 0 {
 		return
 	}
-	if _, err := s.orders.Transition(ctx, actorID, []string{"ops"},
+	if _, err := s.orders.Transition(ctx, "", []string{"ops"},
 		orderID, "accepted", autoTransferNote); err != nil {
 		s.logger.Warn("التحويلُ التلقائيّ: تعذّر القبول", "order", orderID, "error", err)
 		return
