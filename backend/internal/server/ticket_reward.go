@@ -153,7 +153,7 @@ func (s *Server) handleTicketRewardFreeDelivery(w http.ResponseWriter, r *http.R
 		Title: notifTitles.ticketReply, Body: text,
 		Entity: "ticket", EntityID: t.ID, Href: "/portal/orders",
 	})
-	s.audit(r, "support.ticket_reward_free_delivery", "ticket", t.ID, map[string]any{
+	s.audit(r, "ops.ticket_reward_free_delivery", "ticket", t.ID, map[string]any{
 		"promo_id": promo.ID, "code": promo.Code, "expires_on": until,
 	})
 	httpx.JSON(w, http.StatusCreated, map[string]any{
