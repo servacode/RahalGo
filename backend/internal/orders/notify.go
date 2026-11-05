@@ -555,6 +555,12 @@ func (s *Service) notifyCredits(ctx context.Context, orderID string, credits []w
 // **ورديّةٌ مغلقةٌ تعني «لست في العمل»** — وإشعارٌ يرنّ في بيته ليلاً
 // يجعله يُطفئ الإشعاراتِ كلَّها، **فيفقد الطلبَ يومَ يعمل.**
 func (s *Service) notifyOffer(ctx context.Context, orderID, driverID string) {
+	s.notifyOfferWhere(ctx, orderID, driverID, nil)
+}
+
+// notifyOfferWhere **كـ`notifyOffer`، و`keep` يصفّي جمهورَ «للجميع»** — فارغُه الجمهورُ كلُّه.
+// **وانقضاءُ مهلة حدّ الزبون يرنّ به عند من كان محجوباً وحدَه** (`publishSameCustomerGraceEnd`).
+func (s *Service) notifyOfferWhere(ctx context.Context, orderID, driverID string, keep func(string) bool) {
 	if s.notify == nil {
 		return
 	}
@@ -585,7 +591,11 @@ func (s *Service) notifyOffer(ctx context.Context, orderID, driverID string) {
 			s.logger.Error("العرض: تعذّرت قراءةُ من يرى الطلب", "order", orderID, "error", err)
 			return
 		}
-		targets = ids
+		for _, id := range ids {
+			if keep == nil || keep(id) {
+				targets = append(targets, id)
+			}
+		}
 	}
 
 	title := t.offerDriver

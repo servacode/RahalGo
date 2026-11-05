@@ -22,6 +22,22 @@ func armSameCustomer(t *testing.T, f *driverFixture, capN int) {
 	t.Cleanup(func() { f.setSetting(t, "drivers.same_customer_weekly_max", 3) })
 }
 
+// keepSetting **يعيد المفتاحَ كما وُجد بعد الاختبار** — والقاعدةُ مشتركة: «للجميع» أو
+// نصفُ قطرٍ صفريٌّ يبقى لكلّ اختبارٍ بعده إن لم يُعَد.
+func (f *driverFixture) keepSetting(t *testing.T, key string) {
+	t.Helper()
+	var before *string
+	_ = f.pool.QueryRow(context.Background(), `SELECT value::text FROM app_settings WHERE key = $1`, key).Scan(&before)
+	t.Cleanup(func() {
+		c := context.Background()
+		if before == nil {
+			_, _ = f.pool.Exec(c, `DELETE FROM app_settings WHERE key = $1`, key)
+			return
+		}
+		_, _ = f.pool.Exec(c, `UPDATE app_settings SET value = $2::jsonb WHERE key = $1`, key, *before)
+	})
+}
+
 func (f *driverFixture) setCustomer(t *testing.T, orderID, customer string) {
 	t.Helper()
 	if _, err := f.pool.Exec(context.Background(),
@@ -131,6 +147,7 @@ func TestSameCustomer_LegacyFairnessPrefersOther(t *testing.T) {
 	f := newDriverFixture(t, 2)
 	armRotation(t, f, 60)
 	armSameCustomer(t, f, 3)
+	f.keepSetting(t, "drivers.same_route_radius_m")
 	f.setSetting(t, "drivers.same_route_radius_m", 0)
 	a, b := f.drivers[0], f.drivers[1]
 	f.onShift(t, a, true)
@@ -215,6 +232,7 @@ func TestSameCustomer_SameRouteSameDoorKeeps(t *testing.T) {
 func scQueue(t *testing.T, f *driverFixture) (a, b, ord, customer string) {
 	t.Helper()
 	a, b, ord, customer = scProximity(t, f)
+	f.keepSetting(t, "drivers.assignment_mode")
 	f.setSetting(t, "drivers.assignment_mode", "queue")
 	armSameCustomer(t, f, 3)
 	return a, b, ord, customer
@@ -245,6 +263,30 @@ func TestSameCustomer_QueueVisibleWhenAlone(t *testing.T) {
 	f.seedDelivered(t, x, a, 3, 1)
 	if !hasID(f.queueIDs(t, a), ord) {
 		t.Fatal("**لا سائقَ غيرُه والطلبُ محجوبٌ عنه** — يبقى بلا سائق")
+	}
+}
+
+// QueueBusyAlternativeDoesNotHide — **والقربُ مطفأ: B مشغولٌ بسقف طلباته لا يحجب الطلبَ عن A**
+// (مراجعةُ الفرع). كان البديلُ يُسأل بـ`QueueBaseSQL` وحده، **فـB يراه في طابوره ولا يقبله
+// القبولُ** (السقف)، **وA محجوبٌ طولَ المهلة والطلبُ ينتظر.**
+func TestSameCustomer_QueueBusyAlternativeDoesNotHide(t *testing.T) {
+	f := newDriverFixture(t, 2)
+	a, b, ord, x := scQueue(t, f)
+	f.setSetting(t, "drivers.proximity_enabled", false) // يُعاد في `armProximity`
+	f.seedDelivered(t, x, a, 3, 1)
+	// **وفي يد B طلبٌ مفتوح** — والسقفُ واحد (`armProximity`).
+	_ = f.problemOrderAt(t, "at_pickup", b)
+	if !hasID(f.queueIDs(t, a), ord) {
+		t.Fatal("**B مشغولٌ لا يستطيع الطلبَ والطلبُ محجوبٌ عن A** — ينتظر بلا سائق")
+	}
+	// **وB متاحٌ ⇒ الحجبُ كما كان** — يُغلق طلبُه فيعود بديلاً.
+	if _, err := f.pool.Exec(context.Background(), `
+		UPDATE orders SET status = 'delivered', delivered_at = now(), closed_at = now()
+		WHERE driver_id = $1 AND closed_at IS NULL`, b); err != nil {
+		t.Fatal(err)
+	}
+	if hasID(f.queueIDs(t, a), ord) {
+		t.Fatal("B متاحٌ ويرى الطلب و**A فوق الحدّ رآه في المهلة**")
 	}
 }
 

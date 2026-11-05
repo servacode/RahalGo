@@ -48,7 +48,24 @@ func QueueVisibleSQL(drv string, p int) string {
 	radius := `LEAST(` + maxM + `::float8, ` + initM + `::float8 + ` + stepM + `::float8 *
 		floor(GREATEST(0, EXTRACT(EPOCH FROM (now() - COALESCE(o.dispatched_at, o.created_at)))) / GREATEST(` + timeout + `::float8, 1)))`
 	freshLoc := QueueDriverFreshLocSQL(drv, fresh)
-	return QueueBaseSQL(drv) + `
+	return QueueBaseSQL(drv) + queueEligibleSQL(drv, cash, maxActive) + `
+		  -- **حديثُ الموقع — شرطٌ لا يسقط** (قرارُ المالك ٢٠٢٦-٠٩-٢٨).
+		  AND ` + freshLoc + ` IS NOT NULL
+		  -- **داخلَ الحلقة، أو طلبٌ بلغ أقصى التوسّع، أو بلا نقطةِ التقاطٍ تُقاس.**
+		  AND (
+		    ` + DispatchAnchorSQL + ` IS NULL
+		    OR ST_DWithin(` + freshLoc + `, ` + DispatchAnchorSQL + `, ` + radius + `)
+		    OR ` + stepM + ` <= 0
+		    OR ` + radius + ` >= ` + maxM + `::float8
+		  )`
+}
+
+// queueEligibleSQL **السائقُ مؤهَّلٌ فعلاً** — دوامٌ وحالةٌ وسقفُ نقدٍ وعددُ طلبات، **بلا
+// موضعٍ ولا حلقة.** `cash` و`maxActive` تعبيران: وسيطان في `QueueVisibleSQL`، **ورقمان
+// مكتوبان في `SameCustomerGateSQL`** حين يكون القربُ مطفأً ولا وسائطَ له. **ونصٌّ واحد
+// للبابين** — فبديلُ حدّ الزبون يُسأل بما يُسأل به القبولُ نفسُه.
+func queueEligibleSQL(drv, cash, maxActive string) string {
+	return `
 		  -- **السائقُ مؤهَّلٌ فعلاً** — دوامٌ وحالةٌ وسقفُ نقدٍ وعددُ طلبات.
 		  AND EXISTS (SELECT 1 FROM users du WHERE du.id = ` + drv + ` AND du.on_shift AND du.status = 'active')
 		  AND COALESCE((SELECT b.held FROM driver_cash_boxes b WHERE b.driver_id = ` + drv + `), 0)
@@ -59,16 +76,7 @@ func QueueVisibleSQL(drv string, p int) string {
 		                                WHERE cu.id = ` + drv + `), ` + cash + `)
 		  -- **والمتأخّرُ بتسليم نقده لا يرى نقديّاً إن أُشعل الإيقاف** (٢٠٢٦-١٠-٠٤).
 		  AND (o.cash_due = 0 OR NOT driver_cash_overdue_stopped(` + drv + `))
-		  AND (SELECT count(*) FROM orders oo WHERE oo.driver_id = ` + drv + ` AND oo.closed_at IS NULL) < ` + maxActive + `
-		  -- **حديثُ الموقع — شرطٌ لا يسقط** (قرارُ المالك ٢٠٢٦-٠٩-٢٨).
-		  AND ` + freshLoc + ` IS NOT NULL
-		  -- **داخلَ الحلقة، أو طلبٌ بلغ أقصى التوسّع، أو بلا نقطةِ التقاطٍ تُقاس.**
-		  AND (
-		    ` + DispatchAnchorSQL + ` IS NULL
-		    OR ST_DWithin(` + freshLoc + `, ` + DispatchAnchorSQL + `, ` + radius + `)
-		    OR ` + stepM + ` <= 0
-		    OR ` + radius + ` >= ` + maxM + `::float8
-		  )`
+		  AND (SELECT count(*) FROM orders oo WHERE oo.driver_id = ` + drv + ` AND oo.closed_at IS NULL) < ` + maxActive
 }
 
 // SameCustomerGateSQL **حدُّ الزبون في «للجميع»** (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٤) —
@@ -91,8 +99,13 @@ func (s *Service) SameCustomerGateSQL(ctx context.Context, drv string, p int) st
 		return ""
 	}
 	capArg := strconv.FormatInt(capN, 10)
-	grace := strconv.FormatInt(s.DispatchProximity(ctx).TimeoutSec, 10)
-	other := QueueBaseSQL("x.id")
+	dp := s.DispatchProximity(ctx)
+	grace := strconv.FormatInt(dp.TimeoutSec, 10)
+	// **والبديلُ مؤهَّلٌ فعلاً ولو كان القربُ مطفأً** (مراجعةُ الفرع) — كان يُسأل بـ`QueueBaseSQL`
+	// وحده، **فسائقٌ مشغولٌ بسقف طلباته أو نقده** (يرى الطلبَ ولا يقبله القبولُ) **يحجبه عن
+	// صاحب الحدّ طولَ المهلة.** والسقفان رقمان من الإعدادات فيُكتبان في النصّ.
+	other := QueueBaseSQL("x.id") + queueEligibleSQL("x.id",
+		strconv.FormatInt(dp.CashLimit, 10), strconv.FormatInt(dp.MaxActive, 10))
 	if s.ProximityEnabled(ctx) {
 		other = QueueVisibleSQL("x.id", p)
 	}
