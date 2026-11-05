@@ -475,7 +475,7 @@
     <string name="disc_title">موقعك أثناء الوردية</string>
     <string name="disc_what">يستخدم رحّال غو موقع جهازك طوال فترة ورديتك.</string>
     <string name="disc_background">ويستخدمه أيضاً والتطبيق مغلق أو الشاشة مطفأة — لأنك تقود والهاتف في جيبك.</string>
-    <string name="disc_why">ومنه نرسل إليك أقرب طلب، ويرى الزبون مكان طلبه على الخريطة، ونحسب المسافة وأجرتها.</string>
+    <string name="disc_why">ومنه نرسل إليك أقرب طلب، ويرى الزبون مكان طلبه على الخريطة، ونحسب المسافة وأجرتها، والمسافة التي تقطعها في كل طلب وفي يومك.</string>
     <string name="disc_stop">ويتوقف استخدام الموقع فور إغلاق ورديتك. يمكنك الرفض، وسيبقى التطبيق يعمل لكن لن تصلك طلبات.</string>
     <string name="disc_agree">أوافق</string>
     <string name="disc_deny">ليس الآن</string>
@@ -689,6 +689,29 @@
     <string name="offline_follow_customer">لا إنترنت — اتبع الخط إلى الزبون</string>
     <string name="offline_follow_store">لا إنترنت — اتبع الخط إلى المتجر</string>
     <string name="offline_straight">%1$s · %2$s · باتجاه %3$s</string>
+    <!-- عدّاد الدرّاجة ومسافة الطلبات (قرار المالك 2026-11-05) -->
+    <string name="odo_title_start">صوّر عدّاد الدرّاجة لتبدأ العمل</string>
+    <string name="odo_title_end">صوّر عدّاد الدرّاجة لتنهي العمل</string>
+    <string name="odo_hint">صوّر العدّاد من قريب حتّى تظهر الأرقام واضحة، ثمّ اكتب الرقم كما هو.</string>
+    <string name="odo_shoot">افتح الكاميرا</string>
+    <string name="odo_reshoot">أعد التصوير</string>
+    <string name="odo_photo_desc">صورة العدّاد</string>
+    <string name="odo_km_label">رقم العدّاد (كم)</string>
+    <string name="odo_last">آخر رقم سجّلته: %1$s كم</string>
+    <string name="odo_start">ابدأ العمل</string>
+    <string name="odo_end">أنهِ العمل</string>
+    <string name="odo_skip">لم أستطع التصوير</string>
+    <string name="odo_cancel">رجوع</string>
+    <string name="odo_need_photo">صوّر العدّاد أوّلاً</string>
+    <string name="odo_bad_km">اكتب رقم العدّاد بالأرقام فقط</string>
+    <string name="odo_camera_denied">نحتاج إذن الكاميرا لتصوير العدّاد</string>
+    <string name="odo_check_title">تأكّد من الرقم</string>
+    <string name="odo_check_jump">آخر رقم سجّلته %1$s كم، والرقم الجديد %2$s كم — الفرق %3$s كم. هل هو صحيح؟</string>
+    <string name="odo_check_yes">نعم، صحيح</string>
+    <string name="odo_check_fix">أعدّل الرقم</string>
+    <string name="odo_lower">الرقم أقل من آخر رقم سجّلته (%1$s كم) — صوّر العدّاد من جديد واكتب الرقم كما هو</string>
+    <string name="home_today_drive">مسافة طلباتك اليوم: %1$s</string>
+    <string name="hist_drive">المسافة: %1$s</string>
     <string-array name="compass_dirs">
         <item>الشمال</item>
         <item>الشمال الشرقي</item>

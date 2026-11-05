@@ -217,6 +217,50 @@ fun rememberImagePicker(
 }
 
 /**
+ * ══════════════════════════════════════════════════════════════════════
+ * **الكاميرا وحدَها — بلا معرض** (قرارُ المالك ٢٠٢٦-١١-٠٥)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **صورةُ العدّاد دليلٌ لحظتَها** — ومن اختارها من المعرض قد يرفع صورةَ أمس. فلا يُعرض
+ * المعرضُ أصلاً، **واللقطةُ بدقّتها الكاملة** (`TakePicture` لا `TakePicturePreview`) لتُقرأ
+ * الأرقام، مصغّرةً ومُدارةً كما صُوّرت (`readScaledImage`).
+ *
+ * **وإذنُ الكاميرا يُطلب عند أوّل لقطة** إن كان التطبيقُ يعلنه — وطلبُ اللقطة بلاه يُسقط
+ * نظامَ أندرويد. ورفضُه يُقال لصاحبه (`onDenied`) لا يُبتلع.
+ */
+@Composable
+fun rememberCameraShot(onDenied: () -> Unit = {}, onBytes: (ByteArray) -> Unit): () -> Unit {
+    val context = LocalContext.current
+    var shot by remember { mutableStateOf<Uri?>(null) }
+    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
+        val uri = shot
+        if (ok && uri != null) runCatching { readScaledImage(context, uri) }.getOrNull()?.let(onBytes)
+    }
+    fun launch() {
+        runCatching { newPhotoUri(context) }.getOrNull()?.let {
+            shot = it
+            camera.launch(it)
+        }
+    }
+    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        if (granted) launch() else onDenied()
+    }
+    return {
+        val needs = declaresCamera(context) && androidx.core.content.ContextCompat.checkSelfPermission(
+            context, android.Manifest.permission.CAMERA,
+        ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (needs) ask.launch(android.Manifest.permission.CAMERA) else launch()
+    }
+}
+
+/** **أيعلن التطبيقُ إذنَ الكاميرا؟** — ومن لا يعلنه يفتح الكاميرا بلا سؤال. */
+private fun declaresCamera(context: Context): Boolean = runCatching {
+    @Suppress("DEPRECATION")
+    context.packageManager.getPackageInfo(context.packageName, android.content.pm.PackageManager.GET_PERMISSIONS)
+        .requestedPermissions?.contains(android.Manifest.permission.CAMERA) == true
+}.getOrDefault(false)
+
+/**
  * **ملفٌّ مؤقّتٌ تكتب فيه الكاميرا** — وعنوانُه من المزوّد.
  *
  * **واسمُه يحمل الوقتَ** — **ومن كتب باسمٍ ثابتٍ وجد صورةَ الأمس** إن

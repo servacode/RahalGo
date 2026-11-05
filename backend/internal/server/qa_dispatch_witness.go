@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/shifts"
 )
 
 // ══════════════════════════════════════════════════════════════════════
@@ -74,8 +75,13 @@ func (s *Server) qaDriverShift(w http.ResponseWriter, r *http.Request, on bool, 
 		// **و`last_assigned_at=NULL` (NULLS FIRST) + ورديّةٌ قديمةٌ جداً**
 		// فيسبق أيَّ مرشّحٍ آخرَ في `ORDER BY last_assigned_at NULLS FIRST,
 		// shift_started_at`. **فيُختار هو ويُرسَل إليه العرضُ الحقيقيّ.**
+		// **والدوامُ من بابه الواحد** (`internal/shifts`) — ثمّ بقيّةُ الشروط.
+		if _, err := shifts.Open(ctx, s.pg, uid, 0, false); err != nil {
+			s.respondErr(w, err)
+			return
+		}
 		if _, err := s.pg.Exec(ctx,
-			`UPDATE users SET on_shift = true, status = 'active',
+			`UPDATE users SET status = 'active',
 			        shift_started_at = now() - interval '365 days',
 			        last_assigned_at = NULL
 			  WHERE id = $1::uuid`, uid); err != nil {
@@ -97,8 +103,7 @@ func (s *Server) qaDriverShift(w http.ResponseWriter, r *http.Request, on bool, 
 	}
 
 	// **إطفاء** — والوضعُ يُستعاد بقيمةٍ صريحةٍ صحيحةٍ فقط، لا تخمين.
-	if _, err := s.pg.Exec(ctx,
-		`UPDATE users SET on_shift = false WHERE id = $1::uuid`, uid); err != nil {
+	if _, err := shifts.Close(ctx, s.pg, uid, shifts.ReasonQA); err != nil {
 		s.respondErr(w, err)
 		return
 	}

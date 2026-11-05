@@ -778,6 +778,66 @@ export function EndShiftButton({ userID, onDone }: { userID: string; onDone: () 
 }
 
 /**
+ * **سماحٌ بفتح الدوام بلا صورة عدّادٍ — مرّةً واحدة** (قرارُ المالك ٢٠٢٦-١١-٠٥) — كاميرا مكسورة
+ * أو عدّادٌ معطّل. بقدرة بابه (`drivers.manage`)، **وبسببٍ مكتوب** يُرى على دوامه بالمراقبة.
+ * **ولا سماحَ بالسكّر بلا صورة** — صورةُ الليل حصراً؛ ومن تعذّرت عليه يُغلَق دوامُه من هنا.
+ */
+export function OdometerExemptionButton({ userID }: { userID: string }) {
+  const canCall = useCanCall();
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [done, setDone] = useState(false);
+  if (!canCall("POST", "/drivers/{id}/odometer-exemption")) return null;
+  async function grant() {
+    if (!reason.trim()) {
+      setError(D.odoExemptNeedReason);
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      await api(`/api/v1/admin/drivers/${userID}/odometer-exemption`, {
+        method: "POST",
+        body: JSON.stringify({ reason: reason.trim() }),
+      });
+      setOpen(false);
+      setReason("");
+      setDone(true);
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <>
+      <Button variant="secondary" className="flex items-center gap-1.5 !px-2.5" onClick={() => setOpen(true)}>
+        {done ? D.odoExemptDone : D.odoExempt}
+      </Button>
+      {open && (
+        <Modal open onClose={() => setOpen(false)} title={D.odoExempt}>
+          <div className="space-y-3">
+            <p className="text-sm text-ink-muted">{D.odoExemptHint}</p>
+            <Input
+              id="odo-exempt-reason"
+              label={D.odoExemptReason}
+              required
+              maxLength={300}
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+            />
+            {error && <Alert>{error}</Alert>}
+            <FormActions onSave={() => void grant()} onCancel={() => setOpen(false)} busy={busy} saveLabel={D.odoExempt} />
+          </div>
+        </Modal>
+      )}
+    </>
+  );
+}
+
+/**
  * **متاجرُه** — لصاحب المتجر متجرُه، **وللمندوب ما جلب.**
  *
  * والسؤالان مختلفان: **«ماذا أملك؟» و«ماذا جلبتُ؟»** — والاستعلامُ واحدٌ

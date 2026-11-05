@@ -359,12 +359,19 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             // **وموقعُ الزبون يُعيد الطلباتِ وحدَها** (٢٠٢٦-١٠-١٦) — يصل كلَّ عشر ثوانٍ،
             // **ومن أعاد به كلَّ الشاشات أيقظ الراديو بلا خبر.**
             onLight = { type ->
-                if (type == "customer_live") {
-                    lastLiveAt = android.os.SystemClock.elapsedRealtime()
-                    refresh()
-                    true
-                } else {
-                    false
+                when (type) {
+                    "customer_live" -> {
+                        lastLiveAt = android.os.SystemClock.elapsedRealtime()
+                        refresh()
+                        true
+                    }
+                    // **«عدّادُك زاد»** (كانسُ المسافات بعد كلّ طلبٍ ينتهي — ٢٠٢٦-١١-٠٥) يُعيد
+                    // `driver/me` وحدَه: الطلباتُ لم تتغيّر، **فلا تُعاد الشاشاتُ كلُّها لأجله.**
+                    "me" -> {
+                        Refresh.bump()
+                        true
+                    }
+                    else -> false
                 }
             },
             onEvent = {

@@ -73,6 +73,8 @@ type Server struct {
 	media      *media.Service
 	hub        *realtime.Hub
 	geo        *geo.Service
+	// odoPrune **محوُ صور العدّاد مرّةً بالساعة** (`driver_odometer.go`).
+	odoPrune odoPruneGate
 	// route **محرّكُ المسارات** — وفارغٌ يعني الخطَّ المستقيم.
 	// route **محرّكُ المسارات بعقده لا بصنفه** — المرحلة ٨أ.
 	//
@@ -1006,6 +1008,9 @@ func (s *Server) Router() http.Handler {
 			r.Use(s.RequireRoles("driver"))
 			r.Get("/me", s.handleDriverMe)
 			r.Post("/shift", s.handleDriverShift)
+			// **عدّادُ الدرّاجة — صورةٌ ورقم عند فتح الدوام وسكّره** (قرارُ المالك ٢٠٢٦-١١-٠٥،
+			// `driver_odometer.go`): تُرفع قبل `/shift` ويُرسل معرّفُها معه.
+			r.Post("/odometer", s.handleDriverOdometer)
 			// **موضعُه — يُرسله هو ولا يُخمَّن.** ومنه تُقاس المسافةُ إلى
 			// المتجر، **والترتيبُ بالدور عدلٌ في الوقت أعمى في المكان.**
 			r.Post("/location", s.handleDriverLocation)
@@ -1713,6 +1718,10 @@ func (s *Server) Router() http.Handler {
 			// **مراقبةُ حركة السائقين** (قرارُ المالك ٢٠٢٦-١١-٠٣) — `drivers.monitor`.
 			r.Get("/driver-monitor", s.handleDriverMonitorList)
 			r.Get("/driver-monitor/{id}", s.handleDriverMonitorDay)
+			// **وتصحيحُ رقم عدّادٍ غلط فيه السائق** (قرارُ المالك ٢٠٢٦-١١-٠٥) — مُدقَّق، والأصلُ يبقى.
+			r.Patch("/driver-odometer/{id}", s.handleAdminOdometerCorrect)
+			// **وسماحٌ بفتح الدوام بلا صورةٍ مرّةً واحدة** — بسببٍ مكتوب.
+			r.Post("/drivers/{id}/odometer-exemption", s.handleAdminOdometerExemption)
 			r.Get("/drivers/{id}/cash", s.handleDriverCashStatement)
 			// **وكلُّ ما سلّمه — لا النقديُّ وحدَه** (٢٠٢٦-١٠-٣٠) — للعرض فقط.
 			r.Get("/drivers/{id}/delivered", s.handleDriverDelivered)

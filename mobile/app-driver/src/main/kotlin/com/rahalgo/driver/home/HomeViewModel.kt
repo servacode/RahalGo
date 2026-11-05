@@ -14,6 +14,8 @@ import com.rahalgo.ui.Refresh
 import com.rahalgo.driver.location.LocationPermission
 import com.rahalgo.driver.location.LocationService
 import com.rahalgo.driver.location.Readiness
+import com.rahalgo.shared.driver.OdometerFlow
+import com.rahalgo.shared.driver.OdometerInput
 import com.rahalgo.shared.model.DriverMe
 import com.rahalgo.shared.model.Notice
 import com.rahalgo.shared.net.ApiClient
@@ -150,7 +152,7 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
      */
 
     fun toggleShift(on: Boolean) {
-        if (state.busy) return
+        if (state.busy || state.odometer != null) return
         // ══════════════════════════════════════════════════════════════
         // **ولا يُعلَن متاحاً وهو لا يبلغه النداء** (`DRF-04`)
         // ══════════════════════════════════════════════════════════════
@@ -176,10 +178,125 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
             )
             return
         }
+        // ══════════════════════════════════════════════════════════════
+        // **وعدّادُ الدرّاجة قبل الفتح وقبل السكّر** (قرارُ المالك ٢٠٢٦-١١-٠٥)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **والمحرّكُ يقول متى** (`odometer_mode`) — والشاشةُ تفتح الورقة. **وقراءةُ بدايةٍ
+        // رُفع بعدها الفتحُ** (رقمٌ لم يُوثَّق مثلاً) تُعاد نصفَ ساعة ولا تُطلب صورةٌ ثانية.
+        val me = state.me
+        val step = OdometerFlow.onToggle(
+            on, me?.odometerMode ?: "off", me?.odometerExempt == true, me?.activeOrders ?: 0,
+        )
+        if (step is OdometerFlow.Sheet) {
+            val reuse = pendingStart?.takeIf { on && System.currentTimeMillis() - it.second < PENDING_MS }?.first
+            if (reuse != null) {
+                sendShift(on, reuse, null)
+                return
+            }
+            state = state.copy(
+                error = "",
+                odometer = OdometerAsk(step.phase, step.skippable, lastKm = me?.odometerLastKm),
+            )
+            return
+        }
+        sendShift(on, null, null)
+    }
+
+    /** **قراءةُ بدايةٍ رُفعت ولم يُفتح الدوامُ بعدها** — معرّفُها ووقتُها. */
+    private var pendingStart: Pair<String, Long>? = null
+
+    /** **ما بعد سكّر الدوام بالخروج من التطبيق** — يُكمَل حين يُسكَّر. */
+    private var afterLogout: (() -> Unit)? = null
+
+    /**
+     * **يرفع صورةَ العدّاد ورقمَه ثمّ يفتح الدوام أو يسكّره بمعرّفها.**
+     *
+     * **والقفزةُ الكبيرة تُسأل** (`odometer_check`) فيعيدها بتأكيد، **والرقمُ الأقلّ مرفوض**
+     * (`odometer_lower`) فيصوّر من جديد — والحكمان في المحرّك.
+     */
+    fun submitOdometer(jpeg: ByteArray?, kmText: String, confirm: Boolean) {
+        val ask = state.odometer ?: return
+        if (ask.busy) return
+        val app = getApplication<Application>()
+        if (jpeg == null) {
+            state = state.copy(odometer = ask.copy(error = app.getString(R.string.odo_need_photo), confirm = null))
+            return
+        }
+        val km = OdometerInput.normalize(kmText)
+        if (km == null) {
+            state = state.copy(odometer = ask.copy(error = app.getString(R.string.odo_bad_km), confirm = null))
+            return
+        }
+        state = state.copy(odometer = ask.copy(busy = true, error = "", confirm = null))
+        viewModelScope.launch {
+            // **ولا موقعَ مع القراءة** — آخرُ نقطةٍ وقت الفتح من الدوام الماضي، والخصوصيّةُ لا تَعِد بها.
+            val reading = try {
+                backend.driver.sendOdometer(jpeg, km, ask.phase, confirm)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: ApiClient.ApiException) {
+                val d = e.body.details
+                state = state.copy(
+                    odometer = ask.copy(
+                        busy = false,
+                        error = when (e.body.code) {
+                            "odometer_check" -> ""
+                            "odometer_lower" -> app.getString(R.string.odo_lower, d["last_km"].orEmpty())
+                            else -> describe(e)
+                        },
+                        confirm = if (e.body.code == "odometer_check") {
+                            app.getString(
+                                R.string.odo_check_jump,
+                                d["last_km"].orEmpty(), d["km"].orEmpty(), d["diff_km"].orEmpty(),
+                            )
+                        } else {
+                            null
+                        },
+                    ),
+                )
+                return@launch
+            } catch (e: Exception) {
+                state = state.copy(odometer = ask.copy(busy = false, error = describe(e)))
+                return@launch
+            }
+            if (ask.phase == "start") pendingStart = reading.id to System.currentTimeMillis()
+            sendShift(ask.phase == "start", reading.id, if (ask.forLogout) "logout" else null)
+        }
+    }
+
+    /** **«لم أستطع التصوير»** — حين يسمح المحرّك وحدَه (وضعُ «يطلب»). */
+    fun skipOdometer() {
+        val ask = state.odometer ?: return
+        if (!ask.skippable || ask.busy) return
+        state = state.copy(odometer = ask.copy(busy = true, error = ""))
+        sendShift(ask.phase == "start", null, if (ask.forLogout) "logout" else null)
+    }
+
+    /** **رجوعٌ من الورقة** — والخروجُ الذي انتظرها لا يقع. */
+    fun dismissOdometer() {
+        if (state.odometer?.busy == true) return
+        afterLogout = null
+        state = state.copy(odometer = null)
+    }
+
+    /** **«أعدّل الرقم»** — يُغلق سؤالَ التأكيد. */
+    fun fixOdometer() {
+        state.odometer?.let { state = state.copy(odometer = it.copy(confirm = null)) }
+    }
+
+    fun odometerCameraDenied() {
+        state.odometer?.let {
+            state = state.copy(odometer = it.copy(error = getApplication<Application>().getString(R.string.odo_camera_denied)))
+        }
+    }
+
+    private fun sendShift(on: Boolean, readingId: String?, via: String?) {
         state = state.copy(busy = true, error = "")
         viewModelScope.launch {
             try {
-                backend.driver.setShift(on)
+                backend.driver.setShift(on, readingId, via)
+                if (on) pendingStart = null
                 // **والخريطةُ تُنزَّل مع فتح الورديّة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — لتعمل بلا إنترنت.
                 if (on) launch { com.rahalgo.driver.trip.MapPackageWorker.ensureForTrip(getApplication()) }
                 // **والطابورُ يُقرأ من جديد** — ما نزل قبل الفتح لا يصله دفعٌ.
@@ -198,10 +315,21 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
                     me = me,
                     busy = false,
                     readiness = readiness(),
+                    odometer = null,
                 )
+                // **والخروجُ الذي انتظر صورةَ الليل يُكمَل الآن.**
+                afterLogout?.let {
+                    afterLogout = null
+                    it()
+                }
                 return@launch
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
             } catch (e: Exception) {
-                state = state.copy(busy = false, error = describe(e))
+                val msg = describe(e)
+                // **والخطأُ في الورقة إن كانت مفتوحة** — يقرؤه حيث ينظر.
+                state = state.odometer?.let { state.copy(busy = false, odometer = it.copy(busy = false, error = msg)) }
+                    ?: state.copy(busy = false, error = msg)
             }
         }
     }
@@ -317,8 +445,19 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
                     com.rahalgo.ui.Flash.fail(app.getString(res))
                     return@launch
                 }
+                // **والخروجُ وهو بدوامه سكّرٌ للدوام** (قرارُ المالك ٢٠٢٦-١١-٠٥) — فتُطلب صورةُ
+                // العدّاد كما تُطلب عند المفتاح، **والخروجُ يُكمَل بعدها** (`afterLogout`).
+                val me = state.me
+                val step = OdometerFlow.onLogout(me?.onShift == true, me?.odometerMode ?: "off", 0)
+                if (step is OdometerFlow.Sheet) {
+                    afterLogout = { finishLogout(proceed) }
+                    state = state.copy(
+                        odometer = OdometerAsk(step.phase, step.skippable, forLogout = true, lastKm = me?.odometerLastKm),
+                    )
+                    return@launch
+                }
                 try {
-                    backend.driver.setShift(false)
+                    backend.driver.setShift(false, via = "logout")
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     throw e
                 } catch (e: ApiClient.ApiException) {
@@ -331,16 +470,22 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
                 } catch (e: Exception) {
                     Log.w("RahalGo/logout", "تعذّر إنهاءُ الورديّة — يُكمَل الخروج", e)
                 }
-                // **والخدمةُ تقف مع الخروج** — إشعارُ ورديّةٍ لحسابٍ خرج يبقى في
-                // الشريط وموقعُه يُرسَل، وهو ما لا يقبله أحد.
-                LocationService.stop(getApplication())
-                // **ولا تبقى رحلةٌ محفوظةٌ لحسابٍ خرج** (٢٠٢٦-١٠-٣٠) — ولا خطواتٌ تنتظر.
-                com.rahalgo.driver.orders.TripStore.clear(app.filesDir)
-                proceed()
+                finishLogout(proceed)
             } finally {
                 loggingOut = false
             }
         }
+    }
+
+    /** **ما يبقى من الخروج بعد سكّر الدوام.** */
+    private fun finishLogout(proceed: () -> Unit) {
+        val app = getApplication<Application>()
+        // **والخدمةُ تقف مع الخروج** — إشعارُ ورديّةٍ لحسابٍ خرج يبقى في
+        // الشريط وموقعُه يُرسَل، وهو ما لا يقبله أحد.
+        LocationService.stop(app)
+        // **ولا تبقى رحلةٌ محفوظةٌ لحسابٍ خرج** (٢٠٢٦-١٠-٣٠) — ولا خطواتٌ تنتظر.
+        com.rahalgo.driver.orders.TripStore.clear(app.filesDir)
+        proceed()
     }
 
     /**
@@ -350,4 +495,9 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
      */
     /** **الرمزُ بعربيّة** — من الخريطة المركزيّة (`data/ApiErrors.kt`). */
     private fun describe(e: Exception): String = apiError(getApplication(), e)
+
+    private companion object {
+        /** **قراءةُ البداية تُعاد نصفَ ساعة** — كما يقبلها المحرّك. */
+        const val PENDING_MS = 29 * 60 * 1000L
+    }
 }

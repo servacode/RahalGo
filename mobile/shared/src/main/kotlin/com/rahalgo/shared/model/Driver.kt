@@ -68,6 +68,23 @@ data class DriverMe(
      * ذلك** بدل أن تُردّ الأبوابُ عليه بلا سبب.
      */
     val suspended: Boolean = false,
+
+    // ── المسافة والعدّاد (قرارُ المالك ٢٠٢٦-١١-٠٥) ──
+    /**
+     * **مسافةُ طلباته اليوم بالمتر** — تبدأ بصفرٍ أوّلَ يومه وتزيد مع كلّ طلب، من القيادة
+     * الفعليّة كما يحسبها المحرّك. **وصفرٌ من محرّكٍ قديم.**
+     */
+    @SerialName("today_drive_m") val todayDriveM: Long = 0,
+    @SerialName("today_drive_orders") val todayDriveOrders: Int = 0,
+    /**
+     * **صورةُ العدّاد ورقمُه عند فتح الدوام وسكّره** — `off` لا تُطلب · `ask` تُطلب ويُسمح
+     * بالتخطّي · `require` لا يُفتح الدوامُ ولا يُسكَّر بلاها. **يقرّره المحرّك لنسختنا.**
+     */
+    @SerialName("odometer_mode") val odometerMode: String = "off",
+    /** **سمحت العمليّاتُ بفتح الدوام بلا صورةٍ مرّةً واحدة.** */
+    @SerialName("odometer_exempt") val odometerExempt: Boolean = false,
+    /** **آخرُ رقمٍ سجّله** — يُعرض له تحت الحقل، وفارغٌ قبل أوّل قراءة. */
+    @SerialName("odometer_last_km") val odometerLastKm: Double? = null,
 )
 
 /**

@@ -326,7 +326,10 @@ var OrderPrivacy = map[string]FieldRule{
 	// **والسائقُ يقرأ أمرَه من `door_instruction`**، لا من هذا.
 	"door": {Ref: "door_view.go · لوحةُ «عند باب الزبون»", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
 	// **وما يحتاجه المكتبُ وحدَه** (`orders.BoardInfo`) — سعرُ الشراء والعرضُ الحيّ (٢٠٢٦-١٠-٠٤).
-	"board":       {Ref: "board.go · لوحةُ العمل", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	"board": {Ref: "board.go · لوحةُ العمل", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	// **مسافةُ الطلب كما قادها كلُّ سائقٍ حمله** (قرارُ المالك ٢٠٢٦-١١-٠٥) — للمكتب وحده:
+	// فيها اسمُ السائق ودقائقُ صمت جوّاله. **والسائقُ يقرأ مسافتَه من سجلّه** (`drive_m`) لا من هنا.
+	"drive":       adminOnly("drive_view.go — المسافة المقطوعة لكل سائق (٢٠٢٦-١١-٠٥)"),
 	"fault":       {Ref: "نسبةُ الخطأ — حكمٌ على طرف", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
 	"fail_reason": {Ref: "سببُ التعذّر", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
 	"goods_settled_to": {Ref: "لمن سُلّمت البضاعةُ — تسويةٌ داخليّة",

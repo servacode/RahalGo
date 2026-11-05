@@ -214,4 +214,23 @@ func TestSETTINGS_DefaultLegalTextsMatchDecisions(t *testing.T) {
 	if !strings.Contains(DefaultRepTerms, "ربح المنصّة") || strings.Contains(DefaultRepTerms, "من عمولة المنصّة") {
 		t.Error("شروطُ المندوب لا تقول إنّ عمولتَه من ربح المنصّة")
 	}
+	// **وصورةُ العدّاد ورقمُه عند فتح الورديّة وإغلاقها** (قرارُ المالك ٢٠٢٦-١١-٠٥) — يوافق
+	// عليها السائقُ في شروطه، وتُذكر في خصوصيّته بمدّة حفظها، وتعليماتُه تقولها.
+	for name, txt := range map[string]string{"الشروط": DefaultDriverTerms, "الخصوصيّة": DefaultDriverPrivacy,
+		"التعليمات": DefaultDriverHelp} {
+		if !strings.Contains(txt, "عدّاد") {
+			t.Errorf("%s السائق لا تذكر صورةَ العدّاد", name)
+		}
+	}
+	if !strings.Contains(DefaultDriverPrivacy, "تسعين يوماً") {
+		t.Error("خصوصيّةُ السائق لا تقول مدّةَ حفظ صورة العدّاد")
+	}
+	// **والقراءةُ بلا موقع** — فيُقال ذلك في خصوصيّة السائق، **وفي الخصوصيّة العامّة** (قسمُ
+	// السائق) كما يُقال فيها الموقعُ نفسُه.
+	if !strings.Contains(DefaultDriverPrivacy, "بلا موقع") {
+		t.Error("خصوصيّةُ السائق لا تقول إنّ صورةَ العدّاد بلا موقع")
+	}
+	if !strings.Contains(DefaultPrivacy, "عدّاد") || !strings.Contains(DefaultPrivacy, "بلا موقع") {
+		t.Error("الخصوصيّةُ العامّة لا تذكر صورةَ عدّاد السائق بلا موقع")
+	}
 }

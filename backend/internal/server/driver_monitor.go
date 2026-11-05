@@ -46,21 +46,28 @@ func (s *Server) recordTrail(r *http.Request, driverID string, pts []drivermonit
 	}
 }
 
-// monitorDay يقرأ ?day= (افتراضيه اليوم الدمشقيّ).
-func monitorDay(r *http.Request) (string, bool) {
-	day := r.URL.Query().Get("day")
+// monitorDay يقرأ ?day= (افتراضيه يومُ الحساب الآن) ويردّ معه يومَ الحساب الحاليّ.
+//
+// **ويومُ المراقبة يومُ الحساب** (قرار ٢٠٢٦-١١-٠٥): من ساعة فتح الدوام لمثلها،
+// كعدّاد السائق والنقد — لا من نصف الليل.
+func (s *Server) monitorDay(r *http.Request) (day, today string, ok bool) {
+	today, err := drivermonitor.AccountDay(r.Context(), s.pg, time.Now())
+	if err != nil {
+		today = drivermonitor.Today(time.Now())
+	}
+	day = r.URL.Query().Get("day")
 	if day == "" {
-		return drivermonitor.Today(time.Now()), true
+		return today, today, true
 	}
-	if _, _, err := drivermonitor.DayBounds(day); err != nil {
-		return "", false
+	if _, err := time.Parse("2006-01-02", day); err != nil {
+		return "", today, false
 	}
-	return day, true
+	return day, today, true
 }
 
 // handleDriverMonitorList GET /driver-monitor — سائقو اليوم، الأخطر أولا.
 func (s *Server) handleDriverMonitorList(w http.ResponseWriter, r *http.Request) {
-	day, ok := monitorDay(r)
+	day, today, ok := s.monitorDay(r)
 	if !ok {
 		s.respondErr(w, errValidation)
 		return
@@ -71,20 +78,36 @@ func (s *Server) handleDriverMonitorList(w http.ResponseWriter, r *http.Request)
 		s.respondErr(w, err)
 		return
 	}
-	if rows == nil {
-		rows = []drivermonitor.Row{}
+	// **وملخّصُ العدّاد لكلّ سائق** (قرار المالك ٢٠٢٦-١١-٠٥) — العدّاد مقابل التطبيق، ومشيٌ
+	// خارج الدوام، وسكّرٌ بلا صورة. **من حساب الكانس** لا تحليلٍ جديد لكلّ سائق كلّ ٣٠ ثانية.
+	type rowOut struct {
+		drivermonitor.Row
+		Odometer odoDay `json:"odometer"`
+	}
+	out := make([]rowOut, 0, len(rows))
+	if from, to, err := drivermonitor.AccountDayBounds(r.Context(), s.pg, day); err == nil {
+		for _, row := range rows {
+			_, odo, err := s.monitorShifts(r.Context(), row.DriverID, from, to, time.Now(), false)
+			if err != nil {
+				s.respondErr(w, err)
+				return
+			}
+			out = append(out, rowOut{Row: row, Odometer: odo})
+		}
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"day":            day,
+		"today":          today,
+		"day_start_hour": s.settings.GetInt(r.Context(), "platform.day_start_hour"),
 		"km_alert":       alert,
 		"retention_days": s.settings.GetInt(r.Context(), "drivers.trail_retention_days"),
-		"drivers":        rows,
+		"drivers":        out,
 	})
 }
 
 // handleDriverMonitorDay GET /driver-monitor/{id} — يوم سائق: مسار وقصة وأرقام.
 func (s *Server) handleDriverMonitorDay(w http.ResponseWriter, r *http.Request) {
-	day, ok := monitorDay(r)
+	day, today, ok := s.monitorDay(r)
 	if !ok {
 		s.respondErr(w, errValidation)
 		return
@@ -110,6 +133,18 @@ func (s *Server) handleDriverMonitorDay(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	alert := float64(s.settings.GetInt(r.Context(), "drivers.monitor_km_alert"))
+	// **ودوامات اليوم** — متى فُتحت وسُكّرت ومين سكّرها وأرقامها (قرار المالك ٢٠٢٦-١١-٠٥).
+	dayFrom, dayTo, err := drivermonitor.AccountDayBounds(r.Context(), s.pg, day)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	dayShifts, dayOdo, err := s.monitorShifts(r.Context(), id, dayFrom, dayTo, time.Now(), true)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	// **وكل طلبٍ بمسافته** (قرار المالك ٢٠٢٦-١١-٠٥) — من القيادة الفعلية: للمتجر وللزبون.
 	type order struct {
 		ID         string     `json:"id"`
 		Number     int64      `json:"number"`
@@ -117,10 +152,24 @@ func (s *Server) handleDriverMonitorDay(w http.ResponseWriter, r *http.Request) 
 		AssignedAt *time.Time `json:"assigned_at"`
 		PickedUpAt *time.Time `json:"picked_up_at"`
 		EndAt      *time.Time `json:"end_at"`
+		EndKind    string     `json:"end_kind"`
+		ToPickupM  int        `json:"to_pickup_m"`
+		WithOrderM int        `json:"with_order_m"`
+		Shared     bool       `json:"shared"`
+		GapMin     int        `json:"gap_min"`
 	}
 	orders := make([]order, 0, len(wins))
+	seen := map[string]bool{}
 	for _, o := range wins {
-		orders = append(orders, order{o.OrderID, o.Number, o.Store, o.AssignedAt, o.PickedUpAt, o.EndAt})
+		row := order{ID: o.OrderID, Number: o.Number, Store: o.Store, AssignedAt: o.AssignedAt,
+			PickedUpAt: o.PickedUpAt, EndAt: o.EndAt, EndKind: o.EndKind}
+		// **وطلبٌ له ولايتان يُعرض بمسافته كلّها مرّةً واحدة.**
+		if t := res.Tenures[o.OrderID]; t != nil && !seen[o.OrderID] {
+			row.ToPickupM, row.WithOrderM = int(math.Round(t.ToPickupM)), int(math.Round(t.WithOrderM))
+			row.Shared, row.GapMin = t.Shared, t.GapMin
+		}
+		seen[o.OrderID] = true
+		orders = append(orders, row)
 	}
 	// **متاجر حول المسار بأسمائها** — تُرسم على الخريطة باسمها (طلب المالك ٢٠٢٦-١١-٠٣).
 	type near struct {
@@ -149,13 +198,16 @@ func (s *Server) handleDriverMonitorDay(w http.ResponseWriter, r *http.Request) 
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"day":      day,
+		"today":    today,
 		"stores":   nearStores,
 		"driver":   map[string]any{"id": id, "name": name, "phone": phone},
 		"km_alert": alert,
-		"alert":    alert > 0 && res.Summary.KmNoOrder >= alert,
+		"alert":    res.Alert(alert),
 		"summary":  res.Summary,
 		"path":     res.Path,
 		"events":   res.Events,
 		"orders":   orders,
+		"shifts":   dayShifts,
+		"odometer": dayOdo,
 	})
 }

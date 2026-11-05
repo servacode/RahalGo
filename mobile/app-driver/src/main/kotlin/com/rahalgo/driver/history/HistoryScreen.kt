@@ -515,6 +515,14 @@ private fun Row(
                 style = MaterialTheme.typography.bodySmall,
             )
         }
+        // **والمسافةُ التي قادها فيه** (قرارُ المالك ٢٠٢٦-١١-٠٥) — «المسافة: ٣ كم»، من المحرّك.
+        o.driveM?.let { m ->
+            Text(
+                text = stringResource(R.string.hist_drive, com.rahalgo.ui.dist(m.toDouble())),
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
         // ══════════════════════════════════════════════════════════════
         // **وزرّان تحت السطر — بلاغٌ وتقييم**
         // ══════════════════════════════════════════════════════════════

@@ -126,7 +126,10 @@ var validKinds = map[string]bool{"merchant_logo": true, "menu_item": true, "menu
 	"auth_background": true, "site_background": true,
 	// **و`expense_receipt` صورةُ إيصال مصروفٍ تشغيليّ** — صنفٌ محميّ (هجرة ٠٣١٠،
 	// قرارُ المالك ٢٠٢٦-١٠-٠٤): اختياريّةٌ، وإلزاميّةٌ فوق سقف الموافقة.
-	"expense_receipt": true}
+	"expense_receipt": true,
+	// **و`odometer` صورةُ عدّاد الدرّاجة عند فتح الدوام وسكّره** — صنفٌ محميّ (هجرة ٠٥٠١،
+	// قرارُ المالك ٢٠٢٦-١١-٠٥): يراها المالكُ والمديرُ وحدَهما، وتُمحى بعد مدّة حفظها.
+	"odometer": true}
 
 type Media struct {
 	ID       string `json:"id"`

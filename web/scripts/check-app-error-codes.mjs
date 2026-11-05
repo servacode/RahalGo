@@ -109,6 +109,13 @@ const SERVER_MOBILE = new Set([
   // **الأمانة: صاحبُها ورقمُه وطلبُ موقعه** — تطبيقُ الزبون (٢٠٢٦-١٠-٣٠).
   "amanah_holder_required",
   "location_request_invalid",
+  // **عدّادُ الدرّاجة عند فتح الدوام وسكّره** (قرارُ المالك ٢٠٢٦-١١-٠٥) — تطبيقُ السائق.
+  "odometer_required",
+  "odometer_bad_km",
+  "odometer_photo_required",
+  "odometer_wrong_phase",
+  "odometer_lower",
+  "odometer_check",
 ]);
 
 /** **ما لا يبلغ هاتفاً** — أبوابُ الإدارة واللوحات. */
@@ -120,6 +127,8 @@ const SERVER_ADMIN = new Set([
   "bad_format",
   "map_learning_busy",
   "map_learning_no_roads",
+  // **سببُ تصحيح العدّاد أو سماحِ فتح الدوام بلا صورة** — لوحةُ المراقبة وملفُّ السائق (٢٠٢٦-١١-٠٥).
+  "odometer_note_required",
   // **رابطُ «أرسل موقعي» انتهى** — صفحةُ المستلِم العامّة على الويب وحدَها (٢٠٢٦-١٠-٢٩).
   "location_request_closed",
   // **رابطُ رأي الزبون بعد التسليم انتهى** — صفحةُ الويب العامّة وحدَها (٢٠٢٦-١١-٠٤).

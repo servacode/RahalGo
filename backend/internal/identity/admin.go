@@ -13,6 +13,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/rolesguard"
+	"github.com/servacode/rahalgo/backend/internal/shifts"
 	"time"
 )
 
@@ -287,6 +288,12 @@ func (s *Service) afterStatus(ctx context.Context, userID, status string) {
 		// (`SEC5`). **والمحظورُ كان يبقى يستقبل إشعاراتِه الخاصّة.**
 		if _, err := s.repo.DeleteDeviceTokensOfUser(ctx, userID); err != nil {
 			s.logger.Error("تعذّر قطعُ وجهاتِ الدفع بعد تبديل الحال",
+				"user", userID, "status", status, "error", err)
+		}
+		// **ودوامُ السائق المحظور يُسكَّر بسببه** (قرار المالك ٢٠٢٦-١١-٠٥) — كان يبقى
+		// «بالدوام» في كل شاشة. ولمن ليس بالدوام لا يقع شيء.
+		if _, err := shifts.Close(ctx, s.repo.db, userID, shifts.ReasonAccount); err != nil {
+			s.logger.Error("تعذّر إغلاقُ الدوام بعد تبديل الحال",
 				"user", userID, "status", status, "error", err)
 		}
 	}

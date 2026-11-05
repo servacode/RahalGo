@@ -164,6 +164,10 @@ func (s *Server) handleListOrders(w http.ResponseWriter, r *http.Request) {
 	}
 	// **والمسافاتُ على الطريق لا بالهواء** (المالك ٢٠٢٦-١٠-٢٥) — للطلبات الجارية وحدَها.
 	s.fillRoadDistances(r.Context(), res.Orders)
+	// **والمسافةُ المقطوعة لكلّ سائق** (قرارُ المالك ٢٠٢٦-١١-٠٥) — على بطاقة اللوحة والسجلّ.
+	if err := s.orders.FillDrives(r.Context(), res.Orders); err != nil {
+		s.logger.Warn("لوحةُ الطلبات: تعذّرت المسافة المقطوعة", "error", err)
+	}
 	// **وعمولةُ المنصّة من المتجر على البطاقة** (قرارُ المالك ٢٠٢٦-١٠-٢٦).
 	s.fillOrderCommission(r.Context(), res.Orders)
 	s.fillCommissionTaken(r.Context(), res.Orders)
@@ -270,6 +274,10 @@ func (s *Server) handleGetOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	one := []orders.Order{*o}
 	s.fillBoard(r, one)
+	// **والمسافةُ المقطوعة لكلّ سائقٍ حمله** (قرارُ المالك ٢٠٢٦-١١-٠٥) — في ملفّ الطلب.
+	if err := s.orders.FillDrives(r.Context(), one); err != nil {
+		s.logger.Warn("ملفّ الطلب: تعذّرت المسافة المقطوعة", "order", o.ID, "error", err)
+	}
 	// **وعمولتُه وصافي المتجر كما على كرت السجلّ** — لقسم «المال» في ملفّ الطلب (٢٠٢٦-١٠-٣٠).
 	s.fillOrderCommission(r.Context(), one)
 	s.fillCommissionTaken(r.Context(), one)

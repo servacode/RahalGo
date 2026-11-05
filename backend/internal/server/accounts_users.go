@@ -25,6 +25,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/identity"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
+	"github.com/servacode/rahalgo/backend/internal/shifts"
 )
 
 var (
@@ -460,10 +461,14 @@ func (s *Server) driverAccidentLocked(ctx context.Context, driverID string) bool
 }
 
 // lockDriverAfterAccident يقفل دوامَ السائق بعد حادث — حتّى تؤكّد العمليّات أنّه بخير.
+// **ودوامُه يُسكَّر بسبب «بعد حادث»** في سجلّ الدوام (`internal/shifts`).
 func (s *Server) lockDriverAfterAccident(ctx context.Context, driverID string) {
 	if _, err := s.pg.Exec(ctx, `
-		UPDATE users SET accident_lock_at = now(), on_shift = false WHERE id = $1`, driverID); err != nil {
+		UPDATE users SET accident_lock_at = now() WHERE id = $1`, driverID); err != nil {
 		s.logger.Error("تعذّر قفلُ السائق بعد الحادث", "driver", driverID, "error", err)
+	}
+	if _, err := shifts.Close(ctx, s.pg, driverID, shifts.ReasonAccident); err != nil {
+		s.logger.Error("تعذّر إغلاقُ الدوام بعد الحادث", "driver", driverID, "error", err)
 	}
 }
 

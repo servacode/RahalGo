@@ -26,6 +26,32 @@ func DayBounds(day string) (time.Time, time.Time, error) {
 // Today تاريخ اليوم الدمشقيّ.
 func Today(now time.Time) string { return now.In(Loc()).Format("2006-01-02") }
 
+// ══════════════════════════════════════════════════════════════════════
+// **يومُ المراقبة يومُ الحساب** — من ساعة فتح الدوام لمثلها (قرار ٢٠٢٦-١١-٠٥)
+// ══════════════════════════════════════════════════════════════════════
+//
+// صفحة المراقبة وعدّاد السائق والنقد يومٌ واحد: `platform.day_start_hour` (٩ افتراضاً)
+// بتوقيت دمشق — **من دوالّ القاعدة نفسها** (`account_day` · `account_day_start`، الهجرة 0476)
+// فما في ساعة مكتوبة هون تفترق عن الإعداد.
+
+// AccountDay يومُ الحساب للحظةٍ ما (`YYYY-MM-DD`).
+func AccountDay(ctx context.Context, db DB, at time.Time) (string, error) {
+	var day string
+	err := db.QueryRow(ctx, `SELECT account_day($1)::text`, at).Scan(&day)
+	return day, err
+}
+
+// AccountDayBounds بدايةُ يوم الحساب ونهايتُه لتاريخ `YYYY-MM-DD`.
+func AccountDayBounds(ctx context.Context, db DB, day string) (time.Time, time.Time, error) {
+	if _, err := time.Parse("2006-01-02", day); err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+	var from, to time.Time
+	err := db.QueryRow(ctx, `
+		SELECT account_day_start($1::date), account_day_start($1::date + 1)`, day).Scan(&from, &to)
+	return from, to, err
+}
+
 // LoadStores المتاجر الفعّالة التي لها موقع.
 func LoadStores(ctx context.Context, db DB) ([]Store, error) {
 	rows, err := db.Query(ctx, `
@@ -78,24 +104,81 @@ func LoadPoints(ctx context.Context, db DB, driverID string, from, to time.Time)
 	return out, rows.Err()
 }
 
-// LoadWindows نوافذ طلبات السائق التي تمسّ المدى.
+// ReturnTripMax **أطول مشوار إرجاعٍ يُحسب للطلب** — إن لم يضغط السائق «سلّمت البضاعة»
+// بقيت ولايته مفتوحة، فتُقصّ هنا كي لا يصير كل ما بعدها «بطلب».
+const ReturnTripMax = 2 * time.Hour
+
+// LoadTenures **ولايات السائق على الطلبات التي تمسّ المدى** — من سجلّ الطلب لا من حامله الآن.
 //
-// بداية النافذة: أول سطر إسناد له بسجل الطلب، وإلا القبول، وإلا الاستلام.
-// **والطلب المنقول لسائق آخر لا يظهر هنا** — النافذة للسائق الحالي للطلب.
-func LoadWindows(ctx context.Context, db DB, driverID string, from, to time.Time) ([]Window, error) {
+// **من الانتقالات الحقيقيّة وحدَها** (`from_status <> to_status`): سطرٌ حالُه ما تغيّرت ملاحظةٌ
+// (تعديلُ الطلب، صنفٌ غيرُ متوفّر، مبلغُ الإحضار، تحويلُ المتجر…) لا يبدأ ولايةً ولا ينهيها.
+//
+// البداية: انتقالٌ إلى `assigned` باسمه. والنهاية أول انتقالٍ بعدها يُخرج الطلب من يده:
+// رجوعٌ للطابور (تَرَكه، أو استُرجع منه، أو أعادته العمليّات)، **أو «تعذّر» عند المتجر**
+// (`→ accepted` باسمه — `orders/merchant_blocked.go`)، أو إسنادٌ **لسائقٍ آخرَ معلوم**، أو نهايةُ
+// الطلب. **و`at_pickup → assigned` بلا سائق** (تحويلُ المتجر — `server/order_transfer.go`،
+// `orders/external_store.go`) **لا ينهيها**: السائقُ نفسُه يكمل للمتجر الجديد.
+//
+// **والفاشلُ بمشوار إرجاع** يمتدّ حتى «سلّمت البضاعة» (أو «أُعيدت للمتجر» في المسار القديم)،
+// ومفتوحُه يُقصّ بـ`ReturnTripMax`.
+//
+// **والطلباتُ المرشّحة من فهرسين** لا من تاريخ السائق كلّه: سطورُه في السجلّ منذ يومٍ قبل
+// المدى (`order_events_driver_idx`) والطلباتُ المفتوحة بيده (`orders_driver_idx`) — فلا يكبر
+// الاستعلامُ مع عمره في المنصّة وهو يُنادى كلّ ثلاثين ثانية.
+//
+// **والطلبُ بلا سطر إسنادٍ باسمه** (قبل ٠١٧٢) يُقرأ كما كان: من حامله الحالي.
+func LoadTenures(ctx context.Context, db DB, driverID string, from, to, now time.Time) ([]Window, error) {
 	rows, err := db.Query(ctx, `
+		WITH cand AS (
+		     SELECT e.order_id FROM order_events e
+		      WHERE e.driver_id = $1::uuid AND e.created_at >= $2::timestamptz - interval '24 hours'
+		        AND e.created_at < $3
+		     UNION
+		     SELECT o.id FROM orders o WHERE o.driver_id = $1::uuid AND o.closed_at IS NULL
+		)
+		SELECT o.id::text, o.number, COALESCE(m.name, ''), a.created_at,
+		       COALESCE(pk.created_at,
+		                CASE WHEN o.driver_id = $1::uuid AND o.picked_up_at >= a.created_at
+		                      AND (en.created_at IS NULL OR o.picked_up_at <= en.created_at)
+		                     THEN o.picked_up_at END),
+		       en.created_at, COALESCE(en.to_status, ''),
+		       COALESCE(o.driver_id = $1::uuid, false), o.status, o.closed_at, o.delivered_at,
+		       o.returned_at, o.return_to IS NOT NULL, o.goods_handed_at
+		  FROM cand c
+		  JOIN order_events a ON a.order_id = c.order_id
+		  JOIN orders o ON o.id = a.order_id
+		  LEFT JOIN merchants m ON m.id = o.merchant_id
+		  LEFT JOIN LATERAL (
+		       SELECT x.id, x.created_at, x.to_status FROM order_events x
+		        WHERE x.order_id = a.order_id AND x.id > a.id AND x.from_status <> x.to_status
+		          AND (x.to_status IN ('dispatching','delivered','failed','cancelled','rejected','refunded')
+		               OR (x.to_status = 'accepted' AND x.driver_id = $1::uuid)
+		               OR (x.to_status = 'assigned' AND x.driver_id IS NOT NULL AND x.driver_id <> $1::uuid))
+		        ORDER BY x.id LIMIT 1) en ON true
+		  LEFT JOIN LATERAL (
+		       SELECT x.created_at FROM order_events x
+		        WHERE x.order_id = a.order_id AND x.id > a.id AND x.to_status = 'picked_up'
+		          AND x.from_status <> x.to_status
+		          AND (en.id IS NULL OR x.id < en.id)
+		        ORDER BY x.id LIMIT 1) pk ON true
+		 WHERE a.driver_id = $1::uuid AND a.to_status = 'assigned' AND a.from_status <> a.to_status
+		   AND a.created_at < $3
+		   AND COALESCE(en.created_at, o.goods_handed_at, o.returned_at, o.delivered_at, o.closed_at, $3)
+		       + CASE WHEN o.return_to IS NOT NULL THEN interval '2 hours' ELSE interval '0' END > $2
+		UNION ALL
 		SELECT o.id::text, o.number, COALESCE(m.name, ''),
-		       COALESCE((SELECT min(e.created_at) FROM order_events e
-		                  WHERE e.order_id = o.id AND e.driver_id = $1::uuid AND e.to_status = 'assigned'),
-		                o.accepted_at, o.dispatched_at, o.picked_up_at),
-		       o.picked_up_at,
-		       COALESCE(o.delivered_at, o.returned_at, o.closed_at)
+		       COALESCE(o.accepted_at, o.dispatched_at, o.picked_up_at), o.picked_up_at,
+		       NULL::timestamptz, '', true, o.status, o.closed_at, o.delivered_at,
+		       o.returned_at, o.return_to IS NOT NULL, o.goods_handed_at
 		  FROM orders o
 		  LEFT JOIN merchants m ON m.id = o.merchant_id
 		 WHERE o.driver_id = $1::uuid
+		   AND o.created_at >= $2::timestamptz - interval '7 days'
+		   AND NOT EXISTS (SELECT 1 FROM order_events e
+		                    WHERE e.order_id = o.id AND e.driver_id = $1::uuid AND e.to_status = 'assigned'
+		                      AND e.from_status <> e.to_status)
 		   AND COALESCE(o.picked_up_at, o.accepted_at, o.dispatched_at, o.created_at) < $3
-		   AND COALESCE(o.delivered_at, o.returned_at, o.closed_at, $3) > $2
-		 ORDER BY o.created_at`, driverID, from, to)
+		   AND COALESCE(o.delivered_at, o.returned_at, o.closed_at, $3) > $2`, driverID, from, to)
 	if err != nil {
 		return nil, err
 	}
@@ -103,17 +186,119 @@ func LoadWindows(ctx context.Context, db DB, driverID string, from, to time.Time
 	var out []Window
 	for rows.Next() {
 		var w Window
-		if err := rows.Scan(&w.OrderID, &w.Number, &w.Store, &w.AssignedAt, &w.PickedUpAt, &w.EndAt); err != nil {
+		var start *time.Time
+		var endAt, closedAt, deliveredAt, returnedAt, handedAt *time.Time
+		var endStatus, status string
+		var holds, returnTrip bool
+		if err := rows.Scan(&w.OrderID, &w.Number, &w.Store, &start, &w.PickedUpAt, &endAt, &endStatus,
+			&holds, &status, &closedAt, &deliveredAt, &returnedAt, &returnTrip, &handedAt); err != nil {
 			return nil, err
+		}
+		w.AssignedAt = start
+		switch {
+		case endStatus != "":
+			w.EndAt, w.EndKind = endAt, endKindOf(endStatus)
+		case holds && closedAt != nil:
+			e := closedAt
+			if deliveredAt != nil {
+				e = deliveredAt
+			}
+			w.EndAt, w.EndKind = e, endKindOf(status)
+		case holds:
+			// ما زال معه.
+		default:
+			// **خرج من يده بلا سطرٍ يُقرأ** — ولايةٌ بطول صفر خيرٌ من ولايةٍ مفتوحةٍ للأبد.
+			w.EndAt, w.EndKind = start, "other"
+		}
+		// **ووقتُ ما أنهاها** قبل أن يمدّها مشوارُ الإرجاع — منه يُعرف بأيّ دوامٍ انتهت.
+		w.EndEventAt = w.EndAt
+		// **ومشوار إرجاع البضاعة جزءٌ من الطلب** (قرار المالك ٢٠٢٦-١٠-٠٣).
+		if w.EndKind == "failed" && w.EndAt != nil {
+			back := handedAt
+			if back == nil && returnedAt != nil {
+				back = returnedAt
+			}
+			limit := w.EndAt.Add(ReturnTripMax)
+			switch {
+			case back != nil && back.After(*w.EndAt):
+				if back.After(limit) {
+					back = &limit
+				}
+				w.EndAt, w.EndKind = back, "returned"
+			case back == nil && returnTrip:
+				if now.Before(limit) {
+					w.EndAt = nil // المشوار قائم
+				} else {
+					w.EndAt = &limit
+				}
+				w.EndKind = "returned"
+			}
 		}
 		out = append(out, w)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return mergeTenures(out), nil
 }
 
-// DriverDay تحليل سائق ليوم دمشقيّ.
+// endKindOf نوع النهاية من حالة الطلب.
+func endKindOf(status string) string {
+	switch status {
+	case "delivered", "refunded":
+		return "delivered"
+	case "failed":
+		return "failed"
+	case "cancelled", "rejected":
+		return "cancelled"
+	case "dispatching", "assigned":
+		return "released"
+	case "accepted":
+		// **«تعذّر» عند المتجر** — عاد الطلبُ للمكتب وخرج من يده (`orders/merchant_blocked.go`).
+		return "store_failed"
+	}
+	return "other"
+}
+
+// mergeTenures يدمج ولايتين متداخلتين للطلب نفسه (سطرا إسنادٍ له بلا خروجٍ بينهما)
+// — فلا يُقسم مقطعٌ على طلبٍ واحدٍ مرّتين. ويرتّب بالبداية.
+func mergeTenures(ws []Window) []Window {
+	sort.SliceStable(ws, func(i, j int) bool {
+		if ws[i].OrderID != ws[j].OrderID {
+			return ws[i].OrderID < ws[j].OrderID
+		}
+		return timeOr(ws[i].AssignedAt).Before(timeOr(ws[j].AssignedAt))
+	})
+	out := ws[:0]
+	for _, w := range ws {
+		if n := len(out); n > 0 && out[n-1].OrderID == w.OrderID {
+			p := &out[n-1]
+			if p.EndAt == nil || !timeOr(w.AssignedAt).After(*p.EndAt) {
+				if p.EndAt != nil && (w.EndAt == nil || w.EndAt.After(*p.EndAt)) {
+					p.EndAt, p.EndKind, p.EndEventAt = w.EndAt, w.EndKind, w.EndEventAt
+				}
+				if p.PickedUpAt == nil {
+					p.PickedUpAt = w.PickedUpAt
+				}
+				continue
+			}
+		}
+		out = append(out, w)
+	}
+	sort.SliceStable(out, func(i, j int) bool { return timeOr(out[i].AssignedAt).Before(timeOr(out[j].AssignedAt)) })
+	return out
+}
+
+func timeOr(t *time.Time) time.Time {
+	if t == nil {
+		return time.Time{}
+	}
+	return *t
+}
+
+// DriverDay تحليل سائق ليوم حساب (من ساعة فتح الدوام لمثلها).
 func DriverDay(ctx context.Context, db DB, driverID, day string, stores []Store, now time.Time) (Result, []Window, error) {
-	from, to, err := DayBounds(day)
+	from, to, err := AccountDayBounds(ctx, db, day)
 	if err != nil {
 		return Result{}, nil, err
 	}
@@ -121,8 +306,8 @@ func DriverDay(ctx context.Context, db DB, driverID, day string, stores []Store,
 	if err != nil {
 		return Result{}, nil, err
 	}
-	// نافذة طلب بدأ قبل اليوم تحتاج نقطتها لتصنيف أول اليوم — يكفي الطلب نفسه.
-	wins, err := LoadWindows(ctx, db, driverID, from, to)
+	// ولاية طلب بدأت قبل اليوم تحتاج نقطتها لتصنيف أول اليوم — يكفي الطلب نفسه.
+	wins, err := LoadTenures(ctx, db, driverID, from, to, now)
 	if err != nil {
 		return Result{}, nil, err
 	}
@@ -148,14 +333,18 @@ type Row struct {
 	Live *Live `json:"live"`
 }
 
-// Overview سائقو اليوم الذين لهم أثر، الأخطر أولا.
+// Overview سائقو يوم الحساب الذين لهم أثر، الأخطر أولا.
 func Overview(ctx context.Context, db DB, day string, alertKm float64, now time.Time) ([]Row, error) {
-	from, to, err := DayBounds(day)
+	from, to, err := AccountDayBounds(ctx, db, day)
 	if err != nil {
 		return nil, err
 	}
 	// اليوم الحالي: يدخل كل سائق على الدوام ولو بلا أثر بعد، ليرى المالك كل العاملين.
-	isToday := day == Today(now)
+	today, err := AccountDay(ctx, db, now)
+	if err != nil {
+		return nil, err
+	}
+	isToday := day == today
 	rows, err := db.Query(ctx, `
 		SELECT u.id::text, u.full_name, u.phone, u.on_shift
 		  FROM users u
@@ -208,7 +397,7 @@ func Overview(ctx context.Context, db DB, day string, alertKm float64, now time.
 		out[i].Summary = res.Summary
 		out[i].Flagged = res.FlaggedGaps()
 		out[i].Score = res.Score
-		out[i].Alert = alertKm > 0 && res.Summary.KmNoOrder >= alertKm
+		out[i].Alert = res.Alert(alertKm)
 		if out[i].Alert {
 			out[i].Score += 300
 		}

@@ -1195,6 +1195,27 @@ var Catalog = []Def{
 		Min: 0, Max: 23, Unit: "hour", Default: 18},
 	{Key: "drivers.landmarks_remind_on_shift_end", Group: GroupDrivers, Kind: KindBool, Default: true},
 
+	// ══════════════════════════════════════════════════════════════════
+	// **عدّاد الدرّاجة عند فتح الدوام وسكّره** (قرار المالك ٢٠٢٦-١١-٠٥) — `server/driver_odometer.go`
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// `require` إلزامي (قرار المالك: «حصراً الصورة بالليل») — **للتطبيق الذي يعلن أنّه يعرفه وحدَه**
+	// (`odometer_capable` بجسم `/driver/shift`، لا رقمُ النسخة)، فالقديمُ — وأيُّ تصليحٍ سريعٍ بلا
+	// الورقة — يفتح ويسكّر كما كان حتّى يُفرض التحديث. و`ask` يطلبها
+	// ويسمح بالتخطّي، و`off` لا يطلبها. والعتبات: قفزةٌ تُسأل، وفرقٌ بين العدّاد والتطبيق يعلّم
+	// بالأحمر (كيلو ونسبة معاً)، ومشيٌ خارج الدوام يعلّم، ومدّةُ حفظ الصورة (والرقمُ يبقى).
+	{Key: "drivers.odometer_mode", Group: GroupDrivers, Kind: KindChoice,
+		Options: []string{"off", "ask", "require"}, Default: "require"},
+	{Key: "drivers.odometer_max_jump_km", Group: GroupDrivers, Kind: KindInt,
+		Min: 10, Max: 2000, Unit: "km", Default: 150},
+	{Key: "drivers.odometer_gap_alert_km", Group: GroupDrivers, Kind: KindInt,
+		Min: 0, Max: 200, Unit: "km", Default: 5},
+	{Key: "drivers.odometer_gap_alert_pct", Group: GroupDrivers, Kind: KindPercent, Default: 20},
+	{Key: "drivers.odometer_off_alert_km", Group: GroupDrivers, Kind: KindInt,
+		Min: 0, Max: 200, Unit: "km", Default: 1},
+	{Key: "drivers.odometer_photo_retention_days", Group: GroupDrivers, Kind: KindInt,
+		Min: 7, Max: 3650, Unit: "day", Default: 90},
+
 	// **ومتوسّطُ سرعة السائق — منه يُحسب الوقتُ المتوقَّع.**
 	//
 	// (جردُ ٢٠٢٦-٠٨-٠٩: البطاقةُ تقول «٤٠٠ متر» ولا تقول كم يأخذ.)

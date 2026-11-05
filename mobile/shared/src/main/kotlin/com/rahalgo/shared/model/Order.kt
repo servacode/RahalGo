@@ -544,6 +544,11 @@ data class HistoryOrder(
      * غيرَ الحقيقة.**
      */
     @SerialName("returned_at") val returnedAt: String? = null,
+    /**
+     * **المسافةُ التي قادها في الطلب بالمتر** (قرارُ المالك ٢٠٢٦-١١-٠٥) — من قبوله حتّى
+     * خرج من يده، **وفارغةٌ** قبل أن يحسبها المحرّك (أو من محرّكٍ قديم).
+     */
+    @SerialName("drive_m") val driveM: Long? = null,
 )
 
 /**

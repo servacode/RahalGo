@@ -69,7 +69,7 @@ func (tr *dmTrail) stand(dur time.Duration) {
 	tr.cur = tr.cur.Add(dur)
 }
 
-// dmDay أمس بتوقيت دمشق عند الساعة ١٠:٠٠.
+// dmDay أمس بتوقيت دمشق عند الساعة ١٠:٠٠ — داخل يوم الحساب (٩ ← ٩) لتاريخ أمس.
 func dmDay() (string, time.Time) {
 	loc := drivermonitor.Loc()
 	y := time.Now().In(loc).AddDate(0, 0, -1)
@@ -170,25 +170,26 @@ func dmBuildDay(t *testing.T, h *Harness, f *Factory, withCover bool) (driver, d
 
 	tr := &dmTrail{t: t, h: h, driver: drv.ID, cur: base, pos: dmP}
 	tr.put(base, dmP, false)
-	// ١٠:٠٠ → ١٠:١٠ إلى المتجر أ (طلب مسنَد منذ ١٠:٠٠)
-	tr.walk(dmA, 10*time.Minute, 30*time.Second)
-	// ١٠:١٠ → ١٠:١٣ استلام
+	// **بسرعة درّاجة (~٤ م/ث)** — فالكيلومترات قيادة فعليّة لا زحف (قرار المالك ٢٠٢٦-١١-٠٥).
+	// ١٠:٠٠ → ١٠:٠٤ إلى المتجر أ (طلب مسنَد منذ ١٠:٠٠)
+	tr.walk(dmA, 4*time.Minute, 15*time.Second)
+	// ١٠:٠٤ → ١٠:٠٧ استلام
 	tr.stand(3 * time.Minute)
-	// ١٠:١٣ → ١٠:٢٥ إلى الزبون بالطلب
-	tr.walk(dmC, 12*time.Minute, 30*time.Second)
-	dmOrder(t, h, drv.ID, mA.ID, base, base.Add(10*time.Minute), base.Add(25*time.Minute))
-	// ١٠:٢٥ → ١٠:٤٠ إلى متجر ب بلا طلب
-	tr.walk(dmB, 15*time.Minute, 30*time.Second)
-	// ١٠:٤٠ → ١٠:٤٦ يقف عند ب ست دقائق
+	// ١٠:٠٧ → ١٠:١١ إلى الزبون بالطلب
+	tr.walk(dmC, 4*time.Minute, 15*time.Second)
+	dmOrder(t, h, drv.ID, mA.ID, base, base.Add(4*time.Minute), base.Add(11*time.Minute))
+	// ١٠:١١ → ١٠:١٧ إلى متجر ب بلا طلب
+	tr.walk(dmB, 6*time.Minute, 15*time.Second)
+	// ١٠:١٧ → ١٠:٢٣ يقف عند ب ست دقائق
 	tr.stand(6 * time.Minute)
-	// ١٠:٤٦ → ١٠:٥٥ إلى د (≥ ٨٠٠ م) ثم يقف ثلاث دقائق
-	tr.walk(dmD, 9*time.Minute, 30*time.Second)
+	// ١٠:٢٣ → ١٠:٢٨ إلى د (≥ ٨٠٠ م) ثم يقف ثلاث دقائق
+	tr.walk(dmD, 5*time.Minute, 15*time.Second)
 	tr.stand(3 * time.Minute)
-	// ١٠:٥٨ → ١١:٠٨ يرجع إلى ب
-	tr.walk(dmB, 10*time.Minute, 30*time.Second)
+	// ١٠:٣١ → ١٠:٣٦ يرجع إلى ب
+	tr.walk(dmB, 5*time.Minute, 15*time.Second)
 	if withCover {
 		// طلب مسنَد قبل الوقوف عند ب ومسلَّم بعد العودة: كل ما سبق «بطلب».
-		dmOrder(t, h, drv.ID, mB.ID, base.Add(26*time.Minute), base.Add(40*time.Minute), base.Add(70*time.Minute))
+		dmOrder(t, h, drv.ID, mB.ID, base.Add(12*time.Minute), base.Add(17*time.Minute), base.Add(40*time.Minute))
 	}
 	// انقطاع ٢٢ دقيقة وهو يمشي، ثم نقطتان مزيَّفتان
 	g := tr.cur.Add(22 * time.Minute)

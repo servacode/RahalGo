@@ -81,6 +81,14 @@ UPDATE merchants SET status = 'active', emergency_closed = false,
 -- ٦ · السائقون منصرفون — الدوامُ يُرفع باليد في التطبيق، فتُختبر الخطوة
 UPDATE users SET on_shift = false, shift_started_at = NULL;
 
+-- **وسجلُّ الدوام والعدّاد ومسافاتُ الطلبات معه** (الهجرة 0501) — وإلّا بقي صفُّ دوامٍ مفتوحٍ
+-- والسائقُ «منصرف»، فيكمل الدوامُ الجديد من قبل أيّام. (ومسافاتُ الطلبات ذهبت مع الطلبات.)
+-- وصورُ العدّاد تبقى صفوفاً في media بملفّاتها — يمحوها كانسُ المسافات بعد مدّة حفظها.
+DELETE FROM order_drives;
+DELETE FROM driver_odometer_exemptions;
+DELETE FROM driver_shifts;
+DELETE FROM driver_odometer_readings;
+
 -- ٧ · رصيدُ الزبون — قيدٌ واحدٌ نظيف
 INSERT INTO wallet_transactions (user_id, amount, kind, note, created_by)
 SELECT u.id, 250000, 'topup', 'رصيد تجريبي — بداية نظيفة',

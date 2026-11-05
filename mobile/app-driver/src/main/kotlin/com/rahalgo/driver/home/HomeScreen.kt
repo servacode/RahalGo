@@ -349,6 +349,13 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
                 color = Rahal.colors.ink,
                 style = MaterialTheme.typography.bodyMedium,
             )
+            // **ومسافةُ طلباته اليوم** (قرارُ المالك ٢٠٢٦-١١-٠٥) — تبدأ بصفرٍ وتزيد مع كلّ طلب،
+            // من القيادة الفعليّة كما يحسبها المحرّك.
+            Text(
+                text = stringResource(R.string.home_today_drive, com.rahalgo.ui.dist(me.todayDriveM.toDouble())),
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodyMedium,
+            )
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -616,6 +623,11 @@ data class HomeState(
     val readiness: Readiness.State = Readiness.State(),
     val busy: Boolean = false,
     val error: String = "",
+    /**
+     * **ورقةُ عدّاد الدرّاجة المفتوحة** (قرارُ المالك ٢٠٢٦-١١-٠٥) — وفارغةٌ لا ورقة.
+     * تُرسم في `MainActivity` فوق كلّ تبويب (الخروجُ يطلبها من أيّ مكان).
+     */
+    val odometer: OdometerAsk? = null,
 ) {
     /** **أيُنتَج موقعٌ فعلاً؟** — **إذناً وخدمةً معاً.** */
     val locationOn: Boolean get() = Readiness.canWork(readiness)

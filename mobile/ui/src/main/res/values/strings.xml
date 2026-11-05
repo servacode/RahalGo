@@ -656,6 +656,13 @@
     <string name="err_proof_too_far">أنت بعيد عن الزبون — اقترب ثمّ صوّر</string>
     <string name="err_proof_too_far_m">أنت بعيد عن الزبون (%1$s) — اقترب ثمّ صوّر</string>
     <string name="err_proof_mocked">برامج تزييف الموقع ممنوعة — أطفئها ثمّ صوّر</string>
+    <!-- عدّاد الدرّاجة (قرار المالك 2026-11-05) -->
+    <string name="err_odometer_required">صوّر العدّاد واكتب رقمه أولاً</string>
+    <string name="err_odometer_bad_km">اكتب رقم العدّاد بالأرقام فقط</string>
+    <string name="err_odometer_photo_required">صوّر العدّاد قبل ما تبعت الرقم</string>
+    <string name="err_odometer_wrong_phase">حالة العمل تغيّرت — حدّث الشاشة وحاول مرّة أخرى</string>
+    <string name="err_odometer_lower">الرقم أقل من آخر رقم سجّلته — صوّر العدّاد من جديد</string>
+    <string name="err_odometer_check">تأكّد من رقم العدّاد</string>
     <string name="err_proof_no_location">شغّل تحديد الموقع ثمّ صوّر التسليم</string>
     <string name="err_merchant_closed">هذا المتجر مغلق الآن</string>
     <!-- **متجرٌ موقوفٌ يُقرأ ولا يُكتب فيه** (A4): المالكُ يرى متجرَه لكن

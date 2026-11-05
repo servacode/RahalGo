@@ -41,7 +41,9 @@ import {
 import { PageHero } from "@/components/admin/PageHero";
 import { Tile } from "@/components/admin/DashParts";
 import { api } from "@/lib/api";
-import { Box } from "@/components/admin/orders/CardSections";
+import { Box, distText } from "@/components/admin/orders/CardSections";
+import { ShiftsSection, type MonitorShift } from "@/components/admin/drivermonitor/ShiftsSection";
+import { useCanCall } from "@/lib/policy";
 import { ContactLinks, minutesSince, useNow } from "@/components/admin/orders/BoardWidgets";
 import type { FeatureCollection, LayerSpec } from "@/components/admin/opsmap/canvas";
 import { mapIcons, toneColor } from "@/components/admin/opsmap/palette";
@@ -67,6 +69,13 @@ interface Summary {
   mocked: number;
   points: number;
   stopped_minutes: number;
+  /** **القيادة الفعلية** (قرار المالك ٢٠٢٦-١١-٠٥) — منها التنبيه والترتيب والأرقام كلّها. */
+  drive_km_with_order: number;
+  drive_km_to_pickup: number;
+  drive_km_no_order: number;
+  drive_km_total: number;
+  /** حركة محسوبة وليست قيادة — رجفة GPS أو زحف. */
+  not_driving_km: number;
 }
 interface Row {
   driver_id: string;
@@ -78,6 +87,18 @@ interface Row {
   score: number;
   /** الحالة الحيّة — null لأيام ماضية. */
   live: Live | null;
+  /** **ملخّصُ العدّاد لليوم** (قرارُ المالك ٢٠٢٦-١١-٠٥) — العدّاد مقابل التطبيق. */
+  odometer?: OdoDay;
+}
+interface OdoDay {
+  on_km: number | null;
+  off_km: number | null;
+  app_km: number | null;
+  unseen_km: number | null;
+  missing_close: number;
+  big_gap: boolean;
+  off_moved: boolean;
+  shifts: number;
 }
 interface Live {
   state: "moving" | "stopped" | "offline";
@@ -88,6 +109,9 @@ interface Live {
 }
 interface ListResp {
   day: string;
+  /** **يومُ الحساب الآن** (من ساعة فتح الدوام) — من الخادم لا من ساعة الجهاز. */
+  today: string;
+  day_start_hour: number;
   km_alert: number;
   drivers: Row[];
 }
@@ -113,12 +137,69 @@ interface Ev {
 type Cls = "with_order" | "to_pickup" | "no_order" | "stopped" | "gap";
 interface DayResp {
   day: string;
+  today: string;
   alert: boolean;
   driver: { id: string; name: string; phone: string };
   summary: Summary;
   path: Array<{ class: Cls; coords: Array<[number, number]> }>;
   events: Ev[];
   stores: Array<{ id: string; name: string; lat: number; lng: number }>;
+  /** **طلباتُ اليوم بمسافة كلٍّ منها** — للمتجر وللزبون من القيادة الفعليّة. */
+  orders: DayOrder[];
+  /** **دواماتُ اليوم** — مين سكّرها وليش، والعدّاد مقابل التطبيق. */
+  shifts: MonitorShift[];
+  /** **ملخّصُ العدّاد لليوم.** */
+  odometer?: OdoDay;
+}
+interface DayOrder {
+  id: string;
+  number: number;
+  store: string;
+  assigned_at: string | null;
+  picked_up_at: string | null;
+  end_at: string | null;
+  end_kind: string;
+  to_pickup_m: number;
+  with_order_m: number;
+  shared: boolean;
+  gap_min: number;
+}
+
+/** **الطلبات والمسافة** (قرارُ المالك ٢٠٢٦-١١-٠٥) — «كم طلب، وشقد مشى بكل طلب». */
+function OrdersDistance({ orders }: { orders: DayOrder[] }) {
+  const O = T.ordersDist;
+  const ends = O.end as Record<string, string>;
+  return (
+    <div className="surface mt-3 p-3">
+      <h2 className="mb-2 font-bold">{O.title}</h2>
+      {orders.length === 0 ? (
+        <p className="text-sm text-ink-muted">{O.empty}</p>
+      ) : (
+        <ul className="space-y-2 text-sm">
+          {orders.map((o, i) => (
+            <li key={`${o.id}-${i}`} className="rounded-control border border-line-soft px-2 py-1.5">
+              <span className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+                <span className="font-bold">{O.row.replace("{n}", fmtNum(o.number)).replace("{store}", o.store || "—")}</span>
+                <span className="text-xs text-ink-muted">
+                  {o.assigned_at ? fmtDamascusTime(o.assigned_at) : "—"}
+                  {" ← "}
+                  {o.end_at ? fmtDamascusTime(o.end_at) : "—"}
+                </span>
+              </span>
+              <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span>{O.toStore.replace("{d}", distText(o.to_pickup_m))}</span>
+                <span>{O.toCustomer.replace("{d}", distText(o.with_order_m))}</span>
+                <span className="font-bold">{O.total.replace("{d}", distText(o.to_pickup_m + o.with_order_m))}</span>
+                <Badge variant={o.end_at ? "neutral" : "accent"}>{ends[o.end_at ? o.end_kind : "open"] ?? o.end_kind}</Badge>
+                {o.shared && <Badge variant="neutral">{O.shared}</Badge>}
+                {o.gap_min > 0 && <Badge variant="warning">{O.gap.replace("{n}", fmtNum(o.gap_min))}</Badge>}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
 }
 
 const km = (n: number) => T.km.replace("{n}", fmtNum(Math.round(n * 10) / 10));
@@ -181,16 +262,20 @@ function pt(lng: number, lat: number, props: Record<string, unknown>) {
   return { type: "Feature" as const, geometry: { type: "Point", coordinates: [lng, lat] }, properties: props };
 }
 
-function DayView({ driverID, day, onBack }: { driverID: string; day: string; onBack: () => void }) {
+/** **اليومُ في الرابط إن اختاره المالك** — وفارغُه يومُ الحساب الآن كما يقوله الخادم. */
+const dayQuery = (day: string | null) => (day ? `?day=${day}` : "");
+
+function DayView({ driverID, day, onBack }: { driverID: string; day: string | null; onBack: () => void }) {
   const [data, setData] = useState<DayResp | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
+  const canCall = useCanCall();
 
   useEffect(() => {
     let alive = true;
     setData(null);
     setErr(null);
-    api<DayResp>(`/api/v1/admin/driver-monitor/${driverID}?day=${day}`)
+    api<DayResp>(`/api/v1/admin/driver-monitor/${driverID}${dayQuery(day)}`)
       .then((r) => alive && setData(r))
       .catch((e: unknown) => alive && setErr(errorText(e)));
     return () => {
@@ -302,13 +387,19 @@ function DayView({ driverID, day, onBack }: { driverID: string; day: string; onB
           </>
         }
       />
-      <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
-        <Tile icon={IconRoute} label={T.tiles.kmNoOrder} value={km(s.km_no_order)} tone={data.alert ? "danger" : undefined} />
-        <Tile icon={IconRoute} label={T.tiles.kmWithOrder} value={km(s.km_with_order)} />
-        <Tile icon={IconRoute} label={T.tiles.kmToPickup} value={km(s.km_to_pickup)} />
+      {/* **الكيلومترات قيادةٌ فعليّة** (قرار المالك ٢٠٢٦-١١-٠٥) — والرجفة والزحف بخانةٍ لحالها. */}
+      <div className="mb-1 grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
+        <Tile icon={IconRoute} label={T.tiles.kmNoOrder} value={km(s.drive_km_no_order)} tone={data.alert ? "danger" : undefined} />
+        <Tile icon={IconRoute} label={T.tiles.kmWithOrder} value={km(s.drive_km_with_order)} />
+        <Tile icon={IconRoute} label={T.tiles.kmToPickup} value={km(s.drive_km_to_pickup)} />
+        <Tile icon={IconRoute} label={T.tiles.notDriving} value={km(s.not_driving_km)} />
         <Tile icon={IconUser} label={T.tiles.stoppedMinutes} value={mins(s.stopped_minutes)} />
         <Tile icon={IconWarning} label={T.tiles.gapMinutes} value={mins(s.gap_minutes)} tone={s.gaps > 0 ? "warning" : undefined} />
         <Tile icon={IconWarning} label={T.tiles.mocked} value={fmtNum(s.mocked)} tone={s.mocked > 0 ? "danger" : undefined} />
+      </div>
+      <p className="mb-3 text-xs text-ink-muted">{T.driveHint}</p>
+      <div className="mb-3">
+        <OdoLine o={data.odometer} />
       </div>
       {data.path.length === 0 ? (
         <AdminEmpty icon={IconRoute} title={T.emptyDriver} />
@@ -358,6 +449,12 @@ function DayView({ driverID, day, onBack }: { driverID: string; day: string; onB
           </div>
         </div>
       )}
+      <ShiftsSection
+        shifts={data.shifts ?? []}
+        canCorrect={canCall("PATCH", "/driver-odometer/{id}")}
+        onChanged={() => setTick((x) => x + 1)}
+      />
+      <OrdersDistance orders={data.orders ?? []} />
     </>
   );
 }
@@ -431,10 +528,11 @@ function DriverCard({ r, now, onOpen }: { r: Row; now: number; onOpen: () => voi
           <Badge variant={r.live.on_shift ? "success" : "neutral"}>{r.live.on_shift ? L.onShift : L.offShift}</Badge>
         </div>
       )}
+      <OdoLine o={r.odometer} />
       <Box look="plain" icon={<IconRoute size={14} />} title={T.title}>
         <div className="space-y-1 text-sm">
-          <Stat label={T.cols.kmNoOrder} value={km(s.km_no_order)} tone={r.alert} />
-          <Stat label={T.cols.kmWithOrder} value={km(s.km_with_order + s.km_to_pickup)} />
+          <Stat label={T.cols.kmNoOrder} value={km(s.drive_km_no_order)} tone={r.alert} />
+          <Stat label={T.cols.kmWithOrder} value={km(s.drive_km_with_order + s.drive_km_to_pickup)} />
           <Stat label={T.cols.patterns} value={s.patterns > 0 ? fmtNum(s.patterns) : "—"} tone={s.patterns > 0} />
           <Stat label={T.cols.stops} value={s.store_stops > 0 ? fmtNum(s.store_stops) : "—"} />
           <Stat label={T.cols.gaps} value={s.gaps > 0 ? fmtNum(s.gaps) : "—"} tone={r.flagged_gaps > 0} />
@@ -445,14 +543,36 @@ function DriverCard({ r, now, onOpen }: { r: Row; now: number; onOpen: () => voi
   );
 }
 
+/** **العدّاد مقابل التطبيق على كرت السائق** — والأحمرُ لفرقٍ كبير أو سكّرٍ بلا صورة أو مشيٍ خارج الدوام. */
+function OdoLine({ o }: { o?: OdoDay }) {
+  if (!o || o.shifts === 0) return null;
+  const OL = T.odoList;
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-sm">
+      {o.on_km != null && o.app_km != null && (
+        <span className="font-bold">
+          {OL.line.replace("{odo}", km(o.on_km)).replace("{app}", km(o.app_km))}
+        </span>
+      )}
+      {o.big_gap && <Badge variant="danger">{OL.bigGap}</Badge>}
+      {o.missing_close > 0 && <Badge variant="danger">{OL.noClose}</Badge>}
+      {o.off_km != null && o.off_km > 0 && (
+        <Badge variant={o.off_moved ? "danger" : "neutral"}>{OL.off.replace("{n}", km(o.off_km))}</Badge>
+      )}
+    </div>
+  );
+}
+
 export default function DriverMonitorPage() {
-  const [day, setDay] = useState(() => damascusDay());
+  // **فارغٌ = يومُ الحساب الآن** (من ساعة فتح الدوام لمثلها) — يقوله الخادم، فقبل التاسعة
+  // صباحاً يبقى «اليوم» يومَ أمس كما في النقد وعدّاد السائق.
+  const [day, setDay] = useState<string | null>(null);
   const [driver, setDriver] = useState<string | null>(null);
   const [list, setList] = useState<ListResp | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
   const now = useNow();
-  const isToday = day === damascusDay();
+  const isToday = !list || day == null || list.day === list.today;
 
   // اليوم الحالي: تحديث الحالة الحيّة كل ٣٠ ثانية.
   useEffect(() => {
@@ -473,7 +593,7 @@ export default function DriverMonitorPage() {
     if (driver) return;
     let alive = true;
     setErr(null);
-    api<ListResp>(`/api/v1/admin/driver-monitor?day=${day}`)
+    api<ListResp>(`/api/v1/admin/driver-monitor${dayQuery(day)}`)
       .then((r) => alive && setList(r))
       .catch((e: unknown) => alive && setErr(errorText(e)));
     return () => {
@@ -498,12 +618,17 @@ export default function DriverMonitorPage() {
                 id="dm-day"
                 type="date"
                 label={T.day}
-                value={day}
-                max={damascusDay()}
+                value={day ?? list?.day ?? damascusDay()}
+                max={list?.today ?? damascusDay()}
                 onChange={(e) => e.target.value && setDay(e.target.value)}
               />
             }
           />
+          {list && (
+            <p className="mb-3 text-xs text-ink-muted">
+              {T.dayStarts.replace(/\{h\}/g, fmtNum(list.day_start_hour))}
+            </p>
+          )}
           {err ? (
             <ReloadState label={err} onRetry={() => setTick((x) => x + 1)} />
           ) : !list ? (

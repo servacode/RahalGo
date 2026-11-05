@@ -37,6 +37,7 @@ import (
 	"time"
 
 	"github.com/servacode/rahalgo/backend/internal/fininv"
+	"github.com/servacode/rahalgo/backend/internal/shifts"
 )
 
 // ══════════════════════════════════════════════════════════════════════
@@ -386,11 +387,15 @@ func (f *Factory) Driver(opts ...DriverOpt) *User {
 	u := f.NewUserWith("driver", s.user...)
 
 	if s.onShift {
-		// **والورديّةُ عمودان في `users` لا جدولٌ** — `0040_driver_shift.sql`.
-		if _, err := f.h.Pool.Exec(f.ctx(), `
-			UPDATE users SET on_shift = true, shift_started_at = $2
-			WHERE id = $1::uuid`, u.ID, f.CK.Ago(time.Hour)); err != nil {
+		// **والورديّةُ من بابها الواحد** (`internal/shifts`) — العمودان وصفُّ سجلّ الدوام معاً،
+		// **ثمّ تُرجَع بدايتُها ساعةً** كما كانت الفكسچرُ تكتبها.
+		if _, err := shifts.Open(f.ctx(), f.h.Pool, u.ID, 0, false); err != nil {
 			f.fatal("تعذّر فتحُ الورديّة: %v", err)
+		}
+		if _, err := f.h.Pool.Exec(f.ctx(), `
+			WITH s AS (UPDATE driver_shifts SET opened_at = $2 WHERE driver_id = $1::uuid AND closed_at IS NULL)
+			UPDATE users SET shift_started_at = $2 WHERE id = $1::uuid`, u.ID, f.CK.Ago(time.Hour)); err != nil {
+			f.fatal("تعذّر ضبطُ بداية الورديّة: %v", err)
 		}
 	}
 	if s.loc != nil {
