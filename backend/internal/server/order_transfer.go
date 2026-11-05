@@ -32,6 +32,7 @@ package server
 // عشر تصل الزبونَ فيعرف الفرقَ ولو لم يعرف السبب. **فالاقتراحُ يُعرض والإنسانُ يقرّر.**
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -188,21 +189,43 @@ func (s *Server) handleTransferOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// ══════════════════════════════════════════════════════════════════
+	// **وطريقةُ تسوية المتجر الجديد تُلقط في بنوده** (خلل PD-3، ٢٠٢٦-١١-٠٥)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **الطريقةُ لقطةٌ في البند** (`merchant_settlement_method`) يكتبها الإنشاء من المتجر
+	// (`orders/service.go`)، **والتسويةُ تقرؤها** (`merchantShares`). **وكان التحويلُ يُبقي لقطةَ
+	// القديم**: من «محفظة» إلى «نقداً» يُقيَّد حقُّ الجديد في محفظته، **ولا يرى السائقُ ما يدفعه
+	// له** — فإن دفع من جيبه دفع بلا أثرٍ في الدفتر. **فتُقرأ كما يقرؤها الإنشاء** (`FOR SHARE`)،
+	// **وفراغُها نقدٌ كما هناك.**
+	var method string
+	if err := tx.QueryRow(r.Context(),
+		`SELECT settlement_method FROM merchants WHERE id = $1 FOR SHARE`,
+		req.MerchantID).Scan(&method); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			err = httpx.ErrNotFound
+		}
+		s.respondErr(w, err)
+		return
+	}
+	if method == "" {
+		method = "cash"
+	}
 	// **سعرُ الشراء وحدَه يُحدَّث** — وسعرُ البيع كما رآه الزبون.
 	for _, x := range list {
 		if _, err := tx.Exec(r.Context(),
 			`UPDATE order_items SET menu_item_id = $2::uuid, merchant_id = $3::uuid,
-			        merchant_price = $4 WHERE id = $1::uuid`,
-			x.itemID, *x.newID, req.MerchantID, *x.newPrice); err != nil {
+			        merchant_price = $4, merchant_settlement_method = $5 WHERE id = $1::uuid`,
+			x.itemID, *x.newID, req.MerchantID, *x.newPrice, method); err != nil {
 			s.respondErr(w, err)
 			return
 		}
 	}
 	// **وبنودُ المشروبات تتبع صنفَها إلى المتجر الجديد** (٢٠٢٦-١٠-٣٠) — لا تُطابَق
-	// بالاسم، وسعرُها كما رآه الزبون.
+	// بالاسم، وسعرُها كما رآه الزبون، **وطريقةُ تسويتها طريقتُه.**
 	if _, err := tx.Exec(r.Context(),
-		`UPDATE order_items SET merchant_id = $2::uuid
-		  WHERE order_id = $1 AND drink_for IS NOT NULL`, orderID, req.MerchantID); err != nil {
+		`UPDATE order_items SET merchant_id = $2::uuid, merchant_settlement_method = $3
+		  WHERE order_id = $1 AND drink_for IS NOT NULL`, orderID, req.MerchantID, method); err != nil {
 		s.respondErr(w, err)
 		return
 	}
