@@ -53,6 +53,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/textguard"
 )
 
 var (
@@ -192,6 +193,9 @@ func (s *Service) Permit(ctx context.Context, orderID, userID string) (*Permissi
 	if err != nil {
 		return nil, err
 	}
+	// **والسائقُ يرى الاسمَ الأوّلَ للزبون وحده** (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٥) —
+	// والاسمُ هنا لا يُقرأ إلّا للسائق (الزبونُ يرى «كابتن رحال غو»).
+	customerName = textguard.FirstName(customerName)
 
 	// **ورقمُ الطلب يُحمَل معها** — **فإشعارُ الرسالة يقول أيَّ طلبٍ
 	// يخصّ** (`CHAT-09`): **ورسالتان من طلبين بعنوانٍ واحدٍ لا

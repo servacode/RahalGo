@@ -42,6 +42,8 @@ package orders
 
 import (
 	"encoding/json"
+
+	"github.com/servacode/rahalgo/backend/internal/textguard"
 )
 
 // Audience الطرفُ الذي تُبنى له الحمولة.
@@ -514,6 +516,14 @@ func ViewFor(a Audience, o *Order) map[string]any {
 			} else {
 				out["address_text"] = addr + " · " + o.NearLandmark
 			}
+		}
+	}
+	// **والسائقُ يرى الاسمَ الأوّلَ للزبون وحده** (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٥) —
+	// **في الخادم لا في الشاشة**، فالحمولةُ نفسُها لا تحمل الاسمَ كاملاً. **و«لدي توصيلة»
+	// لا تُمسّ**: الاسمُ فيها اسمُ المستلِم (وقد يكون محلّاً) ورقمُه عند السائق أصلاً.
+	if a == AudienceDriver && o.Kind != KindMerchantDelivery {
+		if _, ok := out["customer_name"]; ok {
+			out["customer_name"] = textguard.FirstName(o.CustomerName)
 		}
 	}
 	return out

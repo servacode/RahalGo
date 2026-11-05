@@ -17,6 +17,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/media"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/orders"
+	"github.com/servacode/rahalgo/backend/internal/textguard"
 )
 
 // بوابة السائق.
@@ -645,6 +646,11 @@ func (s *Server) loadDriverOrders(r *http.Request, sql string, args ...any) ([]d
 			&o.AmountCurrency, &o.EntranceLat, &o.EntranceLng,
 			&o.Subtotal, &o.Discount, &o.HolderName, &o.HolderPhone); err != nil {
 			return nil, err
+		}
+		// **والاسمُ الأوّلُ للزبون وحده** (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٥) — كما في
+		// `orders.ViewFor` للسائق، **وقبل قلب «إحضار»**. و«لدي توصيلة» اسمُ مستلِمها كاملاً.
+		if o.Kind != orders.KindMerchantDelivery {
+			o.CustomerName = textguard.FirstName(o.CustomerName)
 		}
 		if o.ReturnTo != "" {
 			s.asReturnTrip(r.Context(), &o)
@@ -1564,6 +1570,9 @@ func (s *Server) handleDriverCash(w http.ResponseWriter, r *http.Request) {
 			s.respondErr(w, err)
 			return
 		}
+		// **والاسمُ الأوّلُ وحده** (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٥) — يميّز القيدَ في
+		// كشفه (طلبُ ٢٠٢٦-٠٨-١٣) ولا يصير قائمةَ زبائن.
+		e.CustomerName = textguard.FirstName(e.CustomerName)
 		out = append(out, e)
 	}
 	httpx.JSON(w, http.StatusOK, paged("entries", out, count, pg))

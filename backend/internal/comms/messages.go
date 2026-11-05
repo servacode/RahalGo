@@ -3,6 +3,8 @@ package comms
 import (
 	"context"
 	"time"
+
+	"github.com/servacode/rahalgo/backend/internal/textguard"
 )
 
 // MaxBody **حدُّ الرسالة الواحدة.**
@@ -247,7 +249,9 @@ func (s *Service) Threads(ctx context.Context, userID string) ([]Thread, error) 
 		       -- (MarkRead)، **فعدٌّ يبقى في سجلّه أحمرَ لا يُطفأ أبداً.**
 		       CASE WHEN o.customer_id = $1 OR o.driver_id = $1
 		            THEN t.unread ELSE 0 END,
-		       COALESCE(t.last_body, ''), t.last_at, o.created_at
+		       COALESCE(t.last_body, ''), t.last_at, o.created_at,
+		       -- **أأنا الزبون؟** — وإلّا فالطرفُ الآخرُ زبونٌ يُقرأ اسمُه الأوّل وحده.
+		       o.customer_id = $1
 		FROM t
 		JOIN orders o ON o.id = t.order_id
 		JOIN users cu ON cu.id = o.customer_id
@@ -264,10 +268,15 @@ func (s *Service) Threads(ctx context.Context, userID string) ([]Thread, error) 
 		var t Thread
 		var status string
 		var deliveredAt, closedAt *time.Time
-		var partyNow bool
+		var partyNow, meCustomer bool
 		if err := rows.Scan(&t.OrderID, &t.Number, &status, &deliveredAt, &closedAt,
-			&t.Peer, &partyNow, &t.Unread, &t.LastBody, &t.LastAt, &t.CreatedAt); err != nil {
+			&t.Peer, &partyNow, &t.Unread, &t.LastBody, &t.LastAt, &t.CreatedAt,
+			&meCustomer); err != nil {
 			return nil, err
+		}
+		// **والسائقُ يرى الاسمَ الأوّلَ للزبون وحده** (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٥).
+		if !meCustomer {
+			t.Peer = textguard.FirstName(t.Peer)
 		}
 		// **والحكمُ من `channelOpen` نفسِها** — لا شرطٌ يشبهه.
 		t.Open, _ = channelOpen(status, deliveredAt, closedAt)

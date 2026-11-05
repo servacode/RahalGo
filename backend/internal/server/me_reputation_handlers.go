@@ -6,7 +6,11 @@ import (
 	"time"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/textguard"
 )
+
+// reviewAnonymousCustomer **ما يُقال مكانَ زبونٍ بلا اسم** في تقييمات السائق — لا رقمُه.
+const reviewAnonymousCustomer = "زبون"
 
 // كشف سمعة المستخدم (موظف): تقييمه واتجاهه، والشكاوى بحقّه، والتقييمات والتعليقات
 // التي تلقّاها — كي يرى كلٌّ ما قُدّم بحقّه بشفافية. حسب دوره (متجر/سائق/مندوب).
@@ -268,8 +272,12 @@ func (s *Server) fillRating(ctx context.Context, uid, starCol, ownerJoin, ownerC
 		Scan(&out.Avg, &out.Count, &out.RecentAvg)
 
 	// التقييمات والتعليقات المتلقّاة (نُظهر ذوات التعليق أولاً).
+	//
+	// **ولا رقمَ زبونٍ أبداً** (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٥): كان الزبونُ بلا اسمٍ
+	// يُقال برقم تلفونه — **رقمٌ يصل السائقَ من باب التقييم.** فالاسمُ الأوّلُ وحده،
+	// **وفارغُه «زبون».** (`fillRating` للسائق وحده — من يُقيَّم بنجوم.)
 	rows, err := s.pg.Query(ctx, `
-		SELECT o.number, m.name, COALESCE(NULLIF(cu.full_name, ''), cu.phone::text),
+		SELECT o.number, m.name, COALESCE(cu.full_name, ''),
 		       `+starCol+`, rt.created_at
 		FROM order_ratings rt
 		JOIN orders o ON o.id = rt.order_id
@@ -283,6 +291,10 @@ func (s *Server) fillRating(ctx context.Context, uid, starCol, ownerJoin, ownerC
 			var rv repReview
 			if rows.Scan(&rv.OrderNumber, &rv.MerchantName, &rv.CustomerName,
 				&rv.Stars, &rv.CreatedAt) == nil {
+				rv.CustomerName = textguard.FirstName(rv.CustomerName)
+				if rv.CustomerName == "" {
+					rv.CustomerName = reviewAnonymousCustomer
+				}
 				*reviews = append(*reviews, rv)
 			}
 		}
