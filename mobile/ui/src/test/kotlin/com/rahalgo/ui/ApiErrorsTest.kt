@@ -58,6 +58,16 @@ class ApiErrorsTest {
      * سابقةٌ لم تُحسَم. **لو سقط على `err_internal` لظنّ صاحبُه عطبَ
      * اتصالٍ فأعاد** — والصوابُ أن يُوجَّه إلى «طلباتي».
      */
+    /**
+     * **«موجود من قبل» له نصُّه** (قرارُ المالك ٢٠٢٦-١١-٠٥) — والخادمُ يقول ما هو وكم بقي في
+     * `notice`، **وهذا نصُّه إن غاب** لا «تعذّر إتمام الطلب».
+     */
+    @Test
+    fun landmarkExistsHasItsOwnText() {
+        assertEquals(R.string.err_landmark_exists, resolveErrorRes("landmark_exists"))
+        assertNotEquals(R.string.err_internal, resolveErrorRes("landmark_exists"))
+    }
+
     @Test
     fun keyReusedResolvesToItsOwnMessage() {
         assertEquals(R.string.err_key_reused, resolveErrorRes("idempotency_key_reused"))

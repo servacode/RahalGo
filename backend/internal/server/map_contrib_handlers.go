@@ -365,6 +365,9 @@ var landmarkKinds = map[string]string{
 }
 
 // handleDriverLandmark **«أضف معلم»** — من موقعه، وبانتظار الإدارة. POST /driver/landmarks
+//
+// **والمكرَّرُ يُقال ولا يُعدّ، والجديدُ يُعدّ بيوم المنصّة** (قرارُ المالك ٢٠٢٦-١١-٠٥) —
+// `landmark_quota.go`.
 func (s *Server) handleDriverLandmark(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[struct {
 		Name string  `json:"name"`
@@ -386,19 +389,28 @@ func (s *Server) handleDriverLandmark(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !validPoint(req.Lat, req.Lng) {
-		s.respondErr(w, httpx.NewError(http.StatusUnprocessableEntity, "bad_point", "errors.validation"))
+		// **ونصٌّ يقول ما يفعل** — كان «لم يُحدَّد موقع التوصيل»، وليس في المعلم توصيل.
+		s.respondErr(w, errLandmarkBadPoint())
 		return
 	}
-	var id int64
-	if err := s.pg.QueryRow(r.Context(), `
-		INSERT INTO landmark_suggestions (name, kind, point, suggested_by)
-		VALUES ($1, $2, ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography, $5::uuid) RETURNING id`,
-		name, req.Kind, req.Lng, req.Lat, userIDFrom(r)).Scan(&id); err != nil {
+	out, err := s.submitLandmark(r.Context(), userIDFrom(r),
+		landmarkSubmit{Name: name, Kind: req.Kind, Lat: req.Lat, Lng: req.Lng}, time.Now())
+	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
+	// **واللوحةُ تتحدّث في الحالين** — عدُّ اليوم يعدّ المكرَّرَ أيضاً.
 	s.touch("landmark", "ops")
-	httpx.JSON(w, http.StatusOK, map[string]any{"id": id, "status": "pending"})
+	if out.Dup != nil {
+		s.respondErr(w, out.existsError())
+		return
+	}
+	// **والحقولُ الجديدةُ تتجاهلها 0.7.0** — تفكّ الردَّ `JsonObject` وتعرض نصَّها الثابت.
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"id": out.ID, "status": "pending", "counted": true,
+		"today": out.Today, "quota": out.Quota, "day": out.Day,
+		"notice": out.notice(), "point_from_ping": out.FromPing,
+	})
 }
 
 // handleAdminLandmarkSuggestions **ما ينتظر الموافقة.** GET /admin/landmark-suggestions

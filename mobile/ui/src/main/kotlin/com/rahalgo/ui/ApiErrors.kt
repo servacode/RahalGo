@@ -354,6 +354,9 @@ private val CODES: Map<String, Int> = mapOf(
     "closure_reason" to R.string.err_validation,
     "landmark_name" to R.string.err_landmark_name,
     "landmark_kind" to R.string.err_landmark_kind,
+    // **«موجود من قبل»** (قرارُ المالك ٢٠٢٦-١١-٠٥) — والخادمُ يقول ما هو وكم بقي في `notice`،
+    // **وهذا نصُّه إن غاب.**
+    "landmark_exists" to R.string.err_landmark_exists,
     "no_dropoff_suggestion" to R.string.err_no_dropoff_suggestion,
     "live_request_too_soon" to R.string.err_rate_limited,
     "live_request_limit" to R.string.err_rate_limited,

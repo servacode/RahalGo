@@ -122,6 +122,13 @@ var notifTitles = struct {
 	offerReplacedByPlatform string
 	// **طلبُ حركةٍ على المحفظة رُفض** — يصل صاحبَها بسببه (قرارُ المالك ٢٠٢٦-١٠-١٥).
 	walletTopupRejected, walletRequestRejected string
+	// **معالمُ السائقين: خمسةٌ جديدةٌ كلَّ يوم** (قرارُ المالك ٢٠٢٦-١١-٠٥، `landmark_quota.go`) —
+	// ردُّ «أضف معلماً» (انحسب · موجود من قبل · بعتّه قبل)، وتذكيرُ من لم يكمل، وملخّصُ المالك
+	// كلَّ صبح. **وما بين قوسين معقوفين يُملأ** (`{today}` · `{quota}` · …).
+	landmarkCounted, landmarkSent, landmarkToday, landmarkBadPoint    string
+	landmarkExistsMap, landmarkExistsPending, landmarkExistsSelf      string
+	landmarkQuotaTitle, landmarkQuotaBody, landmarkQuotaShiftBody     string
+	landmarkDigestTitle, landmarkDigestBody, landmarkDigestIncomplete string
 }{
 	walletTopupRejected:      "انرفض طلب شحن محفظتك",
 	walletRequestRejected:    "انرفض طلب حركة على محفظتك",
@@ -182,6 +189,19 @@ var notifTitles = struct {
 	payoutProcessing:         "طلب سحبك قيد الصرف",
 	payoutFailed:             "تعذّر صرف طلب السحب",
 	payoutReversed:           "ارتدّ طلب السحب",
+	landmarkCounted:          "انحسب ✓ — معالمك اليوم: {today} من {quota}",
+	landmarkSent:             "وصل المعلم ✓ — بانتظار موافقة الإدارة",
+	landmarkToday:            ". معالمك اليوم: {today} من {quota}",
+	landmarkBadPoint:         "ما قدرنا نعرف موقعك — شغّل الموقع واستنى لحظة وجرّب",
+	landmarkExistsMap:        "«{name}» موجود من قبل على الخريطة (على بعد {distance} م) — ما انحسب",
+	landmarkExistsPending:    "«{name}» بعتو سائق قبلك وهو بانتظار الموافقة — ما انحسب",
+	landmarkExistsSelf:       "بعتّ هالمعلم قبل — ما انحسب مرة تانية",
+	landmarkQuotaTitle:       "لم تكتمل المعالم الـ{quota} الخاصة بك بعد",
+	landmarkQuotaBody:        "أرسلت {sent} من {quota} معالم جديدة اليوم. وقّف عند معلم (جامع، صيدلية، مدرسة، دوار…) وافتح القائمة ← «أضف معلماً».",
+	landmarkQuotaShiftBody:   "سكّرت دوامك وأرسلت {sent} من {quota} معالم جديدة اليوم.",
+	landmarkDigestTitle:      "معالم السائقين — أمس",
+	landmarkDigestBody:       "جديد {new} من {drivers} سائق · مكرّر {duplicate} · بانتظار موافقتك {pending}",
+	landmarkDigestIncomplete: " · ما كمّلوا الـ{quota}: {incomplete} سائق",
 }
 
 // صندوق إشعارات المستخدم — لأي دور، فلا أحد يحتاج تحديث الصفحة ليعرف ما استجدّ.
