@@ -510,7 +510,7 @@ func TestWAORD013_DriverMonitorCountsIt(t *testing.T) {
 	deliverOrder(t, h, c.ID, drv)
 
 	now := time.Now()
-	ws, err := drivermonitor.LoadWindows(ctxBG(), h.Pool, drv.ID, now.Add(-time.Hour), now.Add(time.Minute))
+	ws, err := drivermonitor.LoadTenures(ctxBG(), h.Pool, drv.ID, now.Add(-time.Hour), now.Add(time.Minute), now)
 	if err != nil {
 		t.Fatal(err)
 	}

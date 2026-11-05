@@ -360,8 +360,12 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	//
 	// **و٢١١ مع حدَّي عمولة المتجر عند المندوب** (`sales.rep_commission_min|max`، قرارُ المالك
 	// ٢٠٢٦-١١-٠٤) — **«بين ال0 وال10 بالمية».**
-	if d.BehaviourSettings != 211 {
-		t.Errorf("إعداداتُ السلوك = %d لا 211 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	//
+	// **و٢٢٨ مع دفعة ٢٠٢٦-١١-٠٥**: أربعةُ المعالم (`drivers.landmarks_*`)، وستّةُ العدّاد
+	// (`drivers.odometer_*`)، وسبعةُ طلبات الواتساب (`delivery.whatsapp_*|share_whatsapp*`
+	// و`orders.whatsapp_location_followup_min`).
+	if d.BehaviourSettings != 228 {
+		t.Errorf("إعداداتُ السلوك = %d لا 228 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.
