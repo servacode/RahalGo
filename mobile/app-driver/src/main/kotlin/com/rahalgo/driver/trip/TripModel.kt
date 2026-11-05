@@ -581,6 +581,16 @@ fun isFetch(order: DriverOrder): Boolean =
  */
 fun isWhatsApp(order: DriverOrder): Boolean = order.origin == "whatsapp"
 
+/**
+ * **رقمُ المستلم لزرَّي «اتّصل» و«واتساب»** — في «لدي توصيلة» بعد الاستلام وحدَه (قرارُ المالك
+ * ٢٠٢٦-١٠-٠٦). **ولا رقمَ أبداً في طلب الواتساب** (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٧: «السائق يرجع
+ * لموضوع ما فيه ياخذ رقم أي زبون بشكل خارجي») — الخادمُ لا يرسله، **والتطبيقُ لا يعرضه لو وصل.**
+ */
+fun recipientContactPhone(order: DriverOrder, pickedUp: Boolean): String? =
+    order.recipientPhone.takeIf {
+        order.kind == "merchant_delivery" && !isWhatsApp(order) && it.isNotBlank() && pickedUp
+    }
+
 /** **عنوانُ ما يحمله** — «الطلب» في طلب الواتساب (قائمةُ مشتريات)، و«يحمل» في غيره. */
 fun parcelLabel(order: DriverOrder): Int =
     if (isWhatsApp(order)) R.string.detail_parcel_whatsapp else R.string.detail_parcel

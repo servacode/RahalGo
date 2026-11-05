@@ -15,14 +15,22 @@ import (
 func TestWAORD021_DriverNeverGetsRecipientPhone(t *testing.T) {
 	h := New(t)
 	w := newWAFx(t, h, "منطقةُ WA-021")
+	// **وضعُ «الطابور»** — يراه كلُّ قريبٍ مؤهَّل، لا من عُرض عليه وحدَه («بالترتيب»).
+	h.Setting("drivers.assignment_mode", `"queue"`)
 	nearby := w.md.f.Driver(OnShift(), LocationAt(w.storeLat, w.storeLng, time.Now()))
 	c := waEngineCreate(t, h, w.md.admin.ID, w.typed())
-	for _, path := range []string{"/api/v1/driver/queue", "/api/v1/driver/orders"} {
-		for _, o := range mdList(h.GET(path, nearby.Token)) {
-			if m, _ := o.(map[string]any); m != nil && m["id"] == c.ID && m["recipient_phone"] != nil && m["recipient_phone"] != "" {
-				t.Fatalf("**رقمُ المستلِم وصل السائقَ في %s**: %v", path, m["recipient_phone"])
+	// **والطلبُ في طابور القريب فعلاً** — وإلّا فحصُ الرقم فيه لا يقيس شيئاً (مراجعةُ ٢٠٢٦-١١-٠٥).
+	seen := false
+	for _, o := range mdList(h.GET("/api/v1/driver/queue", nearby.Token)) {
+		if m, _ := o.(map[string]any); m != nil && m["id"] == c.ID {
+			seen = true
+			if m["recipient_phone"] != nil && m["recipient_phone"] != "" {
+				t.Fatalf("**رقمُ المستلِم وصل السائقَ في الطابور**: %v", m["recipient_phone"])
 			}
 		}
+	}
+	if !seen {
+		t.Fatal("**طلبُ الواتساب لم يظهر في طابور السائق القريب** — فحصُ الطابور فارغ")
 	}
 	drv := h.driverOf(c.ID)
 	got := driverOrderOf(t, h, drv.Token, c.ID)

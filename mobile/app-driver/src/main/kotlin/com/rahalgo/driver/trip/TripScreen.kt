@@ -2159,8 +2159,8 @@ private fun TripCard(
                 val ctx = LocalContext.current
                 val storePhone = order.merchantPhone?.takeIf { it.isNotBlank() && !pickedUp && order.kind != "custom" }
                 // **ورقمُ المستلم بعد الاستلام وحدَه** (قرارُ المالك ٢٠٢٦-١٠-٠٦: «الاتصال ما لازم يطلع… إلا بعد ما
-                // نستلم الطلب من المتجر»).
-                val recipient = order.recipientPhone.takeIf { order.kind == "merchant_delivery" && it.isNotBlank() && pickedUp }
+                // نستلم الطلب من المتجر») — **ولا رقمَ في طلب الواتساب أبداً** (٢٠٢٦-١١-٠٥، البند ٧).
+                val recipient = recipientContactPhone(order, pickedUp)
                 // **وصاحبُ الأمانة قبل الاستلام** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — الزبونُ كتب اسمَه ورقمَه،
                 // **فيتّصل به السائقُ أو يراسله** ليعرف أين الأمانة إن لم يشارك موقعَه.
                 val holder = order.holderPhone.takeIf {
@@ -2206,12 +2206,7 @@ private fun TripCard(
                         // اتّصالٌ وواتساب برسالةٍ جاهزة.
                         if (recipient != null) {
                             // **وفي «إحضار» الوجهةُ المتجرُ نفسُه** — فلا رسالةَ «متجرٌ أرسل لك طلبيّة».
-                            // **وفي طلب الواتساب المستلِمُ هو من راسل المكتب** (٢٠٢٦-١١-٠٥) — لا «متجرٌ أرسل لك».
-                            val hello = when {
-                                isFetch(order) -> ""
-                                isWhatsApp(order) -> stringResource(R.string.recipient_wa_message_whatsapp, order.merchantName)
-                                else -> stringResource(R.string.recipient_wa_message, order.merchantName)
-                            }
+                            val hello = if (isFetch(order)) "" else stringResource(R.string.recipient_wa_message, order.merchantName)
                             ContactButton(
                                 icon = com.rahalgo.ui.R.drawable.ic_phone,
                                 label = R.string.recipient_call,

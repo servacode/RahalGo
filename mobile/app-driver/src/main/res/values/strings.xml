@@ -566,7 +566,6 @@
     <!-- طلبات الواتساب — قرار المالك ٢٠٢٦-١١-٠٥ -->
     <string name="kind_whatsapp">طلب واتساب</string>
     <string name="detail_parcel_whatsapp">الطلب</string>
-    <string name="recipient_wa_message_whatsapp">مرحباً بك، أنا كابتن من فريق رحّال غو بخصوص طلبك من %1$s.</string>
     <string name="trip_collect_for_store">ادفع للمتجر %1$s من جيبك، واقبض من المستلم %1$s</string>
     <!-- **وفي «إحضار» يدفع بمكان الاستلام ويقبض من المتجر** (قرارُ المالك ٢٠٢٦-١٠-١٦) -->
     <string name="trip_collect_for_store_fetch">ادفع في مكان الاستلام %1$s من جيبك، واقبضه من المتجر عند وصولك</string>
