@@ -635,7 +635,8 @@ class DriverApi(private val api: ApiClient) {
             HttpMethod.Post,
             // **صنفٌ موسوم لا `mapOf` مختلط** — نصٌّ ومنطقيٌّ في خريطةٍ واحدة لا يُسلسَل في
             // النسخة المضغوطة (`RequestBodyGuardTest`). والفارغُ لا يُرسَل (`explicitNulls`).
-            ShiftBody(on, odometerId, via),
+            // **و`odometer_capable` دائماً**: هذا التطبيقُ فيه ورقةُ العدّاد — فيُطبَّق عليه «إلزامي».
+            ShiftBody(on, odometerId, via, odometerCapable = true),
         ).onShift ?: on
 
     /**
@@ -644,8 +645,9 @@ class DriverApi(private val api: ApiClient) {
      * ══════════════════════════════════════════════════════════════════
      *
      * «عند فتح الدوام وعند إغلاقه يصوّر العدّاد ويكتب الرقم.» **الرقمُ عليه الحساب والصورةُ
-     * دليلُه**، ومعهما موضعُه لحظتَها (والمزيَّفُ يُرفض في المحرّك). وتُرفع قبل `setShift`،
-     * **ومعرّفُها يُرسل معه** فيُربط بالدوام.
+     * دليلُه** — **ولا موقعَ معهما**: صورةُ الفتح تُؤخذ والدوامُ مسكَّر، ونصُّ الخصوصيّة يَعِد
+     * بالموقع ما دامت الورديّةُ مفتوحة وحدَها. وتُرفع قبل `setShift`، **ومعرّفُها يُرسل معه**
+     * فيُربط بالدوام.
      *
      * `km` نصٌّ كما كتبه (بعد `OdometerInput`) — والمحرّكُ يقرؤه ويحكم. و`confirm` لقفزةٍ
      * كبيرةٍ أكّدها السائقُ بعد سؤاله.
@@ -654,10 +656,6 @@ class DriverApi(private val api: ApiClient) {
         jpeg: ByteArray,
         km: String,
         phase: String,
-        lat: Double?,
-        lng: Double?,
-        mocked: Boolean = false,
-        accuracyM: Float? = null,
         confirm: Boolean = false,
     ): OdometerReading {
         val raw = api.upload(
@@ -667,12 +665,6 @@ class DriverApi(private val api: ApiClient) {
             fields = buildMap {
                 put("km", km)
                 put("phase", phase)
-                if (lat != null && lng != null) {
-                    put("lat", lat.toString())
-                    put("lng", lng.toString())
-                }
-                if (mocked) put("mocked", "true")
-                if (accuracyM != null && accuracyM > 0f) put("accuracy", accuracyM.toString())
                 if (confirm) put("confirm", "true")
             },
         )
@@ -687,6 +679,11 @@ data class ShiftBody(
     @kotlinx.serialization.SerialName("odometer_id") val odometerId: String? = null,
     /** `logout` حين يُسكَّر الدوام بالخروج من التطبيق. */
     val via: String? = null,
+    /**
+     * **التطبيقُ فيه ورقةُ العدّاد** — منه وحدَه يُطبّق المحرّكُ «إلزامي»، لا من رقم النسخة
+     * (تصليحٌ سريعٌ بلا الورقة قد يأخذ رقماً أكبر فينقفل على السائق دوامُه).
+     */
+    @kotlinx.serialization.SerialName("odometer_capable") val odometerCapable: Boolean? = null,
 )
 
 @Serializable

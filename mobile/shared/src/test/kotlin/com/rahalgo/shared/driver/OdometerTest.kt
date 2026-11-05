@@ -61,6 +61,19 @@ class OdometerTest {
     }
 
     @Test
+    fun `جسم الدوام يعلن أن التطبيق يعرف ورقة العدّاد`() {
+        // **منه وحدَه يُطبّق المحرّكُ «إلزامي»** — لا من رقم النسخة.
+        assertEquals(
+            """{"on":true,"odometer_id":"r1","odometer_capable":true}""",
+            json.encodeToString(ShiftBody(true, "r1", odometerCapable = true)),
+        )
+        assertEquals(
+            """{"on":false,"odometer_capable":true}""",
+            json.encodeToString(ShiftBody(false, odometerCapable = true)),
+        )
+    }
+
+    @Test
     fun `جسم الدوام بقراءة وبخروج`() {
         assertEquals("""{"on":true,"odometer_id":"r1"}""", json.encodeToString(ShiftBody(true, "r1")))
         assertEquals(

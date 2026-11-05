@@ -230,11 +230,9 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         }
         state = state.copy(odometer = ask.copy(busy = true, error = "", confirm = null))
         viewModelScope.launch {
-            val p = com.rahalgo.ui.LastPoint.value
+            // **ولا موقعَ مع القراءة** — آخرُ نقطةٍ وقت الفتح من الدوام الماضي، والخصوصيّةُ لا تَعِد بها.
             val reading = try {
-                backend.driver.sendOdometer(
-                    jpeg, km, ask.phase, p?.lat, p?.lng, p?.mocked == true, p?.accuracyM, confirm,
-                )
+                backend.driver.sendOdometer(jpeg, km, ask.phase, confirm)
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: ApiClient.ApiException) {
