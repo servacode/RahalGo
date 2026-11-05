@@ -630,7 +630,9 @@ export default function OpsMapPage() {
         }
         throw e;
       }),
-    ["catalog"],
+    // `settings` يحمل مفتاحَ الحركة الناعمة والنبضتين، و`account` منح الصلاحيّات وسحبها —
+    // **ولا خوفَ من عودة السيل**: الطبقاتُ تتبع `metaKey` الثابت لا الكائن.
+    ["catalog", "settings", "account"],
   );
   const can = useCallback(
     (p: string) => !!meta.data?.permissions.includes(p),
@@ -2117,7 +2119,7 @@ export default function OpsMapPage() {
             </Button>
             {legendOpen && (
               <div className="absolute end-0 top-full z-30 mt-1 w-[min(28rem,90vw)] rounded-card border border-line bg-shell p-3 elev-2">
-                <Legend />
+                <Legend canMonitor={canMonitor} />
               </div>
             )}
           </div>
@@ -2942,7 +2944,7 @@ function ToneIcon({ tone, big = false }: { tone: MapTone; big?: boolean }) {
 }
 
 /** **دليلُ الألوان** — يقرأ الموضعَ الواحدَ الذي ترسم منه الخريطة. */
-function Legend() {
+function Legend({ canMonitor }: { canMonitor: boolean }) {
   const L = T.legendItem;
   const rows: Array<[MapTone, string]> = [
     ["driver-available", L.driverAvailable],
@@ -2993,12 +2995,15 @@ function Legend() {
           </span>
           <span>{L.driverLeg}</span>
         </li>
-        <li className="flex items-center gap-2">
-          <span aria-hidden className="grid h-6 w-6 shrink-0 place-items-center">
-            <span className="block h-1 w-5 rounded-full" style={{ background: themeColor("primary") }} />
-          </span>
-          <span>{L.recentPath}</span>
-        </li>
+        {/* **وشرحُ الخطّ لمن يُرسم له وحدَه** (`drivers.monitor`) — لا يقرأ الموظفُ شرحَ ما لا يراه. */}
+        {canMonitor && (
+          <li className="flex items-center gap-2">
+            <span aria-hidden className="grid h-6 w-6 shrink-0 place-items-center">
+              <span className="block h-1 w-5 rounded-full" style={{ background: themeColor("primary") }} />
+            </span>
+            <span>{L.recentPath}</span>
+          </li>
+        )}
         <li className="flex items-center gap-2">
           <span aria-hidden className="h-6 w-6 shrink-0 rounded-full border-2 border-line bg-paper" />
           <span>{L.office}</span>

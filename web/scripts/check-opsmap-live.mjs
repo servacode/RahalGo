@@ -363,6 +363,26 @@ check(L.stuckIncreased(1, undefined) === false, "٣ · غيابُ الرقم ع�
     "٨ · حدثُ طلبٍ أو لوحةٍ عُدّ تيّاراً فلا يُعيد جلبَ شيء");
 }
 
+// ── ٩ · معدّلُ الرفع (مراجعةُ ٢٠٢٦-١١-٠٦) ──────────────────────────
+//
+// **انزلاقٌ طويلٌ لا يُرفع ٣٠ مرّةً في الثانية** — سائقٌ بلا طلبٍ ينزلق حتّى ٤٥ ثانية، فتبقى
+// الحلقةُ شبهَ دائمة على جهاز الموظف. **والقصيرُ (مع طلب) والظهورُ يبقيان ناعمَين.**
+{
+  const mo = (dur, fade = false, start = 0) => ({ from: [39, 35.9], to: [39.001, 35.9], start, dur, fade });
+  const layer = (...ms) => new Map(ms.map((m, i) => [String(i), m]));
+  check(typeof L.frameGap === "function" && L.frameGap([layer(mo(45000))], 1000) === L.SLOW_FRAME_MS,
+    "٩ · انزلاقُ ٤٥ ثانيةً يُرفع بالمعدّل السريع");
+  check(L.SLOW_FRAME_MS >= 100, "٩ · المعدّلُ البطيءُ أكثرُ من عشرٍ في الثانية");
+  check(typeof L.frameGap === "function" && L.frameGap([layer(mo(45000), mo(4000))], 1000) === L.FRAME_MS,
+    "٩ · انزلاقٌ قصيرٌ نزل إلى المعدّل البطيء");
+  check(typeof L.frameGap === "function" && L.frameGap([layer(mo(45000)), layer(mo(0, true, 900))], 1000) === L.FRAME_MS,
+    "٩ · الظهورُ نزل إلى المعدّل البطيء");
+  check(typeof L.frameGap === "function" &&
+    L.frameGap([layer(mo(45000)), layer(mo(4000, false, -9000))], 1000) === L.SLOW_FRAME_MS,
+    "٩ · انزلاقٌ قصيرٌ انتهى أبقى المعدّلَ السريع");
+  check(typeof L.frameGap === "function" && L.frameGap([], 1000) === L.SLOW_FRAME_MS, "٩ · بلا حركةٍ معدّلٌ سريع");
+}
+
 if (bad) {
   console.error(`\n**حسابُ الخريطة الحيّة مكسور** — ${bad} من ${cases}.`);
   process.exit(1);

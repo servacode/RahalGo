@@ -353,6 +353,14 @@ export const FADE_MS = 300;
 export const CADENCE_GAPS = 5;
 /** **أقلُّ ما بين رفعين للطبقة المتحرّكة** (م ث) — نحو ثلاثين في الثانية. */
 export const FRAME_MS = 33;
+/**
+ * **…وما بين رفعين حين لا يتحرّك إلّا الطويل** (م ث) — عشرٌ في الثانية (مراجعةُ ٢٠٢٦-١١-٠٦).
+ * سائقٌ بلا طلبٍ ينزلق حتّى ٤٥ ثانية، **فكانت الحلقةُ ترفع الطبقةَ كاملةً ٣٠ مرّةً في الثانية
+ * شبهَ دائماً** على جهاز الموظف — وانزلاقُ مترٍ في الإطار لا تراه العين.
+ */
+export const SLOW_FRAME_MS = 100;
+/** **انزلاقٌ أطولُ من هذا يُعدّ طويلاً** (م ث). */
+export const SLOW_GLIDE_MS = 10000;
 /** **سهمُ الاتّجاه يظهر فوق هذه السرعة** (م/ث). */
 export const HEADING_MIN_SPEED_MPS = 2;
 
@@ -503,6 +511,20 @@ export function anyActive(motions: Map<string, Motion> | undefined, now: number)
   if (!motions) return false;
   for (const m of motions.values()) if (activeAt(m, now)) return true;
   return false;
+}
+
+/**
+ * **ما بين رفعين الآن** — `FRAME_MS` ما دام يتحرّك انزلاقٌ قصيرٌ (سائقٌ مع طلب) أو يظهر معلَم،
+ * **و`SLOW_FRAME_MS` لما لا يتحرّك إلّا الطويل** (أو لا شيء).
+ */
+export function frameGap(layers: Iterable<Map<string, Motion>>, now: number): number {
+  for (const mv of layers) {
+    for (const m of mv.values()) {
+      if (!activeAt(m, now)) continue;
+      if (m.dur < SLOW_GLIDE_MS || (m.fade && now < m.start + FADE_MS)) return FRAME_MS;
+    }
+  }
+  return SLOW_FRAME_MS;
 }
 
 /**

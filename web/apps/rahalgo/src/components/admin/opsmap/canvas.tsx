@@ -49,7 +49,7 @@ import { installLandmarks, setLandmarksVisible } from "@rahalgo/ui/landmarks";
 import { installAreaNames, setAreaNamesVisible } from "@rahalgo/ui/areanames";
 import { themeColor } from "@rahalgo/ui";
 import {
-  FRAME_MS,
+  frameGap,
   TWEEN_MS,
   activeAt,
   advanceMotions,
@@ -481,7 +481,7 @@ export function OpsMapCanvas({
     };
   }, []);
 
-  // ── حلقةُ الإطارات الواحدة — ما دام شيءٌ يتحرّك، ولا أكثرَ من ~٣٠ رفعاً في الثانية ──────
+  // ── حلقةُ الإطارات الواحدة — ما دام شيءٌ يتحرّك، ولا أكثرَ من ~٣٠ رفعاً في الثانية (وعشرٌ للطويل) ──────
   //
   // **كلُّ طبقة `glide` يُرفع لها إطارٌ من حركات معالمها**، وكلُّ خطٍّ مربوطٍ بعلامةٍ منزلقة
   // يُرفع معها في الإطار نفسِه. **ومن توقّف يُرفع له إطارٌ أخيرٌ على هدفه** ثمّ لا يُمسّ.
@@ -497,7 +497,8 @@ export function OpsMapCanvas({
         loop.current = 0;
         return;
       }
-      if (t - lastFrame.current < FRAME_MS) {
+      // **والطويلُ وحدَه يُرفع عشراً في الثانية لا ثلاثين** (مراجعةُ ٢٠٢٦-١١-٠٦).
+      if (t - lastFrame.current < frameGap(motions.current.values(), performance.now())) {
         loop.current = requestAnimationFrame(step);
         return;
       }
