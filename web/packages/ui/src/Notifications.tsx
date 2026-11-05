@@ -11,6 +11,7 @@ import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { CountBadge } from "./components";
 import { IconBell, IconClose, IconSound, IconSoundOff } from "./icons";
 import { useChime, installAudioUnlock, playChime } from "./chime";
+import { isStreamEvent } from "./liveStream";
 
 const m = getMessages(defaultLocale);
 const N = m.shared.notifications;
@@ -365,9 +366,13 @@ export function useLiveNotifications(api: ApiFn, wsUrl: string, token: string | 
               setItems((prev) => [n, ...prev].slice(0, 30));
               setUnread((u) => u + 1);
             }
-          } else {
+          } else if (!isStreamEvent(msg.type)) {
             // حدث خام (تغيّر حالة طلب، تعديل منطقة…): تحديث صامت للصفحات فقط،
             // بلا صفّ في الصندوق — ليس كل تغيّر يستحق إشعاراً في وجه المستخدم.
+            //
+            // **وحدثُ التيّار لا يصير نوعاً** (`liveStream.ts`، ٢٠٢٦-١١-٠٥): موضعٌ يُدفَع
+            // كلَّ ثوانٍ يصل `useLiveEvent` فوق وحدَه — **وكان كلُّ واحدٍ منه يُعيد جلبَ كلِّ
+            // صفحةٍ تسمع «أيَّ حدث»**: نحو ١٣ قائمةً في خريطة العمليّات مع كلّ نبضة سائق.
             emitKind(msg.type);
           }
         } catch {

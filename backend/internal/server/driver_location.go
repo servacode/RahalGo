@@ -134,8 +134,9 @@ func (s *Server) handleDriverLocation(w http.ResponseWriter, r *http.Request) {
 		s.notifyNearCustomers(r.Context(), uid, req.Lat, req.Lng)
 	}
 	// **والموضعُ يُبثّ لخريطة العمليات فوراً** (قرارُ المالك ٢٠٢٦-١٠-١٩: «الموقع المباشر») —
-	// **بدل أن تسأل الخريطةُ كلَّ عشر ثوانٍ** فيقفز السائقُ قفزاً. و`ops` لمن يملك
-	// `orders.read` وحدَه (`ws.go`)، **فالحمولةُ لا تصل زبوناً ولا سائقاً آخر.**
+	// **بدل أن تسأل الخريطةُ كلَّ عشر ثوانٍ** فيقفز السائقُ قفزاً. و`ops:drivers` لمن يملك
+	// `drivers.read` وحدَه (`ws.go`)، **فالحمولةُ لا تصل زبوناً ولا سائقاً آخر، ولا موظّفاً
+	// يقرأ الطلبات ولا يرى السائقين.**
 	if tag.RowsAffected() > 0 && now.Sub(at) <= orders.LiveFreshFor {
 		s.publishDriverLocation(uid, req.Lat, req.Lng, req.BearingDeg, at)
 	}

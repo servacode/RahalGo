@@ -9,11 +9,16 @@ import (
 
 // TestDriverLocation_BroadcastsToOps **نبضةُ السائق تُبثّ لخريطة العمليات بحمولتها**
 // (قرارُ المالك ٢٠٢٦-١٠-١٩) — ونبضةٌ مُهمَلةٌ (قفزةٌ مستحيلة) لا تُبثّ.
+//
+// **وعلى `ops:drivers` لا `ops`** (٢٠٢٦-١١-٠٥، عن قصد): `ops` تصل كلَّ من يقرأ الطلبات،
+// **ومنهم خدمةُ الزبائن والأمانُ ولا يرون السائقين.**
 func TestDriverLocation_BroadcastsToOps(t *testing.T) {
 	f := newDriverFixture(t, 1)
 	d := f.drivers[0]
-	ch, cancel := f.srv.hub.Subscribe([]string{"ops"})
+	ch, cancel := f.srv.hub.Subscribe([]string{"ops:drivers"})
 	defer cancel()
+	orders, cancelOrders := f.srv.hub.Subscribe([]string{"ops"})
+	defer cancelOrders()
 	ping := func(lat, lng string, at time.Time) {
 		t.Helper()
 		w := f.call(f.srv.handleDriverLocation, http.MethodPost, "/driver/location", "", d, []string{"driver"},
@@ -43,10 +48,25 @@ func TestDriverLocation_BroadcastsToOps(t *testing.T) {
 	ping("35.9506", "39.0094", now.Add(-2*time.Second))
 	ev := next()
 	if ev == nil {
-		t.Fatal("النبضةُ لم تُبثّ على ops — **فتبقى الخريطةُ تسأل وتقفز**")
+		t.Fatal("النبضةُ لم تُبثّ على ops:drivers — **فتبقى الخريطةُ تسأل وتقفز**")
 	}
 	if ev["driver_id"] != d || ev["lat"].(float64) < 35.9 || ev["bearing"].(float64) != 90 {
 		t.Fatalf("حمولةٌ غيرُ صحيحة: %v", ev)
+	}
+	// **ولا تصل غرفةَ الطلبات** — من يقرأ الطلبات ولا يرى السائقين لا يصله موضعُهم.
+	// (والبثُّ متزامن: ما وصل `ops:drivers` كان سيصل `ops` معه في النداء نفسِه.)
+drain:
+	for {
+		select {
+		case raw := <-orders:
+			var leaked map[string]any
+			_ = json.Unmarshal(raw, &leaked)
+			if leaked["type"] == "driver_location" {
+				t.Fatalf("موضعُ السائق بُثّ على ops: %v — **فيصل خدمةَ الزبائن والأمانَ بلا صلاحيّة**", leaked)
+			}
+		default:
+			break drain
+		}
 	}
 	// **وقفزةٌ مستحيلةٌ لا تُبثّ** — دمشق بعد ثانية.
 	ping("33.5138", "36.2765", now.Add(-1*time.Second))

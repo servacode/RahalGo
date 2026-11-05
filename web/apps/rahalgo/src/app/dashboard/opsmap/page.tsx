@@ -107,9 +107,12 @@ import {
   toneColor,
 } from "@/components/admin/opsmap/palette";
 import {
+  type FixOf,
   type FocusMode,
   type LngLat,
+  acceptPush,
   applyFocus,
+  mergeRows,
   orderRoute,
   orderTimeline,
   searchLocal,
@@ -166,6 +169,8 @@ const DAY_PARTS = {
 interface Meta {
   permissions: string[];
   location_ping_sec: number;
+  /** **نبضةُ التوصيل** — يرسلها الخادمُ منذ ٢٠٢٦-١٠-١٩. */
+  location_ping_active_sec?: number;
   assignable_sec: number;
 }
 
@@ -589,6 +594,10 @@ export default function OpsMapPage() {
   //
   // **و٤٠٣ هنا «لا صلاحية» لا «تعذّر الوصول»** (تدقيقُ ٢٠٢٦-١٠-٢٧) — الخادمُ يردّ
   // `/meta` بـ٤٠٣ لمن لا يملك الخريطة، **فكان يرى خطأَ شبكةٍ وزرَّ إعادةٍ لا يفيد.**
+  //
+  // **وتُعاد مع كتابة اللوحة وحدَها** (`catalog`، ٢٠٢٦-١١-٠٥) — صلاحيّاتٌ ونبضتان لا تتبدّل
+  // إلّا بفعلٍ إداريّ. **وكانت تُعاد مع كلّ حدثٍ في البثّ**، وكلُّ إعادةٍ كائنٌ جديدٌ يُعيد
+  // جلبَ كلِّ طبقةٍ تتبعه: **نبضةُ سائقٍ واحدةٍ كانت تكلّف كلَّ خريطةٍ مفتوحةٍ نحو ١٣ نداءً.**
   const meta = useLiveData<Meta>(
     () =>
       api<Meta>("/api/v1/admin/ops-map/meta").catch((e: unknown) => {
@@ -597,12 +606,17 @@ export default function OpsMapPage() {
         }
         throw e;
       }),
-    [],
+    ["catalog"],
   );
   const can = useCallback(
     (p: string) => !!meta.data?.permissions.includes(p),
     [meta.data],
   );
+  // **ومفتاحٌ ثابتٌ لِما يعنيه الكائن** — الطبقاتُ تتبعه لا الكائن: **جوابٌ مطابقٌ لما قبله
+  // لا يُعيد جلبَ شيء**، وصلاحيّةٌ أو نبضةٌ تبدّلت تُعيده مرّةً واحدة.
+  const metaKey = meta.data
+    ? `${meta.data.permissions.join(",")}|${meta.data.location_ping_sec}|${meta.data.location_ping_active_sec ?? ""}`
+    : "";
 
   // ── نبضةُ الموضع ─────────────────────────────────────────────
   //
@@ -630,7 +644,7 @@ export default function OpsMapPage() {
         ? api<Summary>("/api/v1/admin/ops-map/summary")
         : Promise.resolve({ staff_online: 0 }),
     ["order", "catalog"],
-    [meta.data, tick],
+    [metaKey, tick],
   );
 
   // ── السائقون ─────────────────────────────────────────────────
@@ -643,22 +657,28 @@ export default function OpsMapPage() {
     return s ? `?${s}` : "";
   }, [onShift, hasActive, driverStatus]);
 
+  // **أحدثُ موضعٍ طُبّق لكلّ سائق** (٢٠٢٦-١١-٠٥) — من النبضة ومن القائمة معاً
+  // (`live.ts` ٨): **جوابٌ قُرئ قبل نبضةٍ أحدثَ لا يُرجع السائقَ إلى الوراء.**
+  const fixes = useRef(new Map<string, FixOf<Driver>>());
   const drivers = useLiveData<{ drivers: Driver[]; count: number }>(
     () =>
       can("VIEW_DRIVER_LOCATIONS") && visible.drivers
-        ? api<{ drivers: Driver[]; count: number }>(`/api/v1/admin/ops-map/drivers${driverQuery}`)
+        ? api<{ drivers: Driver[]; count: number }>(`/api/v1/admin/ops-map/drivers${driverQuery}`).then((d) => ({
+            ...d,
+            drivers: mergeRows(fixes.current, d.drivers),
+          }))
         : Promise.resolve({ drivers: [], count: 0 }),
     [],
-    [driverQuery, visible.drivers, meta.data, tick],
+    [driverQuery, visible.drivers, metaKey, tick],
   );
 
   // ══════════════════════════════════════════════════════════════
   // **والسائقُ يتحرّك حيّاً** (قرارُ المالك ٢٠٢٦-١٠-١٩: «الموقع المباشر»)
   // ══════════════════════════════════════════════════════════════
   //
-  // **كلُّ نبضةٍ تُبثّ على `ops` بموضعها** (`driver_live.go`) — فيُحرَّك السائقُ في
+  // **كلُّ نبضةٍ تُبثّ على `ops:drivers` بموضعها** (`driver_live.go`) — فيُحرَّك السائقُ في
   // القائمة نفسِها بلا سؤالٍ للخادم، **وتنزلقه الخريطةُ إلى موضعه الجديد.** والمدّةُ
-  // فوق تبقى احتياطاً لمن انقطع بثُّه.
+  // فوق تبقى احتياطاً لمن انقطع بثُّه. **ونبضةٌ أقدمُ من آخرِ ما طُبّق لا تحرّكه.**
   const setDrivers = drivers.setData;
   useLiveEvent((e) => {
     if (e.type !== "driver_location") return;
@@ -666,16 +686,17 @@ export default function OpsMapPage() {
     const lat = Number(e.lat);
     const lng = Number(e.lng);
     if (!id || !Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    const fix: FixOf<Driver> = {
+      lat,
+      lng,
+      last_location_at: typeof e.at === "string" ? e.at : "",
+      age_sec: 0,
+      freshness: "LIVE",
+    };
+    if (!acceptPush(fixes.current, id, fix)) return;
     setDrivers((prev) =>
       prev && prev.drivers.some((d) => d.id === id)
-        ? {
-            ...prev,
-            drivers: prev.drivers.map((d) =>
-              d.id === id
-                ? { ...d, lat, lng, last_location_at: String(e.at ?? d.last_location_at), age_sec: 0, freshness: "LIVE" }
-                : d,
-            ),
-          }
+        ? { ...prev, drivers: prev.drivers.map((d) => (d.id === id ? { ...d, ...fix } : d)) }
         : prev,
     );
   });
@@ -688,7 +709,7 @@ export default function OpsMapPage() {
         : Promise.resolve({ merchants: [], count: 0 }),
     // **والمتجرُ يتبدّل بكتابةِ اللوحة** — `catalog` إشارتُها القائمة.
     ["catalog"],
-    [visible.merchants, meta.data],
+    [visible.merchants, metaKey],
   );
 
   // ── الطلباتُ النشطة ─────────────────────────────────────────
@@ -701,7 +722,7 @@ export default function OpsMapPage() {
         ? api<{ orders: OrderPin[]; count: number }>("/api/v1/admin/ops-map/orders")
         : Promise.resolve({ orders: [], count: 0 }),
     ["order"],
-    [visible.orders, meta.data],
+    [visible.orders, metaKey],
   );
 
   // **وموضعُ الزبون الحيُّ يصل بالبثّ** (٢٠٢٦-١٠-١٩) — فتتحرّك علامتُه بلا سؤال.
@@ -742,7 +763,7 @@ export default function OpsMapPage() {
         ? api<{ cells: DemandCell[]; min_count: number }>("/api/v1/admin/ops-map/customers")
         : Promise.resolve({ cells: [], min_count: 3 }),
     [],
-    [visible.customers, meta.data],
+    [visible.customers, metaKey],
   );
 
   // ── المكتب ───────────────────────────────────────────────────
@@ -752,7 +773,7 @@ export default function OpsMapPage() {
         ? api<Office>("/api/v1/admin/ops-map/office")
         : Promise.resolve(null),
     [],
-    [visible.office, meta.data, tick],
+    [visible.office, metaKey, tick],
   );
 
   // ── التغطية — حدودٌ رفيعةٌ دائماً لا مفتاح ───────────────────
@@ -762,7 +783,7 @@ export default function OpsMapPage() {
         ? api<{ zones: Zone[]; count: number }>("/api/v1/admin/ops-map/coverage")
         : Promise.resolve({ zones: [], count: 0 }),
     ["catalog"],
-    [meta.data],
+    [metaKey],
   );
 
   // ── طلباتُ التغطية ──────────────────────────────────────────
@@ -774,7 +795,7 @@ export default function OpsMapPage() {
           )
         : Promise.resolve({ requests: [], count: 0 }),
     [],
-    [visible.requests, meta.data],
+    [visible.requests, metaKey],
   );
 
   // ── الفروعُ والمناطقُ التشغيليّة ────────────────────────────
@@ -787,7 +808,7 @@ export default function OpsMapPage() {
         ? api<{ branches: BranchPin[]; count: number }>("/api/v1/admin/ops-map/branches")
         : Promise.resolve({ branches: [], count: 0 }),
     ["catalog"],
-    [visible.branches, meta.data],
+    [visible.branches, metaKey],
   );
 
   // **بلاغاتُ السائقين للخريطة** (قرارات المالك ٢٠٢٦-١٠-٢١) — المسكَّرُ الآن والمعالمُ المنتظِرة.
@@ -797,7 +818,7 @@ export default function OpsMapPage() {
         ? api<{ closures: Closure[]; count: number }>("/api/v1/admin/ops-map/road-closures")
         : Promise.resolve({ closures: [], count: 0 }),
     ["road_closure"],
-    [visible.closures, meta.data],
+    [visible.closures, metaKey],
   );
   const landmarks = useLiveData<{ suggestions: LandmarkSugg[]; count: number }>(
     () =>
@@ -805,7 +826,7 @@ export default function OpsMapPage() {
         ? api<{ suggestions: LandmarkSugg[]; count: number }>("/api/v1/admin/ops-map/landmark-suggestions")
         : Promise.resolve({ suggestions: [], count: 0 }),
     ["landmark"],
-    [visible.landmarks, meta.data],
+    [visible.landmarks, metaKey],
   );
 
   // ── أفعالُ البطاقة — زرٌّ مقفولٌ وقتَ الإرسال · خطأٌ يُقال · نجاحٌ يمرّ ──
@@ -871,7 +892,7 @@ export default function OpsMapPage() {
           )
         : Promise.resolve({ reps: [], points: [] }),
     [],
-    [visible.reps, range, meta.data],
+    [visible.reps, range, metaKey],
   );
 
   // ── الكثافةُ والفرص ─────────────────────────────────────────
@@ -887,7 +908,7 @@ export default function OpsMapPage() {
             unserved: [], cell_deg: 0.01,
           }),
     [],
-    [visible.demand, visible.opportunities, range, hoursQ, meta.data],
+    [visible.demand, visible.opportunities, range, hoursQ, metaKey],
   );
 
   const opportunities = useLiveData<{ opportunities: OpportunityCell[]; count: number }>(
@@ -898,7 +919,7 @@ export default function OpsMapPage() {
           )
         : Promise.resolve({ opportunities: [], count: 0 }),
     [],
-    [visible.opportunities, range, hoursQ, meta.data],
+    [visible.opportunities, range, hoursQ, metaKey],
   );
 
   const hits = useLiveData<{ hits: SearchHit[]; count: number }>(

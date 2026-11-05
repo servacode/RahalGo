@@ -5,7 +5,7 @@
  *
  * **كلُّ ما يُقاس هنا يُقاس بلا متصفّح** (`scripts/check-opsmap-live.mjs`):
  * انزلاقُ السائق بين نبضتين · البحثُ في المحمَّل · «زاد العالقُ أم لا» ·
- * مرشِّحُ التركيز · خطُّ زمن الطلب · خطُّ مساره.
+ * مرشِّحُ التركيز · خطُّ زمن الطلب · خطُّ مساره · ترتيبُ المواضع بالزمن.
  *
  * **ولا شيءَ هنا يقرأ الثيمَ أو النافذة** — الألوانُ في `palette.ts`
  * والرسمُ في `canvas.tsx`.
@@ -313,4 +313,79 @@ export function orderRoute(
     legs.push({ leg: "to-customer", coords: [driver, drop] });
   }
   return legs;
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **٨ · ترتيبُ المواضع بالزمن** — ما هو أقدمُ من آخرِ ما طُبّق لا يحرّك العلامة
+// ══════════════════════════════════════════════════════════════════════
+//
+// (طلبُ المالك ٢٠٢٦-١١-٠٥: «بدنا حركة السائق على الخريطة تكون مباشرة ما بدنا نطّات».)
+//
+// **موضعُ السائق يصل من بابين**: نبضةٌ تُدفَع بالبثّ، وصفٌّ في قائمةٍ تُجلَب بالمدّة.
+// **وجوابُ القائمة قد يُقرأ قبل نبضةٍ ويصل بعدها** — فكان يضع السائقَ حيث كان قبل
+// أربع ثوانٍ، ثمّ تقدّمه النبضةُ التالية: رجوعٌ وتقدّمٌ كلَّ بضع ثوانٍ.
+//
+// **فيُحفظ لكلّ سائقٍ أحدثُ موضعٍ طُبّق** (من البابين معاً)، **وما هو أقدمُ منه لا يحرّك
+// العلامة.** والأحدثُ منه يُطبَّق ولو جاء من القائمة — **هو نبضةٌ فاتت البثّ** (ساعةُ
+// هاتفٍ متأخّرة، أو رسالةٌ أُسقطت).
+
+/** **وقتُ الالتقاط بالميلّي ثانية** — والتالفُ `NaN`. */
+function fixTime(at: string | null | undefined): number {
+  return typeof at === "string" && at !== "" ? Date.parse(at) : NaN;
+}
+
+/**
+ * **أليس هذا الموضعُ أقدمَ من آخرِ ما طُبّق؟**
+ *
+ * **والمساوي يُطبَّق** — هو الموضعُ نفسُه (صفُّ قائمةٍ قُرئ بعد نبضته): لا يحرّك شيئاً
+ * **ويُحدّث عمرَه من الخادم.** **ولا سابقَ يُقارَن به ⇒ يُطبَّق**؛ **ووقتٌ تالفٌ وقبله
+ * سابقٌ ⇒ لا يُطبَّق** — ما لا يُرتَّب لا يُرجع أحداً.
+ */
+export function newerFix(prevAt: string | null | undefined, at: string | null | undefined): boolean {
+  const p = fixTime(prevAt);
+  if (!Number.isFinite(p)) return true;
+  const a = fixTime(at);
+  return Number.isFinite(a) && a >= p;
+}
+
+/** **ما يقوله البابان عن موضع السائق** — ويُطبَّق كلُّه معاً أو لا يُطبَّق: الموضعُ وعمرُه لا يفترقان. */
+export interface DriverFix {
+  lat: number;
+  lng: number;
+  last_location_at: string;
+  age_sec: number;
+  freshness: string;
+}
+
+/** **حقولُ الموضع من صفٍّ بعينه** — بأنواعها هي. */
+export type FixOf<R extends DriverFix> = Pick<R, keyof DriverFix>;
+
+function fixOf<R extends DriverFix>(r: R): FixOf<R> {
+  return { lat: r.lat, lng: r.lng, last_location_at: r.last_location_at, age_sec: r.age_sec, freshness: r.freshness };
+}
+
+/**
+ * **نبضةٌ من البثّ** — تُحفظ وتُطبَّق إن لم تكن أقدمَ من آخرِ ما طُبّق. **ونبضةٌ بلا وقتٍ
+ * مقروءٍ لا تُطبَّق**: الخادمُ يختمها دائماً، وما لا يُرتَّب لا يحرّك أحداً.
+ */
+export function acceptPush<R extends DriverFix>(book: Map<string, FixOf<R>>, id: string, fix: FixOf<R>): boolean {
+  if (!Number.isFinite(fixTime(fix.last_location_at))) return false;
+  const prev = book.get(id);
+  if (prev && !newerFix(prev.last_location_at, fix.last_location_at)) return false;
+  book.set(id, fix);
+  return true;
+}
+
+/**
+ * **جوابُ القائمة يمرّ بالدفتر** — صفٌّ أقدمُ من آخرِ ما طُبّق يبقى على ذاك الموضع (ومعه
+ * وقتُه وعمرُه)، **وما سوى الموضع يُؤخذ من الصفّ** (الحالُ والطلباتُ واللون). وكلُّ صفٍّ
+ * آخرَ يُطبَّق كما هو ويصير الأحدث.
+ */
+export function mergeRows<R extends DriverFix & { id: string }>(book: Map<string, FixOf<R>>, rows: R[]): R[] {
+  return rows.map((r) => {
+    const prev = book.get(r.id);
+    if (prev && !newerFix(prev.last_location_at, r.last_location_at)) return { ...r, ...prev };
+    book.set(r.id, fixOf(r));
+    return r;
+  });
 }

@@ -6,7 +6,8 @@
  * **الدوالُّ في `components/admin/opsmap/live.ts` خالصة** — فتُنادى هنا
  * بحالاتٍ وتُقاس نتائجُها: **الانزلاقُ** بين نبضتين · **البحثُ** في
  * المحمَّل · **«زاد العالقُ»** · **مرشِّحُ التركيز** · **خطُّ الزمن** ·
- * **خطُّ المسار.**
+ * **خطُّ المسار** · **ترتيبُ المواضع بالزمن** · **وأحداثُ التيّار** في ناقل
+ * البثّ (`packages/ui/src/liveStream.ts`).
  *
  * **وقراءةُ السطر لا تُثبت أنّه يحكم** — فلا فحصَ نصّيّاً هنا.
  */
@@ -21,6 +22,7 @@ register(pathToFileURL(join(here, "_tsload.mjs")).href);
 const L = await import(
   pathToFileURL(join(web, "apps/rahalgo/src/components/admin/opsmap/live.ts")).href
 );
+const S = await import(pathToFileURL(join(web, "packages/ui/src/liveStream.ts")).href);
 
 let bad = 0;
 let cases = 0;
@@ -155,8 +157,54 @@ check(L.stuckIncreased(1, undefined) === false, "٣ · غيابُ الرقم ع�
   check(L.orderRoute({ drop_lng: 39, drop_lat: 35.9 }).length === 0, "٦ · بلا متجرٍ ولا سائقٍ رُسم خطّ");
 }
 
+// ── ٨ · ترتيبُ المواضع بالزمن، وأحداثُ التيّار (٢٠٢٦-١١-٠٥) ──────────
+//
+// **جوابُ قائمةٍ قُرئ قبل نبضةٍ ووصل بعدها لا يُرجع السائقَ إلى الوراء** — «ما بدنا نطّات».
+{
+  const at = (s) => new Date(Date.UTC(2026, 10, 5, 9, 0, s)).toISOString();
+  check(L.newerFix(undefined, at(6)) === true, "٨ · بلا سابقٍ لم يُطبَّق الموضع");
+  check(L.newerFix(at(10), at(6)) === false, "٨ · موضعٌ أقدمُ من آخرِ ما طُبّق طُبّق");
+  check(L.newerFix(at(10), at(12)) === true, "٨ · موضعٌ أحدثُ لم يُطبَّق");
+  check(L.newerFix(at(10), at(10)) === true, "٨ · الموضعُ نفسُه (صفٌّ بعد نبضته) لم يُطبَّق");
+  check(L.newerFix(at(10), "x") === false, "٨ · وقتٌ تالفٌ بعد سابقٍ طُبّق");
+  check(L.newerFix("x", at(6)) === true, "٨ · سابقٌ تالفٌ منع موضعاً");
+
+  // **نبضةٌ عند ١٠ ثمّ صفٌّ عند ٦ ⇒ العلامةُ لا تتحرّك؛ وصفٌّ عند ١٢ ⇒ يُطبَّق.**
+  const book = new Map();
+  const push = { lat: 35.95, lng: 39.01, last_location_at: at(10), age_sec: 0, freshness: "LIVE" };
+  check(L.acceptPush(book, "d1", push) === true, "٨ · أوّلُ نبضةٍ رُدّت");
+  const row = (s, lat, extra = {}) => ({
+    id: "d1", lat, lng: 39.0, last_location_at: at(s), age_sec: 4, freshness: "LIVE", status: "active", ...extra,
+  });
+  const [r6] = L.mergeRows(book, [row(6, 35.9, { status: "busy" })]);
+  check(r6.lat === 35.95 && r6.lng === 39.01 && r6.last_location_at === at(10),
+    "٨ · صفٌّ قُرئ قبل النبضة أرجع السائقَ إلى الوراء");
+  check(r6.age_sec === 0 && r6.freshness === "LIVE", "٨ · عمرُ الموضع لم يبقَ مع موضعه");
+  check(r6.status === "busy", "٨ · ما ليس موضعاً في الصفّ لم يُطبَّق");
+  const [r12] = L.mergeRows(book, [row(12, 35.96)]);
+  check(r12.lat === 35.96 && book.get("d1").last_location_at === at(12), "٨ · صفٌّ أحدثُ من النبضة لم يُطبَّق");
+  // **ونبضةٌ تأخّرت في الطريق بعد صفٍّ أحدث لا تُرجعه**، **وبلا وقتٍ لا تُرتَّب فلا تُطبَّق.**
+  check(L.acceptPush(book, "d1", { ...push, lat: 35.0, last_location_at: at(11) }) === false,
+    "٨ · نبضةٌ أقدمُ من الصفّ المطبَّق قُبلت");
+  check(book.get("d1").lat === 35.96, "٨ · نبضةٌ مرفوضةٌ غيّرت الدفتر");
+  check(L.acceptPush(book, "d1", { ...push, last_location_at: "" }) === false, "٨ · نبضةٌ بلا وقتٍ قُبلت");
+  check(L.acceptPush(book, "d1", { ...push, lat: 35.97, last_location_at: at(16) }) === true,
+    "٨ · نبضةٌ أحدثُ من الصفّ رُدّت");
+  // **وصفُّ الموضع نفسِه يُحدّث عمرَه**، **وسائقٌ بلا سابقٍ يُطبَّق صفُّه كما هو.**
+  const [same] = L.mergeRows(book, [row(16, 35.97, { age_sec: 40, freshness: "FRESH" })]);
+  check(same.age_sec === 40 && same.freshness === "FRESH", "٨ · صفُّ الموضع نفسِه لم يُحدّث عمرَه");
+  const [other] = L.mergeRows(book, [{ ...row(3, 35.5), id: "d2" }]);
+  check(other.lat === 35.5 && book.get("d2")?.lat === 35.5, "٨ · سائقٌ بلا سابقٍ لم يُطبَّق صفُّه");
+
+  // **وحدثُ التيّار لا يصير نوعاً يُعيد الجلب** (`liveStream.ts`).
+  check(S.isStreamEvent("driver_location") === true, "٨ · موضعُ السائق صار نوعاً يُعيد جلبَ الصفحات");
+  check(S.isStreamEvent("customer_location") === true, "٨ · موضعُ الزبون صار نوعاً يُعيد جلبَ الصفحات");
+  check(S.isStreamEvent("order") === false && S.isStreamEvent("catalog") === false,
+    "٨ · حدثُ طلبٍ أو لوحةٍ عُدّ تيّاراً فلا يُعيد جلبَ شيء");
+}
+
 if (bad) {
   console.error(`\n**حسابُ الخريطة الحيّة مكسور** — ${bad} من ${cases}.`);
   process.exit(1);
 }
-console.log(`حسابُ الخريطة الحيّة — ${cases} حالةً قِيست بالنداء: انزلاقٌ · بحثٌ · عالقٌ جديد · تركيزٌ · خطُّ زمن · مسار.`);
+console.log(`حسابُ الخريطة الحيّة — ${cases} حالةً قِيست بالنداء: انزلاقٌ · بحثٌ · عالقٌ جديد · تركيزٌ · خطُّ زمن · مسار · ترتيبٌ بالزمن · تيّار.`);
