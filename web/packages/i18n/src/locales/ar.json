@@ -6521,7 +6521,78 @@
       "daysN": "{n} يوم",
       "empty": "ما في شوارع مرشحة",
       "mapUnavailable": "الخريطة مو شغالة هلق",
-      "sections": { "streets": "شوارع", "places": "أماكن وأسامي", "oneway": "اتجاه واحد", "speeds": "السرعة الحقيقية" },
+      "sections": {
+        "streets": "شوارع",
+        "places": "أماكن وأسامي",
+        "landmarks": "معالم السائقين",
+        "oneway": "اتجاه واحد",
+        "speeds": "السرعة الحقيقية"
+      },
+      "landmarks": {
+        "day": "اليوم",
+        "loadFailed": "تعذّر تحميل معالم اليوم",
+        "tiles": {
+          "sent": "أرسلوا",
+          "new": "جديد",
+          "duplicate": "مكرّر",
+          "pending": "بانتظار",
+          "approved": "موافق",
+          "rejected": "مرفوض",
+          "completed": "كمّلوا الـ{quota}",
+          "completedValue": "{n} من {of} سائق"
+        },
+        "driversTitle": "السائقين بهاليوم",
+        "cols": {
+          "driver": "السائق",
+          "completed": "كمّل؟",
+          "sent": "أرسل",
+          "new": "جديد",
+          "duplicate": "مكرّر",
+          "pending": "بانتظار",
+          "approved": "موافق",
+          "rejected": "مرفوض",
+          "reminder": "التذكير"
+        },
+        "done": "✓ كمّل",
+        "progress": "{n} من {quota}",
+        "quotaOff": "العدّ مطفي",
+        "noName": "سائق بلا اسم",
+        "workedNoSend": "اشتغل وما بعت",
+        "remindedHour": "بالساعة {time}",
+        "remindedShiftEnd": "عند الإغلاق {time}",
+        "emptyDrivers": "ما في سائق اشتغل أو بعت معالم بهاليوم",
+        "queueTitle": "المعالم",
+        "total": "{n} معلم",
+        "status": {
+          "pending": "بانتظار الموافقة",
+          "approved": "موافَق عليها",
+          "rejected": "مرفوضة",
+          "duplicate": "مكرّرة"
+        },
+        "dayOnly": "هاليوم بس",
+        "emptyQueue": "ما في معالم هون",
+        "q": {
+          "name": "المعلم",
+          "driver": "السائق",
+          "at": "الوقت",
+          "location": "الموقع",
+          "dup": "مكرّر مع"
+        },
+        "fixedFromPing": "الموقع مصحّح من الخادم",
+        "unverified": "بلا تحقق",
+        "verified": "موقع متحقق",
+        "dupOf": "«{name}» على بعد {d} م",
+        "dupSource": {
+          "map": "على الخريطة",
+          "store": "متجر عنّا",
+          "suggestion": "سائق تاني",
+          "self": "هو نفسه"
+        },
+        "onMap": "على الخريطة",
+        "loadMore": "عرض المزيد",
+        "viewTable": "جدول",
+        "viewCards": "بطاقات"
+      },
       "places": {
         "sources": {
           "all": "الكل",

@@ -426,10 +426,15 @@ const ALWAYS_ON: Record<string, boolean> = {
 /**
  * **القادمُ من «طلبات التوسّع» يرى طلباتِ التغطية** (`?focus=`) — وإلّا وصل إلى المكان
  * بلا علامةٍ تقول أين الطلب. **ولا يُحفظ** — فتحةٌ عاديّةٌ بعدها تعود كما اختار.
+ *
+ * **والقادمُ من «معالم السائقين» يرى طبقتَها** (`?layer=landmarks`، قرارُ المالك ٢٠٢٦-١١-٠٥) —
+ * **لهذه الفتحة وحدَها**: افتراضُ الطبقة باقٍ مطفأً.
  */
 function fromExpansion(): Record<string, boolean> {
   if (typeof window === "undefined") return {};
-  return new URLSearchParams(window.location.search).get("focus") ? { requests: true } : {};
+  const q = new URLSearchParams(window.location.search);
+  if (q.get("layer") === "landmarks") return { landmarks: true };
+  return q.get("focus") ? { requests: true } : {};
 }
 
 function fc(features: FeatureCollection["features"]): FeatureCollection {

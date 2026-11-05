@@ -9,6 +9,9 @@
  * وشوارعُ مرشَّحة (نقاطٌ بعيدةٌ عن كلّ طريقٍ معروفٍ وتتكرّر بأكثر من يوم).
  * **والمدير يوافق على الخطّ أو يرفضه**، والموافَقُ عليه يُصدَّر ملفّاً تقرؤه إعادةُ بناء الخريطة.
  * والكشف كلُّه في الخادم (`internal/maplearn`) — هنا عرضٌ وقرار.
+ *
+ * **وقسمُ «معالم السائقين»** (قرارُ المالك ٢٠٢٦-١١-٠٥) — ما يرسلونه من «أضف معلماً» وعدُّ يومهم،
+ * **ويُفتح من رابط ملخّص الصبح** (`?section=landmarks&day=`).
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -35,6 +38,7 @@ import { useCanCall } from "@/lib/policy";
 import type { FeatureCollection, LayerSpec } from "@/components/admin/opsmap/canvas";
 import { mapIcons, toneColor } from "@/components/admin/opsmap/palette";
 import { PlacesPanel } from "./PlacesPanel";
+import { LandmarksPanel } from "./LandmarksPanel";
 import { OnewayPanel, SpeedsPanel } from "./RoadsPanel";
 
 const OpsMapCanvas = dynamic(
@@ -46,7 +50,8 @@ const m = getMessages(defaultLocale);
 const T = m.admin.mapLearning;
 
 type Status = "pending" | "approved" | "rejected";
-type Section = "streets" | "places" | "oneway" | "speeds";
+type Section = "streets" | "places" | "landmarks" | "oneway" | "speeds";
+const SECTIONS: Section[] = ["streets", "places", "landmarks", "oneway", "speeds"];
 
 interface Summary {
   points: number;
@@ -131,6 +136,7 @@ function CandidateRow({
 export default function MapLearningPage() {
   const canCall = useCanCall();
   const canManage = canCall("POST", "/ops-map/street-candidates/run");
+  const canDecideLandmark = canCall("POST", "/ops-map/landmark-suggestions/{id}/decide");
 
   const [status, setStatus] = useState<Status>("pending");
   const [days, setDays] = useState(30);
@@ -150,6 +156,15 @@ export default function MapLearningPage() {
   const [roadsTick, setRoadsTick] = useState(0);
   const [roadsRunning, setRoadsRunning] = useState(false);
   const [stores, setStores] = useState<Array<{ id: string; name: string; lat: number; lng: number }>>([]);
+  const [landmarkDay, setLandmarkDay] = useState<string | undefined>(undefined);
+
+  // **رابطُ ملخّص الصبح يفتح قسمَ المعالم على يومه** — `?section=landmarks&day=`.
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    if (sp.get("section") === "landmarks") setSection("landmarks");
+    const d = sp.get("day");
+    if (d && /^\d{4}-\d{2}-\d{2}$/.test(d)) setLandmarkDay(d);
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -382,7 +397,7 @@ export default function MapLearningPage() {
                 </>
               )}
             </>
-          ) : canManage && section === "places" ? (
+          ) : section === "landmarks" ? undefined : canManage && section === "places" ? (
             <Button variant="secondary" size="sm" disabled={busy || placesRunning} onClick={runPlaces}>
               {placesRunning ? T.places.running : T.places.run}
             </Button>
@@ -403,7 +418,7 @@ export default function MapLearningPage() {
       />
       {actionErr && <Alert tone="error">{actionErr}</Alert>}
       <div className="mb-3 flex gap-2">
-        {(["streets", "places", "oneway", "speeds"] as Section[]).map((s) => (
+        {SECTIONS.map((s) => (
           <Button key={s} size="sm" variant={section === s ? "primary" : "secondary"} onClick={() => setSection(s)}>
             {T.sections[s]}
           </Button>
@@ -411,6 +426,8 @@ export default function MapLearningPage() {
       </div>
       {section === "places" ? (
         <PlacesPanel canManage={canManage} runSignal={placesTick} />
+      ) : section === "landmarks" ? (
+        <LandmarksPanel key={landmarkDay ?? ""} canDecide={canDecideLandmark} initialDay={landmarkDay} />
       ) : section === "oneway" ? (
         <OnewayPanel canManage={canManage} runSignal={roadsTick} stores={stores} />
       ) : section === "speeds" ? (

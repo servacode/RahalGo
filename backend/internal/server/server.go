@@ -1276,6 +1276,9 @@ func (s *Server) Router() http.Handler {
 				r.Delete("/road-closures/{id}", s.requirePerm(opsmap.PermManageCoverage, s.handleAdminClearRoadClosure))
 				r.Get("/landmark-suggestions", s.requirePerm(opsmap.PermViewMap, s.handleAdminLandmarkSuggestions))
 				r.Post("/landmark-suggestions/{id}/decide", s.requirePerm(opsmap.PermManageCoverage, s.handleAdminDecideLandmark))
+				// **ومعالمُ السائقين بيومها وشارتُها** (قرارُ المالك ٢٠٢٦-١١-٠٥، landmark_admin.go).
+				r.Get("/landmark-suggestions/count", s.requirePerm(opsmap.PermViewMap, s.handleAdminLandmarkCount))
+				r.Get("/landmarks/daily", s.requirePerm(opsmap.PermViewMap, s.handleAdminLandmarksDaily))
 
 				// **الخريطةُ من حركة السائقين** (قرارُ المالك ٢٠٢٦-١١-٠٣) — كثافةٌ وشوارعُ مقترحة.
 				r.Get("/street-candidates", s.requirePerm(opsmap.PermViewMap, s.handleStreetCandidates))

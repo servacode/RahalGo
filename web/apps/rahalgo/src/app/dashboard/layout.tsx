@@ -296,11 +296,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     ["emergency"],
     [canEmergencies, minuteTick],
   );
+  // **معالمُ السائقين بانتظار الموافقة** (قرارُ المالك ٢٠٢٦-١١-٠٥: «عم يبعثو معالم بس انا ماعم
+  // يوصلني شي») — شارةٌ على «الخريطة من السائقين» **تتحدّث مع كلّ معلمٍ يصل** (`touch("landmark")`).
+  const canLandmarks = capabilities.includes("settings.general.manage") && capabilities.includes("orders.read");
+  const { data: landmarkCount } = useLiveData<{ pending: number }>(
+    () =>
+      canLandmarks
+        ? api("/api/v1/admin/ops-map/landmark-suggestions/count")
+        : Promise.resolve({ pending: 0 }),
+    ["landmark"],
+    [canLandmarks],
+  );
   const navShown = useMemo(
     () =>
       nav.map((i) => {
         if (i.href === "/dashboard/sections")
           return { ...i, badge: inMarket ? 0 : (marketNew?.count ?? 0) };
+        if (i.href === "/dashboard/map-learning") return { ...i, badge: landmarkCount?.pending ?? 0 };
         if (i.href === "/dashboard/emergencies")
           return {
             ...i,
@@ -309,7 +321,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           };
         return i;
       }),
-    [nav, marketNew, inMarket, emergencyCount],
+    [nav, marketNew, inMarket, emergencyCount, landmarkCount],
   );
 
   useEffect(() => {
