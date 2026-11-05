@@ -100,7 +100,8 @@ var customerSteps = map[string]bool{
 // **والزبونُ يرى ما يخصّه بلا اسمِ فاعل** — من نقل الطلب شأنُ المنصّة.
 func (s *Server) timeline(ctx context.Context, orderID string, full bool) []TimelineStep {
 	rows, err := s.pg.Query(ctx, `
-		SELECT e.to_status, e.created_at, u.full_name, e.note, `+actorRoleSQL+`
+		SELECT e.to_status, e.created_at, u.full_name, e.note, `+actorRoleSQL+`,
+		       COALESCE(e.from_status, '') = e.to_status
 		FROM order_events e
 		JOIN orders o ON o.id = e.order_id
 		LEFT JOIN users u ON u.id = e.actor_id
@@ -118,10 +119,17 @@ func (s *Server) timeline(ctx context.Context, orderID string, full bool) []Time
 		var step TimelineStep
 		var actor *string
 		var role string
-		if err := rows.Scan(&step.Status, &step.At, &actor, &step.Note, &role); err != nil {
+		var same bool
+		if err := rows.Scan(&step.Status, &step.At, &actor, &step.Note, &role, &same); err != nil {
 			return out
 		}
 		if !full {
+			// **وسطرٌ حالُه قبلُ وبعدُ واحدةٌ أثرٌ لا خطوة** (خلل PD-5، ٢٠٢٦-١١-٠٥) — صنفٌ غيرُ
+			// متوفّر، تحويلُ المتجر، تعديلُ الطلب: **يقرؤه المكتبُ في مساره الكامل، والزبونُ رأى
+			// الحالَ مرّةً فلا تتكرّر له.** ويُتخطّى قبل كلّ شيء — فلا يُقرأ إسناداً جديداً.
+			if same {
+				continue
+			}
 			// ══════════════════════════════════════════════════════════
 			// **و«حُوّل إلى سائقٍ آخر» ليست حالاً في المحرّك**
 			// ══════════════════════════════════════════════════════════
