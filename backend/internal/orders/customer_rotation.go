@@ -81,3 +81,32 @@ func (s *Service) sameCustomerAlternative(ctx context.Context, orderID, except s
 	}
 	return false
 }
+
+// publishSameCustomerGraceEnd **انقضت مهلةُ حدّ الزبون على طلبٍ في «للجميع» — فلتُقرأ
+// الطوابيرُ من جديد.**
+//
+// **السائقُ فوق الحدّ لا يرى الطلبَ أوّلَ المهلة** (`SameCustomerGateSQL`) — **وبعدها
+// يراه، لكنّ شاشتَه لا تعرف أنّ الوقتَ مضى.** فإشارةٌ بلا حمولةٍ على قناة الطابور
+// (كإشارة العرض) تجعل كلَّ شاشةٍ مفتوحةٍ تسأل. **ولا دفعَ جديد** — مقصود.
+//
+// **ونافذتُها ٣٥ ثانية** — نبضةُ الراصد ٣٠، فلا يفوت طلبٌ ولا يتكرّر كثيراً.
+func (s *Service) publishSameCustomerGraceEnd(ctx context.Context) {
+	if s.pub == nil || s.sameCustomerCap(ctx) <= 0 || s.AssignmentMode(ctx) == "rotation" {
+		return
+	}
+	grace := s.DispatchProximity(ctx).TimeoutSec
+	var due bool
+	if err := s.db.QueryRow(ctx, `
+		SELECT EXISTS (
+		    SELECT 1 FROM orders o
+		    WHERE o.status = 'dispatching' AND o.driver_id IS NULL AND o.customer_id IS NOT NULL
+		      AND COALESCE(o.dispatched_at, o.created_at) <= now() - make_interval(secs => $1::int)
+		      AND COALESCE(o.dispatched_at, o.created_at) > now() - make_interval(secs => $1::int + 35))`,
+		grace).Scan(&due); err != nil {
+		s.logger.Warn("حدُّ الزبون: تعذّر فحصُ انقضاء المهلة", "error", err)
+		return
+	}
+	if due {
+		s.pub.Publish(topicDriverQueue, map[string]any{"type": "order"})
+	}
+}

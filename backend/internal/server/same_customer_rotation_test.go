@@ -10,6 +10,8 @@ package server
 
 import (
 	"context"
+	"net/http"
+	"strings"
 	"testing"
 )
 
@@ -205,5 +207,70 @@ func TestSameCustomer_SameRouteSameDoorKeeps(t *testing.T) {
 	}
 	if got, _ := f.assignedTo(t, fresh); got != a {
 		t.Fatalf("أُسند إلى %q والمتوقّع صاحبُ المسار", got)
+	}
+}
+
+// ── «للجميع» ────────────────────────────────────────────────────────────
+
+func scQueue(t *testing.T, f *driverFixture) (a, b, ord, customer string) {
+	t.Helper()
+	a, b, ord, customer = scProximity(t, f)
+	f.setSetting(t, "drivers.assignment_mode", "queue")
+	armSameCustomer(t, f, 3)
+	return a, b, ord, customer
+}
+
+// QueueHiddenDuringGrace — **A فوق الحدّ لا يرى الطلبَ أوّلَ المهلة وB يراه، وقبولُه يُردّ.**
+func TestSameCustomer_QueueHiddenDuringGrace(t *testing.T) {
+	f := newDriverFixture(t, 2)
+	a, b, ord, x := scQueue(t, f)
+	f.seedDelivered(t, x, a, 3, 1)
+	if hasID(f.queueIDs(t, a), ord) {
+		t.Fatal("**A فوق الحدّ رأى الطلبَ في المهلة وB يراه**")
+	}
+	if !hasID(f.queueIDs(t, b), ord) {
+		t.Fatal("B لم يرَ الطلب")
+	}
+	w := f.accept(a, ord)
+	if w.Code != http.StatusConflict || !strings.Contains(w.Body.String(), "order_taken") {
+		t.Fatalf("**قبولُ A مرّ في المهلة**: %d %s", w.Code, w.Body.String())
+	}
+}
+
+// QueueVisibleWhenAlone — **ولا غيرُه ⇒ يراه.**
+func TestSameCustomer_QueueVisibleWhenAlone(t *testing.T) {
+	f := newDriverFixture(t, 2)
+	a, b, ord, x := scQueue(t, f)
+	f.onShift(t, b, false)
+	f.seedDelivered(t, x, a, 3, 1)
+	if !hasID(f.queueIDs(t, a), ord) {
+		t.Fatal("**لا سائقَ غيرُه والطلبُ محجوبٌ عنه** — يبقى بلا سائق")
+	}
+}
+
+// QueueVisibleAfterGrace — **وبعد المهلة يراه.**
+func TestSameCustomer_QueueVisibleAfterGrace(t *testing.T) {
+	f := newDriverFixture(t, 2)
+	a, _, ord, x := scQueue(t, f)
+	f.seedDelivered(t, x, a, 3, 1)
+	f.dispatchedAgo(t, ord, 61) // المهلة ٦٠ (armRotation)
+	if !hasID(f.queueIDs(t, a), ord) {
+		t.Fatal("**انقضت المهلةُ والطلبُ ما زال محجوباً**")
+	}
+}
+
+// QueueMerchantDeliveryUnaffected — **و«لدي توصيلة» بلا زبونٍ لا حدَّ عليها.**
+func TestSameCustomer_QueueMerchantDeliveryUnaffected(t *testing.T) {
+	f := newDriverFixture(t, 2)
+	a, b, ord, x := scQueue(t, f)
+	f.seedDelivered(t, x, a, 3, 1)
+	if _, err := f.pool.Exec(context.Background(), `
+		UPDATE orders SET kind = 'merchant_delivery', customer_id = NULL,
+		       recipient_name = 'مستلم', recipient_phone = '0991234567', fee_payer = 'merchant'
+		WHERE id = $1`, ord); err != nil {
+		t.Fatalf("تحويلُه إلى توصيلة: %v", err)
+	}
+	if !hasID(f.queueIDs(t, a), ord) || !hasID(f.queueIDs(t, b), ord) {
+		t.Fatal("**توصيلةُ متجرٍ بلا زبونٍ حُجبت**")
 	}
 }

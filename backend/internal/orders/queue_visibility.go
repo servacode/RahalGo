@@ -71,6 +71,44 @@ func QueueVisibleSQL(drv string, p int) string {
 		  )`
 }
 
+// SameCustomerGateSQL **حدُّ الزبون في «للجميع»** (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٤) —
+// شرطٌ يُضاف إلى `QueueBaseSQL`/`QueueVisibleSQL` في الأبواب الثلاثة نفسِها.
+//
+// **السائقُ الذي وصّل لزبون هذا الطلب حدَّ الأسبوع لا يراه أوّلَ مهلةِ العرض**
+// (`DispatchProximity.TimeoutSec`) **إن كان ثمّة سائقٌ آخرُ مؤهَّلٌ ليس فوق الحدّ
+// يراه الآن.** **وبعد المهلة، أو إن لم يكن غيرُه، يراه كما كان** — تفضيلٌ لا منع،
+// **فلا طلبَ يبقى بلا سائقٍ بسببه.**
+//
+// `drv` تعبيرُ السائق، و`p` أوّلُ وسائط `QueueVisibleSQL` السبعة في الاستعلام
+// الخارجيّ (لا يُقرأ والقربُ مطفأ). **والحدُّ والمهلةُ أرقامٌ صحيحةٌ من الإعدادات**
+// فتُكتب في النصّ. **وفارغٌ** إن كان الحدُّ صفراً أو النمطُ «بالدور» — **هناك
+// الترتيبُ نفسُه يفضّل غيرَه** (`pickRotationCandidate`).
+//
+// **ويُبنى قبل فتح أيّ معاملة** — يقرأ الإعدادات من المسبح (`XG-46`).
+func (s *Service) SameCustomerGateSQL(ctx context.Context, drv string, p int) string {
+	capN := s.sameCustomerCap(ctx)
+	if capN <= 0 || s.AssignmentMode(ctx) == "rotation" {
+		return ""
+	}
+	capArg := strconv.FormatInt(capN, 10)
+	grace := strconv.FormatInt(s.DispatchProximity(ctx).TimeoutSec, 10)
+	other := QueueBaseSQL("x.id")
+	if s.ProximityEnabled(ctx) {
+		other = QueueVisibleSQL("x.id", p)
+	}
+	over := func(d string) string { return sameCustomerOverSQL(d, "o.customer_id", "o.id", capArg) }
+	return `
+		  -- **حدُّ الزبون** (البند ٤): فوق الحدّ لا يرى الطلبَ أوّلَ المهلة إن رآه غيرُه.
+		  AND (NOT ` + over(drv) + `
+		       OR COALESCE(o.dispatched_at, o.created_at) <= now() - make_interval(secs => ` + grace + `)
+		       OR NOT EXISTS (
+		           SELECT 1 FROM users x
+		           JOIN user_roles xr ON xr.user_id = x.id AND xr.role_code = 'driver'
+		           WHERE x.id <> ` + drv + ` AND x.on_shift AND x.status = 'active'
+		             AND NOT ` + over("x.id") + `
+		             AND ` + other + `))`
+}
+
 // queueAudience **من يرى هذا الطلبَ في طابوره الآن** — وإليهم وحدَهم يُدفَع
 // العرضُ في «للجميع». **السؤالُ نفسُه الذي يسأله بابُ الطابور** من الجهة الأخرى.
 func (s *Service) queueAudience(ctx context.Context, orderID string) ([]string, error) {
@@ -91,6 +129,8 @@ func (s *Service) queueAudience(ctx context.Context, orderID string) ([]string, 
 	} else {
 		q += QueueBaseSQL("u.id")
 	}
+	// **وحدُّ الزبون الشرطُ نفسُه الذي في الطابور** — لا يرنّ لمن لا يرى.
+	q += s.SameCustomerGateSQL(ctx, "u.id", 2)
 	rows, err := s.db.Query(ctx, q, args...)
 	if err != nil {
 		return nil, err

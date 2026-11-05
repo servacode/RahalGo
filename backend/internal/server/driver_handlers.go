@@ -839,10 +839,13 @@ func (s *Server) handleDriverQueue(w http.ResponseWriter, r *http.Request) {
 	//
 	// **والشرطُ في المحرّك لا هنا** (`orders.QueueVisibleSQL`) — **ودفعُ العرض
 	// يقرؤه نفسَه** فلا يرنّ إلّا لمن يرى الطلبَ في طابوره (٢٠٢٦-١٠-٠٢).
+	//
+	// **وحدُّ الزبون شرطٌ ثالثٌ في البابين** (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٤) —
+	// `orders.SameCustomerGateSQL`، **والدفعُ وبوّابةُ القبول يقرآنه نفسَه.**
 	if !s.orders.ProximityEnabled(ctx) {
 		s.scanDriverOrders(w, r, driverOrderSelect+`
 			WHERE o.status = 'dispatching' AND o.driver_id IS NULL
-			  AND `+orders.QueueBaseSQL("$1::uuid")+`
+			  AND `+orders.QueueBaseSQL("$1::uuid")+s.orders.SameCustomerGateSQL(ctx, "$1::uuid", 3)+`
 			ORDER BY o.ready_at NULLS LAST, o.created_at
 			LIMIT 50`, uid, staleLocationMinutes)
 		return
@@ -856,7 +859,7 @@ func (s *Server) handleDriverQueue(w http.ResponseWriter, r *http.Request) {
 	freshLoc := orders.QueueDriverFreshLocSQL("$1::uuid", "$5")
 	s.scanDriverOrders(w, r, driverOrderSelect+`
 		WHERE o.status = 'dispatching' AND o.driver_id IS NULL
-		  AND `+orders.QueueVisibleSQL("$1::uuid", 3)+`
+		  AND `+orders.QueueVisibleSQL("$1::uuid", 3)+s.orders.SameCustomerGateSQL(ctx, "$1::uuid", 3)+`
 		-- **الأقربُ أوّلاً لمن له موضعٌ حديث، ثمّ الأجهزُ فالأقدم.**
 		ORDER BY
 		  CASE WHEN `+freshLoc+` IS NOT NULL AND `+orders.DispatchAnchorSQL+` IS NOT NULL
@@ -1072,6 +1075,10 @@ func (s *Server) handleDriverAccept(w http.ResponseWriter, r *http.Request) {
 		cond = orders.QueueVisibleSQL("$1::uuid", 3)
 		args = append(args, dp.CashLimit, dp.MaxActive, dp.FreshSec,
 			dp.MaxM, dp.InitialM, dp.StepM, dp.TimeoutSec)
+	}
+	// **وحدُّ الزبون شرطُ الطابور نفسُه** (البند ٤) — **ويُبنى هنا قبل الفتح.**
+	if gateQueue {
+		cond += s.orders.SameCustomerGateSQL(r.Context(), "$1::uuid", 3)
 	}
 	tx, err := s.pg.Begin(r.Context())
 	if err != nil {
