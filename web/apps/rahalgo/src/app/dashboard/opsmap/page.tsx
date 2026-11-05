@@ -433,7 +433,10 @@ const ALWAYS_ON: Record<string, boolean> = {
 function fromExpansion(): Record<string, boolean> {
   if (typeof window === "undefined") return {};
   const q = new URLSearchParams(window.location.search);
-  if (q.get("layer") === "landmarks") return { landmarks: true };
+  const layer = q.get("layer");
+  if (layer === "landmarks") return { landmarks: true };
+  // **و`?layer=none` دبّوسُ المكان وحدَه** — معلمٌ مكرَّرٌ أو مقرَّرٌ لا طبقةَ له ولا لطلبات التغطية.
+  if (layer === "none") return {};
   return q.get("focus") ? { requests: true } : {};
 }
 
@@ -473,11 +476,16 @@ export default function OpsMapPage() {
   // **فلا تُعرض قديمةٌ على أنّها حيّة.**
   const storeKey = `opsmap.layers.${user?.id ?? "anon"}`;
   const [visible, setVisible] = useState<Record<string, boolean>>(DEFAULT_VISIBLE);
+  // **ما اختاره بيده — بلا ما فرضه الرابط** (`fromExpansion`). **فتبديلُ طبقةٍ أخرى في الفتحة
+  // نفسِها لا يحفظ المفروضَ** (مراجعة ٢٠٢٦-١١-٠٥): كان القادمُ من «معالم السائقين» يبدّل طبقةً
+  // فتُحفظ طبقةُ المعالم مشغّلةً للأبد، وهي «لهذه الفتحة وحدَها».
+  const chosen = useRef<Record<string, boolean>>(DEFAULT_VISIBLE);
   useEffect(() => {
     try {
       const raw =
         window.localStorage.getItem(storeKey) ?? window.localStorage.getItem("opsmap.layers");
-      setVisible({ ...(raw ? (JSON.parse(raw) as Record<string, boolean>) : DEFAULT_VISIBLE), ...ALWAYS_ON, ...fromExpansion() });
+      chosen.current = { ...(raw ? (JSON.parse(raw) as Record<string, boolean>) : DEFAULT_VISIBLE), ...ALWAYS_ON };
+      setVisible({ ...chosen.current, ...fromExpansion() });
     } catch {
       /* تخزينٌ ممنوعٌ في نافذةٍ خاصّة — والافتراضُ يكفي */
       setVisible((v) => ({ ...v, ...fromExpansion() }));
@@ -486,13 +494,14 @@ export default function OpsMapPage() {
   const toggle = useCallback(
     (id: string) => {
       setVisible((prev) => {
-        const next = { ...prev, [id]: !(prev[id] ?? DEFAULT_VISIBLE[id]), ...ALWAYS_ON };
+        const on = !(prev[id] ?? DEFAULT_VISIBLE[id]);
+        chosen.current = { ...chosen.current, [id]: on, ...ALWAYS_ON };
         try {
-          window.localStorage.setItem(storeKey, JSON.stringify(next));
+          window.localStorage.setItem(storeKey, JSON.stringify(chosen.current));
         } catch {
           /* لا يضرّ */
         }
-        return next;
+        return { ...prev, [id]: on, ...ALWAYS_ON };
       });
     },
     [storeKey],

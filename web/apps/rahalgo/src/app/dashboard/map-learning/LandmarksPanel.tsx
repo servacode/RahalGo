@@ -11,7 +11,7 @@
  * **والعدُّ والتكرارُ كلُّه في الخادم** (`server/landmark_quota.go`) — هنا عرضٌ وقرار.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { getMessages, defaultLocale, fmtNum, fmtDateTime, fmtDamascusTime, errorText } from "@rahalgo/i18n";
 import {
@@ -25,6 +25,7 @@ import {
   ViewToggle,
   useViewMode,
   useLiveData,
+  useLiveRefresh,
   type DataColumn,
   IconRoute,
   IconCheck,
@@ -100,8 +101,12 @@ interface Page {
   has_more: boolean;
 }
 
-/** **«على الخريطة»** — خريطةُ العمليّات على المعلم وطبقتُه مشغّلةٌ لهذه الفتحة وحدَها. */
-const onMapHref = (s: Sugg) => `/dashboard/opsmap?focus=${s.lat},${s.lng}&layer=landmarks`;
+/**
+ * **«على الخريطة»** — خريطةُ العمليّات على المعلم. **وطبقتُه تُشغَّل لهذه الفتحة وحدَها لِما ينتظر
+ * الموافقة فقط** — الطبقةُ لا تعرض غيرَه، فالمكرَّرُ والمقرَّرُ يُرى بدبّوس مكانه وحده (`layer=none`).
+ */
+const onMapHref = (s: Sugg) =>
+  `/dashboard/opsmap?focus=${s.lat},${s.lng}&layer=${s.status === "pending" ? "landmarks" : "none"}`;
 
 function DriverProgress({ d, quota }: { d: DriverDay; quota: number }) {
   if (quota <= 0) return <span className="text-ink-muted">{L.quotaOff}</span>;
@@ -183,6 +188,25 @@ export function LandmarksPanel({ canDecide, initialDay }: { canDecide: boolean; 
     };
   }, [query, tick]);
 
+  // **والطابورُ يتحدّث مع كلّ معلمٍ يصل** (`touch("landmark")`، مراجعة ٢٠٢٦-١١-٠٥) — كالمربّعات
+  // والجدول. **ويُعاد بطولِ ما فُتح** فلا يضيع ما جاء بـ«عرض المزيد».
+  const loaded = useRef(0);
+  loaded.current = items.length;
+  const refreshQueue = useCallback(() => {
+    const p = new URLSearchParams({ status, limit: String(Math.max(PAGE, loaded.current)), offset: "0" });
+    if (dayOnly && day) p.set("day", day);
+    api<Page>(`/api/v1/admin/ops-map/landmark-suggestions?${p.toString()}`)
+      .then((r) => {
+        setItems(r.suggestions);
+        setTotal(r.total);
+        setHasMore(r.has_more);
+      })
+      .catch(() => {
+        /* تحديثٌ صامت — الخطأُ يظهر في الفتحة التالية */
+      });
+  }, [status, dayOnly, day]);
+  useLiveRefresh(["landmark"], refreshQueue);
+
   async function more() {
     try {
       const r = await query(items.length);
@@ -202,7 +226,10 @@ export function LandmarksPanel({ canDecide, initialDay }: { canDecide: boolean; 
         method: "POST",
         body: JSON.stringify({ approve }),
       });
-      setTick((x) => x + 1);
+      // **يُرفع من القائمة مكانَه** — لا تُعاد من أوّلها فيضيع ما فُتح بـ«عرض المزيد».
+      setItems((x) => x.filter((i) => i.id !== id));
+      setTotal((n) => Math.max(0, n - 1));
+      daily.reload();
     } catch (e) {
       setActionErr(errorText(e));
     } finally {
