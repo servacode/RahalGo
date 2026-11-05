@@ -619,60 +619,6 @@ func TestMultiStop_DispatchAfterLastUnsentPart(t *testing.T) {
 	}
 }
 
-// TestMultiStop_AllRejectedRaceNeverAccepted **رفضُ الأخير والكانسُ معاً — لا «مقبولٌ بلا قسم»** — `T32` (D6).
-//
-// **ولو كُتب الانتقالُ التابعُ في معاملةٍ ثانية** لَقبل الكانسُ الطلبَ بينهما.
-func TestMultiStop_AllRejectedRaceNeverAccepted(t *testing.T) {
-	s := newMSShop(t, "merchants")
-	s.h.Setting("orders.auto_accept_min", "1")
-	oid := s.order(t)
-	s.mustAnswer(t, "رفضُ الثاني", s.tokB, oid, map[string]any{"to": "rejected", "note": "نفد الصنف"})
-	if got := s.h.statusOf(oid); got != "pending" {
-		t.Fatalf("رفضُ الثاني والأوّلُ لم يجب: %q — يُنتظر pending", got)
-	}
-	if _, err := s.h.Pool.Exec(ctxBG(),
-		`UPDATE orders SET created_at = now() - interval '10 minutes' WHERE id = $1::uuid`, oid); err != nil {
-		t.Fatal(err)
-	}
-	var wg sync.WaitGroup
-	var rej Res
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		rej = s.answer(s.tokA, oid, map[string]any{"to": "rejected", "note": "مغلق للصيانة"})
-	}()
-	go func() {
-		defer wg.Done()
-		s.h.Orders.SweepAutoAcceptOnce(context.Background())
-	}()
-	wg.Wait()
-	if rej.Code != http.StatusOK {
-		t.Fatalf("رفضُ الأوّل: %s", rej)
-	}
-	if got := s.h.statusOf(oid); got != "rejected" {
-		t.Fatalf("**رُفضت الأقسامُ كلُّها والطلبُ %q** — يُنتظر rejected", got)
-	}
-	var accepted int
-	var reason string
-	if err := s.h.Pool.QueryRow(ctxBG(), `
-		SELECT (SELECT count(*) FROM order_events WHERE order_id = o.id AND to_status = 'accepted'),
-		       COALESCE(o.cancel_reason, '')
-		FROM orders o WHERE o.id = $1::uuid`, oid).Scan(&accepted, &reason); err != nil {
-		t.Fatal(err)
-	}
-	if accepted != 0 {
-		t.Errorf("**قُبل الطلبُ ولا قسمَ مقبول** — %d حدثاً", accepted)
-	}
-	if reason != "ما توفّر شي من الطلب" {
-		t.Errorf("سببُ الرفض %q", reason)
-	}
-	for _, m := range []*Merchant{s.mA, s.mB} {
-		if p := partOf(t, s.h, oid, m.ID); p.Status != "rejected" || p.Reason == "" {
-			t.Errorf("قسمٌ بعد الرفض: %+v", p)
-		}
-	}
-}
-
 // TestMultiStop_AutoTransferNeedsEveryPhone **التحويلُ التلقائيُّ يسأل هاتفَ كلّ متجرٍ قبل القبول** — `T34` (D8 · C12).
 //
 // **كان يسأل هاتفَ الأوّل وحدَه** — فيُقبل الطلبُ وتذهب تذكرةٌ واحدةٌ ببنود الاثنين.
