@@ -150,13 +150,14 @@ func (s *Server) handleDriverLocationBatch(w http.ResponseWriter, r *http.Reques
 	}
 
 	now := time.Now()
-	// **وساعةُ الهاتف تُصحَّح قبل الحكم** (`driver_clock.go`) — والتصحيحُ واحدٌ للدفعة كلّها:
-	// ساعتُه اليومَ هي ساعتُه حين التقطها. وصفرٌ للنسخ القديمة.
-	fix := s.deviceClockFix(r, uid, now)
+	// **وساعةُ الهاتف تُصحَّح قبل الحكم** (`driver_clock.go`) — **ونقاطُ ما قبل آخر تبدّلٍ
+	// بالتصحيح القديم** (`clockView.correct`): ساعةٌ انضبطت مع عودة الشبكة لا تزيح ساعةَ الانقطاع.
+	// وصفرٌ للنسخ القديمة.
+	clock := s.deviceClock(r, uid, now)
 	good := make([]trackPoint, 0, len(req.Points))
 	for _, p := range req.Points {
-		if fix != 0 && !p.At.IsZero() {
-			p.At = p.At.Add(fix)
+		if !p.At.IsZero() {
+			p.At = clock.correct(p.At)
 		}
 		if p.valid(now) {
 			good = append(good, p)

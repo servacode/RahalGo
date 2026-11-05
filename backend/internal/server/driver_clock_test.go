@@ -12,7 +12,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alicebob/miniredis/v2"
 	"github.com/go-chi/chi/v5"
+	"github.com/redis/go-redis/v9"
 )
 
 func TestNextClockFix_LatencyIsNotSkewAndFixHolds(t *testing.T) {
@@ -125,5 +127,101 @@ func TestDriverLocation_DeviceClockCorrected(t *testing.T) {
 	}
 	if !got.Equal(sent) {
 		t.Fatalf("ساعةٌ صحيحة: كُتب %v والمُرسَل %v — **زمنُ الوصول ليس خطأَ ساعة**", got, sent)
+	}
+}
+
+// **نقاطُ الطابور قبل آخر تبدّلٍ بالتصحيح القديم** (مراجعةُ ٢٠٢٦-١١-٠٦) — هاتفٌ متأخّرٌ ثلاثَ ساعاتٍ
+// انضبطت ساعتُه مع عودة الشبكة: **نقاطُ ساعةِ الانقطاع انلقطت بالساعة القديمة**، وتصحيحُ لحظة
+// الإرسال (صفر) كان يتركها متأخّرةً ثلاثَ ساعاتٍ فتُرمى.
+func TestClockView_QueueBeforeChangeKeepsOldFix(t *testing.T) {
+	now := time.Date(2026, 11, 6, 9, 0, 0, 0, time.UTC)
+	behind := 3 * time.Hour
+	fixed := clockView{fix: 0, changed: true, prev: behind, changedAt: now}
+	before := now.Add(-40 * time.Minute)
+	if got := fixed.correct(before.Add(-behind)); !got.Equal(before) {
+		t.Errorf("نقطةٌ قبل انضباط الساعة: %v والمتوقّعُ %v", got, before)
+	}
+	after := now.Add(5 * time.Second)
+	if got := fixed.correct(after); !got.Equal(after) {
+		t.Errorf("نقطةٌ بعد انضباط الساعة: %v والمتوقّعُ %v", got, after)
+	}
+	// **وبلا تبدّلٍ كما كان** — والتصحيحُ نفسُه لكلّ النقاط.
+	steady := clockView{fix: behind}
+	if got := steady.correct(before.Add(-behind)); !got.Equal(before) {
+		t.Errorf("بلا تبدّل: %v", got)
+	}
+	// **وساعةٌ خربت (صفر ← ثلاث ساعات)**: الاثنان منطقيّان ⇒ الجديد كما كان.
+	broke := clockView{fix: behind, changed: true, prev: 0, changedAt: now}
+	if got := broke.correct(after.Add(-behind)); !got.Equal(after) {
+		t.Errorf("ساعةٌ خربت: %v والمتوقّعُ %v", got, after)
+	}
+}
+
+// **التصحيحُ يثبت بعد إعادة تشغيل الخادم** (مراجعةُ ٢٠٢٦-١١-٠٦) — كان يُحسب من جديدٍ بزمن وصولٍ
+// آخر، **فدفعةٌ أُعيد إرسالها تُكتب بأوقاتٍ أخرى** ولا يمنعها `ON CONFLICT (driver_id, recorded_at)`.
+func TestDeviceClock_HeldAcrossRestart(t *testing.T) {
+	mr := miniredis.RunT(t)
+	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	t.Cleanup(func() { _ = rdb.Close() })
+	s := &Server{rdb: rdb}
+	driver := "clock-restart-" + time.Now().Format("150405.000000000")
+	t.Cleanup(func() { deviceClocks.Delete(driver) })
+	now := time.Date(2026, 11, 6, 9, 0, 0, 0, time.UTC)
+	req := func(dev time.Time) *http.Request {
+		r := httptest.NewRequest(http.MethodPost, "/driver/location/batch", nil)
+		r.Header.Set(deviceTimeHeader, dev.UTC().Format(time.RFC3339Nano))
+		return r
+	}
+	first := s.deviceClockFix(req(now.Add(-3*time.Hour)), driver, now)
+	if first != 3*time.Hour {
+		t.Fatalf("أوّلُ تصحيح: %v", first)
+	}
+	// **إعادةُ تشغيل**: الذاكرةُ فارغة، والنداءُ التالي بزمن وصولٍ أطولَ باثنتي عشرة ثانية.
+	deviceClocks.Delete(driver)
+	if again := s.deviceClockFix(req(now.Add(-3*time.Hour-12*time.Second)), driver, now); again != first {
+		t.Errorf("بعد إعادة التشغيل صار التصحيحُ %v وكان %v — **دفعةٌ مُعادةٌ تتكرّر نقاطُها**", again, first)
+	}
+}
+
+// **ساعةٌ انضبطت مع عودة الشبكة** (مراجعةُ ٢٠٢٦-١١-٠٦، قاعدة) — الهاتفُ متأخّرٌ ثلاثَ ساعاتٍ
+// ومعروفٌ تصحيحُه، ثمّ انقطع أربعين دقيقة، وانضبطت ساعتُه لحظةَ عودة الشبكة فأفرغ طابورَه:
+// **نقاطُ الانقطاع تُقبل بأوقاتها الحقيقيّة** (كانت تُصحَّح بصفرٍ فتبقى أقدمَ من ساعتين فتُرمى).
+func TestLocationBatch_ClockFixedOnReconnect(t *testing.T) {
+	f := newDriverFixture(t, 1)
+	ctx := context.Background()
+	stamp := func(at time.Time) string { return at.UTC().Format(time.RFC3339) }
+	now := time.Now().Truncate(time.Second)
+	behind := 3 * time.Hour
+	drv := f.drivers[0]
+	single := `{"lat":35.95,"lng":39.01,"recorded_at":"` + stamp(now.Add(-behind-45*time.Minute)) + `"}`
+	if w := f.callDevice(f.srv.handleDriverLocation, "/driver/location", drv, single, stamp(now.Add(-behind))); w.Code != http.StatusOK {
+		t.Fatalf("قبل الانقطاع: %d %s", w.Code, w.Body.String())
+	}
+	type pt struct {
+		Lat float64 `json:"lat"`
+		Lng float64 `json:"lng"`
+		At  string  `json:"at"`
+	}
+	pts := make([]pt, 10)
+	for i := range pts {
+		pts[i] = pt{Lat: 35.95 + float64(i)*0.0003, Lng: 39.01,
+			At: stamp(now.Add(-behind - time.Duration(40-i)*time.Minute))}
+	}
+	body, _ := json.Marshal(map[string]any{"points": pts})
+	w := f.callDevice(f.srv.handleDriverLocationBatch, "/driver/location/batch", drv, string(body), stamp(now))
+	var out struct {
+		Data map[string]int `json:"data"`
+	}
+	_ = json.Unmarshal(w.Body.Bytes(), &out)
+	if w.Code != http.StatusOK || out.Data["accepted"] != 10 {
+		t.Fatalf("الطابور بعد انضباط الساعة: %d %s — والمتوقّعُ قبولُ العشر بأوقاتها", w.Code, w.Body.String())
+	}
+	var oldest time.Time
+	if err := f.pool.QueryRow(ctx, `SELECT min(recorded_at) FROM driver_track WHERE driver_id = $1 AND recorded_at > $2`,
+		drv, now.Add(-42*time.Minute)).Scan(&oldest); err != nil {
+		t.Fatal(err)
+	}
+	if want := now.Add(-40 * time.Minute); oldest.Sub(want).Abs() > 30*time.Second {
+		t.Errorf("أقدمُ نقطةٍ في الطابور %v والمتوقّعُ نحو %v", oldest, want)
 	}
 }
