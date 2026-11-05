@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 629,
+    "routes": 644,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 109,
-    "notify_targeted": 52,
+    "notify_sites": 112,
+    "notify_targeted": 54,
     "publish_rooms": [
       "customer",
       "driver",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 256,
-    "behaviour_settings": 211,
-    "order_fields": 133,
-    "test_files": 704,
-    "test_funcs": 2720
+    "setting_defs": 273,
+    "behaviour_settings": 228,
+    "order_fields": 137,
+    "test_files": 731,
+    "test_funcs": 2825
   },
   "flows": [
     {
@@ -4270,6 +4270,132 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "delivery.share_whatsapp",
+      "group": "drivers",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "delivery.share_whatsapp_mode",
+      "group": "drivers",
+      "kind": "choice",
+      "sensitive": true,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "delivery.whatsapp_base_fee",
+      "group": "drivers",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "delivery.whatsapp_by_distance",
+      "group": "drivers",
+      "kind": "bool",
+      "sensitive": true,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "delivery.whatsapp_max_fee",
+      "group": "drivers",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "delivery.whatsapp_per_km",
+      "group": "drivers",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "drivers.assigned_silence_sec",
       "group": "drivers",
       "kind": "int",
@@ -4485,6 +4611,90 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "drivers.landmarks_daily_quota",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.landmarks_duplicate_radius_m",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.landmarks_remind_on_shift_end",
+      "group": "drivers",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.landmarks_reminder_hour",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "drivers.location_fresh_sec",
       "group": "drivers",
       "kind": "int",
@@ -4595,6 +4805,132 @@
     },
     {
       "key": "drivers.monthly_target",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.odometer_gap_alert_km",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.odometer_gap_alert_pct",
+      "group": "drivers",
+      "kind": "percent",
+      "sensitive": false,
+      "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.odometer_max_jump_km",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.odometer_mode",
+      "group": "drivers",
+      "kind": "choice",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.odometer_off_alert_km",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.odometer_photo_retention_days",
       "group": "drivers",
       "kind": "int",
       "sensitive": false,
@@ -6267,6 +6603,24 @@
     },
     {
       "key": "orders.unattended_auto_accept_min",
+      "group": "dispatch",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.whatsapp_location_followup_min",
       "group": "dispatch",
       "kind": "int",
       "sensitive": false,
@@ -8172,6 +8526,60 @@
       "orphan": true
     },
     {
+      "name": "TestAnalyze_DriveAndNotDrivingAddUp",
+      "file": "internal/drivermonitor/analyze_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
+      "name": "TestAnalyze_GapInsideTenureReported",
+      "file": "internal/drivermonitor/analyze_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
+      "name": "TestAnalyze_OverlappingTenuresSplitEqually",
+      "file": "internal/drivermonitor/analyze_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
+      "name": "TestAnalyze_SpanCountsOnlyInside",
+      "file": "internal/drivermonitor/analyze_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
+      "name": "TestAnalyze_StandingJitterIsNotDriving",
+      "file": "internal/drivermonitor/analyze_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
+      "name": "TestAnalyze_ToPickupThenWithOrder",
+      "file": "internal/drivermonitor/analyze_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
+      "name": "TestIsDrive_Thresholds",
+      "file": "internal/drivermonitor/analyze_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
+      "name": "TestMergeTenures",
+      "file": "internal/drivermonitor/analyze_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
+      "name": "TestShiftTenures_CarriedOnlyWhenEndedInShift",
+      "file": "internal/drivermonitor/analyze_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
       "name": "TestGuard_CleanStagingPasses",
       "file": "internal/envguard/envguard_test.go",
       "package": "envguard",
@@ -9320,6 +9728,12 @@
     {
       "name": "TestExport_OSMAndGeoJSON",
       "file": "internal/maplearn/detect_test.go",
+      "package": "maplearn",
+      "orphan": true
+    },
+    {
+      "name": "TestLandmarkNameMatch",
+      "file": "internal/maplearn/landmark_match_test.go",
       "package": "maplearn",
       "orphan": true
     },
@@ -10773,6 +11187,12 @@
       "orphan": true
     },
     {
+      "name": "TestItemUnavailableKeepsCashRemainder",
+      "file": "internal/orders/item_unavailable_cash_remainder_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
       "name": "TestItemUnavailable_CashPartialQty",
       "file": "internal/orders/item_unavailable_test.go",
       "package": "orders_test",
@@ -11558,6 +11978,12 @@
       "orphan": true
     },
     {
+      "name": "TestSettlementPercent_AfterPickupEditBooksLinesOnly",
+      "file": "internal/orders/settlement_percent_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
       "name": "TestActivation_RepOwnOrdersDoNotCount",
       "file": "internal/orders/settlement_test.go",
       "package": "orders_test",
@@ -11877,6 +12303,24 @@
         "FULL"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestWhatsAppListKindFilter",
+      "file": "internal/orders/whatsapp_list_internal_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestWhatsAppStaffSearchReadsTypedStore",
+      "file": "internal/orders/whatsapp_list_internal_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestWAPointOutsideOnlyWhenKnown",
+      "file": "internal/orders/whatsapp_point_outside_test.go",
+      "package": "orders",
+      "orphan": true
     },
     {
       "name": "TestNC01_SameDayClose",
@@ -15540,6 +15984,12 @@
       "orphan": true
     },
     {
+      "name": "TestCustomerTimelineSkipsSameStatusEvents",
+      "file": "internal/qa/customer_timeline_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestCW01_NewCustomerGetsWelcomeInApp",
       "file": "internal/qa/customer_welcome_test.go",
       "package": "qa",
@@ -16815,6 +17265,42 @@
       "orphan": true
     },
     {
+      "name": "TestDriverMonitor_AlertUsesRealDriving",
+      "file": "internal/qa/driver_distance_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverMonitor_ReleasedOrderIsOrderKm",
+      "file": "internal/qa/driver_distance_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverMonitor_ReturnTripIsOrderKm",
+      "file": "internal/qa/driver_distance_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverMonitor_StoreFailureEndsHold",
+      "file": "internal/qa/driver_distance_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverMonitor_StoreTransferKeepsHold",
+      "file": "internal/qa/driver_distance_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRealDrive_EqualsValidatedSQL",
+      "file": "internal/qa/driver_distance_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestDRV_HISTORY_NoCustomerPhoneOrLocation",
       "file": "internal/qa/driver_history_privacy_test.go",
       "package": "qa",
@@ -16865,6 +17351,132 @@
     {
       "name": "TestDriverMonitor_SameMovesWithAnOrderAreNotSuspicious",
       "file": "internal/qa/driver_monitor_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverMonitor_ShiftCountedOnOneDay",
+      "file": "internal/qa/driver_odometer_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverMonitor_ShiftsOdometerAndFlags",
+      "file": "internal/qa/driver_odometer_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOdometer_CloseNeedsPhotoForNewApp",
+      "file": "internal/qa/driver_odometer_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOdometer_CorrectionAudited",
+      "file": "internal/qa/driver_odometer_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOdometer_ExemptionOneOpen",
+      "file": "internal/qa/driver_odometer_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOdometer_LowerRefusedJumpNeedsConfirm",
+      "file": "internal/qa/driver_odometer_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOdometer_PhotoPurgedNumberKept",
+      "file": "internal/qa/driver_odometer_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOdometer_ReadingCarriesNoLocation",
+      "file": "internal/qa/driver_odometer_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOdometer_ReadingSurvivesRejectedOpen",
+      "file": "internal/qa/driver_odometer_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOdometer_RequireOnlyForCapableApps",
+      "file": "internal/qa/driver_odometer_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOdometer_UploadValidation",
+      "file": "internal/qa/driver_odometer_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAccountDeletion_ShiftCloseFailureStillRevokes",
+      "file": "internal/qa/driver_shifts_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverMe_TodayDriveFollowsAccountDay",
+      "file": "internal/qa/driver_shifts_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOrderDrive_ClosedShiftNeverLeavesOpenRow",
+      "file": "internal/qa/driver_shifts_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOrderDrive_HoldsAcrossShifts",
+      "file": "internal/qa/driver_shifts_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOrderDrive_LatePointsThenFrozen",
+      "file": "internal/qa/driver_shifts_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOrderDrive_StoredAndShown",
+      "file": "internal/qa/driver_shifts_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestShifts_ConcurrentClosesWriteOneRow",
+      "file": "internal/qa/driver_shifts_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestShifts_StaleOpenRowClosedOnNextOpen",
+      "file": "internal/qa/driver_shifts_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestShifts_SystemPathsCloseWithReason",
+      "file": "internal/qa/driver_shifts_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestShifts_ToggleOpensAndClosesRow",
+      "file": "internal/qa/driver_shifts_test.go",
       "package": "qa",
       "orphan": true
     },
@@ -18714,6 +19326,132 @@
       "orphan": true
     },
     {
+      "name": "TestAdminLandmarkCount",
+      "file": "internal/qa/landmark_admin_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAdminLandmarkSuggestions_DefaultStillPending",
+      "file": "internal/qa/landmark_admin_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestAdminLandmarksDaily",
+      "file": "internal/qa/landmark_admin_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLandmarkMigration_DropsStatusCheckWhateverItsName",
+      "file": "internal/qa/landmark_quota_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLandmark_DetailsAreAllStrings",
+      "file": "internal/qa/landmark_quota_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLandmark_DuplicateOfMapLandmark",
+      "file": "internal/qa/landmark_quota_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLandmark_DuplicateOfOtherDriverPending",
+      "file": "internal/qa/landmark_quota_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLandmark_DuplicateOfOurStore",
+      "file": "internal/qa/landmark_quota_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLandmark_DuplicateOfOwnPending",
+      "file": "internal/qa/landmark_quota_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLandmark_ExactNameOfUnclassedMapLandmark",
+      "file": "internal/qa/landmark_quota_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLandmark_FarOrDifferentCounts",
+      "file": "internal/qa/landmark_quota_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLandmark_OwnRepeatWithOtherKind",
+      "file": "internal/qa/landmark_quota_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLandmark_RejectedIsNotExisting",
+      "file": "internal/qa/landmark_quota_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLandmark_RepeatedDuplicateTapWritesOneRow",
+      "file": "internal/qa/landmark_quota_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLandmark_StalePointFixedFromTrack",
+      "file": "internal/qa/landmark_quota_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLandmarkOwnerDigest_OncePerDay",
+      "file": "internal/qa/landmark_reminder_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLandmarkReminder_HourBeforeDayStart",
+      "file": "internal/qa/landmark_reminder_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLandmarkReminder_HourCatchUpEndsAtMidnight",
+      "file": "internal/qa/landmark_reminder_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLandmarkReminder_HourOncePerDay",
+      "file": "internal/qa/landmark_reminder_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLandmarkReminder_ShiftEnd",
+      "file": "internal/qa/landmark_reminder_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverLandmarksToday",
+      "file": "internal/qa/landmark_today_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestLM1_OrderingClosedWhileBrowsingOpen",
       "file": "internal/qa/launch_mode_test.go",
       "package": "qa",
@@ -18903,6 +19641,12 @@
     {
       "name": "TestLoadChaos",
       "file": "internal/qa/load_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestLocReqOneMessageForEveryFlow",
+      "file": "internal/qa/location_message_test.go",
       "package": "qa",
       "orphan": true
     },
@@ -24840,6 +25584,24 @@
       "orphan": true
     },
     {
+      "name": "TestCommissionChangeAfterPickupStillDelivers",
+      "file": "internal/qa/settlement_percent_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestCommissionShownAtSettledPercent",
+      "file": "internal/qa/settlement_percent_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSettlementPercentBackfill",
+      "file": "internal/qa/settlement_percent_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestSU01_ExistingAccountsAreNotTakenOverWhenVerifyIsOff",
       "file": "internal/qa/signup_takeover_test.go",
       "package": "qa",
@@ -25985,6 +26747,12 @@
       "orphan": false
     },
     {
+      "name": "TestTransferResnapshotsSettlementMethod",
+      "file": "internal/qa/transfer_settlement_method_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestXG48_CustomerCancelNeedsOneConnection",
       "file": "internal/qa/transition_one_conn_test.go",
       "package": "qa",
@@ -26712,6 +27480,180 @@
     {
       "name": "TestWebPush_NewOrderReachesMerchantBrowser",
       "file": "internal/qa/webpush_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD021_DriverNeverGetsRecipientPhone",
+      "file": "internal/qa/whatsapp_driver_phone_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD027_LocationRequestBoundToRecipientPhone",
+      "file": "internal/qa/whatsapp_location_review_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD028_EarlyPointOutsideCoverage",
+      "file": "internal/qa/whatsapp_location_review_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD029_ArrivedPointMovesOrderZone",
+      "file": "internal/qa/whatsapp_location_review_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD030_SweepWritesALostLocation",
+      "file": "internal/qa/whatsapp_location_review_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD031_ListKeepsOpenOrdersFirst",
+      "file": "internal/qa/whatsapp_location_review_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD023_LocationRequestFromForm",
+      "file": "internal/qa/whatsapp_location_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD024_NoPointThenLocationArrives",
+      "file": "internal/qa/whatsapp_location_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD025_FollowUpOnceForOfficeRequests",
+      "file": "internal/qa/whatsapp_location_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD026_OfficeEditsAddress",
+      "file": "internal/qa/whatsapp_location_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD001_CreateGoesStraightToDrivers",
+      "file": "internal/qa/whatsapp_orders_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD002_OldDriverAppReadsTypedStore",
+      "file": "internal/qa/whatsapp_orders_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD003_RegisteredStoreIsCopiedNotLinked",
+      "file": "internal/qa/whatsapp_orders_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD004_DeliveredMovesOnlyTheFee",
+      "file": "internal/qa/whatsapp_orders_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD005_OpsCancelBeforePickup",
+      "file": "internal/qa/whatsapp_orders_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD005b_CancelRouteBeforePickupOnly",
+      "file": "internal/qa/whatsapp_orders_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD006_DoorFailureChargesNoStore",
+      "file": "internal/qa/whatsapp_orders_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD007_StoreClosedCompensationIsApprovable",
+      "file": "internal/qa/whatsapp_orders_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD008_FeeOverrideBoundsAndAudit",
+      "file": "internal/qa/whatsapp_orders_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD009_Permission",
+      "file": "internal/qa/whatsapp_orders_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD010_Validation",
+      "file": "internal/qa/whatsapp_orders_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD011_Idempotent",
+      "file": "internal/qa/whatsapp_orders_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD012_ListFilterSearchExportReport",
+      "file": "internal/qa/whatsapp_orders_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD013_DriverMonitorCountsIt",
+      "file": "internal/qa/whatsapp_orders_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD014_NoFreeDeliveryClaim",
+      "file": "internal/qa/whatsapp_orders_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD016_OpsViewAndOfferSayWhatsApp",
+      "file": "internal/qa/whatsapp_orders_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD_FI06e_OnlyTheFeeMoves",
+      "file": "internal/qa/whatsapp_orders_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWhatsAppFeeFromStorePoint",
+      "file": "internal/qa/whatsapp_orders_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD022_OwnSettingsCopiedByMigration",
+      "file": "internal/qa/whatsapp_settings_test.go",
       "package": "qa",
       "orphan": true
     },
@@ -29052,6 +29994,18 @@
       "orphan": true
     },
     {
+      "name": "TestLandmark_CountUsesPlatformDay",
+      "file": "internal/server/landmark_quota_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestLandmarkReminder_ShiftEndCountsTimeInsideToday",
+      "file": "internal/server/landmark_remind_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestLeadAddress_StreetCityDistrict",
       "file": "internal/server/lead_address_test.go",
       "package": "server",
@@ -29666,6 +30620,18 @@
     {
       "name": "TestTransfer_MappingValidation",
       "file": "internal/server/order_transfer_mapping_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestExternalStoreAtPickupNotReclaimed",
+      "file": "internal/server/order_transfer_reclaim_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestTransferAtPickupNotReclaimed",
+      "file": "internal/server/order_transfer_reclaim_test.go",
       "package": "server",
       "orphan": true
     },
@@ -30720,6 +31686,18 @@
       "orphan": true
     },
     {
+      "name": "TestWhatsAppExportKindLabel",
+      "file": "internal/server/whatsapp_reports_internal_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestWhatsAppReportKind",
+      "file": "internal/server/whatsapp_reports_internal_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestWSOrigins_DevelopmentStaysLocal",
       "file": "internal/server/ws_origin_test.go",
       "package": "server",
@@ -30921,6 +31899,12 @@
       "name": "TestShowWhen_PointsAtRealKeysAndValues",
       "file": "internal/settings/single_source_test.go",
       "package": "settings_test",
+      "orphan": true
+    },
+    {
+      "name": "TestShifts_NoDirectOnShiftWrites",
+      "file": "internal/shifts/guard_test.go",
+      "package": "shifts",
       "orphan": true
     },
     {

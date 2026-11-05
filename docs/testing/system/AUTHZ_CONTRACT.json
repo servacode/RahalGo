@@ -29,12 +29,12 @@
   {
    "code": "drivers.manage",
    "description": "إدارة السائقين وتشغيلهم",
-   "guards_routes": 3
+   "guards_routes": 4
   },
   {
    "code": "drivers.monitor",
    "description": "مراقبة حركة السائقين اليومية: الكيلومترات والوقفات والانقطاع",
-   "guards_routes": 2
+   "guards_routes": 3
   },
   {
    "code": "drivers.read",
@@ -134,7 +134,12 @@
   {
    "code": "orders.read",
    "description": "قراءة الطلبات ولوحة العمليات",
-   "guards_routes": 32
+   "guards_routes": 34
+  },
+  {
+   "code": "orders.whatsapp",
+   "description": "طلبات الواتساب: إنشاؤها وإلغاؤها قبل الاستلام",
+   "guards_routes": 9
   },
   {
    "code": "payouts.decide",
@@ -267,7 +272,7 @@
   }
  ],
  "route_policy": {
-  "rules": 334,
+  "rules": 347,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",
@@ -292,6 +297,7 @@
    "orders.communications.read",
    "orders.intervene",
    "orders.read",
+   "orders.whatsapp",
    "payouts.decide",
    "platform.overview",
    "roles.manage",

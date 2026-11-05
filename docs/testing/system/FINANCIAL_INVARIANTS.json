@@ -62,7 +62,8 @@
         "FI-06.a",
         "FI-06.d",
         "FI-06.b",
-        "FI-06.c"
+        "FI-06.c",
+        "FI-06.e"
       ]
     },
     {
@@ -599,6 +600,22 @@
       "flows": [
         "F-01",
         "F-07"
+      ]
+    },
+    {
+      "id": "FI-06.e",
+      "family": "FI-06",
+      "name": "طلبُ الواتساب لا يحرّك إلّا الأجرة",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-14"
+      ],
+      "kinds": [
+        "driver_earning",
+        "platform_profit",
+        "compensation",
+        "platform_expense"
       ]
     },
     {
@@ -1590,8 +1607,8 @@
   ],
   "counts": {
     "families": 15,
-    "checks": 85,
-    "provable_now": 79,
+    "checks": 86,
+    "provable_now": 80,
     "not_implemented": 3,
     "deferred_p5": 1,
     "deferred_p6": 2,
@@ -1608,6 +1625,10 @@
     "delivery.merchant_by_distance",
     "delivery.merchant_per_km",
     "delivery.merchant_max_fee",
+    "delivery.whatsapp_base_fee",
+    "delivery.whatsapp_by_distance",
+    "delivery.whatsapp_per_km",
+    "delivery.whatsapp_max_fee",
     "delivery.per_km",
     "delivery.max_fee",
     "delivery.by_distance",
@@ -1643,6 +1664,8 @@
     "delivery.share_purchase_mode",
     "delivery.share_amanah",
     "delivery.share_amanah_mode",
+    "delivery.share_whatsapp",
+    "delivery.share_whatsapp_mode",
     "delivery.custom_fee_amanah",
     "delivery.custom_fee_min",
     "delivery.custom_fee_max",

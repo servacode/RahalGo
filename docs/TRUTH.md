@@ -941,6 +941,7 @@ kosom` |
 ومنه يُسنَد إليك أقربُ طلب، ويرى الزبونُ أين طلبُه على الخريطة، وتُحسب المسافةُ وأجرتُها.
 ويقف الجمعُ فور إغلاق ورديّتك، ولك أن ترفض الإذنَ فلا تصلك طلبات.
 ولا يُشارَك موقعُك مع أحدٍ خارج المنصّة، ويراه الزبونُ نقطةً على خريطة طلبه ما دام طلبُه قائماً.
+وعند فتح الورديّة وإغلاقها يصوّر السائقُ عدّادَ درّاجته ويكتب رقمَه، والصورةُ تُحفظ بلا موقع.
 
 من يرى بياناتك
 السائقُ يرى اسمَك ورقمَك وعنوانَ التسليم — ولا يرى سجلَّ طلباتك ولا محفظتك. وبعد أن ينتهي الطلبُ لا يبقى له إليك سبيل.
@@ -1016,6 +1017,7 @@ kosom` |
 لا تصلك طلباتٌ إلّا وورديّتُك مفتوحةٌ وموقعُك يعمل.
 ويُعرض الطلبُ عليك بمهلة قبول، فإن تركتها انتقل إلى غيرك.
 وتحفظ المنصّةُ موقعَك ما دمتَ على الدوام ثلاثين يوماً لحماية الخدمة ومنع الاحتيال.
+وعند فتح الورديّة وعند إغلاقها تصوّر عدّادَ درّاجتك وتكتب رقمَه كما هو، وتحسب المنصّةُ المسافةَ التي تقطعها في كلّ طلبٍ وفي يومك.
 
 التسليمُ وإثباتُه
 تعلن كلَّ خطوةٍ في وقتها: الوصولَ إلى المتجر، والاستلامَ، والوصولَ إلى الزبون، والتسليم.
@@ -1080,6 +1082,7 @@ kosom` |
 اسمَك ورقمَ هاتفك — بهما يُعرف حسابُك.
 وموقعَ جهازك ما دامت ورديّتُك مفتوحة — ويُجمع أيضاً والتطبيقُ مغلقٌ أو الشاشةُ مطفأة، لأنّك تقود والهاتفُ في جيبك.
 وصورَ إثبات التسليم، وسجلَّ توصيلاتك وصندوقك ومحفظتك.
+وصورةَ عدّاد درّاجتك ورقمَه عند فتح الورديّة وإغلاقها — بلا موقع — والمسافةَ التي تقطعها في كلّ طلبٍ وفي يومك؛ تُحفظ الصورةُ تسعين يوماً ثمّ تُمحى، ويبقى الرقم.
 
 لماذا الموقع
 منه يُعرض عليك أقربُ طلب، ويرى الزبونُ أين طلبُه، وتُحسب المسافة.
@@ -1090,6 +1093,7 @@ kosom` |
 الزبونُ يرى اسمَك وموقعَك نقطةً على خريطة طلبه ما دام طلبُه قائماً، ويستطيع الاتّصالَ بك خلاله.
 والمتجرُ يرى اسمَك حين تستلم منه.
 وموظفو المنصّة يرون موقعَك ومسارَ تنقّلك وتوصيلاتك وصندوقك لمتابعة العمل ومنع الاحتيال، وكلُّ ما يفعلونه مسجَّلٌ بأسمائهم.
+وصورُ العدّاد يراها مالكُ المنصّة ومديرُها وحدَهما.
 
 ولا نبيع شيئاً
 لا نبيع بياناتك ولا مسارات تنقّلك لأحد.
@@ -1113,6 +1117,7 @@ kosom` |
 وللتواصل: {phone}` |
 | `page.driver_help_text` |  | longtext | `كيف أبدأ ورديّتي؟
 افتح «لوحتي» ثمّ شغّل مفتاح الورديّة — ولا تصلك طلباتٌ وأنت منصرف.
+وعند تشغيل المفتاح يطلب منك التطبيقُ صورةَ عدّاد الدرّاجة ورقمَه، وعند إطفائه كذلك.
 وموقعُك يجب أن يكون مفتوحاً: الطلبُ يُسنَد بالقرب من المتجر، ومن أطفأ موقعَه خرج من الحساب.
 
 كيف تصلني الطلبات؟
@@ -1240,6 +1245,7 @@ kosom` |
 | `orders.auto_accept_min` | التوزيع والتنبيهات | int | `0` |
 | `orders.unattended_auto_accept_min` | التوزيع والتنبيهات | int | `10` |
 | `orders.no_whatsapp_dispatch_min` | التوزيع والتنبيهات | int | `2` |
+| `orders.whatsapp_location_followup_min` | التوزيع والتنبيهات | int | `3` |
 | `orders.staff_presence_min` | التوزيع والتنبيهات | int | `5` |
 | `orders.manual_assign_after_min` | التوزيع والتنبيهات | int | `10` |
 | `ops.stuck_reminder_min` | التوزيع والتنبيهات | int | `15` |
@@ -1252,6 +1258,16 @@ kosom` |
 | `drivers.location_ping_active_sec` | السائقون | int | `4` |
 | `drivers.trail_retention_days` | السائقون | int | `30` |
 | `drivers.monitor_km_alert` | السائقون | int | `10` |
+| `drivers.landmarks_daily_quota` | السائقون | int | `5` |
+| `drivers.landmarks_duplicate_radius_m` | السائقون | int | `100` |
+| `drivers.landmarks_reminder_hour` | السائقون | int | `18` |
+| `drivers.landmarks_remind_on_shift_end` | السائقون | bool | `true` |
+| `drivers.odometer_mode` | السائقون | choice | `require` |
+| `drivers.odometer_max_jump_km` | السائقون | int | `150` |
+| `drivers.odometer_gap_alert_km` | السائقون | int | `5` |
+| `drivers.odometer_gap_alert_pct` | السائقون | percent | `20` |
+| `drivers.odometer_off_alert_km` | السائقون | int | `1` |
+| `drivers.odometer_photo_retention_days` | السائقون | int | `90` |
 | `drivers.direct_assign` | السائقون | bool | `false` |
 | `delivery.fee` | السائقون | money | `0` |
 | `delivery.merchant_fee` | السائقون | money | `0` |
@@ -1259,6 +1275,10 @@ kosom` |
 | `delivery.merchant_by_distance` | السائقون | bool | `false` |
 | `delivery.merchant_per_km` | السائقون | money | `0` |
 | `delivery.merchant_max_fee` | السائقون | money | `0` |
+| `delivery.whatsapp_base_fee` | السائقون | money | `0` |
+| `delivery.whatsapp_by_distance` | السائقون | bool | `false` |
+| `delivery.whatsapp_per_km` | السائقون | money | `0` |
+| `delivery.whatsapp_max_fee` | السائقون | money | `0` |
 | `delivery.merchant_debt_open` | السائقون | bool | `true` |
 | `delivery.by_distance` | السائقون | bool | `false` |
 | `delivery.share_standard_mode` | السائقون | choice | `percent` |
@@ -1269,6 +1289,8 @@ kosom` |
 | `delivery.share_purchase` | السائقون | money | `0` |
 | `delivery.share_amanah_mode` | السائقون | choice | `percent` |
 | `delivery.share_amanah` | السائقون | money | `0` |
+| `delivery.share_whatsapp_mode` | السائقون | choice | `percent` |
+| `delivery.share_whatsapp` | السائقون | money | `0` |
 | `delivery.per_km` | السائقون | money | `0` |
 | `delivery.max_fee` | السائقون | money | `0` |
 | `delivery.custom_fee_source` | السائقون | choice | `driver_defined` |

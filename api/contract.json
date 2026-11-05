@@ -1383,6 +1383,10 @@
           "type": "unknown"
         },
         {
+          "name": "day_start_hour",
+          "type": "unknown"
+        },
+        {
           "name": "drivers",
           "type": "unknown"
         },
@@ -1392,6 +1396,10 @@
         },
         {
           "name": "retention_days",
+          "type": "unknown"
+        },
+        {
+          "name": "today",
           "type": "unknown"
         }
       ],
@@ -1427,6 +1435,10 @@
           "type": "unknown"
         },
         {
+          "name": "odometer",
+          "type": "unknown"
+        },
+        {
           "name": "orders",
           "type": "unknown"
         },
@@ -1435,11 +1447,49 @@
           "type": "unknown"
         },
         {
+          "name": "shifts",
+          "type": "unknown"
+        },
+        {
           "name": "stores",
           "type": "unknown"
         },
         {
           "name": "summary",
+          "type": "unknown"
+        },
+        {
+          "name": "today",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/driver-odometer/{id}",
+      "handler": "handleAdminOdometerCorrect",
+      "auth": true,
+      "capability": "drivers.monitor",
+      "request": [
+        {
+          "name": "km",
+          "type": "any"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "id",
+          "type": "unknown"
+        },
+        {
+          "name": "km",
           "type": "unknown"
         }
       ],
@@ -1527,6 +1577,28 @@
         {
           "name": "on_shift",
           "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/drivers/{id}/odometer-exemption",
+      "handler": "handleAdminOdometerExemption",
+      "auth": true,
+      "capability": "drivers.manage",
+      "request": [
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "exemption_id",
+          "type": "unknown"
         }
       ],
       "statuses": [
@@ -3727,11 +3799,25 @@
       "capability": "orders.read"
     },
     {
+      "method": "GET",
+      "path": "/api/v1/admin/ops-map/landmark-suggestions/count",
+      "handler": "requirePerm",
+      "auth": true,
+      "capability": "orders.read"
+    },
+    {
       "method": "POST",
       "path": "/api/v1/admin/ops-map/landmark-suggestions/{id}/decide",
       "handler": "requirePerm",
       "auth": true,
       "capability": "settings.general.manage"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ops-map/landmarks/daily",
+      "handler": "requirePerm",
+      "auth": true,
+      "capability": "orders.read"
     },
     {
       "method": "GET",
@@ -6816,6 +6902,248 @@
       "capability": "settings.security.manage"
     },
     {
+      "method": "GET",
+      "path": "/api/v1/admin/whatsapp-orders",
+      "handler": "handleListWhatsAppOrders",
+      "auth": true,
+      "capability": "orders.whatsapp",
+      "response": [
+        {
+          "name": "orders",
+          "type": "array"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/whatsapp-orders",
+      "handler": "handleCreateWhatsAppOrder",
+      "auth": true,
+      "capability": "orders.whatsapp",
+      "idempotent": true,
+      "request": [
+        {
+          "name": "store_id",
+          "type": "string"
+        },
+        {
+          "name": "store_name",
+          "type": "string"
+        },
+        {
+          "name": "store_phone",
+          "type": "string"
+        },
+        {
+          "name": "store_address",
+          "type": "string"
+        },
+        {
+          "name": "store_lat",
+          "type": "?float64"
+        },
+        {
+          "name": "store_lng",
+          "type": "?float64"
+        },
+        {
+          "name": "details",
+          "type": "string"
+        },
+        {
+          "name": "goods_amount",
+          "type": "?float64"
+        },
+        {
+          "name": "amount_currency",
+          "type": "string"
+        },
+        {
+          "name": "recipient_name",
+          "type": "string"
+        },
+        {
+          "name": "recipient_phone",
+          "type": "string"
+        },
+        {
+          "name": "address_text",
+          "type": "string"
+        },
+        {
+          "name": "lat",
+          "type": "?float64"
+        },
+        {
+          "name": "lng",
+          "type": "?float64"
+        },
+        {
+          "name": "driver_note",
+          "type": "string"
+        },
+        {
+          "name": "fee",
+          "type": "?int64"
+        },
+        {
+          "name": "location_request_id",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/whatsapp-orders/location-requests",
+      "handler": "handleWhatsAppRequestLocation",
+      "auth": true,
+      "capability": "orders.whatsapp",
+      "request": [
+        {
+          "name": "phone",
+          "type": "string"
+        },
+        {
+          "name": "store_name",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "@locReqSend",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/whatsapp-orders/location-requests/{id}",
+      "handler": "handleWhatsAppLocationRequest",
+      "auth": true,
+      "capability": "orders.whatsapp",
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/whatsapp-orders/quote",
+      "handler": "handleWhatsAppQuote",
+      "auth": true,
+      "capability": "orders.whatsapp",
+      "response": [
+        {
+          "name": "@q",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/whatsapp-orders/resolve-location",
+      "handler": "handleWhatsAppResolveLocation",
+      "auth": true,
+      "capability": "orders.whatsapp",
+      "request": [
+        {
+          "name": "url",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "found",
+          "type": "bool"
+        },
+        {
+          "name": "lat",
+          "type": "unknown"
+        },
+        {
+          "name": "lng",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/whatsapp-orders/stores",
+      "handler": "handleWhatsAppStores",
+      "auth": true,
+      "capability": "orders.whatsapp",
+      "response": [
+        {
+          "name": "stores",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/whatsapp-orders/{id}/address",
+      "handler": "handleWhatsAppOrderAddress",
+      "auth": true,
+      "capability": "orders.whatsapp",
+      "request": [
+        {
+          "name": "address_text",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "order",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/whatsapp-orders/{id}/cancel",
+      "handler": "handleCancelWhatsAppOrder",
+      "auth": true,
+      "capability": "orders.whatsapp",
+      "request": [
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "order",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "POST",
       "path": "/api/v1/admin/whatsapp/pair",
       "handler": "inline",
@@ -7684,12 +8012,62 @@
       ],
       "response": [
         {
+          "name": "counted",
+          "type": "bool"
+        },
+        {
+          "name": "day",
+          "type": "unknown"
+        },
+        {
           "name": "id",
+          "type": "unknown"
+        },
+        {
+          "name": "notice",
+          "type": "unknown"
+        },
+        {
+          "name": "point_from_ping",
+          "type": "unknown"
+        },
+        {
+          "name": "quota",
           "type": "unknown"
         },
         {
           "name": "status",
           "type": "string"
+        },
+        {
+          "name": "today",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/driver/landmarks/today",
+      "handler": "handleDriverLandmarksToday",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "response": [
+        {
+          "name": "day",
+          "type": "unknown"
+        },
+        {
+          "name": "quota",
+          "type": "unknown"
+        },
+        {
+          "name": "today",
+          "type": "unknown"
         }
       ],
       "statuses": [
@@ -7792,6 +8170,32 @@
       ],
       "statuses": [
         "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/driver/odometer",
+      "handler": "handleDriverOdometer",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "response": [
+        {
+          "name": "check",
+          "type": "unknown"
+        },
+        {
+          "name": "id",
+          "type": "unknown"
+        },
+        {
+          "name": "km",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
       ]
     },
     {
@@ -8325,6 +8729,18 @@
       "request": [
         {
           "name": "on",
+          "type": "bool"
+        },
+        {
+          "name": "via",
+          "type": "string"
+        },
+        {
+          "name": "odometer_id",
+          "type": "string"
+        },
+        {
+          "name": "odometer_capable",
           "type": "bool"
         }
       ],
@@ -9259,31 +9675,7 @@
       ],
       "response": [
         {
-          "name": "expires_at",
-          "type": "unknown"
-        },
-        {
-          "name": "id",
-          "type": "unknown"
-        },
-        {
-          "name": "link",
-          "type": "unknown"
-        },
-        {
-          "name": "share_text",
-          "type": "unknown"
-        },
-        {
-          "name": "status",
-          "type": "string"
-        },
-        {
-          "name": "wa_url",
-          "type": "unknown"
-        },
-        {
-          "name": "whatsapp_sent",
+          "name": "@locReqSend",
           "type": "unknown"
         }
       ],
@@ -9946,31 +10338,7 @@
       ],
       "response": [
         {
-          "name": "expires_at",
-          "type": "unknown"
-        },
-        {
-          "name": "id",
-          "type": "unknown"
-        },
-        {
-          "name": "link",
-          "type": "unknown"
-        },
-        {
-          "name": "share_text",
-          "type": "unknown"
-        },
-        {
-          "name": "status",
-          "type": "string"
-        },
-        {
-          "name": "wa_url",
-          "type": "unknown"
-        },
-        {
-          "name": "whatsapp_sent",
+          "name": "@locReqSend",
           "type": "unknown"
         }
       ],
