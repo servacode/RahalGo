@@ -186,6 +186,8 @@ class ApiClient(
         method: HttpMethod = HttpMethod.Get,
         body: Any? = null,
         idempotencyKey: String? = null,
+        /** **ساعةُ الجهاز لحظةَ الإرسال** — انظر [DEVICE_TIME_HEADER]. */
+        deviceTime: Boolean = false,
     ): T {
         // ══════════════════════════════════════════════════════════════
         // **ولا يُنادى بابٌ مصادَقٌ بلا جلسة**
@@ -204,7 +206,7 @@ class ApiClient(
             throw ApiException(401, ApiErrorBody(code = "not_signed_in"))
         }
         try {
-            return raw(path, method, body, idempotencyKey, session.accessToken())
+            return raw(path, method, body, idempotencyKey, session.accessToken(), deviceTime)
         } catch (e: ApiException) {
             if (e.status != 401 || session.refreshToken().isEmpty()) {
                 // ══════════════════════════════════════════════════════════
@@ -253,7 +255,7 @@ class ApiClient(
                 throw re
             }
             try {
-                return raw(path, method, body, idempotencyKey, session.accessToken())
+                return raw(path, method, body, idempotencyKey, session.accessToken(), deviceTime)
             } catch (again: ApiException) {
                 // **وجلسةٌ جُدّدت ثمّ رُفضت في النداء نفسِه ماتت كذلك** — أُزيحت
                 // بين التجديد والإعادة. **كانت تُرمى صامتةً** فتبقى الشاشةُ
@@ -295,6 +297,7 @@ class ApiClient(
         body: Any?,
         idempotencyKey: String?,
         token: String,
+        deviceTime: Boolean = false,
     ): HttpResponse = http.request(baseUrl + path) {
         this.method = method
         header(CLIENT_HEADER, client)
@@ -303,6 +306,9 @@ class ApiClient(
         // **ومفتاح منع التكرار حيث يُطلب** — النقاط التي تكتب مالا
         // (انظر `server/idempotency.go` و`api/contract.json`).
         if (idempotencyKey != null) header("Idempotency-Key", idempotencyKey)
+        // **وساعةُ الجهاز تُختَم هنا لا عند بناء الجسم** — لحظةَ خروج النداء نفسِه، فلا يدخل
+        // في الفرق وقتُ تجديد التوكن ولا انتظارُ الطابور.
+        if (deviceTime) header(DEVICE_TIME_HEADER, deviceTimeNow())
         if (body != null) {
             contentType(ContentType.Application.Json)
             setBody(body)
@@ -316,12 +322,13 @@ class ApiClient(
         body: Any? = null,
         idempotencyKey: String? = null,
         token: String = "",
+        deviceTime: Boolean = false,
     ): T {
         if (passwordChangePending && !allowedWhilePasswordPending(path)) {
             throw ApiException(403, ApiErrorBody(code = "password_change_required"))
         }
         val res: HttpResponse = try {
-            send(path, method, body, idempotencyKey, token)
+            send(path, method, body, idempotencyKey, token, deviceTime)
         } catch (e: io.ktor.client.plugins.HttpRequestTimeoutException) {
             dropDeadConnections()
             throw e
@@ -342,7 +349,7 @@ class ApiClient(
                 throw e
             }
             try {
-                send(path, method, body, idempotencyKey, token)
+                send(path, method, body, idempotencyKey, token, deviceTime)
             } catch (e2: java.io.IOException) {
                 dropDeadConnections()
                 throw e2
@@ -648,6 +655,23 @@ class ApiClient(
          * تحليلَ نوع العميل** في المحرّك (`client_kind`).
          */
         const val VERSION_HEADER = "X-RahalGo-Version"
+
+        /**
+         * ══════════════════════════════════════════════════════════════
+         * **ساعةُ الجهاز لحظةَ الإرسال** (نسخة السائق 0.9.0، ٢٠٢٦-١١-٠٥)
+         * ══════════════════════════════════════════════════════════════
+         *
+         * **وقتُ نقطة الموقع من ساعة الهاتف** — وهاتفٌ ساعتُه متأخّرةٌ ساعةً يُكتب موضعُه
+         * قديماً فلا يُعرض عليه طلب. **فيُرسَل مع ندائَي الموقع وحدَهما** ما تقوله ساعتُه الآن،
+         * **والمحرّكُ يصحّح الفرق** (`server/driver_clock.go`). والنسخُ القديمة لا ترسله فلا يتغيّر
+         * لها شيء.
+         */
+        const val DEVICE_TIME_HEADER = "X-Device-Time"
+
+        /** **ساعةُ الجهاز الآن** بصيغة `ISO-8601` — كما يُكتب وقتُ النقطة نفسُها. */
+        @PublishedApi
+        internal fun deviceTimeNow(): String =
+            java.time.Instant.ofEpochMilli(System.currentTimeMillis()).toString()
     }
 }
 

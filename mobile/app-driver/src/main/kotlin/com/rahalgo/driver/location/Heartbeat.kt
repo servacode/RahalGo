@@ -39,8 +39,29 @@ internal object Heartbeat {
         REFRESH,
     }
 
+    /** **أقصرُ نومٍ للنبضة** — لا تدور الحلقةُ بلا نوم. */
+    const val MIN_WAIT_MS = 1_000L
+
+    /** **أتمّ الصمتُ دقيقتين؟** — فهذه نظرةُ نبضةٍ لا صحوةٌ مبكّرة. */
+    fun due(nowMs: Long, lastSentMs: Long): Boolean = nowMs - lastSentMs >= EVERY_MS
+
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **كم تنام النبضة — من آخر إرسالٍ لا على دورتها** (A6.5، 0.9.0)
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * **كانت تنام دقيقتين ثابتتين على دورتها هي** — فإن وصلت نقطةٌ بعد صحوتها بثانيةٍ لم
+     * يتمّ الصمتُ عند الصحوة التالية، **فيُسمع الواقفُ بعد آخر نقطةٍ بدقيقتين إلى أربع**
+     * (ولذلك وسّعت خريطةُ العمليات «حيّ» إلى ٢٧٠ ثانية).
+     *
+     * **والآن تصحو حين يتمّ الصمتُ دقيقتين بالضبط** — بعد آخر إرسالٍ أو آخر نبضةٍ، أيّهما أحدث:
+     * **فنبضةٌ لم تجد موضعاً حيّاً لا تُعاد قبل دقيقتين** (لا تُوقظ عتادَ الموقع كلَّ ثانية).
+     */
+    fun waitMs(nowMs: Long, lastSentMs: Long, lastBeatMs: Long): Long =
+        (maxOf(lastSentMs, lastBeatMs) + EVERY_MS - nowMs).coerceIn(MIN_WAIT_MS, EVERY_MS)
+
     fun decide(nowMs: Long, lastSentMs: Long, point: LastPoint.Point?): Act {
-        if (nowMs - lastSentMs < EVERY_MS) return Act.WAIT
+        if (!due(nowMs, lastSentMs)) return Act.WAIT
         if (point == null) return Act.REFRESH
         if (point.mocked) return Act.WAIT
         // **وموضعٌ بلا وقتٍ عمرُه مجهول** — لا يُعاد على أنّه حيّ.
