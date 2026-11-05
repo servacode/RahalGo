@@ -56,6 +56,12 @@ data class OdometerAsk(
     val error: String = "",
     /** **قفزةٌ كبيرةٌ تنتظر تأكيده** — نصُّ السؤال، وفارغٌ لا سؤال. */
     val confirm: String? = null,
+    /** **زرُّ «بدّلت الدرّاجة» معروض** (`OdometerFlow.bikeChangeOffered`) — قرارُ المالك ٢٠٢٦-١١-٠٦. */
+    val bikeOffer: Boolean = false,
+    /** **سؤالُ «بدّلت الدرّاجة؟» مفتوح.** */
+    val bikeAsk: Boolean = false,
+    /** **أكّد التبديل** — الرقمُ يُرسل بعلامة `bike_change`. */
+    val bikeChange: Boolean = false,
 )
 
 data class OdometerActions(
@@ -65,6 +71,10 @@ data class OdometerActions(
     /** **أُغلق سؤالُ التأكيد ليعدّل الرقم.** */
     val fix: () -> Unit,
     val cameraDenied: () -> Unit,
+    /** **«بدّلت الدرّاجة / العدّاد»**: يفتح السؤال · يؤكّده · يغلقه. */
+    val bikeAsk: () -> Unit = {},
+    val bikeConfirm: () -> Unit = {},
+    val bikeCancel: () -> Unit = {},
 )
 
 @Composable
@@ -92,6 +102,20 @@ fun OdometerSheet(ask: OdometerAsk, actions: OdometerActions) {
         )
     }
 
+    if (ask.bikeAsk) {
+        AlertDialog(
+            onDismissRequest = actions.bikeCancel,
+            title = { Text(stringResource(R.string.odo_bike_title)) },
+            text = { Text(stringResource(R.string.odo_bike_question)) },
+            confirmButton = {
+                RahalTextButton(onClick = actions.bikeConfirm) { Text(stringResource(R.string.odo_bike_yes)) }
+            },
+            dismissButton = {
+                RahalTextButton(onClick = actions.bikeCancel) { Text(stringResource(R.string.odo_cancel)) }
+            },
+        )
+    }
+
     AlertDialog(
         onDismissRequest = { if (!ask.busy) actions.dismiss() },
         properties = DialogProperties(dismissOnClickOutside = false),
@@ -104,6 +128,9 @@ fun OdometerSheet(ask: OdometerAsk, actions: OdometerActions) {
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Text(stringResource(R.string.odo_hint), color = Rahal.colors.inkMuted)
+                if (ask.bikeChange) {
+                    Text(stringResource(R.string.odo_bike_on), color = Rahal.colors.danger)
+                }
                 preview?.let {
                     Image(
                         bitmap = it,
@@ -124,13 +151,18 @@ fun OdometerSheet(ask: OdometerAsk, actions: OdometerActions) {
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
                 )
-                ask.lastKm?.let {
+                ask.lastKm?.takeIf { !ask.bikeChange }?.let {
                     Text(
                         stringResource(R.string.odo_last, OdometerInput.show(it)),
                         color = Rahal.colors.inkMuted,
                     )
                 }
                 if (ask.error.isNotEmpty()) Text(ask.error, color = Rahal.colors.danger)
+                if (ask.bikeOffer && !ask.bikeChange) {
+                    RahalTextButton(onClick = actions.bikeAsk, enabled = !ask.busy) {
+                        Text(stringResource(R.string.odo_bike_button))
+                    }
+                }
                 if (ask.skippable) {
                     RahalTextButton(onClick = actions.skip, enabled = !ask.busy) {
                         Text(stringResource(R.string.odo_skip))

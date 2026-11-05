@@ -665,6 +665,8 @@ class DriverApi(private val api: ApiClient) {
         km: String,
         phase: String,
         confirm: Boolean = false,
+        // **«بدّلت الدرّاجة / العدّاد»** (٢٠٢٦-١١-٠٦) — يُقبل الرقمُ الأقلّ بهالعلامة وحدها.
+        bikeChange: Boolean = false,
     ): OdometerReading {
         val raw = api.upload(
             "/api/v1/driver/odometer",
@@ -674,6 +676,7 @@ class DriverApi(private val api: ApiClient) {
                 put("km", km)
                 put("phase", phase)
                 if (confirm) put("confirm", "true")
+                if (bikeChange) put("bike_change", "true")
             },
         )
         return api.json.decodeFromString<Envelope<OdometerReading>>(raw).data ?: OdometerReading()
@@ -706,6 +709,8 @@ data class OdometerReading(
     val km: Double = 0.0,
     /** ok · first · jump_confirmed */
     val check: String = "",
+    /** **قُبلت تبديلاً** («بدّلت الدرّاجة»). */
+    @kotlinx.serialization.SerialName("bike_change") val bikeChange: Boolean = false,
 )
 
 /** **ردُّ «اطلب موقع الزبون»** — كم بقي من الثلاث. */

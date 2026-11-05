@@ -196,7 +196,10 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
             }
             state = state.copy(
                 error = "",
-                odometer = OdometerAsk(step.phase, step.skippable, lastKm = me?.odometerLastKm),
+                odometer = OdometerAsk(
+                    step.phase, step.skippable, lastKm = me?.odometerLastKm,
+                    bikeOffer = OdometerFlow.bikeChangeOffered(me?.odometerLastKm, false, null, emptyMap()),
+                ),
             )
             return
         }
@@ -232,7 +235,7 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             // **ولا موقعَ مع القراءة** — آخرُ نقطةٍ وقت الفتح من الدوام الماضي، والخصوصيّةُ لا تَعِد بها.
             val reading = try {
-                backend.driver.sendOdometer(jpeg, km, ask.phase, confirm)
+                backend.driver.sendOdometer(jpeg, km, ask.phase, confirm, bikeChange = ask.bikeChange)
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: ApiClient.ApiException) {
@@ -242,9 +245,22 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
                         busy = false,
                         error = when (e.body.code) {
                             "odometer_check" -> ""
-                            "odometer_lower" -> app.getString(R.string.odo_lower, d["last_km"].orEmpty())
+                            "odometer_lower" -> when (OdometerFlow.lowerHint(ask.bikeChange, d)) {
+                                OdometerFlow.LowerHint.LowerBike ->
+                                    app.getString(R.string.odo_lower_bike, d["last_km"].orEmpty())
+                                OdometerFlow.LowerHint.BikeUsed -> app.getString(R.string.odo_bike_used)
+                                OdometerFlow.LowerHint.Lower ->
+                                    app.getString(R.string.odo_lower, d["last_km"].orEmpty())
+                            }
                             else -> describe(e)
                         },
+                        bikeOffer = if (e.body.code == "odometer_lower") {
+                            OdometerFlow.bikeChangeOffered(ask.lastKm, false, e.body.code, d)
+                        } else {
+                            ask.bikeOffer
+                        },
+                        // **تبديلٌ رُفض** (استُعمل اليوم) — يرجع رقماً عاديّاً.
+                        bikeChange = ask.bikeChange && e.body.code != "odometer_lower",
                         confirm = if (e.body.code == "odometer_check") {
                             app.getString(
                                 R.string.odo_check_jump,
@@ -278,6 +294,22 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         if (state.odometer?.busy == true) return
         afterLogout = null
         state = state.copy(odometer = null)
+    }
+
+    /** **«بدّلت الدرّاجة / العدّاد»** (قرارُ المالك ٢٠٢٦-١١-٠٦) — يسأل أوّلاً. */
+    fun askBikeChange() {
+        state.odometer?.takeIf { !it.busy }?.let { state = state.copy(odometer = it.copy(bikeAsk = true)) }
+    }
+
+    /** **أكّد التبديل** — يصوّر العدّادَ الجديد ويكتب رقمَه، ويُرسل بالعلامة. */
+    fun confirmBikeChange() {
+        state.odometer?.let {
+            state = state.copy(odometer = it.copy(bikeAsk = false, bikeChange = true, bikeOffer = false, error = ""))
+        }
+    }
+
+    fun cancelBikeChange() {
+        state.odometer?.let { state = state.copy(odometer = it.copy(bikeAsk = false)) }
     }
 
     /** **«أعدّل الرقم»** — يُغلق سؤالَ التأكيد. */
@@ -452,7 +484,10 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
                 if (step is OdometerFlow.Sheet) {
                     afterLogout = { finishLogout(proceed) }
                     state = state.copy(
-                        odometer = OdometerAsk(step.phase, step.skippable, forLogout = true, lastKm = me?.odometerLastKm),
+                        odometer = OdometerAsk(
+                            step.phase, step.skippable, forLogout = true, lastKm = me?.odometerLastKm,
+                            bikeOffer = OdometerFlow.bikeChangeOffered(me?.odometerLastKm, false, null, emptyMap()),
+                        ),
                     )
                     return@launch
                 }

@@ -129,6 +129,8 @@ var notifTitles = struct {
 	landmarkExistsMap, landmarkExistsPending, landmarkExistsSelf      string
 	landmarkQuotaTitle, landmarkQuotaBody, landmarkQuotaShiftBody     string
 	landmarkDigestTitle, landmarkDigestBody, landmarkDigestIncomplete string
+	// **سائقٌ قال «بدّلت الدرّاجة»** فقُبل رقمٌ أقلّ (قرار المالك ٢٠٢٦-١١-٠٦) — لمن يراقب.
+	odometerBikeChange, odometerBikeChangeBody string
 }{
 	walletTopupRejected:      "انرفض طلب شحن محفظتك",
 	walletRequestRejected:    "انرفض طلب حركة على محفظتك",
@@ -202,6 +204,8 @@ var notifTitles = struct {
 	landmarkDigestTitle:      "معالم السائقين — أمس",
 	landmarkDigestBody:       "جديد {new} من {drivers} سائق · مكرّر {duplicate} · بانتظار موافقتك {pending}",
 	landmarkDigestIncomplete: " · ما كمّلوا الـ{quota}: {incomplete} سائق",
+	odometerBikeChange:       "سائق بدّل درّاجته (أو عدّادها)",
+	odometerBikeChangeBody:   "{name}: آخر رقم {old} كم ← العدّاد الجديد {new} كم. شوف الصورة بمراقبة السائقين.",
 }
 
 // صندوق إشعارات المستخدم — لأي دور، فلا أحد يحتاج تحديث الصفحة ليعرف ما استجدّ.

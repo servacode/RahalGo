@@ -36,8 +36,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
 
+	"github.com/servacode/rahalgo/backend/internal/authz"
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/notifications"
 )
 
 // odometerReadingTTL **كم تبقى قراءةُ البداية صالحةً لفتح الدوام** — رُفض الفتحُ (رقمٌ لم
@@ -56,10 +58,30 @@ var (
 	errOdometerNotFound = httpx.NewError(http.StatusNotFound, "not_found", "errors.not_found")
 )
 
-// errOdometerLower **رقمٌ أقلّ من آخر رقمٍ له — مرفوض** (قرار المالك)، والتفصيلُ يقول آخرَ رقم.
-func errOdometerLower(last float64) error {
+// errOdometerLower **رقمٌ أقلّ من آخر رقمٍ له — مرفوض** (قرار المالك)، والتفصيلُ يقول آخرَ رقم،
+// و`bike_change_left` **أيقدر يقول «بدّلت الدرّاجة» اليوم** (تبديلٌ واحدٌ باليوم) — والتطبيقُ
+// القديمُ لا يقرؤه.
+func errOdometerLower(last float64, bikeLeft bool) error {
 	return &httpx.AppError{Status: http.StatusConflict, Code: "odometer_lower",
-		MessageKey: "errors.odometer_lower", Details: map[string]any{"last_km": kmString(last)}}
+		MessageKey: "errors.odometer_lower", Details: map[string]any{
+			// **نصٌّ لا منطقيّ**: التطبيقُ يقرأ التفصيلَ خريطةَ نصوص — و`true` عارٍ يُسقط قراءةَ
+			// الخطأ كلَّه في ٠٫٧ و٠٫٨ فلا يرون «الرقم أقلّ».
+			"last_km": kmString(last), "bike_change_left": strconv.FormatBool(bikeLeft),
+		}}
+}
+
+// bikeChangesPerDay **«بدّلت الدرّاجة» مرّةً واحدةً لكلّ سائق باليوم** (يوم الحساب) — قرار المالك
+// ٢٠٢٦-١١-٠٦. وما زاد يُرفض كالعادة وتصحّحه العمليّات.
+const bikeChangesPerDay = 1
+
+// bikeChangeLeft **أبقي له تبديلٌ اليوم** — يومُ الحساب (من ساعة بدايته لمثلها).
+func bikeChangeLeft(ctx context.Context, q dbtx.Querier, driverID string) (bool, error) {
+	var n int
+	err := q.QueryRow(ctx, `
+		SELECT count(*) FROM driver_odometer_readings
+		 WHERE driver_id = $1::uuid AND bike_change
+		   AND created_at >= account_day_start(account_day(now()))`, driverID).Scan(&n)
+	return n < bikeChangesPerDay, err
 }
 
 // errOdometerJump **قفزةٌ كبيرةٌ عن آخر رقم** — تُسأل، ويعيد السائقُ الإرسالَ بـ`confirm`.
@@ -166,6 +188,9 @@ func (s *Server) handleDriverOdometer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	confirm := r.FormValue("confirm") == "true"
+	// **«بدّلت الدرّاجة / العدّاد»** (قرار المالك ٢٠٢٦-١١-٠٦) — علامةٌ صريحةٌ من التطبيق الجديد
+	// وحدَه؛ وبلاها (٠٫٧ و٠٫٨) الحالُ كما كان.
+	bikeAsked := r.FormValue("bike_change") == "true"
 
 	// ── المرحلةُ والحال: صورةُ الفتح والدوامُ مسكَّر، وصورةُ السكّر والدوامُ مفتوح ──
 	var onShift bool
@@ -198,10 +223,27 @@ func (s *Server) handleDriverOdometer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	check := "first"
-	if last != nil {
+	bike := false
+	if last != nil && bikeAsked {
+		left, err := bikeChangeLeft(ctx, s.pg, uid)
+		if err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		bike = left
+	}
+	if last != nil && bike {
+		// **عدّادٌ جديد**: لا «أقلّ» ولا «قفزة» — الرقمان من عدّادين مختلفين.
+		check = "ok"
+	} else if last != nil {
 		check = "ok"
 		if km < *last {
-			s.respondErr(w, errOdometerLower(*last))
+			left, err := bikeChangeLeft(ctx, s.pg, uid)
+			if err != nil {
+				s.respondErr(w, err)
+				return
+			}
+			s.respondErr(w, errOdometerLower(*last, left))
 			return
 		}
 		if maxJump := float64(s.settings.GetInt(ctx, "drivers.odometer_max_jump_km")); maxJump > 0 && km-*last > maxJump {
@@ -231,9 +273,9 @@ func (s *Server) handleDriverOdometer(w http.ResponseWriter, r *http.Request) {
 	}
 	var id string
 	if err := s.pg.QueryRow(ctx, `
-		INSERT INTO driver_odometer_readings (driver_id, phase, km, check_status, prev_km, media_id, app_build)
-		VALUES ($1::uuid, $2, $3, $4, $5, $6::uuid, $7)
-		RETURNING id::text`, uid, phase, km, check, last, md.ID, build).Scan(&id); err != nil {
+		INSERT INTO driver_odometer_readings (driver_id, phase, km, check_status, prev_km, media_id, app_build, bike_change)
+		VALUES ($1::uuid, $2, $3, $4, $5, $6::uuid, $7, $8)
+		RETURNING id::text`, uid, phase, km, check, last, md.ID, build, bike).Scan(&id); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -244,11 +286,31 @@ func (s *Server) handleDriverOdometer(w http.ResponseWriter, r *http.Request) {
 			s.logger.Warn("العدّاد: تعذّر إلحاقُ قراءة السكّر", "shift", attachLate, "error", err)
 		}
 	}
-	s.audit(r, "driver.odometer_reading", "user", uid, map[string]any{
-		"reading": id, "km": km, "phase": phase, "check": check,
-	})
+	if bike {
+		s.audit(r, "driver.odometer_bike_change", "user", uid, map[string]any{
+			"reading": id, "km": km, "phase": phase, "prev_km": *last,
+		})
+		s.notifyBikeChange(ctx, uid, *last, km)
+	} else {
+		s.audit(r, "driver.odometer_reading", "user", uid, map[string]any{
+			"reading": id, "km": km, "phase": phase, "check": check,
+		})
+	}
 	s.touch("driver", "ops")
-	httpx.JSON(w, http.StatusCreated, map[string]any{"id": id, "km": km, "check": check})
+	httpx.JSON(w, http.StatusCreated, map[string]any{"id": id, "km": km, "check": check, "bike_change": bike})
+}
+
+// notifyBikeChange **يبلّغ من يراقب السائقين** (`drivers.monitor`) أنّ سائقاً بدّل درّاجته —
+// والرابطُ يفتح يومَه بالمراقبة.
+func (s *Server) notifyBikeChange(ctx context.Context, driverID string, oldKm, newKm float64) {
+	var name string
+	_ = s.pg.QueryRow(ctx, `SELECT full_name FROM users WHERE id = $1::uuid`, driverID).Scan(&name)
+	body := strings.NewReplacer("{name}", name, "{old}", kmString(oldKm), "{new}", kmString(newKm)).
+		Replace(notifTitles.odometerBikeChangeBody)
+	s.notify.NotifyCaps(ctx, []string{string(authz.DriversMonitor)}, notifications.Input{
+		Kind: notifications.KindAccount, Title: notifTitles.odometerBikeChange, Body: body,
+		Entity: "user", EntityID: driverID, Href: "/dashboard/driver-monitor?driver=" + driverID,
+	})
 }
 
 // shiftReading **قراءةٌ صالحةٌ لهذا الفتح أو السكّر** — له، وبمرحلته، وغيرُ مربوطةٍ بدوام،

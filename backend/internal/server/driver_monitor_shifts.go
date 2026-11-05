@@ -13,6 +13,11 @@ package server
 //	مشى خارج الدوام    = رقم هالفتح − رقم سكّر الدوام اللي قبله («لازم يكون صفر»)
 //	تقريبي             = بلا صورة سكّر: رقم فتح الدوام اللي بعده − رقم هالفتح
 //
+// **ولا فرقَ عبر «بدّلت الدرّاجة»** (قرار المالك ٢٠٢٦-١١-٠٦، هجرة ٠٥٠٩): كلُّ فرقٍ من الأربعة
+// طرفُه الثاني قراءةُ تبديل يُترك فارغاً — الرقمان من عدّادين مختلفين، فلا سالبَ ولا وهم.
+// فتحٌ بتبديل: الدوامُ نفسُه يُحسب (العدّادُ الجديد بطرفيه) و«خارج الدوام» قبله فارغ.
+// سكّرٌ بتبديل: «حسب العدّاد» فارغ (بدّلها بنصّ الدوام ولا رقمَ للحظة التبديل).
+//
 // **والأحمر**: فرقٌ كبير بين العدّاد والتطبيق (كيلو ونسبة معاً، من الإعدادات)، وسكّرٌ بلا
 // صورة («ما صوّر عند الإغلاق» — صار بلا السائق: ترك أو طارئ أو عمليّات أو حساب أو جوال
 // مطفي)، ومشيٌ وهو خارج الدوام.
@@ -45,6 +50,10 @@ type odoReading struct {
 	ThumbURL       *string   `json:"thumb_url"`
 	CreatedAt      time.Time `json:"created_at"`
 	AppBuild       *int      `json:"app_build"`
+	// BikeChange **«بدّلت الدرّاجة / العدّاد»** — رقمٌ من عدّادٍ جديد، لا يُطرح من رقمٍ قبله.
+	BikeChange bool `json:"bike_change"`
+	// PrevKm آخرُ رقمٍ قبلها (بالعدّاد القديم إن كانت تبديلاً).
+	PrevKm *float64 `json:"prev_km"`
 }
 
 // monitorShift دوامٌ بيوم السائق.
@@ -91,9 +100,11 @@ type odoDay struct {
 	// UnseenKm OnKm − AppKm.
 	UnseenKm     *float64 `json:"unseen_km"`
 	MissingClose int      `json:"missing_close"`
-	BigGap       bool     `json:"big_gap"`
-	OffMoved     bool     `json:"off_moved"`
-	Shifts       int      `json:"shifts"`
+	// BikeChanges قراءاتُ «بدّلت الدرّاجة» بدوامات اليوم.
+	BikeChanges int  `json:"bike_changes"`
+	BigGap      bool `json:"big_gap"`
+	OffMoved    bool `json:"off_moved"`
+	Shifts      int  `json:"shifts"`
 }
 
 func round1(v float64) float64 { return math.Round(v*10) / 10 }
@@ -143,9 +154,9 @@ func (s *Server) monitorShifts(ctx context.Context, driverID string, from, to, n
 		       COALESCE(a.orders_n, 0), COALESCE(eu.full_name, ''), a.exempt_reason,
 		       a.id IN (SELECT id FROM win), a.computed_at IS NOT NULL,
 		       sr.id::text, sr.km::float8, sr.corrected_km::float8, sr.check_status, sr.correction_note,
-		       sm.path, sm.thumb_path, sr.created_at, sr.app_build,
+		       sm.path, sm.thumb_path, sr.created_at, sr.app_build, COALESCE(sr.bike_change, false), sr.prev_km::float8,
 		       er.id::text, er.km::float8, er.corrected_km::float8, er.check_status, er.correction_note,
-		       em.path, em.thumb_path, er.created_at, er.app_build
+		       em.path, em.thumb_path, er.created_at, er.app_build, COALESCE(er.bike_change, false), er.prev_km::float8
 		  FROM around a
 		  LEFT JOIN users eu ON eu.id = a.exempt_by
 		  LEFT JOIN driver_odometer_readings sr ON sr.id = a.start_reading_id
@@ -168,17 +179,25 @@ func (s *Server) monitorShifts(ctx context.Context, driverID string, from, to, n
 		var sKm, sCor, eKm, eCor *float64
 		var sAt, eAt *time.Time
 		var sBuild, eBuild *int
+		var sBike, eBike bool
+		var sPrev, ePrev *float64
 		m := &x.m
 		if err := rows.Scan(&m.ID, &m.OpenedAt, &m.ClosedAt, &m.CloseReason, &m.OpenedBuild, &m.OpenedCapable, &m.Migrated,
 			&m.Final, &m.DriveM, &m.OrdersM, &m.NoOrderM, &m.NotDrivingM, &m.GapMin, &m.OrdersN,
 			&m.ExemptByName, &m.ExemptReason, &x.inside, &x.computed,
-			&sID, &sKm, &sCor, &sCheck, &sNote, &sPath, &sThumb, &sAt, &sBuild,
-			&eID, &eKm, &eCor, &eCheck, &eNote, &ePath, &eThumb, &eAt, &eBuild); err != nil {
+			&sID, &sKm, &sCor, &sCheck, &sNote, &sPath, &sThumb, &sAt, &sBuild, &sBike, &sPrev,
+			&eID, &eKm, &eCor, &eCheck, &eNote, &ePath, &eThumb, &eAt, &eBuild, &eBike, &ePrev); err != nil {
 			rows.Close()
 			return nil, odoDay{}, err
 		}
 		m.StartReading = makeReading(sID, sKm, sCor, sCheck, sNote, sPath, sThumb, sAt, sBuild)
 		m.EndReading = makeReading(eID, eKm, eCor, eCheck, eNote, ePath, eThumb, eAt, eBuild)
+		if m.StartReading != nil {
+			m.StartReading.BikeChange, m.StartReading.PrevKm = sBike, sPrev
+		}
+		if m.EndReading != nil {
+			m.EndReading.BikeChange, m.EndReading.PrevKm = eBike, ePrev
+		}
 		all = append(all, x)
 	}
 	rows.Close()
@@ -218,7 +237,9 @@ func (s *Server) monitorShifts(ctx context.Context, driverID string, from, to, n
 		flag := func(f string) { m.Flags = append(m.Flags, f) }
 		// **وأرقامُ التطبيق معروفةٌ** إن حُسبت الآن أو حسبها الكانس — وإلّا لا «فرقَ» يُقال.
 		known := measure || all[i].computed
-		if m.StartReading != nil && m.EndReading != nil {
+		startBike := m.StartReading != nil && m.StartReading.BikeChange
+		endBike := m.EndReading != nil && m.EndReading.BikeChange
+		if m.StartReading != nil && m.EndReading != nil && !endBike {
 			odo := round1(m.EndReading.EffectiveKm - m.StartReading.EffectiveKm)
 			m.OdometerKm = f64p(odo)
 			if known {
@@ -228,10 +249,11 @@ func (s *Server) monitorShifts(ctx context.Context, driverID string, from, to, n
 					flag("big_gap")
 				}
 			}
-		} else if m.StartReading != nil && m.EndReading == nil && next != nil && next.StartReading != nil {
+		} else if m.StartReading != nil && m.EndReading == nil && next != nil && next.StartReading != nil &&
+			!next.StartReading.BikeChange {
 			m.ApproxKm = f64p(round1(next.StartReading.EffectiveKm - m.StartReading.EffectiveKm))
 		}
-		if m.StartReading != nil && prev != nil && prev.EndReading != nil {
+		if m.StartReading != nil && !startBike && prev != nil && prev.EndReading != nil {
 			off := round1(m.StartReading.EffectiveKm - prev.EndReading.EffectiveKm)
 			m.OffBeforeKm = f64p(off)
 			if th.offKm > 0 && off >= th.offKm {
@@ -255,6 +277,9 @@ func (s *Server) monitorShifts(ctx context.Context, driverID string, from, to, n
 		if m.ExemptByName != "" || m.ExemptReason != "" {
 			flag("exempt")
 		}
+		if startBike || endBike {
+			flag("bike_change")
+		}
 		if m.ClosedAt == nil && m.OpenHours >= longOpenHours {
 			flag("long_open")
 		}
@@ -265,6 +290,12 @@ func (s *Server) monitorShifts(ctx context.Context, driverID string, from, to, n
 		day.Shifts++
 		if m.ClosedAt != nil && m.EndReading == nil {
 			day.MissingClose++
+		}
+		if startBike {
+			day.BikeChanges++
+		}
+		if endBike {
+			day.BikeChanges++
 		}
 		if m.OdometerKm != nil && known {
 			day.OnKm = f64p(round1(val(day.OnKm) + *m.OdometerKm))

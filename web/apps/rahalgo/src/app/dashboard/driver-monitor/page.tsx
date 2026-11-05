@@ -96,6 +96,8 @@ interface OdoDay {
   app_km: number | null;
   unseen_km: number | null;
   missing_close: number;
+  /** قراءاتُ «بدّلت الدرّاجة» بدوامات اليوم (قرار المالك ٢٠٢٦-١١-٠٦). */
+  bike_changes?: number;
   big_gap: boolean;
   off_moved: boolean;
   shifts: number;
@@ -556,6 +558,7 @@ function OdoLine({ o }: { o?: OdoDay }) {
       )}
       {o.big_gap && <Badge variant="danger">{OL.bigGap}</Badge>}
       {o.missing_close > 0 && <Badge variant="danger">{OL.noClose}</Badge>}
+      {(o.bike_changes ?? 0) > 0 && <Badge variant="warning">{OL.bikeChange}</Badge>}
       {o.off_km != null && o.off_km > 0 && (
         <Badge variant={o.off_moved ? "danger" : "neutral"}>{OL.off.replace("{n}", km(o.off_km))}</Badge>
       )}
