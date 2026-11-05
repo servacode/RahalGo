@@ -551,6 +551,56 @@ func maskDriverContacts(out map[string]any) {
 	}
 }
 
+// DriverFinishedKeep **ما يبقى عند السائق من طلبٍ انتهى — بالسماح لا بالمنع.**
+//
+// (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٢: «سجلّ السائق بعد ما ينتهي الطلب ما بيرجع فيه اسم
+// الزبون ولا عنوانه ولا نقاطه».) **قائمةُ المنع تشيخ**: حقلٌ جديدٌ يتسرّب من نفسه. **فما
+// لم يُذكر هنا لا يخرج** — رقمُ الطلب والمتجرُ والمبالغُ والمسافةُ والتواريخ. **وقائمةٌ
+// واحدةٌ لبابين**: سجلُّه (`server/driver_history.go`) وبثُّ غرفته (`publishOrder`).
+var DriverFinishedKeep = map[string]bool{
+	"id": true, "number": true, "status": true, "kind": true, "custom_mode": true,
+	"merchant_name": true, "total": true, "subtotal": true, "delivery_fee": true,
+	"free_waived": true, "discount": true, "cash_due": true, "payment_method": true,
+	"custom_goods_amount": true, "custom_fee": true, "fail_reason": true,
+	"created_at": true, "picked_up_at": true, "delivered_at": true, "closed_at": true,
+	"returned_at": true, "merchant_accepts_returns": true, "items_count": true,
+	// **المسافةُ** — من الاستلام إلى الباب، رقماً لا نقطة.
+	"leg_m": true,
+}
+
+// DriverFinished **أانتهى الطلبُ في حقّ سائقه؟** — أُغلق (أو حالُه نهاية)، **إلّا مشوارَ
+// إرجاعٍ لم تُسلَّم بضاعتُه**: الطلبُ في قائمته والطريقُ إلى المكتب أو المتجر.
+func DriverFinished(o *Order) bool {
+	if o == nil {
+		return false
+	}
+	switch {
+	case o.ClosedAt != nil:
+	case o.Status == StDelivered, o.Status == StCancelled, o.Status == StRejected,
+		o.Status == StFailed, o.Status == StRefunded:
+	default:
+		return false
+	}
+	openReturn := o.Status == StFailed && o.ReturnTo != nil && *o.ReturnTo != "" && o.GoodsHandedAt == nil
+	return !openReturn
+}
+
+// DriverFinishedView **حمولةُ السائق لطلبٍ انتهى** — قائمتُه (`ViewFor`) ثمّ
+// `DriverFinishedKeep` فوقها. **وفارغٌ إن تعذّر البناء** (يسقط مغلقاً كأصله).
+func DriverFinishedView(o *Order) map[string]any {
+	full := ViewFor(AudienceDriver, o)
+	if full == nil {
+		return nil
+	}
+	out := make(map[string]any, len(DriverFinishedKeep))
+	for k, v := range full {
+		if DriverFinishedKeep[k] {
+			out[k] = v
+		}
+	}
+	return out
+}
+
 // CustomerDriverLabel **ما يراه الزبونُ مكانَ اسم السائق — في كلّ موضع.**
 //
 // (قرارُ المالك مساءَ ٢٠٢٦-١٠-٠٢: «ما بدّنا ينعرف اسم السائق، وإذا قدّم شكوى

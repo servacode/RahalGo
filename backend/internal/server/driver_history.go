@@ -159,20 +159,10 @@ func (s *Server) handleDriverReport(w http.ResponseWriter, r *http.Request) {
 
 // historyKeep **ما يبقى عند السائق من طلبٍ انتهى — بالسماح لا بالمنع.**
 //
-// (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٢: «سجلّ السائق بعد ما ينتهي الطلب ما بيرجع فيه اسم
-// الزبون ولا عنوانه ولا نقاطه».) **كانت قائمةَ منعٍ من ستّة حقول** — فبقي الاسمُ
+// (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٢.) **كانت قائمةَ منعٍ من ستّة حقول** — فبقي الاسمُ
 // والعنوانُ والملاحظاتُ ونصُّ الطلب الخاصّ وصاحبُ الأمانة وبابُ البناية وصورةُ الباب:
-// **سجلٌّ يُقرأ قائمةَ زبائن.** **وقائمةُ المنع تشيخ** (`orderview.go`): حقلٌ جديدٌ
-// يتسرّب من نفسه. **فما لم يُذكر هنا لا يخرج** — رقمُ الطلب والمتجرُ والمبالغُ
-// والمسافةُ والتواريخ. **ونسخُ السائق القديمة لا تنكسر**: حقولُ `HistoryOrder`
-// كلُّها بافتراض، وشاشةُ السجلّ لا تعرض الاسمَ ولا العنوان.
-var historyKeep = map[string]bool{
-	"id": true, "number": true, "status": true, "kind": true, "custom_mode": true,
-	"merchant_name": true, "total": true, "subtotal": true, "delivery_fee": true,
-	"free_waived": true, "discount": true, "cash_due": true, "payment_method": true,
-	"custom_goods_amount": true, "custom_fee": true, "fail_reason": true,
-	"created_at": true, "picked_up_at": true, "delivered_at": true, "closed_at": true,
-	"returned_at": true, "merchant_accepts_returns": true, "items_count": true,
-	// **المسافةُ** — من الاستلام إلى الباب، رقماً لا نقطة.
-	"leg_m": true,
-}
+// **سجلٌّ يُقرأ قائمةَ زبائن.** **والقائمةُ في المحرّك** (`orders.DriverFinishedKeep`) —
+// **وبثُّ غرفته يقرؤها نفسَها**، فلا يصله من التحديث ما نُزع من السجلّ. **ونسخُ السائق
+// القديمة لا تنكسر**: حقولُ `HistoryOrder` كلُّها بافتراض، وشاشةُ السجلّ لا تعرض الاسمَ
+// ولا العنوان.
+var historyKeep = orders.DriverFinishedKeep

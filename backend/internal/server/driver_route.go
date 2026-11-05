@@ -158,9 +158,13 @@ func (s *Server) handleDriverOrderRoute(w http.ResponseWriter, r *http.Request) 
 		// **ومشوارُ الإرجاع** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — وجهتُه المكتبُ أو المتجر.
 		returnTo           string
 		storeLat, storeLng *float64
+		// **وطلبٌ انتهى لا طريقَ له** (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٢) — انظر أسفلُه.
+		live bool
 	)
 	err := s.pg.QueryRow(r.Context(), `
 		SELECT o.status,
+		       (o.closed_at IS NULL
+		        OR (o.status = 'failed' AND o.return_to IS NOT NULL AND o.goods_handed_at IS NULL)),
 		       ST_Y(du.last_location::geometry), ST_X(du.last_location::geometry),
 		       -- **ونقطةُ الاستلام قد تكون بديلةً** (بضاعةٌ مع سائقٍ وقع له
 		       -- طارئ) — فيُمشى إليها لا إلى المتجر.
@@ -184,10 +188,21 @@ func (s *Server) handleDriverOrderRoute(w http.ResponseWriter, r *http.Request) 
 		) ent ON true
 		WHERE o.id = $1::uuid AND o.driver_id = $2::uuid`,
 		chi.URLParam(r, "id"), userIDFrom(r)).
-		Scan(&status, &fromLat, &fromLng, &pickLat, &pickLng, &dropLat, &dropLng, &dropKnown,
+		Scan(&status, &live, &fromLat, &fromLng, &pickLat, &pickLng, &dropLat, &dropLng, &dropKnown,
 			&returnTo, &storeLat, &storeLng)
 	if err != nil {
 		s.respondErr(w, err)
+		return
+	}
+	// ══════════════════════════════════════════════════════════════════
+	// **وطلبٌ انتهى لا طريقَ له** (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٢)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **«أهو سائقُه؟» تبقى صحيحةً بعد التسليم** — فكان البابُ يردّ خطَّ الشوارع إلى باب
+	// الزبون لكلّ رقمٍ في سجلّه، **فيجمع أبوابَ زبائنه وقد نُزعت من السجلّ.** **والشرطُ
+	// شرطُ قائمته** (`handleDriverOrders`): مفتوحٌ، **أو مشوارُ إرجاعٍ لم تُسلَّم بضاعتُه.**
+	if !live {
+		httpx.JSON(w, http.StatusOK, map[string]any{"available": false})
 		return
 	}
 	// ══════════════════════════════════════════════════════════════════

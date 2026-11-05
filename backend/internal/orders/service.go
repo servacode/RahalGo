@@ -184,8 +184,19 @@ func (s *Service) publishOrder(o *Order) {
 	//
 	// كان يُستثنى من البثّ كلِّه: تُسند إليه العملياتُ طلباً فلا يعلم حتى
 	// يُحدّث الصفحة، وتُلغيه فيمضي إلى عنوانٍ لا طلبَ فيه.
+	//
+	// **وطلبٌ انتهى يصله بلا زبون** (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٢) — كان كلُّ تحديثٍ
+	// بعد التسليم (استردادٌ أو تعويضٌ أو تعديلُ إدارة) يُبثّ بقائمته كاملةً، **فيصل عنوانُ
+	// طلبٍ انتهى شاشتَه بعد أيّام.** **والإشارةُ نفسُها تبقى**: تطبيقُه يُعيد بها قائمتَه
+	// فيختفي الطلب — **ولا يقرأ من الحمولة غيرَ نوعها.**
 	if o.DriverID != nil && *o.DriverID != "" {
-		s.publishTo("driver:"+*o.DriverID, AudienceDriver, o)
+		if DriverFinished(o) {
+			if v := DriverFinishedView(o); v != nil {
+				s.pub.Publish("driver:"+*o.DriverID, map[string]any{"type": "order", "order": v})
+			}
+		} else {
+			s.publishTo("driver:"+*o.DriverID, AudienceDriver, o)
+		}
 	}
 
 	// **وإشارةٌ للطابور — بلا حمولة.**
