@@ -429,6 +429,87 @@ func (s *Service) AfterWhatsAppOrder(ctx context.Context, id string) (*Order, er
 	return o, nil
 }
 
+// WhatsAppStore **متجرٌ من متاجرنا في بحث نموذج الواتساب** — الفعّالُ ذو الموقع وحدَه.
+type WhatsAppStore struct {
+	ID          string  `json:"id"`
+	Name        string  `json:"name"`
+	AddressText string  `json:"address_text"`
+	Phone       string  `json:"phone"`
+	Lat         float64 `json:"lat"`
+	Lng         float64 `json:"lng"`
+	// OpenNow **مفتوحٌ الآن بدوامه** (`OpenNowSQL`) — والمسكَّرُ يُقال ولا يُمنع.
+	OpenNow bool `json:"open_now"`
+}
+
+// WhatsAppStores **بحثٌ باسم المتجر أو عنوانه** — في متاجرنا الفعّالة ذات الموقع، **والاسمُ الذي
+// يبدأ بالكلمة أوّلاً.** وحدٌّ أعلى `limit`.
+func (s *Service) WhatsAppStores(ctx context.Context, q string, limit int) ([]WhatsAppStore, error) {
+	q = strings.TrimSpace(q)
+	out := []WhatsAppStore{}
+	if len([]rune(q)) < 2 {
+		return out, nil
+	}
+	if limit <= 0 || limit > 50 {
+		limit = 20
+	}
+	p := EscapeLike(q)
+	rows, err := s.db.Query(ctx, `
+		SELECT m.id::text, m.name, m.address_text,
+		       COALESCE(NULLIF(m.phone::text, ''), NULLIF(u.phone::text, ''), ''),
+		       ST_Y(m.location::geometry), ST_X(m.location::geometry),
+		       `+OpenNowSQL+`
+		  FROM merchants m LEFT JOIN users u ON u.id = m.owner_user_id
+		 WHERE m.status = 'active' AND m.location IS NOT NULL
+		   AND (m.name ILIKE '%' || $1 || '%' ESCAPE '\' OR m.address_text ILIKE '%' || $1 || '%' ESCAPE '\')
+		 ORDER BY (m.name ILIKE $1 || '%' ESCAPE '\') DESC, m.name
+		 LIMIT $2`, p, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var st WhatsAppStore
+		if err := rows.Scan(&st.ID, &st.Name, &st.AddressText, &st.Phone, &st.Lat, &st.Lng,
+			&st.OpenNow); err != nil {
+			return nil, err
+		}
+		out = append(out, st)
+	}
+	return out, rows.Err()
+}
+
+// WhatsAppOrders **آخرُ طلبات الواتساب** — الأحدثُ أوّلاً، للّوحة. **و`phone` يحصرها في رقم
+// مستلِمٍ** (والجاريةُ وحدَها مع `openOnly`): «في طلب واتساب مفتوح لهالرقم» — كي لا يُرسَل
+// سائقان إلى بابٍ واحد.
+func (s *Service) WhatsAppOrders(ctx context.Context, phone string, openOnly bool, limit int) ([]Order, error) {
+	if limit <= 0 || limit > 50 {
+		limit = 20
+	}
+	where := ` WHERE o.origin = 'whatsapp'`
+	args := []any{limit}
+	if phone != "" {
+		args = append(args, phone)
+		where += ` AND o.recipient_phone = $2`
+	}
+	if openOnly {
+		where += ` AND o.closed_at IS NULL`
+	}
+	rows, err := s.db.Query(ctx, orderSelect+where+` ORDER BY o.created_at DESC LIMIT $1`, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []Order{}
+	for rows.Next() {
+		o, err := scanOrder(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *o)
+	}
+	return out, rows.Err()
+}
+
 // CancelWhatsAppOrder **يُلغي موظّفُ الواتساب طلبَه قبل الاستلام** — بسببٍ إلزاميّ.
 //
 // **ولمن يملك `orders.whatsapp` وحدَها** — من يملك التدخّلَ يُلغي من بابه العامّ. **والآلةُ

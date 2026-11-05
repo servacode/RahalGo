@@ -34,7 +34,11 @@ var opsFinalCaps = []string{
 	"merchants.read", "merchants.verify",
 	// **و`orders.customer_details.read` بقرار المالك ٢٠٢٦-١٠-٠٤** (سجلُّ الطلبات، البند ٣).
 	"orders.customer_details.read",
-	"orders.intervene", "orders.read", "settings.read", "support.manage",
+	"orders.intervene", "orders.read",
+	// **و`orders.whatsapp` بقرار المالك ٢٠٢٦-١١-٠٥** («الادمن والموظفين») — هجرة `0500`
+	// منحتها لكلّ دورٍ يتدخّل في الطلبات.
+	"orders.whatsapp",
+	"settings.read", "support.manage",
 	"users.contact.read",
 }
 

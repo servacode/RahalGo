@@ -37,6 +37,7 @@ var opsOwnerSections = []string{
 	"/dashboard/opsmap",      // خريطة العمليّات
 	"/dashboard/expansion",   // طلبات التوسّع
 	"/dashboard/ops",         // مراقبة التشغيل
+	"/dashboard/whatsapp",    // طلبات الواتساب — قرارُ المالك ٢٠٢٦-١١-٠٥ («الادمن والموظفين»)
 }
 
 // navEntry بندٌ من القائمة الجانبيّة: بابُه والقدراتُ التي تُظهره (أيُّها كفى).

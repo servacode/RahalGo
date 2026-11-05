@@ -50,6 +50,11 @@ const (
 	// OrdersEditAfterPickup **«تعديل الطلب» بعد الاستلام** — يكتب قيدَ تصحيحٍ لحقّ المتجر
 	// (قرارُ المالك ٢٠٢٦-١١-٠٣، البند ٤): **للمالك والأدمن وحدَهما**، كـ`finance.recompute`.
 	OrdersEditAfterPickup Capability = "orders.edit_after_pickup"
+	// OrdersWhatsApp **«طلبات الواتساب»** (قرارُ المالك ٢٠٢٦-١١-٠٥) — طلبٌ وصل على الواتساب يكتبه
+	// الموظّفُ فينزل للسائقين مباشرةً بلا موافقة، ويلغيه قبل الاستلام. **ويحدّد أجرةً ويرسل سائقاً
+	// يدفع للمتجر من جيبه** — فخطرُه ماليّ. مُنحت لكلّ دورٍ يملك `orders.intervene` (هجرة `0500`)،
+	// **ويمنحها الأدمنُ لأيّ دورٍ من اللوحة.**
+	OrdersWhatsApp Capability = "orders.whatsapp"
 
 	// ── الحسابات والموظّفون ──────────────────────────────────────
 	UsersRead         Capability = "users.read"
@@ -321,6 +326,7 @@ var catalog = map[Capability]string{
 	OrdersRead:               "قراءة الطلبات ولوحة العمليات",
 	OrdersIntervene:          "التدخل في طلب: تحويله أو إلغاؤه أو استرجاعه",
 	OrdersEditAfterPickup:    "تعديل الطلب بعد استلامه من المتجر",
+	OrdersWhatsApp:           "طلبات الواتساب: إنشاؤها وإلغاؤها قبل الاستلام",
 	UsersRead:                "قراءة الحسابات",
 	UsersStatusManage:        "إيقاف حساب أو حظره أو تعديل بياناته",
 	RolesManage:              "إدارة الأدوار والصلاحيات — أقوى صلاحية بالمنصة، تعطي صاحبها كل شيء",
@@ -388,6 +394,7 @@ var Groups = []Group{GroupOrders, GroupAccounts, GroupMoney, GroupStoresDrivers,
 
 var groupOf = map[Capability]Group{
 	OrdersRead: GroupOrders, OrdersIntervene: GroupOrders, OrdersEditAfterPickup: GroupOrders,
+	OrdersWhatsApp:           GroupOrders,
 	OrdersCommunicationsRead: GroupOrders, OrdersCustomerDetailsRead: GroupOrders,
 	SupportManage: GroupOrders, EmergenciesManage: GroupOrders,
 	DisputesManage: GroupMoney,
@@ -437,7 +444,7 @@ var riskOf = map[Capability]Risk{
 	TreasuryManage:          RiskMoney,
 	FinanceWriteoffApprove:  RiskMoney,
 	SettingsFinancialManage: RiskMoney, UsersCashBanLift: RiskMoney,
-	SupportManage: RiskMoney, OrdersIntervene: RiskMoney,
+	SupportManage: RiskMoney, OrdersIntervene: RiskMoney, OrdersWhatsApp: RiskMoney,
 
 	RolesManage: RiskPower, UsersStatusManage: RiskPower, SettingsSecurityManage: RiskPower,
 	UsersExport: RiskPower, FinanceExport: RiskPower, AuditExport: RiskPower,

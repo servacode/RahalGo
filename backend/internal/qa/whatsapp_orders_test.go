@@ -15,9 +15,12 @@ import (
 	"encoding/json"
 	"math"
 	"net/http"
+	"net/url"
+	"strings"
 	"testing"
 	"time"
 
+	"github.com/servacode/rahalgo/backend/internal/authz"
 	"github.com/servacode/rahalgo/backend/internal/drivermonitor"
 	"github.com/servacode/rahalgo/backend/internal/fininv"
 	"github.com/servacode/rahalgo/backend/internal/orders"
@@ -532,5 +535,353 @@ func TestWAORD016_OpsViewAndOfferSayWhatsApp(t *testing.T) {
 		c.ID).Scan(&offers)
 	if offers == 0 {
 		t.Fatalf("**العرضُ على السائق لا يقول «طلب واتساب»**")
+	}
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **أبوابُ اللوحة** — `/admin/whatsapp-orders` بقدرة `orders.whatsapp`
+// ══════════════════════════════════════════════════════════════════════
+
+const waURL = "/api/v1/admin/whatsapp-orders"
+
+// body **حمولةُ النموذج لمتجرٍ غير تابع** — كما ترسلها اللوحة.
+func (w waFx) body() map[string]any {
+	return map[string]any{
+		"store_name": "فلافل الأمير", "store_phone": "0933444555", "store_address": "شارع تل أبيض",
+		"store_lat": w.storeLat, "store_lng": w.storeLng,
+		"details": "2 شاورما دبل بدون ثوم", "goods_amount": 2400, "amount_currency": "SYP",
+		"recipient_name": "أبو أحمد", "recipient_phone": "0935111222",
+		"address_text": "حي الرميلة جانب الجامع", "lat": w.md.dropLat, "lng": w.md.dropLng,
+		"driver_note": "اتصل قبل الوصول",
+	}
+}
+
+func waPost(t *testing.T, h *Harness, tok string, body map[string]any) Res {
+	t.Helper()
+	return h.POSTKey(waURL, tok, uniq("wa"), body)
+}
+
+func waCreated(t *testing.T, r Res) string {
+	t.Helper()
+	if r.Code != http.StatusCreated {
+		t.Fatalf("**الإنشاءُ رُدّ**: %d / %s", r.Code, r.Err())
+	}
+	id, _ := r.JSON()["id"].(string)
+	if id == "" {
+		t.Fatalf("الإنشاءُ بلا معرّف: %s", r)
+	}
+	if n, _ := r.JSON()["number"].(float64); n <= 0 {
+		t.Fatalf("الإنشاءُ بلا رقم: %s", r)
+	}
+	return id
+}
+
+// TestWAORD001_CreateGoesStraightToDrivers **موظّفُ العمليّات يكتب الطلبَ فينزل للسائقين — بلا موافقة.**
+//
+// **وعلى الشيفرة القديمة: لا باب** (٤٠٤).
+func TestWAORD001_CreateGoesStraightToDrivers(t *testing.T) {
+	h := New(t)
+	w := newWAFx(t, h, "منطقةُ WA-001")
+	drv := w.md.f.Driver(OnShift(), LocationAt(w.storeLat, w.storeLng, time.Now()))
+	ops := h.NewUser("operations")
+
+	id := waCreated(t, waPost(t, h, ops.Token, w.body()))
+	var origin, status, payer, createdBy string
+	var merchant, customer *string
+	var total, cash int64
+	if err := h.Pool.QueryRow(ctxBG(), `
+		SELECT origin, status, fee_payer, merchant_id::text, customer_id::text, created_by::text,
+		       total, cash_due
+		  FROM orders WHERE id = $1`, id).
+		Scan(&origin, &status, &payer, &merchant, &customer, &createdBy, &total, &cash); err != nil {
+		t.Fatal(err)
+	}
+	if origin != "whatsapp" || payer != "recipient" || merchant != nil || customer != nil ||
+		createdBy != ops.ID || total != 500 || cash != 500 {
+		t.Fatalf("**الصفّ**: %s/%s · متجر %v · زبون %v · كاتب %s · %d/%d",
+			origin, payer, merchant, customer, createdBy, total, cash)
+	}
+	if status != "dispatching" && status != "assigned" {
+		t.Fatalf("**الحال %s — والمنتظَر الطابور بلا موافقة**", status)
+	}
+	// **والسائقُ القريبُ يراه** — في طابوره، أو في طلباته إن أُسند مباشرةً.
+	if !containsID(h.GET("/api/v1/driver/queue", drv.Token), id) &&
+		!containsID(h.GET("/api/v1/driver/orders", drv.Token), id) {
+		t.Fatalf("**السائقُ القريبُ لا يرى طلبَ الواتساب**")
+	}
+	var audits int
+	_ = h.Pool.QueryRow(ctxBG(), `SELECT count(*) FROM audit_log
+		WHERE action = 'ops.whatsapp_order_create' AND entity_id = $1`, id).Scan(&audits)
+	if audits != 1 {
+		t.Fatalf("**الإنشاءُ بلا أثرٍ في سجلّ الأحداث**: %d", audits)
+	}
+	// **وآخرُ الطلبات في الصفحة** — والتلميحُ برقم المستلِم.
+	list := h.GET(waURL+"?open=1&q=0935111222", ops.Token)
+	if list.Code != http.StatusOK || !containsID(list, id) {
+		t.Fatalf("**القائمةُ لا تُظهر الطلبَ لرقمه**: %d / %s", list.Code, list.Err())
+	}
+}
+
+// TestWAORD003_RegisteredStoreIsCopiedNotLinked **متجرٌ من متاجرنا يُنسخ ولا يُربط** — لا يراه في
+// توصيلاته، ولا يُخبَر، ولا يُلغيه.
+func TestWAORD003_RegisteredStoreIsCopiedNotLinked(t *testing.T) {
+	h := New(t)
+	w := newWAFx(t, h, "منطقةُ WA-003")
+	body := w.body()
+	for _, k := range []string{"store_name", "store_phone", "store_address", "store_lat", "store_lng"} {
+		delete(body, k)
+	}
+	body["store_id"] = w.md.fx.M.ID
+
+	// **والبحثُ يجده** — بعضُ اسمه يكفي.
+	st := h.GET(waURL+"/stores?q="+url.QueryEscape(w.md.fx.M.Name), w.md.admin.Token)
+	if st.Code != http.StatusOK || !strings.Contains(string(st.Body), w.md.fx.M.ID) {
+		t.Fatalf("**البحثُ لا يجد المتجر**: %d / %s", st.Code, st.Body)
+	}
+
+	id := waCreated(t, waPost(t, h, w.md.admin.Token, body))
+	var merchant, pickupMerchant *string
+	var name string
+	var dist float64
+	if err := h.Pool.QueryRow(ctxBG(), `
+		SELECT o.merchant_id::text, o.pickup_merchant_id::text, o.pickup_name,
+		       ST_Distance(o.pickup_override, m.location)
+		  FROM orders o JOIN merchants m ON m.id = $2::uuid WHERE o.id = $1`, id, w.md.fx.M.ID).
+		Scan(&merchant, &pickupMerchant, &name, &dist); err != nil {
+		t.Fatal(err)
+	}
+	if merchant != nil || pickupMerchant == nil || *pickupMerchant != w.md.fx.M.ID ||
+		name != w.md.fx.M.Name || dist > 1 {
+		t.Fatalf("**المتجرُ لم يُنسخ أو رُبط**: متجر %v · أثر %v · اسم %q · بُعد %v", merchant, pickupMerchant, name, dist)
+	}
+	if containsID(h.GET(w.md.url("/deliveries"), w.md.fx.Tok), id) {
+		t.Fatalf("**طلبُ الواتساب ظهر في «توصيلاتي» عند المتجر**")
+	}
+	if r := h.POST("/api/v1/merchant/deliveries/"+id+"/cancel", w.md.fx.Tok, map[string]any{}); r.Code < 400 {
+		t.Fatalf("**المتجرُ ألغى طلبَ واتسابٍ نُسخ اسمُه عليه**: %d", r.Code)
+	}
+	var told int
+	_ = h.Pool.QueryRow(ctxBG(), `SELECT count(*) FROM notifications
+		WHERE user_id = $1::uuid AND entity_id = $2`, w.md.fx.M.Owner.ID, id).Scan(&told)
+	if told != 0 {
+		t.Fatalf("**صاحبُ المتجر أُخبر بطلبٍ لم يرسله**: %d", told)
+	}
+}
+
+// TestWAORD005b_CancelRouteBeforePickupOnly **«إلغاء الطلب» من صفحة الواتساب** — بسببٍ ومن يملك
+// القدرةَ وحدَها، وقبل الاستلام وحدَه، ولطلب الواتساب وحدَه.
+func TestWAORD005b_CancelRouteBeforePickupOnly(t *testing.T) {
+	h := New(t)
+	w := newWAFx(t, h, "منطقةُ WA-005b")
+	capRole(t, h, "qa_wa_only", authz.OrdersWhatsApp)
+	_, tok := capUser(t, h, "qa_wa_only")
+
+	id := waCreated(t, waPost(t, h, tok, w.body()))
+	if r := h.POST(waURL+"/"+id+"/cancel", tok, map[string]any{"reason": ""}); r.Code != http.StatusBadRequest {
+		t.Fatalf("**إلغاءٌ بلا سبب**: %d", r.Code)
+	}
+	r := h.POST(waURL+"/"+id+"/cancel", tok, map[string]any{"reason": "الزبون ألغى بالواتساب"})
+	if r.Code != http.StatusOK {
+		t.Fatalf("**الإلغاءُ رُدّ**: %d / %s", r.Code, r.Err())
+	}
+	if st := h.statusOf(id); st != "cancelled" {
+		t.Fatalf("الحال %s", st)
+	}
+	var audits int
+	_ = h.Pool.QueryRow(ctxBG(), `SELECT count(*) FROM audit_log
+		WHERE action = 'ops.whatsapp_order_cancel' AND entity_id = $1`, id).Scan(&audits)
+	if audits != 1 {
+		t.Fatalf("**الإلغاءُ بلا أثر**: %d", audits)
+	}
+
+	// **وبعد الاستلام لا** — الحلُّ من بطاقة الطلب.
+	id2 := waCreated(t, waPost(t, h, tok, w.body()))
+	drv := h.driverOf(id2)
+	for _, to := range []string{"at_pickup", "picked_up"} {
+		if r := h.POST("/api/v1/driver/orders/"+id2+"/transition", drv.Token, map[string]any{"to": to}); r.Code >= 400 {
+			t.Fatalf("%s: %s", to, r)
+		}
+	}
+	if r := h.POST(waURL+"/"+id2+"/cancel", tok, map[string]any{"reason": "متأخر"}); r.Err() != "wa_cancel_after_pickup" {
+		t.Fatalf("**إلغاءٌ بعد الاستلام**: %d / %s", r.Code, r.Err())
+	}
+	// **وموظّفُ العمليّات يُلغيه من بابه العامّ قبل الاستلام** — المكتبُ منشئُه، فلا يسري عليه
+	// «بعد التحويل لا تُلغي العمليّات».
+	ops := h.NewUser("operations")
+	id3 := waCreated(t, waPost(t, h, ops.Token, w.body()))
+	if r := h.POST("/api/v1/admin/orders/"+id3+"/transition", ops.Token,
+		map[string]any{"to": "cancelled", "note": "طلب مكرر"}); r.Code != http.StatusOK {
+		t.Fatalf("**العمليّاتُ لا تُلغي طلبَ واتسابٍ كتبته**: %d / %s", r.Code, r.Err())
+	}
+	// **ولا يُلغى من هنا ما ليس طلبَ واتساب.**
+	md := w.md.create(t, h, "recipient", uniq("wa5b"))
+	if r := h.POST(waURL+"/"+md+"/cancel", tok, map[string]any{"reason": "تجربة"}); r.Err() != "wa_not_whatsapp" {
+		t.Fatalf("**ألغى «لدي توصيلة» من باب الواتساب**: %d / %s", r.Code, r.Err())
+	}
+}
+
+// TestWAORD008_FeeOverrideBoundsAndAudit **الأجرةُ تُعدَّل بحدّيها، والمحسوبةُ والمكتوبةُ في السجلّ.**
+func TestWAORD008_FeeOverrideBoundsAndAudit(t *testing.T) {
+	h := New(t)
+	w := newWAFx(t, h, "منطقةُ WA-008")
+
+	b := w.body()
+	b["fee"] = 700
+	id := waCreated(t, waPost(t, h, w.md.admin.Token, b))
+	var fee, driverFee, cash int64
+	if err := h.Pool.QueryRow(ctxBG(),
+		`SELECT delivery_fee, driver_fee, cash_due FROM orders WHERE id = $1`, id).Scan(&fee, &driverFee, &cash); err != nil {
+		t.Fatal(err)
+	}
+	if fee != 700 || driverFee != 630 || cash != 700 {
+		t.Fatalf("**الأجرةُ المعدَّلة**: %d · سائق %d · نقد %d — المنتظَر 700 · 630 · 700", fee, driverFee, cash)
+	}
+	var details string
+	_ = h.Pool.QueryRow(ctxBG(), `SELECT details::text FROM audit_log
+		WHERE action = 'ops.whatsapp_order_create' AND entity_id = $1`, id).Scan(&details)
+	if !strings.Contains(details, `"computed_fee": 500`) || !strings.Contains(details, `"fee": 700`) {
+		t.Fatalf("**السجلُّ لا يحمل الأجرتين**: %s", details)
+	}
+
+	b["fee"] = 5000
+	r := waPost(t, h, w.md.admin.Token, b)
+	if r.Code != http.StatusUnprocessableEntity || r.Err() != "wa_fee_out_of_range" {
+		t.Fatalf("**أجرةٌ فوق الحدّ**: %d / %s", r.Code, r.Err())
+	}
+	errBody, _ := r.JSON()["error"].(map[string]any)
+	if d, _ := errBody["details"].(map[string]any); d == nil || d["min"] != "10" || d["max"] != "1000" {
+		t.Fatalf("**الحدّان لا يُقالان**: %s", r.Body)
+	}
+
+	// **وحصّةٌ ثابتةٌ تبلغ الأجرةَ تُرسل سائقاً بلا أجر.**
+	h.Setting("delivery.share_merchant", "100")
+	h.Setting("delivery.share_merchant_mode", `"fixed"`)
+	b["fee"] = 80
+	if r := waPost(t, h, w.md.admin.Token, b); r.Err() != "wa_fee_below_share" {
+		t.Fatalf("**أجرةٌ دون الحصّة**: %d / %s", r.Code, r.Err())
+	}
+}
+
+// TestWAORD009_Permission **بقدرته وحدَها** — بلاها ٤٠٣، ودورٌ مخصَّصٌ يُمنَحها يكتب.
+func TestWAORD009_Permission(t *testing.T) {
+	h := New(t)
+	w := newWAFx(t, h, "منطقةُ WA-009")
+	fin := h.NewUser("finance")
+	if r := waPost(t, h, fin.Token, w.body()); r.Code != http.StatusForbidden {
+		t.Fatalf("**الماليّةُ أنشأت طلبَ واتساب**: %d", r.Code)
+	}
+	if r := h.GET(waURL+"/stores?q=qa", fin.Token); r.Code != http.StatusForbidden {
+		t.Fatalf("**الماليّةُ بحثت في المتاجر**: %d", r.Code)
+	}
+	capRole(t, h, "qa_wa_role", authz.OrdersWhatsApp)
+	_, tok := capUser(t, h, "qa_wa_role")
+	waCreated(t, waPost(t, h, tok, w.body()))
+}
+
+// TestWAORD010_Validation **ما ينقص يُقال برمزه.**
+func TestWAORD010_Validation(t *testing.T) {
+	h := New(t)
+	w := newWAFx(t, h, "منطقةُ WA-010")
+	tok := w.md.admin.Token
+	with := func(mut func(b map[string]any)) map[string]any {
+		b := w.body()
+		mut(b)
+		return b
+	}
+	inactive := w.md.f.Merchant(func(s *merchantSpec) { s.status = "inactive" })
+	noPin := w.md.f.Merchant()
+	if _, err := h.Pool.Exec(ctxBG(), `UPDATE merchants SET location = NULL WHERE id = $1`, noPin.ID); err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range []struct {
+		name string
+		body map[string]any
+		code string
+	}{
+		{"بلا متجر", with(func(b map[string]any) { delete(b, "store_name"); delete(b, "store_lat"); delete(b, "store_lng") }), "wa_store_required"},
+		{"متجران", with(func(b map[string]any) { b["store_id"] = w.md.fx.M.ID }), "wa_store_conflict"},
+		{"متجرٌ موقوف", with(func(b map[string]any) {
+			delete(b, "store_name")
+			delete(b, "store_lat")
+			delete(b, "store_lng")
+			b["store_id"] = inactive.ID
+		}), "wa_store_unavailable"},
+		{"متجرٌ بلا موقع", with(func(b map[string]any) {
+			delete(b, "store_name")
+			delete(b, "store_lat")
+			delete(b, "store_lng")
+			b["store_id"] = noPin.ID
+		}), "wa_store_unavailable"},
+		{"بلا تفاصيل", with(func(b map[string]any) { b["details"] = "" }), "validation"},
+		{"بلا اسم المستلم", with(func(b map[string]any) { b["recipient_name"] = "" }), "validation"},
+		{"بلا عنوان", with(func(b map[string]any) { b["address_text"] = "" }), "validation"},
+		{"بلا نقطة المستلم", with(func(b map[string]any) { delete(b, "lat"); delete(b, "lng") }), "bad_point"},
+		// **ورمزُ الرقم الفاسد رمزُ «لدي توصيلة» نفسُه** — لا يُخترَع ثانٍ.
+		{"رقمٌ فاسد", with(func(b map[string]any) { b["recipient_phone"] = "12" }), "invalid_phone"},
+	} {
+		r := waPost(t, h, tok, c.body)
+		if r.Code < 400 || r.Err() != c.code {
+			t.Errorf("**%s**: %d / %s — المنتظَر %s", c.name, r.Code, r.Err(), c.code)
+		}
+	}
+	// **ونقطةٌ خارجَ التغطية بحرّاسها القائمة** — لا رمزٌ جديد.
+	far := with(func(b map[string]any) { b["lat"] = w.md.z.Lat + 0.5 })
+	if r := waPost(t, h, tok, far); r.Code < 400 || strings.HasPrefix(r.Err(), "wa_") {
+		t.Errorf("**خارجَ التغطية**: %d / %s", r.Code, r.Err())
+	}
+	var n int
+	_ = h.Pool.QueryRow(ctxBG(), `SELECT count(*) FROM orders WHERE origin = 'whatsapp'
+		AND created_at > now() - interval '5 minutes' AND recipient_name = 'أبو أحمد'
+		AND pickup_name = 'فلافل الأمير' AND address_text = ''`).Scan(&n)
+	if n != 0 {
+		t.Fatalf("**طلبٌ ناقصٌ كُتب**")
+	}
+}
+
+// TestWAORD011_Idempotent **ضغطتان بالمفتاح نفسِه طلبٌ واحد.**
+func TestWAORD011_Idempotent(t *testing.T) {
+	h := New(t)
+	w := newWAFx(t, h, "منطقةُ WA-011")
+	key := uniq("wa11")
+	first := h.POSTKey(waURL, w.md.admin.Token, key, w.body())
+	id := waCreated(t, first)
+	again := h.POSTKey(waURL, w.md.admin.Token, key, w.body())
+	if again.Code != http.StatusCreated || !again.Replay() {
+		t.Fatalf("**الإعادةُ لم تُقرأ إعادة**: %d · replay=%v", again.Code, again.Replay())
+	}
+	if got, _ := again.JSON()["id"].(string); got != id {
+		t.Fatalf("**الإعادةُ أنشأت طلباً ثانياً**: %s ≠ %s", got, id)
+	}
+	var n int
+	_ = h.Pool.QueryRow(ctxBG(), `SELECT count(*) FROM audit_log
+		WHERE action = 'ops.whatsapp_order_create' AND actor_user_id = $1::uuid`, w.md.admin.ID).Scan(&n)
+	if n != 1 {
+		t.Fatalf("**طلبان بمفتاحٍ واحد**: %d", n)
+	}
+}
+
+// TestWAORD014_NoFreeDeliveryClaim **عرضُ التوصيل المجّانيّ لا يمسّ طلبَ الواتساب** — لا يُعفى ولا
+// يستهلك عرضَ متجر.
+func TestWAORD014_NoFreeDeliveryClaim(t *testing.T) {
+	h := New(t)
+	w := newWAFx(t, h, "منطقةُ WA-014")
+	_, _ = h.Pool.Exec(ctxBG(), `UPDATE free_delivery_campaigns SET active = false`)
+	now := time.Now().UTC()
+	var camp string
+	if err := h.Pool.QueryRow(ctxBG(), `INSERT INTO free_delivery_campaigns (active, starts_at, ends_at, kinds)
+		VALUES (true, $1, $2, ARRAY['standard', 'merchant']) RETURNING id::text`,
+		now.Add(-time.Hour), now.Add(24*time.Hour)).Scan(&camp); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_, _ = h.Pool.Exec(context.Background(), `UPDATE free_delivery_campaigns SET active = false WHERE id = $1`, camp)
+	})
+	id := waCreated(t, waPost(t, h, w.md.admin.Token, w.body()))
+	var waived, fee int64
+	var claims int
+	_ = h.Pool.QueryRow(ctxBG(), `SELECT promo_delivery_waived, delivery_fee FROM orders WHERE id = $1`, id).Scan(&waived, &fee)
+	_ = h.Pool.QueryRow(ctxBG(), `SELECT count(*) FROM free_delivery_claims WHERE order_id = $1`, id).Scan(&claims)
+	if waived != 0 || fee != 500 || claims != 0 {
+		t.Fatalf("**التوصيلُ المجّانيّ مسّ طلبَ الواتساب**: إعفاء %d · أجرة %d · مطالبات %d", waived, fee, claims)
 	}
 }

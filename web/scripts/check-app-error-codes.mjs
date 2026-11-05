@@ -205,6 +205,9 @@ const SERVER_ADMIN = new Set([
   "refund_bad_rep_share", "refund_rep_share_no_party",
   // **«من متجر غير تابع لنا»** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — زرُّ بطاقة الطلب في اللوحة وحدَه.
   "ext_store_not_standard", "ext_store_bad_status", "ext_store_wallet", "ext_store_money_moved",
+  // **«طلبات الواتساب»** (قرارُ المالك ٢٠٢٦-١١-٠٥) — نموذجُ اللوحة وحدَه.
+  "wa_store_required", "wa_store_conflict", "wa_store_unavailable", "wa_fee_out_of_range",
+  "wa_fee_below_share", "wa_not_whatsapp", "wa_cancel_after_pickup",
 ]);
 
 const found = new Map();
