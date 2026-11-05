@@ -2,7 +2,9 @@ package server
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
+	"net/http"
 	"os"
 	"testing"
 	"time"
@@ -153,5 +155,87 @@ func TestLocationBatch_RejectsNonsense(t *testing.T) {
 	ok := trackPoint{Lat: 35.9, Lng: 39.0, At: now.Add(30 * time.Second)}
 	if !ok.valid(now) {
 		t.Fatal("رُفضت نقطةٌ سبقت بنصف دقيقة — **وساعةُ الهاتف تسبق دقائق**")
+	}
+}
+
+// TestLocationBatch_OverCapIsAccepted **طابورٌ فوق المئتين يُقبَل ولا يعلق** (L0، ٢٠٢٦-١١-٠٥).
+//
+// **كان يُردّ بـ٤٠٠** فيعيد التطبيقُ (0.7.0 و0.8.0) الحِملَ نفسَه بعد كلّ نبضةٍ ناجحة
+// إلى الأبد، **ونقاطُ الانقطاع لا تصل الأثر.** والآن: يُقبَل، **ويُعالَج أحدثُ ألفٍ منه**
+// وما سبقه يُعدّ مرفوضاً، **والفارغُ وحدَه ٤٠٠.**
+func TestLocationBatch_OverCapIsAccepted(t *testing.T) {
+	f := newDriverFixture(t, 2)
+	ctx := context.Background()
+	type pt struct {
+		Lat float64 `json:"lat"`
+		Lng float64 `json:"lng"`
+		At  string  `json:"at"`
+	}
+	// **ممشىً معقول**: نحو ١١ متراً بين نقطتين — لا قفزةَ تُهمَل.
+	walk := func(n int, base time.Time, step time.Duration) string {
+		pts := make([]pt, n)
+		for i := range pts {
+			pts[i] = pt{Lat: 35.90 + float64(i)*0.0001, Lng: 39.01,
+				At: base.Add(time.Duration(i) * step).UTC().Format(time.RFC3339)}
+		}
+		b, _ := json.Marshal(map[string]any{"points": pts})
+		return string(b)
+	}
+	send := func(driver, body string) (int, map[string]int) {
+		t.Helper()
+		w := f.call(f.srv.handleDriverLocationBatch, http.MethodPost, "/driver/location/batch", "", driver,
+			[]string{"driver"}, body)
+		var out struct {
+			Data map[string]int `json:"data"`
+		}
+		_ = json.Unmarshal(w.Body.Bytes(), &out)
+		return w.Code, out.Data
+	}
+	tracked := func(driver string) (n int, oldest time.Time) {
+		t.Helper()
+		if err := f.pool.QueryRow(ctx, `
+			SELECT count(*), COALESCE(min(recorded_at), 'epoch') FROM driver_track WHERE driver_id = $1`,
+			driver).Scan(&n, &oldest); err != nil {
+			t.Fatalf("قراءةُ الأثر: %v", err)
+		}
+		return n, oldest
+	}
+	now := time.Now().Truncate(time.Second)
+
+	// **ثلاثُمئةٍ وخمسون — ما يتركه ربعُ ساعةٍ بلا شبكةٍ في طلب.**
+	a := f.drivers[0]
+	code, out := send(a, walk(350, now.Add(-30*time.Minute), 4*time.Second))
+	if code != http.StatusOK {
+		t.Fatalf("دفعةُ ٣٥٠ نقطةً ردّت %d — **فيعيدها الهاتفُ بعد كلّ نبضةٍ إلى الأبد، "+
+			"ونقاطُ الانقطاع لا تصل الأثر**", code)
+	}
+	if out["accepted"] != 350 || out["rejected"] != 0 {
+		t.Fatalf("دفعةُ ٣٥٠: قُبل %d ورُفض %d — والمتوقّعُ ٣٥٠ و٠", out["accepted"], out["rejected"])
+	}
+	if n, _ := tracked(a); n != 350 {
+		t.Fatalf("كُتب في الأثر %d نقطةً من ٣٥٠", n)
+	}
+
+	// **وألفٌ وخمسون — يُعالَج أحدثُ ألفٍ والخمسون الأقدمُ مرفوضة.**
+	b := f.drivers[1]
+	base := now.Add(-100 * time.Minute)
+	code, out = send(b, walk(1050, base, 5*time.Second))
+	if code != http.StatusOK {
+		t.Fatalf("دفعةُ ١٠٥٠ نقطةً ردّت %d", code)
+	}
+	if out["accepted"] != 1000 || out["rejected"] != 50 {
+		t.Fatalf("دفعةُ ١٠٥٠: قُبل %d ورُفض %d — والمتوقّعُ ١٠٠٠ و٥٠", out["accepted"], out["rejected"])
+	}
+	n, oldest := tracked(b)
+	if n != 1000 {
+		t.Fatalf("كُتب في الأثر %d نقطةً من ١٠٠٠", n)
+	}
+	if want := base.Add(50 * 5 * time.Second); !oldest.Equal(want) {
+		t.Fatalf("أقدمُ ما كُتب %v والمتوقّعُ %v — **الأحدثُ يُبقى والأقدمُ يُرفَض لا العكس**", oldest, want)
+	}
+
+	// **والفارغةُ وحدَها ٤٠٠.**
+	if code, _ := send(a, `{"points":[]}`); code != http.StatusBadRequest {
+		t.Fatalf("دفعةٌ فارغةٌ ردّت %d — والمتوقّعُ ٤٠٠", code)
 	}
 }
