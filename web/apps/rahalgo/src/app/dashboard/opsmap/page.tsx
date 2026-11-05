@@ -184,6 +184,16 @@ interface Meta {
   ops_map_smooth?: boolean;
 }
 
+/** جزءٌ من طريق السائق الأخير (`/driver-monitor/{id}/recent`) — نفس أجزاء صفحة المراقبة. */
+interface RecentPart {
+  class: "with_order" | "to_pickup" | "no_order" | "stopped" | "gap";
+  coords: Array<[number, number]>;
+  road?: boolean;
+  inferred?: boolean;
+  straight?: boolean;
+  pending?: boolean;
+}
+
 interface Driver {
   id: string;
   name: string;
@@ -1524,9 +1534,72 @@ export default function OpsMapPage() {
     };
   }, [linkOrder, linkFrom, smooth]);
 
+  // ── طريقُه الحقيقي ورا السائق المختار (R3، طلبُ المالك ٢٠٢٦-١١-٠٥) ─────────────
+  //
+  // «والطريق يحسب حسب طريق السائق مو ع كيفنا». لما ينختار سائق (أو طلب معه سائق) **بنرسم
+  // تحته الطريق اللي مشي فيه بطلبه الحالي** (أو آخر نص ساعة) — من نفس دالة المسافة
+  // (`/driver-monitor/{id}/recent`): ع الشوارع وين انطابق، والجزء الأخير (لحد ٥ دقايق) خط
+  // من نقاطه فبيوصل للماركر. **للمالك والمدير بس** (`drivers.monitor`)، وبيتحدّث كل دقيقة.
+  const canMonitor = capabilities.includes("drivers.monitor");
+  const recentID =
+    current?.kind === "driver" ? current.v.id : current?.kind === "order" ? (current.v.driver_id ?? null) : null;
+  const [recent, setRecent] = useState<{ id: string; path: RecentPart[] } | null>(null);
+  useEffect(() => {
+    if (!canMonitor || !recentID || !visible.drivers) {
+      setRecent(null);
+      return;
+    }
+    let alive = true;
+    const load = () =>
+      api<{ path: RecentPart[] }>(`/api/v1/admin/driver-monitor/${recentID}/recent`)
+        .then((r) => alive && setRecent({ id: recentID, path: r.path ?? [] }))
+        .catch(() => alive && setRecent(null));
+    void load();
+    const t = setInterval(load, 60_000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [canMonitor, recentID, visible.drivers]);
+  const recentLayers = useMemo<LayerSpec[]>(() => {
+    const parts = recent && recent.id === recentID ? recent.path : [];
+    const line = (p: RecentPart) => ({
+      type: "Feature" as const,
+      geometry: { type: "LineString", coordinates: p.coords.map(([la, ln]) => [ln, la]) },
+      properties: {},
+    });
+    const counted = (p: RecentPart) => p.class !== "stopped" && p.class !== "gap";
+    const solid = parts.filter((p) => counted(p) && !p.straight && !p.inferred);
+    const dashed = parts.filter((p) => counted(p) && (p.straight || p.inferred));
+    return [
+      {
+        id: "recent-path",
+        kind: "line",
+        order: 46,
+        visible: solid.length > 0,
+        dashed: false,
+        lineWidth: 5,
+        lineOpacity: 0.75,
+        color: themeColor("primary"),
+        data: fc(solid.map(line)),
+      },
+      {
+        id: "recent-path-straight",
+        kind: "line",
+        order: 46,
+        visible: dashed.length > 0,
+        dashed: true,
+        lineWidth: 4,
+        lineOpacity: 0.75,
+        color: themeColor("primary"),
+        data: fc(dashed.map(line)),
+      },
+    ];
+  }, [recent, recentID]);
+
   const layers = useMemo<LayerSpec[]>(
-    () => [...baseLayers, merchantLayer, driverLayer, linkLayer],
-    [baseLayers, merchantLayer, driverLayer, linkLayer],
+    () => [...baseLayers, merchantLayer, ...recentLayers, driverLayer, linkLayer],
+    [baseLayers, merchantLayer, recentLayers, driverLayer, linkLayer],
   );
 
   // ── المكتبُ علامةٌ بشعار المنصّة ─────────────────────────────
@@ -2919,6 +2992,12 @@ function Legend() {
             <span className="block w-5 border-t-2 border-dashed" style={{ borderColor: toneColor("driver-busy") }} />
           </span>
           <span>{L.driverLeg}</span>
+        </li>
+        <li className="flex items-center gap-2">
+          <span aria-hidden className="grid h-6 w-6 shrink-0 place-items-center">
+            <span className="block h-1 w-5 rounded-full" style={{ background: themeColor("primary") }} />
+          </span>
+          <span>{L.recentPath}</span>
         </li>
         <li className="flex items-center gap-2">
           <span aria-hidden className="h-6 w-6 shrink-0 rounded-full border-2 border-line bg-paper" />

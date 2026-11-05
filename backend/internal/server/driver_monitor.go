@@ -183,3 +183,61 @@ func (s *Server) handleDriverMonitorDay(w http.ResponseWriter, r *http.Request) 
 		"orders":   orders,
 	})
 }
+
+// recentDefault **من وين بيبلّش طريقه الأخير**: أقدم طلب مفتوح معه (من إسناده)، وإلا آخر ٣٠ دقيقة.
+const recentDefault = 30 * time.Minute
+
+// handleDriverMonitorRecent GET /driver-monitor/{id}/recent?since=RFC3339 — **طريقه الحقيقي ورا الماركر**
+// بخريطة العمليات (R3، طلب المالك ٢٠٢٦-١١-٠٥). `drivers.monitor` وحدها (المالك والمدير).
+//
+// `path` من `drivermonitor.Measure` (نفس دالة المسافة): ع الطريق وين انطابق، والجزء بعد آخر مطابقة
+// (لحد ٥ دقايق) خط من نقاطه المنظّفة (`pending`) ⇒ الخط دايماً بيوصل للماركر.
+func (s *Server) handleDriverMonitorRecent(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	id := chi.URLParam(r, "id")
+	var ok bool
+	if err := s.pg.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id::text = $1 AND ur.role_code = 'driver')`, id).
+		Scan(&ok); err != nil || !ok {
+		s.respondErr(w, errMonitorDriver)
+		return
+	}
+	now := time.Now()
+	since := now.Add(-recentDefault)
+	if q := r.URL.Query().Get("since"); q != "" {
+		t, err := time.Parse(time.RFC3339, q)
+		if err != nil || t.After(now) || now.Sub(t) > 24*time.Hour {
+			s.respondErr(w, errValidation)
+			return
+		}
+		since = t
+	} else {
+		wins, err := drivermonitor.LoadWindows(ctx, s.pg, id, now.Add(-12*time.Hour), now)
+		if err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		open := false
+		for _, wd := range wins {
+			if wd.EndAt == nil && wd.AssignedAt != nil && (!open || wd.AssignedAt.Before(since)) {
+				since, open = *wd.AssignedAt, true
+			}
+		}
+	}
+	wins, err := drivermonitor.LoadWindows(ctx, s.pg, id, since, now)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	res, err := drivermonitor.Measure(ctx, s.pg, id, since, now.Add(time.Second), wins, nil, now, s.roadMatchOn(ctx))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"since":      since,
+		"path":       res.Path,
+		"km":         res.Summary.KmTotal,
+		"pending_km": res.Summary.PendingKm,
+	})
+}

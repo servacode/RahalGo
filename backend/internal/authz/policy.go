@@ -241,6 +241,7 @@ var adminPolicy = []Rule{
 	// **مراقبةُ حركتهم** — قدرتُها وحدَها (قرارُ المالك ٢٠٢٦-١١-٠٣).
 	{"GET", "/driver-monitor", DriversMonitor},
 	{"GET", "/driver-monitor/{id}", DriversMonitor},
+	{"GET", "/driver-monitor/{id}/recent", DriversMonitor},
 
 	// ── المال ───────────────────────────────────────────────────
 	{"POST", "/payouts/{id}/decide", PayoutsDecide},

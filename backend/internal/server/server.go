@@ -1711,6 +1711,7 @@ func (s *Server) Router() http.Handler {
 			// **مراقبةُ حركة السائقين** (قرارُ المالك ٢٠٢٦-١١-٠٣) — `drivers.monitor`.
 			r.Get("/driver-monitor", s.handleDriverMonitorList)
 			r.Get("/driver-monitor/{id}", s.handleDriverMonitorDay)
+			r.Get("/driver-monitor/{id}/recent", s.handleDriverMonitorRecent)
 			r.Get("/drivers/{id}/cash", s.handleDriverCashStatement)
 			// **وكلُّ ما سلّمه — لا النقديُّ وحدَه** (٢٠٢٦-١٠-٣٠) — للعرض فقط.
 			r.Get("/drivers/{id}/delivered", s.handleDriverDelivered)

@@ -427,6 +427,36 @@ func TestRoadChunks_PrunedWithTrail(t *testing.T) {
 	}
 }
 
+// Q-R9 — طريقه الأخير ورا الماركر: المالك والمدير بس (`drivers.monitor`)، والعمليات ٤٠٣.
+func TestDriverMonitorRecent_Capability(t *testing.T) {
+	h := New(t)
+	drv := h.NewUser("driver")
+	base := time.Now().UTC().Add(-20 * time.Minute).Truncate(time.Second)
+	rmDrive(t, h, drv.ID, base, 10*time.Minute, 35.6700, 38.7000, 0, 0)
+	path := "/api/v1/admin/driver-monitor/" + drv.ID + "/recent"
+	res := h.GET(path, h.NewUser("admin").Token)
+	if res.Code != 200 {
+		t.Fatalf("المدير: %s", res)
+	}
+	var env struct {
+		Data struct {
+			Path []struct {
+				Coords [][2]float64 `json:"coords"`
+			} `json:"path"`
+			Km float64 `json:"km"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(res.Body, &env); err != nil || len(env.Data.Path) == 0 || env.Data.Km < 4.5 {
+		t.Errorf("المسار الأخير: %+v %v", env.Data, err)
+	}
+	if res := h.GET(path, h.NewUser("operations").Token); res.Code != 403 {
+		t.Errorf("العمليات: %s (المتوقَّع ٤٠٣)", res)
+	}
+	if res := h.GET(path+"?since=bad", h.NewUser("admin").Token); res.Code != 400 && res.Code != 422 {
+		t.Errorf("since غلط: %s", res)
+	}
+}
+
 // Q-R11 — قطعة بقواعد أقدم بتنعاد، و`no_match` أقدم من بناء البلاطات بينعاد **مرّة** وبعدين لأ.
 func TestRoadMatcher_ParamsBumpAndNoMatchRetry(t *testing.T) {
 	h := New(t)
