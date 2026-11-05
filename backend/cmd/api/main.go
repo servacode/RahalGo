@@ -371,6 +371,8 @@ func run(logger *slog.Logger) error {
 			go srv.RunFreeDeliveryNotify(ctx, time.Minute)
 			// **وسائقٌ في الدوام انقطع موقعُه يُوقَظ تطبيقُه** — driver_location_watch.go (٢٠٢٦-١٠-١٣).
 			go srv.RunDriverLocationWatch(ctx, time.Minute)
+			// **ومسافةُ كلّ طلبٍ وأرقامُ الدوام** — drive_sweeper.go (قرارُ المالك ٢٠٢٦-١١-٠٥).
+			go srv.RunDriveSweeper(ctx, time.Minute)
 			// **وحارسُ القاعدة** — db_watch.go (اختبارُ التحمّل ٢٠٢٦-١٠-٠٩).
 			srv.StartDBWatch(ctx)
 			// **و«وضع المنصة» على الواتساب** — wa_report.go (طلبُ المالك ٢٠٢٦-١٠-٠٩):

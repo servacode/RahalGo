@@ -42,6 +42,8 @@ import { PageHero } from "@/components/admin/PageHero";
 import { Tile } from "@/components/admin/DashParts";
 import { api } from "@/lib/api";
 import { Box, distText } from "@/components/admin/orders/CardSections";
+import { ShiftsSection, type MonitorShift } from "@/components/admin/drivermonitor/ShiftsSection";
+import { useCanCall } from "@/lib/policy";
 import { ContactLinks, minutesSince, useNow } from "@/components/admin/orders/BoardWidgets";
 import type { FeatureCollection, LayerSpec } from "@/components/admin/opsmap/canvas";
 import { mapIcons, toneColor } from "@/components/admin/opsmap/palette";
@@ -132,6 +134,8 @@ interface DayResp {
   stores: Array<{ id: string; name: string; lat: number; lng: number }>;
   /** **طلباتُ اليوم بمسافة كلٍّ منها** — للمتجر وللزبون من القيادة الفعليّة. */
   orders: DayOrder[];
+  /** **دواماتُ اليوم** — مين سكّرها وليش، والعدّاد مقابل التطبيق. */
+  shifts: MonitorShift[];
 }
 interface DayOrder {
   id: string;
@@ -251,6 +255,7 @@ function DayView({ driverID, day, onBack }: { driverID: string; day: string | nu
   const [data, setData] = useState<DayResp | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
+  const canCall = useCanCall();
 
   useEffect(() => {
     let alive = true;
@@ -427,6 +432,11 @@ function DayView({ driverID, day, onBack }: { driverID: string; day: string | nu
           </div>
         </div>
       )}
+      <ShiftsSection
+        shifts={data.shifts ?? []}
+        canCorrect={canCall("PATCH", "/driver-odometer/{id}")}
+        onChanged={() => setTick((x) => x + 1)}
+      />
       <OrdersDistance orders={data.orders ?? []} />
     </>
   );

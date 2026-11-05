@@ -66,6 +66,31 @@ export interface CardOrder {
   commission_taken?: number;
   commission_percent_exact?: number;
   pay_merchant?: number;
+  /** **المسافةُ كما قادها السائق** (قرارُ المالك ٢٠٢٦-١١-٠٥) — صفٌّ لكلّ سائقٍ حمله. */
+  drive?: DriveRow[];
+}
+
+/**
+ * **مسافةُ الطلب لسائقٍ حمله** — «من بداية استلام الطلب الى انتهاء الطلب»: للمتجر (من القبول
+ * حتى الاستلام) وللزبون (حتى خرج من يده، ومعه مشوارُ إرجاع البضاعة). **من القيادة الفعليّة**
+ * لا من رجفة الموقع، ويحسبها الخادم بعد كلّ دقيقة.
+ */
+export interface DriveRow {
+  driver_id: string;
+  driver_name: string;
+  started_at: string;
+  picked_up_at?: string | null;
+  /** فارغٌ = الطلبُ لسّا معه، والرقمُ «لحد هلق». */
+  ended_at?: string | null;
+  end_kind: string;
+  to_pickup_m: number;
+  with_order_m: number;
+  /** تقاسم مقطعاً مع طلبٍ آخر بيده. */
+  shared: boolean;
+  /** دقائقُ بلا إشارةٍ أثناء الطلب — رقمٌ قليلٌ سببُه جوّالٌ صامت. */
+  gap_min: number;
+  /** ثبت الرقم (بعد ساعتين وعشر دقائق من سكّر الدوام). */
+  final: boolean;
 }
 
 /** **مسافةٌ مقروءة** — «٤٥٠ م» أو «٢٫٣ كم»، **وسالبٌ لا يُعرف فلا يُكتب.** */
@@ -182,6 +207,26 @@ export function RouteLine({ o }: { o: CardOrder }) {
     <span className="flex items-start gap-1.5 font-bold">
       <IconRoute size={16} className="mt-0.5 shrink-0 text-accent-text" aria-hidden />
       <span className="min-w-0 break-words">{routeText(o)}</span>
+    </span>
+  );
+}
+
+/** **المسافةُ المقطوعة على البطاقة** (قرارُ المالك ٢٠٢٦-١١-٠٥) — مثلاً «المسافة المقطوعة: ٣ كم». */
+export function DriveLine({ o }: { o: CardOrder }) {
+  const rows = o.drive ?? [];
+  if (rows.length === 0) return null;
+  const D = C.drive;
+  const total = rows.reduce((s, r) => s + r.to_pickup_m + r.with_order_m, 0);
+  const open = rows.some((r) => !r.ended_at);
+  const one = rows.length === 1 ? rows[0] : null;
+  return (
+    <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-ink-muted">
+      <span className="font-bold text-ink">{(open ? D.soFar : D.total).replace("{d}", distText(total))}</span>
+      {one ? (
+        <span>{D.parts.replace("{a}", distText(one.to_pickup_m)).replace("{b}", distText(one.with_order_m))}</span>
+      ) : (
+        <span>{D.drivers.replace("{n}", fmtNum(rows.length))}</span>
+      )}
     </span>
   );
 }

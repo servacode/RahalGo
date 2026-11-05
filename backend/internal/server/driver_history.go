@@ -69,6 +69,25 @@ func (s *Server) handleDriverHistory(w http.ResponseWriter, r *http.Request) {
 			rows.Close()
 		}
 	}
+	// **ومسافةُ كلّ طلبٍ قاده** (قرارُ المالك ٢٠٢٦-١١-٠٥) — «المسافة: ٣ كم»، من كانس المسافات.
+	// **ومسافتُه هو** لا مسافةُ غيره إن تبدّل السائق.
+	type drive struct{ toPickup, withOrder int }
+	drives := map[string]drive{}
+	if len(ids) > 0 {
+		rows, err := s.pg.Query(r.Context(), `
+			SELECT order_id::text, to_pickup_m, with_order_m FROM order_drives
+			 WHERE driver_id = $1 AND order_id = ANY($2::uuid[])`, userIDFrom(r), ids)
+		if err == nil {
+			for rows.Next() {
+				var id string
+				var d drive
+				if rows.Scan(&id, &d.toPickup, &d.withOrder) == nil {
+					drives[id] = d
+				}
+			}
+			rows.Close()
+		}
+	}
 
 	// ══════════════════════════════════════════════════════════════════
 	// **والسجلُّ بعين السائق لا بعين المدير** (فحصُ دورة السائق ٢٠٢٦-١٠-٠٢)
@@ -92,6 +111,11 @@ func (s *Server) handleDriverHistory(w http.ResponseWriter, r *http.Request) {
 		v["number"] = o.Number
 		v["total"] = o.Total
 		v["merchant_rated"] = rated[o.ID]
+		if d, ok := drives[o.ID]; ok {
+			v["drive_m"] = d.toPickup + d.withOrder
+			v["drive_to_pickup_m"] = d.toPickup
+			v["drive_with_order_m"] = d.withOrder
+		}
 		out[i] = v
 		// **وشرطُ التقييم هو شرطُ الخادم نفسُه** — نسخةٌ ثانيةٌ تفترق فيُعرض زرٌّ يُردّ.
 		// **ولا يُقيَّم متجرٌ لا وجودَ له** (سأل المالك ٢٠٢٦-٠٨-١٣): الخاصُّ بلا متجرٍ يمرّ

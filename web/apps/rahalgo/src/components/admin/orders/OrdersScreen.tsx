@@ -87,6 +87,7 @@ import { OrderEditor } from "./OrderEditor";
 import {
   CommissionSection,
   CustomerSection,
+  DriveLine,
   EtaSection,
   RouteLine,
   Box,
@@ -1597,6 +1598,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       cell: (o) => (
         <div className="rounded-control border border-line-soft bg-ink-faint p-3">
           <RouteLine o={o} />
+          <DriveLine o={o} />
         </div>
       ),
     },
@@ -2728,6 +2730,7 @@ function HistoryCard({
       {/* ── الطريق ── */}
       <div className="min-w-0 rounded-control border border-line-soft bg-ink-faint p-3">
         <RouteLine o={o} />
+        <DriveLine o={o} />
       </div>
 
       {/* ── المتجر ── والصفُّ حاضرٌ دائماً. */}

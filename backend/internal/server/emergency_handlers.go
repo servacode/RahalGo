@@ -40,6 +40,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/orders"
+	"github.com/servacode/rahalgo/backend/internal/shifts"
 )
 
 // handleDriverEmergency طارئٌ على طلبٍ بيده.
@@ -187,8 +188,7 @@ func (s *Server) handleDriverEmergency(w http.ResponseWriter, r *http.Request) {
 		// **وكان يُغلق بعد التحرير** — والتحريرُ يعرض الطلبَ فوراً، **فقِيس على
 		// التجهيز: عُرض الطلبُ بعد الاستلام على من أبلغ عنه نفسِه.** والمحرّكُ
 		// صار يستثني حاملَه من كلّ حال (`transitions.go`)، **وهذا حارسٌ ثانٍ.**
-		if _, err := s.pg.Exec(ctx,
-			`UPDATE users SET on_shift = false WHERE id = $1`, driverID); err != nil {
+		if _, err := shifts.Close(ctx, s.pg, driverID, shifts.ReasonEmergency); err != nil {
 			s.logger.Error("الطارئ: تعذّر إغلاق الدوام", "driver", driverID, "error", err)
 		}
 

@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/shifts"
 )
 
 // حذف الحساب — حق صاحبه، لكنه ليس زرّ محو.
@@ -100,6 +101,10 @@ func (s *Service) ConfirmAccountDeletion(ctx context.Context, userID, code, ip s
 		map[string]any{"phone": user.Phone})
 
 	if err := s.repo.AnonymizeUser(ctx, user.ID); err != nil {
+		return err
+	}
+	// **ودوامُ سائقٍ حذف حسابه يُسكَّر بسببه** (قرار المالك ٢٠٢٦-١١-٠٥).
+	if _, err := shifts.Close(ctx, s.repo.db, user.ID, shifts.ReasonAccount); err != nil {
 		return err
 	}
 	// إقفال فوري: إبطال الجلسات ومسح كاش الحالة كي يُرفض أي توكن قائم

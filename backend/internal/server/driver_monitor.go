@@ -119,6 +119,17 @@ func (s *Server) handleDriverMonitorDay(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	alert := float64(s.settings.GetInt(r.Context(), "drivers.monitor_km_alert"))
+	// **ودوامات اليوم** — متى فُتحت وسُكّرت ومين سكّرها وأرقامها (قرار المالك ٢٠٢٦-١١-٠٥).
+	dayFrom, dayTo, err := drivermonitor.AccountDayBounds(r.Context(), s.pg, day)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	dayShifts, err := s.monitorShifts(r.Context(), id, dayFrom, dayTo, time.Now())
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	// **وكل طلبٍ بمسافته** (قرار المالك ٢٠٢٦-١١-٠٥) — من القيادة الفعلية: للمتجر وللزبون.
 	type order struct {
 		ID         string     `json:"id"`
@@ -182,5 +193,6 @@ func (s *Server) handleDriverMonitorDay(w http.ResponseWriter, r *http.Request) 
 		"path":     res.Path,
 		"events":   res.Events,
 		"orders":   orders,
+		"shifts":   dayShifts,
 	})
 }

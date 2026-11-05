@@ -46,6 +46,7 @@ import { useAuth } from "@/lib/auth";
 import { OrderChatView } from "./OrderChat";
 import { DriverMoneyBox } from "./DriverMoneyBox";
 import { orderKindLabel, payerLabel } from "./payer";
+import { distText, type DriveRow } from "./CardSections";
 
 const m = getMessages(defaultLocale);
 const H = m.admin.ordersPage.history;
@@ -164,6 +165,10 @@ interface Detail {
   prep_minutes?: number | null;
   delivery_estimate_min?: number;
   to_door_eta_sec?: number | null;
+  /** طولُ المشوار على الخريطة من المتجر للزبون — المخطَّط لا المقطوع. */
+  leg_m?: number;
+  /** **المسافةُ كما قادها كلُّ سائقٍ حمله** (قرارُ المالك ٢٠٢٦-١١-٠٥). */
+  drive?: DriveRow[];
   accepted_at?: string | null;
   ready_at?: string | null;
   picked_up_at?: string | null;
@@ -640,6 +645,31 @@ function HowSection({ o }: { o: Detail }) {
         )}
         {roadActual != null && <Row label={F.roadActual}>{fmtSpan(roadActual)}</Row>}
       </div>
+
+      {/* **المسافةُ المقطوعة لكلّ سائقٍ حمله** (قرارُ المالك ٢٠٢٦-١١-٠٥) — والمخطَّطةُ تحتها للمقارنة. */}
+      {((o.drive?.length ?? 0) > 0 || (o.leg_m != null && o.leg_m > 0)) && (
+        <div className="space-y-1 rounded-control bg-field px-3 py-2">
+          <p className="text-xs font-bold">{F.drive}</p>
+          {(o.drive ?? []).map((d) => (
+            <div key={d.driver_id} className="space-y-0.5">
+              <Row label={d.driver_name || "—"}>
+                {F.driveParts
+                  .replace("{a}", distText(d.to_pickup_m))
+                  .replace("{b}", distText(d.with_order_m))
+                  .replace("{t}", distText(d.to_pickup_m + d.with_order_m))}
+              </Row>
+              <span className="flex flex-wrap justify-end gap-1">
+                {!d.ended_at && <Badge variant="accent">{F.driveOpen}</Badge>}
+                {d.ended_at && !d.final && <Badge variant="neutral">{F.driveComputing}</Badge>}
+                {d.end_kind === "released" && <Badge variant="warning">{F.driveReleased}</Badge>}
+                {d.shared && <Badge variant="neutral">{F.driveShared}</Badge>}
+                {d.gap_min > 0 && <Badge variant="warning">{F.driveGap.replace("{n}", fmtNum(d.gap_min))}</Badge>}
+              </span>
+            </div>
+          ))}
+          {o.leg_m != null && o.leg_m > 0 && <Row label={F.legPlanned}>{distText(o.leg_m)}</Row>}
+        </div>
+      )}
     </SectionBox>
   );
 }

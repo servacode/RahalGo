@@ -12,6 +12,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/officecash"
+	"github.com/servacode/rahalgo/backend/internal/shifts"
 )
 
 // errDriverHasOpenOrders **لا يُغلق دوامُ من بيده طلبٌ حيّ** — الطلبُ في صندوقه
@@ -257,15 +258,17 @@ func (s *Server) handleAdminEndShift(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tag, err := s.pg.Exec(r.Context(), `
-		UPDATE users SET on_shift = false, shift_started_at = NULL, updated_at = now()
-		WHERE id = $1 AND on_shift`, id)
-	if err != nil {
-		s.respondErr(w, err)
+	// **ومن ليس في دوامه لا يُغلق له شيء** — ٤٠٤ كما كان.
+	var onShift bool
+	if err := s.pg.QueryRow(r.Context(),
+		`SELECT on_shift FROM users WHERE id = $1`, id).Scan(&onShift); err != nil || !onShift {
+		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
-	if tag.RowsAffected() == 0 {
-		s.respondErr(w, httpx.ErrNotFound)
+	// **ويُكتب في سجلّ الدوام أنّ العمليّات سكّرته** (قرار المالك ٢٠٢٦-١١-٠٥) — فيُرى
+	// بالمراقبة «ما صوّر عند الإغلاق».
+	if _, err := shifts.Close(r.Context(), s.pg, id, shifts.ReasonOps); err != nil {
+		s.respondErr(w, err)
 		return
 	}
 

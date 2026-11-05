@@ -17,6 +17,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/media"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/orders"
+	"github.com/servacode/rahalgo/backend/internal/shifts"
 )
 
 // بوابة السائق.
@@ -124,6 +125,15 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 		// Suspended **أحسابُه موقوف؟** (٢٠٢٦-١٠-٠٢) — يُكمل طلبَه القائمَ وحدَه،
 		// **ويُقال له ذلك** بدل أن تُردّ عليه الأبوابُ واحداً واحداً بلا سبب.
 		Suspended bool `json:"suspended"`
+
+		// ── مسافةُ طلباته اليوم (قرارُ المالك ٢٠٢٦-١١-٠٥) ──────────────
+		//
+		// «شقد المسافة المقطوعة باليوم وتبدا بصفر اول الدوام وتبدا تزيد مع كل طلب.»
+		// **يومُه يومُ الحساب** (من ساعة فتح الدوام) — كعدّ طلباته وأجره على البطاقة نفسها،
+		// **ومن القيادة الفعليّة** كما يكتبها كانسُ المسافات بعد كلّ طلب (والطلبُ بيده «لحد هلق»).
+		// **ولا يرى «بلا طلب»** — تلك مقارنةُ المكتب.
+		TodayDriveM      int `json:"today_drive_m"`
+		TodayDriveOrders int `json:"today_drive_orders"`
 	}
 	err := s.pg.QueryRow(r.Context(), `
 		SELECT u.full_name, u.on_shift, u.shift_started_at,
@@ -181,6 +191,15 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
+	// **ومسافةُ طلباته اليوم** — من `order_drives` لا من الأثر (لا يُقاس هنا مرّةً ثانية).
+	// وتعذّرُها لا يُسقط شاشته: صفرٌ خيرٌ من شاشةٍ بيضاء.
+	if err := s.pg.QueryRow(r.Context(), `
+		SELECT COALESCE(sum(to_pickup_m + with_order_m), 0)::int, count(*)::int
+		  FROM order_drives
+		 WHERE driver_id = $1 AND COALESCE(ended_at, now()) >= account_day_start(account_day(now()))`,
+		uid).Scan(&out.TodayDriveM, &out.TodayDriveOrders); err != nil {
+		s.logger.Warn("مسافة اليوم: تعذّرت القراءة", "driver", uid, "error", err)
+	}
 	// **والقواعدُ تُقرأ من المخزن لا من الاستعلام** — ليست صفوفاً في `users`.
 	out.MaxActiveOrders = s.settings.GetInt(r.Context(), "drivers.max_active_orders")
 	out.RequirePhoto = s.settings.GetBool(r.Context(), "drivers.require_delivery_photo")
@@ -204,6 +223,8 @@ func (s *Server) handleDriverShift(w http.ResponseWriter, r *http.Request) {
 	}
 	req, err := decode[struct {
 		On bool `json:"on"`
+		// Via **من أين سُكّر** — `logout` من الخروج من التطبيق (نسخةٌ جديدة)، وفارغٌ من المفتاح.
+		Via string `json:"via"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -259,13 +280,21 @@ func (s *Server) handleDriverShift(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if _, err := s.pg.Exec(r.Context(), `
-		UPDATE users SET on_shift = $2,
-			shift_started_at = CASE WHEN $2 THEN now() ELSE NULL END,
-			updated_at = now()
-		WHERE id = $1`, userIDFrom(r), req.On); err != nil {
-		s.respondErr(w, err)
-		return
+	// **وكل فتحٍ وسكّرٍ صفٌّ في سجلّ الدوام** (قرار المالك ٢٠٢٦-١١-٠٥) — `internal/shifts`.
+	if req.On {
+		if _, err := shifts.Open(r.Context(), s.pg, userIDFrom(r), appBuild(r)); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+	} else {
+		reason := shifts.ReasonDriver
+		if req.Via == "logout" {
+			reason = shifts.ReasonLogout
+		}
+		if _, err := shifts.Close(r.Context(), s.pg, userIDFrom(r), reason); err != nil {
+			s.respondErr(w, err)
+			return
+		}
 	}
 	s.touch("order", "ops") // العمليات ترى من يعمل الآن
 	httpx.JSON(w, http.StatusOK, map[string]any{"on_shift": req.On})
@@ -1377,9 +1406,9 @@ func (s *Server) handleDriverRelease(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// **ودوامُه يُغلَق قبل الترك لا بعده** — الترتيبُ يقرأ `on_shift`، **والتركُ
-	// يعرض الطلبَ فوراً** (وهو الدرسُ نفسُه في الطارئ).
-	if _, err := s.pg.Exec(ctx,
-		`UPDATE users SET on_shift = false WHERE id = $1`, uid); err != nil {
+	// يعرض الطلبَ فوراً** (وهو الدرسُ نفسُه في الطارئ). **ويُكتب سببُه** في سجلّ الدوام.
+	closedShift, err := shifts.Close(ctx, s.pg, uid, shifts.ReasonRelease)
+	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -1399,7 +1428,9 @@ func (s *Server) handleDriverRelease(w http.ResponseWriter, r *http.Request) {
 	if _, err := s.orders.TransitionAudited(ctx, uid, []string{"driver"},
 		orderID, orders.StDispatching, note, hook); err != nil {
 		// **والدوامُ يعود إن لم يقع الترك** — لا يُغلَق دوامُ من بقي الطلبُ معه.
-		_, _ = s.pg.Exec(ctx, `UPDATE users SET on_shift = true WHERE id = $1`, uid)
+		if rerr := shifts.Reopen(ctx, s.pg, uid, closedShift); rerr != nil {
+			s.logger.Error("الترك: تعذّر إرجاعُ الدوام", "driver", uid, "error", rerr)
+		}
 		s.respondErr(w, err)
 		return
 	}
