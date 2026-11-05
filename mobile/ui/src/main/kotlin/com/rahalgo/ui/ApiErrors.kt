@@ -556,6 +556,14 @@ private val CODES: Map<String, Int> = mapOf(
     "custom_goods_too_high" to R.string.err_custom_goods_too_high,
     "proof_too_far" to R.string.err_proof_too_far,
     "proof_mocked" to R.string.err_proof_mocked,
+    // ── عدّاد الدرّاجة عند فتح الدوام وسكّره (قرارُ المالك ٢٠٢٦-١١-٠٥) ──
+    "odometer_required" to R.string.err_odometer_required,
+    "odometer_bad_km" to R.string.err_odometer_bad_km,
+    "odometer_photo_required" to R.string.err_odometer_photo_required,
+    "odometer_mocked" to R.string.err_odometer_mocked,
+    "odometer_wrong_phase" to R.string.err_odometer_wrong_phase,
+    "odometer_lower" to R.string.err_odometer_lower,
+    "odometer_check" to R.string.err_odometer_check,
     "proof_no_location" to R.string.err_proof_no_location,
     "merchant_closed" to R.string.err_merchant_closed,
     // **ومتجرٌ موقوفٌ يُقرأ ولا يُكتب فيه** (A4) — **حارسُ الخادم هو

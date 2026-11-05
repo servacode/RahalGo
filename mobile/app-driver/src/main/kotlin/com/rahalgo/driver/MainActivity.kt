@@ -500,6 +500,25 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
         )
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    // **ورقةُ عدّاد الدرّاجة — فوق كلّ تبويب** (قرارُ المالك ٢٠٢٦-١١-٠٥)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **تُفتح من مفتاح الدوام ومن الخروج في القائمة** — والخروجُ قد يُطلب من أيّ تبويب،
+    // **فتُرسم هنا لا في «لوحتي» وحدَها.**
+    home.state.odometer?.let { ask ->
+        com.rahalgo.driver.home.OdometerSheet(
+            ask = ask,
+            actions = com.rahalgo.driver.home.OdometerActions(
+                submit = home::submitOdometer,
+                skip = home::skipOdometer,
+                dismiss = home::dismissOdometer,
+                fix = home::fixOdometer,
+                cameraDenied = home::odometerCameraDenied,
+            ),
+        )
+    }
+
     val ask = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) { granted ->

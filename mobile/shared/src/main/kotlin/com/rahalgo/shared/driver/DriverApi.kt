@@ -4,6 +4,7 @@ import com.rahalgo.shared.model.CashPage
 import com.rahalgo.shared.model.CorrelationFix
 import com.rahalgo.shared.model.CorrelationVerdict
 import com.rahalgo.shared.model.DriverMe
+import com.rahalgo.shared.model.Envelope
 import com.rahalgo.shared.model.HistoryPage
 import com.rahalgo.shared.model.MerchantRatingInput
 import com.rahalgo.shared.model.ReportInput
@@ -628,13 +629,79 @@ class DriverApi(private val api: ApiClient) {
      * السقف مثلا)، **ومن بدّل الزرّ قبل الجواب** أرى صاحبه «متاح» وهو
      * ليس كذلك — فينتظر طلبا لا يأتي.
      */
-    suspend fun setShift(on: Boolean): Boolean =
-        api.call<Map<String, Boolean>>(
+    suspend fun setShift(on: Boolean, odometerId: String? = null, via: String? = null): Boolean =
+        api.call<ShiftResult>(
             "/api/v1/driver/shift",
             HttpMethod.Post,
-            mapOf("on" to on),
-        )["on_shift"] ?: on
+            // **صنفٌ موسوم لا `mapOf` مختلط** — نصٌّ ومنطقيٌّ في خريطةٍ واحدة لا يُسلسَل في
+            // النسخة المضغوطة (`RequestBodyGuardTest`). والفارغُ لا يُرسَل (`explicitNulls`).
+            ShiftBody(on, odometerId, via),
+        ).onShift ?: on
+
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **قراءةُ العدّاد — صورةٌ ورقم** (قرارُ المالك ٢٠٢٦-١١-٠٥)
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * «عند فتح الدوام وعند إغلاقه يصوّر العدّاد ويكتب الرقم.» **الرقمُ عليه الحساب والصورةُ
+     * دليلُه**، ومعهما موضعُه لحظتَها (والمزيَّفُ يُرفض في المحرّك). وتُرفع قبل `setShift`،
+     * **ومعرّفُها يُرسل معه** فيُربط بالدوام.
+     *
+     * `km` نصٌّ كما كتبه (بعد `OdometerInput`) — والمحرّكُ يقرؤه ويحكم. و`confirm` لقفزةٍ
+     * كبيرةٍ أكّدها السائقُ بعد سؤاله.
+     */
+    suspend fun sendOdometer(
+        jpeg: ByteArray,
+        km: String,
+        phase: String,
+        lat: Double?,
+        lng: Double?,
+        mocked: Boolean = false,
+        accuracyM: Float? = null,
+        confirm: Boolean = false,
+    ): OdometerReading {
+        val raw = api.upload(
+            "/api/v1/driver/odometer",
+            fileName = "odometer.jpg",
+            bytes = jpeg,
+            fields = buildMap {
+                put("km", km)
+                put("phase", phase)
+                if (lat != null && lng != null) {
+                    put("lat", lat.toString())
+                    put("lng", lng.toString())
+                }
+                if (mocked) put("mocked", "true")
+                if (accuracyM != null && accuracyM > 0f) put("accuracy", accuracyM.toString())
+                if (confirm) put("confirm", "true")
+            },
+        )
+        return api.json.decodeFromString<Envelope<OdometerReading>>(raw).data ?: OdometerReading()
+    }
 }
+
+/** **جسمُ مفتاح الدوام** — والفارغان لا يُرسلان، فيبقى جسمُ النسخة القديمة `{"on":…}` كما هو. */
+@Serializable
+data class ShiftBody(
+    val on: Boolean,
+    @kotlinx.serialization.SerialName("odometer_id") val odometerId: String? = null,
+    /** `logout` حين يُسكَّر الدوام بالخروج من التطبيق. */
+    val via: String? = null,
+)
+
+@Serializable
+internal data class ShiftResult(
+    @kotlinx.serialization.SerialName("on_shift") val onShift: Boolean? = null,
+)
+
+/** **ردُّ قراءة العدّاد** — معرّفُها يُرسل مع `setShift`. */
+@Serializable
+data class OdometerReading(
+    val id: String = "",
+    val km: Double = 0.0,
+    /** ok · first · jump_confirmed */
+    val check: String = "",
+)
 
 /** **ردُّ «اطلب موقع الزبون»** — كم بقي من الثلاث. */
 @kotlinx.serialization.Serializable
