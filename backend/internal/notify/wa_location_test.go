@@ -94,4 +94,17 @@ func TestLocationReplyRoutesResolvedPhone(t *testing.T) {
 	if _, isLoc := s.locationReply(context.Background(), txt, nil); isLoc {
 		t.Fatal("نصٌّ عُدّ موقعاً")
 	}
+	// **موقعٌ مباشر** (٢٠٢٦-١١-٠٦) — أوّلُه وتحديثاتُه تصل المعالِجَ كلُّها بـ `Live`،
+	// **والخادمُ يقبل أوّلَها وحدَه** (`HandleWALocation`).
+	pn := types.NewJID("963944555602", types.DefaultUserServer)
+	for seq := int64(0); seq < 3; seq++ {
+		live := &events.Message{Info: types.MessageInfo{MessageSource: types.MessageSource{Sender: pn}},
+			Message: &waE2E.Message{LiveLocationMessage: &waE2E.LiveLocationMessage{
+				DegreesLatitude: proto.Float64(35.95), DegreesLongitude: proto.Float64(39.01),
+				AccuracyInMeters: proto.Uint32(9), SequenceNumber: proto.Int64(seq)}}}
+		if _, isLoc := s.locationReply(context.Background(), live, nil); !isLoc || !gotLoc.Live ||
+			gotFrom != "+963944555602" || gotLoc.Lat != 35.95 || gotLoc.AccuracyM != 9 {
+			t.Fatalf("مباشرٌ %d: isLoc=%v loc=%+v from=%q", seq, isLoc, gotLoc, gotFrom)
+		}
+	}
 }
