@@ -22,16 +22,19 @@
  */
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { getMessages, defaultLocale, errorText, fmtNum } from "@rahalgo/i18n";
+import { useCallback, useEffect, useRef, useState, type FocusEvent as ReactFocusEvent } from "react";
+import { getMessages, defaultLocale, errorText, fmtNum, westernDigits } from "@rahalgo/i18n";
 import { Alert, Button, Checkbox, EmptyState, IconLink, IconLocation, IconMoto, Input, LoadingState, Textarea } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import { useStoreDeliveries } from "@/lib/store/deliveries";
-import type { DeliveryQuote } from "@/lib/store/types";
+import type { DeliveryQuote, DeliveryRecipient } from "@/lib/store/types";
 import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
 import { backAt, fill } from "@/lib/customer/texts";
 import { DeliveryRow, statusText, toneOf } from "@/components/store/DeliveryParts";
+import { RecipientSuggestions } from "@/components/store/RecipientSuggestions";
+import { useRecipientSuggest } from "@/lib/store/recipients";
+import { recipientFill } from "@/lib/store/recipientSuggest";
 
 const m = getMessages(defaultLocale);
 const D = m.store.delivery;
@@ -179,6 +182,10 @@ export default function DeliveryPage() {
   const [shown, setShown] = useState(5);
   const linkTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const linkSeq = useRef(0);
+  // **مستلموه السابقون يُقترحون وقتَ الكتابة** (قرارُ المالك ٢٠٢٦-١١-٠٥) — مرآةُ التطبيق.
+  const saved = useRecipientSuggest(storeId);
+  /** **النقطةُ من آخر توصيلةٍ لمستلِمٍ اختير** — تُقال تحت العنوان وتُزال بلمسة. */
+  const [pointFromSaved, setPointFromSaved] = useState(false);
 
   const isFetch = mode === "fetch";
   const touched = () => {
@@ -239,6 +246,7 @@ export default function DeliveryPage() {
       setLinkState("idle");
       if (point) {
         setPoint(null);
+        setPointFromSaved(false);
         void fetchQuote(null, mode);
       }
       return;
@@ -254,19 +262,67 @@ export default function DeliveryPage() {
         if (r.found) {
           const p = { lat: r.lat, lng: r.lng };
           setPoint(p);
+          setPointFromSaved(false);
           setLinkState("found");
           void fetchQuote(p, mode);
         } else {
           setPoint(null);
+          setPointFromSaved(false);
           setLinkState("notFound");
           void fetchQuote(null, mode);
         }
       } catch {
         if (seq !== linkSeq.current) return;
         setPoint(null);
+        setPointFromSaved(false);
         setLinkState("notFound");
       }
     }, 400);
+  }
+
+  /**
+   * **اللمسةُ على مستلِمٍ سابقٍ تملأ كلَّ شيء** (قرارُ المالك ٢٠٢٦-١١-٠٥) — الاسمُ والرقمُ
+   * والعنوانُ والنقطةُ إن عُرفت، **وإلّا بلا نقطةٍ كما اليوم.** ويبقى كلُّه قابلاً للتعديل.
+   */
+  function pickRecipient(r: DeliveryRecipient) {
+    const f = recipientFill(r);
+    saved.close();
+    setName(f.name);
+    setPhone(f.phone);
+    setAddress(f.address);
+    touched();
+    if (f.point) {
+      // **ونقطتُه تحلّ محلّ رابطٍ أو طلبِ موقعٍ سابق** — لا تبقى «✓ وصل» فوق غيرها.
+      linkSeq.current++;
+      if (linkTimer.current) clearTimeout(linkTimer.current);
+      setLink("");
+      setLinkState("idle");
+      setAsk("idle");
+      setAskReq(null);
+      setAskAcc(null);
+      setAskError("");
+      setPoint(f.point);
+      setPointFromSaved(true);
+      void fetchQuote(f.point, mode);
+    } else if (pointFromSaved) {
+      // **ونقطةُ مستلِمٍ سابقٍ لا تبقى لمستلِمٍ بلا نقطة.**
+      setPoint(null);
+      setPointFromSaved(false);
+      void fetchQuote(null, mode);
+    }
+  }
+
+  /** **«إزالة الموقع»** — فتعود الأجرةُ بلا نقطة. */
+  function clearSavedPoint() {
+    setPoint(null);
+    setPointFromSaved(false);
+    touched();
+    void fetchQuote(null, mode);
+  }
+
+  /** **القائمةُ تُطوى حين يخرج من الحقل** — إلّا إلى زرٍّ فيها. */
+  function closeOnLeave(e: ReactFocusEvent<HTMLDivElement>) {
+    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) saved.close();
   }
 
   /** **«لصق» بلمسة** — يقرأ الحافظةَ ويمرّرها لقارئ الرابط نفسِه. */
@@ -320,6 +376,7 @@ export default function DeliveryPage() {
           setLink("");
           setLinkState("idle");
           setPoint(p);
+          setPointFromSaved(false);
           setAskAcc(st.accuracy_m);
           setAsk("received");
           void fetchQuote(p, mode);
@@ -403,6 +460,8 @@ export default function DeliveryPage() {
       setLinkState("idle");
       setLinkOpen(false);
       setPoint(null);
+      setPointFromSaved(false);
+      saved.close();
       setAsk("idle");
       setAskReq(null);
       setAskAcc(null);
@@ -512,31 +571,49 @@ export default function DeliveryPage() {
             void send();
           }}
         >
-          <Input
-            label={isFetch ? D.nameFetch : D.name}
-            error={tried && !name.trim() ? D.required : undefined}
-            value={name}
-            disabled={busy}
-            autoComplete="off"
-            onChange={(e) => {
-              setName(e.target.value);
-              touched();
-            }}
-          />
-          <Input
-            label={isFetch ? D.phoneFetch : D.phone}
-            error={tried && !phone.trim() ? D.required : undefined}
-            value={phone}
-            disabled={busy}
-            type="tel"
-            inputMode="tel"
-            dir="ltr"
-            autoComplete="off"
-            onChange={(e) => {
-              setPhone(e.target.value.replace(/[^\d+]/g, "").slice(0, 16));
-              touched();
-            }}
-          />
+          {/* **مستلموه السابقون تحت الحقل الذي يكتب فيه** (قرارُ المالك ٢٠٢٦-١١-٠٥) — حرفان
+              في الاسم أو الرقم، واللمسةُ تملأ النموذج. **وتُطوى حين يخرج من الحقل.** */}
+          <div className="flex flex-col gap-2" onBlur={closeOnLeave}>
+            <Input
+              label={isFetch ? D.nameFetch : D.name}
+              error={tried && !name.trim() ? D.required : undefined}
+              value={name}
+              disabled={busy}
+              autoComplete="off"
+              onChange={(e) => {
+                setName(e.target.value);
+                touched();
+                saved.type("name", e.target.value);
+              }}
+            />
+            {saved.field === "name" && (
+              <RecipientSuggestions items={saved.items} disabled={busy} onPick={pickRecipient} onHide={saved.hide} />
+            )}
+          </div>
+          <div className="flex flex-col gap-2" onBlur={closeOnLeave}>
+            <Input
+              label={isFetch ? D.phoneFetch : D.phone}
+              error={tried && !phone.trim() ? D.required : undefined}
+              value={phone}
+              disabled={busy}
+              type="tel"
+              inputMode="tel"
+              dir="ltr"
+              autoComplete="off"
+              onChange={(e) => {
+                // **والأرقامُ الهنديّةُ تُقرأ أرقاماً** — كانت تُمحى فلا يُكتب الرقمُ من لوحةٍ عربيّة.
+                const v = westernDigits(e.target.value)
+                  .replace(/[^\d+]/g, "")
+                  .slice(0, 16);
+                setPhone(v);
+                touched();
+                saved.type("phone", v);
+              }}
+            />
+            {saved.field === "phone" && (
+              <RecipientSuggestions items={saved.items} disabled={busy} onPick={pickRecipient} onHide={saved.hide} />
+            )}
+          </div>
           <Textarea
             id="delivery-address"
             label={isFetch ? D.addressFetch : D.address}
@@ -549,6 +626,15 @@ export default function DeliveryPage() {
               touched();
             }}
           />
+          {/* **ونقطةُ آخر توصيلةٍ لمن اختير تُقال** — وتُزال بلمسة فتعود الأجرةُ بلا نقطة. */}
+          {pointFromSaved && (
+            <div className="-mt-1 flex items-center gap-2 rounded-control border border-success-edge bg-success-tint px-3 py-2" data-testid="delivery-saved-point">
+              <p className="min-w-0 flex-1 text-xs font-bold text-success">{isFetch ? D.savedPointFetch : D.savedPoint}</p>
+              <button type="button" className="shrink-0 text-sm font-bold text-accent-text" disabled={busy} onClick={clearSavedPoint}>
+                {D.savedPointRemove}
+              </button>
+            </div>
+          )}
           <div className="flex flex-col gap-2">
             {/* **طريقا الموقع في صفٍّ واحد** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩): «اطلب الموقع» — الطريقُ
                 الأوّل (قرارُ المالك ٢٠٢٦-١٠-٢٩) — **وبجانبه «لصق رابط» يفتح خانةَ الرابط وقتَ الحاجة.** */}

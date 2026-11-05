@@ -283,6 +283,21 @@ export interface Delivery {
   created_at: string;
 }
 
+/**
+ * **مستلِمٌ سابقٌ للمتجر** — من آخر توصيلةٍ لرقمه (قرارُ المالك ٢٠٢٦-١١-٠٥). مرآةُ
+ * `DeliveryRecipient` في `DeliveriesApi.kt`، **والنقطةُ فارغةٌ إن أُرسلت بلا نقطة.**
+ */
+export interface DeliveryRecipient {
+  name: string;
+  /** **بصيغته المخزَّنة** `+9639XXXXXXXX`. */
+  phone: string;
+  address_text: string;
+  lat: number | null;
+  lng: number | null;
+  last_used_at: string;
+  times: number;
+}
+
 export interface StoreReport {
   summary: {
     orders: number;

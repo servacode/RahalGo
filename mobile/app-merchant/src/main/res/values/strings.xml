@@ -398,6 +398,15 @@
     <!-- **وفي «إحضار» المبلغُ يُدفع لا يُقبض** (قرارُ المالك ٢٠٢٦-١٠-١٦) — والخطواتُ إلى مكان الاستلام ثمّ إليك. -->
     <string name="md_collect_amount_fetch">المبلغ الذي يدفعه (%1$s)</string>
     <string name="md_collect_missing_fetch">مبلغ الدفع</string>
+    <!-- **مستلموه السابقون يُقترحون وقتَ الكتابة** (قرارُ المالك ٢٠٢٦-١١-٠٥) — ونفسُها بالموقع
+         (`store.delivery.saved*` في ar.json، ويحرسها `check-store-parity.mjs`). -->
+    <string name="md_saved_title">من توصيلاتك السابقة</string>
+    <string name="md_saved_line">%1$s — %2$s</string>
+    <string name="md_saved_hide">إزالة من القائمة</string>
+    <string name="md_saved_has_point">موقعه محفوظ</string>
+    <string name="md_saved_point">✓ موقع المستلم من آخر توصيلة — سيراه السائق على الخريطة</string>
+    <string name="md_saved_point_fetch">✓ موقع مكان الاستلام من آخر توصيلة — سيراه السائق على الخريطة</string>
+    <string name="md_saved_point_remove">إزالة الموقع</string>
     <string name="md_step_to_pickup_fetch">في الطريق إلى مكان الاستلام</string>
     <string name="md_step_at_pickup_fetch">السائق في مكان الاستلام</string>
     <string name="md_step_to_you_fetch">في الطريق إليك</string>
