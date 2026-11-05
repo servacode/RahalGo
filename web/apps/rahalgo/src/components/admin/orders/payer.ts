@@ -69,8 +69,10 @@ export function payerIsCash(k: PayerKey): boolean {
 }
 
 /** **نوعُ الطلب بلفظ اللوحة** — عاديّ · توصيل من المتجر · إحضار للمتجر · أمانة · مشتريات. */
-export function orderKindLabel(o: { kind?: string; delivery_mode?: string; custom_mode?: string }): string {
+export function orderKindLabel(o: { kind?: string; delivery_mode?: string; custom_mode?: string; origin?: string }): string {
   const OP = getMessages(defaultLocale).admin.ordersPage;
+  // **«طلب واتساب»** (قرارُ المالك ٢٠٢٦-١١-٠٥) — كتبه المكتبُ من رسالة واتساب.
+  if (o.origin === "whatsapp") return OP.kindWhatsApp;
   if (o.kind === "merchant_delivery") return o.delivery_mode === "fetch" ? OP.kindMdFetch : OP.kindMdSend;
   if (o.kind === "custom") return o.custom_mode === "amanah" ? OP.kindAmanah : OP.kindPurchase;
   return OP.kindStd;

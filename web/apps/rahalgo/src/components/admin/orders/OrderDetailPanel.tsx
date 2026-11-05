@@ -43,6 +43,7 @@ import {
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useCanOpen } from "@/lib/policy";
 import { OrderChatView } from "./OrderChat";
 import { DriverMoneyBox } from "./DriverMoneyBox";
 import { orderKindLabel, payerLabel } from "./payer";
@@ -161,6 +162,10 @@ interface Detail {
   partner_commission_percent_exact?: number | null;
   ext_store_merchant_name?: string;
   ext_store_reason?: string;
+  /** **طلبُ الواتساب** (قرارُ المالك ٢٠٢٦-١١-٠٥) — أصلُه ومن كتبه ومتجرُ متاجرنا المنسوخ. */
+  origin?: string;
+  created_by_name?: string;
+  pickup_merchant_id?: string;
   prep_minutes?: number | null;
   delivery_estimate_min?: number;
   to_door_eta_sec?: number | null;
@@ -239,6 +244,7 @@ export function OrderDetailPanel({
   onClose: () => void;
 }) {
   const { can } = useAuth();
+  const canOpen = useCanOpen();
   const order = useLoad<Detail>(`/api/v1/admin/orders/${orderId}`);
   const money = useLoad<MoneyBreakdown>(
     can("finance.read") ? `/api/v1/admin/orders/${orderId}/breakdown` : null,
@@ -294,8 +300,23 @@ export function OrderDetailPanel({
             </InfoRow>
             {order.merchant_name && (
               <InfoRow icon={<IconStore size={15} />} label={H.infoStore}>
-                {order.merchant_name}
+                {/* **ومتجرٌ من متاجرنا على طلب واتساب يُفتح ملفُّه** (قرارُ المالك ٢٠٢٦-١١-٠٥). */}
+                {order.origin === "whatsapp" && order.pickup_merchant_id && canOpen.merchant ? (
+                  <Link className="underline" href={`/dashboard/merchants/${encodeURIComponent(order.pickup_merchant_id)}`}>
+                    {order.merchant_name}
+                  </Link>
+                ) : (
+                  order.merchant_name
+                )}
               </InfoRow>
+            )}
+            {/* **«طلب واتساب · أنشأه …»** — من كتبه من الموظّفين. */}
+            {order.origin === "whatsapp" && (
+              <p className="text-sm text-ink-muted">
+                {order.created_by_name
+                  ? m.admin.ordersPage.whatsAppBy.replace("{name}", order.created_by_name)
+                  : m.admin.ordersPage.kindWhatsApp}
+              </p>
             )}
             {order.driver_name && (
               <InfoRow icon={<IconMoto size={15} />} label={H.infoDriver}>

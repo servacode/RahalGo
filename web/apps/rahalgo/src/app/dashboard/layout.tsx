@@ -33,6 +33,7 @@ import {
   IconSignup,
   BootScreen,
   IconShieldCheck,
+  IconWhatsApp,
   wsBase,
   useLiveData,
 } from "@rahalgo/ui";
@@ -77,6 +78,10 @@ const ALL_NAV: NavItem[] = [
   // **والسجلُّ بابٌ ثانٍ** — «ماذا جرى؟» سؤالٌ غيرُ «ما الذي يحتاجني الآن؟».
   { href: "/dashboard/history", label: m.admin.nav.history, icon: IconHistory,
     caps: ["orders.read"] },
+  // **«طلبات الواتساب»** (قرارُ المالك ٢٠٢٦-١١-٠٥) — طلبٌ وصل على الواتساب يُكتب هنا وينزل
+  // للسائقين مباشرةً. **للأدمن والموظفين بقدرته** — ويمنحها الأدمنُ لأيّ دورٍ من «الأدوار».
+  { href: "/dashboard/whatsapp", label: m.admin.nav.whatsappOrders, icon: IconWhatsApp,
+    caps: ["orders.whatsapp"] },
   // ══════════════════════════════════════════════════════════════════
   // **والحساباتُ ثالثاً — أهمُّ ما بعد الطلبات اليوم**
   // ══════════════════════════════════════════════════════════════════
