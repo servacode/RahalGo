@@ -88,8 +88,10 @@ func (s *Server) handleDriverLocation(w http.ResponseWriter, r *http.Request) {
 	// الغد. **وما شاخ ساعتين لا يُكتب موضعاً حاليّاً** (حدُّ الدفعة نفسُه).
 	now := time.Now()
 	at := now
+	uid := userIDFrom(r)
 	if req.RecordedAt != nil && !req.RecordedAt.IsZero() {
-		at = *req.RecordedAt
+		// **وساعةُ الهاتف تُصحَّح أوّلاً** (`driver_clock.go`) — صفرٌ للنسخ القديمة.
+		at = req.RecordedAt.Add(s.deviceClockFix(r, uid, now))
 		if at.After(now) {
 			at = now
 		}
@@ -109,7 +111,6 @@ func (s *Server) handleDriverLocation(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, errValidation)
 		return
 	}
-	uid := userIDFrom(r)
 	// **وقفزةٌ أسرعُ من مركبةٍ تُهمَل** (`driver_location_jump.go`) — نجاحٌ بلا كتابة.
 	from := s.lastFixOf(r.Context(), uid)
 	if impossibleJump(from, req.Lat, req.Lng, at) {
