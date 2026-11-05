@@ -138,17 +138,18 @@ func DriverFamily(kind string, k LandmarkKey) string {
 }
 
 // SameLandmark **أهما معلمٌ واحد؟** — `famA` و`famB` من أنواع السائق السبعة، **و«other»
-// لصنفٍ معروفٍ لا نوعَ له عندنا** (حديقة، مخفر…).
+// لصنفٍ معروفٍ لا نوعَ له عندنا** (حديقة، مخفر…)، **وفارغٌ لصنفٍ لا يُرسم** (مقبرة، حيّ، مكتب).
 func SameLandmark(a LandmarkKey, famA string, b LandmarkKey, famB string) bool {
-	if a.Full == "" || b.Full == "" || famA == "" || famB == "" {
+	if a.Full == "" || b.Full == "" {
 		return false
 	}
 	// **وكلمتا نوعٍ لا تترادفان مكانان** — «فرن الأمل» غيرُ «سوبرماركت الأمل».
 	if a.Group != "" && b.Group != "" && a.Group != b.Group {
 		return false
 	}
-	// **و«غير ذلك» بالاسم كاملاً وحدَه.**
-	if famA == "other" || famB == "other" {
+	// **و«غير ذلك» والصنفُ الذي لا يُرسم بالاسم كاملاً وحدَه** (مراجعة ٢٠٢٦-١١-٠٥: «مقبرة تل
+	// البيعة» بحرفها كانت تُحسب جديدة) — **ولا يكفيه احتواءٌ ولا حرف**: «النور» ليس «حي النور».
+	if famA == "" || famB == "" || famA == "other" || famB == "other" {
 		return a.Full == b.Full
 	}
 	// **وعائلتان مختلفتان مكانان** — «صيدلية الشفاء» غيرُ «مشفى الشفاء».
@@ -163,6 +164,29 @@ func SameLandmark(a LandmarkKey, famA string, b LandmarkKey, famB string) bool {
 	}
 	// **وحرفٌ واحدٌ في اسمٍ طويل** — `withinOneEdit` نفسُها التي تدمج أخطاءَ أسماء الأحياء.
 	return min(len([]rune(a.Core)), len([]rune(b.Core))) >= 5 && withinOneEdit(a.Core, b.Core)
+}
+
+// SameOwnLandmark **أهو ما أرسله السائقُ نفسُه من قبل؟** — بالاسم، **ونوعُ القائمة لا يفرّق**
+// (مراجعة ٢٠٢٦-١١-٠٥): «جامع النور» بنوع جامع ثمّ بنوع محلّ كان يُحسب مرّتين.
+//
+//   - **الاسمُ كاملاً سواء** ⇒ هو، أيّاً كان النوعُ المختار.
+//   - **أو لبُّه سواءٌ** («نور») **وكلمتا النوع مترادفتان** («جامع» ثمّ «مسجد»)، **أو العائلةُ
+//     واحدة، أو أحدُهما بلا كلمة نوع** («جامع النور» ثمّ «النور» بنوع محلّ).
+//   - **و«محل النور» بجانب «جامع النور» مكانان** — المحلُّ يأخذ اسمَ الجامع الذي بجانبه كثيراً.
+func SameOwnLandmark(a LandmarkKey, famA string, b LandmarkKey, famB string) bool {
+	if a.Full == "" || b.Full == "" {
+		return false
+	}
+	if a.Full == b.Full {
+		return true
+	}
+	if a.Core == "" || a.Core != b.Core {
+		return false
+	}
+	if a.Group != "" && b.Group != "" {
+		return a.Group == b.Group
+	}
+	return famA == famB || a.Kind == "" || b.Kind == ""
 }
 
 // wordsInside **أكلماتُ `inner` متتاليةٌ داخل `outer`؟** — بكلماتٍ كاملةٍ لا بحروف، **ورقمٌ وحدَه

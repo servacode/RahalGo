@@ -44,18 +44,27 @@ func platformDayStart(day string, startHour int64) (time.Time, error) {
 	return time.Date(d.Year(), d.Month(), d.Day(), int(startHour), 0, 0, 0, loc), nil
 }
 
-// landmarkReminderAt **ساعةُ التذكير في يوم المنصّة** — **وساعةٌ قبل فتح الدوام** (٢ ليلاً
-// والفتحُ ٩) **تقع في آخر اليوم نفسِه**: صباحَ الغد بالتقويم.
-func landmarkReminderAt(day string, startHour, hour int64) (time.Time, error) {
+// landmarkReminderAt **ساعةُ التذكير في يوم المنصّة ونهايةُ لحاقها** — **وساعةٌ قبل فتح الدوام**
+// (٢ ليلاً والفتحُ ٩) **تقع في آخر اليوم نفسِه**: صباحَ الغد بالتقويم.
+//
+// **واللحاقُ إلى منتصف الليل** (مراجعة ٢٠٢٦-١١-٠٥): من فتح دوامَه السابعةَ مساءً يُذكَّر بعد
+// نصف ساعة، **ومن فتح الثامنةَ صباحاً لا يُقال له «أرسلت ٠ من ٥ اليوم» عن أمسِه** ثمّ يعود العدُّ
+// صفراً بعد ساعة؛ **ونشرٌ للخادم بعد منتصف الليل لا يُذكّر أحداً.** وساعةٌ بعد منتصف الليل
+// لحاقُها إلى فتح الدوام — آخرِ يومها.
+func landmarkReminderAt(day string, startHour, hour int64) (at, until time.Time, err error) {
 	start, err := platformDayStart(day, startHour)
 	if err != nil {
-		return time.Time{}, err
+		return time.Time{}, time.Time{}, err
 	}
-	at := time.Date(start.Year(), start.Month(), start.Day(), int(hour), 0, 0, 0, start.Location())
+	at = time.Date(start.Year(), start.Month(), start.Day(), int(hour), 0, 0, 0, start.Location())
 	if hour < startHour {
 		at = at.AddDate(0, 0, 1)
 	}
-	return at, nil
+	until = time.Date(at.Year(), at.Month(), at.Day()+1, 0, 0, 0, 0, at.Location())
+	if end := start.AddDate(0, 0, 1); end.Before(until) {
+		until = end
+	}
+	return at, until, nil
 }
 
 // RemindLandmarkQuota **جولةُ تذكير الساعة** — تُنادى دوريّاً وفي الاختبار مباشرةً، وتردّ كم ذُكِّر.
@@ -66,11 +75,11 @@ func (s *Server) RemindLandmarkQuota(ctx context.Context, now time.Time) (int, e
 	}
 	startHour := s.dayStartHour(ctx)
 	day := siteDay(now, startHour)
-	at, err := landmarkReminderAt(day, startHour, s.settings.GetInt(ctx, "drivers.landmarks_reminder_hour"))
+	at, until, err := landmarkReminderAt(day, startHour, s.settings.GetInt(ctx, "drivers.landmarks_reminder_hour"))
 	if err != nil {
 		return 0, err
 	}
-	if now.Before(at) {
+	if now.Before(at) || !now.Before(until) {
 		return 0, nil
 	}
 	rows, err := s.pg.Query(ctx, `
@@ -122,8 +131,10 @@ func (s *Server) RemindLandmarkQuota(ctx context.Context, now time.Time) (int, e
 
 // remindLandmarksOnShiftEnd **سكّر دوامَه بنفسه ولم يكمل** — مرّةً باليوم، والإعدادُ يطفئه.
 //
-// **ودوامٌ فُتح قبل بدء اليوم لا يُذكَّر به** — من سكّر التاسعةَ وخمسَ دقائقَ صباحاً بعد
-// ليلته لا يُقال له «أرسلت ٠ من ٥ اليوم» واليومُ بدأ للتوّ.
+// **ويُقاس ما قضاه من دوامه داخل يوم المنصّة الحاليّ** — من الأحدث بين فتح دوامه وبدء اليوم
+// إلى الإغلاق، **ونصفُ ساعةٍ فأكثر يُذكَّر.** فمن سكّر التاسعةَ وخمسَ دقائقَ صباحاً بعد ليلته
+// لا يُقال له «أرسلت ٠ من ٥ اليوم» واليومُ بدأ للتوّ، **ومن فتح الثامنةَ وسكّر الرابعةَ عصراً
+// يُذكَّر** — كان شرطُ «فُتح قبل بدء اليوم» يُسقطه (مراجعة ٢٠٢٦-١١-٠٥).
 func (s *Server) remindLandmarksOnShiftEnd(ctx context.Context, driverID string, startedAt *time.Time, now time.Time) {
 	quota := s.landmarkQuota(ctx)
 	if quota <= 0 || !s.settings.GetBool(ctx, "drivers.landmarks_remind_on_shift_end") {
@@ -131,10 +142,16 @@ func (s *Server) remindLandmarksOnShiftEnd(ctx context.Context, driverID string,
 	}
 	startHour := s.dayStartHour(ctx)
 	day := siteDay(now, startHour)
-	if startedAt != nil {
-		if begin, err := platformDayStart(day, startHour); err == nil && startedAt.Before(begin) {
-			return
-		}
+	begin, err := platformDayStart(day, startHour)
+	if err != nil {
+		s.logger.Warn("تذكيرُ المعالم عند الإغلاق", "driver", driverID, "error", err)
+		return
+	}
+	if startedAt != nil && startedAt.After(begin) {
+		begin = *startedAt
+	}
+	if now.Sub(begin) < landmarkRemindMinShift {
+		return
 	}
 	n, err := landmarkCountedOn(ctx, s.pg, driverID, day)
 	if err != nil {

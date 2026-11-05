@@ -29,6 +29,7 @@ type lmDailyRow struct {
 func TestAdminLandmarksDaily(t *testing.T) {
 	h := New(t)
 	h.Setting("drivers.landmarks_daily_quota", "2")
+	h.Setting("platform.day_start_hour", "9")
 	admin := h.NewUser("admin")
 	a, b, idle := h.NewUser("driver"), h.NewUser("driver"), h.NewUser("driver")
 	sfx := uniq("")
@@ -57,13 +58,20 @@ func TestAdminLandmarksDaily(t *testing.T) {
 		map[string]any{"approve": false}); d.Code != 200 {
 		t.Fatalf("الرفض: %s", d)
 	}
-	// **اشتغل ولم يرسل** — أثرُه الآن على الدوام.
+	// **ويومٌ ثابتٌ لا الساعةُ الحقيقيّة** (مراجعة ٢٠٢٦-١١-٠٥) — كان الأثرُ «قبل دقيقة» واليومُ
+	// الافتراضيّ، **فيسقط من شُغّل في الدقيقة الأولى بعد التاسعة.** فما أُرسل يُنقل إلى يومٍ في
+	// ٢٠٣١، **والخاملُ أثرُه ظهرَ ذلك اليوم.**
+	const day = "2031-07-20"
+	if _, err := h.Pool.Exec(ctxBG(), `UPDATE landmark_suggestions SET platform_day = $3::date
+		WHERE suggested_by IN ($1::uuid, $2::uuid)`, a.ID, b.ID, day); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := h.Pool.Exec(ctxBG(), `INSERT INTO driver_trail (driver_id, recorded_at, lat, lng)
-		VALUES ($1::uuid, now() - interval '1 minute', $2, $3)`, idle.ID, lat, lng); err != nil {
+		VALUES ($1::uuid, $2, $3, $4)`, idle.ID, lmAt(2031, 7, 20, 12, 0), lat, lng); err != nil {
 		t.Fatal(err)
 	}
 
-	res := h.GET("/api/v1/admin/ops-map/landmarks/daily", admin.Token)
+	res := h.GET("/api/v1/admin/ops-map/landmarks/daily?day="+day, admin.Token)
 	if res.Code != 200 {
 		t.Fatalf("**لا يومَ للمعالم في اللوحة**: %s", res)
 	}
@@ -81,7 +89,7 @@ func TestAdminLandmarksDaily(t *testing.T) {
 	if err := json.Unmarshal(res.Body, &body); err != nil {
 		t.Fatal(err)
 	}
-	if body.Data.Quota != 2 || body.Data.Day == "" {
+	if body.Data.Quota != 2 || body.Data.Day != day {
 		t.Fatalf("اليومُ والمطلوب: %s", res)
 	}
 	rows := map[string]lmDailyRow{}

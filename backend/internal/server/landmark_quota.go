@@ -57,7 +57,8 @@ func landmarkText(tpl string, kv ...string) string {
 }
 
 // landmarkClassFamily **عائلةُ صنفِ البلاطة بأنواع السائق السبعة** — «other» لصنفٍ معروفٍ لا
-// نوعَ له عندنا (حديقة، مخفر…)، **وفارغٌ لما لا يُرسم** (أسماءُ أحياءٍ ومقابر): لا يُقارَن.
+// نوعَ له عندنا (حديقة، مخفر…)، **وفارغٌ لما لا يُرسم** (أسماءُ أحياءٍ ومقابر ومكاتب): **لا
+// يُقارَن إلّا بالاسم كاملاً بحرفه** (`maplearn.SameLandmark`).
 func landmarkClassFamily(class string) string {
 	switch class {
 	case "":
@@ -177,6 +178,25 @@ func (s *Server) submitLandmark(ctx context.Context, uid string, in landmarkSubm
 	if err != nil {
 		return out, err
 	}
+	// **والضغطةُ الثانيةُ على المكرَّر نفسِه لا تكتب صفّاً** (مراجعة ٢٠٢٦-١١-٠٥) — في 0.7.0 تبقى
+	// الصفحةُ مفتوحةً بعد الرسالة الحمراء فيضغط ثانيةً، **وكان كلُّ ضغطةٍ صفّاً يزيد «أرسل»
+	// و«مكرّر» في اللوحة والملخّص.** فالاسمُ نفسُه على ما طابقه نفسِه في يومه ⇒ الردُّ نفسُه.
+	if match != nil {
+		var prev int64
+		err := tx.QueryRow(ctx, `
+			SELECT id FROM landmark_suggestions
+			 WHERE suggested_by = $1::uuid AND platform_day = $2::date AND status = 'duplicate'
+			   AND dup_source = $3 AND dup_ref = $4 AND btrim(name) = btrim($5)
+			 ORDER BY id DESC LIMIT 1`, uid, out.Day, match.Source, match.Ref, in.Name).Scan(&prev)
+		switch {
+		case err == nil:
+			out.ID, out.Dup = prev, match
+			out.Today, err = landmarkCountedOn(ctx, tx, uid, out.Day)
+			return out, err
+		case !errors.Is(err, pgx.ErrNoRows):
+			return out, err
+		}
+	}
 	status := "pending"
 	var src, ref, dname *string
 	var ddist *int
@@ -250,12 +270,15 @@ func landmarkDuplicate(ctx context.Context, tx pgx.Tx, uid string, in landmarkSu
 		default:
 			efam = maplearn.DriverFamily(kind, ek)
 		}
-		if !maplearn.SameLandmark(key, fam, ek, efam) {
+		// **وما أرسله هو نفسُه يُطابَق بالاسم ولو بدّل النوع** (مراجعة ٢٠٢٦-١١-٠٥) — «جامع النور»
+		// بنوع جامع ثمّ بنوع محلّ كان يُحسب مرّتين.
+		own := src == "suggestion" && by == uid
+		if !maplearn.SameLandmark(key, fam, ek, efam) && !(own && maplearn.SameOwnLandmark(key, fam, ek, efam)) {
 			continue
 		}
 		m := &landmarkMatch{Source: src, Ref: id, Name: strings.TrimSpace(name), Distance: dist}
 		switch {
-		case src == "suggestion" && by == uid:
+		case own:
 			if self == nil {
 				m.Source = "self"
 				self = m

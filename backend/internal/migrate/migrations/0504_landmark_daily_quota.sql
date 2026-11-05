@@ -30,9 +30,24 @@ ALTER TABLE landmark_suggestions
     ALTER COLUMN platform_day SET DEFAULT account_day(now()),
     ALTER COLUMN platform_day SET NOT NULL;
 
--- **والحالةُ الرابعة: `duplicate`** — والقيدُ القديمُ باسمه التلقائيّ من 0470
--- (`<الجدول>_<العمود>_check`).
-ALTER TABLE landmark_suggestions DROP CONSTRAINT IF EXISTS landmark_suggestions_status_check;
+-- **والحالةُ الرابعة: `duplicate`** — والقيدُ القديمُ بلا اسمٍ في 0470، **فلا يُحذف باسمٍ
+-- نخمّنه**: لو اختلف الاسمُ لمرّ `DROP ... IF EXISTS` صامتاً وبقي القديم، **فيسقط كلُّ مكرَّرٍ
+-- بـ٥٠٠.** فكلُّ قيد CHECK على عمود `status` يُقرأ من `pg_constraint` ويُحذف، ثمّ يُضاف الجديد.
+DO $$
+DECLARE
+    c record;
+BEGIN
+    FOR c IN
+        SELECT DISTINCT con.conname
+          FROM pg_constraint con
+          JOIN pg_attribute a ON a.attrelid = con.conrelid AND a.attnum = ANY (con.conkey)
+         WHERE con.conrelid = 'landmark_suggestions'::regclass
+           AND con.contype = 'c'
+           AND a.attname = 'status'
+    LOOP
+        EXECUTE format('ALTER TABLE landmark_suggestions DROP CONSTRAINT %I', c.conname);
+    END LOOP;
+END $$;
 ALTER TABLE landmark_suggestions ADD CONSTRAINT landmark_suggestions_status_check
     CHECK (status IN ('pending', 'approved', 'rejected', 'duplicate'));
 

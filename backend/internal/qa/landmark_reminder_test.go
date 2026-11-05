@@ -80,6 +80,12 @@ func TestLandmarkReminder_HourOncePerDay(t *testing.T) {
 	const day = "2031-04-07"
 	at := lmAt(2031, 4, 7, 18, 5)
 	two, five, off, fresh := h.NewUser("driver"), h.NewUser("driver"), h.NewUser("driver"), h.NewUser("driver")
+	// **وحسابٌ موقوفٌ على الدوام لا يُذكَّر** (مراجعة ٢٠٢٦-١١-٠٥).
+	stopped := h.NewUser("driver")
+	lmShift(t, h, stopped.ID, true, at.Add(-2*time.Hour))
+	if _, err := h.Pool.Exec(ctxBG(), `UPDATE users SET status = 'suspended' WHERE id = $1::uuid`, stopped.ID); err != nil {
+		t.Fatal(err)
+	}
 	lmShift(t, h, two.ID, true, at.Add(-2*time.Hour))
 	lmShift(t, h, five.ID, true, at.Add(-2*time.Hour))
 	lmShift(t, h, off.ID, false, at)
@@ -111,7 +117,7 @@ func TestLandmarkReminder_HourOncePerDay(t *testing.T) {
 	if n := len(lmReminders(t, h, two.ID)); n != 1 {
 		t.Fatalf("تكرّر التذكيرُ في اليوم نفسِه: %d", n)
 	}
-	for who, u := range map[string]*User{"أكمل الخمسة": five, "خارجَ الدوام": off, "فتح للتوّ": fresh} {
+	for who, u := range map[string]*User{"أكمل الخمسة": five, "خارجَ الدوام": off, "فتح للتوّ": fresh, "حسابُه موقوف": stopped} {
 		if n := len(lmReminders(t, h, u.ID)); n != 0 {
 			t.Fatalf("**ذُكِّر من %s**: %d", who, n)
 		}
@@ -141,6 +147,9 @@ func TestLandmarkReminder_ShiftEnd(t *testing.T) {
 	h.Setting("launch.driver_work", "true")
 	h.Setting("drivers.landmarks_daily_quota", "5")
 	h.Setting("drivers.landmarks_remind_on_shift_end", "true")
+	// **ويومُ المنصّة بدأ قبل نحو اثنتي عشرة ساعة** — الإغلاقُ بالساعة الحقيقيّة، **فلا يقع
+	// الاختبارُ على حدّ اليوم** ولا في نصف ساعته الأولى.
+	h.Setting("platform.day_start_hour", itoa((time.Now().In(platform.Location()).Hour()+12)%24))
 	drv := h.NewUser("driver")
 	t.Cleanup(func() {
 		_, _ = h.Pool.Exec(ctxBG(), `UPDATE users SET on_shift = false WHERE id = $1::uuid`, drv.ID)
@@ -151,10 +160,19 @@ func TestLandmarkReminder_ShiftEnd(t *testing.T) {
 			t.Fatalf("الدوام %v: %s", on, r)
 		}
 	}
+	// **على الدوام منذ ساعتين** — ومن سكّر بعد دقائق من فتحه لا يُذكَّر (نصفُ ساعةٍ في يومه).
+	backdate := func(u *User) {
+		t.Helper()
+		if _, err := h.Pool.Exec(ctxBG(), `UPDATE users SET shift_started_at = now() - interval '2 hours'
+			WHERE id = $1::uuid`, u.ID); err != nil {
+			t.Fatal(err)
+		}
+	}
 	shift(drv, true)
 	if r := lmPost(h, drv.Token, uniq("جامع الإغلاق "), "mosque", 34.4510, 40.3510); r.Code != 200 {
 		t.Fatalf("المعلم: %s", r)
 	}
+	backdate(drv)
 	shift(drv, false)
 	got := lmReminders(t, h, drv.ID)
 	if len(got) != 1 || !strings.Contains(got[0], "سكّرت دوامك") || !strings.Contains(got[0], "أرسلت 1 من 5") {
@@ -162,6 +180,7 @@ func TestLandmarkReminder_ShiftEnd(t *testing.T) {
 	}
 	// **فتح وسكّر ثانيةً في اليوم نفسِه ⇒ لا شيء.**
 	shift(drv, true)
+	backdate(drv)
 	shift(drv, false)
 	if n := len(lmReminders(t, h, drv.ID)); n != 1 {
 		t.Fatalf("تكرّر تذكيرُ الإغلاق: %d", n)
@@ -179,9 +198,36 @@ func TestLandmarkReminder_ShiftEnd(t *testing.T) {
 		_, _ = h.Pool.Exec(ctxBG(), `UPDATE users SET on_shift = false WHERE id = $1::uuid`, other.ID)
 	})
 	shift(other, true)
+	backdate(other)
 	shift(other, false)
 	if n := len(lmReminders(t, h, other.ID)); n != 0 {
 		t.Fatalf("ذُكِّر والإعدادُ مطفأ: %d", n)
+	}
+}
+
+// TestLandmarkReminder_HourCatchUpEndsAtMidnight **تذكيرُ الساعة يلحق المتأخّرَ حتّى منتصف الليل
+// لا إلى صباح الغد** (مراجعة ٢٠٢٦-١١-٠٥): من فتح السابعةَ مساءً يُذكَّر قبل منتصف الليل، **ومن فتح
+// الثامنةَ صباحاً (ويومُ المنصّة لم ينقلب بعد) لا يُقال له في الثامنة والنصف «أرسلت ٠ من ٥
+// اليوم»** عن يومٍ مضى.
+func TestLandmarkReminder_HourCatchUpEndsAtMidnight(t *testing.T) {
+	h := New(t)
+	h.Setting("platform.day_start_hour", "9")
+	h.Setting("drivers.landmarks_reminder_hour", "18")
+	h.Setting("drivers.landmarks_daily_quota", "5")
+	late, morning := h.NewUser("driver"), h.NewUser("driver")
+	lmShift(t, h, late.ID, true, lmAt(2031, 8, 3, 19, 0))
+	if _, err := h.API.RemindLandmarkQuota(ctxBG(), lmAt(2031, 8, 3, 23, 50)); err != nil {
+		t.Fatal(err)
+	}
+	if n := len(lmReminders(t, h, late.ID)); n != 1 {
+		t.Fatalf("من فتح السابعةَ مساءً لم يُذكَّر قبل منتصف الليل: %d", n)
+	}
+	lmShift(t, h, morning.ID, true, lmAt(2031, 8, 4, 8, 0))
+	if _, err := h.API.RemindLandmarkQuota(ctxBG(), lmAt(2031, 8, 4, 8, 30)); err != nil {
+		t.Fatal(err)
+	}
+	if got := lmReminders(t, h, morning.ID); len(got) != 0 {
+		t.Fatalf("**ذُكِّر الثامنةَ والنصفَ صباحاً عن يوم أمس**: %v", got)
 	}
 }
 

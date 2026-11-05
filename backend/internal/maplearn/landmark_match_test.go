@@ -65,9 +65,51 @@ func TestLandmarkNameMatch(t *testing.T) {
 		}
 	}
 
-	// **والصنفُ الذي لا يُرسم لا يُقارَن** — «النور» ليس «حي النور».
+	// **والصنفُ الذي لا يُرسم لا يُقارَن إلّا بالاسم كاملاً** — «النور» ليس «حي النور».
 	if SameLandmark(LandmarkKeyOf("النور"), "other", LandmarkKeyOf("حي النور"), "") {
-		t.Error("قورن بصنفٍ لا يُرسم")
+		t.Error("قورن بصنفٍ لا يُرسم احتواءً")
+	}
+	// **وبالاسم كاملاً بحرفه يُطابَق** (مراجعة ٢٠٢٦-١١-٠٥) — مقبرةٌ أو مكتبٌ على الخريطة بلا صنف.
+	for _, c := range []struct{ a, famA, b string }{
+		{"مقبرة تل البيعة", "other", "مقبرة تل البيعة"},
+		{"مقبرة تل البيعة", "mosque", "مقبرة تل البيعة"},
+		{"مكتب الأمانة", "shop", "مكتب الأمانة"},
+	} {
+		ka := LandmarkKeyOf(c.a)
+		if !SameLandmark(ka, DriverFamily(c.famA, ka), LandmarkKeyOf(c.b), "") {
+			t.Errorf("«%s»(%s) و«%s» بلا صنف — الاسمُ نفسُه بحرفه ولم يُطابَق", c.a, c.famA, c.b)
+		}
+	}
+	if SameLandmark(LandmarkKeyOf("تل البيعة"), "other", LandmarkKeyOf("مقبرة تل البيعة"), "") {
+		t.Error("صنفٌ لا يُرسم طوبق بالاحتواء")
+	}
+	if SameLandmark(LandmarkKeyOf("مكتب الامانه"), "shop", LandmarkKeyOf("مكتب الامانا"), "") {
+		t.Error("صنفٌ لا يُرسم طوبق بحرف")
+	}
+
+	// **وما أرسله هو نفسُه بالاسم لا بنوع القائمة** (مراجعة ٢٠٢٦-١١-٠٥).
+	own := []struct {
+		name    string
+		a, famA string
+		b, famB string
+		want    bool
+	}{
+		{"الاسمُ نفسُه بنوعٍ آخر", "جامع النور", "mosque", "جامع النور", "shop", true},
+		{"مترادفٌ بنوعٍ آخر", "جامع النور", "mosque", "مسجد النور", "shop", true},
+		{"بلا كلمة نوع", "جامع النور", "mosque", "النور", "shop", true},
+		{"العائلةُ نفسُها", "ماركت الأمل", "shop", "محل الأمل", "shop", true},
+		{"محلٌّ باسم الجامع بجانبه", "جامع النور", "mosque", "محل النور", "shop", false},
+		{"صيدليّةٌ باسم الجامع", "جامع النور", "mosque", "صيدلية النور", "pharmacy", false},
+		{"اسمان مختلفان", "جامع النور", "mosque", "جامع الفاروق", "shop", false},
+	}
+	for _, c := range own {
+		ka, kb := LandmarkKeyOf(c.a), LandmarkKeyOf(c.b)
+		if got := SameOwnLandmark(ka, DriverFamily(c.famA, ka), kb, DriverFamily(c.famB, kb)); got != c.want {
+			t.Errorf("%s: «%s»(%s) و«%s»(%s) ⇒ %v والمنتظَر %v", c.name, c.a, c.famA, c.b, c.famB, got, c.want)
+		}
+		if back := SameOwnLandmark(kb, DriverFamily(c.famB, kb), ka, DriverFamily(c.famA, ka)); back != c.want {
+			t.Errorf("%s: الحكمُ غيرُ متناظر", c.name)
+		}
 	}
 
 	// **والمفتاحُ نفسُه**: كلمةُ النوع تُرفع، ويبقى منها أخصُّها.

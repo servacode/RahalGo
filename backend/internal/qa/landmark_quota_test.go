@@ -12,6 +12,7 @@ package qa
 
 import (
 	"encoding/json"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -328,5 +329,142 @@ func TestLandmark_StalePointFixedFromTrack(t *testing.T) {
 	id, _ = res.JSON()["id"].(float64)
 	if r := read(id); res.Code != 200 || r.fromPing || r.gap == nil || *r.gap < 40 || *r.gap > 60 {
 		t.Fatalf("النبضةُ القريبة: %s %+v", res, r)
+	}
+}
+
+// lmRows **صفوفُ السائق بحالتها.**
+func lmRows(t *testing.T, h *Harness, driverID, status string) int {
+	t.Helper()
+	var n int
+	if err := h.Pool.QueryRow(ctxBG(), `SELECT count(*) FROM landmark_suggestions
+		WHERE suggested_by = $1::uuid AND status = $2`, driverID, status).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
+
+// TestLandmark_RepeatedDuplicateTapWritesOneRow **الضغطُ ثانيةً على المكرَّر نفسِه لا يكتب صفّاً**
+// (مراجعة ٢٠٢٦-١١-٠٥) — في 0.7.0 تبقى الصفحةُ مفتوحةً بعد الرسالة الحمراء، **وكلُّ ضغطةٍ كانت
+// صفّاً يزيد «أرسل» و«مكرّر» في اللوحة والملخّص.** والردُّ نفسُه في كلّ مرّة.
+func TestLandmark_RepeatedDuplicateTapWritesOneRow(t *testing.T) {
+	h := New(t)
+	drv := h.NewUser("driver")
+	sfx := uniq("")
+	const lat, lng = 34.6810, 40.2810
+	lmMapLandmark(t, h, "مسجد الإحسان "+sfx, "amenity=place_of_worship", lat, lng)
+	var notice string
+	for i := 0; i < 3; i++ {
+		res := lmPost(h, drv.Token, "جامع الإحسان "+sfx, "mosque", lat+0.0002, lng)
+		if res.Code != 409 || res.Err() != "landmark_exists" {
+			t.Fatalf("الضغطة %d: %s", i+1, res)
+		}
+		d := lmDetails(t, res)
+		if i > 0 && d["notice"] != notice {
+			t.Fatalf("الردُّ تغيّر بين ضغطتين: %q ثمّ %q", notice, d["notice"])
+		}
+		notice = d["notice"]
+	}
+	if n := lmRows(t, h, drv.ID, "duplicate"); n != 1 {
+		t.Fatalf("**ثلاثُ ضغطاتٍ على المكرَّر نفسِه كتبت %d صفوف** والمنتظَر واحد", n)
+	}
+	// **واسمٌ آخرُ مكرّرٌ لمعلمٍ آخر يُكتب** — المنعُ للضغطة نفسِها لا لكلّ مكرَّر.
+	lmMapLandmark(t, h, "صيدلية الإحسان "+sfx, "amenity=pharmacy", lat, lng+0.0003)
+	if res := lmPost(h, drv.Token, "صيدلية الإحسان "+sfx, "pharmacy", lat, lng+0.0003); res.Code != 409 {
+		t.Fatalf("الصيدليّة: %s", res)
+	}
+	if n := lmRows(t, h, drv.ID, "duplicate"); n != 2 {
+		t.Fatalf("مكرَّرٌ لمعلمٍ آخرَ لم يُكتب: %d", n)
+	}
+}
+
+// TestLandmark_OwnRepeatWithOtherKind **ما أرسله هو يُطابَق بالاسم ولو بدّل النوع** (مراجعة
+// ٢٠٢٦-١١-٠٥) — «جامع النور» بنوع جامع ثمّ بنوع محلّ كان يُحسب مرّتين. **و«صيدلية» باسم الجامع
+// بجانبه مكانٌ ثانٍ.**
+func TestLandmark_OwnRepeatWithOtherKind(t *testing.T) {
+	h := New(t)
+	drv := h.NewUser("driver")
+	sfx := uniq("")
+	const lat, lng = 34.6910, 40.2910
+	if res := lmPost(h, drv.Token, "جامع النور "+sfx, "mosque", lat, lng); res.Code != 200 {
+		t.Fatalf("الأوّل: %s", res)
+	}
+	res := lmPost(h, drv.Token, "جامع النور "+sfx, "shop", lat+0.0001, lng)
+	if res.Code != 409 {
+		t.Fatalf("**الاسمُ نفسُه بنوعٍ آخر انحسب مرّةً ثانية**: %s", res)
+	}
+	if d := lmDetails(t, res); d["source"] != "self" || d["today"] != "1" {
+		t.Fatalf("التفصيل: %v", d)
+	}
+	if res := lmPost(h, drv.Token, "صيدلية النور "+sfx, "pharmacy", lat, lng+0.0001); res.Code != 200 {
+		t.Fatalf("صيدليّةٌ باسم الجامع بجانبه رُدّت مكرّرة: %s", res)
+	}
+}
+
+// TestLandmark_ExactNameOfUnclassedMapLandmark **معلمٌ على الخريطة بلا صنفٍ يُرسم** (مقبرة، مكتب)
+// **يُطابَق بالاسم كاملاً بحرفه** (مراجعة ٢٠٢٦-١١-٠٥) — كان مستبعَداً كلَّه فيُحسب جديداً.
+// **ولا يُطابَق احتواءً**: «تل البيعة» ليس «مقبرة تل البيعة».
+func TestLandmark_ExactNameOfUnclassedMapLandmark(t *testing.T) {
+	h := New(t)
+	drv := h.NewUser("driver")
+	sfx := uniq("")
+	const lat, lng = 34.7410, 40.3410
+	name := "مقبرة تل البيعة " + sfx
+	lmMapLandmark(t, h, name, "landuse=cemetery", lat, lng)
+	res := lmPost(h, drv.Token, name, "other", lat+0.0002, lng)
+	if res.Code != 409 {
+		t.Fatalf("**الاسمُ نفسُه بحرفه على الخريطة انحسب جديداً**: %s", res)
+	}
+	if d := lmDetails(t, res); d["source"] != "map" || d["existing_name"] != name {
+		t.Fatalf("التفصيل: %v", d)
+	}
+	if res := lmPost(h, drv.Token, "تل البيعة "+sfx, "other", lat+0.0002, lng); res.Code != 200 {
+		t.Fatalf("بعضُ الاسم طوبق مع صنفٍ لا يُرسم: %s", res)
+	}
+}
+
+// TestLandmarkMigration_DropsStatusCheckWhateverItsName **الهجرة 0504 تحذف قيدَ الحالة القديمَ
+// أيّاً كان اسمُه** (مراجعة ٢٠٢٦-١١-٠٥) — كانت تحذفه باسمٍ مخمَّنٍ مع `IF EXISTS`، **فلو اختلف
+// الاسمُ لمرّت صامتةً وبقي القديم، وسقط كلُّ مكرَّرٍ بـ٥٠٠.** يُبنى قيدٌ قديمٌ باسمٍ آخر داخل
+// معاملةٍ تُلغى، **وتُعاد الهجرةُ عليه، ثمّ يُكتب صفٌّ «مكرّر».**
+func TestLandmarkMigration_DropsStatusCheckWhateverItsName(t *testing.T) {
+	h := New(t)
+	raw, err := os.ReadFile("../migrate/migrations/0504_landmark_daily_quota.sql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx, err := h.Pool.Begin(ctxBG())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Rollback(ctxBG()) }()
+	// **قاعدةٌ قيدُ حالتها القديمُ باسمٍ غير المتوقَّع** — `NOT VALID` فلا تمنعه صفوفٌ مكرَّرةٌ موجودة.
+	if _, err := tx.Exec(ctxBG(), `
+		DO $$
+		DECLARE c record;
+		BEGIN
+		    FOR c IN SELECT DISTINCT con.conname FROM pg_constraint con
+		               JOIN pg_attribute a ON a.attrelid = con.conrelid AND a.attnum = ANY (con.conkey)
+		              WHERE con.conrelid = 'landmark_suggestions'::regclass AND con.contype = 'c'
+		                AND a.attname = 'status'
+		    LOOP
+		        EXECUTE format('ALTER TABLE landmark_suggestions DROP CONSTRAINT %I', c.conname);
+		    END LOOP;
+		END $$;
+		ALTER TABLE landmark_suggestions ADD CONSTRAINT lm_status_legacy_odd_name
+		    CHECK (status IN ('pending', 'approved', 'rejected')) NOT VALID;`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.Exec(ctxBG(), string(raw)); err != nil {
+		t.Fatalf("الهجرةُ على قاعدةٍ قيدُها باسمٍ آخر: %v", err)
+	}
+	if _, err := tx.Exec(ctxBG(), `
+		INSERT INTO landmark_suggestions (name, kind, point, status)
+		VALUES ('فحص الهجرة', 'shop', ST_SetSRID(ST_MakePoint(40.3, 34.4), 4326)::geography, 'duplicate')`); err != nil {
+		t.Fatalf("**بقي قيدُ الحالة القديم بعد الهجرة — كلُّ مكرَّرٍ يسقط**: %v", err)
+	}
+	if _, err := tx.Exec(ctxBG(), `
+		INSERT INTO landmark_suggestions (name, kind, point, status)
+		VALUES ('فحص الهجرة', 'shop', ST_SetSRID(ST_MakePoint(40.3, 34.4), 4326)::geography, 'nonsense')`); err == nil {
+		t.Fatal("**لا قيدَ حالةٍ بعد الهجرة** — حالةٌ مجهولةٌ كُتبت")
 	}
 }
