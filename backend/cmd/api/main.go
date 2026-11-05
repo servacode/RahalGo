@@ -377,6 +377,9 @@ func run(logger *slog.Logger) error {
 			// **و«لم تكتمل المعالم الـ٥ الخاصة بك بعد» وملخّصُ المالك كلَّ صبح** — landmark_remind.go
 			// (قرارُ المالك ٢٠٢٦-١١-٠٥). **والختمُ يمنع التكرار**، فخمسُ دقائقَ تكفي.
 			go srv.RunLandmarkQuota(ctx, 5*time.Minute)
+			// **و«المنصة أغلقت، يجب عليك إغلاق دوامك»** ثمّ تذكيرُ اليوم التالي مرّةً — shift_close_remind.go
+			// (قرارُ المالك ٢٠٢٦-١١-٠٦). **والختمُ يمنع التكرار.**
+			go srv.RunShiftCloseReminder(ctx, time.Minute)
 			// **ومسافةُ كلّ طلبٍ وأرقامُ الدوام** — drive_sweeper.go (قرارُ المالك ٢٠٢٦-١١-٠٥).
 			go srv.RunDriveSweeper(ctx, time.Minute)
 			// **وحارسُ القاعدة** — db_watch.go (اختبارُ التحمّل ٢٠٢٦-١٠-٠٩).
