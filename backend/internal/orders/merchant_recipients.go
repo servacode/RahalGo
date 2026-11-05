@@ -58,24 +58,39 @@ type MerchantRecipient struct {
 	Times int `json:"times"`
 }
 
+// recipientPhoneKeySQL **مفتاحُ رقم المستلِم في القاعدة** — صفٌّ لكلّ مستلِمٍ مهما كانت صيغةُ
+// رقمه المخزَّنة: الأرقامُ الهنديّةُ لاتينيّة، والفواصلُ تُطرح، و`09…` و`9639…` و`009639…`
+// تصير `+9639…`. **وهي قاعدةُ `identity.NormalizePhone` نفسُها** (رقمٌ سوريٌّ محمولٌ تسعةُ
+// أرقامٍ تبدأ بـ9)، **وما لا يطابقها يبقى كما خُزّن.** والمخزَّنُ منذ بوّابة الإنشاء موحّدٌ
+// أصلاً (fa839d29) — **فهذا لصفوفٍ أقدم أو كُتبت من غير الباب**، ويقيسه `TestMR02`.
+const recipientPhoneKeySQL = `(CASE
+	WHEN regexp_replace(translate(recipient_phone, '٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹', '01234567890123456789'), '[^0-9]', '', 'g')
+	     ~ '^(00963|963|0)?9[0-9]{8}$'
+	THEN '+963' || right(regexp_replace(translate(recipient_phone, '٠١٢٣٤٥٦٧٨٩۰۱۲۳۴۵۶۷۸۹', '01234567890123456789'), '[^0-9]', '', 'g'), 9)
+	ELSE recipient_phone END)`
+
 // recipientsSQL **صفٌّ لكلّ رقمٍ من آخر توصيلةٍ إليه** — بمسحٍ واحدٍ لتوصيلات المتجر.
 //
 // $1 المتجر · $2 الاسمُ مهرَّباً لـ`LIKE` (وفارغُه لا شرط) · $3 أرقامُ الهاتف (وفارغُها لا شرط)
 // · $4 الحدّ. **والاسمُ يُطابَق بعد التطبيع** (`section_name_key`، هجرة ٠٢٠٠): أ إ آ ← ا ·
 // ة ← ه · ى ← ي · بلا تشكيلٍ ولا تطويل — **دالّةُ القاعدة نفسُها لا نسخةٌ ثانية.**
 const recipientsSQL = `
-	WITH mine AS (
-		SELECT o.recipient_phone AS phone,
+	WITH keyed AS (
+		SELECT o.id, o.recipient_name, o.address_text, o.dropoff_known, o.dropoff, o.created_at,
+		       ` + recipientPhoneKeySQL + ` AS pk
+		  FROM orders o
+		 WHERE o.merchant_id = $1 AND o.kind = 'merchant_delivery'
+		   AND COALESCE(o.recipient_phone, '') <> ''
+	), mine AS (
+		SELECT o.pk AS phone,
 		       COALESCE(o.recipient_name, '') AS name,
 		       COALESCE(o.address_text, '') AS address_text,
 		       o.dropoff_known, o.dropoff,
 		       row_number() OVER w AS rn,
-		       count(*) OVER (PARTITION BY o.recipient_phone) AS times,
-		       max(o.created_at) OVER (PARTITION BY o.recipient_phone) AS last_used_at
-		  FROM orders o
-		 WHERE o.merchant_id = $1 AND o.kind = 'merchant_delivery'
-		   AND COALESCE(o.recipient_phone, '') <> ''
-		WINDOW w AS (PARTITION BY o.recipient_phone ORDER BY o.created_at DESC, o.id DESC)
+		       count(*) OVER (PARTITION BY o.pk) AS times,
+		       max(o.created_at) OVER (PARTITION BY o.pk) AS last_used_at
+		  FROM keyed o
+		WINDOW w AS (PARTITION BY o.pk ORDER BY o.created_at DESC, o.id DESC)
 	)
 	SELECT m.phone, m.name, m.address_text,
 	       CASE WHEN m.dropoff_known THEN ST_Y(m.dropoff::geometry) END,
@@ -119,8 +134,7 @@ func (s *Service) MerchantRecipients(ctx context.Context, merchantID, q string) 
 			&r.LastUsedAt, &r.Times); err != nil {
 			return nil, err
 		}
-		// **والرقمُ بصيغته الموحّدة** — والمخزَّنُ موحّدٌ أصلاً منذ أوّل توصيلة
-		// (`identity.NormalizePhone` في بوّابة الإنشاء)، **وصفٌّ قديمٌ بغيرها لا يُعرض بشكلين.**
+		// **والرقمُ بصيغته الموحّدة** — والصفوفُ جُمعت بالمفتاح نفسِه (`recipientPhoneKeySQL`).
 		if p, ok := RecipientPhoneKey(r.Phone); ok {
 			r.Phone = p
 		}
@@ -150,7 +164,7 @@ func (s *Service) HideMerchantRecipient(ctx context.Context, merchantID, rawPhon
 		SELECT $1::uuid, $2::text
 		 WHERE EXISTS (SELECT 1 FROM orders
 		                WHERE merchant_id = $1 AND kind = 'merchant_delivery'
-		                  AND recipient_phone = $2)
+		                  AND `+recipientPhoneKeySQL+` = $2)
 		ON CONFLICT (merchant_id, phone_norm) DO UPDATE SET hidden_at = now()`,
 		merchantID, phone)
 	if err != nil {
