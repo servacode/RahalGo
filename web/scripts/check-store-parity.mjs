@@ -16,6 +16,11 @@
  *	٢ · **عمر الطلب** في صفحة طلبات المتجر (/store/orders) بكلمات كاملة:
  *	    «منذ 5 دقائق»، «منذ ساعتين»، وبعد ٣ أيام التاريخ — نفس `Since.text`.
  *	    مو «5 د» و«2 س».
+ *	٣ · **المستلمين السابقين** بنموذج «اطلب توصيلة» (/store/delivery، قرار المالك
+ *	    ٢٠٢٦-١١-٠٥): حرفين بالاسم أو الرقم بتطلع قائمة تحت الحقل، واللمسة بتعبّي كلشي.
+ *	    نفس القواعد (`RecipientSuggest.kt` ↔ `recipientSuggest.ts`) ونفس الكلام
+ *	    (`md_saved_*` بـ strings.xml تبع تطبيق المتجر ↔ `store.delivery.saved*`)،
+ *	    والصفحتين فعلاً بيندهوا `delivery-recipients`.
  *
  * # ليش المقارنة مع التطبيق نفسه
  *
@@ -198,8 +203,65 @@ const ordersPage = strip(read(join(web, "apps", "rahalgo", "src", "app", "(store
 if (/\bfmtSpan\b/.test(ordersPage)) fail("صفحة طلبات المتجر لسّا بتكتب عمر الطلب بـ fmtSpan («5 د» و«2 س») والتطبيق بالكلمات");
 if (!/\bfmtSince\(/.test(ordersPage)) fail("صفحة طلبات المتجر ما بتستعمل fmtSince لعمر الطلب");
 
+// ══════════════════════════════════════════════════════════════════════
+// ٣ · المستلمين السابقين — `RecipientSuggest.kt` و`md_saved_*`
+// ══════════════════════════════════════════════════════════════════════
+const merchXml = read(join(repo, "mobile", "app-merchant", "src", "main", "res", "values", "strings.xml"));
+const merchant = (name) => {
+  const m = merchXml.match(new RegExp(`<string name="${name}">([\\s\\S]*?)</string>`));
+  if (!m) {
+    fail(`النص ${name} مو موجود بـ strings.xml تبع تطبيق المتجر`);
+    return "";
+  }
+  return m[1];
+};
+const DD = dict.store?.delivery ?? {};
+for (const [app, web] of [
+  ["md_saved_title", "savedTitle"],
+  ["md_saved_hide", "savedHide"],
+  ["md_saved_has_point", "savedHasPoint"],
+  ["md_saved_point", "savedPoint"],
+  ["md_saved_point_fetch", "savedPointFetch"],
+  ["md_saved_point_remove", "savedPointRemove"],
+]) {
+  eq(`نص ${app} = store.delivery.${web}`, DD[web], merchant(app));
+}
+eq(
+  "سطر المستلم (الرقم — العنوان)",
+  String(DD.savedLine ?? "").replace(/\{(\w+)\}/g, (_, k) => ({ phone: "0933111222", address: "الثكنة" })[k] ?? ""),
+  fill(merchant("md_saved_line"), "0933111222", "الثكنة"),
+);
+
+const suggestKt = read(join(repo, "mobile", "shared", "src", "main", "kotlin", "com", "rahalgo", "shared", "merchant", "RecipientSuggest.kt"));
+const ktConst = (name) => Number(suggestKt.match(new RegExp(`const val ${name} = (\\d+)L?`))?.[1] ?? NaN);
+const rs = await load(join(web, "apps", "rahalgo", "src", "lib", "store", "recipientSuggest.ts"));
+if (typeof rs.shouldSearchRecipients !== "function" || typeof rs.localPhone !== "function") {
+  fail("recipientSuggest.ts ما فيها shouldSearchRecipients/localPhone — الموقع ما بيقترح المستلمين");
+} else {
+  eq("انتظار ما بعد آخر حرف متل التطبيق", rs.RECIPIENT_DEBOUNCE_MS, ktConst("DEBOUNCE_MS"));
+  eq("أقل عدد حروف متل التطبيق", rs.RECIPIENT_MIN_CHARS, ktConst("MIN_CHARS"));
+  for (const [text, want] of [["", false], ["أ", false], [" ٠ ", false], ["أح", true], ["09", true], ["٠٩", true]]) {
+    eq(`بحث «${text}»`, rs.shouldSearchRecipients(text), want);
+  }
+  eq("+963 بيصير 09", rs.localPhone("+963933111222"), "0933111222");
+  eq("رقم أجنبي بيضل متل ما هو", rs.localPhone("+90532123456"), "+90532123456");
+  const f = rs.recipientFill?.({ name: "أحمد", phone: "+963933111222", address_text: "الثكنة", lat: null, lng: 1, last_used_at: "", times: 1 });
+  eq("بلا نقطة كاملة ما في نقطة", f?.point ?? null, null);
+}
+
+const deliveryPage = strip(read(join(web, "apps", "rahalgo", "src", "app", "(store)", "store", "delivery", "page.tsx")));
+const recipientsLib = strip(read(join(web, "apps", "rahalgo", "src", "lib", "store", "recipients.ts")));
+const deliveryKt = strip(read(join(repo, "mobile", "app-merchant", "src", "main", "kotlin", "com", "rahalgo", "merchant", "delivery", "DeliveryScreen.kt")));
+const deliveriesApiKt = read(join(repo, "mobile", "shared", "src", "main", "kotlin", "com", "rahalgo", "shared", "merchant", "DeliveriesApi.kt"));
+if (!/\buseRecipientSuggest\(/.test(deliveryPage) || !/<RecipientSuggestions\b/.test(deliveryPage)) {
+  fail("صفحة «اطلب توصيلة» ما بتعرض المستلمين السابقين — التطبيق بيعرضهن");
+}
+if (!recipientsLib.includes("/delivery-recipients")) fail("lib/store/recipients.ts ما بيندَه delivery-recipients");
+if (!/\bRecipientSuggestions\(vm\)/.test(deliveryKt)) fail("DeliveryScreen.kt ما بيعرض المستلمين السابقين — الموقع بيعرضهن");
+if (!deliveriesApiKt.includes("/delivery-recipients")) fail("DeliveriesApi.kt ما بيندَه delivery-recipients");
+
 if (fails > 0) {
   console.error(`\n✗ لوحة المتجر والتطبيق: ${fails} فحصاً سقط`);
   process.exit(1);
 }
-console.log("✓ لوحة المتجر والتطبيق: سطر الدين وعمر الطلب بنفس الكلام");
+console.log("✓ لوحة المتجر والتطبيق: سطر الدين وعمر الطلب والمستلمين السابقين بنفس الكلام");
