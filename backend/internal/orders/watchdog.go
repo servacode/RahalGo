@@ -51,7 +51,8 @@ func (s *Service) Alerts(ctx context.Context) ([]Alert, error) {
 	rows, err := s.db.Query(ctx, `
 		SELECT o.id, o.number, o.status,
 			-- **والخاصُّ لا متجرَ له** — فاسمُه طلبٌ خاصٌّ لا NULL.
-			COALESCE(m.name, 'طلبٌ خاصّ') AS merchant_name, COALESCE(cu.phone, o.recipient_phone, ''),
+			-- **وطلبُ الواتساب باسم متجره المكتوب** (قرارُ المالك ٢٠٢٦-١١-٠٥).
+			COALESCE(m.name, o.pickup_name, 'طلبٌ خاصّ') AS merchant_name, COALESCE(cu.phone, o.recipient_phone, ''),
 			r.reason, r.since,
 			round(EXTRACT(EPOCH FROM now() - r.since) / 60),
 			-- **«أنا عليه» تخصّ السببَ الذي أُنذر به** — سببٌ جديدٌ لم يستلمه أحد.

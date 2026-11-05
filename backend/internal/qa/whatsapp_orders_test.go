@@ -12,9 +12,13 @@ package qa
 
 import (
 	"context"
+	"encoding/json"
+	"math"
 	"net/http"
 	"testing"
+	"time"
 
+	"github.com/servacode/rahalgo/backend/internal/drivermonitor"
 	"github.com/servacode/rahalgo/backend/internal/fininv"
 	"github.com/servacode/rahalgo/backend/internal/orders"
 )
@@ -392,5 +396,141 @@ func TestWAORD_FI06e_OnlyTheFeeMoves(t *testing.T) {
 	}
 	if len(base.New(dirty)) == 0 {
 		t.Fatal("**مستحقُّ متجرٍ على طلب واتسابٍ لم يُمسَك**")
+	}
+}
+
+// waDriverOrder **طلبٌ من قائمة السائق كما يقرؤها تطبيقُه** — حقولُ بطاقته.
+type waDriverOrder struct {
+	ID             string   `json:"id"`
+	Kind           string   `json:"kind"`
+	Origin         string   `json:"origin"`
+	MerchantName   string   `json:"merchant_name"`
+	MerchantPhone  *string  `json:"merchant_phone"`
+	PickupAddress  string   `json:"pickup_address"`
+	NavLat         *float64 `json:"nav_lat"`
+	NavLng         *float64 `json:"nav_lng"`
+	RecipientPhone string   `json:"recipient_phone"`
+	CustomerName   string   `json:"customer_name"`
+	ParcelNote     string   `json:"parcel_note"`
+	DriverNote     string   `json:"driver_note"`
+	CollectAmount  *int64   `json:"collect_amount"`
+	CashDue        int64    `json:"cash_due"`
+	DeliveryFee    int64    `json:"delivery_fee"`
+	FeePayer       string   `json:"fee_payer"`
+	DeliveryMode   string   `json:"delivery_mode"`
+}
+
+func waDriverList(t *testing.T, r Res) []waDriverOrder {
+	t.Helper()
+	if r.Code != http.StatusOK {
+		t.Fatalf("قائمةُ السائق: %d / %s", r.Code, r.Err())
+	}
+	var env struct {
+		Data []waDriverOrder `json:"data"`
+	}
+	if err := json.Unmarshal(r.Body, &env); err != nil {
+		t.Fatalf("فكُّ قائمة السائق: %v", err)
+	}
+	return env.Data
+}
+
+// TestWAORD002_OldDriverAppReadsTypedStore **التطبيقُ القديمُ يقرأ المتجرَ المكتوب حيث اعتاد.**
+//
+// **بلا تحديثٍ للتطبيق**: اسمُ المتجر ورقمُه وعنوانُه في `merchant_name`/`merchant_phone`/
+// `pickup_address`، ونقطتُه في `nav_*`. **وعلى شيفرة المرحلة الأولى** يصل الاسمُ فارغاً
+// والرقمُ بلا قيمة — فلا يعرف السائقُ من أين يشتري ولا بمن يتّصل.
+func TestWAORD002_OldDriverAppReadsTypedStore(t *testing.T) {
+	h := New(t)
+	w := newWAFx(t, h, "منطقةُ WA-002")
+	c := waEngineCreate(t, h, w.md.admin.ID, w.typed())
+	drv := h.driverOf(c.ID)
+
+	var got *waDriverOrder
+	for _, o := range waDriverList(t, h.GET("/api/v1/driver/orders", drv.Token)) {
+		if o.ID == c.ID {
+			o := o
+			got = &o
+		}
+	}
+	if got == nil {
+		t.Fatalf("**طلبُ الواتساب غائبٌ عن قائمة سائقه**")
+	}
+	if got.MerchantName != "فلافل الأمير" || got.MerchantPhone == nil || *got.MerchantPhone != "0933444555" ||
+		got.PickupAddress != "شارع تل أبيض" {
+		t.Fatalf("**المتجرُ المكتوبُ لا يصل السائق**: اسم %q · رقم %v · عنوان %q",
+			got.MerchantName, got.MerchantPhone, got.PickupAddress)
+	}
+	if got.NavLat == nil || got.NavLng == nil ||
+		math.Abs(*got.NavLat-w.storeLat) > 1e-6 || math.Abs(*got.NavLng-w.storeLng) > 1e-6 {
+		t.Fatalf("**الملاحةُ لا تقود إلى المتجر**: %v,%v والمنتظَر %v,%v",
+			got.NavLat, got.NavLng, w.storeLat, w.storeLng)
+	}
+	if got.Origin != "whatsapp" || got.Kind != "merchant_delivery" || got.DeliveryMode != "send" ||
+		got.FeePayer != "recipient" {
+		t.Fatalf("**الأصلُ والنوع**: %q / %q / %q / %q", got.Origin, got.Kind, got.DeliveryMode, got.FeePayer)
+	}
+	if got.RecipientPhone != "+963935111222" || got.CustomerName != "أبو أحمد" ||
+		got.ParcelNote != "2 شاورما دبل بدون ثوم" || got.DriverNote != "اتصل قبل الوصول" {
+		t.Fatalf("**المستلِمُ وما يشتريه**: %+v", got)
+	}
+	if got.CollectAmount == nil || *got.CollectAmount != 2400 || got.CashDue != 500 || got.DeliveryFee != 500 {
+		t.Fatalf("**ما يدفعه وما يقبضه**: بضاعة %v · نقد %d · أجرة %d", got.CollectAmount, got.CashDue, got.DeliveryFee)
+	}
+}
+
+// TestWAORD013_DriverMonitorCountsIt **مراقبةُ السائقين تعدّه نافذةَ طلب** — باسم متجره.
+//
+// **وهي الغايةُ كلُّها** (قرارُ المالك ٢٠٢٦-١١-٠٤): مشوارُ طلب الواتساب يُقرأ «مع طلب» لا «بلا طلب».
+func TestWAORD013_DriverMonitorCountsIt(t *testing.T) {
+	h := New(t)
+	w := newWAFx(t, h, "منطقةُ WA-013")
+	c := waEngineCreate(t, h, w.md.admin.ID, w.typed())
+	drv := h.driverOf(c.ID)
+	deliverOrder(t, h, c.ID, drv)
+
+	now := time.Now()
+	ws, err := drivermonitor.LoadWindows(ctxBG(), h.Pool, drv.ID, now.Add(-time.Hour), now.Add(time.Minute))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ws) != 1 || ws[0].OrderID != c.ID {
+		t.Fatalf("**نوافذُ السائق %d — والمنتظَر نافذةُ طلب الواتساب**: %+v", len(ws), ws)
+	}
+	if ws[0].Store != "فلافل الأمير" {
+		t.Fatalf("**النافذةُ بلا اسم متجر**: %q", ws[0].Store)
+	}
+}
+
+// TestWAORD016_OpsViewAndOfferSayWhatsApp **اللوحةُ تقول «طلب واتساب» ومن كتبه، والسائقُ يُعرض
+// عليه باسمه.**
+func TestWAORD016_OpsViewAndOfferSayWhatsApp(t *testing.T) {
+	h := New(t)
+	w := newWAFx(t, h, "منطقةُ WA-016")
+	// **سائقٌ بالدوام عند المتجر المكتوب** — يراه في طابوره فيُعرض عليه.
+	w.md.f.Driver(OnShift(), LocationAt(w.storeLat, w.storeLng, time.Now()))
+	c := waEngineCreate(t, h, w.md.admin.ID, w.typed())
+
+	r := h.GET("/api/v1/admin/orders/"+c.ID, w.md.admin.Token)
+	if r.Code != http.StatusOK {
+		t.Fatalf("الطلبُ في اللوحة: %d / %s", r.Code, r.Err())
+	}
+	o := r.JSON()
+	if inner, ok := o["order"].(map[string]any); ok {
+		o = inner
+	}
+	if o["origin"] != "whatsapp" || o["merchant_name"] != "فلافل الأمير" ||
+		o["pickup_address"] != "شارع تل أبيض" || o["merchant_phone"] != "0933444555" {
+		t.Fatalf("**اللوحةُ لا تقرأ طلبَ الواتساب**: أصل %v · متجر %v · عنوان %v · رقم %v",
+			o["origin"], o["merchant_name"], o["pickup_address"], o["merchant_phone"])
+	}
+	if o["created_by_name"] != w.md.admin.Name {
+		t.Fatalf("**من كتبه لا يُقرأ**: %v والمنتظَر %q", o["created_by_name"], w.md.admin.Name)
+	}
+	var offers int
+	_ = h.Pool.QueryRow(ctxBG(), `SELECT count(*) FROM notifications
+		WHERE entity_id = $1 AND title IN ('طلب واتساب جديد بانتظارك', 'طلب واتساب أُسند إليك')`,
+		c.ID).Scan(&offers)
+	if offers == 0 {
+		t.Fatalf("**العرضُ على السائق لا يقول «طلب واتساب»**")
 	}
 }

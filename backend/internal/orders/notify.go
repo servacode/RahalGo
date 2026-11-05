@@ -57,6 +57,8 @@ var t = struct {
 	mdNewOps, mdAccepted, mdRejected, mdCancelled, mdAssigned, mdPickedUp string
 	// **«من متجر غير تابع لنا»** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — الطلبُ صار مشتريات.
 	extStoreCustomer, extStoreDriver, extStoreMerchant string
+	// **طلبُ الواتساب يُقال باسمه للسائق** (قرارُ المالك ٢٠٢٦-١١-٠٥).
+	offerWhatsApp, assignedWhatsApp string
 }{
 	offerDriver:      "طلب جديد بانتظارك",
 	assignedDriver:   "طلب أُسند إليك",
@@ -108,6 +110,8 @@ var t = struct {
 	extStoreCustomer:          "سيُشترى طلبك من متجرٍ آخر",
 	extStoreDriver:            "صار الطلب مشتريات",
 	extStoreMerchant:          "طلبٌ لم يعد من متجرك",
+	offerWhatsApp:             "طلب واتساب جديد بانتظارك",
+	assignedWhatsApp:          "طلب واتساب أُسند إليك",
 }
 
 // endedByLabel من أنهى الطلب — بلفظٍ يُقرأ لا برمزٍ يُفكّ.
@@ -145,7 +149,8 @@ func (s *Service) parties(ctx context.Context, orderID string) (orderParties, er
 		-- القراءةَ كلَّها فتصمت إشعاراتُها جميعاً، **ومنها «سُلّم طلبٌ من متجرك».**
 		SELECT o.number, COALESCE(o.customer_id::text, ''), mm.owner_user_id, o.kind,
 		       -- **واسمُ المتجر فارغٌ في الطلب الخاصّ** — لا متجرَ له.
-		       COALESCE(mm.name, ''), mm.sales_rep_user_id,
+		       -- **وطلبُ الواتساب باسم متجره المكتوب** (قرارُ المالك ٢٠٢٦-١١-٠٥).
+		       COALESCE(mm.name, o.pickup_name, ''), mm.sales_rep_user_id,
 		       -- **عددُ الأصناف والمبلغ** — لإشعار الطلب الجديد.
 		       -- **ولا نداءَ ثانٍ لهما**: عدُّ الأسطر أرخصُ من رحلةٍ
 		       -- ثانيةٍ إلى القاعدة في مسارٍ يقع مع كلّ طلب.
@@ -559,13 +564,13 @@ func (s *Service) notifyOffer(ctx context.Context, orderID, driverID string) {
 		return
 	}
 
-	var merchant string
+	var merchant, origin string
 	var number int64
 	var cash int64
 	if err := s.db.QueryRow(ctx, `
-		SELECT COALESCE(m.name, ''), o.number, o.cash_due
+		SELECT COALESCE(m.name, o.pickup_name, ''), o.number, o.cash_due, o.origin
 		FROM orders o LEFT JOIN merchants m ON m.id = o.merchant_id
-		WHERE o.id = $1`, orderID).Scan(&merchant, &number, &cash); err != nil {
+		WHERE o.id = $1`, orderID).Scan(&merchant, &number, &cash, &origin); err != nil {
 		return
 	}
 
@@ -634,6 +639,15 @@ func (s *Service) notifyOffer(ctx context.Context, orderID, driverID string) {
 	body := merchant
 	if cash > 0 {
 		body = fmt.Sprintf("%s · تقبض %d", merchant, cash)
+	}
+	// **وطلبُ الواتساب يُقال باسمه** (قرارُ المالك ٢٠٢٦-١١-٠٥: «طلب واتساب» للسائق) — **والدفعُ
+	// يبلغ التطبيقَ القديمَ نفسَه**، وبطاقتُه تقول «لدي توصيلة» حتّى يُحدَّث. ونوعُ الإشعار كما هو.
+	if origin == OriginWhatsApp {
+		if offer {
+			title = t.offerWhatsApp
+		} else {
+			title = t.assignedWhatsApp
+		}
 	}
 
 	for _, id := range targets {

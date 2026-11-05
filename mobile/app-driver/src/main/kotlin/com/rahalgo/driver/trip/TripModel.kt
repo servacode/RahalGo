@@ -559,6 +559,8 @@ fun prepState(order: DriverOrder, zone: java.time.ZoneId = com.rahalgo.ui.SYRIA_
  * او مشتريات او توصيلة») — كانت البطاقةُ تقول «طلب خاص» أو «متجر» فلا يعرف ما يقبل.
  */
 fun kindLabel(order: DriverOrder): Int = when {
+    // **«طلب واتساب»** (قرارُ المالك ٢٠٢٦-١١-٠٥) — كتبه المكتبُ من رسالة واتساب.
+    isWhatsApp(order) -> R.string.kind_whatsapp
     isFetch(order) -> R.string.kind_fetch
     order.kind == "merchant_delivery" -> R.string.kind_delivery
     order.kind == "custom" && order.customMode == "amanah" -> R.string.kind_amanah
@@ -572,6 +574,16 @@ fun kindLabel(order: DriverOrder): Int = when {
  */
 fun isFetch(order: DriverOrder): Boolean =
     order.kind == "merchant_delivery" && order.deliveryMode == "fetch"
+
+/**
+ * **«طلب واتساب»** (قرارُ المالك ٢٠٢٦-١١-٠٥) — طلبٌ كتبه المكتبُ من رسالة واتساب: يشتريه من
+ * المتجر ويقبض من المستلِم كـ«لدي توصيلة» تماماً، **والكلماتُ وحدَها تختلف.**
+ */
+fun isWhatsApp(order: DriverOrder): Boolean = order.origin == "whatsapp"
+
+/** **عنوانُ ما يحمله** — «الطلب» في طلب الواتساب (قائمةُ مشتريات)، و«يحمل» في غيره. */
+fun parcelLabel(order: DriverOrder): Int =
+    if (isWhatsApp(order)) R.string.detail_parcel_whatsapp else R.string.detail_parcel
 
 /**
  * **«ادفع للمتجر X من جيبك، واقبض من المستلم X»** (قرارُ المالك ٢٠٢٦-١٠-١٥) — خارجَ حساب

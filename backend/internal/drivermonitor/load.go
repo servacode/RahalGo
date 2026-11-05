@@ -84,7 +84,9 @@ func LoadPoints(ctx context.Context, db DB, driverID string, from, to time.Time)
 // **والطلب المنقول لسائق آخر لا يظهر هنا** — النافذة للسائق الحالي للطلب.
 func LoadWindows(ctx context.Context, db DB, driverID string, from, to time.Time) ([]Window, error) {
 	rows, err := db.Query(ctx, `
-		SELECT o.id::text, o.number, COALESCE(m.name, ''),
+		SELECT o.id::text, o.number,
+		       -- **وطلبُ الواتساب باسم متجره المكتوب** (قرارُ المالك ٢٠٢٦-١١-٠٥) — نافذةُ طلبٍ كغيرها.
+		       COALESCE(m.name, o.pickup_name, ''),
 		       COALESCE((SELECT min(e.created_at) FROM order_events e
 		                  WHERE e.order_id = o.id AND e.driver_id = $1::uuid AND e.to_status = 'assigned'),
 		                o.accepted_at, o.dispatched_at, o.picked_up_at),

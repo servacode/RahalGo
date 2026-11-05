@@ -1938,7 +1938,7 @@ private fun TripCard(
                 if (order.parcelNote.isNotEmpty() && !pickedUp) {
                     InfoBox(
                         icon = com.rahalgo.ui.R.drawable.ic_cart,
-                        text = stringResource(R.string.detail_parcel) + ": " + order.parcelNote,
+                        text = stringResource(parcelLabel(order)) + ": " + order.parcelNote,
                         tint = Rahal.colors.brand,
                     )
                 }
@@ -2206,7 +2206,12 @@ private fun TripCard(
                         // اتّصالٌ وواتساب برسالةٍ جاهزة.
                         if (recipient != null) {
                             // **وفي «إحضار» الوجهةُ المتجرُ نفسُه** — فلا رسالةَ «متجرٌ أرسل لك طلبيّة».
-                            val hello = if (isFetch(order)) "" else stringResource(R.string.recipient_wa_message, order.merchantName)
+                            // **وفي طلب الواتساب المستلِمُ هو من راسل المكتب** (٢٠٢٦-١١-٠٥) — لا «متجرٌ أرسل لك».
+                            val hello = when {
+                                isFetch(order) -> ""
+                                isWhatsApp(order) -> stringResource(R.string.recipient_wa_message_whatsapp, order.merchantName)
+                                else -> stringResource(R.string.recipient_wa_message, order.merchantName)
+                            }
                             ContactButton(
                                 icon = com.rahalgo.ui.R.drawable.ic_phone,
                                 label = R.string.recipient_call,

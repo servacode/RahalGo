@@ -174,8 +174,13 @@ var OrderPrivacy = map[string]FieldRule{
 	"ext_store_merchant_name": {Ref: "المتجرُ الذي قُلب عنه الطلب (٢٠٢٦-١٠-٢٩)", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
 	"ext_store_at":            {Ref: "متى قُلب الطلبُ «من متجرٍ غير تابع»", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
 	"ext_store_reason":        {Ref: "سببُ قلب الطلب — للمكتب", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
-	"merchant_net":            {Ref: "مستحقُّ المتجر — لا يخصّ زبوناً ولا سائقاً ولا مندوباً", Vis: v(VisForbidden, VisAllowed, VisForbidden, VisForbidden, VisAllowed)},
-	"prep_minutes":            {Ref: "مهلةُ التحضير", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
+	// **طلبُ الواتساب** (قرارُ المالك ٢٠٢٦-١١-٠٥) — أصلُه يُقرأ «طلب واتساب» للسائق وفي اللوحة،
+	// **ومن كتبه ومتجرُ متاجرنا المنسوخ للمكتب وحدَه.** ولا زبونَ ولا متجرَ يرى الطلبَ أصلاً.
+	"origin":             {Ref: "أصلُ الطلب — «طلب واتساب» (٢٠٢٦-١١-٠٥)", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"created_by_name":    {Ref: "الموظّفُ الذي كتب طلبَ الواتساب — للمكتب", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	"pickup_merchant_id": {Ref: "متجرٌ من متاجرنا نُسخ على طلب الواتساب — أثرٌ للمكتب", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	"merchant_net":       {Ref: "مستحقُّ المتجر — لا يخصّ زبوناً ولا سائقاً ولا مندوباً", Vis: v(VisForbidden, VisAllowed, VisForbidden, VisForbidden, VisAllowed)},
+	"prep_minutes":       {Ref: "مهلةُ التحضير", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
 
 	// ── السائق ────────────────────────────────────────────────────
 	"driver_id":       {Ref: "merchant_privacy.go:44 · MD-4", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
