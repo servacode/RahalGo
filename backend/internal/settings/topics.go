@@ -91,6 +91,9 @@ var placeRules = []placeRule{
 	// **ودينُ «لدي توصيلة» متروك** — ما عاد إله أثر من ٢٠٢٦-١٠-١٥، فلا يُعرض مربّعاً يُربك.
 	{prefix: "delivery.merchant_debt_open", exact: true, topic: TopicMoney, hidden: true},
 	{prefix: "delivery.merchant_", topic: TopicMoney, section: "money.merchant_delivery"},
+	// **و«طلب واتساب» قسمٌ وحدَه** (قرارُ المالك ٢٠٢٦-١١-٠٥) — أساسُه ومسافتُه وسقفُه؛ وحصّتُه مع
+	// الحصص في «ربح المنصة» (`delivery.share_`).
+	{prefix: "delivery.whatsapp_", topic: TopicMoney, section: "money.whatsapp_orders"},
 	{prefix: "delivery.by_distance", exact: true, topic: TopicMoney, section: "money.driver"},
 	{prefix: "delivery.per_km", exact: true, topic: TopicMoney, section: "money.driver"},
 	{prefix: "delivery.max_fee", exact: true, topic: TopicMoney, section: "money.driver"},

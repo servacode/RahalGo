@@ -42,6 +42,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/pricing"
 )
 
 // أصلُ الطلب — `orders.origin`.
@@ -110,7 +111,7 @@ type WhatsAppQuote struct {
 	FeeBasis  string `json:"fee_basis"`
 	DistanceM int64  `json:"distance_m"`
 	ZoneName  string `json:"zone_name"`
-	// SharePercent/ShareFixed **حصّةُ المنصّة** — حصّةُ «لدي توصيلة» (`delivery.share_merchant`).
+	// SharePercent/ShareFixed **حصّةُ المنصّة** — حصّةُ «طلب واتساب» (`delivery.share_whatsapp`).
 	SharePercent  int64 `json:"share_percent"`
 	ShareFixed    int64 `json:"share_fixed"`
 	DriverFee     int64 `json:"driver_fee"`
@@ -229,14 +230,22 @@ func (s *Service) whatsAppPricing(ctx context.Context, q dbtx.Querier,
 	if p.fee, p.distanceM, p.basis, err = s.whatsAppFee(ctx, q, storeLat, storeLng, lat, lng); err != nil {
 		return p, err
 	}
-	// **وحصّةُ المنصّة حصّةُ «لدي توصيلة»** (سؤالُ المالك ١، الافتراضُ الموصى به).
-	p.pct, p.fixed = s.platformShare(ctx, q, ShareMerchant)
+	// **وحصّةُ المنصّة حصّةُ «طلب واتساب»** (قرارُ المالك ٢٠٢٦-١١-٠٥: «مثل الاجرة وحصة المنصة»).
+	p.pct, p.fixed = s.platformShare(ctx, q, ShareWhatsApp)
 	return p, nil
 }
 
-// whatsAppFee **الأجرةُ كالتوصيلات** (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٣) — قاعدةُ «لدي توصيلة»
-// (`merchantFeeRule`) على المسافة المستقيمة **من المتجر إلى المستلِم**. **والأجرةُ الخاصّةُ
-// إن ضُبطت تسبقها**، والمسافةُ تُقال معها.
+// whatsAppFeeRule **قاعدةُ أجرة «طلب واتساب»** — مفاتيحُه هو (`pricing.WhatsAppFeeKeys`، قرارُ المالك
+// ٢٠٢٦-١١-٠٥)، **لا مفاتيحُ «لدي توصيلة» ولا أجرتُها الثابتة.** وبلا مخزنٍ صفر.
+func (s *Service) whatsAppFeeRule(ctx context.Context, q dbtx.Querier) pricing.FeeRule {
+	if s.settings == nil {
+		return pricing.FeeRule{}
+	}
+	return pricing.RuleOf(ctx, s.settings.On(q), pricing.WhatsAppFeeKeys)
+}
+
+// whatsAppFee **الأجرةُ كالتوصيلات** (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٣) — قاعدةُ «طلب واتساب»
+// (`whatsAppFeeRule`) على المسافة المستقيمة **من المتجر إلى المستلِم**، والمسافةُ تُقال معها.
 func (s *Service) whatsAppFee(ctx context.Context, q dbtx.Querier,
 	storeLat, storeLng, lat, lng float64) (fee int64, distanceM float64, basis string, err error) {
 	if err = q.QueryRow(ctx, `
@@ -245,11 +254,7 @@ func (s *Service) whatsAppFee(ctx context.Context, q dbtx.Querier,
 		storeLat, storeLng, lat, lng).Scan(&distanceM); err != nil {
 		return 0, 0, "", err
 	}
-	flat, rule := s.merchantFeeRule(ctx, q)
-	if flat > 0 {
-		return flat, distanceM, FeeBasisFlat, nil
-	}
-	return rule.At(distanceM), distanceM, FeeBasisDistance, nil
+	return s.whatsAppFeeRule(ctx, q).At(distanceM), distanceM, FeeBasisDistance, nil
 }
 
 // whatsAppFeeBounds **حدّا تعديل الأجرة** — حدّا أجرة الطلب الخاصّ (`delivery.custom_fee_min/max`).

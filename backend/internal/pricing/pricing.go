@@ -288,6 +288,13 @@ var MerchantDeliveryFeeKeys = FeeKeys{
 	PerKm: "delivery.merchant_per_km", Max: "delivery.merchant_max_fee",
 }
 
+// WhatsAppFeeKeys **مفاتيحُ «طلب واتساب»** (قرارُ المالك ٢٠٢٦-١١-٠٥: «ليها خيارات مثل الاجرة») —
+// افتراضُها قيمُ «لدي توصيلة» يومَ نُشرت (هجرة `0507` تنسخها)، **فلا يتبدّل رقمٌ حتّى يعدّلها المالك.**
+var WhatsAppFeeKeys = FeeKeys{
+	Base: "delivery.whatsapp_base_fee", ByDistance: "delivery.whatsapp_by_distance",
+	PerKm: "delivery.whatsapp_per_km", Max: "delivery.whatsapp_max_fee",
+}
+
 // FeeRule **قاعدةُ أجرةٍ مقروءة** — أساسٌ، ومسافةٌ تشتعل أو تنطفئ، وثمنُ كيلومتر، وسقف.
 type FeeRule struct {
 	Base, PerKm, Max int64

@@ -347,6 +347,8 @@ const (
 	ShareMerchant = "merchant"
 	SharePurchase = "purchase"
 	ShareAmanah   = "amanah"
+	// ShareWhatsApp **«طلب واتساب»** (قرارُ المالك ٢٠٢٦-١١-٠٥) — حصّتُه وحدَه لا حصّةُ «لدي توصيلة».
+	ShareWhatsApp = "whatsapp"
 )
 
 // SettingShare **مفتاحُ قيمة الحصّة لنوع** — و`SettingShare(t)+"_mode"` طريقتُها.
@@ -359,8 +361,8 @@ const platformDeliveryPercentMax = PlatformSharePercentMax
 // برسالةٍ واضحة (قرارُ المالك ٢٠٢٦-١٠-٢٧) بدل أن تُقصّ هنا صامتة.
 const PlatformSharePercentMax = 90
 
-// ShareKinds **الأنواعُ الأربعة** — لكلٍّ حصّتُه وطريقتُها.
-var ShareKinds = []string{ShareStandard, ShareMerchant, SharePurchase, ShareAmanah}
+// ShareKinds **الأنواعُ الخمسة** — لكلٍّ حصّتُه وطريقتُها (وحدُّ التسعين في بابِ الإعدادات لها كلِّها).
+var ShareKinds = []string{ShareStandard, ShareMerchant, SharePurchase, ShareAmanah, ShareWhatsApp}
 
 // platformShare **حصّةُ المنصّة النافذةُ الآن لنوع** — نسبةٌ أو مبلغ (والآخرُ صفر).
 func (s *Service) platformShare(ctx context.Context, q dbtx.Querier, t string) (pct, fixed int64) {
@@ -585,8 +587,8 @@ func (s *Service) merchantDeliveryFee(ctx context.Context, q dbtx.Querier, merch
 }
 
 // merchantFeeRule **أجرةُ «لدي توصيلة» الخاصّةُ إن ضُبطت، وإلّا قاعدتُها** — موضعٌ واحدٌ
-// يقرؤه «لدي توصيلة» وطلبُ الواتساب (قرارُ المالك ٢٠٢٦-١١-٠٥: «مثل اجرة التوصيلات»)، **فلا
-// تفترق حسبتان يومَ تُعدَّل إحداهما.**
+// يقرؤه الإنشاءُ وعرضُ السعر، **فلا تفترق حسبتان يومَ تُعدَّل إحداهما.** (وطلبُ الواتساب له
+// مفاتيحُه منذ ٢٠٢٦-١١-٠٥ — `whatsAppFeeRule`.)
 //
 // **و`delivery.merchant_fee` فوق الصفر أجرةٌ ثابتةٌ تسبق القاعدة** (`flat`)، **وصفرُه «لا أجرةَ
 // خاصّة»** — ومفاتيحُ القاعدة هي لا مفاتيحُ العاديّ (قرارُ المالك ٢٠٢٦-١٠-١٦).

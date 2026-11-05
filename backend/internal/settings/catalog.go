@@ -1266,6 +1266,25 @@ var Catalog = []Def{
 	{Key: "delivery.merchant_max_fee", Group: GroupDrivers, Kind: KindMoney,
 		Min: 0, Max: 100_000, Unit: "currency", Default: 0, Sensitive: true,
 		ShowWhen: &Condition{Key: "delivery.merchant_by_distance", Equals: []string{"true"}}},
+	// ══════════════════════════════════════════════════════════════════
+	// **ولـ«طلب واتساب» مفاتيحُ أجرته هي** (قرارُ المالك ٢٠٢٦-١١-٠٥)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// «اجرة التوصيل للواتس اب ايضا تكون ليها خيارات مثل الاجرة وحصة المنصة». **كان يقرأ مفاتيحَ
+	// «لدي توصيلة»** — فمن عدّل أجرةَ توصيلة المتجر عدّل أجرةَ طلب الواتساب بلا أن يدري. **وصار له
+	// أساسٌ ومسافةٌ وثمنُ كيلومترٍ وسقفٌ وحدَه** (`pricing.WhatsAppFeeKeys`)، **وافتراضُها قيمُ «لدي
+	// توصيلة» يومَ النشر** (هجرة `0507` تنسخها) فلا يتبدّل رقم. **ولا أجرةَ ثابتةً تسبقها** — أساسٌ
+	// بمسافةٍ مطفأةٍ هو الأجرةُ الثابتة. **ويعدّلها الموظّفُ على الطلب الواحد** (البند ٣).
+	{Key: "delivery.whatsapp_base_fee", Group: GroupDrivers, Kind: KindMoney,
+		Min: 0, Max: 100_000, Unit: "currency", Default: 0, Sensitive: true},
+	{Key: "delivery.whatsapp_by_distance", Group: GroupDrivers, Kind: KindBool, Default: false,
+		Sensitive: true},
+	{Key: "delivery.whatsapp_per_km", Group: GroupDrivers, Kind: KindMoney,
+		Min: 0, Max: 10_000, Unit: "currency", Default: 0, Sensitive: true,
+		ShowWhen: &Condition{Key: "delivery.whatsapp_by_distance", Equals: []string{"true"}}},
+	{Key: "delivery.whatsapp_max_fee", Group: GroupDrivers, Kind: KindMoney,
+		Min: 0, Max: 100_000, Unit: "currency", Default: 0, Sensitive: true,
+		ShowWhen: &Condition{Key: "delivery.whatsapp_by_distance", Equals: []string{"true"}}},
 	// **ودينُ «لدي توصيلة» بلا سقف** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — انظر `orders.SettingMerchantDebtOpen`.
 	// **متروكٌ منذ ٢٠٢٦-١٠-١٥: لا يقرؤه المحرّك** (لا دينَ على أجرة توصيلة). والفهرسُ بلا علامة
 	// «متروك»، فيبقى المفتاحُ هنا كي لا يُردّ حفظٌ قديمٌ له، **ولا أثرَ لقيمته.**
@@ -1340,6 +1359,12 @@ var Catalog = []Def{
 	{Key: "delivery.share_amanah_mode", Group: GroupDrivers, Kind: KindChoice,
 		Options: []string{"percent", "fixed"}, Default: "percent", Sensitive: true},
 	{Key: "delivery.share_amanah", Group: GroupDrivers, Kind: KindMoney,
+		Min: 0, Max: 100_000, Unit: "currency", Default: 0, Sensitive: true},
+	// **وحصّتُها من أجرة «طلب واتساب»** (قرارُ المالك ٢٠٢٦-١١-٠٥) — كانت حصّةَ «لدي توصيلة»؛
+	// وافتراضُها قيمتُها يومَ النشر (هجرة `0507` تنسخها).
+	{Key: "delivery.share_whatsapp_mode", Group: GroupDrivers, Kind: KindChoice,
+		Options: []string{"percent", "fixed"}, Default: "percent", Sensitive: true},
+	{Key: "delivery.share_whatsapp", Group: GroupDrivers, Kind: KindMoney,
 		Min: 0, Max: 100_000, Unit: "currency", Default: 0, Sensitive: true},
 
 	// **وأجرةُ الكيلومتر تُضاف فوق `delivery.fee` لا بدلاً منه** —

@@ -26,7 +26,8 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/orders"
 )
 
-// waFx **منطقةٌ ومتجرٌ من متاجرنا ونقطةُ مستلِم** — وأجرةُ «لدي توصيلة» ٥٠٠ بحصّة ١٠٪.
+// waFx **منطقةٌ ومتجرٌ من متاجرنا ونقطةُ مستلِم** — وأجرةُ «طلب واتساب» ٥٠٠ بحصّة ١٠٪ (مفاتيحُه هو
+// منذ ملحق المالك ٢٠٢٦-١١-٠٥، كقيم «لدي توصيلة» في `newMDFx`).
 type waFx struct {
 	md mdFx
 	// storeLat/storeLng **متجرٌ غيرُ تابع** داخلَ المنطقة.
@@ -36,6 +37,9 @@ type waFx struct {
 func newWAFx(t *testing.T, h *Harness, name string) waFx {
 	t.Helper()
 	m := newMDFx(t, h, name)
+	h.Setting("delivery.whatsapp_base_fee", "500")
+	h.Setting("delivery.whatsapp_by_distance", "false")
+	h.Setting("delivery.share_whatsapp", "10")
 	return waFx{md: m, storeLat: m.z.Lat - 0.003, storeLng: m.z.Lng}
 }
 
@@ -109,49 +113,62 @@ func waCashOf(t *testing.T, h *Harness, orderID string) int64 {
 	return n
 }
 
-// TestWhatsAppFeeFromStorePoint **الأجرةُ كالتوصيلات من المتجر إلى المستلِم** — والخاصّةُ
-// تسبقها، **وعرضُ السعر والإنشاءُ بدالّةٍ واحدة.**
+// TestWhatsAppFeeFromStorePoint **الأجرةُ كالتوصيلات من المتجر إلى المستلِم — بمفاتيح «طلب واتساب»**
+// (قرارُ المالك ٢٠٢٦-١١-٠٥: «ليها خيارات مثل الاجرة وحصة المنصة»)، **وعرضُ السعر والإنشاءُ بدالّةٍ
+// واحدة.** ومفاتيحُ «لدي توصيلة» وأجرتُها الثابتةُ لا تمسّه.
+//
+// **وعلى شيفرة المراحل ١–٥** كان يقرأ مفاتيحَ «لدي توصيلة» وحصّتَها — فيخرج ٦٠٠ لا ١٢٥.
 func TestWhatsAppFeeFromStorePoint(t *testing.T) {
 	h := New(t)
 	w := newWAFx(t, h, "منطقةُ WA-FEE")
+	// **«لدي توصيلة» برقمٍ آخر** — لا يُقرأ هنا.
+	h.Setting("delivery.merchant_base_fee", "600")
+	h.Setting("delivery.merchant_by_distance", "false")
+	h.Setting("delivery.share_merchant", "50")
 	// **أساسٌ ١٠٠ ولكلّ كيلومترٍ ٢٥** — والمسافةُ هنا أقلُّ من كيلومتر ⇒ ١٢٥.
-	h.Setting("delivery.merchant_base_fee", "100")
-	h.Setting("delivery.merchant_per_km", "25")
-	h.Setting("delivery.merchant_by_distance", "true")
-	h.Setting("delivery.merchant_max_fee", "0")
-	in := w.typed()
-	q, err := h.Orders.QuoteWhatsAppOrder(ctxBG(), "", in.StoreLat, in.StoreLng, *in.Lat, *in.Lng)
-	if err != nil {
-		t.Fatalf("عرضُ السعر: %v", err)
+	h.Setting("delivery.whatsapp_base_fee", "100")
+	h.Setting("delivery.whatsapp_per_km", "25")
+	h.Setting("delivery.whatsapp_by_distance", "true")
+	h.Setting("delivery.whatsapp_max_fee", "0")
+	quote := func(from string) map[string]any {
+		t.Helper()
+		r := h.GET(waURL+"/quote?"+from+"&lat="+ftoa(w.md.dropLat)+"&lng="+ftoa(w.md.dropLng), w.md.admin.Token)
+		if r.Code != http.StatusOK {
+			t.Fatalf("عرضُ السعر: %d / %s", r.Code, r.Err())
+		}
+		return r.JSON()
 	}
-	if q.Fee != 125 || q.FeeBasis != orders.FeeBasisDistance || q.DistanceM <= 0 || q.DistanceM >= 1000 {
-		t.Fatalf("**عرضُ السعر %d (%s، %d م) والمنتظَر 125 على مسافةٍ دون الكيلومتر**",
-			q.Fee, q.FeeBasis, q.DistanceM)
+	typed := "pickup_lat=" + ftoa(w.storeLat) + "&pickup_lng=" + ftoa(w.storeLng)
+	q := quote(typed)
+	if q["fee"] != float64(125) || q["fee_basis"] != orders.FeeBasisDistance {
+		t.Fatalf("**عرضُ السعر %v (%v) والمنتظَر 125 بمفاتيح «طلب واتساب»**", q["fee"], q["fee_basis"])
 	}
-	if q.DriverFee != 113 || q.PlatformShare != 12 {
-		t.Fatalf("**الحصّة %d والسائق %d — المنتظَر 12 و113** (الكسرُ للسائق)", q.PlatformShare, q.DriverFee)
+	if d, _ := q["distance_m"].(float64); d <= 0 || d >= 1000 {
+		t.Fatalf("المسافة %v — والمنتظَر دون الكيلومتر", q["distance_m"])
 	}
-	c := waEngineCreate(t, h, w.md.admin.ID, in)
-	if c.Fee != q.Fee || c.ComputedFee != q.Fee {
-		t.Fatalf("**الإنشاءُ كتب %d وعرضُ السعر قال %d**", c.Fee, q.Fee)
+	if q["driver_fee"] != float64(113) || q["platform_share"] != float64(12) {
+		t.Fatalf("**الحصّة %v والسائق %v — المنتظَر 12 و113 بحصّة «طلب واتساب»** (الكسرُ للسائق)",
+			q["platform_share"], q["driver_fee"])
+	}
+	c := waEngineCreate(t, h, w.md.admin.ID, w.typed())
+	if c.Fee != 125 || c.ComputedFee != 125 {
+		t.Fatalf("**الإنشاءُ كتب %d وعرضُ السعر قال 125**", c.Fee)
 	}
 
-	// **والأجرةُ الخاصّةُ تسبق المسافة.**
+	// **وأجرةُ «لدي توصيلة» الثابتةُ لا تسبقه بعد اليوم.**
 	h.Setting("delivery.merchant_fee", "300")
-	q2, err := h.Orders.QuoteWhatsAppOrder(ctxBG(), "", in.StoreLat, in.StoreLng, *in.Lat, *in.Lng)
-	if err != nil {
-		t.Fatal(err)
+	if q2 := quote(typed); q2["fee"] != float64(125) {
+		t.Fatalf("**أجرةُ «لدي توصيلة» الثابتةُ سبقت طلبَ الواتساب**: %v", q2["fee"])
 	}
-	if q2.Fee != 300 || q2.FeeBasis != orders.FeeBasisFlat {
-		t.Fatalf("**الأجرةُ الخاصّة لم تسبق**: %d (%s)", q2.Fee, q2.FeeBasis)
+	// **وحصّتُه مبلغاً ثابتاً.**
+	h.Setting("delivery.share_whatsapp_mode", `"fixed"`)
+	h.Setting("delivery.share_whatsapp", "25")
+	if q3 := quote(typed); q3["platform_share"] != float64(25) || q3["driver_fee"] != float64(100) {
+		t.Fatalf("**الحصّةُ الثابتة**: %v / %v", q3["platform_share"], q3["driver_fee"])
 	}
 	// **ومتجرٌ من متاجرنا يُسعَّر من موقعه** — بالدالّة نفسِها.
-	q3, err := h.Orders.QuoteWhatsAppOrder(ctxBG(), w.md.fx.M.ID, nil, nil, *in.Lat, *in.Lng)
-	if err != nil {
-		t.Fatalf("عرضُ السعر لمتجرٍ من متاجرنا: %v", err)
-	}
-	if q3.Fee != 300 {
-		t.Fatalf("متجرٌ من متاجرنا سُعّر %d", q3.Fee)
+	if q4 := quote("store_id=" + w.md.fx.M.ID); q4["fee"] == nil || q4["fee_basis"] != orders.FeeBasisDistance {
+		t.Fatalf("عرضُ السعر لمتجرٍ من متاجرنا: %v", q4)
 	}
 }
 
@@ -755,8 +772,8 @@ func TestWAORD008_FeeOverrideBoundsAndAudit(t *testing.T) {
 	}
 
 	// **وحصّةٌ ثابتةٌ تبلغ الأجرةَ تُرسل سائقاً بلا أجر.**
-	h.Setting("delivery.share_merchant", "100")
-	h.Setting("delivery.share_merchant_mode", `"fixed"`)
+	h.Setting("delivery.share_whatsapp", "100")
+	h.Setting("delivery.share_whatsapp_mode", `"fixed"`)
 	b["fee"] = 80
 	if r := waPost(t, h, w.md.admin.Token, b); r.Err() != "wa_fee_below_share" {
 		t.Fatalf("**أجرةٌ دون الحصّة**: %d / %s", r.Code, r.Err())
