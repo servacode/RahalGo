@@ -70,25 +70,19 @@ type AskStatus = {
 };
 type AskState = "idle" | "sending" | "waiting" | "received" | "expired";
 
-/** **موقعٌ على الخريطة أو برابطٍ يُلصق** — للمتجر غير التابع وللمستلِم. */
+/** **موقعٌ على الخريطة أو برابطٍ يُلصق** — للمتجر غير التابع. */
 function LocationField({
   label,
   point,
   onPoint,
   disabled,
   error,
-  clearable,
 }: {
   label: string;
   point: Point | null;
   onPoint: (p: Point | null) => void;
   disabled: boolean;
   error?: boolean;
-  /**
-   * **«امسح النقطة»** — موقعُ المستلِم اختياريّ (ملحقُ المالك ٢٠٢٦-١١-٠٥، ب): نقطةٌ غلطٌ أو خارجَ
-   * التغطية تُمسح فيُرسَل الطلبُ بالعنوان المكتوب.
-   */
-  clearable?: boolean;
 }) {
   const [link, setLink] = useState("");
   const [state, setState] = useState<LinkState>("idle");
@@ -143,20 +137,6 @@ function LocationField({
       {state === "checking" && <p className="text-sm text-ink-muted">{W.linkChecking}</p>}
       {state === "found" && <p className="text-sm text-success">{W.linkFound}</p>}
       {state === "notFound" && <p className="text-sm text-warning">{W.linkNotFound}</p>}
-      {clearable && point && (
-        <Button
-          size="sm"
-          variant="ghost"
-          disabled={disabled}
-          onClick={() => {
-            onPoint(null);
-            setLink("");
-            setState("idle");
-          }}
-        >
-          {W.clearPoint}
-        </Button>
-      )}
     </div>
   );
 }
@@ -635,7 +615,6 @@ export function WhatsAppOrderForm({ onSent }: { onSent: (o: { id: string; number
             {ask === "expired" && <p className="text-sm text-danger">{W.askLocExpired}</p>}
             {askError && <p className="text-sm text-danger">{askError}</p>}
           </div>
-          <LocationField key={`drop-${round}`} label={W.recipientMap} point={point} onPoint={setPoint} disabled={busy} clearable />
           <Textarea label={W.driverNote} value={driverNote} maxLength={500} autoGrow disabled={busy} onChange={(e) => setDriverNote(e.target.value)} />
         </div>
       </AdminCard>
