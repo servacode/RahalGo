@@ -56,4 +56,25 @@ class RecipientSuggestTest {
         assertEquals("0933111222", RecipientSuggest.localPhone("0933111222"))
         assertEquals("+90532123456", RecipientSuggest.localPhone("+90532123456"))
     }
+
+    @Test
+    fun samePhoneIgnoresFormat() {
+        assertTrue(RecipientSuggest.samePhone("0933111222", "+963933111222"))
+        assertTrue(RecipientSuggest.samePhone("٠٩٣٣ ١١١ ٢٢٢", "00963933111222"))
+        assertFalse(RecipientSuggest.samePhone("0933111222", "0933111223"))
+        assertFalse(RecipientSuggest.samePhone("", ""))
+    }
+
+    @Test
+    fun savedPointDropsWhenPhoneOrAddressChanges() {
+        val picked = RecipientSuggest.Fill("أحمد", "0933111222", "الثكنة", 35.95 to 39.01)
+        // **نفسُه بصيغةٍ أخرى — تبقى.**
+        assertTrue(RecipientSuggest.keepsSavedPoint(picked, "+963933111222", "الثكنة"))
+        // **رقمٌ آخر — شخصٌ آخر — تسقط.**
+        assertFalse(RecipientSuggest.keepsSavedPoint(picked, "0933111223", "الثكنة"))
+        // **رقمٌ يُمحى ليُكتب غيرُه — تسقط من أوّل حرف.**
+        assertFalse(RecipientSuggest.keepsSavedPoint(picked, "093311122", "الثكنة"))
+        // **عنوانٌ عُدّل — مكانٌ آخر — تسقط.**
+        assertFalse(RecipientSuggest.keepsSavedPoint(picked, "0933111222", "الثكنة، البناية الثانية"))
+    }
 }
