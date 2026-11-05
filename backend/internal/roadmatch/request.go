@@ -26,7 +26,7 @@ const (
 	InterpolationM = 10
 	// TurnPenalty بيخفّف نتوءات اللفّة من الرجفة.
 	TurnPenalty = 100
-	// CallTimeout حارس النداء الواحد — **مو هدف**: علامة النجاح ≤ ١٫٥ ث. والمهلة بتقسم القطعة، ما بتعيدها.
+	// CallTimeout حارس النداء الواحد — **مو هدف**: علامة النجاح ≤ ١٫٥ ث. والمهلة بتفتح القاطع، والقطعة بتنقسم بالمحاولة الجاية.
 	CallTimeout = 3 * time.Second
 	// MinSplitSent أصغر قطعة بتنقسم عند المهلة؛ أصغر منها بتنجرّب مرّتين وبعدين `no_match('timeout')`.
 	MinSplitSent = 30
@@ -139,7 +139,7 @@ type Answer struct {
 var (
 	// ErrDown المحرّك ما ردّ (5xx أو انقطاع) ⇒ ما بيتخزّن شي، وبتنعاد.
 	ErrDown = errors.New("roadmatch: محرّك المطابقة ما ردّ")
-	// ErrTimeout خلصت مهلة النداء ⇒ القطعة بتنقسم.
+	// ErrTimeout خلصت مهلة النداء ⇒ القاطع بيفتح، والقطعة بتنقسم بالمحاولة الجاية.
 	ErrTimeout = errors.New("roadmatch: خلصت مهلة النداء")
 )
 

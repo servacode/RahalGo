@@ -152,7 +152,8 @@ interface OpsHealth {
     enabled?: boolean;
     state?: "off" | "ok" | "paused" | "waiting" | "no_engine";
     paused_until?: string;
-    last_error?: string;
+    /** **صنف** آخر خطأ — النصّ العربي من القاموس، والخام بسجلّ الخادم بس. */
+    last_error?: "down" | "timeout" | "storm" | "other";
     calls_hour?: number;
     no_match_hour?: number;
     no_match_share?: number;
@@ -890,7 +891,10 @@ export default function OpsMonitorPage() {
                         )}
                         {health.road_match.last_error && (
                           <p className="mt-1 break-words text-xs text-ink-muted">
-                            {O.roadMatch.lastError.replace("{e}", health.road_match.last_error)}
+                            {O.roadMatch.lastError.replace(
+                              "{e}",
+                              O.roadMatch.errors[health.road_match.last_error] ?? O.roadMatch.errors.other,
+                            )}
                           </p>
                         )}
                       </Block>

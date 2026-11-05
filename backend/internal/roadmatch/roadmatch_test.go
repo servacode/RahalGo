@@ -433,39 +433,11 @@ func TestClient_ErrorClasses(t *testing.T) {
 		t.Errorf("200: %v", err)
 	}
 
-	// المهلة بتقسم: ٤٠ مبعوتة ⇒ مهلة ⇒ ٢٠ + ٢١؛ الأول بينجح والتاني مهلة مرّتين ⇒ no_match('timeout').
-	ch := Chunk{Points: drive(0, 39*4, 4, 0, 8), Closed: true}
-	ch.Sent = make([]bool, len(ch.Points))
-	for i := range ch.Sent {
-		ch.Sent[i] = true
-	}
-	sc := &script{fn: func(n int, sent []drivermonitor.Point) (Answer, error) {
-		if n == 2 {
-			return fakeAnswer(sent), nil
-		}
-		return Answer{}, ErrTimeout
-	}}
-	w := &Worker{Matcher: sc, Opt: DefaultOptions()}
-	tl := &tally{budget: 60}
-	rows, err := w.matchChunk(ctx, ch, t0, w.opt(), tl)
-	if err != nil || sc.calls != 4 || len(rows) != 2 {
-		t.Fatalf("المهلة: خطأ %v، نداءات %d، سطور %d", err, sc.calls, len(rows))
-	}
-	if rows[0].Status != "ok" || rows[1].Status != "no_match" || rows[1].ErrorCode != "timeout" {
-		t.Errorf("السطور: %s/%s %s/%s", rows[0].Status, rows[0].ErrorCode, rows[1].Status, rows[1].ErrorCode)
-	}
-	if !rows[0].ToAt.Equal(rows[1].FromAt) || !rows[0].FromAt.Equal(ch.From()) || !rows[1].ToAt.Equal(ch.To()) {
-		t.Error("النصّين لازم يغطّوا القطعة بنقطة مشتركة")
-	}
 	var res TickResult
-	if w.judge(tl, t0, w.opt(), &res) {
-		t.Error("مهلتين ورا بعض مو عاصفة")
-	}
-
 	// ٥ 400 ورا بعض ⇒ عاصفة.
 	bad := &script{fn: func(int, []drivermonitor.Point) (Answer, error) { return Answer{}, &NoMatchError{Code: "171"} }}
-	w = &Worker{Matcher: bad, Opt: DefaultOptions()}
-	tl = &tally{budget: 60}
+	w := &Worker{Matcher: bad, Opt: DefaultOptions()}
+	tl := &tally{budget: 60}
 	small := Chunk{Points: drive(0, 40, 4, 0, 8), Closed: true}
 	small.Sent = make([]bool, len(small.Points))
 	for i := range small.Sent {
@@ -483,6 +455,9 @@ func TestClient_ErrorClasses(t *testing.T) {
 	if st := w.Status(t0.Add(time.Minute)); st.PausedUntil == nil || !st.PausedUntil.Equal(t0.Add(5*time.Minute)) {
 		t.Errorf("القاطع بعد العاصفة: %+v", st)
 	}
+	if st := w.Status(t0); st.LastError != "storm" {
+		t.Errorf("آخر خطأ بعد العاصفة لازم يكون صنفه storm مو نصّ: %q", st.LastError)
+	}
 
 	// ٣ أعطال ورا بعض ⇒ قاطع.
 	down := &script{fn: func(int, []drivermonitor.Point) (Answer, error) { return Answer{}, ErrDown }}
@@ -494,6 +469,9 @@ func TestClient_ErrorClasses(t *testing.T) {
 	}
 	if !errors.Is(last, errBreaker) {
 		t.Errorf("العطل التالت لازم يفتح القاطع: %v", last)
+	}
+	if st := w.Status(t0); st.LastError != "down" {
+		t.Errorf("آخر خطأ بعد العطل لازم يكون صنفه down مو نصّ: %q", st.LastError)
 	}
 	if res, err := w.Tick(ctx, t0.Add(time.Minute), true); err != nil || res.Calls != 0 {
 		t.Errorf("القاطع مفتوح ⇒ ولا نداء: %+v %v", res, err)
@@ -513,5 +491,88 @@ func TestWorker_IdleWhenOffOrRoadsBusy(t *testing.T) {
 	}
 	if sc.calls != 0 {
 		t.Errorf("نداءات: %d", sc.calls)
+	}
+}
+
+// RM8b (مراجعة ٢٠٢٦-١١-٠٦) — **المهلة بتفتح القاطع فوراً**: خيط Valhalla الوحيد بيضل شغّال ع النداء
+// المتروك، فلا تقسيم ولا إعادة بنفس الدورة (كانت المهلة تكبّر النداءات بالضبط وقت المحرّك بطيء).
+// والقطعة اللي خلصت مهلتها بتنقسم **بالمحاولة الجاية** (بعد الوقفة)، والنص الصغير اللي خلصت مهلته
+// مرّتين بيتخزّن `no_match('timeout')` بلا نداء تالت.
+func TestWorker_TimeoutOpensBreakerSplitsNextTime(t *testing.T) {
+	ctx := context.Background()
+	ch := Chunk{Points: drive(0, 39*4, 4, 0, 8), Closed: true}
+	ch.Sent = make([]bool, len(ch.Points))
+	for i := range ch.Sent {
+		ch.Sent[i] = true
+	}
+	// النص الأول بينجح، وكل شي تاني مهلة.
+	sc := &script{fn: func(_ int, sent []drivermonitor.Point) (Answer, error) {
+		if len(sent) < 40 && sent[0].At.Equal(ch.Points[0].At) {
+			return fakeAnswer(sent), nil
+		}
+		return Answer{}, ErrTimeout
+	}}
+	w := &Worker{Matcher: sc, Opt: DefaultOptions(), Rest: func(context.Context, time.Duration) {}}
+	o := w.opt()
+
+	rows, err := w.matchChunk(ctx, ch, t0, o, &tally{budget: 60})
+	if !errors.Is(err, errBreaker) || rows != nil || sc.calls != 1 {
+		t.Fatalf("أول مهلة: خطأ %v، نداءات %d (لازم ١ بلا تقسيم ولا إعادة)، سطور %d", err, sc.calls, len(rows))
+	}
+	st := w.Status(t0.Add(time.Minute))
+	if st.State != "" && st.State != "paused" || st.PausedUntil == nil || !st.PausedUntil.Equal(t0.Add(o.BreakerPause)) {
+		t.Errorf("المهلة لازم توقّف المطابق: %+v", st)
+	}
+	if st.LastError != "timeout" {
+		t.Errorf("صنف آخر خطأ: %q", st.LastError)
+	}
+	if res, err := w.Tick(ctx, t0.Add(time.Minute), true); err != nil || res.Calls != 0 {
+		t.Errorf("القاطع مفتوح ⇒ ولا نداء: %+v %v", res, err)
+	}
+
+	// المحاولة الجاية: بتنقسم قبل النداء ⇒ النص الأول بينجح والتاني مهلة ⇒ وقفة.
+	later := t0.Add(10 * time.Minute)
+	if _, err := w.matchChunk(ctx, ch, later, o, &tally{budget: 60}); !errors.Is(err, errBreaker) || sc.calls != 3 {
+		t.Fatalf("التانية: خطأ %v، نداءات %d (لازم ٣: كاملة ثم نصّين)", err, sc.calls)
+	}
+	// التالتة: النص التاني (٢١ < ٣٠) بيتجرّب مرّة كمان ⇒ مهلة.
+	if _, err := w.matchChunk(ctx, ch, later.Add(10*time.Minute), o, &tally{budget: 60}); !errors.Is(err, errBreaker) || sc.calls != 5 {
+		t.Fatalf("التالتة: خطأ %v، نداءات %d", err, sc.calls)
+	}
+	// الرابعة: النص التاني خلصت مهلته مرّتين ⇒ `no_match('timeout')` بلا نداء.
+	rows, err = w.matchChunk(ctx, ch, later.Add(20*time.Minute), o, &tally{budget: 60})
+	if err != nil || sc.calls != 6 || len(rows) != 2 {
+		t.Fatalf("الرابعة: خطأ %v، نداءات %d، سطور %d", err, sc.calls, len(rows))
+	}
+	if rows[0].Status != "ok" || rows[1].Status != "no_match" || rows[1].ErrorCode != "timeout" {
+		t.Errorf("السطور: %s/%s %s/%s", rows[0].Status, rows[0].ErrorCode, rows[1].Status, rows[1].ErrorCode)
+	}
+	if !rows[0].ToAt.Equal(rows[1].FromAt) || !rows[0].FromAt.Equal(ch.From()) || !rows[1].ToAt.Equal(ch.To()) {
+		t.Error("النصّين لازم يغطّوا القطعة بنقطة مشتركة")
+	}
+}
+
+// RM8c (مراجعة ٢٠٢٦-١١-٠٦) — **المطابق بيترك مكان للملاحة**: سقف النداءات بالدورة ≤ ٢٠، وبعد كل نداء
+// بيرتاح قدّ ما أخد النداء (فخيط Valhalla فاضي نص الوقت عالأقل).
+func TestWorker_RestsBetweenCalls(t *testing.T) {
+	if n := DefaultOptions().CallsPerTick; n > 20 {
+		t.Errorf("سقف النداءات بالدورة %d — لازم ≤ ٢٠", n)
+	}
+	small := Chunk{Points: drive(0, 40, 4, 0, 8), Closed: true}
+	small.Sent = make([]bool, len(small.Points))
+	for i := range small.Sent {
+		small.Sent[i] = true
+	}
+	sc := &script{fn: func(_ int, sent []drivermonitor.Point) (Answer, error) {
+		time.Sleep(30 * time.Millisecond)
+		return fakeAnswer(sent), nil
+	}}
+	var rests []time.Duration
+	w := &Worker{Matcher: sc, Opt: DefaultOptions(), Rest: func(_ context.Context, d time.Duration) { rests = append(rests, d) }}
+	if _, err := w.matchChunk(context.Background(), small, t0, w.opt(), &tally{budget: 60}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rests) != 1 || rests[0] < 30*time.Millisecond {
+		t.Errorf("الراحة بعد نداء أخد ≥ ٣٠ م ث: %v", rests)
 	}
 }

@@ -3,6 +3,7 @@ package roadmatch
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"math"
 	"sort"
@@ -25,7 +26,8 @@ import (
 //  3. **الرجوع** (بس إذا الحيّ ما عمل ولا نداء): من `backfill_before` لورا، الأحدث أوّلاً، ≤ ٢٠ نداء.
 //     ومعه: القطع بقواعد أقدم (`params`) أو `no_match` أقدم من بناء البلاطات بتنعاد مرّة.
 //  4. **الحكم قبل الكتابة**: عاصفة 4xx (٥ ورا بعض، أو ≥ ٥٠٪ من ≥ ١٠ نداءات) ⇒ عطل بالمحرّك، ما
-//     بيتخزّن شي والقاطع بيفتح ٥ دقايق. و٣ أعطال ورا بعض (5xx، انقطاع، مهلة) ⇒ نفس الشي.
+//     بيتخزّن شي والقاطع بيفتح ٥ دقايق. و٣ أعطال ورا بعض (5xx، انقطاع) ⇒ نفس الشي، **وأول مهلة
+//     ⇒ القاطع فوراً** (Valhalla بيضل شغّال ع النداء المتروك). وبعد كل نداء راحة قدّ ما أخد.
 //
 // **والقطع قبل `frozen_before` ما بتنمسّ** (عقد كنّاس العدّاد — `Freeze`).
 
@@ -51,9 +53,12 @@ type Options struct {
 }
 
 // DefaultOptions القيم المعتمدة.
+//
+// **و٢٠ نداء بالدورة لا ٦٠** (مراجعة ٢٠٢٦-١١-٠٦): ٦٠ كانت بتخلّي المطابق يشغّل خيط Valhalla الوحيد
+// ورا بعض بلا توقف، خصوصاً أول ما ينفتح الإعداد ويكون في تأخير يلحقه — والملاحة بتستنّى وراه.
 func DefaultOptions() Options {
 	return Options{
-		CallsPerTick: 60, BackfillCalls: 20, TailEvery: 5 * time.Minute, LiveLag: 30 * time.Second,
+		CallsPerTick: 20, BackfillCalls: 20, TailEvery: 5 * time.Minute, LiveLag: 30 * time.Second,
 		FirstSight: 30 * time.Minute, BackfillWindow: 3 * time.Hour, BreakerFails: 3, BreakerPause: 5 * time.Minute,
 		Storm4xxRun: 5, StormMinCalls: 10, TilesEvery: time.Hour,
 	}
@@ -63,8 +68,10 @@ func DefaultOptions() Options {
 type Status struct {
 	Enabled bool `json:"enabled"`
 	// State: off · ok · paused · waiting (جولة تعلّم الطرق) · no_engine (بلا Valhalla)
-	State        string     `json:"state"`
-	PausedUntil  *time.Time `json:"paused_until,omitempty"`
+	State       string     `json:"state"`
+	PausedUntil *time.Time `json:"paused_until,omitempty"`
+	// LastError **صنف** آخر خطأ (down · timeout · storm · other) — والواجهة بتعرض نصّه العربي.
+	// النصّ الخام بسجلّ الخادم بس (مراجعة ٢٠٢٦-١١-٠٦: كان يطلع للموظف «roadmatch: …»).
 	LastError    string     `json:"last_error,omitempty"`
 	LastErrorAt  *time.Time `json:"last_error_at,omitempty"`
 	LastTick     *time.Time `json:"last_tick,omitempty"`
@@ -95,6 +102,8 @@ type Worker struct {
 	Logger *slog.Logger
 	Opt    Options
 	Cfg    drivermonitor.Config
+	// Rest **راحة بعد كل نداء** (nil = انتظار حقيقي) — للاختبارات.
+	Rest func(ctx context.Context, d time.Duration)
 
 	mu          sync.Mutex
 	st          Status
@@ -103,6 +112,85 @@ type Worker struct {
 	calls       []callMark
 	tilesAt     time.Time
 	tilesRead   time.Time
+	// timeouts **قطع خلصت مهلتها** — بمفتاح القطعة: بتنقسم (أو بتصير `no_match('timeout')`) بالمحاولة الجاية.
+	timeouts map[string]timeoutMark
+}
+
+type timeoutMark struct {
+	n  int
+	at time.Time
+}
+
+// Error kinds — صنف آخر خطأ بحالة المطابق.
+const (
+	errKindDown    = "down"
+	errKindTimeout = "timeout"
+	errKindStorm   = "storm"
+	errKindOther   = "other"
+)
+
+// errKind صنف خطأ عطل.
+func errKind(err error) string {
+	switch {
+	case errors.Is(err, ErrTimeout):
+		return errKindTimeout
+	case errors.Is(err, ErrDown):
+		return errKindDown
+	}
+	return errKindOther
+}
+
+// MaxRest أطول راحة بعد نداء.
+const MaxRest = 3 * time.Second
+
+// rest **بيرتاح قدّ ما أخد النداء** (لحد `MaxRest`): خيط Valhalla الوحيد فاضي نص الوقت عالأقل للملاحة.
+func (w *Worker) rest(ctx context.Context, took time.Duration) {
+	if took <= 0 {
+		return
+	}
+	if took > MaxRest {
+		took = MaxRest
+	}
+	if w.Rest != nil {
+		w.Rest(ctx, took)
+		return
+	}
+	t := time.NewTimer(took)
+	defer t.Stop()
+	select {
+	case <-t.C:
+	case <-ctx.Done():
+	}
+}
+
+// pieceKey مفتاح قطعة: أول وآخر وقت وأول موضع وعدد المبعوت.
+func pieceKey(c Chunk) string {
+	if len(c.Points) == 0 {
+		return ""
+	}
+	p := c.Points[0]
+	return fmt.Sprintf("%d|%d|%.6f|%.6f|%d", c.From().UnixNano(), c.To().UnixNano(), p.Lat, p.Lng, c.SentCount())
+}
+
+func (w *Worker) timedOut(key string) int {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.timeouts[key].n
+}
+
+func (w *Worker) noteTimeout(key string, now time.Time) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if w.timeouts == nil {
+		w.timeouts = map[string]timeoutMark{}
+	}
+	for k, m := range w.timeouts {
+		if now.Sub(m.at) > 24*time.Hour {
+			delete(w.timeouts, k)
+		}
+	}
+	m := w.timeouts[key]
+	w.timeouts[key] = timeoutMark{n: m.n + 1, at: now}
 }
 
 type callMark struct {
@@ -300,21 +388,21 @@ func (w *Worker) judge(tl *tally, now time.Time, o Options, res *TickResult) boo
 	storm := tl.storm || tl.consec4xx >= o.Storm4xxRun || (tl.calls >= o.StormMinCalls && tl.n4xx*2 >= tl.calls)
 	if storm {
 		res.Storm = true
-		w.open(now, o, "عاصفة 4xx من محرّك المطابقة — ما انخزّن شي")
+		w.open(now, o, errKindStorm, "عاصفة 4xx من محرّك المطابقة — ما انخزّن شي")
 		return true
 	}
 	return false
 }
 
-func (w *Worker) open(now time.Time, o Options, why string) {
+func (w *Worker) open(now time.Time, o Options, kind, why string) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	w.pausedUntil = now.Add(o.BreakerPause)
-	w.st.LastError = why
+	w.st.LastError = kind
 	t := now
 	w.st.LastErrorAt = &t
 	w.consecFails = 0
-	w.logger().Warn("مطابقة الطريق: القاطع فتح", "until", w.pausedUntil, "error", why)
+	w.logger().Warn("مطابقة الطريق: القاطع فتح", "until", w.pausedUntil, "kind", kind, "error", why)
 }
 
 func (w *Worker) mark(now time.Time, noMatch bool) {
@@ -324,19 +412,42 @@ func (w *Worker) mark(now time.Time, noMatch bool) {
 	w.mu.Unlock()
 }
 
-// matchChunk **قطعة ⇒ أسطر**. المهلة بتقسم القطعة لنصّين (لحد ٣٠ نقطة مبعوتة)، والقطعة الصغيرة
-// اللي خلصت مهلتها مرّتين بتتخزّن `no_match('timeout')` — نفس النداء البطيء ما بينبعت مرّة تالتة.
+// matchChunk **قطعة ⇒ أسطر**.
+//
+// # المهلة (مراجعة ٢٠٢٦-١١-٠٦)
+//
+// **أول مهلة بتفتح القاطع وبتوقّف الدورة** — Valhalla بيضل شغّال ع النداء المتروك بخيطه الوحيد، فأي
+// نداء تاني (تقسيم أو إعادة) بينصف وراه والملاحة وراهم. والقطعة اللي خلصت مهلتها بتنقسم لنصّين
+// **بالمحاولة الجاية** (بعد الوقفة، لحد ٣٠ نقطة مبعوتة)، والصغيرة اللي خلصت مهلتها مرّتين بتتخزّن
+// `no_match('timeout')` بلا نداء تالت.
 func (w *Worker) matchChunk(ctx context.Context, c Chunk, now time.Time, o Options, tl *tally) ([]Row, error) {
 	if c.SentCount() < 2 {
 		return []Row{FlatRow(c, "ok", "")}, nil
 	}
-	return w.matchPiece(ctx, c, 0, now, o, tl)
+	return w.matchPiece(ctx, c, now, o, tl)
 }
 
-func (w *Worker) matchPiece(ctx context.Context, c Chunk, tries int, now time.Time, o Options, tl *tally) ([]Row, error) {
+func (w *Worker) matchPiece(ctx context.Context, c Chunk, now time.Time, o Options, tl *tally) ([]Row, error) {
+	key := pieceKey(c)
+	switch n := w.timedOut(key); {
+	case n > 0 && c.SentCount() > MinSplitSent:
+		h1, h2 := splitHalves(c)
+		r1, err := w.matchPiece(ctx, h1, now, o, tl)
+		if err != nil {
+			return nil, err
+		}
+		r2, err := w.matchPiece(ctx, h2, now, o, tl)
+		if err != nil {
+			return nil, err
+		}
+		return append(r1, r2...), nil
+	case n >= 2:
+		return []Row{FlatRow(c, "no_match", "timeout")}, nil
+	}
 	t0 := time.Now()
 	a, err := w.Matcher.Match(ctx, sentPoints(c))
-	took := int(time.Since(t0).Milliseconds())
+	tookD := time.Since(t0)
+	took := int(tookD.Milliseconds())
 	tl.calls++
 	var nm *NoMatchError
 	switch {
@@ -350,6 +461,7 @@ func (w *Worker) matchPiece(ctx context.Context, c Chunk, tries int, now time.Ti
 		for i := range rows {
 			rows[i].TookMs = took
 		}
+		w.rest(ctx, tookD)
 		return rows, nil
 	case errors.As(err, &nm):
 		w.mark(now, true)
@@ -360,34 +472,13 @@ func (w *Worker) matchPiece(ctx context.Context, c Chunk, tries int, now time.Ti
 		}
 		r := FlatRow(c, "no_match", nm.Code)
 		r.TookMs = took
+		w.rest(ctx, tookD)
 		return []Row{r}, nil
 	case errors.Is(err, ErrTimeout):
-		// المهلة بتنعدّ متل 4xx بحكم العاصفة: محرّك ما بيردّ أبداً ما لازم يصير `no_match` دايم.
 		w.mark(now, true)
-		tl.n4xx++
-		tl.consec4xx++
-		if tl.consec4xx >= o.Storm4xxRun {
-			tl.storm = true
-			return nil, nil
-		}
-		if c.SentCount() > MinSplitSent {
-			h1, h2 := splitHalves(c)
-			r1, err := w.matchPiece(ctx, h1, 0, now, o, tl)
-			if err != nil {
-				return nil, err
-			}
-			r2, err := w.matchPiece(ctx, h2, 0, now, o, tl)
-			if err != nil {
-				return nil, err
-			}
-			return append(r1, r2...), nil
-		}
-		if tries == 0 {
-			return w.matchPiece(ctx, c, 1, now, o, tl)
-		}
-		r := FlatRow(c, "no_match", "timeout")
-		r.TookMs = took
-		return []Row{r}, nil
+		w.noteTimeout(key, now)
+		w.open(now, o, errKindTimeout, err.Error())
+		return nil, errBreaker
 	case ctx.Err() != nil:
 		return nil, ctx.Err()
 	default:
@@ -395,6 +486,7 @@ func (w *Worker) matchPiece(ctx context.Context, c Chunk, tries int, now time.Ti
 		if w.fail(now, o, err) {
 			return nil, errBreaker
 		}
+		w.rest(ctx, tookD)
 		return nil, err
 	}
 }
@@ -406,7 +498,7 @@ func (w *Worker) fail(now time.Time, o Options, err error) bool {
 	n := w.consecFails
 	w.mu.Unlock()
 	if n >= o.BreakerFails {
-		w.open(now, o, err.Error())
+		w.open(now, o, errKind(err), err.Error())
 		return true
 	}
 	return false
