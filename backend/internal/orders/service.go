@@ -432,6 +432,30 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 		return nil, nil, ErrMerchantClosed
 	}
 
+	// ══════════════════════════════════════════════════════════════════
+	// **وكلُّ متاجر الطلب مفتوحة — لا الأوّلُ وحدَه** (`G-13`، ٢٠٢٦-١١-٠٥)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **كان الفحصُ فوقُ على متجر الطلب وحدَه** — **فسلّةٌ فُتحت قبل إغلاق
+	// المتجر الثاني (أو نداءٌ يُصاغ باليد) تُدخله مغلقاً**، فيصل الطلبُ ولا
+	// أحدَ يحضّر قسمَه. **والسلّةُ كانت تعرف** (`closedSource`) **والإنشاءُ
+	// لا يسأل.** **وبالنصّ نفسِه** (`OpenNowSQL`) — **وللطلب من متجرين فأكثر
+	// وحدَه**: الطلبُ من متجرٍ واحدٍ فحصُه فوقُ، ومسارُه لا يتبدّل.
+	stops := 1
+	if sources != nil && len(sources.IDs) > 1 {
+		stops = len(sources.IDs)
+		var anyClosed bool
+		if err := tx.QueryRow(ctx, `
+			SELECT EXISTS (SELECT 1 FROM merchants m
+			                WHERE m.id = ANY($1::uuid[]) AND NOT `+OpenNowSQL+`)`,
+			sources.IDs).Scan(&anyClosed); err != nil {
+			return nil, nil, err
+		}
+		if anyClosed {
+			return nil, nil, ErrMerchantClosed
+		}
+	}
+
 	// التسعير الخادمي للأصناف والخيارات (لقطة ثابتة)
 	items, subtotal, err := unit.priceItems(ctx, tx, in.Items)
 	if err != nil {
@@ -685,6 +709,7 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 		return nil, nil, err
 	}
 
+	// **وعددُ المحطّات يُكتب مع الطلب** (`stops`، هجرة ٠٥٠٢) — ١ للطلب من متجرٍ واحد.
 	var orderID string
 	err = tx.QueryRow(ctx, `
 		INSERT INTO orders (customer_id, merchant_id, address_text, dropoff, zone_id,
@@ -693,17 +718,17 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 			snap_merchant_commission_percent, snap_rep_commission_percent,
 			snap_commission_source, snap_activation_orders, driver_fee,
 			promo_delivery_waived, snap_platform_delivery_percent, snap_platform_delivery_fixed,
-			sources_fee)
+			sources_fee, stops)
 		VALUES ($1, $2, $3, ST_SetSRID(ST_MakePoint($5,$4),4326)::geography, $6,
 			$7, $8, $9, $10, $11, $12, $13, NULLIF($14,''), $15, $16,
-			$17, $18, $19, $20, $21, $22, $23, $24, $25)
+			$17, $18, $19, $20, $21, $22, $23, $24, $25, $26)
 		RETURNING id`,
 		customerID, in.MerchantID, in.AddressText, in.Lat, in.Lng, zoneID,
 		in.PaymentMethod, subtotal, deliveryFee, discount, total, walletPaid, cashDue,
 		promoCode, in.Notes, actorID,
 		snap.MerchantCommission, snap.RepCommissionPercent,
 		snap.CommissionSource, snap.ActivationOrders, driverFee,
-		deliveryWaived, platformPct, platformFixed, sourcesFee).Scan(&orderID)
+		deliveryWaived, platformPct, platformFixed, sourcesFee, stops).Scan(&orderID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -769,6 +794,19 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 				return nil, nil, err
 			}
 			settleMethod[id] = method
+		}
+	}
+
+	// ══════════════════════════════════════════════════════════════════
+	// **وصفٌّ لكلّ متجرٍ في الطلب من متجرين فأكثر** — `parts.go` (٢٠٢٦-١١-٠٥)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **وبعد قفل صفوف المتاجر أعلاه لا قبله**: مفتاحُ القسم الأجنبيُّ يطلب
+	// `FOR KEY SHARE` على صفٍّ نحمل عليه `FOR SHARE` أصلاً — **فلا انتظارَ
+	// جديدٌ ولا ترتيبُ أقفالٍ ثانٍ.** **والطلبُ من متجرٍ واحدٍ لا يمرّ هنا.**
+	if stops > 1 {
+		if err := insertPartsTx(ctx, tx, orderID, in.MerchantID, sources.IDs); err != nil {
+			return nil, nil, err
 		}
 	}
 
