@@ -44,6 +44,8 @@ var (
 	ErrExtStoreWallet = errors.New("ext_store_wallet")
 	// ErrExtStoreMoneyMoved **مالٌ تحرّك على الطلب** — لا يُقلب ما قُيّد.
 	ErrExtStoreMoneyMoved = errors.New("ext_store_money_moved")
+	// ErrExtStoreAfterPickup **البضاعةُ خرجت من المتجر** — ولو بلا قيد (PD-8، `GoodsLeftStore`).
+	ErrExtStoreAfterPickup = errors.New("ext_store_after_pickup")
 )
 
 // extStoreStatuses **الحالاتُ التي يُقلب فيها** — هي حالاتُ «التحويل لمتجرٍ آخر» نفسُها.
@@ -128,6 +130,12 @@ func (s *Service) ConvertToExternalStore(ctx context.Context, actorID, orderID, 
 	}
 	if moved {
 		return nil, ch, ErrExtStoreMoneyMoved
+	}
+	// **ولا بعد الاستلام ولو بلا قيد** (PD-8): مستحقٌّ صفريٌّ لا يكتب صفّاً والبضاعةُ خرجت.
+	if left, err := GoodsLeftStore(ctx, tx, orderID); err != nil {
+		return nil, ch, err
+	} else if left {
+		return nil, ch, ErrExtStoreAfterPickup
 	}
 	ch.FromMerchantID, ch.FromMerchantName, ch.FromStatus = merchantID, merchantName, status
 

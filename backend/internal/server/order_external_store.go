@@ -31,6 +31,7 @@ var extStoreErrors = []struct {
 		"ext_store_wallet", "errors.ext_store_wallet")},
 	{orders.ErrExtStoreMoneyMoved, httpx.NewError(http.StatusConflict,
 		"ext_store_money_moved", "errors.ext_store_money_moved")},
+	{orders.ErrExtStoreAfterPickup, errTransferAfterPickup},
 }
 
 // handleOrderExternalStore `POST /admin/orders/{id}/external-store` — `{"reason": "…"}`.

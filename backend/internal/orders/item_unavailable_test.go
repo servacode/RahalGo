@@ -354,3 +354,35 @@ func TestItemUnavailable_SourceGone(t *testing.T) {
 		t.Fatalf("متجرُ الطلب=%s — المنتظَر الباقي %s", st.merchantID, other)
 	}
 }
+
+// TestItemUnavailable_RefusedAfterPickupRedispatch **خلل PD-8**: طلبٌ استُلم ثمّ أعادته العملياتُ
+// إلى الطابور بعد طارئ (`picked_up → dispatching`) — **الحالُ «بانتظار سائق» والبضاعةُ خرجت**
+// ومستحقُّ المتجر مقيَّد. وكان «غير متوفر» يُقبل فيه فيغيّر مستحقَّ الطلب ولا يغيّر صفَّ التسوية،
+// **فيتعطّل الاستلامُ الثاني (XS-1)**. التصحيحُ بعد الاستلام بابُه «تعديل الطلب».
+func TestItemUnavailable_RefusedAfterPickupRedispatch(t *testing.T) {
+	f := iuSetup(t, "at_pickup", "cash")
+	ctx := context.Background()
+	if _, err := f.pool.Exec(ctx, `
+		UPDATE merchants SET owner_user_id = $2, settlement_method = 'cash' WHERE id = $1`,
+		f.merchantID, f.rep); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.pool.Exec(ctx, `
+		UPDATE order_items SET merchant_settlement_method = 'cash' WHERE order_id = $1`, f.orderID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.svc.Transition(ctx, f.driver, []string{"driver"}, f.orderID, "picked_up", ""); err != nil {
+		t.Fatalf("الاستلام: %v", err)
+	}
+	if _, err := f.svc.Transition(ctx, f.customer, []string{"ops"}, f.orderID, "dispatching",
+		"طارئ لدى السائق"); err != nil {
+		t.Fatalf("الإعادةُ إلى الطابور: %v", err)
+	}
+	before := f.read(t)
+	if _, _, err := f.svc.MarkItemUnavailable(ctx, f.customer, f.orderID, f.lineA, 1, nil); !errors.Is(err, orders.ErrItemUnavailableTooLate) {
+		t.Fatalf("بعد الاستلام والإعادة: %v — المنتظَر item_unavailable_too_late", err)
+	}
+	if after := f.read(t); after != before {
+		t.Fatalf("الطلبُ تغيّر بعد الرفض: %+v ← %+v", after, before)
+	}
+}
