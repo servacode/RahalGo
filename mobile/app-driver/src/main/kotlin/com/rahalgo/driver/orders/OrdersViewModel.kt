@@ -1488,8 +1488,16 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     var askEntranceFor by mutableStateOf<String?>(null)
         private set
 
-    private fun hereNow(): Pair<Double, Double>? =
-        navSession.lastGoodFix?.let { it.lat to it.lng } ?: LastPoint.value?.let { it.lat to it.lng }
+    /**
+     * **مكانُه الآن** — قراءةُ الملاحة ما دامت شغّالة، وإلّا موضعُ الدوام إن كان حديثاً (`pickHere`).
+     * **كانت قراءةُ الملاحة تُؤخذ وهي مطفأة** فيُحفظ المعلمُ بين طلبين عند آخر زبون (٢٠٢٦-١١-٠٥).
+     */
+    private fun hereNow(): Pair<Double, Double>? = pickHere(
+        following = following,
+        nav = navSession.lastGoodFix?.let { it.lat to it.lng },
+        last = LastPoint.value,
+        nowElapsedMs = android.os.SystemClock.elapsedRealtime(),
+    )
 
     /**
      * **وموضعٌ جديدٌ من النظام إن لم يكن عندنا** — خارجَ الورديّة لا يُتتبَّع السائق (شُهد
@@ -1571,6 +1579,26 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     var landmarkSending by mutableStateOf(false)
         private set
 
+    /**
+     * **معالمُه اليوم من المطلوب** (قرارُ المالك ٢٠٢٦-١١-٠٥: «كل سائق باليوم اقل شي 5 معالم») —
+     * سطرٌ فوق صفحة «أضف معلماً»، **ويُحدَّث من ردّ كلّ إرسال.** وفارغٌ قبل أن يُقرأ.
+     */
+    var landmarkToday by mutableStateOf<com.rahalgo.shared.driver.LandmarkToday?>(null)
+        private set
+
+    /** **يُقرأ عند فتح الصفحة** — وتعذُّرُه لا يمنع الإرسال: السطرُ يغيب وحسب. */
+    fun loadLandmarkToday() {
+        viewModelScope.launch {
+            try {
+                landmarkToday = backend.driver.landmarksToday()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                android.util.Log.w("RahalGo/معالم", "تعذّر عدُّ معالم اليوم", e)
+            }
+        }
+    }
+
     fun suggestLandmark(name: String, kind: String, done: () -> Unit) {
         if (landmarkSending) return
         landmarkSending = true
@@ -1582,8 +1610,12 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                     com.rahalgo.ui.Flash.fail(app.getString(R.string.map_need_location))
                     return@launch
                 }
-                backend.driver.suggestLandmark(name.trim(), kind, at.first, at.second)
-                com.rahalgo.ui.Flash.ok(app.getString(R.string.landmark_sent))
+                val r = backend.driver.suggestLandmark(name.trim(), kind, at.first, at.second)
+                if (r.quota > 0 || r.today > 0) {
+                    landmarkToday = com.rahalgo.shared.driver.LandmarkToday(today = r.today, quota = r.quota)
+                }
+                // **ونصُّ الخادم يقول «انحسب ✓ — معالمك اليوم: ٣ من ٥»** — وغيابُه يقع على نصّنا.
+                com.rahalgo.ui.Flash.ok(r.notice.trim().ifEmpty { app.getString(R.string.landmark_sent) })
                 done()
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e

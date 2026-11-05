@@ -1035,11 +1035,16 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                                     LaunchedEffect(Unit) { goalsVm.load() }
                                     IncentivesScreen(goalsVm, onBack = { overlay.clear() })
                                 }
-                                MenuItem.AddLandmark -> OverlayPage(stringResource(R.string.menu_add_landmark), onBack = { overlay.clear() }) {
-                                    com.rahalgo.driver.menu.AddLandmarkScreen(
-                                        onSend = { name, kind -> orders.suggestLandmark(name, kind) { overlay.clear() } },
-                                        sending = orders.landmarkSending,
-                                    )
+                                MenuItem.AddLandmark -> {
+                                    // **ومعالمُه اليوم تُقرأ عند الفتح** (قرارُ المالك ٢٠٢٦-١١-٠٥).
+                                    LaunchedEffect(Unit) { orders.loadLandmarkToday() }
+                                    OverlayPage(stringResource(R.string.menu_add_landmark), onBack = { overlay.clear() }) {
+                                        com.rahalgo.driver.menu.AddLandmarkScreen(
+                                            onSend = { name, kind -> orders.suggestLandmark(name, kind) { overlay.clear() } },
+                                            sending = orders.landmarkSending,
+                                            today = orders.landmarkToday,
+                                        )
+                                    }
                                 }
                                 else -> OverlayPage(stringResource(item.label), onBack = { overlay.clear() }) {
                                     MenuScreen(vm = sectionsVm, item = item)

@@ -331,6 +331,19 @@ func (o landmarkOutcome) existsError() error {
 	return &e
 }
 
+// handleDriverLandmarksToday **معالمُه اليوم من المطلوب** — سطرُ «معالمك اليوم: ٢ من ٥» فوق صفحة
+// «أضف معلماً» (قرارُ المالك ٢٠٢٦-١١-٠٥). GET /driver/landmarks/today
+func (s *Server) handleDriverLandmarksToday(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	day := siteDay(time.Now(), s.dayStartHour(ctx))
+	n, err := landmarkCountedOn(ctx, s.pg, userIDFrom(r), day)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"day": day, "today": n, "quota": s.landmarkQuota(ctx)})
+}
+
 // errLandmarkBadPoint **لا موقعَ صالحاً** — بنصٍّ يقول ما يفعل، لا «موقع التوصيل».
 func errLandmarkBadPoint() error {
 	e := *httpx.NewError(http.StatusUnprocessableEntity, "bad_point", "errors.validation")

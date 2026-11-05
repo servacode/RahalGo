@@ -345,14 +345,22 @@ class DriverApi(private val api: ApiClient) {
         )
     }
 
-    /** **«أضف معلم»** (٢٠٢٦-١٠-٢١) — بانتظار الإدارة. `kind`: mosque · pharmacy · school · hospital · shop · roundabout · other. */
-    suspend fun suggestLandmark(name: String, kind: String, lat: Double, lng: Double) {
-        api.call<Ack>(
+    /**
+     * **«أضف معلم»** (٢٠٢٦-١٠-٢١) — بانتظار الإدارة. `kind`: mosque · pharmacy · school · hospital · shop · roundabout · other.
+     *
+     * **ويردّ عدَّه اليوم** (قرارُ المالك ٢٠٢٦-١١-٠٥) — **والمكرَّرُ ٤٠٩ `landmark_exists`** بنصٍّ في
+     * `details.notice` يعرضه `apiError` كما هو.
+     */
+    suspend fun suggestLandmark(name: String, kind: String, lat: Double, lng: Double): LandmarkResult =
+        api.call<LandmarkResult>(
             "/api/v1/driver/landmarks",
             HttpMethod.Post,
             LandmarkInput(name, kind, lat, lng),
         )
-    }
+
+    /** **معالمُه اليوم من المطلوب** (قرارُ المالك ٢٠٢٦-١١-٠٥) — سطرُ «معالمك اليوم: ٢ من ٥». */
+    suspend fun landmarksToday(): LandmarkToday =
+        api.call<LandmarkToday>("/api/v1/driver/landmarks/today")
 
     suspend fun requestLiveLocation(orderId: String): Int =
         api.call<LiveRequestResult>(
@@ -646,3 +654,21 @@ internal data class ClosureInput(val lat: Double, val lng: Double, val reason: S
 
 @Serializable
 internal data class LandmarkInput(val name: String, val kind: String, val lat: Double, val lng: Double)
+
+/**
+ * **ردُّ «أضف معلم»** (قرارُ المالك ٢٠٢٦-١١-٠٥) — انحسب ومعالمُه اليوم من المطلوب، **ونصُّ الخادم
+ * يقولها** (`notice`). **وكلُّها بافتراضٍ** — فخادمٌ أقدمُ يردّ `{id, status}` وحدَهما فلا يسقط الفكّ.
+ */
+@Serializable
+data class LandmarkResult(
+    val id: Long = 0,
+    val status: String = "",
+    val counted: Boolean = false,
+    val today: Int = 0,
+    val quota: Int = 0,
+    val notice: String = "",
+)
+
+/** **معالمُه اليوم** — `quota` صفرٌ: العدُّ مطفأ فلا سطر. */
+@Serializable
+data class LandmarkToday(val today: Int = 0, val quota: Int = 0)

@@ -1067,6 +1067,8 @@ func (s *Server) Router() http.Handler {
 			r.Post("/orders/{id}/entrance", s.handleDriverEntrance)
 			r.Post("/road-closures", s.handleDriverRoadClosure)
 			r.Post("/landmarks", s.handleDriverLandmark)
+			// **ومعالمُه اليوم من المطلوب** (قرارُ المالك ٢٠٢٦-١١-٠٥، landmark_quota.go).
+			r.Get("/landmarks/today", s.handleDriverLandmarksToday)
 			r.Get("/cash", s.handleDriverCash)
 			// **هدفُه وما ناله** — ومكافأةٌ لا يراها صاحبُها لم تُصرف في نظره.
 			r.Get("/incentives", s.handleMyIncentives)
