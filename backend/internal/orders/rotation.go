@@ -482,9 +482,11 @@ func (s *Service) legacyRotationCandidate(ctx context.Context, orderID string, s
 		      WHERE o2.offered_driver_id = u.id AND o2.id <> $4
 		        AND o2.status = 'dispatching' AND o2.driver_id IS NULL
 		        AND o2.offer_expires_at > now())
-		-- **ومن لم يأخذ بعدُ يُرتّبون بمن بكّر بالدوام.**
-		ORDER BY u.last_assigned_at NULLS FIRST, u.shift_started_at, u.id
-		LIMIT 1`, skip, limit, maxActive, orderID).Scan(&driverID)
+		-- **ومن وصّل لزبون هذا الطلب حدَّ الأسبوع آخرُ الصفّ** (customer_rotation.go)،
+		-- **ثمّ من لم يأخذ بعدُ يُرتّبون بمن بكّر بالدوام.**
+		ORDER BY `+sameCustomerOverSQL("u.id", "(SELECT oc.customer_id FROM orders oc WHERE oc.id = $4)", "$4", "$5")+`,
+		         u.last_assigned_at NULLS FIRST, u.shift_started_at, u.id
+		LIMIT 1`, skip, limit, maxActive, orderID, s.sameCustomerCap(ctx)).Scan(&driverID)
 	return driverID, err
 }
 
@@ -535,7 +537,8 @@ const proximityCTE = `
 		JOIN user_roles ur ON ur.user_id = u.id AND ur.role_code = 'driver'
 		CROSS JOIN (
 		    SELECT ` + DispatchAnchorSQL + ` AS pickup,
-		           COALESCE(o.cash_due, 0) AS cash_due
+		           COALESCE(o.cash_due, 0) AS cash_due,
+		           o.customer_id AS customer_id
 		    FROM orders o LEFT JOIN merchants m ON m.id = o.merchant_id
 		    WHERE o.id = $4
 		) ord`
@@ -550,11 +553,13 @@ func (s *Service) proximityInRadius(ctx context.Context, orderID string, skip []
 	q := proximityCTE + proximityEligibleWhere + `
 		  AND ord.pickup IS NOT NULL
 		  AND ST_DWithin(u.last_location, ord.pickup, $6)` + zoneClause + `
-		ORDER BY floor(ST_Distance(u.last_location, ord.pickup) / GREATEST($7::float8, 1)),
+		ORDER BY ` + sameCustomerOverSQL("u.id", "ord.customer_id", "$4", "$8") + `,
+		         floor(ST_Distance(u.last_location, ord.pickup) / GREATEST($7::float8, 1)),
 		         u.last_assigned_at NULLS FIRST, u.shift_started_at, u.id
 		LIMIT 1`
 	var driverID string
-	err := s.db.QueryRow(ctx, q, skip, limit, maxActive, orderID, fresh, radius, bucket).Scan(&driverID)
+	err := s.db.QueryRow(ctx, q, skip, limit, maxActive, orderID, fresh, radius, bucket,
+		s.sameCustomerCap(ctx)).Scan(&driverID)
 	return driverID, err
 }
 
@@ -574,11 +579,13 @@ func (s *Service) freshFallbackCandidate(ctx context.Context, orderID string, sk
 		zoneClause = zoneGateClause
 	}
 	q := proximityCTE + proximityEligibleWhere + zoneClause + `
-		ORDER BY floor(ST_Distance(u.last_location, ord.pickup) / GREATEST($6::float8, 1)) NULLS LAST,
+		ORDER BY ` + sameCustomerOverSQL("u.id", "ord.customer_id", "$4", "$7") + `,
+		         floor(ST_Distance(u.last_location, ord.pickup) / GREATEST($6::float8, 1)) NULLS LAST,
 		         u.last_assigned_at NULLS FIRST, u.shift_started_at, u.id
 		LIMIT 1`
 	var driverID string
-	err := s.db.QueryRow(ctx, q, skip, limit, maxActive, orderID, fresh, bucket).Scan(&driverID)
+	err := s.db.QueryRow(ctx, q, skip, limit, maxActive, orderID, fresh, bucket,
+		s.sameCustomerCap(ctx)).Scan(&driverID)
 	return driverID, err
 }
 

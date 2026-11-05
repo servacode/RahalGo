@@ -51,6 +51,10 @@ type SameRouteCandidate struct {
 	// BetweenPickupsM بين المتجرين، و BetweenDropoffsM بين الزبونين.
 	BetweenPickupsM  float64
 	BetweenDropoffsM float64
+	// OverQuota **وصّل لزبون هذا الطلب حدَّ الأسبوع** (`customer_rotation.go`)، و
+	// SameCustomer **طلبُه الذي بيده لهذا الزبون نفسِه** — بابٌ واحدٌ ومشوارٌ واحد.
+	OverQuota    bool
+	SameCustomer bool
 }
 
 // SameRouteDriver يجد سائقاً في مسار هذا الطلب — **أو لا يجد.**
@@ -89,14 +93,16 @@ func (s *Service) SameRouteDriver(ctx context.Context, orderID string) *SameRout
 	err := s.db.QueryRow(ctx, `
 		WITH nw AS (
 			SELECT o.id, COALESCE(o.pickup_override, m.location) AS pick, o.dropoff,
-			       o.cash_due
+			       o.cash_due, o.customer_id
 			FROM orders o JOIN merchants m ON m.id = o.merchant_id
 			WHERE o.id = $1
 		)
 		SELECT a.driver_id::text, a.id::text,
-		       ST_Distance(a.pick, nw.pick), ST_Distance(a.dropoff, nw.dropoff)
+		       ST_Distance(a.pick, nw.pick), ST_Distance(a.dropoff, nw.dropoff),
+		       `+sameCustomerOverSQL("u.id", "nw.customer_id", "nw.id", "$7")+`,
+		       COALESCE(a.customer_id = nw.customer_id, false)
 		FROM (
-			SELECT o.id, o.driver_id, o.status,
+			SELECT o.id, o.driver_id, o.status, o.customer_id,
 			       COALESCE(o.pickup_override, m.location) AS pick, o.dropoff
 			FROM orders o JOIN merchants m ON m.id = o.merchant_id
 			WHERE o.driver_id IS NOT NULL AND o.closed_at IS NULL
@@ -133,11 +139,13 @@ func (s *Service) SameRouteDriver(ctx context.Context, orderID string) *SameRout
 		  AND (nw.cash_due = 0 OR NOT driver_cash_overdue_stopped(u.id))
 		  AND (SELECT count(*) FROM orders o2
 		       WHERE o2.driver_id = u.id AND o2.closed_at IS NULL) < $5
-		-- **والأقربُ أوّلاً** — وقفتان متلاصقتان خيرٌ من متباعدتين.
-		ORDER BY ST_Distance(a.pick, nw.pick)
+		-- **ومن وصّل لهذا الزبون حدَّ الأسبوع آخرُ الصفّ** (customer_rotation.go)،
+		-- **ثمّ الأقربُ** — وقفتان متلاصقتان خيرٌ من متباعدتين.
+		ORDER BY 5, ST_Distance(a.pick, nw.pick)
 		LIMIT 1`,
-		orderID, radius, spread, limit, maxActive, fresh).
-		Scan(&c.DriverID, &c.AnchorOrderID, &c.BetweenPickupsM, &c.BetweenDropoffsM)
+		orderID, radius, spread, limit, maxActive, fresh, s.sameCustomerCap(ctx)).
+		Scan(&c.DriverID, &c.AnchorOrderID, &c.BetweenPickupsM, &c.BetweenDropoffsM,
+			&c.OverQuota, &c.SameCustomer)
 	if err != nil {
 		return nil
 	}
@@ -154,6 +162,19 @@ const sameRouteNote = "إسنادٌ بنفس المسار — سائقٌ في ا
 func (s *Service) TrySameRoute(ctx context.Context, orderID string) bool {
 	c := s.SameRouteDriver(ctx, orderID)
 	if c == nil {
+		return false
+	}
+	// ══════════════════════════════════════════════════════════════════
+	// **وصاحبُ المسار وصّل لهذا الزبون حدَّ الأسبوع — فغيرُه أولى إن وُجد**
+	// (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٤)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **ولا يُتخطّى إلّا وبديلٌ قائمٌ الآن** (`sameCustomerAlternative`) — وإلّا
+	// فنفسُ المسار كما كان، **فلا يبقى الطلبُ بلا سائقٍ بسببها.** **وطلبُه الذي
+	// بيده لهذا الزبون نفسِه بابٌ واحد** — مشوارٌ واحدٌ لا زيارةٌ ثانية.
+	if c.OverQuota && !c.SameCustomer && s.sameCustomerAlternative(ctx, orderID, c.DriverID) {
+		s.logger.Info("نفسُ المسار: تُخطّي لحدّ الزبون — وثمّة بديل",
+			"order", orderID, "driver", c.DriverID)
 		return false
 	}
 	// **والسببُ في نصّ الحدث نفسِه لا في حدثٍ ثانٍ.**
