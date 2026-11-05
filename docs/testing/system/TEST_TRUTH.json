@@ -33,8 +33,8 @@
     "setting_defs": 256,
     "behaviour_settings": 211,
     "order_fields": 133,
-    "test_files": 702,
-    "test_funcs": 2712
+    "test_files": 704,
+    "test_funcs": 2720
   },
   "flows": [
     {
@@ -7794,6 +7794,36 @@
       "orphan": true
     },
     {
+      "name": "TestItemLink_WesternDigits",
+      "file": "internal/catalog/item_link_test.go",
+      "package": "catalog",
+      "orphan": true
+    },
+    {
+      "name": "TestLinkText",
+      "file": "internal/catalog/item_link_test.go",
+      "package": "catalog",
+      "orphan": true
+    },
+    {
+      "name": "TestSyncPrices_NeverStoresInvalidLink",
+      "file": "internal/catalog/item_link_test.go",
+      "package": "catalog",
+      "orphan": true
+    },
+    {
+      "name": "TestSyncPrices_SharedCodeGoesToOldest",
+      "file": "internal/catalog/item_link_test.go",
+      "package": "catalog",
+      "orphan": true
+    },
+    {
+      "name": "TestUpdateItem_UnchangedLinkSaves",
+      "file": "internal/catalog/item_link_test.go",
+      "package": "catalog",
+      "orphan": true
+    },
+    {
       "name": "TestMediaPathsArePrefixed",
       "file": "internal/catalog/media_paths_test.go",
       "package": "catalog",
@@ -11128,6 +11158,12 @@
     },
     {
       "name": "TestOrderEditAP_NeedsCapability",
+      "file": "internal/orders/order_edit_after_pickup_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestOrderEditAP_PartlyReturnedDrinkKeepsStoreDue",
       "file": "internal/orders/order_edit_after_pickup_test.go",
       "package": "orders_test",
       "orphan": true
@@ -19053,6 +19089,12 @@
     },
     {
       "name": "TestMapLandmarks_BboxClassAndDedupe",
+      "file": "internal/qa/map_landmarks_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMapLandmarks_LabelArabicOnly",
       "file": "internal/qa/map_landmarks_test.go",
       "package": "qa",
       "orphan": true
@@ -29204,6 +29246,12 @@
     {
       "name": "TestLossesReportRuns",
       "file": "internal/server/losses_report_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestLandmarkLabel",
+      "file": "internal/server/map_landmarks_test.go",
       "package": "server",
       "orphan": true
     },
