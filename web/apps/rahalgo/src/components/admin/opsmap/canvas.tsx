@@ -114,6 +114,10 @@ export interface LayerSpec {
   fillOpacity?: number;
   /** **خطٌّ متقطّع؟** لطبقات `line` — افتراضُه نعم. */
   dashed?: boolean;
+  /** **خطٌّ منقّط؟** لطبقات `line` (يغلب `dashed`) — الشارعُ مقدَّرٌ بين نقطتين بعيدتين (٢٠٢٦-١١-٠٥). */
+  dotted?: boolean;
+  /** **شفافيّةُ الخطّ** لطبقات `line` — افتراضُها ١. */
+  lineOpacity?: number;
   /**
    * **انزلاقُ الطبقة كلِّها بين نبضتين** لطبقات النقاط (خاصّةُ `id`) — ثلاثُ ثوانٍ بتسارعٍ
    * وتباطؤ، **ولا انزلاقَ لمن طلب تقليلَ الحركة.** (الحركةُ القديمة: موضعُ الزبون الحيّ، وطبقةُ
@@ -564,7 +568,12 @@ export function OpsMapCanvas({
           paint: {
             "line-color": spec.color as never,
             "line-width": spec.lineWidth ?? 2,
-            ...(spec.dashed === false ? {} : { "line-dasharray": [2, 2] }),
+            ...(spec.lineOpacity != null ? { "line-opacity": spec.lineOpacity } : {}),
+            ...(spec.dotted
+              ? { "line-dasharray": [0.3, 1.6] }
+              : spec.dashed === false
+                ? {}
+                : { "line-dasharray": [2, 2] }),
           },
         } as never);
       } else if (spec.kind === "circle-m") {

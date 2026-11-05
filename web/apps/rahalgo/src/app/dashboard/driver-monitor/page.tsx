@@ -12,6 +12,10 @@
  * **بأسماء السائق والمتجر**. والتحليلُ كلُّه في الخادم (`internal/drivermonitor`) — هنا عرضٌ فقط.
  *
  * **وهي إشارةٌ لا دليل**: السائقُ قد يقف عند مطعمٍ ليأكل. الحكمُ للمالك بعد أن يسأله.
+ *
+ * **والمسافةُ والخطُّ على الشوارع اللي مشي فيها** (طلبُ المالك ٢٠٢٦-١١-٠٥: «الطريق يحسب حسب طريق
+ * السائق مو ع كيفنا»): الصلبُ على الطريق المطابق، **والمتقطّعُ** حاولنا وما انطابق (خطٌّ مستقيم)،
+ * **والمنقّطُ** شارعٌ مقدَّرٌ بين نقطتين بعيدتين، والباهتُ لسّا عم ينحسب. وبالنقر على طلبٍ يتلوّن طريقُه.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -67,6 +71,14 @@ interface Summary {
   mocked: number;
   points: number;
   stopped_minutes: number;
+  /** نفس المقاطع بخطٍّ مستقيم — للمقارنة كم أسبوع. */
+  km_straight?: number;
+  /** حصّة الأمتار ع الطريق المطابق (٠–١). */
+  road_share?: number;
+  /** منها: الشارع مقدَّر. */
+  inferred_km?: number;
+  /** لسّا ما انطابقت والمطابقة شغّالة ⇒ الرقم تقريبي. */
+  pending_km?: number;
 }
 interface Row {
   driver_id: string;
@@ -111,14 +123,56 @@ interface Ev {
   count?: number;
 }
 type Cls = "with_order" | "to_pickup" | "no_order" | "stopped" | "gap";
+/** جزءٌ من المسار — `road` ع الطريق، `straight` حاولنا وما انطابق، `inferred` مقدَّر، `pending` لسّا. */
+interface PathPart {
+  class: Cls;
+  coords: Array<[number, number]>;
+  road?: boolean;
+  inferred?: boolean;
+  straight?: boolean;
+  pending?: boolean;
+  from?: string;
+  to?: string;
+}
+interface DayOrder {
+  id: string;
+  number: number;
+  store: string;
+  assigned_at: string | null;
+  picked_up_at: string | null;
+  end_at: string | null;
+}
 interface DayResp {
   day: string;
   alert: boolean;
   driver: { id: string; name: string; phone: string };
   summary: Summary;
-  path: Array<{ class: Cls; coords: Array<[number, number]> }>;
+  path: PathPart[];
   events: Ev[];
+  orders?: DayOrder[];
   stores: Array<{ id: string; name: string; lat: number; lng: number }>;
+}
+
+/** أسلوب رسم الجزء: صلب (ع الطريق أو متل قبل) · متقطّع · منقّط · باهت (لسّا عم ينحسب). */
+type Style = "solid" | "dashed" | "dotted" | "pending";
+function styleOf(p: PathPart): Style {
+  if (p.inferred) return "dotted";
+  if (p.straight) return "dashed";
+  if (p.pending) return "pending";
+  return "solid";
+}
+
+/** أجزاء طلبٍ واحد: بطلب أو للاستلام، وضمن نافذته (المسار مقسوم عند حدود الطلبات). */
+function orderParts(path: PathPart[], o: DayOrder, nowMs: number): PathPart[] {
+  const start = Date.parse(o.assigned_at ?? o.picked_up_at ?? "");
+  if (!Number.isFinite(start)) return [];
+  const end = o.end_at ? Date.parse(o.end_at) : nowMs;
+  return path.filter((p) => {
+    if (p.class !== "with_order" && p.class !== "to_pickup") return false;
+    const a = Date.parse(p.from ?? "");
+    const b = Date.parse(p.to ?? "");
+    return Number.isFinite(a) && Number.isFinite(b) && a < end && b > start;
+  });
 }
 
 const km = (n: number) => T.km.replace("{n}", fmtNum(Math.round(n * 10) / 10));
@@ -181,46 +235,94 @@ function pt(lng: number, lat: number, props: Record<string, unknown>) {
   return { type: "Feature" as const, geometry: { type: "Point", coordinates: [lng, lat] }, properties: props };
 }
 
-function DayView({ driverID, day, onBack }: { driverID: string; day: string; onBack: () => void }) {
+function DayView({
+  driverID,
+  day,
+  orderID,
+  onOrder,
+  onBack,
+}: {
+  driverID: string;
+  day: string;
+  orderID: string | null;
+  onOrder: (id: string | null) => void;
+  onBack: () => void;
+}) {
   const [data, setData] = useState<DayResp | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
+  const [refresh, setRefresh] = useState(0);
+  const nowMs = useNow();
+  const isToday = day === damascusDay();
+
+  useEffect(() => {
+    setData(null);
+    setErr(null);
+  }, [driverID, day, tick]);
+
+  // اليوم الحالي: الخط والأرقام بيتحدّثوا كل دقيقة (بلا ما تفضى الصفحة).
+  useEffect(() => {
+    if (!isToday) return;
+    const id = setInterval(() => setRefresh((x) => x + 1), 60_000);
+    return () => clearInterval(id);
+  }, [isToday]);
 
   useEffect(() => {
     let alive = true;
-    setData(null);
-    setErr(null);
     api<DayResp>(`/api/v1/admin/driver-monitor/${driverID}?day=${day}`)
       .then((r) => alive && setData(r))
       .catch((e: unknown) => alive && setErr(errorText(e)));
     return () => {
       alive = false;
     };
-  }, [driverID, day, tick]);
+  }, [driverID, day, tick, refresh]);
+
+  const selected = useMemo(
+    () => (data && orderID ? ((data.orders ?? []).find((o) => o.id === orderID) ?? null) : null),
+    [data, orderID],
+  );
+  const highlighted = useMemo(
+    () => (data && selected ? orderParts(data.path, selected, Date.now()) : []),
+    [data, selected],
+  );
 
   const layers = useMemo<LayerSpec[]>(() => {
     if (!data) return [];
     const out: LayerSpec[] = [];
+    const line = (p: PathPart) => ({
+      type: "Feature" as const,
+      geometry: { type: "LineString", coordinates: p.coords.map(([la, ln]) => [ln, la]) },
+      properties: {},
+    });
+    // طريق الطلب المختار: هالة عريضة تحت الألوان.
+    out.push({
+      id: "order-path",
+      kind: "line",
+      order: 29,
+      visible: true,
+      dashed: false,
+      lineWidth: 10,
+      lineOpacity: 0.45,
+      color: toneColor("order-stuck"),
+      data: fc(highlighted.map(line)),
+    });
     const classes: Cls[] = ["stopped", "no_order", "to_pickup", "with_order"];
+    const styles: Style[] = ["solid", "dashed", "dotted", "pending"];
     classes.forEach((c, i) => {
-      out.push({
-        id: `trail-${c}`,
-        kind: "line",
-        order: 30 + i,
-        visible: true,
-        dashed: false,
-        lineWidth: 4,
-        color: classColor(c),
-        data: fc(
-          data.path
-            .filter((p) => p.class === c)
-            .map((p) => ({
-              type: "Feature" as const,
-              geometry: { type: "LineString", coordinates: p.coords.map(([la, ln]) => [ln, la]) },
-              properties: {},
-            })),
-        ),
-      });
+      for (const st of styles) {
+        out.push({
+          id: `trail-${c}-${st}`,
+          kind: "line",
+          order: 30 + i,
+          visible: true,
+          dashed: st === "dashed",
+          dotted: st === "dotted",
+          lineOpacity: st === "pending" ? 0.55 : undefined,
+          lineWidth: st === "pending" ? 3 : 4,
+          color: classColor(c),
+          data: fc(data.path.filter((p) => p.class === c && styleOf(p) === st).map(line)),
+        });
+      }
     });
     out.push({
       id: "stores",
@@ -266,12 +368,12 @@ function DayView({ driverID, day, onBack }: { driverID: string; day: string; onB
       data: fc(end ? [pt(end[1], end[0], { id: data.driver.id, name: data.driver.name, icon: "driver-available" })] : []),
     });
     return out;
-  }, [data]);
+  }, [data, highlighted]);
 
   const bounds = useMemo<[number, number, number, number] | undefined>(() => {
     if (!data || !data.path.length) return undefined;
     let w = 180, s = 90, e = -180, n = -90;
-    for (const p of data.path)
+    for (const p of highlighted.length ? highlighted : data.path)
       for (const [la, ln] of p.coords) {
         w = Math.min(w, ln);
         e = Math.max(e, ln);
@@ -279,7 +381,7 @@ function DayView({ driverID, day, onBack }: { driverID: string; day: string; onB
         n = Math.max(n, la);
       }
     return [w - 0.004, s - 0.004, e + 0.004, n + 0.004];
-  }, [data]);
+  }, [data, highlighted]);
 
   if (err) return <ReloadState label={err} onRetry={() => setTick((x) => x + 1)} />;
   if (!data) return <LoadingState />;
@@ -310,6 +412,7 @@ function DayView({ driverID, day, onBack }: { driverID: string; day: string; onB
         <Tile icon={IconWarning} label={T.tiles.gapMinutes} value={mins(s.gap_minutes)} tone={s.gaps > 0 ? "warning" : undefined} />
         <Tile icon={IconWarning} label={T.tiles.mocked} value={fmtNum(s.mocked)} tone={s.mocked > 0 ? "danger" : undefined} />
       </div>
+      <RoadNotes s={s} />
       {data.path.length === 0 ? (
         <AdminEmpty icon={IconRoute} title={T.emptyDriver} />
       ) : (
@@ -336,6 +439,36 @@ function DayView({ driverID, day, onBack }: { driverID: string; day: string; onB
                 </li>
               ))}
             </ul>
+            {(data.path.some((p) => p.straight) || data.path.some((p) => p.inferred)) && (
+              <ul className="mb-3 space-y-1 text-xs text-ink-muted">
+                {data.path.some((p) => p.straight) && <li>{T.legend.straight}</li>}
+                {data.path.some((p) => p.inferred) && <li>{T.legend.inferred}</li>}
+              </ul>
+            )}
+            {(data.orders ?? []).length > 0 && (
+              <div className="mb-3">
+                <h2 className="mb-2 font-bold">{T.orderPath}</h2>
+                <ul className="flex flex-wrap gap-1.5 text-sm">
+                  {(data.orders ?? []).map((o) => {
+                    const on = o.id === orderID;
+                    const empty = orderParts(data.path, o, nowMs).length === 0;
+                    return (
+                      <li key={o.id}>
+                        <Button
+                          variant={on ? "primary" : "secondary"}
+                          size="sm"
+                          disabled={empty}
+                          aria-pressed={on}
+                          onClick={() => onOrder(on ? null : o.id)}
+                        >
+                          {T.orderChip.replace("{n}", fmtNum(o.number)).replace("{store}", o.store)}
+                        </Button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
             <h2 className="mb-2 font-bold">{T.story}</h2>
             {data.events.length === 0 ? (
               <p className="text-sm text-ink-muted">{T.noStory}</p>
@@ -359,6 +492,29 @@ function DayView({ driverID, day, onBack }: { driverID: string; day: string; onB
         </div>
       )}
     </>
+  );
+}
+
+/** **سطور المسافة ع الطريق** — تظهر بس لما في شي ينقال (ولا شي بيوم ما انطابق ولا كانت المطابقة شغّالة). */
+function RoadNotes({ s }: { s: Summary }) {
+  const R = T.road;
+  const share = s.road_share ?? 0;
+  const pending = s.pending_km ?? 0;
+  const inferred = s.inferred_km ?? 0;
+  const straight = s.km_straight ?? s.km_total;
+  if (share <= 0 && pending <= 0) return null;
+  const sep = m.common.listSeparator;
+  return (
+    <div className="mb-3 space-y-1 text-sm">
+      {share > 0 && (
+        <p className="text-ink-muted">
+          {R.note}
+          {Math.abs(straight - s.km_total) >= 0.05 && sep + R.straight.replace("{n}", km(straight))}
+          {inferred >= 0.05 && sep + R.inferred.replace("{n}", km(inferred))}
+        </p>
+      )}
+      {pending >= 0.05 && <Alert tone="warning">{R.pending.replace("{n}", km(pending))}</Alert>}
+    </div>
   );
 }
 
@@ -448,6 +604,7 @@ function DriverCard({ r, now, onOpen }: { r: Row; now: number; onOpen: () => voi
 export default function DriverMonitorPage() {
   const [day, setDay] = useState(() => damascusDay());
   const [driver, setDriver] = useState<string | null>(null);
+  const [order, setOrder] = useState<string | null>(null);
   const [list, setList] = useState<ListResp | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [tick, setTick] = useState(0);
@@ -467,6 +624,8 @@ export default function DriverMonitorPage() {
     if (d && /^\d{4}-\d{2}-\d{2}$/.test(d)) setDay(d);
     const id = sp.get("driver");
     if (id) setDriver(id);
+    const o = sp.get("order");
+    if (o) setOrder(o);
   }, []);
 
   useEffect(() => {
@@ -487,7 +646,16 @@ export default function DriverMonitorPage() {
   return (
     <PageContainer>
       {driver ? (
-        <DayView driverID={driver} day={day} onBack={() => setDriver(null)} />
+        <DayView
+          driverID={driver}
+          day={day}
+          orderID={order}
+          onOrder={setOrder}
+          onBack={() => {
+            setDriver(null);
+            setOrder(null);
+          }}
+        />
       ) : (
         <>
           <PageHero

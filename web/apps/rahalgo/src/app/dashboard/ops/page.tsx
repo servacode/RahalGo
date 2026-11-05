@@ -147,6 +147,34 @@ interface OpsHealth {
   push?: Record<string, number>;
   clients?: Record<string, number>;
   clients_dropped?: number;
+  /** **مطابق مسار السائق ع الطرق** (٢٠٢٦-١١-٠٥) — سطرٌ هون، **ومو جزء من الحكم**. */
+  road_match?: {
+    enabled?: boolean;
+    state?: "off" | "ok" | "paused" | "waiting" | "no_engine";
+    paused_until?: string;
+    last_error?: string;
+    calls_hour?: number;
+    no_match_hour?: number;
+    no_match_share?: number;
+    backlog_days?: number;
+  };
+}
+
+/** حالة المطابق بجملة. */
+function roadMatchState(r: NonNullable<OpsHealth["road_match"]>): string {
+  const R = O.roadMatch;
+  switch (r.state) {
+    case "paused":
+      return R.paused.replace("{t}", r.paused_until ? fmtClockTime(r.paused_until) : O.unknown);
+    case "waiting":
+      return R.waiting;
+    case "no_engine":
+      return R.noEngine;
+    case "ok":
+      return R.on;
+    default:
+      return R.off;
+  }
 }
 
 interface Identity {
@@ -850,6 +878,23 @@ export default function OpsMonitorPage() {
                       <Counters map={health.clients} labels={appLabel} />
                       <Row label={O.clientsDropped} value={num(health.clients_dropped)} />
                     </Block>
+                    {health.road_match && (
+                      <Block title={O.roadMatch.title}>
+                        <Row label={O.roadMatch.state} value={roadMatchState(health.road_match)} />
+                        {health.road_match.enabled && (
+                          <>
+                            <Row label={O.roadMatch.calls} value={num(health.road_match.calls_hour)} />
+                            <Row label={O.roadMatch.noMatch} value={num(health.road_match.no_match_hour)} />
+                            <Row label={O.roadMatch.backlog} value={num(health.road_match.backlog_days)} />
+                          </>
+                        )}
+                        {health.road_match.last_error && (
+                          <p className="mt-1 break-words text-xs text-ink-muted">
+                            {O.roadMatch.lastError.replace("{e}", health.road_match.last_error)}
+                          </p>
+                        )}
+                      </Block>
+                    )}
                     {errs.data === "failed" ? (
                       <Block title={O.secErrors}>
                         <p className="py-2 text-sm font-bold text-warning">{O.errorsUnreadable}</p>
