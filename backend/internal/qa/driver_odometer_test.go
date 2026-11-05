@@ -635,8 +635,8 @@ func TestDriverMonitor_ShiftCountedOnOneDay(t *testing.T) {
 		e := odoInsertReading(t, h, drv.ID, "end", endKm, closed, nil)
 		if _, err := h.Pool.Exec(ctxBG(), `
 			INSERT INTO driver_shifts (driver_id, opened_at, closed_at, close_reason, start_reading_id,
-			                           end_reading_id, opened_build, opened_capable)
-			VALUES ($1::uuid, $2, $3, 'driver', $4::uuid, $5::uuid, 22, true)`,
+			                           end_reading_id, opened_build)
+			VALUES ($1::uuid, $2, $3, 'driver', $4::uuid, $5::uuid, 22)`,
 			drv.ID, opened, closed, s, e); err != nil {
 			t.Fatal(err)
 		}
