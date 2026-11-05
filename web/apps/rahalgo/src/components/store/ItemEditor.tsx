@@ -551,6 +551,8 @@ export default function ItemEditor({
           cropFrames={ITEM_CROP_FRAMES}
           fit
           tile={{ pick: I.pickImage, change: I.photoChange, clear: I.clearImage }}
+          zoomUrl={item?.image_url}
+          zoomLabel={m.shop.item.zoomBtn}
         />
         <div className="flex min-w-0 flex-1 flex-col gap-2">
           <div>

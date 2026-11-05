@@ -53,6 +53,11 @@ import com.rahalgo.ui.Empty
 import com.rahalgo.ui.R
 import com.rahalgo.ui.RahalButton
 import com.rahalgo.ui.RemoteImage
+import com.rahalgo.ui.ImageViewer
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
 
 /**
  * **صنفٌ كما تعرضه شبكةُ الأصناف** — يحوّله كلُّ تطبيقٍ من نوعه (المتجر والمندوب).
@@ -70,6 +75,8 @@ data class GridItem(
     val rejected: Boolean = false,
     val reviewNote: String = "",
     val closedNow: Boolean = false,
+    /** **الصورةُ الكاملة للتكبير** — و`null` لا تكبير (المندوب). */
+    val fullImageUrl: String? = null,
 )
 
 /** **قسمٌ في الشبكة** — اسمُه وأصنافُه. */
@@ -112,7 +119,13 @@ fun MenuItemsGrid(
     onToggle: (GridItem) -> Unit,
     onEdit: (GridItem) -> Unit,
     header: (LazyGridScope.() -> Unit)? = null,
+    /** **نسبةُ عرض صورة البطاقة إلى ارتفاعها** — المتجر طوليّةٌ (٤:٥)، والمندوب كما كان. */
+    imageAspect: Float = 1.15f,
+    /** **لمسةُ الصورة تفتح العارضَ المشترك** (قرار المالك ٢٠٢٦-١١-٠٦) — المتجر وحدَه. */
+    zoomable: Boolean = false,
 ) {
+    var zoom by remember { mutableStateOf<String?>(null) }
+    zoom?.let { ImageViewer(url = it, onClose = { zoom = null }) }
     val all = groups.flatMap { it.items }
     val off = all.count { !it.available }
     val q = query.trim()
@@ -228,7 +241,12 @@ fun MenuItemsGrid(
                 )
             }
             else -> items(shown, key = { it.id }) { item ->
-                ItemCard(item, toggleEnabled, { onToggle(item) }, { onEdit(item) })
+                ItemCard(
+                    item, toggleEnabled, imageAspect,
+                    onZoom = if (zoomable) item.fullImageUrl?.let { u -> { zoom = u } } else null,
+                    onToggle = { onToggle(item) },
+                    onEdit = { onEdit(item) },
+                )
             }
         }
     }
@@ -306,7 +324,14 @@ private fun SectionChip(text: String, count: Int, selected: Boolean, onClick: ()
  * **والبطاقةُ كلُّها تفتح المحرّر، والمفتاحُ وحدَه يبدّل التوفّر. وغيرُ المتوفّر باهت.**
  */
 @Composable
-private fun ItemCard(item: GridItem, toggleEnabled: Boolean, onToggle: () -> Unit, onEdit: () -> Unit) {
+private fun ItemCard(
+    item: GridItem,
+    toggleEnabled: Boolean,
+    imageAspect: Float,
+    onZoom: (() -> Unit)?,
+    onToggle: () -> Unit,
+    onEdit: () -> Unit,
+) {
     val dim = if (item.available) 1f else 0.5f
     Column(
         Modifier
@@ -316,7 +341,13 @@ private fun ItemCard(item: GridItem, toggleEnabled: Boolean, onToggle: () -> Uni
             .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.lg)
             .clickable(onClick = onEdit),
     ) {
-        Box(Modifier.fillMaxWidth().aspectRatio(1.15f).alpha(dim)) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .aspectRatio(imageAspect)
+                .alpha(dim)
+                .then(if (onZoom != null) Modifier.clickable(onClick = onZoom) else Modifier),
+        ) {
             RemoteImage(url = item.imageUrl, name = item.name.ifBlank { "?" }, modifier = Modifier.fillMaxSize())
             val badge = when {
                 item.rejected -> stringResource(R.string.grid_rejected)

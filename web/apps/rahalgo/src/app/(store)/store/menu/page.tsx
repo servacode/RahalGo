@@ -25,6 +25,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ComponentType } from "react";
 import { getMessages, defaultLocale, errorText, fmtMoney, fmtNum } from "@rahalgo/i18n";
 import {
+  ImageViewer,
   EmptyState,
   IconAdd,
   IconBanknote,
@@ -124,9 +125,17 @@ function SectionChip({
  * **والبطاقةُ كلُّها تفتح المحرّر، والمفتاحُ وحدَه يبدّل التوفّر.**
  */
 function ItemCard({ item, disabled, onToggle }: { item: MenuItem; disabled: boolean; onToggle: () => void }) {
-  const img = mediaUrl(item.image_thumb_url ?? item.image_url);
+  // **صورةٌ كاملةٌ طوليّةٌ ٤:٥** (قرار المالك ٢٠٢٦-١١-٠٦): المصغّرةُ ٤٠٠ بكسل فتتشوّش في بطاقةٍ أطول.
+  const img = mediaUrl(item.image_url || item.image_thumb_url);
+  const [viewing, setViewing] = useState(false);
   const dim = item.available ? "" : "opacity-50";
   const desc = descOf(item);
+  const badge =
+    item.approved === false ? (
+      <span className="absolute start-2 top-2 rounded-full bg-accent px-2 py-0.5 text-2xs font-bold text-on-bright">
+        {M.pendingReview}
+      </span>
+    ) : null;
   return (
     <li
       className="surface flex flex-col overflow-hidden rounded-card border border-line"
@@ -134,21 +143,28 @@ function ItemCard({ item, disabled, onToggle }: { item: MenuItem; disabled: bool
       data-item-id={item.id}
       data-available={item.available}
     >
+      {img ? (
+        // **لمسةُ الصورة تكبّرها** — والباقي من البطاقة يفتح المحرّر.
+        <button
+          type="button"
+          onClick={() => setViewing(true)}
+          aria-label={`${item.name} — ${m.shop.item.zoomBtn}`}
+          data-testid="store-menu-zoom"
+          className={`relative block aspect-[4/5] w-full bg-field ${dim}`}
+        >
+          <img src={img} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+          {badge}
+        </button>
+      ) : (
+        <Link href={`/store/menu/${item.id}`} aria-label={`${M.edit} · ${item.name}`} className={`relative block aspect-[4/5] w-full bg-field ${dim}`}>
+          <span className="absolute inset-0 flex items-center justify-center text-3xl font-medium text-ink-muted" aria-hidden>
+            {item.name.trim().charAt(0) || "?"}
+          </span>
+          {badge}
+        </Link>
+      )}
+      {img && viewing && <ImageViewer src={img} alt={item.name} onClose={() => setViewing(false)} />}
       <Link href={`/store/menu/${item.id}`} aria-label={`${M.edit} · ${item.name}`} data-testid="store-menu-edit" className="flex flex-1 flex-col">
-        <span className={`relative block aspect-[1.15] w-full bg-field ${dim}`}>
-          {img ? (
-            <img src={img} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
-          ) : (
-            <span className="absolute inset-0 flex items-center justify-center text-3xl font-medium text-ink-muted" aria-hidden>
-              {item.name.trim().charAt(0) || "?"}
-            </span>
-          )}
-          {item.approved === false && (
-            <span className="absolute start-2 top-2 rounded-full bg-accent px-2 py-0.5 text-2xs font-bold text-on-bright">
-              {M.pendingReview}
-            </span>
-          )}
-        </span>
         <span className={`flex flex-col gap-0.5 px-3 pt-2 ${dim}`}>
           <span className="line-clamp-2 min-h-[2.5rem] text-sm font-bold leading-5 text-ink">{item.name}</span>
           <span className="line-clamp-2 min-h-[2rem] text-xs leading-4 text-ink-muted">{desc}</span>
