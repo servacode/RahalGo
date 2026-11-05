@@ -905,10 +905,21 @@ func (s *Server) fillMerchantMoney(r *http.Request, merchantID string, list []or
 	//
 	// **وما لم يُسوَّ بعدُ يُقدَّر بنسبة اليوم** — وهو الصواب أيضاً:
 	// **طلبٌ لم يُقبض عنه شيءٌ تحكمه نسبةُ اليوم لا نسبةُ الأمس.**
+	//
+	// # ومتجرٌ «نقداً» لا قيدَ مستحقٍّ له في المحفظة — **فصفُّ تسويته** (خلل PD-1، ٢٠٢٦-١١-٠٥)
+	//
+	// **سُوّي عند الاستلام ونسبتُه في صفّه** (الهجرة 0506)، **فإن بُدّلت بعده بقي الدفترُ على نسبة
+	// الاستلام** — وكانت البطاقةُ تُقدَّر بالحيّة: «عمولة ٥٠٠ · مستحقّ ٩٬٥٠٠» والسائقُ دفع له ٩٬٠٠٠.
+	// **فما لا قيدَ له في المحفظة وله صفُّ تسويةٍ يُقرأ من صفّه** (`settledMoney`).
 	cost := map[string]int64{}
 	paid := map[string]int64{}
 	// **والنسبةُ بمنزلتين** (`Percent2`، ٢٠٢٦-١٠-١٨) — ١٫٥٪ لا ١٪.
 	pcts := map[string]pricing.Percent2{}
+	type settledRow struct {
+		frozen *pricing.Percent2
+		due    *int64
+	}
+	settled := map[string]settledRow{}
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT o.id::text,
 		       COALESCE((SELECT sum(oi.merchant_price * oi.qty)
@@ -920,18 +931,23 @@ func (s *Server) fillMerchantMoney(r *http.Request, merchantID string, list []or
 		                    AND t.user_id = (SELECT owner_user_id FROM merchants
 		                                      WHERE id = $2)), 0),
 		       COALESCE((SELECT m.commission_percent FROM merchants m WHERE m.id = $2),
-		                o.snap_merchant_commission_percent, 0)
-		FROM orders o WHERE o.id = ANY($1)`, ids, merchantID)
+		                o.snap_merchant_commission_percent, 0),
+		       ms.commission_percent, ms.amount + ms.adjusted_amount
+		FROM orders o
+		LEFT JOIN merchant_settlements ms ON ms.order_id = o.id AND ms.merchant_id = $2
+		WHERE o.id = ANY($1)`, ids, merchantID)
 	if err == nil {
 		defer rows.Close()
 		for rows.Next() {
 			var id string
 			var base, net int64
 			var p pricing.Percent2
-			if rows.Scan(&id, &base, &net, &p) == nil {
+			var sr settledRow
+			if rows.Scan(&id, &base, &net, &p, &sr.frozen, &sr.due) == nil {
 				cost[id] = base
 				paid[id] = net
 				pcts[id] = p
+				settled[id] = sr
 			}
 		}
 	}
@@ -939,6 +955,7 @@ func (s *Server) fillMerchantMoney(r *http.Request, merchantID string, list []or
 		o := &list[i]
 		base := cost[o.ID]
 		pct := pcts[o.ID]
+		sr := settled[o.ID]
 		// **ولا تُقرأ `orders.platform_commission`**: هي مجموعُ عمولات
 		// متاجر الطلب كلِّها، **فتصير في طلبٍ من مطبخين عمولةَ غيره
 		// محسوبةً عليه.**
@@ -954,7 +971,14 @@ func (s *Server) fillMerchantMoney(r *http.Request, merchantID string, list []or
 			// تُقيَّد ١٤ فتُشتقّ ١٫٤٪ بالبتر، **وهي ١٫٥٪ التي حُسب بها.**
 			if base > 0 && rate.Of(base) != c {
 				shown = pricing.Percent2(c * 10000 / base)
+				// **ونسبةُ صفّ التسوية إن أعادته بعينه** — هي التي سُوّي بها (PD-1).
+				if f := sr.frozen; f != nil &&
+					(pricing.Amount{Mode: pricing.ModePercent2, Value: int64(*f)}).Of(base) == c {
+					shown = *f
+				}
 			}
+		} else if sc, sp, ok := settledMoney(base, pct, sr.frozen, sr.due); ok {
+			c, shown = sc, sp
 		}
 		o.CommissionPct = int(shown.RoundedPercent())
 		o.CommissionExact = pricing.Percent2Ptr(shown)

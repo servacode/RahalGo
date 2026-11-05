@@ -236,3 +236,82 @@ func TestSettlementPercentBackfill(t *testing.T) {
 
 	assertNewViolations(t, h, base)
 }
+
+// pd1Money **عمولةُ المنصّة وصافي المتجر ونسبتُه كما يردّها بابٌ للطلب.**
+func pd1Money(t *testing.T, h *Harness, path, token string) (commission, net, pct float64) {
+	t.Helper()
+	r := h.GET(path, token)
+	if r.Code != http.StatusOK {
+		t.Fatalf("%s: %s", path, r)
+	}
+	j := r.JSON()
+	commission, _ = j["platform_commission"].(float64)
+	net, _ = j["merchant_net"].(float64)
+	pct, _ = j["commission_percent"].(float64)
+	return commission, net, pct
+}
+
+// TestCommissionShownAtSettledPercent **ما يُعرض للمكتب وللمتجر بعد الاستلام بنسبة الاستلام.**
+//
+// المتجرُ «نقداً» سُوّي عند الاستلام بعشرة (٩٬٠٠٠ دفعها السائق)، **ثمّ بُدّلت نسبتُه إلى خمسة.**
+// كان كرتُ الطلب في اللوحة (`fillOrderCommission`) وبطاقةُ المتجر (`fillMerchantMoney`) يحسبان
+// بالحيّة: عمولة ٥٠٠ وصافٍ ٩٬٥٠٠ — **والدفترُ ٩٬٠٠٠، فيقرأ المتجرُ غيرَ ما قبض.** ⇒ ١٬٠٠٠ و٩٬٠٠٠
+// قبل التسليم وبعده؛ **وطلبٌ لم يُستلم بعد يُعرض بالحيّة.**
+func TestCommissionShownAtSettledPercent(t *testing.T) {
+	h := New(t)
+	treasury(t, h)
+	h.Setting("merchants.commission_percent", "10")
+	f := h.Factory()
+	admin := h.NewUser("admin")
+	m := f.Merchant(Commission(10))
+	coSetCash(t, h, m.ID)
+	item := h.NewItemFor(m, 10_000)
+	base := financialBaseline(t, h)
+	cust := h.Customer()
+
+	made := h.POSTKey("/api/v1/orders", cust.Token, uniq("pd1v"), orderBody(item, 1))
+	if made.Code >= 400 {
+		t.Fatalf("إنشاءُ الطلب: %s", made)
+	}
+	oid, _ := made.JSON()["id"].(string)
+	drv := h.driverOf(oid)
+	pd1Steps(t, h, oid, drv, "at_pickup", "picked_up")
+	if r := h.PATCH("/api/v1/admin/merchants/"+m.ID, admin.Token,
+		map[string]any{"commission_percent": 5}); r.Code != http.StatusOK {
+		t.Fatalf("تبديلُ النسبة: %s", r)
+	}
+
+	check := func(when string) {
+		t.Helper()
+		for _, v := range []struct{ who, path, token string }{
+			{"المكتب", "/api/v1/admin/orders/" + oid, admin.Token},
+			{"المتجر", "/api/v1/merchant/orders/" + oid, m.Owner.Token},
+		} {
+			c, n, p := pd1Money(t, h, v.path, v.token)
+			if c != 1_000 || n != 9_000 || p != 10 {
+				t.Errorf("%s %s: عمولة %v · صافٍ %v · نسبة %v — يُنتظر 1000 · 9000 · 10 (نسبةُ الاستلام)",
+					v.who, when, c, n, p)
+			}
+		}
+	}
+	check("بعد الاستلام")
+	pd1Steps(t, h, oid, drv, "on_the_way", "at_dropoff", "delivered")
+	check("بعد التسليم")
+
+	// **وطلبٌ لم يُستلم بعدُ بالنسبة الحاليّة.**
+	made2 := h.POSTKey("/api/v1/orders", cust.Token, uniq("pd1v2"), orderBody(item, 1))
+	if made2.Code >= 400 {
+		t.Fatalf("إنشاءُ الطلب الثاني: %s", made2)
+	}
+	oid2, _ := made2.JSON()["id"].(string)
+	for _, v := range []struct{ who, path, token string }{
+		{"المكتب", "/api/v1/admin/orders/" + oid2, admin.Token},
+		{"المتجر", "/api/v1/merchant/orders/" + oid2, m.Owner.Token},
+	} {
+		if c, n, p := pd1Money(t, h, v.path, v.token); c != 500 || n != 9_500 || p != 5 {
+			t.Errorf("%s قبل الاستلام: عمولة %v · صافٍ %v · نسبة %v — يُنتظر 500 · 9500 · 5", v.who, c, n, p)
+		}
+	}
+
+	assertNewViolations(t, h, base)
+}
