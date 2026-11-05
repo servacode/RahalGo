@@ -233,3 +233,41 @@ export function fmtRelStamp(v: string | number | Date): string {
   if (!time) return String(v);
   return DATES.stamp.replace("{day}", fmtRelDay(v)).replace("{time}", time);
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// **كم مضى — بكلماتٍ كاملةٍ لا بحروف** (مرآةُ `Since.text` في `mobile/ui`)
+// ══════════════════════════════════════════════════════════════════════
+//
+// (٢٠٢٦-١١-٠٤: «منذ 1 ي» لم يفهمها الزبون، فصار التطبيقُ يكتب «منذ دقيقة · 5 دقائق ·
+//  ساعتين · يومين». **وبقي الموقعُ على «5 د» و«2 س»** — فيقرأ صاحبُ المتجر الطلبَ
+//  نفسَه بلغتين.)
+
+const SINCE = ar.common.since;
+
+/** صيغةُ العدد العربيّة (`Since.form`): ١ مفرد، ٢ مثنّى، ٣–١٠ جمع، وما فوق تمييز مفرد. */
+function sinceForm(n: number): "one" | "two" | "few" | "many" {
+  if (n === 1) return "one";
+  if (n === 2) return "two";
+  return n >= 3 && n <= 10 ? "few" : "many";
+}
+
+/**
+ * **«منذ دقيقة» · «منذ 5 دقائق» · «منذ ساعتين» · «منذ يومين»** — وبعد ثلاثة أيّامٍ
+ * التاريخُ والوقتُ بتوقيت دمشق «2026-11-02 15:00». حدودُها حدودُ `Since.age` حرفاً.
+ *
+ * - **أقلُّها دقيقة**: «منذ 0 دقيقة» لا تُكتب، **ووقتٌ في المستقبل** (ساعةُ الجهاز تسبق
+ *   ساعةَ الخادم بثوانٍ) يُقرأ دقيقةً لا «منذ ناقص ثلاث».
+ * - **ووقتٌ لا يُفهم يردّ فراغاً** — لا تاريخَ اليوم ولا «منذ 0».
+ * - `now` للاختبار، وللصفحة التي تُحيي ساعتَها (`useNow`).
+ */
+export function fmtSince(v: string | number | Date, now: number = Date.now()): string {
+  const at = toDate(v).getTime();
+  if (Number.isNaN(at)) return "";
+  const minutes = Math.max(1, Math.floor((now - at) / 60_000));
+  const ago = (unit: "min" | "hour" | "day", n: number) =>
+    SINCE.line.replace("{t}", SINCE[unit][sinceForm(n)].replace("{n}", fmtNum(n)));
+  if (minutes < 60) return ago("min", minutes);
+  if (minutes < 60 * 24) return ago("hour", Math.floor(minutes / 60));
+  if (minutes < 60 * 24 * 3) return ago("day", Math.floor(minutes / (60 * 24)));
+  return `${damascusDay(at)} ${fmtDamascusTime(at)}`;
+}

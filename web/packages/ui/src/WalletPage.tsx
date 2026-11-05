@@ -23,6 +23,7 @@ import { DataView, ViewToggle, useViewMode, type DataColumn } from "./dataview";
 import type { TabItem } from "./layout";
 import { StatementSheet, currentMonthRange, type StatementData } from "./Statement";
 import { useLiveData } from "./Notifications";
+import { debtLineText, type DebtLine } from "./debtText";
 import {
   IconArrowIn,
   IconArrowOut, IconWallet, IconWarning, IconPrint } from "./icons";
@@ -136,6 +137,9 @@ export function WalletPage({
     balance: number;
     transactions: Tx[];
     truncated?: boolean;
+    /** **ديونُه المفتوحة بأسبابها** — لا تُرسَل لمن لا دينَ عليه (`walletWithDebts`). */
+    debts?: DebtLine[];
+    debt_total?: number;
   }>(
     () => api(path),
     ["wallet"],
@@ -312,6 +316,11 @@ export function WalletPage({
   if (loading) return <LoadingState />;
 
   const balance = statement?.balance ?? 0;
+  // **والدينُ سطرٌ تحت الرصيد** (مرآةُ `DebtLineText` في `WalletScreen.kt`) — فارغٌ لمن لا دينَ عليه.
+  const debtText = debtLineText(
+    statement?.debt_total ?? 0,
+    Array.isArray(statement?.debts) ? statement.debts : [],
+  );
   const hasPending = reqs.some((p) => p.status === "pending");
   // التبويب المختار قد يختفي بعد تحديث حيّ (آخر طلب سحب أُلغي) — نرتدّ للكل
   const current = tab === STATEMENT || tabs.some((t) => t.key === tab) ? tab : ALL;
@@ -370,7 +379,7 @@ export function WalletPage({
           **والأرقامُ التي تُقارَن تُوضع متجاورة**: الرصيدُ وما دخل وما خرج
           وعمولاتُه — **نظرةٌ واحدةٌ تقول الحال.**
           ══════════════════════════════════════════════════════════════ */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-stretch">
         {/* الرصيد — الرقم الذي يهمّ صاحبه أولاً */}
         {/* **بطاقةُ الرصيد بالنبرة** — وهي أهمُّ رقمٍ في الصفحة.
             والأخضرُ صار خلفيةَ كلّ شيء، **فبطاقةٌ بلون البطاقة لا تُميَّز**؛
@@ -404,6 +413,34 @@ export function WalletPage({
           </p>
         </div>
 
+        {/* ══════════════════════════════════════════════════════════
+            **سطرُ الدين — تحت بطاقة الرصيد مباشرةً، قبل شريط التبويب**
+            ══════════════════════════════════════════════════════════
+
+            **عليك كذا، بسبب كذا، ويُخصم من أول أرباح قادمة** — بالنصّ نفسِه في التطبيق.
+            **وبدونه يرى صاحبُ المتجر رصيدَه نزل إلى الصفر ولا يعرف أنّ عليه ديناً يُخصم من
+            أرباحه الجاية** (كان غائباً عن الموقع كلِّه). ولا يظهر لمن لا دينَ عليه.
+
+            # ولماذا هنا لا بعد الصفّ
+
+            مرآةُ `WalletScreen.kt`: الدينُ سطرٌ تحت الرصيد قبل الأزرار. **وعلى الجوّال
+            الصفُّ عموديّ** — فبعد شريط التبويب (وهو يظهر لكلّ متجرٍ له طلبُ سحبٍ واحدٌ
+            على الأقلّ) **يُقرأ السطرُ من محتوى التبويب ويبقى ظاهراً وأنت في «طلبات
+            السحب»**، وهو دينٌ على المحفظة لا على التبويب.
+
+            # وعلى الشاشة العريضة
+
+            **`sm:order-last sm:basis-full` مع `sm:flex-wrap` في الصفّ**: ينزل السطرُ إلى سطرٍ
+            كاملٍ تحت البطاقة والشريط، **ولا يقع عموداً ثالثاً بينهما.** ومن لا دينَ عليه
+            لا عنصرَ له في الصفّ فلا يتغيّر شيءٌ عنده. */}
+        {debtText && (
+          <p
+            className="text-center text-sm text-ink-muted sm:order-last sm:basis-full"
+            data-testid="wallet-debt"
+          >
+            {debtText}
+          </p>
+        )}
 
         {/* **وما بقي من التبويب يملأ ما بعد الرصيد** — «طلبات السحب» وحدَها
             لمن له سحب. **ولا شيءَ هنا عند الزبون والإدارة**، فيقع الجدولُ

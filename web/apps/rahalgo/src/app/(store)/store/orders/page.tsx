@@ -23,7 +23,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getMessages, defaultLocale, errorText, fmtMoney, fmtNum, fmtSpan } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, errorText, fmtMoney, fmtNum, fmtSince } from "@rahalgo/i18n";
 import { Alert, Button, EmptyState, IconOrder, IconWarning, InvoiceLines, LoadingState, Modal, ReloadState, Textarea } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
@@ -36,7 +36,7 @@ const m = getMessages(defaultLocale);
 const O = m.store.orders;
 const STATUS = O.status as Record<string, string>;
 
-/** **ثانيةٌ تمشي** — «عم ينتظر من ٣ د» يتبدّل بلا نداء. */
+/** **ثانيةٌ تمشي** — «منذ 3 دقائق» تتبدّل بلا نداء. */
 function useNow(ms = 15_000): number {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
@@ -90,8 +90,10 @@ function OrderCard({
 }) {
   const [rejecting, setRejecting] = useState(false);
   const isNew = order.status === "pending";
-  const since = Math.max(0, (now - new Date(order.sent_to_merchant_at ?? order.created_at).getTime()) / 1000);
   const ended = !!order.closed_at;
+  // **عمرُ الطلب بكلماتٍ كاملةٍ كالتطبيق** (`Since.text`): «منذ 5 دقائق» · «منذ ساعتين» — لا «5 د» و«2 س».
+  // وفارغٌ إن لم يُفهم الوقت: لا يُكتب «منذ 0».
+  const age = ended ? "" : fmtSince(order.sent_to_merchant_at ?? order.created_at, now);
   const tone = isNew
     ? "border-danger-edge bg-danger-tint"
     : ended
@@ -104,7 +106,7 @@ function OrderCard({
         <span className="heading-card" dir="ltr">
           #{order.number}
         </span>
-        {!ended && <span className="text-xs text-ink-muted">{fill(O.waitingFor, { t: fmtSpan(since) })}</span>}
+        {age && <span className="text-xs text-ink-muted">{age}</span>}
         <span className="ms-auto rounded-badge bg-field px-2 py-1 text-xs font-bold">
           {STATUS[order.status] ?? O.readyDone}
         </span>

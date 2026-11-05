@@ -41,6 +41,7 @@ export {
   fmtCalendarDay,
   fmtRelDay,
   fmtRelStamp,
+  fmtSince,
   fmtDamascusTime,
 } from "./format";
 import { fmtNum } from "./format";
