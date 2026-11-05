@@ -297,12 +297,10 @@ func timeOr(t *time.Time) time.Time {
 	return *t
 }
 
-// DriverDay تحليل سائق ليوم حساب (من ساعة فتح الدوام لمثلها).
-func DriverDay(ctx context.Context, db DB, driverID, day string, stores []Store, now time.Time) (Result, []Window, error) {
-	from, to, err := AccountDayBounds(ctx, db, day)
-	if err != nil {
-		return Result{}, nil, err
-	}
+// DriverDay **تحليلُ سائقٍ في نافذة** `[from, to)` — يومُ شغل المنصّة (من فتحها لإغلاقها، أو
+// يومُ الحساب ٩←٩ إن كانت ٢٤ ساعة)، أو ما بعد الإغلاق. **والنافذةُ يحسبها الخادم** (جدولُ الدوام
+// عنده) — قرار المالك ٢٠٢٦-١١-٠٦.
+func DriverDay(ctx context.Context, db DB, driverID string, from, to time.Time, stores []Store, now time.Time) (Result, []Window, error) {
 	pts, err := LoadPoints(ctx, db, driverID, from, to)
 	if err != nil {
 		return Result{}, nil, err
@@ -334,12 +332,8 @@ type Row struct {
 	Live *Live `json:"live"`
 }
 
-// Overview سائقو يوم الحساب الذين لهم أثر، الأخطر أولا.
-func Overview(ctx context.Context, db DB, day string, alertKm float64, now time.Time) ([]Row, error) {
-	from, to, err := AccountDayBounds(ctx, db, day)
-	if err != nil {
-		return nil, err
-	}
+// Overview سائقو اليوم الذين لهم أثر في نافذته `[from, to)`، الأخطر أولا.
+func Overview(ctx context.Context, db DB, day string, from, to time.Time, alertKm float64, now time.Time) ([]Row, error) {
 	// اليوم الحالي: يدخل كل سائق على الدوام ولو بلا أثر بعد، ليرى المالك كل العاملين.
 	today, err := AccountDay(ctx, db, now)
 	if err != nil {
@@ -377,7 +371,7 @@ func Overview(ctx context.Context, db DB, day string, alertKm float64, now time.
 		return nil, err
 	}
 	for i := range out {
-		res, wins, err := DriverDay(ctx, db, out[i].DriverID, day, stores, now)
+		res, wins, err := DriverDay(ctx, db, out[i].DriverID, from, to, stores, now)
 		if err != nil {
 			return nil, err
 		}

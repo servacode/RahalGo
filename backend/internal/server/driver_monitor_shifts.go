@@ -100,6 +100,10 @@ type odoDay struct {
 	// UnseenKm OnKm − AppKm.
 	UnseenKm     *float64 `json:"unseen_km"`
 	MissingClose int      `json:"missing_close"`
+	// OpenKm · CloseKm **رقمُ العدّاد عند أوّل فتحٍ وآخر سكّرٍ باليوم** — لوين وصل عدّادُ الدرّاجة
+	// (قرار المالك ٢٠٢٦-١١-٠٦). من الصور كما هي، لا يتبعان يومَ المنصّة.
+	OpenKm  *float64 `json:"open_km"`
+	CloseKm *float64 `json:"close_km"`
 	// BikeChanges قراءاتُ «بدّلت الدرّاجة» بدوامات اليوم.
 	BikeChanges int  `json:"bike_changes"`
 	BigGap      bool `json:"big_gap"`
@@ -288,6 +292,12 @@ func (s *Server) monitorShifts(ctx context.Context, driverID string, from, to, n
 		}
 		// ── ملخّصُ اليوم ──
 		day.Shifts++
+		if m.StartReading != nil && day.OpenKm == nil {
+			day.OpenKm = f64p(m.StartReading.EffectiveKm)
+		}
+		if m.EndReading != nil {
+			day.CloseKm = f64p(m.EndReading.EffectiveKm)
+		}
 		if m.ClosedAt != nil && m.EndReading == nil {
 			day.MissingClose++
 		}

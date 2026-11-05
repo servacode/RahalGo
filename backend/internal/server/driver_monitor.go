@@ -9,6 +9,7 @@ package server
 // الأبواب: `drivers.monitor` وحدها. التحليل في `internal/drivermonitor`.
 
 import (
+	"context"
 	"math"
 	"net/http"
 	"time"
@@ -20,6 +21,69 @@ import (
 )
 
 var errMonitorDriver = httpx.NewError(http.StatusNotFound, "not_found", "errors.not_found")
+
+// ══════════════════════════════════════════════════════════════════════
+// **يومُ شغل المنصّة** — «كيلومترات اليوم» (قرار المالك ٢٠٢٦-١١-٠٦)
+// ══════════════════════════════════════════════════════════════════════
+//
+// من فتح المنصّة (`platform.day_start_hour`) **لإغلاقها من جدول الدوام** — لا ٩←٩ ولا الدوام —
+// وتبدأ من الصفر بالفتح التالي. **وما مشاه بعد الإغلاق** (لحد الفتح التالي) يُعرض وحده: «مشي بعد
+// إغلاق المنصة» بكيلومتراته، **وأحمر بعتبة «مشى خارج الدوام»** (`drivers.odometer_off_alert_km`).
+// **والمنصّةُ ٢٤ ساعة ⇒ لا إغلاق**، فاليومُ يومُ الحساب ٩←٩ كما كان.
+//
+// **وقراءاتُ العدّاد** (رقمُ الدرّاجة من الصور) لا تتغيّر — تبقى بأيّام الحساب وبطاقات الدوام.
+
+// workDay نافذةُ اليوم: `From` الفتح · `End` الإغلاق (أو `To`) · `To` الفتحُ التالي.
+type workDay struct {
+	From, End, To time.Time
+	CloseAt       *time.Time
+}
+
+// driverWorkDay **يومُ شغل المنصّة** لتاريخ `YYYY-MM-DD` (يومُ الحساب نفسُه بدايةً).
+func (s *Server) driverWorkDay(ctx context.Context, day string) (workDay, error) {
+	from, to, err := drivermonitor.AccountDayBounds(ctx, s.pg, day)
+	if err != nil {
+		return workDay{}, err
+	}
+	wd := workDay{From: from, End: to, To: to}
+	if s.platform != nil {
+		c, ok, err := s.platform.WorkDayClose(ctx, s.pg, from, to)
+		if err != nil {
+			return workDay{}, err
+		}
+		if ok {
+			wd.End, wd.CloseAt = c, &c
+		}
+	}
+	return wd, nil
+}
+
+// workDayOut **ما يُرسل للوحة** — والإغلاقُ وما بعده.
+type workDayOut struct {
+	From            time.Time  `json:"from"`
+	CloseAt         *time.Time `json:"close_at"`
+	To              time.Time  `json:"to"`
+	AfterCloseKm    *float64   `json:"after_close_km"`
+	AfterCloseAlert bool       `json:"after_close_alert"`
+}
+
+// afterClose **قيادةُ ما بعد إغلاق المنصّة** لحد الفتح التالي (أو الآن) — فارغٌ قبل الإغلاق أو
+// والمنصّةُ ٢٤ ساعة.
+func (s *Server) afterClose(ctx context.Context, driverID string, wd workDay, stores []drivermonitor.Store, now time.Time) (workDayOut, error) {
+	out := workDayOut{From: wd.From, CloseAt: wd.CloseAt, To: wd.To}
+	if wd.CloseAt == nil || !now.After(*wd.CloseAt) {
+		return out, nil
+	}
+	res, _, err := drivermonitor.DriverDay(ctx, s.pg, driverID, *wd.CloseAt, wd.To, stores, now)
+	if err != nil {
+		return out, err
+	}
+	km := round1(res.Summary.DriveKmTotal)
+	out.AfterCloseKm = &km
+	off := float64(s.settings.GetInt(ctx, "drivers.odometer_off_alert_km"))
+	out.AfterCloseAlert = km > 0 && (off <= 0 || km >= off)
+	return out, nil
+}
 
 // trailPoints يحوّل نقاط الدفعة إلى نقاط الأثر.
 func trailPoints(pts []trackPoint) []drivermonitor.Point {
@@ -73,7 +137,13 @@ func (s *Server) handleDriverMonitorList(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	alert := float64(s.settings.GetInt(r.Context(), "drivers.monitor_km_alert"))
-	rows, err := drivermonitor.Overview(r.Context(), s.pg, day, alert, time.Now())
+	wd, err := s.driverWorkDay(r.Context(), day)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	now := time.Now()
+	rows, err := drivermonitor.Overview(r.Context(), s.pg, day, wd.From, wd.End, alert, now)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -82,17 +152,28 @@ func (s *Server) handleDriverMonitorList(w http.ResponseWriter, r *http.Request)
 	// خارج الدوام، وسكّرٌ بلا صورة. **من حساب الكانس** لا تحليلٍ جديد لكلّ سائق كلّ ٣٠ ثانية.
 	type rowOut struct {
 		drivermonitor.Row
-		Odometer odoDay `json:"odometer"`
+		Odometer odoDay     `json:"odometer"`
+		WorkDay  workDayOut `json:"work_day"`
+	}
+	stores, err := drivermonitor.LoadStores(r.Context(), s.pg)
+	if err != nil {
+		s.respondErr(w, err)
+		return
 	}
 	out := make([]rowOut, 0, len(rows))
 	if from, to, err := drivermonitor.AccountDayBounds(r.Context(), s.pg, day); err == nil {
 		for _, row := range rows {
-			_, odo, err := s.monitorShifts(r.Context(), row.DriverID, from, to, time.Now(), false)
+			_, odo, err := s.monitorShifts(r.Context(), row.DriverID, from, to, now, false)
 			if err != nil {
 				s.respondErr(w, err)
 				return
 			}
-			out = append(out, rowOut{Row: row, Odometer: odo})
+			after, err := s.afterClose(r.Context(), row.DriverID, wd, stores, now)
+			if err != nil {
+				s.respondErr(w, err)
+				return
+			}
+			out = append(out, rowOut{Row: row, Odometer: odo, WorkDay: after})
 		}
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{
@@ -127,7 +208,17 @@ func (s *Server) handleDriverMonitorDay(w http.ResponseWriter, r *http.Request) 
 		s.respondErr(w, err)
 		return
 	}
-	res, wins, err := drivermonitor.DriverDay(r.Context(), s.pg, id, day, stores, time.Now())
+	wd, err := s.driverWorkDay(r.Context(), day)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	res, wins, err := drivermonitor.DriverDay(r.Context(), s.pg, id, wd.From, wd.End, stores, time.Now())
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	after, err := s.afterClose(r.Context(), id, wd, stores, time.Now())
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -209,5 +300,6 @@ func (s *Server) handleDriverMonitorDay(w http.ResponseWriter, r *http.Request) 
 		"orders":   orders,
 		"shifts":   dayShifts,
 		"odometer": dayOdo,
+		"work_day": after,
 	})
 }
