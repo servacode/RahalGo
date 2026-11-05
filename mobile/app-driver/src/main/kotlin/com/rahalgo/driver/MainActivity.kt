@@ -515,6 +515,9 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                 dismiss = home::dismissOdometer,
                 fix = home::fixOdometer,
                 cameraDenied = home::odometerCameraDenied,
+                bikeAsk = home::askBikeChange,
+                bikeConfirm = home::confirmBikeChange,
+                bikeCancel = home::cancelBikeChange,
             ),
         )
     }

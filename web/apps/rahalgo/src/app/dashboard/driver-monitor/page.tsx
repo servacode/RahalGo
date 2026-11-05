@@ -89,6 +89,16 @@ interface Row {
   live: Live | null;
   /** **ملخّصُ العدّاد لليوم** (قرارُ المالك ٢٠٢٦-١١-٠٥) — العدّاد مقابل التطبيق. */
   odometer?: OdoDay;
+  /** **يومُ شغل المنصّة** (قرارُ المالك ٢٠٢٦-١١-٠٦) — والمشيُ بعد إغلاقها. */
+  work_day?: WorkDay;
+}
+/** **يومُ شغل المنصّة** — من فتحها لإغلاقها (أو ٩←٩ إن كانت ٢٤ ساعة)، وما مشاه بعد الإغلاق. */
+interface WorkDay {
+  from: string;
+  close_at: string | null;
+  to: string;
+  after_close_km: number | null;
+  after_close_alert: boolean;
 }
 interface OdoDay {
   on_km: number | null;
@@ -96,6 +106,11 @@ interface OdoDay {
   app_km: number | null;
   unseen_km: number | null;
   missing_close: number;
+  /** **رقمُ العدّاد عند أوّل فتحٍ وآخر سكّرٍ باليوم** — لوين وصل عدّادُ الدرّاجة. */
+  open_km?: number | null;
+  close_km?: number | null;
+  /** قراءاتُ «بدّلت الدرّاجة» بدوامات اليوم (قرار المالك ٢٠٢٦-١١-٠٦). */
+  bike_changes?: number;
   big_gap: boolean;
   off_moved: boolean;
   shifts: number;
@@ -150,6 +165,8 @@ interface DayResp {
   shifts: MonitorShift[];
   /** **ملخّصُ العدّاد لليوم.** */
   odometer?: OdoDay;
+  /** **يومُ شغل المنصّة** والمشيُ بعد إغلاقها. */
+  work_day?: WorkDay;
 }
 interface DayOrder {
   id: string;
@@ -398,8 +415,10 @@ function DayView({ driverID, day, onBack }: { driverID: string; day: string | nu
         <Tile icon={IconWarning} label={T.tiles.mocked} value={fmtNum(s.mocked)} tone={s.mocked > 0 ? "danger" : undefined} />
       </div>
       <p className="mb-3 text-xs text-ink-muted">{T.driveHint}</p>
-      <div className="mb-3">
+      <div className="mb-3 space-y-1">
+        <WorkDayLine w={data.work_day} />
         <OdoLine o={data.odometer} />
+        <OdoMeterLine o={data.odometer} />
       </div>
       {data.path.length === 0 ? (
         <AdminEmpty icon={IconRoute} title={T.emptyDriver} />
@@ -528,6 +547,7 @@ function DriverCard({ r, now, onOpen }: { r: Row; now: number; onOpen: () => voi
           <Badge variant={r.live.on_shift ? "success" : "neutral"}>{r.live.on_shift ? L.onShift : L.offShift}</Badge>
         </div>
       )}
+      <WorkDayLine w={r.work_day} />
       <OdoLine o={r.odometer} />
       <Box look="plain" icon={<IconRoute size={14} />} title={T.title}>
         <div className="space-y-1 text-sm">
@@ -539,6 +559,37 @@ function DriverCard({ r, now, onOpen }: { r: Row; now: number; onOpen: () => voi
           <Stat label={T.cols.mocked} value={s.mocked > 0 ? fmtNum(s.mocked) : "—"} tone={s.mocked > 0} />
         </div>
       </Box>
+    </div>
+  );
+}
+
+/**
+ * **يومُ شغل المنصّة** (قرارُ المالك ٢٠٢٦-١١-٠٦) — الأرقامُ من فتح المنصّة لإغلاقها، **والمشيُ بعد
+ * الإغلاق** بكيلومتراته، أحمرُ بعتبة «مشى خارج الدوام». والمنصّةُ ٢٤ ساعة ⇒ لا سطر.
+ */
+function WorkDayLine({ w }: { w?: WorkDay }) {
+  if (!w || !w.close_at) return null;
+  const W = T.workDay;
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-sm">
+      <span className="text-xs text-ink-muted">{W.closeAt.replace("{time}", fmtDamascusTime(w.close_at))}</span>
+      {w.after_close_km != null && w.after_close_km > 0 && (
+        <Badge variant={w.after_close_alert ? "danger" : "warning"}>
+          {W.afterClose.replace("{n}", km(w.after_close_km))}
+        </Badge>
+      )}
+    </div>
+  );
+}
+
+/** **لوين وصل عدّادُ الدرّاجة باليوم** — رقمُ الصورة عند أوّل فتحٍ وآخر سكّر. */
+function OdoMeterLine({ o }: { o?: OdoDay }) {
+  if (!o || (o.open_km == null && o.close_km == null)) return null;
+  const W = T.workDay;
+  return (
+    <div className="flex flex-wrap items-center gap-3 text-sm">
+      {o.open_km != null && <span>{W.odoOpen.replace("{n}", fmtNum(o.open_km))}</span>}
+      {o.close_km != null && <span>{W.odoClose.replace("{n}", fmtNum(o.close_km))}</span>}
     </div>
   );
 }
@@ -556,6 +607,7 @@ function OdoLine({ o }: { o?: OdoDay }) {
       )}
       {o.big_gap && <Badge variant="danger">{OL.bigGap}</Badge>}
       {o.missing_close > 0 && <Badge variant="danger">{OL.noClose}</Badge>}
+      {(o.bike_changes ?? 0) > 0 && <Badge variant="warning">{OL.bikeChange}</Badge>}
       {o.off_km != null && o.off_km > 0 && (
         <Badge variant={o.off_moved ? "danger" : "neutral"}>{OL.off.replace("{n}", km(o.off_km))}</Badge>
       )}

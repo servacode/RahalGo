@@ -13,6 +13,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/cashbox"
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
+	"github.com/servacode/rahalgo/backend/internal/drivermonitor"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/media"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
@@ -202,23 +203,11 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	// **ومسافةُ طلباته اليوم** — من `order_drives` لا من الأثر (لا يُقاس هنا مرّةً ثانية).
-	// قطعٌ انتهت اليوم، **وقطعةٌ مفتوحةٌ ما دام الطلبُ فعلاً بيده** (أو مشوارُ إرجاعه قائم) —
-	// فصفٌّ بقي «لسّا معه» بلا سبب لا يُضاف لكلّ يومٍ للأبد. وطلبٌ له قطعتان يُعدّ مرّة.
-	// وتعذّرُها لا يُسقط شاشته: صفرٌ خيرٌ من شاشةٍ بيضاء.
-	if err := s.pg.QueryRow(r.Context(), `
-		SELECT COALESCE(sum(d.to_pickup_m + d.with_order_m), 0)::int, count(DISTINCT d.order_id)::int
-		  FROM order_drives d
-		 WHERE d.driver_id = $1
-		   AND CASE WHEN d.ended_at IS NOT NULL
-		            THEN d.ended_at >= account_day_start(account_day(now()))
-		            ELSE EXISTS (SELECT 1 FROM orders o
-		                          WHERE o.id = d.order_id AND o.driver_id = d.driver_id
-		                            AND (o.closed_at IS NULL
-		                                 OR (o.return_to IS NOT NULL AND o.goods_handed_at IS NULL)))
-		       END`,
-		uid).Scan(&out.TodayDriveM, &out.TodayDriveOrders); err != nil {
+	// **ومسافةُ طلباته اليوم** (`TodayDrive`). وتعذّرُها لا يُسقط شاشته: صفرٌ خيرٌ من شاشةٍ بيضاء.
+	if m, n, err := s.TodayDrive(r.Context(), uid, time.Now()); err != nil {
 		s.logger.Warn("مسافة اليوم: تعذّرت القراءة", "driver", uid, "error", err)
+	} else {
+		out.TodayDriveM, out.TodayDriveOrders = m, n
 	}
 	// **وعدّادُ الدرّاجة** — الوضع، وسماحُ العمليّات، وآخرُ رقم.
 	out.OdometerMode = s.odometerMode(r.Context())
@@ -1728,4 +1717,33 @@ func (s *Server) handleDriverCash(w http.ResponseWriter, r *http.Request) {
 		out = append(out, e)
 	}
 	httpx.JSON(w, http.StatusOK, paged("entries", out, count, pg))
+}
+
+// TodayDrive **مسافةُ طلبات السائق اليوم** — **يومُ شغل المنصّة** (قرار المالك ٢٠٢٦-١١-٠٦): ما
+// انتهى من فتح المنصّة لإغلاقها، وصفرٌ بالفتح التالي؛ والمنصّةُ ٢٤ ساعة ⇒ ٩←٩. من `order_drives` لا من الأثر (لا يُقاس هنا مرّةً
+// ثانية). قطعٌ انتهت اليوم، **وقطعةٌ مفتوحةٌ ما دام الطلبُ فعلاً بيده** (أو مشوارُ إرجاعه قائم) —
+// فصفٌّ بقي «لسّا معه» بلا سبب لا يُضاف لكلّ يومٍ للأبد. وطلبٌ له قطعتان يُعدّ مرّة.
+func (s *Server) TodayDrive(ctx context.Context, driverID string, now time.Time) (int, int, error) {
+	day, err := drivermonitor.AccountDay(ctx, s.pg, now)
+	if err != nil {
+		return 0, 0, err
+	}
+	wd, err := s.driverWorkDay(ctx, day)
+	if err != nil {
+		return 0, 0, err
+	}
+	var m, n int
+	err = s.pg.QueryRow(ctx, `
+		SELECT COALESCE(sum(d.to_pickup_m + d.with_order_m), 0)::int, count(DISTINCT d.order_id)::int
+		  FROM order_drives d
+		 WHERE d.driver_id = $1
+		   AND CASE WHEN d.ended_at IS NOT NULL
+		            THEN d.ended_at >= $2 AND d.ended_at < $3
+		            WHEN $4 >= $3 THEN false
+		            ELSE EXISTS (SELECT 1 FROM orders o
+		                          WHERE o.id = d.order_id AND o.driver_id = d.driver_id
+		                            AND (o.closed_at IS NULL
+		                                 OR (o.return_to IS NOT NULL AND o.goods_handed_at IS NULL)))
+		       END`, driverID, wd.From, wd.End, now).Scan(&m, &n)
+	return m, n, err
 }

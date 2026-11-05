@@ -398,6 +398,7 @@ type odoDayResp struct {
 		OffKm        *float64 `json:"off_km"`
 		MissingClose int      `json:"missing_close"`
 		BigGap       bool     `json:"big_gap"`
+		BikeChanges  int      `json:"bike_changes"`
 	} `json:"odometer"`
 }
 

@@ -129,6 +129,11 @@ var notifTitles = struct {
 	landmarkExistsMap, landmarkExistsPending, landmarkExistsSelf      string
 	landmarkQuotaTitle, landmarkQuotaBody, landmarkQuotaShiftBody     string
 	landmarkDigestTitle, landmarkDigestBody, landmarkDigestIncomplete string
+	// **سائقٌ قال «بدّلت الدرّاجة»** فقُبل رقمٌ أقلّ (قرار المالك ٢٠٢٦-١١-٠٦) — لمن يراقب.
+	odometerBikeChange, odometerBikeChangeBody string
+	// **الدوامُ المفتوحُ بعد إغلاق المنصّة** (قرار المالك ٢٠٢٦-١١-٠٦، `shift_close_remind.go`) —
+	// إشعارٌ عند الإغلاق وتذكيرٌ واحدٌ باليوم التالي.
+	shiftPlatformClosed, shiftPlatformClosedBody, shiftStillOpen, shiftStillOpenBody string
 }{
 	walletTopupRejected:      "انرفض طلب شحن محفظتك",
 	walletRequestRejected:    "انرفض طلب حركة على محفظتك",
@@ -202,6 +207,12 @@ var notifTitles = struct {
 	landmarkDigestTitle:      "معالم السائقين — أمس",
 	landmarkDigestBody:       "جديد {new} من {drivers} سائق · مكرّر {duplicate} · بانتظار موافقتك {pending}",
 	landmarkDigestIncomplete: " · ما كمّلوا الـ{quota}: {incomplete} سائق",
+	odometerBikeChange:       "سائق بدّل درّاجته (أو عدّادها)",
+	odometerBikeChangeBody:   "{name}: آخر رقم {old} كم ← العدّاد الجديد {new} كم. شوف الصورة بمراقبة السائقين.",
+	shiftPlatformClosed:      "المنصة أغلقت، يجب عليك إغلاق دوامك",
+	shiftPlatformClosedBody:  "سكّر دوامك من التطبيق — صوّر العدّاد واضغط «أنهِ العمل».",
+	shiftStillOpen:           "دوامك من أمس لسّا مفتوح",
+	shiftStillOpenBody:       "المنصة سكّرت مبارح ودوامك ضلّ مفتوح — سكّره من التطبيق، وإذا رجعت تشتغل افتحه من جديد.",
 }
 
 // صندوق إشعارات المستخدم — لأي دور، فلا أحد يحتاج تحديث الصفحة ليعرف ما استجدّ.

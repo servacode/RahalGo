@@ -5321,6 +5321,7 @@
         "driver.odometer_reading": "قراءة عدّاد",
         "ops.odometer_corrected": "تصحيح قراءة عدّاد",
         "ops.odometer_exemption": "سماح بفتح الدوام بلا صورة عدّاد",
+        "driver.odometer_bike_change": "تبديل درّاجة (عدّاد جديد)",
         "driver.delivery_proof_skipped": "تخطي إثبات التسليم",
         "driver.delivery_proof_rejected": "رفض صورة تسليم بعيدة أو بموقع مزيف",
         "driver.emergency": "بلاغ طوارئ من سائق",
@@ -6973,14 +6974,24 @@
           "exempt": "سمحت له العمليات بلا صورة",
           "long_open": "دوام مفتوح من {h} ساعة",
           "off_duty_moved": "مشى وهو خارج الدوام",
-          "migrated": "كان مفتوح قبل الميزة"
-        }
+          "migrated": "كان مفتوح قبل الميزة",
+          "bike_change": "تبديل درّاجة"
+        },
+        "bikeChange": "تبديل درّاجة — عدّاد جديد (قبله {n} كم بالعدّاد القديم)",
+        "bikeChangeNoPrev": "تبديل درّاجة — عدّاد جديد"
+      },
+      "workDay": {
+        "closeAt": "أرقام اليوم من فتح المنصة لإغلاقها ({time})",
+        "afterClose": "مشي بعد إغلاق المنصة: {n}",
+        "odoOpen": "العدّاد عند الفتح: {n} كم",
+        "odoClose": "العدّاد عند السكّر: {n} كم"
       },
       "odoList": {
         "line": "العدّاد {odo} · التطبيق {app}",
         "off": "خارج الدوام {n}",
         "noClose": "ما صوّر عند الإغلاق",
-        "bigGap": "فرق كبير"
+        "bigGap": "فرق كبير",
+        "bikeChange": "تبديل درّاجة"
       },
       "ordersDist": {
         "title": "الطلبات والمسافة",

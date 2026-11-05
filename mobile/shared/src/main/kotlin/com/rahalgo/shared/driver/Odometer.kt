@@ -96,6 +96,31 @@ object OdometerFlow {
         }
     }
 
+    /**
+     * **«بدّلت الدرّاجة / العدّاد»** (قرارُ المالك ٢٠٢٦-١١-٠٦) — **أيُعرض الزرُّ بالورقة؟**
+     *
+     * بعد رفض «الرقم أقلّ» (`odometer_lower`): **حسب المحرّك** (`bike_change_left` — تبديلٌ
+     * واحدٌ باليوم). وقبل أيّ رفض: للسائق الذي له رقمٌ سابق (`lastKm`) — وأوّلُ قراءةٍ لا تبديلَ لها.
+     * **ومن اختار التبديل لا يُعرض عليه ثانيةً.**
+     */
+    fun bikeChangeOffered(lastKm: Double?, chosen: Boolean, rejectCode: String?, details: Map<String, String>): Boolean {
+        if (chosen) return false
+        if (rejectCode == "odometer_lower") return details["bike_change_left"] == "true"
+        return lastKm != null
+    }
+
+    /**
+     * **ما يُقال بعد رفض «الرقم أقلّ»** — `lower` الرسالةُ العاديّة (صوّر من جديد) ·
+     * `lowerBike` «إن بدّلت الدرّاجة اضغط الزرّ» · `bikeUsed` استُعمل تبديلُ اليوم فاتّصل بالعمليّات.
+     */
+    enum class LowerHint { Lower, LowerBike, BikeUsed }
+
+    fun lowerHint(chosen: Boolean, details: Map<String, String>): LowerHint = when {
+        details["bike_change_left"] == "true" -> LowerHint.LowerBike
+        chosen || details["bike_change_left"] == "false" -> LowerHint.BikeUsed
+        else -> LowerHint.Lower
+    }
+
     /** **الخروجُ من التطبيق وهو بدوامه سكّرٌ للدوام** — يُسأل عن العدّاد كما يُسأل عند المفتاح. */
     fun onLogout(onShift: Boolean, mode: String, activeOrders: Int): Step =
         if (!onShift) Direct else onToggle(false, mode, exempt = false, activeOrders = activeOrders)

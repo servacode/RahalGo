@@ -34,6 +34,9 @@ export interface OdoReading {
   thumb_url: string | null;
   created_at: string;
   app_build: number | null;
+  /** **«بدّلت الدرّاجة / العدّاد»** (قرار المالك ٢٠٢٦-١١-٠٦) — رقمٌ من عدّادٍ جديد، لا فرقَ عبره. */
+  bike_change?: boolean;
+  prev_km?: number | null;
 }
 
 export interface MonitorShift {
@@ -122,6 +125,11 @@ function ReadingBox({
       )}
       <p className="text-xs text-ink-muted">{fmtDamascusTime(r.created_at)}</p>
       {r.check_status === "jump_confirmed" && <Badge variant="warning">{S.flags.jump_confirmed}</Badge>}
+      {r.bike_change && (
+        <Badge variant="warning">
+          {r.prev_km != null ? S.bikeChange.replace("{n}", fmtNum(r.prev_km)) : S.bikeChangeNoPrev}
+        </Badge>
+      )}
       {canCorrect && (
         <Button variant="secondary" size="sm" onClick={() => onCorrect(r)}>
           {S.correct}

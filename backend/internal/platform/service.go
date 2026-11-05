@@ -159,6 +159,19 @@ func (s *Service) State(ctx context.Context, q dbtx.Querier) (State, error) {
 	return WithClosedText(Decide(s.now(), enforced, gate, c), s.closedText(ctx)), nil
 }
 
+// HoursClosedAt **أالمنصّةُ مسكّرةٌ بدوامها في هذه اللحظة؟** — الزرُّ إن ضُغط وإلّا الجدولُ إن سرى.
+//
+// **ولا يقرأ الإيقافَ المؤقّت** — هو «مفتوحٌ ولكن ليس الآن» لا إغلاقُ الدوام. **و«مفتوحين» بالزرّ
+// أو جدولٌ لا يسري (٢٤ ساعة) ⇒ لا إغلاق أبداً.** (تذكيرُ الدوام المفتوح، قرارُ المالك ٢٠٢٦-١١-٠٦.)
+func (s *Service) HoursClosedAt(ctx context.Context, q dbtx.Querier, now time.Time) (bool, error) {
+	sch, err := s.Schedule(ctx, q)
+	if err != nil {
+		return false, err
+	}
+	enforced, gate := s.platformGate(ctx, sch)
+	return enforced && !gate.OpenAt(now), nil
+}
+
 // WithClosedText **نصُّ المالك لخارج الدوام وحدَه** — لا يمسّ الإيقافَ المؤقّت (له نصُّه)
 // ولا المفتوح، **وفارغُه لا يغيّر شيئاً.**
 func WithClosedText(st State, text string) State {

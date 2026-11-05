@@ -712,6 +712,13 @@
     <string name="odo_check_jump">آخر رقم سجّلته %1$s كم، والرقم الجديد %2$s كم — الفرق %3$s كم. هل هو صحيح؟</string>
     <string name="odo_check_yes">نعم، صحيح</string>
     <string name="odo_check_fix">أعدّل الرقم</string>
+    <string name="odo_bike_button">بدّلت الدرّاجة / العدّاد</string>
+    <string name="odo_bike_title">بدّلت الدرّاجة؟</string>
+    <string name="odo_bike_question">إذا بدّلت الدرّاجة أو انبدّل عدّادها، صوّر العدّاد الجديد واكتب رقمه. الإدارة رح تشوف التبديل، ومسموح مرّة وحدة باليوم.</string>
+    <string name="odo_bike_yes">نعم، بدّلتها</string>
+    <string name="odo_bike_on">عدّاد جديد — صوّر عدّاد الدرّاجة الجديدة واكتب رقمه</string>
+    <string name="odo_lower_bike">الرقم أقل من آخر رقم سجّلته (%1$s كم). إذا بدّلت الدرّاجة أو العدّاد اضغط «بدّلت الدرّاجة / العدّاد»، وإلّا صوّر العدّاد من جديد</string>
+    <string name="odo_bike_used">استعملت تبديل الدرّاجة اليوم — اتّصل بالعمليات ليصحّحوا الرقم</string>
     <string name="odo_lower">الرقم أقل من آخر رقم سجّلته (%1$s كم) — صوّر العدّاد من جديد واكتب الرقم كما هو</string>
     <string name="home_today_drive">مسافة طلباتك اليوم: %1$s</string>
     <string name="hist_drive">المسافة: %1$s</string>
