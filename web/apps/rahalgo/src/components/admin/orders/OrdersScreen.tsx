@@ -1688,7 +1688,8 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           atDoor={o.status === "at_dropoff"}
           atStore={o.status === "at_pickup"}
           beforeStore={o.status === "assigned"}
-          canTransfer={o.kind !== "merchant_delivery"}
+          // **ولا تبديلَ بعد الاستلام** (PD-8) — طلبٌ أُعيد للطابور بعد طارئ يصل المتجرَ ثانيةً.
+          canTransfer={o.kind !== "merchant_delivery" && !o.picked_up_at}
           // **والإلغاءُ بعد التسليم للسائقين للمالك وحدَه في «المنصّة تدير»** (`modes.go`، P5) — كان
           // زرُّه يظهر للموظّف والمحرّكُ يردّه (تدقيقُ الطلبات ٢٠٢٦-١٠-٢٧).
           canCancel={isAdmin || selfManage === true}
@@ -4054,6 +4055,9 @@ function OrderActions({
         // **و«لدي توصيلة» لا تُحوَّل** (البند ١١) — **وعند المتجر ببلاغٍ الزرُّ في
         // لوحة «الطلب مع السائق»** فلا يُعرض زرّان بالاسم نفسِه (المشكلة ٤).
         o.kind !== "merchant_delivery" &&
+        // **ولا بعد ما استلم السائقُ البضاعة** (PD-8، قرارُ المالك ٢٠٢٦-١١-٠٦) — ولو أُعيد الطلبُ
+        // للطابور بعد طارئ. **والسببُ يُقال تحت** — والخادمُ يردّ `transfer_after_pickup`.
+        !o.picked_up_at &&
         !(o.status === "at_pickup" && doorVisible(o)) && (
         <Button
           variant="secondary"
@@ -4096,7 +4100,14 @@ function OrderActions({
       {/* **«من متجر غير تابع لنا»** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — بجانب التحويل: الطلبُ العاديُّ
           النقديُّ يصير مشتريات. **والخادمُ يردّ ما تحرّك فيه مال.** */}
       {canIntervene && TRANSFERABLE.has(o.status) &&
+        o.kind !== "custom" &&
+        o.kind !== "merchant_delivery" &&
+        !!o.picked_up_at && (
+        <p className="w-full text-xs text-ink-muted">{m.admin.ordersPage.transferAfterPickup}</p>
+      )}
+      {canIntervene && TRANSFERABLE.has(o.status) &&
         o.kind === "standard" &&
+        !o.picked_up_at &&
         o.payment_method === "cash" &&
         (o.wallet_paid ?? 0) === 0 && (
         <Button
@@ -4423,6 +4434,8 @@ function InvoiceList({
     canEdit &&
     (o.kind ?? "standard") === "standard" &&
     ITEM_UNAVAILABLE_FROM.has(o.status) &&
+    // **ولا بعد الاستلام ولو عاد الطلبُ للطابور** (PD-8) — تصحيحُه من «تعديل الطلب».
+    !o.picked_up_at &&
     (o.items ?? []).length > 0;
   async function submitUnavailable() {
     if (!unavail) return;

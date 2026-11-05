@@ -121,6 +121,13 @@ func (s *Service) MarkItemUnavailable(ctx context.Context, actorID, orderID, ite
 	if !itemUnavailableFrom[o.status] {
 		return nil, res, ErrItemUnavailableTooLate
 	}
+	// **ولا بعد الاستلام ولو عاد الطلبُ إلى الطابور** (PD-8): مستحقُّ المتجر مقيَّدٌ منذ الاستلام،
+	// **وحذفٌ يغيّره في الطلب لا في صفّ التسوية** — وتصحيحُه بابُه «تعديل الطلب» (`EditOrder`).
+	if left, err := GoodsLeftStore(ctx, tx, orderID); err != nil {
+		return nil, res, err
+	} else if left {
+		return nil, res, ErrItemUnavailableTooLate
+	}
 
 	// ── ٢ · البندُ وما يبقى بعده ────────────────────────────────────────
 	var lineQty int

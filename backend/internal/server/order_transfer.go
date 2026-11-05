@@ -55,6 +55,11 @@ var (
 	// أصنافٍ كانت تُنقل بلا مطابقةٍ أصلاً. **ومخرجُها «ألغِ التوصيلة» بسبب.**
 	errTransferDeliveryKind = httpx.NewError(http.StatusConflict,
 		"transfer_delivery_kind", "errors.transfer_delivery_kind")
+	// errTransferAfterPickup **بعد ما استلم السائقُ البضاعةَ لا يُحوَّل الطلبُ لمتجرٍ آخر** — خلل
+	// PD-8 (قرارُ المالك ٢٠٢٦-١١-٠٦ «أ»): **يُلغى أو يرجع لمتجره**. ولو عاد إلى «بانتظار سائق»
+	// بعد طارئ (`orders.GoodsLeftStore`).
+	errTransferAfterPickup = httpx.NewError(http.StatusConflict,
+		"transfer_after_pickup", "errors.transfer_after_pickup")
 )
 
 // handleTransferOrder ينقل طلباً إلى متجرٍ آخر قبل خروج البضاعة.
@@ -123,6 +128,16 @@ func (s *Server) handleTransferOrder(w http.ResponseWriter, r *http.Request) {
 	if status != "accepted" && status != "preparing" &&
 		status != "dispatching" && status != "assigned" && status != "at_pickup" {
 		s.respondErr(w, errTransferTooLate)
+		return
+	}
+	// **والحالُ لا تكفي** (PD-8): طلبٌ استُلم ثمّ أُعيد إلى الطابور بعد طارئ يقف في
+	// `dispatching` والبضاعةُ مع السائق الأوّل ومستحقُّ متجره مقيَّد — **فتحويلُه يكتب عند
+	// الاستلام الثاني تسويةً لمتجرٍ ثانٍ عن بضاعةٍ واحدة.** والقفلُ على الطلب أعلاه.
+	if left, err := orders.GoodsLeftStore(r.Context(), tx, orderID); err != nil {
+		s.respondErr(w, err)
+		return
+	} else if left {
+		s.respondErr(w, errTransferAfterPickup)
 		return
 	}
 

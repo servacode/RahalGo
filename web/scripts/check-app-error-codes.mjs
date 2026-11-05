@@ -177,7 +177,7 @@ const SERVER_ADMIN = new Set([
   "role_exists", "section_has_items", "section_name_taken", "section_move_target",
   "not_test_data", "test_store_has_orders", "step_up_invalid", "step_up_required",
    "transfer_same_merchant",
-  "transfer_too_late", "bad_channel", "no_merchant_phone",
+  "transfer_too_late", "transfer_after_pickup", "bad_channel", "no_merchant_phone",
   // **مقابلُ التحويل يختاره الموظّف** (٢٠٢٦-١٠-٠٣) — بابُ الإدارة وحدَه.
   "transfer_mapping_invalid", "transfer_item_wrong_store", "transfer_item_unavailable",
   // **لوحةُ الطلبات** (قراراتُ المالك ٢٠٢٦-١٠-٠٤) — «لدي توصيلة» لا تُحوَّل،
