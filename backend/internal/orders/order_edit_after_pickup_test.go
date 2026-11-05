@@ -382,3 +382,86 @@ func TestOrderEditAP_PartlyReturnedDrinkKeepsStoreDue(t *testing.T) {
 	}
 	f.green(t, "بعد التسليم")
 }
+
+// drinkAfterPickup **طلبٌ فيه «صنف» ٥٠٬٠٠٠ و«صنف ثان» ١٠٬٠٠٠ و«عيران ×٣» مع الأوّل،
+// مستلَمٌ** — حقُّ المتجر ٩٠٪ من ٦٦٬٠٠٠ = ٥٩٬٤٠٠.
+func drinkAfterPickup(t *testing.T) (f *cashFixture, m, oid, parent, drink string) {
+	t.Helper()
+	f = newCashFixture(t)
+	m, _ = f.merchant(t, "cash", 10)
+	oid = f.order(t, m, 50_000, 10_000, "cash")
+	parent = f.line(t, oid)
+	f.exec(t, `
+		INSERT INTO order_items (order_id, name, unit_price, merchant_price, merchant_id, qty, options,
+		                         merchant_settlement_method)
+		VALUES ($1, 'صنف ثان', 10000, 10000, $2, 1, '[]', 'cash')
+		RETURNING id::text`, oid, m)
+	drink = f.exec(t, `
+		INSERT INTO order_items (order_id, name, unit_price, merchant_price, merchant_id, qty, options,
+		                         merchant_settlement_method, drink_for, drink_option_id)
+		VALUES ($1, 'عيران', 2000, 2000, $2, 3, '[]', 'cash', $3::uuid, gen_random_uuid())
+		RETURNING id::text`, oid, m, parent)
+	if _, err := f.pool.Exec(context.Background(), `
+		UPDATE orders SET subtotal = subtotal + 16000, total = total + 16000, cash_due = cash_due + 16000
+		 WHERE id = $1`, oid); err != nil {
+		t.Fatal(err)
+	}
+	f.pickup(t, oid)
+	return
+}
+
+// ── المشروبُ المرتجعُ يبقى تحت صنفه في الفاتورة ─────────────────────────────
+// (قرارُ المالك ٢٠٢٦-١١-٠٦ «أ».) سطرُ «رجّعه الزبون» من مشروبٍ يحمل صنفَه
+// (`drink_for`) وخيارَه (`drink_option_id`) — فيُعرض بين مشروبات الصنف لا بين الأصناف.
+func TestOrderEditAP_ReturnedDrinkKeepsItsItem(t *testing.T) {
+	f, _, oid, parent, drink := drinkAfterPickup(t)
+	f.edit(t, oid, orders.EditRequest{Lines: []orders.EditLine{{ItemID: drink, Qty: 1}}})
+	var drinkFor, optBack, optKept string
+	if err := f.pool.QueryRow(context.Background(), `
+		SELECT COALESCE(r.drink_for::text, ''), COALESCE(r.drink_option_id::text, ''),
+		       COALESCE(k.drink_option_id::text, '')
+		  FROM order_items r JOIN order_items k ON k.id = $2
+		 WHERE r.order_id = $1 AND r.returned AND r.name = 'عيران'`, oid, drink).
+		Scan(&drinkFor, &optBack, &optKept); err != nil {
+		t.Fatal(err)
+	}
+	if drinkFor != parent || optBack == "" || optBack != optKept {
+		t.Fatalf("المرتجع خرج من مشروبات صنفه: drink_for=%q (يُنتظر %q) option=%q/%q",
+			drinkFor, parent, optBack, optKept)
+	}
+	f.green(t, "بعد المرتجع")
+}
+
+// ── رجّع الزبونُ المشروبَ كلَّه ثمّ حُذف صنفُه — المرتجعُ باقٍ للمتجر ───────────
+// (قرارُ المالك ٢٠٢٦-١١-٠٦ «أ».) كان سطرُ المشروب المرتجع يُمحى مع صنفه
+// (`ON DELETE CASCADE`) فينقص حقُّ المتجر بالعيران الثلاثة (٥٬٤٠٠) وقد تحمّلتها المنصّة:
+// **قبلُ ٩٬٠٠٠ (adjusted -50400)، وبعدُ ١٤٬٤٠٠ (adjusted -45000).**
+func TestOrderEditAP_FullyReturnedDrinkSurvivesItsItem(t *testing.T) {
+	f, m, oid, parent, drink := drinkAfterPickup(t)
+	ctx := context.Background()
+
+	res := f.edit(t, oid, orders.EditRequest{Lines: []orders.EditLine{{ItemID: drink, Qty: 0}}})
+	if len(res.Stores) != 0 || f.adjusted(t, oid, m) != 0 {
+		t.Fatalf("المرتجع: %+v — يُنتظر بلا فرقٍ للمتجر", res)
+	}
+	f.green(t, "بعد المرتجع")
+
+	res = f.edit(t, oid, orders.EditRequest{StoreRefunded: true,
+		Lines: []orders.EditLine{{ItemID: parent, Qty: 0}}})
+	var back int
+	if err := f.pool.QueryRow(ctx, `
+		SELECT COALESCE(sum(qty), 0) FROM order_items
+		 WHERE order_id = $1 AND returned AND name = 'عيران'`, oid).Scan(&back); err != nil || back != 3 {
+		t.Fatalf("سطرُ «رجّعه الزبون» مُحي مع صنفه: %d (%v)", back, err)
+	}
+	// ٩٠٪ × (١٠٬٠٠٠ صنفٌ ثانٍ + ٦٬٠٠٠ عيرانٌ مرتجع) = ١٤٬٤٠٠.
+	if len(res.Stores) != 1 || res.Stores[0].NewDue != 14_400 || f.adjusted(t, oid, m) != -45_000 {
+		t.Fatalf("حقُّ المتجر: %+v adjusted=%d — يُنتظر 14400 (adjusted -45000)",
+			res.Stores, f.adjusted(t, oid, m))
+	}
+	f.green(t, "بعد حذف الصنف")
+	for _, st := range []string{"on_the_way", "at_dropoff", "delivered"} {
+		f.transition(t, oid, st)
+	}
+	f.green(t, "بعد التسليم")
+}

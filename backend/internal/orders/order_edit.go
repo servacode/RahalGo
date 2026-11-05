@@ -343,12 +343,14 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 					return nil, res, err
 				}
 			} else {
+				// **والمشروبُ المرتجعُ يبقى تحت صنفه** (`drink_for` و`drink_option_id`) —
+				// فيُعرض بين مشروبات الصنف في الفاتورة (قرارُ المالك ٢٠٢٦-١١-٠٦ «أ»).
 				if _, err := tx.Exec(ctx, `
 					INSERT INTO order_items (order_id, menu_item_id, name, unit_price, merchant_price,
 					                         merchant_id, qty, note, options, merchant_settlement_method,
-					                         offer_cut, offer_borne_by, returned)
+					                         offer_cut, offer_borne_by, returned, drink_for, drink_option_id)
 					SELECT order_id, menu_item_id, name, 0, merchant_price, merchant_id, $2, note, options,
-					       merchant_settlement_method, 0, offer_borne_by, true
+					       merchant_settlement_method, 0, offer_borne_by, true, drink_for, drink_option_id
 					FROM order_items WHERE id = $1`, r.id, back); err != nil {
 					return nil, res, err
 				}
@@ -359,7 +361,14 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 				}
 			}
 		} else if l.Qty == 0 {
-			// **ومشروباتُ الصنف تُمحى بمحوه** (`drink_for ... ON DELETE CASCADE`).
+			// **ومشروباتُ الصنف تُمحى بمحوه** (`drink_for ... ON DELETE CASCADE`) —
+			// **إلّا ما رجّعه الزبونُ منها**: أثرُه قُيّد والمتجرُ يأخذ حقَّه فيه، فيُفكّ
+			// عن صنفه قبل المحو ويبقى (قرارُ المالك ٢٠٢٦-١١-٠٦ «أ»).
+			if _, err := tx.Exec(ctx, `
+				UPDATE order_items SET drink_for = NULL, drink_option_id = NULL
+				 WHERE drink_for = $1 AND returned`, r.id); err != nil {
+				return nil, res, err
+			}
 			if _, err := tx.Exec(ctx, `DELETE FROM order_items WHERE id = $1`, r.id); err != nil {
 				return nil, res, err
 			}
