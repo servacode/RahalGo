@@ -640,7 +640,7 @@ export default function OpsMapPage() {
     () =>
       api<Meta>("/api/v1/admin/ops-map/meta").catch((e: unknown) => {
         if (e instanceof ApiError && e.status === 403) {
-          return { permissions: [], location_ping_sec: 60, assignable_sec: 0 };
+          return { permissions: [], location_ping_sec: 10, assignable_sec: 0 };
         }
         throw e;
       }),
@@ -672,7 +672,7 @@ export default function OpsMapPage() {
   //
   // **وأرضيّتُها عشرُ ثوانٍ لا ثلاثون** (طلبُ المالك ٢٠٢٦-١٠-١٧: «بدي موقع السائق يكون
   // مباشر») — **فنبضةُ ١٥ ثانيةً من الإعدادات تُرى بعد ١٥ ثانيةً لا بعد نصف دقيقة.**
-  const pingSec = Math.max(10, meta.data?.location_ping_sec ?? 60);
+  const pingSec = Math.max(10, meta.data?.location_ping_sec ?? 10);
   const [tick, setTick] = useState(0);
   useEffect(() => {
     const h = window.setInterval(() => setTick((t) => t + 1), pingSec * 1000);
@@ -705,7 +705,7 @@ export default function OpsMapPage() {
   // **وإيقاعُ كلِّ سائق** (`live.ts` ٧) — كم بين نبضاته، **فينزلق كلٌّ على قدّ ما يبعت.**
   // وقبل أن يُعرف إيقاعُه: نبضةُ الإعدادات — مع طلبٍ أو بلا طلب.
   const cadence = useRef(new Map<string, Cadence>());
-  const pingIdleSec = meta.data?.location_ping_sec ?? 60;
+  const pingIdleSec = meta.data?.location_ping_sec ?? 10;
   const pingActiveSec = meta.data?.location_ping_active_sec ?? 4;
   const fallbackMs = useCallback(
     (d: { active_orders?: number } | undefined) =>

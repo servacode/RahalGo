@@ -17,7 +17,7 @@ import (
 // # ولا `SLO` جديدٌ يُخترَع (البند ٥)
 //
 // **المنصّةُ تملك رقمَها**: `drivers.location_ping_sec` — كم بين نبضةٍ
-// وأخرى (افتراضُه ٦٠ ثانية). **ومنه تُشتقّ الطزاجةُ ولا تُبتكَر:**
+// وأخرى (افتراضُه ١٠ ثوانٍ منذ ٢٠٢٦-١١-٠٦). **ومنه تُشتقّ الطزاجةُ ولا تُبتكَر:**
 //
 //	LIVE   ≤ 3 نبضاتٍ    — نبضةٌ ضاعت أو اثنتان، والشبكةُ تتعثّر
 //	FRESH  ≤ 15 دقيقة    — **وهو الحدُّ الذي يستعمله المحرّك فعلاً**
@@ -66,7 +66,7 @@ func Freshness(age time.Duration, hasLocation bool, pingSec int64) string {
 		return FreshnessNone
 	}
 	if pingSec <= 0 {
-		pingSec = 60
+		pingSec = 10
 	}
 	live := time.Duration(pingSec) * 3 * time.Second
 	if live < LiveFloor {

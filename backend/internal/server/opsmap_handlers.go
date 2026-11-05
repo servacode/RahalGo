@@ -89,7 +89,7 @@ func (s *Server) handleOpsMapMeta(w http.ResponseWriter, r *http.Request) {
 	out := map[string]any{
 		"permissions": perms,
 		// **ونبضةُ الموضع تُرسَل** — الواجهةُ تشرح بها معنى «حيّ».
-		"location_ping_sec": s.settings.GetNum(r.Context(), "drivers.location_ping_sec", 60),
+		"location_ping_sec": s.settings.GetNum(r.Context(), "drivers.location_ping_sec", 10),
 		// **ونبضةُ التوصيل** — بها تعرف الخريطةُ كم تُنعّم حركةَ السائق (٢٠٢٦-١٠-١٩).
 		"location_ping_active_sec": s.settings.GetNum(r.Context(), "drivers.location_ping_active_sec", 4),
 		"assignable_sec":           int(opsmap.AssignableWindow.Seconds()),
@@ -127,7 +127,7 @@ func (s *Server) handleOpsMapDrivers(w http.ResponseWriter, r *http.Request) {
 	}
 	limit, _ := strconv.Atoi(q.Get("limit"))
 
-	ping := s.settings.GetNum(r.Context(), "drivers.location_ping_sec", 60)
+	ping := s.settings.GetNum(r.Context(), "drivers.location_ping_sec", 10)
 	money := opsmap.Allows(capabilitiesFrom(r), opsmap.PermViewMoney)
 
 	out, err := opsmap.Drivers(r.Context(), s.pg, box, f, ping, money, limit)
@@ -571,7 +571,7 @@ func (s *Server) handleOpsMapSummary(w http.ResponseWriter, r *http.Request) {
 	out := map[string]any{}
 
 	if opsmap.Allows(caps, opsmap.PermViewDrivers) {
-		ping := s.settings.GetNum(ctx, "drivers.location_ping_sec", 60)
+		ping := s.settings.GetNum(ctx, "drivers.location_ping_sec", 10)
 		list, err := opsmap.Drivers(ctx, s.pg, nil, opsmap.DriverFilter{}, ping, false, 0)
 		if err != nil {
 			s.respondErr(w, err)
