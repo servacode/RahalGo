@@ -32,6 +32,7 @@ package server
 // عشر تصل الزبونَ فيعرف الفرقَ ولو لم يعرف السبب. **فالاقتراحُ يُعرض والإنسانُ يقرّر.**
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -188,21 +189,43 @@ func (s *Server) handleTransferOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// ══════════════════════════════════════════════════════════════════
+	// **وطريقةُ تسوية المتجر الجديد تُلقط في بنوده** (خلل PD-3، ٢٠٢٦-١١-٠٥)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **الطريقةُ لقطةٌ في البند** (`merchant_settlement_method`) يكتبها الإنشاء من المتجر
+	// (`orders/service.go`)، **والتسويةُ تقرؤها** (`merchantShares`). **وكان التحويلُ يُبقي لقطةَ
+	// القديم**: من «محفظة» إلى «نقداً» يُقيَّد حقُّ الجديد في محفظته، **ولا يرى السائقُ ما يدفعه
+	// له** — فإن دفع من جيبه دفع بلا أثرٍ في الدفتر. **فتُقرأ كما يقرؤها الإنشاء** (`FOR SHARE`)،
+	// **وفراغُها نقدٌ كما هناك.**
+	var method string
+	if err := tx.QueryRow(r.Context(),
+		`SELECT settlement_method FROM merchants WHERE id = $1 FOR SHARE`,
+		req.MerchantID).Scan(&method); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			err = httpx.ErrNotFound
+		}
+		s.respondErr(w, err)
+		return
+	}
+	if method == "" {
+		method = "cash"
+	}
 	// **سعرُ الشراء وحدَه يُحدَّث** — وسعرُ البيع كما رآه الزبون.
 	for _, x := range list {
 		if _, err := tx.Exec(r.Context(),
 			`UPDATE order_items SET menu_item_id = $2::uuid, merchant_id = $3::uuid,
-			        merchant_price = $4 WHERE id = $1::uuid`,
-			x.itemID, *x.newID, req.MerchantID, *x.newPrice); err != nil {
+			        merchant_price = $4, merchant_settlement_method = $5 WHERE id = $1::uuid`,
+			x.itemID, *x.newID, req.MerchantID, *x.newPrice, method); err != nil {
 			s.respondErr(w, err)
 			return
 		}
 	}
 	// **وبنودُ المشروبات تتبع صنفَها إلى المتجر الجديد** (٢٠٢٦-١٠-٣٠) — لا تُطابَق
-	// بالاسم، وسعرُها كما رآه الزبون.
+	// بالاسم، وسعرُها كما رآه الزبون، **وطريقةُ تسويتها طريقتُه.**
 	if _, err := tx.Exec(r.Context(),
-		`UPDATE order_items SET merchant_id = $2::uuid
-		  WHERE order_id = $1 AND drink_for IS NOT NULL`, orderID, req.MerchantID); err != nil {
+		`UPDATE order_items SET merchant_id = $2::uuid, merchant_settlement_method = $3
+		  WHERE order_id = $1 AND drink_for IS NOT NULL`, orderID, req.MerchantID, method); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -232,11 +255,17 @@ func (s *Server) handleTransferOrder(w http.ResponseWriter, r *http.Request) {
 	//
 	// **ولا يمرّ بجدول الانتقالات** — `at_pickup → assigned` ليس انتقالاً يطلبه أحد،
 	// **وإنّما أثرُ التحويل وحدَه**، فيُكتب هنا ويُسجَّل حدثاً باسمه.
+	//
+	// **ومهلةُ الصمت تُمحى معه** (خلل PD-4، ٢٠٢٦-١١-٠٥): الإسنادُ المباشر يكتب `offer_expires_at`
+	// (`assignDirectly`) ووصولُه إلى المتجر لا يمحوها، **فعودتُه إلى `assigned` بمهلةٍ منقضيةٍ
+	// يقرؤها كانسُ الإسنادات الصامتة صمتاً** (`reclaimSilentAssignments`) فينزع الطلبَ من سائقٍ
+	// واقفٍ عند المتجر. **وهو تحرّك فعلاً** — فلا صمتَ يُقاس عليه.
 	var driverID *string
 	if status == string(orders.StAtPickup) {
 		if err := tx.QueryRow(r.Context(), `
 			UPDATE orders SET status = 'assigned', updated_at = now(),
-			       door_instruction = '', door_instruction_note = '', door_instruction_at = NULL
+			       door_instruction = '', door_instruction_note = '', door_instruction_at = NULL,
+			       offer_expires_at = NULL
 			WHERE id = $1 RETURNING driver_id::text`, orderID).Scan(&driverID); err != nil {
 			s.respondErr(w, err)
 			return

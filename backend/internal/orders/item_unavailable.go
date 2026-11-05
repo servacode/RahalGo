@@ -261,19 +261,24 @@ func (s *Service) MarkItemUnavailable(ctx context.Context, actorID, orderID, ite
 	}
 	res.OldTotal, res.NewTotal = o.total, total
 
-	// ── ٦ · الدفع: المحفظةُ يُردّ لها الفرقُ فوراً ───────────────────────
-	walletPaid, cashDue := int64(0), total
-	if o.method == "wallet" {
-		walletPaid, cashDue = total, 0
+	// ── ٦ · الدفع: بقاعدة تعديل الطلب — المحفظةُ يُردّ لها ما زاد فوراً ──────
+	//
+	// **المحفظةُ لا تزيد على ما دُفع منها، وما زاد منها على المجموع الجديد يُردّ لها، والباقي
+	// نقد** — القاعدةُ نفسُها في `EditOrder` (`order_edit.go`).
+	//
+	// **وكان طلبُ المحفظة يُكتب كلُّه من المحفظة** (`wallet_paid = total`، `cash_due = 0`) — فطلبٌ
+	// زِيد عليه بتعديلٍ لم يكفِه رصيدُ الزبون (فبقي عليه نقد) **يضيع باقيه النقديّ بحذف صنف**: لا
+	// يقبضه السائق، **والطلبُ يقول دُفع من المحفظة ما لم يُدفع منها.** (خلل PD-2، ٢٠٢٦-١١-٠٥.)
+	walletPaid := min64(o.walletPaid, total)
+	if diff := o.walletPaid - walletPaid; diff > 0 {
 		note := fmt.Sprintf("صنف غير متوفر: %s", res.ItemName)
-		if diff := o.walletPaid - total; diff > 0 {
-			if _, err := s.wallet.ApplyTx(ctx, tx, o.customerID, diff, "refund",
-				orderID, note, &actorID); err != nil {
-				return nil, res, err
-			}
-			res.Refunded = diff
+		if _, err := s.wallet.ApplyTx(ctx, tx, o.customerID, diff, "refund",
+			orderID, note, &actorID); err != nil {
+			return nil, res, err
 		}
+		res.Refunded = diff
 	}
+	cashDue := total - walletPaid
 
 	if _, err := tx.Exec(ctx, `
 		UPDATE orders SET subtotal = $2, delivery_fee = $3, discount = $4, total = $5,
