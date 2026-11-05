@@ -160,9 +160,11 @@ func (s *Service) againstFor(ctx context.Context, orderID, reason string) *strin
 	}
 	var id *string
 	q := `SELECT o.driver_id::text FROM orders o WHERE o.id = $1`
+	// **والطلبُ بعدّة محطّات لا متجرَ واحدٌ يُشكى منه** (C7) — **والزبونُ لا يعرف من أيّ
+	// متجرٍ جاءت بضاعتُه** (`P-1`): فتُترك الجهةُ فارغةً **والمكتبُ يحدّد المتجر.**
 	if target == "merchant" {
 		q = `SELECT m.owner_user_id::text FROM orders o
-		     JOIN merchants m ON m.id = o.merchant_id WHERE o.id = $1`
+		     JOIN merchants m ON m.id = o.merchant_id WHERE o.id = $1 AND o.stops = 1`
 	}
 	if err := s.db.QueryRow(ctx, q, orderID).Scan(&id); err != nil {
 		return nil

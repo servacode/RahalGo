@@ -81,11 +81,15 @@ func (s *Service) MerchantReport(ctx context.Context, ownerID, orderID, reason, 
 	var closedAt *time.Time
 	// **والطلبُ من متاجره هو** — والشرطُ على المالك لا على المتجر:
 	// **من ملك متجرين لا يُبلّغ عن طلبِ ثالثٍ ليس له.**
+	// **أو له فيه قسم** — طلبٌ بعدّة محطّات (C7): المتجرُ الثاني يُبلّغ عن سائقه أيضاً.
 	err := s.db.QueryRow(ctx, `
 		SELECT o.customer_id::text, o.driver_id::text, o.closed_at
 		FROM orders o
-		JOIN merchants m ON m.id = o.merchant_id
-		WHERE o.id = $1 AND m.owner_user_id = $2`, orderID, ownerID).
+		WHERE o.id = $1
+		  AND (EXISTS (SELECT 1 FROM merchants m
+		               WHERE m.id = o.merchant_id AND m.owner_user_id = $2)
+		       OR EXISTS (SELECT 1 FROM order_parts p JOIN merchants m ON m.id = p.merchant_id
+		                  WHERE p.order_id = o.id AND m.owner_user_id = $2))`, orderID, ownerID).
 		Scan(&customerID, &driverID, &closedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotMerchantOrder

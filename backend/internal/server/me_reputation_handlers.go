@@ -114,12 +114,21 @@ func (s *Server) handleMeReputation(w http.ResponseWriter, r *http.Request) {
 	//
 	// **وما يُكتب عنه بلاغاتٌ لا تقييم** — وهي وحدَها ما يستحقّ أن يراه.
 	var ownerJoin, ownerCond, starCol string
+	// complaintJoin · complaintOwner **شرطُ الشكاوى إن افترق عن شرط التقييم** — وفارغُهما شرطُه.
+	var complaintJoin, complaintOwner string
 	// complaintCond ما يُستثنى من كشفه — **افتراضُه لا شيء.**
 	complaintCond := ``
 	switch {
 	case has("merchant"):
 		ownerJoin = `JOIN merchants mm ON mm.id = o.merchant_id`
 		ownerCond = `mm.owner_user_id = $1`
+		// **والطلبُ بعدّة محطّات: الشكوى لمتجرٍ له فيه قسمٌ إن كانت عليه هو** (C7) — لا كلُّ
+		// شكوى على الطلب للمتجر الأوّل.
+		complaintJoin = `LEFT JOIN merchants mm ON mm.id = o.merchant_id`
+		complaintOwner = `((o.stops = 1 AND mm.owner_user_id = $1)
+		     OR (o.stops > 1 AND t.against_user_id = $1 AND EXISTS (
+		         SELECT 1 FROM order_parts p JOIN merchants pm ON pm.id = p.merchant_id
+		          WHERE p.order_id = o.id AND pm.owner_user_id = $1)))`
 	case has("driver"):
 		ownerJoin = ``
 		ownerCond = `o.driver_id = $1`
@@ -179,8 +188,8 @@ func (s *Server) handleMeReputation(w http.ResponseWriter, r *http.Request) {
 		SELECT t.number, o.number, t.subject, t.status, t.created_at
 		FROM tickets t
 		JOIN orders o ON o.id = t.order_id
-		`+ownerJoin+`
-		WHERE `+ownerCond+complaintCond+`
+		`+orStr(complaintJoin, ownerJoin)+`
+		WHERE `+orStr(complaintOwner, ownerCond)+complaintCond+`
 		  AND (t.against_user_id IS NULL OR t.against_user_id = $1)
 		  -- ══════════════════════════════════════════════════════════
 		  -- **وما كتبتُه أنا لا يكون شكوى عليّ**
@@ -288,4 +297,12 @@ func (s *Server) fillRating(ctx context.Context, uid, starCol, ownerJoin, ownerC
 		}
 		rows.Close()
 	}
+}
+
+// orStr **الأوّلُ إن لم يكن فارغاً — وإلّا الثاني.**
+func orStr(a, b string) string {
+	if a != "" {
+		return a
+	}
+	return b
 }
