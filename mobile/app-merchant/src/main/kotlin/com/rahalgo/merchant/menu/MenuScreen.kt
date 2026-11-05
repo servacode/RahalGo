@@ -145,6 +145,8 @@ fun MenuScreen(
             drinksAllowed = vm.drinks.allowed,
             // **ورقمُ المادّة بالأمين** (٢٠٢٦-١١-٠٤) — كالويب.
             amenLinkAllowed = true,
+            // **لمسةُ الصورة تكبّرها** (٢٠٢٦-١١-٠٦).
+            zoomImage = true,
         )
         return
     }
@@ -205,7 +207,10 @@ private fun ItemsList(
                         id = item.id,
                         name = item.name,
                         description = item.modifiers.map { it.name }.filter { it.isNotBlank() }.joinToString(" · "),
-                        imageUrl = media(item.imageThumbUrl ?: item.imageUrl),
+                        // **صورةٌ طوليّةٌ بالدقّة الكاملة** (٢٠٢٦-١١-٠٦): المصغّرةُ ٤٠٠ بكسل
+                        // فتتشوّش في بطاقةٍ أطول، فنأخذ الكاملةَ وتحتها المصغّرة.
+                        imageUrl = media(item.imageUrl?.takeIf { it.isNotBlank() } ?: item.imageThumbUrl),
+                        fullImageUrl = media(item.imageUrl?.takeIf { it.isNotBlank() } ?: item.imageThumbUrl),
                         // **والدولاريُّ بدولاره وليرته** (٢٠٢٦-١٠-١٢).
                         price = com.rahalgo.ui.menu.priceLine(item.price, item.merchantPriceUsd),
                         available = item.available,
@@ -243,5 +248,7 @@ private fun ItemsList(
         toggleEnabled = !vm.suspended,
         onToggle = { vm.toggle(it.id) },
         onEdit = { g -> byId[g.id]?.let(vm::editItem) },
+        imageAspect = 0.8f,
+        zoomable = true,
     )
 }

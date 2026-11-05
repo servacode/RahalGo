@@ -27,6 +27,7 @@
 import { useRef, useState, type ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { Button } from "./components";
+import { ImageViewer } from "./ImageViewer";
 import { ImageCropDialog, LOGO_CROP_FRAMES, type CropFrame } from "./ImageCrop";
 import { IconAdd, IconCamera, IconClose, IconDelete, IconLoading } from "./icons";
 
@@ -66,6 +67,8 @@ export function ImageUpload({
   cropFrames = LOGO_CROP_FRAMES,
   fit = false,
   tile,
+  zoomUrl,
+  zoomLabel,
   compact,
   disabled = false,
 }: {
@@ -111,6 +114,12 @@ export function ImageUpload({
    */
   tile?: { pick: string; change: string; clear: string };
   /**
+   * **لمسةُ الصورة تكبّرها** (قرار المالك ٢٠٢٦-١١-٠٦) — عنوانُ الصورة الكاملة، وبه يظهر زرُّ التكبير.
+   * والشريطُ أسفلَها يبقى للاختيار. (مرآةُ `zoomImage` في `ItemEditor.kt`.)
+   */
+  zoomUrl?: string | null;
+  zoomLabel?: string;
+  /**
    * **مربّعٌ صغيرٌ في سطر** (صورةُ المشروب، ٢٠٢٦-١٠-٣٠) — ٤٤ بكسل، يُضغط ليختار صورة، **و✕ صغيرةٌ
    * في زاويته تُزيلها.** والخطأُ يُقال تحته.
    */
@@ -123,6 +132,7 @@ export function ImageUpload({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [cropping, setCropping] = useState<File | null>(null);
+  const [viewing, setViewing] = useState(false);
 
   function resetInput() {
     if (inputRef.current) inputRef.current.value = "";
@@ -248,26 +258,50 @@ export function ImageUpload({
     return (
       <div className="w-32 shrink-0 sm:w-36">
         <div className="relative aspect-square w-full overflow-hidden rounded-card border border-line bg-field">
-          <button
-            type="button"
-            onClick={() => inputRef.current?.click()}
-            disabled={busy}
-            aria-label={preview ? tile.change : tile.pick}
-            data-testid="image-tile"
-            className="absolute inset-0 flex items-center justify-center text-ink-muted"
-          >
-            {busy ? (
-              <IconLoading size={24} className="animate-spin" />
-            ) : preview ? (
-              <img src={preview} alt="" loading="lazy" className={`h-full w-full ${fit ? "object-contain" : "object-cover"}`} />
-            ) : (
-              <IconCamera size={28} />
-            )}
-            <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-scrim py-1 text-xs font-medium text-on-solid">
-              <IconCamera size={14} />
-              {preview ? tile.change : tile.pick}
-            </span>
-          </button>
+          {(() => {
+            // **الصورةُ الأصليّةُ تُكبَّر بكاملها، وما رُفع الآن يُكبَّر معاينتُه.**
+            const big = preview && preview === mediaUrl(initialUrl) ? (mediaUrl(zoomUrl) ?? preview) : preview;
+            const zoomable = !!zoomUrl && !!preview && !busy;
+            return (
+              <>
+                <button
+                  type="button"
+                  onClick={() => (zoomable ? setViewing(true) : inputRef.current?.click())}
+                  disabled={busy}
+                  aria-label={zoomable ? (zoomLabel ?? tile.change) : preview ? tile.change : tile.pick}
+                  data-testid={zoomable ? "image-tile-zoom" : "image-tile"}
+                  className="absolute inset-0 flex items-center justify-center text-ink-muted"
+                >
+                  {busy ? (
+                    <IconLoading size={24} className="animate-spin" />
+                  ) : preview ? (
+                    <img src={preview} alt="" loading="lazy" className={`h-full w-full ${fit ? "object-contain" : "object-cover"}`} />
+                  ) : (
+                    <IconCamera size={28} />
+                  )}
+                  {!zoomable && (
+                    <span className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-scrim py-1 text-xs font-medium text-on-solid">
+                      <IconCamera size={14} />
+                      {preview ? tile.change : tile.pick}
+                    </span>
+                  )}
+                </button>
+                {zoomable && (
+                  <button
+                    type="button"
+                    onClick={() => inputRef.current?.click()}
+                    aria-label={tile.change}
+                    data-testid="image-tile"
+                    className="absolute inset-x-0 bottom-0 flex items-center justify-center gap-1 bg-scrim py-1 text-xs font-medium text-on-solid"
+                  >
+                    <IconCamera size={14} />
+                    {tile.change}
+                  </button>
+                )}
+                {viewing && big && <ImageViewer src={big} onClose={() => setViewing(false)} />}
+              </>
+            );
+          })()}
           {preview && !busy && (
             <button
               type="button"

@@ -184,6 +184,8 @@ fun ItemEditor(
     onSave: () -> Unit,
     onCancel: () -> Unit,
     onDelete: () -> Unit,
+    /** **لمسةُ الصورة تكبّرها** (المتجر) — وإلا تفتح الاختيار كما كانت (المندوب). */
+    zoomImage: Boolean = false,
     // **وما اختلف بين المتجر والمندوب يُمرَّر، وما اتّفق يبقى هنا** —
     // المتجرُ يقرأ «السعر» والمندوبُ «سعر المتجر» (`pnpm check:menu-parity`).
     @StringRes priceLabel: Int = R.string.item_price,
@@ -246,7 +248,7 @@ fun ItemEditor(
                 null
             }
             Row(verticalAlignment = Alignment.Top) {
-                ItemPhoto(d, busy, media, onPick = { pick() }, onClear = onClearImage)
+                ItemPhoto(d, busy, media, onPick = { pick() }, onClear = onClearImage, zoomImage = zoomImage)
                 Spacer(Modifier.width(Rahal.space.md))
                 Column(Modifier.weight(1f)) {
                     OutlinedTextField(
@@ -484,13 +486,17 @@ private fun ItemPhoto(
     media: (String?) -> String?,
     onPick: () -> Unit,
     onClear: () -> Unit,
+    zoomImage: Boolean = false,
 ) {
     val has = d.imageThumb != null || !d.imageMediaId.isNullOrEmpty()
+    var zoom by remember { mutableStateOf<String?>(null) }
+    zoom?.let { com.rahalgo.ui.ImageViewer(url = it, onClose = { zoom = null }) }
+    val zoomUrl = if (zoomImage && has) media(d.imageFull ?: d.imageThumb) else null
     Box(
         Modifier
             .size(PhotoSize)
             .clip(Rahal.shape.md)
-            .clickable(enabled = !busy) { onPick() },
+            .clickable(enabled = !busy || zoomUrl != null) { if (zoomUrl != null) zoom = zoomUrl else onPick() },
     ) {
         RemoteImage(
             url = media(d.imageThumb),
@@ -504,6 +510,8 @@ private fun ItemPhoto(
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
                 .background(Rahal.colors.panel.copy(alpha = 0.72f))
+                // **الشريطُ يفتح الاختيارَ دائماً** — والصورةُ فوقه تكبّر.
+                .then(if (zoomUrl != null) Modifier.clickable(enabled = !busy) { onPick() } else Modifier)
                 .padding(vertical = Rahal.space.xs),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,

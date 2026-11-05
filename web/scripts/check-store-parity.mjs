@@ -277,8 +277,26 @@ if (!/\bkeepsSavedPoint\(/.test(deliveryKt)) fail("DeliveryScreen.kt ما بيس
 if (!/\bRecipientSuggestions\(vm\)/.test(deliveryKt)) fail("DeliveryScreen.kt ما بيعرض المستلمين السابقين — الموقع بيعرضهن");
 if (!deliveriesApiKt.includes("/delivery-recipients")) fail("DeliveriesApi.kt ما بيندَه delivery-recipients");
 
+// ══════════════════════════════════════════════════════════════════════
+// ٤ · صورة الصنف: تكبير باللمس وبطاقة طوليّة ٤:٥ (قرار المالك ٢٠٢٦-١١-٠٦)
+// ══════════════════════════════════════════════════════════════════════
+const menuScreenKt = strip(read(join(repo, "mobile", "app-merchant", "src", "main", "kotlin", "com", "rahalgo", "merchant", "menu", "MenuScreen.kt")));
+const menuGridKt = strip(read(join(repo, "mobile", "ui", "src", "main", "kotlin", "com", "rahalgo", "ui", "menu", "MenuGrid.kt")));
+const itemEditorKt = strip(read(join(repo, "mobile", "ui", "src", "main", "kotlin", "com", "rahalgo", "ui", "menu", "ItemEditor.kt")));
+const menuPageTsx = strip(read(join(web, "apps", "rahalgo", "src", "app", "(store)", "store", "menu", "page.tsx")));
+const itemEditorTsx = strip(read(join(web, "apps", "rahalgo", "src", "components", "store", "ItemEditor.tsx")));
+if (!/imageAspect\s*=\s*0\.8f/.test(menuScreenKt) || !/zoomable\s*=\s*true/.test(menuScreenKt)) {
+  fail("شبكة أصناف تطبيق المتجر ما هي طوليّة 0.8 (٤:٥) وقابلة للتكبير");
+}
+if (!/zoomImage\s*=\s*true/.test(menuScreenKt)) fail("محرّر الصنف بتطبيق المتجر ما بيكبّر الصورة باللمس");
+if (!/ImageViewer\(/.test(menuGridKt) || !/ImageViewer\(/.test(itemEditorKt)) fail("MenuGrid.kt/ItemEditor.kt ما بيستعملوا ImageViewer المشترك");
+if (!menuPageTsx.includes("aspect-[4/5]") || !menuPageTsx.includes("<ImageViewer")) {
+  fail("بطاقة الصنف بصفحة /store/menu مو ٤:٥ أو ما بتكبّر الصورة (التطبيق بيكبّرها)");
+}
+if (!/zoomUrl=/.test(itemEditorTsx)) fail("محرّر الصنف على الموقع ما بيكبّر الصورة باللمس (التطبيق بيكبّرها)");
+
 if (fails > 0) {
   console.error(`\n✗ لوحة المتجر والتطبيق: ${fails} فحصاً سقط`);
   process.exit(1);
 }
-console.log("✓ لوحة المتجر والتطبيق: سطر الدين وعمر الطلب والمستلمين السابقين بنفس الكلام");
+console.log("✓ لوحة المتجر والتطبيق: سطر الدين وعمر الطلب والمستلمين السابقين وتكبير صورة الصنف بنفس الكلام");

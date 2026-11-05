@@ -45,6 +45,8 @@ data class ItemDraft(
     val imageMediaId: String? = null,
     /** **عنوانُ المصغّرة للعرض** — يأتي مع الرفع أو مع الصنف. */
     val imageThumb: String? = null,
+    /** **الصورةُ الكاملة للتكبير** — و`null` تُكبَّر المصغّرة. */
+    val imageFull: String? = null,
     /** **الإضافاتُ والخيارات** — مجموعاتٌ لكلٍّ خياراتُها. */
     val modifiers: List<ModifierGroup> = emptyList(),
     /**

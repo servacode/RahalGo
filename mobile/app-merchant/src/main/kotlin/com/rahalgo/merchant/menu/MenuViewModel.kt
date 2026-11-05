@@ -398,6 +398,7 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
             price = if (item.price >= 0) item.price.toString() else "",
             platformSectionId = item.platformSectionId.orEmpty(),
             imageThumb = item.imageThumbUrl ?: item.imageUrl,
+            imageFull = item.imageUrl?.takeIf { it.isNotBlank() },
             // **وتُحمَّل مع الصنف** — ومن حرّر صنفاً بلا حملها ثمّ حفظ
             // **محا إضافاتِه كلَّها**: المحرّكُ يستبدل لا يضيف
             // (`DELETE FROM modifier_groups WHERE item_id`).
@@ -452,6 +453,7 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                     editing = editing?.copy(
                         imageMediaId = ref.id,
                         imageThumb = ref.thumbUrl.ifBlank { null },
+                        imageFull = null,
                     )
                 }
                 .onFailure { Flash.fail(err(it)) }
@@ -461,7 +463,7 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
 
     /** **يمحو الصورة** — والفراغُ الصريحُ يعني «أزِلها» لا «لا تمسّها». */
     fun clearImage() {
-        editing = editing?.copy(imageMediaId = "", imageThumb = null)
+        editing = editing?.copy(imageMediaId = "", imageThumb = null, imageFull = null)
     }
 
     /**
