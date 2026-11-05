@@ -82,6 +82,9 @@ type Service struct {
 	settings *settings.Store
 	// whatsapp **مُرسِلُ الواتساب** — لكود التسليم (`delivery_code.go`). واختياريّ.
 	whatsapp TextSender
+	// multiStop **بوّابةُ الطلب من عدّة متاجر** — يحقنها الخادم (`multistop_gate.go`).
+	// **وبلا حقنٍ مغلقة**: متجرٌ واحدٌ في الطلب.
+	multiStop MultiStopGate
 }
 
 // SetNotifier يحقن خدمة الإشعارات بعد بناء الخادم (لا إشعارات قبلها).
@@ -314,7 +317,9 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 		//
 		// السلّةُ لا تعرف المصادر — أخفيناها عنها عمداً — **فلا تملك أن
 		// تمنع.** والخادمُ يعرف، **وهو الموضعُ الذي لا يُلتفّ عليه.**
-		if len(sources.IDs) > unit.maxSources(ctx) {
+		//
+		// **وبمنفّذ الوحدة** — `XG-46`: **وبوّابةُ نسخة السائق تُقرأ هنا أيضاً.**
+		if len(sources.IDs) > unit.maxSources(ctx, tx) {
 			return nil, nil, ErrTooManySources
 		}
 		// ══════════════════════════════════════════════════════════════

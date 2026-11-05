@@ -141,8 +141,18 @@ func (s *Service) SourcesOf(ctx context.Context, q dbtx.Querier, items []ItemInp
 }
 
 // maxSources سقفُ المصادر — **في الإعدادات لا في الشيفرة** (قرار المالك).
-func (s *Service) maxSources(ctx context.Context) int {
-	return int(s.settingInt(ctx, "orders.max_sources"))
+//
+// **وسقفٌ فوق الواحد لا يسري حتّى تُفرض نسخةُ السائق التي تعرف المحطّات**
+// (`MultiStopReady`، ٢٠٢٦-١١-٠٥) — **فالتسعيرةُ تقول «متجرٌ واحد» والإنشاءُ
+// يردّ الثاني بـ`too_many_sources`**، كما يقع اليومَ والسقفُ واحد.
+//
+// **و`q` منفّذُ القراءة** — معاملةُ الإنشاء أو المَسبَح (`XG-46`).
+func (s *Service) maxSources(ctx context.Context, q dbtx.Querier) int {
+	n := int(s.settingInt(ctx, "orders.max_sources"))
+	if n > 1 && !s.MultiStopReady(ctx, q) {
+		return 1
+	}
+	return n
 }
 
 // sourceProximityM نصفُ قطر القرب بالأمتار.
@@ -293,7 +303,7 @@ type QuoteResult struct {
 // **ورسالةُ خطأٍ على كلّ ضغطةِ حرفٍ في السلّة تُتعب ولا تُفيد.** والردُّ
 // الصريح يبقى عند الإنشاء.
 func (s *Service) Quote(ctx context.Context, items []ItemInput, lat, lng float64) (*QuoteResult, error) {
-	out := &QuoteResult{MaxSources: s.maxSources(ctx)}
+	out := &QuoteResult{MaxSources: s.maxSources(ctx, s.poolQ())}
 	if len(items) == 0 {
 		return out, nil
 	}

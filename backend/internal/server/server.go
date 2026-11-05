@@ -297,6 +297,9 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 		media: mediaSvc, hub: hub, otpStatus: otpStatus, otpUnpair: otpUnpair, otpPair: otpPair,
 		notify: notify, push: pushSvc, geo: geoSvc, route: routeClient,
 		routeEngine: cfg.RoutingEngine, osrm: osrmClient}
+	// **والطلبُ من عدّة متاجر لا يُفتح حتّى تُفرض نسخةُ السائق التي تعرف
+	// المحطّات** (٢٠٢٦-١١-٠٥) — **والخادمُ وحدَه يعرف أدنى نسخةٍ نافذة.**
+	ordersSvc.SetMultiStopGate(srv.multiStopReady)
 	// **وتعويضُ الشكوى يدخل طابورَ التعويضات الموحّد** (قرارُ المالك ٢٠٢٦-١٠-٠٤) —
 	// لا طلبَ محفظة: صفحةُ التعويضات والموافقاتُ الموحّدة تريانه.
 	if supportSvc != nil {

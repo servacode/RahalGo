@@ -191,6 +191,8 @@ var placeRules = []placeRule{
 	{prefix: "delivery.custom_", topic: TopicOrders, section: "orders.custom"},
 	{prefix: "delivery.", topic: TopicOrders, section: "orders.dispatch"},
 	{prefix: "orders.max_sources", exact: true, topic: TopicOrders, section: "orders.limits"},
+	// **ونسخةُ السائق التي تفتح السقفَ فوق الواحد بجانب السقف نفسِه** (٢٠٢٦-١١-٠٥).
+	{prefix: "orders.multistop_driver_build", exact: true, topic: TopicOrders, section: "orders.limits"},
 	{prefix: "orders.max_open_per_customer", exact: true, topic: TopicOrders, section: "orders.limits"},
 	{prefix: "orders.extra_source_fee", exact: true, topic: TopicOrders, section: "orders.limits"},
 	{prefix: "orders.source_proximity_m", exact: true, topic: TopicOrders, section: "orders.limits"},
