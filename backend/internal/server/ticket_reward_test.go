@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -161,6 +162,18 @@ func TestTicketReward_ConcurrentClicksMakeOneCode(t *testing.T) {
 		_, _ = f.pool.Exec(context.Background(), `DELETE FROM promo_codes WHERE code LIKE $1 || '%'`, prefix)
 	})
 
+	// **والسباقُ يُفتح عمداً**: جدولُ الأكواد مقفولٌ للكتابة (`SHARE` يسمح بالقراءة) — فكلُّ
+	// ضغطةٍ تمرّ بالفحص وتقف عند الإنشاء، **ثمّ يُفكّ بعد أن تصل كلُّها.** بلا قفلٍ على البلاغ
+	// يجد كلٌّ منها «لا كود» فيُنشئ كودَه؛ **وبه تنتظر الثانيةُ الأولى ثمّ تجد كودَها.**
+	hold, err := f.pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = hold.Rollback(context.Background()) }()
+	if _, err := hold.Exec(ctx, `LOCK TABLE promo_codes IN SHARE MODE`); err != nil {
+		t.Fatal(err)
+	}
+
 	const clicks = 8
 	codes := make([]int, clicks)
 	var wg sync.WaitGroup
@@ -176,6 +189,10 @@ func TestTicketReward_ConcurrentClicksMakeOneCode(t *testing.T) {
 		}(i)
 	}
 	close(start)
+	time.Sleep(1500 * time.Millisecond)
+	if err := hold.Commit(ctx); err != nil {
+		t.Fatal(err)
+	}
 	wg.Wait()
 	created := 0
 	for _, c := range codes {
