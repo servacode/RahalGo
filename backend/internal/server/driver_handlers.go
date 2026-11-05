@@ -125,6 +125,11 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 		// Suspended **أحسابُه موقوف؟** (٢٠٢٦-١٠-٠٢) — يُكمل طلبَه القائمَ وحدَه،
 		// **ويُقال له ذلك** بدل أن تُردّ عليه الأبوابُ واحداً واحداً بلا سبب.
 		Suspended bool `json:"suspended"`
+
+		// TermsVersion و TermsRequired **نسخةُ شروط العمل وأعليه أن يوافق** (قرارُ المالك
+		// ٢٠٢٦-١١-٠٥) — **فيعرض التطبيقُ شريطَ الموافقة قبل أن يضغط «ابدأ الدوام».**
+		TermsVersion  int64 `json:"terms_version"`
+		TermsRequired bool  `json:"terms_required"`
 	}
 	err := s.pg.QueryRow(r.Context(), `
 		SELECT u.full_name, u.on_shift, u.shift_started_at,
@@ -190,6 +195,9 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 	// **وسرعتُه هي سرعتُه** — لا رقمَ واحدٌ لكلّ السائقين. (قرارُ المالك
 	// ٢٠٢٦-٠٨-١٢.) **وإعدادُ المالك يبقى أرضاً** لمن لا تاريخَ له بعد.
 	out.AvgSpeedKmh = s.driverSpeedKmh(r.Context(), uid)
+	if st, err := s.driverTermsStateOf(r, uid); err == nil {
+		out.TermsVersion, out.TermsRequired = st.Version, st.Required()
+	}
 	// **والمسارُ يصير عنوانا** — كما في كلّ صورةٍ في المنصة.
 	out.AvatarURL = media.SignedURLPtr(out.AvatarURL)
 	httpx.JSON(w, http.StatusOK, out)
@@ -244,6 +252,12 @@ func (s *Server) handleDriverShift(w http.ResponseWriter, r *http.Request) {
 	// (قرارُ المالك ٢٠٢٦-١٠-٠٤). **والخروجُ من الدوام لا يُمنع.**
 	if req.On && s.driverAccidentLocked(r.Context(), userIDFrom(r)) {
 		s.respondErr(w, errAccidentCheck)
+		return
+	}
+	// **ولا دوامَ قبل الموافقة على شروط العمل الجديدة** (قرارُ المالك ٢٠٢٦-١١-٠٥) —
+	// **لتطبيقٍ فيه شاشتُها وحدَه** (`driverTermsBlock`): القديمُ لا يُقفل.
+	if req.On && s.driverTermsBlock(r, userIDFrom(r)) {
+		s.respondErr(w, errDriverTermsRequired)
 		return
 	}
 	if req.On && s.settings.RequireWhatsApp(r.Context(), "drivers.require_whatsapp") {

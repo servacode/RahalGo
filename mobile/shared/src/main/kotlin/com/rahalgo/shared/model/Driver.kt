@@ -68,7 +68,34 @@ data class DriverMe(
      * ذلك** بدل أن تُردّ الأبوابُ عليه بلا سبب.
      */
     val suspended: Boolean = false,
+
+    // ── شروطُ العمل (قرارُ المالك ٢٠٢٦-١١-٠٥) ──
+    /** **نسخةُ الشروط المطلوبة** — وصفرٌ من محرّكٍ قديمٍ يعني «لا موافقةَ مطلوبة». */
+    @SerialName("terms_version") val termsVersion: Int = 0,
+    /** **أعليه أن يوافق قبل فتح الدوام؟** — فتُعرض لوحةُ الشروط بدل نداءٍ يُردّ. */
+    @SerialName("terms_required") val termsRequired: Boolean = false,
 )
+
+/**
+ * **شروطُ العمل كما يوقّعها السائق** (`GET /api/v1/driver/terms`، قرارُ المالك ٢٠٢٦-١١-٠٥).
+ *
+ * **والبندُ الجديدُ يُرسَل وحدَه** (`clause`) — فيُعرض فوق النصّ في بطاقةٍ ملوّنة.
+ * **و`name`/`phone` لقوالب النصّ** (`{name}` و`{phone}`).
+ */
+@Serializable
+data class DriverTerms(
+    val version: Int = 0,
+    @SerialName("accepted_version") val acceptedVersion: Int = 0,
+    val required: Boolean = false,
+    val text: String = "",
+    val clause: String = "",
+    val name: String = "",
+    val phone: String = "",
+)
+
+/** **جسمُ الموافقة — صنفٌ موسوم** لا `mapOf` (يسقط المختلطُ في النسخة المضغوطة). */
+@Serializable
+data class TermsAccept(val version: Int)
 
 /**
  * **نقطة مسار** — كما يقبلها `driver/location/batch`.

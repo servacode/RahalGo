@@ -107,6 +107,9 @@ const SERVER_MOBILE = new Set([
   // **الأمانة: صاحبُها ورقمُه وطلبُ موقعه** — تطبيقُ الزبون (٢٠٢٦-١٠-٣٠).
   "amanah_holder_required",
   "location_request_invalid",
+  // **شروطُ العمل قبل فتح الدوام** — تطبيقُ السائق (قرارُ المالك ٢٠٢٦-١١-٠٥).
+  "driver_terms_required",
+  "terms_version_changed",
 ]);
 
 /** **ما لا يبلغ هاتفاً** — أبوابُ الإدارة واللوحات. */

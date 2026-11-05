@@ -1,6 +1,7 @@
 package com.rahalgo.driver.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import com.rahalgo.ui.StatBox
 import com.rahalgo.ui.StatRow
 import com.rahalgo.ui.Bar
@@ -204,6 +205,32 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
                     .padding(16.dp),
             )
             Spacer(Modifier.height(14.dp))
+        }
+
+        // **وشروطُ العمل الجديدة قبل مفتاح الورديّة** (قرارُ المالك ٢٠٢٦-١١-٠٥) —
+        // شريطٌ يفتح اللوحة، **والمفتاحُ نفسُه يفتحها إن ضُغط قبل الموافقة.**
+        if (me.termsRequired && !me.suspended) {
+            Text(
+                text = stringResource(R.string.terms_banner),
+                color = Rahal.colors.brand,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(Rahal.shape.md)
+                    .background(Rahal.colors.brand.copy(alpha = 0.10f))
+                    .clickable(onClick = actions.openTerms)
+                    .padding(16.dp),
+            )
+            Spacer(Modifier.height(14.dp))
+        }
+        state.terms?.let {
+            TermsSheet(
+                terms = it,
+                busy = state.termsBusy,
+                error = state.termsError,
+                onAccept = actions.acceptTerms,
+                onClose = actions.closeTerms,
+            )
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -616,6 +643,10 @@ data class HomeState(
     val readiness: Readiness.State = Readiness.State(),
     val busy: Boolean = false,
     val error: String = "",
+    /** **لوحةُ شروط العمل مفتوحةٌ بنصّها** — وفارغةٌ مغلقة (قرارُ المالك ٢٠٢٦-١١-٠٥). */
+    val terms: com.rahalgo.shared.model.DriverTerms? = null,
+    val termsBusy: Boolean = false,
+    val termsError: String = "",
 ) {
     /** **أيُنتَج موقعٌ فعلاً؟** — **إذناً وخدمةً معاً.** */
     val locationOn: Boolean get() = Readiness.canWork(readiness)
@@ -704,6 +735,10 @@ data class HomeActions(
     val openAppSettings: () -> Unit = {},
     val refresh: () -> Unit,
     val logout: () -> Unit,
+    /** **شروطُ العمل** — فتحُ اللوحة والموافقةُ وإغلاقُها (قرارُ المالك ٢٠٢٦-١١-٠٥). */
+    val openTerms: () -> Unit = {},
+    val acceptTerms: () -> Unit = {},
+    val closeTerms: () -> Unit = {},
 )
 
 /**

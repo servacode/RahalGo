@@ -1031,6 +1031,8 @@
     <string name="err_merchant_ban_locked">المتجر محظور من الإدارة — لا يُفتح ولا يُغلق إلا برفع الحظر</string>
     <string name="err_rep_commission_out_of_range">نسبة العمولة خارج الحد المسموح — شوف الحد تحت الخانة</string>
     <string name="err_accident_check_required">لا يمكنك فتح الدوام بعد الحادث حتى تتأكد الإدارة أنك بخير — تواصل مع العمليات</string>
+    <string name="err_driver_terms_required">لازم توافق على شروط العمل الجديدة قبل ما تفتح دوامك</string>
+    <string name="err_terms_version_changed">الشروط تحدّثت مرة تانية — اقراها من جديد</string>
     <string name="err_never_picked_up">لم تستلم من هذا المتجر — ولا تقييم بلا وقوف عند بابه</string>
     <string name="err_payout_below_min">المبلغ دون الحد الأدنى للسحب</string>
     <string name="err_payout_closed">هذا الطلب مبتوت فيه مسبقا</string>

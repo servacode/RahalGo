@@ -1159,6 +1159,10 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                     actions = HomeActions(
                         toggleShift = home::toggleShift,
                         refresh = home::refresh,
+                        // **شروطُ العمل** (قرارُ المالك ٢٠٢٦-١١-٠٥).
+                        openTerms = { home.openTerms() },
+                        acceptTerms = home::acceptTerms,
+                        closeTerms = home::closeTerms,
                         enableLocation = {
                             when {
                                 !LocationPermission.granted(context) ->

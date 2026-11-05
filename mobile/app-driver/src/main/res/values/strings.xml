@@ -541,6 +541,13 @@
     <string name="trip_call_store">اتصل بالمتجر</string>
     <!-- **الحسابُ موقوفٌ وفي يده طلب** (٢٠٢٦-١٠-٠٢). -->
     <string name="suspended_banner">حسابك موقوف — أكمل الطلب الحالي فقط، ولن تصلك طلبات جديدة.</string>
+    <!-- **شروطُ العمل** (قرارُ المالك ٢٠٢٦-١١-٠٥) — موافقةٌ قبل فتح الدوام. -->
+    <string name="terms_title">شروط العمل تحدّثت</string>
+    <string name="terms_body">قبل ما تفتح دوامك، اقرأ الشروط ووافق عليها.</string>
+    <string name="terms_new_clause">البند الجديد</string>
+    <string name="terms_accept">قرأت الشروط وموافق</string>
+    <string name="terms_banner">وافق على شروط العمل الجديدة لتقدر تفتح دوامك</string>
+    <string name="terms_close">لاحقاً</string>
     <!-- **إشارةُ الموقع ميّتة والإذنُ ممنوح** (٢٠٢٦-١٠-٠٢). -->
     <string name="gps_lost_title">إشارة الموقع مفقودة</string>
     <string name="gps_lost_text">لم يصل موقعك منذ بضع دقائق، فلن تصلك طلبات حتى يعود. انتقل إلى مكان مكشوف، أو أطفئ الموقع ثم شغّله.</string>

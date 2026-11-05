@@ -176,6 +176,16 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
             )
             return
         }
+        // ══════════════════════════════════════════════════════════════
+        // **وشروطُ العمل الجديدة قبل فتح الدوام** (قرارُ المالك ٢٠٢٦-١١-٠٥)
+        // ══════════════════════════════════════════════════════════════
+        //
+        // **تُفتح اللوحةُ بدل نداءٍ يُردّ** — وبعد الموافقة يُفتح الدوامُ من نفسه.
+        // **والإغلاقُ لا يُمنع**، وما بيده من طلباتٍ لا يتأثّر.
+        if (on && state.me?.termsRequired == true) {
+            openTerms(thenShift = true)
+            return
+        }
         state = state.copy(busy = true, error = "")
         viewModelScope.launch {
             try {
@@ -200,8 +210,71 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
                     readiness = readiness(),
                 )
                 return@launch
+            } catch (e: ApiClient.ApiException) {
+                // **والمحرّكُ يقولها إن لم تعرفها الشاشةُ بعد** — نسخةٌ رُفعت وهو على اللوحة.
+                if (on && e.body.code == "driver_terms_required") {
+                    state = state.copy(busy = false)
+                    openTerms(thenShift = true)
+                } else {
+                    state = state.copy(busy = false, error = describe(e))
+                }
             } catch (e: Exception) {
                 state = state.copy(busy = false, error = describe(e))
+            }
+        }
+    }
+
+    // ══════════════════════════════════════════════════════════════════
+    // **لوحةُ شروط العمل** (قرارُ المالك ٢٠٢٦-١١-٠٥)
+    // ══════════════════════════════════════════════════════════════════
+
+    /** **أيُفتح الدوامُ بعد الموافقة؟** — فتحها «ابدأ الدوام» لا الشريط. */
+    private var shiftAfterTerms = false
+
+    /** **يجلب الشروطَ ويفتح اللوحة.** */
+    fun openTerms(thenShift: Boolean = false) {
+        if (state.termsBusy) return
+        shiftAfterTerms = shiftAfterTerms || thenShift
+        state = state.copy(termsBusy = true, termsError = "")
+        viewModelScope.launch {
+            state = try {
+                state.copy(terms = backend.driver.terms(), termsBusy = false)
+            } catch (e: Exception) {
+                state.copy(termsBusy = false, error = describe(e))
+            }
+        }
+    }
+
+    fun closeTerms() {
+        shiftAfterTerms = false
+        state = state.copy(terms = null, termsError = "")
+    }
+
+    /**
+     * **«قرأت الشروط وموافق»** — بالنسخة المعروضة، **ثمّ يُفتح الدوامُ إن كان طلبه.**
+     * **ونسخةٌ رُفعت وهو يقرأ تُعاد قراءتُها** (`terms_version_changed`).
+     */
+    fun acceptTerms() {
+        val shown = state.terms ?: return
+        if (state.termsBusy) return
+        state = state.copy(termsBusy = true, termsError = "")
+        viewModelScope.launch {
+            try {
+                backend.driver.acceptTerms(shown.version)
+                val me = backend.driver.me()
+                val resume = shiftAfterTerms
+                shiftAfterTerms = false
+                state = state.copy(me = me, terms = null, termsBusy = false)
+                if (resume && !me.termsRequired && !me.onShift) toggleShift(true)
+            } catch (e: ApiClient.ApiException) {
+                val fresh = if (e.body.code == "terms_version_changed") {
+                    runCatching { backend.driver.terms() }.getOrNull()
+                } else {
+                    null
+                }
+                state = state.copy(terms = fresh ?: shown, termsBusy = false, termsError = describe(e))
+            } catch (e: Exception) {
+                state = state.copy(termsBusy = false, termsError = describe(e))
             }
         }
     }
