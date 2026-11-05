@@ -2,7 +2,9 @@ package server
 
 import (
 	"net/http"
+	"strings"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/servacode/rahalgo/backend/internal/realtime"
@@ -53,8 +55,34 @@ func (s *Server) announceWrites(next http.Handler) http.Handler {
 		rec := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 		next.ServeHTTP(rec, r)
 		// **و`0` يعني أنّ المعالجَ كتب بلا ترويسة** — وهي ٢٠٠ عند Go.
+		if quietWrite(r) {
+			return
+		}
 		if code := rec.Status(); code == 0 || code < 400 {
 			s.hub.Publish(realtime.TopicCatalog, map[string]any{"type": "catalog"})
 		}
 	})
+}
+
+// quietWrites **كتاباتٌ لا تمسّ ما يراه الزبون — فلا تُبَثّ.**
+//
+// «شيلو من القائمة» (قرارُ المالك ٢٠٢٦-١١-٠٥) قائمةٌ خاصّةٌ بالمتجر نفسِه: **بثُّها يوقظ كلَّ
+// تطبيقٍ مفتوحٍ ليُعيد جلبَ الفهرس بلا شيءٍ تغيّر فيه.** وتُطابَق بنمط المسار بعد التوجيه.
+var quietWrites = []string{
+	"/merchant/stores/{id}/delivery-recipients/{phone}",
+}
+
+// quietWrite **أهذه الكتابةُ من الصامتة؟** — نمطُ المسار يُقرأ بعد أن وجّهه chi.
+func quietWrite(r *http.Request) bool {
+	rc := chi.RouteContext(r.Context())
+	if rc == nil {
+		return false
+	}
+	p := rc.RoutePattern()
+	for _, q := range quietWrites {
+		if strings.HasSuffix(p, q) {
+			return true
+		}
+	}
+	return false
 }
