@@ -410,8 +410,11 @@ var errDateRangeInverted = httpx.NewError(http.StatusBadRequest, "validation", "
 // و`custom_purchase` و`custom_amanah` **شطرا الطلب الخاصّ** بـ`custom_mode` —
 // (قرارُ المالك ٢٠٢٦-١٠-٢٧: «مشتريات» و«أمانة» فلتران منفصلان.) **و`custom`
 // باقٍ للروابط القديمة** — يجمع الشطرين كما كان.
+//
+// **و`whatsapp` طلباتُ الواتساب** (قرارُ المالك ٢٠٢٦-١١-٠٥) — بأصلها لا بنوعها، **و`merchant_delivery`
+// صار «توصيلات المتاجر» وحدَها** (أصلُها التطبيق): طلبُ الواتساب لا يُعدّ توصيلةً أرسلها متجر.
 var listKinds = map[string]bool{"standard": true, "custom": true, "merchant_delivery": true,
-	"custom_purchase": true, "custom_amanah": true}
+	"custom_purchase": true, "custom_amanah": true, "whatsapp": true}
 
 // customModeKinds **فلترُ الشطر ← قيمةُ `custom_mode`.**
 var customModeKinds = map[string]string{"custom_purchase": "purchase", "custom_amanah": "amanah"}
@@ -536,6 +539,10 @@ func ListWhere(f ListFilter, lim StuckLimits) (string, []any, error) {
 	}
 	if mode, ok := customModeKinds[f.Kind]; ok {
 		and(`o.kind = 'custom' AND o.custom_mode = ` + arg(mode))
+	} else if f.Kind == "whatsapp" {
+		and(`o.origin = 'whatsapp'`)
+	} else if f.Kind == KindMerchantDelivery {
+		and(`o.kind = 'merchant_delivery' AND o.origin = 'app'`)
 	} else if f.Kind != "" {
 		and(`o.kind = ` + arg(f.Kind))
 	}

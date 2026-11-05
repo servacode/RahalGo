@@ -860,6 +860,39 @@ func TestWAORD011_Idempotent(t *testing.T) {
 	}
 }
 
+// TestWAORD012_ListFilterSearchExportReport **طلبُ الواتساب طلبٌ نظاميٌّ في القوائم** — بفلتره، وباسم
+// متجره في البحث، وبنوعه في الملفّ، وفي التقارير. **و«توصيلات المتاجر» لم تعد تشمله.**
+func TestWAORD012_ListFilterSearchExportReport(t *testing.T) {
+	h := New(t)
+	w := newWAFx(t, h, "منطقةُ WA-012")
+	tok := w.md.admin.Token
+	wa := waEngineCreate(t, h, w.md.admin.ID, w.typed()).ID
+	md := w.md.create(t, h, "recipient", uniq("wa12"))
+
+	byKind := h.GET("/api/v1/admin/orders?kind=whatsapp&per_page=100", tok)
+	if byKind.Code != http.StatusOK || !containsID(byKind, wa) || containsID(byKind, md) {
+		t.Fatalf("**فلترُ «طلبات الواتساب»**: %d · واتساب %v · توصيلة %v",
+			byKind.Code, containsID(byKind, wa), containsID(byKind, md))
+	}
+	byMD := h.GET("/api/v1/admin/orders?kind=merchant_delivery&per_page=100", tok)
+	if byMD.Code != http.StatusOK || containsID(byMD, wa) || !containsID(byMD, md) {
+		t.Fatalf("**«توصيلات المتاجر» تشمل طلبَ الواتساب**: واتساب %v · توصيلة %v",
+			containsID(byMD, wa), containsID(byMD, md))
+	}
+	// **والبحثُ باسم المتجر المكتوب** — بحثُ الموظّفين.
+	if s := h.GET("/api/v1/admin/orders?per_page=100&query="+url.QueryEscape("فلافل الأمير"), tok); !containsID(s, wa) {
+		t.Fatalf("**البحثُ باسم المتجر المكتوب لا يجد طلبَ الواتساب**: %d", s.Code)
+	}
+	exp := h.GET("/api/v1/admin/orders/export?kind=whatsapp", tok)
+	if exp.Code != http.StatusOK || !strings.Contains(string(exp.Body), "طلب واتساب") ||
+		!strings.Contains(string(exp.Body), "فلافل الأمير") {
+		t.Fatalf("**الملفُّ لا يقول «طلب واتساب» ولا اسمَ المتجر**: %d", exp.Code)
+	}
+	if rep := h.GET("/api/v1/admin/reports?kind=whatsapp", tok); rep.Code != http.StatusOK {
+		t.Fatalf("**التقاريرُ ترفض نوعَ «طلب واتساب»**: %d / %s", rep.Code, rep.Err())
+	}
+}
+
 // TestWAORD014_NoFreeDeliveryClaim **عرضُ التوصيل المجّانيّ لا يمسّ طلبَ الواتساب** — لا يُعفى ولا
 // يستهلك عرضَ متجر.
 func TestWAORD014_NoFreeDeliveryClaim(t *testing.T) {

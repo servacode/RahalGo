@@ -588,6 +588,8 @@ export default function ReportsPage() {
     { id: "standard", label: r.kindStandard },
     { id: "custom", label: r.kindCustom },
     { id: "merchant_delivery", label: r.kindDelivery },
+    // **«طلب واتساب»** (قرارُ المالك ٢٠٢٦-١١-٠٥) — بأصله، و«توصيلة متجر» لم تعد تشمله.
+    { id: "whatsapp", label: r.kindWhatsApp },
   ];
   const exportOff = !report || !!rangeError || exporting !== null;
 

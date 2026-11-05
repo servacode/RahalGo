@@ -401,7 +401,7 @@ func (s *Server) handleOpenEmergencies(w http.ResponseWriter, r *http.Request) {
 		       ST_Y(e.at::geometry), ST_X(e.at::geometry), e.created_at,
 		       e.resolution, e.resolved_at,
 		       COALESCE(NULLIF(rb.full_name, ''), rb.phone::text, ''),
-		       e.kind, e.stage, COALESCE(m.name, ''),
+		       e.kind, e.stage, COALESCE(m.name, o.pickup_name, ''),
 		       e.acknowledged_at, COALESCE(NULLIF(ab.full_name, ''), ab.phone::text, ''),
 		       e.status = 'open' AND e.acknowledged_at IS NULL
 		         AND e.created_at < now() - make_interval(mins => $4::int),

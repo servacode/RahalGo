@@ -81,9 +81,12 @@ func (s *Server) handleOrdersExport(w http.ResponseWriter, r *http.Request) {
 	rows, err := s.pg.Query(r.Context(), `
 		SELECT o.number,
 		       to_char(o.created_at AT TIME ZONE 'Asia/Damascus', 'YYYY-MM-DD HH24:MI'),
-		       o.status, o.payment_method, o.kind,
+		       o.status, o.payment_method,
+		       -- **وطلبُ الواتساب بأصله** (قرارُ المالك ٢٠٢٦-١١-٠٥) — «طلب واتساب» في عمود النوع.
+		       CASE WHEN o.origin = 'whatsapp' THEN 'whatsapp' ELSE o.kind END,
 		       COALESCE(cu.full_name, o.recipient_name, ''), COALESCE(cu.phone::text, o.recipient_phone, ''),
-		       COALESCE(mr.name, ''),
+		       -- **وباسم متجره المكتوب** — لا متجرَ مربوطاً له.
+		       COALESCE(mr.name, o.pickup_name, ''),
 		       COALESCE(dr.full_name, ''),
 		       o.subtotal, o.delivery_fee, o.discount, o.total,
 		       o.wallet_paid, o.cash_due,
@@ -190,6 +193,8 @@ func exportKind(k string) string {
 		return "طلب خاص"
 	case "merchant_delivery":
 		return "توصيلة متجر"
+	case orders.OriginWhatsApp:
+		return "طلب واتساب"
 	}
 	return k
 }
