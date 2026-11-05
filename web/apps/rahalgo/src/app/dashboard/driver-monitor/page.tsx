@@ -87,6 +87,18 @@ interface Row {
   score: number;
   /** الحالة الحيّة — null لأيام ماضية. */
   live: Live | null;
+  /** **ملخّصُ العدّاد لليوم** (قرارُ المالك ٢٠٢٦-١١-٠٥) — العدّاد مقابل التطبيق. */
+  odometer?: OdoDay;
+}
+interface OdoDay {
+  on_km: number | null;
+  off_km: number | null;
+  app_km: number | null;
+  unseen_km: number | null;
+  missing_close: number;
+  big_gap: boolean;
+  off_moved: boolean;
+  shifts: number;
 }
 interface Live {
   state: "moving" | "stopped" | "offline";
@@ -136,6 +148,8 @@ interface DayResp {
   orders: DayOrder[];
   /** **دواماتُ اليوم** — مين سكّرها وليش، والعدّاد مقابل التطبيق. */
   shifts: MonitorShift[];
+  /** **ملخّصُ العدّاد لليوم.** */
+  odometer?: OdoDay;
 }
 interface DayOrder {
   id: string;
@@ -384,6 +398,9 @@ function DayView({ driverID, day, onBack }: { driverID: string; day: string | nu
         <Tile icon={IconWarning} label={T.tiles.mocked} value={fmtNum(s.mocked)} tone={s.mocked > 0 ? "danger" : undefined} />
       </div>
       <p className="mb-3 text-xs text-ink-muted">{T.driveHint}</p>
+      <div className="mb-3">
+        <OdoLine o={data.odometer} />
+      </div>
       {data.path.length === 0 ? (
         <AdminEmpty icon={IconRoute} title={T.emptyDriver} />
       ) : (
@@ -511,6 +528,7 @@ function DriverCard({ r, now, onOpen }: { r: Row; now: number; onOpen: () => voi
           <Badge variant={r.live.on_shift ? "success" : "neutral"}>{r.live.on_shift ? L.onShift : L.offShift}</Badge>
         </div>
       )}
+      <OdoLine o={r.odometer} />
       <Box look="plain" icon={<IconRoute size={14} />} title={T.title}>
         <div className="space-y-1 text-sm">
           <Stat label={T.cols.kmNoOrder} value={km(s.drive_km_no_order)} tone={r.alert} />
@@ -521,6 +539,26 @@ function DriverCard({ r, now, onOpen }: { r: Row; now: number; onOpen: () => voi
           <Stat label={T.cols.mocked} value={s.mocked > 0 ? fmtNum(s.mocked) : "—"} tone={s.mocked > 0} />
         </div>
       </Box>
+    </div>
+  );
+}
+
+/** **العدّاد مقابل التطبيق على كرت السائق** — والأحمرُ لفرقٍ كبير أو سكّرٍ بلا صورة أو مشيٍ خارج الدوام. */
+function OdoLine({ o }: { o?: OdoDay }) {
+  if (!o || o.shifts === 0) return null;
+  const OL = T.odoList;
+  return (
+    <div className="flex flex-wrap items-center gap-2 text-sm">
+      {o.on_km != null && o.app_km != null && (
+        <span className="font-bold">
+          {OL.line.replace("{odo}", km(o.on_km)).replace("{app}", km(o.app_km))}
+        </span>
+      )}
+      {o.big_gap && <Badge variant="danger">{OL.bigGap}</Badge>}
+      {o.missing_close > 0 && <Badge variant="danger">{OL.noClose}</Badge>}
+      {o.off_km != null && o.off_km > 0 && (
+        <Badge variant={o.off_moved ? "danger" : "neutral"}>{OL.off.replace("{n}", km(o.off_km))}</Badge>
+      )}
     </div>
   );
 }

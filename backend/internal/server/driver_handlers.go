@@ -134,6 +134,16 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 		// **ولا يرى «بلا طلب»** — تلك مقارنةُ المكتب.
 		TodayDriveM      int `json:"today_drive_m"`
 		TodayDriveOrders int `json:"today_drive_orders"`
+
+		// ── عدّادُ الدرّاجة (قرارُ المالك ٢٠٢٦-١١-٠٥) ─────────────────────
+		//
+		// OdometerMode **أتُطلب صورةُ العدّاد ورقمُه عند فتح الدوام وسكّره؟** — `off` · `ask`
+		// (ويُسمح بالتخطّي) · `require`. **لنسختِه هو** (`odometerMinBuild`): القديمةُ تقرأ `off`.
+		OdometerMode string `json:"odometer_mode"`
+		// OdometerExempt **سمحت العمليّاتُ بفتح الدوام بلا صورةٍ مرّةً واحدة.**
+		OdometerExempt bool `json:"odometer_exempt"`
+		// OdometerLastKm **آخرُ رقمٍ سجّله** — يُعرض له تحت الحقل. وفارغٌ قبل أوّل قراءة.
+		OdometerLastKm *float64 `json:"odometer_last_km"`
 	}
 	err := s.pg.QueryRow(r.Context(), `
 		SELECT u.full_name, u.on_shift, u.shift_started_at,
@@ -200,6 +210,14 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 		uid).Scan(&out.TodayDriveM, &out.TodayDriveOrders); err != nil {
 		s.logger.Warn("مسافة اليوم: تعذّرت القراءة", "driver", uid, "error", err)
 	}
+	// **وعدّادُ الدرّاجة** — الوضعُ لنسخته، وسماحُ العمليّات، وآخرُ رقم.
+	out.OdometerMode = s.odometerMode(r)
+	if exID, _, _, err := s.pendingExemption(r.Context(), uid); err == nil {
+		out.OdometerExempt = exID != ""
+	}
+	if last, err := lastOdometerKm(r.Context(), s.pg, uid); err == nil {
+		out.OdometerLastKm = last
+	}
 	// **والقواعدُ تُقرأ من المخزن لا من الاستعلام** — ليست صفوفاً في `users`.
 	out.MaxActiveOrders = s.settings.GetInt(r.Context(), "drivers.max_active_orders")
 	out.RequirePhoto = s.settings.GetBool(r.Context(), "drivers.require_delivery_photo")
@@ -225,6 +243,8 @@ func (s *Server) handleDriverShift(w http.ResponseWriter, r *http.Request) {
 		On bool `json:"on"`
 		// Via **من أين سُكّر** — `logout` من الخروج من التطبيق (نسخةٌ جديدة)، وفارغٌ من المفتاح.
 		Via string `json:"via"`
+		// OdometerID **قراءةُ العدّاد** المرفوعة قبله (`POST /driver/odometer`) — تُربط بالدوام.
+		OdometerID string `json:"odometer_id"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -280,20 +300,88 @@ func (s *Server) handleDriverShift(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// ══════════════════════════════════════════════════════════════════
+	// **وعدّادُ الدرّاجة عند الفتح وعند السكّر** (قرارُ المالك ٢٠٢٦-١١-٠٥)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **في «إلزامي» لا يُفتح الدوامُ ولا يُسكَّر بلا قراءة** — «حصراً الصورة بالليل» — **للنسخة
+	// التي تعرفه وحدَها** (`odometerMode`): القديمةُ تفتح وتسكّر كما كانت حتّى يُفرض التحديث.
+	// وسماحُ العمليّات يفتح بلا صورةٍ مرّةً واحدة؛ **ولا سماحَ بالسكّر** (تسكّره العمليّات).
+	// **وقراءةٌ صالحةٌ تُربط بالدوام أيّاً كان الوضع.**
+	ctx := r.Context()
+	uid := userIDFrom(r)
+	mode := s.odometerMode(r)
+	phase := "end"
+	if req.On {
+		phase = "start"
+	}
+	reading, err := s.shiftReading(ctx, uid, req.OdometerID, phase)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	// **وكل فتحٍ وسكّرٍ صفٌّ في سجلّ الدوام** (قرار المالك ٢٠٢٦-١١-٠٥) — `internal/shifts`.
 	if req.On {
-		if _, err := shifts.Open(r.Context(), s.pg, userIDFrom(r), appBuild(r)); err != nil {
+		var exID, exBy, exWhy string
+		if reading == "" && mode == "require" {
+			if exID, exBy, exWhy, err = s.pendingExemption(ctx, uid); err != nil {
+				s.respondErr(w, err)
+				return
+			}
+			if exID == "" {
+				s.respondErr(w, errOdometerRequired)
+				return
+			}
+		}
+		shiftID, err := shifts.Open(ctx, s.pg, uid, appBuild(r))
+		if err != nil {
 			s.respondErr(w, err)
 			return
+		}
+		if reading != "" {
+			if _, err := s.pg.Exec(ctx, `
+				UPDATE driver_shifts SET start_reading_id = $2::uuid
+				 WHERE id = $1::uuid AND start_reading_id IS NULL`, shiftID, reading); err != nil {
+				s.respondErr(w, err)
+				return
+			}
+		}
+		if exID != "" {
+			// **والسماحُ يُستهلك بهذا الفتح** — ويُكتب على الدوام من سمح وليش.
+			if _, err := s.pg.Exec(ctx, `
+				WITH used AS (
+					UPDATE driver_odometer_exemptions SET used_at = now(), used_shift_id = $2::uuid
+					 WHERE id = $1::uuid AND used_at IS NULL RETURNING id)
+				UPDATE driver_shifts SET exempt_by = NULLIF($3, '')::uuid, exempt_reason = $4
+				 WHERE id = $2::uuid AND EXISTS (SELECT 1 FROM used)`, exID, shiftID, exBy, exWhy); err != nil {
+				s.respondErr(w, err)
+				return
+			}
 		}
 	} else {
-		reason := shifts.ReasonDriver
-		if req.Via == "logout" {
-			reason = shifts.ReasonLogout
+		if reading == "" && mode == "require" {
+			s.respondErr(w, errOdometerRequired)
+			return
 		}
-		if _, err := shifts.Close(r.Context(), s.pg, userIDFrom(r), reason); err != nil {
+		reason := shifts.ReasonDriver
+		switch {
+		case req.Via == "logout":
+			reason = shifts.ReasonLogout
+		case reading == "" && mode == "ask":
+			reason = shifts.ReasonDriverSkipped
+		}
+		closed, err := shifts.Close(ctx, s.pg, uid, reason)
+		if err != nil {
 			s.respondErr(w, err)
 			return
+		}
+		if reading != "" && closed.ShiftID != "" {
+			if _, err := s.pg.Exec(ctx, `
+				UPDATE driver_shifts SET end_reading_id = $2::uuid
+				 WHERE id = $1::uuid AND end_reading_id IS NULL`, closed.ShiftID, reading); err != nil {
+				s.respondErr(w, err)
+				return
+			}
 		}
 	}
 	s.touch("order", "ops") // العمليات ترى من يعمل الآن

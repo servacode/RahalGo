@@ -103,6 +103,40 @@ CREATE INDEX IF NOT EXISTS order_drives_driver_ended_idx ON order_drives (driver
 CREATE INDEX IF NOT EXISTS order_events_driver_idx
     ON order_events (driver_id, created_at) WHERE driver_id IS NOT NULL;
 
+-- ── صورة العدّاد: صنفٌ شخصيٌّ محميّ (يُقرأ برابطٍ موقَّع) ──────────────
+ALTER TABLE media DROP CONSTRAINT IF EXISTS media_kind_check;
+ALTER TABLE media ADD CONSTRAINT media_kind_check CHECK (
+  kind = ANY (ARRAY[
+    'merchant_logo'::text,
+    'menu_item'::text,
+    'menu_section'::text,
+    'banner'::text,
+    'avatar'::text,
+    'delivery_proof'::text,
+    'platform_logo'::text,
+    'auth_background'::text,
+    'site_background'::text,
+    'expense_receipt'::text,
+    'odometer'::text
+  ])
+);
+
+-- ── سماحُ العمليّات بفتح الدوام بلا صورةٍ مرّةً واحدة ─────────────────
+--
+-- كاميرا مكسورة أو عدّادٌ معطّل: سماحٌ بسببٍ مكتوب (`drivers.manage`)، **ويُستهلك بأوّل فتح**
+-- فيُكتب على الدوام (`exempt_by` · `exempt_reason`). وسماحٌ قائمٌ واحدٌ لكلّ سائق.
+CREATE TABLE IF NOT EXISTS driver_odometer_exemptions (
+    id            uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    driver_id     uuid NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+    granted_by    uuid REFERENCES users (id) ON DELETE SET NULL,
+    reason        text NOT NULL,
+    created_at    timestamptz NOT NULL DEFAULT now(),
+    used_at       timestamptz,
+    used_shift_id uuid REFERENCES driver_shifts (id) ON DELETE SET NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS driver_odometer_exemptions_pending_idx
+    ON driver_odometer_exemptions (driver_id) WHERE used_at IS NULL;
+
 -- ── الدوامات المفتوحة يوم تنزل الميزة ──────────────────────────────────
 INSERT INTO driver_shifts (driver_id, opened_at, migrated)
 SELECT id, COALESCE(shift_started_at, now()), true

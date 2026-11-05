@@ -101,10 +101,16 @@ function ReadingBox({
     <div className="space-y-1 rounded-control border border-line-soft p-2 text-sm">
       <p className="text-xs font-bold">{title}</p>
       {r.thumb_url ? (
-        <button type="button" onClick={() => setOpen(true)} className="block w-full" aria-label={S.openPhoto}>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => setOpen(true)}
+          className="block w-full overflow-hidden !p-0"
+          aria-label={S.openPhoto}
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={r.thumb_url} alt={S.openPhoto} className="h-24 w-full rounded-control object-cover" />
-        </button>
+          <img src={r.thumb_url} alt={S.openPhoto} className="h-24 w-full object-cover" />
+        </Button>
       ) : (
         <p className="text-ink-muted">{S.photoGone}</p>
       )}

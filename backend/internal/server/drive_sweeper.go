@@ -88,6 +88,8 @@ func (s *Server) SweepDrives(ctx context.Context, now time.Time) int {
 		}
 		n++
 	}
+	// **وصورُ العدّاد تُمحى بعد مدّة حفظها** — مرّةً بالساعة، والرقمُ يبقى.
+	s.pruneOdometerPhotos(ctx, now)
 	return n
 }
 

@@ -55,6 +55,7 @@ import {
   CashboxTab,
   StoresTab,
   EndShiftButton,
+  OdometerExemptionButton,
 } from "@/components/admin/ProfileRoleTabs";
 import { useCanCall } from "@/lib/policy";
 import {
@@ -855,7 +856,13 @@ export default function UserProfilePage() {
         <DriverPanel
           d={p}
           onChanged={() => void load()}
-          endShift={p.on_shift ? <EndShiftButton userID={p.id} onDone={() => void load()} /> : null}
+          endShift={
+            <>
+              {p.on_shift ? <EndShiftButton userID={p.id} onDone={() => void load()} /> : null}
+              {/* **وسماحُ فتح الدوام بلا صورة عدّاد** — مرّةً واحدة (قرارُ المالك ٢٠٢٦-١١-٠٥). */}
+              <OdometerExemptionButton userID={p.id} />
+            </>
+          }
         />
       )}
       {has("customer") && <CashBanCard userID={p.id} />}

@@ -241,6 +241,10 @@ var adminPolicy = []Rule{
 	// **مراقبةُ حركتهم** — قدرتُها وحدَها (قرارُ المالك ٢٠٢٦-١١-٠٣).
 	{"GET", "/driver-monitor", DriversMonitor},
 	{"GET", "/driver-monitor/{id}", DriversMonitor},
+	// **وتصحيحُ رقم عدّادٍ غلط فيه السائق** — من يرى الصورة يصحّح (قرارُ المالك ٢٠٢٦-١١-٠٥).
+	{"PATCH", "/driver-odometer/{id}", DriversMonitor},
+	// **وسماحٌ بفتح الدوام بلا صورةٍ مرّةً واحدة** — بقدرة تشغيل السائقين كإنهاء الدوام.
+	{"POST", "/drivers/{id}/odometer-exemption", DriversManage},
 
 	// ── المال ───────────────────────────────────────────────────
 	{"POST", "/payouts/{id}/decide", PayoutsDecide},

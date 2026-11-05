@@ -49,6 +49,8 @@ var protectedKinds = map[string]bool{
 	"delivery_proof": true,
 	// إيصالُ مصروفٍ تشغيليّ — ورقةٌ ماليّةٌ لا تُقرأ برابطٍ عارٍ (هجرة ٠٣١٠).
 	"expense_receipt": true,
+	// صورةُ عدّاد درّاجة السائق — بيانٌ شخصيٌّ يراه المالكُ والمديرُ وحدَهما (هجرة ٠٥٠١).
+	"odometer": true,
 }
 
 // signTTL عمرُ الرابط الموقَّع.

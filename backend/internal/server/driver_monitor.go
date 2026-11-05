@@ -78,8 +78,22 @@ func (s *Server) handleDriverMonitorList(w http.ResponseWriter, r *http.Request)
 		s.respondErr(w, err)
 		return
 	}
-	if rows == nil {
-		rows = []drivermonitor.Row{}
+	// **وملخّصُ العدّاد لكلّ سائق** (قرار المالك ٢٠٢٦-١١-٠٥) — العدّاد مقابل التطبيق، ومشيٌ
+	// خارج الدوام، وسكّرٌ بلا صورة. **من حساب الكانس** لا تحليلٍ جديد لكلّ سائق كلّ ٣٠ ثانية.
+	type rowOut struct {
+		drivermonitor.Row
+		Odometer odoDay `json:"odometer"`
+	}
+	out := make([]rowOut, 0, len(rows))
+	if from, to, err := drivermonitor.AccountDayBounds(r.Context(), s.pg, day); err == nil {
+		for _, row := range rows {
+			_, odo, err := s.monitorShifts(r.Context(), row.DriverID, from, to, time.Now(), false)
+			if err != nil {
+				s.respondErr(w, err)
+				return
+			}
+			out = append(out, rowOut{Row: row, Odometer: odo})
+		}
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"day":            day,
@@ -87,7 +101,7 @@ func (s *Server) handleDriverMonitorList(w http.ResponseWriter, r *http.Request)
 		"day_start_hour": s.settings.GetInt(r.Context(), "platform.day_start_hour"),
 		"km_alert":       alert,
 		"retention_days": s.settings.GetInt(r.Context(), "drivers.trail_retention_days"),
-		"drivers":        rows,
+		"drivers":        out,
 	})
 }
 
@@ -125,7 +139,7 @@ func (s *Server) handleDriverMonitorDay(w http.ResponseWriter, r *http.Request) 
 		s.respondErr(w, err)
 		return
 	}
-	dayShifts, err := s.monitorShifts(r.Context(), id, dayFrom, dayTo, time.Now())
+	dayShifts, dayOdo, err := s.monitorShifts(r.Context(), id, dayFrom, dayTo, time.Now(), true)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -194,5 +208,6 @@ func (s *Server) handleDriverMonitorDay(w http.ResponseWriter, r *http.Request) 
 		"events":   res.Events,
 		"orders":   orders,
 		"shifts":   dayShifts,
+		"odometer": dayOdo,
 	})
 }
