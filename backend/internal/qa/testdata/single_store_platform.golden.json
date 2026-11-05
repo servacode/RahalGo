@@ -452,7 +452,7 @@
     },
     "04 driver/accept": {
       "accepted_at": "\u003cts\u003e",
-      "address_text": "الرقة — شارع الاختبار · حي الرشيد · قرب متجر QA 37823897000023 (0 م)",
+      "address_text": "الرقة — شارع الاختبار · \u003cnear_landmark\u003e",
       "amount_currency": "SYP",
       "cancel_reason": "",
       "cash_due": 2400,
@@ -549,7 +549,7 @@
     },
     "05 driver/at_pickup": {
       "accepted_at": "\u003cts\u003e",
-      "address_text": "الرقة — شارع الاختبار · حي الرشيد · قرب متجر QA 37823897000023 (0 م)",
+      "address_text": "الرقة — شارع الاختبار · \u003cnear_landmark\u003e",
       "amount_currency": "SYP",
       "cancel_reason": "",
       "cash_due": 2400,
@@ -646,7 +646,7 @@
     },
     "06 driver/picked_up": {
       "accepted_at": "\u003cts\u003e",
-      "address_text": "الرقة — شارع الاختبار · حي الرشيد · قرب متجر QA 37823897000023 (0 م)",
+      "address_text": "الرقة — شارع الاختبار · \u003cnear_landmark\u003e",
       "amount_currency": "SYP",
       "cancel_reason": "",
       "cash_due": 2400,
@@ -743,7 +743,7 @@
     },
     "07 driver/on_the_way": {
       "accepted_at": "\u003cts\u003e",
-      "address_text": "الرقة — شارع الاختبار · حي الرشيد · قرب متجر QA 37823897000023 (0 م)",
+      "address_text": "الرقة — شارع الاختبار · \u003cnear_landmark\u003e",
       "amount_currency": "SYP",
       "cancel_reason": "",
       "cash_due": 2400,
@@ -840,7 +840,7 @@
     },
     "08 driver/at_dropoff": {
       "accepted_at": "\u003cts\u003e",
-      "address_text": "الرقة — شارع الاختبار · حي الرشيد · قرب متجر QA 37823897000023 (0 م)",
+      "address_text": "الرقة — شارع الاختبار · \u003cnear_landmark\u003e",
       "amount_currency": "SYP",
       "cancel_reason": "",
       "cash_due": 2400,
@@ -937,7 +937,7 @@
     },
     "09 driver/delivered": {
       "accepted_at": "\u003cts\u003e",
-      "address_text": "الرقة — شارع الاختبار · حي الرشيد · قرب متجر QA 37823897000023 (0 م)",
+      "address_text": "الرقة — شارع الاختبار · \u003cnear_landmark\u003e",
       "amount_currency": "SYP",
       "cancel_reason": "",
       "cash_due": 2400,

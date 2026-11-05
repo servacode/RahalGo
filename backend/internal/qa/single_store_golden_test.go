@@ -46,7 +46,7 @@ func TestSingleStore_Unchanged(t *testing.T) {
 				t.Run("again", func(t *testing.T) { again = singleStoreJourney(t, mode) })
 				if again != got {
 					t.Fatalf("**الدورةُ لا تُعيد نفسَها — في الصورة ما يتبدّل وحدَه**:\n%s",
-						firstDiff(got, again))
+						goldenDiff(got, again))
 				}
 				if err := os.MkdirAll("testdata", 0o755); err != nil {
 					t.Fatal(err)
@@ -62,16 +62,22 @@ func TestSingleStore_Unchanged(t *testing.T) {
 				t.Fatalf("الصورةُ غيرُ موجودة (%v) — تُكتب بـ QA_GOLDEN_UPDATE=1", err)
 			}
 			if strings.ReplaceAll(string(want), "\r\n", "\n") != got {
-				t.Fatalf("**تبدّل الطلبُ من متجرٍ واحد** (%s):\n%s", file, firstDiff(string(want), got))
+				t.Fatalf("**تبدّل الطلبُ من متجرٍ واحد** (%s):\n%s", file, goldenDiff(string(want), got))
 			}
 		})
 	}
 }
 
-// firstDiff **أوّلُ سطرٍ يفترق فيه النصّان** — مع ما قبله.
-func firstDiff(want, got string) string {
+// goldenDiff **كلُّ سطرٍ يفترق فيه النصّان** (حتّى أربعين) — وما قبل أوّلها.
+//
+// **وأوّلُ فرقٍ وحدَه لا يكفي**: من أصلحه ثمّ أعاد التشغيلَ وجد الثاني بعد
+// نصف ساعة. **والسطورُ بعد الأوّل تُقارَن بموضعها** — فسطرٌ زائدٌ يُظهر ما بعده
+// كلَّه فرقاً، **وهو نفسُه دليلٌ على موضع الزيادة.**
+func goldenDiff(want, got string) string {
 	a := strings.Split(strings.ReplaceAll(want, "\r\n", "\n"), "\n")
 	b := strings.Split(got, "\n")
+	var out []string
+	diffs := 0
 	for i := 0; i < len(a) || i < len(b); i++ {
 		var x, y string
 		if i < len(a) {
@@ -83,17 +89,21 @@ func firstDiff(want, got string) string {
 		if x == y {
 			continue
 		}
-		from := i - 4
-		if from < 0 {
-			from = 0
+		if diffs == 0 {
+			for j := max(0, i-4); j < i && j < len(a); j++ {
+				out = append(out, "    "+a[j])
+			}
 		}
-		ctx := []string{}
-		for j := from; j < i && j < len(a); j++ {
-			ctx = append(ctx, "    "+a[j])
+		if diffs++; diffs > 40 {
+			out = append(out, "  …")
+			break
 		}
-		return fmt.Sprintf("السطر %d:\n%s\n  - %s\n  + %s", i+1, strings.Join(ctx, "\n"), x, y)
+		out = append(out, fmt.Sprintf("السطر %d:\n  - %s\n  + %s", i+1, x, y))
 	}
-	return "(لا فرق)"
+	if diffs == 0 {
+		return "(لا فرق)"
+	}
+	return strings.Join(out, "\n")
 }
 
 // singleStoreJourney **دورةُ طلبٍ كاملةٌ من متجرٍ واحد** — وصورتُها المطبَّعة.
@@ -247,15 +257,22 @@ func singleStoreJourney(t *testing.T, mode string) string {
 	}
 
 	// ── التطبيع ───────────────────────────────────────────────────────
+	//
+	// **و«قرب …» في عنوان السائق يقرؤه زنادُ القاعدة من أقرب معلمٍ أو متجر**
+	// (`orders_near_landmark`، هجرة ٠٤٦٧) — **ومتاجرُ الاختبارات الأخرى تقف على
+	// النقطة نفسِها**، فيتبدّل الاسمُ بما سبق في الحزمة لا بالشيفرة. **فيُطبَّع
+	// بنصّه المحفوظ** — ويبقى أنّ السائقَ يراه ملصقاً بالعنوان.
 	var number int64
-	var mPhone string
+	var mPhone, near string
 	if err := h.Pool.QueryRow(ctxBG(), `
-		SELECT o.number, COALESCE(m.phone, '') FROM orders o JOIN merchants m ON m.id = o.merchant_id
-		WHERE o.id = $1::uuid`, oid).Scan(&number, &mPhone); err != nil {
+		SELECT o.number, COALESCE(m.phone, ''), COALESCE(o.near_landmark, '')
+		FROM orders o JOIN merchants m ON m.id = o.merchant_id
+		WHERE o.id = $1::uuid`, oid).Scan(&number, &mPhone, &near); err != nil {
 		t.Fatal(err)
 	}
 	known := map[string]string{
-		oid: "<order>", treasuryID: "<treasury>", fmt.Sprintf("#%d", number): "#<number>",
+		near: "<near_landmark>",
+		oid:  "<order>", treasuryID: "<treasury>", fmt.Sprintf("#%d", number): "#<number>",
 		cust.ID: "<customer>", cust.Phone: "<customer_phone>", cust.Name: "<customer_name>",
 		m.ID: "<merchant>", m.Name: "<merchant_name>", mPhone: "<merchant_phone>",
 		m.Owner.ID: "<owner>", m.Owner.Phone: "<owner_phone>", m.Owner.Name: "<owner_name>",
