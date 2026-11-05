@@ -42,6 +42,8 @@ type Point struct {
 	AccuracyM *float64
 	SpeedMps  *float64
 	Mocked    bool
+	// BearingDeg اتجاه الجهاز — **لنقطة العرض وحدها** (`display.go`)؛ الأثر ما بيخزّنه.
+	BearingDeg *float64
 }
 
 func (p Point) pos() routing.Point { return routing.Point{Lat: p.Lat, Lng: p.Lng} }

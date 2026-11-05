@@ -47,19 +47,31 @@ func movingAt(pts []Point, i int) bool {
 }
 
 // DeriveLive **دالة صافية**: تشتق الحالة من نقاط مرتّبة بالزمن (نقاط آخر ساعة).
-func DeriveLive(pts []Point, now time.Time) Live {
-	if len(pts) == 0 {
+//
+// «غير متصل» و«آخر ظهور» من النقاط الخام (أي إشارة تعني التطبيق حيّ)، و«يمشي/متوقف» من
+// النقاط **بعد `Clean`** (٢٠٢٦-١١-٠٥): نقطتان دقتهما ٣٠٠ م وبينهما ٣٠٠ م ما بيعنوا إنه
+// ماشي — **وجوال ما بيبعت غير نقاط ضعيفة بينقرا «متوقف» مو «غير متصل».**
+func DeriveLive(raw []Point, now time.Time) Live {
+	if len(raw) == 0 {
 		return Live{State: LiveOffline}
 	}
-	n := len(pts) - 1
-	last := pts[n]
-	seen := last.At
+	seen := raw[len(raw)-1].At
 	lv := Live{LastSeen: &seen}
-	if now.Sub(last.At) > LiveOfflineAfter {
+	if now.Sub(seen) > LiveOfflineAfter {
 		lv.State = LiveOffline
 		lv.Since = &seen
 		return lv
 	}
+	pts := Clean(raw, DefaultConfig())
+	if len(pts) == 0 {
+		// ما في ولا نقطة منقاسة بالساعة: ما منعرف إنه تحرّك، فمتوقف من أول ما شفناه.
+		since := raw[0].At
+		lv.State = LiveStopped
+		lv.Since = &since
+		return lv
+	}
+	n := len(pts) - 1
+	last := pts[n]
 	if movingAt(pts, n) && now.Sub(last.At) <= LiveMoveWindow {
 		lv.State = LiveMoving
 		i := n

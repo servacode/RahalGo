@@ -137,8 +137,25 @@ func (s *Server) handleDriverLocation(w http.ResponseWriter, r *http.Request) {
 	// **بدل أن تسأل الخريطةُ كلَّ عشر ثوانٍ** فيقفز السائقُ قفزاً. و`ops:drivers` لمن يملك
 	// `drivers.read` وحدَه (`ws.go`)، **فالحمولةُ لا تصل زبوناً ولا سائقاً آخر، ولا موظّفاً
 	// يقرأ الطلبات ولا يرى السائقين.**
-	if tag.RowsAffected() > 0 && now.Sub(at) <= orders.LiveFreshFor {
-		s.publishDriverLocation(uid, req.Lat, req.Lng, req.BearingDeg, at)
+	//
+	// **ويُبثّ نقطةَ العرض لا الخامّ** (٢٠٢٦-١١-٠٥، «ما بدنا نطّات»): موقعٌ دقّتُه ضعيفة أو قفزةٌ
+	// مستحيلة أو رجفةُ واقفٍ لا تحرّكه (`drivermonitor.NextShown`) — **وكلُّ نبضةٍ أحدثَ تُبثّ ولو
+	// انمسك موضعُها**، فيبقى «حيّاً». ومفتاحُ اللوحة `drivers.ops_map_smooth` يرجّع الخامّ.
+	if tag.RowsAffected() > 0 {
+		raw := drivermonitor.Point{At: at, Lat: req.Lat, Lng: req.Lng, AccuracyM: req.AccuracyM,
+			SpeedMps: req.SpeedMps, Mocked: req.Mocked != nil && *req.Mocked, BearingDeg: cleanBearing(req.BearingDeg)}
+		shown := nextShown(uid, raw)
+		if now.Sub(at) <= orders.LiveFreshFor {
+			if !s.opsMapSmooth(r.Context()) {
+				shown = drivermonitor.Shown{Lat: raw.Lat, Lng: raw.Lng, At: at, PosAt: at,
+					SpeedMps: raw.SpeedMps, AccuracyM: raw.AccuracyM, BearingDeg: raw.BearingDeg}
+			}
+			s.publishDriverLocation(uid, shown)
+		} else if first, prev := noteClockSkew(uid, now); first {
+			// **أحدثُ نقطةٍ له وأقدمُ من دقيقتين** — لا تُبثّ؛ تُعدّ (J7).
+			s.logger.Info("الموضع: نقطةٌ أحدثُ له وأقدمُ من دقيقتين بساعة الجهاز (لا تُبثّ)",
+				"driver", uid, "lag_sec", int(now.Sub(at).Seconds()), "previous_hour_count", prev)
+		}
 	}
 	// **ونقطةُ الخريطة بلا هويّة** (قرارُ المالك ٢٠٢٦-١٠-٢٠، `saveMapTrace`) — الصالحةُ وحدَها.
 	moved := 1e9

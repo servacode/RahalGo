@@ -227,24 +227,8 @@ func Analyze(in Input) Result {
 		})
 	}
 
-	// ── تنظيف: دقة سيّئة وقفزات مستحيلة تُهمَل بالقياس ──
-	pts := make([]Point, 0, len(raw))
-	for _, p := range raw {
-		if p.AccuracyM != nil && *p.AccuracyM > cfg.MaxAccuracyM {
-			continue
-		}
-		if n := len(pts); n > 0 {
-			dt := p.At.Sub(pts[n-1].At).Seconds()
-			d := Dist(pts[n-1], p)
-			if dt <= 0 && d > 0 {
-				continue
-			}
-			if dt > 0 && d/dt > cfg.MaxSpeedMps && d > 100 {
-				continue
-			}
-		}
-		pts = append(pts, p)
-	}
+	// ── تنظيف: دقة سيّئة وقفزات مستحيلة تُهمَل بالقياس (`Clean`) ──
+	pts := Clean(raw, cfg)
 
 	// ── الوقفات ──
 	longStops := findStops(pts, cfg.StopMin, cfg.StopRadiusM, cfg.GapAfter)

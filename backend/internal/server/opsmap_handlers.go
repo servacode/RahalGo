@@ -14,6 +14,7 @@ package server
 // **ولا تُحمَّل سوريا كلُّها بكلّ كائناتها في أوّل فتحة.**
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"strings"
@@ -92,8 +93,18 @@ func (s *Server) handleOpsMapMeta(w http.ResponseWriter, r *http.Request) {
 		// **ونبضةُ التوصيل** — بها تعرف الخريطةُ كم تُنعّم حركةَ السائق (٢٠٢٦-١٠-١٩).
 		"location_ping_active_sec": s.settings.GetNum(r.Context(), "drivers.location_ping_active_sec", 4),
 		"assignable_sec":           int(opsmap.AssignableWindow.Seconds()),
+		// **والحركةُ الناعمة** (٢٠٢٦-١١-٠٥) — مطفأةً تعود الخريطةُ إلى انزلاق الطبقة القديم.
+		"ops_map_smooth": s.opsMapSmooth(r.Context()),
 	}
 	httpx.JSON(w, http.StatusOK, out)
+}
+
+// opsMapSmooth **أمفعّلةٌ حركةُ السائقين الناعمة؟** (`drivers.ops_map_smooth`، افتراضُها نعم)
+func (s *Server) opsMapSmooth(ctx context.Context) bool {
+	if s.settings == nil {
+		return true
+	}
+	return s.settings.GetBool(ctx, "drivers.ops_map_smooth")
 }
 
 // handleOpsMapDrivers طبقةُ السائقين.
@@ -123,6 +134,11 @@ func (s *Server) handleOpsMapDrivers(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	// **ونقطةُ العرض فوق الخامّ** (٢٠٢٦-١١-٠٥) — ما يُبثّ وما يُسأل عنه واحد، فلا ترجع القائمةُ
+	// السائقَ إلى موقعٍ مسكته النبضة. **ومطفأةً يبقى الخامّ.**
+	if s.opsMapSmooth(r.Context()) {
+		overlayShown(out)
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"drivers": out,
