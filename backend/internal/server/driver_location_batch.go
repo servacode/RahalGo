@@ -38,12 +38,24 @@ import (
 // — وإعادتُه لا تُضاعف شيئاً (انظر القيدَ الفريد في هجرة `0101`).
 
 const (
-	// maxBatchPoints **سقفُ الدفعة.**
+	// maxBatchPoints **الحجمُ المعتادُ للدفعة** — لا سقفٌ يُردّ ما فوقه.
 	//
 	// **ونبضةٌ كلَّ عشرين ثانيةً تعني ثلاثاً في الدقيقة** — فمئتان تغطّي
-	// انقطاعاً يزيد على ساعة. **وما فوقها إمّا عطبٌ في التطبيق وإمّا
-	// عبثٌ**، وكلاهما لا يُخدَم.
+	// انقطاعاً يزيد على ساعة. **وما فوقها يُسجَّل سطراً في سجلّ الخادم**
+	// ليُعرف كم مرّةً يقع، **ويُقبَل** (انظر `batchKeepNewest`).
 	maxBatchPoints = 200
+
+	// batchKeepNewest **أكثرُ ما يُعالَج من دفعةٍ واحدة — الأحدثُ منها** (٢٠٢٦-١١-٠٥).
+	//
+	// **كان ما فوق المئتين يُردّ بـ٤٠٠ فيعلق الطابورُ إلى الأبد**: التطبيقُ (0.7.0 و0.8.0)
+	// لا يقصّ ملفَّ طابوره إلّا حين يبلغ ٦٤ ك.ب — **نحو ٣٥٠ إلى ٧٠٠ سطر** — ويمسحه على أيّ
+	// نجاح، **ويعيد إرسالَه كما هو بعد كلّ نبضةٍ ناجحة**. فسائقٌ انقطع عنه النتُ ربعَ ساعةٍ
+	// وهو في طلب **يرسل الحِملَ نفسَه كلَّ أربع ثوانٍ، ونقاطُ الانقطاع لا تصل الأثرَ أبداً.**
+	//
+	// **فتُقبَل الدفعةُ أيّاً كان حجمُها**، ويُعالَج أحدثُ ألفٍ منها بعد الفرز **وما سبقها
+	// يُعدّ مرفوضاً**؛ والجسمُ محدودٌ بميغا أصلاً (`decode`). **والألفُ تغطّي ملفَّ التطبيق
+	// كلَّه**، فيُفرغ كلُّ هاتفٍ عالقٍ طابورَه في أوّل إرسالٍ بعد النشر — **بلا نسخةٍ جديدة.**
+	batchKeepNewest = 1000
 
 	// futureSkew **ما يُحتمل من تقدّمِ ساعةِ الجهاز.**
 	//
@@ -126,14 +138,27 @@ func (s *Server) handleDriverLocationBatch(w http.ResponseWriter, r *http.Reques
 		s.respondErr(w, err)
 		return
 	}
-	if len(req.Points) == 0 || len(req.Points) > maxBatchPoints {
+	// **والفارغةُ وحدَها خطأ** — **وما فوق الحجم المعتاد يُقبَل** (`batchKeepNewest`):
+	// **ردُّه بـ٤٠٠ كان يُعلق طابورَ الهاتف إلى الأبد.**
+	if len(req.Points) == 0 {
 		s.respondErr(w, errValidation)
 		return
 	}
+	uid := userIDFrom(r)
+	if len(req.Points) > maxBatchPoints {
+		s.logger.Info("الموقع بالجملة: طابورٌ فوق الحجم المعتاد", "driver", uid, "points", len(req.Points))
+	}
 
 	now := time.Now()
+	// **وساعةُ الهاتف تُصحَّح قبل الحكم** (`driver_clock.go`) — **ونقاطُ ما قبل آخر تبدّلٍ
+	// بالتصحيح القديم** (`clockView.correct`): ساعةٌ انضبطت مع عودة الشبكة لا تزيح ساعةَ الانقطاع.
+	// وصفرٌ للنسخ القديمة.
+	clock := s.deviceClock(r, uid, now)
 	good := make([]trackPoint, 0, len(req.Points))
 	for _, p := range req.Points {
+		if !p.At.IsZero() {
+			p.At = clock.correct(p.At)
+		}
 		if p.valid(now) {
 			good = append(good, p)
 		}
@@ -149,10 +174,13 @@ func (s *Server) handleDriverLocationBatch(w http.ResponseWriter, r *http.Reques
 	// التطبيقُ يُفرغ طابورَه بترتيبٍ لا يضمنه أحد، **ومن كتب `last_location`
 	// بآخرِ ما وصله قد يكتب موضعاً قديماً فوق حديث.**
 	sort.Slice(good, func(i, j int) bool { return good[i].At.Before(good[j].At) })
+	// **والأحدثُ ألفٌ وحدَه يُعالَج** — وما سبقه يُعدّ مرفوضاً في الردّ (`batchKeepNewest`).
+	if len(good) > batchKeepNewest {
+		good = good[len(good)-batchKeepNewest:]
+	}
 
 	// **وقفزةٌ أسرعُ من مركبةٍ تُهمَل** (`driver_location_jump.go`) — كلُّ نقطةٍ تُقاس على
 	// آخرِ ما قُبل قبلها، **فنقطةٌ مزيَّفةٌ واحدةٌ في الدفعة لا تصير مرجعاً لما بعدها.**
-	uid := userIDFrom(r)
 	ref := s.lastFixOf(r.Context(), uid)
 	kept := good[:0]
 	// **ونقاطُ الخريطة بلا هويّة** (`saveMapTrace`) — **الأحدثُ من آخر موضعٍ محفوظٍ وحدَه**:

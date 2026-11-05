@@ -177,6 +177,8 @@ export {
   type AppNotification,
   type LiveEvent,
 } from "./Notifications";
+/** **أحداثُ التيّار** — مواضعُ تُدفَع كلَّ ثوانٍ، تصل `useLiveEvent` ولا تُعيد جلبَ شيء (٢٠٢٦-١١-٠٥). */
+export { isStreamEvent, STREAM_EVENTS } from "./liveStream";
 export * from "./timeline";
 export * from "./money";
 export * from "./orderref";

@@ -42,6 +42,8 @@ type Point struct {
 	AccuracyM *float64
 	SpeedMps  *float64
 	Mocked    bool
+	// BearingDeg اتجاه الجهاز — **لنقطة العرض وحدها** (`display.go`)؛ الأثر ما بيخزّنه.
+	BearingDeg *float64
 }
 
 func (p Point) pos() routing.Point { return routing.Point{Lat: p.Lat, Lng: p.Lng} }
@@ -175,4 +177,25 @@ func PruneDue(now time.Time) bool {
 	}
 	pruneGate.last = now
 	return true
+}
+
+// WorkedDrivers **من له أثرٌ في المدى** [from, to) — حضورٌ لا مسافة (معالمُ اليوم: «اشتغل»).
+// هون لأنّ `driver_trail` يُقرأ من `drivermonitor` وحدَه (حارس `roadmatch.TestDistance_OneImplementation`).
+func WorkedDrivers(ctx context.Context, db DB, from, to time.Time) ([]string, error) {
+	rows, err := db.Query(ctx, `
+		SELECT DISTINCT t.driver_id::text FROM driver_trail t
+		 WHERE t.recorded_at >= $1 AND t.recorded_at < $2`, from, to)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []string{}
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		out = append(out, id)
+	}
+	return out, rows.Err()
 }

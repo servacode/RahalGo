@@ -18,6 +18,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/drivermonitor"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/roadmatch"
 )
 
 var errMonitorDriver = httpx.NewError(http.StatusNotFound, "not_found", "errors.not_found")
@@ -74,7 +75,7 @@ func (s *Server) afterClose(ctx context.Context, driverID string, wd workDay, st
 	if wd.CloseAt == nil || !now.After(*wd.CloseAt) {
 		return out, nil
 	}
-	res, _, err := drivermonitor.DriverDay(ctx, s.pg, driverID, *wd.CloseAt, wd.To, stores, now)
+	res, _, err := drivermonitor.DriverDay(ctx, s.pg, driverID, *wd.CloseAt, wd.To, stores, now, s.roadMatchOn(ctx))
 	if err != nil {
 		return out, err
 	}
@@ -96,16 +97,39 @@ func trailPoints(pts []trackPoint) []drivermonitor.Point {
 }
 
 // recordTrail يكتب الأثر اليومي ويقلّم القديم مرة بالساعة. لا يُسقط شيئا.
+//
+// **ونقاط متأخرة** (دفعة الطابور بعد انقطاع) أقدم من مؤشّر المطابق ⇒ القطع من عندها بتنعاد
+// (`roadmatch.MarkDirty` — تحديث واحد للدفعة). النقطة الحيّة أحدث من ٣٠ ثانية ما بتحتاجه:
+// المطابق ما بيقرأ آخر ٣٠ ثانية أصلاً.
 func (s *Server) recordTrail(r *http.Request, driverID string, pts []drivermonitor.Point) {
 	ctx := r.Context()
-	if _, err := drivermonitor.Record(ctx, s.pg, driverID, pts); err != nil {
+	n, err := drivermonitor.Record(ctx, s.pg, driverID, pts)
+	if err != nil {
 		s.logger.Warn("مراقبة السائقين: تعذّر كتابةُ الأثر", "driver", driverID, "error", err)
 		return
 	}
-	if drivermonitor.PruneDue(time.Now()) {
+	now := time.Now()
+	if n > 0 {
+		oldest := pts[0].At
+		for _, p := range pts {
+			if p.At.Before(oldest) {
+				oldest = p.At
+			}
+		}
+		if oldest.Before(now.Add(-roadmatch.DefaultOptions().LiveLag)) {
+			if err := roadmatch.MarkDirty(ctx, s.pg, driverID, oldest); err != nil {
+				s.logger.Warn("مطابقة الطريق: تعذّر تعليمُ النقاط المتأخرة", "driver", driverID, "error", err)
+			}
+		}
+	}
+	if drivermonitor.PruneDue(now) {
 		days := int(s.settings.GetInt(ctx, "drivers.trail_retention_days"))
 		if _, err := drivermonitor.Prune(ctx, s.pg, days); err != nil {
 			s.logger.Warn("مراقبة السائقين: تعذّر التقليم", "error", err)
+		}
+		// قطع الطريق بتعيش قد الأثر بالضبط (قرار المالك: طريق الطلب بينمحى مع الأثر، والأرقام بتضل).
+		if _, err := roadmatch.Prune(ctx, s.pg, days); err != nil {
+			s.logger.Warn("مطابقة الطريق: تعذّر التقليم", "error", err)
 		}
 	}
 }
@@ -143,7 +167,7 @@ func (s *Server) handleDriverMonitorList(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	now := time.Now()
-	rows, err := drivermonitor.Overview(r.Context(), s.pg, day, wd.From, wd.End, alert, now)
+	rows, err := drivermonitor.Overview(r.Context(), s.pg, day, wd.From, wd.End, alert, now, s.roadMatchOn(r.Context()))
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -213,7 +237,8 @@ func (s *Server) handleDriverMonitorDay(w http.ResponseWriter, r *http.Request) 
 		s.respondErr(w, err)
 		return
 	}
-	res, wins, err := drivermonitor.DriverDay(r.Context(), s.pg, id, wd.From, wd.End, stores, time.Now())
+	res, wins, err := drivermonitor.DriverDay(r.Context(), s.pg, id, wd.From, wd.End, stores, time.Now(),
+		s.roadMatchOn(r.Context()))
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -301,5 +326,63 @@ func (s *Server) handleDriverMonitorDay(w http.ResponseWriter, r *http.Request) 
 		"shifts":   dayShifts,
 		"odometer": dayOdo,
 		"work_day": after,
+	})
+}
+
+// recentDefault **من وين بيبلّش طريقه الأخير**: أقدم طلب مفتوح معه (من إسناده)، وإلا آخر ٣٠ دقيقة.
+const recentDefault = 30 * time.Minute
+
+// handleDriverMonitorRecent GET /driver-monitor/{id}/recent?since=RFC3339 — **طريقه الحقيقي ورا الماركر**
+// بخريطة العمليات (R3، طلب المالك ٢٠٢٦-١١-٠٥). `drivers.monitor` وحدها (المالك والمدير).
+//
+// `path` من `drivermonitor.Measure` (نفس دالة المسافة): ع الطريق وين انطابق، والجزء بعد آخر مطابقة
+// (لحد ٥ دقايق) خط من نقاطه المنظّفة (`pending`) ⇒ الخط دايماً بيوصل للماركر.
+func (s *Server) handleDriverMonitorRecent(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	id := chi.URLParam(r, "id")
+	var ok bool
+	if err := s.pg.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM user_roles ur WHERE ur.user_id::text = $1 AND ur.role_code = 'driver')`, id).
+		Scan(&ok); err != nil || !ok {
+		s.respondErr(w, errMonitorDriver)
+		return
+	}
+	now := time.Now()
+	since := now.Add(-recentDefault)
+	if q := r.URL.Query().Get("since"); q != "" {
+		t, err := time.Parse(time.RFC3339, q)
+		if err != nil || t.After(now) || now.Sub(t) > 24*time.Hour {
+			s.respondErr(w, errValidation)
+			return
+		}
+		since = t
+	} else {
+		wins, err := drivermonitor.LoadTenures(ctx, s.pg, id, now.Add(-12*time.Hour), now, now)
+		if err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		open := false
+		for _, wd := range wins {
+			if wd.EndAt == nil && wd.AssignedAt != nil && (!open || wd.AssignedAt.Before(since)) {
+				since, open = *wd.AssignedAt, true
+			}
+		}
+	}
+	wins, err := drivermonitor.LoadTenures(ctx, s.pg, id, since, now, now)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	res, err := drivermonitor.Measure(ctx, s.pg, id, since, now.Add(time.Second), wins, nil, now, s.roadMatchOn(ctx))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"since":      since,
+		"path":       res.Path,
+		"km":         res.Summary.KmTotal,
+		"pending_km": res.Summary.PendingKm,
 	})
 }

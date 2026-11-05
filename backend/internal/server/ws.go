@@ -152,17 +152,18 @@ func (s *Server) handleWS(w http.ResponseWriter, r *http.Request) {
 	// ══════════════════════════════════════════════════════════════
 	//
 	// **والقرارُ المركزيُّ نفسُه** — **ولا منطقُ أدوارٍ ثانٍ للبثّ.**
-	hasOps := false
-	for _, c := range dbCaps {
-		if c == string(authz.OrdersRead) {
-			hasOps = true
-			break
-		}
-	}
+	hasOps := slices.Contains(dbCaps, string(authz.OrdersRead))
+	// **ومواضعُ السائقين الحيّة بقدرة رؤيتهم** (٢٠٢٦-١١-٠٥) — `drivers.read`، **وهي ما
+	// يحرس `GET /ops-map/drivers`** (`opsmap/perm.go`). **ومن يقرأ الطلبات ولا يرى
+	// السائقين** (خدمةُ الزبائن والأمان) **لا تصله مواضعُهم في الخلفية.**
+	hasDrivers := slices.Contains(dbCaps, string(authz.DriversRead))
 
 	topics := []string{}
 	if hasOps {
 		topics = append(topics, realtime.TopicOps)
+	}
+	if hasDrivers {
+		topics = append(topics, realtime.TopicOpsDrivers)
 	}
 	// صاحب متجر: يشترك بمواضيع متاجره (بوابة المتجر)
 	if slices.Contains(roles, "merchant") {

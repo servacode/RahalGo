@@ -260,6 +260,7 @@ var adminPolicy = []Rule{
 	{"PATCH", "/driver-odometer/{id}", DriversMonitor},
 	// **وسماحٌ بفتح الدوام بلا صورةٍ مرّةً واحدة** — بقدرة تشغيل السائقين كإنهاء الدوام.
 	{"POST", "/drivers/{id}/odometer-exemption", DriversManage},
+	{"GET", "/driver-monitor/{id}/recent", DriversMonitor},
 
 	// ── المال ───────────────────────────────────────────────────
 	{"POST", "/payouts/{id}/decide", PayoutsDecide},

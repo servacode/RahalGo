@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/servacode/rahalgo/backend/internal/drivermonitor"
+	"github.com/servacode/rahalgo/backend/internal/polyline"
 )
 
 // ValhallaMatcher يطابق الأثرَ بنداء `trace_attributes` (map_snap) بتكلفة الدراجة الناريّة كالتوجيه.
@@ -79,7 +80,7 @@ func (v ValhallaMatcher) Match(ctx context.Context, pts []drivermonitor.Point) (
 }
 
 func (b vhTrace) toResult(nPts int) MatchResult {
-	shape := decodePolyline6(b.Shape)
+	shape := polyline.Decode6(b.Shape)
 	res := MatchResult{Edges: make([]MatchedEdge, len(b.Edges)), PointEdge: make([]int, nPts)}
 	for i, e := range b.Edges {
 		if e.BeginShape < 0 || e.EndShape >= len(shape) || e.EndShape <= e.BeginShape {
@@ -107,44 +108,4 @@ func (b vhTrace) toResult(nPts int) MatchResult {
 		}
 	}
 	return res
-}
-
-// decodePolyline6 يفكّ خطّاً مشفَّراً بدقّة ست منازل (صيغة Valhalla) إلى (lng,lat).
-func decodePolyline6(s string) [][2]float64 {
-	var out [][2]float64
-	var lat, lng int
-	i := 0
-	next := func() (int, bool) {
-		var result, shift int
-		for {
-			if i >= len(s) {
-				return 0, false
-			}
-			c := int(s[i]) - 63
-			i++
-			result |= (c & 0x1f) << shift
-			shift += 5
-			if c < 0x20 {
-				break
-			}
-		}
-		if result&1 != 0 {
-			return ^(result >> 1), true
-		}
-		return result >> 1, true
-	}
-	for i < len(s) {
-		dLat, ok := next()
-		if !ok {
-			break
-		}
-		dLng, ok := next()
-		if !ok {
-			break
-		}
-		lat += dLat
-		lng += dLng
-		out = append(out, [2]float64{float64(lng) / 1e6, float64(lat) / 1e6})
-	}
-	return out
 }

@@ -79,6 +79,7 @@ import {
   IconTrendUp,
   IconClose,
   IconOverview,
+  IconArrowOut,
   useLiveData,
   useChime,
   useToast,
@@ -107,9 +108,16 @@ import {
   toneColor,
 } from "@/components/admin/opsmap/palette";
 import {
+  type Cadence,
+  type FixOf,
   type FocusMode,
   type LngLat,
+  acceptPush,
   applyFocus,
+  clampGlide,
+  headingOf,
+  mergeRows,
+  noteFix,
   orderRoute,
   orderTimeline,
   searchLocal,
@@ -166,7 +174,24 @@ const DAY_PARTS = {
 interface Meta {
   permissions: string[];
   location_ping_sec: number;
+  /** **نبضةُ التوصيل** — يرسلها الخادمُ منذ ٢٠٢٦-١٠-١٩. */
+  location_ping_active_sec?: number;
   assignable_sec: number;
+  /**
+   * **حركةُ السائقين الناعمة** (`drivers.ops_map_smooth`، ٢٠٢٦-١١-٠٥) — كلُّ سائقٍ ينزلق وحدَه.
+   * **ومطفأةً: انزلاقُ الطبقة القديم.** وغيابُها (خادمٌ أقدم) يعني مطفأة.
+   */
+  ops_map_smooth?: boolean;
+}
+
+/** جزءٌ من طريق السائق الأخير (`/driver-monitor/{id}/recent`) — نفس أجزاء صفحة المراقبة. */
+interface RecentPart {
+  class: "with_order" | "to_pickup" | "no_order" | "stopped" | "gap";
+  coords: Array<[number, number]>;
+  road?: boolean;
+  inferred?: boolean;
+  straight?: boolean;
+  pending?: boolean;
 }
 
 interface Driver {
@@ -186,6 +211,10 @@ interface Driver {
   /** **لمن يملك `users.contact.read` وحدَه.** */
   phone?: string;
   cash_held?: number;
+  /** **من نقطة العرض** (٢٠٢٦-١١-٠٥) — اتّجاهُه وسرعتُه، و`rough`: موقعُه تقريبيّ (يُرسم باهتاً). */
+  bearing?: number;
+  speed_mps?: number;
+  rough?: boolean;
 }
 
 interface Merchant {
@@ -603,6 +632,10 @@ export default function OpsMapPage() {
   //
   // **و٤٠٣ هنا «لا صلاحية» لا «تعذّر الوصول»** (تدقيقُ ٢٠٢٦-١٠-٢٧) — الخادمُ يردّ
   // `/meta` بـ٤٠٣ لمن لا يملك الخريطة، **فكان يرى خطأَ شبكةٍ وزرَّ إعادةٍ لا يفيد.**
+  //
+  // **وتُعاد مع كتابة اللوحة وحدَها** (`catalog`، ٢٠٢٦-١١-٠٥) — صلاحيّاتٌ ونبضتان لا تتبدّل
+  // إلّا بفعلٍ إداريّ. **وكانت تُعاد مع كلّ حدثٍ في البثّ**، وكلُّ إعادةٍ كائنٌ جديدٌ يُعيد
+  // جلبَ كلِّ طبقةٍ تتبعه: **نبضةُ سائقٍ واحدةٍ كانت تكلّف كلَّ خريطةٍ مفتوحةٍ نحو ١٣ نداءً.**
   const meta = useLiveData<Meta>(
     () =>
       api<Meta>("/api/v1/admin/ops-map/meta").catch((e: unknown) => {
@@ -611,12 +644,21 @@ export default function OpsMapPage() {
         }
         throw e;
       }),
-    [],
+    // `settings` يحمل مفتاحَ الحركة الناعمة والنبضتين، و`account` منح الصلاحيّات وسحبها —
+    // **ولا خوفَ من عودة السيل**: الطبقاتُ تتبع `metaKey` الثابت لا الكائن.
+    ["catalog", "settings", "account"],
   );
   const can = useCallback(
     (p: string) => !!meta.data?.permissions.includes(p),
     [meta.data],
   );
+  // **ومفتاحٌ ثابتٌ لِما يعنيه الكائن** — الطبقاتُ تتبعه لا الكائن: **جوابٌ مطابقٌ لما قبله
+  // لا يُعيد جلبَ شيء**، وصلاحيّةٌ أو نبضةٌ تبدّلت تُعيده مرّةً واحدة.
+  const metaKey = meta.data
+    ? `${meta.data.permissions.join(",")}|${meta.data.location_ping_sec}|${meta.data.location_ping_active_sec ?? ""}|${meta.data.ops_map_smooth ? 1 : 0}`
+    : "";
+  // **الحركةُ الناعمة** (٢٠٢٦-١١-٠٥) — من الخادم، ومفتاحُها في اللوحة يرجّع القديمة بلا نشر.
+  const smooth = !!meta.data?.ops_map_smooth;
 
   // ── نبضةُ الموضع ─────────────────────────────────────────────
   //
@@ -644,7 +686,7 @@ export default function OpsMapPage() {
         ? api<Summary>("/api/v1/admin/ops-map/summary")
         : Promise.resolve({ staff_online: 0 }),
     ["order", "catalog"],
-    [meta.data, tick],
+    [metaKey, tick],
   );
 
   // ── السائقون ─────────────────────────────────────────────────
@@ -657,22 +699,52 @@ export default function OpsMapPage() {
     return s ? `?${s}` : "";
   }, [onShift, hasActive, driverStatus]);
 
+  // **أحدثُ موضعٍ طُبّق لكلّ سائق** (٢٠٢٦-١١-٠٥) — من النبضة ومن القائمة معاً
+  // (`live.ts` ٨): **جوابٌ قُرئ قبل نبضةٍ أحدثَ لا يُرجع السائقَ إلى الوراء.**
+  const fixes = useRef(new Map<string, FixOf<Driver>>());
+  // **وإيقاعُ كلِّ سائق** (`live.ts` ٧) — كم بين نبضاته، **فينزلق كلٌّ على قدّ ما يبعت.**
+  // وقبل أن يُعرف إيقاعُه: نبضةُ الإعدادات — مع طلبٍ أو بلا طلب.
+  const cadence = useRef(new Map<string, Cadence>());
+  const pingIdleSec = meta.data?.location_ping_sec ?? 60;
+  const pingActiveSec = meta.data?.location_ping_active_sec ?? 4;
+  const fallbackMs = useCallback(
+    (d: { active_orders?: number } | undefined) =>
+      clampGlide(((d?.active_orders ?? 0) > 0 ? pingActiveSec : pingIdleSec) * 1000),
+    [pingActiveSec, pingIdleSec],
+  );
+  const fallbackRef = useRef(fallbackMs);
+  fallbackRef.current = fallbackMs;
   const drivers = useLiveData<{ drivers: Driver[]; count: number }>(
     () =>
       can("VIEW_DRIVER_LOCATIONS") && visible.drivers
-        ? api<{ drivers: Driver[]; count: number }>(`/api/v1/admin/ops-map/drivers${driverQuery}`)
+        ? api<{ drivers: Driver[]; count: number }>(`/api/v1/admin/ops-map/drivers${driverQuery}`).then((d) => {
+            const rows = mergeRows(fixes.current, d.drivers);
+            // **صفُّ القائمة الأحدثُ يُطبَّق ولا يُعدّ فاصلاً** — نبضةٌ فاتت البثّ لا إيقاعُه.
+            for (const r of rows) {
+              const at = Date.parse(r.last_location_at);
+              const prev = cadence.current.get(r.id);
+              if (r.freshness === "NO_LOCATION" || !Number.isFinite(at) || (prev && at <= prev.at)) continue;
+              cadence.current.set(
+                r.id,
+                noteFix(prev, { pos: [r.lng, r.lat], atMs: at, counted: false, fallbackMs: fallbackRef.current(r) }),
+              );
+            }
+            return { ...d, drivers: rows };
+          })
         : Promise.resolve({ drivers: [], count: 0 }),
     [],
-    [driverQuery, visible.drivers, meta.data, tick],
+    [driverQuery, visible.drivers, metaKey, tick],
   );
+  const driverRows = useRef<Driver[]>([]);
+  driverRows.current = drivers.data?.drivers ?? [];
 
   // ══════════════════════════════════════════════════════════════
   // **والسائقُ يتحرّك حيّاً** (قرارُ المالك ٢٠٢٦-١٠-١٩: «الموقع المباشر»)
   // ══════════════════════════════════════════════════════════════
   //
-  // **كلُّ نبضةٍ تُبثّ على `ops` بموضعها** (`driver_live.go`) — فيُحرَّك السائقُ في
+  // **كلُّ نبضةٍ تُبثّ على `ops:drivers` بموضعها** (`driver_live.go`) — فيُحرَّك السائقُ في
   // القائمة نفسِها بلا سؤالٍ للخادم، **وتنزلقه الخريطةُ إلى موضعه الجديد.** والمدّةُ
-  // فوق تبقى احتياطاً لمن انقطع بثُّه.
+  // فوق تبقى احتياطاً لمن انقطع بثُّه. **ونبضةٌ أقدمُ من آخرِ ما طُبّق لا تحرّكه.**
   const setDrivers = drivers.setData;
   useLiveEvent((e) => {
     if (e.type !== "driver_location") return;
@@ -680,16 +752,31 @@ export default function OpsMapPage() {
     const lat = Number(e.lat);
     const lng = Number(e.lng);
     if (!id || !Number.isFinite(lat) || !Number.isFinite(lng)) return;
+    const num = (v: unknown) => (v == null || !Number.isFinite(Number(v)) ? undefined : Number(v));
+    const fix: FixOf<Driver> = {
+      lat,
+      lng,
+      last_location_at: typeof e.at === "string" ? e.at : "",
+      age_sec: 0,
+      freshness: "LIVE",
+      bearing: num(e.bearing),
+      speed_mps: num(e.speed_mps),
+      rough: e.rough === true,
+    };
+    if (!acceptPush(fixes.current, id, fix)) return;
+    // **ونبضةُ البثّ تُعدّ في إيقاعه** — والواقفةُ والرجفةُ لا تُعدّان (`noteFix`).
+    cadence.current.set(
+      id,
+      noteFix(cadence.current.get(id), {
+        pos: [lng, lat],
+        atMs: Date.parse(fix.last_location_at),
+        counted: true,
+        fallbackMs: fallbackRef.current(driverRows.current.find((d) => d.id === id)),
+      }),
+    );
     setDrivers((prev) =>
       prev && prev.drivers.some((d) => d.id === id)
-        ? {
-            ...prev,
-            drivers: prev.drivers.map((d) =>
-              d.id === id
-                ? { ...d, lat, lng, last_location_at: String(e.at ?? d.last_location_at), age_sec: 0, freshness: "LIVE" }
-                : d,
-            ),
-          }
+        ? { ...prev, drivers: prev.drivers.map((d) => (d.id === id ? { ...d, ...fix } : d)) }
         : prev,
     );
   });
@@ -702,7 +789,7 @@ export default function OpsMapPage() {
         : Promise.resolve({ merchants: [], count: 0 }),
     // **والمتجرُ يتبدّل بكتابةِ اللوحة** — `catalog` إشارتُها القائمة.
     ["catalog"],
-    [visible.merchants, meta.data],
+    [visible.merchants, metaKey],
   );
 
   // ── الطلباتُ النشطة ─────────────────────────────────────────
@@ -715,7 +802,7 @@ export default function OpsMapPage() {
         ? api<{ orders: OrderPin[]; count: number }>("/api/v1/admin/ops-map/orders")
         : Promise.resolve({ orders: [], count: 0 }),
     ["order"],
-    [visible.orders, meta.data],
+    [visible.orders, metaKey],
   );
 
   // **وموضعُ الزبون الحيُّ يصل بالبثّ** (٢٠٢٦-١٠-١٩) — فتتحرّك علامتُه بلا سؤال.
@@ -756,7 +843,7 @@ export default function OpsMapPage() {
         ? api<{ cells: DemandCell[]; min_count: number }>("/api/v1/admin/ops-map/customers")
         : Promise.resolve({ cells: [], min_count: 3 }),
     [],
-    [visible.customers, meta.data],
+    [visible.customers, metaKey],
   );
 
   // ── المكتب ───────────────────────────────────────────────────
@@ -766,7 +853,7 @@ export default function OpsMapPage() {
         ? api<Office>("/api/v1/admin/ops-map/office")
         : Promise.resolve(null),
     [],
-    [visible.office, meta.data, tick],
+    [visible.office, metaKey, tick],
   );
 
   // ── التغطية — حدودٌ رفيعةٌ دائماً لا مفتاح ───────────────────
@@ -776,7 +863,7 @@ export default function OpsMapPage() {
         ? api<{ zones: Zone[]; count: number }>("/api/v1/admin/ops-map/coverage")
         : Promise.resolve({ zones: [], count: 0 }),
     ["catalog"],
-    [meta.data],
+    [metaKey],
   );
 
   // ── طلباتُ التغطية ──────────────────────────────────────────
@@ -788,7 +875,7 @@ export default function OpsMapPage() {
           )
         : Promise.resolve({ requests: [], count: 0 }),
     [],
-    [visible.requests, meta.data],
+    [visible.requests, metaKey],
   );
 
   // ── الفروعُ والمناطقُ التشغيليّة ────────────────────────────
@@ -801,7 +888,7 @@ export default function OpsMapPage() {
         ? api<{ branches: BranchPin[]; count: number }>("/api/v1/admin/ops-map/branches")
         : Promise.resolve({ branches: [], count: 0 }),
     ["catalog"],
-    [visible.branches, meta.data],
+    [visible.branches, metaKey],
   );
 
   // **بلاغاتُ السائقين للخريطة** (قرارات المالك ٢٠٢٦-١٠-٢١) — المسكَّرُ الآن والمعالمُ المنتظِرة.
@@ -811,7 +898,7 @@ export default function OpsMapPage() {
         ? api<{ closures: Closure[]; count: number }>("/api/v1/admin/ops-map/road-closures")
         : Promise.resolve({ closures: [], count: 0 }),
     ["road_closure"],
-    [visible.closures, meta.data],
+    [visible.closures, metaKey],
   );
   const landmarks = useLiveData<{ suggestions: LandmarkSugg[]; count: number }>(
     () =>
@@ -819,7 +906,7 @@ export default function OpsMapPage() {
         ? api<{ suggestions: LandmarkSugg[]; count: number }>("/api/v1/admin/ops-map/landmark-suggestions")
         : Promise.resolve({ suggestions: [], count: 0 }),
     ["landmark"],
-    [visible.landmarks, meta.data],
+    [visible.landmarks, metaKey],
   );
 
   // ── أفعالُ البطاقة — زرٌّ مقفولٌ وقتَ الإرسال · خطأٌ يُقال · نجاحٌ يمرّ ──
@@ -885,7 +972,7 @@ export default function OpsMapPage() {
           )
         : Promise.resolve({ reps: [], points: [] }),
     [],
-    [visible.reps, range, meta.data],
+    [visible.reps, range, metaKey],
   );
 
   // ── الكثافةُ والفرص ─────────────────────────────────────────
@@ -901,7 +988,7 @@ export default function OpsMapPage() {
             unserved: [], cell_deg: 0.01,
           }),
     [],
-    [visible.demand, visible.opportunities, range, hoursQ, meta.data],
+    [visible.demand, visible.opportunities, range, hoursQ, metaKey],
   );
 
   const opportunities = useLiveData<{ opportunities: OpportunityCell[]; count: number }>(
@@ -912,7 +999,7 @@ export default function OpsMapPage() {
           )
         : Promise.resolve({ opportunities: [], count: 0 }),
     [],
-    [visible.opportunities, range, hoursQ, meta.data],
+    [visible.opportunities, range, hoursQ, metaKey],
   );
 
   const hits = useLiveData<{ hits: SearchHit[]; count: number }>(
@@ -956,15 +1043,19 @@ export default function OpsMapPage() {
     const all = drivers.data?.drivers ?? [];
     return onShift || visible.offShift ? all : all.filter((d) => d.on_shift);
   }, [drivers.data, onShift, visible.offShift]);
-  const focused = useMemo(
-    () =>
-      applyFocus(
-        focusMode,
-        driverPool,
-        orders.data?.orders ?? [],
-        merchants.data?.merchants ?? [],
-      ),
+  // **والطلباتُ والمتاجرُ بعد التركيز لا تتبع السائقين** (٢٠٢٦-١١-٠٥) — فنبضةُ سائقٍ لا تبني
+  // طبقاتِها من جديد ولا تُعيد رفعَها.
+  const focusedOM = useMemo(
+    () => applyFocus(focusMode, [] as Driver[], orders.data?.orders ?? [], merchants.data?.merchants ?? []),
+    [focusMode, orders.data, merchants.data],
+  );
+  const focusedDrivers = useMemo(
+    () => applyFocus(focusMode, driverPool, orders.data?.orders ?? [], merchants.data?.merchants ?? []).drivers,
     [focusMode, driverPool, orders.data, merchants.data],
+  );
+  const focused = useMemo(
+    () => ({ drivers: focusedDrivers, orders: focusedOM.orders, merchants: focusedOM.merchants }),
+    [focusedDrivers, focusedOM],
   );
 
   // ── المُحدَّدُ حيٌّ لا لقطة ─────────────────────────────────────
@@ -1026,7 +1117,10 @@ export default function OpsMapPage() {
     return [...local.map(({ kind, id, label, lng, lat }) => ({ kind: kind as string, id, label, lng, lat })), ...remote];
   }, [hunt, orders.data, drivers.data, merchants.data, hits.data]);
 
-  const layers = useMemo<LayerSpec[]>(() => {
+  // **الطبقاتُ ثلاثُ مذكَّرات** (٢٠٢٦-١١-٠٥): **نبضةُ سائقٍ تبني طبقةَ السائقين وخطَّ الطلب
+  // المُحدَّد وحدَهما** — وكانت مذكَّرةً واحدةً تبني الطبقاتِ العشرين مع كلّ نبضة، واللوحُ يرفعها
+  // كلَّها (المتاجرَ بتجميعها والمناطقَ والكثافة). **واللوحُ لا يرفع ما لم يتبدّل** (`needsUpload`).
+  const baseLayers = useMemo<LayerSpec[]>(() => {
     const out: LayerSpec[] = [];
     out.push({
       id: "emergencies",
@@ -1042,84 +1136,12 @@ export default function OpsMapPage() {
       ),
     });
 
-    // ── السائقون — أخضرُ متاح · برتقاليٌّ معه طلب · رماديٌّ خامل ──
-    //
-    // **ولا يُجمَّعون**: فقّاعةٌ خضراءُ تخفي برتقاليّاً بداخلها، **والحالُ هو
-    // ما جاء المكتبُ يراه.** ومن لا موضعَ له لا يُرسَم (البند ٤).
-    out.push({
-      id: "drivers",
-      kind: "symbol",
-      cluster: false,
-      order: 50,
-      visible: !!visible.drivers,
-      color: toneColor("driver-available"),
-      // **ينزلق بين نبضتين، وحلقةٌ نابضةٌ حولَ من موقعُه حيّ** — بلون حاله.
-      animate: true,
-      // **واسمُه فوق رمزه** (٢٠٢٦-١٠-١٧) — ويتراكب، فلا يختفي سائقٌ لأنّ جاره قريب.
-      labelField: "name",
-      labelOverlap: true,
-      pulse: {
-        field: "live",
-        color: [
-          "match", ["get", "icon"],
-          "driver-available", toneColor("driver-available"),
-          "driver-busy", toneColor("driver-busy"),
-          toneColor("driver-idle"),
-        ],
-      },
-      data: fc(
-        focused.drivers
-          .filter((d) => d.freshness !== "NO_LOCATION")
-          .map((d) => pt(d.lng, d.lat, { id: d.id, name: d.name, icon: driverTone(d.tone), live: d.freshness === "LIVE" })),
-      ),
-    });
-
-    // ── المتاجر — بنفسجيٌّ مفتوح · رماديٌّ مغلق ─────────────────
-    //
-    // **والمغلقُ يُرى مغلقاً** — لونٌ باهتٌ لا اختفاء: «متجرٌ مغلقٌ
-    // وطلبٌ ينتظره» حقيقةٌ يريد المكتبُ أن يراها.
-    //
-    // **والفقّاعةُ تقول القسمةَ** (تحسيناتُ ٢٠٢٦-١٠-٠٦): **لونُها لونُ
-    // الأكثر** (مفتوحٌ أو مسكّر)، **وحلقةٌ عريضةٌ بلون الأقلّ إن وُجد** —
-    // «عشرون متجراً ستّةٌ منها مسكّرة» بنظرةٍ لا بنقرة.
-    const openC = toneColor("store-open");
-    const closedC = toneColor("store-closed");
-    const opened = ["get", "open_n"];
-    const total = ["get", "point_count"];
-    const openMajority = [">=", ["*", opened, 2], total];
-    out.push({
-      id: "merchants",
-      kind: "symbol",
-      cluster: true,
-      order: 40,
-      visible: !!visible.merchants,
-      // **واسمُ المتجر فوق رمزه** (٢٠٢٦-١٠-١٧) — والمتزاحمةُ تُخفى حتّى يُكبَّر عليها.
-      labelField: "name",
-      color: openC,
-      clusterProperties: { open_n: ["+", ["case", ["==", ["get", "open"], true], 1, 0]] },
-      clusterColor: ["case", openMajority, openC, closedC],
-      clusterStroke: {
-        color: [
-          "case",
-          ["any", ["==", opened, 0], ["==", opened, total]], themeColor("paper"),
-          openMajority, closedC,
-          openC,
-        ],
-        width: ["case", ["any", ["==", opened, 0], ["==", opened, total]], 2, 5],
-      },
-      data: fc(
-        focused.merchants.map((x) =>
-          pt(x.lng, x.lat, { id: x.id, name: x.name, icon: storeTone(x.open_now), open: x.open_now }),
-        ),
-      ),
-    });
-
     // ── الطلباتُ النشطة — أزرقُ ماشٍ · أحمرُ عالق ────────────────
     //
     // **والعالقُ بشرط لوحة الطلبات نفسِه** (`stuck_reason` من الخادم) — فلا
     // تقول الخريطةُ «عالق» عن طلبٍ لا تعدّه اللوحة. **وخطٌّ من المتجر إلى
     // نقطة التسليم لكلّ طلب** — «من أين إلى أين» بنظرة.
-    const orderList = focused.orders;
+    const orderList = focusedOM.orders;
     out.push({
       id: "orders",
       kind: "symbol",
@@ -1394,38 +1416,207 @@ export default function OpsMapPage() {
       ),
     });
 
-    // ── مسارُ الطلب المُحدَّد (البند ١١ · تحسيناتُ ٢٠٢٦-١٠-٠٦) ──────
-    //
-    // **سائقٌ ← متجرٌ ← زبون، خطوطٌ مستقيمةٌ متقطّعة** — **الخريطةُ ليست
-    // محرّكَ ملاحة**، ولا بابَ توجيهٍ للعمليّات. **والسائقُ من موضعه الحيّ**
-    // إن كان في الطبقة، **وبعد الاستلام لا متجرَ في الطريق.**
+    return out;
+  }, [zones.data, requests.data, focusedOM,
+      branches.data, reps.data, demand.data, opportunities.data, customers.data,
+      visible, draft, drawing, emergencies.data, closures.data, landmarks.data]);
+
+  // ── المتاجر — بنفسجيٌّ مفتوح · رماديٌّ مغلق ─────────────────
+  //
+  // **والمغلقُ يُرى مغلقاً** — لونٌ باهتٌ لا اختفاء: «متجرٌ مغلقٌ
+  // وطلبٌ ينتظره» حقيقةٌ يريد المكتبُ أن يراها.
+  //
+  // **والفقّاعةُ تقول القسمةَ** (تحسيناتُ ٢٠٢٦-١٠-٠٦): **لونُها لونُ
+  // الأكثر** (مفتوحٌ أو مسكّر)، **وحلقةٌ عريضةٌ بلون الأقلّ إن وُجد** —
+  // «عشرون متجراً ستّةٌ منها مسكّرة» بنظرةٍ لا بنقرة.
+  // **وطبقتُها وحدَها** (٢٠٢٦-١١-٠٥) — تتبع المتاجرَ وحدَها، فموضعُ زبونٍ أو طلبٌ تبدّل لا يُعيد رفعَ
+  // تجميعها.
+  const merchantLayer = useMemo<LayerSpec>(() => {
+    const openC = toneColor("store-open");
+    const closedC = toneColor("store-closed");
+    const opened = ["get", "open_n"];
+    const total = ["get", "point_count"];
+    const openMajority = [">=", ["*", opened, 2], total];
+    return {
+      id: "merchants",
+      kind: "symbol",
+      cluster: true,
+      order: 40,
+      visible: !!visible.merchants,
+      // **واسمُ المتجر فوق رمزه** (٢٠٢٦-١٠-١٧) — والمتزاحمةُ تُخفى حتّى يُكبَّر عليها.
+      labelField: "name",
+      color: openC,
+      clusterProperties: { open_n: ["+", ["case", ["==", ["get", "open"], true], 1, 0]] },
+      clusterColor: ["case", openMajority, openC, closedC],
+      clusterStroke: {
+        color: [
+          "case",
+          ["any", ["==", opened, 0], ["==", opened, total]], themeColor("paper"),
+          openMajority, closedC,
+          openC,
+        ],
+        width: ["case", ["any", ["==", opened, 0], ["==", opened, total]], 2, 5],
+      },
+      data: fc(
+        focusedOM.merchants.map((x) =>
+          pt(x.lng, x.lat, { id: x.id, name: x.name, icon: storeTone(x.open_now), open: x.open_now }),
+        ),
+      ),
+    };
+  }, [focusedOM.merchants, visible.merchants]);
+
+  // ── السائقون — أخضرُ متاح · برتقاليٌّ معه طلب · رماديٌّ خامل ──
+  //
+  // **ولا يُجمَّعون**: فقّاعةٌ خضراءُ تخفي برتقاليّاً بداخلها، **والحالُ هو
+  // ما جاء المكتبُ يراه.** ومن لا موضعَ له لا يُرسَم (البند ٤).
+  const driverLayer = useMemo<LayerSpec>(() => {
+    return {
+      id: "drivers",
+      kind: "symbol",
+      cluster: false,
+      order: 50,
+      visible: !!visible.drivers,
+      color: toneColor("driver-available"),
+      // **كلُّ سائقٍ ينزلق وحدَه على قدّ ما يبعت** (٢٠٢٦-١١-٠٥، `live.ts` ٧) — **ومفتاحُ اللوحة
+      // مطفأً: انزلاقُ الطبقة القديم.** وحلقةٌ نابضةٌ حولَ من موقعُه حيّ، بلون حاله.
+      ...(smooth ? { motion: "glide" as const, opacityField: "_op", heading: { field: "heading" } } : { animate: true }),
+      // **واسمُه فوق رمزه** (٢٠٢٦-١٠-١٧) — ويتراكب، فلا يختفي سائقٌ لأنّ جاره قريب.
+      labelField: "name",
+      labelOverlap: true,
+      pulse: {
+        field: "live",
+        color: [
+          "match", ["get", "icon"],
+          "driver-available", toneColor("driver-available"),
+          "driver-busy", toneColor("driver-busy"),
+          toneColor("driver-idle"),
+        ],
+      },
+      data: fc(
+        focused.drivers
+          .filter((d) => d.freshness !== "NO_LOCATION")
+          .map((d) => {
+            const props: Record<string, unknown> = {
+              id: d.id, name: d.name, icon: driverTone(d.tone), live: d.freshness === "LIVE",
+            };
+            if (smooth) {
+              // **مدّةُ انزلاقه من إيقاعه** (وصفرٌ: يُوضع)، **والباهتُ باهت**، **والسهمُ وهو ماشٍ.**
+              props._glide = cadence.current.get(d.id)?.glideMs ?? 0;
+              props._op = d.rough ? 0.6 : 1;
+              const h = headingOf(d.bearing, d.speed_mps);
+              if (h != null) props.heading = h;
+            }
+            return pt(d.lng, d.lat, props);
+          }),
+      ),
+    };
+  }, [focused.drivers, visible.drivers, smooth]);
+
+  // ── مسارُ الطلب المُحدَّد (البند ١١ · تحسيناتُ ٢٠٢٦-١٠-٠٦) ──────
+  //
+  // **سائقٌ ← متجرٌ ← زبون، خطوطٌ مستقيمةٌ متقطّعة** — **الخريطةُ ليست
+  // محرّكَ ملاحة**، ولا بابَ توجيهٍ للعمليّات. **والسائقُ من موضعه الحيّ**
+  // إن كان في الطبقة، **وبعد الاستلام لا متجرَ في الطريق.**
+  //
+  // **ويُبنى من الطلب المُحدَّد وموضع سائقه وحدَهما** — نبضةُ سائقٍ آخرَ لا تُعيد بناءه.
+  const linkOrder = current?.kind === "order" ? current.v : null;
+  const linkRow = linkOrder?.driver_id ? drivers.data?.drivers.find((x) => x.id === linkOrder.driver_id) : undefined;
+  const linkFrom = linkRow && linkRow.freshness !== "NO_LOCATION" ? `${linkRow.lng},${linkRow.lat}` : "";
+  const linkLayer = useMemo<LayerSpec>(() => {
     const link: FeatureCollection["features"] = [];
-    if (current?.kind === "order") {
-      const o = current.v;
-      const d = o.driver_id ? drivers.data?.drivers.find((x) => x.id === o.driver_id) : undefined;
-      const live: LngLat | null = d && d.freshness !== "NO_LOCATION" ? [d.lng, d.lat] : null;
+    if (linkOrder) {
+      const o = linkOrder;
+      const live: LngLat | null = linkFrom ? (linkFrom.split(",").map(Number) as LngLat) : null;
       for (const leg of orderRoute(o, live)) {
         link.push({
           type: "Feature" as const,
           geometry: { type: "LineString", coordinates: leg.coords },
-          properties: { leg: leg.leg },
+          // **والساقُ الخارجةُ من موضع السائق الحيّ تتبعه** (`anchorLines`).
+          properties: { leg: leg.leg, from_driver: !!live && leg.coords[0] === live },
         });
       }
     }
-    out.push({
+    const driverID = linkOrder?.driver_id;
+    return {
       id: "order-link",
       kind: "line",
       order: 70,
       lineWidth: 3,
       visible: link.length > 0,
       color: ["match", ["get", "leg"], "to-store", toneColor("driver-busy"), themeColor("primary")],
+      // **ويخرج من السائق حيث يُرى في كلّ إطار** — لا حيث كانت نبضتُه.
+      ...(smooth && driverID ? { anchor: { layer: "drivers", id: driverID } } : {}),
       data: fc(link),
-    });
+    };
+  }, [linkOrder, linkFrom, smooth]);
 
-    return out;
-  }, [drivers.data, zones.data, requests.data, focused,
-      branches.data, reps.data, demand.data, opportunities.data, customers.data,
-      visible, current, draft, drawing, emergencies.data, closures.data, landmarks.data]);
+  // ── طريقُه الحقيقي ورا السائق المختار (R3، طلبُ المالك ٢٠٢٦-١١-٠٥) ─────────────
+  //
+  // «والطريق يحسب حسب طريق السائق مو ع كيفنا». لما ينختار سائق (أو طلب معه سائق) **بنرسم
+  // تحته الطريق اللي مشي فيه بطلبه الحالي** (أو آخر نص ساعة) — من نفس دالة المسافة
+  // (`/driver-monitor/{id}/recent`): ع الشوارع وين انطابق، والجزء الأخير (لحد ٥ دقايق) خط
+  // من نقاطه فبيوصل للماركر. **للمالك والمدير بس** (`drivers.monitor`)، وبيتحدّث كل دقيقة.
+  const canMonitor = capabilities.includes("drivers.monitor");
+  const recentID =
+    current?.kind === "driver" ? current.v.id : current?.kind === "order" ? (current.v.driver_id ?? null) : null;
+  const [recent, setRecent] = useState<{ id: string; path: RecentPart[] } | null>(null);
+  useEffect(() => {
+    if (!canMonitor || !recentID || !visible.drivers) {
+      setRecent(null);
+      return;
+    }
+    let alive = true;
+    const load = () =>
+      api<{ path: RecentPart[] }>(`/api/v1/admin/driver-monitor/${recentID}/recent`)
+        .then((r) => alive && setRecent({ id: recentID, path: r.path ?? [] }))
+        .catch(() => alive && setRecent(null));
+    void load();
+    const t = setInterval(load, 60_000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [canMonitor, recentID, visible.drivers]);
+  const recentLayers = useMemo<LayerSpec[]>(() => {
+    const parts = recent && recent.id === recentID ? recent.path : [];
+    const line = (p: RecentPart) => ({
+      type: "Feature" as const,
+      geometry: { type: "LineString", coordinates: p.coords.map(([la, ln]) => [ln, la]) },
+      properties: {},
+    });
+    const counted = (p: RecentPart) => p.class !== "stopped" && p.class !== "gap";
+    const solid = parts.filter((p) => counted(p) && !p.straight && !p.inferred);
+    const dashed = parts.filter((p) => counted(p) && (p.straight || p.inferred));
+    return [
+      {
+        id: "recent-path",
+        kind: "line",
+        order: 46,
+        visible: solid.length > 0,
+        dashed: false,
+        lineWidth: 5,
+        lineOpacity: 0.75,
+        color: themeColor("primary"),
+        data: fc(solid.map(line)),
+      },
+      {
+        id: "recent-path-straight",
+        kind: "line",
+        order: 46,
+        visible: dashed.length > 0,
+        dashed: true,
+        lineWidth: 4,
+        lineOpacity: 0.75,
+        color: themeColor("primary"),
+        data: fc(dashed.map(line)),
+      },
+    ];
+  }, [recent, recentID]);
+
+  const layers = useMemo<LayerSpec[]>(
+    () => [...baseLayers, merchantLayer, ...recentLayers, driverLayer, linkLayer],
+    [baseLayers, merchantLayer, recentLayers, driverLayer, linkLayer],
+  );
 
   // ── المكتبُ علامةٌ بشعار المنصّة ─────────────────────────────
   //
@@ -1942,7 +2133,7 @@ export default function OpsMapPage() {
             </Button>
             {legendOpen && (
               <div className="absolute end-0 top-full z-30 mt-1 w-[min(28rem,90vw)] rounded-card border border-line bg-shell p-3 elev-2">
-                <Legend />
+                <Legend canMonitor={canMonitor} />
               </div>
             )}
           </div>
@@ -2767,7 +2958,7 @@ function ToneIcon({ tone, big = false }: { tone: MapTone; big?: boolean }) {
 }
 
 /** **دليلُ الألوان** — يقرأ الموضعَ الواحدَ الذي ترسم منه الخريطة. */
-function Legend() {
+function Legend({ canMonitor }: { canMonitor: boolean }) {
   const L = T.legendItem;
   const rows: Array<[MapTone, string]> = [
     ["driver-available", L.driverAvailable],
@@ -2818,9 +3009,30 @@ function Legend() {
           </span>
           <span>{L.driverLeg}</span>
         </li>
+        {/* **وشرحُ الخطّ لمن يُرسم له وحدَه** (`drivers.monitor`) — لا يقرأ الموظفُ شرحَ ما لا يراه. */}
+        {canMonitor && (
+          <li className="flex items-center gap-2">
+            <span aria-hidden className="grid h-6 w-6 shrink-0 place-items-center">
+              <span className="block h-1 w-5 rounded-full" style={{ background: themeColor("primary") }} />
+            </span>
+            <span>{L.recentPath}</span>
+          </li>
+        )}
         <li className="flex items-center gap-2">
           <span aria-hidden className="h-6 w-6 shrink-0 rounded-full border-2 border-line bg-paper" />
           <span>{L.office}</span>
+        </li>
+        <li className="flex items-center gap-2">
+          <span aria-hidden className="opacity-60">
+            <ToneIcon tone="driver-busy" />
+          </span>
+          <span>{L.rough}</span>
+        </li>
+        <li className="flex items-center gap-2">
+          <span aria-hidden className="grid h-6 w-6 shrink-0 place-items-center text-ink">
+            <IconArrowOut size={16} />
+          </span>
+          <span>{L.heading}</span>
         </li>
       </ul>
       <p className="text-xs leading-5 text-ink-muted">{T.bar.coverageAlways}</p>

@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/servacode/rahalgo/backend/internal/authz"
+	"github.com/servacode/rahalgo/backend/internal/drivermonitor"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/platform"
 )
@@ -236,6 +237,11 @@ func (s *Server) landmarkDaily(ctx context.Context, day string, startHour int64,
 	if err != nil {
 		return nil, tot, err
 	}
+	// من اشتغل: أثرُه من `drivermonitor` وحدَه (الجدولُ لا يُقرأ خارجه).
+	worked, err := drivermonitor.WorkedDrivers(ctx, s.pg, start, start.AddDate(0, 0, 1))
+	if err != nil {
+		return nil, tot, err
+	}
 	rows, err := s.pg.Query(ctx, `
 		WITH s AS (
 			SELECT l.suggested_by AS driver_id,
@@ -249,8 +255,7 @@ func (s *Server) landmarkDaily(ctx context.Context, day string, startHour int64,
 			 WHERE l.platform_day = $1::date AND l.suggested_by IS NOT NULL
 			 GROUP BY l.suggested_by
 		), w AS (
-			SELECT DISTINCT t.driver_id FROM driver_trail t
-			 WHERE t.recorded_at >= $2 AND t.recorded_at < $3
+			SELECT DISTINCT unnest($2::uuid[]) AS driver_id
 		), ids AS (
 			SELECT driver_id FROM s UNION SELECT driver_id FROM w
 		)
@@ -265,7 +270,7 @@ func (s *Server) landmarkDaily(ctx context.Context, day string, startHour int64,
 		  FROM ids
 		  JOIN users u ON u.id = ids.driver_id
 		  LEFT JOIN s ON s.driver_id = ids.driver_id
-		  LEFT JOIN w ON w.driver_id = ids.driver_id`, day, start, start.AddDate(0, 0, 1))
+		  LEFT JOIN w ON w.driver_id = ids.driver_id`, day, worked)
 	if err != nil {
 		return nil, tot, err
 	}

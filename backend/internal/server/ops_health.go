@@ -10,6 +10,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/envguard"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/obs"
+	"github.com/servacode/rahalgo/backend/internal/roadmatch"
 )
 
 // ══════════════════════════════════════════════════════════════════════
@@ -186,6 +187,9 @@ type opsHealth struct {
 	ClientsDropped int64 `json:"clients_dropped"`
 	// WindowMinutes **نافذةُ الحكم بالدقائق** — والعدّاداتُ نفسُها منذ الإقلاع.
 	WindowMinutes int `json:"window_minutes"`
+	// RoadMatch **مطابق مسار السائق ع الطرق** (`road_match.go`) — سطرٌ بالصفحة، **مو جزء من الحكم**:
+	// الحكم بيرفع الشريط الأحمر لكل الموظفين وبينبّه المالك، وشغلٌ بالخلفيّة ما بيرفعهن بلا قراره.
+	RoadMatch roadmatch.Status `json:"road_match"`
 }
 
 // ══════════════════════════════════════════════════════════════════════
@@ -480,6 +484,7 @@ func (s *Server) collectOps(ctx context.Context) opsHealth {
 		cacheTimeouts: cacheTimeouts,
 	})
 	out.Verdict = judgeOps(in)
+	out.RoadMatch = s.roadMatchStatus(ctx)
 	out.Status = "ok"
 	if out.Verdict.State != stOK {
 		out.Status = "degraded"

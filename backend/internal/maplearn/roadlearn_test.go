@@ -194,19 +194,6 @@ func encodePolyline6(pts [][2]float64) string {
 	return string(out)
 }
 
-func TestPolyline6_RoundTrip(t *testing.T) {
-	in := [][2]float64{{38.400000, 35.400000}, {38.401234, 35.400567}, {38.399000, 35.402000}}
-	out := decodePolyline6(encodePolyline6(in))
-	if len(out) != len(in) {
-		t.Fatalf("الطول %d", len(out))
-	}
-	for i := range in {
-		if math.Abs(in[i][0]-out[i][0]) > 1e-6 || math.Abs(in[i][1]-out[i][1]) > 1e-6 {
-			t.Errorf("النقطة %d: %v ≠ %v", i, out[i], in[i])
-		}
-	}
-}
-
 func TestValhallaMatcher_ParsesTraceAttributes(t *testing.T) {
 	shape := [][2]float64{{38.400, 35.4}, {38.401, 35.4}, {38.402, 35.4}, {38.401, 35.4}, {38.400, 35.4}}
 	one := 0

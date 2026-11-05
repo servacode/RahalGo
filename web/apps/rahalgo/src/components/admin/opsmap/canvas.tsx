@@ -48,7 +48,25 @@ import { loadMapEngine } from "@rahalgo/ui/mapengine";
 import { installLandmarks, setLandmarksVisible } from "@rahalgo/ui/landmarks";
 import { installAreaNames, setAreaNamesVisible } from "@rahalgo/ui/areanames";
 import { themeColor } from "@rahalgo/ui";
-import { TWEEN_MS, anyMoved, easeInOut, positionsOf, tweenPoints, type LngLat } from "./live";
+import {
+  frameGap,
+  TWEEN_MS,
+  activeAt,
+  advanceMotions,
+  anchorLines,
+  anyActive,
+  anyMoved,
+  easeInOut,
+  frameFeatures,
+  interpolates,
+  needsUpload,
+  positionAt,
+  positionsOf,
+  tweenPoints,
+  type LngLat,
+  type Motion,
+  type Uploaded,
+} from "./live";
 
 /** **مركزُ الرقّة** — حيث تعمل المنصّة. */
 const RAQQA: [number, number] = [39.0079, 35.9528];
@@ -96,11 +114,31 @@ export interface LayerSpec {
   fillOpacity?: number;
   /** **خطٌّ متقطّع؟** لطبقات `line` — افتراضُه نعم. */
   dashed?: boolean;
+  /** **خطٌّ منقّط؟** لطبقات `line` (يغلب `dashed`) — الشارعُ مقدَّرٌ بين نقطتين بعيدتين (٢٠٢٦-١١-٠٥). */
+  dotted?: boolean;
+  /** **شفافيّةُ الخطّ** لطبقات `line` — افتراضُها ١. */
+  lineOpacity?: number;
   /**
-   * **انزلاقٌ بين نبضتين** لطبقات النقاط (خاصّةُ `id`) — **السائقُ يمشي ولا
-   * يقفز.** ثانيةٌ واحدة، **ولا انزلاقَ لمن طلب تقليلَ الحركة.**
+   * **انزلاقُ الطبقة كلِّها بين نبضتين** لطبقات النقاط (خاصّةُ `id`) — ثلاثُ ثوانٍ بتسارعٍ
+   * وتباطؤ، **ولا انزلاقَ لمن طلب تقليلَ الحركة.** (الحركةُ القديمة: موضعُ الزبون الحيّ، وطبقةُ
+   * السائقين حين يُطفأ `drivers.ops_map_smooth`.)
    */
   animate?: boolean;
+  /**
+   * **`glide`: كلُّ معلَمٍ ينزلق وحدَه** (٢٠٢٦-١١-٠٥) — خطّيّاً إلى هدفه الجديد بمدّة خاصّة
+   * `_glide` في معلَمه (وصفرٌ: يُوضع مع ظهور)، **ونبضةُ واحدٍ لا تمسّ حركةَ غيره.** ويُحرَّك
+   * لمن طلب تقليلَ الحركة أيضاً: الموضعُ معلومةٌ لا زينة (`live.ts` ٧).
+   */
+  motion?: "glide";
+  /**
+   * **خطٌّ يخرج من علامةٍ منزلقة** — أوّلُ رأسِ كلِّ معلَمٍ خاصّتُه `from_driver` صحيحةٌ يتبع
+   * المعلَمَ `id` من الطبقة `layer` في كلّ إطار (خطُّ الطلب المُحدَّد من سائقه).
+   */
+  anchor?: { layer: string; id: string };
+  /** **شفافيّةُ الرمز من خاصّة** — والباهتُ (`rough`) يُرسم بها. لطبقات `symbol`. */
+  opacityField?: string;
+  /** **سهمُ اتّجاهٍ تحت الرمز** — يدور بخاصّة `field` (بالدرجات)، ولا يُرسم لمن لا خاصّةَ له. */
+  heading?: { field: string };
   /**
    * **حلقةٌ نابضةٌ تحت الرمز** لما خاصّتُه `field` صحيحة — **«موقعُه حيٌّ
    * الآن»** بنظرة. ولونُها تعبيرٌ كاللون.
@@ -186,6 +224,37 @@ async function drawIcon(icon: MapIcon): Promise<ImageData | null> {
   return g.getImageData(0, 0, size, size);
 }
 
+/** **اسمُ صورة سهم الاتّجاه** — تُسجَّل مرّةً عند الإقلاع. */
+const HEADING_ICON = "heading-chevron";
+
+/**
+ * **سهمُ الاتّجاه** — مثلّثٌ صغيرٌ عند حافّة الرمز من فوق، **وتديره الخريطةُ حولَ مركزه**
+ * باتّجاه السائق. لونُه لونُ أسماء الخريطة بحاشيتها — من الثيم.
+ */
+function drawHeading(): ImageData | null {
+  const size = (ICON_PX + 16) * ICON_RATIO;
+  const c = document.createElement("canvas");
+  c.width = size;
+  c.height = size;
+  const g = c.getContext("2d");
+  if (!g) return null;
+  const mid = size / 2;
+  const tip = ICON_RATIO * 1.5;
+  const base = tip + ICON_RATIO * 8;
+  const half = ICON_RATIO * 5;
+  g.beginPath();
+  g.moveTo(mid, tip);
+  g.lineTo(mid + half, base);
+  g.lineTo(mid - half, base);
+  g.closePath();
+  g.fillStyle = themeColor("map-label");
+  g.fill();
+  g.lineWidth = ICON_RATIO * 1.2;
+  g.strokeStyle = themeColor("map-label-halo");
+  g.stroke();
+  return g.getImageData(0, 0, size, size);
+}
+
 /**
  * **متر إلى بكسل** — منقولٌ من `ZonesMap` حرفاً.
  *
@@ -262,6 +331,15 @@ export function OpsMapCanvas({
   const shown = useRef<Map<string, Map<string, LngLat>>>(new Map());
   const tweens = useRef<Map<string, number>>(new Map());
   const pulses = useRef<Set<string>>(new Set());
+  // **حركةُ كلِّ معلَمٍ وحدَه** لطبقات `glide` (٢٠٢٦-١١-٠٥) — وآخرُ وصفٍ لكلّ طبقة، وما رُفع
+  // لها آخرَ مرّة (فلا يُعاد رفعُ ما لم يتبدّل)، وما كان يتحرّك في الإطار الأخير (فيُرفع له
+  // إطارٌ أخيرٌ على الهدف)، وحلقةُ الإطارات الواحدة.
+  const motions = useRef<Map<string, Map<string, Motion>>>(new Map());
+  const specs = useRef<Map<string, LayerSpec>>(new Map());
+  const uploaded = useRef<Map<string, Uploaded>>(new Map());
+  const moving = useRef<Set<string>>(new Set());
+  const loop = useRef(0);
+  const lastFrame = useRef(0);
 
   // **والمُنادياتُ في مرجعٍ** — فلا يُعاد بناءُ الخريطة كلَّما تبدّلت.
   const clickRef = useRef(onFeatureClick);
@@ -321,6 +399,10 @@ export function OpsMapCanvas({
     const tweensNow = tweens.current;
     const shownNow = shown.current;
     const pulsesNow = pulses.current;
+    const motionsNow = motions.current;
+    const specsNow = specs.current;
+    const uploadedNow = uploaded.current;
+    const movingNow = moving.current;
     let observer: ResizeObserver | null = null;
 
     (async () => {
@@ -353,6 +435,12 @@ export function OpsMapCanvas({
               instance.addImage(ic.name, data, { pixelRatio: ICON_RATIO });
             }
           }
+          // **وسهمُ الاتّجاه** (٢٠٢٦-١١-٠٥) — صورةٌ واحدةٌ لكلّ الطبقات.
+          const chevron = drawHeading();
+          if (cancelled || !instance) return;
+          if (chevron && !instance.hasImage(HEADING_ICON)) {
+            instance.addImage(HEADING_ICON, chevron, { pixelRatio: ICON_RATIO });
+          }
           if (!cancelled) setReady(true);
         });
         // **ونقرُ الأرض يُرسَل خامّاً** — والمُنادي يقرّر ما يفعل به.
@@ -377,6 +465,8 @@ export function OpsMapCanvas({
       observer?.disconnect();
       for (const h of tweensNow.values()) cancelAnimationFrame(h);
       tweensNow.clear();
+      if (loop.current) cancelAnimationFrame(loop.current);
+      loop.current = 0;
       for (const mk of markersNow.values()) mk.remove();
       markersNow.clear();
       instance?.remove();
@@ -384,10 +474,69 @@ export function OpsMapCanvas({
       built.current.clear();
       shownNow.clear();
       pulsesNow.clear();
+      motionsNow.clear();
+      specsNow.clear();
+      uploadedNow.clear();
+      movingNow.clear();
     };
   }, []);
 
-  /** **يبني الطبقةَ إن لم تُبنَ، ويحدّث بياناتِها دائماً.** */
+  // ── حلقةُ الإطارات الواحدة — ما دام شيءٌ يتحرّك، ولا أكثرَ من ~٣٠ رفعاً في الثانية (وعشرٌ للطويل) ──────
+  //
+  // **كلُّ طبقة `glide` يُرفع لها إطارٌ من حركات معالمها**، وكلُّ خطٍّ مربوطٍ بعلامةٍ منزلقة
+  // يُرفع معها في الإطار نفسِه. **ومن توقّف يُرفع له إطارٌ أخيرٌ على هدفه** ثمّ لا يُمسّ.
+  const anchorAt = useCallback((a: { layer: string; id: string }, now: number): { pos: LngLat | null; active: boolean } => {
+    const mo = motions.current.get(a.layer)?.get(a.id);
+    return mo ? { pos: positionAt(mo, now), active: activeAt(mo, now) } : { pos: null, active: false };
+  }, []);
+  const kick = useCallback(() => {
+    if (loop.current) return;
+    const step = (t: number) => {
+      const m = map.current;
+      if (!m) {
+        loop.current = 0;
+        return;
+      }
+      // **والطويلُ وحدَه يُرفع عشراً في الثانية لا ثلاثين** (مراجعةُ ٢٠٢٦-١١-٠٦).
+      if (t - lastFrame.current < frameGap(motions.current.values(), performance.now())) {
+        loop.current = requestAnimationFrame(step);
+        return;
+      }
+      lastFrame.current = t;
+      const now = performance.now();
+      let more = false;
+      for (const [id, mv] of motions.current) {
+        const spec = specs.current.get(id);
+        if (!spec || !spec.visible) continue;
+        const act = anyActive(mv, now);
+        if (act || moving.current.has(id)) {
+          const src = m.getSource(`src-${id}`) as maplibregl.GeoJSONSource | undefined;
+          src?.setData({ type: "FeatureCollection", features: frameFeatures(spec.data.features, mv, now) } as never);
+        }
+        if (act) {
+          moving.current.add(id);
+          more = true;
+        } else moving.current.delete(id);
+      }
+      for (const spec of specs.current.values()) {
+        if (!spec.anchor || !spec.visible) continue;
+        const key = `anchor:${spec.id}`;
+        const a = anchorAt(spec.anchor, now);
+        if (a.active || moving.current.has(key)) {
+          const src = m.getSource(`src-${spec.id}`) as maplibregl.GeoJSONSource | undefined;
+          src?.setData({ type: "FeatureCollection", features: anchorLines(spec.data.features, a.pos) } as never);
+        }
+        if (a.active) {
+          moving.current.add(key);
+          more = true;
+        } else moving.current.delete(key);
+      }
+      loop.current = more ? requestAnimationFrame(step) : 0;
+    };
+    loop.current = requestAnimationFrame(step);
+  }, [anchorAt]);
+
+  /** **يبني الطبقةَ إن لم تُبنَ، ويحدّث بياناتِها حين تتبدّل.** */
   const sync = useCallback((spec: LayerSpec) => {
     const m = map.current;
     if (!m) return;
@@ -420,7 +569,12 @@ export function OpsMapCanvas({
           paint: {
             "line-color": spec.color as never,
             "line-width": spec.lineWidth ?? 2,
-            ...(spec.dashed === false ? {} : { "line-dasharray": [2, 2] }),
+            ...(spec.lineOpacity != null ? { "line-opacity": spec.lineOpacity } : {}),
+            ...(spec.dotted
+              ? { "line-dasharray": [0.3, 1.6] }
+              : spec.dashed === false
+                ? {}
+                : { "line-dasharray": [2, 2] }),
           },
         } as never);
       } else if (spec.kind === "circle-m") {
@@ -517,7 +671,25 @@ export function OpsMapCanvas({
           } as never);
           pulses.current.add(`${spec.id}-pulse`);
         }
+        // **وسهمُ الاتّجاه تحت الرمز** — من المصدر نفسِه فينزلق معه، ويدور بالاتّجاه.
+        if (spec.heading) {
+          m.addLayer({
+            id: `${spec.id}-heading`, type: "symbol", source: srcID,
+            filter: ["has", spec.heading.field],
+            layout: {
+              "icon-image": HEADING_ICON,
+              "icon-rotate": ["get", spec.heading.field] as never,
+              "icon-rotation-alignment": "map",
+              "icon-allow-overlap": true,
+              "icon-ignore-placement": true,
+            },
+            ...(spec.opacityField
+              ? { paint: { "icon-opacity": ["coalesce", ["get", spec.opacityField], 1] as never } }
+              : {}),
+          } as never);
+        }
         if (spec.kind === "symbol") {
+          const opacity = spec.opacityField ? (["coalesce", ["get", spec.opacityField], 1] as never) : undefined;
           m.addLayer({
             id: spec.id, type: "symbol", source: srcID,
             ...(spec.cluster ? { filter: ["!", ["has", "point_count"]] } : {}),
@@ -539,17 +711,19 @@ export function OpsMapCanvas({
                   }
                 : {}),
             },
-            ...(spec.labelField
-              ? {
-                  paint: {
+            paint: {
+              ...(spec.labelField
+                ? {
                     // **داكنٌ بحاشيةٍ بيضاء** — الخريطةُ فاتحةٌ في الثيمين (٢٠٢٦-١٠-٢٣).
                     "text-color": themeColor("map-label"),
                     "text-halo-color": themeColor("map-label-halo"),
                     "text-halo-width": 2.8,
                     "text-halo-blur": 0.4,
-                  },
-                }
-              : {}),
+                  }
+                : {}),
+              // **والباهتُ باهت** — موقعُه تقريبيّ، والإشارةُ ضعيفة (٢٠٢٦-١١-٠٥).
+              ...(opacity ? { "icon-opacity": opacity, ...(spec.labelField ? { "text-opacity": opacity } : {}) } : {}),
+            },
           } as never);
         } else {
           m.addLayer({
@@ -583,39 +757,85 @@ export function OpsMapCanvas({
     }
 
     const src = m.getSource(srcID) as maplibregl.GeoJSONSource | undefined;
-    const prevTween = tweens.current.get(spec.id);
-    if (prevTween != null) {
-      cancelAnimationFrame(prevTween);
-      tweens.current.delete(spec.id);
-    }
-    const from = shown.current.get(spec.id);
-    const still =
-      !spec.animate || !spec.visible || !from || from.size === 0 || reducedMotion() ||
-      !anyMoved(from, spec.data.features);
-    if (still) {
-      src?.setData((spec.visible ? spec.data : EMPTY) as never);
-      if (spec.animate) shown.current.set(spec.id, spec.visible ? positionsOf(spec.data.features) : new Map());
+    specs.current.set(spec.id, spec);
+    // **وما لم يتبدّل لا يُرفع** (٢٠٢٦-١١-٠٥) — كانت كلُّ نبضة سائقٍ تُعيد رفعَ كلِّ الطبقات:
+    // المتاجرَ بتجميعها والمناطقَ والكثافة.
+    const next: Uploaded = { data: spec.data, visible: spec.visible };
+    const changed = needsUpload(uploaded.current.get(spec.id), next);
+    if (changed) uploaded.current.set(spec.id, next);
+
+    if (!changed) {
+      // لا شيء — الحركاتُ الجارية تكمل في حلقتها.
+    } else if (spec.motion === "glide") {
+      // ── كلُّ معلَمٍ ينزلق وحدَه — **ولا يُوقَف لمن طلب تقليلَ الحركة** (`interpolates`) ──
+      const now = performance.now();
+      const oldTween = tweens.current.get(spec.id);
+      if (oldTween != null) {
+        cancelAnimationFrame(oldTween);
+        tweens.current.delete(spec.id);
+      }
+      // ومواضعُ الانزلاق القديم تُنسى — مفتاحٌ يُطفأ بعدها يبدأ من حيث العلامةُ لا من حيث كانت.
+      shown.current.delete(spec.id);
+      if (!spec.visible) {
+        motions.current.delete(spec.id);
+        moving.current.delete(spec.id);
+        src?.setData(EMPTY as never);
+      } else {
+        const mv = advanceMotions(motions.current.get(spec.id), spec.data.features, now);
+        motions.current.set(spec.id, mv);
+        src?.setData({ type: "FeatureCollection", features: frameFeatures(spec.data.features, mv, now) } as never);
+        if (anyActive(mv, now)) {
+          moving.current.add(spec.id);
+          kick();
+        }
+      }
+    } else if (spec.anchor) {
+      // ── خطٌّ يخرج من علامةٍ منزلقة — من حيث هي الآن ─────────────────
+      const a = anchorAt(spec.anchor, performance.now());
+      src?.setData(
+        (spec.visible ? { type: "FeatureCollection", features: anchorLines(spec.data.features, a.pos) } : EMPTY) as never,
+      );
+      if (spec.visible && a.active) {
+        moving.current.add(`anchor:${spec.id}`);
+        kick();
+      }
     } else {
-      // ── الانزلاق — لقطةٌ كلَّ إطارٍ حتّى الهدف ─────────────────
-      const start = performance.now();
-      const target = spec.data.features;
-      const step = (now: number) => {
-        const t = Math.min(1, (now - start) / TWEEN_MS);
-        const frame = t >= 1 ? target : tweenPoints(from, target, easeInOut(t));
-        src?.setData({ type: "FeatureCollection", features: frame } as never);
-        shown.current.set(spec.id, positionsOf(frame));
-        if (t < 1) tweens.current.set(spec.id, requestAnimationFrame(step));
-        else tweens.current.delete(spec.id);
-      };
-      tweens.current.set(spec.id, requestAnimationFrame(step));
+      motions.current.delete(spec.id);
+      moving.current.delete(spec.id);
+      const prevTween = tweens.current.get(spec.id);
+      if (prevTween != null) {
+        cancelAnimationFrame(prevTween);
+        tweens.current.delete(spec.id);
+      }
+      const from = shown.current.get(spec.id);
+      const still =
+        !spec.animate || !spec.visible || !from || from.size === 0 || !interpolates("tween", reducedMotion()) ||
+        !anyMoved(from, spec.data.features);
+      if (still) {
+        src?.setData((spec.visible ? spec.data : EMPTY) as never);
+        if (spec.animate) shown.current.set(spec.id, spec.visible ? positionsOf(spec.data.features) : new Map());
+      } else {
+        // ── الانزلاق — لقطةٌ كلَّ إطارٍ حتّى الهدف ─────────────────
+        const start = performance.now();
+        const target = spec.data.features;
+        const step = (now: number) => {
+          const t = Math.min(1, (now - start) / TWEEN_MS);
+          const frame = t >= 1 ? target : tweenPoints(from, target, easeInOut(t));
+          src?.setData({ type: "FeatureCollection", features: frame } as never);
+          shown.current.set(spec.id, positionsOf(frame));
+          if (t < 1) tweens.current.set(spec.id, requestAnimationFrame(step));
+          else tweens.current.delete(spec.id);
+        };
+        tweens.current.set(spec.id, requestAnimationFrame(step));
+      }
     }
 
-    for (const id of [spec.id, `${spec.id}-line`, `${spec.id}-cluster`, `${spec.id}-count`, `${spec.id}-label`, `${spec.id}-pulse`]) {
+    for (const id of [spec.id, `${spec.id}-line`, `${spec.id}-cluster`, `${spec.id}-count`, `${spec.id}-label`, `${spec.id}-pulse`, `${spec.id}-heading`]) {
       if (m.getLayer(id)) {
         m.setLayoutProperty(id, "visibility", spec.visible ? "visible" : "none");
       }
     }
-  }, []);
+  }, [kick, anchorAt]);
 
   useEffect(() => {
     if (!ready) return;

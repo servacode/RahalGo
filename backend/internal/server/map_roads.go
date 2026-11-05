@@ -28,7 +28,8 @@ var errOnewayDecided = httpx.NewError(http.StatusConflict, "oneway_decided", "er
 func (s *Server) mapRoadsOnce(ctx context.Context) {
 	runCtx, cancel := context.WithTimeout(ctx, 60*time.Minute)
 	defer cancel()
-	res, err := maplearn.RunRoads(runCtx, s.pg, maplearn.NewMatcher(s.cfg.ValhallaURL), maplearn.DefaultRoadOptions())
+	// **عبر بوّابة التتبّع** (`road_match.go`): عمّاله الأربعة بيصيروا نداء بالمرّة، فخيط Valhalla الوحيد ما بينسدّ.
+	res, err := maplearn.RunRoads(runCtx, s.pg, gateRoads(maplearn.NewMatcher(s.cfg.ValhallaURL)), maplearn.DefaultRoadOptions())
 	if err != nil {
 		s.logger.Warn("تعلّم الطرق: تعثّرت الجولة", "error", err)
 		return

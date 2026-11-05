@@ -35,6 +35,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/push"
 	"github.com/servacode/rahalgo/backend/internal/realtime"
 	"github.com/servacode/rahalgo/backend/internal/referrals"
+	"github.com/servacode/rahalgo/backend/internal/roadmatch"
 	"github.com/servacode/rahalgo/backend/internal/routing"
 	"github.com/servacode/rahalgo/backend/internal/settings"
 	"github.com/servacode/rahalgo/backend/internal/support"
@@ -112,6 +113,8 @@ type Server struct {
 	// opsT **ذاكرةُ مراقبة التشغيل** — نافذةُ الحكم وحالُ الانقطاع
 	// (قرارُ المالك ٢٠٢٦-١٠-٠٤ — «مراقبة التشغيل»). انظر `ops_health.go`.
 	opsT opsTracker
+	// roadW **مطابق مسار السائق ع الطرق** — `road_match.go` (طلب المالك ٢٠٢٦-١١-٠٥).
+	roadW *roadmatch.Worker
 	// errs **عدّادُ أخطاء ٥xx** — والراصدُ يكتبه في الجدول. انظر `monitoring_errors.go`.
 	errs errorTracker
 	// sec **عدّادُ أحداث الأمان وتنبيهاتُها الفوريّة** — انظر `monitoring_security.go`.
@@ -1740,6 +1743,7 @@ func (s *Server) Router() http.Handler {
 			r.Patch("/driver-odometer/{id}", s.handleAdminOdometerCorrect)
 			// **وسماحٌ بفتح الدوام بلا صورةٍ مرّةً واحدة** — بسببٍ مكتوب.
 			r.Post("/drivers/{id}/odometer-exemption", s.handleAdminOdometerExemption)
+			r.Get("/driver-monitor/{id}/recent", s.handleDriverMonitorRecent)
 			r.Get("/drivers/{id}/cash", s.handleDriverCashStatement)
 			// **وكلُّ ما سلّمه — لا النقديُّ وحدَه** (٢٠٢٦-١٠-٣٠) — للعرض فقط.
 			r.Get("/drivers/{id}/delivered", s.handleDriverDelivered)

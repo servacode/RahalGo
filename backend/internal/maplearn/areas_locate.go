@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/servacode/rahalgo/backend/internal/polyline"
 )
 
 // ValhallaLocator يلصق النقاطَ بأقرب حافّةٍ بنداء `/locate` (verbose) بتكلفة الدراجة الناريّة كالتوجيه.
@@ -109,7 +111,7 @@ func parseShape(raw json.RawMessage) [][2]float64 {
 	}
 	var enc string
 	if json.Unmarshal(raw, &enc) == nil {
-		return decodePolyline6(enc)
+		return polyline.Decode6(enc)
 	}
 	var arr []struct {
 		Lat float64 `json:"lat"`

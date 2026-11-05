@@ -9,9 +9,9 @@ import org.junit.Test
  *
  * # لماذا إثباتٌ بنيويٌّ لا اختبارُ جهاز
  *
- * **`PointQueue` و`LocationService` يعتمدان `android.content.Context`
- * و`android.util.Log`** — **فلا يعملان في آلة Java وحدَها**، وتشغيلُهما
- * يحتاج جهازاً أو Robolectric.
+ * **`LocationService` يعتمد `android.content.Context` و`android.util.Log`**
+ * — **فلا يعمل في آلة Java وحدَها**، وتشغيلُه يحتاج جهازاً أو Robolectric.
+ * (**و`PointQueue` صار يُبنى من ملفٍّ** منذ 0.9.0 — فيُختبر سلوكُه في `PointQueueTest`.)
  *
  * **ولا جهازَ متّصلٌ اليوم.**
  *
@@ -36,41 +36,37 @@ class LocationContractTest {
     }
 
     /**
-     * **`R19` — نافذةُ الطابور بين القراءة والمسح.**
+     * **`R19` — نافذةُ الطابور بين القراءة والمسح — أُصلح في 0.9.0** (A6.3، ٢٠٢٦-١١-٠٥).
      *
-     * الترتيبُ المقيسُ في `LocationService`:
-     * ```
-     * val waiting = queue.all()      // ١ يقرأ ما في الملفّ
-     * api.sendBatch(waiting)         // ٢ نداءُ شبكةٍ يستغرق زمناً
-     * queue.clear()                  // ٣ يحذف الملفَّ كلَّه
-     * ```
+     * **كان**: `queue.all()` ثمّ `api.sendBatch(waiting)` ثمّ `queue.clear()` — **والمسحُ يحذف
+     * الملفَّ كلَّه**، فنقطةٌ أُضيفت أثناء نداء الشبكة تُمحى ولم تُرسَل.
      *
-     * **و`clear()` تحذف الملفَّ لا الصفوفَ المقروءة** — **فنقطةٌ أُضيفت
-     * أثناء نداء الشبكة تُمحى ولم تُرسَل.**
+     * **والآن**:
+     * ```
+     * val part = queue.oldest(...)   // ١ أقدمُ جزءٍ لا يزيد على مئتين
+     * api.sendBatch(part)            // ٢ نداءُ شبكة
+     * queue.remove(part)             // ٣ يمحو ذلك الجزءَ وحدَه
+     * ```
+     * **والسلوكُ نفسُه مُثبَتٌ على ملفٍّ حقيقيّ في `PointQueueTest`.**
      */
     @Test
-    fun `R19 — الطابور يُمحى كاملاً بعد إرسال ما قُرئ`() {
+    fun `R19 — يُمحى من الطابور ما أُرسل وحده`() {
         val svc = source("location/LocationService.kt")
         val queue = source("location/PointQueue.kt")
 
-        val readAt = svc.indexOf("queue.all()")
-        val sendAt = svc.indexOf("api.sendBatch(waiting)")
-        val clearAt = svc.indexOf("queue.clear()")
-        assertTrue2(readAt >= 0 && sendAt >= 0 && clearAt >= 0, "المسارُ تبدّل — يُعاد القياس")
-        assertTrue2(readAt < sendAt && sendAt < clearAt, "الترتيبُ ليس قراءةً ثمّ إرسالاً ثمّ مسحاً")
+        val readAt = svc.indexOf("queue.oldest(")
+        val sendAt = svc.indexOf("api.sendBatch(part)")
+        val removeAt = svc.indexOf("queue.remove(part)")
+        assertTrue2(readAt >= 0 && sendAt >= 0 && removeAt >= 0, "المسارُ تبدّل — يُعاد القياس")
+        assertTrue2(readAt < sendAt && sendAt < removeAt, "الترتيبُ ليس قراءةً ثمّ إرسالاً ثمّ محواً للمُرسَل")
 
-        // **والمسحُ يحذف الملفَّ** — لا يحذف ما أُرسل وحدَه.
-        val clearsWholeFile = queue.contains("fun clear()") && queue.contains("file.delete()")
-        assertTrue2(clearsWholeFile, "clear() لم تعد تحذف الملفَّ — يُعاد القياس")
+        // **ولا مسحَ للملفّ كلِّه بعد الإرسال.**
+        assertTrue2(!svc.contains("queue.clear()"), "عاد مسحُ الطابور كلِّه — R19 رجع")
+        assertTrue2(!queue.contains("fun clear()"), "عاد مسحُ الطابور كلِّه — R19 رجع")
+        assertTrue2(queue.contains("fun remove(sent: List<TrackPoint>)"), "المحوُ لم يعد للمُرسَل وحدَه")
 
-        // **ولا مِلكيّةَ في الطابور** — لا `id` ولا مؤشّرَ إرسال.
-        val hasCursor = queue.contains("removeFirst") || queue.contains("dropWhile") ||
-            queue.contains("sentUpTo") || queue.contains("cursor")
-        assertTrue2(!hasCursor, "ثمّةَ مؤشّرُ إرسالٍ — R19 قد يكون أُصلح، يُعاد القياس")
-
-        println("R19 LOCATION QUEUE RACE = RISK CONFIRMED (STRUCTURAL)")
-        println("  all() ثمّ sendBatch() ثمّ clear() — والملفُّ يُحذف كاملاً")
-        println("  فنقطةٌ تُضاف أثناء نداء الشبكة تُمحى ولم تُرسَل")
+        println("R19 LOCATION QUEUE RACE = FIXED (STRUCTURAL + UNIT PointQueueTest)")
+        println("  oldest() ثمّ sendBatch() ثمّ remove(part) — يُمحى ما أُرسل وحدَه")
         println("  DEVICE PROOF = NOT EXECUTED — لا جهازَ متّصل")
     }
 
@@ -84,7 +80,7 @@ class LocationContractTest {
     @Test
     fun `R20 — لا تُقرأ حمولةُ الردّ لتمييز المرفوض`() {
         val svc = source("location/LocationService.kt")
-        val i = svc.indexOf("api.sendBatch(waiting)")
+        val i = svc.indexOf("api.sendBatch(part)")
         assertTrue2(i >= 0, "المسارُ تبدّل")
         val after = svc.substring(i, minOf(i + 400, svc.length))
 

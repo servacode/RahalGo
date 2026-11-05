@@ -134,7 +134,13 @@ func MeasureShift(ctx context.Context, db DB, s ShiftSpan, now time.Time) (Shift
 		return ShiftKm{}, nil, err
 	}
 	wins := ShiftTenures(all, s)
-	res := Analyze(Input{Points: pts, Windows: wins, Now: now, From: begin, To: end, Cfg: DefaultConfig()})
+	// **والطريقُ المطابق إن وُجد** (`LoadRoad`) — فرقمُ الدوام والطلب ع الشارع نفسِه اللي بصفحة
+	// المراقبة. `on=false`: بلا قطعٍ مخزّنة ⇒ nil ⇒ خطوطٌ مستقيمةٌ متل قبل بالضبط.
+	road, err := LoadRoad(ctx, db, s.DriverID, from, to, false)
+	if err != nil {
+		return ShiftKm{}, nil, err
+	}
+	res := Analyze(Input{Points: pts, Windows: wins, Now: now, From: begin, To: end, Cfg: DefaultConfig(), Road: road})
 	sum := res.Summary
 	km := ShiftKm{
 		DriveM:      meters(sum.DriveKmTotal),

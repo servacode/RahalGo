@@ -468,7 +468,8 @@ class DriverApi(private val api: ApiClient) {
             speedMps = speedMps, accuracyM = accuracyM, bearingDeg = bearingDeg,
             recordedAt = recordedAt,
         )
-        api.call<Ack>("/api/v1/driver/location", HttpMethod.Post, body)
+        // **ومعه ساعةُ الجهاز** — فيصحّح المحرّكُ وقتَ هاتفٍ ساعتُه خاطئة (`DEVICE_TIME_HEADER`).
+        api.call<Ack>("/api/v1/driver/location", HttpMethod.Post, body, deviceTime = true)
     }
 
     /**
@@ -519,7 +520,8 @@ class DriverApi(private val api: ApiClient) {
      * **يرسل ما تجمّع حين انقطعت الشبكة — دفعة واحدة.**
      *
      * **ولا تُرسل نقطة نقطة**: مئة نقطة مئة نداء، **وحزمة السائق تُدفع
-     * من جيبه.** والمحرّك يقبل حتّى مئتين في الدفعة.
+     * من جيبه.** والحجمُ المعتادُ في المحرّك مئتان — **فالطابورُ يُرسَل أجزاءً لا تزيد عليها**
+     * (`BATCH_MAX_POINTS`، 0.9.0).
      */
     suspend fun sendBatch(points: List<TrackPoint>) {
         api.call<Ack>(
@@ -527,7 +529,14 @@ class DriverApi(private val api: ApiClient) {
             HttpMethod.Post,
             // **وقائمةُ أصنافٍ داخلَ خريطةٍ تُخمَّن في زمن التشغيل** — صنفٌ موسومٌ لا تخمين.
             BatchBody(points = points),
+            // **وساعةُ الجهاز لحظةَ الإرسال** — أوقاتُ الطابور من الساعة نفسِها فتُصحَّح معاً.
+            deviceTime = true,
         )
+    }
+
+    companion object {
+        /** **أكثرُ ما يُرسَل في نداء دفعةٍ واحد** — الحجمُ المعتادُ في المحرّك (`maxBatchPoints`). */
+        const val BATCH_MAX_POINTS = 200
     }
 
     /**

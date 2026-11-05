@@ -108,7 +108,7 @@ class AbuseMatrixTest {
             "**عادت ساعةُ الحائط إلى مهلة الإرسال**",
             src.contains("val now = SystemClock.elapsedRealtime()"),
         )
-        val send = src.indexOf("private fun send(point: Location)")
+        val send = src.indexOf("private fun send(point: Location")
         val after = src.substring(send, minOf(send + 1200, src.length))
         assertFalse(
             "**ساعةُ الحائط في حارس التردّد**",

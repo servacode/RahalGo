@@ -23,6 +23,7 @@ import com.google.android.gms.location.Priority
 import com.rahalgo.driver.MainActivity
 import com.rahalgo.driver.R
 import com.rahalgo.driver.data.Backend
+import com.rahalgo.shared.driver.DriverApi
 import com.rahalgo.shared.model.TrackPoint
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -31,6 +32,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -74,6 +76,9 @@ class LocationService : Service() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val client by lazy { LocationServices.getFusedLocationProviderClient(this) }
+
+    // **وتقرؤه النبضةُ من خيطٍ آخر** لتحسب موعدَها منه (A6.5) — فيُرى ما كُتب للتوّ.
+    @Volatile
     private var lastSentAt = 0L
 
     /** **حارسُ التردّد** — على قدر الفترة أثناء التوصيل (`request`). */
@@ -86,8 +91,12 @@ class LocationService : Service() {
 
     private val callback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
-            // **وآخر نقطة في الدفعة هي الحقّ** — ما قبلها ماضٍ.
-            val point = result.lastLocation ?: return
+            // **وكلُّ نقاط الدفعة لا آخرُها** (A6.1، 0.9.0) — الأحدثُ يُرسَل حيّاً، **وما قبله يمرّ
+            // بالطابور** فيصل الأثرَ مع نداء الدفعة بعده. (كانت الأحدثُ وحدَها تُستعمل والباقي
+            // يُرمى — فبلا طلبٍ لا يصل إلّا موضعٌ كلَّ دقيقةٍ أو دقيقتين.)
+            val (older, point) = PointQueue.splitDelivered(result.locations) { it.time }
+            if (point == null) return
+            val earlier = older.map { trackPointOf(it) }
             // **وأثر الوصول يُكتب** — «لا فشل» ليس دليل نجاح: قد لا
             // تصل نقطة أصلا، **والسكوت يُقرأ عملا وهو صمت.**
             Log.i(TAG, "نقطة: ${point.latitude}, ${point.longitude} دقّة ${point.accuracy}")
@@ -102,12 +111,16 @@ class LocationService : Service() {
             //
             // **و`hasSpeed()` كاذبةٌ على الواقف** — فيُمرَّر فراغُها كما
             // هو، **والصفرُ يُقرّره القارئُ لا الكاتب.**
-            accept(point)
+            accept(point, earlier)
         }
     }
 
-    /** **قراءةٌ حقيقيّةٌ من النظام** — تُحفظ للشاشة وتُرسَل، والإشارةُ حيّة. */
-    private fun accept(point: Location) {
+    /**
+     * **قراءةٌ حقيقيّةٌ من النظام** — تُحفظ للشاشة وتُرسَل، والإشارةُ حيّة.
+     *
+     * و[earlier] ما سبقها في الدفعة نفسِها — يُصَفّ ويخرج مع نداء الدفعة بعدها.
+     */
+    private fun accept(point: Location, earlier: List<TrackPoint> = emptyList()) {
         LastPoint.set(
             point.latitude,
             point.longitude,
@@ -117,7 +130,7 @@ class LocationService : Service() {
             accuracyM = if (point.hasAccuracy()) point.accuracy else null,
         )
         GpsSignal.alive()
-        send(point)
+        send(point, earlier)
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -181,13 +194,19 @@ class LocationService : Service() {
     // **وما شاخ لا يُعاد** (٢٠٢٦-١٠-٠٢، `Heartbeat`): يُسأل النظامُ موضعاً
     // جديداً، **فإن لم يردّ فلا نبضة** — وموضعٌ ميّتٌ يُعاد «حديثاً» يُبنى عليه
     // توزيعٌ ويُقاس به قرب، **وهو أسوأُ من غيابه.**
+    //
+    // **وموعدُها من آخر إرسالٍ لا على دورةٍ مستقلّة** (A6.5، 0.9.0): كانت تنام دقيقتين على
+    // دورتها هي، **فالواقفُ يُسمع بعد آخر نقطةٍ بدقيقتين إلى أربع**. والآن تصحو حين يتمّ الصمتُ
+    // دقيقتين بالضبط (`Heartbeat.waitMs`)، **ولا تُعيد المحاولةَ قبل دقيقتين من محاولتها السابقة.**
     private fun heartbeat() {
         if (beating) return
         beating = true
         scope.launch {
+            var lastBeat = SystemClock.elapsedRealtime()
             while (true) {
-                delay(HEARTBEAT_SEC * 1000)
+                delay(Heartbeat.waitMs(SystemClock.elapsedRealtime(), lastSentAt, lastBeat))
                 val now = SystemClock.elapsedRealtime()
+                if (Heartbeat.due(now, lastSentAt)) lastBeat = now
                 val p = LastPoint.value
                 // **ولا يُغسَل موضعٌ مزيَّفٌ بنبضة** — **`isMocked` تُقرأ من
                 // `Location` الذي سلّمه النظام**، وموضعٌ نبنيه نحن يُقرأ أصيلاً
@@ -297,7 +316,7 @@ class LocationService : Service() {
      * **فالفاشلة تُكتب في الطابور**، وأوّل نقطة تنجح بعدها **تجرّ ما
      * تجمّع في دفعة واحدة** — لا نداء لكلّ نقطة.
      */
-    private fun send(point: Location) {
+    private fun send(point: Location, earlier: List<TrackPoint> = emptyList()) {
         // ══════════════════════════════════════════════════════════════
         // **ومهلةٌ تُقاس بساعةٍ لا ترجع** (`AB-06`، ٢٠٢٦-٠٩-١٦)
         // ══════════════════════════════════════════════════════════════
@@ -314,7 +333,11 @@ class LocationService : Service() {
         val now = SystemClock.elapsedRealtime()
         // **وحارس ثانٍ على التردّد** — النظام قد يسلّم أسرع ممّا طُلب،
         // **ونداء لكلّ نقطة يستنزف البطارية والحزمة معا.**
-        if (now - lastSentAt < minSendGapMs) return
+        if (now - lastSentAt < minSendGapMs) {
+            // **وما سبقها في الدفعة يُصَفّ وإن لم تُرسَل هي** — يخرج مع الإرسال التالي.
+            if (earlier.isNotEmpty()) scope.launch { earlier.forEach { queue.add(it) } }
+            return
+        }
         lastSentAt = now
 
         val speed = if (point.hasSpeed()) point.speed.toDouble() else null
@@ -336,6 +359,8 @@ class LocationService : Service() {
         val capturedAt = if (point.provider == HEARTBEAT_PROVIDER || point.time <= 0L) null else stamp(point.time)
 
         scope.launch {
+            // **وما سبقها في الدفعة يُصَفّ أوّلاً** — فيخرج مع نداء الدفعة بعد نجاحها (A6.1).
+            earlier.forEach { queue.add(it) }
             val api = Backend.of(applicationContext).driver
             try {
                 api.sendLocation(
@@ -354,31 +379,39 @@ class LocationService : Service() {
                 // **ووقت الالتقاط يُحفظ معها** — لا وقت الإرسال:
                 // **دفعة تصل بعد ربع ساعة بوقت الوصول** تجعل السائق
                 // يقفز من حيّ إلى حيّ في لحظة.
-                queue.add(
-                    TrackPoint(
-                        lat = point.latitude,
-                        lng = point.longitude,
-                        at = stamp(point.time),
-                        speedMps = speed,
-                        accuracyM = accuracy,
-                        // **ويُحفظ مع النقطة في الطابور** — **وإلّا
-                        // ضاع اتّجاهُ كلّ من انقطعت شبكتُه**، وهي
-                        // أطولُ المسارات وأغناها بالمنعطفات.
-                        bearingDeg = bearing,
-                        mocked = point.isMocked(),
-                    ),
-                )
+                //
+                // **والنبضةُ المعادةُ لا تُصَفّ** (0.9.0) — لا وقتَ التقاطٍ لها، وموضعُها
+                // نفسُه في الطابور أو وصل من قبل.
+                if (capturedAt != null) queue.add(trackPointOf(point))
                 Log.w(TAG, "تعذّر الإرسال — حُفظت في الطابور", e)
                 return@launch
             }
 
             // **والطابور يُفرَغ بعد أوّل نجاح** — الشبكة عادت.
-            if (!queue.isEmpty()) {
-                val waiting = queue.all()
+            flush(api)
+        }
+    }
+
+    /** **نداءُ دفعةٍ واحدٌ في كلّ مرّة** — نجاحان متقاربان لا يرسلان الجزءَ نفسَه مرّتين. */
+    private val flushing = Mutex()
+
+    /**
+     * ══════════════════════════════════════════════════════════════════
+     * **يُفرغ الطابورَ أجزاءً — ويمحو ما أُرسل وحدَه** (A6.3، 0.9.0)
+     * ══════════════════════════════════════════════════════════════════
+     *
+     * **كان يُرسَل الطابورُ كلُّه في نداءٍ واحدٍ ثمّ يُحذف الملفّ** — فما فوق المئتين يردّه المحرّك
+     * فيعلق، **ونقطةٌ أُضيفت أثناء النداء تُمحى ولم تُرسَل** (`R19`). والآن: أقدمُ مئتين، ثمّ
+     * **يُمحى ذلك الجزءُ وحدَه** حين ينجح، ثمّ التالي — **وأوّلُ فشلٍ يوقف ويترك الباقي كما هو.**
+     */
+    private suspend fun flush(api: DriverApi) {
+        if (!flushing.tryLock()) return
+        try {
+            repeat(FLUSH_MAX_PARTS) {
+                val part = queue.oldest(DriverApi.BATCH_MAX_POINTS)
+                if (part.isEmpty()) return
                 try {
-                    api.sendBatch(waiting)
-                    queue.clear()
-                    Log.i(TAG, "أُرسلت دفعة: ${waiting.size} نقطة")
+                    api.sendBatch(part)
                 } catch (e: CancellationException) {
                     // **والطابورُ يبقى كما هو** — يُرسَل حين تعود الورديّة.
                     throw e
@@ -386,10 +419,30 @@ class LocationService : Service() {
                     // **ولا تُمحى إن فشلت الدفعة** — تُترك للمحاولة
                     // التالية، **ومن مسحها قبل أن تصل فقدها.**
                     Log.w(TAG, "تعذّرت الدفعة", e)
+                    return
                 }
+                // **وجزءٌ لم يُمحَ منه شيءٌ لا يُعاد في الحلقة نفسِها.**
+                if (queue.remove(part) == 0) return
+                Log.i(TAG, "أُرسلت دفعة: ${part.size} نقطة، وبقي ${queue.size()}")
             }
+        } finally {
+            flushing.unlock()
         }
     }
+
+    /** **نقطةُ الطابور من قراءة النظام** — بوقت التقاطها واتّجاهها وتزييفها. */
+    private fun trackPointOf(point: Location): TrackPoint = TrackPoint(
+        lat = point.latitude,
+        lng = point.longitude,
+        at = stamp(point.time),
+        speedMps = if (point.hasSpeed()) point.speed.toDouble() else null,
+        accuracyM = if (point.hasAccuracy()) point.accuracy.toDouble() else null,
+        // **ويُحفظ مع النقطة في الطابور** — **وإلّا
+        // ضاع اتّجاهُ كلّ من انقطعت شبكتُه**، وهي
+        // أطولُ المسارات وأغناها بالمنعطفات.
+        bearingDeg = if (point.hasBearing()) point.bearing.toDouble() else null,
+        mocked = point.isMocked(),
+    )
 
     /** وقت الالتقاط بصيغة `ISO-8601` كما يقبلها المحرّك. */
     private fun stamp(millis: Long): String =
@@ -494,6 +547,9 @@ class LocationService : Service() {
 
         /** **كم يُنتظر النظامُ ليردّ موضعاً جديداً** — قبل أن تُعدّ الإشارةُ مفقودة. */
         private const val FIX_TIMEOUT_MS = 30_000L
+
+        /** **أكثرُ أجزاء الدفعة في إفراغٍ واحد** — الطابورُ كلُّه بأقصى سقفه، وجزءٌ زائد. */
+        private const val FLUSH_MAX_PARTS = PointQueue.MAX_POINTS / DriverApi.BATCH_MAX_POINTS + 1
 
         // **ومصدرُها يُسمّى** — من قرأ سجلّاً عرف أنّها إعادةٌ لا قراءة.
         private const val HEARTBEAT_PROVIDER = "rahalgo-heartbeat"

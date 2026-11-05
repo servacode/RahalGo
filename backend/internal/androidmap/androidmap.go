@@ -152,11 +152,13 @@ type Case struct {
 // اليوم** — **ولا جهازَ متّصل.**
 var Cases = []Case{
 	// ── السائق · طبقةُ الموقع — **مُثبَتةٌ بنيويّاً** ─────────────
+	// **أُصلح في نسخة السائق 0.9.0** (A6.3، ٢٠٢٦-١١-٠٥) — كان `RISK_CONFIRMED`:
+	// `all()` ثمّ `sendBatch()` ثمّ `clear()` والملفُّ يُحذف كاملاً.
 	{ID: "AND-01", App: "driver", Area: "location-queue",
-		Title: "الطابورُ يُمحى كاملاً بعد إرسال ما قُرئ",
+		Title: "يُمحى من الطابور ما أُرسل وحدَه — ونقطةُ أثناء النداء تبقى",
 		Kind:  Structural, Automation: Automated, Registers: []string{"R19"},
-		Test: "LocationContractTest.R19", Result: RiskConfirmed,
-		Evidence: "all() ثمّ sendBatch() ثمّ clear() — والملفُّ يُحذف كاملاً"},
+		Test: "LocationContractTest.R19", Result: Pass,
+		Evidence: "oldest() ثمّ sendBatch(part) ثمّ remove(part) · وPointQueueTest على ملفٍّ حقيقيّ"},
 	{ID: "AND-02", App: "driver", Area: "location-queue",
 		Title: "نجاحُ الدفعة يمسح المرفوضَ مع المقبول",
 		Kind:  Structural, Automation: Automated, Registers: []string{"R20"},

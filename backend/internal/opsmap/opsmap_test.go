@@ -87,7 +87,9 @@ func TestPerm_GrantedIsStableAndDeduped(t *testing.T) {
 // ══════════════════════════════════════════════════════════════════════
 
 func TestFreshness_DerivedNotInvented(t *testing.T) {
-	const ping = 60
+	// **بنبضةِ ١٢٠ ثانيةً** — ثلاثُ نبضاتٍ (٣٦٠ ث) فوق أرضيّة «حيّ» (`LiveFloor`، ٢٠٢٦-١١-٠٥)،
+	// فالحدُّ هنا مشتقٌّ من النبضة وحدها. (وكانت ٦٠، وحدُّها ١٨٠ صار تحت الأرضيّة.)
+	const ping = 120
 	cases := []struct {
 		name string
 		age  time.Duration
@@ -96,8 +98,8 @@ func TestFreshness_DerivedNotInvented(t *testing.T) {
 	}{
 		{"بلا موضعٍ قطّ", 0, false, FreshnessNone},
 		{"نبضةٌ الآن", 5 * time.Second, true, FreshnessLive},
-		{"ثلاثُ نبضاتٍ بالضبط", 180 * time.Second, true, FreshnessLive},
-		{"بعد ثلاثِ نبضات", 181 * time.Second, true, FreshnessFresh},
+		{"ثلاثُ نبضاتٍ بالضبط", 360 * time.Second, true, FreshnessLive},
+		{"بعد ثلاثِ نبضات", 361 * time.Second, true, FreshnessFresh},
 		{"حدُّ المحرّك بالضبط", AssignableWindow, true, FreshnessFresh},
 		{"بعد حدّ المحرّك", AssignableWindow + time.Second, true, FreshnessStale},
 	}
@@ -112,15 +114,34 @@ func TestFreshness_FollowsSettingNotConstant(t *testing.T) {
 	// **ومن غيّر النبضةَ من اللوحة تحرّك حدُّ «حيّ» معه** — وهذا هو
 	// «التشغيل بلا شيفرة».
 	// **عمرٌ واحدٌ وثلاثةُ أحكامٍ بثلاثِ نبضات** — والحكمُ يتبع اللوحة.
-	age := 100 * time.Second
+	//
+	// **عُدّل عن قصد (٢٠٢٦-١١-٠٥)**: كان العمرُ ١٠٠ ثانية، وصار «حيّ» لا ينزل تحت
+	// `LiveFloor` (٢٧٠ ث) فيُقرأ حيّاً بكلّ نبضة. **العمرُ ٣٠٠ ثانية** يُبقي الحكمَ تابعاً للّوحة.
+	age := 300 * time.Second
 	if got := Freshness(age, true, 20); got != FreshnessFresh {
-		t.Fatalf("بنبضةِ ٢٠ ثانيةً (حدُّ حيٍّ ٦٠): %s", got)
+		t.Fatalf("بنبضةِ ٢٠ ثانيةً (حدُّ حيٍّ الأرضيّة ٢٧٠): %s", got)
 	}
-	if got := Freshness(age, true, 60); got != FreshnessLive {
-		t.Fatalf("بنبضةِ ٦٠ ثانيةً (حدُّ حيٍّ ١٨٠): %s", got)
+	if got := Freshness(age, true, 60); got != FreshnessFresh {
+		t.Fatalf("بنبضةِ ٦٠ ثانيةً (حدُّ حيٍّ الأرضيّة ٢٧٠): %s", got)
 	}
 	if got := Freshness(age, true, 120); got != FreshnessLive {
-		t.Fatalf("بنبضةِ ١٢٠ ثانيةً: %s", got)
+		t.Fatalf("بنبضةِ ١٢٠ ثانيةً (حدُّ حيٍّ ٣٦٠): %s", got)
+	}
+}
+
+// L-T6
+func TestFreshness_LiveFloorCoversHeartbeat(t *testing.T) {
+	// **السائقُ الواقفُ يتكلّم بالنبضة الواقفة وحدها**، وأوّلُها بعد آخرِ إرسالٍ يصل بعد ١٢٠ إلى
+	// ٢٤٠ ثانية. **فبنبضةِ ٢٠ ثانيةً لا يُقلَب «صالحاً» وهو واقفٌ ينبض**: ٢٣٠ ث «حيّ»،
+	// وبعد الأرضيّة (٢٨٠ ث) «صالح».
+	if got := Freshness(230*time.Second, true, 20); got != FreshnessLive {
+		t.Fatalf("بنبضةِ ٢٠ ثانيةً وعمرِ ٢٣٠ ث: %s — والنبضةُ الواقفةُ لم تتأخّر بعد", got)
+	}
+	if got := Freshness(280*time.Second, true, 20); got != FreshnessFresh {
+		t.Fatalf("بنبضةِ ٢٠ ثانيةً وعمرِ ٢٨٠ ث: %s", got)
+	}
+	if got := Freshness(LiveFloor, true, 15); got != FreshnessLive {
+		t.Fatalf("الأرضيّةُ بالضبط: %s", got)
 	}
 }
 

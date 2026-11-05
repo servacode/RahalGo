@@ -49,9 +49,18 @@ const (
 // `TestOpsMap_FreshnessMatchesEngine` من نسي.
 const AssignableWindow = 15 * time.Minute
 
+// LiveFloor **أقلُّ نافذةٍ لـ«حيّ»** — أربعُ دقائقَ ونصف (٢٠٢٦-١١-٠٥).
+//
+// **السائقُ الواقفُ لا يتكلّم إلّا بالنبضة الواقفة**، وأوّلُها بعد آخرِ إرسالٍ يصل بعد
+// ١٢٠ إلى ٢٤٠ ثانية (حلقةُ التطبيق تنام دقيقتين على طورها هي، `LocationService.kt`).
+// **فثلاثُ نبضاتٍ وحدها (٤٥ ثانيةً عند ١٥) تقلبه «حيّ» ثمّ «صالح» ثمّ «حيّ»** وهو واقفٌ في
+// مكانه. **فالنافذةُ max(٣ × النبضة، ٢٧٠ ث)**: دقيقتان مرّتين وثلاثون ثانيةً للشبكة.
+// ولا يمسّ هذا التوزيعَ (`drivers.location_fresh_sec`) ولا مراقبةَ الموضع.
+const LiveFloor = 270 * time.Second
+
 // Freshness حكمُ الطزاجة على موضعٍ بعمره.
 //
-// **و`pingSec` من الإعدادات** — فما ضُبط في اللوحة يحكم.
+// **و`pingSec` من الإعدادات** — فما ضُبط في اللوحة يحكم، **ولا ينزل «حيّ» تحت `LiveFloor`.**
 func Freshness(age time.Duration, hasLocation bool, pingSec int64) string {
 	if !hasLocation {
 		return FreshnessNone
@@ -59,7 +68,11 @@ func Freshness(age time.Duration, hasLocation bool, pingSec int64) string {
 	if pingSec <= 0 {
 		pingSec = 60
 	}
-	if age <= time.Duration(pingSec)*3*time.Second {
+	live := time.Duration(pingSec) * 3 * time.Second
+	if live < LiveFloor {
+		live = LiveFloor
+	}
+	if age <= live {
 		return FreshnessLive
 	}
 	if age <= AssignableWindow {
@@ -118,6 +131,13 @@ type Driver struct {
 	LastLocationAt time.Time `json:"last_location_at"`
 	AgeSec         int64     `json:"age_sec"`
 	Freshness      string    `json:"freshness"`
+
+	// **نقطةُ العرض** (٢٠٢٦-١١-٠٥، `drivermonitor.NextShown`) — يضعها المعالجُ فوق الموضع
+	// الخامّ حين تكون الحركةُ الناعمة مفعّلة: اتّجاهُه وسرعتُه، و`Rough` إن كان الموضعُ من
+	// نقطةٍ دقّتُها ضعيفة (يُرسم باهتاً). **وتغيب حين لا نعرفها** — فلا يُخترَع اتّجاه.
+	Bearing  *float64 `json:"bearing,omitempty"`
+	SpeedMps *float64 `json:"speed_mps,omitempty"`
+	Rough    bool     `json:"rough,omitempty"`
 
 	// Tone **حالُه في لون** — `available` · `busy` · `idle` (`DriverTone`).
 	Tone string `json:"tone"`
