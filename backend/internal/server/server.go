@@ -1105,6 +1105,7 @@ func (s *Server) Router() http.Handler {
 			r.Get("/warnings", s.handleMerchantWarnings)
 			r.Get("/stores/{id}/orders", s.handleMerchantOrders)
 			r.Get("/stores/{id}/menu", s.handleMerchantMenu)
+			r.Get("/stores/{id}/menu/no-photo", s.handleMerchantNoPhotoItems)
 			r.Get("/stores/{id}/reports", s.handleMerchantReports)
 			r.Post("/stores/{id}/emergency", s.handleMerchantEmergency)
 			r.Get("/orders/{id}", s.handleMerchantGetOrder)
