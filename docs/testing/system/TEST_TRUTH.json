@@ -33,8 +33,8 @@
     "setting_defs": 277,
     "behaviour_settings": 232,
     "order_fields": 137,
-    "test_files": 766,
-    "test_funcs": 2935
+    "test_files": 767,
+    "test_funcs": 2936
   },
   "flows": [
     {
@@ -9397,6 +9397,12 @@
     {
       "name": "TestDriverSales_RefusedWithOwnCode",
       "file": "internal/identity/driver_sales_test.go",
+      "package": "identity",
+      "orphan": true
+    },
+    {
+      "name": "TestEnsureUserWithRole_EmptyActorOnExistingUser",
+      "file": "internal/identity/ensure_user_actor_test.go",
       "package": "identity",
       "orphan": true
     },
