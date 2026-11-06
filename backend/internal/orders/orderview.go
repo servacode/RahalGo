@@ -42,6 +42,8 @@ package orders
 
 import (
 	"encoding/json"
+
+	"github.com/servacode/rahalgo/backend/internal/textguard"
 )
 
 // Audience الطرفُ الذي تُبنى له الحمولة.
@@ -522,6 +524,86 @@ func ViewFor(a Audience, o *Order) map[string]any {
 			} else {
 				out["address_text"] = addr + " · " + o.NearLandmark
 			}
+		}
+	}
+	// **والسائقُ يرى الاسمَ الأوّلَ للزبون وحده** (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٥) —
+	// **في الخادم لا في الشاشة**، فالحمولةُ نفسُها لا تحمل الاسمَ كاملاً. **و«لدي توصيلة»
+	// لا تُمسّ**: الاسمُ فيها اسمُ المستلِم (وقد يكون محلّاً) ورقمُه عند السائق أصلاً.
+	if a == AudienceDriver && o.Kind != KindMerchantDelivery {
+		if _, ok := out["customer_name"]; ok {
+			out["customer_name"] = textguard.FirstName(o.CustomerName)
+		}
+		maskDriverContacts(out)
+	}
+	return out
+}
+
+// maskDriverContacts **ما كتبه الزبونُ بيده يُقرأ للسائق بلا رقم تواصل** (قرارُ المالك
+// ٢٠٢٦-١١-٠٥، البند ١ج): الملاحظاتُ ونصُّ الطلب الخاصّ والعنوانُ وملاحظةُ كلّ صنف —
+// **فرقمٌ مُخفى في الحديث لا يصل من بطاقة الطلب.** **وبالقراءة وحدَها**: الأصلُ في
+// القاعدة للإدارة. **ولا يُمسّ رقمُ صاحب الأمانة** (`holder_phone`): السائقُ يتّصل به
+// بقرار المالك ٢٠٢٦-١٠-٣٠.
+func maskDriverContacts(out map[string]any) {
+	for _, k := range []string{"notes", "custom_request", "address_text"} {
+		if v, ok := out[k].(string); ok && v != "" {
+			out[k], _ = textguard.MaskContacts(v, "***")
+		}
+	}
+	items, _ := out["items"].([]any)
+	for _, x := range items {
+		if it, ok := x.(map[string]any); ok {
+			if n, ok := it["note"].(string); ok && n != "" {
+				it["note"], _ = textguard.MaskContacts(n, "***")
+			}
+		}
+	}
+}
+
+// DriverFinishedKeep **ما يبقى عند السائق من طلبٍ انتهى — بالسماح لا بالمنع.**
+//
+// (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٢: «سجلّ السائق بعد ما ينتهي الطلب ما بيرجع فيه اسم
+// الزبون ولا عنوانه ولا نقاطه».) **قائمةُ المنع تشيخ**: حقلٌ جديدٌ يتسرّب من نفسه. **فما
+// لم يُذكر هنا لا يخرج** — رقمُ الطلب والمتجرُ والمبالغُ والمسافةُ والتواريخ. **وقائمةٌ
+// واحدةٌ لبابين**: سجلُّه (`server/driver_history.go`) وبثُّ غرفته (`publishOrder`).
+var DriverFinishedKeep = map[string]bool{
+	"id": true, "number": true, "status": true, "kind": true, "custom_mode": true,
+	"merchant_name": true, "total": true, "subtotal": true, "delivery_fee": true,
+	"free_waived": true, "discount": true, "cash_due": true, "payment_method": true,
+	"custom_goods_amount": true, "custom_fee": true, "fail_reason": true,
+	"created_at": true, "picked_up_at": true, "delivered_at": true, "closed_at": true,
+	"returned_at": true, "merchant_accepts_returns": true, "items_count": true,
+	// **المسافةُ** — من الاستلام إلى الباب، رقماً لا نقطة.
+	"leg_m": true,
+}
+
+// DriverFinished **أانتهى الطلبُ في حقّ سائقه؟** — أُغلق (أو حالُه نهاية)، **إلّا مشوارَ
+// إرجاعٍ لم تُسلَّم بضاعتُه**: الطلبُ في قائمته والطريقُ إلى المكتب أو المتجر.
+func DriverFinished(o *Order) bool {
+	if o == nil {
+		return false
+	}
+	switch {
+	case o.ClosedAt != nil:
+	case o.Status == StDelivered, o.Status == StCancelled, o.Status == StRejected,
+		o.Status == StFailed, o.Status == StRefunded:
+	default:
+		return false
+	}
+	openReturn := o.Status == StFailed && o.ReturnTo != nil && *o.ReturnTo != "" && o.GoodsHandedAt == nil
+	return !openReturn
+}
+
+// DriverFinishedView **حمولةُ السائق لطلبٍ انتهى** — قائمتُه (`ViewFor`) ثمّ
+// `DriverFinishedKeep` فوقها. **وفارغٌ إن تعذّر البناء** (يسقط مغلقاً كأصله).
+func DriverFinishedView(o *Order) map[string]any {
+	full := ViewFor(AudienceDriver, o)
+	if full == nil {
+		return nil
+	}
+	out := make(map[string]any, len(DriverFinishedKeep))
+	for k, v := range full {
+		if DriverFinishedKeep[k] {
+			out[k] = v
 		}
 	}
 	return out

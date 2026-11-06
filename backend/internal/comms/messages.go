@@ -3,6 +3,8 @@ package comms
 import (
 	"context"
 	"time"
+
+	"github.com/servacode/rahalgo/backend/internal/textguard"
 )
 
 // MaxBody **حدُّ الرسالة الواحدة.**
@@ -247,7 +249,9 @@ func (s *Service) Threads(ctx context.Context, userID string) ([]Thread, error) 
 		       -- (MarkRead)، **فعدٌّ يبقى في سجلّه أحمرَ لا يُطفأ أبداً.**
 		       CASE WHEN o.customer_id = $1 OR o.driver_id = $1
 		            THEN t.unread ELSE 0 END,
-		       COALESCE(t.last_body, ''), t.last_at, o.created_at
+		       COALESCE(t.last_body, ''), t.last_at, o.created_at,
+		       -- **أأنا الزبون؟** — وإلّا فالطرفُ الآخرُ زبونٌ يُقرأ اسمُه الأوّل وحده.
+		       o.customer_id = $1
 		FROM t
 		JOIN orders o ON o.id = t.order_id
 		JOIN users cu ON cu.id = o.customer_id
@@ -264,10 +268,15 @@ func (s *Service) Threads(ctx context.Context, userID string) ([]Thread, error) 
 		var t Thread
 		var status string
 		var deliveredAt, closedAt *time.Time
-		var partyNow bool
+		var partyNow, meCustomer bool
 		if err := rows.Scan(&t.OrderID, &t.Number, &status, &deliveredAt, &closedAt,
-			&t.Peer, &partyNow, &t.Unread, &t.LastBody, &t.LastAt, &t.CreatedAt); err != nil {
+			&t.Peer, &partyNow, &t.Unread, &t.LastBody, &t.LastAt, &t.CreatedAt,
+			&meCustomer); err != nil {
 			return nil, err
+		}
+		// **والسائقُ يرى الاسمَ الأوّلَ للزبون وحده** (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٥).
+		if !meCustomer {
+			t.Peer = textguard.FirstName(t.Peer)
 		}
 		// **والحكمُ من `channelOpen` نفسِها** — لا شرطٌ يشبهه.
 		t.Open, _ = channelOpen(status, deliveredAt, closedAt)
@@ -285,5 +294,19 @@ func (s *Service) Threads(ctx context.Context, userID string) ([]Thread, error) 
 func (s *Service) Flag(ctx context.Context, messageID, word string) error {
 	_, err := s.db.Exec(ctx,
 		`UPDATE order_messages SET flagged = true, flag_word = $2 WHERE id = $1`, messageID, word)
+	return err
+}
+
+// FlagContact **يَسِم رسالةً أُخفي منها رقمُ جوّالٍ أو واتساب** — والرسالةُ تصل مُخفاة.
+//
+// (قرارُ المالك ٢٠٢٦-١١-٠٥: حتّى لا يأخذ السائقُ الزبونَ برّا المنصّة.) **والأصلُ
+// يُضمّ إلى `flag_word`** بعد لفظٍ مسيءٍ إن سبقه — دليلٌ للإدارة وحدَها: `List`
+// للطرفين لا يقرأ هذا العمود. **و`contact_leak` يُعدّ لكلّ سائقٍ في صفحة المراقبة.**
+func (s *Service) FlagContact(ctx context.Context, messageID, summary string) error {
+	_, err := s.db.Exec(ctx, `
+		UPDATE order_messages SET flagged = true, contact_leak = true,
+		       flag_word = CASE WHEN COALESCE(flag_word, '') = '' THEN $2
+		                        ELSE flag_word || ' · ' || $2 END
+		 WHERE id = $1`, messageID, summary)
 	return err
 }

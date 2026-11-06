@@ -93,6 +93,26 @@ func (s *Server) alertOffensive(ctx context.Context, masked []string, body, enti
 	})
 }
 
+// alertContactLeak **رقمٌ أو واتساب أُخفي في حديث طلب — تُخبَر الإدارة.**
+//
+// (قرارُ المالك ٢٠٢٦-١١-٠٥: «موافق على كلشي» — حتّى لا يأخذ السائقُ الزبونَ برّا
+// المنصّة.) **ومن كتبه يُقال** (سائقٌ أم زبون) — **ولا رقمَ في نصّ التنبيه**: يُقرأ على
+// شاشةٍ مقفلة، والأصلُ في السجلّ (`flag_word`) لمن يراجع، كقاعدة الشتيمة.
+func (s *Server) alertContactLeak(ctx context.Context, p *comms.Permission) {
+	if s.notify == nil || p == nil {
+		return
+	}
+	who := notifTitles.contactLeakByCustomer
+	if p.Me == comms.RoleDriver {
+		who = notifTitles.contactLeakByDriver
+	}
+	s.notify.NotifyOps(ctx, notifications.Input{
+		Kind: notifications.KindTicket, Title: notifTitles.contactLeak,
+		Body:   orderRef(p.Number) + " — " + who,
+		Entity: "order", EntityID: p.OrderID, Href: "/dashboard/orders",
+	})
+}
+
 // ErrItemNameTooLong **اسمُ الصنف أطولُ من حدّ اللوحة** — ومعه `max`.
 var ErrItemNameTooLong = httpx.NewError(http.StatusBadRequest, "item_name_too_long", "errors.item_name_too_long")
 

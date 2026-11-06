@@ -116,6 +116,9 @@ const SERVER_MOBILE = new Set([
   "odometer_wrong_phase",
   "odometer_lower",
   "odometer_check",
+  // **شروطُ العمل قبل فتح الدوام** — تطبيقُ السائق (قرارُ المالك ٢٠٢٦-١١-٠٥).
+  "driver_terms_required",
+  "terms_version_changed",
 ]);
 
 /** **ما لا يبلغ هاتفاً** — أبوابُ الإدارة واللوحات. */
@@ -221,6 +224,8 @@ const SERVER_ADMIN = new Set([
   "wa_fee_below_share", "wa_not_whatsapp", "wa_cancel_after_pickup",
   // **طلبٌ بلا موقعٍ للمستلِم وتصحيحُ عنوانه** (ملحقُ المالك ٢٠٢٦-١١-٠٥).
   "wa_fee_required", "wa_address_closed",
+  // **مكافأةُ بلاغ «طلب رقمي»** (قرارُ المالك ٢٠٢٦-١١-٠٥) — زرُّ التذكرة في اللوحة وحدَه.
+  "reward_not_eligible", "reward_already_granted",
 ]);
 
 const found = new Map();

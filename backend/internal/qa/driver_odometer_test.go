@@ -83,7 +83,28 @@ func odoShift(t *testing.T, h *Harness, drv *User, on bool, readingID string, ca
 	if capable {
 		body["odometer_capable"] = true
 	}
+	if on {
+		odoAcceptTerms(t, h, drv)
+	}
 	return h.Call("POST", "/api/v1/driver/shift", drv.Token, body, driverApp("22"))
+}
+
+// odoAcceptTerms **يوافق السائقُ على شروط العمل الحاليّة** — تطبيقُ 22 لا يفتح الدوامَ قبلها
+// (`driver_terms_required`، فرعُ مكافحة الاصطياد). والموافقةُ مرّتين صفٌّ واحد.
+func odoAcceptTerms(t *testing.T, h *Harness, drv *User) {
+	t.Helper()
+	terms := h.Call("GET", "/api/v1/driver/terms", drv.Token, nil, driverApp("22"))
+	if terms.Code != 200 {
+		t.Fatalf("شروط العمل: %s", terms)
+	}
+	v, _ := terms.JSON()["version"].(float64)
+	if v <= 0 {
+		return
+	}
+	if r := h.Call("POST", "/api/v1/driver/terms/accept", drv.Token, map[string]any{"version": int64(v)},
+		driverApp("22")); r.Code != 200 {
+		t.Fatalf("الموافقة على الشروط: %s", r)
+	}
 }
 
 // odoErrDetails تفصيلُ الخطأ.

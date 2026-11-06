@@ -19,14 +19,41 @@ import (
 // حالتُه تقول ذلك أصلاً، **وسؤالُ المستخدم عمّا نعرفه يجعله يشكّ فيما نعرف.**
 func (s *Server) handleComplaintReasons(w http.ResponseWriter, r *http.Request) {
 	var status string
-	if err := s.pg.QueryRow(r.Context(),
-		`SELECT status FROM orders WHERE id = $1 AND customer_id = $2`,
-		chi.URLParam(r, "id"), userIDFrom(r)).Scan(&status); err != nil {
+	var hadDriver bool
+	if err := s.pg.QueryRow(r.Context(), `
+		SELECT o.status,
+		       o.driver_id IS NOT NULL OR EXISTS (
+		           SELECT 1 FROM order_events e WHERE e.order_id = o.id AND e.driver_id IS NOT NULL)
+		  FROM orders o WHERE o.id = $1 AND o.customer_id = $2`,
+		chi.URLParam(r, "id"), userIDFrom(r)).Scan(&status, &hadDriver); err != nil {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"reasons": support.ReasonsFor(status)})
+	reasons := support.ReasonsFor(status)
+	// ══════════════════════════════════════════════════════════════════
+	// **«السائق طلب رقمي» لمن كان له سائق — ولمن يعرف تطبيقُه اسمَه** (٢٠٢٦-١١-٠٥)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **وتطبيقُ الزبون القديم يقرأ الرمزَ المجهول «أخرى»** (`OrdersScreen.kt` قبل ٣٦)،
+	// **فيرى «أخرى» مرّتين** — ومن اختار الثانيةَ يريد «أخرى» فتح بلاغاً على سائقٍ
+	// بالغلط. **والويبُ لا يرسل ترويسةَ نسخة** فيأخذ القائمةَ كاملة.
+	kind, build := requestAppBuild(r)
+	oldApp := kind == "customer" && build > 0 && build < customerOffPlatformMinBuild
+	if !hadDriver || oldApp {
+		kept := make([]support.ComplaintReason, 0, len(reasons))
+		for _, x := range reasons {
+			if x.Code != support.ReasonOffPlatform {
+				kept = append(kept, x)
+			}
+		}
+		reasons = kept
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"reasons": reasons})
 }
+
+// customerOffPlatformMinBuild **أوّلُ بناءٍ لتطبيق الزبون يعرف اسمَ «السائق طلب رقمي»** —
+// وما دونه لا يُعرض عليه السبب. **ويساوي رقمَ بناء النسخة التي فيها السطر** (خطوةُ الإصدار).
+const customerOffPlatformMinBuild = 36
 
 // handleOpenComplaint يفتح تذكرةً على طلبِ صاحبها.
 func (s *Server) handleOpenComplaint(w http.ResponseWriter, r *http.Request) {
@@ -75,7 +102,12 @@ func (s *Server) handleOpenComplaint(w http.ResponseWriter, r *http.Request) {
 	//
 	// **ولا يُذكر اسمُ الشاكي**: ما يخصّه ما وقع لا من قاله — **ومن عرف من
 	// اشتكى عليه قد يقصده خارجَ المنصّة.**
-	if t.AgainstUserID != nil {
+	//
+	// **و«طلب رقمي» لا يُخبَر به السائق أبداً** (قرارُ المالك ٢٠٢٦-١١-٠٥): يعرف رقمَ
+	// الطلب فيعرف من بلّغ — **وهو بالضبط من يريد أن يصله برّا المنصّة.** الإدارةُ تقرّر
+	// الإنذارَ أو الإيقاف.
+	offPlatform := req.Reason == support.ReasonOffPlatform
+	if t.AgainstUserID != nil && !offPlatform {
 		s.notify.Notify(r.Context(), notifications.Input{
 			UserID: *t.AgainstUserID, Kind: notifications.KindTicket,
 			Title: notifTitles.complaintOnYou, Body: t.Subject,
@@ -86,10 +118,17 @@ func (s *Server) handleOpenComplaint(w http.ResponseWriter, r *http.Request) {
 	// **والعملياتُ تُخبَر فوراً لا حين تفتح اللوحة.**
 	//
 	// «لم يصلني طلبي» خبرُ مالٍ خرج بلا مقابل، **وساعةُ تأخيرٍ في قراءته
-	// ساعةٌ يبتعد فيها من يُسأل.**
+	// ساعةٌ يبتعد فيها من يُسأل.** **و«طلب رقمي» بعنوانه هو** — لا «شكوى جديدة»
+	// تضيع بين أخواتها.
+	opsTitle, opsBody := notifTitles.ticketNewOps, t.Subject+" — "+support.ReasonAr(req.Reason)
+	if offPlatform {
+		opsTitle = notifTitles.offPlatformComplaint
+		if t.OrderNumber != nil {
+			opsBody = t.Subject + " — " + orderRef(*t.OrderNumber)
+		}
+	}
 	s.notify.NotifyOps(r.Context(), notifications.Input{
-		Kind: notifications.KindTicket, Title: notifTitles.ticketNewOps,
-		Body:   t.Subject + " — " + support.ReasonAr(req.Reason),
+		Kind: notifications.KindTicket, Title: opsTitle, Body: opsBody,
 		Entity: "ticket", EntityID: t.ID, Href: "/dashboard/tickets",
 	})
 	s.audit(r, "customer.complaint_opened", "ticket", t.ID, map[string]any{

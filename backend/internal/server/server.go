@@ -1014,6 +1014,9 @@ func (s *Server) Router() http.Handler {
 			// **عدّادُ الدرّاجة — صورةٌ ورقم عند فتح الدوام وسكّره** (قرارُ المالك ٢٠٢٦-١١-٠٥،
 			// `driver_odometer.go`): تُرفع قبل `/shift` ويُرسل معرّفُها معه.
 			r.Post("/odometer", s.handleDriverOdometer)
+			// **شروطُ العمل وموافقتُه عليها** (قرارُ المالك ٢٠٢٦-١١-٠٥) — `driver_terms.go`.
+			r.Get("/terms", s.handleDriverTerms)
+			r.Post("/terms/accept", s.handleDriverTermsAccept)
 			// **موضعُه — يُرسله هو ولا يُخمَّن.** ومنه تُقاس المسافةُ إلى
 			// المتجر، **والترتيبُ بالدور عدلٌ في الوقت أعمى في المكان.**
 			r.Post("/location", s.handleDriverLocation)
@@ -1733,6 +1736,8 @@ func (s *Server) Router() http.Handler {
 			r.Get("/tickets/{id}", s.handleGetTicket)
 			r.Post("/tickets/{id}/replies", s.handleTicketReply)
 			r.Post("/tickets/{id}/resolve", s.handleTicketResolve)
+			// **مكافأةُ بلاغ «طلب رقمي» — كودُ توصيلٍ مجّانيّ** (قرارُ المالك ٢٠٢٦-١١-٠٥).
+			r.Post("/tickets/{id}/reward-free-delivery", s.handleTicketRewardFreeDelivery)
 
 			// السائقون والصندوق النقدي
 			r.Get("/drivers", s.handleListDrivers)

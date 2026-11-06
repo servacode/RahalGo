@@ -110,6 +110,8 @@ func (s *Service) RunWatchdog(ctx context.Context, interval time.Duration) {
 			s.sweepAutoAccept(ctx)
 			// **وما علق عند المكتب أو الواتساب بينزل للسائقين لحاله** — انظر `sweepNoWhatsAppDispatch`.
 			s.sweepNoWhatsAppDispatch(ctx)
+			// **وانقضاءُ مهلة حدّ الزبون يُعيد قراءةَ الطوابير المفتوحة** — انظر `publishSameCustomerGraceEnd`.
+			s.publishSameCustomerGraceEnd(ctx)
 			alerts, err := s.Alerts(ctx)
 			if err != nil {
 				s.logger.Error("watchdog scan failed", "error", err)

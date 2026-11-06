@@ -59,6 +59,18 @@ func DeliveryCodeText(number int64, code string) string {
 	return fmt.Sprintf("كود استلام طلبك #%d هو %s — أعطه للسائق عند الاستلام فقط.", number, code)
 }
 
+// SafetyNotice **سطرُ حماية الزبون** (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٦) — يُلحق برسائل
+// الواتساب التي تصل الزبونَ والسائقُ في طريقه إليه أو بعد التسليم. **ونفسُه حرفاً في
+// شاشة الطلب** (`shop.orders.safetyNotice` و`ord_safety_notice`).
+const SafetyNotice = "لحمايتك: لا تتعامل مع السائق برّا التطبيق، وبلّغنا إذا طلب رقمك."
+
+// DeliveryCodeWhatsAppText **نصُّ الكود بالواتساب** — نصُّ الإشعار وتحته سطرُ الحماية.
+// **يصل لحظةَ يستلم السائقُ الطلب** — والسائقُ في الطريق إلى الزبون: أنسبُ لحظة.
+// **وإشعارُ التطبيق يبقى بلاه** — قصيرٌ يُقرأ على شاشةٍ مقفلة.
+func DeliveryCodeWhatsAppText(number int64, code string) string {
+	return DeliveryCodeText(number, code) + "\n" + SafetyNotice
+}
+
 // FetchCodeText **نصُّ الكود للمتجر في «إحضار»** — يعطيه للسائق لما يوصله الغرض.
 func FetchCodeText(number int64, code string) string {
 	return fmt.Sprintf("كود استلام التوصيلة #%d هو %s — أعطه للسائق لما يوصلك الغرض فقط.", number, code)
@@ -200,10 +212,11 @@ func (s *Service) sendDeliveryCode(ctx context.Context, orderID string, rt *code
 		return
 	}
 	appSent := rt.app != ""
+	waText := DeliveryCodeWhatsAppText(rt.number, rt.code)
 	go func() {
 		bg, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
 		defer cancel()
-		if s.whatsapp.SendText(bg, rt.phone, text) {
+		if s.whatsapp.SendText(bg, rt.phone, waText) {
 			return
 		}
 		if s.logger != nil {

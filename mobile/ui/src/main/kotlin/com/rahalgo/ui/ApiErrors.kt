@@ -685,6 +685,9 @@ private val CODES: Map<String, Int> = mapOf(
     "merchant_ban_locked" to R.string.err_merchant_ban_locked,
     "rep_commission_out_of_range" to R.string.err_rep_commission_out_of_range,
     "accident_check_required" to R.string.err_accident_check_required,
+    // **شروطُ العمل الجديدة** (قرارُ المالك ٢٠٢٦-١١-٠٥) — قبل فتح الدوام.
+    "driver_terms_required" to R.string.err_driver_terms_required,
+    "terms_version_changed" to R.string.err_terms_version_changed,
     "never_picked_up" to R.string.err_never_picked_up,
     "payout_below_min" to R.string.err_payout_below_min,
     "payout_closed" to R.string.err_payout_closed,

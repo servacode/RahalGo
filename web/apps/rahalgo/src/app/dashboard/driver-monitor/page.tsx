@@ -103,6 +103,10 @@ interface Row {
   odometer?: OdoDay;
   /** **يومُ شغل المنصّة** (قرارُ المالك ٢٠٢٦-١١-٠٦) — والمشيُ بعد إغلاقها. */
   work_day?: WorkDay;
+  /** **بلاغاتُ «السائق طلب رقمي» عليه** — آخر ٣٠ يوماً (قرارُ المالك ٢٠٢٦-١١-٠٥). */
+  off_platform_reports?: number;
+  /** **رسائلُه التي أُخفي منها رقمٌ أو واتساب** — آخر ٣٠ يوماً. */
+  contact_leaks?: number;
 }
 /** **يومُ شغل المنصّة** — من فتحها لإغلاقها (أو ٩←٩ إن كانت ٢٤ ساعة)، وما مشاه بعد الإغلاق. */
 interface WorkDay {
@@ -668,6 +672,8 @@ function Stat({ label, value, tone }: { label: string; value: React.ReactNode; t
 function DriverCard({ r, now, onOpen }: { r: Row; now: number; onOpen: () => void }) {
   const L = T.live;
   const s = r.summary;
+  const offPlatform = r.off_platform_reports ?? 0;
+  const leaks = r.contact_leaks ?? 0;
   return (
     <div
       role="button"
@@ -682,6 +688,11 @@ function DriverCard({ r, now, onOpen }: { r: Row; now: number; onOpen: () => voi
           {r.alert && (
             <Badge variant="danger" className="ms-2">
               {T.overLimit}
+            </Badge>
+          )}
+          {offPlatform > 0 && (
+            <Badge variant="danger" className="ms-2">
+              {T.offPlatformBadge}
             </Badge>
           )}
         </span>
@@ -709,6 +720,8 @@ function DriverCard({ r, now, onOpen }: { r: Row; now: number; onOpen: () => voi
           <Stat label={T.cols.stops} value={s.store_stops > 0 ? fmtNum(s.store_stops) : "—"} />
           <Stat label={T.cols.gaps} value={s.gaps > 0 ? fmtNum(s.gaps) : "—"} tone={r.flagged_gaps > 0} />
           <Stat label={T.cols.mocked} value={s.mocked > 0 ? fmtNum(s.mocked) : "—"} tone={s.mocked > 0} />
+          <Stat label={T.cols.offPlatform} value={offPlatform > 0 ? fmtNum(offPlatform) : "—"} tone={offPlatform > 0} />
+          <Stat label={T.cols.contactLeaks} value={leaks > 0 ? fmtNum(leaks) : "—"} tone={leaks > 0} />
         </div>
       </Box>
     </div>

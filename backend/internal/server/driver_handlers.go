@@ -19,6 +19,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/shifts"
+	"github.com/servacode/rahalgo/backend/internal/textguard"
 )
 
 // بوابة السائق.
@@ -146,6 +147,11 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 		OdometerExempt bool `json:"odometer_exempt"`
 		// OdometerLastKm **آخرُ رقمٍ سجّله** — يُعرض له تحت الحقل. وفارغٌ قبل أوّل قراءة.
 		OdometerLastKm *float64 `json:"odometer_last_km"`
+
+		// TermsVersion و TermsRequired **نسخةُ شروط العمل وأعليه أن يوافق** (قرارُ المالك
+		// ٢٠٢٦-١١-٠٥) — **فيعرض التطبيقُ شريطَ الموافقة قبل أن يضغط «ابدأ الدوام».**
+		TermsVersion  int64 `json:"terms_version"`
+		TermsRequired bool  `json:"terms_required"`
 	}
 	err := s.pg.QueryRow(r.Context(), `
 		SELECT u.full_name, u.on_shift, u.shift_started_at,
@@ -225,6 +231,9 @@ func (s *Server) handleDriverMe(w http.ResponseWriter, r *http.Request) {
 	// **وسرعتُه هي سرعتُه** — لا رقمَ واحدٌ لكلّ السائقين. (قرارُ المالك
 	// ٢٠٢٦-٠٨-١٢.) **وإعدادُ المالك يبقى أرضاً** لمن لا تاريخَ له بعد.
 	out.AvgSpeedKmh = s.driverSpeedKmh(r.Context(), uid)
+	if st, err := s.driverTermsStateOf(r, uid); err == nil {
+		out.TermsVersion, out.TermsRequired = st.Version, st.Required()
+	}
 	// **والمسارُ يصير عنوانا** — كما في كلّ صورةٍ في المنصة.
 	out.AvatarURL = media.SignedURLPtr(out.AvatarURL)
 	httpx.JSON(w, http.StatusOK, out)
@@ -287,6 +296,12 @@ func (s *Server) handleDriverShift(w http.ResponseWriter, r *http.Request) {
 	// (قرارُ المالك ٢٠٢٦-١٠-٠٤). **والخروجُ من الدوام لا يُمنع.**
 	if req.On && s.driverAccidentLocked(r.Context(), userIDFrom(r)) {
 		s.respondErr(w, errAccidentCheck)
+		return
+	}
+	// **ولا دوامَ قبل الموافقة على شروط العمل الجديدة** (قرارُ المالك ٢٠٢٦-١١-٠٥) —
+	// **لتطبيقٍ فيه شاشتُها وحدَه** (`driverTermsBlock`): القديمُ لا يُقفل.
+	if req.On && s.driverTermsBlock(r, userIDFrom(r)) {
+		s.respondErr(w, errDriverTermsRequired)
 		return
 	}
 	if req.On && s.settings.RequireWhatsApp(r.Context(), "drivers.require_whatsapp") {
@@ -792,6 +807,15 @@ func (s *Server) loadDriverOrders(r *http.Request, sql string, args ...any) ([]d
 			&o.Subtotal, &o.Discount, &o.HolderName, &o.HolderPhone, &o.Origin); err != nil {
 			return nil, err
 		}
+		// **والاسمُ الأوّلُ للزبون وحده** (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٥) — كما في
+		// `orders.ViewFor` للسائق، **وقبل قلب «إحضار»**. و«لدي توصيلة» اسمُ مستلِمها كاملاً.
+		if o.Kind != orders.KindMerchantDelivery {
+			o.CustomerName = textguard.FirstName(o.CustomerName)
+			// **وما كتبه الزبونُ بلا رقم تواصل** (البند ١ج) — كما في `orders.ViewFor`،
+			// بالقراءة وحدَها والأصلُ للإدارة.
+			o.CustomRequest, _ = textguard.MaskContacts(o.CustomRequest, "***")
+			o.AddressText, _ = textguard.MaskContacts(o.AddressText, "***")
+		}
 		if o.ReturnTo != "" {
 			s.asReturnTrip(r.Context(), &o)
 		} else if o.DeliveryMode == orders.DeliveryModeFetch {
@@ -975,10 +999,13 @@ func (s *Server) handleDriverQueue(w http.ResponseWriter, r *http.Request) {
 	//
 	// **والشرطُ في المحرّك لا هنا** (`orders.QueueVisibleSQL`) — **ودفعُ العرض
 	// يقرؤه نفسَه** فلا يرنّ إلّا لمن يرى الطلبَ في طابوره (٢٠٢٦-١٠-٠٢).
+	//
+	// **وحدُّ الزبون شرطٌ ثالثٌ في البابين** (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٤) —
+	// `orders.SameCustomerGateSQL`، **والدفعُ وبوّابةُ القبول يقرآنه نفسَه.**
 	if !s.orders.ProximityEnabled(ctx) {
 		s.scanDriverOrders(w, r, driverOrderSelect+`
 			WHERE o.status = 'dispatching' AND o.driver_id IS NULL
-			  AND `+orders.QueueBaseSQL("$1::uuid")+`
+			  AND `+orders.QueueBaseSQL("$1::uuid")+s.orders.SameCustomerGateSQL(ctx, "$1::uuid", 3)+`
 			ORDER BY o.ready_at NULLS LAST, o.created_at
 			LIMIT 50`, uid, staleLocationMinutes)
 		return
@@ -992,7 +1019,7 @@ func (s *Server) handleDriverQueue(w http.ResponseWriter, r *http.Request) {
 	freshLoc := orders.QueueDriverFreshLocSQL("$1::uuid", "$5")
 	s.scanDriverOrders(w, r, driverOrderSelect+`
 		WHERE o.status = 'dispatching' AND o.driver_id IS NULL
-		  AND `+orders.QueueVisibleSQL("$1::uuid", 3)+`
+		  AND `+orders.QueueVisibleSQL("$1::uuid", 3)+s.orders.SameCustomerGateSQL(ctx, "$1::uuid", 3)+`
 		-- **الأقربُ أوّلاً لمن له موضعٌ حديث، ثمّ الأجهزُ فالأقدم.**
 		ORDER BY
 		  CASE WHEN `+freshLoc+` IS NOT NULL AND `+orders.DispatchAnchorSQL+` IS NOT NULL
@@ -1208,6 +1235,10 @@ func (s *Server) handleDriverAccept(w http.ResponseWriter, r *http.Request) {
 		cond = orders.QueueVisibleSQL("$1::uuid", 3)
 		args = append(args, dp.CashLimit, dp.MaxActive, dp.FreshSec,
 			dp.MaxM, dp.InitialM, dp.StepM, dp.TimeoutSec)
+	}
+	// **وحدُّ الزبون شرطُ الطابور نفسُه** (البند ٤) — **ويُبنى هنا قبل الفتح.**
+	if gateQueue {
+		cond += s.orders.SameCustomerGateSQL(r.Context(), "$1::uuid", 3)
 	}
 	tx, err := s.pg.Begin(r.Context())
 	if err != nil {
@@ -1714,6 +1745,9 @@ func (s *Server) handleDriverCash(w http.ResponseWriter, r *http.Request) {
 			s.respondErr(w, err)
 			return
 		}
+		// **والاسمُ الأوّلُ وحده** (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٥) — يميّز القيدَ في
+		// كشفه (طلبُ ٢٠٢٦-٠٨-١٣) ولا يصير قائمةَ زبائن.
+		e.CustomerName = textguard.FirstName(e.CustomerName)
 		out = append(out, e)
 	}
 	httpx.JSON(w, http.StatusOK, paged("entries", out, count, pg))

@@ -142,6 +142,8 @@ export default function OrderPage() {
           {O.chat}
         </Button>
       )}
+      {/* **«لحمايتك: لا تتعامل مع السائق برّا التطبيق»** (قرارُ المالك ٢٠٢٦-١١-٠٥) — كتطبيق الزبون. */}
+      {!ended && order.driver_name && <p className="text-xs text-ink-muted">{O.safetyNotice}</p>}
       {!ended && <LiveStartButton orderId={order.id} status={order.status} />}
 
       <dl className="surface flex flex-col gap-2 p-4">

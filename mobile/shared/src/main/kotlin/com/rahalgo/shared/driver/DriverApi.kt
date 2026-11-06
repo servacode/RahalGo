@@ -33,6 +33,21 @@ class DriverApi(private val api: ApiClient) {
     /** حال السائق — **الوردية والمال واليوم في نداء واحد.** */
     suspend fun me(): DriverMe = api.call("/api/v1/driver/me")
 
+    /** **شروطُ العمل ونسختُها وما وافق عليه** (قرارُ المالك ٢٠٢٦-١١-٠٥). */
+    suspend fun terms(): com.rahalgo.shared.model.DriverTerms = api.call("/api/v1/driver/terms")
+
+    /**
+     * **«قرأت الشروط وموافق»** — بالنسخة التي قرأها. **ونسخةٌ رُفعت وهو يقرأ تُردّ**
+     * (`terms_version_changed`) فتُعاد قراءتُها.
+     */
+    suspend fun acceptTerms(version: Int) {
+        api.call<Ack>(
+            "/api/v1/driver/terms/accept",
+            HttpMethod.Post,
+            com.rahalgo.shared.model.TermsAccept(version),
+        )
+    }
+
     /**
      * **سجلُّ ما نفّذه** — المغلقةُ وحدَها، الأحدثُ أوّلاً.
      *

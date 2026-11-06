@@ -684,6 +684,8 @@ private fun reasonLabel(code: String): String = when (code) {
     "quality" -> stringResource(R.string.cr_quality)
     "late" -> stringResource(R.string.cr_late)
     "driver_conduct" -> stringResource(R.string.rs_driver_conduct)
+    // **«السائق طلب رقمي»** (قرارُ المالك ٢٠٢٦-١١-٠٥) — بلاغٌ يصل الإدارةَ فوراً.
+    "off_platform" -> stringResource(R.string.cr_off_platform)
     "money" -> stringResource(R.string.cr_money)
     "other" -> stringResource(R.string.cr_other)
     else -> stringResource(R.string.cr_other)

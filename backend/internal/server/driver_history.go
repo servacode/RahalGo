@@ -97,16 +97,16 @@ func (s *Server) handleDriverHistory(w http.ResponseWriter, r *http.Request) {
 	//
 	// **كان يُرسَل صفُّ الطلب كاملاً** — وفيه `customer_phone` ومعرّفُ الزبون وإحداثيّاتُ
 	// بابه. **وقرارُ المالك (٢٠٢٦-٠٨-٠٩): «ولا رقمَ زبونٍ يصل إلى سائق».** فيمرّ بقائمة
-	// السائق (`orders.ViewFor`) — **ويُنزع الموضعُ فوقها: الطلبُ انتهى فلا حاجةَ له.**
+	// السائق (`orders.ViewFor`) — **ثمّ بقائمة السجلّ فوقها** (`historyKeep`).
 	out := make([]map[string]any, len(res.Orders))
 	for i := range res.Orders {
 		o := res.Orders[i]
-		v := orders.ViewFor(orders.AudienceDriver, &o)
-		if v == nil {
-			v = map[string]any{}
-		}
-		for _, k := range historyHidden {
-			delete(v, k)
+		full := orders.ViewFor(orders.AudienceDriver, &o)
+		v := make(map[string]any, len(historyKeep)+5)
+		for k, x := range full {
+			if historyKeep[k] {
+				v[k] = x
+			}
 		}
 		// **وما تحتاجه شاشةُ السجلّ ممّا ليس في قائمة السائق.**
 		v["merchant_name"] = o.MerchantName
@@ -183,5 +183,12 @@ func (s *Server) handleDriverReport(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"id": t.ID, "number": t.Number, "status": t.Status})
 }
 
-// historyHidden **ما لا يحتاجه سجلُّ طلبٍ انتهى** — موضعُ باب الزبون ومعرّفُه.
-var historyHidden = []string{"lat", "lng", "customer_id", "nav_lat", "nav_lng", "customer_phone"}
+// historyKeep **ما يبقى عند السائق من طلبٍ انتهى — بالسماح لا بالمنع.**
+//
+// (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٢.) **كانت قائمةَ منعٍ من ستّة حقول** — فبقي الاسمُ
+// والعنوانُ والملاحظاتُ ونصُّ الطلب الخاصّ وصاحبُ الأمانة وبابُ البناية وصورةُ الباب:
+// **سجلٌّ يُقرأ قائمةَ زبائن.** **والقائمةُ في المحرّك** (`orders.DriverFinishedKeep`) —
+// **وبثُّ غرفته يقرؤها نفسَها**، فلا يصله من التحديث ما نُزع من السجلّ. **ونسخُ السائق
+// القديمة لا تنكسر**: حقولُ `HistoryOrder` كلُّها بافتراض، وشاشةُ السجلّ لا تعرض الاسمَ
+// ولا العنوان.
+var historyKeep = orders.DriverFinishedKeep

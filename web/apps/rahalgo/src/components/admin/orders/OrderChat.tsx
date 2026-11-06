@@ -22,6 +22,12 @@ interface ChatLine {
   role: string;
   sender: string;
   created_at: string;
+  /** **سطرٌ موسوم** — لفظٌ مسيءٌ أو رقمُ تواصلٍ أُخفي عن الطرف الآخر. */
+  flagged?: boolean;
+  /** **ما أُخفي بنصّه الأصليّ** — للإدارة وحدَها (قرارُ المالك ٢٠٢٦-١١-٠٥). */
+  flag_word?: string;
+  /** **أُخفي منه رقمٌ أو واتساب** — حمايةُ الزبون من سحبه برّا المنصّة. */
+  contact_leak?: boolean;
 }
 
 /** **اسمُ المرسِل** — وحين يغيب يُقال دورُه بالعربيّ لا رمزُه (`driver`). */
@@ -54,7 +60,18 @@ export function OrderChatView({ orderId }: { orderId: string }) {
           {chat.lines.map((l) => (
             <li key={l.id} className="flex items-start gap-2 text-sm">
               <Badge variant={l.role === "driver" ? "primary" : "neutral"}>{senderLabel(l)}</Badge>
-              <span className="min-w-0 flex-1">{l.body}</span>
+              <span className="min-w-0 flex-1">
+                <span className={l.flagged ? "text-danger" : ""}>{l.body}</span>
+                {/* **وما أُخفي يُقال للإدارة بنصّه** — الرقمُ أو اللفظ — ليُحسم البلاغ. */}
+                {l.flagged && l.flag_word && (
+                  <span className="ms-2 text-xs text-danger">({l.flag_word})</span>
+                )}
+                {l.contact_leak && (
+                  <span className="ms-2 inline-block">
+                    <Badge variant="danger">{H.contactLeak}</Badge>
+                  </span>
+                )}
+              </span>
               <span dir="ltr" className="shrink-0 text-2xs text-ink-muted">
                 {fmtDateTime(l.created_at)}
               </span>
