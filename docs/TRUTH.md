@@ -1034,6 +1034,7 @@ kosom` |
 سلوكُك
 معاملةٌ حسنةٌ للزبون والمتجر، وقيادةٌ آمنة. ويقيّمك الزبائن، والشكاوى الثابتة قد توقف حسابك.
 ولا يحقّ لك تغييرُ سعرٍ أو طلبُ مالٍ زائدٍ عمّا يعرضه التطبيق.
+أخذ زبون أو رقمه للتعامل برّا المنصّة يعني إيقاف الحساب.
 
 الإيقاف
 قد يُوقَف حسابُك لإخلالٍ بالأمانة أو إساءةٍ متكرّرة. ولك أن تراجعنا على {phone}.
@@ -1254,8 +1255,9 @@ kosom` |
 | `app.min_version.driver` | السائقون | int | `0` |
 | `drivers.assignment_mode` | السائقون | choice | `rotation` |
 | `drivers.assigned_silence_sec` | السائقون | int | `180` |
-| `drivers.location_ping_sec` | السائقون | int | `60` |
+| `drivers.location_ping_sec` | السائقون | int | `10` |
 | `drivers.location_ping_active_sec` | السائقون | int | `4` |
+| `drivers.ops_map_smooth` | السائقون | bool | `true` |
 | `drivers.trail_retention_days` | السائقون | int | `30` |
 | `drivers.monitor_km_alert` | السائقون | int | `10` |
 | `drivers.landmarks_daily_quota` | السائقون | int | `5` |
@@ -1268,6 +1270,7 @@ kosom` |
 | `drivers.odometer_gap_alert_pct` | السائقون | percent | `20` |
 | `drivers.odometer_off_alert_km` | السائقون | int | `1` |
 | `drivers.odometer_photo_retention_days` | السائقون | int | `90` |
+| `drivers.road_match_enabled` | السائقون | bool | `false` |
 | `drivers.direct_assign` | السائقون | bool | `false` |
 | `delivery.fee` | السائقون | money | `0` |
 | `delivery.merchant_fee` | السائقون | money | `0` |
@@ -1305,6 +1308,8 @@ kosom` |
 | `drivers.cash_overdue_days` | السائقون | int | `3` |
 | `drivers.cash_overdue_stop` | السائقون | bool | `false` |
 | `drivers.same_route_extra` | السائقون | int | `1` |
+| `drivers.same_customer_weekly_max` | السائقون | int | `3` |
+| `drivers.terms_version` | السائقون | int | `1` |
 | `drivers.proximity_enabled` | السائقون | bool | `true` |
 | `drivers.location_fresh_sec` | السائقون | int | `300` |
 | `drivers.dispatch_radius_initial_m` | السائقون | int | `3000` |

@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 646,
+    "routes": 650,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 112,
-    "notify_targeted": 54,
+    "notify_sites": 115,
+    "notify_targeted": 55,
     "publish_rooms": [
       "customer",
       "driver",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 273,
-    "behaviour_settings": 228,
+    "setting_defs": 277,
+    "behaviour_settings": 232,
     "order_fields": 137,
-    "test_files": 733,
-    "test_funcs": 2831
+    "test_files": 766,
+    "test_funcs": 2935
   },
   "flows": [
     {
@@ -4969,6 +4969,27 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "drivers.ops_map_smooth",
+      "group": "drivers",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "drivers.proof_max_m",
       "group": "drivers",
       "kind": "int",
@@ -5116,6 +5137,48 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "drivers.road_match_enabled",
+      "group": "drivers",
+      "kind": "bool",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.same_customer_weekly_max",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "drivers.same_route_extra",
       "group": "drivers",
       "kind": "int",
@@ -5226,6 +5289,27 @@
       "kind": "money",
       "sensitive": false,
       "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "drivers.terms_version",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
       "flows": [
         "F-07",
         "F-08",
@@ -8580,6 +8664,84 @@
       "orphan": true
     },
     {
+      "name": "TestClean_DropsPoorAndImpossible",
+      "file": "internal/drivermonitor/display_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
+      "name": "TestDeriveLive_BadAccuracyIsNotMoving",
+      "file": "internal/drivermonitor/display_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
+      "name": "TestNextShown_ImpossibleHopHeld30s",
+      "file": "internal/drivermonitor/display_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
+      "name": "TestNextShown_PoorAccuracyHeldThenReleased",
+      "file": "internal/drivermonitor/display_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
+      "name": "TestNextShown_StandingJitterKeepsPoint",
+      "file": "internal/drivermonitor/display_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
+      "name": "TestAnalyze_InferredFlag",
+      "file": "internal/drivermonitor/road_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
+      "name": "TestAnalyze_NoRoadDataIsToday",
+      "file": "internal/drivermonitor/road_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
+      "name": "TestAnalyze_PartsSplitAtHolds",
+      "file": "internal/drivermonitor/road_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
+      "name": "TestAnalyze_PathFollowsMatchedLine",
+      "file": "internal/drivermonitor/road_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
+      "name": "TestAnalyze_PendingOnlyWhileMatchingOn",
+      "file": "internal/drivermonitor/road_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
+      "name": "TestAnalyze_RoadMetresCredited",
+      "file": "internal/drivermonitor/road_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
+      "name": "TestAnalyze_StoredChunksUsedWhenOff",
+      "file": "internal/drivermonitor/road_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
+      "name": "TestPlausibility",
+      "file": "internal/drivermonitor/road_test.go",
+      "package": "drivermonitor",
+      "orphan": true
+    },
+    {
       "name": "TestGuard_CleanStagingPasses",
       "file": "internal/envguard/envguard_test.go",
       "package": "envguard",
@@ -9798,12 +9960,6 @@
       "orphan": true
     },
     {
-      "name": "TestPolyline6_RoundTrip",
-      "file": "internal/maplearn/roadlearn_test.go",
-      "package": "maplearn",
-      "orphan": true
-    },
-    {
       "name": "TestSlowFromCounts",
       "file": "internal/maplearn/roadlearn_test.go",
       "package": "maplearn",
@@ -10107,6 +10263,12 @@
         "FULL"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestFreshness_LiveFloorCoversHeartbeat",
+      "file": "internal/opsmap/opsmap_test.go",
+      "package": "opsmap",
+      "orphan": true
     },
     {
       "name": "TestFreshness_ZeroPingFallsBackNotPanics",
@@ -10515,6 +10677,12 @@
         "db"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestCustomChat_FirstLineMasksContacts",
+      "file": "internal/orders/custom_chat_contact_test.go",
+      "package": "orders_test",
+      "orphan": true
     },
     {
       "name": "TestCustomChat_NotWrittenTwice",
@@ -10947,8 +11115,26 @@
       "orphan": true
     },
     {
+      "name": "TestDriverView_MasksContactsInCustomerText",
+      "file": "internal/orders/driver_contact_view_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
       "name": "TestFreeDelivery_DriverStillEarns",
       "file": "internal/orders/driver_fee_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestPublishOrder_FinishedReachesDriverWithoutCustomer",
+      "file": "internal/orders/driver_finished_publish_internal_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverView_FirstNameOnly",
+      "file": "internal/orders/driver_first_name_view_test.go",
       "package": "orders_test",
       "orphan": true
     },
@@ -11218,6 +11404,12 @@
     },
     {
       "name": "TestItemUnavailable_Refusals",
+      "file": "internal/orders/item_unavailable_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestItemUnavailable_RefusedAfterPickupRedispatch",
       "file": "internal/orders/item_unavailable_test.go",
       "package": "orders_test",
       "orphan": true
@@ -11577,6 +11769,12 @@
       "orphan": true
     },
     {
+      "name": "TestOrderEditAP_FullyReturnedDrinkSurvivesItsItem",
+      "file": "internal/orders/order_edit_after_pickup_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
       "name": "TestOrderEditAP_Guards",
       "file": "internal/orders/order_edit_after_pickup_test.go",
       "package": "orders_test",
@@ -11590,6 +11788,12 @@
     },
     {
       "name": "TestOrderEditAP_PartlyReturnedDrinkKeepsStoreDue",
+      "file": "internal/orders/order_edit_after_pickup_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestOrderEditAP_ReturnedDrinkKeepsItsItem",
       "file": "internal/orders/order_edit_after_pickup_test.go",
       "package": "orders_test",
       "orphan": true
@@ -11980,6 +12184,18 @@
     {
       "name": "TestRouteLimitStaysSilentWhenUnmeasured",
       "file": "internal/orders/routelimit_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestSameCustomer_GraceEndPushesOverCapDriver",
+      "file": "internal/orders/same_customer_audience_internal_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
+      "name": "TestSameCustomer_QueueAudienceMatchesQueue",
+      "file": "internal/orders/same_customer_audience_internal_test.go",
       "package": "orders",
       "orphan": true
     },
@@ -12623,6 +12839,12 @@
       "orphan": true
     },
     {
+      "name": "TestWorkDayClose",
+      "file": "internal/platform/workday_test.go",
+      "package": "platform",
+      "orphan": true
+    },
+    {
       "name": "TestZH01_DisabledScheduleIsAlwaysOpen",
       "file": "internal/platform/zones_test.go",
       "package": "platform",
@@ -12722,6 +12944,18 @@
       "name": "TestZH29_DeviceClockIrrelevant",
       "file": "internal/platform/zones_test.go",
       "package": "platform",
+      "orphan": true
+    },
+    {
+      "name": "TestPolyline6_RoundTrip",
+      "file": "internal/polyline/polyline_test.go",
+      "package": "polyline",
+      "orphan": true
+    },
+    {
+      "name": "TestProjectAndCut",
+      "file": "internal/polyline/polyline_test.go",
+      "package": "polyline",
       "orphan": true
     },
     {
@@ -17001,6 +17235,12 @@
       "orphan": false
     },
     {
+      "name": "TestDCODE_WhatsAppCarriesSafetyNotice",
+      "file": "internal/qa/delivery_code_safety_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestDCODE_CustomerOrderCarriesCode",
       "file": "internal/qa/delivery_code_test.go",
       "package": "qa",
@@ -17307,6 +17547,12 @@
       "orphan": true
     },
     {
+      "name": "TestDRV_FIRSTNAME_EveryDriverReadShowsFirstNameOnly",
+      "file": "internal/qa/driver_first_name_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestDRV_HISTORY_NoCustomerPhoneOrLocation",
       "file": "internal/qa/driver_history_privacy_test.go",
       "package": "qa",
@@ -17321,6 +17567,18 @@
     {
       "name": "TestDriverMonitor_LiveStateMovingStoppedOffline",
       "file": "internal/qa/driver_monitor_live_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverMonitor_CountsOffPlatformReportsAndContactLeaks",
+      "file": "internal/qa/driver_monitor_offplatform_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverMonitor_FlaggedDriverWithoutTraceIsListed",
+      "file": "internal/qa/driver_monitor_offplatform_test.go",
       "package": "qa",
       "orphan": true
     },
@@ -17357,6 +17615,18 @@
     {
       "name": "TestDriverMonitor_SameMovesWithAnOrderAreNotSuspicious",
       "file": "internal/qa/driver_monitor_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverMonitor_BikeChangeNoBogusDistance",
+      "file": "internal/qa/driver_odometer_bike_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOdometer_BikeChangeAcceptsLowerOncePerDay",
+      "file": "internal/qa/driver_odometer_bike_test.go",
       "package": "qa",
       "orphan": true
     },
@@ -17487,8 +17757,26 @@
       "orphan": true
     },
     {
+      "name": "TestDriverTerms_ShiftGateAndAccept",
+      "file": "internal/qa/driver_terms_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestDriverTodayEarned_ByDeliveryDay",
       "file": "internal/qa/driver_today_earned_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverMe_TodayDriveFollowsPlatformDay",
+      "file": "internal/qa/driver_work_day_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverMonitor_DayFollowsPlatformDayAndFlagsAfterClose",
+      "file": "internal/qa/driver_work_day_test.go",
       "package": "qa",
       "orphan": true
     },
@@ -19651,7 +19939,19 @@
       "orphan": true
     },
     {
+      "name": "TestLocReqNoLinkNoStoreName",
+      "file": "internal/qa/location_message_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestLocReqOneMessageForEveryFlow",
+      "file": "internal/qa/location_message_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWALocationLiveReplyAppliedOnce",
       "file": "internal/qa/location_message_test.go",
       "package": "qa",
       "orphan": true
@@ -20495,6 +20795,12 @@
     },
     {
       "name": "TestMR05_HideAndReturn",
+      "file": "internal/qa/merchant_recipients_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMR06_HideIsPerStore",
       "file": "internal/qa/merchant_recipients_test.go",
       "package": "qa",
       "orphan": true
@@ -24704,6 +25010,60 @@
       "orphan": false
     },
     {
+      "name": "TestDriverMonitorRecent_Capability",
+      "file": "internal/qa/road_match_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverMonitor_DayInRoadMetres",
+      "file": "internal/qa/road_match_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRoadChunks_PrunedWithTrail",
+      "file": "internal/qa/road_match_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRoadMatcher_DownBacksOffAndPageStillAnswers",
+      "file": "internal/qa/road_match_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRoadMatcher_LateBatchRematches",
+      "file": "internal/qa/road_match_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRoadMatcher_MatchesNewTrailOnce",
+      "file": "internal/qa/road_match_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRoadMatcher_ParamsBumpAndNoMatchRetry",
+      "file": "internal/qa/road_match_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRoadMatcher_SwitchOffStopsCallsKeepsHistory",
+      "file": "internal/qa/road_match_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRoadMatcher_TwoCursors",
+      "file": "internal/qa/road_match_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestU1_A1_CreateRoleNeedsRolesManage",
       "file": "internal/qa/role_create_test.go",
       "package": "qa",
@@ -25634,6 +25994,18 @@
     {
       "name": "TestSettlementPercentBackfill",
       "file": "internal/qa/settlement_percent_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestShiftCloseReminder_NothingWhenAlwaysOpen",
+      "file": "internal/qa/shift_close_remind_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestShiftCloseReminder_OncePerClosingAndNextDay",
+      "file": "internal/qa/shift_close_remind_test.go",
       "package": "qa",
       "orphan": true
     },
@@ -27927,6 +28299,12 @@
       "orphan": true
     },
     {
+      "name": "TestWS_DriverLocationNeedsDriversRead",
+      "file": "internal/qa/ws_driver_location_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestZH01_DisabledScheduleKeepsExistingBehaviour",
       "file": "internal/qa/zone_hours_test.go",
       "package": "qa",
@@ -28196,6 +28574,78 @@
       "name": "TestFileNameSkipsArabicVersion",
       "file": "internal/release/public_staging_test.go",
       "package": "release",
+      "orphan": true
+    },
+    {
+      "name": "TestDistance_OneImplementation",
+      "file": "internal/roadmatch/guard_test.go",
+      "package": "roadmatch",
+      "orphan": true
+    },
+    {
+      "name": "TestChunks_JitterAndSpikesCarryPosition",
+      "file": "internal/roadmatch/roadmatch_test.go",
+      "package": "roadmatch",
+      "orphan": true
+    },
+    {
+      "name": "TestChunks_SplitAtGapsStopsAndLongHops",
+      "file": "internal/roadmatch/roadmatch_test.go",
+      "package": "roadmatch",
+      "orphan": true
+    },
+    {
+      "name": "TestClient_ErrorClasses",
+      "file": "internal/roadmatch/roadmatch_test.go",
+      "package": "roadmatch",
+      "orphan": true
+    },
+    {
+      "name": "TestOffMap_FarMatchedPoints",
+      "file": "internal/roadmatch/roadmatch_test.go",
+      "package": "roadmatch",
+      "orphan": true
+    },
+    {
+      "name": "TestParse_DiscontinuityAndOutliers",
+      "file": "internal/roadmatch/roadmatch_test.go",
+      "package": "roadmatch",
+      "orphan": true
+    },
+    {
+      "name": "TestPositions_DeadEndInAndOut",
+      "file": "internal/roadmatch/roadmatch_test.go",
+      "package": "roadmatch",
+      "orphan": true
+    },
+    {
+      "name": "TestPositions_ForwardOnly",
+      "file": "internal/roadmatch/roadmatch_test.go",
+      "package": "roadmatch",
+      "orphan": true
+    },
+    {
+      "name": "TestRequest_Golden",
+      "file": "internal/roadmatch/roadmatch_test.go",
+      "package": "roadmatch",
+      "orphan": true
+    },
+    {
+      "name": "TestWorker_IdleWhenOffOrRoadsBusy",
+      "file": "internal/roadmatch/roadmatch_test.go",
+      "package": "roadmatch",
+      "orphan": true
+    },
+    {
+      "name": "TestWorker_RestsBetweenCalls",
+      "file": "internal/roadmatch/roadmatch_test.go",
+      "package": "roadmatch",
+      "orphan": true
+    },
+    {
+      "name": "TestWorker_TimeoutOpensBreakerSplitsNextTime",
+      "file": "internal/roadmatch/roadmatch_test.go",
+      "package": "roadmatch",
       "orphan": true
     },
     {
@@ -28979,8 +29429,20 @@
       "orphan": true
     },
     {
+      "name": "TestAnnounceWrites_QuietRoutes",
+      "file": "internal/server/announce_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestAppFileUploadDownloadAndPriority",
       "file": "internal/server/app_file_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestAppMinBuildGatesMatchVersionCode",
+      "file": "internal/server/app_min_build_gate_test.go",
       "package": "server",
       "orphan": true
     },
@@ -29096,6 +29558,18 @@
     {
       "name": "TestChat_AutoLineDoesNotCountAgainstTheDriver",
       "file": "internal/server/chat_auto_line_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestChatContactMask_BothDirectionsFlaggedAndOpsAlerted",
+      "file": "internal/server/chat_contact_mask_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverOrders_MasksContactsInCustomerText",
+      "file": "internal/server/chat_contact_mask_test.go",
       "package": "server",
       "orphan": true
     },
@@ -29568,6 +30042,36 @@
       "orphan": true
     },
     {
+      "name": "TestClockView_QueueBeforeChangeKeepsOldFix",
+      "file": "internal/server/driver_clock_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDeviceClock_HeldAcrossRestart",
+      "file": "internal/server/driver_clock_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverLocation_DeviceClockCorrected",
+      "file": "internal/server/driver_clock_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestLocationBatch_ClockFixedOnReconnect",
+      "file": "internal/server/driver_clock_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestNextClockFix_LatencyIsNotSkewAndFixHolds",
+      "file": "internal/server/driver_clock_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestDriverOrders_FailedLeavesTheList",
       "file": "internal/server/driver_closed_orders_test.go",
       "package": "server",
@@ -29610,7 +30114,19 @@
       "orphan": true
     },
     {
+      "name": "TestDriverLocation_BroadcastsShownPoint",
+      "file": "internal/server/driver_live_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestDriverLocation_BroadcastsToOps",
+      "file": "internal/server/driver_live_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestOpsMapDrivers_OverlaysShownPoint",
       "file": "internal/server/driver_live_test.go",
       "package": "server",
       "orphan": true
@@ -29623,6 +30139,12 @@
     },
     {
       "name": "TestLocationBatch_KeepsDeviceTime",
+      "file": "internal/server/driver_location_batch_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestLocationBatch_OverCapIsAccepted",
       "file": "internal/server/driver_location_batch_test.go",
       "package": "server",
       "orphan": true
@@ -29684,6 +30206,12 @@
     {
       "name": "TestDriverQueue_Responds",
       "file": "internal/server/driver_queue_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverRoute_FinishedOrderHasNoRoute",
+      "file": "internal/server/driver_route_finished_test.go",
       "package": "server",
       "orphan": true
     },
@@ -30522,6 +31050,18 @@
       "orphan": true
     },
     {
+      "name": "TestOffPlatformComplaint_AgainstLastDriverAfterRelease",
+      "file": "internal/server/off_platform_complaint_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestOffPlatformComplaint_ReasonListAndOpen",
+      "file": "internal/server/off_platform_complaint_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestOffer_AllowsWhatFitsUnderLimit",
       "file": "internal/server/offer_cash_limit_test.go",
       "package": "server",
@@ -30620,6 +31160,18 @@
     {
       "name": "TestOverview_NoDriverCardEqualsFilter",
       "file": "internal/server/ops_monitor_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestEXTSTORE_RefusedAfterPickupRedispatch",
+      "file": "internal/server/order_transfer_after_pickup_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestTransfer_RefusedAfterPickupRedispatch",
+      "file": "internal/server/order_transfer_after_pickup_test.go",
       "package": "server",
       "orphan": true
     },
@@ -31296,6 +31848,12 @@
       "orphan": true
     },
     {
+      "name": "TestLocReqTextNoLink",
+      "file": "internal/server/recipient_location_text_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestRelease_NeedsReasonAndNote_BeforePickupOnly",
       "file": "internal/server/release_reason_test.go",
       "package": "server",
@@ -31374,6 +31932,18 @@
       "orphan": true
     },
     {
+      "name": "TestNextDailyAt_ThreeAmDamascus",
+      "file": "internal/server/road_match_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestTraceGate_OneCallInFlight",
+      "file": "internal/server/road_match_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestRotation_OffShiftNotOffered",
       "file": "internal/server/rotation_test.go",
       "package": "server",
@@ -31400,6 +31970,102 @@
     {
       "name": "TestRouteKeyPrefixKeepsOSRMKeys",
       "file": "internal/server/route_heading_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSameCustomer_BelowCap",
+      "file": "internal/server/same_customer_rotation_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSameCustomer_CapZeroOff",
+      "file": "internal/server/same_customer_rotation_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSameCustomer_DeclineGoesBackToSame",
+      "file": "internal/server/same_customer_rotation_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSameCustomer_DirectAssignPrefersOther",
+      "file": "internal/server/same_customer_rotation_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSameCustomer_FallsBackWhenAlone",
+      "file": "internal/server/same_customer_rotation_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSameCustomer_LegacyFairnessPrefersOther",
+      "file": "internal/server/same_customer_rotation_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSameCustomer_OldDeliveriesDontCount",
+      "file": "internal/server/same_customer_rotation_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSameCustomer_ProximityPrefersOther",
+      "file": "internal/server/same_customer_rotation_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSameCustomer_QueueBusyAlternativeDoesNotHide",
+      "file": "internal/server/same_customer_rotation_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSameCustomer_QueueHiddenDuringGrace",
+      "file": "internal/server/same_customer_rotation_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSameCustomer_QueueMerchantDeliveryUnaffected",
+      "file": "internal/server/same_customer_rotation_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSameCustomer_QueueVisibleAfterGrace",
+      "file": "internal/server/same_customer_rotation_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSameCustomer_QueueVisibleWhenAlone",
+      "file": "internal/server/same_customer_rotation_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSameCustomer_SameRouteKeepsWhenAlone",
+      "file": "internal/server/same_customer_rotation_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSameCustomer_SameRouteSameDoorKeeps",
+      "file": "internal/server/same_customer_rotation_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSameCustomer_SameRouteSkipsWhenAlternative",
+      "file": "internal/server/same_customer_rotation_test.go",
       "package": "server",
       "orphan": true
     },
@@ -31586,6 +32252,18 @@
     {
       "name": "TestTextLimits_CountsLettersNotBytes",
       "file": "internal/server/text_limits_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestTicketReward_ConcurrentClicksMakeOneCode",
+      "file": "internal/server/ticket_reward_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestTicketReward_FreeDeliveryCodeOnce",
+      "file": "internal/server/ticket_reward_test.go",
       "package": "server",
       "orphan": true
     },
@@ -31827,6 +32505,12 @@
       "name": "TestCommissionPercentAcceptsTwoDecimals",
       "file": "internal/settings/decimal_kind_test.go",
       "package": "settings_test",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverTerms_ClauseAlwaysPresent",
+      "file": "internal/settings/driver_terms_test.go",
+      "package": "settings",
       "orphan": true
     },
     {
@@ -32144,6 +32828,30 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestMaskContacts_KeepsOriginalForAdmin",
+      "file": "internal/textguard/contact_test.go",
+      "package": "textguard",
+      "orphan": true
+    },
+    {
+      "name": "TestMaskContacts_LeavesOrdinaryNumbers",
+      "file": "internal/textguard/contact_test.go",
+      "package": "textguard",
+      "orphan": true
+    },
+    {
+      "name": "TestMaskContacts_Masks",
+      "file": "internal/textguard/contact_test.go",
+      "package": "textguard",
+      "orphan": true
+    },
+    {
+      "name": "TestFirstName",
+      "file": "internal/textguard/firstname_test.go",
+      "package": "textguard",
+      "orphan": true
     },
     {
       "name": "TestApply_RejectVsMask",

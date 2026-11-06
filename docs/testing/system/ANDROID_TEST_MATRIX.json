@@ -4,15 +4,15 @@
       "id": "AND-01",
       "app": "driver",
       "area": "location-queue",
-      "title": "الطابورُ يُمحى كاملاً بعد إرسال ما قُرئ",
+      "title": "يُمحى من الطابور ما أُرسل وحدَه — ونقطةُ أثناء النداء تبقى",
       "kind": "STRUCTURAL",
       "automation": "AUTOMATED",
       "registers": [
         "R19"
       ],
       "test": "LocationContractTest.R19",
-      "result": "RISK_CONFIRMED",
-      "evidence": "all() ثمّ sendBatch() ثمّ clear() — والملفُّ يُحذف كاملاً"
+      "result": "PASS",
+      "evidence": "oldest() ثمّ sendBatch(part) ثمّ remove(part) · وPointQueueTest على ملفٍّ حقيقيّ"
     },
     {
       "id": "AND-02",
@@ -474,9 +474,9 @@
     "AutomatedN": 13,
     "SemiAutoN": 19,
     "ManualN": 4,
-    "PassN": 8,
+    "PassN": 9,
     "ExpectedFailN": 2,
-    "RiskConfirmedN": 3,
+    "RiskConfirmedN": 2,
     "NotRunN": 23,
     "Apps": 4
   }

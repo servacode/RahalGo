@@ -12,9 +12,9 @@
     "AutomatedN": 13,
     "SemiAutoN": 19,
     "ManualN": 4,
-    "PassN": 8,
+    "PassN": 9,
     "ExpectedFailN": 2,
-    "RiskConfirmedN": 3,
+    "RiskConfirmedN": 2,
     "NotRunN": 23,
     "Apps": 4
   },

@@ -1461,6 +1461,38 @@
         {
           "name": "today",
           "type": "unknown"
+        },
+        {
+          "name": "work_day",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/driver-monitor/{id}/recent",
+      "handler": "handleDriverMonitorRecent",
+      "auth": true,
+      "capability": "drivers.monitor",
+      "response": [
+        {
+          "name": "km",
+          "type": "unknown"
+        },
+        {
+          "name": "path",
+          "type": "unknown"
+        },
+        {
+          "name": "pending_km",
+          "type": "unknown"
+        },
+        {
+          "name": "since",
+          "type": "unknown"
         }
       ],
       "statuses": [
@@ -6070,6 +6102,30 @@
       ]
     },
     {
+      "method": "POST",
+      "path": "/api/v1/admin/tickets/{id}/reward-free-delivery",
+      "handler": "handleTicketRewardFreeDelivery",
+      "auth": true,
+      "capability": "support.manage",
+      "response": [
+        {
+          "name": "code",
+          "type": "unknown"
+        },
+        {
+          "name": "expires_on",
+          "type": "unknown"
+        },
+        {
+          "name": "promo_id",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
       "method": "GET",
       "path": "/api/v1/admin/treasury-candidates",
       "handler": "handleTreasuryCandidates",
@@ -8182,6 +8238,10 @@
       ],
       "response": [
         {
+          "name": "bike_change",
+          "type": "unknown"
+        },
+        {
           "name": "check",
           "type": "unknown"
         },
@@ -8747,6 +8807,72 @@
       "response": [
         {
           "name": "on_shift",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/driver/terms",
+      "handler": "handleDriverTerms",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "response": [
+        {
+          "name": "accepted_version",
+          "type": "unknown"
+        },
+        {
+          "name": "clause",
+          "type": "unknown"
+        },
+        {
+          "name": "name",
+          "type": "unknown"
+        },
+        {
+          "name": "phone",
+          "type": "unknown"
+        },
+        {
+          "name": "required",
+          "type": "unknown"
+        },
+        {
+          "name": "text",
+          "type": "unknown"
+        },
+        {
+          "name": "version",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/driver/terms/accept",
+      "handler": "handleDriverTermsAccept",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "request": [
+        {
+          "name": "version",
+          "type": "int64"
+        }
+      ],
+      "response": [
+        {
+          "name": "accepted_version",
           "type": "unknown"
         }
       ],
