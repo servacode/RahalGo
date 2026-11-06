@@ -21,7 +21,7 @@
  */
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
 import {
@@ -30,6 +30,8 @@ import {
   Button,
   ButtonLink,
   Checkbox,
+  GuideBubble,
+  GuideSpotlight,
   Chips,
   Input,
   LoadingState,
@@ -44,11 +46,36 @@ import { useAuth } from "@/lib/auth";
 import { routeByRole, safeNext } from "@rahalgo/auth";
 import { useCustomer } from "@/lib/customer/context";
 import { fill } from "@/lib/customer/texts";
+import {
+  SIGNUP_CODE_DIGITS,
+  browserStorage,
+  guidePasswordDone,
+  guideSeen,
+  guideSpot,
+  markGuideSeen,
+  type GuideSpot,
+} from "@/lib/customer/signupGuide";
 
 const m = getMessages(defaultLocale);
 const T = m.shop.auth;
 
 export type AuthMode = "login" | "signup" | "forgot";
+
+/**
+ * **شرحُ إنشاء الحساب أوّلَ مرّة** (قرارُ المالك ٢٠٢٦-١١-٠٧، مرآةُ `SignupGuide.kt`) —
+ * **يُقرأ بعد الرسم** فلا يختلف ما يرسمه الخادمُ عمّا يرسمه المتصفّح.
+ */
+function useSignupGuide() {
+  const [active, setActive] = useState(false);
+  useEffect(() => {
+    setActive(!guideSeen(browserStorage()));
+  }, []);
+  const finish = useCallback(() => {
+    setActive(false);
+    markGuideSeen(browserStorage());
+  }, []);
+  return { active, finish };
+}
 
 function Frame({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
   return (
@@ -209,6 +236,7 @@ function Login({ next }: { next?: string }) {
   const [error, setError] = useState("");
   const q = next ? `next=${encodeURIComponent(next)}` : params.toString();
   const otp = platform?.otp_login === true;
+  const guide = useSignupGuide();
   return (
     <Frame title={T.loginTitle}>
       {otp && (
@@ -256,13 +284,17 @@ function Login({ next }: { next?: string }) {
       <div className="mt-6 flex flex-col items-center gap-3 border-t border-line-soft pt-5 text-sm">
         {/* **ظاهرٌ لا مخبّأ** (طلبُ المالك ٢٠٢٦-١١-٠٦) — سطرُ السؤال وتحته زرٌّ بعرض البطاقة، كالتطبيق. */}
         <p className="text-ink-muted">{T.noAccount}</p>
-        <ButtonLink
-          href={`/signup${q ? `?${q}` : ""}`}
-          variant="signup"
-          className="w-full py-3 text-base"
-        >
-          {T.signupOpen}
-        </ButtonLink>
+        {/* **وأوّلَ مرّةٍ في هذا المتصفّح: سهمٌ وإضاءةٌ على الزرّ** (قرارُ المالك ٢٠٢٦-١١-٠٧). */}
+        {guide.active && <GuideBubble text={T.guideLogin} skipLabel={T.guideSkip} onSkip={guide.finish} />}
+        <GuideSpotlight active={guide.active}>
+          <ButtonLink
+            href={`/signup${q ? `?${q}` : ""}`}
+            variant="signup"
+            className="w-full py-3 text-base"
+          >
+            {T.signupOpen}
+          </ButtonLink>
+        </GuideSpotlight>
         <Link href="/shop" className="text-ink-muted hover:text-ink">
           {T.guest}
         </Link>
@@ -286,6 +318,31 @@ function Signup() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const min = platform?.password_min_length ?? 8;
+  // **فقاعةُ الشرح فوق الحقل الحاليّ وحدَه** — والقرارُ في `guideSpot`.
+  const guide = useSignupGuide();
+  const [focused, setFocused] = useState<GuideSpot | null>(null);
+  const spot = guideSpot(step, name.trim() !== "", guidePasswordDone(password, password2, min), focused);
+  const { finish: finishGuide } = guide;
+  // **ورقمٌ له حساب** — صاحبُه لا يحتاج شرحَ إنشاء حساب.
+  useEffect(() => {
+    if (step === "taken") finishGuide();
+  }, [step, finishGuide]);
+  const hint = (at: GuideSpot) => {
+    if (!guide.active || spot !== at) return null;
+    const text =
+      at === "phone"
+        ? T.guidePhone
+        : at === "code"
+          ? fill(T.guideCode, { n: SIGNUP_CODE_DIGITS })
+          : at === "name"
+            ? T.guideName
+            : fill(T.guidePassword, { n: min });
+    return <GuideBubble text={text} skipLabel={T.guideSkip} onSkip={guide.finish} />;
+  };
+  const tracks = (at: GuideSpot) => ({
+    onFocus: () => setFocused(at),
+    onBlur: () => setFocused((f) => (f === at ? null : f)),
+  });
 
   if (!platform) return <LoadingState variant="inline" />;
   if (!platform.launch.customer_signup) {
@@ -352,6 +409,7 @@ function Signup() {
             setStep("code");
           })}
         >
+          {hint("phone")}
           <PhoneField value={phone} onChange={setPhone} />
           {error && <Alert>{error}</Alert>}
           <Button type="submit" disabled={busy} className="w-full py-3">
@@ -373,7 +431,15 @@ function Signup() {
               {phone}
             </span>
           </p>
-          <OtpInput value={code} onChange={setCode} autoFocus boxLabel={m.auth.otpBoxLabel} onComplete={(v) => void verify(v)} />
+          {hint("code")}
+          <OtpInput
+            value={code}
+            onChange={setCode}
+            length={SIGNUP_CODE_DIGITS}
+            autoFocus
+            boxLabel={m.auth.otpBoxLabel}
+            onComplete={(v) => void verify(v)}
+          />
           {error && <Alert>{error}</Alert>}
           <Button type="submit" disabled={busy} className="w-full py-3">
             {T.verify}
@@ -393,17 +459,24 @@ function Signup() {
             await doEnter(r);
           })}
         >
-          <Input
-            id="full-name"
-            label={T.name}
-            icon={<IconUser />}
-            autoComplete="name"
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
-          <PasswordField id="new-password" label={T.password} value={password} onChange={setPassword} auto="new-password" />
-          <PasswordField id="new-password2" label={T.password2} value={password2} onChange={setPassword2} auto="new-password" />
+          {hint("name")}
+          <div {...tracks("name")}>
+            <Input
+              id="full-name"
+              label={T.name}
+              icon={<IconUser />}
+              autoComplete="name"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+          {hint("password")}
+          {/* **وتأكيدُها من خطوة كلمة السرّ** — فالفقاعةُ تبقى فوق الأولى. */}
+          <div className="space-y-4" {...tracks("password")}>
+            <PasswordField id="new-password" label={T.password} value={password} onChange={setPassword} auto="new-password" />
+            <PasswordField id="new-password2" label={T.password2} value={password2} onChange={setPassword2} auto="new-password" />
+          </div>
           <p className="text-xs text-ink-muted">{fill(T.passwordHint, { n: min })}</p>
           <Checkbox
             id="agree"
@@ -430,7 +503,7 @@ function Signup() {
       )}
       <div className="mt-6 border-t border-line-soft pt-4 text-center text-sm text-ink-muted">
         {T.haveAccount}{" "}
-        <Link href="/login" className="font-bold text-accent-text hover:underline">
+        <Link href="/login" onClick={finishGuide} className="font-bold text-accent-text hover:underline">
           {T.loginLink}
         </Link>
       </div>
@@ -567,6 +640,8 @@ export default function CustomerAuth({ mode, next }: { mode: AuthMode; next?: st
   useEffect(() => {
     if (loading || !user || sent.current) return;
     sent.current = true;
+    // **ومن دخل بحسابٍ لا يُشرح له إنشاءُ حساب** — مرّةً لكلّ متصفّح.
+    markGuideSeen(browserStorage());
     void routeByRole(user, safeNext(next ?? params.get("next")) ?? undefined);
   }, [user, loading, params, next]);
   if (loading || user) return <LoadingState variant="inline" />;

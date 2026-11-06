@@ -275,7 +275,11 @@ private fun Signed(theme: ThemeState, dark: Boolean) {
     //
     // **ولا يُلتقط الرجوعُ في التسوّق** — من أراد أن يخرج يخرج:
     // **تطبيقٌ لا يُغلق بزرّ الرجوع يُقرأ معلَّقا.**
-    BackHandler(enabled = vm.signup != null) { vm.closeSignup() }
+    BackHandler(enabled = vm.signup != null) {
+        // **ومن رجع من التسجيل انتهى شرحُه** (`SignupGuide`) — كزرّ الرجوع في الشاشة.
+        com.rahalgo.ui.SignupGuide.shared.finish()
+        vm.closeSignup()
+    }
     BackHandler(enabled = vm.reset != null) { vm.closeReset() }
     BackHandler(enabled = asking && vm.signup == null && vm.reset == null) {
         asking = false

@@ -283,16 +283,24 @@ fun AuthScreen(
                 style = MaterialTheme.typography.bodyMedium,
             )
             Spacer(Modifier.height(8.dp))
-            RahalButton(
-                onClick = actions.signup,
-                enabled = !state.busy,
-                tone = Tone.AccentSolid,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    stringResource(R.string.signup_new_account),
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-                )
+            // **وأوّلَ مرّةٍ على هذا الجهاز: سهمٌ وإضاءةٌ على الزرّ** (قرارُ المالك
+            // ٢٠٢٦-١١-٠٧، `SignupGuide.kt`) — **والزبونُ وحدَه يقرؤه**: هنا داخل `signup`.
+            val guide = SignupGuide.shared
+            if (guide.active) {
+                GuideBubble(text = stringResource(R.string.guide_login), onSkip = guide::finish)
+            }
+            GuideSpotlight(active = guide.active) {
+                RahalButton(
+                    onClick = actions.signup,
+                    enabled = !state.busy,
+                    tone = Tone.AccentSolid,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(
+                        stringResource(R.string.signup_new_account),
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    )
+                }
             }
         }
         Spacer(Modifier.height(40.dp))

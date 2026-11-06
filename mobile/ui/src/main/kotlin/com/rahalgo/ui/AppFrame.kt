@@ -289,12 +289,13 @@ fun AuthGate(
                 sendCode = vm::sendSignupCode,
                 verifyCode = vm::verifySignupCode,
                 confirm = vm::confirmSignup,
-                cancel = vm::closeSignup,
+                // **ومن خرج من التسجيل انتهى شرحُه** — يُعرض مرّةً واحدة (`SignupGuide`).
+                cancel = { SignupGuide.shared.finish(); vm.closeSignup() },
                 onReconnected = vm::signupConnectivityRestored,
                 // **استعادةٌ عند `phone_taken`** (Batch 4، SG1) — لا طريقٌ مسدود.
-                toLogin = vm::recoverToLogin,
-                toReset = vm::recoverToReset,
-                toOtp = vm::recoverToOtp,
+                toLogin = { SignupGuide.shared.finish(); vm.recoverToLogin() },
+                toReset = { SignupGuide.shared.finish(); vm.recoverToReset() },
+                toOtp = { SignupGuide.shared.finish(); vm.recoverToOtp() },
             ),
         )
 
@@ -348,6 +349,11 @@ fun AuthGate(
             // إزاحةَ العائلة القديمة قطعت وجهةَ الجهاز — فيُعيدها `sessionEpoch`.
             LaunchedEffect(vm.user?.id, vm.sessionEpoch) {
                 Push.register(ctx)
+            }
+            // **ومن دخل بحسابٍ لا يُشرح له إنشاءُ حساب** — الزبونُ وحدَه (`signup`)،
+            // **فلا تلمس التطبيقاتُ الأخرى تخزينَ الشرح.**
+            if (signup) {
+                LaunchedEffect(Unit) { SignupGuide.shared.finish() }
             }
             // **ونماذجُ الشاشات من مخزن الجلسة** (٢٠٢٦-١٠-١٦) — يُفرَّغ مع الخروج،
             // **فلا يُعرض ما جلبته جلسةٌ ماتت كأنّه الآن.**
@@ -428,11 +434,12 @@ fun AuthPanes(
                 sendCode = vm::sendSignupCode,
                 verifyCode = vm::verifySignupCode,
                 confirm = vm::confirmSignup,
-                cancel = vm::closeSignup,
+                // **ومن خرج من التسجيل انتهى شرحُه** — يُعرض مرّةً واحدة (`SignupGuide`).
+                cancel = { SignupGuide.shared.finish(); vm.closeSignup() },
                 onReconnected = vm::signupConnectivityRestored,
-                toLogin = vm::recoverToLogin,
-                toReset = vm::recoverToReset,
-                toOtp = vm::recoverToOtp,
+                toLogin = { SignupGuide.shared.finish(); vm.recoverToLogin() },
+                toReset = { SignupGuide.shared.finish(); vm.recoverToReset() },
+                toOtp = { SignupGuide.shared.finish(); vm.recoverToOtp() },
             ),
         )
 

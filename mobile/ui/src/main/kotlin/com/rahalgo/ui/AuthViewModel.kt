@@ -177,8 +177,10 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
             // **ورايةُ التسجيل تُحفظ هنا لا في `SignupState`** — تُقرأ
             // مرّةً عند فتح الشاشة، **وشاشةُ الإنشاء تُفتح بعدها.**
             signupNeedsCode = platform.signupVerify
+            // **وطولُ كلمة السرّ الأدنى من المنصّة** — لفقاعة الشرح (`SignupGuide`).
+            signupPasswordMin = platform.passwordMinLength
             // **والشاشةُ تعرف لتسمّي زرَّها** — انظر `SignupState.needsCode`.
-            signup = signup?.copy(needsCode = platform.signupVerify)
+            signup = signup?.copy(needsCode = platform.signupVerify, passwordMin = platform.passwordMinLength)
         }
     }
 
@@ -191,6 +193,9 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
      * بدل أن يُحبس على شاشةٍ لا يصلها شيء.
      */
     private var signupNeedsCode: Boolean = false
+
+    /** **أقلُّ طولٍ لكلمة السرّ** (`security.password_min_length`) — وافتراضُه افتراضُ العقد. */
+    private var signupPasswordMin: Int = SignupState().passwordMin
 
     /**
      * **يفتح واتساب على رقم المنصّة** — وفشلُه لا يُسقط الخطوة.
@@ -600,7 +605,7 @@ class AuthViewModel(app: Application) : AndroidViewModel(app) {
     /** @param referral رمزُ من دعاه — **من الرابط لا من يده.** */
     fun openSignup(referral: String = "") {
         signupWasAmbiguous = false
-        signup = SignupState(referral = referral, needsCode = signupNeedsCode)
+        signup = SignupState(referral = referral, needsCode = signupNeedsCode, passwordMin = signupPasswordMin)
     }
 
     fun closeSignup() {

@@ -81,6 +81,16 @@ object PriceConfirm {
     val Reject: Tone = Tone.Danger
 }
 
+/**
+ * **أرضُ النبرة وحبرُها لغير الأزرار** — فقاعةُ الشرح تأخذ لونَ زرّ «إنشاء حساب»
+ * نفسَه (`SignupGuide.kt`)، **ولا يُعاد حسابُ البرتقاليّ الغامق في موضعٍ ثانٍ.**
+ */
+@Composable
+fun toneFill(tone: Tone): Color = tone.color()
+
+@Composable
+fun toneOn(tone: Tone): Color = tone.onColor()
+
 /** لونُ النبرة — **من اللوح لا من رقمٍ يُكتب هنا.** */
 @Composable
 private fun Tone.color(): Color = when (this) {

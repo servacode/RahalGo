@@ -224,6 +224,7 @@ export { BannerSlider, type SlideItem } from "./BannerSlider";
 export { SectionRail, type RailItem } from "./SectionRail";
 export { FavoriteButton, useFavorites } from "./Favorites";
 export { CopyCode } from "./CopyCode";
+export { GuideBubble, GuideSpotlight } from "./GuideHint";
 
 // **تهيئةُ التشغيل** — دورةُ ٧١و: **لا `NEXT_PUBLIC_*` في حزمةٍ مشتركة.**
 export {
