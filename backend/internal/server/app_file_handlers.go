@@ -285,7 +285,7 @@ func (s *Server) handleDownloadAppByKey(w http.ResponseWriter, r *http.Request) 
 	// باسم `rahalgo.apk` واحدٍ تختلط في مجلَّد التنزيل.**
 	out := release.FileName(pub)
 	w.Header().Set("Content-Type", "application/vnd.android.package-archive")
-	w.Header().Set("Content-Disposition", `attachment; filename="`+out+`"`)
+	w.Header().Set("Content-Disposition", release.ContentDisposition(pub))
 	// ══════════════════════════════════════════════════════════════════
 	// **ولا يُخبَّأ أبداً** (٢٠٢٦-١٠-٠٢)
 	// ══════════════════════════════════════════════════════════════════

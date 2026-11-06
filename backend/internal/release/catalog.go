@@ -79,6 +79,10 @@ type App struct {
 	PackageID string
 	// Channel القناةُ المقصودة.
 	Channel Channel
+	// DisplayName الاسمُ العربيُّ الذي يظهر في اسم الملفّ المنزَّل.
+	DisplayName string
+	// ASCIIName الاسمُ اللاتينيُّ الاحتياطيّ لاسم الملفّ.
+	ASCIIName string
 	// GradlePath موضعُ الهويّة في المستودع — **للحارس لا للعرض.**
 	GradlePath string
 }
@@ -87,13 +91,13 @@ type App struct {
 //
 // **والزبونُ أوّلاً**: **هو من يفتح الصفحةَ في الغالب.**
 var Apps = []App{
-	{Key: "customer", PackageID: "com.rahalgo.customer", Channel: ChannelPlay,
+	{Key: "customer", DisplayName: "رحال غو", ASCIIName: "RahalGo", PackageID: "com.rahalgo.customer", Channel: ChannelPlay,
 		GradlePath: "mobile/app-customer/build.gradle.kts"},
-	{Key: "driver", PackageID: "com.rahalgo.driver", Channel: ChannelDirect,
+	{Key: "driver", DisplayName: "كابتن رحال غو", ASCIIName: "RahalGo-Captain", PackageID: "com.rahalgo.driver", Channel: ChannelDirect,
 		GradlePath: "mobile/app-driver/build.gradle.kts"},
-	{Key: "merchant", PackageID: "com.rahalgo.merchant", Channel: ChannelDirect,
+	{Key: "merchant", DisplayName: "متجر رحال غو", ASCIIName: "RahalGo-Store", PackageID: "com.rahalgo.merchant", Channel: ChannelDirect,
 		GradlePath: "mobile/app-merchant/build.gradle.kts"},
-	{Key: "rep", PackageID: "com.rahalgo.rep", Channel: ChannelDirect,
+	{Key: "rep", DisplayName: "وكيل رحال غو", ASCIIName: "RahalGo-Agent", PackageID: "com.rahalgo.rep", Channel: ChannelDirect,
 		GradlePath: "mobile/app-rep/build.gradle.kts"},
 }
 
