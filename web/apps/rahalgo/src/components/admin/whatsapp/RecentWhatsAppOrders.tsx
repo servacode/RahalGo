@@ -56,6 +56,8 @@ interface WaRow {
   delivery_fee: number;
   address_text?: string;
   dropoff_known?: boolean;
+  /** **ثمنُ الطلب كتبه السائق** (قرارُ المالك ٢٠٢٦-١١-٠٦) — ووصل الزبونَ برسالة. */
+  fetch_amount?: number | null;
 }
 
 /** **قبل الاستلام وحدَه** — والمحرّكُ يحرسه (`wa_cancel_after_pickup`). */
@@ -193,8 +195,12 @@ export function RecentWhatsAppOrders({ refresh }: { refresh: number }) {
                 <>
                   {o.merchant_name} ← {o.customer_name} · {fmtDamascusTime(o.created_at)} ·{" "}
                   {o.driver_name || W.noDriver}
+                  {o.address_text ? <span className="block">{o.address_text}</span> : null}
                   {o.dropoff_known === false && ADDRESS_EDITABLE.has(o.status) && (
                     <span className="block text-warning">{W.noPoint}</span>
+                  )}
+                  {o.fetch_amount != null && (
+                    <span className="block font-bold">{fill(W.goodsLine, { goods: fmtMoney(o.fetch_amount) })}</span>
                   )}
                 </>
               }

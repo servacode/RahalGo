@@ -4522,6 +4522,8 @@ function InvoiceList({
           ? OP.mdPayerMerchantCash
           : OP.mdPayerMerchant;
     const fetch = o.delivery_mode === "fetch";
+    // **ثمنُ طلب الواتساب كتبه السائق** (قرارُ المالك ٢٠٢٦-١١-٠٦) — والزبونُ أُخبر بالمجموع.
+    const waGoods = o.origin === "whatsapp" && o.fetch_amount != null;
     return (
       <ul className="space-y-1.5 text-sm">
         {/* **ونوعُ المشوار أوّلاً** (قرارُ المالك ٢٠٢٦-١٠-١٥) — الإحضارُ يقلب الوقفتين. */}
@@ -4562,9 +4564,17 @@ function InvoiceList({
           <li className="flex items-start justify-between gap-2 border-t border-line-soft pt-1.5">
             {/* **والشرحُ يلتفّ والمبلغُ ثابتٌ يساراً** (المالك ٢٠٢٦-١٠-٢٢: «رقم 250 متخبي ورا
                 المربع») — كان النصُّ لا ينكمش فيدفع الرقمَ خارج الصندوق. */}
+            {/* **وطلبُ الواتساب: الثمنُ كتبه السائقُ ووصل الزبونَ برسالة** (قرارُ المالك ٢٠٢٦-١١-٠٦). */}
             <span className="min-w-0 flex-1 text-ink-muted">
-              {fetch ? OP.mdFetchEstimate : OP.mdCollect}
-              <span className="block text-xs">{fetch ? OP.mdFetchEstimateHint : OP.mdCollectHint}</span>
+              {fetch ? OP.mdFetchEstimate : waGoods ? OP.mdWaGoods : OP.mdCollect}
+              <span className="block text-xs">
+                {fetch ? OP.mdFetchEstimateHint : waGoods ? OP.mdWaGoodsHint : OP.mdCollectHint}
+              </span>
+              {waGoods && o.amount_currency !== "USD" && (
+                <span className="block text-xs font-bold text-ink">
+                  {OP.mdWaTotal.replace("{total}", fmtMoney(o.collect_amount + o.cash_due))}
+                </span>
+              )}
             </span>
             <span className="shrink-0 whitespace-nowrap">
               {o.amount_currency === "USD" ? (
