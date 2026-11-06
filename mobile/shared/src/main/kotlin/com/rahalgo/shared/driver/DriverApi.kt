@@ -647,6 +647,24 @@ class DriverApi(private val api: ApiClient) {
      * **جسمُ التوثيق — صنفٌ موسوم** (الخطوةُ نصٌّ والمبلغان أرقام: خريطةٌ مختلطةٌ تسقط في النسخة
      * المضغوطة، `RequestBodyGuardTest`). و`step`: `fee` ثمّ `goods` (قرارُ المالك ٢٠٢٦-١٠-٠٣).
      */
+    /**
+     * **بعد الاستلام: طلب تعديل ثمن البضاعة** (قرار المالك ٢٠٢٦-١١-٠٦) — بالمشتريات، والسبب
+     * إلزامي. **والزبون يوافق أو يرفض**، والتسليم موقوف لحد ما يرد.
+     */
+    suspend fun priceRequest(orderId: String, goodsAmount: Long, reason: String) {
+        api.call<Ack>(
+            "/api/v1/driver/orders/" + orderId + "/price-request",
+            HttpMethod.Post,
+            PriceRequestBody(goodsAmount, reason),
+        )
+    }
+
+    @kotlinx.serialization.Serializable
+    private data class PriceRequestBody(
+        @kotlinx.serialization.SerialName("goods_amount") val goodsAmount: Long,
+        val reason: String,
+    )
+
     @kotlinx.serialization.Serializable
     private data class AgreeBody(
         @kotlinx.serialization.SerialName("goods_amount") val goodsAmount: Long,

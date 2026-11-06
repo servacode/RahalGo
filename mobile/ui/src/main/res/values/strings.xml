@@ -628,6 +628,13 @@
     <string name="err_agree_wrong_step">هذه الخطوة لا تخصّ هذا الطلب.</string>
     <string name="err_custom_locked">لا يمكن تعديل السعر بعد الاستلام.</string>
     <string name="err_quote_reconfirm_pending">السعر الجديد بانتظار تأكيد الزبون — لا تسليم قبله.</string>
+    <string name="err_price_request_stage">تعديل سعر البضاعة بيصير بطلب المشتريات بعد الاستلام وبعد ما يأكّد الزبون السعر.</string>
+    <string name="err_price_request_pending">في سعر جديد لسا بانتظار رد الزبون — استنّى رده.</string>
+    <string name="err_price_request_same">هاد نفس السعر الحالي.</string>
+    <string name="err_price_request_off">تعديل السعر من التطبيق مقفول — تواصل مع المكتب.</string>
+    <string name="err_price_request_reason">اكتب سبب التعديل ليعرفه الزبون.</string>
+    <string name="err_price_request_too_far">التعديل أكبر من النسبة المسموحة — تواصل مع المكتب.</string>
+    <string name="err_price_request_too_far_pct">التعديل أكبر من المسموح (%1$s٪ من السعر) — تواصل مع المكتب.</string>
     <string name="err_quote_nothing_pending">لا سعر جديد بانتظار تأكيدك.</string>
     <string name="err_fetch_amount_stage">لا يمكنك كتابة المبلغ الآن — فقط في طلب إحضار وأنت في مكان الاستلام، وقبل موافقة المتجر.</string>
     <string name="err_fetch_amount_stale">تغيّر المبلغ أو حُسم — حدّث الشاشة وراجع المبلغ الجديد.</string>

@@ -192,6 +192,10 @@ fun detailedErrorRes(code: String, details: Map<String, String>): Pair<Int, List
     "custom_goods_too_high" -> details["max"]?.toLongOrNull()?.let {
         R.string.err_custom_goods_max to listOf(money(it))
     }
+    // **وسقفُ تعديل الكابتن يقول نسبتَه** (قرارُ المالك ٢٠٢٦-١١-٠٦).
+    "price_request_too_far" -> details["max_percent"]?.toLongOrNull()?.let {
+        R.string.err_price_request_too_far_pct to listOf(it.toString())
+    }
     // **والكودُ يقول حدَّه** (قرارُ المالك ٢٠٢٦-١٠-١٥) — «بيشتغل على طلب من X وأكتر».
     "promo_min_order" -> details["min_order"]?.toLongOrNull()?.takeIf { it > 0 }?.let {
         R.string.err_promo_min_order_x to listOf(money(it))
@@ -533,6 +537,13 @@ private val CODES: Map<String, Int> = mapOf(
     // ── تعديلُ سعر الخاصّ بعد الاستلام وحذفُ الصنف غير المتوفّر (قرارا المالك ٢٠٢٦-١٠-١٥) ──
     "quote_reconfirm_pending" to R.string.err_quote_reconfirm_pending,
     "quote_nothing_pending" to R.string.err_quote_nothing_pending,
+    // **الكابتن يطلب تعديل ثمن البضاعة بعد الاستلام** (قرارُ المالك ٢٠٢٦-١١-٠٦).
+    "price_request_stage" to R.string.err_price_request_stage,
+    "price_request_pending" to R.string.err_price_request_pending,
+    "price_request_same" to R.string.err_price_request_same,
+    "price_request_off" to R.string.err_price_request_off,
+    "price_request_reason" to R.string.err_price_request_reason,
+    "price_request_too_far" to R.string.err_price_request_too_far,
     // **«إحضار»: مبلغُ السائق وموافقةُ المتجر** (قرارُ المالك ٢٠٢٦-١٠-١٦).
     "fetch_amount_stage" to R.string.err_fetch_amount_stage,
     "fetch_amount_stale" to R.string.err_fetch_amount_stale,

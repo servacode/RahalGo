@@ -1121,6 +1121,17 @@ fun TripScreen(
         )
     }
 
+    // **«عدّل سعر البضاعة» بعد الاستلام** (قرار المالك ٢٠٢٦-١١-٠٦) — والزبون يوافق.
+    if (state.priceEditOpen && roomyWindow()) {
+        PriceEditDialog(
+            currentGoods = order.customGoods ?: 0L,
+            error = state.priceEditError,
+            busy = state.busy,
+            onConfirm = actions.priceEdit,
+            onDismiss = actions.dismissPriceEdit,
+        )
+    }
+
     if (state.emergencyOpen && roomyWindow()) {
         EmergencyDialog(
             busy = state.emergencyBusy,
@@ -1663,6 +1674,8 @@ private fun TripCard(
         // **«إحضار»: لا «استلمت» قبل أن يوافق المتجرُ على المبلغ** (قرارُ المالك ٢٠٢٦-١٠-١٦).
         val fetchStep = fetchAmountStep(order)
         val fetchBlocked = next?.status == "picked_up" && fetchBlocksPickup(order)
+        // **ولا «تم التسليم» والسعر الجديد بانتظار الزبون** (قرار المالك ٢٠٢٦-١١-٠٦) — المحرّك يمنعه أصلاً.
+        val priceBlocked = next?.status == "delivered" && priceEditBlocksDelivery(order)
         var fetchOpen by remember(order.id) { mutableStateOf(false) }
         if (fetchOpen && roomyWindow()) {
             FetchAmountDialog(
@@ -1744,7 +1757,7 @@ private fun TripCard(
                     enabled = !state.busy,
                     busy = state.busy,
                 )
-            } else if (next != null && !buyBlocked && !arriveLater && !fetchBlocked) {
+            } else if (next != null && !buyBlocked && !arriveLater && !fetchBlocked && !priceBlocked) {
                 TripPrimary(label = nextLabel, onClick = onNext, enabled = !state.busy, busy = state.busy)
             }
             return@Column
@@ -2070,6 +2083,24 @@ private fun TripCard(
                     )
                 }
 
+                // ── **تعديل ثمن البضاعة بعد الاستلام** (قرار المالك ٢٠٢٦-١١-٠٦) ──
+                val priceStep = priceEditStep(order)
+                when (priceStep) {
+                    PriceEditStep.WAITING -> InfoBox(
+                        icon = com.rahalgo.ui.R.drawable.ic_time,
+                        text = stringResource(R.string.price_edit_waiting, money(order.total)),
+                        tint = Rahal.colors.brand,
+                        bold = true,
+                    )
+                    PriceEditStep.REVERTED -> InfoBox(
+                        icon = R.drawable.ic_warning,
+                        text = stringResource(R.string.price_edit_reverted),
+                        tint = Rahal.colors.danger,
+                        bold = true,
+                    )
+                    else -> Unit
+                }
+
                 // ── «إحضار»: المبلغُ الحقيقيُّ وموافقةُ المتجر (قرارُ المالك ٢٠٢٦-١٠-١٦) ──
                 // **بعملة الطلب** (٢٠٢٦-١٠-٢٠) — والدولارُ بالسنتات.
                 val shownAmount = orderAmount(order, order.fetchAmount ?: 0)
@@ -2127,7 +2158,7 @@ private fun TripCard(
                         enabled = !state.busy,
                         busy = false,
                     )
-                } else if (next != null && !awaitingConfirm) {
+                } else if (next != null && !awaitingConfirm && !priceBlocked) {
                     // **وقبل الوصول يُرى الزرُّ باهتاً لا غائباً** — فلا تبقى البطاقةُ بلا فعل.
                     // **ولا عبارةَ تحته** (المالك ٢٠٢٦-١٠-٠٦: «ما تلزم أصلاً»).
                     TripPrimary(
@@ -2153,6 +2184,16 @@ private fun TripCard(
                         tone = com.rahalgo.ui.PriceConfirm.Accept,
                         modifier = Modifier.fillMaxWidth(),
                     ) { Text(stringResource(R.string.agree_edit_button), fontWeight = FontWeight.Bold) }
+                }
+
+                // **«عدّل سعر البضاعة» بعد الاستلام** — زرّ ثانوي تحت فعل المرحلة، والزبون يوافق.
+                if (priceStep == PriceEditStep.CAN_REQUEST || priceStep == PriceEditStep.REVERTED) {
+                    com.rahalgo.ui.RahalButton(
+                        onClick = actions.askPriceEdit,
+                        enabled = !state.busy,
+                        tone = com.rahalgo.ui.PriceConfirm.Accept,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text(stringResource(R.string.price_edit_button), fontWeight = FontWeight.Bold) }
                 }
 
                 // ── صفُّ التواصل: أزرارٌ متساوية ────────────────────────────
