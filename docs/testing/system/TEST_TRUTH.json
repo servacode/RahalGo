@@ -33,8 +33,8 @@
     "setting_defs": 277,
     "behaviour_settings": 232,
     "order_fields": 137,
-    "test_files": 769,
-    "test_funcs": 2941
+    "test_files": 771,
+    "test_funcs": 2944
   },
   "flows": [
     {
@@ -20168,6 +20168,12 @@
       "orphan": true
     },
     {
+      "name": "TestMapLearning_DetectionReadsWindowOnly",
+      "file": "internal/qa/map_learning_window_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestPlaces_AddressNamesDetector",
       "file": "internal/qa/map_places_test.go",
       "package": "qa",
@@ -25406,6 +25412,12 @@
     },
     {
       "name": "TestRTX02_PanelTextOverridesDefault",
+      "file": "internal/qa/role_terms_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestRTX03_DriverPrivacyAlwaysMentionsMapPoints",
       "file": "internal/qa/role_terms_test.go",
       "package": "qa",
       "orphan": true
@@ -32552,6 +32564,12 @@
     {
       "name": "TestEverySettingHasArabicLabel",
       "file": "internal/settings/labels_test.go",
+      "package": "settings",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverPrivacy_MapTraceLineAlwaysPresent",
+      "file": "internal/settings/map_trace_privacy_test.go",
       "package": "settings",
       "orphan": true
     },

@@ -73,6 +73,16 @@ osmium apply-changes merged.osm.pbf names.osc -o merged-ar.osm.pbf --overwrite
 mv -f merged-ar.osm.pbf merged.osm.pbf
 rm -f named.osm.pbf named.osm names.osc
 
+# ── 3c · شوارعُ مشي السائقين ─────────────────────────────────────────
+# (قرارُ المالك ٢٠٢٦-١١-٠٦.) إن وُضع ملفُّ التصدير من اللوحة في
+# $M/driver-streets.osm تُضاف شوارعُه الموافَق عليها موصولةً بأقرب طريق
+# (add-driver-streets.sh). وبلا الملفّ يمضي البناءُ كما كان.
+if [ -s "$M/driver-streets.osm" ]; then
+  step "driver streets"
+  sh "$M/add-driver-streets.sh" merged.osm.pbf "$M/driver-streets.osm" merged-ds.osm.pbf
+  mv -f merged-ds.osm.pbf merged.osm.pbf
+fi
+
 # ── 4 · tiles ────────────────────────────────────────────────────────
 if [ ! -f planetiler.jar ]; then
   step "download planetiler"
