@@ -192,9 +192,17 @@ func TestWAORD042_LocationReplyStillFillsThePoint(t *testing.T) {
 	if !known || fee != 600 || !nearF(lat, w.md.dropLat) || !nearF(lng, w.md.dropLng) {
 		t.Fatalf("**الموقعُ لم يُكتب**: %v · %d · %v,%v", known, fee, lat, lng)
 	}
-	// **والعنوانُ بعد الموقع يُلتقط أيضاً** — الاثنان مطلوبان.
-	if reply := h.API.HandleWAAddressText(ctxBG(), phone, "حي المشلب جانب الصيدلية"); reply == "" {
-		t.Fatal("**العنوانُ بعد الموقع لم يُلتقط**")
+	// **وبعد الموقع لا يُلتقط نصٌّ عنواناً** (قرارُ المالك ٢٠٢٦-١١-٠٦: «إذا بعث الموقع ما بيلزم العنوان») —
+	// «شكراً» بعد الموقع ليست عنواناً.
+	var before string
+	_ = h.Pool.QueryRow(ctxBG(), `SELECT address_text FROM orders WHERE id = $1`, id).Scan(&before)
+	if reply := h.API.HandleWAAddressText(ctxBG(), phone, "شكراً كتير"); reply != "" {
+		t.Fatalf("**نصٌّ بعد الموقع التُقط عنواناً**: %q", reply)
+	}
+	var after string
+	_ = h.Pool.QueryRow(ctxBG(), `SELECT address_text FROM orders WHERE id = $1`, id).Scan(&after)
+	if after != before {
+		t.Fatalf("**نصٌّ بعد الموقع بدّل العنوان**: %q ← %q", before, after)
 	}
 }
 

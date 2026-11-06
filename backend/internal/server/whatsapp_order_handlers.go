@@ -610,6 +610,7 @@ func (s *Server) handleWhatsAppOrderAddress(w http.ResponseWriter, r *http.Reque
 // «الموقع والعنوان التفصيلي يطلبهم البوت من الزبون ويعبّيهم لحاله». **رسالةُ الطلب تطلب الاثنين**
 // (`waAddressAskLine`)، والموقعُ يملأ النقطة (`HandleWALocation`)، **وأوّلُ ردٍّ نصّيٍّ من الرقم نفسِه
 // وطلبُ الموقع مفتوحٌ يُكتب عنوانَ الطلب** — مرّةً واحدة، وما بعده لا يُلتقط (المكتبُ يصحّح بيده).
+// **وبعد وصول الموقع لا يُلتقط نصٌّ أبداً** — «شكراً» بعد الموقع ليست عنواناً.
 //
 // **وعنوانٌ كتبه الموظّفُ قبله لا يضيع**: القديمُ والجديدُ في سجلّ الأحداث
 // (`ops.whatsapp_order_address_bot`).
@@ -657,6 +658,8 @@ func (s *Server) HandleWAAddressText(ctx context.Context, from, text string) str
 		 WHERE l.id = (SELECT r.id FROM recipient_location_requests r
 		                WHERE r.phone = $1 AND r.mode = 'whatsapp'
 		                  AND r.address_received_at IS NULL AND r.expires_at > now()
+		                  -- **ووصل الموقعُ ⇒ لا عنوانَ يُلتقط** (قرارُ المالك ٢٠٢٦-١١-٠٦: «إذا بعث الموقع ما بيلزم العنوان»).
+		                  AND r.received_at IS NULL
 		                  AND (r.order_id IS NULL OR EXISTS (
 		                       SELECT 1 FROM orders o
 		                        WHERE o.id = r.order_id AND o.delivered_at IS NULL AND o.closed_at IS NULL))
