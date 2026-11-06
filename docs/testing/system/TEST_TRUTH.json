@@ -33,8 +33,8 @@
     "setting_defs": 277,
     "behaviour_settings": 232,
     "order_fields": 137,
-    "test_files": 767,
-    "test_funcs": 2936
+    "test_files": 768,
+    "test_funcs": 2937
   },
   "flows": [
     {
@@ -30044,6 +30044,12 @@
     {
       "name": "TestLosses_NetEqualsProfitLossLines",
       "file": "internal/server/door_who_pays_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDriveFailures_BackoffThenRetry",
+      "file": "internal/server/drive_sweeper_backoff_test.go",
       "package": "server",
       "orphan": true
     },
