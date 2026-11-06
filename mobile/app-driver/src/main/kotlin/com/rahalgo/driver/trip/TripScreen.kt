@@ -1675,6 +1675,7 @@ private fun TripCard(
                     actions.fetchAmount(amount)
                 },
                 onDismiss = { fetchOpen = false },
+                whatsApp = isWhatsApp(order),
             )
         }
         val deliver: () -> Unit = {
@@ -1739,7 +1740,7 @@ private fun TripCard(
         if (!TripCollapse.bottom) {
             if (fetchBlocked && fetchStep != FetchAmountStep.WAITING) {
                 TripPrimary(
-                    label = R.string.fetch_amount_button,
+                    label = if (isWhatsApp(order)) R.string.wa_goods_button else R.string.fetch_amount_button,
                     onClick = { fetchOpen = true },
                     enabled = !state.busy,
                     busy = state.busy,
@@ -2076,7 +2077,7 @@ private fun TripCard(
                 when (fetchStep) {
                     FetchAmountStep.ENTER -> InfoBox(
                         icon = R.drawable.ic_cash,
-                        text = stringResource(R.string.fetch_amount_enter),
+                        text = stringResource(if (isWhatsApp(order)) R.string.wa_goods_enter else R.string.fetch_amount_enter),
                         tint = Rahal.colors.accent,
                         bold = true,
                     )
@@ -2094,7 +2095,10 @@ private fun TripCard(
                     )
                     FetchAmountStep.APPROVED -> InfoBox(
                         icon = R.drawable.ic_check_circle,
-                        text = stringResource(R.string.fetch_amount_approved, shownAmount),
+                        text = stringResource(
+                            if (isWhatsApp(order)) R.string.wa_goods_done else R.string.fetch_amount_approved,
+                            shownAmount,
+                        ),
                         tint = Rahal.colors.success,
                         bold = true,
                     )
@@ -2106,7 +2110,7 @@ private fun TripCard(
                     // **والكتابةُ هي الفعلُ الوحيد** — وفي الانتظار لا زرّ: المتجرُ يقرّر.
                     if (fetchStep != FetchAmountStep.WAITING) {
                         TripPrimary(
-                            label = R.string.fetch_amount_button,
+                            label = if (isWhatsApp(order)) R.string.wa_goods_button else R.string.fetch_amount_button,
                             onClick = { fetchOpen = true },
                             enabled = !state.busy,
                             busy = state.busy,

@@ -603,6 +603,8 @@ fun collectForStore(order: DriverOrder): Long? {
     if (order.kind != "merchant_delivery") return null
     // **وفي «إحضار» بعد موافقة المتجر: المبلغُ الحقيقيُّ لا التقدير** (قرارُ المالك ٢٠٢٦-١٠-١٦).
     if (isFetch(order) && order.fetchAmountStatus == "approved") return order.fetchAmount?.takeIf { it > 0 }
+    // **وطلبُ الواتساب: الثمنُ الذي كتبه السائق** (قرارُ المالك ٢٠٢٦-١١-٠٦).
+    if (isWhatsApp(order) && order.fetchAmountStatus == "approved") return order.fetchAmount?.takeIf { it > 0 }
     return order.collectAmount?.takeIf { it > 0 }
 }
 
@@ -638,6 +640,12 @@ fun fetchAmountDraft(units: Long, currency: String?): String {
 enum class FetchAmountStep { NONE, ENTER, REJECTED, WAITING, APPROVED }
 
 fun fetchAmountStep(order: DriverOrder): FetchAmountStep {
+    // **وطلبُ الواتساب: ثمنُ الطلب بلا موافقة** (قرارُ المالك ٢٠٢٦-١١-٠٦) — يكتبه بمكان الاستلام قبل
+    // «استلمت»، **والزبونُ تصله رسالةٌ بالمبالغ.** ولا انتظارَ ولا رفض: الخادمُ يقبله في لحظته.
+    if (isWhatsApp(order) && order.kind == "merchant_delivery") {
+        if (order.status != "at_pickup") return FetchAmountStep.NONE
+        return if (order.fetchAmountStatus == "approved") FetchAmountStep.APPROVED else FetchAmountStep.ENTER
+    }
     if (!isFetch(order) || order.status != "at_pickup") return FetchAmountStep.NONE
     return when (order.fetchAmountStatus) {
         "approved" -> FetchAmountStep.APPROVED
