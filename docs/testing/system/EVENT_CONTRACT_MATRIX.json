@@ -381,7 +381,7 @@
     },
     {
       "file": "internal/orders/parts_remove.go",
-      "line": 375,
+      "line": 377,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -390,7 +390,7 @@
     },
     {
       "file": "internal/orders/parts_remove.go",
-      "line": 383,
+      "line": 385,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -399,7 +399,7 @@
     },
     {
       "file": "internal/orders/parts_remove.go",
-      "line": 408,
+      "line": 410,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -408,7 +408,7 @@
     },
     {
       "file": "internal/orders/parts_remove.go",
-      "line": 569,
+      "line": 571,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -1558,7 +1558,7 @@
     },
     {
       "file": "internal/orders/parts_remove.go",
-      "line": 575,
+      "line": 577,
       "room": "driver:*"
     },
     {

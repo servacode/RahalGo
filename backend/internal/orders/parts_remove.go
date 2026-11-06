@@ -73,7 +73,9 @@ type partRemoval struct {
 	byStore bool
 	// transfer **حُوّل لمتجرٍ آخر** — لا خبرَ «ما توفّر» للزبون.
 	transfer bool
-	money    removalMoney
+	// byEdit **خرج بتعديل الطلب** — والزبونُ أُخبر بالتعديل نفسِه (`orderEdited`) فلا خبرَ ثانٍ له.
+	byEdit bool
+	money  removalMoney
 }
 
 // removePartReq **ما طُلب من الشيل.**
@@ -366,7 +368,7 @@ func (s *Service) notifyPartRemovals(ctx context.Context, orderID string, out *p
 	}
 	ref := fmt.Sprintf("#%d", number)
 	for _, r := range out.removed {
-		if r.continued && !r.transfer && customerID != "" {
+		if r.continued && !r.transfer && !r.byEdit && customerID != "" {
 			body := fmt.Sprintf("%s — وباقي طلبك مكمّل · صار طلبك %s ل.س", ref, groupDigits(r.money.newTotal))
 			if len(r.items) > 0 {
 				body = fmt.Sprintf("%s — ما توفّر: %s · وباقي طلبك مكمّل · صار طلبك %s ل.س",

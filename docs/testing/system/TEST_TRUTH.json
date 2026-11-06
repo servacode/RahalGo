@@ -34,7 +34,7 @@
     "behaviour_settings": 235,
     "order_fields": 141,
     "test_files": 788,
-    "test_funcs": 3031
+    "test_funcs": 3032
   },
   "flows": [
     {
@@ -21396,6 +21396,12 @@
     },
     {
       "name": "TestMultiStop_CustomerSectionsWithoutStores",
+      "file": "internal/qa/multistop_removal_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_EditEmptyingStoreNotifiesLikeRemoval",
       "file": "internal/qa/multistop_removal_test.go",
       "package": "qa",
       "orphan": true

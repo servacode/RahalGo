@@ -793,3 +793,53 @@ func TestMultiStop_CustomerSectionsWithoutStores(t *testing.T) {
 		}
 	}
 }
+
+// TestMultiStop_EditEmptyingStoreNotifiesLikeRemoval **تعديلٌ أخرج بنودَ متجرٍ كلَّها ⇒ يُخبَر كشيل المكتب** —
+// قرارُ المالك ٢٠٢٦-١١-٠٦.
+//
+// **كان قسمُه يصير «انشال» بصمت** — فيبقى المتجرُ يحضّر والسائقُ يروح لعنده.
+func TestMultiStop_EditEmptyingStoreNotifiesLikeRemoval(t *testing.T) {
+	s := newMSShop(t, "merchants")
+	base := financialBaseline(t, s.h)
+	oid, drv := acceptedMS(t, s)
+	lineB := lineOf(t, s.h, oid, s.mB.ID)
+	if r := s.h.POST("/api/v1/admin/orders/"+oid+"/edit", s.admin.Token, map[string]any{
+		"reason": "الزبون شاله", "lines": []map[string]any{{"item_id": lineB, "qty": 0}},
+	}); r.Code != http.StatusOK {
+		t.Fatalf("تعديلُ الطلب: %s", r)
+	}
+	if p := partOf(t, s.h, oid, s.mB.ID); p.Status != "removed" {
+		t.Fatalf("القسمُ الثاني %+v — يُنتظر removed", p)
+	}
+	count := func(user, title string) int {
+		t.Helper()
+		var n int
+		if err := s.h.Pool.QueryRow(ctxBG(), `SELECT count(*) FROM notifications
+			WHERE user_id = $1::uuid AND entity_id = $2 AND title = $3`, user, oid, title).Scan(&n); err != nil {
+			t.Fatal(err)
+		}
+		return n
+	}
+	if !notifiedWith(t, s.h, drv.ID, oid, "انشالت محطة من الطلب", 2*time.Second) {
+		t.Errorf("**السائقُ لم يُخبَر بالمحطّة التي انشالت بالتعديل**")
+	}
+	if !notifiedWith(t, s.h, s.mB.Owner.ID, oid, "أُلغي قسمك من الطلب", 2*time.Second) {
+		t.Errorf("**المتجرُ الثاني لم يُخبَر بأنّ قسمه انشال بالتعديل**")
+	}
+	time.Sleep(300 * time.Millisecond)
+	if n := count(drv.ID, "انشالت محطة من الطلب"); n != 1 {
+		t.Errorf("خبرُ السائق %d مرّة — يُنتظر مرّة", n)
+	}
+	if n := count(s.mB.Owner.ID, "أُلغي قسمك من الطلب"); n != 1 {
+		t.Errorf("خبرُ المتجر الثاني %d مرّة — يُنتظر مرّة", n)
+	}
+	if n := count(s.mA.Owner.ID, "أُلغي قسمك من الطلب"); n != 0 {
+		t.Errorf("**المتجرُ الأوّل أُخبر بشيل قسمٍ ليس قسمَه** (%d)", n)
+	}
+	if n := count(s.cust.ID, "قسم من طلبك ما توفّر"); n != 0 {
+		t.Errorf("الزبونُ أُخبر مرّتين — والتعديلُ أخبره (%d)", n)
+	}
+	deliverMultiStop(t, s, oid, drv)
+	assertNewViolations(t, s.h, base)
+	assertFinancialTruth(t, s.h, oid)
+}

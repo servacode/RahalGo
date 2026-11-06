@@ -602,8 +602,9 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 	}
 
 	// **ومتجرٌ خرجت بنودُه كلُّها قسمُه «انشال»** — كشيل القسم (رسمُ المحطّة أُعيد فوق).
+	var emptied []partRemoval
 	if perStore {
-		if err := markEmptyPartsTx(ctx, tx, orderID, actorID, req.Reason, o.status, o.driverID); err != nil {
+		if emptied, err = markEmptyPartsTx(ctx, tx, orderID, actorID, req.Reason, o.status, o.driverID); err != nil {
 			return nil, res, err
 		}
 	}
@@ -650,6 +651,10 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return nil, res, err
+	}
+	// **قسمٌ فرغ بالتعديل يُخبَر كشيل المكتب** — متجرُه «أُلغي قسمك» وسائقُه «انشالت محطة».
+	if len(emptied) > 0 {
+		s.notifyPartRemovals(ctx, orderID, &partOutcome{removed: emptied})
 	}
 	if follow != nil {
 		updated, err := s.afterTransition(ctx, follow)
