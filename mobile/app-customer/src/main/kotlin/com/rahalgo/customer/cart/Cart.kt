@@ -305,6 +305,12 @@ object Cart {
         /** **ثمنُ الواحد بخياراته** — والفرقُ يُضاف كما يُضاف في المحرّك. */
         val unitPrice: Long get() = item.price + options.sumOf { it.priceDelta }
 
+        /**
+         * **ثمنُ الواحد بالدولار للعرض** — لمتجرٍ يعرض بالدولار (`display_currency`، طلبُ المالك ٢٠٢٦-١١-٠٧)، و`null`
+         * لغيره. **عرضٌ وحدَه**: ما يُدفع `unitPrice` بالليرة.
+         */
+        val unitPriceUsd: Double? get() = item.priceUsd?.let { u -> u + options.sumOf { it.priceDeltaUsd ?: 0.0 } }
+
         /** **ثمنُ المشروبات** — كلٌّ بسعره وعدده، ولا يُضرب بعدد الصنف. */
         val drinksTotal: Long get() = drinks.sumOf { it.option.priceDelta * it.qty }
 

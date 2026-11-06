@@ -47,6 +47,15 @@ export function unitPrice(l: { item: Item; options: ModifierOption[] }): number 
   return l.item.price + l.options.reduce((s, o) => s + o.price_delta, 0);
 }
 
+/**
+ * **ثمنُ الواحد بالدولار للعرض** — لمتجرٍ يعرض بالدولار (`display_currency`، طلبُ المالك ٢٠٢٦-١١-٠٧)، و`null` لغيره.
+ * مرآةُ `Cart.Line.unitPriceUsd`. **عرضٌ وحدَه**: ما يُدفع `unitPrice` بالليرة.
+ */
+export function unitPriceUsd(l: { item: Item; options: ModifierOption[] }): number | null {
+  if (l.item.price_usd == null) return null;
+  return l.item.price_usd + l.options.reduce((s, o) => s + (o.price_delta_usd ?? 0), 0);
+}
+
 /** **ثمنُ المشروبات** — كلٌّ بسعره وعدده. */
 export function drinksTotal(l: { drinks?: DrinkPick[] }): number {
   return (l.drinks ?? []).reduce((s, d) => s + d.option.price_delta * d.qty, 0);

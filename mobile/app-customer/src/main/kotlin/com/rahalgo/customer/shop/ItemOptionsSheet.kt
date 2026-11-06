@@ -40,7 +40,6 @@ import com.rahalgo.shared.model.Item
 import com.rahalgo.shared.model.ModifierGroup
 import com.rahalgo.shared.model.ModifierOption
 import com.rahalgo.ui.RahalButton
-import com.rahalgo.ui.money
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -196,6 +195,18 @@ fun ItemOptionsSheet(
                     },
                 )
             }
+            // **والسعرُ تحت الاسم** — «$2.5 · 300 ل.س» لصنفٍ بالدولار، والليرةُ وحدَها لغيره
+            // (طلبُ المالك ٢٠٢٦-١١-٠٧)، **ويتبع ما اختاره** كما في الويب (`Price`).
+            Spacer(Modifier.height(6.dp))
+            Text(
+                com.rahalgo.ui.dualPrice(
+                    item.priceUsd?.let { u -> u + picked.sumOf { it.priceDeltaUsd ?: 0.0 } },
+                    item.price + picked.sumOf { it.priceDelta },
+                ),
+                color = Rahal.colors.brand,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium,
+            )
             Spacer(Modifier.height(16.dp))
 
             when {
@@ -223,7 +234,7 @@ fun ItemOptionsSheet(
                                 group = g,
                                 counts = drinkQty,
                                 max = com.rahalgo.customer.cart.Cart.MAX_DRINK,
-                                priceText = { o -> o.priceDeltaUsd?.let { com.rahalgo.ui.dollars(it) } ?: money(o.priceDelta) },
+                                priceText = { o -> com.rahalgo.ui.dualPrice(o.priceDeltaUsd, o.priceDelta) },
                                 onCount = { id, n -> drinkQty = drinkQty + (id to n) },
                                 // **ومصغّرةُ المشروب جنب اسمه** (طلبُ المالك ٢٠٢٦-١٠-٣٠) — وبلاها كوب.
                                 thumb = { o -> drinkMedia(o.imageThumbUrl) },
@@ -237,8 +248,10 @@ fun ItemOptionsSheet(
                                 counts = splitQty,
                                 max = com.rahalgo.customer.cart.OptionSplit.MAX_PER_OPTION,
                                 priceText = { o ->
-                                    item.priceUsd?.let { com.rahalgo.ui.dollars(it + (o.priceDeltaUsd ?: 0.0)) }
-                                        ?: money(item.price + o.priceDelta)
+                                    com.rahalgo.ui.dualPrice(
+                                        item.priceUsd?.let { it + (o.priceDeltaUsd ?: 0.0) },
+                                        item.price + o.priceDelta,
+                                    )
                                 },
                                 onCount = { id, n -> splitQty = splitQty + (id to n) },
                             )
@@ -314,9 +327,7 @@ fun ItemOptionsSheet(
                 Text(
                     stringResource(
                         R.string.options_add,
-                        if (usdTotal != null) {
-                            com.rahalgo.ui.dollars(usdTotal) + " (≈ " + money(total) + ")"
-                        } else money(total),
+                        com.rahalgo.ui.dualPrice(usdTotal, total),
                     ),
                     maxLines = 2,
                 )
@@ -528,7 +539,7 @@ private fun OptionRow(
         }
         if (fullPrice != null) {
             Text(
-                fullPriceUsd?.let { com.rahalgo.ui.dollars(it) } ?: money(fullPrice),
+                com.rahalgo.ui.dualPrice(fullPriceUsd, fullPrice),
                 color = Rahal.colors.inkMuted,
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -536,7 +547,7 @@ private fun OptionRow(
             // **والصفرُ لا يُكتب «+٠»** — **رقمٌ بلا معنًى يُقرأ سعراً.**
             Text(
                 // **وبالدولار لمتجرٍ يعرض به** (٢٠٢٦-١٠-١٢).
-                "+" + (option.priceDeltaUsd?.let { com.rahalgo.ui.dollars(it) } ?: money(option.priceDelta)),
+                "+" + com.rahalgo.ui.dualPrice(option.priceDeltaUsd, option.priceDelta),
                 color = Rahal.colors.inkMuted,
                 style = MaterialTheme.typography.bodyMedium,
             )
