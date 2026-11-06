@@ -3,7 +3,9 @@ package release
 import (
 	"context"
 	"os"
+	"net/url"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -38,13 +40,30 @@ func TestCustomerDirectOnProductionToo(t *testing.T) {
 	}
 }
 
-// TestFileNameSkipsArabicVersion **نسخةٌ كُتبت اسماً عربيّاً لا تملأ الاسمَ شُرَطاً.**
-func TestFileNameSkipsArabicVersion(t *testing.T) {
-	got := FileName(Public{Key: "driver", Version: "كابتن رحال غو", SHA256: "e1ec88746fa3aa"})
-	if got != "rahalgo-driver-e1ec8874.apk" {
-		t.Errorf("الاسم %q", got)
+// TestFileNameClean **اسمٌ نظيفٌ بلا بصمة، وعربيٌّ في filename*.**
+func TestFileNameClean(t *testing.T) {
+	sha := "e1ec88746fa3aa"
+	cases := []struct{ key, ver, ascii, ar string }{
+		{"driver", "0.9.0", "RahalGo-Captain-0.9.0.apk", "كابتن رحال غو 0.9.0.apk"},
+		{"merchant", "0.13.0", "RahalGo-Store-0.13.0.apk", "متجر رحال غو 0.13.0.apk"},
+		{"rep", "0.10.0", "RahalGo-Agent-0.10.0.apk", "وكيل رحال غو 0.10.0.apk"},
+		{"customer", "1.10.0", "RahalGo-1.10.0.apk", "رحال غو 1.10.0.apk"},
+		{"driver", "", "RahalGo-Captain.apk", "كابتن رحال غو.apk"},
+		{"driver", "كابتن رحال غو", "RahalGo-Captain.apk", "كابتن رحال غو.apk"},
+		{"driver", "1/../x", "RahalGo-Captain.apk", "كابتن رحال غو.apk"},
 	}
-	if got := FileName(Public{Key: "driver", Version: "0.4.0", SHA256: "e1ec88746fa3aa"}); got != "rahalgo-driver-0.4.0-e1ec8874.apk" {
-		t.Errorf("الاسم %q", got)
+	for _, c := range cases {
+		p := Public{Key: c.key, Version: c.ver, SHA256: sha}
+		if got := FileName(p); got != c.ascii {
+			t.Errorf("لاتيني %q بدل %q", got, c.ascii)
+		}
+		if got := DisplayFileName(p); got != c.ar {
+			t.Errorf("عربي %q بدل %q", got, c.ar)
+		}
+		cd := ContentDisposition(p)
+		want := `attachment; filename="` + c.ascii + `"; filename*=UTF-8''` + url.PathEscape(c.ar)
+		if cd != want || strings.Contains(cd, sha[:8]) {
+			t.Errorf("ترويسة %q", cd)
+		}
 	}
 }

@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -209,46 +210,58 @@ func sumOf(path string, fi os.FileInfo) (string, error) {
 	return sum, nil
 }
 
-// FileName **اسمُ الملفّ الذي يجده من نزّله — يقول ما هو.**
+// FileName **الاسمُ اللاتينيُّ الاحتياطيّ للملفّ المنزَّل** — `RahalGo-Captain-0.9.0.apk`.
 //
-// **والمخزَّنُ معرّفٌ عشوائيّ** — **ومن نزّله وجده باسمٍ لا يقول شيئاً**
-// (وهي عِلّةُ `rahalgo.apk` القائمة: **أربعةُ تطبيقاتٍ باسمٍ واحد**).
-//
-// **وتُوسَم الهويّةُ في الاسم**: النسخةُ إن عُرفت، **وإلّا فأوّلُ بصمته**
-// — **فملفّان مختلفان لا يتشابهان في مجلَّد التنزيل.**
-//
-// **وأوّلُ البصمة يُلحق بالنسخة دائماً** (٢٠٢٦-١٠-٠٢): نسخةٌ لم يُبدَّل رقمُها
-// وملفُّها تبدّل **تنزل باسم القديم نفسِه** — فيفتح صاحبُها القديمَ من مجلَّده.
+// **بلا بصمةٍ في الاسم** (قرارُ المالك ٢٠٢٦-١١-٠٦): البصمةُ تبقى في JSON
+// العامّ للتحقّق، **لا في اسمٍ يراه الناس.** ونسخةٌ غيرُ آمنةٍ أو بلا حرفٍ
+// لاتينيٍّ أو رقمٍ تُحذف.
 func FileName(p Public) string {
-	parts := []string{}
-	// **ونسخةٌ بلا حرفٍ لاتينيٍّ أو رقمٍ لا تدخل الاسم** (٢٠٢٦-١٠-٠٥): كُتب
-	// «كابتن رحال غو» في حقل النسخة **فصار الاسمُ شُرَطاً متتالية.**
-	if v := safeTag(strings.TrimSpace(p.Version)); strings.Trim(v, "-._") != "" {
-		parts = append(parts, v)
+	base := "RahalGo"
+	if a, ok := Find(p.Key); ok && a.ASCIIName != "" {
+		base = a.ASCIIName
 	}
-	if len(p.SHA256) >= 8 {
-		parts = append(parts, p.SHA256[:8])
+	if v := versionTag(p.Version); v != "" {
+		base += "-" + v
 	}
-	if len(parts) == 0 {
-		return "rahalgo-" + p.Key + ".apk"
-	}
-	return "rahalgo-" + p.Key + "-" + strings.Join(parts, "-") + ".apk"
+	return base + ".apk"
 }
 
-// safeTag **وسمٌ يصلح في اسم ملفٍّ** — حروفٌ وأرقامٌ ونقطةٌ وشُرطة.
-//
-// **والنسخةُ نصٌّ تكتبه يد** — **ويدٌ تكتب مسافةً أو خطّاً مائلاً**،
-// **واسمُ ملفٍّ فيه خطٌّ مائلٌ في ترويسة `Content-Disposition` عطبٌ.**
-func safeTag(s string) string {
-	var b strings.Builder
-	for _, r := range s {
+// DisplayFileName **الاسمُ العربيُّ للملفّ** — `كابتن رحال غو 0.9.0.apk`.
+func DisplayFileName(p Public) string {
+	base := "رحال غو"
+	if a, ok := Find(p.Key); ok && a.DisplayName != "" {
+		base = a.DisplayName
+	}
+	if v := versionTag(p.Version); v != "" {
+		base += " " + v
+	}
+	return base + ".apk"
+}
+
+// ContentDisposition **ترويسةُ التنزيل** (RFC 6266/5987): اسمٌ لاتينيٌّ احتياطيّ
+// و`filename*` بالعربيّة مرمَّزةً نسبةً مئويّة.
+func ContentDisposition(p Public) string {
+	return `attachment; filename="` + FileName(p) + `"; filename*=UTF-8''` +
+		url.PathEscape(DisplayFileName(p))
+}
+
+// versionTag النسخةُ إن كانت آمنةً (أرقامٌ وحروفٌ لاتينيّةٌ ونقطةٌ وشُرطة)، وإلّا فارغ.
+func versionTag(v string) string {
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return ""
+	}
+	for _, r := range v {
 		switch {
 		case r >= '0' && r <= '9', r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z',
-			r == '.', r == '-', r == '_':
-			b.WriteRune(r)
+			r == '.', r == '-', r == '_', r == '+':
 		default:
-			b.WriteRune('-')
+			return ""
 		}
 	}
-	return b.String()
+	if strings.Trim(v, "-._+") == "" {
+		return ""
+	}
+	return v
 }
+

@@ -28577,7 +28577,7 @@
       "orphan": true
     },
     {
-      "name": "TestFileNameSkipsArabicVersion",
+      "name": "TestFileNameClean",
       "file": "internal/release/public_staging_test.go",
       "package": "release",
       "orphan": true

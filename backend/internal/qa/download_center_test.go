@@ -153,7 +153,7 @@ func TestDLC3_RegisteredArtifactIsDescribedExactly(t *testing.T) {
 	}
 	// **والاسمُ يحمل النسخةَ وأوّلَ البصمة** — نسخةٌ لم يُبدَّل رقمُها وملفُّها
 	// تبدّل لا تنزل باسم القديم.
-	if cd := got.Head.Get("Content-Disposition"); !strings.Contains(cd, "rahalgo-driver-1.2.3-"+sum[:8]+".apk") {
+	if cd := got.Head.Get("Content-Disposition"); !strings.Contains(cd, `filename="RahalGo-Captain-1.2.3.apk"`) {
 		t.Errorf("DLC3 **اسمُ التنزيل لا يحمل هويّتَه**: %q", cd)
 	}
 	// **ولا يُخبَّأ** — المسارُ نفسُه يخدم كلَّ ملفٍّ يُرفع بعده (قِيس على متصفّح
