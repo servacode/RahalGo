@@ -103,6 +103,12 @@ func (s *Server) handleTransferOrder(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, errTransferDeliveryKind)
 		return
 	}
+	// **والطلبُ من أكثر من متجر يُحوَّل قسماً قسماً** (§7.3) — نقلُ بنوده كلِّها لمتجرٍ واحدٍ يدمج
+	// المتجرين. بابُه `/parts/{storeID}/transfer` (`admin_parts.go`).
+	if s.orders.StopsOf(r.Context(), orderID) > 1 {
+		s.respondErr(w, errUsePartTransfer)
+		return
+	}
 	if oldMerchant == req.MerchantID {
 		s.respondErr(w, errSameMerchant)
 		return

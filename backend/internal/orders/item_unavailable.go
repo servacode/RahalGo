@@ -94,7 +94,7 @@ func (s *Service) MarkItemUnavailable(ctx context.Context, actorID, orderID, ite
 	// ── ١ · الطلبُ مقفولاً ─────────────────────────────────────────────
 	var o struct {
 		status, kind, customerID, method, promoCode, merchantID string
-		number                                                  int64
+		number, stops                                           int64
 		subtotal, deliveryFee, discount, total, walletPaid      int64
 		waived, sourcesFee, driverFee, sharePct, shareFixed     int64
 		driverID                                                *string
@@ -104,11 +104,11 @@ func (s *Service) MarkItemUnavailable(ctx context.Context, actorID, orderID, ite
 		       COALESCE(promo_code, ''), COALESCE(merchant_id::text, ''), number,
 		       subtotal, delivery_fee, discount, total, wallet_paid,
 		       promo_delivery_waived, sources_fee, driver_fee,
-		       snap_platform_delivery_percent, snap_platform_delivery_fixed, driver_id
+		       snap_platform_delivery_percent, snap_platform_delivery_fixed, driver_id, stops
 		FROM orders WHERE id = $1 FOR UPDATE`, orderID).
 		Scan(&o.status, &o.kind, &o.customerID, &o.method, &o.promoCode, &o.merchantID, &o.number,
 			&o.subtotal, &o.deliveryFee, &o.discount, &o.total, &o.walletPaid,
-			&o.waived, &o.sourcesFee, &o.driverFee, &o.sharePct, &o.shareFixed, &o.driverID)
+			&o.waived, &o.sourcesFee, &o.driverFee, &o.sharePct, &o.shareFixed, &o.driverID, &o.stops)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, res, httpx.ErrNotFound
 	}
@@ -159,6 +159,39 @@ func (s *Service) MarkItemUnavailable(ctx context.Context, actorID, orderID, ite
 	if allQty-res.RemovedQty <= 0 {
 		return nil, res, ErrItemUnavailableLast
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **وفي الطلب بعدّة محطّات: صنفُ متجرٍ استُلم لا يُحذف، وآخرُ صنفٍ لمتجرٍ يشيل قسمَه** (§6.2)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **مستحقُّ المتجر المستلَم مقيَّد** — وتصحيحُه بابُه «تعديل الطلب». **وصنفٌ هو آخرُ ما للمتجر في
+	// الطلب يُخرج المتجرَ كلَّه** — فيُشال قسمُه (ذنبُ المنصّة) بالباب نفسِه الذي يشيل به المكتبُ قسماً:
+	// لقطتُه في قسمه، وخبرُ الزبون والسائق، **وإعادةُ الحساب الواحدة.**
+	if o.stops > 1 {
+		if collected, err := partCollectedTx(ctx, tx, orderID, lineMerchant); err != nil {
+			return nil, res, err
+		} else if collected {
+			return nil, res, ErrPartCollected
+		}
+		var storeLeft int
+		if err := tx.QueryRow(ctx, `
+			SELECT COALESCE(sum(qty) FILTER (WHERE NOT ($4 AND drink_for IS NOT DISTINCT FROM $2::uuid)
+			                                  AND drink_for IS NULL), 0)
+			FROM order_items WHERE order_id = $1 AND COALESCE(merchant_id::text, $3) = $5`,
+			orderID, itemID, o.merchantID, res.RemovedQty == lineQty, lineMerchant).Scan(&storeLeft); err != nil {
+			return nil, res, err
+		}
+		if res.RemovedQty == lineQty {
+			var lineIsDrink bool
+			if err := tx.QueryRow(ctx, `SELECT drink_for IS NOT NULL FROM order_items WHERE id = $1`, itemID).
+				Scan(&lineIsDrink); err != nil {
+				return nil, res, err
+			}
+			if !lineIsDrink && storeLeft-res.RemovedQty <= 0 {
+				_ = tx.Rollback(ctx)
+				return s.itemUnavailableRemovesPart(ctx, actorID, orderID, lineMerchant, res, hook)
+			}
+		}
+	}
 	if res.RemovedQty == lineQty {
 		_, err = tx.Exec(ctx, `DELETE FROM order_items WHERE id = $1`, itemID)
 	} else {
@@ -168,134 +201,14 @@ func (s *Service) MarkItemUnavailable(ctx context.Context, actorID, orderID, ite
 		return nil, res, err
 	}
 
-	// ── ٣ · البضاعةُ من البنود — المعادلةُ نفسُها التي سعّرت الطلب ───────
-	// (`priceItems`: سعرُ البيع الملقوطُ × الكمّيّة.)
-	var subtotal int64
-	if err := tx.QueryRow(ctx,
-		`SELECT COALESCE(sum(unit_price * qty), 0) FROM order_items WHERE order_id = $1`, orderID).
-		Scan(&subtotal); err != nil {
+	// ── ٣…٦ · إعادةُ الحساب — الدالّةُ المشتركةُ مع إزالة قسمٍ من طلبٍ بعدّة محطّات ──
+	rc, err := unit.recomputeAfterRemovalTx(ctx, tx, orderID, lineMerchant, actorID,
+		fmt.Sprintf("صنف غير متوفر: %s", res.ItemName))
+	if err != nil {
 		return nil, res, err
 	}
-
-	// ── ٤ · أخرج متجرٌ كاملٌ من الطلب؟ ───────────────────────────────────
-	feeBeforePromo := o.deliveryFee + o.waived
-	sourcesFee, driverFee, merchantID := o.sourcesFee, o.driverFee, o.merchantID
-	var stillThere bool
-	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS(SELECT 1 FROM order_items
-		              WHERE order_id = $1 AND COALESCE(merchant_id::text, $2) = $3)`,
-		orderID, o.merchantID, lineMerchant).Scan(&stillThere); err != nil {
-		return nil, res, err
-	}
-	if !stillThere {
-		res.SourceGone = true
-		remaining, err := remainingSources(ctx, tx, orderID, o.merchantID)
-		if err != nil {
-			return nil, res, err
-		}
-		// **ومتجرُ الطلب إن خرج يخلفه أوّلُ الباقين** — وإلّا بقي الطلبُ على متجرٍ لا بضاعةَ له فيه.
-		if lineMerchant == o.merchantID && len(remaining.merchants) > 0 {
-			merchantID = remaining.merchants[0]
-		}
-		// **ورسمُ المصادر يُعاد بالمعادلة نفسِها** (`extraSourceFee`) على ما بقي،
-		// **ولا يرتفع أبداً** — إعداداتُ اليوم لا تُحمَّل على طلب الأمس.
-		if o.sourcesFee > 0 {
-			base := feeBeforePromo - o.sourcesFee
-			var extra int64
-			if len(remaining.items) > 0 {
-				src, err := unit.SourcesOf(ctx, tx, remaining.items)
-				if err != nil {
-					return nil, res, err
-				}
-				extra = unit.extraSourceFee(ctx, src, base)
-			}
-			if extra > o.sourcesFee {
-				extra = o.sourcesFee
-			}
-			sourcesFee = extra
-			feeBeforePromo = base + extra
-			// **وأجرُ السائق يتبع الأجرة** — وقفةٌ أقلّ، **بحصّة المنصّة الملقوطة.**
-			driverFee = DriverFeeWithShare(feeBeforePromo, o.sharePct, o.shareFixed)
-		}
-	}
-
-	// ── ٥ · الكود: يُعاد حسابُه على البضاعة الجديدة — ولا يسقط ─────────────
-	//
-	// **لا يُسأل عن حدّه الأدنى ولا عن صلاحيّته اليوم**: وُعد به الزبونُ يومَ الطلب،
-	// **وحذفُ ما نفد عند المتجر لا ينقض الوعد.** النسبةُ تُعاد بسقفها، والثابتُ يُقصَر على
-	// البضاعة (`promoCut`)، **والاستعمالُ وعدّادُه لا يُمسّان.**
-	deliveryFee := feeBeforePromo
-	var discount, waived int64
-	promoCode := o.promoCode
-	if promoCode != "" {
-		var kind string
-		var value int64
-		var maxDiscount *int64
-		err := tx.QueryRow(ctx, `
-			SELECT kind, value, max_discount FROM promo_codes
-			WHERE code = $1`, promoCode).Scan(&kind, &value, &maxDiscount)
-		switch {
-		case errors.Is(err, pgx.ErrNoRows):
-			// **كودٌ مُحي بعد الطلب** — يبقى خصمُه كما وُعد، لا يُخترَع غيرُه.
-			discount, waived, deliveryFee = min64(o.discount, subtotal), o.waived, o.deliveryFee
-		case err != nil:
-			return nil, res, err
-		default:
-			discount = promoCut(kind, value, maxDiscount, subtotal, &deliveryFee)
-			if feeBeforePromo > deliveryFee {
-				waived = feeBeforePromo - deliveryFee
-			}
-		}
-	}
-	// **والتوصيلُ المجانيّ يبقى وعداً** — يُعاد على الأجرة الجديدة بسقف عرضه.
-	if fw, err := s.freeDeliveryReapply(ctx, tx, orderID, deliveryFee); err != nil {
-		return nil, res, err
-	} else if fw > 0 {
-		deliveryFee -= fw
-		waived += fw
-	}
-	total := subtotal - discount + deliveryFee
-	if total < 0 {
-		total = 0
-	}
-	// **وحارسٌ بنيويّ**: الحسبةُ أعلاه لا ترفع المجموعَ (البضاعةُ تنقص والخصمُ يتبعها
-	// صعوداً ونزولاً)، **فإن ارتفع يوماً بقاعدةٍ تُضاف بعدُ امتصّه الخصمُ** — ولا يدفع
-	// الزبونُ أكثرَ ممّا وافق عليه.
-	if total > o.total {
-		extra := min64(total-o.total, subtotal-discount)
-		discount += extra
-		total -= extra
-	}
-	res.OldTotal, res.NewTotal = o.total, total
-
-	// ── ٦ · الدفع: بقاعدة تعديل الطلب — المحفظةُ يُردّ لها ما زاد فوراً ──────
-	//
-	// **المحفظةُ لا تزيد على ما دُفع منها، وما زاد منها على المجموع الجديد يُردّ لها، والباقي
-	// نقد** — القاعدةُ نفسُها في `EditOrder` (`order_edit.go`).
-	//
-	// **وكان طلبُ المحفظة يُكتب كلُّه من المحفظة** (`wallet_paid = total`، `cash_due = 0`) — فطلبٌ
-	// زِيد عليه بتعديلٍ لم يكفِه رصيدُ الزبون (فبقي عليه نقد) **يضيع باقيه النقديّ بحذف صنف**: لا
-	// يقبضه السائق، **والطلبُ يقول دُفع من المحفظة ما لم يُدفع منها.** (خلل PD-2، ٢٠٢٦-١١-٠٥.)
-	walletPaid := min64(o.walletPaid, total)
-	if diff := o.walletPaid - walletPaid; diff > 0 {
-		note := fmt.Sprintf("صنف غير متوفر: %s", res.ItemName)
-		if _, err := s.wallet.ApplyTx(ctx, tx, o.customerID, diff, "refund",
-			orderID, note, &actorID); err != nil {
-			return nil, res, err
-		}
-		res.Refunded = diff
-	}
-	cashDue := total - walletPaid
-
-	if _, err := tx.Exec(ctx, `
-		UPDATE orders SET subtotal = $2, delivery_fee = $3, discount = $4, total = $5,
-		       wallet_paid = $6, cash_due = $7, promo_delivery_waived = $8,
-		       sources_fee = $9, driver_fee = $10, promo_code = NULLIF($11, ''),
-		       merchant_id = $12::uuid, updated_at = now()
-		WHERE id = $1`, orderID, subtotal, deliveryFee, discount, total,
-		walletPaid, cashDue, waived, sourcesFee, driverFee, promoCode, merchantID); err != nil {
-		return nil, res, err
-	}
+	res.SourceGone, res.OldTotal, res.NewTotal, res.Refunded = rc.sourceGone, rc.oldTotal, rc.newTotal, rc.refunded
+	total := rc.newTotal
 
 	// ── ٧ · الأثر: حدثٌ وإشعارٌ وتدقيق — في المعاملة نفسِها ───────────────
 	note := fmt.Sprintf("صنف غير متوفر: %s ×%d — المجموع الجديد %s ل.س",
@@ -336,6 +249,24 @@ func (s *Service) MarkItemUnavailable(ctx context.Context, actorID, orderID, ite
 	s.publishOrder(updated)
 	s.publishWalletsOf(ctx, orderID)
 	return updated, res, nil
+}
+
+// itemUnavailableRemovesPart **آخرُ صنفٍ لمتجرٍ في طلبٍ بعدّة محطّات ⇒ قسمُه يُشال** (ذنبُ المنصّة).
+//
+// **والتدقيقُ في معاملة الشيل نفسِها** — كما في الحذف.
+func (s *Service) itemUnavailableRemovesPart(ctx context.Context, actorID, orderID, store string,
+	res ItemUnavailableResult, hook func(context.Context, dbtx.Querier, ItemUnavailableResult) error) (*Order, ItemUnavailableResult, error) {
+	res.SourceGone = true
+	o, err := s.removePart(ctx, actorID, []string{"ops"}, orderID, store,
+		"صنف غير متوفر: "+res.ItemName, FaultPlatform,
+		func(ctx context.Context, q dbtx.Querier, r partRemoval) error {
+			res.OldTotal, res.NewTotal, res.Refunded = r.money.oldTotal, r.money.newTotal, r.money.refunded
+			if hook != nil {
+				return hook(ctx, q, res)
+			}
+			return nil
+		})
+	return o, res, err
 }
 
 // orderSources **ما بقي في الطلب من مصادر وأصناف** — بترتيب البنود.

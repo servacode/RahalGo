@@ -569,6 +569,15 @@ type Order struct {
 	// **داخليٌّ لا يُرسَل**: كلُّ فرعٍ للطلب من عدّة متاجر يُقرأ منه (`Stops > 1`)،
 	// **والحمولاتُ لا تتبدّل بحرف** لطلب المتجر الواحد.
 	Stops int `json:"-"`
+	// Parts · Sections · SharedStops **الطلبُ بعدّة محطّات لكلّ طرفٍ بقدره** (`parts_payload.go`) —
+	// **فارغةٌ لطلب المتجر الواحد فلا تُرسَل** (`omitempty`):
+	//
+	//	parts         للمكتب — كلُّ متجرٍ بقسمه وماله وأحواله
+	//	sections      للزبون — «القسم ١ / ٢» بلا اسم متجرٍ ولا معرّفه (`P-1`)
+	//	shared_stops  للمتجر — عددُ متاجر الطلب، بلا أسمائها
+	Parts       []OpsPart         `json:"parts,omitempty"`
+	Sections    []CustomerSection `json:"sections,omitempty"`
+	SharedStops int               `json:"shared_stops,omitempty"`
 	// partStores **متاجرُ أقسام الطلب بترتيبها** — للطلب من عدّة متاجر وحدَه، وفارغٌ لغيره.
 	// **ومنه تُبثّ إشارةُ «تبدّل الطلب» لغرفة كلّ متجرٍ فيه** (`publishOrder`).
 	partStores []string

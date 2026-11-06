@@ -68,6 +68,9 @@ var t = struct {
 	partAccepted, partRejectedOps string
 	// **والزبونُ ألغى ومتجرٌ قبل قسمَه** (G7) — قد بدأ يطبخ ولا يدري.
 	partCancelledByCustomer string
+	// **قسمٌ خرج والطلبُ يكمل** (قرارُ المالك ٢٠٢٦-١١-٠٦) — الزبونُ بلا اسم متجر، والسائقُ لا
+	// يروح لعنده، والمتجرُ حين شاله المكتب؛ **وقسمٌ حُوّل** — السائقُ يُخبَر بالمحطّة الجديدة.
+	partUnavailable, partRemovedDriver, partRemovedMerchant, partTransferredDriver string
 }{
 	offerDriver:      "طلب جديد بانتظارك",
 	assignedDriver:   "طلب أُسند إليك",
@@ -128,6 +131,10 @@ var t = struct {
 	partAccepted:               "قسم من طلبك انقبل",
 	partRejectedOps:            "متجر رفض قسمه من طلب",
 	partCancelledByCustomer:    "الزبون ألغى طلب قبلته",
+	partUnavailable:            "قسم من طلبك ما توفّر",
+	partRemovedDriver:          "انشالت محطة من الطلب",
+	partRemovedMerchant:        "أُلغي قسمك من الطلب",
+	partTransferredDriver:      "تبدّلت محطة من الطلب",
 }
 
 // endedByLabel من أنهى الطلب — بلفظٍ يُقرأ لا برمزٍ يُفكّ.

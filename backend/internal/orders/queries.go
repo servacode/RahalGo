@@ -304,6 +304,10 @@ func (s *Service) getByID(ctx context.Context, db dbtx.Querier, id string) (*Ord
 		if o.partStores, err = partStoresOf(ctx, db, id); err != nil {
 			return nil, err
 		}
+		// **وأقسامُه للمكتب والزبون** — كلٌّ بقدره (`parts_payload.go`).
+		if err := s.fillPartPayloads(ctx, db, []*Order{o}); err != nil {
+			return nil, err
+		}
 	}
 
 	eRows, err := db.Query(ctx, `
@@ -762,6 +766,14 @@ func (s *Service) List(ctx context.Context, f ListFilter) (*OrderPage, error) {
 	}
 
 	if err := s.fillStageTimes(ctx, orders); err != nil {
+		return nil, err
+	}
+	// **وأقسامُ الطلب بعدّة محطّات** — للمكتب والزبون (`parts_payload.go`).
+	ptrs := make([]*Order, 0, len(orders))
+	for i := range orders {
+		ptrs = append(ptrs, &orders[i])
+	}
+	if err := s.fillPartPayloads(ctx, s.db, ptrs); err != nil {
 		return nil, err
 	}
 

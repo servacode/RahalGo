@@ -1064,9 +1064,14 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 	}
 
 	// (1) نهاية غير التسليم قبل التسليم — استرجاع ما دُفع من المحفظة
+	// **وفاعلُ النظام `NULL`** (`PF-08`) — رفضُ الطلب بعدّة محطّات حين يرفض آخرُ متجرٍ قسمَه.
 	if refundOnEnter(in.to) && in.from != StDelivered && in.walletPaid > 0 {
+		var by *string
+		if in.actorID != "" {
+			by = &in.actorID
+		}
 		if _, err := s.wallet.ApplyTx(ctx, q, in.customerID, in.walletPaid, "refund",
-			in.orderID, fmt.Sprintf("استرجاع طلب %s", statusAr(in.to)), &in.actorID); err != nil {
+			in.orderID, fmt.Sprintf("استرجاع طلب %s", statusAr(in.to)), by); err != nil {
 			return err
 		}
 		out.credit(in.customerID, in.walletPaid, t.refunded2, notifications.AppCustomer)

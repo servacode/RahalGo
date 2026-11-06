@@ -140,6 +140,11 @@ var adminPolicy = []Rule{
 	{"POST", "/orders/{id}/transfer", OrdersIntervene},
 	// **ومرشّحو التحويل يُقرؤون لمن يحوّل** — فيهم أسعارُ الشراء.
 	{"GET", "/orders/{id}/transfer-candidates", OrdersIntervene},
+	// **وأفعالُ المكتب على قسم متجرٍ في الطلب بعدّة محطّات** (قرارُ المالك ٢٠٢٦-١١-٠٦).
+	{"POST", "/orders/{id}/parts/{storeID}/accept", OrdersIntervene},
+	{"POST", "/orders/{id}/parts/{storeID}/reject", OrdersIntervene},
+	{"POST", "/orders/{id}/parts/{storeID}/remove", OrdersIntervene},
+	{"POST", "/orders/{id}/parts/{storeID}/transfer", OrdersIntervene},
 	// **وإعادةُ حساب التسوية للمالك والأدمن وحدَهما** (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ١٥).
 	{"POST", "/orders/{id}/recompute", FinanceRecompute},
 	// **و«ما استلمت العمولة» فعلٌ نقديٌّ كاستلام صندوق السائق** (قرارُ المالك ٢٠٢٦-١٠-٢٦).

@@ -4653,6 +4653,62 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/parts/{storeID}/accept",
+      "handler": "handleAdminPartAccept",
+      "auth": true,
+      "capability": "orders.intervene",
+      "request": [
+        {
+          "name": "prep_minutes",
+          "type": "?int"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/parts/{storeID}/reject",
+      "handler": "handleAdminPartReject",
+      "auth": true,
+      "capability": "orders.intervene",
+      "request": [
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/parts/{storeID}/remove",
+      "handler": "handleAdminPartRemove",
+      "auth": true,
+      "capability": "orders.intervene",
+      "request": [
+        {
+          "name": "reason",
+          "type": "string"
+        },
+        {
+          "name": "fault",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/parts/{storeID}/transfer",
+      "handler": "handleAdminPartTransfer",
+      "auth": true,
+      "capability": "orders.intervene",
+      "request": [
+        {
+          "name": "to_merchant_id",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/admin/orders/{id}/proof-exception",
       "handler": "handleAuthorizeProofException",
       "auth": true,

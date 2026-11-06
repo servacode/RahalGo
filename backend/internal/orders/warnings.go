@@ -41,10 +41,11 @@ func (s *Service) warnMerchantOnFault(ctx context.Context, orderID, fault, reaso
 	// **والفهرسُ الفريد يمنع التكرار** — لا فحصٌ قبله.
 	//
 	// **وصار إلى الجدول الموحَّد** (٢٠٢٦-٠٨-٠٩): إنذارٌ واحدٌ لكلّ الأدوار.
+	// **وواحدٌ لكلّ (طلب، متجر)** (هجرة ٠٥١٧) — طلبٌ بعدّة محطّات ينذر كلَّ متجرٍ بذنبه.
 	if _, err := s.db.Exec(ctx, `
 		INSERT INTO warnings (user_id, merchant_id, role_code, reason, order_id)
 		VALUES ($1, $2, 'merchant', $3, $4)
-		ON CONFLICT (order_id) WHERE order_id IS NOT NULL DO NOTHING`,
+		ON CONFLICT (order_id, merchant_id) WHERE order_id IS NOT NULL AND merchant_id IS NOT NULL DO NOTHING`,
 		ownerID, merchantID, reason, orderID); err != nil {
 		s.logger.Error("الإنذارات: تعذّر التسجيل", "merchant", merchantID, "error", err)
 		return
@@ -64,6 +65,39 @@ func (s *Service) warnMerchantOnFault(ctx context.Context, orderID, fault, reaso
 	s.enforceMerchantViolations(ctx, orderID)
 }
 
+// warnMerchantPart **إنذارٌ على متجرٍ بعينه في طلبٍ بعدّة محطّات** (قرارُ المالك ٢٠٢٦-١١-٠٦، ٦أ) —
+// رفض قسمَه أو شاله بنفسه، أو شاله المكتبُ بذنبه. **ويُعدّ مخالفةً كرفض الطلب العاديّ**
+// (`warningsWhere`). **وإنذارُ متجرٍ ثانٍ على الطلب نفسِه يبقى** (فهرسُ ٠٥١٧).
+//
+// **ومن رفض بنفسه لا يُخبَر بإنذار** — كرفض الطلب العاديّ يُعدّ ولا يُرسَل؛ **ومن شاله المكتبُ
+// بذنبه يُخبَر** كإنذار باب المتجر.
+func (s *Service) warnMerchantPart(ctx context.Context, orderID, merchantID string, byStore bool) {
+	reason := "part_removed"
+	if byStore {
+		reason = "part_rejected"
+	}
+	var ownerID *string
+	if err := s.db.QueryRow(ctx, `
+		INSERT INTO warnings (user_id, merchant_id, role_code, reason, order_id)
+		SELECT m.owner_user_id, m.id, 'merchant', $3, $1
+		FROM merchants m WHERE m.id = $2::uuid AND m.owner_user_id IS NOT NULL
+		ON CONFLICT (order_id, merchant_id) WHERE order_id IS NOT NULL AND merchant_id IS NOT NULL DO NOTHING
+		RETURNING user_id::text`, orderID, merchantID, reason).Scan(&ownerID); err != nil {
+		if !errors.Is(err, pgx.ErrNoRows) && s.logger != nil {
+			s.logger.Error("الإنذارات: تعذّر تسجيلُ إنذار القسم", "merchant", merchantID, "error", err)
+		}
+		return
+	}
+	if !byStore && s.notify != nil && ownerID != nil {
+		s.notify.Notify(ctx, notifications.Input{
+			UserID: *ownerID, Kind: notifications.KindOrder,
+			Title: t.warningIssued, Body: warningText(reason),
+			Entity: "merchant", EntityID: merchantID, Href: "/portal/reviews",
+		})
+	}
+	s.enforceViolationsOf(ctx, merchantID)
+}
+
 // warningText نصُّ الإنذار بلفظه — والرمزُ يبقى للعدّ.
 func warningText(reason string) string {
 	switch reason {
@@ -75,6 +109,10 @@ func warningText(reason string) string {
 		return "لم يكن الطلبُ جاهزاً والسائقُ ينتظر"
 	case "order_unknown":
 		return "لم يُعرَف الطلبُ عند الاستلام"
+	case "part_rejected":
+		return "رفضتَ قسمَك من طلبٍ مشترك"
+	case "part_removed":
+		return "انشال قسمُك من طلبٍ مشترك بسبب المتجر"
 	}
 	return "إنذارٌ على طلب"
 }
@@ -144,7 +182,7 @@ func (s *Service) openMerchantClaim(ctx context.Context, q wallet.Querier,
 		       COALESCE(o.fail_reason, 'merchant_refused'), o.id
 		FROM orders o JOIN merchants m ON m.id = o.merchant_id
 		WHERE o.id = $1
-		ON CONFLICT (order_id) WHERE order_id IS NOT NULL
+		ON CONFLICT (order_id, merchant_id) WHERE order_id IS NOT NULL AND merchant_id IS NOT NULL
 		DO UPDATE SET reason = warnings.reason
 		RETURNING id::text`, orderID).Scan(&warningID)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {

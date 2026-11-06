@@ -24,18 +24,17 @@ package orders
 // المعاملة نفسِها (`partGatesTx`، G1). **والمتجرُ لا يقبل الطلبَ كلَّه** — بابُه
 // يُوجَّه إلى قسمه (G1/G6، `ErrUsePart`). **ولا إنزالَ وقسمٌ معلَّق** (G2).
 //
-// # وما ينتظر الدفعةَ التالية
+// # ورفضُ قسمٍ والطلبُ ماضٍ بغيره
 //
-// **رفضُ قسمٍ والطلبُ ماضٍ بغيره يُخرج بنودَه ويعيد حسابَ المبلغ** — **وذاك مالٌ
-// ينتظر جوابَ المالك.** **فإلى أن يُبنى**: قسمٌ رُفض وبنودُه ما زالت في الطلب
-// **يُبقي الطلبَ «بانتظار» عند المكتب** (`ErrPartRemovalPending`) — **ولا يُقبل
-// طلبٌ يدفع فيه الزبونُ ثمنَ ما لن يصله.**
+// **بنودُه تخرج ويُعاد حسابُ المبلغ** (`removePartTx`، `parts_remove.go`) — **ولا يُقبل طلبٌ
+// يدفع فيه الزبونُ ثمنَ ما لن يصله.** وآخرُ قسمٍ يُرفض يرفض الطلبَ كلَّه.
 
 import (
 	"context"
 	"errors"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -51,9 +50,6 @@ var (
 	ErrUsePart = httpx.NewError(http.StatusConflict, "use_part", "errors.use_part")
 	// ErrPartsPending **لا إنزالَ وفي الطلب قسمٌ لم يُجَب** (G2).
 	ErrPartsPending = httpx.NewError(http.StatusConflict, "parts_pending", "errors.parts_pending")
-	// ErrPartRemovalPending **متجرٌ رفض قسمَه وبنودُه ما زالت في الطلب** — المكتبُ يقرّر.
-	ErrPartRemovalPending = httpx.NewError(http.StatusConflict, "part_removal_pending",
-		"errors.part_removal_pending")
 	// ErrPartNotReady **قسمٌ لا يُعلَن جاهزاً في حاله** — يترجمه بابُ المتجر (`not_readyable`).
 	ErrPartNotReady = errors.New("القسمُ لا يُعلَن جاهزاً في حاله")
 )
@@ -131,19 +127,14 @@ type partCounts struct {
 	pending int
 	// live مقبولٌ أو مستلَم.
 	live int
-	// closedWithLines **رُفض أو أُزيل وبنودُه ما زالت في الطلب** — ينتظر إعادةَ الحساب.
-	closedWithLines int
 }
 
 func partCountsTx(ctx context.Context, q dbtx.Querier, orderID string) (partCounts, error) {
 	var c partCounts
 	err := q.QueryRow(ctx, `
 		SELECT count(*) FILTER (WHERE p.status = 'pending'),
-		       count(*) FILTER (WHERE p.status IN ('accepted', 'picked_up')),
-		       count(*) FILTER (WHERE p.status IN ('rejected', 'removed') AND EXISTS (
-		           SELECT 1 FROM order_items oi
-		           WHERE oi.order_id = p.order_id AND oi.merchant_id = p.merchant_id))
-		FROM order_parts p WHERE p.order_id = $1`, orderID).Scan(&c.pending, &c.live, &c.closedWithLines)
+		       count(*) FILTER (WHERE p.status IN ('accepted', 'picked_up'))
+		FROM order_parts p WHERE p.order_id = $1`, orderID).Scan(&c.pending, &c.live)
 	return c, err
 }
 
@@ -287,8 +278,6 @@ func (s *Service) partGatesTx(ctx context.Context, tx pgx.Tx, lo *lockedOrder,
 			case c.pending+c.live == 0:
 				// **رُفضت الأقسامُ كلُّها قبل أن يصل القبول** — فالطلبُ مرفوض.
 				g.to, g.note = StRejected, allPartsRejectedReason
-			case c.closedWithLines > 0:
-				return g, ErrPartRemovalPending
 			default:
 				if _, err := answerPartsTx(ctx, tx, lo, nil, actorID, role, true, nil, "",
 					[]string{PartPending}); err != nil {
@@ -402,12 +391,8 @@ func (s *Service) partsFollowUpTx(ctx context.Context, tx pgx.Tx, lo *lockedOrde
 		return nil, nil
 	}
 	to, note := StAccepted, partsAnsweredNote
-	switch {
-	case c.live == 0:
+	if c.live == 0 {
 		to, note = StRejected, allPartsRejectedReason
-	case c.closedWithLines > 0:
-		// **قسمٌ رُفض وبنودُه في الطلب** — لا قبولَ يدفع فيه الزبونُ ما لن يصله.
-		return nil, nil
 	}
 	return s.applyTransitionTx(ctx, tx, lo, transitionReq{
 		actorRoles: []string{"ops"}, to: to, note: note, fromParts: true,
@@ -422,6 +407,9 @@ type partOutcome struct {
 	reason   string
 	// noop **لا شيءَ كُتب** — جوابٌ أُعيد على ما هو عليه.
 	noop bool
+	// removed **أقسامٌ خرجت** (`removePartTx`) · transferTo **قسمٌ جديدٌ بالتحويل.**
+	removed    []partRemoval
+	transferTo partRef
 }
 
 // partAction **هيكلُ كلّ فعلِ قسم** — قفلٌ ففعلٌ فانتقالٌ تابعٌ في معاملةٍ واحدة،
@@ -500,6 +488,29 @@ func lockPartsTx(ctx context.Context, q dbtx.Querier, orderID string, stores []s
 	return got, nil
 }
 
+// answerRoles **أدوارُ من يرفض كما يقرؤها الشيل** — المتجرُ متجرٌ، والكانسُ والمكتبُ مكتب.
+func answerRoles(actorRoles []string, role string) []string {
+	if role == "merchant" {
+		return []string{"merchant"}
+	}
+	return actorRoles
+}
+
+// sortBySeq **المتاجرُ بترتيب محطّاتها** — يُكتب حدثُها كما تُزار.
+func sortBySeq(ctx context.Context, q dbtx.Querier, orderID string, stores []string) {
+	order, err := partStoresOf(ctx, q, orderID)
+	if err != nil {
+		return
+	}
+	pos := map[string]int{}
+	for i, id := range order {
+		pos[strings.ToLower(id)] = i
+	}
+	sort.SliceStable(stores, func(i, j int) bool {
+		return pos[strings.ToLower(stores[i])] < pos[strings.ToLower(stores[j])]
+	})
+}
+
 func uniqStrings(in []string) []string {
 	seen := map[string]bool{}
 	out := make([]string, 0, len(in))
@@ -561,16 +572,31 @@ func (s *Service) AnswerParts(ctx context.Context, actorID string, actorRoles []
 		if lo.from != StPending {
 			return ErrBadTransition
 		}
+		if !accept {
+			// **رفضُ القسم يُخرج بنودَه ويُعاد الحساب** (`removePartTx`) — وآخرُ قسمٍ يرفض الطلب.
+			// **وذنبُه على المتجر إن رفض بنفسه** (٦أ)، وعلى المنصّة إن رفضه المكتب.
+			fault := FaultPlatform
+			if role == "merchant" {
+				fault = FaultMerchant
+			}
+			out.reason = reason
+			sortBySeq(ctx, tx, lo.id, todo)
+			for _, id := range todo {
+				if err := unit.removePartTx(ctx, tx, lo, removePartReq{
+					store: id, actorID: actorID, roles: answerRoles(actorRoles, role), reason: reason, fault: fault,
+				}, out); err != nil {
+					return err
+				}
+			}
+			// **والمكتبُ يُخبَر برفض المتجر من باب الشيل** (`notifyPartRemovals`) — خبرٌ واحد.
+			return nil
+		}
 		refs, err := answerPartsTx(ctx, tx, lo, todo, actorID, partRole(actorID, role), accept, prep, reason,
 			[]string{PartPending})
 		if err != nil {
 			return err
 		}
-		if accept {
-			out.accepted = refs
-		} else {
-			out.rejected, out.reason = refs, reason
-		}
+		out.accepted = refs
 		out.follow, err = unit.partsFollowUpTx(ctx, tx, lo)
 		return err
 	})
@@ -579,7 +605,11 @@ func (s *Service) AnswerParts(ctx context.Context, actorID string, actorRoles []
 	}
 	if !out.noop {
 		s.notifyPartAnswers(ctx, orderID, out)
-		s.maybeDispatchParts(ctx, orderID)
+		if len(out.removed) > 0 {
+			s.afterPartRemovals(ctx, orderID, out)
+		} else {
+			s.maybeDispatchParts(ctx, orderID)
+		}
 	}
 	return updated, nil
 }

@@ -347,7 +347,7 @@ func TestMultiStop_AutoTransferAnswersPartsAsSystem(t *testing.T) {
 
 // TestMultiStop_LastRejectAndSweeperUnderLock **رفضُ الأخير والكانسُ يتزاحمان على القفل** — `T32` (D6).
 //
-// **بنودُ المتجر الثاني خرجت من الطلب** فيقدر الكانسُ أن يقبل. **ويُمسَك قفلُ الطلب حتّى
+// **بنودُ المتجر الثاني خرجت من الطلب برفضه** فيقدر الكانسُ أن يقبل. **ويُمسَك قفلُ الطلب حتّى
 // ينتظر الاثنان معاً** ثمّ يُطلق — أيُّهما سبق: **«مقبولٌ» ومعه قسمٌ مقبول**، أو «مرفوضٌ» ولا
 // قسمَ مقبولاً ولا حدثَ قبول.
 func TestMultiStop_LastRejectAndSweeperUnderLock(t *testing.T) {
@@ -357,15 +357,15 @@ func TestMultiStop_LastRejectAndSweeperUnderLock(t *testing.T) {
 			s.h.Setting("orders.auto_accept_min", "1")
 			oid := s.order(t)
 			s.mustAnswer(t, "رفضُ الثاني", s.tokB, oid, map[string]any{"to": "rejected", "note": "نفد الصنف"})
-			var line string
+			// **ورفضُ الثاني يُخرج بنودَه من الطلب** (`removePartTx`) — فلا يبقى ما يمنع القبول.
+			var left int
 			if err := s.h.Pool.QueryRow(ctxBG(), `
-			SELECT id::text FROM order_items WHERE order_id = $1::uuid AND merchant_id = $2::uuid`,
-				oid, s.mB.ID).Scan(&line); err != nil {
+			SELECT count(*) FROM order_items WHERE order_id = $1::uuid AND merchant_id = $2::uuid`,
+				oid, s.mB.ID).Scan(&left); err != nil {
 				t.Fatal(err)
 			}
-			if r := s.h.POST("/api/v1/admin/orders/"+oid+"/items/"+line+"/unavailable", s.admin.Token,
-				map[string]any{}); r.Code >= 400 {
-				t.Fatalf("بنودُ الثاني تخرج: %s", r)
+			if left != 0 {
+				t.Fatalf("**بنودُ المتجر الرافض ما زالت في الطلب**: %d", left)
 			}
 			if got := s.h.statusOf(oid); got != "pending" {
 				t.Fatalf("قبل السباق: %q — يُنتظر pending", got)

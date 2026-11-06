@@ -11,7 +11,7 @@ package server
 //	accepted   ⇒ قبولُ قسمه بمدّة تحضيره
 //	rejected   ⇒ رفضُ قسمه — والسببُ إلزاميّ
 //	preparing  ⇒ لا شيء: قبولُ القسم هو بدءُ التحضير
-//	cancelled  ⇒ رفضُ قسمه ما دام الطلبُ ينتظر؛ وبعد قبوله **إزالتُه للمكتب** (`use_part`)
+//	cancelled  ⇒ رفضُ قسمه أو شيلُه بذنبه حتّى «قيد التحضير»؛ وبعدها **الشيلُ للمكتب** (`use_part`)
 //
 // **ومالكٌ له فرعان في الطلب يجيب عنهما معاً.** **والردُّ حمولتُه هو** — قسمُه وماله.
 
@@ -44,8 +44,18 @@ func (s *Server) merchantPartTransition(w http.ResponseWriter, r *http.Request, 
 	case orders.StPreparing:
 		// **قبولُ القسم هو بدءُ تحضيره** — وزرُّ «ابدأ التحضير» القديمُ يمرّ بلا أثر.
 	case orders.StCancelled:
-		// **«لا» قبل أن يمضي الطلبُ رفضٌ لقسمه** — وبعد قبوله إزالتُه بيد المكتب.
+		// **«لا» على قسمٍ لم يُجَب رفضٌ له** — **وعلى قسمٍ قبله شيلٌ له بذنبه** (`RemovePart`) ما دام
+		// الطلبُ «بانتظار/مقبول/قيد التحضير»؛ **وبعدها الشيلُ للمكتب** (`use_part`) — نافذةُ إلغاء
+		// المتجر لطلبه العاديّ نفسُها.
 		_, err = s.orders.AnswerParts(ctx, actor, roles, orderID, stores, false, nil, note)
+		if errors.Is(err, orders.ErrBadTransition) {
+			for _, id := range stores {
+				if _, err = s.orders.RemovePart(ctx, actor, roles, orderID, id, note,
+					orders.FaultMerchant, nil); err != nil {
+					break
+				}
+			}
+		}
 		if errors.Is(err, orders.ErrBadTransition) {
 			err = orders.ErrUsePart
 		}

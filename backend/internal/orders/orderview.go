@@ -135,6 +135,8 @@ var audienceAllow = map[Audience]map[string]bool{
 		"wallet_paid":              true,
 		"zone_id":                  true,
 		"zone_name":                true,
+		// **أقسامُ طلبه بلا اسم متجرٍ ولا معرّفه** (`P-1`) — الطلبُ بعدّة محطّات وحدَه.
+		"sections": true,
 	},
 	AudienceMerchant: {
 		"accepted_at":              true,
@@ -173,6 +175,8 @@ var audienceAllow = map[Audience]map[string]bool{
 		"status":                   true,
 		"to_door_eta_sec":          true,
 		"to_store_eta_sec":         true,
+		// **«قسمك من طلب فيه {n} محلات»** — العددُ لا الأسماء.
+		"shared_stops": true,
 	},
 	AudienceDriver: {
 		// **«طلب واتساب» على بطاقته** (قرارُ المالك ٢٠٢٦-١١-٠٥).
@@ -455,6 +459,8 @@ var audienceAllow = map[Audience]map[string]bool{
 		"origin":             true,
 		"created_by_name":    true,
 		"pickup_merchant_id": true,
+		// **صندوقٌ لكلّ متجرٍ في الطلب بعدّة محطّات** (العقدُ §2).
+		"parts": true,
 	},
 }
 

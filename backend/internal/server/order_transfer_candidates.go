@@ -18,6 +18,7 @@ package server
 import (
 	"net/http"
 	"sort"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 
@@ -72,19 +73,29 @@ func (s *Server) handleTransferCandidates(w http.ResponseWriter, r *http.Request
 		s.respondErr(w, errValidation)
 		return
 	}
+	// **وقسمُ متجرٍ في الطلب بعدّة محطّات** (`?part_merchant_id=`) — مرشّحون لبنوده وحدَها،
+	// **والقياسُ من موضعه، ولا يُرشَّح متجرٌ في الطلب أصلاً** (`transfer_target_in_order`).
+	part := strings.ToLower(r.URL.Query().Get("part_merchant_id"))
+	if part != "" && !isUUID(part) {
+		s.respondErr(w, errValidation)
+		return
+	}
 
 	// **نقطةُ القياس**: موضعُ السائق إن كان الطلبُ معه وموضعُه معروف —
 	// **فهو من سيقود إلى المتجر الجديد** — وإلّا المتجرُ الحاليّ.
 	var current, from, kind string
 	if err := s.pg.QueryRow(ctx, `
-		SELECT o.merchant_id::text,
+		SELECT COALESCE(NULLIF($2, ''), o.merchant_id::text),
 		       CASE WHEN u.last_location IS NOT NULL THEN 'driver'
 		            WHEN m.location IS NOT NULL THEN 'store' ELSE '' END,
 		       o.kind
 		FROM orders o
-		JOIN merchants m ON m.id = o.merchant_id
+		JOIN merchants m ON m.id = COALESCE(NULLIF($2, '')::uuid, o.merchant_id)
 		LEFT JOIN users u ON u.id = o.driver_id
-		WHERE o.id = $1`, orderID).Scan(&current, &from, &kind); err != nil {
+		WHERE o.id = $1
+		  AND ($2 = '' OR EXISTS (SELECT 1 FROM order_parts p
+		                          WHERE p.order_id = o.id AND p.merchant_id::text = $2))`,
+		orderID, part).Scan(&current, &from, &kind); err != nil {
 		s.respondErr(w, httpx.ErrNotFound)
 		return
 	}
@@ -97,7 +108,9 @@ func (s *Server) handleTransferCandidates(w http.ResponseWriter, r *http.Request
 	items := []transferOrderItem{}
 	rows, err := s.pg.Query(ctx, `
 		SELECT id::text, name, qty, merchant_price FROM order_items
-		WHERE order_id = $1 ORDER BY name, id`, orderID)
+		WHERE order_id = $1 AND ($2 = '' OR merchant_id::text = $2)
+		  AND ($2 = '' OR drink_for IS NULL)
+		ORDER BY name, id`, orderID, part)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -124,13 +137,15 @@ func (s *Server) handleTransferCandidates(w http.ResponseWriter, r *http.Request
 		WITH origin AS (
 			SELECT COALESCE(u.last_location, m.location) AS pt
 			FROM orders o
-			JOIN merchants m ON m.id = o.merchant_id
+			JOIN merchants m ON m.id = $2::uuid
 			LEFT JOIN users u ON u.id = o.driver_id
 			WHERE o.id = $1)
 		SELECT m.id::text, m.number, m.name, ST_Distance(m.location, origin.pt)
 		FROM merchants m, origin
 		WHERE m.status = 'active' AND NOT m.emergency_closed AND m.id <> $2::uuid
-		  AND ($3 = '' OR m.id::text = $3)`, orderID, current, only)
+		  AND ($3 = '' OR m.id::text = $3)
+		  AND NOT EXISTS (SELECT 1 FROM order_parts p WHERE p.order_id = $1 AND p.merchant_id = m.id)`,
+		orderID, current, only)
 	if err != nil {
 		s.respondErr(w, err)
 		return
