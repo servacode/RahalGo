@@ -379,12 +379,9 @@ private fun CounterBlock(
             )
         }
         Spacer(Modifier.height(4.dp))
-        // **المشروباتُ الكثيرة تُطوى بعد خمسة** — وما عدّه الزبونُ يبقى ظاهراً ولو طُويت.
-        var expanded by remember(group.id) { mutableStateOf(false) }
-        val collapsible = thumb != null && group.options.size > DRINKS_COLLAPSED
-        val shown = if (!collapsible || expanded) group.options else
-            group.options.filterIndexed { i, o -> i < DRINKS_COLLAPSED || (counts[o.id] ?: 0) > 0 }
-        shown.forEach { o ->
+        // **كلُّ المشروبات ظاهرةٌ دائماً، والنافذةُ تتمرّر** (قرارُ المالك ٢٠٢٦-١١-٠٧: «سكرول مو
+        // إخفاء وإظهار») — و«أضف» والعددُ ثابتان تحتها (`weight` في `ItemOptionsSheet`).
+        group.options.forEach { o ->
             val n = counts[o.id] ?: 0
             Row(
                 Modifier.fillMaxWidth().padding(vertical = 4.dp),
@@ -435,25 +432,8 @@ private fun CounterBlock(
                 }
             }
         }
-        if (collapsible) {
-            Text(
-                text = if (expanded) stringResource(R.string.options_drinks_hide)
-                else stringResource(R.string.options_drinks_show_all, group.options.size),
-                color = Rahal.colors.brand,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(Rahal.shape.sm)
-                    .clickable { expanded = !expanded }
-                    .padding(vertical = 10.dp),
-            )
-        }
     }
 }
-
-/** **كم مشروباً يظهر قبل «عرض الكل».** */
-private const val DRINKS_COLLAPSED = 5
 
 /** **مجموعةٌ واحدةٌ وخياراتُها** — وعنوانُها يقول أإلزاميّةٌ هي. */
 @Composable
