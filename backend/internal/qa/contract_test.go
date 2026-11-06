@@ -136,8 +136,11 @@ var contracts = []struct {
 	{ID: "CONTRACT-001", File: "model/Shop.kt", Class: "Item",
 		Path: "ITEMS", JSONPath: "items.0",
 		Skip: []string{"price_usd", "price_before_usd", "exchange_rate"}},
+	// **وأقسامُ الطلب لا تُرسَل إلّا لطلبٍ من متجرين فأكثر** (`sections`، ٢٠٢٦-١١-٠٦) — وطلبُ
+	// العقد من متجرٍ واحد، **وغيابُها يعني شاشةَ اليوم** (null). حارسُها `TestMultiStop_CustomerSectionsWithoutStores`.
 	{ID: "CONTRACT-002", File: "customer/CustomerApi.kt", Class: "MyOrder",
-		Path: "/api/v1/my/orders", JSONPath: "orders.0"},
+		Path: "/api/v1/my/orders", JSONPath: "orders.0",
+		Skip: []string{"sections"}},
 	{ID: "CONTRACT-003", File: "model/Chat.kt", Class: "ChatMessage",
 		Path: "MESSAGES", JSONPath: "messages.0"},
 	{ID: "CONTRACT-004", File: "model/Chat.kt", Class: "ChatThreadRow",
