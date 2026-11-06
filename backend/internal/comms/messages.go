@@ -256,8 +256,10 @@ func (s *Service) Threads(ctx context.Context, userID string) ([]Thread, error) 
 		JOIN orders o ON o.id = t.order_id
 		JOIN users cu ON cu.id = o.customer_id
 		LEFT JOIN users dr ON dr.id = t.tenure
+		-- **والسائقُ لا يرى حديثَ طلبٍ انتهى** (قرارُ المالك ٢٠٢٦-١١-٠٦) — والزبونُ يرى حديثَه.
+		WHERE o.customer_id = $1 OR NOT (o.status = ANY($3::text[]))
 		ORDER BY t.last_at DESC
-		LIMIT 50`, userID, CustomerDriverLabel)
+		LIMIT 50`, userID, CustomerDriverLabel, EndedStatuses())
 	if err != nil {
 		return nil, err
 	}

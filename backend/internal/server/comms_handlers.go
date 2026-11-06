@@ -64,7 +64,11 @@ func (s *Server) handleOrderMessages(w http.ResponseWriter, r *http.Request) {
 		// **وعطبٌ في اسم موضوعٍ لا يُرى في سجلّ**: النداءُ ينجح والبثُّ
 		// ينجح، **ولا مشترِكَ يسمع.** (أمسكه المالك ٢٠٢٦-٠٨-١٢:
 		// «ولا تنسَ التحديث اللحظيّ أيضا».)
-		s.touchUser(p.PeerID, "order")
+		//
+		// **ولا إشارةَ إلى سائقٍ انتهى طلبُه** (قرارُ المالك ٢٠٢٦-١١-٠٦) — حديثُه مقفلٌ في وجهه.
+		if p.Me == comms.RoleDriver || p.Open {
+			s.touchUser(p.PeerID, "order")
+		}
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"messages": list,

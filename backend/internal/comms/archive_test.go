@@ -17,6 +17,7 @@ package comms_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -74,10 +75,21 @@ func TestArchive_TheOneWhoSpokeKeepsHisWords(t *testing.T) {
 	svc, _, order, customer, driver := spokenThenPulled(t)
 	ctx := context.Background()
 
+	// **والسائقُ لا يرى حديثَ طلبٍ انتهى** (قرارُ المالك ٢٠٢٦-١١-٠٦) — والطلبُ هنا مُلغًى.
+	dl, err := svc.Threads(ctx, driver)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, th := range dl {
+		if th.OrderID == order {
+			t.Fatalf("**طلبٌ منتهٍ ما زال في محادثات السائق**")
+		}
+	}
+
 	for _, who := range []struct {
 		name string
 		id   string
-	}{{"الزبون", customer}, {"السائق", driver}} {
+	}{{"الزبون", customer}} {
 		list, err := svc.Threads(ctx, who.id)
 		if err != nil {
 			t.Fatalf("تعذّر قراءةُ سجلّ %s: %v", who.name, err)
@@ -110,10 +122,15 @@ func TestArchive_TheOneWhoSpokeCanStillReadIt(t *testing.T) {
 	svc, _, order, customer, driver := spokenThenPulled(t)
 	ctx := context.Background()
 
+	// **والسائقُ الذي ترك طلباً انتهى لا يبلغه** (قرارُ المالك ٢٠٢٦-١١-٠٦).
+	if _, err := svc.Permit(ctx, order, driver); !errors.Is(err, comms.ErrDriverChatEnded) {
+		t.Fatalf("السائقُ يبلغ حديثَ طلبٍ منتهٍ: %v", err)
+	}
+
 	for _, who := range []struct {
 		name string
 		id   string
-	}{{"الزبون", customer}, {"السائق", driver}} {
+	}{{"الزبون", customer}} {
 		p, err := svc.Permit(ctx, order, who.id)
 		if err != nil {
 			t.Fatalf("%s لا يبلغ حديثَه: %v", who.name, err)

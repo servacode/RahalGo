@@ -67,6 +67,12 @@ var (
 	ErrChannelClosed = httpx.NewError(http.StatusConflict,
 		"comms_closed", "errors.comms_closed")
 
+	// ErrDriverChatEnded **انتهى الطلبُ فأُقفل الحديثُ في وجه السائق** — قراءةً وكتابةً
+	// (قرارُ المالك ٢٠٢٦-١١-٠٦). **والرمزُ `comms_closed` نفسُه** — فالتطبيقُ القديمُ يقول
+	// «المحادثة مغلقة» بنصّه القائم ولا يحتاج نسخةً جديدة.
+	ErrDriverChatEnded = httpx.NewError(http.StatusForbidden,
+		"comms_closed", "errors.comms_closed")
+
 	// ErrNoDriverYet **لا سائقَ بعد** — فلا طرفَ ثانيَ للحديث.
 	ErrNoDriverYet = httpx.NewError(http.StatusConflict,
 		"comms_no_driver", "errors.comms_no_driver")
@@ -249,11 +255,46 @@ func (s *Service) Permit(ctx context.Context, orderID, userID string) (*Permissi
 		p.PeerID, p.PeerName = customerID, customerName
 		p.DriverID = userID
 		p.Former = true
+		// **وطلبٌ انتهى لا يقرؤه سائقٌ تركه** (قرارُ المالك ٢٠٢٦-١١-٠٦).
+		if orderEnded(status) {
+			return nil, ErrDriverChatEnded
+		}
 		return p, nil
 	}
 
 	p.Open, p.ClosesAt = channelOpen(status, deliveredAt, closedAt)
+	// ══════════════════════════════════════════════════════════════════
+	// **وانتهى الطلبُ ⇒ لا حديثَ للسائق — لا قراءةً ولا كتابةً** (قرارُ المالك ٢٠٢٦-١١-٠٦)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **كان يقرأ أحاديثَ طلباته المنتهية أبداً** — وفيها الزبونُ وما قاله، **فيعود إليه
+	// برّا المنصّة.** والزبونُ يبقى له حديثُه (حجّتُه عند الشكوى)، **والإدارةُ تقرأ كلَّ
+	// شيءٍ من بابها** (`Audit`) لا من هذا.
+	if p.Me == RoleDriver && orderEnded(status) {
+		return nil, ErrDriverChatEnded
+	}
 	return p, nil
+}
+
+// endedStatuses **نهاياتُ الطلب** — ما بعدها لا يعود الطلبُ إلى الطريق.
+//
+// **ولا يُكتفى بـ«ليست مفتوحة»**: طلبٌ عاد إلى «بانتظار سائق» (`dispatching`) لم ينتهِ،
+// والسائقُ الذي تركه يقرأ ولايتَه كما كان.
+var endedStatuses = map[string]bool{
+	"delivered": true, "cancelled": true, "rejected": true, "failed": true,
+	"refunded": true, "closed": true,
+}
+
+// orderEnded **أانتهى الطلب؟** — مفصولاً ليُختبر بلا قاعدة.
+func orderEnded(status string) bool { return endedStatuses[status] }
+
+// EndedStatuses **نهاياتُ الطلب قائمةً** — لاستعلام «محادثاتي» (`Threads`).
+func EndedStatuses() []string {
+	out := make([]string, 0, len(endedStatuses))
+	for s := range endedStatuses {
+		out = append(out, s)
+	}
+	return out
 }
 
 // formerPeer **آخرُ سائقٍ كانت له ولايةٌ في هذا الحديث** — واسمُه.
