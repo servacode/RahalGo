@@ -112,6 +112,8 @@ func (s *Service) RunWatchdog(ctx context.Context, interval time.Duration) {
 			s.sweepNoWhatsAppDispatch(ctx)
 			// **وانقضاءُ مهلة حدّ الزبون يُعيد قراءةَ الطوابير المفتوحة** — انظر `publishSameCustomerGraceEnd`.
 			s.publishSameCustomerGraceEnd(ctx)
+			// **وتعديلُ سعر الكابتن اللي ما انردّ عليه يُنذَر به المكتب** — `driver_price_request.go`.
+			s.SweepPriceRequestsOnce(ctx)
 			alerts, err := s.Alerts(ctx)
 			if err != nil {
 				s.logger.Error("watchdog scan failed", "error", err)

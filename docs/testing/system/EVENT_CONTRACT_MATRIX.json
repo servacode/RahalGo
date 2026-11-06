@@ -11,7 +11,7 @@
     "InApp": 8
   },
   "derived": {
-    "emit_sites": 114,
+    "emit_sites": 118,
     "realtime_publishers": 29,
     "rooms": 5,
     "untargeted_user_sites": 37
@@ -49,7 +49,7 @@
     },
     {
       "file": "internal/orders/custom_quote.go",
-      "line": 566,
+      "line": 580,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -58,7 +58,7 @@
     },
     {
       "file": "internal/orders/custom_quote.go",
-      "line": 573,
+      "line": 587,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -67,7 +67,7 @@
     },
     {
       "file": "internal/orders/custom_quote.go",
-      "line": 632,
+      "line": 668,
       "call": "NotifyOps",
       "kind": "Order",
       "entity": "order",
@@ -76,7 +76,7 @@
     },
     {
       "file": "internal/orders/custom_quote.go",
-      "line": 641,
+      "line": 677,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -126,6 +126,42 @@
       "kind": "Order",
       "entity": "order",
       "has_app_targeting": true,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/orders/driver_price_request.go",
+      "line": 199,
+      "call": "Notify",
+      "kind": "Order",
+      "entity": "order",
+      "has_app_targeting": true,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/orders/driver_price_request.go",
+      "line": 283,
+      "call": "NotifyOps",
+      "kind": "Order",
+      "entity": "order",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/orders/driver_price_request.go",
+      "line": 291,
+      "call": "Notify",
+      "kind": "Order",
+      "entity": "order",
+      "has_app_targeting": true,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/orders/driver_price_request.go",
+      "line": 342,
+      "call": "NotifyOps",
+      "kind": "Order",
+      "entity": "order",
+      "has_app_targeting": false,
       "has_entity_id": true
     },
     {
@@ -220,7 +256,7 @@
     },
     {
       "file": "internal/orders/notify.go",
-      "line": 198,
+      "line": 206,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -229,7 +265,7 @@
     },
     {
       "file": "internal/orders/notify.go",
-      "line": 293,
+      "line": 301,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -238,7 +274,7 @@
     },
     {
       "file": "internal/orders/notify.go",
-      "line": 325,
+      "line": 333,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -247,7 +283,7 @@
     },
     {
       "file": "internal/orders/notify.go",
-      "line": 378,
+      "line": 386,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -256,7 +292,7 @@
     },
     {
       "file": "internal/orders/notify.go",
-      "line": 399,
+      "line": 407,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -265,7 +301,7 @@
     },
     {
       "file": "internal/orders/notify.go",
-      "line": 434,
+      "line": 442,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -274,7 +310,7 @@
     },
     {
       "file": "internal/orders/notify.go",
-      "line": 469,
+      "line": 477,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "wallet",
@@ -283,7 +319,7 @@
     },
     {
       "file": "internal/orders/notify.go",
-      "line": 512,
+      "line": 520,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "wallet",
@@ -292,7 +328,7 @@
     },
     {
       "file": "internal/orders/notify.go",
-      "line": 664,
+      "line": 672,
       "call": "Notify",
       "entity": "order",
       "has_app_targeting": true,
@@ -300,7 +336,7 @@
     },
     {
       "file": "internal/orders/notify.go",
-      "line": 714,
+      "line": 722,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "wallet",
@@ -1496,12 +1532,12 @@
     },
     {
       "file": "internal/orders/watchdog.go",
-      "line": 142,
+      "line": 144,
       "room": "ops"
     },
     {
       "file": "internal/orders/watchdog.go",
-      "line": 371,
+      "line": 373,
       "room": "ops"
     },
     {

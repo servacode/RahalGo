@@ -684,3 +684,75 @@ internal fun reasonLabel(code: String): String = when (code) {
     "customer_no_answer" -> stringResource(R.string.reason_customer_no_answer)
     else -> stringResource(com.rahalgo.ui.R.string.rs_other)
 }
+
+/**
+ * **«عدّل سعر البضاعة» بعد الاستلام** (قرار المالك ٢٠٢٦-١١-٠٦) — الثمن الجديد وسببه، **والزبون
+ * يوافق أو يرفض.** والسبب إلزامي (بيوصل الزبون بالإشعار)، والخطأ يُقال جوّا النافذة.
+ */
+@Composable
+internal fun PriceEditDialog(
+    currentGoods: Long,
+    error: String,
+    busy: Boolean,
+    onConfirm: (Long, String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var goods by remember { mutableStateOf("") }
+    var reason by remember { mutableStateOf("") }
+    val amount = goods.toLongOrNull()
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.price_edit_title), fontWeight = FontWeight.Bold) },
+        text = {
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    stringResource(R.string.price_edit_current, money(currentGoods)),
+                    color = Rahal.colors.ink,
+                    fontWeight = FontWeight.Bold,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(stringResource(R.string.price_edit_hint), color = Rahal.colors.inkMuted)
+                Spacer(Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = goods,
+                    onValueChange = { goods = it.filter { c -> c.isDigit() }.take(9) },
+                    label = { Text(stringResource(R.string.price_edit_new)) },
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.headlineSmall.copy(
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Bold,
+                    ),
+                    suffix = { Text(stringResource(R.string.currency_short), fontWeight = FontWeight.Bold) },
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                )
+                Spacer(Modifier.height(6.dp))
+                OutlinedTextField(
+                    value = reason,
+                    onValueChange = { reason = it.take(200) },
+                    label = { Text(stringResource(R.string.price_edit_reason)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 2,
+                )
+                if (error.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(error, color = Rahal.colors.danger, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        },
+        confirmButton = {
+            RahalButton(
+                onClick = { onConfirm(amount ?: 0L, reason.trim()) },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !busy && amount != null && amount != currentGoods && reason.isNotBlank(),
+            ) {
+                Text(stringResource(R.string.price_edit_send), fontWeight = FontWeight.Bold)
+            }
+        },
+        dismissButton = {
+            RahalTextButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.act_back))
+            }
+        },
+    )
+}

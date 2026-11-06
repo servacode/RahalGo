@@ -218,6 +218,9 @@ data class TripState(
     val agreeEdit: Boolean = false,
     /** **خطأُ التوثيق داخلَ نافذته** — «أجرة التوصيل لازم تكون بين…». */
     val agreeError: String = "",
+    /** **نافذة «عدّل سعر البضاعة» بعد الاستلام** (قرار المالك ٢٠٢٦-١١-٠٦) — وخطؤها جوّاها. */
+    val priceEditOpen: Boolean = false,
+    val priceEditError: String = "",
     /** محطّاته كلّها — **وواحدةٌ منها هي المعروضة.** */
     val stops: List<Stop> = emptyList(),
     /** **أنافذة الطارئ مفتوحة؟** — تُفتح حين لا سببَ يُختار. */
@@ -308,6 +311,10 @@ data class TripActions(
     /** **«تعديل السعر»** — بعد التوثيق وقبل الاستلام (المالك ٢٠٢٦-١٠-٢٢). */
     val askEdit: () -> Unit = {},
     val agree: (Long, Long) -> Unit,
+    /** **بعد الاستلام: يطلب ثمن بضاعة جديد بسببه** — والزبون يوافق (قرار المالك ٢٠٢٦-١١-٠٦). */
+    val askPriceEdit: () -> Unit = {},
+    val priceEdit: (Long, String) -> Unit = { _, _ -> },
+    val dismissPriceEdit: () -> Unit = {},
     /** **«إحضار»: ما دفعه بمكان الاستلام** — يصل المتجرَ ليوافق (قرارُ المالك ٢٠٢٦-١٠-١٦). */
     // **بعملة الطلب وبالوحدة الكبرى** (١٣٫٢٥ للدولار) — قرارُ المالك ٢٠٢٦-١٠-٢٠.
     val fetchAmount: (Double) -> Unit = {},
@@ -646,6 +653,32 @@ fun fetchAmountStep(order: DriverOrder): FetchAmountStep {
         else -> if (order.collectAmount != null) FetchAmountStep.ENTER else FetchAmountStep.NONE
     }
 }
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **تعديل ثمن البضاعة بعد الاستلام** (قرار المالك ٢٠٢٦-١١-٠٦)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * بالمشتريات، بعد «تم شراء المطلوب» ولحد التسليم: الكابتن بيطلب ثمن جديد بسبب، **والزبون
+ * بيوافق أو بيرفض.** `WAITING` سعر جديد بانتظار الزبون (والتسليم موقوف بالمحرّك)، و`REVERTED`
+ * الزبون رفض فرجع السعر القديم (والمكتب بيتدخّل) — وبيقدر يطلب من جديد.
+ */
+enum class PriceEditStep { NONE, CAN_REQUEST, WAITING, REVERTED }
+
+fun priceEditStep(order: DriverOrder): PriceEditStep {
+    if (order.kind != "custom" || order.customMode != "purchase") return PriceEditStep.NONE
+    if (order.status !in setOf("picked_up", "on_the_way", "at_dropoff")) return PriceEditStep.NONE
+    val confirmed = order.quoteConfirmedVersion ?: return PriceEditStep.NONE
+    if (order.customGoods == null || order.customGoodsPending) return PriceEditStep.NONE
+    return when {
+        confirmed != order.quoteVersion -> PriceEditStep.WAITING
+        order.quoteRejectedAt != null -> PriceEditStep.REVERTED
+        else -> PriceEditStep.CAN_REQUEST
+    }
+}
+
+/** **أيُحجب «تم التسليم»؟** — سعر جديد بانتظار الزبون (`quote_reconfirm_pending` بالمحرّك). */
+fun priceEditBlocksDelivery(order: DriverOrder): Boolean = priceEditStep(order) == PriceEditStep.WAITING
 
 /** **أيُحجب «استلمت»؟** — والمبلغُ لم يُوافَق عليه بعد. */
 fun fetchBlocksPickup(order: DriverOrder): Boolean =

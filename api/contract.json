@@ -8530,6 +8530,42 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/driver/orders/{id}/price-request",
+      "handler": "handleDriverPriceRequest",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "request": [
+        {
+          "name": "goods_amount",
+          "type": "int64"
+        },
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "quote_version",
+          "type": "unknown"
+        },
+        {
+          "name": "requested",
+          "type": "bool"
+        },
+        {
+          "name": "total",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/driver/orders/{id}/proof",
       "handler": "handleDeliveryProof",
       "auth": true,

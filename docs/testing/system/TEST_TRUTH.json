@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 651,
+    "routes": 652,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 115,
-    "notify_targeted": 55,
+    "notify_sites": 119,
+    "notify_targeted": 57,
     "publish_rooms": [
       "customer",
       "driver",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 277,
-    "behaviour_settings": 232,
+    "setting_defs": 279,
+    "behaviour_settings": 234,
     "order_fields": 137,
-    "test_files": 774,
-    "test_funcs": 2949
+    "test_files": 775,
+    "test_funcs": 2957
   },
   "flows": [
     {
@@ -3888,6 +3888,48 @@
     },
     {
       "key": "delivery.default_radius_m",
+      "group": "drivers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "delivery.driver_price_edit_max_percent",
+      "group": "drivers",
+      "kind": "percent",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-07",
+        "F-08",
+        "F-13",
+        "F-27"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "delivery.driver_price_edit_timeout_min",
       "group": "drivers",
       "kind": "int",
       "sensitive": false,
@@ -11183,6 +11225,54 @@
     {
       "name": "TestDriverLost_StrangerGetsNotFound",
       "file": "internal/orders/driver_lost_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverPriceRequest_AmanahRefused",
+      "file": "internal/orders/driver_price_request_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverPriceRequest_CashRaiseApprove",
+      "file": "internal/orders/driver_price_request_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverPriceRequest_ClosedWithOrder",
+      "file": "internal/orders/driver_price_request_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverPriceRequest_Limits",
+      "file": "internal/orders/driver_price_request_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverPriceRequest_RejectRevertsCash",
+      "file": "internal/orders/driver_price_request_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverPriceRequest_RejectRevertsWallet",
+      "file": "internal/orders/driver_price_request_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverPriceRequest_TimeoutAndOfficeSupersedes",
+      "file": "internal/orders/driver_price_request_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverPriceRequest_WalletLowerApprove",
+      "file": "internal/orders/driver_price_request_test.go",
       "package": "orders_test",
       "orphan": true
     },

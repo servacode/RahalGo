@@ -140,7 +140,8 @@
     <string name="ord_awaiting_quote">بانتظار تحديد تكلفة الطلب</string>
     <string name="ord_fee_value">أجرة التوصيل: %1$s</string>
     <string name="ord_confirm_prompt">أكد المبلغ واختر طريقة الدفع</string>
-    <string name="ord_quote_raised_note">عدّل المكتب سعر طلبك بعد الشراء — أكّده ليُسلَّم إليك.</string>
+    <string name="ord_quote_raised_note">تعدّل سعر طلبك بعد الشراء — وافق ليُسلَّم إليك.</string>
+    <string name="ord_quote_was">كان المجموع %1$s وصار %2$s</string>
     <string name="ord_quote_reject">أرفض السعر الجديد</string>
     <string name="ord_quote_rejected_note">رفضت السعر الجديد — سيتواصل معك المكتب.</string>
     <string name="ord_quote_rejected_sent">وصل رفضك إلى المكتب.</string>

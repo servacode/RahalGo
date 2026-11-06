@@ -1474,6 +1474,14 @@ var Catalog = []Def{
 	{Key: "delivery.custom_fee_max", Group: GroupDrivers, Kind: KindMoney,
 		Min: 0, Max: 100_000, Unit: "currency", Default: 1000, Sensitive: true},
 
+	// **السائق يطلب تعديل ثمن بضاعة المشتريات بعد الاستلام والزبون يوافق** (قرار المالك
+	// ٢٠٢٦-١١-٠٦، `orders/driver_price_request.go`). **أكبر تغيير بالنسبة** من الثمن المؤكَّد
+	// (والصفر يقفل الزر)، **والمهلة** اللي بعدها بينذر المكتب إذا الزبون ما ردّ.
+	{Key: "delivery.driver_price_edit_max_percent", Group: GroupDrivers, Kind: KindPercent,
+		Default: 50, Sensitive: true},
+	{Key: "delivery.driver_price_edit_timeout_min", Group: GroupDrivers, Kind: KindInt,
+		Min: 1, Max: 240, Unit: "minute", Default: 10},
+
 	// ══════════════════════════════════════════════════════════════════
 	// **ومدى التوصيل الافتراضيّ — أوّلُ درجاتِ السُّلّم الثلاث**
 	// ══════════════════════════════════════════════════════════════════

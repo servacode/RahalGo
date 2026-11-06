@@ -113,7 +113,9 @@ var FinancialSettings = []string{
 	"delivery.custom_fee_amanah", // أجرةُ الأمانة حين تحدّدها المنصّة (٢٠٢٦-١٠-١٣)
 	"delivery.custom_fee_min",    // orders/custom.go — أدنى أجرةِ الخاصّ
 	"delivery.custom_fee_max",    // orders/custom.go — أعلاها
-	"finance.manual_wallet_max",  // accounts — سقفُ الحركة اليدويّة
+	// **سقف تعديل السائق لثمن البضاعة بعد الاستلام** (قرار المالك ٢٠٢٦-١١-٠٦) — driver_price_request.go.
+	"delivery.driver_price_edit_max_percent",
+	"finance.manual_wallet_max", // accounts — سقفُ الحركة اليدويّة
 	// **وما وسمته أقسامٌ أخرى «يمسّ المال»** (كشفه الحارسُ عند الدمج ٢٠٢٦-١٠-٠٤):
 	"compensations.cap_driver",
 	"compensations.cap_merchant_goods",

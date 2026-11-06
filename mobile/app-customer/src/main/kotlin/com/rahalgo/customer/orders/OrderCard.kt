@@ -493,6 +493,15 @@ internal fun quotePending(order: MyOrder): Boolean {
 }
 
 /**
+ * **المجموعُ القديمُ المؤكَّد حين تغيّر السعرُ بعد التأكيد** (قرارُ المالك ٢٠٢٦-١١-٠٦) — طلبُ
+ * الكابتن أو تعديلُ المكتب. **والفارغُ: لا قديمَ أو هو نفسُه.**
+ */
+internal fun quoteWasTotal(order: MyOrder): Long? {
+    if (order.quoteConfirmedVersion == null || order.quoteConfirmedVersion == order.quoteVersion) return null
+    return order.quoteConfirmedTotal?.takeIf { it != order.total }
+}
+
+/**
  * **مبالغُ العرض** — ثمنُ البضاعة والأجرةُ والمجموع، **في البطاقة والنافذة معاً.**
  *
  * **والأمانةُ بلا ثمنِ بضاعة، والمشترياتُ قبل الشراء «بعد الشراء»** (قرارُ المالك
@@ -549,6 +558,16 @@ private fun QuoteConfirmPanel(
             color = Rahal.colors.ink,
             style = MaterialTheme.typography.bodySmall,
         )
+        // **«كان X» فوق المجموع الجديد** (قرارُ المالك ٢٠٢٦-١١-٠٦: الزبون يشوف القديم والجديد).
+        quoteWasTotal(order)?.let { was ->
+            Spacer(Modifier.height(4.dp))
+            Text(
+                stringResource(R.string.ord_quote_was, money(was), money(total)),
+                color = Rahal.colors.ink,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold,
+            )
+        }
     }
 
     // (C/D) يحتاج تأكيداً: أكّد المبلغ واختر الدفع.

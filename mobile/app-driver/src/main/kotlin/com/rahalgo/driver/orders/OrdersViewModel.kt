@@ -1871,6 +1871,8 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             agreeOpen = agreeOpen,
             agreeEdit = agreeEdit,
             agreeError = agreeError,
+            priceEditOpen = priceEditOpen,
+            priceEditError = priceEditError,
             emergencyOpen = emergencyOpen,
             emergencyBusy = emergencyBusy,
             emergencyError = emergencyError,
@@ -2694,6 +2696,45 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             }
             agreeOpen = false
             agreeEdit = false
+            detail = detail.copy(busy = false)
+            reload()
+        }
+    }
+
+    /** **نافذة «عدّل سعر البضاعة» بعد الاستلام** (قرار المالك ٢٠٢٦-١١-٠٦). */
+    var priceEditOpen by mutableStateOf(false)
+        private set
+    var priceEditError by mutableStateOf("")
+        private set
+
+    fun askPriceEdit() {
+        priceEditError = ""
+        priceEditOpen = true
+    }
+
+    fun dismissPriceEdit() {
+        priceEditError = ""
+        priceEditOpen = false
+    }
+
+    /** **يطلب الثمن الجديد بسببه** — والنافذة بتضل مفتوحة إذا ردّ المحرّك بخطأ (السقف، معلّق…). */
+    fun priceEdit(goods: Long, reason: String) {
+        val id = currentId() ?: return
+        if (detail.busy) return
+        priceEditError = ""
+        detail = detail.copy(busy = true, error = "")
+        viewModelScope.launch {
+            try {
+                backend.driver.priceRequest(id, goods, reason)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                priceEditError = describe(e)
+                detail = detail.copy(busy = false)
+                refresh()
+                return@launch
+            }
+            priceEditOpen = false
             detail = detail.copy(busy = false)
             reload()
         }

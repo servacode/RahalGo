@@ -4676,6 +4676,13 @@ function InvoiceList({
           {!confirmed && o.quote_confirmed_version != null && o.quote_rejected_at == null && (
             <li className="text-xs font-bold text-warning">{OP.reconfirmWaiting}</li>
           )}
+          {/* **والقديمُ جنبَ الجديد** — طلبُ الكابتن أو تعديلُ المكتب (قرارُ المالك ٢٠٢٦-١١-٠٦). */}
+          {!confirmed && o.quote_confirmed_version != null && o.quote_confirmed_total != null && (
+            <li className={`${row} text-xs text-ink-muted`}>
+              <span>{OP.reconfirmWas}</span>
+              <Money value={o.quote_confirmed_total} small />
+            </li>
+          )}
           {o.quote_rejected_at != null && (
             <li className="text-xs font-bold text-danger">{OP.quoteRejected}</li>
           )}

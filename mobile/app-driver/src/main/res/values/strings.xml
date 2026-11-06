@@ -328,6 +328,16 @@
     <!-- **رفض الزبونُ السعر** (قرارُ المالك ٢٠٢٦-١٠-٢١). -->
     <string name="drv_quote_rejected">رفض الزبون السعر — تحدّث معه في الدردشة وعدّل السعر</string>
     <string name="agree_edit_button">تعديل السعر</string>
+    <!-- تعديل ثمن البضاعة بعد الاستلام والزبون يوافق (قرار المالك ٢٠٢٦-١١-٠٦) -->
+    <string name="price_edit_button">عدّل سعر البضاعة</string>
+    <string name="price_edit_title">تعديل سعر البضاعة</string>
+    <string name="price_edit_current">السعر الحالي: %1$s</string>
+    <string name="price_edit_hint">اكتب السعر الحقيقي وسببه. الزبون رح يوافق أو يرفض، وما في تسليم قبل رده.</string>
+    <string name="price_edit_new">السعر الجديد للبضاعة</string>
+    <string name="price_edit_reason">السبب (بيوصل للزبون)</string>
+    <string name="price_edit_send">أرسل للزبون</string>
+    <string name="price_edit_waiting">بانتظار موافقة الزبون على السعر الجديد (المجموع %1$s) — ما في تسليم قبل رده</string>
+    <string name="price_edit_reverted">رفض الزبون السعر الجديد — رجع السعر القديم، والمكتب رح يتواصل</string>
     <string name="agree_edit_title">عدّل السعر وأرسله للزبون</string>
     <string name="drv_awaiting_customer">بانتظار تأكيد الزبون للتكلفة</string>
     <string name="drv_customer_confirmed">الزبون أكّد الطلب — قم بالشراء</string>
