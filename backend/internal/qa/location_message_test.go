@@ -21,6 +21,11 @@ func waLocText(amanah bool) string {
 		"ردّ على هالرسالة بموقعك: اضغط 📎 ← الموقع ← أرسل موقعك الحالي أو المباشر"
 }
 
+// waLocTextWA **رسالةُ طلب الواتساب** — نصُّ المالك ومعه سطرُ العنوان المكتوب (قرارُ المالك ٢٠٢٦-١١-٠٦).
+func waLocTextWA() string {
+	return waLocText(false) + "\n" + "وإذا بتحب اكتبلنا عنوانك بالتفصيل: الحي، الشارع، وأقرب معلم"
+}
+
 // TestLocReqOneMessageForEveryFlow **ج · رسالةٌ واحدةٌ لكلّ طلب موقع** — توصيلةُ المتجر و«إحضار»
 // والأمانةُ وطلبُ الواتساب: نصُّ المالك حرفاً، في الواتساب وفي «ابعته بنفسك».
 //
@@ -51,6 +56,9 @@ func TestLocReqOneMessageForEveryFlow(t *testing.T) {
 			continue
 		}
 		want := waLocText(f.amanah)
+		if f.path == waURL+"/location-requests" {
+			want = waLocTextWA()
+		}
 		if got, _ := r.JSON()["share_text"].(string); got != want {
 			t.Errorf("**%s — «ابعته بنفسك»**:\n%q\nوالمنتظَر\n%q", f.name, got, want)
 		}

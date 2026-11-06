@@ -164,6 +164,9 @@ type waStore struct {
 	merchantID           string
 	name, phone, address string
 	lat, lng             float64
+	// known **أللمتجر نقطةٌ؟** — متجرٌ غيرُ تابعٍ يُكتب اسمُه وحدَه (قرارُ المالك ٢٠٢٦-١١-٠٦: «بس اسم
+	// المحل، بلا رقم ولا موقع») فلا نقطةَ له، **ومتجرُنا نقطتُه دبّوسُه.**
+	known bool
 }
 
 // resolveWhatsAppStore **المتجرُ من متاجرنا (يُنسخ) أو المكتوبُ (كما هو).**
@@ -176,14 +179,19 @@ func (s *Service) resolveWhatsAppStore(ctx context.Context, q dbtx.Querier,
 		return waStore{}, ErrWAStoreConflict
 	}
 	if in.StoreID == "" {
-		if (needName && in.StoreName == "") || in.StoreLat == nil || in.StoreLng == nil {
+		if needName && in.StoreName == "" {
 			return waStore{}, ErrWAStoreRequired
 		}
-		if !ValidPoint(*in.StoreLat, *in.StoreLng) {
+		st := waStore{name: in.StoreName, phone: in.StorePhone, address: in.StoreAddress}
+		// **والنقطةُ اختياريّةٌ للمتجر غير التابع** (قرارُ المالك ٢٠٢٦-١١-٠٦) — والنصفُ خطأ.
+		switch {
+		case in.StoreLat == nil && in.StoreLng == nil:
+		case in.StoreLat == nil || in.StoreLng == nil || !ValidPoint(*in.StoreLat, *in.StoreLng):
 			return waStore{}, ErrBadPoint
+		default:
+			st.lat, st.lng, st.known = *in.StoreLat, *in.StoreLng, true
 		}
-		return waStore{name: in.StoreName, phone: in.StorePhone, address: in.StoreAddress,
-			lat: *in.StoreLat, lng: *in.StoreLng}, nil
+		return st, nil
 	}
 	if _, err := uuid.Parse(in.StoreID); err != nil {
 		return waStore{}, ErrWAStoreUnavailable
@@ -210,7 +218,7 @@ func (s *Service) resolveWhatsAppStore(ctx context.Context, q dbtx.Querier,
 	if status != "active" || lat == nil || lng == nil {
 		return waStore{}, ErrWAStoreUnavailable
 	}
-	st.lat, st.lng = *lat, *lng
+	st.lat, st.lng, st.known = *lat, *lng, true
 	// **ورقمُ المتجر يُعدَّل في النموذج** — الموظّفُ يعرف من يردّ.
 	if in.StorePhone != "" {
 		st.phone = in.StorePhone
@@ -225,30 +233,56 @@ type waPricing struct {
 	distanceM  float64
 	basis      string
 	pct, fixed int64
-	// hasPoint **أحُسبت من موقع المستلِم** — وبلاه `fee` أساسُ القاعدة اقتراحاً لا أجرة.
-	hasPoint bool
+	// computed **أحُسبت الأجرةُ من المسافة؟** — بنقطتي المتجر والمستلِم معاً. **وبلاها `fee` أساسُ
+	// القاعدة اقتراحاً لا أجرة**، والموظّفُ يكتبها.
+	computed bool
+	// anchorLat/anchorLng **نقطةٌ تُحكم منها التغطيةُ والمنطقة** — المستلِمُ ثمّ المتجرُ ثمّ مركزُ أوّل
+	// منطقةٍ فعّالة (`waCityAnchor`). وهي نقطةُ التسليم «غيرُ المعروفة» حتّى يصل الموقع.
+	anchorLat, anchorLng float64
 }
 
-// whatsAppPricing **حرّاسُ التغطية ثمّ الأجرة** — النقطتان كلتاهما داخلَ التغطية،
-// **والمنطقةُ مفتوحةٌ عند المستلِم** (حرّاسُ «لدي توصيلة» نفسُها، ولا رابع).
+// waCityAnchor **مركزُ أوّل منطقةٍ فعّالة** — لطلبٍ لا نقطةَ فيه أصلاً: متجرٌ غيرُ تابعٍ باسمه
+// وحدَه (قرارُ المالك ٢٠٢٦-١١-٠٦) **وموقعُ المستلِم لم يصل بعد.** منه تُحكم التغطيةُ والدوام،
+// **ولا يُوجَّه إليه سائق** (`dropoff_known = false`، ولا `pickup_override`). وبلا منطقةٍ فعّالة
+// لا تغطية (`coverage_unavailable`).
+func waCityAnchor(ctx context.Context, q dbtx.Querier) (lat, lng float64, err error) {
+	err = q.QueryRow(ctx, `
+		SELECT ST_Y(center::geometry), ST_X(center::geometry)
+		  FROM delivery_zones
+		 WHERE active AND center IS NOT NULL
+		 ORDER BY sort_order, id
+		 LIMIT 1`).Scan(&lat, &lng)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 0, 0, ErrCoverageUnavailable
+	}
+	return lat, lng, err
+}
+
+// whatsAppPricing **حرّاسُ التغطية ثمّ الأجرة** — كلُّ نقطةٍ معروفةٍ داخلَ التغطية، **والمنطقةُ
+// مفتوحةٌ** (حرّاسُ «لدي توصيلة» نفسُها، ولا رابع).
 //
-// # وبلا موقعٍ للمستلِم (ملحقُ المالك ٢٠٢٦-١١-٠٥، ب)
+// # والنقاطُ المعروفة (قرارُ المالك ٢٠٢٦-١١-٠٦)
 //
-// **التغطيةُ والدوامُ من نقطة المتجر ومنطقته** — كـ«لدي توصيلة» بلا نقطة
-// (`CreateMerchantDeliveryIn`). **والأجرةُ أساسُ القاعدة اقتراحاً** (`no_point`) — يكتبها الموظّف.
+// **المنطقةُ منطقةُ المستلِم إن عُرف موقعُه، وإلّا منطقةُ المتجر، وإلّا منطقةُ مركز المدينة**
+// (`waCityAnchor`). **والأجرةُ بالمسافة إن عُرفت النقطتان معاً**، وإلّا أساسُ القاعدة اقتراحاً
+// (`no_point`) — يكتبها الموظّف.
 func (s *Service) whatsAppPricing(ctx context.Context, q dbtx.Querier,
-	storeLat, storeLng, lat, lng float64, hasPoint bool) (waPricing, error) {
-	p := waPricing{hasPoint: hasPoint}
-	if !ValidPoint(storeLat, storeLng) || (hasPoint && !ValidPoint(lat, lng)) {
+	store waStore, lat, lng float64, hasPoint bool) (waPricing, error) {
+	p := waPricing{}
+	if (store.known && !ValidPoint(store.lat, store.lng)) || (hasPoint && !ValidPoint(lat, lng)) {
 		return p, ErrBadPoint
 	}
+	var zone ZoneCharge
+	var err error
 	// **والمتجرُ داخلَ التغطية** — لا يُرسَل سائقٌ إلى خارجها.
-	if err := s.requirePlaceLaunched(ctx, q, storeLat, storeLng); err != nil {
-		return p, err
-	}
-	zone, err := s.RequireServiceable(ctx, q, storeLat, storeLng)
-	if err != nil {
-		return p, err
+	if store.known {
+		if err := s.requirePlaceLaunched(ctx, q, store.lat, store.lng); err != nil {
+			return p, err
+		}
+		if zone, err = s.RequireServiceable(ctx, q, store.lat, store.lng); err != nil {
+			return p, err
+		}
+		p.anchorLat, p.anchorLng = store.lat, store.lng
 	}
 	if hasPoint {
 		if err := s.requirePlaceLaunched(ctx, q, lat, lng); err != nil {
@@ -257,16 +291,25 @@ func (s *Service) whatsAppPricing(ctx context.Context, q dbtx.Querier,
 		if zone, err = s.RequireServiceable(ctx, q, lat, lng); err != nil {
 			return p, err
 		}
+		p.anchorLat, p.anchorLng = lat, lng
+	}
+	if !store.known && !hasPoint {
+		if p.anchorLat, p.anchorLng, err = waCityAnchor(ctx, q); err != nil {
+			return p, err
+		}
+		if zone, err = s.RequireServiceable(ctx, q, p.anchorLat, p.anchorLng); err != nil {
+			return p, err
+		}
 	}
 	if err := s.requireZoneOpen(ctx, q, zone); err != nil {
 		return p, err
 	}
 	p.zone = zone
-	if hasPoint {
-		if p.fee, p.distanceM, err = s.whatsAppFee(ctx, q, storeLat, storeLng, lat, lng); err != nil {
+	if store.known && hasPoint {
+		if p.fee, p.distanceM, err = s.whatsAppFee(ctx, q, store.lat, store.lng, lat, lng); err != nil {
 			return p, err
 		}
-		p.basis = FeeBasisDistance
+		p.basis, p.computed = FeeBasisDistance, true
 	} else {
 		p.fee, p.basis = s.whatsAppFeeRule(ctx, q).Base, FeeBasisNoPoint
 	}
@@ -324,7 +367,7 @@ func (s *Service) QuoteWhatsAppOrder(ctx context.Context, storeID string,
 	if hasPoint {
 		dLat, dLng = *lat, *lng
 	}
-	p, err := s.whatsAppPricing(ctx, s.db, st.lat, st.lng, dLat, dLng, hasPoint)
+	p, err := s.whatsAppPricing(ctx, s.db, st, dLat, dLng, hasPoint)
 	if err != nil {
 		return nil, err
 	}
@@ -335,7 +378,7 @@ func (s *Service) QuoteWhatsAppOrder(ctx context.Context, storeID string,
 		SharePercent: p.pct, ShareFixed: p.fixed,
 		DriverFee: driverFee, PlatformShare: p.fee - driverFee,
 		FeeMin: lo, FeeMax: hi,
-		HasPoint: hasPoint, FeeRequired: !hasPoint,
+		HasPoint: hasPoint, FeeRequired: !p.computed,
 	}, nil
 }
 
@@ -364,8 +407,13 @@ func (s *Service) CreateWhatsAppOrderIn(ctx context.Context, tx dbtx.Querier,
 	in.RecipientPhone = strings.TrimSpace(in.RecipientPhone)
 	in.AddressText = strings.TrimSpace(in.AddressText)
 	in.DriverNote = strings.TrimSpace(in.DriverNote)
-	if in.Details == "" || in.RecipientName == "" || in.RecipientPhone == "" || in.AddressText == "" {
+	// **رقمُ الزبون وحدَه إلزاميّ** (قرارُ المالك ٢٠٢٦-١١-٠٦) — لا اسمَ له («زبون»)، **والعنوانُ
+	// والموقعُ يطلبهما البوتُ منه** ويملآن الطلبَ حين يصلان. والتفاصيلُ ملاحظةٌ اختياريّة.
+	if in.RecipientPhone == "" {
 		return nil, httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
+	}
+	if in.RecipientName == "" {
+		in.RecipientName = WhatsAppRecipientName
 	}
 	if len([]rune(in.Details)) > MaxWhatsAppDetails {
 		in.Details = string([]rune(in.Details)[:MaxWhatsAppDetails])
@@ -375,9 +423,6 @@ func (s *Service) CreateWhatsAppOrderIn(ctx context.Context, tx dbtx.Querier,
 	hasPoint, err := in.hasPoint()
 	if err != nil {
 		return nil, err
-	}
-	if !hasPoint && in.Fee == nil {
-		return nil, ErrWAFeeRequired
 	}
 	// **والثمنُ موجبٌ أو لا شيء** — صفرٌ يُقرأ «اقبض صفراً».
 	if in.GoodsAmount != nil && *in.GoodsAmount <= 0 {
@@ -394,15 +439,25 @@ func (s *Service) CreateWhatsAppOrderIn(ctx context.Context, tx dbtx.Querier,
 	if err != nil {
 		return nil, err
 	}
-	// **ونقطةُ التسليم بلا موقعٍ نقطةُ المتجر «غيرَ معروفة»** — سابقةُ «لدي توصيلة» بلا نقطة: لا
-	// يُوجَّه السائقُ إليها، **ويقرأ العنوانَ المكتوب** حتّى يصل الموقع.
-	dropLat, dropLng := store.lat, store.lng
+	var rLat, rLng float64
 	if hasPoint {
-		dropLat, dropLng = *in.Lat, *in.Lng
+		rLat, rLng = *in.Lat, *in.Lng
 	}
-	p, err := s.whatsAppPricing(ctx, tx, store.lat, store.lng, dropLat, dropLng, hasPoint)
+	p, err := s.whatsAppPricing(ctx, tx, store, rLat, rLng, hasPoint)
 	if err != nil {
 		return nil, err
+	}
+	// **ولا أجرةَ تُحسب بلا النقطتين** — يكتبها الموظّف (ملحقُ المالك ٢٠٢٦-١١-٠٥، ب).
+	if !p.computed && in.Fee == nil {
+		return nil, ErrWAFeeRequired
+	}
+	// **ونقطةُ التسليم بلا موقعٍ «غيرُ معروفة»** — نقطةُ المتجر أو مركزُ المدينة (`anchor`)، سابقةُ
+	// «لدي توصيلة» بلا نقطة: لا يُوجَّه السائقُ إليها، **ويقرأ العنوانَ** حتّى يصل الموقع.
+	dropLat, dropLng := p.anchorLat, p.anchorLng
+	// **ونقطةُ الاستلام نقطةُ المتجر إن عُرفت** — ومتجرٌ باسمه وحدَه بلا نقطة: يعرفه السائق.
+	var pickLat, pickLng *float64
+	if store.known {
+		pickLat, pickLng = &store.lat, &store.lng
 	}
 
 	// ── الأجرة: المحسوبةُ أو ما عدّله الموظّف بحدّيه ─────────────────────
@@ -410,10 +465,10 @@ func (s *Service) CreateWhatsAppOrderIn(ctx context.Context, tx dbtx.Querier,
 	// **وبلا موقعٍ لا محسوبةَ أصلاً** — فالمكتوبةُ تمرّ بالحدّين دائماً، **ولا تكون صفراً**: سائقٌ
 	// يُرسَل بلا أجر.
 	fee := p.fee
-	typed := in.Fee != nil && (*in.Fee != p.fee || !hasPoint)
+	typed := in.Fee != nil && (*in.Fee != p.fee || !p.computed)
 	if typed {
 		lo, hi := s.whatsAppFeeBounds(ctx, tx)
-		if *in.Fee < lo || (hi > 0 && *in.Fee > hi) || *in.Fee < 0 || (!hasPoint && *in.Fee == 0) {
+		if *in.Fee < lo || (hi > 0 && *in.Fee > hi) || *in.Fee < 0 || (!p.computed && *in.Fee == 0) {
 			return nil, &WAFeeRangeError{Min: lo, Max: hi}
 		}
 		fee = *in.Fee
@@ -451,7 +506,9 @@ func (s *Service) CreateWhatsAppOrderIn(ctx context.Context, tx dbtx.Querier,
 		                    delivery_mode, collect_amount, amount_currency, promo_delivery_waived,
 		                    accepted_at, dispatched_at)
 		VALUES ('merchant_delivery', 'whatsapp', $1, $2,
-		        $3, NULLIF($4, ''), NULLIF($5, ''), ST_SetSRID(ST_MakePoint($7, $6), 4326)::geography,
+		        $3, NULLIF($4, ''), NULLIF($5, ''),
+	        CASE WHEN $6::float8 IS NULL OR $7::float8 IS NULL THEN NULL
+	             ELSE ST_SetSRID(ST_MakePoint($7, $6), 4326)::geography END,
 		        $8, ST_SetSRID(ST_MakePoint($10, $9), 4326)::geography, $11,
 		        $12, $13, $14, 'recipient',
 		        'dispatching', 'cash', 0, $15, $16,
@@ -462,7 +519,7 @@ func (s *Service) CreateWhatsAppOrderIn(ctx context.Context, tx dbtx.Querier,
 		        now(), now())
 		RETURNING id::text, number`,
 		actor, pickupMerchant,
-		store.name, store.phone, store.address, store.lat, store.lng,
+		store.name, store.phone, store.address, pickLat, pickLng,
 		in.AddressText, dropLat, dropLng, nullIfEmpty(p.zone.ID),
 		in.RecipientName, in.RecipientPhone, in.Details,
 		fee, driverFee, in.DriverNote,
@@ -480,6 +537,10 @@ func (s *Service) CreateWhatsAppOrderIn(ctx context.Context, tx dbtx.Querier,
 	}
 	return out, nil
 }
+
+// WhatsAppRecipientName **اسمُ المستلِم في طلب الواتساب** — لا يُكتب له اسم (قرارُ المالك ٢٠٢٦-١١-٠٦:
+// «اسم المستلم زبون»).
+const WhatsAppRecipientName = "زبون"
 
 // whatsAppBirthNote **سطرُ الميلاد في سجلّ الطلب.**
 const whatsAppBirthNote = "طلب واتساب"

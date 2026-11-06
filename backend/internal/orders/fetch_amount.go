@@ -100,11 +100,12 @@ func (s *Service) ProposeFetchAmount(ctx context.Context, orderID, driverID stri
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	var kind, mode, status, amountStatus, driver string
+	var kind, mode, status, amountStatus, driver, origin string
 	err = tx.QueryRow(ctx, `
-		SELECT kind, delivery_mode, status, COALESCE(fetch_amount_status, ''), COALESCE(driver_id::text, '')
+		SELECT kind, delivery_mode, status, COALESCE(fetch_amount_status, ''), COALESCE(driver_id::text, ''),
+		       origin
 		  FROM orders WHERE id = $1 FOR UPDATE`, orderID).
-		Scan(&kind, &mode, &status, &amountStatus, &driver)
+		Scan(&kind, &mode, &status, &amountStatus, &driver, &origin)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound
 	}
@@ -113,6 +114,21 @@ func (s *Service) ProposeFetchAmount(ctx context.Context, orderID, driverID stri
 	}
 	if driver != driverID {
 		return nil, httpx.ErrNotFound
+	}
+	// **وطلبُ الواتساب: ثمنُ الطلب بلا موافقة** (قرارُ المالك ٢٠٢٦-١١-٠٦) — `whatsAppGoodsAmount`.
+	if origin == OriginWhatsApp {
+		if err := s.whatsAppGoodsAmount(ctx, tx, orderID, driverID, kind, status, amount); err != nil {
+			return nil, err
+		}
+		if err := tx.Commit(ctx); err != nil {
+			return nil, err
+		}
+		o, err := s.GetByID(ctx, orderID)
+		if err != nil {
+			return nil, err
+		}
+		s.publishOrder(o)
+		return o, nil
 	}
 	if kind != KindMerchantDelivery || mode != DeliveryModeFetch || status != StAtPickup ||
 		amountStatus == FetchAmountApproved {
@@ -234,4 +250,77 @@ func (s *Service) notifyFetchAmount(ctx context.Context, o *Order) {
 		Entity: "order", EntityID: o.ID, Href: "/portal/orders",
 		Apps: []string{notifications.AppMerchant},
 	})
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **طلبُ الواتساب: السائقُ يكتب ثمنَ الطلب والزبونُ يُخبَر** (قرارُ المالك ٢٠٢٦-١١-٠٦)
+// ══════════════════════════════════════════════════════════════════════
+//
+// «سعر البضاعة يكتبه السائق بتطبيقه وقت يستلم من المحل، يوصل للإدارة، ويوصل للزبون رسالة واتساب
+// فيها المبالغ — إعلام بس بلا موافقة». **فبابُ «إحضار» نفسُه** (`/driver/orders/{id}/fetch-amount`)
+// **بلا خطوة المتجر**: المبلغُ يُكتب «موافَقاً» في لحظته، **ويُكتب ثمنَ ما يقبضه السائق**
+// (`collect_amount`) — فيقرؤه كلُّ قارئٍ قائم: بطاقةُ اللوحة، وسطرُ «اقبض من المستلم» عند السائق
+// (القديمُ كذلك).
+//
+// **والمالُ كما كان**: ثمنُ البضاعة خارجَ الدفتر والصندوق (قرارُ المالك ٢٠٢٦-١١-٠٥: «السائق بيدفع
+// للمحل، وبينسجّل بس أجرة التوصيل»)، **والمقيَّدُ الأجرةُ وحدَها عند التسليم.** ولا يوقف «استلمت».
+//
+// **ويُصحَّح قبل «استلمت»** — كتابةٌ ثانيةٌ تُبدّل الرقمَ وتُرسل للزبون الرقمَ الصحيح.
+
+// whatsAppGoodsStages **متى يكتبه السائق** — بمكان الاستلام، أو بعد «استلمت» إن نسيه.
+var whatsAppGoodsStages = map[string]bool{StAtPickup: true, StPickedUp: true}
+
+func (s *Service) whatsAppGoodsAmount(ctx context.Context, tx pgx.Tx, orderID, driverID, kind, status string,
+	amount int64) error {
+	if kind != KindMerchantDelivery || !whatsAppGoodsStages[status] {
+		return ErrFetchAmountStage
+	}
+	// **وثمنٌ صفرٌ ليس ثمناً** — «اقبض صفراً» لا تُرسل للزبون.
+	if amount <= 0 {
+		return httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE orders
+		   SET fetch_amount = $2, fetch_amount_version = fetch_amount_version + 1,
+		       fetch_amount_status = 'approved', fetch_amount_at = now(),
+		       fetch_amount_decided_at = now(), collect_amount = $2, updated_at = now()
+		 WHERE id = $1`, orderID, amount); err != nil {
+		return err
+	}
+	_, err := tx.Exec(ctx, `
+		INSERT INTO order_events (order_id, from_status, to_status, actor_id, note, driver_id)
+		VALUES ($1, $2, $2, $3, $4, $3)`, orderID, status, driverID,
+		fmt.Sprintf("السائق كتب ثمن الطلب: %d — وصل للزبون برسالة", amount))
+	return err
+}
+
+// WhatsAppGoodsNotice **رسالةُ المبالغ للزبون** — رقمُه ونصُّها، **أو `false`** إن لم يكن طلبَ واتساب
+// بثمنٍ مكتوب. «ثمن طلبك X ل.س + أجرة التوصيل Y ل.س = المجموع Z ل.س» (قرارُ المالك ٢٠٢٦-١١-٠٦).
+func (s *Service) WhatsAppGoodsNotice(ctx context.Context, orderID string) (phone, text string, ok bool, err error) {
+	var origin, currency string
+	var goods *int64
+	var fee int64
+	err = s.db.QueryRow(ctx, `
+		SELECT origin, COALESCE(recipient_phone, ''), fetch_amount, cash_due, amount_currency
+		  FROM orders WHERE id = $1`, orderID).Scan(&origin, &phone, &goods, &fee, &currency)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", "", false, nil
+	}
+	if err != nil {
+		return "", "", false, err
+	}
+	if origin != OriginWhatsApp || goods == nil || *goods <= 0 || phone == "" {
+		return "", "", false, nil
+	}
+	return phone, WhatsAppGoodsText(*goods, fee, currency), true, nil
+}
+
+// WhatsAppGoodsText **نصُّ رسالة المبالغ** — بفواصل الآلاف، **والمجموعُ بالليرة وحدَها**: ثمنٌ بالدولار
+// وأجرةٌ بالليرة لا تُجمعان.
+func WhatsAppGoodsText(goods, fee int64, currency string) string {
+	if currency == "USD" {
+		return fmt.Sprintf("ثمن طلبك %s + أجرة التوصيل %s ل.س", AmountText(goods, "USD"), groupDigits(fee))
+	}
+	return fmt.Sprintf("ثمن طلبك %s ل.س + أجرة التوصيل %s ل.س = المجموع %s ل.س",
+		groupDigits(goods), groupDigits(fee), groupDigits(goods+fee))
 }
