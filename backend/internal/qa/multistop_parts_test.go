@@ -357,8 +357,12 @@ func TestMultiStop_SweepsAnswerAllParts(t *testing.T) {
 	s.h.Setting("orders.auto_accept_min", "1")
 	oid := s.order(t)
 	s.mustAnswer(t, "قبولُ الأوّل", s.tokA, oid, map[string]any{"to": "accepted", "prep_minutes": 7})
+	// **وبعد المهلة بثوانٍ لا بعشر دقائق** — الكانسُ يأخذ أحدثَ خمسين طلباً تجاوزت مهلتَها
+	// (`sweepAutoAccept`)، **وفي التشغيل الكامل تبقى عشراتُ الطلبات «بانتظار» من اختباراتٍ
+	// قبله أعمارُها بين دقيقةٍ وعشر** فيخرج طلبُ الاختبار من الخمسين. (قِيس: ٥٥ طلباً عمرُها
+	// خمسُ دقائق ⇒ «الكانسُ لم يقبل الطلب».) **فطلبُ الاختبار أحدثُ ما تجاوز المهلة.**
 	if _, err := s.h.Pool.Exec(ctxBG(),
-		`UPDATE orders SET created_at = now() - interval '10 minutes' WHERE id = $1::uuid`, oid); err != nil {
+		`UPDATE orders SET created_at = now() - interval '61 seconds' WHERE id = $1::uuid`, oid); err != nil {
 		t.Fatal(err)
 	}
 	s.h.Orders.SweepAutoAcceptOnce(ctxBG())
