@@ -84,6 +84,15 @@ func (s *Service) merchantBlocked(ctx context.Context, tx wallet.Querier,
 		WHERE id = $1`, orderID, failReason, fault); err != nil {
 		return nil, err
 	}
+	// **وفي الطلب بعدّة محطّات قسمُه الحيُّ الوحيدُ يعود «لم يُبلَّغ» ولا وصولَ عليه** (G8) — فيبدأ
+	// التحويلُ من أوّله كما يبدأ للطلب كلِّه. **ولا صفَّ لطلب المتجر الواحد فلا يُمسّ شيء.**
+	if _, err := tx.Exec(ctx, `
+		UPDATE order_parts SET arrived_at = NULL,
+		       sent_at = CASE WHEN status = 'accepted' THEN NULL ELSE sent_at END,
+		       sent_channel = CASE WHEN status = 'accepted' THEN '' ELSE sent_channel END, updated_at = now()
+		WHERE order_id = $1`, orderID); err != nil {
+		return nil, err
+	}
 
 	// **والحدثُ يقول ما وقع لا ما صار إليه فقط.**
 	//

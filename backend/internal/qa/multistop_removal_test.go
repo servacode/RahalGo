@@ -183,7 +183,7 @@ func TestMultiStop_PartRejectRemovesItemsAndExtraFee(t *testing.T) {
 	if got := s.h.statusOf(oid); got != "dispatching" {
 		t.Fatalf("بعد قبول الأوّل: %q — يُنتظر dispatching", got)
 	}
-	deliverOrder(t, s.h, oid, s.h.driverOf(oid))
+	deliverMultiStop(t, s, oid)
 	assertFinancialTruth(t, s.h, oid)
 }
 
@@ -311,7 +311,7 @@ func TestMultiStop_RemovePartKeepsCashRemainder(t *testing.T) {
 	if !notifiedWith(t, s.h, s.mB.Owner.ID, oid, "أُلغي قسمك من الطلب", 2*time.Second) {
 		t.Errorf("**المتجرُ الثاني لم يُخبَر بأنّ المكتب شال قسمه**")
 	}
-	deliverOrder(t, s.h, oid, drv)
+	deliverMultiStop(t, s, oid, drv)
 	assertFinancialTruth(t, s.h, oid)
 }
 

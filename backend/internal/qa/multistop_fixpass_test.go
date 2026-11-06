@@ -156,7 +156,9 @@ func TestMultiStop_PartEventsKeepAssignedAndDoorClocks(t *testing.T) {
 		t.Fatalf("الطلبُ ليس على خريطة المكتب")
 	}
 
-	for _, to := range []string{"at_pickup", "picked_up", "on_the_way", "at_dropoff"} {
+	// **وصولٌ واستلامٌ لكلّ محطّة** (P4) — ثمّ الطريقُ إلى الباب.
+	pickupAllStops(t, s.h, oid, drv)
+	for _, to := range []string{"on_the_way", "at_dropoff"} {
 		if r := s.h.POST("/api/v1/driver/orders/"+oid+"/transition", drv.Token,
 			map[string]any{"to": to}); r.Code >= 400 {
 			t.Fatalf("الانتقالُ إلى %s: %s", to, r)
@@ -238,7 +240,7 @@ func TestMultiStop_WaivedCommissionInStoreMoney(t *testing.T) {
 	oid := s.order(t)
 	s.mustAnswer(t, "قبولُ الأوّل", s.tokA, oid, map[string]any{"to": "accepted"})
 	s.mustAnswer(t, "قبولُ الثاني", s.tokB, oid, map[string]any{"to": "accepted"})
-	deliverOrder(t, s.h, oid, s.h.driverOf(oid))
+	deliverMultiStop(t, s, oid)
 	fin := s.h.NewUser("finance")
 	if r := s.h.POST("/api/v1/admin/orders/"+oid+"/waive-commission", fin.Token,
 		map[string]any{"reason": "المتجر رفض يخصم العمولة"}); r.Code != http.StatusOK {

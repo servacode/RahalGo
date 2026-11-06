@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/servacode/rahalgo/backend/internal/obligations"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -175,6 +176,8 @@ type transitionReq struct {
 	hook       func(context.Context, dbtx.Querier) error
 	// fromParts **انتقالٌ تبع فعلَ قسم** (`parts.go`) — أقسامُه كُتبت قبله.
 	fromParts bool
+	// handover **المكتبُ يرسل سائقاً آخرَ يستلم البضاعةَ من الأوّل** (٥أ) — استثناءُ G5 الوحيد.
+	handover bool
 }
 
 // appliedTransition **ما وقع في المعاملة** — يقرؤه ما بعد التثبيت.
@@ -239,6 +242,12 @@ func (s *Service) applyTransitionTx(ctx context.Context, tx pgx.Tx, lo *lockedOr
 		if g.to != to {
 			to, note = g.to, g.note
 			endedBy = authorizingRole(kind, from, to, effRoles)
+		}
+	}
+	// **ومحطّاتُ السائق** (G3 · G5 · G8، `parts_stops.go`) — للطلب بعدّة محطّات وحدَه.
+	if lo.stops > 1 {
+		if err := unit.stopGatesTx(ctx, tx, lo, req, to); err != nil {
+			return nil, err
 		}
 	}
 	// لا استلام بلا سائق مسند
@@ -448,6 +457,9 @@ func (s *Service) applyTransitionTx(ctx context.Context, tx pgx.Tx, lo *lockedOr
 	// **وما يُشتقّ من الأقسام يُعاد حسابُه** — الجهوزُ والإرسالُ للطلب كلِّه (`parts.go`).
 	if lo.stops > 1 {
 		if err := syncPartFieldsTx(ctx, tx, orderID); err != nil {
+			return nil, err
+		}
+		if err := stopsAfterTransitionTx(ctx, tx, orderID, to); err != nil {
 			return nil, err
 		}
 	}
@@ -1204,6 +1216,13 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 //
 // **والعمولةُ معه**: هي تكلفةُ بيعته، والبيعةُ وقعت. (السياسة §٣-١)
 func (s *Service) settleMerchant(ctx context.Context, q wallet.Querier, orderID, actorID string, driverID *string, out *settled) error {
+	return s.settleMerchantFor(ctx, q, orderID, actorID, driverID, "", out)
+}
+
+// settleMerchantFor **مستحقُّ المتاجر — أو متجرٍ واحدٍ بعينه** (`only`): **الطلبُ بعدّة محطّات
+// يُسوّى عند كلّ محطّةٍ لمتجرها وحدَه** (قرارُ المالك ٢٠٢٦-١١-٠٦، ٣أ — `StopPickup`). وفارغُه الكلّ.
+func (s *Service) settleMerchantFor(ctx context.Context, q wallet.Querier, orderID, actorID string, driverID *string,
+	only string, out *settled) error {
 	// **لا يُقيَّد مرّتين.**
 	//
 	// تُنادى عند الاستلام، **وتُنادى ثانيةً عند التسليم احتياطاً**: الخريطةُ
@@ -1292,6 +1311,9 @@ func (s *Service) settleMerchant(ctx context.Context, q wallet.Querier, orderID,
 		// **صافٍ صفريٌّ أو سالبٌ لا يُسوّى** (§Z): عمولةُ ١٠٠٪ تُنتج صفراً —
 		// لا صفَّ ولا قيدَ ولا مستحقّ، ومرّةً واحدةً بداهةً (لا شيءَ يقع).
 		if sh.ownerID == nil || sh.due <= 0 {
+			continue
+		}
+		if only != "" && !strings.EqualFold(sh.merchantID, only) {
 			continue
 		}
 		// **بوّابةُ الهُويّة لكلّ (طلب، متجر)** — «مرّةً واحدة» للطريقتين، وXOR بنيويّ.

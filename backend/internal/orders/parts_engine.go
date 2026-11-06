@@ -410,6 +410,8 @@ type partOutcome struct {
 	// removed **أقسامٌ خرجت** (`removePartTx`) · transferTo **قسمٌ جديدٌ بالتحويل.**
 	removed    []partRemoval
 	transferTo partRef
+	// settled **ما قُيّد عند محطّة** (`StopPickup`) — يُبلَّغ أصحابُه بعد التثبيت.
+	settled settled
 }
 
 // partAction **هيكلُ كلّ فعلِ قسم** — قفلٌ ففعلٌ فانتقالٌ تابعٌ في معاملةٍ واحدة،

@@ -158,7 +158,8 @@ func (s *Server) autoApproveCompensationTx(ctx context.Context, q dbtx.Querier, 
 		note = "نفذت فوراً بحركة الإدارة"
 	}
 	if err := s.approveCompensationTx(ctx, q, r, c, amount, note); err != nil {
-		if errors.Is(err, errCompensationAboveCap) {
+		// **وذنبُ متجرٍ في طلبٍ بعدّة محطّات ينتظر من يختار المتجر** (٦أ) — يبقى معلَّقاً.
+		if errors.Is(err, errCompensationAboveCap) || errors.Is(err, orders.ErrCompensationStoreRequired) {
 			return nil, 0, nil
 		}
 		return nil, 0, err
@@ -242,6 +243,8 @@ func (s *Server) handleApproveCompensation(w http.ResponseWriter, r *http.Reques
 	req, err := decode[struct {
 		Amount int64  `json:"amount"`
 		Note   string `json:"note"`
+		// MerchantID **المتجرُ المذنب في طلبٍ بعدّة محطّات** (٦أ) — يلزم حين يكون الذنبُ ذنبَ متجر.
+		MerchantID string `json:"merchant_id"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -258,6 +261,9 @@ func (s *Server) handleApproveCompensation(w http.ResponseWriter, r *http.Reques
 			return httpx.ErrNotFound
 		}
 		paid = c
+		if m := strings.TrimSpace(req.MerchantID); m != "" {
+			c.MerchantID = &m
+		}
 		return s.approveCompensationTx(ctx, q, r, c, req.Amount, note)
 	}); err != nil {
 		s.respondErr(w, err)

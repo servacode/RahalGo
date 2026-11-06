@@ -50,6 +50,10 @@ const (
 	OutcomeReturnStore = "return_store"
 	OutcomeCancel      = "cancel"
 	OutcomeContinue    = "continue"
+	// OutcomeDropRemaining **«شيل المحطّات الباقية»** (٥أ) — طلبٌ بعدّة محطّات وبيد السائق بضاعةُ
+	// محطّة: كلُّ محطّةٍ لم تُستلم تُشال بذنب المنصّة **ويمضي الطلبُ بما استُلم** (`picked_up`).
+	// **ولا يُكتب مصيراً** — بعده تسري مخارجُ ما بعد الاستلام كما هي (سائقٌ آخر · إرجاع · إنهاء).
+	OutcomeDropRemaining = "drop_remaining"
 )
 
 // emergencyStaleSetting **طارئٌ بلا مستلِمٍ هذه المدّة يحمرّ** (افتراضُه ١٠ دقائق).
@@ -325,6 +329,8 @@ type emergencyOrder struct {
 	Store         *emergencyPerson `json:"store"`
 	NewDriver     *emergencyPerson `json:"new_driver"`
 	AddressText   string           `json:"address_text"`
+	// GoodsInHand **بيد السائق بضاعةُ محطّةٍ من طلبٍ بعدّة متاجر** (§5.3) — وغائبٌ في طلب المتجر الواحد.
+	GoodsInHand *bool `json:"goods_in_hand,omitempty"`
 }
 
 type emergencyOtherOrder struct {
@@ -598,6 +604,10 @@ func (s *Server) emergencyOrderOf(ctx context.Context, orderID string, oldDriver
 	}
 	o.Customer = person(custID, custName, custPhone)
 	o.Store = person(storeID, storeName, storePhone)
+	if s.orders.StopsOf(ctx, orderID) > 1 {
+		in := s.orders.GoodsInHand(ctx, orderID)
+		o.GoodsInHand = &in
+	}
 	if drvID != nil && (oldDriver == nil || *drvID != *oldDriver) {
 		o.NewDriver = person(drvID, drvName, drvPhone)
 	}
@@ -728,7 +738,7 @@ func (s *Server) handleEmergencyOutcome(w http.ResponseWriter, r *http.Request) 
 	actor := userIDFrom(r)
 	note := clip(strings.TrimSpace(req.Note), 500)
 	switch req.Outcome {
-	case OutcomeRedispatch, OutcomeReturnStore, OutcomeCancel, OutcomeContinue:
+	case OutcomeRedispatch, OutcomeReturnStore, OutcomeCancel, OutcomeContinue, OutcomeDropRemaining:
 	default:
 		s.respondErr(w, errEmergencyBadOutcome)
 		return
@@ -762,13 +772,39 @@ func (s *Server) handleEmergencyOutcome(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	after := orders.AfterPickup(status)
+	// **وبيد السائق بضاعةُ محطّةٍ والطلبُ عند المحطّات** (§5.3) — المخارجُ للمكتب وحدَه.
+	stopGoods := !after && s.orders.GoodsInHand(ctx, orderID)
 	open := !isTerminalStatus(status)
 	ops := []string{"ops"}
 	customerText := ""
 
+	if req.Outcome == OutcomeDropRemaining {
+		s.emergencyDropRemaining(w, r, e.ID, orderID, status, note, stopGoods)
+		return
+	}
+	// **والإرجاعُ والإنهاءُ والبضاعةُ من محطّة: تُشال المحطّاتُ الباقيةُ أوّلاً** — ثمّ مسارُ ما
+	// بعد الاستلام كما هو.
+	if stopGoods && (req.Outcome == OutcomeReturnStore || req.Outcome == OutcomeCancel) {
+		if _, err := s.orders.DropRemainingStops(ctx, actor, ops, orderID, "طارئٌ لدى السائق — "+note); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		if err := s.pg.QueryRow(ctx, `SELECT status FROM orders WHERE id = $1`, orderID).Scan(&status); err != nil {
+			s.respondErr(w, err)
+			return
+		}
+	}
+
 	switch req.Outcome {
 	case OutcomeRedispatch:
 		switch {
+		case stopGoods:
+			// **سائقٌ آخرُ يستلم البضاعةَ من الأوّل ثمّ يكمل المحطّات** (٥أ) — استثناءُ G5 الوحيد.
+			if _, err := s.orders.RedispatchWithGoods(ctx, actor, ops, orderID,
+				"طارئٌ لدى السائق — "+note); err != nil {
+				s.respondErr(w, err)
+				return
+			}
 		case after:
 			// **والبضاعةُ مع الأوّل** — نقطةُ الاستلام البديلة كُتبت عند الطارئ.
 			if _, err := s.orders.Transition(ctx, actor, ops, orderID, orders.StDispatching,
@@ -962,4 +998,39 @@ func (s *Server) handleEmergencyMoney(w http.ResponseWriter, r *http.Request) {
 	s.touch("emergency", "ops")
 	httpx.JSON(w, http.StatusOK, map[string]any{"request_id": requestID, "skipped": req.Skip,
 		"applied": paid != nil})
+}
+
+// emergencyDropRemaining **«شيل المحطّات الباقية»** — والمصيرُ لا يُكتب: بعدها تُختار مخارجُ ما
+// بعد الاستلام. **ويُكتب ما وقع ملاحظةً في الغرفة وأثراً في التدقيق.**
+func (s *Server) emergencyDropRemaining(w http.ResponseWriter, r *http.Request, emergencyID, orderID, status,
+	note string, stopGoods bool) {
+	ctx := r.Context()
+	if !stopGoods {
+		s.respondErr(w, errEmergencyOutcomeStage)
+		return
+	}
+	actor := userIDFrom(r)
+	o, err := s.orders.DropRemainingStops(ctx, actor, []string{"ops"}, orderID, "طارئٌ لدى السائق — "+note)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if err := s.inTx(ctx, func(ctx context.Context, q dbtx.Querier) error {
+		if err := addEmergencyNote(ctx, q, emergencyID, actor, "شيل المحطات الباقية — "+note); err != nil {
+			return err
+		}
+		return s.auditTx(ctx, q, r, "ops.emergency_drop_remaining", "emergency", emergencyID, map[string]any{
+			"order_id": orderID, "status_was": status, "note": note,
+		})
+	}); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.touch("order", "ops")
+	s.touch("emergency", "ops")
+	st := ""
+	if o != nil {
+		st = o.Status
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"outcome": OutcomeDropRemaining, "status": st})
 }

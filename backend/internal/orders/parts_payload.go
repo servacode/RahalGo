@@ -127,7 +127,10 @@ func (s *Service) fillPartPayloads(ctx context.Context, q dbtx.Querier, list []*
 		       -- **قسمٌ حُوّل لمتجرٍ آخر**: بنودُ لقطته ما زالت في الطلب — انتقلت ولم تُحذف.
 		       p.status = 'removed' AND EXISTS (
 		           SELECT 1 FROM jsonb_array_elements(p.removed_items) x
-		           JOIN order_items oi ON oi.id::text = x->>'id' AND oi.order_id = p.order_id)
+		           JOIN order_items oi ON oi.id::text = x->>'id' AND oi.order_id = p.order_id),
+		       -- **أبيد سائق الطلب بضاعةُ هذه المحطّة؟** (goods_in_hand).
+		       COALESCE(p.status = 'picked_up'
+		           AND p.picked_up_by = (SELECT o2.driver_id FROM orders o2 WHERE o2.id = p.order_id), false)
 		FROM order_parts p
 		JOIN merchants m ON m.id = p.merchant_id
 		LEFT JOIN users mo ON mo.id = m.owner_user_id
@@ -145,6 +148,7 @@ func (s *Service) fillPartPayloads(ctx context.Context, q dbtx.Querier, list []*
 		snap        []byte
 		snapTotal   int64
 		transferred bool
+		inHand      bool
 	}
 	var got []row
 	for rows.Next() {
@@ -154,7 +158,7 @@ func (s *Service) fillPartPayloads(ctx context.Context, q dbtx.Querier, list []*
 			&p.Status, &p.AnsweredRole, &p.AnsweredAt, &p.Reason, &p.RemovedFault,
 			&p.PrepMinutes, &p.ReadyAt, &p.SentAt, &p.SentChannel, &p.ArrivedAt, &p.PickedUpAt,
 			&p.PickedUpByName, &p.Collected, &r.snap, &r.snapTotal, &p.SettlementMethod,
-			&p.RepName, &p.RepCommission, &r.transferred); err != nil {
+			&p.RepName, &p.RepCommission, &r.transferred, &r.inHand); err != nil {
 			rows.Close()
 			return err
 		}
@@ -229,6 +233,13 @@ func (s *Service) fillPartPayloads(ctx context.Context, q dbtx.Querier, list []*
 			}
 		}
 		o.Parts = append(o.Parts, p)
+		if o.GoodsInHand == nil {
+			v := AfterPickup(o.Status)
+			o.GoodsInHand = &v
+		}
+		if r.inHand {
+			*o.GoodsInHand = true
+		}
 
 		// **والزبونُ يرى أقسامَه بلا متجر** — وما حُوّل لا يُرى: بضاعتُه في قسمٍ آخر.
 		if r.transferred {

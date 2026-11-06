@@ -28,6 +28,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/orders"
 )
 
 var (
@@ -74,6 +75,15 @@ func (s *Server) handleDriverReturn(w http.ResponseWriter, r *http.Request) {
 	}
 	if !accepts {
 		s.respondErr(w, errNoReturns)
+		return
+	}
+	// **وبضاعةٌ من متجرين فأكثر لا تعود لمتجر** (قرارُ المالك ٤أ) — كان البابُ يخصم من المتجر
+	// الأوّل ثمنَ بضاعة المتجرين. **للمكتب كلُّها.**
+	if multi, err := orders.MultiStoreGoods(r.Context(), tx, orderID); err != nil {
+		s.respondErr(w, err)
+		return
+	} else if multi {
+		s.respondErr(w, orders.ErrReturnStoreRefused)
 		return
 	}
 

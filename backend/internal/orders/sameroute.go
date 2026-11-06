@@ -95,7 +95,8 @@ func (s *Service) SameRouteDriver(ctx context.Context, orderID string) *SameRout
 			SELECT o.id, COALESCE(o.pickup_override, m.location) AS pick, o.dropoff,
 			       o.cash_due, o.customer_id
 			FROM orders o JOIN merchants m ON m.id = o.merchant_id
-			WHERE o.id = $1
+			-- **والطلبُ من عدّة متاجر لا يُضاف إلى طريقٍ ولا يُضاف إليه** (قرارُ المالك ٧أ).
+			WHERE o.id = $1 AND o.stops = 1
 		)
 		SELECT a.driver_id::text, a.id::text,
 		       ST_Distance(a.pick, nw.pick), ST_Distance(a.dropoff, nw.dropoff),
@@ -109,6 +110,7 @@ func (s *Service) SameRouteDriver(ctx context.Context, orderID string) *SameRout
 			  -- **وقبل الاستلام وحدَه**: من استلم بضاعتَه ومضى إلى الزبون
 			  -- **لا يعود إلى مطعمٍ ثانٍ والطعامُ يبرد في صندوقه.**
 			  AND o.status IN ('assigned', 'at_pickup')
+			  AND o.stops = 1
 		) a
 		CROSS JOIN nw
 		JOIN users u ON u.id = a.driver_id

@@ -157,8 +157,28 @@ func (s *Service) UncountedWarnings(ctx context.Context, q wallet.Querier, merch
 // محفظةِ متجرٍ قبل أن يُسأل نزاعٌ خُسر قبل أن يُفتح.**
 func (s *Service) openMerchantClaim(ctx context.Context, q wallet.Querier,
 	orderID string, amount int64) error {
+	return s.openMerchantClaimFor(ctx, q, orderID, "", amount)
+}
+
+// openMerchantClaimFor **المطالبةُ على متجرٍ بعينه** (`store`) — في طلبٍ بعدّة محطّات يختاره المكتب
+// (٦أ)؛ **وفارغُه متجرُ الطلب** كما كان. **ومطالبةٌ مفتوحةٌ على متجرٍ آخرَ في الطلب نفسِه تُحسم
+// أوّلاً** (`merchant_dispute_open`): مفتاحُ النزاع (طلب · طرف) واحد، **وجمعُ مطالبتين على متجرين
+// في صفٍّ واحدٍ يُطالب الأوّلَ بذنب الثاني.**
+func (s *Service) openMerchantClaimFor(ctx context.Context, q wallet.Querier,
+	orderID, store string, amount int64) error {
 	if amount <= 0 {
 		return nil
+	}
+	if store != "" {
+		var other bool
+		if err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM disputes WHERE order_id = $1
+			AND party_role = 'merchant' AND status = 'open' AND merchant_id <> $2::uuid)`,
+			orderID, store).Scan(&other); err != nil {
+			return err
+		}
+		if other {
+			return ErrMerchantDisputeOpen
+		}
 	}
 	// **والإنذارُ يُكتب هنا إن لم يكن كُتب** — فقد يقع التعويضُ قبله.
 	// `ON CONFLICT` يجعل الترتيبَ لا يهمّ: **من سبق كتب، ومن تلاه أضاف
@@ -180,11 +200,11 @@ func (s *Service) openMerchantClaim(ctx context.Context, q wallet.Querier,
 		INSERT INTO warnings (user_id, merchant_id, role_code, reason, order_id)
 		SELECT m.owner_user_id, m.id, 'merchant',
 		       COALESCE(o.fail_reason, 'merchant_refused'), o.id
-		FROM orders o JOIN merchants m ON m.id = o.merchant_id
+		FROM orders o JOIN merchants m ON m.id = COALESCE(NULLIF($2, '')::uuid, o.merchant_id)
 		WHERE o.id = $1
 		ON CONFLICT (order_id, merchant_id) WHERE order_id IS NOT NULL AND merchant_id IS NOT NULL
 		DO UPDATE SET reason = warnings.reason
-		RETURNING id::text`, orderID).Scan(&warningID)
+		RETURNING id::text`, orderID, store).Scan(&warningID)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return err
 	}
@@ -215,7 +235,7 @@ func (s *Service) openMerchantClaim(ctx context.Context, q wallet.Querier,
 	// الماليّة على تعويض السائق تسقط كلُّها. **فالتعويضُ يُدفع والمطالبةُ لا تُكتب.**
 	_, err = q.Exec(ctx, `
 		INSERT INTO disputes (party_role, merchant_id, order_id, warning_id, reason, amount)
-		SELECT 'merchant', o.merchant_id, o.id, $3,
+		SELECT 'merchant', COALESCE(NULLIF($4, '')::uuid, o.merchant_id), o.id, $3,
 		       COALESCE((SELECT NULLIF(r.fail_reason, '') FROM driver_compensation_requests r
 		                  WHERE r.order_id = o.id AND r.fault = 'merchant'
 		                  ORDER BY r.decided_at DESC NULLS FIRST, r.created_at DESC LIMIT 1),
@@ -223,6 +243,6 @@ func (s *Service) openMerchantClaim(ctx context.Context, q wallet.Querier,
 		FROM orders o WHERE o.id = $1 AND o.merchant_id IS NOT NULL
 		ON CONFLICT (order_id, party_role) WHERE order_id IS NOT NULL AND status = 'open'
 		DO UPDATE SET amount = disputes.amount + $2`,
-		orderID, amount, warningID)
+		orderID, amount, warningID, store)
 	return err
 }

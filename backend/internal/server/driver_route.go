@@ -255,6 +255,19 @@ func (s *Server) handleDriverOrderRoute(w http.ResponseWriter, r *http.Request) 
 	// **واختياريّان بالكامل** — نسخةٌ منشورةٌ لا ترسلهما تعمل حرفاً
 	// بحرفٍ كما كانت.
 	picked := status != "assigned" && status != "at_pickup"
+	// **وفي الطلب بعدّة محطّات الطريقُ إلى المحطّة** (`?stop=`) **أو التالية** — ومحطّةُ التسليم عند
+	// نقطة الطارئ. **وطلبُ المتجر الواحد كما كان.**
+	if !picked && returnTo == "" {
+		lat, lng, ok, err := s.orders.StopPoint(r.Context(), chi.URLParam(r, "id"), userIDFrom(r),
+			r.URL.Query().Get("stop"))
+		if err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		if ok {
+			pickLat, pickLng = lat, lng
+		}
+	}
 	// **ولا متجرَ يُقصد قبل الشراء في الخاصّ** — «اشترِ الطلب، ثمّ يُرسم الطريق».
 	if pickLat == nil || pickLng == nil {
 		if !picked {

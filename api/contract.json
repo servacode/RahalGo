@@ -1001,6 +1001,10 @@
         {
           "name": "note",
           "type": "string"
+        },
+        {
+          "name": "merchant_id",
+          "type": "string"
         }
       ],
       "response": [
@@ -8382,7 +8386,7 @@
       ],
       "response": [
         {
-          "name": "@ViewFor",
+          "name": "@driverReplyView",
           "type": "unknown"
         }
       ],
@@ -8802,11 +8806,15 @@
         {
           "name": "delivery_code",
           "type": "string"
+        },
+        {
+          "name": "stop",
+          "type": "string"
         }
       ],
       "response": [
         {
-          "name": "@ViewFor",
+          "name": "@driverReplyView",
           "type": "unknown"
         }
       ],

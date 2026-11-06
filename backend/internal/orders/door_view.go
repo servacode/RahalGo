@@ -86,7 +86,24 @@ func (s *Service) DoorViewOf(ctx context.Context, orderID string) *DoorView {
 	}
 	var arrived *time.Time
 	var waited *float64
-	if err := s.db.QueryRow(ctx, `
+	// **وفي الطلب بعدّة محطّات بابُ المتجر بابُ المحطّة الحاليّة** — آخرُ وصولٍ لم يُستلم بعد،
+	// **لا أوّلُ وصولٍ إلى الطلب**: من استلم الأولى ووقف عند الثانية ينتظر منذ الثانية.
+	stopWait := false
+	if waitAt == StAtPickup {
+		if err := s.db.QueryRow(ctx, `
+			SELECT max(p.arrived_at), floor(EXTRACT(EPOCH FROM now() - max(p.arrived_at)) / 60)
+			FROM order_parts p JOIN orders o ON o.id = p.order_id
+			WHERE p.order_id = $1 AND o.stops > 1 AND p.arrived_at IS NOT NULL
+			  AND (p.status = 'accepted' OR (p.status = 'picked_up' AND p.picked_up_by IS DISTINCT FROM o.driver_id))`,
+			orderID).Scan(&arrived, &waited); err == nil && arrived != nil && waited != nil {
+			v.ArrivedAt = arrived
+			v.WaitedMin = int64(*waited)
+			stopWait = true
+		}
+	}
+	if stopWait {
+		// قِيس من المحطّة.
+	} else if err := s.db.QueryRow(ctx, `
 		SELECT max(created_at),
 		       floor(EXTRACT(EPOCH FROM now() - max(created_at)) / 60)
 		-- **وحدثُ القسم ليس وصولاً** (merchant_id) — متجرٌ جهّز قسمَه والسائقُ عند الباب.

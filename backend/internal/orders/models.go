@@ -578,6 +578,9 @@ type Order struct {
 	Parts       []OpsPart         `json:"parts,omitempty"`
 	Sections    []CustomerSection `json:"sections,omitempty"`
 	SharedStops int               `json:"shared_stops,omitempty"`
+	// GoodsInHand **بيد السائق بضاعةُ محطّة** (§5.3) — للمكتب وحدَه، وللطلب بعدّة محطّات وحدَه:
+	// غرفةُ الطوارئ تعرض «كمّل بسائق تاني» و«شيل المحطّات الباقية» حين يكون صحيحاً.
+	GoodsInHand *bool `json:"goods_in_hand,omitempty"`
 	// partStores **متاجرُ أقسام الطلب بترتيبها** — للطلب من عدّة متاجر وحدَه، وفارغٌ لغيره.
 	// **ومنه تُبثّ إشارةُ «تبدّل الطلب» لغرفة كلّ متجرٍ فيه** (`publishOrder`).
 	partStores []string
@@ -610,6 +613,10 @@ func (o *Order) SetStageTimes(evs []Event, lim StageLimits) {
 	}
 	// **ومهلتا الطريق من خريطة هذا الطلب** — كلُّ طريقٍ بطوله.
 	lim.ToStore = routeLimit(o.ToStoreETASec, lim.RouteMarginPct)
+	// **وبعدّة محطّاتٍ وقفةُ تسليمٍ عند كلّ متجرٍ بعد الأوّل** (D12) — `parts_stops_eta.go`.
+	if lim.ToStore > 0 {
+		lim.ToStore += o.stopsStageExtra(lim.Handover)
+	}
 	lim.ToDoor = routeLimit(o.ToDoorETASec, lim.RouteMarginPct)
 	o.OpsStageLate = opsStageLate(o.OpsStages, o.OpsStageTimes, lim)
 }

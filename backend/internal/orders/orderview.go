@@ -461,6 +461,8 @@ var audienceAllow = map[Audience]map[string]bool{
 		"pickup_merchant_id": true,
 		// **صندوقٌ لكلّ متجرٍ في الطلب بعدّة محطّات** (العقدُ §2).
 		"parts": true,
+		// **وبيد السائق بضاعةُ محطّة** (§5.3) — غرفةُ الطوارئ ونافذةُ التعويض.
+		"goods_in_hand": true,
 	},
 }
 

@@ -151,6 +151,15 @@ func (s *Service) SettleGoods(ctx context.Context, orderID, to, actorID string, 
 			return ErrGoodsWrongPlace
 		}
 	}
+	// **وبضاعةٌ من متجرين فأكثر لا تعود لمتجر** (قرارُ المالك ٤أ) — للمكتب كلُّها، والمتاجرُ على
+	// مستحقّها والمنصّةُ تتحمّل. **وكان الردُّ «إلى المتجر» يسترجع من كلّ متجرٍ والبضاعةُ عند واحد.**
+	if to == GoodsToMerchant {
+		if multi, err := MultiStoreGoods(ctx, tx, orderID); err != nil {
+			return err
+		} else if multi {
+			return ErrReturnStoreRefused
+		}
+	}
 	if compensation > 0 {
 		cost, err := goodsCost(ctx, tx, orderID)
 		if err != nil {

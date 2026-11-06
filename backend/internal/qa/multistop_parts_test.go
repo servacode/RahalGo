@@ -491,7 +491,7 @@ func TestMultiStop_StoreReportsPerStore(t *testing.T) {
 	oid := s.order(t)
 	s.mustAnswer(t, "قبولُ الأوّل", s.tokA, oid, map[string]any{"to": "accepted"})
 	s.mustAnswer(t, "قبولُ الثاني", s.tokB, oid, map[string]any{"to": "accepted"})
-	deliverOrder(t, s.h, oid, s.h.driverOf(oid))
+	deliverMultiStop(t, s, oid)
 
 	for _, c := range []struct {
 		label     string
@@ -689,7 +689,7 @@ func TestMultiStop_StoreBReportsAndComplaintsTarget(t *testing.T) {
 	oid := s.order(t)
 	s.mustAnswer(t, "قبولُ الأوّل", s.tokA, oid, map[string]any{"to": "accepted"})
 	s.mustAnswer(t, "قبولُ الثاني", s.tokB, oid, map[string]any{"to": "accepted"})
-	deliverOrder(t, s.h, oid, s.h.driverOf(oid))
+	deliverMultiStop(t, s, oid)
 
 	if r := s.h.POST("/api/v1/merchant/orders/"+oid+"/report", s.tokB,
 		map[string]any{"reason": "driver_late_pickup", "note": "تأخّر ربع ساعة"}); r.Code >= 400 {

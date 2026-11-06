@@ -257,8 +257,11 @@ func (s *Service) removePartTx(ctx context.Context, tx pgx.Tx, lo *lockedOrder, 
 		if lo.from == StPending && out.follow == nil {
 			out.follow, err = s.partsFollowUpTx(ctx, tx, lo)
 		}
-		// **والطلبُ عند المحطّة وكلُّ ما بقي استلمه سائقُه** ⇒ `picked_up` — **مع الاستلام لكلّ
-		// محطّة في الدفعة التالية (P4)**: لا استلامَ لمحطّةٍ بعينها قبلها.
+		// **والطلبُ عند المحطّة وكلُّ ما بقي استلمه سائقُه** ⇒ `picked_up` في المعاملة نفسِها
+		// (§2.4) — شال المكتبُ آخرَ محطّةٍ لم تُستلم، **فالبضاعةُ كلُّها في يده.**
+		if err == nil && out.follow == nil && !req.transfer {
+			out.follow, err = s.stopsDoneFollowTx(ctx, tx, lo, req.actorID)
+		}
 		return err
 	}
 	if lo.from == StPending {

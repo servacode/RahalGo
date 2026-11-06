@@ -74,6 +74,9 @@ func storeTakesReturns(ctx context.Context, q dbtx.Querier, orderID string) (boo
 	var ok bool
 	err := q.QueryRow(ctx, `
 		SELECT o.kind <> 'custom' AND o.merchant_id IS NOT NULL AND
+		       -- **وبضاعةٌ من متجرين فأكثر لا تعود لمتجر** (قرارُ المالك ٤أ) — للمكتب كلُّها.
+		       (SELECT count(DISTINCT COALESCE(oi.merchant_id, o.merchant_id)) FROM order_items oi
+		         WHERE oi.order_id = o.id) <= 1 AND
 		       COALESCE((SELECT bool_and(m2.accepts_returns) FROM merchants m2
 		                 WHERE m2.id IN (SELECT COALESCE(oi.merchant_id, o.merchant_id)
 		                                 FROM order_items oi WHERE oi.order_id = o.id
