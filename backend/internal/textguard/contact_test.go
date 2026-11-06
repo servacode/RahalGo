@@ -131,3 +131,83 @@ func TestMaskContacts_KeepsOriginalForAdmin(t *testing.T) {
 		t.Errorf("ملخّصُ الفراغ ليس فراغاً")
 	}
 }
+
+// **تلغرام وفيسبوك وماسنجر وانستغرام والبريد تُخفى كالواتساب** (قرارُ المالك ٢٠٢٦-١١-٠٦) —
+// روابطُها وأسماؤها، والمعرّفُ «@…» بعد كلمتها، والبريدُ الإلكترونيّ.
+func TestMaskContacts_SocialAndEmail(t *testing.T) {
+	cases := map[string]string{
+		"t.me/ahmad99":                       "***",
+		"https://t.me/ahmad99 راسلني":        "*** راسلني",
+		"telegram.me/ahmad":                  "***",
+		"telegram.dog/ahmad":                 "***",
+		"تلغرام":                             "***",
+		"عالتلغرام":                          "***",
+		"تليغرام":                            "***",
+		"تيليجرام":                           "***",
+		"Telegram":                           "***",
+		"facebook.com/ahmad.ali":             "***",
+		"https://www.facebook.com/profile":   "***",
+		"fb.com/ahmad":                       "***",
+		"fb.me/ahmad":                        "***",
+		"m.me/ahmad":                         "***",
+		"messenger.com/t/ahmad":              "***",
+		"فيسبوك":                             "***",
+		"عالفيسبوك":                          "***",
+		"فيس بوك":                            "***",
+		"ماسنجر":                             "***",
+		"عالماسنجر":                          "***",
+		"Messenger":                          "***",
+		"Facebook":                           "***",
+		"instagram.com/ahmad":                "***",
+		"instagr.am/ahmad":                   "***",
+		"انستغرام":                           "***",
+		"عالانستغرام":                        "***",
+		"Instagram":                          "***",
+		"ahmad.ali@gmail.com":                "***",
+		"ايميلي ahmad_99@yahoo.com":          "ايميلي ***",
+		"ضيفني تلغرام @ahmad_99":             "ضيفني *** ***",
+		"انستغرام: @ahmad.ali":               "***: ***",
+		"كلمني عالفيسبوك اسمي احمد":          "كلمني *** اسمي احمد",
+	}
+	for in, want := range cases {
+		got, hits := MaskContacts(in, "***")
+		if got != want {
+			t.Errorf("MaskContacts(%q) = %q، والمتوقّع %q", in, got, want)
+		}
+		if len(hits) == 0 {
+			t.Errorf("MaskContacts(%q): لا شيءَ مسجّلٌ بما أُخفي", in)
+		}
+		if again, h2 := MaskContacts(got, "***"); again != got || len(h2) != 0 {
+			t.Errorf("MaskContacts(%q) بعد الإخفاء بقي فيه شيء: %q %v", in, again, h2)
+		}
+	}
+}
+
+// **والعاديُّ لا يُمسّ** — «@» بلا كلمة تلغرام/انستغرام قبلها، وكلماتٌ تشبه ولا تكون.
+func TestMaskContacts_SocialLeavesOrdinary(t *testing.T) {
+	for _, s := range []string{
+		"@احمد وصلت",
+		"شكراً @ahmad",
+		"الفيس تعبان",
+		"وجهه فيس",
+		"المسنن مكسور",
+		"السعر 25000 والبناية 12",
+		"عند المطعم m.",
+		"حي الجامع، بناية 3",
+		"tme",
+		"install the app",
+	} {
+		got, hits := MaskContacts(s, "***")
+		if got != s || len(hits) != 0 {
+			t.Errorf("MaskContacts(%q) غيّر البريء: %q %v", s, got, hits)
+		}
+	}
+	// **والأصلُ للإدارة** بنوعه: بريدٌ ورابط.
+	_, hits := MaskContacts("ahmad@gmail.com t.me/ahmad", "***")
+	if len(hits) != 2 || hits[0].Kind != "email" || hits[1].Kind != "link" {
+		t.Fatalf("المُخفى: %+v", hits)
+	}
+	if sum := ContactSummary(hits); !strings.Contains(sum, "بريد: ahmad@gmail.com") || !strings.Contains(sum, "رابط: t.me/ahmad") {
+		t.Errorf("الملخّص: %q", sum)
+	}
+}

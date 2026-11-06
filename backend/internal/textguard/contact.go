@@ -45,6 +45,53 @@ const MinPhoneDigits = 7
 // contactLinkRe **رابطُ الواتساب** — بلا حساسيّةِ حروف، ومعه ما يلحقه من مسار.
 var contactLinkRe = regexp.MustCompile(`(?i)\b(?:https?://)?(?:www\.)?(?:wa\.me|wa\.link|(?:api|chat|web)\.whatsapp\.com|whatsapp\.com)(?:/\S*)?`)
 
+// ══════════════════════════════════════════════════════════════════════
+// **وتلغرام وفيسبوك وماسنجر وانستغرام والبريد** (قرارُ المالك ٢٠٢٦-١١-٠٦)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **بابٌ برّا المنصّة كالواتساب تماماً** — فتُخفى روابطُها وأسماؤها بالاتّجاهين وتُوسَم
+// للإدارة والأصلُ في `flag_word`:
+//
+//	«t.me/…» «telegram.me» «telegram.dog»                 رابطُ تلغرام
+//	«facebook.com» «fb.com» «fb.me» «m.me» «messenger.com» رابطُ فيسبوك وماسنجر
+//	«instagram.com» «instagr.am»                          رابطُ انستغرام
+//	«تلغرام» «تيليجرام» «فيسبوك» «فيس بوك» «ماسنجر» «انستغرام»  الكلمةُ بسوابقها
+//	«ahmad@gmail.com»                                     البريدُ الإلكترونيّ
+//	«@ahmad_99» بعد كلمة تلغرام أو انستغرام                المعرّف — **وبلاها لا يُمسّ**
+//
+// **ولا يُمسّ «الفيس» وحدَها** (وجهٌ أو فيسبوك؟ لا يُعرف) **ولا «@» عاديّة.**
+
+// socialLinkRe **روابطُ تلغرام وفيسبوك وماسنجر وانستغرام.**
+var socialLinkRe = regexp.MustCompile(`(?i)\b(?:https?://)?(?:www\.)?(?:t\.me|telegram\.(?:me|dog)|(?:[a-z]{1,3}\.)?facebook\.com|fb\.(?:com|me|watch)|m\.me|messenger\.com|instagram\.com|instagr\.am)(?:/\S*)?`)
+
+// emailRe **البريدُ الإلكترونيّ** — وسيلةُ تواصلٍ كالرقم.
+var emailRe = regexp.MustCompile(`[A-Za-z0-9._%+\-]+@[A-Za-z0-9\-]+(?:\.[A-Za-z0-9\-]+)*\.[A-Za-z]{2,}`)
+
+// handleRe **معرّفٌ «@…» لاتينيّ** — يُخفى بعد كلمة تلغرام أو انستغرام وحدَها.
+var handleRe = regexp.MustCompile(`@[A-Za-z0-9_][A-Za-z0-9_.]{2,}`)
+
+// socialWordHas **ما إن احتوته الكلمةُ (مطبَّعةً مطويّةَ التكرار) فهي تطبيقُ تواصل** —
+// والقيمةُ «cue»: أيُطلق «@…» بعدها. **وصورٌ مطويّةٌ معها** («facebok» «mesenger»).
+var socialWordHas = map[string]bool{
+	"تلغرام": true, "تليغرام": true, "تيليغرام": true, "تيلغرام": true, "تلجرام": true,
+	"تليجرام": true, "تيليجرام": true, "تيلجرام": true, "تلقرام": true, "تليقرام": true,
+	"تيليقرام": true, "telegram": true,
+	"انستغرام": true, "انستقرام": true, "انستجرام": true, "انستاغرام": true, "انستاجرام": true,
+	"انستكرام": true, "instagram": true,
+	"فيسبوك": false, "فيسبك": false, "فسبوك": false, "facebok": false,
+	"ماسنجر": false, "مسنجر": false, "ماسينجر": false, "mesenger": false,
+}
+
+// socialWordIs **ما كانته الكلمةُ بعينه** — قصيرٌ لا يُبحث عنه داخلَ غيره («insta» في «install»).
+var socialWordIs = map[string]bool{"انستا": true, "insta": true, "fb": false, "تلي": false}
+
+// socialPairs **كلمتان هما اسمٌ واحد** — «فيس بوك» و«face book» و«insta gram».
+var socialPairs = map[string]map[string]bool{
+	"فيس": {"بوك": false, "بك": false}, "face": {"bok": false},
+	"انستا": {"غرام": true, "جرام": true, "قرام": true}, "insta": {"gram": true},
+	"تلي": {"غرام": true, "جرام": true},
+}
+
 // contactWordHas **ما إن احتوته الكلمةُ (مطبَّعةً) فهي الواتساب** — والتكرارُ
 // يُطوى قبلها، فـ«whatsapp» تصير «whatsap».
 var contactWordHas = []string{"واتس", "وتساب", "واتصاب", "whatsap", "whatsab", "watsap", "watsab"}
@@ -79,8 +126,19 @@ func MaskContacts(s, token string) (string, []ContactHit) {
 		rs = append(rs, r)
 	}
 	spans := phoneSpans(rs)
-	spans = append(spans, linkSpans(rs)...)
-	spans = append(spans, contactWordSpans(rs)...)
+	spans = append(spans, linkSpans(rs, contactLinkRe, "link")...)
+	spans = append(spans, linkSpans(rs, socialLinkRe, "link")...)
+	spans = append(spans, linkSpans(rs, emailRe, "email")...)
+	words, cueAt := contactWordSpans(rs)
+	spans = append(spans, words...)
+	// **والمعرّفُ بعد كلمة تلغرام أو انستغرام وحدَها** — «@احمد» و«شكراً @ahmad» تمرّان.
+	if cueAt >= 0 {
+		for _, h := range linkSpans(rs, handleRe, "handle") {
+			if h.start >= cueAt {
+				spans = append(spans, h)
+			}
+		}
+	}
 	if len(spans) == 0 {
 		return s, nil
 	}
@@ -120,6 +178,10 @@ func ContactSummary(h []ContactHit) string {
 			label = "رقم"
 		case "link":
 			label = "رابط"
+		case "email":
+			label = "بريد"
+		case "handle":
+			label = "معرّف"
 		}
 		text := x.Text
 		if rs := []rune(text); len(rs) > 80 {
@@ -343,9 +405,9 @@ func isYear(s string) bool {
 
 // ── الروابط ──────────────────────────────────────────────────────────
 
-func linkSpans(rs []rune) []cspan {
+func linkSpans(rs []rune, re *regexp.Regexp, kind string) []cspan {
 	s := string(rs)
-	locs := contactLinkRe.FindAllStringIndex(s, -1)
+	locs := re.FindAllStringIndex(s, -1)
 	if len(locs) == 0 {
 		return nil
 	}
@@ -353,7 +415,7 @@ func linkSpans(rs []rune) []cspan {
 	for _, l := range locs {
 		start := utf8.RuneCountInString(s[:l[0]])
 		end := start + utf8.RuneCountInString(s[l[0]:l[1]])
-		out = append(out, cspan{start: start, end: end, kind: "link"})
+		out = append(out, cspan{start: start, end: end, kind: kind})
 	}
 	return out
 }
@@ -377,14 +439,47 @@ func isContactWord(norm string) bool {
 	return false
 }
 
-// contactWordSpans **مواضعُ كلمة الواتساب** — بتقطيع فلتر الشتائم وتطبيعه
-// نفسيهما، **والحروفُ المفرّقةُ تُجمع** («و ا ت س»)، **والذيلُ يُضمّ**
-// («whats app»).
-func contactWordSpans(rs []rune) []cspan {
+// socialWord **أهذه الكلمةُ اسمُ تطبيق تواصل؟** — والثانيةُ: أيُطلق «@…» بعدها.
+func socialWord(norm string) (bool, bool) {
+	if cue, ok := socialWordIs[norm]; ok {
+		return true, cue
+	}
+	for w, cue := range socialWordHas {
+		if strings.Contains(norm, w) {
+			return true, cue
+		}
+	}
+	return false, false
+}
+
+// contactWordSpans **مواضعُ كلمة الواتساب وأسماءِ تطبيقات التواصل** — بتقطيع فلتر
+// الشتائم وتطبيعه نفسيهما، **والحروفُ المفرّقةُ تُجمع** («و ا ت س»)، **والذيلُ يُضمّ**
+// («whats app»). **والثاني أوّلُ موضعِ كلمةِ تلغرام أو انستغرام** (`-1` إن لم تكن) —
+// فما بعده من «@…» معرّفٌ يُخفى.
+func contactWordSpans(rs []rune) ([]cspan, int) {
 	tokens := tokenize(string(rs))
 	var out []cspan
+	cueAt := -1
 	for i := 0; i < len(tokens); i++ {
 		t := tokens[i]
+		// **كلمتان هما اسمٌ واحد** — «فيس بوك».
+		if tails, ok := socialPairs[t.norm]; ok && i+1 < len(tokens) {
+			if cue, ok := tails[tokens[i+1].norm]; ok {
+				out = append(out, cspan{start: t.start, end: tokens[i+1].end, kind: "word"})
+				if cue && cueAt < 0 {
+					cueAt = t.start
+				}
+				i++
+				continue
+			}
+		}
+		if ok, cue := socialWord(t.norm); ok {
+			out = append(out, cspan{start: t.start, end: t.end, kind: "word"})
+			if cue && cueAt < 0 {
+				cueAt = t.start
+			}
+			continue
+		}
 		end, next := -1, i+1
 		if len([]rune(t.norm)) == 1 {
 			j := i
@@ -410,5 +505,5 @@ func contactWordSpans(rs []rune) []cspan {
 		out = append(out, cspan{start: t.start, end: end, kind: "word"})
 		i = next - 1
 	}
-	return out
+	return out, cueAt
 }

@@ -169,3 +169,47 @@ func TestDriverOrders_MasksContactsInCustomerText(t *testing.T) {
 		t.Errorf("**الأصلُ تغيّر في القاعدة**: %q", stored)
 	}
 }
+
+// TestChatContactMask_SocialAndEmail **تلغرام وفيسبوك وانستغرام والبريد تُخفى في الحديث
+// كالرقم** (قرارُ المالك ٢٠٢٦-١١-٠٦) — والأصلُ في `flag_word` للإدارة.
+func TestChatContactMask_SocialAndEmail(t *testing.T) {
+	f := newDriverFixture(t, 1)
+	d := f.drivers[0]
+	f.srv.comms = comms.New(f.pool)
+	f.srv.support = support.NewService(f.pool, f.srv.identity, f.srv.wallet)
+	f.srv.notify = notifications.New(f.pool, f.srv.hub, f.srv.logger)
+	ctx := context.Background()
+	orderID := f.problemOrderAt(t, "on_the_way", d)
+	var customer string
+	if err := f.pool.QueryRow(ctx, `SELECT customer_id::text FROM orders WHERE id = $1`,
+		orderID).Scan(&customer); err != nil {
+		t.Fatal(err)
+	}
+	js := func(v any) string { b, _ := json.Marshal(v); return string(b) }
+	for _, c := range []struct{ uid, role, in, want, orig string }{
+		{d, "driver", "ضيفني تلغرام @ahmad_99", "ضيفني *** ***", "@ahmad_99"},
+		{customer, "customer", "هاد حسابي facebook.com/ahmad", "هاد حسابي ***", "facebook.com/ahmad"},
+		{d, "driver", "ايميلي ahmad@gmail.com", "ايميلي ***", "ahmad@gmail.com"},
+	} {
+		if _, err := f.pool.Exec(ctx,
+			`UPDATE order_messages SET created_at = created_at - interval '1 minute' WHERE order_id = $1`, orderID); err != nil {
+			t.Fatal(err)
+		}
+		w := f.call(f.srv.handleSendOrderMessage, http.MethodPost, "/x", orderID, c.uid, []string{c.role},
+			js(map[string]any{"body": c.in}))
+		if w.Code != http.StatusCreated {
+			t.Fatalf("الحديثُ رُفض: %d %s", w.Code, w.Body.String())
+		}
+		var body, word string
+		var leak bool
+		if err := f.pool.QueryRow(ctx, `
+			SELECT body, COALESCE(flag_word, ''), contact_leak FROM order_messages
+			 WHERE order_id = $1 AND NOT auto ORDER BY created_at DESC LIMIT 1`, orderID).
+			Scan(&body, &word, &leak); err != nil {
+			t.Fatal(err)
+		}
+		if body != c.want || !leak || !strings.Contains(word, c.orig) {
+			t.Errorf("%q ⇒ نصّ=%q وسم=%v أصل=%q", c.in, body, leak, word)
+		}
+	}
+}
