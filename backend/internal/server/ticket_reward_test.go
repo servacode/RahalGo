@@ -121,6 +121,30 @@ func TestTicketReward_FreeDeliveryCodeOnce(t *testing.T) {
 		t.Errorf("**الزبونُ لم يُخبَر بالكود**")
 	}
 
+	// (٣ب) **والكودُ لحساب المبلِّغ وحدَه** (قرارُ المالك ٢٠٢٦-١١-٠٦) — غيرُه يُردّ برمزٍ واضح.
+	var bound string
+	if err := f.pool.QueryRow(ctx, `SELECT COALESCE(bound_user_id::text, '') FROM promo_codes WHERE code = $1`,
+		code).Scan(&bound); err != nil {
+		t.Fatalf("ربطُ الكود: %v", err)
+	}
+	if bound != c1 {
+		t.Errorf("**الكودُ غيرُ مربوطٍ بالمبلِّغ**: %q", bound)
+	}
+	other, err := f.srv.orders.PreviewPromo(ctx, code, c2, 20_000, 5_000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if other.Valid || other.Reason != "promo_not_yours" {
+		t.Errorf("**حسابٌ آخرُ استعمل كودَ المكافأة**: %+v", other)
+	}
+	mine, err := f.srv.orders.PreviewPromo(ctx, code, c1, 20_000, 5_000)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !mine.Valid || mine.DeliveryWaived != 5_000 {
+		t.Errorf("**صاحبُ الكود لا يستعمله**: %+v", mine)
+	}
+
 	// (٤) المرّةُ الثانية ⇒ ٤٠٩ بالكود نفسِه.
 	w2 := f.callWithCaps(f.srv.handleTicketRewardFreeDelivery, offTk.ID, staff, both)
 	if w2.Code != http.StatusConflict || !strings.Contains(w2.Body.String(), "reward_already_granted") ||

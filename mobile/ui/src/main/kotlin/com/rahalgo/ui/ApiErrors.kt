@@ -604,6 +604,8 @@ private val CODES: Map<String, Int> = mapOf(
     "promo_already_used" to R.string.err_promo_already_used,
     "promo_first_order_only" to R.string.err_promo_first_order_only,
     "promo_exhausted" to R.string.err_promo_exhausted,
+    // **كودٌ مربوطٌ بحسابٍ آخر** (قرارُ المالك ٢٠٢٦-١١-٠٦) — مكافأةُ البلاغ لصاحبها وحدَه.
+    "promo_not_yours" to R.string.err_promo_not_yours,
     "promo_expired" to R.string.err_promo_expired,
     "invalid_transition" to R.string.err_invalid_transition,
     "driver_required" to R.string.err_driver_required,

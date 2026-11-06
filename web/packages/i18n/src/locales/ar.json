@@ -1235,6 +1235,7 @@
     "promo_already_used": "استعملت هذا الكود من قبل",
     "promo_first_order_only": "الكود للطلب الأول فقط",
     "promo_exhausted": "نفدت استخدامات الكود",
+    "promo_not_yours": "هذا الكود مخصّص لحساب آخر — ما بيشتغل على حسابك",
     "promo_expired": "الكود انتهى",
     "promo_expired_activate": "هالكود انتهى — مدد تاريخ الانتهاء أول وبعدين فعّله",
     "offer_platform_live": "يوجد عرض من المنصة على هذا الصنف",

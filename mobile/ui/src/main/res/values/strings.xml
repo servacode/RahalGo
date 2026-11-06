@@ -692,6 +692,7 @@
     <string name="err_promo_already_used">استعملت هذا الكود من قبل</string>
     <string name="err_promo_first_order_only">الكود للطلب الأول فقط</string>
     <string name="err_promo_exhausted">نفدت استخدامات الكود</string>
+    <string name="err_promo_not_yours">هذا الكود مخصّص لحساب آخر — ما بيشتغل على حسابك</string>
     <string name="err_promo_expired">انتهت صلاحية الكود</string>
     <string name="err_invalid_transition">لا يمكن نقل الطلب لهذه الحالة</string>
     <string name="err_driver_required">يجب إسناد سائق أولا</string>

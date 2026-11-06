@@ -74,7 +74,7 @@ func randomRewardTail(n int) (string, error) {
 // rewardReplyText **ردُّ المكتب على البلاغ** — بالكود وتاريخ انتهائه.
 func rewardReplyText(code, until string) string {
 	return "شكراً لأنك بلّغتنا 🌷 إلك توصيلة مجانية: اكتب الكود " + code +
-		" بالسلّة بطلبك الجاي. صالح لمرة وحدة لحد " + until + "."
+		" بالسلّة بطلبك الجاي. صالح لحسابك بس ولمرة وحدة لحد " + until + "."
 }
 
 // handleTicketRewardFreeDelivery `POST /admin/tickets/{id}/reward-free-delivery`.
@@ -158,6 +158,12 @@ func (s *Server) handleTicketRewardFreeDelivery(w http.ResponseWriter, r *http.R
 		if errors.Is(err, catalog.ErrCodeTaken) {
 			_ = sp.Rollback(ctx)
 			continue
+		}
+		// **والكودُ لحساب المبلِّغ وحدَه** (قرارُ المالك ٢٠٢٦-١١-٠٦) — `validatePromo` يردّه
+		// لغيره بـ`promo_not_yours`. وفي المعاملة نفسِها: لا كودَ يُثبَّت بلا ربط.
+		if err == nil {
+			_, err = sp.Exec(ctx, `UPDATE promo_codes SET bound_user_id = $2::uuid WHERE id = $1::uuid`,
+				promo.ID, t.ComplainantID)
 		}
 		if err == nil {
 			err = sp.Commit(ctx)

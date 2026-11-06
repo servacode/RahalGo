@@ -1187,15 +1187,16 @@ func (s *Service) validatePromo(ctx context.Context, q wallet.Querier, code, cus
 	var usedCount int
 	var expiresAt *time.Time
 	var maxDiscount *int64
-	var approvalState string
+	var approvalState, boundUser string
 	// **و`FOR UPDATE` هي القفل**: من وصل ثانياً ينتظر أن تُودَع الأولى، **ثمّ
 	// يقرأ عدّاداً محدَّثاً وقيداً مكتوباً** — فيُردّ كما يجب.
 	err := q.QueryRow(ctx, `
 		SELECT id, kind, value, min_order, first_order_only, once_per_user,
-		       max_uses, used_count, expires_at, active, max_discount, approval_state
+		       max_uses, used_count, expires_at, active, max_discount, approval_state,
+		       COALESCE(bound_user_id::text, '')
 		FROM promo_codes WHERE code = $1 FOR UPDATE`, code).
 		Scan(&id, &kind, &value, &minOrder, &firstOnly, &oncePerUser,
-			&maxUses, &usedCount, &expiresAt, &active, &maxDiscount, &approvalState)
+			&maxUses, &usedCount, &expiresAt, &active, &maxDiscount, &approvalState, &boundUser)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, 0, ErrInvalidPromo
 	}
@@ -1208,6 +1209,9 @@ func (s *Service) validatePromo(ctx context.Context, q wallet.Querier, code, cus
 	switch {
 	case !active, approvalState != "ok":
 		return nil, 0, ErrInvalidPromo
+	// **وكودٌ مربوطٌ بحسابٍ لا يستعمله غيرُه** (قرارُ المالك ٢٠٢٦-١١-٠٦) — مكافأةُ البلاغ.
+	case boundUser != "" && boundUser != customerID:
+		return nil, 0, ErrPromoNotYours
 	case expiresAt != nil && time.Now().After(*expiresAt):
 		return nil, 0, ErrPromoExpired
 	case maxUses != nil && usedCount >= *maxUses:
@@ -1379,6 +1383,7 @@ func (s *Service) PreviewPromo(ctx context.Context, code, customerID string, sub
 var promoRejections = map[string]bool{
 	ErrInvalidPromo.Code: true, ErrPromoMinOrder.Code: true, ErrPromoUsed.Code: true,
 	ErrPromoFirstOrder.Code: true, ErrPromoExhausted.Code: true, ErrPromoExpired.Code: true,
+	ErrPromoNotYours.Code: true,
 }
 
 // PromoRejection **أهذا رفضٌ للكود؟** — رمزُه وتفاصيلُه.

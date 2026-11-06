@@ -90,6 +90,10 @@ var (
 		"promo_already_used", "errors.promo_already_used")
 	ErrPromoFirstOrder = httpx.NewError(http.StatusBadRequest,
 		"promo_first_order_only", "errors.promo_first_order_only")
+	// ErrPromoNotYours **كودٌ مربوطٌ بحسابٍ آخر** (قرارُ المالك ٢٠٢٦-١١-٠٦) — مكافأةُ بلاغٍ
+	// لصاحبها وحدَه (`promo_codes.bound_user_id`).
+	ErrPromoNotYours = httpx.NewError(http.StatusBadRequest,
+		"promo_not_yours", "errors.promo_not_yours")
 	ErrPromoExhausted = httpx.NewError(http.StatusBadRequest,
 		"promo_exhausted", "errors.promo_exhausted")
 	ErrPromoExpired = httpx.NewError(http.StatusBadRequest,
