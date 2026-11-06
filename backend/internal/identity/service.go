@@ -1455,7 +1455,7 @@ func (s *Service) EnsureUserWithRoleTx(ctx context.Context, q dbtx.Querier,
 	err := q.QueryRow(ctx, `SELECT id::text FROM users WHERE phone = $1`, phone).Scan(&id)
 	if err == nil {
 		// **قائمٌ ⇒ يُمنَح الدورَ وحدَه** — **ولا تُمَسّ كلمتُه.**
-		if err := GrantRoleTx(ctx, q, id, role, &actorID); err != nil {
+		if err := GrantRoleTx(ctx, q, id, role, optActor(actorID)); err != nil {
 			return "", err
 		}
 		return id, nil
@@ -1528,10 +1528,19 @@ func (s *Service) EnsureUserWithRole(ctx context.Context, actorID, rawPhone, rol
 	if err != nil {
 		return nil, err
 	}
-	if err := s.repo.GrantRole(ctx, user.ID, role, &actorID); err != nil {
+	if err := s.repo.GrantRole(ctx, user.ID, role, optActor(actorID)); err != nil {
 		return nil, err
 	}
 	return user, nil
+}
+
+// optActor an empty actor (a system or QA caller) is NULL, not an empty string — an empty string is not a uuid and
+// Postgres refuses it (22P02), which surfaced as a 404 on an existing user.
+func optActor(actorID string) *string {
+	if actorID == "" {
+		return nil
+	}
+	return &actorID
 }
 
 // BootstrapAdmin يضمن وجود حساب أدمن أول (يُستدعى عند الإقلاع بهاتف من الإعدادات).
