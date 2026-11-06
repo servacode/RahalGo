@@ -307,6 +307,7 @@ func (f *driverFixture) armCompensation(t *testing.T) string {
 	t.Helper()
 	f.srv.orders.SetSettings(settings.NewStore(f.pool))
 	f.setSetting(t, "drivers.failed_compensation_percent", 50)
+	liftDriverCompCap(t, f)
 	return testdb.NewUser(t, f.pool, "admin")
 }
 
@@ -552,4 +553,17 @@ func TestEmergency_PickupNoteReachesNextDriver(t *testing.T) {
 	if v := orders.ViewFor(orders.AudienceDriver, o); v["pickup_note"] == nil || v["pickup_note"] == "" {
 		t.Errorf("pickup_note غائبٌ عن حمولة السائق: %v", v["pickup_note"])
 	}
+}
+
+// liftDriverCompCap **يرفع سقفَ تعويض السائق (صفر = بلا سقف) ويرجعه بعد الاختبار.**
+//
+// اختباراتُ الموافقة تدفع ٢٥٠٠–٣٠٠٠ فوق السقف الافتراضيّ (٥٠٠) وموافقُها ليس المالك. كانت
+// تنجح بسقف ٤٠٠٠ تركه `TestCOMP_AboveCapOnlyOwner` بالقاعدة (تنظيفُه كان يمسح جدول `settings`
+// لا `app_settings`) فتسقط حين تُشغَّل وحدَها. والسقفُ نفسُه يُختبر هناك.
+func liftDriverCompCap(t *testing.T, f *driverFixture) {
+	t.Helper()
+	f.setSetting(t, "compensations.cap_driver", 0)
+	t.Cleanup(func() {
+		_, _ = f.pool.Exec(context.Background(), `DELETE FROM app_settings WHERE key = 'compensations.cap_driver'`)
+	})
 }

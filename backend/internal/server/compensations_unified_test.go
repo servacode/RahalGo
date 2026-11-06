@@ -24,6 +24,7 @@ import (
 // compTreasury **خزينةٌ للاختبار** — القائمةُ إن وُجدت، وإلّا تُنشأ.
 func compTreasury(t *testing.T, f *driverFixture) string {
 	t.Helper()
+	liftDriverCompCap(t, f)
 	ctx := context.Background()
 	var id string
 	if err := f.pool.QueryRow(ctx,
@@ -159,7 +160,7 @@ func TestCOMP_AboveCapOnlyOwner(t *testing.T) {
 	f.srv.orders.SetSettings(settings.NewStore(f.pool))
 	f.setSetting(t, "compensations.cap_driver", 4000)
 	t.Cleanup(func() {
-		_, _ = f.pool.Exec(context.Background(), `DELETE FROM settings WHERE key = 'compensations.cap_driver'`)
+		_, _ = f.pool.Exec(context.Background(), `DELETE FROM app_settings WHERE key = 'compensations.cap_driver'`)
 	})
 	d := f.drivers[0]
 	orderID := f.problemOrderAt(t, "at_dropoff", d)
