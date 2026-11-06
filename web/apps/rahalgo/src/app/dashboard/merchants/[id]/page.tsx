@@ -89,6 +89,8 @@ interface Merchant {
   emergency_closed: boolean;
   /** أيستردّ بضاعةَ طلبٍ تعذّر تسليمُه — وعليه يظهر زرُّ الردّ في الطلبات. */
   accepts_returns: boolean;
+  /** هل لديه برنامج الأمين (٢٠٢٦-١١-٠٦) — بدونه لا مزامنةَ أسعار ولا رمزَ مادّة. */
+  uses_ameen?: boolean;
   /** طريقةُ تسويةِ مستحقّاته — نقدٌ أو محفظة (الأدمنُ ذو الصلاحيّة الماليّة يغيّرها). */
   settlement_method: "cash" | "wallet";
   /** **الشعار** — يُرى في رأس الملفّ، وفراغُه أيقونةُ متجر. */
@@ -120,6 +122,7 @@ export default function MerchantProfilePage() {
   const [editOpen, setEditOpen] = useState(false);
   const [error, setError] = useState("");
   const [savingReturns, setSavingReturns] = useState(false);
+  const [savingAmeen, setSavingAmeen] = useState(false);
   // **ومن لا يملك قراءةَ المتجر لا يُنادي بابَه** (فحصُ المتصفّح ٢٠٢٦-١٠-٠٥):
   // المالية تصل الصفحةَ من ملفّ صاحب المتجر، فكانت تُردّ ٤٠٣ وتُعرض
   // رسالةَ الخطأ حمراءَ بدل «غير مسموح».
@@ -151,6 +154,25 @@ export default function MerchantProfilePage() {
       setError(errorText(err));
     }
   }, [id, canRead]);
+
+  /** **«لديه برنامج الأمين؟»** — يُحفظ فوراً ثمّ يُعاد التحميل. */
+  const setUsesAmeen = useCallback(
+    async (v: boolean) => {
+      setSavingAmeen(true);
+      try {
+        await api(`/api/v1/admin/merchants/${id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ uses_ameen: v }),
+        });
+        await load();
+      } catch (err) {
+        setError(errorText(err));
+      } finally {
+        setSavingAmeen(false);
+      }
+    },
+    [id, load],
+  );
 
   /** بندُ الاسترداد — يُحفظ فوراً ثمّ يُعاد التحميلُ ليُقرأ من القاعدة. */
   const setAcceptsReturns = useCallback(
@@ -323,6 +345,22 @@ export default function MerchantProfilePage() {
               ))}
             </dd>
           </div>
+          <div className="flex items-center justify-between gap-3 sm:col-span-2">
+            <dt className="shrink-0 text-sm text-ink-muted">{P.usesAmeen}</dt>
+            <dd className="flex gap-1" data-testid="admin-uses-ameen">
+              {[true, false].map((v) => (
+                <Button
+                  key={String(v)}
+                  size="sm"
+                  variant={(mr.uses_ameen === true) === v ? "primary" : "secondary"}
+                  disabled={savingAmeen || !canEdit}
+                  onClick={() => void setUsesAmeen(v)}
+                >
+                  {v ? P.ameenYes : P.ameenNo}
+                </Button>
+              ))}
+            </dd>
+          </div>
         </dl>
         <MerchantSettlement merchantId={mr.id} method={mr.settlement_method} onChanged={load} />
         {/* **«انضمّ متجر جديد» — و«لا ترسل»** (قرارُ المالك ٢٠٢٦-١٠-٢١). */}
@@ -331,7 +369,7 @@ export default function MerchantProfilePage() {
         {/* **موظّفو المتجر ورقمُ الطلبات بحسب الدوام** (قرارُ المالك ٢٠٢٦-١٠-٢٠). */}
         <StoreStaffAdmin merchantId={mr.id} canManage={canCall("POST", "/merchants/{id}/staff")} />
         <OrderPhonesAdmin merchantId={mr.id} canManage={canCall("PUT", "/merchants/{id}/order-phones")} />
-        {canEditMenu && <PriceSyncAdmin merchantId={mr.id} />}
+        {canEditMenu && mr.uses_ameen === true && <PriceSyncAdmin merchantId={mr.id} />}
         {canCall("DELETE", "/merchants/{id}") && (
           <DeleteMerchantButton merchantId={mr.id} name={mr.name} onDeleted={() =>
             /* **بعد الحذف إلى قائمة المتاجر الموجودة** — `/dashboard/merchants` بلا صفحةٍ فكان يردّ ٤٠٤

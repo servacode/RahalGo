@@ -144,7 +144,7 @@ fun MenuScreen(
             // **المشروباتُ للمطاعم وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
             drinksAllowed = vm.drinks.allowed,
             // **ورقمُ المادّة بالأمين** (٢٠٢٦-١١-٠٤) — كالويب.
-            amenLinkAllowed = true,
+            amenLinkAllowed = vm.usesAmeen,
             // **لمسةُ الصورة تكبّرها** (٢٠٢٦-١١-٠٦).
             zoomImage = true,
         )
@@ -160,6 +160,12 @@ fun MenuScreen(
     if (vm.bulk.open) {
         BackHandler { vm.bulk.close() }
         com.rahalgo.ui.menu.BulkPriceEditor(vm.bulk, vm.sections)
+        return
+    }
+
+    // **التصوير السريع يغطّي الشبكةَ** (٢٠٢٦-١١-٠٦).
+    if (vm.quick.open) {
+        com.rahalgo.merchant.quickphoto.QuickPhotoScreen(vm.quick)
         return
     }
 
@@ -234,6 +240,10 @@ private fun ItemsList(
         onDrinks = { vm.drinks.show() },
         drinksAllowed = vm.drinks.allowed,
         addLabel = stringResource(R.string.item_add),
+        quickPhotoLabel = byId.values.count { it.imageUrl.isNullOrBlank() && it.imageThumbUrl.isNullOrBlank() }
+            .takeIf { it > 0 && !vm.suspended }
+            ?.let { stringResource(R.string.qp_open, it) },
+        onQuickPhoto = { vm.quick.show() },
         onAdd = {
             // **ومن داخل قسمٍ يُضاف إليه** — فلا يُعيد اختيارَ ما هو فيه.
             when {

@@ -18,7 +18,7 @@ import (
 func TestPriceSyncAgent_TokenPicksStore(t *testing.T) {
 	f := newDriverFixture(t, 0)
 	ctx := context.Background()
-	if _, err := f.pool.Exec(ctx, `UPDATE merchants SET price_sync_token_hash = $2 WHERE id = $1`,
+	if _, err := f.pool.Exec(ctx, `UPDATE merchants SET uses_ameen = true, price_sync_token_hash = $2 WHERE id = $1`,
 		f.merchantID, syncTokenHash("rgs_test")); err != nil {
 		t.Fatal(err)
 	}
@@ -73,7 +73,7 @@ func TestPriceSyncAgent_TokenPicksStore(t *testing.T) {
 func TestPriceSyncPoll_SyncNow(t *testing.T) {
 	f := newDriverFixture(t, 0)
 	ctx := context.Background()
-	if _, err := f.pool.Exec(ctx, `UPDATE merchants SET price_sync_token_hash = $2, price_sync_requested_at = NULL WHERE id = $1`,
+	if _, err := f.pool.Exec(ctx, `UPDATE merchants SET uses_ameen = true, price_sync_token_hash = $2, price_sync_requested_at = NULL WHERE id = $1`,
 		f.merchantID, syncTokenHash("rgs_poll")); err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +140,7 @@ func TestPriceSyncAgentV2_ConfigStatusDownload(t *testing.T) {
 	t.Setenv("AGENT_DIR", dir)
 	owner := testdb.NewUser(t, f.pool, "merchant")
 	if _, err := f.pool.Exec(ctx, `
-		UPDATE merchants SET owner_user_id = $2, price_sync_sql_query = 'SELECT Code AS code, Price AS price FROM mt000',
+		UPDATE merchants SET uses_ameen = true, owner_user_id = $2, price_sync_sql_query = 'SELECT Code AS code, Price AS price FROM mt000',
 		       price_sync_interval_minutes = 3 WHERE id = $1`, f.merchantID, owner); err != nil {
 		t.Fatal(err)
 	}

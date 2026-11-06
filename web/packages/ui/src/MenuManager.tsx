@@ -570,10 +570,15 @@ export function ItemModal({
   const [priceUsd, setPriceUsd] = useState(usdText(item?.merchant_price_usd ?? null));
   const usdValue = parseUsd(priceUsd);
   const [rate, setRate] = useState<number | null>(null);
+  /** **هل لدى المتجر برنامج الأمين؟** (٢٠٢٦-١١-٠٦) — بدونه لا حقلَ رمزٍ ولا باركود. */
+  const [usesAmeen, setUsesAmeen] = useState(false);
   useEffect(() => {
     if (!paths.merchant) return;
-    api<{ exchange_rate?: number | null }>(paths.merchant(merchantID))
-      .then((r) => setRate(r.exchange_rate ?? null))
+    api<{ exchange_rate?: number | null; uses_ameen?: boolean }>(paths.merchant(merchantID))
+      .then((r) => {
+        setRate(r.exchange_rate ?? null);
+        setUsesAmeen(r.uses_ameen === true);
+      })
       .catch(() => setRate(null)); // @empty-ok — بلا سعرٍ يُحفظ الدولارُ ويقول الخادمُ إن لزم.
   }, [api, paths, merchantID]);
   /* ══════════════════════════════════════════════════════════════════
@@ -634,8 +639,7 @@ export function ItemModal({
       ...(usd ? { price_usd: usdValue } : { price: Number(price) || 0 }),
       // **والفراغُ الصريح يرفع التصنيف** — يقرؤه الخادمُ «ارفع» لا «بلا تغيير».
       platform_section_id: psID,
-      external_code: amenCode.trim(),
-      barcode: barcode.trim(),
+      ...(usesAmeen ? { external_code: amenCode.trim(), barcode: barcode.trim() } : {}),
       modifiers: groups.map((g) => ({
         ...g,
         options: g.options.map(({ _usd, price_delta_usd: _old, ...rest }) => {
@@ -783,6 +787,7 @@ export function ItemModal({
         </div>
         {imageUpload?.(item?.image_thumb_url, setImageID)}
 
+        {usesAmeen && (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" data-testid="item-amen-link">
           <div>
             <Input
@@ -804,6 +809,7 @@ export function ItemModal({
             onChange={(e) => setBarcode(e.target.value)}
           />
         </div>
+        )}
 
         <div>
           <span className="mb-1 block text-sm font-medium">{L.modifiers}</span>

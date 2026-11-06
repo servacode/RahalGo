@@ -12,6 +12,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   getMessages,
   defaultLocale,
@@ -92,7 +93,13 @@ const EMPTY: Mapping = {
 
 export default function PriceSyncPage() {
   const { store } = useStore();
+  const router = useRouter();
   const id = store?.id ?? "";
+  /** **بلا برنامج الأمين لا صفحةَ هنا** (٢٠٢٦-١١-٠٦) — ويرجع إلى القائمة. */
+  const noAmeen = !!store && store.uses_ameen !== true;
+  useEffect(() => {
+    if (noAmeen) router.replace("/store/menu");
+  }, [noAmeen, router]);
   const [info, setInfo] = useState<Info | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
@@ -102,14 +109,14 @@ export default function PriceSyncPage() {
   const [error, setError] = useState("");
 
   const load = useCallback(() => {
-    if (!id) return;
+    if (!id || noAmeen) return;
     api<Info>(`/api/v1/merchant/stores/${id}/price-sync`)
       .then((i) => {
         setInfo(i);
         if (i.mapping) setMap({ ...EMPTY, ...i.mapping });
       })
       .catch((e) => setError(errorText(e)));
-  }, [id]);
+  }, [id, noAmeen]);
   useEffect(load, [load]);
 
   async function send(f: File, mapping: Mapping | null, dry: boolean) {
@@ -252,6 +259,8 @@ export default function PriceSyncPage() {
       ))}
     </Select>
   );
+
+  if (noAmeen) return null;
 
   return (
     <div className="flex flex-col gap-3">

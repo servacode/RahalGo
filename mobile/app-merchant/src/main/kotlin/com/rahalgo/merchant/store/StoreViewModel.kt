@@ -396,6 +396,22 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** **هل لديه برنامج الأمين؟** — قرارُ المالك ٢٠٢٦-١١-٠٦. */
+    fun setUsesAmeen(uses: Boolean) {
+        val id = store?.id ?: return
+        if (uses == store?.usesAmeen) return
+        saving = true
+        viewModelScope.launch {
+            runCatching { api.settings(id, StoreSettingsInput(usesAmeen = uses)) }
+                .onSuccess {
+                    store = store?.copy(usesAmeen = uses)
+                    Flash.ok(com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.ok_ameen_saved))
+                }
+                .onFailure { Flash.fail(err(it)) }
+            saving = false
+        }
+    }
+
     fun setPrepMinutes(minutes: Int) {
         val id = store?.id ?: return
         if (minutes <= 0) return
@@ -551,4 +567,4 @@ class StoreViewModel(app: Application) : AndroidViewModel(app) {
 enum class SetupStep { Logo, Sections, Address, Hours, Settlement, Returns }
 
 /** **صفحاتُ الإعداد التي تُفتح من «متجري».** */
-enum class StorePage { Hours, Sections, Address, Settlement, Returns, Rate, Prep }
+enum class StorePage { Hours, Sections, Address, Settlement, Returns, Rate, Prep, Ameen }

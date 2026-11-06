@@ -9874,6 +9874,24 @@
       "idempotent": true
     },
     {
+      "method": "GET",
+      "path": "/api/v1/merchant/stores/{id}/menu/no-photo",
+      "handler": "handleMerchantNoPhotoItems",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "@page",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "POST",
       "path": "/api/v1/merchant/stores/{id}/menu/prices",
       "handler": "handleMerchantBulkPrice",
@@ -10331,6 +10349,10 @@
         {
           "name": "logo_media_id",
           "type": "?string"
+        },
+        {
+          "name": "uses_ameen",
+          "type": "?bool"
         }
       ],
       "response": [

@@ -302,6 +302,11 @@ fun StoreScreen(
                         warn = !store.returnsConfirmed,
                     ) { vm.page = StorePage.Returns }
                     SettingsRow(
+                        icon = com.rahalgo.ui.R.drawable.ic_check,
+                        label = stringResource(R.string.home_row_ameen),
+                        value = stringResource(if (store.usesAmeen) R.string.home_val_ameen_yes else R.string.home_val_ameen_no),
+                    ) { vm.page = StorePage.Ameen }
+                    SettingsRow(
                         icon = com.rahalgo.ui.R.drawable.ic_chart,
                         label = stringResource(R.string.home_row_rate_short),
                         value = store.exchangeRate?.let { com.rahalgo.ui.menu.usdText(it) } ?: notSet,
@@ -732,6 +737,7 @@ private fun StorePageScreen(
                     StorePage.Settlement -> R.string.home_row_settlement
                     StorePage.Returns -> R.string.home_row_returns
                     StorePage.Rate -> R.string.home_row_rate_short
+                    StorePage.Ameen -> R.string.home_row_ameen
                     StorePage.Prep -> R.string.home_row_prep
                 },
             ),
@@ -805,6 +811,27 @@ private fun StorePageScreen(
                         sub = "",
                         selected = store.returnsConfirmed && !store.acceptsReturns,
                     ) { vm.setAcceptsReturns(false) },
+                    enabled = !vm.saving && !suspended,
+                )
+            }
+            StorePage.Ameen -> Card {
+                Text(stringResource(R.string.ameen_q), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
+                Spacer(Modifier.height(Rahal.space.xs))
+                Text(stringResource(R.string.ameen_q_hint), style = MaterialTheme.typography.bodySmall)
+                Spacer(Modifier.height(Rahal.space.sm))
+                IconChoicePair(
+                    first = IconChoice(
+                        icon = com.rahalgo.ui.R.drawable.ic_check,
+                        title = stringResource(R.string.ameen_yes),
+                        sub = "",
+                        selected = store.usesAmeen,
+                    ) { vm.setUsesAmeen(true) },
+                    second = IconChoice(
+                        icon = R.drawable.ic_block,
+                        title = stringResource(R.string.ameen_no),
+                        sub = "",
+                        selected = !store.usesAmeen,
+                    ) { vm.setUsesAmeen(false) },
                     enabled = !vm.saving && !suspended,
                 )
             }

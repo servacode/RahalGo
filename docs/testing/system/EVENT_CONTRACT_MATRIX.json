@@ -816,7 +816,7 @@
     },
     {
       "file": "internal/server/merchant_handlers.go",
-      "line": 579,
+      "line": 581,
       "call": "NotifyOps",
       "kind": "Account",
       "entity": "merchant",

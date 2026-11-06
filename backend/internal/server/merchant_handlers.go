@@ -130,6 +130,8 @@ type merchantStore struct {
 	ExchangeRate *float64 `json:"exchange_rate"`
 	// DisplayCurrency بأيّ عملةٍ يرى زبونُه أسعارَه — «SYP» أو «USD».
 	DisplayCurrency string `json:"display_currency"`
+	// UsesAmeen هل لديه برنامج الأمين — لا حقل رمز ولا مزامنة أسعار بدونه (0514).
+	UsesAmeen bool `json:"uses_ameen"`
 }
 
 // handleMerchantStores متاجر صاحب الحساب.
@@ -152,7 +154,7 @@ func (s *Server) handleMerchantStores(w http.ResponseWriter, r *http.Request) {
 		       m.settlement_confirmed_at IS NOT NULL, m.accepts_returns,
 		       m.returns_confirmed_at IS NOT NULL,
 		       EXISTS (SELECT 1 FROM merchant_hours h WHERE h.merchant_id = m.id),
-		       m.exchange_rate::float8, m.display_currency
+		       m.exchange_rate::float8, m.display_currency, m.uses_ameen
 		FROM merchants m
 		JOIN categories c ON c.id = m.category_id
 		LEFT JOIN media lm ON lm.id = m.logo_media_id
@@ -170,7 +172,7 @@ func (s *Server) handleMerchantStores(w http.ResponseWriter, r *http.Request) {
 			&m.AddressText, &m.Lat, &m.Lng, &m.OpenNow, &m.NextOpen,
 			&m.SettlementMethod, &m.UnpaidCashDue,
 			&m.SettlementConfirmed, &m.AcceptsReturns, &m.ReturnsConfirmed, &m.HasHours,
-			&m.ExchangeRate, &m.DisplayCurrency); err != nil {
+			&m.ExchangeRate, &m.DisplayCurrency, &m.UsesAmeen); err != nil {
 			s.respondErr(w, err)
 			return
 		}

@@ -473,6 +473,12 @@ export default function StoreHome() {
           href="/store/settings/returns"
         />
         <Row
+          icon={IconCheck}
+          label={HM.rowAmeen}
+          value={store.uses_ameen ? HM.ameenYesShort : HM.ameenNoShort}
+          href="/store/settings/ameen"
+        />
+        <Row
           icon={IconTrendUp}
           label={HM.rowRate}
           value={store.exchange_rate ? usdText(store.exchange_rate) : notSet}

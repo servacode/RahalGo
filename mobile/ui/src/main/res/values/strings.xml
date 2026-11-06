@@ -114,6 +114,7 @@
     <string name="err_offer_platform_live_until">يوجد عرض من رحّال غو على هذا الصنف حتى %1$s</string>
     <string name="err_offer_item_unavailable">هذا الصنف غير متوفر — فعّله أولاً ثم أنزل عليه عرضاً</string>
     <string name="err_price_sync_empty">الملف فارغ أو كبير جداً — يجب أن يحتوي على مواد (حتى 50 ألف مادة)</string>
+    <string name="err_ameen_off">برنامج الأمين غير مفعّل لهذا المتجر. فعّله من إعدادات المتجر أولاً</string>
     <string name="err_price_sync_file_type">تعذّرت قراءة الملف. احفظه من الأمين بصيغة Excel (xlsx) أو CSV وحاول مرة أخرى</string>
     <string name="err_price_sync_mapping">يوجد عمود مختار غير موجود في الملف — اختر الأعمدة من جديد</string>
     <string name="err_external_code_taken">هذا الرقم مربوط بصنف آخر</string>
