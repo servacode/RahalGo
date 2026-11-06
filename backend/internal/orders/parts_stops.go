@@ -638,8 +638,11 @@ func editCollectedStoresTx(ctx context.Context, q dbtx.Querier, orderID, status 
 
 // markEmptyPartsTx **قسمٌ خرجت بنودُه كلُّها بتعديل الطلب يصير «انشال»** — بذنب المنصّة، بحدثه.
 // **قبل قبول الطلب «رُفض».** ولقطةُ ما خرج في سجلّ التعديل نفسِه.
+//
+// **ويردّ ما خرج** — فيُخبَر بعد التثبيت متجرُه وسائقُه كشيل المكتب (`notifyPartRemovals`).
 func markEmptyPartsTx(ctx context.Context, q dbtx.Querier, orderID, actorID, reason, status string,
-	driverID *string) error {
+	driverID *string) ([]partRemoval, error) {
+	reason = strings.TrimSpace(reason)
 	rows, err := q.Query(ctx, `
 		UPDATE order_parts p
 		   SET status = CASE WHEN p.status = 'pending' THEN 'rejected' ELSE 'removed' END,
@@ -648,30 +651,31 @@ func markEmptyPartsTx(ctx context.Context, q dbtx.Querier, orderID, actorID, rea
 		 WHERE m.id = p.merchant_id AND p.order_id = $1 AND p.status IN ('pending', 'accepted')
 		   AND NOT EXISTS (SELECT 1 FROM order_items oi WHERE oi.order_id = p.order_id
 		                    AND oi.merchant_id = p.merchant_id)
-		RETURNING p.merchant_id::text, m.name`, orderID, strings.TrimSpace(reason))
+		RETURNING p.merchant_id::text, m.name, COALESCE(m.owner_user_id::text, ''), p.status`,
+		orderID, reason)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	var refs []partRef
+	var out []partRemoval
 	for rows.Next() {
-		var r partRef
-		if err := rows.Scan(&r.merchantID, &r.name); err != nil {
+		r := partRemoval{reason: reason, fault: FaultPlatform, continued: true, byEdit: true}
+		if err := rows.Scan(&r.merchantID, &r.name, &r.owner, &r.status); err != nil {
 			rows.Close()
-			return err
+			return nil, err
 		}
-		refs = append(refs, r)
+		out = append(out, r)
 	}
 	rows.Close()
 	if err := rows.Err(); err != nil {
-		return err
+		return nil, err
 	}
-	for _, r := range refs {
+	for _, r := range out {
 		if err := partEventTx(ctx, q, orderID, status, actorID,
 			fmt.Sprintf("انشال قسم %s بتعديل الطلب — %s", r.name, reason), driverID, r.merchantID); err != nil {
-			return err
+			return nil, err
 		}
 	}
-	return nil
+	return out, nil
 }
 
 // compensationStoreTx **على أيّ متجرٍ تُكتب مطالبةُ تعويض السائق بذنب متجر** (٦أ): طلبُ المتجر

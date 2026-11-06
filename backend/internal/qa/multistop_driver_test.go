@@ -629,6 +629,16 @@ func TestMultiStop_EmergencyBetweenStops(t *testing.T) {
 		t.Errorf("قسمُ الأوّل بعد الطارئ: %s بيد %s — يُنتظر picked_up بيد الأوّل", st, by)
 	}
 	y := s.h.driverOf(oid)
+	// **والبضاعةُ ما زالت بيد الأوّل ⇒ لا إلغاءَ ولا إفشال** (`stops_in_hand`) — قرارُ المالك ٢٠٢٦-١١-٠٦.
+	// **والإفشالُ من «مُسند» تردّه الآلةُ قبلها** (`invalid_transition`) — مقفولٌ في الحالين.
+	if r := s.h.POST("/api/v1/admin/orders/"+oid+"/transition", s.admin.Token,
+		map[string]any{"to": "cancelled", "note": "اختبار"}); r.Code != http.StatusConflict || r.Err() != "stops_in_hand" {
+		t.Errorf("إلغاءٌ والتسليمُ للجديد معلّق: %s — يُنتظر 409 stops_in_hand", r)
+	}
+	if r := s.h.POST("/api/v1/admin/orders/"+oid+"/transition", s.admin.Token,
+		map[string]any{"to": "failed", "note": "اختبار"}); r.Code != http.StatusConflict {
+		t.Errorf("إفشالٌ والتسليمُ للجديد معلّق: %s — يُنتظر 409", r)
+	}
 	o := driverListed(t, s.h, y, oid)
 	if a := stopOf(o, s.mA.ID); a == nil || a["handover"] != true || o["next_stop"] != s.mA.ID {
 		t.Errorf("**المحطّةُ الأولى ليست «تسليماً» للجديد**: %v next=%v", a, o["next_stop"])
