@@ -23,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -84,6 +85,34 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
         if (online) actions.onReconnected()
     }
 
+    // ══════════════════════════════════════════════════════════════════
+    // **وشرحُ أوّلِ مرّة — فقاعةٌ فوق الحقل الحاليّ وحدَه** (قرارُ المالك ٢٠٢٦-١١-٠٧)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **والقرارُ في `GuideSteps.spot`** — الشاشةُ تقول أيَّ حقلٍ لمسه وما اكتمل.
+    // **والفقاعةُ في سطرها لا فوق الحقل** فلا تحجب الكتابةَ ولا الكيبورد.
+    val guide = SignupGuide.shared
+    var focused by remember(state.step) { mutableStateOf<GuideSpot?>(null) }
+    val spot = GuideSteps.spot(
+        step = state.step,
+        nameFilled = name.isNotBlank(),
+        passwordDone = GuideSteps.passwordDone(password, password2, state.passwordMin),
+        focused = focused,
+    )
+    val showGuide = guide.active && !state.recovery
+
+    @Composable
+    fun Hint(at: GuideSpot) {
+        if (showGuide && spot == at) {
+            GuideBubble(text = guideText(at, state.passwordMin), onSkip = guide::finish)
+            Spacer(Modifier.height(Rahal.space.xs))
+        }
+    }
+
+    fun Modifier.tracks(at: GuideSpot): Modifier = onFocusChanged {
+        if (it.isFocused) focused = at else if (focused == at) focused = null
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -120,13 +149,17 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
             // **والرقمُ يُكتب مرّةً واحدة** — ثمّ يُحمل في الحالة إلى
             // الخطوتين التاليتين. **ومن أعاد كتابتَه في كلّ خطوةٍ أخطأ في
             // واحدة** فسقط الرمزُ بلا سببٍ ظاهر.
-            SignupStep.PHONE -> PhoneField(
-                value = state.phone,
-                onChange = actions.setPhone,
-                enabled = !state.busy,
-            )
+            SignupStep.PHONE -> {
+                Hint(GuideSpot.PHONE)
+                PhoneField(
+                    value = state.phone,
+                    onChange = actions.setPhone,
+                    enabled = !state.busy,
+                )
+            }
 
             SignupStep.CODE -> {
+                Hint(GuideSpot.CODE)
                 CodeField(
                     value = code,
                     onChange = { code = it },
@@ -145,15 +178,17 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
             }
 
             SignupStep.DETAILS -> {
+                Hint(GuideSpot.NAME)
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
                     label = { Text(stringResource(R.string.signup_name)) },
                     singleLine = true,
                     enabled = !state.busy,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().tracks(GuideSpot.NAME),
                 )
                 Spacer(Modifier.height(10.dp))
+                Hint(GuideSpot.PASSWORD)
                 // **والعينُ هنا أيضا** — كلمةٌ تُكتب مرّةً واحدةً بلا
                 // تأكيد، **فمن أخطأ حرفاً ضبط كلمةً لا يعرفها** ثمّ عاد
                 // يستعيدها في أوّل يوم.
@@ -162,6 +197,7 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
                     onChange = { password = it },
                     enabled = !state.busy,
                     label = R.string.signup_password,
+                    modifier = Modifier.tracks(GuideSpot.PASSWORD),
                 )
 
                 // ══════════════════════════════════════════════════════
@@ -180,6 +216,8 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
                     onChange = { password2 = it },
                     enabled = !state.busy,
                     label = R.string.signup_password2,
+                    // **وتأكيدُها من خطوة كلمة السرّ** — فالفقاعةُ تبقى فوق الأولى.
+                    modifier = Modifier.tracks(GuideSpot.PASSWORD),
                 )
                 // **والخطأُ يُقال تحت الحقل لا عند الضغط** — من رآه
                 // مبكّراً أصلحه قبل أن يملأ ما بعده.
@@ -214,6 +252,7 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
                 // **واختياريٌّ صراحةً في نصّه**: حقلٌ لا يُعرف أإلزاميٌّ
                 // هو **يوقف من لا رمزَ عنده** عند آخر خطوةٍ في التسجيل.
                 Spacer(Modifier.height(10.dp))
+                Hint(GuideSpot.REFERRAL)
                 OutlinedTextField(
                     value = referral,
                     onValueChange = { referral = it.trim().uppercase() },
@@ -223,7 +262,7 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
                     },
                     singleLine = true,
                     enabled = !state.busy,
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().tracks(GuideSpot.REFERRAL),
                 )
             }
         }
@@ -341,6 +380,11 @@ data class SignupState(
      * **و«متابعة» حين لا يُطلب** — وزرٌّ يعد بما لا يفعل يُقرأ عطباً.
      */
     val needsCode: Boolean = false,
+    /**
+     * **أقلُّ طولٍ لكلمة السرّ** — من المنصّة (`password_min_length`)، وافتراضُه
+     * افتراضُ العقد (`Platform.passwordMinLength`). **لفقاعة الشرح** (`SignupGuide`).
+     */
+    val passwordMin: Int = 8,
     val error: String = "",
     /**
      * **أخطأُ الانقطاعِ وحدَه** — وهو يُمحى تلقائيّاً عند عودة الاتّصال

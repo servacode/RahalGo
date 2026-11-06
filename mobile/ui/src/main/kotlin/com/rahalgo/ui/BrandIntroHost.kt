@@ -1,6 +1,5 @@
 package com.rahalgo.ui
 
-import android.provider.Settings
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -11,7 +10,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.rahalgo.design.intro.BrandIntro
 
@@ -49,17 +47,10 @@ import com.rahalgo.design.intro.BrandIntro
  */
 @Composable
 fun BrandIntroHost() {
-    val context = LocalContext.current
 
     // **وحركاتُ النظام تُقرأ من إعداداته** — من أطفأها أراد ذلك،
     // **وتطبيقٌ يتجاهله يُقرأ معطوباً لا أنيقا.**
-    val reduceMotion = remember {
-        Settings.Global.getFloat(
-            context.contentResolver,
-            Settings.Global.ANIMATOR_DURATION_SCALE,
-            1f,
-        ) == 0f
-    }
+    val reduceMotion = rememberReduceMotion()
 
     var showing by remember { mutableStateOf(!shown) }
 

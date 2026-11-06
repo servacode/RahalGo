@@ -234,6 +234,15 @@
     <string name="signup_recover_login">تسجيل الدخول</string>
     <string name="signup_recover_reset">نسيت كلمة المرور</string>
     <string name="signup_recover_otp">دخول برمز</string>
+    <!-- **شرحُ إنشاء الحساب أوّلَ مرّة** (قرارُ المالك ٢٠٢٦-١١-٠٧) — `SignupGuide.kt`،
+         وهي نفسُها في الموقع (`shop.auth.guide*` بـ ar.json) ويحرسها `check-signup-guide.mjs`. -->
+    <string name="guide_login">جديد عنّا؟ اكبس هون لتعمل حساب</string>
+    <string name="guide_phone">اكتب رقم جوالك اللي عليه واتساب</string>
+    <string name="guide_code">وصلك كود من %1$d أرقام عالواتساب — اكتبه هون</string>
+    <string name="guide_name">اكتب اسمك</string>
+    <string name="guide_password">اختار كلمة سر من %1$d خانات أو أكتر — بتحتاجها لتفوت بعدين</string>
+    <string name="guide_referral">رمز الدعوة: ما بتحتاجه إلا إذا صديقك بعتلك ياه</string>
+    <string name="guide_skip">تخطّي الشرح</string>
     <!-- **ونصُّه نصُّ الويب حرفاً بحرف** (`i18n/ar.json`) — **ونصّان
          لمعنًى واحدٍ يفترقان يومَ يُصحَّح أحدُهما.** -->
     <string name="err_no_whatsapp">هذا الرقم غير مسجل في واتساب — استعمل رقما عليه واتساب</string>
