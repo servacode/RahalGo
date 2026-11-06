@@ -254,12 +254,15 @@ function Login({ next }: { next?: string }) {
       </form>
       )}
       <div className="mt-6 flex flex-col items-center gap-3 border-t border-line-soft pt-4 text-sm">
-        <p className="text-ink-muted">
-          {T.noAccount}{" "}
-          <Link href={`/signup${q ? `?${q}` : ""}`} className="font-bold text-accent-text hover:underline">
-            {T.signupOpen}
-          </Link>
-        </p>
+        {/* **ظاهرٌ لا مخبّأ** (طلبُ المالك ٢٠٢٦-١١-٠٦) — سطرُ السؤال وتحته زرٌّ بعرض البطاقة، كالتطبيق. */}
+        <p className="text-ink-muted">{T.noAccount}</p>
+        <ButtonLink
+          href={`/signup${q ? `?${q}` : ""}`}
+          variant="secondary"
+          className="w-full py-3 text-base"
+        >
+          {T.signupOpen}
+        </ButtonLink>
         <Link href="/shop" className="text-ink-muted hover:text-ink">
           {T.guest}
         </Link>

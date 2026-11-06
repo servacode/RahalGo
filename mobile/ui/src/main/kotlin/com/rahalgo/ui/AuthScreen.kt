@@ -263,9 +263,22 @@ fun AuthScreen(
         }
         // **وبابُ الحساب الجديد تحت الدخول لا فوقه** — أكثرُ من يفتح
         // الشاشةَ له حسابٌ أصلا، **والتسجيلُ مرّةٌ في العمر.**
+        // **وظاهرٌ لا مخبّأ** (طلبُ المالك ٢٠٢٦-١١-٠٦: «الناس عم تخربط وما عم تعرف من وين تسجّل») —
+        // سطرُ «ليس لديك حساب؟» وتحته زرٌّ محدَّدٌ بعرض الشاشة، لا رابطٌ نصّيٌّ صغير.
         if (signup) {
-            RahalTextButton(onClick = actions.signup, enabled = !state.busy) {
-                Text(stringResource(R.string.signup_open), color = Rahal.colors.accentInk)
+            Spacer(Modifier.height(20.dp))
+            Text(
+                stringResource(R.string.signup_question),
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Spacer(Modifier.height(8.dp))
+            RahalOutlineButton(
+                onClick = actions.signup,
+                enabled = !state.busy,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(stringResource(R.string.signup_new_account))
             }
         }
         Spacer(Modifier.height(40.dp))

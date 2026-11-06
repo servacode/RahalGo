@@ -219,6 +219,8 @@
     <!-- **إنشاء حساب — للزبون وحدَه** -->
     <string name="signup_title">إنشاء حساب جديد</string>
     <string name="signup_open">ليس لديك حساب؟ إنشاء حساب جديد</string>
+    <string name="signup_question">ليس لديك حساب؟</string>
+    <string name="signup_new_account">إنشاء حساب جديد</string>
     <string name="signup_hint_phone">اكتب رقمك لإنشاء حسابك</string>
     <string name="signup_hint_code">اكتب الرمز الذي وصلك</string>
     <string name="signup_hint_details">اسمك وكلمة مرورك — وبها تدخل بعد اليوم</string>
