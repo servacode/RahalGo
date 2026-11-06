@@ -97,7 +97,8 @@ func (s *Server) handleRepMerchantDetail(w http.ResponseWriter, r *http.Request)
 	if bucket != "delivered" && bucket != "cancelled" {
 		bucket = ""
 	}
-	where := `WHERE o.merchant_id = $1 AND ($2 = '' OR
+	// **وطلبٌ بعدّة محطّات فيه قسمٌ حيٌّ لهذا المتجر طلبُه أيضاً** (C8) — لا متجرُه الأوّلُ وحدَه.
+	where := `WHERE ` + orders.LiveStoreOrdersSQL("$1") + ` AND ($2 = '' OR
 	          ($2 = 'delivered' AND o.status = 'delivered') OR
 	          ($2 = 'cancelled' AND o.status IN ('rejected','cancelled','failed','refunded')))`
 
@@ -112,7 +113,12 @@ func (s *Server) handleRepMerchantDetail(w http.ResponseWriter, r *http.Request)
 	// الجمع لا الاختيار: الطلب المُسترجَع له قيدان يلغي أحدهما الآخر فيظهر صفراً
 	// — وهو الصدق بعينه، لا إخفاءَ السطر ولا إظهارَ عمولةٍ سُحبت.
 	rows, err := s.pg.Query(ctx, `
-		SELECT o.number, o.status, o.cancel_reason, o.total, o.subtotal, o.delivery_fee,
+		-- **وفي طلبٍ بعدّة محطّات: بضاعةُ هذا المتجر وحدَها** (C8) — لا مجموعُ الطلب ولا توصيلُه،
+		-- **وهامشُ بنوده هو، ونصيبُه عنه.**
+		SELECT o.number, o.status, o.cancel_reason,
+		       CASE WHEN o.stops > 1 THEN `+orders.StoreGoodsSQL("$1")+` ELSE o.total END,
+		       CASE WHEN o.stops > 1 THEN `+orders.StoreGoodsSQL("$1")+` ELSE o.subtotal END,
+		       CASE WHEN o.stops > 1 THEN 0 ELSE o.delivery_fee END,
 		       -- **الهامشُ لا عمولةُ المتاجر.**
 		       --
 		       -- **ونصيبُ المندوب نسبةٌ منه** — فعرضُ عمولةِ المتاجر بجانبه
@@ -122,7 +128,8 @@ func (s *Server) handleRepMerchantDetail(w http.ResponseWriter, r *http.Request)
 		       --
 		       -- (قرارُ المالك ٢٠٢٦-٠٨-٠٤: «يجب أن تجلب هامشَ الربح بدل عمولة
 		       -- المنصة، والاسمُ يبقى عمولة المنصة».)
-		       `+orders.OrderMarginSQL("o.id")+`, o.created_at, o.delivered_at,
+		       CASE WHEN o.stops > 1 THEN `+orders.StoreMarginSQL("$1")+`
+		            ELSE `+orders.OrderMarginSQL("o.id")+` END, o.created_at, o.delivered_at,
 		       -- **والمشطوبُ ما كان سيُحتسب لولا الإلغاء.**
 		       --
 		       -- الدفترُ يُصفّر عمولةَ الطلب الملغى — وهو الصوابُ المحاسبيّ،
@@ -130,9 +137,7 @@ func (s *Server) handleRepMerchantDetail(w http.ResponseWriter, r *http.Request)
 		       -- للعرض وحدَه، **ويقوله الشطبُ صراحةً: رقمٌ كان ولم يصر.**
 		       --
 		       -- **وهو الهامشُ نفسُه** — فبنودُ الطلب باقيةٌ ولو أُلغي.
-		       COALESCE((SELECT sum(t.amount) FROM wallet_transactions t
-		                 WHERE t.user_id = $3 AND t.ref = o.id::text
-		                   AND t.kind IN ('commission', 'adjustment')), 0)
+		       `+orders.RepStoreShareSQL("$1", "$3")+`
 		FROM orders o `+where+`
 		ORDER BY o.number DESC LIMIT $4 OFFSET $5`,
 		merchantID, bucket, uid, perPage, (page-1)*perPage)
@@ -193,12 +198,10 @@ func (s *Server) handleRepMerchantDetail(w http.ResponseWriter, r *http.Request)
 		SELECT count(*),
 		       count(*) FILTER (WHERE o.status = 'delivered'),
 		       count(*) FILTER (WHERE o.status IN ('rejected','cancelled','failed','refunded')),
-		       COALESCE(sum(o.total) FILTER (WHERE o.status = 'delivered'), 0),
-		       COALESCE((SELECT sum(t.amount) FROM wallet_transactions t
-		                 JOIN orders o2 ON t.ref <> '' AND o2.id::text = t.ref
-		                 WHERE t.user_id = $2 AND o2.merchant_id = $1
-		                   AND t.kind IN ('commission', 'adjustment')), 0)
-		FROM orders o WHERE o.merchant_id = $1`, merchantID, uid).
+		       COALESCE(sum(CASE WHEN o.stops > 1 THEN `+orders.StoreGoodsSQL("$1")+` ELSE o.total END)
+		                FILTER (WHERE o.status = 'delivered'), 0),
+		       COALESCE(sum(`+orders.RepStoreShareSQL("$1", "$2")+`), 0)
+		FROM orders o WHERE `+orders.LiveStoreOrdersSQL("$1"), merchantID, uid).
 		Scan(&sum.Orders, &sum.Delivered, &sum.Cancelled, &sum.Sales, &sum.MyEarnings); err != nil {
 		s.respondErr(w, err)
 		return

@@ -48,6 +48,10 @@ func (s *Service) RateOrder(ctx context.Context, actorID string, actorRoles []st
 	err := s.db.QueryRow(ctx, `
 		SELECT o.status, o.customer_id, o.driver_id,
 		       COALESCE(m.sales_rep_user_id = o.customer_id, false)
+		       -- **وفي طلبٍ بعدّة محطّات: مندوبُ أيِّ متجرٍ فيه.**
+		         OR (o.stops > 1 AND EXISTS (SELECT 1 FROM order_parts p
+		                                     JOIN merchants pm ON pm.id = p.merchant_id
+		                                     WHERE p.order_id = o.id AND pm.sales_rep_user_id = o.customer_id))
 		-- **ويُضمّ المتجرُ يساراً** — (الطلبُ الخاصّ ٢٠٢٦-٠٨-٠٩): لا متجرَ له.
 		--
 		-- **وضمٌّ صلبٌ يجعل تقييمَه يردّ «الطلب غير موجود»** — وهو مكتوبٌ في

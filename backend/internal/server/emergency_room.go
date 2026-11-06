@@ -515,8 +515,12 @@ func (s *Server) handleEmergencyDetail(w http.ResponseWriter, r *http.Request) {
 		list, err := s.emergencyOrderList(ctx, `
 			SELECT o.id::text, o.number, o.status, false, `+nameSQL("c")+`
 			  FROM orders o LEFT JOIN users c ON c.id = o.customer_id
-			 WHERE o.merchant_id = $1 AND o.closed_at IS NULL AND o.picked_up_at IS NULL
-			   AND o.status <> ALL($2)
+			 -- **وطلبٌ بعدّة محطّات لم يُستلم قسمُ هذا المتجر منه بعد** — يُشال قسمُه أو يُحوَّل.
+			 WHERE ((o.stops = 1 AND o.merchant_id = $1 AND o.picked_up_at IS NULL)
+			        OR (o.stops > 1 AND EXISTS (SELECT 1 FROM order_parts p
+			                                    WHERE p.order_id = o.id AND p.merchant_id = $1
+			                                      AND p.status IN ('pending', 'accepted'))))
+			   AND o.closed_at IS NULL AND o.status <> ALL($2)
 			 ORDER BY o.created_at`, *e.MerchantID, orders.TerminalStatuses())
 		if err != nil {
 			s.respondErr(w, err)

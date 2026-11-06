@@ -6,6 +6,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/media"
+	"github.com/servacode/rahalgo/backend/internal/orders"
 )
 
 // لوحة المندوب: كوده للدعوة، متاجره، عمولاته — قراءة فقط (الترويج يتم ميدانياً).
@@ -49,8 +50,9 @@ func (s *Server) handleRepMe(w http.ResponseWriter, r *http.Request) {
 	err := s.pg.QueryRow(r.Context(), `
 		SELECT u.invite_code, u.full_name,
 		       (SELECT count(*) FROM merchants m WHERE m.sales_rep_user_id = u.id),
-		       (SELECT count(*) FROM orders o JOIN merchants m ON m.id = o.merchant_id
-		        WHERE m.sales_rep_user_id = u.id AND o.status = 'delivered'),
+		       -- **وطلبٌ بعدّة محطّات يُعدّ لمندوب كلِّ متجرٍ حيٍّ فيه** — مرّةً واحدةً لكلّ مندوب.
+		       (SELECT count(*) FROM orders o
+		        WHERE `+orders.RepLiveOrdersSQL("u.id")+` AND o.status = 'delivered'),
 		       -- العمولة **الصافية** لا الإجمالية: العمولات ناقصَ ما عُكس منها عن
 		       -- طلبات مُسترجَعة. عرض الإجمالي كان يناقض بطاقات العملاء في الشاشة
 		       -- نفسها، ويَعِد المندوب بمالٍ سُحب منه فعلاً. (التسويات اليدوية من
@@ -73,8 +75,8 @@ func (s *Server) handleRepMe(w http.ResponseWriter, r *http.Request) {
 		       (SELECT count(*) FROM merchants m
 		        WHERE m.sales_rep_user_id = u.id AND m.rep_qualified_at IS NULL
 		          AND m.status = 'active'),
-		       (SELECT count(*) FROM orders o JOIN merchants m ON m.id = o.merchant_id
-		        WHERE m.sales_rep_user_id = u.id AND o.status = 'delivered'
+		       (SELECT count(*) FROM orders o
+		        WHERE `+orders.RepLiveOrdersSQL("u.id")+` AND o.status = 'delivered'
 		          AND date_trunc('month', o.delivered_at AT TIME ZONE 'Asia/Damascus')
 		            = date_trunc('month', now() AT TIME ZONE 'Asia/Damascus')),
 		       COALESCE((SELECT sum(t.amount) FROM wallet_transactions t
@@ -124,21 +126,27 @@ func (s *Server) handleRepMerchants(w http.ResponseWriter, r *http.Request) {
 		SELECT m.id, m.name, c.icon, c.name, lm.thumb_path, m.status,
 		       m.created_at::date::text,
 		       NULLIF(ou.phone::text, ''),
-		       (SELECT count(*) FROM orders o WHERE o.merchant_id = m.id AND o.status = 'delivered'),
+		       -- **وطلبٌ بعدّة محطّات فيه قسمٌ حيٌّ لهذا المتجر طلبُه أيضاً.**
+		       (SELECT count(*) FROM orders o WHERE `+orders.LiveStoreOrdersSQL("m.id")+` AND o.status = 'delivered'),
 		       -- «الملغية» تجمع كل نهاية غير التسليم: رفضٌ من المتجر، وإلغاءٌ من
 		       -- الزبون، وفشلُ توصيل، واسترجاعٌ بعد التسليم. تفريقها في بطاقة
 		       -- ملخّص يشتّت، والمندوب يقرأها سؤالاً واحداً: كم طلباً ضاع؟
-		       (SELECT count(*) FROM orders o WHERE o.merchant_id = m.id
+		       (SELECT count(*) FROM orders o WHERE `+orders.StoreOrdersSQL("m.id")+`
 		        AND o.status IN ('rejected', 'cancelled', 'failed', 'refunded')),
 		       -- العمولة **الصافية**: العمولات ناقصَ ما عُكس منها عن طلبات مُسترجَعة.
 		       -- عرض الإجمالي وحده يَعِد المندوب بمالٍ سُحب منه فعلاً.
 		       -- تسويات الإدارة اليدوية لا تدخل هنا: مرجعها فارغ فلا يطابق طلباً.
+		       -- **وفي طلبٍ بعدّة محطّات نصيبُه عن هذا المتجر وحدَه** (RepStoreShareSQL).
 		       COALESCE((SELECT sum(t.amount) FROM wallet_transactions t
 		                 JOIN orders o2 ON t.ref <> '' AND o2.id::text = t.ref
 		                 WHERE t.user_id = $1 AND t.kind IN ('commission', 'adjustment')
-		                   AND o2.merchant_id = m.id), 0),
+		                   AND o2.merchant_id = m.id AND o2.stops = 1), 0)
+		         + COALESCE((SELECT sum(`+orders.RepStoreShareSQL("m.id", "$1")+`) FROM orders o
+		                     WHERE o.stops > 1 AND o.id = ANY (ARRAY(
+		                           SELECT rp.order_id FROM order_parts rp
+		                            WHERE rp.merchant_id = m.id AND rp.rep_id = $1))), 0),
 		       (SELECT max(o.delivered_at) FROM orders o
-		        WHERE o.merchant_id = m.id AND o.status = 'delivered'),
+		        WHERE `+orders.LiveStoreOrdersSQL("m.id")+` AND o.status = 'delivered'),
 		       -- **عدّادُ التفعيل — بشرط القاعدة حرفياً لا بشرطٍ يشبهه.**
 		       --
 		       -- العمولة محجوزة حتى يُسلّم المتجرُ عدداً من الطلبات، والقاعدة

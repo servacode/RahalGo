@@ -634,13 +634,21 @@ func (s *Server) profitsMerchants(w http.ResponseWriter, r *http.Request, from, 
 	pg := pagingOf(r, 25)
 	ctes := `
 		WITH led AS (
-			SELECT t.user_id, t.kind, t.amount, o.id AS order_id, o.merchant_id AS order_merchant
+			SELECT t.id AS tx_id, t.user_id, t.kind, t.amount, o.id AS order_id, o.merchant_id AS order_merchant,
+			       o.stops
 			FROM wallet_transactions t
 			JOIN orders o ON o.id = ` + refUUID("t.ref") + `
 			WHERE t.kind IN ('merchant_earning','merchant_cash_accrued','compensation')
 			  AND ` + profitRange("t.created_at") + `
 		), led_m AS (
+			-- **وفي طلبٍ بعدّة محطّات: المتجرُ من صفّ تسويته** — مالكٌ لمتجرين في الطلب يُنسب
+			-- لكلٍّ مستحقُّه، لا لأوّلهما كلاهما.
 			SELECT COALESCE(
+			         CASE WHEN led.stops > 1 THEN COALESCE(
+			           (SELECT ms.merchant_id FROM merchant_settlements ms
+			             WHERE ms.order_id = led.order_id AND ms.earning_tx_id = led.tx_id),
+			           (SELECT ms.merchant_id FROM merchant_settlements ms
+			             WHERE ms.order_id = led.order_id AND ms.accrued_tx_id = led.tx_id)) END,
 			         (SELECT m.id FROM merchants m WHERE m.id = led.order_merchant AND m.owner_user_id = led.user_id),
 			         (SELECT oi.merchant_id FROM order_items oi JOIN merchants m ON m.id = oi.merchant_id
 			          WHERE oi.order_id = led.order_id AND m.owner_user_id = led.user_id
