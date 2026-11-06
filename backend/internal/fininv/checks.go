@@ -337,13 +337,33 @@ var All = []Check{
 		// قُيّد مرّتين لا عن قيدٍ ثانٍ يُنقص.**
 		// **وقيدُ تصحيحٍ بتعديل الطلب بعد الاستلام ليس تكراراً** (٢٠٢٦-١١-٠٣) — يُعرف بسطره
 		// في merchant_settlement_adjustments، **ويحرسه FI-14.h بمقداره.**
+		//
+		// **والمسموحُ قيدٌ لكلّ صفِّ تسويةٍ محفظيٍّ للمالك في الطلب** (الطلبُ من عدّة متاجر،
+		// موافقةُ المالك Q2 ٢٠٢٦-١١-٠٦): متجران لمالكٍ واحدٍ يكتبان قيدين حقّاً. **وطلبٌ له صفوفٌ
+		// ولا صفَّ محفظيّاً للمالك فيه** — فقيدُه الموجبُ مالٌ فوق ما سُوّي (نقداً أو لا شيء).
+		// **والطلبُ التراثيُّ بلا صفوفٍ يبقى على قيدٍ واحد.**
 		SQL: `
-			SELECT t.ref, t.user_id::text, count(*)::bigint AS مرّات
-			FROM wallet_transactions t
-			WHERE t.kind = 'merchant_earning' AND t.amount > 0
-			  AND NOT EXISTS (SELECT 1 FROM merchant_settlement_adjustments a
-			                  WHERE a.earning_tx_id = t.id)
-			GROUP BY t.ref, t.user_id HAVING count(*) > 1`,
+			WITH e AS (
+				SELECT t.ref, t.user_id, count(*) AS n
+				FROM wallet_transactions t
+				WHERE t.kind = 'merchant_earning' AND t.amount > 0
+				  AND NOT EXISTS (SELECT 1 FROM merchant_settlement_adjustments a
+				                  WHERE a.earning_tx_id = t.id)
+				GROUP BY t.ref, t.user_id
+			), s AS (
+				SELECT ms.order_id::text AS ref, ms.owner_user_id AS user_id,
+				       count(*) FILTER (WHERE ms.method = 'wallet') AS n
+				FROM merchant_settlements ms
+				GROUP BY ms.order_id, ms.owner_user_id
+			), so AS (
+				SELECT DISTINCT ms.order_id::text AS ref FROM merchant_settlements ms
+			)
+			SELECT e.ref, e.user_id::text, e.n::bigint AS مرّات,
+			       (CASE WHEN so.ref IS NULL THEN 1 ELSE COALESCE(s.n, 0) END)::bigint AS المسموح
+			FROM e
+			LEFT JOIN s ON s.ref = e.ref AND s.user_id = e.user_id
+			LEFT JOIN so ON so.ref = e.ref
+			WHERE e.n > CASE WHEN so.ref IS NULL THEN 1 ELSE COALESCE(s.n, 0) END`,
 	},
 	{
 		ID: "FI-05.d", Family: FI05, Status: ProvableNow, Ops: true,
@@ -399,11 +419,23 @@ var All = []Check{
 		Why:   "طلبٌ رُدَّ ثمنُه مرّتين — **والزبونُ قبض ضعفَ ما دفع.**",
 		Flows: []string{"F-15"},
 		Kinds: []string{"refund"},
+		// **والطلبُ العاديُّ يُسأل عن المقدار لا عن العدد** (موافقةُ المالك Q2 ٢٠٢٦-١١-٠٦):
+		// صنفٌ غيرُ متوفّرٍ أو متجرٌ أُزيل أو تعديلٌ يردّ جزءاً، ثمّ إلغاءٌ يردّ الباقي — كلُّها
+		// `refund` بمرجع الطلب ولا علامةَ تفرّقها. **فالخرقُ أن يُردّ أكثرُ ممّا دُفع من المحفظة**،
+		// ومعه النقدُ إن استُرجع الطلبُ بعد التسليم (transitions.go: يُردّ المحفظةُ + `cash_due`).
+		// **وغيرُ العاديّ على العدّ كما كان** — استردادُ التوصيلة يضيف نقداً قُبض عند الاستلام
+		// (merchant_delivery_money.go).
 		SQL: `
-			SELECT t.ref, count(*)::bigint AS مرّات
+			SELECT t.ref, count(*)::bigint AS مرّات, sum(t.amount)::bigint AS المردود
 			FROM wallet_transactions t
+			LEFT JOIN orders o ON o.id::text = t.ref
 			WHERE t.kind = 'refund' AND t.ref <> ''
-			GROUP BY t.ref HAVING count(*) > 1`,
+			GROUP BY t.ref, o.kind, o.status, o.cash_due
+			HAVING CASE WHEN o.kind = 'standard' THEN
+			         sum(t.amount) > COALESCE((SELECT -sum(p.amount) FROM wallet_transactions p
+			                                   WHERE p.ref = t.ref AND p.kind = 'order_payment'), 0)
+			                       + CASE WHEN o.status = 'refunded' THEN o.cash_due ELSE 0 END
+			       ELSE count(*) > 1 END`,
 	},
 	{
 		ID: "FI-05.h", Family: FI05, Status: ProvableNow, Ops: true,
@@ -590,15 +622,31 @@ var All = []Check{
 		// **الصيغةُ من settleMerchant:822**: العمولةُ مجموعُ نسبةِ كلّ متجرٍ
 		// من كلفته، **ثمّ تُكتب في العمود.** والمستحقُّ المقيَّدُ = الكلفةُ
 		// ناقص العمولة، فالعمولةُ = الكلفةُ ناقص المستحقِّ الموجبِ المقيَّد.
+		//
+		// **وطلبٌ له صفوفُ تسويةٍ يُقرأ مستحقُّه من صفوفه** (الطلبُ من عدّة متاجر، موافقةُ المالك Q2
+		// ٢٠٢٦-١١-٠٦): متجرٌ بالمحفظة مستحقُّه `merchant_earning` ومتجرٌ بالنقد مستحقُّه
+		// `merchant_cash_accrued` — **والمستحقُّ = قيدُ الصفّ الموصولُ به** (`earning_tx_id` أو
+		// `accrued_tx_id`)، أي المقدارُ الأصليُّ قبل اقتطاع الدَّين (القيدُ السالبُ لا يُحسب).
+		// **وقيدا المحو موصولان بـ`waived_*_tx_id` فلا يدخلان**، والمحوُّ يُقرأ من عموده:
+		// `platform_commission + commission_waived = الكلفة − المستحقّ − التصحيح` (التصحيحُ للطريقتين).
+		// **وطلبٌ بلا صفوفٍ (تراثيّ) على القاعدة القديمة.**
 		SQL: `
-			SELECT o.number, o.platform_commission,
-			       (COALESCE(k.cost, 0) - COALESCE(m.due, 0))::bigint AS المحسوبة
+			SELECT o.number, o.platform_commission, o.commission_waived,
+			       (COALESCE(k.cost, 0) - CASE WHEN s.n > 0 THEN COALESCE(s.due, 0) ELSE COALESCE(m.due, 0) END
+			                            - COALESCE(j.adj, 0))::bigint AS المحسوبة
 			FROM orders o
 			LEFT JOIN LATERAL (
 				SELECT sum(oi.merchant_price * oi.qty) AS cost
 				FROM order_items oi WHERE oi.order_id = o.id
 			) k ON true
-			-- **والمستحقُّ الأصليُّ بلا قيود التصحيح، ثمّ التصحيحُ بمقداره** (تعديلُ الطلب بعد الاستلام،
+			LEFT JOIN LATERAL (
+				SELECT count(*) AS n, sum(COALESCE(te.amount, 0) + COALESCE(ta.amount, 0)) AS due
+				FROM merchant_settlements ms
+				LEFT JOIN wallet_transactions te ON te.id = ms.earning_tx_id
+				LEFT JOIN wallet_transactions ta ON ta.id = ms.accrued_tx_id
+				WHERE ms.order_id = o.id
+			) s ON true
+			-- **والمستحقُّ التراثيُّ بلا قيود التصحيح، ثمّ التصحيحُ بمقداره** (تعديلُ الطلب بعد الاستلام،
 			-- ٢٠٢٦-١١-٠٣): قيدُ النقص سالبٌ، وما لم يكفِه رصيدُ المتجر دينٌ لا قيد — فيُقرأ الفرقُ
 			-- من سطر التصحيح لا من الدفتر.
 			LEFT JOIN LATERAL (
@@ -609,12 +657,15 @@ var All = []Check{
 			) m ON true
 			LEFT JOIN LATERAL (
 				SELECT sum(a.delta) AS adj FROM merchant_settlement_adjustments a
-				JOIN merchant_settlements ms ON ms.id = a.settlement_id
-				WHERE a.order_id = o.id AND ms.method = 'wallet'
+				WHERE a.order_id = o.id
 			) j ON true
 			WHERE o.status = 'delivered' AND o.kind <> 'custom'
-			  AND COALESCE(m.due, 0) > 0
-			  AND o.platform_commission <> COALESCE(k.cost, 0) - COALESCE(m.due, 0) - COALESCE(j.adj, 0)`,
+			  AND CASE WHEN s.n > 0 THEN
+			        o.platform_commission + o.commission_waived
+			          <> COALESCE(k.cost, 0) - COALESCE(s.due, 0) - COALESCE(j.adj, 0)
+			      ELSE COALESCE(m.due, 0) > 0
+			        AND o.platform_commission <> COALESCE(k.cost, 0) - COALESCE(m.due, 0) - COALESCE(j.adj, 0)
+			      END`,
 	},
 	{
 		ID: "FI-06.c", Family: FI06, Status: ProvableNow, Ops: true,
