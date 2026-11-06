@@ -84,8 +84,11 @@ export function Sheet({
         aria-modal="true"
         aria-labelledby={id}
         onClick={(e) => e.stopPropagation()}
-        className="surface-sheet flex max-h-[88vh] w-full flex-col sm:max-h-[90vh] sm:max-w-lg"
+        className="surface-sheet flex max-h-[88vh] w-full flex-col supports-[height:100dvh]:max-h-[88dvh] sm:max-h-[90vh] sm:supports-[height:100dvh]:max-h-[90dvh] sm:max-w-lg"
       >
+        {/* **والطولُ بالشاشة المرئيّة (`dvh`) لا الكاملة** (٢٠٢٦-١١-٠٧) — `vh` في سفاري الآيفون
+            أطولُ من المرئيّ حين يظهر شريطُ المتصفّح، **فيقع التذييلُ («أضف» والعدد) تحته** على
+            الهاتف الصغير. و`vh` يبقى لمتصفّحٍ لا يعرف `dvh`. */}
         {/* **المقبضُ على الجوّال وحدَه** — على الواسع نافذةٌ لا تُسحب. */}
         <span
           aria-hidden

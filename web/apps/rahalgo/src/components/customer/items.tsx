@@ -655,20 +655,15 @@ function CounterBlock({
   price: (o: ModifierOption) => ReactNode;
   onCount: (id: string, n: number) => void;
 }) {
-  /* **المشروباتُ الكثيرة تُطوى بعد خمسة** — وما عدّه الزبونُ يبقى ظاهراً ولو طُويت. */
-  const [expanded, setExpanded] = useState(false);
-  const collapsible = thumbs && group.options.length > DRINKS_COLLAPSED;
-  const shown =
-    !collapsible || expanded
-      ? group.options
-      : group.options.filter((o, i) => i < DRINKS_COLLAPSED || (counts[o.id] ?? 0) > 0);
+  /* **كلُّ المشروبات ظاهرةٌ دائماً، والنافذةُ تتمرّر** (قرارُ المالك ٢٠٢٦-١١-٠٧: «سكرول مو إخفاء
+     وإظهار») — و«أضف» والعددُ في تذييل `Sheet` ثابتان تحتها. */
   return (
     <fieldset className="surface-inset space-y-2 p-3">
       <legend className="flex w-full items-center justify-between gap-2 text-sm font-bold">
         <span>{group.name}</span>
         <span className="text-xs font-normal text-ink-muted">{group.min_select > 0 ? I.required : I.optional}</span>
       </legend>
-      {shown.map((o) => {
+      {group.options.map((o) => {
         const n = counts[o.id] ?? 0;
         return (
           <div key={o.id} className="flex items-center justify-between gap-3">
@@ -709,18 +704,6 @@ function CounterBlock({
           </div>
         );
       })}
-      {collapsible && (
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          className="w-full rounded-control py-2 text-sm font-bold text-accent-text hover:bg-row-hover"
-        >
-          {expanded ? I.drinksHide : I.drinksShowAll.replace("{n}", fmtNum(group.options.length))}
-        </button>
-      )}
     </fieldset>
   );
 }
-
-/** **كم مشروباً يظهر قبل «عرض الكل».** */
-const DRINKS_COLLAPSED = 5;
