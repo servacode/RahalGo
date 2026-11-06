@@ -205,7 +205,26 @@ fun AuthScreen(
             )
         }
 
-        Spacer(Modifier.height(20.dp))
+        // **ونسيانُ الكلمة تحت حقلها بالزاوية، فوق زرّ الدخول** (طلبُ المالك ٢٠٢٦-١١-٠٦) — بابُه هنا
+        // لا في اتّصالٍ بالمكتب، **ولا يُعرض مع الرمز**: من دخل برمزٍ لا يحتاج كلمة.
+        if (state.mode == LoginMode.PASSWORD || state.codeSent) {
+            androidx.compose.foundation.layout.Box(
+                Modifier.fillMaxWidth(),
+                contentAlignment = androidx.compose.ui.Alignment.CenterEnd,
+            ) {
+                if (state.mode == LoginMode.PASSWORD) {
+                    RahalTextButton(onClick = actions.forgot, enabled = !state.busy) {
+                        Text(stringResource(R.string.login_forgot), color = Rahal.colors.accentInk)
+                    }
+                } else {
+                    RahalTextButton(onClick = actions.resetCode, enabled = !state.busy) {
+                        Text(stringResource(R.string.login_change_number), color = Rahal.colors.inkMuted)
+                    }
+                }
+            }
+        } else {
+            Spacer(Modifier.height(20.dp))
+        }
         RahalButton(
             onClick = {
                 when {
@@ -249,23 +268,14 @@ fun AuthScreen(
             }
         }
 
-        Spacer(Modifier.height(4.dp))
-        // **ونسيان الكلمة ليس عطبا** — بابه هنا لا في اتّصال بالمكتب.
-        // **ولا يُعرض مع الرمز**: من دخل برمز لا يحتاج كلمة أصلا.
-        if (state.mode == LoginMode.PASSWORD) {
-            RahalTextButton(onClick = actions.forgot, enabled = !state.busy) {
-                Text(stringResource(R.string.login_forgot), color = Rahal.colors.inkMuted)
-            }
-        } else if (state.codeSent) {
-            RahalTextButton(onClick = actions.resetCode, enabled = !state.busy) {
-                Text(stringResource(R.string.login_change_number), color = Rahal.colors.inkMuted)
-            }
-        }
         // **وبابُ الحساب الجديد تحت الدخول لا فوقه** — أكثرُ من يفتح
         // الشاشةَ له حسابٌ أصلا، **والتسجيلُ مرّةٌ في العمر.**
         // **وظاهرٌ لا مخبّأ** (طلبُ المالك ٢٠٢٦-١١-٠٦: «الناس عم تخربط وما عم تعرف من وين تسجّل») —
         // سطرُ «ليس لديك حساب؟» وتحته زرٌّ محدَّدٌ بعرض الشاشة، لا رابطٌ نصّيٌّ صغير.
         if (signup) {
+            // **وخطٌّ يفصل الدخولَ عن الحساب الجديد** (طلبُ المالك ٢٠٢٦-١١-٠٦).
+            Spacer(Modifier.height(24.dp))
+            androidx.compose.material3.HorizontalDivider(color = Rahal.colors.line)
             Spacer(Modifier.height(20.dp))
             Text(
                 stringResource(R.string.signup_question),
