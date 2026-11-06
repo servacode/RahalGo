@@ -64,7 +64,12 @@ func TestOfferIsTransientAndMoneyIsSilent(t *testing.T) {
 	}
 	s := string(src)
 
-	offer := between(s, "func (s *Service) notifyOffer", "\n}\n")
+	// **والجسمُ في `notifyOfferWhere`** (٢٠٢٦-١١-٠٥، تدويرُ الزبون نفسِه) — و`notifyOffer`
+	// غلافٌ له بسطرٍ واحد. **والقراءةُ من الغلاف كانت تُسقط الحارسَ والتمييزُ قائم.**
+	offer := between(s, "func (s *Service) notifyOfferWhere(", "\n}\n")
+	if offer == "" {
+		t.Fatal("جسمُ العرض غير موجود — تغيّر اسمُه فليُحدَّث الحارس")
+	}
 	// **والعرضُ صفٌّ بنوعٍ لا يُعرَض** (٢٠٢٦-١٠-٠٢) — **لا عابر**: العابرُ لا
 	// صفَّ له فلا يُدفَع والتطبيقُ مغلق. **ويبقى خارجَ الصندوق** بنوعه
 	// (`InboxHidden`) — وقرارُ ٢٠٢٦-٠٨-١٤ باقٍ.
