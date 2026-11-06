@@ -141,8 +141,11 @@ func (s *Service) releaseCustomReservationOnTerminal(ctx context.Context, q wall
 type quoteMutator struct {
 	actorID string
 	role    string // "driver" | "admin"
-	source  string // "driver_agree" | "admin_override"
+	source  string // "driver_agree" | "admin_override" | "driver_price_request"
 	reason  string
+	// needApproval **كلُّ تغييرٍ بعد الاستلام ينتظر الزبون — نقصاً كان أو زيادة** (طلبُ
+	// الكابتن، قرارُ المالك ٢٠٢٦-١١-٠٦). **فلا يُفكّ حجزٌ ولا يُحدَّث المؤكَّد** حتّى يوافق.
+	needApproval bool
 }
 
 // applyCustomQuoteTx **جوهرُ تغييرِ العرض** — يشترك فيه السائقُ والأدمن.
@@ -178,7 +181,8 @@ func (s *Service) applyCustomQuoteTx(ctx context.Context, q wallet.Querier, row 
 
 	// ── سياسةُ التأكيد والحجز — لا تنطبق إلّا على تأكيدٍ حيّ ──────────────
 	invalidate := false
-	if row.confirmedAt != nil {
+	forceReconfirm := m.needApproval && row.confirmedAt != nil && row.pickedUpAt != nil
+	if row.confirmedAt != nil && !forceReconfirm {
 		confirmedTotal := int64(0)
 		if row.confirmedTotal != nil {
 			confirmedTotal = *row.confirmedTotal
@@ -203,7 +207,7 @@ func (s *Service) applyCustomQuoteTx(ctx context.Context, q wallet.Querier, row 
 	// يبقى عقداً قائماً بمحجوزه**، والنسخةُ الجديدةُ تسبقه فيُغلق التسليمُ حتّى يؤكّدها
 	// الزبون (`ErrQuoteReconfirmPending`). **ومن فكّ الحجزَ هنا ترك الزبونَ يصرف
 	// رصيدَه والبضاعةُ في الطريق إليه.** والنقصُ يقع فوراً كما قبل الاستلام.
-	reconfirm := false
+	reconfirm := forceReconfirm
 	if invalidate && row.pickedUpAt != nil {
 		invalidate, reconfirm = false, true
 	}
@@ -438,6 +442,10 @@ func (s *Service) confirmQuote(ctx context.Context, orderID, customerID, payment
 		WHERE id = $1`, orderID, paymentMethod, current, row.quoteVersion, cashDue); err != nil {
 		return nil, err
 	}
+	// **وطلبُ الكابتن المعلّق صار موافَقاً** (قرارُ المالك ٢٠٢٦-١١-٠٦) — `driver_price_request.go`.
+	if err := closePriceRequestsTx(ctx, tx, orderID, "approved"); err != nil {
+		return nil, err
+	}
 	// **ثمّ يُحجَز كاملُ المبلغ فوراً** — فشلٌ مغلق (`reserved <= balance`).
 	if paymentMethod == "wallet" {
 		if err := s.reserveCustomTx(ctx, tx, customerID, orderID, current); err != nil {
@@ -529,6 +537,12 @@ func (s *Service) AdminOverrideCustomQuote(ctx context.Context, orderID, adminID
 	if err != nil {
 		return nil, err
 	}
+	// **والمكتبُ يبقى يعدّل** (قرارُ المالك ٢٠٢٦-١١-٠٦) — وتعديلُه يحلّ محلّ طلب الكابتن المعلّق.
+	if changed {
+		if err := closePriceRequestsTx(ctx, tx, orderID, "superseded"); err != nil {
+			return nil, err
+		}
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return nil, err
 	}
@@ -611,6 +625,22 @@ func (s *Service) RejectQuote(ctx context.Context, orderID, customerID string) (
 	if !row.hasGoods || (row.confirmedVersion != nil && *row.confirmedVersion == row.quoteVersion) {
 		return nil, ErrQuoteNothingPending
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **ورفضُ طلب الكابتن يُرجع السعرَ القديم** (قرارُ المالك ٢٠٢٦-١١-٠٦)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **«الرفض ما بيغيّر شي»** — فالقديمُ يرجع مؤكَّداً والكابتنُ يسلّم فيه، **وعلامةُ الرفض
+	// تبقى** سطراً أحمرَ في اللوحة ليتدخّل المكتب. (وسعرٌ رفعه المكتبُ يبقى كما كان: المكتبُ يقرّر.)
+	priceReq, err := pendingPriceRequestTx(ctx, tx, orderID, row.quoteVersion)
+	if err != nil {
+		return nil, err
+	}
+	reverted := false
+	if priceReq != nil {
+		if reverted, err = revertPriceRequestTx(ctx, tx, row, priceReq); err != nil {
+			return nil, err
+		}
+	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE orders SET quote_rejected_at = COALESCE(quote_rejected_at, now()),
 		       updated_at = now() WHERE id = $1`, orderID); err != nil {
@@ -619,6 +649,7 @@ func (s *Service) RejectQuote(ctx context.Context, orderID, customerID string) (
 	if err := s.auditQuoteTx(ctx, tx, &customerID, "order.custom_quote_rejected", orderID, map[string]any{
 		"total": row.goods + row.fee - row.waived, "quote_version": row.quoteVersion,
 		"actor_role": "customer", "source": "customer_reject",
+		"driver_request_reverted": reverted,
 	}); err != nil {
 		return nil, err
 	}
@@ -626,6 +657,11 @@ func (s *Service) RejectQuote(ctx context.Context, orderID, customerID string) (
 		return nil, err
 	}
 	o, err := s.GetByID(ctx, orderID)
+	if err == nil && reverted {
+		s.publishOrder(o)
+		s.notifyPriceRequestRejected(ctx, o, priceReq)
+		return o, nil
+	}
 	if err == nil {
 		s.publishOrder(o)
 		if s.notify != nil {

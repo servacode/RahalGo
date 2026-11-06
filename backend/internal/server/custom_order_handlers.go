@@ -205,6 +205,28 @@ func (s *Server) handleAgreeCustom(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"agreed": true})
 }
 
+// handleDriverPriceRequest **الكابتن يطلب تعديل ثمن البضاعة بعد الاستلام** — والزبون يوافق
+// أو يرفض (قرار المالك ٢٠٢٦-١١-٠٦، `orders/driver_price_request.go`). **والسبب إلزامي.**
+func (s *Server) handleDriverPriceRequest(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		Goods  int64  `json:"goods_amount"`
+		Reason string `json:"reason"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	o, err := s.orders.RequestDriverPrice(r.Context(), chi.URLParam(r, "id"), userIDFrom(r),
+		req.Goods, req.Reason)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"requested": true, "total": o.Total, "quote_version": o.QuoteVersion,
+	})
+}
+
 // handleConfirmQuote **الزبونُ يؤكّد العرضَ ويختار طريقةَ الدفع** — Batch 2a.
 //
 // (قرارُ المالك: العرضُ يُقفَل بتأكيدٍ من الزبون قبل أن يبدأ الشراء.)

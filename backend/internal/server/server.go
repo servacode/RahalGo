@@ -1046,6 +1046,8 @@ func (s *Server) Router() http.Handler {
 			r.Post("/orders/{id}/goods-handed", s.handleDriverGoodsHanded)
 			// **وتوثيقُ ما اتُّفق عليه في الطلب الخاصّ** — بعد المحادثة.
 			r.Post("/orders/{id}/agree", s.handleAgreeCustom)
+			// **وبعد الاستلام يطلب تعديل ثمن البضاعة والزبون يوافق** (قرار المالك ٢٠٢٦-١١-٠٦).
+			r.Post("/orders/{id}/price-request", s.handleDriverPriceRequest)
 			r.Get("/orders", s.handleDriverOrders)
 			// **مسارُ الطرف الحاليّ** — خطُّ الشوارع ومسافتُه ومدّتُه.
 			// **ونداءٌ وحدَه لا حقلٌ في القائمة**: القائمةُ خمسةُ طلبات
