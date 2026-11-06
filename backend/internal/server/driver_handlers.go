@@ -600,6 +600,10 @@ type driverOrder struct {
 	FetchAmountStatus  string `json:"fetch_amount_status"`
 	// AmountCurrency **عملةُ المبلغين** — «SYP» أو «USD»، والدولارُ بالسنتات (٢٠٢٦-١٠-٢٠).
 	AmountCurrency string `json:"amount_currency"`
+	// Stops · NextStop **محطّاتُ الطلب بعدّة متاجر والتي يُذهب إليها الآن** (العقدُ §1، `driver_stops.go`)
+	// — **وغائبتان في طلب المتجر الواحد.**
+	Stops    []orders.DriverStop `json:"stops,omitempty"`
+	NextStop *string             `json:"next_stop,omitempty"`
 	// مقروءاتُ الوجهة — لا تُرسَل.
 	storeLat, storeLng *float64
 	storeAddr          string
@@ -832,6 +836,9 @@ func (s *Server) loadDriverOrders(r *http.Request, sql string, args ...any) ([]d
 		return nil, err
 	}
 	if err := s.attachPayMerchants(r.Context(), out); err != nil {
+		return nil, err
+	}
+	if err := s.attachDriverStops(r.Context(), userIDFrom(r), out); err != nil {
 		return nil, err
 	}
 	return out, nil
@@ -1153,6 +1160,11 @@ func (s *Server) handleDriverAccept(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, errNotOnShift)
 		return
 	}
+	// **وطلبٌ بعدّة محطّات لنسخةٍ تعرف المحطّات** (§5.5) — حزامٌ فوق بوّابة التحديث.
+	if s.driverBuildBelowStops(r) && s.orders.StopsOf(r.Context(), orderID) > 1 {
+		s.respondErr(w, orders.ErrStopRequired)
+		return
+	}
 	// سقفُ ما بيده: كان يأخذ ما شاء ما دام السقف النقدي يتّسع — والسقف النقدي
 	// لا يمنع تكديس الطلبات الصغيرة. وخمسةُ طلبات بيد سائقٍ واحد تعني أربعة
 	// زبائن ينتظرون ساعة.
@@ -1340,7 +1352,7 @@ func (s *Server) handleDriverAccept(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// **وحمولةُ السائق لا الطلبُ الخامّ** (٢٠٢٦-١٠-٠٦: كان الردُّ يحمل رقمَ الزبون).
-	httpx.JSON(w, http.StatusOK, orders.ViewFor(orders.AudienceDriver, o))
+	httpx.JSON(w, http.StatusOK, s.driverReplyView(r, o))
 }
 
 // handleDriverTransition ينقل الطلب في مساره — والمحرّك يحكم ما يُسمح.
@@ -1355,6 +1367,8 @@ func (s *Server) handleDriverTransition(w http.ResponseWriter, r *http.Request) 
 		// DeliveryCode **كودُ التسليم من الزبون** — يلزم مع «سُلّم» إن كان على الطلب كود
 		// (قرارُ المالك ٢٠٢٦-١٠-٠٦، `delivery_code.go`).
 		DeliveryCode string `json:"delivery_code"`
+		// Stop **محطّةُ الخطوة** (معرّفُ المتجر) — «وصلت»/«استلمت» في طلبٍ بعدّة محطّات.
+		Stop string `json:"stop"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -1367,6 +1381,23 @@ func (s *Server) handleDriverTransition(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 		s.respondErr(w, errNotYourOrder)
+		return
+	}
+	// **وفي الطلب بعدّة محطّات «وصلت» و«استلمت» لمحطّةٍ بعينها** (`orders.StopArrive`/`StopPickup`) —
+	// **وبلا محطّةٍ ٤٢٦** (G3). **وطلبُ المتجر الواحد يتجاهل `stop`** كما كان.
+	if (req.To == orders.StAtPickup || req.To == orders.StPickedUp) && s.orders.StopsOf(r.Context(), orderID) > 1 {
+		var o *orders.Order
+		var err error
+		if req.To == orders.StAtPickup {
+			o, err = s.orders.StopArrive(r.Context(), userIDFrom(r), orderID, req.Stop)
+		} else {
+			o, err = s.orders.StopPickup(r.Context(), userIDFrom(r), orderID, req.Stop)
+		}
+		if err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		httpx.JSON(w, http.StatusOK, s.driverReplyView(r, o))
 		return
 	}
 	// **سببٌ مصنَّفٌ لا نصٌّ حرّ.**
@@ -1445,7 +1476,7 @@ func (s *Server) handleDriverTransition(w http.ResponseWriter, r *http.Request) 
 		s.suggestFromDelivery(r.Context(), orderID)
 	}
 	// **وحمولةُ السائق لا الطلبُ الخامّ** (٢٠٢٦-١٠-٠٦: كان الردُّ يحمل رقمَ الزبون).
-	httpx.JSON(w, http.StatusOK, orders.ViewFor(orders.AudienceDriver, o))
+	httpx.JSON(w, http.StatusOK, s.driverReplyView(r, o))
 }
 
 // errDoorReportPending **بلاغُ الباب ينتظر قرار الإدارة** — فلا يُسلَّم قبله.
@@ -1550,6 +1581,16 @@ func (s *Server) handleDriverRelease(w http.ResponseWriter, r *http.Request) {
 	}
 	if _, ok := orders.ReleaseReasonAt(reason, status); !ok || note == "" {
 		s.respondErr(w, errReleaseReasonRequired)
+		return
+	}
+	// **وبيده بضاعةُ محطّة — قبل أن يُغلق دوامُه أو يُقفل** (§5.3): **الحادثُ طارئٌ بعد الاستلام
+	// بلا انتقال، وما سواه مرفوضٌ بلا أثر** (`stops_in_hand`) — المكتبُ يقرّر.
+	if s.orders.GoodsInHand(ctx, orderID) {
+		if reason != "accident" {
+			s.respondErr(w, orders.ErrStopsInHand)
+			return
+		}
+		s.releaseWithGoods(w, r, orderID, number, note)
 		return
 	}
 

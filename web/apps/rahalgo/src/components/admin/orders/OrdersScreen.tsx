@@ -93,6 +93,7 @@ import {
   Box,
   StoreSection,
   hasPickupSection,
+  type OrderPart,
 } from "./CardSections";
 import { useCanCall } from "@/lib/policy";
 import {
@@ -103,9 +104,11 @@ import {
   AgeBadge,
   SoundButton,
   minutesSince,
+  toWhatsAppWeb,
   useNow,
   type NewOrder,
 } from "./BoardWidgets";
+import { PartsSection } from "./PartsBoxes";
 
 const m = getMessages(defaultLocale);
 
@@ -267,6 +270,8 @@ interface OrderRow {
   /** **زمنا الطريق كما قالتهما الخريطة** — للمتجر لحظةَ الإسناد، وللباب لحظةَ الاستلام. */
   to_store_eta_sec?: number | null;
   to_door_eta_sec?: number | null;
+  /** **أقسامُ الطلب من أكثر من متجر** (٢٠٢٦-١١-٠٦) — غائبٌ في طلب المتجر الواحد فيبقى صندوقُه كما كان. */
+  parts?: OrderPart[];
   /** كم كان بين السائق ونقطة الاستلام — **جوابُ «لماذا هذا السائق؟»**. */
   driver_to_pickup_m?: number;
   /** **كم بين السائق وباب الزبون الآن** — بعد الاستلام أو حين لا متجرَ معروف. */
@@ -1620,7 +1625,12 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
       noLabel: true,
       only: "cards",
       hide: (o: OrderRow) => !hasPickupSection(o),
-      cell: (o) => <StoreSection o={o} live={live} />,
+      cell: (o) =>
+        o.parts?.length ? (
+          <PartsSection order={o} live={live} onChanged={load} />
+        ) : (
+          <StoreSection o={o} live={live} />
+        ),
     },
     {
       id: "eta",
@@ -1695,7 +1705,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           atStore={o.status === "at_pickup"}
           beforeStore={o.status === "assigned"}
           // **ولا تبديلَ بعد الاستلام** (PD-8) — طلبٌ أُعيد للطابور بعد طارئ يصل المتجرَ ثانيةً.
-          canTransfer={o.kind !== "merchant_delivery" && !o.picked_up_at}
+          canTransfer={o.kind !== "merchant_delivery" && !o.picked_up_at && !o.parts?.length}
           // **والإلغاءُ بعد التسليم للسائقين للمالك وحدَه في «المنصّة تدير»** (`modes.go`، P5) — كان
           // زرُّه يظهر للموظّف والمحرّكُ يردّه (تدقيقُ الطلبات ٢٠٢٦-١٠-٢٧).
           canCancel={isAdmin || selfManage === true}
@@ -2783,7 +2793,13 @@ function HistoryCard({
       </div>
 
       {/* ── المتجر ── والصفُّ حاضرٌ دائماً. */}
-      <div className="min-w-0">{hasPickupSection(o) ? <StoreSection o={o} live /> : null}</div>
+      <div className="min-w-0">
+        {o.parts?.length ? (
+          <PartsSection order={o} live compact />
+        ) : hasPickupSection(o) ? (
+          <StoreSection o={o} live />
+        ) : null}
+      </div>
 
       {/* ── الزبون ── */}
       <div className="min-w-0">
@@ -3187,25 +3203,6 @@ function OrderActions({
       return;
     }
     void forwardToMerchant();
-  }
-
-  /**
-   * **واتساب ويب مباشرةً** (قرارُ المالك ٢٠٢٦-١٠-٠٦) — `wa.me` يفتح صفحةَ واتساب الرسميّة
-   * «التطبيق أم الويب» أوّلاً، **و`web.whatsapp.com/send` يفتح المحادثةَ والرسالةُ جاهزة.**
-   */
-  function toWhatsAppWeb(link: string): string {
-    try {
-      const u = new URL(link);
-      if (u.hostname !== "wa.me" && u.hostname !== "api.whatsapp.com") return link;
-      const phone = u.hostname === "wa.me" ? u.pathname.replace(/\//g, "") : (u.searchParams.get("phone") ?? "");
-      const out = new URL("https://web.whatsapp.com/send");
-      out.searchParams.set("phone", phone);
-      const text = u.searchParams.get("text");
-      if (text) out.searchParams.set("text", text);
-      return out.toString();
-    } catch {
-      return link;
-    }
   }
 
   // **تحويلٌ بلا واتساب** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — المكتبُ أبلغ المتجرَ بنفسه، فيُوسَم ويُطلب سائق.
@@ -3980,7 +3977,8 @@ function OrderActions({
           والنافذةُ حتى `preparing`: بعد بدء الطبخ لم يعد المطبخُ يحتاج خبراً. */}
       {/* **وإخبارُ المتجر يَسِم الطلبَ** (`POST /orders/{id}/whatsapp`)
         * — **فهو تدخّلٌ لا قراءة.** */}
-      {canIntervene && (o.status === "accepted" || o.status === "preparing") && (
+      {/* **وفي الطلب من أكثر من متجر** يُرسَل لكلّ متجرٍ من صندوقه (`PartsBoxes`)، فلا زرَّ للطلب كلِّه. */}
+      {canIntervene && (o.status === "accepted" || o.status === "preparing") && !o.parts?.length && (
         <Button
           variant={
             o.sent_to_merchant_at || selfManage ? "secondary" : "primary"
@@ -3999,7 +3997,7 @@ function OrderActions({
           </BtnLabel>
         </Button>
       )}
-      {canIntervene && !o.sent_to_merchant_at && (o.status === "accepted" || o.status === "preparing") && (
+      {canIntervene && !o.parts?.length && !o.sent_to_merchant_at && (o.status === "accepted" || o.status === "preparing") && (
         <Button variant="secondary" disabled={busy !== ""} onClick={() => void forwardManual()}>
           <BtnLabel icon={IconCheck}>{m.admin.ordersPage.sendManual}</BtnLabel>
         </Button>
@@ -4009,6 +4007,7 @@ function OrderActions({
           أحياناً تفشل») — الرسالةُ لم تصل أو ضاعت عند المتجر. **ولا يُعيد الإنزالَ ولا يفكّ السائق**
           (يحرسه المحرّك: الإنزالُ من «مقبول/تحضير» وحدَهما). */}
       {canIntervene &&
+        !o.parts?.length &&
         !!o.sent_to_merchant_at &&
         o.kind !== "custom" &&
         o.kind !== "merchant_delivery" &&
@@ -4091,6 +4090,8 @@ function OrderActions({
           طارئٍ فتح قائمةَ متاجرَ لا علاقةَ لها بطلبٍ اشتراه سائقٌ من سوق،
           **فيظنّ أنّ الشاشةَ انكسرت أو أنّه أخطأ الطلب.** */}
       {canIntervene && TRANSFERABLE.has(o.status) &&
+        // **والطلبُ من أكثر من متجر يُحوَّل قسمًا قسمًا** (`use_part_transfer`) من صندوق المتجر.
+        !o.parts?.length &&
         o.kind !== "custom" &&
         // **و«لدي توصيلة» لا تُحوَّل** (البند ١١) — **وعند المتجر ببلاغٍ الزرُّ في
         // لوحة «الطلب مع السائق»** فلا يُعرض زرّان بالاسم نفسِه (المشكلة ٤).

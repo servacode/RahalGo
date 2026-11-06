@@ -153,6 +153,8 @@ const SERVER_ADMIN = new Set([
   "platform_share_over_max",
   // **سقفُ المصادر فوق الواحد ونسخةُ السائق لم تُفرض** — صفحةُ الإعدادات وحدَها (٢٠٢٦-١١-٠٥).
   "multistop_driver_not_forced",
+  // **الطلبُ من أكثر من متجر: أفعالُ المكتب على الأقسام** (قرارُ المالك ٢٠٢٦-١١-٠٦) — اللوحةُ وحدَها.
+  "part_collected", "transfer_target_in_order", "use_part_transfer", "compensation_store_required",
   "emergency_steps_pending", "emergency_step_done", "emergency_no_order",
   "emergency_no_driver", "emergency_bad_outcome", "emergency_outcome_stage",
   "emergency_halt_active",

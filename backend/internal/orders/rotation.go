@@ -748,7 +748,9 @@ func (s *Service) reclaimSilentAssignments(ctx context.Context) {
 	rows, err := s.db.Query(ctx, `
 		SELECT id, driver_id FROM orders
 		WHERE status = 'assigned' AND driver_id IS NOT NULL
-		  AND offer_expires_at IS NOT NULL AND offer_expires_at <= now()`)
+		  AND offer_expires_at IS NOT NULL AND offer_expires_at <= now()
+		  -- **ومحطّةٌ استُلمت لا يُنزع طلبُها صامتاً** (D13) — البضاعةُ مع سائق، والمكتبُ يقرّر.
+		  AND NOT EXISTS (SELECT 1 FROM order_parts p WHERE p.order_id = orders.id AND p.status = 'picked_up')`)
 	if err != nil {
 		s.logger.Error("الترتيب: تعذّرت قراءة الإسنادات الصامتة", "error", err)
 		return
@@ -777,6 +779,7 @@ func (s *Service) reclaimSilentAssignments(ctx context.Context) {
 			    dispatched_at = now(), offer_passed = offer_passed || $2::uuid,
 			    updated_at = now()
 			WHERE id = $1 AND status = 'assigned' AND driver_id = $2
+			  AND NOT EXISTS (SELECT 1 FROM order_parts p WHERE p.order_id = orders.id AND p.status = 'picked_up')
 			RETURNING array(SELECT unnest(offer_passed)::text)`,
 			x.orderID, x.driverID).Scan(&skip); err != nil {
 			if !errors.Is(err, pgx.ErrNoRows) {

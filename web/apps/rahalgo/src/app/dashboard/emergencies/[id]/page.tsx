@@ -140,6 +140,9 @@ interface Detail {
     status: string;
     picked_up: boolean;
     picked_up_at: string | null;
+    /** بيد السائق بضاعةُ محطةٍ من طلبٍ مشترك — غائبٌ في طلب المتجر الواحد. */
+    goods_in_hand?: boolean;
+    parts?: { status: string }[];
     total: number;
     cash_due: number;
     payment_method: string;
@@ -159,7 +162,19 @@ const OUTCOME_ICON: Record<Outcome, typeof IconRoute> = {
   return_store: IconStore,
   cancel: IconBlock,
   continue: IconSuccess,
+  drop_remaining: IconBlock,
 };
+
+/**
+ * **طلبٌ من أكثر من متجر وبيد السائق بضاعةُ محطة** (٢٠٢٦-١١-٠٦) — حالُه `assigned` أو `at_pickup`
+ * وقسمٌ منه مُستلَم. **والخادمُ يقول** (`goods_in_hand`)، وإلّا قرأناها من الأقسام.
+ */
+function holdsStopGoods(o: { status: string; goods_in_hand?: boolean; parts?: { status: string }[] }): boolean {
+  if (o.goods_in_hand != null) return o.goods_in_hand;
+  return (
+    (o.status === "assigned" || o.status === "at_pickup") && (o.parts ?? []).some((p) => p.status === "picked_up")
+  );
+}
 
 /** **زرُّ اتّصالٍ بعرضٍ كامل** — ولا يُرسم بلا رقم. */
 function Call({ phone, label }: { phone: string | undefined; label: string }) {
@@ -295,6 +310,8 @@ export default function EmergencyPage() {
   const halt = d.kind === "platform_halt";
   const now = d.next_step;
   const amountN = Math.round(Number(amount));
+  /** بيد السائق بضاعةُ محطةٍ من طلبٍ مشترك: «كمّل بسائق تاني» و«شيل المحلات الباقية». */
+  const hand = !!d.order && holdsStopGoods(d.order);
 
   // ── الخطوات: لكلٍّ ما قُطع منها ومن قطعها، وما يُفعل فيها الآن ──────────
   const steps: { key: string; label: string; done: boolean; doneText?: ReactNode; body?: ReactNode }[] = [
@@ -356,8 +373,14 @@ export default function EmergencyPage() {
           <>
             <p className="text-sm text-ink-muted">{R.outcomeHint}</p>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {(Object.keys(R.outcomes) as Outcome[]).map((k) => {
+              {(Object.keys(R.outcomes) as Outcome[])
+                .filter((k) => k !== "drop_remaining" || hand)
+                .map((k) => {
                 const Icon = OUTCOME_ICON[k];
+                const hands = R.outcomesHand as Record<string, string>;
+                const helpHand = R.outcomeHelpHand as Record<string, string>;
+                const label = hand && hands[k] ? hands[k] : R.outcomes[k];
+                const help = hand && helpHand[k] ? helpHand[k] : R.outcomeHelp[k];
                 const on = outcome === k;
                 return (
                   <button
@@ -377,8 +400,8 @@ export default function EmergencyPage() {
                       <Icon size={16} />
                     </span>
                     <span className="min-w-0">
-                      <span className="block text-sm font-bold">{R.outcomes[k]}</span>
-                      <span className="block text-2xs text-ink-muted">{R.outcomeHelp[k]}</span>
+                      <span className="block text-sm font-bold">{label}</span>
+                      <span className="block text-2xs text-ink-muted">{help}</span>
                     </span>
                   </button>
                 );

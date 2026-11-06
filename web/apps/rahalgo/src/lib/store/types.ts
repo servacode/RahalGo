@@ -56,6 +56,8 @@ export interface OrderLine {
 export interface MerchantOrder {
   id: string;
   number: number;
+  /** **عددُ المحلات في الطلب** (٢٠٢٦-١١-٠٦) — في الطلب المشترك وحدَه (≥ 2)، وغائبٌ في المحلّ الواحد. */
+  shared_stops?: number;
   status: string;
   subtotal: number;
   platform_commission: number;

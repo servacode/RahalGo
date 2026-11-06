@@ -449,8 +449,8 @@ func (s *Server) handleOrderUndeliver(w http.ResponseWriter, r *http.Request) {
 	if res.DriverID != "" {
 		s.touchUser(res.DriverID, "wallet")
 	}
-	if res.RepID != "" {
-		s.touchUser(res.RepID, "wallet")
+	for _, rep := range res.RepIDs {
+		s.touchUser(rep, "wallet")
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"order": o, "result": res})
 }

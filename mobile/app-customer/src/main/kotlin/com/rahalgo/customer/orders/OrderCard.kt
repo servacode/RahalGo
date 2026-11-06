@@ -249,8 +249,11 @@ fun OrderCard(
         //
         // **ونداءٌ لكلّ بطاقةٍ ليُعرض تفصيلُها** يعني عشرةَ نداءاتٍ في
         // شاشةٍ واحدة.
+        // **وطلبٌ من محلّين فأكثر: أقسامُه وحالُ كلٍّ منها** — وغيابُ الحقل لا يرسم شيئاً.
+        OrderSectionsBlock(order.sections)
+
         val lines = order.items.orEmpty()
-        val invoice = order.kind != "custom" && lines.isNotEmpty()
+        val invoice =order.kind != "custom" && lines.isNotEmpty()
         if (invoice) {
             // **فاتورةٌ جدولٌ كاملٌ لا «شاورما دجاج، شاورما دجاج»** (قرارُ المالك ٢٠٢٦-١٠-٣٠) —
             // بنودُها ومجاميعُها في الأعمدة نفسِها.

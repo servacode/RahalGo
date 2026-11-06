@@ -52,6 +52,10 @@ const routeETATimeout = 20 * time.Second
 //
 // **ومن موضعه الآن** — لا من موضعه حين يُسأل بعد يومين.
 func (s *Service) captureToStoreETA(orderID string) {
+	// **وطلبٌ بعدّة محطّات: الطريقُ من السائق إلى المحطّة الأولى ثمّ ما بعدها** (D12).
+	if s.captureStopsToStoreETA(orderID) {
+		return
+	}
 	s.captureETA(orderID, "to_store_eta_sec", `
 		SELECT ST_Y(du.last_location::geometry), ST_X(du.last_location::geometry),
 		       ST_Y(COALESCE(o.pickup_override, mr.location)::geometry),
@@ -67,9 +71,10 @@ func (s *Service) captureToStoreETA(orderID string) {
 
 // captureToDoorETA يلتقط زمنَ الطريق من المتجر إلى باب الزبون عند الاستلام.
 func (s *Service) captureToDoorETA(orderID string) {
+	// **وفي الطلب بعدّة محطّات من آخر محطّةٍ استُلمت** — لا من المتجر الأوّل.
 	s.captureETA(orderID, "to_door_eta_sec", `
-		SELECT ST_Y(COALESCE(o.pickup_override, mr.location)::geometry),
-		       ST_X(COALESCE(o.pickup_override, mr.location)::geometry),
+		SELECT ST_Y(COALESCE(`+lastStopPointSQL+`, o.pickup_override, mr.location)::geometry),
+		       ST_X(COALESCE(`+lastStopPointSQL+`, o.pickup_override, mr.location)::geometry),
 		       ST_Y(o.dropoff::geometry), ST_X(o.dropoff::geometry)
 		FROM orders o
 		LEFT JOIN merchants mr ON mr.id = o.merchant_id

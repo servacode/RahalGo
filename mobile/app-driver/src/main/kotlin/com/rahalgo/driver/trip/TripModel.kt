@@ -296,6 +296,8 @@ data class TripState(
 
 data class TripActions(
     val step: (String) -> Unit,
+    /** **«وصلت»/«استلمت» على محطّةٍ بعينها** (طلبٌ من عدّة متاجر، ٢٠٢٦-١١-٠٦) — (الحال، معرّفُ المتجر). */
+    val stopStep: (String, String) -> Unit = { _, _ -> },
     /** **«سلّمت البضاعة» — نهايةُ مشوار الإرجاع** (قرارُ المالك ٢٠٢٦-١٠-٠٣). */
     val handGoods: () -> Unit = {},
     /** **«اطلب موقع الزبون المباشر»** (قرارُ المالك ٢٠٢٦-١٠-٢١). */
@@ -424,7 +426,17 @@ data class TripActions(
  * و`on_the_way` وحدَها. **وما بينهما (`at_pickup` · `picked_up`)
  * حالٌ بلغها بيده، ولا يُعاد تسجيلُها.**
  */
-fun autoArrivalTarget(status: String, custom: Boolean, dropoffKnown: Boolean = true): String? {
+fun autoArrivalTarget(
+    status: String,
+    custom: Boolean,
+    dropoffKnown: Boolean = true,
+    /** **طلبُ المحطّات:** هل المحطّةُ الحاليّةُ لم يُسجَّل وصولُها؟ — و`null`: ليس متعدّداً (كما كان). */
+    stopPending: Boolean? = null,
+): String? {
+    // **وفي طلب المحطّات «وصلت» لكلّ محطّة** — والباقي (إلى الزبون) كما هو.
+    if (stopPending != null && (status == "assigned" || status == "at_pickup")) {
+        return if (stopPending) "at_pickup" else null
+    }
     // **والخاصُّ يصل الزبونَ وحدَه كالعاديّ** (قرارُ المالك ٢٠٢٦-١٠-٠٣: «وصلت الزبون تظهر فقط وقت
     // يوصل، مثل الطلب العاديّ، وتتحوّل تلقائيّاً بعد ٣٠ ثانية») — **والمتجرُ وحدَه يبقى خارجه.**
     if (custom && status != "on_the_way") return null
@@ -472,6 +484,18 @@ fun arrivalPoint(
         // **ومتجرٌ بلا دبّوسٍ «لا يُعرف» لا «بعيد»** (٢٠٢٦-١٠-٠٢) — كان يُقرأ بعيداً
         // فيُخفى زرُّ «وصلت المتجر» إلى الأبد، **ولا آليّةَ تضغطه عنه.**
         if (la == null || ln == null) ArrivalPoint.Unknown else ArrivalPoint.At(la, ln)
+    }
+    // **طلبُ المحطّات: وصولٌ لكلّ محطّة** — بين المحطّتين يبقى الطلبُ `at_pickup`، والهدفُ المحطّةُ
+    // التالية (الحقولُ المسطّحةُ = هي) حتّى يسجّل وصولَها. وبعده لا شيء.
+    "at_pickup" -> {
+        val stop = currentStop(order)
+        if (stop == null || stop.arrivedAt != null) {
+            ArrivalPoint.NotArriving
+        } else {
+            val la = order.navLat ?: stop.lat
+            val ln = order.navLng ?: stop.lng
+            if (la == null || ln == null) ArrivalPoint.Unknown else ArrivalPoint.At(la, ln)
+        }
     }
     // **«لدي توصيلة» بلا نقطةٍ** — المكتوبُ موقعُ المتجر لا باب المستلِم.
     "on_the_way" -> when {

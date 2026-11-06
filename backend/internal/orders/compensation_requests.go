@@ -30,6 +30,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 
@@ -37,6 +38,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
+	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
@@ -70,6 +72,12 @@ var (
 	ErrCompensationNotPending = errors.New("طلبُ التعويض ليس معلَّقاً")
 	// ErrAlreadyCompensated **المستفيدُ عُوِّض عن هذا الطلب سلفاً.**
 	ErrAlreadyCompensated = errors.New("عُوِّض المستفيدُ عن هذا سلفاً")
+	// ErrCompensationStoreRequired **ذنبُ متجرٍ في طلبٍ بعدّة محطّات — والمتجرُ لم يُختر** (٦أ).
+	ErrCompensationStoreRequired = httpx.NewError(http.StatusConflict,
+		"compensation_store_required", "errors.compensation_store_required")
+	// ErrMerchantDisputeOpen **للطلب مطالبةٌ مفتوحةٌ على متجرٍ آخر** — تُحسم أوّلاً.
+	ErrMerchantDisputeOpen = httpx.NewError(http.StatusConflict,
+		"merchant_dispute_open", "errors.merchant_dispute_open")
 )
 
 // CompensationRequest طلبُ تعويضٍ ينتظر — أو قُضي فيه.
@@ -94,7 +102,10 @@ type CompensationRequest struct {
 	// ExpectedFault **ذنبُ السبب كما في القائمة** — وفراغُه سببٌ لا ذنبَ له معروف.
 	ExpectedFault string `json:"expected_fault"`
 	// FaultMismatch **الذنبُ المكتوبُ لا يطابق السبب** — «المتجرُ مغلق» وذنبُه «الزبون».
-	FaultMismatch   bool       `json:"fault_mismatch"`
+	FaultMismatch bool `json:"fault_mismatch"`
+	// MerchantID **المتجرُ الذي تُكتب عليه المطالبة** في طلبٍ بعدّة محطّات (٦أ) — يختاره المكتبُ
+	// قبل الموافقة، **وفارغٌ لما سواه**: متجرُ الطلب.
+	MerchantID      *string    `json:"merchant_id"`
 	SuggestedAmount int64      `json:"suggested_amount"`
 	Status          string     `json:"status"`
 	Amount          *int64     `json:"amount"`
@@ -402,7 +413,7 @@ const compensationCols = `
 	       r.fault, r.fail_reason, r.suggested_amount, r.status, r.amount,
 	       r.note, r.proposed_by::text, COALESCE(pu.full_name, ''),
 	       r.decided_by::text, COALESCE(du.full_name, ''),
-	       r.decided_at, r.decision_note, r.self_approved, r.created_at
+	       r.decided_at, r.decision_note, r.self_approved, r.created_at, r.merchant_id::text
 	FROM driver_compensation_requests r
 	JOIN users u ON u.id = r.driver_id
 	LEFT JOIN tickets tk ON tk.id = r.ticket_id
@@ -417,7 +428,7 @@ func scanCompensation(row pgx.Row) (*CompensationRequest, error) {
 		&c.TicketID, &c.TicketNumber, &c.DriverID, &c.DriverName, &c.BeneficiaryRole,
 		&c.Fault, &c.FailReason, &c.SuggestedAmount, &c.Status, &c.Amount,
 		&c.Note, &c.ProposedBy, &c.ProposedByName, &c.DecidedBy, &c.DecidedByName,
-		&c.DecidedAt, &c.DecisionNote, &c.SelfApproved, &c.CreatedAt); err != nil {
+		&c.DecidedAt, &c.DecisionNote, &c.SelfApproved, &c.CreatedAt, &c.MerchantID); err != nil {
 		return nil, err
 	}
 	c.ReasonLabel = ReasonLabel(c.FailReason)
@@ -515,6 +526,14 @@ func (s *Service) ApproveCompensationTx(ctx context.Context, q wallet.Querier,
 	}
 	switch c.Kind {
 	case CompKindDriver:
+		// **والمتجرُ المذنبُ يُعرف قبل أيّ قيد** (٦أ) — فلا يُدفع تعويضٌ تسقط مطالبتُه بعده.
+		store := ""
+		if c.Fault == FaultMerchant {
+			var err error
+			if store, err = compensationStoreTx(ctx, q, c); err != nil {
+				return err
+			}
+		}
 		var already bool
 		if err := q.QueryRow(ctx, `
 			SELECT EXISTS(SELECT 1 FROM wallet_transactions
@@ -534,7 +553,8 @@ func (s *Service) ApproveCompensationTx(ctx context.Context, q wallet.Querier,
 			return err
 		}
 		if c.Fault == FaultMerchant {
-			if err := s.openMerchantClaim(ctx, q, c.OrderID, amount); err != nil {
+			// **وفي الطلب بعدّة محطّات المتجرُ الذي اختاره المكتب** (٦أ) — `compensationStoreTx`.
+			if err := s.openMerchantClaimFor(ctx, q, c.OrderID, store, amount); err != nil {
 				return err
 			}
 		}

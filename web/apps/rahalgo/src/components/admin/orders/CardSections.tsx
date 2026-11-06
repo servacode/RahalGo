@@ -25,8 +25,54 @@ const OP = m.admin.ordersPage;
 const C = OP.card;
 const SEC = OP.sections;
 
+/** **سطرُ صنفٍ في قسم متجر** (طلبٌ من أكثر من متجر). */
+export interface PartItem {
+  name: string;
+  qty: number;
+  unit_price: number;
+  merchant_price: number;
+  options?: string;
+  note?: string;
+}
+
+/**
+ * **قسمُ متجرٍ في طلبٍ من أكثر من متجر** (٢٠٢٦-١١-٠٦) — مرآةُ `parts[]` في ردّ المكتب.
+ * غائبٌ في طلب المتجر الواحد.
+ */
+export interface OrderPart {
+  merchant_id: string;
+  seq: number;
+  name: string;
+  phone?: string;
+  address?: string;
+  lat?: number | null;
+  lng?: number | null;
+  status: "pending" | "accepted" | "rejected" | "removed" | "picked_up";
+  answered_role?: "" | "merchant" | "ops" | "admin" | "system";
+  answered_at?: string | null;
+  reason?: string;
+  removed_fault?: "" | "merchant" | "platform";
+  prep_minutes?: number | null;
+  ready_at?: string | null;
+  sent_at?: string | null;
+  sent_channel?: "" | "whatsapp" | "manual";
+  arrived_at?: string | null;
+  picked_up_at?: string | null;
+  picked_up_by_name?: string;
+  collected?: boolean;
+  items?: PartItem[];
+  subtotal?: number;
+  cost?: number;
+  settlement_method?: "cash" | "wallet";
+  pay_amount?: number;
+  rep_name?: string;
+  rep_commission?: number;
+}
+
 /** **ما تقرؤه الأقسامُ من الطلب** — حقولُ ردّ المكتب كما هي. */
 export interface CardOrder {
+  /** أقسامُ المتاجر — غائبٌ في طلب المتجر الواحد. */
+  parts?: OrderPart[];
   kind?: string;
   delivery_mode?: string;
   custom_mode?: string;
@@ -150,7 +196,7 @@ export function Box({
 }
 
 /** **سطرُ الطرف** — الاسمُ يميناً، والرقمُ وأزرارُه يساراً، **ولا يفيض على شاشة جوّال.** */
-function PartyLine({
+export function PartyLine({
   name,
   phone,
   masked,
@@ -251,7 +297,7 @@ function pickupParty(o: CardOrder): { title: string; name: string; phone?: strin
 }
 
 export function hasPickupSection(o: CardOrder): boolean {
-  return pickupParty(o) != null;
+  return (o.parts?.length ?? 0) > 0 || pickupParty(o) != null;
 }
 
 export function StoreSection({ o, live }: { o: CardOrder; live: boolean }) {

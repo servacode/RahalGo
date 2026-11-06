@@ -359,6 +359,15 @@ var OrderPrivacy = map[string]FieldRule{
 	// **والزبونُ لا يُعاد إليه موقعُه، والمتجرُ والمندوبُ لا شأنَ لهما به.**
 	"customer_live": {Ref: "live_location.go — موقعُ الزبون للسائق المُسنَد والمكتب (٢٠٢٦-١٠-١٦)", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 
+	// ── الطلبُ بعدّة محطّات (قرارُ المالك ٢٠٢٦-١١-٠٦) ─────────────────
+	//
+	// **أقسامُ المكتب فيها أسماءُ المتاجر وهواتفُها وأسعارُ شرائها** — للإدارة وحدَها.
+	// **وأقسامُ الزبون بلا اسم متجرٍ ولا معرّفه** (`P-1`). **وعددُ المتاجر للمتجر** بلا أسمائها.
+	"parts":         adminOnly("parts_payload.go — صندوقٌ لكلّ متجرٍ في الطلب بعدّة محطّات"),
+	"goods_in_hand": adminOnly("parts_payload.go — بيد السائق بضاعةُ محطّة (غرفةُ الطوارئ)"),
+	"sections":      {Ref: "parts_payload.go — «القسم ١ / ٢» للزبون بلا متجر", Vis: v(VisAllowed, VisForbidden, VisForbidden, VisForbidden, VisForbidden)},
+	"shared_stops":  {Ref: "parts_view.go — «قسمك من طلب فيه {n} محلات»", Vis: v(VisForbidden, VisAllowed, VisForbidden, VisForbidden, VisForbidden)},
+
 	// ── الملاحظاتُ والأحداثُ والتقييم ──────────────────────────────
 	"notes":  {Ref: "تعليماتُ الزبون — والسائقُ ينفّذها", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
 	"events": {Ref: "الخطُّ الزمنيّ — يحمل فاعلين", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},

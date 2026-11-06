@@ -89,6 +89,9 @@ const orderSelect = `
 	           o.dropoff), -1),
 	       -- **أيستردّ كلُّ مصدرٍ في هذا الطلب؟** — bool_and لا bool_or:
 	       -- الزرُّ يسترجع من الجميع، **ومن لا يستردّ لا يُسترجع منه.**
+	       -- **وبضاعةٌ من متجرين فأكثر لا تعود لمتجر** (قرارُ المالك ٤أ) — للمكتب كلُّها.
+	       (SELECT count(DISTINCT COALESCE(oi.merchant_id, o.merchant_id)) FROM order_items oi
+	         WHERE oi.order_id = o.id) <= 1 AND
 	       COALESCE((SELECT bool_and(m2.accepts_returns) FROM merchants m2
 	                 WHERE m2.id IN (SELECT COALESCE(oi.merchant_id, o.merchant_id)
 	                                 FROM order_items oi WHERE oi.order_id = o.id
@@ -302,6 +305,10 @@ func (s *Service) getByID(ctx context.Context, db dbtx.Querier, id string) (*Ord
 	// **ومتاجرُ الأقسام للطلب من عدّة متاجر وحدَه** — منها تُبثّ إشارةُ كلّ متجر.
 	if o.Stops > 1 {
 		if o.partStores, err = partStoresOf(ctx, db, id); err != nil {
+			return nil, err
+		}
+		// **وأقسامُه للمكتب والزبون** — كلٌّ بقدره (`parts_payload.go`).
+		if err := s.fillPartPayloads(ctx, db, []*Order{o}); err != nil {
 			return nil, err
 		}
 	}
@@ -761,6 +768,15 @@ func (s *Service) List(ctx context.Context, f ListFilter) (*OrderPage, error) {
 		return nil, err
 	}
 
+	// **وأقسامُ الطلب بعدّة محطّات** — للمكتب والزبون (`parts_payload.go`)، **وقبل المهل**: مهلةُ
+	// الطريق إلى المتجر تزيد بمحطّاته الحيّة (`stopsStageExtra`).
+	ptrs := make([]*Order, 0, len(orders))
+	for i := range orders {
+		ptrs = append(ptrs, &orders[i])
+	}
+	if err := s.fillPartPayloads(ctx, s.db, ptrs); err != nil {
+		return nil, err
+	}
 	if err := s.fillStageTimes(ctx, orders); err != nil {
 		return nil, err
 	}

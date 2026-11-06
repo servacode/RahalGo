@@ -245,6 +245,44 @@ data class DriverOrder(
      * (`at`)، فنقطةٌ وصلت حديثةً ثمّ سكت صاحبُها لا تبقى وجهةً إلى الأبد.
      */
     @SerialName("customer_live") val customerLive: CustomerLive? = null,
+    /**
+     * **محطّاتُ الاستلام** (طلبٌ من متجرين فأكثر، ٢٠٢٦-١١-٠٦) — وغائبةٌ في طلب المتجر الواحد، فكلُّ
+     * شيءٍ كما كان. **والحقولُ المسطّحةُ أعلاه (`merchantName`/`navLat`…) هي المحطّةُ التالية.**
+     */
+    val stops: List<PickupStop>? = null,
+    /** **المحطّةُ التي يُذهب إليها الآن** (معرّفُ المتجر) — أوّلُ حيّةٍ لم يستلمها هو. */
+    @SerialName("next_stop") val nextStop: String? = null,
+)
+
+/**
+ * **محطّةُ استلامٍ واحدة** (`stops[]` في `driverOrder`) — واسمُ `Stop` محجوزٌ لـ«أحد طلباتي».
+ *
+ * **`handover`: استلمها سائقٌ سابق** — يذهب إلى نقطة التسليم (`lat`/`lng`) ويأخذ البضاعة منه.
+ */
+@Serializable
+data class PickupStop(
+    @SerialName("merchant_id") val merchantId: String = "",
+    val seq: Int = 0,
+    val name: String = "",
+    val phone: String? = null,
+    val address: String = "",
+    val lat: Double? = null,
+    val lng: Double? = null,
+    /** `accepted` · `picked_up` · `removed`. */
+    val status: String = "accepted",
+    val ready: Boolean = false,
+    @SerialName("ready_at") val readyAt: String? = null,
+    @SerialName("prep_minutes") val prepMinutes: Int? = null,
+    @SerialName("arrived_at") val arrivedAt: String? = null,
+    @SerialName("picked_up_at") val pickedUpAt: String? = null,
+    /** **استلمتُها أنا.** */
+    val mine: Boolean = false,
+    val handover: Boolean = false,
+    val items: List<DriverItem> = emptyList(),
+    /** **ما يدفعه نقداً لهذا المتجر عند الاستلام** — وصفرٌ لمتجر المحفظة. */
+    @SerialName("pay_amount") val payAmount: Long = 0,
+    /** `cash` · `wallet`. */
+    @SerialName("pays_by") val paysBy: String = "cash",
 )
 
 /**

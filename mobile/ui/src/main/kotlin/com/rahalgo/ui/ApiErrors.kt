@@ -413,6 +413,12 @@ private val CODES: Map<String, Int> = mapOf(
     "text_offensive" to R.string.err_text_offensive,
     "text_bad_chars" to R.string.err_text_bad_chars,
     "update_required" to R.string.err_update_required,
+    // **طلبٌ من عدّة متاجر** (٢٠٢٦-١١-٠٦) — `transition` على محطّة.
+    "stop_not_arrived" to R.string.err_stop_not_arrived,
+    "stop_not_live" to R.string.err_stop_not_live,
+    "stops_in_hand" to R.string.err_stops_in_hand,
+    "compensation_store_required" to R.string.err_compensation_store_required,
+    "merchant_dispute_open" to R.string.err_merchant_dispute_open,
     // **وكلُّ سببٍ باسمه** — انظر `orders/models.go`.
     "no_items" to R.string.err_no_items,
     "no_address" to R.string.err_no_address,

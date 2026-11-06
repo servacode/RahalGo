@@ -569,6 +569,18 @@ type Order struct {
 	// **داخليٌّ لا يُرسَل**: كلُّ فرعٍ للطلب من عدّة متاجر يُقرأ منه (`Stops > 1`)،
 	// **والحمولاتُ لا تتبدّل بحرف** لطلب المتجر الواحد.
 	Stops int `json:"-"`
+	// Parts · Sections · SharedStops **الطلبُ بعدّة محطّات لكلّ طرفٍ بقدره** (`parts_payload.go`) —
+	// **فارغةٌ لطلب المتجر الواحد فلا تُرسَل** (`omitempty`):
+	//
+	//	parts         للمكتب — كلُّ متجرٍ بقسمه وماله وأحواله
+	//	sections      للزبون — «القسم ١ / ٢» بلا اسم متجرٍ ولا معرّفه (`P-1`)
+	//	shared_stops  للمتجر — عددُ متاجر الطلب، بلا أسمائها
+	Parts       []OpsPart         `json:"parts,omitempty"`
+	Sections    []CustomerSection `json:"sections,omitempty"`
+	SharedStops int               `json:"shared_stops,omitempty"`
+	// GoodsInHand **بيد السائق بضاعةُ محطّة** (§5.3) — للمكتب وحدَه، وللطلب بعدّة محطّات وحدَه:
+	// غرفةُ الطوارئ تعرض «كمّل بسائق تاني» و«شيل المحطّات الباقية» حين يكون صحيحاً.
+	GoodsInHand *bool `json:"goods_in_hand,omitempty"`
 	// partStores **متاجرُ أقسام الطلب بترتيبها** — للطلب من عدّة متاجر وحدَه، وفارغٌ لغيره.
 	// **ومنه تُبثّ إشارةُ «تبدّل الطلب» لغرفة كلّ متجرٍ فيه** (`publishOrder`).
 	partStores []string
@@ -601,6 +613,10 @@ func (o *Order) SetStageTimes(evs []Event, lim StageLimits) {
 	}
 	// **ومهلتا الطريق من خريطة هذا الطلب** — كلُّ طريقٍ بطوله.
 	lim.ToStore = routeLimit(o.ToStoreETASec, lim.RouteMarginPct)
+	// **وبعدّة محطّاتٍ وقفةُ تسليمٍ عند كلّ متجرٍ بعد الأوّل** (D12) — `parts_stops_eta.go`.
+	if lim.ToStore > 0 {
+		lim.ToStore += o.stopsStageExtra(lim.Handover)
+	}
 	lim.ToDoor = routeLimit(o.ToDoorETASec, lim.RouteMarginPct)
 	o.OpsStageLate = opsStageLate(o.OpsStages, o.OpsStageTimes, lim)
 }

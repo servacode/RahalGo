@@ -261,7 +261,8 @@ func TestCASHORD_TwoCashStoresWaiverSplitsPerStore(t *testing.T) {
 		t.Fatalf("الطلب: نقد %d أجرة %d أجرُ السائق %d — يُنتظر ٢٠٠٠ و٥٠٠ و٥٠٠", cashDue, fee, driverFee)
 	}
 	drv := h.driverOf(oid)
-	deliverOrder(t, h, oid, drv)
+	// **وصولٌ واستلامٌ لكلّ محطّة** (P4).
+	deliverByStops(t, h, oid, drv)
 
 	if _, _, _, _, commission := coOrderMoney(t, h, oid); commission != 200 {
 		t.Errorf("عمولةُ المنصّة %d — يُنتظر ٢٠٠ (١٠٠ + ١٠٠)", commission)

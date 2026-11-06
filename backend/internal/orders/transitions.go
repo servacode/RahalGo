@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/servacode/rahalgo/backend/internal/obligations"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -175,6 +176,8 @@ type transitionReq struct {
 	hook       func(context.Context, dbtx.Querier) error
 	// fromParts **انتقالٌ تبع فعلَ قسم** (`parts.go`) — أقسامُه كُتبت قبله.
 	fromParts bool
+	// handover **المكتبُ يرسل سائقاً آخرَ يستلم البضاعةَ من الأوّل** (٥أ) — استثناءُ G5 الوحيد.
+	handover bool
 }
 
 // appliedTransition **ما وقع في المعاملة** — يقرؤه ما بعد التثبيت.
@@ -239,6 +242,12 @@ func (s *Service) applyTransitionTx(ctx context.Context, tx pgx.Tx, lo *lockedOr
 		if g.to != to {
 			to, note = g.to, g.note
 			endedBy = authorizingRole(kind, from, to, effRoles)
+		}
+	}
+	// **ومحطّاتُ السائق** (G3 · G5 · G8، `parts_stops.go`) — للطلب بعدّة محطّات وحدَه.
+	if lo.stops > 1 {
+		if err := unit.stopGatesTx(ctx, tx, lo, req, to); err != nil {
+			return nil, err
 		}
 	}
 	// لا استلام بلا سائق مسند
@@ -448,6 +457,9 @@ func (s *Service) applyTransitionTx(ctx context.Context, tx pgx.Tx, lo *lockedOr
 	// **وما يُشتقّ من الأقسام يُعاد حسابُه** — الجهوزُ والإرسالُ للطلب كلِّه (`parts.go`).
 	if lo.stops > 1 {
 		if err := syncPartFieldsTx(ctx, tx, orderID); err != nil {
+			return nil, err
+		}
+		if err := stopsAfterTransitionTx(ctx, tx, orderID, to); err != nil {
 			return nil, err
 		}
 	}
@@ -688,7 +700,9 @@ func (s *Service) afterTransition(ctx context.Context, ap *appliedTransition) (*
 		code := DriverLossCodeFrom(from, to, endedBy, actorID == *driverID, actorID == "")
 		s.notifyDriverLost(ctx, orderID, *driverID, code)
 	}
-	s.notifyCommission(ctx, done.repID, orderID, done.commissionPaid)
+	for _, rp := range done.reps {
+		s.notifyCommission(ctx, rp.repID, orderID, rp.amount, rp.store)
+	}
 	// **وكلُّ من تحرّكت محفظتُه يعرف عمّاذا** — (قرارُ المالك ٢٠٢٦-٠٨-١١:
 	// «الرصيد يتغيّر وما حدا بيعرف ليش»).
 	//
@@ -934,13 +948,14 @@ var pastPickup = map[string]bool{
 // لإطلاق الإشعارات. متغيّر محلي لكل طلب: الخدمة مشتركة بين كل الطلبات المتزامنة
 // فلا يجوز أن تحمل حالة طلب بعينه.
 type settled struct {
-	repID          string
-	commissionPaid int64
+	// reps **كلُّ مندوبٍ قُيّدت له عمولةٌ ومبلغُها** — واحدٌ لطلب المتجر الواحد،
+	// **ولكلّ مندوبٍ سطرُه في طلبٍ بعدّة محطّات** (قرارُ المالك ٢٠٢٦-١١-٠٦، ٢أ).
+	reps []repPaid
 	// ══════════════════════════════════════════════════════════════════
 	// **مندوبُ المتجر — ولو لم يقبض عمولةً عن هذا الطلب**
 	// ══════════════════════════════════════════════════════════════════
 	//
-	// **و`repID` أعلاه لا يصلح لهذا**: يُملأ فقط حين تُقيَّد عمولة،
+	// **و`reps` أعلاه لا يصلح لهذا**: يُملأ فقط حين تُقيَّد عمولة،
 	// **فيبقى فارغاً إن كانت النسبةُ صفراً** — وهي صفرٌ اليوم.
 	//
 	// ══════════════════════════════════════════════════════════════════
@@ -957,7 +972,7 @@ type settled struct {
 	// الانتقال، **ومعاملةٌ تُرجَع بعد أن أُرسل إشعارُها تُخبر صاحبَها
 	// بمالٍ لم يصله.** فتُجمَع، ثمّ تُرسَل بعد الإيداع.
 	//
-	// **وهو النمطُ نفسُه الذي تسير عليه `repID` منذ زمن.**
+	// **وهو النمطُ نفسُه الذي تسير عليه `reps` منذ زمن.**
 	credits []walletCredit
 	// compensationRequested **كُتب طلبُ تعويضٍ معلَّق** — فيُنبَّه المكتبُ بعد الإيداع.
 	compensationRequested bool
@@ -1064,9 +1079,14 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 	}
 
 	// (1) نهاية غير التسليم قبل التسليم — استرجاع ما دُفع من المحفظة
+	// **وفاعلُ النظام `NULL`** (`PF-08`) — رفضُ الطلب بعدّة محطّات حين يرفض آخرُ متجرٍ قسمَه.
 	if refundOnEnter(in.to) && in.from != StDelivered && in.walletPaid > 0 {
+		var by *string
+		if in.actorID != "" {
+			by = &in.actorID
+		}
 		if _, err := s.wallet.ApplyTx(ctx, q, in.customerID, in.walletPaid, "refund",
-			in.orderID, fmt.Sprintf("استرجاع طلب %s", statusAr(in.to)), &in.actorID); err != nil {
+			in.orderID, fmt.Sprintf("استرجاع طلب %s", statusAr(in.to)), by); err != nil {
 			return err
 		}
 		out.credit(in.customerID, in.walletPaid, t.refunded2, notifications.AppCustomer)
@@ -1196,6 +1216,13 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 //
 // **والعمولةُ معه**: هي تكلفةُ بيعته، والبيعةُ وقعت. (السياسة §٣-١)
 func (s *Service) settleMerchant(ctx context.Context, q wallet.Querier, orderID, actorID string, driverID *string, out *settled) error {
+	return s.settleMerchantFor(ctx, q, orderID, actorID, driverID, "", out)
+}
+
+// settleMerchantFor **مستحقُّ المتاجر — أو متجرٍ واحدٍ بعينه** (`only`): **الطلبُ بعدّة محطّات
+// يُسوّى عند كلّ محطّةٍ لمتجرها وحدَه** (قرارُ المالك ٢٠٢٦-١١-٠٦، ٣أ — `StopPickup`). وفارغُه الكلّ.
+func (s *Service) settleMerchantFor(ctx context.Context, q wallet.Querier, orderID, actorID string, driverID *string,
+	only string, out *settled) error {
 	// **لا يُقيَّد مرّتين.**
 	//
 	// تُنادى عند الاستلام، **وتُنادى ثانيةً عند التسليم احتياطاً**: الخريطةُ
@@ -1284,6 +1311,9 @@ func (s *Service) settleMerchant(ctx context.Context, q wallet.Querier, orderID,
 		// **صافٍ صفريٌّ أو سالبٌ لا يُسوّى** (§Z): عمولةُ ١٠٠٪ تُنتج صفراً —
 		// لا صفَّ ولا قيدَ ولا مستحقّ، ومرّةً واحدةً بداهةً (لا شيءَ يقع).
 		if sh.ownerID == nil || sh.due <= 0 {
+			continue
+		}
+		if only != "" && !strings.EqualFold(sh.merchantID, only) {
 			continue
 		}
 		// **بوّابةُ الهُويّة لكلّ (طلب، متجر)** — «مرّةً واحدة» للطريقتين، وXOR بنيويّ.
@@ -1508,6 +1538,14 @@ func (s *Service) offsetMerchantDebt(ctx context.Context, q wallet.Querier,
 // **وعند الفشل لا يُقيَّد شيء**: عمولتُه على طلبٍ وصل، لا على طلبٍ خرج من
 // المطبخ. (وهو قرارُ المالك: «عند الفشل يُشطب ويُكتب ملغي».)
 func (s *Service) settleRep(ctx context.Context, q wallet.Querier, orderID, actorID string, out *settled) error {
+	// **وطلبٌ بعدّة محطّات: كلُّ مندوبٍ من ربح متجره هو** (قرارُ المالك ٢٠٢٦-١١-٠٦، ٢أ) —
+	// `settleRepParts`. **وطلبُ المتجر الواحد على مساره اليوم حرفاً.**
+	if multi, err := stopsAbove1(ctx, q, orderID); err != nil || multi {
+		if err != nil {
+			return err
+		}
+		return s.settleRepParts(ctx, q, orderID, actorID, out)
+	}
 	var platformCommission, promoCost int64
 	var repID *string
 	var repIsBuyer bool
@@ -1607,7 +1645,7 @@ func (s *Service) settleRep(ctx context.Context, q wallet.Querier, orderID, acto
 	if err := s.offsetRepDebt(ctx, q, *repID, repCommission, orderID, actorID); err != nil {
 		return err
 	}
-	out.repID, out.commissionPaid = *repID, repCommission
+	out.reps = append(out.reps, repPaid{repID: *repID, amount: repCommission})
 	return nil
 }
 

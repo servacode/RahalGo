@@ -276,6 +276,15 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 		return nil, res, err
 	}
 	res.AfterPickup = settled || pastPickup[o.status]
+	// **وفي الطلب بعدّة محطّات «بعد الاستلام» لكلّ متجر** (§7.1، قرارُ المالك ٣أ): بنودُ متجرٍ
+	// استُلم لا يعدّلها إلّا من يملك التصحيح، **وبنودُ متجرٍ لم يُستلم بعدُ يعدّلها المكتب.**
+	perStore, collected, err := editCollectedStoresTx(ctx, tx, orderID, o.status)
+	if err != nil {
+		return nil, res, err
+	}
+	if perStore {
+		res.AfterPickup = false
+	}
 	if res.AfterPickup && !afterPickupAllowed {
 		return nil, res, ErrOrderEditAfterPickup
 	}
@@ -336,7 +345,7 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 		// الزبونُ رجّع الصنفَ بعد أن استلمه السائق: **المتجرُ يأخذ حقَّه كاملاً والمنصّةُ
 		// تتحمّل.** فيبقى ما رجّع سطراً بسعر متجره (لا يتغيّر حقُّه ولا عمولتُه) **وسعرُ
 		// الزبون فيه صفر** — والمجموعُ ينقص وحدَه، والفرقُ على الخزينة.
-		if res.AfterPickup && !req.StoreRefunded && l.Qty < r.qty {
+		if (res.AfterPickup || collected[r.merchantID]) && !req.StoreRefunded && l.Qty < r.qty {
 			back := r.qty - l.Qty
 			change.Returned = back
 			if l.Qty == 0 {
@@ -455,6 +464,17 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 	}
 	if len(res.Changes) == 0 {
 		return nil, res, ErrOrderEditNoChange
+	}
+
+	// **ومتجرٌ استُلم من بنوده ما تبدّل ⇒ تصحيحٌ بعد الاستلام** — لمن يملكه وحدَه.
+	touchedCollected := false
+	for m := range touched {
+		if collected[m] {
+			touchedCollected = true
+		}
+	}
+	if touchedCollected && !afterPickupAllowed {
+		return nil, res, ErrOrderEditAfterPickup
 	}
 
 	// ── ٤ · لا يبقى طلبٌ بلا بضاعة ──────────────────────────────────────
@@ -581,6 +601,15 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 		return nil, res, err
 	}
 
+	// **ومتجرٌ خرجت بنودُه كلُّها قسمُه «انشال»** — كشيل القسم (رسمُ المحطّة أُعيد فوق).
+	if perStore {
+		if err := markEmptyPartsTx(ctx, tx, orderID, actorID, req.Reason, o.status, o.driverID); err != nil {
+			return nil, res, err
+		}
+	}
+	if touchedCollected {
+		res.AfterPickup = true
+	}
 	// ── ٧ · بعد الاستلام: حقُّ كلِّ متجرٍ يُصحَّح بقيدٍ جديد، ثمّ الخزينة ────────
 	if res.AfterPickup {
 		stores, err := s.correctSettlementsTx(ctx, tx, orderID, actorID, o.driverID, req.Reason)
@@ -605,11 +634,30 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 	}
 	// **والمعاينةُ تُحسب كلُّها ثمّ تُطوى** — الرقمُ الذي يراه المكتبُ قبل التأكيد هو
 	// ما سيقع بالضبط، لا تقديرٌ في الشاشة.
+	// **وما بقي من المحطّات استلمه السائقُ كلَّه ⇒ `picked_up`** في المعاملة نفسِها (§2.4).
+	var follow *appliedTransition
+	if perStore && !req.DryRun {
+		lo, err := lockOrderTx(ctx, tx, orderID)
+		if err != nil {
+			return nil, res, err
+		}
+		if follow, err = unit.stopsDoneFollowTx(ctx, tx, lo, actorID); err != nil {
+			return nil, res, err
+		}
+	}
 	if req.DryRun {
 		return nil, res, nil
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return nil, res, err
+	}
+	if follow != nil {
+		updated, err := s.afterTransition(ctx, follow)
+		if err != nil {
+			return nil, res, err
+		}
+		s.publishWalletsOf(ctx, orderID)
+		return updated, res, nil
 	}
 	updated, err := s.GetByID(ctx, orderID)
 	if err != nil {

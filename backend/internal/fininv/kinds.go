@@ -83,7 +83,7 @@ var Kinds = map[string]KindContract{
 		Creators:   []string{"internal/orders/transitions.go:988", "internal/orders/commission_waiver.go", "internal/orders/undeliver.go"},
 		Path:       "تسويةُ التسليم · وPOST /admin/orders/{id}/waive-commission",
 		Semantics:  "نصيبُ المندوبِ من هامشِ طلبٍ سُلّم لمتجرٍ فعّله — **والسالبُ اقتطاعُ دَينٍ أو عكسُ نصيبه من عمولةٍ محيت** (٢٠٢٦-١٠-٢٦).",
-		Invariants: []string{"FI-01.d", "FI-05.e", "FI-06.a", "FI-09.a"},
+		Invariants: []string{"FI-01.d", "FI-05.e", "FI-06.a", "FI-09.a", "FI-09.b"},
 		Reachable:  true,
 	},
 	"merchant_earning": {

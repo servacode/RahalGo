@@ -75,6 +75,8 @@ type WaiverResult struct {
 	RepID       string `json:"-"`
 	RepReversed int64  `json:"-"`
 	RepDebt     int64  `json:"-"`
+	// RepIDs **كلُّ مندوبٍ عُكس من نصيبه** — أكثرُ من واحدٍ في طلبٍ بعدّة محطّات.
+	RepIDs []string `json:"-"`
 }
 
 type waiverShare struct {
@@ -200,7 +202,8 @@ func (s *Service) WaiveCommissionTx(ctx context.Context, q wallet.Querier,
 	}
 
 	// (٥) **المندوبُ — بالحسبة قبل تصفير العمولة** (تُقرأ المدخلاتُ نفسُها).
-	repID, repReverse, err := s.repShareToReverse(ctx, q, orderID, commission)
+	// **ولكلّ مندوبٍ من متاجره هو** في طلبٍ بعدّة محطّات (قرارُ المالك ٢٠٢٦-١١-٠٦، ٢أ).
+	repReverses, err := s.repSharesToReverse(ctx, q, orderID, commission)
 	if err != nil {
 		return res, err
 	}
@@ -239,12 +242,20 @@ func (s *Service) WaiveCommissionTx(ctx context.Context, q wallet.Querier,
 	}
 
 	// (٨) المندوب.
-	if repID != "" && repReverse > 0 {
-		res.RepID = repID
-		if res.RepReversed, res.RepDebt, err = s.reverseRepForWaiver(ctx, q, repID, orderID,
-			repReverse, actorID); err != nil {
+	for _, rr := range repReverses {
+		if rr.amount <= 0 {
+			continue
+		}
+		if res.RepID == "" {
+			res.RepID = rr.repID
+		}
+		res.RepIDs = append(res.RepIDs, rr.repID)
+		taken, debt, err := s.reverseRepForWaiver(ctx, q, rr.repID, orderID, rr.amount, actorID)
+		if err != nil {
 			return res, err
 		}
+		res.RepReversed += taken
+		res.RepDebt += debt
 	}
 
 	// (٩) الطلب.
@@ -310,7 +321,7 @@ func (s *Service) repShareToReverse(ctx context.Context, q wallet.Querier,
 	var heldAmount int64
 	err = q.QueryRow(ctx, `
 		SELECT id::text, amount FROM rep_held_commissions
-		 WHERE order_id = $1 AND status = 'held' FOR UPDATE`, orderID).Scan(&heldID, &heldAmount)
+		 WHERE order_id = $1 AND rep_id = $2 AND status = 'held' FOR UPDATE`, orderID, *repID).Scan(&heldID, &heldAmount)
 	if err == nil {
 		cut := heldAmount - remain
 		if cut <= 0 {

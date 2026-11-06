@@ -86,7 +86,12 @@ func (s *Server) handleOrdersExport(w http.ResponseWriter, r *http.Request) {
 		       CASE WHEN o.origin = 'whatsapp' THEN 'whatsapp' ELSE o.kind END,
 		       COALESCE(cu.full_name, o.recipient_name, ''), COALESCE(cu.phone::text, o.recipient_phone, ''),
 		       -- **وباسم متجره المكتوب** — لا متجرَ مربوطاً له.
-		       COALESCE(mr.name, o.pickup_name, ''),
+		       -- **وطلبٌ بعدّة محطّات بمتاجره الحيّة كلِّها** «أ + ب» بترتيب المحطّات.
+		       COALESCE(CASE WHEN o.stops > 1 THEN
+		                  (SELECT string_agg(pm.name, ' + ' ORDER BY p.seq) FROM order_parts p
+		                     JOIN merchants pm ON pm.id = p.merchant_id
+		                    WHERE p.order_id = o.id AND p.status NOT IN ('rejected', 'removed')) END,
+		                mr.name, o.pickup_name, ''),
 		       COALESCE(dr.full_name, ''),
 		       o.subtotal, o.delivery_fee, o.discount, o.total,
 		       o.wallet_paid, o.cash_due,

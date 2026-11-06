@@ -251,7 +251,19 @@ export interface CustomerPlatform {
   otp_login: boolean;
 }
 
+/**
+ * **قسمٌ في طلبٍ من أكثر من محلّ** (٢٠٢٦-١١-٠٦) — بلا اسمِ المحلّ ولا معرّفه (P-1).
+ * `unavailable` = ما توفّر، وأصنافُه تُعرض مشطوبةً والمجموعُ نزل من الخادم.
+ */
+export interface OrderSection {
+  seq: number;
+  status: "pending" | "accepted" | "picked_up" | "unavailable";
+  items: { name: string; qty: number }[];
+}
+
 export interface MyOrder {
+  /** أقسامُ الطلب المشترك — غائبٌ في طلب المحلّ الواحد فلا يتغيّر شيء. */
+  sections?: OrderSection[] | null;
   /** **إعفاءُ عرض التوصيل المجانيّ** — و`delivery_fee` بعده (٢٠٢٦-١٠-٢٦). */
   free_waived?: number;
   /** **كودُ الاستلام** — لصاحب الطلب من الاستلام حتّى الباب، وإلّا غائب. */

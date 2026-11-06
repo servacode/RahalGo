@@ -1581,6 +1581,16 @@ func (s *Server) Router() http.Handler {
 			// **والمتاجرُ المرشّحةُ له مرتّبةً بما تقدّمه من أصنافه** — مع مقابلٍ
 			// مقترحٍ لكلّ صنف (قرارُ المالك ٢٠٢٦-١٠-٠٣). انظر `order_transfer_candidates.go`.
 			r.Get("/orders/{id}/transfer-candidates", s.handleTransferCandidates)
+			// **أفعالُ المكتب على قسم متجرٍ في الطلب بعدّة محطّات** (قرارُ المالك ٢٠٢٦-١١-٠٦) —
+			// قبولٌ ورفضٌ وشيلٌ بذنبٍ وتحويل. انظر `admin_parts.go`.
+			r.With(s.RequireCapability(authz.OrdersIntervene)).
+				Post("/orders/{id}/parts/{storeID}/accept", s.handleAdminPartAccept)
+			r.With(s.RequireCapability(authz.OrdersIntervene)).
+				Post("/orders/{id}/parts/{storeID}/reject", s.handleAdminPartReject)
+			r.With(s.RequireCapability(authz.OrdersIntervene)).
+				Post("/orders/{id}/parts/{storeID}/remove", s.handleAdminPartRemove)
+			r.With(s.RequireCapability(authz.OrdersIntervene)).
+				Post("/orders/{id}/parts/{storeID}/transfer", s.handleAdminPartTransfer)
 			r.With(s.RequireCapability(authz.OrdersIntervene)).
 				Post("/orders/{id}/transition", s.handleOrderTransition)
 			// **«تصحيح: الطلب انلغى»** — تسليمٌ سُجّل خطأً (قرارُ المالك ٢٠٢٦-١٠-٢٨). للأدمن وحدَه

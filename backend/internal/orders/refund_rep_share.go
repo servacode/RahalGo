@@ -50,6 +50,20 @@ func ChargeRefundRepShareTx(ctx context.Context, q dbtx.Querier, orderID, party,
 	if party == "" || party == RepSharePlatform {
 		return 0, nil
 	}
+	// **وفي طلبٍ بعدّة محطّات: نصيبُ كلِّ مندوبٍ على متاجره هو** — `chargeRefundRepSharePartsTx`.
+	if party == RepShareMerchant {
+		multi, err := stopsAbove1(ctx, q, orderID)
+		if err != nil {
+			return 0, err
+		}
+		if multi {
+			var actor *string
+			if actorID != "" {
+				actor = &actorID
+			}
+			return chargeRefundRepSharePartsTx(ctx, q, orderID, actor)
+		}
+	}
 	var share int64
 	var merchantID, driverID *string
 	if err := q.QueryRow(ctx, `

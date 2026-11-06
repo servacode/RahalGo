@@ -625,6 +625,19 @@
     <string name="trip_collect_later">تقبض من الزبون عند التسليم</string>
     <string name="trip_pay_merchant">ادفع للمتجر</string>
     <string name="trip_pay_merchant_named">ادفع لـ%1$s</string>
+    <!-- طلبٌ من عدّة متاجر: محطّةٌ لكلّ متجر -->
+    <string name="stops_title">محطّات الاستلام</string>
+    <string name="stop_chip_next">التالية</string>
+    <string name="stop_chip_waiting">بانتظارك</string>
+    <string name="stop_chip_arrived">وصلت</string>
+    <string name="stop_chip_done">استلمت</string>
+    <string name="stop_chip_handover">عند السائق السابق</string>
+    <string name="stop_removed">انشالت</string>
+    <string name="stop_pay_wallet">مدفوع بالمحفظة</string>
+    <string name="stop_pay_cash">ادفع %1$s</string>
+    <string name="stop_arrive_named">وصلت %1$s</string>
+    <string name="stop_pick_named">استلمت من %1$s</string>
+    <string name="stop_handover_named">استلم بضاعة %1$s من السائق السابق</string>
     <string name="trip_partner_store">اشترِ من متجر: %1$s</string>
     <string name="trip_goods_line">المشتريات: %1$s</string>
     <string name="trip_fee_line">أجرة التوصيل: %1$s</string>

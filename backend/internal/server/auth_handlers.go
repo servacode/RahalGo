@@ -72,6 +72,11 @@ func (s *Server) respondErr(w http.ResponseWriter, err error) {
 		httpx.Error(w, errClientClosed)
 		return
 	}
+	// **وأخطاءُ أقسام الطلب بعدّة محطّات برموزها** — من أيّ بابٍ جاءت (`admin_parts.go`).
+	if pe := partAppErr(err); pe != nil {
+		httpx.Error(w, pe)
+		return
+	}
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.Code == "22P02" {
 		httpx.Error(w, httpx.ErrNotFound)

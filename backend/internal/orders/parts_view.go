@@ -150,6 +150,8 @@ func projectOrder(o *Order, parts []partView, itemStore map[string]string, mine 
 		return
 	}
 	p0 := own[0]
+	// **«قسمك من طلب فيه {n} محلات»** — عددُها لا أسماؤها (العقدُ §4).
+	o.SharedStops = o.Stops
 
 	// **وقسمٌ رُفض أو أُزيل يبقى في سجلّه بما رفضه** (C6) — لقطتُه إن حُفظت.
 	closed := true

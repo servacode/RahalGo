@@ -42,7 +42,7 @@ func (s *Server) handleWaiveCommission(w http.ResponseWriter, r *http.Request) {
 	if err := s.auditTx(ctx, tx, r, "finance.commission_waived", "order", id, map[string]any{
 		"number": res.Number, "waived": res.Waived, "reason": req.Reason,
 		"driver_id": res.DriverID, "driver_held_after": res.DriverHeld,
-		"rep_id": res.RepID, "rep_reversed": res.RepReversed, "rep_debt": res.RepDebt,
+		"rep_id": res.RepID, "rep_ids": res.RepIDs, "rep_reversed": res.RepReversed, "rep_debt": res.RepDebt,
 	}); err != nil {
 		s.respondErr(w, err)
 		return
@@ -53,8 +53,8 @@ func (s *Server) handleWaiveCommission(w http.ResponseWriter, r *http.Request) {
 	}
 	s.touch("wallet", "ops")
 	s.touchUser(res.DriverID, "wallet")
-	if res.RepID != "" {
-		s.touchUser(res.RepID, "wallet")
+	for _, rep := range res.RepIDs {
+		s.touchUser(rep, "wallet")
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"order_id": res.OrderID, "number": res.Number,

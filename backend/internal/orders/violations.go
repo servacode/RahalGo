@@ -145,13 +145,17 @@ func violationPredicate(a string) string {
 // **حُوّل من `merchant_warnings` إلى `warnings`** (٢٠٢٦-٠٨-٠٩): جدولٌ واحدٌ
 // لكلّ الأدوار.
 //
+// **وفي الطلب بعدّة محطّات يُستثنى إنذارُ متجر الطلب وحدَه** (`stops > 1`) — إنذارُ متجرٍ رفض
+// قسمَه لا يُمحى لأنّ الطلبَ عُدّ على غيره.
+//
 // **والعدُّ بمعرّف المتجر لا بحساب صاحبه**: المخالفةُ سلوكُ المحلّ، **والحظرُ
 // يقع عليه** — ومتجرٌ بلا حسابِ صاحبٍ يُعدّ عليه كما يُعدّ على غيره.
 func warningsWhere(merchantExpr, daysExpr, mAlias string) string {
 	return `WHERE w.merchant_id = ` + merchantExpr + `
 		  AND (w.order_id IS NULL OR NOT EXISTS (
 		        SELECT 1 FROM orders ov
-		        WHERE ov.id = w.order_id AND ` + violationPredicate("ov") + `))
+		        WHERE ov.id = w.order_id AND ` + violationPredicate("ov") + `
+		          AND (ov.stops = 1 OR ov.merchant_id = w.merchant_id)))
 		  AND w.created_at > now() - make_interval(days => ` + daysExpr + `::int)
 		  AND (` + mAlias + `.violations_cleared_at IS NULL
 		       OR w.created_at > ` + mAlias + `.violations_cleared_at)`
@@ -216,6 +220,14 @@ func (s *Service) enforceMerchantViolations(ctx context.Context, orderID string)
 	var merchantID string
 	if err := s.db.QueryRow(ctx,
 		`SELECT merchant_id FROM orders WHERE id = $1`, orderID).Scan(&merchantID); err != nil {
+		return
+	}
+	s.enforceViolationsOf(ctx, merchantID)
+}
+
+// enforceViolationsOf **العتبةُ لمتجرٍ بعينه** — ولطلبٍ بعدّة محطّات متجرُ القسم لا متجرُ الطلب.
+func (s *Service) enforceViolationsOf(ctx context.Context, merchantID string) {
+	if s.settings == nil || merchantID == "" {
 		return
 	}
 

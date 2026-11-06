@@ -92,7 +92,8 @@ func Merchants(ctx context.Context, q Querier, box *BBox, f MerchantFilter,
 		}
 	}
 	if f.HasActive != nil {
-		cond := "EXISTS (SELECT 1 FROM orders o WHERE o.merchant_id = m.id AND o.closed_at IS NULL)"
+		// **وطلبٌ بعدّة محطّات فيه قسمٌ حيٌّ للمتجر طلبُه أيضاً** (`LiveStoreOrdersSQL`).
+		cond := "EXISTS (SELECT 1 FROM orders o WHERE " + orders.LiveStoreOrdersSQL("m.id") + " AND o.closed_at IS NULL)"
 		if !*f.HasActive {
 			cond = "NOT " + cond
 		}
@@ -108,7 +109,7 @@ func Merchants(ctx context.Context, q Querier, box *BBox, f MerchantFilter,
 		       ` + orders.OpenNowSQL + `,
 		       c.name, m.address_text,
 		       (SELECT count(*) FROM orders o
-		         WHERE o.merchant_id = m.id AND o.closed_at IS NULL),
+		         WHERE ` + orders.LiveStoreOrdersSQL("m.id") + ` AND o.closed_at IS NULL),
 		       rep.full_name, m.phone::text
 		FROM merchants m
 		LEFT JOIN cities c ON c.id = m.city_id
@@ -253,7 +254,7 @@ func ActiveOrders(ctx context.Context, q Querier, box *BBox, f OrderFilter,
 		add(fmt.Sprintf("o.status = $%d", len(args)+1), f.Status)
 	}
 	if f.MerchantID != "" {
-		add(fmt.Sprintf("o.merchant_id = $%d", len(args)+1), f.MerchantID)
+		add(orders.LiveStoreOrdersSQL(fmt.Sprintf("$%d::uuid", len(args)+1)), f.MerchantID)
 	}
 	if f.DriverID != "" {
 		add(fmt.Sprintf("o.driver_id = $%d", len(args)+1), f.DriverID)

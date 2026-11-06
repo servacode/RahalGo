@@ -564,14 +564,19 @@ fun TripScreen(
         status = state.order?.status.orEmpty(),
         custom = state.order?.kind == "custom",
         dropoffKnown = state.order?.dropoffKnown != false,
+        // **طلبُ المحطّات: وصولٌ لكلّ محطّة** — والمفتاحُ أدناه يحمل معرّفَها فلا يمنع الثانيةَ.
+        stopPending = state.order?.takeIf { isMultiStop(it) }?.let { o ->
+            currentStop(o)?.let { it.arrivedAt == null } ?: false
+        },
     )
     // **ومرّةً واحدةً لكلّ طور** — والمفتاحُ الحالُ نفسُه:
     // **فمن سُجّل وصولُه إلى المتجر لا يُعاد تسجيلُه**، ووصولُ
     // الزبون طورٌ آخرُ بمفتاحٍ آخر.
     val autoFired = rememberSaveable { mutableStateOf("") }
-    LaunchedEffect(arrived, autoStatus, state.busy) {
+    val autoStopId = state.order?.takeIf { isMultiStop(it) }?.let { currentStop(it)?.merchantId }.orEmpty()
+    LaunchedEffect(arrived, autoStatus, state.busy, autoStopId) {
         val to = autoStatus ?: return@LaunchedEffect
-        if (!arrived || state.busy || autoFired.value == to) return@LaunchedEffect
+        if (!arrived || state.busy || autoFired.value == to + autoStopId) return@LaunchedEffect
         // **والمكثُ ستُّ ثوانٍ** — **ودونها يكفي أن يقف عند إشارةٍ
         // أمام المتجر ليُحسب واصلا.**
         //
@@ -582,7 +587,7 @@ fun TripScreen(
         // ضُغط»، **وهي مدّةُ `OrdersViewModel.ARRIVAL_HOLD_MS` نفسُها** فلا مدّتان.
         kotlinx.coroutines.delay(30_000L)
         if (navSession.nav?.arrivedAtTarget != true) return@LaunchedEffect
-        autoFired.value = to
+        autoFired.value = to + autoStopId
         android.util.Log.i("RahalGo/nav", "وصولٌ تلقائيّ → $to")
         actions.step(to)
     }
@@ -1655,8 +1660,20 @@ private fun TripCard(
         val quoteOk = feeDone && order.quoteConfirmedVersion == order.quoteVersion
         val needGoods = customOpen && order.customGoodsPending
         val buyBlocked = customOpen && (!feeDone || !quoteOk || needGoods)
-        val next = nextAction(order.status, order.kind == "custom", isFetch(order))
+        // **وطلبُ المحطّات: الفعلُ لمحطّةٍ بعينها** إلى أن يصير الطلبُ `picked_up` — ثمّ «في الطريق للزبون».
+        val multiNext = multiStopNext(order)
+        val activeStop = currentStop(order)
+        val next = if (isMultiStop(order) && (order.status == "assigned" || order.status == "at_pickup")) {
+            multiNext
+        } else {
+            nextAction(order.status, order.kind == "custom", isFetch(order))
+        }
         // **واسمُ الزرّ بنوع الطلب** — «استلمت الأمانة» أو «تم شراء المطلوب».
+        val nextLabelText: String? = if (multiNext != null && activeStop != null) {
+            stopButtonText(activeStop, multiNext.status)
+        } else {
+            null
+        }
         val nextLabel = when {
             next == null -> 0
             order.kind == "custom" && next.status == "picked_up" ->
@@ -1759,7 +1776,7 @@ private fun TripCard(
                     busy = state.busy,
                 )
             } else if (next != null && !buyBlocked && !arriveLater && !fetchBlocked && !priceBlocked) {
-                TripPrimary(label = nextLabel, onClick = onNext, enabled = !state.busy, busy = state.busy)
+                TripPrimary(label = nextLabel, onClick = onNext, enabled = !state.busy, busy = state.busy, text = nextLabelText)
             }
             return@Column
         }
@@ -1871,6 +1888,11 @@ private fun TripCard(
                 } else if (order.kind != "custom") {
                     // **وقبل الاستلام: متى يجهز** — بأيقونة ساعة. **ولا «جاهز في المتجر» في
                     // «إحضار»** — يستلم من مكانٍ لا من المتجر (ملاحظةُ المالك ٢٠٢٦-١٠-١٦).
+                    // **طلبٌ من عدّة متاجر: كتلةُ المحطّات بدل الجاهزيّة والفاتورة ودفع المتجر** — لكلّ محطّةٍ
+                    // حالُها وما تدفعه وأصنافُها وأزرارُها.
+                    if (isMultiStop(order)) {
+                        StopsBlock(order, activeStop?.merchantId, state.busy) { to, stop -> actions.stopStep(to, stop) }
+                    } else {
                     when (val p = if (isFetch(order)) PrepState.Unknown else prepState(order)) {
                         PrepState.Ready -> InfoBox(
                             icon = com.rahalgo.ui.R.drawable.ic_time,
@@ -1906,6 +1928,7 @@ private fun TripCard(
                                 tint = Rahal.colors.brand,
                             )
                         }
+                    }
                     }
                     // **وكم يقبض عند الباب** — يعرفه قبل أن يمشي.
                     if (order.kind == "standard") {
@@ -2279,7 +2302,7 @@ private const val ARRIVE_FAR_M = 300.0
 
 /** **زرُّ المرحلة** — كبيرٌ بعرض البطاقة، وهو ما يُضغط في تسعٍ من عشر. */
 @Composable
-private fun TripPrimary(label: Int, onClick: () -> Unit, enabled: Boolean, busy: Boolean) {
+private fun TripPrimary(label: Int, onClick: () -> Unit, enabled: Boolean, busy: Boolean, text: String? = null) {
     RahalButton(onClick = onClick, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
         if (busy) {
             CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = Color.White)
@@ -2290,7 +2313,7 @@ private fun TripPrimary(label: Int, onClick: () -> Unit, enabled: Boolean, busy:
                 modifier = Modifier.size(20.dp),
             )
             Spacer(Modifier.width(8.dp))
-            Text(stringResource(label), fontWeight = FontWeight.Bold)
+            Text(text ?: stringResource(label), fontWeight = FontWeight.Bold)
         }
     }
 }

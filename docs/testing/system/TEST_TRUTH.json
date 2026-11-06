@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 653,
+    "routes": 657,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 125,
-    "notify_targeted": 61,
+    "notify_sites": 131,
+    "notify_targeted": 65,
     "publish_rooms": [
       "customer",
       "driver",
@@ -32,9 +32,9 @@
     ],
     "setting_defs": 280,
     "behaviour_settings": 235,
-    "order_fields": 137,
-    "test_files": 780,
-    "test_funcs": 2991
+    "order_fields": 141,
+    "test_files": 788,
+    "test_funcs": 3031
   },
   "flows": [
     {
@@ -12034,6 +12034,12 @@
       "orphan": true
     },
     {
+      "name": "TestMultiStop_ToStoreETAAndLimit",
+      "file": "internal/orders/parts_stops_eta_internal_test.go",
+      "package": "orders",
+      "orphan": true
+    },
+    {
       "name": "TestFailAtDropoff_NoAutoCompensation_PendingByFault",
       "file": "internal/orders/problem_button_test.go",
       "package": "orders_test",
@@ -19243,6 +19249,30 @@
       "orphan": false
     },
     {
+      "name": "TestFI_RepCommissionPerStoreGuards",
+      "file": "internal/qa/fininv_multistore_rep_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestFI_MixedWalletCashCommission",
+      "file": "internal/qa/fininv_multistore_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestFI_PartialRefundsNotDuplicate",
+      "file": "internal/qa/fininv_multistore_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestFI_SameOwnerTwoStoresNotDuplicate",
+      "file": "internal/qa/fininv_multistore_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestFreeDelivery_RepKeepsCommission",
       "file": "internal/qa/free_delivery_rep_test.go",
       "package": "qa",
@@ -21131,6 +21161,90 @@
       "orphan": true
     },
     {
+      "name": "TestMultiStop_CannotReleaseOrCancelAfterOneStop",
+      "file": "internal/qa/multistop_driver_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_CollectedStoreLinesFrozen",
+      "file": "internal/qa/multistop_driver_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_CommissionChangeBetweenStops",
+      "file": "internal/qa/multistop_driver_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_CompensationStoreChoice",
+      "file": "internal/qa/multistop_driver_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_DriverStopsPayloadIncludesWalletStore",
+      "file": "internal/qa/multistop_driver_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_EmergencyBetweenStops",
+      "file": "internal/qa/multistop_driver_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_PerStopPickupSettlesThatStoreOnly",
+      "file": "internal/qa/multistop_driver_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_ReclaimSkipsCollectedPart",
+      "file": "internal/qa/multistop_driver_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_ReleaseWithGoodsInHand",
+      "file": "internal/qa/multistop_driver_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_RemoveLastUnpickedCompletesPickup",
+      "file": "internal/qa/multistop_driver_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_SecondStopArrival",
+      "file": "internal/qa/multistop_driver_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_StopLessCallsGet426",
+      "file": "internal/qa/multistop_driver_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_StopRemovedAfterArrivalKeepsBaseDriverFee",
+      "file": "internal/qa/multistop_driver_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStoreReturnRefused",
+      "file": "internal/qa/multistop_driver_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestMultiStop_AutoTransferAnswersPartsAsSystem",
       "file": "internal/qa/multistop_fixpass_test.go",
       "package": "qa",
@@ -21265,6 +21379,126 @@
     {
       "name": "TestMultiStop_WhatsAppTicketOwnItemsOwnPhone",
       "file": "internal/qa/multistop_parts_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_AllPartsRejectedRejectsOrder",
+      "file": "internal/qa/multistop_removal_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_CustomerCancelCancelsAll",
+      "file": "internal/qa/multistop_removal_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_CustomerSectionsWithoutStores",
+      "file": "internal/qa/multistop_removal_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_ItemUnavailableLastLineRemovesPart",
+      "file": "internal/qa/multistop_removal_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_OpsPartsPayload",
+      "file": "internal/qa/multistop_removal_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_PartRejectRemovesItemsAndExtraFee",
+      "file": "internal/qa/multistop_removal_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_PartTransferMovesOnlyThatPart",
+      "file": "internal/qa/multistop_removal_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_RejectedPartHistory",
+      "file": "internal/qa/multistop_removal_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_RemovalRoleWindows",
+      "file": "internal/qa/multistop_removal_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_RemovePartKeepsCashRemainder",
+      "file": "internal/qa/multistop_removal_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_StoreFaultWarningOnThatStore",
+      "file": "internal/qa/multistop_removal_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_HeldCommissionPerRep",
+      "file": "internal/qa/multistop_rep_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_RefundRepShareSplitFromLedger",
+      "file": "internal/qa/multistop_rep_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_RepClampPerStore",
+      "file": "internal/qa/multistop_rep_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_SettleRepPaysEachStoresRep",
+      "file": "internal/qa/multistop_rep_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_WaiverReversesEachRep",
+      "file": "internal/qa/multistop_rep_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSingleStore_RepPayUnchangedAfterBeingASecondaryStop",
+      "file": "internal/qa/multistop_rep_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_ExportStoreColumnAndFilter",
+      "file": "internal/qa/multistop_reports_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_RepClientDetailPerStore",
+      "file": "internal/qa/multistop_reports_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_SecondStoreInMapRatingAndEmergencyRoom",
+      "file": "internal/qa/multistop_reports_test.go",
       "package": "qa",
       "orphan": true
     },
@@ -32445,6 +32679,12 @@
     {
       "name": "TestSameCustomer_SameRouteSkipsWhenAlternative",
       "file": "internal/server/same_customer_rotation_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestSameRoute_MultiStopNeverJoins",
+      "file": "internal/server/sameroute_multistop_test.go",
       "package": "server",
       "orphan": true
     },

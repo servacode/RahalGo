@@ -187,8 +187,9 @@ func (s *Server) isLiveParticipant(ctx context.Context, orderID, userID, role st
 	case "customer":
 		col = `o.customer_id = $2::uuid`
 	case "merchant":
+		// **وصاحبُ متجرٍ له قسمٌ حيٌّ في طلبٍ بعدّة محطّات طرفٌ فيه أيضاً.**
 		col = `EXISTS (SELECT 1 FROM merchants m
-		                WHERE m.id = o.merchant_id AND m.owner_user_id = $2::uuid)`
+		                WHERE m.owner_user_id = $2::uuid AND ` + orders.LiveStoreOrdersSQL("m.id") + `)`
 	default:
 		return false
 	}

@@ -93,7 +93,9 @@ func (s *Server) handleDriverEmergency(w http.ResponseWriter, r *http.Request) {
 	// الموقعَ لم يُقرأ طارئٌ ضاع.** والعملياتُ تتّصل به فتعرف أين هو.
 	hasPoint := req.Lat != nil && req.Lng != nil
 	stage := "before_pickup"
-	if orders.AfterPickup(status) {
+	// **وبضاعةُ محطّةٍ في يده «بعد الاستلام»** (§5.3) — لا يُحرَّر الطلبُ ونقطةُ الاستلام موضعُه.
+	inHand := orders.AfterPickup(status) || s.orders.GoodsInHand(ctx, orderID)
+	if inHand {
 		stage = "after_pickup"
 	}
 	// ══════════════════════════════════════════════════════════════════
@@ -141,8 +143,7 @@ func (s *Server) handleDriverEmergency(w http.ResponseWriter, r *http.Request) {
 	// وإعادتُها على إعادةٍ تُكرّر بلا فائدة (والانتقالُ من `dispatching`
 	// إلى `dispatching` يُخطئ). **أمّا الإخطارُ فيُعاد أدناه على الحالين.**
 	released := true
-	afterPickup := status == orders.StPickedUp || status == orders.StOnTheWay ||
-		status == orders.StAtDropoff
+	afterPickup := inHand
 	var others []emergencyOther
 	if fresh {
 		// **نقطةُ الاستلام البديلة — إن كانت البضاعةُ قد خرجت.**
@@ -317,6 +318,10 @@ func (s *Server) emergencyOtherOrders(ctx context.Context, driverID, orderID str
 	rows.Close()
 	for i, o := range out {
 		if o.Status != orders.StAssigned && o.Status != orders.StAtPickup {
+			continue
+		}
+		// **وطلبٌ بعدّة محطّات استلم منه محطّةً يبقى معه** — البضاعةُ في يده (§5.3).
+		if s.orders.GoodsInHand(ctx, o.ID) {
 			continue
 		}
 		if err := s.orders.ExcludeDriverTx(ctx, s.pg, o.ID, driverID); err != nil {
