@@ -113,6 +113,7 @@ export function DoorPanel({
   canTransfer = true,
   canCancel = true,
   acceptsReturns = false,
+  returnOnly = false,
   driverPhone,
   customerPhone,
   door,
@@ -149,6 +150,12 @@ export function DoorPanel({
    * كاذبٌ دائماً: لا متجر. **ومنه يظهر «رجّع للمتجر»** (قرارُ المالك ٢٠٢٦-١٠-٠٣).
    */
   acceptsReturns?: boolean;
+  /**
+   * **زرٌّ واحدٌ بعد الاستلام** (قرارُ المالك ٢٠٢٦-١١-٠٦) — «رجّعه لمتجره» لمتجرٍ يقبل الإرجاع
+   * و«رجّعه للمكتب» لغيره، **بنافذة «عُد إلى المكتب» نفسِها** (الذنبُ والسببُ ومن يدفع) والبابِ
+   * نفسِه في المحرّك (`door-resolution`). **بلا اللوحة كلِّها** — لطلبٍ في الطريق بلا بلاغ.
+   */
+  returnOnly?: boolean;
   customerPhone: string;
   /** **هاتفُ السائق** — المكتبُ يكلّمه في كلّ مرحلة. */
   driverPhone?: string | null;
@@ -192,7 +199,8 @@ export function DoorPanel({
     setNote("");
     setReason("");
     setFault("");
-    setReturnTo("office");
+    // **والوجهةُ مختارةٌ من الزرّ** — «رجّعه لمتجره» تفتح على المتجر، وتبقى قابلةً للتبديل.
+    setReturnTo(acceptsReturns && !atStore && !beforeStore ? "store" : "office");
     setDriverShare("platform");
     setDriverPercent("50");
     setCustomerAction("cash_ban");
@@ -293,6 +301,208 @@ export function DoorPanel({
   const suggested = door?.suggested_fault
     ? (D.faults as Record<string, string>)[door.suggested_fault]
     : "";
+
+  // **ونافذةُ العودة واحدةٌ للّوحة وللزرّ الواحد** — لا نسخةٌ ثانيةٌ تفترق.
+  const returnModal = (
+  <Modal
+    open={dialog === "return"}
+    onClose={() => setDialog("")}
+    title={atStore ? D.transferTitle : D.returnTitle}
+  >
+    <div className="space-y-4">
+      <p className="text-sm text-ink-muted">
+        {atStore ? D.transferHint : D.returnHint}
+      </p>
+      {!atStore && (
+        <fieldset className="space-y-2">
+          <legend className="mb-1.5 text-sm font-medium text-ink">
+            {D.faultLabel}
+          </legend>
+          {FAULTS.map((f) => (
+            <div key={f} className="space-y-0.5">
+              <Radio
+                id={`door-fault-${orderId}-${f}`}
+                name={`door-fault-${orderId}`}
+                checked={fault === f}
+                onChange={() => {
+                  setFault(f);
+                  setErr("");
+                }}
+                label={D.faults[f]}
+              />
+              <p className="ps-7 text-xs text-ink-muted">
+                {D.faultEffects[f].replace("{days}", fmtNum(cashBanDays))}
+              </p>
+            </div>
+          ))}
+        </fieldset>
+      )}
+      {/* **ذنبُ السائق: من يتحمّل خسارةَ الطلب** (قرارُ المالك ٢٠٢٦-١٠-١٥) — والمنصّةُ افتراضاً. */}
+      {!atStore && fault === "driver" && (
+        <fieldset className="space-y-2">
+          <legend className="mb-1.5 text-sm font-medium text-ink">
+            {D.driverShareLabel}
+          </legend>
+          {DRIVER_SHARES.map((v) => (
+            <div key={v} className="space-y-0.5">
+              <Radio
+                id={`door-share-${orderId}-${v}`}
+                name={`door-share-${orderId}`}
+                checked={driverShare === v}
+                onChange={() => {
+                  setDriverShare(v);
+                  setErr("");
+                }}
+                label={D.driverShares[v]}
+              />
+              <p className="ps-7 text-xs text-ink-muted">
+                {D.driverShareHints[v]}
+              </p>
+            </div>
+          ))}
+          {driverShare === "percent" && (
+            <Input
+              id={`door-percent-${orderId}`}
+              label={D.driverPercentLabel}
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={99}
+              value={driverPercent}
+              onChange={(e) => {
+                setDriverPercent(e.target.value);
+                setErr("");
+              }}
+            />
+          )}
+        </fieldset>
+      )}
+      {/* **ذنبُ الزبون: ما يقع عليه** — ومنعُ النقد مختارٌ افتراضاً، ولا يقع شيءٌ بلا اختيار. */}
+      {!atStore && fault === "customer" && (
+        <fieldset className="space-y-2">
+          <legend className="mb-1.5 text-sm font-medium text-ink">
+            {D.customerActionLabel}
+          </legend>
+          {CUSTOMER_ACTIONS.filter((v) => v !== "block" || canBlock).map(
+            (v) => (
+              <div key={v} className="space-y-0.5">
+                <Radio
+                  id={`door-customer-${orderId}-${v}`}
+                  name={`door-customer-${orderId}`}
+                  checked={customerAction === v}
+                  onChange={() => {
+                    setCustomerAction(v);
+                    setErr("");
+                  }}
+                  label={D.customerActions[v]}
+                />
+                <p className="ps-7 text-xs text-ink-muted">
+                  {D.customerActionHints[v].replace(
+                    "{days}",
+                    fmtNum(cashBanDays),
+                  )}
+                </p>
+              </div>
+            ),
+          )}
+        </fieldset>
+      )}
+      {!atStore && (
+        <fieldset className="space-y-2">
+          <legend className="mb-1.5 text-sm font-medium text-ink">
+            {D.returnDestLabel}
+          </legend>
+          <div className="space-y-0.5">
+            <Radio
+              id={`door-dest-${orderId}-office`}
+              name={`door-dest-${orderId}`}
+              checked={returnTo === "office"}
+              onChange={() => setReturnTo("office")}
+              label={D.returnDestOffice}
+            />
+            <p className="ps-7 text-xs text-ink-muted">
+              {D.returnDestOfficeHint}
+            </p>
+          </div>
+          {acceptsReturns && (
+            <div className="space-y-0.5">
+              <Radio
+                id={`door-dest-${orderId}-store`}
+                name={`door-dest-${orderId}`}
+                checked={returnTo === "store"}
+                onChange={() => setReturnTo("store")}
+                label={D.returnDestStore}
+              />
+              <p className="ps-7 text-xs text-ink-muted">
+                {D.returnDestStoreHint}
+              </p>
+            </div>
+          )}
+        </fieldset>
+      )}
+      <div>
+        <label
+          htmlFor={`door-reason-${orderId}`}
+          className="mb-1.5 block text-sm font-medium text-ink"
+        >
+          {D.reasonLabel}
+        </label>
+        <Select
+          id={`door-reason-${orderId}`}
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+        >
+          <option value="">
+            {reportLabel
+              ? `${D.reasonLast} — ${reportLabel}`
+              : D.reasonLast}
+          </option>
+          {/* **والأسبابُ من المحرّك لهذه المرحلة** — وبلا قائمةٍ منه لا يُعرض شيء
+              يردّه، فيبقى «آخر بلاغ» وحدَه. */}
+          {(door?.reasons ?? []).map((code) => (
+            <option key={code} value={code}>
+              {REPORTS[code] ?? code}
+            </option>
+          ))}
+        </Select>
+      </div>
+      <Textarea
+        id={`door-note-${orderId}`}
+        label={D.returnNote}
+        value={note}
+        maxLength={300}
+        autoGrow
+        onChange={(e) => {
+          setNote(e.target.value);
+          setErr("");
+        }}
+      />
+      {err && <Alert>{err}</Alert>}
+      <FormActions
+        busy={busy}
+        onSave={() => void send()}
+        onCancel={() => setDialog("")}
+        saveLabel={D.returnSend}
+        tone="danger"
+      />
+    </div>
+  </Modal>
+  );
+
+  /** **اسمُ زرّ العودة بعد الاستلام** — بوجهة البضاعة (قرارُ المالك ٢٠٢٦-١١-٠٦). */
+  const returnLabel = acceptsReturns ? D.returnToStoreBtn : D.returnToOfficeBtn;
+
+  if (returnOnly) {
+    if (!canResolve) return null;
+    return (
+      <div className="w-full" onClick={(e) => e.stopPropagation()}>
+        <Button variant="danger" disabled={busy} onClick={() => open("return")}>
+          {returnLabel}
+        </Button>
+        {returnModal}
+      </div>
+    );
+  }
 
   // **واللونُ بالخطورة** (تدقيقُ الطلبات ٢٠٢٦-١٠-٢٧) — أحمرُ حين بلاغٌ أو انتظارٌ طويل (المالك ٢٠٢٦-١٠-٢٢:
   // «مربع الابلاغ لازم احمر لنعرف انها مشكلة بدها حل»)، **وأزرقُ هادئٌ لطلبٍ وصل الباب بلا مشكلة.**
@@ -442,7 +652,7 @@ export function DoorPanel({
               disabled={busy}
               onClick={() => open("return")}
             >
-              {D.returnToOffice}
+              {returnLabel}
             </Button>
           )}
         </div>
@@ -535,189 +745,7 @@ export function DoorPanel({
         </div>
       </Modal>
 
-      <Modal
-        open={dialog === "return"}
-        onClose={() => setDialog("")}
-        title={atStore ? D.transferTitle : D.returnTitle}
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-ink-muted">
-            {atStore ? D.transferHint : D.returnHint}
-          </p>
-          {!atStore && (
-            <fieldset className="space-y-2">
-              <legend className="mb-1.5 text-sm font-medium text-ink">
-                {D.faultLabel}
-              </legend>
-              {FAULTS.map((f) => (
-                <div key={f} className="space-y-0.5">
-                  <Radio
-                    id={`door-fault-${orderId}-${f}`}
-                    name={`door-fault-${orderId}`}
-                    checked={fault === f}
-                    onChange={() => {
-                      setFault(f);
-                      setErr("");
-                    }}
-                    label={D.faults[f]}
-                  />
-                  <p className="ps-7 text-xs text-ink-muted">
-                    {D.faultEffects[f].replace("{days}", fmtNum(cashBanDays))}
-                  </p>
-                </div>
-              ))}
-            </fieldset>
-          )}
-          {/* **ذنبُ السائق: من يتحمّل خسارةَ الطلب** (قرارُ المالك ٢٠٢٦-١٠-١٥) — والمنصّةُ افتراضاً. */}
-          {!atStore && fault === "driver" && (
-            <fieldset className="space-y-2">
-              <legend className="mb-1.5 text-sm font-medium text-ink">
-                {D.driverShareLabel}
-              </legend>
-              {DRIVER_SHARES.map((v) => (
-                <div key={v} className="space-y-0.5">
-                  <Radio
-                    id={`door-share-${orderId}-${v}`}
-                    name={`door-share-${orderId}`}
-                    checked={driverShare === v}
-                    onChange={() => {
-                      setDriverShare(v);
-                      setErr("");
-                    }}
-                    label={D.driverShares[v]}
-                  />
-                  <p className="ps-7 text-xs text-ink-muted">
-                    {D.driverShareHints[v]}
-                  </p>
-                </div>
-              ))}
-              {driverShare === "percent" && (
-                <Input
-                  id={`door-percent-${orderId}`}
-                  label={D.driverPercentLabel}
-                  type="number"
-                  inputMode="numeric"
-                  min={1}
-                  max={99}
-                  value={driverPercent}
-                  onChange={(e) => {
-                    setDriverPercent(e.target.value);
-                    setErr("");
-                  }}
-                />
-              )}
-            </fieldset>
-          )}
-          {/* **ذنبُ الزبون: ما يقع عليه** — ومنعُ النقد مختارٌ افتراضاً، ولا يقع شيءٌ بلا اختيار. */}
-          {!atStore && fault === "customer" && (
-            <fieldset className="space-y-2">
-              <legend className="mb-1.5 text-sm font-medium text-ink">
-                {D.customerActionLabel}
-              </legend>
-              {CUSTOMER_ACTIONS.filter((v) => v !== "block" || canBlock).map(
-                (v) => (
-                  <div key={v} className="space-y-0.5">
-                    <Radio
-                      id={`door-customer-${orderId}-${v}`}
-                      name={`door-customer-${orderId}`}
-                      checked={customerAction === v}
-                      onChange={() => {
-                        setCustomerAction(v);
-                        setErr("");
-                      }}
-                      label={D.customerActions[v]}
-                    />
-                    <p className="ps-7 text-xs text-ink-muted">
-                      {D.customerActionHints[v].replace(
-                        "{days}",
-                        fmtNum(cashBanDays),
-                      )}
-                    </p>
-                  </div>
-                ),
-              )}
-            </fieldset>
-          )}
-          {!atStore && (
-            <fieldset className="space-y-2">
-              <legend className="mb-1.5 text-sm font-medium text-ink">
-                {D.returnDestLabel}
-              </legend>
-              <div className="space-y-0.5">
-                <Radio
-                  id={`door-dest-${orderId}-office`}
-                  name={`door-dest-${orderId}`}
-                  checked={returnTo === "office"}
-                  onChange={() => setReturnTo("office")}
-                  label={D.returnDestOffice}
-                />
-                <p className="ps-7 text-xs text-ink-muted">
-                  {D.returnDestOfficeHint}
-                </p>
-              </div>
-              {acceptsReturns && (
-                <div className="space-y-0.5">
-                  <Radio
-                    id={`door-dest-${orderId}-store`}
-                    name={`door-dest-${orderId}`}
-                    checked={returnTo === "store"}
-                    onChange={() => setReturnTo("store")}
-                    label={D.returnDestStore}
-                  />
-                  <p className="ps-7 text-xs text-ink-muted">
-                    {D.returnDestStoreHint}
-                  </p>
-                </div>
-              )}
-            </fieldset>
-          )}
-          <div>
-            <label
-              htmlFor={`door-reason-${orderId}`}
-              className="mb-1.5 block text-sm font-medium text-ink"
-            >
-              {D.reasonLabel}
-            </label>
-            <Select
-              id={`door-reason-${orderId}`}
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-            >
-              <option value="">
-                {reportLabel
-                  ? `${D.reasonLast} — ${reportLabel}`
-                  : D.reasonLast}
-              </option>
-              {/* **والأسبابُ من المحرّك لهذه المرحلة** — وبلا قائمةٍ منه لا يُعرض شيء
-                  يردّه، فيبقى «آخر بلاغ» وحدَه. */}
-              {(door?.reasons ?? []).map((code) => (
-                <option key={code} value={code}>
-                  {REPORTS[code] ?? code}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <Textarea
-            id={`door-note-${orderId}`}
-            label={D.returnNote}
-            value={note}
-            maxLength={300}
-            autoGrow
-            onChange={(e) => {
-              setNote(e.target.value);
-              setErr("");
-            }}
-          />
-          {err && <Alert>{err}</Alert>}
-          <FormActions
-            busy={busy}
-            onSave={() => void send()}
-            onCancel={() => setDialog("")}
-            saveLabel={D.returnSend}
-            tone="danger"
-          />
-        </div>
-      </Modal>
+      {returnModal}
     </div>
   );
 }

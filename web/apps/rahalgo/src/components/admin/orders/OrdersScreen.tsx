@@ -891,6 +891,12 @@ function opsNext(
  * **ودالّةٌ واحدةٌ للوحة ولزرّ البطاقة**: حين تظهر عند المتجر يكون «حوّل لمتجر
  * آخر» فيها، **فلا يُعرض زرّان بالاسم نفسِه** (المشكلة ٤).
  */
+/**
+ * **حالاتُ «البضاعةُ مع السائق والطلبُ قائم»** — مرآةُ `orders.AfterPickup` في المحرّك، وفيها وحدَها
+ * يقبل `door-resolution` العودةَ بالبضاعة.
+ */
+const AFTER_PICKUP_LIVE = new Set(["picked_up", "on_the_way", "at_dropoff"]);
+
 function doorVisible(o: OrderRow): boolean {
   return (
     o.status === "at_dropoff" ||
@@ -1693,6 +1699,40 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
           // **والإلغاءُ بعد التسليم للسائقين للمالك وحدَه في «المنصّة تدير»** (`modes.go`، P5) — كان
           // زرُّه يظهر للموظّف والمحرّكُ يردّه (تدقيقُ الطلبات ٢٠٢٦-١٠-٢٧).
           canCancel={isAdmin || selfManage === true}
+          acceptsReturns={o.kind !== "custom" && o.merchant_accepts_returns}
+          customerPhone={o.customer_phone}
+          driverPhone={o.driver_phone}
+          door={o.door}
+          cashBanDays={cashBanDays}
+          onChanged={load}
+          onReturned={setReturnedNumber}
+        />
+      ),
+    },
+    {
+      // ══════════════════════════════════════════════════════════════
+      // **بعد الاستلام زرٌّ واحد: «رجّعه لمتجره» أو «رجّعه للمكتب»** (قرارُ المالك ٢٠٢٦-١١-٠٦)
+      // ══════════════════════════════════════════════════════════════
+      //
+      // **البضاعةُ خرجت من المتجر** (`picked_up_at`) **والطلبُ لم ينتهِ** — والبابُ بابُ غرفة
+      // الطوارئ نفسُه (`door-resolution` بنافذته: الذنبُ والسببُ ومن يدفع). **ولا يظهر مع لوحة
+      // الباب** — فيها الزرُّ نفسُه، ولا زرّان لفعلٍ واحد.
+      id: "returnGoods",
+      header: m.admin.ordersPage.door.returnTitle,
+      icon: <IconSwap />,
+      hide: (o: OrderRow) =>
+        !(
+          !!o.picked_up_at &&
+          AFTER_PICKUP_LIVE.has(o.status) &&
+          !doorVisible(o) &&
+          !ending.has(o.id)
+        ),
+      cell: (o) => (
+        <DoorPanel
+          returnOnly
+          orderId={o.id}
+          orderNumber={o.number}
+          atDoor={false}
           acceptsReturns={o.kind !== "custom" && o.merchant_accepts_returns}
           customerPhone={o.customer_phone}
           driverPhone={o.driver_phone}

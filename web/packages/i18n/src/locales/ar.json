@@ -2539,6 +2539,8 @@
         "instructionAt": "الساعة {t}",
         "deliverNow": "سلم الآن",
         "returnToOffice": "عد إلى المكتب",
+        "returnToStoreBtn": "رجّعه لمتجره",
+        "returnToOfficeBtn": "رجّعه للمكتب",
         "deliverTitle": "أمر السائق بالتسليم الآن",
         "deliverHint": "يبقى الطلب مع السائق ويصله إشعار عاجل «الإدارة: سلم الآن» مع ملاحظتك، ثم يسلم كالعادة.",
         "deliverNote": "ملاحظة للسائق (اختيارية)",
