@@ -440,7 +440,7 @@ export default function MapLearningPage() {
         }
       />
       {actionErr && <Alert tone="error">{actionErr}</Alert>}
-      <div className="mb-3 flex gap-2">
+      <div className="mb-3 flex flex-wrap gap-2">
         {SECTIONS.map((s) => (
           <Button key={s} size="sm" variant={section === s ? "primary" : "secondary"} onClick={() => pickSection(s)}>
             {T.sections[s]}
@@ -488,7 +488,7 @@ export default function MapLearningPage() {
                   </Button>
                 ))}
               </div>
-              <div className="mb-3 flex gap-2">
+              <div className="mb-3 flex flex-wrap gap-2">
                 {(["pending", "approved", "rejected"] as Status[]).map((s) => (
                   <Button
                     key={s}
