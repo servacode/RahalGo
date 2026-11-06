@@ -98,6 +98,7 @@ import type {
   LayerSpec,
   MapMarker,
 } from "@/components/admin/opsmap/canvas";
+import { circleRing, coverageMask, openRing, outerRings, type Pt } from "@/components/admin/opsmap/zonegeo";
 import {
   MAP_TONES,
   type MapTone,
@@ -436,6 +437,8 @@ const DEFAULT_VISIBLE: Record<string, boolean> = {
   office: true,
   /** **معالمُ الخريطة** (٢٠٢٦-١١-٠٣) — مفتوحةٌ افتراضاً، وتُطفأ من «الطبقات». */
   poiLandmarks: true,
+  /** **تغميقُ ما خارج المناطق الفعّالة** (قرارُ المالك ٢٠٢٦-١١-٠٦) — للشاشة فقط. */
+  coverageMask: true,
 };
 
 /**
@@ -1252,6 +1255,23 @@ export default function OpsMapPage() {
     // **ولا مفتاحَ لها** (قرارُ المالك ٢٠٢٦-١٠-٠٥): من لا يرى أين نصل لا
     // يقرأ الخريطةَ أصلاً، **والخطُّ الرفيعُ لا يحجب شيئاً تحته.**
     const zoneList = zones.data?.zones ?? [];
+    // ── التغميق: العالمُ ناقصَ اتّحاد المناطق الفعّالة، تحت كلّ شيء ولا يحجب النقر ──
+    const holes: Pt[][] = [];
+    for (const z of zoneList) {
+      if (!z.active) continue;
+      if (z.shape === "radius") holes.push(circleRing(z.lng, z.lat, z.radius_m));
+      else if (z.area) holes.push(...outerRings(z.area).map(openRing));
+    }
+    const maskGeom = coverageMask(holes);
+    out.push({
+      id: "coverage-mask",
+      kind: "mask",
+      order: 5,
+      visible: !!maskGeom && visible.coverageMask !== false,
+      color: themeColor("map-label"),
+      fillOpacity: 0.35,
+      data: fc(maskGeom ? [{ type: "Feature" as const, geometry: maskGeom, properties: {} }] : []),
+    });
     out.push({
       id: "coverage-radius",
       kind: "circle-m",
@@ -1931,6 +1951,7 @@ export default function OpsMapPage() {
     { id: "closures", label: T.layer.closures, count: visible.closures ? closures.data?.count : undefined },
     { id: "landmarks", label: T.layer.landmarks, count: visible.landmarks ? landmarks.data?.count : undefined },
     { id: "poiLandmarks", label: T.layer.poiLandmarks },
+    { id: "coverageMask", label: T.layer.coverageMask },
     { id: "branches", label: T.layer.branches, count: visible.branches ? branches.data?.count : undefined },
   );
   const layerOn = layerChips.filter((c) => visible[c.id] ?? DEFAULT_VISIBLE[c.id]).map((c) => c.id);

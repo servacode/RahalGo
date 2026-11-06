@@ -85,10 +85,10 @@ export interface LayerSpec {
   id: string;
   /**
    * `point` نقاطٌ · `symbol` رموزٌ بصورة الحال (خاصّةُ `icon`) · `bubble`
-   * فقّاعاتُ عددٍ (خاصّةُ `count`) · `fill` مضلَّعاتٌ · `circle-m` دوائرُ
+   * فقّاعاتُ عددٍ (خاصّةُ `count`) · `fill` مضلَّعاتٌ · `mask` تغميقٌ بلا حدٍّ ولا نقر · `circle-m` دوائرُ
    * بالمتر · `heat` كثافة · `line` خطوط
    */
-  kind: "point" | "symbol" | "bubble" | "fill" | "circle-m" | "heat" | "line";
+  kind: "point" | "symbol" | "bubble" | "fill" | "mask" | "circle-m" | "heat" | "line";
   data: FeatureCollection;
   /** **اللونُ تعبيرٌ أو نصّ** — والتعبيرُ يقرأ خاصّةً من المعلَم. */
   color: unknown;
@@ -151,6 +151,21 @@ export interface LayerSpec {
   /** **حلقةُ فقّاعة التجميع** — لونُها وعرضُها تعبيران. */
   clusterStroke?: { color: unknown; width: unknown };
 }
+
+/**
+ * **مقبضُ تحريرٍ يُسحَب** (٢٠٢٦-١١-٠٦) — رأسُ مضلَّعٍ أو منتصفُ ضلع.
+ * `mid`: سحبُه يُدرج رأساً جديداً. `selected`: الرأسُ المحدَّد (للحذف باللمس).
+ */
+export interface MapHandle {
+  id: string;
+  lng: number;
+  lat: number;
+  mid?: boolean;
+  selected?: boolean;
+  label: string;
+}
+
+export type HandlePhase = "start" | "move" | "end";
 
 /** **صورةُ رمزٍ تُسجَّل في الخريطة** — اسمُها قيمةُ خاصّة `icon`. */
 export interface MapIcon {
@@ -284,6 +299,10 @@ export function OpsMapCanvas({
   flyTo,
   onFeatureClick,
   onMarkerClick,
+  handles = [],
+  onHandleMove,
+  onHandleRemove,
+  onHandleSelect,
   onMoveEnd,
   onMapClick,
   height = "h-full",
@@ -301,6 +320,11 @@ export function OpsMapCanvas({
   flyTo?: FlyRequest;
   onFeatureClick?: (layerID: string, props: Record<string, unknown>) => void;
   onMarkerClick?: (id: string) => void;
+  /** **مقابضُ تحريرِ شكلٍ** — تُسحَب؛ وحذفُ الرأس بالنقر الأيمن أو الضغطة الطويلة. */
+  handles?: MapHandle[];
+  onHandleMove?: (id: string, lng: number, lat: number, phase: HandlePhase) => void;
+  onHandleRemove?: (id: string) => void;
+  onHandleSelect?: (id: string) => void;
   onMoveEnd?: (bbox: [number, number, number, number], zoom: number) => void;
   /** **نقرٌ على الأرض لا على معلَم** — رسمُ المضلَّع وتحديدُ موضعِ فرع. */
   onMapClick?: (lng: number, lat: number) => void;
@@ -350,6 +374,13 @@ export function OpsMapCanvas({
   moveRef.current = onMoveEnd;
   const mapClickRef = useRef(onMapClick);
   mapClickRef.current = onMapClick;
+  const handleMoveRef = useRef(onHandleMove);
+  handleMoveRef.current = onHandleMove;
+  const handleRemoveRef = useRef(onHandleRemove);
+  handleRemoveRef.current = onHandleRemove;
+  const handleSelectRef = useRef(onHandleSelect);
+  handleSelectRef.current = onHandleSelect;
+  const handleMarks = useRef<Map<string, maplibregl.Marker>>(new Map());
   // **والحدودُ تُطبَّق حين تصل** — المناطقُ تُجلب بعد إقلاع الخريطة.
   const boundsKey = bounds ? bounds.map((x) => x.toFixed(4)).join(",") : "";
   const fittedRef = useRef(false);
@@ -396,6 +427,7 @@ export function OpsMapCanvas({
     let cancelled = false;
     let instance: maplibregl.Map | null = null;
     const markersNow = placed.current;
+    const handlesNow = handleMarks.current;
     const tweensNow = tweens.current;
     const shownNow = shown.current;
     const pulsesNow = pulses.current;
@@ -469,6 +501,8 @@ export function OpsMapCanvas({
       loop.current = 0;
       for (const mk of markersNow.values()) mk.remove();
       markersNow.clear();
+      for (const mk of handlesNow.values()) mk.remove();
+      handlesNow.clear();
       instance?.remove();
       map.current = null;
       built.current.clear();
@@ -562,6 +596,12 @@ export function OpsMapCanvas({
         m.addLayer({
           id: `${spec.id}-line`, type: "line", source: srcID,
           paint: { "line-color": spec.color as never, "line-width": spec.lineWidth ?? 2 },
+        } as never);
+      } else if (spec.kind === "mask") {
+        // **تغميقُ ما خارج التغطية** — حشوٌ فقط، ولا مستمعَ نقرٍ له (لا يحجب شيئاً).
+        m.addLayer({
+          id: spec.id, type: "fill", source: srcID,
+          paint: { "fill-color": spec.color as never, "fill-opacity": spec.fillOpacity ?? 0.4, "fill-antialias": false },
         } as never);
       } else if (spec.kind === "line") {
         m.addLayer({
@@ -741,17 +781,19 @@ export function OpsMapCanvas({
       }
 
       // **والنقرُ يفتح اللوحةَ الجانبيّة** — لا نافذةً منبثقةً ضخمة
-      // (البند ٣٧).
-      m.on("click", spec.id, (e: maplibregl.MapLayerMouseEvent) => {
-        const f = e.features?.[0];
-        if (f) clickRef.current?.(spec.id, f.properties ?? {});
-      });
-      m.on("mouseenter", spec.id, () => {
-        m.getCanvas().style.cursor = "pointer";
-      });
-      m.on("mouseleave", spec.id, () => {
-        m.getCanvas().style.cursor = "";
-      });
+      // (البند ٣٧). **والتغميقُ لا ينقر ولا يغيّر المؤشّر.**
+      if (spec.kind !== "mask") {
+        m.on("click", spec.id, (e: maplibregl.MapLayerMouseEvent) => {
+          const f = e.features?.[0];
+          if (f) clickRef.current?.(spec.id, f.properties ?? {});
+        });
+        m.on("mouseenter", spec.id, () => {
+          m.getCanvas().style.cursor = "pointer";
+        });
+        m.on("mouseleave", spec.id, () => {
+          m.getCanvas().style.cursor = "";
+        });
+      }
 
       built.current.add(spec.id);
     }
@@ -903,6 +945,91 @@ export function OpsMapCanvas({
       placed.current.set(x.id, mk);
     }
   }, [markers, ready]);
+
+  // ── مقابضُ التحرير — تُبنى وتُحدَّث مواضعُها ولا تُهدم أثناء السحب ──────
+  //
+  // **تُفرَّق بالمعرّف**: السحبُ الجاري يُحدِّث الحالَ فتصل مقابضُ جديدةٌ بالمعرّفات نفسِها، فيُحرَّك
+  // الموجودُ ولا يُعاد بناؤه (وإلّا انقطع السحب).
+  useEffect(() => {
+    const m = map.current;
+    const lib = engine.current;
+    if (!ready || !m || !lib) return;
+    const want = new Set(handles.map((h) => h.id));
+    for (const [id, mk] of handleMarks.current) {
+      if (!want.has(id)) {
+        mk.remove();
+        handleMarks.current.delete(id);
+      }
+    }
+    for (const h of handles) {
+      const look = h.mid
+        ? "h-3 w-3 rounded-full border-2 border-accent bg-paper opacity-80 shadow-lift"
+        : `${h.selected ? "h-5 w-5 bg-danger" : "h-4 w-4 bg-accent"} rounded-full border-2 border-paper shadow-lift`;
+      let mk = handleMarks.current.get(h.id);
+      if (!mk) {
+        const el = document.createElement("div");
+        // **تُضاف الأصنافُ ولا تُستبدل** — MapLibre تضع أصنافَها على العنصر.
+        el.classList.add("grid", "h-6", "w-6", "place-items-center", "cursor-grab");
+        el.appendChild(document.createElement("span"));
+        el.setAttribute("role", "button");
+        el.setAttribute("aria-label", h.label);
+        el.title = h.label;
+        const id = h.id;
+        let pressTimer = 0;
+        let dragged = false;
+        const clearPress = () => {
+          if (pressTimer) window.clearTimeout(pressTimer);
+          pressTimer = 0;
+        };
+        el.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          if (!dragged) handleSelectRef.current?.(id);
+          dragged = false;
+        });
+        el.addEventListener("contextmenu", (ev) => {
+          ev.preventDefault();
+          ev.stopPropagation();
+          handleRemoveRef.current?.(id);
+        });
+        // **ضغطةٌ طويلةٌ للمس** — تحذف الرأس ما لم يبدأ سحب.
+        el.addEventListener("pointerdown", (ev) => {
+          if (ev.pointerType !== "touch") return;
+          clearPress();
+          pressTimer = window.setTimeout(() => {
+            pressTimer = 0;
+            dragged = true;
+            handleRemoveRef.current?.(id);
+          }, 650);
+        });
+        el.addEventListener("pointerup", clearPress);
+        el.addEventListener("pointercancel", clearPress);
+        mk = new lib.Marker({ element: el, draggable: true }).setLngLat([h.lng, h.lat]).addTo(m);
+        mk.on("dragstart", () => {
+          clearPress();
+          dragged = true;
+          const p = mk!.getLngLat();
+          handleMoveRef.current?.(id, p.lng, p.lat, "start");
+        });
+        mk.on("drag", () => {
+          const p = mk!.getLngLat();
+          handleMoveRef.current?.(id, p.lng, p.lat, "move");
+        });
+        mk.on("dragend", () => {
+          const p = mk!.getLngLat();
+          handleMoveRef.current?.(id, p.lng, p.lat, "end");
+          window.setTimeout(() => {
+            dragged = false;
+          }, 0);
+        });
+        handleMarks.current.set(h.id, mk);
+      }
+      const el = mk.getElement();
+      (el.firstElementChild as HTMLElement).className = look;
+      el.title = h.label;
+      const cur = mk.getLngLat();
+      if (Math.abs(cur.lng - h.lng) > 1e-9 || Math.abs(cur.lat - h.lat) > 1e-9) mk.setLngLat([h.lng, h.lat]);
+    }
+  }, [handles, ready]);
 
   // ── التحريكُ بنقرةٍ صريحة وحدَها ──────────────────────────────
   useEffect(() => {
