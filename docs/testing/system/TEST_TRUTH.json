@@ -33,8 +33,8 @@
     "setting_defs": 277,
     "behaviour_settings": 232,
     "order_fields": 137,
-    "test_files": 768,
-    "test_funcs": 2937
+    "test_files": 769,
+    "test_funcs": 2941
   },
   "flows": [
     {
@@ -29574,8 +29574,20 @@
       "orphan": true
     },
     {
+      "name": "TestChatContactMask_SocialAndEmail",
+      "file": "internal/server/chat_contact_mask_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
       "name": "TestDriverOrders_MasksContactsInCustomerText",
       "file": "internal/server/chat_contact_mask_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestDriverChat_ClosedForDriverWhenOrderEnds",
+      "file": "internal/server/chat_driver_closed_test.go",
       "package": "server",
       "orphan": true
     },
@@ -32855,6 +32867,18 @@
     },
     {
       "name": "TestMaskContacts_Masks",
+      "file": "internal/textguard/contact_test.go",
+      "package": "textguard",
+      "orphan": true
+    },
+    {
+      "name": "TestMaskContacts_SocialAndEmail",
+      "file": "internal/textguard/contact_test.go",
+      "package": "textguard",
+      "orphan": true
+    },
+    {
+      "name": "TestMaskContacts_SocialLeavesOrdinary",
       "file": "internal/textguard/contact_test.go",
       "package": "textguard",
       "orphan": true
