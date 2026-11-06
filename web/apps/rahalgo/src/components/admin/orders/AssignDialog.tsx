@@ -23,7 +23,6 @@ import {
   LoadingState,
   Modal,
   Money,
-  Textarea,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 
@@ -61,7 +60,6 @@ export function AssignDialog({
   const [staleMin, setStaleMin] = useState(15);
   const [loadErr, setLoadErr] = useState("");
   const [pick, setPick] = useState<Candidate | null>(null);
-  const [reason, setReason] = useState("");
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -89,16 +87,13 @@ export function AssignDialog({
 
   async function send() {
     if (!pick) return;
-    if (reason.trim() === "") {
-      setErr(m.admin.ordersPage.board.reasonMissing);
-      return;
-    }
     setBusy(true);
     setErr("");
     try {
       await api(`/api/v1/admin/orders/${orderId}/assign`, {
         method: "POST",
-        body: JSON.stringify({ driver_id: pick.id, note: reason.trim() }),
+        // **ولا سببَ** (قرارُ المالك ٢٠٢٦-١١-٠٦): «الإدارة تسند الطلب مباشر بدون سبب».
+        body: JSON.stringify({ driver_id: pick.id }),
       });
       onDone();
     } catch (e) {
@@ -121,17 +116,6 @@ export function AssignDialog({
               .replace("{n}", `#${orderNumber}`)
               .replace("{name}", pick.full_name || pick.phone)}
           </p>
-          <Textarea
-            id={`assign-reason-${orderId}`}
-            label={A.reason}
-            value={reason}
-            maxLength={300}
-            autoGrow
-            onChange={(e) => {
-              setReason(e.target.value);
-              setErr("");
-            }}
-          />
           {err && <Alert>{err}</Alert>}
           <FormActions
             busy={busy}
@@ -189,7 +173,6 @@ export function AssignDialog({
                     variant="secondary"
                     onClick={() => {
                       setPick(d);
-                      setReason("");
                       setErr("");
                     }}
                   >
