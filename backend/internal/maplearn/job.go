@@ -17,13 +17,19 @@ type Options struct {
 	// Workers عددُ الطلبات المتوازية إلى محرّك الخريطة.
 	Workers int
 	// FarM بُعدٌ عن الطريق يُعدّ بعده الموضعُ «خارج الخريطة».
-	FarM   float64
-	Detect Params
+	FarM float64
+	// WindowDays أقدمُ يومٍ يُقرأ للكشف — **والتقليمُ (٩٠ يوماً) يقع مع الكتابة وحدَها**، فإن غاب السائقون
+	// أيّاماً بقي القديمُ في الجدول؛ وهذا الحدُّ يُبقي الكشفَ على النافذة نفسِها.
+	WindowDays int
+	// MaxFarPoints أكثرُ ما يُقرأ من النقاط البعيدة في الجولة — **الأحدثُ أوّلاً**، فلا تُحمَّل الذاكرةُ بجدولٍ كبير.
+	MaxFarPoints int
+	Detect       Params
 }
 
 // DefaultOptions الافتراضات.
 func DefaultOptions() Options {
-	return Options{Batch: 20000, Workers: 8, FarM: 18, Detect: DefaultParams()}
+	return Options{Batch: 20000, Workers: 8, FarM: 18, WindowDays: 90, MaxFarPoints: 200000,
+		Detect: DefaultParams()}
 }
 
 // Result نتيجةُ جولة.
@@ -72,8 +78,18 @@ func Run(ctx context.Context, pg *pgxpool.Pool, roads RoadFinder, opt Options) (
 	if opt.FarM <= 0 {
 		opt.FarM = 18
 	}
+	// **وأدنى البُعد ١٥ م** — شرطُ الفهرس الجزئيّ الذي تُقرأ به النقاطُ البعيدة.
+	if opt.FarM < 15 {
+		opt.FarM = 15
+	}
 	if opt.Detect.CellM <= 0 {
 		opt.Detect = DefaultParams()
+	}
+	if opt.WindowDays <= 0 {
+		opt.WindowDays = DefaultOptions().WindowDays
+	}
+	if opt.MaxFarPoints <= 0 {
+		opt.MaxFarPoints = DefaultOptions().MaxFarPoints
 	}
 
 	var runID int64
@@ -187,12 +203,16 @@ feed:
 // detectAndStore يقرأ البعيدَ، يكشف، ويكتب المقترحات.
 func detectAndStore(ctx context.Context, pg *pgxpool.Pool, opt Options) (far, stored int, err error) {
 	// **ما غطّاه خطٌّ قُرّر (موافَق أو مرفوض) لا يُعاد اقتراحُه.**
+	// **والقراءةُ محدودة**: نافذةُ أيّامٍ وسقفُ نقاطٍ (الأحدثُ أوّلاً). و`road_dist_m >= 15` حرفاً
+	// ليستعمل المخطِّطُ الفهرسَ الجزئيَّ `map_trace_points_far_idx` (لا يُثبت شرطَه من مُعامِل).
 	rows, err := pg.Query(ctx, `
 		SELECT ST_Y(p.point::geometry), ST_X(p.point::geometry), p.day::text
 		  FROM map_trace_points p
-		 WHERE p.road_dist_m >= $1
+		 WHERE p.road_dist_m >= 15 AND p.road_dist_m >= $1
+		   AND p.day >= (now() AT TIME ZONE 'Asia/Damascus')::date - $2::int
 		   AND NOT EXISTS (SELECT 1 FROM map_street_candidates c
-		                    WHERE c.status <> 'pending' AND ST_DWithin(c.line, p.point, 30))`, opt.FarM)
+		                    WHERE c.status <> 'pending' AND ST_DWithin(c.line, p.point, 30))
+		 ORDER BY p.day DESC LIMIT $3`, opt.FarM, opt.WindowDays, opt.MaxFarPoints)
 	if err != nil {
 		return 0, 0, err
 	}
