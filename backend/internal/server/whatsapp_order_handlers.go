@@ -23,11 +23,13 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
@@ -288,9 +290,13 @@ func (s *Server) handleCreateWhatsAppOrder(w http.ResponseWriter, r *http.Reques
 		// **طلبُ الموقع يُقفَل قبل الإنشاء** — فموقعٌ يصل في اللحظة نفسِها ينتظر الربطَ ثمّ يُكتب
 		// في الطلب (`ApplyWhatsAppShared`)، **ولا يضيع بينهما.**
 		if locReqID != "" {
-			lat, lng, err := lockWhatsAppLocReqTx(ctx, q, locReqID, phone)
+			lat, lng, addr, err := lockWhatsAppLocReqTx(ctx, q, locReqID, phone)
 			if err != nil {
 				return IdempotentBody{}, err
+			}
+			// **وعنوانٌ ردّ به الزبونُ قبل الإنشاء** يملأ العنوانَ إن لم يكتبه الموظّف.
+			if strings.TrimSpace(in.AddressText) == "" && addr != "" {
+				in.AddressText = addr
 			}
 			if in.Lat == nil && in.Lng == nil && lat != nil && lng != nil {
 				covered, err := s.orders.CoverableAt(ctx, q, *lat, *lng)
@@ -314,6 +320,16 @@ func (s *Server) handleCreateWhatsAppOrder(w http.ResponseWriter, r *http.Reques
 				return IdempotentBody{}, err
 			}
 		}
+		// **وبلا طلب موقعٍ ولا نقطةٍ يُطلبان من الزبون تلقائيّاً** (قرارُ المالك ٢٠٢٦-١١-٠٦: «الموقع
+		// والعنوان يطلبهم البوت») — صفٌّ مربوطٌ بالطلب في المعاملة نفسِها، **والرسالةُ بعد التثبيت.**
+		var auto *waAutoLocReq
+		if locReqID == "" && !c.HasPoint && late == nil {
+			a, err := newWALocReqTx(ctx, q, actor, phone, c.StoreName, c.ID)
+			if err != nil {
+				return IdempotentBody{}, err
+			}
+			auto = &a
+		}
 		if err := s.auditTx(ctx, q, r, "ops.whatsapp_order_create", "order", c.ID, map[string]any{
 			"number":             c.Number,
 			"store_name":         c.StoreName,
@@ -325,6 +341,7 @@ func (s *Server) handleCreateWhatsAppOrder(w http.ResponseWriter, r *http.Reques
 			"amount_currency":    in.Currency,
 			"has_point":          c.HasPoint,
 			"location_request":   locReqID,
+			"location_auto":      auto != nil,
 			"point_after_create": late != nil,
 		}); err != nil {
 			return IdempotentBody{}, err
@@ -346,6 +363,10 @@ func (s *Server) handleCreateWhatsAppOrder(w http.ResponseWriter, r *http.Reques
 				}
 				if _, err := s.orders.AfterWhatsAppOrder(ctx, id); err != nil {
 					s.logger.Error("طلب واتساب: بعد الإنشاء", "order", id, "error", err)
+				}
+				// **ورسالةُ الموقع والعنوان للزبون** — وإن لم تصل فالمكتبُ يرى «ما وصلت» في طلب الموقع.
+				if auto != nil {
+					s.locReqSend(ctx, auto.id, phone, locReqModeWhatsApp, auto.token, auto.expires)
 				}
 				s.touch("orders", "ops")
 			},
@@ -410,18 +431,18 @@ const waLocReqPerHour = 60
 // **ولرقم المستلِم نفسِه وحدَه** (`phone` مُطبَّعاً): موظّفٌ طلب الموقعَ من رقمٍ غلط ثمّ صحّح الرقمَ
 // في النموذج **لا يُربط طلبُه بالطلب** — وإلّا ذهبت المتابعةُ إلى الرقم الغلط، ونقطةُ صاحبه (إن
 // بعثها) صارت نقطةَ التسليم وبلغت السائق.
-func lockWhatsAppLocReqTx(ctx context.Context, q dbtx.Querier, id, phone string) (lat, lng *float64, err error) {
+func lockWhatsAppLocReqTx(ctx context.Context, q dbtx.Querier, id, phone string) (lat, lng *float64, address string, err error) {
 	if !isUUID(id) {
-		return nil, nil, errAmanahLocReq
+		return nil, nil, "", errAmanahLocReq
 	}
 	err = q.QueryRow(ctx, `
-		SELECT lat, lng FROM recipient_location_requests
+		SELECT lat, lng, COALESCE(address_text, '') FROM recipient_location_requests
 		 WHERE id = $1 AND mode = 'whatsapp' AND order_id IS NULL AND phone = $2
-		 FOR UPDATE`, id, phone).Scan(&lat, &lng)
+		 FOR UPDATE`, id, phone).Scan(&lat, &lng, &address)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, nil, errAmanahLocReq
+		return nil, nil, "", errAmanahLocReq
 	}
-	return lat, lng, err
+	return lat, lng, address, err
 }
 
 // handleWhatsAppRequestLocation `POST /admin/whatsapp-orders/location-requests` —
@@ -468,25 +489,36 @@ func (s *Server) handleWhatsAppRequestLocation(w http.ResponseWriter, r *http.Re
 		s.respondErr(w, errLocReqLimit)
 		return
 	}
+	a, err := newWALocReqTx(ctx, s.pg, actor, phone, req.StoreName, "")
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusCreated, s.locReqSend(ctx, a.id, phone, locReqModeWhatsApp, a.token, a.expires))
+}
+
+// waAutoLocReq **طلبُ موقعٍ كُتب ولم تُرسَل رسالتُه بعد** — رمزُه في الذاكرة وحدَها.
+type waAutoLocReq struct {
+	id, token string
+	expires   time.Time
+}
+
+// newWALocReqTx **يكتب طلبَ موقعٍ للمكتب** — مربوطاً بطلبٍ (`orderID`) أو حرّاً حتّى يُربط.
+func newWALocReqTx(ctx context.Context, q dbtx.Querier, actor, phone, storeName, orderID string) (waAutoLocReq, error) {
 	raw := make([]byte, 18)
 	if _, err := rand.Read(raw); err != nil {
-		s.respondErr(w, err)
-		return
+		return waAutoLocReq{}, err
 	}
-	token := base64.RawURLEncoding.EncodeToString(raw)
-	var id string
-	var expires time.Time
-	if err := s.pg.QueryRow(ctx, `
+	a := waAutoLocReq{token: base64.RawURLEncoding.EncodeToString(raw)}
+	err := q.QueryRow(ctx, `
 		INSERT INTO recipient_location_requests
-		       (requested_by, phone, mode, store_label, token_hash, expires_at)
-		VALUES (NULLIF($1, '')::uuid, $2, 'whatsapp', NULLIF($3, ''), $4, now() + make_interval(secs => $5))
+		       (requested_by, phone, mode, store_label, token_hash, expires_at, order_id)
+		VALUES (NULLIF($1, '')::uuid, $2, 'whatsapp', NULLIF($3, ''), $4, now() + make_interval(secs => $5),
+		        NULLIF($6, '')::uuid)
 		RETURNING id::text, expires_at`,
-		actor, phone, strings.TrimSpace(req.StoreName), locReqHash(token), int(locReqTTL.Seconds())).
-		Scan(&id, &expires); err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	httpx.JSON(w, http.StatusCreated, s.locReqSend(ctx, id, phone, locReqModeWhatsApp, token, expires))
+		actor, phone, strings.TrimSpace(storeName), locReqHash(a.token), int(locReqTTL.Seconds()), orderID).
+		Scan(&a.id, &a.expires)
+	return a, err
 }
 
 // handleWhatsAppLocationRequest `GET /admin/whatsapp-orders/location-requests/{id}` — **أوصل الموقع؟**
@@ -569,4 +601,97 @@ func (s *Server) handleWhatsAppOrderAddress(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"order": view})
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **الزبونُ يردّ بعنوانه مكتوباً** (قرارُ المالك ٢٠٢٦-١١-٠٦)
+// ══════════════════════════════════════════════════════════════════════
+//
+// «الموقع والعنوان التفصيلي يطلبهم البوت من الزبون ويعبّيهم لحاله». **رسالةُ الطلب تطلب الاثنين**
+// (`waAddressAskLine`)، والموقعُ يملأ النقطة (`HandleWALocation`)، **وأوّلُ ردٍّ نصّيٍّ من الرقم نفسِه
+// وطلبُ الموقع مفتوحٌ يُكتب عنوانَ الطلب** — مرّةً واحدة، وما بعده لا يُلتقط (المكتبُ يصحّح بيده).
+//
+// **وعنوانٌ كتبه الموظّفُ قبله لا يضيع**: القديمُ والجديدُ في سجلّ الأحداث
+// (`ops.whatsapp_order_address_bot`).
+
+// waAddressMinRunes **أقصرُ ما يُعدّ عنواناً** — «ok» و«👍» ليسا عنواناً.
+const waAddressMinRunes = 3
+
+// waAddressReply **ما يردّ به البوتُ على العنوان.**
+const waAddressReply = "وصلنا عنوانك ✅ شكراً."
+
+// waAddressLike **أيُشبه النصُّ عنواناً؟** — ثلاثةُ أحرفٍ فأكثر فيها حرفٌ واحدٌ على الأقلّ.
+func waAddressLike(text string) bool {
+	letters, n := 0, 0
+	for _, c := range text {
+		n++
+		if unicode.IsLetter(c) {
+			letters++
+		}
+	}
+	return n >= waAddressMinRunes && letters > 0
+}
+
+// HandleWAAddressText **ردٌّ نصّيٌّ من رقمٍ له طلبُ موقعٍ مفتوحٌ من المكتب** — يُكتب عنوانَ الطلب
+// ويردّ بنصّ الشكر، **أو سلسلةً فارغة** (لا طلبَ مفتوحاً، أو ليس عنواناً، أو وصل عنوانٌ قبله).
+func (s *Server) HandleWAAddressText(ctx context.Context, from, text string) string {
+	phone, ok := identity.NormalizePhone(from)
+	if !ok {
+		return ""
+	}
+	addr := strings.TrimSpace(text)
+	if !waAddressLike(addr) {
+		return ""
+	}
+	if r := []rune(addr); len(r) > maxAddressText {
+		addr = string(r[:maxAddressText])
+	}
+	if _, err := s.guardText(ctx, tf("address_text", &addr, maxAddressText, textguard.Address)); err != nil {
+		return ""
+	}
+	addr = strings.TrimSpace(addr)
+	var reqID, orderID string
+	err := s.pg.QueryRow(ctx, `
+		UPDATE recipient_location_requests l
+		   SET address_text = $2, address_received_at = now()
+		 WHERE l.id = (SELECT r.id FROM recipient_location_requests r
+		                WHERE r.phone = $1 AND r.mode = 'whatsapp'
+		                  AND r.address_received_at IS NULL AND r.expires_at > now()
+		                  AND (r.order_id IS NULL OR EXISTS (
+		                       SELECT 1 FROM orders o
+		                        WHERE o.id = r.order_id AND o.delivered_at IS NULL AND o.closed_at IS NULL))
+		                ORDER BY r.created_at DESC LIMIT 1)
+		   AND l.address_received_at IS NULL
+		RETURNING l.id::text, COALESCE(l.order_id::text, '')`, phone, addr).Scan(&reqID, &orderID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ""
+	}
+	if err != nil {
+		s.logger.Warn("عنوانُ زبون طلب الواتساب: الحفظُ سقط", "error", err)
+		return ""
+	}
+	if orderID != "" {
+		if _, err := s.orders.UpdateWhatsAppAddress(ctx, orderID, addr,
+			func(ctx context.Context, q dbtx.Querier, old string) error {
+				return waAuditBot(ctx, q, orderID, map[string]any{
+					"old": old, "new": addr, "location_request": reqID,
+				})
+			}); err != nil {
+			s.logger.Warn("عنوانُ زبون طلب الواتساب: كتابتُه في الطلب سقطت", "order", orderID, "error", err)
+		}
+	}
+	s.touch("orders", "ops")
+	return waAddressReply
+}
+
+// waAuditBot **أثرُ ما كتبه البوتُ في الطلب** — بلا فاعلٍ بشريّ، في معاملة الكتابة نفسِها.
+func waAuditBot(ctx context.Context, q dbtx.Querier, orderID string, meta map[string]any) error {
+	raw, err := json.Marshal(meta)
+	if err != nil {
+		return err
+	}
+	_, err = q.Exec(ctx, `
+		INSERT INTO audit_log (actor_user_id, action, entity, entity_id, details)
+		VALUES (NULL, 'ops.whatsapp_order_address_bot', 'order', $1, $2)`, orderID, raw)
+	return err
 }

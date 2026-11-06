@@ -96,7 +96,7 @@ func TestWAORD023_LocationRequestFromForm(t *testing.T) {
 	if j["whatsapp_sent"] != true {
 		t.Fatalf("**الرسالةُ لم تُعلَّم مُرسَلة**: %v", j)
 	}
-	if msgs := n.to(phone); len(msgs) != 1 || msgs[0].text != waLocText(false) {
+	if msgs := n.to(phone); len(msgs) != 1 || msgs[0].text != waLocTextWA() {
 		t.Fatalf("**رسالةُ المالك لم تصل الرقم**: %+v", msgs)
 	}
 	// **ضغطتان للرقم نفسِه في دقيقةٍ تُردّ.**

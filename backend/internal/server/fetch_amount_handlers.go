@@ -13,6 +13,7 @@ package server
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 
@@ -50,6 +51,11 @@ func (s *Server) handleDriverFetchAmount(w http.ResponseWriter, r *http.Request)
 	if err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	// **وطلبُ الواتساب: الزبونُ يُخبَر بالمبالغ** (قرارُ المالك ٢٠٢٦-١١-٠٦) — إعلامٌ بلا موافقة،
+	// **ولا يُنتظر**: رسالةٌ لم تصل لا توقف السائق.
+	if o.Origin == orders.OriginWhatsApp {
+		s.sendWhatsAppGoodsNotice(context.WithoutCancel(r.Context()), orderID)
 	}
 	s.touch("orders", "ops")
 	httpx.JSON(w, http.StatusOK, orders.ViewFor(orders.AudienceDriver, o))
@@ -160,4 +166,21 @@ func (s *Server) attachFetchCodes(ctx context.Context, views []map[string]any) e
 		}
 	}
 	return nil
+}
+
+// sendWhatsAppGoodsNotice **يرسل رسالةَ المبالغ لزبون طلب الواتساب** — بانتظاره كرسالة الموقع.
+func (s *Server) sendWhatsAppGoodsNotice(ctx context.Context, orderID string) {
+	phone, text, ok, err := s.orders.WhatsAppGoodsNotice(ctx, orderID)
+	if err != nil {
+		s.logger.Warn("طلب واتساب: قراءةُ رسالة المبالغ سقطت", "order", orderID, "error", err)
+		return
+	}
+	if !ok {
+		return
+	}
+	sendCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+	if !s.sendText(sendCtx, phone, text) {
+		s.logger.Warn("طلب واتساب: رسالةُ المبالغ لم تصل للزبون", "order", orderID)
+	}
 }

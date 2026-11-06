@@ -830,9 +830,8 @@ func TestWAORD010_Validation(t *testing.T) {
 			delete(b, "store_lng")
 			b["store_id"] = noPin.ID
 		}), "wa_store_unavailable"},
-		{"بلا تفاصيل", with(func(b map[string]any) { b["details"] = "" }), "validation"},
-		{"بلا اسم المستلم", with(func(b map[string]any) { b["recipient_name"] = "" }), "validation"},
-		{"بلا عنوان", with(func(b map[string]any) { b["address_text"] = "" }), "validation"},
+		// **والتفاصيلُ واسمُ المستلِم وعنوانُه اختياريّةٌ منذ ٢٠٢٦-١١-٠٦** — `TestWAORD040`؛ ورقمُه وحدَه إلزاميّ.
+		{"بلا رقم المستلم", with(func(b map[string]any) { b["recipient_phone"] = "" }), "invalid_phone"},
 		// **وبلا نقطةٍ يُنشأ بالعنوان — بأجرةٍ يكتبها الموظّف** (ملحقُ المالك ٢٠٢٦-١١-٠٥، ب).
 		{"بلا نقطة المستلم ولا أجرة", with(func(b map[string]any) { delete(b, "lat"); delete(b, "lng") }), "wa_fee_required"},
 		{"نصفُ نقطة", with(func(b map[string]any) { delete(b, "lng") }), "bad_point"},

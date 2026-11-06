@@ -789,7 +789,14 @@ func (s *WhatsAppSender) onInbound(ctx context.Context, c *whatsmeow.Client, msg
 	if strings.TrimSpace(text) == "" {
 		return
 	}
+	// **ورقمُ المرسِل من معرّفه الخفيّ إن لزم** — كردّ الموقع (`ResolveSenderPhone`)، فعنوانُ زبونٍ
+	// يخاطبه واتساب بمعرّفٍ خفيّ يجد طلبَه (٢٠٢٦-١١-٠٦). وبلا رقمٍ معروفٍ ما كان.
 	from := "+" + msg.Info.Sender.User
+	if !selfChat && c.Store != nil {
+		if p := ResolveSenderPhone(ctx, msg.Info, c.Store.LIDs); p != "" {
+			from = p
+		}
+	}
 	jid := msg.Info.Sender.ToNonAD()
 	if selfChat {
 		jid = msg.Info.Chat.ToNonAD()

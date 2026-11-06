@@ -241,15 +241,25 @@ internal fun FetchAmountDialog(
     busy: Boolean,
     onConfirm: (Double) -> Unit,
     onDismiss: () -> Unit,
+    // **طلبُ واتساب** (قرارُ المالك ٢٠٢٦-١١-٠٦) — ثمنُ الطلب يصل الزبونَ برسالةٍ لا المتجرَ ليوافق.
+    whatsApp: Boolean = false,
 ) {
     val usd = isUsd(currency)
     var amount by remember { mutableStateOf(current?.let { fetchAmountDraft(it, currency) } ?: "") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.fetch_amount_title), fontWeight = FontWeight.Bold) },
+        title = {
+            Text(
+                stringResource(if (whatsApp) R.string.wa_goods_title else R.string.fetch_amount_title),
+                fontWeight = FontWeight.Bold,
+            )
+        },
         text = {
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(stringResource(R.string.fetch_amount_hint), color = Rahal.colors.inkMuted)
+                Text(
+                    stringResource(if (whatsApp) R.string.wa_goods_hint else R.string.fetch_amount_hint),
+                    color = Rahal.colors.inkMuted,
+                )
                 if (estimate != null && estimate > 0) {
                     Spacer(Modifier.height(6.dp))
                     Text(
@@ -285,7 +295,10 @@ internal fun FetchAmountDialog(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !busy && amountValue(amount) != null,
             ) {
-                Text(stringResource(R.string.fetch_amount_send), fontWeight = FontWeight.Bold)
+                Text(
+                    stringResource(if (whatsApp) R.string.wa_goods_send else R.string.fetch_amount_send),
+                    fontWeight = FontWeight.Bold,
+                )
             }
         },
         dismissButton = {

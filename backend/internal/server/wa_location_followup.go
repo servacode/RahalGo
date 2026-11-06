@@ -16,7 +16,7 @@ package server
 //
 // # ومتى لا يُبعث
 //
-//   - **وصل الموقع**، أو انتهى الرابط، أو الصفرُ في الإعداد.
+//   - **وصل الموقع أو العنوانُ المكتوب** (ردٌّ نصّيّ، ٢٠٢٦-١١-٠٦)، أو انتهى الرابط، أو الصفرُ في الإعداد.
 //   - **رسالةُ الطلب الأولى لم تصل** (`whatsapp_sent`) — ثانيةٌ بلا أولى لا تُفهم.
 //   - **الطلبُ المربوطُ انتهى** (سُلّم أو أُلغي) — لا يُسأل عن عنوانٍ لا يُوصَل إليه.
 //   - **الطلبُ المربوطُ له نقطةٌ معروفة** — حدّدها الموظّفُ على الخريطة، فلا يُسأل عن عنوانه.
@@ -131,6 +131,7 @@ func (s *Server) SweepWALocationFollowUp(ctx context.Context) int {
 		  FROM recipient_location_requests l
 		 WHERE l.mode = 'whatsapp'
 		   AND l.received_at IS NULL AND l.followup_sent_at IS NULL
+		   AND l.address_received_at IS NULL
 		   AND l.whatsapp_sent AND l.expires_at > now()
 		   AND l.created_at <= now() - make_interval(mins => $1)
 		   AND l.created_at >  now() - make_interval(secs => $2)
@@ -164,7 +165,8 @@ func (s *Server) SweepWALocationFollowUp(ctx context.Context) int {
 		}
 		tag, err := s.pg.Exec(ctx, `
 			UPDATE recipient_location_requests SET followup_sent_at = now()
-			 WHERE id = $1 AND followup_sent_at IS NULL AND received_at IS NULL`, c.id)
+			 WHERE id = $1 AND followup_sent_at IS NULL AND received_at IS NULL
+			   AND address_received_at IS NULL`, c.id)
 		if err != nil {
 			s.logger.Warn("متابعةُ طلب الموقع: الحجزُ سقط", "request", c.id, "error", err)
 			continue

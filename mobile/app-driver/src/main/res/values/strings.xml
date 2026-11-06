@@ -596,6 +596,13 @@
     <string name="fetch_amount_rejected">المتجر رفض المبلغ %1$s — اكتب المبلغ الصحيح</string>
     <string name="fetch_amount_waiting">بانتظار موافقة المتجر على المبلغ %1$s</string>
     <string name="fetch_amount_approved">المتجر وافق على المبلغ %1$s</string>
+    <!-- طلب الواتساب: ثمن الطلب يكتبه السائق والزبون تصله رسالة بالمبالغ (قرار المالك ٢٠٢٦-١١-٠٦) -->
+    <string name="wa_goods_button">اكتب ثمن الطلب</string>
+    <string name="wa_goods_title">كم ثمن الطلب الذي دفعته للمحل؟</string>
+    <string name="wa_goods_hint">اكتب ثمن الطلب — تصل للزبون رسالة فيها ثمن الطلب والأجرة والمجموع.</string>
+    <string name="wa_goods_send">أرسل</string>
+    <string name="wa_goods_enter">اكتب ثمن الطلب الذي دفعته للمحل قبل أن تستلم — تصل للزبون رسالة بالمبالغ</string>
+    <string name="wa_goods_done">ثمن الطلب %1$s — وصل للزبون برسالة</string>
     <string name="kind_purchase">طلب مشتريات</string>
     <string name="kind_amanah">طلب أمانة</string>
     <string name="card_pay_recipient">من المستلم</string>
