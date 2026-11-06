@@ -1,6 +1,11 @@
 package qa
 
-import "testing"
+import (
+	"strings"
+	"testing"
+
+	"github.com/servacode/rahalgo/backend/internal/settings"
+)
 
 // ══════════════════════════════════════════════════════════════════════
 // **شروطٌ وخصوصيّةٌ لكلّ دور** — `RTX` (قرارُ المالك ٢٠٢٦-١٠-٠١)
@@ -57,8 +62,18 @@ func TestRTX02_PanelTextOverridesDefault(t *testing.T) {
 	if d, ok := body["data"].(map[string]any); ok {
 		body = d
 	}
-	if v := str(body["driver_terms_text"]); v != "شروطٌ من اللوحة" {
+	// **نصُّ اللوحة يغلب الأصل، وبندُ «التعامل برّا المنصّة» حاضرٌ دائماً** (قرارُ المالك
+	// ٢٠٢٦-١١-٠٥) — يُلحَق بأيّ نصٍّ لا يحويه، مرّةً واحدة (`settings.EffectiveDriverTerms`،
+	// وحارسُه `TestDriverTerms_ClauseAlwaysPresent`). **فالحقيقةُ اثنتان معاً لا نصُّ اللوحة وحده.**
+	v := str(body["driver_terms_text"])
+	if !strings.HasPrefix(v, "شروطٌ من اللوحة") || strings.Contains(v, settings.DefaultDriverTerms) {
 		t.Fatalf("RTX02 نصُّ اللوحة لم يغلب الأصل: %q", v)
+	}
+	if strings.Count(v, settings.DriverTermsClause) != 1 {
+		t.Fatalf("RTX02 بندُ التعامل برّا المنصّة ليس مرّةً واحدة: %q", v)
+	}
+	if v != settings.EffectiveDriverTerms("شروطٌ من اللوحة") {
+		t.Fatalf("RTX02 النصُّ غيرُ ما يُلحقه البند: %q", v)
 	}
 }
 
