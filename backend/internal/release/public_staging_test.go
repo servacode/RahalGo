@@ -2,8 +2,8 @@ package release
 
 import (
 	"context"
-	"os"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"

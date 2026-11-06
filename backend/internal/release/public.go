@@ -264,4 +264,3 @@ func versionTag(v string) string {
 	}
 	return v
 }
-
