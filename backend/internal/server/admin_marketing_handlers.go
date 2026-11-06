@@ -322,6 +322,12 @@ func (s *Server) handleSetSetting(w http.ResponseWriter, r *http.Request) {
 			s.respondErr(w, err)
 			return
 		}
+		// **وسقفُ المصادر فوق الواحد ينتظر نسخةَ السائق** (٢٠٢٦-١١-٠٥) —
+		// **فلا يُحفظ رقمٌ لا يقع أثرُه**، والردُّ يقول السبب.
+		if err := s.checkMultiStopSources(r.Context(), key, norm); err != nil {
+			s.respondErr(w, err)
+			return
+		}
 	}
 
 	// التحقق كلُّه في الكتالوج: المفتاح المجهول مرفوض، والقيمة خارج المدى

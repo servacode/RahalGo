@@ -63,26 +63,7 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	var from string
-	var driverID *string
-	var walletPaid, cashDue, deliveryFee, customReserved int64
-	var customerID, promoCode, kind, origin string
-	// **و`deliveryFee` هنا أجرُ السائقِ المعتمَد (`driver_fee`) لا ما يدفعه
-	// الزبون** (٢٠٢٦-٠٩-٢٧): يُقرأ لتسويةِ أجرِ السائق وتعويضِه وحدَهما، **فعرضُ
-	// «توصيلٌ مجّانيّ» يُصفّر `delivery_fee` (دفعُ الزبون) ولا يُصفّر أجرَ من
-	// قاد** — والفرقَ تموّله الخزينة. (للطلبات القديمة `driver_fee=delivery_fee`.)
-	err = tx.QueryRow(ctx, `
-		SELECT status, driver_id, wallet_paid, cash_due, driver_fee,
-		       -- **والتوصيلةُ بلا زبون** («لدي توصيلة») — NULL في نصٍّ يُسقط
-		       -- كلَّ انتقالٍ لها: قبولَ السائق واستلامَه وتسليمَه.
-		       COALESCE(customer_id::text, ''),
-		       COALESCE(promo_code,''), kind, custom_reserved_amount, origin
-		FROM orders WHERE id = $1 FOR UPDATE`, orderID).
-		Scan(&from, &driverID, &walletPaid, &cashDue, &deliveryFee, &customerID, &promoCode,
-			&kind, &customReserved, &origin)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, httpx.ErrNotFound
-	}
+	lo, err := lockOrderTx(ctx, tx, orderID)
 	if err != nil {
 		return nil, err
 	}
@@ -111,6 +92,118 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 	// **تبني وحدةً قراءتُها من المعاملة** — **ولا دالّةَ `…Tx`
 	// موازيةٌ تُكتب ولا معجمَ إعداداتٍ ثانٍ.**
 	unit := s.on(tx)
+	ap, err := unit.applyTransitionTx(ctx, tx, lo, transitionReq{
+		actorID: actorID, actorRoles: actorRoles, to: to, note: note,
+		failReason: failReason, fault: fault, hook: hook,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if ap.blocked {
+		return unit.merchantBlocked(ctx, tx, orderID, actorID, lo.from, lo.kind, failReason, fault, note,
+			lo.driverID, lo.deliveryFee)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return nil, err
+	}
+	return s.afterTransition(ctx, ap)
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **الآلةُ ثلاثُ قطع — وطريقُها واحد** (طلبٌ بعدّة محطّات، ٢٠٢٦-١١-٠٥)
+// ══════════════════════════════════════════════════════════════════════
+//
+//	transitionTx = Begin → lockOrderTx → applyTransitionTx → Commit → afterTransition
+//
+// **والقطعُ هي الشيفرةُ نفسُها حرفاً** — **فلا يتبدّل طلبُ المتجر الواحد**
+// (`TestSingleStore_Unchanged`). **وفعلُ القسم** (`parts.go`) يقفل الطلبَ ثمّ
+// يكتب قسمَه ثمّ يُجري الانتقالَ الذي يتبعه **في المعاملة نفسِها** — `XG-46`:
+// **لا `s.Transition` داخلَ معاملة**، فوصلةٌ ثانيةٌ على صفٍّ مقفولٍ جمود.
+
+// lockedOrder **صفُّ الطلب كما قفلته الآلة** — ما يُقرّر به الانتقال.
+type lockedOrder struct {
+	id         string
+	from       string
+	driverID   *string
+	walletPaid int64
+	cashDue    int64
+	// deliveryFee **أجرُ السائق المعتمَد** (`driver_fee`) — انظر `lockOrderTx`.
+	deliveryFee    int64
+	customReserved int64
+	customerID     string
+	promoCode      string
+	kind           string
+	// origin **أصلُ الطلب** — طلبُ الواتساب يُلغيه المكتب (٢٠٢٦-١١-٠٥).
+	origin string
+	// stops **عددُ متاجر الطلب** — وفوق الواحد فرعُ المحطّات.
+	stops int
+}
+
+// lockOrderTx **يقفل صفَّ الطلب ويقرؤه** — أوّلُ ما في كلّ انتقالٍ وكلّ فعلِ قسم.
+func lockOrderTx(ctx context.Context, tx pgx.Tx, orderID string) (*lockedOrder, error) {
+	lo := &lockedOrder{id: orderID}
+	// **و`deliveryFee` هنا أجرُ السائقِ المعتمَد (`driver_fee`) لا ما يدفعه
+	// الزبون** (٢٠٢٦-٠٩-٢٧): يُقرأ لتسويةِ أجرِ السائق وتعويضِه وحدَهما، **فعرضُ
+	// «توصيلٌ مجّانيّ» يُصفّر `delivery_fee` (دفعُ الزبون) ولا يُصفّر أجرَ من
+	// قاد** — والفرقَ تموّله الخزينة. (للطلبات القديمة `driver_fee=delivery_fee`.)
+	err := tx.QueryRow(ctx, `
+		SELECT status, driver_id, wallet_paid, cash_due, driver_fee,
+		       -- **والتوصيلةُ بلا زبون** («لدي توصيلة») — NULL في نصٍّ يُسقط
+		       -- كلَّ انتقالٍ لها: قبولَ السائق واستلامَه وتسليمَه.
+		       COALESCE(customer_id::text, ''),
+		       COALESCE(promo_code,''), kind, custom_reserved_amount, origin, stops
+		FROM orders WHERE id = $1 FOR UPDATE`, orderID).
+		Scan(&lo.from, &lo.driverID, &lo.walletPaid, &lo.cashDue, &lo.deliveryFee, &lo.customerID,
+			&lo.promoCode, &lo.kind, &lo.customReserved, &lo.origin, &lo.stops)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, httpx.ErrNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return lo, nil
+}
+
+// transitionReq **ما طُلب من الآلة.**
+type transitionReq struct {
+	actorID    string
+	actorRoles []string
+	to, note   string
+	failReason string
+	fault      string
+	hook       func(context.Context, dbtx.Querier) error
+	// fromParts **انتقالٌ تبع فعلَ قسم** (`parts.go`) — أقسامُه كُتبت قبله.
+	fromParts bool
+}
+
+// appliedTransition **ما وقع في المعاملة** — يقرؤه ما بعد التثبيت.
+type appliedTransition struct {
+	lo         *lockedOrder
+	req        transitionReq
+	to, note   string
+	endedBy    string
+	effFault   string
+	done       settled
+	codeRt     *codeRoute
+	lateCancel bool
+	// blocked **تعذّرٌ عند باب المتجر** — `merchantBlocked` يُكمل بنفسه.
+	blocked bool
+}
+
+// applyTransitionTx **جسمُ الانتقال داخلَ المعاملة** — من فحص الأدوار إلى الحدث والتسوية.
+//
+// **ولا يثبّت ولا يُخطر** — ذاك لمن ناداه (`transitionTx` وفعلُ القسم).
+func (s *Service) applyTransitionTx(ctx context.Context, tx pgx.Tx, lo *lockedOrder, req transitionReq) (*appliedTransition, error) {
+	// **والمحرّكُ هنا وحدةُ المعاملة** (`s.on(tx)`) — كلُّ قراءةٍ منها.
+	unit := s
+	orderID := lo.id
+	from, driverID := lo.from, lo.driverID
+	walletPaid, cashDue, deliveryFee, customReserved := lo.walletPaid, lo.cashDue, lo.deliveryFee, lo.customReserved
+	customerID, promoCode, kind, origin := lo.customerID, lo.promoCode, lo.kind, lo.origin
+	actorID, actorRoles, to, note := req.actorID, req.actorRoles, req.to, req.note
+	failReason, fault, hook := req.failReason, req.fault, req.hook
+	var err error
 
 	selfManage := unit.MerchantsSelfManage(ctx)
 	effRoles := rolesUnderMode(selfManage, from, to, actorRoles, driverID != nil)
@@ -132,6 +225,22 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 		return nil, ErrBadTransition
 	}
 	endedBy := authorizingRole(kind, from, to, effRoles)
+	// ══════════════════════════════════════════════════════════════════
+	// **وطلبٌ بعدّة محطّات: القبولُ والرفضُ لكلّ قسم** (`parts.go`، G1/G2/G6)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **ولا تتبدّل الآلةُ لطلب المتجر الواحد بحرف** (`stops = 1`). **وما جاء من
+	// فعل قسمٍ** (`fromParts`) كُتبت أقسامُه قبله فلا يُعاد.
+	if lo.stops > 1 && !req.fromParts {
+		g, err := unit.partGatesTx(ctx, tx, lo, actorID, to, note, endedBy)
+		if err != nil {
+			return nil, err
+		}
+		if g.to != to {
+			to, note = g.to, g.note
+			endedBy = authorizingRole(kind, from, to, effRoles)
+		}
+	}
 	// لا استلام بلا سائق مسند
 	if (to == StAtPickup || to == StPickedUp) && driverID == nil {
 		return nil, ErrNeedsDriver
@@ -256,7 +365,15 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 	// **والسائقُ يُعوَّض عن مشواره** — قاد وعاد بلا شيء، **والذنبُ ليس ذنبَه.**
 	// **وبعد موافقة العمليات لا لحظتَها** (٢٠٢٦-١٠-٠٢): يُكتب طلباً معلَّقاً.
 	if to == StFailed && from == StAtPickup {
-		return unit.merchantBlocked(ctx, tx, orderID, actorID, from, kind, failReason, fault, note, driverID, deliveryFee)
+		return &appliedTransition{lo: lo, req: req, to: to, note: note, blocked: true}, nil
+	}
+
+	// **ومدّةُ تحضير الطلب من أبطأ أقسامه** (`partsPrepTx`) — تُكتب قبل `COALESCE`
+	// أدناه فتبقى.
+	if lo.stops > 1 && to == StAccepted {
+		if err := partsPrepTx(ctx, tx, orderID); err != nil {
+			return nil, err
+		}
 	}
 
 	set := `status = $2, updated_at = now()`
@@ -327,6 +444,12 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 	}
 	if _, err := tx.Exec(ctx, `UPDATE orders SET `+set+` WHERE id = $1`, args...); err != nil {
 		return nil, err
+	}
+	// **وما يُشتقّ من الأقسام يُعاد حسابُه** — الجهوزُ والإرسالُ للطلب كلِّه (`parts.go`).
+	if lo.stops > 1 {
+		if err := syncPartFieldsTx(ctx, tx, orderID); err != nil {
+			return nil, err
+		}
 	}
 
 	// **سببُ التعذّر وذنبُه** — يُكتبان قبل التسوية لأن التعويضَ يقرأهما.
@@ -424,7 +547,13 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 		// الاستعلامُ يعمل بالقديم عند غياب الصفّ. **وافتراضٌ في موضعين
 		// افتراضٌ لا يُعتمد عليه.**
 		var withinWindow bool
-		if err := tx.QueryRow(ctx, `
+		if lo.stops > 1 {
+			// **وفي الطلب بعدّة محطّات المهلةُ من أوّل قسمٍ قُبل** (G7) — لا من `accepted_at`
+			// الذي يُكتب حين يجيب آخرُ متجر، **فتنفتح المهلةُ من جديد والأوّلُ يطبخ.**
+			if withinWindow, err = partCancelWithinWindowTx(ctx, tx, orderID, unit.cancelWindowSec(ctx)); err != nil {
+				return nil, err
+			}
+		} else if err := tx.QueryRow(ctx, `
 			SELECT accepted_at IS NOT NULL
 			   AND accepted_at > now() - make_interval(secs => $2)
 			FROM orders WHERE id = $1`,
@@ -432,6 +561,18 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 			return nil, err
 		}
 		if !withinWindow {
+			return nil, ErrCancelWindowPassed
+		}
+	}
+	// **ومهلةُ الإلغاء في الطلب بعدّة محطّات تبدأ من أوّل قبول** (G7) — والطلبُ ما زال
+	// «بانتظار» حتّى يجيب كلُّ متجر.
+	if lo.stops > 1 && to == StCancelled && from == StPending && slices.Contains(actorRoles, "customer") &&
+		!slices.Contains(actorRoles, "ops") && !slices.Contains(actorRoles, "admin") {
+		ok, err := partCancelWithinWindowTx(ctx, tx, orderID, unit.cancelWindowSec(ctx))
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
 			return nil, ErrCancelWindowPassed
 		}
 	}
@@ -466,9 +607,20 @@ func (s *Service) transitionTx(ctx context.Context, actorID string, actorRoles [
 		}
 	}
 
-	if err := tx.Commit(ctx); err != nil {
-		return nil, err
-	}
+	return &appliedTransition{
+		lo: lo, req: req, to: to, note: note, endedBy: endedBy, effFault: effFault,
+		done: done, codeRt: codeRt, lateCancel: lateCancel,
+	}, nil
+}
+
+// afterTransition **ما بعد التثبيت** — البثُّ والإشعاراتُ والخطواتُ التلقائيّة التالية.
+func (s *Service) afterTransition(ctx context.Context, ap *appliedTransition) (*Order, error) {
+	orderID, from, driverID := ap.lo.id, ap.lo.from, ap.lo.driverID
+	customerID, kind := ap.lo.customerID, ap.lo.kind
+	actorID, actorRoles := ap.req.actorID, ap.req.actorRoles
+	to, note, endedBy := ap.to, ap.note, ap.endedBy
+	failReason, fault, effFault := ap.req.failReason, ap.req.fault, ap.effFault
+	done, codeRt, lateCancel := ap.done, ap.codeRt, ap.lateCancel
 
 	updated, err := s.GetByID(ctx, orderID)
 	if err != nil {
@@ -1967,6 +2119,21 @@ func (s *Service) CancelSecondsLeft(ctx context.Context, o *Order) int {
 		default:
 			return 0
 		}
+	}
+	// **والطلبُ بعدّة محطّات «بانتظار» حتّى يجيب كلُّ متجر** — ومهلتُه من أوّل قبول (G7).
+	if o.Stops > 1 && (o.Status == StPending || o.Status == StAccepted) {
+		first := s.firstPartAcceptedAt(ctx, o.ID)
+		if first == nil {
+			if o.Status == StAccepted {
+				return 0
+			}
+			return -1
+		}
+		left := s.cancelWindowSec(ctx) - int64(time.Since(*first).Seconds())
+		if left < 0 {
+			return 0
+		}
+		return int(left)
 	}
 	if o.Status != StAccepted || o.AcceptedAt == nil {
 		if o.Status == StPending {

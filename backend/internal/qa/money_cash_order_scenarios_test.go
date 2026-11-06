@@ -233,6 +233,8 @@ func TestCASHORD_TwoCashStoresWaiverSplitsPerStore(t *testing.T) {
 	treasury(t, h)
 	waiverSettings(h)
 	h.Setting("orders.max_sources", "2")
+	// **والطلبُ من متجرين ينتظر نسخةَ السائق التي تعرف المحطّات** (٢٠٢٦-١١-٠٥).
+	h.OpenMultiStop()
 	h.Setting("orders.extra_source_fee", "0")
 	h.Setting("orders.source_mid_percent", "0")
 	h.Setting("orders.source_far_percent", "0")

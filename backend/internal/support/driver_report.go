@@ -121,6 +121,12 @@ func AllowedForKind(kind, code string) bool {
 // أيّ طلبٍ هذه» لا «من كتبها»، **ومن كتبها في `created_by`.** ولو وُضع السائقُ
 // فيه لَظهر البلاغُ في «شكاواي» عنده وفي ملفّ زبونٍ لا يخصّه.
 func (s *Service) DriverReport(ctx context.Context, driverID, orderID, reason, note string) (*Ticket, error) {
+	return s.DriverReportAtStop(ctx, driverID, orderID, reason, note, "")
+}
+
+// DriverReportAtStop **بلاغُ السائق — ومعه محطّتُه في الطلب بعدّة محطّات** (`stop` = متجرُ
+// المحطّة). **وبلا محطّةٍ في طلبٍ كهذا تُترك الجهةُ للمكتب** — لا تُنسب إلى المتجر الأوّل.
+func (s *Service) DriverReportAtStop(ctx context.Context, driverID, orderID, reason, note, stop string) (*Ticket, error) {
 	if !validDriverReason(reason) {
 		return nil, ErrBadReason
 	}
@@ -185,7 +191,7 @@ func (s *Service) DriverReport(ctx context.Context, driverID, orderID, reason, n
 	// على المتجر وأربعةٌ على الزبون. **وكانت مكتوبةً ولا تُقرأ.**
 	//
 	// **و«سببٌ آخر» يبقى بلا جهة** — لا تُخمَّن على أحد.
-	against := s.againstDriverReport(ctx, orderID, reason)
+	against := s.againstDriverReport(ctx, orderID, reason, stop)
 	err = s.db.QueryRow(ctx, `
 		INSERT INTO tickets (customer_id, order_id, subject, reason, created_by,
 		                     opened_by_customer, against_user_id)
@@ -227,7 +233,7 @@ func (s *Service) pastComplaintWindow(ctx context.Context, closedAt time.Time) (
 // **ونظيرُ `againstFor` للزبون** — وهما دالّتان لأنّ القائمتين مختلفتان:
 // **أسبابُ الزبون على السائق والمتجر، وأسبابُ السائق على المتجر
 // والزبون.**
-func (s *Service) againstDriverReport(ctx context.Context, orderID, reason string) *string {
+func (s *Service) againstDriverReport(ctx context.Context, orderID, reason, stop string) *string {
 	var target string
 	for _, r := range DriverReportReasons {
 		if r.Code == reason {
@@ -239,12 +245,26 @@ func (s *Service) againstDriverReport(ctx context.Context, orderID, reason strin
 		return nil
 	}
 	q := `SELECT o.customer_id::text FROM orders o WHERE o.id = $1`
+	args := []any{orderID}
 	if target == AgainstMerchant {
+		// **والطلبُ بعدّة محطّات: متجرُ المحطّة التي يقف عندها** (C7) — وبلاها للمكتب.
 		q = `SELECT m.owner_user_id::text FROM orders o
-		     JOIN merchants m ON m.id = o.merchant_id WHERE o.id = $1`
+		     JOIN merchants m ON m.id = o.merchant_id WHERE o.id = $1 AND o.stops = 1`
+		// **و`stop` لا يُقرأ إلّا في طلبٍ بعدّة محطّات** — طلبُ المتجر الواحد بلا أقسام،
+		// **ونسخةُ سائقٍ ترسله في كلّ بلاغٍ لا تُضيّع على متجره بلاغَه.**
+		if stop != "" {
+			q = `SELECT m.owner_user_id::text FROM orders o
+			     JOIN merchants m ON m.id = o.merchant_id WHERE o.id = $1 AND o.stops = 1
+			     UNION ALL
+			     SELECT m.owner_user_id::text FROM orders o
+			     JOIN order_parts p ON p.order_id = o.id
+			     JOIN merchants m ON m.id = p.merchant_id
+			     WHERE o.id = $1 AND o.stops > 1 AND p.merchant_id::text = lower($2)`
+			args = append(args, stop)
+		}
 	}
 	var id *string
-	if err := s.db.QueryRow(ctx, q, orderID).Scan(&id); err != nil {
+	if err := s.db.QueryRow(ctx, q, args...).Scan(&id); err != nil {
 		return nil
 	}
 	return id

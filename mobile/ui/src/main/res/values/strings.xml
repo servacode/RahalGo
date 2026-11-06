@@ -1042,6 +1042,9 @@
     <string name="err_merchant_no_returns">هذا المتجر لا يستقبل المرتجعات</string>
     <string name="err_order_not_returnable">الإرجاع لطلب تعذر تسليمه فقط</string>
     <string name="err_not_readyable">لا يمكن إعلان الجاهزية في هذه الحالة.</string>
+    <string name="err_use_part">هالطلب من أكتر من متجر: كل متجر بيجاوب على قسمه، وإلغاء قسم بعد قبوله بيكون من المكتب</string>
+    <string name="err_parts_pending">في متجر بالطلب لسّا ما جاوب على قسمه — الطلب بينزل للسائقين بعد ما تجاوب كل المتاجر</string>
+    <string name="err_part_removal_pending">متجر رفض قسمه وأصنافه لسّا بالطلب — القرار للمكتب</string>
     <string name="err_reason_required">اكتب السبب أولا</string>
     <string name="err_temp_password_expired">انتهت مدة كلمة المرور المؤقتة — اطلب من الإدارة إرسال كلمة جديدة</string>
     <string name="err_rep_inactive">رمز المندوب هذا موقوف ولا يقبل متاجر جديدة</string>

@@ -52,7 +52,12 @@ func (s *Service) Alerts(ctx context.Context) ([]Alert, error) {
 		SELECT o.id, o.number, o.status,
 			-- **والخاصُّ لا متجرَ له** — فاسمُه طلبٌ خاصٌّ لا NULL.
 			-- **وطلبُ الواتساب باسم متجره المكتوب** (قرارُ المالك ٢٠٢٦-١١-٠٥).
-			COALESCE(m.name, o.pickup_name, 'طلبٌ خاصّ') AS merchant_name, COALESCE(cu.phone, o.recipient_phone, ''),
+			-- **والطلبُ بعدّة محطّات لم يُقبل: المتاجرُ التي لم تجب** (§3.7) — من يُتّصل به.
+			COALESCE(CASE WHEN o.stops > 1 AND r.reason = '`+StuckNoAccept+`' THEN
+			             (SELECT string_agg(pm.name, ' + ' ORDER BY p.seq)
+			                FROM order_parts p JOIN merchants pm ON pm.id = p.merchant_id
+			               WHERE p.order_id = o.id AND p.status = 'pending') END,
+			         m.name, o.pickup_name, 'طلبٌ خاصّ') AS merchant_name, COALESCE(cu.phone, o.recipient_phone, ''),
 			r.reason, r.since,
 			round(EXTRACT(EPOCH FROM now() - r.since) / 60),
 			-- **«أنا عليه» تخصّ السببَ الذي أُنذر به** — سببٌ جديدٌ لم يستلمه أحد.

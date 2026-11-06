@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/release"
 )
@@ -144,6 +145,22 @@ func (s *Server) backfillAllReleases(ctx context.Context) {
 //
 // **ونداءٌ واحدٌ للقاعدة لا أربعة** — يقع مع كلّ نداءٍ من كلّ هاتف.
 func (s *Server) effectiveMinVersion(ctx context.Context, appKey string) int64 {
+	var q dbtx.Querier
+	if s.pg != nil {
+		q = s.pg
+	}
+	return s.minVersionOn(ctx, q, appKey, true)
+}
+
+// minVersionOn **`effectiveMinVersion` عينُها بمنفّذٍ يُمرَّر** — `XG-46`.
+//
+// **وبوّابةُ الطلب من عدّة متاجر تسألها من داخل معاملة الإنشاء**
+// (`multiStopReady`) — **ووصلةٌ ثانيةٌ من المَسبَح هناك تُجمّد الطلب.**
+//
+// **و`backfill` مطفأٌ هناك**: **قراءةُ ملفٍّ قديمٍ تكتب رقمَه بالمَسبَح**
+// (`storeReleaseMeta`). **وبلاها يُقرأ الحدُّ اليدويُّ وحدَه** — **والبوّابةُ
+// تبقى مغلقةً لا تُفتح خطأً**، وأوّلُ نداءٍ من هاتفٍ يقرأ الملفَّ بعدها.
+func (s *Server) minVersionOn(ctx context.Context, q dbtx.Querier, appKey string, backfill bool) int64 {
 	app, ok := release.Find(appKey)
 	if !ok || s.settings == nil {
 		return 0
@@ -151,8 +168,8 @@ func (s *Server) effectiveMinVersion(ctx context.Context, appKey string) int64 {
 	keys := []string{"app.min_version." + appKey, release.AutoForceKey(appKey),
 		release.VersionCodeKey(appKey), release.ApkKey(appKey)}
 	vals := map[string]json.RawMessage{}
-	if s.pg != nil {
-		rows, err := s.pg.Query(ctx,
+	if q != nil {
+		rows, err := q.Query(ctx,
 			`SELECT key, value FROM app_settings WHERE key = ANY($1)`, keys)
 		if err == nil {
 			for rows.Next() {
@@ -191,7 +208,7 @@ func (s *Server) effectiveMinVersion(ctx context.Context, appKey string) int64 {
 		return manual
 	}
 	code := num(keys[2])
-	if code <= 0 {
+	if code <= 0 && backfill {
 		code = s.backfillReleaseMeta(ctx, app, name)
 	}
 	if code > manual {

@@ -370,8 +370,10 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	//
 	// **و٢٣٤ مع** `delivery.driver_price_edit_max_percent|timeout_min` (الكابتن يطلب تعديل ثمن
 	// البضاعة والزبون يوافق — قرارُ المالك ٢٠٢٦-١١-٠٦).
-	if d.BehaviourSettings != 234 {
-		t.Errorf("إعداداتُ السلوك = %d لا 234 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	//
+	// **و٢٣٥ مع** `orders.multistop_driver_build` (بوّابةُ الطلب من عدّة متاجر — مغلقةٌ افتراضاً).
+	if d.BehaviourSettings != 235 {
+		t.Errorf("إعداداتُ السلوك = %d لا 235 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

@@ -156,7 +156,9 @@ const orderSelect = `
 	       -- **وأصلُ الطلب ومن كتبه ومتجرُ متاجرنا المنسوخ** (قرارُ المالك ٢٠٢٦-١١-٠٥).
 	       o.origin,
 	       COALESCE((SELECT NULLIF(cb.full_name, '') FROM users cb WHERE cb.id = o.created_by), ''),
-	       COALESCE(o.pickup_merchant_id::text, '')
+	       COALESCE(o.pickup_merchant_id::text, ''),
+	       -- **وعددُ متاجر الطلب** (هجرة ٠٥٠٢) — داخليٌّ لا يُرسَل (Order.Stops).
+	       o.stops
 	FROM orders o
 	LEFT JOIN LATERAL (
 		SELECT ST_Y(a.entrance::geometry) AS lat, ST_X(a.entrance::geometry) AS lng
@@ -216,7 +218,7 @@ func scanOrder(row pgx.Row) (*Order, error) {
 		&o.AmountCurrency, &o.NearLandmark, &o.LiveRequestedAt, &o.LiveRequestCount,
 		&o.EntranceLat, &o.EntranceLng, &o.DropoffSuggestLat, &o.DropoffSuggestLng,
 		&o.HolderName, &o.HolderPhone, &o.PickupAddress,
-		&o.Origin, &o.CreatedByName, &o.PickupMerchantID)
+		&o.Origin, &o.CreatedByName, &o.PickupMerchantID, &o.Stops)
 	if err != nil {
 		return nil, err
 	}
@@ -297,6 +299,12 @@ func (s *Service) getByID(ctx context.Context, db dbtx.Querier, id string) (*Ord
 		return nil, err
 	}
 	o.Items = drinksAfterParents(o.Items)
+	// **ومتاجرُ الأقسام للطلب من عدّة متاجر وحدَه** — منها تُبثّ إشارةُ كلّ متجر.
+	if o.Stops > 1 {
+		if o.partStores, err = partStoresOf(ctx, db, id); err != nil {
+			return nil, err
+		}
+	}
 
 	eRows, err := db.Query(ctx, `
 		SELECT from_status, to_status, actor_id, note, created_at
@@ -387,6 +395,10 @@ type ListFilter struct {
 	// (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ٧: الطلبُ متعدّدُ المصادر يظهر تحت كلّ
 	// متجرٍ شارك فيه.) **وبوّابةُ المتجر لا تطلبه** — سجلُّه ما باعه هو.
 	AnySource bool
+	// ForStore **سجلُّ متجرٍ بعينه في بوّابته** — الطلبُ الذي هو متجرُه الأوّل **أو له فيه قسم**
+	// (طلبٌ واحدٌ بعدّة محطّات، ٢٠٢٦-١١-٠٥). **وبالأقسام لا بالبنود**: قسمٌ رفضه المتجرُ
+	// يبقى في سجلّه ولو خرجت بنودُه. **و«منتهٍ له»** = انتهى الطلبُ **أو** رُفض قسمُه أو أُزيل.
+	ForStore bool
 	// WithCounts **أعدادُ الحالات بالشرط نفسِه** — تتبع البحثَ والفلاتر.
 	WithCounts bool
 	// StaffSearch **البحثُ الأعرض للوحة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — باسم السائق وهاتفه،
@@ -468,6 +480,8 @@ func ListWhere(f ListFilter, lim StuckLimits) (string, []any, error) {
 		return "$" + strconv.Itoa(len(args))
 	}
 	var b strings.Builder
+	// storeArg **معاملُ المتجر في سجلّه** (`ForStore`) — وفارغُه لغيره.
+	storeArg := ""
 	b.WriteString(` WHERE TRUE`)
 	and := func(cond string) {
 		b.WriteString("\n\t\tAND ")
@@ -482,10 +496,17 @@ func ListWhere(f ListFilter, lim StuckLimits) (string, []any, error) {
 	}
 	if f.MerchantID != "" {
 		if f.AnySource && validUUID(f.MerchantID) {
-			// **وأيُّ متجرٍ شارك** (البند ٧) — صاحبُ الطلب أو مصدرُ صنفٍ فيه.
+			// **وأيُّ متجرٍ شارك** (البند ٧) — صاحبُ الطلب أو مصدرُ صنفٍ فيه **أو له قسم**
+			// (طلبٌ بعدّة محطّات: قسمٌ رُفض خرجت بنودُه وبقي قسمُه).
 			p := arg(f.MerchantID)
 			and(`(o.merchant_id = ` + p + `::uuid OR EXISTS (SELECT 1 FROM order_items oi
-			     WHERE oi.order_id = o.id AND oi.merchant_id = ` + p + `::uuid))`)
+			     WHERE oi.order_id = o.id AND oi.merchant_id = ` + p + `::uuid)
+			     OR EXISTS (SELECT 1 FROM order_parts op
+			     WHERE op.order_id = o.id AND op.merchant_id = ` + p + `::uuid))`)
+		} else if f.ForStore && validUUID(f.MerchantID) {
+			p := arg(f.MerchantID)
+			and(StoreOrdersSQL(p))
+			storeArg = p
 		} else {
 			byID(`o.merchant_id`, f.MerchantID)
 		}
@@ -524,11 +545,20 @@ func ListWhere(f ListFilter, lim StuckLimits) (string, []any, error) {
 		}
 		and(`(` + strings.Join(or, ` OR `) + `)`)
 	}
+	// **و«منتهٍ» لسجلّ المتجر يشمل قسمَه المرفوضَ أو المُزال** — والطلبُ ماضٍ بغيره.
 	if f.OpenOnly {
-		and(`o.closed_at IS NULL`)
+		if storeArg != "" {
+			and(`(o.closed_at IS NULL AND NOT ` + partClosedSQL(storeArg) + `)`)
+		} else {
+			and(`o.closed_at IS NULL`)
+		}
 	}
 	if f.ClosedOnly {
-		and(`o.closed_at IS NOT NULL`)
+		if storeArg != "" {
+			and(`(o.closed_at IS NOT NULL OR ` + partClosedSQL(storeArg) + `)`)
+		} else {
+			and(`o.closed_at IS NOT NULL`)
+		}
 	}
 	// **ومدى التاريخ بيوم دمشق** — يومُ إنشاء الطلب (قرارُ المالك ٢٠٢٦-١٠-٠٤، البند ١).
 	if f.From != "" {
@@ -684,7 +714,13 @@ func (s *Service) List(ctx context.Context, f ListFilter) (*OrderPage, error) {
 	}
 	// **والحالُ آخرُ الشروط** — فتُعدّ الحالاتُ بالشرط نفسِه بدونه (أسفل).
 	where, wargs := base, append([]any{}, args...)
-	if f.Status != "" {
+	if f.Status != "" && f.ForStore && validUUID(f.MerchantID) && f.MerchantID != "" && !f.AnySource {
+		// **وحالُ الطلب في سجلّ المتجر حالُ قسمه** — قسمٌ رُفض «مرفوض» والطلبُ ماضٍ.
+		wargs = append(wargs, f.MerchantID)
+		p := `$` + strconv.Itoa(len(wargs))
+		wargs = append(wargs, f.Status)
+		where += ` AND ` + StoreStatusSQL(p, s.MerchantsSelfManage(ctx)) + ` = $` + strconv.Itoa(len(wargs))
+	} else if f.Status != "" {
 		wargs = append(wargs, f.Status)
 		where += ` AND o.status = $` + strconv.Itoa(len(wargs))
 	}

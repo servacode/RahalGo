@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 652,
+    "routes": 653,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 119,
-    "notify_targeted": 57,
+    "notify_sites": 125,
+    "notify_targeted": 61,
     "publish_rooms": [
       "customer",
       "driver",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 279,
-    "behaviour_settings": 234,
+    "setting_defs": 280,
+    "behaviour_settings": 235,
     "order_fields": 137,
-    "test_files": 776,
-    "test_funcs": 2961
+    "test_files": 780,
+    "test_funcs": 2991
   },
   "flows": [
     {
@@ -6539,6 +6539,25 @@
     },
     {
       "key": "orders.max_sources",
+      "group": "customers",
+      "kind": "int",
+      "sensitive": false,
+      "money": false,
+      "flows": [
+        "F-01",
+        "F-17"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "orders.multistop_driver_build",
       "group": "customers",
       "kind": "int",
       "sensitive": false,
@@ -21112,6 +21131,180 @@
       "orphan": true
     },
     {
+      "name": "TestMultiStop_AutoTransferAnswersPartsAsSystem",
+      "file": "internal/qa/multistop_fixpass_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_CancelWindowFromFirstPartWhenAccepted",
+      "file": "internal/qa/multistop_fixpass_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_CustomerCancelTellsAcceptedStores",
+      "file": "internal/qa/multistop_fixpass_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_DriverReportStopOnSingleStoreOrder",
+      "file": "internal/qa/multistop_fixpass_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_LastRejectAndSweeperUnderLock",
+      "file": "internal/qa/multistop_fixpass_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_OwnerOfTwoBranchesSeesBothMoney",
+      "file": "internal/qa/multistop_fixpass_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_PartEventsKeepAssignedAndDoorClocks",
+      "file": "internal/qa/multistop_fixpass_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_StoreStatusFilterMatchesProjection",
+      "file": "internal/qa/multistop_fixpass_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_WaivedCommissionInStoreMoney",
+      "file": "internal/qa/multistop_fixpass_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_AutoTransferNeedsEveryPhone",
+      "file": "internal/qa/multistop_parts_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_DispatchAfterLastUnsentPart",
+      "file": "internal/qa/multistop_parts_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_DispatchWaitsForAllParts",
+      "file": "internal/qa/multistop_parts_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_EachStoreSeesOnlyOwnItemsAndMoney",
+      "file": "internal/qa/multistop_parts_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_OfficePushOnStoreRejection",
+      "file": "internal/qa/multistop_parts_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_OldMerchantCallsRouteToPart",
+      "file": "internal/qa/multistop_parts_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_OrderEditTellsEachStoreItsOwnChanges",
+      "file": "internal/qa/multistop_parts_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_PrivacyContract",
+      "file": "internal/qa/multistop_parts_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_ReadyPerPart",
+      "file": "internal/qa/multistop_parts_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_SecondStoreListsAndOpens",
+      "file": "internal/qa/multistop_parts_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_StoreBReportsAndComplaintsTarget",
+      "file": "internal/qa/multistop_parts_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_StoreReportsPerStore",
+      "file": "internal/qa/multistop_parts_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_SweepsAnswerAllParts",
+      "file": "internal/qa/multistop_parts_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_WhatsAppTicketOwnItemsOwnPhone",
+      "file": "internal/qa/multistop_parts_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_EverySourceMustBeOpen",
+      "file": "internal/qa/multistop_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_MaxSourcesSettingWaitsForDriverBuild",
+      "file": "internal/qa/multistop_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_PartsCreatedOnlyForTwoStores",
+      "file": "internal/qa/multistop_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_RuntimeGate",
+      "file": "internal/qa/multistop_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStop_StoreWithAPartIsNotDeleted",
+      "file": "internal/qa/multistop_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestXG46_MultiStopCreateNeedsOneConnection",
+      "file": "internal/qa/multistop_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestMYC1_OwnCapabilitiesOnly",
       "file": "internal/qa/my_capabilities_test.go",
       "package": "qa",
@@ -26266,6 +26459,12 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestSingleStore_Unchanged",
+      "file": "internal/qa/single_store_golden_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestSNAP_010_NoUnlimitedRetry",

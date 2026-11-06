@@ -117,7 +117,12 @@ func (s *Server) handleMerchantReportsAgainst(w http.ResponseWriter, r *http.Req
 		       t.status, COALESCE(t.resolution, ''), t.created_at, t.resolved_at
 		FROM tickets t
 		JOIN orders o ON o.id = t.order_id
-		WHERE o.merchant_id = $1 AND t.created_by <> $2
+		-- **والطلبُ بعدّة محطّات: ما كان على هذا المتجر بعينه** (C7) — لا كلُّ شكوى على الطلب.
+		WHERE ((o.stops = 1 AND o.merchant_id = $1)
+		       OR (o.stops > 1 AND EXISTS (SELECT 1 FROM order_parts p
+		                                   WHERE p.order_id = o.id AND p.merchant_id = $1)
+		           AND t.against_user_id = (SELECT owner_user_id FROM merchants WHERE id = $1)))
+		  AND t.created_by <> $2
 		ORDER BY t.created_at DESC
 		LIMIT 100`, merchantID, userIDFrom(r))
 	if err != nil {

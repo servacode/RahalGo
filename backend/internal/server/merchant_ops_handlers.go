@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 	"time"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/catalog"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/support"
 	"github.com/servacode/rahalgo/backend/internal/textguard"
 )
@@ -41,6 +43,24 @@ func (s *Server) handleMerchantReady(w http.ResponseWriter, r *http.Request) {
 	orderID := chi.URLParam(r, "id")
 	if !s.merchantOwnsOrder(r, orderID) {
 		s.respondErr(w, errForbidden)
+		return
+	}
+	// **والطلبُ بعدّة محطّات: «جاهز» لقسمه** (G-06) — **والطلبُ كلُّه جاهزٌ حين تجهز أقسامُه.**
+	if s.orders.StopsOf(r.Context(), orderID) > 1 {
+		stores, err := s.orders.OwnerPartStores(r.Context(), orderID, userIDFrom(r))
+		if err != nil {
+			s.respondErr(w, err)
+			return
+		}
+		if _, err := s.orders.PartReady(r.Context(), userIDFrom(r), orderID, stores, userIDFrom(r)); err != nil {
+			if errors.Is(err, orders.ErrPartNotReady) {
+				err = errNotReadyable
+			}
+			s.respondErr(w, err)
+			return
+		}
+		s.touch("order", "ops")
+		httpx.JSON(w, http.StatusOK, map[string]any{"ready": true})
 		return
 	}
 	var status string
