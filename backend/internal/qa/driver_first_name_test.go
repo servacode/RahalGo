@@ -47,6 +47,13 @@ func TestDRV_FIRSTNAME_EveryDriverReadShowsFirstNameOnly(t *testing.T) {
 		`UPDATE users SET full_name = $2 WHERE id = $1::uuid`, fx.Cust.ID, fullCustomerName); err != nil {
 		t.Fatalf("تهيئة: %v", err)
 	}
+	// **والطابورُ خمسون صفّاً بترتيب `ready_at` ثمّ الأقدم** — وفي التشغيل الكامل تبقى
+	// عشراتُ الطلبات «قيد التوزيع» من اختباراتٍ سبقت، **فيقع طلبُ الاختبار (الأحدث)
+	// خارجَ الخمسين.** (قِيس: ٥٥ طلباً قبله ⇒ «ليس في الطابور».) فيُقدَّم بجاهزيّةٍ قديمة.
+	if _, err := h.Pool.Exec(ctxBG(),
+		`UPDATE orders SET ready_at = '2000-01-01' WHERE id = $1::uuid`, fx.Order); err != nil {
+		t.Fatalf("تهيئة: %v", err)
+	}
 	const want = "سليمان"
 
 	// (١) الطابور
