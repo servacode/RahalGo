@@ -461,6 +461,12 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 val order = state.mine.firstOrNull { it.id == openId }
                     ?: state.mine.firstOrNull()
                 val to = when {
+                    // **وطلبُ المحطّات: وصولٌ لكلّ محطّة** — الهدفُ أوّلُ محطّةٍ لم أصلها، ثمّ لا شيء حتّى تُستلم.
+                    order != null && com.rahalgo.driver.trip.isMultiStop(order) &&
+                        (order.status == "assigned" || order.status == "at_pickup") ->
+                        if (com.rahalgo.driver.trip.currentStop(order)?.arrivedAt == null &&
+                            com.rahalgo.driver.trip.currentStop(order) != null
+                        ) "at_pickup" else null
                     order?.status == "assigned" -> "at_pickup"
                     order?.status == "on_the_way" -> "at_dropoff"
                     // **والإرجاعُ ينتهي بالوصول** (قرارُ المالك ٢٠٢٦-١٠-٠٦: «ما في تمّ التسليم… خلص
@@ -652,9 +658,12 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** **يحفظ الخطوةَ وتتقدّم الشاشةُ** — و«استلمت» يتبعها «انطلقت» كما في الشبكة. */
-    private fun queueStep(id: String, to: String, key: String, at: Pair<Double, Double>? = null) {
-        val add = mutableListOf(PendingStep(id, to, key, at?.first, at?.second))
-        if (to == "picked_up") add += PendingStep(id, "on_the_way", StepRetry.newKey())
+    private fun queueStep(id: String, to: String, key: String, at: Pair<Double, Double>? = null, stop: String? = null) {
+        val add = mutableListOf(PendingStep(id, to, key, at?.first, at?.second, stop))
+        // **و«انطلقت» بعد المحطّة الأخيرة وحدَها** في طلب المحطّات (`state.mine` فيه المنتظرُ سابقاً).
+        val order = state.mine.firstOrNull { it.id == id }
+        val last = stop == null || order == null || StepQueue.finalAfter(order, stop)
+        if (to == "picked_up" && last) add += PendingStep(id, "on_the_way", StepRetry.newKey())
         pending = pending + add
         Log.i("RahalGo/offline", "خطوةٌ محفوظةٌ حتّى تعود الشبكة: " + to)
         savePending()
@@ -679,7 +688,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 if (p.to == StepQueue.GOODS) {
                     backend.driver.goodsHanded(p.orderId, p.lat, p.lng)
                 } else {
-                    backend.driver.transition(p.orderId, p.to, idempotencyKey = p.key)
+                    backend.driver.transition(p.orderId, p.to, idempotencyKey = p.key, stop = p.stop)
                 }
             }
             val dead = r.rejected.map { it.first.orderId }.toSet()
@@ -1329,9 +1338,23 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     var deliveryCode: String = ""
 
     /** يحرّك الطلب خطوة — **ثمّ يعيد قراءة كلّ شيء.** */
-    fun step(to: String) {
+    fun step(to: String) = stepStop(to, null)
+
+    /**
+     * **خطوةٌ على محطّةٍ بعينها** (طلبٌ من عدّة متاجر) — وبلا `stop` تُشتقّ المحطّةُ الحاليّة
+     * لـ«وصلت»/«استلمت» (**والخادمُ يردّ ٤٢٦ على طلبٍ متعدّدٍ بلا محطّة**).
+     */
+    fun stepStop(to: String, stopArg: String?) {
         val id = currentId() ?: return
         if (detail.busy) return
+        val cur = state.mine.firstOrNull { it.id == id }
+        val stop = stopArg ?: if (cur != null && com.rahalgo.driver.trip.isMultiStop(cur) &&
+            (to == "at_pickup" || to == "picked_up")
+        ) {
+            com.rahalgo.driver.trip.currentStop(cur)?.merchantId
+        } else {
+            null
+        }
         detail = detail.copy(busy = true, error = "")
         val code = if (to == "delivered") deliveryCode else ""
         viewModelScope.launch {
@@ -1344,7 +1367,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             if (pending.isNotEmpty()) flushPending()
             if (pending.any { it.orderId == id } || (queueable && !com.rahalgo.ui.Net.online)) {
                 if (queueable) {
-                    queueStep(id, to, StepRetry.newKey())
+                    queueStep(id, to, StepRetry.newKey(), stop = stop)
                     detail = detail.copy(busy = false)
                 } else {
                     detail = detail.copy(
@@ -1359,10 +1382,12 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 return@launch
             }
             val stepKey = StepRetry.newKey()
+            // **حالُ الطلب في ردّ الخادم** — في طلب المحطّات هي التي تقرّر «انطلقت».
+            var replied: String? = null
             try {
                 // **بمفتاحٍ يُعاد بعينه إن ضاع الردّ** — انظر `StepRetry`.
                 StepRetry.send(stepKey) { key ->
-                    backend.driver.transition(id, to, idempotencyKey = key, deliveryCode = code)
+                    replied = backend.driver.transition(id, to, idempotencyKey = key, deliveryCode = code, stop = stop)
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
@@ -1371,7 +1396,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                 // الخادمُ على الإعادة بالطلب كما هو. **و«سلّمت» لا تُحفظ** — كودُ الزبون يُفحص هناك.
                 if (StepRetry.retriable(e)) {
                     if (queueable) {
-                        queueStep(id, to, stepKey)
+                        queueStep(id, to, stepKey, stop = stop)
                         detail = detail.copy(busy = false)
                         return@launch
                     }
@@ -1388,9 +1413,17 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             }
             // **والشاشةُ تتبدّل لحظةَ قبول الخطوة** (بلاغُ المالك ٢٠٢٦-١٠-٠٦: «الشاشة بقيت ثواني
             // تقول وصلت إلى وجهتك») — لا بعد إعادة القائمة وجلب الطريق.
+            // **وفي طلب المحطّات «استلمت» غيرُ الأخيرة تُبقيه `at_pickup`** — والردُّ هو الحكَم.
+            val chain = to == "picked_up" && (stop == null || replied == "picked_up")
             if (to != "delivered" && openId == id) {
                 detail = detail.copy(
-                    order = detail.order.copy(status = if (to == "picked_up") "on_the_way" else to),
+                    order = detail.order.copy(
+                        status = when {
+                            to != "picked_up" -> to
+                            chain -> "on_the_way"
+                            else -> "at_pickup"
+                        },
+                    ),
                     busy = false,
                 )
             }
@@ -1408,7 +1441,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             // **والحالُ في المحرّك يبقى كما هو**: خطوتان في الخطّ
             // الزمنيّ لا واحدة — **ووقتُ الانطلاق يُقرأ في الشكوى**،
             // إنّما تقعان بضغطةٍ واحدة.
-            if (to == "picked_up") {
+            if (chain) {
                 val goKey = StepRetry.newKey()
                 try {
                     StepRetry.send(goKey) { key ->
@@ -2860,7 +2893,11 @@ internal fun routeLegOf(o: com.rahalgo.shared.model.DriverOrder, live: Pair<Doub
     val id = o.id
     // **ومشوارُ الإرجاع ساقٌ ثالثة** — وجهتُه غيرُ باب الزبون، فيُطلب طريقُه من جديد.
     if (com.rahalgo.driver.trip.isReturnTrip(o)) return "$id:return"
-    if (o.status !in TO_CUSTOMER) return "$id:merchant"
+    // **وطلبُ المحطّات: ساقٌ لكلّ محطّة** — فيتبدّل الطريقُ المحفوظ من أ إلى ب حين تُستلم أ.
+    if (o.status !in TO_CUSTOMER) {
+        val stop = com.rahalgo.driver.trip.currentStop(o)
+        return if (stop != null) "$id:stop:" + stop.merchantId else "$id:merchant"
+    }
     // **والزبونُ الآن ساقٌ غيرُ الدبّوس** (٢٠٢٦-١٠-١٦) — فإن تحوّلت الوجهةُ أو تحرّك
     // الزبونُ فوق `LIVE_REANCHOR_M` طُلب الطريقُ من جديد، **والخادمُ يحسبه إليه.**
     // **ونقطةُ الباب في المفتاح** (طلبُ المالك ٢٠٢٦-١١-٠٦) — موقعُ المستلِم يصل بالواتساب والسائقُ

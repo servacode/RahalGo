@@ -805,6 +805,22 @@ data class MyOrder(
      */
     val stages: List<String> = emptyList(),
     @SerialName("stage_at") val stageAt: Int = -1,
+    /** **أقسامُ طلبٍ من محلّين فأكثر** — غائبةٌ في الطلب العاديّ، ولا اسمَ متجرٍ فيها. */
+    val sections: List<OrderSection>? = null,
+)
+
+/** **قسمٌ من طلبٍ متعدّد المحلّات** — رقمٌ وحالةٌ وبنود، بلا اسم متجر. */
+@Serializable
+data class OrderSection(
+    val seq: Int = 0,
+    val status: String = "",
+    val items: List<OrderSectionItem> = emptyList(),
+)
+
+@Serializable
+data class OrderSectionItem(
+    val name: String = "",
+    val qty: Int = 1,
 )
 
 /**

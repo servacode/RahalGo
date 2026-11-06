@@ -39,6 +39,7 @@ import {
   Chips,
   Button,
   Input,
+  Select,
   Textarea,
   Modal,
   PageContainer,
@@ -614,6 +615,28 @@ function DecideModal({
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  /**
+   * **طلبٌ من أكثر من متجر والغلطُ على المتجر** (٢٠٢٦-١١-٠٦) — من المتجر الغلطان؟ يُسأل قبل الموافقة
+   * (`compensation_store_required`). **والأقسامُ من الطلب نفسِه**، فلا يُسأل في طلب المتجر الواحد.
+   */
+  const needsStore = item.kind === "driver" && item.fault === "merchant" && item.order_id !== "";
+  const [stores, setStores] = useState<{ merchant_id: string; name: string }[] | null>(null);
+  const [storeId, setStoreId] = useState("");
+  useEffect(() => {
+    if (!approve || !needsStore) return;
+    let live = true;
+    api<{ parts?: { merchant_id: string; name: string; seq: number }[] }>(`/api/v1/admin/orders/${item.order_id}`)
+      .then((r) => {
+        if (live) setStores((r.parts ?? []).slice().sort((a, b) => a.seq - b.seq));
+      })
+      .catch(() => {
+        if (live) setStores([]);
+      });
+    return () => {
+      live = false;
+    };
+  }, [approve, needsStore, item.order_id]);
+  const multiStore = (stores?.length ?? 0) >= 2;
 
   const value = Number(amount);
   const amountOk = Number.isInteger(value) && value > 0;
@@ -627,12 +650,20 @@ function DecideModal({
       setError(C.amountInvalid);
       return;
     }
+    if (approve && multiStore && !storeId) {
+      setError(C.storeRequired);
+      return;
+    }
     setBusy(true);
     setError("");
     try {
       await api(`/api/v1/admin/compensations/${item.id}/${approve ? "approve" : "reject"}`, {
         method: "POST",
-        body: JSON.stringify(approve ? { amount: value, note: text } : { note: text }),
+        body: JSON.stringify(
+          approve
+            ? { amount: value, note: text, ...(multiStore ? { merchant_id: storeId } : {}) }
+            : { note: text },
+        ),
       });
       onDone();
     } catch (err) {
@@ -701,6 +732,30 @@ function DecideModal({
             {aboveCap && <Alert tone="warning">{C.aboveCap.replace("{cap}", fmtMoney(item.cap))}</Alert>}
             {item.kind === "driver" && item.fault === "merchant" && (
               <Alert tone="info">{C.merchantClaimHint}</Alert>
+            )}
+            {approve && needsStore && stores === null && (
+              <p className="text-xs text-ink-muted">{C.storeLoading}</p>
+            )}
+            {approve && multiStore && (
+              <>
+                <p className="text-xs text-ink-muted">{C.storeHint}</p>
+                <Select
+                  id="comp-store"
+                  label={C.storeLabel}
+                  value={storeId}
+                  onChange={(e) => {
+                    setStoreId(e.target.value);
+                    setError("");
+                  }}
+                >
+                  <option value="">{C.storeLabel}</option>
+                  {(stores ?? []).map((s) => (
+                    <option key={s.merchant_id} value={s.merchant_id}>
+                      {s.name}
+                    </option>
+                  ))}
+                </Select>
+              </>
             )}
           </>
         )}

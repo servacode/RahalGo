@@ -8,7 +8,7 @@
 
 import { useCallback } from "react";
 import { useParams } from "next/navigation";
-import { getMessages, defaultLocale, fmtRelStamp } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRelStamp } from "@rahalgo/i18n";
 import { InvoiceLines, LoadingState, ReloadState, useLiveData } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import type { MerchantOrder } from "@/lib/store/types";
@@ -38,6 +38,9 @@ export default function HistoryOrderPage() {
         actions={<span className="shrink-0 text-sm text-ink-muted">{orderStatus(o.status)}</span>}
       />
       <p className="text-xs text-ink-muted">{fmtRelStamp(o.closed_at ?? o.created_at)}</p>
+      {(o.shared_stops ?? 0) >= 2 && (
+        <p className="text-xs font-bold text-accent-text">{fill(S.orders.sharedStops, { n: fmtNum(o.shared_stops ?? 0) })}</p>
+      )}
       <section className="surface flex flex-col gap-2 rounded-card p-3">
         <h3 className="heading-card">{S.orders.items}</h3>
         {/* **سطرٌ لكلّ عنصر** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — «شاورما دبل × 3 ...... 90 ل.س». */}

@@ -112,6 +112,13 @@ function OrderCard({
         </span>
       </header>
 
+      {/* **طلبٌ مشترك**: قسمُك فقط، بلا اسم أيّ محلٍّ آخر (٢٠٢٦-١١-٠٦). */}
+      {(order.shared_stops ?? 0) >= 2 && (
+        <p className="text-xs font-bold text-accent-text" data-testid="store-order-shared">
+          {fill(O.sharedStops, { n: fmtNum(order.shared_stops ?? 0) })}
+        </p>
+      )}
+
       <div>
         <p className="text-xs text-ink-muted">{O.items}</p>
         {/* **سطرٌ لكلّ عنصر** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — «شاورما دبل × 3 ...... 90 ل.س»، كتطبيق المتجر. */}

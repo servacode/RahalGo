@@ -565,6 +565,8 @@ data class MerchantOrder(
     @SerialName("created_at") val createdAt: String = "",
     /** **لحظةُ «جاهز للاستلام»** — وفارغةٌ ما لم يُعلنها المتجر (`ready_at`). */
     @SerialName("ready_at") val readyAt: String? = null,
+    /** **عددُ المحلّات في الطلب** — غائبٌ في الطلب العاديّ، ومن 2 فأكثر في المتعدّد. */
+    @SerialName("shared_stops") val sharedStops: Int? = null,
 )
 
 @Serializable

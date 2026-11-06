@@ -189,6 +189,8 @@ class DriverApi(private val api: ApiClient) {
          * (`heading` في الخادم، ٢٠٢٦-١٠-٠٢). **وفارغٌ: لا يُرسل.**
          */
         heading: Float? = null,
+        /** **الطريقُ إلى محطّةٍ بعينها** (طلبٌ متعدّد المحطّات) — وفارغٌ: المحطّةُ التالية. */
+        stop: String? = null,
     ): OrderRoute {
         val base = "/api/v1/driver/orders/" + orderId + "/route"
         // **وزوجٌ أو لا شيء** — والخادمُ يردّ نصفَ زوجٍ بخطأِ تحقّق.
@@ -200,6 +202,7 @@ class DriverApi(private val api: ApiClient) {
             if (alternatives) add("alternatives=true")
             if (correlation) add("correlation=true")
             if (heading != null && lat != null && lng != null) add("heading=" + heading.toInt())
+            if (stop != null) add("stop=$stop")
         }
         val path = if (params.isEmpty()) base else base + "?" + params.joinToString("&")
         return api.call(path)
@@ -307,17 +310,24 @@ class DriverApi(private val api: ApiClient) {
         idempotencyKey: String? = null,
         /** **كودُ التسليم** كما أملاه الزبون — يُرسَل مع `delivered` وحدَه. */
         deliveryCode: String = "",
-    ) {
-        api.call<Ack>(
+        /** **معرّفُ المتجر في طلبٍ متعدّد المحطّات** — «وصلت»/«استلمت» لتلك المحطّة. وفارغٌ: كما كان. */
+        stop: String? = null,
+    ): String? {
+        val body = buildMap {
+            put("to", to)
+            put("reason", reason)
+            put("note", note)
+            if (deliveryCode.isNotEmpty()) put("delivery_code", deliveryCode)
+            if (stop != null) put("stop", stop)
+        }
+        val reply = api.call<Ack>(
             "/api/v1/driver/orders/" + orderId + "/transition",
             HttpMethod.Post,
-            if (deliveryCode.isEmpty()) {
-                mapOf("to" to to, "reason" to reason, "note" to note)
-            } else {
-                mapOf("to" to to, "reason" to reason, "note" to note, "delivery_code" to deliveryCode)
-            },
+            body,
             idempotencyKey = idempotencyKey,
         )
+        // **حالُ الطلب في الردّ** — «انطلقت» لا تُرسَل بعد محطّةٍ غير أخيرة إلّا إن قال `picked_up`.
+        return (reply["status"] as? kotlinx.serialization.json.JsonPrimitive)?.content
     }
 
     /** **يعيد الطلب إلى الطابور** — ولا يبقى معلّقا في يد من لا يقدر. */

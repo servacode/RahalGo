@@ -372,6 +372,26 @@ function waDigits(phone: string): string {
 }
 
 /**
+ * **واتساب ويب مباشرةً** (قرارُ المالك ٢٠٢٦-١٠-٠٦) — `wa.me` يفتح صفحةَ واتساب الرسميّة
+ * «التطبيق أم الويب» أوّلاً، **و`web.whatsapp.com/send` يفتح المحادثةَ والرسالةُ جاهزة.**
+ * (نُقلت من `OrdersScreen` ليستعملها زرُّ إرسال كلّ متجرٍ في الطلب المشترك أيضاً.)
+ */
+export function toWhatsAppWeb(link: string): string {
+  try {
+    const u = new URL(link);
+    if (u.hostname !== "wa.me" && u.hostname !== "api.whatsapp.com") return link;
+    const phone = u.hostname === "wa.me" ? u.pathname.replace(/\//g, "") : (u.searchParams.get("phone") ?? "");
+    const out = new URL("https://web.whatsapp.com/send");
+    out.searchParams.set("phone", phone);
+    const text = u.searchParams.get("text");
+    if (text) out.searchParams.set("text", text);
+    return out.toString();
+  } catch {
+    return link;
+  }
+}
+
+/**
  * **زرّا اتّصالٍ وواتساب جنب كلّ طرف** (قرارُ المالك ٢٠٢٦-١١-٠٣) — المتجرُ والزبونُ والسائق
  * على البطاقة نفسِها، بلا فتحِ لوحةٍ أخرى.
  */

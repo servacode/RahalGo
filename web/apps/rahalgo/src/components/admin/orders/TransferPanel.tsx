@@ -82,9 +82,17 @@ export function TransferPanel(props: {
   orderId: string;
   onDone: () => void;
   onClose: () => void;
+  /**
+   * **تحويلُ قسمِ متجرٍ واحدٍ من طلبٍ مشترك** (٢٠٢٦-١١-٠٦) — المرشّحون نفسُهم، لكن بلا مقابلِ أصناف:
+   * الخادمُ يطابق أصنافَ القسم، **والنداءُ على مسار القسم لا الطلب.**
+   */
+  part?: { merchantId: string; name: string };
 }) {
+  const title = props.part
+    ? m.admin.ordersPage.parts.transferTitle.replace("{store}", props.part.name)
+    : m.admin.ordersPage.transferTitle;
   return (
-    <Modal open onClose={props.onClose} title={m.admin.ordersPage.transferTitle} size="lg">
+    <Modal open onClose={props.onClose} title={title} size="lg">
       <TransferBody {...props} />
     </Modal>
   );
@@ -94,14 +102,19 @@ function TransferBody({
   orderId,
   onDone,
   onClose,
+  part,
 }: {
   orderId: string;
   /** **نجح التحويل** — تُحدَّث القائمة. */
   onDone: () => void;
   onClose: () => void;
+  part?: { merchantId: string; name: string };
 }) {
+  const partId = part?.merchantId ?? "";
   const [data, setData] = useState<Candidates | null>(null);
   const [store, setStore] = useState<Candidate | null>(null);
+  /** **قسمٌ مشترك**: المتجرُ المختار بانتظار التأكيد. */
+  const [partTarget, setPartTarget] = useState<Candidate | null>(null);
   /** `order_item_id → menu_item_id` — **و`""` بلا مقابل.** */
   const [picks, setPicks] = useState<Record<string, string>>({});
   const [reason, setReason] = useState("");
@@ -113,7 +126,8 @@ function TransferBody({
 
   useEffect(() => {
     let live = true;
-    api<Candidates>(`/api/v1/admin/orders/${orderId}/transfer-candidates`)
+    const qs = partId ? `?part_merchant_id=${partId}` : "";
+    api<Candidates>(`/api/v1/admin/orders/${orderId}/transfer-candidates${qs}`)
       .then((r) => {
         if (live) setData(r);
       })
@@ -123,10 +137,33 @@ function TransferBody({
     return () => {
       live = false;
     };
-  }, [orderId]);
+  }, [orderId, partId]);
+
+  /** **قسمٌ مشترك**: التأكيدُ يرسل المتجرَ الجديدَ وحدَه — **والمطابقةُ في الخادم.** */
+  async function submitPart() {
+    if (!part || !partTarget) return;
+    setBusy(true);
+    setErr("");
+    try {
+      await api(`/api/v1/admin/orders/${orderId}/parts/${part.merchantId}/transfer`, {
+        method: "POST",
+        body: JSON.stringify({ to_merchant_id: partTarget.merchant_id }),
+      });
+      onDone();
+    } catch (e) {
+      setErr(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
 
   /** **متجرٌ بعينه يأتي بقائمته كاملةً** — للاختيار باليد. */
   async function choose(id: string) {
+    if (part) {
+      const s = data?.stores.find((x) => x.merchant_id === id);
+      if (s) setPartTarget(s);
+      return;
+    }
     setBusy(true);
     setErr("");
     setUnmatched([]);
@@ -188,6 +225,28 @@ function TransferBody({
     } finally {
       setBusy(false);
     }
+  }
+
+  // ── قسمٌ مشترك: تأكيدٌ واحد ───────────────────────────────────────
+  if (part && partTarget) {
+    return (
+      <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
+        <p className="text-sm font-medium">
+          {t.parts.transferPick.replace("{store}", partTarget.name)}
+        </p>
+        {err && <p className="text-xs text-danger">{err}</p>}
+        <FormActions
+          busy={busy}
+          onSave={() => void submitPart()}
+          onCancel={() => {
+            setPartTarget(null);
+            setErr("");
+          }}
+          saveLabel={t.parts.confirm}
+          cancelLabel={m.common.back}
+        />
+      </div>
+    );
   }
 
   // ── الخطوةُ الثانية: مقابلُ كلِّ صنف ──────────────────────────────

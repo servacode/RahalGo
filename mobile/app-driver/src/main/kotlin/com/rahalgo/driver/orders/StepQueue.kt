@@ -27,6 +27,8 @@ data class PendingStep(
     val key: String,
     val lat: Double? = null,
     val lng: Double? = null,
+    /** **معرّفُ المتجر** في طلبٍ متعدّد المحطّات — وفارغٌ لغيره (٢٠٢٦-١١-٠٦). */
+    val stop: String? = null,
 )
 
 object StepQueue {
@@ -60,14 +62,64 @@ object StepQueue {
         if (pending.isEmpty()) return mine
         val gone = pending.filter { it.to == GOODS }.map { it.orderId }.toSet()
         return mine.filterNot { it.id in gone }.map { o ->
-            var status = o.status
+            var cur = o
             for (p in pending) {
                 if (p.orderId != o.id) continue
-                val next = statusAfter(p.to) ?: continue
-                if (RANK.indexOf(next) > RANK.indexOf(status)) status = next
+                cur = if (p.stop != null && cur.stops != null) applyStop(cur, p) else advance(cur, statusAfter(p.to))
             }
-            if (status == o.status) o else o.copy(status = status)
+            cur
         }
+    }
+
+    private fun advance(o: DriverOrder, next: String?): DriverOrder =
+        if (next != null && RANK.indexOf(next) > RANK.indexOf(o.status)) o.copy(status = next) else o
+
+    /** **علامةُ وصولٍ محلّيّة** — لا وقتَ حقيقيّاً لها حتّى يردّ الخادم. */
+    const val LOCAL_MARK = "local"
+
+    /**
+     * **هل هذه آخرُ محطّةٍ تبقى؟** — كلُّ ما سواها حيٌّ استلمتُه أنا أو انشال.
+     * **وعليها وحدَها يُرسَل «انطلقت».**
+     */
+    fun finalAfter(o: DriverOrder, stop: String): Boolean =
+        o.stops.orEmpty().filter { it.merchantId != stop }.all { com.rahalgo.driver.trip.stopDone(it) }
+
+    /**
+     * **خطوةُ محطّةٍ محلّيّاً** — «وصلت» تعلّم تلك المحطّةَ وحدَها، و«استلمت» غيرُ الأخيرة تُبقي الطلبَ
+     * `at_pickup` وتعلّم تلك المحطّةَ مستلَمةً، والأخيرةُ تُقدّمه كما في المحطّة الواحدة.
+     */
+    private fun applyStop(o: DriverOrder, p: PendingStep): DriverOrder {
+        val stops = o.stops ?: return o
+        val sid = p.stop ?: return o
+        if (stops.none { it.merchantId == sid }) return o
+        return when (p.to) {
+            "at_pickup" -> advance(
+                o.copy(stops = stops.map { if (it.merchantId == sid && it.arrivedAt == null) it.copy(arrivedAt = LOCAL_MARK) else it }),
+                "at_pickup",
+            )
+            "picked_up" -> {
+                val marked = stops.map {
+                    if (it.merchantId == sid) it.copy(status = "picked_up", mine = true, arrivedAt = it.arrivedAt ?: LOCAL_MARK) else it
+                }
+                val moved = withNext(o.copy(stops = marked))
+                advance(moved, if (finalAfter(o, sid)) "on_the_way" else "at_pickup")
+            }
+            else -> advance(o, statusAfter(p.to))
+        }
+    }
+
+    /** **المحطّةُ التالية بعد تعليم محطّةٍ محلّيّاً** — والحقولُ المسطّحةُ تتبعها كما يفعل الخادم. */
+    private fun withNext(o: DriverOrder): DriverOrder {
+        val next = o.stops.orEmpty().sortedBy { it.seq }.firstOrNull { !com.rahalgo.driver.trip.stopDone(it) }
+            ?: return o.copy(nextStop = null)
+        return o.copy(
+            nextStop = next.merchantId,
+            merchantName = next.name,
+            merchantPhone = next.phone,
+            pickupAddress = next.address,
+            navLat = next.lat ?: o.navLat,
+            navLng = next.lng ?: o.navLng,
+        )
     }
 
     /** **حصيلةُ إعادة الإرسال.** */
@@ -119,6 +171,7 @@ object StepQueue {
                     put("key", p.key)
                     p.lat?.let { put("lat", it) }
                     p.lng?.let { put("lng", it) }
+                    p.stop?.let { put("stop", it) }
                 },
             )
         }
@@ -131,7 +184,14 @@ object StepQueue {
             val to = o["to"]?.jsonPrimitive?.content ?: return@mapNotNull null
             val key = o["key"]?.jsonPrimitive?.content ?: return@mapNotNull null
             if (to !in QUEUEABLE) return@mapNotNull null
-            PendingStep(id, to, key, o["lat"]?.jsonPrimitive?.doubleOrNull, o["lng"]?.jsonPrimitive?.doubleOrNull)
+            PendingStep(
+                id,
+                to,
+                key,
+                o["lat"]?.jsonPrimitive?.doubleOrNull,
+                o["lng"]?.jsonPrimitive?.doubleOrNull,
+                o["stop"]?.jsonPrimitive?.content,
+            )
         }
     }.getOrDefault(emptyList())
 

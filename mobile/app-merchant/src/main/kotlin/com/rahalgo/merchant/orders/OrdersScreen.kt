@@ -261,6 +261,16 @@ private fun OrderCard(
             // حيّ، فيتردّد صاحبُ المتجر عن طلبٍ ما زال أمامه وقت.**
         }
 
+        // **وطلبٌ مشترَكٌ مع محلّاتٍ أخرى: سطرٌ صغيرٌ بعددها** — بلا اسم أحد.
+        sharedStopsCount(order)?.let { n ->
+            Spacer(Modifier.height(6.dp))
+            Text(
+                stringResource(R.string.mn_shared_stops, n.toString()),
+                color = Rahal.colors.accent,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.labelMedium,
+            )
+        }
         Spacer(Modifier.height(8.dp))
         Text(
             stringResource(R.string.mn_items),

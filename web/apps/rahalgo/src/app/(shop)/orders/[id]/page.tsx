@@ -25,6 +25,7 @@ import { useCustomer } from "@/lib/customer/context";
 import { ENDED, type MyOrder } from "@/lib/customer/types";
 import { CancelNote, CancelOrder, DeliveryCode, OrderEta, OrderInvoice, OrderStages, QuoteAmounts } from "@/components/customer/orderParts";
 import { statusTone } from "@/components/customer/OrderSummary";
+import { OrderSections } from "@/components/customer/OrderSections";
 import { NeedLogin } from "@/components/customer/NeedLogin";
 import { useShopToast } from "@/components/customer/toast";
 import { ComplaintBox, RateButton } from "@/components/customer/feedback";
@@ -145,6 +146,9 @@ export default function OrderPage() {
       {/* **«لحمايتك: لا تتعامل مع السائق برّا التطبيق»** (قرارُ المالك ٢٠٢٦-١١-٠٥) — كتطبيق الزبون. */}
       {!ended && order.driver_name && <p className="text-xs text-ink-muted">{O.safetyNotice}</p>}
       {!ended && <LiveStartButton orderId={order.id} status={order.status} />}
+
+      {/* **«طلبك من {n} محلات»** — طلبٌ مشتركٌ فقط؛ الحقلُ غائبٌ في طلب المحلّ الواحد فلا يُرسم شيء. */}
+      <OrderSections sections={order.sections} />
 
       <dl className="surface flex flex-col gap-2 p-4">
         {order.driver_name && !ended && <Row label={O.driver}>{order.driver_name}</Row>}

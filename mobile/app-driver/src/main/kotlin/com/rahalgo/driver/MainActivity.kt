@@ -1110,6 +1110,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                     state = orders.trip(LastPoint.value),
                     actions = TripActions(
                         step = orders::step,
+                        stopStep = orders::stepStop,
                         handGoods = orders::handGoods,
                         requestLive = orders::requestLive,
                         reportClosure = orders::reportRoadClosure,
