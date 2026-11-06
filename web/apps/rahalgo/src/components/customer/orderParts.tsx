@@ -15,7 +15,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { getMessages, defaultLocale, errorText, fmtRef, fmtSpan } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, errorText, fmtMoney, fmtRef, fmtSpan } from "@rahalgo/i18n";
 import { Alert, Button, Chips, Confirm, InvoiceLines, Money } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
@@ -31,6 +31,16 @@ export function quotePending(o: MyOrder): boolean {
   if (o.quote_confirmed_at != null && o.quote_confirmed_version === o.quote_version) return false;
   if (ENDED.has(o.status)) return false;
   return o.quote_rejected_at == null;
+}
+
+/**
+ * **المجموعُ القديمُ المؤكَّد حين تغيّر السعرُ بعد التأكيد** (قرارُ المالك ٢٠٢٦-١١-٠٦) — طلبُ
+ * الكابتن أو تعديلُ المكتب. مرآةُ `quoteWasTotal` بتطبيق الزبون.
+ */
+export function quoteWasTotal(o: MyOrder): number | null {
+  if (o.quote_confirmed_version == null || o.quote_confirmed_version === o.quote_version) return null;
+  const was = o.quote_confirmed_total ?? null;
+  return was != null && was !== o.total ? was : null;
 }
 
 /** **شريطُ المراحل** — المنتهي مُضاء، والجاري بارز، والآتي باهت. */
@@ -306,6 +316,11 @@ export function QuotePanel({
   return (
     <div className="space-y-3">
       {order.quote_confirmed_version != null && <p className="text-sm">{O.raisedNote}</p>}
+      {quoteWasTotal(order) != null && (
+        <p className="text-sm font-bold">
+          {fill(O.quoteWas, { was: fmtMoney(quoteWasTotal(order) ?? 0), now: fmtMoney(order.total) })}
+        </p>
+      )}
       <p className="text-sm font-bold">{walletOk ? O.confirmPrompt : O.confirmAmount}</p>
       {/* **والمحفظةُ خيارٌ فقط إن غطّت المبلغ** — وإلّا سطرٌ واحدٌ «الدفع: نقداً عند الاستلام»
           (قرارُ المالك ٢٠٢٦-١٠-٣٠)، والطريقةُ تبقى نقداً. مرآةُ `QuoteConfirmPanel`. */}

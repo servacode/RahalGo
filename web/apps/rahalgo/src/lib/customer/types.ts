@@ -275,6 +275,8 @@ export interface MyOrder {
   quote_version: number;
   quote_confirmed_at: string | null;
   quote_confirmed_version: number | null;
+  /** **المجموع المؤكَّد** — والسعر الجديد بانتظار الزبون يُعرض «كان X وصار Y» (٢٠٢٦-١١-٠٦). */
+  quote_confirmed_total?: number | null;
   quote_rejected_at: string | null;
   custom_reserved_amount: number;
   created_at: string;
