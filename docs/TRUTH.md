@@ -1302,6 +1302,8 @@ kosom` |
 | `delivery.custom_driver_may_change_fee` | السائقون | bool | `false` |
 | `delivery.custom_fee_min` | السائقون | money | `10` |
 | `delivery.custom_fee_max` | السائقون | money | `1000` |
+| `delivery.driver_price_edit_max_percent` | السائقون | percent | `50` |
+| `delivery.driver_price_edit_timeout_min` | السائقون | int | `10` |
 | `delivery.default_radius_m` | السائقون | int | `0` |
 | `drivers.cash_limit` | السائقون | money | `5000` |
 | `drivers.max_active_orders` | السائقون | int | `1` |
