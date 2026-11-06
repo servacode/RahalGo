@@ -28,6 +28,8 @@ export interface MerchantStore {
   has_hours: boolean;
   exchange_rate: number | null;
   display_currency: string;
+  /** هل لديه برنامج الأمين (٢٠٢٦-١١-٠٦) — بدونه لا يظهر شيءٌ منه. */
+  uses_ameen?: boolean;
 }
 
 export interface StoresPage {

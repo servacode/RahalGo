@@ -71,6 +71,7 @@ export function ImageUpload({
   zoomLabel,
   compact,
   disabled = false,
+  capture = false,
 }: {
   kind: MediaKind;
   label: string;
@@ -126,6 +127,8 @@ export function ImageUpload({
   compact?: { pick: string; change: string; clear: string };
   /** **معطّلٌ** — متجرٌ موقوفٌ أو قارئٌ بلا إذن تعديل (للمربّع الصغير). */
   disabled?: boolean;
+  /** **كاميرا الجوّال أولاً** (التصوير السريع، ٢٠٢٦-١١-٠٦) — `capture` على حقل الملفّ. */
+  capture?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<string | null>(mediaUrl(initialUrl));
@@ -182,6 +185,7 @@ export function ImageUpload({
         ref={inputRef}
         type="file"
         accept="image/jpeg,image/png,image/webp"
+        {...(capture ? { capture: "environment" as const } : {})}
         className="hidden"
         onChange={(e) => {
           const f = e.target.files?.[0];
@@ -374,6 +378,7 @@ export function ImageUpload({
         ref={inputRef}
         type="file"
         accept="image/jpeg,image/png,image/webp"
+        {...(capture ? { capture: "environment" as const } : {})}
         className="hidden"
         onChange={(e) => {
           const f = e.target.files?.[0];

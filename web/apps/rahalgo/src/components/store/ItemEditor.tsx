@@ -285,6 +285,8 @@ export default function ItemEditor({
   const router = useRouter();
   const toast = useShopToast();
   const rate = store?.exchange_rate ?? null;
+  /** **هل لديه برنامج الأمين؟** (٢٠٢٦-١١-٠٦) — بدونه لا حقلَ رمزٍ ولا باركود. */
+  const usesAmeen = store?.uses_ameen === true;
 
   const [name, setName] = useState(item?.name ?? "");
   const [currency, setCurrency] = useState<"SYP" | "USD">(
@@ -453,8 +455,7 @@ export default function ItemEditor({
       platform_section_id: section,
       modifiers,
       store_drinks: storeDrinks,
-      external_code: amenCode.trim(),
-      barcode: barcode.trim(),
+      ...(usesAmeen ? { external_code: amenCode.trim(), barcode: barcode.trim() } : {}),
       price_currency: currency,
       ...(usd ? { price_usd: usdValue } : { price: syp }),
       ...(imageId !== null ? { image_media_id: imageId } : {}),
@@ -647,6 +648,7 @@ export default function ItemEditor({
 
       {/* ── ٣ب · رقمُ المادّة بالأمين — يربط الصنفَ بملف الأسعار (٢٠٢٦-١١-٠٤)، وأرقامُه لاتينيّةٌ
           كما تُكتب (مرآةُ `amenCodeInput` في التطبيق، ٢٠٢٦-١١-٠٥): «٠١٧٠٦٤» لا يطابق ملفَّ الأمين ── */}
+      {usesAmeen && (
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" data-testid="item-amen-link">
         <div>
           <Input
@@ -682,6 +684,7 @@ export default function ItemEditor({
           }}
         />
       </div>
+      )}
 
       {/* ── ٤ · الإضافاتُ والخيارات ── */}
       <section className="flex flex-col gap-3" aria-label={I.modTitle}>

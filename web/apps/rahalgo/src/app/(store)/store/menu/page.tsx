@@ -29,6 +29,7 @@ import {
   EmptyState,
   IconAdd,
   IconBanknote,
+  IconCamera,
   IconCatDrinks,
   IconClose,
   IconList,
@@ -43,7 +44,7 @@ import { api, mediaUrl } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import { useDrinksAllowed } from "@/lib/store/drinks";
 import type { MenuItem, MenuSection, SectionRef } from "@/lib/store/types";
-import { dollars } from "@/lib/customer/texts";
+import { dollars, fill } from "@/lib/customer/texts";
 import { useShopToast } from "@/components/customer/toast";
 
 const m = getMessages(defaultLocale);
@@ -252,6 +253,7 @@ export default function MenuPage() {
   }, [all, order]);
 
   const off = all.filter((i) => !i.available).length;
+  const noPhoto = all.filter((i) => !i.image_url && !i.image_thumb_url).length;
   const needle = q.trim();
   const shown = needle
     ? all.filter((i) => i.name.toLowerCase().includes(needle.toLowerCase()))
@@ -333,6 +335,14 @@ export default function MenuPage() {
           <ToolPill icon={IconPromos} label={M.addOffer} href="/store/offers?new=1" testId="menu-offer" />
           <ToolPill icon={IconBanknote} label={M.toolBulk} href="/store/menu/prices" testId="menu-tool-prices" />
           <ToolPill icon={IconOptions} label={M.toolPresets} href="/store/menu/options" testId="menu-tool-options" />
+          {noPhoto > 0 && !suspended && (
+            <ToolPill
+              icon={IconCamera}
+              label={fill(M.toolQuickPhoto, { n: fmtNum(noPhoto) })}
+              href="/store/menu/photos"
+              testId="menu-tool-photos"
+            />
+          )}
           {drinksAllowed === true && (
             <ToolPill icon={IconCatDrinks} label={M.toolDrinks} href="/store/menu/drinks" testId="menu-tool-drinks" />
           )}
@@ -386,7 +396,7 @@ export default function MenuPage() {
       )}
 
       {/* **مزامنةُ الأمين** — للمولات (٢٠٢٦-١٠-١٩)، ويبقى بابُها هنا. */}
-      {!suspended && (
+      {!suspended && store?.uses_ameen === true && (
         <Link href="/store/price-sync" className="mx-auto py-2 text-xs text-ink-muted underline-offset-2 hover:underline">
           {m.store.priceSync.open}
         </Link>

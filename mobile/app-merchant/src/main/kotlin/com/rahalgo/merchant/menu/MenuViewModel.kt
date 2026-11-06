@@ -85,6 +85,9 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
 
     /** **سعرُ صرف المتجر** — لعرض «≈ ل.س» تحت السعر الدولاريّ (٢٠٢٦-١٠-١٢). */
     var exchangeRate by mutableStateOf<Double?>(null)
+
+    /** **هل لديه برنامج الأمين؟** (٢٠٢٦-١١-٠٦) — بدونه لا حقلَ رمزٍ في الصنف. */
+    var usesAmeen by mutableStateOf(false)
         private set
 
     /** **وجهُ كلّ قسمٍ باسمه** — من `platform-sections`، تُقرأ مرّةً. */
@@ -131,6 +134,15 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
     // **وتُعلَن قبل `init`** (تدقيقُ ٢٠٢٦-١٠-٢٨) — `init { load() }` كان يسبقها،
     // **فيُنادى `presets.refresh()` على حقلٍ لم يُبنَ بعد.**
     // ══════════════════════════════════════════════════════════════════
+
+    /** **التصوير السريع للأصناف بلا صورة** (قرارُ المالك ٢٠٢٦-١١-٠٦). */
+    val quick = com.rahalgo.merchant.quickphoto.QuickPhotoState(
+        scope = viewModelScope,
+        api = api,
+        storeId = { storeId },
+        dir = java.io.File(app.cacheDir, "quickphoto"),
+        onClosed = { load() },
+    )
 
     // **قائمةُ المشروبات** (قرارُ المالك ٢٠٢٦-١٠-١٩) — محرّرُها مشتركٌ مع المندوب (`DrinksState`).
     val drinks = com.rahalgo.ui.menu.DrinksState(
@@ -232,6 +244,7 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                 val mine = SelectedStore.resolve(api.stores().stores)
                 storeId = mine?.id.orEmpty()
                 exchangeRate = mine?.exchangeRate
+                usesAmeen = mine?.usesAmeen == true
                 suspended = mine?.status == "suspended"
                 if (storeId.isEmpty()) {
                     error = noStoreMsg()

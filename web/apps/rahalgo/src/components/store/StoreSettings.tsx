@@ -15,7 +15,7 @@
 
 import { useEffect, useState } from "react";
 import { getMessages, defaultLocale, errorText, fmtMoney, fmtNum } from "@rahalgo/i18n";
-import { Button, Confirm, IconBlock, IconCash, IconReturn, IconWallet, ImageUpload, Input, Modal, FormActions } from "@rahalgo/ui";
+import { Button, Confirm, IconBlock, IconCash, IconCheck, IconReturn, IconWallet, ImageUpload, Input, Modal, FormActions } from "@rahalgo/ui";
 import { api, ApiError, mediaUrl } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import { parseUsd, usdInput, usdText } from "@/lib/store/usd";
@@ -165,6 +165,31 @@ export function ReturnsCard() {
         items={[
           { icon: IconReturn, title: W.returnsYes, selected: c && store.accepts_returns, onClick: () => pick(true) },
           { icon: IconBlock, title: W.returnsNo, selected: c && !store.accepts_returns, onClick: () => pick(false) },
+        ]}
+      />
+    </section>
+  );
+}
+
+/** **«هل لديك برنامج الأمين؟»** (٢٠٢٦-١١-٠٦) — مرآةُ `StorePage.Ameen` في التطبيق. */
+export function AmeenCard() {
+  const { store } = useStore();
+  const { busy, save } = useSaveSettings();
+  if (!store) return null;
+  const on = store.uses_ameen === true;
+  const pick = (v: boolean) => {
+    if (v === on) return;
+    void save({ uses_ameen: v }, T.ameenSaved, { uses_ameen: v });
+  };
+  return (
+    <section className="surface flex flex-col gap-3 rounded-card p-4" aria-label={W.ameenQ}>
+      <h3 className="heading-card">{W.ameenQ}</h3>
+      <p className="text-xs text-ink-muted">{W.ameenHint}</p>
+      <IconChoicePair
+        disabled={busy || store.status === "suspended"}
+        items={[
+          { icon: IconCheck, title: W.ameenYes, selected: on, onClick: () => pick(true) },
+          { icon: IconBlock, title: W.ameenNo, selected: !on, onClick: () => pick(false) },
         ]}
       />
     </section>

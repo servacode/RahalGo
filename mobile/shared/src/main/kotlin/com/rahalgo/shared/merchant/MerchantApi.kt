@@ -170,6 +170,10 @@ class MerchantApi(private val api: ApiClient) {
             idempotencyKey = idempotencyKey,
         )
 
+    /** **أصناف المتجر بلا صورة** لوضع التصوير السريع (٢٠٢٦-١١-٠٦) — صفحةٌ بمؤشّر `after`. */
+    suspend fun noPhotoItems(storeId: String, after: String = "", limit: Int = 200): NoPhotoPage =
+        api.call("/api/v1/merchant/stores/$storeId/menu/no-photo?limit=$limit" + if (after.isEmpty()) "" else "&after=$after")
+
     suspend fun updateItem(itemId: String, input: MenuItemInput): MenuItem =
         api.call("/api/v1/merchant/menu/items/$itemId", HttpMethod.Patch, input)
 
@@ -475,6 +479,8 @@ data class Store(
     @SerialName("has_hours") val hasHours: Boolean = true,
     /** **سعرُ صرفه** (ليرةٌ للدولار) — وفراغُه: لم يكتبه بعد (٢٠٢٦-١٠-١٢). */
     @SerialName("exchange_rate") val exchangeRate: Double? = null,
+    /** **هل لديه برنامج الأمين؟** (٢٠٢٦-١١-٠٦) — لا يظهر شيءٌ منه عند `false`. */
+    @SerialName("uses_ameen") val usesAmeen: Boolean = false,
     /** **بأيّ عملةٍ يرى زبونُه أسعارَه** «SYP» أو «USD» — والدفعُ بالليرة دائماً. */
     @SerialName("display_currency") val displayCurrency: String = "SYP",
 )
@@ -867,6 +873,8 @@ data class StoreSettingsInput(
     val lng: Double? = null,
     /** **وقبولُ الاسترداد بيده** — (طلبُ المالك ٢٠٢٦-١٠-٠٨). */
     @SerialName("accepts_returns") val acceptsReturns: Boolean? = null,
+    /** **هل لديه برنامج الأمين؟** (٢٠٢٦-١١-٠٦). */
+    @SerialName("uses_ameen") val usesAmeen: Boolean? = null,
     /** **عملةُ العرض للزبون** «SYP» أو «USD» (٢٠٢٦-١٠-١٢، الخيار ١). */
     @SerialName("display_currency") val displayCurrency: String? = null,
     /** **شعارُه بيده** (طلبُ المالك ٢٠٢٦-١٠-١٨) — معرّفُ صورةٍ رفعها بـ`uploadLogo`. */
@@ -907,4 +915,21 @@ data class ExchangeRateResult(
 @Serializable
 data class SettlementMethodAck(
     @SerialName("settlement_method") val settlementMethod: String = "",
+)
+
+@Serializable
+data class NoPhotoItem(
+    val id: String = "",
+    val name: String = "",
+    @SerialName("section_name") val sectionName: String = "",
+    @SerialName("merchant_price") val price: Long = 0,
+    @SerialName("merchant_price_usd") val priceUsd: Double? = null,
+    val available: Boolean = true,
+)
+
+@Serializable
+data class NoPhotoPage(
+    val items: List<NoPhotoItem> = emptyList(),
+    val total: Int = 0,
+    @SerialName("next_after") val nextAfter: String = "",
 )

@@ -17,7 +17,7 @@ import { useStoreSections } from "@/lib/store/setup";
 import HoursEditor from "@/components/store/HoursEditor";
 import SectionsEditor from "@/components/store/SectionsEditor";
 import AddressEditor from "@/components/store/AddressEditor";
-import { PrepCard, RateCard, ReturnsCard, SettlementCard } from "@/components/store/StoreSettings";
+import { AmeenCard, PrepCard, RateCard, ReturnsCard, SettlementCard } from "@/components/store/StoreSettings";
 import { PageHeader } from "@/components/store/SetupParts";
 
 const m = getMessages(defaultLocale);
@@ -31,6 +31,7 @@ const TITLES = {
   returns: HM.rowReturns,
   rate: HM.rowRate,
   prep: HM.rowPrep,
+  ameen: HM.rowAmeen,
 } as const;
 type Page = keyof typeof TITLES;
 
@@ -57,6 +58,7 @@ export default function StoreSettingsPage() {
       {page === "returns" && <ReturnsCard />}
       {page === "rate" && <RateCard />}
       {page === "prep" && <PrepCard />}
+      {page === "ameen" && <AmeenCard />}
     </div>
   );
 }

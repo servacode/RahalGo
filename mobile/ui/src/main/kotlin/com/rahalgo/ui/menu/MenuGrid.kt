@@ -108,6 +108,9 @@ fun MenuItemsGrid(
     onBulk: () -> Unit,
     onDrinks: () -> Unit,
     addLabel: String,
+    /** **«صوّر الأصناف بلا صورة»** (٢٠٢٦-١١-٠٦) — و`null` لا زرّ (المندوب). */
+    quickPhotoLabel: String? = null,
+    onQuickPhoto: (() -> Unit)? = null,
     /** **المشروباتُ للمطاعم وحدَها** (٢٠٢٦-١٠-٣٠) — `false`: لا أداةَ «المشروبات». */
     drinksAllowed: Boolean = true,
     /** **«أضف صنفاً»** مربّعاً بجانب البحث — و`null` لا زرّ (للمتجر تبويبُ إضافة). */
@@ -209,6 +212,14 @@ fun MenuItemsGrid(
                     if (onOffer != null) ToolChip(R.drawable.ic_offer, offerLabel, onOffer)
                     if (drinksAllowed) ToolChip(R.drawable.ic_cup, stringResource(R.string.grid_drinks), onDrinks)
                     ToolChip(R.drawable.ic_custom, stringResource(R.string.presets_title), onPresets)
+                }
+            }
+            if (quickPhotoLabel != null && onQuickPhoto != null) {
+                item(span = full) {
+                    Row(
+                        Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                        horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
+                    ) { ToolChip(R.drawable.ic_photo, quickPhotoLabel, onQuickPhoto) }
                 }
             }
         }

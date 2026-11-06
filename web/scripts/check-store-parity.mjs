@@ -295,8 +295,73 @@ if (!menuPageTsx.includes("aspect-[4/5]") || !menuPageTsx.includes("<ImageViewer
 }
 if (!/zoomUrl=/.test(itemEditorTsx)) fail("محرّر الصنف على الموقع ما بيكبّر الصورة باللمس (التطبيق بيكبّرها)");
 
+// ══════════════════════════════════════════════════════════════════════
+// ٥ · «هل لديك برنامج الأمين؟» (قرار المالك ٢٠٢٦-١١-٠٦): بدون نعم ما بيبين شي من الأمين
+// ══════════════════════════════════════════════════════════════════════
+const ameenWeb = dict.store ?? {};
+for (const [app, webVal] of [
+  ["ameen_q", ameenWeb.wizard?.ameenQ],
+  ["ameen_q_hint", ameenWeb.wizard?.ameenHint],
+  ["ameen_yes", ameenWeb.wizard?.ameenYes],
+  ["ameen_no", ameenWeb.wizard?.ameenNo],
+  ["home_row_ameen", ameenWeb.home?.rowAmeen],
+  ["home_val_ameen_yes", ameenWeb.home?.ameenYesShort],
+  ["home_val_ameen_no", ameenWeb.home?.ameenNoShort],
+  ["ok_ameen_saved", ameenWeb.settings?.ameenSaved],
+]) {
+  eq(`نص الأمين ${app}`, webVal, merchant(app));
+}
+const storeVmKt = strip(read(join(repo, "mobile", "app-merchant", "src", "main", "kotlin", "com", "rahalgo", "merchant", "store", "StoreViewModel.kt")));
+const menuVmKt = strip(read(join(repo, "mobile", "app-merchant", "src", "main", "kotlin", "com", "rahalgo", "merchant", "menu", "MenuViewModel.kt")));
+const storePageTsx = strip(read(join(web, "apps", "rahalgo", "src", "app", "(store)", "store", "page.tsx")));
+const priceSyncTsx = strip(read(join(web, "apps", "rahalgo", "src", "app", "(store)", "store", "price-sync", "page.tsx")));
+if (!/StoreSettingsInput\(usesAmeen = uses\)/.test(storeVmKt)) fail("تطبيق المتجر ما بيحفظ uses_ameen من الإعدادات");
+if (!/amenLinkAllowed\s*=\s*vm\.usesAmeen/.test(menuScreenKt) || !/usesAmeen = mine\?\.usesAmeen == true/.test(menuVmKt)) {
+  fail("محرّر الصنف بتطبيق المتجر بيعرض حقل الأمين بدون ما يسأل uses_ameen");
+}
+if (!/usesAmeen && \(/.test(itemEditorTsx) || !/store\?\.uses_ameen === true/.test(itemEditorTsx)) {
+  fail("محرّر الصنف على الموقع بيعرض حقل الأمين بدون ما يسأل uses_ameen");
+}
+if (!/store\?\.uses_ameen === true/.test(menuPageTsx)) fail("صفحة /store/menu بتعرض رابط مزامنة الأمين بدون uses_ameen");
+if (!/uses_ameen !== true/.test(priceSyncTsx)) fail("صفحة /store/price-sync ما بتسكّر لما uses_ameen مطفي");
+if (!/store\.uses_ameen/.test(storePageTsx)) fail("صفحة «متجري» على الموقع ما فيها سطر الأمين");
+
+// ══════════════════════════════════════════════════════════════════════
+// ٦ · «التصوير السريع» للأصناف بلا صورة (قرار المالك ٢٠٢٦-١١-٠٦)
+// ══════════════════════════════════════════════════════════════════════
+const QP = dict.store?.quickPhoto ?? {};
+const qpText = (t) => t.replace(/%\d\$d/g, "{n}");
+for (const [app, webVal] of [
+  ["qp_title", QP.title],
+  ["qp_shoot", QP.shoot],
+  ["qp_retake", QP.retake],
+  ["qp_save_next", QP.saveNext],
+  ["qp_skip", QP.skip],
+  ["qp_done", QP.done],
+  ["qp_none", QP.none],
+]) {
+  eq(`نص التصوير السريع ${app}`, webVal, merchant(app));
+}
+eq("نص التصوير السريع qp_open", qpText(merchant("qp_open")), dict.store?.menu?.toolQuickPhoto);
+eq("نص التصوير السريع qp_counter", merchant("qp_counter").replace("%1$d", "{n}").replace("%2$d", "{total}"), QP.counter);
+// الترتيب نفسه بالتطبيق (QuickPhotoQueue.of) وبالموقع (quickPhotoOrder): المتخطّى بالآخر، وقيد الرفع يغيب.
+const qpLib = await load(join(web, "apps", "rahalgo", "src", "lib", "store", "quickPhoto.ts"));
+if (qpLib.quickPhotoOrder) {
+  const ids = (xs) => xs.map((x) => x.id).join(",");
+  const mk = (...a) => a.map((id) => ({ id }));
+  eq("ترتيب التصوير السريع: المتخطّى بالآخر", ids(qpLib.quickPhotoOrder(mk("c", "d", "e"), new Set(["c"]))), "d,e,c");
+  eq("ترتيب التصوير السريع: قيد الرفع يغيب", ids(qpLib.quickPhotoOrder(mk("a", "b", "c"), new Set(), new Set(["a", "b"]))), "c");
+}
+const qpKt = read(join(repo, "mobile", "app-merchant", "src", "main", "kotlin", "com", "rahalgo", "merchant", "quickphoto", "QuickPhotoQueue.kt"));
+if (!/partition \{ it\.id in skipped \}/.test(qpKt) || !/it\.id !in queuedForUpload/.test(qpKt)) fail("QuickPhotoQueue.kt تغيّر ترتيبه — راجع quickPhotoOrder بالموقع");
+const qpPage = strip(read(join(web, "apps", "rahalgo", "src", "app", "(store)", "store", "menu", "photos", "page.tsx")));
+if (!qpPage.includes("/menu/no-photo") || !qpPage.includes("image_media_id") || !/ImageUpload/.test(qpPage)) fail("صفحة /store/menu/photos ما بتجيب الأصناف بلا صورة أو ما بتحفظ الصورة");
+if (!/\/menu\/no-photo/.test(read(join(repo, "mobile", "shared", "src", "main", "kotlin", "com", "rahalgo", "shared", "merchant", "MerchantApi.kt")))) fail("MerchantApi.kt ما بينده menu/no-photo");
+if (!/menu\/photos/.test(menuPageTsx)) fail("صفحة /store/menu ما فيها زر التصوير السريع (التطبيق فيه)");
+if (!/onQuickPhoto\s*=/.test(menuScreenKt)) fail("شاشة الأصناف بالتطبيق ما فيها زر التصوير السريع");
+
 if (fails > 0) {
   console.error(`\n✗ لوحة المتجر والتطبيق: ${fails} فحصاً سقط`);
   process.exit(1);
 }
-console.log("✓ لوحة المتجر والتطبيق: سطر الدين وعمر الطلب والمستلمين السابقين وتكبير صورة الصنف بنفس الكلام");
+console.log("✓ لوحة المتجر والتطبيق: سطر الدين وعمر الطلب والمستلمين السابقين وتكبير صورة الصنف وسؤال الأمين والتصوير السريع بنفس الكلام");

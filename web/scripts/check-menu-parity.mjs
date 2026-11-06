@@ -325,6 +325,18 @@ for (const setter of ["setAmenCode", "setBarcode"]) {
   }
 }
 
+// **وحقلا الأمين لا يظهران إلا لمتجرٍ عنده برنامج الأمين** (قرار المالك ٢٠٢٦-١١-٠٦) — تطبيقاً وموقعاً ولوحةَ إدارة.
+if (!/amenLinkAllowed\s*=\s*vm\.usesAmeen/.test(readFileSync(join(repo, "mobile/app-merchant/src/main/kotlin/com/rahalgo/merchant/menu/MenuScreen.kt"), "utf8"))) {
+  problems.push("محرّر الصنف بالتطبيق يعرض حقل الأمين بدون «vm.usesAmeen»");
+}
+if (!/\{usesAmeen && \(/.test(webEditor) || !webEditor.includes("usesAmeen ? { external_code")) {
+  problems.push("محرّر الصنف في الويب يعرض/يرسل حقلَي الأمين بدون «usesAmeen»");
+}
+const adminEditor = readFileSync(join(here, "..", "packages/ui/src/MenuManager.tsx"), "utf8");
+if (!/\{usesAmeen && \(/.test(adminEditor) || !adminEditor.includes("usesAmeen ? { external_code")) {
+  problems.push("محرّر الصنف في لوحة الإدارة (MenuManager) يعرض/يرسل حقلَي الأمين بدون «usesAmeen»");
+}
+
 if (problems.length > 0) {
   console.error("محرّرُ الأصناف يختلف بين الويب والتطبيق:");
   for (const p of problems) console.error("  · " + p);
