@@ -33,8 +33,8 @@
     "setting_defs": 277,
     "behaviour_settings": 232,
     "order_fields": 137,
-    "test_files": 771,
-    "test_funcs": 2944
+    "test_files": 772,
+    "test_funcs": 2948
   },
   "flows": [
     {
@@ -28080,6 +28080,30 @@
     {
       "name": "TestWAORD022_OwnSettingsCopiedByMigration",
       "file": "internal/qa/whatsapp_settings_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD040_StoreNameAndPhoneOnly",
+      "file": "internal/qa/whatsapp_simple_form_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD041_TextReplyIsTheAddress",
+      "file": "internal/qa/whatsapp_simple_form_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD042_LocationReplyStillFillsThePoint",
+      "file": "internal/qa/whatsapp_simple_form_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWAORD043_DriverTypesGoodsCustomerInformed",
+      "file": "internal/qa/whatsapp_simple_form_test.go",
       "package": "qa",
       "orphan": true
     },
