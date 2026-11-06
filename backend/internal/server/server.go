@@ -125,6 +125,9 @@ type Server struct {
 	// alertOut **من يكتب للمالك في محادثته مع نفسه** — البوت. **وفارغٌ في
 	// التطوير** فتذهب التنبيهاتُ إلى إشعارات اللوحة وحدَها.
 	alertOut AlertSender
+
+	// driveFails **دواماتٌ تعثّر قياسُها** — تُنحّى عن رأس الكانس عشرَ دقائق (`drive_sweeper.go`).
+	driveFails driveFailures
 }
 
 // MerchantNotifier **من يبلّغ متجراً بطلب** — يُرضيه البوت.

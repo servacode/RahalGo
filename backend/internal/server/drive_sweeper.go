@@ -16,6 +16,7 @@ package server
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -25,6 +26,48 @@ import (
 
 // driveSweepBatch أقصى دوامات في الجولة.
 const driveSweepBatch = 50
+
+// driveFailBackoff **دوامٌ تعثّر قياسُه يُنحّى عن الجولات هذه المدّة.**
+//
+// (٢٠٢٦-١١-٠٦) **كان التعثّرُ يُبقي `computed_at` فارغاً** — والفارغُ أوّلُ الترتيب — **فيعود
+// المتعثّرُ رأسَ كلّ جولة**: خمسون متعثّراً تُوقف الكانسَ كلَّه ولا يُحسب دوامٌ بعدها.
+const driveFailBackoff = 10 * time.Minute
+
+// driveFailures **ما تعثّر ومتى يُعاد** — في الذاكرة: إقلاعٌ جديدٌ يعيد المحاولةَ فوراً.
+type driveFailures struct {
+	mu    sync.Mutex
+	until map[string]time.Time
+}
+
+// skip **المنحّى الآن** — ويُنسى ما انقضت مهلتُه.
+func (f *driveFailures) skip(now time.Time) []string {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	out := []string{}
+	for id, t := range f.until {
+		if now.Before(t) {
+			out = append(out, id)
+		} else {
+			delete(f.until, id)
+		}
+	}
+	return out
+}
+
+func (f *driveFailures) failed(id string, now time.Time) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.until == nil {
+		f.until = map[string]time.Time{}
+	}
+	f.until[id] = now.Add(driveFailBackoff)
+}
+
+func (f *driveFailures) ok(id string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	delete(f.until, id)
+}
 
 // RunDriveSweeper **كلَّ دقيقة.**
 func (s *Server) RunDriveSweeper(ctx context.Context, interval time.Duration) {
@@ -63,8 +106,11 @@ func (s *Server) SweepDrives(ctx context.Context, now time.Time) int {
 		        OR EXISTS (SELECT 1 FROM orders o
 		                    WHERE o.driver_id = s.driver_id AND o.goods_handed_at > s.computed_at
 		                      AND o.goods_handed_at <= $1))
-		 ORDER BY s.computed_at NULLS FIRST
-		 LIMIT $3`, now, now.Add(-drivermonitor.FinalAfter), driveSweepBatch)
+		   AND NOT (s.id::text = ANY($4::text[]))
+		 -- **وما لم يُحسب قطّ: المسكَّرُ أوّلاً ثمّ الأحدث** (٢٠٢٦-١١-٠٦) — كان ترتيبُ الفارغ
+		 -- بينه عشوائيّاً، فدوامٌ فُتح للتوّ ينتظر خلف مئاتٍ قديمةٍ بلا حركة.
+		 ORDER BY s.computed_at NULLS FIRST, s.closed_at IS NULL, s.opened_at DESC
+		 LIMIT $3`, now, now.Add(-drivermonitor.FinalAfter), driveSweepBatch, s.driveFails.skip(now))
 	if err != nil {
 		s.logger.Warn("كانس المسافات: تعذّرت قراءة الدوامات", "error", err)
 		return 0
@@ -84,8 +130,10 @@ func (s *Server) SweepDrives(ctx context.Context, now time.Time) int {
 	for _, sp := range spans {
 		if err := s.measureShift(ctx, sp, now); err != nil {
 			s.logger.Warn("كانس المسافات: تعذّر قياس دوام", "shift", sp.ID, "driver", sp.DriverID, "error", err)
+			s.driveFails.failed(sp.ID, now)
 			continue
 		}
+		s.driveFails.ok(sp.ID)
 		n++
 	}
 	// **وصورُ العدّاد تُمحى بعد مدّة حفظها** — مرّةً بالساعة، والرقمُ يبقى.

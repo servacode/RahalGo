@@ -265,7 +265,15 @@ func odShift(t *testing.T, h *Harness, driver string, opened time.Time, closed *
 // sweepUntil يكنس حتى يُحسب الدوام (قد يكون في الجولة دواماتٌ لغيره).
 func sweepUntil(t *testing.T, h *Harness, shift string, now time.Time) {
 	t.Helper()
-	for i := 0; i < 6; i++ {
+	// **والجولاتُ بعدد ما ينتظر لا ستٌّ ثابتة** (٢٠٢٦-١١-٠٦) — في التشغيل الكامل تبقى آلافُ
+	// الورديّات المفتوحة من اختباراتٍ سبقت (`OnShift`) بلا حساب، **والجولةُ خمسون**؛ فستُّ جولاتٍ
+	// كانت تفوت دوامَ الاختبار (قِيس: ٤٠٠ ورديّة قبله ⇒ «ما حسب الدوام»).
+	var pending int
+	if err := h.Pool.QueryRow(ctxBG(),
+		`SELECT count(*)::int FROM driver_shifts WHERE NOT final AND computed_at IS NULL`).Scan(&pending); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < pending/50+6; i++ {
 		h.API.SweepDrives(context.Background(), now)
 		var at *time.Time
 		if err := h.Pool.QueryRow(ctxBG(), `SELECT computed_at FROM driver_shifts WHERE id = $1::uuid`, shift).Scan(&at); err != nil {
