@@ -77,6 +77,22 @@ func TestRTX02_PanelTextOverridesDefault(t *testing.T) {
 	}
 }
 
+// **وسطرُ نقاط الخريطة في خصوصيّة السائق ولو عدّلها المالك** (قرارُ المالك ٢٠٢٦-١١-٠٦) — نصُّ
+// اللوحة يغلب الأصل، ويُلحَق به السطرُ مرّةً واحدة (`settings.EffectiveDriverPrivacy`).
+func TestRTX03_DriverPrivacyAlwaysMentionsMapPoints(t *testing.T) {
+	h := New(t)
+	h.Setting("page.driver_privacy_text", `"خصوصيّةٌ من اللوحة"`)
+	got := h.GET("/api/v1/public/contact", "")
+	body := got.JSON()
+	if d, ok := body["data"].(map[string]any); ok {
+		body = d
+	}
+	v := str(body["driver_privacy_text"])
+	if !strings.HasPrefix(v, "خصوصيّةٌ من اللوحة") || strings.Count(v, settings.DriverMapTraceLine) != 1 {
+		t.Fatalf("RTX03 خصوصيّةُ السائق بلا سطر نقاط الخريطة: %q", v)
+	}
+}
+
 func str(v any) string {
 	s, _ := v.(string)
 	return s

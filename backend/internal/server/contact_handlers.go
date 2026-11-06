@@ -72,7 +72,7 @@ func (s *Server) handlePublicContact(w http.ResponseWriter, r *http.Request) {
 		"rep_privacy_text":      s.settings.GetString(ctx, "page.rep_privacy_text"),
 		// **وبندُ التعامل برّا المنصّة فيها أبداً** — ولو عدّل المالكُ النصَّ قبله (٢٠٢٦-١١-٠٥).
 		"driver_terms_text":   settings.EffectiveDriverTerms(s.settings.GetString(ctx, "page.driver_terms_text")),
-		"driver_privacy_text": s.settings.GetString(ctx, "page.driver_privacy_text"),
+		"driver_privacy_text": settings.EffectiveDriverPrivacy(s.settings.GetString(ctx, "page.driver_privacy_text")),
 		"support_phone":       s.settings.GetString(ctx, "platform.support_phone"),
 		"address":             s.settings.GetString(ctx, "platform.address"),
 	})
