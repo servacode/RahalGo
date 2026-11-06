@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/servacode/rahalgo/backend/internal/drivermonitor"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
@@ -186,18 +187,27 @@ func (s *Server) handleDriverMonitorList(w http.ResponseWriter, r *http.Request)
 	}
 	out := make([]rowOut, 0, len(rows))
 	if from, to, err := drivermonitor.AccountDayBounds(r.Context(), s.pg, day); err == nil {
-		for _, row := range rows {
-			_, odo, err := s.monitorShifts(r.Context(), row.DriverID, from, to, now, false)
-			if err != nil {
-				s.respondErr(w, err)
-				return
-			}
-			after, err := s.afterClose(r.Context(), row.DriverID, wd, stores, now)
-			if err != nil {
-				s.respondErr(w, err)
-				return
-			}
-			out = append(out, rowOut{Row: row, Odometer: odo, WorkDay: after})
+		// **وبالتوازي كقائمة اليوم نفسِها** (`drivermonitor.OverviewWorkers`) — كلُّ عاملٍ صفُّه وحدَه.
+		out = out[:len(rows)]
+		g, gctx := errgroup.WithContext(r.Context())
+		g.SetLimit(drivermonitor.OverviewWorkers)
+		for i, row := range rows {
+			g.Go(func() error {
+				_, odo, err := s.monitorShifts(gctx, row.DriverID, from, to, now, false)
+				if err != nil {
+					return err
+				}
+				after, err := s.afterClose(gctx, row.DriverID, wd, stores, now)
+				if err != nil {
+					return err
+				}
+				out[i] = rowOut{Row: row, Odometer: odo, WorkDay: after}
+				return nil
+			})
+		}
+		if err := g.Wait(); err != nil {
+			s.respondErr(w, err)
+			return
 		}
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{

@@ -4,6 +4,8 @@ import (
 	"context"
 	"sort"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 )
 
 // Loc توقيت دمشق — اليوم عند المنصّة يبدأ منتصف الليل بتوقيتها.
@@ -456,36 +458,56 @@ func Overview(ctx context.Context, db DB, day string, from, to time.Time, alertK
 	if err != nil {
 		return nil, err
 	}
+	// **وكلُّ سائقٍ بسؤالاته وحدَه، بالتوازي على ثمانية** (٢٠٢٦-١١-٠٦) — كان بالتتالي
+	// ثمانيةَ أجزاءٍ من الثانية لكلّ سائق، **فصارت القائمةُ ثلاثين ثانيةً عند أربعة آلاف
+	// سائقٍ على الدوام** وقطعتها مهلةُ النداء «المنصّة مشغولة». وكلُّ عاملٍ يكتب صفَّه وحدَه.
+	g, gctx := errgroup.WithContext(ctx)
+	g.SetLimit(OverviewWorkers)
 	for i := range out {
-		res, wins, err := DriverDay(ctx, db, out[i].DriverID, from, to, stores, now, roadOn)
-		if err != nil {
-			return nil, err
-		}
-		if isToday {
-			recent, err := LoadPoints(ctx, db, out[i].DriverID, now.Add(-LiveLookback), now.Add(time.Second))
-			if err != nil {
-				return nil, err
-			}
-			lv := DeriveLive(recent, now)
-			lv.OnShift = onShift[out[i].DriverID]
-			for _, w := range wins {
-				if w.EndAt == nil {
-					lv.HasOrder = true
-				}
-			}
-			out[i].Live = &lv
-		}
-		out[i].Summary = res.Summary
-		out[i].Flagged = res.FlaggedGaps()
-		out[i].Score = res.Score
-		out[i].Alert = res.Alert(alertKm)
-		if out[i].Alert {
-			out[i].Score += 300
-		}
+		g.Go(func() error {
+			return overviewRow(gctx, db, &out[i], onShift[out[i].DriverID], from, to, stores, now, alertKm, isToday, roadOn)
+		})
+	}
+	if err := g.Wait(); err != nil {
+		return nil, err
 	}
 	if err := fillAntiPoach(ctx, db, out, now); err != nil {
 		return nil, err
 	}
 	sort.SliceStable(out, func(a, b int) bool { return out[a].Score > out[b].Score })
 	return out, nil
+}
+
+// OverviewWorkers **كم سائقاً يُحسب معاً** في قائمة اليوم — أقلُّ بكثيرٍ من أربعين اتّصالاً في المجمّع.
+const OverviewWorkers = 8
+
+// overviewRow **صفُّ سائقٍ واحدٍ في قائمة اليوم** — يكتب في صفّه وحدَه.
+func overviewRow(ctx context.Context, db DB, row *Row, shift bool, from, to time.Time, stores []Store, now time.Time,
+	alertKm float64, isToday, roadOn bool) error {
+	res, wins, err := DriverDay(ctx, db, row.DriverID, from, to, stores, now, roadOn)
+	if err != nil {
+		return err
+	}
+	if isToday {
+		recent, err := LoadPoints(ctx, db, row.DriverID, now.Add(-LiveLookback), now.Add(time.Second))
+		if err != nil {
+			return err
+		}
+		lv := DeriveLive(recent, now)
+		lv.OnShift = shift
+		for _, w := range wins {
+			if w.EndAt == nil {
+				lv.HasOrder = true
+			}
+		}
+		row.Live = &lv
+	}
+	row.Summary = res.Summary
+	row.Flagged = res.FlaggedGaps()
+	row.Score = res.Score
+	row.Alert = res.Alert(alertKm)
+	if row.Alert {
+		row.Score += 300
+	}
+	return nil
 }
