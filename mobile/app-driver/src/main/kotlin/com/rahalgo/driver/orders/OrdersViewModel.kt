@@ -770,14 +770,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     private fun legOf(mine: List<com.rahalgo.shared.model.DriverOrder>): String? {
         val id = openId?.takeIf { oid -> mine.any { it.id == oid } } ?: mine.firstOrNull()?.id ?: return null
         val o = mine.firstOrNull { it.id == id } ?: return null
-        // **ومشوارُ الإرجاع ساقٌ ثالثة** — وجهتُه غيرُ باب الزبون، فيُطلب طريقُه من جديد.
-        if (com.rahalgo.driver.trip.isReturnTrip(o)) return "$id:return"
-        if (o.status !in TO_CUSTOMER) return "$id:merchant"
-        // **والزبونُ الآن ساقٌ غيرُ الدبّوس** (٢٠٢٦-١٠-١٦) — فإن تحوّلت الوجهةُ أو تحرّك
-        // الزبونُ فوق `LIVE_REANCHOR_M` طُلب الطريقُ من جديد، **والخادمُ يحسبه إليه.**
-        val a = liveAnchor?.takeIf { liveFor == id }
-            ?: return "$id:customer"
-        return "$id:customer:live:" + a.first + "," + a.second
+        return routeLegOf(o, liveAnchor?.takeIf { liveFor == id })
     }
 
     // ══════════════════════════════════════════════════════════════════
@@ -2818,3 +2811,20 @@ private val FINISHED = setOf("delivered", "failed", "cancelled", "returned", "cl
 
 /** **حالاتُ الساق الثانية** — بعد الاستلام يُوجَّه إلى الزبون. */
 private val TO_CUSTOMER = setOf("picked_up", "on_the_way", "at_dropoff")
+
+/**
+ * **مفتاحُ ساق الطريق** — إن تبدّل طُلب الطريقُ من جديد، وإلّا بقي المحفوظ (`routeKeep`).
+ */
+internal fun routeLegOf(o: com.rahalgo.shared.model.DriverOrder, live: Pair<Double, Double>?): String {
+    val id = o.id
+    // **ومشوارُ الإرجاع ساقٌ ثالثة** — وجهتُه غيرُ باب الزبون، فيُطلب طريقُه من جديد.
+    if (com.rahalgo.driver.trip.isReturnTrip(o)) return "$id:return"
+    if (o.status !in TO_CUSTOMER) return "$id:merchant"
+    // **والزبونُ الآن ساقٌ غيرُ الدبّوس** (٢٠٢٦-١٠-١٦) — فإن تحوّلت الوجهةُ أو تحرّك
+    // الزبونُ فوق `LIVE_REANCHOR_M` طُلب الطريقُ من جديد، **والخادمُ يحسبه إليه.**
+    // **ونقطةُ الباب في المفتاح** (طلبُ المالك ٢٠٢٦-١١-٠٦) — موقعُ المستلِم يصل بالواتساب والسائقُ
+    // في الطريق: **كانت الساقُ «customer» قبله وبعده** فيبقى الطريقُ المحفوظُ إلى النقطة القديمة
+    // (والدبّوسُ في الجديدة). **وبلا نقطةٍ «nopoint»** — المكتوبُ موقعُ المتجر لا الباب.
+    val a = live ?: return "$id:customer:" + if (o.dropoffKnown) "${o.lat},${o.lng}" else "nopoint"
+    return "$id:customer:live:" + a.first + "," + a.second
+}
