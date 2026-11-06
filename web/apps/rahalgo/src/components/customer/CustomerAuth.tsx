@@ -258,7 +258,7 @@ function Login({ next }: { next?: string }) {
         <p className="text-ink-muted">{T.noAccount}</p>
         <ButtonLink
           href={`/signup${q ? `?${q}` : ""}`}
-          variant="secondary"
+          variant="signup"
           className="w-full py-3 text-base"
         >
           {T.signupOpen}

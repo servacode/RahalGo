@@ -61,6 +61,12 @@ enum class Tone {
 
     /** On a dark/brand background: white outline and text (driver offer banner). */
     OnDark,
+
+    /**
+     * **البرتقاليُّ الغامقُ بخطٍّ أبيض** — زرُّ «إنشاء حساب جديد» (طلبُ المالك ٢٠٢٦-١١-٠٦: «لون
+     * الزر برتقالي ليتميّز بكتابة بخط أبيض»). **أغمقُ من `Accent` درجة** ليُقرأ الأبيضُ عليه في الشمس.
+     */
+    AccentSolid,
 }
 
 /**
@@ -83,6 +89,11 @@ private fun Tone.color(): Color = when (this) {
     Tone.Success -> Rahal.colors.success
     Tone.Danger -> Rahal.colors.danger
     Tone.OnDark -> Color.White
+    Tone.AccentSolid -> androidx.compose.ui.graphics.lerp(
+        Rahal.colors.accent,
+        if (Rahal.colors.dark) Rahal.colors.panel else Rahal.colors.accentInk,
+        if (Rahal.colors.dark) 0.25f else 0.45f,
+    )
 }
 
 /**
@@ -96,13 +107,14 @@ private fun Tone.color(): Color = when (this) {
 private fun Tone.onColor(): Color = when (this) {
     Tone.Accent -> Rahal.colors.onLight
     Tone.OnDark -> Color.White
+    Tone.AccentSolid -> Rahal.colors.onPanel
     else -> Rahal.colors.onBrand
 }
 
 /** **حبرُ النبرة للزرّ المحدَّد والنصّيّ** — البرتقاليُّ نصّاً بحبره الغامق. */
 @Composable
 private fun Tone.inkColor(): Color = when (this) {
-    Tone.Accent -> Rahal.colors.accentInk
+    Tone.Accent, Tone.AccentSolid -> Rahal.colors.accentInk
     else -> color()
 }
 

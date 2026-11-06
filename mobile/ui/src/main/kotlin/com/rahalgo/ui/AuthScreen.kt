@@ -273,12 +273,16 @@ fun AuthScreen(
                 style = MaterialTheme.typography.bodyMedium,
             )
             Spacer(Modifier.height(8.dp))
-            RahalOutlineButton(
+            RahalButton(
                 onClick = actions.signup,
                 enabled = !state.busy,
+                tone = Tone.AccentSolid,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(stringResource(R.string.signup_new_account))
+                Text(
+                    stringResource(R.string.signup_new_account),
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                )
             }
         }
         Spacer(Modifier.height(40.dp))
