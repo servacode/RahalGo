@@ -5,8 +5,9 @@
  * **بطاقةُ الصنف ونافذتُه — مرآةُ `ItemCard` و`ItemOptionsSheet`**
  * ══════════════════════════════════════════════════════════════════════
  *
- * **السعرُ بالدولار و«≈ بالليرة» على سطرٍ واحد** — الدولارُ ما كتبه صاحبُ
+ * **السعرُ بالدولار و«· بالليرة» على سطرٍ واحد** — الدولارُ ما كتبه صاحبُ
  * المتجر، **والليرةُ ما يدفعه الزبون** (يحسبها المحرّكُ من سعر الصرف).
+ * و«·» لا «≈» (طلبُ المالك ٢٠٢٦-١١-٠٧): الليرةُ ليست تقريباً، هي ما يُدفع.
  *
  * **واسمُ المتجر تحت الصورة** — «شاورما» من مطعمين اسمان متطابقان،
  * **والمتجرُ هو ما يفرّق بينهما.**
@@ -65,16 +66,30 @@ const SV = m.shop.service;
 /** **سقفُ العدد في النافذة** — مرآةُ `ItemOptionsSheet.kt` (`qty < 99`). */
 const MAX_QTY = 99;
 
-/** **السعرُ على سطرٍ واحد** — دولارٌ ثمّ «≈ ليرة»، أو ليرةٌ وحدَها. */
-export function Price({ syp, usd, className = "" }: { syp: number; usd?: number | null; className?: string }) {
-  if (usd == null) return <Money value={syp} className={`font-bold text-accent-text ${className}`} />;
+/**
+ * **السعرُ على سطرٍ واحد** — دولارٌ ثمّ «· ليرة»، أو ليرةٌ وحدَها. مرآةُ `dualPrice` في
+ * التطبيق (`Money.kt`). و`muted` لسطور الخيارات والمشروبات: بلا لونٍ ولا ثِقَل.
+ */
+export function Price({
+  syp,
+  usd,
+  muted = false,
+  className = "",
+}: {
+  syp: number;
+  usd?: number | null;
+  muted?: boolean;
+  className?: string;
+}) {
+  const strong = muted ? "" : "font-bold text-accent-text";
+  if (usd == null) return <Money value={syp} small={muted} className={`${strong} ${className}`} />;
   return (
-    <span className={`inline-flex flex-wrap items-baseline gap-x-1.5 ${className}`}>
-      <span dir="ltr" className="font-bold text-accent-text tabular-nums">
+    <span className={`inline-flex flex-wrap items-baseline gap-x-1 ${className}`}>
+      <span dir="ltr" className={`tabular-nums ${strong}`}>
         {dollars(usd)}
       </span>
-      <span className="text-xs text-ink-muted">
-        {"≈ "}
+      <span className={muted ? "" : "text-xs text-ink-muted"}>
+        {"· "}
         <Money value={syp} small />
       </span>
     </span>
@@ -123,7 +138,7 @@ export function ItemCard({
                   {dollars(item.price_usd)}
                 </span>
                 <span className="whitespace-nowrap text-2xs text-ink-muted">
-                  {"≈ "}
+                  {"· "}
                   <Money value={item.price} small />
                 </span>
               </>
@@ -463,7 +478,7 @@ export function ItemSheet({
                         {dollars(totalUsd)}
                       </span>
                       <span className="text-xs opacity-80">
-                        {"≈ "}
+                        {"· "}
                         <Money value={total} small />
                       </span>
                     </span>
@@ -529,7 +544,7 @@ export function ItemSheet({
                 counts={drinkQty}
                 max={MAX_DRINK}
                 thumbs
-                price={(o) => (o.price_delta_usd != null ? dollars(o.price_delta_usd) : <Money value={o.price_delta} small />)}
+                price={(o) => <Price muted syp={o.price_delta} usd={o.price_delta_usd} />}
                 onCount={(id, n) => {
                   setWarn("");
                   setDrinkQty((cur) => ({ ...cur, [id]: Math.max(0, Math.min(MAX_DRINK, n)) }));
@@ -542,13 +557,13 @@ export function ItemSheet({
                 group={g}
                 counts={splitQty}
                 max={MAX_PER_OPTION}
-                price={(o) =>
-                  view.price_usd != null ? (
-                    dollars(view.price_usd + (o.price_delta_usd ?? 0))
-                  ) : (
-                    <Money value={view.price + o.price_delta} small />
-                  )
-                }
+                price={(o) => (
+                  <Price
+                    muted
+                    syp={view.price + o.price_delta}
+                    usd={view.price_usd != null ? view.price_usd + (o.price_delta_usd ?? 0) : null}
+                  />
+                )}
                 onCount={(id, n) => {
                   setWarn("");
                   setSplitQty((cur) => ({ ...cur, [id]: Math.max(0, Math.min(MAX_PER_OPTION, n)) }));
@@ -577,13 +592,17 @@ export function ItemSheet({
                       // **«حسب الوزن» بسعره كاملاً** لا «+فرق» (قرارُ المالك ٢٠٢٦-١٠-٢٨) —
                       // مرآةُ `ItemOptionsSheet.kt`.
                       <span className="text-xs text-ink-muted">
-                        <Money value={view.price + o.price_delta} small />
+                        <Price
+                          muted
+                          syp={view.price + o.price_delta}
+                          usd={view.price_usd != null && o.price_delta_usd != null ? view.price_usd + o.price_delta_usd : null}
+                        />
                       </span>
                     ) : (
                       o.price_delta !== 0 && (
                         <span className="text-xs text-ink-muted">
                           {"+ "}
-                          <Money value={o.price_delta} small />
+                          <Price muted syp={o.price_delta} usd={o.price_delta_usd} />
                         </span>
                       )
                     )}

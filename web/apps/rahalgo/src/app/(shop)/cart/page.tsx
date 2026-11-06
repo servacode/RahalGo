@@ -40,10 +40,10 @@ import {
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { useCart, drinkRows, lineKey, linePayload, unitPrice, MAX_DRINK } from "@/lib/customer/cart";
+import { useCart, drinkRows, lineKey, linePayload, unitPrice, unitPriceUsd, MAX_DRINK } from "@/lib/customer/cart";
 import { useCustomer } from "@/lib/customer/context";
 import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
-import { changeText, fill, serviceText } from "@/lib/customer/texts";
+import { changeText, dollars, fill, serviceText } from "@/lib/customer/texts";
 import type { CartChange, PromoPreview, Quote } from "@/lib/customer/types";
 import { AddressChip, AddressSheet } from "@/components/customer/AddressSheet";
 import { DrinkThumb } from "@/components/customer/DrinkThumb";
@@ -328,6 +328,14 @@ export default function CartPage() {
                     <p className="truncate text-sm font-bold">{l.item.name}</p>
                     {l.options.length > 0 && (
                       <p className="truncate text-xs text-ink-muted">{l.options.map((o) => o.name).join(m.common.listSep)}</p>
+                    )}
+                    {/* **وصنفٌ بالدولار يُقال دولارُه تحت اسمه** (٢٠٢٦-١١-٠٧) — والليرةُ في عمود السعر، وهي ما يُدفع. */}
+                    {unitPriceUsd(l) != null && (
+                      <p className="text-xs text-ink-muted">
+                        <span dir="ltr" className="tabular-nums">
+                          {dollars((unitPriceUsd(l) ?? 0) * l.qty)}
+                        </span>
+                      </p>
                     )}
                     {l.item.merchant_name && (
                       <p className="flex items-center gap-1 truncate text-xs text-ink-muted">

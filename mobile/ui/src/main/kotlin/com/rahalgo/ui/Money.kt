@@ -27,6 +27,17 @@ fun dollars(v: Double): String {
     return "$$text"
 }
 
+/**
+ * **السعرُ بالعملتين على سطرٍ واحد** — «$2.5 · 300 ل.س»: الدولارُ أوّلاً والليرةُ جنبه
+ * (طلبُ المالك ٢٠٢٦-١١-٠٧: «نشوف الدولار والسوري سوا»). **والليرةُ هي ما يُدفع**؛
+ * وبلا دولارٍ الليرةُ وحدَها. ومرآتُه في الويب `Price` (`items.tsx`).
+ */
+fun dualPrice(usd: Double?, syp: Long): String =
+    if (usd == null) money(syp) else dollars(usd) + DUAL_SEP + money(syp)
+
+/** **فاصلُ العملتين** — «·» لا «≈»: الليرةُ ليست تقريباً، هي ما يُدفع. */
+const val DUAL_SEP = " · "
+
 /** رقم بفواصل آلاف: `12,500` — **وسالبه يبقى سالبا.** */
 fun grouped(amount: Long): String {
     val negative = amount < 0

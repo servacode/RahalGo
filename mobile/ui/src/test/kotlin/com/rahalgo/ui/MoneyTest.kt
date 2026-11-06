@@ -105,4 +105,11 @@ class MoneyTest {
         val far = etaText(20_000.0, 30)
         assertTrue("المسافتان أعطتا النصَّ نفسَه: $near", near != far)
     }
+
+    /** FMT-DUAL **صنفٌ بالدولار يُقرأ بالعملتين على سطرٍ واحد** (طلبُ المالك ٢٠٢٦-١١-٠٧)، والليريُّ بالليرة وحدَها. */
+    @Test
+    fun dualPriceShowsDollarThenPound() {
+        assertEquals("$2.5 · 300 ل.س", dualPrice(2.5, 300))
+        assertEquals("300 ل.س", dualPrice(null, 300))
+    }
 }

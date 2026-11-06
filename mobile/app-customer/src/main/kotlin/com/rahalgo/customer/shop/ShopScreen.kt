@@ -863,7 +863,8 @@ internal fun ItemCard(
                 )
                 if (item.priceUsd != null) {
                     Text(
-                        text = "≈ " + money(item.price),
+                        // **«·» لا «≈»** — الليرةُ ما يُدفع (طلبُ المالك ٢٠٢٦-١١-٠٧).
+                        text = com.rahalgo.ui.DUAL_SEP.trimStart() + money(item.price),
                         color = Rahal.colors.inkMuted,
                         style = MaterialTheme.typography.labelSmall,
                         maxLines = 1,
