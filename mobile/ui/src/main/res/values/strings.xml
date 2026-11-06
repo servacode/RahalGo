@@ -152,6 +152,8 @@
     <string name="err_stop_not_arrived">اضغط «وصلت» لهالمحل أولاً، وبعدها «استلمت»</string>
     <string name="err_stop_not_live">هالمحل انشال من الطلب — لا تروح لعنده</string>
     <string name="err_stops_in_hand">معك بضاعة من الطلب — القرار للمكتب، تواصل معهم</string>
+    <string name="err_compensation_store_required">حدّد أي محل عليه الغلط قبل الموافقة</string>
+    <string name="err_merchant_dispute_open">في مطالبة مفتوحة على محل تاني بهالطلب — خلّصها أول</string>
     <!-- **وكلُّ سببٍ يقول نفسَه** — (بلاغُ المالك ٢٠٢٦-٠٨-٢٥: «ليش
          يعطي تحقق من البيانات المدخلة؟»). سبعةُ أسبابٍ كانت ترجع
          برسالةٍ واحدةٍ لا تدلّ على شيء. -->
