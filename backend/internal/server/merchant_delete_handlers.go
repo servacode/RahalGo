@@ -46,6 +46,9 @@ func (s *Server) handleDeleteMerchant(w http.ResponseWriter, r *http.Request) {
 		       EXISTS (SELECT 1 FROM orders o WHERE o.merchant_id = m.id OR o.partner_merchant_id = m.id
 		                                         OR o.ext_store_merchant_id = m.id)
 		       OR EXISTS (SELECT 1 FROM merchant_settlements ms WHERE ms.merchant_id = m.id)
+		       -- **وقسمُه في طلبٍ من عدّة متاجر تاريخُه** (٢٠٢٦-١١-٠٥) — **ولو خرجت بنودُه
+		       -- كلُّها من الطلب**؛ وبلا هذا يصطدم الحذفُ بمفتاح القسم فيردّ ٥٠٠ لا ٤٠٩.
+		       OR EXISTS (SELECT 1 FROM order_parts op WHERE op.merchant_id = m.id)
 		FROM merchants m WHERE m.id::text = $1 FOR UPDATE`, id).Scan(&name, &number, &owner, &busy)
 	if errors.Is(err, pgx.ErrNoRows) {
 		s.respondErr(w, httpx.ErrNotFound)

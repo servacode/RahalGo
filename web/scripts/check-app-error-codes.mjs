@@ -151,6 +151,8 @@ const SERVER_ADMIN = new Set([
   "setting_conflict", "setting_placeholder_missing",
   // **حصّةُ المنصّة بالنسبة فوق ٩٠٪** — صفحةُ الإعدادات وحدَها (قرارُ المالك ٢٠٢٦-١٠-٢٧).
   "platform_share_over_max",
+  // **سقفُ المصادر فوق الواحد ونسخةُ السائق لم تُفرض** — صفحةُ الإعدادات وحدَها (٢٠٢٦-١١-٠٥).
+  "multistop_driver_not_forced",
   "emergency_steps_pending", "emergency_step_done", "emergency_no_order",
   "emergency_no_driver", "emergency_bad_outcome", "emergency_outcome_stage",
   "emergency_halt_active",

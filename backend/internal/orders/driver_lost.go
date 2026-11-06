@@ -188,10 +188,12 @@ func (s *Service) RepeatsOwnTransition(ctx context.Context, orderID, driverID, t
 		    SELECT 1 FROM order_events e
 		    WHERE e.order_id = $1::uuid AND e.actor_id = $2::uuid
 		      AND e.to_status = ANY($3::text[])
+		      AND e.merchant_id IS NULL
 		      AND e.created_at > now() - interval '10 minutes'
 		      AND NOT EXISTS (
 		          SELECT 1 FROM order_events l
 		          WHERE l.order_id = e.order_id AND l.id > e.id
+		            AND l.merchant_id IS NULL
 		            AND l.actor_id IS DISTINCT FROM $2::uuid))`,
 		orderID, driverID, targets).Scan(&again); err != nil {
 		return false

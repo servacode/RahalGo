@@ -59,6 +59,11 @@ var t = struct {
 	extStoreCustomer, extStoreDriver, extStoreMerchant string
 	// **طلبُ الواتساب يُقال باسمه للسائق** (قرارُ المالك ٢٠٢٦-١١-٠٥).
 	offerWhatsApp, assignedWhatsApp string
+	// **طلبٌ بعدّة محطّات** (قرارُ المالك ٢٠٢٦-١١-٠٥) — قسمٌ قُبل والطلبُ ينتظر غيرَه،
+	// **ومتجرٌ رفض قسمَه يصل المكتب** (C13).
+	partAccepted, partRejectedOps string
+	// **والزبونُ ألغى ومتجرٌ قبل قسمَه** (G7) — قد بدأ يطبخ ولا يدري.
+	partCancelledByCustomer string
 }{
 	offerDriver:      "طلب جديد بانتظارك",
 	assignedDriver:   "طلب أُسند إليك",
@@ -112,6 +117,9 @@ var t = struct {
 	extStoreMerchant:          "طلبٌ لم يعد من متجرك",
 	offerWhatsApp:             "طلب واتساب جديد بانتظارك",
 	assignedWhatsApp:          "طلب واتساب أُسند إليك",
+	partAccepted:              "قسم من طلبك انقبل",
+	partRejectedOps:           "متجر رفض قسمه من طلب",
+	partCancelledByCustomer:   "الزبون ألغى طلب قبلته",
 }
 
 // endedByLabel من أنهى الطلب — بلفظٍ يُقرأ لا برمزٍ يُفكّ.
@@ -140,6 +148,8 @@ type orderParties struct {
 	merchantOwner *string
 	merchantName  string
 	repID         *string
+	// stops **عددُ متاجر الطلب** — وفوق الواحد يُخبَر كلُّ متجرٍ بقسمه.
+	stops int
 }
 
 func (s *Service) parties(ctx context.Context, orderID string) (orderParties, error) {
@@ -156,14 +166,14 @@ func (s *Service) parties(ctx context.Context, orderID string) (orderParties, er
 		       -- ثانيةٍ إلى القاعدة في مسارٍ يقع مع كلّ طلب.
 		       COALESCE((SELECT count(*) FROM order_items oi
 		                 WHERE oi.order_id = o.id), 0),
-		       o.subtotal
+		       o.subtotal, o.stops
 		-- **ويُضمّ يساراً** — (٢٠٢٦-٠٨-٠٩): **وضمٌّ صلبٌ يُسكت إشعاراتِ الطلب
 		-- الخاصّ كلَّها** — لا الزبونُ يُخبَر ولا العملياتُ، **ولا خطأ يظهر**:
 		-- الدالّةُ تردّ «لا صفوف» فيُبتلع.
 		FROM orders o LEFT JOIN merchants mm ON mm.id = o.merchant_id
 		WHERE o.id = $1`, orderID).
 		Scan(&p.number, &p.customerID, &p.merchantOwner, &p.kind, &p.merchantName, &p.repID,
-			&p.itemCount, &p.subtotal)
+			&p.itemCount, &p.subtotal, &p.stops)
 	return p, err
 }
 
@@ -177,6 +187,17 @@ func (s *Service) notifyCreated(ctx context.Context, o *Order) {
 		return
 	}
 	ref := fmt.Sprintf("#%d", p.number)
+	// **والطلبُ بعدّة محطّات: كلُّ متجرٍ يُخبَر بقسمه هو** — عددُ أصنافه ومبلغُها،
+	// **لا ما طلبه الزبونُ من غيره** (G-01).
+	if o.Stops > 1 {
+		names := s.notifyPartsCreated(ctx, o.ID, ref)
+		s.notify.NotifyRoles(ctx, notifications.OpsDesk, notifications.Input{
+			Kind: notifications.KindOrder, Title: t.newOrderOps,
+			Body:   ref + " — " + names,
+			Entity: "order", EntityID: o.ID, Href: "/dashboard/orders",
+		})
+		return
+	}
 	if p.merchantOwner != nil {
 		// ══════════════════════════════════════════════════════════════
 		// **والنصُّ يقول ما يكفي للقرار**
@@ -429,6 +450,32 @@ func (s *Service) notifyTransition(ctx context.Context, orderID, to, note, ended
 		})
 	}
 
+	// **والزبونُ ألغى طلباً بعدّة محطّات ومتجرٌ قبل قسمَه** (G7) — **ربّما بدأ يطبخ**،
+	// وكان لا يعلم إلّا بإشارة البثّ أو حين يعيد التحميل. (طلبُ المتجر الواحد في وضع
+	// المتاجر لا يُلغيه الزبونُ بعد القبول — يصير «قيد التحضير» فوراً.)
+	if to == StCancelled && p.stops > 1 && endedBy == "customer" {
+		for _, owner := range s.livePartOwners(ctx, orderID) {
+			s.notify.Notify(ctx, notifications.Input{
+				UserID: owner, Kind: notifications.KindOrder,
+				Title: t.partCancelledByCustomer, Body: body,
+				Entity: "order", EntityID: orderID, Href: "/portal",
+				Apps: []string{notifications.AppMerchant},
+			})
+		}
+		return
+	}
+	// **والطلبُ بعدّة محطّات: كلُّ متجرٍ بقي قسمُه فيه** (G-17).
+	if to == StDelivered && p.stops > 1 {
+		for _, owner := range s.livePartOwners(ctx, orderID) {
+			s.notify.Notify(ctx, notifications.Input{
+				UserID: owner, Kind: notifications.KindOrder,
+				Title: t.merchantDelivered, Body: ref,
+				Entity: "order", EntityID: orderID, Href: "/portal",
+				Apps: []string{notifications.AppMerchant},
+			})
+		}
+		return
+	}
 	// التسليم يخصّ المتجر أيضاً (اكتمل التزامه)
 	if to == StDelivered && p.merchantOwner != nil {
 		s.notify.Notify(ctx, notifications.Input{

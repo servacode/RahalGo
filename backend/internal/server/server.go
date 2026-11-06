@@ -305,6 +305,9 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 		media: mediaSvc, hub: hub, otpStatus: otpStatus, otpUnpair: otpUnpair, otpPair: otpPair,
 		notify: notify, push: pushSvc, geo: geoSvc, route: routeClient,
 		routeEngine: cfg.RoutingEngine, osrm: osrmClient}
+	// **والطلبُ من عدّة متاجر لا يُفتح حتّى تُفرض نسخةُ السائق التي تعرف
+	// المحطّات** (٢٠٢٦-١١-٠٥) — **والخادمُ وحدَه يعرف أدنى نسخةٍ نافذة.**
+	ordersSvc.SetMultiStopGate(srv.multiStopReady)
 	// **وتعويضُ الشكوى يدخل طابورَ التعويضات الموحّد** (قرارُ المالك ٢٠٢٦-١٠-٠٤) —
 	// لا طلبَ محفظة: صفحةُ التعويضات والموافقاتُ الموحّدة تريانه.
 	if supportSvc != nil {
@@ -1109,6 +1112,8 @@ func (s *Server) Router() http.Handler {
 			r.Post("/stores/{id}/emergency", s.handleMerchantEmergency)
 			r.Get("/orders/{id}", s.handleMerchantGetOrder)
 			r.Post("/orders/{id}/transition", s.handleMerchantTransition)
+			// **وبابُ القسم الصريح** — طلبٌ بعدّة محطّات، لمالكٍ له فيه فرعان (`merchant_parts.go`).
+			r.Post("/orders/{id}/parts/{storeID}/transition", s.handleMerchantPartTransition)
 			// حلقة المطبخ: الجاهزية علامةٌ يرفعها من يعرف، وساعاته وإعداداته بيده
 			r.Post("/orders/{id}/ready", s.handleMerchantReady)
 			// ══════════════════════════════════════════════════════════

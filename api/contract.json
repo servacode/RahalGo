@@ -4623,23 +4623,7 @@
       "capability": "orders.intervene",
       "response": [
         {
-          "name": "drivers_on_shift",
-          "type": "unknown"
-        },
-        {
-          "name": "phone",
-          "type": "unknown"
-        },
-        {
-          "name": "shift",
-          "type": "unknown"
-        },
-        {
-          "name": "text",
-          "type": "unknown"
-        },
-        {
-          "name": "wa_link",
+          "name": "@out",
           "type": "unknown"
         }
       ],
@@ -4906,11 +4890,19 @@
         {
           "name": "channel",
           "type": "string"
+        },
+        {
+          "name": "merchant_id",
+          "type": "string"
         }
       ],
       "response": [
         {
           "name": "channel",
+          "type": "unknown"
+        },
+        {
+          "name": "merchant_id",
           "type": "unknown"
         },
         {
@@ -9419,6 +9411,29 @@
       ],
       "statuses": [
         "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/merchant/orders/{id}/parts/{storeID}/transition",
+      "handler": "handleMerchantPartTransition",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "request": [
+        {
+          "name": "to",
+          "type": "string"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        },
+        {
+          "name": "prep_minutes",
+          "type": "?int"
+        }
       ]
     },
     {

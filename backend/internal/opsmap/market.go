@@ -283,7 +283,7 @@ func ActiveOrders(ctx context.Context, q Querier, box *BBox, f OrderFilter,
 		       ST_Y(d.last_location::geometry), ST_X(d.last_location::geometry),
 		       o.created_at, o.accepted_at,
 		       (SELECT max(e.created_at) FROM order_events e
-		         WHERE e.order_id = o.id AND e.to_status = 'assigned'),
+		         WHERE e.order_id = o.id AND e.to_status = 'assigned' AND e.merchant_id IS NULL),
 		       o.picked_up_at,
 		       o.total, o.payment_method, o.delivery_fee,
 		       ` + stuckColumn(f.Stuck) + `, cu.full_name,

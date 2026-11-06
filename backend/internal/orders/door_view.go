@@ -89,7 +89,8 @@ func (s *Service) DoorViewOf(ctx context.Context, orderID string) *DoorView {
 	if err := s.db.QueryRow(ctx, `
 		SELECT max(created_at),
 		       floor(EXTRACT(EPOCH FROM now() - max(created_at)) / 60)
-		FROM order_events WHERE order_id = $1 AND to_status = $2`,
+		-- **وحدثُ القسم ليس وصولاً** (merchant_id) — متجرٌ جهّز قسمَه والسائقُ عند الباب.
+		FROM order_events WHERE order_id = $1 AND to_status = $2 AND merchant_id IS NULL`,
 		orderID, waitAt).Scan(&arrived, &waited); err == nil && arrived != nil && waited != nil {
 		v.ArrivedAt = arrived
 		v.WaitedMin = int64(*waited)

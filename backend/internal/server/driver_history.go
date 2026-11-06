@@ -157,6 +157,8 @@ func (s *Server) handleDriverReport(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[struct {
 		Reason string `json:"reason"`
 		Note   string `json:"note"`
+		// Stop **متجرُ المحطّة** في الطلب بعدّة محطّات — يرسله تطبيقُ السائق القادم.
+		Stop string `json:"stop"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -168,7 +170,7 @@ func (s *Server) handleDriverReport(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, err)
 		return
 	}
-	t, err := s.support.DriverReport(r.Context(), userIDFrom(r), orderID, req.Reason, req.Note)
+	t, err := s.support.DriverReportAtStop(r.Context(), userIDFrom(r), orderID, req.Reason, req.Note, req.Stop)
 	if err != nil {
 		s.respondErr(w, err)
 		return

@@ -1203,6 +1203,7 @@ kosom` |
 | `release.rep.auto_force` |  | bool | `true` |
 | `app.max_file_mb` |  | int | `100` |
 | `orders.max_sources` |  | int | `2` |
+| `orders.multistop_driver_build` |  | int | `0` |
 | `meals.enabled` |  | bool | `true` |
 | `meals.breakfast_at` |  | text | `09:00` |
 | `meals.breakfast_texts` |  | longtext | `صباح الخير ☀️ شو بدك تفطر اليوم؟ | فول، فطاير، منقوشة… اطلب ويوصلك لعندك
