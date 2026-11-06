@@ -55,6 +55,10 @@ func (s *Server) handleMerchantPriceSyncInfo(w http.ResponseWriter, r *http.Requ
 		s.respondErr(w, errForbidden)
 		return
 	}
+	if err := s.requireAmeen(r.Context(), merchantID); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	var mapping []byte
 	var hasToken bool
 	var seenAt, requestedAt *time.Time
@@ -106,6 +110,10 @@ func (s *Server) handleMerchantPriceSyncInfo(w http.ResponseWriter, r *http.Requ
 func (s *Server) handleMerchantPriceSyncFile(w http.ResponseWriter, r *http.Request) {
 	merchantID := chi.URLParam(r, "id")
 	if err := s.merchantWriteGuard(r, merchantID); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if err := s.requireAmeen(r.Context(), merchantID); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -176,6 +184,10 @@ func (s *Server) handleMerchantPriceSyncToken(w http.ResponseWriter, r *http.Req
 		s.respondErr(w, err)
 		return
 	}
+	if err := s.requireAmeen(r.Context(), merchantID); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	tok, err := newSyncToken()
 	if err != nil {
 		s.respondErr(w, err)
@@ -238,6 +250,10 @@ func (s *Server) syncAgentMerchant(w http.ResponseWriter, r *http.Request) (stri
 		SELECT id::text FROM merchants
 		 WHERE price_sync_token_hash = $1 AND status <> 'suspended'`, syncTokenHash(tok)).Scan(&merchantID); err != nil {
 		s.respondErr(w, errUnauthorized)
+		return "", false
+	}
+	if err := s.requireAmeen(r.Context(), merchantID); err != nil {
+		s.respondErr(w, err)
 		return "", false
 	}
 	return merchantID, true
@@ -352,6 +368,10 @@ func (s *Server) handleMerchantPriceSyncInterval(w http.ResponseWriter, r *http.
 		s.respondErr(w, err)
 		return
 	}
+	if err := s.requireAmeen(r.Context(), merchantID); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	req, err := decode[struct {
 		IntervalMinutes int `json:"interval_minutes"`
 	}](r)
@@ -378,10 +398,29 @@ func (s *Server) handleMerchantPriceSyncRequest(w http.ResponseWriter, r *http.R
 		s.respondErr(w, err)
 		return
 	}
+	if err := s.requireAmeen(r.Context(), merchantID); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	if _, err := s.pg.Exec(r.Context(),
 		`UPDATE merchants SET price_sync_requested_at = now() WHERE id = $1`, merchantID); err != nil {
 		s.respondErr(w, err)
 		return
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"requested": true})
+}
+
+// errAmeenOff المتجر لم يفعّل برنامج الأمين (ترحيل 0514) — كل مسارات المزامنة ترفض.
+var errAmeenOff = httpx.NewError(http.StatusForbidden, "ameen_off", "errors.ameen_off")
+
+// requireAmeen يرفض إن كان المتجر لا يملك برنامج الأمين.
+func (s *Server) requireAmeen(ctx context.Context, merchantID string) error {
+	var on bool
+	if err := s.pg.QueryRow(ctx, `SELECT uses_ameen FROM merchants WHERE id = $1`, merchantID).Scan(&on); err != nil {
+		return err
+	}
+	if !on {
+		return errAmeenOff
+	}
+	return nil
 }

@@ -395,6 +395,7 @@ private val CODES: Map<String, Int> = mapOf(
     "preset_invalid" to R.string.err_preset_invalid,
     // **مزامنةُ الأمين** (٢٠٢٦-١٠-١٩) — `catalog/pricesync*.go`.
     "price_sync_empty" to R.string.err_price_sync_empty,
+    "ameen_off" to R.string.err_ameen_off,
     "price_sync_file_type" to R.string.err_price_sync_file_type,
     "price_sync_mapping" to R.string.err_price_sync_mapping,
     // **سعرُ الصرف** (٢٠٢٦-١٠-١٢) — `catalog/usd.go`.

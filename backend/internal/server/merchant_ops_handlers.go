@@ -166,6 +166,8 @@ func (s *Server) handleMerchantSettings(w http.ResponseWriter, r *http.Request) 
 		// LogoMediaID **شعارُه بيده** (طلبُ المالك ٢٠٢٦-١٠-١٨) — صورةٌ رفعها هو
 		// بنوع `merchant_logo` من `/merchant/media`، **لا صورةُ غيره.**
 		LogoMediaID *string `json:"logo_media_id"`
+		// UsesAmeen هل لديه برنامج الأمين (0514) — بيده.
+		UsesAmeen *bool `json:"uses_ameen"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -247,11 +249,12 @@ func (s *Server) handleMerchantSettings(w http.ResponseWriter, r *http.Request) 
 			accepts_returns      = COALESCE($8, accepts_returns),
 			display_currency     = COALESCE($9, display_currency),
 			logo_media_id        = COALESCE($10::uuid, logo_media_id),
+			uses_ameen           = COALESCE($11, uses_ameen),
 			returns_confirmed_at = CASE WHEN $8::bool IS NULL THEN returns_confirmed_at ELSE now() END,
 			returns_confirmed_by = CASE WHEN $8::bool IS NULL THEN returns_confirmed_by ELSE 'merchant' END,
 			updated_at           = now()
 		WHERE id = $1`, merchantID, req.DefaultPrepMinutes, req.MinOrder,
-		req.AddressText, req.Lat, req.Lng, req.Name, req.AcceptsReturns, req.DisplayCurrency, req.LogoMediaID); err != nil {
+		req.AddressText, req.Lat, req.Lng, req.Name, req.AcceptsReturns, req.DisplayCurrency, req.LogoMediaID, req.UsesAmeen); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -259,6 +262,11 @@ func (s *Server) handleMerchantSettings(w http.ResponseWriter, r *http.Request) 
 		s.auditCtx(r.Context(), userIDFrom(r), clientIP(r), "merchant.returns_update", "merchant", merchantID,
 			map[string]any{"accepts_returns": *req.AcceptsReturns})
 		s.touch("merchant", "ops", "merchant:"+merchantID)
+	}
+	if req.UsesAmeen != nil {
+		s.auditCtx(r.Context(), userIDFrom(r), clientIP(r), "merchant.uses_ameen_update", "merchant", merchantID,
+			map[string]any{"uses_ameen": *req.UsesAmeen})
+		s.touch("menu", "merchant:"+merchantID)
 	}
 	if req.DisplayCurrency != nil {
 		s.touch("menu", "merchant:"+merchantID)

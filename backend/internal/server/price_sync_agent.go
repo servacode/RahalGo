@@ -77,6 +77,10 @@ func (s *Server) handleMerchantPriceSyncAgentDownload(w http.ResponseWriter, r *
 		s.respondErr(w, err)
 		return
 	}
+	if err := s.requireAmeen(r.Context(), merchantID); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	_, exe := agentLatest()
 	if len(exe) == 0 {
 		s.respondErr(w, errAgentMissing)
@@ -107,6 +111,10 @@ func (s *Server) handleMerchantPriceSyncAgentDownload(w http.ResponseWriter, r *
 func (s *Server) handleMerchantPriceSyncStop(w http.ResponseWriter, r *http.Request) {
 	merchantID := chi.URLParam(r, "id")
 	if err := s.merchantWriteGuard(r, merchantID); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if err := s.requireAmeen(r.Context(), merchantID); err != nil {
 		s.respondErr(w, err)
 		return
 	}
