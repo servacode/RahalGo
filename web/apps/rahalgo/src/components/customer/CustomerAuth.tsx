@@ -253,7 +253,7 @@ function Login({ next }: { next?: string }) {
         </Button>
       </form>
       )}
-      <div className="mt-6 flex flex-col items-center gap-3 border-t border-line pt-5 text-sm">
+      <div className="mt-6 flex flex-col items-center gap-3 border-t border-line-soft pt-5 text-sm">
         {/* **ظاهرٌ لا مخبّأ** (طلبُ المالك ٢٠٢٦-١١-٠٦) — سطرُ السؤال وتحته زرٌّ بعرض البطاقة، كالتطبيق. */}
         <p className="text-ink-muted">{T.noAccount}</p>
         <ButtonLink
