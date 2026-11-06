@@ -688,7 +688,9 @@ func (s *Service) afterTransition(ctx context.Context, ap *appliedTransition) (*
 		code := DriverLossCodeFrom(from, to, endedBy, actorID == *driverID, actorID == "")
 		s.notifyDriverLost(ctx, orderID, *driverID, code)
 	}
-	s.notifyCommission(ctx, done.repID, orderID, done.commissionPaid)
+	for _, rp := range done.reps {
+		s.notifyCommission(ctx, rp.repID, orderID, rp.amount, rp.store)
+	}
 	// **وكلُّ من تحرّكت محفظتُه يعرف عمّاذا** — (قرارُ المالك ٢٠٢٦-٠٨-١١:
 	// «الرصيد يتغيّر وما حدا بيعرف ليش»).
 	//
@@ -934,13 +936,14 @@ var pastPickup = map[string]bool{
 // لإطلاق الإشعارات. متغيّر محلي لكل طلب: الخدمة مشتركة بين كل الطلبات المتزامنة
 // فلا يجوز أن تحمل حالة طلب بعينه.
 type settled struct {
-	repID          string
-	commissionPaid int64
+	// reps **كلُّ مندوبٍ قُيّدت له عمولةٌ ومبلغُها** — واحدٌ لطلب المتجر الواحد،
+	// **ولكلّ مندوبٍ سطرُه في طلبٍ بعدّة محطّات** (قرارُ المالك ٢٠٢٦-١١-٠٦، ٢أ).
+	reps []repPaid
 	// ══════════════════════════════════════════════════════════════════
 	// **مندوبُ المتجر — ولو لم يقبض عمولةً عن هذا الطلب**
 	// ══════════════════════════════════════════════════════════════════
 	//
-	// **و`repID` أعلاه لا يصلح لهذا**: يُملأ فقط حين تُقيَّد عمولة،
+	// **و`reps` أعلاه لا يصلح لهذا**: يُملأ فقط حين تُقيَّد عمولة،
 	// **فيبقى فارغاً إن كانت النسبةُ صفراً** — وهي صفرٌ اليوم.
 	//
 	// ══════════════════════════════════════════════════════════════════
@@ -957,7 +960,7 @@ type settled struct {
 	// الانتقال، **ومعاملةٌ تُرجَع بعد أن أُرسل إشعارُها تُخبر صاحبَها
 	// بمالٍ لم يصله.** فتُجمَع، ثمّ تُرسَل بعد الإيداع.
 	//
-	// **وهو النمطُ نفسُه الذي تسير عليه `repID` منذ زمن.**
+	// **وهو النمطُ نفسُه الذي تسير عليه `reps` منذ زمن.**
 	credits []walletCredit
 	// compensationRequested **كُتب طلبُ تعويضٍ معلَّق** — فيُنبَّه المكتبُ بعد الإيداع.
 	compensationRequested bool
@@ -1513,6 +1516,14 @@ func (s *Service) offsetMerchantDebt(ctx context.Context, q wallet.Querier,
 // **وعند الفشل لا يُقيَّد شيء**: عمولتُه على طلبٍ وصل، لا على طلبٍ خرج من
 // المطبخ. (وهو قرارُ المالك: «عند الفشل يُشطب ويُكتب ملغي».)
 func (s *Service) settleRep(ctx context.Context, q wallet.Querier, orderID, actorID string, out *settled) error {
+	// **وطلبٌ بعدّة محطّات: كلُّ مندوبٍ من ربح متجره هو** (قرارُ المالك ٢٠٢٦-١١-٠٦، ٢أ) —
+	// `settleRepParts`. **وطلبُ المتجر الواحد على مساره اليوم حرفاً.**
+	if multi, err := stopsAbove1(ctx, q, orderID); err != nil || multi {
+		if err != nil {
+			return err
+		}
+		return s.settleRepParts(ctx, q, orderID, actorID, out)
+	}
 	var platformCommission, promoCost int64
 	var repID *string
 	var repIsBuyer bool
@@ -1612,7 +1623,7 @@ func (s *Service) settleRep(ctx context.Context, q wallet.Querier, orderID, acto
 	if err := s.offsetRepDebt(ctx, q, *repID, repCommission, orderID, actorID); err != nil {
 		return err
 	}
-	out.repID, out.commissionPaid = *repID, repCommission
+	out.reps = append(out.reps, repPaid{repID: *repID, amount: repCommission})
 	return nil
 }
 

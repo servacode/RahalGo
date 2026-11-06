@@ -28,7 +28,7 @@ func (s *Service) holdRepCommissionIfInactive(ctx context.Context, q wallet.Quer
 	}
 	_, err := q.Exec(ctx, `
 		INSERT INTO rep_held_commissions (rep_id, order_id, amount)
-		VALUES ($1, $2, $3) ON CONFLICT (order_id) DO NOTHING`, repID, orderID, amount)
+		VALUES ($1, $2, $3) ON CONFLICT (order_id, rep_id) DO NOTHING`, repID, orderID, amount)
 	return err == nil, err
 }
 

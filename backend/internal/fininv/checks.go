@@ -395,11 +395,13 @@ var All = []Check{
 		Why:   "طلبٌ دفع عمولتَه مرّتين — **والمنصّةُ خسرت ضعفَ ما قرّرت.**",
 		Flows: []string{"F-23"},
 		Kinds: []string{"commission"},
+		// **لكلّ (طلب، مندوب)** — طلبٌ بعدّة محطّات يكتب عمولةً لكلّ مندوبٍ من متاجره
+		// (قرارُ المالك ٢٠٢٦-١١-٠٦، ٢أ). **ومندوبٌ واحدٌ لمتجرين يأخذ سطراً واحداً.**
 		SQL: `
 			SELECT t.ref, count(*)::bigint AS مرّات
 			FROM wallet_transactions t
 			WHERE t.kind = 'commission' AND t.ref <> '' AND t.amount > 0
-			GROUP BY t.ref HAVING count(*) > 1`,
+			GROUP BY t.ref, t.user_id HAVING count(*) > 1`,
 	},
 	{
 		ID: "FI-05.f", Family: FI05, Status: ProvableNow, Ops: true,
@@ -1266,17 +1268,57 @@ var All = []Check{
 		Kinds:     []string{"commission"},
 		// **والالتزاماتُ القديمةُ (`refund_rep_commission`) تبقى كما نشأت** — يحرسها مجموعُها
 		// مع الصورة (FI-05) ويُقتطع منها كما كان. **وهذا الفحصُ للجديد وحدَه.**
+		//
+		// **ومجموعُ ديون الطلب لا كلُّ دين**: في طلبٍ بعدّة محطّات يُقسَم نصيبُ كلِّ مندوبٍ على
+		// متاجره (قرارُ المالك ٢٠٢٦-١١-٠٦، ٢أ) — **فدينُ متجرٍ واحدٍ جزءٌ من العمولة لا كلُّها.**
 		SQL: `
 			SELECT o.number, o.status, f.party_kind, f.amount,
 			       COALESCE(c.kept, 0)::bigint AS العمولة
-			FROM financial_obligations f
+			FROM (SELECT order_id, string_agg(DISTINCT party_kind, ',') AS party_kind,
+			             sum(amount)::bigint AS amount
+			      FROM financial_obligations
+			      WHERE cause = 'refund_rep_share' AND order_id IS NOT NULL
+			      GROUP BY order_id) f
 			JOIN orders o ON o.id = f.order_id
 			LEFT JOIN LATERAL (
 				SELECT sum(t.amount) AS kept FROM wallet_transactions t
 				WHERE t.ref = o.id::text AND t.kind = 'commission'
 			) c ON true
-			WHERE f.cause = 'refund_rep_share'
-			  AND (o.status <> 'refunded' OR f.amount <> COALESCE(c.kept, 0))`,
+			WHERE o.status <> 'refunded' OR f.amount <> COALESCE(c.kept, 0)`,
+	},
+	{
+		ID: "FI-09.b", Family: FI09, Status: ProvableNow, Ops: true,
+		Name: "تفصيلُ عمولة المندوبين على متاجر الطلب يطابق الدفتر",
+		Why: "**كلُّ مندوبٍ من ربح متجره هو** (قرارُ المالك ٢٠٢٦-١١-٠٦، ٢أ): طلبٌ بعدّة محطّات يحفظ " +
+			"نصيبَ كلِّ متجرٍ (`order_parts.rep_commission`) — **للشاشة ولقسمة نصيب المندوب عند " +
+			"الاسترجاع.** **وتفصيلٌ يفترق عن الدفتر يقسم ديناً على أرقامٍ لم تُقيَّد.** فمجموعُه لكلّ " +
+			"(طلب، مندوب) = عمولتُه الموجبةُ بمرجع الطلب + المحجوزُ له (قائماً أو ساقطاً). " +
+			"**وطلبٌ مُحيت عمولتُه خارجَه** — المحوُ يعكس بسطورٍ سالبةٍ ويُنقص المحجوزَ في مكانه.",
+		Flows: []string{"F-23"},
+		Kinds: []string{"commission"},
+		SQL: `
+			WITH ms AS (
+				SELECT id, number FROM orders
+				WHERE stops > 1 AND status IN ('delivered', 'refunded')
+				  AND COALESCE(commission_waived, 0) = 0),
+			parts AS (
+				SELECT p.order_id, p.rep_id, sum(p.rep_commission)::bigint AS amt
+				FROM order_parts p JOIN ms ON ms.id = p.order_id
+				WHERE p.rep_id IS NOT NULL GROUP BY 1, 2),
+			led AS (
+				SELECT ms.id AS order_id, t.user_id AS rep_id, t.amount AS amt
+				FROM wallet_transactions t JOIN ms ON t.ref = ms.id::text
+				WHERE t.kind = 'commission' AND t.amount > 0
+				UNION ALL
+				SELECT h.order_id, h.rep_id, h.amount
+				FROM rep_held_commissions h JOIN ms ON ms.id = h.order_id
+				WHERE h.status IN ('held', 'forfeited')),
+			l AS (SELECT order_id, rep_id, sum(amt)::bigint AS amt FROM led GROUP BY 1, 2)
+			SELECT ms.number, COALESCE(p.rep_id, l.rep_id)::text AS المندوب,
+			       COALESCE(p.amt, 0) AS التفصيل, COALESCE(l.amt, 0) AS الدفتر
+			FROM parts p FULL JOIN l ON l.order_id = p.order_id AND l.rep_id = p.rep_id
+			JOIN ms ON ms.id = COALESCE(p.order_id, l.order_id)
+			WHERE COALESCE(p.amt, 0) <> COALESCE(l.amt, 0)`,
 	},
 	{
 		ID: "FI-12.c", Family: FI12, Status: DeferredP6, Ops: false,

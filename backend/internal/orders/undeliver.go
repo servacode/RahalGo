@@ -79,6 +79,8 @@ type UndeliverResult struct {
 	// DriverID · RepID للإشعار والتدقيق.
 	DriverID string `json:"-"`
 	RepID    string `json:"-"`
+	// RepIDs **كلُّ مندوبٍ عُكست عمولتُه** — أكثرُ من واحدٍ في طلبٍ بعدّة محطّات.
+	RepIDs []string `json:"-"`
 }
 
 // Undeliver **يصحّح طلباً سُجّل تسليمُه خطأً** — في معاملةٍ واحدة، و`hook` (التدقيق) قبل التثبيت
@@ -211,6 +213,7 @@ func (s *Service) undeliverTx(ctx context.Context, q wallet.Querier,
 		return res, err
 	}
 	res.RepID, res.RepReversed, res.RepDebt = rep.userID, rep.taken, rep.debt
+	res.RepIDs = rep.userIDs
 	if err := q.QueryRow(ctx, `
 		WITH f AS (
 			UPDATE rep_held_commissions SET status = 'forfeited', decided_at = now(), decided_by = $2
@@ -297,7 +300,9 @@ func (s *Service) undeliverTx(ctx context.Context, q wallet.Querier,
 }
 
 type reversedEarning struct {
-	userID      string
+	userID string
+	// userIDs **كلُّ من عُكس له** — مندوبان في طلبٍ بعدّة محطّات.
+	userIDs     []string
 	taken, debt int64
 }
 
@@ -333,6 +338,7 @@ func (s *Service) reverseEarnings(ctx context.Context, q wallet.Querier, orderID
 	}
 	for _, p := range list {
 		out.userID = p.userID
+		out.userIDs = append(out.userIDs, p.userID)
 		available, err := lockedInt(ctx, q,
 			`SELECT balance - reserved FROM wallets WHERE user_id = $1 FOR UPDATE`, p.userID)
 		if err != nil {

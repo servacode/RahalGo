@@ -83,7 +83,8 @@
     {
       "id": "FI-09",
       "checks": [
-        "FI-09.a"
+        "FI-09.a",
+        "FI-09.b"
       ]
     },
     {
@@ -700,6 +701,19 @@
       ]
     },
     {
+      "id": "FI-09.b",
+      "family": "FI-09",
+      "name": "تفصيلُ عمولة المندوبين على متاجر الطلب يطابق الدفتر",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-23"
+      ],
+      "kinds": [
+        "commission"
+      ]
+    },
+    {
       "id": "FI-10.a",
       "family": "FI-10",
       "name": "محتجَزُ الصندوق = مجموعُ قيوده",
@@ -1279,7 +1293,8 @@
         "FI-01.d",
         "FI-05.e",
         "FI-06.a",
-        "FI-09.a"
+        "FI-09.a",
+        "FI-09.b"
       ],
       "reachable": true
     },
@@ -1607,8 +1622,8 @@
   ],
   "counts": {
     "families": 15,
-    "checks": 86,
-    "provable_now": 80,
+    "checks": 87,
+    "provable_now": 81,
     "not_implemented": 3,
     "deferred_p5": 1,
     "deferred_p6": 2,
