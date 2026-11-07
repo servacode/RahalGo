@@ -30,14 +30,14 @@ export default function AlertsPage() {
   const rows = data?.warnings ?? [];
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="console-page" data-testid="store-alerts">
       <PageHeader title={W.title} />
       {rows.length === 0 ? (
         <EmptyState icon={IconWarning} title={W.empty} tone="success" />
       ) : (
-        <ul className="surface flex flex-col divide-y divide-line rounded-card px-4">
+        <ul className="panel flex flex-col divide-y divide-line-soft overflow-hidden">
           {rows.map((w) => (
-            <li key={w.id} className="flex flex-col gap-0.5 py-3" data-testid="store-warning">
+            <li key={w.id} className="flex min-h-14 flex-col gap-0.5 px-4 py-3" data-testid="store-warning">
               <span className="font-bold">{REASONS[w.reason] ?? w.reason}</span>
               {w.note && <span className="text-sm text-ink-muted">{w.note}</span>}
               <span className="flex gap-3 text-2xs text-ink-muted">

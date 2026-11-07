@@ -103,7 +103,7 @@ export default function DeliveryTrack() {
   const ST = D.status as Record<string, string>;
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="console-page" data-testid="store-delivery-track">
       <PageHeader title={fill(D.trackTitle, { n: d?.number ?? "" })} href="/store/delivery" />
       {error && <Alert>{error}</Alert>}
       {!d ? (
@@ -119,16 +119,17 @@ export default function DeliveryTrack() {
               <p className="text-xs text-ink-muted">{D.codeHint}</p>
             </section>
           )}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start lg:gap-5">
           {at < 0 ? (
             /* **المنتهيةُ رماديّة** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) — الإلغاءُ ليس خطأً. */
-            <p className="surface rounded-card border border-line p-3 text-sm text-ink-muted">
+            <p className="panel p-3 text-sm text-ink-muted">
               {(d.status === "failed" ? ST.failed : d.status === "rejected" ? ST.rejected : ST.cancelled) +
                 (d.cancel_reason?.trim() ? ` — ${d.cancel_reason}` : "")}
             </p>
           ) : (
-            <>
+            <div className="flex min-w-0 flex-col gap-3">
               {d.status === "dispatching" && <SearchingBanner />}
-              <ol className="surface flex flex-col gap-1 rounded-card p-4">
+              <ol className="panel flex flex-col gap-1 p-4">
                 {steps.map((label, i) => {
                   const done = i < at || (i === at && at === LAST);
                   const now = i === at && at < LAST;
@@ -150,11 +151,12 @@ export default function DeliveryTrack() {
                   );
                 })}
               </ol>
-            </>
+            </div>
           )}
-          <section className="surface flex flex-col gap-2 rounded-card p-4">
+          <div className="flex min-w-0 flex-col gap-4">
+          <section className="panel flex flex-col gap-2 p-4">
             <header className="flex items-center justify-between gap-2">
-              <h3 className="heading-card">{D.trackDetails}</h3>
+              <h2 className="console-h2">{D.trackDetails}</h2>
               <StatusPill status={d.status} />
             </header>
             <DeliveryLines d={d} />
@@ -172,6 +174,8 @@ export default function DeliveryTrack() {
             </Alert>
           )}
           {CANCELLABLE.has(d.status) && <CancelDeliveryButton busy={busy} onConfirm={() => void cancel()} />}
+          </div>
+          </div>
         </>
       )}
     </div>

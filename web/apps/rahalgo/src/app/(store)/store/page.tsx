@@ -21,6 +21,7 @@
  * **ولا مفتاحَ «مفتوح» يدويّ**: الحالُ تتبع ساعاتِ الدوام، **والإغلاقُ الطارئُ وحدَه بيده.**
  */
 
+import { AmeenStatusTile } from "@/components/store/AmeenStatus";
 import Link from "next/link";
 import { useCallback, useEffect, useState, type ComponentType, type ReactNode } from "react";
 import { getMessages, defaultLocale, damascusDay, errorText, fmtMoney, fmtNum, fmtSince } from "@rahalgo/i18n";
@@ -546,6 +547,9 @@ export default function StoreHome() {
           <Alert tone="error">{S.suspendedBanner}</Alert>
         </div>
       )}
+
+      {/* **حالةُ برنامج الأمين قرب الأعلى** (ملاحظةُ المالك ٢٠٢٦-١١-٠٧) — لمتاجر الأمين وحدَها. */}
+      <AmeenStatusTile className="lg:col-span-3" />
 
       <section className="flex flex-col gap-2 lg:col-span-3" aria-label={HM.today}>
         <h2 className="console-h2 px-1">{HM.today}</h2>

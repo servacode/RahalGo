@@ -15,13 +15,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, errorText, fmtNum } from "@rahalgo/i18n";
-import { Alert, Button, Card, Checkbox, Input, Select } from "@rahalgo/ui";
+import { Alert, Button, Checkbox, Input, Kpi, KpiGrid, Select } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { fill } from "@/lib/customer/texts";
 import type { SectionRef } from "@/lib/store/types";
 
 const m = getMessages(defaultLocale);
 const P = m.store.priceSync;
+const K = m.store.console;
 const PAGE = 50;
 
 interface Group {
@@ -198,53 +199,47 @@ export function PriceSyncSections({ storeId, refreshKey }: { storeId: string; re
   const allPicked = items.length > 0 && items.every((it) => picked.has(it.id));
 
   return (
-    <Card>
-      <div className="flex flex-col gap-3 p-4" data-testid="sync-sections">
-        <h3 className="heading-card">{P.sortTitle}</h3>
-        <p className="text-sm font-bold">
-          {pending > 0 ? fill(P.sortWaiting, { n: fmtNum(pending) }) : P.sortNone}
-        </p>
-        {pending > 0 && (
-          <>
-            <p className="text-xs text-ink-muted">{P.sortAutoHint}</p>
-            <Button className="w-fit" onClick={() => void autoSort()} disabled={busy}>
+    <section className="panel flex min-w-0 flex-col gap-4 p-4 lg:p-5" data-testid="sync-sections" aria-label={P.sortTitle}>
+      <h2 className="console-h2">{P.sortTitle}</h2>
+      <KpiGrid>
+        <Kpi label={K.secPending} value={pending} tone={pending > 0 ? "attention" : "good"} sub={pending > 0 ? undefined : P.sortNone} />
+        <Kpi label={K.secGroups} value={groups.length} />
+      </KpiGrid>
+      {pending > 0 && (
+        <>
+          <p className="text-sm font-bold">{fill(P.sortWaiting, { n: fmtNum(pending) })}</p>
+          <p className="console-meta">{P.sortAutoHint}</p>
+          <div className="flex flex-wrap gap-2">
+            <Button className="min-h-11 flex-1" onClick={() => void autoSort()} disabled={busy}>
               {P.sortAuto}
             </Button>
-            {askRest ? (
-              <div className="flex flex-col gap-2 rounded-card border border-line-soft p-3" role="group">
-                <p className="text-sm">{fill(P.moveRestAsk, { n: fmtNum(pending) })}</p>
-                <div className="flex flex-wrap gap-2">
-                  <Button className="w-fit" onClick={() => void moveRest()} disabled={busy}>
-                    {P.moveRestYes}
-                  </Button>
-                  <Button
-                    className="w-fit"
-                    variant="secondary"
-                    onClick={() => setAskRest(false)}
-                    disabled={busy}
-                  >
-                    {P.moveRestNo}
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <Button
-                className="w-fit"
-                variant="secondary"
-                onClick={() => setAskRest(true)}
-                disabled={busy}
-              >
+            {!askRest && (
+              <Button className="min-h-11 flex-1" variant="secondary" onClick={() => setAskRest(true)} disabled={busy}>
                 {P.moveRest}
               </Button>
             )}
-          </>
-        )}
+          </div>
+          {askRest && (
+            <div className="flex flex-col gap-2 rounded-control border border-line-soft bg-field p-3" role="group">
+              <p className="text-sm">{fill(P.moveRestAsk, { n: fmtNum(pending) })}</p>
+              <div className="flex flex-wrap gap-2">
+                <Button className="min-h-11" onClick={() => void moveRest()} disabled={busy}>
+                  {P.moveRestYes}
+                </Button>
+                <Button className="min-h-11" variant="secondary" onClick={() => setAskRest(false)} disabled={busy}>
+                  {P.moveRestNo}
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
         {error && <Alert>{error}</Alert>}
         {note && <Alert tone="success">{note}</Alert>}
 
         {(pending > 0 || q) && (
-          <div className="flex flex-col gap-2 border-t border-line-soft pt-3">
-            <h4 className="font-bold">{P.reviewTitle}</h4>
+          <div className="flex flex-col gap-3 border-t border-line-soft pt-4">
+            <h3 className="console-h2">{P.reviewTitle}</h3>
             <Input
               id="sync-pending-search"
               type="search"
@@ -253,7 +248,7 @@ export function PriceSyncSections({ storeId, refreshKey }: { storeId: string; re
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
-            <div className="flex flex-wrap items-end gap-2">
+            <div className="flex flex-wrap items-end gap-2 rounded-control border border-line-soft bg-field p-3">
               <Checkbox
                 id="sync-pick-all"
                 checked={allPicked}
@@ -262,7 +257,7 @@ export function PriceSyncSections({ storeId, refreshKey }: { storeId: string; re
                 }
                 label={P.selectAll}
               />
-              <span className="text-xs text-ink-muted">
+              <span className="console-meta tabular-nums">
                 {fill(P.selected, { n: fmtNum(picked.size) })}
               </span>
               <Select
@@ -274,6 +269,7 @@ export function PriceSyncSections({ storeId, refreshKey }: { storeId: string; re
                 {options()}
               </Select>
               <Button
+                className="min-h-11"
                 onClick={() => void move([...picked], bulkSec)}
                 disabled={busy || picked.size === 0 || !bulkSec}
               >
@@ -283,9 +279,9 @@ export function PriceSyncSections({ storeId, refreshKey }: { storeId: string; re
             {items.length === 0 ? (
               <p className="text-sm text-ink-muted">{P.reviewEmpty}</p>
             ) : (
-              <ul className="flex flex-col divide-y divide-line-soft">
+              <ul className="flex flex-col divide-y divide-line-soft lg:max-h-[28rem] lg:overflow-y-auto">
                 {items.map((it) => (
-                  <li key={it.id} className="flex flex-wrap items-center gap-2 py-2">
+                  <li key={it.id} className="flex min-h-11 flex-wrap items-center gap-2 py-2">
                     <Checkbox
                       id={`sync-pick-${it.id}`}
                       checked={picked.has(it.id)}
@@ -306,7 +302,7 @@ export function PriceSyncSections({ storeId, refreshKey }: { storeId: string; re
                         </span>
                       }
                     />
-                    <div className="ms-auto flex items-end gap-2">
+                    <div className="flex w-full items-end gap-2 sm:ms-auto sm:w-auto">
                       <Select
                         id={`sync-sec-${it.id}`}
                         aria-label={P.itemSection}
@@ -328,7 +324,7 @@ export function PriceSyncSections({ storeId, refreshKey }: { storeId: string; re
               </ul>
             )}
             {next && (
-              <Button variant="ghost" className="w-fit" onClick={() => loadItems(next, q)} disabled={busy}>
+              <Button variant="secondary" className="min-h-11 w-fit" onClick={() => loadItems(next, q)} disabled={busy}>
                 {P.more} ({fmtNum(items.length)} / {fmtNum(total)})
               </Button>
             )}
@@ -336,9 +332,9 @@ export function PriceSyncSections({ storeId, refreshKey }: { storeId: string; re
         )}
 
         {groups.length > 0 && (
-          <div className="flex flex-col gap-2 border-t border-line-soft pt-3">
-            <h4 className="font-bold">{P.groupsTitle}</h4>
-            <p className="text-xs text-ink-muted">{P.groupsHint}</p>
+          <div className="flex flex-col gap-3 border-t border-line-soft pt-4">
+            <h3 className="console-h2">{P.groupsTitle}</h3>
+            <p className="console-meta">{P.groupsHint}</p>
             <ul className="flex flex-col divide-y divide-line-soft">
               {groups.map((g) => (
                 <li key={g.group_key} className="flex flex-wrap items-center gap-2 py-2">
@@ -361,12 +357,11 @@ export function PriceSyncSections({ storeId, refreshKey }: { storeId: string; re
                 </li>
               ))}
             </ul>
-            <Button className="w-fit" onClick={() => void saveGroups()} disabled={busy}>
+            <Button className="min-h-11 w-fit" onClick={() => void saveGroups()} disabled={busy}>
               {P.groupSave}
             </Button>
           </div>
         )}
-      </div>
-    </Card>
+    </section>
   );
 }

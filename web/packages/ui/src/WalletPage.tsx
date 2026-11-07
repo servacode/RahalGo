@@ -12,7 +12,7 @@
  */
 
 import { FormActions } from "./FormActions";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { Money } from "./money";
 import { getMessages, defaultLocale, fmtNum, fmtDate, fmtTime, errorText } from "@rahalgo/i18n";
 import { Badge, Button, Input, Modal } from "./components";
@@ -21,6 +21,7 @@ import { Alert } from "./feedback";
 import { PageContainer, PageHeader, Card, EmptyState, LoadingState, ListRow } from "./layout";
 import { DataView, ViewToggle, useViewMode, type DataColumn } from "./dataview";
 import type { TabItem } from "./layout";
+import { Kpi, KpiGrid, PageHead } from "./console";
 import { StatementSheet, currentMonthRange, type StatementData } from "./Statement";
 import { useLiveData } from "./Notifications";
 import { debtLineText, type DebtLine } from "./debtText";
@@ -79,6 +80,9 @@ export function WalletPage({
   holderName,
   holderPhone,
   cardsOnly = false,
+  console: consoleMode = false,
+  leading,
+  aside,
 }: {
   api: ApiFn;
   /** نقطة كشف المحفظة — تختلف بالدور: `/api/v1/rep/wallet` أو `/api/v1/my/wallet` */
@@ -112,6 +116,17 @@ export function WalletPage({
    * **والسائقُ يقرأ حركاتِه هو** — عشرين في الشهر.
    */
   cardsOnly?: boolean;
+  /**
+   * **شكلُ «لوحة التشغيل» لصاحب المتجر** (دفعةُ التصميم ٢، ٢٠٢٦-١١-٠٧) — مؤشّراتٌ للرصيد
+   * والدين والداخل والخارج، وجدولٌ كثيفٌ على الحاسوب وقائمةٌ نظيفةٌ على الجوّال، وعمودٌ جانبيٌّ
+   * (`aside`) على الحاسوب. **عرضٌ فقط**: الكشفُ وطلبُ السحب وكشفُ الحساب والتبويبُ هي هي،
+   * ولا يمسّه إلّا من مرّره (المتجر)، فتبقى محافظُ الزبون والمندوب والسائق والإدارة كما هي.
+   */
+  console?: boolean;
+  /** سهمُ رجوعٍ قبل العنوان (وضع اللوحة). */
+  leading?: ReactNode;
+  /** لوحٌ جانبيٌّ بجوار الحركات على الحاسوب، وفوقها على الجوّال (وضع اللوحة). */
+  aside?: ReactNode;
 }) {
   const [tab, setTab] = useState(ALL);
   const [asking, setAsking] = useState(false);
@@ -188,7 +203,7 @@ export function WalletPage({
   const reqs = useMemo(() => (Array.isArray(requests) ? requests : []), [requests]);
 
   /** **وتفضيلُ العرضِ محفوظٌ لصاحبه** — جدولاً أو بطاقات. */
-  const [view, setView] = useViewMode("wallet-tx");
+  const [view, setView, { narrow }] = useViewMode("wallet-tx");
 
   /**
    * **أعمدةُ الحركة — تعريفٌ واحدٌ يغذّي الجدولَ والبطاقات.**
@@ -347,6 +362,8 @@ export function WalletPage({
       {m.shared.statement.open}
     </Button>
   );
+
+  if (consoleMode) return renderConsole();
 
   return (
     <PageContainer>
@@ -573,6 +590,143 @@ export function WalletPage({
       )}
     </PageContainer>
   );
+
+  /** **وضعُ اللوحة** (للمتجر) — دالةٌ مرفوعةٌ هنا بعد الشكل العامّ كي يبقى الحارسُ يقرأ الشكلَ العامَّ أوّلاً. */
+  function renderConsole() {
+    const K = m.store.console;
+    const pos = txs.filter((t) => t.amount > 0).reduce((a, t) => a + t.amount, 0);
+    const neg = txs.filter((t) => t.amount < 0).reduce((a, t) => a + -t.amount, 0);
+    const debtTotal = statement?.debt_total ?? 0;
+    /** **صفُّ الحركة على الجوّال** — نوعٌ ومرجعٌ ووقتٌ، والمبلغُ بإشارته وبعرضٍ ثابت. */
+    const txRow = (tx: Tx) => (
+      <li key={String(tx.id)} className="flex min-h-14 items-center gap-3 px-3 py-2.5" data-testid="wallet-tx">
+        <span
+          aria-hidden
+          className={`flex size-9 shrink-0 items-center justify-center rounded-control ${
+            tx.amount >= 0 ? "bg-success-tint text-success" : "bg-danger-tint text-danger"
+          }`}
+        >
+          {tx.amount >= 0 ? <IconArrowIn size={16} /> : <IconArrowOut size={16} />}
+        </span>
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="truncate text-sm font-bold">{KIND_LABELS[tx.kind] ?? tx.kind}</span>
+          <span className="console-meta truncate" dir="ltr">
+            {tx.order_number ? `#${tx.order_number} · ` : ""}
+            {fmtDate(tx.created_at)} · {fmtTime(tx.created_at)}
+          </span>
+          {tx.note && <span className="console-meta line-clamp-1">{tx.note}</span>}
+        </span>
+        <span dir="ltr" className={`shrink-0 text-sm font-bold tabular-nums ${tx.amount >= 0 ? "text-success" : "text-danger"}`}>
+          {tx.amount >= 0 ? "+" : "−"}
+          <Money value={Math.abs(tx.amount)} small />
+        </span>
+      </li>
+    );
+    return (
+      <div className="console-page" data-testid="wallet-console">
+        <PageHead
+          leading={leading}
+          title={m.terms.wallet}
+          actions={
+            <>
+              {statementBtn}
+              {payouts && (
+                <Button className="min-h-11" onClick={() => setAsking(true)} disabled={balance <= 0 || hasPending}>
+                  {P.request}
+                </Button>
+              )}
+            </>
+          }
+        />
+        <KpiGrid>
+          <Kpi icon={IconWallet} label={balanceLabel} value={fmtNum(balance)} unit={m.common.currency} tone="accent" testId="wallet-balance" />
+          <Kpi
+            icon={IconWarning}
+            label={K.walletDebt}
+            value={fmtNum(debtTotal)}
+            unit={m.common.currency}
+            tone={debtTotal > 0 ? "danger" : undefined}
+            sub={debtTotal > 0 ? undefined : K.walletNoDebt}
+          />
+          <Kpi icon={IconArrowIn} label={K.walletIn} value={fmtNum(pos)} unit={m.common.currency} tone="good" sub={W.recent} />
+          <Kpi icon={IconArrowOut} label={K.walletOut} value={fmtNum(neg)} unit={m.common.currency} sub={W.recent} />
+        </KpiGrid>
+        {debtText && (
+          <p className="rounded-control border border-danger-edge bg-danger-tint px-3 py-2 text-sm text-ink" data-testid="wallet-debt">
+            {debtText}
+          </p>
+        )}
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-5">
+          <section className="panel min-w-0 overflow-hidden" aria-label={m.terms.transactions}>
+            <div className="panel-head">
+              <h2 className="console-h2">{m.terms.transactions}</h2>
+              {current !== STATEMENT && tabs.length > 0 && (
+                <Tabs
+                  items={tabs.map((t) => ({ key: t.key, label: t.label, count: t.count }))}
+                  value={current}
+                  onChange={setTab}
+                />
+              )}
+            </div>
+            <div className={current === STATEMENT ? "p-3 lg:p-4" : ""}>
+              {current === STATEMENT ? (
+                <StatementSheet
+                  data={sheet}
+                  loading={sheetLoading}
+                  from={range.from}
+                  to={range.to}
+                  onFrom={(from) => setRange((r) => ({ ...r, from }))}
+                  onTo={(to) => setRange((r) => ({ ...r, to }))}
+                  onQuick={(from, to) => setRange({ from, to })}
+                  holderName={holderName}
+                  holderPhone={holderPhone}
+                  onBack={() => setTab(ALL)}
+                />
+              ) : current === REQUESTS ? (
+                <ul className="divide-y divide-line-soft">
+                  {reqs.map((p) => (
+                    <li key={p.id} className="flex min-h-14 items-center gap-3 px-3 py-2.5">
+                      <span className="flex min-w-0 flex-1 flex-col">
+                        <span className="text-sm font-bold">
+                          <Money value={p.amount} />
+                        </span>
+                        {(p.decision || p.note) && <span className="console-meta line-clamp-1">{p.decision || p.note}</span>}
+                      </span>
+                      <Badge variant={STATUS_VARIANT[p.status]}>{P.status[p.status]}</Badge>
+                      <span className="console-meta" dir="ltr">
+                        {fmtDate(p.created_at)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              ) : txs.length === 0 ? (
+                <EmptyState icon={IconWallet} title={m.terms.noTransactions} />
+              ) : narrow ? (
+                <ul className="divide-y divide-line-soft">{txs.map(txRow)}</ul>
+              ) : (
+                <DataView dense view="table" items={txs} getKey={(tx) => String(tx.id)} empty={m.shared.txCard.empty} columns={txColumns} />
+              )}
+              {statement?.truncated && current === ALL && (
+                <p className="console-meta p-3 text-center">{W.glanceHint}</p>
+              )}
+            </div>
+          </section>
+          {aside && <aside className="flex min-w-0 flex-col gap-4 max-lg:order-first">{aside}</aside>}
+        </div>
+        {asking && (
+          <PayoutModal
+            api={api}
+            balance={balance}
+            onClose={() => setAsking(false)}
+            onDone={() => {
+              setAsking(false);
+              refreshAll();
+            }}
+          />
+        )}
+      </div>
+    );
+  }
 }
 
 function PayoutModal({

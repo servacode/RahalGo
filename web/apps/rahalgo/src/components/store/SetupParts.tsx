@@ -17,7 +17,7 @@
 import Link from "next/link";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Button, IconCheck, IconClose, IconPrev, IconSearch, Modal, FormActions, Input, Switch } from "@rahalgo/ui";
+import { Button, PageHead, IconCheck, IconClose, IconPrev, IconSearch, Modal, FormActions, Input, Switch } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import type { DayHours, SectionRef } from "@/lib/store/types";
 import { fill } from "@/lib/customer/texts";
@@ -53,14 +53,18 @@ export function BackArrow({ href = "/store" }: { href?: string }) {
  * (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩: صفحاتٌ كانت بسهمٍ وأخرى بلا طريقِ رجوع).
  * و`actions` في آخر السطر إن وُجدت.
  */
-export function PageHeader({ title, href = "/store", actions }: { title: string; href?: string; actions?: ReactNode }) {
-  return (
-    <header className="flex items-center gap-2">
-      <BackArrow href={href} />
-      <h1 className="heading-page min-w-0 flex-1 truncate">{title}</h1>
-      {actions}
-    </header>
-  );
+export function PageHeader({
+  title,
+  href = "/store",
+  actions,
+  subtitle,
+}: {
+  title: string;
+  href?: string;
+  actions?: ReactNode;
+  subtitle?: ReactNode;
+}) {
+  return <PageHead leading={<BackArrow href={href} />} title={title} subtitle={subtitle} actions={actions} />;
 }
 
 /** **علامةُ «مختار»** — دائرةٌ بلون العلامة فيها صحّ. */

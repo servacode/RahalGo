@@ -13,7 +13,7 @@
 import Link from "next/link";
 import type { ComponentType, ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { IconCheck, IconPrev } from "@rahalgo/ui";
+import { IconCheck, IconPrev, PageHead } from "@rahalgo/ui";
 
 const m = getMessages(defaultLocale);
 
@@ -30,22 +30,17 @@ export function ToolHeader({
   end?: ReactNode;
 }) {
   const cls =
-    "flex h-12 w-12 shrink-0 items-center justify-center rounded-control text-ink hover:bg-row-hover";
-  return (
-    <header className="flex items-center gap-1">
-      {href ? (
-        <Link href={href} aria-label={m.common.back} title={m.common.back} className={cls} data-testid="tool-back">
-          <IconPrev size={24} />
-        </Link>
-      ) : onBack ? (
-        <button type="button" onClick={onBack} aria-label={m.common.back} title={m.common.back} className={cls} data-testid="tool-back">
-          <IconPrev size={24} />
-        </button>
-      ) : null}
-      <h2 className="heading-page min-w-0 flex-1 truncate">{title}</h2>
-      {end}
-    </header>
-  );
+    "flex h-11 w-11 shrink-0 items-center justify-center rounded-control text-ink hover:bg-row-hover";
+  const back = href ? (
+    <Link href={href} aria-label={m.common.back} title={m.common.back} className={cls} data-testid="tool-back">
+      <IconPrev size={22} />
+    </Link>
+  ) : onBack ? (
+    <button type="button" onClick={onBack} aria-label={m.common.back} title={m.common.back} className={cls} data-testid="tool-back">
+      <IconPrev size={22} />
+    </button>
+  ) : null;
+  return <PageHead leading={back} title={title} actions={end} />;
 }
 
 /**

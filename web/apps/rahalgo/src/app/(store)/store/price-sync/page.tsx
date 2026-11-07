@@ -20,15 +20,17 @@ import {
   fmtNum,
   fmtDateTime,
 } from "@rahalgo/i18n";
-import { Alert, Button, Card, Checkbox, Confirm, LoadingState, Select } from "@rahalgo/ui";
+import { Alert, Badge, Button, Checkbox, Confirm, Kpi, KpiGrid, LoadingState, Select } from "@rahalgo/ui";
 import { api, apiFile } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import { fill } from "@/lib/customer/texts";
 import { PageHeader } from "@/components/store/SetupParts";
 import { PriceSyncSections } from "@/components/store/PriceSyncSections";
+import { agentState, lastRealSync } from "@/components/store/AmeenStatus";
 
 const m = getMessages(defaultLocale);
 const P = m.store.priceSync;
+const K = m.store.console;
 
 interface Mapping {
   code: string;
@@ -275,7 +277,7 @@ export default function PriceSyncPage() {
     }
   }
 
-  if (!info && !error) return <LoadingState />;
+  if (!info && !error) return <LoadingState variant="list" rows={4} />;
 
   const col = (key: keyof Mapping, label: string, required = false) => (
     <Select
@@ -295,356 +297,317 @@ export default function PriceSyncPage() {
 
   if (noAmeen) return null;
 
-  return (
-    <div className="flex flex-col gap-3">
-      <header>
-        <PageHeader title={P.title} href="/store/menu" />
-        {info?.last_run && (
-          <p className="mt-1 text-xs text-ink-muted">
-            {fill(P.last, { at: fmtDateTime(info.last_run.at) })}
-          </p>
-        )}
-      </header>
+  const st = agentState(info);
+  const last = lastRealSync(info);
+  const linked = !!info?.agent_seen_at && !info.stopped;
+  /** **التحميلُ هو الفعلُ الأوّلُ** حين لا برنامجَ يعمل بعد، وثانويٌّ حين يعمل. */
+  const needsInstall = st.key === "unlinked" || st.key === "never" || st.key === "stopped";
 
-      <label className="surface flex cursor-pointer flex-col items-center gap-2 rounded-card border border-dashed border-accent p-6 text-center">
-        <span className="font-bold text-accent-text">
-          {busy ? P.reading : P.pick}
-        </span>
-        {file && <span className="text-xs text-ink-muted">{file.name}</span>}
-        <input
-          type="file"
-          accept=".xlsx,.xlsm,.csv,.txt"
-          className="hidden"
-          disabled={busy}
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) void pick(f);
-            e.target.value = "";
-          }}
+  return (
+    <div className="console-page" data-testid="store-price-sync">
+      <PageHeader
+        title={P.title}
+        href="/store/menu"
+        subtitle={info?.last_run ? fill(P.last, { at: fmtDateTime(info.last_run.at) }) : undefined}
+      />
+
+      {/* ══ **حالةُ برنامج الأمين أوّلُ ما في الصفحة** (ملاحظةُ المالك ٢٠٢٦-١١-٠٧) —
+          الحالةُ وآخرُ مزامنةٍ فعليّةٍ وأفعالُها كلُّها في لوحٍ واحدٍ فوق العمودين. ══ */}
+      <section
+        className="panel flex flex-col gap-4 p-4 lg:p-5"
+        aria-label={P.agentTitle}
+        data-testid="sync-agent"
+        data-state={st.key}
+      >
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+            <span className="flex flex-wrap items-center gap-2">
+              <h2 className="console-h2">{P.agentTitle}</h2>
+              <Badge variant={st.badge}>{st.label}</Badge>
+            </span>
+            {st.key === "error" ? (
+              <div className="rounded-control border border-danger-edge bg-danger-tint p-3 text-sm" role="alert">
+                <span className="block font-bold text-danger">{st.detail}</span>
+                <span className="block text-ink">{st.why}</span>
+              </div>
+            ) : st.key === "paused" ? (
+              <Alert tone="warning">
+                <span className="block font-bold">{P.agentPaused}</span>
+                <span className="block">{P.agentPausedHint}</span>
+              </Alert>
+            ) : (
+              <p
+                className={`text-sm ${st.key === "alive" ? "text-success" : st.key === "dead" ? "text-danger" : "text-ink-muted"}`}
+              >
+                {st.detail}
+              </p>
+            )}
+            {last && <p className="console-meta">{last}</p>}
+            {needsInstall && <p className="text-sm text-ink-muted">{P.agentSteps}</p>}
+          </div>
+
+          <div className="flex flex-col gap-3 lg:w-80 lg:shrink-0">
+            <div className="flex flex-wrap gap-2">
+              {linked &&
+                (info?.paused ? (
+                  <Button className="min-h-11 flex-1" onClick={() => void setPaused(false)} disabled={busy}>
+                    {P.agentResume}
+                  </Button>
+                ) : (
+                  <>
+                    {info?.sync_requested ? (
+                      <p className="flex min-h-11 flex-1 items-center text-sm font-bold text-success">{P.syncAsked}</p>
+                    ) : (
+                      <Button className="min-h-11 flex-1" onClick={() => void syncNow()} disabled={busy}>
+                        {P.syncNow}
+                      </Button>
+                    )}
+                    <Button className="min-h-11 flex-1" variant="secondary" onClick={() => void setPaused(true)} disabled={busy}>
+                      {P.agentStop}
+                    </Button>
+                  </>
+                ))}
+              <Button
+                className="min-h-11 flex-1"
+                variant={needsInstall ? "primary" : "secondary"}
+                onClick={() => void download()}
+                disabled={busy}
+              >
+                {busy ? P.agentDownloading : P.agentDownload}
+              </Button>
+            </div>
+            {info?.has_token && !info.stopped && (
+              <Select
+                id="sync-interval"
+                label={P.interval}
+                value={String(info.interval_minutes ?? 1)}
+                onChange={(e) => void saveInterval(Number(e.target.value))}
+                disabled={busy}
+              >
+                {[1, 5, 10, 15, 30, 60].map((n) => (
+                  <option key={n} value={n}>
+                    {n === 1 ? P.every1 : n === 60 ? P.every60 : fill(P.everyN, { n: fmtNum(n) })}
+                  </option>
+                ))}
+              </Select>
+            )}
+            <p className="console-meta">{P.agentRedownload}</p>
+            {/* **الحذفُ من الكمبيوتر أقلُّ بروزاً ومؤكَّد** — بعده تحميلٌ جديد (٢٠٢٦-١١-٠٧). */}
+            {linked && (
+              <button
+                type="button"
+                className="flex min-h-11 w-fit items-center text-xs text-danger underline disabled:opacity-60"
+                onClick={() => setAskUninstall(true)}
+                disabled={busy}
+              >
+                {P.agentUninstall}
+              </button>
+            )}
+          </div>
+        </div>
+        <Confirm
+          open={askUninstall}
+          title={P.agentUninstallQ}
+          body={P.agentUninstallBody}
+          confirmLabel={P.agentUninstall}
+          busy={busy}
+          onConfirm={() => void stopAgent()}
+          onCancel={() => setAskUninstall(false)}
         />
-      </label>
+      </section>
 
       {error && <Alert>{error}</Alert>}
 
-      {/* **أنشئ المواد غير الموجودة أصنافاً مخفية** (٢٠٢٦-١١-٠٤) — يُبدَّل فيُعاد «جرّب» ليُرى العدد. */}
-      {file && (
-        <Card>
-          <div className="flex flex-col gap-1 p-4">
-            <Checkbox
-              id="sync-create-missing"
-              data-testid="sync-create-missing"
-              checked={!!map.create_missing}
+      {/* ══ عمودان على الحاسوب: الملفّ والأعمدة والتقرير | توزيع الأقسام. جوّالاً متتابعان. ══ */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start lg:gap-5">
+        <div className="flex min-w-0 flex-col gap-4">
+          <label className="flex min-h-28 cursor-pointer flex-col items-center justify-center gap-2 surface rounded-card border border-dashed border-accent p-6 text-center transition-colors hover:bg-row-hover focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent">
+            <span className="font-bold text-accent-text">{busy ? P.reading : P.pick}</span>
+            {file && (
+              <span className="console-meta" dir="ltr">
+                {file.name}
+              </span>
+            )}
+            <input
+              type="file"
+              accept=".xlsx,.xlsm,.csv,.txt"
+              className="sr-only"
               disabled={busy}
               onChange={(e) => {
-                const next = { ...map, create_missing: e.target.checked };
-                setMap(next);
-                if (report || info?.mapping) void run(true, next);
+                const f = e.target.files?.[0];
+                if (f) void pick(f);
+                e.target.value = "";
               }}
-              label={<span className="font-bold">{P.createMissing}</span>}
             />
-            <p className="text-xs text-ink-muted">{P.createMissingHint}</p>
-          </div>
-        </Card>
-      )}
+          </label>
 
-      {preview && (
-        <Card>
-          <div className="flex flex-col gap-3 p-4">
-            <h3 className="heading-card">{P.columnsTitle}</h3>
-            <p className="text-xs text-ink-muted">
-              {P.columnsHint} · {fill(P.rows, { n: fmtNum(preview.rows) })}
-            </p>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {col("code", P.colCode)}
-              {col("price", P.colPrice, true)}
-              {col("qty", P.colQty)}
-              {col("name", P.colName)}
-              {col("barcode", P.colBarcode)}
-              {col("group", P.colGroup)}
-              <Select
-                id="col-currency"
-                label={P.currency}
-                value={map.currency ?? "SYP"}
-                onChange={(e) =>
-                  setMap({ ...map, currency: e.target.value as "SYP" | "USD" })
-                }
-              >
-                <option value="SYP">{P.syp}</option>
-                <option value="USD">{P.usd}</option>
-              </Select>
+          {/* **أنشئ المواد غير الموجودة أصنافاً مخفية** (٢٠٢٦-١١-٠٤) — يُبدَّل فيُعاد «جرّب» ليُرى العدد. */}
+          {file && (
+            <div className="panel flex flex-col gap-1 p-4">
+              <Checkbox
+                id="sync-create-missing"
+                data-testid="sync-create-missing"
+                checked={!!map.create_missing}
+                disabled={busy}
+                onChange={(e) => {
+                  const next = { ...map, create_missing: e.target.checked };
+                  setMap(next);
+                  if (report || info?.mapping) void run(true, next);
+                }}
+                label={<span className="font-bold">{P.createMissing}</span>}
+              />
+              <p className="console-meta">{P.createMissingHint}</p>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr>
-                    {preview.headers.map((h, i) => (
-                      <th
-                        key={i}
-                        className="border-b border-line-soft p-1 text-start"
-                      >
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {preview.sample.map((r, i) => (
-                    <tr key={i}>
-                      {preview.headers.map((_, j) => (
-                        <td key={j} className="border-b border-line-soft p-1">
-                          {r[j] ?? ""}
-                        </td>
+          )}
+
+          {preview && (
+            <div className="panel flex flex-col gap-3 p-4">
+              <h3 className="console-h2">{P.columnsTitle}</h3>
+              <p className="console-meta">
+                {P.columnsHint} · {fill(P.rows, { n: fmtNum(preview.rows) })}
+              </p>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {col("code", P.colCode)}
+                {col("price", P.colPrice, true)}
+                {col("qty", P.colQty)}
+                {col("name", P.colName)}
+                {col("barcode", P.colBarcode)}
+                {col("group", P.colGroup)}
+                <Select
+                  id="col-currency"
+                  label={P.currency}
+                  value={map.currency ?? "SYP"}
+                  onChange={(e) => setMap({ ...map, currency: e.target.value as "SYP" | "USD" })}
+                >
+                  <option value="SYP">{P.syp}</option>
+                  <option value="USD">{P.usd}</option>
+                </Select>
+              </div>
+              <div className="overflow-x-auto rounded-control border border-line-soft">
+                <table className="console-table text-xs">
+                  <thead>
+                    <tr>
+                      {preview.headers.map((h, i) => (
+                        <th key={i} className="text-start">
+                          {h}
+                        </th>
                       ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <Button onClick={() => void run(true)} disabled={busy}>
-              {P.try}
-            </Button>
-          </div>
-        </Card>
-      )}
-
-      {report && (
-        <Card tone={report.dry_run ? "default" : "success"}>
-          <div className="flex flex-col gap-2 p-4 text-sm">
-            <h3 className="heading-card">
-              {report.dry_run ? P.dryTitle : P.doneTitle}
-            </h3>
-            <p>{fill(P.matched, { n: fmtNum(report.matched) })}</p>
-            <p className="font-bold">
-              {fill(P.priceChanged, { n: fmtNum(report.price_changed) })}
-            </p>
-            <p>{fill(P.madeAvailable, { n: fmtNum(report.made_available) })}</p>
-            <p>
-              {fill(P.madeUnavailable, { n: fmtNum(report.made_unavailable) })}
-            </p>
-            {report.linked_by_name > 0 && (
-              <p>
-                {fill(P.linkedByName, { n: fmtNum(report.linked_by_name) })}
-              </p>
-            )}
-            {(report.created ?? 0) > 0 && (
-              <p className="font-bold" data-testid="sync-created">
-                {fill(report.dry_run ? P.createdDry : P.created, {
-                  n: fmtNum(report.created ?? 0),
-                })}
-              </p>
-            )}
-            {(report.created ?? 0) > 0 && (
-              <p className="text-xs text-ink-muted">
-                {[
-                  fill(P.createdByName, { n: fmtNum(report.created_by_name ?? 0) }),
-                  (report.created_by_group ?? 0) > 0
-                    ? fill(P.createdByGroup, { n: fmtNum(report.created_by_group ?? 0) })
-                    : "",
-                  fill(P.createdPending, { n: fmtNum(report.created_pending ?? 0) }),
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </p>
-            )}
-            {(report.kept_hidden_no_photo ?? 0) > 0 && (
-              <p className="text-warning" data-testid="sync-kept-hidden">
-                {fill(P.keptHiddenNoPhoto, { n: fmtNum(report.kept_hidden_no_photo ?? 0) })}
-              </p>
-            )}
-            {(report.zero_price ?? 0) > 0 && (
-              <p className="text-warning">
-                {fill(P.zeroPrice, { n: fmtNum(report.zero_price ?? 0) })}
-              </p>
-            )}
-            {(report.create_skipped ?? 0) > 0 && (
-              <p className="text-ink-muted">
-                {fill(P.createSkipped, { n: fmtNum(report.create_skipped ?? 0) })}
-              </p>
-            )}
-            <p className="text-ink-muted">
-              {fill(P.unchanged, { n: fmtNum(report.unchanged) })}
-            </p>
-            {report.unmatched > 0 && (
-              <details>
-                <summary className="cursor-pointer text-warning">
-                  {fill(P.unmatched, { n: fmtNum(report.unmatched) })}
-                </summary>
-                <p className="mt-1 text-xs text-ink-muted">{P.unmatchedHint}</p>
-                <ul className="mt-1 list-disc ps-5 text-xs">
-                  {report.unmatched_sample.map((u) => (
-                    <li key={u.row}>
-                      {[u.code, u.name].filter(Boolean).join(" · ")}
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            )}
-            {(report.link_rejected ?? 0) > 0 && (
-              <details data-testid="sync-link-rejected">
-                <summary className="cursor-pointer text-warning">
-                  {fill(P.linkRejected, { n: fmtNum(report.link_rejected ?? 0) })}
-                </summary>
-                <ul className="mt-1 list-disc ps-5 text-xs">
-                  {(report.link_rejected_sample ?? []).map((u) => (
-                    <li key={`${u.row}-${u.reason}`}>
-                      {[u.code, u.name].filter(Boolean).join(" · ")} —{" "}
-                      {(P as Record<string, string>)[`why_${u.reason}`] ??
-                        u.reason}
-                    </li>
-                  ))}
-                </ul>
-              </details>
-            )}
-            {report.skipped.length > 0 && (
-              <div className="text-xs">
-                <p className="font-bold">{P.skipped}</p>
-                <ul className="list-disc ps-5">
-                  {report.skipped.map((u) => (
-                    <li key={u.row}>
-                      {[u.code, u.name].filter(Boolean).join(" · ")} —{" "}
-                      {(P as Record<string, string>)[`why_${u.reason}`] ??
-                        u.reason}
-                    </li>
-                  ))}
-                </ul>
+                  </thead>
+                  <tbody>
+                    {preview.sample.map((r, i) => (
+                      <tr key={i}>
+                        {preview.headers.map((_, j) => (
+                          <td key={j}>{r[j] ?? ""}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            )}
-            {report.dry_run && (
-              <Button onClick={() => void run(false)} disabled={busy}>
-                {P.apply}
+              <Button className="min-h-11" onClick={() => void run(true)} disabled={busy}>
+                {P.try}
               </Button>
-            )}
-          </div>
-        </Card>
-      )}
+            </div>
+          )}
 
-      {/* **توزيع الأقسام** (٢٠٢٦-١١-٠٧) — كل صنف يروح على قسمو. */}
-      {id && <PriceSyncSections storeId={id} refreshKey={applied} />}
-
-      {/* **برنامجُ المزامنة — ملفٌّ واحد** (قرارُ المالك ٢٠٢٦-١٠-١٩): يُحمَّل وفيه رمزُ المتجر،
-          دبل كليك على كمبيوتر الأمين وخلص. **وحالُه وخطؤه هنا** لا على كمبيوتر المحاسب. */}
-      <Card>
-        <div className="flex flex-col gap-2 p-4">
-          <h3 className="heading-card">{P.agentTitle}</h3>
-          <p className="text-sm">{P.agentSteps}</p>
-          <Button
-            className="w-fit"
-            onClick={() => void download()}
-            disabled={busy}
-          >
-            {busy ? P.agentDownloading : P.agentDownload}
-          </Button>
-          <p className="text-xs text-ink-muted">{P.agentRedownload}</p>
-          {/* **متّصلٌ ولا يزامن ليس «يعمل»** (المالك ٢٠٢٦-١١-٠٧) — خطأُ البرنامج يغلب الأخضر. */}
-          {info?.stopped ? (
-            <p className="text-sm text-ink-muted">{P.agentStopped}</p>
-          ) : info?.paused ? (
-            <Alert tone="warning">
-              <span className="block font-bold">{P.agentPaused}</span>
-              <span className="block">{P.agentPausedHint}</span>
-            </Alert>
-          ) : info?.agent_seen_at && info.agent_error ? (
-            <Alert tone="error">
-              <span className="block font-bold">
-                {fill(P.agentNotSyncing, { ago: fmtDateTime(info.agent_seen_at) })}
-              </span>
-              <span className="block">{fill(P.agentNotSyncingWhy, { e: info.agent_error })}</span>
-            </Alert>
-          ) : info?.agent_seen_at ? (
-            <p
-              className={`text-sm ${Date.now() - new Date(info.agent_seen_at).getTime() < 5 * 60_000 ? "text-success" : "text-danger"}`}
-            >
-              {fill(
-                Date.now() - new Date(info.agent_seen_at).getTime() < 5 * 60_000
-                  ? P.agentAlive
-                  : P.agentDead,
-                {
-                  ago: fmtDateTime(info.agent_seen_at),
-                },
+          {report && (
+            <div className="panel flex flex-col gap-3 p-4 text-sm" data-testid="sync-report">
+              <h3 className="console-h2">{report.dry_run ? P.dryTitle : P.doneTitle}</h3>
+              <KpiGrid>
+                <Kpi label={K.rpMatched} value={report.matched} />
+                <Kpi label={K.rpChanged} value={report.price_changed} tone={report.price_changed > 0 ? "accent" : undefined} />
+                <Kpi label={K.rpMadeAvailable} value={report.made_available} tone={report.made_available > 0 ? "good" : undefined} />
+                <Kpi
+                  label={K.rpMadeUnavailable}
+                  value={report.made_unavailable}
+                  tone={report.made_unavailable > 0 ? "attention" : undefined}
+                />
+              </KpiGrid>
+              {report.linked_by_name > 0 && <p>{fill(P.linkedByName, { n: fmtNum(report.linked_by_name) })}</p>}
+              {(report.created ?? 0) > 0 && (
+                <p className="font-bold" data-testid="sync-created">
+                  {fill(report.dry_run ? P.createdDry : P.created, { n: fmtNum(report.created ?? 0) })}
+                </p>
               )}
-              {info.agent_version
-                ? ` · ${fill(P.agentVersion, { v: info.agent_version })}`
-                : ""}
-            </p>
-          ) : (
-            info?.has_token && (
-              <p className="text-sm text-ink-muted">{P.agentNever}</p>
-            )
-          )}
-          {info?.agent_seen_at && !info.stopped && (
-            <p className="text-sm text-ink-muted">
-              {info.last_run && info.last_run.source !== "file"
-                ? fill(P.agentLastSync, { at: fmtDateTime(info.last_run.at) })
-                : P.agentNoSyncYet}
-            </p>
-          )}
-          {info?.has_token && !info.stopped && (
-            <Select
-              id="sync-interval"
-              label={P.interval}
-              value={String(info.interval_minutes ?? 1)}
-              onChange={(e) => void saveInterval(Number(e.target.value))}
-              disabled={busy}
-            >
-              {[1, 5, 10, 15, 30, 60].map((n) => (
-                <option key={n} value={n}>
-                  {n === 1
-                    ? P.every1
-                    : n === 60
-                      ? P.every60
-                      : fill(P.everyN, { n: fmtNum(n) })}
-                </option>
-              ))}
-            </Select>
-          )}
-          {info?.agent_seen_at && !info.stopped && (
-            <div className="flex flex-wrap gap-2">
-              {info.paused ? (
-                <Button onClick={() => void setPaused(false)} disabled={busy}>
-                  {P.agentResume}
+              {(report.created ?? 0) > 0 && (
+                <p className="console-meta">
+                  {[
+                    fill(P.createdByName, { n: fmtNum(report.created_by_name ?? 0) }),
+                    (report.created_by_group ?? 0) > 0
+                      ? fill(P.createdByGroup, { n: fmtNum(report.created_by_group ?? 0) })
+                      : "",
+                    fill(P.createdPending, { n: fmtNum(report.created_pending ?? 0) }),
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
+              )}
+              {(report.kept_hidden_no_photo ?? 0) > 0 && (
+                <p className="text-warning" data-testid="sync-kept-hidden">
+                  {fill(P.keptHiddenNoPhoto, { n: fmtNum(report.kept_hidden_no_photo ?? 0) })}
+                </p>
+              )}
+              {(report.zero_price ?? 0) > 0 && (
+                <p className="text-warning">{fill(P.zeroPrice, { n: fmtNum(report.zero_price ?? 0) })}</p>
+              )}
+              {(report.create_skipped ?? 0) > 0 && (
+                <p className="text-ink-muted">{fill(P.createSkipped, { n: fmtNum(report.create_skipped ?? 0) })}</p>
+              )}
+              <p className="text-ink-muted">{fill(P.unchanged, { n: fmtNum(report.unchanged) })}</p>
+              {report.unmatched > 0 && (
+                <details>
+                  <summary className="flex min-h-11 cursor-pointer items-center text-warning">
+                    {fill(P.unmatched, { n: fmtNum(report.unmatched) })}
+                  </summary>
+                  <p className="console-meta mt-1">{P.unmatchedHint}</p>
+                  <ul className="mt-1 list-disc ps-5 text-xs">
+                    {report.unmatched_sample.map((u) => (
+                      <li key={u.row}>{[u.code, u.name].filter(Boolean).join(" · ")}</li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+              {(report.link_rejected ?? 0) > 0 && (
+                <details data-testid="sync-link-rejected">
+                  <summary className="flex min-h-11 cursor-pointer items-center text-warning">
+                    {fill(P.linkRejected, { n: fmtNum(report.link_rejected ?? 0) })}
+                  </summary>
+                  <ul className="mt-1 list-disc ps-5 text-xs">
+                    {(report.link_rejected_sample ?? []).map((u) => (
+                      <li key={`${u.row}-${u.reason}`}>
+                        {[u.code, u.name].filter(Boolean).join(" · ")} —{" "}
+                        {(P as Record<string, string>)[`why_${u.reason}`] ?? u.reason}
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              )}
+              {report.skipped.length > 0 && (
+                <div className="text-xs">
+                  <p className="font-bold">{P.skipped}</p>
+                  <ul className="list-disc ps-5">
+                    {report.skipped.map((u) => (
+                      <li key={u.row}>
+                        {[u.code, u.name].filter(Boolean).join(" · ")} —{" "}
+                        {(P as Record<string, string>)[`why_${u.reason}`] ?? u.reason}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {report.dry_run && (
+                <Button className="min-h-11" onClick={() => void run(false)} disabled={busy}>
+                  {P.apply}
                 </Button>
-              ) : (
-                <>
-                  {info.sync_requested ? (
-                    <p className="text-sm text-success">{P.syncAsked}</p>
-                  ) : (
-                    <Button onClick={() => void syncNow()} disabled={busy}>
-                      {P.syncNow}
-                    </Button>
-                  )}
-                  <Button
-                    variant="ghost"
-                    onClick={() => void setPaused(true)}
-                    disabled={busy}
-                  >
-                    {P.agentStop}
-                  </Button>
-                </>
               )}
             </div>
           )}
-          {/* **الحذفُ من الكمبيوتر أقلُّ بروزاً ومؤكَّد** — بعده تحميلٌ جديد (٢٠٢٦-١١-٠٧). */}
-          {info?.agent_seen_at && !info.stopped && (
-            <button
-              type="button"
-              className="w-fit text-xs text-danger underline disabled:opacity-60"
-              onClick={() => setAskUninstall(true)}
-              disabled={busy}
-            >
-              {P.agentUninstall}
-            </button>
-          )}
-          <Confirm
-            open={askUninstall}
-            title={P.agentUninstallQ}
-            body={P.agentUninstallBody}
-            confirmLabel={P.agentUninstall}
-            busy={busy}
-            onConfirm={() => void stopAgent()}
-            onCancel={() => setAskUninstall(false)}
-          />
         </div>
-      </Card>
+
+        {/* **توزيع الأقسام** (٢٠٢٦-١١-٠٧) — كل صنف يروح على قسمو. */}
+        {id && <PriceSyncSections storeId={id} refreshKey={applied} />}
+      </div>
     </div>
   );
 }

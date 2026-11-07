@@ -10,7 +10,7 @@
 
 import { useCallback, useState } from "react";
 import { getMessages, defaultLocale, fmtRelDay } from "@rahalgo/i18n";
-import { EmptyState, IconChat, LoadingState, ReloadState, Tabs, useLiveData } from "@rahalgo/ui";
+import { Badge, EmptyState, IconChat, LoadingState, ReloadState, Tabs, useLiveData } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import type { MerchantReport } from "@/lib/store/types";
@@ -24,10 +24,12 @@ const C = m.store.complaints;
 function Row({ t }: { t: MerchantReport }) {
   const status = (C.status as Record<string, string>)[t.status] ?? t.status;
   return (
-    <li className="flex flex-col gap-1 py-3" data-testid="store-ticket">
+    <li className="flex min-h-14 flex-col gap-1 px-4 py-3" data-testid="store-ticket">
       <span className="flex items-center justify-between gap-2">
         <span className="font-bold">{`#${t.number} · ${reasonText(t.reason)}`}</span>
-        <span className={`shrink-0 text-xs ${t.status === "resolved" ? "text-success" : "text-ink-muted"}`}>{status}</span>
+        <Badge variant={t.status === "resolved" ? "success" : "neutral"} className="shrink-0">
+          {status}
+        </Badge>
       </span>
       {t.order_number != null && <span className="text-xs text-ink-muted">{fill(C.onOrder, { n: `#${t.order_number}` })}</span>}
       {t.resolution && <span className="text-sm">{t.resolution}</span>}
@@ -54,7 +56,7 @@ export default function ComplaintsPage() {
   const rows = tab === "mine" ? (data?.mine ?? []) : (data?.against ?? []);
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="console-page" data-testid="store-complaints">
       <PageHeader title={C.title} />
       <Tabs
         items={[
@@ -67,7 +69,7 @@ export default function ComplaintsPage() {
       {rows.length === 0 ? (
         <EmptyState icon={IconChat} title={tab === "mine" ? C.mineEmpty : C.onMeEmpty} tone={tab === "onMe" ? "success" : "muted"} />
       ) : (
-        <ul className="surface flex flex-col divide-y divide-line rounded-card px-4">
+        <ul className="panel flex flex-col divide-y divide-line-soft overflow-hidden">
           {rows.map((t) => (
             <Row key={t.id} t={t} />
           ))}

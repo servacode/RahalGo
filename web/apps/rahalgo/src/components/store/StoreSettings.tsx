@@ -108,7 +108,7 @@ export function SettlementCard() {
     if (!confirmed || store.settlement_method !== k) setAsk(k);
   };
   return (
-    <section className="surface flex flex-col gap-3 rounded-card p-4" aria-label={S.settlement.q}>
+    <section className="panel flex flex-col gap-3 p-4" aria-label={S.settlement.q}>
       <h3 className="heading-card">{S.settlement.q}</h3>
       <IconChoicePair
         disabled={busy || store.status === "suspended"}
@@ -158,7 +158,7 @@ export function ReturnsCard() {
     void save({ accepts_returns: accepts }, T.returnsSaved, { accepts_returns: accepts, returns_confirmed: true });
   };
   return (
-    <section className="surface flex flex-col gap-3 rounded-card p-4" aria-label={W.returnsQ}>
+    <section className="panel flex flex-col gap-3 p-4" aria-label={W.returnsQ}>
       <h3 className="heading-card">{W.returnsQ}</h3>
       <IconChoicePair
         disabled={busy || store.status === "suspended"}
@@ -182,7 +182,7 @@ export function AmeenCard() {
     void save({ uses_ameen: v }, T.ameenSaved, { uses_ameen: v });
   };
   return (
-    <section className="surface flex flex-col gap-3 rounded-card p-4" aria-label={W.ameenQ}>
+    <section className="panel flex flex-col gap-3 p-4" aria-label={W.ameenQ}>
       <h3 className="heading-card">{W.ameenQ}</h3>
       <p className="text-xs text-ink-muted">{W.ameenHint}</p>
       <IconChoicePair
@@ -268,7 +268,7 @@ export function RateCard() {
 
   const usd = store.display_currency === "USD";
   return (
-    <section className="surface flex flex-col gap-3 rounded-card p-4" aria-label={T.rate}>
+    <section className="panel flex flex-col gap-3 p-4" aria-label={T.rate}>
       <h3 className="heading-card">{T.rate}</h3>
       <form
         className="flex items-end gap-2"
@@ -357,7 +357,7 @@ export function PrepCard() {
     void save({ default_prep_minutes: n }, T.prepSaved, { default_prep_minutes: n });
   };
   return (
-    <section className="surface flex items-center gap-2 rounded-card p-4" aria-label={T.prep}>
+    <section className="panel flex items-center gap-2 p-4" aria-label={T.prep}>
       <span className="min-w-0 flex-1 text-sm font-bold">{T.prep}</span>
       <Button
         variant="secondary"

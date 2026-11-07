@@ -61,6 +61,7 @@ export function Kpi({
   href,
   Link,
   testId,
+  className = "",
 }: {
   icon?: IconType;
   label: string;
@@ -72,6 +73,8 @@ export function Kpi({
   href?: string;
   Link?: ComponentType<{ href: string; className?: string; "data-tone"?: string; "data-testid"?: string; children: ReactNode }>;
   testId?: string;
+  /** صفوفُ شبكةٍ إضافيّة (مثلاً `col-span-2`) — لا ألوانَ ولا حواشي. */
+  className?: string;
 }) {
   const body = (
     <>
@@ -79,7 +82,7 @@ export function Kpi({
         <span className="console-meta truncate font-bold">{label}</span>
         {Icon && <Icon size={18} className="shrink-0 text-ink-muted" />}
       </span>
-      <span className="flex items-baseline gap-1.5 truncate">
+      <span className="flex flex-wrap items-baseline gap-x-1.5">
         <span className="kpi-figure">{typeof value === "number" ? fmtNum(value) : value}</span>
         {unit && <span className="console-meta">{unit}</span>}
       </span>
@@ -88,14 +91,14 @@ export function Kpi({
   );
   if (!href) {
     return (
-      <div className="kpi" data-tone={tone} data-testid={testId}>
+      <div className={`kpi ${className}`} data-tone={tone} data-testid={testId}>
         {body}
       </div>
     );
   }
   const Tag = Link ?? "a";
   return (
-    <Tag href={href} className="kpi" data-tone={tone} data-testid={testId}>
+    <Tag href={href} className={`kpi ${className}`} data-tone={tone} data-testid={testId}>
       {body}
     </Tag>
   );

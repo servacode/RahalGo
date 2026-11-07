@@ -38,6 +38,7 @@ import { PageHeader } from "./SetupParts";
 
 const m = getMessages(defaultLocale);
 const T = m.store.team;
+const K = m.store.console;
 
 // ══════════════════════════════════════════════════════════════════════
 // **قِطَعُ الصفحتين**
@@ -47,8 +48,8 @@ const T = m.store.team;
 function WhiteCard({ title, children }: { title?: string; children: ReactNode }) {
   return (
     <section className="flex flex-col gap-2">
-      {title && <h3 className="px-1 text-sm font-bold text-ink-muted">{title}</h3>}
-      <div className="surface flex flex-col gap-3 rounded-card border border-line p-4">{children}</div>
+      {title && <h2 className="console-h2 px-1">{title}</h2>}
+      <div className="panel flex flex-col gap-3 p-4">{children}</div>
     </section>
   );
 }
@@ -190,9 +191,10 @@ export function StaffPage() {
     body = loadError ? <ReloadState label={loadError} onRetry={load} /> : <LoadingState variant="list" rows={3} />;
   else
     body = (
-      <>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-start lg:gap-5">
+        <div className="min-w-0">
         {list.length === 0 ? (
-          <div className="surface flex flex-col items-center gap-3 rounded-card border border-line px-4 py-8">
+          <div className="panel flex flex-col items-center gap-3 px-4 py-10">
             <span className="flex h-14 w-14 items-center justify-center rounded-full bg-accent-tint text-accent-text">
               <IconUser size={28} />
             </span>
@@ -200,8 +202,8 @@ export function StaffPage() {
           </div>
         ) : (
           <section className="flex flex-col gap-2">
-            <h3 className="px-1 text-sm font-bold text-ink-muted">{T.listTitle}</h3>
-            <ul className="surface divide-y divide-line-soft rounded-card border border-line">
+            <h2 className="console-h2 px-1">{T.listTitle}</h2>
+            <ul className="panel divide-y divide-line-soft">
               {list.map((row) => {
                 const initial = row.name.trim().charAt(0) || row.phone.replace(/\D/g, "").slice(-1) || "?";
                 return (
@@ -238,7 +240,9 @@ export function StaffPage() {
             </ul>
           </section>
         )}
+        </div>
 
+        <div className="flex min-w-0 flex-col gap-4">
         {canManage && (
           <WhiteCard title={T.newTitle}>
             <Input
@@ -276,11 +280,12 @@ export function StaffPage() {
           </Alert>
         )}
         {error && <Alert>{error}</Alert>}
-      </>
+        </div>
+      </div>
     );
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
+    <div className="console-page" data-testid="store-team">
       <PageHeader title={T.staffTitle} />
       {body}
       {removing && (
@@ -356,12 +361,13 @@ export function OrderPhonesPage() {
   const editable = canManage && !busy;
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
+    <div className="console-page" data-testid="store-order-phones">
       <PageHeader title={T.phonesTitle} />
       {p == null ? (
         loadError ? <ReloadState label={loadError} onRetry={load} /> : <LoadingState variant="list" rows={2} />
       ) : (
-        <>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start lg:gap-5">
+          <div className="flex min-w-0 flex-col gap-4">
           <div className="flex gap-3" role="radiogroup" aria-label={T.phonesTitle}>
             <IconChoiceCard
               icon={<IconPhone size={28} />}
@@ -382,6 +388,18 @@ export function OrderPhonesPage() {
             />
           </div>
 
+          {canManage && (
+            <Button size="lg" className="flex min-h-11 w-full items-center justify-center gap-2" disabled={busy} onClick={() => void save()}>
+              <IconCheck size={20} />
+              {T.save}
+            </Button>
+          )}
+          {saved && <Alert tone="success">{T.saved}</Alert>}
+          {error && <Alert>{error}</Alert>}
+          </div>
+
+          <div className="min-w-0">
+          {p.mode === "full" && <p className="panel p-4 text-sm text-ink-muted">{K.phonesFullHint}</p>}
           {p.mode === "split" && (
             <WhiteCard title={T.numbersTitle}>
               <Input
@@ -426,16 +444,8 @@ export function OrderPhonesPage() {
               </div>
             </WhiteCard>
           )}
-
-          {canManage && (
-            <Button size="lg" className="flex w-full items-center justify-center gap-2" disabled={busy} onClick={() => void save()}>
-              <IconCheck size={20} />
-              {T.save}
-            </Button>
-          )}
-          {saved && <Alert tone="success">{T.saved}</Alert>}
-          {error && <Alert>{error}</Alert>}
-        </>
+          </div>
+        </div>
       )}
     </div>
   );

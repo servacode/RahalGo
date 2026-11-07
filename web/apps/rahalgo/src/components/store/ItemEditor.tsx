@@ -81,11 +81,12 @@ import {
   type PriceMode,
 } from "@/lib/store/optionModes";
 import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
-import { fill } from "@/lib/customer/texts";
+import { dollars, fill } from "@/lib/customer/texts";
 import { useShopToast } from "@/components/customer/toast";
 
 const m = getMessages(defaultLocale);
 const I = m.store.item;
+const K = m.store.console;
 
 const SLOT = "merchant_item";
 /** **مرآةُ `MAX_EDGE` في `ImagePick.kt`** — الصورةُ تُصغَّر قبل الرفع كما في التطبيق. */
@@ -518,13 +519,21 @@ export default function ItemEditor({
 
   const readOnly = store?.status === "suspended";
   const current = sections.find((s) => s.id === section) ?? null;
+  const previewImg = mediaUrl(item?.image_url || item?.image_thumb_url);
+  const previewPrice = usd
+    ? usdValue != null
+      ? `${dollars(usdValue)}${itemSyp != null ? ` · ${fmtMoney(itemSyp)}` : ""}`
+      : "—"
+    : itemSyp != null
+      ? fmtMoney(itemSyp)
+      : "—";
   const removeGroup = (gi: number) => edit((gs) => gs.filter((_, i) => i !== gi));
   const removeOption = (gi: number, oi: number) =>
     setGroup(gi, { options: (groups[gi]?.options ?? []).filter((_, j) => j !== oi) });
 
   return (
     <form
-      className="mx-auto flex w-full max-w-2xl flex-col gap-4"
+      className="console-page"
       data-testid="item-editor"
       onSubmit={(e) => {
         e.preventDefault();
@@ -532,6 +541,10 @@ export default function ItemEditor({
       }}
     >
       <ToolHeader title={item ? I.edit : I.new} href="/store/menu" />
+
+      {/* ── عمودان على الحاسوب: النموذج | معاينةٌ حيّةٌ كما يراها الزبون. جوّالاً النموذجُ وحدَه بترتيبه ── */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-5">
+      <div className="flex min-w-0 flex-col gap-4">
 
       {/* ── ١ · الصورةُ يميناً، والاسمُ عن يسارها — ولا وصفَ (قرارُ المالك ٢٠٢٦-١٠-٣٠) ── */}
       <div className="flex items-start gap-3">
@@ -990,6 +1003,40 @@ export default function ItemEditor({
           />
         </>
       )}
+
+      </div>
+
+      {/* ══ **المعاينة الحيّة** — بطاقةُ الصنف كما تظهر للزبون، تتبدّل مع كلّ حرفٍ يُكتب. حاسوبٌ فقط. ══ */}
+      <aside className="hidden lg:sticky lg:top-[calc(var(--topbar-h)+0.75rem)] lg:block" aria-label={K.previewTitle} data-testid="item-preview">
+        <h2 className="console-h2 mb-2 px-1">{K.previewTitle}</h2>
+        <div className="panel-lite flex flex-col overflow-hidden">
+          <div className="relative block aspect-[4/5] w-full bg-field">
+            {previewImg && imageId === null ? (
+              <img src={previewImg} alt="" className="absolute inset-0 h-full w-full object-cover" />
+            ) : (
+              <span className="absolute inset-0 flex flex-col items-center justify-center gap-1 px-4 text-center text-ink-muted" aria-hidden>
+                <span className="text-4xl font-medium">{name.trim().charAt(0) || "?"}</span>
+                {imageId ? <span className="text-xs">{K.previewImageNew}</span> : null}
+              </span>
+            )}
+          </div>
+          <div className="flex flex-col gap-1 p-3">
+            <span className="line-clamp-2 min-h-[2.5rem] text-sm font-bold leading-5 text-ink">{name.trim() || I.name}</span>
+            {groups.filter((g) => g.name.trim()).length > 0 && (
+              <span className="line-clamp-2 text-xs leading-4 text-ink-muted">
+                {groups
+                  .map((g) => g.name.trim())
+                  .filter(Boolean)
+                  .join(" · ")}
+              </span>
+            )}
+            <span className="mt-1 text-sm font-bold tabular-nums text-accent-text">{previewPrice}</span>
+            {current && <span className="console-meta">{current.name}</span>}
+          </div>
+        </div>
+        <p className="console-meta mt-2 px-1">{K.previewHint}</p>
+      </aside>
+      </div>
 
       {/* **«حفظ / إلغاء» ثابتان أسفلَ الشاشة** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) — أكثرُ
           ما يُعدَّل السعرُ في الأعلى، **فلا يُنزَل إلى آخر الصفحة ليُحفظ.** */}

@@ -24,6 +24,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import { getMessages, defaultLocale, errorText, fmtDateTime, fmtMoney, fmtNum } from "@rahalgo/i18n";
 import {
   Alert,
+  Badge,
   Button,
   Confirm,
   FormActions,
@@ -33,6 +34,8 @@ import {
   IconPromos,
   IconSearch,
   Input,
+  Kpi,
+  KpiGrid,
   LoadingState,
   ReloadState,
   useLiveData,
@@ -47,6 +50,7 @@ import { CheckBadge, StickyBar, ToolHeader } from "@/components/store/ToolParts"
 
 const m = getMessages(defaultLocale);
 const O = m.store.offers;
+const K = m.store.console;
 
 const SLOT = "merchant_offer";
 /** **مرآةُ `OfferDuration.PRESET_HOURS`.** */
@@ -72,8 +76,8 @@ const LIVE = new Set(["active", "scheduled"]);
 /** **بطاقةُ قسمٍ من النموذج** — بحدٍّ رفيعٍ وعنوانٍ عريض. */
 function FormCard({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="surface flex flex-col gap-2 rounded-card border border-line p-3">
-      <h3 className="heading-card">{title}</h3>
+    <section className="panel flex flex-col gap-2 p-3 lg:p-4">
+      <h2 className="console-h2">{title}</h2>
       {children}
     </section>
   );
@@ -120,12 +124,6 @@ function OfferCard({ o, stopping, onStop }: { o: StoreOffer; stopping: boolean; 
         ? `−${fmtMoney(o.discount_amount)}`
         : "";
   const status = (O.status as Record<string, string>)[o.status] ?? O.status.unknown;
-  const tone =
-    o.status === "active"
-      ? "bg-success-tint text-success"
-      : o.status === "scheduled"
-        ? "bg-accent-tint text-accent-text"
-        : "bg-field text-ink-muted";
   return (
     <article
       className={`surface flex flex-col gap-2 rounded-card border p-3 ${live ? "border-success-edge" : "border-line"}`}
@@ -150,7 +148,7 @@ function OfferCard({ o, stopping, onStop }: { o: StoreOffer; stopping: boolean; 
             <span className="text-xs text-ink-muted line-through">{fmtMoney(o.price_before)}</span>
           </span>
         </span>
-        <span className={`shrink-0 rounded-full px-2 py-0.5 text-2xs font-bold ${tone}`}>{status}</span>
+        <Badge variant={o.status === "active" ? "success" : o.status === "scheduled" ? "accent" : "neutral"} className="shrink-0">{status}</Badge>
       </header>
       {(saved > 0 && LIVE.has(o.status)) || (live && o.ends_at) ? (
         <p className="flex flex-wrap gap-x-3 text-xs text-ink-muted">
@@ -161,7 +159,7 @@ function OfferCard({ o, stopping, onStop }: { o: StoreOffer; stopping: boolean; 
       {LIVE.has(o.status) && (
         <Button
           variant="secondary"
-          className="inline-flex w-fit items-center gap-1.5 border-danger-edge text-danger"
+          className="inline-flex min-h-11 w-fit items-center gap-1.5 border-danger-edge text-danger"
           disabled={stopping}
           onClick={onStop}
           data-testid="offer-stop"
@@ -241,8 +239,11 @@ function NewOffer({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-3" data-testid="offer-form">
+    <div className="console-page" data-testid="offer-form">
       <ToolHeader title={O.newTitle} onBack={onCancel} />
+      {/* ── عمودان على الحاسوب: النموذج | المعاينة اللاصقة. جوّالاً متتابعان ── */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-5">
+      <div className="flex min-w-0 flex-col gap-3">
 
       {/* **الصنفُ أوّلاً والبحثُ أوّلُه** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) — تُعرض نتائجُ البحث
           أو أوّلُ ثمانيةٍ لا أصنافُ المتجر كلُّها، **وبعد الاختيار ينطوي سطراً واحداً.** */}
@@ -387,7 +388,9 @@ function NewOffer({
         </div>
       </FormCard>
 
-      {item && (
+      </div>
+      <div className="lg:sticky lg:top-[calc(var(--topbar-h)+0.75rem)]">
+      {item ? (
         <FormCard title={O.previewTitle}>
           <p className="font-bold">{item.name}</p>
           <p className="text-sm">{fill(O.previewPrice, { price: fmtMoney(price) })}</p>
@@ -398,7 +401,11 @@ function NewOffer({
           )}
           <p className="text-xs text-ink-muted">{fill(O.previewFor, { d: durationLabel(hours) })}</p>
         </FormCard>
+      ) : (
+        <p className="panel hidden p-4 text-sm text-ink-muted lg:block">{K.offerPreviewHint}</p>
       )}
+      </div>
+      </div>
 
       <StickyBar>
         {error && <Alert>{error}</Alert>}
@@ -484,30 +491,40 @@ export default function OffersPage() {
     setComposing(true);
   };
 
+  const activeN = rows.filter((o) => o.status === "active").length;
+  const scheduledN = rows.filter((o) => o.status === "scheduled").length;
+  const endedN = rows.length - activeN - scheduledN;
+  const addBtn = (
+    <Button className="inline-flex min-h-11 items-center justify-center gap-1.5 font-bold" data-testid="offer-new" onClick={start}>
+      <IconAdd size={18} />
+      {O.add}
+    </Button>
+  );
+
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-3">
-      <ToolHeader title={O.title} href="/store/menu" />
+    <div className="console-page" data-testid="store-offers">
+      <ToolHeader title={O.title} href="/store/menu" end={rows.length > 0 ? addBtn : undefined} />
       {created && <Alert tone="success">{O.createdTop}</Alert>}
       {rows.length === 0 ? (
-        <section className="surface flex flex-col items-center gap-3 rounded-card border border-line px-4 py-8 text-center">
+        <section className="panel mx-auto flex w-full max-w-xl flex-col items-center gap-3 px-4 py-10 text-center">
           <span className="flex h-22 w-22 items-center justify-center rounded-full bg-accent-tint text-accent-text" aria-hidden>
             <IconPromos size={40} />
           </span>
-          <p className="heading-card">{O.emptyTitle}</p>
-          <Button className="inline-flex w-full items-center justify-center gap-1.5 font-bold" data-testid="offer-new" onClick={start}>
-            <IconAdd size={18} />
-            {O.add}
-          </Button>
+          <p className="console-h2">{O.emptyTitle}</p>
+          {addBtn}
         </section>
       ) : (
         <>
-          <Button className="inline-flex w-full items-center justify-center gap-1.5 font-bold" data-testid="offer-new" onClick={start}>
-            <IconAdd size={18} />
-            {O.add}
-          </Button>
-          {rows.map((o) => (
-            <OfferCard key={o.id} o={o} stopping={stopping === o.id} onStop={() => setAskStop(o)} />
-          ))}
+          <KpiGrid cols={3}>
+            <Kpi icon={IconPromos} label={K.offersActive} value={activeN} tone={activeN > 0 ? "good" : undefined} testId="offers-active" />
+            <Kpi label={K.offersScheduled} value={scheduledN} tone={scheduledN > 0 ? "accent" : undefined} />
+            <Kpi label={K.offersEnded} value={endedN} className="col-span-2 lg:col-span-1" />
+          </KpiGrid>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {rows.map((o) => (
+              <OfferCard key={o.id} o={o} stopping={stopping === o.id} onStop={() => setAskStop(o)} />
+            ))}
+          </div>
         </>
       )}
       <Confirm

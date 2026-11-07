@@ -9,15 +9,16 @@
 import { useCallback } from "react";
 import { useParams } from "next/navigation";
 import { getMessages, defaultLocale, fmtNum, fmtRelStamp } from "@rahalgo/i18n";
-import { InvoiceLines, LoadingState, ReloadState, useLiveData } from "@rahalgo/ui";
+import { Badge, InvoiceLines, LoadingState, ReloadState, useLiveData } from "@rahalgo/ui";
 import { api } from "@/lib/api";
-import type { MerchantOrder } from "@/lib/store/types";
+import { noPayout, type MerchantOrder } from "@/lib/store/types";
 import { fill } from "@/lib/customer/texts";
 import { MoneyLines, orderStatus } from "@/components/store/HistoryParts";
 import { PageHeader } from "@/components/store/SetupParts";
 
 const m = getMessages(defaultLocale);
 const S = m.store;
+const K = S.console;
 const H = S.history;
 
 export default function HistoryOrderPage() {
@@ -31,18 +32,19 @@ export default function HistoryOrderPage() {
   if (!o) return null;
 
   return (
-    <div className="flex flex-col gap-3" data-testid="history-detail">
+    <div className="console-page" data-testid="history-detail">
       <PageHeader
         title={fill(H.orderTitle, { n: o.number })}
         href="/store/history"
-        actions={<span className="shrink-0 text-sm text-ink-muted">{orderStatus(o.status)}</span>}
+        subtitle={fmtRelStamp(o.closed_at ?? o.created_at)}
+        actions={<Badge variant={o.status === "delivered" ? "success" : noPayout(o.status) ? "danger" : "neutral"}>{orderStatus(o.status)}</Badge>}
       />
-      <p className="text-xs text-ink-muted">{fmtRelStamp(o.closed_at ?? o.created_at)}</p>
       {(o.shared_stops ?? 0) >= 2 && (
         <p className="text-xs font-bold text-accent-text">{fill(S.orders.sharedStops, { n: fmtNum(o.shared_stops ?? 0) })}</p>
       )}
-      <section className="surface flex flex-col gap-2 rounded-card p-3">
-        <h3 className="heading-card">{S.orders.items}</h3>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-start lg:gap-5">
+      <section className="panel flex flex-col gap-2 p-4">
+        <h2 className="console-h2">{S.orders.items}</h2>
         {/* **سطرٌ لكلّ عنصر** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — «شاورما دبل × 3 ...... 90 ل.س». */}
         <InvoiceLines items={o.items} />
         {o.notes && (
@@ -52,9 +54,11 @@ export default function HistoryOrderPage() {
           </p>
         )}
       </section>
-      <section className="surface rounded-card p-3">
+      <section className="panel flex flex-col gap-2 p-4">
+        <h2 className="console-h2">{K.histMoney}</h2>
         <MoneyLines o={o} />
       </section>
+      </div>
       {o.cancel_reason && (
         <p className="text-sm text-ink-muted">
           <span className="font-bold">{H.cancelReason}: </span>

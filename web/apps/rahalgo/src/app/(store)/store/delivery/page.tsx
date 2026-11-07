@@ -24,7 +24,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, type FocusEvent as ReactFocusEvent } from "react";
 import { getMessages, defaultLocale, errorText, fmtNum, westernDigits } from "@rahalgo/i18n";
-import { Alert, Button, Checkbox, EmptyState, IconLink, IconLocation, IconMoto, Input, LoadingState, Textarea } from "@rahalgo/ui";
+import { Alert, Button, ButtonLink, Checkbox, PageHead, EmptyState, IconLink, IconLocation, IconMoto, Input, LoadingState, Textarea } from "@rahalgo/ui";
 import { api, ApiError } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import { useStoreDeliveries } from "@/lib/store/deliveries";
@@ -94,7 +94,7 @@ function ModeButton({ on, title, onClick, disabled }: { on: boolean; title: stri
       disabled={disabled}
       aria-pressed={on}
       data-testid="delivery-mode"
-      className={`flex flex-1 flex-col items-center gap-1 rounded-card border p-4 text-center transition-colors ${
+      className={`flex min-h-14 flex-1 flex-col items-center justify-center gap-1 rounded-card border p-4 text-center transition-colors ${
         on ? "border-2 border-accent bg-accent-tint" : "border-line bg-surface hover:bg-row-hover"
       }`}
     >
@@ -565,8 +565,15 @@ export default function DeliveryPage() {
   });
 
   return (
-    <div className="flex flex-col gap-3">
-      <h2 className="heading-page">{D.title}</h2>
+    <div className="console-page" data-testid="store-delivery-page">
+      <PageHead
+        title={D.title}
+        actions={
+          <ButtonLink Link={Link} href="/store/deliveries" variant="secondary" className="min-h-11">
+            {m.store.deliveries.title}
+          </ButtonLink>
+        }
+      />
 
       {live && (
         <Link
@@ -595,6 +602,9 @@ export default function DeliveryPage() {
         </div>
       )}
 
+      {/* ── عمودان على الحاسوب: الطلب | توصيلاتي. جوّالاً متتابعان بالترتيب نفسه. ── */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:items-start lg:gap-5">
+      <div className="flex min-w-0 flex-col gap-3">
       <div className="flex gap-3">
         <ModeButton on={mode === "send"} title={D.modeSend} disabled={busy} onClick={() => pickMode("send")} />
         <ModeButton on={mode === "fetch"} title={D.modeFetch} disabled={busy} onClick={() => pickMode("fetch")} />
@@ -604,7 +614,7 @@ export default function DeliveryPage() {
 
       {mode && (
         <form
-          className="surface flex flex-col gap-3 rounded-card p-4"
+          className="panel flex flex-col gap-3 p-4 lg:p-5"
           onSubmit={(e) => {
             e.preventDefault();
             void send();
@@ -868,8 +878,10 @@ export default function DeliveryPage() {
         </form>
       )}
 
-      <section className="flex flex-col gap-2" aria-label={D.mine}>
-        <h3 className="heading-card">{D.mine}</h3>
+      </div>
+
+      <section className="flex min-w-0 flex-col gap-2" aria-label={D.mine}>
+        <h2 className="console-h2 px-1">{D.mine}</h2>
         {(listError || cancelError) && <Alert>{cancelError || errorText(listError)}</Alert>}
         {rows == null && !listError && <LoadingState variant="inline" label={D.loading} />}
         {rows != null && rows.length === 0 && (
@@ -884,6 +896,7 @@ export default function DeliveryPage() {
           </Button>
         )}
       </section>
+      </div>
     </div>
   );
 }

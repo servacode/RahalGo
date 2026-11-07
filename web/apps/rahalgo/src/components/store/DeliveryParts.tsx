@@ -8,7 +8,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { getMessages, defaultLocale, fmtMoney, fmtNum, fmtRelStamp } from "@rahalgo/i18n";
-import { Button, Confirm, IconChevronDown, IconClose, IconLocation, IconMoto, IconNote, IconPhone, IconUser, IconWallet } from "@rahalgo/ui";
+import { Badge, Button, Confirm, IconChevronDown, IconClose, IconLocation, IconMoto, IconNote, IconPhone, IconUser, IconWallet } from "@rahalgo/ui";
 import type { Delivery } from "@/lib/store/types";
 import { CANCELLABLE, amountText } from "@/lib/store/deliveries";
 import { fill } from "@/lib/customer/texts";
@@ -27,12 +27,11 @@ export function toneOf(status: string): Tone {
   return "ended";
 }
 
-const PILL: Record<Tone, string> = {
-  waiting: "bg-warning-tint text-warning",
-  moving: "bg-accent-tint text-accent-text",
-  done: "bg-success-tint text-success",
-  // **المنتهيةُ والملغاةُ رماديّة** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) — أُلغيت بيده غالباً، فليست خطأً.
-  ended: "bg-field text-ink-muted",
+const BADGE: Record<Tone, "warning" | "accent" | "success" | "neutral"> = {
+  waiting: "warning",
+  moving: "accent",
+  done: "success",
+  ended: "neutral",
 };
 const EDGE: Record<Tone, string> = {
   waiting: "border-warning-edge",
@@ -48,10 +47,10 @@ export function statusText(status: string): string {
 export function StatusPill({ status }: { status: string }) {
   const tone = toneOf(status);
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-badge px-2.5 py-1 text-xs font-bold ${PILL[tone]}`}>
-      <span className={`h-2 w-2 rounded-badge bg-current ${tone === "waiting" ? "motion-safe:animate-pulse" : ""}`} />
+    <Badge variant={BADGE[tone]} className="gap-1.5 font-bold">
+      <span className={`h-2 w-2 rounded-badge bg-current ${tone === "waiting" ? "motion-safe:animate-pulse" : ""}`} aria-hidden />
       {statusText(status)}
-    </span>
+    </Badge>
   );
 }
 
@@ -114,11 +113,16 @@ export function DeliveryLines({ d }: { d: Delivery }) {
   );
 }
 
-export function CancelDeliveryButton({ busy, onConfirm }: { busy: boolean; onConfirm: () => void }) {
+export function CancelDeliveryButton({ busy, onConfirm, compact = false }: { busy: boolean; onConfirm: () => void; compact?: boolean }) {
   const [asking, setAsking] = useState(false);
   return (
     <>
-      <Button variant="secondary" className="flex w-full items-center justify-center gap-2 py-3 text-danger" disabled={busy} onClick={() => setAsking(true)}>
+      <Button
+        variant={compact ? "ghost" : "secondary"}
+        className={compact ? "flex min-h-9 items-center gap-1 text-danger" : "flex min-h-11 w-full items-center justify-center gap-2 py-3 text-danger"}
+        disabled={busy}
+        onClick={() => setAsking(true)}
+      >
         <IconClose size={16} />
         {busy ? D.cancelling : D.cancel}
       </Button>
