@@ -84,6 +84,13 @@ object Engagement {
     const val DEST_MERCHANT = "merchant"
 
     /**
+     * **وإشعارُ «أصناف بانتظار قسم»** (قرارُ المالك ٢٠٢٦-١١-٠٧) — يفتح شاشةَ «أصناف بلا قسم»
+     * في تطبيق المتجر (`entity="price_sync"` والمعرّفُ معرّفُ المتجر في `price_sync_notify.go`).
+     * وغيرُ المتجر من التطبيقات لا فرعَ له فيسقط إلى البيت.
+     */
+    const val DEST_PRICE_SYNC = "price_sync"
+
+    /**
      * **الوجهةُ بعد التنقية** — **نوعٌ ومعرّف.**
      *
      * **و`Home` ليست فشلاً** — **هي الجوابُ الصحيحُ لِما لا وجهةَ له
@@ -105,7 +112,7 @@ object Engagement {
         val type = entity?.trim().orEmpty()
         val id = entityId?.trim().orEmpty()
         return when (type) {
-            DEST_OFFER, DEST_ORDER_CHAT, DEST_ORDER, DEST_MERCHANT ->
+            DEST_OFFER, DEST_ORDER_CHAT, DEST_ORDER, DEST_MERCHANT, DEST_PRICE_SYNC ->
                 if (id.isEmpty()) HOME else Dest(type, id)
             else -> HOME
         }

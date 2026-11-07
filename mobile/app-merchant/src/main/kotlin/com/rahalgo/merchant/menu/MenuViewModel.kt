@@ -90,6 +90,10 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
     var usesAmeen by mutableStateOf(false)
         private set
 
+    /** **كم صنفاً من الأمين ينتظر قسماً** (٢٠٢٦-١١-٠٧) — يظهر زرُّ «أصناف بلا قسم» حين يزيد على صفر. */
+    var pendingCount by mutableStateOf(0)
+        private set
+
     /** **وجهُ كلّ قسمٍ باسمه** — من `platform-sections`، تُقرأ مرّةً. */
     private var faces: Map<String, String?> = emptyMap()
 
@@ -143,6 +147,27 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
         dir = java.io.File(app.cacheDir, "quickphoto"),
         onClosed = { load() },
     )
+
+    /** **أصناف بلا قسم** (قرارُ المالك ٢٠٢٦-١١-٠٧) — صاحبُ المتجر يستعمل الجوّالَ وحدَه. */
+    val pendingSections = com.rahalgo.merchant.pendingsections.PendingSectionsState(
+        scope = viewModelScope,
+        api = api,
+        storeId = { storeId },
+        onClosed = { load() },
+    )
+
+    /**
+     * **يفتح الشاشةَ من نقرة الإشعار** — والمتجرُ قد لا يكون قُرئ بعدُ إن فُتح التطبيقُ من الإشعار.
+     */
+    fun openPendingSections() {
+        viewModelScope.launch {
+            if (storeId.isEmpty()) {
+                runCatching { SelectedStore.resolve(api.stores().stores)?.id.orEmpty() }
+                    .onSuccess { storeId = it }
+            }
+            if (storeId.isNotEmpty()) pendingSections.show()
+        }
+    }
 
     // **قائمةُ المشروبات** (قرارُ المالك ٢٠٢٦-١٠-١٩) — محرّرُها مشتركٌ مع المندوب (`DrinksState`).
     val drinks = com.rahalgo.ui.menu.DrinksState(
@@ -300,6 +325,12 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                 }
                 regroup(api.menu(storeId).flatMap { it.items })
                 error = ""
+                // **عددُ الأصناف بلا قسم** (٢٠٢٦-١١-٠٧) — للأمين وحدَه، وفشلُه لا يُسقط الشاشة.
+                pendingCount = if (usesAmeen) {
+                    runCatching { api.priceSyncPendingCount(storeId) }.getOrDefault(0)
+                } else {
+                    0
+                }
                 // **أوّلَ مرّةٍ وعند تبديل الفرع وحدَهما** — لا مع كلّ نبضة (تدقيقُ ٢٠٢٦-١٠-٢٨).
                 if (presetsFor != storeId) {
                     if (presetsFor != null) presets.reset()

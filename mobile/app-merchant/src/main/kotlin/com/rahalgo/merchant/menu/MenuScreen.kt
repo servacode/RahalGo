@@ -169,6 +169,12 @@ fun MenuScreen(
         return
     }
 
+    // **أصناف بلا قسم تغطّي الشبكةَ** (قرارُ المالك ٢٠٢٦-١١-٠٧).
+    if (vm.pendingSections.open) {
+        com.rahalgo.merchant.pendingsections.PendingSectionsScreen(vm.pendingSections)
+        return
+    }
+
     // **قائمةُ المشروبات تغطّي الشبكةَ كالمحرّر** (٢٠٢٦-١٠-١٩).
     if (vm.drinks.open) {
         BackHandler { vm.drinks.close() }
@@ -244,6 +250,10 @@ private fun ItemsList(
             .takeIf { it > 0 && !vm.suspended }
             ?.let { stringResource(R.string.qp_open, it) },
         onQuickPhoto = { vm.quick.show() },
+        pendingSectionsLabel = vm.pendingCount
+            .takeIf { it > 0 && vm.usesAmeen && !vm.suspended }
+            ?.let { stringResource(R.string.ps_open, it) },
+        onPendingSections = { vm.pendingSections.show() },
         onAdd = {
             // **ومن داخل قسمٍ يُضاف إليه** — فلا يُعيد اختيارَ ما هو فيه.
             when {

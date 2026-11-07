@@ -111,6 +111,9 @@ fun MenuItemsGrid(
     /** **«صوّر الأصناف بلا صورة»** (٢٠٢٦-١١-٠٦) — و`null` لا زرّ (المندوب). */
     quickPhotoLabel: String? = null,
     onQuickPhoto: (() -> Unit)? = null,
+    /** **«أصناف بلا قسم (N)»** (٢٠٢٦-١١-٠٧) — لمن يستعمل الأمين وعنده أصناف بالانتظار، و`null` لا زرّ. */
+    pendingSectionsLabel: String? = null,
+    onPendingSections: (() -> Unit)? = null,
     /** **المشروباتُ للمطاعم وحدَها** (٢٠٢٦-١٠-٣٠) — `false`: لا أداةَ «المشروبات». */
     drinksAllowed: Boolean = true,
     /** **«أضف صنفاً»** مربّعاً بجانب البحث — و`null` لا زرّ (للمتجر تبويبُ إضافة). */
@@ -220,6 +223,14 @@ fun MenuItemsGrid(
                         Modifier.fillMaxWidth().height(IntrinsicSize.Min),
                         horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
                     ) { ToolChip(R.drawable.ic_photo, quickPhotoLabel, onQuickPhoto) }
+                }
+            }
+            if (pendingSectionsLabel != null && onPendingSections != null) {
+                item(span = full) {
+                    Row(
+                        Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+                        horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
+                    ) { ToolChip(R.drawable.ic_custom, pendingSectionsLabel, onPendingSections) }
                 }
             }
         }

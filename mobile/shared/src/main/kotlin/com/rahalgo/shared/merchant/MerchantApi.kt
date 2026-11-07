@@ -174,6 +174,42 @@ class MerchantApi(private val api: ApiClient) {
     suspend fun noPhotoItems(storeId: String, after: String = "", limit: Int = 200): NoPhotoPage =
         api.call("/api/v1/merchant/stores/$storeId/menu/no-photo?limit=$limit" + if (after.isEmpty()) "" else "&after=$after")
 
+    // ══════════════════════════════════════════════════════════════════
+    // **أصناف الأمين بلا قسم** (قرارُ المالك ٢٠٢٦-١١-٠٧) — مرآةُ بطاقة «توزيع الأقسام» بالويب
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **كلُّها تشترط تفعيلَ «برنامج الأمين»** (`requireAmeen`)، وصاحبُ المتجر يستعمل الجوّالَ وحدَه.
+
+    /** **كم صنفاً ينتظر قسماً** — من `groups` (الحقل `pending` وحدَه). */
+    suspend fun priceSyncPendingCount(storeId: String): Int =
+        api.call<PriceSyncGroupsInfo>("/api/v1/merchant/stores/$storeId/price-sync/groups").pending
+
+    /** **صفحةٌ من أصناف الانتظار** — `after` هو `next` الصفحة السابقة، و`q` بحثٌ بالاسم أو الرقم. */
+    suspend fun priceSyncPending(storeId: String, after: String = "", q: String = "", limit: Int = 50): PendingSyncPage {
+        val qs = buildString {
+            append("?limit=").append(limit)
+            if (after.isNotEmpty()) append("&after=").append(java.net.URLEncoder.encode(after, "UTF-8"))
+            if (q.isNotBlank()) append("&q=").append(java.net.URLEncoder.encode(q.trim(), "UTF-8"))
+        }
+        return api.call("/api/v1/merchant/stores/$storeId/price-sync/pending$qs")
+    }
+
+    /** **«وزّع الأصناف تلقائياً»** — من مجموعتها ثمّ من اسمها. */
+    suspend fun priceSyncAutoSort(storeId: String): AutoSortResult =
+        api.call("/api/v1/merchant/stores/$storeId/price-sync/auto-sort", HttpMethod.Post, Unit)
+
+    /** **نقلُ أصنافٍ مختارةٍ لقسم** — والنقلُ بالإيد يدويٌّ لا تردّه المزامنة. */
+    suspend fun priceSyncMove(storeId: String, itemIds: List<String>, sectionId: String): MovedCount =
+        api.call(
+            "/api/v1/merchant/stores/$storeId/price-sync/move",
+            HttpMethod.Post,
+            MoveSyncItemsInput(itemIds, sectionId),
+        )
+
+    /** **«حطّ الباقي بقسم منوّعات»** — كلُّ ما بقي بالانتظار. */
+    suspend fun priceSyncMoveRest(storeId: String): MovedCount =
+        api.call("/api/v1/merchant/stores/$storeId/price-sync/move-rest", HttpMethod.Post, Unit)
+
     suspend fun updateItem(itemId: String, input: MenuItemInput): MenuItem =
         api.call("/api/v1/merchant/menu/items/$itemId", HttpMethod.Patch, input)
 
@@ -934,4 +970,42 @@ data class NoPhotoPage(
     val items: List<NoPhotoItem> = emptyList(),
     val total: Int = 0,
     @SerialName("next_after") val nextAfter: String = "",
+)
+
+/** **ما يهمّ من `price-sync/groups`** — عددُ الأصناف التي تنتظر قسماً. */
+@Serializable
+data class PriceSyncGroupsInfo(val pending: Int = 0)
+
+/** **صنفٌ ينتظر قسماً** مع القسم المقترح من اسمه (إن وُجد). */
+@Serializable
+data class PendingSyncItem(
+    val id: String = "",
+    val name: String = "",
+    @SerialName("external_code") val code: String? = null,
+    val price: Long = 0,
+    @SerialName("suggested_section_id") val suggestedSectionId: String? = null,
+    @SerialName("suggested_section_name") val suggestedSectionName: String? = null,
+)
+
+@Serializable
+data class PendingSyncPage(
+    val items: List<PendingSyncItem> = emptyList(),
+    val total: Int = 0,
+    val next: String = "",
+)
+
+@Serializable
+data class AutoSortResult(
+    @SerialName("by_group") val byGroup: Int = 0,
+    @SerialName("by_name") val byName: Int = 0,
+    val waiting: Int = 0,
+)
+
+@Serializable
+data class MovedCount(val moved: Int = 0)
+
+@Serializable
+data class MoveSyncItemsInput(
+    @SerialName("item_ids") val itemIds: List<String>,
+    @SerialName("platform_section_id") val platformSectionId: String,
 )

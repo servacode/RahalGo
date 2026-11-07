@@ -547,6 +547,33 @@
     <string name="qp_retry">أعد المحاولة</string>
     <string name="qp_done">خلصت كل الأصناف. أحسنت!</string>
     <string name="qp_none">كل أصنافك فيها صور</string>
+    <!-- **أصناف بلا قسم** (قرار المالك ٢٠٢٦-١١-٠٧) — مرآة «توزيع الأقسام» بالويب -->
+    <string name="ps_open">أصناف بلا قسم (%1$d)</string>
+    <string name="ps_title">أصناف بلا قسم</string>
+    <string name="ps_waiting">لسّا بانتظار قسم: %1$d</string>
+    <string name="ps_close">إغلاق</string>
+    <string name="ps_auto">وزّع الأصناف تلقائياً</string>
+    <string name="ps_auto_hint">منحطّ كل صنف بقسمه حسب اسمه. اللي ما عرفنا قسمه بيضل هون لتختاره بإيدك.</string>
+    <string name="ps_sorted">انوزّع: %1$d من اسمها · %2$d من مجموعتها · ضل بالانتظار %3$d</string>
+    <string name="ps_moved">انتقل %1$d صنف</string>
+    <string name="ps_search">دوّر بالاسم أو الرقم</string>
+    <string name="ps_code">الرقم: %1$s</string>
+    <string name="ps_pick">اختار قسم</string>
+    <string name="ps_suggested">مقترح</string>
+    <string name="ps_move">انقل</string>
+    <string name="ps_select">تحديد</string>
+    <string name="ps_select_off">إلغاء التحديد</string>
+    <string name="ps_select_all">حدّد الكل</string>
+    <string name="ps_selected">محدّد: %1$d</string>
+    <string name="ps_move_selected">انقل المحدّد إلى قسم…</string>
+    <string name="ps_sheet_title">اختار القسم</string>
+    <string name="ps_more">عرض المزيد</string>
+    <string name="ps_rest">حطّ الباقي بقسم منوّعات</string>
+    <string name="ps_rest_ask">بدك تنقل كل الأصناف اللي لسّا بانتظار قسم (%1$d) لقسم «منوّعات»؟ بتقدر تغيّر قسم أي صنف بعدين.</string>
+    <string name="ps_rest_yes">إي، انقلهن</string>
+    <string name="ps_empty">كل الأصناف بأقسامها</string>
+    <string name="ps_empty_search">ما في أصناف بهالبحث</string>
+    <string name="ps_retry">أعد المحاولة</string>
     <string name="ok_ameen_saved">تم حفظ اختيارك</string>
     <!-- **أسماءٌ قصيرةٌ لأسطر «متجري»** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) — الطويلةُ تأكل مكانَ القيمة. -->
     <string name="home_row_rate_short">سعر الصرف</string>

@@ -299,6 +299,18 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
         }
     }
 
+    // **وإشعارُ «أصناف بانتظار قسم» يفتح شاشتَها** (قرارُ المالك ٢٠٢٦-١١-٠٧) — تبويبُ الأصناف
+    // ثمّ الشاشةُ فوقه. والوجهةُ تُستهلَك مرّةً كوجهة الطلب.
+    LaunchedEffect(waiting) {
+        if (waiting.type == com.rahalgo.ui.Engagement.DEST_PRICE_SYNC) {
+            com.rahalgo.ui.Opened.take()
+            overlay.clear()
+            menuVm.cancelEdit()
+            tab = Tab.Menu
+            menuVm.openPendingSections()
+        }
+    }
+
     // ══════════════════════════════════════════════════════════════════
     // **جرسُ الطلب الجديد — يتكرّر ما دام طلبٌ ينتظر قراراً** (B2، ٢٠٢٦-٠٩-٢٦)
     // ══════════════════════════════════════════════════════════════════
