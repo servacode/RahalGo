@@ -519,7 +519,7 @@ export default function PriceSyncPage() {
           {info?.stopped ? (
             <p className="text-sm text-ink-muted">{P.agentStopped}</p>
           ) : info?.agent_seen_at && info.agent_error ? (
-            <Alert tone="danger">
+            <Alert tone="error">
               <span className="block font-bold">
                 {fill(P.agentNotSyncing, { ago: fmtDateTime(info.agent_seen_at) })}
               </span>
