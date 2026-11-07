@@ -84,15 +84,17 @@ function descOf(it: MenuItem): string {
  * بلون التمييز، والبقيةُ مؤطَّرة. من `ButtonLink` المركزيّ مع رابط التطبيق (بلا إعادة تحميل).
  */
 function Tool({ icon: Ico, label, href, testId, primary = false }: { icon: Icon; label: string; href: string; testId: string; primary?: boolean }) {
+  if (!primary) {
+    return (
+      <Link href={href} data-testid={testId} className="chip min-h-11 shrink-0">
+        <Ico size={18} className="text-cta-start" />
+        {label}
+      </Link>
+    );
+  }
   return (
-    <ButtonLink
-      Link={Link}
-      href={href}
-      variant={primary ? "primary" : "secondary"}
-      data-testid={testId}
-      className="min-h-11 shrink-0 whitespace-nowrap"
-    >
-      <Ico size={18} className={primary ? "" : "text-primary"} />
+    <ButtonLink Link={Link} href={href} variant="primary" data-testid={testId} className="min-h-11 shrink-0 whitespace-nowrap">
+      <Ico size={18} />
       {label}
     </ButtonLink>
   );
@@ -134,7 +136,7 @@ function ItemCard({ item, disabled, onToggle }: { item: MenuItem; disabled: bool
     ) : null;
   return (
     <li
-      className="panel-lite flex flex-col overflow-hidden transition-colors hover:border-primary-edge"
+      className="item-card"
       data-testid="store-menu-item"
       data-item-id={item.id}
       data-available={item.available}
@@ -153,7 +155,7 @@ function ItemCard({ item, disabled, onToggle }: { item: MenuItem; disabled: bool
         </button>
       ) : (
         <Link href={`/store/menu/${item.id}`} aria-label={`${M.edit} · ${item.name}`} className={`relative block aspect-[4/5] w-full bg-field ${dim}`}>
-          <span className="absolute inset-0 flex items-center justify-center text-3xl font-medium text-ink-muted" aria-hidden>
+          <span className="absolute inset-0 flex items-center justify-center tile-initial text-5xl" aria-hidden>
             {item.name.trim().charAt(0) || "?"}
           </span>
           {badge}
@@ -164,7 +166,7 @@ function ItemCard({ item, disabled, onToggle }: { item: MenuItem; disabled: bool
         <span className={`flex flex-col gap-0.5 px-3 pt-3 ${dim}`}>
           <span className="line-clamp-2 min-h-[2.5rem] text-sm font-bold leading-5 text-ink">{item.name}</span>
           <span className="line-clamp-2 min-h-[2rem] text-xs leading-4 text-ink-muted">{desc}</span>
-          <span className="mt-1 line-clamp-2 text-sm font-bold tabular-nums text-accent-text">{priceLine(item)}</span>
+          <span className="mt-1 line-clamp-2 text-base font-extrabold tabular-nums text-accent-text">{priceLine(item)}</span>
           {item.approved === false && item.review_note && (
             <span className="line-clamp-2 text-xs text-danger">{item.review_note}</span>
           )}
@@ -201,13 +203,13 @@ function RowThumb({ item }: { item: MenuItem }) {
           type="button"
           onClick={() => setViewing(true)}
           aria-label={`${item.name} — ${m.shop.item.zoomBtn}`}
-          className={`block size-12 overflow-hidden rounded-control bg-field ${item.available ? "" : "opacity-50"}`}
+          className={`block size-12 overflow-hidden rounded-tile bg-field ${item.available ? "" : "opacity-50"}`}
         >
           <img src={img} alt="" loading="lazy" className="size-full object-cover" />
         </button>
       ) : (
         <span
-          className="flex size-12 items-center justify-center rounded-control bg-field text-lg font-medium text-ink-muted"
+          className="flex size-12 items-center justify-center rounded-tile tile-initial text-lg"
           title={M.noPhoto}
           aria-label={M.noPhoto}
         >
@@ -425,7 +427,7 @@ export default function MenuPage() {
         subtitle={fill(M.count, { n: fmtNum(total) })}
         actions={
           !suspended && (
-            <div className="rail-x w-full max-w-full lg:w-auto lg:flex-wrap" aria-label={M.tools}>
+            <div className="flex flex-wrap items-center gap-2">
               <Tool
                 icon={IconAdd}
                 label={M.add}
@@ -434,25 +436,31 @@ export default function MenuPage() {
                 primary
               />
               <Tool icon={IconPromos} label={M.addOffer} href="/store/offers?new=1" testId="menu-offer" />
-              <Tool icon={IconBanknote} label={M.toolBulk} href="/store/menu/prices" testId="menu-tool-prices" />
-              <Tool icon={IconOptions} label={M.toolPresets} href="/store/menu/options" testId="menu-tool-options" />
-              {noPhoto > 0 && (
-                <Tool
-                  icon={IconCamera}
-                  label={fill(M.toolQuickPhoto, { n: fmtNum(noPhoto) })}
-                  href="/store/menu/photos"
-                  testId="menu-tool-photos"
-                />
-              )}
-              {drinksAllowed === true && <Tool icon={IconCatDrinks} label={M.toolDrinks} href="/store/menu/drinks" testId="menu-tool-drinks" />}
-              {/* **مزامنةُ الأمين أداةٌ ظاهرة** (٢٠٢٦-١١-٠٧) — كانت سطراً تحت آلاف الأصناف فلا يُرى. */}
-              {store?.uses_ameen === true && (
-                <Tool icon={IconRotate} label={m.store.priceSync.open} href="/store/price-sync" testId="menu-tool-price-sync" />
-              )}
             </div>
           )
         }
       />
+
+      {/* ── أدواتُ المتجر: سطرٌ واحدٌ يُمرَّر على الجوّال ── */}
+      {!suspended && (
+        <div className="rail-x -mx-3 px-3 sm:mx-0 sm:flex-wrap sm:px-0" aria-label={M.tools}>
+          <Tool icon={IconBanknote} label={M.toolBulk} href="/store/menu/prices" testId="menu-tool-prices" />
+          <Tool icon={IconOptions} label={M.toolPresets} href="/store/menu/options" testId="menu-tool-options" />
+          {noPhoto > 0 && (
+            <Tool
+              icon={IconCamera}
+              label={fill(M.toolQuickPhoto, { n: fmtNum(noPhoto) })}
+              href="/store/menu/photos"
+              testId="menu-tool-photos"
+            />
+          )}
+          {drinksAllowed === true && <Tool icon={IconCatDrinks} label={M.toolDrinks} href="/store/menu/drinks" testId="menu-tool-drinks" />}
+          {/* **مزامنةُ الأمين أداةٌ ظاهرة** (٢٠٢٦-١١-٠٧) — كانت سطراً تحت آلاف الأصناف فلا يُرى. */}
+          {store?.uses_ameen === true && (
+            <Tool icon={IconRotate} label={m.store.priceSync.open} href="/store/price-sync" testId="menu-tool-price-sync" />
+          )}
+        </div>
+      )}
 
       {/* ── شريطُ البحث والترشيح: لاصقٌ على الحاسوب ── */}
       <div ref={setBarEl} className="toolbar max-lg:static max-lg:border-0 max-lg:bg-transparent max-lg:p-0 max-lg:shadow-none max-lg:backdrop-blur-none">

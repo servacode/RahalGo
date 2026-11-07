@@ -47,7 +47,7 @@ export {
 export { FormActions } from "./FormActions";
 /** **قائمةُ أفعالٍ منسدلة** — «إجراءات ▾» و«⋯» و«إضافة ▾» (قسمُ الحسابات ٢٠٢٦-١٠-٠٤). */
 export { ActionMenu, type ActionMenuItem } from "./ActionMenu";
-export { PageHead, Kpi, KpiGrid, Chip } from "./console";
+export { PageHead, Kpi, KpiGrid, Chip, SectionTitle, Pill, MiniBars } from "./console";
 export { DataView, ViewToggle, useViewMode, type DataColumn, type ViewMode } from "./dataview";
 /** **رفعُ الصور ومصغَّرُها** — كانا في لوحة الإدارة، **فبوّابةُ المتجر لا
     تراهما**، وصورةُ الصنف مبنيّةٌ في المحرّك بلا يدٍ ترفعها. */

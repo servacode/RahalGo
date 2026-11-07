@@ -36,6 +36,7 @@ import {
   IconUser,
   IconUsers,
   IconWallet,
+  Pill,
 } from "@rahalgo/ui";
 import { mediaUrl } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
@@ -118,45 +119,44 @@ export default function StoreSidebar({ path, selfManage }: { path: string; selfM
         : !store.open_now
           ? m.store.state.closedHours
           : m.store.home.openNow;
-  const dot = !store
-    ? ""
+  const tone: "good" | "attention" | "danger" | undefined = !store
+    ? undefined
     : suspended
-      ? "bg-danger-solid"
-      : store.emergency_closed
-        ? "bg-warning-solid"
-        : !store.open_now
-          ? "bg-ink-dim"
-          : "bg-success-solid";
+      ? "danger"
+      : store.emergency_closed || !store.open_now
+        ? "attention"
+        : "good";
   const logo = store ? mediaUrl(store.logo_thumb_url) : null;
 
   return (
     <aside
-      className="panel sticky top-3 m-3 me-0 hidden h-[calc(100vh-1.5rem)] w-64 shrink-0 flex-col overflow-hidden lg:flex"
+      className="panel sticky top-3 m-3 me-0 hidden h-[calc(100vh-1.5rem)] w-[17rem] shrink-0 flex-col overflow-hidden lg:flex"
       data-testid="store-sidebar"
     >
       <Link
         href="/store"
         aria-label={N.panel}
-        className="flex items-center gap-3 border-b border-line-soft p-4 transition-colors hover:bg-row-hover"
+        className="console-hero m-3 flex items-center gap-3 p-3.5 transition-opacity hover:opacity-95"
       >
         {logo ? (
-          <img src={logo} alt="" className="size-11 shrink-0 rounded-control object-cover" />
+          <img src={logo} alt="" className="hero-logo object-cover" data-size="sm" />
         ) : (
-          <BrandMark size={44} disc />
+          <span className="hero-logo" data-size="sm">
+            {(store?.name ?? "").slice(0, 1) || <BrandMark size={32} />}
+          </span>
         )}
-        <span className="flex min-w-0 flex-1 flex-col">
-          <span className="truncate text-sm font-bold">{store?.name ?? N.panel}</span>
+        <span className="flex min-w-0 flex-1 flex-col items-start gap-1.5">
+          <span className="w-full truncate text-sm font-extrabold">{store?.name ?? N.panel}</span>
           {store && (
-            <span className="mt-0.5 flex items-center gap-1.5 text-xs text-ink-muted" data-testid="store-sidebar-state">
-              <span className={`size-2 shrink-0 rounded-badge ${dot}`} aria-hidden />
-              <span className="truncate">{state}</span>
+            <span data-testid="store-sidebar-state">
+              <Pill tone={tone}>{state}</Pill>
             </span>
           )}
         </span>
       </Link>
 
       {!suspended && (
-        <div className="px-3 pt-3">
+        <div className="px-3">
           <ButtonLink Link={Link} href={addHref} className="w-full" data-testid="store-sidebar-add">
             <IconAdd size={18} />
             {N.addItem}
@@ -164,25 +164,16 @@ export default function StoreSidebar({ path, selfManage }: { path: string; selfM
         </div>
       )}
 
-      <nav aria-label={N.sidebar} className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-3">
+      <nav aria-label={N.sidebar} className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-3 pt-4">
         {groups.map((g) => (
-          <div key={g.key} className="flex flex-col gap-0.5">
+          <div key={g.key} className="flex flex-col gap-1">
             <p className="px-3 pb-1 text-xs font-bold text-ink-dim">{g.title}</p>
             {g.items.map((it) => {
               const Ico = it.icon;
               const active = it.href === activeHref;
               return (
-                <Link
-                  key={it.href}
-                  href={it.href}
-                  aria-current={active ? "page" : undefined}
-                  className={`flex min-h-10 items-center gap-3 rounded-control border-s-2 px-3 py-2 text-sm transition-colors ${
-                    active
-                      ? "border-accent bg-primary-tint font-bold text-ink"
-                      : "border-transparent text-ink-muted hover:bg-row-hover hover:text-ink"
-                  }`}
-                >
-                  <Ico size={18} strokeWidth={active ? 2.4 : 1.8} />
+                <Link key={it.href} href={it.href} aria-current={active ? "page" : undefined} className="nav-link">
+                  <Ico size={20} strokeWidth={active ? 2.3 : 1.8} className={active ? "text-cta-start" : ""} />
                   <span className="min-w-0 flex-1 truncate">{it.label}</span>
                   {!!it.count && <CountBadge count={it.count} tone="danger" />}
                 </Link>

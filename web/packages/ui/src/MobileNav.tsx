@@ -72,6 +72,7 @@ export function MobileNav({
 }) {
   return (
     <nav
+      data-mobile-nav
       /* **وشريطُ الجوّال السفليُّ من القشرة** — (طلبُ المالك ٢٠٢٦-٠٨-١٧):
           **هو فوترُ الهاتف**، ومن خفّف الفوترَ على الحاسوب وتركه ثقيلاً على
           الجوّال خفّف ما لا يراه أكثرُ الناس. */
@@ -138,6 +139,7 @@ export function MobileNavSpacer() {
   return (
     <div
       aria-hidden
+      data-mobile-nav-spacer
       className="h-[3.75rem] md:hidden"
       style={{ marginBottom: "env(safe-area-inset-bottom)" }}
     />

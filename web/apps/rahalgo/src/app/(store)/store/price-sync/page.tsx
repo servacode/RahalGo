@@ -20,7 +20,7 @@ import {
   fmtNum,
   fmtDateTime,
 } from "@rahalgo/i18n";
-import { Alert, Badge, Button, Checkbox, Confirm, Kpi, KpiGrid, LoadingState, Select } from "@rahalgo/ui";
+import { Alert, Button, Checkbox, Confirm, IconCheck, IconRotate, IconUpload, Kpi, KpiGrid, LoadingState, Pill, Select } from "@rahalgo/ui";
 import { api, apiFile } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import { fill } from "@/lib/customer/texts";
@@ -314,19 +314,22 @@ export default function PriceSyncPage() {
       {/* ══ **حالةُ برنامج الأمين أوّلُ ما في الصفحة** (ملاحظةُ المالك ٢٠٢٦-١١-٠٧) —
           الحالةُ وآخرُ مزامنةٍ فعليّةٍ وأفعالُها كلُّها في لوحٍ واحدٍ فوق العمودين. ══ */}
       <section
-        className="panel flex flex-col gap-4 p-4 lg:p-5"
+        className="panel overflow-hidden"
         aria-label={P.agentTitle}
         data-testid="sync-agent"
         data-state={st.key}
       >
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <div className="flex items-start gap-4 p-4 lg:p-5">
+          <span className="icon-chip size-12 rounded-2xl lg:size-14" data-tone={st.tone} aria-hidden>
+            <IconRotate size={26} />
+          </span>
+          <div className="flex min-w-0 flex-1 flex-col gap-2">
             <span className="flex flex-wrap items-center gap-2">
-              <h2 className="console-h2">{P.agentTitle}</h2>
-              <Badge variant={st.badge}>{st.label}</Badge>
+              <h2 className="console-h2 lg:text-lg">{P.agentTitle}</h2>
+              <Pill tone={st.tone}>{st.label}</Pill>
             </span>
             {st.key === "error" ? (
-              <div className="rounded-control border border-danger-edge bg-danger-tint p-3 text-sm" role="alert">
+              <div className="rounded-2xl border border-danger-edge bg-danger-tint p-3 text-sm" role="alert">
                 <span className="block font-bold text-danger">{st.detail}</span>
                 <span className="block text-ink">{st.why}</span>
               </div>
@@ -345,38 +348,43 @@ export default function PriceSyncPage() {
             {last && <p className="console-meta">{last}</p>}
             {needsInstall && <p className="text-sm text-ink-muted">{P.agentSteps}</p>}
           </div>
+        </div>
 
-          <div className="flex flex-col gap-3 lg:w-80 lg:shrink-0">
-            <div className="flex flex-wrap gap-2">
-              {linked &&
-                (info?.paused ? (
-                  <Button className="min-h-11 flex-1" onClick={() => void setPaused(false)} disabled={busy}>
-                    {P.agentResume}
-                  </Button>
-                ) : (
-                  <>
-                    {info?.sync_requested ? (
-                      <p className="flex min-h-11 flex-1 items-center text-sm font-bold text-success">{P.syncAsked}</p>
-                    ) : (
-                      <Button className="min-h-11 flex-1" onClick={() => void syncNow()} disabled={busy}>
-                        {P.syncNow}
-                      </Button>
-                    )}
-                    <Button className="min-h-11 flex-1" variant="secondary" onClick={() => void setPaused(true)} disabled={busy}>
-                      {P.agentStop}
+        <div className="flex flex-col gap-3 border-t border-line-soft bg-field p-4 lg:flex-row lg:flex-wrap lg:items-end lg:px-5">
+          <div className="flex flex-wrap gap-2">
+            {linked &&
+              (info?.paused ? (
+                <Button className="min-h-11" onClick={() => void setPaused(false)} disabled={busy}>
+                  {P.agentResume}
+                </Button>
+              ) : (
+                <>
+                  {info?.sync_requested ? (
+                    <p className="flex min-h-11 items-center gap-2 px-2 text-sm font-bold text-success">
+                      <IconCheck size={18} />
+                      {P.syncAsked}
+                    </p>
+                  ) : (
+                    <Button className="min-h-11" onClick={() => void syncNow()} disabled={busy}>
+                      {P.syncNow}
                     </Button>
-                  </>
-                ))}
-              <Button
-                className="min-h-11 flex-1"
-                variant={needsInstall ? "primary" : "secondary"}
-                onClick={() => void download()}
-                disabled={busy}
-              >
-                {busy ? P.agentDownloading : P.agentDownload}
-              </Button>
-            </div>
-            {info?.has_token && !info.stopped && (
+                  )}
+                  <Button className="min-h-11" variant="secondary" onClick={() => void setPaused(true)} disabled={busy}>
+                    {P.agentStop}
+                  </Button>
+                </>
+              ))}
+            <Button
+              className="min-h-11"
+              variant={needsInstall ? "primary" : "secondary"}
+              onClick={() => void download()}
+              disabled={busy}
+            >
+              {busy ? P.agentDownloading : P.agentDownload}
+            </Button>
+          </div>
+          {info?.has_token && !info.stopped && (
+            <div className="lg:w-60">
               <Select
                 id="sync-interval"
                 label={P.interval}
@@ -390,7 +398,9 @@ export default function PriceSyncPage() {
                   </option>
                 ))}
               </Select>
-            )}
+            </div>
+          )}
+          <div className="flex min-w-0 flex-1 flex-col gap-1 lg:items-end">
             <p className="console-meta">{P.agentRedownload}</p>
             {/* **الحذفُ من الكمبيوتر أقلُّ بروزاً ومؤكَّد** — بعده تحميلٌ جديد (٢٠٢٦-١١-٠٧). */}
             {linked && (
@@ -421,7 +431,10 @@ export default function PriceSyncPage() {
       {/* ══ عمودان على الحاسوب: الملفّ والأعمدة والتقرير | توزيع الأقسام. جوّالاً متتابعان. ══ */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start lg:gap-5">
         <div className="flex min-w-0 flex-col gap-4">
-          <label className="flex min-h-28 cursor-pointer flex-col items-center justify-center gap-2 surface rounded-card border border-dashed border-accent p-6 text-center transition-colors hover:bg-row-hover focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent">
+          <label className="panel flex min-h-32 cursor-pointer flex-col items-center justify-center gap-3 dropzone p-6 text-center transition-colors hover:bg-row-hover focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent">
+            <span className="icon-chip size-12 rounded-2xl" data-tone="accent" aria-hidden>
+              <IconUpload size={24} />
+            </span>
             <span className="font-bold text-accent-text">{busy ? P.reading : P.pick}</span>
             {file && (
               <span className="console-meta" dir="ltr">

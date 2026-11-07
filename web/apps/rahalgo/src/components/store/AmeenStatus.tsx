@@ -16,7 +16,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { getMessages, defaultLocale, fmtDateTime } from "@rahalgo/i18n";
-import { Badge, ButtonLink, IconRotate } from "@rahalgo/ui";
+import { ButtonLink, IconRotate, Pill } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import { fill } from "@/lib/customer/texts";
@@ -126,25 +126,25 @@ export function AmeenStatusTile({ className = "" }: { className?: string }) {
   const last = lastRealSync(info);
   return (
     <section
-      className={`panel flex flex-wrap items-center gap-3 p-3 lg:p-4 ${className}`}
+      className={`panel flex flex-wrap items-center gap-3 p-4 lg:px-5 ${className}`}
       aria-label={K.ameenTile}
       data-testid="ameen-status-tile"
       data-state={st.key}
     >
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-control bg-field text-primary" aria-hidden>
-        <IconRotate size={20} />
+      <span className="icon-chip size-11" data-tone={st.tone} aria-hidden>
+        <IconRotate size={22} />
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="flex flex-wrap items-center gap-2">
           <h2 className="console-h2">{K.ameenTile}</h2>
-          <Badge variant={st.badge}>{st.label}</Badge>
+          <Pill tone={st.tone}>{st.label}</Pill>
         </span>
-        <p className={`console-meta ${st.key === "error" ? "!text-danger" : ""}`}>
+        <p className={`console-meta line-clamp-2 lg:line-clamp-none ${st.key === "error" ? "!text-danger" : ""}`}>
           {st.key === "error" && st.why ? `${st.detail} — ${st.why}` : st.detail}
         </p>
-        {last && st.key !== "stopped" && <p className="console-meta">{last}</p>}
+        {last && st.key !== "stopped" && <p className="console-meta hidden sm:block">{last}</p>}
       </div>
-      <ButtonLink Link={Link} href="/store/price-sync" variant="secondary" className="min-h-11 shrink-0">
+      <ButtonLink Link={Link} href="/store/price-sync" variant="secondary" className="min-h-11 w-full shrink-0 sm:w-auto">
         {K.ameenOpen}
       </ButtonLink>
     </section>

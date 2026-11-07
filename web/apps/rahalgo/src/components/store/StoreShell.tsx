@@ -175,7 +175,7 @@ function Shell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen">
+    <div className="console-root flex min-h-screen">
       {/* **على `lg` فما فوق: سايدبارٌ ثابتٌ في جهة البداية** — وتحتها الجوّال والتابلت كما كانا. */}
       <StoreSidebar path={path} selfManage={selfManage} />
       <div className="flex min-w-0 flex-1 flex-col">

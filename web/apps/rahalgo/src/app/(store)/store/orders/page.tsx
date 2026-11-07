@@ -24,7 +24,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, errorText, fmtMoney, fmtNum, fmtSince } from "@rahalgo/i18n";
-import { Alert, Badge, Button, EmptyState, IconOrder, IconWarning, InvoiceLines, LoadingState, Modal, PageHead, ReloadState, Textarea } from "@rahalgo/ui";
+import { Alert, Button, EmptyState, IconHourglass, IconOrder, IconWarning, InvoiceLines, LoadingState, Modal, PageHead, Pill, ReloadState, Textarea } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import { useStoreOrders } from "@/lib/store/orders";
@@ -37,13 +37,14 @@ const O = m.store.orders;
 const STATUS = O.status as Record<string, string>;
 
 /** **نبرةُ شارة الحال بمجموعة الطلب** — والنصُّ يقول الحالَ، فلا يعتمد المعنى على اللون وحدَه. */
-const BADGE: Record<OrderGroup, "danger" | "warning" | "primary" | "neutral"> = {
+const TONE: Record<OrderGroup, "danger" | "attention" | "info" | undefined> = {
   new: "danger",
-  preparing: "warning",
-  waiting: "primary",
-  closed: "neutral",
+  preparing: "attention",
+  waiting: "info",
+  closed: undefined,
 };
-/** **نقطةُ لون المجموعة في رأس العمود.** */
+/** دقائقُ الانتظار التي يصير بعدها الطلبُ الجديدُ «متأخّراً» فيُلوَّن عدّادُه. */
+const LATE_MIN = 5;
 const DOT: Record<OrderGroup, string> = {
   new: "bg-danger-solid",
   preparing: "bg-warning-solid",
@@ -109,23 +110,32 @@ function OrderCard({
   // **عمرُ الطلب بكلماتٍ كاملةٍ كالتطبيق** (`Since.text`): «منذ 5 دقائق» · «منذ ساعتين» — لا «5 د» و«2 س».
   // وفارغٌ إن لم يُفهم الوقت: لا يُكتب «منذ 0».
   const age = ended ? "" : fmtSince(order.sent_to_merchant_at ?? order.created_at, now);
+  const late = isNew && now - new Date(order.sent_to_merchant_at ?? order.created_at).getTime() > LATE_MIN * 60_000;
   /* **الجديدُ يُرى قبل أن يُقرأ**: حدُّ بدايته أحمرُ سميكٌ وأرضيّتُه محمرّة، والمنتهي باهت. */
   const tone = isNew
-    ? "border-danger-edge border-s-4 bg-danger-tint"
+    ? "border-danger-edge bg-danger-tint shadow-[inset_0_3px_0_var(--color-danger-solid)]"
     : ended
       ? "opacity-80"
       : "";
 
   return (
-    <article className={`panel-lite flex flex-col gap-3 p-4 ${tone}`} data-testid="store-order">
-      <header className="flex items-center gap-2">
-        <span className="console-title" dir="ltr">
+    <article className={`panel-lite flex flex-col gap-3.5 p-4 ${tone}`} data-testid="store-order">
+      <header className="flex items-center gap-2.5">
+        <span className="icon-chip" data-tone={TONE[groupOf(order)]} aria-hidden>
+          <IconOrder size={18} />
+        </span>
+        <span className="text-xl font-extrabold tabular-nums" dir="ltr">
           #{order.number}
         </span>
-        {age && <span className="console-meta">{age}</span>}
-        <Badge variant={BADGE[groupOf(order)]} className="ms-auto px-3 py-1 font-bold">
-          {STATUS[order.status] ?? O.readyDone}
-        </Badge>
+        {age && (
+          <Pill tone={late ? "danger" : undefined} dot={false}>
+            <IconHourglass size={13} />
+            {age}
+          </Pill>
+        )}
+        <span className="ms-auto">
+          <Pill tone={TONE[groupOf(order)]}>{STATUS[order.status] ?? O.readyDone}</Pill>
+        </span>
       </header>
 
       {/* **طلبٌ مشترك**: قسمُك فقط، بلا اسم أيّ محلٍّ آخر (٢٠٢٦-١١-٠٦). */}
@@ -157,18 +167,18 @@ function OrderCard({
       {noPayout(order.status) ? (
         <p className="border-t border-line-soft pt-2 text-sm text-ink-muted">{O.noPayout}</p>
       ) : (
-        <dl className="flex flex-col gap-1 border-t border-line-soft pt-2 text-sm">
-          <div className="flex justify-between">
+        <dl className="flex flex-col gap-1.5 border-t border-line-soft pt-3 text-sm">
+          <div className="flex justify-between text-ink-muted">
             <dt>{O.sum}</dt>
-            <dd>{fmtMoney(order.subtotal)}</dd>
+            <dd className="tabular-nums">{fmtMoney(order.subtotal)}</dd>
           </div>
           <div className="flex justify-between text-ink-muted">
             <dt>{fill(O.cut, { n: fmtNum(order.commission_percent_exact ?? order.commission_percent) })}</dt>
-            <dd>− {fmtMoney(order.platform_commission)}</dd>
+            <dd className="tabular-nums">− {fmtMoney(order.platform_commission)}</dd>
           </div>
-          <div className="flex justify-between border-t border-line-soft pt-1 font-bold text-accent-text">
+          <div className="mt-1 flex items-baseline justify-between rounded-tile bg-field px-3 py-2 font-bold text-accent-text">
             <dt>{O.due}</dt>
-            <dd>{fmtMoney(order.merchant_net)}</dd>
+            <dd className="text-lg font-extrabold tabular-nums">{fmtMoney(order.merchant_net)}</dd>
           </div>
         </dl>
       )}
@@ -179,7 +189,7 @@ function OrderCard({
             type="button"
             disabled={busy}
             onClick={() => onAct(order, "accept")}
-            className="min-h-12 w-full rounded-control bg-success px-4 py-3 text-base font-bold text-on-bright transition-opacity hover:opacity-90 disabled:opacity-60"
+            className="min-h-12 w-full rounded-2xl bg-success px-4 py-3 text-base font-extrabold text-on-bright transition-opacity hover:opacity-90 disabled:opacity-60"
           >
             {O.accept}
           </button>
@@ -302,12 +312,12 @@ export default function OrdersPage() {
             <section
               key={g}
               className={`flex min-w-0 flex-col gap-3 ${list.length === 0 ? "hidden lg:flex" : ""} ${
-                g === "closed" ? "lg:col-span-3" : "lg:rounded-card lg:border lg:border-line-soft lg:bg-field lg:p-3"
+                g === "closed" ? "lg:col-span-3" : "lg:rounded-3xl lg:border lg:border-line-soft lg:bg-field lg:p-3"
               }`}
               aria-label={fill(O.groups[g], { n: fmtNum(list.length) })}
             >
               <h3 className={`console-h2 flex items-center gap-2 pt-2 lg:pt-0 ${g === "new" ? "text-ink" : "text-ink-muted"}`}>
-                <span className={`size-2.5 shrink-0 rounded-badge ${DOT[g]}`} aria-hidden />
+                <span className={`size-2.5 shrink-0 rounded-badge ${DOT[g]} ${g === "new" && list.length > 0 ? "motion-safe:animate-pulse" : ""}`} aria-hidden />
                 {fill(O.groups[g], { n: fmtNum(list.length) })}
               </h3>
               {list.length === 0 && <p className="py-6 text-center text-sm text-ink-muted">{O.colEmpty}</p>}

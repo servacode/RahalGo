@@ -69,7 +69,7 @@ export function Kpi({
   sub?: ReactNode;
   /** **وحدةٌ صغيرةٌ بعد الرقم** (ل.س) — فلا تأكل عرضَ الرقم الكبير. */
   unit?: string;
-  tone?: "good" | "attention" | "danger" | "accent";
+  tone?: "good" | "attention" | "danger" | "accent" | "violet";
   href?: string;
   Link?: ComponentType<{ href: string; className?: string; "data-tone"?: string; "data-testid"?: string; children: ReactNode }>;
   testId?: string;
@@ -78,11 +78,15 @@ export function Kpi({
 }) {
   const body = (
     <>
-      <span className="flex items-center justify-between gap-2">
-        <span className="console-meta truncate font-bold">{label}</span>
-        {Icon && <Icon size={18} className="shrink-0 text-ink-muted" />}
+      <span className="flex items-center gap-2.5">
+        {Icon && (
+          <span className="icon-chip" data-tone={tone}>
+            <Icon size={18} />
+          </span>
+        )}
+        <span className="console-meta min-w-0 flex-1 truncate text-sm font-bold">{label}</span>
       </span>
-      <span className="flex flex-wrap items-baseline gap-x-1.5">
+      <span className="mt-1 flex flex-wrap items-baseline gap-x-1.5">
         <span className="kpi-figure">{typeof value === "number" ? fmtNum(value) : value}</span>
         {unit && <span className="console-meta">{unit}</span>}
       </span>
@@ -130,5 +134,73 @@ export function Chip({
       {children}
       {count != null && <span className="chip-count">{fmtNum(count)}</span>}
     </button>
+  );
+}
+
+/** **ترويسةُ قسمٍ** — عنوانٌ صغيرٌ بخطٍّ يمتدّ بعده. */
+export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
+  return (
+    <div className="flex items-center gap-3">
+      <h2 className="console-section min-w-0 flex-1">{children}</h2>
+      {action}
+    </div>
+  );
+}
+
+/** **حبّةُ حالة** — نقطةٌ ونصّ (المعنى بالنصّ لا باللون وحدَه). */
+export function Pill({
+  tone,
+  dot = true,
+  children,
+  testId,
+}: {
+  tone?: "good" | "attention" | "danger" | "accent" | "info" | "violet";
+  dot?: boolean;
+  children: ReactNode;
+  testId?: string;
+}) {
+  return (
+    <span className="pill" data-tone={tone} data-testid={testId}>
+      {dot && <span className="size-1.5 shrink-0 rounded-full bg-current" aria-hidden />}
+      {children}
+    </span>
+  );
+}
+
+/**
+ * **رسمٌ مصغَّرٌ بالأعمدة** — لا مكتبةَ رسمٍ: أعمدةٌ بارتفاعٍ نسبيٍّ وتسميةٌ تحت كلٍّ منها،
+ * واليومُ الأخيرُ بتدرّج العلامة، والزمنُ يمضي من اليمين إلى اليسار كالعربيّة. القيمُ الصفريّةُ تبقى عموداً قصيراً فيُقرأ الأسبوعُ كاملاً.
+ */
+export function MiniBars({
+  data,
+  height = 120,
+  ariaLabel,
+}: {
+  data: { label: string; value: number; title?: string }[];
+  height?: number;
+  ariaLabel: string;
+}) {
+  const max = Math.max(1, ...data.map((d) => d.value));
+  return (
+    <div role="img" aria-label={ariaLabel} className="flex w-full flex-col gap-2">
+      <div className="flex items-end gap-2" style={{ height }}>
+        {data.map((d, i) => (
+          <div
+            key={`${d.label}-${i}`}
+            className="mini-bar"
+            data-now={i === data.length - 1}
+            title={d.title}
+            style={{ ["--v" as string]: d.value / max }}
+          />
+        ))}
+      </div>
+      <div className="flex gap-2">
+        {data.map((d, i) => (
+          <span key={`${d.label}-${i}`} className="console-meta flex-1 text-center" aria-hidden>
+            {d.label}
+          </span>
+        ))}
+      </div>
+    </div>
   );
 }

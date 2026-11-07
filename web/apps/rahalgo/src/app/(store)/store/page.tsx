@@ -60,6 +60,7 @@ import {
   Kpi,
   KpiGrid,
   LoadingState,
+  MiniBars,
   Modal,
   Select,
   useLiveData,
@@ -99,14 +100,14 @@ function Identity({ store, suspended, onLogo }: { store: MerchantStore; suspende
   const [draft, setDraft] = useState<string | null>(null);
   const logo = mediaUrl(store.logo_thumb_url);
   return (
-    <section className="panel flex flex-col gap-3 p-4 lg:col-span-2 lg:justify-center" aria-label={HM.groupStore}>
+    <section className="console-hero flex flex-col gap-3 p-4 lg:col-span-2 lg:justify-center lg:p-6" aria-label={HM.groupStore}>
       <div className="flex items-center gap-4">
         <button
           type="button"
           onClick={onLogo}
           disabled={suspended}
           aria-label={HM.changeLogo}
-          className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-card border border-line bg-field heading-page text-primary lg:size-20"
+          className="hero-logo text-ink"
         >
           {logo ? <img src={logo} alt="" className="h-full w-full object-cover" /> : store.name.slice(0, 1) || "?"}
         </button>
@@ -121,9 +122,9 @@ function Identity({ store, suspended, onLogo }: { store: MerchantStore; suspende
               ))}
             </Select>
           ) : (
-            <h1 className="console-title line-clamp-2">{store.name}</h1>
+            <h1 className="hero-name line-clamp-2">{store.name}</h1>
           )}
-          <p className="console-meta mt-1">{S.nav.panel}</p>
+          <p className="mt-1.5 hidden text-sm text-ink-muted sm:block">{S.nav.panel}</p>
         </div>
         {!suspended && draft == null && (
           <button
@@ -194,7 +195,7 @@ function StatusPanel({ store, suspended }: { store: MerchantStore; suspended: bo
     : store.emergency_closed
       ? "border-warning-edge bg-warning-tint text-warning"
       : !store.open_now
-        ? "border-line bg-field text-ink-muted"
+        ? "border-line text-ink-muted"
         : "border-success-edge bg-success-tint text-success";
   const Icon: IconT = suspended ? IconLock : store.emergency_closed || !store.open_now ? IconBlock : IconStore;
 
@@ -218,13 +219,13 @@ function StatusPanel({ store, suspended }: { store: MerchantStore; suspended: bo
 
   const reopen = store.emergency_closed;
   return (
-    <section className={`flex flex-col justify-center gap-3 rounded-card border p-4 ${tone}`} data-testid="store-status" aria-label={HM.statusLabel}>
-      <div className="flex items-center gap-3">
-        <span className="flex size-11 shrink-0 items-center justify-center rounded-badge bg-surface">
-          <Icon size={24} />
+    <section className={`panel flex items-center gap-3 p-3 lg:flex-col lg:items-stretch lg:justify-center lg:gap-4 lg:p-5 ${tone}`} data-testid="store-status" aria-label={HM.statusLabel}>
+      <div className="flex min-w-0 flex-1 items-center gap-3 lg:flex-none">
+        <span className="icon-chip size-12 rounded-2xl" data-tone={suspended ? "danger" : store.emergency_closed ? "attention" : !store.open_now ? undefined : "good"}>
+          <Icon size={26} />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="heading-card">{label}</p>
+          <p className="text-lg font-extrabold">{label}</p>
           <p className="console-meta">{sub}</p>
         </div>
       </div>
@@ -233,7 +234,7 @@ function StatusPanel({ store, suspended }: { store: MerchantStore; suspended: bo
           type="button"
           disabled={busy}
           onClick={() => (reopen ? void setClosed(false) : setAsking(true))}
-          className={`flex min-h-11 w-full items-center justify-center gap-2 rounded-control border bg-surface px-4 text-sm font-bold transition-colors hover:bg-row-hover disabled:opacity-60 ${
+          className={`flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-tile border bg-surface px-3 text-sm font-bold transition-colors hover:bg-row-hover disabled:opacity-60 lg:w-full lg:px-4 ${
             reopen ? "border-success-edge text-success" : "border-danger-edge text-danger"
           }`}
         >
@@ -395,16 +396,14 @@ function QuickAction({
   return (
     <Link
       href={href}
-      className={`relative flex min-h-16 min-w-0 items-center gap-3 rounded-card border px-4 py-3 text-start transition-colors ${
-        primary
-          ? "border-accent bg-accent text-on-bright hover:opacity-90"
-          : "border-line-soft bg-surface shadow-[var(--shadow-e1)] hover:bg-row-hover"
+      className={`item-card relative min-h-[4.5rem] min-w-0 flex-row items-center gap-3 px-4 py-3 text-start ${
+        primary ? "border-transparent bg-gradient-to-l from-cta-start to-accent text-on-bright" : ""
       } ${className}`}
     >
-      <span className={`flex size-10 shrink-0 items-center justify-center rounded-control ${primary ? "bg-on-bright text-accent-text" : ICON_TINT}`}>
+      <span className="icon-chip size-11" data-solid={primary ? "" : undefined}>
         <Icon size={22} />
       </span>
-      <span className="min-w-0 flex-1 text-sm font-bold">{label}</span>
+      <span className="min-w-0 flex-1 text-sm font-extrabold">{label}</span>
       {badge > 0 && (
         <span className="rounded-badge bg-danger-solid px-2 py-0.5 text-xs font-bold tabular-nums text-on-solid">{fmtNum(badge)}</span>
       )}
@@ -477,6 +476,68 @@ function hoursValue(store: MerchantStore, hours: DayHours[] | null): string | nu
 // ══════════════════════════════════════════════════════════════════════
 // الصفحة
 // ══════════════════════════════════════════════════════════════════════
+
+function WeekPanel({ storeId }: { storeId: string }) {
+  const load = useCallback(async () => {
+    const days = Array.from({ length: 7 }, (_, i) => damascusDay(Date.now() - (6 - i) * 86_400_000));
+    const rows = await Promise.all(
+      days.map((d) =>
+        api<StoreReport>(`/api/v1/merchant/stores/${storeId}/reports?from=${d}&to=${d}`).then(
+          (r) => ({ day: d, sales: r.summary.sales, orders: r.summary.orders }),
+          () => ({ day: d, sales: 0, orders: 0 }),
+        ),
+      ),
+    );
+    return rows;
+  }, [storeId]);
+  const { data } = useLiveData(load, ["order"], [storeId]);
+  const total = (data ?? []).reduce((a, r) => a + r.sales, 0);
+  const orders = (data ?? []).reduce((a, r) => a + r.orders, 0);
+  return (
+    <section className="panel flex flex-col gap-4 p-5 lg:col-span-3 lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)] lg:items-center lg:gap-8" aria-label={HM.weekTitle} data-testid="store-week">
+      <div className="flex flex-col gap-3">
+        <h2 className="console-h2 flex items-center gap-2">
+          <span className="icon-chip" data-tone="violet">
+            <IconTrendUp size={18} />
+          </span>
+          {HM.weekTitle}
+        </h2>
+        <div>
+          <p className="console-meta">{HM.weekSales}</p>
+          <p className="flex items-baseline gap-1.5">
+            <span className="kpi-figure">{fmtNum(total)}</span>
+            <span className="console-meta">{m.common.currency}</span>
+          </p>
+        </div>
+        <div className="flex gap-6">
+          <div>
+            <p className="console-meta">{HM.weekOrders}</p>
+            <p className="text-lg font-extrabold tabular-nums">{fmtNum(orders)}</p>
+          </div>
+          <div>
+            <p className="console-meta">{HM.weekAvg}</p>
+            <p className="text-lg font-extrabold tabular-nums">{fmtNum(Math.round(total / 7))}</p>
+          </div>
+        </div>
+      </div>
+      <div className="min-w-0">
+        {data ? (
+          <MiniBars
+            ariaLabel={HM.weekChart}
+            data={data.map((r, i) => ({
+              label: i === data.length - 1 ? HM.today : fmtNum(Number(r.day.slice(8, 10))),
+              value: r.sales,
+              title: `${r.day} — ${fmtMoney(r.sales)}`,
+            }))}
+          />
+        ) : (
+          <LoadingState variant="inline" />
+        )}
+        {data && total === 0 && <p className="console-meta mt-3 text-center">{HM.weekNone}</p>}
+      </div>
+    </section>
+  );
+}
 
 export default function StoreHome() {
   const { store, selfManage } = useStore();
@@ -552,7 +613,7 @@ export default function StoreHome() {
       <AmeenStatusTile className="lg:col-span-3" />
 
       <section className="flex flex-col gap-2 lg:col-span-3" aria-label={HM.today}>
-        <h2 className="console-h2 px-1">{HM.today}</h2>
+        <h2 className="console-section">{HM.today}</h2>
         {loading && !report ? (
           <LoadingState variant="stats" rows={4} />
         ) : (
@@ -595,6 +656,8 @@ export default function StoreHome() {
         )}
       </section>
 
+      {!suspended && <WeekPanel storeId={id} />}
+
       {selfManage && <LiveOrders />}
       {selfManage && <NeedsPanel needs={needs} wide={false} />}
 
@@ -603,7 +666,7 @@ export default function StoreHome() {
 
       {!suspended && (
         <section className="flex flex-col gap-2 lg:col-span-3" aria-label={HM.quickTitle}>
-          <h2 className="console-h2 px-1">{HM.quickTitle}</h2>
+          <h2 className="console-section">{HM.quickTitle}</h2>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
             <QuickAction href="/store/menu/new" icon={IconAdd} label={HM.quickAdd} primary className="col-span-2 lg:col-span-1" />
             <QuickAction href="/store/offers" icon={IconPromos} label={HM.quickOffers} />
