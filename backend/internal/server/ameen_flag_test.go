@@ -34,13 +34,18 @@ func TestAmeenFlag_DefaultOffAndRefusals(t *testing.T) {
 		t.Fatal("expected off")
 	}
 	for name, h := range map[string]http.HandlerFunc{
-		"info":     f.srv.handleMerchantPriceSyncInfo,
-		"file":     f.srv.handleMerchantPriceSyncFile,
-		"token":    f.srv.handleMerchantPriceSyncToken,
-		"request":  f.srv.handleMerchantPriceSyncRequest,
-		"interval": f.srv.handleMerchantPriceSyncInterval,
-		"download": f.srv.handleMerchantPriceSyncAgentDownload,
-		"stop":     f.srv.handleMerchantPriceSyncStop,
+		"info":      f.srv.handleMerchantPriceSyncInfo,
+		"file":      f.srv.handleMerchantPriceSyncFile,
+		"token":     f.srv.handleMerchantPriceSyncToken,
+		"request":   f.srv.handleMerchantPriceSyncRequest,
+		"interval":  f.srv.handleMerchantPriceSyncInterval,
+		"download":  f.srv.handleMerchantPriceSyncAgentDownload,
+		"stop":      f.srv.handleMerchantPriceSyncStop,
+		"groups":    f.srv.handleMerchantPriceSyncGroups,
+		"setGroups": f.srv.handleMerchantPriceSyncSetGroups,
+		"autoSort":  f.srv.handleMerchantPriceSyncAutoSort,
+		"pending":   f.srv.handleMerchantPriceSyncPending,
+		"move":      f.srv.handleMerchantPriceSyncMove,
 	} {
 		w := f.call(h, http.MethodPost, "/x", f.merchantID, owner, []string{"merchant"}, `{}`)
 		if w.Code != http.StatusForbidden || !strings.Contains(w.Body.String(), "ameen_off") {

@@ -10,6 +10,8 @@ package catalog
 //   - **مخفيّاً**: `available = false` في قسمٍ غيرِ فعّالٍ اسمُه «من الأمين — بانتظار
 //     التصنيف». **والزبونُ يرى الأقسامَ الفعّالةَ وحدَها**، فلا يظهر حتى يضيف المتجرُ
 //     صورتَه وينقله إلى قسمٍ حقيقيّ ويُفعّله.
+//     **ومن ٢٠٢٦-١١-٠٧ قسم الانتظار آخر حلّ بس**: الصنف بيروح لقسم مجموعته بالأمين
+//     أو لقسم من اسمه أوّلاً (`pricesync_groups.go`).
 //   - **برقم المادّة** — فرفعُ الملف ثانيةً يطابقه ولا يُنشئ شيئاً (idempotent).
 //   - **وبالسعر كما تضعه المزامنةُ**: دولارٌ ⇒ `price_usd_cents` + الليرةُ بسعر الصرف.
 //     **وسعرٌ صفرٌ يُنشأ ويبقى مخفيّاً ويُذكر في التقرير.**
@@ -74,44 +76,50 @@ func ensurePendingSection(ctx context.Context, q dbtx.Querier) (string, error) {
 	return id, err
 }
 
-// newItem **مادّةٌ ستصير صنفاً.**
+// newItem **مادّةٌ ستصير صنفاً** — وقسمُها محلولٌ قبل الإدراج (`placeNewItems`).
 type newItem struct {
 	code  string
 	name  string
 	price int64
 	cents *int64
+	// group **مجموعةُ الأمين** كما وصلت (قد تكون فارغة).
+	group string
+	// section ومصدرُه: `pending` · `group` · `name` (٢٠٢٦-١١-٠٧).
+	section string
+	source  string
 }
 
 // insertNewItems **يُدرج الأصنافَ الجديدةَ دفعةً واحدة** ويردّ ما أُدرج فعلاً —
-// **وتعارضٌ على الرقم (طلبٌ متزامن) يُتجاوز بلا خطأ.**
+// **وتعارضٌ على الرقم (طلبٌ متزامن) يُتجاوز بلا خطأ.** وكلُّ صنفٍ بقسمه المحلول.
 func insertNewItems(ctx context.Context, tx dbtx.Querier, merchantID string, items []newItem) (int, error) {
 	if len(items) == 0 {
 		return 0, nil
-	}
-	sec, err := ensurePendingSection(ctx, tx)
-	if err != nil {
-		return 0, err
 	}
 	names := make([]string, len(items))
 	codes := make([]string, len(items))
 	prices := make([]int64, len(items))
 	cents := make([]*int64, len(items))
+	secs := make([]string, len(items))
+	sources := make([]string, len(items))
+	groups := make([]string, len(items))
 	for i, it := range items {
 		names[i], codes[i], prices[i], cents[i] = it.name, it.code, it.price, it.cents
+		secs[i], sources[i], groups[i] = it.section, it.source, it.group
 	}
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO menu_items (merchant_id, name, description, merchant_price, price,
 		                        price_usd_cents, available, external_code,
-		                        platform_section_id, sort_order, drinks_off)
-		SELECT $1::uuid, t.name, '', t.price, t.price, t.cents, false, t.code, $2::uuid,
+		                        platform_section_id, sort_order, drinks_off,
+		                        section_source, external_group)
+		SELECT $1::uuid, t.name, '', t.price, t.price, t.cents, false, t.code, t.sec::uuid,
 		       COALESCE((SELECT max(sort_order) FROM menu_items
-		                  WHERE merchant_id = $1::uuid AND platform_section_id = $2::uuid), 0) + t.ord::int,
-		       true
-		  FROM unnest($3::text[], $4::text[], $5::bigint[], $6::bigint[]) WITH ORDINALITY
-		       AS t(name, code, price, cents, ord)
+		                  WHERE merchant_id = $1::uuid AND platform_section_id = t.sec::uuid), 0) + t.ord::int,
+		       true, t.source, NULLIF(t.grp, '')
+		  FROM unnest($2::text[], $3::text[], $4::bigint[], $5::bigint[], $6::text[], $7::text[], $8::text[])
+		       WITH ORDINALITY AS t(name, code, price, cents, sec, source, grp, ord)
 		ON CONFLICT (merchant_id, external_code)
 		  WHERE external_code IS NOT NULL AND external_code <> '' DO NOTHING`,
-		merchantID, sec, names, codes, prices, cents)
+		merchantID, names, codes, prices, cents, secs, sources, groups)
 	if err != nil {
 		return 0, err
 	}

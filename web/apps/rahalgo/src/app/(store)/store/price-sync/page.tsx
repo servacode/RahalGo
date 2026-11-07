@@ -25,6 +25,7 @@ import { api, apiFile } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import { fill } from "@/lib/customer/texts";
 import { PageHeader } from "@/components/store/SetupParts";
+import { PriceSyncSections } from "@/components/store/PriceSyncSections";
 
 const m = getMessages(defaultLocale);
 const P = m.store.priceSync;
@@ -35,6 +36,8 @@ interface Mapping {
   name?: string;
   price: string;
   qty?: string;
+  /** **عمود المجموعة** (٢٠٢٦-١١-٠٧) — اختياري؛ بيحدد قسم الصنف الجديد. */
+  group?: string;
   currency?: "SYP" | "USD";
   /** **أنشئ غير الموجود أصنافاً مخفيّة** (٢٠٢٦-١١-٠٤) — مُطفأٌ افتراضاً. */
   create_missing?: boolean;
@@ -58,6 +61,10 @@ interface Report {
   created?: number;
   created_zero_price?: number;
   create_skipped?: number;
+  /** **وين راحت الأصناف الجديدة** (٢٠٢٦-١١-٠٧). */
+  created_by_name?: number;
+  created_by_group?: number;
+  created_pending?: number;
   zero_price?: number;
   skipped: Issue[];
   unmatched_sample: Issue[];
@@ -88,6 +95,7 @@ const EMPTY: Mapping = {
   name: "",
   price: "",
   qty: "",
+  group: "",
   currency: "SYP",
 };
 
@@ -107,6 +115,8 @@ export default function PriceSyncPage() {
   const [report, setReport] = useState<Report | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  /** **بعد كل تطبيق** تنقرا «توزيع الأقسام» من جديد. */
+  const [applied, setApplied] = useState(0);
 
   const load = useCallback(() => {
     if (!id || noAmeen) return;
@@ -166,6 +176,7 @@ export default function PriceSyncPage() {
       if (!dry) {
         setPreview(null);
         load();
+        setApplied((n) => n + 1);
       }
     } catch (e) {
       setError(errorText(e));
@@ -327,6 +338,7 @@ export default function PriceSyncPage() {
               {col("qty", P.colQty)}
               {col("name", P.colName)}
               {col("barcode", P.colBarcode)}
+              {col("group", P.colGroup)}
               <Select
                 id="col-currency"
                 label={P.currency}
@@ -399,6 +411,19 @@ export default function PriceSyncPage() {
                 })}
               </p>
             )}
+            {(report.created ?? 0) > 0 && (
+              <p className="text-xs text-ink-muted">
+                {[
+                  fill(P.createdByName, { n: fmtNum(report.created_by_name ?? 0) }),
+                  (report.created_by_group ?? 0) > 0
+                    ? fill(P.createdByGroup, { n: fmtNum(report.created_by_group ?? 0) })
+                    : "",
+                  fill(P.createdPending, { n: fmtNum(report.created_pending ?? 0) }),
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            )}
             {(report.zero_price ?? 0) > 0 && (
               <p className="text-warning">
                 {fill(P.zeroPrice, { n: fmtNum(report.zero_price ?? 0) })}
@@ -465,6 +490,9 @@ export default function PriceSyncPage() {
           </div>
         </Card>
       )}
+
+      {/* **توزيع الأقسام** (٢٠٢٦-١١-٠٧) — كل صنف يروح على قسمو. */}
+      {id && <PriceSyncSections storeId={id} refreshKey={applied} />}
 
       {/* **برنامجُ المزامنة — ملفٌّ واحد** (قرارُ المالك ٢٠٢٦-١٠-١٩): يُحمَّل وفيه رمزُ المتجر،
           دبل كليك على كمبيوتر الأمين وخلص. **وحالُه وخطؤه هنا** لا على كمبيوتر المحاسب. */}

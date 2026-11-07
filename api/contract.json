@@ -10205,6 +10205,24 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/merchant/stores/{id}/price-sync/auto-sort",
+      "handler": "handleMerchantPriceSyncAutoSort",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "@res",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/merchant/stores/{id}/price-sync/file",
       "handler": "handleMerchantPriceSyncFile",
       "auth": true,
@@ -10234,6 +10252,42 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/v1/merchant/stores/{id}/price-sync/groups",
+      "handler": "handleMerchantPriceSyncGroups",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "@view",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/merchant/stores/{id}/price-sync/groups",
+      "handler": "handleMerchantPriceSyncSetGroups",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "moved",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "PUT",
       "path": "/api/v1/merchant/stores/{id}/price-sync/interval",
       "handler": "handleMerchantPriceSyncInterval",
@@ -10250,6 +10304,52 @@
       "response": [
         {
           "name": "interval_minutes",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/merchant/stores/{id}/price-sync/move",
+      "handler": "handleMerchantPriceSyncMove",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "request": [
+        {
+          "name": "item_ids",
+          "type": "[]string"
+        },
+        {
+          "name": "platform_section_id",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "moved",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/merchant/stores/{id}/price-sync/pending",
+      "handler": "handleMerchantPriceSyncPending",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "@page",
           "type": "unknown"
         }
       ],

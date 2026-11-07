@@ -227,7 +227,7 @@ func (s *Server) handleMarketItemsBulk(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		tag, err := tx.Exec(ctx, `
-			UPDATE menu_items SET platform_section_id = $2, updated_at = now()
+			UPDATE menu_items SET platform_section_id = $2, section_source = 'manual', updated_at = now()
 			 WHERE id = ANY($1::uuid[])`, req.IDs, req.SectionID)
 		if err != nil {
 			s.respondErr(w, err)

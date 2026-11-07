@@ -775,6 +775,11 @@ func (s *Service) UpdateItem(ctx context.Context, actorID, itemID string, in Men
 			-- **والفراغُ الصريح يرفع التصنيف** — لا يُقرأ «بلا تغيير».
 			platform_section_id = CASE WHEN $8::text IS NULL THEN platform_section_id
 			                           ELSE NULLIF($8, '')::uuid END,
+			-- **وقسمٌ تبدّل باليد صار يدويّاً** (٢٠٢٦-١١-٠٧) — فمزامنةُ الأمين ما بترجّعه.
+			-- والقسمُ نفسُه مُرسَلاً مع كلّ حفظ ما بيقلب شي.
+			section_source = CASE WHEN $8::text IS NULL
+			                        OR NULLIF($8, '')::uuid IS NOT DISTINCT FROM platform_section_id
+			                      THEN section_source ELSE 'manual' END,
 			-- **والعملة** (٢٠٢٦-١٠-١٢): دولارٌ بسنته، أو ليرةٌ صريحةٌ تمحوه، أو بلا تغيير.
 			price_usd_cents = CASE WHEN $9::bool THEN $10::bigint
 			                       WHEN $11::bool THEN NULL

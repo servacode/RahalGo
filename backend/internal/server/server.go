@@ -1160,6 +1160,12 @@ func (s *Server) Router() http.Handler {
 			r.Put("/stores/{id}/price-sync/interval", s.handleMerchantPriceSyncInterval)
 			r.Get("/stores/{id}/price-sync/agent", s.handleMerchantPriceSyncAgentDownload)
 			r.Post("/stores/{id}/price-sync/stop", s.handleMerchantPriceSyncStop)
+			// **كلّ صنف من الأمين يروح على قسمو** (٢٠٢٦-١١-٠٧) — انظر price_sync_groups_handlers.go.
+			r.Get("/stores/{id}/price-sync/groups", s.handleMerchantPriceSyncGroups)
+			r.Put("/stores/{id}/price-sync/groups", s.handleMerchantPriceSyncSetGroups)
+			r.Post("/stores/{id}/price-sync/auto-sort", s.handleMerchantPriceSyncAutoSort)
+			r.Get("/stores/{id}/price-sync/pending", s.handleMerchantPriceSyncPending)
+			r.Post("/stores/{id}/price-sync/move", s.handleMerchantPriceSyncMove)
 
 			// ══════════════════════════════════════════════════════════
 			// **أقسامُ المتجر — ما يبيعه هو لا ما تبيعه المنصّة**

@@ -32,6 +32,7 @@ import (
 	"math"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 )
@@ -43,6 +44,9 @@ type SyncRow struct {
 	Name    string   `json:"name,omitempty"`
 	Price   *float64 `json:"price,omitempty"`
 	Qty     *float64 `json:"qty,omitempty"`
+	// Group **مجموعة المادّة بالأمين** (٢٠٢٦-١١-٠٧) — اختياريّة؛ بتحدّد قسم الصنف الجديد
+	// إذا صاحب المتجر اختار قسم لهالمجموعة (`pricesync_groups.go`).
+	Group string `json:"group,omitempty"`
 }
 
 // SyncOptions **كيف تُقرأ القائمة.**
@@ -85,7 +89,11 @@ type SyncReport struct {
 	Created          int `json:"created"`
 	CreatedZeroPrice int `json:"created_zero_price"`
 	CreateSkipped    int `json:"create_skipped"`
-	ZeroPrice        int `json:"zero_price"`
+	// وين راحت الأصناف الجديدة (٢٠٢٦-١١-٠٧): لقسم مجموعتها · لقسم من اسمها · للانتظار.
+	CreatedByGroup int `json:"created_by_group"`
+	CreatedByName  int `json:"created_by_name"`
+	CreatedPending int `json:"created_pending"`
+	ZeroPrice      int `json:"zero_price"`
 	// CreatedSample **أوّلُ ما أُنشئ** للعرض.
 	CreatedSample []SyncIssue `json:"created_sample"`
 	Skipped       []SyncIssue `json:"skipped"`
@@ -115,6 +123,9 @@ type syncItem struct {
 	price     int64
 	usdCents  *int64
 	available bool
+	group     string
+	source    string
+	section   string
 }
 
 // normName **الاسمُ للمقارنة** — بلا فراغاتٍ زائدة، وبلا فروق الهمزات والتاء والياء.
@@ -154,7 +165,8 @@ func (s *Service) SyncPrices(ctx context.Context, merchantID string, rows []Sync
 	// **والأقدمُ أوّلاً** — انظر «والأقدمُ يملك» تحت.
 	dbRows, err := tx.Query(ctx, `
 		SELECT id::text, name, COALESCE(external_code, ''), COALESCE(barcode, ''),
-		       merchant_price, price_usd_cents, available
+		       merchant_price, price_usd_cents, available,
+		       COALESCE(external_group, ''), section_source, COALESCE(platform_section_id::text, '')
 		  FROM menu_items WHERE merchant_id = $1::uuid
 		 ORDER BY created_at, id`, merchantID)
 	if err != nil {
@@ -163,7 +175,8 @@ func (s *Service) SyncPrices(ctx context.Context, merchantID string, rows []Sync
 	items := []syncItem{}
 	for dbRows.Next() {
 		var it syncItem
-		if err := dbRows.Scan(&it.id, &it.name, &it.code, &it.barcode, &it.price, &it.usdCents, &it.available); err != nil {
+		if err := dbRows.Scan(&it.id, &it.name, &it.code, &it.barcode, &it.price, &it.usdCents, &it.available,
+			&it.group, &it.source, &it.section); err != nil {
 			dbRows.Close()
 			return nil, err
 		}
@@ -212,8 +225,19 @@ func (s *Service) SyncPrices(ctx context.Context, merchantID string, rows []Sync
 		}
 	}
 	touched := map[int]bool{}
+	// **مجموعات الأمين** (٢٠٢٦-١١-٠٧): كلّ مجموعة شافها الملف بتنحفظ، والصنف المطابَق
+	// بتنكتب عليه مجموعته إذا تغيّرت.
+	seenGroups := map[string]string{}
+	var groupIDs, groupTexts []string
 	for i, r := range rows {
 		r.Code, r.Barcode = linkText(r.Code), linkText(r.Barcode)
+		r.Group = strings.TrimSpace(r.Group)
+		if utf8.RuneCountInString(r.Group) > maxGroupKey {
+			r.Group = string([]rune(r.Group)[:maxGroupKey])
+		}
+		if k := groupKey(r.Group); k != "" {
+			seenGroups[k] = r.Group
+		}
 		idx, byNameHit := -1, false
 		if j, ok := byCode[r.Code]; ok && r.Code != "" {
 			idx = j
@@ -237,7 +261,7 @@ func (s *Service) SyncPrices(ctx context.Context, merchantID string, rows []Sync
 			case createdCodes[r.Code]:
 				skip(i, r, "duplicate")
 			default:
-				n := newItem{code: r.Code, name: name}
+				n := newItem{code: r.Code, name: name, group: r.Group}
 				if r.Price != nil && *r.Price > 0 && !math.IsNaN(*r.Price) && !math.IsInf(*r.Price, 0) {
 					if usd {
 						c := dollarsToCents(*r.Price)
@@ -278,6 +302,9 @@ func (s *Service) SyncPrices(ctx context.Context, merchantID string, rows []Sync
 		touched[idx] = true
 		rep.Matched++
 		it := &items[idx]
+		if r.Group != "" && r.Group != it.group {
+			groupIDs, groupTexts = append(groupIDs, it.id), append(groupTexts, r.Group)
+		}
 
 		var newPrice int64 = it.price
 		var newCents *int64 = it.usdCents
@@ -372,8 +399,54 @@ func (s *Service) SyncPrices(ctx context.Context, merchantID string, rows []Sync
 	}
 
 	rep.Created = len(toCreate)
+	if err := placeNewItems(ctx, tx, merchantID, toCreate, opt.DryRun, rep); err != nil {
+		return nil, err
+	}
 	if opt.DryRun {
 		return rep, nil
+	}
+	if err := upsertGroups(ctx, tx, merchantID, seenGroups); err != nil {
+		return nil, err
+	}
+	if len(groupIDs) > 0 {
+		if _, err := tx.Exec(ctx, `
+			UPDATE menu_items i SET external_group = t.g
+			  FROM unnest($1::text[], $2::text[]) AS t(id, g)
+			 WHERE i.id = t.id::uuid`, groupIDs, groupTexts); err != nil {
+			return nil, err
+		}
+	}
+	// **وصنف قديم لسّا بالانتظار ومجموعته إلها قسم بينتقل** — بس اللي مو يدويّ.
+	if gm, err := loadGroupMap(ctx, tx, merchantID); err != nil {
+		return nil, err
+	} else if len(gm) > 0 {
+		newGroup := make(map[string]string, len(groupIDs))
+		for j, id := range groupIDs {
+			newGroup[id] = groupTexts[j]
+		}
+		var ids, secs []string
+		for idx := range touched {
+			it := items[idx]
+			g := it.group
+			if ng, ok := newGroup[it.id]; ok {
+				g = ng
+			}
+			if sec := gm[groupKey(g)]; g != "" && sec != "" && it.source == SourcePending && it.section != sec {
+				ids, secs = append(ids, it.id), append(secs, sec)
+			}
+		}
+		if _, err := moveItems(ctx, tx, merchantID, ids, secs, SourceGroup); err != nil {
+			return nil, err
+		}
+	}
+	var placed []string
+	for _, n := range toCreate {
+		if n.source != SourcePending {
+			placed = append(placed, n.section)
+		}
+	}
+	if err := addStoreSections(ctx, tx, merchantID, placed); err != nil {
+		return nil, err
 	}
 	made, err := insertNewItems(ctx, tx, merchantID, toCreate)
 	if err != nil {

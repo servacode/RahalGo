@@ -30,11 +30,13 @@ import (
 
 // SyncMapping **أيُّ عمودٍ لأيّ حقل** — بأسماء الأعمدة كما في رأس الملفّ.
 type SyncMapping struct {
-	Code     string `json:"code"`
-	Barcode  string `json:"barcode,omitempty"`
-	Name     string `json:"name,omitempty"`
-	Price    string `json:"price"`
-	Qty      string `json:"qty,omitempty"`
+	Code    string `json:"code"`
+	Barcode string `json:"barcode,omitempty"`
+	Name    string `json:"name,omitempty"`
+	Price   string `json:"price"`
+	Qty     string `json:"qty,omitempty"`
+	// Group **عمود مجموعة المادّة** (٢٠٢٦-١١-٠٧) — اختياريّ؛ انظر `pricesync_groups.go`.
+	Group    string `json:"group,omitempty"`
 	Currency string `json:"currency,omitempty"`
 	// CreateMissing **أنشئ المواد غير الموجودة أصنافاً مخفيّة** (٢٠٢٦-١١-٠٤) — يُحفظ مع
 	// الاختيار فيسري على ملفّ الساعي أيضاً.
@@ -173,6 +175,10 @@ func (sh *Sheet) SyncRows(m SyncMapping) ([]SyncRow, error) {
 	if err != nil {
 		return nil, err
 	}
+	group, err := col(m.Group)
+	if err != nil {
+		return nil, err
+	}
 	if code < 0 && barcode < 0 && name < 0 {
 		return nil, ErrSyncMapping
 	}
@@ -184,7 +190,7 @@ func (sh *Sheet) SyncRows(m SyncMapping) ([]SyncRow, error) {
 	}
 	out := make([]SyncRow, 0, len(sh.Rows))
 	for _, row := range sh.Rows {
-		r := SyncRow{Code: cell(row, code), Barcode: cell(row, barcode), Name: cell(row, name)}
+		r := SyncRow{Code: cell(row, code), Barcode: cell(row, barcode), Name: cell(row, name), Group: cell(row, group)}
 		if v, ok := ParseAmount(cell(row, price)); ok {
 			r.Price = &v
 		}
