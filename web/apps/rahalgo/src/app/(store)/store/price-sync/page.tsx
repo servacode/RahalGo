@@ -325,7 +325,7 @@ export default function PriceSyncPage() {
           </span>
           <div className="flex min-w-0 flex-1 flex-col gap-2">
             <span className="flex flex-wrap items-center gap-2">
-              <h2 className="console-h2 lg:text-lg">{P.agentTitle}</h2>
+              <h2 className="console-h2">{P.agentTitle}</h2>
               <Pill tone={st.tone}>{st.label}</Pill>
             </span>
             {st.key === "error" ? (
