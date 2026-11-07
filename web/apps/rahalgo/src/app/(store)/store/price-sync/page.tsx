@@ -515,8 +515,16 @@ export default function PriceSyncPage() {
             {busy ? P.agentDownloading : P.agentDownload}
           </Button>
           <p className="text-xs text-ink-muted">{P.agentRedownload}</p>
+          {/* **متّصلٌ ولا يزامن ليس «يعمل»** (المالك ٢٠٢٦-١١-٠٧) — خطأُ البرنامج يغلب الأخضر. */}
           {info?.stopped ? (
             <p className="text-sm text-ink-muted">{P.agentStopped}</p>
+          ) : info?.agent_seen_at && info.agent_error ? (
+            <Alert tone="danger">
+              <span className="block font-bold">
+                {fill(P.agentNotSyncing, { ago: fmtDateTime(info.agent_seen_at) })}
+              </span>
+              <span className="block">{fill(P.agentNotSyncingWhy, { e: info.agent_error })}</span>
+            </Alert>
           ) : info?.agent_seen_at ? (
             <p
               className={`text-sm ${Date.now() - new Date(info.agent_seen_at).getTime() < 5 * 60_000 ? "text-success" : "text-danger"}`}
@@ -538,10 +546,12 @@ export default function PriceSyncPage() {
               <p className="text-sm text-ink-muted">{P.agentNever}</p>
             )
           )}
-          {info?.agent_error && !info.stopped && (
-            <Alert tone="warning">
-              {fill(P.agentError, { e: info.agent_error })}
-            </Alert>
+          {info?.agent_seen_at && !info.stopped && (
+            <p className="text-sm text-ink-muted">
+              {info.last_run && info.last_run.source !== "file"
+                ? fill(P.agentLastSync, { at: fmtDateTime(info.last_run.at) })
+                : P.agentNoSyncYet}
+            </p>
           )}
           {info?.has_token && !info.stopped && (
             <Select
