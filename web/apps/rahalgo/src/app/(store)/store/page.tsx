@@ -57,7 +57,7 @@ import {
 import { api, mediaUrl } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import { pointSet, useStoreSections } from "@/lib/store/setup";
-import type { DayHours, MenuSection, MerchantStore, StoreReport } from "@/lib/store/types";
+import type { DayHours, MenuSummary, MerchantStore, StoreReport } from "@/lib/store/types";
 import { backAt, fill } from "@/lib/customer/texts";
 import { useShopToast } from "@/components/customer/toast";
 import { LogoCard, useSaveSettings } from "@/components/store/StoreSettings";
@@ -368,8 +368,9 @@ export default function StoreHome() {
 
   useEffect(() => {
     if (!id) return;
-    api<MenuSection[]>(`/api/v1/merchant/stores/${id}/menu`)
-      .then((secs) => setUnavailable((secs ?? []).reduce((n, s) => n + s.items.filter((i) => !i.available).length, 0)))
+    // **The count from the light summary** (2026-11-07) — not the whole menu of a big mall.
+    api<MenuSummary>(`/api/v1/merchant/stores/${id}/menu/summary`)
+      .then((s) => setUnavailable(s.unavailable ?? 0))
       .catch(() => undefined);
   }, [id]);
 
