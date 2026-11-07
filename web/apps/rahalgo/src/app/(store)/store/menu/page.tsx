@@ -35,6 +35,7 @@ import {
   IconList,
   IconOptions,
   IconPromos,
+  IconRotate,
   IconSearch,
   LoadingState,
   ReloadState,
@@ -346,6 +347,10 @@ export default function MenuPage() {
           {drinksAllowed === true && (
             <ToolPill icon={IconCatDrinks} label={M.toolDrinks} href="/store/menu/drinks" testId="menu-tool-drinks" />
           )}
+          {/* **مزامنةُ الأمين أداةٌ ظاهرة** (٢٠٢٦-١١-٠٧) — كانت سطراً تحت آلاف الأصناف فلا يُرى. */}
+          {store?.uses_ameen === true && (
+            <ToolPill icon={IconRotate} label={m.store.priceSync.open} href="/store/price-sync" testId="menu-tool-price-sync" />
+          )}
         </div>
       )}
 
@@ -395,12 +400,6 @@ export default function MenuPage() {
         </ul>
       )}
 
-      {/* **مزامنةُ الأمين** — للمولات (٢٠٢٦-١٠-١٩)، ويبقى بابُها هنا. */}
-      {!suspended && store?.uses_ameen === true && (
-        <Link href="/store/price-sync" className="mx-auto py-2 text-xs text-ink-muted underline-offset-2 hover:underline">
-          {m.store.priceSync.open}
-        </Link>
-      )}
     </div>
   );
 }
