@@ -314,7 +314,9 @@ internal fun StoreScreen(
                 Spacer(Modifier.height(Rahal.space.sm))
                 notice()
 
-                val sections = StoreMenu.visible(page.sections)
+                // **Sections with counts from the summary, items page by page** (owner 2026-11-07:
+                // «ما يصير يكون بطيء») — see `StoreList`.
+                val sections = page.sections.filter { it.count > 0 }
                 if (sections.isEmpty()) {
                     Empty(
                         text = stringResource(R.string.store_empty),
@@ -324,17 +326,49 @@ internal fun StoreScreen(
                     )
                     return@Column
                 }
+                val list = vm.storeList
 
                 // **كالسوق تماماً** (ملاحظةُ المالك ٢٠٢٦-١٠-١٨: «لازم نفس الاقسام دوائر من فوق وكل
                 // قسم فيه اصنافه») — دوائرُ الأقسام بصورها، **وتحتها أصنافُ المختار وحدَه.**
-                var picked by rememberSaveable(sections) { mutableStateOf(sections.first().id) }
-                val shown = sections.firstOrNull { it.id == picked } ?: sections.first()
                 Spacer(Modifier.height(Rahal.space.sm))
-                SectionRail(
-                    sections.map { Section(id = it.id, name = it.name, icon = it.icon, imageUrl = it.imageUrl, imageThumbUrl = it.imageThumbUrl) },
-                    shown.id,
-                    media,
-                ) { picked = it }
+                // **Search inside the store** — on the server, across its sections (2026-11-07).
+                androidx.compose.material3.OutlinedTextField(
+                    value = list.query,
+                    onValueChange = { list.search(it) },
+                    placeholder = { Text(stringResource(com.rahalgo.ui.R.string.ow_search)) },
+                    leadingIcon = {
+                        Icon(painterResource(com.rahalgo.ui.R.drawable.ic_search), contentDescription = null, tint = Rahal.colors.inkMuted)
+                    },
+                    trailingIcon = if (list.query.isNotEmpty()) {
+                        {
+                            androidx.compose.material3.IconButton(onClick = { list.search("") }) {
+                                Icon(
+                                    painterResource(com.rahalgo.ui.R.drawable.ic_close),
+                                    contentDescription = stringResource(com.rahalgo.ui.R.string.act_cancel),
+                                    tint = Rahal.colors.inkMuted,
+                                )
+                            }
+                        }
+                    } else {
+                        null
+                    },
+                    singleLine = true,
+                    shape = Rahal.shape.md,
+                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+                        unfocusedContainerColor = Rahal.colors.field,
+                        focusedContainerColor = Rahal.colors.field,
+                        unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
+                    ),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = Rahal.space.md),
+                )
+                if (list.query.isBlank()) {
+                    Spacer(Modifier.height(Rahal.space.sm))
+                    SectionRail(
+                        sections.map { Section(id = it.id, name = it.name, icon = it.icon, imageUrl = it.imageUrl, imageThumbUrl = it.imageThumbUrl) },
+                        list.section.ifEmpty { sections.first().id },
+                        media,
+                    ) { list.pick(it) }
+                }
 
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(ShopCols),
@@ -342,7 +376,7 @@ internal fun StoreScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    items(shown.items, key = { shown.id + "/" + it.id }) { item ->
+                    items(list.items, key = { it.id }) { item ->
                         ItemCard(
                             item = item,
                             media = media,
@@ -354,6 +388,28 @@ internal fun StoreScreen(
                             onStore = StoreLink.target(item, vm.storeId)?.let { id -> { vm.openStore(id) } },
                             showStoreName = false,
                         )
+                    }
+                    val full: androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope.() -> GridItemSpan = { GridItemSpan(maxLineSpan) }
+                    when {
+                        list.items.isEmpty() && list.loading -> item(span = full) {
+                            Box(Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) { RahalLoader(size = 48.dp) }
+                        }
+                        list.items.isEmpty() && list.error.isNotEmpty() -> item(span = full) {
+                            LoadState(loading = false, error = list.error, onRetry = list::reload)
+                        }
+                        list.items.isEmpty() -> item(span = full) {
+                            Text(
+                                stringResource(com.rahalgo.ui.R.string.grid_search_none),
+                                color = Rahal.colors.inkMuted,
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                            )
+                        }
+                        list.hasMore -> item(span = full, key = "more") {
+                            androidx.compose.runtime.LaunchedEffect(list.items.size) { list.loadMore() }
+                            Box(Modifier.fillMaxWidth().padding(vertical = 12.dp), contentAlignment = Alignment.Center) { RahalLoader(size = 48.dp) }
+                        }
                     }
                 }
             }

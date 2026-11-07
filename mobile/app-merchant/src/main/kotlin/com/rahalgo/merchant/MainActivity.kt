@@ -783,7 +783,7 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                     // **وتنبيهُ «غير متوفر» يُحسب من الأصناف المحمّلة** — بلا نداءٍ جديد.
                     tab == Tab.Store -> StoreScreen(
                         storeVm,
-                        unavailable = menuVm.groups.sumOf { g -> g.items.count { !it.available } },
+                        unavailable = menuVm.summary.unavailable,
                         onUnavailable = { menuVm.cancelEdit(); menuVm.showUnavailable(); tab = Tab.Menu },
                         // **الأزرارُ السريعة** (ملاحظةُ المالك ٦ب).
                         onOffers = { overlay.show(Overlay.Menu(MerchantItems.OFFERS)) },

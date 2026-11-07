@@ -4,6 +4,7 @@ import com.rahalgo.shared.model.Envelope
 import com.rahalgo.shared.model.WalletStatement
 import com.rahalgo.shared.net.ApiClient
 import io.ktor.http.HttpMethod
+import io.ktor.http.encodeURLParameter
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -116,6 +117,38 @@ class MerchantApi(private val api: ApiClient) {
 
     suspend fun menu(storeId: String): List<MenuSection> =
         api.call("/api/v1/merchant/stores/$storeId/menu")
+
+    /**
+     * **Menu summary** (owner 2026-11-07: «ما يصير يكون بطيء») — section chips with their counts,
+     * the unavailable and no-photo counts. A few hundred bytes even for a 15,000-item mall.
+     */
+    suspend fun menuSummary(storeId: String): MenuSummary =
+        api.call("/api/v1/merchant/stores/$storeId/menu/summary")
+
+    /**
+     * **One page of the store's items** — filtered on the server by section, search (name or exact
+     * Ameen code/barcode) and `filter` ("unavailable"); `item` fetches one item by id. `after` is
+     * the previous page's `nextAfter`. Price is the store's own price, as in [menu].
+     */
+    suspend fun menuItems(
+        storeId: String,
+        section: String = "",
+        query: String = "",
+        filter: String = "",
+        item: String = "",
+        after: String = "",
+        limit: Int = 60,
+    ): MenuItemsPage {
+        val p = buildList {
+            add("limit=$limit")
+            if (section.isNotEmpty()) add("section=$section")
+            if (query.isNotBlank()) add("q=" + query.trim().encodeURLParameter())
+            if (filter.isNotEmpty()) add("filter=$filter")
+            if (item.isNotEmpty()) add("item=$item")
+            if (after.isNotEmpty()) add("after=" + after.encodeURLParameter())
+        }
+        return api.call("/api/v1/merchant/stores/$storeId/menu/items?" + p.joinToString("&"))
+    }
 
     /**
      * **يبدّل توفّرَ صنفٍ بضغطة** — أكثرُ فعلٍ يتكرّر في يومه.
@@ -963,6 +996,34 @@ data class NoPhotoItem(
     @SerialName("merchant_price") val price: Long = 0,
     @SerialName("merchant_price_usd") val priceUsd: Double? = null,
     val available: Boolean = true,
+)
+
+/** **A market section holding items of this store** — `GET .../menu/summary`. */
+@Serializable
+data class MenuSummarySection(
+    val id: String = "",
+    val name: String = "",
+    @SerialName("image_url") val imageUrl: String? = null,
+    @SerialName("image_thumb_url") val imageThumbUrl: String? = null,
+    val count: Int = 0,
+    val unavailable: Int = 0,
+)
+
+/** **The light head of the paged menu** (2026-11-07). */
+@Serializable
+data class MenuSummary(
+    val total: Int = 0,
+    val unavailable: Int = 0,
+    @SerialName("no_photo") val noPhoto: Int = 0,
+    val sections: List<MenuSummarySection> = emptyList(),
+)
+
+/** **One keyset page of items** — `total` on the first page only (-1 after). */
+@Serializable
+data class MenuItemsPage(
+    val items: List<MenuItem> = emptyList(),
+    @SerialName("next_after") val nextAfter: String = "",
+    val total: Int = -1,
 )
 
 @Serializable

@@ -80,6 +80,33 @@ data class StoreSection(
     val items: List<Item> = emptyList(),
 )
 
+/** **A market section of the store page with its item count** — `GET /public/stores/{id}/summary`. */
+@Serializable
+data class StoreSectionCount(
+    val id: String = "",
+    val name: String = "",
+    val icon: String = "",
+    @SerialName("image_url") val imageUrl: String? = null,
+    @SerialName("image_thumb_url") val imageThumbUrl: String? = null,
+    val count: Int = 0,
+)
+
+/** **The store page head** (2026-11-07) — header and sections; items come in pages. */
+@Serializable
+data class StoreSummary(
+    val store: StoreHeader = StoreHeader(),
+    val sections: List<StoreSectionCount> = emptyList(),
+    val total: Int = 0,
+)
+
+/** **One page of a store's items** — `GET /public/stores/{id}/items`; `total` on the first page only. */
+@Serializable
+data class StoreItemsPage(
+    val items: List<Item> = emptyList(),
+    @SerialName("next_after") val nextAfter: String = "",
+    val total: Int = -1,
+)
+
 /** **صفحةُ متجر** — `GET /public/stores/{id}`. */
 @Serializable
 data class StorePage(

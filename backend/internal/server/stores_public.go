@@ -150,52 +150,11 @@ func groupStoreSections(heads []storeSectionHead, items []publicItem) []storeSec
 // لا يُطلب منه، **فلا يُفتح له باب.**
 func (s *Server) handlePublicStore(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	if !isUUID(id) {
-		s.respondErr(w, httpx.ErrNotFound)
-		return
-	}
-	where, geo := s.cityWhere(r.Context(), scopeFrom(r), 2)
-	var h storeHeader
-	err := s.pg.QueryRow(r.Context(), `
-		SELECT m.id, m.name, lm.path, lm.thumb_path,
-		       `+orders.OpenNowSQL+`, `+orders.NextOpenSQL+`,
-		       m.default_prep_minutes, m.emergency_closed
-		FROM merchants m
-		LEFT JOIN media lm ON lm.id = m.logo_media_id
-		WHERE m.id = $1::uuid AND m.status = 'active'`+where,
-		append([]any{id}, geo...)...).
-		Scan(&h.ID, &h.Name, &h.LogoURL, &h.LogoThumbURL, &h.OpenNow, &h.OpensAt, &h.PrepMinutes, &h.EmergencyClosed)
+	h, where, geo, err := s.publicStoreHead(r, id)
 	if err != nil {
-		// **ولا صفّ ⇒ ٤٠٤** — ولا يُفرَّق بين «لا وجود» و«موقوف»: **الفرقُ
-		// يقول لزائرٍ أنّ المعرّفَ لمتجرٍ حقيقيّ.**
-		s.respondErr(w, httpx.ErrNotFound)
+		s.respondErr(w, err)
 		return
 	}
-	{
-		var closed bool
-		var open, close string
-		err := s.pg.QueryRow(r.Context(), `
-			SELECT closed, to_char(open_time, 'HH24:MI'), to_char(close_time, 'HH24:MI')
-			FROM merchant_hours
-			WHERE merchant_id = $1::uuid
-			  AND day_of_week = EXTRACT(dow FROM (now() AT TIME ZONE 'Asia/Damascus'))::int`, id).
-			Scan(&closed, &open, &close)
-		switch {
-		case err != nil:
-			// **لا صفوفَ دوامٍ أصلاً ⇒ مفتوحٌ دائماً** (`OpenNowSQL`)، **وله دوامٌ بلا صفِّ اليوم ⇒ مغلقٌ اليوم.**
-			var any bool
-			_ = s.pg.QueryRow(r.Context(), `SELECT EXISTS (SELECT 1 FROM merchant_hours WHERE merchant_id = $1::uuid)`, id).Scan(&any)
-			h.Today = todayHours{Open24: !any, Closed: any}
-		case closed:
-			h.Today = todayHours{Closed: true}
-		case open == close:
-			h.Today = todayHours{Open24: true}
-		default:
-			h.Today = todayHours{Open: open, Close: close}
-		}
-	}
-	h.LogoURL = media.URLForPtr(h.LogoURL)
-	h.LogoThumbURL = media.URLForPtr(h.LogoThumbURL)
 
 	// **والأصنافُ بأعمدة القسم وشرطِه** — والمتاحُ أوّلاً داخل كلّ قسم.
 	items, err := s.queryItems(r, itemSelect+`
@@ -251,4 +210,55 @@ func (s *Server) handlePublicStore(w http.ResponseWriter, r *http.Request) {
 		"store":    h,
 		"sections": groupStoreSections(heads, items),
 	})
+}
+
+// publicStoreHead the header of a public store page and the city condition (with its args,
+// numbered from $2) that every item query of that page must carry. 404 when the store does not
+// exist, is not active or is outside the visitor's city.
+func (s *Server) publicStoreHead(r *http.Request, id string) (storeHeader, string, []any, error) {
+	if !isUUID(id) {
+		return storeHeader{}, "", nil, httpx.ErrNotFound
+	}
+	where, geo := s.cityWhere(r.Context(), scopeFrom(r), 2)
+	var h storeHeader
+	err := s.pg.QueryRow(r.Context(), `
+		SELECT m.id, m.name, lm.path, lm.thumb_path,
+		       `+orders.OpenNowSQL+`, `+orders.NextOpenSQL+`,
+		       m.default_prep_minutes, m.emergency_closed
+		FROM merchants m
+		LEFT JOIN media lm ON lm.id = m.logo_media_id
+		WHERE m.id = $1::uuid AND m.status = 'active'`+where,
+		append([]any{id}, geo...)...).
+		Scan(&h.ID, &h.Name, &h.LogoURL, &h.LogoThumbURL, &h.OpenNow, &h.OpensAt, &h.PrepMinutes, &h.EmergencyClosed)
+	if err != nil {
+		// **ولا صفّ ⇒ ٤٠٤** — ولا يُفرَّق بين «لا وجود» و«موقوف»: **الفرقُ
+		// يقول لزائرٍ أنّ المعرّفَ لمتجرٍ حقيقيّ.**
+		return storeHeader{}, "", nil, httpx.ErrNotFound
+	}
+	{
+		var closed bool
+		var open, close string
+		err := s.pg.QueryRow(r.Context(), `
+			SELECT closed, to_char(open_time, 'HH24:MI'), to_char(close_time, 'HH24:MI')
+			FROM merchant_hours
+			WHERE merchant_id = $1::uuid
+			  AND day_of_week = EXTRACT(dow FROM (now() AT TIME ZONE 'Asia/Damascus'))::int`, id).
+			Scan(&closed, &open, &close)
+		switch {
+		case err != nil:
+			// **لا صفوفَ دوامٍ أصلاً ⇒ مفتوحٌ دائماً** (`OpenNowSQL`)، **وله دوامٌ بلا صفِّ اليوم ⇒ مغلقٌ اليوم.**
+			var any bool
+			_ = s.pg.QueryRow(r.Context(), `SELECT EXISTS (SELECT 1 FROM merchant_hours WHERE merchant_id = $1::uuid)`, id).Scan(&any)
+			h.Today = todayHours{Open24: !any, Closed: any}
+		case closed:
+			h.Today = todayHours{Closed: true}
+		case open == close:
+			h.Today = todayHours{Open24: true}
+		default:
+			h.Today = todayHours{Open: open, Close: close}
+		}
+	}
+	h.LogoURL = media.URLForPtr(h.LogoURL)
+	h.LogoThumbURL = media.URLForPtr(h.LogoThumbURL)
+	return h, where, geo, nil
 }

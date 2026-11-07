@@ -9,7 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.rahalgo.shared.customer.CustomerApi
 import com.rahalgo.shared.model.Banner
 import com.rahalgo.shared.model.FeaturedStore
-import com.rahalgo.shared.model.StorePage
+import com.rahalgo.shared.model.StoreSummary
 import com.rahalgo.shared.model.Item
 import com.rahalgo.shared.model.Section
 import com.rahalgo.ui.AppCore
@@ -83,8 +83,12 @@ class ShopViewModel(app: Application) : AndroidViewModel(app) {
     var storeId by mutableStateOf<String?>(null)
         private set
 
-    var store by mutableStateOf<StorePage?>(null)
+    /** **The store page head** — header and section counts (2026-11-07); items in [storeList]. */
+    var store by mutableStateOf<StoreSummary?>(null)
         private set
+
+    /** **The open store's items, page by page** — see `StoreList`. */
+    val storeList = StoreList(viewModelScope, api) { apiError(getApplication(), it) }
 
     var storeError by mutableStateOf("")
         private set
@@ -103,6 +107,7 @@ class ShopViewModel(app: Application) : AndroidViewModel(app) {
         storeId = null
         store = null
         storeError = ""
+        storeList.clear()
     }
 
     fun loadStore() {
@@ -110,10 +115,14 @@ class ShopViewModel(app: Application) : AndroidViewModel(app) {
         storeJob?.cancel()
         store = null
         storeError = ""
+        storeList.clear()
         storeJob = viewModelScope.launch {
             try {
-                val got = api.store(id)
-                if (storeId == id) store = got
+                val got = api.storeSummary(id)
+                if (storeId == id) {
+                    store = got
+                    got.sections.firstOrNull()?.let { storeList.start(id, it.id) }
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

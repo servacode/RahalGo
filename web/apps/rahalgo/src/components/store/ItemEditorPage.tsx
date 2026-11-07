@@ -13,7 +13,7 @@ import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { ButtonLink, EmptyState, IconList, IconStore, LoadingState, ReloadState } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
-import type { MenuItem, MenuSection, SectionRef } from "@/lib/store/types";
+import type { MenuItem, MenuItemsPage, SectionRef } from "@/lib/store/types";
 import ItemEditor from "./ItemEditor";
 
 const m = getMessages(defaultLocale);
@@ -35,8 +35,9 @@ export default function ItemEditorPage({ itemId }: { itemId?: string }) {
       const secs = await api<{ sections: SectionRef[] }>(`/api/v1/merchant/stores/${id}/sections`);
       setSections(secs.sections ?? []);
       if (itemId) {
-        const menu = await api<MenuSection[]>(`/api/v1/merchant/stores/${id}/menu`);
-        setItem(menu.flatMap((s) => s.items).find((i) => i.id === itemId) ?? null);
+        // **The one item, not the whole menu** (2026-11-07) — a mall has thousands.
+        const pg = await api<MenuItemsPage>(`/api/v1/merchant/stores/${id}/menu/items?item=${encodeURIComponent(itemId)}`);
+        setItem(pg.items?.[0] ?? null);
       }
     } catch {
       setFailed(true);

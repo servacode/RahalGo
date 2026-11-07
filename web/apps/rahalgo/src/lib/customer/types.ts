@@ -88,6 +88,30 @@ export interface StorePage {
   sections: StoreSection[];
 }
 
+/** **A market section of the store page with its count** — `GET /public/stores/{id}/summary` (2026-11-07). */
+export interface StoreSectionCount {
+  id: string;
+  name: string;
+  icon: string;
+  image_url: string | null;
+  image_thumb_url: string | null;
+  count: number;
+}
+
+/** **The store page head** — header and section counts; items come in pages. */
+export interface StoreSummary {
+  store: StoreHeader;
+  sections: StoreSectionCount[];
+  total: number;
+}
+
+/** **One page of a store's items** — `total` on the first page only (-1 after). */
+export interface StoreItemsPage {
+  items: Item[];
+  next_after: string;
+  total: number;
+}
+
 export interface Item {
   id: string;
   name: string;
