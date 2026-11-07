@@ -137,7 +137,7 @@ function Shell({ children }: { children: ReactNode }) {
       ? [{ href: "/store/orders", label: S.nav.orders, icon: IconOrder, count: pending.length, exact: true }]
       : []),
     { href: "/store", label: S.nav.store, icon: IconStore, exact: true },
-    { href: "/store/menu/new", label: S.nav.addItem, icon: IconAdd, exact: true },
+    { href: "/store/menu/new", label: S.nav.addItem, icon: IconAdd, exact: true, emphasis: true },
     { href: "/store/menu", label: S.nav.menu, icon: IconList, exact: true },
     { href: "/store/delivery", label: S.nav.delivery, icon: IconMoto, exact: true },
     { href: "/store/account", label: S.nav.account, icon: IconUser, exact: true },
@@ -208,9 +208,17 @@ function Shell({ children }: { children: ReactNode }) {
         })}
         {/* **«تسوّق كزبون»** — والعودةُ من صفحات الزبون بـ«لوحة متجري» (٢٠٢٦-١٠-١٩). */}
         {/* **ملوّنٌ بأيقونة** (اقتراحٌ وافق عليه المالك ٢٠٢٦-١٠-١٩) — يُرى زرَّ تبديلٍ لا رابطاً. */}
-        <TopBarLink Link={Link} href="/shop" tone="plain" className="rounded-full bg-primary px-3 text-on-bright hover:opacity-90">
-          <IconCart size={16} />
-          {S.nav.shopAsCustomer}
+        <TopBarLink
+          Link={Link}
+          href="/shop"
+          tone="plain"
+          title={S.nav.shopAsCustomer}
+          aria-label={S.nav.shopAsCustomer}
+          className="min-h-11 min-w-11 justify-center rounded-full bg-primary px-3 text-on-bright hover:opacity-90"
+        >
+          <IconCart size={18} />
+          {/* على الجوّال أيقونةٌ بحجم لمسةٍ كاملة، والاسمُ من `sm`. */}
+          <span className="hidden sm:inline">{S.nav.shopAsCustomer}</span>
         </TopBarLink>
         <Bell />
         <button
@@ -218,13 +226,14 @@ function Shell({ children }: { children: ReactNode }) {
           onClick={() => setMenuOpen(true)}
           aria-label={S.nav.more}
           data-testid="store-menu-open"
-          className="shrink-0 rounded-control p-2 text-ink-muted transition-colors hover:bg-row-hover hover:text-ink"
+          className="flex size-11 shrink-0 items-center justify-center rounded-control text-ink-muted transition-colors hover:bg-row-hover hover:text-ink"
         >
           <IconHamburger size={22} />
         </button>
       </TopBar>
       <StoreMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
-      <main className="flex min-w-0 flex-1 flex-col gap-3 px-3 pb-4 pt-3 sm:px-4">
+      {/* **حشوةُ الجانبين صغيرةٌ ثابتةٌ على العريض** (قرارُ المالك: لا فراغَ جانبيّاً كبيراً) — والمحتوى يملأ العرض. */}
+      <main className="flex min-w-0 flex-1 flex-col gap-3 px-3 pb-4 pt-3 sm:px-4 lg:gap-4 lg:px-5 lg:pb-8 lg:pt-4">
         <PwaHints android={ANDROID_HINT} />
         {/* **وصفحةُ الحساب بلا شريط المتجر** — كما يُخفي التطبيقُ مبدّلَ المتجر في «حسابي». */}
         {store && path !== "/store" && !path.startsWith("/store/account") && <StoreBar />}

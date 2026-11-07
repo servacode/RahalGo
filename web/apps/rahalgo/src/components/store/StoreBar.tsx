@@ -42,8 +42,10 @@ export default function StoreBar() {
         ? "bg-field text-ink-muted"
         : "bg-success-tint text-success";
 
+  /* على الحاسوب السايدبارُ يحمل الاسمَ والحال — فيبقى هذا الشريطُ لمن له فروعٌ (المبدّل) أو لمتجرٍ موقوف. */
+  const redundantOnDesktop = stores.length <= 1 && !suspended;
   return (
-    <section className="surface flex flex-col gap-2 p-3" aria-label={S.nav.store}>
+    <section className={`panel flex flex-col gap-2 p-3 ${redundantOnDesktop ? "lg:hidden" : ""}`} aria-label={S.nav.store}>
       <div className="flex items-center gap-2">
         <IconStore size={18} className="shrink-0 text-primary" />
         {stores.length > 1 ? (

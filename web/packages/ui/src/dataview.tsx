@@ -184,7 +184,16 @@ export interface DataColumn<T> {
   primary?: boolean;
   /** أيقونة معبرة للحقل — تظهر برأس العمود وفي تسمية حقل البطاقة */
   icon?: ReactNode;
+  /**
+   * **محاذاةُ العمود في الجدول الكثيف** (`dense`) — الأسماءُ `start` والأرقامُ `end`.
+   * وبلا `dense` تبقى الخلايا في الوسط كما كانت (لوحةُ الإدارة).
+   */
+  align?: "start" | "center" | "end";
+  /** صنفُ عرضٍ للعمود في الجدول الكثيف — `w-16` لصورةٍ مصغّرة مثلاً. */
+  widthClass?: string;
 }
+
+const ALIGN = { start: "text-start", center: "text-center", end: "text-end" } as const;
 
 function FieldLabel({ icon, text }: { icon?: ReactNode; text: string }) {
   return (
@@ -211,6 +220,7 @@ export function DataView<T>({
   loading = false,
   actionsLayout = "wrap",
   stack = false,
+  dense = false,
 }: {
   items: T[];
   getKey: (item: T) => string;
@@ -276,6 +286,11 @@ export function DataView<T>({
    * الموظّفُ أنّ الطابورَ فارغ.**
    */
   loading?: boolean;
+  /**
+   * **جدولٌ كثيفٌ لمئات الصفوف** (لوحةُ المتجر ٢٠٢٦-١١-٠٧): صفوفٌ أضيق، رؤوسٌ بمحاذاة بداية
+   * العمود، ترويسةٌ لاصقةٌ على `lg`، وأرقامٌ بعرض ثابت. وللجدول فقط — البطاقاتُ كما هي.
+   */
+  dense?: boolean;
 }) {
   if (loading && items.length === 0) {
     return <LoadingState />;
@@ -558,8 +573,8 @@ export function DataView<T>({
   );
 
   return (
-    <div className="overflow-x-auto surface">
-      <table className="w-full text-sm">
+    <div className={dense ? "panel overflow-x-auto lg:overflow-visible" : "overflow-x-auto surface"}>
+      <table className={dense ? "console-table" : "w-full text-sm"}>
         <thead>
           {/* **والرؤوسُ فوق قيمها لا بجانبها.**
 
@@ -570,16 +585,20 @@ export function DataView<T>({
             {shown.map((c) => (
               <th
                 key={c.id}
-                className="whitespace-nowrap p-3 text-center align-middle font-medium"
+                className={
+                  dense
+                    ? `${ALIGN[c.align ?? "start"]} ${c.widthClass ?? ""}`
+                    : "whitespace-nowrap p-3 text-center align-middle font-medium"
+                }
               >
-                <span className="inline-flex justify-center">
+                <span className={dense ? "inline-flex" : "inline-flex justify-center"}>
                   <FieldLabel icon={c.icon} text={c.header} />
                 </span>
               </th>
             ))}
             {/* **وعمودُ الأفعال له رأسٌ أيضاً** — عمودٌ بلا اسمٍ يُقرأ زائداً. */}
             {actions && (
-              <th className="whitespace-nowrap p-3 text-center align-middle font-medium">
+              <th className={dense ? "text-end" : "whitespace-nowrap p-3 text-center align-middle font-medium"}>
                 {L.actions}
               </th>
             )}
@@ -597,7 +616,10 @@ export function DataView<T>({
                 //
                 // خليّةٌ تحمل سطراً وأخرى تحمل خمسةً تجعل الصفَّ يتمدّد
                 // **والقيمُ تسبح في فراغه**، فيُقرأ الجدولُ عشوائياً.
-                <td key={c.id} className="p-3 text-center align-middle">
+                <td
+                  key={c.id}
+                  className={dense ? `${ALIGN[c.align ?? "start"]} ${c.widthClass ?? ""}` : "p-3 text-center align-middle"}
+                >
                   {c.hide?.(item) ? (
                     <span className="text-ink-muted">—</span>
                   ) : (
@@ -607,10 +629,10 @@ export function DataView<T>({
               ))}
               {actions && (
                 <td
-                  className="p-3 align-middle"
+                  className={dense ? "text-end" : "p-3 align-middle"}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <div className="flex flex-nowrap justify-center gap-1.5 whitespace-nowrap">
+                  <div className={`flex flex-nowrap gap-1.5 whitespace-nowrap ${dense ? "justify-end" : "justify-center"}`}>
                     {actions(item)}
                   </div>
                 </td>

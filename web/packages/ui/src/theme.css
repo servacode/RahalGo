@@ -2973,3 +2973,272 @@ select:-webkit-autofill:focus {
   background-color: var(--color-field);
   color: var(--color-ink-muted);
 }
+
+/* ══════════════════════════════════════════════════════════════════════
+   **لوحة التشغيل (console) — دفعة تصميم لوحة المتجر ١ (٢٠٢٦-١١-٠٧)**
+   ══════════════════════════════════════════════════════════════════════
+
+   (ملاحظة المالك: «لسّا التصميم ضعيف جداً — لازم يكون أقوى واحترافي أكثر»، واللوحة
+    هي تطبيق الآيفون لأصحاب المتاجر وكونسول اللابتوب لمتاجر الآلاف.)
+
+   **أصنافٌ جديدةٌ فقط (`console-*` · `panel` · `kpi` · `chip` · `toolbar`)** —
+   لا يمسّ أيٌّ منها ما سبق: /shop ولوحة الإدارة لا يكتبانها، فلا يتغيّر شيءٌ فيهما.
+   (والإدارة لها عدّتُها `admin-*` ولا تُدمَج هنا.)
+
+   الاتجاه: «تشغيلٌ هادئٌ كثيف» — لوحٌ واحدٌ مسطّح بحدٍّ رفيع وظلٍّ واحد، أرقامٌ
+   كبيرةٌ بعرضٍ ثابت، وإيقاعٌ ٤ · ٨ · ١٢ · ١٦ · ٢٠ · ٢٤.
+   سلّم الحروف (Tajawal): عنوان الصفحة ٢٠ (٢٤ على lg) · قسم ١٦ · نصّ ١٤ · وصف ١٢ ·
+   رقم ٢٨ (٣٢ على lg) بعرض ثابت.
+   والثيم واحدٌ (داكنٌ زجاجيّ) — لا نسخةَ فاتحةً تُراعى. */
+
+:root {
+  /* ارتفاع الشريط العلويّ اللاصق — ما تحته من أشرطةٍ لاصقة تقف عنده. */
+  --topbar-h: 4.5rem;
+}
+
+@utility console-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  @media (width >= 1024px) {
+    gap: 1.25rem;
+  }
+}
+
+@utility console-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-top: 0.25rem;
+}
+
+@utility console-title {
+  font-size: 1.25rem;
+  line-height: 1.45;
+  font-weight: 700;
+  @media (width >= 1024px) {
+    font-size: 1.5rem;
+    line-height: 1.35;
+  }
+}
+
+@utility console-h2 {
+  font-size: var(--text-base);
+  line-height: var(--text-base--line-height);
+  font-weight: 700;
+}
+
+@utility console-meta {
+  font-size: var(--text-xs);
+  line-height: var(--text-xs--line-height);
+  color: var(--color-ink-muted);
+}
+
+/* لوحٌ مسطّح: حدٌّ رفيع وظلٌّ واحد وتضبيبٌ خفيف (للأقسام الكبيرة). */
+@utility panel {
+  border-radius: var(--radius-card);
+  border: 1px solid var(--color-line-soft);
+  background-color: var(--color-surface);
+  backdrop-filter: blur(14px) saturate(1.1);
+  box-shadow: var(--shadow-e1);
+}
+
+/* بلا تضبيب — لما يتكرّر عشرات المرّات في قائمة (بطاقات الأصناف والصفوف). */
+@utility panel-lite {
+  border-radius: var(--radius-card);
+  border: 1px solid var(--color-line-soft);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-e1);
+}
+
+@utility panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--color-line-soft);
+}
+
+/* مؤشّر: رقمٌ كبير وتسمية. `data-tone` يلوّن شريطَ بدايته. */
+@utility kpi {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  padding: 1rem;
+  text-align: start;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--color-line-soft);
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-e1);
+  transition: background-color 150ms ease, border-color 150ms ease;
+  &[data-tone="good"] {
+    border-inline-start: 3px solid var(--color-success);
+  }
+  &[data-tone="attention"] {
+    border-inline-start: 3px solid var(--color-warning);
+  }
+  &[data-tone="danger"] {
+    border-inline-start: 3px solid var(--color-danger);
+  }
+  &[data-tone="accent"] {
+    border-inline-start: 3px solid var(--color-accent);
+  }
+  &:is(a, button):hover {
+    background-color: var(--color-row-hover);
+    border-color: var(--color-primary-edge);
+  }
+  @media (width >= 1024px) {
+    padding: 1.25rem;
+  }
+}
+
+@utility kpi-figure {
+  font-size: 1.5rem;
+  line-height: 1.2;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  @media (width >= 640px) {
+    font-size: 1.75rem;
+  }
+  @media (width >= 1024px) {
+    font-size: 2rem;
+  }
+}
+
+/* حبّة ترشيح: ٤٤ على اللمس، والمختارةُ ممتلئةٌ بلون التمييز. */
+@utility chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.5rem;
+  padding-inline: 1rem;
+  border-radius: var(--radius-badge);
+  border: 1px solid var(--color-line);
+  background-color: var(--color-surface);
+  color: var(--color-ink);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  transition: background-color 150ms ease, border-color 150ms ease;
+  @media (pointer: coarse) {
+    min-height: 2.75rem;
+  }
+  &:hover {
+    background-color: var(--color-row-hover);
+  }
+  &[aria-pressed="true"] {
+    border-color: var(--color-accent);
+    background-color: var(--color-accent);
+    color: var(--color-on-bright);
+    font-weight: 700;
+  }
+}
+
+@utility chip-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5rem;
+  height: 1.25rem;
+  padding-inline: 0.375rem;
+  border-radius: var(--radius-badge);
+  background-color: var(--color-ink-faint);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  [aria-pressed="true"] > & {
+    background-color: var(--color-on-bright);
+    color: var(--color-accent-text);
+  }
+}
+
+/* شريطُ أدواتٍ لاصقٌ تحت الشريط العلويّ (بحث + ترشيح). */
+@utility toolbar {
+  position: sticky;
+  top: var(--topbar-h);
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--color-line-soft);
+  background-color: var(--color-chrome);
+  backdrop-filter: blur(16px) saturate(1.1);
+  box-shadow: var(--shadow-e2);
+}
+
+/* حقلُ بحثٍ عالٍ (٤٨) بأيقونةٍ في بدايته. */
+@utility search-field {
+  width: 100%;
+  height: 3rem;
+  border-radius: var(--radius-control);
+  border: 1px solid var(--color-line);
+  background-color: var(--color-field);
+  color: var(--color-ink);
+  font-size: var(--text-sm);
+  outline: none;
+  padding-inline-start: 2.5rem;
+  padding-inline-end: 2.75rem;
+  &::placeholder {
+    color: var(--color-ink-muted);
+  }
+  &:focus {
+    border-color: var(--color-accent);
+  }
+}
+
+/* مسار أفقيٌّ يُمرَّر بلا شريط (رقائق · أدوات). */
+@utility rail-x {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* جدولٌ كثيف (`DataView dense`): ترويسةٌ لاصقةٌ على lg وصفوفٌ بتحويم وأرقامٌ بعرض ثابت.
+   `--table-head-offset` يرفع الترويسةَ تحت شريط أدواتٍ لاصقٍ فوقه. */
+@utility console-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  & thead th {
+    padding: 0.625rem 0.75rem;
+    background-color: var(--color-field);
+    border-bottom: 1px solid var(--color-line);
+    color: var(--color-ink-muted);
+    font-size: var(--text-xs);
+    font-weight: 700;
+    white-space: nowrap;
+    @media (width >= 1024px) {
+      position: sticky;
+      top: calc(var(--topbar-h) + var(--table-head-offset, 0px));
+      z-index: 10;
+      background-color: var(--color-chrome);
+      backdrop-filter: blur(16px);
+    }
+  }
+  & tbody td {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--color-line-soft);
+    vertical-align: middle;
+  }
+  & tbody tr:hover td {
+    background-color: var(--color-row-hover);
+  }
+  & tbody tr:last-child td {
+    border-bottom: 0;
+  }
+}

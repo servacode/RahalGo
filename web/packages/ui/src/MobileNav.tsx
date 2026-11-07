@@ -43,6 +43,11 @@ export interface NavItem {
    * بدايةُ `/store/menu/new`). **وبلا هذا يُضاء بندان معاً.**
    */
   exact?: boolean;
+  /**
+   * **زرُّ الفعل الأوّل** (لوحةُ المتجر: «أضف صنفاً») — أيقونتُه في قرصٍ بلون التمييز،
+   * فيُرى فعلاً لا قسماً. وبلا هذا يبقى البندُ كغيره.
+   */
+  emphasis?: boolean;
 }
 
 /**
@@ -88,7 +93,7 @@ export function MobileNav({
             /* **وأربعةٌ وأربعون بكسلاً حدُّ اللمس** — والارتفاعُ هنا ستّون:
                الإصبعُ لا يصيب أقلَّ منها من أوّل مرّة، **ومن أخطأ مرّتين ترك
                الشريطَ واستعمل رجوعَ المتصفّح.** */
-            className={`relative flex min-h-[3.75rem] flex-1 flex-col items-center justify-center gap-1 py-2 text-2xs transition-colors ${
+            className={`relative flex min-h-[3.75rem] flex-1 flex-col items-center justify-center gap-0.5 py-1.5 text-2xs transition-colors ${
               on ? "font-bold text-accent-text" : "text-ink-muted"
             }`}
           >
@@ -100,11 +105,18 @@ export function MobileNav({
                 on ? "bg-accent" : "bg-transparent"
               }`}
             />
-            <span className="relative">
-              <Icon size={21} />
-              {it.count != null && it.count > 0 && (
-                <CountBadge count={it.count} tone="danger" float max={9} />
-              )}
+            {/* **قرصٌ خلف الأيقونة**: النشِطُ بصبغةٍ هادئة، وبندُ الفعل (`emphasis`) بلون التمييز. */}
+            <span
+              className={`relative flex h-8 w-14 items-center justify-center rounded-badge transition-colors ${
+                it.emphasis ? "bg-accent text-on-bright" : on ? "bg-primary-tint" : ""
+              }`}
+            >
+              <span className="relative">
+                <Icon size={21} />
+                {it.count != null && it.count > 0 && (
+                  <CountBadge count={it.count} tone="danger" float max={9} />
+                )}
+              </span>
             </span>
             {it.label}
           </Link>

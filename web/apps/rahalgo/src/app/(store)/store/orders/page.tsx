@@ -24,17 +24,32 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, errorText, fmtMoney, fmtNum, fmtSince } from "@rahalgo/i18n";
-import { Alert, Button, EmptyState, IconOrder, IconWarning, InvoiceLines, LoadingState, Modal, ReloadState, Textarea } from "@rahalgo/ui";
+import { Alert, Badge, Button, EmptyState, IconOrder, IconWarning, InvoiceLines, LoadingState, Modal, PageHead, ReloadState, Textarea } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import { useStoreOrders } from "@/lib/store/orders";
-import { canMarkReady, groupOf, noPayout, ORDER_GROUPS, type MerchantOrder } from "@/lib/store/types";
+import { canMarkReady, groupOf, noPayout, ORDER_GROUPS, type MerchantOrder, type OrderGroup } from "@/lib/store/types";
 import { fill } from "@/lib/customer/texts";
 import { useShopToast } from "@/components/customer/toast";
 
 const m = getMessages(defaultLocale);
 const O = m.store.orders;
 const STATUS = O.status as Record<string, string>;
+
+/** **نبرةُ شارة الحال بمجموعة الطلب** — والنصُّ يقول الحالَ، فلا يعتمد المعنى على اللون وحدَه. */
+const BADGE: Record<OrderGroup, "danger" | "warning" | "primary" | "neutral"> = {
+  new: "danger",
+  preparing: "warning",
+  waiting: "primary",
+  closed: "neutral",
+};
+/** **نقطةُ لون المجموعة في رأس العمود.** */
+const DOT: Record<OrderGroup, string> = {
+  new: "bg-danger-solid",
+  preparing: "bg-warning-solid",
+  waiting: "bg-primary-solid",
+  closed: "bg-ink-dim",
+};
 
 /** **ثانيةٌ تمشي** — «منذ 3 دقائق» تتبدّل بلا نداء. */
 function useNow(ms = 15_000): number {
@@ -94,22 +109,23 @@ function OrderCard({
   // **عمرُ الطلب بكلماتٍ كاملةٍ كالتطبيق** (`Since.text`): «منذ 5 دقائق» · «منذ ساعتين» — لا «5 د» و«2 س».
   // وفارغٌ إن لم يُفهم الوقت: لا يُكتب «منذ 0».
   const age = ended ? "" : fmtSince(order.sent_to_merchant_at ?? order.created_at, now);
+  /* **الجديدُ يُرى قبل أن يُقرأ**: حدُّ بدايته أحمرُ سميكٌ وأرضيّتُه محمرّة، والمنتهي باهت. */
   const tone = isNew
-    ? "border-danger-edge bg-danger-tint"
+    ? "border-danger-edge border-s-4 bg-danger-tint"
     : ended
-      ? "border-line opacity-80"
-      : "border-line";
+      ? "opacity-80"
+      : "";
 
   return (
-    <article className={`surface flex flex-col gap-3 rounded-card border p-4 ${tone}`} data-testid="store-order">
+    <article className={`panel-lite flex flex-col gap-3 p-4 ${tone}`} data-testid="store-order">
       <header className="flex items-center gap-2">
-        <span className="heading-card" dir="ltr">
+        <span className="console-title" dir="ltr">
           #{order.number}
         </span>
-        {age && <span className="text-xs text-ink-muted">{age}</span>}
-        <span className="ms-auto rounded-badge bg-field px-2 py-1 text-xs font-bold">
+        {age && <span className="console-meta">{age}</span>}
+        <Badge variant={BADGE[groupOf(order)]} className="ms-auto px-3 py-1 font-bold">
           {STATUS[order.status] ?? O.readyDone}
-        </span>
+        </Badge>
       </header>
 
       {/* **طلبٌ مشترك**: قسمُك فقط، بلا اسم أيّ محلٍّ آخر (٢٠٢٦-١١-٠٦). */}
@@ -163,7 +179,7 @@ function OrderCard({
             type="button"
             disabled={busy}
             onClick={() => onAct(order, "accept")}
-            className="w-full rounded-control bg-success px-4 py-4 text-base font-bold text-on-bright transition-opacity hover:opacity-90 disabled:opacity-60"
+            className="min-h-12 w-full rounded-control bg-success px-4 py-3 text-base font-bold text-on-bright transition-opacity hover:opacity-90 disabled:opacity-60"
           >
             {O.accept}
           </button>
@@ -255,15 +271,17 @@ export default function OrdersPage() {
      السائق) ولو فارغةً — فالعينُ تتعلّم موضعَ كلّ حال. والمنتهي صفٌّ كاملٌ تحتها. */
   const groups = all.filter((x) => x.list.length > 0 || x.g !== "closed");
 
-  const historyLink = (
-    <Link href="/store/history" className="block py-3 text-center text-sm font-bold text-primary hover:underline">
-      {O.historyLink}
-    </Link>
-  );
-
   return (
-    <div className="flex flex-col gap-3">
-      <h2 className="heading-page">{O.title}</h2>
+    <div className="console-page">
+      <PageHead
+        title={O.title}
+        subtitle={fill(O.liveCount, { n: fmtNum(all.filter((x) => x.g !== "closed").reduce((a, x) => a + x.list.length, 0)) })}
+        actions={
+          <Link href="/store/history" className="flex min-h-11 items-center gap-1 text-sm font-bold text-primary hover:underline">
+            {O.historyLink}
+          </Link>
+        }
+      />
       {!selfManage && <Alert tone="info">{O.platformMode}</Alert>}
       {orders.length === 0 ? (
         <EmptyState
@@ -279,20 +297,21 @@ export default function OrdersPage() {
           }
         />
       ) : (
-        <div className="flex flex-col gap-3 lg:grid lg:grid-cols-3 lg:items-start" data-testid="store-orders-board">
+        <div className="flex flex-col gap-4 lg:grid lg:grid-cols-3 lg:items-start lg:gap-4" data-testid="store-orders-board">
           {groups.map(({ g, list }) => (
             <section
               key={g}
               className={`flex min-w-0 flex-col gap-3 ${list.length === 0 ? "hidden lg:flex" : ""} ${
-                g === "closed" ? "lg:col-span-3" : "lg:rounded-card lg:bg-field lg:p-3"
+                g === "closed" ? "lg:col-span-3" : "lg:rounded-card lg:border lg:border-line-soft lg:bg-field lg:p-3"
               }`}
               aria-label={fill(O.groups[g], { n: fmtNum(list.length) })}
             >
-              <h3 className={`heading-card pt-2 lg:pt-0 ${g === "new" ? "text-accent-text" : "text-ink-muted"}`}>
+              <h3 className={`console-h2 flex items-center gap-2 pt-2 lg:pt-0 ${g === "new" ? "text-ink" : "text-ink-muted"}`}>
+                <span className={`size-2.5 shrink-0 rounded-badge ${DOT[g]}`} aria-hidden />
                 {fill(O.groups[g], { n: fmtNum(list.length) })}
               </h3>
               {list.length === 0 && <p className="py-6 text-center text-sm text-ink-muted">{O.colEmpty}</p>}
-              <div className={g === "closed" ? "flex flex-col gap-3 lg:grid lg:grid-cols-3" : "contents"}>
+              <div className={g === "closed" ? "flex flex-col gap-3 lg:grid lg:grid-cols-3 2xl:grid-cols-4" : "contents"}>
                 {list.map((o) => (
                   <OrderCard key={o.id} order={o} selfManage={selfManage} busy={busy.has(o.id)} now={now} onAct={act} />
                 ))}
@@ -301,7 +320,6 @@ export default function OrdersPage() {
           ))}
         </div>
       )}
-      {historyLink}
     </div>
   );
 }

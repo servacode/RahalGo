@@ -90,14 +90,18 @@ export function ButtonLink({
   variant = "primary",
   size = "md",
   className = "",
+  Link,
   ...props
 }: React.AnchorHTMLAttributes<HTMLAnchorElement> & {
   variant?: keyof typeof buttonVariants;
   size?: keyof typeof buttonSizes;
+  /** **رابطُ التطبيق (`next/link`)** للتنقّل بلا إعادة تحميل — وبلاه `<a>` عاديّ كما كان. */
+  Link?: React.ComponentType<React.AnchorHTMLAttributes<HTMLAnchorElement> & { href: string }>;
 }) {
+  const Tag = Link ?? "a";
   return (
-    <a
-      {...props}
+    <Tag
+      {...(props as React.AnchorHTMLAttributes<HTMLAnchorElement> & { href: string })}
       className={`inline-flex items-center justify-center gap-2 rounded-control font-medium transition-colors ${buttonSizes[size]} ${buttonVariants[variant]} ${className}`}
     />
   );

@@ -2,29 +2,34 @@
 
 /**
  * ══════════════════════════════════════════════════════════════════════
- * **‏/store — «متجري»: الشاشةُ نفسُها التي في التطبيق**
+ * **‏/store — «متجري»: لوحةُ قيادة المتجر**
  * ══════════════════════════════════════════════════════════════════════
  *
- * (مرآةُ `StoreHome.kt` — ملاحظةُ المالك ٦، ٢٠٢٦-١٠-٢٨.)
+ * (مرآةُ `StoreHome.kt` — ملاحظةُ المالك ٦، ٢٠٢٦-١٠-٢٨؛ وإعادةُ التصميم ٢٠٢٦-١١-٠٧:
+ *  «لسّا التصميم ضعيف جداً — لازم يكون أقوى واحترافي أكثر».)
  *
- * **من فوق إلى تحت**: رأسٌ بالشعار والاسم · **شريطُ الحال بأرضٍ فاتحةٍ من لونه**
- * (أخضر مفتوح · رماديّ مغلق بالساعات · برتقاليّ إغلاقٌ طارئ · أحمر موقوف) وزرُّه
- * صغيرٌ محدَّدٌ في آخره ·
- * **أربعةُ أزرارٍ سريعة** · **أرقامُ اليوم** · **ثمّ الإعداداتُ في مجموعتين**:
- * «المتجر» و«الدوام والمال»، كلُّ سطرٍ بأيقونته وقيمته ونقطةٍ حمراءَ إن نقص.
+ * **من فوق إلى تحت (جوّالاً: عمودٌ واحد · حاسوباً: ثلاثةُ أعمدة):**
  *
- * **ولا مفتاحَ «مفتوح» يدويّ**: الحالُ تتبع ساعاتِ الدوام، **والإغلاقُ الطارئُ
- * وحدَه بيده.**
+ *   ١ · هويّةُ المتجر (شعارٌ واسمٌ) ‖ **حالُه** — مفتوحٌ · مغلقٌ بالساعات · إغلاقٌ طارئ · موقوف،
+ *       وزرُّ الإغلاق الطارئ/إعادة الفتح كبيرٌ بحجم لمسةٍ كاملة.
+ *   ٢ · **طلباتُ الآن** (جديدة · قيد التحضير · بانتظار السائق) من سياق الطلبات الحيّ نفسِه
+ *       — بلا نداءٍ جديد، وتتحدّث مع البثّ.
+ *   ٣ · **أرقامُ اليوم**: الطلبات · المبيعات · المستحق · الملغاة (من تقرير اليوم).
+ *   ٤ · **يحتاج انتباهك**: أصنافٌ بلا صورة · غير متوفرة · بلا قسم (الأمين) · وما نقص من الإعداد.
+ *   ٥ · **الإجراءات السريعة** · ٦ · **الإعدادات** في مجموعتين.
+ *
+ * **ولا مفتاحَ «مفتوح» يدويّ**: الحالُ تتبع ساعاتِ الدوام، **والإغلاقُ الطارئُ وحدَه بيده.**
  */
 
 import Link from "next/link";
 import { useCallback, useEffect, useState, type ComponentType, type ReactNode } from "react";
-import { getMessages, defaultLocale, damascusDay, errorText, fmtMoney, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, damascusDay, errorText, fmtMoney, fmtNum, fmtSince } from "@rahalgo/i18n";
 import {
   Alert,
   Button,
   Confirm,
   FormActions,
+  IconAdd,
   IconBanknote,
   IconBlock,
   IconCash,
@@ -42,13 +47,17 @@ import {
   IconPromos,
   IconReports,
   IconReturn,
+  IconRotate,
   IconStore,
   IconTrendUp,
   IconUsers,
   IconViewOff,
   IconWallet,
+  IconWarning,
   IconCatOther,
   Input,
+  Kpi,
+  KpiGrid,
   LoadingState,
   Modal,
   Select,
@@ -56,7 +65,9 @@ import {
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
+import { useStoreOrders } from "@/lib/store/orders";
 import { pointSet, useStoreSections } from "@/lib/store/setup";
+import { groupOf } from "@/lib/store/types";
 import type { DayHours, MenuSummary, MerchantStore, StoreReport } from "@/lib/store/types";
 import { backAt, fill } from "@/lib/customer/texts";
 import { useShopToast } from "@/components/customer/toast";
@@ -73,35 +84,30 @@ type IconT = ComponentType<{ size?: number; className?: string }>;
 
 /**
  * **لونُ الأيقونة واحدٌ هادئ** — لونُ المنصّة لكلّ سطرٍ وزرّ (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩).
- * **والأحمرُ والبرتقاليُّ والأخضرُ للحال وحدَها**: نقطةُ «ناقص» وشريطُ الحال —
- * وكان العنوانُ أحمرَ فيُقرأ مشكلةً وهو ليس كذلك.
+ * **والأحمرُ والبرتقاليُّ والأخضرُ للحال وحدَها**: نقطةُ «ناقص» وشريطُ الحال.
  */
 const ICON_TINT = "bg-primary-tint text-primary";
 
 // ══════════════════════════════════════════════════════════════════════
-// الرأس
+// الهويّة
 // ══════════════════════════════════════════════════════════════════════
 
-function HomeHeader({ store, suspended, onLogo }: { store: MerchantStore; suspended: boolean; onLogo: () => void }) {
+function Identity({ store, suspended, onLogo }: { store: MerchantStore; suspended: boolean; onLogo: () => void }) {
   const { stores, select } = useStore();
   const { busy, save } = useSaveSettings();
   const [draft, setDraft] = useState<string | null>(null);
   const logo = mediaUrl(store.logo_thumb_url);
   return (
-    <section className="flex flex-col gap-3 rounded-card bg-primary-solid p-4 text-on-solid">
-      <div className="flex items-center gap-3">
+    <section className="panel flex flex-col gap-3 p-4 lg:col-span-2 lg:justify-center" aria-label={HM.groupStore}>
+      <div className="flex items-center gap-4">
         <button
           type="button"
           onClick={onLogo}
           disabled={suspended}
           aria-label={HM.changeLogo}
-          className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden figure rounded-card border-2 border-on-solid bg-paper text-primary-solid"
+          className="flex size-16 shrink-0 items-center justify-center overflow-hidden rounded-card border border-line bg-field heading-page text-primary lg:size-20"
         >
-          {logo ? (
-            <img src={logo} alt="" className="h-full w-full object-cover" />
-          ) : (
-            store.name.slice(0, 1) || "?"
-          )}
+          {logo ? <img src={logo} alt="" className="h-full w-full object-cover" /> : store.name.slice(0, 1) || "?"}
         </button>
         <div className="min-w-0 flex-1">
           {/* **والاسمُ مرّةً واحدة** (تجربةُ المالك ٢٠٢٦-١٠-٢٩) — ومن له فروعٌ يبدّل منه. */}
@@ -114,8 +120,9 @@ function HomeHeader({ store, suspended, onLogo }: { store: MerchantStore; suspen
               ))}
             </Select>
           ) : (
-            <h1 className="heading-page line-clamp-2">{store.name}</h1>
+            <h1 className="console-title line-clamp-2">{store.name}</h1>
           )}
+          <p className="console-meta mt-1">{S.nav.panel}</p>
         </div>
         {!suspended && draft == null && (
           <button
@@ -123,7 +130,7 @@ function HomeHeader({ store, suspended, onLogo }: { store: MerchantStore; suspen
             onClick={() => setDraft(store.name)}
             aria-label={T.rename}
             title={T.rename}
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control hover:bg-scrim"
+            className="flex size-11 shrink-0 items-center justify-center rounded-control text-ink-muted hover:bg-row-hover hover:text-ink"
           >
             <IconEdit size={20} />
           </button>
@@ -131,7 +138,7 @@ function HomeHeader({ store, suspended, onLogo }: { store: MerchantStore; suspen
       </div>
       {draft != null && (
         <form
-          className="flex flex-col gap-2 rounded-control bg-surface p-3 text-ink"
+          className="flex flex-col gap-2 rounded-control bg-field p-3"
           onSubmit={(e) => {
             e.preventDefault();
             const name = draft.trim();
@@ -155,10 +162,10 @@ function HomeHeader({ store, suspended, onLogo }: { store: MerchantStore; suspen
 }
 
 // ══════════════════════════════════════════════════════════════════════
-// شريطُ الحال
+// الحال — والإغلاقُ الطارئ
 // ══════════════════════════════════════════════════════════════════════
 
-function StatusBand({ store, suspended }: { store: MerchantStore; suspended: boolean }) {
+function StatusPanel({ store, suspended }: { store: MerchantStore; suspended: boolean }) {
   const { patch, reload } = useStore();
   const toast = useShopToast();
   const [asking, setAsking] = useState(false);
@@ -180,8 +187,7 @@ function StatusBand({ store, suspended }: { store: MerchantStore; suspended: boo
       : !store.open_now
         ? HM.closedHours
         : HM.byHours;
-  /* **أرضٌ فاتحةٌ من لون الحال وحرفٌ بلونه** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) — كان أبيضَ
-     على تعبئةٍ مصمتة، **وكان «إغلاقٌ طارئ» أكبرَ زرٍّ في الشاشة.** */
+  /* **أرضٌ فاتحةٌ من لون الحال وحرفٌ بلونه** — و«إغلاق طارئ» زرٌّ بإطار لا تعبئة (لا يصرخ). */
   const tone = suspended
     ? "border-danger-edge bg-danger-tint text-danger"
     : store.emergency_closed
@@ -211,22 +217,26 @@ function StatusBand({ store, suspended }: { store: MerchantStore; suspended: boo
 
   const reopen = store.emergency_closed;
   return (
-    <section className={`flex items-center gap-3 rounded-card border p-3 ${tone}`} data-testid="store-status">
-      <Icon size={24} className="shrink-0" />
-      <div className="min-w-0 flex-1">
-        <p className="heading-card">{label}</p>
-        <p className="text-sm text-ink-muted">{sub}</p>
+    <section className={`flex flex-col justify-center gap-3 rounded-card border p-4 ${tone}`} data-testid="store-status" aria-label={HM.statusLabel}>
+      <div className="flex items-center gap-3">
+        <span className="flex size-11 shrink-0 items-center justify-center rounded-badge bg-surface">
+          <Icon size={24} />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="heading-card">{label}</p>
+          <p className="console-meta">{sub}</p>
+        </div>
       </div>
       {!suspended && (
         <button
           type="button"
           disabled={busy}
           onClick={() => (reopen ? void setClosed(false) : setAsking(true))}
-          className={`flex h-10 shrink-0 items-center gap-1.5 rounded-control border px-3 text-sm font-bold transition-colors hover:bg-row-hover disabled:opacity-60 ${
+          className={`flex min-h-11 w-full items-center justify-center gap-2 rounded-control border bg-surface px-4 text-sm font-bold transition-colors hover:bg-row-hover disabled:opacity-60 ${
             reopen ? "border-success-edge text-success" : "border-danger-edge text-danger"
           }`}
         >
-          <IconBlock size={16} />
+          <IconBlock size={18} />
           {reopen ? HM.reopen : T.emergency}
         </button>
       )}
@@ -244,56 +254,170 @@ function StatusBand({ store, suspended }: { store: MerchantStore; suspended: boo
 }
 
 // ══════════════════════════════════════════════════════════════════════
-// الأزرارُ السريعة · أرقامُ اليوم · سطورُ الإعداد
+// طلباتُ الآن
 // ══════════════════════════════════════════════════════════════════════
 
-function QuickAction({ href, icon: Icon, label, badge = 0 }: { href: string; icon: IconT; label: string; badge?: number }) {
+function LiveOrders() {
+  const { orders } = useStoreOrders();
+  const now = Date.now();
+  const list = orders ?? [];
+  const fresh = list.filter((o) => groupOf(o) === "new");
+  const cells: { key: string; label: string; n: number; urgent?: boolean }[] = [
+    { key: "new", label: HM.liveNew, n: fresh.length, urgent: true },
+    { key: "preparing", label: HM.livePrep, n: list.filter((o) => groupOf(o) === "preparing").length },
+    { key: "waiting", label: HM.liveWait, n: list.filter((o) => groupOf(o) === "waiting").length },
+  ];
+  const total = cells.reduce((a, c) => a + c.n, 0);
+  return (
+    <section className="panel flex flex-col lg:col-span-2" aria-label={HM.liveTitle} data-testid="store-live">
+      <div className="panel-head">
+        <h2 className="console-h2 flex items-center gap-2">
+          <IconOrder size={18} className="text-primary" />
+          {HM.liveTitle}
+        </h2>
+        <Link href="/store/orders" className="flex min-h-11 items-center gap-1 text-sm font-bold text-primary hover:underline">
+          {HM.liveAll}
+          <IconNext size={16} />
+        </Link>
+      </div>
+      <div className="flex gap-2 p-3 lg:gap-3 lg:p-4">
+        {cells.map((c) => (
+          <Link
+            key={c.key}
+            href="/store/orders"
+            className={`flex min-w-0 flex-1 flex-col gap-1 rounded-control border p-3 text-start transition-colors hover:bg-row-hover ${
+              c.urgent && c.n > 0 ? "border-danger-edge bg-danger-tint" : "border-line-soft bg-field"
+            }`}
+          >
+            <span className="kpi-figure">{fmtNum(c.n)}</span>
+            <span className="console-meta line-clamp-2">{c.label}</span>
+          </Link>
+        ))}
+      </div>
+      {fresh.length > 0 ? (
+        <ul className="flex flex-col border-t border-line-soft">
+          {fresh.slice(0, 3).map((o) => (
+            <li key={o.id} className="border-b border-line-soft last:border-0">
+              <Link href="/store/orders" className="flex min-h-14 items-center gap-3 px-4 py-2 transition-colors hover:bg-row-hover">
+                <span className="heading-card" dir="ltr">
+                  #{o.number}
+                </span>
+                <span className="console-meta">{fmtSince(o.sent_to_merchant_at ?? o.created_at, now)}</span>
+                <span className="ms-auto text-sm font-bold tabular-nums">{fmtMoney(o.subtotal)}</span>
+                <IconNext size={16} className="shrink-0 text-ink-muted" />
+              </Link>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        total === 0 && <p className="border-t border-line-soft px-4 py-4 text-center text-sm text-ink-muted">{HM.liveNone}</p>
+      )}
+    </section>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// يحتاج انتباهك
+// ══════════════════════════════════════════════════════════════════════
+
+interface Need {
+  key: string;
+  text: string;
+  cta?: string;
+  href: string;
+  /** `danger`: نقصٌ في الإعداد يمنع عملاً · `warning`: أصنافٌ تحتاج مراجعة. */
+  tone: "danger" | "warning";
+  icon: IconT;
+}
+
+function NeedsPanel({ needs, wide }: { needs: Need[]; wide: boolean }) {
+  return (
+    <section className={`panel flex flex-col ${wide ? "lg:col-span-3" : ""}`} aria-label={HM.alertsTitle} data-testid="store-needs">
+      <div className="panel-head">
+        <h2 className="console-h2 flex items-center gap-2">
+          <IconWarning size={18} className="text-primary" />
+          {HM.alertsTitle}
+        </h2>
+        {needs.length > 0 && <span className="chip-count">{fmtNum(needs.length)}</span>}
+      </div>
+      {needs.length === 0 ? (
+        <p className="flex items-center justify-center gap-2 px-4 py-6 text-center text-sm text-ink-muted">
+          <IconCheck size={18} className="text-success" />
+          {HM.alertsClear}
+        </p>
+      ) : (
+        <ul className="flex flex-col">
+          {needs.map((n) => {
+            const Ico = n.icon;
+            return (
+              <li key={n.key} className="border-b border-line-soft last:border-0">
+                <Link href={n.href} className="flex min-h-14 items-center gap-3 px-4 py-2 transition-colors hover:bg-row-hover">
+                  <span
+                    className={`flex size-9 shrink-0 items-center justify-center rounded-control ${
+                      n.tone === "danger" ? "bg-danger-tint text-danger" : "bg-warning-tint text-warning"
+                    }`}
+                  >
+                    <Ico size={18} />
+                  </span>
+                  <span className="min-w-0 flex-1 text-sm font-medium">{n.text}</span>
+                  {n.cta && <span className="shrink-0 text-sm font-bold text-primary">{n.cta}</span>}
+                  <IconNext size={16} className="shrink-0 text-ink-muted" />
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// الإجراءاتُ السريعة · سطورُ الإعداد
+// ══════════════════════════════════════════════════════════════════════
+
+function QuickAction({
+  href,
+  icon: Icon,
+  label,
+  badge = 0,
+  primary = false,
+  className = "",
+}: {
+  href: string;
+  icon: IconT;
+  label: string;
+  badge?: number;
+  primary?: boolean;
+  className?: string;
+}) {
   return (
     <Link
       href={href}
-      className="surface relative flex min-w-0 flex-1 flex-col items-center gap-2 rounded-card px-1 py-3 text-center transition-colors hover:bg-row-hover"
+      className={`relative flex min-h-16 min-w-0 items-center gap-3 rounded-card border px-4 py-3 text-start transition-colors ${
+        primary
+          ? "border-accent bg-accent text-on-bright hover:opacity-90"
+          : "border-line-soft bg-surface shadow-[var(--shadow-e1)] hover:bg-row-hover"
+      } ${className}`}
     >
-      <span className={`flex h-11 w-11 items-center justify-center rounded-badge ${ICON_TINT}`}>
-        <Icon size={24} />
+      <span className={`flex size-10 shrink-0 items-center justify-center rounded-control ${primary ? "bg-on-bright text-accent-text" : ICON_TINT}`}>
+        <Icon size={22} />
       </span>
-      <span className="text-xs font-bold sm:text-sm">{label}</span>
+      <span className="min-w-0 flex-1 text-sm font-bold">{label}</span>
       {badge > 0 && (
-        <span className="absolute end-1 top-1 rounded-badge bg-danger-solid px-2 py-0.5 text-xs font-bold text-on-solid">
-          {fmtNum(badge)}
-        </span>
+        <span className="rounded-badge bg-danger-solid px-2 py-0.5 text-xs font-bold tabular-nums text-on-solid">{fmtNum(badge)}</span>
       )}
     </Link>
   );
 }
 
-function Tile({ icon: Icon, value, label, sub, href }: { icon: IconT; value: string; label: string; sub?: string; href?: string }) {
-  const body = (
-    <>
-      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-control ${ICON_TINT}`}>
-        <Icon size={20} />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="figure truncate tabular-nums">{value}</p>
-        <p className="truncate text-xs text-ink-muted">{label}</p>
-        {sub && <p className="truncate text-xs text-ink-muted">{sub}</p>}
-      </div>
-    </>
-  );
-  // **وطلباتُ اليوم تُضغط فتُري الطلبات** (قرارُ المالك ٢٠٢٦-١٠-٢٩).
-  return href ? (
-    <Link href={href} className="surface flex items-center gap-3 rounded-card p-3 transition-colors hover:bg-row-hover">
-      {body}
-    </Link>
-  ) : (
-    <div className="surface flex items-center gap-3 rounded-card p-3">{body}</div>
-  );
-}
-
 function Group({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-2" aria-label={title}>
-      <h2 className="px-1 text-sm font-bold text-ink-muted">{title}</h2>
-      <div className="surface flex flex-col divide-y divide-line overflow-hidden rounded-card p-0">{children}</div>
+    <section className="panel flex flex-col overflow-hidden" aria-label={title}>
+      <div className="panel-head">
+        <h2 className="console-h2">{title}</h2>
+      </div>
+      <div className="flex flex-col divide-y divide-line-soft">{children}</div>
     </section>
   );
 }
@@ -317,16 +441,16 @@ function Row({
 }) {
   const body = (
     <>
-      <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-control ${ICON_TINT}`}>
+      <span className={`flex size-9 shrink-0 items-center justify-center rounded-control ${ICON_TINT}`}>
         <Icon size={20} />
       </span>
-      <span className="shrink-0 text-base">{label}</span>
+      <span className="shrink-0 text-sm font-medium">{label}</span>
       <span className={`min-w-0 flex-1 truncate text-end text-sm ${warn ? "text-danger" : "text-ink-muted"}`}>{value}</span>
-      {warn && <span className="h-2.5 w-2.5 shrink-0 rounded-badge bg-danger-solid" aria-label={HM.missing} />}
+      {warn && <span className="size-2.5 shrink-0 rounded-badge bg-danger-solid" aria-label={HM.missing} />}
       <IconNext size={18} className="shrink-0 text-ink-muted" />
     </>
   );
-  const cls = "flex min-h-15 w-full items-center gap-3 px-3 py-2 text-start transition-colors hover:bg-row-hover disabled:opacity-60";
+  const cls = "flex min-h-14 w-full items-center gap-3 px-4 py-2 text-start transition-colors hover:bg-row-hover disabled:opacity-60";
   return href ? (
     <Link href={href} className={cls}>
       {body}
@@ -354,7 +478,7 @@ function hoursValue(store: MerchantStore, hours: DayHours[] | null): string | nu
 // ══════════════════════════════════════════════════════════════════════
 
 export default function StoreHome() {
-  const { store } = useStore();
+  const { store, selfManage } = useStore();
   const id = store?.id ?? "";
   const loadReport = useCallback(() => {
     const today = damascusDay();
@@ -363,135 +487,198 @@ export default function StoreHome() {
   const { data: report, loading } = useLiveData(loadReport, ["order"], [id]);
   const sec = useStoreSections(id);
   const { saved: hours } = useStoreHours(id);
-  const [unavailable, setUnavailable] = useState(0);
+  const [menu, setMenu] = useState<MenuSummary | null>(null);
+  /** **أصنافُ الأمين بلا قسم** — من `price-sync/groups`، وللمتجر الذي يستعمل الأمين وحدَه. */
+  const [unsorted, setUnsorted] = useState(0);
   const [logoOpen, setLogoOpen] = useState(false);
+  const usesAmeen = store?.uses_ameen === true;
 
   useEffect(() => {
     if (!id) return;
-    // **The count from the light summary** (2026-11-07) — not the whole menu of a big mall.
+    // **The counts from the light summary** (2026-11-07) — not the whole menu of a big mall.
     api<MenuSummary>(`/api/v1/merchant/stores/${id}/menu/summary`)
-      .then((s) => setUnavailable(s.unavailable ?? 0))
+      .then(setMenu)
       .catch(() => undefined);
   }, [id]);
+
+  useEffect(() => {
+    if (!id || !usesAmeen) {
+      setUnsorted(0);
+      return;
+    }
+    api<{ pending: number }>(`/api/v1/merchant/stores/${id}/price-sync/groups`)
+      .then((r) => setUnsorted(r.pending ?? 0))
+      .catch(() => undefined);
+  }, [id, usesAmeen]);
 
   if (!store) return null;
   const suspended = store.status === "suspended";
   const point = pointSet(store);
   const notSet = HM.notSet;
+  const unavailable = menu?.unavailable ?? 0;
+  const noPhoto = menu?.no_photo ?? 0;
+
+  /* **ما يحتاج انتباهاً** — النقصُ في الإعداد أوّلاً (يمنع عملاً)، ثمّ الأصناف. */
+  const needs: Need[] = [];
+  if (sec.known && sec.mine.length === 0)
+    needs.push({ key: "sections", text: `${HM.rowSections}: ${notSet}`, href: "/store/settings/sections", tone: "danger", icon: IconCatOther });
+  if (!point)
+    needs.push({ key: "address", text: `${HM.rowAddress}: ${notSet}`, href: "/store/settings/address", tone: "danger", icon: IconLocation });
+  if (!store.has_hours)
+    needs.push({ key: "hours", text: `${HM.rowHours}: ${notSet}`, href: "/store/settings/hours", tone: "danger", icon: IconDate });
+  if (!store.settlement_confirmed)
+    needs.push({ key: "settle", text: `${HM.rowSettlement}: ${notSet}`, href: "/store/settings/settlement", tone: "danger", icon: IconWallet });
+  if (!store.returns_confirmed)
+    needs.push({ key: "returns", text: `${HM.rowReturns}: ${notSet}`, href: "/store/settings/returns", tone: "danger", icon: IconReturn });
+  if (!suspended && noPhoto > 0)
+    needs.push({ key: "photo", text: fill(HM.alertNoPhoto, { n: fmtNum(noPhoto) }), cta: HM.alertNoPhotoCta, href: "/store/menu/photos", tone: "warning", icon: IconCamera });
+  if (!suspended && unsorted > 0)
+    needs.push({ key: "unsorted", text: fill(HM.alertUnsorted, { n: fmtNum(unsorted) }), cta: HM.alertUnsortedCta, href: "/store/price-sync", tone: "warning", icon: IconRotate });
+  if (unavailable > 0)
+    needs.push({ key: "off", text: fill(HM.alertOff, { n: fmtNum(unavailable) }), cta: HM.alertOffCta, href: "/store/menu?filter=unavailable", tone: "warning", icon: IconViewOff });
 
   return (
-    <div className="flex flex-col gap-4">
-      <HomeHeader store={store} suspended={suspended} onLogo={() => setLogoOpen(true)} />
-      <StatusBand store={store} suspended={suspended} />
-      {suspended && <Alert tone="error">{S.suspendedBanner}</Alert>}
-
-      {!suspended && (
-        <div className="flex gap-2">
-          <QuickAction href="/store/offers" icon={IconPromos} label={HM.quickOffers} />
-          <QuickAction
-            href="/store/menu?filter=unavailable"
-            icon={IconViewOff}
-            label={HM.quickUnavailable}
-            badge={unavailable}
-          />
-          <QuickAction href="/store/menu/prices" icon={IconBanknote} label={HM.quickPrices} />
-          <QuickAction href="/store/delivery" icon={IconMoto} label={HM.quickDelivery} />
+    <div className="console-page lg:grid lg:grid-cols-3" data-testid="store-home">
+      <Identity store={store} suspended={suspended} onLogo={() => setLogoOpen(true)} />
+      <StatusPanel store={store} suspended={suspended} />
+      {suspended && (
+        <div className="lg:col-span-3">
+          <Alert tone="error">{S.suspendedBanner}</Alert>
         </div>
       )}
 
-      <section className="flex flex-col gap-2" aria-label={HM.today}>
-        <h2 className="px-1 text-sm font-bold text-ink-muted">{HM.today}</h2>
+      <section className="flex flex-col gap-2 lg:col-span-3" aria-label={HM.today}>
+        <h2 className="console-h2 px-1">{HM.today}</h2>
         {loading && !report ? (
           <LoadingState variant="stats" rows={4} />
         ) : (
           report && (
-            <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-              <Tile
+            <KpiGrid>
+              <Kpi
                 icon={IconOrder}
-                value={fmtNum(report.summary.orders)}
                 label={HM.todayOrders}
-                sub={fill(HM.cancelledSub, { n: fmtNum(report.summary.cancelled) })}
+                value={report.summary.orders}
+                sub={`${HM.deliveredToday}: ${fmtNum(report.summary.delivered)}`}
                 href="/store/history"
+                Link={Link}
+                testId="kpi-orders"
               />
-              <Tile icon={IconCheck} value={fmtNum(report.summary.delivered)} label={HM.deliveredToday} />
-              <Tile icon={IconReports} value={fmtMoney(report.summary.sales)} label={HM.salesToday} />
-              <Tile
+              <Kpi
+                icon={IconReports}
+                label={HM.salesToday}
+                value={fmtNum(report.summary.sales)}
+                unit={m.common.currency}
+                tone="accent"
+                testId="kpi-sales"
+              />
+              <Kpi
                 icon={IconWallet}
-                value={fmtMoney(report.summary.sales - report.summary.platform_commission)}
                 label={HM.dueToday}
+                value={fmtNum(report.summary.sales - report.summary.platform_commission)}
+                unit={m.common.currency}
+                tone="good"
+                testId="kpi-due"
               />
-            </div>
+              <Kpi
+                icon={IconBlock}
+                label={HM.cancelledToday}
+                value={report.summary.cancelled}
+                tone={report.summary.cancelled > 0 ? "attention" : undefined}
+                testId="kpi-cancelled"
+              />
+            </KpiGrid>
           )
         )}
       </section>
 
-      <Group title={HM.groupStore}>
-        <Row
-          icon={IconCatOther}
-          label={HM.rowSections}
-          value={sec.mine.map((s) => s.name).join(" · ") || notSet}
-          warn={sec.known && sec.mine.length === 0}
-          href="/store/settings/sections"
-        />
-        <Row
-          icon={IconLocation}
-          label={HM.rowAddress}
-          value={point ? store.address_text : notSet}
-          warn={!point}
-          href="/store/settings/address"
-        />
-        <Row
-          icon={IconCamera}
-          label={HM.rowLogo}
-          value={store.logo_thumb_url ? HM.logoSet : HM.logoNone}
-          disabled={suspended}
-          onClick={() => setLogoOpen(true)}
-        />
-        <Row icon={IconUsers} label={HM.rowStaff} href="/store/team" />
-        <Row icon={IconPhone} label={HM.rowOrderPhones} href="/store/order-phones" />
-      </Group>
+      {selfManage && <LiveOrders />}
+      {selfManage && <NeedsPanel needs={needs} wide={false} />}
 
-      <Group title={HM.groupHoursMoney}>
-        <Row
-          icon={IconDate}
-          label={HM.rowHours}
-          value={hoursValue(store, hours) ?? notSet}
-          warn={!store.has_hours}
-          href="/store/settings/hours"
-        />
-        <Row
-          icon={store.settlement_method === "wallet" ? IconWallet : IconCash}
-          label={HM.rowSettlement}
-          value={!store.settlement_confirmed ? notSet : store.settlement_method === "wallet" ? HM.wallet : HM.cash}
-          warn={!store.settlement_confirmed}
-          href="/store/settings/settlement"
-        />
-        <Row
-          icon={IconReturn}
-          label={HM.rowReturns}
-          value={!store.returns_confirmed ? notSet : store.accepts_returns ? HM.returnsYes : HM.returnsNo}
-          warn={!store.returns_confirmed}
-          href="/store/settings/returns"
-        />
-        <Row
-          icon={IconCheck}
-          label={HM.rowAmeen}
-          value={store.uses_ameen ? HM.ameenYesShort : HM.ameenNoShort}
-          href="/store/settings/ameen"
-        />
-        <Row
-          icon={IconTrendUp}
-          label={HM.rowRate}
-          value={store.exchange_rate ? usdText(store.exchange_rate) : notSet}
-          href="/store/settings/rate"
-        />
-        <Row
-          icon={IconHourglass}
-          label={HM.rowPrep}
-          value={`${fmtNum(store.default_prep_minutes)} ${T.prepUnit}`}
-          href="/store/settings/prep"
-        />
-      </Group>
+      {/* الوضع «المنصّة تدير» لا تعرض الطلبات الحيّة، فيأخذ «يحتاج انتباهك» العرضَ كلَّه. */}
+      {!selfManage && <NeedsPanel needs={needs} wide />}
+
+      {!suspended && (
+        <section className="flex flex-col gap-2 lg:col-span-3" aria-label={HM.quickTitle}>
+          <h2 className="console-h2 px-1">{HM.quickTitle}</h2>
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+            <QuickAction href="/store/menu/new" icon={IconAdd} label={HM.quickAdd} primary className="col-span-2 lg:col-span-1" />
+            <QuickAction href="/store/offers" icon={IconPromos} label={HM.quickOffers} />
+            <QuickAction href="/store/menu?filter=unavailable" icon={IconViewOff} label={HM.quickUnavailable} badge={unavailable} />
+            <QuickAction href="/store/menu/prices" icon={IconBanknote} label={HM.quickPrices} />
+            <QuickAction href="/store/delivery" icon={IconMoto} label={HM.quickDelivery} />
+          </div>
+        </section>
+      )}
+
+      <div className="flex flex-col gap-4 lg:col-span-3 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5">
+        <Group title={HM.groupStore}>
+          <Row
+            icon={IconCatOther}
+            label={HM.rowSections}
+            value={sec.mine.map((s) => s.name).join(" · ") || notSet}
+            warn={sec.known && sec.mine.length === 0}
+            href="/store/settings/sections"
+          />
+          <Row
+            icon={IconLocation}
+            label={HM.rowAddress}
+            value={point ? store.address_text : notSet}
+            warn={!point}
+            href="/store/settings/address"
+          />
+          <Row
+            icon={IconCamera}
+            label={HM.rowLogo}
+            value={store.logo_thumb_url ? HM.logoSet : HM.logoNone}
+            disabled={suspended}
+            onClick={() => setLogoOpen(true)}
+          />
+          <Row icon={IconUsers} label={HM.rowStaff} href="/store/team" />
+          <Row icon={IconPhone} label={HM.rowOrderPhones} href="/store/order-phones" />
+        </Group>
+
+        <Group title={HM.groupHoursMoney}>
+          <Row
+            icon={IconDate}
+            label={HM.rowHours}
+            value={hoursValue(store, hours) ?? notSet}
+            warn={!store.has_hours}
+            href="/store/settings/hours"
+          />
+          <Row
+            icon={store.settlement_method === "wallet" ? IconWallet : IconCash}
+            label={HM.rowSettlement}
+            value={!store.settlement_confirmed ? notSet : store.settlement_method === "wallet" ? HM.wallet : HM.cash}
+            warn={!store.settlement_confirmed}
+            href="/store/settings/settlement"
+          />
+          <Row
+            icon={IconReturn}
+            label={HM.rowReturns}
+            value={!store.returns_confirmed ? notSet : store.accepts_returns ? HM.returnsYes : HM.returnsNo}
+            warn={!store.returns_confirmed}
+            href="/store/settings/returns"
+          />
+          <Row
+            icon={IconCheck}
+            label={HM.rowAmeen}
+            value={store.uses_ameen ? HM.ameenYesShort : HM.ameenNoShort}
+            href="/store/settings/ameen"
+          />
+          <Row
+            icon={IconTrendUp}
+            label={HM.rowRate}
+            value={store.exchange_rate ? usdText(store.exchange_rate) : notSet}
+            href="/store/settings/rate"
+          />
+          <Row
+            icon={IconHourglass}
+            label={HM.rowPrep}
+            value={`${fmtNum(store.default_prep_minutes)} ${T.prepUnit}`}
+            href="/store/settings/prep"
+          />
+        </Group>
+      </div>
 
       <Modal open={logoOpen} onClose={() => setLogoOpen(false)} title={T.logo}>
         <div className="flex flex-col gap-3">
