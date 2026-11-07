@@ -21,28 +21,29 @@ func allSuggestSections() []string {
 		secStation, secDairy, secSpices, secNuts, secSnacks, secCold, secHot,
 		secWater, secFrozen, secSweets, secBread, secMeat, secPoultry, secFish,
 		secFruit, secVeg, secPharmacy, secMobile, secGifts, secClothes, secShoes,
-		secHookah,
+		secHookah, secAccessories, secPets,
 	}
 }
 
 func TestSuggestSectionNamesExistInMigration(t *testing.T) {
-	path := filepath.Join("..", "migrate", "migrations", "0156_launch_sections.sql")
-	raw, err := os.ReadFile(path)
-	if err != nil {
-		t.Fatalf("cannot read migration: %v", err)
-	}
-	// أول كتلة INSERT: أسطر ('الاسم', 'icon', n)
+	// أسطر ('الاسم', 'icon', n) في هجرتي الأقسام
 	re := regexp.MustCompile(`(?m)^\s*\('([^']+)',\s*'[a-z]+',\s*\d+\)`)
 	have := map[string]bool{}
-	for _, m := range re.FindAllStringSubmatch(string(raw), -1) {
-		have[m[1]] = true
+	for _, f := range []string{"0156_launch_sections.sql", "0521_pets_accessories_sections.sql"} {
+		raw, err := os.ReadFile(filepath.Join("..", "migrate", "migrations", f))
+		if err != nil {
+			t.Fatalf("cannot read migration: %v", err)
+		}
+		for _, m := range re.FindAllStringSubmatch(string(raw), -1) {
+			have[m[1]] = true
+		}
 	}
-	if len(have) < 30 {
-		t.Fatalf("parsed only %d sections from migration", len(have))
+	if len(have) < 40 {
+		t.Fatalf("parsed only %d sections from migrations", len(have))
 	}
 	for _, s := range allSuggestSections() {
 		if !have[s] {
-			t.Errorf("section %q is not in 0156_launch_sections.sql", s)
+			t.Errorf("section %q is not in 0156/0521 migrations", s)
 		}
 	}
 	// وكل قيمةٍ تخرج فعلاً من القواعد يجب أن تكون ضمن القائمة
@@ -194,7 +195,16 @@ func TestSuggestSectionRealNames(t *testing.T) {
 		{"بندورة", secVeg},
 		{"فحم يحيى ربع", secHookah},
 		{"معسل روز", secHookah},
-		{"حقيبة ديور قماش رسمات حجم وسط", secClothes},
+		{"حقيبة ديور قماش رسمات حجم وسط", secAccessories},
+		{"ساعة يد الفجر اورجنال", secAccessories},
+		{"خاتم اسود ناعم", secAccessories},
+		{"اساور ستانلس", secAccessories},
+		{"حباسة 11-532", secAccessories},
+		{"نظارة رجالي بولارايز 22/23", secAccessories},
+		{"بيورينا فريسكيس جاف للقطط البالغة سلمون 1.5 كيلوغرام", secPets},
+		{"فيتمين قط فور لايف للقطط المعقمة بلحم الدجاج 1.8 كيلوغرام", secPets},
+		{"فور ايفير شامبو للكلاب والقطط 250 مل", secPets},
+		{"كنزة صيفي قطط وكلاب قياس M", secPets},
 		{"حذاء نسائي جبلي مياو مياو جلد وقماش", secShoes},
 		// تعارضات محسومة
 		{"بسكويت اطفال اولكر 1كغ", secSnacks},
@@ -214,11 +224,9 @@ func TestSuggestSectionRealNames(t *testing.T) {
 	}
 }
 
-// طعام القطط والكلاب لا يُقترح له قسم، وأسماء غامضة تنتظر إنساناً.
+// أسماء غامضة تنتظر إنساناً.
 func TestSuggestSectionAbstains(t *testing.T) {
 	for _, n := range []string{
-		"فيتمين قط فور لايف للقطط المعقمة بلحم الدجاج 1.8 كيلوغرام",
-		"بيورينا فريسكيس جاف للقطط البالغة سلمون 1.5 كيلوغرام",
 		"ماستر طويل",
 		"مجموعة كملي",
 		"3ب1 ارمغان 250غ",
