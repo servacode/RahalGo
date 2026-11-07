@@ -1503,12 +1503,9 @@ func (s *Service) offsetMerchantDebt(ctx context.Context, q wallet.Querier,
 	if debt <= 0 {
 		return nil
 	}
-	take := debt
-	if available < take {
-		take = available
-	}
-	if take <= 0 {
-		return nil
+	take, err := s.offsetRoom(ctx, q, ownerID, min(debt, available))
+	if err != nil || take <= 0 {
+		return err
 	}
 	// **والوصفُ من أسباب ما يُسدَّد فعلاً** — لا «بضاعةٌ رُدّت» لكلّ دين.
 	note, err := obligations.OffsetNote(ctx, q, obligations.PartyMerchant, merchantID, take)
@@ -1863,12 +1860,9 @@ func (s *Service) offsetRepDebt(ctx context.Context, q wallet.Querier,
 	if debt <= 0 {
 		return nil
 	}
-	take := debt
-	if available < take {
-		take = available
-	}
-	if take <= 0 {
-		return nil
+	take, err := s.offsetRoom(ctx, q, repID, min(debt, available))
+	if err != nil || take <= 0 {
+		return err
 	}
 	note, err := obligations.OffsetNote(ctx, q, obligations.PartyRep, repID, take)
 	if err != nil {
@@ -2062,6 +2056,23 @@ func (s *Service) payDriver(ctx context.Context, q wallet.Querier, in settlement
 	return s.offsetDriverDebt(ctx, q, *in.driverID, in.deliveryFee, in.orderID, in.actorID)
 }
 
+// offsetRoom **ما يجوز اقتطاعُه من المحفظة الآن لسداد دين** — لا أكثرَ من الرصيد الموجب.
+//
+// (بلاغُ الإنتاج ٢٠٢٦-١١-٠٧، الطلب ١٢٤٤.) **سائقٌ عليه سلفةٌ ودين**: الأجرةُ تُقيَّد فيُنقص
+// المُطلِقُ `advance_owed` بقدرها، **ثمّ يُقتطع الدينُ منها فينزل الرصيدُ تحت حدّ السلفة**
+// ويسقط `wallets_balance_check` — فيُردّ التسليمُ كلُّه بـ`insufficient_balance`.
+// **فالأجرةُ تسدّ السلفةَ أوّلاً، والدينُ يبقى التزاماً مفتوحاً** يُسدَّد حين يصير الرصيدُ موجباً.
+func (s *Service) offsetRoom(ctx context.Context, q wallet.Querier, userID string, want int64) (int64, error) {
+	if want <= 0 {
+		return 0, nil
+	}
+	room, err := s.wallet.AvailableTx(ctx, q, userID)
+	if err != nil {
+		return 0, err
+	}
+	return max(0, min(want, room)), nil
+}
+
 // offsetDriverDebt يقتطع دينَ السائق من أجرٍ جديد — **كاملاً ما احتمله الأجر.**
 //
 // **ومرآةُ `offsetRepDebt`** (قرارُ المالك ٢٠٢٦-١٠-١٥): **الأجرُ يُقيَّد كاملاً
@@ -2075,9 +2086,9 @@ func (s *Service) offsetDriverDebt(ctx context.Context, q wallet.Querier,
 	if err != nil {
 		return err
 	}
-	take := min(debt, available)
-	if take <= 0 {
-		return nil
+	take, err := s.offsetRoom(ctx, q, driverID, min(debt, available))
+	if err != nil || take <= 0 {
+		return err
 	}
 	note, err := obligations.OffsetNote(ctx, q, obligations.PartyDriver, driverID, take)
 	if err != nil {
