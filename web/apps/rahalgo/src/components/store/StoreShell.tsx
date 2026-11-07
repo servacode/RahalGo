@@ -62,6 +62,7 @@ import StoreBar from "./StoreBar";
 import OrderAlert from "./OrderAlert";
 import FetchAmountWatcher from "./FetchAmountWatcher";
 import StoreMenu from "./StoreMenu";
+import StoreSidebar from "./StoreSidebar";
 import SetupWizard from "./SetupWizard";
 import { useSetupWizard, useStoreSections } from "@/lib/store/setup";
 
@@ -174,7 +175,10 @@ function Shell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen">
+      {/* **على `lg` فما فوق: سايدبارٌ ثابتٌ في جهة البداية** — وتحتها الجوّال والتابلت كما كانا. */}
+      <StoreSidebar path={path} selfManage={selfManage} />
+      <div className="flex min-w-0 flex-1 flex-col">
       <TopBar
         sticky
         start={
@@ -195,7 +199,7 @@ function Shell({ children }: { children: ReactNode }) {
               tone={active === it.href ? "active" : "plain"}
               title={it.label}
               aria-label={it.label}
-              className="hidden md:inline-flex"
+              className="hidden md:inline-flex lg:hidden"
             >
               <Icon size={18} />
               <span className="hidden xl:inline">{it.label}</span>
@@ -233,6 +237,7 @@ function Shell({ children }: { children: ReactNode }) {
       <MobileNav items={nav} active={active} Link={Link} />
       {store && <FetchAmountWatcher />}
       <TitleBadge />
+      </div>
     </div>
   );
 }
