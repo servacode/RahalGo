@@ -10218,6 +10218,10 @@
           "type": "unknown"
         },
         {
+          "name": "paused",
+          "type": "unknown"
+        },
+        {
           "name": "stopped",
           "type": "unknown"
         },
@@ -10394,6 +10398,15 @@
       ]
     },
     {
+      "method": "POST",
+      "path": "/api/v1/merchant/stores/{id}/price-sync/pause",
+      "handler": "handleMerchantPriceSyncPause",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ]
+    },
+    {
       "method": "GET",
       "path": "/api/v1/merchant/stores/{id}/price-sync/pending",
       "handler": "handleMerchantPriceSyncPending",
@@ -10427,6 +10440,15 @@
       ],
       "statuses": [
         "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/merchant/stores/{id}/price-sync/resume",
+      "handler": "handleMerchantPriceSyncResume",
+      "auth": true,
+      "roles": [
+        "merchant"
       ]
     },
     {

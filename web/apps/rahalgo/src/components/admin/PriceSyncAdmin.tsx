@@ -37,6 +37,10 @@ interface Config {
   folder: string | null;
   currency: "SYP" | "USD";
   want_schema: boolean;
+  /** **حذفه المتجرُ من الكمبيوتر** — يحتاج تحميلاً جديداً. */
+  stop: boolean;
+  /** **موقوفة مؤقّتاً** (٢٠٢٦-١١-٠٧) — البرنامجُ باقٍ. */
+  paused: boolean;
   /** **أنشئ غير الموجود أصنافاً مخفيّة** (٢٠٢٦-١١-٠٤) — لقراءة الساعي. */
   create_missing: boolean;
   last_run: {
@@ -114,6 +118,12 @@ export default function PriceSyncAdmin({ merchantId }: { merchantId: string }) {
           {c.agent_status?.database && (
             <p>{fill(P.found, { db: c.agent_status.database })}</p>
           )}
+          {/* **موقوفة مؤقّتاً / محذوف** (٢٠٢٦-١١-٠٧) — من لوحة المتجر. */}
+          {c.stop ? (
+            <p className="text-danger">{P.stopped}</p>
+          ) : c.paused ? (
+            <p className="font-bold text-warning">{P.paused}</p>
+          ) : null}
           {c.agent_error && (
             <p className="text-danger">{fill(P.error, { e: c.agent_error })}</p>
           )}

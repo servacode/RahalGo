@@ -8,7 +8,9 @@ package server
 // يتلبك». فـ:
 //
 //	GET  /merchant/stores/{id}/price-sync/agent  البرنامجُ وفيه رمزُ المتجر — دبل كليك وخلص
-//	POST /merchant/stores/{id}/price-sync/stop   «إيقاف البرنامج» — يزيل نفسَه من الإقلاع
+//	POST /merchant/stores/{id}/price-sync/stop   «احذف البرنامج من الكمبيوتر» — يزيل نفسَه من الإقلاع
+//	POST /merchant/stores/{id}/price-sync/pause  «إيقاف» مؤقّت — يبقى ويسأل، ولا يقرأ ولا يرفع (٢٠٢٦-١١-٠٧)
+//	POST /merchant/stores/{id}/price-sync/resume «شغّل المزامنة» — يرجع بالسؤال التالي
 //	POST /public/price-sync/poll                  يسأل كلَّ دقيقة: يبعث حالَه ويأخذ إعدادَه
 //	POST /public/price-sync/schema                جداولُ الأمين — لنضبط القراءةَ بلا زيارة
 //	GET  /public/price-sync/agent                 نسختُه الأحدث — يحدّث نفسَه
@@ -17,6 +19,7 @@ package server
 // **والبرنامجُ يُبنى مع الخادم** (`Dockerfile`) فكلُّ نشرٍ يحمل أحدثَه.
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"os"
@@ -92,7 +95,8 @@ func (s *Server) handleMerchantPriceSyncAgentDownload(w http.ResponseWriter, r *
 		return
 	}
 	if _, err := s.pg.Exec(r.Context(), `
-		UPDATE merchants SET price_sync_token_hash = $2, price_sync_stop = false, price_sync_want_schema = true
+		UPDATE merchants SET price_sync_token_hash = $2, price_sync_stop = false, price_sync_paused = false,
+		       price_sync_want_schema = true
 		 WHERE id = $1`, merchantID, syncTokenHash(tok)); err != nil {
 		s.respondErr(w, err)
 		return
@@ -126,12 +130,63 @@ func (s *Server) handleMerchantPriceSyncStop(w http.ResponseWriter, r *http.Requ
 	httpx.JSON(w, http.StatusOK, map[string]any{"stopped": true})
 }
 
+// handleMerchantPriceSyncPause **«إيقاف» مؤقّت** (قرارُ المالك ٢٠٢٦-١١-٠٧: «بينزل مرّة وحدة بس»).
+//
+// **البرنامجُ يبقى على الكمبيوتر ويسأل كلَّ دقيقة** — لكنّه لا يقرأ الأمين ولا يرفع شيئاً،
+// **وما يرفعه برنامجٌ قديمٌ لا يعرف «موقوف» يُقبل ولا يُكتب** (انظر syncPaused).
+func (s *Server) handleMerchantPriceSyncPause(w http.ResponseWriter, r *http.Request) {
+	s.setPriceSyncPaused(w, r, true)
+}
+
+// handleMerchantPriceSyncResume **«شغّل المزامنة»** — يقرؤها البرنامجُ في سؤاله التالي.
+func (s *Server) handleMerchantPriceSyncResume(w http.ResponseWriter, r *http.Request) {
+	s.setPriceSyncPaused(w, r, false)
+}
+
+func (s *Server) setPriceSyncPaused(w http.ResponseWriter, r *http.Request, paused bool) {
+	merchantID := chi.URLParam(r, "id")
+	if err := s.merchantWriteGuard(r, merchantID); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if err := s.requireAmeen(r.Context(), merchantID); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if _, err := s.pg.Exec(r.Context(),
+		`UPDATE merchants SET price_sync_paused = $2 WHERE id = $1`, merchantID, paused); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	action := "merchant.price_sync_resume"
+	if paused {
+		action = "merchant.price_sync_pause"
+	}
+	s.auditCtx(r.Context(), userIDFrom(r), clientIP(r), action, "merchant", merchantID, map[string]any{})
+	httpx.JSON(w, http.StatusOK, map[string]any{"paused": paused})
+}
+
+// syncPaused **المزامنةُ موقوفةٌ مؤقّتاً؟** — شبكةُ أمانٍ لبرنامج 2.0.1 الذي لا يعرف «paused»:
+// ما يرفعه يُقبل بـ٢٠٠ ولا يُكتب منه شيء ولا يُبلَّغ عنه.
+func (s *Server) syncPaused(ctx context.Context, merchantID string) bool {
+	var on bool
+	_ = s.pg.QueryRow(ctx, `SELECT price_sync_paused FROM merchants WHERE id = $1`, merchantID).Scan(&on)
+	return on
+}
+
+// pausedReply **ردُّ الرفع وهو موقوف** — ٢٠٠ بلا كتابة.
+func pausedReply(w http.ResponseWriter) {
+	httpx.JSON(w, http.StatusOK, map[string]any{"paused": true, "ignored": true})
+}
+
 // agentConfig **ما يعمل به الساعي** — يُعاد في كلّ سؤال.
 type agentConfig struct {
-	SyncNow       bool   `json:"sync_now"`
-	Interval      int    `json:"interval_minutes"`
-	HasMapping    bool   `json:"has_mapping"`
-	Stop          bool   `json:"stop"`
+	SyncNow    bool `json:"sync_now"`
+	Interval   int  `json:"interval_minutes"`
+	HasMapping bool `json:"has_mapping"`
+	Stop       bool `json:"stop"`
+	// Paused **موقوفٌ مؤقّتاً** (٢٠٢٦-١١-٠٧) — يسأل ويحدّث نفسَه، ولا يقرأ ولا يرفع.
+	Paused        bool   `json:"paused"`
 	SQLQuery      string `json:"sql_query"`
 	SQLConnection string `json:"sql_connection"`
 	ProbeTable    string `json:"probe_table"`
@@ -175,9 +230,9 @@ func (s *Server) handlePriceSyncPollV2(w http.ResponseWriter, r *http.Request) {
 		RETURNING price_sync_requested_at IS NOT NULL, price_sync_interval_minutes,
 		          price_sync_mapping IS NOT NULL, price_sync_stop, price_sync_sql_query,
 		          price_sync_sql_connection, price_sync_probe_table, price_sync_folder,
-		          price_sync_currency, price_sync_want_schema`,
+		          price_sync_currency, price_sync_want_schema, price_sync_paused`,
 		merchantID, req.Version, req.Error, status).Scan(&c.SyncNow, &c.Interval, &c.HasMapping, &c.Stop,
-		&query, &conn, &c.ProbeTable, &folder, &c.Currency, &c.WantSchema); err != nil {
+		&query, &conn, &c.ProbeTable, &folder, &c.Currency, &c.WantSchema, &c.Paused); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -190,6 +245,10 @@ func (s *Server) handlePriceSyncPollV2(w http.ResponseWriter, r *http.Request) {
 	if folder != nil {
 		c.Folder = *folder
 	}
+	if c.Paused {
+		// **وبرنامجٌ قديمٌ لا يعرف «paused» لا يُدفع إلى قراءةٍ فوريّة.**
+		c.SyncNow, c.WantSchema = false, false
+	}
 	c.LatestVersion, _ = agentLatest()
 	httpx.JSON(w, http.StatusOK, c)
 }
@@ -198,6 +257,10 @@ func (s *Server) handlePriceSyncPollV2(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handlePriceSyncSchema(w http.ResponseWriter, r *http.Request) {
 	merchantID, ok := s.syncAgentMerchant(w, r)
 	if !ok {
+		return
+	}
+	if s.syncPaused(r.Context(), merchantID) {
+		pausedReply(w)
 		return
 	}
 	r.Body = http.MaxBytesReader(w, r.Body, 4<<20)
@@ -239,6 +302,7 @@ func (s *Server) handleAdminPriceSyncGet(w http.ResponseWriter, r *http.Request)
 		Folder        *string          `json:"folder"`
 		Currency      string           `json:"currency"`
 		Stop          bool             `json:"stop"`
+		Paused        bool             `json:"paused"`
 		WantSchema    bool             `json:"want_schema"`
 		CreateMissing bool             `json:"create_missing"`
 		LastRun       *json.RawMessage `json:"last_run"`
@@ -254,12 +318,12 @@ func (s *Server) handleAdminPriceSyncGet(w http.ResponseWriter, r *http.Request)
 		SELECT price_sync_sql_query, price_sync_sql_connection, price_sync_probe_table, price_sync_folder,
 		       price_sync_currency, price_sync_stop, price_sync_want_schema, price_sync_agent_seen_at,
 		       price_sync_agent_version, price_sync_agent_error, price_sync_agent_status,
-		       price_sync_schema, price_sync_schema_at, price_sync_create_missing,
+		       price_sync_schema, price_sync_schema_at, price_sync_create_missing, price_sync_paused,
 		       (SELECT jsonb_build_object('source', source, 'report', report, 'at', created_at)
 		          FROM price_sync_runs WHERE merchant_id = merchants.id ORDER BY created_at DESC LIMIT 1)
 		  FROM merchants WHERE id = $1`, id).Scan(&out.SQLQuery, &out.SQLConnection, &out.ProbeTable, &out.Folder,
 		&out.Currency, &out.Stop, &out.WantSchema, &out.AgentSeenAt, &out.AgentVersion, &out.AgentError,
-		&status, &schema, &out.SchemaAt, &out.CreateMissing, &lastRun); err != nil {
+		&status, &schema, &out.SchemaAt, &out.CreateMissing, &out.Paused, &lastRun); err != nil {
 		s.respondErr(w, err)
 		return
 	}

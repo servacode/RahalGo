@@ -20,7 +20,7 @@ import {
   fmtNum,
   fmtDateTime,
 } from "@rahalgo/i18n";
-import { Alert, Button, Card, Checkbox, LoadingState, Select } from "@rahalgo/ui";
+import { Alert, Button, Card, Checkbox, Confirm, LoadingState, Select } from "@rahalgo/ui";
 import { api, apiFile } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import { fill } from "@/lib/customer/texts";
@@ -84,6 +84,8 @@ interface Info {
   interval_minutes: number;
   agent_error: string | null;
   stopped: boolean;
+  /** **موقوفة مؤقّتاً** (٢٠٢٦-١١-٠٧) — البرنامجُ باقٍ على الكمبيوتر. */
+  paused: boolean;
 }
 interface Preview {
   headers: string[];
@@ -111,6 +113,7 @@ export default function PriceSyncPage() {
     if (noAmeen) router.replace("/store/menu");
   }, [noAmeen, router]);
   const [info, setInfo] = useState<Info | null>(null);
+  const [askUninstall, setAskUninstall] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [map, setMap] = useState<Mapping>(EMPTY);
@@ -240,13 +243,30 @@ export default function PriceSyncPage() {
     }
   }
 
-  /** **«إيقاف البرنامج»** — يزيل نفسَه من الإقلاع في سؤاله التالي. */
+  /** **«احذف البرنامج من الكمبيوتر»** — يزيل نفسَه من الإقلاع في سؤاله التالي، وبعدها تحميلٌ جديد. */
   async function stopAgent() {
     setBusy(true);
     try {
       await api(`/api/v1/merchant/stores/${id}/price-sync/stop`, {
         method: "POST",
       });
+      setAskUninstall(false);
+      load();
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** **«إيقاف المزامنة» / «شغّل المزامنة»** (٢٠٢٦-١١-٠٧) — مؤقّت، بلا تحميلٍ جديد. */
+  async function setPaused(paused: boolean) {
+    setBusy(true);
+    try {
+      await api(
+        `/api/v1/merchant/stores/${id}/price-sync/${paused ? "pause" : "resume"}`,
+        { method: "POST" },
+      );
       load();
     } catch (e) {
       setError(errorText(e));
@@ -518,6 +538,11 @@ export default function PriceSyncPage() {
           {/* **متّصلٌ ولا يزامن ليس «يعمل»** (المالك ٢٠٢٦-١١-٠٧) — خطأُ البرنامج يغلب الأخضر. */}
           {info?.stopped ? (
             <p className="text-sm text-ink-muted">{P.agentStopped}</p>
+          ) : info?.paused ? (
+            <Alert tone="warning">
+              <span className="block font-bold">{P.agentPaused}</span>
+              <span className="block">{P.agentPausedHint}</span>
+            </Alert>
           ) : info?.agent_seen_at && info.agent_error ? (
             <Alert tone="error">
               <span className="block font-bold">
@@ -574,23 +599,50 @@ export default function PriceSyncPage() {
           )}
           {info?.agent_seen_at && !info.stopped && (
             <div className="flex flex-wrap gap-2">
-              {info.sync_requested ? (
-                <p className="text-sm text-success">{P.syncAsked}</p>
-              ) : (
-                <Button onClick={() => void syncNow()} disabled={busy}>
-                  {P.syncNow}
+              {info.paused ? (
+                <Button onClick={() => void setPaused(false)} disabled={busy}>
+                  {P.agentResume}
                 </Button>
+              ) : (
+                <>
+                  {info.sync_requested ? (
+                    <p className="text-sm text-success">{P.syncAsked}</p>
+                  ) : (
+                    <Button onClick={() => void syncNow()} disabled={busy}>
+                      {P.syncNow}
+                    </Button>
+                  )}
+                  <Button
+                    variant="ghost"
+                    onClick={() => void setPaused(true)}
+                    disabled={busy}
+                  >
+                    {P.agentStop}
+                  </Button>
+                </>
               )}
-              <Button
-                variant="ghost"
-                className="text-danger"
-                onClick={() => void stopAgent()}
-                disabled={busy}
-              >
-                {P.agentStop}
-              </Button>
             </div>
           )}
+          {/* **الحذفُ من الكمبيوتر أقلُّ بروزاً ومؤكَّد** — بعده تحميلٌ جديد (٢٠٢٦-١١-٠٧). */}
+          {info?.agent_seen_at && !info.stopped && (
+            <button
+              type="button"
+              className="w-fit text-xs text-danger underline disabled:opacity-60"
+              onClick={() => setAskUninstall(true)}
+              disabled={busy}
+            >
+              {P.agentUninstall}
+            </button>
+          )}
+          <Confirm
+            open={askUninstall}
+            title={P.agentUninstallQ}
+            body={P.agentUninstallBody}
+            confirmLabel={P.agentUninstall}
+            busy={busy}
+            onConfirm={() => void stopAgent()}
+            onCancel={() => setAskUninstall(false)}
+          />
         </div>
       </Card>
     </div>
