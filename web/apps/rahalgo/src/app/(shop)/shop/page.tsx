@@ -31,25 +31,32 @@ import {
   ReloadState,
   IconSearch,
   IconStore,
-  SectionRail,
-  type RailItem,
   type SlideItem,
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useBrowseQuery } from "@/lib/customer/context";
 import type { HomePage, Item } from "@/lib/customer/types";
-import { AddressChip, AddressSheet } from "@/components/customer/AddressSheet";
 import { ItemGrid, ItemSheet } from "@/components/customer/items";
 import { FeaturedStrip } from "@/components/customer/stores";
 import { InviteHomeCard } from "@/components/customer/InviteNudge";
+import { FreeDeliveryBanner } from "@/components/customer/ServiceNotices";
+import { ShopPic } from "@/components/customer/ShopPic";
+import { SHOP_SEARCH_EVENT } from "@/components/customer/ShopChrome";
 
 const m = getMessages(defaultLocale);
 const H = m.shop.home;
 const SC = m.shop.section;
 
 function useSearch(scope: string) {
+  // **النصُّ الأوّليُّ من الرابط** (`?q=` — من بحث الشريط في صفحةٍ أخرى) وما يكتبه الشريطُ بعدها.
   const [q, setQ] = useState("");
+  useEffect(() => {
+    setQ(new URLSearchParams(window.location.search).get("q") ?? "");
+    const on = (e: Event) => setQ(String((e as CustomEvent<string>).detail ?? ""));
+    window.addEventListener(SHOP_SEARCH_EVENT, on);
+    return () => window.removeEventListener(SHOP_SEARCH_EVENT, on);
+  }, []);
   const [items, setItems] = useState<Item[] | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -83,7 +90,6 @@ export default function ShopPage() {
   const [home, setHome] = useState<HomePage | null>(null);
   const [error, setError] = useState("");
   const [open, setOpen] = useState<Item | null>(null);
-  const [pickAddr, setPickAddr] = useState(false);
   const search = useSearch(scopeA);
 
   const load = useCallback(() => {
@@ -118,27 +124,12 @@ export default function ShopPage() {
   }));
 
   const searching = search.q.trim().length > 0;
-  const rail: RailItem[] = (home?.sections ?? []).map((sec) => ({
-    id: sec.id,
-    name: sec.name,
-    imageUrl: mediaUrl(sec.image_thumb_url ?? sec.image_url),
-    icon: sec.icon,
-    count: sec.count,
-  }));
+
+  const activeSection = (home?.sections ?? []).find((x) => x.id === sectionID);
 
   return (
-    <div className="flex flex-col gap-4">
-      {user ? (
-        <AddressChip onOpen={() => setPickAddr(true)} />
-      ) : (
-        <p className="text-xs text-ink-muted">{H.browsing}</p>
-      )}
-
-      {/* **سلايدرٌ ثمّ «متاجر مميّزة» ثمّ البحث** — ولا يُرسمان وهو يبحث: نتائجُه أولى. */}
-      {!searching && home && slides.length > 0 && (
-        <BannerSlider items={slides} Link={Link} everyMs={home.banner_auto ? home.banner_every_ms || 5000 : 0} />
-      )}
-      {!searching && home && <FeaturedStrip stores={home.featured_stores ?? []} />}
+    <div className="flex flex-col gap-5 lg:gap-8">
+      {!user && <p className="text-xs text-ink-muted">{H.browsing}</p>}
 
       <Input
         id="shop-search"
@@ -148,9 +139,17 @@ export default function ShopPage() {
         value={search.q}
         onChange={(e) => search.setQ(e.target.value)}
         aria-label={H.search}
+        wrapperClassName="lg:hidden"
       />
 
-      {/* **«ادعُ صديقك» تحت البحث** — تُخفى بـ✕ للأبد (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}
+      {/* **سلايدرٌ ثمّ عرضُ التوصيل ثمّ «متاجر مميّزة»** — ولا يُرسمان وهو يبحث: نتائجُه أولى. */}
+      {!searching && home && slides.length > 0 && (
+        <BannerSlider items={slides} Link={Link} everyMs={home.banner_auto ? home.banner_every_ms || 5000 : 0} />
+      )}
+      {!searching && home && <FreeDeliveryBanner hero />}
+      {!searching && home && <FeaturedStrip stores={home.featured_stores ?? []} />}
+
+      {/* **«ادعُ صديقك» تحت العروض** — تُخفى بـ✕ للأبد (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}
       {user && !searching && <InviteHomeCard />}
 
       {searching ? (
@@ -177,24 +176,48 @@ export default function ShopPage() {
           {home.sections.length === 0 ? (
             <EmptyState icon={IconStore} title={H.empty} action={<span className="text-xs text-ink-muted">{H.emptyHint}</span>} />
           ) : (
-            <section className="flex flex-col gap-3">
-              <SectionRail items={rail} activeID={sectionID} auto={false} onSelect={setActive} />
-              {itemsErr ? (
-                <ReloadState label={itemsErr} onRetry={loadItems} />
-              ) : items === null ? (
-                <LoadingState variant="list" rows={4} />
-              ) : items.length === 0 ? (
-                <EmptyState icon={IconStore} title={SC.empty} action={<span className="text-xs text-ink-muted">{SC.emptyHint}</span>} />
-              ) : (
-                <ItemGrid items={items} onOpen={setOpen} />
-              )}
-            </section>
+            <>
+              <section id="shop-sections" className="flex scroll-mt-20 flex-col gap-3" aria-label={H.sections}>
+                <div className="shop-sec-head">
+                  <h2>{H.sections}</h2>
+                </div>
+                <div className="shop-tiles">
+                  {home.sections.map((sec) => (
+                    <button
+                      key={sec.id}
+                      type="button"
+                      className="shop-tile"
+                      aria-pressed={sec.id === sectionID}
+                      onClick={() => setActive(sec.id)}
+                    >
+                      <ShopPic src={sec.image_thumb_url ?? sec.image_url} name={sec.name} icon={sec.icon} />
+                      <span>{sec.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+              <section className="flex flex-col gap-3">
+                {activeSection && (
+                  <div className="shop-sec-head">
+                    <h2>{activeSection.name}</h2>
+                  </div>
+                )}
+                {itemsErr ? (
+                  <ReloadState label={itemsErr} onRetry={loadItems} />
+                ) : items === null ? (
+                  <LoadingState variant="list" rows={4} />
+                ) : items.length === 0 ? (
+                  <EmptyState icon={IconStore} title={SC.empty} action={<span className="text-xs text-ink-muted">{SC.emptyHint}</span>} />
+                ) : (
+                  <ItemGrid items={items} onOpen={setOpen} />
+                )}
+              </section>
+            </>
           )}
         </>
       )}
 
       <ItemSheet item={open} onClose={() => setOpen(null)} />
-      <AddressSheet open={pickAddr} onClose={() => setPickAddr(false)} />
     </div>
   );
 }

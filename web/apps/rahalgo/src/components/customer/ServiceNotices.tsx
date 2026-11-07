@@ -11,9 +11,10 @@
  * الطلبَ إن أُرسل** (`requireOrdering`).
  */
 
+import Link from "next/link";
 import { useState } from "react";
 import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
-import { Alert, Button, usePlatform } from "@rahalgo/ui";
+import { Alert, Button, IconPromos, usePlatform } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useCustomer } from "@/lib/customer/context";
 import { serviceText, demandKind, demandCta, demandDone, freeOfferLines } from "@/lib/customer/texts";
@@ -21,6 +22,7 @@ import type { Address, Availability } from "@/lib/customer/types";
 
 const m = getMessages(defaultLocale);
 const S = m.shop;
+const SK = m.shop.skin;
 
 /** **أيُستقبَل الطلبُ الآن؟** — وما يُقال إن لم يُستقبَل. */
 export function useOrderingState(): { open: boolean; text: string } {
@@ -139,13 +141,34 @@ export function ServiceBlockBanner() {
  * **لمن يحقّ له طلبُ السوق والطلبُ مفتوح** — عرضٌ للأمانة وحدَها لا يُعلَن في السوق، فيملأ
  * الزبونُ سلّةً ويجد الأجرةَ كاملة. **ويُقال السقفُ ولإيمتى** من الخادم (`max_fee` · `ends_at`).
  */
-export function FreeDeliveryBanner() {
+export function FreeDeliveryBanner({ hero = false }: { hero?: boolean }) {
   const { freeDelivery } = useCustomer();
   const ordering = useOrderingState();
   if (!ordering.open || !freeDelivery || !freeDelivery.standard) return null;
+  const lines = freeOfferLines(freeDelivery, S.free.banner);
+  /* **على سوق الزبون: بطلٌ بتدرّج العلامة** (مخطّطُ ٢٠٢٦-١١-٠٨) — العنوانُ أوّلُ سطرٍ والباقي تحته،
+     **والنصُّ نفسُه من الخادم لا مكتوبٌ هنا**. وبلا `hero` تبقى اللافتةُ كما كانت. */
+  if (hero) {
+    const [first, ...rest] = lines;
+    return (
+      <section className="shop-hero" aria-label={SK.freeTag}>
+        <span className="tag">
+          <IconPromos size={14} />
+          {SK.freeTag}
+        </span>
+        <h2>{first}</h2>
+        {rest.map((line) => (
+          <p key={line}>{line}</p>
+        ))}
+        <Link href="#shop-sections" className="cta">
+          {SK.orderNow}
+        </Link>
+      </section>
+    );
+  }
   return (
     <Alert tone="success">
-      {freeOfferLines(freeDelivery, S.free.banner).map((line) => (
+      {lines.map((line) => (
         <span key={line} className="block">
           {line}
         </span>

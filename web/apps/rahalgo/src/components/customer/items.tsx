@@ -56,6 +56,7 @@ import { useShopToast } from "./toast";
 import { useAddGate, AvailabilityNotice } from "./ServiceNotices";
 import { AddressSheet } from "./AddressSheet";
 import { DrinkThumb } from "./DrinkThumb";
+import { ShopPic } from "./ShopPic";
 import { useCustomer } from "@/lib/customer/context";
 import { useAuth } from "@/lib/auth";
 
@@ -63,6 +64,7 @@ const m = getMessages(defaultLocale);
 const I = m.shop.item;
 const S = m.shop.stores;
 const SV = m.shop.service;
+const SK = m.shop.skin;
 /** **سقفُ العدد في النافذة** — مرآةُ `ItemOptionsSheet.kt` (`qty < 99`). */
 const MAX_QTY = 99;
 
@@ -115,131 +117,128 @@ export function ItemCard({
   item,
   onOpen,
   storeLink = true,
+  layout = "tile",
 }: {
   item: Item;
   onOpen: (item: Item) => void;
-  /** **اسمُ المتجر رابطٌ لصفحته** (٢٠٢٦-١٠-١٨) — ويُطفأ في صفحة المتجر نفسِها. */
   storeLink?: boolean;
+  /** **`row`** صورةٌ وبجانبها النصُّ (صفحةُ المتجر) · **`tile`** بلاطةٌ رأسيّة (السوقُ والبحثُ والمفضّلة). */
+  layout?: "row" | "tile";
 }) {
   const closed = item.source_closed || !item.available;
-  const img = mediaUrl(item.image_thumb_url ?? item.image_url);
+  const img = item.image_thumb_url ?? item.image_url;
   const full = mediaUrl(item.image_url ?? item.image_thumb_url);
   const [viewing, setViewing] = useState(false);
   const fav = useFav();
+  const cart = useCart();
+  // **كم منه في السلّة** — شارةٌ على الصورة كما في المخطّط، وللعرض وحدَه.
+  const inCart = cart.lines.reduce((n, l) => (l.item.id === item.id ? n + l.qty : n), 0);
   return (
-    <div className="flex min-w-0 flex-col gap-1.5">
-      <div className="surface flex min-w-0 flex-col overflow-hidden">
-        {/* ── شريطُ السعر وحدَه بعرض البطاقة — والليرةُ تنزل تحت الدولار إن ضاق ولا تُقصّ ── */}
-        <div className="flex min-w-0 items-center px-1.5 py-1">
-          <span className="ms-auto flex min-w-0 flex-wrap items-baseline justify-end gap-x-1">
+    <div className="shop-item" data-layout={layout}>
+      {/* **والصورةُ وعدسةُ التكبير أخوان لا متداخلان** — زرٌّ في زرٍّ لا يصحّ. */}
+      <div className="shop-item-img">
+        <ShopPic src={img} name={item.name} icon="food" iconSize={28} />
+        {/* **الضغطُ على الصورة يكبّرها** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — و«اطلب» والاسمُ يفتحان الصنف. */}
+        <button
+          type="button"
+          onClick={() => (full ? setViewing(true) : onOpen(item))}
+          aria-label={full ? `${item.name} — ${I.zoomBtn}` : item.name}
+          className="transition-transform active:scale-[0.98]"
+        />
+        {closed && (
+          <div className="scrim pointer-events-none absolute inset-0 flex items-center justify-center p-2 text-center text-sm font-bold text-on-solid">
+            {closedLabel(item)}
+          </div>
+        )}
+        {item.discount_percent != null && item.discount_percent > 0 && (
+          <span className="pointer-events-none absolute start-2 top-2">
+            <Badge variant="accent">{`-${fmtNum(item.discount_percent)}%`}</Badge>
+          </span>
+        )}
+        {inCart > 0 && (
+          <span className="shop-qty-badge" aria-label={fill(SK.inCart, { n: fmtNum(inCart) })}>
+            {fmtNum(inCart)}
+          </span>
+        )}
+      </div>
+      {full && viewing && <ImageViewer src={full} alt={item.name} onClose={() => setViewing(false)} />}
+      <div className="shop-item-body">
+        <button type="button" onClick={() => onOpen(item)} className="min-w-0 text-start">
+          <h3 className="line-clamp-2">{item.name}</h3>
+          {item.description && <p className="d">{item.description}</p>}
+        </button>
+        {/* **وداخل صفحة المتجر نفسِها لا اسمَ تحت كلّ صنف** (٢٠٢٦-١١-٠٤). */}
+        {storeLink &&
+          (item.merchant_id && item.merchant_name ? (
+            <Link
+              href={`/stores/${item.merchant_id}`}
+              aria-label={`${S.openStore} — ${item.merchant_name}`}
+              className="truncate text-xs text-ink-muted hover:text-accent-text hover:underline"
+            >
+              {item.merchant_name}
+            </Link>
+          ) : (
+            <span className="truncate text-xs text-ink-muted">{item.merchant_name ?? ""}</span>
+          ))}
+        <div className="shop-item-foot">
+          {/* **الدولارُ ثمّ الليرةُ** («$2.5 · 300 ل.س») — والليرةُ تنزل تحته إن ضاق ولا تُقصّ. */}
+          <span className="flex min-w-0 flex-wrap items-baseline gap-x-1">
             {item.price_usd != null ? (
               <>
-                <span dir="ltr" className="text-sm font-bold text-accent-text tabular-nums">
+                <span dir="ltr" className="font-bold tabular-nums">
                   {dollars(item.price_usd)}
                 </span>
-                <span className="whitespace-nowrap text-2xs text-ink-muted">
+                <span className="whitespace-nowrap text-xs text-ink-muted">
                   {"· "}
                   <Money value={item.price} small />
                 </span>
               </>
             ) : (
-              <Money value={item.price} className="text-sm font-bold text-accent-text" />
+              <Money value={item.price} className="font-bold" />
+            )}
+            {item.price_before != null && (
+              <span className="text-xs text-ink-muted line-through">
+                {item.price_before_usd != null ? dollars(item.price_before_usd) : <Money value={item.price_before} small />}
+              </span>
+            )}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <FavoriteButton
+              itemID={item.id}
+              on={fav.has(item.id)}
+              onToggle={fav.toggle}
+              onRequireLogin={fav.needLogin}
+              size="sm"
+              className="shrink-0 rounded-full! border border-line-soft"
+            />
+            {!closed && (
+              <button type="button" onClick={() => onOpen(item)} className="shop-add">
+                <IconAdd size={14} />
+                {I.orderBtn}
+              </button>
             )}
           </span>
         </div>
-        {/* **والصورةُ وعدسةُ التكبير أخوان لا متداخلان** — زرٌّ في زرٍّ لا يصحّ. */}
-        <div className="relative">
-        {/* **الضغطُ على الصورة يكبّرها** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — و«اطلب» والاسمُ يفتحان الصنف. */}
-        <button
-          type="button"
-          onClick={() => (full ? setViewing(true) : onOpen(item))}
-          aria-label={full ? `${item.name} — ${I.zoomBtn}` : undefined}
-          className="flex w-full min-w-0 flex-col text-start transition-transform active:scale-[0.98]"
-        >
-          {/* **مربّعٌ ثابتٌ مهما كانت الصورة** (ملاحظةُ المالك ٢٠٢٦-١٠-١٩) — صورةٌ طويلةٌ كانت تمطّ
-              بطاقتَها، **فالصورةُ مطلقةٌ داخلَ المربّع وتُقصّ**، والبطاقاتُ بطولٍ واحد. */}
-          <div className="relative aspect-square w-full overflow-hidden bg-field">
-            {img && <img src={img} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />}
-            {closed && (
-              <div className="scrim absolute inset-0 flex items-center justify-center p-2 text-center text-sm font-bold text-on-solid">
-                {closedLabel(item)}
-              </div>
-            )}
-            {item.discount_percent != null && item.discount_percent > 0 && (
-              <span className="absolute start-2 top-2">
-                <Badge variant="accent">{`-${fmtNum(item.discount_percent)}%`}</Badge>
-              </span>
-            )}
-          </div>
-        </button>
-        </div>
-        {full && viewing && <ImageViewer src={full} alt={item.name} onClose={() => setViewing(false)} />}
-        {/* ── سطرٌ لاسم المتجر (رابطٌ لصفحته)، وسطرٌ لزرّين مكتوبين «اطلب» —
-            قرارُ المالك ٢٠٢٦-١٠-٣٠: العدسةُ على الصورة كانت تشوّهها و«+» لا يفهمها الكلّ. ── */}
-        {/* **وداخل صفحة المتجر نفسِها لا اسمَ تحت كلّ صنف** (٢٠٢٦-١١-٠٤). */}
-        {storeLink && (
-        <div className="flex min-h-7 w-full min-w-0 items-center px-2 pt-1">
-          {item.merchant_id && item.merchant_name ? (
-            <Link
-              href={`/stores/${item.merchant_id}`}
-              aria-label={`${S.openStore} — ${item.merchant_name}`}
-              className="flex-1 truncate text-2xs text-ink-muted hover:text-accent-text hover:underline"
-            >
-              {item.merchant_name}
-            </Link>
-          ) : (
-            <span className="flex-1 truncate text-2xs text-ink-muted">{item.merchant_name ?? ""}</span>
-          )}
-        </div>
-        )}
-        {/* ── «اطلب» عريضٌ والقلبُ جنبه (اقتراحُ المالك ٢٠٢٦-١١-٠٤) — والشريطُ الأعلى للسعر وحدَه ── */}
-        <div className="flex h-10 w-full min-w-0 items-center gap-1 px-1.5 pb-1.5">
-          <FavoriteButton
-            itemID={item.id}
-            on={fav.has(item.id)}
-            onToggle={fav.toggle}
-            onRequireLogin={fav.needLogin}
-            size="sm"
-            className="shrink-0 rounded-full! border border-line-soft"
-          />
-          {!closed && (
-            <button
-              type="button"
-              onClick={() => onOpen(item)}
-              className="flex-1 rounded-control bg-accent text-xs font-bold text-on-bright"
-            >
-              {I.orderBtn}
-            </button>
-          )}
-        </div>
       </div>
-      {/* ── اسمُ الصنف تحت الإطار، في الوسط ── */}
-      <button type="button" tabIndex={-1} onClick={() => onOpen(item)} className="min-w-0 text-center">
-        <p className="line-clamp-2 text-sm font-medium leading-snug">{item.name}</p>
-        {item.price_before != null && (
-          <p className="text-xs text-ink-muted line-through">
-            {item.price_before_usd != null ? dollars(item.price_before_usd) : <Money value={item.price_before} small />}
-          </p>
-        )}
-      </button>
     </div>
   );
 }
 
-/** **شبكةُ الأصناف** — عمودان على الجوّال وتتّسع مع الشاشة. */
 export function ItemGrid({
   items,
   onOpen,
   storeLink = true,
+  layout = "tile",
 }: {
   items: Item[];
   onOpen: (item: Item) => void;
   storeLink?: boolean;
+  layout?: "row" | "tile";
 }) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+    <div className="shop-items" data-layout={layout}>
       {items.map((it) => (
-        <ItemCard key={it.id} item={it} onOpen={onOpen} storeLink={storeLink} />
+        <ItemCard key={it.id} item={it} onOpen={onOpen} storeLink={storeLink} layout={layout} />
       ))}
     </div>
   );

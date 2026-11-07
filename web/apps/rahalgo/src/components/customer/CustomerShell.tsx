@@ -23,31 +23,12 @@
 import Link from "next/link";
 import { useEffect, useMemo, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import {
-  BrandMark,
-  ChatBubble,
-  CountBadge,
-  MobileNav,
-  MobileNavSpacer,
-  NotificationBell,
-  NotificationToast,
-  TopBar,
-  TopBarLink,
-  IconBag,
-  IconCart,
-  IconOrder,
-  IconStore,
-  IconUser,
-  useLiveNotifications,
-  wsBase,
-  type NavItem,
-} from "@rahalgo/ui";
+import { ChatBubble, NotificationBell, NotificationToast, useLiveNotifications, wsBase } from "@rahalgo/ui";
 import { api, onLogout, tokenStore } from "@/lib/api";
 import { dropWebPushOnLogout } from "@/lib/webpush";
 import { hasRole, useAuth } from "@/lib/auth";
 import { ActiveOrdersProvider, useActiveOrders } from "@/lib/customer/active";
-import { CartProvider, useCart } from "@/lib/customer/cart";
+import { CartProvider } from "@/lib/customer/cart";
 import { CustomerProvider } from "@/lib/customer/context";
 import { FavoritesProvider } from "@/lib/customer/favorites";
 import { LiveShareProvider } from "@/lib/customer/live";
@@ -58,9 +39,8 @@ import QuoteWatcher from "./QuoteWatcher";
 import WebPushCard from "@/components/WebPushCard";
 import { LiveAsk, LiveBanner } from "./LiveShare";
 import { RatingWatcher } from "./feedback";
-
-const m = getMessages(defaultLocale);
-const N = m.shop.nav;
+import { ShopFloat, ShopTabBar, ShopTopBar } from "./ShopChrome";
+import { useShopTheme } from "./ShopTheme";
 
 /** **شاشاتُ الدخول بلا قشرة** — من جاء ليدخل لا يحتاج سلّةً ولا أقساماً. */
 const BARE = ["/login", "/signup", "/forgot"];
@@ -131,93 +111,36 @@ function Live({ children }: { children: ReactNode }) {
 
 function Shell({ children }: { children: ReactNode }) {
   const { user } = useAuth();
-  const cart = useCart();
   // **وفقّاعةُ المحادثة تطفو فوق آخر المحتوى** — يُترك لها ذيلٌ ما دامت ظاهرة (٢٠٢٦-١١-٠٤).
   const { open: activeOrders } = useActiveOrders();
   const chatShown = !!user && (activeOrders ?? []).some((o) => !!o.driver_name);
   const path = usePathname() ?? "/shop";
-
-  const nav: NavItem[] = user
-    ? [
-        { href: "/shop", label: N.shop, icon: IconStore },
-        { href: "/cart", label: N.cart, icon: IconCart, count: cart.count },
-        { href: "/orders", label: N.orders, icon: IconOrder },
-        { href: "/custom", label: N.custom, icon: IconBag },
-        { href: "/account", label: N.account, icon: IconUser },
-      ]
-    : [
-        { href: "/shop", label: N.shop, icon: IconStore },
-        { href: "/account", label: N.account, icon: IconUser },
-      ];
-  /* **و`/s/…` قسمٌ من التسوّق** — فيُضاء «تسوّق» وهو فيه. */
-  const active = path.startsWith("/s/") || path.startsWith("/stores/") || path.startsWith("/offers") || path.startsWith("/favorites") ? "/shop" : path;
+  const { theme, toggle } = useShopTheme();
 
   if (BARE.some((p) => path.startsWith(p))) {
-    return <main className="flex min-h-screen flex-1 flex-col">{children}</main>;
+    return (
+      <div className="shop-root">
+        <main className="flex min-h-screen flex-1 flex-col">{children}</main>
+      </div>
+    );
   }
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <TopBar
-        sticky
-        start={
-          <Link href="/shop" aria-label={N.shop} className="flex items-center">
-            {/* **دائريٌّ على أبيض** (ملاحظةُ المالك ٢٠٢٦-١٠-١٩) — كان يذوب في الأزرق. */}
-            <BrandMark size={40} disc />
-          </Link>
-        }
-      >
-        {nav.map((it) => {
-          const Icon = it.icon;
-          const on = active.startsWith(it.href);
-          return (
-            <TopBarLink
-              key={it.href}
-              Link={Link}
-              href={it.href}
-              tone={on ? "active" : "plain"}
-              className="hidden md:inline-flex"
-            >
-              <span className="relative">
-                <Icon size={18} />
-                {it.count != null && it.count > 0 && <CountBadge count={it.count} tone="danger" float max={9} />}
-              </span>
-              {it.label}
-            </TopBarLink>
-          );
-        })}
-        {/* **«لوحة متجري» لصاحب المتجر** (قرارُ المالك ٢٠٢٦-١٠-١٩) — يتسوّق زبوناً ويعود بضغطة. */}
-        {user?.roles?.includes("merchant") && (
-          <TopBarLink Link={Link} href="/store" tone="plain" className="rounded-full bg-primary px-3 text-on-bright hover:opacity-90">
-            <IconStore size={16} />
-            {N.myStore}
-          </TopBarLink>
-        )}
-        {user && <Bell />}
-        {user && (
-          <Link
-            href="/cart"
-            aria-label={N.cart}
-            className="taparea relative flex h-10 w-10 items-center justify-center rounded-control text-ink md:hidden"
-          >
-            <IconCart size={22} />
-            {cart.count > 0 && <CountBadge count={cart.count} tone="danger" float max={9} />}
-          </Link>
-        )}
-      </TopBar>
-      <main className={`flex min-w-0 flex-1 flex-col gap-3 px-3 pt-3 sm:px-4 ${chatShown ? "pb-24" : "pb-4"}`}>
+    <div className="shop-root">
+      <ShopTopBar theme={theme} onTheme={toggle} bell={<Bell />} />
+      <main className={`shop-wrap shop-main ${chatShown ? "lg:pb-24" : ""}`}>
         <PwaHints />
         <OrderingBanner />
         <ServiceBlockBanner />
-        <FreeDeliveryBanner />
+        {path !== "/shop" && <FreeDeliveryBanner />}
         {user && <LiveBanner />}
         {/* **«فعّل الإشعارات» قدّامه لا في «حسابي»** (ملاحظةُ المالك ٢٠٢٦-١٠-١٩) — **وصاحبُ
             الآيفون يُقال له كيف** (أضفه للشاشة الرئيسيّة)، فلا يدور على الإذن. */}
         {user && <WebPushCard app="customer" variant="banner" notes={path === "/shop"} />}
         {children}
       </main>
-      <MobileNavSpacer />
-      <MobileNav items={nav} active={active} Link={Link} />
+      <ShopFloat />
+      <ShopTabBar />
       {user && (
         <>
           <MerchantHome />

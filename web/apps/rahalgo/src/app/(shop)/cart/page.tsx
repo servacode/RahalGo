@@ -583,7 +583,7 @@ export default function CartPage() {
       {/* ══ **الشريطُ الثابت — الإجماليُّ وزرُّ الإرسال وسببُ تعطيله** (مرآةُ `CartScreen.kt`) ══
           **كان الزرُّ آخرَ صفحةٍ طويلة، وإن كان معطّلاً لم يُعرف لماذا.** والإجماليُّ بمعادلة الملخّص حرفاً. */}
       {user && (
-        <div className="surface sticky bottom-[calc(3.75rem+env(safe-area-inset-bottom))] z-30 flex flex-col gap-2 p-3 md:bottom-0">
+        <div className="surface sticky bottom-[calc(3.9rem+env(safe-area-inset-bottom))] z-30 flex flex-col gap-2 p-3 lg:bottom-0">
           {why && <p className="line-clamp-3 text-xs text-danger">{why}</p>}
           <div className="flex items-center gap-3">
             <div className="min-w-0 flex-1">

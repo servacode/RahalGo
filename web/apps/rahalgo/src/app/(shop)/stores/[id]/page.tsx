@@ -17,17 +17,19 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
-import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
-import { Alert, EmptyState, LoadingState, ReloadState, IconClose, IconPrev, IconSearch, IconStore, SectionRail } from "@rahalgo/ui";
-import { api, mediaUrl } from "@/lib/api";
+import { getMessages, defaultLocale, errorText, fmtNum } from "@rahalgo/i18n";
+import { Alert, EmptyState, LoadingState, ReloadState, IconClose, IconPrev, IconSearch, IconStore } from "@rahalgo/ui";
+import { api } from "@/lib/api";
 import { useBrowseQuery } from "@/lib/customer/context";
 import type { Item, StoreItemsPage, StoreSummary } from "@/lib/customer/types";
 import { clock12, fill } from "@/lib/customer/texts";
 import { ItemGrid, ItemSheet } from "@/components/customer/items";
-import { StoreLogo } from "@/components/customer/stores";
+import { ShopPic } from "@/components/customer/ShopPic";
+import { StoreCartPanel } from "@/components/customer/StoreCartPanel";
 
 const m = getMessages(defaultLocale);
 const ST = m.shop.stores;
+const SK = m.shop.skin;
 
 /**
  * **دوامُ اليوم بلفظ الزبون** (ملاحظةُ المالك ٢٠٢٦-١٠-١٨) — «مفتوح ٢٤ ساعة» أو «اليوم من … لـ …»
@@ -144,36 +146,63 @@ export default function StorePageView() {
   }, [next, more]);
 
   const sections = (page?.sections ?? []).filter((x) => x.count > 0);
+  const activeName = sections.find((x) => x.id === active)?.name ?? "";
 
   return (
     <div className="flex flex-col gap-4">
-      {/* **زرٌّ واضحٌ بسهم رجوع** (ملاحظةُ المالك ٢٠٢٦-١٠-١٨) */}
-      <Link
-        href="/shop"
-        className="inline-flex w-fit items-center gap-2 rounded-full border border-accent px-4 py-2 text-sm font-bold text-accent-text transition-colors hover:bg-accent-tint"
-      >
-        <IconPrev size={18} />
-        {ST.back}
-      </Link>
-
       {error ? (
-        <ReloadState label={error} onRetry={load} />
+        <>
+          <Link href="/shop" className="shop-chip w-fit">
+            <IconPrev size={18} />
+            {ST.back}
+          </Link>
+          <ReloadState label={error} onRetry={load} />
+        </>
       ) : !page ? (
         <LoadingState variant="list" rows={4} />
       ) : (
         <>
-          {/* ── الرأس ── */}
-          <header className="flex items-center gap-3">
-            <StoreLogo name={page.store.name} logo={page.store.logo_thumb_url ?? page.store.logo_url} className="h-20 w-20" />
-            <div className="min-w-0 flex-1 space-y-1">
-              <h1 className="heading-page truncate">{page.store.name}</h1>
-              {/* **دوامُ اليوم وحدَه بلا حبّة «مفتوح / مسكّر»** (قرارُ المالك ٢٠٢٦-١٠-٢٨، مرآةُ `StoreScreen.kt`) —
-                  **والإغلاقُ الطارئُ يُقال بلفظه** فلا يُقرأ الدوامُ وعداً بأنّه مفتوح. */}
-              {page.store.emergency_closed ? (
-                <p className="text-xs font-bold text-danger">{ST.emergencyClosed}</p>
-              ) : (
-                <p className="text-xs text-ink-muted">{todayText(page.store.today)}</p>
-              )}
+          {/* ── الرأس: شريطٌ مصبوغٌ وشعارٌ يعلوه ودوامُ اليوم ── */}
+          <header className="shop-store-hero">
+            {/* **زرٌّ واضحٌ بسهم رجوع** (ملاحظةُ المالك ٢٠٢٦-١٠-١٨) */}
+            <Link href="/shop" className="shop-back">
+              <IconPrev size={18} />
+              {ST.back}
+            </Link>
+            <div className="shop-store-band">
+              <ShopPic src={null} name={page.store.name} iconSize={0} />
+            </div>
+            <div className="shop-store-head">
+              <div className="shop-store-logo">
+                <ShopPic
+                  src={page.store.logo_thumb_url ?? page.store.logo_url}
+                  name={page.store.name}
+                  fit="contain"
+                  initial
+                  className="h-full w-full"
+                />
+              </div>
+              <div className="min-w-0 flex-1 space-y-1.5 pb-1">
+                <h1 className="truncate">{page.store.name}</h1>
+                {/* **دوامُ اليوم وحدَه بلا حبّة «مفتوح / مسكّر»** (قرارُ المالك ٢٠٢٦-١٠-٢٨، مرآةُ `StoreScreen.kt`) —
+                    **والإغلاقُ الطارئُ يُقال بلفظه** فلا يُقرأ الدوامُ وعداً بأنّه مفتوح. */}
+                <div className="flex flex-wrap items-center gap-2">
+                  {page.store.emergency_closed ? (
+                    <span className="shop-cap" data-tone="bad">
+                      {ST.emergencyClosed}
+                    </span>
+                  ) : (
+                    <span className="shop-cap" data-tone={page.store.open_now ? "ok" : "brand"}>
+                      {todayText(page.store.today)}
+                    </span>
+                  )}
+                  {page.store.prep_minutes > 0 && (
+                    <span className="shop-cap" data-tone="brand">
+                      {fill(SK.prep, { n: fmtNum(page.store.prep_minutes) })}
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
           </header>
 
@@ -182,64 +211,94 @@ export default function StorePageView() {
           {sections.length === 0 ? (
             <EmptyState icon={IconStore} title={ST.empty} action={<span className="text-xs text-ink-muted">{ST.emptyHint}</span>} />
           ) : (
-            <>
-              {/* ── دوائرُ الأقسام كالسوق، وتحتها أصنافُ المختار وحدَه ── (ملاحظةُ المالك ٢٠٢٦-١٠-١٨) */}
-              {/* ── search inside the store (2026-11-07) ── */}
-              <div className="relative">
-                <span className="pointer-events-none absolute inset-y-0 start-3 flex items-center text-ink-muted" aria-hidden>
-                  <IconSearch size={18} />
-                </span>
-                <input
-                  type="search"
-                  value={q}
-                  onChange={(e) => setQ(e.target.value.slice(0, 60))}
-                  placeholder={ST.search}
-                  aria-label={ST.search}
-                  data-testid="store-page-search"
-                  className="h-12 w-full rounded-control border border-transparent bg-field pe-11 ps-10 text-sm text-ink outline-none placeholder:text-ink-muted focus:border-accent"
-                />
-                {q && (
-                  <button
-                    type="button"
-                    onClick={() => setQ("")}
-                    aria-label={ST.clearSearch}
-                    className="absolute inset-y-0 end-1 flex w-10 items-center justify-center text-ink-muted hover:text-ink"
-                  >
-                    <IconClose size={18} />
-                  </button>
+            <div className="shop-store-cols">
+              {/* ── أقسامُ القائمة: عمودٌ لاصقٌ على الحاسوب ── */}
+              {!q.trim() ? (
+                <nav className="shop-menu-rail" aria-label={SK.menuSections}>
+                  <h2>{SK.menuSections}</h2>
+                  {sections.map((sec) => (
+                    <button
+                      key={sec.id}
+                      type="button"
+                      className="shop-menu-link"
+                      aria-pressed={sec.id === active}
+                      onClick={() => setActive(sec.id)}
+                    >
+                      {sec.name}
+                      <small>{fmtNum(sec.count)}</small>
+                    </button>
+                  ))}
+                </nav>
+              ) : (
+                <span className="hidden lg:block" />
+              )}
+
+              <div className="flex min-w-0 flex-col gap-4">
+                {/* ── search inside the store (2026-11-07) ── */}
+                <div className="relative">
+                  <span className="pointer-events-none absolute inset-y-0 start-3 z-10 flex items-center text-ink-muted" aria-hidden>
+                    <IconSearch size={18} />
+                  </span>
+                  <input
+                    type="search"
+                    value={q}
+                    onChange={(e) => setQ(e.target.value.slice(0, 60))}
+                    placeholder={ST.search}
+                    aria-label={ST.search}
+                    data-testid="store-page-search"
+                    className="h-12 w-full rounded-tile border border-line bg-surface pe-11 ps-10 text-sm text-ink outline-none placeholder:text-ink-muted focus:border-accent"
+                  />
+                  {q && (
+                    <button
+                      type="button"
+                      onClick={() => setQ("")}
+                      aria-label={ST.clearSearch}
+                      className="absolute inset-y-0 end-1 flex w-10 items-center justify-center text-ink-muted hover:text-ink"
+                    >
+                      <IconClose size={18} />
+                    </button>
+                  )}
+                </div>
+                {!q.trim() && (
+                  <div className="shop-chips" data-phone>
+                    {sections.map((sec) => (
+                      <button
+                        key={sec.id}
+                        type="button"
+                        className="shop-chip"
+                        aria-pressed={sec.id === active}
+                        onClick={() => setActive(sec.id)}
+                      >
+                        {sec.name}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {!q.trim() && activeName && (
+                  <div className="shop-sec-head">
+                    <h2>{activeName}</h2>
+                  </div>
+                )}
+                {items.length === 0 && listLoading ? (
+                  <LoadingState variant="list" rows={3} />
+                ) : items.length === 0 && listError ? (
+                  <ReloadState label={listError} onRetry={() => setRev((r) => r + 1)} />
+                ) : items.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-ink-muted">{ST.noMatch}</p>
+                ) : (
+                  <>
+                    <ItemGrid items={items} onOpen={setOpen} storeLink={false} layout="row" />
+                    {next && (
+                      <div ref={sentinel}>
+                        <LoadingState variant="list" rows={1} />
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
-              {!q.trim() && (
-                <SectionRail
-                  items={sections.map((sec) => ({
-                    id: sec.id,
-                    name: sec.name,
-                    imageUrl: mediaUrl(sec.image_thumb_url ?? sec.image_url),
-                    icon: sec.icon,
-                    count: sec.count,
-                  }))}
-                  activeID={active}
-                  auto={false}
-                  onSelect={setActive}
-                />
-              )}
-              {items.length === 0 && listLoading ? (
-                <LoadingState variant="list" rows={3} />
-              ) : items.length === 0 && listError ? (
-                <ReloadState label={listError} onRetry={() => setRev((r) => r + 1)} />
-              ) : items.length === 0 ? (
-                <p className="py-6 text-center text-sm text-ink-muted">{ST.noMatch}</p>
-              ) : (
-                <>
-                  <ItemGrid items={items} onOpen={setOpen} storeLink={false} />
-                  {next && (
-                    <div ref={sentinel}>
-                      <LoadingState variant="list" rows={1} />
-                    </div>
-                  )}
-                </>
-              )}
-            </>
+
+              <StoreCartPanel storeId={id} storeName={page.store.name} />
+            </div>
           )}
         </>
       )}

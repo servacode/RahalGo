@@ -119,6 +119,9 @@ export {
   History as IconHistory,
   ChartColumn as IconReports,
   Gauge as IconMonitor,
+  // تبديلُ الثيم في سوق الزبون (فاتح ↔ داكن).
+  Moon as IconMoon,
+  Sun as IconSun,
   TrendingUp as IconTrendUp,
   TrendingDown as IconTrendDown,
   Minus as IconTrendFlat,

@@ -17,6 +17,7 @@ import Link from "next/link";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { mediaUrl } from "@/lib/api";
 import type { FeaturedStore } from "@/lib/customer/types";
+import { ShopPic } from "./ShopPic";
 
 const m = getMessages(defaultLocale);
 const ST = m.shop.stores;
@@ -56,18 +57,20 @@ export function StoreLogo({
   );
 }
 
-/** **الشريطُ نفسُه** — ولا يُرسم إن لم يصل متجر. */
+/** **الشريطُ نفسُه** — بطاقاتٌ بالشعار والاسم، **ولا يُرسم إن لم يصل متجر.** */
 export function FeaturedStrip({ stores }: { stores: FeaturedStore[] }) {
   if (stores.length === 0) return null;
   return (
-    <section aria-label={ST.featured} className="flex flex-col gap-2">
-      <h2 className="heading-section">{ST.featured}</h2>
-      <ul className="-mx-3 flex snap-x gap-3 overflow-x-auto px-3 pb-1 sm:-mx-4 sm:px-4">
+    <section aria-label={ST.featured} className="flex flex-col gap-3">
+      <div className="shop-sec-head">
+        <h2>{ST.featured}</h2>
+      </div>
+      <ul className="shop-featured">
         {stores.map((s) => (
-          <li key={s.id} className="w-20 shrink-0 snap-start">
-            <Link href={`/stores/${s.id}`} className="flex flex-col items-center gap-1.5 text-center">
-              <StoreLogo name={s.name} logo={s.logo_thumb_url ?? s.logo_url} className={`h-20 w-20 ${s.open_now ? "" : "opacity-70"}`} />
-              <span className="w-full text-2xs font-medium leading-tight [overflow-wrap:anywhere]">{s.name}</span>
+          <li key={s.id} className="contents">
+            <Link href={`/stores/${s.id}`} className={`shop-store-card ${s.open_now ? "" : "opacity-70"}`}>
+              <ShopPic src={s.logo_thumb_url ?? s.logo_url} name={s.name} fit="contain" initial />
+              <b>{s.name}</b>
             </Link>
           </li>
         ))}

@@ -668,6 +668,1337 @@
 }
 
 /* ══════════════════════════════════════════════════════════════════════
+   ٨ب · جلدُ الزبون على الويب (/shop) — فاتحٌ وداكنٌ بتوكنزِ لوحة المتجر نفسِها
+   ══════════════════════════════════════════════════════════════════════
+
+   (موافقةُ المالك ٢٠٢٦-١١-٠٨ على المخطّط: «تمام موافق».)
+
+   **كلُّه تحت `html[data-shop]` و`.shop-root`** — فلا يتأثّر المتجرُ ولا الإدارةُ ولا الموقعُ العامّ.
+   **والسمةُ على الجذر لا على الغلاف**: النوافذُ (`Sheet` و`Confirm`) تُرسم في `body` خارجَ الغلاف،
+   فلو كانت التوكنزُ على الغلاف لخرجت النافذةُ بالثيم القديم. **ويضعها نصٌّ صغيرٌ قبل أوّل رسمٍ**
+   فلا يومض الفاتحُ لمن نظامُه داكن.
+
+   الثيمُ: `data-shop-theme="dark"` وإلّا فاتح. **والاختيارُ يُحفظ ويُتّبع النظامُ إن لم يُختر.**
+   الأرضُ #f4f5f7 والسطحُ أبيضُ بحدٍّ رقيق، والنبرةُ الواحدةُ سماويّةٌ داكنةٌ (فاتح) / فاتحةٌ (داكن).
+   الأنصافُ: ٦ · ٨ · ١٠ على الحاسوب، ١٢ للقوائم على الجوّال، ١٦ للبطاقات، ٢٢ للأوراق. */
+html[data-shop],
+.shop-root {
+  color-scheme: light;
+  --color-primary: #0e7490;
+  --color-primary-dark: #0b6178;
+  --color-primary-light: #e6f3f7;
+  --color-accent: #0e7490;
+  --color-accent-dark: #0b6178;
+  --color-accent-light: #e6f3f7;
+  --color-accent-text: #0e7490;
+  --color-primary-strong: #0b6178;
+  --color-primary-soft: #e6f3f7;
+  --color-accent-strong: #0b6178;
+  --color-accent-soft: #e6f3f7;
+  --color-on-bright: #ffffff;
+  --color-on-solid: #ffffff;
+  --color-success: #15803d;
+  --color-warning: #b45309;
+  --color-danger: #d92d20;
+  --color-info: #2563eb;
+  --color-violet: #7c3aed;
+  --color-pending: #7c3aed;
+  --color-disabled: #9aa3af;
+  --color-ink: #14181f;
+  --color-ink-muted: #5b6472;
+  --color-paper: #ffffff;
+  --color-shell: #f4f5f7;
+  --color-page: #f4f5f7;
+  --color-surface: #ffffff;
+  --color-raised: #ffffff;
+  --color-chrome: rgb(255 255 255 / 0.94);
+  --color-field: #f3f4f6;
+  --color-line: #e7e9ed;
+  --color-scrim: rgb(10 13 18 / 0.46);
+  --shadow-e1: 0 1px 2px rgb(16 24 40 / 0.05);
+  --shadow-e2: 0 6px 18px -8px rgb(16 24 40 / 0.16), 0 0 0 1px rgb(16 24 40 / 0.04);
+  --shadow-e3: 0 10px 28px -10px rgb(16 24 40 / 0.2), 0 0 0 1px rgb(16 24 40 / 0.05);
+  --shadow-e4: 0 14px 36px -8px rgb(16 24 40 / 0.22), 0 0 0 1px rgb(16 24 40 / 0.06);
+  --shop-hero-a: #0b6178;
+  --shop-hero-b: #1397b5;
+  --shop-pic-a: 94%;
+  --shop-pic-b: 85%;
+  --shop-pic-s1: 85%;
+  --shop-pic-s2: 78%;
+}
+
+html[data-shop][data-shop-theme="dark"],
+html[data-shop-theme="dark"] .shop-root {
+  color-scheme: dark;
+  --color-primary: #6fd3ea;
+  --color-primary-dark: #93e0f1;
+  --color-primary-light: rgb(111 211 234 / 0.12);
+  --color-accent: #6fd3ea;
+  --color-accent-dark: #93e0f1;
+  --color-accent-light: rgb(111 211 234 / 0.12);
+  --color-accent-text: #6fd3ea;
+  --color-primary-strong: #93e0f1;
+  --color-primary-soft: rgb(111 211 234 / 0.12);
+  --color-accent-strong: #93e0f1;
+  --color-accent-soft: rgb(111 211 234 / 0.12);
+  --color-on-bright: #04222b;
+  --color-on-solid: #ffffff;
+  --color-success: #6fd69a;
+  --color-warning: #f2c14e;
+  --color-danger: #ff8d9b;
+  --color-info: #86b6f7;
+  --color-violet: #c3a6ff;
+  --color-pending: #c3a6ff;
+  --color-disabled: #5d6877;
+  --color-ink: #e9edf3;
+  --color-ink-muted: #9aa5b4;
+  --color-shell: #0a0d12;
+  --color-page: #0a0d12;
+  --color-surface: #11151b;
+  --color-raised: #151a22;
+  --color-chrome: rgb(10 13 18 / 0.94);
+  --color-field: #171d26;
+  --color-line: #212833;
+  --color-scrim: rgb(0 0 0 / 0.6);
+  --shadow-e1: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-e2: 0 8px 22px -8px rgb(0 0 0 / 0.6), 0 0 0 1px #212833;
+  --shadow-e3: 0 12px 30px -10px rgb(0 0 0 / 0.65), 0 0 0 1px #2e3744;
+  --shadow-e4: 0 18px 40px -8px rgb(0 0 0 / 0.7), 0 0 0 1px #2e3744;
+  --shop-hero-a: #0b4a5f;
+  --shop-hero-b: #0e7490;
+  --shop-pic-a: 22%;
+  --shop-pic-b: 14%;
+  --shop-pic-s1: 32%;
+  --shop-pic-s2: 30%;
+}
+
+/* المشتقّاتُ تُحسب حيث تُعرَّف — فتُعاد هنا بعد تبديل الأساس (انظر `.console-root`). */
+html[data-shop],
+.shop-root,
+html[data-shop][data-shop-theme="dark"],
+html[data-shop-theme="dark"] .shop-root {
+  --color-primary-tint: color-mix(in oklab, var(--color-primary) 10%, transparent);
+  --color-accent-tint: color-mix(in oklab, var(--color-accent) 10%, transparent);
+  --color-success-tint: color-mix(in oklab, var(--color-success) 12%, transparent);
+  --color-warning-tint: color-mix(in oklab, var(--color-warning) 13%, transparent);
+  --color-danger-tint: color-mix(in oklab, var(--color-danger) 11%, transparent);
+  --color-info-tint: color-mix(in oklab, var(--color-info) 11%, transparent);
+  --color-violet-tint: color-mix(in oklab, var(--color-violet) 11%, transparent);
+  --color-primary-fill: color-mix(in oklab, var(--color-primary) 30%, transparent);
+  --color-accent-fill: color-mix(in oklab, var(--color-accent) 30%, transparent);
+  --color-success-fill: color-mix(in oklab, var(--color-success) 30%, transparent);
+  --color-warning-fill: color-mix(in oklab, var(--color-warning) 30%, transparent);
+  --color-danger-fill: color-mix(in oklab, var(--color-danger) 30%, transparent);
+  --color-info-fill: color-mix(in oklab, var(--color-info) 30%, transparent);
+  --color-violet-fill: color-mix(in oklab, var(--color-violet) 30%, transparent);
+  --color-primary-edge: color-mix(in oklab, var(--color-primary) 40%, transparent);
+  --color-accent-edge: color-mix(in oklab, var(--color-accent) 40%, transparent);
+  --color-success-edge: color-mix(in oklab, var(--color-success) 40%, transparent);
+  --color-warning-edge: color-mix(in oklab, var(--color-warning) 40%, transparent);
+  --color-danger-edge: color-mix(in oklab, var(--color-danger) 40%, transparent);
+  --color-info-edge: color-mix(in oklab, var(--color-info) 40%, transparent);
+  --color-violet-edge: color-mix(in oklab, var(--color-violet) 40%, transparent);
+  --color-line-soft: color-mix(in oklab, var(--color-line) 70%, transparent);
+  --color-ink-faint: color-mix(in oklab, var(--color-ink) 12%, transparent);
+  --color-ink-dim: color-mix(in oklab, var(--color-ink-muted) 75%, transparent);
+  --color-row-hover: color-mix(in oklab, var(--color-ink) 5%, transparent);
+  --color-on-solid-tint: color-mix(in oklab, var(--color-on-solid) 14%, transparent);
+  --color-on-solid-edge: color-mix(in oklab, var(--color-on-solid) 40%, transparent);
+}
+
+/* الأرضُ: بلا شفقٍ ولا تدرّجٍ — شاشةٌ هادئةٌ يتصدّرها المحتوى. */
+html[data-shop] {
+  background-color: var(--color-shell);
+}
+html[data-shop] body {
+  background-color: var(--color-shell);
+  background-image: none;
+  color: var(--color-ink);
+}
+html[data-shop] body::before,
+html[data-shop] body::after {
+  display: none;
+}
+
+/* الأسطحُ المركزيّةُ تفقد زجاجَها هنا: بطاقةٌ بيضاءُ بحدٍّ رقيقٍ وظلٍّ خفيف. */
+html[data-shop] :is(.surface, .surface-raised, .surface-modal, .surface-sheet, .chrome),
+.shop-root :is(.surface, .surface-raised, .surface-modal, .surface-sheet, .chrome) {
+  backdrop-filter: none;
+  background-image: none;
+}
+html[data-shop] .surface,
+.shop-root .surface {
+  box-shadow: var(--shadow-e1);
+}
+html[data-shop] .surface-raised,
+html[data-shop] .surface-modal {
+  box-shadow: var(--shadow-e3);
+}
+html[data-shop] .surface-sheet {
+  background-color: var(--color-surface);
+  border-start-start-radius: 22px;
+  border-start-end-radius: 22px;
+  box-shadow: var(--shadow-e4);
+}
+@media (width >= 640px) {
+  html[data-shop] .surface-sheet {
+    border-radius: 22px;
+  }
+}
+html[data-shop] .scrim {
+  backdrop-filter: blur(3px);
+}
+html[data-shop] .surface-inset {
+  background-color: var(--color-field);
+  border-color: transparent;
+}
+
+/* ── الغلافُ والحاوية ── */
+.shop-root {
+  display: flex;
+  min-height: 100dvh;
+  flex-direction: column;
+  background-color: var(--color-shell);
+  color: var(--color-ink);
+}
+.shop-wrap {
+  width: 100%;
+  max-width: 1280px;
+  margin-inline: auto;
+  padding-inline: 16px;
+}
+@media (width >= 1024px) {
+  .shop-wrap {
+    padding-inline: 28px;
+  }
+}
+.shop-main {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 8px;
+  padding-bottom: calc(112px + env(safe-area-inset-bottom));
+}
+@media (width >= 1024px) {
+  .shop-main {
+    gap: 24px;
+    padding-top: 24px;
+    padding-bottom: 56px;
+  }
+}
+
+/* ── الشريطُ العلويّ: على الجوّال يظهر بخلفيّةٍ حين يُمرَّر، وعلى الحاسوب ثابتٌ بحدٍّ سفليّ ── */
+.shop-top {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  border-bottom: 1px solid transparent;
+  transition:
+    background-color 200ms,
+    border-color 200ms;
+}
+.shop-top[data-scrolled="true"],
+.shop-top[data-solid="true"] {
+  border-color: var(--color-line);
+  background-color: var(--color-chrome);
+  backdrop-filter: blur(12px);
+}
+@media (width >= 1024px) {
+  .shop-top {
+    border-color: var(--color-line);
+    background-color: var(--color-chrome);
+    backdrop-filter: blur(12px);
+  }
+}
+.shop-top-in {
+  display: flex;
+  min-height: 60px;
+  align-items: center;
+  gap: 10px;
+}
+@media (width >= 1024px) {
+  .shop-top-in {
+    min-height: 68px;
+    gap: 14px;
+  }
+}
+.shop-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 18px;
+}
+.shop-addr {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+  text-align: start;
+}
+.shop-addr-ic {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  place-items: center;
+  border-radius: 10px;
+  background-color: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+.shop-addr small {
+  display: block;
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--color-ink-muted);
+}
+.shop-addr b {
+  display: flex;
+  max-width: 46vw;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+@media (width >= 1024px) {
+  .shop-addr {
+    border: 1px solid var(--color-line);
+    border-radius: 12px;
+    padding: 5px 12px 5px 8px;
+    background-color: var(--color-surface);
+  }
+  .shop-addr b {
+    max-width: 220px;
+  }
+}
+.shop-search {
+  display: none;
+  min-width: 0;
+  flex: 1;
+  height: 44px;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  background-color: var(--color-field);
+  padding-inline: 14px;
+  color: var(--color-ink-muted);
+  font-size: 14px;
+  text-align: start;
+}
+.shop-search:hover,
+.shop-search:focus-within {
+  border-color: var(--color-primary-edge);
+}
+.shop-search input {
+  min-width: 0;
+  flex: 1;
+  background: transparent;
+  outline: none;
+  color: var(--color-ink);
+}
+.shop-search input::placeholder {
+  color: var(--color-ink-muted);
+}
+@media (width >= 1024px) {
+  .shop-search {
+    display: flex;
+  }
+}
+.shop-iconbtn {
+  position: relative;
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  place-items: center;
+  border-radius: 12px;
+  color: var(--color-ink);
+  transition: background-color 150ms;
+}
+.shop-iconbtn:hover {
+  background-color: var(--color-row-hover);
+}
+.shop-iconbtn[data-round="true"] {
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-e1);
+}
+.shop-cartbtn {
+  display: none;
+  height: 40px;
+  align-items: center;
+  gap: 8px;
+  border-radius: 10px;
+  background-color: var(--color-primary);
+  padding-inline: 14px;
+  color: var(--color-on-bright);
+  font-size: 14px;
+  font-weight: 700;
+}
+.shop-cartbtn:hover {
+  background-color: var(--color-primary-dark);
+}
+.shop-cartbtn i {
+  display: grid;
+  min-width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 7px;
+  background-color: var(--color-on-solid-tint);
+  font-size: 12px;
+  font-style: normal;
+}
+@media (width >= 1024px) {
+  .shop-cartbtn {
+    display: inline-flex;
+  }
+}
+.shop-navlink {
+  display: none;
+  height: 40px;
+  align-items: center;
+  gap: 6px;
+  border-radius: 10px;
+  padding-inline: 12px;
+  color: var(--color-ink-muted);
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.shop-navlink:hover,
+.shop-navlink[aria-current="page"] {
+  background-color: var(--color-row-hover);
+  color: var(--color-ink);
+}
+@media (width >= 1024px) {
+  .shop-navlink {
+    display: inline-flex;
+  }
+}
+.shop-acct {
+  display: none;
+  height: 44px;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  background-color: var(--color-surface);
+  padding-inline: 5px 14px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.shop-acct i {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 999px;
+  background-color: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-style: normal;
+}
+@media (width >= 1024px) {
+  .shop-acct {
+    display: inline-flex;
+  }
+}
+.shop-only-phone {
+  display: contents;
+}
+@media (width >= 1024px) {
+  .shop-only-phone {
+    display: none;
+  }
+}
+
+/* الجرسُ (مكوّنٌ مشتركٌ) يأخذ هنا مقاسَ أزرار الشريط وعدّادَه الأحمر. */
+.shop-top a[href="/notifications"] {
+  width: 40px;
+  height: 40px;
+  justify-content: center;
+  border-radius: 12px;
+  padding: 0;
+  color: var(--color-ink);
+}
+.shop-top a[href="/notifications"]:hover {
+  background-color: var(--color-row-hover);
+  color: var(--color-ink);
+}
+.shop-top a[href="/notifications"] svg {
+  width: 22px;
+  height: 22px;
+}
+.shop-top a[href="/notifications"] span[dir="ltr"] {
+  top: -7px;
+  inset-inline-end: -8px;
+  background-color: var(--color-danger-solid);
+  color: #fff;
+  --tw-ring-color: var(--color-chrome);
+}
+
+/* ── شريطُ التبويبات السفليّ (جوّال) ── */
+.shop-tabbar {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 40;
+  display: flex;
+  border-top: 1px solid var(--color-line);
+  background-color: var(--color-chrome);
+  backdrop-filter: blur(14px);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+@media (width >= 1024px) {
+  .shop-tabbar {
+    display: none;
+  }
+}
+.shop-tab {
+  position: relative;
+  display: flex;
+  min-height: 62px;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: var(--color-ink-muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+.shop-tab[aria-current="page"] {
+  color: var(--color-primary);
+}
+.shop-tab b {
+  position: absolute;
+  top: 6px;
+  inset-inline-start: calc(50% + 6px);
+  display: grid;
+  min-width: 18px;
+  height: 18px;
+  place-items: center;
+  border-radius: 999px;
+  background-color: var(--color-danger);
+  padding-inline: 4px;
+  color: var(--color-on-solid);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+[data-shop-theme="dark"] .shop-tab b {
+  color: var(--color-shell);
+}
+
+/* ── شريطان عائمان فوق التبويبات: «طلبك في الطريق» وسلّةُ المتجر ── */
+.shop-float {
+  position: fixed;
+  inset-inline: 12px;
+  bottom: calc(74px + env(safe-area-inset-bottom));
+  z-index: 39;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+.shop-float > * {
+  pointer-events: auto;
+}
+@media (width >= 1024px) {
+  .shop-float {
+    display: none;
+  }
+}
+.shop-trackbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--color-line);
+  border-radius: 16px;
+  background-color: var(--color-surface);
+  padding: 10px 12px;
+  box-shadow: var(--shadow-e3);
+}
+.shop-trackbar .ic {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  place-items: center;
+  border-radius: 12px;
+  background-color: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+.shop-steps {
+  display: flex;
+  gap: 4px;
+  margin-top: 6px;
+}
+.shop-steps i {
+  height: 4px;
+  flex: 1;
+  border-radius: 99px;
+  background-color: var(--color-line);
+}
+.shop-steps i[data-on="true"] {
+  background-color: var(--color-primary);
+}
+.shop-cartbar {
+  display: flex;
+  height: 54px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-radius: 16px;
+  background-color: var(--color-primary);
+  padding-inline: 16px;
+  color: var(--color-on-bright);
+  font-weight: 700;
+  box-shadow: var(--shadow-e4);
+}
+.shop-cartbar i {
+  display: inline-grid;
+  min-width: 28px;
+  height: 28px;
+  place-items: center;
+  margin-inline-start: 10px;
+  border-radius: 9px;
+  background-color: var(--color-on-solid-tint);
+  font-style: normal;
+}
+
+/* ── البطل: عرضُ التوصيل المجّانيّ ── */
+.shop-hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow: hidden;
+  border-radius: 16px;
+  background-image: linear-gradient(135deg, var(--shop-hero-a), var(--shop-hero-b));
+  padding: 20px;
+  color: #fff;
+}
+.shop-hero::before,
+.shop-hero::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  background-color: rgb(255 255 255 / 0.08);
+  pointer-events: none;
+}
+.shop-hero::before {
+  width: 220px;
+  height: 220px;
+  inset-inline-start: -60px;
+  top: -80px;
+}
+.shop-hero::after {
+  width: 150px;
+  height: 150px;
+  inset-inline-start: 90px;
+  bottom: -90px;
+}
+.shop-hero > * {
+  position: relative;
+}
+.shop-hero h2 {
+  max-width: 24ch;
+  font-size: 22px;
+  line-height: 1.4;
+  font-weight: 800;
+}
+.shop-hero p {
+  font-size: 14px;
+  color: rgb(255 255 255 / 0.9);
+}
+.shop-hero .tag {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  background-color: rgb(255 255 255 / 0.16);
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.shop-hero .cta {
+  display: inline-flex;
+  width: fit-content;
+  height: 46px;
+  align-items: center;
+  border-radius: 12px;
+  background-color: #fff;
+  padding-inline: 20px;
+  color: var(--shop-hero-a);
+  font-weight: 700;
+}
+@media (width >= 1024px) {
+  .shop-hero {
+    min-height: 220px;
+    justify-content: center;
+    padding: 32px 40px;
+  }
+  .shop-hero h2 {
+    font-size: 32px;
+    max-width: 18ch;
+  }
+  .shop-hero .cta {
+    height: 44px;
+    border-radius: 8px;
+  }
+}
+
+/* ── عناوينُ الأقسام ── */
+.shop-sec-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.shop-sec-head h2 {
+  font-size: 20px;
+  line-height: 1.4;
+  font-weight: 800;
+}
+@media (width >= 1024px) {
+  .shop-sec-head h2 {
+    font-size: 24px;
+  }
+}
+.shop-sec-head a,
+.shop-sec-head button {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--color-primary);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* ── صورٌ بديلةٌ مصبوغةٌ حين لا صورة: الصبغةُ من --h (٠–٣٦٠) تُحسب من الاسم ── */
+.shop-pic {
+  position: relative;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background-image: linear-gradient(
+    150deg,
+    hsl(var(--h, 190) var(--shop-pic-s1) var(--shop-pic-a)),
+    hsl(var(--h, 190) var(--shop-pic-s2) var(--shop-pic-b))
+  );
+  color: hsl(var(--h, 190) 45% 38%);
+}
+html[data-shop-theme="dark"] .shop-pic {
+  color: hsl(var(--h, 190) 55% 70%);
+}
+.shop-pic[data-fit="contain"]:has(> img) {
+  background-image: none;
+  background-color: var(--color-surface);
+}
+.shop-pic[data-fit="contain"] > img {
+  object-fit: contain;
+  padding: 8px;
+}
+.shop-ini {
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1;
+}
+.shop-pic > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ── بلاطاتُ الأقسام ── */
+.shop-tiles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px 12px;
+}
+@media (width >= 1024px) {
+  .shop-tiles {
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    gap: 20px 18px;
+  }
+}
+.shop-tile {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.shop-tile .shop-pic {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 20px;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  transition:
+    outline-color 150ms,
+    transform 150ms;
+}
+.shop-tile:active .shop-pic {
+  transform: scale(0.97);
+}
+.shop-tile[aria-pressed="true"] .shop-pic {
+  outline-color: var(--color-primary);
+}
+.shop-tile[aria-pressed="true"] span {
+  color: var(--color-primary);
+}
+.shop-tile span {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+/* ── كبسولاتُ الفلاتر والأقسام ── */
+.shop-chips {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-block: 2px;
+  margin-inline: -16px;
+  padding-inline: 16px;
+}
+.shop-chips::-webkit-scrollbar {
+  display: none;
+}
+.shop-chip {
+  display: inline-flex;
+  height: 40px;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  background-color: var(--color-surface);
+  padding-inline: 16px;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.shop-chip[aria-pressed="true"] {
+  border-color: var(--color-primary);
+  background-color: var(--color-primary);
+  color: var(--color-on-bright);
+}
+
+/* ── متاجرُ مميّزة ── */
+.shop-featured {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  margin-inline: -16px;
+  padding-inline: 16px;
+  padding-bottom: 4px;
+}
+.shop-featured::-webkit-scrollbar {
+  display: none;
+}
+.shop-store-card {
+  display: flex;
+  width: 148px;
+  flex: none;
+  flex-direction: column;
+  gap: 8px;
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+  border-radius: 16px;
+  background-color: var(--color-surface);
+  padding: 12px;
+  box-shadow: var(--shadow-e1);
+  transition:
+    transform 150ms,
+    box-shadow 150ms;
+}
+.shop-store-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-e2);
+}
+.shop-store-card .shop-pic {
+  height: 84px;
+  border-radius: 12px;
+}
+.shop-store-card b {
+  font-size: 14px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.shop-store-card span.st {
+  font-size: 12px;
+  color: var(--color-ink-muted);
+}
+@media (width >= 1024px) {
+  .shop-featured {
+    margin-inline: 0;
+    padding-inline: 0;
+  }
+  .shop-store-card {
+    width: 196px;
+  }
+  .shop-store-card .shop-pic {
+    height: 110px;
+  }
+}
+
+/* ── بطاقةُ الصنف: صفٌّ في المتجر، وبلاطةٌ في السوق والبحث والمفضّلة ── */
+.shop-items {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+.shop-items[data-layout="tile"] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (width >= 768px) {
+  .shop-items[data-layout="tile"] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (width >= 1024px) {
+  .shop-items {
+    gap: 16px;
+  }
+  .shop-items[data-layout="row"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .shop-items[data-layout="tile"] {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+.shop-item {
+  display: flex;
+  min-width: 0;
+  gap: 14px;
+  overflow: hidden;
+  border: 1px solid var(--color-line);
+  border-radius: 16px;
+  background-color: var(--color-surface);
+  padding: 12px;
+  box-shadow: var(--shadow-e1);
+}
+.shop-item[data-layout="tile"] {
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px;
+}
+.shop-item-img {
+  position: relative;
+  width: 108px;
+  height: 108px;
+  flex: none;
+  overflow: hidden;
+  border-radius: 12px;
+}
+.shop-item[data-layout="tile"] .shop-item-img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+}
+@media (width >= 1024px) {
+  .shop-item-img {
+    width: 150px;
+    height: 150px;
+  }
+}
+.shop-item-img > .shop-pic {
+  position: absolute;
+  inset: 0;
+}
+.shop-item-img > button {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.shop-item-body {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+}
+.shop-item-body h3 {
+  font-size: 16px;
+  line-height: 1.4;
+  font-weight: 700;
+}
+.shop-item-body p.d {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--color-ink-muted);
+}
+.shop-item[data-layout="tile"] .d {
+  display: none;
+}
+.shop-item-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 4px;
+}
+.shop-add {
+  display: inline-flex;
+  height: 36px;
+  align-items: center;
+  gap: 4px;
+  border-radius: 10px;
+  background-color: var(--color-primary);
+  padding-inline: 12px;
+  color: var(--color-on-bright);
+  font-size: 13px;
+  font-weight: 700;
+  transition: background-color 150ms;
+}
+.shop-add:hover {
+  background-color: var(--color-primary-dark);
+}
+.shop-qty-badge {
+  position: absolute;
+  inset-block-end: 8px;
+  inset-inline-start: 8px;
+  display: grid;
+  min-width: 30px;
+  height: 30px;
+  place-items: center;
+  border-radius: 999px;
+  background-color: var(--color-primary);
+  padding-inline: 6px;
+  color: var(--color-on-bright);
+  font-size: 13px;
+  font-weight: 700;
+  pointer-events: none;
+}
+
+/* ── رأسُ المتجر ── */
+.shop-store-hero {
+  position: relative;
+  margin-inline: -16px;
+  background-image: linear-gradient(160deg, var(--color-primary-soft), transparent 90%);
+}
+.shop-store-band {
+  height: 120px;
+}
+.shop-store-band .shop-pic {
+  height: 100%;
+  width: 100%;
+}
+@media (width >= 1024px) {
+  .shop-store-hero {
+    margin-inline: 0;
+    overflow: hidden;
+    border-radius: 16px;
+  }
+  .shop-store-band {
+    height: 190px;
+  }
+}
+.shop-store-head {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: -44px;
+  padding-inline: 16px;
+}
+@media (width >= 1024px) {
+  .shop-store-head {
+    margin-top: 0;
+    flex-direction: row;
+    align-items: flex-end;
+    gap: 18px;
+    padding: 0;
+    margin-top: -52px;
+    padding-inline: 24px;
+    padding-bottom: 14px;
+  }
+}
+.shop-store-logo {
+  display: grid;
+  width: 88px;
+  height: 88px;
+  flex: none;
+  place-items: center;
+  overflow: hidden;
+  border: 3px solid var(--color-surface);
+  border-radius: 22px;
+  background-color: var(--color-surface);
+  box-shadow: var(--shadow-e2);
+}
+.shop-store-head h1 {
+  font-size: 24px;
+  line-height: 1.35;
+  font-weight: 800;
+}
+@media (width >= 1024px) {
+  .shop-store-logo {
+    width: 104px;
+    height: 104px;
+  }
+  .shop-store-head h1 {
+    font-size: 28px;
+  }
+}
+.shop-cap {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.shop-cap[data-tone="ok"] {
+  background-color: var(--color-success-tint);
+  color: var(--color-success);
+}
+.shop-cap[data-tone="bad"] {
+  background-color: var(--color-danger-tint);
+  color: var(--color-danger);
+}
+.shop-cap[data-tone="brand"] {
+  background-color: var(--color-primary-tint);
+  color: var(--color-primary);
+}
+.shop-back {
+  position: absolute;
+  top: 12px;
+  inset-inline-start: 16px;
+  z-index: 2;
+  display: inline-flex;
+  height: 40px;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  background-color: var(--color-surface);
+  padding-inline: 12px 14px;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: var(--shadow-e1);
+}
+
+/* ── صفحةُ المتجر: ثلاثةُ أعمدةٍ على الحاسوب (أقسام · أصناف · سلّة) ── */
+.shop-store-cols {
+  display: grid;
+  gap: 16px;
+}
+@media (width >= 1024px) {
+  .shop-store-cols {
+    grid-template-columns: 200px minmax(0, 1fr) 340px;
+    align-items: start;
+    gap: 24px;
+  }
+}
+@media (width >= 1024px) {
+  .shop-back {
+    inset-inline-start: auto;
+    inset-inline-end: 16px;
+  }
+}
+.shop-menu-rail {
+  display: none;
+}
+@media (width >= 1024px) {
+  .shop-menu-rail {
+    position: sticky;
+    top: 88px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .shop-chips[data-phone] {
+    display: none;
+  }
+}
+.shop-menu-rail h2 {
+  padding-inline: 12px;
+  padding-bottom: 6px;
+  color: var(--color-ink-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+.shop-menu-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-inline-end: 3px solid transparent;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: start;
+}
+.shop-menu-link:hover {
+  background-color: var(--color-row-hover);
+}
+.shop-menu-link[aria-pressed="true"] {
+  border-inline-end-color: var(--color-primary);
+  background-color: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+.shop-menu-link small {
+  font-size: 12px;
+  color: var(--color-ink-muted);
+}
+.shop-cartpanel {
+  display: none;
+}
+@media (width >= 1024px) {
+  .shop-cartpanel {
+    position: sticky;
+    top: 88px;
+    display: flex;
+    max-height: calc(100dvh - 112px);
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--color-line);
+    border-radius: 16px;
+    background-color: var(--color-surface);
+    box-shadow: var(--shadow-e2);
+  }
+}
+.shop-cartpanel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--color-line);
+  padding: 14px 16px;
+}
+.shop-cartpanel-lines {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 16px;
+}
+.shop-cartpanel-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--color-line-soft);
+  padding-block: 12px;
+}
+.shop-cartpanel-line:last-child {
+  border-bottom: 0;
+}
+.shop-cartpanel-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-top: 1px solid var(--color-line);
+  padding: 14px 16px;
+}
+.shop-stepper {
+  display: inline-flex;
+  height: 36px;
+  flex: none;
+  align-items: center;
+  border-radius: 999px;
+  background-color: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-weight: 700;
+}
+.shop-stepper button {
+  display: grid;
+  width: 34px;
+  height: 36px;
+  place-items: center;
+}
+.shop-stepper span {
+  min-width: 20px;
+  text-align: center;
+}
+
+/* ── قياساتُ الأزرار: ٣٦ على الحاسوب و٥٠ على الجوّال للأفعال الرئيسة ── */
+.shop-root .shop-cta {
+  display: flex;
+  width: 100%;
+  height: 50px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 14px;
+  background-color: var(--color-primary);
+  color: var(--color-on-bright);
+  font-size: 16px;
+  font-weight: 700;
+}
+@media (width >= 1024px) {
+  .shop-root .shop-cta {
+    height: 46px;
+    border-radius: 10px;
+  }
+}
+.shop-root .shop-cta:hover {
+  background-color: var(--color-primary-dark);
+}
+
+/* ── حقولُ الإدخال والبحث وأزرارُ المكوّنات المركزيّة تأخذ الحدّ الجديد ── */
+.shop-root input[type="search"],
+.shop-root input[type="text"],
+.shop-root input[type="tel"],
+.shop-root input[type="password"],
+.shop-root input[type="email"],
+.shop-root textarea {
+  border-color: var(--color-line);
+}
+.shop-root [data-variant="primary"],
+html[data-shop] [data-variant="primary"] {
+  border-radius: 12px;
+  font-weight: 700;
+}
+.shop-root [data-variant="primary"]:hover,
+html[data-shop] [data-variant="primary"]:hover {
+  opacity: 1;
+  background-color: var(--color-primary-dark);
+}
+
+/* مفتاحُ الثيم: أيقونةٌ تُبدَّل بحسب الثيم الحاليّ. */
+.shop-theme-moon {
+  display: inline;
+}
+.shop-theme-sun {
+  display: none;
+}
+html[data-shop-theme="dark"] .shop-theme-moon {
+  display: none;
+}
+html[data-shop-theme="dark"] .shop-theme-sun {
+  display: inline;
+}
+
+/* ── تتبّعُ الطلب والسلّة: أوراقٌ على الأرض نفسِها ── */
+html[data-shop] .heading-page {
+  font-weight: 800;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
    ٩ · احترامُ من أطفأ الحركة — **مركزيّاً لا في كلّ مكوّن**
    ══════════════════════════════════════════════════════════════════════
 

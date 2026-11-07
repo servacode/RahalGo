@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { fetchPlatform } from "@rahalgo/ui";
 import CustomerShell from "@/components/customer/CustomerShell";
+import { SHOP_THEME_SCRIPT } from "@/components/customer/ShopTheme";
 import { readServerConfig } from "@/lib/config";
 import pwa from "@/lib/pwa.gen.json";
 
@@ -42,5 +43,11 @@ export const viewport: Viewport = {
 };
 
 export default function ShopLayout({ children }: { children: React.ReactNode }) {
-  return <CustomerShell>{children}</CustomerShell>;
+  return (
+    <>
+      {/* **قبل أوّل رسمٍ** — يضع ثيمَ السوق على الجذر فلا يومض الفاتحُ لمن نظامُه داكن (`theme.css ٨ب`). */}
+      <script dangerouslySetInnerHTML={{ __html: SHOP_THEME_SCRIPT }} />
+      <CustomerShell>{children}</CustomerShell>
+    </>
+  );
 }
