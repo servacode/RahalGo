@@ -7,7 +7,9 @@
 //     ويندوز (بلا صلاحيات مدير)، ويعمل في الخلفية، ويقول «تمّ» مرّةً واحدة.
 //   - **ولا إعدادَ على الجهاز**: يسأل الخادمَ كلَّ دقيقة فيأخذ طريقةَ القراءة والمدّة،
 //     **ويجد قاعدةَ الأمين وحدَه** على الجهاز، ويبعث حالَه وخطأَه وجداولَ الأمين.
-//   - **ويحدّث نفسَه** إن صدرت نسخةٌ أحدث، **ويزيل نفسَه** إن ضُغط «إيقاف» في اللوحة.
+//   - **ويحدّث نفسَه** إن صدرت نسخةٌ أحدث، **ويزيل نفسَه** إن ضُغط «احذف البرنامج من الكمبيوتر».
+//   - **و«إيقاف» مؤقّت** (٢٠٢٦-١١-٠٧): يبقى ويسأل كلَّ دقيقة ويحدّث نفسَه، **ولا يقرأ الأمين
+//     ولا يرفع شيئاً** حتّى يُضغط «شغّل المزامنة».
 //
 // **ويقرأ فقط**: جملةُ القراءة `SELECT` خالصة، وتُردّ كلُّ جملةٍ تكتب.
 package main
@@ -39,7 +41,7 @@ import (
 )
 
 // Version **نسختُه** — يقرؤها الخادمُ عند البناء ليعرف من يحتاج تحديثاً.
-var Version = "2.0.1"
+var Version = "2.0.2"
 
 const marker = "\n##RAHALGO-SYNC-CONFIG##"
 
@@ -55,6 +57,7 @@ type Remote struct {
 	Interval      int    `json:"interval_minutes"`
 	HasMapping    bool   `json:"has_mapping"`
 	Stop          bool   `json:"stop"`
+	Paused        bool   `json:"paused"`
 	SQLQuery      string `json:"sql_query"`
 	SQLConnection string `json:"sql_connection"`
 	ProbeTable    string `json:"probe_table"`
@@ -290,14 +293,15 @@ func run(ctx context.Context, dir string, l *Local) {
 				return
 			}
 		}
-		if rc.WantSchema {
+		doSchema, doSync := plan(rc, st.lastSync, time.Now())
+		if rc.Paused {
+			st.mode = "paused"
+			st.lastErr = ""
+		}
+		if doSchema {
 			st.sendSchema(ctx, rc)
 		}
-		every := rc.Interval
-		if every <= 0 {
-			every = 1
-		}
-		if rc.SyncNow || time.Since(st.lastSync) >= time.Duration(every)*time.Minute-5*time.Second {
+		if doSync {
 			if err := st.sync(ctx, rc, rc.SyncNow); err != nil {
 				st.lastErr = err.Error()
 				log.Printf("المزامنة فشلت: %v", err)
@@ -308,6 +312,21 @@ func run(ctx context.Context, dir string, l *Local) {
 		}
 		time.Sleep(time.Minute)
 	}
+}
+
+// plan **ما يفعله في هذه الدورة** — إرسالُ الجداول، والمزامنة.
+//
+// **وموقوفٌ مؤقّتاً ⇒ لا هذا ولا ذاك** (٢٠٢٦-١١-٠٧): يبقى يسأل ويحدّث نفسَه فقط،
+// ولا يفتح قاعدةَ الأمين ولا يرفع شيئاً.
+func plan(rc *Remote, lastSync, now time.Time) (schema, sync bool) {
+	if rc.Paused {
+		return false, false
+	}
+	every := rc.Interval
+	if every <= 0 {
+		every = 1
+	}
+	return rc.WantSchema, rc.SyncNow || now.Sub(lastSync) >= time.Duration(every)*time.Minute-5*time.Second
 }
 
 func (st *state) request(ctx context.Context, method, path string, body io.Reader, ctype string) ([]byte, error) {

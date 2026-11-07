@@ -65,13 +65,13 @@ func (s *Server) handleMerchantPriceSyncInfo(w http.ResponseWriter, r *http.Requ
 	var agentVersion *string
 	var interval int
 	var agentError *string
-	var stopped bool
+	var stopped, paused bool
 	if err := s.pg.QueryRow(r.Context(), `
 		SELECT price_sync_mapping, price_sync_token_hash IS NOT NULL,
 		       price_sync_agent_seen_at, price_sync_agent_version, price_sync_requested_at,
-		       price_sync_interval_minutes, price_sync_agent_error, price_sync_stop
+		       price_sync_interval_minutes, price_sync_agent_error, price_sync_stop, price_sync_paused
 		  FROM merchants WHERE id = $1`, merchantID).Scan(&mapping, &hasToken, &seenAt, &agentVersion, &requestedAt,
-		&interval, &agentError, &stopped); err != nil {
+		&interval, &agentError, &stopped, &paused); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -100,6 +100,8 @@ func (s *Server) handleMerchantPriceSyncInfo(w http.ResponseWriter, r *http.Requ
 		"interval_minutes": interval,
 		// **وخطأُ الساعي يُقرأ هنا لا على كمبيوتر المحاسب** — و«أُوقف» من اللوحة.
 		"agent_error": agentError, "stopped": stopped,
+		// **«موقوفة مؤقّتاً»** (٢٠٢٦-١١-٠٧) — البرنامجُ باقٍ على الكمبيوتر.
+		"paused": paused,
 	})
 }
 
@@ -211,6 +213,10 @@ func (s *Server) handlePriceSyncAgent(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	if s.syncPaused(r.Context(), merchantID) {
+		pausedReply(w)
+		return
+	}
 	r.Body = http.MaxBytesReader(w, r.Body, maxSyncFile)
 	req, err := decode[struct {
 		Rows     []catalog.SyncRow `json:"rows"`
@@ -309,6 +315,10 @@ func (s *Server) handlePriceSyncPoll(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handlePriceSyncAgentFile(w http.ResponseWriter, r *http.Request) {
 	merchantID, ok := s.syncAgentMerchant(w, r)
 	if !ok {
+		return
+	}
+	if s.syncPaused(r.Context(), merchantID) {
+		pausedReply(w)
 		return
 	}
 	var raw []byte
