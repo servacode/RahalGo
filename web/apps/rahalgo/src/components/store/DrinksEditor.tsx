@@ -19,7 +19,7 @@ import { getMessages, defaultLocale, errorText, fmtNum } from "@rahalgo/i18n";
 import { Alert, Button, FormActions, IconAdd, IconCheck, IconClose, IconDelete, ImageUpload, LoadingState, ReloadState } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
-import type { MenuSection } from "@/lib/store/types";
+import type { MenuSummary } from "@/lib/store/types";
 import { parseUsd, usdInput, usdText } from "@/lib/store/usd";
 import { useShopToast } from "@/components/customer/toast";
 import { fill as fillText } from "@/lib/customer/texts";
@@ -92,8 +92,9 @@ export default function DrinksEditor() {
       setFailed(true);
     }
     // **كم صنفاً عند المتجر** — ليُقال بعد الحفظ كم صنفاً نال القائمة.
-    api<MenuSection[]>(`/api/v1/merchant/stores/${storeId}/menu`)
-      .then((menu) => setItemCount(menu.reduce((n, s) => n + s.items.length, 0)))
+    // **From the light summary** (2026-11-07) — not the whole menu of a big mall.
+    api<MenuSummary>(`/api/v1/merchant/stores/${storeId}/menu/summary`)
+      .then((s) => setItemCount(s.total ?? 0))
       .catch(() => undefined);
   }, [storeId, fill]);
   useEffect(() => {

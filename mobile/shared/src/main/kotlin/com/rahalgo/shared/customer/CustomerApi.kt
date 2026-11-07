@@ -13,6 +13,7 @@ import com.rahalgo.shared.model.Reputation
 import com.rahalgo.shared.net.Ack
 import com.rahalgo.shared.net.ApiClient
 import io.ktor.http.HttpMethod
+import io.ktor.http.encodeURLParameter
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -65,6 +66,30 @@ class CustomerApi(private val api: ApiClient) {
      */
     suspend fun store(storeId: String): StorePage =
         api.raw("/api/v1/public/stores/$storeId" + BrowseScope.query('?'))
+
+    /**
+     * **Store page head** (owner 2026-11-07: «ما يصير يكون بطيء») — the header and the market
+     * sections with their counts; the items come page by page from [storeItems].
+     */
+    suspend fun storeSummary(storeId: String): com.rahalgo.shared.model.StoreSummary =
+        api.raw("/api/v1/public/stores/$storeId/summary" + BrowseScope.query('?'))
+
+    /** **One page of a store's items** — for a section or a search inside the store. */
+    suspend fun storeItems(
+        storeId: String,
+        section: String = "",
+        query: String = "",
+        after: String = "",
+        limit: Int = 40,
+    ): com.rahalgo.shared.model.StoreItemsPage {
+        val p = buildList {
+            add("limit=$limit")
+            if (section.isNotEmpty()) add("section=$section")
+            if (query.isNotBlank()) add("q=" + query.trim().encodeURLParameter())
+            if (after.isNotEmpty()) add("after=" + after.encodeURLParameter())
+        }
+        return api.raw("/api/v1/public/stores/$storeId/items?" + p.joinToString("&") + BrowseScope.query('&'))
+    }
 
     /**
      * **صنفٌ بخياراته** — يُنادى حين تُضغط بطاقةٌ عليها `hasOptions`.

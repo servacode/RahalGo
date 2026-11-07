@@ -110,7 +110,7 @@ fun MenuScreen(
     val context = LocalContext.current
     val media = { path: String? -> Backend.of(context).media(path) }
 
-    if (vm.loading || (vm.error.isNotEmpty() && vm.groups.isEmpty())) {
+    if (vm.loading || (vm.error.isNotEmpty() && vm.summary.sections.isEmpty() && vm.items.isEmpty())) {
         Screen {
             ScreenTitle(stringResource(R.string.menu_title))
             LoadState(vm.loading, vm.error) { vm.load() }
@@ -198,41 +198,47 @@ fun MenuScreen(
 private fun ItemsList(
     vm: MenuViewModel,
     media: (String?) -> String?,
-    open: MenuGroup?,
+    open: com.rahalgo.shared.merchant.MenuSummarySection?,
     onAddItem: (() -> Unit)?,
     onOffer: (() -> Unit)?,
 ) {
     // **والشبكةُ نفسُها عند المندوب** — `ui.menu.MenuItemsGrid` (طلبُ المالك ٢٠٢٦-١٠-٢٩).
-    val byId = vm.groups.flatMap { it.items }.associateBy { it.id }
+    // **Paged** (owner 2026-11-07): the chips and counts come from the summary, the items page by
+    // page from the server for the open chip / search — see `MenuViewModel`.
+    val byId = vm.items.associateBy { it.id }
     com.rahalgo.ui.menu.MenuItemsGrid(
-        groups = vm.groups.map { g ->
-            com.rahalgo.ui.menu.GridGroup(
-                g.name,
-                g.items.map { item ->
-                    com.rahalgo.ui.menu.GridItem(
-                        id = item.id,
-                        name = item.name,
-                        description = item.modifiers.map { it.name }.filter { it.isNotBlank() }.joinToString(" · "),
-                        // **صورةٌ طوليّةٌ بالدقّة الكاملة** (٢٠٢٦-١١-٠٦): المصغّرةُ ٤٠٠ بكسل
-                        // فتتشوّش في بطاقةٍ أطول، فنأخذ الكاملةَ وتحتها المصغّرة.
-                        imageUrl = media(item.imageUrl?.takeIf { it.isNotBlank() } ?: item.imageThumbUrl),
-                        fullImageUrl = media(item.imageUrl?.takeIf { it.isNotBlank() } ?: item.imageThumbUrl),
-                        // **والدولاريُّ بدولاره وليرته** (٢٠٢٦-١٠-١٢).
-                        price = com.rahalgo.ui.menu.priceLine(item.price, item.merchantPriceUsd),
-                        available = item.available,
-                        approved = item.approved,
-                        reviewNote = if (item.approved) "" else item.reviewNote,
-                    )
-                },
-            )
-        },
+        groups = emptyList(),
+        paging = com.rahalgo.ui.menu.GridPaging(
+            chips = vm.summary.sections.map { com.rahalgo.ui.menu.GridChip(it.id, it.name, it.count) },
+            total = vm.summary.total,
+            off = vm.summary.unavailable,
+            loading = vm.listLoading,
+            hasMore = vm.hasMore,
+            onMore = { vm.loadMore() },
+            items = vm.items.map { item ->
+                com.rahalgo.ui.menu.GridItem(
+                    id = item.id,
+                    name = item.name,
+                    description = item.modifiers.map { it.name }.filter { it.isNotBlank() }.joinToString(" · "),
+                    // **صورةٌ طوليّةٌ بالدقّة الكاملة** (٢٠٢٦-١١-٠٦): المصغّرةُ ٤٠٠ بكسل
+                    // فتتشوّش في بطاقةٍ أطول، فنأخذ الكاملةَ وتحتها المصغّرة.
+                    imageUrl = media(item.imageUrl?.takeIf { it.isNotBlank() } ?: item.imageThumbUrl),
+                    fullImageUrl = media(item.imageUrl?.takeIf { it.isNotBlank() } ?: item.imageThumbUrl),
+                    // **والدولاريُّ بدولاره وليرته** (٢٠٢٦-١٠-١٢).
+                    price = com.rahalgo.ui.menu.priceLine(item.price, item.merchantPriceUsd),
+                    available = item.available,
+                    approved = item.approved,
+                    reviewNote = if (item.approved) "" else item.reviewNote,
+                )
+            },
+        ),
         query = vm.query,
-        onQuery = { vm.query = it },
-        openName = open?.name,
+        onQuery = { vm.search(it) },
+        openName = open?.id,
         onlyOff = vm.onlyOff,
         onAll = { vm.back() },
         onOnlyOff = { vm.showUnavailable() },
-        onOpen = { name -> vm.groups.firstOrNull { it.name == name }?.let(vm::openGroup) },
+        onOpen = { id -> vm.openSection(id) },
         // **والموقوفُ لا يرى أدواتٍ لا يملكها** (B6).
         showTools = !vm.suspended,
         onPresets = { vm.presets.show() },
@@ -240,7 +246,7 @@ private fun ItemsList(
         onDrinks = { vm.drinks.show() },
         drinksAllowed = vm.drinks.allowed,
         addLabel = stringResource(R.string.item_add),
-        quickPhotoLabel = byId.values.count { it.imageUrl.isNullOrBlank() && it.imageThumbUrl.isNullOrBlank() }
+        quickPhotoLabel = vm.summary.noPhoto
             .takeIf { it > 0 && !vm.suspended }
             ?.let { stringResource(R.string.qp_open, it) },
         onQuickPhoto = { vm.quick.show() },

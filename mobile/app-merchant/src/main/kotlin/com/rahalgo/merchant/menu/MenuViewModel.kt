@@ -21,6 +21,12 @@ import com.rahalgo.shared.merchant.PlatformSectionRef
 import com.rahalgo.ui.err
 import com.rahalgo.ui.AppCore
 import com.rahalgo.ui.Flash
+import com.rahalgo.shared.merchant.MenuSummary
+import com.rahalgo.shared.merchant.MenuSummarySection
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
@@ -52,18 +58,54 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
 
     private val api = MerchantApi(AppCore.get().api)
 
-    /** **أقسامُ السوق التي فيها أصنافُه** — مرتّبةً كما يراها الزبون. */
-    var groups by mutableStateOf<List<MenuGroup>>(emptyList())
+    // ══════════════════════════════════════════════════════════════════
+    // **Paged menu** (owner 2026-11-07: «ما يصير يكون بطيء»)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // A mall of 5,311 items made the full menu 3 MB and the tab took 45 s on a weak link. So the
+    // screen reads a light summary (section chips and counts) and then pages of 60 items; the
+    // chips, «غير المتوفرة» and the search ask the server instead of filtering a full list.
+
+    /** **Section chips with counts, unavailable and no-photo counts** — from `menu/summary`. */
+    var summary by mutableStateOf(MenuSummary())
         private set
 
-    /** **القسمُ المفتوح** — وفارغٌ يعني الشبكة. (كنمط الويب.) */
+    /** **The items loaded so far for the current filter** (section / search / unavailable). */
+    var items by mutableStateOf<List<MenuItem>>(emptyList())
+        private set
+
+    /** **More pages after these?** */
+    var hasMore by mutableStateOf(false)
+        private set
+
+    /** **The first page of a new filter is on its way** — the grid shows a loader, not «لا شيء». */
+    var listLoading by mutableStateOf(false)
+        private set
+
+    private var nextAfter = ""
+    private var listJob: Job? = null
+    private var moreJob: Job? = null
+    private var searchJob: Job? = null
+
     /**
-     * **بحثٌ في كلّ الأصناف** (تدقيقُ ٢٠٢٦-١٠-٢٧) — المتجرُ الكبيرُ كان يفتح كلَّ قسمٍ
-     * ويقلّب ليجد صنفاً يطفئه. **وفارغٌ يعني الشبكة.**
+     * **بحثٌ في كلّ الأصناف** (تدقيقُ ٢٠٢٦-١٠-٢٧) — and now on the server, 350 ms after the last
+     * keystroke. **وفارغٌ يعني الشبكة.**
      */
     var query by mutableStateOf("")
+        private set
 
-    var open by mutableStateOf<MenuGroup?>(null)
+    fun search(text: String) {
+        if (text == query) return
+        query = text
+        searchJob?.cancel()
+        searchJob = viewModelScope.launch {
+            delay(SEARCH_DEBOUNCE_MS)
+            reloadList()
+        }
+    }
+
+    /** **القسمُ المفتوح** — وفارغٌ يعني «الكل». */
+    var open by mutableStateOf<MenuSummarySection?>(null)
         private set
 
     var loading by mutableStateOf(true)
@@ -149,7 +191,7 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
         scope = viewModelScope,
         load = { api.drinksInfo(storeId) },
         save = { api.setDrinks(storeId, it) },
-        itemCount = { groups.sumOf { g -> g.items.size } },
+        itemCount = { summary.total },
         errText = { err(it) },
         upload = { api.uploadItemImage("drink.jpg", it) },
     )
@@ -200,9 +242,11 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             runCatching {
                 val newId = api.duplicateItem(itemId)
-                val items = api.menu(storeId).flatMap { it.items }
-                regroup(items)
-                items.first { it.id == newId }
+                // **The copy alone** — not the whole menu (a mall has thousands of items).
+                val copy = api.menuItems(storeId, item = newId).items.first()
+                refreshCounts()
+                reloadList()
+                copy
             }.onSuccess { copy ->
                 // **أُغلق المحرّرُ والنسخُ ماشٍ؟** — فلا يُفتح من جديد بلا طلب.
                 if (editing == null) return@onSuccess
@@ -213,14 +257,17 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun openGroup(g: MenuGroup) {
-        open = g
+    fun openSection(sectionId: String) {
+        open = summary.sections.firstOrNull { it.id == sectionId } ?: return
         onlyOff = false
+        reloadList()
     }
 
     fun back() {
+        val changed = open != null || onlyOff
         open = null
         onlyOff = false
+        if (changed) reloadList()
     }
 
     /**
@@ -228,11 +275,14 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
      * «غير المتوفر» في «متجري» ورقاقتُها في «الأصناف». و«الكل» يمحوها.
      */
     var onlyOff by mutableStateOf(false)
+        private set
 
     fun showUnavailable() {
         open = null
         query = ""
+        searchJob?.cancel()
         onlyOff = true
+        if (storeId.isNotEmpty()) reloadList()
     }
 
     fun load() {
@@ -298,7 +348,15 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
                         faces = sections.associate { it.name to (it.imageThumbUrl ?: it.imageUrl) }
                     }
                 }
-                regroup(api.menu(storeId).flatMap { it.items })
+                // **The summary and the first page together** — two small answers instead of one
+                // that grows with every item.
+                coroutineScope {
+                    val sum = async { api.menuSummary(storeId) }
+                    val first = async { fetchPage("") }
+                    summary = sum.await()
+                    open = open?.let { cur -> summary.sections.firstOrNull { it.id == cur.id } }
+                    applyFirst(first.await())
+                }
                 error = ""
                 // **أوّلَ مرّةٍ وعند تبديل الفرع وحدَهما** — لا مع كلّ نبضة (تدقيقُ ٢٠٢٦-١٠-٢٨).
                 if (presetsFor != storeId) {
@@ -312,42 +370,61 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /**
-     * **يجمع الأصنافَ بقسم السوق** — والقسمُ بلا اسمٍ يُجمع تحت «غير مصنّف».
-     *
-     * **ولا يُسقط ما لا قسمَ له**: صنفٌ يختفي من شاشة صاحبه **يُقرأ ضياعاً
-     * في المنصّة** — ويُعرض ويُقال عنه.
-     */
-    private fun regroup(items: List<MenuItem>) {
-        val byName = items.groupBy { it.platformSectionName.ifBlank { UNSORTED } }
-        groups = byName.map { (name, list) ->
-            MenuGroup(
-                name = name,
-                items = list.sortedBy { it.name },
-                // ══════════════════════════════════════════════════════
-                // **ووجهُ القسم من السوق لا من بضاعته**
-                // ══════════════════════════════════════════════════════
-                //
-                // **كانت الشبكةُ تأخذ صورةَ أوّلِ صنفٍ فظهرت حروفاً** —
-                // قِيس على الجهاز ٢٠٢٦-٠٨-٢٣: **أصنافُ المتجر بلا صورٍ
-                // بعد**، وأقسامُ السوق مصوَّرةٌ كلُّها.
-                //
-                // **وصنفُه احتياطٌ لها** — إن دخل قسمٌ بلا صورةٍ يوماً.
-                imageUrl = faces[name]
-                    ?: list.firstNotNullOfOrNull { it.imageThumbUrl ?: it.imageUrl },
-            )
-        }
-            // **بترتيب أقسام المتجر كما يراها الزبون** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كانت بعدد
-            // الأصناف والتعليقُ يقول غيرَه. **وما ليس في أقسامه آخراً بعدد أصنافه.**
-            .sortedWith(
-                compareBy<MenuGroup> { g ->
-                    sections.indexOfFirst { it.name == g.name }.let { if (it < 0) Int.MAX_VALUE else it }
-                }.thenByDescending { it.items.size },
-            )
+    /** **One page for the current filter** — section, search or unavailable. */
+    private suspend fun fetchPage(after: String) = api.menuItems(
+        storeId,
+        section = if (query.isBlank()) open?.id.orEmpty() else "",
+        query = query,
+        filter = if (onlyOff && query.isBlank()) "unavailable" else "",
+        after = after,
+        limit = PAGE_SIZE,
+    )
 
-        // **والمفتوحُ يُحدَّث لا يُغلق** — من بدّل توفّرَ صنفٍ وهو داخلَ
-        // قسمٍ **لا تُقذف به الشبكةُ إلى الخارج.**
-        open = open?.let { cur -> groups.firstOrNull { it.name == cur.name } }
+    private fun applyFirst(page: com.rahalgo.shared.merchant.MenuItemsPage) {
+        items = page.items
+        nextAfter = page.nextAfter
+        hasMore = page.nextAfter.isNotEmpty()
+    }
+
+    /** **The filter changed** — drop the list and read its first page. */
+    private fun reloadList() {
+        if (storeId.isEmpty()) return
+        listJob?.cancel()
+        moreJob?.cancel()
+        items = emptyList()
+        hasMore = false
+        listLoading = true
+        listJob = viewModelScope.launch {
+            runCatching { fetchPage("") }
+                .onSuccess { applyFirst(it) }
+                .onFailure { if (it !is kotlinx.coroutines.CancellationException) Flash.fail(err(it)) }
+            listLoading = false
+        }
+    }
+
+    /** **The grid reached its end** — the next page, once at a time. */
+    fun loadMore() {
+        if (!hasMore || nextAfter.isEmpty() || moreJob?.isActive == true || listJob?.isActive == true) return
+        val after = nextAfter
+        moreJob = viewModelScope.launch {
+            runCatching { fetchPage(after) }
+                .onSuccess { page ->
+                    if (after != nextAfter) return@onSuccess
+                    val have = items.mapTo(HashSet()) { it.id }
+                    items = items + page.items.filter { it.id !in have }
+                    nextAfter = page.nextAfter
+                    hasMore = page.nextAfter.isNotEmpty()
+                }
+                .onFailure { if (it !is kotlinx.coroutines.CancellationException) Flash.fail(err(it)) }
+        }
+    }
+
+    /** **Counts after a change** (duplicate, toggle failure…) — the summary only. */
+    private suspend fun refreshCounts() {
+        runCatching { api.menuSummary(storeId) }.onSuccess { sum ->
+            summary = sum
+            open = open?.let { cur -> sum.sections.firstOrNull { it.id == cur.id } }
+        }
     }
 
     /**
@@ -356,29 +433,28 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
      * **وانتظارُ رحلةِ شبكةٍ عند كلّ ضغطةٍ يجعل التطبيقَ يبدو ثقيلاً** على
      * شبكة الرقّة. **وإن ردّ المحرّكُ خطأً عاد الحالُ وقيلت الرسالة** —
      * **وشاشةٌ تقول «متوفر» والمحرّكُ يقول غيرَه تجعل الزبونَ يطلب ما نفد.**
+     *
+     * The item stays where it is in the list (also under «غير المتوفرة») until the next reload,
+     * and the chip counts follow at once.
      */
     fun toggle(itemId: String) {
-        val before = groups
-        val beforeOpen = open
-        var next = false
-        groups = groups.map { g ->
-            g.copy(
-                items = g.items.map { item ->
-                    if (item.id != itemId) item
-                    else {
-                        next = !item.available
-                        item.copy(available = next)
-                    }
-                },
-            )
-        }
-        open = open?.let { cur -> groups.firstOrNull { it.name == cur.name } }
-
+        val beforeItems = items
+        val beforeSummary = summary
+        val target = items.firstOrNull { it.id == itemId } ?: return
+        val next = !target.available
+        items = items.map { if (it.id == itemId) it.copy(available = next) else it }
+        val delta = if (next) -1 else 1
+        summary = summary.copy(
+            unavailable = (summary.unavailable + delta).coerceAtLeast(0),
+            sections = summary.sections.map { sec ->
+                if (sec.id == target.platformSectionId) sec.copy(unavailable = (sec.unavailable + delta).coerceAtLeast(0)) else sec
+            },
+        )
         viewModelScope.launch {
             runCatching { api.setAvailability(itemId, next) }
                 .onFailure {
-                    groups = before
-                    open = beforeOpen
+                    items = beforeItems
+                    summary = beforeSummary
                     Flash.fail(err(it))
                 }
         }
@@ -567,15 +643,7 @@ class MenuViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     private companion object {
-        val UNSORTED: String get() = com.rahalgo.ui.AppCore.get().app.getString(com.rahalgo.merchant.R.string.mn_unsorted)
+        const val PAGE_SIZE = 60
+        const val SEARCH_DEBOUNCE_MS = 350L
     }
 }
-
-
-
-/** **قسمُ سوقٍ فيه أصنافُه** — والاسمُ هو المفتاح، فهو ما يراه الزبون. */
-data class MenuGroup(
-    val name: String,
-    val items: List<MenuItem>,
-    val imageUrl: String?,
-)

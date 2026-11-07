@@ -267,11 +267,7 @@ func (s *Service) GetMenu(ctx context.Context, merchantID string) ([]MenuSection
 	//
 	// **والصفوفُ القديمةُ كلُّها مملوءة** فلم يسقط قطّ على قاعدةٍ مبذورة.
 	rows, err = s.db.Query(ctx, `
-		SELECT i.id, COALESCE(i.section_id::text, ''), i.name, i.description,
-		       i.merchant_price, i.margin_override, ps.margin_override,
-		       i.platform_section_id, COALESCE(ps.name, ''),
-		       im.path, im.thumb_path, i.available, i.sort_order, i.price_usd_cents,
-		       NOT i.drinks_off, COALESCE(i.external_code, ''), COALESCE(i.barcode, '')
+		SELECT `+menuItemCols+`
 		FROM menu_items i
 		LEFT JOIN platform_sections ps ON ps.id = i.platform_section_id
 		LEFT JOIN media im ON im.id = i.image_media_id
@@ -280,30 +276,11 @@ func (s *Service) GetMenu(ctx context.Context, merchantID string) ([]MenuSection
 		return nil, err
 	}
 	for rows.Next() {
-		var it MenuItem
-		var sectionMargin, usdCents *int64
-		if err := rows.Scan(&it.ID, &it.SectionID, &it.Name, &it.Description,
-			&it.MerchantPrice, &it.MarginOverride, &sectionMargin,
-			&it.PlatformSectionID, &it.PlatformSectionName,
-			&it.ImageURL, &it.ImageThumbURL, &it.Available, &it.SortOrder, &usdCents,
-			&it.StoreDrinks, &it.ExternalCode, &it.Barcode); err != nil {
+		it, err := scanMenuItem(rows, rule, open, opensAt)
+		if err != nil {
 			rows.Close()
 			return nil, err
 		}
-		it.PriceCurrency = CurrencySYP
-		if usdCents != nil {
-			it.PriceCurrency = CurrencyUSD
-			d := float64(*usdCents) / 100
-			it.MerchantPriceUSD = &d
-		}
-		it.Price = rule.SalePrice(it.MerchantPrice, it.MarginOverride, sectionMargin)
-		it.SourceClosed = !open
-		if !open {
-			it.SourceOpensAt = opensAt
-		}
-		it.ImageURL = media.URLForPtr(it.ImageURL)
-		it.ImageThumbURL = media.URLForPtr(it.ImageThumbURL)
-		it.Modifiers = []ModifierGroup{}
 		// **والانتماءُ بقسم السوق** — و`section_id` القديمُ يبقى في الصفّ
 		// ولا يُقرأ. **وصنفٌ بلا قسمِ سوقٍ لا يظهر في القائمة**: هو حالةٌ
 		// لا تقع اليومَ (صفرٌ من ١٩٤)، **وإظهارُه بلا رأسٍ يُقرأ عطباً.**
@@ -383,6 +360,49 @@ func (s *Service) GetMenu(ctx context.Context, merchantID string) ([]MenuSection
 		g.Options = append(g.Options, o)
 	}
 	return sections, rows.Err()
+}
+
+// menuItemCols the columns of one menu item as the store, rep and admin read it — shared by
+// the full menu (`GetMenu`) and its paged reader (`ListMenuItems`), so both price an item the
+// same way. Needs aliases i (menu_items), ps (platform_sections) and im (media).
+const menuItemCols = `i.id, COALESCE(i.section_id::text, ''), i.name, i.description,
+		       i.merchant_price, i.margin_override, ps.margin_override,
+		       i.platform_section_id, COALESCE(ps.name, ''),
+		       im.path, im.thumb_path, i.available, i.sort_order, i.price_usd_cents,
+		       NOT i.drinks_off, COALESCE(i.external_code, ''), COALESCE(i.barcode, '')`
+
+// scanMenuItem reads one row of `menuItemCols` and dresses it with its sale price, currency,
+// opening state and media URLs. Modifiers start empty.
+func scanMenuItem(rows pgx.Rows, rule pricing.MarginRule, open bool, opensAt *time.Time) (MenuItem, error) {
+	var it MenuItem
+	var sectionMargin, usdCents *int64
+	if err := rows.Scan(&it.ID, &it.SectionID, &it.Name, &it.Description,
+		&it.MerchantPrice, &it.MarginOverride, &sectionMargin,
+		&it.PlatformSectionID, &it.PlatformSectionName,
+		&it.ImageURL, &it.ImageThumbURL, &it.Available, &it.SortOrder, &usdCents,
+		&it.StoreDrinks, &it.ExternalCode, &it.Barcode); err != nil {
+		return it, err
+	}
+	it.ImageURL = media.URLForPtr(it.ImageURL)
+	it.ImageThumbURL = media.URLForPtr(it.ImageThumbURL)
+	dressMenuItem(&it, rule, open, opensAt, sectionMargin, usdCents)
+	return it, nil
+}
+
+// dressMenuItem the derived fields of a scanned item: currency, sale price, opening state.
+func dressMenuItem(it *MenuItem, rule pricing.MarginRule, open bool, opensAt *time.Time, sectionMargin, usdCents *int64) {
+	it.PriceCurrency = CurrencySYP
+	if usdCents != nil {
+		it.PriceCurrency = CurrencyUSD
+		d := float64(*usdCents) / 100
+		it.MerchantPriceUSD = &d
+	}
+	it.Price = rule.SalePrice(it.MerchantPrice, it.MarginOverride, sectionMargin)
+	it.SourceClosed = !open
+	if !open {
+		it.SourceOpensAt = opensAt
+	}
+	it.Modifiers = []ModifierGroup{}
 }
 
 // ---------- الأقسام ----------

@@ -22,7 +22,7 @@
  */
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState, type ComponentType } from "react";
+import { useCallback, useEffect, useRef, useState, type ComponentType } from "react";
 import { getMessages, defaultLocale, errorText, fmtMoney, fmtNum } from "@rahalgo/i18n";
 import {
   ImageViewer,
@@ -43,7 +43,7 @@ import {
 import { api, mediaUrl } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import { useDrinksAllowed } from "@/lib/store/drinks";
-import type { MenuItem, MenuSection, SectionRef } from "@/lib/store/types";
+import type { MenuItem, MenuItemsPage, MenuSummary } from "@/lib/store/types";
 import { dollars, fill } from "@/lib/customer/texts";
 import { useShopToast } from "@/components/customer/toast";
 
@@ -202,16 +202,31 @@ function ItemCard({ item, disabled, onToggle }: { item: MenuItem; disabled: bool
   );
 }
 
+/** **Page size of the paged menu** — 60 cards, a few tens of KB even for a 15,000-item mall. */
+const PAGE = 60;
+
+/**
+ * **The paged menu** (owner 2026-11-07: «ما يصير يكون بطيء») — mirror of `MenuViewModel` in the
+ * merchant app. A mall of 5,311 items made the full menu 3 MB (45 s on a weak link), so the page
+ * reads a light summary (chips and counts) and then pages of 60 items; the chips, «غير المتوفر»
+ * and the search ask the server, and the next page comes when the end of the grid shows.
+ */
 export default function MenuPage() {
   const { store } = useStore();
   const id = store?.id ?? "";
   // **أداةُ المشروبات للمطاعم وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
   const drinksAllowed = useDrinksAllowed(id);
   const toast = useShopToast();
-  const load = useCallback(() => api<MenuSection[]>(`/api/v1/merchant/stores/${id}/menu`), [id]);
+  const load = useCallback(() => api<MenuSummary>(`/api/v1/merchant/stores/${id}/menu/summary`), [id]);
   const { data, loading, error, reload, setData } = useLiveData(load, ["menu"], [id]);
   const [q, setQ] = useState("");
-  /** **المفتوح**: `null` الكلّ، أو اسمُ قسم. */
+  /** **The search sent to the server** — 350 ms after the last keystroke. */
+  const [needle, setNeedle] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setNeedle(q.trim()), 350);
+    return () => clearTimeout(t);
+  }, [q]);
+  /** **المفتوح**: `null` الكلّ، أو معرّفُ قسم. */
   const [open, setOpen] = useState<string | null>(null);
   const [onlyOff, setOnlyOff] = useState(false);
   const suspended = store?.status === "suspended";
@@ -225,46 +240,94 @@ export default function MenuPage() {
     }
   }, []);
 
-  // **أقسامُ المتجر بترتيبها كما يراها الزبون** — وتعذّرُها لا يُخفي شيئاً.
-  const [order, setOrder] = useState<string[]>([]);
+  // ── the items of the current filter, page by page ──
+  const [items, setItems] = useState<MenuItem[]>([]);
+  const [next, setNext] = useState("");
+  const [listLoading, setListLoading] = useState(true);
+  const [listFailed, setListFailed] = useState(false);
+  const [rev, setRev] = useState(0);
+  // **A live «menu» event reloads the summary — and the list with it** (not on the first load).
+  const seenSummary = useRef(false);
+  useEffect(() => {
+    if (!data) return;
+    if (!seenSummary.current) {
+      seenSummary.current = true;
+      return;
+    }
+    setRev((r) => r + 1);
+  }, [data]);
+
+  const pageUrl = useCallback(
+    (after: string) => {
+      const p = new URLSearchParams({ limit: String(PAGE) });
+      if (needle) p.set("q", needle);
+      else if (onlyOff) p.set("filter", "unavailable");
+      else if (open) p.set("section", open);
+      if (after) p.set("after", after);
+      return `/api/v1/merchant/stores/${id}/menu/items?${p.toString()}`;
+    },
+    [id, needle, onlyOff, open],
+  );
+
   useEffect(() => {
     if (!id) return;
-    api<{ sections: SectionRef[] }>(`/api/v1/merchant/stores/${id}/sections`)
-      .then((r) => setOrder((r.sections ?? []).map((x) => x.name)))
-      .catch(() => undefined);
-  }, [id]);
+    let alive = true;
+    setListLoading(true);
+    setListFailed(false);
+    setItems([]);
+    setNext("");
+    api<MenuItemsPage>(pageUrl(""))
+      .then((pg) => {
+        if (!alive) return;
+        setItems(pg.items ?? []);
+        setNext(pg.next_after ?? "");
+      })
+      .catch(() => alive && setListFailed(true))
+      .finally(() => alive && setListLoading(false));
+    return () => {
+      alive = false;
+    };
+  }, [id, pageUrl, rev]);
 
-  const all = useMemo(() => (data ?? []).flatMap((s) => s.items), [data]);
-  const groups = useMemo(() => {
-    const by = new Map<string, MenuItem[]>();
-    for (const it of all) {
-      const k = it.platform_section_name.trim() || M.unsorted;
-      by.set(k, [...(by.get(k) ?? []), it]);
-    }
-    return [...by.entries()]
-      .map(([name, items]) => ({ name, items: items.sort((a, b) => a.name.localeCompare(b.name, "ar")) }))
-      .sort((a, b) => {
-        const ia = order.indexOf(a.name);
-        const ib = order.indexOf(b.name);
-        const ra = ia < 0 ? Number.MAX_SAFE_INTEGER : ia;
-        const rb = ib < 0 ? Number.MAX_SAFE_INTEGER : ib;
-        return ra - rb || b.items.length - a.items.length;
+  const moreBusy = useRef(false);
+  const more = useCallback(() => {
+    if (!next || moreBusy.current || listLoading) return;
+    moreBusy.current = true;
+    const after = next;
+    const url = pageUrl(after);
+    api<MenuItemsPage>(url)
+      .then((pg) => {
+        setItems((cur) => {
+          const have = new Set(cur.map((i) => i.id));
+          return [...cur, ...(pg.items ?? []).filter((i) => !have.has(i.id))];
+        });
+        setNext((cur) => (cur === after ? (pg.next_after ?? "") : cur));
+      })
+      .catch((e) => toast(errorText(e), "error"))
+      .finally(() => {
+        moreBusy.current = false;
       });
-  }, [all, order]);
+  }, [next, listLoading, pageUrl, toast]);
 
-  const off = all.filter((i) => !i.available).length;
-  const noPhoto = all.filter((i) => !i.image_url && !i.image_thumb_url).length;
-  const needle = q.trim();
-  const shown = needle
-    ? all.filter((i) => i.name.toLowerCase().includes(needle.toLowerCase()))
-    : onlyOff
-      ? all.filter((i) => !i.available)
-      : open != null
-        ? (groups.find((g) => g.name === open)?.items ?? [])
-        : groups.flatMap((g) => g.items);
+  // **The next page when the end of the grid comes into view.**
+  const sentinel = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!el || !next) return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) more();
+    }, { rootMargin: "600px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [next, more]);
+
+  const sections = data?.sections ?? [];
+  const total = data?.total ?? 0;
+  const off = data?.unavailable ?? 0;
+  const noPhoto = data?.no_photo ?? 0;
 
   // **ومن داخل قسمٍ يُضاف إليه** — فلا يُعيد اختيارَ ما هو فيه.
-  const openSection = open != null && !onlyOff ? (groups.find((g) => g.name === open)?.items[0]?.platform_section_id ?? "") : "";
+  const openSection = open != null && !onlyOff ? open : "";
 
   const showAll = () => {
     setOnlyOff(false);
@@ -273,10 +336,22 @@ export default function MenuPage() {
 
   async function toggle(item: MenuItem) {
     const next = !item.available;
-    const flip = (v: boolean) =>
-      setData((d) =>
-        d ? d.map((s) => ({ ...s, items: s.items.map((i) => (i.id === item.id ? { ...i, available: v } : i)) })) : d,
+    const flip = (v: boolean) => {
+      setItems((list) => list.map((i) => (i.id === item.id ? { ...i, available: v } : i)));
+      // **والعدّادات تتبع فوراً** — «غير المتوفر» ورقاقةُ القسم.
+      const d = v === item.available ? 0 : v ? -1 : 1;
+      setData((s) =>
+        s
+          ? {
+              ...s,
+              unavailable: Math.max(0, s.unavailable + d),
+              sections: s.sections.map((x) =>
+                x.id === item.platform_section_id ? { ...x, unavailable: Math.max(0, x.unavailable + d) } : x,
+              ),
+            }
+          : s,
       );
+    };
     flip(next);
     try {
       await api(`/api/v1/merchant/menu/items/${item.id}/availability`, {
@@ -284,7 +359,7 @@ export default function MenuPage() {
         body: JSON.stringify({ available: next }),
       });
     } catch (e) {
-      flip(!next);
+      flip(item.available);
       toast(errorText(e), "error");
     }
   }
@@ -350,9 +425,9 @@ export default function MenuPage() {
       )}
 
       {/* ── ٣ · الرقائق: «الكل» · «غير المتوفر» · الأقسام ── */}
-      {groups.length > 0 && !needle && (
+      {sections.length > 0 && !q.trim() && (
         <div className="-mx-3 flex gap-2 overflow-x-auto px-3 pb-1 sm:-mx-4 sm:px-4">
-          <SectionChip text={M.all} count={all.length} selected={open == null && !onlyOff} onClick={showAll} />
+          <SectionChip text={M.all} count={total} selected={open == null && !onlyOff} onClick={showAll} />
           <SectionChip
             text={M.unavailable}
             count={off}
@@ -365,15 +440,15 @@ export default function MenuPage() {
               setQ("");
             }}
           />
-          {groups.map((g) => (
+          {sections.map((g) => (
             <SectionChip
-              key={g.name}
+              key={g.id}
               text={g.name}
-              count={g.items.length}
-              selected={open === g.name && !onlyOff}
+              count={g.count}
+              selected={open === g.id && !onlyOff}
               onClick={() => {
                 setOnlyOff(false);
-                setOpen(g.name);
+                setOpen(g.id);
               }}
             />
           ))}
@@ -381,18 +456,30 @@ export default function MenuPage() {
       )}
 
       {/* ── ٤ · الأصناف ── */}
-      {groups.length === 0 ? (
+      {total === 0 ? (
         <EmptyState icon={IconList} title={M.empty} />
-      ) : shown.length === 0 ? (
+      ) : items.length === 0 && listLoading ? (
+        <LoadingState variant="list" rows={3} />
+      ) : items.length === 0 && listFailed ? (
+        <ReloadState onRetry={() => setRev((r) => r + 1)} />
+      ) : items.length === 0 ? (
         <p className="py-6 text-center text-sm text-ink-muted" data-testid="menu-none">
           {onlyOff && !needle ? M.offNone : M.noMatch}
         </p>
       ) : (
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-          {shown.map((it) => (
-            <ItemCard key={it.id} item={it} disabled={suspended} onToggle={() => void toggle(it)} />
-          ))}
-        </ul>
+        <>
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            {items.map((it) => (
+              <ItemCard key={it.id} item={it} disabled={suspended} onToggle={() => void toggle(it)} />
+            ))}
+          </ul>
+          {/* **The next page when this comes into view** (2026-11-07). */}
+          {next && (
+            <div ref={sentinel} data-testid="menu-more">
+              <LoadingState variant="list" rows={1} />
+            </div>
+          )}
+        </>
       )}
 
       {/* **مزامنةُ الأمين** — للمولات (٢٠٢٦-١٠-١٩)، ويبقى بابُها هنا. */}

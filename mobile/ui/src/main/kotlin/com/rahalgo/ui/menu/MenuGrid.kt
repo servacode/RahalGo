@@ -82,6 +82,26 @@ data class GridItem(
 /** **قسمٌ في الشبكة** — اسمُه وأصنافُه. */
 data class GridGroup(val name: String, val items: List<GridItem>)
 
+/** **A section chip of a paged grid** — its key (section id), name and item count. */
+data class GridChip(val key: String, val name: String, val count: Int)
+
+/**
+ * **A grid filled page by page from the server** (owner 2026-11-07: «ما يصير يكون بطيء»).
+ *
+ * The chips and counts come from a summary; [items] are already filtered by the server for the
+ * open chip, «غير المتوفرة» or the search, so the grid shows them as they are and asks for
+ * [onMore] when the user scrolls near the end. Without it (the rep) the grid filters [groups].
+ */
+data class GridPaging(
+    val chips: List<GridChip>,
+    val total: Int,
+    val off: Int,
+    val items: List<GridItem>,
+    val loading: Boolean,
+    val hasMore: Boolean,
+    val onMore: () -> Unit,
+)
+
 /**
  * ══════════════════════════════════════════════════════════════════════
  * **شبكةُ الأصناف — التصميمُ المعتمد ٢٠٢٦-١٠-٢٩، للمتجر والمندوب**
@@ -126,13 +146,18 @@ fun MenuItemsGrid(
     imageAspect: Float = 1.15f,
     /** **لمسةُ الصورة تفتح العارضَ المشترك** (قرار المالك ٢٠٢٦-١١-٠٦) — المتجر وحدَه. */
     zoomable: Boolean = false,
+    /** **Paged from the server** (2026-11-07) — then [groups] is ignored and [openName] is a chip key. */
+    paging: GridPaging? = null,
 ) {
     var zoom by remember { mutableStateOf<String?>(null) }
     zoom?.let { ImageViewer(url = it, onClose = { zoom = null }) }
-    val all = groups.flatMap { it.items }
-    val off = all.count { !it.available }
+    val all = if (paging != null) emptyList() else groups.flatMap { it.items }
+    val off = paging?.off ?: all.count { !it.available }
+    val allCount = paging?.total ?: all.size
+    val chips = paging?.chips ?: groups.map { GridChip(it.name, it.name, it.items.size) }
     val q = query.trim()
     val shown = when {
+        paging != null -> paging.items
         q.isNotEmpty() -> all.filter { it.name.contains(q, ignoreCase = true) }
         onlyOff -> all.filter { !it.available }
         openName != null -> groups.firstOrNull { it.name == openName }?.items.orEmpty()
@@ -224,25 +249,30 @@ fun MenuItemsGrid(
             }
         }
         // ── ٣ · الرقائق: «الكل» ثمّ «غير المتوفرة» ثمّ الأقسام ──
-        if (groups.isNotEmpty() && q.isEmpty()) {
+        if (chips.isNotEmpty() && q.isEmpty()) {
             item(span = full) {
                 Row(
                     Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
                 ) {
-                    SectionChip(stringResource(R.string.grid_all), all.size, openName == null && !onlyOff, onAll)
+                    SectionChip(stringResource(R.string.grid_all), allCount, openName == null && !onlyOff, onAll)
                     if (off > 0 || onlyOff) {
                         SectionChip(stringResource(R.string.grid_stat_off), off, onlyOff) { if (onlyOff) onAll() else onOnlyOff() }
                     }
-                    groups.forEach { g ->
-                        SectionChip(g.name, g.items.size, openName == g.name && !onlyOff) { onOpen(g.name) }
+                    chips.forEach { c ->
+                        SectionChip(c.name, c.count, openName == c.key && !onlyOff) { onOpen(c.key) }
                     }
                 }
             }
         }
         // ── ٤ · الأصناف — بطاقتان في كلّ سطر ──
         when {
-            groups.isEmpty() -> item(span = full) { Empty(emptyText) }
+            (if (paging == null) groups.isEmpty() else paging.total == 0 && q.isEmpty() && !onlyOff) -> item(span = full) { Empty(emptyText) }
+            shown.isEmpty() && paging?.loading == true -> item(span = full) {
+                Box(Modifier.fillMaxWidth().padding(vertical = Rahal.space.lg), contentAlignment = Alignment.Center) {
+                    com.rahalgo.ui.RahalLoader(size = 48.dp)
+                }
+            }
             shown.isEmpty() -> item(span = full) {
                 Text(
                     stringResource(if (onlyOff && q.isEmpty()) R.string.grid_off_none else R.string.grid_search_none),
@@ -258,6 +288,15 @@ fun MenuItemsGrid(
                     onToggle = { onToggle(item) },
                     onEdit = { onEdit(item) },
                 )
+            }
+        }
+        // ── ٥ · the next page when the end comes into view ──
+        if (paging != null && paging.hasMore && shown.isNotEmpty()) {
+            item(span = full, key = "more") {
+                androidx.compose.runtime.LaunchedEffect(shown.size) { paging.onMore() }
+                Box(Modifier.fillMaxWidth().padding(vertical = Rahal.space.md), contentAlignment = Alignment.Center) {
+                    com.rahalgo.ui.RahalLoader(size = 48.dp)
+                }
             }
         }
     }

@@ -360,8 +360,23 @@ if (!/\/menu\/no-photo/.test(read(join(repo, "mobile", "shared", "src", "main", 
 if (!/menu\/photos/.test(menuPageTsx)) fail("صفحة /store/menu ما فيها زر التصوير السريع (التطبيق فيه)");
 if (!/onQuickPhoto\s*=/.test(menuScreenKt)) fail("شاشة الأصناف بالتطبيق ما فيها زر التصوير السريع");
 
+// ── الأصناف صفحة صفحة (قرار المالك ٢٠٢٦-١١-٠٧: «ما يصير يكون بطيء») — بالاتنين لا بواحد ──
+const merchantApiKt = read(join(repo, "mobile", "shared", "src", "main", "kotlin", "com", "rahalgo", "shared", "merchant", "MerchantApi.kt"));
+if (!merchantApiKt.includes("/menu/summary") || !merchantApiKt.includes("/menu/items?")) fail("MerchantApi.kt ما بينده menu/summary و menu/items");
+if (!/api\.menuSummary\(/.test(menuVmKt) || !/api\.menuItems\(/.test(menuVmKt) || /api\.menu\(storeId\)/.test(menuVmKt)) {
+  fail("شاشة الأصناف بالتطبيق لسّا بتجيب القائمة كاملة بدل الملخّص والصفحات");
+}
+if (!menuPageTsx.includes("/menu/summary") || !menuPageTsx.includes("/menu/items?") || /stores\/\$\{id\}\/menu`/.test(menuPageTsx)) {
+  fail("صفحة /store/menu لسّا بتجيب القائمة كاملة بدل الملخّص والصفحات (التطبيق صار صفحات)");
+}
+const storeScreenKt = strip(read(join(repo, "mobile", "app-customer", "src", "main", "kotlin", "com", "rahalgo", "customer", "shop", "ShopViewModel.kt")));
+const shopStorePage = strip(read(join(web, "apps", "rahalgo", "src", "app", "(shop)", "stores", "[id]", "page.tsx")));
+if (!/api\.storeSummary\(/.test(storeScreenKt) || !shopStorePage.includes("/summary") || !shopStorePage.includes("/items?")) {
+  fail("صفحة المتجر عند الزبون مو صفحات بالاتنين (التطبيق و /shop)");
+}
+
 if (fails > 0) {
   console.error(`\n✗ لوحة المتجر والتطبيق: ${fails} فحصاً سقط`);
   process.exit(1);
 }
-console.log("✓ لوحة المتجر والتطبيق: سطر الدين وعمر الطلب والمستلمين السابقين وتكبير صورة الصنف وسؤال الأمين والتصوير السريع بنفس الكلام");
+console.log("✓ لوحة المتجر والتطبيق: سطر الدين وعمر الطلب والمستلمين السابقين وتكبير صورة الصنف وسؤال الأمين والتصوير السريع والأصناف صفحة صفحة بنفس الكلام");

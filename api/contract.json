@@ -9979,6 +9979,24 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/v1/merchant/stores/{id}/menu/items",
+      "handler": "handleMerchantMenuItems",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "@page",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "POST",
       "path": "/api/v1/merchant/stores/{id}/menu/items",
       "handler": "handleMerchantCreateItem",
@@ -10031,6 +10049,24 @@
       ],
       "statuses": [
         "StatusCreated"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/merchant/stores/{id}/menu/summary",
+      "handler": "handleMerchantMenuSummary",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "@sum",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
       ]
     },
     {
@@ -12057,6 +12093,52 @@
         },
         {
           "name": "store",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/public/stores/{id}/items",
+      "handler": "handlePublicStoreItems",
+      "auth": false,
+      "response": [
+        {
+          "name": "items",
+          "type": "unknown"
+        },
+        {
+          "name": "next_after",
+          "type": "unknown"
+        },
+        {
+          "name": "total",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/public/stores/{id}/summary",
+      "handler": "handlePublicStoreSummary",
+      "auth": false,
+      "response": [
+        {
+          "name": "sections",
+          "type": "unknown"
+        },
+        {
+          "name": "store",
+          "type": "unknown"
+        },
+        {
+          "name": "total",
           "type": "unknown"
         }
       ],

@@ -696,6 +696,12 @@ func (s *Server) Router() http.Handler {
 		// `stores_public.go`). **وبابُها بابُ التصفّح.**
 		r.With(s.launchGate(launchCustomerBrowse)).
 			Get("/public/stores/{id}", s.handlePublicStore)
+		// **And the same page in parts** (owner 2026-11-07) — header and section counts, then
+		// keyset pages per section or search. The full page above stays for old app versions.
+		r.With(s.launchGate(launchCustomerBrowse)).
+			Get("/public/stores/{id}/summary", s.handlePublicStoreSummary)
+		r.With(s.launchGate(launchCustomerBrowse)).
+			Get("/public/stores/{id}/items", s.handlePublicStoreItems)
 		// **«يُطلب معه»** — مشروبٌ ومقبّلاتٌ تُعرض على من ملأ سلّته.
 		// (طلبُ المالك ٢٠٢٦-٠٨-٢٢. انظر `suggest_handlers.go`.)
 		r.Get("/public/suggest", s.handleSuggestWith)
@@ -1111,6 +1117,10 @@ func (s *Server) Router() http.Handler {
 			r.Get("/stores/{id}/orders", s.handleMerchantOrders)
 			r.Get("/stores/{id}/menu", s.handleMerchantMenu)
 			r.Get("/stores/{id}/menu/no-photo", s.handleMerchantNoPhotoItems)
+			// **Paged menu** (owner 2026-11-07: «ما يصير يكون بطيء») — a light summary, then small
+			// keyset pages filtered on the server. The full /menu above stays for old app versions.
+			r.Get("/stores/{id}/menu/summary", s.handleMerchantMenuSummary)
+			r.Get("/stores/{id}/menu/items", s.handleMerchantMenuItems)
 			r.Get("/stores/{id}/reports", s.handleMerchantReports)
 			r.Post("/stores/{id}/emergency", s.handleMerchantEmergency)
 			r.Get("/orders/{id}", s.handleMerchantGetOrder)

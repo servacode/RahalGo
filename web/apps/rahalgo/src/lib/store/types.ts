@@ -251,6 +251,32 @@ export interface MenuSection {
   items: MenuItem[];
 }
 
+/** **A market section holding items of the store** — `GET …/menu/summary` (2026-11-07). */
+export interface MenuSummarySection {
+  id: string;
+  name: string;
+  image_url?: string | null;
+  image_thumb_url?: string | null;
+  sort_order: number;
+  count: number;
+  unavailable: number;
+}
+
+/** **The light head of the paged menu** — chips, counts, quick-photo count. */
+export interface MenuSummary {
+  total: number;
+  unavailable: number;
+  no_photo: number;
+  sections: MenuSummarySection[];
+}
+
+/** **One keyset page of items** — `total` on the first page only (-1 after). */
+export interface MenuItemsPage {
+  items: MenuItem[];
+  next_after: string;
+  total: number;
+}
+
 export interface DeliveryQuote {
   fee: number;
   zone_name: string;
