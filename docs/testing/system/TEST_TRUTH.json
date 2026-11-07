@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 662,
+    "routes": 663,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 131,
-    "notify_targeted": 65,
+    "notify_sites": 132,
+    "notify_targeted": 66,
     "publish_rooms": [
       "customer",
       "driver",
@@ -33,8 +33,8 @@
     "setting_defs": 280,
     "behaviour_settings": 235,
     "order_fields": 141,
-    "test_files": 792,
-    "test_funcs": 3047
+    "test_files": 794,
+    "test_funcs": 3050
   },
   "flows": [
     {
@@ -8439,6 +8439,18 @@
     {
       "name": "TestUpdateItem_SectionChangeIsManual",
       "file": "internal/catalog/pricesync_groups_test.go",
+      "package": "catalog",
+      "orphan": true
+    },
+    {
+      "name": "TestMoveRestToMisc",
+      "file": "internal/catalog/pricesync_photo_test.go",
+      "package": "catalog",
+      "orphan": true
+    },
+    {
+      "name": "TestSyncPrices_PhotoRule",
+      "file": "internal/catalog/pricesync_photo_test.go",
       "package": "catalog",
       "orphan": true
     },
@@ -32247,6 +32259,12 @@
     {
       "name": "TestPriceSyncSections_Routes",
       "file": "internal/server/price_sync_groups_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPriceSyncPending_NotifyOnceRemindOnce",
+      "file": "internal/server/price_sync_notify_test.go",
       "package": "server",
       "orphan": true
     },

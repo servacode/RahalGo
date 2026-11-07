@@ -46,6 +46,7 @@ func TestAmeenFlag_DefaultOffAndRefusals(t *testing.T) {
 		"autoSort":  f.srv.handleMerchantPriceSyncAutoSort,
 		"pending":   f.srv.handleMerchantPriceSyncPending,
 		"move":      f.srv.handleMerchantPriceSyncMove,
+		"moveRest":  f.srv.handleMerchantPriceSyncMoveRest,
 	} {
 		w := f.call(h, http.MethodPost, "/x", f.merchantID, owner, []string{"merchant"}, `{}`)
 		if w.Code != http.StatusForbidden || !strings.Contains(w.Body.String(), "ameen_off") {

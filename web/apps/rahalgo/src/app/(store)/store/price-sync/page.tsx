@@ -65,6 +65,8 @@ interface Report {
   created_by_name?: number;
   created_by_group?: number;
   created_pending?: number;
+  /** **من الأمين وكميتها موجودة بس مخفية لأنو بلا صورة** (٢٠٢٦-١١-٠٧). */
+  kept_hidden_no_photo?: number;
   zero_price?: number;
   skipped: Issue[];
   unmatched_sample: Issue[];
@@ -422,6 +424,11 @@ export default function PriceSyncPage() {
                 ]
                   .filter(Boolean)
                   .join(" · ")}
+              </p>
+            )}
+            {(report.kept_hidden_no_photo ?? 0) > 0 && (
+              <p className="text-warning" data-testid="sync-kept-hidden">
+                {fill(P.keptHiddenNoPhoto, { n: fmtNum(report.kept_hidden_no_photo ?? 0) })}
               </p>
             )}
             {(report.zero_price ?? 0) > 0 && (

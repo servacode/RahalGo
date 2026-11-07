@@ -9,6 +9,7 @@ package server
 //	POST /merchant/stores/{id}/price-sync/auto-sort  «وزّع الأصناف الباقية تلقائياً» من أسمائها
 //	GET  /merchant/stores/{id}/price-sync/pending    أصناف قسم الانتظار صفحة صفحة (?after=&limit=&q=)
 //	POST /merchant/stores/{id}/price-sync/move       نقل أصناف مختارة لقسم بالإيد ⇒ يدويّ
+//	POST /merchant/stores/{id}/price-sync/move-rest  «حطّ الباقي بقسم منوّعات» ⇒ يدويّ
 //
 // المنطق كلّه بـ `catalog/pricesync_groups.go`، والحرّاس نفس باقي أبواب المزامنة.
 
@@ -134,6 +135,22 @@ func (s *Server) handleMerchantPriceSyncMove(w http.ResponseWriter, r *http.Requ
 		s.respondErr(w, err)
 		return
 	}
+	s.touch("menu", "merchant:"+merchantID)
+	httpx.JSON(w, http.StatusOK, map[string]any{"moved": moved})
+}
+
+// handleMerchantPriceSyncMoveRest **«حطّ الباقي بقسم منوّعات»** — كلّ اللي لسّا بالانتظار ⇒ يدويّ.
+func (s *Server) handleMerchantPriceSyncMoveRest(w http.ResponseWriter, r *http.Request) {
+	merchantID, ok := s.priceSyncWriteGuard(w, r)
+	if !ok {
+		return
+	}
+	moved, err := s.catalog.MoveRestToMisc(r.Context(), merchantID, userIDFrom(r))
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.clearPriceSyncStamps(r.Context(), merchantID)
 	s.touch("menu", "merchant:"+merchantID)
 	httpx.JSON(w, http.StatusOK, map[string]any{"moved": moved})
 }

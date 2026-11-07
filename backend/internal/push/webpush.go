@@ -297,13 +297,17 @@ func BuildWebPayload(app string, msg Message) WebPayload {
 
 // WebURL **أين يفتح الضغطُ على الإشعار.**
 //
-//	المتجر: طلبٌ ⇒ /store/orders · وغيرُه ⇒ /store/notifications
+//	المتجر: طلبٌ ⇒ /store/orders · مزامنةُ الأسعار ⇒ /store/price-sync · وغيرُه ⇒ /store/notifications
 //	الزبون: طلبٌ ⇒ /orders/{id} · شكوى ⇒ /complaints/{id} · وغيرُه ⇒ /notifications
 func WebURL(app, kind, entity, id string) string {
 	safeID := url.PathEscape(id)
 	if app == WebAppMerchant {
 		if entity == "order" || kind == kindOrder {
 			return "/store/orders"
+		}
+		// **أصناف من الأمين بلا قسم** (٢٠٢٦-١١-٠٧) ⇒ صفحة مزامنة الأسعار.
+		if entity == "price_sync" {
+			return "/store/price-sync"
 		}
 		return "/store/notifications"
 	}

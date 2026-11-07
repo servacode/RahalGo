@@ -573,7 +573,7 @@ func (s *Server) handleMerchantItemAvailability(w http.ResponseWriter, r *http.R
 		return
 	}
 	tag, err := s.pg.Exec(r.Context(), `
-		UPDATE menu_items i SET available = $3, updated_at = now()
+		UPDATE menu_items i SET available = $3, photo_hold = false, updated_at = now()
 		FROM merchants m
 		WHERE i.id = $1 AND m.id = i.merchant_id AND m.owner_user_id = $2`,
 		itemID, userIDFrom(r), *req.Available)

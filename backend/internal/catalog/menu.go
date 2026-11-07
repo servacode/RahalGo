@@ -769,7 +769,16 @@ func (s *Service) UpdateItem(ctx context.Context, actorID, itemID string, in Men
 			margin_override = CASE WHEN $7::bigint IS NULL THEN margin_override
 			                       WHEN $7 < 0 THEN NULL
 			                       ELSE $7 END,
-			available   = COALESCE($5, available),
+			-- **وصنف من الأمين مخفي لأنو بلا صورة بيصير متوفر مع أوّل صورة** (قرار المالك
+			-- ٢٠٢٦-١١-٠٧، انظر pricesync_photo.go) — إلّا إذا آخر كمية صفر. والتوفّر المُرسَل متل
+			-- ما هو محفوظ مو تغيير (المحرّر بيبعته مع كلّ حفظ)؛ والتغيير بالإيد بيشيل العلامة.
+			available   = CASE WHEN $5::bool IS NOT NULL AND $5::bool IS DISTINCT FROM available THEN $5::bool
+			                   WHEN photo_hold AND image_media_id IS NULL AND NULLIF($6::text, '') IS NOT NULL
+			                        AND COALESCE(ameen_qty, 1) > 0 THEN true
+			                   ELSE available END,
+			photo_hold  = CASE WHEN $5::bool IS NOT NULL AND $5::bool IS DISTINCT FROM available THEN false
+			                   WHEN NULLIF($6::text, '') IS NOT NULL THEN false
+			                   ELSE photo_hold END,
 			image_media_id = CASE WHEN $6::text IS NULL THEN image_media_id
 			                      ELSE NULLIF($6, '')::uuid END,
 			-- **والفراغُ الصريح يرفع التصنيف** — لا يُقرأ «بلا تغيير».

@@ -9,6 +9,8 @@
  *  - مراجعة الباقي بالإيد: صفحة صفحة مع بحث، قسم لكل صنف، وتحديد ونقل دفعة وحدة
  *    (`GET …/pending` و`POST …/move`) — والنقل بالإيد ما بترجّعه المزامنة.
  *  - مجموعات الأمين إذا الملف فيه عمود مجموعة (`GET/PUT …/groups`).
+ *  - «حطّ الباقي بقسم منوّعات» (`POST …/move-rest`) بعد تأكيد جوّا الصفحة — كل اللي ضل
+ *    بالانتظار بيصير يدويّ بقسم «منوّعات».
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -67,6 +69,7 @@ export function PriceSyncSections({ storeId, refreshKey }: { storeId: string; re
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
+  const [askRest, setAskRest] = useState(false);
 
   const loadGroups = useCallback(() => {
     api<{ groups: Group[]; pending: number }>(`${base}/groups`)
@@ -148,6 +151,13 @@ export function PriceSyncSections({ storeId, refreshKey }: { storeId: string; re
       });
     });
 
+  const moveRest = () =>
+    act(async () => {
+      setAskRest(false);
+      const r = await api<{ moved: number }>(`${base}/move-rest`, { method: "POST" });
+      return fill(P.moveRestDone, { n: fmtNum(r.moved) });
+    });
+
   const saveGroups = () =>
     act(async () => {
       const body = groups.map((g) => ({
@@ -200,6 +210,33 @@ export function PriceSyncSections({ storeId, refreshKey }: { storeId: string; re
             <Button className="w-fit" onClick={() => void autoSort()} disabled={busy}>
               {P.sortAuto}
             </Button>
+            {askRest ? (
+              <div className="flex flex-col gap-2 rounded-card border border-line-soft p-3" role="group">
+                <p className="text-sm">{fill(P.moveRestAsk, { n: fmtNum(pending) })}</p>
+                <div className="flex flex-wrap gap-2">
+                  <Button className="w-fit" onClick={() => void moveRest()} disabled={busy}>
+                    {P.moveRestYes}
+                  </Button>
+                  <Button
+                    className="w-fit"
+                    variant="secondary"
+                    onClick={() => setAskRest(false)}
+                    disabled={busy}
+                  >
+                    {P.moveRestNo}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Button
+                className="w-fit"
+                variant="secondary"
+                onClick={() => setAskRest(true)}
+                disabled={busy}
+              >
+                {P.moveRest}
+              </Button>
+            )}
           </>
         )}
         {error && <Alert>{error}</Alert>}

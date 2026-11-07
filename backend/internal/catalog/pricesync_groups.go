@@ -653,6 +653,70 @@ func (s *Service) MoveSyncItems(ctx context.Context, merchantID, actorID string,
 	return n, nil
 }
 
+// ── «حطّ الباقي بقسم منوّعات» (قرار المالك ٢٠٢٦-١١-٠٧) ─────────────────
+
+// MiscSectionName **قسم «منوّعات»** — فعّال وآخر الأقسام (هجرة 0522).
+const MiscSectionName = "منوّعات"
+
+// PendingSyncCount **كم صنف للمتجر لسّا بقسم الانتظار** — للإشعار والتذكير.
+func (s *Service) PendingSyncCount(ctx context.Context, merchantID string) (int, error) {
+	return pendingCount(ctx, s.db, merchantID)
+}
+
+// MoveRestToMisc **كلّ صنف لسّا بقسم الانتظار بينتقل لـ«منوّعات»** بالإيد (`manual`) —
+// فالمزامنة وزرّ التوزيع ما بيرجّعوه. وبيردّ كم صنف انتقل.
+func (s *Service) MoveRestToMisc(ctx context.Context, merchantID, actorID string) (int, error) {
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return 0, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	pend, err := pendingSectionID(ctx, tx)
+	if err != nil || pend == "" {
+		return 0, err
+	}
+	var misc string
+	err = tx.QueryRow(ctx, `SELECT id::text FROM platform_sections
+	          WHERE section_name_key(name) = section_name_key($1) AND active LIMIT 1`, MiscSectionName).Scan(&misc)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 0, ErrSectionRequired
+	}
+	if err != nil {
+		return 0, err
+	}
+	rows, err := tx.Query(ctx, `SELECT id::text FROM menu_items
+	                             WHERE merchant_id = $1::uuid AND platform_section_id = $2::uuid`, merchantID, pend)
+	if err != nil {
+		return 0, err
+	}
+	var ids []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return 0, err
+		}
+		ids = append(ids, id)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return 0, err
+	}
+	secs := make([]string, len(ids))
+	for i := range secs {
+		secs[i] = misc
+	}
+	n, err := moveItems(ctx, tx, merchantID, ids, secs, SourceManual)
+	if err != nil {
+		return 0, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return 0, err
+	}
+	s.audit(ctx, actorID, "menu.price_sync_move_rest", "merchant", merchantID, "")
+	return n, nil
+}
+
 // isUUIDText **نصّ بشكل معرّف.**
 func isUUIDText(s string) bool {
 	if len(s) != 36 {

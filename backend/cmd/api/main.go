@@ -383,6 +383,9 @@ func run(logger *slog.Logger) error {
 			// **و«المنصة أغلقت، يجب عليك إغلاق دوامك»** ثمّ تذكيرُ اليوم التالي مرّةً — shift_close_remind.go
 			// (قرارُ المالك ٢٠٢٦-١١-٠٦). **والختمُ يمنع التكرار.**
 			go srv.RunShiftCloseReminder(ctx, time.Minute)
+			// **و«في أصناف من الأمين بلا قسم» — تذكيرٌ واحدٌ بعد يومين** — price_sync_notify.go
+			// (قرارُ المالك ٢٠٢٦-١١-٠٧). **والختمُ يمنع التكرار.**
+			go srv.RunPriceSyncReminder(ctx, 15*time.Minute)
 			// **ومسافةُ كلّ طلبٍ وأرقامُ الدوام** — drive_sweeper.go (قرارُ المالك ٢٠٢٦-١١-٠٥).
 			go srv.RunDriveSweeper(ctx, time.Minute)
 			// **وحارسُ القاعدة** — db_watch.go (اختبارُ التحمّل ٢٠٢٦-١٠-٠٩).

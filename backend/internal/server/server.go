@@ -1166,6 +1166,8 @@ func (s *Server) Router() http.Handler {
 			r.Post("/stores/{id}/price-sync/auto-sort", s.handleMerchantPriceSyncAutoSort)
 			r.Get("/stores/{id}/price-sync/pending", s.handleMerchantPriceSyncPending)
 			r.Post("/stores/{id}/price-sync/move", s.handleMerchantPriceSyncMove)
+			// **«حطّ الباقي بقسم منوّعات»** (٢٠٢٦-١١-٠٧).
+			r.Post("/stores/{id}/price-sync/move-rest", s.handleMerchantPriceSyncMoveRest)
 
 			// ══════════════════════════════════════════════════════════
 			// **أقسامُ المتجر — ما يبيعه هو لا ما تبيعه المنصّة**

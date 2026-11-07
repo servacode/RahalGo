@@ -10340,6 +10340,24 @@
       ]
     },
     {
+      "method": "POST",
+      "path": "/api/v1/merchant/stores/{id}/price-sync/move-rest",
+      "handler": "handleMerchantPriceSyncMoveRest",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "moved",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "GET",
       "path": "/api/v1/merchant/stores/{id}/price-sync/pending",
       "handler": "handleMerchantPriceSyncPending",

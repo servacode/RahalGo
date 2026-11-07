@@ -197,7 +197,7 @@ func (s *Server) handleMarketItemsBulk(w http.ResponseWriter, r *http.Request) {
 	switch req.Action {
 	case "available", "unavailable":
 		tag, err := s.pg.Exec(ctx, `
-			UPDATE menu_items SET available = $2, updated_at = now()
+			UPDATE menu_items SET available = $2, photo_hold = false, updated_at = now()
 			 WHERE id = ANY($1::uuid[])`, req.IDs, req.Action == "available")
 		if err != nil {
 			s.respondErr(w, err)

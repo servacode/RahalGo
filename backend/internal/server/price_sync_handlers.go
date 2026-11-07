@@ -171,6 +171,7 @@ func (s *Server) handleMerchantPriceSyncFile(w http.ResponseWriter, r *http.Requ
 			return
 		}
 		s.touch("menu", "merchant:"+merchantID)
+		s.priceSyncPendingNotice(r.Context(), merchantID, rep, time.Now())
 	}
 	httpx.JSON(w, http.StatusOK, rep)
 }
@@ -234,6 +235,7 @@ func (s *Server) handlePriceSyncAgent(w http.ResponseWriter, r *http.Request) {
 	}
 	if !req.DryRun {
 		s.agentSynced(r.Context(), merchantID)
+		s.priceSyncPendingNotice(r.Context(), merchantID, rep, time.Now())
 	}
 	httpx.JSON(w, http.StatusOK, rep)
 }
@@ -357,6 +359,7 @@ func (s *Server) handlePriceSyncAgentFile(w http.ResponseWriter, r *http.Request
 	}
 	if !dry {
 		s.agentSynced(r.Context(), merchantID)
+		s.priceSyncPendingNotice(r.Context(), merchantID, rep, time.Now())
 	}
 	httpx.JSON(w, http.StatusOK, rep)
 }

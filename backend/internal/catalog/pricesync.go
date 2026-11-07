@@ -94,6 +94,9 @@ type SyncReport struct {
 	CreatedByName  int `json:"created_by_name"`
 	CreatedPending int `json:"created_pending"`
 	ZeroPrice      int `json:"zero_price"`
+	// KeptHiddenNoPhoto **أصناف من الأمين كميتها موجودة بس ضلّت مخفية لأنو ما إلها صورة**
+	// (قرار المالك ٢٠٢٦-١١-٠٧) — جديدة أو قديمة. أوّل صورة بتنزل بتخلّيها متوفرة.
+	KeptHiddenNoPhoto int `json:"kept_hidden_no_photo"`
 	// CreatedSample **أوّلُ ما أُنشئ** للعرض.
 	CreatedSample []SyncIssue `json:"created_sample"`
 	Skipped       []SyncIssue `json:"skipped"`
@@ -126,6 +129,11 @@ type syncItem struct {
 	group     string
 	source    string
 	section   string
+	// قاعدة الصورة (٢٠٢٦-١١-٠٧، `pricesync_photo.go`).
+	ameenCreated bool
+	noImage      bool
+	hold         bool
+	qty          *float64
 }
 
 // normName **الاسمُ للمقارنة** — بلا فراغاتٍ زائدة، وبلا فروق الهمزات والتاء والياء.
@@ -166,7 +174,8 @@ func (s *Service) SyncPrices(ctx context.Context, merchantID string, rows []Sync
 	dbRows, err := tx.Query(ctx, `
 		SELECT id::text, name, COALESCE(external_code, ''), COALESCE(barcode, ''),
 		       merchant_price, price_usd_cents, available,
-		       COALESCE(external_group, ''), section_source, COALESCE(platform_section_id::text, '')
+		       COALESCE(external_group, ''), section_source, COALESCE(platform_section_id::text, ''),
+		       ameen_created, image_media_id IS NULL, photo_hold, ameen_qty
 		  FROM menu_items WHERE merchant_id = $1::uuid
 		 ORDER BY created_at, id`, merchantID)
 	if err != nil {
@@ -176,7 +185,8 @@ func (s *Service) SyncPrices(ctx context.Context, merchantID string, rows []Sync
 	for dbRows.Next() {
 		var it syncItem
 		if err := dbRows.Scan(&it.id, &it.name, &it.code, &it.barcode, &it.price, &it.usdCents, &it.available,
-			&it.group, &it.source, &it.section); err != nil {
+			&it.group, &it.source, &it.section,
+			&it.ameenCreated, &it.noImage, &it.hold, &it.qty); err != nil {
 			dbRows.Close()
 			return nil, err
 		}
@@ -261,7 +271,12 @@ func (s *Service) SyncPrices(ctx context.Context, merchantID string, rows []Sync
 			case createdCodes[r.Code]:
 				skip(i, r, "duplicate")
 			default:
-				n := newItem{code: r.Code, name: name, group: r.Group}
+				n := newItem{code: r.Code, name: name, group: r.Group, qty: r.Qty}
+				// **بلا صورة بيضلّ مخفي** — وإذا الكمية موجودة بينطر صورته (`photo_hold`).
+				n.hold = r.Qty == nil || *r.Qty > 0
+				if n.hold {
+					rep.KeptHiddenNoPhoto++
+				}
 				if r.Price != nil && *r.Price > 0 && !math.IsNaN(*r.Price) && !math.IsInf(*r.Price, 0) {
 					if usd {
 						c := dollarsToCents(*r.Price)
@@ -330,10 +345,15 @@ func (s *Service) SyncPrices(ctx context.Context, merchantID string, rows []Sync
 			}
 			priceSet = true
 		}
-		newAvail := it.available
+		newAvail, newHold := it.available, it.hold
 		if r.Qty != nil {
 			newAvail = *r.Qty > 0
+			newAvail, newHold = photoRule(it, newAvail, newHold)
+			if newHold && !newAvail {
+				rep.KeptHiddenNoPhoto++
+			}
 		}
+		qtyChanged := r.Qty != nil && (it.qty == nil || *it.qty != *r.Qty)
 		// **ورقمٌ أو باركودٌ لا يقبله النموذج لا يُكتب — والصفُّ يُطبَّق** (`validLink`، ٢٠٢٦-١١-٠٥).
 		// فراغٌ في وسطه (باركودان بخانة) أو أطولُ من الحدّ **كان يُكتب فيُردّ بعدها كلُّ حفظٍ
 		// للصنف.** فيُترك هو وحدَه ويُذكر (`LinkRejected`)، **والسعرُ والكميّةُ يُطبَّقان كما كانا**:
@@ -371,7 +391,10 @@ func (s *Service) SyncPrices(ctx context.Context, merchantID string, rows []Sync
 		}
 		if !priceChanged && !availChanged && !link {
 			rep.Unchanged++
-			continue
+			// **والكمية وعلامة الصورة بتنكتب ولو ما تغيّر شي بيشوفه الزبون.**
+			if !qtyChanged && newHold == it.hold {
+				continue
+			}
 		}
 		if opt.DryRun {
 			continue
@@ -391,9 +414,11 @@ func (s *Service) SyncPrices(ctx context.Context, merchantID string, rows []Sync
 				available       = $4,
 				external_code   = NULLIF($5, ''),
 				barcode         = NULLIF($6, ''),
+				ameen_qty       = COALESCE($7::double precision, ameen_qty),
+				photo_hold      = $8,
 				updated_at      = now()
 			 WHERE id = $1::uuid`,
-			it.id, newPrice, newCents, newAvail, code, barcode); err != nil {
+			it.id, newPrice, newCents, newAvail, code, barcode, r.Qty, newHold); err != nil {
 			return nil, err
 		}
 	}

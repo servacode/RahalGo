@@ -87,6 +87,9 @@ type newItem struct {
 	// section ومصدرُه: `pending` · `group` · `name` (٢٠٢٦-١١-٠٧).
 	section string
 	source  string
+	// qty آخر كمية من الأمين، وhold «مخفي لأنو بلا صورة» (`pricesync_photo.go`).
+	qty  *float64
+	hold bool
 }
 
 // insertNewItems **يُدرج الأصنافَ الجديدةَ دفعةً واحدة** ويردّ ما أُدرج فعلاً —
@@ -102,24 +105,30 @@ func insertNewItems(ctx context.Context, tx dbtx.Querier, merchantID string, ite
 	secs := make([]string, len(items))
 	sources := make([]string, len(items))
 	groups := make([]string, len(items))
+	qtys := make([]*float64, len(items))
+	holds := make([]bool, len(items))
 	for i, it := range items {
 		names[i], codes[i], prices[i], cents[i] = it.name, it.code, it.price, it.cents
 		secs[i], sources[i], groups[i] = it.section, it.source, it.group
+		qtys[i], holds[i] = it.qty, it.hold
 	}
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO menu_items (merchant_id, name, description, merchant_price, price,
 		                        price_usd_cents, available, external_code,
 		                        platform_section_id, sort_order, drinks_off,
-		                        section_source, external_group)
+		                        section_source, external_group,
+		                        ameen_created, ameen_qty, photo_hold)
 		SELECT $1::uuid, t.name, '', t.price, t.price, t.cents, false, t.code, t.sec::uuid,
 		       COALESCE((SELECT max(sort_order) FROM menu_items
 		                  WHERE merchant_id = $1::uuid AND platform_section_id = t.sec::uuid), 0) + t.ord::int,
-		       true, t.source, NULLIF(t.grp, '')
-		  FROM unnest($2::text[], $3::text[], $4::bigint[], $5::bigint[], $6::text[], $7::text[], $8::text[])
-		       WITH ORDINALITY AS t(name, code, price, cents, sec, source, grp, ord)
+		       true, t.source, NULLIF(t.grp, ''),
+		       true, t.qty, t.hold
+		  FROM unnest($2::text[], $3::text[], $4::bigint[], $5::bigint[], $6::text[], $7::text[], $8::text[],
+		              $9::double precision[], $10::bool[])
+		       WITH ORDINALITY AS t(name, code, price, cents, sec, source, grp, qty, hold, ord)
 		ON CONFLICT (merchant_id, external_code)
 		  WHERE external_code IS NOT NULL AND external_code <> '' DO NOTHING`,
-		merchantID, names, codes, prices, cents, secs, sources, groups)
+		merchantID, names, codes, prices, cents, secs, sources, groups, qtys, holds)
 	if err != nil {
 		return 0, err
 	}
