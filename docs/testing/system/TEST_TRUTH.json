@@ -33,8 +33,8 @@
     "setting_defs": 280,
     "behaviour_settings": 235,
     "order_fields": 141,
-    "test_files": 791,
-    "test_funcs": 3039
+    "test_files": 792,
+    "test_funcs": 3047
   },
   "flows": [
     {
@@ -8451,6 +8451,54 @@
     {
       "name": "TestSyncPrices_MatchAndUpdate",
       "file": "internal/catalog/pricesync_test.go",
+      "package": "catalog",
+      "orphan": true
+    },
+    {
+      "name": "TestSuggestSectionAbstains",
+      "file": "internal/catalog/section_suggest_test.go",
+      "package": "catalog",
+      "orphan": true
+    },
+    {
+      "name": "TestSuggestSectionCoverageReport",
+      "file": "internal/catalog/section_suggest_test.go",
+      "package": "catalog",
+      "orphan": true
+    },
+    {
+      "name": "TestSuggestSectionEmpty",
+      "file": "internal/catalog/section_suggest_test.go",
+      "package": "catalog",
+      "orphan": true
+    },
+    {
+      "name": "TestSuggestSectionNamesExistInMigration",
+      "file": "internal/catalog/section_suggest_test.go",
+      "package": "catalog",
+      "orphan": true
+    },
+    {
+      "name": "TestSuggestSectionNoFalseOk",
+      "file": "internal/catalog/section_suggest_test.go",
+      "package": "catalog",
+      "orphan": true
+    },
+    {
+      "name": "TestSuggestSectionNoiseInvariant",
+      "file": "internal/catalog/section_suggest_test.go",
+      "package": "catalog",
+      "orphan": true
+    },
+    {
+      "name": "TestSuggestSectionNormalization",
+      "file": "internal/catalog/section_suggest_test.go",
+      "package": "catalog",
+      "orphan": true
+    },
+    {
+      "name": "TestSuggestSectionRealNames",
+      "file": "internal/catalog/section_suggest_test.go",
       "package": "catalog",
       "orphan": true
     },

@@ -89,7 +89,8 @@ func TestSyncPrices_CreateHidden(t *testing.T) {
 		Scan(&name, &price, &avail, &sec, &secActive); err != nil {
 		t.Fatal(err)
 	}
-	if name != "طاقة بور هورس 250مل" || price != 2 || avail || sec != PendingSectionName || secActive {
+	// **يذهب إلى قسمه من اسمه** (٢٠٢٦-١١-٠٧) — ويبقى مخفيّاً حتى يُفعَّل.
+	if name != "طاقة بور هورس 250مل" || price != 2 || avail || sec != "مشروبات باردة" || !secActive {
 		t.Fatalf("الصنفُ المنشأ: %q %d avail=%v %q active=%v", name, price, avail, sec, secActive)
 	}
 
