@@ -250,7 +250,10 @@ export default function OrdersPage() {
   //
   // **كانت قائمةً واحدةً بترتيب الخادم** — فطلبٌ جديدٌ ينتظر قراراً قد يقع
   // تحت طلبٍ يُحضَّر، **ومهلتُه تمضي وهو لا يُرى.** والمنتهي في «سجلّ الطلبات».
-  const groups = ORDER_GROUPS.map((g) => ({ g, list: orders.filter((o) => groupOf(o) === g) })).filter((x) => x.list.length > 0);
+  const all = ORDER_GROUPS.map((g) => ({ g, list: orders.filter((o) => groupOf(o) === g) }));
+  /* **على الجوّال الفارغُ يُخفى كما كان؛ وعلى `lg` ثلاثةُ أعمدةٍ ثابتةٌ** (جديدة | قيد التحضير | بانتظار
+     السائق) ولو فارغةً — فالعينُ تتعلّم موضعَ كلّ حال. والمنتهي صفٌّ كاملٌ تحتها. */
+  const groups = all.filter((x) => x.list.length > 0 || x.g !== "closed");
 
   const historyLink = (
     <Link href="/store/history" className="block py-3 text-center text-sm font-bold text-primary hover:underline">
@@ -276,16 +279,27 @@ export default function OrdersPage() {
           }
         />
       ) : (
-        groups.map(({ g, list }) => (
-          <section key={g} className="flex flex-col gap-3" aria-label={fill(O.groups[g], { n: fmtNum(list.length) })}>
-            <h3 className={`heading-card pt-2 ${g === "new" ? "text-accent-text" : "text-ink-muted"}`}>
-              {fill(O.groups[g], { n: fmtNum(list.length) })}
-            </h3>
-            {list.map((o) => (
-              <OrderCard key={o.id} order={o} selfManage={selfManage} busy={busy.has(o.id)} now={now} onAct={act} />
-            ))}
-          </section>
-        ))
+        <div className="flex flex-col gap-3 lg:grid lg:grid-cols-3 lg:items-start" data-testid="store-orders-board">
+          {groups.map(({ g, list }) => (
+            <section
+              key={g}
+              className={`flex min-w-0 flex-col gap-3 ${list.length === 0 ? "hidden lg:flex" : ""} ${
+                g === "closed" ? "lg:col-span-3" : "lg:rounded-card lg:bg-field lg:p-3"
+              }`}
+              aria-label={fill(O.groups[g], { n: fmtNum(list.length) })}
+            >
+              <h3 className={`heading-card pt-2 lg:pt-0 ${g === "new" ? "text-accent-text" : "text-ink-muted"}`}>
+                {fill(O.groups[g], { n: fmtNum(list.length) })}
+              </h3>
+              {list.length === 0 && <p className="py-6 text-center text-sm text-ink-muted">{O.colEmpty}</p>}
+              <div className={g === "closed" ? "flex flex-col gap-3 lg:grid lg:grid-cols-3" : "contents"}>
+                {list.map((o) => (
+                  <OrderCard key={o.id} order={o} selfManage={selfManage} busy={busy.has(o.id)} now={now} onAct={act} />
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
       )}
       {historyLink}
     </div>
