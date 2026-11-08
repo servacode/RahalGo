@@ -34,7 +34,7 @@
     "behaviour_settings": 235,
     "order_fields": 141,
     "test_files": 798,
-    "test_funcs": 3061
+    "test_funcs": 3062
   },
   "flows": [
     {
@@ -32288,6 +32288,12 @@
     },
     {
       "name": "TestPriceSyncAgentV2_ConfigStatusDownload",
+      "file": "internal/server/price_sync_agent_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestPriceSyncAgent_AmeenAutoDefaults",
       "file": "internal/server/price_sync_agent_test.go",
       "package": "server",
       "orphan": true

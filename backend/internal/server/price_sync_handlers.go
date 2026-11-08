@@ -233,7 +233,8 @@ func (s *Server) handlePriceSyncAgent(w http.ResponseWriter, r *http.Request) {
 	defer cancel()
 	rep, err := s.catalog.SyncPrices(ctx, merchantID, req.Rows, catalog.SyncOptions{
 		Currency: req.Currency, DryRun: req.DryRun, Source: "agent",
-		CreateMissing: req.CreateMissing || s.syncCreateMissing(r.Context(), merchantID),
+		CreateMissing: req.CreateMissing || s.syncCreateMissing(r.Context(), merchantID) ||
+			s.ameenAutoMode(r.Context(), merchantID),
 	})
 	if err != nil {
 		s.respondErr(w, err)
@@ -265,6 +266,17 @@ func (s *Server) syncAgentMerchant(w http.ResponseWriter, r *http.Request) (stri
 		return "", false
 	}
 	return merchantID, true
+}
+
+// ameenAutoMode **متجرٌ يزامن الأمينَ بالجملة الافتراضيّة** (٢٠٢٦-١١-٠٨) — فالموادُّ الجديدةُ تُنشأ
+// أصنافاً لحالها (مخفيّةً حتّى صورتها)، **ولا يضبط أحدٌ شيئاً.** وجملةٌ خاصّةٌ مكتوبة ⇒ الإعدادُ كما هو.
+func (s *Server) ameenAutoMode(ctx context.Context, merchantID string) bool {
+	var auto bool
+	_ = s.pg.QueryRow(ctx, `
+		SELECT COALESCE(btrim(price_sync_sql_query), '') = ''
+		   AND lower(btrim(COALESCE(price_sync_probe_table, ''))) IN ('', 'mt000')
+		  FROM merchants WHERE id = $1`, merchantID).Scan(&auto)
+	return auto
 }
 
 // syncCreateMissing **أضبط فريقُ المنصّة «أنشئ غير الموجود» لهذا المتجر؟** (٢٠٢٦-١١-٠٤)
