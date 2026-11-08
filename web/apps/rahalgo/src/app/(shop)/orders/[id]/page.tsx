@@ -103,8 +103,10 @@ export default function OrderPage() {
   const fixedFee = order.custom_fee != null || adminFee;
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-3">
+    <div className="flex w-full flex-col gap-3">
       {back}
+      <div className="grid grid-cols-1 items-start gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,26rem)] lg:gap-6">
+      <div className="flex min-w-0 flex-col gap-3">
       <div className="surface flex flex-col gap-4 p-4">
         <div className="flex items-center justify-between gap-2">
           <h1 className="heading-page tabular-nums" dir="ltr">
@@ -138,20 +140,30 @@ export default function OrderPage() {
       <DeliveryCode order={order} />
 
       {!ended && order.driver_name && (
-        <Button variant="secondary" className="flex w-full items-center justify-center gap-2" onClick={() => setChat(true)}>
-          <IconChat size={16} />
-          {O.chat}
-        </Button>
+        <div className="surface flex items-center gap-3 p-4">
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-accent-tint heading-card text-accent-text" aria-hidden>
+            {Array.from(order.driver_name.trim())[0] ?? ""}
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-xs text-ink-muted">{O.driver}</span>
+            <b className="block truncate">{order.driver_name}</b>
+          </span>
+          <Button variant="primary" className="flex items-center gap-2" onClick={() => setChat(true)}>
+            <IconChat size={16} />
+            {O.chat}
+          </Button>
+        </div>
       )}
       {/* **«لحمايتك: لا تتعامل مع السائق برّا التطبيق»** (قرارُ المالك ٢٠٢٦-١١-٠٥) — كتطبيق الزبون. */}
       {!ended && order.driver_name && <p className="text-xs text-ink-muted">{O.safetyNotice}</p>}
       {!ended && <LiveStartButton orderId={order.id} status={order.status} />}
 
+      </div>
+      <div className="flex min-w-0 flex-col gap-3">
       {/* **«طلبك من {n} محلات»** — طلبٌ مشتركٌ فقط؛ الحقلُ غائبٌ في طلب المحلّ الواحد فلا يُرسم شيء. */}
       <OrderSections sections={order.sections} />
 
       <dl className="surface flex flex-col gap-2 p-4">
-        {order.driver_name && !ended && <Row label={O.driver}>{order.driver_name}</Row>}
         {order.items_preview && (order.items ?? []).length === 0 && (
           <Row label={fill(O.items, { n: fmtNum(order.items_count) })}>{order.items_preview}</Row>
         )}
@@ -258,6 +270,8 @@ export default function OrderPage() {
       />
       <RateButton order={order} />
       <ComplaintBox order={order} />
+      </div>
+      </div>
       {chat && (
         <Sheet open onClose={() => setChat(false)} title={O.chat}>
           {/* **ووصولُ الحديث هو وسمُ القراءة في المحرّك** — فتُقرأ الحقيقةُ بعده لتسقط شارةُ

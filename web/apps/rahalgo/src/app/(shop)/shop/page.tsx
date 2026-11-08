@@ -131,6 +131,24 @@ export default function ShopPage() {
     <div className="flex flex-col gap-5 lg:gap-8">
       {!user && <p className="text-xs text-ink-muted">{H.browsing}</p>}
 
+      {/* **شريطُ الأقسام على الحاسوب** (مخطّطُ ٢٠٢٦-١١-٠٨) — أقسامُ الصفحة نفسُها بالحال نفسِه، يبدّل القسمَ في مكانه. */}
+      {!searching && home && home.sections.length > 0 && (
+        <div className="shop-chips shop-rail" aria-label={H.sections}>
+          {home.sections.map((sec) => (
+            <button
+              key={sec.id}
+              type="button"
+              className="shop-chip"
+              aria-pressed={sec.id === sectionID}
+              onClick={() => setActive(sec.id)}
+            >
+              <ShopPic src={sec.image_thumb_url ?? sec.image_url} name={sec.name} icon={sec.icon} iconSize={14} className="h-7 w-7 rounded-full" />
+              {sec.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       <Input
         id="shop-search"
         type="search"

@@ -30,15 +30,16 @@ import {
   Input,
   LoadingState,
   Money,
-  Radio,
   Textarea,
   IconCart,
   IconDelete,
   IconAdd,
   IconMinus,
   IconStore,
+  IconWallet,
+  IconCash,
 } from "@rahalgo/ui";
-import { api, mediaUrl } from "@/lib/api";
+import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useCart, drinkRows, lineKey, linePayload, unitPrice, unitPriceUsd, MAX_DRINK } from "@/lib/customer/cart";
 import { useCustomer } from "@/lib/customer/context";
@@ -46,6 +47,7 @@ import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
 import { changeText, dollars, fill, serviceText } from "@/lib/customer/texts";
 import type { CartChange, PromoPreview, Quote } from "@/lib/customer/types";
 import { AddressChip, AddressSheet } from "@/components/customer/AddressSheet";
+import { ShopPic } from "@/components/customer/ShopPic";
 import { DrinkThumb } from "@/components/customer/DrinkThumb";
 import { AvailabilityNotice, useOrderingState } from "@/components/customer/ServiceNotices";
 import { useShopToast } from "@/components/customer/toast";
@@ -306,18 +308,29 @@ export default function CartPage() {
           {/* ══ **الأصنافُ كلُّها أوّلاً، ثمّ المشروباتُ مجموعةً تحتها** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — المشروبُ
               نفسُه من أكثر من صنفٍ سطرٌ واحدٌ بعدده المجموع: «+» و«−» لأوّل صنفٍ هو معه، والحذفُ من كلّها.
               **والسعرُ في عمودٍ واحدٍ ثابتٍ آخرَ السطر** لكلّ الأسطر، والعدّادُ والحذفُ قبله. ══ */}
-          <ul className="surface divide-y divide-line-soft">
+          <div className="surface overflow-hidden">
+            {cart.lines[0]?.item.merchant_name && (
+              <div className="flex items-center justify-between gap-3 border-b border-line-soft px-4 py-3">
+                <span className="flex min-w-0 items-center gap-2 font-bold">
+                  <IconStore size={18} className="shrink-0 text-accent-text" />
+                  <span className="truncate">{cart.lines[0].item.merchant_name}</span>
+                </span>
+                {cart.merchantId && (
+                  <Link href={`/stores/${cart.merchantId}`} className="shrink-0 text-sm font-bold text-accent-text">
+                    {C.addMore}
+                  </Link>
+                )}
+              </div>
+            )}
+          <ul className="divide-y divide-line-soft">
             {cart.lines.map((l) => {
               const k = lineKey(l);
-              const img = mediaUrl(l.item.image_thumb_url ?? l.item.image_url);
               const bad = badLines.get(l.item.id);
               return (
                 <li key={k} className={`p-3 ${bad ? "bg-danger-tint" : ""}`}>
                   <CartRow
                     media={
-                      <span className="h-14 w-14 shrink-0 overflow-hidden rounded-control bg-field">
-                        {img && <img src={img} alt="" loading="lazy" className="h-full w-full object-cover" />}
-                      </span>
+                      <ShopPic src={l.item.image_thumb_url ?? l.item.image_url} name={l.item.name} icon="food" iconSize={22} className="h-14 w-14 shrink-0 rounded-control" />
                     }
                     price={unitPrice(l) * l.qty}
                     qty={l.qty}
@@ -372,6 +385,7 @@ export default function CartPage() {
               );
             })}
           </ul>
+          </div>
           {/* **زرٌّ واضحٌ بأيقونة سلّة المهملات تحت الأصناف مباشرةً** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — لا رابطٌ نصّيّ. */}
           <button
             type="button"
@@ -393,9 +407,75 @@ export default function CartPage() {
               cart.clear();
             }}
           />
+          {user && (
+            <>
+              <AddressChip onOpen={() => setPickAddr(true)} />
+              <div className="surface flex flex-col gap-3 p-4">
+                <h2 className="heading-card">{C.payment}</h2>
+                {/* **سطرٌ واحدٌ حين لا تكفي المحفظة — لا خيارٌ مطفأٌ ولا «رصيدك لا يكفي»** (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}
+                {walletBlocked ? (
+                  <div className="shop-opt" data-on="true">
+                    <span className="shop-opt-ic">
+                      <IconCash size={20} />
+                    </span>
+                    <b className="min-w-0 flex-1">{m.shop.orders.payCashOnly}</b>
+                    <i aria-hidden className="shop-opt-dot" />
+                  </div>
+                ) : (
+                  <div role="radiogroup" aria-label={C.payment} className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    <button
+                      type="button"
+                      id="pay-wallet"
+                      role="radio"
+                      aria-checked={wallet}
+                      data-on={wallet}
+                      onClick={() => setWallet(true)}
+                      className="shop-opt"
+                    >
+                      <span className="shop-opt-ic">
+                        <IconWallet size={20} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <b className="block">{C.wallet}</b>
+                        <span className="block text-xs text-ink-muted">{fill(C.walletBalance, { amount: fmtMoney(available) })}</span>
+                      </span>
+                      <i aria-hidden className="shop-opt-dot" />
+                    </button>
+                    <button
+                      type="button"
+                      id="pay-cash"
+                      role="radio"
+                      aria-checked={!wallet}
+                      data-on={!wallet}
+                      onClick={() => setWallet(false)}
+                      className="shop-opt"
+                    >
+                      <span className="shop-opt-ic">
+                        <IconCash size={20} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <b className="block">{C.cash}</b>
+                      </span>
+                      <i aria-hidden className="shop-opt-dot" />
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div className="surface p-4">
+                <Textarea
+                  id="notes"
+                  label={C.notes}
+                  placeholder={C.notesHint}
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={2}
+                />
+              </div>
+            </>
+          )}
         </section>
 
-        <aside className="flex flex-col gap-3">
+        <aside className="flex flex-col gap-3 lg:sticky lg:top-24">
           {!user ? (
             <div className="surface flex flex-col gap-3 p-4">
               <p className="text-sm">{C.needLogin}</p>
@@ -405,8 +485,6 @@ export default function CartPage() {
             </div>
           ) : (
             <>
-              <AddressChip onOpen={() => setPickAddr(true)} />
-
               <div className="surface flex flex-col gap-3 p-4">
                 <div className="flex items-end gap-2">
                   <Input
@@ -436,36 +514,6 @@ export default function CartPage() {
                   </p>
                 )}
 
-                {/* **سطرٌ واحدٌ حين لا تكفي المحفظة — لا خيارٌ مطفأٌ ولا «رصيدك لا يكفي»** (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}
-                {walletBlocked ? (
-                  <p className="text-sm">{m.shop.orders.payCashOnly}</p>
-                ) : (
-                  <fieldset className="flex flex-col gap-2">
-                    <legend className="mb-1 text-sm font-medium">{C.payment}</legend>
-                    <Radio id="pay-cash" name="pay" checked={!wallet} onChange={() => setWallet(false)} label={C.cash} />
-                    <Radio
-                      id="pay-wallet"
-                      name="pay"
-                      checked={wallet}
-                      onChange={() => setWallet(true)}
-                      label={
-                        <span>
-                          {C.wallet}
-                          <span className="ms-2 text-xs text-ink-muted">{fill(C.walletBalance, { amount: fmtMoney(available) })}</span>
-                        </span>
-                      }
-                    />
-                  </fieldset>
-                )}
-
-                <Textarea
-                  id="notes"
-                  label={C.notes}
-                  placeholder={C.notesHint}
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={2}
-                />
               </div>
             </>
           )}
@@ -517,6 +565,25 @@ export default function CartPage() {
               </>
             )}
           </div>
+
+          {/* **على الحاسوب الزرُّ في الملخّص اللاصق** — وعلى الجوّال في الشريط السفليّ الثابت (نفسُ الحالة والنفسُ الفعل). */}
+          {user && (
+            <div className="surface hidden flex-col gap-2 p-4 lg:flex">
+              {why && <p className="line-clamp-3 text-xs text-danger">{why}</p>}
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-ink-muted">{C.total}</span>
+                {payable != null ? <Money value={payable} className="figure" /> : <p className="figure">—</p>}
+              </div>
+              <button
+                type="button"
+                className="shop-cta"
+                onClick={send}
+                disabled={busy || !address || !online || !ordering.open || blocked || !canSubmit}
+              >
+                {busy ? C.sending : C.send}
+              </button>
+            </div>
+          )}
 
           {quoteError && <Alert>{quoteError}</Alert>}
           {av && !av.available && <AvailabilityNotice av={av} address={address} />}
@@ -583,7 +650,7 @@ export default function CartPage() {
       {/* ══ **الشريطُ الثابت — الإجماليُّ وزرُّ الإرسال وسببُ تعطيله** (مرآةُ `CartScreen.kt`) ══
           **كان الزرُّ آخرَ صفحةٍ طويلة، وإن كان معطّلاً لم يُعرف لماذا.** والإجماليُّ بمعادلة الملخّص حرفاً. */}
       {user && (
-        <div className="surface sticky bottom-[calc(3.9rem+env(safe-area-inset-bottom))] z-30 flex flex-col gap-2 p-3 lg:bottom-0">
+        <div className="surface sticky bottom-[calc(3.9rem+env(safe-area-inset-bottom))] z-30 flex flex-col gap-2 p-3 lg:hidden">
           {why && <p className="line-clamp-3 text-xs text-danger">{why}</p>}
           <div className="flex items-center gap-3">
             <div className="min-w-0 flex-1">

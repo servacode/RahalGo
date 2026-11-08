@@ -1491,6 +1491,19 @@ html[data-shop-theme="dark"] .shop-pic {
   font-weight: 700;
   white-space: nowrap;
 }
+.shop-rail {
+  display: none;
+}
+@media (width >= 1024px) {
+  .shop-rail {
+    display: flex;
+    margin-inline: 0;
+    padding-inline: 0;
+  }
+  .shop-chip:has(.shop-pic) {
+    padding-inline: 6px 16px;
+  }
+}
 .shop-chip[aria-pressed="true"] {
   border-color: var(--color-primary);
   background-color: var(--color-primary);
@@ -1977,6 +1990,59 @@ html[data-shop] [data-variant="primary"] {
 html[data-shop] [data-variant="primary"]:hover {
   opacity: 1;
   background-color: var(--color-primary-dark);
+}
+
+
+/* ── خياراتُ الدفع: صفوفٌ تُختار (محفظة · نقداً) ── */
+.shop-opt {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1.5px solid var(--color-line);
+  border-radius: 12px;
+  background-color: var(--color-surface);
+  padding: 12px;
+  text-align: start;
+  transition:
+    border-color 150ms,
+    background-color 150ms;
+}
+.shop-opt:hover {
+  border-color: var(--color-primary-edge);
+}
+.shop-opt[data-on="true"] {
+  border-color: var(--color-primary);
+  background-color: var(--color-primary-tint);
+}
+.shop-opt-ic {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: none;
+  place-items: center;
+  border-radius: 10px;
+  background-color: var(--color-field);
+  color: var(--color-ink);
+}
+.shop-opt[data-on="true"] .shop-opt-ic {
+  background-color: var(--color-surface);
+  color: var(--color-primary);
+}
+.shop-opt-dot {
+  display: block;
+  width: 22px;
+  height: 22px;
+  flex: none;
+  border: 2px solid var(--color-line);
+  border-radius: 999px;
+}
+.shop-opt[data-on="true"] .shop-opt-dot {
+  border: 6px solid var(--color-primary);
+}
+.shop-root .shop-cta:disabled {
+  background-color: var(--color-disabled);
+  opacity: 0.55;
+  pointer-events: none;
 }
 
 /* مفتاحُ الثيم: أيقونةٌ تُبدَّل بحسب الثيم الحاليّ. */
