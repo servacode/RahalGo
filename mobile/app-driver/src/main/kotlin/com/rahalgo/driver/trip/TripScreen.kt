@@ -1864,7 +1864,10 @@ private fun TripCard(
                                 text = stringResource(R.string.trip_goods_line, money(order.customGoods ?: 0)) + "\n" +
                                     // **والأجرةُ المُعفاة لا تُطالَب** — المربّعُ الكبير يقول
                                     // `cashDue` (البضاعة وحدها)، فالتفصيلُ يطابقه.
-                                    if (order.freeWaived > 0) {
+                                    if (feePaidFromWallet(order)) {
+                                        // **الأجرةُ من محفظة الزبون** (٢٠٢٦-١١-٠٩) — لا تُقبض.
+                                        stringResource(R.string.trip_fee_line_wallet)
+                                    } else if (order.freeWaived > 0) {
                                         stringResource(R.string.trip_fee_line_free)
                                     } else {
                                         stringResource(R.string.trip_fee_line, money(order.customFee ?: 0))

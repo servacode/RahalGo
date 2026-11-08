@@ -324,6 +324,12 @@ private fun OrdersList(
                     null
                 },
                 confirming = vm.acting,
+                // **وتبديلُ الدفع من المحفظة لحد ما يوصل الكابتن** (قرارُ المالك ٢٠٢٦-١١-٠٩).
+                onChangeWalletScope = if (!history) {
+                    { scope -> vm.changeWalletScope(o, scope) }
+                } else {
+                    null
+                },
             )
         }
         // **مزيدٌ من السجلّ — صفحةً صفحة** (`CAF-14`/`CUST-14-026`).

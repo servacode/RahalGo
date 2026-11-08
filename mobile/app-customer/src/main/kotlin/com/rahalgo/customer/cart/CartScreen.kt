@@ -405,11 +405,21 @@ fun CartScreen(
         }
         // **والمحفظةُ لا تُعرض أصلاً حتّى يغطّي رصيدُها الإجماليَّ** (قرارُ المالك ٢٠٢٦-١٠-٣٠) —
         // ولا إجماليَّ بعد ⇒ لا محفظة. وإن صار الرصيدُ كافياً ظهرت.
-        val walletBlocked = payableTotal == null || walletBalance < payableTotal
+        //
+        // **وصار للمحفظة خياران** (قرارُ المالك ٢٠٢٦-١١-٠٩): «الكل» حين يغطّي الرصيدُ المجموع،
+        // و«التوصيل والباقي كاش» حين يغطّي الأجرةَ وهي أقلُّ من المجموع (وإلّا فهو «الكل»).
+        val fee0 = q0?.let { cut0?.deliveryFee ?: it.deliveryFee } ?: 0L
+        val fullOk = payableTotal != null && walletBalance >= payableTotal
+        val deliveryPart = payableTotal?.let { minOf(fee0, it) } ?: 0L
+        val deliveryOk = payableTotal != null && deliveryPart in 1 until payableTotal &&
+            walletBalance >= deliveryPart
+        val walletBlocked = !fullOk && !deliveryOk
         // **وخيارٌ معطّلٌ لا يبقى مختاراً** — من اختار المحفظةَ ثمّ ارتفع
         // الإجماليُّ فوق رصيده يُعاد إلى النقد، فلا يُرسَل بما لا يُقبَل.
-        LaunchedEffect(walletBlocked) {
-            if (walletBlocked && vm.wallet) vm.wallet = false
+        LaunchedEffect(fullOk, deliveryOk) {
+            if ((vm.walletScope == "full" && !fullOk) || (vm.walletScope == "delivery" && !deliveryOk)) {
+                vm.walletScope = "none"
+            }
         }
         Spacer(Modifier.height(12.dp))
         if (walletBlocked) {
@@ -420,17 +430,36 @@ fun CartScreen(
                 style = MaterialTheme.typography.bodyMedium,
             )
         } else {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 PayChoice(
                     text = stringResource(R.string.cart_cash),
-                    on = !vm.wallet,
-                    modifier = Modifier.weight(1f),
-                ) { vm.wallet = false }
-                PayChoice(
-                    text = stringResource(R.string.cart_wallet),
-                    on = vm.wallet,
-                    modifier = Modifier.weight(1f),
-                ) { vm.wallet = true }
+                    on = vm.walletScope == "none",
+                    modifier = Modifier.fillMaxWidth(),
+                ) { vm.walletScope = "none" }
+                if (fullOk) {
+                    PayChoice(
+                        text = stringResource(R.string.cart_wallet_full),
+                        on = vm.walletScope == "full",
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { vm.walletScope = "full" }
+                }
+                if (deliveryOk && payableTotal != null) {
+                    PayChoice(
+                        text = stringResource(R.string.cart_wallet_delivery),
+                        on = vm.walletScope == "delivery",
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { vm.walletScope = "delivery" }
+                    if (vm.walletScope == "delivery") {
+                        Text(
+                            stringResource(
+                                R.string.cart_wallet_delivery_hint,
+                                money(deliveryPart), money(payableTotal - deliveryPart),
+                            ),
+                            color = Rahal.colors.inkMuted,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
             }
         }
         // ══════════════════════════════════════════════════════════════
@@ -831,7 +860,7 @@ fun CartScreen(
                 address?.let {
                     vm.send(
                         it.text, it.lat, it.lng,
-                        if (vm.wallet) "wallet" else "cash", vm.promo.trim(), onDone,
+                        if (vm.walletScope == "none") "cash" else "wallet", vm.promo.trim(), onDone,
                     )
                 }
             },
@@ -1058,7 +1087,8 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
             promoBusy = false
         }
     }
-    var wallet by mutableStateOf(false)
+    /** **شو بيندفع من المحفظة** (قرارُ المالك ٢٠٢٦-١١-٠٩): `none` كاش · `full` الكل · `delivery` التوصيل. */
+    var walletScope by mutableStateOf("none")
 
     var priced by mutableStateOf<Quote?>(null)
         private set
@@ -1304,6 +1334,7 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
                         lat = lat,
                         lng = lng,
                         paymentMethod = payment,
+                        walletScope = walletScope,
                         promoCode = code,
                     ),
                     attemptKey = key,

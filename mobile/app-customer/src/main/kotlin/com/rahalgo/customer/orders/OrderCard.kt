@@ -38,6 +38,7 @@ import androidx.compose.foundation.layout.padding
 import com.rahalgo.design.Rahal
 import com.rahalgo.shared.customer.MyOrder
 import com.rahalgo.shared.customer.MyOrderLine
+import com.rahalgo.shared.customer.effectiveWalletScope
 import androidx.compose.foundation.layout.width
 import com.rahalgo.ui.Card
 import com.rahalgo.ui.Chip
@@ -95,6 +96,11 @@ fun OrderCard(
      * الطلب خلال 46 ثانية»، والزرُّ تحت بلا عدّاد. و`null` بلا مهلةٍ تُعرض.
      */
     cancelHint: String? = null,
+    /**
+     * **يبدّل شو بيندفع من المحفظة** (قرارُ المالك ٢٠٢٦-١١-٠٩) — `none` · `full` · `delivery`، لحد ما
+     * يوصل الكابتن للباب. و`null` لا تبديلَ هنا (السجلّ).
+     */
+    onChangeWalletScope: ((String) -> Unit)? = null,
 ) {
     Card {
         // **الحالُ أبرزُ ما في الرأس ورقمُ الطلب صغيرٌ جنبها** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧)
@@ -323,9 +329,16 @@ fun OrderCard(
         KeyValue(
             stringResource(R.string.ord_payment),
             stringResource(
-                if (order.paymentMethod == "wallet") R.string.cart_wallet else R.string.cart_cash,
+                when (order.effectiveWalletScope) {
+                    "delivery" -> R.string.ord_pay_wallet_delivery
+                    "full" -> R.string.ord_pay_wallet_full
+                    else -> R.string.cart_cash
+                },
             ),
         )
+        if (onChangeWalletScope != null) {
+            PayScopeRow(order, walletBalance, confirming, onChangeWalletScope)
+        }
         order.addressText.takeIf { it.isNotEmpty() }?.let {
             KeyValue(stringResource(R.string.ord_address), it)
         }
@@ -577,10 +590,15 @@ private fun QuoteConfirmPanel(
     // **وحجزُ هذا الطلب نفسِه يُحسب** — يُفكّ عند التأكيد قبل حجز الجديد، فرصيدٌ
     // متاحٌ ناقصٌ عن المجموع قد يكفيه مع ما حُجز له أصلاً.
     val ownReserved = if (order.paymentMethod == "wallet") order.customReservedAmount else 0L
-    val walletOk = walletBalance + ownReserved >= total
+    // **«الكل» أو «التوصيل والباقي كاش»** (قرارُ المالك ٢٠٢٦-١١-٠٩) — كلٌّ يظهر حين يغطّيه
+    // الرصيد، و«التوصيل» حين تكون الأجرةُ أقلَّ من المجموع (وإلّا فهو «الكل»).
+    val deliveryPart = order.deliveryFee.coerceIn(0L, maxOf(total, 0L))
+    val fullOk = walletBalance + ownReserved >= total
+    val deliveryOk = deliveryPart in 1 until total && walletBalance + ownReserved >= deliveryPart
+    val walletOk = fullOk || deliveryOk
     var method by rememberSaveable(order.id, order.quoteVersion) { mutableStateOf("cash") }
     // (J) المحفظةُ لا تبقى مختارةً إن لم تعُد كافية قبل التأكيد.
-    if (method == "wallet" && !walletOk) method = "cash"
+    if ((method == "full" && !fullOk) || (method == "delivery" && !deliveryOk)) method = "cash"
 
     Spacer(Modifier.height(10.dp))
     HorizontalDivider()
@@ -596,17 +614,26 @@ private fun QuoteConfirmPanel(
     // عند الاستلام» لا رقاقةٌ وحيدةٌ وسطرُ «رصيدك لا يكفي» (قرارُ المالك ٢٠٢٦-١٠-٣٠).
     // والطريقةُ تبقى `cash` كما كانت.
     if (walletOk) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column {
             FilterChip(
                 selected = method == "cash",
                 onClick = { method = "cash" },
                 label = { Text(stringResource(R.string.cart_cash)) },
             )
-            FilterChip(
-                selected = method == "wallet",
-                onClick = { method = "wallet" },
-                label = { Text(stringResource(R.string.cart_wallet)) },
-            )
+            if (fullOk) {
+                FilterChip(
+                    selected = method == "full",
+                    onClick = { method = "full" },
+                    label = { Text(stringResource(R.string.cart_wallet_full)) },
+                )
+            }
+            if (deliveryOk) {
+                FilterChip(
+                    selected = method == "delivery",
+                    onClick = { method = "delivery" },
+                    label = { Text(stringResource(R.string.cart_wallet_delivery)) },
+                )
+            }
         }
     } else {
         Text(
@@ -830,3 +857,61 @@ internal fun MyOrderLine.toInvoiceLine(): com.rahalgo.ui.InvoiceLine = com.rahal
     options = options.orEmpty().map { it.group to it.name },
     returned = returned,
 )
+
+/**
+ * **تبديلُ الدفع من المحفظة — لحد ما يوصل الكابتن للباب** (قرارُ المالك ٢٠٢٦-١١-٠٩).
+ *
+ * **كلُّ خيارٍ يظهر حين يغطّيه الرصيد** (المتاحُ + ما دُفع أو حُجز لهذا الطلب)، والخاصُّ بعد
+ * تأكيد سعره وحدَه. مرآةُ `PayScope` في موقع الزبون.
+ */
+@Composable
+private fun PayScopeRow(order: MyOrder, walletBalance: Long, busy: Boolean, onChange: (String) -> Unit) {
+    val custom = order.kind == "custom"
+    val confirmed = order.quoteConfirmedVersion != null && order.quoteConfirmedVersion == order.quoteVersion
+    val ended = order.status in setOf("delivered", "cancelled", "rejected", "failed", "refunded")
+    if (ended || order.status == "at_dropoff" || (custom && !confirmed)) return
+    if (order.kind != "standard" && !custom) return
+    val scope = order.effectiveWalletScope
+    val own = if (custom) order.customReservedAmount else order.walletPaid
+    val budget = walletBalance + own
+    val deliveryPart = order.deliveryFee.coerceIn(0L, maxOf(order.total, 0L))
+    val showFull = budget >= order.total || scope == "full"
+    val showDelivery = (deliveryPart in 1 until order.total && budget >= deliveryPart) || scope == "delivery"
+    if (!showFull && !showDelivery) return
+    Spacer(Modifier.height(6.dp))
+    Text(
+        stringResource(R.string.ord_change_pay),
+        color = Rahal.colors.ink,
+        style = MaterialTheme.typography.bodyMedium,
+        fontWeight = FontWeight.Bold,
+    )
+    Text(
+        stringResource(R.string.ord_change_pay_hint),
+        color = Rahal.colors.inkMuted,
+        style = MaterialTheme.typography.bodySmall,
+    )
+    Column {
+        FilterChip(
+            selected = scope == "none",
+            enabled = !busy,
+            onClick = { if (scope != "none") onChange("none") },
+            label = { Text(stringResource(R.string.ord_pay_cash)) },
+        )
+        if (showFull) {
+            FilterChip(
+                selected = scope == "full",
+                enabled = !busy,
+                onClick = { if (scope != "full") onChange("full") },
+                label = { Text(stringResource(R.string.cart_wallet_full)) },
+            )
+        }
+        if (showDelivery) {
+            FilterChip(
+                selected = scope == "delivery",
+                enabled = !busy,
+                onClick = { if (scope != "delivery") onChange("delivery") },
+                label = { Text(stringResource(R.string.cart_wallet_delivery)) },
+            )
+        }
+    }
+}

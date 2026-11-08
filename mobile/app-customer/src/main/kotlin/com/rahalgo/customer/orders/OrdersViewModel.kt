@@ -339,6 +339,31 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * **تبديلُ شو بيندفع من المحفظة** (قرارُ المالك ٢٠٢٦-١١-٠٩) — لحد ما يوصل الكابتن للباب.
+     * **ويُرسَل المجموعُ الذي رآه** — فإن تغيّر ردّ المحرّكُ `order_changed` ويُعاد الجلب.
+     */
+    fun changeWalletScope(order: MyOrder, scope: String) {
+        if (acting) return
+        acting = true
+        actionError = ""
+        val slot = "wallet_scope:" + order.id
+        val key = Attempt.key(slot)
+        viewModelScope.launch {
+            try {
+                api.changeWalletScope(order.id, scope, order.total, key)
+                Attempt.clear(slot)
+                Flash.ok(getApplication<Application>().getString(R.string.ord_pay_changed))
+            } catch (e: Exception) {
+                if (com.rahalgo.ui.isDecided(e)) Attempt.clear(slot)
+                actionError = apiError(getApplication(), e)
+                Flash.fail(actionError)
+            }
+            acting = false
+            load()
+        }
+    }
+
     fun rejectQuote(orderId: String) {
         if (acting) return
         acting = true
@@ -455,20 +480,32 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     // بينهما ردّ المحرّكُ `quote_changed`** — فيُجلب الجديدُ ويُقال «راجِعه»
     // لا خطأٌ عامّ (`L`). **والمحرّكُ سلطان**: المحفظةُ لا تُقبَل بلا رصيدٍ
     // كافٍ، ويُحجَز فوراً. **ومفتاحُ المحاولة يحمله** فلا يُؤكَّد مرّتين.
+    //
+    // **و`method` واحدٌ من ثلاثة** (قرارُ المالك ٢٠٢٦-١١-٠٩): `cash` · `full` «الكل من المحفظة» ·
+    // `delivery` «التوصيل من المحفظة والباقي كاش». و`wallet` القديمُ = «الكل».
     fun confirmQuote(order: MyOrder, method: String) {
         if (acting) return
         acting = true
         actionError = ""
         val slot = "confirm:" + order.id
         val key = Attempt.key(slot)
+        val scope = when (method) {
+            "delivery" -> "delivery"
+            "full", "wallet" -> "full"
+            else -> "none"
+        }
+        val payment = if (scope == "none") "cash" else "wallet"
         viewModelScope.launch {
             try {
-                api.confirmQuote(order.id, method, order.total, order.quoteVersion, key)
+                api.confirmQuote(order.id, payment, order.total, order.quoteVersion, key, scope)
                 Attempt.clear(slot)
                 Flash.ok(
                     getApplication<Application>().getString(
-                        if (method == "wallet") R.string.ord_confirmed_wallet
-                        else R.string.ord_confirmed_cash,
+                        when (scope) {
+                            "full" -> R.string.ord_confirmed_wallet
+                            "delivery" -> R.string.ord_confirmed_delivery
+                            else -> R.string.ord_confirmed_cash
+                        },
                     ),
                 )
             } catch (e: Exception) {

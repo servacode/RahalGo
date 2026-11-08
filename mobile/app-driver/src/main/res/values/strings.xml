@@ -643,6 +643,7 @@
     <string name="trip_partner_store">اشترِ من متجر: %1$s</string>
     <string name="trip_goods_line">المشتريات: %1$s</string>
     <string name="trip_fee_line">أجرة التوصيل: %1$s</string>
+    <string name="trip_fee_line_wallet">أجرة التوصيل: مدفوعة من محفظة الزبون — اقبض المشتريات بس</string>
     <!-- **والأجرةُ المُعفاة لا تُطالَب** (تدقيق ٢٠٢٦-١٠-٢٧) — تفصيلُ المشتريات يطابق المبلغ الكبير. -->
     <string name="trip_fee_line_free">أجرة التوصيل: مجانية للزبون (أجرتك محفوظة)</string>
     <string name="arrive_far_title">أنت بعيد عن المكان</string>
