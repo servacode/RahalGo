@@ -134,7 +134,7 @@ export function Skeleton({
   // **والأصنافُ كاملةٌ لا مركَّبة**: تيلويند يمسح المصدرَ نصّاً، **و`rounded-${x}`
   // لا يراها فتخرج الحوافُّ حادّة.**
   return (
-    <span aria-hidden className={`block animate-pulse bg-ink-faint ${skelRadius[rounded]} ${className}`} />
+    <span aria-hidden className={`block max-w-full animate-pulse bg-ink-faint ${skelRadius[rounded]} ${className}`} />
   );
 }
 
@@ -266,7 +266,7 @@ export function ToastStack({
   return (
     <div
       aria-live="polite"
-      className="pointer-events-none fixed inset-x-3 bottom-4 z-[60] flex flex-col items-center gap-2 sm:inset-x-auto sm:end-4 sm:items-end"
+      className="pointer-events-none fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-[60] flex flex-col items-center gap-2 sm:inset-x-auto sm:end-4 sm:items-end lg:bottom-4"
     >
       {toasts.map((t) => (
         <div key={t.id} className="pointer-events-auto w-full max-w-sm elev-3">
@@ -357,7 +357,17 @@ export function Confirm({
           {title}
         </h2>
         {body && <div className="mt-1.5 text-sm text-ink-muted">{body}</div>}
-        <FormActions onSave={onConfirm} onCancel={onCancel} busy={busy} saveLabel={busy ? m.common.loading : confirmLabel} />
+        {/* **ونغمةُ الزرّ تُمرَّر فعلاً**: كانت `tone` تُستقبل ولا تصل، فيظهر «نعم، احذف»
+            بلون الحفظ. **وفسحةٌ بين المتن والأزرار** — كانت ملتصقةً به. */}
+        <div className="mt-5">
+          <FormActions
+            onSave={onConfirm}
+            onCancel={onCancel}
+            busy={busy}
+            tone={tone === "danger" ? "danger" : undefined}
+            saveLabel={busy ? m.common.loading : confirmLabel}
+          />
+        </div>
       </div>
     </div>,
     document.body,
