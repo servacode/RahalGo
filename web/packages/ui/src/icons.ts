@@ -193,9 +193,7 @@ export {
   // **تكبيرُ الصورة وتصغيرُها** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
   ZoomIn as IconZoomIn,
   ZoomOut as IconZoomOut,
-  // **أيقوناتُ كُسوة لوحة المتجر** (٢٠٢٦-١١-٠٨) — وضعُ الليل/النهار والمساعدة والترتيب والأسهمُ المائلة للتغيّر.
-  Moon as IconMoon,
-  Sun as IconSun,
+  // **أيقوناتُ كُسوة لوحة المتجر** (٢٠٢٦-١١-٠٨) — المساعدة والترتيب والأسهمُ المائلة للتغيّر (والقمر والشمس فوق).
   CircleHelp as IconHelp,
   ImageOff as IconImageOff,
   Folder as IconFolder,
