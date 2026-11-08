@@ -65,6 +65,9 @@ const (
 	// CauseOrderEdit **نقصُ حقّ متجرٍ «محفظة» بتعديل طلبٍ بعد الاستلام** لم يكفِه رصيدُه
 	// (قرارُ المالك ٢٠٢٦-١١-٠٣، هجرة `0497`). مصدرُه سطرُ التصحيح.
 	CauseOrderEdit = "order_edit"
+	// CauseWhatsAppCommission **عمولةُ متجرنا على ثمن طلب واتساب لم يكفِها رصيدُه** (قرارُ المالك
+	// ٢٠٢٦-١١-٠٨، هجرة `0524`). مصدرُه معرّفُ الطلب.
+	CauseWhatsAppCommission = "whatsapp_order_commission"
 )
 
 // طرقُ التسوية — **وهي قيدُ `CHECK` في `obligation_settlements.method`** (هجرة `0340`).
@@ -98,6 +101,8 @@ var causeWords = map[string]string{
 	CauseWaivedRepCommission: "عمولة طلب ما استلمناها من المتجر",
 	// (قرارُ المالك ٢٠٢٦-١٠-٢٨.)
 	CauseUndeliveredOrder: "طلب سُجّل تسليمه خطأً ثم أُلغي",
+	// (قرارُ المالك ٢٠٢٦-١١-٠٨.)
+	CauseWhatsAppCommission: "عمولة طلب واتساب",
 }
 
 // CauseWords السببُ بالعربيّ — ومجهولُه «دين».

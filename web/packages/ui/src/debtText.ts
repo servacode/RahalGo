@@ -44,6 +44,9 @@ export function debtCauseText(cause: string): string {
     // **نقصُ حقّ المتجر بتعديل الطلب بعد الاستلام** (قرارُ المالك ٢٠٢٦-١١-٠٣، هجرة 0497).
     case "order_edit":
       return D.orderEdit;
+    // **عمولةُ طلب واتسابٍ ما كفاها رصيدُ المتجر** (قرارُ المالك ٢٠٢٦-١١-٠٨، هجرة 0524).
+    case "whatsapp_order_commission":
+      return D.whatsappCommission;
     default:
       return D.old;
   }

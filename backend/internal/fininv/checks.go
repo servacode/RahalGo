@@ -702,12 +702,15 @@ var All = []Check{
 	},
 	{
 		ID: "FI-06.e", Family: FI06, Status: ProvableNow, Ops: true,
-		Name: "طلبُ الواتساب لا يحرّك إلّا الأجرة",
+		Name: "طلبُ الواتساب لا يحرّك إلّا الأجرة — وعمولةَ متجرنا",
 		Why: "**ثمنُ بضاعته خارجَ الدفتر** (قرارُ المالك ٢٠٢٦-١١-٠٥): السائقُ يدفعه للمتجر ويقبضه " +
 			"من المستلِم. **فقيدٌ آخرُ عليه — مستحقُّ متجرٍ أو دفعُ محفظةٍ أو استرجاع — مالٌ " +
-			"قُيّد لطرفٍ لم يُبَع منه شيء**، ومتجرٌ غيرُ تابعٍ يصير دائناً للمنصّة.",
+			"قُيّد لطرفٍ لم يُبَع منه شيء**، ومتجرٌ غيرُ تابعٍ يصير دائناً للمنصّة. " +
+			"**إلّا عمولةَ متجرٍ من متاجرنا** (قرارُ المالك ٢٠٢٦-١١-٠٨): خصمُها وردُّها، " +
+			"**و`platform_commission` = المخصومُ + الدينُ بسببها** في المسلَّم، وصفرٌ في غيره.",
 		Flows: []string{"F-14"},
-		Kinds: []string{"driver_earning", "platform_profit", "compensation", "platform_expense"},
+		Kinds: []string{"driver_earning", "platform_profit", "compensation", "platform_expense",
+			"order_payment", "refund"},
 		// **أجرُ السائق وحصّةُ المنصّة عند التسليم، وتعويضُه ومصروفُه إن فشل بغير ذنبه** — وما
 		// سواها خرق. **وتسويةُ متجرٍ عليه خرقٌ كذلك** (لا متجرَ مربوطاً).
 		SQL: `
@@ -716,11 +719,24 @@ var All = []Check{
 			JOIN wallet_transactions t ON t.ref = o.id::text
 			WHERE o.origin = 'whatsapp'
 			  AND t.kind NOT IN ('driver_earning', 'platform_profit', 'compensation', 'platform_expense')
+			  AND NOT (o.pickup_merchant_id IS NOT NULL
+			           AND ((t.kind = 'order_payment' AND t.amount < 0)
+			             OR (t.kind = 'refund' AND t.amount > 0 AND o.status = 'refunded')))
 			UNION ALL
 			SELECT o.number, 'merchant_settlement', ms.amount
 			FROM orders o
 			JOIN merchant_settlements ms ON ms.order_id = o.id
-			WHERE o.origin = 'whatsapp'`,
+			WHERE o.origin = 'whatsapp'
+			UNION ALL
+			SELECT o.number, 'platform_commission', o.platform_commission
+			FROM orders o
+			WHERE o.origin = 'whatsapp'
+			  AND o.platform_commission <> CASE WHEN o.status = 'delivered' THEN
+			        COALESCE((SELECT -sum(t.amount) FROM wallet_transactions t
+			                   WHERE t.ref = o.id::text AND t.kind = 'order_payment'), 0)
+			      + COALESCE((SELECT sum(f.amount) FROM financial_obligations f
+			                   WHERE f.order_id = o.id AND f.cause = 'whatsapp_order_commission'), 0)
+			      ELSE 0 END`,
 	},
 
 	// ═══════════════════════════════════════════════════════════════════

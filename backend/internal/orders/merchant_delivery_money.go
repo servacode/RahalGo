@@ -84,6 +84,21 @@ func (s *Service) chargeMerchantDelivery(ctx context.Context, q wallet.Querier,
 // يُقرأ صفراً فتُقيَّد الخزينةُ خسارةً وهي التي كسبت.**
 func (s *Service) debitMerchantWallet(ctx context.Context, q wallet.Querier,
 	orderID, merchantID, actorID string, amount int64, note string) (bool, error) {
+	ok, err := s.takeFromMerchantWallet(ctx, q, orderID, merchantID, actorID, amount, note)
+	if err != nil || !ok {
+		return ok, err
+	}
+	if _, err := q.Exec(ctx,
+		`UPDATE orders SET wallet_paid = wallet_paid + $2 WHERE id = $1`, orderID, amount); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// takeFromMerchantWallet **الخصمُ وحدَه** (`order_payment` بمرجع الطلب) بلا `wallet_paid` — وعمولةُ
+// طلب الواتساب تمرّ منه (`whatsapp_commission.go`): أجرتُه نقدٌ كلُّها، **والخزينةُ تقرأ القيدَ لا العمود.**
+func (s *Service) takeFromMerchantWallet(ctx context.Context, q wallet.Querier,
+	orderID, merchantID, actorID string, amount int64, note string) (bool, error) {
 	// **والقبولُ التلقائيُّ بلا فاعل** — **والفارغُ ليس `uuid`** فيُسقط القيدَ
 	// والمعاملةَ معه. **فيُكتب `NULL`**: لا إنسانَ فعلها.
 	var actor *string
@@ -108,10 +123,6 @@ func (s *Service) debitMerchantWallet(ctx context.Context, q wallet.Querier,
 	// بيعرف ليش»).
 	if _, err := s.wallet.ApplyTx(ctx, q, ownerID, -amount, "order_payment",
 		orderID, note, actor); err != nil {
-		return false, err
-	}
-	if _, err := q.Exec(ctx,
-		`UPDATE orders SET wallet_paid = wallet_paid + $2 WHERE id = $1`, orderID, amount); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -228,7 +239,15 @@ func (s *Service) settleMerchantDelivery(ctx context.Context, q wallet.Querier,
 		if err := s.payDriver(ctx, q, in, out); err != nil {
 			return err
 		}
+		// **وعمولةُ متجرنا على ثمن طلب الواتساب** (قرارُ المالك ٢٠٢٦-١١-٠٨) — قبل الخزينة لتقرأها.
+		if err := s.chargeWhatsAppCommission(ctx, q, in.orderID, in.actorID); err != nil {
+			return err
+		}
 		return s.creditTreasury(ctx, q, in.orderID, in.actorID)
+
+	// **استرجاعٌ بعد التسليم: عمولةُ طلب الواتساب تعود للمتجر** — وما سواها كما كان (لا شيء).
+	case refundOnEnter(in.to) && in.from == StDelivered:
+		return s.returnWhatsAppCommission(ctx, q, in.orderID, in.actorID)
 
 	case refundOnEnter(in.to) && in.from != StDelivered:
 		var merchantID, ownerID, payer, fault, reason, origin string

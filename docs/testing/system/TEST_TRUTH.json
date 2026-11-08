@@ -33,8 +33,8 @@
     "setting_defs": 280,
     "behaviour_settings": 235,
     "order_fields": 141,
-    "test_files": 797,
-    "test_funcs": 3057
+    "test_files": 798,
+    "test_funcs": 3061
   },
   "flows": [
     {
@@ -28549,6 +28549,30 @@
     {
       "name": "TestWebPush_NewOrderReachesMerchantBrowser",
       "file": "internal/qa/webpush_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWACOMM01_OurStoreWalletPays",
+      "file": "internal/qa/whatsapp_commission_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWACOMM02_EmptyWalletBecomesDebt",
+      "file": "internal/qa/whatsapp_commission_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWACOMM03_NoCommissionCases",
+      "file": "internal/qa/whatsapp_commission_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWACOMM04_USDGoodsUseMerchantRate",
+      "file": "internal/qa/whatsapp_commission_test.go",
       "package": "qa",
       "orphan": true
     },
