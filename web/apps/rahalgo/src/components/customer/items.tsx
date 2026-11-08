@@ -570,7 +570,7 @@ export function ItemSheet({
               />
             ) : (
             <fieldset key={g.id} className="surface-inset space-y-2 p-3">
-              <legend className="flex w-full items-center justify-between gap-2 text-sm font-bold">
+              <legend className="float-start mb-2 flex w-full items-center justify-between gap-2 text-sm font-bold">
                 <span>{g.name}</span>
                 <span className="text-xs font-normal text-ink-muted">
                   {g.min_select > 0 ? I.required : g.max_select === 1 ? I.pickOne : fill(I.pickUpTo, { n: fmtNum(g.max_select) })}
@@ -677,10 +677,12 @@ function CounterBlock({
      وإظهار») — و«أضف» والعددُ في تذييل `Sheet` ثابتان تحتها. */
   return (
     <fieldset className="surface-inset space-y-2 p-3">
-      <legend className="flex w-full items-center justify-between gap-2 text-sm font-bold">
+      {/* **العنوانُ داخل الصندوق لا على حدّه** — عنصرُ legend يقف فوق الإطار فيلامس خطَّه؛ فيبقى للقارئ الصوتيّ ويُرسَم العنوانُ صفّاً عادياً. */}
+      <legend className="sr-only">{group.name}</legend>
+      <div className="flex w-full items-center justify-between gap-2 pb-1 text-sm font-bold" aria-hidden>
         <span>{group.name}</span>
         <span className="text-xs font-normal text-ink-muted">{group.min_select > 0 ? I.required : I.optional}</span>
-      </legend>
+      </div>
       {group.options.map((o) => {
         const n = counts[o.id] ?? 0;
         return (
