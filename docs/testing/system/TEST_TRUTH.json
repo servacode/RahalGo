@@ -28733,7 +28733,7 @@
       "orphan": true
     },
     {
-      "name": "TestWAORD041_TextReplyIsTheAddress",
+      "name": "TestWAORD041_LocationOnlyNoAddressLine",
       "file": "internal/qa/whatsapp_simple_form_test.go",
       "package": "qa",
       "orphan": true

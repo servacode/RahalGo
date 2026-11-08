@@ -413,11 +413,8 @@ func run(logger *slog.Logger) error {
 					if r := srv.ReportForPhone(c, from, text); r != "" {
 						return r
 					}
-					if r := identitySvc.HandleWAInbound(c, from, text); r != "" {
-						return r
-					}
-					// **وعنوانُ زبون طلب الواتساب مكتوباً** (٢٠٢٦-١١-٠٦): ردُّه النصّيُّ يُكتب في طلبه.
-					return srv.HandleWAAddressText(c, from, text)
+					// **ولا يُلتقط عنوانٌ مكتوب** (قرارُ المالك ٢٠٢٦-١١-٠٨: «فقط الموقع وبس»).
+					return identitySvc.HandleWAInbound(c, from, text)
 				})
 			}
 			return srv.Router()

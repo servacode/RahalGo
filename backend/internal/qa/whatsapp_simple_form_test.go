@@ -109,70 +109,28 @@ func TestWAORD040_StoreNameAndPhoneOnly(t *testing.T) {
 	}
 }
 
-// TestWAORD041_TextReplyIsTheAddress **ردُّ الزبون النصّيُّ عنوانُ الطلب** — مرّةً واحدة، ويصل السائق،
-// **والعنوانُ الذي كتبه الموظّفُ قبله في سجلّ الأحداث**، والمتابعةُ لا تُبعث بعده.
+// TestWAORD041_LocationOnlyNoAddressLine **رسالةُ طلب الواتساب تطلب الموقعَ وحدَه** (قرارُ المالك
+// ٢٠٢٦-١١-٠٨: «مابدي رسالة وصل عنوانك فقط الموقع وبس») — لا سطرَ عنوانٍ مكتوب.
 //
-// **وعلى الشيفرة القديمة لا يُبنى**: لا `HandleWAAddressText` (البوتُ لا يلتقط النصّ).
-func TestWAORD041_TextReplyIsTheAddress(t *testing.T) {
+// **وعلى الشيفرة القديمة يسقط**: كانت الرسالةُ تطلب «عنوانك بالتفصيل».
+func TestWAORD041_LocationOnlyNoAddressLine(t *testing.T) {
 	h := New(t)
 	_ = waSimpleFx(t, h, "منطقةُ WA-041")
 	n := armFeedback(t, h, true)
 	ops := h.NewUser("operations")
-	h.Setting("orders.whatsapp_location_followup_min", "3")
-
 	phone := uniqPhone()
-	id := waCreated(t, waPost(t, h, ops.Token, waSimpleBody(phone, 600)))
-	drv := h.driverOf(id)
-	// **الموظّفُ كتب عنواناً من الواتساب قبل ردّ الزبون.**
-	if r := h.POST(waURL+"/"+id+"/address", ops.Token, map[string]any{"address_text": "الرميلة"}); r.Code != http.StatusOK {
-		t.Fatalf("تعديلُ العنوان: %s", r)
+	_ = waCreated(t, waPost(t, h, ops.Token, waSimpleBody(phone, 600)))
+	msgs := n.to(phone)
+	if len(msgs) == 0 {
+		t.Fatal("**لا رسالةَ للزبون**")
 	}
-
-	// **ونصٌّ لا يشبه عنواناً لا يُلتقط.**
-	if reply := h.API.HandleWAAddressText(ctxBG(), phone, "👍"); reply != "" {
-		t.Fatalf("**إشارةٌ عُدّت عنواناً**: %q", reply)
-	}
-	addr := "حي الدرعية، شارع المنصور، جانب فرن الأمل"
-	if reply := h.API.HandleWAAddressText(ctxBG(), phone, addr); reply == "" {
-		t.Fatal("**لا ردَّ على عنوانٍ لطلبٍ مفتوح**")
-	}
-	var got string
-	_ = h.Pool.QueryRow(ctxBG(), `SELECT address_text FROM orders WHERE id = $1`, id).Scan(&got)
-	if got != addr {
-		t.Fatalf("**العنوانُ لم يُكتب في الطلب**: %q", got)
-	}
-	var old string
-	_ = h.Pool.QueryRow(ctxBG(), `SELECT details->>'old' FROM audit_log
-		WHERE action = 'ops.whatsapp_order_address_bot' AND entity_id = $1`, id).Scan(&old)
-	if old != "الرميلة" {
-		t.Fatalf("**عنوانُ الموظّف القديم ضاع**: %q", old)
-	}
-	// **وثانيةٌ لا تُبدّله.**
-	if reply := h.API.HandleWAAddressText(ctxBG(), phone, "حي الثكنة"); reply != "" {
-		t.Fatalf("**ردٌّ ثانٍ التُقط**: %q", reply)
-	}
-	_ = h.Pool.QueryRow(ctxBG(), `SELECT address_text FROM orders WHERE id = $1`, id).Scan(&got)
-	if got != addr {
-		t.Fatalf("**الردُّ الثاني بدّل العنوان**: %q", got)
-	}
-	// **والسائقُ يراه ويُخبَر بلا رقم الزبون.**
-	if d := driverOrderOf(t, h, drv.Token, id); !strings.HasPrefix(fmtAny(d["address_text"]), addr) {
-		t.Fatalf("**السائقُ لا يرى العنوان**: %v", d["address_text"])
-	}
-	for _, b := range waNotes(t, h, drv.ID, id, "تغيّر عنوان المستلم") {
-		if strings.Contains(b, strings.TrimPrefix(phone, "+963")) {
-			t.Fatalf("**رقمُ الزبون وصل السائق**: %q", b)
+	for _, m := range msgs {
+		if strings.Contains(m.text, "عنوانك بالتفصيل") || strings.Contains(m.text, "وصلنا عنوانك") {
+			t.Fatalf("**الرسالةُ تطلب عنواناً مكتوباً**: %q", m)
 		}
 	}
-	// **والمتابعةُ لا تُبعث بعد العنوان** — ولو مضت الدقائقُ الثلاث بلا موقع.
-	if _, err := h.Pool.Exec(ctxBG(), `UPDATE recipient_location_requests
-		SET created_at = now() - interval '5 minutes' WHERE order_id = $1`, id); err != nil {
-		t.Fatal(err)
-	}
-	before := len(n.to(phone))
-	h.API.SweepWALocationFollowUp(ctxBG())
-	if after := len(n.to(phone)); after != before {
-		t.Fatalf("**المتابعةُ بُعثت بعد وصول العنوان**: %d ← %d", before, after)
+	if !strings.Contains(msgs[0].text, "موقعك") {
+		t.Fatalf("**الرسالةُ لا تطلب الموقع**: %q", msgs[0])
 	}
 }
 
@@ -191,18 +149,6 @@ func TestWAORD042_LocationReplyStillFillsThePoint(t *testing.T) {
 	lat, lng, known, fee := waOrderPoint(t, h, id)
 	if !known || fee != 600 || !nearF(lat, w.md.dropLat) || !nearF(lng, w.md.dropLng) {
 		t.Fatalf("**الموقعُ لم يُكتب**: %v · %d · %v,%v", known, fee, lat, lng)
-	}
-	// **وبعد الموقع لا يُلتقط نصٌّ عنواناً** (قرارُ المالك ٢٠٢٦-١١-٠٦: «إذا بعث الموقع ما بيلزم العنوان») —
-	// «شكراً» بعد الموقع ليست عنواناً.
-	var before string
-	_ = h.Pool.QueryRow(ctxBG(), `SELECT address_text FROM orders WHERE id = $1`, id).Scan(&before)
-	if reply := h.API.HandleWAAddressText(ctxBG(), phone, "شكراً كتير"); reply != "" {
-		t.Fatalf("**نصٌّ بعد الموقع التُقط عنواناً**: %q", reply)
-	}
-	var after string
-	_ = h.Pool.QueryRow(ctxBG(), `SELECT address_text FROM orders WHERE id = $1`, id).Scan(&after)
-	if after != before {
-		t.Fatalf("**نصٌّ بعد الموقع بدّل العنوان**: %q ← %q", before, after)
 	}
 }
 
