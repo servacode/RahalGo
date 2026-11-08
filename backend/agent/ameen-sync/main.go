@@ -38,10 +38,14 @@ import (
 	"time"
 
 	_ "github.com/microsoft/go-mssqldb"
+	// SQL Server بعد التثبيت يقفل TCP افتراضاً — فالذاكرةُ المشتركة والأنابيب
+	// تخلّيه يلاقي الأمين على نفس الجهاز بلا أيّ إعداد (لابتوب المالك ٢٠٢٦-١١-٠٨).
+	_ "github.com/microsoft/go-mssqldb/namedpipe"
+	_ "github.com/microsoft/go-mssqldb/sharedmemory"
 )
 
 // Version **نسختُه** — يقرؤها الخادمُ عند البناء ليعرف من يحتاج تحديثاً.
-var Version = "2.0.2"
+var Version = "2.0.3"
 
 const marker = "\n##RAHALGO-SYNC-CONFIG##"
 
@@ -523,12 +527,18 @@ func findAmeen(ctx context.Context, probe string) (string, string, error) {
 	}
 	hosts = append(hosts, "localhost/SQLEXPRESS")
 	seen := map[string]bool{}
+	var bases []string
 	for _, h := range hosts {
 		if seen[strings.ToLower(h)] {
 			continue
 		}
 		seen[strings.ToLower(h)] = true
-		base := "sqlserver://" + h + "?encrypt=disable&connection+timeout=8"
+		// كلّ طريقةٍ تُجرَّب باسمها: ترك المكتبة تختار لحالها يعلق على الأنبوب حين TCP مقفول.
+		for _, proto := range []string{"", "&protocol=lpc", "&protocol=np"} {
+			bases = append(bases, "sqlserver://"+h+"?encrypt=disable&connection+timeout=8"+proto)
+		}
+	}
+	for _, base := range bases {
 		db, err := sql.Open("sqlserver", base+"&database=master")
 		if err != nil {
 			continue
