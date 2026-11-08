@@ -1918,11 +1918,11 @@ func (s *Service) AssignDriver(ctx context.Context, actorID string, actorRoles [
 
 	var from string
 	var cashDue int64
-	var hasDriver, excluded bool
+	var hasDriver bool
 	err = s.db.QueryRow(ctx, `
-		SELECT status, cash_due, driver_id IS NOT NULL, $2::uuid = ANY(excluded_drivers)
-		FROM orders WHERE id = $1`, orderID, driverID).
-		Scan(&from, &cashDue, &hasDriver, &excluded)
+		SELECT status, cash_due, driver_id IS NOT NULL
+		FROM orders WHERE id = $1`, orderID).
+		Scan(&from, &cashDue, &hasDriver)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound
 	}
@@ -1939,15 +1939,14 @@ func (s *Service) AssignDriver(ctx context.Context, actorID string, actorRoles [
 	//
 	// **كانت الشاشةُ وحدَها تُرشِّح** — فمن نادى المسارَ مباشرةً أسند طلباً:
 	//
-	//	لسائقٍ تركه        ← «لا يعود الطلبُ إلى من تركه أبداً» (مساءَ ٢٠٢٦-١٠-٠٢)
 	//	لسائقٍ خارج دوامه  ← يُخفى عن الطابور ولا يوصله أحد
 	//	لطلبٍ أخذه سائق    ← يكتب فوق من قبله في الثانية نفسِها
 	if hasDriver {
 		return nil, ErrOrderTaken
 	}
-	if excluded {
-		return nil, ErrDriverExcluded
-	}
+	// **ومن ترك الطلبَ يُرجَع إليه بيد العمليّات** (قرارُ المالك ٢٠٢٦-١١-٠٨: «ترك الطلب نفسه
+	// بس عادي بدي ارجعو الو») — الاستثناءُ يحكم العرضَ التلقائيّ وحدَه، **والإسنادُ اليدويّ قرارُ
+	// إنسانٍ يراه**: يُمحى من قائمة التاركين في الكتابة نفسِها، فإن تركه ثانيةً عاد إليها.
 	var onShift bool
 	if err := s.db.QueryRow(ctx,
 		`SELECT COALESCE(on_shift, false) FROM users WHERE id = $1`, driverID).Scan(&onShift); err != nil {
@@ -1995,10 +1994,10 @@ func (s *Service) AssignDriver(ctx context.Context, actorID string, actorRoles [
 	// يضغط «قبول» فيُردّ، **ويقرأ المنصّةَ تعبث به.**
 	tag, err := tx.Exec(ctx, `
 		UPDATE orders SET driver_id = $2, updated_at = now(),
-		       offered_driver_id = NULL, offer_expires_at = NULL
+		       offered_driver_id = NULL, offer_expires_at = NULL,
+		       excluded_drivers = array_remove(excluded_drivers, $2::uuid)
 		 WHERE id = $1 AND driver_id IS NULL
-		   AND status IN ('preparing','dispatching')
-		   AND NOT ($2::uuid = ANY(excluded_drivers))`,
+		   AND status IN ('preparing','dispatching')`,
 		orderID, driverID)
 	if err != nil {
 		return nil, err

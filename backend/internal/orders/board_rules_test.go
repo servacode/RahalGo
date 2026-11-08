@@ -196,17 +196,6 @@ func TestAssign_ServerGuards(t *testing.T) {
 	if _, err := f.pool.Exec(ctx, `UPDATE users SET on_shift = true WHERE id = $1`, drv); err != nil {
 		t.Fatal(err)
 	}
-	// ── ٢ · تركه من قبل ⇒ لا يعود إليه أبداً.
-	if _, err := f.pool.Exec(ctx, `UPDATE orders SET excluded_drivers = ARRAY[$2::uuid] WHERE id = $1`,
-		f.orderID, drv); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := f.svc.AssignDriver(ctx, ops, []string{"ops"}, f.orderID, drv, "إسنادٌ يدويّ"); !errors.Is(err, orders.ErrDriverExcluded) {
-		t.Fatalf("**عاد الطلبُ إلى من تركه**: %v", err)
-	}
-	if _, err := f.pool.Exec(ctx, `UPDATE orders SET excluded_drivers = '{}' WHERE id = $1`, f.orderID); err != nil {
-		t.Fatal(err)
-	}
 	// ── ٣ · أخذه سائقٌ قبلُ ⇒ لا يُكتب فوقه.
 	if _, err := f.pool.Exec(ctx, `UPDATE orders SET driver_id = $2 WHERE id = $1`, f.orderID, f.driver); err != nil {
 		t.Fatal(err)
@@ -219,9 +208,11 @@ func TestAssign_ServerGuards(t *testing.T) {
 	if still != f.driver {
 		t.Fatalf("تبدّل السائقُ القابل: %s", still)
 	}
-	// ── ٤ · وسليمٌ يُسند، والعرضُ الحيُّ لغيره يُمحى.
+	// ── ٤ · وسليمٌ يُسند، والعرضُ الحيُّ لغيره يُمحى — **ولو ترك الطلبَ من قبل**: العمليّاتُ
+	// تُرجعه إليه بيدها (قرارُ المالك ٢٠٢٦-١١-٠٨)، ويُمحى من قائمة التاركين.
 	if _, err := f.pool.Exec(ctx, `UPDATE orders SET driver_id = NULL, offered_driver_id = $2,
-		offer_expires_at = now() + interval '40 seconds' WHERE id = $1`, f.orderID, f.driver); err != nil {
+		offer_expires_at = now() + interval '40 seconds', excluded_drivers = ARRAY[$3::uuid]
+		WHERE id = $1`, f.orderID, f.driver, drv); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := f.svc.AssignDriver(ctx, ops, []string{"ops"}, f.orderID, drv, "إسنادٌ يدويّ"); err != nil {
@@ -236,6 +227,12 @@ func TestAssign_ServerGuards(t *testing.T) {
 	}
 	if offered != nil {
 		t.Errorf("**العرضُ الحيُّ لسائقٍ آخر بقي** بعد الإسناد: %s", *offered)
+	}
+	var left int
+	_ = f.pool.QueryRow(ctx, `SELECT cardinality(excluded_drivers) FROM orders WHERE id = $1`,
+		f.orderID).Scan(&left)
+	if left != 0 {
+		t.Errorf("**بقي السائقُ في قائمة التاركين** بعد أن أُرجع إليه الطلب")
 	}
 }
 

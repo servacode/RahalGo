@@ -9,8 +9,8 @@
  * السجلّ دائماً، **وفشلُ الجلب يُقرأ «لا سائق في الدوام».**
  *
  * **والقائمةُ من الخادم** (`GET /orders/{id}/assign-candidates`): من في الدوام
- * وحدَه، **ولا من ترك الطلب**، مرتّبون بالقرب من نقطة الاستلام — **وهي الشروطُ
- * نفسُها التي يردّ بها المحرّكُ الإسناد** (`AssignDriver`).
+ * وحدَه، مرتّبون بالقرب من نقطة الاستلام. **ومن ترك الطلبَ يأتي آخرَها بعلامة** —
+ * والإسنادُ اليدويُّ يُرجعه إليه (قرارُ المالك ٢٠٢٦-١١-٠٨).
  */
 
 import { useEffect, useState } from "react";
@@ -38,6 +38,7 @@ interface Candidate {
   cash_held: number;
   open_orders: number;
   location_at: string | null;
+  left_before?: boolean;
 }
 
 function distanceText(d: number): string {
@@ -167,6 +168,7 @@ export function AssignDialog({
                       </span>
                       <span>{A.orders.replace("{n}", fmtNum(d.open_orders))}</span>
                       {stale(d.location_at) && <Badge variant="danger">{A.stale}</Badge>}
+                      {d.left_before && <Badge variant="warning">{A.leftBefore}</Badge>}
                     </span>
                   </span>
                   <Button
