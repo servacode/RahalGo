@@ -257,13 +257,18 @@ export function QuotePanel({
   onMessage: (text: string) => void;
 }) {
   const ownReserved = order.payment_method === "wallet" ? order.custom_reserved_amount : 0;
-  const walletOk = available + ownReserved >= order.total;
-  const [method, setMethod] = useState<"cash" | "wallet">("cash");
+  // **«الكل» أو «التوصيل والباقي كاش»** (قرارُ المالك ٢٠٢٦-١١-٠٩) — كلٌّ يظهر حين يغطّيه الرصيد،
+  // و«التوصيل» حين تكون الأجرةُ أقلَّ من المجموع (وإلّا فهو «الكل»). مرآةُ `QuoteConfirmPanel`.
+  const deliveryPart = Math.max(0, Math.min(order.delivery_fee, order.total));
+  const fullOk = available + ownReserved >= order.total;
+  const deliveryOk = deliveryPart > 0 && deliveryPart < order.total && available + ownReserved >= deliveryPart;
+  const walletOk = fullOk || deliveryOk;
+  const [method, setMethod] = useState<"cash" | "full" | "delivery">("cash");
   const [busy, setBusy] = useState(false);
   const [askReject, setAskReject] = useState(false);
   const [error, setError] = useState("");
   const amanah = order.custom_mode === "amanah";
-  const pay = method === "wallet" && !walletOk ? "cash" : method;
+  const pay = (method === "full" && !fullOk) || (method === "delivery" && !deliveryOk) ? "cash" : method;
 
   const confirm = async () => {
     const slot = "confirm_" + order.id;
@@ -274,13 +279,14 @@ export function QuotePanel({
         method: "POST",
         headers: { "Idempotency-Key": attemptKey(slot) },
         body: JSON.stringify({
-          payment_method: pay,
+          payment_method: pay === "cash" ? "cash" : "wallet",
+          wallet_scope: pay === "cash" ? "none" : pay,
           expected_total: order.total,
           expected_quote_version: order.quote_version,
         }),
       });
       clearAttempt(slot);
-      onMessage(pay === "wallet" ? O.confirmedWallet : O.confirmedCash);
+      onMessage(pay === "full" ? O.confirmedWallet : pay === "delivery" ? O.confirmedDelivery : O.confirmedCash);
       onDone();
     } catch (err) {
       const code = (err as { body?: { code?: string } })?.body?.code;
@@ -325,10 +331,11 @@ export function QuotePanel({
       {/* **والمحفظةُ خيارٌ فقط إن غطّت المبلغ** — وإلّا سطرٌ واحدٌ «الدفع: نقداً عند الاستلام»
           (قرارُ المالك ٢٠٢٦-١٠-٣٠)، والطريقةُ تبقى نقداً. مرآةُ `QuoteConfirmPanel`. */}
       {walletOk ? (
-        <Chips<"cash" | "wallet">
+        <Chips<"cash" | "full" | "delivery">
           items={[
             { id: "cash", label: m.shop.cart.cash },
-            { id: "wallet", label: m.shop.cart.wallet },
+            ...(fullOk ? [{ id: "full" as const, label: m.shop.cart.walletFull }] : []),
+            ...(deliveryOk ? [{ id: "delivery" as const, label: m.shop.cart.walletDelivery }] : []),
           ]}
           value={pay}
           onChange={setMethod}
@@ -467,6 +474,85 @@ export function OrderInvoice({ order, totals = false }: { order: MyOrder; totals
           </Line>
         </div>
       )}
+    </div>
+  );
+}
+
+/** **اسمُ طريقة الدفع** — «الكل من المحفظة» · «التوصيل من المحفظة والباقي كاش» · كاش. */
+export function payScopeLabel(order: MyOrder): string {
+  const scope = order.wallet_scope ?? (order.payment_method === "wallet" ? "full" : "none");
+  if (scope === "delivery") return O.payWalletDelivery;
+  if (scope === "full") return O.payWalletFull;
+  return m.shop.cart.cash;
+}
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **تبديلُ الدفع من المحفظة — لحد ما يوصل الكابتن للباب** (قرارُ المالك ٢٠٢٦-١١-٠٩)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **يُرسَل المجموعُ الذي رآه** (`expected_total`) — فإن تغيّر ردّ المحرّكُ `order_changed`.
+ * **وكلُّ خيارٍ يظهر حين يغطّيه الرصيد** (المتاحُ + ما دُفع أو حُجز لهذا الطلب). والخاصُّ
+ * يتبدّل بعد تأكيد سعره وحدَه. مرآةُ `PayScopeRow` في تطبيق الزبون.
+ */
+export function PayScope({
+  order,
+  available,
+  onDone,
+  onMessage,
+}: {
+  order: MyOrder;
+  available: number;
+  onDone: () => void;
+  onMessage: (text: string) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const scope = order.wallet_scope ?? (order.payment_method === "wallet" ? "full" : "none");
+  const custom = order.kind === "custom";
+  const confirmed = order.quote_confirmed_version != null && order.quote_confirmed_version === order.quote_version;
+  const open = !ENDED.has(order.status) && order.status !== "at_dropoff" && (!custom || confirmed);
+  if (!open || (order.kind !== "standard" && !custom)) return null;
+
+  const own = custom ? order.custom_reserved_amount : order.wallet_paid;
+  const budget = available + own;
+  const deliveryPart = Math.max(0, Math.min(order.delivery_fee, order.total));
+  const items: { id: "none" | "full" | "delivery"; label: string }[] = [{ id: "none", label: m.shop.cart.cash }];
+  if (budget >= order.total || scope === "full") items.push({ id: "full", label: m.shop.cart.walletFull });
+  if ((deliveryPart > 0 && deliveryPart < order.total && budget >= deliveryPart) || scope === "delivery") {
+    items.push({ id: "delivery", label: m.shop.cart.walletDelivery });
+  }
+  if (items.length < 2) return null;
+
+  const change = async (next: "none" | "full" | "delivery") => {
+    if (next === scope || busy) return;
+    const slot = "wallet_scope_" + order.id;
+    setBusy(true);
+    setError("");
+    try {
+      await api(`/api/v1/orders/${order.id}/wallet-scope`, {
+        method: "POST",
+        headers: { "Idempotency-Key": attemptKey(slot) },
+        body: JSON.stringify({ wallet_scope: next, expected_total: order.total }),
+      });
+      clearAttempt(slot);
+      onMessage(O.payChanged);
+      onDone();
+    } catch (err) {
+      if (isDecided(err)) clearAttempt(slot);
+      setError(errorText(err));
+      onDone();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="surface flex flex-col gap-2 p-4">
+      <p className="text-sm font-bold">{O.changePay}</p>
+      <p className="text-xs text-ink-muted">{O.changePayHint}</p>
+      <Chips<"none" | "full" | "delivery"> items={items} value={scope} onChange={change} />
+      {error && <Alert>{error}</Alert>}
     </div>
   );
 }

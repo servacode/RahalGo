@@ -301,6 +301,8 @@ export interface MyOrder {
   discount: number;
   total: number;
   payment_method: string;
+  /** **شو بيندفع من المحفظة** (٢٠٢٦-١١-٠٩) — `none` كاش · `full` الكل · `delivery` التوصيل والباقي كاش. */
+  wallet_scope?: "none" | "full" | "delivery";
   address_text: string;
   notes: string;
   custom_request: string;

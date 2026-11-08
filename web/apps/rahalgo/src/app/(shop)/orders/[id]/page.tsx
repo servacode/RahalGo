@@ -23,7 +23,17 @@ import { customFee, fill, freeCustomOn, statusLabel } from "@/lib/customer/texts
 import { useActiveOrders } from "@/lib/customer/active";
 import { useCustomer } from "@/lib/customer/context";
 import { ENDED, type MyOrder } from "@/lib/customer/types";
-import { CancelNote, CancelOrder, DeliveryCode, OrderEta, OrderInvoice, OrderStages, QuoteAmounts } from "@/components/customer/orderParts";
+import {
+  CancelNote,
+  CancelOrder,
+  DeliveryCode,
+  OrderEta,
+  OrderInvoice,
+  OrderStages,
+  PayScope,
+  QuoteAmounts,
+  payScopeLabel,
+} from "@/components/customer/orderParts";
 import { statusTone } from "@/components/customer/OrderSummary";
 import { OrderSections } from "@/components/customer/OrderSections";
 import { NeedLogin } from "@/components/customer/NeedLogin";
@@ -50,7 +60,7 @@ export default function OrderPage() {
   const id = params?.id ?? "";
   const { user, loading } = useAuth();
   const toast = useShopToast();
-  const { platform, freeDelivery } = useCustomer();
+  const { platform, freeDelivery, available, reloadWallet } = useCustomer();
   // **وقارئُ الحديث من هنا يُخبر الفقّاعةَ الطافية** — انظر `onLoaded` أدناه.
   const { reload: reloadActive } = useActiveOrders();
   const [order, setOrder] = useState<MyOrder | null>(null);
@@ -168,10 +178,20 @@ export default function OrderPage() {
           <Row label={fill(O.items, { n: fmtNum(order.items_count) })}>{order.items_preview}</Row>
         )}
         <Row label={O.placed}>{fmtDateTime(order.created_at)}</Row>
-        <Row label={O.payment}>{order.payment_method === "wallet" ? m.shop.cart.wallet : m.shop.cart.cash}</Row>
+        <Row label={O.payment}>{payScopeLabel(order)}</Row>
         {order.address_text && <Row label={O.address}>{order.address_text}</Row>}
         {order.notes && <Row label={O.notes}>{order.notes}</Row>}
       </dl>
+      {/* **تبديلُ الدفع من المحفظة لحد ما يوصل الكابتن** (قرارُ المالك ٢٠٢٦-١١-٠٩). */}
+      <PayScope
+        order={order}
+        available={available}
+        onMessage={(t) => toast(t)}
+        onDone={() => {
+          reloadWallet();
+          load();
+        }}
+      />
 
       <dl className="surface flex flex-col gap-2 p-4">
         {custom ? (
