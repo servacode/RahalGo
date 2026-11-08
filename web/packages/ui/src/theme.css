@@ -1018,6 +1018,12 @@ html[data-shop] .surface-inset {
   color: var(--color-ink);
   transition: background-color 150ms;
 }
+@media (width < 1024px) {
+  .shop-iconbtn {
+    width: 44px;
+    height: 44px;
+  }
+}
 .shop-iconbtn:hover {
   background-color: var(--color-row-hover);
 }
@@ -1418,15 +1424,34 @@ html[data-shop-theme="dark"] .shop-pic {
 }
 
 /* ── بلاطاتُ الأقسام ── */
+/* **الصفّ الأخير في الوسط** — flex لا grid، فلا تبقى بلاطةٌ يتيمةٌ على طرفٍ بلا جيران. */
 .shop-tiles {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px 12px;
+  --tile-cols: 4;
+  --tile-gap-x: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px var(--tile-gap-x);
+}
+.shop-tiles > .shop-tile {
+  flex: none;
+  width: calc((100% - (var(--tile-cols) - 1) * var(--tile-gap-x)) / var(--tile-cols));
 }
 @media (width >= 1024px) {
   .shop-tiles {
-    grid-template-columns: repeat(8, minmax(0, 1fr));
-    gap: 20px 18px;
+    --tile-cols: 8;
+    --tile-gap-x: 18px;
+    row-gap: 20px;
+  }
+}
+@media (width >= 1440px) {
+  .shop-tiles {
+    --tile-cols: 10;
+  }
+}
+@media (width >= 1760px) {
+  .shop-tiles {
+    --tile-cols: 12;
   }
 }
 .shop-tile {
@@ -1439,6 +1464,11 @@ html[data-shop-theme="dark"] .shop-pic {
   font-size: 14px;
   font-weight: 700;
   line-height: 1.35;
+}
+@media (width < 640px) {
+  .shop-tile {
+    font-size: 13px;
+  }
 }
 .shop-tile .shop-pic {
   width: 100%;
@@ -1461,7 +1491,7 @@ html[data-shop-theme="dark"] .shop-pic {
 }
 .shop-tile span {
   max-width: 100%;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 /* ── كبسولاتُ الفلاتر والأقسام ── */
