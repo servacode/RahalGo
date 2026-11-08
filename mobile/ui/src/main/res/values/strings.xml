@@ -755,6 +755,8 @@
     <string name="signup_password2">تأكيد كلمة المرور</string>
     <string name="signup_password_mismatch">كلمتا المرور غير متطابقتين</string>
     <string name="wal_k_topup">شحن رصيد</string>
+    <string name="wal_k_topup_shamcash">شحن من شام كاش</string>
+    <string name="wal_k_refund_shamcash">إرجاع لشام كاش</string>
     <string name="wal_k_order_payment">دفع طلب من المحفظة</string>
     <string name="wal_k_merchant_earning">مستحقات مبيعات</string>
     <string name="wal_k_platform_profit">ربح المنصة</string>
@@ -1097,6 +1099,8 @@
     <string name="err_undeliver_not_standard">هذا التصحيح للطلبات العادية من المتاجر فقط.</string>
     <string name="err_undeliver_not_delivered">الطلب ليس مُسلَّماً، فلا يوجد ما يُصحَّح.</string>
     <string name="err_undeliver_commission_waived">عمولة هذا الطلب مُسحت من قبل، ولا يمكن تصحيحه بهذا الزر.</string>
+    <string name="err_shamcash_unavailable">الدفع بشام كاش مو متوفر هلق</string>
+    <string name="err_shamcash_amount_out_of_range">المبلغ لازم يكون بين الحد الأدنى والأعلى</string>
     <string name="err_bad_request">طلبٌ غير صالح — راجع ما أُرسل</string>
     <!-- تحديدُ الموقع: لكلّ تعذّرٍ سببُه وعلاجُه (ML، ٢٠٢٦-٠٩-١٥) -->
     <string name="loc_fail_denied">لم يُسمح بالموقع — اسمح به ليُحدَّد مكانك</string>

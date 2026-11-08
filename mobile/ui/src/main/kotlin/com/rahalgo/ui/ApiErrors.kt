@@ -744,6 +744,9 @@ private val CODES: Map<String, Int> = mapOf(
     "undeliver_not_standard" to R.string.err_undeliver_not_standard,
     "undeliver_not_delivered" to R.string.err_undeliver_not_delivered,
     "undeliver_commission_waived" to R.string.err_undeliver_commission_waived,
+    // **الدفع بشام كاش** (٢٠٢٦-١١-٠٩) — مطفي أو مبلغ برّا الحدّين.
+    "shamcash_unavailable" to R.string.err_shamcash_unavailable,
+    "shamcash_amount_out_of_range" to R.string.err_shamcash_amount_out_of_range,
 )
 
 /**

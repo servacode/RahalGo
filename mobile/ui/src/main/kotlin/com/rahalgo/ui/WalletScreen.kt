@@ -233,6 +233,8 @@ fun WalletScreen(
     neutralCompensation: Boolean = false,
     /** **سهمُ رجوعٍ وعنوان «محفظتك» فوقها** — و`null` بلا رأس كما كانت. */
     onBack: (() -> Unit)? = null,
+    /** Extra content under the balance card (the customer app's Sham Cash top-up button); null for other apps. */
+    extra: (@Composable () -> Unit)? = null,
 ) {
     val s = vm.state
     val st = s.statement?.let { raw ->
@@ -349,6 +351,11 @@ fun WalletScreen(
                 onClick = { statement = true },
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(stringResource(R.string.wal_statement)) }
+        }
+
+        if (extra != null) {
+            Spacer(Modifier.height(Rahal.space.md))
+            extra()
         }
 
         if (payouts && s.payouts.isNotEmpty()) {

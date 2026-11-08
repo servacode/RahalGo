@@ -168,6 +168,8 @@ class MainActivity : ComponentActivity() {
         // أحدُهما مكافأة.
         Invited.fromLink(this, intent)
         Invited.fromStore(this)
+        // Sham Cash return link; not on recreation, or a rotation would reopen the status screen.
+        if (savedInstanceState == null) com.rahalgo.customer.shamcash.ShamNav.fromIntent(intent)
         // **ووجهةُ الإشعار تُقرأ قبل أوّل شاشة** — **وتُستهلَك مرّةً**
         // (`AN-02`): **ومن أدار جهازَه لا يُساق إلى العرض ثانيةً.**
         com.rahalgo.ui.Opened.from(intent)
@@ -184,6 +186,7 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         Invited.fromLink(this, intent)
+        com.rahalgo.customer.shamcash.ShamNav.fromIntent(intent)
         // **وإشعارٌ يُنقر والتطبيقُ مفتوح** — **كالرابط سواءً بسواء.**
         com.rahalgo.ui.Opened.from(intent)
     }
@@ -1007,6 +1010,9 @@ private fun SignedIn(
                 contentAlignment = Alignment.Center,
             ) {
                 if (over != Overlay.None) BackHandler { overlay.clear() }
+                val shamOpen = com.rahalgo.customer.shamcash.ShamNav.topup ||
+                    com.rahalgo.customer.shamcash.ShamNav.billId != null
+                if (shamOpen) BackHandler { com.rahalgo.customer.shamcash.ShamNav.close() }
 
                 // ══════════════════════════════════════════════════════
                 // **قرصُ الحديث — فوق كلّ شاشةٍ لا في شاشةِ الطلبات**
@@ -1023,6 +1029,33 @@ private fun SignedIn(
                 // **وهنا يُركَّب مرّةً** — كالرسالة الطافية وشريط
                 // الشبكة والافتتاح: **وثلاثةُ تركيباتٍ تُنسى في واحد.**
                 when {
+                    // Sham Cash: amount screen, then the payment status screen.
+                    com.rahalgo.customer.shamcash.ShamNav.topup ->
+                        com.rahalgo.customer.shamcash.ShamTopupScreen(
+                            onBack = { com.rahalgo.customer.shamcash.ShamNav.close() },
+                        )
+
+                    com.rahalgo.customer.shamcash.ShamNav.billId != null ->
+                        com.rahalgo.customer.shamcash.ShamStatusScreen(
+                            billId = com.rahalgo.customer.shamcash.ShamNav.billId.orEmpty(),
+                            onWallet = {
+                                com.rahalgo.customer.shamcash.ShamNav.close()
+                                overlay.show(Overlay.Wallet)
+                            },
+                            onOrders = {
+                                com.rahalgo.customer.shamcash.ShamNav.close()
+                                overlay.clear()
+                                tab = Tab.Orders
+                                ordersVm.load()
+                            },
+                            onCart = {
+                                com.rahalgo.customer.shamcash.ShamNav.close()
+                                overlay.clear()
+                                tab = Tab.Cart
+                            },
+                            onClose = { com.rahalgo.customer.shamcash.ShamNav.close() },
+                        )
+
                     // ══════════════════════════════════════════════════
                     // **وما يخصّه يطلب حساباً — قبل النداء لا بعده**
                     // ══════════════════════════════════════════════════
@@ -1108,6 +1141,15 @@ private fun SignedIn(
                         payouts = false,
                         // **وسهمُ رجوعٍ فوقها** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
                         onBack = { overlay.clear() },
+                        extra = {
+                            LaunchedEffect(Unit) { com.rahalgo.customer.shamcash.ShamNav.refresh() }
+                            if (com.rahalgo.customer.shamcash.ShamNav.enabled) {
+                                com.rahalgo.ui.RahalButton(
+                                    onClick = { com.rahalgo.customer.shamcash.ShamNav.openTopup() },
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) { Text(stringResource(R.string.sham_topup_btn)) }
+                            }
+                        },
                     )
 
                     // **والصندوقُ يُقرأ ثمّ يُغلق** — وفارغٌ حتّى يصل،

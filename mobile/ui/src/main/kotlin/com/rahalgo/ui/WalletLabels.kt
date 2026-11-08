@@ -26,6 +26,8 @@ object WalletLabels {
         "reward" -> R.string.wal_k_reward
         "settlement" -> R.string.wal_k_settlement
         "topup" -> R.string.wal_k_topup
+        "topup_shamcash" -> R.string.wal_k_topup_shamcash
+        "refund_shamcash" -> R.string.wal_k_refund_shamcash
         "order_payment" -> R.string.wal_k_order_payment
         "merchant_earning" -> R.string.wal_k_merchant_earning
         "merchant_cash_accrued" -> R.string.wal_k_merchant_cash_accrued

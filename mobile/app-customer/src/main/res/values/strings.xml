@@ -379,4 +379,33 @@
     <string name="shop_open_item">عرض الصنف</string>
     <string name="shop_zoom_btn">عرض الصورة بملء الشاشة</string>
     <string name="shop_order_btn">اطلب</string>
+
+    <!-- شام كاش -->
+    <string name="sham_pay">ادفع بشام كاش</string>
+    <string name="sham_topup_btn">اشحن من شام كاش</string>
+    <string name="sham_topup_title">شحن المحفظة من شام كاش</string>
+    <string name="sham_amount">المبلغ</string>
+    <string name="sham_range">من %1$s إلى %2$s</string>
+    <string name="sham_continue">تابع للدفع</string>
+    <string name="sham_unavailable">الدفع بشام كاش مو متوفر هلق</string>
+    <string name="sham_out_of_range">المبلغ خارج الحدود المسموحة</string>
+    <string name="sham_no_browser">ما قدرنا نفتح صفحة الدفع. جرّب مرة تانية</string>
+    <string name="sham_status_title">الدفع بشام كاش</string>
+    <string name="sham_waiting_title">بانتظار الدفع</string>
+    <string name="sham_waiting_body">كمّل الدفع بتطبيق شام كاش وارجع هون. رح نتأكد تلقائياً</string>
+    <string name="sham_reopen">افتح صفحة الدفع</string>
+    <string name="sham_paid_topup">وصلت دفعتك وانشحنت محفظتك</string>
+    <string name="sham_paid_order">وصلت دفعتك وتم إرسال طلبك</string>
+    <string name="sham_paid_order_number">وصلت دفعتك وتم إرسال طلبك رقم %1$s</string>
+    <string name="sham_order_failed">وصلت دفعتك وصارت برصيد محفظتك، بس ما قدرنا نرسل الطلب. ارجع للسلة وادفع من المحفظة</string>
+    <string name="sham_expired">انتهت مهلة الدفع</string>
+    <string name="sham_failed">ما تمت عملية الدفع</string>
+    <string name="sham_refunded">تم إرجاع المبلغ</string>
+    <string name="sham_try_again">جرّب مرة تانية</string>
+    <string name="sham_pay_cash">ادفع نقداً</string>
+    <string name="sham_to_wallet">روح للمحفظة</string>
+    <string name="sham_to_order">شوف طلبي</string>
+    <string name="sham_to_cart">ارجع للسلة</string>
+    <string name="sham_checking_error">تعذّر التأكد من الدفع. رح نعيد المحاولة</string>
+    <string name="sham_close">إغلاق</string>
 </resources>

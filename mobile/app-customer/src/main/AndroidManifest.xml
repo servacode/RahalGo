@@ -98,6 +98,18 @@
                 <data android:scheme="https" android:host="www.rahalgo.com"
                     android:pathPrefix="/signup" />
             </intent-filter>
+
+            <!-- Sham Cash return: the browser is redirected to
+                 https://rahalgo.com/wallet/shamcash/BILL_ID and this opens the status screen. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="rahalgo.com"
+                    android:pathPrefix="/wallet/shamcash" />
+                <data android:scheme="https" android:host="www.rahalgo.com"
+                    android:pathPrefix="/wallet/shamcash" />
+            </intent-filter>
         </activity>
     
         <!-- **مشاركةُ الموقع المباشر مع الكابتن** — انظر `live/LiveShareService.kt`. -->

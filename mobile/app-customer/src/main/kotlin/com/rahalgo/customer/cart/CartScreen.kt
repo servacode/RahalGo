@@ -44,6 +44,10 @@ import com.rahalgo.design.Rahal
 import com.rahalgo.shared.customer.CartLine
 import com.rahalgo.shared.customer.CustomerApi
 import com.rahalgo.shared.customer.NewOrder
+import com.rahalgo.shared.customer.ShamCashApi
+import com.rahalgo.shared.customer.ShamOrderBody
+import com.rahalgo.customer.shamcash.ShamNav
+import com.rahalgo.customer.shamcash.shamError
 import com.rahalgo.shared.model.Item
 import com.rahalgo.shared.model.Quote
 import com.rahalgo.ui.AppCore
@@ -412,26 +416,47 @@ fun CartScreen(
             if (walletBlocked && vm.wallet) vm.wallet = false
         }
         Spacer(Modifier.height(12.dp))
+        // Sham Cash: shown only when the server says it is on (hidden otherwise).
+        LaunchedEffect(Unit) { ShamNav.refresh() }
+        val shamOn = ShamNav.enabled
+        LaunchedEffect(shamOn) { if (!shamOn && vm.sham) vm.sham = false }
         if (walletBlocked) {
             // **سطرٌ واحدٌ لا خيارٌ مطفأٌ ولا «رصيدك لا يكفي»** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
-            Text(
-                stringResource(R.string.ord_pay_cash_only),
-                color = Rahal.colors.ink,
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            if (!shamOn) {
+                Text(
+                    stringResource(R.string.ord_pay_cash_only),
+                    color = Rahal.colors.ink,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            } else {
+                // With Sham Cash on there is a real choice: cash or Sham Cash (below).
+                PayChoice(
+                    text = stringResource(R.string.cart_cash),
+                    on = !vm.sham,
+                    modifier = Modifier.fillMaxWidth(),
+                ) { vm.sham = false }
+            }
         } else {
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 PayChoice(
                     text = stringResource(R.string.cart_cash),
-                    on = !vm.wallet,
+                    on = !vm.wallet && !vm.sham,
                     modifier = Modifier.weight(1f),
-                ) { vm.wallet = false }
+                ) { vm.wallet = false; vm.sham = false }
                 PayChoice(
                     text = stringResource(R.string.cart_wallet),
-                    on = vm.wallet,
+                    on = vm.wallet && !vm.sham,
                     modifier = Modifier.weight(1f),
-                ) { vm.wallet = true }
+                ) { vm.wallet = true; vm.sham = false }
             }
+        }
+        if (shamOn) {
+            Spacer(Modifier.height(10.dp))
+            PayChoice(
+                text = stringResource(R.string.sham_pay),
+                on = vm.sham,
+                modifier = Modifier.fillMaxWidth(),
+            ) { vm.wallet = false; vm.sham = true }
         }
         // ══════════════════════════════════════════════════════════════
         // **جملةٌ واحدةٌ موجزةٌ بالرصيد** (تصحيحُ المالك ٢٠٢٦-٠٩-٢١)
@@ -829,10 +854,14 @@ fun CartScreen(
         RahalButton(
             onClick = {
                 address?.let {
-                    vm.send(
-                        it.text, it.lat, it.lng,
-                        if (vm.wallet) "wallet" else "cash", vm.promo.trim(), onDone,
-                    )
+                    if (vm.sham && ShamNav.enabled) {
+                        vm.sendSham(it.text, it.lat, it.lng, vm.promo.trim())
+                    } else {
+                        vm.send(
+                            it.text, it.lat, it.lng,
+                            if (vm.wallet) "wallet" else "cash", vm.promo.trim(), onDone,
+                        )
+                    }
                 }
             },
             // **والاستقبالُ مغلقٌ يُعطّل الزرَّ** — **والسببُ فوقَه
@@ -1060,6 +1089,9 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
     }
     var wallet by mutableStateOf(false)
 
+    /** Pay with Sham Cash (only offered when the server enables it). */
+    var sham by mutableStateOf(false)
+
     var priced by mutableStateOf<Quote?>(null)
         private set
 
@@ -1269,6 +1301,37 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
                 // **والتسعيرةُ لا تُنشئ طلباً** فلا سقفَ نقدٍ منها — يُصفَّر الرمز.
                 errorCode = ""
             }
+        }
+    }
+
+    /**
+     * Pay for the order with Sham Cash: the server creates the order only after the payment
+     * is confirmed, so the cart is NOT cleared here (the status screen clears it once the
+     * bill is paid with an order).
+     */
+    fun sendSham(address: String, lat: Double, lng: Double, promo: String) {
+        if (busy) return
+        busy = true
+        error = ""
+        errorCode = ""
+        val code = if (promoResult?.valid == true) promo.trim() else ""
+        viewModelScope.launch {
+            try {
+                val started = ShamCashApi(AppCore.get().api).order(
+                    ShamOrderBody(
+                        items = Cart.lines.map { it.toPayload() },
+                        addressText = address,
+                        lat = lat,
+                        lng = lng,
+                        promoCode = code,
+                    ),
+                )
+                ShamNav.show(started.bill.id, started.paymentUrl.ifBlank { started.bill.paymentUrl })
+            } catch (e: Exception) {
+                error = shamError(getApplication(), e)
+                errorCode = (e as? com.rahalgo.shared.net.ApiClient.ApiException)?.body?.code ?: ""
+            }
+            busy = false
         }
     }
 
