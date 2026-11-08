@@ -4742,13 +4742,17 @@ body:has(.console-root) :is(button, a)[data-variant] {
 }
 /* على الهاتف: الأزرارُ أطولُ للّمس */
 @media (width < 1024px) {
-  .console-root :is(button, a)[data-variant] {
+  /* **ومعهما `body:has(...)` كالقاعدة الأمّ**: دونه كانت قاعدةُ الأمّ (٣٤) أعلى تخصيصاً
+     فتغلب هذه على الهاتف، **فبقيت أزرارُ اللوحة ٣٤ لا ٤٤.** */
+  .console-root :is(button, a)[data-variant],
+  body:has(.console-root) :is(button, a)[data-variant] {
     min-height: 2.75rem;
     padding-inline: 1rem;
     border-radius: 0.75rem;
     font-size: var(--text-sm);
   }
-  .console-root :is(button, a)[data-variant][data-size="sm"] {
+  .console-root :is(button, a)[data-variant][data-size="sm"],
+  body:has(.console-root) :is(button, a)[data-variant][data-size="sm"] {
     min-height: 2.25rem;
     border-radius: 0.625rem;
   }
