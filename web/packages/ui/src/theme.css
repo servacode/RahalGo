@@ -1130,6 +1130,12 @@ html[data-shop] .surface-inset {
   padding: 0;
   color: var(--color-ink);
 }
+@media (width < 1024px) {
+  .shop-top a[href="/notifications"] {
+    width: 44px;
+    height: 44px;
+  }
+}
 .shop-top a[href="/notifications"]:hover {
   background-color: var(--color-row-hover);
   color: var(--color-ink);
@@ -1423,77 +1429,6 @@ html[data-shop-theme="dark"] .shop-pic {
   object-fit: cover;
 }
 
-/* ── بلاطاتُ الأقسام ── */
-/* **الصفّ الأخير في الوسط** — flex لا grid، فلا تبقى بلاطةٌ يتيمةٌ على طرفٍ بلا جيران. */
-.shop-tiles {
-  --tile-cols: 4;
-  --tile-gap-x: 12px;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 14px var(--tile-gap-x);
-}
-.shop-tiles > .shop-tile {
-  flex: none;
-  width: calc((100% - (var(--tile-cols) - 1) * var(--tile-gap-x)) / var(--tile-cols));
-}
-@media (width >= 1024px) {
-  .shop-tiles {
-    --tile-cols: 8;
-    --tile-gap-x: 18px;
-    row-gap: 20px;
-  }
-}
-@media (width >= 1440px) {
-  .shop-tiles {
-    --tile-cols: 10;
-  }
-}
-@media (width >= 1760px) {
-  .shop-tiles {
-    --tile-cols: 12;
-  }
-}
-.shop-tile {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  text-align: center;
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1.35;
-}
-@media (width < 640px) {
-  .shop-tile {
-    font-size: 13px;
-  }
-}
-.shop-tile .shop-pic {
-  width: 100%;
-  aspect-ratio: 1;
-  border-radius: 20px;
-  outline: 2px solid transparent;
-  outline-offset: 2px;
-  transition:
-    outline-color 150ms,
-    transform 150ms;
-}
-.shop-tile:active .shop-pic {
-  transform: scale(0.97);
-}
-.shop-tile[aria-pressed="true"] .shop-pic {
-  outline-color: var(--color-primary);
-}
-.shop-tile[aria-pressed="true"] span {
-  color: var(--color-primary);
-}
-.shop-tile span {
-  max-width: 100%;
-  overflow-wrap: break-word;
-}
-
 /* ── كبسولاتُ الفلاتر والأقسام ── */
 .shop-chips {
   display: flex;
@@ -1520,21 +1455,6 @@ html[data-shop-theme="dark"] .shop-pic {
   font-size: 14px;
   font-weight: 700;
   white-space: nowrap;
-}
-.shop-rail {
-  display: none;
-}
-@media (width >= 1024px) {
-  .shop-rail {
-    display: flex;
-    margin-inline: 0;
-    padding-inline: 0;
-    /* الحافةُ البعيدة تتلاشى فلا يبدو الكبسولُ المقطوع خطأً — والباقي بالتمرير */
-    mask-image: linear-gradient(to left, #000 calc(100% - 56px), transparent);
-  }
-  .shop-chip:has(.shop-pic) {
-    padding-inline: 6px 16px;
-  }
 }
 .shop-chip[aria-pressed="true"] {
   border-color: var(--color-primary);
