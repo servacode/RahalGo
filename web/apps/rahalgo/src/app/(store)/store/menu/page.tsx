@@ -925,8 +925,8 @@ export default function MenuPage() {
                 <Link href={`/store/menu/${i.id}`} className="flex min-w-0 flex-1 items-center gap-3 self-stretch" data-testid="store-menu-edit" aria-label={`${M.edit} · ${i.name}`}>
                   <RowThumb item={i} size={46} />
                   <span className={`min-w-0 flex-1 py-2 ${i.available ? "" : "opacity-60"}`}>
-                    <span className="block truncate text-base font-bold leading-snug">{i.name}</span>
-                    <span className="console-meta block truncate">{metaLine(i)}</span>
+                    <span className="line-clamp-2 block break-words text-base font-bold leading-snug">{i.name}</span>
+                    <span className="console-meta block">{metaLine(i)}</span>
                   </span>
                 </Link>
                 <button

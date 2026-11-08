@@ -366,7 +366,7 @@ export function OrderPhonesPage() {
       {p == null ? (
         loadError ? <ReloadState label={loadError} onRetry={load} /> : <LoadingState variant="list" rows={2} />
       ) : (
-        <div className="flex w-full min-w-0 flex-col gap-4 lg:max-w-3xl">
+        <div className="flex w-full min-w-0 flex-col gap-4">
           <div className="flex gap-3" role="radiogroup" aria-label={T.phonesTitle}>
             <IconChoiceCard
               icon={<IconPhone size={28} />}

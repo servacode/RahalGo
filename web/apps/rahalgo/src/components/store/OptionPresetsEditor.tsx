@@ -96,7 +96,7 @@ export default function OptionPresetsEditor() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-4" data-testid="store-option-presets">
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-4 lg:mx-0 lg:max-w-none" data-testid="store-option-presets">
       <ToolHeader title={O.title} href={BACK} />
       {failed ? (
         <ReloadState onRetry={() => void load()} />

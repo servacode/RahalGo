@@ -554,8 +554,8 @@ export function IRow({
         {sub && <span className="console-meta block">{sub}</span>}
       </span>
       {value != null && (
-        <span className={`flex max-w-[55%] items-center gap-1.5 truncate text-end ${valueTone === "danger" ? "text-danger" : "text-ink-dim"}`}>
-          {value}
+        <span className={`flex min-w-0 max-w-[42%] items-center gap-1.5 text-end ${valueTone === "danger" ? "text-danger" : "text-ink-dim"}`}>
+          <span className="min-w-0 truncate">{value}</span>
         </span>
       )}
       {trailing}
