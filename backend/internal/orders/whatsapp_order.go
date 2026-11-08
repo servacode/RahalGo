@@ -840,3 +840,20 @@ func (s *Service) afterWhatsAppRecipientChange(ctx context.Context, orderID stri
 	})
 	s.pub.Publish("driver:"+*driverID, map[string]any{"type": "order"})
 }
+
+// WhatsAppArrivedText **رسالةُ الوصول لزبون طلب الواتساب** (قرارُ المالك ٢٠٢٦-١١-٠٨) — نصُّه حرفاً.
+const WhatsAppArrivedText = "سائق رحّال غو وصل إلى موقعك، الرجاء الخروج لاستلام طلبك"
+
+// WhatsAppArrivedNotice **رقمُ زبون طلب الواتساب لرسالة الوصول** — أو `false` لغيره.
+func (s *Service) WhatsAppArrivedNotice(ctx context.Context, orderID string) (phone string, ok bool, err error) {
+	var origin string
+	err = s.db.QueryRow(ctx, `SELECT origin, COALESCE(recipient_phone, '') FROM orders WHERE id = $1`, orderID).
+		Scan(&origin, &phone)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, err
+	}
+	return phone, origin == OriginWhatsApp && phone != "", nil
+}

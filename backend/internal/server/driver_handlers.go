@@ -1475,8 +1475,29 @@ func (s *Server) handleDriverTransition(w http.ResponseWriter, r *http.Request) 
 	if req.To == orders.StDelivered {
 		s.suggestFromDelivery(r.Context(), orderID)
 	}
+	// **«وصلت» في طلب الواتساب ⇒ البوتُ يُخبر الزبون** (قرارُ المالك ٢٠٢٦-١١-٠٨) — بانتظاره كرسالة المبالغ.
+	if req.To == orders.StAtDropoff {
+		s.sendWhatsAppArrived(context.WithoutCancel(r.Context()), orderID)
+	}
 	// **وحمولةُ السائق لا الطلبُ الخامّ** (٢٠٢٦-١٠-٠٦: كان الردُّ يحمل رقمَ الزبون).
 	httpx.JSON(w, http.StatusOK, s.driverReplyView(r, o))
+}
+
+// sendWhatsAppArrived **«سائق رحّال غو وصل إلى موقعك»** لزبون طلب الواتساب — ولغيره لا شيء.
+func (s *Server) sendWhatsAppArrived(ctx context.Context, orderID string) {
+	phone, ok, err := s.orders.WhatsAppArrivedNotice(ctx, orderID)
+	if err != nil {
+		s.logger.Warn("طلب واتساب: قراءةُ رسالة الوصول سقطت", "order", orderID, "error", err)
+		return
+	}
+	if !ok {
+		return
+	}
+	sendCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+	if !s.sendText(sendCtx, phone, orders.WhatsAppArrivedText) {
+		s.logger.Warn("طلب واتساب: رسالةُ الوصول لم تصل للزبون", "order", orderID)
+	}
 }
 
 // errDoorReportPending **بلاغُ الباب ينتظر قرار الإدارة** — فلا يُسلَّم قبله.
