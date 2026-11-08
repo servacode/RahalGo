@@ -179,6 +179,18 @@ func pausedReply(w http.ResponseWriter) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"paused": true, "ignored": true})
 }
 
+// AmeenDefaultQuery **جملةُ القراءة الافتراضيّة للأمين** — من جدول المواد: الرمز والباركود والاسم،
+// **وسعرُ المستهلك وإلّا المفرق**، والكميّة، **بلا المخفيّ.** (جُرّبت على قاعدة أمين ٩ — ٢٠٢٦-١١-٠٨.)
+const AmeenDefaultQuery = "SELECT m.Code AS code, m.BarCode AS barcode, m.Name AS name, " +
+	"CASE WHEN m.EndUser > 0 THEN m.EndUser ELSE m.Retail END AS price, m.Qty AS qty " +
+	"FROM mt000 m WHERE m.bHide = 0"
+
+// ameenProbe **أيبحث الساعي عن قاعدة الأمين؟** — الفارغُ افتراضُه mt000.
+func ameenProbe(probe string) bool {
+	p := strings.ToLower(strings.TrimSpace(probe))
+	return p == "" || p == "mt000"
+}
+
 // agentConfig **ما يعمل به الساعي** — يُعاد في كلّ سؤال.
 type agentConfig struct {
 	SyncNow    bool `json:"sync_now"`
@@ -238,6 +250,11 @@ func (s *Server) handlePriceSyncPollV2(w http.ResponseWriter, r *http.Request) {
 	}
 	if query != nil {
 		c.SQLQuery = *query
+	}
+	// **وبلا جملةٍ مكتوبة: جملةُ الأمين الافتراضيّة** (قرارُ المالك ٢٠٢٦-١١-٠٨: «لازم يكون تلقائي») —
+	// جدولُ المواد واحدٌ في كلّ نسخ الأمين، فلا يكتب أحدٌ شيئاً لمتجرٍ جديد.
+	if strings.TrimSpace(c.SQLQuery) == "" && ameenProbe(c.ProbeTable) {
+		c.SQLQuery = AmeenDefaultQuery
 	}
 	if conn != nil {
 		c.SQLConnection = *conn

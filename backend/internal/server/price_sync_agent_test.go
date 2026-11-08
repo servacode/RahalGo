@@ -188,3 +188,63 @@ func TestPriceSyncAgentV2_ConfigStatusDownload(t *testing.T) {
 		t.Fatalf("«إيقاف» لم يصل: %s", rw.Body.String())
 	}
 }
+
+// TestPriceSyncAgent_AmeenAutoDefaults **الأمين تلقائيّ بلا ضبط** (قرارُ المالك ٢٠٢٦-١١-٠٨) — متجرٌ بلا جملةٍ
+// مكتوبة يأخذ جملةَ الأمين الافتراضيّة، **وموادُّه الجديدةُ تُنشأ أصنافاً لحالها.** وجملةٌ خاصّةٌ تبقى كما هي.
+func TestPriceSyncAgent_AmeenAutoDefaults(t *testing.T) {
+	f := newDriverFixture(t, 0)
+	ctx := context.Background()
+	if _, err := f.pool.Exec(ctx, `UPDATE merchants SET uses_ameen = true, price_sync_token_hash = $2,
+		price_sync_sql_query = NULL, price_sync_create_missing = false WHERE id = $1`,
+		f.merchantID, syncTokenHash("rgs_auto")); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_, _ = f.pool.Exec(context.Background(), `DELETE FROM menu_items WHERE merchant_id = $1 AND external_code = 'AUTO-1'`, f.merchantID)
+	})
+	poll := func() agentConfig {
+		req := httptest.NewRequest(http.MethodPost, "/public/price-sync/poll", strings.NewReader(`{"version":"2.0.3"}`))
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("X-Sync-Token", "rgs_auto")
+		w := httptest.NewRecorder()
+		f.srv.handlePriceSyncPollV2(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("السؤال: %d %s", w.Code, w.Body.String())
+		}
+		var env struct {
+			Data agentConfig `json:"data"`
+		}
+		_ = json.Unmarshal(w.Body.Bytes(), &env)
+		return env.Data
+	}
+	if c := poll(); c.SQLQuery != AmeenDefaultQuery {
+		t.Fatalf("**بلا جملةٍ مكتوبة لم تصل الافتراضيّة**: %q", c.SQLQuery)
+	}
+	if !validSyncQuery(AmeenDefaultQuery) {
+		t.Fatal("**الجملةُ الافتراضيّة لا تمرّ بحارس القراءة**")
+	}
+	req := httptest.NewRequest(http.MethodPost, "/public/price-sync",
+		strings.NewReader(`{"rows":[{"code":"AUTO-1","name":"زيت زيتون تجربة","price":500,"qty":3}],"currency":"SYP"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Sync-Token", "rgs_auto")
+	w := httptest.NewRecorder()
+	f.srv.handlePriceSyncAgent(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("الرفع: %d %s", w.Code, w.Body.String())
+	}
+	var n int
+	_ = f.pool.QueryRow(ctx, `SELECT count(*) FROM menu_items WHERE merchant_id = $1 AND external_code = 'AUTO-1'`, f.merchantID).Scan(&n)
+	if n != 1 {
+		t.Fatalf("**المادّةُ الجديدةُ لم تُنشأ صنفاً**: %d", n)
+	}
+	custom := "SELECT Code AS code, Price AS price FROM mt000"
+	if _, err := f.pool.Exec(ctx, `UPDATE merchants SET price_sync_sql_query = $2 WHERE id = $1`, f.merchantID, custom); err != nil {
+		t.Fatal(err)
+	}
+	if c := poll(); c.SQLQuery != custom {
+		t.Fatalf("**الجملةُ الخاصّة استُبدلت**: %q", c.SQLQuery)
+	}
+	if f.srv.ameenAutoMode(ctx, f.merchantID) {
+		t.Fatal("**جملةٌ خاصّةٌ عُدّت تلقائيّاً**")
+	}
+}
