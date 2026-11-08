@@ -527,6 +527,9 @@ type assignCandidate struct {
 	OpenOrders int      `json:"open_orders"`
 	// LocationAt **آخرُ موضعٍ وصل منه** — والفارغُ «لم يصل قطّ».
 	LocationAt *time.Time `json:"location_at"`
+	// LeftBefore **ترك هذا الطلبَ من قبل** — يُعرض آخرَ القائمة بعلامة، والإسنادُ اليدويّ يُرجعه
+	// (قرارُ المالك ٢٠٢٦-١١-٠٨: «ترك الطلب نفسه بس عادي بدي ارجعو الو»).
+	LeftBefore bool `json:"left_before"`
 }
 
 // handleAssignCandidates **مرشّحو الإسناد اليدويّ** — `GET /admin/orders/{id}/assign-candidates`.
@@ -546,14 +549,14 @@ func (s *Server) handleAssignCandidates(w http.ResponseWriter, r *http.Request) 
 		            THEN ST_Distance(u.last_location, COALESCE(o.pickup_override, m.location)) END,
 		       COALESCE((SELECT b.held FROM driver_cash_boxes b WHERE b.driver_id = u.id), 0),
 		       (SELECT count(*) FROM orders oo WHERE oo.driver_id = u.id AND oo.closed_at IS NULL),
-		       u.last_location_at
+		       u.last_location_at,
+		       u.id = ANY(o.excluded_drivers)
 		FROM orders o
 		LEFT JOIN merchants m ON m.id = o.merchant_id
 		JOIN users u ON u.on_shift AND u.status = 'active'
 		JOIN user_roles ur ON ur.user_id = u.id AND ur.role_code = 'driver'
 		WHERE o.id = $1
-		  AND NOT (u.id = ANY(o.excluded_drivers))
-		ORDER BY 4 ASC NULLS LAST, 6 ASC, 2`, id)
+		ORDER BY 8 ASC, 4 ASC NULLS LAST, 6 ASC, 2`, id)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -563,7 +566,7 @@ func (s *Server) handleAssignCandidates(w http.ResponseWriter, r *http.Request) 
 	for rows.Next() {
 		var c assignCandidate
 		if err := rows.Scan(&c.ID, &c.FullName, &c.Phone, &c.DistanceM, &c.CashHeld,
-			&c.OpenOrders, &c.LocationAt); err != nil {
+			&c.OpenOrders, &c.LocationAt, &c.LeftBefore); err != nil {
 			s.respondErr(w, err)
 			return
 		}
