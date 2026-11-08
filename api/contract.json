@@ -10206,6 +10206,10 @@
           "type": "unknown"
         },
         {
+          "name": "imported_count",
+          "type": "unknown"
+        },
+        {
           "name": "interval_minutes",
           "type": "unknown"
         },
@@ -10254,6 +10258,24 @@
       "response": [
         {
           "name": "@res",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/merchant/stores/{id}/price-sync/delete-imported",
+      "handler": "handleMerchantPriceSyncDeleteImported",
+      "auth": true,
+      "roles": [
+        "merchant"
+      ],
+      "response": [
+        {
+          "name": "deleted",
           "type": "unknown"
         }
       ],

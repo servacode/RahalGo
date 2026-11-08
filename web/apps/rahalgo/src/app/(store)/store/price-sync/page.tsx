@@ -88,6 +88,8 @@ interface Info {
   stopped: boolean;
   /** **موقوفة مؤقّتاً** (٢٠٢٦-١١-٠٧) — البرنامجُ باقٍ على الكمبيوتر. */
   paused: boolean;
+  /** **كم صنفاً أنشأه الأمين** — لزرّ «احذف الأصناف المستوردة» (٢٠٢٦-١١-٠٨). */
+  imported_count?: number;
 }
 interface Preview {
   headers: string[];
@@ -116,6 +118,8 @@ export default function PriceSyncPage() {
   }, [noAmeen, router]);
   const [info, setInfo] = useState<Info | null>(null);
   const [askUninstall, setAskUninstall] = useState(false);
+  const [askDeleteImported, setAskDeleteImported] = useState(false);
+  const [deletedN, setDeletedN] = useState<number | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [map, setMap] = useState<Mapping>(EMPTY);
@@ -253,6 +257,27 @@ export default function PriceSyncPage() {
         method: "POST",
       });
       setAskUninstall(false);
+      load();
+    } catch (e) {
+      setError(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /**
+   * **«احذف الأصناف المستوردة من الأمين»** (قرارُ المالك ٢٠٢٦-١١-٠٨) — ما أنشأته المزامنةُ وحدَه،
+   * والمُضافُ باليد يبقى. **وبرنامجٌ يعمل يُنشئها من جديد** — فالتأكيدُ يقول ذلك.
+   */
+  async function deleteImported() {
+    setBusy(true);
+    try {
+      const r = await api<{ deleted: number }>(`/api/v1/merchant/stores/${id}/price-sync/delete-imported`, {
+        method: "POST",
+      });
+      setAskDeleteImported(false);
+      setDeletedN(r.deleted);
+      setApplied((n) => n + 1);
       load();
     } catch (e) {
       setError(errorText(e));
@@ -622,6 +647,39 @@ export default function PriceSyncPage() {
         {/* **توزيع الأقسام** (٢٠٢٦-١١-٠٧) — كل صنف يروح على قسمو. */}
         {id && <PriceSyncSections storeId={id} refreshKey={applied} />}
       </div>
+
+      {/* **حذفُ المستورد — آخرَ الصفحة وبتأكيد** (٢٠٢٦-١١-٠٨): لمن غلط بالاستيراد أو خلّص تجربة. */}
+      {((info?.imported_count ?? 0) > 0 || deletedN !== null) && (
+        <section className="panel flex flex-col gap-2 p-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="flex min-w-0 flex-col gap-1">
+            <p className="font-bold text-ink">{P.importedTitle}</p>
+            <p className="console-meta">
+              {deletedN !== null
+                ? fill(P.importedDeleted, { n: fmtNum(deletedN) })
+                : fill(P.importedHint, { n: fmtNum(info?.imported_count ?? 0) })}
+            </p>
+          </div>
+          {(info?.imported_count ?? 0) > 0 && (
+            <Button
+              variant="danger"
+              className="min-h-11 shrink-0"
+              onClick={() => setAskDeleteImported(true)}
+              disabled={busy}
+            >
+              {P.importedDelete}
+            </Button>
+          )}
+          <Confirm
+            open={askDeleteImported}
+            title={fill(P.importedDeleteQ, { n: fmtNum(info?.imported_count ?? 0) })}
+            body={P.importedDeleteBody}
+            confirmLabel={P.importedDelete}
+            busy={busy}
+            onConfirm={() => void deleteImported()}
+            onCancel={() => setAskDeleteImported(false)}
+          />
+        </section>
+      )}
     </div>
   );
 }

@@ -92,8 +92,16 @@ func (s *Server) handleMerchantPriceSyncInfo(w http.ResponseWriter, r *http.Requ
 	if len(mapping) > 0 {
 		_ = json.Unmarshal(mapping, &m)
 	}
+	var imported int
+	if err := s.pg.QueryRow(r.Context(),
+		`SELECT count(*) FROM menu_items WHERE merchant_id = $1 AND ameen_created`, merchantID).Scan(&imported); err != nil {
+		s.respondErr(w, err)
+		return
+	}
 	httpx.JSON(w, http.StatusOK, map[string]any{
 		"mapping": m, "has_token": hasToken, "last_run": last,
+		// **كم صنفاً أنشأه الأمين** — لزرّ «احذف الأصناف المستوردة» (٢٠٢٦-١١-٠٨).
+		"imported_count": imported,
 		// **حالُ الساعي** (٢٠٢٦-١٠-١٩) — آخرُ سؤالٍ منه ونسختُه، وأطُلبت «مزامنة الآن».
 		"agent_seen_at": seenAt, "agent_version": agentVersion, "sync_requested": requestedAt != nil,
 		// **كلّ كم دقيقة** — بيد صاحب المتجر (٢٠٢٦-١٠-١٩).
@@ -103,6 +111,35 @@ func (s *Server) handleMerchantPriceSyncInfo(w http.ResponseWriter, r *http.Requ
 		// **«موقوفة مؤقّتاً»** (٢٠٢٦-١١-٠٧) — البرنامجُ باقٍ على الكمبيوتر.
 		"paused": paused,
 	})
+}
+
+// handleMerchantPriceSyncDeleteImported **يحذف كلَّ صنفٍ أنشأه الأمين** —
+// `POST /merchant/stores/{id}/price-sync/delete-imported`.
+//
+// (قرارُ المالك ٢٠٢٦-١١-٠٨: «أ» — زرٌّ بصفحة المزامنة بدل أمرٍ على الخادم.) **ما أنشأته المزامنةُ
+// وحدَه** (`ameen_created`) — الصنفُ المُضاف باليد لا يُمسّ ولو رُبط برقم مادّة. والطلباتُ القديمة
+// تبقى بأسمائها (`order_items.menu_item_id` يصير فارغاً)، والعروضُ والمفضّلةُ عليها تُحذف معها.
+// **وساعٍ يعمل يُنشئها من جديد** في مزامنته التالية — فالشاشةُ تقول ذلك قبل الحذف.
+func (s *Server) handleMerchantPriceSyncDeleteImported(w http.ResponseWriter, r *http.Request) {
+	merchantID := chi.URLParam(r, "id")
+	if err := s.merchantWriteGuard(r, merchantID); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	if err := s.requireAmeen(r.Context(), merchantID); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	tag, err := s.pg.Exec(r.Context(),
+		`DELETE FROM menu_items WHERE merchant_id = $1 AND ameen_created`, merchantID)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	n := tag.RowsAffected()
+	s.audit(r, "menu.ameen_imported_delete", "merchant", merchantID, map[string]any{"deleted": n})
+	s.touch("menu", "merchant:"+merchantID)
+	httpx.JSON(w, http.StatusOK, map[string]any{"deleted": n})
 }
 
 // handleMerchantPriceSyncFile **ملفُّ الأمين.**
