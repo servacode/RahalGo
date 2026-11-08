@@ -161,7 +161,7 @@ export function SectionGrid({
                     )}
                     {on && <CheckBadge className="absolute end-1 top-1" />}
                   </span>
-                  <span className={`line-clamp-2 text-sm ${on ? "font-bold text-primary" : ""}`}>{s.name}</span>
+                  <span className={`text-xs leading-snug sm:text-sm ${on ? "font-bold text-primary" : ""}`}>{s.name}</span>
                 </button>
               </li>
             );

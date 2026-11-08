@@ -269,7 +269,6 @@ export function RateCard() {
   const usd = store.display_currency === "USD";
   return (
     <section className="panel flex flex-col gap-3 p-4" aria-label={T.rate}>
-      <h3 className="heading-card">{T.rate}</h3>
       <form
         className="flex items-end gap-2"
         onSubmit={(e) => {
@@ -288,7 +287,7 @@ export function RateCard() {
           error={value != null && value > 0 && value < MIN_RATE ? T.rateTooLow : undefined}
           wrapperClassName="min-w-0 flex-1"
         />
-        <Button type="submit" disabled={!dirty || busy || suspended} data-testid="store-rate-save">
+        <Button type="submit" className="min-h-11" disabled={!dirty || busy || suspended} data-testid="store-rate-save">
           {T.rateSave}
         </Button>
       </form>
@@ -361,6 +360,7 @@ export function PrepCard() {
       <span className="min-w-0 flex-1 text-sm font-bold">{T.prep}</span>
       <Button
         variant="secondary"
+        className="size-11 px-0 text-lg"
         aria-label={T.prepLess}
         disabled={busy || suspended || minutes <= 5}
         onClick={() => set(minutes - 5)}
@@ -370,7 +370,7 @@ export function PrepCard() {
       <span className="min-w-20 text-center font-bold tabular-nums">
         {fmtNum(minutes)} {T.prepUnit}
       </span>
-      <Button variant="secondary" aria-label={T.prepMore} disabled={busy || suspended} onClick={() => set(minutes + 5)}>
+      <Button variant="secondary" className="size-11 px-0 text-lg" aria-label={T.prepMore} disabled={busy || suspended} onClick={() => set(minutes + 5)}>
         +
       </Button>
     </section>
