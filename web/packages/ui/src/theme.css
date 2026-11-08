@@ -1561,7 +1561,8 @@ html[data-shop-theme="dark"] .shop-pic {
 @media (width >= 1024px) {
   .shop-featured {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(188px, 1fr));
+    /* auto-fit: سبعةُ متاجر بسطرٍ واحد بلا بطاقةٍ يتيمة تحت (فحصُ اللابتوب ٢٠٢٦-١١-٠٨). */
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     overflow: visible;
     margin-inline: 0;
     padding-inline: 0;
