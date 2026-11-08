@@ -237,6 +237,14 @@ func TestPriceSyncAgent_AmeenAutoDefaults(t *testing.T) {
 	if n != 1 {
 		t.Fatalf("**المادّةُ الجديدةُ لم تُنشأ صنفاً**: %d", n)
 	}
+	// **والافتراضيّةُ ملصوقةً باليد تبقى تلقائيّة** (بفراغاتٍ وحالةٍ مختلفة).
+	pasted := "  select m.Code AS code,  m.BarCode AS barcode, m.Name AS name, CASE WHEN m.EndUser > 0 THEN m.EndUser ELSE m.Retail END AS price, m.Qty AS qty\n\tFROM mt000 m WHERE m.bHide = 0; "
+	if _, err := f.pool.Exec(ctx, `UPDATE merchants SET price_sync_sql_query = $2 WHERE id = $1`, f.merchantID, pasted); err != nil {
+		t.Fatal(err)
+	}
+	if !f.srv.ameenAutoMode(ctx, f.merchantID) {
+		t.Fatal("**الجملةُ الافتراضيّةُ الملصوقةُ عُدّت خاصّة**")
+	}
 	custom := "SELECT Code AS code, Price AS price FROM mt000"
 	if _, err := f.pool.Exec(ctx, `UPDATE merchants SET price_sync_sql_query = $2 WHERE id = $1`, f.merchantID, custom); err != nil {
 		t.Fatal(err)
