@@ -182,7 +182,7 @@ export default function StorePageView() {
                   className="h-full w-full"
                 />
               </div>
-              <div className="min-w-0 flex-1 space-y-1.5 pb-1">
+              <div className="shop-store-meta min-w-0 flex-1 space-y-1.5 pb-1">
                 <h1 className="truncate">{page.store.name}</h1>
                 {/* **دوامُ اليوم وحدَه بلا حبّة «مفتوح / مسكّر»** (قرارُ المالك ٢٠٢٦-١٠-٢٨، مرآةُ `StoreScreen.kt`) —
                     **والإغلاقُ الطارئُ يُقال بلفظه** فلا يُقرأ الدوامُ وعداً بأنّه مفتوح. */}

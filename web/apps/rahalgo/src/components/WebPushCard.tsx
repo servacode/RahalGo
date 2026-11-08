@@ -155,6 +155,7 @@ export default function WebPushCard({
       </div>
       {note && <p className="text-xs text-warning">{note}</p>}
       {err && <p className="text-xs text-danger">{err}</p>}
+      {(state === "off" || (variant === "prompt" && state !== "on") || (state === "on" && variant === "card")) && (
       <div className="flex flex-wrap gap-2">
         {state === "off" && (
           <Button onClick={() => void enable()} disabled={busy}>
@@ -172,6 +173,7 @@ export default function WebPushCard({
           </Button>
         )}
       </div>
+      )}
     </div>
   );
 }

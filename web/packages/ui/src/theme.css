@@ -1499,6 +1499,8 @@ html[data-shop-theme="dark"] .shop-pic {
     display: flex;
     margin-inline: 0;
     padding-inline: 0;
+    /* الحافةُ البعيدة تتلاشى فلا يبدو الكبسولُ المقطوع خطأً — والباقي بالتمرير */
+    mask-image: linear-gradient(to left, #000 calc(100% - 56px), transparent);
   }
   .shop-chip:has(.shop-pic) {
     padding-inline: 6px 16px;
@@ -1558,11 +1560,15 @@ html[data-shop-theme="dark"] .shop-pic {
 }
 @media (width >= 1024px) {
   .shop-featured {
+    display: grid;
+    /* auto-fit: سبعةُ متاجر بسطرٍ واحد بلا بطاقةٍ يتيمة تحت (فحصُ اللابتوب ٢٠٢٦-١١-٠٨). */
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    overflow: visible;
     margin-inline: 0;
     padding-inline: 0;
   }
   .shop-store-card {
-    width: 196px;
+    width: auto;
   }
   .shop-store-card .shop-pic {
     height: 110px;
@@ -1592,6 +1598,11 @@ html[data-shop-theme="dark"] .shop-pic {
   }
   .shop-items[data-layout="tile"] {
     grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  /* **صفوفٌ متساويةُ الارتفاع**: كلُّ البطاقات بقياسٍ واحدٍ، فيقع السعرُ وزرُّ «اطلب» على خطٍّ واحد
+     سواءٌ كان للصنف وصفٌ أم لا (ملاحظةُ المالك ٢٠٢٦-١١-٠٨). */
+  .shop-items {
+    grid-auto-rows: 1fr;
   }
 }
 .shop-item {
@@ -1624,9 +1635,24 @@ html[data-shop-theme="dark"] .shop-pic {
   aspect-ratio: 1;
 }
 @media (width >= 1024px) {
-  .shop-item-img {
-    width: 150px;
-    height: 150px;
+  .shop-item[data-layout="row"] .shop-item-img {
+    width: 128px;
+    height: 128px;
+  }
+  .shop-item[data-layout="row"] .shop-item-body p.d {
+    -webkit-line-clamp: 1;
+  }
+  /* السعرُ في سطرٍ وتحته «اطلب» والقلب: بنيةٌ واحدةٌ لكلّ البطاقات مهما طال السعرُ بالدولار. */
+  .shop-item .shop-item-foot {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .shop-item .shop-item-foot > span:last-child {
+    justify-content: space-between;
+  }
+  .shop-item[data-layout="tile"] .shop-item-img {
+    aspect-ratio: 4 / 3;
   }
 }
 .shop-item-img > .shop-pic {
@@ -1725,7 +1751,7 @@ html[data-shop-theme="dark"] .shop-pic {
     border-radius: 16px;
   }
   .shop-store-band {
-    height: 190px;
+    height: 150px;
   }
 }
 .shop-store-head {
@@ -1746,6 +1772,11 @@ html[data-shop-theme="dark"] .shop-pic {
     margin-top: -52px;
     padding-inline: 24px;
     padding-bottom: 14px;
+    align-items: flex-start;
+  }
+  /* الاسمُ ودوامُ اليوم تحت الشريط لا فوق حدِّه */
+  .shop-store-meta {
+    margin-top: 60px;
   }
 }
 .shop-store-logo {
@@ -1822,7 +1853,7 @@ html[data-shop-theme="dark"] .shop-pic {
 }
 @media (width >= 1024px) {
   .shop-store-cols {
-    grid-template-columns: 200px minmax(0, 1fr) 340px;
+    grid-template-columns: 176px minmax(0, 1fr) 320px;
     align-items: start;
     gap: 24px;
   }
@@ -1841,8 +1872,12 @@ html[data-shop-theme="dark"] .shop-pic {
     position: sticky;
     top: 88px;
     display: flex;
+    max-height: calc(100dvh - 112px);
     flex-direction: column;
     gap: 2px;
+    /* متجرٌ بعشرات الأقسام: العمودُ يتمرّر في مكانه فلا يُقطع ما تحت الشاشة */
+    overflow-y: auto;
+    scrollbar-width: thin;
   }
   .shop-chips[data-phone] {
     display: none;
