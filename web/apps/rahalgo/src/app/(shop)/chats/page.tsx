@@ -21,7 +21,7 @@ export default function ChatsPage() {
   if (loading) return <LoadingState variant="list" rows={3} />;
   if (!user) return <NeedLogin />;
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 lg:max-w-none">
       <ShopPageHeader title={C.title} />
       <ChatArchive api={api} bare />
     </div>

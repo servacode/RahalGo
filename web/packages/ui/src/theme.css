@@ -861,15 +861,15 @@ html[data-shop] .surface-inset {
   background-color: var(--color-shell);
   color: var(--color-ink);
 }
+/* **بلا سقفٍ ولا نطاقٍ مركزيّ** (قرارُ المالك ٢٠٢٦-١١-٠٩: «خلّي التصميم ياخذ مساحة الشاشة كلّها») —
+   حشوةٌ جانبيّةٌ صغيرةٌ فقط، والشبكاتُ تزيد أعمدةً لا هوامش. */
 .shop-wrap {
   width: 100%;
-  max-width: 1280px;
-  margin-inline: auto;
   padding-inline: 16px;
 }
 @media (width >= 1024px) {
   .shop-wrap {
-    padding-inline: 28px;
+    padding-inline: 24px;
   }
 }
 .shop-main {
@@ -1594,10 +1594,10 @@ html[data-shop-theme="dark"] .shop-pic {
     gap: 16px;
   }
   .shop-items[data-layout="row"] {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
   }
   .shop-items[data-layout="tile"] {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   }
   /* **صفوفٌ متساويةُ الارتفاع**: كلُّ البطاقات بقياسٍ واحدٍ، فيقع السعرُ وزرُّ «اطلب» على خطٍّ واحد
      سواءٌ كان للصنف وصفٌ أم لا (ملاحظةُ المالك ٢٠٢٦-١١-٠٨). */

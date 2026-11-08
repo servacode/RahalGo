@@ -57,15 +57,15 @@ export default function InvitePage() {
   const tierLabels = [V.tier1, V.tier2, V.tier3];
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
-      <div>
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 lg:max-w-none lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
+      <div className="lg:col-span-2">
         <ShopPageHeader title={V.title} />
         <p className="text-sm text-ink-muted">
           {r.next_reward > 0 ? fill(V.subtitle, { n: fmtNum(r.next_reward) }) : V.subtitleNoReward}
         </p>
       </div>
 
-      <section className="surface flex flex-col gap-3 p-4">
+      <section className="surface flex flex-col gap-3 p-4 lg:row-span-2">
         <CopyCode code={r.code} title={m.shop.invite.code} />
         <p className="text-xs text-ink-muted">{V.yourLink}</p>
         <p dir="ltr" className="break-all rounded-control bg-field px-3 py-2 text-sm">
