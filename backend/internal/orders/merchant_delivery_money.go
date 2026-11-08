@@ -243,6 +243,10 @@ func (s *Service) settleMerchantDelivery(ctx context.Context, q wallet.Querier,
 		if err := s.chargeWhatsAppCommission(ctx, q, in.orderID, in.actorID); err != nil {
 			return err
 		}
+		// **ومندوبُ المتجر نصيبُه منها** كالطلب العاديّ (قرارُ المالك ٢٠٢٦-١١-٠٨) — `settleRep` بقواعده.
+		if err := s.settleWhatsAppRep(ctx, q, in.orderID, in.actorID, out); err != nil {
+			return err
+		}
 		return s.creditTreasury(ctx, q, in.orderID, in.actorID)
 
 	// **استرجاعٌ بعد التسليم: عمولةُ طلب الواتساب تعود للمتجر** — وما سواها كما كان (لا شيء).

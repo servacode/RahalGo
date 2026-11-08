@@ -706,11 +706,11 @@ var All = []Check{
 		Why: "**ثمنُ بضاعته خارجَ الدفتر** (قرارُ المالك ٢٠٢٦-١١-٠٥): السائقُ يدفعه للمتجر ويقبضه " +
 			"من المستلِم. **فقيدٌ آخرُ عليه — مستحقُّ متجرٍ أو دفعُ محفظةٍ أو استرجاع — مالٌ " +
 			"قُيّد لطرفٍ لم يُبَع منه شيء**، ومتجرٌ غيرُ تابعٍ يصير دائناً للمنصّة. " +
-			"**إلّا عمولةَ متجرٍ من متاجرنا** (قرارُ المالك ٢٠٢٦-١١-٠٨): خصمُها وردُّها، " +
+			"**إلّا عمولةَ متجرٍ من متاجرنا** (قرارُ المالك ٢٠٢٦-١١-٠٨): خصمُها وردُّها ونصيبُ مندوبه، " +
 			"**و`platform_commission` = المخصومُ + الدينُ بسببها** في المسلَّم، وصفرٌ في غيره.",
 		Flows: []string{"F-14"},
 		Kinds: []string{"driver_earning", "platform_profit", "compensation", "platform_expense",
-			"order_payment", "refund"},
+			"order_payment", "refund", "commission"},
 		// **أجرُ السائق وحصّةُ المنصّة عند التسليم، وتعويضُه ومصروفُه إن فشل بغير ذنبه** — وما
 		// سواها خرق. **وتسويةُ متجرٍ عليه خرقٌ كذلك** (لا متجرَ مربوطاً).
 		SQL: `
@@ -721,7 +721,9 @@ var All = []Check{
 			  AND t.kind NOT IN ('driver_earning', 'platform_profit', 'compensation', 'platform_expense')
 			  AND NOT (o.pickup_merchant_id IS NOT NULL
 			           AND ((t.kind = 'order_payment' AND t.amount < 0)
-			             OR (t.kind = 'refund' AND t.amount > 0 AND o.status = 'refunded')))
+			             OR (t.kind = 'refund' AND t.amount > 0 AND o.status = 'refunded')
+			             -- **ونصيبُ مندوب متجرنا منها** (قرارُ المالك ٢٠٢٦-١١-٠٨) — واقتطاعُ دينه.
+			             OR t.kind = 'commission'))
 			UNION ALL
 			SELECT o.number, 'merchant_settlement', ms.amount
 			FROM orders o

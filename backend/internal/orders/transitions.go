@@ -1546,6 +1546,7 @@ func (s *Service) settleRep(ctx context.Context, q wallet.Querier, orderID, acto
 	var platformCommission, promoCost int64
 	var repID *string
 	var repIsBuyer bool
+	var origin string
 	// **وكلفةُ الكود معها** — خصمُه وإعفاءُ توصيله (قرارُ المالك ٢٠٢٦-١٠-١٥): الكوبونُ
 	// من حصّة المنصّة، **فيُطرح من القاعدة قبل نصيب المندوب.** (`RepCommissionBase`)
 	if err := q.QueryRow(ctx, `
@@ -1555,12 +1556,13 @@ func (s *Service) settleRep(ctx context.Context, q wallet.Querier, orderID, acto
 		       o.discount + o.promo_delivery_waived
 		         - COALESCE((SELECT c.waived FROM free_delivery_claims c WHERE c.order_id = o.id), 0),
 		       m.sales_rep_user_id,
-		       COALESCE(m.sales_rep_user_id = o.customer_id, false)
+		       COALESCE(m.sales_rep_user_id = o.customer_id, false), o.origin
 		FROM orders o
 		-- **والمتجرُ التابعُ في المشتريات متجرُ الطلب هنا** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
-		-- مندوبُه يأخذ نصيبَه من عمولته كما في الطلب العاديّ.
-		JOIN merchants m ON m.id = COALESCE(o.merchant_id, o.partner_merchant_id)
-		WHERE o.id = $1`, orderID).Scan(&platformCommission, &promoCost, &repID, &repIsBuyer); err != nil {
+		-- مندوبُه يأخذ نصيبَه من عمولته كما في الطلب العاديّ. **ومتجرُنا في طلب الواتساب كذلك**
+		-- (قرارُ المالك ٢٠٢٦-١١-٠٨: «المندوب ياخذ عمولة طبعا اذا المتجر تابع للمندوب»).
+		JOIN merchants m ON m.id = COALESCE(o.merchant_id, o.partner_merchant_id, o.pickup_merchant_id)
+		WHERE o.id = $1`, orderID).Scan(&platformCommission, &promoCost, &repID, &repIsBuyer, &origin); err != nil {
 		return err
 	}
 
@@ -1616,11 +1618,16 @@ func (s *Service) settleRep(ctx context.Context, q wallet.Querier, orderID, acto
 		`SELECT `+OrderMarginSQL("$1"), orderID).Scan(&margin); err != nil {
 		return err
 	}
+	// **وطلبُ الواتساب بلا أصنافٍ ولا هامش** — ربحُ المنصّة منه عمولتُه وحدَها، فهي قاعدتُه بكلّ وضع
+	// (و«الاثنان» لا يعدّها مرّتين).
+	source := pricing.CommissionSource(snap.CommissionSource)
+	if origin == OriginWhatsApp {
+		source, margin = pricing.SourcePlatformCommission, 0
+	}
 	// **والقاعدةُ بحسب الوضع المعتمد** — `RQ-6`. **ولا يُقرأ مجهولٌ
 	// افتراضاً**: **وضعٌ فاسدٌ يُسقط التسويةَ ولا يدفع مالاً بالتخمين.**
 	// **والوضعُ والنسبةُ من لقطة الطلب** — `XG-26` · `XG-27`.
-	base := pricing.RepCommissionBase(
-		pricing.CommissionSource(snap.CommissionSource), platformCommission, margin, promoCost)
+	base := pricing.RepCommissionBase(source, platformCommission, margin, promoCost)
 	repCommission := pricing.Amount{Mode: "percent", Value: snap.RepCommissionPercent}.Of(base)
 	if repCommission <= 0 {
 		return nil
@@ -2128,9 +2135,9 @@ func (s *Service) merchantActivated(ctx context.Context, q wallet.Querier, order
 	if err := q.QueryRow(ctx, `
 		SELECT count(*)
 		FROM orders o
-		JOIN merchants m ON m.id = COALESCE(o.merchant_id, o.partner_merchant_id)
-		WHERE COALESCE(o.merchant_id, o.partner_merchant_id) =
-		      (SELECT COALESCE(merchant_id, partner_merchant_id) FROM orders WHERE id = $1)
+		JOIN merchants m ON m.id = COALESCE(o.merchant_id, o.partner_merchant_id, o.pickup_merchant_id)
+		WHERE COALESCE(o.merchant_id, o.partner_merchant_id, o.pickup_merchant_id) =
+		      (SELECT COALESCE(merchant_id, partner_merchant_id, pickup_merchant_id) FROM orders WHERE id = $1)
 		  AND o.status = 'delivered'
 		  AND o.customer_id IS DISTINCT FROM m.sales_rep_user_id`, orderID).Scan(&delivered); err != nil {
 		return false, err
