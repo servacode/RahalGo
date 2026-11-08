@@ -58,7 +58,7 @@ import {
   ITEM_CROP_FRAMES,
   MediaThumb,
   Modal,
-  Switch,
+  Toggle,
 } from "@rahalgo/ui";
 import { ColumnLabel, CurrencyCircles, RowField, StickyBar, TagChip, ToolHeader } from "./ToolParts";
 import { api, mediaUrl } from "@/lib/api";
@@ -705,7 +705,7 @@ export default function ItemEditor({
         {/* **«أضف مشروباتي»** (هجرة 0483) — أتظهر قائمةُ المشروبات مع هذا الصنف. */}
         {drinksAllowed === true && (
           <div className="rounded-control bg-accent-tint px-3 py-2" data-testid="item-drinks">
-            <Switch
+            <Toggle
               checked={storeDrinks}
               disabled={busy}
               onChange={(v) => {
@@ -814,7 +814,7 @@ export default function ItemEditor({
                   value={g.name}
                   onChange={(e) => setGroup(gi, { name: e.target.value })}
                 />
-                <Switch
+                <Toggle
                   checked={g.min_select > 0}
                   disabled={busy}
                   onChange={(one) => setGroup(gi, one ? { min_select: 1, max_select: 1 } : { min_select: 0, max_select: 99 })}

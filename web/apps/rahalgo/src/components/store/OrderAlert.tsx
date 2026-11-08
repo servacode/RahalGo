@@ -49,12 +49,14 @@ export default function OrderAlert() {
           type="button"
           onClick={unlockSound}
           data-testid="enable-order-sound"
-          className="flex w-full items-center justify-center gap-3 rounded-card bg-accent px-4 py-5 text-on-bright shadow-e3 hover:opacity-90"
+          className="flex w-full items-center gap-3 rounded-card border border-primary-edge bg-primary-soft px-4 py-3 text-start text-ink transition-colors hover:bg-primary-tint"
         >
-          <IconBell size={28} className="shrink-0" />
-          <span className="flex flex-col items-start text-start">
-            <span className="heading-card">{A.enable}</span>
-            <span className="text-xs">{A.enableHint}</span>
+          <span className="icon-chip" aria-hidden>
+            <IconBell size={18} />
+          </span>
+          <span className="flex min-w-0 flex-col items-start text-start">
+            <span className="text-sm font-bold">{A.enable}</span>
+            <span className="console-meta">{A.enableHint}</span>
           </span>
         </button>
       )}

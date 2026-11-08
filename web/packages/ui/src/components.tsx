@@ -71,6 +71,7 @@ export function Button({
   return (
     <button
       data-variant={variant}
+      data-size={size}
       {...props}
       className={`rounded-control font-medium transition-colors disabled:pointer-events-none disabled:opacity-60 ${buttonSizes[size]} ${buttonVariants[variant]} ${className}`}
     />
@@ -101,6 +102,8 @@ export function ButtonLink({
   const Tag = Link ?? "a";
   return (
     <Tag
+      data-variant={variant}
+      data-size={size}
       {...(props as React.AnchorHTMLAttributes<HTMLAnchorElement> & { href: string })}
       className={`inline-flex items-center justify-center gap-2 rounded-control font-medium transition-colors ${buttonSizes[size]} ${buttonVariants[variant]} ${className}`}
     />
@@ -617,6 +620,7 @@ export function Badge({
   return (
     <span
       dir={dir}
+      data-ui="badge"
       className={`inline-flex items-center rounded-badge px-2.5 py-0.5 text-xs font-medium ${badgeVariants[variant]} ${className}`}
     >
       {children}
@@ -707,6 +711,7 @@ export function CountBadge({
   return (
     <span
       dir="ltr"
+      data-ui="count"
       className={
         /* ══════════════════════════════════════════════════════════
            **والعدّادُ يجاور الأيقونةَ لا يجلس فوقها**

@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { fetchPlatform } from "@rahalgo/ui";
+import { CONSOLE_THEME_SCRIPT, fetchPlatform } from "@rahalgo/ui";
 import StoreShell from "@/components/store/StoreShell";
 import { readServerConfig } from "@/lib/config";
 import pwa from "@/lib/pwa.gen.json";
@@ -38,5 +38,11 @@ export const viewport: Viewport = {
 };
 
 export default function StoreLayout({ children }: { children: React.ReactNode }) {
-  return <StoreShell>{children}</StoreShell>;
+  return (
+    <>
+      {/* **ثيمُ اللوحة قبل أوّل رسم** — فاتحٌ افتراضاً، ويُحفظ لكلّ متصفّح، ويحترم ما يفضّله النظامُ في الزيارة الأولى. */}
+      <script dangerouslySetInnerHTML={{ __html: CONSOLE_THEME_SCRIPT }} />
+      <StoreShell>{children}</StoreShell>
+    </>
+  );
 }

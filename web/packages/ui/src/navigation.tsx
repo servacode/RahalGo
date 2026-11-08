@@ -199,6 +199,7 @@ export function Chips<K extends string>({
             key={c.id}
             type="button"
             role={many ? "checkbox" : "radio"}
+            data-ui="chip"
             aria-checked={sel}
             disabled={c.disabled}
             onClick={() => onChange(c.id)}

@@ -17,21 +17,42 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { AccountSettings, Badge, Button, ButtonLink, IconBag, IconLogout, Switch } from "@rahalgo/ui";
+import {
+  AccountSettings,
+  Badge,
+  Button,
+  ButtonLink,
+  IGroup,
+  IRow,
+  IconWarning,
+  IconBag,
+  IconLogout,
+  IconPhone,
+  Toggle,
+  useConsoleTheme,
+} from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useTeamRole } from "@/lib/store/team";
 import { hasRole, useAuth } from "@/lib/auth";
 import { useStoreOrders } from "@/lib/store/orders";
 import WebPushCard from "@/components/WebPushCard";
 import { PageHeader } from "@/components/store/SetupParts";
+import { useStoreNav } from "@/components/store/navModel";
 
 const m = getMessages(defaultLocale);
 const A = m.store.account;
+const SH = m.store.shell;
+const N = m.store.nav;
+
+/** **ألوانُ مربّعات آيفون لكلّ مجموعة** — لتفريق التشغيل عن المال عن الحساب بنظرة. */
+const TONES = { ops: "info", money: "good", account: "violet" } as const;
 
 export default function StoreAccountPage() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const { soundEnabled, setSoundEnabled } = useStoreOrders();
+  const { theme, toggle } = useConsoleTheme();
+  const nav = useStoreNav("/store/account");
   // **شارةُ الدور** (قرارُ المالك ٢٠٢٦-١٠-٢٩) — «صاحب المتجر» أو «موظف»، من ردّ المحرّك
   // (`useTeamRole`، مرآةُ `TeamAccess`). **ولا رأسَ باسمٍ ورقمٍ ومحفظة** — كـ«حسابي» في التطبيق.
   const role = useTeamRole();
@@ -53,17 +74,39 @@ export default function StoreAccountPage() {
         }
       />
 
+      {/* ── **جوّالاً «حسابي» مركزُ الأبواب** — ما ليس في شريط التبويب (المحفظة · التقارير · السجلّ · العروض · التوصيلات…)
+          كقائمة إعدادات آيفون. وعلى الحاسوب السايدبارُ يغني. ── */}
+      <div className="flex flex-col gap-1 lg:hidden" data-testid="store-account-hub">
+        {nav.groups.map((g) => {
+          const items = g.items.filter((it) => !["/store", "/store/orders", "/store/menu", "/store/account"].includes(it.href));
+          const extra = g.key === "account" ? [{ href: "/store/order-phones", label: N.orderPhones, icon: IconPhone }, { href: "/store/alerts", label: N.alerts, icon: IconWarning }] : [];
+          const rows = [...items, ...extra];
+          if (rows.length === 0) return null;
+          return (
+            <IGroup key={g.key} title={g.title}>
+              {rows.map((it) => (
+                <IRow key={it.href} icon={it.icon} tone={TONES[g.key as keyof typeof TONES]} title={it.label} href={it.href} Link={Link} />
+              ))}
+            </IGroup>
+          );
+        })}
+      </div>
+
       {/* ── عمودان على الحاسوب: التنبيهات والجلسة | بيانات الحساب. جوّالاً متتابعان ── */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start lg:gap-5">
         <div className="flex min-w-0 flex-col gap-4">
           <section className="panel p-4" aria-label={A.sound} data-testid="store-sound">
-            <Switch
+            <Toggle
               id="store-sound"
               checked={soundEnabled}
               onChange={setSoundEnabled}
               label={A.sound}
               hint={soundEnabled ? A.soundOn : A.soundOff}
             />
+          </section>
+
+          <section className="panel p-4" aria-label={SH.darkMode}>
+            <Toggle id="store-dark" checked={theme === "dark"} onChange={() => toggle()} label={SH.darkMode} hint={SH.darkModeHint} />
           </section>
 
           <WebPushCard app="merchant" />

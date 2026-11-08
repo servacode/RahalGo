@@ -115,12 +115,14 @@ export default function WebPushCard({
           onClick={() => void enable()}
           disabled={busy}
           data-testid="enable-webpush"
-          className="flex w-full items-center justify-center gap-3 rounded-card bg-accent px-4 py-5 text-on-bright shadow-e3 hover:opacity-90 disabled:opacity-60"
+          className="flex w-full items-center gap-3 rounded-card border border-primary-edge bg-primary-soft px-4 py-3 text-start text-ink transition-colors hover:bg-primary-tint disabled:opacity-60"
         >
-          <IconBell size={28} className="shrink-0" />
-          <span className="flex flex-col items-start text-start">
-            <span className="heading-card">{busy ? W.enabling : title}</span>
-            <span className="text-xs">{body}</span>
+          <span className="icon-chip" aria-hidden>
+            <IconBell size={18} />
+          </span>
+          <span className="flex min-w-0 flex-col items-start text-start">
+            <span className="text-sm font-bold">{busy ? W.enabling : title}</span>
+            <span className="console-meta">{body}</span>
           </span>
         </button>
         {err && <p className="text-xs text-danger">{err}</p>}
