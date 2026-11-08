@@ -424,9 +424,12 @@ func (s *Service) CreateWhatsAppOrderIn(ctx context.Context, tx dbtx.Querier,
 	if err != nil {
 		return nil, err
 	}
-	// **والثمنُ موجبٌ أو لا شيء** — صفرٌ يُقرأ «اقبض صفراً».
-	if in.GoodsAmount != nil && *in.GoodsAmount <= 0 {
+	// **والثمنُ صفرٌ = أمانةٌ بلا ثمن** (قرارُ المالك ٢٠٢٦-١١-٠٨) — كأنّه لم يُكتب. **والسالبُ يُردّ.**
+	if in.GoodsAmount != nil && *in.GoodsAmount < 0 {
 		return nil, httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
+	}
+	if in.GoodsAmount != nil && *in.GoodsAmount == 0 {
+		in.GoodsAmount = nil
 	}
 	if in.Currency == "" {
 		in.Currency = "SYP"

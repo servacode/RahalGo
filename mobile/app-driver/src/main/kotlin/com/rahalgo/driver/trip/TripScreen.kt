@@ -2149,10 +2149,15 @@ private fun TripCard(
                     )
                     FetchAmountStep.APPROVED -> InfoBox(
                         icon = R.drawable.ic_check_circle,
-                        text = stringResource(
-                            if (isWhatsApp(order)) R.string.wa_goods_done else R.string.fetch_amount_approved,
-                            shownAmount,
-                        ),
+                        // **وصفرٌ في طلب الواتساب أمانةٌ بلا ثمن** (قرارُ المالك ٢٠٢٦-١١-٠٨).
+                        text = if (isWhatsApp(order) && (order.fetchAmount ?: 0) <= 0) {
+                            stringResource(R.string.wa_goods_amanah_done)
+                        } else {
+                            stringResource(
+                                if (isWhatsApp(order)) R.string.wa_goods_done else R.string.fetch_amount_approved,
+                                shownAmount,
+                            )
+                        },
                         tint = Rahal.colors.success,
                         bold = true,
                     )

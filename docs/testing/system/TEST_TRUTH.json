@@ -34,7 +34,7 @@
     "behaviour_settings": 235,
     "order_fields": 141,
     "test_files": 798,
-    "test_funcs": 3063
+    "test_funcs": 3064
   },
   "flows": [
     {
@@ -28578,6 +28578,12 @@
     },
     {
       "name": "TestWACOMM05_RepGetsShare",
+      "file": "internal/qa/whatsapp_commission_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWACOMM06_ZeroIsAmanah",
       "file": "internal/qa/whatsapp_commission_test.go",
       "package": "qa",
       "orphan": true
