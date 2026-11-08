@@ -1302,6 +1302,8 @@
     <string name="grid_search_none">لا يوجد صنف بهذا الاسم</string>
     <string name="grid_rejected">مرفوض</string>
     <string name="grid_closed_now">خارج الدوام</string>
+    <string name="grid_from_whatsapp">من الواتساب</string>
+    <string name="grid_wa_hint">بتقدر تضيف أصناف بإرسال صورة واسم وسعر لرقم رحّال غو على واتساب</string>
     <!-- ساعات الدوام — المخطط المشترك بين المتجر والمندوب (com.rahalgo.ui.hours) -->
     <string name="wz_hours_custom">ساعات محددة</string>
     <string name="hours_mode_24">مفتوح 24 ساعة كل الأيام</string>

@@ -235,6 +235,7 @@ private fun ItemsList(
                     available = item.available,
                     approved = item.approved,
                     reviewNote = if (item.approved) "" else item.reviewNote,
+                    fromWhatsapp = item.createdVia == "whatsapp",
                 )
             },
         ),
@@ -276,5 +277,17 @@ private fun ItemsList(
         onEdit = { g -> byId[g.id]?.let(vm::editItem) },
         imageAspect = 0.8f,
         zoomable = true,
+        // **سطرُ تلميحٍ واحد**: إضافةُ الأصناف بصورةٍ على الواتساب (٢٠٢٦-١١-٠٩).
+        header = if (vm.suspended) null else {
+            {
+                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                    androidx.compose.material3.Text(
+                        stringResource(com.rahalgo.ui.R.string.grid_wa_hint),
+                        color = com.rahalgo.design.Rahal.colors.inkMuted,
+                        style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+        },
     )
 }

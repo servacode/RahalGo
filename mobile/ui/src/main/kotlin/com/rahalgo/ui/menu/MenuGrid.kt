@@ -77,6 +77,8 @@ data class GridItem(
     val closedNow: Boolean = false,
     /** **الصورةُ الكاملة للتكبير** — و`null` لا تكبير (المندوب). */
     val fullImageUrl: String? = null,
+    /** **أُضيف بصورةٍ على الواتساب** (٢٠٢٦-١١-٠٩) — شارةُ «من الواتساب». */
+    val fromWhatsapp: Boolean = false,
 )
 
 /** **قسمٌ في الشبكة** — اسمُه وأصنافُه. */
@@ -414,6 +416,7 @@ private fun ItemCard(
                 item.rejected -> stringResource(R.string.grid_rejected)
                 !item.approved -> stringResource(R.string.mn_pending_review)
                 item.closedNow -> stringResource(R.string.grid_closed_now)
+                item.fromWhatsapp -> stringResource(R.string.grid_from_whatsapp)
                 else -> null
             }
             if (badge != null) {
