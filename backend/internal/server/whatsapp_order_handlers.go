@@ -23,13 +23,11 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5"
@@ -601,100 +599,4 @@ func (s *Server) handleWhatsAppOrderAddress(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"order": view})
-}
-
-// ══════════════════════════════════════════════════════════════════════
-// **الزبونُ يردّ بعنوانه مكتوباً** (قرارُ المالك ٢٠٢٦-١١-٠٦)
-// ══════════════════════════════════════════════════════════════════════
-//
-// «الموقع والعنوان التفصيلي يطلبهم البوت من الزبون ويعبّيهم لحاله». **رسالةُ الطلب تطلب الاثنين**
-// (`waAddressAskLine`)، والموقعُ يملأ النقطة (`HandleWALocation`)، **وأوّلُ ردٍّ نصّيٍّ من الرقم نفسِه
-// وطلبُ الموقع مفتوحٌ يُكتب عنوانَ الطلب** — مرّةً واحدة، وما بعده لا يُلتقط (المكتبُ يصحّح بيده).
-// **وبعد وصول الموقع لا يُلتقط نصٌّ أبداً** — «شكراً» بعد الموقع ليست عنواناً.
-//
-// **وعنوانٌ كتبه الموظّفُ قبله لا يضيع**: القديمُ والجديدُ في سجلّ الأحداث
-// (`ops.whatsapp_order_address_bot`).
-
-// waAddressMinRunes **أقصرُ ما يُعدّ عنواناً** — «ok» و«👍» ليسا عنواناً.
-const waAddressMinRunes = 3
-
-// waAddressReply **ما يردّ به البوتُ على العنوان.**
-const waAddressReply = "وصلنا عنوانك ✅ شكراً."
-
-// waAddressLike **أيُشبه النصُّ عنواناً؟** — ثلاثةُ أحرفٍ فأكثر فيها حرفٌ واحدٌ على الأقلّ.
-func waAddressLike(text string) bool {
-	letters, n := 0, 0
-	for _, c := range text {
-		n++
-		if unicode.IsLetter(c) {
-			letters++
-		}
-	}
-	return n >= waAddressMinRunes && letters > 0
-}
-
-// HandleWAAddressText **ردٌّ نصّيٌّ من رقمٍ له طلبُ موقعٍ مفتوحٌ من المكتب** — يُكتب عنوانَ الطلب
-// ويردّ بنصّ الشكر، **أو سلسلةً فارغة** (لا طلبَ مفتوحاً، أو ليس عنواناً، أو وصل عنوانٌ قبله).
-func (s *Server) HandleWAAddressText(ctx context.Context, from, text string) string {
-	phone, ok := identity.NormalizePhone(from)
-	if !ok {
-		return ""
-	}
-	addr := strings.TrimSpace(text)
-	if !waAddressLike(addr) {
-		return ""
-	}
-	if r := []rune(addr); len(r) > maxAddressText {
-		addr = string(r[:maxAddressText])
-	}
-	if _, err := s.guardText(ctx, tf("address_text", &addr, maxAddressText, textguard.Address)); err != nil {
-		return ""
-	}
-	addr = strings.TrimSpace(addr)
-	var reqID, orderID string
-	err := s.pg.QueryRow(ctx, `
-		UPDATE recipient_location_requests l
-		   SET address_text = $2, address_received_at = now()
-		 WHERE l.id = (SELECT r.id FROM recipient_location_requests r
-		                WHERE r.phone = $1 AND r.mode = 'whatsapp'
-		                  AND r.address_received_at IS NULL AND r.expires_at > now()
-		                  -- **ووصل الموقعُ ⇒ لا عنوانَ يُلتقط** (قرارُ المالك ٢٠٢٦-١١-٠٦: «إذا بعث الموقع ما بيلزم العنوان»).
-		                  AND r.received_at IS NULL
-		                  AND (r.order_id IS NULL OR EXISTS (
-		                       SELECT 1 FROM orders o
-		                        WHERE o.id = r.order_id AND o.delivered_at IS NULL AND o.closed_at IS NULL))
-		                ORDER BY r.created_at DESC LIMIT 1)
-		   AND l.address_received_at IS NULL
-		RETURNING l.id::text, COALESCE(l.order_id::text, '')`, phone, addr).Scan(&reqID, &orderID)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return ""
-	}
-	if err != nil {
-		s.logger.Warn("عنوانُ زبون طلب الواتساب: الحفظُ سقط", "error", err)
-		return ""
-	}
-	if orderID != "" {
-		if _, err := s.orders.UpdateWhatsAppAddress(ctx, orderID, addr,
-			func(ctx context.Context, q dbtx.Querier, old string) error {
-				return waAuditBot(ctx, q, orderID, map[string]any{
-					"old": old, "new": addr, "location_request": reqID,
-				})
-			}); err != nil {
-			s.logger.Warn("عنوانُ زبون طلب الواتساب: كتابتُه في الطلب سقطت", "order", orderID, "error", err)
-		}
-	}
-	s.touch("orders", "ops")
-	return waAddressReply
-}
-
-// waAuditBot **أثرُ ما كتبه البوتُ في الطلب** — بلا فاعلٍ بشريّ، في معاملة الكتابة نفسِها.
-func waAuditBot(ctx context.Context, q dbtx.Querier, orderID string, meta map[string]any) error {
-	raw, err := json.Marshal(meta)
-	if err != nil {
-		return err
-	}
-	_, err = q.Exec(ctx, `
-		INSERT INTO audit_log (actor_user_id, action, entity, entity_id, details)
-		VALUES (NULL, 'ops.whatsapp_order_address_bot', 'order', $1, $2)`, orderID, raw)
-	return err
 }
