@@ -599,10 +599,12 @@
     <!-- طلب الواتساب: ثمن الطلب يكتبه السائق والزبون تصله رسالة بالمبالغ (قرار المالك ٢٠٢٦-١١-٠٦) -->
     <string name="wa_goods_button">اكتب ثمن الطلب</string>
     <string name="wa_goods_title">كم ثمن الطلب الذي دفعته للمحل؟</string>
-    <string name="wa_goods_hint">اكتب ثمن الطلب — تصل للزبون رسالة فيها ثمن الطلب والأجرة والمجموع.</string>
+    <string name="wa_goods_hint">اكتب ثمن الطلب — تصل للزبون رسالة فيها ثمن الطلب والأجرة والمجموع. وإذا أمانة بلا ثمن اكتب 0 أو اضغط «أمانة».</string>
     <string name="wa_goods_send">أرسل</string>
     <string name="wa_goods_enter">اكتب ثمن الطلب الذي دفعته للمحل قبل أن تستلم — تصل للزبون رسالة بالمبالغ</string>
     <string name="wa_goods_done">ثمن الطلب %1$s — وصل للزبون برسالة</string>
+    <string name="wa_goods_amanah">أمانة — بلا ثمن بضاعة</string>
+    <string name="wa_goods_amanah_done">أمانة — بلا ثمن بضاعة. اقبض أجرة التوصيل بس</string>
     <string name="kind_purchase">طلب مشتريات</string>
     <string name="kind_amanah">طلب أمانة</string>
     <string name="card_pay_recipient">من المستلم</string>

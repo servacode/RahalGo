@@ -246,6 +246,8 @@ internal fun FetchAmountDialog(
 ) {
     val usd = isUsd(currency)
     var amount by remember { mutableStateOf(current?.let { fetchAmountDraft(it, currency) } ?: "") }
+    // **وطلبُ الواتساب يقبل الصفر** (قرارُ المالك ٢٠٢٦-١١-٠٨): صفرٌ = أمانةٌ بلا ثمن بضاعة.
+    val value = if (whatsApp) amount.toDoubleOrNull()?.takeIf { it >= 0 } else amountValue(amount)
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -287,13 +289,24 @@ internal fun FetchAmountDialog(
                     modifier = Modifier.fillMaxWidth(),
                     keyboardOptions = KeyboardOptions(keyboardType = if (usd) KeyboardType.Decimal else KeyboardType.Number),
                 )
+                // **«أمانة — بلا ثمن»** (قرارُ المالك ٢٠٢٦-١١-٠٨) — ضغطةٌ وحدةٌ بدل كتابة صفر.
+                if (whatsApp) {
+                    Spacer(Modifier.height(8.dp))
+                    RahalTextButton(
+                        onClick = { onConfirm(0.0) },
+                        enabled = !busy,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.wa_goods_amanah), fontWeight = FontWeight.Bold)
+                    }
+                }
             }
         },
         confirmButton = {
             RahalButton(
-                onClick = { amountValue(amount)?.let(onConfirm) },
+                onClick = { value?.let(onConfirm) },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !busy && amountValue(amount) != null,
+                enabled = !busy && value != null,
             ) {
                 Text(
                     stringResource(if (whatsApp) R.string.wa_goods_send else R.string.fetch_amount_send),

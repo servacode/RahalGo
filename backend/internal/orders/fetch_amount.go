@@ -275,22 +275,29 @@ func (s *Service) whatsAppGoodsAmount(ctx context.Context, tx pgx.Tx, orderID, d
 	if kind != KindMerchantDelivery || !whatsAppGoodsStages[status] {
 		return ErrFetchAmountStage
 	}
-	// **وثمنٌ صفرٌ ليس ثمناً** — «اقبض صفراً» لا تُرسل للزبون.
-	if amount <= 0 {
+	// **وصفرٌ = أمانةٌ بلا ثمن بضاعة** (قرارُ المالك ٢٠٢٦-١١-٠٨: «خيار امانه بدون سعر ويقبل رقم صفر») —
+	// يُوثَّق ويمضي، **ولا ثمنَ يُقبض** (`collect_amount` فارغ) **ولا رسالةَ مبالغ** ولا عمولة.
+	if amount < 0 {
 		return httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
+	}
+	var collect *int64
+	note := fmt.Sprintf("السائق كتب ثمن الطلب: %d — وصل للزبون برسالة", amount)
+	if amount > 0 {
+		collect = &amount
+	} else {
+		note = "السائق وثّقه أمانة — بلا ثمن بضاعة"
 	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE orders
 		   SET fetch_amount = $2, fetch_amount_version = fetch_amount_version + 1,
 		       fetch_amount_status = 'approved', fetch_amount_at = now(),
-		       fetch_amount_decided_at = now(), collect_amount = $2, updated_at = now()
-		 WHERE id = $1`, orderID, amount); err != nil {
+		       fetch_amount_decided_at = now(), collect_amount = $3, updated_at = now()
+		 WHERE id = $1`, orderID, amount, collect); err != nil {
 		return err
 	}
 	_, err := tx.Exec(ctx, `
 		INSERT INTO order_events (order_id, from_status, to_status, actor_id, note, driver_id)
-		VALUES ($1, $2, $2, $3, $4, $3)`, orderID, status, driverID,
-		fmt.Sprintf("السائق كتب ثمن الطلب: %d — وصل للزبون برسالة", amount))
+		VALUES ($1, $2, $2, $3, $4, $3)`, orderID, status, driverID, note)
 	return err
 }
 

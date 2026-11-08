@@ -287,3 +287,50 @@ func waRepShare(t *testing.T, src string) {
 		mdaNoNewViolations(t, h, base)
 	}
 }
+
+// TestWACOMM06_ZeroIsAmanah **صفرٌ = أمانةٌ بلا ثمن** (قرارُ المالك ٢٠٢٦-١١-٠٨: «خيار امانه بدون سعر ويقبل
+// رقم صفر») — يُوثَّق ويمضي التسليم، **بلا ثمنٍ يُقبض ولا رسالةِ مبالغ ولا عمولة.**
+//
+// **وعلى الشيفرة القديمة يسقط**: الصفرُ يُردّ ٤٠٠ ويبقى الاستلامُ موقوفاً عليه.
+func TestWACOMM06_ZeroIsAmanah(t *testing.T) {
+	h := New(t)
+	n := armFeedback(t, h, true)
+	c := newWAComm(t, h, "منطقةُ WA-COMM-06", 1000)
+	base := mdaBaseline(t, h)
+	phone := uniqPhone()
+	id := c.ourStore(t, h, map[string]any{"recipient_phone": phone})
+	before := len(n.to(phone))
+	drv := h.driverOf(id)
+	if r := h.POST("/api/v1/driver/orders/"+id+"/transition", drv.Token, map[string]any{"to": "at_pickup"}); r.Code >= 400 {
+		t.Fatalf("وصلت المتجر: %s", r)
+	}
+	if r := h.POST("/api/v1/driver/orders/"+id+"/fetch-amount", drv.Token, map[string]any{"amount": 0}); r.Code != http.StatusOK {
+		t.Fatalf("**الصفرُ رُدّ**: %d / %s", r.Code, r.Err())
+	}
+	var collect *int64
+	var status string
+	_ = h.Pool.QueryRow(ctxBG(), `SELECT collect_amount, COALESCE(fetch_amount_status, '') FROM orders WHERE id = $1`, id).
+		Scan(&collect, &status)
+	if collect != nil || status != "approved" {
+		t.Fatalf("**الأمانةُ**: ثمنٌ للقبض %v · حال %q — المنتظَر لا ثمن وموثَّق", collect, status)
+	}
+	if after := len(n.to(phone)); after != before {
+		t.Fatalf("**رسالةُ مبالغ بُعثت لأمانةٍ بلا ثمن**: %d ← %d", before, after)
+	}
+	for _, to := range []string{"picked_up", "on_the_way", "at_dropoff"} {
+		if r := h.POST("/api/v1/driver/orders/"+id+"/transition", drv.Token, map[string]any{"to": to}); r.Code >= 400 {
+			t.Fatalf("الانتقالُ إلى %s: %s", to, r)
+		}
+	}
+	h.authorizeProofExempt(id)
+	if r := h.POST("/api/v1/driver/orders/"+id+"/transition", drv.Token, map[string]any{"to": "delivered"}); r.Code >= 400 {
+		t.Fatalf("التسليم: %s", r)
+	}
+	if got := waBalance(t, h, c.ownerID); got != 1000 {
+		t.Fatalf("**عمولةٌ على أمانة**: المحفظة %d", got)
+	}
+	if pc := waPlatformCommission(t, h, id); pc != 0 {
+		t.Fatalf("**عمولةٌ على أمانة**: %d", pc)
+	}
+	mdaNoNewViolations(t, h, base)
+}

@@ -44,4 +44,15 @@ class WhatsAppGoodsTripTest {
         val send = DriverOrder(id = "s1", status = "at_pickup", kind = "merchant_delivery", deliveryMode = "send")
         assertEquals(FetchAmountStep.NONE, fetchAmountStep(send))
     }
+
+    @Test
+    fun `zero is an amanah with no goods price and pickup goes on`() {
+        val o = DriverOrder(
+            id = "w2", status = "at_pickup", kind = "merchant_delivery", deliveryMode = "send", origin = "whatsapp",
+            fetchAmount = 0, fetchAmountStatus = "approved", collectAmount = null,
+        )
+        assertEquals(FetchAmountStep.APPROVED, fetchAmountStep(o))
+        assertFalse(fetchBlocksPickup(o))
+        assertEquals(null, collectForStore(o))
+    }
 }
