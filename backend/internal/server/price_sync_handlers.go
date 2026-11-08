@@ -270,13 +270,22 @@ func (s *Server) syncAgentMerchant(w http.ResponseWriter, r *http.Request) (stri
 
 // ameenAutoMode **متجرٌ يزامن الأمينَ بالجملة الافتراضيّة** (٢٠٢٦-١١-٠٨) — فالموادُّ الجديدةُ تُنشأ
 // أصنافاً لحالها (مخفيّةً حتّى صورتها)، **ولا يضبط أحدٌ شيئاً.** وجملةٌ خاصّةٌ مكتوبة ⇒ الإعدادُ كما هو.
+//
+// **والجملةُ الافتراضيّةُ نفسُها مكتوبةً باليد تلقائيّةٌ أيضاً** — لُصقت من اللوحة قبل أن تصير افتراضاً.
 func (s *Server) ameenAutoMode(ctx context.Context, merchantID string) bool {
-	var auto bool
-	_ = s.pg.QueryRow(ctx, `
-		SELECT COALESCE(btrim(price_sync_sql_query), '') = ''
-		   AND lower(btrim(COALESCE(price_sync_probe_table, ''))) IN ('', 'mt000')
-		  FROM merchants WHERE id = $1`, merchantID).Scan(&auto)
-	return auto
+	var query, probe string
+	if err := s.pg.QueryRow(ctx, `
+		SELECT COALESCE(price_sync_sql_query, ''), COALESCE(price_sync_probe_table, '')
+		  FROM merchants WHERE id = $1`, merchantID).Scan(&query, &probe); err != nil {
+		return false
+	}
+	q := sqlSpaces(query)
+	return ameenProbe(probe) && (q == "" || q == sqlSpaces(AmeenDefaultQuery))
+}
+
+// sqlSpaces **الجملةُ بلا فروق الفراغات والحالة** — للمقارنة وحدَها.
+func sqlSpaces(q string) string {
+	return strings.ToLower(strings.Join(strings.Fields(strings.TrimRight(strings.TrimSpace(q), ";")), " "))
 }
 
 // syncCreateMissing **أضبط فريقُ المنصّة «أنشئ غير الموجود» لهذا المتجر؟** (٢٠٢٦-١١-٠٤)
