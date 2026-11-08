@@ -344,7 +344,7 @@ export function NotificationsPage({
                       </span>
                       <div className="min-w-0 flex-1">
                         <p
-                          className={`flex items-center gap-2 leading-snug ${
+                          className={`flex items-baseline gap-2 leading-snug ${
                             n.read ? "text-ink" : "font-bold text-ink"
                           }`}
                         >
@@ -362,7 +362,7 @@ export function NotificationsPage({
                               className="h-2 w-2 shrink-0 rounded-badge bg-accent"
                             />
                           )}
-                          <span className="min-w-0 truncate" title={n.title}>{n.title}</span>
+                          <span className="line-clamp-2 min-w-0" title={n.title}>{n.title}</span>
                         </p>
                         {/* **الجسدُ سطران لا سطرٌ مقتطع**: «تعويض عن طلبٍ فشل —
                             المطعم مغلق» يُقصّ عند «طلبٍ» فيبقى السؤال. */}
