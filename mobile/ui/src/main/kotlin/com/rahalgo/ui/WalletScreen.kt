@@ -566,6 +566,8 @@ private fun debtCause(cause: String): String = when (cause) {
     "undelivered_order" -> stringResource(R.string.wal_debt_undelivered)
     // **نقصُ حقّ المتجر بتعديل الطلب بعد الاستلام** (قرارُ المالك ٢٠٢٦-١١-٠٣، هجرة `0497`).
     "order_edit" -> stringResource(R.string.wal_debt_order_edit)
+    // **عمولةُ طلب واتسابٍ ما كفاها رصيدُ المتجر** (قرارُ المالك ٢٠٢٦-١١-٠٨، هجرة `0524`).
+    "whatsapp_order_commission" -> stringResource(R.string.wal_debt_whatsapp_commission)
     else -> stringResource(R.string.wal_debt_old)
 }
 
