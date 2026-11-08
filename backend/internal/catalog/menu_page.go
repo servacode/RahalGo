@@ -313,7 +313,7 @@ func scanMenuItemWith(rows interface {
 		&it.MerchantPrice, &it.MarginOverride, &sectionMargin,
 		&it.PlatformSectionID, &it.PlatformSectionName,
 		&it.ImageURL, &it.ImageThumbURL, &it.Available, &it.SortOrder, &usdCents,
-		&it.StoreDrinks, &it.ExternalCode, &it.Barcode, sortOrder); err != nil {
+		&it.StoreDrinks, &it.ExternalCode, &it.Barcode, &it.CreatedVia, sortOrder); err != nil {
 		return it, err
 	}
 	it.ImageURL = media.URLForPtr(it.ImageURL)

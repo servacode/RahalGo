@@ -409,6 +409,12 @@ func run(logger *slog.Logger) error {
 				waBot.SetInboundLocation(func(c context.Context, from string, l notify.InboundLocation) string {
 					return srv.HandleWALocation(c, from, l.Lat, l.Lng, l.AccuracyM)
 				})
+				// **«صورة + اسم وسعر»** (٢٠٢٦-١١-٠٩): صاحبُ المتجر أو موظّفه يضيف صنفاً من الواتساب.
+				waItems := srv.NewWAItems(waBot.SendText)
+				waBot.SetInboundImage(func(c context.Context, from string, img notify.InboundImage) string {
+					return waItems.HandleImage(c, from, img)
+				})
+				waBot.SetInboundReply(waItems.HandleText)
 				waBot.SetInbound(func(c context.Context, from, text string) string {
 					if r := srv.ReportForPhone(c, from, text); r != "" {
 						return r
