@@ -194,11 +194,20 @@ export function Input({
      صفحتَه.
 
      **فتُقلب الحشوةُ حين يُخالف** — لتقع في الجهة التي فيها الأيقونة فعلاً. */
-  // **ويُقاس بالمقارنة لا بالافتراض**: `dir="rtl"` على صفحةٍ عربيّةٍ لا
-  // يخالف شيئاً، **والقلبُ له يكسر ما كان سليماً.**
-  const flipped = !!props.dir && props.dir !== getDir(defaultLocale);
-  const padStart = icon ? (flipped ? "pe-10" : "ps-10") : flipped ? "pe-3" : "ps-3";
-  const padEnd = isPassword ? (flipped ? "ps-10" : "pe-10") : flipped ? "ps-3" : "pe-3";
+  /* **وجهاتُ الحقل فيزيائيّةٌ لا منطقيّة — بعد قياسٍ ثالث (٢٠٢٦-١١-٠٩).**
+
+     **المقياسُ**: في البناء الحاليّ تُترجَم `ps-*`/`pe-*`/`start-*`/`end-*` إلى
+     `:lang(ar)` لا إلى `dir` العنصر. **فحقلٌ `dir="ltr"` داخل صفحةٍ عربيّة
+     يأخذ حشوتَه من لغة الصفحة (يمين) لا من اتّجاهه** — فتنقلب الحشوةُ التي
+     كانت تُصلح العطبَ وتعود الأيقونةُ تغطّي الرقم.
+
+     **والإصلاحُ لا يتوقّف على كيفيّة ترجمة المنطقيّ**: الأيقونةُ والحشوةُ
+     يُكتبان بالجهة الفيزيائيّة نفسِها، وتُحسب من اتّجاه الصفحة مرّةً واحدة. */
+  const rtl = getDir(defaultLocale) === "rtl";
+  const iconPos = rtl ? "right-3" : "left-3";
+  const endPos = rtl ? "left-3" : "right-3";
+  const padStart = icon ? (rtl ? "pr-10" : "pl-10") : rtl ? "pr-3" : "pl-3";
+  const padEnd = isPassword ? (rtl ? "pl-10" : "pr-10") : rtl ? "pl-3" : "pr-3";
   // **والعنوانُ مربوطٌ بحقله ولو لم يُعطَ معرّفاً** — حقلٌ بلا `id` كان عنوانُه
   // نصّاً لا يُقرأ له (قارئُ الشاشة والضغطُ على العنوان). (فحصُ المال ٢٠٢٦-١٠-٠٥:
   // نافذةُ «دفع نقدي بالمكتب» في الديون.)
@@ -214,7 +223,7 @@ export function Input({
       <div className="relative">
         {/* الأيقونة داخل الحقل دائماً — لا تُعلَّق بجانب العنوان */}
         {icon && (
-          <span className="pointer-events-none absolute inset-y-0 start-3 flex items-center text-ink-muted [&>svg]:h-[18px] [&>svg]:w-[18px]">
+          <span className={`pointer-events-none absolute inset-y-0 ${iconPos} flex items-center text-ink-muted [&>svg]:h-[18px] [&>svg]:w-[18px]`}>
             {icon}
           </span>
         )}
@@ -250,7 +259,7 @@ export function Input({
             onClick={() => setReveal((r) => !r)}
             tabIndex={-1}
             aria-label={reveal ? m.shared.hidePassword : m.shared.showPassword}
-            className="absolute inset-y-0 end-3 flex items-center text-ink-muted transition-colors hover:text-ink [&>svg]:h-[18px] [&>svg]:w-[18px]"
+            className={`absolute inset-y-0 ${endPos} flex items-center text-ink-muted transition-colors hover:text-ink [&>svg]:h-[18px] [&>svg]:w-[18px]`}
           >
             {reveal ? <IconViewOff /> : <IconView />}
           </button>
