@@ -225,13 +225,13 @@ export function Kpi({
     <>
       <span className="flex items-center gap-2 text-sm font-medium text-ink-muted">
         {Icon && <Icon size={15} className="text-ink-dim" />}
-        <span className="min-w-0 flex-1 truncate">{label}</span>
+        <span className="min-w-0 flex-1 break-words">{label}</span>
       </span>
       <span className="mt-1 flex flex-wrap items-baseline gap-x-1.5">
         <span className="kpi-figure">{typeof value === "number" ? fmtNum(value) : value}</span>
         {unit && <span className="console-meta text-sm">{unit}</span>}
       </span>
-      {sub && <span className="console-meta mt-auto flex items-center gap-1.5 truncate pt-1">{sub}</span>}
+      {sub && <span className="console-meta mt-auto flex min-w-0 flex-wrap items-center gap-x-1.5 break-words pt-1">{sub}</span>}
       {spark && spark.length > 1 && (
         <span className="kpi-spark max-lg:hidden">
           <Sparkline data={spark} className="" />
@@ -554,8 +554,8 @@ export function IRow({
         {sub && <span className="console-meta block">{sub}</span>}
       </span>
       {value != null && (
-        <span className={`flex min-w-0 max-w-[42%] items-center gap-1.5 text-end ${valueTone === "danger" ? "text-danger" : "text-ink-dim"}`}>
-          <span className="min-w-0 truncate">{value}</span>
+        <span className={`flex min-w-0 max-w-[36%] items-center gap-1.5 text-end ${valueTone === "danger" ? "text-danger" : "text-ink-dim"}`}>
+          <span className="min-w-0 line-clamp-2 break-words">{value}</span>
         </span>
       )}
       {trailing}

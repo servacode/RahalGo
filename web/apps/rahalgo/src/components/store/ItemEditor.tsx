@@ -753,7 +753,7 @@ export default function ItemEditor({
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate font-bold text-ink">{p.name}</span>
-                  {values && <span className="truncate text-xs text-ink-muted">{values}</span>}
+                  {values && <span className="break-words text-xs text-ink-muted">{values}</span>}
                 </span>
               </button>
             );
@@ -1182,7 +1182,7 @@ function SectionPicker({
                         </span>
                       )}
                     </span>
-                    <span className={`line-clamp-2 text-center text-xs ${on ? "font-bold text-accent-text" : "text-ink"}`}>{s.name}</span>
+                    <span className={`break-words text-center text-xs ${on ? "font-bold text-accent-text" : "text-ink"}`}>{s.name}</span>
                   </button>
                 </li>
               );

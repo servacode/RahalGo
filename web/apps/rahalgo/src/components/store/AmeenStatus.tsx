@@ -151,7 +151,7 @@ export function AmeenSideCard() {
       <span className="dot mt-1.5" data-tone={st.tone === "danger" ? "bad" : st.tone === "attention" ? "warn" : st.tone === "good" ? undefined : "off"} aria-hidden />
       <span className="min-w-0">
         <b className="block text-sm text-ink">{fill(SH.sideTitle, { s: st.label })}</b>
-        <span className="line-clamp-2">{last}</span>
+        <span className="break-words">{last}</span>
       </span>
     </Link>
   );
@@ -181,7 +181,7 @@ export function AmeenStatusTile({ className = "" }: { className?: string }) {
           <h2 className="console-h2">{K.ameenTile}</h2>
           <Pill tone={st.tone}>{st.label}</Pill>
         </span>
-        <p className={`console-meta line-clamp-2 lg:line-clamp-none ${st.key === "error" ? "!text-danger" : ""}`}>
+        <p className={`console-meta ${st.key === "error" ? "!text-danger" : ""}`}>
           {st.key === "error" && st.why ? `${st.detail} — ${st.why}` : st.detail}
         </p>
         {last && st.key !== "stopped" && <p className="console-meta hidden sm:block">{last}</p>}

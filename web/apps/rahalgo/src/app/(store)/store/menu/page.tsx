@@ -745,7 +745,7 @@ export default function MenuPage() {
                       <td className="w-11 !pe-0">
                         <CheckMark state={picked.has(i.id)} onChange={() => flipPick(i.id)} label={i.name} />
                       </td>
-                      <td className="w-full">
+                      <td className="w-[40%] min-w-[16rem]">
                         <div className={`flex min-w-0 items-center gap-3 ${i.available ? "" : "opacity-60"}`}>
                           <RowThumb item={i} size={36} />
                           <div className="min-w-0">
@@ -753,7 +753,7 @@ export default function MenuPage() {
                               href={`/store/menu/${i.id}`}
                               aria-label={`${M.edit} · ${i.name}`}
                               data-testid="store-menu-edit"
-                              className="line-clamp-1 font-bold hover:underline"
+                              className="line-clamp-2 font-bold hover:underline"
                             >
                               {i.name}
                             </Link>
@@ -925,8 +925,8 @@ export default function MenuPage() {
                 <Link href={`/store/menu/${i.id}`} className="flex min-w-0 flex-1 items-center gap-3 self-stretch" data-testid="store-menu-edit" aria-label={`${M.edit} · ${i.name}`}>
                   <RowThumb item={i} size={46} />
                   <span className={`min-w-0 flex-1 py-2 ${i.available ? "" : "opacity-60"}`}>
-                    <span className="line-clamp-2 block break-words text-base font-bold leading-snug">{i.name}</span>
-                    <span className="console-meta block">{metaLine(i)}</span>
+                    <span className="line-clamp-2 block break-words text-base font-bold leading-snug [text-wrap:balance]">{i.name}</span>
+                    <span className="console-meta block [text-wrap:balance]">{metaLine(i)}</span>
                   </span>
                 </Link>
                 <button

@@ -4763,6 +4763,17 @@ body:has(.console-root) :is(button, a)[data-variant] {
   font-size: 0.75rem;
   font-weight: 700;
 }
+/* جوّالاً: مساحةُ لمسِ الرقائق ٤٤ بكسل دون تغيير حجمها */
+@media (width < 1024px) {
+  .console-root [data-ui="chip"] {
+    position: relative;
+  }
+  .console-root [data-ui="chip"]::after {
+    content: "";
+    position: absolute;
+    inset: -0.3125rem -0.125rem;
+  }
+}
 .console-root [data-ui="chip"] {
   border-radius: var(--radius-control);
   min-height: 2.125rem;
