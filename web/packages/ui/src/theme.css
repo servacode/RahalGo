@@ -5570,7 +5570,7 @@ html[data-console-theme="dark"] .console-root .seg-item[aria-pressed="true"] {
   /* جوّالاً حاشيةُ ١٦ للصفحة كلِّها — فكلُّ ما فيها (مجموعاتٌ وبطاقاتٌ وأزرارٌ قديمةٌ بأيّ غلاف) يقف على الحاشية نفسها */
   padding: calc(2.75rem + env(safe-area-inset-top)) 1rem calc(5.5rem + env(safe-area-inset-bottom));
   @media (width >= 1024px) {
-    max-width: 82rem;
+    /* قرارُ المالك: لا حشوةَ جانبيّةً ولا عمودَ محصوراً — المحتوى يملأ العرضَ بجوار الشريط */
     padding: 1.5rem 1.75rem 3.5rem;
   }
 }
