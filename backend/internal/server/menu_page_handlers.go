@@ -38,7 +38,7 @@ func (s *Server) handleMerchantMenuSummary(w http.ResponseWriter, r *http.Reques
 }
 
 // handleMerchantMenuItems GET /merchant/stores/{id}/menu/items — one keyset page of the own
-// store's items: ?section= &q= &filter=unavailable|no_photo &item= &after= &limit= (60, max 200).
+// store's items: ?section= &q= &filter=unavailable|available|no_photo &item= &after= &limit= (60, max 200).
 //
 // The platform sale price never reaches the store owner — `price` carries his own price, as
 // in `handleMerchantMenu`.

@@ -35,6 +35,14 @@ class OffersViewModel(app: Application) : OffersWizardViewModel(app) {
         return listOf(OfferStore(s.id, s.name))
     }
 
+    /** **ويبحث في الخادم** — لا تنزل قائمةُ مولٍ بآلاف الأصناف (ملاحظةُ المالك ٢٠٢٦-١١-٠٨). */
+    override val serverSearch = true
+
+    override suspend fun searchItems(storeId: String, query: String, limit: Int): List<OfferItem> =
+        merchant.menuItems(storeId, query = query, filter = "available", limit = limit).items
+            .filter { it.approved && it.available }
+            .map { OfferItem(it.id, it.name, it.price) }
+
     override suspend fun menu(storeId: String): List<OfferSection> =
         merchant.menu(storeId).map { s ->
             OfferSection(

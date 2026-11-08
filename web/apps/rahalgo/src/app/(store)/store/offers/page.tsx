@@ -42,7 +42,7 @@ import {
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
-import type { MenuSection, StoreOffer } from "@/lib/store/types";
+import type { MenuItem, StoreOffer } from "@/lib/store/types";
 import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
 import { fill } from "@/lib/customer/texts";
 import { useShopToast } from "@/components/customer/toast";
@@ -178,13 +178,44 @@ interface PickItem {
   price: number;
 }
 
+/**
+ * **الأصنافُ من البحث في الخادم لا من القائمة كلِّها** — متجرٌ بخمسة آلاف صنفٍ كان ينزّل ٢٫٩
+ * ميغا في كلّ فتحٍ للعروض (ملاحظةُ المالك ٢٠٢٦-١١-٠٨: «صفحة العروض بطيئة»): أوّلُ ثمانيةٍ
+ * متوفّرةٍ قبل البحث، ونتائجُ البحث بعده — كما صفحةُ الأصناف (`/menu/items`).
+ */
+function useOfferItems(storeId: string, query: string): PickItem[] | null {
+  const [items, setItems] = useState<PickItem[] | null>(null);
+  useEffect(() => {
+    if (!storeId) return;
+    let live = true;
+    const q = query.trim();
+    const t = setTimeout(
+      () => {
+        const qs = new URLSearchParams({ filter: "available", limit: q ? "60" : String(FIRST_ITEMS) });
+        if (q) qs.set("q", q);
+        api<{ items: MenuItem[] }>(`/api/v1/merchant/stores/${storeId}/menu/items?${qs}`)
+          .then((r) => {
+            if (live) setItems((r.items ?? []).map((i) => ({ id: i.id, name: i.name, price: i.price })));
+          })
+          .catch(() => {
+            if (live) setItems([]);
+          });
+      },
+      q ? 300 : 0,
+    );
+    return () => {
+      live = false;
+      clearTimeout(t);
+    };
+  }, [storeId, query]);
+  return items;
+}
+
 function NewOffer({
-  items,
   rows,
   onCreated,
   onCancel,
 }: {
-  items: PickItem[];
   rows: StoreOffer[];
   onCreated: () => void;
   onCancel: () => void;
@@ -197,8 +228,11 @@ function NewOffer({
   const [hours, setHours] = useState(24);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-
-  const item = items.find((i) => i.id === picked) ?? null;
+  const found = useOfferItems(store?.id ?? "", query);
+  const items = found ?? [];
+  // **المختارُ محفوظٌ بنفسه** — نتائجُ البحث تتبدّل والصنفُ المختار يبقى.
+  const [pickedItem, setPickedItem] = useState<PickItem | null>(null);
+  const item = picked && pickedItem?.id === picked ? pickedItem : (items.find((i) => i.id === picked) ?? null);
   const n = Number(value) || 0;
   const price = item?.price ?? 0;
   const valueOK = percentMode ? n >= 1 && n <= 90 : n > 0 && (price <= 0 || n < price);
@@ -207,7 +241,7 @@ function NewOffer({
     for (const o of rows) if (LIVE.has(o.status) && o.menu_item_id) t.set(o.menu_item_id, o.status);
     return t;
   }, [rows]);
-  const shown = query.trim() ? items.filter((i) => i.name.includes(query.trim())) : items.slice(0, FIRST_ITEMS);
+  const shown = items;
 
   async function create() {
     if (!store) return;
@@ -266,12 +300,24 @@ function NewOffer({
               value={query}
               onChange={(e) => setQuery(e.target.value.slice(0, 40))}
             />
-            {shown.length === 0 && <p className="text-sm text-ink-muted">{query.trim() ? O.noMatch : O.noItems}</p>}
+            {found === null ? (
+              <LoadingState variant="inline" />
+            ) : (
+              shown.length === 0 && <p className="text-sm text-ink-muted">{query.trim() ? O.noMatch : O.noItems}</p>
+            )}
             <div role="radiogroup" aria-label={O.item} className="grid grid-cols-2 gap-2 sm:grid-cols-3">
               {shown.map((i) => {
                 const note = taken.get(i.id);
                 return (
-                  <Tile key={i.id} on={false} onClick={() => setPicked(i.id)} testId="offer-item">
+                  <Tile
+                    key={i.id}
+                    on={false}
+                    onClick={() => {
+                      setPickedItem(i);
+                      setPicked(i.id);
+                    }}
+                    testId="offer-item"
+                  >
                     <span className="line-clamp-2 pe-5 text-sm font-bold text-ink">{i.name}</span>
                     <span className="text-xs text-ink-muted">{fmtMoney(i.price)}</span>
                     {note && (
@@ -426,13 +472,11 @@ export default function OffersPage() {
   const id = store?.id ?? "";
   const toast = useShopToast();
   const load = useCallback(async () => {
-    const [offers, menu] = await Promise.all([
-      api<{ offers: StoreOffer[] }>(`/api/v1/merchant/stores/${id}/offers`),
-      api<MenuSection[]>(`/api/v1/merchant/stores/${id}/menu`),
-    ]);
-    return { offers: offers.offers ?? [], menu };
+    // **العروضُ وحدَها** — والأصنافُ يبحث عنها «عرض جديد» في الخادم (`useOfferItems`).
+    const offers = await api<{ offers: StoreOffer[] }>(`/api/v1/merchant/stores/${id}/offers`);
+    return { offers: offers.offers ?? [] };
   }, [id]);
-  const { data, loading, error, reload, setData } = useLiveData(load, ["menu", "offers"], [id]);
+  const { data, loading, error, reload, setData } = useLiveData(load, ["offers"], [id]);
   const [composing, setComposing] = useState(false);
   // **«أنشئ عرضاً» من الأصناف يفتح «عرض جديد» مباشرةً** (تجربةُ المالك ٢٠٢٦-١٠-٢٩).
   useEffect(() => {
@@ -441,15 +485,6 @@ export default function OffersPage() {
   const [created, setCreated] = useState(false);
   const [stopping, setStopping] = useState("");
   const [askStop, setAskStop] = useState<StoreOffer | null>(null);
-
-  const items = useMemo<PickItem[]>(
-    () =>
-      (data?.menu ?? [])
-        .flatMap((s) => s.items)
-        .filter((i) => i.approved !== false && i.available)
-        .map((i) => ({ id: i.id, name: i.name, price: i.price })),
-    [data],
-  );
 
   async function stop(o: StoreOffer) {
     setAskStop(null);
@@ -474,7 +509,6 @@ export default function OffersPage() {
   if (composing) {
     return (
       <NewOffer
-        items={items}
         rows={rows}
         onCancel={() => setComposing(false)}
         onCreated={() => {

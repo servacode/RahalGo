@@ -102,7 +102,7 @@ type MenuQuery struct {
 	SectionID string
 	// Q a search on the item name (contains, case-insensitive) or its exact Ameen code / barcode.
 	Q string
-	// Filter "unavailable" or "no_photo"; empty is every item.
+	// Filter "unavailable", "available" (the offer item picker) or "no_photo"; empty is every item.
 	Filter string
 	// ItemID one item only — for the editor and after a duplicate.
 	ItemID string
@@ -227,6 +227,8 @@ func (s *Service) ListMenuItems(ctx context.Context, merchantID string, q MenuQu
 	case "":
 	case "unavailable":
 		where += ` AND NOT i.available`
+	case "available":
+		where += ` AND i.available`
 	case "no_photo":
 		where += ` AND i.image_media_id IS NULL`
 	default:

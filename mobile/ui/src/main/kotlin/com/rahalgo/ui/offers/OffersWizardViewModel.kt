@@ -15,6 +15,8 @@ import com.rahalgo.ui.R
 import com.rahalgo.ui.Refresh
 import com.rahalgo.ui.err
 import com.rahalgo.ui.isDecided
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.format.DateTimeFormatter
@@ -61,6 +63,23 @@ abstract class OffersWizardViewModel(app: Application) : AndroidViewModel(app) {
 
     /** أقسامُ قائمة المتجر بأصنافها — **المعتمَدةُ وحدَها.** */
     protected abstract suspend fun menu(storeId: String): List<OfferSection>
+
+    /**
+     * **بحثُ الأصناف في الخادم بدل تنزيل القائمة كلِّها** — متجرٌ بخمسة آلاف صنفٍ كان ينزّل
+     * القائمةَ كاملةً في كلّ فتح (ملاحظةُ المالك ٢٠٢٦-١١-٠٨: «صفحة العروض بطيئة»).
+     * **`null` = لا بحثَ في الخادم** — فتُستعمل `menu` كما كانت (المندوب).
+     */
+    protected open suspend fun searchItems(storeId: String, query: String, limit: Int): List<OfferItem>? = null
+
+    /** **يبحث في الخادم** — يقرؤه الشاشة فلا تصفّي بنفسها. */
+    open val serverSearch: Boolean = false
+
+    var searching by mutableStateOf(false)
+        private set
+    private var searchJob: Job? = null
+
+    /** **المختارُ محفوظٌ بنفسه** — نتائجُ البحث تتبدّل والصنفُ المختار يبقى. */
+    private var pickedObj: OfferItem? = null
 
     var merchantID by mutableStateOf("")
         private set
@@ -163,6 +182,29 @@ abstract class OffersWizardViewModel(app: Application) : AndroidViewModel(app) {
 
     fun pickItem(id: String) {
         pickedItem = id
+        pickedObj = items.firstOrNull { it.id == id }
+    }
+
+    /** **بحثُ الخادم** — أوّلُ ثمانيةٍ بلا كلمة، وستّون بها، وبعد توقّف الكتابة. */
+    fun search(query: String, firstItems: Int) {
+        if (!serverSearch || merchantID.isEmpty()) return
+        searchJob?.cancel()
+        val store = merchantID
+        searchJob = viewModelScope.launch {
+            val q = query.trim()
+            if (q.isNotEmpty()) delay(300)
+            searching = true
+            try {
+                val found = searchItems(store, q, if (q.isEmpty()) firstItems else 60).orEmpty()
+                val keep = pickedObj?.takeIf { p -> pickedItem == p.id && found.none { it.id == p.id } }
+                items = if (keep != null) found + keep else found
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                error = err(e)
+            } finally {
+                searching = false
+            }
+        }
     }
 
     fun close() {
@@ -177,6 +219,8 @@ abstract class OffersWizardViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 rows = offers.list(merchantID).offers
+                // **والبحثُ في الخادم لا ينزّل القائمة** — الشاشةُ تنادي `search`.
+                if (serverSearch) return@launch
                 val secs = menu(merchantID)
                 sections = secs
                 items = secs.flatMap { it.items }

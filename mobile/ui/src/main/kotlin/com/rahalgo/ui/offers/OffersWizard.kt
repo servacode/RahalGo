@@ -133,6 +133,10 @@ fun OffersWizard(
     LaunchedEffect(vm.merchantID) {
         if (vm.merchantID.isEmpty()) vm.loadClients()
     }
+    // **وبحثُ الخادم يتبع الكلمة** — بدل تصفية قائمةٍ كاملةٍ نزلت (متجرٌ بآلاف الأصناف).
+    LaunchedEffect(vm.merchantID, query) {
+        if (vm.serverSearch) vm.search(query, FirstItems)
+    }
     // **ونجاحُ الإنشاء يعيد إلى القائمة** — والجديدُ أوّلُها، ورسالةُ «تمّ» فوقها.
     // **وإنشاءٌ سبق فتحَ الشاشة لا يُغلق النموذج** — وإلّا رجع «عرضٌ جديد» (`startNew`)
     // إلى القائمة في كلّ فتحٍ بعد أوّل عرض (مراجعةُ المالك ٢٠٢٦-١٠-٣٠).
@@ -340,7 +344,7 @@ fun OffersWizard(
                     vm.items
                 }
                 // **والشبكةُ نتائجُ البحث أو أوّلُ ثمانية** — متجرٌ بمئتي صنفٍ لا يُعرض كلُّه.
-                val matched = if (query.isBlank()) pool
+                val matched = if (query.isBlank() || vm.serverSearch) pool
                 else pool.filter { it.name.contains(query.trim(), ignoreCase = true) }
                 val shown = if (query.isBlank() && vm.pickedSection.isEmpty()) matched.take(FirstItems) else matched
                 // **وصنفٌ عليه عرضٌ يُقال بجانبه** — الجديدُ يحلّ محلّه (`OFFER-EXP`).
@@ -397,8 +401,8 @@ fun OffersWizard(
                             }
                         }
                         Spacer(Modifier.height(Rahal.space.sm))
-                        if (vm.busy && pool.isEmpty()) Muted(stringResource(R.string.ow_loading_items))
-                        if (shown.isEmpty() && !vm.busy) {
+                        if ((vm.busy || vm.searching) && pool.isEmpty()) Muted(stringResource(R.string.ow_loading_items))
+                        if (shown.isEmpty() && !vm.busy && !vm.searching) {
                             Muted(stringResource(if (query.isNotBlank()) R.string.ow_no_match else R.string.ow_no_items_store))
                         }
                         TileGrid(shown, columns = 2) { i, mod ->

@@ -290,6 +290,11 @@ func TestPagedMenu_Merchant(t *testing.T) {
 	if tot != wantOff || len(off) != wantOff {
 		t.Fatalf("unavailable: %d/%d want %d", tot, len(off), wantOff)
 	}
+	// available only — the offer item picker (owner 2026-11-08: the offers page was slow)
+	on, tot, _ := f.walk(t, f.owner, base+"/menu/items?filter=available&limit=150")
+	if tot != len(all)-wantOff || len(on) != len(all)-wantOff {
+		t.Fatalf("available: %d/%d want %d", tot, len(on), len(all)-wantOff)
+	}
 	// search by name and by exact Ameen code
 	var wantQ int
 	_ = pool.QueryRow(ctx, `SELECT count(*) FROM menu_items WHERE merchant_id = $1 AND platform_section_id IS NOT NULL AND name LIKE '%00012%'`, f.merchantID).Scan(&wantQ)
