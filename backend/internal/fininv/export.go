@@ -80,6 +80,8 @@ var FinancialSettings = []string{
 	"customers.cod_limit",                   // orders/service.go — سقفُ نقد الزبون غيرِ المسدَّد
 	"payouts.min_amount",                    // payout_handlers.go:120
 	"customers.signup_bonus",                // referrals.go:443
+	// **الدفع بشام كاش** (٢٠٢٦-١١-٠٩) — server/shamcash.go: المفتاح والحدّان.
+	"customers.shamcash_enabled", "customers.shamcash_min", "customers.shamcash_max",
 	"referral.reward_1",
 	"referral.reward_2",
 	"referral.reward_3",

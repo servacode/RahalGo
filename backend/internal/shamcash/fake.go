@@ -2,6 +2,7 @@ package shamcash
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -48,13 +49,13 @@ type fakeBill struct {
 // NewFake starts the fake with a random 32-byte secret.
 func NewFake() *Fake {
 	key := make([]byte, 32)
-	for i := range key {
-		key[i] = byte(i*7 + 3)
+	if _, err := rand.Read(key); err != nil {
+		panic(err)
 	}
 	secret := base64.StdEncoding.EncodeToString(key)
 	j, _ := newJWE(secret)
 	f := &Fake{AgentKey: "agent-test-key", Secret: secret, jwe: j,
-		bills: map[string]*fakeBill{}, nextTx: 3919000, refKeys: map[string]int64{},
+		bills: map[string]*fakeBill{}, nextTx: time.Now().UnixNano() / 1000, // unique across fakes: sham_tran_id is UNIQUE in a shared test DB refKeys: map[string]int64{},
 		failNext: map[string]int{}, Calls: map[string]int{}}
 	f.Srv = httptest.NewServer(http.HandlerFunc(f.serve))
 	return f

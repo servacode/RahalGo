@@ -1115,6 +1115,82 @@ var All = []Check{
 	},
 
 	// ═══════════════════════════════════════════════════════════════════
+	// FI-16 — حساب المنصّة بشام كاش (قرار المالك ٢٠٢٦-١١-٠٩)
+	// ═══════════════════════════════════════════════════════════════════
+	//
+	// **مال شام كاش ما بيمرّ بدرج المكتب** — بيوصل حساب المنصّة بشام كاش. فكلّ إيداع
+	// بالمحفظة إله فاتورة مدفوعة بنفس المبلغ والعكس، وكلّ إرجاع إله خصم وسطر بدفتره.
+	{
+		ID: "FI-16.a", Family: FI16, Status: ProvableNow, Ops: true,
+		Name: "كلّ شحن من شام كاش إله فاتورة مدفوعة بمبلغه — والعكس",
+		Why: "إيداع بالمحفظة بلا فاتورة مدفوعة **مال انخلق من عدم**، وفاتورة مدفوعة بلا إيداع " +
+			"(أو بإيداعين) **زبون دفع وما وصله شي أو وصله مرّتين** — أو دفتر حساب شام كاش ما بيطابق.",
+		Kinds: []string{"topup_shamcash"},
+		SQL: `
+			SELECT b.id::text, b.amount, 'فاتورة' AS المصدر
+			FROM shamcash_bills b
+			WHERE b.status IN ('paid', 'refunded', 'partly_refunded')
+			  AND ((SELECT count(*) FROM wallet_transactions t
+			         WHERE t.kind = 'topup_shamcash' AND t.ref = b.id::text
+			           AND t.amount = b.amount AND t.user_id = b.user_id) <> 1
+			    OR (SELECT count(*) FROM wallet_transactions t
+			         WHERE t.kind = 'topup_shamcash' AND t.ref = b.id::text) <> 1
+			    OR NOT EXISTS (SELECT 1 FROM shamcash_account_entries e
+			                    WHERE e.source = 'bill_paid' AND e.ref = b.id AND e.amount = b.amount))
+			UNION ALL
+			SELECT t.ref, t.amount, 'قيد'
+			FROM wallet_transactions t
+			WHERE t.kind = 'topup_shamcash'
+			  AND NOT EXISTS (SELECT 1 FROM shamcash_bills b
+			                  WHERE b.id::text = t.ref AND b.amount = t.amount AND b.user_id = t.user_id
+			                    AND b.status IN ('paid', 'refunded', 'partly_refunded'))
+			UNION ALL
+			SELECT e.ref::text, e.amount, 'دفتر'
+			FROM shamcash_account_entries e
+			WHERE e.source = 'bill_paid'
+			  AND NOT EXISTS (SELECT 1 FROM shamcash_bills b
+			                  WHERE b.id = e.ref AND b.amount = e.amount
+			                    AND b.status IN ('paid', 'refunded', 'partly_refunded'))`,
+	},
+	{
+		ID: "FI-16.b", Family: FI16, Status: ProvableNow, Ops: true,
+		Name: "كلّ إرجاع لشام كاش انخصم من المحفظة بمبلغه وطلع من دفتره",
+		Why: "إرجاع ناجح بلا خصم من المحفظة **الزبون أخد المبلغ مرّتين**، أو إرجاع فاشل وما رجع خصمه " +
+			"**الزبون خسر مبلغ**، أو مجموع الإرجاع أكبر من الفاتورة.",
+		Kinds: []string{"refund_shamcash"},
+		SQL: `
+			SELECT r.id::text, r.amount, r.status
+			FROM shamcash_refunds r
+			WHERE COALESCE((SELECT sum(t.amount) FROM wallet_transactions t
+			                 WHERE t.kind = 'refund_shamcash' AND t.ref = r.id::text), 0)
+			      <> CASE WHEN r.status = 'failed' THEN 0 ELSE -r.amount END
+			   OR (r.status = 'done') <> EXISTS (SELECT 1 FROM shamcash_account_entries e
+			                     WHERE e.source = 'refund_sent' AND e.ref = r.id AND e.amount = r.amount)
+			UNION ALL
+			SELECT t.ref, t.amount, 'قيد بلا إرجاع'
+			FROM wallet_transactions t
+			WHERE t.kind = 'refund_shamcash'
+			  AND NOT EXISTS (SELECT 1 FROM shamcash_refunds r WHERE r.id::text = t.ref)
+			UNION ALL
+			SELECT b.id::text, b.refunded, 'الفاتورة'
+			FROM shamcash_bills b
+			WHERE b.refunded <> COALESCE((SELECT sum(r.amount) FROM shamcash_refunds r
+			                               WHERE r.bill_id = b.id AND r.status = 'done'), 0)
+			   OR b.amount < COALESCE((SELECT sum(r.amount) FROM shamcash_refunds r
+			                            WHERE r.bill_id = b.id AND r.status <> 'failed'), 0)`,
+	},
+	{
+		ID: "FI-16.c", Family: FI16, Status: ProvableNow, Ops: true,
+		Name: "مال شام كاش ما بيمرّ بدرج المكتب",
+		Why:  "سطر بصندوق المكتب مرجعه فاتورة أو إرجاع شام كاش — **الإغلاق اليومي بيعدّ مال مو بالدرج.**",
+		SQL: `
+			SELECT c.id::text, c.source, c.amount
+			FROM office_cash_entries c
+			WHERE c.ref IN (SELECT id::text FROM shamcash_bills)
+			   OR c.ref IN (SELECT id::text FROM shamcash_refunds)`,
+	},
+
+	// ═══════════════════════════════════════════════════════════════════
 	// FI-14 — تسويةُ المتجر نقداً: الاحتباسُ والهُويّةُ والعكس
 	// ═══════════════════════════════════════════════════════════════════
 

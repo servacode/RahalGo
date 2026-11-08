@@ -311,6 +311,10 @@ var adminPolicy = []Rule{
 	{"GET", "/treasury/withdrawals", FinanceRead},
 	{"POST", "/treasury/withdrawals", TreasuryManage},
 	{"GET", "/treasury/health", FinanceRead},
+	// Sham Cash (2026-11-09): reading for finance, refund back to Sham Cash for the admin.
+	{"GET", "/shamcash/bills", FinanceRead},
+	{"GET", "/shamcash/reconcile", FinanceRead},
+	{"POST", "/shamcash/bills/{id}/refund", TreasuryManage},
 	{"GET", "/cashbox", FinanceRead},
 	{"GET", "/cashbox/closes", FinanceRead},
 	{"POST", "/cashbox/closes", FinanceManage},

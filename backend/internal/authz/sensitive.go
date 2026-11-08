@@ -188,6 +188,9 @@ var sensitiveActions = []Sensitive{
 	// يخرج من الخزينة بقرار إنسان (قرارُ المالك ٢٠٢٦-١٠-٠٤ — الخزينة).
 	{"POST", "/treasury/withdrawals", "finance.treasury_withdrawal",
 		"treasury_withdrawal", -1, []string{"amount"}, ""},
+	// Sham Cash refund: money leaves a wallet back to Sham Cash by a human decision.
+	{"POST", "/shamcash/bills/{id}/refund", "finance.shamcash_refund",
+		"shamcash_bill", 2, []string{"amount"}, ""},
 	{"POST", "/cashbox/shortfalls/{id}/approve", "finance.cash_shortfall_loss",
 		"office_cash_shortfall", 2, nil, ""},
 	// **وإيداعُ المالك في الدرج من جيبه** (قرارُ المالك ٢٠٢٦-١٠-١٥) — نقدٌ يدخل الصندوقَ بقرار

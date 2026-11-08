@@ -2279,6 +2279,21 @@ var Catalog = []Def{
 	{Key: "customers.signup_bonus", Group: GroupCustomers, Kind: KindMoney,
 		Min: 0, Max: 10_000, Unit: "currency", Default: 0, Sensitive: true},
 
+	// ══════════════════════════════════════════════════════════════════
+	// **الدفع بشام كاش** (قرار المالك ٢٠٢٦-١١-٠٩) — جاهز ومطفي
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **مطفي افتراضاً** — وحتّى لو انفتح، ما بيشتغل إلّا إذا مفاتيح شام كاش
+	// موجودة على السيرفر (`internal/shamcash`). والحدّان لكلّ فاتورة.
+	{Key: "customers.shamcash_enabled", Group: GroupCustomers, Kind: KindBool,
+		Default: false, Sensitive: true},
+	{Key: "customers.shamcash_min", Group: GroupCustomers, Kind: KindMoney,
+		Min: 1, Max: 1_000_000, Unit: "currency", Default: 10, Sensitive: true,
+		ShowWhen: &Condition{Key: "customers.shamcash_enabled", Equals: []string{"true"}}},
+	{Key: "customers.shamcash_max", Group: GroupCustomers, Kind: KindMoney,
+		Min: 1, Max: 1_000_000, Unit: "currency", Default: 10_000, Sensitive: true,
+		ShowWhen: &Condition{Key: "customers.shamcash_enabled", Equals: []string{"true"}}},
+
 	// ── السائقون ──────────────────────────────────────
 	//
 	// **وصورةُ التسليم بيّنةٌ يومَ النزاع** — انظر الترحيلة ٠٠٦١.

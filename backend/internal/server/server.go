@@ -38,6 +38,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/roadmatch"
 	"github.com/servacode/rahalgo/backend/internal/routing"
 	"github.com/servacode/rahalgo/backend/internal/settings"
+	"github.com/servacode/rahalgo/backend/internal/shamcash"
 	"github.com/servacode/rahalgo/backend/internal/support"
 	"github.com/servacode/rahalgo/backend/internal/textguard"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
@@ -59,8 +60,10 @@ type Server struct {
 	// platform **دوامُ المنصّة وإيقافُها المؤقّت** — `PH`.
 	platform *platform.Service
 	// comms **حديثُ الطلب** — قناةٌ واحدةٌ لطرفيه بلا رقمٍ بينهما.
-	comms   *comms.Service
-	wallet  *wallet.Service
+	comms  *comms.Service
+	wallet *wallet.Service
+	// sham Sham Cash client (nil = not configured) - shamcash.go.
+	sham    *shamcash.Client
 	orders  *orders.Service
 	cashbox *cashbox.Service
 	support *support.Service
@@ -182,6 +185,7 @@ type Option func(*options)
 type options struct {
 	pushTransport push.Transport
 	webPush       *push.WebPush
+	shamcash      *shamcash.Client
 }
 
 // WithWebPush يضع ناقلَ متصفّحٍ مبنيّاً بيد الفحص — **ليقبل عنوانَ مزوّدٍ
@@ -308,6 +312,11 @@ func New(cfg *config.Config, logger *slog.Logger, pg *pgxpool.Pool, rdb *redis.C
 	// **والطلبُ من عدّة متاجر لا يُفتح حتّى تُفرض نسخةُ السائق التي تعرف
 	// المحطّات** (٢٠٢٦-١١-٠٥) — **والخادمُ وحدَه يعرف أدنى نسخةٍ نافذة.**
 	ordersSvc.SetMultiStopGate(srv.multiStopReady)
+	// Sham Cash: test option, else SHAMCASH_* env (nil = off) - shamcash.go.
+	srv.sham = o.shamcash
+	if srv.sham == nil {
+		srv.sham = shamClientFromEnv()
+	}
 	// **وتعويضُ الشكوى يدخل طابورَ التعويضات الموحّد** (قرارُ المالك ٢٠٢٦-١٠-٠٤) —
 	// لا طلبَ محفظة: صفحةُ التعويضات والموافقاتُ الموحّدة تريانه.
 	if supportSvc != nil {
@@ -653,6 +662,8 @@ func (s *Server) Router() http.Handler {
 		r.Get("/public/app/{key}", s.handleDownloadAppByKey)
 		// **وزيارةُ الموقع تُعدّ** — مرّةً في اليوم للشخص (`site_stats.go`).
 		r.Post("/public/visit", s.handlePublicVisit)
+		// Sham Cash webhook - encrypted with the secret key; shamcash.go.
+		r.Post("/public/shamcash/webhook", s.handleShamWebhook)
 		// **ساعي الأمين برمزه** — بلا جلسة، والرمزُ يدلّ على المتجر (٢٠٢٦-١٠-١٩).
 		r.Post("/public/price-sync", s.handlePriceSyncAgent)
 		r.Get("/public/price-sync/poll", s.handlePriceSyncPoll)
@@ -842,6 +853,11 @@ func (s *Server) Router() http.Handler {
 			r.Get("/my/orders", s.handleMyOrders)
 			r.Get("/my/orders/{id}", s.handleMyOrder)
 			r.Get("/my/wallet", s.handleMyWallet)
+			// Sham Cash (2026-11-09) - shamcash.go; off until configured and enabled.
+			r.Get("/my/shamcash", s.handleMyShamCash)
+			r.Post("/my/shamcash/topups", s.handleShamTopup)
+			r.Post("/my/shamcash/orders", s.handleShamOrder)
+			r.Get("/my/shamcash/bills/{id}", s.handleMyShamBill)
 			// **أله توصيلةٌ مجانيّةٌ الآن؟** (قرارُ المالك ٢٠٢٦-١٠-٢٦) — لتقول الشاشةُ «مجانيّة» قبل الطلب.
 			r.Get("/my/free-delivery", s.handleMyFreeDelivery)
 			// **بابُ الشكوى عند الطلب لا في رقم هاتف.**
@@ -1886,6 +1902,10 @@ func (s *Server) Router() http.Handler {
 			r.Get("/treasury/withdrawals", s.handleTreasuryWithdrawals)
 			r.Post("/treasury/withdrawals", s.idempotent(s.handleTreasuryWithdraw))
 			r.Get("/treasury/health", s.handleTreasuryHealth)
+			// Sham Cash bills, reconciliation and refunds (2026-11-09) - shamcash.go.
+			r.Get("/shamcash/bills", s.handleAdminShamBills)
+			r.Get("/shamcash/reconcile", s.handleAdminShamReconcile)
+			r.Post("/shamcash/bills/{id}/refund", s.idempotent(s.handleAdminShamRefund))
 			r.Get("/cashbox", s.handleCashbox)
 			r.Get("/cashbox/closes", s.handleListCashCloses)
 			r.Post("/cashbox/closes", s.handleCreateCashClose)

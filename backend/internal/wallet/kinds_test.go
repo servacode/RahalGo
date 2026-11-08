@@ -38,6 +38,8 @@ var walletKinds = []string{
 	"payout_reversal",
 	// **السلفة** — قرارُ المالك ٢٠٢٦-١٠-٢٦.
 	"advance",
+	// Sham Cash (2026-11-09).
+	"topup_shamcash", "refund_shamcash",
 }
 
 func TestWalletKinds_AllAcceptedByTheDatabase(t *testing.T) {

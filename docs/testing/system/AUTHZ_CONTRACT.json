@@ -59,7 +59,7 @@
   {
    "code": "finance.read",
    "description": "قراءة المال والتقارير المالية",
-   "guards_routes": 36
+   "guards_routes": 38
   },
   {
    "code": "finance.recompute",
@@ -189,7 +189,7 @@
   {
    "code": "treasury.manage",
    "description": "سحب مدير المنصة من رصيد الخزينة واعتماد نقص صندوق المكتب خسارة",
-   "guards_routes": 4
+   "guards_routes": 5
   },
   {
    "code": "users.cashban.lift",
@@ -272,7 +272,7 @@
   }
  ],
  "route_policy": {
-  "rules": 353,
+  "rules": 356,
   "note": "الصفوفُ نفسُها في api/contract.json بحقل capability لكلّ نقطة — فلا تُعاد هنا. المصدر: internal/authz/policy.go:36",
   "capabilities_used": [
    "analytics.read",
@@ -658,6 +658,17 @@
    "target_segment": 1,
    "fingerprint_params": [],
    "need": "finance.recompute"
+  },
+  {
+   "method": "POST",
+   "pattern": "/shamcash/bills/{id}/refund",
+   "action": "finance.shamcash_refund",
+   "target_type": "shamcash_bill",
+   "target_segment": 2,
+   "fingerprint_params": [
+    "amount"
+   ],
+   "need": "treasury.manage"
   },
   {
    "method": "POST",

@@ -144,7 +144,14 @@ var notifTitles = struct {
 	// وللإدارة بعد المزامنة، وتذكير واحد بعد يومين. `{n}` العدد و`{store}` اسم المتجر.
 	priceSyncPendingTitle, priceSyncPendingBody, priceSyncPendingRemindTitle string
 	priceSyncPendingAdminTitle, priceSyncPendingAdminBody                    string
+	// **الدفع بشام كاش** (قرار المالك ٢٠٢٦-١١-٠٩، `shamcash.go`) — وصل المبلغ للمحفظة، وانعمل
+	// الطلب أو ما انعمل، ورجع مبلغ لشام كاش.
+	shamTopupPaid, shamOrderPaid, shamOrderFailed, shamRefunded string
 }{
+	shamTopupPaid:               "وصل شحن محفظتك من شام كاش",
+	shamOrderPaid:               "اندفع طلبك بشام كاش وانبعت",
+	shamOrderFailed:             "وصل مبلغ شام كاش لمحفظتك بس الطلب ما انبعت",
+	shamRefunded:                "رجعنالك مبلغ على شام كاش",
 	walletTopupRejected:         "انرفض طلب شحن محفظتك",
 	walletRequestRejected:       "انرفض طلب حركة على محفظتك",
 	incentiveReward:             "مكافأة من الإدارة في محفظتك",

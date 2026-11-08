@@ -50,6 +50,26 @@ var Kinds = map[string]KindContract{
 		Invariants: []string{"FI-02.a"},
 		Reachable:  true,
 	},
+	// **الشحن من شام كاش** (قرار المالك ٢٠٢٦-١١-٠٩) — المال بحساب المنصة بشام كاش
+	// **مو بدرج المكتب**، فما إله سطر بالصندوق (FI-15.g ما بتمسّه) وإله دفتره.
+	"topup_shamcash": {
+		Kind: "topup_shamcash", Sign: "+", RefRequired: true, RefTarget: "shamcash_bills",
+		Creators: []string{"internal/server/shamcash.go"},
+		Path:     "POST /api/v1/public/shamcash/webhook · وفاحص الفواتير المعلّقة",
+		Semantics: "فاتورة شام كاش اندفعت وتأكّدت من شام كاش — **تُودَع بمحفظة الزبون مرّة وحدة بمبلغها، " +
+			"ويقابلها سطر داخل بدفتر حساب شام كاش** (ولطلبٍ مدفوعٍ بشام كاش: بعدها مباشرة خصم الطلب من المحفظة).",
+		Invariants: []string{"FI-02.a", "FI-16.a", "FI-16.c"},
+		Reachable:  true,
+	},
+	"refund_shamcash": {
+		Kind: "refund_shamcash", Sign: "±", RefRequired: true, RefTarget: "shamcash_refunds",
+		Creators: []string{"internal/server/shamcash.go"},
+		Path:     "POST /admin/shamcash/bills/{id}/refund",
+		Semantics: "إرجاع من محفظة الزبون لشام كاش بقرار الإدارة — **السالب الخصم، والموجب ردّه إذا رفضت شام كاش الإرجاع** " +
+			"(نفس المرجع فيتصافى)، ويقابل الناجح سطر طالع بدفتر حساب شام كاش.",
+		Invariants: []string{"FI-02.a", "FI-16.b", "FI-16.c"},
+		Reachable:  true,
+	},
 	"order_payment": {
 		Kind: "order_payment", Sign: "-", RefRequired: true, RefTarget: "orders",
 		Creators: []string{"internal/orders/service.go:521", "internal/orders/custom.go:278",

@@ -23,23 +23,24 @@
 //
 // # What is needed to switch it ON
 //
-// 1. Sham Cash issues, after the verified commercial account and "Service Creation":
-//    the agent key, the secret key (Base64, 32 bytes) and the base URL. Put them in the
-//    server's environment — NEVER in the repo (it is public):
+//  1. Sham Cash issues, after the verified commercial account and "Service Creation":
+//     the agent key, the secret key (Base64, 32 bytes) and the base URL. Put them in the
+//     server's environment — NEVER in the repo (it is public):
 //
-//	SHAMCASH_AGENT_KEY=...
-//	SHAMCASH_SECRET_KEY=...            # Base64 32-byte AES key
-//	SHAMCASH_BASE_URL=https://...      # as given by Sham Cash, no trailing path
-//	SHAMCASH_CALLBACK_URL=https://api.rahalgo.com/api/v1/public/shamcash/webhook
-//	SHAMCASH_RETURN_URL=https://rahalgo.com   # the browser returns to {this}/wallet/shamcash/{bill id}
-//	SHAMCASH_AMOUNT_SCALE=1            # bill amount = wallet amount × scale (see below)
+//     SHAMCASH_AGENT_KEY=...
+//     SHAMCASH_SECRET_KEY=...            # Base64 32-byte AES key
+//     SHAMCASH_BASE_URL=https://...      # as given by Sham Cash, no trailing path
+//     SHAMCASH_CALLBACK_URL=https://api.rahalgo.com/api/v1/public/shamcash/webhook
+//     SHAMCASH_RETURN_URL=https://rahalgo.com   # the browser returns to {this}/wallet/shamcash/{bill id}
+//     SHAMCASH_AMOUNT_SCALE=1            # bill amount = wallet amount × scale (see below)
 //
-// 2. Register the callback URL above with Sham Cash if they ask for it at service creation
-//    (it is also sent with every bill).
-// 3. Restart the API, then turn on the setting `customers.shamcash_enabled` in the admin
-//    settings (customers group). `customers.shamcash_min` / `customers.shamcash_max` bound
-//    each bill. While the setting is off OR the env is incomplete, every endpoint answers
-//    `shamcash_unavailable` and the apps hide the option.
+//  2. Register the callback URL above with Sham Cash if they ask for it at service creation
+//     (it is also sent with every bill).
+//
+//  3. Restart the API, then turn on the setting `customers.shamcash_enabled` in the admin
+//     settings (customers group). `customers.shamcash_min` / `customers.shamcash_max` bound
+//     each bill. While the setting is off OR the env is incomplete, every endpoint answers
+//     `shamcash_unavailable` and the apps hide the option.
 //
 // SHAMCASH_AMOUNT_SCALE: RahalGo amounts are in the NEW Syrian pound (1000 old = 10 new).
 // If Sham Cash's SYP currency is still the old pound, set the scale to 100 — otherwise a

@@ -7,7 +7,7 @@
 > **ومعها ملفٌّ يُقرأ بالآلة**: `docs/testing/system/AUTHZ_CONTRACT.json`.
 
 <!-- gen:counts -->
-**42 قدرةً · 353 صفَّ سياسةٍ للمسارات · 3 استثناءً · 38 فعلاً حسّاساً · 9 حقلاً محروساً · 2 قدرةً حقليّةً لا تحرس باباً · 0 قدرةً لا تحرس شيئاً.**
+**42 قدرةً · 356 صفَّ سياسةٍ للمسارات · 3 استثناءً · 39 فعلاً حسّاساً · 9 حقلاً محروساً · 2 قدرةً حقليّةً لا تحرس باباً · 0 قدرةً لا تحرس شيئاً.**
 <!-- /gen:counts -->
 
 ---
@@ -66,7 +66,7 @@
 | `emergencies.manage` | 12 | — | غرفة الطوارئ: القراءة والاستلام والإغلاق |
 | `finance.export` | 6 | — | تصدير الدفتر وكشف الطلبات ملفا |
 | `finance.manage` | 42 | — | اقتراح حركات المحافظ والموافقة عليها والمصاريف والخزينة |
-| `finance.read` | 36 | — | قراءة المال والتقارير المالية |
+| `finance.read` | 38 | — | قراءة المال والتقارير المالية |
 | `finance.recompute` | 1 | — | إعادة حساب تسوية طلب مغلق |
 | `finance.writeoff.approve` | **0** + 1 داخلَ الباب | — | الموافقة على شطب دين متجر أو مندوب لن يسدد |
 | `market.manage` | 18 | — | إدارة السوق: الأقسام والأصناف والمتاجر |
@@ -90,7 +90,7 @@
 | `settings.read` | 4 | — | قراءة الإعدادات |
 | `settings.security.manage` | 3 | — | إعدادات الأمان والجلسات |
 | `support.manage` | 8 | — | التذاكر والنزاعات والتقييمات |
-| `treasury.manage` | 4 | — | سحب مدير المنصة من رصيد الخزينة واعتماد نقص صندوق المكتب خسارة |
+| `treasury.manage` | 5 | — | سحب مدير المنصة من رصيد الخزينة واعتماد نقص صندوق المكتب خسارة |
 | `users.cashban.lift` | 1 | — | رفع منع الدفع نقدا عن زبون |
 | `users.contact.read` | **0** | **8** | رؤية أرقام الهواتف |
 | `users.export` | 1 | — | تصدير دليل الحسابات ملفا |
@@ -183,6 +183,7 @@
 | `finance.obligation_request_approved` | `POST` | `/obligation-requests/{id}/approve` | — | دائماً | `finance.manage` |
 | `finance.payout_decide` | `POST` | `/payouts/{id}/decide` | `status`, `amount`, `method` | `payoutMovesMoney` | `payouts.decide` |
 | `finance.settlement_recomputed` | `POST` | `/orders/{id}/recompute` | — | دائماً | `finance.recompute` |
+| `finance.shamcash_refund` | `POST` | `/shamcash/bills/{id}/refund` | `amount` | دائماً | `treasury.manage` |
 | `finance.ticket_resolve` | `POST` | `/tickets/{id}/resolve` | `compensation` | دائماً | `support.manage` |
 | `finance.treasury_withdrawal` | `POST` | `/treasury/withdrawals` | `amount` | دائماً | `treasury.manage` |
 | `finance.wallet_apply` | `POST` | `/users/{id}/wallet` | `amount`, `kind` | دائماً | `finance.manage` |

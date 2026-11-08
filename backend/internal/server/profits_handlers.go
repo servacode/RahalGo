@@ -67,7 +67,8 @@ const profitClosedStatuses = `'delivered','failed','cancelled','rejected','refun
 // الخزينة محفظة الأدمن، فشحنه وسحبه وطلباته الشخصيّة ومالُ الاحتباس تمرّ
 // فيها ولا تُحسب ربحاً (القرار ٣).
 const profitOutsideKinds = `'topup','payout','adjustment','order_payment','refund','compensation',
-	'commission','driver_earning','merchant_earning','merchant_cash_accrued','merchant_cash_paid','treasury_withdrawal'`
+	'commission','driver_earning','merchant_earning','merchant_cash_accrued','merchant_cash_paid','treasury_withdrawal',
+	'topup_shamcash','refund_shamcash'`
 
 // treasuryEntriesCTE قيود الخزينة مصنّفة: لكلّ قيد بابه (bucket) ويومه (at).
 // ويليه شرط المدى على at في الاستعلام نفسه (inr).

@@ -5993,6 +5993,87 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/shamcash/bills",
+      "handler": "handleAdminShamBills",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "bills",
+          "type": "unknown"
+        },
+        {
+          "name": "book_balance",
+          "type": "unknown"
+        },
+        {
+          "name": "configured",
+          "type": "unknown"
+        },
+        {
+          "name": "enabled",
+          "type": "unknown"
+        },
+        {
+          "name": "page",
+          "type": "unknown"
+        },
+        {
+          "name": "per_page",
+          "type": "unknown"
+        },
+        {
+          "name": "total",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/shamcash/bills/{id}/refund",
+      "handler": "handleAdminShamRefund",
+      "auth": true,
+      "capability": "treasury.manage",
+      "idempotent": true,
+      "response": [
+        {
+          "name": "refund",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/shamcash/reconcile",
+      "handler": "handleAdminShamReconcile",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "date",
+          "type": "unknown"
+        },
+        {
+          "name": "rows",
+          "type": "unknown"
+        },
+        {
+          "name": "summary",
+          "type": "object"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/site-stats",
       "handler": "handleSiteStats",
       "auth": true,
@@ -10972,6 +11053,86 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/my/shamcash",
+      "handler": "handleMyShamCash",
+      "auth": true,
+      "response": [
+        {
+          "name": "enabled",
+          "type": "unknown"
+        },
+        {
+          "name": "expires_minutes",
+          "type": "unknown"
+        },
+        {
+          "name": "max",
+          "type": "unknown"
+        },
+        {
+          "name": "min",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/my/shamcash/bills/{id}",
+      "handler": "handleMyShamBill",
+      "auth": true,
+      "response": [
+        {
+          "name": "bill",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/my/shamcash/orders",
+      "handler": "handleShamOrder",
+      "auth": true,
+      "response": [
+        {
+          "name": "bill",
+          "type": "unknown"
+        },
+        {
+          "name": "payment_url",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/my/shamcash/topups",
+      "handler": "handleShamTopup",
+      "auth": true,
+      "response": [
+        {
+          "name": "bill",
+          "type": "unknown"
+        },
+        {
+          "name": "payment_url",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/my/tickets",
       "handler": "handleMyTickets",
       "auth": true,
@@ -12124,6 +12285,23 @@
       "path": "/api/v1/public/sections/{id}/items",
       "handler": "handlePublicSectionItems",
       "auth": false
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/public/shamcash/webhook",
+      "handler": "handleShamWebhook",
+      "auth": false,
+      "response": [
+        {
+          "name": "ok",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusBadRequest",
+        "StatusInternalServerError",
+        "StatusOK"
+      ]
     },
     {
       "method": "GET",

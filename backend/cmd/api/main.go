@@ -316,6 +316,9 @@ func run(logger *slog.Logger) error {
 			// **ورأيُ الزبون بعد التسليم بعشر دقائق** (٢٠٢٦-١١-٠٤) — `order_feedback.go`.
 			go srv.RunOrderFeedbackSweeper(ctx, time.Minute)
 
+			// Sham Cash: bills whose webhook never came, and pending refunds (no-op when not configured).
+			go srv.RunShamCashPoller(ctx, time.Minute)
+
 			// **و«اكتبلنا عنوانك» بعد دقائق بلا موقع** (٢٠٢٦-١١-٠٥) — `wa_location_followup.go`.
 			go srv.RunWALocationFollowUp(ctx, 30*time.Second)
 
