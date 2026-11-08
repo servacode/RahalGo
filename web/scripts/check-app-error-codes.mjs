@@ -123,6 +123,9 @@ const SERVER_MOBILE = new Set([
 
 /** **ما لا يبلغ هاتفاً** — أبوابُ الإدارة واللوحات. */
 const SERVER_ADMIN = new Set([
+  // **إرجاع شام كاش** (٢٠٢٦-١١-٠٩) — زرّ الأدمن بالخزينة وحدَه.
+  "shamcash_refund_exceeds",
+  "shamcash_not_paid",
   // **الخريطةُ من حركة السائقين** (٢٠٢٦-١١-٠٣) — أبوابُ اللوحة وحدَها.
   "candidate_decided",
   "place_decided",

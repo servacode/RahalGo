@@ -334,7 +334,9 @@
       "merchant_cash_paid": "دفع نقدي للمتجر",
       "payout_reversal": "إرجاع سحب",
       "treasury_withdrawal": "سحب الأدمن من رصيد الخزينة",
-      "advance": "سلفة"
+      "advance": "سلفة",
+      "topup_shamcash": "شحن من شام كاش",
+      "refund_shamcash": "إرجاع لشام كاش"
     },
     "live": "مباشر",
     "liveOff": "غير متصل",
@@ -896,6 +898,10 @@
     "cash_limit_exceeded": "السائق تجاوز سقفه النقدي — يجب تسليم الصندوق أولا",
     "cash_overdue": "بيد السائق نقد لم يسلمه منذ أيام — يجب تسليم الصندوق أولا",
     "cod_limit_exceeded": "قيمة الطلب تتجاوز الحد المسموح للدفع عند الاستلام.",
+    "shamcash_unavailable": "الدفع بشام كاش مو متاح هلق",
+    "shamcash_amount_out_of_range": "المبلغ لازم يكون بين الحد الأدنى والأعلى",
+    "shamcash_refund_exceeds": "المبلغ أكبر من الباقي بالفاتورة",
+    "shamcash_not_paid": "الفاتورة مو مدفوعة",
     "phone_taken": "هذا الرقم مسجل مسبقا",
     "not_delivered": "لا يمكن تقييم طلب لم يسلم بعد",
     "invalid_image": "الملف ليس صورة صالحة (JPG/PNG/WebP)",
@@ -4159,6 +4165,18 @@
           "label": "سقف الدفع عند الاستلام للزبون",
           "hint": "مجموع الطلبات النقدية المفتوحة للزبون الواحد",
           "zero": "بلا حد"
+        },
+        "customers.shamcash_enabled": {
+          "label": "الدفع بشام كاش",
+          "hint": "يظهر للزبون خيار الشحن والدفع بشام كاش — بيشتغل بس بعد ما تنحط مفاتيح شام كاش على السيرفر"
+        },
+        "customers.shamcash_min": {
+          "label": "أقل مبلغ بشام كاش",
+          "hint": "أقل مبلغ بيقدر الزبون يشحنه أو يدفعه بشام كاش"
+        },
+        "customers.shamcash_max": {
+          "label": "أعلى مبلغ بشام كاش",
+          "hint": "أعلى مبلغ بالفاتورة الوحدة"
         },
         "drivers.max_active_orders": {
           "label": "أقصى طلبات بيد السائق معا",
@@ -8868,6 +8886,68 @@
     },
     "treasury": {
       "title": "الخزينة",
+      "shamcash": {
+        "tab": "شام كاش",
+        "enabled": "الدفع مفعّل",
+        "disabled": "الدفع مطفأ",
+        "configured": "المفاتيح موجودة",
+        "notConfigured": "مفاتيح شام كاش مو موجودة على السيرفر",
+        "bookBalance": "رصيد حساب شام كاش",
+        "bookHint": "اللي جاي من شام كاش ناقص اللي انرجع",
+        "search": "رقم الفاتورة أو اسم الزبون أو رقمه",
+        "allStatuses": "كل الحالات",
+        "statusLabel": "الحالة",
+        "status": {
+          "pending": "بانتظار الدفع",
+          "paid": "مدفوعة",
+          "expired": "منتهية",
+          "failed": "فاشلة",
+          "refunded": "مرجّعة",
+          "partly_refunded": "مرجّعة جزئياً"
+        },
+        "purpose": {
+          "topup": "شحن محفظة",
+          "order": "دفع طلب"
+        },
+        "empty": "ما في فواتير",
+        "emptyHint": "أول ما يدفع زبون بشام كاش بتنزل هون",
+        "orderNo": "طلب رقم {n}",
+        "tranId": "رقم العملية",
+        "refundedAmount": "المرجّع",
+        "refund": "ترجيع",
+        "refundTitle": "ترجيع المبلغ لشام كاش؟",
+        "refundBody": "رح يرجع المبلغ لحساب الزبون على شام كاش، وينخصم من محفظته عنا. فاتورة {n}.",
+        "refundAmount": "المبلغ المرجّع",
+        "refundRemaining": "الباقي: {amount}",
+        "refundNote": "السبب",
+        "refundConfirm": "رجّع المبلغ",
+        "refundDone": "تم الترجيع",
+        "refundPending": "الترجيع قيد التنفيذ",
+        "refundFailed": "الترجيع فشل",
+        "reconcile": "المطابقة مع شام كاش",
+        "reconcileHint": "اختار يوم لنقارن قيودنا مع قيود شام كاش",
+        "date": "اليوم",
+        "reconcileRun": "طابق",
+        "reconcileEmpty": "ما في عمليات بهاليوم",
+        "rowBill": "الفاتورة",
+        "rowType": "النوع",
+        "rowRemote": "عند شام كاش",
+        "rowLocal": "عندنا",
+        "type": {
+          "payment": "دفع",
+          "refund": "ترجيع"
+        },
+        "match": {
+          "match": "مطابق",
+          "missing_local": "ناقص عندنا",
+          "missing_remote": "ناقص عند شام كاش",
+          "amount_mismatch": "المبلغ مختلف"
+        },
+        "summaryRemote": "عند شام كاش",
+        "summaryLocal": "عندنا",
+        "summaryMatched": "مطابق",
+        "summaryMismatched": "غير مطابق"
+      },
       "topup": {
         "tab": "شحن محفظة",
         "hint": "ابحث عن الحساب برقمه أو اسمه ثم اكتب الحركة. طلب الموظف بينتظر موافقة، وحركة المالك أو المدير بتنفذ فوراً. والسقف من الإعدادات.",
@@ -11062,6 +11142,36 @@
     "wallet": {
       "title": "محفظتي",
       "balance": "الرصيد الحالي"
+    },
+    "shamcash": {
+      "topupBtn": "اشحن من شام كاش",
+      "topupTitle": "الشحن من شام كاش",
+      "amountLabel": "المبلغ",
+      "rangeHint": "من {min} لـ {max}",
+      "submit": "تابع للدفع",
+      "cancel": "إلغاء",
+      "orderOption": "ادفع بشام كاش",
+      "orderOptionHint": "بينعمل الطلب أول ما يوصلنا الدفع",
+      "statusTitle": "الدفع بشام كاش",
+      "waiting": "بانتظار الدفع…",
+      "waitingHint": "كمّل الدفع بصفحة شام كاش. هالصفحة بتتحدّث لحالها.",
+      "reopen": "افتح صفحة الدفع مرّة تانية",
+      "billNo": "رقم الفاتورة: {n}",
+      "paidTopup": "وصلنا الدفع وانشحنت محفظتك",
+      "paidTopupHint": "انزاد على رصيدك مبلغ {amount}",
+      "toWallet": "روح لمحفظتي",
+      "paidOrder": "وصلنا الدفع وانعمل طلبك",
+      "orderNo": "طلب رقم {n}",
+      "toOrder": "تابع طلبك",
+      "orderErrorTitle": "وصل الدفع بس الطلب ما انعمل",
+      "orderErrorHint": "مبلغك صار بمحفظتك. ارجع للسلة وادفع من المحفظة.",
+      "toCart": "ارجع للسلة",
+      "expired": "انتهت مهلة الدفع",
+      "failed": "ما تمت عملية الدفع",
+      "endedHint": "ما انسحب منك شي. جرّب مرّة تانية أو اختار الدفع نقداً.",
+      "refunded": "انرجع المبلغ أو جزء منه لشام كاش",
+      "retry": "جرّب مرّة تانية",
+      "loadFail": "ما قدرنا نجيب حالة الفاتورة"
     },
     "invite": {
       "code": "رمزك",

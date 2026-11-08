@@ -31,11 +31,13 @@ import { CashboxTab } from "@/components/admin/treasury/Cashbox";
 import { ApprovalsTab } from "@/components/admin/treasury/Approvals";
 import { HealthTab } from "@/components/admin/treasury/Health";
 import { TopupTab } from "@/components/admin/treasury/Topup";
+import { ShamCashTab } from "@/components/admin/treasury/ShamCash";
 import { useCanCall } from "@/lib/policy";
+import { useAuth } from "@/lib/auth";
 import { PageHero, type HeroTab } from "@/components/admin/PageHero";
 
-type Tab = "overview" | "statement" | "cashbox" | "approvals" | "topup" | "health";
-const TABS: Tab[] = ["overview", "statement", "cashbox", "approvals", "topup", "health"];
+type Tab = "overview" | "statement" | "cashbox" | "approvals" | "topup" | "shamcash" | "health";
+const TABS: Tab[] = ["overview", "statement", "cashbox", "approvals", "topup", "shamcash", "health"];
 
 export default function TreasuryPage() {
   return (
@@ -50,6 +52,7 @@ function TreasuryHub() {
   const params = useSearchParams();
   // **«شحن محفظة» لمن يقترح الحركة** (قرارُ المالك ٢٠٢٦-١٠-٠٥) — بقدرة بابه.
   const canTopup = useCanCall()("GET", "/treasury/wallet-lookup");
+  const canSham = useAuth().can("finance.read");
   const fromUrl = params.get("tab") as Tab | null;
   const [tab, setTab] = useState<Tab>(fromUrl && TABS.includes(fromUrl) ? fromUrl : "overview");
 
@@ -76,6 +79,7 @@ function TreasuryHub() {
     { key: "cashbox", label: T.tabs.cashbox, icon: IconBalance },
     { key: "approvals", label: T.tabs.approvals, icon: IconCheck },
     ...(canTopup ? [{ key: "topup", label: T.topup.tab, icon: IconWallet }] : []),
+    ...(canSham ? [{ key: "shamcash", label: T.shamcash.tab, icon: IconWallet }] : []),
     { key: "health", label: T.tabs.health, icon: IconShieldCheck },
   ];
 
@@ -89,6 +93,7 @@ function TreasuryHub() {
       {tab === "cashbox" && <CashboxTab />}
       {tab === "approvals" && <ApprovalsTab />}
       {tab === "topup" && canTopup && <TopupTab />}
+      {tab === "shamcash" && canSham && <ShamCashTab />}
       {tab === "health" && <HealthTab />}
     </PageContainer>
   );

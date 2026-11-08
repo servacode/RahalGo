@@ -43,7 +43,8 @@ import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useCart, drinkRows, lineKey, linePayload, unitPrice, unitPriceUsd, MAX_DRINK } from "@/lib/customer/cart";
 import { useCustomer } from "@/lib/customer/context";
-import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
+import { attemptKey, clearAttempt, isDecided, writeJSON } from "@/lib/customer/storage";
+import { SHAM_CART_KEY, abortPay, goPay, openPayTab, statusPath, useShamConfig, type ShamStart } from "@/lib/customer/shamcash";
 import { changeText, dollars, fill, serviceText } from "@/lib/customer/texts";
 import type { CartChange, PromoPreview, Quote } from "@/lib/customer/types";
 import { AddressChip, AddressSheet } from "@/components/customer/AddressSheet";
@@ -55,6 +56,7 @@ import { useShopToast } from "@/components/customer/toast";
 const m = getMessages(defaultLocale);
 const C = m.shop.cart;
 const ORDER_SLOT = "order";
+const SC = m.shop.shamcash;
 
 /** **أمتّصلٌ بالشبكة؟** — مرآةُ `Net.online`: لا يُرسَل طلبٌ بلا شبكة، ويُقال السببُ تحت. */
 function useOnline(): boolean {
@@ -95,6 +97,7 @@ export default function CartPage() {
   const [promoRes, setPromoRes] = useState<PromoPreview | null>(null);
   const [promoBusy, setPromoBusy] = useState(false);
   const [wallet, setWallet] = useState(false);
+  const [sham, setSham] = useState(false);
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -102,6 +105,7 @@ export default function CartPage() {
   const [uncertain, setUncertain] = useState(false);
   const [askClear, setAskClear] = useState(false);
   const online = useOnline();
+  const shamCfg = useShamConfig(!!user);
 
   const point = address ? `${address.lat},${address.lng}` : "";
   const linesKey = cart.lines.map((l) => `${lineKey(l)}:${l.qty}`).join(",");
@@ -160,6 +164,9 @@ export default function CartPage() {
   useEffect(() => {
     if (walletBlocked && wallet) setWallet(false);
   }, [walletBlocked, wallet]);
+  useEffect(() => {
+    if (!shamCfg && sham) setSham(false);
+  }, [shamCfg, sham]);
 
   const fp = useMemo(() => fingerprint(quote, linesKey, point, cut?.discount ?? 0), [quote, linesKey, point, cut]);
   const canSubmit = changes.length === 0 || acked === fp;
@@ -193,6 +200,34 @@ export default function CartPage() {
     setBusy(true);
     setError("");
     setErrorCode("");
+    // **شام كاش**: النافذةُ تُفتح الآن داخل الضغطة، والخادمُ ينشئ الطلبَ بعد تأكّد الدفع فلا تُمسح السلّةُ هنا.
+    if (sham && shamCfg) {
+      const w = openPayTab();
+      try {
+        const r = await api<ShamStart>("/api/v1/my/shamcash/orders", {
+          method: "POST",
+          body: JSON.stringify({
+            order: {
+              items: cart.lines.map(linePayload),
+              address_text: address.address_text,
+              lat: address.lat,
+              lng: address.lng,
+              promo_code: cut ? promo.trim() : "",
+              notes: notes.trim(),
+            },
+            return: "web",
+          }),
+        });
+        writeJSON(SHAM_CART_KEY, r.bill.id);
+        if (goPay(w, r.payment_url)) router.push(statusPath(r.bill.id));
+      } catch (err) {
+        abortPay(w);
+        setError(errorText(err));
+        setErrorCode((err as { body?: { code?: string } })?.body?.code ?? "");
+        setBusy(false);
+      }
+      return;
+    }
     try {
       const created = await api<{ id: string; number: number }>("/api/v1/orders", {
         method: "POST",
@@ -413,7 +448,7 @@ export default function CartPage() {
               <div className="surface flex flex-col gap-3 p-4">
                 <h2 className="heading-card">{C.payment}</h2>
                 {/* **سطرٌ واحدٌ حين لا تكفي المحفظة — لا خيارٌ مطفأٌ ولا «رصيدك لا يكفي»** (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}
-                {walletBlocked ? (
+                {walletBlocked && !shamCfg ? (
                   <div className="shop-opt" data-on="true">
                     <span className="shop-opt-ic">
                       <IconCash size={20} />
@@ -423,31 +458,39 @@ export default function CartPage() {
                   </div>
                 ) : (
                   <div role="radiogroup" aria-label={C.payment} className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                    <button
-                      type="button"
-                      id="pay-wallet"
-                      role="radio"
-                      aria-checked={wallet}
-                      data-on={wallet}
-                      onClick={() => setWallet(true)}
-                      className="shop-opt"
-                    >
-                      <span className="shop-opt-ic">
-                        <IconWallet size={20} />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <b className="block">{C.wallet}</b>
-                        <span className="block text-xs text-ink-muted">{fill(C.walletBalance, { amount: fmtMoney(available) })}</span>
-                      </span>
-                      <i aria-hidden className="shop-opt-dot" />
-                    </button>
+                    {!walletBlocked && (
+                      <button
+                        type="button"
+                        id="pay-wallet"
+                        role="radio"
+                        aria-checked={wallet}
+                        data-on={wallet}
+                        onClick={() => {
+                          setWallet(true);
+                          setSham(false);
+                        }}
+                        className="shop-opt"
+                      >
+                        <span className="shop-opt-ic">
+                          <IconWallet size={20} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <b className="block">{C.wallet}</b>
+                          <span className="block text-xs text-ink-muted">{fill(C.walletBalance, { amount: fmtMoney(available) })}</span>
+                        </span>
+                        <i aria-hidden className="shop-opt-dot" />
+                      </button>
+                    )}
                     <button
                       type="button"
                       id="pay-cash"
                       role="radio"
-                      aria-checked={!wallet}
-                      data-on={!wallet}
-                      onClick={() => setWallet(false)}
+                      aria-checked={!wallet && !sham}
+                      data-on={!wallet && !sham}
+                      onClick={() => {
+                        setWallet(false);
+                        setSham(false);
+                      }}
                       className="shop-opt"
                     >
                       <span className="shop-opt-ic">
@@ -458,6 +501,29 @@ export default function CartPage() {
                       </span>
                       <i aria-hidden className="shop-opt-dot" />
                     </button>
+                    {shamCfg && (
+                      <button
+                        type="button"
+                        id="pay-shamcash"
+                        role="radio"
+                        aria-checked={sham}
+                        data-on={sham}
+                        onClick={() => {
+                          setSham(true);
+                          setWallet(false);
+                        }}
+                        className="shop-opt"
+                      >
+                        <span className="shop-opt-ic">
+                          <IconWallet size={20} />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <b className="block">{SC.orderOption}</b>
+                          <span className="block text-xs text-ink-muted">{SC.orderOptionHint}</span>
+                        </span>
+                        <i aria-hidden className="shop-opt-dot" />
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
