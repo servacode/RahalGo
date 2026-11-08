@@ -189,7 +189,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     : "";
 
   return (
-    <html lang={defaultLocale} dir={getDir(defaultLocale)}>
+    // **النصُّ الصغيرُ قبل الرسم** (`ShopTheme`) يضع data-shop و data-shop-theme على الجذر قبل أن يتهيّأ React — وهذا اختلافٌ مقصود، لا عطب.
+    <html lang={defaultLocale} dir={getDir(defaultLocale)} suppressHydrationWarning>
       {bg && (
         <head>
           <link rel="preload" as="image" href={bg} fetchPriority="high" />
