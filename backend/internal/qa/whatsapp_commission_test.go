@@ -375,3 +375,42 @@ func TestWAORD050_ArrivedMessage(t *testing.T) {
 		t.Fatalf("**رسالةُ الوصول**: %d رسالة — المنتظَر واحدة", k)
 	}
 }
+
+// TestWAORD051_ChangeDriver **«بدّل السائق» في طلب الواتساب** (قرارُ المالك ٢٠٢٦-١١-٠٨: «طلب الواتس لازم في
+// تبديل السائق») — قبل الاستلام يعيده المكتبُ للطابور بسبب، **ولا يعود لمن تُرك**، ثمّ يُسنده لسائقٍ آخر.
+func TestWAORD051_ChangeDriver(t *testing.T) {
+	h := New(t)
+	c := newWAComm(t, h, "منطقةُ WA-051", 0)
+	admin := h.NewUser("admin")
+	for _, at := range []string{"assigned", "at_pickup"} {
+		id := c.ourStore(t, h, nil)
+		old := h.driverOf(id)
+		if at == "at_pickup" {
+			if r := h.POST("/api/v1/driver/orders/"+id+"/transition", old.Token, map[string]any{"to": "at_pickup"}); r.Code >= 400 {
+				t.Fatalf("وصلت المتجر: %s", r)
+			}
+		}
+		if r := h.POST("/api/v1/admin/orders/"+id+"/transition", c.ops.Token,
+			map[string]any{"to": "dispatching", "note": "السائق تأخر"}); r.Code >= 400 {
+			t.Fatalf("%s: **المكتبُ لم يُعِده للطابور**: %s", at, r)
+		}
+		var drv *string
+		_ = h.Pool.QueryRow(ctxBG(), `SELECT driver_id::text FROM orders WHERE id = $1`, id).Scan(&drv)
+		if drv != nil || h.statusOf(id) != "dispatching" {
+			t.Fatalf("%s: **السائقُ القديمُ باقٍ**: %v · %s", at, drv, h.statusOf(id))
+		}
+		if r := h.POST("/api/v1/admin/orders/"+id+"/assign", admin.Token,
+			map[string]any{"driver_id": old.ID}); r.Code < 400 {
+			t.Fatalf("%s: **عاد الطلبُ لمن تُرك**", at)
+		}
+		fresh := c.w.md.f.Driver(OnShift())
+		if r := h.POST("/api/v1/admin/orders/"+id+"/assign", admin.Token,
+			map[string]any{"driver_id": fresh.ID}); r.Code >= 400 {
+			t.Fatalf("%s: **الإسنادُ للسائق الجديد**: %s", at, r)
+		}
+		_ = h.Pool.QueryRow(ctxBG(), `SELECT driver_id::text FROM orders WHERE id = $1`, id).Scan(&drv)
+		if drv == nil || *drv != fresh.ID {
+			t.Fatalf("%s: **السائقُ الجديدُ لم يأخذه**: %v", at, drv)
+		}
+	}
+}
