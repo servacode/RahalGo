@@ -169,3 +169,26 @@ func (s *Service) returnWhatsAppCommission(ctx context.Context, q wallet.Querier
 	}
 	return s.creditTreasury(ctx, q, orderID, actorID)
 }
+
+// settleWhatsAppRep **نصيبُ مندوب متجرنا من عمولة طلب الواتساب** — عند التسليم، بقواعد `settleRep`
+// كلِّها (الموقوفُ يُحجز، والتفعيلُ، ولقطةُ النسبة). **ومتجرٌ غيرُ تابعٍ أو بلا عمولةٍ لا شيء.**
+// **ولا يُستردّ بالاسترجاع** كالطلب العاديّ (قرارُ المالك ٢٠٢٦-١٠-١٦).
+func (s *Service) settleWhatsAppRep(ctx context.Context, q wallet.Querier, orderID, actorID string, out *settled) error {
+	var ours bool
+	var commission int64
+	err := q.QueryRow(ctx, `
+		SELECT pickup_merchant_id IS NOT NULL, platform_commission
+		  FROM orders WHERE id = $1 AND origin = 'whatsapp'`, orderID).Scan(&ours, &commission)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil || !ours || commission <= 0 {
+		return err
+	}
+	var paid bool
+	if err := q.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM wallet_transactions
+		WHERE ref = $1 AND kind = 'commission' AND amount > 0)`, orderID).Scan(&paid); err != nil || paid {
+		return err
+	}
+	return s.settleRep(ctx, q, orderID, actorID, out)
+}

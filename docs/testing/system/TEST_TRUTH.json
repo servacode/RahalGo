@@ -34,7 +34,7 @@
     "behaviour_settings": 235,
     "order_fields": 141,
     "test_files": 798,
-    "test_funcs": 3062
+    "test_funcs": 3063
   },
   "flows": [
     {
@@ -28572,6 +28572,12 @@
     },
     {
       "name": "TestWACOMM04_USDGoodsUseMerchantRate",
+      "file": "internal/qa/whatsapp_commission_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWACOMM05_RepGetsShare",
       "file": "internal/qa/whatsapp_commission_test.go",
       "package": "qa",
       "orphan": true

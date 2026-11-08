@@ -10,6 +10,7 @@ package qa
 
 import (
 	"net/http"
+	"strings"
 	"testing"
 )
 
@@ -24,7 +25,8 @@ func newWAComm(t *testing.T, h *Harness, name string, balance int64) waComm {
 	t.Helper()
 	w := waSimpleFx(t, h, name)
 	c := waComm{w: w, ownerID: w.md.fx.M.Owner.ID, ops: h.NewUser("operations")}
-	if _, err := h.Pool.Exec(ctxBG(), `UPDATE merchants SET commission_percent = 10 WHERE id = $1`,
+	// **وبلا مندوب** — نصيبُه سيناريو وحدَه (`TestWACOMM05`)، وهنا الدفترُ عمولةُ المتجر وحدَها.
+	if _, err := h.Pool.Exec(ctxBG(), `UPDATE merchants SET commission_percent = 10, sales_rep_user_id = NULL WHERE id = $1`,
 		w.md.fx.M.ID); err != nil {
 		t.Fatal(err)
 	}
@@ -242,4 +244,46 @@ func TestWACOMM04_USDGoodsUseMerchantRate(t *testing.T) {
 		t.Fatalf("**المحفظة %d والمنتظَر 850**", got)
 	}
 	mdaNoNewViolations(t, h, base)
+}
+
+// TestWACOMM05_RepGetsShare **مندوبُ متجرنا يأخذ نصيبَه من عمولة طلب الواتساب** (قرارُ المالك ٢٠٢٦-١١-٠٨:
+// «المندوب ياخذ عمولة طبعا اذا المتجر تابع للمندوب») — نسبتُه من لقطة الطلب على عمولة ٢٤٠، **بالوضعين** (العمولةُ
+// والهامش: طلبُ الواتساب بلا هامشٍ فعمولتُه قاعدتُه). **ومتجرٌ بلا مندوبٍ لا يُسقط التسليم.**
+//
+// **وعلى الشيفرة القديمة يسقط**: لا قيدَ `commission` للمندوب.
+func TestWACOMM05_RepGetsShare(t *testing.T) {
+	for _, src := range []string{`"platform_commission"`, `"pricing_margin"`, `"both"`} {
+		t.Run(strings.Trim(src, `"`), func(t *testing.T) { waRepShare(t, src) })
+	}
+}
+
+func waRepShare(t *testing.T, src string) {
+	{
+		h := New(t)
+		c := newWAComm(t, h, "منطقةُ WA-COMM-05", 1000)
+		h.Setting("sales.commission_source", src)
+		h.Setting("sales.activation_orders", "0")
+		rep := c.w.md.f.RepAccount()
+		if _, err := h.Pool.Exec(ctxBG(), `UPDATE merchants SET sales_rep_user_id = $2 WHERE id = $1`,
+			c.w.md.fx.M.ID, rep.ID); err != nil {
+			t.Fatal(err)
+		}
+		base := mdaBaseline(t, h)
+		id := c.ourStore(t, h, nil)
+		waDeliver(t, h, id, 2400)
+		var got int64
+		if err := h.Pool.QueryRow(ctxBG(), `SELECT COALESCE(sum(amount), 0) FROM wallet_transactions
+			WHERE user_id = $1 AND ref = $2 AND kind = 'commission'`, rep.ID, id).Scan(&got); err != nil {
+			t.Fatal(err)
+		}
+		var pct int64
+		_ = h.Pool.QueryRow(ctxBG(), `SELECT snap_rep_commission_percent FROM orders WHERE id = $1`, id).Scan(&pct)
+		if want := 240 * pct / 100; pct <= 0 || got != want {
+			t.Fatalf("%s: **نصيبُ المندوب %d والمنتظَر %d** (نسبتُه %d٪ من ٢٤٠)", src, got, want, pct)
+		}
+		if pc := waPlatformCommission(t, h, id); pc != 240 {
+			t.Fatalf("%s: عمولةُ المنصّة %d", src, pc)
+		}
+		mdaNoNewViolations(t, h, base)
+	}
 }
