@@ -23,14 +23,17 @@ export function ToolHeader({
   href,
   onBack,
   end,
+  topLevel,
 }: {
+  /** صفحةٌ بابُها في السايدبار: لا سهمَ رجوعٍ على الحاسوب. */
+  topLevel?: boolean;
   title: string;
   href?: string;
   onBack?: () => void;
   end?: ReactNode;
 }) {
   const cls =
-    "flex h-11 w-11 shrink-0 items-center justify-center rounded-control text-ink hover:bg-row-hover";
+    `flex h-11 w-11 shrink-0 items-center justify-center rounded-control text-ink hover:bg-row-hover lg:h-9 lg:w-9 ${topLevel ? "lg:hidden" : ""}`;
   const back = href ? (
     <Link href={href} aria-label={m.common.back} title={m.common.back} className={cls} data-testid="tool-back">
       <IconPrev size={22} />

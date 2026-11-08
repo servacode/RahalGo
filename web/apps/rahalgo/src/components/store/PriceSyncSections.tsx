@@ -15,7 +15,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { getMessages, defaultLocale, errorText, fmtNum } from "@rahalgo/i18n";
-import { Alert, Button, Checkbox, Input, Kpi, KpiGrid, Select } from "@rahalgo/ui";
+import { Alert, Button, Checkbox, Input, Kpi, Select } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { fill } from "@/lib/customer/texts";
 import type { SectionRef } from "@/lib/store/types";
@@ -201,10 +201,10 @@ export function PriceSyncSections({ storeId, refreshKey }: { storeId: string; re
   return (
     <section className="panel flex min-w-0 flex-col gap-4 p-4 lg:p-5" data-testid="sync-sections" aria-label={P.sortTitle}>
       <h2 className="console-h2">{P.sortTitle}</h2>
-      <KpiGrid>
+      <div className="grid grid-cols-2 gap-3">
         <Kpi label={K.secPending} value={pending} tone={pending > 0 ? "attention" : "good"} sub={pending > 0 ? undefined : P.sortNone} />
         <Kpi label={K.secGroups} value={groups.length} />
-      </KpiGrid>
+      </div>
       {pending > 0 && (
         <>
           <p className="text-sm font-bold">{fill(P.sortWaiting, { n: fmtNum(pending) })}</p>

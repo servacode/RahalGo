@@ -308,6 +308,7 @@ export default function PriceSyncPage() {
       <PageHeader
         title={P.title}
         href="/store/menu"
+        topLevel
         subtitle={info?.last_run ? fill(P.last, { at: fmtDateTime(info.last_run.at) }) : undefined}
       />
 

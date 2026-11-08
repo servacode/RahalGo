@@ -503,10 +503,10 @@ export default function OffersPage() {
 
   return (
     <div className="console-page" data-testid="store-offers">
-      <ToolHeader title={O.title} href="/store/menu" end={rows.length > 0 ? addBtn : undefined} />
+      <ToolHeader title={O.title} href="/store/menu" topLevel end={rows.length > 0 ? addBtn : undefined} />
       {created && <Alert tone="success">{O.createdTop}</Alert>}
       {rows.length === 0 ? (
-        <section className="panel mx-auto flex w-full max-w-xl flex-col items-center gap-3 px-4 py-10 text-center">
+        <section className="panel mx-auto flex w-full max-w-xl flex-col items-center gap-3 px-4 py-10 text-center lg:max-w-none lg:py-16">
           <span className="flex h-22 w-22 items-center justify-center rounded-full bg-accent-tint text-accent-text" aria-hidden>
             <IconPromos size={40} />
           </span>

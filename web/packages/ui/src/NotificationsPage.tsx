@@ -362,7 +362,7 @@ export function NotificationsPage({
                               className="h-2 w-2 shrink-0 rounded-badge bg-accent"
                             />
                           )}
-                          <span className="min-w-0 truncate">{n.title}</span>
+                          <span className="min-w-0 truncate" title={n.title}>{n.title}</span>
                         </p>
                         {/* **الجسدُ سطران لا سطرٌ مقتطع**: «تعويض عن طلبٍ فشل —
                             المطعم مغلق» يُقصّ عند «طلبٍ» فيبقى السؤال. */}

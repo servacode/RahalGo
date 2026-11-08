@@ -6003,6 +6003,12 @@ html[data-console-theme="dark"] .console-root .seg-item[aria-pressed="true"] {
   font-weight: 700;
   color: var(--color-ink-muted);
 }
+/* فراغٌ داخل لوحٍ (جدولُ حركاتٍ مثلاً): لا إطارَ ثانٍ داخل الإطار */
+.console-root .panel [data-ui="empty"] {
+  border-color: transparent;
+  box-shadow: none;
+  background: transparent;
+}
 .console-root [data-ui="error"] {
   margin-inline: 0;
   border: 1px solid var(--color-line-soft);

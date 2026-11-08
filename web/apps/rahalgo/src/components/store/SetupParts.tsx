@@ -35,14 +35,14 @@ export const FRIDAY = 5;
 // ══════════════════════════════════════════════════════════════════════
 
 /** **سهمُ الرجوع وحدَه** — لرأسٍ مشتركٍ يأخذه قبل عنوانه (الإشعارات). */
-export function BackArrow({ href = "/store" }: { href?: string }) {
+export function BackArrow({ href = "/store", topLevel }: { href?: string; topLevel?: boolean }) {
   return (
     <Link
       href={href}
       aria-label={HM.back}
       title={HM.back}
-      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-control text-ink transition-colors hover:bg-row-hover ${
-        href === "/store" ? "lg:hidden" : ""
+      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-control text-ink transition-colors hover:bg-row-hover lg:h-9 lg:w-9 ${
+        href === "/store" || topLevel ? "lg:hidden" : ""
       }`}
     >
       <IconPrev size={22} />
@@ -60,8 +60,11 @@ export function PageHeader({
   href = "/store",
   actions,
   subtitle,
+  topLevel,
 }: {
   title: string;
+  /** صفحةٌ بابُها في السايدبار: لا سهمَ رجوعٍ على الحاسوب. */
+  topLevel?: boolean;
   href?: string;
   actions?: ReactNode;
   subtitle?: ReactNode;
@@ -69,7 +72,7 @@ export function PageHeader({
   /* **جوّالاً الرجوعُ في شريط التنقّل** (سهمٌ ونصٌّ كآيفون) و**حاسوباً سهمٌ قبل العنوان في الصفحات الفرعيّة وحدَها** (السايدبارُ يغني الرئيسيّة). */
   return (
     <PageHead
-      leading={<BackArrow href={href} />}
+      leading={<BackArrow href={href} topLevel={topLevel} />}
       navStart={
         <Link href={href} className="flex items-center gap-0.5 text-base font-medium" data-testid="phone-back">
           <IconPrev size={22} />

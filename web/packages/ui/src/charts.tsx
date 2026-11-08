@@ -12,7 +12,7 @@
  * **والزمنُ يمضي من اليمين إلى اليسار كالعربيّة** — فاليومُ الأخيرُ على اليسار.
  */
 
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 /** عنصرٌ بفهرسٍ مضمونٍ (الفحصُ الصارمُ للفهارس لا يعرف أنّ الطولَ مفحوص). */
 const at = <T,>(a: readonly T[], i: number): T => a[i] as T;
@@ -109,9 +109,19 @@ export function SalesChart({
 }) {
   const gid = useId();
   const [hover, setHover] = useState<number | null>(null);
+  /** عرضُ الحاوية الفعليّ: على الحاسوب يُرسم بمقياس ١:١ فلا يتضخّم الخطّ، وجوّالاً يبقى المقياسُ القديم. */
+  const box = useRef<HTMLDivElement>(null);
+  const [wide, setWide] = useState(0);
+  useEffect(() => {
+    const el = box.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => setWide(Math.round(el.clientWidth)));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   const n = points.length;
   if (n < 2) return null;
-  const W = 730;
+  const W = wide >= 600 ? wide : 730;
   const H = 214;
   const pl = 6;
   const pr = 52;
@@ -134,7 +144,7 @@ export function SalesChart({
   /** تسميةٌ كلَّ بضع نقاطٍ كي لا تتزاحم في ٣٠ و٩٠ يوماً. */
   const every = Math.max(1, Math.ceil(n / 8));
   return (
-    <div className="relative">
+    <div className="relative" ref={box}>
       <svg
         viewBox={`0 0 ${W} ${H}`}
         width="100%"

@@ -127,9 +127,11 @@ export default function BulkPricePage() {
   if (!store) return null;
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-4" data-testid="bulk-price">
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-4 lg:mx-0 lg:max-w-5xl" data-testid="bulk-price">
       <ToolHeader title={B.title} href={BACK} />
 
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start lg:gap-5">
+      <div className="flex min-w-0 flex-col gap-4">
       <div role="radiogroup" aria-label={B.title} className="flex gap-2">
         <ChoiceBox icon={IconAdd} label={B.up} tone="success" on={up} disabled={busy} onPick={() => { setUp(true); changed(); }} testId="bulk-up" />
         <ChoiceBox icon={IconMinus} label={B.down} tone="danger" on={!up} disabled={busy} onPick={() => { setUp(false); changed(); }} testId="bulk-down" />
@@ -168,14 +170,15 @@ export default function BulkPricePage() {
           <span className="shrink-0 font-bold text-ink-muted">{byAmount ? B.unitSyp : B.unitPct}</span>
         </span>
       </label>
+      </div>
 
-      <fieldset className="flex flex-col gap-1">
+      <fieldset className="flex min-w-0 flex-col gap-1">
         <legend className="mb-1 text-sm font-bold">{B.scope}</legend>
-        <div className="surface flex flex-col gap-1 rounded-card border border-line p-2">
+        <div className="surface grid grid-cols-1 gap-x-2 gap-y-1 rounded-card border border-line p-2 sm:grid-cols-2 ">
           <Radio
             id="bulk-sec-all"
             name="bulk-section"
-            className="min-h-11 px-1"
+            className="min-h-11 px-1 lg:min-h-9"
             checked={section === ""}
             disabled={busy}
             onChange={() => { setSection(""); changed(); }}
@@ -186,7 +189,7 @@ export default function BulkPricePage() {
               key={s.id}
               id={`bulk-sec-${s.id}`}
               name="bulk-section"
-              className="min-h-11 px-1"
+              className="min-h-11 px-1 lg:min-h-9"
               checked={section === s.id}
               disabled={busy}
               onChange={() => { setSection(s.id); changed(); }}
@@ -195,6 +198,7 @@ export default function BulkPricePage() {
           ))}
         </div>
       </fieldset>
+      </div>
 
       {error && <Alert>{error}</Alert>}
       <FormActions

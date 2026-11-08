@@ -92,41 +92,40 @@ export default function StoreAccountPage() {
         })}
       </div>
 
-      {/* ── عمودان على الحاسوب: التنبيهات والجلسة | بيانات الحساب. جوّالاً متتابعان ── */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start lg:gap-5">
-        <div className="flex min-w-0 flex-col gap-4">
-          <section className="panel p-4" aria-label={A.sound} data-testid="store-sound">
-            <Toggle
-              id="store-sound"
-              checked={soundEnabled}
-              onChange={setSoundEnabled}
-              label={A.sound}
-              hint={soundEnabled ? A.soundOn : A.soundOff}
-            />
-          </section>
+      {/* ── الحاسوب: صفُّ تفضيلات (صوت · داكن · إشعارات) ثمّ بطاقاتُ الحساب بعرض الصفحة كاملاً، وتحتها الخروج. ── */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-stretch lg:gap-5">
+        <section className="panel p-4" aria-label={A.sound} data-testid="store-sound">
+          <Toggle
+            id="store-sound"
+            checked={soundEnabled}
+            onChange={setSoundEnabled}
+            label={A.sound}
+            hint={soundEnabled ? A.soundOn : A.soundOff}
+          />
+        </section>
 
-          <section className="panel p-4" aria-label={SH.darkMode}>
-            <Toggle id="store-dark" checked={theme === "dark"} onChange={() => toggle()} label={SH.darkMode} hint={SH.darkModeHint} />
-          </section>
+        <section className="panel p-4" aria-label={SH.darkMode}>
+          <Toggle id="store-dark" checked={theme === "dark"} onChange={() => toggle()} label={SH.darkMode} hint={SH.darkModeHint} />
+        </section>
 
+        <div className="min-w-0 [&>*]:h-full">
           <WebPushCard app="merchant" />
-
-          {user && hasRole(user, "customer") && (
-            <ButtonLink Link={Link} href="/shop" variant="secondary" className="flex min-h-11 items-center justify-center gap-2 py-3">
-              <IconBag size={16} />
-              {A.shop}
-            </ButtonLink>
-          )}
-
-          <Button variant="danger" className="flex min-h-11 items-center justify-center gap-2 py-3" onClick={out} data-testid="account-logout">
-            <IconLogout size={16} />
-            {A.logout}
-          </Button>
         </div>
+      </div>
 
-        <div className="min-w-0">
-          <AccountSettings api={api} mediaUrl={mediaUrl} phone={user?.phone} onDeleted={out} whatsapp={false} />
-        </div>
+      <AccountSettings api={api} mediaUrl={mediaUrl} phone={user?.phone} onDeleted={out} whatsapp={false} />
+
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+        {user && hasRole(user, "customer") && (
+          <ButtonLink Link={Link} href="/shop" variant="secondary" className="flex min-h-11 items-center justify-center gap-2 px-5 py-3">
+            <IconBag size={16} />
+            {A.shop}
+          </ButtonLink>
+        )}
+        <Button variant="danger" className="flex min-h-11 items-center justify-center gap-2 px-5 py-3" onClick={out} data-testid="account-logout">
+          <IconLogout size={16} />
+          {A.logout}
+        </Button>
       </div>
     </div>
   );

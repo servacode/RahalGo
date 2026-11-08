@@ -366,8 +366,7 @@ export function OrderPhonesPage() {
       {p == null ? (
         loadError ? <ReloadState label={loadError} onRetry={load} /> : <LoadingState variant="list" rows={2} />
       ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start lg:gap-5">
-          <div className="flex min-w-0 flex-col gap-4">
+        <div className="flex w-full min-w-0 flex-col gap-4 lg:max-w-3xl">
           <div className="flex gap-3" role="radiogroup" aria-label={T.phonesTitle}>
             <IconChoiceCard
               icon={<IconPhone size={28} />}
@@ -388,17 +387,6 @@ export function OrderPhonesPage() {
             />
           </div>
 
-          {canManage && (
-            <Button size="lg" className="flex min-h-11 w-full items-center justify-center gap-2" disabled={busy} onClick={() => void save()}>
-              <IconCheck size={20} />
-              {T.save}
-            </Button>
-          )}
-          {saved && <Alert tone="success">{T.saved}</Alert>}
-          {error && <Alert>{error}</Alert>}
-          </div>
-
-          <div className="min-w-0">
           {p.mode === "full" && <p className="panel p-4 text-sm text-ink-muted">{K.phonesFullHint}</p>}
           {p.mode === "split" && (
             <WhiteCard title={T.numbersTitle}>
@@ -444,7 +432,14 @@ export function OrderPhonesPage() {
               </div>
             </WhiteCard>
           )}
-          </div>
+          {canManage && (
+            <Button size="lg" className="flex min-h-11 w-full items-center lg:w-auto lg:self-start lg:px-8 justify-center gap-2" disabled={busy} onClick={() => void save()}>
+              <IconCheck size={20} />
+              {T.save}
+            </Button>
+          )}
+          {saved && <Alert tone="success">{T.saved}</Alert>}
+          {error && <Alert>{error}</Alert>}
         </div>
       )}
     </div>

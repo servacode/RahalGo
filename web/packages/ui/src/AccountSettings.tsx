@@ -384,7 +384,7 @@ export function AccountSettings({
           **والاسمُ يُقرأ حيث يهمّ**: يناديه السائقُ عند الباب، ويُكتب في
           الفاتورة، ويظهر لغرفة العمليات حين يتّصل. (شهده المالك ٢٠٢٦-٠٨-٠٣) */}
       <Section title={A.identity} icon={<IconUser />}>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
           <div className="figure flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-tint text-primary-dark">
             {avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -446,7 +446,7 @@ export function AccountSettings({
         {!otpSent ? (
           <form onSubmit={reqPhone} className="space-y-3">
             <div>
-              <Input id="new-phone" label={A.newPhone} icon={<IconPhone />} dir="ltr" inputMode="tel" required value={newPhone} onChange={(e) => setNewPhone(e.target.value)} className="text-end" placeholder="09xxxxxxxx" />
+              <Input id="new-phone" label={A.newPhone} icon={<IconPhone />} dir="ltr" inputMode="tel" required value={newPhone} onChange={(e) => setNewPhone(e.target.value)} placeholder="09xxxxxxxx" />
               <p className="mt-1 text-xs text-ink-muted">{A.phoneHint}</p>
             </div>
             <Button type="submit" disabled={phoneBusy} className="w-full py-2.5">
@@ -506,7 +506,7 @@ export function AccountSettings({
                 required
                 value={wa}
                 onChange={(e) => setWa(e.target.value)}
-                className="text-end"
+                
                 placeholder="09xxxxxxxx"
               />
               <p className="mt-1 text-xs text-ink-muted">{A.whatsappHint}</p>
