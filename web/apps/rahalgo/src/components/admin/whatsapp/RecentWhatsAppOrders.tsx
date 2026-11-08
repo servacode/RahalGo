@@ -9,6 +9,8 @@
  * قبل الاستلام بسببٍ إلزاميّ** (`POST /admin/whatsapp-orders/{id}/cancel`) — والمحرّكُ يحكم:
  * بعد الاستلام يُقال «الحلّ من بطاقة الطلب».
  *
+ * **و«بدّل السائق» قبل الاستلام** (قرارُ المالك ٢٠٢٦-١١-٠٨) — يُعاد للطابور بسبب، ثمّ يُختار سائقٌ آخر.
+ *
  * **ومن هنا إلى لوحة الطلبات وسجلّها** بفلتر «طلبات الواتساب» — الطلبُ طلبٌ نظاميٌّ هناك.
  *
  * **و«تعديل العنوان» قبل التسليم** (ملحقُ المالك ٢٠٢٦-١١-٠٥، د: «نحن رح نعبيه يدوي») — المستلِمُ
@@ -40,6 +42,7 @@ import {
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { fill } from "@/lib/customer/texts";
+import { AssignDialog } from "../orders/AssignDialog";
 
 const m = getMessages(defaultLocale);
 const W = m.admin.whatsappOrders;
@@ -62,6 +65,8 @@ interface WaRow {
 
 /** **قبل الاستلام وحدَه** — والمحرّكُ يحرسه (`wa_cancel_after_pickup`). */
 const CANCELLABLE = new Set(["dispatching", "assigned", "at_pickup"]);
+/** **«بدّل السائق» قبل الاستلام** (قرارُ المالك ٢٠٢٦-١١-٠٨) — والمحرّكُ يحرسه، ولا يعود لمن تُرك. */
+const DRIVER_CHANGEABLE = new Set(["assigned", "at_pickup"]);
 /** **قبل التسليم** — والمحرّكُ يحرسه (`wa_address_closed`). */
 const ADDRESS_EDITABLE = new Set(["dispatching", "assigned", "at_pickup", "picked_up", "on_the_way", "at_dropoff"]);
 
@@ -75,6 +80,8 @@ export function RecentWhatsAppOrders({ refresh }: { refresh: number }) {
   const [done, setDone] = useState("");
   const [addrTarget, setAddrTarget] = useState<WaRow | null>(null);
   const [addrText, setAddrText] = useState("");
+  const [swapTarget, setSwapTarget] = useState<WaRow | null>(null);
+  const [assignFor, setAssignFor] = useState<WaRow | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -122,6 +129,32 @@ export function RecentWhatsAppOrders({ refresh }: { refresh: number }) {
       });
       setDone(fill(W.cancelled, { n: target.number }));
       setTarget(null);
+      setReason("");
+      void load();
+    } catch (e) {
+      setErr(errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** **«بدّل السائق»** — يُعاد للطابور بسببٍ يُسجَّل، ثمّ يُختار سائقٌ أو يُترك للتوزيع. */
+  async function releaseDriver() {
+    if (!swapTarget || busy) return;
+    if (!reason.trim()) {
+      setErr(W.changeDriverReason);
+      return;
+    }
+    setBusy(true);
+    setErr("");
+    try {
+      await api(`/api/v1/admin/orders/${swapTarget.id}/transition`, {
+        method: "POST",
+        body: JSON.stringify({ to: "dispatching", note: reason.trim() }),
+      });
+      setDone(fill(W.driverReleased, { n: swapTarget.number }));
+      setAssignFor(swapTarget);
+      setSwapTarget(null);
       setReason("");
       void load();
     } catch (e) {
@@ -221,6 +254,20 @@ export function RecentWhatsAppOrders({ refresh }: { refresh: number }) {
                       {W.editAddress}
                     </Button>
                   )}
+                  {DRIVER_CHANGEABLE.has(o.status) && o.driver_name && (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      onClick={() => {
+                        setSwapTarget(o);
+                        setReason("");
+                        setErr("");
+                        setDone("");
+                      }}
+                    >
+                      {W.changeDriver}
+                    </Button>
+                  )}
                   {CANCELLABLE.has(o.status) && (
                     <Button
                       size="sm"
@@ -255,6 +302,36 @@ export function RecentWhatsAppOrders({ refresh }: { refresh: number }) {
           />
         </div>
       </Modal>
+
+      <Modal
+        open={swapTarget !== null}
+        onClose={() => setSwapTarget(null)}
+        title={swapTarget ? fill(W.changeDriverTitle, { n: swapTarget.number }) : W.changeDriver}
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-ink-muted">{W.changeDriverHint}</p>
+          <Textarea label={W.changeDriverReason} value={reason} maxLength={300} autoGrow onChange={(e) => setReason(e.target.value)} />
+          {err && <Alert tone="error">{err}</Alert>}
+          <FormActions
+            onSave={() => void releaseDriver()}
+            onCancel={() => setSwapTarget(null)}
+            busy={busy}
+            saveLabel={W.changeDriverSave}
+          />
+        </div>
+      </Modal>
+
+      {assignFor && (
+        <AssignDialog
+          orderId={assignFor.id}
+          orderNumber={assignFor.number}
+          onClose={() => setAssignFor(null)}
+          onDone={() => {
+            setAssignFor(null);
+            void load();
+          }}
+        />
+      )}
 
       <Modal
         open={addrTarget !== null}
