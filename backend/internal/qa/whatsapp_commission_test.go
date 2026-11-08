@@ -334,3 +334,44 @@ func TestWACOMM06_ZeroIsAmanah(t *testing.T) {
 	}
 	mdaNoNewViolations(t, h, base)
 }
+
+// TestWAORD050_ArrivedMessage **«وصلت» ⇒ البوتُ يُخبر الزبون** (قرارُ المالك ٢٠٢٦-١١-٠٨: «سائق رحال غو وصل
+// الى موقعك الرجاء الخروج لاستلام طلبك») — مرّةً عند «وصلت»، ولا قبلها.
+//
+// **وعلى الشيفرة القديمة يسقط**: لا رسالةَ عند الوصول.
+func TestWAORD050_ArrivedMessage(t *testing.T) {
+	h := New(t)
+	n := armFeedback(t, h, true)
+	c := newWAComm(t, h, "منطقةُ WA-050", 0)
+	phone := uniqPhone()
+	id := c.ourStore(t, h, map[string]any{"recipient_phone": phone})
+	drv := h.driverOf(id)
+	step := func(to string) {
+		t.Helper()
+		if r := h.POST("/api/v1/driver/orders/"+id+"/transition", drv.Token, map[string]any{"to": to}); r.Code >= 400 {
+			t.Fatalf("الانتقالُ إلى %s: %s", to, r)
+		}
+	}
+	has := func() int {
+		k := 0
+		for _, m := range n.to(phone) {
+			if strings.Contains(m.text, "وصل إلى موقعك") {
+				k++
+			}
+		}
+		return k
+	}
+	step("at_pickup")
+	if r := h.POST("/api/v1/driver/orders/"+id+"/fetch-amount", drv.Token, map[string]any{"amount": 0}); r.Code != http.StatusOK {
+		t.Fatalf("الأمانة: %s", r)
+	}
+	step("picked_up")
+	step("on_the_way")
+	if k := has(); k != 0 {
+		t.Fatalf("**رسالةُ الوصول قبل «وصلت»**: %d", k)
+	}
+	step("at_dropoff")
+	if k := has(); k != 1 {
+		t.Fatalf("**رسالةُ الوصول**: %d رسالة — المنتظَر واحدة", k)
+	}
+}
