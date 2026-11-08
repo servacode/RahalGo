@@ -198,7 +198,7 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="surface-lit surface p-10 text-center">
+    <div className="surface-lit surface p-10 text-center" data-ui="empty">
       {/* ══════════════════════════════════════════════════════════════
           **والفرقُ بين «رسمٍ» و«نوعٍ» يُقاس بـ`isValidElement` لا بـ`typeof`**
           ══════════════════════════════════════════════════════════════
@@ -291,6 +291,7 @@ export function ReloadState({ onRetry, label }: { onRetry?: () => void; label?: 
       className="flex flex-col items-center justify-center gap-3 py-16 text-center"
       role="status"
       aria-live="polite"
+      data-ui="error"
     >
       <p className="text-sm text-ink-muted">{label ?? m.errors.offline}</p>
       {onRetry && (

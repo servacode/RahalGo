@@ -15,7 +15,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getMessages, defaultLocale, fmtDateTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtDateTime, fmtSince } from "@rahalgo/i18n";
 import { ButtonLink, IconRotate, Pill } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
@@ -24,6 +24,7 @@ import { fill } from "@/lib/customer/texts";
 const m = getMessages(defaultLocale);
 const P = m.store.priceSync;
 const K = m.store.console;
+const SH = m.store.shell;
 
 /** **ما يلزم من ردّ المحرّك لتحديد الحالة** — والصفحةُ تمدّه بما تحتاجه. */
 export interface SyncInfoBase {
@@ -96,10 +97,10 @@ export function lastRealSync(info: SyncInfoBase | null): string {
 }
 
 /**
- * **بطاقةُ الرئيسيّة** — حالةُ البرنامج في صفٍّ واحدٍ قرب الأعلى، وتفتح صفحةَ المزامنة.
- * لا تظهر إلّا لمتجرٍ يستعمل الأمين، وتبقى صامتةً إن تعذّرت القراءة (لا تُسقط الرئيسيّة).
+ * **قراءةُ حالة البرنامج وتجديدُها كلَّ دقيقة** — لمتجرٍ يستعمل الأمين وحدَه.
+ * `undefined` قبل الجواب، و`null` إن تعذّرت القراءةُ (فيبقى المستهلكُ صامتاً ولا يُسقط شاشتَه).
  */
-export function AmeenStatusTile({ className = "" }: { className?: string }) {
+export function useAmeenInfo(): SyncInfoBase | null | undefined {
   const { store } = useStore();
   const id = store?.id ?? "";
   const on = store?.uses_ameen === true;
@@ -121,18 +122,59 @@ export function AmeenStatusTile({ className = "" }: { className?: string }) {
     };
   }, [id, on]);
 
-  if (!on || info === undefined) return null;
+  return on ? info : undefined;
+}
+
+/** **هل يحتاج البرنامجُ نظرةً؟** — متّصلٌ ولا يزامن، أو انقطع. (للنقطة الحمراء في القائمة.) */
+export function ameenNeedsLook(info: SyncInfoBase | null | undefined): boolean {
+  if (!info) return false;
+  const k = agentState(info).key;
+  return k === "error" || k === "dead";
+}
+
+/**
+ * **بطاقةُ الشريط الجانبيّ** — نقطةٌ بلون الحال، «الأمين: …» وآخرُ اتصال؛ وتفتح صفحةَ المزامنة.
+ * لا تظهر إلّا لمتجرٍ يستعمل الأمين.
+ */
+export function AmeenSideCard() {
+  const info = useAmeenInfo();
+  if (info === undefined) return null;
+  const st = agentState(info);
+  const last = info?.agent_seen_at ? fill(SH.sideLast, { t: fmtSince(info.agent_seen_at) }) : st.detail;
+  return (
+    <Link
+      href="/store/price-sync"
+      data-testid="ameen-side-card"
+      data-state={st.key}
+      className="flex items-start gap-2.5 rounded-control border border-line-soft bg-surface p-2.5 text-xs leading-snug text-ink-muted transition-colors hover:bg-row-hover"
+    >
+      <span className="dot mt-1.5" data-tone={st.tone === "danger" ? "bad" : st.tone === "attention" ? "warn" : st.tone === "good" ? undefined : "off"} aria-hidden />
+      <span className="min-w-0">
+        <b className="block text-sm text-ink">{fill(SH.sideTitle, { s: st.label })}</b>
+        <span className="line-clamp-2">{last}</span>
+      </span>
+    </Link>
+  );
+}
+
+/**
+ * **بطاقةُ الرئيسيّة** — حالةُ البرنامج في صفٍّ واحدٍ قرب الأعلى، وتفتح صفحةَ المزامنة.
+ * لا تظهر إلّا لمتجرٍ يستعمل الأمين، وتبقى صامتةً إن تعذّرت القراءة (لا تُسقط الرئيسيّة).
+ */
+export function AmeenStatusTile({ className = "" }: { className?: string }) {
+  const info = useAmeenInfo();
+  if (info === undefined) return null;
   const st = agentState(info);
   const last = lastRealSync(info);
   return (
     <section
-      className={`panel flex flex-wrap items-center gap-3 p-4 lg:px-5 ${className}`}
+      className={`panel flex flex-wrap items-center gap-3 p-3.5 ${className}`}
       aria-label={K.ameenTile}
       data-testid="ameen-status-tile"
       data-state={st.key}
     >
-      <span className="icon-chip size-11" data-tone={st.tone} aria-hidden>
-        <IconRotate size={22} />
+      <span className="icon-chip size-10" data-tone={st.tone} aria-hidden>
+        <IconRotate size={20} />
       </span>
       <div className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="flex flex-wrap items-center gap-2">
@@ -144,7 +186,7 @@ export function AmeenStatusTile({ className = "" }: { className?: string }) {
         </p>
         {last && st.key !== "stopped" && <p className="console-meta hidden sm:block">{last}</p>}
       </div>
-      <ButtonLink Link={Link} href="/store/price-sync" variant="secondary" className="min-h-11 w-full shrink-0 sm:w-auto">
+      <ButtonLink Link={Link} href="/store/price-sync" variant="secondary" size="sm" className="w-full shrink-0 sm:w-auto">
         {K.ameenOpen}
       </ButtonLink>
     </section>

@@ -50,7 +50,7 @@ export function ToolHeader({
  */
 export function StickyBar({ children }: { children: ReactNode }) {
   return (
-    <div className="surface sticky bottom-[calc(3.75rem+env(safe-area-inset-bottom))] z-30 flex flex-col gap-2 border-t border-line-soft p-3 md:bottom-0">
+    <div className="surface sticky bottom-[calc(3.3rem+env(safe-area-inset-bottom))] z-30 flex flex-col gap-2 border-t border-line-soft p-3 lg:bottom-0">
       {children}
     </div>
   );

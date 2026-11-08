@@ -19,34 +19,20 @@
  * **والدخولُ من `/login` نفسِه** — والتوجيهُ بالدور (`homeFor`).
  */
 
-import Link from "next/link";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { getMessages, defaultLocale, errorText } from "@rahalgo/i18n";
 import {
-  BrandMark,
   ButtonLink,
+  ConsoleNavContext,
   EmptyState,
-  IconAdd,
-  IconHamburger,
-  IconMoto,
-  IconOrder,
-  IconCart,
   IconStore,
-  IconList,
-  IconUser,
-  IconWallet,
   LoadingState,
-  MobileNav,
-  MobileNavSpacer,
-  NotificationBell,
   NotificationToast,
   ReloadState,
-  TopBar,
-  TopBarLink,
+  useConsoleTheme,
   useLiveNotifications,
   wsBase,
-  type NavItem,
 } from "@rahalgo/ui";
 import { api, onLogout, tokenStore } from "@/lib/api";
 import { dropWebPushOnLogout } from "@/lib/webpush";
@@ -58,11 +44,13 @@ import { StoreDeliveriesProvider } from "@/lib/store/deliveries";
 import { ShopToastProvider } from "@/components/customer/toast";
 import PwaHints from "@/components/customer/PwaHints";
 import { fill } from "@/lib/customer/texts";
-import StoreBar from "./StoreBar";
 import OrderAlert from "./OrderAlert";
 import FetchAmountWatcher from "./FetchAmountWatcher";
 import StoreMenu from "./StoreMenu";
 import StoreSidebar from "./StoreSidebar";
+import StoreTopBar from "./StoreTopBar";
+import { PhoneNavBar, PhoneTabBar, usePhoneNav } from "./StorePhoneChrome";
+import { useStoreNav } from "./navModel";
 import SetupWizard from "./SetupWizard";
 import { useSetupWizard, useStoreSections } from "@/lib/store/setup";
 
@@ -76,19 +64,6 @@ const ANDROID_HINT = {
   cta: S.pwa.androidCta,
   offKey: "rahalgo_pwa_android_merchant_off",
 };
-
-/** **الجرسُ وقناةُ البثّ** — والقناةُ نفسُها توقظ الطلباتِ والتوصيلات (`useLiveRefresh`). */
-function Bell() {
-  // **والخروجُ يُلغي اشتراكَ إشعارات المتصفّح** — كما في قشرة الزبون.
-  useEffect(() => onLogout(() => void dropWebPushOnLogout()), []);
-  const notif = useLiveNotifications(api, wsBase(), tokenStore.access, "merchant");
-  return (
-    <>
-      <NotificationBell unread={notif.unread} Link={Link} allHref="/store/notifications" />
-      <NotificationToast notification={notif.toast} onDismiss={notif.dismissToast} />
-    </>
-  );
-}
 
 /**
  * **عدّادُ الطلبات الجديدة في عنوان التبويب** — «(٢) طلب جديد».
@@ -115,7 +90,6 @@ function TitleBadge() {
 function Shell({ children }: { children: ReactNode }) {
   const path = usePathname() ?? "/store";
   const { loading, error, store, selfManage, reload } = useStore();
-  const { pending } = useStoreOrders();
 
   const [menuOpen, setMenuOpen] = useState(false);
   const router = useRouter();
@@ -124,35 +98,17 @@ function Shell({ children }: { children: ReactNode }) {
   const sec = useStoreSections(store?.id ?? "");
   const wizard = useSetupWizard(store, sec);
 
-  /* ══════════════════════════════════════════════════════════════════
-     **الشريطُ السفليُّ تبويباتُ التطبيق نفسُها وبترتيبها**
-     ══════════════════════════════════════════════════════════════════
+  /* **الجرسُ وقناةُ البثّ** — والقناةُ نفسُها توقظ الطلباتِ والتوصيلات (`useLiveRefresh`).
+     **والخروجُ يُلغي اشتراكَ إشعارات المتصفّح** — كما في قشرة الزبون. */
+  useEffect(() => onLogout(() => void dropWebPushOnLogout()), []);
+  const notif = useLiveNotifications(api, wsBase(), tokenStore.access, "merchant");
 
-     (مرآةُ `NavigationBar` في `MainActivity.kt`: الطلبات حين يدير المتجرُ
-      طلباتِه · متجري · أضف صنفاً · الأصناف · توصيلة · حسابي.)
-
-     **والمحفظةُ وما بقي في القائمة الجانبيّة** (`StoreMenu`) — كدرج التطبيق. */
-  const nav: NavItem[] = [
-    ...(selfManage
-      ? [{ href: "/store/orders", label: S.nav.orders, icon: IconOrder, count: pending.length, exact: true }]
-      : []),
-    { href: "/store", label: S.nav.store, icon: IconStore, exact: true },
-    { href: "/store/menu/new", label: S.nav.addItem, icon: IconAdd, exact: true, emphasis: true },
-    { href: "/store/menu", label: S.nav.menu, icon: IconList, exact: true },
-    { href: "/store/delivery", label: S.nav.delivery, icon: IconMoto, exact: true },
-    { href: "/store/account", label: S.nav.account, icon: IconUser, exact: true },
-  ];
-  /* **وعلى الشاشة العريضة المحفظةُ في الشريط العلويّ أيضاً** — كزرّها في
-     شريط التطبيق. */
-  const top: NavItem[] = [...nav, { href: "/store/wallet", label: S.nav.wallet, icon: IconWallet, exact: true }];
-  /* **و`/store` بدايةُ كلّ مسار** — فيُطابَق حرفيّاً وإلّا أُضيء مع كلّ قسم.
-     **و«أضف صنفاً» قبل «الأصناف»** — `/store/menu/new` يبدأ بـ`/store/menu`.
-     **والمطابقةُ بحدّ المقطع** — `/store/deliveries` ليست `/store/delivery`. */
-  const active =
-    top
-      .map((n) => n.href)
-      .filter((h) => h !== "/store")
-      .find((h) => path === h || path.startsWith(`${h}/`)) ?? (path === "/store" ? "/store" : "");
+  const nav = useStoreNav(path);
+  const phone = usePhoneNav();
+  const navCtx = useMemo(
+    () => ({ setTitle: phone.setTitle, startEl: phone.startEl, endEl: phone.endEl }),
+    [phone.setTitle, phone.startEl, phone.endEl],
+  );
 
   let body: ReactNode = children;
   if (loading) body = <LoadingState variant="list" rows={3} />;
@@ -175,79 +131,30 @@ function Shell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="console-root flex min-h-screen">
-      {/* **على `lg` فما فوق: سايدبارٌ ثابتٌ في جهة البداية** — وتحتها الجوّال والتابلت كما كانا. */}
-      <StoreSidebar path={path} selfManage={selfManage} />
-      <div className="flex min-w-0 flex-1 flex-col">
-      <TopBar
-        sticky
-        start={
-          <Link href="/store" aria-label={S.nav.panel} className="flex items-center">
-            <BrandMark size={40} disc />
-          </Link>
-        }
-      >
-        {top.map((it) => {
-          const Icon = it.icon;
-          /* **والاسمُ يظهر من `xl`** — سبعةُ أبوابٍ بأسمائها لا تتّسع لشاشةٍ
-             بين الجوّال والحاسوب، **فتبقى الأيقونةُ وتسميتُها للقارئ.** */
-          return (
-            <TopBarLink
-              key={it.href}
-              Link={Link}
-              href={it.href}
-              tone={active === it.href ? "active" : "plain"}
-              title={it.label}
-              aria-label={it.label}
-              className="hidden md:inline-flex lg:hidden"
-            >
-              <Icon size={18} />
-              <span className="hidden xl:inline">{it.label}</span>
-            </TopBarLink>
-          );
-        })}
-        {/* **«تسوّق كزبون»** — والعودةُ من صفحات الزبون بـ«لوحة متجري» (٢٠٢٦-١٠-١٩). */}
-        {/* **ملوّنٌ بأيقونة** (اقتراحٌ وافق عليه المالك ٢٠٢٦-١٠-١٩) — يُرى زرَّ تبديلٍ لا رابطاً. */}
-        <TopBarLink
-          Link={Link}
-          href="/shop"
-          tone="plain"
-          title={S.nav.shopAsCustomer}
-          aria-label={S.nav.shopAsCustomer}
-          className="min-h-11 min-w-11 justify-center rounded-full bg-primary px-3 text-on-bright hover:opacity-90"
-        >
-          <IconCart size={18} />
-          {/* على الجوّال أيقونةٌ بحجم لمسةٍ كاملة، والاسمُ من `sm`. */}
-          <span className="hidden sm:inline">{S.nav.shopAsCustomer}</span>
-        </TopBarLink>
-        <Bell />
-        <button
-          type="button"
-          onClick={() => setMenuOpen(true)}
-          aria-label={S.nav.more}
-          data-testid="store-menu-open"
-          className="flex size-11 shrink-0 items-center justify-center rounded-control text-ink-muted transition-colors hover:bg-row-hover hover:text-ink"
-        >
-          <IconHamburger size={22} />
-        </button>
-      </TopBar>
+    <ConsoleNavContext.Provider value={navCtx}>
+      <div className="flex min-h-screen">
+        {/* **على `lg` فما فوق: سايدبارٌ ثابتٌ في جهة البداية** — وتحتها شريطُ التبويب والعنوانُ الكبير. */}
+        <StoreSidebar path={path} onMenu={() => setMenuOpen(true)} />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <StoreTopBar crumb={nav.crumb} unread={notif.unread} onMenu={() => setMenuOpen(true)} />
+          <PhoneNavBar title={phone.title} unread={notif.unread} setStartEl={phone.setStartEl} setEndEl={phone.setEndEl} />
+          <main className="console-main" data-testid="store-main">
+            <div className="flex flex-col gap-3 empty:hidden">
+              <PwaHints android={ANDROID_HINT} />
+              {store && selfManage && <OrderAlert />}
+              {/* **وبجانب زرّ الصوت «فعّل إشعارات الطلبات»** — يرنّ والموقعُ مسكّر. */}
+              {store && selfManage && <WebPushCard app="merchant" variant="banner" notes={path === "/store"} />}
+            </div>
+            {body}
+          </main>
+        </div>
+      </div>
       <StoreMenu open={menuOpen} onClose={() => setMenuOpen(false)} />
-      {/* **حشوةُ الجانبين صغيرةٌ ثابتةٌ على العريض** (قرارُ المالك: لا فراغَ جانبيّاً كبيراً) — والمحتوى يملأ العرض. */}
-      <main className="flex min-w-0 flex-1 flex-col gap-3 px-3 pb-4 pt-3 sm:px-4 lg:gap-4 lg:px-5 lg:pb-8 lg:pt-4">
-        <PwaHints android={ANDROID_HINT} />
-        {/* **وصفحةُ الحساب بلا شريط المتجر** — كما يُخفي التطبيقُ مبدّلَ المتجر في «حسابي». */}
-        {store && path !== "/store" && !path.startsWith("/store/account") && <StoreBar />}
-        {store && selfManage && <OrderAlert />}
-        {/* **وبجانب زرّ الصوت «فعّل إشعارات الطلبات»** — يرنّ والموقعُ مسكّر. */}
-        {store && selfManage && <WebPushCard app="merchant" variant="banner" notes={path === "/store"} />}
-        {body}
-      </main>
-      <MobileNavSpacer />
-      <MobileNav items={nav} active={active} Link={Link} />
+      <PhoneTabBar path={path} />
+      <NotificationToast notification={notif.toast} onDismiss={notif.dismissToast} />
       {store && <FetchAmountWatcher />}
       <TitleBadge />
-      </div>
-    </div>
+    </ConsoleNavContext.Provider>
   );
 }
 
@@ -285,11 +192,15 @@ function Gate({ children }: { children: ReactNode }) {
 }
 
 export default function StoreShell({ children }: { children: ReactNode }) {
+  // **ثيمُ اللوحة (فاتحٌ افتراضاً)** — يُقرأ هنا مرّةً إن لم يسبقه سكربتُ الـ`<head>`.
+  useConsoleTheme();
   return (
-    <ShopToastProvider>
-      <Gate>
-        <Shell>{children}</Shell>
-      </Gate>
-    </ShopToastProvider>
+    <div className="console-root">
+      <ShopToastProvider>
+        <Gate>
+          <Shell>{children}</Shell>
+        </Gate>
+      </ShopToastProvider>
+    </div>
   );
 }

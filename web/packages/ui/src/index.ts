@@ -47,7 +47,37 @@ export {
 export { FormActions } from "./FormActions";
 /** **قائمةُ أفعالٍ منسدلة** — «إجراءات ▾» و«⋯» و«إضافة ▾» (قسمُ الحسابات ٢٠٢٦-١٠-٠٤). */
 export { ActionMenu, type ActionMenuItem } from "./ActionMenu";
-export { PageHead, Kpi, KpiGrid, Chip, SectionTitle, Pill, MiniBars } from "./console";
+export {
+  PageHead,
+  Kpi,
+  KpiGrid,
+  Chip,
+  SectionTitle,
+  Pill,
+  MiniBars,
+  Delta,
+  Segmented,
+  SwitchTrack,
+  Toggle,
+  CheckMark,
+  IconButton,
+  Thumb,
+  IGroup,
+  IRow,
+  FilterMenu,
+  LineTabs,
+  type LineTab,
+  SwipeRow,
+  type SwipeAction,
+  useConsoleTheme,
+  useIsDesktop,
+  CONSOLE_THEME_SCRIPT,
+  ConsoleNavContext,
+  type ConsoleNavCtx,
+  type ConsoleTheme,
+} from "./console";
+/** **رسومُ لوحة المتجر** — مصغّرٌ ورسمُ مبيعات، بلا مكتبة. */
+export { Sparkline, SalesChart, type SalesPoint } from "./charts";
 export { DataView, ViewToggle, useViewMode, type DataColumn, type ViewMode } from "./dataview";
 /** **رفعُ الصور ومصغَّرُها** — كانا في لوحة الإدارة، **فبوّابةُ المتجر لا
     تراهما**، وصورةُ الصنف مبنيّةٌ في المحرّك بلا يدٍ ترفعها. */

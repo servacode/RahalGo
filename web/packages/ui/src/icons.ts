@@ -193,4 +193,18 @@ export {
   // **تكبيرُ الصورة وتصغيرُها** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
   ZoomIn as IconZoomIn,
   ZoomOut as IconZoomOut,
+  // **أيقوناتُ كُسوة لوحة المتجر** (٢٠٢٦-١١-٠٨) — وضعُ الليل/النهار والمساعدة والترتيب والأسهمُ المائلة للتغيّر.
+  Moon as IconMoon,
+  Sun as IconSun,
+  CircleHelp as IconHelp,
+  ImageOff as IconImageOff,
+  Folder as IconFolder,
+  ChevronsUpDown as IconUpDown,
+  Rows3 as IconRows,
+  ArrowUpRight as IconArrowUpRight,
+  ArrowDownRight as IconArrowDownRight,
+  Download as IconDownload,
+  Clock as IconClock,
+  Tag as IconTag,
+  Bike as IconBike,
 } from "lucide-react";

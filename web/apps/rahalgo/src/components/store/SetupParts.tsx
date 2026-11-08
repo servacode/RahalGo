@@ -17,7 +17,7 @@
 import Link from "next/link";
 import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { Button, PageHead, IconCheck, IconClose, IconPrev, IconSearch, Modal, FormActions, Input, Switch } from "@rahalgo/ui";
+import { Button, PageHead, IconCheck, IconClose, IconPrev, IconSearch, Modal, FormActions, Input, Toggle } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import type { DayHours, SectionRef } from "@/lib/store/types";
 import { fill } from "@/lib/customer/texts";
@@ -41,7 +41,9 @@ export function BackArrow({ href = "/store" }: { href?: string }) {
       href={href}
       aria-label={HM.back}
       title={HM.back}
-      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-control text-ink transition-colors hover:bg-row-hover"
+      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-control text-ink transition-colors hover:bg-row-hover ${
+        href === "/store" ? "lg:hidden" : ""
+      }`}
     >
       <IconPrev size={22} />
     </Link>
@@ -64,7 +66,21 @@ export function PageHeader({
   actions?: ReactNode;
   subtitle?: ReactNode;
 }) {
-  return <PageHead leading={<BackArrow href={href} />} title={title} subtitle={subtitle} actions={actions} />;
+  /* **جوّالاً الرجوعُ في شريط التنقّل** (سهمٌ ونصٌّ كآيفون) و**حاسوباً سهمٌ قبل العنوان في الصفحات الفرعيّة وحدَها** (السايدبارُ يغني الرئيسيّة). */
+  return (
+    <PageHead
+      leading={<BackArrow href={href} />}
+      navStart={
+        <Link href={href} className="flex items-center gap-0.5 text-base font-medium" data-testid="phone-back">
+          <IconPrev size={22} />
+          {HM.back}
+        </Link>
+      }
+      title={title}
+      subtitle={subtitle}
+      actions={actions}
+    />
+  );
 }
 
 /** **علامةُ «مختار»** — دائرةٌ بلون العلامة فيها صحّ. */
@@ -476,7 +492,7 @@ function DayRow({
       <span className={`min-w-0 flex-1 text-sm font-bold ${open ? "" : "text-ink-muted"}`}>{name}</span>
       {onToggle && (
         <div className="shrink-0" aria-label={name}>
-          <Switch checked={open} disabled={disabled} onChange={onToggle} label="" />
+          <Toggle checked={open} disabled={disabled} onChange={onToggle} label="" />
         </div>
       )}
       {open ? (

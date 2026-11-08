@@ -41,7 +41,7 @@ const SOURCES = {
 
      **والاستثناءُ ملفٌّ بعينه لا نمطٌ عام** — فمن أراد رسمَ أيقونةٍ في
      شاشةٍ يبقى الحارسُ يردّه. */
-  icons: ["packages/ui/src/icons.ts", "packages/ui/src/NetworkFx.tsx"],
+  icons: ["packages/ui/src/icons.ts", "packages/ui/src/NetworkFx.tsx", "packages/ui/src/charts.tsx"],
   fonts: ["packages/ui/src/fonts.css"],
   /** **مصدرُ ترتيب المبلغ ورمزِه** — المركّبةُ والدالّة. */
   money: ["packages/ui/src/money.tsx", "packages/i18n/src/index.ts"],

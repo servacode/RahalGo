@@ -2,59 +2,84 @@
 
 /**
  * ══════════════════════════════════════════════════════════════════════
- * **‏/store/menu — «الأصناف»: لوحةُ الأصناف (٢٠٢٦-١١-٠٧)**
+ * **‏/store/menu — «الأصناف»: لوحةُ الأصناف (٢٠٢٦-١١-٠٨)**
  * ══════════════════════════════════════════════════════════════════════
  *
  * (مرآةُ `MenuItemsGrid` في `ui/menu/MenuGrid.kt` — نسخةٌ واحدةٌ للمتجر والمندوب في التطبيق،
- *  وهذه مرآتُها على الويب. وإعادةُ التصميم بطلب المالك: «لازم يكون أقوى واحترافي أكثر».)
+ *  وهذه مرآتُها على الويب. والتصميمُ المعتمد ٢٠٢٦-١١-٠٨: جدولٌ بمقام Shopify وقائمةٌ مُدرجةٌ بمقام iOS.)
  *
- * **من فوق لتحت**: رأسٌ (العنوان + عدد الأصناف + الأدوات: أضف · أنشئ عرضاً · تغيير الأسعار
- * · الخيارات · صوّر الأصناف · المشروبات · مزامنة الأمين) · **شريطُ أدواتٍ لاصق** (البحث
- * + مبدّل «شبكة | جدول» على الحاسوب + رقائقُ «الكل» و«غير المتوفر» والأقسام) · ثمّ الأصناف.
+ * **حاسوباً**: رأسٌ (العنوان + العدد + أدواتُ الأصناف ▾ · أنشئ عرضاً · أضف صنفاً) · تبويباتٌ بعدّاداتها
+ * (الكلّ · غير المتوفر · بلا صورة) · شريطُ بحثٍ وترشيحٍ بالقسم · **جدولٌ كثيف** (تحديدٌ · صورة واسم · رمز ·
+ * قسم · سعر بالدولار والليرة · مفتاحُ توفّر · تعديل ونسخ) بشريطِ تحديدٍ جماعيّ، أو شبكةُ بطاقات.
+ * **جوّالاً**: عنوانٌ كبير · بحثٌ وزرُّ تصفية (ورقةٌ بالأقسام) · مفتاحٌ مقسَّمٌ بالتبويبات ·
+ * مجموعةٌ مُدرجةٌ من الأصناف **تُسحب نحو اليمين لتعديلها أو إخفائها**، و«تحديد» للعمل الجماعيّ.
  *
- * **جوّالاً**: بطاقتان في كلّ سطر، وأدواتٌ في مسارٍ أفقيّ بأهدافِ لمسٍ ٤٤، ومفتاحُ التوفّر
- * سطرٌ كاملٌ يُضغط. **حاسوباً**: شبكةٌ حتّى ستّة أعمدة **أو جدولٌ كثيف** (صورة · اسم · رمز ·
- * قسم · سعر بالدولار والليرة · توفّر · نسخ وتعديل) لمتاجرَ بآلاف الأصناف، والاختيارُ محفوظٌ
- * لكلّ جهاز (`useViewMode`).
+ * **والتحديثُ الجماعيّ يستعمل نداءاتِ محرّر الصنف نفسَها** (توفّرٌ · قسمٌ · حذف) صنفاً صنفاً، بأربعةٍ في آنٍ واحد.
+ * **ومصدرُ التبويبات والقوائم الخادمُ**: ملخّصُ الأصناف ثمّ صفحاتُ ٦٠ بمفاتيحَ (`filter` · `section` · `q`).
  *
- * **والبطاقةُ/الصفُّ كلُّه يفتح المحرّر، والمفتاحُ وحدَه يبدّل التوفّر** — يتبدّل فوراً ثمّ
- * يُسأل المحرّك، **فإن ردّه عاد كما كان** وقيل السببُ كما قاله. **وغيرُ المتوفّر باهت.**
+ * **والبطاقةُ/الصفُّ كلُّه يفتح المحرّر، والمفتاحُ وحدَه يبدّل التوفّر** — يتبدّل فوراً ثمّ يُسأل المحرّك،
+ * **فإن ردّه عاد كما كان** وقيل السببُ كما قاله. **وغيرُ المتوفّر باهت.**
  *
- * **و`?filter=unavailable` يفتحها مصفّاةً على غير المتوفرة** — زرُّ «غير المتوفر» في
- * «متجري» يصل إليها.
+ * **و`?filter=unavailable` و`?q=` يفتحانها مصفّاةً** — من «متجري» ومن بحث الشريط العلويّ.
  */
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, type ComponentType } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getMessages, defaultLocale, errorText, fmtMoney, fmtNum } from "@rahalgo/i18n";
 import {
+  ActionMenu,
+  Button,
   ButtonLink,
-  Chip,
-  DataView,
+  CheckMark,
+  Confirm,
   EmptyState,
+  FilterMenu,
+  IGroup,
+  IRow,
   IconAdd,
   IconBanknote,
+  IconButton,
   IconCamera,
   IconCatDrinks,
+  IconCheck,
   IconClose,
   IconCopy,
+  IconDelete,
   IconEdit,
+  IconFolder,
+  IconGrid,
   IconList,
+  IconMore,
+  IconNext,
   IconOptions,
   IconPromos,
   IconRotate,
+  IconRows,
   IconSearch,
+  IconTag,
+  IconView,
+  IconViewOff,
   ImageViewer,
   LoadingState,
+  Modal,
   PageHead,
   ReloadState,
-  ViewToggle,
+  Segmented,
+  Select,
+  Sheet,
+  SwipeRow,
+  SwitchTrack,
+  LineTabs,
+  Thumb,
+  useIsDesktop,
   useLiveData,
   useViewMode,
+  type ActionMenuItem,
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
+import { MENU_SEARCH_EVENT } from "@/lib/store/menuSearch";
 import { useDrinksAllowed } from "@/lib/store/drinks";
 import type { MenuItem, MenuItemsPage, MenuSummary } from "@/lib/store/types";
 import { dollars, fill } from "@/lib/customer/texts";
@@ -62,8 +87,9 @@ import { useShopToast } from "@/components/customer/toast";
 
 const m = getMessages(defaultLocale);
 const M = m.store.menu;
+const SH = m.store.shell;
 
-type Icon = ComponentType<{ size?: number; className?: string }>;
+type Tab = "all" | "off" | "photo";
 
 function priceLine(it: MenuItem): string {
   return it.price_currency === "USD" && it.merchant_price_usd != null
@@ -79,47 +105,13 @@ function descOf(it: MenuItem): string {
     .join(" · ");
 }
 
-/**
- * **زرُّ أداةٍ** — أيقونةٌ واسمُها في سطرٍ واحد، ارتفاعُه ٤٤ (هدفُ لمس). والأوّلُ (`primary`)
- * بلون التمييز، والبقيةُ مؤطَّرة. من `ButtonLink` المركزيّ مع رابط التطبيق (بلا إعادة تحميل).
- */
-function Tool({ icon: Ico, label, href, testId, primary = false }: { icon: Icon; label: string; href: string; testId: string; primary?: boolean }) {
-  if (!primary) {
-    return (
-      <Link href={href} data-testid={testId} className="chip min-h-11 shrink-0">
-        <Ico size={18} className="text-cta-start" />
-        {label}
-      </Link>
-    );
-  }
-  return (
-    <ButtonLink Link={Link} href={href} variant="primary" data-testid={testId} className="min-h-11 shrink-0 whitespace-nowrap">
-      <Ico size={18} />
-      {label}
-    </ButtonLink>
-  );
-}
-
-/** **مفتاحُ التوفّر** — مسارٌ ودائرة؛ والزرُّ الحاضنُ له هو هدفُ اللمس. */
-function SwitchTrack({ on }: { on: boolean }) {
-  return (
-    <span
-      aria-hidden
-      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-badge border transition-colors ${
-        on ? "border-success-edge bg-success-fill" : "border-line bg-field"
-      }`}
-    >
-      <span
-        className={`absolute h-4.5 w-4.5 rounded-badge transition-[inset-inline-start] duration-200 ${
-          on ? "start-[1.5rem] bg-success" : "start-0.5 bg-ink-muted"
-        }`}
-      />
-    </span>
-  );
+/** **سطرٌ وصفيٌّ للصنف**: القسمُ (أو «بلا قسم») · السعر. */
+function metaLine(it: MenuItem): string {
+  return [it.platform_section_name || M.noSection, priceLine(it)].join(" · ");
 }
 
 /**
- * **بطاقةُ صنف** — صورتُه فوق، ثمّ اسمُه ووصفُه وسعرُه، ثمّ مفتاحُ توفّره.
+ * **بطاقةُ صنف (عرضُ الشبكة)** — صورتُه فوق، ثمّ اسمُه وسعرُه، ثمّ مفتاحُ توفّره.
  * **والبطاقةُ كلُّها تفتح المحرّر، والمفتاحُ وحدَه يبدّل التوفّر.**
  */
 function ItemCard({ item, disabled, onToggle }: { item: MenuItem; disabled: boolean; onToggle: () => void }) {
@@ -130,17 +122,12 @@ function ItemCard({ item, disabled, onToggle }: { item: MenuItem; disabled: bool
   const desc = descOf(item);
   const badge =
     item.approved === false ? (
-      <span className="absolute start-2 top-2 rounded-full bg-accent px-2 py-0.5 text-2xs font-bold text-on-bright">
+      <span className="pill absolute start-2 top-2" data-tone="attention">
         {M.pendingReview}
       </span>
     ) : null;
   return (
-    <li
-      className="item-card"
-      data-testid="store-menu-item"
-      data-item-id={item.id}
-      data-available={item.available}
-    >
+    <li className="item-card" data-testid="store-menu-item" data-item-id={item.id} data-available={item.available}>
       {img ? (
         // **لمسةُ الصورة تكبّرها** — والباقي من البطاقة يفتح المحرّر.
         <button
@@ -155,8 +142,8 @@ function ItemCard({ item, disabled, onToggle }: { item: MenuItem; disabled: bool
         </button>
       ) : (
         <Link href={`/store/menu/${item.id}`} aria-label={`${M.edit} · ${item.name}`} className={`relative block aspect-[4/5] w-full bg-field ${dim}`}>
-          <span className="absolute inset-0 flex items-center justify-center tile-initial text-5xl" aria-hidden>
-            {item.name.trim().charAt(0) || "?"}
+          <span className="tile-initial absolute inset-0 flex items-center justify-center text-5xl" aria-hidden>
+            {item.name.trim().charAt(0) || SH.noName}
           </span>
           {badge}
         </Link>
@@ -164,12 +151,10 @@ function ItemCard({ item, disabled, onToggle }: { item: MenuItem; disabled: bool
       {img && viewing && <ImageViewer src={img} alt={item.name} onClose={() => setViewing(false)} />}
       <Link href={`/store/menu/${item.id}`} aria-label={`${M.edit} · ${item.name}`} data-testid="store-menu-edit" className="flex flex-1 flex-col">
         <span className={`flex flex-col gap-0.5 px-3 pt-3 ${dim}`}>
-          <span className="line-clamp-2 min-h-[2.5rem] text-sm font-bold leading-5 text-ink">{item.name}</span>
-          <span className="line-clamp-2 min-h-[2rem] text-xs leading-4 text-ink-muted">{desc}</span>
-          <span className="mt-1 line-clamp-2 text-base font-extrabold tabular-nums text-accent-text">{priceLine(item)}</span>
-          {item.approved === false && item.review_note && (
-            <span className="line-clamp-2 text-xs text-danger">{item.review_note}</span>
-          )}
+          <span className="line-clamp-2 min-h-10 text-sm font-bold leading-5 text-ink">{item.name}</span>
+          <span className="line-clamp-2 min-h-8 text-xs leading-4 text-ink-dim">{desc}</span>
+          <span className="mt-1 line-clamp-2 text-base font-bold tabular-nums text-accent-text">{priceLine(item)}</span>
+          {item.approved === false && item.review_note && <span className="line-clamp-2 text-xs text-danger">{item.review_note}</span>}
         </span>
       </Link>
       {/* **سطرُ التوفّر كلُّه زرٌّ** (≥ ٤٤) — كان المفتاحُ وحدَه ٢٤ بكسلاً. */}
@@ -183,7 +168,7 @@ function ItemCard({ item, disabled, onToggle }: { item: MenuItem; disabled: bool
         data-testid="store-menu-toggle"
         className="mx-3 mt-2 flex min-h-11 items-center gap-2 border-t border-line-soft text-start disabled:opacity-50"
       >
-        <span className={`min-w-0 flex-1 truncate text-xs font-bold ${item.available ? "text-success" : "text-ink-muted"}`}>
+        <span className={`min-w-0 flex-1 truncate text-xs font-bold ${item.available ? "text-success" : "text-ink-dim"}`}>
           {item.available ? M.available : M.unavailable}
         </span>
         <SwitchTrack on={item.available} />
@@ -192,8 +177,8 @@ function ItemCard({ item, disabled, onToggle }: { item: MenuItem; disabled: bool
   );
 }
 
-/** **صورةٌ مصغّرةٌ في صفّ الجدول** — لمستُها تكبّرها، ومن غيرها حرفٌ أوّل. */
-function RowThumb({ item }: { item: MenuItem }) {
+/** **صورةٌ مصغّرةٌ في صفّ** — لمستُها تكبّرها، ومن غيرها مربّعٌ متقطّعٌ بأيقونة «بلا صورة». */
+function RowThumb({ item, size }: { item: MenuItem; size: number }) {
   const img = mediaUrl(item.image_thumb_url || item.image_url);
   const [viewing, setViewing] = useState(false);
   return (
@@ -201,19 +186,19 @@ function RowThumb({ item }: { item: MenuItem }) {
       {img ? (
         <button
           type="button"
-          onClick={() => setViewing(true)}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setViewing(true);
+          }}
           aria-label={`${item.name} — ${m.shop.item.zoomBtn}`}
-          className={`block size-12 overflow-hidden rounded-tile bg-field ${item.available ? "" : "opacity-50"}`}
+          className={item.available ? "" : "opacity-50"}
         >
-          <img src={img} alt="" loading="lazy" className="size-full object-cover" />
+          <Thumb src={img} size={size} />
         </button>
       ) : (
-        <span
-          className="flex size-12 items-center justify-center rounded-tile tile-initial text-lg"
-          title={M.noPhoto}
-          aria-label={M.noPhoto}
-        >
-          {item.name.trim().charAt(0) || "?"}
+        <span title={M.noPhoto} aria-label={M.noPhoto} className={item.available ? "" : "opacity-60"}>
+          <Thumb size={size} />
         </span>
       )}
       {img && viewing && <ImageViewer src={img} alt={item.name} onClose={() => setViewing(false)} />}
@@ -224,11 +209,27 @@ function RowThumb({ item }: { item: MenuItem }) {
 /** **Page size of the paged menu** — 60 cards, a few tens of KB even for a 15,000-item mall. */
 const PAGE = 60;
 
+/** **تحديثٌ لعدّة أصناف** — بأربعةٍ في آنٍ واحدٍ، ويُعاد ما نجح وعددُ ما فشل. */
+async function inChunks(ids: string[], run: (id: string) => Promise<void>): Promise<{ ok: string[]; failed: number }> {
+  const ok: string[] = [];
+  let failed = 0;
+  for (let i = 0; i < ids.length; i += 4) {
+    const chunk = ids.slice(i, i + 4);
+    const res = await Promise.allSettled(chunk.map((id) => run(id)));
+    res.forEach((r, k) => {
+      const id = chunk[k];
+      if (r.status === "fulfilled" && id) ok.push(id);
+      else failed += 1;
+    });
+  }
+  return { ok, failed };
+}
+
 /**
  * **The paged menu** (owner 2026-11-07: «ما يصير يكون بطيء») — mirror of `MenuViewModel` in the
  * merchant app. A mall of 5,311 items made the full menu 3 MB (45 s on a weak link), so the page
- * reads a light summary (chips and counts) and then pages of 60 items; the chips, «غير المتوفر»
- * and the search ask the server, and the next page comes when the end of the grid shows.
+ * reads a light summary (counts and sections) and then pages of 60 items; the tabs, the section filter
+ * and the search ask the server, and the next page comes when the end of the list shows.
  */
 export default function MenuPage() {
   const { store } = useStore();
@@ -237,20 +238,10 @@ export default function MenuPage() {
   const drinksAllowed = useDrinksAllowed(id);
   const toast = useShopToast();
   const router = useRouter();
-  /** **جدولٌ على الحاسوب افتراضاً** (آلافُ الأصناف)، والجوّالُ بطاقاتٌ دائماً؛ والاختيارُ محفوظ. */
+  const desk = useIsDesktop();
+  /** **جدولٌ على الحاسوب افتراضاً** (آلافُ الأصناف)؛ والجوّالُ قائمةٌ دائماً؛ والاختيارُ محفوظ. */
   const [view, setView] = useViewMode("store-menu", "table");
   const dupBusy = useRef(false);
-  /** **ارتفاعُ شريط الأدوات اللاصق** — تقف تحتَه ترويسةُ الجدول اللاصقة. */
-  const [barEl, setBarEl] = useState<HTMLDivElement | null>(null);
-  const [barH, setBarH] = useState(0);
-  useEffect(() => {
-    if (!barEl) return;
-    const sync = () => setBarH(barEl.offsetHeight + 8);
-    sync();
-    const ro = new ResizeObserver(sync);
-    ro.observe(barEl);
-    return () => ro.disconnect();
-  }, [barEl]);
   const load = useCallback(() => api<MenuSummary>(`/api/v1/merchant/stores/${id}/menu/summary`), [id]);
   const { data, loading, error, reload, setData } = useLiveData(load, ["menu"], [id]);
   const [q, setQ] = useState("");
@@ -260,18 +251,32 @@ export default function MenuPage() {
     const t = setTimeout(() => setNeedle(q.trim()), 350);
     return () => clearTimeout(t);
   }, [q]);
-  /** **المفتوح**: `null` الكلّ، أو معرّفُ قسم. */
-  const [open, setOpen] = useState<string | null>(null);
-  const [onlyOff, setOnlyOff] = useState(false);
+  /** **القسمُ المفتوح**: `""` الكلّ، أو معرّفُ قسم. */
+  const [section, setSection] = useState("");
+  const [tab, setTab] = useState<Tab>("all");
+  const [sheet, setSheet] = useState(false);
   const suspended = store?.status === "suspended";
 
-  // **`?filter=unavailable`** — من زرّ «غير المتوفر» في «متجري».
+  // **`?filter=unavailable` و`?q=`** — من «متجري» ومن بحث الشريط العلويّ.
   useEffect(() => {
     try {
-      if (new URLSearchParams(window.location.search).get("filter") === "unavailable") setOnlyOff(true);
+      const p = new URLSearchParams(window.location.search);
+      if (p.get("filter") === "unavailable") setTab("off");
+      const qq = p.get("q");
+      if (qq) setQ(qq.slice(0, 60));
     } catch {
       /* لا عنوانَ يُقرأ — تبقى «الكل». */
     }
+  }, []);
+
+  // **بحثُ الشريط العلويّ وأنا في الصفحة** — يصل حدثاً (انظر `menuSearch.ts`).
+  useEffect(() => {
+    const on = (e: Event) => {
+      const t = (e as CustomEvent<string>).detail;
+      if (typeof t === "string") setQ(t.slice(0, 60));
+    };
+    window.addEventListener(MENU_SEARCH_EVENT, on);
+    return () => window.removeEventListener(MENU_SEARCH_EVENT, on);
   }, []);
 
   // ── the items of the current filter, page by page ──
@@ -297,13 +302,21 @@ export default function MenuPage() {
     (after: string) => {
       const p = new URLSearchParams({ limit: String(PAGE) });
       if (needle) p.set("q", needle);
-      else if (onlyOff) p.set("filter", "unavailable");
-      else if (open) p.set("section", open);
+      if (tab === "off") p.set("filter", "unavailable");
+      else if (tab === "photo") p.set("filter", "no_photo");
+      if (section) p.set("section", section);
       if (after) p.set("after", after);
       return `/api/v1/merchant/stores/${id}/menu/items?${p.toString()}`;
     },
-    [id, needle, onlyOff, open],
+    [id, needle, tab, section],
   );
+
+  // **الاختيارُ يُمسح مع كلّ ترشيحٍ جديد** — فلا يبقى تحديدٌ لما لم يعد معروضاً.
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [selecting, setSelecting] = useState(false);
+  useEffect(() => {
+    setPicked(new Set());
+  }, [needle, tab, section]);
 
   useEffect(() => {
     if (!id) return;
@@ -346,14 +359,17 @@ export default function MenuPage() {
       });
   }, [next, listLoading, pageUrl, toast]);
 
-  // **The next page when the end of the grid comes into view.**
+  // **The next page when the end of the list comes into view.**
   const sentinel = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     const el = sentinel.current;
     if (!el || !next) return;
-    const io = new IntersectionObserver((entries) => {
-      if (entries.some((e) => e.isIntersecting)) more();
-    }, { rootMargin: "600px" });
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) more();
+      },
+      { rootMargin: "600px" },
+    );
     io.observe(el);
     return () => io.disconnect();
   }, [next, more]);
@@ -362,41 +378,36 @@ export default function MenuPage() {
   const total = data?.total ?? 0;
   const off = data?.unavailable ?? 0;
   const noPhoto = data?.no_photo ?? 0;
+  const filtered = needle !== "" || tab !== "all" || section !== "";
+  const shown = filtered ? listTotal || items.length : total;
 
-  // **ومن داخل قسمٍ يُضاف إليه** — فلا يُعيد اختيارَ ما هو فيه.
-  const openSection = open != null && !onlyOff ? open : "";
-
-  const showAll = () => {
-    setOnlyOff(false);
-    setOpen(null);
-  };
+  /** **والعدّاداتُ تتبع فوراً** — «غير المتوفر» ورقاقةُ القسم. */
+  function bump(item: MenuItem, v: boolean) {
+    const d = v === item.available ? 0 : v ? -1 : 1;
+    setItems((list) => list.map((i) => (i.id === item.id ? { ...i, available: v } : i)));
+    setData((s) =>
+      s
+        ? {
+            ...s,
+            unavailable: Math.max(0, s.unavailable + d),
+            sections: s.sections.map((x) =>
+              x.id === item.platform_section_id ? { ...x, unavailable: Math.max(0, x.unavailable + d) } : x,
+            ),
+          }
+        : s,
+    );
+  }
 
   async function toggle(item: MenuItem) {
-    const next = !item.available;
-    const flip = (v: boolean) => {
-      setItems((list) => list.map((i) => (i.id === item.id ? { ...i, available: v } : i)));
-      // **والعدّادات تتبع فوراً** — «غير المتوفر» ورقاقةُ القسم.
-      const d = v === item.available ? 0 : v ? -1 : 1;
-      setData((s) =>
-        s
-          ? {
-              ...s,
-              unavailable: Math.max(0, s.unavailable + d),
-              sections: s.sections.map((x) =>
-                x.id === item.platform_section_id ? { ...x, unavailable: Math.max(0, x.unavailable + d) } : x,
-              ),
-            }
-          : s,
-      );
-    };
-    flip(next);
+    const want = !item.available;
+    bump(item, want);
     try {
       await api(`/api/v1/merchant/menu/items/${item.id}/availability`, {
         method: "PATCH",
-        body: JSON.stringify({ available: next }),
+        body: JSON.stringify({ available: want }),
       });
     } catch (e) {
-      flip(item.available);
+      bump({ ...item, available: want }, item.available);
       toast(errorText(e), "error");
     }
   }
@@ -415,295 +426,578 @@ export default function MenuPage() {
     }
   }
 
+  // ══════════════════════════════════════════════════════════════════
+  // **التحديدُ والتحديثُ الجماعيّ** — النداءاتُ نفسُها التي يستعملها محرّرُ الصنف، صنفاً صنفاً
+  // ══════════════════════════════════════════════════════════════════
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [askDelete, setAskDelete] = useState(false);
+  const [askSection, setAskSection] = useState(false);
+  const [sectionPick, setSectionPick] = useState("");
+  const chosen = items.filter((i) => picked.has(i.id));
+
+  const flipPick = (idd: string) =>
+    setPicked((s) => {
+      const n = new Set(s);
+      if (n.has(idd)) n.delete(idd);
+      else n.add(idd);
+      return n;
+    });
+  const allState: boolean | "mixed" = picked.size === 0 ? false : picked.size === items.length ? true : "mixed";
+  const flipAll = () => setPicked(allState === true ? new Set() : new Set(items.map((i) => i.id)));
+  const clearPick = () => {
+    setPicked(new Set());
+    setSelecting(false);
+  };
+
+  function report(res: { ok: string[]; failed: number }) {
+    if (res.ok.length > 0) toast(fill(SH.bulkOk, { n: fmtNum(res.ok.length) }), "success");
+    if (res.failed > 0) toast(fill(SH.bulkFail, { n: fmtNum(res.failed) }), "error");
+  }
+
+  async function bulkAvail(available: boolean) {
+    const targets = chosen.filter((i) => i.available !== available);
+    if (targets.length === 0) return clearPick();
+    setBulkBusy(true);
+    try {
+      const byId = new Map(targets.map((i) => [i.id, i]));
+      const res = await inChunks(
+        targets.map((i) => i.id),
+        async (itemId) => {
+          await api(`/api/v1/merchant/menu/items/${itemId}/availability`, { method: "PATCH", body: JSON.stringify({ available }) });
+          const it = byId.get(itemId);
+          if (it) bump(it, available);
+        },
+      );
+      report(res);
+    } finally {
+      setBulkBusy(false);
+      clearPick();
+    }
+  }
+
+  async function bulkSection() {
+    const sec = sections.find((s) => s.id === sectionPick);
+    if (!sec) return;
+    setBulkBusy(true);
+    try {
+      const res = await inChunks(
+        chosen.map((i) => i.id),
+        async (itemId) => {
+          await api(`/api/v1/merchant/menu/items/${itemId}`, { method: "PATCH", body: JSON.stringify({ platform_section_id: sec.id }) });
+        },
+      );
+      const done = new Set(res.ok);
+      setItems((list) => list.map((i) => (done.has(i.id) ? { ...i, platform_section_id: sec.id, platform_section_name: sec.name } : i)));
+      report(res);
+      void reload();
+    } finally {
+      setBulkBusy(false);
+      setAskSection(false);
+      clearPick();
+    }
+  }
+
+  async function bulkDelete() {
+    setBulkBusy(true);
+    try {
+      const res = await inChunks(
+        chosen.map((i) => i.id),
+        async (itemId) => {
+          await api(`/api/v1/merchant/menu/items/${itemId}`, { method: "DELETE" });
+        },
+      );
+      const gone = new Set(res.ok);
+      setItems((list) => list.filter((i) => !gone.has(i.id)));
+      report(res);
+      void reload();
+    } finally {
+      setBulkBusy(false);
+      setAskDelete(false);
+      clearPick();
+    }
+  }
+
+  // ── أدواتُ المتجر في قائمةٍ واحدة ──
+  const tools: ActionMenuItem[] = suspended
+    ? []
+    : [
+        { key: "prices", label: M.toolBulk, icon: IconBanknote, onSelect: () => router.push("/store/menu/prices") },
+        { key: "options", label: M.toolPresets, icon: IconOptions, onSelect: () => router.push("/store/menu/options") },
+        ...(noPhoto > 0
+          ? [{ key: "photos", label: fill(M.toolQuickPhoto, { n: fmtNum(noPhoto) }), icon: IconCamera, onSelect: () => router.push("/store/menu/photos") }]
+          : []),
+        ...(drinksAllowed === true ? [{ key: "drinks", label: M.toolDrinks, icon: IconCatDrinks, onSelect: () => router.push("/store/menu/drinks") }] : []),
+        ...(store?.uses_ameen === true
+          ? [{ key: "sync", label: m.store.priceSync.open, icon: IconRotate, onSelect: () => router.push("/store/price-sync") }]
+          : []),
+      ];
+
   if (loading && !data) return <LoadingState variant="list" rows={5} />;
   if (error && !data) return <ReloadState onRetry={() => void reload()} />;
 
   const asTable = view === "table";
+  const sectionOptions = [{ key: "", label: M.bulk.allSections }, ...sections.map((s) => ({ key: s.id, label: s.name, count: s.count }))];
+  const addHref = section ? `/store/menu/new?section=${section}` : "/store/menu/new";
 
-  return (
-    <div className="console-page" data-testid="store-menu">
-      <PageHead
-        title={M.title}
-        subtitle={fill(M.count, { n: fmtNum(total) })}
-        actions={
-          !suspended && (
-            <div className="flex flex-wrap items-center gap-2">
-              <Tool
-                icon={IconAdd}
-                label={M.add}
-                href={openSection ? `/store/menu/new?section=${openSection}` : "/store/menu/new"}
-                testId="menu-add"
-                primary
-              />
-              <Tool icon={IconPromos} label={M.addOffer} href="/store/offers?new=1" testId="menu-offer" />
-            </div>
-          )
-        }
+  const bulkButtons = (
+    <>
+      <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={() => setAskSection(true)}>
+        <IconFolder size={15} />
+        {SH.bulkSection}
+      </Button>
+      <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={() => void bulkAvail(true)}>
+        <IconCheck size={15} />
+        {M.available}
+      </Button>
+      <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={() => void bulkAvail(false)}>
+        <IconViewOff size={15} />
+        {M.unavailable}
+      </Button>
+      <Button size="sm" variant="secondary" disabled={bulkBusy} onClick={() => router.push("/store/menu/prices")}>
+        <IconTag size={15} />
+        {M.editPrice}
+      </Button>
+      <Button size="sm" variant="danger-outline" disabled={bulkBusy} onClick={() => setAskDelete(true)}>
+        <IconDelete size={15} />
+        {m.common.delete}
+      </Button>
+    </>
+  );
+
+  const dialogs = (
+    <>
+      <Confirm
+        open={askDelete}
+        title={fill(SH.bulkDeleteQ, { n: fmtNum(picked.size) })}
+        body={SH.bulkDeleteBody}
+        confirmLabel={m.common.delete}
+        busy={bulkBusy}
+        onConfirm={() => void bulkDelete()}
+        onCancel={() => setAskDelete(false)}
       />
-
-      {/* ── أدواتُ المتجر: سطرٌ واحدٌ يُمرَّر على الجوّال ── */}
-      {!suspended && (
-        <div className="rail-x -mx-3 px-3 sm:mx-0 sm:flex-wrap sm:px-0" aria-label={M.tools}>
-          <Tool icon={IconBanknote} label={M.toolBulk} href="/store/menu/prices" testId="menu-tool-prices" />
-          <Tool icon={IconOptions} label={M.toolPresets} href="/store/menu/options" testId="menu-tool-options" />
-          {noPhoto > 0 && (
-            <Tool
-              icon={IconCamera}
-              label={fill(M.toolQuickPhoto, { n: fmtNum(noPhoto) })}
-              href="/store/menu/photos"
-              testId="menu-tool-photos"
-            />
-          )}
-          {drinksAllowed === true && <Tool icon={IconCatDrinks} label={M.toolDrinks} href="/store/menu/drinks" testId="menu-tool-drinks" />}
-          {/* **مزامنةُ الأمين أداةٌ ظاهرة** (٢٠٢٦-١١-٠٧) — كانت سطراً تحت آلاف الأصناف فلا يُرى. */}
-          {store?.uses_ameen === true && (
-            <Tool icon={IconRotate} label={m.store.priceSync.open} href="/store/price-sync" testId="menu-tool-price-sync" />
-          )}
+      <Modal open={askSection} onClose={() => setAskSection(false)} title={SH.bulkSection}>
+        <div className="flex flex-col gap-3">
+          <Select id="bulk-section" label={SH.pickSection} value={sectionPick} onChange={(e) => setSectionPick(e.target.value)}>
+            <option value="">{SH.pickSection}</option>
+            {sections.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </Select>
+          <Button disabled={!sectionPick || bulkBusy} onClick={() => void bulkSection()}>
+            {m.common.confirm}
+          </Button>
         </div>
-      )}
+      </Modal>
+    </>
+  );
 
-      {/* ── شريطُ البحث والترشيح: لاصقٌ على الحاسوب ── */}
-      <div ref={setBarEl} className="toolbar max-lg:static max-lg:border-0 max-lg:bg-transparent max-lg:p-0 max-lg:shadow-none max-lg:backdrop-blur-none">
-        <div className="flex items-center gap-3">
-          <div className="relative min-w-0 flex-1">
-            <span className="pointer-events-none absolute inset-y-0 start-3 flex items-center text-ink-muted" aria-hidden>
-              <IconSearch size={18} />
+  const empty = (
+    <EmptyState
+      icon={IconList}
+      title={M.empty}
+      action={
+        !suspended ? (
+          <ButtonLink Link={Link} href="/store/menu/new">
+            <IconAdd size={18} />
+            {M.add}
+          </ButtonLink>
+        ) : undefined
+      }
+    />
+  );
+  const none = (
+    <p className="py-8 text-center text-sm text-ink-dim" data-testid="menu-none">
+      {tab === "off" && !needle ? M.offNone : M.noMatch}
+    </p>
+  );
+  const sentinelNode = next ? (
+    <div ref={sentinel} data-testid="menu-more" className="flex flex-col items-center gap-2">
+      <LoadingState variant="list" rows={1} />
+    </div>
+  ) : null;
+
+  // ══════════════════════════ الحاسوب ══════════════════════════
+  if (desk) {
+    const tabs = [
+      { key: "all" as const, label: M.all, count: total },
+      { key: "off" as const, label: M.unavailable, count: off },
+      { key: "photo" as const, label: M.noPhoto, count: noPhoto, warn: noPhoto > 0 },
+    ];
+    return (
+      <div className="console-page" data-testid="store-menu">
+        <PageHead
+          title={M.title}
+          subtitle={fill(M.count, { n: fmtNum(total) })}
+          actions={
+            !suspended && (
+              <>
+                {tools.length > 0 && <ActionMenu variant="secondary" label={SH.toolsMenu} icon={IconOptions} items={tools} width={260} />}
+                <ButtonLink Link={Link} href="/store/offers?new=1" variant="secondary" data-testid="menu-offer">
+                  <IconPromos size={15} />
+                  {M.addOffer}
+                </ButtonLink>
+                <ButtonLink Link={Link} href={addHref} data-testid="menu-add">
+                  <IconAdd size={15} />
+                  {M.add}
+                </ButtonLink>
+              </>
+            )
+          }
+        />
+
+        {/* ── التبويبات: الكلّ · غير المتوفر · بلا صورة (كلُّها من الخادم) ── */}
+        <LineTabs items={tabs} value={tab} onChange={(k) => setTab(k)} ariaLabel={M.filters} />
+
+        {/* ── البحث والترشيح ── */}
+        <div className="toolbar">
+          <div className="relative w-80 max-w-full">
+            <span className="pointer-events-none absolute inset-y-0 start-3 flex items-center text-ink-dim" aria-hidden>
+              <IconSearch size={16} />
             </span>
             <input
               type="search"
               value={q}
               onChange={(e) => setQ(e.target.value.slice(0, 60))}
-              placeholder={M.search}
+              placeholder={SH.search}
               aria-label={M.search}
               data-testid="store-menu-search"
               className="search-field"
             />
             {q && (
-              <button
-                type="button"
-                onClick={() => setQ("")}
-                aria-label={M.clearSearch}
-                className="absolute inset-y-0 end-1 flex w-11 items-center justify-center text-ink-muted hover:text-ink"
-              >
-                <IconClose size={18} />
+              <button type="button" onClick={() => setQ("")} aria-label={M.clearSearch} className="absolute inset-y-0 end-1 flex w-8 items-center justify-center text-ink-dim hover:text-ink">
+                <IconClose size={15} />
               </button>
             )}
           </div>
-          <ViewToggle view={view} onChange={setView} tableLabel={M.viewTable} cardsLabel={M.viewGrid} />
-        </div>
-
-        {/* ── الرقائق: «الكل» · «غير المتوفر» · الأقسام ── */}
-        {sections.length > 0 && !q.trim() && (
-          <div className="rail-x -mx-3 px-3 pb-0.5 lg:mx-0 lg:px-0" aria-label={M.filters}>
-            <Chip selected={open == null && !onlyOff} count={total} onClick={showAll} testId="menu-chip">
-              {M.all}
-            </Chip>
-            <Chip
-              selected={onlyOff}
-              count={off}
-              testId="menu-stat-off"
+          {sections.length > 0 && (
+            <FilterMenu label={M.colSection} icon={IconFolder} options={sectionOptions} value={section} onChange={setSection} testId="menu-section-filter" />
+          )}
+          {filtered && (
+            <Button
+              size="sm"
+              variant="ghost"
               onClick={() => {
-                if (onlyOff) return showAll();
-                setOnlyOff(true);
-                setOpen(null);
                 setQ("");
+                setTab("all");
+                setSection("");
               }}
             >
-              {M.unavailable}
-            </Chip>
-            {sections.map((g) => (
-              <Chip
-                key={g.id}
-                selected={open === g.id && !onlyOff}
-                count={g.count}
-                testId="menu-chip"
-                onClick={() => {
-                  setOnlyOff(false);
-                  setOpen(g.id);
-                }}
-              >
-                {g.name}
-              </Chip>
-            ))}
+              <IconClose size={14} />
+              {SH.reset}
+            </Button>
+          )}
+          <div className="ms-auto flex items-center gap-2">
+            <Segmented
+              ariaLabel={M.viewTable}
+              value={view}
+              onChange={setView}
+              items={[
+                { key: "table", label: <IconRows size={15} />, title: M.viewTable },
+                { key: "cards", label: <IconGrid size={15} />, title: M.viewGrid },
+              ]}
+            />
           </div>
+        </div>
+
+        {/* ── الأصناف ── */}
+        {total === 0 ? (
+          empty
+        ) : items.length === 0 && listLoading ? (
+          <LoadingState variant="list" rows={3} />
+        ) : items.length === 0 && listFailed ? (
+          <ReloadState onRetry={() => setRev((r) => r + 1)} />
+        ) : items.length === 0 ? (
+          none
+        ) : asTable ? (
+          <div className="panel overflow-clip" data-testid="store-menu-table">
+            {picked.size > 0 && (
+              <div className="bulk-bar" data-testid="menu-bulk">
+                <CheckMark state={allState} onChange={flipAll} label={SH.selectAll} />
+                <span className="text-primary">{fill(SH.selectedCount, { n: fmtNum(picked.size) })}</span>
+                <span className="mx-1 h-5 w-px bg-primary-edge" aria-hidden />
+                {bulkButtons}
+                <Button size="sm" variant="ghost" className="ms-auto" onClick={clearPick}>
+                  <IconClose size={14} />
+                  {SH.bulkClear}
+                </Button>
+              </div>
+            )}
+            <div className="overflow-x-auto lg:overflow-visible">
+              <table className="console-table">
+                <thead>
+                  <tr>
+                    <th className="w-11 !pe-0">
+                      <CheckMark state={allState} onChange={flipAll} label={SH.selectAll} />
+                    </th>
+                    <th>{M.colName}</th>
+                    <th>{M.colCode}</th>
+                    <th>{M.colSection}</th>
+                    <th>{M.colPrice}</th>
+                    <th>{M.colAvail}</th>
+                    <th className="w-24" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((i) => (
+                    <tr key={i.id} data-selected={picked.has(i.id)} data-testid="store-menu-item" data-item-id={i.id} data-available={i.available}>
+                      <td className="w-11 !pe-0">
+                        <CheckMark state={picked.has(i.id)} onChange={() => flipPick(i.id)} label={i.name} />
+                      </td>
+                      <td className="w-full">
+                        <div className={`flex min-w-0 items-center gap-3 ${i.available ? "" : "opacity-60"}`}>
+                          <RowThumb item={i} size={36} />
+                          <div className="min-w-0">
+                            <Link
+                              href={`/store/menu/${i.id}`}
+                              aria-label={`${M.edit} · ${i.name}`}
+                              data-testid="store-menu-edit"
+                              className="line-clamp-1 font-bold hover:underline"
+                            >
+                              {i.name}
+                            </Link>
+                            {i.approved === false ? (
+                              <span className="block text-xs font-bold text-warning">
+                                {M.pendingReview}
+                                {i.review_note ? ` — ${i.review_note}` : ""}
+                              </span>
+                            ) : descOf(i) ? (
+                              <span className="line-clamp-1 block text-xs text-ink-dim">{descOf(i)}</span>
+                            ) : !i.image_thumb_url && !i.image_url ? (
+                              <span className="block text-xs text-warning">{M.noPhoto}</span>
+                            ) : null}
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span dir="ltr" className="inline-block text-xs text-ink-muted">
+                          {i.external_code || i.barcode || "—"}
+                        </span>
+                      </td>
+                      <td>
+                        {i.platform_section_name ? (
+                          <span className="line-clamp-1">{i.platform_section_name}</span>
+                        ) : (
+                          <span className="pill" data-tone="attention">
+                            {M.noSection}
+                          </span>
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap">
+                        {i.price_currency === "USD" && i.merchant_price_usd != null ? (
+                          <>
+                            <b>{dollars(i.merchant_price_usd)}</b>
+                            <span className="ms-1.5 text-xs text-ink-dim">· {fmtMoney(i.price)}</span>
+                          </>
+                        ) : (
+                          <b>{fmtMoney(i.price)}</b>
+                        )}
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={i.available}
+                          aria-label={`${i.name} · ${i.available ? M.available : M.unavailable}`}
+                          disabled={suspended}
+                          onClick={() => void toggle(i)}
+                          data-testid="store-menu-toggle"
+                          className="flex min-h-9 items-center gap-2.5 whitespace-nowrap text-sm disabled:opacity-50"
+                        >
+                          <SwitchTrack on={i.available} size="sm" />
+                          <span className={i.available ? "" : "text-ink-dim"}>{i.available ? M.available : M.unavailable}</span>
+                        </button>
+                      </td>
+                      <td>
+                        <div className="flex justify-end gap-0.5">
+                          <IconButton icon={IconEdit} label={`${M.edit} · ${i.name}`} href={`/store/menu/${i.id}`} Link={Link} size={16} />
+                          {!suspended && (
+                            <IconButton icon={IconCopy} label={`${M.duplicate} · ${i.name}`} onClick={() => void duplicate(i)} testId="store-menu-duplicate" size={16} />
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="table-foot">
+              <span>{fill(M.shownOf, { a: fmtNum(items.length), b: fmtNum(shown) })}</span>
+              {next && (
+                <Button size="sm" variant="secondary" className="ms-auto" onClick={more} data-testid="menu-more-btn">
+                  {SH.rowMore}
+                </Button>
+              )}
+            </div>
+          </div>
+        ) : (
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 lg:gap-4 xl:grid-cols-5 2xl:grid-cols-6">
+            {items.map((it) => (
+              <ItemCard key={it.id} item={it} disabled={suspended} onToggle={() => void toggle(it)} />
+            ))}
+          </ul>
+        )}
+        {sentinelNode}
+        {dialogs}
+      </div>
+    );
+  }
+
+  // ══════════════════════════ الهاتف ══════════════════════════
+  const segItems = [
+    { key: "all" as const, label: M.all },
+    { key: "off" as const, label: M.unavailable },
+    { key: "photo" as const, label: M.noPhoto },
+  ];
+  return (
+    <div className="console-page" data-testid="store-menu">
+      <PageHead
+        title={M.title}
+        navStart={
+          <button type="button" className="text-base font-medium" onClick={() => (selecting ? clearPick() : setSelecting(true))} data-testid="menu-select">
+            {selecting ? SH.selectDone : SH.select}
+          </button>
+        }
+        navEnd={
+          !suspended && (
+            <>
+              {tools.length > 0 && <ActionMenu variant="ghost" size="sm" chevron={false} label={<IconMore size={22} />} ariaLabel={SH.toolsMenu} items={tools} width={240} />}
+              <IconButton icon={IconAdd} label={M.add} href={addHref} Link={Link} size={24} testId="menu-add" />
+            </>
+          )
+        }
+      />
+      <div className="flex gap-2.5">
+        <label className="relative min-w-0 flex-1">
+          <span className="pointer-events-none absolute inset-y-0 start-2.5 flex items-center text-ink-dim" aria-hidden>
+            <IconSearch size={17} />
+          </span>
+          <input
+            type="search"
+            value={q}
+            onChange={(e) => setQ(e.target.value.slice(0, 60))}
+            placeholder={fill(SH.searchN, { n: fmtNum(total) })}
+            aria-label={M.search}
+            data-testid="store-menu-search"
+            className="search-field"
+          />
+        </label>
+        {sections.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setSheet(true)}
+            aria-label={SH.filtersTitle}
+            data-testid="menu-filter-open"
+            className="relative flex size-10 shrink-0 items-center justify-center rounded-control bg-field text-primary"
+          >
+            <IconOptions size={19} />
+            {section !== "" && <span className="absolute -start-1 -top-1 grid size-4 place-items-center rounded-full bg-primary text-2xs font-bold text-on-bright">1</span>}
+          </button>
+        )}
+      </div>
+      <div>
+        <Segmented ariaLabel={M.filters} value={tab} onChange={setTab} items={segItems} block />
+      </div>
+      <div className="flex items-center justify-between px-5 text-xs text-ink-dim">
+        <span>{fill(M.count, { n: fmtNum(shown) })}</span>
+        {section !== "" && (
+          <button type="button" className="font-medium text-primary" onClick={() => setSection("")}>
+            {sections.find((s) => s.id === section)?.name}
+          </button>
         )}
       </div>
 
-      {/* ── الأصناف ── */}
       {total === 0 ? (
-        <EmptyState
-          icon={IconList}
-          title={M.empty}
-          action={
-            !suspended ? (
-              <ButtonLink Link={Link} href="/store/menu/new">
-                <IconAdd size={18} />
-                {M.add}
-              </ButtonLink>
-            ) : undefined
-          }
-        />
+        empty
       ) : items.length === 0 && listLoading ? (
         <LoadingState variant="list" rows={3} />
       ) : items.length === 0 && listFailed ? (
         <ReloadState onRetry={() => setRev((r) => r + 1)} />
       ) : items.length === 0 ? (
-        <p className="py-6 text-center text-sm text-ink-muted" data-testid="menu-none">
-          {onlyOff && !needle ? M.offNone : M.noMatch}
-        </p>
+        none
       ) : (
-        <>
-          {asTable ? (
-            <div style={{ ["--table-head-offset" as string]: `${barH}px` }} data-testid="store-menu-table">
-              <DataView<MenuItem>
-                dense
-                view="table"
-                items={items}
-                getKey={(i) => i.id}
-                empty={M.noMatch}
-                onRowClick={(i) => router.push(`/store/menu/${i.id}`)}
-                columns={[
-                  {
-                    id: "image",
-                    header: M.colImage,
-                    widthClass: "w-16",
-                    cell: (i) => (
-                      <span onClick={(e) => e.stopPropagation()} className="inline-flex">
-                        <RowThumb item={i} />
-                      </span>
-                    ),
-                  },
-                  {
-                    id: "name",
-                    header: M.colName,
-                    cell: (i) => (
-                      <div className={`flex min-w-0 flex-col ${i.available ? "" : "opacity-60"}`} data-testid="store-menu-item" data-item-id={i.id} data-available={i.available}>
-                        <Link
-                          href={`/store/menu/${i.id}`}
-                          onClick={(e) => e.stopPropagation()}
-                          aria-label={`${M.edit} · ${i.name}`}
-                          data-testid="store-menu-edit"
-                          className="line-clamp-2 font-bold text-ink hover:underline"
-                        >
-                          {i.name}
-                        </Link>
-                        {descOf(i) && <span className="line-clamp-1 text-xs text-ink-muted">{descOf(i)}</span>}
-                        {i.approved === false && (
-                          <span className="text-xs font-bold text-warning">
-                            {M.pendingReview}
-                            {i.review_note ? ` — ${i.review_note}` : ""}
-                          </span>
-                        )}
-                      </div>
-                    ),
-                  },
-                  {
-                    id: "code",
-                    header: M.colCode,
-                    widthClass: "w-36",
-                    hide: (i) => !i.external_code && !i.barcode,
-                    cell: (i) => (
-                      <span dir="ltr" className="text-xs text-ink-muted">
-                        {i.external_code || i.barcode || "—"}
-                      </span>
-                    ),
-                  },
-                  {
-                    id: "section",
-                    header: M.colSection,
-                    widthClass: "w-40",
-                    cell: (i) =>
-                      i.platform_section_name ? (
-                        <span className="line-clamp-1 text-ink-muted">{i.platform_section_name}</span>
-                      ) : (
-                        <span className="text-ink-dim">{M.noSection}</span>
-                      ),
-                  },
-                  {
-                    id: "price",
-                    header: M.colPrice,
-                    align: "end",
-                    widthClass: "w-44",
-                    cell: (i) =>
-                      i.price_currency === "USD" && i.merchant_price_usd != null ? (
-                        <span className="flex flex-col items-end">
-                          <span className="font-bold text-accent-text">{dollars(i.merchant_price_usd)}</span>
-                          <span className="text-xs text-ink-muted">{fmtMoney(i.price)}</span>
-                        </span>
-                      ) : (
-                        <span className="font-bold text-accent-text">{fmtMoney(i.price)}</span>
-                      ),
-                  },
-                  {
-                    id: "available",
-                    header: M.colAvail,
-                    widthClass: "w-40",
-                    cell: (i) => (
-                      <button
-                        type="button"
-                        role="switch"
-                        aria-checked={i.available}
-                        aria-label={`${i.name} · ${i.available ? M.available : M.unavailable}`}
-                        disabled={suspended}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          void toggle(i);
-                        }}
-                        data-testid="store-menu-toggle"
-                        className="flex min-h-9 items-center gap-2 disabled:opacity-50"
-                      >
-                        <SwitchTrack on={i.available} />
-                        <span className={`text-xs font-bold ${i.available ? "text-success" : "text-ink-muted"}`}>
-                          {i.available ? M.available : M.unavailable}
-                        </span>
-                      </button>
-                    ),
-                  },
+        <div className="igroup" data-testid="store-menu-list">
+          {items.map((i) => {
+            const row = (
+              <div className="irow gap-3 ps-4 pe-3" style={{ minHeight: "4.125rem" }} data-testid="store-menu-item" data-item-id={i.id} data-available={i.available}>
+                {selecting && <CheckMark state={picked.has(i.id)} onChange={() => flipPick(i.id)} label={i.name} />}
+                <Link href={`/store/menu/${i.id}`} className="flex min-w-0 flex-1 items-center gap-3 self-stretch" data-testid="store-menu-edit" aria-label={`${M.edit} · ${i.name}`}>
+                  <RowThumb item={i} size={46} />
+                  <span className={`min-w-0 flex-1 py-2 ${i.available ? "" : "opacity-60"}`}>
+                    <span className="block truncate text-base font-bold leading-snug">{i.name}</span>
+                    <span className="console-meta block truncate">{metaLine(i)}</span>
+                  </span>
+                </Link>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={i.available}
+                  aria-label={`${i.name} · ${i.available ? M.available : M.unavailable}`}
+                  disabled={suspended}
+                  onClick={() => void toggle(i)}
+                  data-testid="store-menu-toggle"
+                  className="flex min-h-11 min-w-11 items-center justify-center text-xs disabled:opacity-50"
+                >
+                  {i.available ? (
+                    <span className="size-2.5 rounded-full bg-success-solid" aria-label={M.available} />
+                  ) : (
+                    <span className="pill">{M.unavailable}</span>
+                  )}
+                </button>
+                <IconNext size={14} className="shrink-0 text-ink-dim opacity-70" />
+              </div>
+            );
+            return suspended || selecting ? (
+              <div key={i.id}>{row}</div>
+            ) : (
+              <SwipeRow
+                key={i.id}
+                actions={[
+                  { key: "edit", label: SH.swipeEdit, icon: IconEdit, tone: "info", onClick: () => router.push(`/store/menu/${i.id}`) },
+                  { key: "hide", label: i.available ? SH.swipeHide : SH.swipeShow, icon: i.available ? IconViewOff : IconView, tone: "attention", onClick: () => void toggle(i) },
                 ]}
-                actions={(i) => (
-                  <>
-                    <Link
-                      href={`/store/menu/${i.id}`}
-                      title={M.edit}
-                      aria-label={`${M.edit} · ${i.name}`}
-                      className="flex size-9 items-center justify-center rounded-control text-ink-muted hover:bg-row-hover hover:text-ink"
-                    >
-                      <IconEdit size={18} />
-                    </Link>
-                    {!suspended && (
-                      <button
-                        type="button"
-                        title={M.duplicate}
-                        aria-label={`${M.duplicate} · ${i.name}`}
-                        onClick={() => void duplicate(i)}
-                        data-testid="store-menu-duplicate"
-                        className="flex size-9 items-center justify-center rounded-control text-ink-muted hover:bg-row-hover hover:text-ink"
-                      >
-                        <IconCopy size={18} />
-                      </button>
-                    )}
-                  </>
-                )}
-              />
-            </div>
-          ) : (
-            <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 lg:gap-4 xl:grid-cols-5 2xl:grid-cols-6">
-              {items.map((it) => (
-                <ItemCard key={it.id} item={it} disabled={suspended} onToggle={() => void toggle(it)} />
-              ))}
-            </ul>
-          )}
-          {/* **عدّادُ ما عُرض، وزرُّ «المزيد» احتياطٌ للصفحة التالية** — والصفحةُ تأتي وحدَها حين تُرى النهاية. */}
-          {next ? (
-            <div ref={sentinel} data-testid="menu-more" className="flex flex-col items-center gap-2">
-              {listTotal > 0 && (
-                <p className="console-meta">{fill(M.shownOf, { a: fmtNum(items.length), b: fmtNum(listTotal) })}</p>
-              )}
-              <LoadingState variant="list" rows={1} />
-            </div>
-          ) : null}
-        </>
+              >
+                {row}
+              </SwipeRow>
+            );
+          })}
+        </div>
       )}
+      {sentinelNode}
+      {items.length > 0 && !selecting && <p className="sec-foot text-center">{SH.swipeHint}</p>}
+
+      {selecting && picked.size > 0 && (
+        <div
+          className="fixed inset-x-3 z-30 flex flex-wrap items-center justify-center gap-2 rounded-2xl border border-line-soft bg-raised p-2.5 shadow-e3"
+          style={{ bottom: "calc(4.25rem + env(safe-area-inset-bottom))" }}
+          data-testid="menu-bulk"
+        >
+          <b className="w-full text-center text-sm">{fill(SH.selectedCount, { n: fmtNum(picked.size) })}</b>
+          {bulkButtons}
+        </div>
+      )}
+
+      <Sheet open={sheet} onClose={() => setSheet(false)} title={SH.filtersTitle}>
+        <div className="-mx-1 flex flex-col gap-3">
+          <IGroup title={M.colSection}>
+            {sectionOptions.map((o) => (
+              <IRow
+                key={o.key}
+                title={o.label}
+                value={"count" in o && o.count != null ? fmtNum(o.count) : undefined}
+                trailing={o.key === section ? <IconCheck size={18} className="text-primary" /> : undefined}
+                chevron={false}
+                onClick={() => setSection(o.key)}
+              />
+            ))}
+          </IGroup>
+          <Button size="lg" onClick={() => setSheet(false)}>
+            {fill(SH.showN, { n: fmtNum(shown) })}
+          </Button>
+        </div>
+      </Sheet>
+      {dialogs}
     </div>
   );
 }
