@@ -57,7 +57,7 @@ export default function InvitePage() {
   const tierLabels = [V.tier1, V.tier2, V.tier3];
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 lg:max-w-none lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
+    <div className="mx-auto flex w-full flex-col gap-4 max-w-none lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
       <div className="lg:col-span-2">
         <ShopPageHeader title={V.title} />
         <p className="text-sm text-ink-muted">

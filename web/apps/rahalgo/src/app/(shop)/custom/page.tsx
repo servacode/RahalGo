@@ -199,7 +199,7 @@ export default function CustomOrderPage() {
   ];
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 lg:max-w-none lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
+    <div className="mx-auto flex w-full flex-col gap-4 max-w-none lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
       {/* **«اطلب أي شيء…» هي العنوان، ولا «طلب خاص» فوقها** (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}
       <div className="flex flex-col gap-4 lg:col-span-2">
         <h1 className="heading-page">{K.subtitle}</h1>

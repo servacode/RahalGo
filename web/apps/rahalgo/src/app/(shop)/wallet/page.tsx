@@ -22,7 +22,7 @@ export default function WalletRoute() {
   if (loading) return <LoadingState variant="list" rows={3} />;
   if (!user) return <NeedLogin />;
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 lg:max-w-none">
+    <div className="mx-auto flex w-full flex-col gap-4 max-w-none">
       <ShopPageHeader title={W.title} />
       <WalletPage
         api={api}

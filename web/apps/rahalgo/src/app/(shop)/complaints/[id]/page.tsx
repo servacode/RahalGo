@@ -126,7 +126,7 @@ export default function ComplaintPage() {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 lg:max-w-none">
+    <div className="mx-auto flex w-full flex-col gap-3 max-w-none">
       {back}
       <section className="surface flex flex-col gap-3 p-4">
         <div className="flex items-start justify-between gap-2">

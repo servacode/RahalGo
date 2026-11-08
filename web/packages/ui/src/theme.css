@@ -1538,6 +1538,10 @@ html[data-shop-theme="dark"] .shop-pic {
   .shop-items[data-layout="tile"] {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+  /* **على التابلت صفّان لا صفٌّ يتيمٌ بعرض الشاشة** — بطاقةُ الصفّ فيها صورةٌ ونصٌّ وتكفيها نحو ٣٤٠ بكسلاً. */
+  .shop-items[data-layout="row"] {
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  }
 }
 @media (width >= 1024px) {
   .shop-items {
@@ -1814,7 +1818,14 @@ html[data-shop-theme="dark"] .shop-pic {
     inset-inline-end: 16px;
   }
 }
+/* **بطاقاتُ موقع الزبون مسطّحةٌ كباقي بطاقاته** — «ثقل القاع» في `surface-lit` يظهر لطخةً رماديّةً على بطاقةٍ قصيرةٍ (سجلُّ المحفظة). */
+html[data-shop] .surface-lit {
+  background-image: none;
+  box-shadow: var(--shadow-e1);
+}
+
 /* **حالةٌ فارغةٌ داخل بطاقةٍ لا تُرسَم بإطارٍ ثانٍ** — كانت «لا حركات بعد» في المحفظة صندوقاً داخل صندوق. */
+html[data-shop] .surface-lit [data-ui="empty"],
 html[data-shop] .surface [data-ui="empty"] {
   border: 0;
   background: none;

@@ -153,7 +153,7 @@ export default function AccountPage() {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 lg:max-w-none">
+    <div className="mx-auto flex w-full flex-col gap-4 max-w-none">
       <h1 className="heading-page">{A.title}</h1>
 
       {/* **عمودان على الحاسوب**: بياناتي وإعداداتي، وبجانبها ما يخصّني والروابط. */}

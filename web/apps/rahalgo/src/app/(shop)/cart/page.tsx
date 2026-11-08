@@ -322,7 +322,7 @@ export default function CartPage() {
                 )}
               </div>
             )}
-          <ul className="divide-y divide-line-soft">
+          <ul className="divide-y divide-line-soft xl:grid xl:grid-cols-2 xl:divide-y-0 xl:[&>li]:border-b xl:[&>li]:border-line-soft">
             {cart.lines.map((l) => {
               const k = lineKey(l);
               const bad = badLines.get(l.item.id);
@@ -422,7 +422,7 @@ export default function CartPage() {
                     <i aria-hidden className="shop-opt-dot" />
                   </div>
                 ) : (
-                  <div role="radiogroup" aria-label={C.payment} className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <div role="radiogroup" aria-label={C.payment} className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
                     <button
                       type="button"
                       id="pay-wallet"

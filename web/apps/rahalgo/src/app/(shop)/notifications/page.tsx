@@ -19,7 +19,7 @@ export default function Page() {
   if (loading) return <LoadingState variant="list" rows={3} />;
   if (!user) return <NeedLogin />;
   return (
-    <div className="mx-auto w-full max-w-4xl lg:max-w-none">
+    <div className="mx-auto w-full max-w-none">
       <NotificationsPage api={api} Link={Link} app="customer" />
     </div>
   );
