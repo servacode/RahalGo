@@ -18,5 +18,9 @@ export default function Page() {
   const { user, loading } = useAuth();
   if (loading) return <LoadingState variant="list" rows={3} />;
   if (!user) return <NeedLogin />;
-  return <NotificationsPage api={api} Link={Link} app="customer" />;
+  return (
+    <div className="mx-auto w-full max-w-4xl">
+      <NotificationsPage api={api} Link={Link} app="customer" />
+    </div>
+  );
 }

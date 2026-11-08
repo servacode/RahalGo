@@ -57,8 +57,14 @@ function Links() {
   return (
     <nav className="surface flex flex-col divide-y divide-line-soft">
       {items.map(([href, label]) => (
-        <Link key={href} href={href} className="flex items-center gap-2 px-4 py-3 text-sm hover:bg-row-hover">
-          {href === "/download/customer" && <IconSmartphone size={16} className="text-accent-text" />}
+        <Link
+          key={href}
+          href={href}
+          className="flex items-center gap-2 px-4 py-3 text-sm hover:bg-row-hover"
+        >
+          {href === "/download/customer" && (
+            <IconSmartphone size={16} className="text-accent-text" />
+          )}
           {label}
         </Link>
       ))}
@@ -80,12 +86,21 @@ function Mine() {
     ["/complaints", A.tickets, IconSupport],
   ] as const;
   return (
-    <nav className="surface flex flex-col divide-y divide-line-soft" aria-label={A.mine}>
-      <p className="px-4 pb-2 pt-3 text-xs font-bold text-ink-muted">{A.mine}</p>
+    <nav
+      className="surface flex flex-col divide-y divide-line-soft"
+      aria-label={A.mine}
+    >
+      <p className="px-4 pb-2 pt-3 text-xs font-bold text-ink-muted">
+        {A.mine}
+      </p>
       {/* **«ادعُ صديقاً» أوّلاً بلونٍ ومبلغ** (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}
       <InviteMenuRow />
       {items.map(([href, label, Icon]) => (
-        <Link key={href} href={href} className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-row-hover">
+        <Link
+          key={href}
+          href={href}
+          className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-row-hover"
+        >
           <Icon size={17} className="shrink-0 text-accent-text" />
           <span className="flex-1">{label}</span>
           <IconNext size={15} className="text-ink-muted" />
@@ -124,7 +139,10 @@ export default function AccountPage() {
     setBusy(true);
     setError("");
     try {
-      await api("/api/v1/me/name", { method: "PATCH", body: JSON.stringify({ full_name: name.trim() }) });
+      await api("/api/v1/me/name", {
+        method: "PATCH",
+        body: JSON.stringify({ full_name: name.trim() }),
+      });
       setUser({ ...user, full_name: name.trim() });
       toast(A.nameSaved);
     } catch (err) {
@@ -135,68 +153,105 @@ export default function AccountPage() {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4 lg:max-w-5xl">
       <h1 className="heading-page">{A.title}</h1>
 
-      <FormSection title={A.wallet} icon={<IconWallet />}>
-        {wallet ? (
-          <div className="flex flex-col gap-1">
-            <Money value={wallet.available ?? wallet.balance} className="figure text-accent-text" />
-            <p className="text-xs text-ink-muted">{A.walletAvailable}</p>
-            {(wallet.reserved ?? 0) > 0 && (
-              <p className="text-xs text-ink-muted">
-                {A.walletReserved}: <Money value={wallet.reserved ?? 0} small />
-              </p>
+      {/* **عمودان على الحاسوب**: بياناتي وإعداداتي، وبجانبها ما يخصّني والروابط. */}
+      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
+        <div className="flex min-w-0 flex-col gap-4">
+          <FormSection title={A.wallet} icon={<IconWallet />}>
+            {wallet ? (
+              <div className="flex flex-col gap-1">
+                <Money
+                  value={wallet.available ?? wallet.balance}
+                  className="figure text-accent-text"
+                />
+                <p className="text-xs text-ink-muted">{A.walletAvailable}</p>
+                {(wallet.reserved ?? 0) > 0 && (
+                  <p className="text-xs text-ink-muted">
+                    {A.walletReserved}:{" "}
+                    <Money value={wallet.reserved ?? 0} small />
+                  </p>
+                )}
+              </div>
+            ) : (
+              <LoadingState variant="inline" />
             )}
-          </div>
-        ) : (
-          <LoadingState variant="inline" />
-        )}
-      </FormSection>
+          </FormSection>
 
-      <FormSection title={A.profile} icon={<IconUser />}>
-        <form onSubmit={saveName} className="flex flex-col gap-3">
-          <Input id="acc-name" label={A.name} value={name} onChange={(e) => setName(e.target.value)} required />
-          <Input id="acc-phone" label={A.phone} value={user.phone} dir="ltr" readOnly className="text-end" />
-          {error && <Alert>{error}</Alert>}
-          <Button type="submit" disabled={busy || !name.trim() || name.trim() === user.full_name} className="w-fit">
-            {A.saveName}
+          <FormSection title={A.profile} icon={<IconUser />}>
+            <form onSubmit={saveName} className="flex flex-col gap-3">
+              <Input
+                id="acc-name"
+                label={A.name}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+              <Input
+                id="acc-phone"
+                label={A.phone}
+                value={user.phone}
+                dir="ltr"
+                readOnly
+                className="text-end"
+              />
+              {error && <Alert>{error}</Alert>}
+              <Button
+                type="submit"
+                disabled={
+                  busy || !name.trim() || name.trim() === user.full_name
+                }
+                className="w-fit"
+              >
+                {A.saveName}
+              </Button>
+            </form>
+          </FormSection>
+
+          <WhatsAppSection />
+
+          <WebPushCard app="customer" />
+
+          <FormSection title={A.addresses} icon={<IconLocation />}>
+            <button
+              type="button"
+              onClick={() => setAddr(true)}
+              className="flex w-full flex-col gap-1 text-start"
+            >
+              {addresses === null ? (
+                <LoadingState variant="inline" />
+              ) : (
+                <>
+                  <span className="text-sm">
+                    {address ? address.address_text : m.shop.address.none}
+                  </span>
+                  <span className="text-xs text-accent-text">
+                    {m.shop.address.change}
+                  </span>
+                </>
+              )}
+            </button>
+          </FormSection>
+        </div>
+        <div className="flex min-w-0 flex-col gap-4">
+          <Mine />
+
+          <Links />
+
+          <Button
+            variant="danger"
+            className="flex items-center justify-center gap-2 py-3"
+            onClick={() => {
+              logout();
+              router.replace("/shop");
+            }}
+          >
+            <IconLogout size={16} />
+            {A.logout}
           </Button>
-        </form>
-      </FormSection>
-
-      <WhatsAppSection />
-
-      <WebPushCard app="customer" />
-
-      <FormSection title={A.addresses} icon={<IconLocation />}>
-        <button type="button" onClick={() => setAddr(true)} className="flex w-full flex-col gap-1 text-start">
-          {addresses === null ? (
-            <LoadingState variant="inline" />
-          ) : (
-            <>
-              <span className="text-sm">{address ? address.address_text : m.shop.address.none}</span>
-              <span className="text-xs text-accent-text">{m.shop.address.change}</span>
-            </>
-          )}
-        </button>
-      </FormSection>
-
-      <Mine />
-
-      <Links />
-
-      <Button
-        variant="danger"
-        className="flex items-center justify-center gap-2 py-3"
-        onClick={() => {
-          logout();
-          router.replace("/shop");
-        }}
-      >
-        <IconLogout size={16} />
-        {A.logout}
-      </Button>
+        </div>
+      </div>
       <AddressSheet open={addr} onClose={() => setAddr(false)} />
     </div>
   );

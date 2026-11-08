@@ -476,13 +476,13 @@ export function ItemSheet({
                       <span dir="ltr" className="tabular-nums">
                         {dollars(totalUsd)}
                       </span>
-                      <span className="text-xs opacity-80">
+                      <span className="text-xs opacity-90 [&_span]:text-current!">
                         {"· "}
                         <Money value={total} small />
                       </span>
                     </span>
                   ) : (
-                    <Money value={total} />
+                    <Money value={total} className="[&_span]:text-current!" />
                   )}
                 </span>
               </Button>
