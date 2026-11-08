@@ -1853,7 +1853,7 @@ html[data-shop-theme="dark"] .shop-pic {
 }
 @media (width >= 1024px) {
   .shop-store-cols {
-    grid-template-columns: 176px minmax(0, 1fr) 320px;
+    grid-template-columns: minmax(0, 1fr) 320px;
     align-items: start;
     gap: 24px;
   }
@@ -1864,55 +1864,45 @@ html[data-shop-theme="dark"] .shop-pic {
     inset-inline-end: 16px;
   }
 }
-.shop-menu-rail {
-  display: none;
+/* **حالةٌ فارغةٌ داخل بطاقةٍ لا تُرسَم بإطارٍ ثانٍ** — كانت «لا حركات بعد» في المحفظة صندوقاً داخل صندوق. */
+html[data-shop] .surface [data-ui="empty"] {
+  border: 0;
+  background: none;
+  box-shadow: none;
+  padding-block: 24px;
+}
+
+/* ── شريطُ أقسام المتجر: لاصقٌ تحت الشريط العلويّ، على كلّ المقاسات ── */
+.shop-store-sections {
+  position: sticky;
+  top: 61px;
+  z-index: 30;
+  margin-inline: -16px;
+  border-bottom: 1px solid var(--color-line);
+  background-color: var(--color-chrome);
+  padding-block: 8px;
+  backdrop-filter: blur(12px);
+  scroll-margin-top: 61px;
+}
+.shop-store-sections .shop-chips {
+  margin-inline: 0;
+  padding-block: 0;
+}
+.shop-store-sections .shop-chip {
+  height: 44px;
 }
 @media (width >= 1024px) {
-  .shop-menu-rail {
-    position: sticky;
-    top: 88px;
-    display: flex;
-    max-height: calc(100dvh - 112px);
-    flex-direction: column;
-    gap: 2px;
-    /* متجرٌ بعشرات الأقسام: العمودُ يتمرّر في مكانه فلا يُقطع ما تحت الشاشة */
-    overflow-y: auto;
-    scrollbar-width: thin;
+  .shop-store-sections {
+    top: 69px;
+    margin-inline: 0;
+    border: 1px solid var(--color-line);
+    border-radius: 16px;
+    padding-inline: 8px;
+    scroll-margin-top: 69px;
   }
-  .shop-chips[data-phone] {
-    display: none;
+  .shop-store-sections .shop-chips {
+    padding-inline: 0;
   }
-}
-.shop-menu-rail h2 {
-  padding-inline: 12px;
-  padding-bottom: 6px;
-  color: var(--color-ink-muted);
-  font-size: 13px;
-  font-weight: 700;
-}
-.shop-menu-link {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  border-inline-end: 3px solid transparent;
-  border-radius: 8px;
-  padding: 10px 12px;
-  font-size: 14px;
-  font-weight: 700;
-  text-align: start;
-}
-.shop-menu-link:hover {
-  background-color: var(--color-row-hover);
-}
-.shop-menu-link[aria-pressed="true"] {
-  border-inline-end-color: var(--color-primary);
-  background-color: var(--color-primary-soft);
-  color: var(--color-primary);
-}
-.shop-menu-link small {
-  font-size: 12px;
-  color: var(--color-ink-muted);
 }
 .shop-cartpanel {
   display: none;

@@ -146,6 +146,26 @@ export default function StorePageView() {
   }, [next, more]);
 
   const sections = (page?.sections ?? []).filter((x) => x.count > 0);
+  const bar = useRef<HTMLElement | null>(null);
+
+  // **القسمُ المختارُ يبقى ظاهراً في الشريط** — أفقيّاً فقط، فلا تقفز الصفحةُ.
+  useEffect(() => {
+    const chip = bar.current?.querySelector<HTMLElement>('[aria-pressed="true"]');
+    const row = chip?.parentElement;
+    if (!chip || !row) return;
+    const c = chip.getBoundingClientRect();
+    const r = row.getBoundingClientRect();
+    row.scrollBy({ left: c.left + c.width / 2 - (r.left + r.width / 2), behavior: "smooth" });
+  }, [active, page]);
+
+  // **عند تبديل القسم والشريطُ لاصقٌ** تعود الصفحةُ إلى رأس الأصناف الجديدة — لا تبقى في ذيل قسمٍ طويل.
+  const pick = (secId: string) => {
+    setActive(secId);
+    const el = bar.current;
+    if (el && el.getBoundingClientRect().top <= 140) {
+      window.scrollTo({ top: window.scrollY + el.getBoundingClientRect().top - (window.innerWidth >= 1024 ? 69 : 61), behavior: "auto" });
+    }
+  };
   const activeName = sections.find((x) => x.id === active)?.name ?? "";
 
   return (
@@ -212,27 +232,6 @@ export default function StorePageView() {
             <EmptyState icon={IconStore} title={ST.empty} action={<span className="text-xs text-ink-muted">{ST.emptyHint}</span>} />
           ) : (
             <div className="shop-store-cols">
-              {/* ── أقسامُ القائمة: عمودٌ لاصقٌ على الحاسوب ── */}
-              {!q.trim() ? (
-                <nav className="shop-menu-rail" aria-label={SK.menuSections}>
-                  <h2>{SK.menuSections}</h2>
-                  {sections.map((sec) => (
-                    <button
-                      key={sec.id}
-                      type="button"
-                      className="shop-menu-link"
-                      aria-pressed={sec.id === active}
-                      onClick={() => setActive(sec.id)}
-                    >
-                      {sec.name}
-                      <small>{fmtNum(sec.count)}</small>
-                    </button>
-                  ))}
-                </nav>
-              ) : (
-                <span className="hidden lg:block" />
-              )}
-
               <div className="flex min-w-0 flex-col gap-4">
                 {/* ── search inside the store (2026-11-07) ── */}
                 <div className="relative">
@@ -260,19 +259,23 @@ export default function StorePageView() {
                   )}
                 </div>
                 {!q.trim() && (
-                  <div className="shop-chips" data-phone>
-                    {sections.map((sec) => (
-                      <button
-                        key={sec.id}
-                        type="button"
-                        className="shop-chip"
-                        aria-pressed={sec.id === active}
-                        onClick={() => setActive(sec.id)}
-                      >
-                        {sec.name}
-                      </button>
-                    ))}
-                  </div>
+                  /* **شريطُ الأقسام تحت البحث على كلّ المقاسات** (قرارُ المالك ٢٠٢٦-١١-٠٩، كالجوّال والتطبيق):
+                     لاصقٌ تحت الشريط العلويّ، والقسمُ المختارُ يبقى في المرمى، وتحته أصنافُه وحدَها. */
+                  <nav ref={bar} className="shop-store-sections" aria-label={SK.menuSections}>
+                    <div className="shop-chips">
+                      {sections.map((sec) => (
+                        <button
+                          key={sec.id}
+                          type="button"
+                          className="shop-chip"
+                          aria-pressed={sec.id === active}
+                          onClick={() => pick(sec.id)}
+                        >
+                          {sec.name}
+                        </button>
+                      ))}
+                    </div>
+                  </nav>
                 )}
                 {!q.trim() && activeName && (
                   <div className="shop-sec-head">
