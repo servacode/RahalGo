@@ -97,7 +97,8 @@ export default function PwaHints({ android }: { android?: AndroidHint } = {}) {
         role="dialog"
         aria-label={withPlatform(P.iosTitle, name)}
         className="fixed inset-x-0 z-50 flex justify-center px-4"
-        style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 12px)" }}
+        // فوق شريط التبويبات السفليّ (٦٢ + حدّ) فلا يغطّيه، والسهمُ يبقى نازلاً نحو زرّ المشاركة.
+        style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 76px)" }}
       >
         <div className="surface-modal relative w-full max-w-sm p-4 elev-3">
           <button
