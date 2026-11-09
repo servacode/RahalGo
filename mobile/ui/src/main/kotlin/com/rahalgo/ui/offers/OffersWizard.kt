@@ -54,6 +54,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.rahalgo.design.Rahal
+import com.rahalgo.ui.cardSurface
 import com.rahalgo.ui.ConfirmDialog
 import com.rahalgo.ui.OfferCard
 import com.rahalgo.ui.OfferDuration
@@ -245,9 +246,7 @@ fun OffersWizard(
                     Row(
                         Modifier
                             .fillMaxWidth()
-                            .clip(Rahal.shape.md)
-                            .background(Rahal.colors.canvas)
-                            .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
+                            .cardSurface(Rahal.shape.md, elevation = 2.dp)
                             .padding(start = Rahal.space.md),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -597,9 +596,7 @@ private fun FormCard(title: String, body: @Composable ColumnScope.() -> Unit) {
     Column(
         Modifier
             .fillMaxWidth()
-            .clip(Rahal.shape.md)
-            .background(Rahal.colors.canvas)
-            .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
+            .cardSurface(Rahal.shape.md, elevation = 2.dp)
             .padding(Rahal.space.md),
     ) {
         Text(
@@ -619,9 +616,7 @@ private fun EmptyOffers(enabled: Boolean, onCreate: () -> Unit) {
     Column(
         Modifier
             .fillMaxWidth()
-            .clip(Rahal.shape.md)
-            .background(Rahal.colors.canvas)
-            .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
+            .cardSurface(Rahal.shape.md, elevation = 2.dp)
             .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.xl),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {

@@ -360,7 +360,7 @@ fun OrderChatSheet(
     ) {
         Surface(
             shape = Rahal.shape.lg,
-            color = Rahal.colors.surface,
+            color = Rahal.colors.canvas,
             tonalElevation = 6.dp,
             modifier = Modifier
                 .fillMaxWidth(0.92f)
@@ -525,6 +525,7 @@ fun OrderChatSheet(
                             onValueChange = { draft = TextLimits.fit(it, TextLimits.CHAT_BODY) },
                             placeholder = { Text(stringResource(R.string.chat_write)) },
                             singleLine = true,
+                            shape = Rahal.shape.pill,
                             modifier = Modifier.weight(1f),
                         )
                         RahalButton(

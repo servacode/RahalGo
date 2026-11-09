@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -133,11 +132,10 @@ fun TicketsScreen(
             Empty(if (againstMe != null && showAgainst) againstMeEmpty else mineEmpty)
             return@Screen
         }
-        Card {
-            list.forEachIndexed { i, row ->
-                if (i > 0) HorizontalDivider()
-                TicketLine(row, onOpen)
-            }
+        // **كلُّ بلاغٍ بطاقتُه** (مراجعةُ التصميم ٢٠٢٦-١١-٠٩) لا شريحةٌ بفواصل.
+        list.forEach { row ->
+            Card { TicketLine(row, onOpen) }
+            Spacer(Modifier.height(Rahal.space.md))
         }
     }
 }

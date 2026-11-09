@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.rahalgo.design.Rahal
+import com.rahalgo.ui.cardSurface
 import com.rahalgo.merchant.R
 import com.rahalgo.merchant.SelectedStore
 import com.rahalgo.shared.merchant.DeliveriesApi
@@ -1223,9 +1224,7 @@ private fun AskLocationCard(vm: DeliveryViewModel, fetch: Boolean, linkOpen: Boo
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .clip(Rahal.shape.md)
-                    .background(Rahal.colors.canvas)
-                    .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
+                    .cardSurface(Rahal.shape.md, elevation = 2.dp)
                     .padding(Rahal.space.md),
             ) {
                 Text(
@@ -1403,9 +1402,7 @@ fun DeliveryRow(d: Delivery, cancelling: Boolean, onOpen: () -> Unit = {}, onCan
     Column(
         Modifier
             .fillMaxWidth()
-            .clip(Rahal.shape.md)
-            .background(Rahal.colors.canvas)
-            .border(Rahal.stroke.hair, tone.copy(alpha = 0.45f), Rahal.shape.md)
+            .cardSurface(Rahal.shape.lg)
             .clickable { open = !open }
             .padding(Rahal.space.md),
     ) {

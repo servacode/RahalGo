@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -177,12 +176,16 @@ fun AccountScreen(
             .padding(bottom = LocalChatFabInset.current),
     ) {
 
-        Identity(vm, s, worker, whatsapp)
+        // **كلُّ قسمٍ بطاقة** (مراجعةُ التصميم ٢٠٢٦-١١-٠٩) — بدل فواصلَ خطّيّةٍ بين كتلٍ عارية.
+        Card { Identity(vm, s, worker, whatsapp) }
         Gap()
-        PasswordSection(vm, s)
+        Card { PasswordSection(vm, s) }
         Gap()
         // **ولا عناوينَ في حساب السائق** — انظر `showAddresses`.
-        if (showAddresses) AddressesSection(vm, s, picker, onEditAddress)
+        if (showAddresses) {
+            Card { AddressesSection(vm, s, picker, onEditAddress) }
+            Gap()
+        }
         // ══════════════════════════════════════════════════════════════
         // **ولا فحصَ إشعاراتٍ هنا**
         // ══════════════════════════════════════════════════════════════
@@ -199,9 +202,8 @@ fun AccountScreen(
         //
         // **والبابُ في المحرّك باقٍ** — يُنادى من لوحة الإدارة يومَ
         // يُشكّ في جهاز.
-        Gap()
         // **والخطرُ آخرا** — بأمر المالك.
-        DangerSection(vm, s)
+        Card(tone = Rahal.colors.danger) { DangerSection(vm, s) }
         Spacer(Modifier.height(24.dp))
         // ══════════════════════════════════════════════════════════════
         // **وذكرُ مصدر الخرائط — يُؤدَّى هنا لا فوق الطريق**
@@ -773,9 +775,7 @@ private fun SectionTitle(text: String, color: androidx.compose.ui.graphics.Color
 
 @Composable
 private fun Gap() {
-    Spacer(Modifier.height(24.dp))
-    HorizontalDivider()
-    Spacer(Modifier.height(16.dp))
+    Spacer(Modifier.height(Rahal.space.lg))
 }
 
 @Composable

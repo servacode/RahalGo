@@ -6,6 +6,7 @@ import android.app.Application
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -123,10 +124,16 @@ fun WarningsScreen(vm: WarningsViewModel) {
                 Note(stringResource(com.rahalgo.merchant.R.string.store_no_warnings), Rahal.colors.brand)
                 return@Screen
             }
-            Card {
-                vm.items.forEachIndexed { i, w ->
-                    if (i > 0) HorizontalDivider()
-                    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+            // **كلُّ إنذارٍ بطاقةٌ بأيقونةٍ ملوّنة** (مراجعةُ التصميم ٢٠٢٦-١١-٠٩).
+            vm.items.forEach { w ->
+                Card(tone = Rahal.colors.accent) {
+                  Row(verticalAlignment = Alignment.CenterVertically) {
+                    com.rahalgo.ui.IconTile(
+                        icon = com.rahalgo.ui.R.drawable.ic_warning,
+                        tint = Rahal.colors.accent,
+                    )
+                    Spacer(Modifier.width(Rahal.space.md))
+                    Column(Modifier.weight(1f)) {
                         Text(stringResource(com.rahalgo.ui.WarnReasons.res(w.reason)), fontWeight = FontWeight.Bold)
                         if (w.note.isNotBlank()) {
                             Text(
@@ -141,7 +148,9 @@ fun WarningsScreen(vm: WarningsViewModel) {
                             style = MaterialTheme.typography.labelSmall,
                         )
                     }
+                  }
                 }
+                Spacer(Modifier.height(Rahal.space.md))
             }
             Spacer(Modifier.height(24.dp))
         }

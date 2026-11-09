@@ -39,6 +39,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -190,12 +191,54 @@ fun Card(
     Column(
         modifier
             .fillMaxWidth()
-            .clip(Rahal.shape.md)
-            .background(tone?.copy(alpha = 0.06f) ?: Rahal.colors.canvas)
-            .border(Rahal.stroke.hair, tone?.copy(alpha = 0.30f) ?: Rahal.colors.line, Rahal.shape.md)
+            .cardSurface(tone = tone)
             .padding(Rahal.space.md),
         content = content,
     )
+}
+
+/**
+ * **سطحُ البطاقة الواحد** — أرضٌ بيضاءُ بظلٍّ خفيفٍ وحدٍّ رفيع، كبطاقات معالج الإعداد
+ * و«متجري». (مراجعةُ التصميم الشاملة ٢٠٢٦-١١-٠٩.)
+ *
+ * **وموضعٌ واحدٌ لا نسخ**: كانت كلُّ شاشةٍ ترسم بطاقتَها بقصٍّ وخلفيّةٍ وحدٍّ من عندها،
+ * فاختلف الظلُّ والزاويةُ بين شاشةٍ وشاشة. **والظلُّ يسبق القصَّ** وإلّا قُصَّ معه.
+ * **و`tone` لمعنى حال** (تمامٌ أو تنبيه): أرضٌ خفيفةٌ من لونه وحدٌّ منه.
+ */
+@Composable
+fun Modifier.cardSurface(
+    shape: androidx.compose.ui.graphics.Shape = Rahal.shape.lg,
+    tone: Color? = null,
+    elevation: Dp = 3.dp,
+): Modifier = this
+    .shadow(elevation, shape, clip = false)
+    .clip(shape)
+    .background(Rahal.colors.canvas)
+    .then(if (tone != null) Modifier.background(tone.copy(alpha = 0.06f)) else Modifier)
+    .border(Rahal.stroke.hair, tone?.copy(alpha = 0.30f) ?: Rahal.colors.line, shape)
+
+/** **أيقونةٌ في مربّعٍ مدوَّرٍ بلونها** — لغةُ الأيقونات في «متجري» والقائمة والإشعارات. */
+@Composable
+fun IconTile(
+    icon: Int,
+    tint: Color,
+    modifier: Modifier = Modifier,
+    size: Dp = 40.dp,
+) {
+    Box(
+        modifier
+            .size(size)
+            .clip(Rahal.shape.md)
+            .background(tint.copy(alpha = 0.12f)),
+        contentAlignment = Alignment.Center,
+    ) {
+        androidx.compose.material3.Icon(
+            painter = androidx.compose.ui.res.painterResource(icon),
+            contentDescription = null,
+            tint = tint,
+            modifier = Modifier.size(size * 0.55f),
+        )
+    }
 }
 
 /**
@@ -516,8 +559,9 @@ fun StatBox(
     Column(
         modifier
             .fillMaxHeight()
+            // **مربّعٌ بصبغة العلامة** لا بطاقةٌ بظلّ — فيصلح داخل بطاقةٍ وعلى الأرض الرماديّة معاً.
             .clip(Rahal.shape.md)
-            .background(Rahal.colors.inkMuted.copy(alpha = 0.07f))
+            .background(Rahal.colors.brand.copy(alpha = 0.07f))
             .padding(horizontal = 8.dp, vertical = 12.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,

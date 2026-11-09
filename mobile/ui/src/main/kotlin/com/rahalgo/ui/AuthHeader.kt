@@ -1,6 +1,18 @@
 package com.rahalgo.ui
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.Alignment
+import com.rahalgo.design.Rahal
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
@@ -45,4 +57,42 @@ fun AuthHeader(
         modifier = Modifier.size(logoSize),
     )
     Spacer(Modifier.height(bottomSpace))
+}
+
+/**
+ * **أرضُ شاشات الدخول كلِّها** — عمودٌ يتوسّط ويمرَّر، على أرضٍ رماديّةٍ خفيفةٍ لتبرز عليها
+ * بطاقةُ النموذج (`AuthCard`). (مراجعةُ التصميم الشاملة ٢٠٢٦-١١-٠٩.)
+ *
+ * **موضعٌ واحدٌ** للدخول والإنشاء والاستعادة وتبديل الكلمة: كانت كلُّ شاشةٍ تكتب عمودَها
+ * بحشوةٍ ومحاذاةٍ تختلف قليلاً.
+ */
+@Composable
+fun AuthPage(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Rahal.colors.surface)
+            // **والكيبوردُ لا يغطّي الزرّ** (رُئي على جوال المالك ٢٠٢٦-١٠-٠٩) — العمودُ يقصر فوقه.
+            .imePadding()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = Rahal.space.xl),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        content = content,
+    )
+}
+
+/** **بطاقةُ النموذج** — الحقولُ والأزرارُ في بطاقةٍ بيضاءَ بظلّ، كبطاقات معالج الإعداد. */
+@Composable
+fun AuthCard(content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .cardSurface(Rahal.shape.lg, elevation = 6.dp)
+            .padding(Rahal.space.lg),
+        content = content,
+    )
 }

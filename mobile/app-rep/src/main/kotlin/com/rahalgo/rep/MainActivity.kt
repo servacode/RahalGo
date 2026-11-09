@@ -23,6 +23,7 @@ import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.foundation.background
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
@@ -44,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.rahalgo.design.Rahal
+import com.rahalgo.ui.RahalNavTab
 import com.rahalgo.map.PickPoint
 import com.rahalgo.map.PickPointViewModel
 import com.rahalgo.rep.board.BoardScreen
@@ -384,7 +386,7 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                 )
             },
             bottomBar = {
-                NavigationBar {
+                com.rahalgo.ui.RahalNavigationBar {
                     // **ولوحتُه أوّلا فهي في اليمين** — يفتحها كلَّ
                     // صباحٍ ليرى كم بقي على هدفه.
                     Tab(
@@ -457,6 +459,8 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
             Box(
                 Modifier
                     .fillMaxSize()
+                    // **أرضٌ رماديّةٌ خفيفةٌ تحت كلّ الشاشات** لتبرز عليها البطاقاتُ البيضاءُ بظلّها.
+                    .background(Rahal.colors.surface)
                     .padding(
                         top = padding.calculateTopPadding(),
                         bottom = padding.calculateBottomPadding(),
@@ -658,12 +662,6 @@ private enum class Tab { Board, AddClient, Clients, Account }
 
 /** **بندٌ برسمٍ واسم** — وثلاثُ نسخٍ منه في شريطٍ واحدٍ حشوٌ يُنسخ. */
 @Composable
-private fun RowScope.Tab(selected: Boolean, onClick: () -> Unit, icon: Int, label: Int) {
-    NavigationBarItem(
-        selected = selected,
-        onClick = onClick,
-        icon = { Icon(painterResource(icon), contentDescription = null) },
-        label = { Text(stringResource(label)) },
-    )
-}
+private fun RowScope.Tab(selected: Boolean, onClick: () -> Unit, icon: Int, label: Int) =
+    RahalNavTab(selected, onClick, icon, label)
 

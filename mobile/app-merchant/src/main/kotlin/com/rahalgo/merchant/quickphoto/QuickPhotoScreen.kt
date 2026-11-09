@@ -18,12 +18,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import com.rahalgo.design.Rahal
+import com.rahalgo.ui.cardSurface
 import com.rahalgo.merchant.R
 import com.rahalgo.shared.merchant.NoPhotoItem
 import com.rahalgo.ui.LoadState
@@ -59,6 +62,17 @@ fun QuickPhotoScreen(state: QuickPhotoState) {
                 )
             }
             RahalTextButton(onClick = { state.close() }) { Text(stringResource(R.string.qp_close)) }
+        }
+        // **شريطُ التقدّم** (مراجعةُ التصميم ٢٠٢٦-١١-٠٩) — يُرى كم بقي قبل أن يُقرأ الرقم.
+        if (q != null && q.total > 0) {
+            Spacer(Modifier.height(Rahal.space.sm))
+            androidx.compose.material3.LinearProgressIndicator(
+                progress = { (q.position.toFloat() / q.total).coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxWidth().height(6.dp).clip(Rahal.shape.pill),
+                color = Rahal.colors.brand,
+                trackColor = Rahal.colors.line,
+                drawStopIndicator = {},
+            )
         }
         UploadBanner(state)
         Spacer(Modifier.height(Rahal.space.md))
@@ -113,7 +127,14 @@ private fun ColumnScope.Capture(state: QuickPhotoState, item: NoPhotoItem, shoot
     )
     Spacer(Modifier.height(Rahal.space.md))
     val shot = state.captured
-    Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+    Box(
+        Modifier
+            .weight(1f)
+            .fillMaxWidth()
+            .cardSurface(Rahal.shape.lg)
+            .padding(Rahal.space.sm),
+        contentAlignment = Alignment.Center,
+    ) {
         if (shot != null) {
             val bmp = remember(shot) { android.graphics.BitmapFactory.decodeByteArray(shot, 0, shot.size) }
             if (bmp != null) {
@@ -125,12 +146,20 @@ private fun ColumnScope.Capture(state: QuickPhotoState, item: NoPhotoItem, shoot
                 )
             }
         } else {
-            Text(
-                stringResource(R.string.qp_hint),
-                style = MaterialTheme.typography.bodyMedium,
-                color = Rahal.colors.inkMuted,
-                textAlign = TextAlign.Center,
-            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                com.rahalgo.ui.IconTile(
+                    icon = com.rahalgo.ui.R.drawable.ic_photo,
+                    tint = Rahal.colors.brand,
+                    size = 72.dp,
+                )
+                Spacer(Modifier.height(Rahal.space.md))
+                Text(
+                    stringResource(R.string.qp_hint),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Rahal.colors.inkMuted,
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
     }
     Spacer(Modifier.height(Rahal.space.md))
@@ -154,6 +183,12 @@ private fun ColumnScope.Capture(state: QuickPhotoState, item: NoPhotoItem, shoot
 @Composable
 private fun Done(state: QuickPhotoState, total: Int) {
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+        com.rahalgo.ui.IconTile(
+            icon = com.rahalgo.ui.R.drawable.ic_check,
+            tint = Rahal.colors.success,
+            size = 72.dp,
+        )
+        Spacer(Modifier.height(Rahal.space.lg))
         Text(
             stringResource(if (total == 0) R.string.qp_none else R.string.qp_done),
             style = MaterialTheme.typography.titleLarge,

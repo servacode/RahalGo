@@ -59,6 +59,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.rahalgo.design.Rahal
+import com.rahalgo.ui.cardSurface
 import com.rahalgo.merchant.R
 import com.rahalgo.shared.merchant.DayHours
 import com.rahalgo.shared.merchant.Store
@@ -510,9 +511,7 @@ private fun QuickAction(
         Column(
             Modifier
                 .fillMaxSize()
-                .clip(Rahal.shape.md)
-                .background(Rahal.colors.canvas)
-                .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
+                .cardSurface(Rahal.shape.md, elevation = 2.dp)
                 .clickable(role = Role.Button, onClick = onClick)
                 .padding(vertical = Rahal.space.md, horizontal = Rahal.space.xs),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -576,9 +575,7 @@ private fun Tile(
 ) {
     Row(
         modifier
-            .clip(Rahal.shape.md)
-            .background(Rahal.colors.canvas)
-            .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
+            .cardSurface(Rahal.shape.md, elevation = 2.dp)
             .padding(Rahal.space.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -641,9 +638,7 @@ internal fun SettingsGroup(title: String, content: @Composable ColumnScope.() ->
         Column(
             Modifier
                 .fillMaxWidth()
-                .clip(Rahal.shape.md)
-                .background(Rahal.colors.canvas)
-                .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md),
+                .cardSurface(Rahal.shape.md, elevation = 2.dp),
             content = content,
         )
     }

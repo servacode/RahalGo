@@ -99,19 +99,7 @@ fun AuthScreen(
     var password by remember { mutableStateOf("") }
     var code by remember { mutableStateOf("") }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            // **والكيبوردُ لا يغطّي الزرّ** (رُئي على جوال المالك ٢٠٢٦-١٠-٠٩) — العمودُ
-            // يقصر فوقه، فيبقى «تسجيل الدخول» ظاهراً تحت الحقل.
-            .imePadding()
-            .verticalScroll(rememberScrollState())
-            // **وحشوة جانبية هنا لا في الغلاف** — الحقول تحتاج هامشا،
-            // والشعار لا.
-            .padding(horizontal = 28.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
+    AuthPage {
         // **ترويسةُ الهويّة المشتركة** (Batch 5) — بقيمِ الدخولِ نفسِها
         // (١٤٠dp/٤٠/٦) فلا يتغيّر مظهرُه.
         AuthHeader()
@@ -136,6 +124,7 @@ fun AuthScreen(
             Spacer(Modifier.height(16.dp))
         }
 
+        AuthCard {
         if (state.otpAvailable) {
             TabRow(selectedTabIndex = if (state.mode == LoginMode.PASSWORD) 0 else 1) {
                 Tab(
@@ -268,6 +257,8 @@ fun AuthScreen(
             }
         }
 
+        } // AuthCard
+
         // **وبابُ الحساب الجديد تحت الدخول لا فوقه** — أكثرُ من يفتح
         // الشاشةَ له حسابٌ أصلا، **والتسجيلُ مرّةٌ في العمر.**
         // **وظاهرٌ لا مخبّأ** (طلبُ المالك ٢٠٢٦-١١-٠٦: «الناس عم تخربط وما عم تعرف من وين تسجّل») —
@@ -275,8 +266,6 @@ fun AuthScreen(
         if (signup) {
             // **وخطٌّ يفصل الدخولَ عن الحساب الجديد** (طلبُ المالك ٢٠٢٦-١١-٠٦).
             Spacer(Modifier.height(24.dp))
-            androidx.compose.material3.HorizontalDivider(color = Rahal.colors.line)
-            Spacer(Modifier.height(20.dp))
             Text(
                 stringResource(R.string.signup_question),
                 color = Rahal.colors.inkMuted,

@@ -49,14 +49,9 @@ fun ForcedPasswordScreen(
     var confirm by remember { mutableStateOf("") }
     val mismatch = next.isNotEmpty() && confirm.isNotEmpty() && next != confirm
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
+    AuthPage {
+        AuthHeader(logoSize = 100.dp, topSpace = 24.dp, bottomSpace = 10.dp)
+        AuthCard {
         Text(
             text = stringResource(R.string.pw_forced_title),
             fontWeight = FontWeight.Bold,
@@ -102,5 +97,6 @@ fun ForcedPasswordScreen(
             onClick = onLogout,
             modifier = Modifier.fillMaxWidth(),
         ) { Text(stringResource(R.string.login_logout)) }
+        } // AuthCard
     }
 }

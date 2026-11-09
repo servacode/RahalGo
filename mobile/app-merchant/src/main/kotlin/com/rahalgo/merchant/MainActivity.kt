@@ -11,6 +11,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import com.rahalgo.ui.RahalButton
 import com.rahalgo.design.Rahal
+import com.rahalgo.ui.RahalNavTab
 import com.rahalgo.ui.ShellViewModel
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -466,28 +467,7 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
             },
             bottomBar = {
                 // **شريطٌ أبيضُ بخطٍّ رفيعٍ فوقه، والمختارُ أيقونتُه في كبسولة** (التصميمُ المعتمد ٢٠٢٦-١٠-٢٨).
-                val barLine = Rahal.colors.line
-                NavigationBar(
-                    containerColor = Rahal.colors.canvas,
-                    tonalElevation = 0.dp,
-                    modifier = Modifier.drawBehind {
-                        drawLine(
-                            color = barLine,
-                            start = androidx.compose.ui.geometry.Offset(0f, 0f),
-                            end = androidx.compose.ui.geometry.Offset(size.width, 0f),
-                            strokeWidth = Rahal.stroke.hair.toPx(),
-                        )
-                    },
-                ) {
-                    // ══════════════════════════════════════════════════
-                    // **الترتيبُ بحسب ما يُفتح — يميناً إلى يسار**
-                    // ══════════════════════════════════════════════════
-                    //
-                    // (قرارُ المالك ٢٠٢٦-٠٨-٢٣: «أوّل قسمٍ يجب أن يكون
-                    //  طلباتي في حال كان موجوداً، ثاني قسمٍ متجري، بعدها
-                    //  إضافةُ صنف، بعدها الأصناف».)
-                    //
-                    // **والأوّلُ يقع تحت الإبهام** — وهو ما يُفتح أكثر.
+                com.rahalgo.ui.RahalNavigationBar {
                     if (selfManage) {
                         // **ورقمٌ أحمرُ بعدد ما ينتظر قراره** (تدقيقُ ٢٠٢٦-١٠-٢٧) — الجرسُ يرنّ
                         // وهو في «متجري»، **والرقمُ يقول له أين يذهب.**
@@ -618,6 +598,8 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                 Box(
                     Modifier
                         .fillMaxSize()
+                        // **أرضٌ رماديّةٌ خفيفةٌ تحت كلّ الشاشات** لتبرز عليها البطاقاتُ البيضاءُ بظلّها.
+                        .background(Rahal.colors.surface)
                         .weight(1f),
                     contentAlignment = Alignment.Center,
                 ) {
@@ -856,43 +838,7 @@ private fun RowScope.Tab(
     icon: Int,
     label: Int,
     badge: Int = 0,
-) {
-    NavigationBarItem(
-        selected = selected,
-        onClick = onClick,
-        icon = {
-            Box {
-                Icon(painterResource(icon), contentDescription = null)
-                if (badge > 0) {
-                    com.rahalgo.ui.CountBadge(
-                        count = badge,
-                        color = Rahal.colors.danger,
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .offset(x = 8.dp, y = (-6).dp),
-                    )
-                }
-            }
-        },
-        // **ولا يلتفّ الاسمُ على شاشةٍ صغيرة** (تدقيقُ ٢٠٢٦-١٠-٢٧) — ستّةُ تبويبات.
-        label = {
-            Text(
-                stringResource(label),
-                maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-            )
-        },
-        // **والمختارُ بلون العلامة في كبسولةٍ فاتحة، والباقي باهت.**
-        colors = androidx.compose.material3.NavigationBarItemDefaults.colors(
-            selectedIconColor = Rahal.colors.brand,
-            selectedTextColor = Rahal.colors.brand,
-            indicatorColor = Rahal.colors.brand.copy(alpha = 0.12f),
-            unselectedIconColor = Rahal.colors.inkMuted,
-            unselectedTextColor = Rahal.colors.inkMuted,
-        ),
-    )
-}
+) = RahalNavTab(selected, onClick, icon, label, badge)
 
 
 /**
