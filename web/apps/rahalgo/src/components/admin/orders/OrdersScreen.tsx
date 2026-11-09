@@ -3180,6 +3180,8 @@ function OrderActions({
     canIntervene &&
     (o.status === "preparing" || o.status === "dispatching") &&
     !o.driver_name;
+  /** **سائقٌ قَبِل ولم يستلم بعد** — هنا «بدّل السائق» يفكّه ويفتح الإسناد. */
+  const beforePickup = o.status === "assigned" || o.status === "at_pickup";
 
   // **ما يُرسَل باسم المنصة يُقرأ قبل أن يُرسَل.** والنصُّ والرابطُ من الخادم
   // لا من هنا: لو رُكّبا في الواجهة لأمكن أن يفترقا عمّا يصل المتجر، ولا
@@ -3416,6 +3418,8 @@ function OrderActions({
       });
       setAsking("");
       setRepShare("platform");
+      // **وبعد فكّ السائق قبل الاستلام يُفتح الإسنادُ فوراً** — كما في طلبات الواتساب.
+      if (releasing && beforePickup && to === "dispatching") setAssigning(true);
       setReleasing(false);
       setReason("");
       onChanged();
@@ -3623,11 +3627,13 @@ function OrderActions({
   }
 
   // **طارئٌ بعد الاستلام — المكتبُ يرسل الطلبَ لسائقٍ آخر بقراره** (المشكلة ٢٦).
+  // **وقبل الاستلام «بدّل السائق»** (طلبُ المالك ٢٠٢٦-١١-٠٩): بكلّ الطلبات من أوّل ما يقبل السائق —
+  // يُفكّ السائقُ ويُفتح الإسنادُ فوراً، أو يُترك للتوزيع.
   if (releasing) {
     return (
       <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
-        <p className="text-xs font-medium text-danger">{BOARD.release.title}</p>
-        <p className="text-xs text-ink-muted">{BOARD.release.hint}</p>
+        <p className="text-xs font-medium text-danger">{beforePickup ? BOARD.release.swapTitle : BOARD.release.title}</p>
+        <p className="text-xs text-ink-muted">{beforePickup ? BOARD.release.swapHint : BOARD.release.hint}</p>
         <Input
           id={`release-${o.id}`}
           autoFocus
@@ -3647,7 +3653,7 @@ function OrderActions({
             setReason("");
             setErr("");
           }}
-          saveLabel={BOARD.release.send}
+          saveLabel={beforePickup ? BOARD.release.swapSend : BOARD.release.send}
           tone="danger"
         />
       </div>
@@ -4236,8 +4242,8 @@ function OrderActions({
           <BtnLabel icon={IconClose}>{BOARD.endOrder}</BtnLabel>
         </Button>
       )}
-      {canIntervene &&
-        (o.status === "picked_up" || o.status === "on_the_way" || o.status === "at_dropoff") && (
+      {canIntervene && !!o.driver_name && (beforePickup ||
+        o.status === "picked_up" || o.status === "on_the_way" || o.status === "at_dropoff") && (
           <Button
             variant="danger-outline"
             disabled={busy !== ""}
@@ -4247,7 +4253,7 @@ function OrderActions({
               setReleasing(true);
             }}
           >
-            <BtnLabel icon={IconSwap}>{BOARD.release.button}</BtnLabel>
+            <BtnLabel icon={IconSwap}>{BOARD.release.swap}</BtnLabel>
           </Button>
         )}
       {err && <p className="order-2 w-full text-xs text-danger">{err}</p>}
