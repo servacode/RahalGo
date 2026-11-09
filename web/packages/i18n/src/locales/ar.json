@@ -5643,6 +5643,7 @@
         "system.merchant_role_dropped": "سحب دور المتجر لعدم وجود متجر",
         "admin.role_delete": "حذف دور",
         "finance.treasury_withdrawal": "سحب الأدمن من رصيد الخزينة",
+        "finance.shamcash_refund": "إرجاع مبلغ لشام كاش",
         "finance.treasury_statement_exported": "تصدير كشف الخزينة",
         "finance.cash_close": "إغلاق صندوق المكتب",
         "finance.cash_close_approved": "مراجعة إغلاق الصندوق",
@@ -7719,6 +7720,7 @@
         "finance.dispute_resolution_approved": "الموافقة على حل نزاع",
         "finance.ticket_resolve": "حل شكوى بتعويض",
         "finance.treasury_withdrawal": "سحب من الخزينة",
+        "finance.shamcash_refund": "إرجاع مبلغ لشام كاش",
         "finance.cash_shortfall_loss": "تسجيل نقص الصندوق خسارة",
         "finance.cash_owner_deposit": "إيداع من المالك بدرج المكتب",
         "finance.commission_waived": "مسح عمولة طلب ما استلمها السائق"
