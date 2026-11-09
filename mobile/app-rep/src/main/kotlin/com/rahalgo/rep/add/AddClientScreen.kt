@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.rahalgo.design.Rahal
+import com.rahalgo.ui.cardSurface
 import com.rahalgo.rep.R
 import com.rahalgo.shared.rep.Division
 import com.rahalgo.shared.rep.Lead
@@ -120,11 +121,8 @@ private fun PickerBlock(
     Column(
         Modifier
             .fillMaxWidth()
-            .clip(Rahal.shape.md)
-            .background(
-                if (done) Rahal.colors.surface else Rahal.colors.warnTint,
-            )
-            .border(Rahal.stroke.hair, edge.copy(alpha = if (done) 0.35f else 0.55f), Rahal.shape.md)
+            // **بطاقةٌ بظلّ كبقيّة الشاشات** — الناقصُ بصبغة التنبيه، والتامُّ بيضاءُ بلون العلامة (مراجعةُ التصميم ٢٠٢٦-١١-٠٩).
+            .cardSurface(Rahal.shape.md, tone = if (done) null else edge, elevation = 2.dp)
             .padding(12.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
