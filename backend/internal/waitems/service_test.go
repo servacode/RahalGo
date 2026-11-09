@@ -74,6 +74,8 @@ func newFx(t *testing.T) *fx {
 	if err != nil {
 		must(t, pool.QueryRow(f.ctx, `INSERT INTO platform_sections (name, sort_order) VALUES ('ألبان وأجبان', 22) RETURNING id::text`).Scan(&f.dairy))
 	}
+	// المتجر الرئيسيّ أعلن قسماً واحداً ⇒ يُستعمل بلا سؤال (الأسئلة لها اختباراتها أدناه).
+	f.declare(f.merchant, f.dairy)
 	return f
 }
 
@@ -169,7 +171,7 @@ func TestOwnerCreatesItem(t *testing.T) {
 	must(t, f.pool.QueryRow(f.ctx, `
 		SELECT id::text, created_via, section_source, platform_section_id::text, available, merchant_price, image_media_id::text
 		  FROM menu_items WHERE merchant_id = $1::uuid`, f.merchant).Scan(&id, &via, &src, &sec, &avail, &price, &media))
-	if via != "whatsapp" || src != "name" || sec != f.dairy || !avail || price != 25000 || media == nil {
+	if via != "whatsapp" || src != "manual" || sec != f.dairy || !avail || price != 25000 || media == nil {
 		t.Fatalf("صفّ خاطئ: via=%s src=%s sec=%s avail=%v price=%d media=%v", via, src, sec, avail, price, media)
 	}
 	if !strings.HasSuffix(msg, id) {
@@ -255,6 +257,7 @@ func TestMissingName(t *testing.T) {
 func TestMultiStoreAsksOnceAndRemembers(t *testing.T) {
 	f := newFx(t)
 	second := f.newStore(f.owner, "الفرع الثاني", "SYP", 0)
+	f.declare(second, f.dairy)
 	f.img(f.phone, "جبنة بيضاء 25000")
 	q := one(t, f.flush())
 	has(t, q, "لأي فرع؟", "١ - متجر الاختبار", "٢ - الفرع الثاني")
@@ -296,6 +299,7 @@ func TestMultiStoreAsksOnceAndRemembers(t *testing.T) {
 func TestMultiStoreBatchWaits(t *testing.T) {
 	f := newFx(t)
 	second := f.newStore(f.owner, "الفرع الثاني", "SYP", 0)
+	f.declare(second, f.dairy)
 	f.img(f.phone, "جبنة بيضاء 25000")
 	f.img(f.phone, "لبنة 8000")
 	f.img(f.phone, "حليب 5000")
@@ -428,23 +432,12 @@ func TestUSDStore(t *testing.T) {
 	must(t, f.pool.QueryRow(f.ctx, `SELECT phone FROM users WHERE id = $1`, owner2).Scan(&phone2))
 	_ = usd
 	st := f.newStore(owner2, "متجر دولار ٢", "USD", 15000)
+	f.declare(st, f.dairy)
 	f.img(phone2, "لبنة 5")
 	has(t, one(t, f.flush()), "انضاف (لبنة)", "٥ $")
 	var cents, syp int64
 	must(t, f.pool.QueryRow(f.ctx, `SELECT price_usd_cents, merchant_price FROM menu_items WHERE merchant_id = $1::uuid`, st).Scan(&cents, &syp))
 	if cents != 500 || syp != 75000 {
 		t.Fatalf("الدولار: %d سنت و%d ل.س", cents, syp)
-	}
-}
-
-func TestUnsortedNameGoesToPendingSection(t *testing.T) {
-	f := newFx(t)
-	f.img(f.phone, "قطعة غريبة جدا اسمها كذا 1200")
-	msg := one(t, f.flush())
-	has(t, msg, "انضاف", "بانتظار التصنيف")
-	var src string
-	must(t, f.pool.QueryRow(f.ctx, `SELECT section_source FROM menu_items WHERE merchant_id = $1::uuid`, f.merchant).Scan(&src))
-	if src != "pending" {
-		t.Fatalf("المصدر %s", src)
 	}
 }

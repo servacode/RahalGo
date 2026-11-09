@@ -5,7 +5,8 @@
 // إدراجٍ ثانياً. ومفتاحُ «موافقة الأصناف» رُفع بقرار 2026-10-04 فلا مراجعةَ قبل النشر).
 //
 // **ولا تخمين**: لا سعرَ ⇒ «شو سعر (الاسم)؟»، ولا اسمَ ⇒ «شو اسم الصنف؟»، واسمٌ مكرّرٌ ⇒ يسأل،
-// وسعرٌ أبعدُ بكثيرٍ من أصناف القسم ⇒ «متأكد؟». والأسئلةُ تُحفظ بالخادم بمهلة (`wa_item_pending`).
+// وسعرٌ أبعدُ بكثيرٍ من أصناف القسم ⇒ «متأكد؟». **والقسمُ يُسأل عنه** (قرار المالك 2026-11-09): قائمةُ أقسام المتجر مرقّمةً
+// والمرسل يردّ برقم (أو اسم)؛ قسمٌ واحد ⇒ بلا سؤال؛ متجرٌ بلا أقسام فعّالة ⇒ قسم الانتظار القديم. والأسئلةُ تُحفظ بالخادم بمهلة (`wa_item_pending`).
 // **والبوتُ لا يبدأ محادثةً أبداً**: يردّ فقط على من راسله، ومن ليس صاحبَ متجرٍ ولا موظّفاً يُهمَل بصمت.
 package waitems
 
@@ -50,7 +51,11 @@ const (
 	kPrice     = "price"
 	kDup       = "dup"
 	kSanity    = "sanity"
+	kSection   = "section"
 )
+
+// maxSectionList أقصى أقسام تظهر مرقّمةً بالرسالة (الباقي يُختار بالاسم) — كي تبقى القائمة مقروءةً بالواتساب.
+const maxSectionList = 25
 
 // Service خدمةُ أصناف الواتساب.
 type Service struct {
@@ -187,6 +192,12 @@ type Draft struct {
 	DupItemID  string   `json:"dup_id,omitempty"`
 	SanityOK   bool     `json:"ok,omitempty"`
 	Stores     []string `json:"stores,omitempty"`
+	// القسم: معرّفه واسمه ومصدره (manual = اختاره المرسل، name/pending = احتياط متجر بلا أقسام).
+	Section     string   `json:"sec,omitempty"`
+	SectionName string   `json:"secn,omitempty"`
+	SectionSrc  string   `json:"ssrc,omitempty"`
+	OptIDs      []string `json:"opt,omitempty"`  // أقسام السؤال المعلّق بترتيب القائمة
+	OptNames    []string `json:"optn,omitempty"` // وأسماؤها
 }
 
 type pending struct {
@@ -199,6 +210,7 @@ type pending struct {
 type outcome struct {
 	Kind string
 	Text string
+	List string // قائمة الأقسام (لملخّص الدفعة)
 }
 
 const (
@@ -209,6 +221,7 @@ const (
 	oDup     = "ask_dup"
 	oSanity  = "ask_sanity"
 	oStore   = "ask_store"
+	oSection = "ask_section"
 	oRate    = "rate"
 	oFailed  = "failed"
 	oInfo    = "info"
@@ -586,6 +599,13 @@ func (s *Service) answerItem(ctx context.Context, st storeInfo, phone string, p 
 		default:
 			return s.requeue(ctx, phone, p, "ردّ ١ لتحديث الصنف الموجود أو ٢ لإضافته صنف جديد")
 		}
+	case kSection:
+		i, ok := pickSection(txt, d.OptNames)
+		if !ok {
+			shown := min(len(d.OptNames), maxSectionList)
+			return s.requeue(ctx, phone, p, fmt.Sprintf("ما فهمت 🙏 ردّ برقم القسم من ١ لـ %s", ar(shown)))
+		}
+		d.Section, d.SectionName, d.SectionSrc = d.OptIDs[i], d.OptNames[i], catalog.SourceManual
 	case kSanity:
 		switch {
 		case isYes(txt):
@@ -648,11 +668,6 @@ func (s *Service) advance(ctx context.Context, st storeInfo, phone, msgID string
 		return s.ask(ctx, phone, msgID, kPrice, d, oPrice,
 			"ما في سعر صرف لمتجرك فما فيني أحسب الدولار — اكتب سعر ("+d.Name+") بالليرة.")
 	}
-	secID, secName, src, err := catalog.SectionByName(ctx, s.db, d.Name)
-	if err != nil {
-		s.log.Warn("waitems: section", "error", err)
-		return outcome{Kind: oFailed, Text: "صار خطأ، جرّب مرة تانية 🙏"}
-	}
 	sypPrice := d.Price
 	if d.Currency == catalog.CurrencyUSD {
 		sypPrice = d.Price * st.Rate
@@ -669,7 +684,39 @@ func (s *Service) advance(ctx context.Context, st storeInfo, phone, msgID string
 		}
 		d.Dup = "new"
 	}
-	if !d.SanityOK && src == catalog.SourceName {
+	// القسم: يسأل المرسلَ عنه (قرار المالك 2026-11-09) — إلا تحديثَ صنفٍ موجود (قسمه قائم).
+	secID, secName, src := d.Section, d.SectionName, d.SectionSrc
+	if d.Dup == "update" {
+		secID, secName, src = s.itemSection(ctx, d.DupItemID)
+	} else if secID == "" {
+		opts, err := s.sectionOptions(ctx, st.ID)
+		if err != nil {
+			s.log.Warn("waitems: section options", "error", err)
+			return outcome{Kind: oFailed, Text: "صار خطأ، جرّب مرة تانية 🙏"}
+		}
+		switch len(opts) {
+		case 0:
+			// متجرٌ بلا أقسام فعّالة: الاحتياط القديم — مقترح الاسم، وإلا قسم الانتظار (الإدارة ترتّبه).
+			secID, secName, src, err = catalog.SectionByName(ctx, s.db, d.Name)
+			if err != nil {
+				s.log.Warn("waitems: section", "error", err)
+				return outcome{Kind: oFailed, Text: "صار خطأ، جرّب مرة تانية 🙏"}
+			}
+		case 1:
+			secID, secName, src = opts[0].ID, opts[0].Name, catalog.SourceManual
+		default:
+			d.OptIDs, d.OptNames = nil, nil
+			for _, o := range opts {
+				d.OptIDs, d.OptNames = append(d.OptIDs, o.ID), append(d.OptNames, o.Name)
+			}
+			head, list, foot := sectionQuestion(d.Name, d.OptNames)
+			o := s.ask(ctx, phone, msgID, kSection, d, oSection, head+list+foot)
+			o.List = list + foot
+			return o
+		}
+		d.Section, d.SectionName, d.SectionSrc = secID, secName, src
+	}
+	if !d.SanityOK && secID != "" && src != catalog.SourcePending {
 		if n, med := s.sectionMedian(ctx, st.ID, secID); n >= sanityMinItems && med > 0 && sypPrice > sanityFactor*med {
 			return s.ask(ctx, phone, msgID, kSanity, d, oSanity, fmt.Sprintf(
 				"متأكد؟ سعر (%s) %s وأصناف قسم %s عادةً حوالي %s — ردّ «نعم» للتأكيد أو «لا» لتغييره",
@@ -680,6 +727,83 @@ func (s *Service) advance(ctx context.Context, st storeInfo, phone, msgID string
 		return outcome{Kind: oRate, Text: "شوي شوي 🙏 أضفت أصناف كتير بدقيقة، ابعت الباقي بعد دقيقة."}
 	}
 	return s.save(ctx, st, phone, d, secID, secName, src)
+}
+
+type secOpt struct{ ID, Name string }
+
+// sectionOptions **أقسامُ هذا المتجر** (ما أعلنه، وفارغٌ يعني كلَّ أقسام السوق الفعّالة) — بترتيب السوق.
+func (s *Service) sectionOptions(ctx context.Context, merchantID string) ([]secOpt, error) {
+	rows, err := s.db.Query(ctx, `
+		SELECT ps.id::text, ps.name FROM platform_sections ps
+		 WHERE ps.active
+		   AND (NOT EXISTS (SELECT 1 FROM store_sections x WHERE x.store_id = $1::uuid)
+		        OR ps.id IN (SELECT section_id FROM store_sections WHERE store_id = $1::uuid))
+		 ORDER BY ps.sort_order, ps.name, ps.id`, merchantID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []secOpt
+	for rows.Next() {
+		var o secOpt
+		if err := rows.Scan(&o.ID, &o.Name); err != nil {
+			return nil, err
+		}
+		out = append(out, o)
+	}
+	return out, rows.Err()
+}
+
+// itemSection قسمُ صنفٍ موجود (لتحديثه) — فارغٌ إن لم يُعرف.
+func (s *Service) itemSection(ctx context.Context, itemID string) (id, name, src string) {
+	_ = s.db.QueryRow(ctx, `SELECT COALESCE(m.platform_section_id::text, ''), COALESCE(ps.name, ''), m.section_source
+		  FROM menu_items m LEFT JOIN platform_sections ps ON ps.id = m.platform_section_id
+		 WHERE m.id = $1::uuid`, itemID).Scan(&id, &name, &src)
+	return id, name, src
+}
+
+// sectionQuestion نصُّ السؤال: (سطر العنوان، القائمة المرقّمة، التذييل). فوق maxSectionList يُعرض الأوّل والباقي بالاسم.
+func sectionQuestion(item string, names []string) (head, list, foot string) {
+	head = "بأي قسم أحط (" + item + ")؟\n"
+	var b strings.Builder
+	shown := min(len(names), maxSectionList)
+	for i := 0; i < shown; i++ {
+		fmt.Fprintf(&b, "%s - %s\n", ar(i+1), names[i])
+	}
+	foot = "ردّ برقم القسم"
+	if len(names) > shown {
+		foot += "، أو اكتب اسم القسم إذا مو بالقائمة"
+	}
+	return head, b.String(), foot
+}
+
+// pickSection **القسم المختار**: رقمٌ من القائمة المعروضة، أو اسمٌ (مطابقةٌ كاملة ثم جزئيّةٌ وحيدة).
+func pickSection(txt string, names []string) (int, bool) {
+	if n, ok := pickNumber(txt); ok {
+		if n >= 1 && n <= min(len(names), maxSectionList) {
+			return n - 1, true
+		}
+		return 0, false
+	}
+	q := catalog.NormName(txt)
+	if q == "" {
+		return 0, false
+	}
+	hit := -1
+	for i, n := range names {
+		if catalog.NormName(n) == q {
+			return i, true
+		}
+	}
+	for i, n := range names {
+		if strings.Contains(catalog.NormName(n), q) {
+			if hit >= 0 {
+				return 0, false // غامض
+			}
+			hit = i
+		}
+	}
+	return hit, hit >= 0
 }
 
 func (s *Service) findDup(ctx context.Context, merchantID, name string) (string, error) {
@@ -915,12 +1039,19 @@ func summarize(outs []outcome) string {
 	conn(cnt[oPrice], "ناقصهن سعر")
 	conn(cnt[oName], "ناقصهن اسم")
 	conn(cnt[oDup], "اسمهن مكرّر")
+	conn(cnt[oSection], "ناقصهن قسم")
 	conn(cnt[oSanity], "بانتظار تأكيد السعر")
 	conn(cnt[oRate], "ما انضافوا (سرعة)")
 	conn(cnt[oFailed], "ما انضافوا (خطأ)")
 	out := strings.Join(parts, "، ")
-	if cnt[oPrice]+cnt[oName]+cnt[oDup]+cnt[oSanity] > 0 {
+	if cnt[oPrice]+cnt[oName]+cnt[oDup]+cnt[oSanity]+cnt[oSection] > 0 {
 		out += "\nردّ على صورة كل صنف ناقص (اضغط عليها ← ردّ) بالمطلوب."
+	}
+	for _, o := range outs {
+		if o.Kind == oSection && o.List != "" {
+			out += "\n\nالأقسام:\n" + o.List
+			break
+		}
 	}
 	return out
 }

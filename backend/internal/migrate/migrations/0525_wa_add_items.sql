@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS wa_item_pending (
     id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     phone      text NOT NULL,
     msg_id     text NOT NULL DEFAULT '',
-    kind       text NOT NULL CHECK (kind IN ('store', 'store_wait', 'name', 'price', 'dup', 'sanity')),
+    kind       text NOT NULL CHECK (kind IN ('store', 'store_wait', 'name', 'price', 'dup', 'sanity', 'section')),
     data       jsonb NOT NULL DEFAULT '{}'::jsonb,
     created_at timestamptz NOT NULL DEFAULT now(),
     expires_at timestamptz NOT NULL
