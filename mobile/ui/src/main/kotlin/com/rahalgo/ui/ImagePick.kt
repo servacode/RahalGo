@@ -35,6 +35,21 @@ import java.io.IOException
  * فيُظنّ أنّه أُصلح.
  */
 
+/**
+ * **الكاميرا الخلفيّة دائماً** لصور الأصناف والعدّاد (طلبُ المالك ٢٠٢٦-١١-٠٩).
+ * تطبيقُ الكاميرا يفتح على آخر عدسةٍ استُعملت، **فنطلب الخلفيّة صراحةً** بالإضافات
+ * التي تقرؤها كاميرات سامسونغ وغوغل وغيرها؛ ومن لا يقرؤها يتجاهلها بلا ضرر.
+ */
+class TakeBackPicture : ActivityResultContracts.TakePicture() {
+    override fun createIntent(context: Context, input: Uri): android.content.Intent =
+        super.createIntent(context, input).apply {
+            putExtra("android.intent.extras.CAMERA_FACING", 0)
+            putExtra("android.intent.extras.LENS_FACING_BACK", 1)
+            putExtra("android.intent.extra.USE_FRONT_CAMERA", false)
+            putExtra("com.google.assistant.extra.USE_FRONT_CAMERA", false)
+        }
+}
+
 /** **أطولُ ضلعٍ يُرسَل** — والمحرّكُ يصغّرها ثانيةً إلى حدّه. */
 private const val MAX_EDGE = 1600
 
@@ -185,8 +200,9 @@ fun rememberImagePicker(
         ActivityResultContracts.PickVisualMedia(),
     ) { uri -> deliver(uri) }
 
+    // صورُ الأصناف والشعار بالخلفيّة؛ صورةُ الحساب (بلا قصّ) تبقى كما يختار الجوّال.
     val camera = rememberLauncherForActivityResult(
-        ActivityResultContracts.TakePicture(),
+        if (crop) TakeBackPicture() else ActivityResultContracts.TakePicture(),
     ) { ok -> if (ok) deliver(shot) }
 
     if (asking) {
@@ -232,7 +248,7 @@ fun rememberImagePicker(
 fun rememberCameraShot(onDenied: () -> Unit = {}, onBytes: (ByteArray) -> Unit): () -> Unit {
     val context = LocalContext.current
     var shot by remember { mutableStateOf<Uri?>(null) }
-    val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
+    val camera = rememberLauncherForActivityResult(TakeBackPicture()) { ok ->
         val uri = shot
         if (ok && uri != null) runCatching { readScaledImage(context, uri) }.getOrNull()?.let(onBytes)
     }
