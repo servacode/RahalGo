@@ -3083,6 +3083,7 @@ function OrderActions({
    * **«أرسلها مع سائق آخر»** — طارئٌ بعد الاستلام يبقى لقرار المكتب (المشكلة ٢٦).
    */
   const [releasing, setReleasing] = useState(false);
+  const [swapping, setSwapping] = useState(false);
   /** سببُ الفعل المفتوح — يُكتب قبل أن يُنفَّذ */
   const [reason, setReason] = useState("");
   const [err, setErr] = useState("");
@@ -3180,6 +3181,8 @@ function OrderActions({
     canIntervene &&
     (o.status === "preparing" || o.status === "dispatching") &&
     !o.driver_name;
+  /** **سائقٌ قَبِل ولم يستلم بعد** — هنا «بدّل السائق» يفكّه ويفتح الإسناد. */
+  const beforePickup = o.status === "assigned" || o.status === "at_pickup";
 
   // **ما يُرسَل باسم المنصة يُقرأ قبل أن يُرسَل.** والنصُّ والرابطُ من الخادم
   // لا من هنا: لو رُكّبا في الواجهة لأمكن أن يفترقا عمّا يصل المتجر، ولا
@@ -3623,6 +3626,7 @@ function OrderActions({
   }
 
   // **طارئٌ بعد الاستلام — المكتبُ يرسل الطلبَ لسائقٍ آخر بقراره** (المشكلة ٢٦).
+  // **وقبل الاستلام «بدّل السائق»** (طلبُ المالك ٢٠٢٦-١١-٠٩) نافذةُ الإسناد نفسُها (`swapFrom`).
   if (releasing) {
     return (
       <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
@@ -4236,20 +4240,33 @@ function OrderActions({
           <BtnLabel icon={IconClose}>{BOARD.endOrder}</BtnLabel>
         </Button>
       )}
-      {canIntervene &&
-        (o.status === "picked_up" || o.status === "on_the_way" || o.status === "at_dropoff") && (
+      {canIntervene && !!o.driver_name && (beforePickup ||
+        o.status === "picked_up" || o.status === "on_the_way" || o.status === "at_dropoff") && (
           <Button
             variant="danger-outline"
             disabled={busy !== ""}
             onClick={() => {
               setReason("");
               setErr("");
-              setReleasing(true);
+              if (beforePickup) setSwapping(true);
+              else setReleasing(true);
             }}
           >
-            <BtnLabel icon={IconSwap}>{BOARD.release.button}</BtnLabel>
+            <BtnLabel icon={IconSwap}>{BOARD.release.swap}</BtnLabel>
           </Button>
         )}
+      {swapping && (
+        <AssignDialog
+          orderId={o.id}
+          orderNumber={o.number}
+          swapFrom={o.driver_name ?? ""}
+          onClose={() => setSwapping(false)}
+          onDone={() => {
+            setSwapping(false);
+            onChanged();
+          }}
+        />
+      )}
       {err && <p className="order-2 w-full text-xs text-danger">{err}</p>}
       {note && <p className="order-2 w-full text-xs text-muted">{note}</p>}
     </>
