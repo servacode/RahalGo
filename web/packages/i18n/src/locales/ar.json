@@ -5523,6 +5523,8 @@
         "operational_area.update": "تعديل منطقة تشغيلية",
         "order.custom_quote_changed": "تعديل عرض الطلب الخاص",
         "order.custom_quote_confirmed": "تأكيد الزبون لعرض الطلب",
+        "order.wallet_scope_changed": "تبديل الزبون للدفع من المحفظة",
+        "menu.ameen_imported_delete": "حذف الأصناف المستوردة من الأمين",
         "order.custom_quote_rejected": "رفض الزبون للسعر الجديد",
         "ops.broadcast": "إرسال إعلان منصة",
         "ops.merchant_setup_reminder": "تذكير متجر بإكمال إعداده",
