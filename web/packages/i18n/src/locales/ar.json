@@ -10563,6 +10563,8 @@
       "yourCart": "سلتك",
       "fromStore": "من {name}",
       "itemsN": "{n} أصناف",
+      "items1": "صنف واحد",
+      "items2": "صنفان",
       "subtotal": "المجموع",
       "continue": "متابعة الطلب",
       "cartEmpty": "سلتك فارغة",
@@ -10837,7 +10839,7 @@
       "quoteStale": "تم تحديث تكلفة الطلب. راجع المبلغ الجديد ثم أكد من جديد.",
       "dialogTitle": "تأكيد سعر الطلب #{n}",
       "stages": {
-        "waiting": "في الانتظار",
+        "waiting": "انتظار",
         "accepted": "مقبول",
         "preparing": "تحضير",
         "seeking": "سائق",

@@ -32,7 +32,7 @@ export function StoreCartPanel({ storeId, storeName }: { storeId: string; storeN
           <h2 className="heading-card">{SK.yourCart}</h2>
           <p className="truncate text-xs text-ink-muted">{fill(SK.fromStore, { name: storeName })}</p>
         </div>
-        {mine.length > 0 && <span className="shop-cap" data-tone="brand">{fill(SK.itemsN, { n: fmtNum(cart.count) })}</span>}
+        {mine.length > 0 && <span className="shop-cap" data-tone="brand">{cart.count === 1 ? SK.items1 : cart.count === 2 ? SK.items2 : fill(SK.itemsN, { n: fmtNum(cart.count) })}</span>}
       </div>
       {mine.length === 0 ? (
         <div className="flex flex-col items-center gap-2 px-6 py-10 text-center">
