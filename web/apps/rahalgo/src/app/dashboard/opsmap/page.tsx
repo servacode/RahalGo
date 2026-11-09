@@ -1152,9 +1152,19 @@ export default function OpsMapPage() {
       order: 60,
       visible: !!visible.orders,
       color: toneColor("order"),
+      // **فوق كلّ طلب: رقمُه واسمُ صاحبه والسائقُ المتّجهُ إليه** (المالك ٢٠٢٦-١١-٠٩).
+      labelField: "name",
+      labelOverlap: true,
       data: fc(
         orderList.map((o) =>
-          pt(o.drop_lng, o.drop_lat, { id: o.id, icon: orderTone(o.stuck_reason) }),
+          pt(o.drop_lng, o.drop_lat, {
+            id: o.id,
+            icon: orderTone(o.stuck_reason),
+            name: [
+              `#${fmtNum(o.number)}${o.customer_name ? ` · ${o.customer_name}` : ""}`,
+              o.driver ? T.orderCard.pinDriver.replace("{name}", o.driver) : "",
+            ].filter(Boolean).join("\n"),
+          }),
         ),
       ),
     });

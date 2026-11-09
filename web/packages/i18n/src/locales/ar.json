@@ -7495,6 +7495,7 @@
       },
       "orderCard": {
         "customer": "الزبون",
+        "pinDriver": "السائق: {name}",
         "age": "صارله",
         "minutes": "{n} دقيقة",
         "stuck": "عالق",
