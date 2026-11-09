@@ -31,8 +31,6 @@
     <!-- **الطلبات** -->
     <string name="ord_wanted">المطلوب:</string>
     <string name="ord_driver">السائق</string>
-    <!-- **حمايةُ الزبون** (قرارُ المالك ٢٠٢٦-١١-٠٥) — بألفاظ الويب حرفاً (`shop.orders.safetyNotice`). -->
-    <string name="ord_safety_notice">لحمايتك: لا تتعامل مع السائق برّا التطبيق، وبلّغنا إذا طلب رقمك.</string>
     <!-- **أقسامُ الطلب من عدّة محلّات** (٢٠٢٦-١١-٠٦) — بلا اسم متجر. -->
     <string name="sec_title">طلبك من %1$s محلات</string>
     <string name="sec_part">القسم %1$s</string>

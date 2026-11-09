@@ -154,8 +154,6 @@ export default function OrderPage() {
           </Button>
         </div>
       )}
-      {/* **«لحمايتك: لا تتعامل مع السائق برّا التطبيق»** (قرارُ المالك ٢٠٢٦-١١-٠٥) — كتطبيق الزبون. */}
-      {!ended && order.driver_name && <p className="text-xs text-ink-muted">{O.safetyNotice}</p>}
       {!ended && <LiveStartButton orderId={order.id} status={order.status} />}
 
       </div>

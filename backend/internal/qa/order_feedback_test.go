@@ -111,10 +111,9 @@ func TestOrderFeedback_SweepSendsOnce(t *testing.T) {
 	if len(msgs) != 1 {
 		t.Fatalf("وصل الزبونَ %d رسالة — والمنتظَر 1", len(msgs))
 	}
-	// **وسطرُ الحماية قبل التوقيع** (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٦).
-	want := "وصلك طلبك رقم " + strconv.FormatInt(number, 10) + "؟\n" +
-		"كيف كانت الخدمة؟ رأيك بيفرق معنا 🌷\n" +
-		"لحمايتك: لا تتعامل مع السائق برّا التطبيق، وبلّغنا إذا طلب رقمك.\n" +
+	// **بألفاظ المالك وبلا سطر الحماية** (قرارُ المالك ٢٠٢٦-١١-١٠).
+	want := "طلبك رقم " + strconv.FormatInt(number, 10) + "\n" +
+		"كيف كانت الخدمة؟ رأيك يهمنا 🌷\n" +
 		"مع تحيات إدارة تطبيق رحّال غو"
 	if msgs[0].text != want {
 		t.Fatalf("نصُّ الرسالة: %q — والمنتظَر %q", msgs[0].text, want)
@@ -129,6 +128,34 @@ func TestOrderFeedback_SweepSendsOnce(t *testing.T) {
 	if err := h.Pool.QueryRow(ctxBG(),
 		`SELECT sent_at::text FROM order_feedback_requests WHERE order_id = $1::uuid`, oid).Scan(&sentAt); err != nil || sentAt == nil {
 		t.Fatalf("sent_at لم يُسجَّل: %v / %v", sentAt, err)
+	}
+}
+
+// **وطلبُ الواتساب يُسأل كباقي الطلبات** (قرارُ المالك ٢٠٢٦-١١-١٠) — على رقم المستلم، ولا حسابَ له.
+func TestOrderFeedback_WhatsAppOrderAsksRecipient(t *testing.T) {
+	h := New(t)
+	w := newWAFx(t, h, "منطقةُ رأي الواتساب")
+	ops := h.NewUser("operations")
+	in := w.typed()
+	phone := uniqPhone()
+	in.RecipientPhone = phone
+	c := waEngineCreate(t, h, ops.ID, in)
+	if _, err := h.Pool.Exec(ctxBG(), `
+		UPDATE orders SET status = 'delivered', delivered_at = now() - interval '15 minutes'
+		 WHERE id = $1::uuid`, c.ID); err != nil {
+		t.Fatal(err)
+	}
+	blockOthers(t, h, c.ID)
+	n := armFeedback(t, h, true)
+	if got := h.API.SweepOrderFeedback(ctxBG()); got != 1 {
+		t.Fatalf("طلبُ الواتساب: أُرسل %d — والمنتظَر 1", got)
+	}
+	msgs := n.to(phone)
+	want := "طلبك رقم " + strconv.FormatInt(c.Number, 10) + "\n" +
+		"كيف كانت الخدمة؟ رأيك يهمنا 🌷\n" +
+		"مع تحيات إدارة تطبيق رحّال غو"
+	if len(msgs) != 1 || msgs[0].text != want {
+		t.Fatalf("رسالةُ مستلم الواتساب: %v — والمنتظَر %q", msgs, want)
 	}
 }
 
