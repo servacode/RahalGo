@@ -12,7 +12,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { IconAdd, IconBell, IconButton, IconList, IconOrder, IconStore, IconUser } from "@rahalgo/ui";
+import { IconAdd, IconBell, IconButton, IconCart, IconList, IconOrder, IconStore, IconUser } from "@rahalgo/ui";
 import { useStore } from "@/lib/store/context";
 import { useStoreOrders } from "@/lib/store/orders";
 
@@ -47,6 +47,8 @@ export function PhoneNavBar({
       <span ref={setStartEl} className="flex items-center gap-4 text-base" />
       <span className="flex items-center gap-3">
         <span ref={setEndEl} className="contents" />
+        {/* التبديلُ للتسوّق كزبون بلمسة (طلبُ المالك ٢٠٢٦-١١-٠٩) */}
+        <IconButton icon={IconCart} label={S.nav.shopAsCustomer} href="/shop" Link={Link} size={24} testId="phone-shop" />
         <IconButton icon={IconBell} label={S.shell.notifications} href="/store/notifications" Link={Link} dot={unread > 0} size={24} testId="phone-bell" />
       </span>
     </div>

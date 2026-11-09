@@ -155,6 +155,14 @@ export function ShopTopBar({
           </Link>
         )}
 
+        {/* عالجوّال: أيقونةُ «متجري» بالأعلى للتبديل بلمسة (طلبُ المالك ٢٠٢٦-١١-٠٩) */}
+        {merchant && (
+          <span className="contents lg:hidden">
+            <Link href="/store" className="shop-iconbtn" aria-label={N.myStore} title={N.myStore} data-testid="phone-my-store">
+              <IconStore size={20} />
+            </Link>
+          </span>
+        )}
         <ThemeToggle theme={theme} onToggle={onTheme} />
         {user && bell}
 
