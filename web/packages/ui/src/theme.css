@@ -4773,6 +4773,12 @@ body:has(.console-root) :is(button, a)[data-variant] {
   padding-block: 0;
   font-size: var(--text-sm);
 }
+/* على الهاتف: هدفُ لمسٍ ٤٤ للتبويبات (الكلّ/الطلبات/الحساب…) — وعلى اللابتوب كما كانت */
+@media (width < 1024px) {
+  .console-root [data-ui="chip"] {
+    min-height: 2.75rem;
+  }
+}
 .console-root [data-ui="chip"][aria-checked="true"] {
   background-color: var(--color-primary-soft);
   border-color: var(--c-brand-line);

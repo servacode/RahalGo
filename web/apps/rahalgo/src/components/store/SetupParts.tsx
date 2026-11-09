@@ -74,7 +74,7 @@ export function PageHeader({
     <PageHead
       leading={<BackArrow href={href} topLevel={topLevel} />}
       navStart={
-        <Link href={href} className="flex items-center gap-0.5 text-base font-medium" data-testid="phone-back">
+        <Link href={href} className="flex min-h-11 items-center gap-0.5 pe-3 text-base font-medium" data-testid="phone-back">
           <IconPrev size={22} />
           {HM.back}
         </Link>
