@@ -82,6 +82,8 @@ export function RecentWhatsAppOrders({ refresh }: { refresh: number }) {
   const [addrText, setAddrText] = useState("");
   const [swapTarget, setSwapTarget] = useState<WaRow | null>(null);
   const [assignFor, setAssignFor] = useState<WaRow | null>(null);
+  // **«بدّل السائق» = اختيارُ السائق الجديد بنفس النافذة** (طلبُ المالك ٢٠٢٦-١١-٠٩) — لا رجوعَ للتوزيع.
+  const [swapFor, setSwapFor] = useState<WaRow | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -259,7 +261,7 @@ export function RecentWhatsAppOrders({ refresh }: { refresh: number }) {
                       size="sm"
                       variant="secondary"
                       onClick={() => {
-                        setSwapTarget(o);
+                        setSwapFor(o);
                         setReason("");
                         setErr("");
                         setDone("");
@@ -320,6 +322,19 @@ export function RecentWhatsAppOrders({ refresh }: { refresh: number }) {
           />
         </div>
       </Modal>
+
+      {swapFor && (
+        <AssignDialog
+          orderId={swapFor.id}
+          orderNumber={swapFor.number}
+          swapFrom={swapFor.driver_name ?? ""}
+          onClose={() => setSwapFor(null)}
+          onDone={() => {
+            setSwapFor(null);
+            void load();
+          }}
+        />
+      )}
 
       {assignFor && (
         <AssignDialog

@@ -21,6 +21,7 @@ import {
   Button,
   FormActions,
   LoadingState,
+  Textarea,
   Modal,
   Money,
 } from "@rahalgo/ui";
@@ -51,11 +52,18 @@ export function AssignDialog({
   orderNumber,
   onClose,
   onDone,
+  swapFrom,
 }: {
   orderId: string;
   orderNumber: number;
   onClose: () => void;
   onDone: () => void;
+  /**
+   * **«بدّل السائق» قبل الاستلام** (طلبُ المالك ٢٠٢٦-١١-٠٩: «لازم انا اسندو لسائق ثاني») — اسمُ
+   * السائق الحاليّ. **يُفكّ ويُسند للجديد بضغطةٍ واحدة**: انتقالٌ إلى `dispatching` بالسبب ثمّ إسناد،
+   * فلا يرجع الطلبُ للتوزيع. والحاليُّ لا يُعرض في القائمة.
+   */
+  swapFrom?: string;
 }) {
   const [list, setList] = useState<Candidate[] | null>(null);
   const [staleMin, setStaleMin] = useState(15);
@@ -64,6 +72,9 @@ export function AssignDialog({
   const [err, setErr] = useState("");
   const [busy, setBusy] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [reason, setReason] = useState("");
+  // **فُكّ مرّةً** — فإن فشل الإسنادُ بعده (سائقٌ خرج من الدوام) يُختار غيرُه بلا فكٍّ ثانٍ.
+  const [released, setReleased] = useState(false);
 
   useEffect(() => {
     let live = true;
@@ -88,9 +99,20 @@ export function AssignDialog({
 
   async function send() {
     if (!pick) return;
+    if (swapFrom !== undefined && !released && !reason.trim()) {
+      setErr(A.swapReason);
+      return;
+    }
     setBusy(true);
     setErr("");
     try {
+      if (swapFrom !== undefined && !released) {
+        await api(`/api/v1/admin/orders/${orderId}/transition`, {
+          method: "POST",
+          body: JSON.stringify({ to: "dispatching", note: reason.trim() }),
+        });
+        setReleased(true);
+      }
       await api(`/api/v1/admin/orders/${orderId}/assign`, {
         method: "POST",
         // **ولا سببَ** (قرارُ المالك ٢٠٢٦-١١-٠٦): «الإدارة تسند الطلب مباشر بدون سبب».
@@ -108,7 +130,11 @@ export function AssignDialog({
     !iso || Date.now() - Date.parse(iso) > staleMin * 60_000;
 
   return (
-    <Modal open onClose={onClose} title={A.title.replace("{n}", `#${orderNumber}`)}>
+    <Modal
+      open
+      onClose={released ? onDone : onClose}
+      title={(swapFrom !== undefined ? A.swapTitle : A.title).replace("{n}", `#${orderNumber}`)}
+    >
       {pick ? (
         <div className="space-y-3">
           <p className="text-sm font-medium text-ink">{A.confirmTitle}</p>
@@ -117,6 +143,18 @@ export function AssignDialog({
               .replace("{n}", `#${orderNumber}`)
               .replace("{name}", pick.full_name || pick.phone)}
           </p>
+          {swapFrom !== undefined && !released && (
+            <Textarea
+              label={A.swapReason}
+              value={reason}
+              maxLength={300}
+              autoGrow
+              onChange={(e) => {
+                setReason(e.target.value);
+                setErr("");
+              }}
+            />
+          )}
           {err && <Alert>{err}</Alert>}
           <FormActions
             busy={busy}
@@ -147,7 +185,7 @@ export function AssignDialog({
             <p className="text-sm text-ink-muted">{A.none}</p>
           ) : (
             <ul className="max-h-96 space-y-2 overflow-y-auto">
-              {list.map((d) => (
+              {list.filter((d) => swapFrom === undefined || released || (d.full_name || d.phone) !== swapFrom).map((d) => (
                 <li
                   key={d.id}
                   className="flex flex-wrap items-center gap-2 rounded-control border border-line-soft p-2"
@@ -185,7 +223,7 @@ export function AssignDialog({
             </ul>
           )}
           <div className="flex justify-end">
-            <Button variant="secondary" onClick={onClose}>
+            <Button variant="secondary" onClick={released ? onDone : onClose}>
               {m.common.cancel}
             </Button>
           </div>
