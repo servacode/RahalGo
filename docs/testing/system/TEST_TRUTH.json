@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 280,
-    "behaviour_settings": 235,
-    "order_fields": 141,
-    "test_files": 799,
-    "test_funcs": 3067
+    "setting_defs": 281,
+    "behaviour_settings": 236,
+    "order_fields": 144,
+    "test_files": 801,
+    "test_funcs": 3076
   },
   "flows": [
     {
@@ -5939,6 +5939,25 @@
       "status": "NO_REGRESSION_TEST_YET"
     },
     {
+      "key": "merchants.usd_reference_rate",
+      "group": "merchants",
+      "kind": "decimal",
+      "sensitive": true,
+      "money": false,
+      "flows": [
+        "F-04",
+        "F-05",
+        "F-28"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
       "key": "monitoring.db_slow_ms",
       "group": "platform",
       "kind": "int",
@@ -11538,6 +11557,48 @@
     {
       "name": "TestGoods_ToOfficeChangesNoMoney",
       "file": "internal/orders/goods_settlement_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestGoodsUSD_AmanahRefused",
+      "file": "internal/orders/goods_usd_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestGoodsUSD_CODLimitCountsEquivalent",
+      "file": "internal/orders/goods_usd_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestGoodsUSD_CurrencySwitchReconfirms",
+      "file": "internal/orders/goods_usd_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestGoodsUSD_LostGoodsPostsEquivalent",
+      "file": "internal/orders/goods_usd_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestGoodsUSD_PartnerCash_StoreRateBeatsReference",
+      "file": "internal/orders/goods_usd_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestGoodsUSD_PriceRequestSameCurrency",
+      "file": "internal/orders/goods_usd_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestGoodsUSD_WalletPaysFeeOnly_ReferenceRate",
+      "file": "internal/orders/goods_usd_test.go",
       "package": "orders_test",
       "orphan": true
     },
@@ -28589,6 +28650,12 @@
       "orphan": true
     },
     {
+      "name": "TestWACOMM07_DriverPicksUSD_SnapshotRate",
+      "file": "internal/qa/whatsapp_commission_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestWAORD050_ArrivedMessage",
       "file": "internal/qa/whatsapp_commission_test.go",
       "package": "qa",
@@ -31233,6 +31300,12 @@
     {
       "name": "TestGoodsCompNone_LeavesQueueWithoutMoney",
       "file": "internal/server/goods_comp_none_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestGoodsUnits",
+      "file": "internal/server/goods_units_internal_test.go",
       "package": "server",
       "orphan": true
     },

@@ -318,7 +318,7 @@ var passingTitles = map[string]bool{
 // (بلاغُ المالك ٢٠٢٦-٠٩-٢٩: «مشان ما يفكّر حاله إنه طلب وهو يستنّى بدون ما
 //
 //	يحصل شي».)
-func (s *Service) notifyCustomQuoted(ctx context.Context, orderID string, total int64) {
+func (s *Service) notifyCustomQuoted(ctx context.Context, orderID string, total int64, usd *int64) {
 	if s.notify == nil {
 		return
 	}
@@ -330,7 +330,7 @@ func (s *Service) notifyCustomQuoted(ctx context.Context, orderID string, total 
 		UserID: p.customerID, Kind: notifications.KindOrder,
 		Title: t.customQuoted,
 		// **والمبلغُ في النصّ** — من قرأه عرف على ماذا يوافق قبل أن يفتح.
-		Body:   fmt.Sprintf("#%d — %s ل.س", p.number, groupDigits(total)),
+		Body:   fmt.Sprintf("#%d — %s", p.number, customAmountText(total, usd)),
 		Entity: "order", EntityID: orderID, Href: "/portal/orders",
 		Apps: []string{notifications.AppCustomer},
 	})
@@ -346,8 +346,10 @@ func (s *Service) notifyCustomConfirmed(ctx context.Context, orderID, driverID s
 	}
 	var number int64
 	var mode string
+	var usd *int64
 	if err := s.db.QueryRow(ctx,
-		`SELECT number, COALESCE(custom_mode, '') FROM orders WHERE id = $1`, orderID).Scan(&number, &mode); err != nil {
+		`SELECT number, COALESCE(custom_mode, ''), custom_goods_usd FROM orders WHERE id = $1`, orderID).
+		Scan(&number, &mode, &usd); err != nil {
 		return
 	}
 	title := t.customConfirmed
@@ -361,7 +363,7 @@ func (s *Service) notifyCustomConfirmed(ctx context.Context, orderID, driverID s
 	s.notify.Notify(ctx, notifications.Input{
 		UserID: driverID, Kind: notifications.KindOrder,
 		Title:  title,
-		Body:   fmt.Sprintf("#%d — %s ل.س", number, groupDigits(total)),
+		Body:   fmt.Sprintf("#%d — %s", number, customAmountText(total, usd)),
 		Entity: "order", EntityID: orderID, Href: "/portal",
 		// **وتطبيقُ السائق وحدَه يرنّ** — الحسابُ نفسُه قد يكون زبوناً.
 		Apps: []string{notifications.AppDriver},

@@ -63,12 +63,15 @@ import (
 // ثانيةٌ هنا تحاكيهما نسخةٌ تنحرف عنهما يوماً** — فبقي `cash_due` كما هو، **وهو
 // المالُ الذي يمرّ بيد السائق فعلاً** (يقبضه من الزبون ثمّ يدفع منه). **وصفحةُ
 // النقد وكشفُ السائق يقرآن الرقمَ نفسَه** — فلا يرى المكتبُ سقفاً غيرَ الذي يمنع.
+//
+// **وثمنُ مشترياتٍ بالدولار يمرّ بيده بمعادله الملقوط** (`goods_usd_syp` — قرارُ المالك ٢٠٢٦-١١-٠٩):
+// يقبضه دولاراً خارجَ المستحقّ النقديّ، **فيُضاف إليه** وإلّا حمل مالاً لا يراه السقف.
 func (s *Service) Exposure(ctx context.Context, q Querier, driverID string) (int64, error) {
 	var held, inflight int64
 	err := q.QueryRow(ctx, `
 		SELECT COALESCE((SELECT b.held FROM driver_cash_boxes b
 		                  WHERE b.driver_id = $1::uuid), 0),
-		       COALESCE((SELECT sum(o.cash_due) FROM orders o
+		       COALESCE((SELECT sum(o.cash_due + o.goods_usd_syp) FROM orders o
 		                  WHERE o.driver_id = $1::uuid
 		                    AND o.closed_at IS NULL), 0)`,
 		driverID).Scan(&held, &inflight)

@@ -1603,12 +1603,16 @@ func (s *Service) checkCODLimit(ctx context.Context, q dbtx.Querier, customerID,
 	if exclude == "" {
 		exclude = "00000000-0000-0000-0000-000000000000"
 	}
+	// **وثمنُ مشترياتٍ بالدولار نقدٌ بذمّته بمعادله** (قرارُ المالك ٢٠٢٦-١١-٠٩) — أيّاً كانت طريقةُ
+	// دفع الأجرة: المحفظةُ ليرةٌ وحدَها، فالدولارُ يُدفع نقداً للسائق.
 	var current int64
 	if err := q.QueryRow(ctx, `
-		SELECT COALESCE(SUM(CASE WHEN kind = 'custom' THEN total ELSE cash_due END), 0)
+		SELECT COALESCE(SUM(CASE WHEN payment_method = 'cash'
+		                         THEN CASE WHEN kind = 'custom' THEN total ELSE cash_due END
+		                         ELSE 0 END + goods_usd_syp), 0)
 		FROM orders
 		WHERE customer_id = $1::uuid
-		  AND payment_method = 'cash'
+		  AND (payment_method = 'cash' OR goods_usd_syp > 0)
 		  AND closed_at IS NULL
 		  AND id <> $2::uuid`,
 		customerID, exclude).Scan(&current); err != nil {

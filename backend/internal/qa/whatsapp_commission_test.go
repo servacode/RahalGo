@@ -414,3 +414,52 @@ func TestWAORD051_ChangeDriver(t *testing.T) {
 		}
 	}
 }
+
+// TestWACOMM07_DriverPicksUSD_SnapshotRate **السائقُ يختار الدولار لثمن طلب الواتساب** (قرارُ المالك
+// ٢٠٢٦-١١-٠٩): الطلبُ أُنشئ بالليرة، والسائقُ يكتب 12.5 بالدولار ⇒ تُحفظ العملةُ ويُلقط السعرُ المرجعيُّ
+// (متجرٌ بلا سعر) ١٠٠ ⇒ ١٢٥٠ ل.س ⇒ عمولةٌ ١٢٥. **وتبديلُ المرجعيّ قبل التسليم لا يمسّها.**
+func TestWACOMM07_DriverPicksUSD_SnapshotRate(t *testing.T) {
+	h := New(t)
+	c := newWAComm(t, h, "منطقةُ WA-COMM-07", 1000)
+	if _, err := h.Pool.Exec(ctxBG(), `UPDATE merchants SET exchange_rate = NULL WHERE id = $1`, c.w.md.fx.M.ID); err != nil {
+		t.Fatal(err)
+	}
+	h.Setting("merchants.usd_reference_rate", "100")
+	base := mdaBaseline(t, h)
+	id := c.ourStore(t, h, nil)
+	drv := h.driverOf(id)
+	if r := h.POST("/api/v1/driver/orders/"+id+"/transition", drv.Token, map[string]any{"to": "at_pickup"}); r.Code >= 400 {
+		t.Fatalf("وصلت المتجر: %s", r)
+	}
+	if r := h.POST("/api/v1/driver/orders/"+id+"/fetch-amount", drv.Token,
+		map[string]any{"amount": 12.5, "currency": "USD"}); r.Code != http.StatusOK {
+		t.Fatalf("كتابةُ الثمن بالدولار: %d / %s", r.Code, r.Err())
+	}
+	var cur string
+	var collect *int64
+	var rate *float64
+	if err := h.Pool.QueryRow(ctxBG(), `SELECT amount_currency, collect_amount, goods_fx_rate::float8
+		FROM orders WHERE id = $1`, id).Scan(&cur, &collect, &rate); err != nil {
+		t.Fatal(err)
+	}
+	if cur != "USD" || collect == nil || *collect != 1250 || rate == nil || *rate != 100 {
+		t.Fatalf("**العملة %q والثمن %v والسعر %v** — المنتظَر USD و1250 و100", cur, collect, rate)
+	}
+	h.Setting("merchants.usd_reference_rate", "300")
+	for _, to := range []string{"picked_up", "on_the_way", "at_dropoff"} {
+		if r := h.POST("/api/v1/driver/orders/"+id+"/transition", drv.Token, map[string]any{"to": to}); r.Code >= 400 {
+			t.Fatalf("الانتقالُ إلى %s: %s", to, r)
+		}
+	}
+	h.authorizeProofExempt(id)
+	if r := h.POST("/api/v1/driver/orders/"+id+"/transition", drv.Token, map[string]any{"to": "delivered"}); r.Code >= 400 {
+		t.Fatalf("التسليم: %s", r)
+	}
+	if pc := waPlatformCommission(t, h, id); pc != 125 {
+		t.Fatalf("**platform_commission %d والمنتظَر 125** (بالسعر الملقوط لا الجديد)", pc)
+	}
+	if got := waBalance(t, h, c.ownerID); got != 875 {
+		t.Fatalf("**المحفظة %d والمنتظَر 875**", got)
+	}
+	mdaNoNewViolations(t, h, base)
+}

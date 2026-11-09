@@ -120,7 +120,7 @@ func (s *Service) creditTreasury(ctx context.Context, q wallet.Querier, orderID,
 	if tid == "" {
 		return nil
 	}
-	var walletPaid, cashDue, goods, collected, lost int64
+	var walletPaid, cashDue, goods, collected, lost, usdSYP int64
 	var status, kind string
 	if err := q.QueryRow(ctx,
 		`SELECT wallet_paid, cash_due, status, kind,
@@ -142,9 +142,11 @@ func (s *Service) creditTreasury(ctx context.Context, q wallet.Querier, orderID,
 		        -- (settleCustomLostGoods) — فطلبٌ فشل قبل الشراء لا خسارةَ فيه.
 		        CASE WHEN kind = 'custom' AND custom_mode = 'purchase'
 		              AND status IN ('failed', 'cancelled', 'rejected')
-		             THEN COALESCE(custom_store_paid, 0) ELSE 0 END
+		             THEN COALESCE(custom_store_paid, 0) ELSE 0 END,
+		        -- **وثمنٌ بالدولار نقدٌ مرّ بيد السائق بمعادله** (قرارُ المالك ٢٠٢٦-١١-٠٩).
+		        goods_usd_syp
 		 FROM orders WHERE id = $1`, orderID).
-		Scan(&walletPaid, &cashDue, &status, &kind, &collected, &goods, &lost); err != nil {
+		Scan(&walletPaid, &cashDue, &status, &kind, &collected, &goods, &lost, &usdSYP); err != nil {
 		return err
 	}
 	// ══════════════════════════════════════════════════════════════════
@@ -187,6 +189,9 @@ func (s *Service) creditTreasury(ctx context.Context, q wallet.Querier, orderID,
 	paid := walletPaid
 	if status == StDelivered || status == StRefunded {
 		paid += cashDue
+		// **ومعادلُ ثمنٍ بالدولار مقبوضٌ كالنقد** (٢٠٢٦-١١-٠٩) — ثمّ يُطرح ما دُفع للمتجر منه تحت،
+		// **فيبقى للخزينة عمولةُ المتجر التابع** كما في الليرة تماماً.
+		paid += usdSYP
 	}
 	// ══════════════════════════════════════════════════════════════════
 	// **والتوصيلةُ تقرأ نقدَها من الصندوق لا من حالها** (قرارُ المالك ٢٠٢٦-١٠-١٥)

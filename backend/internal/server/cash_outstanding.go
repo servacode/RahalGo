@@ -148,7 +148,7 @@ func (s *Server) cashOverviewOf(ctx context.Context) (cashOverview, error) {
 	}
 	rows, err := s.pg.Query(ctx, `
 		SELECT u.id, COALESCE(u.full_name, ''), u.phone, COALESCE(b.held, 0),
-		       COALESCE((SELECT sum(o.cash_due) FROM orders o
+		       COALESCE((SELECT sum(o.cash_due + o.goods_usd_syp) FROM orders o
 		                  WHERE o.driver_id = u.id AND o.closed_at IS NULL), 0) AS open_cash,
 		       COALESCE(u.cash_limit_override, $1::bigint) AS lim,
 		       x.oldest_at,

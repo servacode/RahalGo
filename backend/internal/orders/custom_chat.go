@@ -184,7 +184,12 @@ func (s *Service) openPlainChat(ctx context.Context, orderID, driverID string) {
 // السائق. **وأربعةٌ تكفي**: مشى · استلم · وصل · سلّم. **ومن كتب سطراً
 // لكلّ انتقالٍ** حوّل الحديثَ إلى سجلٍّ لا يُقرأ.
 // agreeLine **سطرُ التوثيق في الحديث** — بمبلغه.
-func agreeLine(step, mode string, goods, fee int64) string {
+func agreeLine(step, mode string, goods, fee int64, usd *int64) string {
+	// **ثمنٌ بالدولار يُقال بعملته ولا يُجمع مع الأجرة** (قرارُ المالك ٢٠٢٦-١١-٠٩).
+	if usd != nil && step != AgreeStepFee && mode != CustomModeAmanah {
+		return fmt.Sprintf("ثمن البضاعة: %s\nأجرة التوصيل: %s ل.س — بانتظار موافقتك.",
+			AmountText(*usd, CurrencyUSD), groupDigits(fee))
+	}
 	switch {
 	case step == AgreeStepGoods:
 		// **ثلاثةُ أسطرٍ لا جملةٌ يُحسب منها** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢: «بالرسائل

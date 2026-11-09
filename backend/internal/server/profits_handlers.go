@@ -659,7 +659,8 @@ func (s *Server) profitsMerchants(w http.ResponseWriter, r *http.Request, from, 
 			-- **مشترياتٌ من متجرٍ تابع** (قرارُ المالك ٢٠٢٦-١٠-١٥): ثمنُها إجماليُّه، وعمولتُها
 			-- عمولتُنا، وما دفعه السائقُ له مستحقُّه — بلا بنودٍ ولا قيدِ مستحقٍّ في الدفتر.
 			SELECT o.partner_merchant_id AS merchant_id,
-			       COALESCE(o.custom_goods_amount, 0) AS gross,
+			       -- **وثمنٌ بالدولار بمعادله الملقوط** (قرارُ المالك ٢٠٢٦-١١-٠٩).
+			       COALESCE(o.custom_goods_amount, 0) + o.goods_usd_syp AS gross,
 			       o.platform_commission AS commission,
 			       COALESCE(o.custom_store_paid, 0) AS got
 			FROM orders o

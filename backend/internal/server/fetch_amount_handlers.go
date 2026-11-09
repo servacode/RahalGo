@@ -31,6 +31,9 @@ func (s *Server) handleDriverFetchAmount(w http.ResponseWriter, r *http.Request)
 	req, err := decode[struct {
 		// **ورقمٌ عشريٌّ للدولار** (٢٠٢٦-١٠-٢٠) — والعملةُ عملةُ الطلب لا ما يقوله السائق.
 		Amount *float64 `json:"amount"`
+		// Currency **عملةُ ثمن طلب الواتساب يختارها السائق** (قرارُ المالك ٢٠٢٦-١١-٠٩) — `SYP` أو
+		// `USD`. **وفي «إحضار» تُهمَل**: العملةُ عملةُ المتجر. وغيابُها عملةُ الطلب كما كانت.
+		Currency string `json:"currency"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
@@ -40,14 +43,25 @@ func (s *Server) handleDriverFetchAmount(w http.ResponseWriter, r *http.Request)
 		s.respondErr(w, errValidation)
 		return
 	}
-	var currency string
-	_ = s.pg.QueryRow(r.Context(), `SELECT amount_currency FROM orders WHERE id::text = $1`, orderID).Scan(&currency)
+	if req.Currency != "" && req.Currency != orders.CurrencySYP && req.Currency != orders.CurrencyUSD {
+		s.respondErr(w, errValidation)
+		return
+	}
+	var currency, origin string
+	_ = s.pg.QueryRow(r.Context(), `SELECT amount_currency, origin FROM orders WHERE id::text = $1`, orderID).
+		Scan(&currency, &origin)
+	if origin != orders.OriginWhatsApp {
+		req.Currency = ""
+	}
+	if req.Currency != "" {
+		currency = req.Currency
+	}
 	units, ok := orders.AmountUnits(*req.Amount, currency)
 	if !ok {
 		s.respondErr(w, errValidation)
 		return
 	}
-	o, err := s.orders.ProposeFetchAmount(r.Context(), orderID, userIDFrom(r), units)
+	o, err := s.orders.ProposeFetchAmountCurrency(r.Context(), orderID, userIDFrom(r), units, req.Currency)
 	if err != nil {
 		s.respondErr(w, err)
 		return

@@ -11,7 +11,8 @@ package orders
 //	المتاحُ يكفي     ⇐ `order_payment` سالبٌ بمرجع الطلب — والخزينةُ تقرؤه مدفوعاً (`creditTreasury`)
 //	لا يكفي          ⇐ دينٌ على المتجر (`whatsapp_order_commission`) — ولا محفظةَ سالبة
 //	متجرٌ غيرُ تابع  ⇐ لا شيء · بلا ثمن ⇐ لا شيء
-//	ثمنٌ بالدولار    ⇐ بسعر صرف المتجر، **وبلا سعرٍ لا عمولة** (تحذيرٌ في السجلّ)
+//	ثمنٌ بالدولار    ⇐ بالسعر الملقوط لحظةَ كتابة الثمن (`goods_fx_rate`)، وإلّا سعرِ المتجر، وإلّا
+//	                   «سعرِ الدولار المرجعيّ» (٢٠٢٦-١١-٠٩) — **وبلا سعرٍ لا عمولة** (تحذيرٌ في السجلّ)
 //
 // **ولا `wallet_paid`**: أجرةُ طلب الواتساب نقدٌ كلُّها (`orders_whatsapp_shape` و`FI-03.c`).
 // **والعمولةُ في `platform_commission`** للتقارير. **ولا عمولةَ مندوبٍ عليه** — خارجَ القرار.
@@ -59,7 +60,7 @@ func (s *Service) chargeWhatsAppCommission(ctx context.Context, q wallet.Querier
 	var rate *float64
 	err := q.QueryRow(ctx, `
 		SELECT COALESCE(o.pickup_merchant_id::text, ''), o.collect_amount, o.amount_currency,
-		       m.commission_percent, m.exchange_rate::float8
+		       m.commission_percent, COALESCE(o.goods_fx_rate, m.exchange_rate)::float8
 		  FROM orders o LEFT JOIN merchants m ON m.id = o.pickup_merchant_id
 		 WHERE o.id = $1 AND o.origin = 'whatsapp'`, orderID).
 		Scan(&merchantID, &goods, &currency, &override, &rate)
@@ -82,9 +83,14 @@ func (s *Service) chargeWhatsAppCommission(ctx context.Context, q wallet.Querier
 	if booked {
 		return nil
 	}
+	if currency == CurrencyUSD && (rate == nil || *rate <= 0) {
+		if ref := s.usdReferenceRate(ctx, q); ref > 0 {
+			rate = &ref
+		}
+	}
 	base, ok := whatsAppGoodsSYP(*goods, currency, rate)
 	if !ok {
-		s.logger.Warn("عمولة طلب واتساب: ثمنٌ بالدولار ومتجرٌ بلا سعر صرف — لا عمولة",
+		s.logger.Warn("عمولة طلب واتساب: ثمنٌ بالدولار بلا سعر صرف (لا للمتجر ولا مرجعي) — لا عمولة",
 			"order", orderID, "merchant", merchantID)
 		return nil
 	}

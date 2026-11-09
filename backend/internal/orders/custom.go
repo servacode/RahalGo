@@ -81,7 +81,23 @@ var (
 	// ErrQuoteNothingPending **لا سعرَ جديدٌ يُرفض** — العرضُ الحاليُّ مؤكَّدٌ أصلاً.
 	ErrQuoteNothingPending = httpx.NewError(http.StatusConflict,
 		"quote_nothing_pending", "errors.quote_nothing_pending")
+
+	// ErrGoodsUSDNotPurchase **ثمنٌ بالدولار للمشتريات وحدَها** (٢٠٢٦-١١-٠٩) — الأمانةُ بلا ثمن.
+	ErrGoodsUSDNotPurchase = httpx.NewError(http.StatusConflict,
+		"goods_usd_not_purchase", "errors.goods_usd_not_purchase")
 )
+
+// CustomGoodsUSDMax **أعلى ثمنٍ بالدولار يُوثَّق — بالسنتات** (ألفُ دولار) — كسقف الليرة.
+const CustomGoodsUSDMax int64 = 100_000
+
+// ErrCustomGoodsUSDTooHigh **ثمنٌ بالدولار فوق `CustomGoodsUSDMax`** — والحدُّ دولاراتٍ نصّاً.
+func ErrCustomGoodsUSDTooHigh() error {
+	return &httpx.AppError{
+		Status: http.StatusUnprocessableEntity, Code: "custom_goods_usd_too_high",
+		MessageKey: "errors.custom_goods_usd_too_high",
+		Details:    map[string]any{"max": strconv.FormatInt(CustomGoodsUSDMax/100, 10)},
+	}
+}
 
 // CustomGoodsMax **أعلى ثمنِ بضاعةٍ يُوثَّق** (تجربةُ القبول ٢٠٢٦-١٠-٠٣) — كان يُقبل أيُّ
 // رقمٍ فيجمع المجموعُ ما لا يُدفع ويقترب من فيض العدد. **ومئةُ ألفٍ بالليرة الجديدة
@@ -532,14 +548,21 @@ const (
 // فالمالُ يمرّ بالمسار القائم نفسِه (`applyCustomQuoteTx`) قبل الاستلام، **ولا يُمسّ الدفتر.**
 func (s *Service) AgreeCustomStep(ctx context.Context, orderID, driverID, step string,
 	goods, fee int64) error {
-	return s.agreeCustomStep(ctx, orderID, driverID, step, goods, fee, false)
+	return s.agreeCustomStep(ctx, orderID, driverID, step, goods, fee, nil, false)
+}
+
+// AgreeCustomStepUSD **توثيقُ خطوةٍ بثمنٍ بالدولار** (قرارُ المالك ٢٠٢٦-١١-٠٩) — `usd` بالسنتات،
+// **وnil ليرةٌ** كما يرسل التطبيقُ القديم. وفي خطوة الأجرة لا يُقرأ.
+func (s *Service) AgreeCustomStepUSD(ctx context.Context, orderID, driverID, step string,
+	goods, fee int64, usd *int64) error {
+	return s.agreeCustomStep(ctx, orderID, driverID, step, goods, fee, usd, false)
 }
 
 // agreeCustomStep **والصامتُ منه** (`quiet`) للأجرة التي تفرضها المنصّة — لا سطرَ في
 // الحديث ولا إشعارَ للزبون: **الأجرةُ معروفةٌ للطرفين من لحظة الطلب** (`autoAgreeFixedFee`).
 func (s *Service) agreeCustomStep(ctx context.Context, orderID, driverID, step string,
-	goods, fee int64, quiet bool) error {
-	if goods < 0 || fee < 0 {
+	goods, fee int64, usd *int64, quiet bool) error {
+	if goods < 0 || fee < 0 || (usd != nil && *usd <= 0) {
 		return httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
 	}
 
@@ -587,14 +610,18 @@ func (s *Service) agreeCustomStep(ctx context.Context, orderID, driverID, step s
 		return err
 	}
 	goodsDone := row.hasGoods && !pending
-	effGoods, effFee := goods, fee
+	effGoods, effFee, effUSD := goods, fee, usd
 	newPending := false
+	// **والدولارُ ثمنُ مشترياتٍ وحدَها** — الأمانةُ بلا ثمن.
+	if usd != nil && step != AgreeStepFee && mode != CustomModePurchase {
+		return ErrGoodsUSDNotPurchase
+	}
 	switch step {
 	case AgreeStepFee:
-		// **الأجرةُ وحدَها** — والبضاعةُ كما وُثّقت إن وُثّقت، وإلّا صفرٌ ينتظرها.
-		effGoods = 0
+		// **الأجرةُ وحدَها** — والبضاعةُ كما وُثّقت إن وُثّقت (بعملتها)، وإلّا صفرٌ ينتظرها.
+		effGoods, effUSD = 0, nil
 		if goodsDone {
-			effGoods = row.goods
+			effGoods, effUSD = row.goods, row.goodsUSD
 		}
 		newPending = mode == CustomModePurchase && !goodsDone
 	case AgreeStepGoods:
@@ -606,7 +633,7 @@ func (s *Service) agreeCustomStep(ctx context.Context, orderID, driverID, step s
 		effFee = row.fee
 	case "":
 		if mode == CustomModeAmanah {
-			effGoods = 0
+			effGoods, effUSD = 0, nil
 		}
 	default:
 		return ErrAgreeStep
@@ -633,11 +660,14 @@ func (s *Service) agreeCustomStep(ctx context.Context, orderID, driverID, step s
 	if effGoods > CustomGoodsMax {
 		return ErrCustomGoodsTooHigh()
 	}
+	if effUSD != nil && *effUSD > CustomGoodsUSDMax {
+		return ErrCustomGoodsUSDTooHigh()
+	}
 
 	// **والجوهرُ في `applyCustomQuoteTx`** — كتابةُ الأعمدة، وتزايدُ النسخة
 	// عند تغييرٍ حقيقيٍّ وحدَه، وسياسةُ التأكيد/الحجز، والتدقيق. **بابٌ واحدٌ
 	// يشترك فيه السائقُ والأدمن** — ولا نسختان من المنطق الماليّ.
-	if _, err := s.applyCustomQuoteTx(ctx, tx, row, effGoods, effFee, quoteMutator{
+	if _, err := s.applyCustomQuoteTx(ctx, tx, row, effGoods, effFee, effUSD, quoteMutator{
 		actorID: driverID, role: "driver", source: "driver_agree",
 	}); err != nil {
 		return err
@@ -652,7 +682,7 @@ func (s *Service) agreeCustomStep(ctx context.Context, orderID, driverID, step s
 	// **وما وُثّق يُقال في الحديث** (طلبُ المالك ٢٠٢٦-١٠-٠٣: «بالدردشة لازم يظهر السعرُ كم تمّ
 	// توثيقُه»).
 	if !quiet {
-		s.quoteLine(ctx, orderID, driverID, "driver", agreeLine(step, mode, effGoods, effFee))
+		s.quoteLine(ctx, orderID, driverID, "driver", agreeLine(step, mode, effGoods, effFee, effUSD))
 	}
 
 	// **ويصل صاحبَ الطلب ما وُثّق باسمه** (`D22`) — بعد التثبيت لا داخلَه.
@@ -671,7 +701,7 @@ func (s *Service) agreeCustomStep(ctx context.Context, orderID, driverID, step s
 	// **فمن أغلق التطبيقَ ينتظر ما لن يأتي** — ويظنّ أنّه طلب وأنّ المنصّةَ
 	// تعمل. (بلاغُ المالك ٢٠٢٦-٠٩-٢٩.)
 	if !quiet {
-		s.notifyCustomQuoted(ctx, orderID, effGoods+effFee)
+		s.notifyCustomQuoted(ctx, orderID, effGoods+effFee, effUSD)
 	}
 	return nil
 }
@@ -701,7 +731,7 @@ func (s *Service) autoAgreeFixedFee(ctx context.Context, orderID, customerID, dr
 	if source != "admin_defined" || mayChange {
 		return
 	}
-	if err := s.agreeCustomStep(ctx, orderID, driverID, AgreeStepFee, 0, 0, true); err != nil {
+	if err := s.agreeCustomStep(ctx, orderID, driverID, AgreeStepFee, 0, 0, nil, true); err != nil {
 		s.logger.Error("أجرة المنصّة: تعذّر تثبيتُها", "order", orderID, "error", err)
 		return
 	}
@@ -718,8 +748,8 @@ func (s *Service) autoAgreeFixedFee(ctx context.Context, orderID, customerID, dr
 		if o.CustomFee != nil {
 			fee = *o.CustomFee
 		}
-		s.quoteLine(ctx, orderID, driverID, "driver", agreeLine(AgreeStepFee, mode, 0, fee))
-		s.notifyCustomQuoted(ctx, orderID, o.Total)
+		s.quoteLine(ctx, orderID, driverID, "driver", agreeLine(AgreeStepFee, mode, 0, fee, nil))
+		s.notifyCustomQuoted(ctx, orderID, o.Total, o.CustomGoodsUSD)
 	}
 }
 
@@ -903,16 +933,17 @@ func (s *Service) settleCustomCash(ctx context.Context, q wallet.Querier, in set
 	// **وعلامةُ الدفعِ تحرس التكرار** — كما في المحفظة: **التسليمُ قد
 	// يُنادى مرّتين، فيُقيَّد مرّتين لولاها.**
 	var paidAt *time.Time
-	var goods, driverFee, waived int64
+	var goods, driverFee, waived, usdSYP int64
 	if err := q.QueryRow(ctx, `
-		SELECT custom_paid_at, COALESCE(custom_goods_amount, 0), driver_fee, promo_delivery_waived
+		SELECT custom_paid_at, COALESCE(custom_goods_amount, 0), driver_fee, promo_delivery_waived,
+		       goods_usd_syp
 		FROM orders WHERE id = $1 FOR UPDATE`, in.orderID).
-		Scan(&paidAt, &goods, &driverFee, &waived); err != nil {
+		Scan(&paidAt, &goods, &driverFee, &waived, &usdSYP); err != nil {
 		return err
 	}
 	// **والتوصيلُ المجانيّ** (٢٠٢٦-١٠-٢٣): أمانةٌ معفاةٌ كلُّها لا نقدَ فيها — والسائقُ
-	// يُدفع أجرُه من المنصّة.
-	if paidAt != nil || (in.cashDue <= 0 && waived <= 0) {
+	// يُدفع أجرُه من المنصّة. **وثمنٌ بالدولار نقدٌ مرّ بيده** (٢٠٢٦-١١-٠٩) ولو صفُرت الأجرة.
+	if paidAt != nil || (in.cashDue <= 0 && waived <= 0 && usdSYP <= 0) {
 		return nil
 	}
 
@@ -960,18 +991,29 @@ func (s *Service) settleCustomCash(ctx context.Context, q wallet.Querier, in set
 //
 // **و`custom_store_paid` يُكتب هنا** — تقرؤه الخزينةُ (تطرحه لا الثمنَ كلَّه) وحرّاسُ
 // المال. **و`platform_commission` العمولةُ** — يقرؤها المندوبُ وصفحةُ الأرباح.
+//
+// # وثمنٌ بالدولار (قرارُ المالك ٢٠٢٦-١١-٠٩)
+//
+// **الزبونُ دفع الدولارَ نقداً للسائق، والسائقُ دفع منه للمتجر** — فمعادلُه الملقوطُ (`goods_usd_syp`)
+// **نقدٌ مرّ بيده كالمستحقّ النقديّ**: صندوقُه يقبض `max(المستحقّ + المعادل − S, 0)` — **الأجرةَ
+// وعمولةَ المتجر التابع** ليرةً، ولا سلفةَ تُردّ (لم يدفع من مال المكتب).
 func (s *Service) settleCustomStore(ctx context.Context, q wallet.Querier, in settlement, out *settled) error {
 	storePaid, commission, err := customStoreCut(ctx, q, in.orderID)
 	if err != nil {
 		return err
 	}
+	var usdSYP int64
+	if err := q.QueryRow(ctx, `SELECT goods_usd_syp FROM orders WHERE id = $1`, in.orderID).Scan(&usdSYP); err != nil {
+		return err
+	}
+	cashIn := in.cashDue + usdSYP
 	if _, err := q.Exec(ctx, `
 		UPDATE orders SET custom_store_paid = $2, platform_commission = $3, updated_at = now()
 		 WHERE id = $1`, in.orderID, storePaid, commission); err != nil {
 		return err
 	}
 	if in.driverID != nil {
-		collect := in.cashDue - storePaid
+		collect := cashIn - storePaid
 		if collect < 0 {
 			collect = 0
 		}
@@ -980,7 +1022,7 @@ func (s *Service) settleCustomStore(ctx context.Context, q wallet.Querier, in se
 				return err
 			}
 		}
-		if err := recordAdvanceReturn(ctx, q, in.orderID, *in.driverID, storePaid-in.cashDue+collect, in.actorID); err != nil {
+		if err := recordAdvanceReturn(ctx, q, in.orderID, *in.driverID, storePaid-cashIn+collect, in.actorID); err != nil {
 			return err
 		}
 	}
@@ -1011,6 +1053,11 @@ func (s *Service) settleCustomStore(ctx context.Context, q wallet.Querier, in se
 //
 // **والأمانةُ لا ثمنَ فيها** (`customStoreCut` صفرٌ لها)، **وما لم يُوثَّق ثمنُه لا خسارةَ فيه.**
 func (s *Service) settleCustomLostGoods(ctx context.Context, q wallet.Querier, in settlement) error {
+	// **وثمنٌ بالدولار بمعادله** (قرارُ المالك ٢٠٢٦-١١-٠٩) — ولو فشل قبل تأكيد الزبون يُلقط سعرُ
+	// الآن: **البضاعةُ اشتُريت ولا يسقط ثمنُها من الحساب.**
+	if _, err := s.on(q).snapshotCustomGoodsFXTx(ctx, q, in.orderID, false); err != nil {
+		return err
+	}
 	storePaid, _, err := customStoreCut(ctx, q, in.orderID)
 	if err != nil {
 		return err

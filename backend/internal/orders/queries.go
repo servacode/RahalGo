@@ -29,6 +29,8 @@ const orderSelect = `
 	       -- **ونوعُ الطلب** — الشاشاتُ تعرض به، والخارطةُ تختلف عليه.
 	       o.kind, COALESCE(o.custom_request, ''),
 	       o.custom_agreed_at, o.custom_goods_amount, o.custom_fee,
+	       -- **ثمنُ البضاعة بالدولار ولقطتُه** (قرارُ المالك ٢٠٢٦-١١-٠٩).
+	       o.custom_goods_usd, o.goods_fx_rate::float8, o.goods_usd_syp,
 	       -- **عرضُ السعر وتأكيدُه** (Batch 2a) — النسخةُ ولحظةُ التأكيد ومبلغُه ونسختُه.
 	       o.quote_version, o.quote_confirmed_at, o.quote_confirmed_total, o.quote_confirmed_version,
 	       o.quote_rejected_at,
@@ -195,6 +197,7 @@ func scanOrder(row pgx.Row) (*Order, error) {
 	var pkLat, pkLng, drLat, drLng *float64
 	err := row.Scan(&o.ID, &o.Number, &o.CustomerID, &o.CustomerPhone, &o.CustomerName,
 		&o.Kind, &o.CustomRequest, &o.CustomAgreedAt, &o.CustomGoodsAmount, &o.CustomFee,
+		&o.CustomGoodsUSD, &o.GoodsFXRate, &o.GoodsUSDSYP,
 		&o.QuoteVersion, &o.QuoteConfirmedAt, &o.QuoteConfirmedTotal, &o.QuoteConfirmedVersion,
 		&o.QuoteRejectedAt,
 		&o.CustomReservedAmount, &o.CustomFeeSource, &o.CustomFeeSnapshot, &o.CustomDriverMayChangeFee,

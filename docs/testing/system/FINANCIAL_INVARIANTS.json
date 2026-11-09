@@ -606,7 +606,7 @@
     {
       "id": "FI-06.e",
       "family": "FI-06",
-      "name": "طلبُ الواتساب لا يحرّك إلّا الأجرة",
+      "name": "طلبُ الواتساب لا يحرّك إلّا الأجرة — وعمولةَ متجرنا",
       "status": "PROVABLE_NOW",
       "ops": true,
       "flows": [
@@ -616,7 +616,10 @@
         "driver_earning",
         "platform_profit",
         "compensation",
-        "platform_expense"
+        "platform_expense",
+        "order_payment",
+        "refund",
+        "commission"
       ]
     },
     {
@@ -1443,19 +1446,21 @@
     },
     {
       "kind": "order_payment",
-      "semantics": "خصمُ ثمنِ الطلب من محفظة الزبون لحظةَ الإنشاء.",
+      "semantics": "خصمُ ثمنِ الطلب من محفظة الزبون لحظةَ الإنشاء — **وعمولةُ متجرنا على طلب الواتساب من محفظة صاحبه عند التسليم** (٢٠٢٦-١١-٠٨).",
       "sign": "-",
       "ref_required": true,
       "ref_target": "orders",
       "path": "POST /api/v1/orders",
       "creators": [
         "internal/orders/service.go:521",
-        "internal/orders/custom.go:278"
+        "internal/orders/custom.go:278",
+        "internal/orders/whatsapp_commission.go"
       ],
       "invariants": [
         "FI-01.d",
         "FI-04.b",
-        "FI-06.a"
+        "FI-06.a",
+        "FI-06.e"
       ],
       "reachable": true
     },
@@ -1550,7 +1555,7 @@
     },
     {
       "kind": "refund",
-      "semantics": "ردُّ ما دفعه الزبون — **من المحفظة قبل التسليم، وكاملُ المبلغ بعده.**",
+      "semantics": "ردُّ ما دفعه الزبون — **من المحفظة قبل التسليم، وكاملُ المبلغ بعده.** **وعمولةُ طلب واتسابٍ مسترجَعٍ تعود لمحفظة المتجر** (٢٠٢٦-١١-٠٨).",
       "sign": "+",
       "ref_required": true,
       "ref_target": "orders",
@@ -1558,12 +1563,14 @@
       "creators": [
         "internal/orders/transitions.go:659",
         "internal/orders/transitions.go:739",
-        "internal/orders/undeliver.go"
+        "internal/orders/undeliver.go",
+        "internal/orders/whatsapp_commission.go"
       ],
       "invariants": [
         "FI-01.d",
         "FI-05.g",
-        "FI-06.a"
+        "FI-06.a",
+        "FI-06.e"
       ],
       "reachable": true
     },

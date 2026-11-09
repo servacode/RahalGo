@@ -91,6 +91,13 @@ func requireFetchAmountApproved(ctx context.Context, tx pgx.Tx, orderID string) 
 // **ويُعاد ما دام لم يُوافَق**: بعد رفضٍ، أو لتصحيح رقمٍ قبل أن يقرّر المتجر — **وكلُّ
 // كتابةٍ نسخةٌ أحدث** فلا تُقفل موافقةٌ قديمةٌ المبلغَ الجديد.
 func (s *Service) ProposeFetchAmount(ctx context.Context, orderID, driverID string, amount int64) (*Order, error) {
+	return s.ProposeFetchAmountCurrency(ctx, orderID, driverID, amount, "")
+}
+
+// ProposeFetchAmountCurrency **وبعملةٍ يختارها السائق لطلب الواتساب** (قرارُ المالك ٢٠٢٦-١١-٠٩) —
+// `currency` فارغٌ: عملةُ الطلب كما هي. **وفي «إحضار» لا تُقبل** (العملةُ عملةُ المتجر).
+func (s *Service) ProposeFetchAmountCurrency(ctx context.Context, orderID, driverID string, amount int64,
+	currency string) (*Order, error) {
 	if amount < 0 || amount > MaxFetchAmount {
 		return nil, httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
 	}
@@ -117,7 +124,7 @@ func (s *Service) ProposeFetchAmount(ctx context.Context, orderID, driverID stri
 	}
 	// **وطلبُ الواتساب: ثمنُ الطلب بلا موافقة** (قرارُ المالك ٢٠٢٦-١١-٠٦) — `whatsAppGoodsAmount`.
 	if origin == OriginWhatsApp {
-		if err := s.whatsAppGoodsAmount(ctx, tx, orderID, driverID, kind, status, amount); err != nil {
+		if err := s.whatsAppGoodsAmount(ctx, tx, orderID, driverID, kind, status, amount, currency); err != nil {
 			return nil, err
 		}
 		if err := tx.Commit(ctx); err != nil {
@@ -271,7 +278,7 @@ func (s *Service) notifyFetchAmount(ctx context.Context, o *Order) {
 var whatsAppGoodsStages = map[string]bool{StAtPickup: true, StPickedUp: true}
 
 func (s *Service) whatsAppGoodsAmount(ctx context.Context, tx pgx.Tx, orderID, driverID, kind, status string,
-	amount int64) error {
+	amount int64, currency string) error {
 	if kind != KindMerchantDelivery || !whatsAppGoodsStages[status] {
 		return ErrFetchAmountStage
 	}
@@ -287,13 +294,38 @@ func (s *Service) whatsAppGoodsAmount(ctx context.Context, tx pgx.Tx, orderID, d
 	} else {
 		note = "السائق وثّقه أمانة — بلا ثمن بضاعة"
 	}
+	// ══════════════════════════════════════════════════════════════════
+	// **والعملةُ يختارها السائق، والسعرُ يُلقط الآن** (قرارُ المالك ٢٠٢٦-١١-٠٩)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **فارغةً تبقى عملةُ الطلب** (التطبيقُ القديم). **وثمنٌ بالدولار يُلقط سعرُه لحظةَ كتابته** — سعرُ
+	// متجرنا إن ضبطه وإلّا المرجعيّ — **فعمولتُه عند التسليم بسعر اليوم الذي كُتب فيه.**
+	var rate *float64
+	if currency == "" {
+		if err := tx.QueryRow(ctx, `SELECT amount_currency FROM orders WHERE id = $1`, orderID).Scan(&currency); err != nil {
+			return err
+		}
+	}
+	if currency == CurrencyUSD && amount > 0 {
+		r, err := s.goodsRateFor(ctx, tx, orderID)
+		if err != nil {
+			return err
+		}
+		if r > 0 {
+			rate = &r
+		}
+	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE orders
 		   SET fetch_amount = $2, fetch_amount_version = fetch_amount_version + 1,
 		       fetch_amount_status = 'approved', fetch_amount_at = now(),
-		       fetch_amount_decided_at = now(), collect_amount = $3, updated_at = now()
-		 WHERE id = $1`, orderID, amount, collect); err != nil {
+		       fetch_amount_decided_at = now(), collect_amount = $3, updated_at = now(),
+		       amount_currency = $4, goods_fx_rate = $5
+		 WHERE id = $1`, orderID, amount, collect, currency, rate); err != nil {
 		return err
+	}
+	if amount > 0 {
+		note = fmt.Sprintf("السائق كتب ثمن الطلب: %s — وصل للزبون برسالة", AmountText(amount, currency))
 	}
 	_, err := tx.Exec(ctx, `
 		INSERT INTO order_events (order_id, from_status, to_status, actor_id, note, driver_id)

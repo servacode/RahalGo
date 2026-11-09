@@ -172,18 +172,26 @@ func (s *Server) handleCreateCustomOrder(w http.ResponseWriter, r *http.Request)
 // **ثمّ يُوثَّق.** (قرارُ المالك.)
 func (s *Server) handleAgreeCustom(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[struct {
-		Goods int64 `json:"goods_amount"`
-		Fee   int64 `json:"fee"`
+		// Goods **رقمٌ عشريٌّ للدولار** (قرارُ المالك ٢٠٢٦-١١-٠٩) — وصحيحٌ لليرة كما كان.
+		Goods float64 `json:"goods_amount"`
+		Fee   int64   `json:"fee"`
 		// Step **خطوةُ التوثيق** (٢٠٢٦-١٠-٠٣): `fee` ثمّ `goods` — وفارغٌ الاثنان معاً.
 		Step string `json:"step"`
+		// GoodsCurrency **عملةُ ثمن البضاعة** — `SYP` أو `USD`، **وغيابُه ليرةٌ** (التطبيقُ القديم).
+		GoodsCurrency string `json:"goods_currency"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
+	goods, usd, ok := goodsUnits(req.Goods, req.GoodsCurrency, req.Step == orders.AgreeStepFee)
+	if !ok {
+		s.respondErr(w, errValidation)
+		return
+	}
 	orderID := chi.URLParam(r, "id")
-	if err := s.orders.AgreeCustomStep(r.Context(), orderID, userIDFrom(r),
-		req.Step, req.Goods, req.Fee); err != nil {
+	if err := s.orders.AgreeCustomStepUSD(r.Context(), orderID, userIDFrom(r),
+		req.Step, goods, req.Fee, usd); err != nil {
 		s.respondErr(w, err)
 		return
 	}
@@ -209,15 +217,22 @@ func (s *Server) handleAgreeCustom(w http.ResponseWriter, r *http.Request) {
 // أو يرفض (قرار المالك ٢٠٢٦-١١-٠٦، `orders/driver_price_request.go`). **والسبب إلزامي.**
 func (s *Server) handleDriverPriceRequest(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[struct {
-		Goods  int64  `json:"goods_amount"`
-		Reason string `json:"reason"`
+		Goods  float64 `json:"goods_amount"`
+		Reason string  `json:"reason"`
+		// GoodsCurrency **عملةُ الثمن** (٢٠٢٦-١١-٠٩) — عملةُ الثمن المؤكَّد نفسُها، وغيابُه ليرة.
+		GoodsCurrency string `json:"goods_currency"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	o, err := s.orders.RequestDriverPrice(r.Context(), chi.URLParam(r, "id"), userIDFrom(r),
-		req.Goods, req.Reason)
+	units, ok := orders.AmountUnits(req.Goods, req.GoodsCurrency)
+	if !ok {
+		s.respondErr(w, errValidation)
+		return
+	}
+	o, err := s.orders.RequestDriverPriceCurrency(r.Context(), chi.URLParam(r, "id"), userIDFrom(r),
+		units, req.GoodsCurrency, req.Reason)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -288,21 +303,25 @@ func (s *Server) handleRejectQuote(w http.ResponseWriter, r *http.Request) {
 // **والتوثيقُ في المحرّك** (`audit_log` داخلَ المعاملة) — لا في المعالِج.
 func (s *Server) handleAdminOverrideCustomQuote(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[struct {
-		Goods  int64  `json:"goods_amount"`
-		Fee    int64  `json:"fee"`
-		Reason string `json:"reason"`
+		// Goods **رقمٌ عشريٌّ للدولار** (٢٠٢٦-١١-٠٩).
+		Goods  float64 `json:"goods_amount"`
+		Fee    int64   `json:"fee"`
+		Reason string  `json:"reason"`
+		// GoodsCurrency **عملةُ الثمن** — `SYP` أو `USD`، وغيابُه ليرة.
+		GoodsCurrency string `json:"goods_currency"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
 		return
 	}
-	if req.Goods < 0 || req.Fee < 0 || len(req.Reason) == 0 {
+	goods, usd, ok := goodsUnits(req.Goods, req.GoodsCurrency, false)
+	if !ok || req.Fee < 0 || len(req.Reason) == 0 {
 		s.respondErr(w, errValidation)
 		return
 	}
 	orderID := chi.URLParam(r, "id")
-	o, err := s.orders.AdminOverrideCustomQuote(r.Context(), orderID, userIDFrom(r),
-		req.Goods, req.Fee, req.Reason)
+	o, err := s.orders.AdminOverrideCustomQuoteUSD(r.Context(), orderID, userIDFrom(r),
+		goods, req.Fee, usd, req.Reason)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -313,4 +332,24 @@ func (s *Server) handleAdminOverrideCustomQuote(w http.ResponseWriter, r *http.R
 		return
 	}
 	httpx.JSON(w, http.StatusOK, view)
+}
+
+// goodsUnits **ثمنُ البضاعة كما يُحفظ بعملته** (قرارُ المالك ٢٠٢٦-١١-٠٩) — الليرةُ صحيحةٌ في `goods`،
+// **والدولارُ بالسنتات في `usd`** و`goods` صفر. **وغيابُ العملة ليرةٌ** (التطبيقُ القديم).
+// `feeStep`: خطوةُ الأجرة لا ثمنَ فيها — يُهمَل ما أُرسل. **ودولارٌ صفرٌ أو سالبٌ يُردّ.**
+func goodsUnits(v float64, currency string, feeStep bool) (int64, *int64, bool) {
+	if feeStep {
+		return 0, nil, true
+	}
+	units, ok := orders.AmountUnits(v, currency)
+	if !ok || units < 0 {
+		return 0, nil, false
+	}
+	if currency == orders.CurrencyUSD {
+		if units <= 0 {
+			return 0, nil, false
+		}
+		return 0, &units, true
+	}
+	return units, nil, true
 }

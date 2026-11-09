@@ -531,6 +531,17 @@ func (s *Service) CreateWhatsAppOrderIn(ctx context.Context, tx dbtx.Querier,
 		in.GoodsAmount, in.Currency, hasPoint).Scan(&out.ID, &out.Number); err != nil {
 		return nil, err
 	}
+	// **وثمنٌ بالدولار كتبه الموظّف يُلقط سعرُه الآن** (قرارُ المالك ٢٠٢٦-١١-٠٩) — كما يُلقط حين يكتبه
+	// السائق: عمولتُه عند التسليم بسعر يوم كتابته.
+	if in.GoodsAmount != nil && in.Currency == CurrencyUSD {
+		if r, err := s.goodsRateFor(ctx, tx, out.ID); err != nil {
+			return nil, err
+		} else if r > 0 {
+			if _, err := tx.Exec(ctx, `UPDATE orders SET goods_fx_rate = $2 WHERE id = $1`, out.ID, r); err != nil {
+				return nil, err
+			}
+		}
+	}
 
 	// **ولحظةُ الميلاد تُقيَّد** — والفاعلُ الموظّفُ الذي كتبه، **والحالُ الأولى الطابور.**
 	if _, err := tx.Exec(ctx, `

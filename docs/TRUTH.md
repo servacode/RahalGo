@@ -1346,6 +1346,7 @@ kosom` |
 | `orders.notify_merchant` | السائقون | bool | `true` |
 | `app.min_version.merchant` | المتاجر | int | `0` |
 | `merchants.commission_percent` | المتاجر | decimal | `10` |
+| `merchants.usd_reference_rate` | المتاجر | decimal | `0` |
 | `merchants.cancel_ban_mode` | المتاجر | choice | `manual` |
 | `merchants.cancel_ban_count` | المتاجر | int | `5` |
 | `merchants.cancel_ban_days` | المتاجر | int | `30` |

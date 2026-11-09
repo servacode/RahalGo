@@ -525,6 +525,8 @@ type driverOrder struct {
 	// CustomGoodsAmount وCustomFee ما وُثّق — **و`nil` تعني «لم يُوثَّق بعد».**
 	CustomGoodsAmount *int64 `json:"custom_goods_amount"`
 	CustomFee         *int64 `json:"custom_fee"`
+	// CustomGoodsUSD **ثمنُ البضاعة بالدولار بالسنتات** (قرارُ المالك ٢٠٢٦-١١-٠٩) — وnil: ليرة.
+	CustomGoodsUSD *int64 `json:"custom_goods_usd"`
 	// لقطةُ سياسة الأجرة وعرضُ السعر (Batch 2c) — ليعرف السائقُ أيحدّد
 	// الأجرةَ أم تُفرَض عليه، وأأكّد الزبونُ العرضَ الحاليّ فيبدأ الشراء.
 	CustomFeeSource          string `json:"custom_fee_source"`
@@ -686,7 +688,7 @@ const driverOrderSelect = `
 	       -- **والطلبُ الخاصّ يُعرَف من نوعه** — لا متجرَ له ولا أصناف،
 	       -- **وبطاقتُه تقول «اشترِ ثمّ سلّم» لا «استلم ثمّ سلّم».**
 	       o.kind, COALESCE(o.custom_request, ''),
-	       o.custom_goods_amount, o.custom_fee,
+	       o.custom_goods_amount, o.custom_fee, o.custom_goods_usd,
 	       -- **لقطةُ سياسة الأجرة وعرضُ السعر** (Batch 2c) — سلطةُ الأجرة وحالُ التأكيد.
 	       o.custom_fee_source, o.custom_fee_snapshot, o.custom_driver_may_change_fee,
 	       o.custom_mode, o.custom_goods_pending,
@@ -796,7 +798,7 @@ func (s *Server) loadDriverOrders(r *http.Request, sql string, args ...any) ([]d
 			&o.PickupLat, &o.PickupLng, &o.PickupNote,
 			&o.AcceptsReturns, &o.FailReason, &o.ToPickupM, &o.LegM,
 			&o.OfferExpiresAt, &o.NavLat, &o.NavLng,
-			&o.Kind, &o.CustomRequest, &o.CustomGoodsAmount, &o.CustomFee,
+			&o.Kind, &o.CustomRequest, &o.CustomGoodsAmount, &o.CustomFee, &o.CustomGoodsUSD,
 			&o.CustomFeeSource, &o.CustomFeeSnapshot, &o.CustomDriverMayChangeFee,
 			&o.CustomMode, &o.CustomGoodsPending,
 			&o.QuoteVersion, &o.QuoteConfirmedVersion, &o.QuoteRejectedAt,
@@ -867,7 +869,10 @@ func (s *Server) attachPayMerchants(ctx context.Context, list []driverOrder) err
 		if p, ok := got[list[i].ID]; ok {
 			list[i].PayMerchants = p
 			for _, x := range p {
-				list[i].PayMerchant += x.Amount
+				// **ودفعٌ بالدولار لا يُجمع مع الليرة** (٢٠٢٦-١١-٠٩) — سطرُه بعملته.
+				if x.Currency == "" {
+					list[i].PayMerchant += x.Amount
+				}
 			}
 		}
 	}

@@ -165,12 +165,15 @@ func (s *Service) LinkPartner(ctx context.Context, actorID, orderID, merchantID 
 //
 // **ومصدرٌ واحدٌ للتسوية وللسائق** (`payMerchantsFor`) — **فلا يفترق رقمُ الشاشة عن رقم
 // الدفتر.** والأمانةُ وغيرُ الخاصّ صفران.
+//
+// **وثمنٌ بالدولار يُحسب بمعادله الملقوط** (`goods_usd_syp` — قرارُ المالك ٢٠٢٦-١١-٠٩): ما دفعه
+// للمتجر والعمولةُ ليرةٌ بالمعادل، **والسائقُ دفعهما دولاراً من نقد الزبون** (`settleCustomStore`).
 func customStoreCut(ctx context.Context, q dbtx.Querier, orderID string) (storePaid, commission int64, err error) {
 	var goods int64
 	var pct *pricing.Percent2
 	if err := q.QueryRow(ctx, `
 		SELECT CASE WHEN kind = 'custom' AND custom_mode = 'purchase'
-		            THEN COALESCE(custom_goods_amount, 0) ELSE 0 END,
+		            THEN COALESCE(custom_goods_amount, 0) + goods_usd_syp ELSE 0 END,
 		       CASE WHEN partner_merchant_id IS NOT NULL THEN partner_commission_percent END
 		FROM orders WHERE id = $1`, orderID).Scan(&goods, &pct); err != nil {
 		return 0, 0, err

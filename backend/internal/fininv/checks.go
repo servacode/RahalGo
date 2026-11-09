@@ -779,8 +779,9 @@ var All = []Check{
 			FROM orders o
 			JOIN driver_cash_entries e
 			  ON e.ref = o.id::text AND e.kind = 'order_collection'
-			GROUP BY o.id, o.number, o.cash_due, o.custom_store_paid, e.driver_id
-			HAVING sum(e.amount) <> GREATEST(o.cash_due - COALESCE((
+			GROUP BY o.id, o.number, o.cash_due, o.custom_store_paid, o.goods_usd_syp, e.driver_id
+			-- **وثمنُ مشترياتٍ بالدولار نقدٌ مرّ بيده بمعادله** (قرارُ المالك ٢٠٢٦-١١-٠٩) — يُضاف للمستحقّ.
+			HAVING sum(e.amount) <> GREATEST(o.cash_due + o.goods_usd_syp - COALESCE((
 			         SELECT -sum(t.amount) FROM merchant_settlements ms
 			         JOIN wallet_transactions t ON t.id = ms.paid_tx_id
 			         WHERE ms.order_id = o.id AND ms.paid_via = 'driver'

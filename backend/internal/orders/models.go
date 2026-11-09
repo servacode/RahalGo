@@ -235,6 +235,14 @@ type Order struct {
 	CustomAgreedAt    *time.Time `json:"custom_agreed_at"`
 	CustomGoodsAmount *int64     `json:"custom_goods_amount"`
 	CustomFee         *int64     `json:"custom_fee"`
+	// CustomGoodsUSD **ثمنُ البضاعة بالدولار — بالسنتات** (قرارُ المالك ٢٠٢٦-١١-٠٩): ١٢٥٠ = ١٢٫٥٠$.
+	// **وغيرُ nil يعني أنّ البضاعةَ بالدولار**: `CustomGoodsAmount` صفرٌ، و`Total` الأجرةُ وحدَها —
+	// **فيُعرض «البضاعة 12.5$» و«التوصيل X ل.س» منفصلَين ولا يُجمعان.** والزبونُ يراه.
+	CustomGoodsUSD *int64 `json:"custom_goods_usd"`
+	// GoodsFXRate وGoodsUSDSYP **السعرُ الملقوطُ ومعادلُ الدولار بالليرة** — للمكتب وحدَه:
+	// منه العمولةُ والسقوفُ والخسارة. وnil/صفرٌ قبل التأكيد أو بلا سعر.
+	GoodsFXRate *float64 `json:"goods_fx_rate"`
+	GoodsUSDSYP int64    `json:"goods_usd_syp"`
 	// QuoteVersion **نسخةُ العرض** — تتزايد مع كلّ تغييرٍ حقيقيّ في البضاعة
 	// أو الأجرة. **وتأكيدُ الزبون مربوطٌ بنسخةٍ بعينها** (`QuoteConfirmedVersion`):
 	// **فتغييرٌ بعد التأكيد يُبطله ما لم يُطابق النسختين.** (Batch 2a)

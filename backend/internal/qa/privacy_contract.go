@@ -275,6 +275,11 @@ var OrderPrivacy = map[string]FieldRule{
 	"custom_agreed_at":     {Ref: "وقتُ الاتّفاق", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"custom_goods_amount":  {Ref: "قيمةُ البضاعة", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	"custom_fee":           {Ref: "أجرُ الخدمة", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	// **ثمنُ البضاعة بالدولار** (قرارُ المالك ٢٠٢٦-١١-٠٩) — كقيمة البضاعة: يراه الزبونُ بعملته كما كُتب.
+	"custom_goods_usd": {Ref: "قيمةُ البضاعة بالدولار (بالسنتات)", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	// **وسعرُ الدولار الملقوطُ ومعادلُه بالليرة** — حسابٌ داخليٌّ للمكتب وحدَه.
+	"goods_fx_rate": {Ref: "سعرُ الدولار الملقوط على الطلب (٢٠٢٦-١١-٠٩)", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
+	"goods_usd_syp": {Ref: "معادلُ ثمن الدولار بالليرة — للعمولة والسقوف والخسارة", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
 
 	// ── عرضُ السعر وتأكيدُه (Batch 2a) — كأعمدةِ الخاصّ نفسِها ────────
 	"quote_version":           {Ref: "نسخةُ العرض", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},

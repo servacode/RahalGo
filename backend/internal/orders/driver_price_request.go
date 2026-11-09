@@ -47,6 +47,10 @@ var (
 	// ErrPriceRequestOff **الإعداد مقفول** (النسبة صفر) — المكتب بيعدّل.
 	ErrPriceRequestOff = httpx.NewError(http.StatusConflict,
 		"price_request_off", "errors.price_request_off")
+	// ErrPriceRequestCurrency **عملة الطلب غير عملة الثمن المؤكَّد** (٢٠٢٦-١١-٠٩) — الكابتن بيعدّل
+	// المبلغ بنفس العملة، وتبديل العملة بعد الاستلام للمكتب.
+	ErrPriceRequestCurrency = httpx.NewError(http.StatusConflict,
+		"price_request_currency", "errors.price_request_currency")
 	// ErrPriceRequestReason **السبب إلزامي** — الزبون لازم يعرف ليش.
 	ErrPriceRequestReason = httpx.NewError(http.StatusBadRequest,
 		"price_request_reason", "errors.price_request_reason")
@@ -90,6 +94,19 @@ func (s *Service) driverPriceEditTimeout(ctx context.Context) int64 {
 // RequestDriverPrice **الكابتن يطلب ثمن بضاعة جديد** — بعد الاستلام، والزبون يوافق.
 func (s *Service) RequestDriverPrice(ctx context.Context, orderID, driverID string,
 	goods int64, reason string) (*Order, error) {
+	return s.RequestDriverPriceCurrency(ctx, orderID, driverID, goods, "", reason)
+}
+
+// RequestDriverPriceCurrency **وبعملة الثمن** (٢٠٢٦-١١-٠٩) — `goods` بالسنتات للدولار، و«» ليرة
+// (التطبيق القديم). **ولازم تطابق عملة الثمن المؤكَّد** (`ErrPriceRequestCurrency`).
+func (s *Service) RequestDriverPriceCurrency(ctx context.Context, orderID, driverID string,
+	goods int64, currency, reason string) (*Order, error) {
+	if currency == "" {
+		currency = CurrencySYP
+	}
+	if currency != CurrencySYP && currency != CurrencyUSD {
+		return nil, httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
+	}
 	reason = strings.TrimSpace(reason)
 	if reason == "" {
 		return nil, ErrPriceRequestReason
@@ -100,8 +117,11 @@ func (s *Service) RequestDriverPrice(ctx context.Context, orderID, driverID stri
 	if goods < 0 {
 		return nil, httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
 	}
-	if goods > CustomGoodsMax {
+	if currency == CurrencySYP && goods > CustomGoodsMax {
 		return nil, ErrCustomGoodsTooHigh()
+	}
+	if currency == CurrencyUSD && goods > CustomGoodsUSDMax {
+		return nil, ErrCustomGoodsUSDTooHigh()
 	}
 
 	tx, err := s.db.Begin(ctx)
@@ -147,7 +167,20 @@ func (s *Service) RequestDriverPrice(ctx context.Context, orderID, driverID stri
 	if open {
 		return nil, ErrPriceRequestPending
 	}
-	if goods == row.goods {
+	// **والمبلغ بعملة الثمن المؤكَّد** — والمقارنة والسقف بنفس العملة.
+	if (row.goodsUSD != nil) != (currency == CurrencyUSD) {
+		return nil, ErrPriceRequestCurrency
+	}
+	curGoods := row.goods
+	var newUSD *int64
+	if row.goodsUSD != nil {
+		curGoods = *row.goodsUSD
+		if goods <= 0 {
+			return nil, httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
+		}
+		newUSD = &goods
+	}
+	if goods == curGoods {
 		return nil, ErrPriceRequestSame
 	}
 	// **السقف بالنسبة من الثمن المؤكَّد** — والصفر بيقفل الباب.
@@ -155,16 +188,16 @@ func (s *Service) RequestDriverPrice(ctx context.Context, orderID, driverID stri
 	if pct <= 0 {
 		return nil, ErrPriceRequestOff
 	}
-	diff := goods - row.goods
+	diff := goods - curGoods
 	if diff < 0 {
 		diff = -diff
 	}
-	if diff*100 > pct*row.goods {
+	if diff*100 > pct*curGoods {
 		return nil, ErrPriceRequestTooFar(pct)
 	}
 
 	oldTotal := row.goods + row.fee - row.waived
-	if _, err := s.applyCustomQuoteTx(ctx, tx, row, goods, row.fee, quoteMutator{
+	if _, err := s.applyCustomQuoteTx(ctx, tx, row, goods, row.fee, newUSD, quoteMutator{
 		actorID: driverID, role: "driver", source: "driver_price_request", reason: reason,
 		needApproval: true,
 	}); err != nil {
@@ -179,7 +212,7 @@ func (s *Service) RequestDriverPrice(ctx context.Context, orderID, driverID stri
 		INSERT INTO order_price_requests (order_id, driver_id, old_goods, new_goods,
 		                                  old_total, new_total, quote_version, reason)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-		orderID, driverID, row.goods, goods, oldTotal, newTotal, version, reason); err != nil {
+		orderID, driverID, curGoods, goods, oldTotal, newTotal, version, reason); err != nil {
 		return nil, err
 	}
 	if err := tx.Commit(ctx); err != nil {
@@ -192,15 +225,26 @@ func (s *Service) RequestDriverPrice(ctx context.Context, orderID, driverID stri
 	}
 	s.publishOrder(o)
 	s.publishWalletsOf(ctx, orderID)
-	s.quoteLine(ctx, orderID, driverID, "driver", fmt.Sprintf(
+	line := fmt.Sprintf(
 		"طلبتُ تعديل ثمن البضاعة من %s إلى %s ل.س — السبب: %s. المجموع الجديد %s ل.س، وافق أو ارفض.",
-		groupDigits(row.goods), groupDigits(goods), reason, groupDigits(newTotal)))
+		groupDigits(row.goods), groupDigits(goods), reason, groupDigits(newTotal))
+	if newUSD != nil {
+		line = fmt.Sprintf(
+			"طلبتُ تعديل ثمن البضاعة من %s إلى %s — السبب: %s. أجرة التوصيل %s ل.س، وافق أو ارفض.",
+			AmountText(curGoods, CurrencyUSD), AmountText(goods, CurrencyUSD), reason, groupDigits(newTotal))
+	}
+	s.quoteLine(ctx, orderID, driverID, "driver", line)
+	body := fmt.Sprintf("#%d — كان %s صار %s ل.س — السبب: %s",
+		o.Number, groupDigits(oldTotal), groupDigits(newTotal), reason)
+	if newUSD != nil {
+		body = fmt.Sprintf("#%d — ثمن البضاعة كان %s صار %s — السبب: %s",
+			o.Number, AmountText(curGoods, CurrencyUSD), AmountText(goods, CurrencyUSD), reason)
+	}
 	if s.notify != nil {
 		s.notify.Notify(ctx, notifications.Input{
 			UserID: o.CustomerID, Kind: notifications.KindOrder,
-			Title: t.priceRequestCustomer,
-			Body: fmt.Sprintf("#%d — كان %s صار %s ل.س — السبب: %s",
-				o.Number, groupDigits(oldTotal), groupDigits(newTotal), reason),
+			Title:  t.priceRequestCustomer,
+			Body:   body,
 			Entity: "order", EntityID: o.ID, Href: "/portal/orders",
 			Apps: []string{notifications.AppCustomer},
 		})
@@ -253,6 +297,24 @@ func revertPriceRequestTx(ctx context.Context, q wallet.Querier, row customQuote
 	p *pendingPriceRequest) (bool, error) {
 	if row.confirmedTotal == nil || *row.confirmedTotal != p.oldTotal {
 		return false, nil
+	}
+	// **وثمنٌ بالدولار يرجع بعملته** (٢٠٢٦-١١-٠٩) — المجموع الأجرة وحدها فما بيتغيّر.
+	if row.goodsUSD != nil {
+		tag, err := q.Exec(ctx, `
+			UPDATE orders SET custom_goods_usd = $2,
+			       quote_version = quote_version + 1, quote_confirmed_version = quote_version + 1,
+			       updated_at = now()
+			 WHERE id = $1 AND custom_goods_usd IS NOT NULL AND total = $3`,
+			row.id, p.oldGoods, p.oldTotal)
+		if err != nil {
+			return false, err
+		}
+		if tag.RowsAffected() != 1 {
+			return false, nil
+		}
+		_, err = q.Exec(ctx, `
+			UPDATE order_price_requests SET status = 'rejected', decided_at = now() WHERE id = $1`, p.id)
+		return err == nil, err
 	}
 	tag, err := q.Exec(ctx, `
 		UPDATE orders SET custom_goods_amount = $2, subtotal = $2,

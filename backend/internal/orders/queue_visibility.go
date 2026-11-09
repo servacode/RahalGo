@@ -70,7 +70,7 @@ func queueEligibleSQL(drv, cash, maxActive string) string {
 		  AND EXISTS (SELECT 1 FROM users du WHERE du.id = ` + drv + ` AND du.on_shift AND du.status = 'active')
 		  AND COALESCE((SELECT b.held FROM driver_cash_boxes b WHERE b.driver_id = ` + drv + `), 0)
 		      -- **والمُسنَدُ الذي لم يُسلَّم يُحسب** — صيغةُ cashbox.Exposure.
-		      + COALESCE((SELECT sum(oi.cash_due) FROM orders oi
+		      + COALESCE((SELECT sum(oi.cash_due + oi.goods_usd_syp) FROM orders oi
 		                  WHERE oi.driver_id = ` + drv + ` AND oi.closed_at IS NULL), 0)
 		      + o.cash_due <= COALESCE((SELECT cu.cash_limit_override FROM users cu
 		                                WHERE cu.id = ` + drv + `), ` + cash + `)

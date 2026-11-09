@@ -4409,7 +4409,7 @@
       "request": [
         {
           "name": "goods_amount",
-          "type": "int64"
+          "type": "float64"
         },
         {
           "name": "fee",
@@ -4417,6 +4417,10 @@
         },
         {
           "name": "reason",
+          "type": "string"
+        },
+        {
+          "name": "goods_currency",
           "type": "string"
         }
       ],
@@ -8405,7 +8409,7 @@
       "request": [
         {
           "name": "goods_amount",
-          "type": "int64"
+          "type": "float64"
         },
         {
           "name": "fee",
@@ -8413,6 +8417,10 @@
         },
         {
           "name": "step",
+          "type": "string"
+        },
+        {
+          "name": "goods_currency",
           "type": "string"
         }
       ],
@@ -8532,6 +8540,10 @@
         {
           "name": "amount",
           "type": "?float64"
+        },
+        {
+          "name": "currency",
+          "type": "string"
         }
       ],
       "response": [
@@ -8591,10 +8603,14 @@
       "request": [
         {
           "name": "goods_amount",
-          "type": "int64"
+          "type": "float64"
         },
         {
           "name": "reason",
+          "type": "string"
+        },
+        {
+          "name": "goods_currency",
           "type": "string"
         }
       ],

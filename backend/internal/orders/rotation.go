@@ -465,7 +465,7 @@ func (s *Service) legacyRotationCandidate(ctx context.Context, orderID string, s
 		                WHERE b.driver_id = u.id), 0)
 		      -- **والمُسنَدُ الذي لم يُسلَّم يُحسب** — صيغةُ cashbox.Exposure (فحصُ المتجر
 		      --  ٢٠٢٦-١٠-٠١: سائقٌ أُسنِد إليه ثلاثةٌ في ثلاث ثوانٍ فبلغ ٥٦١٬٤٠٠ والسقفُ ٥٠٠٬٠٠٠).
-		      + COALESCE((SELECT sum(oi.cash_due) FROM orders oi
+		      + COALESCE((SELECT sum(oi.cash_due + oi.goods_usd_syp) FROM orders oi
 		                  WHERE oi.driver_id = u.id AND oi.closed_at IS NULL), 0)
 		      + COALESCE((SELECT o.cash_due FROM orders o WHERE o.id = $4), 0)
 		      -- **وسقفٌ خاصٌّ بالسائق يغلب العامّ إن ضُبط** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
@@ -514,7 +514,7 @@ const proximityEligibleWhere = `
 		                WHERE b.driver_id = u.id), 0)
 		      -- **والمُسنَدُ الذي لم يُسلَّم يُحسب** — صيغةُ cashbox.Exposure (فحصُ المتجر
 		      --  ٢٠٢٦-١٠-٠١: سائقٌ أُسنِد إليه ثلاثةٌ في ثلاث ثوانٍ فبلغ ٥٦١٬٤٠٠ والسقفُ ٥٠٠٬٠٠٠).
-		      + COALESCE((SELECT sum(oi.cash_due) FROM orders oi
+		      + COALESCE((SELECT sum(oi.cash_due + oi.goods_usd_syp) FROM orders oi
 		                  WHERE oi.driver_id = u.id AND oi.closed_at IS NULL), 0)
 		      + ord.cash_due <= COALESCE(u.cash_limit_override, $2)
 		  -- **والمتأخّرُ بتسليم نقده لا يُعرض عليه نقديّ إن أُشعل الإيقاف** (٢٠٢٦-١٠-٠٤).

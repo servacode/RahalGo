@@ -22,6 +22,7 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/obligations"
+	"github.com/servacode/rahalgo/backend/internal/pricing"
 )
 
 // StorePay **ما يدفعه السائقُ لمتجرٍ واحدٍ عند الاستلام.**
@@ -29,6 +30,9 @@ type StorePay struct {
 	MerchantID   string `json:"merchant_id"`
 	MerchantName string `json:"merchant_name"`
 	Amount       int64  `json:"amount"`
+	// Currency **«USD» حين يدفع للمتجر التابع بالدولار** (قرارُ المالك ٢٠٢٦-١١-٠٩) — و`Amount` حينها
+	// بالسنتات، **ولا يدخل مجموعَ `PayMerchant` بالليرة.** وفارغٌ: ليرة.
+	Currency string `json:"currency,omitempty"`
 }
 
 // PayMerchants **ما يدفعه السائقُ لكلّ متجرٍ في كلّ طلب** — والطلبُ بلا دفعٍ غائبٌ.
@@ -116,12 +120,15 @@ func (s *Service) payMerchantsFor(ctx context.Context, q dbtx.Querier, orderID s
 func (s *Service) payPartnerFor(ctx context.Context, q dbtx.Querier, orderID string) ([]StorePay, error) {
 	var p StorePay
 	var documented bool
+	var usd *int64
+	var pct *pricing.Percent2
 	err := q.QueryRow(ctx, `
 		SELECT o.partner_merchant_id::text, m.name,
-		       o.custom_goods_amount IS NOT NULL AND NOT o.custom_goods_pending
+		       o.custom_goods_amount IS NOT NULL AND NOT o.custom_goods_pending,
+		       o.custom_goods_usd, o.partner_commission_percent
 		FROM orders o JOIN merchants m ON m.id = o.partner_merchant_id
 		WHERE o.id = $1 AND o.custom_mode = 'purchase'`, orderID).
-		Scan(&p.MerchantID, &p.MerchantName, &documented)
+		Scan(&p.MerchantID, &p.MerchantName, &documented, &usd, &pct)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -130,6 +137,18 @@ func (s *Service) payPartnerFor(ctx context.Context, q dbtx.Querier, orderID str
 	}
 	if !documented {
 		return nil, nil
+	}
+	// **ثمنٌ بالدولار يُدفع للمتجر دولاراً** (٢٠٢٦-١١-٠٩) — الثمنُ ناقصَ عمولتِه بالسنتات، بالنسبة
+	// نفسِها؛ **والعمولةُ بالليرة في الدفتر من المعادل** (`customStoreCut`).
+	if usd != nil {
+		p.Amount, p.Currency = *usd, CurrencyUSD
+		if pct != nil {
+			p.Amount -= pricing.Amount{Mode: pricing.ModePercent2, Value: int64(*pct)}.Of(*usd)
+		}
+		if p.Amount <= 0 {
+			return nil, nil
+		}
+		return []StorePay{p}, nil
 	}
 	if p.Amount, _, err = customStoreCut(ctx, q, orderID); err != nil {
 		return nil, err
@@ -152,7 +171,9 @@ func (s *Service) fillPayMerchant(ctx context.Context, q dbtx.Querier, o *Order)
 	o.PayMerchants = list
 	o.PayMerchant = 0
 	for _, p := range list {
-		o.PayMerchant += p.Amount
+		if p.Currency == "" {
+			o.PayMerchant += p.Amount
+		}
 	}
 	return nil
 }

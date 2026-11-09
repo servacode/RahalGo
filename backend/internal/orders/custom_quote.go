@@ -61,6 +61,8 @@ type customQuoteRow struct {
 	feeSnapshot        *int64
 	driverMayChangeFee bool
 	pickedUpAt         *time.Time
+	// goodsUSD **ثمنُ البضاعة بالدولار بالسنتات** (٢٠٢٦-١١-٠٩) — ومعه `goods` صفر. وnil: ليرة.
+	goodsUSD *int64
 }
 
 // lockCustomRow يقرأ صفَّ الطلب **بقفلٍ** (`FOR UPDATE`) — فلا يتبدّل تحته.
@@ -73,13 +75,13 @@ func (s *Service) lockCustomRow(ctx context.Context, q wallet.Querier, orderID s
 		       custom_goods_amount, custom_fee, quote_version,
 		       quote_confirmed_at, quote_confirmed_total, quote_confirmed_version,
 		       custom_reserved_amount, custom_fee_source, custom_fee_snapshot,
-		       custom_driver_may_change_fee, picked_up_at, promo_delivery_waived
+		       custom_driver_may_change_fee, picked_up_at, promo_delivery_waived, custom_goods_usd
 		FROM orders WHERE id = $1 FOR UPDATE`, orderID).
 		Scan(&r.customerID, &r.driverID, &r.kind, &r.status, &r.paymentMethod,
 			&goods, &fee, &r.quoteVersion,
 			&r.confirmedAt, &r.confirmedTotal, &r.confirmedVersion,
 			&r.reserved, &r.feeSource, &r.feeSnapshot,
-			&r.driverMayChangeFee, &r.pickedUpAt, &r.waived)
+			&r.driverMayChangeFee, &r.pickedUpAt, &r.waived, &r.goodsUSD)
 	if err != nil {
 		return customQuoteRow{}, err
 	}
@@ -156,9 +158,16 @@ type quoteMutator struct {
 //
 // **والمنادي أمسك الصفَّ بقفلٍ** (`lockCustomRow`) ومرّر لقطتَه — فلا قراءةَ
 // ثانيةً هنا، ولا يتبدّل الصفُّ بين القراءة والكتابة.
+//
+// **و`newUSD` ثمنُ البضاعة بالدولار** (٢٠٢٦-١١-٠٩) — ومعه `newGoods` صفرٌ إلزاماً. **وتبديلُ العملة
+// أو مبلغِ الدولار تغييرٌ يُعيد التأكيد** — رآه الزبونُ بغير ما يدفعه، ولو نقص المجموع.
 func (s *Service) applyCustomQuoteTx(ctx context.Context, q wallet.Querier, row customQuoteRow,
-	newGoods, newFee int64, m quoteMutator) (bool, error) {
-	if row.hasGoods && row.goods == newGoods && row.fee == newFee {
+	newGoods, newFee int64, newUSD *int64, m quoteMutator) (bool, error) {
+	if newUSD != nil {
+		newGoods = 0
+	}
+	usdChanged := !sameUSD(row.goodsUSD, newUSD)
+	if row.hasGoods && row.goods == newGoods && row.fee == newFee && !usdChanged {
 		return false, nil
 	}
 	// **والتوصيلُ المجانيّ بعرضه** (قرارُ المالك ٢٠٢٦-١٠-٢٣) — يُحسب قبل المجموع: الزبونُ
@@ -188,6 +197,8 @@ func (s *Service) applyCustomQuoteTx(ctx context.Context, q wallet.Querier, row 
 			confirmedTotal = *row.confirmedTotal
 		}
 		switch {
+		case usdChanged:
+			invalidate = true // ثمنُ الدولار أو العملةُ تبدّلت → يُعاد التأكيد
 		case newTotal > confirmedTotal:
 			invalidate = true // زيادة → يُعاد التأكيد
 		case newTotal < confirmedTotal:
@@ -264,10 +275,10 @@ func (s *Service) applyCustomQuoteTx(ctx context.Context, q wallet.Querier, row 
 	        snap_platform_delivery_percent = $6, snap_platform_delivery_fixed = $7,
 	        total = $2::bigint + $3::bigint - $8::bigint,
 	        quote_version = $4, custom_agreed_at = now(), updated_at = now(),
-	        quote_rejected_at = NULL`
+	        quote_rejected_at = NULL, custom_goods_usd = $9`
 	// **والثابتان يُضافان قبل الشرطيّ** — **ورقمُ وسيطٍ يتزحزح بحسب فرعٍ
 	// يُنفَّذ أو لا يُنفَّذ يكتب قيمةً في عمودٍ آخر بصمت.**
-	args := []any{row.id, newGoods, newFee, newVersion, driverFee, pct, fixed, waive}
+	args := []any{row.id, newGoods, newFee, newVersion, driverFee, pct, fixed, waive, newUSD}
 	switch {
 	case invalidate:
 		set += `, quote_confirmed_at = NULL, quote_confirmed_total = NULL, quote_confirmed_version = NULL`
@@ -276,9 +287,14 @@ func (s *Service) applyCustomQuoteTx(ctx context.Context, q wallet.Querier, row 
 	case row.confirmedAt != nil: // نقصٌ مع تأكيدٍ باقٍ: يُحدَّث المبلغُ والنسخة
 		// **والمستحقُّ النقديُّ يتبع المبلغ** — كان يبقى على المؤكَّد القديم فيقبض
 		// السائقُ ما لم يعُد مستحقّاً. (والمحفظةُ صفرٌ فيها، فلا يُمَسّ.)
-		set += `, quote_confirmed_total = $9, quote_confirmed_version = $4,
-		        cash_due = CASE WHEN payment_method = 'cash' THEN $9 ELSE cash_due END`
+		set += `, quote_confirmed_total = $10, quote_confirmed_version = $4,
+		        cash_due = CASE WHEN payment_method = 'cash' THEN $10 ELSE cash_due END`
 		args = append(args, newTotal)
+	}
+	// **ولقطةُ السعر تسقط مع التأكيد** — يُلقط سعرُ التأكيد الجديد. **وثمنٌ صار ليرةً لا تبقى له
+	// لقطةُ دولار** (القيدُ يمنعها في الجملة نفسِها).
+	if invalidate || newUSD == nil {
+		set += `, goods_fx_rate = NULL, goods_usd_syp = 0`
 	}
 	if _, err := q.Exec(ctx, `UPDATE orders SET `+set+` WHERE id = $1`, args...); err != nil {
 		return false, err
@@ -291,10 +307,19 @@ func (s *Service) applyCustomQuoteTx(ctx context.Context, q wallet.Querier, row 
 		"quote_version": newVersion, "actor_role": m.role, "source": m.source,
 		"reason": m.reason, "invalidated_confirmation": invalidate,
 		"reconfirm_pending": reconfirm,
+		"old_goods_usd":     row.goodsUSD, "new_goods_usd": newUSD,
 	}); err != nil {
 		return false, err
 	}
 	return true, nil
+}
+
+// sameUSD **أهما ثمنُ الدولار نفسُه** — nil وnil ليرتان.
+func sameUSD(a, b *int64) bool {
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return *a == *b
 }
 
 // ConfirmQuote **تأكيدُ الزبون للعرض واختيارُ طريقة الدفع** — Batch 2a.
@@ -365,6 +390,20 @@ func (s *Service) confirmQuote(ctx context.Context, orderID, customerID, payment
 		return nil, ErrCustomLocked
 	}
 
+	// ══════════════════════════════════════════════════════════════════
+	// **ثمنٌ بالدولار: يُلقط سعرُه الآن ويُحسب نقداً بذمّة الزبون** (قرارُ المالك ٢٠٢٦-١١-٠٩)
+	// ══════════════════════════════════════════════════════════════════
+	//
+	// **المحفظةُ ليرةٌ وحدَها** — فالدولارُ يدفعه نقداً للسائق أيّاً كانت طريقةُ الأجرة: **فقفلُ النقد
+	// وسقفُه يُسألان عنه بمعادله** باللقطة. **ويُلقط السعرُ مع كلّ تأكيد** — تبديلُه بعدها لا يمسّ الطلب.
+	usdEquiv := int64(0)
+	if row.goodsUSD != nil {
+		if usdEquiv, err = s.on(tx).snapshotCustomGoodsFXTx(ctx, tx, orderID, true); err != nil {
+			return nil, err
+		}
+	}
+	cashy := paymentMethod == "cash" || row.goodsUSD != nil
+
 	// **وأيُّ حجزٍ سابقٍ يُفكّ قبل التأكيد الجديد** — تبديلُ الطريقة أو إعادةُ
 	// التأكيد لا يُبقي حجزاً قديماً معلَّقاً.
 	if row.reserved > 0 {
@@ -376,7 +415,7 @@ func (s *Service) confirmQuote(ctx context.Context, orderID, customerID, payment
 	// **وإعادةُ التأكيد نقداً على طلبٍ نقديٍّ في الطريق لا تُسأل عن قفل النقد وسقفه**:
 	// **الطلبُ قائمٌ نقداً والبضاعةُ اشتُريت** — ومن رُدّ هنا بقيت بضاعتُه بيد السائق
 	// لا تُسلَّم ولا تُردّ. والسقفان حارسا طلبٍ جديدٍ لا تعديلِ طلبٍ في الطريق.
-	if paymentMethod == "cash" && !(reconfirm && row.paymentMethod == "cash") {
+	if cashy && !(reconfirm && (row.paymentMethod == "cash" || row.goodsUSD != nil)) {
 		// **ومن قُفل عليه النقدُ لا يؤكّد نقداً** — الحدُّ نفسُه لبابٍ آخر.
 		blocked, err := s.on(tx).cashBlocked(ctx, tx, customerID)
 		if err != nil {
@@ -397,10 +436,15 @@ func (s *Service) confirmQuote(ctx context.Context, orderID, customerID, payment
 			"customer-admit:"+customerID); err != nil {
 			return nil, err
 		}
-		if err := s.on(tx).checkCODLimit(ctx, tx, customerID, orderID, current); err != nil {
+		incoming := usdEquiv
+		if paymentMethod == "cash" {
+			incoming += current
+		}
+		if err := s.on(tx).checkCODLimit(ctx, tx, customerID, orderID, incoming); err != nil {
 			return nil, err
 		}
-	} else if paymentMethod == "wallet" {
+	}
+	if paymentMethod == "wallet" {
 		avail, err := s.wallet.AvailableTx(ctx, tx, customerID)
 		if err != nil {
 			return nil, err
@@ -459,7 +503,7 @@ func (s *Service) confirmQuote(ctx context.Context, orderID, customerID, payment
 	if err := s.auditQuoteTx(ctx, tx, &customerID, "order.custom_quote_confirmed", orderID, map[string]any{
 		"total": current, "quote_version": row.quoteVersion,
 		"payment_method": paymentMethod, "actor_role": "customer", "source": "customer_confirm",
-		"after_pickup": reconfirm,
+		"after_pickup": reconfirm, "goods_usd": row.goodsUSD, "goods_usd_syp": usdEquiv,
 	}); err != nil {
 		return nil, err
 	}
@@ -481,7 +525,9 @@ func (s *Service) confirmQuote(ctx context.Context, orderID, customerID, payment
 			s.notifyCustomConfirmed(ctx, orderID, *o.DriverID, o.Total, reconfirm)
 			// **وتأكيدُ الزبون يُقال في الحديث أيضاً** (٢٠٢٦-١٠-٠٣) — بمجموعه.
 			line := fmt.Sprintf("وافقتُ على المجموع: %s ل.س.", groupDigits(o.Total))
-			if o.CustomGoodsPending || o.CustomMode == CustomModeAmanah {
+			if o.CustomGoodsUSD != nil && !o.CustomGoodsPending {
+				line = fmt.Sprintf("وافقتُ: %s.", customAmountText(o.Total, o.CustomGoodsUSD))
+			} else if o.CustomGoodsPending || o.CustomMode == CustomModeAmanah {
 				line = fmt.Sprintf("وافقتُ على أجرة التوصيل: %s ل.س.", groupDigits(o.Total))
 			}
 			s.quoteLine(ctx, orderID, customerID, "customer", line)
@@ -506,9 +552,18 @@ func (s *Service) confirmQuote(ctx context.Context, orderID, customerID, payment
 //
 // **والسائقُ لا يعدّل بعد الاستلام** — بابُه `AgreeCustom` ما زال مقفلاً.
 // **وبعد التسليم/الانتهاء لا تعديل** — التصحيحُ حينها تعويضٌ بابُه آخر.
+//
+// **و`newUSD` ثمنٌ بالدولار بالسنتات** (٢٠٢٦-١١-٠٩) — والمكتبُ يختار العملةَ كما يختارها السائق؛
+// **وnil ليرة.** ودولارٌ على أمانةٍ يُردّ (`ErrGoodsUSDNotPurchase`).
 func (s *Service) AdminOverrideCustomQuote(ctx context.Context, orderID, adminID string,
 	newGoods, newFee int64, reason string) (*Order, error) {
-	if newGoods < 0 || newFee < 0 {
+	return s.AdminOverrideCustomQuoteUSD(ctx, orderID, adminID, newGoods, newFee, nil, reason)
+}
+
+// AdminOverrideCustomQuoteUSD **تدخّلُ الأدمن بعملة الثمن** — `newUSD` بالسنتات أو nil لليرة.
+func (s *Service) AdminOverrideCustomQuoteUSD(ctx context.Context, orderID, adminID string,
+	newGoods, newFee int64, newUSD *int64, reason string) (*Order, error) {
+	if newGoods < 0 || newFee < 0 || (newUSD != nil && *newUSD <= 0) {
 		return nil, httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
 	}
 	tx, err := s.db.Begin(ctx)
@@ -531,7 +586,16 @@ func (s *Service) AdminOverrideCustomQuote(ctx context.Context, orderID, adminID
 	if terminal(row.status) {
 		return nil, ErrCustomLocked
 	}
-	changed, err := s.applyCustomQuoteTx(ctx, tx, row, newGoods, newFee, quoteMutator{
+	if newUSD != nil {
+		var mode string
+		if err := tx.QueryRow(ctx, `SELECT custom_mode FROM orders WHERE id = $1`, orderID).Scan(&mode); err != nil {
+			return nil, err
+		}
+		if mode != CustomModePurchase {
+			return nil, ErrGoodsUSDNotPurchase
+		}
+	}
+	changed, err := s.applyCustomQuoteTx(ctx, tx, row, newGoods, newFee, newUSD, quoteMutator{
 		actorID: adminID, role: "admin", source: "admin_override", reason: reason,
 	})
 	if err != nil {
@@ -576,7 +640,7 @@ func (s *Service) notifyCustomPriceChanged(ctx context.Context, o *Order, reason
 	if pending {
 		title = t.customPriceRaised
 	}
-	body := fmt.Sprintf("#%d — المجموع الجديد %s ل.س — السبب: %s", o.Number, groupDigits(o.Total), reason)
+	body := fmt.Sprintf("#%d — المجموع الجديد %s — السبب: %s", o.Number, customAmountText(o.Total, o.CustomGoodsUSD), reason)
 	s.notify.Notify(ctx, notifications.Input{
 		UserID: o.CustomerID, Kind: notifications.KindOrder,
 		Title: title, Body: body,
@@ -587,7 +651,7 @@ func (s *Service) notifyCustomPriceChanged(ctx context.Context, o *Order, reason
 		s.notify.Notify(ctx, notifications.Input{
 			UserID: *o.DriverID, Kind: notifications.KindOrder,
 			Title:  t.customPriceRaisedDriver,
-			Body:   fmt.Sprintf("#%d — المجموع الجديد %s ل.س", o.Number, groupDigits(o.Total)),
+			Body:   fmt.Sprintf("#%d — المجموع الجديد %s", o.Number, customAmountText(o.Total, o.CustomGoodsUSD)),
 			Entity: "order", EntityID: o.ID, Href: "/portal",
 			Apps: []string{notifications.AppDriver},
 		})

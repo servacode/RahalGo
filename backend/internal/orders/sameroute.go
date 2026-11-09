@@ -133,7 +133,7 @@ func (s *Service) SameRouteDriver(ctx context.Context, orderID string) *SameRout
 		                WHERE b.driver_id = u.id), 0)
 		      -- **والمُسنَدُ الذي لم يُسلَّم يُحسب** — صيغةُ cashbox.Exposure (فحصُ المتجر
 		      --  ٢٠٢٦-١٠-٠١: سائقٌ أُسنِد إليه ثلاثةٌ في ثلاث ثوانٍ فبلغ ٥٦١٬٤٠٠ والسقفُ ٥٠٠٬٠٠٠).
-		      + COALESCE((SELECT sum(oi.cash_due) FROM orders oi
+		      + COALESCE((SELECT sum(oi.cash_due + oi.goods_usd_syp) FROM orders oi
 		                  WHERE oi.driver_id = u.id AND oi.closed_at IS NULL), 0)
 		      -- **وسقفُه الخاصُّ يغلب العامّ إن ضُبط** — كحارس الإسناد cashbox.GuardTx.
 		      + nw.cash_due <= COALESCE(u.cash_limit_override, $4)
