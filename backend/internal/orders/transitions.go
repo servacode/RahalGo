@@ -33,6 +33,12 @@ func (s *Service) TransitionWithReason(ctx context.Context, actorID string, acto
 	return s.transitionTx(ctx, actorID, actorRoles, orderID, to, note, failReason, "", nil)
 }
 
+// TransitionWithReasonHook كـ`TransitionWithReason` ومعها **مِعراضٌ يُكتب في معاملة الانتقال نفسِها**
+// قبل التثبيت — **وسقوطُه يُسقط الانتقال**. (شام كاش عند التسليم، قرارُ المالك ٢٠٢٦-١١-١٠.)
+func (s *Service) TransitionWithReasonHook(ctx context.Context, actorID string, actorRoles []string, orderID, to, note, failReason string, hook func(context.Context, dbtx.Querier) error) (*Order, error) {
+	return s.transitionTx(ctx, actorID, actorRoles, orderID, to, note, failReason, "", hook)
+}
+
 // TransitionAudited **انتقالٌ يحمل أثرَه في معاملته** — `XG-20` · `AQ-4`.
 //
 // ══════════════════════════════════════════════════════════════════════

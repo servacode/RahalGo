@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 670,
+    "routes": 679,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -33,8 +33,8 @@
     "setting_defs": 281,
     "behaviour_settings": 236,
     "order_fields": 144,
-    "test_files": 801,
-    "test_funcs": 3076
+    "test_files": 802,
+    "test_funcs": 3082
   },
   "flows": [
     {
@@ -33046,6 +33046,42 @@
     {
       "name": "TestSETTINGS_SameValueNormalised",
       "file": "internal/server/settings_risk_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestShamcash_BalancesAndToggles",
+      "file": "internal/server/shamcash_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestShamcash_DeliverRecordsSYPPartial",
+      "file": "internal/server/shamcash_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestShamcash_DeliverUSDDecimals",
+      "file": "internal/server/shamcash_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestShamcash_LedgerUntouched",
+      "file": "internal/server/shamcash_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestShamcash_OldClientSendsNothing",
+      "file": "internal/server/shamcash_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestShamcash_Policy",
+      "file": "internal/server/shamcash_test.go",
       "package": "server",
       "orphan": true
     },

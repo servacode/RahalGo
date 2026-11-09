@@ -324,6 +324,17 @@ var adminPolicy = []Rule{
 	{"POST", "/cashbox/opening", FinanceManage},
 	{"POST", "/cashbox/deposits", TreasuryManage},
 	{"GET", "/cashbox/report", FinanceRead},
+	// **سجلّ شام كاش اليدويّ** (قرارُ المالك ٢٠٢٦-١١-١٠) — قراءةٌ للماليّة وكتابتُه بقدرتها؛
+	// **جانبيٌّ لا يحرّك مالاً في الدفتر**، فلا تأكيدَ بكلمة السرّ.
+	{"GET", "/shamcash", FinanceRead},
+	{"GET", "/shamcash/summary", FinanceRead},
+	{"PUT", "/shamcash/opening", FinanceManage},
+	{"POST", "/shamcash/movements", FinanceManage},
+	{"POST", "/shamcash/{id}/compensate", FinanceManage},
+	{"POST", "/shamcash/{id}/uncompensate", FinanceManage},
+	{"POST", "/shamcash/{id}/not-arrived", FinanceManage},
+	{"POST", "/shamcash/{id}/arrived", FinanceManage},
+	{"POST", "/shamcash/{id}/void", FinanceManage},
 	{"GET", "/approvals", FinanceRead},
 
 	// ── الدعمُ والنزاعاتُ والطوارئ ───────────────────────────────

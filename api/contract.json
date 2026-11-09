@@ -5997,6 +5997,153 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/shamcash",
+      "handler": "handleShamcashList",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "@paged",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/shamcash/movements",
+      "handler": "handleShamcashAdd",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "kind",
+          "type": "string"
+        },
+        {
+          "name": "currency",
+          "type": "string"
+        },
+        {
+          "name": "amount",
+          "type": "?float64"
+        },
+        {
+          "name": "occurred_at",
+          "type": "string"
+        },
+        {
+          "name": "note",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "movement",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusCreated"
+      ]
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/shamcash/opening",
+      "handler": "handleShamcashOpening",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "currency",
+          "type": "string"
+        },
+        {
+          "name": "amount",
+          "type": "?float64"
+        },
+        {
+          "name": "as_of",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "amount",
+          "type": "unknown"
+        },
+        {
+          "name": "currency",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/shamcash/summary",
+      "handler": "handleShamcashSummary",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "balances",
+          "type": "unknown"
+        },
+        {
+          "name": "drivers",
+          "type": "unknown"
+        },
+        {
+          "name": "owed_by_driver",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/shamcash/{id}/arrived",
+      "handler": "handleShamcashArrived",
+      "auth": true,
+      "capability": "finance.manage"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/shamcash/{id}/compensate",
+      "handler": "handleShamcashCompensate",
+      "auth": true,
+      "capability": "finance.manage"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/shamcash/{id}/not-arrived",
+      "handler": "handleShamcashNotArrived",
+      "auth": true,
+      "capability": "finance.manage"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/shamcash/{id}/uncompensate",
+      "handler": "handleShamcashUncompensate",
+      "auth": true,
+      "capability": "finance.manage"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/shamcash/{id}/void",
+      "handler": "handleShamcashVoid",
+      "auth": true,
+      "capability": "finance.manage"
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/site-stats",
       "handler": "handleSiteStats",
       "auth": true,
@@ -8826,6 +8973,10 @@
         {
           "name": "stop",
           "type": "string"
+        },
+        {
+          "name": "shamcash",
+          "type": "?shamcashClaim"
         }
       ],
       "response": [
