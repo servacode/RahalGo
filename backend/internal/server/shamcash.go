@@ -827,58 +827,54 @@ func (s *Server) handleAdminShamRefund(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	actor := userIDFrom(r)
-	var refundID string
-	err = func() error {
-		tx, err := s.pg.Begin(ctx)
-		if err != nil {
-			return err
-		}
-		defer func() { _ = tx.Rollback(ctx) }()
+	// The DB half (refund row + wallet debit) runs inside the idempotency transaction
+	// (XG-33): a double click or a replayed key never makes a second refund. Sham Cash is
+	// called after commit with the refund id as its idempotency key.
+	s.WithIdempotentTx(w, r, func(ctx context.Context, tx dbtx.Querier) (IdempotentBody, error) {
 		var userID, status string
 		var amount, open int64
-		err = tx.QueryRow(ctx, `
+		err := tx.QueryRow(ctx, `
 			SELECT b.user_id::text, b.status, b.amount,
 			       COALESCE((SELECT sum(r.amount) FROM shamcash_refunds r
 			                  WHERE r.bill_id = b.id AND r.status <> 'failed'), 0)::bigint
 			  FROM shamcash_bills b WHERE b.id = $1 FOR UPDATE`, billID).Scan(&userID, &status, &amount, &open)
 		if errors.Is(err, pgx.ErrNoRows) {
-			return errShamNotFound
+			return IdempotentBody{}, errShamNotFound
 		}
 		if err != nil {
-			return err
+			return IdempotentBody{}, err
 		}
 		if status != "paid" && status != "partly_refunded" {
-			return errShamNotPaid
+			return IdempotentBody{}, errShamNotPaid
 		}
 		if open+in.Amount > amount {
-			return errShamExceeds
+			return IdempotentBody{}, errShamExceeds
 		}
+		v := &shamRefundView{Amount: in.Amount, Status: "pending"}
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO shamcash_refunds (bill_id, amount, note, created_by)
 			VALUES ($1, $2, $3, $4) RETURNING id::text`, billID, in.Amount, strings.TrimSpace(in.Note), actor).
-			Scan(&refundID); err != nil {
-			return err
+			Scan(&v.ID); err != nil {
+			return IdempotentBody{}, err
 		}
-		if _, err := s.wallet.ApplyTx(ctx, tx, userID, -in.Amount, "refund_shamcash", refundID,
+		if _, err := s.wallet.ApplyTx(ctx, tx, userID, -in.Amount, "refund_shamcash", v.ID,
 			strings.TrimSpace(in.Note), &actor); err != nil {
-			return err
+			return IdempotentBody{}, err
 		}
-		return tx.Commit(ctx)
-	}()
-	if err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	if err := s.shamSendRefund(ctx, refundID); err != nil {
-		s.logger.Warn("shamcash: refund send", "refund", refundID, "err", err)
-	}
-	var v shamRefundView
-	if err := s.pg.QueryRow(ctx, `SELECT id::text, amount, status FROM shamcash_refunds WHERE id = $1`, refundID).
-		Scan(&v.ID, &v.Amount, &v.Status); err != nil {
-		s.respondErr(w, err)
-		return
-	}
-	httpx.JSON(w, http.StatusCreated, map[string]any{"refund": v})
+		return IdempotentBody{
+			Status:  http.StatusCreated,
+			Payload: map[string]any{"refund": v},
+			// Runs before the live response is written, so the caller sees done/failed;
+			// a replay of the key returns the stored "pending" and the bills list shows the rest.
+			AfterCommit: func() {
+				bg := context.WithoutCancel(ctx)
+				if err := s.shamSendRefund(bg, v.ID); err != nil {
+					s.logger.Warn("shamcash: refund send", "refund", v.ID, "err", err)
+				}
+				_ = s.pg.QueryRow(bg, `SELECT status FROM shamcash_refunds WHERE id = $1`, v.ID).Scan(&v.Status)
+			},
+		}, nil
+	})
 }
 
 // shamSendRefund يرسل الإرجاع المعلّق لشام كاش ويحسمه:

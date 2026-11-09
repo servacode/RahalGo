@@ -5668,6 +5668,7 @@
         "finance.cash_opening": "تسجيل رصيد البداية بالدرج",
         "menu.drinks_update": "متجر عدّل قائمة المشروبات",
         "menu.price_sync": "مزامنة أسعار من الأمين",
+        "menu.ameen_imported_delete": "حذف الأصناف المستوردة من الأمين",
         "merchant.price_sync_token": "متجر طلب رمز مزامنة جديد",
         "merchant.price_sync_pause": "متجر أوقف مزامنة الأمين مؤقتاً",
         "merchant.price_sync_resume": "متجر رجّع شغّل مزامنة الأمين",

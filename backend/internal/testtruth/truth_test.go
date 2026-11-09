@@ -372,8 +372,10 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	// البضاعة والزبون يوافق — قرارُ المالك ٢٠٢٦-١١-٠٦).
 	//
 	// **و٢٣٥ مع** `orders.multistop_driver_build` (بوّابةُ الطلب من عدّة متاجر — مغلقةٌ افتراضاً).
-	if d.BehaviourSettings != 235 {
-		t.Errorf("إعداداتُ السلوك = %d لا 235 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	//
+	// **و٢٣٨ مع** `customers.shamcash_enabled|min|max` (الدفع بشام كاش — مطفي افتراضاً، ٢٠٢٦-١١-٠٩).
+	if d.BehaviourSettings != 238 {
+		t.Errorf("إعداداتُ السلوك = %d لا 238 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.
