@@ -5506,6 +5506,7 @@
         "menu.price_sync_move_rest": "نقل باقي أصناف الأمين إلى منوّعات",
         "menu.item_delete": "حذف صنف",
         "menu.item_update": "تعديل صنف",
+        "menu.ameen_imported_delete": "حذف الأصناف المستوردة من الأمين",
         "menu.item_duplicate": "نسخ صنف",
         "menu.bulk_price": "تغيير الأسعار دفعة وحدة",
         "menu.option_presets": "تغيير خيارات أصناف المتجر",
