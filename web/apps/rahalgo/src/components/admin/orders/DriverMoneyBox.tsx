@@ -1,6 +1,6 @@
 "use client";
 
-import { getMessages, defaultLocale, fmtNum } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtUsd } from "@rahalgo/i18n";
 import { Money } from "@rahalgo/ui";
 
 const m = getMessages(defaultLocale);
@@ -12,6 +12,8 @@ export interface DriverMoneyInput {
   platform_commission?: number;
   commission_percent_exact?: number;
   pay_merchant?: number;
+  /** **ما يدفعه السائقُ لكلّ متجر** — والدولارُ (`currency: "USD"`) بالسنتات ولا يدخل `pay_merchant` بالليرة. */
+  pay_merchants?: { merchant_name: string; amount: number; currency?: string }[];
   driver_fee?: number;
   free_waived?: number;
 }
@@ -31,9 +33,11 @@ export function DriverMoneyBox({ o, hideCommission = false }: {
   const com = hideCommission ? 0 : o.platform_commission ?? 0;
   const pay = o.pay_merchant ?? 0;
   const cash = o.payment_method === "cash" ? o.cash_due ?? 0 : 0;
-  if (com <= 0 && pay <= 0 && cash <= 0) return null;
+  if (com <= 0 && pay <= 0 && cash <= 0 && (o.pay_merchants ?? []).every((p) => p.currency !== "USD")) return null;
   const office = Math.max(0, cash - pay);
   const row = "flex items-center justify-between gap-2";
+  /* **ما يدفعه السائقُ بالدولار يُكتب بالدولار** — منفصلاً عن الليرة، لا يُجمع معها ولا يُحوَّل. */
+  const usdPays = (o.pay_merchants ?? []).filter((p) => p.currency === "USD" && p.amount > 0);
   return (
     <li className="mt-2 list-none rounded-control border border-line-soft bg-field p-2.5 text-sm">
       <p className="mb-1.5 text-xs font-bold">{OP.moneyBox}</p>
@@ -60,6 +64,14 @@ export function DriverMoneyBox({ o, hideCommission = false }: {
             </span>
           </li>
         )}
+        {usdPays.map((p, i) => (
+          <li key={`usd-${i}`} className={row}>
+            <span className="text-ink-muted">{p.merchant_name ? `${OP.driverPaysStore} — ${p.merchant_name}` : OP.driverPaysStore}</span>
+            <span dir="ltr" className="tabular-nums">
+              −{fmtUsd(p.amount)}
+            </span>
+          </li>
+        ))}
         {cash > 0 && (
           <li className={`${row} border-t border-line-soft pt-1 font-bold`}>
             <span>{OP.driverToOffice}</span>

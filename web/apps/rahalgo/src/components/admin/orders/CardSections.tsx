@@ -112,6 +112,8 @@ export interface CardOrder {
   commission_taken?: number;
   commission_percent_exact?: number;
   pay_merchant?: number;
+  /** **ما يدفعه السائقُ لكلّ متجر** — والدولارُ (`currency: "USD"`) بالسنتات ولا يدخل `pay_merchant` بالليرة. */
+  pay_merchants?: { merchant_name: string; amount: number; currency?: string }[];
   /** **المسافةُ كما قادها السائق** (قرارُ المالك ٢٠٢٦-١١-٠٥) — صفٌّ لكلّ سائقٍ حمله. */
   drive?: DriveRow[];
 }

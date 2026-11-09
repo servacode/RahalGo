@@ -22,6 +22,7 @@ import {
   fmtNum,
   fmtMoney,
   fmtSpan,
+  fmtUsd,
   errorText,
 } from "@rahalgo/i18n";
 import {
@@ -144,6 +145,8 @@ interface Detail {
   commission_waived?: number;
   commission_percent_exact?: number;
   pay_merchant?: number;
+  /** **ما يدفعه السائقُ لكلّ متجر** — والدولارُ (`currency: "USD"`) بالسنتات ولا يدخل `pay_merchant` بالليرة. */
+  pay_merchants?: { merchant_name: string; amount: number; currency?: string }[];
   driver_fee?: number;
   address_text: string;
   zone_name?: string | null;
@@ -157,6 +160,9 @@ interface Detail {
   holder_name?: string;
   holder_phone?: string;
   custom_goods_amount?: number | null;
+  custom_goods_usd?: number | null;
+  goods_fx_rate?: number | null;
+  goods_usd_syp?: number;
   custom_store_paid?: number | null;
   fetch_amount?: number | null;
   partner_merchant_name?: string;
@@ -494,10 +500,25 @@ function WhatSection({ o }: { o: Detail }) {
               )}
             </Row>
           )}
-          {o.custom_goods_amount != null && (
+          {o.custom_goods_usd != null ? (
             <Row label={F.goodsAmount}>
-              <Money value={o.custom_goods_amount} small />
+              <span dir="ltr" className="tabular-nums">
+                {fmtUsd(o.custom_goods_usd)}
+              </span>
+              {o.goods_fx_rate != null && (o.goods_usd_syp ?? 0) > 0 && (
+                <span className="ms-2 text-xs text-ink-muted">
+                  {m.admin.ordersPage.goodsFxNote
+                    .replace("{rate}", fmtNum(o.goods_fx_rate))
+                    .replace("{syp}", fmtNum(o.goods_usd_syp ?? 0))}
+                </span>
+              )}
             </Row>
+          ) : (
+            o.custom_goods_amount != null && (
+              <Row label={F.goodsAmount}>
+                <Money value={o.custom_goods_amount} small />
+              </Row>
+            )
           )}
           {o.custom_store_paid != null && (
             <Row label={F.storePaid}>

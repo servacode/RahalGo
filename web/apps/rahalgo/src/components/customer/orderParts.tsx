@@ -15,7 +15,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { getMessages, defaultLocale, errorText, fmtMoney, fmtRef, fmtSpan } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, errorText, fmtMoney, fmtRef, fmtSpan, fmtUsd } from "@rahalgo/i18n";
 import { Alert, Button, Chips, Confirm, InvoiceLines, Money } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
@@ -203,12 +203,25 @@ export function QuoteAmounts({ order }: { order: MyOrder }) {
   if (goods == null) return null;
   const fee = order.custom_fee ?? 0;
   const waived = order.free_waived ?? 0;
+  /* **بضاعةٌ بالدولار** (٢٠٢٦-١١-٠٩): تُعرض كما كُتبت، **ولا تُحوَّل ولا تُجمع مع الليرة** —
+     و`total` هنا الأجرةُ وحدَها. */
+  const usd = order.custom_mode !== "amanah" && !order.custom_goods_pending ? order.custom_goods_usd ?? null : null;
   return (
     <dl className="space-y-1 text-sm">
       {order.custom_mode !== "amanah" && (
         <div className="flex justify-between gap-2">
           <dt className="text-ink-muted">{O.goods}</dt>
-          <dd>{order.custom_goods_pending ? O.goodsAfter : <Money value={goods} />}</dd>
+          <dd>
+            {order.custom_goods_pending ? (
+              O.goodsAfter
+            ) : usd != null ? (
+              <span dir="ltr" className="tabular-nums">
+                {fmtUsd(usd)}
+              </span>
+            ) : (
+              <Money value={goods} />
+            )}
+          </dd>
         </div>
       )}
       <div className="flex justify-between gap-2">
@@ -228,11 +241,12 @@ export function QuoteAmounts({ order }: { order: MyOrder }) {
         </dd>
       </div>
       <div className="flex justify-between gap-2 font-bold">
-        <dt>{O.total}</dt>
+        <dt>{usd != null ? O.totalSyp : O.total}</dt>
         <dd className="text-accent-text">
           <Money value={order.total} />
         </dd>
       </div>
+      {usd != null && <p className="text-xs text-ink-muted">{O.goodsUsdCash}</p>}
     </dl>
   );
 }
@@ -335,6 +349,10 @@ export function QuotePanel({
         />
       ) : (
         <p className="text-sm">{O.payCashOnly}</p>
+      )}
+      {/* **بضاعةٌ بالدولار والمحفظةُ مختارة**: تدفع الأجرةَ وحدَها، والدولارُ كاشٌ للكابتن. */}
+      {order.custom_goods_usd != null && pay === "wallet" && (
+        <p className="text-xs text-ink-muted">{O.walletDeliveryOnly}</p>
       )}
       {error && <Alert>{error}</Alert>}
       <button

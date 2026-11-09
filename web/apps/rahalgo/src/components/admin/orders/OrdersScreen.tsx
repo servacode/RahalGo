@@ -1,6 +1,7 @@
 "use client";
 
 import { amountText } from "@/lib/store/deliveries";
+import { fmtUsd } from "@rahalgo/i18n";
 import { useCallback, useEffect, useState, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -193,6 +194,11 @@ interface OrderRow {
   amount_currency?: string;
   /** **ما وُثّق ولم يُحاسَب** — تهمّ الإدارةَ وإن لم تأخذ منها شيئاً. */
   custom_goods_amount?: number | null;
+  /** **ثمنُ البضاعة بالدولار بالسنتات** — غيرُ فارغٍ ⇒ `custom_goods_amount` صفر والمجاميعُ ليرةٌ للأجرة وحدَها. */
+  custom_goods_usd?: number | null;
+  /** **للعمليات**: سعرُ الصرف (ل.س لكلّ دولار) لحظةَ تأكيد الزبون، ومعادلُ الليرة المستعمل للعمولة والحدود. */
+  goods_fx_rate?: number | null;
+  goods_usd_syp?: number;
   custom_fee?: number | null;
   /** **إعفاءُ عرض التوصيل المجانيّ** — ما لا يدفعه الزبونُ من الأجرة (٢٠٢٦-١٠-٢٦). */
   free_waived?: number;
@@ -319,6 +325,8 @@ interface OrderRow {
   commission_percent_exact?: number;
   merchant_net?: number;
   pay_merchant?: number;
+  /** **ما يدفعه السائقُ لكلّ متجر** — والدولارُ (`currency: "USD"`) بالسنتات ولا يدخل `pay_merchant` بالليرة. */
+  pay_merchants?: { merchant_name: string; amount: number; currency?: string }[];
   promo_code: string | null;
   address_text: string;
   /** **اسمُ منطقة التوصيل** — يُعرض بجانب العنوان. */
@@ -3104,6 +3112,8 @@ function OrderActions({
   const [overriding, setOverriding] = useState(false);
   const [confirmingOverride, setConfirmingOverride] = useState(false);
   const [overrideGoods, setOverrideGoods] = useState("");
+  /** **عملةُ ثمن البضاعة في التعديل** — تبدأ بعملتها الحاليّة (٢٠٢٦-١١-٠٩). */
+  const [overrideCur, setOverrideCur] = useState<"SYP" | "USD">("SYP");
   const [overrideFee, setOverrideFee] = useState("");
 
   /**
@@ -3311,9 +3321,11 @@ function OrderActions({
       await api(`/api/v1/admin/orders/${o.id}/custom-quote`, {
         method: "POST",
         body: JSON.stringify({
-          goods_amount: Math.round(g),
+          // **الدولارُ يقبل كسراً (سنتَين) والليرةُ صحيحة** — والخادمُ يحكم بالحدّ.
+          goods_amount: overrideCur === "USD" ? Math.round(g * 100) / 100 : Math.round(g),
           fee: Math.round(f),
           reason: reason.trim(),
+          goods_currency: overrideCur,
         }),
       });
       setConfirmingOverride(false);
@@ -3644,12 +3656,20 @@ function OrderActions({
 
   // **ومراجعةٌ واحدةٌ قبل الإرسال** — تُقرأ فيها الأرقامُ ونتائجُها.
   if (confirmingOverride) {
+    // **الدولارُ لا يدخل مجموعَ الليرة أبداً**: المجموعُ هنا ليرةٌ وحدَها (الأجرةُ + بضاعةُ الليرة).
+    const curUsd = o.custom_goods_usd ?? null;
+    const newUsd = overrideCur === "USD";
     const curGoods = o.custom_goods_amount ?? 0;
     const curFee = o.custom_fee ?? 0;
     const curTotal = curGoods + curFee;
-    const newGoods = Math.round(Number(overrideGoods) || 0);
+    const newGoodsRaw = newUsd
+      ? Math.round((Number(overrideGoods) || 0) * 100)
+      : Math.round(Number(overrideGoods) || 0);
+    const newGoods = newUsd ? 0 : newGoodsRaw;
     const newFee = Math.round(Number(overrideFee) || 0);
     const newTotal = newGoods + newFee;
+    const goodsChanged =
+      curUsd != null !== newUsd || (newUsd ? newGoodsRaw !== curUsd : newGoodsRaw !== curGoods);
     const confirmed = o.quote_confirmed_at != null;
     const confirmedTotal = o.quote_confirmed_total ?? 0;
     // **ويُلغى التأكيدُ إن زاد المبلغُ عمّا أكّده الزبون، أو تبدّلت أرقامُه
@@ -3658,7 +3678,7 @@ function OrderActions({
       confirmed &&
       (newTotal > confirmedTotal ||
         (newTotal === confirmedTotal &&
-          (newGoods !== curGoods || newFee !== curFee)));
+          (goodsChanged || newFee !== curFee)));
     const reserved = (o.custom_reserved_amount ?? 0) > 0;
     return (
       <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
@@ -3671,9 +3691,9 @@ function OrderActions({
               {m.admin.ordersPage.overrideGoodsLabel}
             </span>
             <span className="flex items-center gap-1.5">
-              <Money value={curGoods} small />
+              {curUsd != null ? <span dir="ltr">{fmtUsd(curUsd)}</span> : <Money value={curGoods} small />}
               <span aria-hidden>←</span>
-              <Money value={newGoods} small />
+              {newUsd ? <span dir="ltr">{fmtUsd(newGoodsRaw)}</span> : <Money value={newGoods} small />}
             </span>
           </div>
           <div className="flex items-center justify-between gap-2">
@@ -3732,9 +3752,21 @@ function OrderActions({
     return (
       <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
         <p className="text-xs font-medium">{m.admin.ordersPage.overrideBtn}</p>
+        {/* **عملةُ ثمن البضاعة — للمشتريات وحدَها** (الأمانةُ بلا ثمن، والأجرةُ ليرةٌ دائماً). */}
+        {o.custom_mode === "purchase" && (
+          <Chips<"SYP" | "USD">
+            items={[
+              { id: "SYP", label: m.admin.ordersPage.overrideCurSyp },
+              { id: "USD", label: m.admin.ordersPage.overrideCurUsd },
+            ]}
+            value={overrideCur}
+            onChange={setOverrideCur}
+          />
+        )}
         <Input
           type="number"
-          inputMode="numeric"
+          inputMode={overrideCur === "USD" ? "decimal" : "numeric"}
+          step={overrideCur === "USD" ? "0.01" : "1"}
           placeholder={m.admin.ordersPage.overrideGoodsLabel}
           value={overrideGoods}
           onChange={(e) => setOverrideGoods(e.target.value)}
@@ -3851,7 +3883,9 @@ function OrderActions({
             variant="secondary"
             disabled={busy !== ""}
             onClick={() => {
-              setOverrideGoods(String(o.custom_goods_amount ?? 0));
+              const usd = o.custom_goods_usd ?? null;
+              setOverrideCur(usd != null ? "USD" : "SYP");
+              setOverrideGoods(usd != null ? String(usd / 100) : String(o.custom_goods_amount ?? 0));
               setOverrideFee(String(o.custom_fee ?? 0));
               setReason("");
               setErr("");
@@ -4324,7 +4358,8 @@ function PartnerStoreBox({
             const pct = o.partner_commission_percent_exact ?? o.partner_commission_percent ?? 0;
             if (pct <= 0) return <p className="text-xs text-ink-muted">{OP.partnerNoCommission}</p>;
             if (!goodsDone) return <p className="text-xs text-ink-muted">{OP.partnerCommissionLater}</p>;
-            const goods = o.custom_goods_amount ?? 0;
+            // **بضاعةُ الدولار تُحسب العمولةُ عليها بمعادلها بالليرة** (المحرّك يرسله).
+            const goods = o.custom_goods_usd != null ? o.goods_usd_syp ?? 0 : o.custom_goods_amount ?? 0;
             const cut = Math.min(goods, Math.floor((goods * Math.round(pct * 100) + 5000) / 10000)); // لأقرب ليرة كالخادم
             return (
               <p className="text-xs font-bold text-success">
@@ -4630,6 +4665,9 @@ function InvoiceList({
     const fixed = o.custom_fee_source === "admin_defined" && !o.custom_driver_may_change_fee;
     const fee = o.custom_fee ?? (fixed ? o.custom_fee_snapshot ?? null : null);
     const goods = o.custom_goods_pending ? null : o.custom_goods_amount ?? null;
+    // **بضاعةُ الدولار تُعرض كما كُتبت ولا تدخل مجموعَ الليرة** (قرارُ المالك ٢٠٢٦-١١-٠٩).
+    const goodsUsd = o.custom_goods_pending ? null : o.custom_goods_usd ?? null;
+    const hasGoods = goodsUsd != null || (goods != null && goods > 0);
     const confirmed = o.quote_confirmed_at != null && o.quote_confirmed_version === o.quote_version;
     const row = "flex items-center justify-between gap-2";
     return (
@@ -4642,7 +4680,20 @@ function InvoiceList({
           {!amanah && (
             <li className={row}>
               <span className="text-ink-muted">{OP.customGoods}</span>
-              {goods != null && goods > 0 ? (
+              {goodsUsd != null ? (
+                <span className="flex flex-col items-end">
+                  <span dir="ltr" className="font-bold tabular-nums">
+                    {fmtUsd(goodsUsd)}
+                  </span>
+                  {o.goods_fx_rate != null && (o.goods_usd_syp ?? 0) > 0 && (
+                    <span className="text-xs text-ink-muted">
+                      {OP.goodsFxNote
+                        .replace("{rate}", fmtNum(o.goods_fx_rate))
+                        .replace("{syp}", fmtNum(o.goods_usd_syp ?? 0))}
+                    </span>
+                  )}
+                </span>
+              ) : goods != null && goods > 0 ? (
                 <Money value={goods} small />
               ) : (
                 <span className="text-xs text-ink-muted">{OP.goodsAwait}</span>
@@ -4670,10 +4721,10 @@ function InvoiceList({
               </span>
             </li>
           )}
-          {fee != null && (amanah || (goods != null && goods > 0)) && (
+          {fee != null && (amanah || hasGoods) && (
             <li className={`${row} border-t border-line-soft pt-1.5 font-bold`}>
-              <span>{amanah ? OP.collectTotal : OP.customTotal}</span>
-              <Money value={(amanah ? 0 : goods ?? 0) + fee - (o.free_waived ?? 0)} />
+              <span>{amanah ? OP.collectTotal : goodsUsd != null ? OP.customTotalSyp : OP.customTotal}</span>
+              <Money value={(amanah || goodsUsd != null ? 0 : goods ?? 0) + fee - (o.free_waived ?? 0)} />
             </li>
           )}
           <li className={`${row} text-xs`}>

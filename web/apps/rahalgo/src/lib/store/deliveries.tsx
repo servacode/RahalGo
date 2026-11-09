@@ -14,7 +14,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { useLiveRefresh } from "@rahalgo/ui";
-import { fmtMoney } from "@rahalgo/i18n";
+import { fmtMoney, fmtUsd } from "@rahalgo/i18n";
 import { api } from "@/lib/api";
 import { useStore } from "./context";
 import type { Delivery } from "./types";
@@ -38,8 +38,7 @@ export function awaitsAmount(d: Delivery): boolean {
  */
 export function amountText(units: number, currency?: string | null): string {
   if (currency === "USD") {
-    const v = units / 100;
-    return `${Number.isInteger(v) ? String(v) : v.toFixed(2)}$`;
+    return fmtUsd(units);
   }
   return fmtMoney(units);
 }

@@ -305,6 +305,8 @@ export interface MyOrder {
   notes: string;
   custom_request: string;
   custom_goods_amount: number | null;
+  /** **ثمنُ البضاعة بالدولار بالسنتات** (١٢٥٠ = 12.50$) — غيرُ فارغٍ ⇒ البضاعةُ دولار و`custom_goods_amount` صفر. */
+  custom_goods_usd?: number | null;
   custom_mode: string;
   custom_goods_pending: boolean;
   custom_fee: number | null;

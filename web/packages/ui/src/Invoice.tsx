@@ -11,7 +11,7 @@
  * عقدٌ بين المتجر والمنصة لا شأن للزبون به — ولا يُخفى عن المتجر لأنه طرفه.
  */
 
-import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime, withPlatform } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtUsd, fmtRef, fmtDateTime, withPlatform } from "@rahalgo/i18n";
 import { Money } from "./money";
 import { InvoiceLines } from "./InvoiceLines";
 import { Button } from "./components";
@@ -48,6 +48,8 @@ export interface InvoiceOrder {
   custom_request?: string;
   /** ما وثّقه السائقُ بعد الاتّفاق — **وهما مالُ الطلب الحقيقيّ.** */
   custom_goods_amount?: number | null;
+  /** ثمنُ البضاعة بالدولار بالسنتات — غيرُ فارغٍ ⇒ يُعرض بالدولار ولا يدخل مجموعَ الليرة. */
+  custom_goods_usd?: number | null;
   custom_fee?: number | null;
   merchant_name?: string;
   customer_name?: string;
@@ -99,6 +101,7 @@ export function Invoice({
    */
   const custom = order.kind === "custom";
   const goods = order.custom_goods_amount ?? null;
+  const goodsUsd = order.custom_goods_usd ?? null;
   const fee = order.custom_fee ?? 0;
 
   return (
@@ -208,7 +211,16 @@ export function Invoice({
             يجعل كلَّ لفظٍ ملاصقاً لمبلغه. */}
         <div className="mt-5 flex justify-end" data-print-keep>
           <dl className="w-full max-w-xs space-y-1.5 text-sm">
-            <Row label={custom ? V.customGoods : V.subtotal} value={custom ? (goods ?? 0) : order.subtotal} />
+            {custom && goodsUsd != null ? (
+              <div className="flex items-center justify-between">
+                <dt className="text-ink-muted">{V.customGoods}</dt>
+                <dd dir="ltr" className="tabular-nums">
+                  {fmtUsd(goodsUsd)}
+                </dd>
+              </div>
+            ) : (
+              <Row label={custom ? V.customGoods : V.subtotal} value={custom ? (goods ?? 0) : order.subtotal} />
+            )}
             {/* ══════════════════════════════════════════════════════
                 **وصفرُ الأجرة تُقال «مجاني»**
                 ══════════════════════════════════════════════════════
@@ -237,13 +249,13 @@ export function Invoice({
               <Row label={V.discount} value={-order.discount} tone="success" />
             )}
             <div className="figure flex items-center justify-between border-t-2 border-line-soft pt-2">
-              <dt>{V.total}</dt>
+              <dt>{custom && goodsUsd != null ? V.totalSyp : V.total}</dt>
               {/* **ولا لفّةَ على الأب أيضا** — `Money` تلفّ رقمَها
                   بنفسها، **ولفّةٌ فوقها تقلب الزوجَ من جديد.**
                   (بقيت هنا فانقلب «٣٠٠ ل.س» رغم التصحيح — قيس
                   ٢٠٢٦-٠٨-١٢.) */}
               <dd>
-                <Money value={custom ? (goods ?? 0) + fee : order.total} />
+                <Money value={custom ? (goodsUsd != null ? 0 : goods ?? 0) + fee : order.total} />
               </dd>
             </div>
           </dl>
@@ -260,9 +272,13 @@ export function Invoice({
           {custom
             ? goods == null
               ? V.customPending
-              : order.wallet_paid > 0
-                ? V.paidWallet
-                : V.paidCash.replace("{n}", fmtNum(goods + fee))
+              : goodsUsd != null
+                ? (order.wallet_paid > 0 ? V.paidWalletUsd : V.paidCashUsd)
+                    .replace("{usd}", fmtUsd(goodsUsd))
+                    .replace("{n}", fmtNum(fee))
+                : order.wallet_paid > 0
+                  ? V.paidWallet
+                  : V.paidCash.replace("{n}", fmtNum(goods + fee))
             : order.wallet_paid > 0 && order.cash_due === 0
               ? V.paidWallet
               : V.paidCash.replace("{n}", fmtNum(order.cash_due))}
