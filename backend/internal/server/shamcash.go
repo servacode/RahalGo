@@ -38,7 +38,6 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
-	"github.com/servacode/rahalgo/backend/internal/obligations"
 	"github.com/servacode/rahalgo/backend/internal/orders"
 	"github.com/servacode/rahalgo/backend/internal/shamcash"
 	"github.com/servacode/rahalgo/backend/internal/textguard"
@@ -48,16 +47,23 @@ const (
 	shamSettingEnabled = "customers.shamcash_enabled"
 	shamSettingMin     = "customers.shamcash_min"
 	shamSettingMax     = "customers.shamcash_max"
-	// shamBillTTL شام كاش بتنهي الفاتورة غير المدفوعة بعد عشر دقايق.
-	shamBillTTL = 10 * time.Minute
-	// shamFirstCheck أوّل سؤال لشام كاش عن فاتورة ما وصل إشعارها — بعد انتهائها (الحزمة
-	// الرسميّة بتقول: مرّة وحدة بعد عشر دقايق، لا استطلاع).
+	// shamBillTTL **عمر الفاتورة ٣٠ دقيقة** (قرار المالك ٢٠٢٦-١١-٠٩). createBill عند شام كاش
+	// ما إلها باراميتر مدّة، فالمدّة بتنفرض عندنا: فاتورة ما اندفعت لحدّ `expires_at` بتنعلّم
+	// «منتهية» (بعد ما نسأل شام كاش إنّها مو مدفوعة) والزبون بيعمل وحدة جديدة.
+	// **وإذا وصل دفع متأخّر لفاتورة انتهت عندنا بينودع بالمحفظة** — المال اللي وصل ما بيضيع
+	// (وفاتورة الطلب المتأخّرة ما بتعمل طلب؛ المبلغ بيضلّ بالمحفظة).
+	shamBillTTL = 30 * time.Minute
+	// shamFirstCheck أوّل سؤال لشام كاش عن فاتورة ما وصل إشعارها (الحزمة الرسميّة: مرّة بعد
+	// عشر دقايق، لا استطلاع) — شام كاش نفسها بتنهي فاتورتها بعد حوالي عشر دقايق.
 	shamFirstCheck = 11 * time.Minute
-	// shamRecheck وبعدها كلّ خمس دقايق لحدّ ما تنحسم.
+	// shamRecheck وبعدها كلّ خمس دقايق لحدّ ما تنحسم أو توصل `expires_at`.
 	shamRecheck = 5 * time.Minute
-	// shamGiveUp فاتورة بعدها «معلّقة» عند شام كاش بعد هالمدّة منعلّمها منتهية عندنا — وإذا
-	// وصل بعدها إشعار دفع مؤكّد بتنحسب عادي.
-	shamGiveUp = 30 * time.Minute
+	// shamLateWindow / shamLateRecheck **شبكة أمان للدفع المتأخّر**: فاتورة انتهت عندنا بالمهلة
+	// (مو بجواب شام كاش) منضلّ نسأل عنها كلّ ساعة ليوم كامل — إذا ضاع إشعار دفع متأخّر بيلقطه الفاحص.
+	shamLateWindow  = 24 * time.Hour
+	shamLateRecheck = time.Hour
+	// shamCustomerRecheck الزبون فاتح صفحة فاتورة فات وقتها ⇒ منسأل شام كاش مرّة بالدقيقة بالأكتر.
+	shamCustomerRecheck = time.Minute
 	// shamDryRunCredit رصيد مؤقّت جوّا معاملة بترجع دايماً — لنحسب مجموع الطلب بنفس طريق الإنشاء.
 	shamDryRunCredit int64 = 1 << 40
 )
@@ -298,7 +304,7 @@ func (s *Server) shamOpenBill(ctx context.Context, userID, purpose string, amoun
 		return shamBillView{}, "", err
 	}
 	note := "RahalGo " + purpose + " " + number
-	bill, err := s.sham.CreateBill(ctx, number, amount, shamcash.CurrencySYP, note, s.sham.ReturnURLFor(id))
+	bill, err := s.sham.CreateBill(ctx, number, amount, note, s.sham.ReturnURLFor(id))
 	if err != nil {
 		// **عطلُ نقلٍ قد يعني فاتورةً انعملت هناك** — تبقى معلّقةً والفاحصُ يسأل عنها.
 		// **وخطأُ عملٍ صريح** يعني لا فاتورة: تُعلَّم فاشلة.
@@ -335,13 +341,30 @@ func (s *Server) shamBill(ctx context.Context, q dbtx.Querier, id string) (shamB
 
 // handleMyShamBill GET /my/shamcash/bills/{id} — حال الفاتورة من عندنا (لا سؤال لشام كاش بكلّ نقرة).
 func (s *Server) handleMyShamBill(w http.ResponseWriter, r *http.Request) {
-	v, err := s.shamBill(r.Context(), s.pg, chi.URLParam(r, "id"))
+	ctx := r.Context()
+	v, err := s.shamBill(ctx, s.pg, chi.URLParam(r, "id"))
 	if err == nil && v.UserID != userIDFrom(r) {
 		err = errShamNotFound
 	}
 	if err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	// **فات وقتها وهي لسّا معلّقة** ⇒ منسأل شام كاش هلّق (مدفوعة ⇒ بتنودع، لأ ⇒ منتهية)
+	// حتى يشوف الزبون «منتهية» ويعمل وحدة جديدة — بلا ما يستنّى الفاحص.
+	if v.Status == "pending" && time.Now().After(v.ExpiresAt) && s.sham != nil {
+		var due bool
+		_ = s.pg.QueryRow(ctx, `
+			SELECT checked_at IS NULL OR checked_at < now() - $2::interval FROM shamcash_bills WHERE id = $1`,
+			v.ID, strconv.Itoa(int(shamCustomerRecheck/time.Second))+" seconds").Scan(&due)
+		if due {
+			if err := s.shamReconcile(ctx, v.ID); err != nil {
+				s.logger.Warn("shamcash: overdue bill reconcile", "bill", v.Number, "err", err)
+			}
+			if nv, err := s.shamBill(ctx, s.pg, v.ID); err == nil {
+				v = nv
+			}
+		}
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"bill": v.customerView()})
 }
@@ -396,10 +419,10 @@ func (s *Server) handleShamWebhook(w http.ResponseWriter, r *http.Request) {
 func (s *Server) shamReconcile(ctx context.Context, id string) error {
 	var number, status, userID string
 	var amount int64
-	var created time.Time
+	var overdue bool
 	if err := s.pg.QueryRow(ctx, `
-		SELECT number, status, user_id::text, amount, created_at FROM shamcash_bills WHERE id = $1`, id).
-		Scan(&number, &status, &userID, &amount, &created); err != nil {
+		SELECT number, status, user_id::text, amount, expires_at < now() FROM shamcash_bills WHERE id = $1`, id).
+		Scan(&number, &status, &userID, &amount, &overdue); err != nil {
 		return err
 	}
 	if status != "pending" && status != "expired" && status != "failed" {
@@ -408,7 +431,7 @@ func (s *Server) shamReconcile(ctx context.Context, id string) error {
 	_, _ = s.pg.Exec(ctx, `UPDATE shamcash_bills SET checked_at = now() WHERE id = $1`, id)
 	bill, err := s.sham.GetBill(ctx, number)
 	if shamcash.IsResult(err, shamcash.ResultBillNotFound) {
-		if status == "pending" && time.Since(created) > shamGiveUp {
+		if status == "pending" && overdue {
 			return s.shamMark(ctx, id, "failed", "not_found")
 		}
 		return nil
@@ -430,8 +453,9 @@ func (s *Server) shamReconcile(ctx context.Context, id string) error {
 		return s.shamSettle(ctx, id, *bill.TranID)
 	case shamcash.StatusExpired:
 		return s.shamMark(ctx, id, "expired", "remote_expired")
-	default: // معلّقة
-		if status == "pending" && time.Since(created) > shamGiveUp {
+	default: // معلّقة عند شام كاش
+		// **مرّت الـ٣٠ دقيقة** ⇒ منتهية عندنا. وإذا اندفعت بعدين: الإشعار أو الفاحص بيودعها.
+		if status == "pending" && overdue {
 			return s.shamMark(ctx, id, "expired", "local_timeout")
 		}
 		return nil
@@ -464,13 +488,18 @@ func (s *Server) shamSettle(ctx context.Context, id string, tranID int64) error 
 		Scan(&userID, &purpose, &status, &number, &amount, &orderJSON); err != nil {
 		return err
 	}
+	// **دفعٌ وصل لفاتورة علّمناها منتهية** (بعد ما شام كاش قالت «مو مدفوعة») — بينودع عادي
+	// (المال اللي وصل ما بيضيع) وبينكتب بالسجلّ «paid_late». أمّا فاتورة لسّا معلّقة عندنا
+	// ولو فات وقتها فهي دفعة بوقتها وإشعارها تأخّر: بتنحسب عادي.
+	late := status != "pending"
 	if status != "pending" && status != "expired" && status != "failed" {
 		return nil
 	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE shamcash_bills SET status = 'paid', paid_at = now(), sham_tran_id = $2,
-		       history = history || jsonb_build_array(jsonb_build_object('at', now(), 'event', 'paid', 'tran', $2::bigint))
-		 WHERE id = $1`, id, tranID); err != nil {
+		       history = history || jsonb_build_array(jsonb_build_object('at', now(),
+		                 'event', CASE WHEN $3::bool THEN 'paid_late' ELSE 'paid' END, 'tran', $2::bigint))
+		 WHERE id = $1`, id, tranID, late); err != nil {
 		return err
 	}
 	note := "شام كاش " + number
@@ -488,11 +517,22 @@ func (s *Server) shamSettle(ctx context.Context, id string, tranID int64) error 
 	var paidDebt int64
 	switch purpose {
 	case "topup":
-		// **والشحن بيسدّ الدين أوّلاً** — متل الشحن النقديّ (`payDebtFromTopup`). سؤال للمالك.
-		if paidDebt, err = s.shamPayDebt(ctx, tx, userID, amount, id); err != nil {
+		// **والشحن بيسدّ الدين أوّلاً، والباقي للمحفظة** (قرار المالك ٢٠٢٦-١١-٠٩) — بنفس
+		// طريق الشحن النقديّ تماماً (`payDebtFromTopup`)، بلا مُنفِّذ.
+		if paidDebt, err = s.payDebtFromTopup(ctx, tx, userID, amount, id, ""); err != nil {
 			return err
 		}
 	case "order":
+		if late {
+			// **فاتورة طلب انتهت عندنا ثمّ اندفعت** ⇒ ما منعمل الطلب متأخّر (يمكن طلب غيره
+			// أو تغيّرت السلّة) — المبلغ بيضلّ بالمحفظة والزبون بيتبلّغ.
+			orderErr = "shamcash_bill_expired"
+			if _, err := tx.Exec(ctx, `UPDATE shamcash_bills SET order_error = $2 WHERE id = $1`,
+				id, orderErr); err != nil {
+				return err
+			}
+			break
+		}
 		var in shamOrderInput
 		if err := json.Unmarshal(orderJSON, &in); err != nil {
 			return err
@@ -552,29 +592,6 @@ func (s *Server) shamSettle(ctx context.Context, id string, tranID int64) error 
 	return nil
 }
 
-// shamPayDebt كـ`payDebtFromTopup` — بلا مُنفِّذ (ما في إنسان؛ القيد من شام كاش).
-func (s *Server) shamPayDebt(ctx context.Context, q dbtx.Querier, userID string, amount int64, ref string) (int64, error) {
-	var hasDebt bool
-	if err := q.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM financial_obligations o
-		                WHERE o.closed_at IS NULL
-		                  AND ((o.party_kind IN ('rep', 'driver') AND o.party_id = $1::uuid)
-		                    OR (o.party_kind = 'merchant' AND o.party_id IN (
-		                          SELECT id FROM merchants WHERE owner_user_id = $1::uuid))))`,
-		userID).Scan(&hasDebt); err != nil || !hasDebt {
-		return 0, err
-	}
-	var treasury string
-	if err := q.QueryRow(ctx,
-		`SELECT COALESCE((SELECT user_id::text FROM wallets WHERE is_treasury LIMIT 1), '')`).
-		Scan(&treasury); err != nil {
-		return 0, err
-	}
-	return obligations.PayFromCredit(ctx, q, userID, amount, ref, nil, obligations.CreditPay{
-		Wallet: s.wallet, TreasuryID: treasury, Method: obligations.MethodTopup, From: "الشحن من شام كاش",
-	})
-}
-
 // ── الفاحص ────────────────────────────────────────────────────────────
 
 // RunShamCashPoller **فاحص ما فات من إشعارات** — الفواتير المعلّقة بعد انتهائها، والإرجاع
@@ -602,11 +619,16 @@ func (s *Server) SweepShamCash(ctx context.Context) {
 	}
 	rows, err := s.pg.Query(ctx, `
 		SELECT id::text FROM shamcash_bills
-		 WHERE status = 'pending' AND created_at < now() - $1::interval
-		   AND (checked_at IS NULL OR checked_at < now() - $2::interval)
+		 WHERE (status = 'pending' AND (created_at < now() - $1::interval OR expires_at < now())
+		        AND (checked_at IS NULL OR checked_at < now() - $2::interval OR expires_at < now()))
+		    OR (status = 'expired' AND expires_at > now() - $3::interval
+		        AND history @> '[{"event":"local_timeout"}]'::jsonb
+		        AND (checked_at IS NULL OR checked_at < now() - $4::interval))
 		 ORDER BY created_at LIMIT 50`,
 		strconv.Itoa(int(shamFirstCheck/time.Second))+" seconds",
-		strconv.Itoa(int(shamRecheck/time.Second))+" seconds")
+		strconv.Itoa(int(shamRecheck/time.Second))+" seconds",
+		strconv.Itoa(int(shamLateWindow/time.Second))+" seconds",
+		strconv.Itoa(int(shamLateRecheck/time.Second))+" seconds")
 	if err != nil {
 		s.logger.Warn("shamcash: sweep", "err", err)
 		return

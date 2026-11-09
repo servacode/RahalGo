@@ -55,7 +55,7 @@ func TestJWE_RoundTripAndShape(t *testing.T) {
 func TestClient_CreateGetAndRetryOn1704(t *testing.T) {
 	f, c := newPair(t)
 	ctx := context.Background()
-	b, err := c.CreateBill(ctx, "RG-1", 1500, CurrencySYP, "note", c.ReturnURLFor("x"))
+	b, err := c.CreateBill(ctx, "RG-1", 1500, "note", c.ReturnURLFor("x"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,7 +63,7 @@ func TestClient_CreateGetAndRetryOn1704(t *testing.T) {
 		t.Fatalf("bill %+v", b)
 	}
 	// a second create with the same number loads the stored bill (dropped-response retry)
-	b2, err := c.CreateBill(ctx, "RG-1", 1500, CurrencySYP, "", c.ReturnURLFor("x"))
+	b2, err := c.CreateBill(ctx, "RG-1", 1500, "", c.ReturnURLFor("x"))
 	if err != nil || b2.BillNo != "RG-1" || f.Bills() != 1 {
 		t.Fatalf("retry made a second bill: %v %d", err, f.Bills())
 	}
@@ -80,7 +80,7 @@ func TestClient_CreateGetAndRetryOn1704(t *testing.T) {
 func TestClient_RefundIdempotentAndBounded(t *testing.T) {
 	f, c := newPair(t)
 	ctx := context.Background()
-	if _, err := c.CreateBill(ctx, "RG-2", 1000, CurrencySYP, "", c.ReturnURLFor("x")); err != nil {
+	if _, err := c.CreateBill(ctx, "RG-2", 1000, "", c.ReturnURLFor("x")); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := c.RefundBill(ctx, "RG-2", 100, "key-not-paid-1", ""); !IsResult(err, ResultOriginBillNotPaid) {
@@ -111,7 +111,7 @@ func TestClient_TransactionsPaging(t *testing.T) {
 	ctx := context.Background()
 	for i := 0; i < 12; i++ {
 		no := "RG-P" + string(rune('a'+i))
-		if _, err := c.CreateBill(ctx, no, 10, CurrencySYP, "", c.ReturnURLFor("x")); err != nil {
+		if _, err := c.CreateBill(ctx, no, 10, "", c.ReturnURLFor("x")); err != nil {
 			t.Fatal(err)
 		}
 		f.Pay(no)
@@ -128,7 +128,7 @@ func TestClient_TransactionsPaging(t *testing.T) {
 
 func TestClient_Webhook(t *testing.T) {
 	f, c := newPair(t)
-	if _, err := c.CreateBill(context.Background(), "RG-W", 10, CurrencySYP, "", c.ReturnURLFor("x")); err != nil {
+	if _, err := c.CreateBill(context.Background(), "RG-W", 10, "", c.ReturnURLFor("x")); err != nil {
 		t.Fatal(err)
 	}
 	w, err := c.ParseWebhook(f.Pay("RG-W"))
@@ -153,5 +153,42 @@ func TestClient_Webhook(t *testing.T) {
 	body, _ := json.Marshal(map[string]string{"encData": enc})
 	if _, err := c.ParseWebhook(body); !errors.Is(err, ErrCrypto) {
 		t.Fatal("expired webhook accepted")
+	}
+}
+
+// TestClient_BillsAreNewSYPScaleOne owner decision 2026-11-09: every bill is SYP
+// (currencyId 2, the new pound — never USD) and, by default, the amount on the bill is
+// exactly the wallet amount (scale 1). The scale knob only exists for an old-pound Sham Cash.
+func TestClient_BillsAreNewSYPScaleOne(t *testing.T) {
+	t.Setenv("SHAMCASH_AMOUNT_SCALE", "")
+	if cfg := ConfigFromEnv(); cfg.AmountScale != 0 {
+		t.Fatalf("unset scale read as %d", cfg.AmountScale)
+	}
+	f, c := newPair(t)
+	cfg := f.Config("https://api.example/hook", "https://shop.example")
+	cfg.AmountScale = 0 // unset ⇒ 1
+	c0, err := New(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if c0.Config().AmountScale != 1 || c0.FormatAmount(500) != "500" {
+		t.Fatalf("default scale: %d %q", c0.Config().AmountScale, c0.FormatAmount(500))
+	}
+	b, err := c.CreateBill(context.Background(), "RG-SYP", 500, "", c.ReturnURLFor("x"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if b.CurrencyID != CurrencySYP || !c.AmountEquals(b.Amount, 500) || b.Amount != "500" {
+		t.Fatalf("bill not 500 new SYP: currency %d amount %q", b.CurrencyID, b.Amount)
+	}
+	// the old-pound knob: 500 new pounds = 50000 old on the bill, still SYP
+	cfg.AmountScale = 100
+	c100, err := New(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err = c100.CreateBill(context.Background(), "RG-OLD", 500, "", c.ReturnURLFor("x"))
+	if err != nil || b.CurrencyID != CurrencySYP || b.Amount != "50000" || !c100.AmountEquals(b.Amount, 500) {
+		t.Fatalf("scale 100: %v %+v", err, b)
 	}
 }

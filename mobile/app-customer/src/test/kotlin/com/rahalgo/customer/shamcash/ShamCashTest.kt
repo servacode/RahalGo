@@ -17,11 +17,11 @@ class ShamCashTest {
 
     @Test
     fun configParses() {
-        val c = json.decodeFromString<ShamConfig>("""{"enabled":true,"min":1000,"max":500000,"expires_minutes":10}""")
+        val c = json.decodeFromString<ShamConfig>("""{"enabled":true,"min":1000,"max":500000,"expires_minutes":30}""")
         assertTrue(c.enabled)
         assertEquals(1000L, c.min)
         assertEquals(500000L, c.max)
-        assertEquals(10, c.expiresMinutes)
+        assertEquals(30, c.expiresMinutes)
     }
 
     @Test

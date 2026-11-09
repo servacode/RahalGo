@@ -37,7 +37,7 @@ data class ShamConfig(
     val enabled: Boolean = false,
     val min: Long = 0,
     val max: Long = 0,
-    @SerialName("expires_minutes") val expiresMinutes: Int = 10,
+    @SerialName("expires_minutes") val expiresMinutes: Int = 30,
 )
 
 @Serializable

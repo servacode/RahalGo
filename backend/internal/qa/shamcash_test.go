@@ -72,6 +72,17 @@ func shamWebhook(h *Harness, body []byte) Res {
 	return h.POST(shamHook, "", json.RawMessage(body))
 }
 
+// shamAge يرجّع الفاتورة لورا بالزمن — الإنشاء والانتهاء معاً (عمرها ٣٠ دقيقة).
+func shamAge(t *testing.T, h *Harness, id string, minutes int) {
+	t.Helper()
+	if _, err := h.Pool.Exec(ctxBG(), `
+		UPDATE shamcash_bills SET created_at = created_at - make_interval(mins => $2),
+		       expires_at = expires_at - make_interval(mins => $2), checked_at = NULL
+		 WHERE id = $1`, id, minutes); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func shamCount(t *testing.T, h *Harness, sql string, args ...any) int {
 	t.Helper()
 	var n int
@@ -227,9 +238,7 @@ func TestSHAM_Expiry(t *testing.T) {
 	}
 
 	id2, _ := shamStart(t, h, u, 200) // معلّقة عند شام كاش للأبد
-	if _, err := h.Pool.Exec(ctxBG(), `UPDATE shamcash_bills SET created_at = now() - interval '31 minutes' WHERE id = $1`, id2); err != nil {
-		t.Fatal(err)
-	}
+	shamAge(t, h, id2, 31)
 	h.API.SweepShamCash(ctxBG())
 	if st := shamStatus(t, h, u, id2); st["status"] != "expired" {
 		t.Fatalf("مهلة محلّية: %v", st)
@@ -424,4 +433,202 @@ func TestSHAM_OrderBillExpiresNoOrder(t *testing.T) {
 	if r := h.POST("/api/v1/my/shamcash/orders", u.Token, map[string]any{"order": bad}); r.Code < 400 {
 		t.Fatalf("سلّة غلط عملت فاتورة: %s", r)
 	}
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// قرارات المالك ٢٠٢٦-١١-٠٩: الدين أوّلاً · الليرة الجديدة · عمر الفاتورة ٣٠ دقيقة
+// ══════════════════════════════════════════════════════════════════════
+
+// TestSHAM_TopupPaysDebtFirst شحن شام كاش لصاحب دين ⇒ بيسدّ الدين أوّلاً والباقي بالمحفظة —
+// بنفس طريق الشحن النقديّ (`payDebtFromTopup`): نفس طريقة التسوية ونفس قيد الخزينة.
+func TestSHAM_TopupPaysDebtFirst(t *testing.T) {
+	h, f := newShamHarness(t)
+	base := financialBaseline(t, h)
+	tid := treasury(t, h)
+	m := h.Factory().Merchant()
+	ob := legacyDebt(t, h, "merchant", m.ID, 3000)
+	before := treasuryBalance(t, h, tid)
+	startBal := shamBalance(t, h, m.Owner.ID)
+
+	id, no := shamStart(t, h, m.Owner, 5000)
+	if r := shamWebhook(h, f.Pay(no)); r.Code != 200 {
+		t.Fatalf("الإشعار: %s", r)
+	}
+	if b := shamBalance(t, h, m.Owner.ID) - startBal; b != 2000 {
+		t.Fatalf("**الشحن ما سدّ الدين أوّلاً**: زاد الرصيد %d والمنتظر ٢٠٠٠", b)
+	}
+	settled, closed, methods := obligationState(t, h, ob)
+	if settled != 3000 || !closed || len(methods) != 1 || methods[0] != "wallet_topup" {
+		t.Fatalf("الدين: %d %v %v", settled, closed, methods)
+	}
+	if after := treasuryBalance(t, h, tid); after-before != 3000 {
+		t.Fatalf("الخزينة: %d ⟵ %d", before, after)
+	}
+	if n := shamCount(t, h, `SELECT count(*) FROM wallet_transactions
+		WHERE user_id = $1::uuid AND ref = $2 AND kind = 'adjustment' AND amount = -3000 AND created_by IS NULL`,
+		m.Owner.ID, id); n != 1 {
+		t.Fatalf("سطر سداد الدين من الشحن: %d", n)
+	}
+	// الإشعار المكرّر ما بيسدّ مرّة تانية
+	shamWebhook(h, f.Webhook(no, nil, shamcash.StatusPaid))
+	if b := shamBalance(t, h, m.Owner.ID) - startBal; b != 2000 {
+		t.Fatalf("سداد مكرّر: %d", b)
+	}
+
+	// دين أكبر من الشحنة ⇒ كلّ الشحنة للدين والمحفظة ما بتزيد
+	ob2 := legacyDebt(t, h, "merchant", m.ID, 9000)
+	mid := shamBalance(t, h, m.Owner.ID)
+	_, no2 := shamStart(t, h, m.Owner, 4000)
+	shamWebhook(h, f.Pay(no2))
+	if b := shamBalance(t, h, m.Owner.ID); b != mid {
+		t.Fatalf("دين أكبر: الرصيد %d ⟵ %d", mid, b)
+	}
+	if s2, closed2, _ := obligationState(t, h, ob2); closed2 || s2 != 4000 {
+		t.Fatalf("الدين الكبير: سُدّ %d مسكّر %v", s2, closed2)
+	}
+	assertNewViolations(t, h, base)
+}
+
+// TestSHAM_BillsInNewSYP الفاتورة بالليرة الجديدة (currencyId 2) وبنفس مبلغ المحفظة.
+func TestSHAM_BillsInNewSYP(t *testing.T) {
+	h, f := newShamHarness(t)
+	u := h.Customer()
+	id, no := shamStart(t, h, u, 750)
+	if n := shamCount(t, h, `SELECT count(*) FROM shamcash_bills WHERE id = $1 AND currency = 2 AND amount = 750`, id); n != 1 {
+		t.Fatal("الفاتورة مو ٧٥٠ ليرة جديدة")
+	}
+	shamWebhook(h, f.Pay(no))
+	if b := shamBalance(t, h, u.ID); b != 750 {
+		t.Fatalf("انودع %d بدل ٧٥٠ — لا تحويل", b)
+	}
+}
+
+// TestSHAM_ThirtyMinuteExpiryAndLatePayment عمر الفاتورة ٣٠ دقيقة عندنا · الزبون بيشوفها
+// منتهية وبيعمل وحدة جديدة · ودفع متأخّر لفاتورة منتهية **بينودع** (إشعاراً أو بالفاحص).
+func TestSHAM_ThirtyMinuteExpiryAndLatePayment(t *testing.T) {
+	h, f := newShamHarness(t)
+	base := financialBaseline(t, h)
+	u := h.Customer()
+	if r := h.GET("/api/v1/my/shamcash", u.Token); r.JSON()["expires_minutes"] != float64(30) {
+		t.Fatalf("المدّة: %s", r)
+	}
+	id, no := shamStart(t, h, u, 400)
+	if n := shamCount(t, h, `SELECT count(*) FROM shamcash_bills WHERE id = $1
+		AND expires_at - created_at = interval '30 minutes'`, id); n != 1 {
+		t.Fatal("expires_at مو بعد ٣٠ دقيقة")
+	}
+	// بعد ٢٠ دقيقة لسّا معلّقة (مو منتهية عندنا)
+	shamAge(t, h, id, 20)
+	h.API.SweepShamCash(ctxBG())
+	if st := shamStatus(t, h, u, id); st["status"] != "pending" {
+		t.Fatalf("انتهت قبل الـ٣٠: %v", st)
+	}
+	// بعد ٣١ دقيقة: الزبون بيفتحها ⇒ منتهية (بعد ما سألنا شام كاش)
+	shamAge(t, h, id, 11)
+	calls := f.Calls["getBillInfo"]
+	if st := shamStatus(t, h, u, id); st["status"] != "expired" {
+		t.Fatalf("فاتت الـ٣٠ وما انتهت: %v", st)
+	}
+	if f.Calls["getBillInfo"] == calls {
+		t.Fatal("علّمناها منتهية بلا ما نسأل شام كاش")
+	}
+	// وبيعمل وحدة جديدة
+	id2, _ := shamStart(t, h, u, 400)
+	if id2 == id {
+		t.Fatal("نفس الفاتورة")
+	}
+	// دفع متأخّر بإشعار ⇒ بينودع
+	if r := shamWebhook(h, f.Pay(no)); r.Code != 200 {
+		t.Fatalf("الإشعار المتأخّر: %s", r)
+	}
+	if b := shamBalance(t, h, u.ID); b != 400 {
+		t.Fatalf("**الدفع المتأخّر ضاع**: الرصيد %d", b)
+	}
+	if st := shamStatus(t, h, u, id); st["status"] != "paid" {
+		t.Fatalf("الحالة بعد الدفع المتأخّر: %v", st)
+	}
+	if n := shamCount(t, h, `SELECT count(*) FROM shamcash_bills WHERE id = $1
+		AND history @> '[{"event":"paid_late"}]'::jsonb`, id); n != 1 {
+		t.Fatal("الدفع المتأخّر ما انكتب بالسجلّ")
+	}
+
+	// دفع متأخّر **وإشعاره ضاع** ⇒ شبكة الأمان بالفاحص بتلقطه
+	id3, no3 := shamStart(t, h, u, 300)
+	shamAge(t, h, id3, 31)
+	h.API.SweepShamCash(ctxBG())
+	if st := shamStatus(t, h, u, id3); st["status"] != "expired" {
+		t.Fatalf("الفاحص ما أنهاها: %v", st)
+	}
+	f.Pay(no3) // بلا إشعار
+	if _, err := h.Pool.Exec(ctxBG(), `UPDATE shamcash_bills SET checked_at = now() - interval '2 hours' WHERE id = $1`, id3); err != nil {
+		t.Fatal(err)
+	}
+	h.API.SweepShamCash(ctxBG())
+	if b := shamBalance(t, h, u.ID); b != 700 {
+		t.Fatalf("**الفاحص ما لقط الدفع المتأخّر**: الرصيد %d", b)
+	}
+	assertNewViolations(t, h, base)
+}
+
+// TestSHAM_LateOrderBillCreditsNoOrder فاتورة طلب انتهت عندنا ثمّ اندفعت ⇒ المبلغ بالمحفظة
+// ولا طلب متأخّر.
+func TestSHAM_LateOrderBillCreditsNoOrder(t *testing.T) {
+	h, f := newShamHarness(t)
+	base := financialBaseline(t, h)
+	u := h.Customer()
+	item := h.NewItem(600)
+	body := orderBody(item, 1)
+	delete(body, "payment_method")
+	before := h.CountOrders(u.ID)
+	r := h.POST("/api/v1/my/shamcash/orders", u.Token, map[string]any{"order": body})
+	if r.Code != 201 {
+		t.Fatalf("فاتورة الطلب: %s", r)
+	}
+	bill := r.JSON()["bill"].(map[string]any)
+	id, no, amount := bill["id"].(string), bill["number"].(string), int64(bill["amount"].(float64))
+	shamAge(t, h, id, 31)
+	h.API.SweepShamCash(ctxBG())
+	if st := shamStatus(t, h, u, id); st["status"] != "expired" {
+		t.Fatalf("ما انتهت: %v", st)
+	}
+	shamWebhook(h, f.Pay(no))
+	st := shamStatus(t, h, u, id)
+	if st["status"] != "paid" || st["order_id"] != nil || st["order_error"] != "shamcash_bill_expired" {
+		t.Fatalf("بعد الدفع المتأخّر: %v", st)
+	}
+	if b := shamBalance(t, h, u.ID); b != amount {
+		t.Fatalf("المبلغ لازم يضلّ بالمحفظة: %d من %d", b, amount)
+	}
+	if h.CountOrders(u.ID) != before {
+		t.Fatal("انعمل طلب متأخّر")
+	}
+	assertNewViolations(t, h, base)
+}
+
+// TestSHAM_PaidInTimeConfirmedLateStillOrders paid inside the 30 minutes but our side only
+// hears after them (lost webhook) => it is a payment on time: the order is made normally.
+func TestSHAM_PaidInTimeConfirmedLateStillOrders(t *testing.T) {
+	h, f := newShamHarness(t)
+	base := financialBaseline(t, h)
+	u := h.Customer()
+	item := h.NewItem(700)
+	body := orderBody(item, 1)
+	delete(body, "payment_method")
+	before := h.CountOrders(u.ID)
+	r := h.POST("/api/v1/my/shamcash/orders", u.Token, map[string]any{"order": body})
+	if r.Code != 201 {
+		t.Fatalf("order bill: %s", r)
+	}
+	bill := r.JSON()["bill"].(map[string]any)
+	id, no := bill["id"].(string), bill["number"].(string)
+	f.Pay(no) // no webhook
+	shamAge(t, h, id, 31)
+	st := shamStatus(t, h, u, id) // the customer opens it: we ask Sham Cash, it is paid
+	if st["status"] != "paid" || st["order_id"] == nil || st["order_error"] != "" {
+		t.Fatalf("paid on time but: %v", st)
+	}
+	if h.CountOrders(u.ID) != before+1 {
+		t.Fatal("no order")
+	}
+	assertNewViolations(t, h, base)
 }

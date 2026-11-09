@@ -1091,7 +1091,7 @@
     },
     {
       "file": "internal/server/shamcash.go",
-      "line": 546,
+      "line": 586,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "wallet",
@@ -1100,7 +1100,7 @@
     },
     {
       "file": "internal/server/shamcash.go",
-      "line": 949,
+      "line": 967,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "wallet",
@@ -2019,7 +2019,7 @@
     },
     {
       "file": "internal/server/shamcash.go",
-      "line": 546,
+      "line": 586,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "wallet",
@@ -2028,7 +2028,7 @@
     },
     {
       "file": "internal/server/shamcash.go",
-      "line": 949,
+      "line": 967,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "wallet",

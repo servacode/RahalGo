@@ -450,6 +450,9 @@ func obligationNotice(kind string, amount, remaining int64) (string, string) {
 // **ويُكتب سطرُ تسويةٍ «من الشحن»** لكلّ دينٍ مسّه — الأقدمُ أوّلاً.
 //
 // يُرجع ما اقتُطع — ليُبلَّغ صاحبُه بعد الإيداع.
+//
+// **وشحنُ شام كاش يناديه نفسَه** (قرارُ المالك ٢٠٢٦-١١-٠٩) — بلا مُنفِّذ: `actor`
+// فارغٌ ⇒ القيدُ بلا مُنفِّذ (ما في إنسان؛ المالُ جاء من شام كاش).
 func (s *Server) payDebtFromTopup(ctx context.Context, q dbtx.Querier,
 	userID string, topup int64, ref, actor string) (int64, error) {
 	// **والطريقةُ واحدةٌ لكلّ مالٍ يدخل** (قرارُ المالك ٢٠٢٦-١٠-١٥): الشحنُ
@@ -460,7 +463,11 @@ func (s *Server) payDebtFromTopup(ctx context.Context, q dbtx.Querier,
 		Scan(&treasury); err != nil {
 		return 0, err
 	}
-	return obligations.PayFromCredit(ctx, q, userID, topup, ref, &actor, obligations.CreditPay{
+	var actorID *string
+	if actor != "" {
+		actorID = &actor
+	}
+	return obligations.PayFromCredit(ctx, q, userID, topup, ref, actorID, obligations.CreditPay{
 		Wallet: s.wallet, TreasuryID: treasury, Method: obligations.MethodTopup, From: "الشحن",
 	})
 }

@@ -42,9 +42,24 @@
 //     each bill. While the setting is off OR the env is incomplete, every endpoint answers
 //     `shamcash_unavailable` and the apps hide the option.
 //
-// SHAMCASH_AMOUNT_SCALE: RahalGo amounts are in the NEW Syrian pound (1000 old = 10 new).
-// If Sham Cash's SYP currency is still the old pound, set the scale to 100 — otherwise a
-// customer would pay a hundredth of the amount. Confirm with Sham Cash before going live.
+// # Currency (owner decision 2026-11-09)
+//
+// Every bill is in the NEW Syrian pound — SYP, currencyId = 2 — the same unit as the
+// wallet, so a bill of 500 credits exactly 500 to the wallet, no conversion. **There are
+// no USD bills**: CreateBill always sends currencyId 2, and a paid bill reported in any
+// other currency is never credited (it is flagged for finance instead).
+//
+// SHAMCASH_AMOUNT_SCALE (default 1 — leave it unset or 1): a safety knob ONLY for the
+// case Sham Cash's SYP turns out to still be the OLD pound (1000 old = 10 new). Then set
+// it to 100, otherwise a customer would pay a hundredth of the amount. The wallet is
+// always credited the bill's amount in new pounds; the scale only changes the number
+// written on the Sham Cash bill. Confirm with Sham Cash before going live.
+//
+// # Bill expiry (owner decision 2026-11-09: 30 minutes)
+//
+// createBill has no expiry parameter (the official SDK sends billNo, amount, currencyId,
+// callbackUrl, redirectUrl and note only), so the 30 minutes are enforced on our side
+// (internal/server/shamcash.go, shamBillTTL).
 package shamcash
 
 import (
@@ -100,7 +115,9 @@ type Config struct {
 	BaseURL     string
 	CallbackURL string
 	ReturnURL   string
-	// AmountScale multiplies wallet units into Sham Cash currency units (default 1).
+	// AmountScale multiplies wallet units (NEW Syrian pounds) into the number written on
+	// the Sham Cash SYP bill. Default 1 (Sham Cash SYP = new pound, no conversion); 100
+	// only if Sham Cash still counts in the OLD pound. Zero or negative means 1.
 	AmountScale int64
 	Timeout     time.Duration
 }
@@ -359,13 +376,14 @@ func (c *Client) bill(data json.RawMessage) (*Bill, error) {
 	return &b, nil
 }
 
-// CreateBill creates a bill; a dropped response followed by 1704 loads the stored bill
-// (as the SDK's retry example does), so a retry never makes a second bill.
-func (c *Client) CreateBill(ctx context.Context, billNo string, units int64, currency int, note, redirectURL string) (*Bill, error) {
+// CreateBill creates a bill in SYP (currencyId 2, the new pound — never USD); a dropped
+// response followed by 1704 loads the stored bill (as the SDK's retry example does), so a
+// retry never makes a second bill.
+func (c *Client) CreateBill(ctx context.Context, billNo string, units int64, note, redirectURL string) (*Bill, error) {
 	payload := map[string]any{
 		"billNo":      billNo,
 		"amount":      json.Number(c.FormatAmount(units)),
-		"currencyId":  currency,
+		"currencyId":  CurrencySYP,
 		"callbackUrl": c.cfg.CallbackURL,
 		"redirectUrl": redirectURL,
 	}

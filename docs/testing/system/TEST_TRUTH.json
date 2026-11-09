@@ -34,7 +34,7 @@
     "behaviour_settings": 238,
     "order_fields": 141,
     "test_files": 801,
-    "test_funcs": 3082
+    "test_funcs": 3088
   },
   "flows": [
     {
@@ -26704,6 +26704,12 @@
       "orphan": true
     },
     {
+      "name": "TestSHAM_BillsInNewSYP",
+      "file": "internal/qa/shamcash_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestSHAM_Expiry",
       "file": "internal/qa/shamcash_test.go",
       "package": "qa",
@@ -26711,6 +26717,12 @@
     },
     {
       "name": "TestSHAM_ForgedAndLyingWebhooks",
+      "file": "internal/qa/shamcash_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSHAM_LateOrderBillCreditsNoOrder",
       "file": "internal/qa/shamcash_test.go",
       "package": "qa",
       "orphan": true
@@ -26740,6 +26752,12 @@
       "orphan": true
     },
     {
+      "name": "TestSHAM_PaidInTimeConfirmedLateStillOrders",
+      "file": "internal/qa/shamcash_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestSHAM_RefundPartialAndOver",
       "file": "internal/qa/shamcash_test.go",
       "package": "qa",
@@ -26758,7 +26776,19 @@
       "orphan": true
     },
     {
+      "name": "TestSHAM_ThirtyMinuteExpiryAndLatePayment",
+      "file": "internal/qa/shamcash_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestSHAM_TopupPaidOnceAndDrawerUntouched",
+      "file": "internal/qa/shamcash_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSHAM_TopupPaysDebtFirst",
       "file": "internal/qa/shamcash_test.go",
       "package": "qa",
       "orphan": true
@@ -33577,6 +33607,12 @@
       "name": "TestShowWhen_PointsAtRealKeysAndValues",
       "file": "internal/settings/single_source_test.go",
       "package": "settings_test",
+      "orphan": true
+    },
+    {
+      "name": "TestClient_BillsAreNewSYPScaleOne",
+      "file": "internal/shamcash/client_test.go",
+      "package": "shamcash",
       "orphan": true
     },
     {
