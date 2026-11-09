@@ -59,6 +59,7 @@ type Counts struct {
 // **وحارسٌ في الاختبار يطابقها بمعجم الإعدادات فيسقط إن اختفى مفتاح.**
 var FinancialSettings = []string{
 	"merchants.commission_percent", // pricing.go:153 — عمولةُ المنصّة
+	"merchants.usd_reference_rate", // goods_fx.go — سعرُ الدولار المرجعيّ لعمولة ثمنٍ بالدولار (٢٠٢٦-١١-٠٩)
 	"sales.commission_percent",     // pricing.go:164 — عمولةُ المندوب
 	"pricing.margin_fixed",         // pricing.go:69  — هامشُ التسعير
 	"delivery.fee",                 // pricing.go:195 — أجرةُ التوصيل

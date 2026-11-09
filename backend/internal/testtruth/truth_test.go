@@ -372,8 +372,10 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	// البضاعة والزبون يوافق — قرارُ المالك ٢٠٢٦-١١-٠٦).
 	//
 	// **و٢٣٥ مع** `orders.multistop_driver_build` (بوّابةُ الطلب من عدّة متاجر — مغلقةٌ افتراضاً).
-	if d.BehaviourSettings != 235 {
-		t.Errorf("إعداداتُ السلوك = %d لا 235 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	//
+	// **و٢٣٦ مع** `merchants.usd_reference_rate` (سعرُ الدولار المرجعيّ — قرارُ المالك ٢٠٢٦-١١-٠٩).
+	if d.BehaviourSettings != 236 {
+		t.Errorf("إعداداتُ السلوك = %d لا 236 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

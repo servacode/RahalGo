@@ -1638,6 +1638,7 @@
   },
   "financial_settings": [
     "merchants.commission_percent",
+    "merchants.usd_reference_rate",
     "sales.commission_percent",
     "pricing.margin_fixed",
     "delivery.fee",
