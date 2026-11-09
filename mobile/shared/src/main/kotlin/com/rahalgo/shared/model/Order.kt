@@ -659,3 +659,43 @@ data class CorrelationVerdict(
     val status: String = "INSUFFICIENT_DATA",
     @SerialName("evidence_age_ms") val evidenceAgeMs: Long = 0,
 )
+
+/**
+ * **طلب تعديل من الكابتن** (قرار المالك ٢٠٢٦-١١-١٠) — بالطلب العادي: سطر «ناقص» أو «الزبون لغاه»
+ * أو «انزاد صنف»، **والمكتب يوافق أو يرفض.** (`orders.EditRequestView` بالمحرّك — نفس الأسماء.)
+ *
+ * `status`: `pending` · `approved` · `rejected` · `superseded` · `stale` (الطلب تغيّر) · `closed`.
+ */
+@Serializable
+data class DriverEditRequest(
+    val id: String = "",
+    val status: String = "",
+    val lines: List<DriverEditRequestLine> = emptyList(),
+    val adds: List<DriverEditRequestAdd> = emptyList(),
+    val note: String = "",
+    @SerialName("old_total") val oldTotal: Long = 0,
+    @SerialName("new_total") val newTotal: Long = 0,
+    @SerialName("reject_reason") val rejectReason: String = "",
+    @SerialName("created_at") val createdAt: String = "",
+)
+
+@Serializable
+data class DriverEditRequestLine(
+    @SerialName("item_id") val itemId: String = "",
+    val name: String = "",
+    val action: String = "",
+    @SerialName("old_qty") val oldQty: Int = 0,
+    @SerialName("new_qty") val newQty: Int = 0,
+    @SerialName("unit_price") val unitPrice: Long = 0,
+)
+
+@Serializable
+data class DriverEditRequestAdd(
+    val name: String = "",
+    val qty: Int = 1,
+    val price: Long = 0,
+)
+
+/** **ردّ «آخر طلب تعديل»** — و`null`: ما في. */
+@Serializable
+data class DriverEditRequestReply(val request: DriverEditRequest? = null)

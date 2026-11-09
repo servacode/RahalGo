@@ -329,6 +329,27 @@
     <string name="drv_quote_rejected">رفض الزبون السعر — تحدّث معه في الدردشة وعدّل السعر</string>
     <string name="agree_edit_button">تعديل السعر</string>
     <!-- تعديل ثمن البضاعة بعد الاستلام والزبون يوافق (قرار المالك ٢٠٢٦-١١-٠٦) -->
+    <!-- طلب تعديل بالطلب العادي (قرار المالك ٢٠٢٦-١١-١٠): ناقص · الزبون لغاه · انزاد صنف، والمكتب يوافق -->
+    <string name="edit_req_button">طلب تعديل</string>
+    <string name="edit_req_title">طلب تعديل للمكتب</string>
+    <string name="edit_req_hint">اختار شو تغيّر. المكتب بيوافق، وبعدها بيتعدّل المبلغ اللي بتقبضه.</string>
+    <string name="edit_req_missing">ناقص</string>
+    <string name="edit_req_cancelled">الزبون لغاه</string>
+    <string name="edit_req_how_many">كم قطعة؟</string>
+    <string name="edit_req_add_title">انزاد صنف</string>
+    <string name="edit_req_add_name">اسم الصنف</string>
+    <string name="edit_req_add_qty">الكمية</string>
+    <string name="edit_req_add_price">سعر القطعة (ل.س)</string>
+    <string name="edit_req_add_button">+ ضيف الصنف</string>
+    <string name="edit_req_added_line">%1$s ×%2$d بسعر %3$s</string>
+    <string name="edit_req_remove">شيل</string>
+    <string name="edit_req_note">ملاحظة للمكتب (اختياري)</string>
+    <string name="edit_req_total">المجموع: %1$s ← تقريباً %2$s</string>
+    <string name="edit_req_send">ابعت للمكتب</string>
+    <string name="edit_req_pending">طلب التعديل بانتظار المكتب (المجموع الجديد %1$s)</string>
+    <string name="edit_req_rejected">المكتب رفض طلب التعديل: %1$s</string>
+    <string name="edit_req_stale">الطلب تغيّر قبل ما يوافق المكتب — ابعت طلب جديد إذا لسا لازم</string>
+    <string name="wa_goods_edit_button">عدّل ثمن الطلب</string>
     <string name="price_edit_button">عدّل سعر البضاعة</string>
     <string name="price_edit_title">تعديل سعر البضاعة</string>
     <string name="price_edit_current">السعر الحالي: %1$s</string>

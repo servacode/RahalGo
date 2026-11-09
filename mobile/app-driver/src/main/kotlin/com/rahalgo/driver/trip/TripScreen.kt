@@ -1142,6 +1142,17 @@ fun TripScreen(
         )
     }
 
+    // **«طلب تعديل» بالطلب العادي** (قرار المالك ٢٠٢٦-١١-١٠) — والمكتب يوافق.
+    if (state.editRequestOpen && roomyWindow()) {
+        EditRequestDialog(
+            order = order,
+            error = state.editRequestError,
+            busy = state.busy,
+            onSend = actions.sendEditRequest,
+            onDismiss = actions.dismissEditRequest,
+        )
+    }
+
     if (state.emergencyOpen && roomyWindow()) {
         EmergencyDialog(
             busy = state.emergencyBusy,
@@ -2155,6 +2166,29 @@ private fun TripCard(
                     else -> Unit
                 }
 
+                // ── **طلب تعديل بالطلب العادي** (قرار المالك ٢٠٢٦-١١-١٠) ──
+                when (editRequestBadge(order, state.editRequest)) {
+                    EditRequestBadge.PENDING -> InfoBox(
+                        icon = com.rahalgo.ui.R.drawable.ic_time,
+                        text = stringResource(R.string.edit_req_pending, money(state.editRequest?.newTotal ?: order.total)),
+                        tint = Rahal.colors.brand,
+                        bold = true,
+                    )
+                    EditRequestBadge.REJECTED -> InfoBox(
+                        icon = R.drawable.ic_warning,
+                        text = stringResource(R.string.edit_req_rejected, state.editRequest?.rejectReason.orEmpty()),
+                        tint = Rahal.colors.danger,
+                        bold = true,
+                    )
+                    EditRequestBadge.STALE -> InfoBox(
+                        icon = R.drawable.ic_warning,
+                        text = stringResource(R.string.edit_req_stale),
+                        tint = Rahal.colors.danger,
+                        bold = true,
+                    )
+                    EditRequestBadge.NONE -> Unit
+                }
+
                 // ── «إحضار»: المبلغُ الحقيقيُّ وموافقةُ المتجر (قرارُ المالك ٢٠٢٦-١٠-١٦) ──
                 // **بعملة الطلب** (٢٠٢٦-١٠-٢٠) — والدولارُ بالسنتات.
                 val shownAmount = orderAmount(order, order.fetchAmount ?: 0)
@@ -2256,6 +2290,25 @@ private fun TripCard(
                         tone = com.rahalgo.ui.PriceConfirm.Accept,
                         modifier = Modifier.fillMaxWidth(),
                     ) { Text(stringResource(R.string.price_edit_button), fontWeight = FontWeight.Bold) }
+                }
+
+                // **«طلب تعديل»** — زرّ ثانوي من القبول لحد التسليم، وطلب جديد بيحلّ محل المعلّق.
+                if (canRequestEdit(order)) {
+                    com.rahalgo.ui.RahalButton(
+                        onClick = actions.askEditRequest,
+                        enabled = !state.busy,
+                        tone = com.rahalgo.ui.PriceConfirm.Accept,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text(stringResource(R.string.edit_req_button), fontWeight = FontWeight.Bold) }
+                }
+                // **وطلب الواتساب: تصحيح الثمن بعد الاستلام لحد الباب** — نفس نافذة الثمن.
+                if (whatsAppAmountEditable(order)) {
+                    com.rahalgo.ui.RahalButton(
+                        onClick = { fetchOpen = true },
+                        enabled = !state.busy,
+                        tone = com.rahalgo.ui.PriceConfirm.Accept,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text(stringResource(R.string.wa_goods_edit_button), fontWeight = FontWeight.Bold) }
                 }
 
                 // ── صفُّ التواصل: أزرارٌ متساوية ────────────────────────────

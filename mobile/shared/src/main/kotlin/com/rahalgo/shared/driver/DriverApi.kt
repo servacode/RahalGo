@@ -656,6 +656,42 @@ class DriverApi(private val api: ApiClient) {
         )
     }
 
+    /**
+     * **طلب تعديل من الكابتن** (قرار المالك ٢٠٢٦-١١-١٠) — بالطلب العادي، والمكتب يوافق أو يرفض.
+     * **ومفتاح المحاولة نفسه يُعاد** حين يضيع الردّ — فلا ينبعت الطلب مرّتين.
+     */
+    suspend fun editRequest(orderId: String, body: EditRequestBody, idempotencyKey: String? = null): com.rahalgo.shared.model.DriverEditRequest? =
+        api.call<com.rahalgo.shared.model.DriverEditRequestReply>(
+            "/api/v1/driver/orders/" + orderId + "/edit-request",
+            HttpMethod.Post,
+            body,
+            idempotencyKey = idempotencyKey,
+        ).request
+
+    /** **آخر طلب تعديل بعته على هالطلب** — و`null`: ما في. */
+    suspend fun editRequestStatus(orderId: String): com.rahalgo.shared.model.DriverEditRequest? =
+        api.call<com.rahalgo.shared.model.DriverEditRequestReply>(
+            "/api/v1/driver/orders/" + orderId + "/edit-request",
+        ).request
+
+    /** **جسم طلب التعديل** — `qty` بالسطر كم قطعة بتنشال (صفر = السطر كلّه)، و`price` سعر الوحدة بالليرة. */
+    @kotlinx.serialization.Serializable
+    data class EditRequestBody(
+        val lines: List<EditLineBody> = emptyList(),
+        val adds: List<EditAddBody> = emptyList(),
+        val note: String = "",
+    )
+
+    @kotlinx.serialization.Serializable
+    data class EditLineBody(
+        @kotlinx.serialization.SerialName("item_id") val itemId: String,
+        val action: String,
+        val qty: Int,
+    )
+
+    @kotlinx.serialization.Serializable
+    data class EditAddBody(val name: String, val qty: Int, val price: Long)
+
     /** `currency` لطلب الواتساب وحده (٢٠٢٦-١١-٠٩) — وغيرُه يتجاهله الخادمُ ويُبقي عملةَ المتجر. */
     @kotlinx.serialization.Serializable
     private data class FetchAmountBody(val amount: Double, val currency: String? = null)

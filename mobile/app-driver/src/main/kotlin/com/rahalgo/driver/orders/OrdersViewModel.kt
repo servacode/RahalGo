@@ -1,5 +1,6 @@
 package com.rahalgo.driver.orders
 
+import com.rahalgo.driver.trip.toBody
 import android.app.Application
 import com.rahalgo.ui.apiError
 import android.os.SystemClock
@@ -594,6 +595,8 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             autoFollow(state.mine)
             trackDepartures(state.mine)
             persistTrip()
+            // **وحالة «طلب التعديل» مع كل تحديث** — موافقة المكتب أو رفضه بيوصلوا بالوصلة الحيّة.
+            loadEditRequest()
         } else {
             restoreTrip()
         }
@@ -1906,6 +1909,9 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             agreeError = agreeError,
             priceEditOpen = priceEditOpen,
             priceEditError = priceEditError,
+            editRequestOpen = editRequestOpen,
+            editRequestError = editRequestError,
+            editRequest = editRequest?.takeIf { editRequestOrder == order.id },
             emergencyOpen = emergencyOpen,
             emergencyBusy = emergencyBusy,
             emergencyError = emergencyError,
@@ -2770,6 +2776,75 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             priceEditOpen = false
             detail = detail.copy(busy = false)
             reload()
+        }
+    }
+
+    /** **«طلب تعديل» بالطلب العادي** (قرار المالك ٢٠٢٦-١١-١٠) — والمكتب يوافق أو يرفض. */
+    var editRequestOpen by mutableStateOf(false)
+        private set
+    var editRequestError by mutableStateOf("")
+        private set
+    /** **آخر طلب بعته على الطلب المفتوح** — ومعرّف الطلب اللي انقرا إله. */
+    private var editRequest by mutableStateOf<com.rahalgo.shared.model.DriverEditRequest?>(null)
+    private var editRequestOrder: String? = null
+
+    /**
+     * **مفتاح المحاولة لنفس المسودّة** — ردّ ضايع بيعيد بنفس المفتاح فما ينبعت الطلب مرّتين؛
+     * ومسودّة جديدة مفتاح جديد.
+     */
+    private var editRequestKey: Pair<com.rahalgo.driver.trip.EditDraft, String>? = null
+
+    fun askEditRequest() {
+        editRequestError = ""
+        editRequestOpen = true
+    }
+
+    fun dismissEditRequest() {
+        editRequestError = ""
+        editRequestOpen = false
+    }
+
+    fun sendEditRequest(draft: com.rahalgo.driver.trip.EditDraft) {
+        val id = currentId() ?: return
+        if (detail.busy) return
+        editRequestError = ""
+        val key = editRequestKey?.takeIf { it.first == draft }?.second
+            ?: java.util.UUID.randomUUID().toString().also { editRequestKey = draft to it }
+        detail = detail.copy(busy = true, error = "")
+        viewModelScope.launch {
+            try {
+                val got = backend.driver.editRequest(id, draft.toBody(), key)
+                editRequest = got
+                editRequestOrder = id
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                editRequestError = describe(e)
+                detail = detail.copy(busy = false)
+                return@launch
+            }
+            editRequestKey = null
+            editRequestOpen = false
+            detail = detail.copy(busy = false)
+            reload()
+        }
+    }
+
+    /** **يقرأ آخر طلب تعديل للطلب المفتوح** — بالطلب العادي بين القبول والتسليم بس. */
+    private suspend fun loadEditRequest() {
+        val id = currentId() ?: return
+        val order = state.mine.firstOrNull { it.id == id } ?: return
+        if (!com.rahalgo.driver.trip.canRequestEdit(order)) {
+            if (editRequestOrder == id) editRequest = null
+            return
+        }
+        try {
+            editRequest = backend.driver.editRequestStatus(id)
+            editRequestOrder = id
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            // **قراءة فاشلة ما بتمسح الحالة المعروضة** — بتنعاد بالتحديث الجاي.
         }
     }
 

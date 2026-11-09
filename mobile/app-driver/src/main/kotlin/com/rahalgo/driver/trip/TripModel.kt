@@ -221,6 +221,10 @@ data class TripState(
     /** **نافذة «عدّل سعر البضاعة» بعد الاستلام** (قرار المالك ٢٠٢٦-١١-٠٦) — وخطؤها جوّاها. */
     val priceEditOpen: Boolean = false,
     val priceEditError: String = "",
+    /** **«طلب تعديل» بالطلب العادي** (قرار المالك ٢٠٢٦-١١-١٠) — النافذة وخطؤها، وآخر طلب بعته. */
+    val editRequestOpen: Boolean = false,
+    val editRequestError: String = "",
+    val editRequest: com.rahalgo.shared.model.DriverEditRequest? = null,
     /** محطّاته كلّها — **وواحدةٌ منها هي المعروضة.** */
     val stops: List<Stop> = emptyList(),
     /** **أنافذة الطارئ مفتوحة؟** — تُفتح حين لا سببَ يُختار. */
@@ -319,6 +323,10 @@ data class TripActions(
     /** (الثمن الجديد بالوحدة الكبرى، السبب، عملة الثمن الموافَق عليه). */
     val priceEdit: (Double, String, String) -> Unit = { _, _, _ -> },
     val dismissPriceEdit: () -> Unit = {},
+    /** **«طلب تعديل» بالطلب العادي** — والمكتب يوافق (قرار المالك ٢٠٢٦-١١-١٠). */
+    val askEditRequest: () -> Unit = {},
+    val sendEditRequest: (EditDraft) -> Unit = {},
+    val dismissEditRequest: () -> Unit = {},
     /** **«إحضار»: ما دفعه بمكان الاستلام** — يصل المتجرَ ليوافق (قرارُ المالك ٢٠٢٦-١٠-١٦). */
     // **بعملة الطلب وبالوحدة الكبرى** (١٣٫٢٥ للدولار) — قرارُ المالك ٢٠٢٦-١٠-٢٠.
     // **والعملةُ لطلب الواتساب وحدَه** (٢٠٢٦-١١-٠٩) — وفارغةٌ تعني عملةَ الطلب كما هي.
