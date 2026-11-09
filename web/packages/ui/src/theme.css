@@ -4163,7 +4163,7 @@ select:-webkit-autofill:focus {
   --admin-gap: 1rem;
   --admin-pad: 1rem;
   --admin-row-pad-y: 0.75rem;
-  --admin-max: 90rem;
+  --admin-max: none;
 }
 
 @media (width >= 1024px) {
@@ -4178,7 +4178,7 @@ select:-webkit-autofill:focus {
   flex-direction: column;
   gap: var(--admin-gap, 1rem);
   width: 100%;
-  max-width: var(--admin-max, 90rem);
+  max-width: var(--admin-max, none);
   margin-inline: auto;
 }
 
