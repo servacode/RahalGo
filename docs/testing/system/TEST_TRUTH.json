@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 670,
+    "routes": 678,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,7 +21,7 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 132,
+    "notify_sites": 134,
     "notify_targeted": 66,
     "publish_rooms": [
       "customer",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 280,
-    "behaviour_settings": 235,
+    "setting_defs": 283,
+    "behaviour_settings": 238,
     "order_fields": 141,
-    "test_files": 799,
-    "test_funcs": 3067
+    "test_files": 801,
+    "test_funcs": 3082
   },
   "flows": [
     {
@@ -3639,6 +3639,63 @@
         "TestCustomWhatsApp_RoleOffNotBlocked"
       ],
       "status": "REGRESSION_TEST_PRESENT"
+    },
+    {
+      "key": "customers.shamcash_enabled",
+      "group": "customers",
+      "kind": "bool",
+      "sensitive": true,
+      "money": false,
+      "flows": [
+        "F-01",
+        "F-17"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "customers.shamcash_max",
+      "group": "customers",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-01",
+        "F-17"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "customers.shamcash_min",
+      "group": "customers",
+      "kind": "money",
+      "sensitive": true,
+      "money": true,
+      "flows": [
+        "F-01",
+        "F-17"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "driver",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
     },
     {
       "key": "customers.signup_bonus",
@@ -26647,6 +26704,66 @@
       "orphan": true
     },
     {
+      "name": "TestSHAM_Expiry",
+      "file": "internal/qa/shamcash_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSHAM_ForgedAndLyingWebhooks",
+      "file": "internal/qa/shamcash_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSHAM_MissedWebhookPollerCredits",
+      "file": "internal/qa/shamcash_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSHAM_OrderBillExpiresNoOrder",
+      "file": "internal/qa/shamcash_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSHAM_OrderFailsAfterPaymentKeepsMoney",
+      "file": "internal/qa/shamcash_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSHAM_OrderPaidThenCreated",
+      "file": "internal/qa/shamcash_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSHAM_RefundPartialAndOver",
+      "file": "internal/qa/shamcash_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSHAM_RefundTransportFaultRetriedWithSameKey",
+      "file": "internal/qa/shamcash_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSHAM_SwitchOffIsUnavailable",
+      "file": "internal/qa/shamcash_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSHAM_TopupPaidOnceAndDrawerUntouched",
+      "file": "internal/qa/shamcash_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestShiftCloseReminder_NothingWhenAlwaysOpen",
       "file": "internal/qa/shift_close_remind_test.go",
       "package": "qa",
@@ -33460,6 +33577,36 @@
       "name": "TestShowWhen_PointsAtRealKeysAndValues",
       "file": "internal/settings/single_source_test.go",
       "package": "settings_test",
+      "orphan": true
+    },
+    {
+      "name": "TestClient_CreateGetAndRetryOn1704",
+      "file": "internal/shamcash/client_test.go",
+      "package": "shamcash",
+      "orphan": true
+    },
+    {
+      "name": "TestClient_RefundIdempotentAndBounded",
+      "file": "internal/shamcash/client_test.go",
+      "package": "shamcash",
+      "orphan": true
+    },
+    {
+      "name": "TestClient_TransactionsPaging",
+      "file": "internal/shamcash/client_test.go",
+      "package": "shamcash",
+      "orphan": true
+    },
+    {
+      "name": "TestClient_Webhook",
+      "file": "internal/shamcash/client_test.go",
+      "package": "shamcash",
+      "orphan": true
+    },
+    {
+      "name": "TestJWE_RoundTripAndShape",
+      "file": "internal/shamcash/client_test.go",
+      "package": "shamcash",
       "orphan": true
     },
     {

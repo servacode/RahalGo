@@ -11,10 +11,10 @@
     "InApp": 8
   },
   "derived": {
-    "emit_sites": 127,
+    "emit_sites": 130,
     "realtime_publishers": 31,
     "rooms": 5,
-    "untargeted_user_sites": 38
+    "untargeted_user_sites": 40
   },
   "emit_sites": [
     {
@@ -452,7 +452,7 @@
     },
     {
       "file": "internal/orders/whatsapp_order.go",
-      "line": 755,
+      "line": 758,
       "call": "NotifyOps",
       "kind": "Order",
       "entity": "order",
@@ -461,7 +461,7 @@
     },
     {
       "file": "internal/orders/whatsapp_order.go",
-      "line": 832,
+      "line": 835,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -718,7 +718,7 @@
     },
     {
       "file": "internal/server/driver_handlers.go",
-      "line": 1657,
+      "line": 1678,
       "call": "NotifyOps",
       "kind": "Order",
       "entity": "order",
@@ -1039,6 +1039,15 @@
       "has_entity_id": true
     },
     {
+      "file": "internal/server/price_sync_notify.go",
+      "line": 71,
+      "call": "Notify",
+      "kind": "Account",
+      "entity": "price_sync",
+      "has_app_targeting": true,
+      "has_entity_id": true
+    },
+    {
       "file": "internal/server/promos_handlers.go",
       "line": 346,
       "call": "NotifyMany",
@@ -1079,6 +1088,24 @@
       "entity": "merchant",
       "has_app_targeting": true,
       "has_entity_id": true
+    },
+    {
+      "file": "internal/server/shamcash.go",
+      "line": 546,
+      "call": "Notify",
+      "kind": "Wallet",
+      "entity": "wallet",
+      "has_app_targeting": false,
+      "has_entity_id": false
+    },
+    {
+      "file": "internal/server/shamcash.go",
+      "line": 949,
+      "call": "Notify",
+      "kind": "Wallet",
+      "entity": "wallet",
+      "has_app_targeting": false,
+      "has_entity_id": false
     },
     {
       "file": "internal/server/shift_close_remind.go",
@@ -1633,7 +1660,7 @@
     },
     {
       "file": "internal/orders/whatsapp_order.go",
-      "line": 838,
+      "line": 841,
       "room": "driver:*"
     },
     {
@@ -1989,6 +2016,24 @@
       "entity": "merchant",
       "has_app_targeting": false,
       "has_entity_id": true
+    },
+    {
+      "file": "internal/server/shamcash.go",
+      "line": 546,
+      "call": "Notify",
+      "kind": "Wallet",
+      "entity": "wallet",
+      "has_app_targeting": false,
+      "has_entity_id": false
+    },
+    {
+      "file": "internal/server/shamcash.go",
+      "line": 949,
+      "call": "Notify",
+      "kind": "Wallet",
+      "entity": "wallet",
+      "has_app_targeting": false,
+      "has_entity_id": false
     },
     {
       "file": "internal/server/ticket_reward.go",

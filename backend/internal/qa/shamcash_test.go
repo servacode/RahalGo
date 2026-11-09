@@ -290,7 +290,7 @@ func TestSHAM_RefundPartialAndOver(t *testing.T) {
 	assertNewViolations(t, h, base, "FI-16", "FI-15", "FI-02.a")
 }
 
-// TestSHAM_RefundTransportFaultRetriedWithSameKey شام كاش رفضت الإرجاع ⇒ الخصم بيرجع للمحفظة.
+// TestSHAM_RefundTransportFaultRetriedWithSameKey عطل نقل ⇒ الإرجاع معلّق، والفاحص بيعيده بنفس المفتاح.
 func TestSHAM_RefundTransportFaultRetriedWithSameKey(t *testing.T) {
 	h, f := newShamHarness(t)
 	base := financialBaseline(t, h)

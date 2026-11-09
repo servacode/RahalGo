@@ -1229,6 +1229,9 @@ kosom` |
 | `customers.cod_limit` |  | money | `0` |
 | `customers.require_whatsapp` |  | bool | `false` |
 | `customers.signup_bonus` |  | money | `0` |
+| `customers.shamcash_enabled` |  | bool | `false` |
+| `customers.shamcash_min` |  | money | `10` |
+| `customers.shamcash_max` |  | money | `10000` |
 | `customers.welcome_template` |  | longtext | `أهلاً فيك بعائلة رحّال غو 🌿
 صار عندك حساب، وفيك تطلب من مطاعم ومحلات الرقة ويوصلك طلبك لباب بيتك.
 
