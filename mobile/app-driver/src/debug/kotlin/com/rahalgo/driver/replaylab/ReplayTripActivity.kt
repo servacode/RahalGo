@@ -62,7 +62,7 @@ class ReplayTripActivity : ComponentActivity() {
                             capture = {},
                             chat = {},
                             askAgree = {},
-                            agree = { _, _ -> },
+                            agree = { _, _, _ -> },
                             dismissAgree = {},
                             pickStop = {},
                             takeOffer = {},

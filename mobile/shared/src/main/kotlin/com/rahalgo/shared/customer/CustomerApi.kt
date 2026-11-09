@@ -749,6 +749,8 @@ data class MyOrder(
     // مربوطٌ بنسخةٍ**: `quoteConfirmedVersion == quoteVersion` تعني تأكيداً
     // حيّاً، وإلّا فالعرضُ تغيّر ويجب أن يُؤكَّد من جديد. **والمحجوزُ مالُه.**
     @SerialName("custom_goods_amount") val customGoodsAmount: Long? = null,
+    /** **ثمنُ البضاعة بالدولار بالسنتات** — غيرُ فارغٍ ⇐ البضاعةُ دولار، و`total` أجرةُ التوصيل وحدها. */
+    @SerialName("custom_goods_usd") val customGoodsUsd: Long? = null,
     /** **أمانةٌ أم مشتريات** (قرارُ المالك ٢٠٢٦-١٠-٠٣) — اختيارُه عند الطلب. */
     @SerialName("custom_mode") val customMode: String = "purchase",
     /** **وُثّقت الأجرةُ والثمنُ بعد الشراء** — فيُوافَق على الأجرة الآن. */

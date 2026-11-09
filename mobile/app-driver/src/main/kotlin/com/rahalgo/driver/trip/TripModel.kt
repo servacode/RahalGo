@@ -312,14 +312,17 @@ data class TripActions(
     val askAgree: () -> Unit,
     /** **«تعديل السعر»** — بعد التوثيق وقبل الاستلام (المالك ٢٠٢٦-١٠-٢٢). */
     val askEdit: () -> Unit = {},
-    val agree: (Long, Long) -> Unit,
+    /** (ثمن البضاعة بالوحدة الكبرى، الأجرة، عملة الثمن «SYP»/«USD») — ٢٠٢٦-١١-٠٩. */
+    val agree: (Double, Long, String) -> Unit,
     /** **بعد الاستلام: يطلب ثمن بضاعة جديد بسببه** — والزبون يوافق (قرار المالك ٢٠٢٦-١١-٠٦). */
     val askPriceEdit: () -> Unit = {},
-    val priceEdit: (Long, String) -> Unit = { _, _ -> },
+    /** (الثمن الجديد بالوحدة الكبرى، السبب، عملة الثمن الموافَق عليه). */
+    val priceEdit: (Double, String, String) -> Unit = { _, _, _ -> },
     val dismissPriceEdit: () -> Unit = {},
     /** **«إحضار»: ما دفعه بمكان الاستلام** — يصل المتجرَ ليوافق (قرارُ المالك ٢٠٢٦-١٠-١٦). */
     // **بعملة الطلب وبالوحدة الكبرى** (١٣٫٢٥ للدولار) — قرارُ المالك ٢٠٢٦-١٠-٢٠.
-    val fetchAmount: (Double) -> Unit = {},
+    // **والعملةُ لطلب الواتساب وحدَه** (٢٠٢٦-١١-٠٩) — وفارغةٌ تعني عملةَ الطلب كما هي.
+    val fetchAmount: (Double, String?) -> Unit = { _, _ -> },
     val dismissAgree: () -> Unit,
     val pickStop: (String) -> Unit,
     val takeOffer: (String) -> Unit,
@@ -644,6 +647,20 @@ fun collectForStore(order: DriverOrder): Long? {
  * **والدولارُ من الخادم بالسنتات** (١٢٥٠ = ١٢٫٥٠$)، فلا يُعرض بـ`money`.
  */
 fun orderAmount(order: DriverOrder, units: Long): String = amountText(units, order.amountCurrency)
+
+/**
+ * **ما يقبضه السائقُ من المستلِم في الطلب الخاصّ** (قرارُ المالك ٢٠٢٦-١١-٠٩): البضاعةُ بالدولار تُدفع
+ * كاشاً للكابتن، **والأجرةُ ليرةٌ** — فيُقال «12.50$ + 150 ل.س» **ولا يُجمع الاثنان أبداً.**
+ * وفارغٌ (`null`) إن لم تكن البضاعةُ بالدولار.
+ */
+fun usdCollectText(order: DriverOrder): String? {
+    val usd = order.customGoodsUsd ?: return null
+    val goods = amountText(usd, "USD")
+    return if (order.cashDue > 0) goods + " + " + money(order.cashDue) else goods
+}
+
+/** **ما يدفعه السائقُ لمتجرٍ** بعملته — «USD» سنتات و«SYP» أو فارغٌ ليرة. */
+fun storePayText(p: com.rahalgo.shared.model.StorePay): String = amountText(p.amount, p.currency)
 
 /**
  * **المبلغُ المرفوضُ كما يُكتب من جديد** — بالوحدة الكبرى: «13.25» للدولار لا «1325».

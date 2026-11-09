@@ -73,6 +73,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.rahalgo.driver.R
 import com.rahalgo.ui.money
+import com.rahalgo.ui.amountText
+import com.rahalgo.ui.isUsd
 import com.rahalgo.shared.model.DriverOrder
 import com.rahalgo.shared.model.FailReasonItem
 import com.rahalgo.ui.RahalButton
@@ -1111,6 +1113,8 @@ fun TripScreen(
             driverMayChange = order.customDriverMayChangeFee,
             // **وثمنٌ ينتظر الشراء ليس ثمناً** — فلا تظهر خانتُه في تعديل الأجرة بعد الرفض.
             currentGoods = order.customGoods.takeUnless { order.customGoodsPending },
+            // **ودولارُ البضاعة بالسنتات** (٢٠٢٦-١١-٠٩) — يُملأ سلفاً ويبدأ الاختيارُ على «$».
+            currentGoodsUsd = order.customGoodsUsd.takeUnless { order.customGoodsPending },
             currentFee = order.customFee,
             // **وبعد رفض الزبون: الاثنان معاً** (قرارُ المالك ٢٠٢٦-١٠-٢١).
             step = when {
@@ -1130,6 +1134,7 @@ fun TripScreen(
     if (state.priceEditOpen && roomyWindow()) {
         PriceEditDialog(
             currentGoods = order.customGoods ?: 0L,
+            currentGoodsUsd = order.customGoodsUsd,
             error = state.priceEditError,
             busy = state.busy,
             onConfirm = actions.priceEdit,
@@ -1700,9 +1705,9 @@ private fun TripCard(
                 current = order.fetchAmount.takeIf { fetchStep == FetchAmountStep.REJECTED },
                 currency = order.amountCurrency,
                 busy = state.busy,
-                onConfirm = { amount ->
+                onConfirm = { amount, cur ->
                     fetchOpen = false
-                    actions.fetchAmount(amount)
+                    actions.fetchAmount(amount, cur)
                 },
                 onDismiss = { fetchOpen = false },
                 whatsApp = isWhatsApp(order),
@@ -1845,23 +1850,30 @@ private fun TripCard(
 
                 // **مربّعُ المال أوّلاً بعد الاستلام** — «كم آخذ ومن مَن» بالرقم الكبير.
                 if (pickedUp) {
-                    if (cashFrom == CashFrom.RECIPIENT) {
+                    // **وبضاعةُ الدولار تُقبض كاشاً حتّى لو دفعت المحفظةُ الأجرة** (٢٠٢٦-١١-٠٩).
+                    val usdCollect = usdCollectText(order)
+                    if (cashFrom == CashFrom.RECIPIENT || usdCollect != null) {
                         MoneyBox(
                             label = stringResource(
                                 R.string.trip_collect_from,
                                 order.customerName.ifBlank { stringResource(R.string.detail_customer) },
                             ),
-                            amount = money(order.cashDue),
+                            amount = usdCollect ?: money(order.cashDue),
                             // **ولونُ «تقبض» واحدٌ في كلّ الشاشات** — أحمرُ كبطاقة الطلب (قرارُ المالك
                             // ٢٠٢٦-٠٨-١٢: «أحمر يعني اقبض»)، لا برتقاليٌّ هنا وأحمرُ هناك.
                             tint = CollectTint(),
                         )
                         // **والمشترياتُ مفصّلة** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢: «مشتريات بقيمة 350 اجرة
                         // توصيل 150 مجموع 500»).
-                        if (order.kind == "custom" && order.customMode != "amanah" && (order.customGoods ?: 0) > 0) {
+                        if (order.kind == "custom" && order.customMode != "amanah" &&
+                            ((order.customGoods ?: 0) > 0 || order.customGoodsUsd != null)
+                        ) {
                             InfoBox(
                                 icon = R.drawable.ic_cash,
-                                text = stringResource(R.string.trip_goods_line, money(order.customGoods ?: 0)) + "\n" +
+                                text = stringResource(
+                                    R.string.trip_goods_line,
+                                    order.customGoodsUsd?.let { amountText(it, "USD") } ?: money(order.customGoods ?: 0),
+                                ) + "\n" +
                                     // **والأجرةُ المُعفاة لا تُطالَب** — المربّعُ الكبير يقول
                                     // `cashDue` (البضاعة وحدها)، فالتفصيلُ يطابقه.
                                     if (order.freeWaived > 0) {
@@ -1912,15 +1924,21 @@ private fun TripCard(
                     if (order.items.isNotEmpty()) InvoiceBox(order)
                     // **وكم يدفع للمتجر عند الاستلام** (قرارُ المالك ٢٠٢٦-١٠-١٥) — من سلفة
                     // المكتب، **ولكلّ متجرٍ سطرُه** إن كان الطلبُ من مصدرين.
-                    if (order.kind == "standard" && order.payMerchant > 0) {
+                    if (order.kind == "standard" && (order.payMerchant > 0 || order.payMerchants.any { isUsd(it.currency) })) {
                         if (order.payMerchants.size > 1) {
                             order.payMerchants.forEach { p ->
                                 MoneyBox(
                                     label = stringResource(R.string.trip_pay_merchant_named, p.merchantName),
-                                    amount = money(p.amount),
+                                    amount = storePayText(p),
                                     tint = Rahal.colors.brand,
                                 )
                             }
+                        } else if (order.payMerchants.size == 1 && isUsd(order.payMerchants[0].currency)) {
+                            MoneyBox(
+                                label = stringResource(R.string.trip_pay_merchant),
+                                amount = storePayText(order.payMerchants[0]),
+                                tint = Rahal.colors.brand,
+                            )
                         } else {
                             MoneyBox(
                                 label = stringResource(R.string.trip_pay_merchant),
@@ -2050,7 +2068,12 @@ private fun TripCard(
                         append(stringResource(R.string.agree_fee_done, money(order.customFee ?: 0)))
                         if (order.customMode != "amanah" && !order.customGoodsPending) {
                             append("\n")
-                            append(stringResource(R.string.agree_goods_done, money(order.customGoods ?: 0)))
+                            append(
+                                stringResource(
+                                    R.string.agree_goods_done,
+                                    order.customGoodsUsd?.let { amountText(it, "USD") } ?: money(order.customGoods ?: 0),
+                                ),
+                            )
                         }
                     }
                     InfoBox(icon = R.drawable.ic_check_circle, text = done, tint = Rahal.colors.success)
@@ -2058,7 +2081,14 @@ private fun TripCard(
                 // **والمشترياتُ من متجرٍ تابع** (قرارُ المالك ٢٠٢٦-١٠-١٥) — يعرف من أين يشتري،
                 // **وبعد توثيق الثمن كم يدفع له: الثمنُ ناقصَ العمولة** (من الخادم لا من هنا).
                 if (customOpen && order.partnerMerchantName.isNotBlank()) {
-                    if (order.payMerchant > 0) {
+                    val usdPay = order.payMerchants.firstOrNull { isUsd(it.currency) }
+                    if (usdPay != null) {
+                        MoneyBox(
+                            label = stringResource(R.string.trip_pay_merchant_named, order.partnerMerchantName),
+                            amount = storePayText(usdPay),
+                            tint = Rahal.colors.brand,
+                        )
+                    } else if (order.payMerchant > 0) {
                         MoneyBox(
                             label = stringResource(R.string.trip_pay_merchant_named, order.partnerMerchantName),
                             amount = money(order.payMerchant),

@@ -48,6 +48,7 @@ import com.rahalgo.driver.R
 import com.rahalgo.driver.data.Backend
 import com.rahalgo.ui.Refresh
 import com.rahalgo.ui.money
+import com.rahalgo.ui.amountText
 import com.rahalgo.shared.model.HistoryOrder
 import com.rahalgo.shared.model.ReportReason
 import com.rahalgo.shared.net.ApiClient
@@ -509,8 +510,11 @@ private fun Row(
             } else {
                 (o.customGoods ?: 0) + (o.customFee ?: 0)
             }
+            // **وبضاعةُ الدولار تُقال دولاراً والأجرةُ ليرةً — ولا تُجمع** (٢٠٢٦-١١-٠٩).
+            val worthText = o.customGoodsUsd?.let { amountText(it, "USD") + " + " + money(o.customFee ?: o.total) }
+                ?: money(worth)
             Text(
-                text = money(worth),
+                text = worthText,
                 color = Rahal.colors.inkMuted,
                 style = MaterialTheme.typography.bodySmall,
             )

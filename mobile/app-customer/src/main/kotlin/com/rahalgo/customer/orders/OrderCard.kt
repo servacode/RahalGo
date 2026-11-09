@@ -44,6 +44,7 @@ import com.rahalgo.ui.Chip
 import com.rahalgo.ui.KeyValue
 import com.rahalgo.ui.Stages
 import com.rahalgo.ui.money
+import com.rahalgo.ui.amountText
 import com.rahalgo.ui.RahalButton
 import com.rahalgo.ui.Tone
 import com.rahalgo.ui.RahalOutlineButton
@@ -516,7 +517,12 @@ private fun QuoteAmounts(order: MyOrder) {
     if (order.customMode != "amanah") {
         KeyValue(
             stringResource(R.string.ord_goods),
-            if (order.customGoodsPending) stringResource(R.string.ord_goods_after_purchase) else money(goods),
+            when {
+                order.customGoodsPending -> stringResource(R.string.ord_goods_after_purchase)
+                // **بالدولار كما كتبه الكابتن** (قرارُ المالك ٢٠٢٦-١١-٠٩) — لا تحويلَ ولا جمعَ مع الليرة.
+                order.customGoodsUsd != null -> amountText(order.customGoodsUsd!!, "USD")
+                else -> money(goods)
+            },
         )
     }
     // **والأجرةُ المُعفاةُ تُقال «مجاني 🎁» والأصلُ مشطوب** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كالطلب
@@ -529,12 +535,22 @@ private fun QuoteAmounts(order: MyOrder) {
     Spacer(Modifier.height(4.dp))
     HorizontalDivider()
     Spacer(Modifier.height(4.dp))
+    // **وبضاعةُ الدولار خارجَ المجموع** (٢٠٢٦-١١-٠٩): `total` هو التوصيلُ وحدَه بالليرة، والدولارُ كاشٌ للكابتن.
+    val usdGoods = order.customGoodsUsd != null && !order.customGoodsPending
     com.rahalgo.ui.SumLine(
-        stringResource(R.string.ord_total),
+        stringResource(if (usdGoods) R.string.ord_total_syp else R.string.ord_total),
         money(order.total),
         strong = true,
         color = Rahal.colors.brand,
     )
+    if (usdGoods) {
+        Spacer(Modifier.height(4.dp))
+        Text(
+            stringResource(R.string.ord_goods_usd_cash_note),
+            color = Rahal.colors.inkMuted,
+            style = MaterialTheme.typography.bodySmall,
+        )
+    }
 }
 
 /**
@@ -613,6 +629,15 @@ private fun QuoteConfirmPanel(
             stringResource(R.string.ord_pay_cash_only),
             color = Rahal.colors.ink,
             style = MaterialTheme.typography.bodyMedium,
+        )
+    }
+    // **المحفظةُ ليرةٌ فقط** (٢٠٢٦-١١-٠٩): مع بضاعةٍ بالدولار تدفع التوصيلَ وحدَه، والدولارُ كاش.
+    if (method == "wallet" && order.customGoodsUsd != null) {
+        Spacer(Modifier.height(6.dp))
+        Text(
+            stringResource(R.string.ord_wallet_delivery_only),
+            color = Rahal.colors.ink,
+            style = MaterialTheme.typography.bodySmall,
         )
     }
     Spacer(Modifier.height(10.dp))

@@ -113,6 +113,8 @@ internal fun AgreeDialog(
      * فاضية، كان بدّي أرجع أكتب السعرَ من جديد») — فالتعديلُ يبدأ ممّا اتُّفق عليه.
      */
     currentGoods: Long? = null,
+    /** **ثمنُ البضاعة بالدولار بالسنتات** إن وُثّق بالدولار — فيبدأ الاختيارُ على «$» ويُملأ سلفاً. */
+    currentGoodsUsd: Long? = null,
     currentFee: Long? = null,
     /**
      * **أيُّ خطوة** (قرارُ المالك ٢٠٢٦-١٠-٠٣): `fee` الأجرةُ وحدَها، `goods` ثمنُ البضاعة وحدَه.
@@ -122,14 +124,24 @@ internal fun AgreeDialog(
     error: String = "",
     /** **يُرسل** — فلا يُضغط التأكيدُ مرّتين. */
     busy: Boolean = false,
-    onConfirm: (Long, Long) -> Unit,
+    /** (ثمن البضاعة بالوحدة الكبرى، الأجرة، عملة الثمن «SYP» أو «USD»). */
+    onConfirm: (Double, Long, String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val adminDefined = feeSource == "admin_defined"
     // **مفروضةٌ لا تُعدَّل** حين تحدّدها المنصةُ ولا تأذن للسائق (2c) —
     // **والمحرّكُ يفرضها على كلّ حال**، والحقلُ المقفلُ يقول ذلك للسائق.
     val feeLocked = adminDefined && !driverMayChange
-    var goods by remember { mutableStateOf(currentGoods?.takeIf { it > 0 }?.toString() ?: "") }
+    // **عملةُ الثمن** (قرارُ المالك ٢٠٢٦-١١-٠٩): ليرةٌ أو دولار، والأجرةُ ليرةٌ دائماً.
+    var goodsUsd by remember { mutableStateOf(currentGoodsUsd != null) }
+    val goodsCurrency = if (goodsUsd) "USD" else "SYP"
+    var goods by remember {
+        mutableStateOf(
+            if (currentGoodsUsd != null) fetchAmountDraft(currentGoodsUsd, "USD")
+            else currentGoods?.takeIf { it > 0 }?.toString() ?: "",
+        )
+    }
+    val goodsShown = step == "goods" || (step == "both" && currentGoods != null)
     // **تُملأ سلفاً من لقطة المنصة إن حدّدتها** — مقفلةً أو قابلةً للتعديل.
     var fee by remember {
         mutableStateOf(
@@ -162,18 +174,29 @@ internal fun AgreeDialog(
                 )
                 Spacer(Modifier.height(10.dp))
                 // **و«both» بعد رفض الزبون** (٢٠٢٦-١٠-٢١) — الأجرةُ والبضاعةُ معاً، والأمانةُ بلا بضاعة.
-                if (step == "goods" || (step == "both" && currentGoods != null)) OutlinedTextField(
+                if (goodsShown) {
+                    GoodsCurrencyToggle(usd = goodsUsd, onChange = { goodsUsd = it; goods = "" })
+                    Spacer(Modifier.height(6.dp))
+                }
+                if (goodsShown) OutlinedTextField(
                     value = goods,
-                    onValueChange = { goods = it.filter { c -> c.isDigit() } },
+                    onValueChange = { goods = amountInput(it, goodsCurrency) },
                     label = { Text(stringResource(R.string.agree_goods)) },
                     singleLine = true,
                     textStyle = MaterialTheme.typography.headlineSmall.copy(
                         textAlign = TextAlign.Center,
                         fontWeight = FontWeight.Bold,
                     ),
-                    suffix = { Text(stringResource(R.string.currency_short), fontWeight = FontWeight.Bold) },
+                    suffix = {
+                        Text(
+                            stringResource(if (goodsUsd) R.string.currency_usd_short else R.string.currency_short),
+                            fontWeight = FontWeight.Bold,
+                        )
+                    },
                     modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = if (goodsUsd) KeyboardType.Decimal else KeyboardType.Number,
+                    ),
                 )
                 if (step != "goods") OutlinedTextField(
                     value = fee,
@@ -206,10 +229,21 @@ internal fun AgreeDialog(
         },
         confirmButton = {
             RahalButton(
-                onClick = { onConfirm(goods.toLongOrNull() ?: 0L, fee.toLongOrNull() ?: 0L) },
+                onClick = {
+                    onConfirm(
+                        if (goodsShown) goods.toDoubleOrNull() ?: 0.0 else 0.0,
+                        fee.toLongOrNull() ?: 0L,
+                        goodsCurrency,
+                    )
+                },
                 modifier = Modifier.fillMaxWidth(),
-                // **والأجرةُ حقُّه فلا يمضي بلا رقم** — إلّا حين تُفرَض فتكون معلومة. **والثمنُ كذلك.**
-                enabled = !busy && if (step == "goods") goods.isNotBlank() else feeLocked || fee.isNotBlank(),
+                // **والأجرةُ حقُّه فلا يمضي بلا رقم** — إلّا حين تُفرَض فتكون معلومة. **والثمنُ كذلك**،
+                // **وبالدولار أكبرُ من صفر** (الخادمُ يرفض الصفر).
+                enabled = !busy && when {
+                    step == "goods" -> if (goodsUsd) amountValue(goods) != null else goods.isNotBlank()
+                    goodsShown && goodsUsd && amountValue(goods) == null -> false
+                    else -> feeLocked || fee.isNotBlank()
+                },
             ) {
                 Text(stringResource(R.string.agree_confirm), fontWeight = FontWeight.Bold)
             }
@@ -239,13 +273,18 @@ internal fun FetchAmountDialog(
     current: Long?,
     currency: String?,
     busy: Boolean,
-    onConfirm: (Double) -> Unit,
+    /** (المبلغ بالوحدة الكبرى، العملة «SYP»/«USD» — للواتساب وحدَه تُرسَل، وغيرُه يتجاهلها الخادم). */
+    onConfirm: (Double, String?) -> Unit,
     onDismiss: () -> Unit,
     // **طلبُ واتساب** (قرارُ المالك ٢٠٢٦-١١-٠٦) — ثمنُ الطلب يصل الزبونَ برسالةٍ لا المتجرَ ليوافق.
     whatsApp: Boolean = false,
 ) {
-    val usd = isUsd(currency)
+    // **وطلبُ الواتساب يختار السائقُ عملتَه** (قرارُ المالك ٢٠٢٦-١١-٠٩) — وغيرُه بعملة المتجر.
+    var chosenUsd by remember { mutableStateOf(isUsd(currency)) }
+    val usd = if (whatsApp) chosenUsd else isUsd(currency)
+    val shownCurrency = if (usd) "USD" else "SYP"
     var amount by remember { mutableStateOf(current?.let { fetchAmountDraft(it, currency) } ?: "") }
+    val send: (Double) -> Unit = { onConfirm(it, if (whatsApp) shownCurrency else null) }
     // **وطلبُ الواتساب يقبل الصفر** (قرارُ المالك ٢٠٢٦-١١-٠٨): صفرٌ = أمانةٌ بلا ثمن بضاعة.
     val value = if (whatsApp) amount.toDoubleOrNull()?.takeIf { it >= 0 } else amountValue(amount)
     AlertDialog(
@@ -271,9 +310,13 @@ internal fun FetchAmountDialog(
                     )
                 }
                 Spacer(Modifier.height(10.dp))
+                if (whatsApp) {
+                    GoodsCurrencyToggle(usd = chosenUsd, onChange = { chosenUsd = it; amount = "" })
+                    Spacer(Modifier.height(6.dp))
+                }
                 OutlinedTextField(
                     value = amount,
-                    onValueChange = { amount = amountInput(it, currency) },
+                    onValueChange = { amount = amountInput(it, shownCurrency) },
                     label = { Text(stringResource(R.string.fetch_amount_field)) },
                     singleLine = true,
                     textStyle = MaterialTheme.typography.headlineSmall.copy(
@@ -293,7 +336,7 @@ internal fun FetchAmountDialog(
                 if (whatsApp) {
                     Spacer(Modifier.height(8.dp))
                     RahalTextButton(
-                        onClick = { onConfirm(0.0) },
+                        onClick = { send(0.0) },
                         enabled = !busy,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
@@ -304,7 +347,7 @@ internal fun FetchAmountDialog(
         },
         confirmButton = {
             RahalButton(
-                onClick = { value?.let(onConfirm) },
+                onClick = { value?.let(send) },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !busy && value != null,
             ) {
@@ -718,21 +761,28 @@ internal fun reasonLabel(code: String): String = when (code) {
 @Composable
 internal fun PriceEditDialog(
     currentGoods: Long,
+    /** **ثمنُ البضاعة بالدولار بالسنتات** إن وُثّق بالدولار — فالعملةُ لا تتبدّل بعد الاستلام (الخادمُ يرفض). */
+    currentGoodsUsd: Long? = null,
     error: String,
     busy: Boolean,
-    onConfirm: (Long, String) -> Unit,
+    /** (الثمن الجديد بالوحدة الكبرى، السبب، عملةُ الثمن الموافَق عليه). */
+    onConfirm: (Double, String, String) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val usd = currentGoodsUsd != null
+    val cur = if (usd) "USD" else "SYP"
     var goods by remember { mutableStateOf("") }
     var reason by remember { mutableStateOf("") }
-    val amount = goods.toLongOrNull()
+    val amount = if (usd) amountValue(goods) else goods.toLongOrNull()?.toDouble()
+    val same = amount != null &&
+        (if (usd) Math.round(amount * 100) == currentGoodsUsd else amount.toLong() == currentGoods)
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.price_edit_title), fontWeight = FontWeight.Bold) },
         text = {
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    stringResource(R.string.price_edit_current, money(currentGoods)),
+                    stringResource(R.string.price_edit_current, if (usd) amountText(currentGoodsUsd!!, "USD") else money(currentGoods)),
                     color = Rahal.colors.ink,
                     fontWeight = FontWeight.Bold,
                 )
@@ -741,16 +791,21 @@ internal fun PriceEditDialog(
                 Spacer(Modifier.height(10.dp))
                 OutlinedTextField(
                     value = goods,
-                    onValueChange = { goods = it.filter { c -> c.isDigit() }.take(9) },
+                    onValueChange = { goods = amountInput(it, cur, 9) },
                     label = { Text(stringResource(R.string.price_edit_new)) },
                     singleLine = true,
                     textStyle = MaterialTheme.typography.headlineSmall.copy(
                         textAlign = TextAlign.Center,
                         fontWeight = FontWeight.Bold,
                     ),
-                    suffix = { Text(stringResource(R.string.currency_short), fontWeight = FontWeight.Bold) },
+                    suffix = {
+                        Text(
+                            stringResource(if (usd) R.string.currency_usd_short else R.string.currency_short),
+                            fontWeight = FontWeight.Bold,
+                        )
+                    },
                     modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(keyboardType = if (usd) KeyboardType.Decimal else KeyboardType.Number),
                 )
                 Spacer(Modifier.height(6.dp))
                 OutlinedTextField(
@@ -768,9 +823,9 @@ internal fun PriceEditDialog(
         },
         confirmButton = {
             RahalButton(
-                onClick = { onConfirm(amount ?: 0L, reason.trim()) },
+                onClick = { onConfirm(amount ?: 0.0, reason.trim(), cur) },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !busy && amount != null && amount != currentGoods && reason.isNotBlank(),
+                enabled = !busy && amount != null && !same && reason.isNotBlank(),
             ) {
                 Text(stringResource(R.string.price_edit_send), fontWeight = FontWeight.Bold)
             }
@@ -781,4 +836,24 @@ internal fun PriceEditDialog(
             }
         },
     )
+}
+
+/**
+ * **اختيارُ عملة ثمن البضاعة: «ل.س» أو «$»** (قرارُ المالك ٢٠٢٦-١١-٠٩) — خيارٌ من اثنين، والأجرةُ ليرةٌ دائماً.
+ * **وارتفاعُ اللمس ٤٨dp** (حدُّ `FilterChip` الافتراضيّ).
+ */
+@Composable
+internal fun GoodsCurrencyToggle(usd: Boolean, onChange: (Boolean) -> Unit) {
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        androidx.compose.material3.FilterChip(
+            selected = !usd,
+            onClick = { onChange(false) },
+            label = { Text(stringResource(R.string.currency_short), fontWeight = FontWeight.Bold) },
+        )
+        androidx.compose.material3.FilterChip(
+            selected = usd,
+            onClick = { onChange(true) },
+            label = { Text(stringResource(R.string.currency_usd_short), fontWeight = FontWeight.Bold) },
+        )
+    }
 }

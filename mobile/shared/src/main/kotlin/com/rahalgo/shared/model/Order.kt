@@ -135,6 +135,8 @@ data class DriverOrder(
      * `assigned` قبل التوثيق وبعده، **والفارقُ طابعُ وقتٍ لا حال.**
      */
     @SerialName("custom_goods_amount") val customGoods: Long? = null,
+    /** **ثمنُ البضاعة بالدولار بالسنتات** (٢٠٢٦-١١-٠٩) — غيرُ فارغٍ ⇐ البضاعةُ دولار و`customGoods` صفر. */
+    @SerialName("custom_goods_usd") val customGoodsUsd: Long? = null,
     @SerialName("custom_fee") val customFee: Long? = null,
 
     /**
@@ -325,6 +327,8 @@ data class StorePay(
     @SerialName("merchant_id") val merchantId: String = "",
     @SerialName("merchant_name") val merchantName: String = "",
     val amount: Long = 0,
+    /** «USD» ⇐ `amount` سنتات. وفارغٌ ليرة (خادمٌ قديمٌ). */
+    val currency: String = "",
 )
 
 /**
@@ -577,6 +581,8 @@ data class HistoryOrder(
      * حمل وجد صفرا.
      */
     @SerialName("custom_goods_amount") val customGoods: Long? = null,
+    /** ثمنُ البضاعة بالدولار بالسنتات (إن وُثّق بالدولار) — ٢٠٢٦-١١-٠٩. */
+    @SerialName("custom_goods_usd") val customGoodsUsd: Long? = null,
     @SerialName("custom_fee") val customFee: Long? = null,
     @SerialName("merchant_accepts_returns") val acceptsReturns: Boolean = false,
     /**

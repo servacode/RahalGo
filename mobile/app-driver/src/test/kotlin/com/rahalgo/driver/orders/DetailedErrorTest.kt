@@ -27,6 +27,14 @@ class DetailedErrorTest {
     }
 
     @Test
+    fun usdGoodsCeilingSaysItsMaxInDollars() {
+        val (res, args) = detailedErrorRes("custom_goods_usd_too_high", mapOf("max" to "1000"))!!
+        assertEquals(R.string.err_custom_goods_usd_max, res)
+        assertEquals(listOf("1000$"), args)
+        assertNull(detailedErrorRes("custom_goods_usd_too_high", emptyMap()))
+    }
+
+    @Test
     fun missingDetailsFallBack() {
         assertNull(detailedErrorRes("proof_too_far", emptyMap()))
         assertNull(detailedErrorRes("proof_mocked", emptyMap()))
@@ -34,7 +42,7 @@ class DetailedErrorTest {
 
     @Test
     fun codesHaveTheirText() {
-        for (code in listOf("custom_fee_out_of_range", "custom_goods_too_high", "proof_too_far", "proof_mocked", "proof_no_location")) {
+        for (code in listOf("custom_fee_out_of_range", "custom_goods_too_high", "custom_goods_usd_too_high", "goods_usd_not_purchase", "price_request_currency", "proof_too_far", "proof_mocked", "proof_no_location")) {
             val res = com.rahalgo.ui.resolveErrorRes(code)
             org.junit.Assert.assertNotEquals("رمزٌ بلا نصّ: $code", R.string.err_internal, res)
         }

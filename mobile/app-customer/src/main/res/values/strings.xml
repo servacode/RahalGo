@@ -45,6 +45,9 @@
     <string name="ord_delivery">التوصيل</string>
     <string name="ord_discount">الحسم</string>
     <string name="ord_total">الإجمالي</string>
+    <string name="ord_total_syp">المجموع بالليرة</string>
+    <string name="ord_goods_usd_cash_note">ثمن البضاعة بالدولار كاش للكابتن عند التسليم.</string>
+    <string name="ord_wallet_delivery_only">المحفظة بتدفع التوصيل بس — ثمن البضاعة بالدولار كاش للكابتن</string>
     <string name="ord_placed">وقت الطلب</string>
     <string name="ord_payment">طريقة الدفع</string>
     <string name="ord_address">التوصيل إلى</string>

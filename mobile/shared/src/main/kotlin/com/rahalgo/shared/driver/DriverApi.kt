@@ -627,11 +627,17 @@ class DriverApi(private val api: ApiClient) {
      * **والمنصّة توثّق ولا تحاسب**: السائق يدفع من جيبه ويستردّ عند
      * التسليم. **والتوثيق هو ما يُرجع إليه** يوم يختلفان.
      */
-    suspend fun agree(orderId: String, goodsAmount: Long, fee: Long, step: String = "") {
+    suspend fun agree(
+        orderId: String,
+        goodsAmount: Double,
+        fee: Long,
+        step: String = "",
+        goodsCurrency: String = "SYP",
+    ) {
         api.call<Ack>(
             "/api/v1/driver/orders/" + orderId + "/agree",
             HttpMethod.Post,
-            AgreeBody(goodsAmount, fee, step),
+            AgreeBody(goodsAmount, fee, step, goodsCurrency),
         )
     }
 
@@ -642,16 +648,17 @@ class DriverApi(private val api: ApiClient) {
      * **والمبلغُ بعملة الطلب كما يُقرأ** (قرارُ المالك ٢٠٢٦-١٠-٢٠): ١٣٫٢٥ للدولار و٢١٠٠٠ لليرة —
      * **لا سنتات**: الخادمُ يحوّل بنفسه.
      */
-    suspend fun fetchAmount(orderId: String, amount: Double) {
+    suspend fun fetchAmount(orderId: String, amount: Double, currency: String? = null) {
         api.call<Ack>(
             "/api/v1/driver/orders/" + orderId + "/fetch-amount",
             HttpMethod.Post,
-            FetchAmountBody(amount),
+            FetchAmountBody(amount, currency),
         )
     }
 
+    /** `currency` لطلب الواتساب وحده (٢٠٢٦-١١-٠٩) — وغيرُه يتجاهله الخادمُ ويُبقي عملةَ المتجر. */
     @kotlinx.serialization.Serializable
-    private data class FetchAmountBody(val amount: Double)
+    private data class FetchAmountBody(val amount: Double, val currency: String? = null)
 
     /**
      * **جسمُ التوثيق — صنفٌ موسوم** (الخطوةُ نصٌّ والمبلغان أرقام: خريطةٌ مختلطةٌ تسقط في النسخة
@@ -661,26 +668,50 @@ class DriverApi(private val api: ApiClient) {
      * **بعد الاستلام: طلب تعديل ثمن البضاعة** (قرار المالك ٢٠٢٦-١١-٠٦) — بالمشتريات، والسبب
      * إلزامي. **والزبون يوافق أو يرفض**، والتسليم موقوف لحد ما يرد.
      */
-    suspend fun priceRequest(orderId: String, goodsAmount: Long, reason: String) {
+    suspend fun priceRequest(orderId: String, goodsAmount: Double, reason: String, goodsCurrency: String = "SYP") {
         api.call<Ack>(
             "/api/v1/driver/orders/" + orderId + "/price-request",
             HttpMethod.Post,
-            PriceRequestBody(goodsAmount, reason),
+            PriceRequestBody(goodsAmount, reason, goodsCurrency),
         )
     }
 
     @kotlinx.serialization.Serializable
     private data class PriceRequestBody(
-        @kotlinx.serialization.SerialName("goods_amount") val goodsAmount: Long,
+        @kotlinx.serialization.SerialName("goods_amount")
+        @kotlinx.serialization.Serializable(with = WholeOrDecimalSerializer::class)
+        val goodsAmount: Double,
         val reason: String,
+        @kotlinx.serialization.SerialName("goods_currency") val goodsCurrency: String = "SYP",
     )
 
     @kotlinx.serialization.Serializable
     private data class AgreeBody(
-        @kotlinx.serialization.SerialName("goods_amount") val goodsAmount: Long,
+        @kotlinx.serialization.SerialName("goods_amount")
+        @kotlinx.serialization.Serializable(with = WholeOrDecimalSerializer::class)
+        val goodsAmount: Double,
         val fee: Long,
         val step: String,
+        @kotlinx.serialization.SerialName("goods_currency") val goodsCurrency: String = "SYP",
     )
+
+    /**
+     * **رقمٌ صحيحٌ إن كان صحيحاً وعشريٌّ إن لم يكن** (٢٠٢٦-١١-٠٩) — فثمنُ الليرة يصل `12000` لا `12000.0`
+     * كما كان، والدولارُ يصل `12.5`.
+     */
+    internal object WholeOrDecimalSerializer : kotlinx.serialization.KSerializer<Double> {
+        override val descriptor = kotlinx.serialization.descriptors.PrimitiveSerialDescriptor(
+            "WholeOrDecimal",
+            kotlinx.serialization.descriptors.PrimitiveKind.DOUBLE,
+        )
+
+        override fun serialize(encoder: kotlinx.serialization.encoding.Encoder, value: Double) {
+            if (value % 1.0 == 0.0 && kotlin.math.abs(value) < 1e15) encoder.encodeLong(value.toLong())
+            else encoder.encodeDouble(value)
+        }
+
+        override fun deserialize(decoder: kotlinx.serialization.encoding.Decoder): Double = decoder.decodeDouble()
+    }
 
     /**
      * يفتح الوردية أو يغلقها.

@@ -678,6 +678,10 @@
     <string name="err_custom_fee_between">يجب أن تكون أجرة التوصيل بين %1$s و%2$s.</string>
     <string name="err_custom_goods_too_high">ثمن البضاعة أكبر من المسموح.</string>
     <string name="err_custom_goods_max">ثمن البضاعة أكبر من المسموح (الحد %1$s).</string>
+    <string name="err_custom_goods_usd_too_high">ثمن البضاعة بالدولار أكبر من المسموح.</string>
+    <string name="err_custom_goods_usd_max">ثمن البضاعة بالدولار أكبر من المسموح (الحد %1$s).</string>
+    <string name="err_goods_usd_not_purchase">الثمن بالدولار بس لطلبات المشتريات — الأمانة ما إلها ثمن.</string>
+    <string name="err_price_request_currency">عدّل الثمن بنفس عملة الثمن الموافق عليه. تبديل العملة بعد الاستلام من المكتب.</string>
     <string name="err_proof_too_far">أنت بعيد عن الزبون — اقترب ثمّ صوّر</string>
     <string name="err_proof_too_far_m">أنت بعيد عن الزبون (%1$s) — اقترب ثمّ صوّر</string>
     <string name="err_proof_mocked">برامج تزييف الموقع ممنوعة — أطفئها ثمّ صوّر</string>

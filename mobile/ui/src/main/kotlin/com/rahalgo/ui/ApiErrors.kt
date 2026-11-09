@@ -192,6 +192,10 @@ fun detailedErrorRes(code: String, details: Map<String, String>): Pair<Int, List
     "custom_goods_too_high" -> details["max"]?.toLongOrNull()?.let {
         R.string.err_custom_goods_max to listOf(money(it))
     }
+    // **وسقفُ الثمن بالدولار بالدولار لا بالسنتات** (٢٠٢٦-١١-٠٩) — «الحد 1000$».
+    "custom_goods_usd_too_high" -> details["max"]?.toLongOrNull()?.let {
+        R.string.err_custom_goods_usd_max to listOf(it.toString() + "$")
+    }
     // **وسقفُ تعديل الكابتن يقول نسبتَه** (قرارُ المالك ٢٠٢٦-١١-٠٦).
     "price_request_too_far" -> details["max_percent"]?.toLongOrNull()?.let {
         R.string.err_price_request_too_far_pct to listOf(it.toString())
@@ -575,6 +579,10 @@ private val CODES: Map<String, Int> = mapOf(
     // ── حدّا الأجرة وسقفُ الثمن ومنعُ احتيال التسليم (قرارُ المالك ٢٠٢٦-١٠-٠٣ مساءً) ──
     "custom_fee_out_of_range" to R.string.err_custom_fee_out_of_range,
     "custom_goods_too_high" to R.string.err_custom_goods_too_high,
+    // ── ثمنُ البضاعة بالدولار (قرارُ المالك ٢٠٢٦-١١-٠٩) ──
+    "custom_goods_usd_too_high" to R.string.err_custom_goods_usd_too_high,
+    "goods_usd_not_purchase" to R.string.err_goods_usd_not_purchase,
+    "price_request_currency" to R.string.err_price_request_currency,
     "proof_too_far" to R.string.err_proof_too_far,
     "proof_mocked" to R.string.err_proof_mocked,
     // ── عدّاد الدرّاجة عند فتح الدوام وسكّره (قرارُ المالك ٢٠٢٦-١١-٠٥) ──

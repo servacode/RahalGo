@@ -23,6 +23,15 @@ class QuoteWasTotalTest {
     }
 
     @Test
+    fun `usd goods keep the old total as the delivery fee only`() {
+        val o = order(version = 2, confirmed = 1, confirmedTotal = 150, total = 200).copy(customGoodsUsd = 1250)
+        assertEquals(150L, quoteWasTotal(o))
+        assertEquals("12.50$", com.rahalgo.ui.amountText(o.customGoodsUsd!!, "USD"))
+        // التوصيل ليرة والبضاعة دولار — لا يُجمعان: المجموع المؤكَّد هو `total` وحده.
+        assertEquals(200L, o.total)
+    }
+
+    @Test
     fun `nothing pending or nothing changed shows nothing`() {
         assertNull(quoteWasTotal(order(version = 2, confirmed = 2, confirmedTotal = 2900, total = 2900)))
         assertNull(quoteWasTotal(order(version = 1, confirmed = null, confirmedTotal = null, total = 2900)))

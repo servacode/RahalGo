@@ -2701,7 +2701,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** **يوثّق ما اتُّفق عليه** — ثمّ يعيد قراءة الطلب بسعره الجديد. */
-    fun agree(goods: Long, fee: Long) {
+    fun agree(goods: Double, fee: Long, currency: String) {
         val id = currentId() ?: return
         agreeError = ""
         // **والخطوةُ من حال الطلب** (قرارُ المالك ٢٠٢٦-١٠-٠٣): الأجرةُ أوّلاً، ثمّ ثمنُ البضاعة.
@@ -2718,7 +2718,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         detail = detail.copy(busy = true, error = "")
         viewModelScope.launch {
             try {
-                backend.driver.agree(id, goods, fee, step)
+                backend.driver.agree(id, goods, fee, step, currency)
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -2751,14 +2751,14 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /** **يطلب الثمن الجديد بسببه** — والنافذة بتضل مفتوحة إذا ردّ المحرّك بخطأ (السقف، معلّق…). */
-    fun priceEdit(goods: Long, reason: String) {
+    fun priceEdit(goods: Double, reason: String, currency: String) {
         val id = currentId() ?: return
         if (detail.busy) return
         priceEditError = ""
         detail = detail.copy(busy = true, error = "")
         viewModelScope.launch {
             try {
-                backend.driver.priceRequest(id, goods, reason)
+                backend.driver.priceRequest(id, goods, reason, currency)
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -2778,13 +2778,13 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
      * **والخطأُ يُقال في البطاقة** كخطأ أيّ خطوة. **والمبلغُ بعملة الطلب وبالوحدة الكبرى**
      * (قرارُ المالك ٢٠٢٦-١٠-٢٠) — لا يُضرب بمئة: الخادمُ يحوّل.
      */
-    fun fetchAmount(amount: Double) {
+    fun fetchAmount(amount: Double, currency: String?) {
         val id = currentId() ?: return
         if (detail.busy) return
         detail = detail.copy(busy = true, error = "")
         viewModelScope.launch {
             try {
-                backend.driver.fetchAmount(id, amount)
+                backend.driver.fetchAmount(id, amount, currency)
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
             } catch (e: Exception) {
