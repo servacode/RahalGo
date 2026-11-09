@@ -367,21 +367,27 @@ export function WalletPage({
 
   return (
     <PageContainer>
-      <PageHeader
-        icon={IconWallet}
-        title={m.terms.wallet}
-        actions={
-          <>
-            {/* كشف الحساب إجراء لا تصنيف: لا رقم له فلا مكان له بين البطاقات */}
-            {statementBtn}
-            {payouts && (
-              <Button onClick={() => setAsking(true)} disabled={balance <= 0 || hasPending}>
-                {P.request}
-              </Button>
-            )}
-          </>
-        }
-      />
+      {/* **في موقع الزبون العنوانُ فوقَ الصفحة أصلاً** («محفظتي») — فلا تُكرَّر ترويسةٌ ثانيةٌ بالاسم نفسِه،
+          ويبقى «كشف الحساب» وحدَه في صفٍّ عند الطرف. */}
+      {cardsOnly ? (
+        <div className="flex justify-end">{statementBtn}</div>
+      ) : (
+        <PageHeader
+          icon={IconWallet}
+          title={m.terms.wallet}
+          actions={
+            <>
+              {/* كشف الحساب إجراء لا تصنيف: لا رقم له فلا مكان له بين البطاقات */}
+              {statementBtn}
+              {payouts && (
+                <Button onClick={() => setAsking(true)} disabled={balance <= 0 || hasPending}>
+                  {P.request}
+                </Button>
+              )}
+            </>
+          }
+        />
+      )}
 
       {/* ══════════════════════════════════════════════════════════════
           **الرصيدُ مع البطاقات الذكيّة في صفٍّ واحدٍ أعلى الصفحة**

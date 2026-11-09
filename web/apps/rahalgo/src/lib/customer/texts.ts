@@ -33,7 +33,8 @@ export function backAt(raw: string | undefined | null): string {
   if (!v) return "";
   const d = new Date(v);
   if (Number.isNaN(d.getTime())) return "";
-  return fmtTime(d);
+  // **الوقتُ وحرفُ ص/م لا ينفصلان على سطرين** — كان «ص» تقع وحدَها في سطرٍ ثانٍ.
+  return fmtTime(d).replace(/\s/g, "\u00A0");
 }
 
 export const REASON = {

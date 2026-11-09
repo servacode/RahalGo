@@ -23,7 +23,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
-import { getMessages, defaultLocale, fmtNum, fmtDateTime } from "@rahalgo/i18n";
+import { getMessages, defaultLocale, fmtNum, fmtRef, fmtDateTime } from "@rahalgo/i18n";
 import { Badge } from "./components";
 import { PageContainer, PageHeader, EmptyState, LoadingState } from "./layout";
 import { IconChat } from "./icons";
@@ -93,7 +93,7 @@ export function ChatArchive({
       {rows.length === 0 ? (
         <EmptyState icon={IconChat} title={C.archiveEmpty} />
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-2 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0 xl:grid-cols-3">
           {rows.map((t) => (
             <li key={t.order_id} className="surface p-3">
               <button
@@ -101,7 +101,7 @@ export function ChatArchive({
                 onClick={() => setPicked(picked === t.order_id ? "" : t.order_id)}
                 className="flex w-full items-center gap-2 text-start"
               >
-                <span className="font-bold">#{fmtNum(t.number)}</span>
+                <span className="font-bold">#{fmtRef(t.number)}</span>
                 <span className="min-w-0 flex-1 truncate text-sm text-ink-muted">
                   {t.peer} — {t.last_body}
                 </span>

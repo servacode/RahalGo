@@ -349,7 +349,7 @@ export function SectionRail({
                   **والاسمُ يشتدّ مع المختار** — رابعةُ الإشارات، ولأنّ الاسمَ
                   هو ما يُقرأ حين تُشبه الصورُ بعضَها. */}
               <span
-                className={`w-full truncate text-center text-xs transition-colors duration-[--duration-base] sm:text-sm ${
+                className={`w-full line-clamp-2 break-words text-center text-xs leading-snug transition-colors duration-[--duration-base] sm:text-sm ${
                   on ? "font-bold text-accent-text" : "text-ink-muted group-hover:text-ink"
                 }`}
               >

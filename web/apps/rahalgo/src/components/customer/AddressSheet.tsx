@@ -340,7 +340,7 @@ export function AddressChip({ onOpen }: { onOpen: () => void }) {
       <IconLocation size={20} className="shrink-0 text-accent-text" />
       <span className="min-w-0 flex-1">
         <span className="block text-xs text-ink-muted">{m.shop.home.deliverTo}</span>
-        <span className="block truncate text-sm font-bold">{address ? address.address_text : A.none}</span>
+        <span className={address ? "block truncate text-sm font-bold" : "block text-sm font-bold leading-snug"}>{address ? address.address_text : A.none}</span>
       </span>
       <span className="shrink-0 text-xs text-accent-text">{A.change}</span>
     </button>

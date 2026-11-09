@@ -146,7 +146,7 @@ export function ItemCard({
           className="transition-transform active:scale-[0.98]"
         />
         {closed && (
-          <div className="scrim pointer-events-none absolute inset-0 flex items-center justify-center p-2 text-center text-sm font-bold text-on-solid">
+          <div className="scrim pointer-events-none absolute inset-0 flex items-center justify-center p-1.5 text-center text-xs font-bold leading-snug text-on-solid">
             {closedLabel(item)}
           </div>
         )}
@@ -467,12 +467,12 @@ export function ItemSheet({
                 onClick={tryAdd}
                 disabled={(item.has_options && !detail && !loadError) || (!!split && nothing)}
               >
-                <span className="flex items-center justify-center gap-2">
-                  {I.add}
-                  <span aria-hidden>·</span>
+                {/* **عبارةٌ فوق وسعرٌ تحت** — على عرض الهاتف كان السطرُ الواحدُ يلتفّ فيقطع «أضف إلى السلة» والسعرَ. */}
+                <span className="flex flex-col items-center justify-center gap-0.5 leading-tight">
+                  <span className="whitespace-nowrap">{I.add}</span>
                   {/* **والدولارُ يتبع العدد كالليرة** — كان سعرَ الواحد مهما زاد العدد. */}
                   {totalUsd != null ? (
-                    <span className="inline-flex items-baseline gap-1.5">
+                    <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap text-sm">
                       <span dir="ltr" className="tabular-nums">
                         {dollars(totalUsd)}
                       </span>
@@ -570,7 +570,7 @@ export function ItemSheet({
               />
             ) : (
             <fieldset key={g.id} className="surface-inset space-y-2 p-3">
-              <legend className="flex w-full items-center justify-between gap-2 text-sm font-bold">
+              <legend className="float-start mb-2 flex w-full items-center justify-between gap-2 text-sm font-bold">
                 <span>{g.name}</span>
                 <span className="text-xs font-normal text-ink-muted">
                   {g.min_select > 0 ? I.required : g.max_select === 1 ? I.pickOne : fill(I.pickUpTo, { n: fmtNum(g.max_select) })}
@@ -677,10 +677,12 @@ function CounterBlock({
      وإظهار») — و«أضف» والعددُ في تذييل `Sheet` ثابتان تحتها. */
   return (
     <fieldset className="surface-inset space-y-2 p-3">
-      <legend className="flex w-full items-center justify-between gap-2 text-sm font-bold">
+      {/* **العنوانُ داخل الصندوق لا على حدّه** — عنصرُ legend يقف فوق الإطار فيلامس خطَّه؛ فيبقى للقارئ الصوتيّ ويُرسَم العنوانُ صفّاً عادياً. */}
+      <legend className="sr-only">{group.name}</legend>
+      <div className="flex w-full items-center justify-between gap-2 pb-1 text-sm font-bold" aria-hidden>
         <span>{group.name}</span>
         <span className="text-xs font-normal text-ink-muted">{group.min_select > 0 ? I.required : I.optional}</span>
-      </legend>
+      </div>
       {group.options.map((o) => {
         const n = counts[o.id] ?? 0;
         return (

@@ -861,15 +861,15 @@ html[data-shop] .surface-inset {
   background-color: var(--color-shell);
   color: var(--color-ink);
 }
+/* **بلا سقفٍ ولا نطاقٍ مركزيّ** (قرارُ المالك ٢٠٢٦-١١-٠٩: «خلّي التصميم ياخذ مساحة الشاشة كلّها») —
+   حشوةٌ جانبيّةٌ صغيرةٌ فقط، والشبكاتُ تزيد أعمدةً لا هوامش. */
 .shop-wrap {
   width: 100%;
-  max-width: 1280px;
-  margin-inline: auto;
   padding-inline: 16px;
 }
 @media (width >= 1024px) {
   .shop-wrap {
-    padding-inline: 28px;
+    padding-inline: 24px;
   }
 }
 .shop-main {
@@ -1018,6 +1018,12 @@ html[data-shop] .surface-inset {
   color: var(--color-ink);
   transition: background-color 150ms;
 }
+@media (width < 1024px) {
+  .shop-iconbtn {
+    width: 44px;
+    height: 44px;
+  }
+}
 .shop-iconbtn:hover {
   background-color: var(--color-row-hover);
 }
@@ -1123,6 +1129,12 @@ html[data-shop] .surface-inset {
   border-radius: 12px;
   padding: 0;
   color: var(--color-ink);
+}
+@media (width < 1024px) {
+  .shop-top a[href="/notifications"] {
+    width: 44px;
+    height: 44px;
+  }
 }
 .shop-top a[href="/notifications"]:hover {
   background-color: var(--color-row-hover);
@@ -1417,53 +1429,6 @@ html[data-shop-theme="dark"] .shop-pic {
   object-fit: cover;
 }
 
-/* ── بلاطاتُ الأقسام ── */
-.shop-tiles {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 14px 12px;
-}
-@media (width >= 1024px) {
-  .shop-tiles {
-    grid-template-columns: repeat(8, minmax(0, 1fr));
-    gap: 20px 18px;
-  }
-}
-.shop-tile {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  text-align: center;
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1.35;
-}
-.shop-tile .shop-pic {
-  width: 100%;
-  aspect-ratio: 1;
-  border-radius: 20px;
-  outline: 2px solid transparent;
-  outline-offset: 2px;
-  transition:
-    outline-color 150ms,
-    transform 150ms;
-}
-.shop-tile:active .shop-pic {
-  transform: scale(0.97);
-}
-.shop-tile[aria-pressed="true"] .shop-pic {
-  outline-color: var(--color-primary);
-}
-.shop-tile[aria-pressed="true"] span {
-  color: var(--color-primary);
-}
-.shop-tile span {
-  max-width: 100%;
-  overflow-wrap: anywhere;
-}
-
 /* ── كبسولاتُ الفلاتر والأقسام ── */
 .shop-chips {
   display: flex;
@@ -1490,21 +1455,6 @@ html[data-shop-theme="dark"] .shop-pic {
   font-size: 14px;
   font-weight: 700;
   white-space: nowrap;
-}
-.shop-rail {
-  display: none;
-}
-@media (width >= 1024px) {
-  .shop-rail {
-    display: flex;
-    margin-inline: 0;
-    padding-inline: 0;
-    /* الحافةُ البعيدة تتلاشى فلا يبدو الكبسولُ المقطوع خطأً — والباقي بالتمرير */
-    mask-image: linear-gradient(to left, #000 calc(100% - 56px), transparent);
-  }
-  .shop-chip:has(.shop-pic) {
-    padding-inline: 6px 16px;
-  }
 }
 .shop-chip[aria-pressed="true"] {
   border-color: var(--color-primary);
@@ -1588,16 +1538,20 @@ html[data-shop-theme="dark"] .shop-pic {
   .shop-items[data-layout="tile"] {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+  /* **على التابلت صفّان لا صفٌّ يتيمٌ بعرض الشاشة** — بطاقةُ الصفّ فيها صورةٌ ونصٌّ وتكفيها نحو ٣٤٠ بكسلاً. */
+  .shop-items[data-layout="row"] {
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  }
 }
 @media (width >= 1024px) {
   .shop-items {
     gap: 16px;
   }
   .shop-items[data-layout="row"] {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
   }
   .shop-items[data-layout="tile"] {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
   }
   /* **صفوفٌ متساويةُ الارتفاع**: كلُّ البطاقات بقياسٍ واحدٍ، فيقع السعرُ وزرُّ «اطلب» على خطٍّ واحد
      سواءٌ كان للصنف وصفٌ أم لا (ملاحظةُ المالك ٢٠٢٦-١١-٠٨). */
@@ -1853,7 +1807,7 @@ html[data-shop-theme="dark"] .shop-pic {
 }
 @media (width >= 1024px) {
   .shop-store-cols {
-    grid-template-columns: 176px minmax(0, 1fr) 320px;
+    grid-template-columns: minmax(0, 1fr) 320px;
     align-items: start;
     gap: 24px;
   }
@@ -1864,55 +1818,52 @@ html[data-shop-theme="dark"] .shop-pic {
     inset-inline-end: 16px;
   }
 }
-.shop-menu-rail {
-  display: none;
+/* **بطاقاتُ موقع الزبون مسطّحةٌ كباقي بطاقاته** — «ثقل القاع» في `surface-lit` يظهر لطخةً رماديّةً على بطاقةٍ قصيرةٍ (سجلُّ المحفظة). */
+html[data-shop] .surface-lit {
+  background-image: none;
+  box-shadow: var(--shadow-e1);
+}
+
+/* **حالةٌ فارغةٌ داخل بطاقةٍ لا تُرسَم بإطارٍ ثانٍ** — كانت «لا حركات بعد» في المحفظة صندوقاً داخل صندوق. */
+html[data-shop] .surface-lit [data-ui="empty"],
+html[data-shop] .surface [data-ui="empty"] {
+  border: 0;
+  background: none;
+  box-shadow: none;
+  padding-block: 24px;
+}
+
+/* ── شريطُ أقسام المتجر: لاصقٌ تحت الشريط العلويّ، على كلّ المقاسات ── */
+.shop-store-sections {
+  position: sticky;
+  top: 61px;
+  z-index: 30;
+  margin-inline: -16px;
+  border-bottom: 1px solid var(--color-line);
+  background-color: var(--color-chrome);
+  padding-block: 8px;
+  backdrop-filter: blur(12px);
+  scroll-margin-top: 61px;
+}
+.shop-store-sections .shop-chips {
+  margin-inline: 0;
+  padding-block: 0;
+}
+.shop-store-sections .shop-chip {
+  height: 44px;
 }
 @media (width >= 1024px) {
-  .shop-menu-rail {
-    position: sticky;
-    top: 88px;
-    display: flex;
-    max-height: calc(100dvh - 112px);
-    flex-direction: column;
-    gap: 2px;
-    /* متجرٌ بعشرات الأقسام: العمودُ يتمرّر في مكانه فلا يُقطع ما تحت الشاشة */
-    overflow-y: auto;
-    scrollbar-width: thin;
+  .shop-store-sections {
+    top: 69px;
+    margin-inline: 0;
+    border: 1px solid var(--color-line);
+    border-radius: 16px;
+    padding-inline: 8px;
+    scroll-margin-top: 69px;
   }
-  .shop-chips[data-phone] {
-    display: none;
+  .shop-store-sections .shop-chips {
+    padding-inline: 0;
   }
-}
-.shop-menu-rail h2 {
-  padding-inline: 12px;
-  padding-bottom: 6px;
-  color: var(--color-ink-muted);
-  font-size: 13px;
-  font-weight: 700;
-}
-.shop-menu-link {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  border-inline-end: 3px solid transparent;
-  border-radius: 8px;
-  padding: 10px 12px;
-  font-size: 14px;
-  font-weight: 700;
-  text-align: start;
-}
-.shop-menu-link:hover {
-  background-color: var(--color-row-hover);
-}
-.shop-menu-link[aria-pressed="true"] {
-  border-inline-end-color: var(--color-primary);
-  background-color: var(--color-primary-soft);
-  color: var(--color-primary);
-}
-.shop-menu-link small {
-  font-size: 12px;
-  color: var(--color-ink-muted);
 }
 .shop-cartpanel {
   display: none;

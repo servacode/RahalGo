@@ -31,6 +31,8 @@ import {
   ReloadState,
   IconSearch,
   IconStore,
+  SectionRail,
+  type RailItem,
   type SlideItem,
 } from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
@@ -41,7 +43,6 @@ import { ItemGrid, ItemSheet } from "@/components/customer/items";
 import { FeaturedStrip } from "@/components/customer/stores";
 import { InviteHomeCard } from "@/components/customer/InviteNudge";
 import { FreeDeliveryBanner } from "@/components/customer/ServiceNotices";
-import { ShopPic } from "@/components/customer/ShopPic";
 import { SHOP_SEARCH_EVENT } from "@/components/customer/ShopChrome";
 
 const m = getMessages(defaultLocale);
@@ -126,28 +127,17 @@ export default function ShopPage() {
   const searching = search.q.trim().length > 0;
 
   const activeSection = (home?.sections ?? []).find((x) => x.id === sectionID);
+  const rail: RailItem[] = (home?.sections ?? []).map((s) => ({
+    id: s.id,
+    name: s.name,
+    imageUrl: mediaUrl(s.image_thumb_url ?? s.image_url),
+    icon: s.icon,
+    count: s.count,
+  }));
 
   return (
     <div className="flex flex-col gap-5 lg:gap-8">
       {!user && <p className="text-xs text-ink-muted">{H.browsing}</p>}
-
-      {/* **شريطُ الأقسام على الحاسوب** (مخطّطُ ٢٠٢٦-١١-٠٨) — أقسامُ الصفحة نفسُها بالحال نفسِه، يبدّل القسمَ في مكانه. */}
-      {!searching && home && home.sections.length > 0 && (
-        <div className="shop-chips shop-rail" aria-label={H.sections}>
-          {home.sections.map((sec) => (
-            <button
-              key={sec.id}
-              type="button"
-              className="shop-chip"
-              aria-pressed={sec.id === sectionID}
-              onClick={() => setActive(sec.id)}
-            >
-              <ShopPic src={sec.image_thumb_url ?? sec.image_url} name={sec.name} icon={sec.icon} iconSize={14} className="h-7 w-7 rounded-full" />
-              {sec.name}
-            </button>
-          ))}
-        </div>
-      )}
 
       <Input
         id="shop-search"
@@ -195,24 +185,10 @@ export default function ShopPage() {
             <EmptyState icon={IconStore} title={H.empty} action={<span className="text-xs text-ink-muted">{H.emptyHint}</span>} />
           ) : (
             <>
-              <section id="shop-sections" className="flex scroll-mt-20 flex-col gap-3" aria-label={H.sections}>
-                <div className="shop-sec-head">
-                  <h2>{H.sections}</h2>
-                </div>
-                <div className="shop-tiles">
-                  {home.sections.map((sec) => (
-                    <button
-                      key={sec.id}
-                      type="button"
-                      className="shop-tile"
-                      aria-pressed={sec.id === sectionID}
-                      onClick={() => setActive(sec.id)}
-                    >
-                      <ShopPic src={sec.image_thumb_url ?? sec.image_url} name={sec.name} icon={sec.icon} />
-                      <span>{sec.name}</span>
-                    </button>
-                  ))}
-                </div>
+              {/* **شريطُ الأقسام دوائرُ بصورها كالتطبيق** (قرارُ المالك ٢٠٢٦-١١-٠٩: «نشيل المربّعات، يظلّ مثل تطبيق الجوال») —
+                  بعد «ادعُ صديقك» ولافتات الخدمة وقبل الأصناف، على كلّ المقاسات، ويبدّل القسمَ في مكانه. */}
+              <section id="shop-sections" className="scroll-mt-20" aria-label={H.sections}>
+                <SectionRail items={rail} activeID={sectionID} auto={false} onSelect={setActive} />
               </section>
               <section className="flex flex-col gap-3">
                 {activeSection && (

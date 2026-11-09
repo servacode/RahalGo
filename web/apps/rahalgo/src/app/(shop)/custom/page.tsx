@@ -199,11 +199,12 @@ export default function CustomOrderPage() {
   ];
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
+    <div className="mx-auto flex w-full flex-col gap-4 max-w-none lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
       {/* **«اطلب أي شيء…» هي العنوان، ولا «طلب خاص» فوقها** (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}
-      <h1 className="heading-page">{K.subtitle}</h1>
-
-      {closed && <Alert tone="warning">{closedText}</Alert>}
+      <div className="flex flex-col gap-4 lg:col-span-2">
+        <h1 className="heading-page">{K.subtitle}</h1>
+        {closed && <Alert tone="warning">{closedText}</Alert>}
+      </div>
 
       <section className="surface flex flex-col gap-3 p-4">
         {/* **ولا «نوع الطلب» ولا سطرَ شرحٍ** — الخياران يشرحان نفسَيهما (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}
@@ -333,6 +334,7 @@ export default function CustomOrderPage() {
         </div>
       </section>
 
+      <div className="flex flex-col gap-4 lg:col-span-2">
       {!ordering.open && <Alert tone="warning">{ordering.text}</Alert>}
       {gate.kind === "blocked" && <AvailabilityNotice av={gate.av} address={address} />}
 
@@ -355,6 +357,7 @@ export default function CustomOrderPage() {
           )}
         </Alert>
       )}
+      </div>
       <AddressSheet open={pickAddr} onClose={() => setPickAddr(false)} />
     </div>
   );
