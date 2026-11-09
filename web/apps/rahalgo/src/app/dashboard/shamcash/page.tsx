@@ -15,7 +15,6 @@
  *  - «أضف حركة»: إيداعُ المالك أو سحبُه بعملته وتاريخه وملاحظته
  */
 
-import Link from "next/link";
 import { useState } from "react";
 import { getMessages, defaultLocale, errorText, fmtDate, fmtDateTime, fmtMoney, fmtNum, fmtUsd } from "@rahalgo/i18n";
 import {
@@ -48,6 +47,8 @@ import {
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { useCanOpen } from "@/lib/policy";
+import { OpenLink } from "@/components/admin/OpenLink";
 import { PageHero } from "@/components/admin/PageHero";
 import { Panel, Tile } from "@/components/admin/DashParts";
 
@@ -121,6 +122,7 @@ const MINUS = String.fromCharCode(0x2212);
 export default function ShamcashPage() {
   const { can } = useAuth();
   const canManage = can("finance.manage");
+  const canOrder = useCanOpen().order;
   const [view, setView, { narrow }] = useViewMode("admin-shamcash", "table");
   const [kind, setKind] = useState<"" | Kind>("");
   const [driver, setDriver] = useState("");
@@ -364,9 +366,13 @@ export default function ShamcashPage() {
                 hide: (r) => !r.order_id,
                 cell: (r) =>
                   r.order_id ? (
-                    <Link href={`/dashboard/orders?order=${r.order_id}`} className="font-bold text-primary hover:underline">
+                    <OpenLink
+                      allowed={canOrder}
+                      href={`/dashboard/orders?id=${r.order_id}`}
+                      className="font-bold text-primary hover:underline"
+                    >
                       {S.orderNo.replace("{n}", String(r.order_number ?? ""))}
-                    </Link>
+                    </OpenLink>
                   ) : (
                     <span className="text-ink-muted">—</span>
                   ),
