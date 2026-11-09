@@ -46,11 +46,13 @@ var t = struct {
 	itemUnavailable string
 	// **تعديلُ المكتب للطلب العاديّ** (قرارُ المالك ٢٠٢٦-١١-٠٣) — الزبونُ والسائقُ والمتجر.
 	orderEdited, orderEditedDriver, orderEditedMerchant string
-	rejected, cancelled, failed, refunded               string
-	merchantDelivered, commission                       string
-	targetReached                                       string
-	violationsWarn, violationsBanned                    string
-	endedOps, warningIssued                             string
+	// **طلب تعديل من الكابتن** (قرارُ المالك ٢٠٢٦-١١-١٠) — يوصل المكتب، وقرارُه يوصل الكابتن.
+	editRequestOps, editRequestRejectedDriver string
+	rejected, cancelled, failed, refunded     string
+	merchantDelivered, commission             string
+	targetReached                             string
+	violationsWarn, violationsBanned          string
+	endedOps, warningIssued                   string
 	// **عناوينُ حركات المحفظة** — (قرارُ المالك ٢٠٢٦-٠٨-١١: «الرصيد
 	// يتغيّر وما حدا بيعرف ليش»).
 	driverEarned, merchantEarned, refunded2, compensated string
@@ -98,6 +100,8 @@ var t = struct {
 	liveLocationRequested:      "الكابتن طالب موقعك المباشر ليوصلك بالضبط — افتح التطبيق وشارك موقعك",
 	itemUnavailable:            "صنف غير متوفر في طلبك",
 	orderEdited:                "تعدّل طلبك",
+	editRequestOps:             "طلب تعديل من الكابتن — وافق أو ارفض",
+	editRequestRejectedDriver:  "المكتب رفض طلب التعديل",
 	orderEditedDriver:          "تعدّل الطلب الذي معك",
 	orderEditedMerchant:        "تعدّل طلب من متجرك",
 	driverAssignedToCustomer:   "أُسند سائقٌ لطلبك",

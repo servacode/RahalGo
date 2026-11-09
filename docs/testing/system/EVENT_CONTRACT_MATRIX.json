@@ -11,7 +11,7 @@
     "InApp": 8
   },
   "derived": {
-    "emit_sites": 128,
+    "emit_sites": 130,
     "realtime_publishers": 31,
     "rooms": 5,
     "untargeted_user_sites": 38
@@ -157,7 +157,7 @@
     },
     {
       "file": "internal/orders/driver_price_request.go",
-      "line": 404,
+      "line": 406,
       "call": "NotifyOps",
       "kind": "Order",
       "entity": "order",
@@ -256,7 +256,7 @@
     },
     {
       "file": "internal/orders/notify.go",
-      "line": 234,
+      "line": 238,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -265,7 +265,7 @@
     },
     {
       "file": "internal/orders/notify.go",
-      "line": 329,
+      "line": 333,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -274,7 +274,7 @@
     },
     {
       "file": "internal/orders/notify.go",
-      "line": 363,
+      "line": 367,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -283,7 +283,7 @@
     },
     {
       "file": "internal/orders/notify.go",
-      "line": 416,
+      "line": 420,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -292,7 +292,7 @@
     },
     {
       "file": "internal/orders/notify.go",
-      "line": 437,
+      "line": 441,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -301,7 +301,7 @@
     },
     {
       "file": "internal/orders/notify.go",
-      "line": 475,
+      "line": 479,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -310,7 +310,7 @@
     },
     {
       "file": "internal/orders/notify.go",
-      "line": 487,
+      "line": 491,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -319,7 +319,7 @@
     },
     {
       "file": "internal/orders/notify.go",
-      "line": 498,
+      "line": 502,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -328,7 +328,7 @@
     },
     {
       "file": "internal/orders/notify.go",
-      "line": 538,
+      "line": 542,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "wallet",
@@ -337,7 +337,7 @@
     },
     {
       "file": "internal/orders/notify.go",
-      "line": 581,
+      "line": 585,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "wallet",
@@ -346,7 +346,7 @@
     },
     {
       "file": "internal/orders/notify.go",
-      "line": 733,
+      "line": 737,
       "call": "Notify",
       "entity": "order",
       "has_app_targeting": true,
@@ -354,12 +354,30 @@
     },
     {
       "file": "internal/orders/notify.go",
-      "line": 783,
+      "line": 787,
       "call": "Notify",
       "kind": "Wallet",
       "entity": "wallet",
       "has_app_targeting": true,
       "has_entity_id": false
+    },
+    {
+      "file": "internal/orders/order_edit_request.go",
+      "line": 333,
+      "call": "NotifyOps",
+      "kind": "Order",
+      "entity": "order",
+      "has_app_targeting": false,
+      "has_entity_id": true
+    },
+    {
+      "file": "internal/orders/order_edit_request.go",
+      "line": 620,
+      "call": "Notify",
+      "kind": "Order",
+      "entity": "order",
+      "has_app_targeting": true,
+      "has_entity_id": true
     },
     {
       "file": "internal/orders/parts_engine.go",
@@ -1542,7 +1560,7 @@
     },
     {
       "file": "internal/orders/board.go",
-      "line": 322,
+      "line": 327,
       "room": "ops"
     },
     {

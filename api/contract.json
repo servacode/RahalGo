@@ -4521,6 +4521,78 @@
       ]
     },
     {
+      "method": "GET",
+      "path": "/api/v1/admin/orders/{id}/edit-request",
+      "handler": "handleAdminGetEditRequest",
+      "auth": true,
+      "capability": "orders.intervene",
+      "response": [
+        {
+          "name": "can_approve_after_pickup",
+          "type": "unknown"
+        },
+        {
+          "name": "request",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/edit-request/approve",
+      "handler": "handleAdminApproveEditRequest",
+      "auth": true,
+      "capability": "orders.intervene",
+      "request": [
+        {
+          "name": "request_id",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "order",
+          "type": "unknown"
+        },
+        {
+          "name": "result",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/edit-request/reject",
+      "handler": "handleAdminRejectEditRequest",
+      "auth": true,
+      "capability": "orders.intervene",
+      "request": [
+        {
+          "name": "request_id",
+          "type": "string"
+        },
+        {
+          "name": "reason",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "rejected",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
       "method": "POST",
       "path": "/api/v1/admin/orders/{id}/external-store",
       "handler": "handleOrderExternalStore",
@@ -8451,6 +8523,34 @@
       "statuses": [
         "StatusOK"
       ]
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/driver/orders/{id}/edit-request",
+      "handler": "handleDriverGetEditRequest",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "response": [
+        {
+          "name": "request",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/driver/orders/{id}/edit-request",
+      "handler": "handleDriverEditRequest",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "idempotent": true
     },
     {
       "method": "POST",

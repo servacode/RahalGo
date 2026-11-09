@@ -133,6 +133,9 @@ var adminPolicy = []Rule{
 	{"POST", "/orders/{id}/items/{itemID}/unavailable", OrdersIntervene}, // صنفٌ غيرُ متوفّر (٢٠٢٦-١٠-١٥)
 	{"GET", "/orders/{id}/edit-catalog", OrdersIntervene},                // تعديلُ الطلب: ما يُضاف (٢٠٢٦-١١-٠٣)
 	{"POST", "/orders/{id}/edit", OrdersIntervene},                       // تعديلُ الطلب — وبعد الاستلام بقدرةٍ أضيق
+	{"GET", "/orders/{id}/edit-request", OrdersIntervene},                // طلبُ تعديل الكابتن بمعاينته (٢٠٢٦-١١-١٠)
+	{"POST", "/orders/{id}/edit-request/approve", OrdersIntervene},       // الموافقة — وبعد الاستلام بقدرةٍ أضيق
+	{"POST", "/orders/{id}/edit-request/reject", OrdersIntervene},        // الرفض بسبب
 	{"POST", "/orders/{id}/partner", OrdersIntervene},                    // ربطُ متجرٍ تابعٍ بالمشتريات (٢٠٢٦-١٠-١٥)
 	{"DELETE", "/orders/{id}/partner", OrdersIntervene},                  // وفكُّه
 	{"POST", "/orders/{id}/external-store", OrdersIntervene},             // «من متجر غير تابع لنا» (٢٠٢٦-١٠-٢٩)
@@ -695,6 +698,9 @@ var handlerChecks = []HandlerRule{
 	// وبعد الاستلام يكتب قيدَ تصحيحٍ لحقّ المتجر، **فقدرةٌ أضيق تُسأل داخلَه.**
 	{"POST", "/orders/{id}/edit", OrdersEditAfterPickup,
 		"server/order_edit.go handleOrderEdit"},
+	// **وموافقةُ طلب تعديل الكابتن من الباب نفسِه** (قرارُ المالك ٢٠٢٦-١١-١٠) — نفسُ القدرة بعد الاستلام.
+	{"POST", "/orders/{id}/edit-request/approve", OrdersEditAfterPickup,
+		"server/order_edit_request.go handleAdminApproveEditRequest"},
 }
 
 // HandlerChecks القدراتُ التي تُسأل داخلَ المعالِج — **للعقد والحرّاس.**

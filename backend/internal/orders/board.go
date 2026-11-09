@@ -256,6 +256,9 @@ type BoardInfo struct {
 	// Money و EndedByName **لكرت السجلّ وحدَه** (`FillHistory`) — وغائبان عن لوحة العمل.
 	Money       *HistoryMoney `json:"money,omitempty"`
 	EndedByName string        `json:"ended_by_name,omitempty"`
+	// EditRequestAt **طلب تعديل من الكابتن بانتظار المكتب — من إمتى** (قرارُ المالك ٢٠٢٦-١١-١٠).
+	// وفاضي: ما في. وتفصيله ومعاينته من `GET /admin/orders/{id}/edit-request`.
+	EditRequestAt *string `json:"edit_request_at,omitempty"`
 }
 
 // BoardInfoOf **معلوماتُ المكتب لصفحةٍ من الطلبات** — في رحلةٍ واحدة.
@@ -282,7 +285,9 @@ func (s *Service) BoardInfoOf(ctx context.Context, ids []string) (map[string]*Bo
 		       to_char(o.office_seen_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
 		       (o.status IN ('delivered', 'refunded') AND o.delivery_code IS NOT NULL),
 		       rt.platform_stars, rt.driver_stars,
-		       `+CasesSQL+`, `+TransferredSQL+`, `+LateDeliverySQL(l)+`
+		       `+CasesSQL+`, `+TransferredSQL+`, `+LateDeliverySQL(l)+`,
+		       (SELECT to_char(er.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"')
+		          FROM order_edit_requests er WHERE er.order_id = o.id AND er.status = 'pending')
 		FROM orders o LEFT JOIN order_ratings rt ON rt.order_id = o.id
 		WHERE o.id = ANY($1::uuid[])`, ids)
 	if err != nil {
@@ -296,7 +301,7 @@ func (s *Service) BoardInfoOf(ctx context.Context, ids []string) (map[string]*Bo
 		if err := rows.Scan(&id, &b.AlertReason, &since, &b.EmergencyOpen,
 			&b.OfferExpiresAt, &b.OfferPassed, &b.GoodsCost, &b.StoreCompensated, &b.SeenAt,
 			&b.DeliveredByCode, &b.PlatformStars, &b.DriverStars,
-			&b.Cases, &b.Transferred, &b.Late); err != nil {
+			&b.Cases, &b.Transferred, &b.Late, &b.EditRequestAt); err != nil {
 			return nil, err
 		}
 		if b.AlertReason != "" {

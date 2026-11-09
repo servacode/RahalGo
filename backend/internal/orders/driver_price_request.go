@@ -366,6 +366,8 @@ func (s *Service) notifyPriceRequestRejected(ctx context.Context, o *Order, p *p
 // **والعلامة قبل الإشعار** (`alerted_at` بشرط فاضي) — متل `escalate`: إشعار ضايع أهون من
 // إشعار بيتكرّر كل نبضة.
 func (s *Service) SweepPriceRequestsOnce(ctx context.Context) int {
+	// **وطلبات تعديل الكابتن المعلّقة على طلبات انتهت** (`order_edit_request.go`).
+	s.closeEndedEditRequests(ctx)
 	if _, err := s.db.Exec(ctx, `
 		UPDATE order_price_requests r SET status = 'closed', decided_at = now()
 		  FROM orders o

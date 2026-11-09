@@ -187,8 +187,11 @@ func awaitingOfficeSQL() string {
 		}
 	}
 	st, cs := sqlTextList(statuses), sqlTextList(codes)
-	return `o.closed_at IS NULL AND o.status IN ` + st + `
-		AND EXISTS (
+	// **وطلب تعديل من الكابتن بانتظار المكتب** (قرارُ المالك ٢٠٢٦-١١-١٠) — قرارٌ ينتظر المكتب متله.
+	return `(o.closed_at IS NULL AND o.status IN ` + st + `
+		AND (EXISTS (SELECT 1 FROM order_edit_requests er
+		             WHERE er.order_id = o.id AND er.status = 'pending')
+		OR EXISTS (
 			SELECT 1 FROM (
 				SELECT a.details->>'code' AS code, a.created_at
 				FROM audit_log a
@@ -201,7 +204,7 @@ func awaitingOfficeSQL() string {
 				        '-infinity'::timestamptz)
 				ORDER BY a.created_at DESC LIMIT 1) last
 			WHERE last.code IN ` + cs + `
-			  AND (o.door_instruction_at IS NULL OR o.door_instruction_at < last.created_at))`
+			  AND (o.door_instruction_at IS NULL OR o.door_instruction_at < last.created_at))))`
 }
 
 // sqlTextList قائمةُ نصوصٍ ثابتةٍ بصيغة SQL — **والاقتباسُ يُضاعَف** احتياطاً.
