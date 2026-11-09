@@ -1115,6 +1115,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                         requestLive = orders::requestLive,
                         reportClosure = orders::reportRoadClosure,
                         setDeliveryCode = { orders.deliveryCode = it },
+                        setShamcash = { orders.shamcash = it },
                         capture = {
                             // **والإذن يُطلب عند الحاجة لا عند الدخول** —
                             // **كاميرا تُطلب في أوّل فتحة** تُرفض.

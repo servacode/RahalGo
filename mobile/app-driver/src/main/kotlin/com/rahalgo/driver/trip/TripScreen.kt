@@ -1760,9 +1760,10 @@ private fun TripCard(
                 who = order.customerName.ifBlank { stringResource(R.string.detail_customer) },
                 needCode = order.deliveryCodeRequired,
                 codeAsk = deliverCodeAskRes(order),
-                onConfirm = { code ->
+                onConfirm = { code, sham ->
                     confirmDeliver = false
                     actions.setDeliveryCode(code)
+                    actions.setShamcash(sham)
                     deliver()
                 },
                 onDismiss = { confirmDeliver = false },
@@ -2621,11 +2622,17 @@ private fun DeliverConfirmDialog(
     needCode: Boolean,
     /** **من يُملي الكود** — الزبونُ، أو المتجرُ في «إحضار» (٢٠٢٦-١٠-١٦). */
     codeAsk: Int = R.string.deliver_code_ask,
-    onConfirm: (String) -> Unit,
+    /** (كود التسليم، ما قبضه بشام كاش أو `null` للنقد). */
+    onConfirm: (String, com.rahalgo.shared.driver.ShamcashPay?) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var code by remember { mutableStateOf("") }
-    val ready = !needCode || code.length == 4
+    // **كيف قبض؟** (قرار المالك 2026-11-10) — نقدٌ افتراضاً، أو شام كاش بمبلغٍ قد يكون جزءاً.
+    var sham by remember { mutableStateOf(false) }
+    var shamUsd by remember { mutableStateOf(false) }
+    var shamText by remember { mutableStateOf("") }
+    val payment = shamcashPayload(sham && due, shamUsd, shamText)
+    val ready = (!needCode || code.length == 4) && shamcashReady(sham && due, shamUsd, shamText)
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
@@ -2653,6 +2660,15 @@ private fun DeliverConfirmDialog(
                         textAlign = TextAlign.Center,
                     )
                 }
+                // **كيف قبضت؟** — والنقدُ بلا شيء يُرسَل (كما كان).
+                if (due) ShamcashChoice(
+                    sham = sham,
+                    onSham = { sham = it },
+                    usd = shamUsd,
+                    onUsd = { shamUsd = it; shamText = "" },
+                    text = shamText,
+                    onText = { shamText = it },
+                )
                 // **كودُ التسليم يمليه الزبون** (قرارُ المالك ٢٠٢٦-١٠-٠٦) — أربعةُ أرقامٍ لا يعرفها غيره.
                 if (needCode) {
                     Spacer(Modifier.height(14.dp))
@@ -2679,7 +2695,7 @@ private fun DeliverConfirmDialog(
             }
         },
         confirmButton = {
-            RahalButton(onClick = { onConfirm(code) }, enabled = ready, modifier = Modifier.fillMaxWidth()) {
+            RahalButton(onClick = { onConfirm(code, payment) }, enabled = ready, modifier = Modifier.fillMaxWidth()) {
                 Text(
                     stringResource(if (due) R.string.deliver_confirm_due_yes else R.string.deliver_confirm_paid_yes),
                     fontWeight = FontWeight.Bold,

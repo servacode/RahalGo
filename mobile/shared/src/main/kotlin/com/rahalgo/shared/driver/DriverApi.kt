@@ -312,14 +312,10 @@ class DriverApi(private val api: ApiClient) {
         deliveryCode: String = "",
         /** **معرّفُ المتجر في طلبٍ متعدّد المحطّات** — «وصلت»/«استلمت» لتلك المحطّة. وفارغٌ: كما كان. */
         stop: String? = null,
+        /** **ما حُوِّل بشام كاش** عند التسليم (قرار المالك 2026-11-10) — `null` = كلّه نقد، والحقل لا يُرسَل. */
+        shamcash: ShamcashPay? = null,
     ): String? {
-        val body = buildMap {
-            put("to", to)
-            put("reason", reason)
-            put("note", note)
-            if (deliveryCode.isNotEmpty()) put("delivery_code", deliveryCode)
-            if (stop != null) put("stop", stop)
-        }
+        val body = transitionBody(to, reason, note, deliveryCode, stop, shamcash)
         val reply = api.call<Ack>(
             "/api/v1/driver/orders/" + orderId + "/transition",
             HttpMethod.Post,
@@ -824,3 +820,33 @@ data class LandmarkResult(
 /** **معالمُه اليوم** — `quota` صفرٌ: العدُّ مطفأ فلا سطر. */
 @Serializable
 data class LandmarkToday(val today: Int = 0, val quota: Int = 0)
+
+/**
+ * **ما قبضه السائق بشام كاش** (قرار المالك 2026-11-10) — العملة `SYP` أو `USD`، والمبلغ بالوحدة الكبرى
+ * (150000 ليرة · 12.5 دولار). **قد يكون جزءاً** والباقي نقد.
+ */
+@Serializable
+data class ShamcashPay(val currency: String, val amount: Double)
+
+/**
+ * **جسمُ الانتقال** — صنفٌ موسوم لا خريطةٌ مختلطة (تسقط في النسخة المضغوطة).
+ * **والحقول الاختياريّة تُحذف حين تغيب** فيبقى الجسم كما كان للتطبيق القديم والخادم.
+ */
+@Serializable
+data class TransitionBody(
+    val to: String,
+    val reason: String,
+    val note: String,
+    @SerialName("delivery_code") val deliveryCode: String? = null,
+    val stop: String? = null,
+    val shamcash: ShamcashPay? = null,
+)
+
+fun transitionBody(
+    to: String,
+    reason: String = "",
+    note: String = "",
+    deliveryCode: String = "",
+    stop: String? = null,
+    shamcash: ShamcashPay? = null,
+) = TransitionBody(to, reason, note, deliveryCode.ifEmpty { null }, stop, shamcash)

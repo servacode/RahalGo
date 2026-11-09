@@ -306,6 +306,8 @@ data class TripActions(
     val reportClosure: (String) -> Unit = {},
     /** **كودُ التسليم** من نافذة التأكيد — يُحفظ قبل `step`/`capture`. */
     val setDeliveryCode: (String) -> Unit = {},
+    /** **ما قبضه بشام كاش** من نافذة التأكيد — `null` = نقد. يُحفظ قبل `step`/`capture` مع الكود. */
+    val setShamcash: (com.rahalgo.shared.driver.ShamcashPay?) -> Unit = {},
     /** يفتح الكاميرا لصورة التسليم. */
     val capture: () -> Unit,
     val chat: () -> Unit,

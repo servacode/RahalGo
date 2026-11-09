@@ -839,6 +839,86 @@ internal fun PriceEditDialog(
 }
 
 /**
+ * **ما يُرسَل لشام كاش** من حالة النافذة — `null` للنقد **أو لمبلغٍ غير صالح** (انظر `shamcashReady`).
+ * الليرة عددٌ صحيح، والدولار منزلتان على الأكثر، والمبلغ أكبر من صفر.
+ */
+internal fun shamcashPayload(sham: Boolean, usd: Boolean, text: String): com.rahalgo.shared.driver.ShamcashPay? {
+    if (!sham) return null
+    val t = text.trim()
+    if (usd) {
+        if (!Regex("""\d+(\.\d{1,2})?""").matches(t)) return null
+        val v = t.toDouble()
+        return if (v > 0) com.rahalgo.shared.driver.ShamcashPay("USD", v) else null
+    }
+    if (!Regex("""\d+""").matches(t)) return null
+    val v = t.toLongOrNull() ?: return null
+    return if (v > 0) com.rahalgo.shared.driver.ShamcashPay("SYP", v.toDouble()) else null
+}
+
+/** **التأكيدُ مفتوح** للنقد دائماً، ولشام كاش حين يصحّ المبلغ. */
+internal fun shamcashReady(sham: Boolean, usd: Boolean, text: String): Boolean =
+    !sham || shamcashPayload(sham, usd, text) != null
+
+/**
+ * **كيف قبضت؟ نقدي / شام كاش** (قرار المالك 2026-11-10) — شام كاش يفتح عملةً ومبلغاً محوّلاً (قد يكون جزءاً)،
+ * بلا صورة إيصال. **وعملته نفسُ مبدّل ثمن البضاعة.**
+ */
+@Composable
+internal fun ShamcashChoice(
+    sham: Boolean,
+    onSham: (Boolean) -> Unit,
+    usd: Boolean,
+    onUsd: (Boolean) -> Unit,
+    text: String,
+    onText: (String) -> Unit,
+) {
+    Spacer(Modifier.height(14.dp))
+    Text(stringResource(R.string.shamcash_how), fontWeight = FontWeight.Bold)
+    Spacer(Modifier.height(6.dp))
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        androidx.compose.material3.FilterChip(
+            selected = !sham,
+            onClick = { onSham(false) },
+            label = { Text(stringResource(R.string.shamcash_cash), fontWeight = FontWeight.Bold) },
+        )
+        androidx.compose.material3.FilterChip(
+            selected = sham,
+            onClick = { onSham(true) },
+            label = { Text(stringResource(R.string.shamcash_sham), fontWeight = FontWeight.Bold) },
+        )
+    }
+    if (!sham) return
+    Spacer(Modifier.height(8.dp))
+    GoodsCurrencyToggle(usd = usd, onChange = onUsd)
+    Spacer(Modifier.height(6.dp))
+    OutlinedTextField(
+        value = text,
+        onValueChange = { onText(amountInput(it, if (usd) "USD" else "SYP")) },
+        label = { Text(stringResource(R.string.shamcash_amount)) },
+        singleLine = true,
+        textStyle = MaterialTheme.typography.headlineSmall.copy(
+            textAlign = TextAlign.Center,
+            fontWeight = FontWeight.Bold,
+        ),
+        suffix = {
+            Text(
+                stringResource(if (usd) R.string.currency_usd_short else R.string.currency_short),
+                fontWeight = FontWeight.Bold,
+            )
+        },
+        modifier = Modifier.fillMaxWidth(),
+        keyboardOptions = KeyboardOptions(keyboardType = if (usd) KeyboardType.Decimal else KeyboardType.Number),
+    )
+    Spacer(Modifier.height(4.dp))
+    Text(
+        stringResource(R.string.shamcash_hint),
+        color = Rahal.colors.inkMuted,
+        style = MaterialTheme.typography.bodySmall,
+        textAlign = TextAlign.Center,
+    )
+}
+
+/**
  * **اختيارُ عملة ثمن البضاعة: «ل.س» أو «$»** (قرارُ المالك ٢٠٢٦-١١-٠٩) — خيارٌ من اثنين، والأجرةُ ليرةٌ دائماً.
  * **وارتفاعُ اللمس ٤٨dp** (حدُّ `FilterChip` الافتراضيّ).
  */
