@@ -6037,16 +6037,7 @@
       "handler": "handleAdminShamRefund",
       "auth": true,
       "capability": "treasury.manage",
-      "idempotent": true,
-      "response": [
-        {
-          "name": "refund",
-          "type": "unknown"
-        }
-      ],
-      "statuses": [
-        "StatusCreated"
-      ]
+      "idempotent": true
     },
     {
       "method": "GET",
