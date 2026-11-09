@@ -662,7 +662,7 @@ export function WalletPage({
             {debtText}
           </p>
         )}
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-5">
+        <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_22rem] md:items-start md:gap-5">
           <section className="panel min-w-0 overflow-hidden" aria-label={m.terms.transactions}>
             <div className="panel-head">
               <h2 className="console-h2">{m.terms.transactions}</h2>

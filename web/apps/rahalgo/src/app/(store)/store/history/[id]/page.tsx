@@ -42,7 +42,7 @@ export default function HistoryOrderPage() {
       {(o.shared_stops ?? 0) >= 2 && (
         <p className="text-xs font-bold text-accent-text">{fill(S.orders.sharedStops, { n: fmtNum(o.shared_stops ?? 0) })}</p>
       )}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-start lg:gap-5">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] md:items-start md:gap-5">
       <section className="panel flex flex-col gap-2 p-4">
         <h2 className="console-h2">{S.orders.items}</h2>
         {/* **سطرٌ لكلّ عنصر** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — «شاورما دبل × 3 ...... 90 ل.س». */}

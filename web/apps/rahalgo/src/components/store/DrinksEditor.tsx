@@ -135,7 +135,7 @@ export default function DrinksEditor() {
   const suspended = store.status === "suspended";
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-4" data-testid="store-drinks">
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-4 md:mx-0 md:max-w-none" data-testid="store-drinks">
       <ToolHeader title={D.title} href={BACK} />
       {failed ? (
         <ReloadState onRetry={() => void load()} />

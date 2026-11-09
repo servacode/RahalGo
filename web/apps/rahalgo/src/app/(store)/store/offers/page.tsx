@@ -276,7 +276,7 @@ function NewOffer({
     <div className="console-page" data-testid="offer-form">
       <ToolHeader title={O.newTitle} onBack={onCancel} />
       {/* ── عمودان على الحاسوب: النموذج | المعاينة اللاصقة. جوّالاً متتابعان ── */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-5">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_22rem] md:items-start md:gap-5">
       <div className="flex min-w-0 flex-col gap-3">
 
       {/* **الصنفُ أوّلاً والبحثُ أوّلُه** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) — تُعرض نتائجُ البحث

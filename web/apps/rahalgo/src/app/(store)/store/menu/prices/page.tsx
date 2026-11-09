@@ -127,10 +127,10 @@ export default function BulkPricePage() {
   if (!store) return null;
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-4 lg:mx-0 lg:max-w-5xl" data-testid="bulk-price">
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-4 md:mx-0 md:max-w-none" data-testid="bulk-price">
       <ToolHeader title={B.title} href={BACK} />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start lg:gap-5">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:items-start md:gap-5">
       <div className="flex min-w-0 flex-col gap-4">
       <div role="radiogroup" aria-label={B.title} className="flex gap-2">
         <ChoiceBox icon={IconAdd} label={B.up} tone="success" on={up} disabled={busy} onPick={() => { setUp(true); changed(); }} testId="bulk-up" />

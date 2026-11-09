@@ -319,7 +319,7 @@ export function NotificationsPage({
                   **والفرقُ عن شبكة الأصناف مقصود**: البطاقةُ هناك تحمل صورةً
                   لها نسبةٌ تنكسر إن ضاقت، **وهذه تحمل سطرين من نصّ** — تضيق
                   إلى مئتين وأربعين ولا تنكسر. */}
-              <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
+              <ul className="grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
                 {g.rows.map((n) => {
                   const meta = KINDS[n.kind] ?? KINDS.account!;
                   const Icon = meta.icon;
@@ -362,12 +362,12 @@ export function NotificationsPage({
                               className="h-2 w-2 shrink-0 rounded-badge bg-accent"
                             />
                           )}
-                          <span className="line-clamp-2 min-w-0" title={n.title}>{n.title}</span>
+                          <span className="min-w-0 break-words" title={n.title}>{n.title}</span>
                         </p>
                         {/* **الجسدُ سطران لا سطرٌ مقتطع**: «تعويض عن طلبٍ فشل —
                             المطعم مغلق» يُقصّ عند «طلبٍ» فيبقى السؤال. */}
                         {n.body && (
-                          <p className="mt-0.5 line-clamp-2 text-sm leading-relaxed text-ink-muted">
+                          <p className="mt-0.5 text-sm leading-relaxed text-ink-muted">
                             {n.body}
                           </p>
                         )}

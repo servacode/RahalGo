@@ -160,7 +160,7 @@ export default function DeliveriesHistoryPage() {
 
       {/* ── الجوّال: بطاقةٌ تنطوي وتنفتح ── */}
       {rows != null && rows.length > 0 && narrow && (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 md:grid md:grid-cols-2 md:items-start">
           {rows.map((d) => (
             <DeliveryRow key={d.id} d={d} cancelling={cancelling === d.id} onCancel={() => void cancel(d.id)} />
           ))}

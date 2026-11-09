@@ -396,7 +396,7 @@ export default function OrdersPage() {
                 <h3 className="sec-head !px-1 !pb-0 !pt-3 lg:!pt-1">
                   {TITLE[c]} · {fmtNum(list.length)}
                 </h3>
-                <div className="flex flex-col gap-2 lg:grid lg:grid-cols-2 xl:grid-cols-3">{list.map(card)}</div>
+                <div className="flex flex-col gap-2 md:grid md:grid-cols-2 xl:grid-cols-3">{list.map(card)}</div>
               </section>
             ))}
         </div>

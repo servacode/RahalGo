@@ -94,7 +94,7 @@ export default function ReportsPage() {
           ))}
         </div>
         {range === "custom" && (
-          <div className="panel grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 lg:max-w-xl">
+          <div className="panel grid grid-cols-1 gap-3 p-3 sm:grid-cols-2">
             <Input id="sales-from" type="date" label={R.from} dir="ltr" max={today} value={from} onChange={(e) => e.target.value && setFrom(e.target.value)} wrapperClassName="min-w-0" />
             <Input id="sales-to" type="date" label={R.to} dir="ltr" max={today} value={to} onChange={(e) => e.target.value && setTo(e.target.value)} wrapperClassName="min-w-0" />
           </div>
@@ -135,7 +135,7 @@ export default function ReportsPage() {
                 sub={rate != null ? fill(K.rpRate, { p: fmtNum(rate) }) : undefined}
                 testId="reports-delivered"
               />
-              <Kpi icon={IconBlock} label={R.cancelled} value={s.cancelled} tone={s.cancelled > 0 ? "attention" : undefined} testId="reports-cancelled" />
+              <Kpi icon={IconBlock} label={R.cancelled} value={s.cancelled} tone={s.cancelled > 0 ? "attention" : undefined} testId="reports-cancelled" className="col-span-2 lg:col-span-1" />
             </KpiGrid>
             {s.orders === 0 && <EmptyState icon={IconReceipt} title={K.rpNone} />}
           </>

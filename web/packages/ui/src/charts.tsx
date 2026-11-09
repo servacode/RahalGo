@@ -218,7 +218,7 @@ export function SalesChart({
           />
         ))}
       </svg>
-      <div className="chart-tip" style={{ left: `${(hx / W) * 100}%`, top: `${(hy / H) * 100 - 9}%` }}>
+      <div className="chart-tip" style={{ left: `clamp(5rem, ${(hx / W) * 100}%, calc(100% - 5rem))`, top: `${(hy / H) * 100 - 9}%` }}>
         <b className="block text-sm text-ink">{at(points, hi).title}</b>
         {at(points, hi).detail}
       </div>

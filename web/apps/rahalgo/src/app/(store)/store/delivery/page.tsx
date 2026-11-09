@@ -603,7 +603,7 @@ export default function DeliveryPage() {
       )}
 
       {/* ── عمودان على الحاسوب: الطلب | توصيلاتي. جوّالاً متتابعان بالترتيب نفسه. ── */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:items-start lg:gap-5">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] md:items-start md:gap-5">
       <div className="flex min-w-0 flex-col gap-3">
       <div className="flex gap-3">
         <ModeButton on={mode === "send"} title={D.modeSend} disabled={busy} onClick={() => pickMode("send")} />

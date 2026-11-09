@@ -96,7 +96,7 @@ export default function OptionPresetsEditor() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-4" data-testid="store-option-presets">
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-4 md:mx-0 md:max-w-none" data-testid="store-option-presets">
       <ToolHeader title={O.title} href={BACK} />
       {failed ? (
         <ReloadState onRetry={() => void load()} />
@@ -135,7 +135,7 @@ export default function OptionPresetsEditor() {
                         <span className="truncate font-bold text-ink">{p.name}</span>
                         <ModeChip p={p} />
                       </span>
-                      {values && <span className="truncate text-xs text-ink-muted">{values}</span>}
+                      {values && <span className="break-words text-xs text-ink-muted">{values}</span>}
                     </span>
                     <span
                       className={`flex h-6 w-6 shrink-0 items-center justify-center rounded border-2 ${
