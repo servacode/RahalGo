@@ -55,7 +55,9 @@ func NewFake() *Fake {
 	secret := base64.StdEncoding.EncodeToString(key)
 	j, _ := newJWE(secret)
 	f := &Fake{AgentKey: "agent-test-key", Secret: secret, jwe: j,
-		bills: map[string]*fakeBill{}, nextTx: time.Now().UnixNano() / 1000, // unique across fakes: sham_tran_id is UNIQUE in a shared test DB refKeys: map[string]int64{},
+		bills: map[string]*fakeBill{}, refKeys: map[string]int64{},
+		// unique across fakes: sham_tran_id is UNIQUE in a shared test DB
+		nextTx:   time.Now().UnixNano() / 1000,
 		failNext: map[string]int{}, Calls: map[string]int{}}
 	f.Srv = httptest.NewServer(http.HandlerFunc(f.serve))
 	return f
