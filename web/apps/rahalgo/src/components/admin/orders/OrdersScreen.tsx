@@ -3083,6 +3083,7 @@ function OrderActions({
    * **«أرسلها مع سائق آخر»** — طارئٌ بعد الاستلام يبقى لقرار المكتب (المشكلة ٢٦).
    */
   const [releasing, setReleasing] = useState(false);
+  const [swapping, setSwapping] = useState(false);
   /** سببُ الفعل المفتوح — يُكتب قبل أن يُنفَّذ */
   const [reason, setReason] = useState("");
   const [err, setErr] = useState("");
@@ -3418,8 +3419,6 @@ function OrderActions({
       });
       setAsking("");
       setRepShare("platform");
-      // **وبعد فكّ السائق قبل الاستلام يُفتح الإسنادُ فوراً** — كما في طلبات الواتساب.
-      if (releasing && beforePickup && to === "dispatching") setAssigning(true);
       setReleasing(false);
       setReason("");
       onChanged();
@@ -3627,13 +3626,12 @@ function OrderActions({
   }
 
   // **طارئٌ بعد الاستلام — المكتبُ يرسل الطلبَ لسائقٍ آخر بقراره** (المشكلة ٢٦).
-  // **وقبل الاستلام «بدّل السائق»** (طلبُ المالك ٢٠٢٦-١١-٠٩): بكلّ الطلبات من أوّل ما يقبل السائق —
-  // يُفكّ السائقُ ويُفتح الإسنادُ فوراً، أو يُترك للتوزيع.
+  // **وقبل الاستلام «بدّل السائق»** (طلبُ المالك ٢٠٢٦-١١-٠٩) نافذةُ الإسناد نفسُها (`swapFrom`).
   if (releasing) {
     return (
       <div className="w-full space-y-2" onClick={(e) => e.stopPropagation()}>
-        <p className="text-xs font-medium text-danger">{beforePickup ? BOARD.release.swapTitle : BOARD.release.title}</p>
-        <p className="text-xs text-ink-muted">{beforePickup ? BOARD.release.swapHint : BOARD.release.hint}</p>
+        <p className="text-xs font-medium text-danger">{BOARD.release.title}</p>
+        <p className="text-xs text-ink-muted">{BOARD.release.hint}</p>
         <Input
           id={`release-${o.id}`}
           autoFocus
@@ -3653,7 +3651,7 @@ function OrderActions({
             setReason("");
             setErr("");
           }}
-          saveLabel={beforePickup ? BOARD.release.swapSend : BOARD.release.send}
+          saveLabel={BOARD.release.send}
           tone="danger"
         />
       </div>
@@ -4250,12 +4248,25 @@ function OrderActions({
             onClick={() => {
               setReason("");
               setErr("");
-              setReleasing(true);
+              if (beforePickup) setSwapping(true);
+              else setReleasing(true);
             }}
           >
             <BtnLabel icon={IconSwap}>{BOARD.release.swap}</BtnLabel>
           </Button>
         )}
+      {swapping && (
+        <AssignDialog
+          orderId={o.id}
+          orderNumber={o.number}
+          swapFrom={o.driver_name ?? ""}
+          onClose={() => setSwapping(false)}
+          onDone={() => {
+            setSwapping(false);
+            onChanged();
+          }}
+        />
+      )}
       {err && <p className="order-2 w-full text-xs text-danger">{err}</p>}
       {note && <p className="order-2 w-full text-xs text-muted">{note}</p>}
     </>
