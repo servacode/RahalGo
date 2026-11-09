@@ -8,7 +8,7 @@
 
 import { isValidElement, type ComponentType, type ReactNode } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtDate, fmtTime } from "@rahalgo/i18n";
-import { Button, CountBadge } from "./components";
+import { Button, ButtonLink, CountBadge } from "./components";
 import { SkeletonList, SkeletonStats } from "./feedback";
 import { IconStar } from "./icons";
 import { BrandMark } from "./platform";
@@ -286,6 +286,15 @@ export function EmptyState({
  * **النصُّ نفسُه والزرُّ نفسُه** — فمن رآها في تطبيقه عرفها في لوحته.
  */
 export function ReloadState({ onRetry, label }: { onRetry?: () => void; label?: string }) {
+  /* **«يجب تسجيل الدخول» لا يُعالَج بإعادة المحاولة** — الجلسةُ انتهت، فيُعطى
+     زرُّ دخولٍ إلى الباب الصحيح (الإدارة لها بابُها، وغيرُها `/login`)
+     مع عودةٍ إلى الصفحة نفسها. */
+  const expired = label === m.errors.unauthorized;
+  const loginHref = () => {
+    const path = typeof window === "undefined" ? "/" : window.location.pathname;
+    if (path.startsWith("/dashboard") || path.startsWith("/adminrahalgo")) return "/adminrahalgo";
+    return `/login?next=${encodeURIComponent(path)}`;
+  };
   return (
     <div
       className="flex flex-col items-center justify-center gap-3 py-16 text-center"
@@ -294,8 +303,9 @@ export function ReloadState({ onRetry, label }: { onRetry?: () => void; label?: 
       data-ui="error"
     >
       <p className="text-sm text-ink-muted">{label ?? m.errors.offline}</p>
+      {expired && <ButtonLink href={loginHref()}>{m.common.signIn}</ButtonLink>}
       {onRetry && (
-        <Button variant="secondary" onClick={onRetry}>
+        <Button variant={expired ? "ghost" : "secondary"} onClick={onRetry}>
           {m.common.retry}
         </Button>
       )}
