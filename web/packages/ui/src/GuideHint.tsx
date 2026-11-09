@@ -29,7 +29,7 @@ export function GuideBubble({
         <button
           type="button"
           onClick={onSkip}
-          className="shrink-0 rounded-control px-2 py-2 text-xs text-on-solid underline-offset-2 hover:underline"
+          className="min-h-11 shrink-0 rounded-control px-3 py-2 text-xs text-on-solid underline-offset-2 hover:underline"
         >
           {skipLabel}
         </button>
