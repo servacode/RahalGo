@@ -13,6 +13,7 @@
  * **وكلُّ قسمٍ يُحمَّل وحدَه ويفشل وحدَه** — المحادثةُ الساقطةُ لا تُخفي المسار.
  */
 
+import { SHAMCASH_LABEL, shamcashText, type ShamcashBoard } from "./ShamcashLine";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
@@ -191,7 +192,7 @@ interface Detail {
   return_to?: "office" | "store" | null;
   goods_handed_at?: string | null;
   rating?: { platform_stars: number; driver_stars: number | null } | null;
-  board?: { delivered_by_code?: boolean };
+  board?: { delivered_by_code?: boolean } & ShamcashBoard;
   ops_stage_times?: (string | null)[];
   ops_stage_late?: (boolean | null)[];
   items?: Item[];
@@ -559,6 +560,8 @@ function WhatSection({ o }: { o: Detail }) {
           )}
         </div>
       )}
+
+      {shamcashText(o.board) && <Row label={SHAMCASH_LABEL}>{shamcashText(o.board)}</Row>}
 
       {(o.board?.delivered_by_code || o.proof_url || o.proof_skip_reason) && (
         <Row label={F.proof}>

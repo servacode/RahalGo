@@ -110,6 +110,7 @@ import {
   type NewOrder,
 } from "./BoardWidgets";
 import { PartsSection } from "./PartsBoxes";
+import { SHAMCASH_LABEL, shamcashText, type ShamcashBoard } from "./ShamcashLine";
 
 const m = getMessages(defaultLocale);
 
@@ -358,7 +359,7 @@ interface OrderRow {
   }[];
 }
 
-interface BoardInfo {
+interface BoardInfo extends ShamcashBoard {
   alert_reason: string;
   alert_since: string | null;
   emergency_open: boolean;
@@ -2927,6 +2928,11 @@ function HistoryCard({
               ]
                 .filter(Boolean)
                 .join(m.common.listSeparator)}
+            </MoneyLine>
+          )}
+          {shamcashText(o.board) && (
+            <MoneyLine label={SHAMCASH_LABEL}>
+              <span className="font-bold">{shamcashText(o.board)}</span>
             </MoneyLine>
           )}
           {money && money.lines > 0 && (

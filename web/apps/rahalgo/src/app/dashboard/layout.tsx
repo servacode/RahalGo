@@ -29,6 +29,7 @@ import {
   IconArrowOut,
   IconTrendUp,
   IconReceipt,
+  IconCash,
   IconTarget,
   IconSignup,
   BootScreen,
@@ -170,6 +171,9 @@ const ALL_NAV: NavItem[] = [
   { href: "/dashboard/profits", label: m.admin.treasury.links.profits, icon: IconTrendUp,
     caps: ["finance.read"] },
   { href: "/dashboard/expenses", label: m.admin.treasury.links.expenses, icon: IconReceipt,
+    caps: ["finance.read"] },
+  // **سجلّ شام كاش اليدويّ** (قرارُ المالك ٢٠٢٦-١١-١٠) — جانبيٌّ لا يمسّ الخزينة.
+  { href: "/dashboard/shamcash", label: m.admin.shamcash.title, icon: IconCash,
     caps: ["finance.read"] },
   // **والديونُ من الخزينة وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٢٥: «موجود بالقائمة وبالخزينة… نخلّيه بالخزينة»).
   // **والخسائرُ والنزاعاتُ وتعويضُ البضاعة صارت تبويباتٍ في «المشاكل والتعويضات»** (٢٠٢٦-١٠-٢٥).
