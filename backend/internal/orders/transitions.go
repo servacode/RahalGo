@@ -139,6 +139,8 @@ type lockedOrder struct {
 	origin string
 	// stops **عددُ متاجر الطلب** — وفوق الواحد فرعُ المحطّات.
 	stops int
+	// walletScope **شو بيندفع من المحفظة** — none | full | delivery (هجرة ٠٥٢٦).
+	walletScope string
 }
 
 // lockOrderTx **يقفل صفَّ الطلب ويقرؤه** — أوّلُ ما في كلّ انتقالٍ وكلّ فعلِ قسم.
@@ -153,10 +155,10 @@ func lockOrderTx(ctx context.Context, tx pgx.Tx, orderID string) (*lockedOrder, 
 		       -- **والتوصيلةُ بلا زبون** («لدي توصيلة») — NULL في نصٍّ يُسقط
 		       -- كلَّ انتقالٍ لها: قبولَ السائق واستلامَه وتسليمَه.
 		       COALESCE(customer_id::text, ''),
-		       COALESCE(promo_code,''), kind, custom_reserved_amount, origin, stops
+		       COALESCE(promo_code,''), kind, custom_reserved_amount, origin, stops, wallet_scope
 		FROM orders WHERE id = $1 FOR UPDATE`, orderID).
 		Scan(&lo.from, &lo.driverID, &lo.walletPaid, &lo.cashDue, &lo.deliveryFee, &lo.customerID,
-			&lo.promoCode, &lo.kind, &lo.customReserved, &lo.origin, &lo.stops)
+			&lo.promoCode, &lo.kind, &lo.customReserved, &lo.origin, &lo.stops, &lo.walletScope)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound
 	}
@@ -598,6 +600,7 @@ func (s *Service) applyTransitionTx(ctx context.Context, tx pgx.Tx, lo *lockedOr
 		customerID: customerID, driverID: driverID,
 		walletPaid: walletPaid, cashDue: cashDue, deliveryFee: deliveryFee,
 		custom: kind == KindCustom, customReserved: customReserved,
+		walletScope:      lo.walletScope,
 		merchantDelivery: kind == KindMerchantDelivery,
 	}, &done); err != nil {
 		return nil, err
@@ -1011,6 +1014,8 @@ type settlement struct {
 	// **يُمرَّر ليقرّر `settle` بلا قراءةٍ ثانية**: نهايةٌ إلى غير التسليم تفكّ
 	// الحجزَ **إن وُجد وحدَه** — **فطلبٌ نقديٌّ (لا حجزَ له) لا يمسّ شيئاً.**
 	customReserved int64
+	// walletScope **شو انحجز من المحفظة** — none | full | delivery (هجرة ٠٥٢٦).
+	walletScope string
 	// merchantDelivery **«لدي توصيلة» — لا بضاعةَ ولا زبونَ ولا عمولةَ مبيعات.**
 	merchantDelivery bool
 }
@@ -1056,6 +1061,14 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 			// **ويُميَّز بالمستحقِّ النقديِّ نفسِه لا بحقلٍ جديد**: المحفظةُ
 			// تُصفّره عند التأكيد، **والنقدُ يكتبه.** ولقطةٌ واحدةٌ تُقرأ
 			// أصدقُ من اثنتين تفترقان.
+			//
+			// **إلّا «التوصيل من المحفظة والباقي كاش»** (قرارُ المالك ٢٠٢٦-١١-٠٩): نقدٌ
+			// وحجزٌ معاً — **مسارُ المحفظة يسوّي الحجزَ ويقبض النقدَ معاً**، ومسارُ النقد
+			// وحدَه كان يقصر السائقَ على المقبوض فيخسر أجرتَه ويبقى الحجزُ مجمَّداً
+			// (FI-11.l). **وحجزٌ صفرٌ** (أجرةٌ معفاةٌ كلُّها) نقدٌ محض.
+			if in.walletScope == ScopeDelivery && in.customReserved > 0 {
+				return s.settleCustomWallet(ctx, q, in, out)
+			}
 			if in.cashDue > 0 {
 				return s.settleCustomCash(ctx, q, in, out)
 			}

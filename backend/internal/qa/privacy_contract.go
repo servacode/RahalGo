@@ -221,6 +221,8 @@ var OrderPrivacy = map[string]FieldRule{
 	// ممنوعةً كما كانت** (`RQ-7`)، **ولا يُوسَّع العقدُ ليخضرَّ
 	// فحص.**
 	"payment_method": {Ref: "merchant_privacy.go:51", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	// **شو بيندفع من المحفظة** (قرارُ المالك ٢٠٢٦-١١-٠٩) — كطريقة الدفع: للزبون والكابتن والمكتب.
+	"wallet_scope": {Ref: "wallet_scope.go · كطريقة الدفع", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	// **شفافيّةُ تسوية المتجر** — قرارُ المالك ٢٠٢٦-٠٨-٢٦ و٢٠٢٦-٠٩-٠٩.
 	"subtotal":     {Ref: "شفافيّةُ تسوية المتجر (قرارُ المالك ٢٠٢٦-٠٩-٠٩) — ما بِيع من عنده · وRQ-7 يجيزه للمندوب", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisAllowed, VisAllowed)},
 	"delivery_fee": {Ref: "merchant_privacy.go:49 · وأجرُ السائق", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisAllowed, VisAllowed)},

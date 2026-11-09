@@ -26,6 +26,7 @@
         "FI-03.a",
         "FI-03.b",
         "FI-03.c",
+        "FI-03.e",
         "FI-03.d"
       ]
     },
@@ -325,6 +326,20 @@
       ]
     },
     {
+      "id": "FI-03.e",
+      "family": "FI-03",
+      "name": "«التوصيل من المحفظة» لا يدفع البضاعة من المحفظة",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-01",
+        "F-14"
+      ],
+      "kinds": [
+        "order_payment"
+      ]
+    },
+    {
       "id": "FI-04.a",
       "family": "FI-04",
       "name": "كلُّ طلبٍ مسلَّمٍ له مستحقُّ متجر",
@@ -606,7 +621,7 @@
     {
       "id": "FI-06.e",
       "family": "FI-06",
-      "name": "طلبُ الواتساب لا يحرّك إلّا الأجرة",
+      "name": "طلبُ الواتساب لا يحرّك إلّا الأجرة — وعمولةَ متجرنا",
       "status": "PROVABLE_NOW",
       "ops": true,
       "flows": [
@@ -616,7 +631,10 @@
         "driver_earning",
         "platform_profit",
         "compensation",
-        "platform_expense"
+        "platform_expense",
+        "order_payment",
+        "refund",
+        "commission"
       ]
     },
     {
@@ -1443,19 +1461,24 @@
     },
     {
       "kind": "order_payment",
-      "semantics": "خصمُ ثمنِ الطلب من محفظة الزبون لحظةَ الإنشاء.",
+      "semantics": "خصمُ ثمنِ الطلب من محفظة الزبون لحظةَ الإنشاء — **وعمولةُ متجرنا على طلب الواتساب من محفظة صاحبه عند التسليم** (٢٠٢٦-١١-٠٨). **والحصّةُ ما اختاره الزبون: الكلُّ أو الأجرةُ وحدَها، وفرقُ تبديلها قبل الباب** (٢٠٢٦-١١-٠٩).",
       "sign": "-",
       "ref_required": true,
       "ref_target": "orders",
       "path": "POST /api/v1/orders",
       "creators": [
         "internal/orders/service.go:521",
-        "internal/orders/custom.go:278"
+        "internal/orders/custom.go:278",
+        "internal/orders/whatsapp_commission.go",
+        "internal/orders/order_edit.go",
+        "internal/orders/wallet_scope.go"
       ],
       "invariants": [
         "FI-01.d",
+        "FI-03.e",
         "FI-04.b",
-        "FI-06.a"
+        "FI-06.a",
+        "FI-06.e"
       ],
       "reachable": true
     },
@@ -1550,7 +1573,7 @@
     },
     {
       "kind": "refund",
-      "semantics": "ردُّ ما دفعه الزبون — **من المحفظة قبل التسليم، وكاملُ المبلغ بعده.**",
+      "semantics": "ردُّ ما دفعه الزبون — **من المحفظة قبل التسليم، وكاملُ المبلغ بعده.** **وعمولةُ طلب واتسابٍ مسترجَعٍ تعود لمحفظة المتجر** (٢٠٢٦-١١-٠٨). **وفرقُ تبديل الدفع من «الكل» إلى «التوصيل من المحفظة» يُردّ فوراً** (٢٠٢٦-١١-٠٩).",
       "sign": "+",
       "ref_required": true,
       "ref_target": "orders",
@@ -1558,12 +1581,17 @@
       "creators": [
         "internal/orders/transitions.go:659",
         "internal/orders/transitions.go:739",
-        "internal/orders/undeliver.go"
+        "internal/orders/undeliver.go",
+        "internal/orders/whatsapp_commission.go",
+        "internal/orders/order_edit.go",
+        "internal/orders/removal_recompute.go",
+        "internal/orders/wallet_scope.go"
       ],
       "invariants": [
         "FI-01.d",
         "FI-05.g",
-        "FI-06.a"
+        "FI-06.a",
+        "FI-06.e"
       ],
       "reachable": true
     },
@@ -1622,8 +1650,8 @@
   ],
   "counts": {
     "families": 15,
-    "checks": 87,
-    "provable_now": 81,
+    "checks": 88,
+    "provable_now": 82,
     "not_implemented": 3,
     "deferred_p5": 1,
     "deferred_p6": 2,

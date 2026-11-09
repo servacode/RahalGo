@@ -46,11 +46,13 @@ var t = struct {
 	itemUnavailable string
 	// **تعديلُ المكتب للطلب العاديّ** (قرارُ المالك ٢٠٢٦-١١-٠٣) — الزبونُ والسائقُ والمتجر.
 	orderEdited, orderEditedDriver, orderEditedMerchant string
-	rejected, cancelled, failed, refunded               string
-	merchantDelivered, commission                       string
-	targetReached                                       string
-	violationsWarn, violationsBanned                    string
-	endedOps, warningIssued                             string
+	// walletScopeDriver **الزبونُ بدّل الدفعَ من المحفظة** (قرارُ المالك ٢٠٢٦-١١-٠٩) — ما يقبضه الكابتن تبدّل.
+	walletScopeDriver                     string
+	rejected, cancelled, failed, refunded string
+	merchantDelivered, commission         string
+	targetReached                         string
+	violationsWarn, violationsBanned      string
+	endedOps, warningIssued               string
 	// **عناوينُ حركات المحفظة** — (قرارُ المالك ٢٠٢٦-٠٨-١١: «الرصيد
 	// يتغيّر وما حدا بيعرف ليش»).
 	driverEarned, merchantEarned, refunded2, compensated string
@@ -100,6 +102,7 @@ var t = struct {
 	orderEdited:                "تعدّل طلبك",
 	orderEditedDriver:          "تعدّل الطلب الذي معك",
 	orderEditedMerchant:        "تعدّل طلب من متجرك",
+	walletScopeDriver:          "الزبون غيّر طريقة الدفع — شوف المبلغ الجديد",
 	driverAssignedToCustomer:   "أُسند سائقٌ لطلبك",
 	rejected:                   "اعتذر المتجر عن طلبك",
 	cancelled:                  "أُلغي طلبك",

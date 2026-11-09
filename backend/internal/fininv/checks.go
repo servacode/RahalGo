@@ -197,11 +197,33 @@ var All = []Check{
 		Name:  "الدفعُ يغطّي المجموع",
 		Why:   "طلبٌ مدفوعُه لا يساوي مجموعَه — فرقٌ ضائعٌ لا يعرف أحدٌ أين ذهب",
 		Flows: []string{"F-01", "F-14"},
+		// **والخاصُّ بـ«التوصيل من المحفظة» داخلٌ فيه** (قرارُ المالك ٢٠٢٦-١١-٠٩): الحجزُ يُسوّى
+		// فيُكتب `wallet_paid` = الأجرة، والبضاعةُ `cash_due` — فمجموعُهما المجموع. **وسائرُ
+		// الخاصّ خارجٌ كما كان** (طلباتٌ قديمةٌ قبل كتابة المدفوع).
 		SQL: `
 			SELECT number, total, wallet_paid, cash_due
 			FROM orders
-			WHERE status = 'delivered' AND kind <> 'custom'
+			WHERE status = 'delivered'
+			  AND (kind <> 'custom' OR wallet_scope = 'delivery')
 			  AND wallet_paid + cash_due <> total`,
+	},
+	{
+		ID: "FI-03.e", Family: FI03, Status: ProvableNow, Ops: true,
+		Name: "«التوصيل من المحفظة» لا يدفع البضاعة من المحفظة",
+		Why: "زبونٌ اختار الأجرةَ وحدَها من محفظته وخُصم منه أو حُجز أكثرُ منها — " +
+			"**فدفع البضاعةَ مرّتين: من محفظته ونقداً للكابتن.**",
+		Flows: []string{"F-01", "F-14"},
+		Kinds: []string{"order_payment"},
+		// **والحصّةُ من الدالّة الواحدة** (`orders.WalletPortion`): أجرةُ التوصيل المدفوعةُ ولا
+		// تتجاوز المجموع. **والمدفوعُ والمحجوزُ معاً** — العاديُّ يُخصم والخاصُّ يُحجز.
+		// **والخاصُّ الذي ينتظر إعادةَ تأكيدٍ بعد الاستلام يُستثنى** — محجوزُه القديمُ قائمٌ
+		// بتأكيده حتّى يؤكّد الزبونُ الجديد (FI-11.m).
+		SQL: `
+			SELECT number, kind, status, wallet_paid, custom_reserved_amount, delivery_fee, total
+			FROM orders
+			WHERE wallet_scope = 'delivery'
+			  AND NOT (kind = 'custom' AND quote_confirmed_version IS DISTINCT FROM quote_version)
+			  AND wallet_paid + custom_reserved_amount > GREATEST(LEAST(delivery_fee, total), 0)`,
 	},
 
 	// ═══════════════════════════════════════════════════════════════════
@@ -1511,7 +1533,8 @@ var All = []Check{
 		ID: "FI-11.m", Family: FI11, Status: ProvableNow, Ops: true,
 		Name: "حجزٌ موجبٌ يقابل طلبَ محفظةٍ حيّاً مؤكَّداً بنسخته الحاليّة",
 		Why: "**المالُ لا يُحجَز إلّا لطلبِ محفظةٍ حيٍّ أكّده صاحبُه**، " +
-			"**والمحجوزُ = ما أكّده بالضبط** (`quote_confirmed_total`) " +
+			"**والمحجوزُ = ما أكّده بالضبط** (`quote_confirmed_total`) — " +
+			"**وفي «التوصيل من المحفظة» المحجوزُ + النقدُ = ما أكّده** (٢٠٢٦-١١-٠٩) " +
 			"**بالنسخة الحاليّة** — **وحجزٌ لا يطابق تأكيداً حيّاً مالٌ مجمَّدٌ " +
 			"بلا عقد.** **إلّا بعد الاستلام**: زيادةُ المكتب تنتظر تأكيدَ الزبون " +
 			"**والمؤكَّدُ القديمُ قائمٌ بمحجوزه** (قرارُ المالك ٢٠٢٦-١٠-١٥).",
@@ -1528,7 +1551,11 @@ var All = []Check{
 		            -- (قرارُ المالك ٢٠٢٦-١٠-١٥) **والمؤكَّدُ القديمُ قائمٌ بمحجوزه.**
 		            OR (quote_confirmed_version IS DISTINCT FROM quote_version
 		                AND (picked_up_at IS NULL OR quote_confirmed_version > quote_version))
+		            -- **وفي «التوصيل من المحفظة» المحجوزُ الأجرةُ والبضاعةُ نقد** (قرارُ المالك
+		            -- ٢٠٢٦-١١-٠٩): المحجوزُ + النقدُ = المؤكَّد. **وفي «الكلّ» لا نقدَ أصلاً.**
 		            OR quote_confirmed_total IS DISTINCT FROM custom_reserved_amount
+		                 + CASE WHEN wallet_scope = 'delivery' THEN cash_due ELSE 0 END
+		            OR (wallet_scope = 'full' AND cash_due <> 0)
 		            OR status IN ('delivered','cancelled','rejected','failed') )`,
 	},
 	// ══════════════════════════════════════════════════════════════

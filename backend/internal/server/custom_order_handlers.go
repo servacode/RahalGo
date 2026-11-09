@@ -238,6 +238,9 @@ func (s *Server) handleConfirmQuote(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[struct {
 		// Payment **نقدٌ أو محفظة** — يُختار عند القفل لا عند الطلب.
 		Payment string `json:"payment_method"`
+		// WalletScope **«الكل من المحفظة» (`full`) أو «التوصيل من المحفظة والباقي كاش»
+		// (`delivery`)** — قرارُ المالك ٢٠٢٦-١١-٠٩. **وغيابُه مع `wallet` يعني `full`.**
+		WalletScope string `json:"wallet_scope"`
 		// ExpectedTotal وExpectedQuoteVersion **العرضُ الذي رآه الزبونُ** —
 		// يُطابَقان بالحاليّ، وإلّا فتغيّر السعرُ تحت يده.
 		ExpectedTotal        int64 `json:"expected_total"`
@@ -248,8 +251,8 @@ func (s *Server) handleConfirmQuote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	orderID := chi.URLParam(r, "id")
-	o, err := s.orders.ConfirmQuote(r.Context(), orderID, userIDFrom(r),
-		req.Payment, req.ExpectedTotal, req.ExpectedQuoteVersion)
+	o, err := s.orders.ConfirmQuoteScope(r.Context(), orderID, userIDFrom(r),
+		req.Payment, req.WalletScope, req.ExpectedTotal, req.ExpectedQuoteVersion)
 	if err != nil {
 		s.respondErr(w, err)
 		return
@@ -260,6 +263,37 @@ func (s *Server) handleConfirmQuote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.JSON(w, http.StatusOK, view)
+}
+
+// handleChangeWalletScope **الزبونُ يبدّل شو بيندفع من المحفظة** (قرارُ المالك ٢٠٢٦-١١-٠٩).
+//
+// الطلبُ العاديُّ والخاصُّ المؤكَّد — **حتّى يوصل الكابتن للباب** (`at_dropoff`). **ويرسل
+// المجموعَ الذي رآه** (`expected_total`) — فإن تغيّر رُدّ `order_changed`. **ومحميٌّ من
+// الإعادة** (`Idempotency-Key`) كأبواب المال، **ونفسُ الاختيار ثانيةً لا شيء.**
+func (s *Server) handleChangeWalletScope(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		// WalletScope **none | full | delivery**.
+		WalletScope   string `json:"wallet_scope"`
+		ExpectedTotal int64  `json:"expected_total"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	// **السقفُ قبل المعاملة** (`XG-46`)، **والمالُ وعلامةُ منع التكرار في معاملةٍ واحدة** (`XG-33`).
+	limit := s.orders.DriverCashLimit(r.Context())
+	s.WithIdempotentTx(w, r, func(ctx context.Context, q dbtx.Querier) (IdempotentBody, error) {
+		o, after, err := s.orders.ChangeWalletScopeTx(ctx, q, chi.URLParam(r, "id"), userIDFrom(r),
+			req.WalletScope, req.ExpectedTotal, limit)
+		if err != nil {
+			return IdempotentBody{}, err
+		}
+		view, err := orderView(orders.AudienceCustomer, o)
+		if err != nil {
+			return IdempotentBody{}, err
+		}
+		return IdempotentBody{Status: http.StatusOK, Payload: view, AfterCommit: after}, nil
+	})
 }
 
 // handleRejectQuote **الزبونُ يرفض السعرَ الجديد** (قرارُ المالك ٢٠٢٦-١٠-١٥).

@@ -237,6 +237,7 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 	// ── ١ · الطلبُ مقفولاً ─────────────────────────────────────────────
 	var o struct {
 		status, kind, customerID, method, promoCode, merchantID string
+		scope                                                   string
 		number                                                  int64
 		subtotal, deliveryFee, discount, total, walletPaid      int64
 		cashDue, waived, sourcesFee, driverFee                  int64
@@ -248,11 +249,11 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 		       COALESCE(promo_code, ''), COALESCE(merchant_id::text, ''), number,
 		       subtotal, delivery_fee, discount, total, wallet_paid, cash_due,
 		       promo_delivery_waived, sources_fee, driver_fee,
-		       snap_platform_delivery_percent, snap_platform_delivery_fixed, driver_id::text
+		       snap_platform_delivery_percent, snap_platform_delivery_fixed, driver_id::text, wallet_scope
 		FROM orders WHERE id = $1 FOR UPDATE`, orderID).
 		Scan(&o.status, &o.kind, &o.customerID, &o.method, &o.promoCode, &o.merchantID, &o.number,
 			&o.subtotal, &o.deliveryFee, &o.discount, &o.total, &o.walletPaid, &o.cashDue,
-			&o.waived, &o.sourcesFee, &o.driverFee, &o.sharePct, &o.shareFixed, &o.driverID)
+			&o.waived, &o.sourcesFee, &o.driverFee, &o.sharePct, &o.shareFixed, &o.driverID, &o.scope)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, res, httpx.ErrNotFound
 	}
@@ -565,21 +566,24 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 	// ── ٦ · الدفع ──────────────────────────────────────────────────────
 	walletPaid := o.walletPaid
 	note := fmt.Sprintf("تعديل الطلب: %s", req.Reason)
-	if total < walletPaid {
+	// **وحصّةُ المحفظة من الدالّة الواحدة** (`WalletPortion`، قرارُ المالك ٢٠٢٦-١١-٠٩): في
+	// «التوصيل من المحفظة» **زيادةُ البضاعة تصير نقداً** وتغيّرُ الأجرة يُخصم فرقُه أو يُردّ.
+	target := WalletPortion(o.scope, total, deliveryFee)
+	if target < walletPaid {
 		// **نقصٌ دون ما دُفع من المحفظة** — يُردّ الفرقُ فوراً.
-		diff := walletPaid - total
+		diff := walletPaid - target
 		if _, err := s.wallet.ApplyTx(ctx, tx, o.customerID, diff, "refund", orderID, note, &actorID); err != nil {
 			return nil, res, err
 		}
 		res.Refunded = diff
-		walletPaid = total
-	} else if o.method == "wallet" && total > walletPaid {
+		walletPaid = target
+	} else if target > walletPaid {
 		// **زيادةٌ على طلب محفظة** — يُخصم ما يكفيه الرصيد، والباقي نقد.
 		avail, err := s.wallet.AvailableTx(ctx, tx, o.customerID)
 		if err != nil {
 			return nil, res, err
 		}
-		charge := min64(total-walletPaid, avail)
+		charge := min64(target-walletPaid, avail)
 		if charge > 0 {
 			if _, err := s.wallet.ApplyTx(ctx, tx, o.customerID, -charge, "order_payment",
 				orderID, note, &actorID); err != nil {
