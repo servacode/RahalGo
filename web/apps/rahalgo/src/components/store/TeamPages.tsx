@@ -104,7 +104,7 @@ function IconChoiceCard({
       >
         {icon}
       </span>
-      <span className="text-base font-bold text-ink">{title}</span>
+      <span className="text-base font-bold text-ink [text-wrap:balance]">{title}</span>
     </button>
   );
 }
@@ -191,15 +191,18 @@ export function StaffPage() {
     body = loadError ? <ReloadState label={loadError} onRetry={load} /> : <LoadingState variant="list" rows={3} />;
   else
     body = (
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] lg:items-start lg:gap-5">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] md:items-start md:gap-5">
         <div className="min-w-0">
         {list.length === 0 ? (
+          <section className="flex flex-col gap-2">
+          <h2 className="console-h2 px-1">{T.listTitle}</h2>
           <div className="panel flex flex-col items-center gap-3 px-4 py-10">
             <span className="flex h-14 w-14 items-center justify-center rounded-full bg-accent-tint text-accent-text">
               <IconUser size={28} />
             </span>
             <p className="font-bold text-ink-muted">{T.none}</p>
           </div>
+          </section>
         ) : (
           <section className="flex flex-col gap-2">
             <h2 className="console-h2 px-1">{T.listTitle}</h2>

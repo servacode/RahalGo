@@ -119,7 +119,7 @@ export default function DeliveryTrack() {
               <p className="text-xs text-ink-muted">{D.codeHint}</p>
             </section>
           )}
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start lg:gap-5">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:items-start md:gap-5">
           {at < 0 ? (
             /* **المنتهيةُ رماديّة** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) — الإلغاءُ ليس خطأً. */
             <p className="panel p-3 text-sm text-ink-muted">

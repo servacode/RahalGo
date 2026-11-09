@@ -374,7 +374,7 @@ export function AccountSettings({
        بالدمج صار لكلّ شأنٍ بطاقة: **من أنت** (الصورةُ والاسم) · **مفتاحُك**
        (كلمةُ المرور) · **كيف نصل إليك** (الرقمُ والواتساب). **وثلاثةٌ تملأ
        السطرَ بلا فراغٍ رابعٍ يتيم.** */
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
       {/* **بابُ تغيير الاسم.**
 
           كانت الصفحةُ تقرأ الاسمَ وتعرضه في الصورة الرمزية **ولا تكتبه** —
@@ -544,7 +544,7 @@ export function AccountSettings({
         )}
       </Section>
 
-      <section className="surface-lit surface !border-danger-edge p-4 sm:col-span-2 lg:col-span-3">
+      <section className="surface-lit surface !border-danger-edge p-4 md:col-span-3">
         <h2 className="mb-1 flex items-center gap-2 text-sm font-bold text-danger">
           <span className="[&>svg]:h-4 [&>svg]:w-4">
             <IconWarning />

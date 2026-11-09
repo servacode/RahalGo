@@ -543,7 +543,7 @@ export default function ItemEditor({
       <ToolHeader title={item ? I.edit : I.new} href="/store/menu" />
 
       {/* ── عمودان على الحاسوب: النموذج | معاينةٌ حيّةٌ كما يراها الزبون. جوّالاً النموذجُ وحدَه بترتيبه ── */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-5">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_20rem] md:items-start md:gap-5">
       <div className="flex min-w-0 flex-col gap-4">
 
       {/* ── ١ · الصورةُ يميناً، والاسمُ عن يسارها — ولا وصفَ (قرارُ المالك ٢٠٢٦-١٠-٣٠) ── */}
@@ -1007,7 +1007,7 @@ export default function ItemEditor({
       </div>
 
       {/* ══ **المعاينة الحيّة** — بطاقةُ الصنف كما تظهر للزبون، تتبدّل مع كلّ حرفٍ يُكتب. حاسوبٌ فقط. ══ */}
-      <aside className="hidden lg:sticky lg:top-[calc(var(--topbar-h)+0.75rem)] lg:block" aria-label={K.previewTitle} data-testid="item-preview">
+      <aside className="hidden md:sticky md:top-14 md:block lg:top-[calc(var(--topbar-h)+0.75rem)]" aria-label={K.previewTitle} data-testid="item-preview">
         <h2 className="console-h2 mb-2 px-1">{K.previewTitle}</h2>
         <div className="panel-lite flex flex-col overflow-hidden">
           <div className="relative block aspect-[4/5] w-full bg-field">

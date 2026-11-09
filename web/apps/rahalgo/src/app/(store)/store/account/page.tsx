@@ -76,7 +76,7 @@ export default function StoreAccountPage() {
 
       {/* ── **جوّالاً «حسابي» مركزُ الأبواب** — ما ليس في شريط التبويب (المحفظة · التقارير · السجلّ · العروض · التوصيلات…)
           كقائمة إعدادات آيفون. وعلى الحاسوب السايدبارُ يغني. ── */}
-      <div className="flex flex-col gap-1 lg:hidden" data-testid="store-account-hub">
+      <div className="flex flex-col gap-1 md:max-lg:block md:max-lg:columns-2 md:max-lg:gap-4 md:max-lg:[&>*]:mb-4 md:max-lg:[&>*]:break-inside-avoid lg:hidden" data-testid="store-account-hub">
         {nav.groups.map((g) => {
           const items = g.items.filter((it) => !["/store", "/store/orders", "/store/menu", "/store/account"].includes(it.href));
           const extra = g.key === "account" ? [{ href: "/store/order-phones", label: N.orderPhones, icon: IconPhone }, { href: "/store/alerts", label: N.alerts, icon: IconWarning }] : [];
@@ -93,7 +93,7 @@ export default function StoreAccountPage() {
       </div>
 
       {/* ── الحاسوب: صفُّ تفضيلات (صوت · داكن · إشعارات) ثمّ بطاقاتُ الحساب بعرض الصفحة كاملاً، وتحتها الخروج. ── */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-stretch lg:gap-5">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:items-stretch md:gap-5">
         <section className="panel p-4" aria-label={A.sound} data-testid="store-sound">
           <Toggle
             id="store-sound"

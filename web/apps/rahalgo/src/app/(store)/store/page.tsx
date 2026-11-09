@@ -784,7 +784,7 @@ function HomeBody({ store }: { store: MerchantStore }) {
     title: `${fmtCalendarDay(r.from)} — ${fmtMoney(r.sales)}`,
   }));
   return (
-    <div className="console-page" data-testid="store-home">
+    <div className="console-page tab-grid" data-testid="store-home">
       <PageHead
         title={S.nav.store}
         navEnd={<IconButton icon={IconUser} label={S.nav.account} href="/store/account" Link={Link} size={24} testId="phone-account" />}
@@ -792,7 +792,7 @@ function HomeBody({ store }: { store: MerchantStore }) {
       {suspended && (
         <Alert tone="error">{S.suspendedBanner}</Alert>
       )}
-      <div className="igroup">
+      <div className="igroup tab-span">
         <div className="flex items-center gap-3.5 px-4 py-3.5">
           <StoreLogo store={store} suspended={suspended} onLogo={() => setLogoOpen(true)} size="lg" />
           <div className="min-w-0 flex-1">
@@ -828,9 +828,11 @@ function HomeBody({ store }: { store: MerchantStore }) {
         )}
       </div>
 
-      <AmeenStatusTile />
+      <div className="tab-span">
+        <AmeenStatusTile />
+      </div>
 
-      <div>
+      <div className="tab-span">
         <div className="sec-head">{SH.todayHead}</div>
         <div className="igroup">
           <div className="px-4 pb-1 pt-3.5">
@@ -902,6 +904,7 @@ function HomeBody({ store }: { store: MerchantStore }) {
       )}
 
       {!suspended && (
+        <div className="tab-span">
         <IGroup title={HM.quickTitle}>
           <div className="qa-row px-1.5 py-3.5">
             {[
@@ -922,6 +925,7 @@ function HomeBody({ store }: { store: MerchantStore }) {
             })}
           </div>
         </IGroup>
+        </div>
       )}
 
       {settings}

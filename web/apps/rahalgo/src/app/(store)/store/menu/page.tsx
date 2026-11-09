@@ -832,7 +832,7 @@ export default function MenuPage() {
             </div>
           </div>
         ) : (
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 lg:gap-4 xl:grid-cols-5 2xl:grid-cols-6">
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:gap-4 xl:grid-cols-5 2xl:grid-cols-6">
             {items.map((it) => (
               <ItemCard key={it.id} item={it} disabled={suspended} onToggle={() => void toggle(it)} />
             ))}
@@ -917,7 +917,7 @@ export default function MenuPage() {
       ) : items.length === 0 ? (
         none
       ) : (
-        <div className="igroup" data-testid="store-menu-list">
+        <div className="igroup md:max-lg:columns-2 md:max-lg:gap-0 md:max-lg:[column-rule:1px_solid_var(--color-line-soft)] md:max-lg:[&>*]:break-inside-avoid" data-testid="store-menu-list">
           {items.map((i) => {
             const row = (
               <div className="irow gap-3 ps-4 pe-3" style={{ minHeight: "4.125rem" }} data-testid="store-menu-item" data-item-id={i.id} data-available={i.available}>

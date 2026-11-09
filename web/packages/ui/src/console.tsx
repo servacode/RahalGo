@@ -257,7 +257,7 @@ export function Kpi({
 /** **شبكةُ المؤشّرات** — عمودان على الجوّال وأربعةٌ (أو ثلاثةٌ) على الحاسوب. */
 export function KpiGrid({ children, cols = 4 }: { children: ReactNode; cols?: 3 | 4 }) {
   return (
-    <div className={`grid grid-cols-2 gap-3 lg:gap-4 ${cols === 3 ? "lg:grid-cols-3" : "lg:grid-cols-4"}`}>{children}</div>
+    <div className={`grid grid-cols-2 gap-3 md:gap-4 ${cols === 3 ? "md:grid-cols-3" : "md:grid-cols-4"}`}>{children}</div>
   );
 }
 

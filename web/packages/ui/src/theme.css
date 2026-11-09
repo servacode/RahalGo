@@ -4794,6 +4794,19 @@ body:has(.console-root) :is(button, a)[data-variant] {
 
 /* ══ مكوّناتُ اللوحة ══ */
 
+/* تابلت (٧٦٨–١٠٢٣): صفحةٌ بعمودين بدل هاتفٍ ممدود. تُضاف `tab-grid` للجذر، و`tab-span` لما يأخذ العرض كلَّه */
+@media (width >= 768px) and (width < 1024px) {
+  .tab-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+    align-items: start;
+  }
+  .tab-grid > :is(.console-head, .tab-span) {
+    grid-column: 1 / -1;
+  }
+}
+
 /* غلافُ الصفحة. جوّالاً: لا حشوةَ جانبيّة (المجموعاتُ لها هوامشُها) */
 @utility console-page {
   display: flex;

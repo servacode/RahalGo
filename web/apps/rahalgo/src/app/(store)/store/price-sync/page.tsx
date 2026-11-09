@@ -455,7 +455,7 @@ export default function PriceSyncPage() {
       {error && <Alert>{error}</Alert>}
 
       {/* ══ عمودان على الحاسوب: الملفّ والأعمدة والتقرير | توزيع الأقسام. جوّالاً متتابعان. ══ */}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-start lg:gap-5">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:items-start md:gap-5">
         <div className="flex min-w-0 flex-col gap-4">
           <label className="panel flex min-h-32 cursor-pointer flex-col items-center justify-center gap-3 dropzone p-6 text-center transition-colors hover:bg-row-hover focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent">
             <span className="icon-chip size-12 rounded-2xl" data-tone="accent" aria-hidden>

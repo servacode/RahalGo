@@ -84,7 +84,7 @@ export default function StoreSettingsPage() {
   return (
     <div className="console-page" data-testid="store-settings">
       <PageHeader title={TITLES[page]} />
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_16rem] lg:items-start lg:gap-5">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_16rem] md:items-start md:gap-5">
         <div className="flex min-w-0 flex-col gap-4">
           {page === "hours" && <HoursEditor />}
           {page === "sections" && <Sections />}

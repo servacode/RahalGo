@@ -184,7 +184,7 @@ export default function HistoryPage() {
       {/* ── الجوّال: بعناوين أيّامٍ وبطاقةٍ لكلّ طلب (مرآةُ `HistoryScreen.kt`، تدقيقُ ٢٠٢٦-١٠-٢٧) —
           «طلبُ مبارح العصر» يُوجد تحت يومه، وبرأسه ساعتُه. ── */}
       {rows != null && rows.length > 0 && narrow && (
-        <ul className="flex flex-col gap-2">
+        <ul className="flex flex-col gap-2 md:grid md:grid-cols-2 md:items-start">
           {rows.map((o, i, all) => {
             const day = fmtRelDay(o.created_at);
             const prev = all[i - 1];
