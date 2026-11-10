@@ -376,8 +376,10 @@ func TestExtractorsAgreeWithSource(t *testing.T) {
 	// **و٢٣٦ مع** `merchants.usd_reference_rate` (سعرُ الدولار المرجعيّ — قرارُ المالك ٢٠٢٦-١١-٠٩).
 	//
 	// **و٢٣٧ مع** `merchants.wa_items_enabled` (مفتاحُ بوت أصناف الواتساب — قرارُ المالك ٢٠٢٦-١١-١٠).
-	if d.BehaviourSettings != 237 {
-		t.Errorf("إعداداتُ السلوك = %d لا 237 — راجِعْ قاعدةَ `behaviour` أو المعجم",
+	//
+	// **و٢٣٨ مع** `finance.goods_outside` (البضاعةُ خارجَ الحسابات — خطّةُ المال ٢٠٢٦-١١-١٠، B1).
+	if d.BehaviourSettings != 238 {
+		t.Errorf("إعداداتُ السلوك = %d لا 238 — راجِعْ قاعدةَ `behaviour` أو المعجم",
 			d.BehaviourSettings)
 	}
 	// **والموجَّهُ من الإشعارات ١١ من ٤٩** — حقيقةٌ مقيسةٌ في إغلاق المنظومة.

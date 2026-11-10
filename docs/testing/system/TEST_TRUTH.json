@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 684,
+    "routes": 685,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 282,
-    "behaviour_settings": 237,
+    "setting_defs": 283,
+    "behaviour_settings": 238,
     "order_fields": 144,
-    "test_files": 809,
-    "test_funcs": 3129
+    "test_files": 812,
+    "test_funcs": 3132
   },
   "flows": [
     {
@@ -5415,6 +5415,24 @@
       "kind": "money",
       "sensitive": true,
       "money": true,
+      "flows": [
+        "F-33"
+      ],
+      "apps": [
+        "customer",
+        "driver",
+        "merchant",
+        "rep"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "finance.goods_outside",
+      "group": "platform",
+      "kind": "bool",
+      "sensitive": true,
+      "money": false,
       "flows": [
         "F-33"
       ],
@@ -11967,6 +11985,12 @@
       "name": "TestItemUnavailable_ThenFailedAfterPickup_TreasuryConserves",
       "file": "internal/orders/money_item_unavailable_treasury_test.go",
       "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestEveryOrderInsertStampsMoneyModel",
+      "file": "internal/orders/money_model_guard_test.go",
+      "package": "orders",
       "orphan": true
     },
     {
@@ -19533,6 +19557,12 @@
       "orphan": true
     },
     {
+      "name": "TestGoodsBalances_ReportListsEachSource",
+      "file": "internal/qa/goods_balances_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestHours24h_API",
       "file": "internal/qa/hours_24h_test.go",
       "package": "qa",
@@ -21309,6 +21339,12 @@
     {
       "name": "TestMDM08c_FetchRecipientCashRecipientFault",
       "file": "internal/qa/money_merchant_delivery_scenarios_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestMoneyModel_StampedAtCreation",
+      "file": "internal/qa/money_model_test.go",
       "package": "qa",
       "orphan": true
     },

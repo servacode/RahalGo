@@ -85,6 +85,7 @@ export const ADMIN_POLICY: ReadonlyArray<readonly [string, string, string]> = [
   ["GET", "/expenses/export", "finance.export"],
   ["POST", "/expenses/receipt", "finance.manage"],
   ["POST", "/expenses/{id}/void", "finance.manage"],
+  ["GET", "/finance/goods-balances", "finance.read"],
   ["", "/free-delivery", "offers.manage"],
   ["", "/free-delivery/{id}", "offers.manage"],
   ["", "/governorates", "settings.general.manage"],

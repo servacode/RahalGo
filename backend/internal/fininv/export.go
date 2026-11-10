@@ -117,6 +117,8 @@ var FinancialSettings = []string{
 	// **سقف تعديل السائق لثمن البضاعة بعد الاستلام** (قرار المالك ٢٠٢٦-١١-٠٦) — driver_price_request.go.
 	"delivery.driver_price_edit_max_percent",
 	"finance.manual_wallet_max", // accounts — سقفُ الحركة اليدويّة
+	// **البضاعةُ خارجَ الحسابات** (خطّةُ المال ٢٠٢٦-١١-١٠، B1) — orders/money_model.go: نموذجُ مال الطلب الجديد.
+	"finance.goods_outside",
 	// **وما وسمته أقسامٌ أخرى «يمسّ المال»** (كشفه الحارسُ عند الدمج ٢٠٢٦-١٠-٠٤):
 	"compensations.cap_driver",
 	"compensations.cap_merchant_goods",

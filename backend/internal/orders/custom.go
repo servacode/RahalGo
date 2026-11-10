@@ -261,14 +261,15 @@ func (s *Service) CreateCustom(ctx context.Context, customerID, request,
 		                    status, payment_method, subtotal, delivery_fee, total, cash_due,
 		                    snap_merchant_commission_percent, snap_rep_commission_percent,
 		                    snap_commission_source, snap_activation_orders, notes,
-		                    custom_fee_source, custom_fee_snapshot, custom_driver_may_change_fee)
+		                    custom_fee_source, custom_fee_snapshot, custom_driver_may_change_fee,
+		                    money_model)
 		VALUES ('custom', $1, $2, ST_SetSRID(ST_MakePoint($4, $3), 4326)::geography, $5,
-		        'pending', $6, 0, 0, 0, 0, $7, $8, $9, $10, $11, $12, $13, $14)
+		        'pending', $6, 0, 0, 0, 0, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 		RETURNING id::text`,
 		customerID, addressText, lat, lng, request, payment,
 		snap.MerchantCommission, snap.RepCommissionPercent,
 		snap.CommissionSource, snap.ActivationOrders, notes,
-		feeSource, feeSnap, feeMayChange).Scan(&id)
+		feeSource, feeSnap, feeMayChange, s.newOrderMoneyModel(ctx, s.db)).Scan(&id)
 	if err != nil {
 		return nil, err
 	}
@@ -457,14 +458,15 @@ func (s *Service) CreateCustomTx(ctx context.Context, q dbtx.Querier, customerID
 		                    status, payment_method, subtotal, delivery_fee, total, cash_due,
 		                    snap_merchant_commission_percent, snap_rep_commission_percent,
 		                    snap_commission_source, snap_activation_orders, notes,
-		                    custom_fee_source, custom_fee_snapshot, custom_driver_may_change_fee)
+		                    custom_fee_source, custom_fee_snapshot, custom_driver_may_change_fee,
+		                    money_model)
 		VALUES ('custom', $1, $2, ST_SetSRID(ST_MakePoint($4, $3), 4326)::geography, $5,
-		        'pending', $6, 0, 0, 0, 0, $7, $8, $9, $10, $11, $12, $13, $14)
+		        'pending', $6, 0, 0, 0, 0, $7, $8, $9, $10, $11, $12, $13, $14, $15)
 		RETURNING id::text`,
 		customerID, addressText, lat, lng, request, payment,
 		snap.MerchantCommission, snap.RepCommissionPercent,
 		snap.CommissionSource, snap.ActivationOrders, notes,
-		feeSource, feeSnap, feeMayChange).Scan(&id)
+		feeSource, feeSnap, feeMayChange, s.newOrderMoneyModel(ctx, q)).Scan(&id)
 	if err != nil {
 		return nil, nil, err
 	}

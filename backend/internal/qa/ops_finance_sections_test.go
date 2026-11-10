@@ -231,12 +231,13 @@ var financeOwnerSections = []string{
 	"/dashboard/promos",     // العروض والخصومات
 	// **وأقسامُ المال رجعت كلٌّ قسماً لحاله في القائمة** — قرارُ المالك ٢٠٢٦-١٠-٢٧:
 	// «كل واحد قسم لحاله نرجعهن ع القائمة»، وشُطب صفُّ روابط الخزينة.
-	"/dashboard/cash",        // النقد
-	"/dashboard/payouts",     // الدفعات
-	"/dashboard/obligations", // الديون
-	"/dashboard/profits",     // الأرباح
-	"/dashboard/expenses",    // المصروفات
-	"/dashboard/shamcash",    // شام كاش — سجلٌّ جانبيّ (قرارُ المالك ٢٠٢٦-١١-١٠)
+	"/dashboard/cash",           // النقد
+	"/dashboard/payouts",        // الدفعات
+	"/dashboard/obligations",    // الديون
+	"/dashboard/profits",        // الأرباح
+	"/dashboard/expenses",       // المصروفات
+	"/dashboard/shamcash",       // شام كاش — سجلٌّ جانبيّ (قرارُ المالك ٢٠٢٦-١١-١٠)
+	"/dashboard/goods-balances", // أرصدة من بضاعة — قراءةٌ فقط (قرارُ المالك ٢٠٢٦-١١-١٠)
 }
 
 // TestFinSections_NavEqualsOwnerList **ما تراه الماليّةُ في القائمة = قائمةُ المالك.**
@@ -295,6 +296,7 @@ func TestFinSections_EveryButtonWorks(t *testing.T) {
 		// ── صفحاتُ المال التي تُفتح من الخزينة ──
 		{"GET", a + "/cash/outstanding", nil}, {"GET", a + "/cash/outstanding/export", nil},
 		{"GET", a + "/cash/merchant-dues", nil},
+		{"GET", a + "/finance/goods-balances", nil},
 		{"POST", a + "/drivers/" + drv.ID + "/settle", map[string]any{"amount": 0}},
 		{"GET", a + "/merchants/" + m.ID + "/cash-settlements", nil},
 		{"POST", a + "/merchant-cash-settlements/" + none + "/pay", map[string]any{}},

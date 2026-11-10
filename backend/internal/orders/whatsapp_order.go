@@ -507,7 +507,7 @@ func (s *Service) CreateWhatsAppOrderIn(ctx context.Context, tx dbtx.Querier,
 		                    snap_commission_source, snap_activation_orders,
 		                    snap_platform_delivery_percent, dropoff_known, snap_platform_delivery_fixed,
 		                    delivery_mode, collect_amount, amount_currency, promo_delivery_waived,
-		                    accepted_at, dispatched_at)
+		                    accepted_at, dispatched_at, money_model)
 		VALUES ('merchant_delivery', 'whatsapp', $1, $2,
 		        $3, NULLIF($4, ''), NULLIF($5, ''),
 	        CASE WHEN $6::float8 IS NULL OR $7::float8 IS NULL THEN NULL
@@ -519,7 +519,7 @@ func (s *Service) CreateWhatsAppOrderIn(ctx context.Context, tx dbtx.Querier,
 		        $18, $19, $20, $21,
 		        $22, $26, $23,
 		        'send', $24, $25, 0,
-		        now(), now())
+		        now(), now(), $27)
 		RETURNING id::text, number`,
 		actor, pickupMerchant,
 		store.name, store.phone, store.address, pickLat, pickLng,
@@ -528,7 +528,7 @@ func (s *Service) CreateWhatsAppOrderIn(ctx context.Context, tx dbtx.Querier,
 		fee, driverFee, in.DriverNote,
 		snap.MerchantCommission, snap.RepCommissionPercent, snap.CommissionSource, snap.ActivationOrders,
 		p.pct, p.fixed,
-		in.GoodsAmount, in.Currency, hasPoint).Scan(&out.ID, &out.Number); err != nil {
+		in.GoodsAmount, in.Currency, hasPoint, s.newOrderMoneyModel(ctx, tx)).Scan(&out.ID, &out.Number); err != nil {
 		return nil, err
 	}
 	// **وثمنٌ بالدولار كتبه الموظّف يُلقط سعرُه الآن** (قرارُ المالك ٢٠٢٦-١١-٠٩) — كما يُلقط حين يكتبه
