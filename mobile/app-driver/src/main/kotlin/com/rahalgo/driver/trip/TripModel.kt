@@ -176,8 +176,13 @@ private fun nextActionPlain(status: String, custom: Boolean): NextAction? = when
 }
 
 /** ما تعرضه الرحلة — **ولا تملكه هي.** */
+/** **ملخّصُ آخر تسليم** — رقمُ الطلب وما كسبه السائقُ من أجرته. */
+data class DeliveredSummary(val number: Long, val fee: Long)
+
 data class TripState(
     val order: DriverOrder? = null,
+    /** **آخرُ ما سلّمه** — يُعرض والشاشةُ فارغة (المالك ٢٠٢٦-١١-١٠). */
+    val justDelivered: DeliveredSummary? = null,
     /** ما بقي من الطريق بالمتر — **وسالبٌ يعني لا يُعرف.** */
     val remainingM: Double = -1.0,
     // ══════════════════════════════════════════════════════════════════

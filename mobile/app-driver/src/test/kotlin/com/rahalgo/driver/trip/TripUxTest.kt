@@ -37,4 +37,38 @@ class TripUxTest {
         assertNotNull(dir)
         assertTrue(!dir!!.readText().contains("edit_req_note"))
     }
+
+    @Test
+    fun `zero distance tail is stripped from the address, others stay`() {
+        assertEquals("حي الرشيد · قرب فرن", cleanAddress("حي الرشيد · قرب فرن (0 م)"))
+        assertEquals("حي الرشيد", cleanAddress("حي الرشيد (0.0 م)"))
+        assertEquals("قرب فرن (40 م)", cleanAddress("قرب فرن (40 م)"))
+    }
+
+    @Test
+    fun `arabic minute plurals`() {
+        assertEquals("1 دقيقة", com.rahalgo.ui.minutes(1))
+        assertEquals("2 دقيقتان", com.rahalgo.ui.minutes(2))
+        assertEquals("3 دقائق", com.rahalgo.ui.minutes(3))
+        assertEquals("10 دقائق", com.rahalgo.ui.minutes(10))
+        assertEquals("11 دقيقة", com.rahalgo.ui.minutes(11))
+        assertEquals("25 دقيقة", com.rahalgo.ui.minutes(25))
+    }
+
+    @Test
+    fun `filled add fields are added on send, empty ones are not`() {
+        val d = EditDraft().withPendingAdd(" كولا ", 2, 500, null, "")
+        assertEquals(1, d.adds.size)
+        assertEquals("كولا", d.adds[0].name)
+        assertEquals(EditDraft(), EditDraft().withPendingAdd("", 1, 500, null, ""))
+        assertEquals(EditDraft(), EditDraft().withPendingAdd("كولا", 1, 0, null, ""))
+    }
+
+    @Test
+    fun `bidi isolates wrap numbers and amounts`() {
+        val out = com.rahalgo.ui.BidiText.isolateNumbers("طلب #1201 – +100 ل.س")
+        assertTrue(out.contains("⁨#1201⁩"))
+        assertTrue(out.contains("⁨+100 ل.س⁩"))
+        assertEquals("⁨x⁩".length, com.rahalgo.driver.Bidi.isolate("x").length)
+    }
 }

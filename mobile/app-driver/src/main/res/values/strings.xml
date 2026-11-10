@@ -376,6 +376,9 @@
     <string name="drv_customer_confirmed_amanah">الزبون أكّد الطلب — استلم الأمانة</string>
     <string name="trip_on_route">طلب على طريقك</string>
     <string name="order_agree">موافق</string>
+    <string name="order_decline">رفض</string>
+    <string name="offer_collect_customer">تقبض من الزبون</string>
+    <string name="offer_invoice_total">إجمالي الفاتورة</string>
     <!-- **ولا «رفض»** — (قرارُ المالك ٢٠٢٦-٠٨-١٤): يوافق أو يترك.
          **وهذا إخفاءٌ للشريط وهو يقود** — والطلبُ يبقى في الطابور. -->
     <string name="order_later">لاحقا</string>
@@ -391,7 +394,7 @@
     <string name="card_store_cd">متجر</string>
     <string name="card_eta">المدة</string>
     <!-- الشريط العلويّ -->
-    <string name="card_dist_to">المسافة إلى (%1$s)</string>
+    <string name="card_dist_to">المسافة إلى %1$s</string>
     <string name="card_invoice_total">إجمالي الفاتورة</string>
 
     <!-- ══ شاشةُ الحساب ══ -->
@@ -467,7 +470,7 @@
     <string name="cash_full">بلغت السقف — لا تقبل طلبات نقدية حتى تسلم</string>
     <string name="cash_empty">لا حركات بعد</string>
     <string name="cash_more">عرض %1$s من %2$s حركة</string>
-    <string name="cash_k_order_collection">قبضت من زبون</string>
+    <string name="cash_k_order_collection">قبضت من الزبون</string>
     <!-- **ومِمَّن قبض باسمه** — والصفةُ أعلاه تبقى لقيدٍ بلا طلب. -->
     <string name="cash_from">قبضت من %1$s</string>
     <string name="cash_k_settlement">سلّمت للمكتب</string>
@@ -595,11 +598,11 @@
     <string name="gps_lost_text">لم يصل موقعك منذ بضع دقائق، فلن تصلك طلبات حتى يعود. انتقل إلى مكان مكشوف، أو أطفئ الموقع ثم شغّله.</string>
     <!-- ما يُبقي الموقعَ حيّاً والتطبيقُ مغلق (٢٠٢٦-١٠-١٣) -->
     <string name="keep_bg_title">يتوقف الموقع عند إغلاق التطبيق</string>
-    <string name="keep_bg_text">إذن الموقع لديك «أثناء الاستخدام» فقط، فعند الخروج من التطبيق يتوقف موقعك ولا تصلك طلبات. اختر «السماح طوال الوقت».</string>
+    <string name="keep_bg_text">إذن الموقع لديك «أثناء الاستخدام» فقط، فعند الخروج من التطبيق يتوقف موقعك ولا تصلك طلبات. اضغط الزر واختر «اسمح طوال الوقت».</string>
     <string name="keep_bg_button">اسمح طوال الوقت</string>
     <string name="keep_autostart_title">اسمح للتطبيق بالعمل تلقائياً</string>
-    <string name="keep_autostart_text">يغلق هاتفك التطبيقات في الخلفية لتوفير البطارية، فيتوقف موقعك ولا تصلك طلبات. فعّل «التشغيل التلقائي» لتطبيق رحّال غو.</string>
-    <string name="keep_autostart_button">افتح الإعداد</string>
+    <string name="keep_autostart_text">يغلق هاتفك التطبيقات في الخلفية لتوفير البطارية، فيتوقف موقعك ولا تصلك طلبات. اضغط الزر وفعّل «التشغيل التلقائي» لتطبيق رحّال غو.</string>
+    <string name="keep_autostart_button">افتح التشغيل التلقائي</string>
     <!-- مشوارُ إرجاع البضاعة (قرارُ المالك ٢٠٢٦-١٠-٠٣) -->
     <string name="trip_return_office">أرجِع البضاعة إلى المكتب</string>
     <string name="trip_return_store">أرجِع البضاعة إلى %1$s</string>
@@ -629,9 +632,16 @@
     <string name="fetch_amount_waiting">بانتظار موافقة المتجر على المبلغ %1$s</string>
     <string name="fetch_amount_approved">المتجر وافق على المبلغ %1$s</string>
     <!-- طلب الواتساب: ثمن الطلب يكتبه السائق والزبون تصله رسالة بالمبالغ (قرار المالك ٢٠٢٦-١١-٠٦) -->
+    <string name="trip_delivered_summary">تمّ تسليم الطلب #%1$d · كسبت %2$s</string>
+    <string name="contact_call_holder">اتصل بصاحب الأمانة</string>
+    <string name="contact_wa_holder">واتساب صاحب الأمانة</string>
+    <string name="contact_call_store">اتصل بالمتجر</string>
+    <string name="contact_wa_store">واتساب المتجر</string>
+    <string name="contact_call_recipient">اتصل بالزبون</string>
+    <string name="contact_wa_recipient">واتساب الزبون</string>
     <string name="wa_goods_button">اكتب ثمن الطلب</string>
     <string name="wa_goods_title">كم ثمن الطلب الذي دفعته للمحل؟</string>
-    <string name="wa_goods_hint">اكتب ثمن الطلب — تصل للزبون رسالة فيها ثمن الطلب والأجرة والمجموع. وإذا أمانة بلا ثمن اكتب 0 أو اضغط «أمانة».</string>
+    <string name="wa_goods_hint">اكتب ثمن الطلب، أو اضغط «أمانة» إذا بلا ثمن.</string>
     <string name="wa_goods_send">أرسل</string>
     <string name="wa_goods_enter">اكتب ثمن الطلب الذي دفعته للمحل قبل أن تستلم — تصل للزبون رسالة بالمبالغ</string>
     <string name="wa_goods_done">ثمن الطلب %1$s — وصل للزبون برسالة</string>
@@ -746,6 +756,7 @@
     <string name="cash_d_free">مجانية للزبون</string>
     <string name="home_compensated">منها تعويض %1$s</string>
     <string name="home_today_counts">سلّمت %1$s · تعذّر %2$s</string>
+    <string name="home_fixes_title_online">حتى تستمر بالعمل — ينقصك (%1$d)</string>
     <string name="home_fixes_title">قبل أن تبدأ العمل — ينقصك (%1$d)</string>
     <string name="why_suspended">حسابك موقوف — أكمل طلبك الحالي وتواصل مع المكتب</string>
     <string name="card_out_of_pocket">تدفع عنه ثم تقبضه</string>

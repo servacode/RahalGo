@@ -166,7 +166,7 @@ fun TripScreen(
 ) {
     val order = state.order
     if (order == null) {
-        NoTrip(onOrders = actions.toOrders)
+        NoTrip(onOrders = actions.toOrders, delivered = state.justDelivered)
         return
     }
 
@@ -788,7 +788,7 @@ fun TripScreen(
         val replayRoute = navSession.route?.geometry
             ?: state.navRoute?.geometry
             ?: state.routeLine.map { com.rahalgo.navigation.GeoPoint(it.latitude, it.longitude) }
-        if (!inPip && com.rahalgo.driver.BuildConfig.BUILD_TYPE != "release") {
+        if (!inPip && replayLabAllowed()) {
             if (navSession.replaying) {
                 Text(
                     text = stringResource(R.string.replay_banner),
@@ -1038,7 +1038,7 @@ fun TripScreen(
             // **وفي الخاصّ قبل الشراء أيضاً** (٢٠٢٦-١٠-٠٣) — لا طريقَ بعد، **فيُشغَّل ويبدأ وحدَه**
             // حين يُرسم الطريقُ إلى الزبون بعد «تم شراء المطلوب».
             val customBeforeRoute = state.order?.kind == "custom" && state.order?.status == "assigned"
-            if (com.rahalgo.driver.BuildConfig.BUILD_TYPE != "release" &&
+            if (replayLabAllowed() &&
                 (replayRoute.size >= 2 || navSession.replaying || customBeforeRoute || demoTrip)
             ) {
                 Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
@@ -1943,7 +1943,7 @@ private fun TripCard(
                             } else {
                                 // **ولا اسمَ متجرٍ في الخاصّ** — فيُقال ما هو: أمانةٌ أم مشتريات.
                                 order.merchantName.takeIf { it.isNotBlank() }
-                                    ?.let { stringResource(R.string.trip_head_pickup, it) }
+                                    ?.let { stringResource(R.string.trip_head_pickup, com.rahalgo.driver.Bidi.isolate(it)) }
                                     ?: stringResource(kindLabel(order))
                             },
                             style = MaterialTheme.typography.titleMedium,
@@ -2028,7 +2028,7 @@ private fun TripCard(
                                 )
                             }
                             if (order.addressText.isNotBlank()) {
-                                InfoBox(icon = R.drawable.ic_pin, text = order.addressText, tint = Rahal.colors.brand)
+                                InfoBox(icon = R.drawable.ic_pin, text = cleanAddress(order.addressText), tint = Rahal.colors.brand)
                             }
                             // **«خد من المتجر X»** — المكتبُ عدّل الطلبَ بعد الاستلام فنقص حقُّ المتجر، والفرقُ
                             // يسترجعه الكابتنُ من المتجر نفسِه (خطّةُ المال ٢٠٢٦-١١-١٠).
@@ -2145,7 +2145,8 @@ private fun TripCard(
                             )
                         }
                         // **و«يحمل» قبل الاستلام وحدَه** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢) — بعده هو بيده.
-                        if (order.parcelNote.isNotEmpty() && !pickedUp) {
+                        // **وطلبُ الواتساب يبقى ما طُلب ظاهراً حتّى التسليم** (المالك ٢٠٢٦-١١-١٠).
+                            if (order.parcelNote.isNotEmpty() && (!pickedUp || isWhatsApp(order))) {
                             InfoBox(
                                 icon = com.rahalgo.ui.R.drawable.ic_cart,
                                 text = stringResource(parcelLabel(order)) + ": " + order.parcelNote,
@@ -2410,7 +2411,8 @@ private fun TripCard(
                             com.rahalgo.ui.RahalButton(
                                 onClick = actions.askEditRequest,
                                 enabled = !state.busy,
-                                tone = com.rahalgo.ui.PriceConfirm.Accept,
+                                // لون العلامة لا الأخضر — الأخضر لاتصال وواتساب (المالك ٢٠٢٦-١١-١٠).
+                                tone = Tone.Brand,
                                 modifier = Modifier.fillMaxWidth(),
                             ) { Text(stringResource(R.string.edit_req_button), fontWeight = FontWeight.Bold) }
                         }
@@ -2445,12 +2447,12 @@ private fun TripCard(
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 ContactButton(
                                     icon = com.rahalgo.ui.R.drawable.ic_phone,
-                                    label = R.string.recipient_call,
+                                    label = R.string.contact_call_holder,
                                     modifier = Modifier.weight(1f),
                                 ) { dial(ctx, holder) }
                                 ContactButton(
                                     icon = com.rahalgo.ui.R.drawable.ic_whatsapp,
-                                    label = R.string.recipient_whatsapp,
+                                    label = R.string.contact_wa_holder,
                                     modifier = Modifier.weight(1f),
                                 ) { openWhatsApp(ctx, holder, "") }
                             }
@@ -2462,12 +2464,12 @@ private fun TripCard(
                                 if (storePhone != null) {
                                     ContactButton(
                                         icon = com.rahalgo.ui.R.drawable.ic_phone,
-                                        label = R.string.recipient_call,
+                                        label = R.string.contact_call_store,
                                         modifier = Modifier.weight(1f),
                                     ) { dial(ctx, storePhone) }
                                     ContactButton(
                                         icon = com.rahalgo.ui.R.drawable.ic_whatsapp,
-                                        label = R.string.recipient_whatsapp,
+                                        label = R.string.contact_wa_store,
                                         modifier = Modifier.weight(1f),
                                     ) { openWhatsApp(ctx, storePhone, "") }
                                 }
@@ -2478,12 +2480,12 @@ private fun TripCard(
                                     val hello = if (isFetch(order)) "" else stringResource(R.string.recipient_wa_message, order.merchantName)
                                     ContactButton(
                                         icon = com.rahalgo.ui.R.drawable.ic_phone,
-                                        label = R.string.recipient_call,
+                                        label = R.string.contact_call_recipient,
                                         modifier = Modifier.weight(1f),
                                     ) { dial(ctx, recipient) }
                                     ContactButton(
                                         icon = com.rahalgo.ui.R.drawable.ic_whatsapp,
-                                        label = R.string.recipient_whatsapp,
+                                        label = R.string.contact_wa_recipient,
                                         modifier = Modifier.weight(1f),
                                     ) { openWhatsApp(ctx, recipient, hello) }
                                 }
@@ -2512,6 +2514,13 @@ private fun TripCard(
 
 /** **«وصلت» أبعدَ من هذا يُسأل عنه** — بالمتر (٢٠٢٦-١٠-١٢). */
 private const val ARRIVE_FAR_M = 300.0
+
+/**
+ * **«رحلة تجريبيّة» لنسخ التصحيح والتجربة وحدَها** (المالك ٢٠٢٦-١١-١٠) — قائمةُ سماحٍ لا منعٍ:
+ * **أيُّ نوعِ بناءٍ آخر (إصدارٌ أو غيرُه) لا يراها.** `BuildConfig.BUILD_TYPE == "debug"` أو `"staging"`.
+ */
+internal fun replayLabAllowed(): Boolean =
+    com.rahalgo.driver.BuildConfig.BUILD_TYPE == "debug" || com.rahalgo.driver.BuildConfig.BUILD_TYPE == "staging"
 
 /** **زرُّ المرحلة** — كبيرٌ بعرض البطاقة، وهو ما يُضغط في تسعٍ من عشر. */
 @Composable
@@ -2639,7 +2648,7 @@ private fun ContactButton(icon: Int, label: Int, modifier: Modifier, onClick: ()
     com.rahalgo.ui.RahalOutlineButton(tone = Tone.Success, modifier = modifier, onClick = onClick) {
         Icon(painter = painterResource(icon), contentDescription = null, modifier = Modifier.size(18.dp))
         Spacer(Modifier.width(6.dp))
-        Text(stringResource(label), fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(stringResource(label), fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
     }
 }
 
@@ -2659,12 +2668,22 @@ private fun dial(ctx: android.content.Context, phone: String) {
 }
 
 @Composable
-private fun NoTrip(onOrders: () -> Unit) {
+private fun NoTrip(onOrders: () -> Unit, delivered: DeliveredSummary? = null) {
     Column(
         Modifier.fillMaxSize().padding(32.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        if (delivered != null) {
+            Text(
+                text = stringResource(R.string.trip_delivered_summary, delivered.number, money(delivered.fee)),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = Rahal.colors.success,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(14.dp))
+        }
         Text(
             text = stringResource(R.string.trip_none),
             style = MaterialTheme.typography.titleLarge,
@@ -2742,7 +2761,7 @@ private fun ReturnCard(
         }
         if (order.addressText.isNotBlank()) {
             Spacer(Modifier.height(4.dp))
-            Text(text = order.addressText, color = Rahal.colors.inkMuted)
+            Text(text = cleanAddress(order.addressText), color = Rahal.colors.inkMuted)
         }
         if (!order.dropoffKnown) {
             Spacer(Modifier.height(4.dp))

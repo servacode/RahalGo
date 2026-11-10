@@ -103,6 +103,8 @@ fun TopBar(
      *  يسجّل دخولاً بعد».)
      */
     guest: Boolean = false,
+    /** **وشاشةُ المحفظة نفسُها تُظهر الرصيدَ** — فلا رقاقةَ مكرَّرةً فوقها (المالك ٢٠٢٦-١١-١٠). */
+    showBalance: Boolean = true,
     /**
      * ══════════════════════════════════════════════════════════════════
      * **بابُ عنوان التوصيل — أوّلُ ما يُقرأ في الشريط**
@@ -314,30 +316,32 @@ fun TopBar(
 
             // **والرصيد رقم لا أيقونة وحدها** — «محفظتك» بلا رقم لا تقول
             // شيئا.
-            Row(
-                Modifier
-                    .minimumInteractiveComponentSize()
-                    .clip(Rahal.shape.lg)
-                    .background(Rahal.colors.brand.copy(alpha = 0.08f))
-                    .clickable(onClick = onWallet)
-                    .padding(horizontal = Rahal.space.md, vertical = 7.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_wallet),
-                    contentDescription = stringResource(R.string.top_wallet),
-                    tint = Rahal.colors.brand,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(Modifier.size(6.dp))
-                Text(
-                    text = money(balance),
-                    color = Rahal.colors.brand,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+            if (showBalance) {
+                Row(
+                    Modifier
+                        .minimumInteractiveComponentSize()
+                        .clip(Rahal.shape.lg)
+                        .background(Rahal.colors.brand.copy(alpha = 0.08f))
+                        .clickable(onClick = onWallet)
+                        .padding(horizontal = Rahal.space.md, vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_wallet),
+                        contentDescription = stringResource(R.string.top_wallet),
+                        tint = Rahal.colors.brand,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.size(6.dp))
+                    Text(
+                        text = money(balance),
+                        color = Rahal.colors.brand,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+                Spacer(Modifier.size(Rahal.space.xs))
             }
-            Spacer(Modifier.size(Rahal.space.xs))
 
             // ══════════════════════════════════════════════════════════
             // **والجرسُ في الطرف — بعد المحفظة**
