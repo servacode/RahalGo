@@ -139,7 +139,8 @@ fun OrdersScreen(state: OrdersState, actions: OrdersActions) {
                     // فلا يعرف صاحبه ما الذي وقع.
                     enabled = state.acceptingId == null,
                     onAccept = { actions.accept(order.id) },
-                    onDecline = { actions.decline(order.id) },
+                    // **لا «رفض» في الطابور** — قرارُ المالك ٢٠٢٦-١٠-٠٦، أُكِّد ٢٠٢٦-١١-١٠.
+                    onDecline = null,
                     onOpen = null,
                     actionLabel = R.string.order_agree,
                     // ══════════════════════════════════════════════════
