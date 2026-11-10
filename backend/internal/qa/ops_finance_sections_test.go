@@ -236,6 +236,7 @@ var financeOwnerSections = []string{
 	"/dashboard/obligations", // الديون
 	"/dashboard/profits",     // الأرباح
 	"/dashboard/expenses",    // المصروفات
+	"/dashboard/shamcash",    // شام كاش — سجلٌّ جانبيّ (قرارُ المالك ٢٠٢٦-١١-١٠)
 }
 
 // TestFinSections_NavEqualsOwnerList **ما تراه الماليّةُ في القائمة = قائمةُ المالك.**
