@@ -198,6 +198,9 @@ func (s *Server) handleQACustomAgree(w http.ResponseWriter, r *http.Request) {
 	req, err := decode[struct {
 		Goods int64 `json:"goods"`
 		Fee   int64 `json:"fee"`
+		// GoodsUSDCents **ثمنٌ بالدولار بالسنتات** (شهادةُ النموذج ٢، الدفعة B7) — فيُوثَّق عبر
+		// `AgreeCustomStepUSD` الحقيقيّ و`goods` حينها صفر. **وغيابُه: ليرةٌ كما كان.**
+		GoodsUSDCents *int64 `json:"goods_usd_cents"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, errValidation)
@@ -225,7 +228,12 @@ func (s *Server) handleQACustomAgree(w http.ResponseWriter, r *http.Request) {
 		s.respondErr(w, httpx.NewError(http.StatusConflict, "qa_not_qa_order", "errors.conflict"))
 		return
 	}
-	if err := s.orders.AgreeCustom(ctx, orderID, *driverID, req.Goods, req.Fee); err != nil {
+	if req.GoodsUSDCents != nil {
+		err = s.orders.AgreeCustomStepUSD(ctx, orderID, *driverID, "", req.Goods, req.Fee, req.GoodsUSDCents)
+	} else {
+		err = s.orders.AgreeCustom(ctx, orderID, *driverID, req.Goods, req.Fee)
+	}
+	if err != nil {
 		s.respondErr(w, err)
 		return
 	}

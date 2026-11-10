@@ -54,6 +54,8 @@ WATCHED = [
     ("scripts/e2e-cycle.py", "target.base_url("),
     ("scripts/perf-baseline.py", "target.base_url("),
     ("scripts/qa/media.py", "target.base_url("),
+    # **شهادةُ النموذج ٢ على التجهيز** (موافقةُ المالك ٢٠٢٦-١١-١٠) — تقلب مفتاحاً ماليّاً، فلا تُبلغ الإنتاج.
+    ("scripts/qa/money_model2_staging.py", "target.base_url("),
     ("mobile/testkit/api.py", "target.base_url("),
     ("mobile/drivertest/engine.sh", "rg_base_url"),
     ("mobile/merchtest/engine.sh", "rg_base_url"),

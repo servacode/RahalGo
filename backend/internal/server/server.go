@@ -644,7 +644,29 @@ func (s *Server) Router() http.Handler {
 				r.Patch("/qa/merchants/{id}", s.handleUpdateMerchant)    // نقلُ المتجر بين مندوبَين (بسبب)
 				r.Post("/qa/app-file", s.handleUploadAppFile)            // نشرُ أثرِ التطبيق (APK) عبر معالِج الرفع الحقيقيّ — ?key=release.rep.apk
 			})
-			s.logger.Warn("QA staging endpoints ENABLED — staging only (POST /api/v1/qa/session, /qa/revoke, /qa/setting, /qa/seed, /qa/catalog/sections, /qa/rep-session, /qa/leads/{id}/status, /qa/payouts/{id}/decide, /qa/users/{id}, /qa/merchants/{id}; GET /qa/reconcile)")
+			// ── جسرُ شهادةِ النموذج ٢ الحيّة (موافقةُ المالك ٢٠٢٦-١١-١٠، `qa_money_model2.go`) ──
+			//
+			// **أفعالُ المكتب الحقيقيّة على طلب QA وحدَه** (`qaOrderScope` ⇒ ٤٠٣ لغيره) خلف
+			// `qaAdminActor` و`qaAdminAllCaps` — **المعالِجاتُ الإنتاجيّةُ عينُها والتخويلُ وحدَه
+			// المُخطّى**. **وقراءةُ المال قراءةٌ محضة.** غيرُ مسجَّلةٍ في الإنتاج ⇒ ٤٠٤.
+			r.Get("/qa/money", s.handleQAMoneyReadback)
+			r.Group(func(r chi.Router) {
+				r.Use(s.announceWrites)
+				r.Use(s.qaAdminActor)
+				r.Use(s.qaAdminAllCaps)
+				r.With(s.qaOrderScope).Post("/qa/orders/{id}/transition", s.qaOrderTransition)                       // الاسترجاعُ بعد التسليم
+				r.With(s.qaOrderScope).Post("/qa/orders/{id}/door-resolution", s.handleDoorResolution)               // الفشلُ عند الباب
+				r.With(s.qaOrderScope).Post("/qa/orders/{id}/goods", s.handleGoods)                                  // مصيرُ البضاعة بعد الفشل
+				r.With(s.qaOrderScope).Post("/qa/orders/{id}/stuck-goods", s.handleStuckGoodsDecision)               // «مصاري الكابتن عالقة»
+				r.With(s.qaOrderScope).Post("/qa/orders/{id}/edit", s.handleOrderEdit)                               // تعديلُ المكتب
+				r.With(s.qaOrderScope).Post("/qa/orders/{id}/edit-request/approve", s.handleAdminApproveEditRequest) // موافقةُ طلب تعديل الكابتن
+				r.With(s.qaOrderScope).Post("/qa/orders/{id}/edit-request/reject", s.handleAdminRejectEditRequest)   // رفضُه
+				r.With(s.qaOrderScope).Post("/qa/orders/{id}/proof-exception", s.handleAuthorizeProofException)      // إذنُ التسليم بلا صورة
+				r.With(s.qaOrderScope).Post("/qa/orders/{id}/partner", s.handleLinkPartner)                          // ربطُ المشتريات بمتجرٍ تابع
+				r.Post("/qa/whatsapp-orders", s.qaWhatsAppGuard(s.idempotent(s.handleCreateWhatsAppOrder)))          // طلبُ واتساب لرقم QA ومتجر QA
+				r.With(s.qaDriverScope).Post("/qa/drivers/{id}/settle", s.idempotent(s.handleDriverSettle))          // تسليمُ صندوق سائق QA
+			})
+			s.logger.Warn("QA staging endpoints ENABLED — staging only (POST /api/v1/qa/session, /qa/revoke, /qa/setting, /qa/seed, /qa/catalog/sections, /qa/rep-session, /qa/leads/{id}/status, /qa/payouts/{id}/decide, /qa/users/{id}, /qa/merchants/{id}, /qa/orders/{id}/*, /qa/whatsapp-orders, /qa/drivers/{id}/settle; GET /qa/reconcile, /qa/money)")
 		}
 		// **وتنزيلُ التطبيق عامٌّ** — يُضغط قبل أن يكون هناك حساب.
 		r.Get("/public/app", s.handleDownloadApp)

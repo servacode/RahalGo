@@ -12,25 +12,25 @@
 
 | ما هو | العدد |
 |---|---|
-| أبوابٌ في الموجّه | **688** |
+| أبوابٌ في الموجّه | **700** |
 | انتقالاتُ الطلب | **55** |
 | أنواعُ قيدِ المحفظة | **16** — `adjustment` · `commission` · `compensation` · `driver_earning` · `merchant_cash_accrued` · `merchant_cash_paid` · `merchant_earning` · `operating_expense` · `order_payment` · `payout` · `penalty` · `platform_expense` · `platform_profit` · `refund` · `reward` · `topup` |
 | مواضعُ الإشعار | **136** — منها **69** موجَّهٌ بـ`Apps` |
 | غرفُ البثّ | **5** — `customer` · `driver` · `merchant` · `ops` · `user` |
 | تعريفاتُ الإعدادات | **283** — منها **238** مُغيِّرٌ للسلوك |
 | حقولُ الطلب | **146** — من عقد `P-1` |
-| ملفّاتُ اختبار | **821** |
-| دوالُّ اختبار | **3164** |
+| ملفّاتُ اختبار | **823** |
+| دوالُّ اختبار | **3176** |
 
 ---
 
 # ٢ · الاختبارات
 
 ```
-TOTAL      = 3164
+TOTAL      = 3176
 MAPPED     = 457
 INFRA      = 123
-ORPHAN     = 2584
+ORPHAN     = 2596
 ```
 
 **واليتيمُ اختبارٌ لا يعرف ماذا يحرس** — **ولا يُسقط البناءَ اليومَ**،
@@ -38,8 +38,8 @@ ORPHAN     = 2584
 
 | الحزمة | يتيمٌ |
 |---|---|
-| `qa` | 1034 |
-| `server` | 564 |
+| `qa` | 1042 |
+| `server` | 568 |
 | `orders_test` | 285 |
 | `routing` | 88 |
 | `orders` | 83 |
