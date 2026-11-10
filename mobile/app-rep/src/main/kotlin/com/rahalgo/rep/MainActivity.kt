@@ -22,7 +22,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.foundation.background
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -432,27 +431,13 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                         label = R.string.nav_clients,
                     )
                     // **وحسابي آخرا فهو في اليسار** — وصورتُه لا أيقونة.
-                    NavigationBarItem(
+                    // **أيقونةُ شخصٍ لا صورةَ بروفايل** (قرارُ المالك ٢٠٢٦-٠٨-٢٣) — وبالتبويب الموحَّد كإخوته
+                    // (٢٠٢٦-١١-١١)، وكان `NavigationBarItem` خاماً فاختلف لونُه ووزنُ اسمه عنهم.
+                    Tab(
                         selected = tab == Tab.Account && over == Overlay.None,
                         onClick = { tab = Tab.Account; leaveStore() },
-                        icon = {
-// ══════════════════════════════════
-// **وحسابي أيقونةُ شخصٍ لا صورةَ بروفايل**
-// ══════════════════════════════════
-//
-// (قرارُ المالك ٢٠٢٦-٠٨-٢٣: «أيقونةُ حسابي
-//  ألغِ اللوغو ووحّدها بشكلٍ مركزيٍّ مع
-//  المتجر والزبون والسائق والمندوب».)
-//
-// **وصورةُ الحساب فارغةٌ عند أكثر الناس**
-// فتُرسم حرفاً في دائرة — **وحرفٌ بين
-// أيقوناتٍ يُقرأ شيئاً ناقصاً لا تبويباً.**
-                            Icon(
-                                painter = painterResource(com.rahalgo.ui.R.drawable.ic_user),
-                                contentDescription = null,
-                            )
-                        },
-                        label = { Text(stringResource(R.string.nav_profile)) },
+                        icon = com.rahalgo.ui.R.drawable.ic_user,
+                        label = R.string.nav_profile,
                     )
                 }
             },
@@ -539,6 +524,8 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
                         onOpenWallet = { overlay.show(Overlay.Wallet) },
                         onOpenAccount = { tab = Tab.Account; leaveStore() },
                         onOpenClients = { tab = Tab.Clients; leaveStore() },
+                        onAddClient = { tab = Tab.AddClient; leaveStore() },
+                        onOpenGoals = { overlay.show(Overlay.Menu(RepItems.REWARDS)) },
                     )
 
                     // **وبعد الإرسال ينتقل إلى «عملائي»** (طلبُ المالك
