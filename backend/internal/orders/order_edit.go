@@ -83,6 +83,9 @@ type EditLine struct {
 	ItemID        string `json:"item_id"`
 	Qty           int    `json:"qty"`
 	MerchantPrice *int64 `json:"merchant_price,omitempty"`
+	// StoreRefunded **لهالسطر وحدَه** (طلب تعديل الكابتن ٢٠٢٦-١١-١٠): «ناقص بالمتجر» ⇒ المتجر ما
+	// سلّمه فحقُّه بينقص، و«الزبون لغاه» ⇒ حقُّه كامل. وفارغ: قيمةُ الطلب كلِّه (`EditRequest`).
+	StoreRefunded *bool `json:"store_refunded,omitempty"`
 }
 
 // EditAdd **صنفٌ يُضاف** من قائمة متجرٍ في الطلب — يُسعَّر بسعر اليوم.
@@ -126,6 +129,9 @@ type EditRequest struct {
 	Custom        []EditCustom `json:"custom,omitempty"`
 	StoreRefunded bool         `json:"store_refunded"`
 	DryRun        bool         `json:"dry_run"`
+	// guard **شرطٌ بعد قفل الطلب في المعاملة نفسِها** — طلب تعديل الكابتن بيتأكّد إنّ الطلب
+	// ما تغيّر من وقت ما انبعت (`order_edit_request.go`). داخليّ لا يُرسَل.
+	guard func(context.Context, pgx.Tx) error
 }
 
 // EditChange **سطرٌ تغيّر** — يُقرأ في الحدث والإشعار والتدقيق.
@@ -265,6 +271,11 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 	if terminal(o.status) {
 		return nil, res, ErrOrderEditClosed
 	}
+	if req.guard != nil {
+		if err := req.guard(ctx, tx); err != nil {
+			return nil, res, err
+		}
+	}
 	// **«بعد الاستلام» يُعرف بالدفتر لا بالحال**: طلبٌ أُرسل مع سائقٍ آخرَ عاد إلى
 	// «بانتظار سائق» ومستحقُّ متجره مقيَّدٌ منذ الاستلام الأوّل.
 	var settled bool
@@ -345,7 +356,11 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 		// الزبونُ رجّع الصنفَ بعد أن استلمه السائق: **المتجرُ يأخذ حقَّه كاملاً والمنصّةُ
 		// تتحمّل.** فيبقى ما رجّع سطراً بسعر متجره (لا يتغيّر حقُّه ولا عمولتُه) **وسعرُ
 		// الزبون فيه صفر** — والمجموعُ ينقص وحدَه، والفرقُ على الخزينة.
-		if (res.AfterPickup || collected[r.merchantID]) && !req.StoreRefunded && l.Qty < r.qty {
+		storeRefunded := req.StoreRefunded
+		if l.StoreRefunded != nil {
+			storeRefunded = *l.StoreRefunded
+		}
+		if (res.AfterPickup || collected[r.merchantID]) && !storeRefunded && l.Qty < r.qty {
 			back := r.qty - l.Qty
 			change.Returned = back
 			if l.Qty == 0 {

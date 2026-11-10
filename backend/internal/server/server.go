@@ -1057,6 +1057,10 @@ func (s *Server) Router() http.Handler {
 			r.Post("/orders/{id}/agree", s.handleAgreeCustom)
 			// **وبعد الاستلام يطلب تعديل ثمن البضاعة والزبون يوافق** (قرار المالك ٢٠٢٦-١١-٠٦).
 			r.Post("/orders/{id}/price-request", s.handleDriverPriceRequest)
+			// **وبالطلب العادي «طلب تعديل»: ناقص · الزبون لغاه · انزاد صنف — والمكتب يوافق**
+			// (قرارُ المالك ٢٠٢٦-١١-١٠). انظر `order_edit_request.go`.
+			r.Post("/orders/{id}/edit-request", s.idempotent(s.handleDriverEditRequest))
+			r.Get("/orders/{id}/edit-request", s.handleDriverGetEditRequest)
 			r.Get("/orders", s.handleDriverOrders)
 			// **مسارُ الطرف الحاليّ** — خطُّ الشوارع ومسافتُه ومدّتُه.
 			// **ونداءٌ وحدَه لا حقلٌ في القائمة**: القائمةُ خمسةُ طلبات
@@ -1637,6 +1641,14 @@ func (s *Server) Router() http.Handler {
 				Get("/orders/{id}/edit-catalog", s.handleOrderEditCatalog)
 			r.With(s.RequireCapability(authz.OrdersIntervene)).
 				Post("/orders/{id}/edit", s.handleOrderEdit)
+			// **طلب تعديل الكابتن** (قرارُ المالك ٢٠٢٦-١١-١٠) — الموافقة من باب التعديل نفسه وبقدرته
+			// بعد الاستلام. انظر `order_edit_request.go`.
+			r.With(s.RequireCapability(authz.OrdersIntervene)).
+				Get("/orders/{id}/edit-request", s.handleAdminGetEditRequest)
+			r.With(s.RequireCapability(authz.OrdersIntervene)).
+				Post("/orders/{id}/edit-request/approve", s.handleAdminApproveEditRequest)
+			r.With(s.RequireCapability(authz.OrdersIntervene)).
+				Post("/orders/{id}/edit-request/reject", s.handleAdminRejectEditRequest)
 			// **مشترياتٌ من متجرٍ تابعٍ إلنا** (قرارُ المالك ٢٠٢٦-١٠-١٥) — يُربط قبل توثيق الثمن
 			// ويُفكّ، والإرسالُ له بالبابين القائمين. انظر `order_partner.go`.
 			r.With(s.RequireCapability(authz.OrdersIntervene)).

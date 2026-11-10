@@ -662,6 +662,11 @@
     <string name="err_item_unavailable_not_standard">حذف الأصناف للطلب العادي وحده.</string>
     <string name="err_order_edit_not_standard">تعديل الطلب للطلب العادي وحده.</string>
     <string name="err_order_edit_closed">لا يُعدَّل طلب بعد تسليمه أو انتهائه.</string>
+    <string name="err_edit_request_stage">طلب التعديل من قبول الطلب لحد التسليم بس.</string>
+    <string name="err_edit_request_empty">اختار سطر ناقص أو ملغى، أو ضيف صنف.</string>
+    <string name="err_edit_request_stale">الطلب تغيّر من وقت ما انبعت طلب التعديل — لازم يبعت طلب جديد.</string>
+    <string name="err_edit_request_not_pending">طلب التعديل انقرّر أو انبدّل بطلب أحدث.</string>
+    <string name="err_edit_request_reject_reason">اكتب سبب الرفض ليعرفه الكابتن.</string>
     <string name="err_order_edit_after_pickup">تعديل الطلب بعد الاستلام للإدارة وحدها.</string>
     <string name="err_order_edit_last_item">لا يبقى طلب بلا أصناف.</string>
     <string name="err_order_edit_store_not_in_order">يُضاف الصنف من متجر موجود في الطلب فقط.</string>

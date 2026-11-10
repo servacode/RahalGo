@@ -272,10 +272,12 @@ func (s *Service) notifyFetchAmount(ctx context.Context, o *Order) {
 // **والمالُ كما كان**: ثمنُ البضاعة خارجَ الدفتر والصندوق (قرارُ المالك ٢٠٢٦-١١-٠٥: «السائق بيدفع
 // للمحل، وبينسجّل بس أجرة التوصيل»)، **والمقيَّدُ الأجرةُ وحدَها عند التسليم.** ولا يوقف «استلمت».
 //
-// **ويُصحَّح قبل «استلمت»** — كتابةٌ ثانيةٌ تُبدّل الرقمَ وتُرسل للزبون الرقمَ الصحيح.
+// **ويُصحَّح لحدّ التسليم** (قرارُ المالك ٢٠٢٦-١١-١٠: «كلشي على المبالغ الحقيقية») — كتابةٌ ثانيةٌ
+// تُبدّل الرقمَ (نسخةٌ أحدث وسطرٌ بالسجلّ) وتُرسل للزبون الرقمَ الصحيح، **وعمولةُ متجرنا تُحسب عند
+// التسليم من آخر رقم** (`chargeWhatsAppCommission` تقرأ `collect_amount`) **بسعر لحظة آخر كتابة.**
 
-// whatsAppGoodsStages **متى يكتبه السائق** — بمكان الاستلام، أو بعد «استلمت» إن نسيه.
-var whatsAppGoodsStages = map[string]bool{StAtPickup: true, StPickedUp: true}
+// whatsAppGoodsStages **متى يكتبه السائق** — من مكان الاستلام لحدّ باب الزبون.
+var whatsAppGoodsStages = map[string]bool{StAtPickup: true, StPickedUp: true, StOnTheWay: true, StAtDropoff: true}
 
 func (s *Service) whatsAppGoodsAmount(ctx context.Context, tx pgx.Tx, orderID, driverID, kind, status string,
 	amount int64, currency string) error {
@@ -300,6 +302,14 @@ func (s *Service) whatsAppGoodsAmount(ctx context.Context, tx pgx.Tx, orderID, d
 	//
 	// **فارغةً تبقى عملةُ الطلب** (التطبيقُ القديم). **وثمنٌ بالدولار يُلقط سعرُه لحظةَ كتابته** — سعرُ
 	// متجرنا إن ضبطه وإلّا المرجعيّ — **فعمولتُه عند التسليم بسعر اليوم الذي كُتب فيه.**
+	// **والتصحيحُ يُقال تصحيحاً بالسجلّ** — بالرقم القديم والجديد.
+	var prev *int64
+	var prevCurrency string
+	var prevVersion int64
+	if err := tx.QueryRow(ctx, `SELECT fetch_amount, amount_currency, fetch_amount_version FROM orders WHERE id = $1`,
+		orderID).Scan(&prev, &prevCurrency, &prevVersion); err != nil {
+		return err
+	}
 	var rate *float64
 	if currency == "" {
 		if err := tx.QueryRow(ctx, `SELECT amount_currency FROM orders WHERE id = $1`, orderID).Scan(&currency); err != nil {
@@ -327,6 +337,10 @@ func (s *Service) whatsAppGoodsAmount(ctx context.Context, tx pgx.Tx, orderID, d
 	if amount > 0 {
 		note = fmt.Sprintf("السائق كتب ثمن الطلب: %s — وصل للزبون برسالة", AmountText(amount, currency))
 	}
+	if prev != nil && prevVersion > 0 && (*prev != amount || prevCurrency != currency) {
+		note = fmt.Sprintf("السائق عدّل ثمن الطلب من %s إلى %s — وصل للزبون برسالة",
+			AmountText(*prev, prevCurrency), AmountText(amount, currency))
+	}
 	_, err := tx.Exec(ctx, `
 		INSERT INTO order_events (order_id, from_status, to_status, actor_id, note, driver_id)
 		VALUES ($1, $2, $2, $3, $4, $3)`, orderID, status, driverID, note)
@@ -338,10 +352,10 @@ func (s *Service) whatsAppGoodsAmount(ctx context.Context, tx pgx.Tx, orderID, d
 func (s *Service) WhatsAppGoodsNotice(ctx context.Context, orderID string) (phone, text string, ok bool, err error) {
 	var origin, currency string
 	var goods *int64
-	var fee int64
+	var fee, version int64
 	err = s.db.QueryRow(ctx, `
-		SELECT origin, COALESCE(recipient_phone, ''), fetch_amount, cash_due, amount_currency
-		  FROM orders WHERE id = $1`, orderID).Scan(&origin, &phone, &goods, &fee, &currency)
+		SELECT origin, COALESCE(recipient_phone, ''), fetch_amount, cash_due, amount_currency, fetch_amount_version
+		  FROM orders WHERE id = $1`, orderID).Scan(&origin, &phone, &goods, &fee, &currency, &version)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", "", false, nil
 	}
@@ -351,7 +365,12 @@ func (s *Service) WhatsAppGoodsNotice(ctx context.Context, orderID string) (phon
 	if origin != OriginWhatsApp || goods == nil || *goods <= 0 || phone == "" {
 		return "", "", false, nil
 	}
-	return phone, WhatsAppGoodsText(*goods, fee, currency), true, nil
+	text = WhatsAppGoodsText(*goods, fee, currency)
+	// **وكتابةٌ تانية تصحيح** (قرارُ المالك ٢٠٢٦-١١-١٠) — الزبون بيعرف إنّ الرقم تغيّر.
+	if version > 1 {
+		text = "تعدّل المبلغ: " + text
+	}
+	return phone, text, true, nil
 }
 
 // WhatsAppGoodsText **نصُّ رسالة المبالغ** — بفواصل الآلاف، **والمجموعُ بالليرة وحدَها**: ثمنٌ بالدولار

@@ -85,6 +85,7 @@ import { OrderChatModal } from "./OrderChat";
 import { payerIsCash, payerLabel, payerOf } from "./payer";
 import { WaiveCommissionDialog, WAIVE_ROUTE } from "./WaiveCommissionDialog";
 import { OrderEditor } from "./OrderEditor";
+import { EditRequestBox } from "./EditRequestBox";
 import {
   CommissionSection,
   CustomerSection,
@@ -385,6 +386,8 @@ interface BoardInfo extends ShamcashBoard {
     offer_merchant: number;
   };
   ended_by_name?: string;
+  /** **طلب تعديل من الكابتن بانتظار المكتب — من إمتى** (قرارُ المالك ٢٠٢٦-١١-١٠). */
+  edit_request_at?: string | null;
 }
 
 /** **إعداداتُ اللوحة من الخادم** (`GET /orders/board`) — لا من `/settings` (المشكلة ٣٢). */
@@ -1571,6 +1574,13 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
             )}
           </span>
         ) : null}
+        {/* **طلب تعديل من الكابتن بانتظار القرار** (قرارُ المالك ٢٠٢٦-١١-١٠) — والتفصيلُ بالأفعال تحت. */}
+        {live && !o.closed_at && o.board?.edit_request_at && (
+          <span className="flex w-full items-center gap-2 rounded-control border border-warning-edge bg-warning-tint px-3 py-2 text-sm font-bold text-warning">
+            <IconWarning size={16} />
+            {m.admin.ordersPage.editRequest.badge}
+          </span>
+        )}
         {/* **سطرُ التنبيه تحت الرأس — بلونه، ويغيب حين لا مشكلة** (قرارُ المالك ٢٠٢٦-١١-٠٣). */}
         {(o.board?.emergency_open || (live && o.board?.alert_reason) || (!o.closed_at && o.quote_rejected_at)) && (
           <span className="flex w-full items-center gap-2 rounded-control border border-danger-edge bg-danger-tint px-3 py-2 text-sm font-bold text-danger">
@@ -4168,6 +4178,10 @@ function OrderActions({
         >
           <BtnLabel icon={IconEdit}>{m.admin.ordersPage.orderEdit.button}</BtnLabel>
         </Button>
+      )}
+      {/* **طلب تعديل من الكابتن** (قرارُ المالك ٢٠٢٦-١١-١٠) — وافق أو ارفض بمعاينة المحرّك. */}
+      {o.board?.edit_request_at && !CLOSED_STATUSES.has(o.status) && (
+        <EditRequestBox key={o.board.edit_request_at} orderId={o.id} onChanged={onChanged} />
       )}
       {editing && (
         <OrderEditor
