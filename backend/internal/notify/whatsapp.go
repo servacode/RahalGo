@@ -98,6 +98,7 @@ type WhatsAppSender struct {
 	inboundLoc func(ctx context.Context, from string, loc InboundLocation) string
 	// inboundImg — «صورة + اسم وسعر» (wa_image.go)؛ inboundReply — أجوبةُ أسئلة البوت المعلّقة.
 	inboundImg   func(ctx context.Context, from string, img InboundImage) string
+	inboundGate  func(ctx context.Context, from string) bool
 	inboundReply func(ctx context.Context, from, text, quotedID string) (string, bool)
 	hooksMu      sync.RWMutex
 

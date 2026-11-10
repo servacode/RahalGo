@@ -18,6 +18,7 @@ func (s *Server) NewWAItems(send func(ctx context.Context, phone, text string) e
 		}
 		return s.siteURL()
 	}
+	w.Enabled = func(ctx context.Context) bool { return s.settings.GetBool(ctx, "merchants.wa_items_enabled") }
 	w.NameMax = s.itemNameMax
 	w.OnChange = func() { s.touch("menu", "ops") }
 	return w

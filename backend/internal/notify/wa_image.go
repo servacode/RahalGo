@@ -41,6 +41,14 @@ func (s *WhatsAppSender) SetInboundImage(f func(ctx context.Context, from string
 	s.hooksMu.Unlock()
 }
 
+// SetInboundImageGate **بوابةُ الميزة** — false ⇒ الصورة لا تُسلَّم لمعالِج الأصناف وتكمل
+// لمسار الواتساب العاديّ (مفتاح الميزة مطفأ عامّاً أو للمتجر، قرار المالك 2026-11-10). فارغ ⇒ مفتوحة.
+func (s *WhatsAppSender) SetInboundImageGate(f func(ctx context.Context, from string) bool) {
+	s.hooksMu.Lock()
+	s.inboundGate = f
+	s.hooksMu.Unlock()
+}
+
 // SetInboundReply يربط معالِجَ نصوصٍ تُجيب عن أسئلة البوت المعلّقة. يردّ (نصّ، هل عالج)؛
 // ولا يُعالج ⇒ يكمل النصُّ إلى المعالِج العامّ.
 func (s *WhatsAppSender) SetInboundReply(f func(ctx context.Context, from, text, quotedID string) (string, bool)) {
@@ -72,6 +80,7 @@ func (s *WhatsAppSender) mediaReply(ctx context.Context, c *whatsmeow.Client, ms
 	}
 	s.hooksMu.RLock()
 	h := s.inboundImg
+	gate := s.inboundGate
 	s.hooksMu.RUnlock()
 	if h == nil {
 		return false
@@ -84,6 +93,9 @@ func (s *WhatsAppSender) mediaReply(ctx context.Context, c *whatsmeow.Client, ms
 	if from == "" {
 		s.logger.Warn("whatsapp: صورةٌ واردة بلا رقمٍ معروف للمرسِل")
 		return true
+	}
+	if gate != nil && !gate(ctx, from) {
+		return false
 	}
 	in := InboundImage{MsgID: msg.Info.ID, NotImage: kind != "image"}
 	if im != nil {

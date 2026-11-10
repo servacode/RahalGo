@@ -91,6 +91,8 @@ interface Merchant {
   accepts_returns: boolean;
   /** هل لديه برنامج الأمين (٢٠٢٦-١١-٠٦) — بدونه لا مزامنةَ أسعار ولا رمزَ مادّة. */
   uses_ameen?: boolean;
+  /** مفتاح «أضف أصناف بصورة واتساب» لهذا المتجر (٢٠٢٦-١١-١٠) — الافتراضي تشغيل. */
+  wa_items_enabled?: boolean;
   /** طريقةُ تسويةِ مستحقّاته — نقدٌ أو محفظة (الأدمنُ ذو الصلاحيّة الماليّة يغيّرها). */
   settlement_method: "cash" | "wallet";
   /** **الشعار** — يُرى في رأس الملفّ، وفراغُه أيقونةُ متجر. */
@@ -123,6 +125,7 @@ export default function MerchantProfilePage() {
   const [error, setError] = useState("");
   const [savingReturns, setSavingReturns] = useState(false);
   const [savingAmeen, setSavingAmeen] = useState(false);
+  const [savingWaItems, setSavingWaItems] = useState(false);
   // **ومن لا يملك قراءةَ المتجر لا يُنادي بابَه** (فحصُ المتصفّح ٢٠٢٦-١٠-٠٥):
   // المالية تصل الصفحةَ من ملفّ صاحب المتجر، فكانت تُردّ ٤٠٣ وتُعرض
   // رسالةَ الخطأ حمراءَ بدل «غير مسموح».
@@ -169,6 +172,25 @@ export default function MerchantProfilePage() {
         setError(errorText(err));
       } finally {
         setSavingAmeen(false);
+      }
+    },
+    [id, load],
+  );
+
+  /** **مفتاح بوت أصناف الواتساب لهذا المتجر** — يُحفظ فوراً ثمّ يُعاد التحميل. */
+  const setWaItems = useCallback(
+    async (v: boolean) => {
+      setSavingWaItems(true);
+      try {
+        await api(`/api/v1/admin/merchants/${id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ wa_items_enabled: v }),
+        });
+        await load();
+      } catch (err) {
+        setError(errorText(err));
+      } finally {
+        setSavingWaItems(false);
       }
     },
     [id, load],
@@ -357,6 +379,22 @@ export default function MerchantProfilePage() {
                   onClick={() => void setUsesAmeen(v)}
                 >
                   {v ? P.ameenYes : P.ameenNo}
+                </Button>
+              ))}
+            </dd>
+          </div>
+          <div className="flex items-center justify-between gap-3 sm:col-span-2">
+            <dt className="shrink-0 text-sm text-ink-muted">{P.waItems}</dt>
+            <dd className="flex gap-1" data-testid="admin-wa-items">
+              {[true, false].map((v) => (
+                <Button
+                  key={String(v)}
+                  size="sm"
+                  variant={(mr.wa_items_enabled !== false) === v ? "primary" : "secondary"}
+                  disabled={savingWaItems || !canEdit}
+                  onClick={() => void setWaItems(v)}
+                >
+                  {v ? P.waItemsOn : P.waItemsOff}
                 </Button>
               ))}
             </dd>

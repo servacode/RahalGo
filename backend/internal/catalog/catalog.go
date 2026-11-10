@@ -123,6 +123,8 @@ type Merchant struct {
 	FeaturedOrder int  `json:"featured_order"`
 	// UsesAmeen هل لدى المتجر برنامج الأمين (ترحيل 0514) — لا يظهر شيء منه بدونه.
 	UsesAmeen bool `json:"uses_ameen"`
+	// WaItemsEnabled مفتاح «أضف أصناف بصورة واتساب» لهذا المتجر (0531) — الافتراضي تشغيل.
+	WaItemsEnabled bool `json:"wa_items_enabled"`
 }
 
 // ErrBadCommission **نسبةُ عمولةٍ خارجَ ٠–١٠٠ أو بأكثرَ من منزلتين.**
@@ -306,7 +308,7 @@ func merchantSelect(daysExpr string) string {
 	       -- يُعدَّل في مصدره، **فيبقى في اللوحة اسمٌ بدّله المالكُ من سنة.**
 	       m.district_id::text,
 	       COALESCE(dd.name || '، ' || gg.name, ''),
-	       m.settlement_method, m.featured, m.featured_order, m.uses_ameen
+	       m.settlement_method, m.featured, m.featured_order, m.uses_ameen, m.wa_items_enabled
 	FROM merchants m
 	JOIN categories c ON c.id = m.category_id
 	LEFT JOIN users u ON u.id = m.owner_user_id
@@ -352,7 +354,7 @@ func scanMerchant(row pgx.Row) (*Merchant, error) {
 		&m.Phone, &m.AddressText, &m.OwnerUserID, &m.OwnerPhone, &m.OwnerName, &m.SalesRepPhone, &m.SalesRepCode, &m.SalesRepName,
 		&m.Lat, &m.Lng, &m.LogoURL, &m.LogoThumbURL,
 		&m.Status, &m.Violations, &m.CommissionExact, &m.EmergencyClosed, &m.AcceptsReturns, &m.CreatedAt, &m.DistrictID, &m.District,
-		&m.SettlementMethod, &m.Featured, &m.FeaturedOrder, &m.UsesAmeen)
+		&m.SettlementMethod, &m.Featured, &m.FeaturedOrder, &m.UsesAmeen, &m.WaItemsEnabled)
 	if err != nil {
 		return nil, err
 	}
@@ -446,6 +448,8 @@ type MerchantInput struct {
 	AcceptsReturns *bool `json:"accepts_returns"`
 	// UsesAmeen هل لدى المتجر برنامج الأمين (ترحيل 0514).
 	UsesAmeen *bool `json:"uses_ameen"`
+	// WaItemsEnabled مفتاح بوت أصناف الواتساب لهذا المتجر (0531). NULL لا يمسّ.
+	WaItemsEnabled *bool `json:"wa_items_enabled"`
 	// OwnerPhone **صاحبُ المتجر — ولا متجرَ بلاه.**
 	//
 	// (قرارُ المالك ٢٠٢٦-٠٨-١٥: «فتحُ متجرٍ بدون صاحبِ متجرٍ غلطٌ كبير
@@ -903,9 +907,10 @@ func (s *Service) updateMerchant(ctx context.Context, actorID, id string, in Mer
 			featured       = COALESCE($17, featured),
 			featured_order = COALESCE($18, featured_order),
 			uses_ameen     = COALESCE($19, uses_ameen),
+			wa_items_enabled = COALESCE($20, wa_items_enabled),
 			updated_at    = now()
 		WHERE id = $1`,
-		id, in.Name, in.Description, in.CategoryID, in.Phone, in.AddressText, in.Status, in.EmergencyClosed, ownerID, repID, in.Lat, in.Lng, in.CommissionPct, in.LogoMediaID, in.AcceptsReturns, in.DistrictID, in.Featured, in.FeaturedOrder, in.UsesAmeen)
+		id, in.Name, in.Description, in.CategoryID, in.Phone, in.AddressText, in.Status, in.EmergencyClosed, ownerID, repID, in.Lat, in.Lng, in.CommissionPct, in.LogoMediaID, in.AcceptsReturns, in.DistrictID, in.Featured, in.FeaturedOrder, in.UsesAmeen, in.WaItemsEnabled)
 	if isFKViolation(err) {
 		return nil, ErrCategoryInvalid
 	}

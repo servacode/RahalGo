@@ -72,6 +72,8 @@ type Service struct {
 	NameMax func(ctx context.Context) int
 	// OnChange يُنادى بعد إضافة/تحديث صنف (بثّ للّوحات).
 	OnChange func()
+	// Enabled المفتاح العامّ (`merchants.wa_items_enabled`) — فارغ ⇒ مفعّل.
+	Enabled func(ctx context.Context) bool
 
 	// Quiet مهلة الهدوء قبل إرسال ملخّص دفعة الصور.
 	Quiet time.Duration
@@ -110,6 +112,8 @@ type storeInfo struct {
 	ActorID            string
 	StaffID, StaffName string
 	Suspended          bool
+	// Off مفتاح المتجر مطفأ (merchants.wa_items_enabled = false).
+	Off bool
 }
 
 type who struct {
@@ -121,12 +125,12 @@ type who struct {
 func (s *Service) lookup(ctx context.Context, phone string) (*who, error) {
 	rows, err := s.db.Query(ctx, `
 		SELECT m.id::text, m.name, m.display_currency, COALESCE(m.exchange_rate::float8, 0),
-		       m.owner_user_id::text, '', '', (m.status = 'suspended'), m.created_at, 0
+		       m.owner_user_id::text, '', '', (m.status = 'suspended'), m.created_at, 0, NOT m.wa_items_enabled
 		  FROM users u JOIN merchants m ON m.owner_user_id = u.id
 		 WHERE u.phone = $1
 		UNION ALL
 		SELECT m.id::text, m.name, m.display_currency, COALESCE(m.exchange_rate::float8, 0),
-		       m.owner_user_id::text, st.id::text, st.name, (m.status = 'suspended'), m.created_at, 1
+		       m.owner_user_id::text, st.id::text, st.name, (m.status = 'suspended'), m.created_at, 1, NOT m.wa_items_enabled
 		  FROM merchant_staff st JOIN merchants m ON m.owner_user_id = st.owner_user_id
 		 WHERE st.phone = $1
 		ORDER BY 10, 9, 1`, phone)
@@ -140,7 +144,7 @@ func (s *Service) lookup(ctx context.Context, phone string) (*who, error) {
 		var st storeInfo
 		var ts time.Time
 		var ord int
-		if err := rows.Scan(&st.ID, &st.Name, &st.Currency, &st.Rate, &st.ActorID, &st.StaffID, &st.StaffName, &st.Suspended, &ts, &ord); err != nil {
+		if err := rows.Scan(&st.ID, &st.Name, &st.Currency, &st.Rate, &st.ActorID, &st.StaffID, &st.StaffName, &st.Suspended, &ts, &ord, &st.Off); err != nil {
 			return nil, err
 		}
 		if seen[st.ID] {
@@ -161,11 +165,21 @@ func (s *Service) lookup(ctx context.Context, phone string) (*who, error) {
 func (w *who) active() []storeInfo {
 	var out []storeInfo
 	for _, s := range w.Stores {
-		if !s.Suspended {
+		if !s.Suspended && !s.Off {
 			out = append(out, s)
 		}
 	}
 	return out
+}
+
+// anyOn أللرقم متجرٌ واحدٌ على الأقلّ مفتاحُه مفعّل؟ (الموقوف يُحسب — رسالته القديمة باقية.)
+func (w *who) anyOn() bool {
+	for _, s := range w.Stores {
+		if !s.Off {
+			return true
+		}
+	}
+	return false
 }
 
 func (w *who) byID(id string) (storeInfo, bool) {
@@ -274,10 +288,36 @@ func (s *Service) dropPending(ctx context.Context, id string) {
 	_, _ = s.db.Exec(ctx, `DELETE FROM wa_item_pending WHERE id = $1::uuid`, id)
 }
 
+// globalOn المفتاح العامّ `merchants.wa_items_enabled` (فارغ ⇒ مفعّل).
+func (s *Service) globalOn(ctx context.Context) bool {
+	return s.Enabled == nil || s.Enabled(ctx)
+}
+
+// Accepts **هل يتولّى البوت صورة هذا الرقم أصلاً؟** — false ⇒ تمرّ للواتساب العاديّ كأنّ الميزة
+// غير موجودة (قرار المالك 2026-11-10). مطفأ عامّاً، أو رقمٌ معروف كلُّ متاجره مطفأة ⇒ false.
+// والغريب يبقى كما كان (صمت من البوت).
+func (s *Service) Accepts(ctx context.Context, from string) bool {
+	if !s.globalOn(ctx) {
+		return false
+	}
+	phone, ok := identity.NormalizePhone(from)
+	if !ok {
+		return true
+	}
+	w, err := s.lookup(ctx, phone)
+	if err != nil || w == nil {
+		return true
+	}
+	return w.anyOn()
+}
+
 // ── نقطة الدخول: صورة ─────────────────────────────────────────────
 
 // HandleImage **صورةٌ واردة** — يردّ نصّاً فورياً أو فارغاً (والرسائلُ الأخرى تُجمَّع وتُرسَل بعد هدوء).
 func (s *Service) HandleImage(ctx context.Context, from string, img notify.InboundImage) string {
+	if !s.globalOn(ctx) {
+		return ""
+	}
 	phone, ok := identity.NormalizePhone(from)
 	if !ok {
 		return ""
@@ -289,6 +329,9 @@ func (s *Service) HandleImage(ctx context.Context, from string, img notify.Inbou
 	}
 	if w == nil {
 		return "" // غريب: صمت
+	}
+	if !w.anyOn() {
+		return "" // كلّ متاجره مطفأة: خارج البوت
 	}
 	// واتساب قد يعيد التسليم — رسالةٌ عولجت لا تُعالَج ثانية.
 	if img.MsgID != "" {
@@ -406,6 +449,9 @@ func storeQuestion(act []storeInfo) string {
 // HandleText **نصٌّ واردٌ يُجيب عن سؤالٍ معلّق** (أو أمر «فرع» / «إلغاء») — (ردّ، عولج).
 // وغير المعالَج يكمل إلى معالِج النصوص العامّ.
 func (s *Service) HandleText(ctx context.Context, from, text, quotedID string) (string, bool) {
+	if !s.globalOn(ctx) {
+		return "", false
+	}
 	phone, ok := identity.NormalizePhone(from)
 	if !ok {
 		return "", false
@@ -429,6 +475,9 @@ func (s *Service) HandleText(ctx context.Context, from, text, quotedID string) (
 	}
 	if w == nil {
 		_, _ = s.db.Exec(ctx, `DELETE FROM wa_item_pending WHERE phone = $1`, phone)
+		return "", false
+	}
+	if !w.anyOn() {
 		return "", false
 	}
 	act := w.active()
@@ -465,7 +514,7 @@ func (s *Service) HandleText(ctx context.Context, from, text, quotedID string) (
 		outs = s.answerStore(ctx, w, act, phone, pend, target, txt)
 	default:
 		st, ok := w.byID(target.D.MerchantID)
-		if !ok || st.Suspended {
+		if !ok || st.Suspended || st.Off {
 			s.dropPending(ctx, target.ID)
 			return "", false
 		}

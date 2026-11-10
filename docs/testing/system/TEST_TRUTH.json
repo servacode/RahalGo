@@ -30,11 +30,11 @@
       "ops",
       "user"
     ],
-    "setting_defs": 281,
-    "behaviour_settings": 236,
+    "setting_defs": 282,
+    "behaviour_settings": 237,
     "order_fields": 144,
-    "test_files": 807,
-    "test_funcs": 3121
+    "test_files": 808,
+    "test_funcs": 3126
   },
   "flows": [
     {
@@ -5943,6 +5943,25 @@
       "group": "merchants",
       "kind": "decimal",
       "sensitive": true,
+      "money": false,
+      "flows": [
+        "F-04",
+        "F-05",
+        "F-28"
+      ],
+      "apps": [
+        "admin",
+        "customer",
+        "merchant"
+      ],
+      "tests": null,
+      "status": "NO_REGRESSION_TEST_YET"
+    },
+    {
+      "key": "merchants.wa_items_enabled",
+      "group": "merchants",
+      "kind": "bool",
+      "sensitive": false,
       "money": false,
       "flows": [
         "F-04",
@@ -34088,6 +34107,36 @@
     {
       "name": "TestUSDStore",
       "file": "internal/waitems/service_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestSwitchDefaultOnUnchanged",
+      "file": "internal/waitems/switch_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestSwitchGlobalDefaultOffIgnores",
+      "file": "internal/waitems/switch_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestSwitchGlobalOffIgnored",
+      "file": "internal/waitems/switch_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestSwitchMixedStoresOnlyEnabledOffered",
+      "file": "internal/waitems/switch_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestSwitchStoreOffIgnored",
+      "file": "internal/waitems/switch_test.go",
       "package": "waitems",
       "orphan": true
     },

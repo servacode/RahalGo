@@ -414,6 +414,7 @@ func run(logger *slog.Logger) error {
 				waBot.SetInboundImage(func(c context.Context, from string, img notify.InboundImage) string {
 					return waItems.HandleImage(c, from, img)
 				})
+				waBot.SetInboundImageGate(waItems.Accepts)
 				waBot.SetInboundReply(waItems.HandleText)
 				waBot.SetInbound(func(c context.Context, from, text string) string {
 					if r := srv.ReportForPhone(c, from, text); r != "" {
