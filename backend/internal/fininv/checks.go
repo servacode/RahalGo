@@ -245,6 +245,8 @@ var All = []Check{
 			SELECT o.number, o.total, o.status
 			FROM orders o
 			WHERE o.status = 'delivered' AND o.kind NOT IN ('custom', 'merchant_delivery')
+			  -- **والنموذج ٢ البضاعةُ فيه خارجَ الدفتر** (خطّةُ المال ٢٠٢٦-١١-١٠) — يحرسه FI-17.
+			  AND o.money_model = 1
 			  AND NOT EXISTS (
 				SELECT 1 FROM wallet_transactions t
 				WHERE t.ref = o.id::text
@@ -587,6 +589,8 @@ var All = []Check{
 				WHERE o.status NOT IN ('delivered', 'refunded', 'failed', 'cancelled', 'rejected')
 			) d ON true
 			WHERE EXISTS (SELECT 1 FROM wallets WHERE is_treasury)
+			  -- **والنموذج ٢ له صيغتُه الأبسط** (FI-17.e) — لا سلفةَ ولا بضاعةَ فيه.
+			  AND o.money_model = 1
 			  AND EXISTS (SELECT 1 FROM wallet_transactions p
 			              WHERE p.ref = o.id::text AND p.kind = 'platform_profit')
 			  AND COALESCE(l.net, 0) <> COALESCE(c.cash, 0) - COALESCE(a.adv, 0)
@@ -664,7 +668,9 @@ var All = []Check{
 				FROM order_items oi WHERE oi.order_id = o.id
 			) k ON true
 			LEFT JOIN LATERAL (
-				SELECT count(*) AS n, sum(COALESCE(te.amount, 0) + COALESCE(ta.amount, 0)) AS due
+				-- **وصفُّ السجلّ في النموذج ٢ (off_ledger) مستحقُّه مبلغُه** — لا قيدَ له.
+				SELECT count(*) AS n, sum(CASE WHEN ms.off_ledger THEN ms.amount
+				                              ELSE COALESCE(te.amount, 0) + COALESCE(ta.amount, 0) END) AS due
 				FROM merchant_settlements ms
 				LEFT JOIN wallet_transactions te ON te.id = ms.earning_tx_id
 				LEFT JOIN wallet_transactions ta ON ta.id = ms.accrued_tx_id
@@ -801,6 +807,8 @@ var All = []Check{
 			FROM orders o
 			JOIN driver_cash_entries e
 			  ON e.ref = o.id::text AND e.kind = 'order_collection'
+			-- **والنموذج ٢ له صيغتُه** (FI-17.d) — بلا دولارٍ ولا قيدِ دفع.
+			WHERE o.money_model = 1
 			GROUP BY o.id, o.number, o.cash_due, o.custom_store_paid, o.goods_usd_syp, e.driver_id
 			-- **وثمنُ مشترياتٍ بالدولار نقدٌ مرّ بيده بمعادله** (قرارُ المالك ٢٠٢٦-١١-٠٩) — يُضاف للمستحقّ.
 			HAVING sum(e.amount) <> GREATEST(o.cash_due + o.goods_usd_syp - COALESCE((
@@ -1011,6 +1019,7 @@ var All = []Check{
 			  AND ms.paid_at >= ` + officeCashSince + `
 			  -- **وما دفعه السائقُ عند الاستلام لم يمرّ بالدرج** (٢٠٢٦-١٠-١٥).
 			  AND ms.paid_via IS DISTINCT FROM 'driver'
+			  AND NOT ms.off_ledger
 			  AND NOT EXISTS (SELECT 1 FROM office_cash_entries c
 			                  WHERE c.source = 'merchant_cash_paid' AND c.direction = 'out'
 			                    AND c.ref = ms.id::text)`,
@@ -1152,12 +1161,13 @@ var All = []Check{
 			SELECT w.user_id, w.balance,
 			       COALESCE((SELECT sum(amount + adjusted_amount - reversed_amount)
 			                 FROM merchant_settlements
-			                 WHERE method = 'cash' AND state = 'cash_due'), 0) AS outstanding
+			                 WHERE method = 'cash' AND state = 'cash_due' AND NOT off_ledger), 0) AS outstanding
 			FROM wallets w
 			WHERE w.is_cash_holding
+			  -- **وصفُّ السجلّ في النموذج ٢ (off_ledger) لا احتباسَ له** — خارجَ هذه المعادلة.
 			  AND w.balance <> COALESCE((SELECT sum(amount + adjusted_amount - reversed_amount)
 			                             FROM merchant_settlements
-			                             WHERE method = 'cash' AND state = 'cash_due'), 0)`,
+			                             WHERE method = 'cash' AND state = 'cash_due' AND NOT off_ledger), 0)`,
 	},
 	{
 		ID: "FI-14.b", Family: FI14, Status: ProvableNow, Ops: true,
@@ -1168,7 +1178,8 @@ var All = []Check{
 		SQL: `
 			SELECT id, method, state
 			FROM merchant_settlements
-			WHERE (method = 'cash'
+			-- **وصفُّ السجلّ (off_ledger) بلا قيودٍ أصلاً** — يحرسه قيدُ الجدول وFI-17.a.
+			WHERE (method = 'cash' AND NOT off_ledger
 			         AND (accrued_tx_id IS NULL OR earning_tx_id IS NOT NULL))
 			   OR (method = 'wallet'
 			         AND (earning_tx_id IS NULL
@@ -1198,7 +1209,7 @@ var All = []Check{
 		SQL: `
 			SELECT ms.id
 			FROM merchant_settlements ms
-			WHERE ms.method = 'cash'
+			WHERE ms.method = 'cash' AND NOT ms.off_ledger
 			  AND (
 			    ms.amount <> COALESCE((SELECT wt.amount FROM wallet_transactions wt
 			                            WHERE wt.id = ms.accrued_tx_id), 0)
@@ -1238,7 +1249,7 @@ var All = []Check{
 			        FROM wallet_transactions WHERE kind = 'merchant_cash_paid') paid,
 			     (SELECT COALESCE(sum(amount + adjusted_amount - reversed_amount + commission_waived), 0) AS total
 			        FROM merchant_settlements
-			       WHERE method = 'cash' AND state = 'cash_paid') due
+			       WHERE method = 'cash' AND state = 'cash_paid' AND NOT off_ledger) due
 			WHERE paid.total <> due.total`,
 	},
 	{
@@ -1251,7 +1262,7 @@ var All = []Check{
 		SQL: `
 			SELECT ms.id::text, ms.commission_waived
 			FROM merchant_settlements ms
-			WHERE ms.commission_waived > 0
+			WHERE ms.commission_waived > 0 AND NOT ms.off_ledger
 			  AND (ms.method <> 'cash' OR ms.state <> 'cash_paid' OR ms.paid_via <> 'driver'
 			    OR COALESCE((SELECT wt.amount FROM wallet_transactions wt
 			                  WHERE wt.id = ms.waived_accrued_tx_id
@@ -1283,7 +1294,7 @@ var All = []Check{
 			          OR COALESCE((SELECT t.amount FROM wallet_transactions t
 			                        WHERE t.id = a.earning_tx_id AND t.kind = 'merchant_earning'), 0)
 			             - a.debt <> a.delta))
-			   OR (ms.method = 'cash'
+			   OR (ms.method = 'cash' AND NOT ms.off_ledger
 			        AND (a.earning_tx_id IS NOT NULL OR a.debt <> 0
 			          OR COALESCE((SELECT t.amount FROM wallet_transactions t
 			                        WHERE t.id = a.accrued_tx_id AND t.kind = 'merchant_cash_accrued'), 0)
@@ -1733,5 +1744,122 @@ var All = []Check{
 			WHERE order_id IS NULL AND cause <> 'legacy_opening'
 			  -- **وباقي العقوبة والنزاع يُفسَّر بمصدره** (هجرة 0439) — العقوبةُ أو النزاع.
 			  AND NOT (cause IN ('penalty_remainder', 'dispute_remainder') AND source_ref IS NOT NULL)`,
+	},
+
+	// ═══════════════════════════════════════════════════════════════════
+	// FI-17 — النموذج ٢: البضاعةُ خارجَ كلّ حساب (خطّةُ المال ٢٠٢٦-١١-١٠)
+	// ═══════════════════════════════════════════════════════════════════
+	//
+	// طلبٌ `money_model = 2`: **الكابتنُ يدفع للمتجر من جيبه ويقبض من الزبون**، والمنصّةُ تلمس
+	// الأجرةَ والعمولةَ (مع الهامش) وحدَهما. **فلا قيدَ بضاعةٍ ولا سلفةَ درجٍ ولا دينَ بضاعة**،
+	// والمحفظةُ تدفع التوصيلَ وحدَه.
+
+	{
+		ID: "FI-17.a", Family: FI17, Status: ProvableNow, Ops: true,
+		Name: "لا قيدَ بضاعةٍ على طلبٍ من النموذج ٢",
+		Why: "**ثمنُ البضاعة لا يدخل حساباً** — قيدُ مستحقِّ متجرٍ أو احتباسٍ أو دفعٍ أو ردِّ بضاعةٍ " +
+			"بمرجع طلبٍ من النموذج ٢ يعني أنّ المنصّةَ اشترت البضاعةَ ثانيةً.",
+		Flows: []string{"F-12", "F-14"},
+		Kinds: []string{"merchant_earning", "merchant_cash_accrued", "merchant_cash_paid", "custom_goods_return"},
+		SQL: `
+			SELECT o.number, t.kind, t.amount
+			FROM orders o
+			JOIN wallet_transactions t ON t.ref = o.id::text
+			WHERE o.money_model = 2
+			  AND t.kind IN ('merchant_earning', 'merchant_cash_accrued', 'merchant_cash_paid',
+			                 'custom_goods_return')`,
+	},
+	{
+		ID: "FI-17.b", Family: FI17, Status: ProvableNow, Ops: true,
+		Name: "لا سلفةَ درجٍ لطلبٍ من النموذج ٢",
+		Why: "**الكابتنُ دفع للمتجر من جيبه لا من الدرج** — سطرُ «سلفةٌ رجعت للمكتب» أو «ردُّ تسليمٍ " +
+			"خاطئ» بمرجعه نقدٌ خرج من الدرج لبضاعةٍ ليست للمنصّة.",
+		Flows: []string{"F-14"},
+		SQL: `
+			SELECT o.number, c.source, c.amount
+			FROM orders o
+			JOIN office_cash_entries c ON c.ref = o.id::text
+			WHERE o.money_model = 2
+			  AND c.source IN ('advance_return', 'undelivered_return')`,
+	},
+	{
+		ID: "FI-17.c", Family: FI17, Status: ProvableNow, Ops: true,
+		Name: "المحفظةُ تدفع التوصيلَ وحدَه في النموذج ٢",
+		Why: "**«الكل من المحفظة» انشال** — طلبٌ من النموذج ٢ بنطاق `full`، أو خُصم أو حُجز له من " +
+			"المحفظة أكثرُ من أجرة توصيله، يعني أنّ المحفظةَ دفعت بضاعة.",
+		Flows: []string{"F-01"},
+		Kinds: []string{"order_payment"},
+		// **والخاصُّ الذي ينتظر إعادةَ تأكيدٍ بعد الاستلام يُستثنى** — كـFI-03.e.
+		SQL: `
+			SELECT number, kind, wallet_scope, wallet_paid, custom_reserved_amount, delivery_fee, total
+			FROM orders
+			WHERE money_model = 2
+			  AND (wallet_scope = 'full'
+			       OR (NOT (kind = 'custom' AND quote_confirmed_version IS DISTINCT FROM quote_version)
+			           AND wallet_paid + custom_reserved_amount > GREATEST(LEAST(delivery_fee, total), 0)))`,
+	},
+	{
+		ID: "FI-17.d", Family: FI17, Status: ProvableNow, Ops: true,
+		Name: "صندوقُ الكابتن يقبض نقدَ الطلب ناقصَ ما دفعه للمتجر — من صفوف السجلّ",
+		Why: "**نظيرُ FI-10.b للنموذج ٢**: الكابتنُ يقبض من الزبون ويدفع للمتجر من جيبه، فصندوقُه يحمل " +
+			"الأجرةَ والعمولةَ والهامشَ وحدَها. **والمدفوعُ يُقرأ من صفوف السجلّ** (`off_ledger`) لا من قيدٍ.",
+		Flows: []string{"F-14", "F-27"},
+		// **وثمنُ مشترياتٍ بالدولار** يمرّ بيده ويخرج منها للمتجر (`custom_store_paid` بمعادله) —
+		// فالمعادلُ يُضاف ويُطرح معاً، **والباقي عمولةُ المتجر التابع بالليرة.**
+		SQL: `
+			SELECT o.number, o.cash_due, sum(e.amount)::bigint AS المحصَّل
+			FROM orders o
+			JOIN driver_cash_entries e
+			  ON e.ref = o.id::text AND e.kind = 'order_collection'
+			WHERE o.money_model = 2
+			GROUP BY o.id, o.number, o.cash_due, o.custom_store_paid, o.goods_usd_syp, e.driver_id
+			HAVING sum(e.amount) <> GREATEST(o.cash_due + o.goods_usd_syp
+			       - COALESCE((SELECT sum(ms.amount - ms.reversed_amount) FROM merchant_settlements ms
+			                    WHERE ms.order_id = o.id AND ms.off_ledger AND ms.paid_via = 'driver'
+			                      AND ms.paid_by = e.driver_id), 0)
+			       - COALESCE((SELECT sum(a.delta) FROM merchant_settlement_adjustments a
+			                    JOIN merchant_settlements ms ON ms.id = a.settlement_id
+			                    WHERE a.order_id = o.id AND ms.off_ledger AND a.paid_via = 'driver'
+			                      AND a.paid_by = e.driver_id), 0)
+			       - COALESCE(o.custom_store_paid, 0), 0)`,
+	},
+	{
+		ID: "FI-17.e", Family: FI17, Status: ProvableNow, Ops: true,
+		Name: "صافي دفترِ طلبٍ من النموذج ٢ = نقدُ الكابتن منه",
+		Why: "**نظيرُ FI-06.a بلا بضاعة**: −المدفوعُ من المحفظة + الأطراف + المردود + ربحُ المنصّة = ما قبضه " +
+			"الصندوق. **فربحُ المنصّة = المحفظة + الصندوق − المردود − الكابتن − المندوب** — ولا حدَّ " +
+			"للبضاعة يُنزله تحت الصفر.",
+		Flows: []string{"F-01", "F-14", "F-15"},
+		Kinds: []string{"platform_profit"},
+		SQL: `
+			SELECT o.number, o.status,
+			       COALESCE(l.net, 0)::bigint  AS صافي_الدفتر,
+			       COALESCE(c.cash, 0)::bigint AS نقدُ_الصندوق
+			FROM orders o
+			LEFT JOIN LATERAL (
+				SELECT sum(t.amount) AS net FROM wallet_transactions t WHERE t.ref = o.id::text
+			) l ON true
+			LEFT JOIN LATERAL (
+				SELECT sum(e.amount) AS cash FROM driver_cash_entries e
+				WHERE e.ref = o.id::text
+				  AND e.kind IN ('order_collection', 'commission_waived', 'collection_reversed')
+			) c ON true
+			WHERE o.money_model = 2 AND o.kind <> 'merchant_delivery'
+			  AND EXISTS (SELECT 1 FROM wallets WHERE is_treasury)
+			  AND EXISTS (SELECT 1 FROM wallet_transactions p
+			              WHERE p.ref = o.id::text AND p.kind = 'platform_profit')
+			  AND COALESCE(l.net, 0) <> COALESCE(c.cash, 0)`,
+	},
+	{
+		ID: "FI-17.g", Family: FI17, Status: ProvableNow, Ops: true,
+		Name: "صفُّ تسويةِ طلبٍ من النموذج ٢ نقدٌ وسجلٌّ بلا دفتر",
+		Why: "**كلُّ المتاجر نقداً** (القرار ٩) **والصفُّ سجلٌّ وحدَه** — صفٌّ بطريقة «محفظة» أو بقيودٍ " +
+			"على طلبٍ من النموذج ٢ يعني أنّ البضاعةَ دخلت حساباً من بابٍ خلفيّ.",
+		Flows: []string{"F-12"},
+		SQL: `
+			SELECT o.number, ms.method, ms.off_ledger
+			FROM merchant_settlements ms
+			JOIN orders o ON o.id = ms.order_id
+			WHERE o.money_model = 2 AND (ms.method <> 'cash' OR NOT ms.off_ledger)`,
 	},
 }

@@ -65,6 +65,16 @@ func (s *Service) payMerchantsFor(ctx context.Context, q dbtx.Querier, orderID s
 	if err != nil {
 		return nil, err
 	}
+	// **النموذج ٢: كلُّ متجرٍ نقداً يدفعه الكابتن** — ولو بقيت لقطةُ بنده «محفظة».
+	var model int16
+	if err := q.QueryRow(ctx, `SELECT money_model FROM orders WHERE id = $1`, orderID).Scan(&model); err != nil {
+		return nil, err
+	}
+	if model == MoneyModelGoodsOutside {
+		for i := range shares {
+			shares[i].method = "cash"
+		}
+	}
 	var out []StorePay
 	for _, sh := range shares {
 		if sh.ownerID == nil || sh.due <= 0 {

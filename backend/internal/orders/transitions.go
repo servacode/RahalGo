@@ -147,6 +147,8 @@ type lockedOrder struct {
 	stops int
 	// walletScope **شو بيندفع من المحفظة** — none | full | delivery (هجرة ٠٥٢٦).
 	walletScope string
+	// moneyModel **نموذجُ المال** (هجرة ٠٥٣٢) — ٢: البضاعةُ خارجَ كلّ حساب (`money_model2.go`).
+	moneyModel int16
 }
 
 // lockOrderTx **يقفل صفَّ الطلب ويقرؤه** — أوّلُ ما في كلّ انتقالٍ وكلّ فعلِ قسم.
@@ -161,10 +163,12 @@ func lockOrderTx(ctx context.Context, tx pgx.Tx, orderID string) (*lockedOrder, 
 		       -- **والتوصيلةُ بلا زبون** («لدي توصيلة») — NULL في نصٍّ يُسقط
 		       -- كلَّ انتقالٍ لها: قبولَ السائق واستلامَه وتسليمَه.
 		       COALESCE(customer_id::text, ''),
-		       COALESCE(promo_code,''), kind, custom_reserved_amount, origin, stops, wallet_scope
+		       COALESCE(promo_code,''), kind, custom_reserved_amount, origin, stops, wallet_scope,
+		       money_model
 		FROM orders WHERE id = $1 FOR UPDATE`, orderID).
 		Scan(&lo.from, &lo.driverID, &lo.walletPaid, &lo.cashDue, &lo.deliveryFee, &lo.customerID,
-			&lo.promoCode, &lo.kind, &lo.customReserved, &lo.origin, &lo.stops, &lo.walletScope)
+			&lo.promoCode, &lo.kind, &lo.customReserved, &lo.origin, &lo.stops, &lo.walletScope,
+			&lo.moneyModel)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound
 	}
@@ -608,6 +612,7 @@ func (s *Service) applyTransitionTx(ctx context.Context, tx pgx.Tx, lo *lockedOr
 		custom: kind == KindCustom, customReserved: customReserved,
 		walletScope:      lo.walletScope,
 		merchantDelivery: kind == KindMerchantDelivery,
+		moneyModel:       lo.moneyModel,
 	}, &done); err != nil {
 		return nil, err
 	}
@@ -1024,6 +1029,8 @@ type settlement struct {
 	walletScope string
 	// merchantDelivery **«لدي توصيلة» — لا بضاعةَ ولا زبونَ ولا عمولةَ مبيعات.**
 	merchantDelivery bool
+	// moneyModel **نموذجُ المال** — ٢: البضاعةُ خارجَ كلّ حساب (`money_model2.go`).
+	moneyModel int16
 }
 
 // settle ينفّذ كل الأثر المالي لانتقال الحالة داخل معاملة المستدعي.
@@ -1132,6 +1139,11 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 	if in.to == StPickedUp {
 		if err := s.settleMerchant(ctx, q, in.orderID, in.actorID, in.driverID, out); err != nil {
 			return err
+		}
+		// **النموذج ٢: لا مالَ تحرّك في حساب** — الكابتنُ دفع للمتجر من جيبه، والصفُّ سجلّ.
+		// فلا خزينةَ تُحسب هنا، **ولا تهبط تحت الصفر بثمن البضاعة.**
+		if in.moneyModel == MoneyModelGoodsOutside {
+			return nil
 		}
 		return s.creditTreasury(ctx, q, in.orderID, in.actorID)
 	}
@@ -1320,6 +1332,11 @@ func (s *Service) settleMerchantFor(ctx context.Context, q wallet.Querier, order
 	if err != nil {
 		return err
 	}
+	// **النموذج ٢: صفُّ سجلٍّ بلا دفتر لكلّ متجر** (`settleMerchantRecord`) — نقداً دائماً.
+	outside, err := goodsOutside(ctx, q, orderID)
+	if err != nil {
+		return err
+	}
 
 	if _, err := q.Exec(ctx,
 		`UPDATE orders SET platform_commission = $2 WHERE id = $1`,
@@ -1338,6 +1355,12 @@ func (s *Service) settleMerchantFor(ctx context.Context, q wallet.Querier, order
 			continue
 		}
 		if only != "" && !strings.EqualFold(sh.merchantID, only) {
+			continue
+		}
+		if outside {
+			if err := s.settleMerchantRecord(ctx, q, orderID, sh, driverID, actorID); err != nil {
+				return err
+			}
 			continue
 		}
 		// **بوّابةُ الهُويّة لكلّ (طلب، متجر)** — «مرّةً واحدة» للطريقتين، وXOR بنيويّ.

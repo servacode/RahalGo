@@ -33,8 +33,8 @@
     "setting_defs": 283,
     "behaviour_settings": 238,
     "order_fields": 145,
-    "test_files": 819,
-    "test_funcs": 3156
+    "test_files": 820,
+    "test_funcs": 3157
   },
   "flows": [
     {
@@ -21399,6 +21399,12 @@
     {
       "name": "TestMDM08c_FetchRecipientCashRecipientFault",
       "file": "internal/qa/money_merchant_delivery_scenarios_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestModel2_CashOrderGoodsOffLedger",
+      "file": "internal/qa/money_model2_test.go",
       "package": "qa",
       "orphan": true
     },

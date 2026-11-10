@@ -126,7 +126,7 @@ var goodsBalanceQueries = []struct{ key, sql string }{
 		FROM merchant_settlements ms
 		JOIN orders o ON o.id = ms.order_id
 		JOIN users u ON u.id = ms.paid_by
-		WHERE ms.paid_via = 'driver' AND ms.state = 'cash_paid'
+		WHERE ms.paid_via = 'driver' AND ms.state = 'cash_paid' AND NOT ms.off_ledger
 		  AND ms.amount > ms.reversed_amount AND ` + goodsOpenOrderSQL + `
 		GROUP BY u.id, u.full_name, u.phone
 		ORDER BY 4 DESC`},

@@ -382,6 +382,17 @@ func driverPaidFor(ctx context.Context, q wallet.Querier, orderID, driverID stri
 			FROM merchant_settlement_adjustments a
 			JOIN wallet_transactions t ON t.id = a.paid_tx_id
 			WHERE a.order_id = $1 AND a.paid_via = 'driver'
+			-- **والنموذج ٢: صفُّ السجلّ بلا قيد** (off_ledger) — المدفوعُ = المبلغُ ناقصَ المقتطَع
+			-- (والسالبُ هنا صورةُ قيد الدفع). وتصحيحاتُه بلا قيدٍ كذلك: الفرقُ دفعه الكابتنُ أو قبضه.
+			UNION ALL
+			SELECT -(ms.amount - ms.reversed_amount), ms.paid_by
+			FROM merchant_settlements ms
+			WHERE ms.order_id = $1 AND ms.off_ledger AND ms.paid_via = 'driver'
+			UNION ALL
+			SELECT -a.delta, a.paid_by
+			FROM merchant_settlement_adjustments a
+			JOIN merchant_settlements ms ON ms.id = a.settlement_id
+			WHERE a.order_id = $1 AND ms.off_ledger AND a.paid_via = 'driver'
 		) p`, orderID, driverID).Scan(&all, &mine)
 	return all, mine, err
 }
@@ -421,9 +432,14 @@ func (s *Service) collectAndReturnAdvance(ctx context.Context, q wallet.Querier,
 
 // recordAdvanceReturn **سطرُ «سلفة رجعت للمكتب»** — خارجٌ من الدرج بمرجع الطلب،
 // **ومرّةً واحدةً للطلب** (`(source, ref)` فريد).
+//
+// **والنموذج ٢ لا سلفةَ فيه** (خطّةُ المال ٢٠٢٦-١١-١٠): الكابتنُ دفع من جيبه لا من الدرج — فلا سطر.
 func recordAdvanceReturn(ctx context.Context, q wallet.Querier, orderID, driverID string, amount int64, actorID string) error {
 	if amount <= 0 {
 		return nil
+	}
+	if outside, err := goodsOutside(ctx, q, orderID); err != nil || outside {
+		return err
 	}
 	return officecash.Record(ctx, q, officecash.Entry{
 		Direction: officecash.Out, Amount: amount, Source: officecash.SourceAdvanceReturn,
@@ -465,7 +481,7 @@ func (s *Service) MerchantCashSettlements(ctx context.Context, merchantID string
 		       ms.paid_by::text, ms.paid_via, ms.paid_at, ms.created_at
 		FROM merchant_settlements ms
 		LEFT JOIN orders o ON o.id = ms.order_id
-		WHERE ms.merchant_id = $1 AND ms.method = 'cash'
+		WHERE ms.merchant_id = $1 AND ms.method = 'cash' AND NOT ms.off_ledger
 		ORDER BY ms.created_at DESC`, merchantID)
 	if err != nil {
 		return out, err
@@ -511,10 +527,11 @@ func (s *Service) MarkCashSettlementPaid(ctx context.Context, settlementID, admi
 
 	var orderID, merchantID, method, state string
 	var amount, reversed int64
+	var offLedger bool
 	if err := tx.QueryRow(ctx, `
-		SELECT order_id::text, merchant_id::text, method, state, amount, reversed_amount
+		SELECT order_id::text, merchant_id::text, method, state, amount, reversed_amount, off_ledger
 		FROM merchant_settlements WHERE id = $1 FOR UPDATE`, settlementID).
-		Scan(&orderID, &merchantID, &method, &state, &amount, &reversed); err != nil {
+		Scan(&orderID, &merchantID, &method, &state, &amount, &reversed, &offLedger); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return res, ErrSettlementNotFound
 		}
@@ -523,6 +540,10 @@ func (s *Service) MarkCashSettlementPaid(ctx context.Context, settlementID, admi
 	res.SettlementID, res.OrderID, res.MerchantID = settlementID, orderID, merchantID
 	if method != "cash" {
 		return res, ErrSettlementNotCash
+	}
+	// **صفُّ سجلٍّ من النموذج ٢ لا يُدفع من الدرج** — البضاعةُ بين الكابتن والمتجر.
+	if offLedger {
+		return res, ErrSettlementNotPayable
 	}
 	if state == "cash_paid" {
 		var owner *string
