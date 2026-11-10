@@ -152,6 +152,11 @@ function ItemCard({ item, disabled, onToggle }: { item: MenuItem; disabled: bool
       <Link href={`/store/menu/${item.id}`} aria-label={`${M.edit} · ${item.name}`} data-testid="store-menu-edit" className="flex flex-1 flex-col">
         <span className={`flex flex-col gap-0.5 px-3 pt-3 ${dim}`}>
           <span className="line-clamp-2 min-h-10 text-sm font-bold leading-5 text-ink">{item.name}</span>
+          {item.created_via === "whatsapp" && (
+            <span className="pill self-start" data-tone="brand" data-testid="store-menu-wa-badge">
+              {M.fromWhatsapp}
+            </span>
+          )}
           <span className="line-clamp-2 min-h-8 text-xs leading-4 text-ink-dim">{desc}</span>
           <span className="mt-1 line-clamp-2 text-base font-bold tabular-nums text-accent-text">{priceLine(item)}</span>
           {item.approved === false && item.review_note && <span className="line-clamp-2 text-xs text-danger">{item.review_note}</span>}
@@ -647,6 +652,8 @@ export default function MenuPage() {
           }
         />
 
+        {!suspended && <p className="text-xs text-ink-dim" data-testid="store-menu-wa-hint">{M.whatsappHint}</p>}
+
         {/* ── التبويبات: الكلّ · غير المتوفر · بلا صورة (كلُّها من الخادم) ── */}
         <LineTabs items={tabs} value={tab} onChange={(k) => setTab(k)} ariaLabel={M.filters} />
 
@@ -757,6 +764,11 @@ export default function MenuPage() {
                             >
                               {i.name}
                             </Link>
+                            {i.created_via === "whatsapp" && (
+                              <span className="pill ms-2" data-tone="brand" data-testid="store-menu-wa-badge">
+                                {M.fromWhatsapp}
+                              </span>
+                            )}
                             {i.approved === false ? (
                               <span className="block text-xs font-bold text-warning">
                                 {M.pendingReview}
@@ -868,6 +880,7 @@ export default function MenuPage() {
           )
         }
       />
+      {!suspended && <p className="text-xs text-ink-dim" data-testid="store-menu-wa-hint">{M.whatsappHint}</p>}
       <div className="flex gap-2.5">
         <label className="relative min-w-0 flex-1">
           <span className="pointer-events-none absolute inset-y-0 start-2.5 flex items-center text-ink-dim" aria-hidden>

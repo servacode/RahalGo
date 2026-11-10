@@ -703,6 +703,8 @@ data class MenuItem(
     /** **رقمُ المادّة بالأمين والباركود** (٢٠٢٦-١١-٠٤) — وفارغُهما غيرُ مربوط. */
     @SerialName("external_code") val externalCode: String = "",
     val barcode: String = "",
+    /** **من وين وُلد الصنف** (هجرة 0525): `whatsapp` = أُضيف بصورةٍ على الواتساب. ومحرّكٌ قديمٌ لا يرسله ⇒ فارغ. */
+    @SerialName("created_via") val createdVia: String = "",
 )
 
 @Serializable

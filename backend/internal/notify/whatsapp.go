@@ -96,7 +96,10 @@ type WhatsAppSender struct {
 	self func(ctx context.Context, text string) string
 	// inboundLoc — «ردّ بموقعك»: موقعٌ وارد ⇒ ردّ (انظر wa_location.go).
 	inboundLoc func(ctx context.Context, from string, loc InboundLocation) string
-	hooksMu    sync.RWMutex
+	// inboundImg — «صورة + اسم وسعر» (wa_image.go)؛ inboundReply — أجوبةُ أسئلة البوت المعلّقة.
+	inboundImg   func(ctx context.Context, from string, img InboundImage) string
+	inboundReply func(ctx context.Context, from, text, quotedID string) (string, bool)
+	hooksMu      sync.RWMutex
 
 	// ══════════════════════════════════════════════════════════════════
 	// **pairWanted — ولا رمزَ إلّا بطلب**
@@ -756,6 +759,10 @@ func (s *WhatsAppSender) onInbound(ctx context.Context, c *whatsmeow.Client, msg
 	}
 	// **«ردّ بموقعك»** — موقعٌ وارد من غير النفس يُسلَّم للخادم قبل مسار النصّ.
 	if !msg.Info.IsFromMe {
+		// **«صورة + اسم وسعر»** — صورةٌ أو وسيطٌ يُسلَّم لمعالِج الأصناف (wa_image.go).
+		if s.mediaReply(ctx, c, msg) {
+			return
+		}
 		if reply, isLoc := s.locationReply(ctx, msg, c.Store.LIDs); isLoc {
 			if strings.TrimSpace(reply) != "" {
 				jid := msg.Info.Sender.ToNonAD()
@@ -786,6 +793,10 @@ func (s *WhatsAppSender) onInbound(ctx context.Context, c *whatsmeow.Client, msg
 			text = e.GetText()
 		}
 	}
+	quotedID := ""
+	if e := msg.Message.GetExtendedTextMessage(); e != nil && e.GetContextInfo() != nil {
+		quotedID = e.GetContextInfo().GetStanzaID()
+	}
 	if strings.TrimSpace(text) == "" {
 		return
 	}
@@ -805,6 +816,8 @@ func (s *WhatsAppSender) onInbound(ctx context.Context, c *whatsmeow.Client, msg
 		var reply string
 		if selfChat {
 			reply = self(ctx, text)
+		} else if r, ok := s.replyHook(ctx, from, text, quotedID); ok {
+			reply = r
 		} else {
 			reply = inbound(ctx, from, text)
 		}

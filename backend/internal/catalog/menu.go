@@ -150,6 +150,9 @@ type MenuItem struct {
 	// مربوط».** للمتجر والمندوب والإدارة وحدَهم — **ولا يصل زبوناً.**
 	ExternalCode string `json:"external_code"`
 	Barcode      string `json:"barcode"`
+	// CreatedVia **من أين وُلد الصنف**: فارغٌ (تطبيق أو لوحة) أو `whatsapp` (صورةٌ بالواتساب،
+	// هجرة 0525) — به تُرسم شارةُ «من الواتساب». وغيابُه بتطبيقٍ قديمٍ لا يكسر شيئاً.
+	CreatedVia string `json:"created_via"`
 }
 
 type MenuSection struct {
@@ -369,7 +372,7 @@ const menuItemCols = `i.id, COALESCE(i.section_id::text, ''), i.name, i.descript
 		       i.merchant_price, i.margin_override, ps.margin_override,
 		       i.platform_section_id, COALESCE(ps.name, ''),
 		       im.path, im.thumb_path, i.available, i.sort_order, i.price_usd_cents,
-		       NOT i.drinks_off, COALESCE(i.external_code, ''), COALESCE(i.barcode, '')`
+		       NOT i.drinks_off, COALESCE(i.external_code, ''), COALESCE(i.barcode, ''), i.created_via`
 
 // scanMenuItem reads one row of `menuItemCols` and dresses it with its sale price, currency,
 // opening state and media URLs. Modifiers start empty.
@@ -380,7 +383,7 @@ func scanMenuItem(rows pgx.Rows, rule pricing.MarginRule, open bool, opensAt *ti
 		&it.MerchantPrice, &it.MarginOverride, &sectionMargin,
 		&it.PlatformSectionID, &it.PlatformSectionName,
 		&it.ImageURL, &it.ImageThumbURL, &it.Available, &it.SortOrder, &usdCents,
-		&it.StoreDrinks, &it.ExternalCode, &it.Barcode); err != nil {
+		&it.StoreDrinks, &it.ExternalCode, &it.Barcode, &it.CreatedVia); err != nil {
 		return it, err
 	}
 	it.ImageURL = media.URLForPtr(it.ImageURL)
