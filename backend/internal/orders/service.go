@@ -745,17 +745,18 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 			snap_merchant_commission_percent, snap_rep_commission_percent,
 			snap_commission_source, snap_activation_orders, driver_fee,
 			promo_delivery_waived, snap_platform_delivery_percent, snap_platform_delivery_fixed,
-			sources_fee, stops)
+			sources_fee, stops, money_model)
 		VALUES ($1, $2, $3, ST_SetSRID(ST_MakePoint($5,$4),4326)::geography, $6,
 			$7, $8, $9, $10, $11, $12, $13, NULLIF($14,''), $15, $16,
-			$17, $18, $19, $20, $21, $22, $23, $24, $25, $26)
+			$17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)
 		RETURNING id`,
 		customerID, in.MerchantID, in.AddressText, in.Lat, in.Lng, zoneID,
 		in.PaymentMethod, subtotal, deliveryFee, discount, total, walletPaid, cashDue,
 		promoCode, in.Notes, actorID,
 		snap.MerchantCommission, snap.RepCommissionPercent,
 		snap.CommissionSource, snap.ActivationOrders, driverFee,
-		deliveryWaived, platformPct, platformFixed, sourcesFee, stops).Scan(&orderID)
+		deliveryWaived, platformPct, platformFixed, sourcesFee, stops,
+		s.newOrderMoneyModel(ctx, tx)).Scan(&orderID)
 	if err != nil {
 		return nil, nil, err
 	}

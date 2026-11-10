@@ -813,6 +813,7 @@ kosom` |
 | `security.temp_password_hours` | المنصة | int | `72` |
 | `security.phone_change_approval_balance` | المنصة | money | `1000` |
 | `finance.manual_wallet_max` | المنصة | money | `5000` |
+| `finance.goods_outside` | المنصة | bool | `false` |
 | `finance.expense_approval_threshold` | المنصة | money | `5000` |
 | `finance.obligation_alert_days` | المنصة | int | `30` |
 | `safety.warnings_alert_count` | المنصة | int | `3` |

@@ -651,6 +651,7 @@ private val CODES: Map<String, Int> = mapOf(
     // هاتفٍ عمليّاً (صلاحيّةٌ ماليّةٌ + خطوةُ تحقّق)، لكنّها في حزمتَي
     // orders/catalog فيُطلب لها نصٌّ عربيٌّ اتّساقاً مع الحارس.
     "settlement_method_invalid" to R.string.err_settlement_method_invalid,
+    "settlement_wallet_removed" to R.string.err_settlement_wallet_removed,
     "settlement_not_found" to R.string.err_settlement_not_found,
     "settlement_not_cash" to R.string.err_settlement_not_cash,
     "settlement_not_payable" to R.string.err_settlement_not_payable,

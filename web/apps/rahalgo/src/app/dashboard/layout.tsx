@@ -175,6 +175,9 @@ const ALL_NAV: NavItem[] = [
   // **سجلّ شام كاش اليدويّ** (قرارُ المالك ٢٠٢٦-١١-١٠) — جانبيٌّ لا يمسّ الخزينة.
   { href: "/dashboard/shamcash", label: m.admin.shamcash.title, icon: IconCash,
     caps: ["finance.read"] },
+  // **أرصدة من بضاعة** (قرارُ المالك ٢٠٢٦-١١-١٠) — تقريرُ قراءةٍ فقط لأرصدةٍ قديمةٍ أصلُها بضاعة.
+  { href: "/dashboard/goods-balances", label: m.admin.goodsBalances.title, icon: IconBalance,
+    caps: ["finance.read"] },
   // **والديونُ من الخزينة وحدَها** (قرارُ المالك ٢٠٢٦-١٠-٢٥: «موجود بالقائمة وبالخزينة… نخلّيه بالخزينة»).
   // **والخسائرُ والنزاعاتُ وتعويضُ البضاعة صارت تبويباتٍ في «المشاكل والتعويضات»** (٢٠٢٦-١٠-٢٥).
   { href: "/dashboard/audit", label: m.admin.audit.title, icon: IconShieldCheck,

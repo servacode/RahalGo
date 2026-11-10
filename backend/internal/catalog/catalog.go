@@ -26,6 +26,12 @@ var (
 	ErrCategoryInvalid = httpx.NewError(http.StatusBadRequest, "invalid_category", "errors.invalid_category")
 	ErrNameRequired    = httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
 
+	// ErrSettlementWalletRemoved **«محفظة» شيلت** (قرارُ المالك ٢٠٢٦-١١-١٠، القرار ٩) — كلُّ المتاجر
+	// نقداً عند الاستلام. **ورمزٌ خاصٌّ لا «طريقةٌ غيرُ صالحة»**: تطبيقُ متجرٍ قديمٌ ما زال يعرض الخيار،
+	// فيُقال له السببُ لا «خطأ».
+	ErrSettlementWalletRemoved = httpx.NewError(http.StatusBadRequest,
+		"settlement_wallet_removed", "errors.settlement_wallet_removed")
+
 	// ErrSettlementMethodInvalid طريقةُ التسويةِ نقدٌ أو محفظةٌ لا غير.
 	ErrSettlementMethodInvalid = httpx.NewError(http.StatusBadRequest,
 		"settlement_method_invalid", "errors.settlement_method_invalid")
@@ -981,8 +987,15 @@ func (s *Service) SetSettlementMethod(ctx context.Context, actorID, id, method, 
 // **وللطلبات الجديدة وحدَها**: كلُّ بندٍ يحمل طريقتَه يومَ أُنشئ
 // (`order_items.merchant_settlement_method`)، **والمستحقُّ النقديُّ القائمُ يبقى
 // حتّى يُصرف.**
+//
+// **ومنذ ٢٠٢٦-١١-١٠ (القرار ٩) لا يقبل البابان إلّا «نقد»**: «محفظة» تُردّ برمزها
+// (`settlement_wallet_removed`)، **و«نقد» يبقى تأكيداً لمتجرٍ لم يُسأل** (إعدادُه يعدّه ناقصاً).
+// والهجرةُ ٠٥٣٣ حوّلت كلَّ متجرٍ «محفظة» إلى «نقد»، **ورصيدُ محفظته القديمُ يبقى ويُسحب.**
 func (s *Service) SetSettlementMethodAs(ctx context.Context, actorID, id, method, ip, action string) (*Merchant, error) {
-	if method != "cash" && method != "wallet" {
+	if method == "wallet" {
+		return nil, ErrSettlementWalletRemoved
+	}
+	if method != "cash" {
 		return nil, ErrSettlementMethodInvalid
 	}
 	tx, err := s.db.Begin(ctx)

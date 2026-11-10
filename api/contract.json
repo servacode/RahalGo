@@ -2191,6 +2191,22 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/admin/finance/goods-balances",
+      "handler": "handleGoodsBalances",
+      "auth": true,
+      "capability": "finance.read",
+      "response": [
+        {
+          "name": "@out",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/admin/free-delivery",
       "handler": "handleGetFreeDelivery",
       "auth": true,

@@ -5,8 +5,9 @@
  *
  * # ما هنا
  *
- * **طريقةُ التسوية** (نقد/محفظة): تُعرَض في ملفّ المتجر، **وتُغيَّر بقدرةِ
- * `settings.financial.manage`** خلفَ تأكيد. **والتغييرُ على الطلبات الجديدة وحدَها.**
+ * **طريقةُ التسوية نقدٌ لكلّ المتاجر** (قرارُ المالك ٢٠٢٦-١١-١٠، القرار ٩): شيلت «المحفظة» —
+ * السائقُ يدفع للمتجر عند الاستلام. **فلا زرَّ تبديل**؛ تُعرَض نصّاً ثابتاً، والخادمُ يردّ «محفظة».
+ * (و`method` باقٍ في النوع لصفوفٍ قديمة: المستحقُّ النقديُّ القديمُ يُعرض كما كان.)
  * **ولا تُعرض في نافذة الدفع** (`variant="pay"`، فحصُ اللوحة ٢٠٢٦-١٠-٢٧): تخصّ ملفَّ
  * المتجر ولا شأنَ لها بالدفع.
  *
@@ -68,10 +69,6 @@ const STATE_VARIANT: Record<string, "warning" | "success" | "neutral"> = {
   cash_reversed: "neutral",
 };
 
-function methodLabel(v: Method): string {
-  return v === "cash" ? S.cash : S.wallet;
-}
-
 function orderLabel(s: CashSettlement): string {
   return s.order_number ? C.orderNo.replace("{o}", String(s.order_number)) : C.orderUnknown;
 }
@@ -91,14 +88,9 @@ export function MerchantSettlement({
 }) {
   const { can } = useAuth();
   const canOrder = useCanOpen().order;
-  const canManageMethod = can("settings.financial.manage");
   const canReadCash = can("finance.read");
   const canPayCash = can("finance.manage");
   const payMode = variant === "pay";
-
-  const [pendingMethod, setPendingMethod] = useState<Method | null>(null);
-  const [changing, setChanging] = useState(false);
-  const [error, setError] = useState("");
 
   const [summary, setSummary] = useState<CashSummary | null>(null);
   const [cashError, setCashError] = useState("");
@@ -127,23 +119,6 @@ export function MerchantSettlement({
   useEffect(() => {
     if (canReadCash) void loadCash();
   }, [canReadCash, loadCash]);
-
-  async function applyChange(target: Method) {
-    setPendingMethod(null);
-    setChanging(true);
-    setError("");
-    try {
-      await api(`/api/v1/admin/merchants/${merchantId}/settlement-method`, {
-        method: "PATCH",
-        body: JSON.stringify({ method: target }),
-      });
-      onChanged();
-    } catch (err) {
-      setError(errorText(err));
-    } finally {
-      setChanging(false);
-    }
-  }
 
   const due = (summary?.settlements ?? []).filter((s) => s.state === "cash_due");
   const history = (summary?.settlements ?? []).filter((s) => s.state !== "cash_due");
@@ -183,29 +158,9 @@ export function MerchantSettlement({
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-sm text-ink-muted">{S.title}</p>
-              <p className="mt-0.5 font-medium">{methodLabel(method)}</p>
+              <p className="mt-0.5 font-medium">{S.cashFixed}</p>
             </div>
-            {canManageMethod && (
-              <div className="flex gap-1">
-                {(["cash", "wallet"] as Method[]).map((opt) => (
-                  <button
-                    key={opt}
-                    type="button"
-                    disabled={changing}
-                    onClick={() => opt !== method && setPendingMethod(opt)}
-                    className={`rounded-control border px-3 py-1 text-sm transition-colors ${
-                      method === opt
-                        ? "border-accent bg-accent-tint font-medium"
-                        : "border-line text-ink-muted hover:border-accent-edge"
-                    }`}
-                  >
-                    {methodLabel(opt)}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
-          {error && <Alert className="mt-3">{error}</Alert>}
         </div>
       )}
 
@@ -317,26 +272,6 @@ export function MerchantSettlement({
           )}
         </div>
       )}
-
-      <Confirm
-        open={pendingMethod !== null}
-        title={S.changeTitle}
-        body={
-          <>
-            <p>{S.changeNote}</p>
-            {pendingMethod && (
-              <p className="mt-2 font-medium text-ink">
-                {S.changeTo.replace("{method}", methodLabel(pendingMethod))}
-              </p>
-            )}
-          </>
-        }
-        confirmLabel={S.confirmChange}
-        tone="primary"
-        busy={changing}
-        onConfirm={() => pendingMethod && void applyChange(pendingMethod)}
-        onCancel={() => setPendingMethod(null)}
-      />
 
       <Confirm
         open={payTarget !== null}

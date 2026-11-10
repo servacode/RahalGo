@@ -259,6 +259,8 @@ var adminPolicy = []Rule{
 	{"GET", "/cash/outstanding", FinanceRead},
 	{"GET", "/cash/outstanding/export", FinanceExport},
 	{"GET", "/cash/merchant-dues", FinanceRead},
+	// **«أرصدة من بضاعة»** (قرارُ المالك ٢٠٢٦-١١-١٠) — تقريرُ قراءةٍ فقط، لا يحرّك مالاً.
+	{"GET", "/finance/goods-balances", FinanceRead},
 	{"POST", "/drivers/{id}/end-shift", DriversManage},
 	{"GET", "/drivers", DriversRead},
 	// **مراقبةُ حركتهم** — قدرتُها وحدَها (قرارُ المالك ٢٠٢٦-١١-٠٣).

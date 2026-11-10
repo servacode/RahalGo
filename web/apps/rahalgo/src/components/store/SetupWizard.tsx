@@ -17,7 +17,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { getMessages, defaultLocale, errorText, fmtNum } from "@rahalgo/i18n";
-import { BrandMark, Button, Confirm, IconBlock, IconCash, IconCheck, IconReturn, IconWallet, LoadingState, Textarea } from "@rahalgo/ui";
+import { BrandMark, Button, Confirm, IconBlock, IconCash, IconCheck, IconReturn, LoadingState, Textarea } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import type { DayHours, SectionRef } from "@/lib/store/types";
@@ -325,37 +325,40 @@ function HoursStep(p: StepProps) {
   return <HoursPlan {...p} saved={saved} />;
 }
 
+/**
+ * **طريقةُ استلام الأموال — نقدٌ لا غير** (قرارُ المالك ٢٠٢٦-١١-١٠، القرار ٩: شيلت «المحفظة»).
+ * الخطوةُ تُعلم صاحبَ المتجر وتؤكّد «نقدي» بزرّ «التالي» — لا اختيار.
+ */
 function SettlementStep(p: StepProps) {
   const { store, patch } = useStore();
-  const [pick, setPick] = useState<"" | "cash" | "wallet">(() =>
-    store?.settlement_confirmed ? (store.settlement_method === "wallet" ? "wallet" : "cash") : "",
-  );
   const { busy, run } = useRun();
   if (!store) return null;
   return (
     <StepFrame
       {...p}
       title={W.settlementQ}
-      ok={pick !== ""}
+      ok
       busy={busy}
       onNext={() =>
         void run(async () => {
           const r = await api<{ settlement_method: string }>(`/api/v1/merchant/stores/${store.id}/settlement-method`, {
             method: "PATCH",
-            body: JSON.stringify({ method: pick }),
+            body: JSON.stringify({ method: "cash" }),
           });
           patch({ settlement_method: r.settlement_method, settlement_confirmed: true });
           p.advance();
         })
       }
     >
-      <IconChoicePair
-        disabled={busy}
-        items={[
-          { icon: IconCash, title: W.payCash, selected: pick === "cash", onClick: () => setPick("cash") },
-          { icon: IconWallet, title: W.payWallet, selected: pick === "wallet", onClick: () => setPick("wallet") },
-        ]}
-      />
+      <div className="panel flex items-center gap-3 p-4">
+        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-on-bright">
+          <IconCash size={20} />
+        </span>
+        <span className="min-w-0">
+          <span className="block font-bold">{W.payCash}</span>
+          <span className="block text-sm text-ink-muted">{W.cashOnly}</span>
+        </span>
+      </div>
     </StepFrame>
   );
 }

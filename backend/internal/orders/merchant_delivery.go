@@ -258,20 +258,21 @@ func (s *Service) CreateMerchantDeliveryIn(ctx context.Context, tx dbtx.Querier,
 		                    snap_merchant_commission_percent, snap_rep_commission_percent,
 		                    snap_commission_source, snap_activation_orders,
 		                    snap_platform_delivery_percent, dropoff_known, snap_platform_delivery_fixed,
-		                    delivery_mode, collect_amount, amount_currency, promo_delivery_waived)
+		                    delivery_mode, collect_amount, amount_currency, promo_delivery_waived,
+		                    money_model)
 		VALUES ('merchant_delivery', $1, $2,
 		        ST_SetSRID(ST_MakePoint($4, $3), 4326)::geography,
 		        $5, $6, $7, $8,
 		        'pending', 'cash', 0, $9, $10,
 		        $9, $11, $12,
-		        $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
+		        $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
 		RETURNING id::text`,
 		merchantID, in.AddressText, in.Lat, in.Lng,
 		in.RecipientName, in.RecipientPhone, nullIfEmpty(in.ParcelNote), in.FeePayer,
 		charge, driverFee, cashDue, strings.TrimSpace(in.DriverNote), // **و`notes` NOT NULL** — فراغٌ لا NULL
 		snap.MerchantCommission, snap.RepCommissionPercent,
 		snap.CommissionSource, snap.ActivationOrders, pct, dropoffKnown, fixed,
-		mode, in.CollectAmount, in.Currency, free.waive).Scan(&id)
+		mode, in.CollectAmount, in.Currency, free.waive, s.newOrderMoneyModel(ctx, tx)).Scan(&id)
 	if err != nil {
 		return "", err
 	}

@@ -15,7 +15,7 @@
 
 import { useEffect, useState } from "react";
 import { getMessages, defaultLocale, errorText, fmtMoney, fmtNum } from "@rahalgo/i18n";
-import { Button, Confirm, IconBlock, IconCash, IconCheck, IconReturn, IconWallet, ImageUpload, Input, Modal, FormActions } from "@rahalgo/ui";
+import { Button, IconBlock, IconCash, IconCheck, IconReturn, ImageUpload, Input, Modal, FormActions } from "@rahalgo/ui";
 import { api, ApiError, mediaUrl } from "@/lib/api";
 import { useStore } from "@/lib/store/context";
 import { parseUsd, usdInput, usdText } from "@/lib/store/usd";
@@ -77,22 +77,25 @@ export function LogoCard() {
   );
 }
 
-/** **طريقةُ استلام المستحقّات** — والتبديلُ بسؤال «ينطبق على الطلبات الجديدة فقط». */
+/**
+ * **طريقةُ استلام المستحقّات — نقدٌ لا غير** (قرارُ المالك ٢٠٢٦-١١-١٠، القرار ٩: شيلت «المحفظة»).
+ * تُعرَض نصّاً ثابتاً، **ومتجرٌ لم يؤكّدها بعد يؤكّد «نقدي» بزرّ** (إعدادُه يعدّها ناقصةً حتّى يُسأل).
+ * **ورصيدُ محفظته القديمُ يبقى ويُسحب كما كان** — هنا لا شيءَ يمسّه.
+ */
 export function SettlementCard() {
   const { store, patch } = useStore();
   const toast = useShopToast();
-  const [ask, setAsk] = useState<"" | "cash" | "wallet">("");
   const [busy, setBusy] = useState(false);
   if (!store) return null;
   const confirmed = store.settlement_confirmed;
 
-  async function save(method: "cash" | "wallet") {
+  async function confirmCash() {
     if (!store) return;
     setBusy(true);
     try {
       const r = await api<{ settlement_method: string }>(`/api/v1/merchant/stores/${store.id}/settlement-method`, {
         method: "PATCH",
-        body: JSON.stringify({ method }),
+        body: JSON.stringify({ method: "cash" }),
       });
       patch({ settlement_method: r.settlement_method, settlement_confirmed: true });
       toast(S.settlement.saved, "success");
@@ -100,49 +103,32 @@ export function SettlementCard() {
       toast(errorText(e), "error");
     } finally {
       setBusy(false);
-      setAsk("");
     }
   }
 
-  const pick = (k: "cash" | "wallet") => {
-    if (!confirmed || store.settlement_method !== k) setAsk(k);
-  };
   return (
     <section className="panel flex flex-col gap-3 p-4" aria-label={S.settlement.q}>
       <h3 className="heading-card">{S.settlement.q}</h3>
-      <IconChoicePair
-        disabled={busy || store.status === "suspended"}
-        items={[
-          {
-            icon: IconCash,
-            title: W.payCash,
-            selected: confirmed && store.settlement_method === "cash",
-            onClick: () => pick("cash"),
-          },
-          {
-            icon: IconWallet,
-            title: W.payWallet,
-            selected: confirmed && store.settlement_method === "wallet",
-            onClick: () => pick("wallet"),
-          },
-        ]}
-      />
-      {store.settlement_method === "cash" && store.unpaid_cash_due > 0 && (
+      <div className="flex items-center gap-3">
+        <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-on-bright">
+          <IconCash size={20} />
+        </span>
+        <span className="min-w-0">
+          <span className="block font-bold">{W.payCash}</span>
+          <span className="block text-sm text-ink-muted">{W.cashOnly}</span>
+        </span>
+      </div>
+      {!confirmed && store.status !== "suspended" && (
+        <Button disabled={busy} onClick={() => void confirmCash()} className="min-h-11">
+          {S.settlement.confirmCash}
+        </Button>
+      )}
+      {store.unpaid_cash_due > 0 && (
         <p className="flex items-center justify-between text-sm">
           <span>{S.settlement.unpaid}</span>
           <span className="font-bold text-accent-text">{fmtMoney(store.unpaid_cash_due)}</span>
         </p>
       )}
-      <Confirm
-        open={!!ask}
-        title={S.settlement.confirmTitle}
-        body={S.settlement.confirmBody}
-        confirmLabel={S.settlement.confirmYes}
-        tone="primary"
-        busy={busy}
-        onConfirm={() => ask && void save(ask)}
-        onCancel={() => setAsk("")}
-      />
     </section>
   );
 }

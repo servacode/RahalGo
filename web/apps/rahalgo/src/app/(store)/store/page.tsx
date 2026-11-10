@@ -610,10 +610,10 @@ function HomeBody({ store }: { store: MerchantStore }) {
           Link={Link}
         />
         <IRow
-          icon={store.settlement_method === "wallet" ? IconWallet : IconCash}
+          icon={IconCash}
           tone="good"
           title={HM.rowSettlement}
-          value={!store.settlement_confirmed ? notSet : store.settlement_method === "wallet" ? HM.wallet : HM.cash}
+          value={!store.settlement_confirmed ? notSet : HM.cash}
           valueTone={!store.settlement_confirmed ? "danger" : undefined}
           href="/store/settings/settlement"
           Link={Link}

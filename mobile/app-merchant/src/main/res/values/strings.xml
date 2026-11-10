@@ -339,10 +339,9 @@
     <string name="md_step_to_recipient">في الطريق إلى المستلم</string>
     <string name="md_step_delivered">تم التسليم</string>
     <string name="md_cancel">إلغاء التوصيلة</string>
-    <string name="ok_settlement_saved">تم تغيير طريقة استلام أموالك</string>
-    <string name="settlement_q">تغيير طريقة استلام أموالك؟</string>
-    <string name="settlement_body">ينطبق على الطلبات الجديدة فقط. وما لك نقداً من الطلبات السابقة يبقى كما هو حتى يُسلَّم لك.</string>
-    <string name="settlement_yes">نعم، غيّرها</string>
+    <string name="ok_settlement_saved">تمام — أموالك نقداً عند الاستلام</string>
+    <string name="settlement_cash_only">السائق بيدفعلك حق البضاعة نقداً عند الاستلام، ناقص العمولة.</string>
+    <string name="settlement_confirm_cash">تمام، فهمت</string>
     <string name="md_cancelling">جاري الإلغاء…</string>
     <string name="md_cancel_q">إلغاء التوصيلة؟</string>
     <string name="md_cancel_body">ستتوقف التوصيلة، ويعود أي مبلغ دُفع من محفظتك إليها.</string>
@@ -516,7 +515,6 @@
     <string name="wz_hours_edit_day">+ تعديل يوم بعينه</string>
     <string name="wz_hours_hide_days">إخفاء الأيام</string>
     <string name="wz_settlement_q">كيف تستلم أموالك؟</string>
-    <string name="wz_settlement_hint">يمكنك تغييرها لاحقاً من «متجري».</string>
     <string name="wz_returns_hint">إذا لم يستلم الزبون طلبه، هل يُعيد السائق الغرض إلى متجرك؟</string>
     <string name="wz_ready_title">✓ متجرك أصبح جاهزاً</string>
     <string name="home_open_now">مفتوح الآن</string>
@@ -580,7 +578,6 @@
     <string name="home_row_prep">مدة التحضير</string>
     <string name="home_val_point_set">محدّد ✓</string>
     <string name="home_val_cash">نقداً</string>
-    <string name="home_val_wallet">المحفظة</string>
     <string name="home_val_returns_yes">يقبل</string>
     <string name="home_val_returns_no">لا يقبل</string>
     <string name="md_active">توصيلة جارية: #%1$d · %2$s</string>
@@ -590,7 +587,6 @@
     <string name="wz_sections_picked">الأقسام المختارة: %1$d</string>
     <string name="wz_sections_no_match">لا يوجد قسم بهذا الاسم</string>
     <string name="wz_pay_cash">نقدي</string>
-    <string name="wz_pay_wallet">المحفظة</string>
     <string name="wz_returns_yes">نعم، أقبل الإرجاع</string>
     <string name="wz_returns_no">لا أقبل</string>
     <string name="home_quick_unavailable">غير المتوفر</string>

@@ -1815,6 +1815,8 @@ func (s *Server) Router() http.Handler {
 			// **وكشفُ النقد ملفّاً، ومستحقّاتُ المتاجر النقديّة كلُّها** (٢٠٢٦-١٠-٠٤).
 			r.Get("/cash/outstanding/export", s.handleCashOutstandingExport)
 			r.Get("/cash/merchant-dues", s.handleMerchantCashDues)
+			// **مَن يحمل مالاً أصلُه بضاعة** (قرارُ المالك ٢٠٢٦-١١-١٠) — قراءةٌ فقط (`goods_balances.go`).
+			r.Get("/finance/goods-balances", s.handleGoodsBalances)
 			// **نزاعاتُ المنصة مع الأربعة** — المتجرِ والسائقِ والمندوبِ
 			// والزبون. **ونزاعٌ لا يُرى مجموعاً لا يُتابَع**، وثلاثةٌ منها لم
 			// يكن لها مكانٌ إطلاقاً قبل هجرة `0063`.
