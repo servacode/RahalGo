@@ -1,3 +1,6 @@
+import { fmtMoney } from "@rahalgo/i18n";
+import { dollars } from "@/lib/customer/texts";
+
 /**
  * ══════════════════════════════════════════════════════════════════════
  * **الدولارُ في لوحة المتجر — قواعدُ التطبيق نفسُها حرفاً**
@@ -32,4 +35,14 @@ export function usdText(v: number | null | undefined): string {
 /** **ما يُكتب في حقل الدولار** — أرقامٌ وفاصلةٌ عشريّةٌ واحدة، بحدٍّ كالتطبيق. */
 export function usdInput(v: string, max = 10): string {
   return v.replace(/[^\d.,٫]/g, "").slice(0, max);
+}
+
+/**
+ * **سطرُ سعر الصنف** — «$1.5 · 175 ل.س» للدولاريّ والليرةُ وحدَها لغيره (مرآةُ `priceLine` في التطبيق).
+ * **والليرةُ ما يُدفع**؛ تقبل أيَّ صنفٍ فيه `price` و`price_currency` و`merchant_price_usd`.
+ */
+export function priceLine(it: { price: number; price_currency?: string | null; merchant_price_usd?: number | null }): string {
+  return it.price_currency === "USD" && it.merchant_price_usd != null
+    ? `${dollars(it.merchant_price_usd)} · ${fmtMoney(it.price)}`
+    : fmtMoney(it.price);
 }

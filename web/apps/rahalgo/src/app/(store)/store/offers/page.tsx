@@ -45,6 +45,7 @@ import { useStore } from "@/lib/store/context";
 import type { MenuItem, StoreOffer } from "@/lib/store/types";
 import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
 import { fill } from "@/lib/customer/texts";
+import { priceLine } from "@/lib/store/usd";
 import { useShopToast } from "@/components/customer/toast";
 import { CheckBadge, StickyBar, ToolHeader } from "@/components/store/ToolParts";
 
@@ -176,6 +177,8 @@ interface PickItem {
   id: string;
   name: string;
   price: number;
+  price_currency: string | null;
+  merchant_price_usd: number | null;
 }
 
 /**
@@ -195,7 +198,7 @@ function useOfferItems(storeId: string, query: string): PickItem[] | null {
         if (q) qs.set("q", q);
         api<{ items: MenuItem[] }>(`/api/v1/merchant/stores/${storeId}/menu/items?${qs}`)
           .then((r) => {
-            if (live) setItems((r.items ?? []).map((i) => ({ id: i.id, name: i.name, price: i.price })));
+            if (live) setItems((r.items ?? []).map((i) => ({ id: i.id, name: i.name, price: i.price, price_currency: i.price_currency, merchant_price_usd: i.merchant_price_usd })));
           })
           .catch(() => {
             if (live) setItems([]);
@@ -285,7 +288,7 @@ function NewOffer({
         {item ? (
           <div className="flex items-center gap-2" data-testid="offer-item-picked">
             <span className="min-w-0 flex-1 truncate font-bold">{fill(O.pickedLine, { name: item.name })}</span>
-            <span className="shrink-0 text-sm text-ink-muted">{fmtMoney(item.price)}</span>
+            <span className="shrink-0 text-sm text-ink-muted">{priceLine(item)}</span>
             <Button variant="secondary" className="shrink-0" onClick={() => setPicked("")} data-testid="offer-item-change">
               {O.change}
             </Button>
@@ -319,7 +322,7 @@ function NewOffer({
                     testId="offer-item"
                   >
                     <span className="line-clamp-2 pe-5 text-sm font-bold text-ink">{i.name}</span>
-                    <span className="text-xs text-ink-muted">{fmtMoney(i.price)}</span>
+                    <span className="text-xs text-ink-muted">{priceLine(i)}</span>
                     {note && (
                       <span className="mt-1 w-fit rounded-control bg-warning-tint px-1.5 py-0.5 text-2xs text-warning">
                         {note === "scheduled" ? O.itemScheduled : O.itemTaken}

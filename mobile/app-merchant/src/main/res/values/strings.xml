@@ -144,7 +144,7 @@
     <string name="setup_missing_sections">اختر أقسام السوق (بدونها لا يمكنك إضافة أصناف)</string>
     <string name="setup_missing_hours">اضبط ساعات الدوام (بدونها يظهر متجرك مفتوحاً 24 ساعة)</string>
     <string name="setup_missing_address">اكتب العنوان وحدّد موقعك على الخريطة</string>
-    <string name="setup_missing_settlement">اختر طريقة استلام أموالك</string>
+    <string name="setup_missing_settlement">أكّد طريقة استلام أموالك</string>
     <string name="setup_missing_returns">اختر إن كنت تقبل إرجاع الغرض</string>
     <string name="menu_tutorial">شرح التطبيق بالفيديو</string>
     <!-- موظفين المتجر ورقم الطلبات حسب الدوام (قرار المالك ٢٠٢٦-١٠-٢٠) — نفس نصوص لوحة المتجر بالويب -->
@@ -445,7 +445,7 @@
     <string name="store_display_need_rate">لتعرض أسعارك بالدولار، اكتب سعر الصرف واحفظه أولاً.</string>
     <string name="ok_display_saved">تم — تغيّرت عملة العرض للزبائن</string>
     <!-- صفحة متجري: سؤال وزرّين (٢٠٢٦-١٠-١٢) -->
-    <string name="q_settlement">كيف تريد استلام أموالك؟</string>
+    <string name="q_settlement">طريقة استلام أموالك</string>
     <string name="q_returns">هل تقبل الإرجاع؟</string>
     <string name="q_display">كيف تريد عرض أسعارك؟</string>
     <string name="yes">نعم</string>
@@ -514,7 +514,7 @@
     <string name="wz_hours_all">كل الأيام</string>
     <string name="wz_hours_edit_day">+ تعديل يوم بعينه</string>
     <string name="wz_hours_hide_days">إخفاء الأيام</string>
-    <string name="wz_settlement_q">كيف تستلم أموالك؟</string>
+    <string name="wz_settlement_q">طريقة استلام أموالك</string>
     <string name="wz_returns_hint">إذا لم يستلم الزبون طلبه، هل يُعيد السائق الغرض إلى متجرك؟</string>
     <string name="wz_ready_title">✓ متجرك أصبح جاهزاً</string>
     <string name="home_open_now">مفتوح الآن</string>
@@ -575,6 +575,7 @@
     <string name="ok_ameen_saved">تم حفظ اختيارك</string>
     <!-- **أسماءٌ قصيرةٌ لأسطر «متجري»** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) — الطويلةُ تأكل مكانَ القيمة. -->
     <string name="home_row_rate_short">سعر الصرف</string>
+    <string name="home_val_rate">1$ = %1$s ل.س</string>
     <string name="home_row_prep">مدة التحضير</string>
     <string name="home_val_point_set">محدّد ✓</string>
     <string name="home_val_cash">نقداً</string>

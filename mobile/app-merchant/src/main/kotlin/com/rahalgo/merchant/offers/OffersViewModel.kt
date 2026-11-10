@@ -41,7 +41,7 @@ class OffersViewModel(app: Application) : OffersWizardViewModel(app) {
     override suspend fun searchItems(storeId: String, query: String, limit: Int): List<OfferItem> =
         merchant.menuItems(storeId, query = query, filter = "available", limit = limit).items
             .filter { it.approved && it.available }
-            .map { OfferItem(it.id, it.name, it.price) }
+            .map { OfferItem(it.id, it.name, it.price, it.merchantPriceUsd) }
 
     override suspend fun menu(storeId: String): List<OfferSection> =
         merchant.menu(storeId).map { s ->
@@ -49,7 +49,7 @@ class OffersViewModel(app: Application) : OffersWizardViewModel(app) {
                 s.id,
                 s.name,
                 // **و«غير المتوفر» لا يُعرض** — «مو معقول ينزل عرض لصنف مو موجود عنده».
-                s.items.filter { it.approved && it.available }.map { OfferItem(it.id, it.name, it.price) },
+                s.items.filter { it.approved && it.available }.map { OfferItem(it.id, it.name, it.price, it.merchantPriceUsd) },
             )
         }.filter { it.items.isNotEmpty() }
 }

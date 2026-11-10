@@ -83,6 +83,7 @@ import { MENU_SEARCH_EVENT } from "@/lib/store/menuSearch";
 import { useDrinksAllowed } from "@/lib/store/drinks";
 import type { MenuItem, MenuItemsPage, MenuSummary } from "@/lib/store/types";
 import { dollars, fill } from "@/lib/customer/texts";
+import { priceLine } from "@/lib/store/usd";
 import { useShopToast } from "@/components/customer/toast";
 
 const m = getMessages(defaultLocale);
@@ -90,12 +91,6 @@ const M = m.store.menu;
 const SH = m.store.shell;
 
 type Tab = "all" | "off" | "photo";
-
-function priceLine(it: MenuItem): string {
-  return it.price_currency === "USD" && it.merchant_price_usd != null
-    ? `${dollars(it.merchant_price_usd)} · ${fmtMoney(it.price)}`
-    : fmtMoney(it.price);
-}
 
 /** **أسماءُ مجموعات خياراته** — لا وصفَ للصنف (قرارُ المالك ٢٠٢٦-١٠-٣٠)؛ مرآةُ `MenuScreen` في التطبيق. */
 function descOf(it: MenuItem): string {
