@@ -798,6 +798,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                 // ٢٠٢٦-٠٨-١٣: «نبني المحفظة بنفس الويب»). **وكانت
                 // تنقله إلى اللوحة** حيث سطرُ رصيدٍ لا كشفُ حساب.
                 onWallet = { overlay.show(Overlay.Wallet) },
+                showBalance = overlay.current != Overlay.Wallet,
                 // ══════════════════════════════════════════════════════════
                 // **والجرسُ يفتح ويُغلق بلمسته هو**
                 // ══════════════════════════════════════════════════════
@@ -1257,6 +1258,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                             tab = 0
                         },
                         refresh = orders::refresh,
+                        decline = orders::declineOffer,
                     ),
                 )
             }

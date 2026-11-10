@@ -77,6 +77,17 @@ fun editDraftValid(order: DriverOrder, draft: EditDraft): Boolean {
 }
 
 /** **الجسم للمحرّك.** */
+/**
+ * **ما كُتب في خانات «انزاد صنف» ولم يُضَف بزرّه يُضاف عند الإرسال** (المالك ٢٠٢٦-١١-١٠) —
+ * **كان يسقط بصمت.** **وناقصُ الحقول (اسمٌ فارغ أو سعرٌ صفر) لا يُضاف**: يبقى كما هو.
+ */
+fun EditDraft.withPendingAdd(name: String, qty: Int, price: Long, merchantId: String?, merchantName: String): EditDraft =
+    if (name.isNotBlank() && qty in 1..50 && price > 0) {
+        copy(adds = adds + EditAddDraft(name.trim(), qty, price, merchantId, merchantName))
+    } else {
+        this
+    }
+
 fun EditDraft.toBody(): DriverApi.EditRequestBody = DriverApi.EditRequestBody(
     lines = lines.map { (id, d) -> DriverApi.EditLineBody(itemId = id, action = d.action.wire, qty = d.remove) },
     adds = adds.map {

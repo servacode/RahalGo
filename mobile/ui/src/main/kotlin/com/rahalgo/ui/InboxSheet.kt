@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -106,12 +106,11 @@ fun InboxSheet(
         //
         // **وثلاثون خبراً في قائمةٍ متّصلةٍ تُقرأ كتلةً واحدة** — ومن فتح
         // ليعرف ما جدّ اليومَ لا يعرف أين ينتهي اليومُ ويبدأ الأمس.
-        var day = ""
         LazyColumn(Modifier.fillMaxSize()) {
-            items(items) { notice ->
+            // **رأسُ اليوم من الفهرس لا من متغيّرٍ يُعدَّل أثناء الرسم** — فلا يضيع عند التمرير.
+            itemsIndexed(items) { index, notice ->
                 val d = dayText(notice.createdAt)
-                if (d != day) {
-                    day = d
+                if (index == 0 || d != dayText(items[index - 1].createdAt)) {
                     Column(Modifier.padding(horizontal = Rahal.space.lg)) { DayHead(d) }
                 }
                 // **والضغطُ على الخبر يعلّمه مقروءاً** (تجربةُ المالك ٢٠٢٦-١٠-٢٩: ضغط فلم يتغيّر شيء).
@@ -130,21 +129,21 @@ fun InboxSheet(
                     verticalAlignment = Alignment.Top,
                 ) {
                     IconTile(
-                        icon = if (notice.kind == "order") R.drawable.ic_orders else R.drawable.ic_bell,
-                        tint = if (notice.read) Rahal.colors.inkMuted else Rahal.colors.brand,
+                        icon = noticeIcon(notice.kind),
+                        tint = if (notice.read) Rahal.colors.inkMuted else noticeTint(notice.kind),
                         size = 40.dp,
                     )
                     Spacer(Modifier.size(Rahal.space.md))
                     Column(Modifier.weight(1f)) {
                         Text(
-                            notice.title,
+                            BidiText.isolateNumbers(notice.title),
                             fontWeight = if (notice.read) FontWeight.Normal else FontWeight.Bold,
                             color = Rahal.colors.ink,
                         )
                         if (notice.body.isNotBlank()) {
                             Spacer(Modifier.height(Rahal.space.xs))
                             Text(
-                                notice.body,
+                                BidiText.isolateNumbers(notice.body),
                                 color = Rahal.colors.inkMuted,
                                 style = MaterialTheme.typography.bodyMedium,
                             )
@@ -173,4 +172,22 @@ private val Dot = 8.dp
 @Composable
 private fun Box(modifier: Modifier, content: @Composable () -> Unit = {}) {
     androidx.compose.foundation.layout.Box(modifier) { content() }
+}
+
+/** **أيقونةٌ لكلّ نوعِ إشعار** (المالك ٢٠٢٦-١١-١٠) — مالٌ ومحفظة، طلب، دردشة، تقييم، تنبيهُ حساب. */
+internal fun noticeIcon(kind: String): Int = when (kind) {
+    "wallet" -> R.drawable.ic_wallet
+    "order", "order_offer" -> R.drawable.ic_orders
+    "chat" -> R.drawable.ic_chat
+    "rating" -> R.drawable.ic_star
+    "account" -> R.drawable.ic_warning
+    "ticket" -> R.drawable.ic_info
+    else -> R.drawable.ic_bell
+}
+
+@Composable
+private fun noticeTint(kind: String): Color = when (kind) {
+    "account" -> Rahal.colors.accent
+    "wallet" -> Rahal.colors.success
+    else -> Rahal.colors.brand
 }

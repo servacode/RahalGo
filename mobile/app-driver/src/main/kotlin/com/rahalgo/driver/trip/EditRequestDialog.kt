@@ -9,7 +9,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
@@ -55,6 +60,12 @@ internal fun EditRequestDialog(
     // **طلب بأكثر من متجر ⇒ الكابتن يختار متجر الصنف** (الافتراضي: الأول)، وغيره ما بيظهر اختيار.
     val stores = editStoreChoices(order)
     var addStore by remember(order.id) { mutableStateOf(stores.firstOrNull()?.merchantId) }
+    val focus = LocalFocusManager.current
+    val q = addQty.toIntOrNull() ?: 0
+    val p = addPrice.toLongOrNull() ?: 0L
+    val addStoreRow = stores.firstOrNull { it.merchantId == addStore }
+    // **والمكتوبُ في الخانات يُحسب ويُرسَل ولو لم يُضغط «+ ضيف الصنف».**
+    val effective = draft.withPendingAdd(addName, q, p, addStoreRow?.merchantId, addStoreRow?.name.orEmpty())
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.edit_req_title), fontWeight = FontWeight.Bold) },
@@ -125,6 +136,8 @@ internal fun EditRequestDialog(
                     onValueChange = { addName = it.take(120) },
                     label = { Text(stringResource(R.string.edit_req_add_name)) },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    keyboardActions = KeyboardActions(onNext = { focus.moveFocus(FocusDirection.Down) }),
                     modifier = Modifier.fillMaxWidth(),
                 )
                 if (stores.isNotEmpty()) {
@@ -139,48 +152,50 @@ internal fun EditRequestDialog(
                         }
                     }
                 }
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    OutlinedTextField(
-                        value = addQty,
-                        onValueChange = { v -> addQty = v.filter { it.isDigit() }.take(2) },
-                        label = { Text(stringResource(R.string.edit_req_add_qty)) },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(1f),
+                // **الكمّيةُ بزرَّي − و+** — لا كتابةَ لرقمٍ صغير (المالك ٢٠٢٦-١١-١٠).
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.edit_req_add_qty), color = Rahal.colors.inkMuted)
+                    Spacer(Modifier.width(8.dp))
+                    RahalTextButton(onClick = { addQty = (q - 1).coerceAtLeast(1).toString() }) {
+                        Text("−", fontWeight = FontWeight.Bold)
+                    }
+                    Text(
+                        addQty.ifBlank { "1" },
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMedium,
                     )
-                    OutlinedTextField(
-                        value = addPrice,
-                        onValueChange = { v -> addPrice = v.filter { it.isDigit() }.take(9) },
-                        label = { Text(stringResource(R.string.edit_req_add_price)) },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.weight(2f),
-                    )
+                    RahalTextButton(onClick = { addQty = (q + 1).coerceIn(1, 50).toString() }) {
+                        Text("+", fontWeight = FontWeight.Bold)
+                    }
                 }
-                val q = addQty.toIntOrNull() ?: 0
-                val p = addPrice.toLongOrNull() ?: 0L
+                // **والسعرُ بعرضٍ كامل** — فلا تلتفّ التسميةُ على سطرين.
+                OutlinedTextField(
+                    value = addPrice,
+                    onValueChange = { v -> addPrice = v.filter { it.isDigit() }.take(9) },
+                    label = {
+                        Text(
+                            stringResource(R.string.edit_req_add_price),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { focus.clearFocus() }),
+                    modifier = Modifier.fillMaxWidth(),
+                )
                 RahalTextButton(
                     onClick = {
-                        val st = stores.firstOrNull { it.merchantId == addStore }
-                        draft = draft.copy(
-                            adds = draft.adds + EditAddDraft(addName.trim(), q, p, st?.merchantId, st?.name.orEmpty()),
-                        )
+                        draft = effective
                         addName = ""
                         addQty = "1"
                         addPrice = ""
                     },
                     enabled = addName.isNotBlank() && q in 1..50 && p > 0,
                 ) { Text(stringResource(R.string.edit_req_add_button)) }
-                OutlinedTextField(
-                    value = draft.note,
-                    onValueChange = { draft = draft.copy(note = it.take(300)) },
-                    label = { Text(stringResource(R.string.edit_req_note)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    minLines = 2,
-                )
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    stringResource(R.string.edit_req_total, money(order.total), money(editDraftTotal(order, draft))),
+                    stringResource(R.string.edit_req_total, money(order.total), money(editDraftTotal(order, effective))),
                     fontWeight = FontWeight.Bold,
                     color = Rahal.colors.ink,
                 )
@@ -192,9 +207,9 @@ internal fun EditRequestDialog(
         },
         confirmButton = {
             RahalButton(
-                onClick = { onSend(draft) },
+                onClick = { onSend(effective) },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = !busy && editDraftValid(order, draft),
+                enabled = !busy && editDraftValid(order, effective),
             ) { Text(stringResource(R.string.edit_req_send), fontWeight = FontWeight.Bold) }
         },
         dismissButton = {

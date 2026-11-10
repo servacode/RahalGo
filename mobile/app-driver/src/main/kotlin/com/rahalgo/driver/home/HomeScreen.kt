@@ -307,7 +307,7 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
         }
         if (fixes.isNotEmpty()) {
             Spacer(Modifier.height(14.dp))
-            FixesCard(fixes)
+            FixesCard(fixes, online = me.onShift)
         }
         Spacer(Modifier.height(14.dp))
 
@@ -695,7 +695,7 @@ private data class Fix(
  * **والأيقونةُ وحدَها بلون التنبيه.**
  */
 @Composable
-private fun FixesCard(fixes: List<Fix>) {
+private fun FixesCard(fixes: List<Fix>, online: Boolean) {
     Column(
         Modifier
             .fillMaxWidth()
@@ -704,7 +704,8 @@ private fun FixesCard(fixes: List<Fix>) {
             .padding(16.dp),
     ) {
         Text(
-            text = stringResource(R.string.home_fixes_title, fixes.size),
+            // **وهو يعمل الآن؟ «حتى تستمر بالعمل»** لا «قبل أن تبدأ» (المالك ٢٠٢٦-١١-١٠).
+            text = stringResource(if (online) R.string.home_fixes_title_online else R.string.home_fixes_title, fixes.size),
             fontWeight = FontWeight.Bold,
             color = Rahal.colors.ink,
             style = MaterialTheme.typography.titleMedium,
@@ -763,21 +764,20 @@ data class HomeActions(
 private fun CashBar(held: Long, limit: Long) {
     val left = limit - held
     val ratio = if (limit > 0) held.toFloat() / limit else 0f
-    Row(
-        Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = stringResource(R.string.home_cash_bar),
-            style = MaterialTheme.typography.titleMedium,
-        )
-        Text(
-            text = money(held),
-            fontWeight = FontWeight.Bold,
-            color = if (ratio >= 1f) Rahal.colors.danger else Rahal.colors.accent,
-        )
-    }
+    // **جملةٌ واحدةٌ بمبلغٍ معزول** — «بـ» تبقى لاصقةً بالمبلغ ولا تنفصل في الطرف الآخر.
+    val owedColor = if (ratio >= 1f) Rahal.colors.danger else Rahal.colors.accent
+    Text(
+        text = androidx.compose.ui.text.buildAnnotatedString {
+            append(stringResource(R.string.home_cash_bar))
+            append(" ")
+            pushStyle(
+                androidx.compose.ui.text.SpanStyle(fontWeight = FontWeight.Bold, color = owedColor),
+            )
+            append(com.rahalgo.driver.Bidi.isolate(money(held)))
+            pop()
+        },
+        style = MaterialTheme.typography.titleMedium,
+    )
     Spacer(Modifier.height(8.dp))
     Bar(ratio = ratio, color = com.rahalgo.driver.menu.cashBarColor(ratio))
     Spacer(Modifier.height(6.dp))

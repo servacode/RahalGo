@@ -139,6 +139,8 @@ fun OrdersScreen(state: OrdersState, actions: OrdersActions) {
                     // فلا يعرف صاحبه ما الذي وقع.
                     enabled = state.acceptingId == null,
                     onAccept = { actions.accept(order.id) },
+                    // **لا «رفض» في الطابور** — قرارُ المالك ٢٠٢٦-١٠-٠٦، أُكِّد ٢٠٢٦-١١-١٠.
+                    onDecline = null,
                     onOpen = null,
                     actionLabel = R.string.order_agree,
                     // ══════════════════════════════════════════════════
@@ -230,6 +232,16 @@ private fun WhyNoOrders(state: OrdersState) {
     }
 
     val (text, blocking) = reason
+    // **«كل شيء جاهز» حالةٌ فارغةٌ لقائمة الطلبات لا بطاقةٌ ضيّقة** (المالك ٢٠٢٦-١١-١٠) —
+    // مكوّنُ `Empty` المشترك: أيقونةٌ ونصٌّ وسطرٌ يقول ما يفعله، بعرضٍ كامل.
+    if (!blocking) {
+        Empty(
+            text = stringResource(text),
+            hint = stringResource(R.string.orders_no_offers_hint),
+            icon = R.drawable.ic_orders,
+        )
+        return
+    }
     Box(
         Modifier
             .fillMaxWidth()
@@ -295,6 +307,8 @@ private fun OrderCard(
     onOpen: (() -> Unit)?,
     actionLabel: Int,
     onExpired: () -> Unit = {},
+    /** **«رفض»** — للعروض فقط (قرارُ المالك ٢٠٢٦-١١-١٠)؛ والخادمُ ينقل الدورَ فوراً. */
+    onDecline: (() -> Unit)? = null,
 ) {
     Column(
         Modifier
@@ -400,7 +414,7 @@ private fun OrderCard(
                 )
                 Spacer(Modifier.size(6.dp))
                 Text(
-                    text = order.merchantName.ifBlank { order.holderName.ifBlank { stringResource(com.rahalgo.driver.trip.kindLabel(order)) } },
+                    text = com.rahalgo.driver.Bidi.isolate(order.merchantName).ifBlank { order.holderName.ifBlank { stringResource(com.rahalgo.driver.trip.kindLabel(order)) } },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     // ══════════════════════════════════════════════════
@@ -524,10 +538,10 @@ private fun OrderCard(
             label = stringResource(
                 R.string.card_dist_to,
                 if (amanahPoint) stringResource(R.string.amanah_place)
-                else order.merchantName.ifBlank { stringResource(R.string.nav_custom_order) },
+                else com.rahalgo.driver.Bidi.isolate(order.merchantName.ifBlank { stringResource(R.string.nav_custom_order) }),
             ),
             value = if (amanahPoint) "" else order.pickupAddress,
-            far = if (order.toPickupM >= 0) distance(order.toPickupM) else "",
+            far = legDistanceText(order.toPickupM),
             // **والزمن بجانب المسافة** — (قرار المالك ٢٠٢٦-٠٨-١٢).
             //
             // **والمسافة وحدها لا تقرّر**: «٣ كم» تعني ربع ساعة في زحمة
@@ -542,10 +556,10 @@ private fun OrderCard(
             // قوسان فارغان يظنّهما صاحبُهما عطبا.
             label = stringResource(
                 R.string.card_dist_to,
-                order.customerName.ifBlank { stringResource(R.string.card_customer) },
+                com.rahalgo.driver.trip.customerShownName(order.customerName) ?: stringResource(R.string.card_customer),
             ),
-            value = order.addressText,
-            far = if (order.legM >= 0) distance(order.legM) else "",
+            value = com.rahalgo.driver.trip.cleanAddress(order.addressText),
+            far = legDistanceText(order.legM),
             mins = legEta(order.legM, avgSpeedKmh),
             tint = Rahal.colors.accent,
         )
@@ -661,22 +675,37 @@ private fun OrderCard(
         Spacer(Modifier.height(10.dp))
         TotalBox(order)
         Spacer(Modifier.height(12.dp))
+        // **الأزرارُ في أسفل البطاقة بمتناول الإبهام: «رفض» بجانب «موافق».**
         // **والعدّادُ في الزرّ لا في زاوية البطاقة** — (قرارُ المالك
         // ٢٠٢٦-٠٨-١٤: «العدّادُ يكون داخل زرّ موافق بطريقةٍ احترافيّة،
         // ليكون واضحاً أنّه بمجرّد انتهاء الزمن سيختفي الطلب»).
         //
         // **ورقمٌ في الزاوية يُقرأ ثمّ يُنسى** — والزرُّ في مكانٍ آخر،
         // **فلا يربط الذهنُ بينهما.**
-        CountdownButton(
-            expiresAt = if (offer) order.offerExpiresAt else null,
-            onExpired = onExpired,
-            onClick = onAccept,
-            label = stringResource(actionLabel),
-            icon = R.drawable.ic_check_circle,
-            enabled = enabled,
-            busy = busy,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (offer && onDecline != null) {
+                com.rahalgo.ui.RahalOutlineButton(
+                    onClick = onDecline,
+                    enabled = enabled,
+                    tone = com.rahalgo.ui.PriceConfirm.Reject,
+                    modifier = Modifier.weight(1f),
+                ) { Text(stringResource(R.string.order_decline), fontWeight = FontWeight.Bold) }
+            }
+            CountdownButton(
+                expiresAt = if (offer) order.offerExpiresAt else null,
+                onExpired = onExpired,
+                onClick = onAccept,
+                label = stringResource(actionLabel),
+                icon = R.drawable.ic_check_circle,
+                enabled = enabled,
+                busy = busy,
+                modifier = if (offer && onDecline != null) Modifier.weight(2f) else Modifier.fillMaxWidth(),
+            )
+        }
     }
 }
 
@@ -720,6 +749,22 @@ private fun WhatBox(label: String, text: String) {
 private fun TotalBox(order: DriverOrder) {
     val custom = order.kind == "custom"
     val fixed = com.rahalgo.driver.trip.fixedCustomFee(order)
+    // **ما يُقبض بلون التنبيه الدافئ لا الأحمر** — الأحمرُ للخطأ (المالك ٢٠٢٦-١١-١٠).
+    val collectTint = Rahal.colors.accent
+    val standardCash = order.kind == "standard" && order.cashDue > 0
+    if (standardCash) {
+        // **ادفع للمتجر** منفصلٌ عن **تقبض من الزبون** — مالان مختلفان بجهتين مختلفتين.
+        if (order.payMerchant > 0) {
+            MoneyRow(stringResource(R.string.trip_pay_merchant), money(order.payMerchant), Rahal.colors.brand)
+            Spacer(Modifier.height(8.dp))
+        }
+        if (order.total != order.cashDue) {
+            MoneyRow(stringResource(R.string.offer_invoice_total), money(order.total), Rahal.colors.inkMuted)
+            Spacer(Modifier.height(8.dp))
+        }
+        MoneyRow(stringResource(R.string.offer_collect_customer), money(order.cashDue), collectTint)
+        return
+    }
     val (label, amount, collect) = when {
         order.kind == "merchant_delivery" -> when (order.feePayer) {
             "recipient" -> Triple(stringResource(R.string.total_collect_recipient), money(order.cashDue), true)
@@ -734,7 +779,12 @@ private fun TotalBox(order: DriverOrder) {
         order.cashDue > 0 -> Triple(stringResource(R.string.card_invoice_total), money(order.total), true)
         else -> Triple(stringResource(R.string.total_paid_customer), money(order.total), false)
     }
-    val tint = if (collect) Rahal.colors.danger else Rahal.colors.success
+    MoneyRow(label, amount, if (collect) collectTint else Rahal.colors.success)
+}
+
+/** **سطرُ مال** — وصفٌ وراءه رقمٌ كبير بنغمةٍ واحدة. */
+@Composable
+private fun MoneyRow(label: String, amount: String, tint: Color) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -831,7 +881,7 @@ private fun Leg(label: String, value: String, far: String, mins: Long, tint: Col
                     Text(
                         // **والرقم بين قوسين** — (طلب المالك): يُقرأ
                         // رقما مستقلّا لا امتدادا للاسم قبله.
-                        text = "(" + far + ")",
+                        text = far,
                         color = tint,
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.bodySmall,
@@ -842,7 +892,7 @@ private fun Leg(label: String, value: String, far: String, mins: Long, tint: Col
                     // **والزمن باهت والمسافة ملوّنة** — خبران في سطر،
                     // **ولو تساويا في الصياح** لم يُقرأ أحدهما أوّلا.
                     Text(
-                        text = "(" + minutesText(mins) + ")",
+                        text = minutesText(mins),
                         color = Rahal.colors.inkMuted,
                         style = MaterialTheme.typography.bodySmall,
                     )
@@ -961,6 +1011,15 @@ private fun eta(toPickupM: Double, legM: Double, avgSpeedKmh: Long): Long {
 private fun distance(meters: Double): String = dist(meters)
 
 /**
+ * **مسافةُ ساقٍ في البطاقة، أو فارغٌ إن لم تُعرف أو كانت صفراً.**
+ *
+ * (ملاحظةُ المالك ٢٠٢٦-١١-١٠: «(٠ م)» بلا معنى.) **`leg_m` من الخادم: سالبٌ لا يُعرف،
+ * وصفرٌ حين يتطابق موضعُ المتجر والزبون (نقطتان واحدة، أو بيانات تجربة)، ولا مشوارَ طوله
+ * أقلّ من متر.** فلا يُكتب «(0 م)» — يُحذف القوسان معه.
+ */
+internal fun legDistanceText(meters: Double): String = if (meters >= 1.0) dist(meters) else ""
+
+/**
  * **حال الطلب بالعربيّة.**
  *
  * **والمجهولُ «قيد المعالجة» لا رمزُه** (قرارُ المالك ٢٠٢٦-١٠-١٨: ولا رمزَ
@@ -1020,4 +1079,6 @@ data class OrdersActions(
     /** **يفتح رحلته** — يختار الطلب وينتقل إلى الخريطة. */
     val startTrip: (String) -> Unit,
     val refresh: () -> Unit,
+    /** **رفضُ عرضٍ** — يُخفيه وينقل الدورَ للتالي. */
+    val decline: (String) -> Unit = {},
 )

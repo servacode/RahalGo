@@ -91,7 +91,7 @@ class ReplayLabIsolationTest {
         if (trip.contains("ReplayButton(")) {
             assertTrue(
                 "**زرُّ الإعادة على شاشة الرحلة بلا حارسِ الإصدار** — يبلغه سائقٌ حقيقيّ",
-                trip.contains("BuildConfig.BUILD_TYPE != \"release\""),
+                trip.contains("replayLabAllowed()") && trip.contains("BUILD_TYPE == \"debug\"") && trip.contains("BUILD_TYPE == \"staging\""),
             )
         }
     }

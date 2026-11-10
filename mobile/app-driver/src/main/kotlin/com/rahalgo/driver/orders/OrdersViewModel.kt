@@ -1009,7 +1009,11 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
     var detail by mutableStateOf(DetailState(order = com.rahalgo.shared.model.DriverOrder()))
         private set
 
+    /** **آخرُ تسليمٍ في هذه الجلسة** — يُعرض في شاشة الرحلة الفارغة حتّى يبدأ طلبًا آخر. */
+    private var justDelivered by mutableStateOf<com.rahalgo.driver.trip.DeliveredSummary?>(null)
+
     fun open(orderId: String) {
+        justDelivered = null
         openId = orderId
         detail = DetailState(order = state.mine.firstOrNull { it.id == orderId } ?: return)
     }
@@ -1470,6 +1474,10 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             // **والتسليم يُغلق الطلب** — فيُعاد إلى القائمة لا إلى شاشة
             // طلب لم يعد له وجود فيها.
             if (to == "delivered") {
+                // **ملخّصُ التسليم** (المالك ٢٠٢٦-١١-١٠) — «تمّ التسليم · كسبت X» قبل الشاشة الفارغة.
+                state.mine.firstOrNull { it.id == id }?.let { done ->
+                    justDelivered = com.rahalgo.driver.trip.DeliveredSummary(done.number, done.deliveryFee)
+                }
                 openId = null
                 // **«انت عند باب البناية؟»** (قرارُ المالك ٢٠٢٦-١٠-٢١) — لطلبٍ له زبونٌ وعنوان.
                 val delivered = state.mine.firstOrNull { it.id == id }
@@ -1838,7 +1846,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
      */
     fun trip(driver: LastPoint.Point?): TripState {
         val order = state.mine.firstOrNull { it.id == openId } ?: state.mine.firstOrNull()
-            ?: return TripState()
+            ?: return TripState(justDelivered = justDelivered)
         val line = route?.points.orEmpty().mapNotNull {
             if (it.size >= 2) LatLng(it[0], it[1]) else null
         }
@@ -2920,6 +2928,19 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
      * **وتُصفَّر حين تبدأ رحلةٌ جديدة** — وهو ما يفعله `openTrip`.
      */
     private var offerSpent by mutableStateOf(false)
+
+    /**
+     * **«رفض» من بطاقة العرض في الطابور** (قرارُ المالك ٢٠٢٦-١١-١٠) — يُخفى فوراً
+     * **ويُقال للخادم** (`/decline`) فينتقل الدورُ. **وسقوطُه صامت**: عرضٌ انقضى أو أخذه غيرُه.
+     */
+    fun declineOffer(id: String) {
+        dismissedOffers += id
+        state = state.copy(offers = state.offers.filter { it.id != id })
+        viewModelScope.launch {
+            runCatching { backend.driver.decline(id) }
+                .onFailure { Log.i("RahalGo/offer", "رفضُ العرض لم يُقبل: " + it.message) }
+        }
+    }
 
     fun dismissOffer() {
         state.offers.firstOrNull { it.id !in dismissedOffers }?.let { offer ->

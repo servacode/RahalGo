@@ -335,7 +335,8 @@ internal fun FetchAmountDialog(
                 // **«أمانة — بلا ثمن»** (قرارُ المالك ٢٠٢٦-١١-٠٨) — ضغطةٌ وحدةٌ بدل كتابة صفر.
                 if (whatsApp) {
                     Spacer(Modifier.height(8.dp))
-                    RahalTextButton(
+                    // **«أمانة» زرٌّ حقيقيٌّ بإطار** لا كلمةٌ عائمة (المالك ٢٠٢٦-١١-١٠).
+                    com.rahalgo.ui.RahalOutlineButton(
                         onClick = { send(0.0) },
                         enabled = !busy,
                         modifier = Modifier.fillMaxWidth(),
