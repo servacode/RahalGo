@@ -582,6 +582,8 @@ type driverOrder struct {
 	PayMerchant int64 `json:"pay_merchant"`
 	// PayMerchants **لكلّ متجرٍ ما يدفعه له** — لطلبٍ من مصدرين.
 	PayMerchants []orders.StorePay `json:"pay_merchants"`
+	// TakeFromStores **«خد من المتجر X»** — فرقُ تعديلٍ بعد الاستلام يسترجعه من المتجر (النموذج ٢).
+	TakeFromStores []orders.StorePay `json:"take_from_stores,omitempty"`
 	// CustomerLive **موقعُ الزبون المباشر إن شاركه وهو حديث** (قرارُ المالك ٢٠٢٦-١٠-١٦) —
 	// يُلحَق في طلباته هو وحدَها (`attachDriverLive`)، **وغيابُه يعني: امشِ إلى الدبّوس.**
 	CustomerLive *orders.LivePoint `json:"customer_live,omitempty"`
@@ -855,7 +857,9 @@ func (s *Server) attachPayMerchants(ctx context.Context, list []driverOrder) err
 	for i := range list {
 		list[i].PayMerchants = []orders.StorePay{}
 		// **والمشترياتُ من متجرٍ تابعٍ كذلك** (قرارُ المالك ٢٠٢٦-١٠-١٥) — الثمنُ ناقصَ العمولة.
-		if (list[i].Kind == "standard" || list[i].PartnerMerchantName != "") && list[i].ReturnTo == "" {
+		// **وطلبُ الواتساب في النموذج ٢** — الثمنُ ناقصَ عمولة متجرنا (والمحرّكُ يردّ لا شيء لغيره).
+		if (list[i].Kind == "standard" || list[i].Kind == "merchant_delivery" ||
+			list[i].PartnerMerchantName != "") && list[i].ReturnTo == "" {
 			ids = append(ids, list[i].ID)
 		}
 	}
@@ -867,6 +871,11 @@ func (s *Server) attachPayMerchants(ctx context.Context, list []driverOrder) err
 		return err
 	}
 	for i := range list {
+		if list[i].Kind == "standard" {
+			if list[i].TakeFromStores, err = s.orders.TakeFromStores(ctx, s.pg, list[i].ID); err != nil {
+				return err
+			}
+		}
 		if p, ok := got[list[i].ID]; ok {
 			list[i].PayMerchants = p
 			for _, x := range p {

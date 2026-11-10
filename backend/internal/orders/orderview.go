@@ -284,6 +284,8 @@ var audienceAllow = map[Audience]map[string]bool{
 		// **وما يدفعه للمتاجر عند الاستلام** (قرارُ المالك ٢٠٢٦-١٠-١٥).
 		"pay_merchant":  true,
 		"pay_merchants": true,
+		// **«خد من المتجر X»** — فرقُ تعديلٍ بعد الاستلام يأخذه الكابتنُ من المتجر (النموذج ٢، B8).
+		"take_from_stores": true,
 		// **ومن أيّ متجرٍ تابعٍ يشتري** (قرارُ المالك ٢٠٢٦-١٠-١٥) — اسمُه لا نسبتُه.
 		"partner_merchant_name": true,
 		// **وموقعُ الزبون المباشر** (٢٠٢٦-١٠-١٦) — **غرفةُ السائق غرفةُ المُسنَد وحدَه**
@@ -453,6 +455,8 @@ var audienceAllow = map[Audience]map[string]bool{
 		// **وما يدفعه السائقُ للمتاجر عند الاستلام** (٢٠٢٦-١٠-١٥).
 		"pay_merchant":  true,
 		"pay_merchants": true,
+		// **«خد من المتجر X»** — فرقُ تعديلٍ بعد الاستلام يأخذه الكابتنُ من المتجر (النموذج ٢، B8).
+		"take_from_stores": true,
 		// **والمتجرُ التابعُ في المشتريات ونسبتُه وما دُفع له** (٢٠٢٦-١٠-١٥).
 		"partner_merchant_id":              true,
 		"partner_merchant_name":            true,

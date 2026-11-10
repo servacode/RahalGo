@@ -287,3 +287,45 @@ func TestModel2_WhatsAppCommissionViaBox(t *testing.T) {
 	}
 	assertNewViolations(t, h, base, m2Checks...)
 }
+
+// ── B8 · تعديلُ الطلب بعد الاستلام: الفرقُ بين الكابتن والمتجر، لا قيدَ ولا درج ──
+func TestModel2_EditAfterPickupDriverAndStore(t *testing.T) {
+	h := New(t)
+	item, _ := m2Prep(t, h)
+	base := financialBaseline(t, h, m2Checks...)
+	admin := h.NewUser("admin")
+	cust := h.Customer()
+	oid := wsMake(t, h, cust, wsBody(item, 2, "cash", ""), 0)
+	drv := h.driverOf(oid)
+	wsDrive(t, h, oid, drv, "at_pickup", "picked_up")
+
+	var line string
+	if err := h.Pool.QueryRow(ctxBG(), `SELECT id::text FROM order_items WHERE order_id = $1::uuid`, oid).Scan(&line); err != nil {
+		t.Fatal(err)
+	}
+	if r := h.POST("/api/v1/admin/orders/"+oid+"/edit", admin.Token, map[string]any{
+		"reason": "الزبون بدّو وحدة", "store_refunded": true,
+		"lines": []map[string]any{{"item_id": line, "qty": 1}},
+	}); r.Code != 200 {
+		t.Fatalf("التعديل: %s", r)
+	}
+	var ledgerAdj, withTx int
+	_ = h.Pool.QueryRow(ctxBG(), `SELECT count(*), count(*) FILTER (WHERE accrued_tx_id IS NOT NULL OR paid_tx_id IS NOT NULL
+	        OR earning_tx_id IS NOT NULL) FROM merchant_settlement_adjustments WHERE order_id = $1::uuid`, oid).Scan(&ledgerAdj, &withTx)
+	if ledgerAdj != 1 || withTx != 0 {
+		t.Errorf("سطرُ التصحيح %d (بقيود %d) — يُنتظر سطرٌ واحدٌ بلا قيد", ledgerAdj, withTx)
+	}
+	// **«خد من المتجر X»** في عرض الكابتن.
+	view := h.GET("/api/v1/driver/orders", drv.Token)
+	if !strings.Contains(view.String(), `"take_from_stores"`) || !strings.Contains(view.String(), `"amount":9000`) {
+		t.Errorf("عرضُ الكابتن لا يقول «خد من المتجر 9000»: %s", view)
+	}
+	wsDrive(t, h, oid, drv, "on_the_way", "at_dropoff", "delivered")
+	f := m2Read(t, h, oid)
+	// الكابتنُ دفع ١٨٠٠٠ واسترجع ٩٠٠٠ ⇒ صندوقُه نقدُ الطلب بعد التعديل ناقصَ ٩٠٠٠.
+	if f.box != f.cashDue-9_000 || f.advance != 0 || f.goodsRows != 0 {
+		t.Errorf("بعد التسليم: صندوق %d (نقد %d) سلفة %d قيودُ بضاعة %d — يُنتظر النقد − 9000 بلا سلفةٍ ولا قيد",
+			f.box, f.cashDue, f.advance, f.goodsRows)
+	}
+	assertNewViolations(t, h, base, m2Checks...)
+}

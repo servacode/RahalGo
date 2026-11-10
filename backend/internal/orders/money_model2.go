@@ -427,3 +427,37 @@ func (s *Service) payWhatsAppStoreFor(ctx context.Context, q dbtx.Querier, order
 	}
 	return []StorePay{p}, nil
 }
+
+// TakeFromStores **«خد من المتجر X»** لقائمة الكابتن — انظر `takeFromStoresFor`.
+func (s *Service) TakeFromStores(ctx context.Context, q dbtx.Querier, orderID string) ([]StorePay, error) {
+	return takeFromStoresFor(ctx, q, orderID)
+}
+
+// takeFromStoresFor **«خد من المتجر X»** — صافي تصحيحات حقّ كلّ متجرٍ نقصاً في طلبٍ من النموذج ٢
+// لم ينتهِ بعد (B8، جوابُ المالك): **الكابتنُ دفع للمتجر أكثرَ ممّا صار حقَّه فيسترجع الفرقَ منه.**
+func takeFromStoresFor(ctx context.Context, q dbtx.Querier, orderID string) ([]StorePay, error) {
+	rows, err := q.Query(ctx, `
+		SELECT ms.merchant_id::text, m.name, -sum(a.delta)::bigint
+		FROM merchant_settlement_adjustments a
+		JOIN merchant_settlements ms ON ms.id = a.settlement_id
+		JOIN merchants m ON m.id = ms.merchant_id
+		JOIN orders o ON o.id = a.order_id
+		WHERE a.order_id = $1 AND ms.off_ledger AND a.paid_via = 'driver'
+		  AND o.status NOT IN ('delivered', 'refunded', 'cancelled', 'rejected', 'failed')
+		GROUP BY ms.merchant_id, m.name
+		HAVING sum(a.delta) < 0
+		ORDER BY m.name`, orderID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []StorePay
+	for rows.Next() {
+		var p StorePay
+		if err := rows.Scan(&p.MerchantID, &p.MerchantName, &p.Amount); err != nil {
+			return nil, err
+		}
+		out = append(out, p)
+	}
+	return out, rows.Err()
+}

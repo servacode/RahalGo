@@ -1920,6 +1920,15 @@ private fun TripCard(
                     if (order.addressText.isNotBlank()) {
                         InfoBox(icon = R.drawable.ic_pin, text = order.addressText, tint = Rahal.colors.brand)
                     }
+                    // **«خد من المتجر X»** — المكتبُ عدّل الطلبَ بعد الاستلام فنقص حقُّ المتجر، والفرقُ
+                    // يسترجعه الكابتنُ من المتجر نفسِه (خطّةُ المال ٢٠٢٦-١١-١٠).
+                    order.takeFromStores.forEach { p ->
+                        MoneyBox(
+                            label = stringResource(R.string.trip_take_from_store, p.merchantName),
+                            amount = storePayText(p),
+                            tint = Rahal.colors.brand,
+                        )
+                    }
                     // **والفاتورةُ عند الباب كذلك** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — لمن يسأله «شو بالطلب؟ وقديش؟».
                     if (order.kind == "standard" && order.items.isNotEmpty()) InvoiceBox(order)
                 } else if (order.kind != "custom") {

@@ -183,6 +183,9 @@ func (s *Service) fillPayMerchant(ctx context.Context, q dbtx.Querier, o *Order)
 		return err
 	}
 	o.PayMerchants = list
+	if o.TakeFromStores, err = takeFromStoresFor(ctx, q, o.ID); err != nil {
+		return err
+	}
 	o.PayMerchant = 0
 	for _, p := range list {
 		if p.Currency == "" {

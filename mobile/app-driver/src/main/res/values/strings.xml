@@ -660,6 +660,7 @@
     <string name="trip_collect_later">تقبض من الزبون عند التسليم</string>
     <string name="trip_pay_merchant">ادفع للمتجر</string>
     <string name="trip_pay_merchant_named">ادفع لـ%1$s</string>
+    <string name="trip_take_from_store">خد من المتجر %1$s</string>
     <!-- طلبٌ من عدّة متاجر: محطّةٌ لكلّ متجر -->
     <string name="stops_title">محطّات الاستلام</string>
     <string name="stop_chip_next">التالية</string>

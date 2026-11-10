@@ -427,9 +427,12 @@ type Order struct {
 	// PayMerchants **لكلّ متجرٍ ما يدفعه له** — الصافي ناقصَ دَينه (تقديرٌ قبل
 	// الاستلام، وما دُفع فعلاً بعده). (`pay_merchant.go`)
 	PayMerchants []StorePay `json:"pay_merchants,omitempty"`
-	PromoCode    *string    `json:"promo_code"`
-	Notes        string     `json:"notes"`
-	CancelReason string     `json:"cancel_reason"`
+	// TakeFromStores **«خد من المتجر X»** (النموذج ٢، خطّةُ المال ٢٠٢٦-١١-١٠، B8): المكتبُ عدّل الطلبَ
+	// بعد الاستلام فنقص حقُّ المتجر — **والكابتنُ يسترجع الفرقَ من المتجر لا من درج المكتب.**
+	TakeFromStores []StorePay `json:"take_from_stores,omitempty"`
+	PromoCode      *string    `json:"promo_code"`
+	Notes          string     `json:"notes"`
+	CancelReason   string     `json:"cancel_reason"`
 	// SentToMerchantAt متى حُوِّل الطلب إلى المتجر — لا «متى وصله».
 	//
 	// **كان يُكتب ولا يُقرأ**: تكتبه نقطةُ الإبلاغ في القاعدة ولا يعود في

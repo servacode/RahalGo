@@ -32,9 +32,9 @@
     ],
     "setting_defs": 283,
     "behaviour_settings": 238,
-    "order_fields": 145,
+    "order_fields": 146,
     "test_files": 821,
-    "test_funcs": 3162
+    "test_funcs": 3163
   },
   "flows": [
     {
@@ -21416,6 +21416,12 @@
     },
     {
       "name": "TestModel2_CashOrderGoodsOffLedger",
+      "file": "internal/qa/money_model2_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestModel2_EditAfterPickupDriverAndStore",
       "file": "internal/qa/money_model2_test.go",
       "package": "qa",
       "orphan": true
