@@ -171,6 +171,7 @@
         "FI-17.c",
         "FI-17.d",
         "FI-17.e",
+        "FI-17.f",
         "FI-17.g"
       ]
     }
@@ -1335,6 +1336,17 @@
       ]
     },
     {
+      "id": "FI-17.f",
+      "family": "FI-17",
+      "name": "لا دينَ بضاعةٍ على متجرٍ أو كابتنٍ بسبب طلبٍ من النموذج ٢",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-15",
+        "F-17"
+      ]
+    },
+    {
       "id": "FI-17.g",
       "family": "FI-17",
       "name": "صفُّ تسويةِ طلبٍ من النموذج ٢ نقدٌ وسجلٌّ بلا دفتر",
@@ -1737,8 +1749,8 @@
   ],
   "counts": {
     "families": 16,
-    "checks": 94,
-    "provable_now": 88,
+    "checks": 95,
+    "provable_now": 89,
     "not_implemented": 3,
     "deferred_p5": 1,
     "deferred_p6": 2,

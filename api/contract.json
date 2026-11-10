@@ -4882,6 +4882,32 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/admin/orders/{id}/stuck-goods",
+      "handler": "handleStuckGoodsDecision",
+      "auth": true,
+      "capability": "finance.manage",
+      "request": [
+        {
+          "name": "decision",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "amount",
+          "type": "unknown"
+        },
+        {
+          "name": "decision",
+          "type": "unknown"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/admin/orders/{id}/transfer",
       "handler": "handleTransferOrder",
       "auth": true,

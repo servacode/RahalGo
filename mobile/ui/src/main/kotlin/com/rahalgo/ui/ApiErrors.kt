@@ -542,6 +542,8 @@ private val CODES: Map<String, Int> = mapOf(
     "order_changed" to R.string.err_order_changed,
     "wallet_scope_not_allowed" to R.string.err_wallet_scope_not_allowed,
     "wallet_full_removed" to R.string.err_wallet_full_removed,
+    "stuck_goods_none" to R.string.err_stuck_goods_none,
+    "stuck_goods_decided" to R.string.err_stuck_goods_decided,
     "quote_not_confirmed" to R.string.err_quote_not_confirmed,
     "delivery_code_wrong" to R.string.err_delivery_code_wrong,
     "category_in_use" to R.string.err_category_in_use,

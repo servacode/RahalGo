@@ -20,9 +20,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/obligations"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
@@ -154,6 +156,15 @@ func (s *Service) creditTreasuryGoodsOutside(ctx context.Context, q wallet.Queri
 		orderID).Scan(&paid, &toParties, &refunded, &posted); err != nil {
 		return err
 	}
+	// **وما ردّه الدرجُ للكابتن من تحصيلٍ لم يقع** (تصحيحُ تسليمٍ خاطئ بعد أن سلّم نقدَه للمكتب) —
+	// نقدٌ خرج من المنصّة فيُطرح من المقبوض.
+	var drawerBack int64
+	if err := q.QueryRow(ctx, `
+		SELECT COALESCE(sum(amount), 0) FROM office_cash_entries
+		 WHERE ref = $1 AND source = 'undelivered_return'`, orderID).Scan(&drawerBack); err != nil {
+		return err
+	}
+	paid -= drawerBack
 	delta := (paid - refunded - toParties) - posted
 	if delta == 0 {
 		return nil
@@ -161,4 +172,123 @@ func (s *Service) creditTreasuryGoodsOutside(ctx context.Context, q wallet.Queri
 	_, err := s.wallet.ApplyTx(ctx, q, tid, delta, "platform_profit",
 		orderID, "تسويةُ نصيب المنصة", &actorID)
 	return err
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **البضاعةُ الراجعةُ بعد الاستلام — النموذج ٢** (القرار ٤، الدفعة B5)
+// ══════════════════════════════════════════════════════════════════════
+//
+//	إلى المتجر   صفوفُ السجلّ `goods_returned` — والمتجرُ يردّ للكابتن ما دفعه (برّا الحسابات).
+//	إلى المكتب   **المتجرُ رفض** (أو بضاعةٌ من عدّة متاجر) — صفوفُ السجلّ `held_by_driver`،
+//	             و`stuck_goods_amount` = ما دفعه الكابتنُ ولم يرجع له: «مصاري الكابتن عالقة»،
+//	             والمكتبُ يقرّر (`DecideStuckGoodsTx`).
+//
+// **ولا خزينةَ ولا خسارةَ ولا دينَ بضاعة** — المنصّةُ لم تشترِ شيئاً.
+func (s *Service) settleGoodsOutside(ctx context.Context, q wallet.Querier, orderID, to string) error {
+	state := "goods_returned"
+	if to == GoodsToOffice {
+		state = "held_by_driver"
+	}
+	if _, err := q.Exec(ctx, `
+		UPDATE merchant_settlements SET state = $2
+		 WHERE order_id = $1 AND off_ledger AND state IN ('cash_due', 'cash_paid')`,
+		orderID, state); err != nil {
+		return err
+	}
+	stuck := int64(0)
+	if to == GoodsToOffice {
+		// **ما دفعه الكابتنُ للمتجر** — صفوفُ السجلّ (العاديّ) أو ما دفعه في المشتريات.
+		if err := q.QueryRow(ctx, `
+			SELECT COALESCE((SELECT sum(ms.amount + ms.adjusted_amount - ms.reversed_amount)
+			                   FROM merchant_settlements ms
+			                  WHERE ms.order_id = o.id AND ms.off_ledger AND ms.paid_via = 'driver'), 0)
+			       + CASE WHEN o.kind = 'custom' THEN COALESCE(o.custom_store_paid, 0) ELSE 0 END
+			  FROM orders o WHERE o.id = $1`, orderID).Scan(&stuck); err != nil {
+			return err
+		}
+		if stuck < 0 {
+			stuck = 0
+		}
+	}
+	returned := "NULL"
+	if to == GoodsToMerchant {
+		returned = "now()"
+	}
+	_, err := q.Exec(ctx, `UPDATE orders SET goods_settled_to = $2, stuck_goods_amount = $3, returned_at = `+
+		returned+` WHERE id = $1`, orderID, to, stuck)
+	return err
+}
+
+// قرارا المكتب على «مصاري الكابتن عالقة».
+const (
+	// StuckByPlatform **المنصّةُ تعوّض الكابتن** — من الخزينة إلى محفظته.
+	StuckByPlatform = "platform"
+	// StuckByCustomer **دينٌ على الزبون** — سجلٌّ يُقرأ في تقرير البضاعة، ولا مالَ يتحرّك الآن.
+	StuckByCustomer = "customer"
+)
+
+// StuckGoodsResult ما وقع — للردّ والتدقيق.
+type StuckGoodsResult struct {
+	OrderID  string `json:"order_id"`
+	Number   int64  `json:"number"`
+	Amount   int64  `json:"amount"`
+	Decision string `json:"decision"`
+	DriverID string `json:"-"`
+}
+
+var (
+	// ErrStuckGoodsNone لا مصاري عالقة للكابتن على هذا الطلب.
+	ErrStuckGoodsNone = httpx.NewError(http.StatusConflict, "stuck_goods_none", "errors.stuck_goods_none")
+	// ErrStuckGoodsDecided قُرّر سابقاً — والثاني لا يدفع مرّتين.
+	ErrStuckGoodsDecided = httpx.NewError(http.StatusConflict, "stuck_goods_decided", "errors.stuck_goods_decided")
+	// ErrStuckGoodsBadDecision القرارُ واحدٌ من اثنين.
+	ErrStuckGoodsBadDecision = httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
+)
+
+// DecideStuckGoodsTx **المكتبُ يقرّر على مصاري الكابتن العالقة** — في معاملة المستدعي.
+//
+//	platform  تعويضُ الكابتن من الخزينة (`compensation` له و`platform_expense` على الخزينة،
+//	          بمرجع `stuck:<الطلب>` — فلا يُخلط بتعويض مشواره).
+//	customer  سجلٌّ: الزبونُ مدينٌ بالمبلغ — لا مالَ يتحرّك (يظهر في تقرير البضاعة).
+//
+// **ومرّةً واحدة** — القرارُ يُقفل الطلب.
+func (s *Service) DecideStuckGoodsTx(ctx context.Context, q wallet.Querier, orderID, decision, actorID string) (StuckGoodsResult, error) {
+	res := StuckGoodsResult{OrderID: orderID, Decision: decision}
+	if decision != StuckByPlatform && decision != StuckByCustomer {
+		return res, ErrStuckGoodsBadDecision
+	}
+	var driverID, decided *string
+	err := q.QueryRow(ctx, `
+		SELECT number, stuck_goods_amount, stuck_goods_decision, driver_id::text
+		  FROM orders WHERE id = $1 FOR UPDATE`, orderID).
+		Scan(&res.Number, &res.Amount, &decided, &driverID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return res, httpx.ErrNotFound
+	}
+	if err != nil {
+		return res, err
+	}
+	if decided != nil {
+		return res, ErrStuckGoodsDecided
+	}
+	if res.Amount <= 0 || driverID == nil {
+		return res, ErrStuckGoodsNone
+	}
+	res.DriverID = *driverID
+	if decision == StuckByPlatform {
+		ref := "stuck:" + orderID
+		if _, err := s.wallet.ApplyTx(ctx, q, *driverID, res.Amount, "compensation", ref,
+			"تعويض المنصّة عن بضاعة رفض المتجر يرجّع ثمنها", &actorID); err != nil {
+			return res, err
+		}
+		if err := s.DebitTreasury(ctx, q, res.Amount, ref,
+			"مصاري الكابتن العالقة — بضاعة رفض المتجر يرجّع ثمنها", actorID); err != nil {
+			return res, err
+		}
+	}
+	_, err = q.Exec(ctx, `
+		UPDATE orders SET stuck_goods_decision = $2, stuck_goods_decided_at = now(),
+		       stuck_goods_decided_by = NULLIF($3, '')::uuid
+		 WHERE id = $1`, orderID, decision, actorID)
+	return res, err
 }

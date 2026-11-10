@@ -143,6 +143,11 @@ func chargeDriverLoss(ctx context.Context, q dbtx.Querier, orderID, driverID, ac
 	if in.Fault != FaultDriver || in.DriverShare == DriverSharePlatform || driverID == "" {
 		return nil
 	}
+	// **النموذج ٢: لا خسارةَ بضاعةٍ على المنصّة أصلاً** (القرار ٤) — فلا دينَ بضاعةٍ على الكابتن.
+	// (أجرةُ مشواره بابُ التعويض لا هذا الباب.)
+	if outside, err := goodsOutside(ctx, q, orderID); err != nil || outside {
+		return err
+	}
 	// ══════════════════════════════════════════════════════════════════
 	// **وفي «لدي توصيلة» الخسارةُ ما رُدّ للمتجر** (قرارُ المالك ٢٠٢٦-١٠-١٥)
 	// ══════════════════════════════════════════════════════════════════

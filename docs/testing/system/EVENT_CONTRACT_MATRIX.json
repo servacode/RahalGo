@@ -12,7 +12,7 @@
   },
   "derived": {
     "emit_sites": 132,
-    "realtime_publishers": 31,
+    "realtime_publishers": 32,
     "rooms": 5,
     "untargeted_user_sites": 38
   },
@@ -112,7 +112,7 @@
     },
     {
       "file": "internal/orders/door.go",
-      "line": 399,
+      "line": 404,
       "call": "Notify",
       "kind": "Order",
       "entity": "order",
@@ -1583,7 +1583,7 @@
     },
     {
       "file": "internal/orders/door.go",
-      "line": 405,
+      "line": 410,
       "room": "driver:*"
     },
     {
@@ -1593,12 +1593,17 @@
     },
     {
       "file": "internal/orders/goods.go",
-      "line": 210,
+      "line": 177,
       "room": "ops"
     },
     {
       "file": "internal/orders/goods.go",
-      "line": 544,
+      "line": 227,
+      "room": "ops"
+    },
+    {
+      "file": "internal/orders/goods.go",
+      "line": 561,
       "room": "ops"
     },
     {

@@ -8,11 +8,17 @@
  * القاعدةُ الجديدة: البضاعةُ لا تدخل حساباً. **والأرصدةُ القديمةُ تبقى كما هي** — فهذه الصفحةُ تقول
  * مَن يحمل اليومَ مالاً أصلُه بضاعة، بستّة أقسام (`backend/internal/server/goods_balances.go`).
  * **قراءةٌ فقط**: لا زرَّ يحرّك مالاً، والأرقامُ من الخادم كما هي.
+ *
+ * **إلّا «مصاري الكابتن عالقة»** (النموذج ٢، القرار ٤): المتجرُ رفض يرجّع ثمنَ بضاعةٍ رجعت —
+ * والمكتبُ يقرّر كلَّ مرّة: المنصّةُ تعوّض الكابتن، أو دينٌ على الزبون (`finance.manage`).
  */
 
-import { getMessages, defaultLocale, fmtMoney, fmtNum } from "@rahalgo/i18n";
+import { useState } from "react";
+import { getMessages, defaultLocale, fmtMoney, fmtNum, errorText } from "@rahalgo/i18n";
 import {
   Alert,
+  Button,
+  Confirm,
   IconBalance,
   IconCash,
   IconMoto,
@@ -25,7 +31,7 @@ import {
   useLiveData,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
-import { useCanOpen } from "@/lib/policy";
+import { useCanCall, useCanOpen } from "@/lib/policy";
 import { OpenLink } from "@/components/admin/OpenLink";
 import { PageHero } from "@/components/admin/PageHero";
 import { Panel, Tile } from "@/components/admin/DashParts";
@@ -56,7 +62,16 @@ interface Section {
   total: number;
 }
 
-type Report = Record<SectionKey, Section> & { generated_at: string };
+interface StuckRow {
+  order_id: string;
+  number: number;
+  driver: string;
+  phone: string;
+  amount: number;
+  decision: "platform" | "customer" | null;
+}
+
+type Report = Record<SectionKey, Section> & { generated_at: string; stuck_driver_money?: StuckRow[] };
 
 /** **ترتيبُ الأقسام وأيقوناتُها** — وهل الطرفُ متجرٌ (ملفُّه في المتاجر) أم حساب. */
 const SECTIONS: { key: SectionKey; icon: typeof IconStore; store: boolean }[] = [
@@ -72,8 +87,31 @@ const SHOWN_ORDERS = 5;
 
 export default function GoodsBalancesPage() {
   const open = useCanOpen();
+  const canCall = useCanCall();
+  const canDecide = canCall("POST", "/orders/{id}/stuck-goods");
   const rep = useLiveData<Report>(() => api("/api/v1/admin/finance/goods-balances"), ["wallet", "order"]);
   const r = rep.data;
+  const [busy, setBusy] = useState("");
+  const [error, setError] = useState("");
+  const [ask, setAsk] = useState<{ row: StuckRow; decision: "platform" | "customer" } | null>(null);
+
+  const decide = async (row: StuckRow, decision: "platform" | "customer") => {
+    setBusy(row.order_id);
+    setError("");
+    try {
+      await api(`/api/v1/admin/orders/${row.order_id}/stuck-goods`, {
+        method: "POST",
+        body: JSON.stringify({ decision }),
+      });
+      rep.reload();
+    } catch (err) {
+      setError(errorText(err));
+    } finally {
+      setBusy("");
+      setAsk(null);
+    }
+  };
+  const stuck = r?.stuck_driver_money ?? [];
 
   return (
     <PageContainer>
@@ -86,6 +124,71 @@ export default function GoodsBalancesPage() {
       {!r && !rep.error && <LoadingState variant="list" rows={3} />}
       {r && (
         <>
+          <Panel title={G.stuckTitle} note={G.stuckHint} className="mb-3">
+            {error && <Alert className="mb-2">{error}</Alert>}
+            {stuck.length === 0 ? (
+              <p className="text-sm text-ink-muted">{G.none}</p>
+            ) : (
+              <ul className="divide-y divide-line-soft">
+                {stuck.map((row) => (
+                  <li key={row.order_id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                    <span className="min-w-0">
+                      <OpenLink
+                        allowed={open.order}
+                        href={`/dashboard/orders?q=${row.number}`}
+                        className="font-bold text-primary hover:underline"
+                      >
+                        #{row.number}
+                      </OpenLink>
+                      <span className="block text-xs text-ink-muted">
+                        {G.stuckDriver.replace("{name}", row.driver || row.phone)}
+                      </span>
+                      {row.decision === "customer" && (
+                        <span className="block text-xs text-warning">{G.stuckCustomerOwes}</span>
+                      )}
+                    </span>
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className="font-bold text-warning" dir="ltr">
+                        {fmtMoney(row.amount)}
+                      </span>
+                      {row.decision === null && canDecide && (
+                        <>
+                          <Button size="sm" disabled={busy !== ""} onClick={() => setAsk({ row, decision: "platform" })}>
+                            {G.stuckPlatform}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            disabled={busy !== ""}
+                            onClick={() => setAsk({ row, decision: "customer" })}
+                          >
+                            {G.stuckCustomer}
+                          </Button>
+                        </>
+                      )}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <Confirm
+              open={ask !== null}
+              tone="primary"
+              title={G.stuckTitle}
+              body={
+                ask
+                  ? (ask.decision === "platform" ? G.stuckAskPlatform : G.stuckAskCustomer)
+                      .replace("{amount}", fmtMoney(ask.row.amount))
+                      .replace("{n}", String(ask.row.number))
+                  : ""
+              }
+              confirmLabel={ask?.decision === "customer" ? G.stuckCustomer : G.stuckPlatform}
+              busy={busy !== ""}
+              onConfirm={() => ask && decide(ask.row, ask.decision)}
+              onCancel={() => setAsk(null)}
+            />
+          </Panel>
+
           <div className="mb-4 grid grid-cols-2 gap-2 lg:grid-cols-3">
             {SECTIONS.map((s) => (
               <Tile

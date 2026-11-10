@@ -1772,15 +1772,24 @@ var All = []Check{
 	{
 		ID: "FI-17.b", Family: FI17, Status: ProvableNow, Ops: true,
 		Name: "لا سلفةَ درجٍ لطلبٍ من النموذج ٢",
-		Why: "**الكابتنُ دفع للمتجر من جيبه لا من الدرج** — سطرُ «سلفةٌ رجعت للمكتب» أو «ردُّ تسليمٍ " +
-			"خاطئ» بمرجعه نقدٌ خرج من الدرج لبضاعةٍ ليست للمنصّة.",
+		Why: "**الكابتنُ دفع للمتجر من جيبه لا من الدرج** — سطرُ «سلفةٌ رجعت للمكتب» بمرجعه نقدٌ خرج " +
+			"من الدرج لبضاعةٍ ليست للمنصّة. **وردُّ تسليمٍ خاطئ لا يتجاوز ما سلّمه الكابتنُ من تحصيلٍ** " +
+			"(الأجرةُ والعمولة) — وما زاد ثمنُ بضاعة.",
 		Flows: []string{"F-14"},
 		SQL: `
 			SELECT o.number, c.source, c.amount
 			FROM orders o
 			JOIN office_cash_entries c ON c.ref = o.id::text
+			WHERE o.money_model = 2 AND c.source = 'advance_return'
+			UNION ALL
+			SELECT o.number, 'undelivered_return', sum(c.amount)::bigint
+			FROM orders o
+			JOIN office_cash_entries c ON c.ref = o.id::text AND c.source = 'undelivered_return'
 			WHERE o.money_model = 2
-			  AND c.source IN ('advance_return', 'undelivered_return')`,
+			GROUP BY o.id, o.number
+			HAVING sum(c.amount) > COALESCE((SELECT sum(e.amount) FROM driver_cash_entries e
+			                                  WHERE e.ref = o.id::text
+			                                    AND e.kind IN ('order_collection', 'collection_reversed')), 0)`,
 	},
 	{
 		ID: "FI-17.c", Family: FI17, Status: ProvableNow, Ops: true,
@@ -1844,11 +1853,31 @@ var All = []Check{
 				WHERE e.ref = o.id::text
 				  AND e.kind IN ('order_collection', 'commission_waived', 'collection_reversed')
 			) c ON true
+			-- **وما ردّه الدرجُ من تحصيلٍ لم يقع** (تصحيحُ تسليمٍ خاطئ) نقدٌ خرج من المنصّة.
+			LEFT JOIN LATERAL (
+				SELECT sum(oc.amount) AS back FROM office_cash_entries oc
+				WHERE oc.ref = o.id::text AND oc.source = 'undelivered_return'
+			) a ON true
 			WHERE o.money_model = 2 AND o.kind <> 'merchant_delivery'
 			  AND EXISTS (SELECT 1 FROM wallets WHERE is_treasury)
 			  AND EXISTS (SELECT 1 FROM wallet_transactions p
 			              WHERE p.ref = o.id::text AND p.kind = 'platform_profit')
-			  AND COALESCE(l.net, 0) <> COALESCE(c.cash, 0)`,
+			  AND COALESCE(l.net, 0) <> COALESCE(c.cash, 0) - COALESCE(a.back, 0)`,
+	},
+	{
+		ID: "FI-17.f", Family: FI17, Status: ProvableNow, Ops: true,
+		Name: "لا دينَ بضاعةٍ على متجرٍ أو كابتنٍ بسبب طلبٍ من النموذج ٢",
+		Why: "**البضاعةُ ترجع للمتجر والمنصّةُ لا تخسر** (القرار ٤) — دينُ «بضاعة رجعت» أو «استرجاعٌ بعد " +
+			"صرف مستحقّه» أو «تعديلُ طلب» على متجر، أو «خسارةُ طلبٍ فشل» على كابتن، أو عمولةُ واتساب " +
+			"دَيناً، بمرجع طلبٍ من النموذج ٢ — مالُ بضاعةٍ دخل حساباً من باب الدين.",
+		Flows: []string{"F-15", "F-17"},
+		SQL: `
+			SELECT o.number, f.party_kind, f.cause, f.amount
+			FROM financial_obligations f
+			JOIN orders o ON o.id = f.order_id
+			WHERE o.money_model = 2
+			  AND f.cause IN ('returned_goods', 'refund_merchant_earning', 'order_edit',
+			                  'failed_order_driver', 'whatsapp_order_commission')`,
 	},
 	{
 		ID: "FI-17.g", Family: FI17, Status: ProvableNow, Ops: true,

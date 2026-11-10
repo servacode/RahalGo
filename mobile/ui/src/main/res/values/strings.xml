@@ -641,6 +641,8 @@
     <string name="err_wallet_scope_locked">الكابتن وصل لعندك، ما عاد فيك تغيّر طريقة الدفع.</string>
     <string name="err_order_changed">تغيّر مبلغ الطلب. راجع المبلغ الجديد وجرّب مرة تانية.</string>
     <string name="err_wallet_scope_not_allowed">ما فيك تغيّر طريقة الدفع لهالطلب هلق.</string>
+    <string name="err_stuck_goods_none">ما في مصاري عالقة للكابتن على هالطلب.</string>
+    <string name="err_stuck_goods_decided">انقرّر على هالمصاري من قبل.</string>
     <string name="err_wallet_full_removed">المحفظة بتدفع أجرة التوصيل بس — وثمن الأغراض كاش للكابتن.</string>
     <string name="err_quote_not_confirmed">لم يؤكّد الزبون السعر بعد.</string>
     <string name="err_delivery_code_wrong">كود التسليم غير صحيح — اطلبه من الزبون مرة ثانية.</string>

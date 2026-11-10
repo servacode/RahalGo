@@ -1820,6 +1820,8 @@ func (s *Server) Router() http.Handler {
 			r.Get("/cash/merchant-dues", s.handleMerchantCashDues)
 			// **مَن يحمل مالاً أصلُه بضاعة** (قرارُ المالك ٢٠٢٦-١١-١٠) — قراءةٌ فقط (`goods_balances.go`).
 			r.Get("/finance/goods-balances", s.handleGoodsBalances)
+			// **«مصاري الكابتن عالقة»** — قرارُ المكتب (النموذج ٢، القرار ٤).
+			r.Post("/orders/{id}/stuck-goods", s.handleStuckGoodsDecision)
 			// **نزاعاتُ المنصة مع الأربعة** — المتجرِ والسائقِ والمندوبِ
 			// والزبون. **ونزاعٌ لا يُرى مجموعاً لا يُتابَع**، وثلاثةٌ منها لم
 			// يكن لها مكانٌ إطلاقاً قبل هجرة `0063`.

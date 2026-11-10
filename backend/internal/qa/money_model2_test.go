@@ -8,6 +8,7 @@ package qa
 // يُختم بثوابت المال كلِّها (النموذج ١ والنموذج ٢ معاً) بلا خرقٍ جديد.
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -105,6 +106,101 @@ func TestModel2_CashOrderGoodsOffLedger(t *testing.T) {
 		}
 		if f.commission != 2_000 {
 			t.Errorf("%s: عمولةُ الطلب %d — يُنتظر 2000", c.name, f.commission)
+		}
+	}
+	assertNewViolations(t, h, base, m2Checks...)
+}
+
+// m2FailAtDoor **طلبٌ من النموذج ٢ يصل الباب ويفشل بذنب الزبون** — والبضاعةُ في طريق الرجوع.
+func m2FailAtDoor(t *testing.T, h *Harness, item *Item, cust *User) (oid string, drv *User) {
+	t.Helper()
+	oid = wsMake(t, h, cust, wsBody(item, 1, "cash", ""), 0)
+	drv = h.driverOf(oid)
+	wsDrive(t, h, oid, drv, "at_pickup", "picked_up", "on_the_way", "at_dropoff")
+	if r := h.POST("/api/v1/driver/orders/"+oid+"/report", drv.Token,
+		map[string]any{"code": firstDoorReport(t, h, drv), "note": "ما حدا فتح"}); r.Code >= 400 {
+		t.Fatalf("البلاغ: %s", r)
+	}
+	ops := h.NewUser("admin")
+	if r := h.POST("/api/v1/admin/orders/"+oid+"/door-resolution", ops.Token,
+		map[string]any{"action": "return_to_office", "fault": "customer", "note": "ما ردّ"}); r.Code >= 400 {
+		t.Fatalf("قرارُ المكتب: %s", r)
+	}
+	return oid, drv
+}
+
+// ── B5 · فشلٌ بعد الاستلام: لا خسارةَ على المنصّة ولا سلفةَ ولا دين، والبضاعةُ ترجع ──
+func TestModel2_FailedAfterPickupNoLoss(t *testing.T) {
+	h := New(t)
+	item, tid := m2Prep(t, h)
+	base := financialBaseline(t, h, m2Checks...)
+	admin := h.NewUser("admin")
+
+	// ── ١ · رجعت للمتجر: سجلٌّ وحدَه ──
+	oid, drv := m2FailAtDoor(t, h, item, h.Customer())
+	before := treasuryBalance(t, h, tid)
+	if _, err := h.Pool.Exec(ctxBG(), `UPDATE orders SET return_to = 'store' WHERE id = $1::uuid`, oid); err != nil {
+		t.Fatal(err)
+	}
+	if r := h.POST("/api/v1/driver/orders/"+oid+"/goods-handed", drv.Token, map[string]any{}); r.Code >= 400 {
+		t.Fatalf("سلّمت البضاعة: %s", r)
+	}
+	if r := h.POST("/api/v1/admin/orders/"+oid+"/goods", admin.Token, map[string]any{"to": "merchant"}); r.Code >= 400 {
+		t.Fatalf("حسمُ البضاعة للمتجر: %s", r)
+	}
+	f := m2Read(t, h, oid)
+	if f.rowState != "goods_returned" || f.advance != 0 || f.goodsRows != 0 || f.profit < 0 {
+		t.Errorf("رجعت للمتجر: %+v — يُنتظر صفٌّ goods_returned بلا سلفةٍ ولا قيدٍ ولا خسارة", f)
+	}
+	if after := treasuryBalance(t, h, tid); after != before {
+		t.Errorf("الخزينةُ تحرّكت بحسم البضاعة %d ← %d", before, after)
+	}
+	var debts int
+	_ = h.Pool.QueryRow(ctxBG(), `SELECT count(*) FROM financial_obligations WHERE order_id = $1::uuid`, oid).Scan(&debts)
+	if debts != 0 {
+		t.Errorf("دينٌ نشأ عن بضاعةٍ رجعت: %d", debts)
+	}
+
+	// ── ٢ · المتجرُ رفض: «مصاري الكابتن عالقة» والمكتبُ يقرّر ──
+	for _, decision := range []string{"platform", "customer"} {
+		oid, drv := m2FailAtDoor(t, h, item, h.Customer())
+		if r := h.POST("/api/v1/driver/orders/"+oid+"/goods-handed", drv.Token, map[string]any{}); r.Code >= 400 {
+			t.Fatalf("سلّمت البضاعة: %s", r)
+		}
+		if r := h.POST("/api/v1/admin/orders/"+oid+"/goods", admin.Token, map[string]any{"to": "platform"}); r.Code >= 400 {
+			t.Fatalf("حسمُ البضاعة للمكتب: %s", r)
+		}
+		var stuck int64
+		var state string
+		_ = h.Pool.QueryRow(ctxBG(), `SELECT o.stuck_goods_amount, ms.state FROM orders o
+			JOIN merchant_settlements ms ON ms.order_id = o.id WHERE o.id = $1::uuid`, oid).Scan(&stuck, &state)
+		if stuck != 9_000 || state != "held_by_driver" {
+			t.Errorf("%s: عالقٌ %d حال %s — يُنتظر 9000 held_by_driver", decision, stuck, state)
+		}
+		rep := h.GET("/api/v1/admin/finance/goods-balances", admin.Token)
+		if rep.Code >= 400 || !strings.Contains(rep.String(), oid) {
+			t.Errorf("%s: التقريرُ لا يعرض المصاري العالقة: %s", decision, rep)
+		}
+		drvBefore := walletOf(t, h, drv.ID)
+		tBefore := treasuryBalance(t, h, tid)
+		if r := h.POST("/api/v1/admin/orders/"+oid+"/stuck-goods", admin.Token,
+			map[string]any{"decision": decision}); r.Code >= 400 {
+			t.Fatalf("%s: القرار: %s", decision, r)
+		}
+		if r := h.POST("/api/v1/admin/orders/"+oid+"/stuck-goods", admin.Token,
+			map[string]any{"decision": decision}); r.Code != 409 {
+			t.Errorf("%s: قرارٌ ثانٍ مرّ: %s", decision, r)
+		}
+		gotDrv, gotT := walletOf(t, h, drv.ID)-drvBefore, treasuryBalance(t, h, tid)-tBefore
+		want := int64(0)
+		if decision == "platform" {
+			want = 9_000
+		}
+		if gotDrv != want || gotT != -want {
+			t.Errorf("%s: الكابتن +%d والخزينة %d — يُنتظر +%d و−%d", decision, gotDrv, gotT, want, want)
+		}
+		if f := m2Read(t, h, oid); f.advance != 0 || f.goodsRows != 0 || f.profit < 0 {
+			t.Errorf("%s: %+v — لا سلفةَ ولا قيدَ ولا خسارةَ على الطلب", decision, f)
 		}
 	}
 	assertNewViolations(t, h, base, m2Checks...)

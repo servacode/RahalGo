@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 687,
+    "routes": 688,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -34,7 +34,7 @@
     "behaviour_settings": 238,
     "order_fields": 145,
     "test_files": 820,
-    "test_funcs": 3157
+    "test_funcs": 3158
   },
   "flows": [
     {
@@ -21404,6 +21404,12 @@
     },
     {
       "name": "TestModel2_CashOrderGoodsOffLedger",
+      "file": "internal/qa/money_model2_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestModel2_FailedAfterPickupNoLoss",
       "file": "internal/qa/money_model2_test.go",
       "package": "qa",
       "orphan": true
