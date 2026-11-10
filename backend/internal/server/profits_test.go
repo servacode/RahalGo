@@ -202,7 +202,8 @@ func TestProfits_LinesReconcileToNet(t *testing.T) {
 
 	r := readPlatformProfits(t, f.srv, "2001-03-11")
 	want := map[string]int64{
-		"margin": 1000, "commission": 900, "delivery_share": 200, "discount": -500,
+		// **الهامشُ داخلَ العمولة** (القرار ٣، ٢٠٢٦-١١-١٠): ١٠٠٠ + ٩٠٠ — ولا سطرَ هامشٍ منفصل.
+		"margin": 0, "commission": 1900, "delivery_share": 200, "discount": -500,
 		"settle_diff": 0, "rep_share": -160, "lost_failed": -3000, "lost_cancelled": -700,
 		"compensations": -400, "referrals": -300, "targets": -200, "opex": -1000, "penalties": 250,
 	}
