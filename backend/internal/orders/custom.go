@@ -31,6 +31,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
 
@@ -1032,6 +1033,43 @@ func (s *Service) settleCustomStore(ctx context.Context, q wallet.Querier, in se
 		return s.settleRep(ctx, q, in.orderID, in.actorID, out)
 	}
 	return nil
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **استرجاعُ طلبٍ خاصٍّ بعد التسليم = الأجرةُ المدفوعةُ وحدَها** — قرارُ المالك ٢٠٢٦-١١-١٠ (القرار ٦)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **كان لا يفعل شيئاً** (جردُ المال ٢٠٢٦-١١-١٠، العطب ١): فرعُ الخاصّ لا يعرف `delivered → refunded`.
+//
+//	محفظةُ الزبون  ← ما دفعه للتوصيل فعلاً: `delivery_fee` (الأجرةُ بعد إعفاء العرض)، مقصورةً
+//	                 على ما دفعه أصلاً — **وصفرٌ لا يُقيَّد**
+//	ثمنُ البضاعة   ← لا يُردّ من التطبيق — يُسوّى نقداً خارجَه بين الزبون والمتجر
+//	السائق         ← أجرُه وصندوقُه كما هما — أدّى الرحلة
+//	الخزينة        ← تتحمّل المردود — `creditTreasury` تطرح الـ`refund` من نصيبها
+//
+// **ولا يُردّ مرّتين**: قيدُ `refund` قائمٌ على الطلب يمنع الثاني (والخارطةُ تمنع
+// `refunded → refunded` أصلاً) — و`FI-05.g` يعدّها للخاصّ.
+func (s *Service) refundCustomDeliveredFee(ctx context.Context, q wallet.Querier, in settlement, out *settled) error {
+	var fee, paid int64
+	var already bool
+	if err := q.QueryRow(ctx, `
+		SELECT delivery_fee, wallet_paid + cash_due,
+		       EXISTS(SELECT 1 FROM wallet_transactions WHERE ref = orders.id::text AND kind = 'refund')
+		FROM orders WHERE id = $1 FOR UPDATE`, in.orderID).Scan(&fee, &paid, &already); err != nil {
+		return err
+	}
+	if fee > paid {
+		fee = paid
+	}
+	if already || fee <= 0 {
+		return nil
+	}
+	if _, err := s.wallet.ApplyTx(ctx, q, in.customerID, fee, "refund",
+		in.orderID, "استرجاع أجرة طلب خاصّ مُسلَّم", &in.actorID); err != nil {
+		return err
+	}
+	out.credit(in.customerID, fee, t.refunded2, notifications.AppCustomer)
+	return s.creditTreasury(ctx, q, in.orderID, in.actorID)
 }
 
 // ══════════════════════════════════════════════════════════════════════
