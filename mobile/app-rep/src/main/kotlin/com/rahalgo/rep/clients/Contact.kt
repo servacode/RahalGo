@@ -9,15 +9,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.rahalgo.design.Rahal
+import com.rahalgo.ui.IconAction
 import com.rahalgo.ui.RahalOutlineButton
 import com.rahalgo.ui.waMeDigits
 
@@ -37,14 +36,14 @@ import com.rahalgo.ui.waMeDigits
 fun ContactButtons(phone: String, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val wa = waMeDigits(phone)
-    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
         RahalOutlineButton(onClick = { dial(context, phone) }, modifier = Modifier.weight(1f)) {
             Icon(
                 painterResource(com.rahalgo.ui.R.drawable.ic_phone),
                 contentDescription = null,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(Rahal.icon.xs),
             )
-            Spacer(Modifier.size(6.dp))
+            Spacer(Modifier.size(Rahal.space.xs))
             Text(stringResource(com.rahalgo.ui.R.string.contact_call))
         }
         if (wa.isNotEmpty()) {
@@ -52,9 +51,9 @@ fun ContactButtons(phone: String, modifier: Modifier = Modifier) {
                 Icon(
                     painterResource(com.rahalgo.ui.R.drawable.ic_whatsapp),
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp),
+                    modifier = Modifier.size(Rahal.icon.xs),
                 )
-                Spacer(Modifier.size(6.dp))
+                Spacer(Modifier.size(Rahal.space.xs))
                 Text(stringResource(com.rahalgo.ui.R.string.contact_whatsapp))
             }
         }
@@ -65,14 +64,10 @@ fun ContactButtons(phone: String, modifier: Modifier = Modifier) {
 @Composable
 fun CallIcon(phone: String) {
     val context = LocalContext.current
-    IconButton(onClick = { dial(context, phone) }, modifier = Modifier.size(36.dp)) {
-        Icon(
-            painterResource(com.rahalgo.ui.R.drawable.ic_phone),
-            contentDescription = stringResource(com.rahalgo.ui.R.string.contact_call),
-            tint = Rahal.colors.brand,
-            modifier = Modifier.size(20.dp),
-        )
-    }
+    IconAction(
+        icon = com.rahalgo.ui.R.drawable.ic_phone,
+        description = stringResource(com.rahalgo.ui.R.string.contact_call),
+    ) { dial(context, phone) }
 }
 
 /** **يفتح لوحةَ الاتّصال بالرقم** — ولا يتّصل وحدَه: لا إذنَ `CALL_PHONE`. */

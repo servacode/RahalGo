@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -17,7 +16,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import com.rahalgo.design.Rahal
 import com.rahalgo.rep.R
 import com.rahalgo.ui.LoadState
@@ -48,7 +46,7 @@ fun ClientSections(vm: ClientsViewModel) {
             return@Screen
         }
         if (vm.allSections.isEmpty()) {
-            Text(stringResource(R.string.cd_sections_none), color = Rahal.colors.inkMuted)
+            com.rahalgo.ui.EmptyState(title = stringResource(R.string.cd_sections_none), icon = R.drawable.ic_grid)
             return@Screen
         }
         val saved = vm.mySections.map { it.id }.toSet()
@@ -56,7 +54,7 @@ fun ClientSections(vm: ClientsViewModel) {
         Text(
             stringResource(R.string.cd_sections_hint),
             color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodyMedium,
+            style = Rahal.type.body,
         )
         Spacer(Modifier.height(Rahal.space.md))
         FlowRow(
@@ -69,7 +67,8 @@ fun ClientSections(vm: ClientsViewModel) {
                     selected = on,
                     enabled = !suspended,
                     onClick = { picked = if (on) picked - sec.id else picked + sec.id },
-                    label = { Text(sec.name) },
+                    label = { Text(sec.name, style = Rahal.type.label) },
+                    shape = Rahal.shape.pill,
                 )
             }
         }
@@ -78,7 +77,7 @@ fun ClientSections(vm: ClientsViewModel) {
             Text(
                 stringResource(R.string.cd_sections_empty),
                 color = Rahal.colors.danger,
-                style = MaterialTheme.typography.bodySmall,
+                style = Rahal.type.caption,
             )
         }
         if (picked != saved && !suspended) {
@@ -88,7 +87,7 @@ fun ClientSections(vm: ClientsViewModel) {
                 enabled = !vm.sectionsSaving,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp),
+                    .height(Rahal.size.action),
             ) { Text(stringResource(com.rahalgo.ui.R.string.act_save), fontWeight = FontWeight.Bold) }
         }
         Spacer(Modifier.height(Rahal.space.xl))

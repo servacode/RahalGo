@@ -14,42 +14,37 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import com.rahalgo.ui.RahalButton
-import com.rahalgo.ui.RahalOutlineButton
-import com.rahalgo.ui.RahalTextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import com.rahalgo.design.Rahal
 import com.rahalgo.rep.Backend
 import com.rahalgo.rep.R
 import com.rahalgo.shared.rep.Lead
 import com.rahalgo.shared.rep.RepMerchant
 import com.rahalgo.ui.Bar
-import com.rahalgo.ui.Card
-import com.rahalgo.ui.Chip
-import com.rahalgo.ui.Empty
+import com.rahalgo.ui.CardVariant
+import com.rahalgo.ui.EmptyState
 import com.rahalgo.ui.LoadState
+import com.rahalgo.ui.RahalButton
+import com.rahalgo.ui.RahalCard
+import com.rahalgo.ui.RahalDivider
 import com.rahalgo.ui.Refreshable
 import com.rahalgo.ui.RemoteImage
 import com.rahalgo.ui.Screen
 import com.rahalgo.ui.ScreenTitle
-import com.rahalgo.ui.SectionTitle
+import com.rahalgo.ui.SectionHeader
+import com.rahalgo.ui.StatusChip
+import com.rahalgo.ui.StatusDot
+import com.rahalgo.ui.StatusTone
 import com.rahalgo.ui.money
 
 /**
@@ -126,50 +121,41 @@ fun ClientsScreen(
     // عميلاً صباحاً يسحب ليرى أقُبل** بلا خروجٍ وعودة.
     Refreshable(refreshing = false, onRefresh = { vm.load() }) {
         Screen {
-            // ══════════════════════════════════════════════════════════
-            // **والعددُ بجانب الاسم — لا سطراً تحته ولا عنوانَ قسم**
-            // ══════════════════════════════════════════════════════════
-            //
-            // **(طلبُ المالك ٢٠٢٦-٠٨-٣١:** «من سجّلتهم وما نلتَه عنهم ما
-            // تلزم · **يعملون (٤) أيضاً احذفها** · حطّ رقمَ عدد العملاء
-            // بجانب عملائي».)
+            // **والعددُ بجانب الاسم — لا سطراً تحته ولا عنوانَ قسم** (طلبُ المالك ٢٠٢٦-٠٨-٣١:
+            // «حطّ رقمَ عدد العملاء بجانب عملائي»).
             ScreenTitle(stringResource(R.string.nav_clients) + " (" + list.size + ")")
 
             // ══════════════════════════════════════════════════════════
-            // **والمعلَّقون أوّلا** — ما ينتظر عملا
+            // **والمعلَّقون أوّلا** — ما ينتظر عملا، والعددُ يعدّهم وحدَهم.
             // ══════════════════════════════════════════════════════════
-            //
-            // **والعددُ يعدّهم وحدَهم** — **وكان يعدّ المرفوضين معهم**، فيرى
-            // «ينتظرون (٣)» وواحدٌ منهم رُفض من شهر.
             if (pending.isNotEmpty()) {
-                SectionTitle(stringResource(R.string.cl_pending, pending.size.toString()))
-                pending.forEach { LeadCard(it, onEdit = { onEditLead(it) }) }
+                SectionHeader(stringResource(R.string.cl_pending, pending.size.toString()))
+                Column(verticalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
+                    pending.forEach { LeadCard(it, onEdit = { onEditLead(it) }) }
+                }
             }
 
             // **والمرفوضون في قسمهم مطويّين** — يُرَون بضغطة، ولا يزحمون.
             if (rejected.isNotEmpty()) {
-                SectionTitle(stringResource(R.string.cl_rejected_title, rejected.size.toString()))
-                RahalTextButton(onClick = { vm.showRejected = !vm.showRejected }) {
-                    Text(
-                        stringResource(
-                            if (vm.showRejected) R.string.cl_rejected_hide else R.string.cl_rejected_show,
-                        ),
-                        color = Rahal.colors.brand,
-                    )
+                SectionHeader(
+                    title = stringResource(R.string.cl_rejected_title, rejected.size.toString()),
+                    action = stringResource(
+                        if (vm.showRejected) R.string.cl_rejected_hide else R.string.cl_rejected_show,
+                    ),
+                    onAction = { vm.showRejected = !vm.showRejected },
+                )
+                if (vm.showRejected) {
+                    Column(verticalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
+                        rejected.forEach { LeadCard(it, onEdit = { onEditLead(it) }) }
+                    }
                 }
-                if (vm.showRejected) rejected.forEach { LeadCard(it, onEdit = { onEditLead(it) }) }
-            }
-            if (pending.isNotEmpty() || rejected.isNotEmpty()) {
-                Spacer(Modifier.height(14.dp))
-                HorizontalDivider()
             }
 
             if (list.isEmpty() && vm.leads.isEmpty()) {
                 // **ولا متجرَ بعد — وزرٌّ إلى حيث يُسجَّل** (٢٠٢٦-١٠-٢٧).
-                // **وكان التلميحُ يقول «زرّ الإضافة في الأعلى»** — والإضافةُ
-                // تبويبٌ تحت، **وجملتان تعيدان الشيءَ نفسَه.**
-                Empty(
-                    text = stringResource(R.string.cl_none),
+                EmptyState(
+                    title = stringResource(R.string.cl_none),
+                    icon = com.rahalgo.ui.R.drawable.ic_store,
                     actionLabel = stringResource(R.string.nav_add_client),
                     onAction = onAddClient,
                 )
@@ -177,50 +163,58 @@ fun ClientsScreen(
             }
 
             if (list.isNotEmpty()) {
+                if (pending.isNotEmpty() || rejected.isNotEmpty()) {
+                    SectionHeader(stringResource(R.string.nav_clients))
+                }
                 // ══════════════════════════════════════════════════════
                 // **وبحثٌ وفلترةٌ لمن كثر عملاؤه** (٢٠٢٦-١٠-٢٧)
                 // ══════════════════════════════════════════════════════
                 //
-                // **ومن له ثلاثون عميلاً يمرّر طويلاً ليبلغ واحدا.** **ولا
-                // تُعرض لمن له خمسةٌ أو أقلّ** — قائمةٌ قصيرةٌ تُرى كلُّها.
+                // **ولا تُعرض لمن له خمسةٌ أو أقلّ** — قائمةٌ قصيرةٌ تُرى كلُّها.
                 if (list.size > 5) {
-                    Spacer(Modifier.height(10.dp))
                     OutlinedTextField(
                         value = vm.query,
                         onValueChange = { vm.query = it },
-                        placeholder = { Text(stringResource(R.string.cl_search)) },
+                        placeholder = { Text(stringResource(R.string.cl_search), style = Rahal.type.body) },
                         leadingIcon = {
                             Icon(
                                 painterResource(com.rahalgo.ui.R.drawable.ic_search),
                                 contentDescription = null,
-                                modifier = Modifier.size(20.dp),
+                                modifier = Modifier.size(Rahal.icon.sm),
                             )
                         },
                         singleLine = true,
+                        textStyle = Rahal.type.body,
+                        shape = Rahal.shape.md,
                         modifier = Modifier.fillMaxWidth(),
                     )
-                    Spacer(Modifier.height(6.dp))
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Spacer(Modifier.height(Rahal.space.sm))
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
                         FilterOption(com.rahalgo.ui.R.string.wal_all, ClientFilter.All, vm)
                         FilterOption(R.string.cl_f_missing, ClientFilter.Missing, vm)
                         FilterOption(R.string.cl_f_no_items, ClientFilter.NoItems, vm)
                         FilterOption(R.string.cl_stopped, ClientFilter.Stopped, vm)
                     }
+                    Spacer(Modifier.height(Rahal.space.xs))
                 }
                 // **وبلا حقلٍ ظاهرٍ لا بحثَ يُطبَّق** (٢٠٢٦-١٠-٢٨) — والنموذجُ يصفّرهما أيضاً.
                 val shown = if (list.size > 5) vm.visible(list) else list
                 if (shown.isEmpty()) {
-                    Empty(stringResource(R.string.cl_no_match))
-                }
-                shown.forEach { m ->
-                    MerchantCard(
-                        m = m,
-                        media = { path -> Backend.of(context).media(path) },
-                        onOpen = { vm.openDetail(m.id) },
+                    EmptyState(
+                        title = stringResource(R.string.cl_no_match),
+                        icon = com.rahalgo.ui.R.drawable.ic_search,
                     )
                 }
+                Column(verticalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
+                    shown.forEach { m ->
+                        MerchantCard(
+                            m = m,
+                            media = { path -> Backend.of(context).media(path) },
+                            onOpen = { vm.openDetail(m.id) },
+                        )
+                    }
+                }
             }
-            Spacer(Modifier.height(24.dp))
         }
     }
 }
@@ -230,38 +224,35 @@ private fun FilterOption(label: Int, f: ClientFilter, vm: ClientsViewModel) {
     FilterChip(
         selected = vm.filter == f,
         onClick = { vm.filter = f },
-        label = { Text(stringResource(label)) },
+        label = { Text(stringResource(label), style = Rahal.type.label) },
+        shape = Rahal.shape.pill,
     )
 }
 
 /**
  * **عميلٌ ينتظر البتّ — أو رُفض.**
  *
- * **ولا عمولةَ فيه ولا طلبات** — **ورقمٌ صفريٌّ بجانب اسمٍ يُقرأ فشلا**،
- * وهو لم يبدأ بعد.
+ * **ولا عمولةَ فيه ولا طلبات** — **ورقمٌ صفريٌّ بجانب اسمٍ يُقرأ فشلا**، وهو لم يبدأ بعد.
  */
 @Composable
 private fun LeadCard(lead: Lead, onEdit: () -> Unit) {
     val rejected = lead.status == "rejected"
     val needsInfo = lead.status == "needs_info"
-    Spacer(Modifier.height(8.dp))
-    Card {
+    RahalCard(variant = CardVariant.Outlined) {
         Row(
             Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
                 text = lead.storeName,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.cardTitle,
+                color = Rahal.colors.ink,
                 modifier = Modifier.weight(1f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            // **و«الإدارة بدها معلومات» حالٌ ثالثة** — **وكانت تُقرأ
-            // «بانتظار الموافقة» بلونٍ عاديّ**، فلا يعرف أنّ الدورَ عليه.
-            Chip(
+            StatusChip(
                 stringResource(
                     when {
                         rejected -> R.string.cl_rejected
@@ -269,87 +260,59 @@ private fun LeadCard(lead: Lead, onEdit: () -> Unit) {
                         else -> R.string.cl_waiting
                     },
                 ),
-                if (rejected) Rahal.colors.danger else Rahal.colors.accent,
+                if (rejected) StatusTone.Danger else StatusTone.Warning,
             )
         }
+        // **ورقمُ صاحبه بجانبه زرُّ اتّصال** — هو من يُلاحَق ليُكمل.
         if (lead.ownerName.isNotEmpty() || lead.phone.isNotEmpty()) {
-            Spacer(Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = listOf(lead.ownerName, ltrPhone(lead.phone), lead.area)
-                        .filter { it.isNotEmpty() }
-                        .joinToString(" · "),
-                    color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.weight(1f),
-                )
-                // **واتّصالٌ بضغطة** — يلاحق صاحبَه وهو في الطريق.
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        text = listOf(lead.ownerName, ltrPhone(lead.phone), lead.area)
+                            .filter { it.isNotEmpty() }
+                            .joinToString(" · "),
+                        color = Rahal.colors.inkMuted,
+                        style = Rahal.type.caption,
+                    )
+                    if (lead.createdAt.isNotEmpty()) {
+                        Text(
+                            text = stringResource(R.string.cl_lead_since, com.rahalgo.ui.dayText(lead.createdAt)),
+                            color = Rahal.colors.inkMuted,
+                            style = Rahal.type.meta,
+                        )
+                    }
+                }
                 if (lead.phone.isNotEmpty()) CallIcon(lead.phone)
             }
-        }
-        if (lead.createdAt.isNotEmpty()) {
+        } else if (lead.createdAt.isNotEmpty()) {
+            Spacer(Modifier.height(Rahal.space.xs))
             Text(
                 text = stringResource(R.string.cl_lead_since, com.rahalgo.ui.dayText(lead.createdAt)),
                 color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.labelSmall,
+                style = Rahal.type.meta,
             )
         }
-        // **وسببُ الرفض وما ينقص يُقالان** — **ومن رُفض عميلُه بلا سببٍ يُعيد
-        // تسجيلَه بالخطأ نفسِه.** وهي ملاحظةُ الإدارة (`decision_note`) لا ما
-        // كتبه المندوبُ نفسُه (`note`) — كانت تعرض الثانيةَ فلا يرى ما طُلب.
-        if (lead.decisionNote.isNotEmpty() && (lead.status == "rejected" || needsInfo)) {
-            Spacer(Modifier.height(6.dp))
+        // **وملاحظةُ الإدارة تُقال** — سببُ الرفض أو المعلومةُ المطلوبة (`decision_note`).
+        if (lead.decisionNote.isNotEmpty() && (rejected || needsInfo)) {
+            Spacer(Modifier.height(Rahal.space.sm))
             Text(
                 text = stringResource(R.string.cl_admin_note, lead.decisionNote),
-                color = if (rejected) Rahal.colors.danger else Rahal.colors.accent,
-                fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodySmall,
+                color = if (rejected) Rahal.colors.danger else Rahal.colors.accentInk,
+                style = Rahal.type.bodyStrong,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(Rahal.shape.sm)
+                    .background((if (rejected) Rahal.colors.danger else Rahal.colors.accent).copy(alpha = 0.08f))
+                    .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
             )
         }
-        // **و«بحاجة معلومات» تُصلَح من هنا** (قرارُ المالك ٢٠٢٦-١٠-٢٧).
+        // **و«بحاجة معلومات» تُصلَح من بطاقتها** (قرارُ المالك ٢٠٢٦-١٠-٢٧).
         if (needsInfo) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.md))
             RahalButton(onClick = onEdit, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.cl_fix_lead))
             }
         }
-    }
-}
-
-/**
- * **رقمٌ صغيرٌ بكلمته** — أربعةٌ في صفٍّ واحدٍ من البطاقة.
- *
- * **وليس `StatBox`**: أربعةُ مربّعاتٍ بحشوته في عرض الهاتف تقصّ الرقم،
- * **وهذا أخفُّ** — رقمٌ ثقيلٌ وكلمةٌ صغيرةٌ تحته.
- */
-@Composable
-private fun MiniStat(label: String, value: String, color: Color, modifier: Modifier) {
-    Column(
-        modifier
-            .clip(Rahal.shape.sm)
-            .background(Rahal.colors.inkMuted.copy(alpha = 0.07f))
-            .padding(horizontal = 6.dp, vertical = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(
-            value,
-            color = color,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.bodyMedium,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center,
-        )
-        Text(
-            label,
-            color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.labelSmall,
-            // **سطران لا قصّ** (مراجعةُ المالك ٢٠٢٦-١٠-٣٠: «طلبات سلمت» كانت تنقطع).
-            minLines = 1,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center,
-        )
     }
 }
 
@@ -368,26 +331,38 @@ internal fun missingFor(m: RepMerchant): List<String> = buildList {
 @Composable
 internal fun MissingStrip(missing: List<String>, onClick: (() -> Unit)? = null) {
     if (missing.isEmpty()) return
-    Spacer(Modifier.height(8.dp))
-    Text(
-        text = stringResource(R.string.cl_goal_missing, missing.joinToString(" · ")),
-        color = Rahal.colors.accent,
-        fontWeight = FontWeight.Bold,
-        style = MaterialTheme.typography.bodySmall,
-        modifier = Modifier
+    Spacer(Modifier.height(Rahal.space.md))
+    Row(
+        Modifier
             .fillMaxWidth()
             .clip(Rahal.shape.sm)
             .background(Rahal.colors.warnTint)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 10.dp, vertical = 8.dp),
-    )
+            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            painterResource(com.rahalgo.ui.R.drawable.ic_warning),
+            contentDescription = null,
+            tint = Rahal.colors.accentInk,
+            modifier = Modifier.size(Rahal.icon.xs),
+        )
+        Spacer(Modifier.size(Rahal.space.sm))
+        Text(
+            text = stringResource(R.string.cl_goal_missing, missing.joinToString(" · ")),
+            color = Rahal.colors.accentInk,
+            style = Rahal.type.bodyStrong,
+            modifier = Modifier.weight(1f),
+        )
+    }
 }
 
 /**
  * **بطاقةُ عميلٍ في القائمة — مضغوطة** (طلبُ المالك ٢٠٢٦-١١-١١).
  *
- * شعارٌ واسمٌ وصاحبُه وحالُه، وبعدها رقمان هما ما يسأل عنه المندوب (سُلّم كم · عمولتي كم)، وشارةٌ
- * بما ينقصه إن نقص. **والتواصلُ والإجراءاتُ وساعاتُ الدوام في تفصيله** — **وزرٌّ في سطر القائمة يُضغط سهواً وهو يمرّر.**
+ * شعارٌ واسمٌ وصاحبُه وحالُه في سطرٍ واحد، وتحت فاصلٍ رقمان هما ما يسأل عنه المندوب (سُلّم كم ·
+ * عمولتي كم) وشارةٌ بما ينقصه إن نقص. **والتواصلُ والإجراءاتُ وساعاتُ الدوام في تفصيله** —
+ * **وزرٌّ في سطر القائمة يُضغط سهواً وهو يمرّر.**
  */
 @Composable
 private fun MerchantCard(
@@ -395,45 +370,45 @@ private fun MerchantCard(
     media: (String?) -> String?,
     onOpen: () -> Unit,
 ) {
-    Spacer(Modifier.height(Rahal.space.md))
-    Card(modifier = Modifier.clickable(onClick = onOpen)) {
+    val active = m.status == "active"
+    RahalCard(onClick = onOpen) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             RemoteImage(
                 url = media(m.logoThumbUrl),
                 name = m.name,
                 modifier = Modifier
-                    .size(52.dp)
+                    .size(Rahal.size.avatarMd)
                     .clip(Rahal.shape.md),
             )
-            Spacer(Modifier.size(12.dp))
-            Column(Modifier.weight(1f)) {
+            Spacer(Modifier.size(Rahal.space.md))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(Rahal.space.xxs)) {
                 Text(
                     text = m.name,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = Rahal.type.cardTitle,
+                    color = Rahal.colors.ink,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                // **اسمُ صاحبه لا رقمُه** (قرارُ المالك ٢٠٢٦-١١-١١).
                 m.ownerName?.takeIf { it.isNotBlank() }?.let {
                     Text(
                         text = it,
                         color = Rahal.colors.ink,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = Rahal.type.caption,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                 }
-                Spacer(Modifier.height(3.dp))
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
                     StatusDot(
-                        stringResource(if (m.status == "active") R.string.cl_working else R.string.cl_stopped),
-                        if (m.status == "active") Rahal.colors.success else Rahal.colors.inkMuted,
+                        stringResource(if (active) R.string.cl_working else R.string.cl_stopped),
+                        if (active) StatusTone.Success else StatusTone.Neutral,
                     )
                     if (m.categoryName.isNotEmpty()) {
                         Text(
                             text = m.categoryName,
                             color = Rahal.colors.inkMuted,
-                            style = MaterialTheme.typography.labelMedium,
+                            style = Rahal.type.meta,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -441,63 +416,58 @@ private fun MerchantCard(
                 }
             }
             Icon(
-                painterResource(com.rahalgo.ui.R.drawable.ic_arrow_back),
+                painterResource(com.rahalgo.ui.R.drawable.ic_chevron_end),
                 contentDescription = null,
                 tint = Rahal.colors.inkMuted,
-                modifier = Modifier
-                    .size(18.dp)
-                    .graphicsLayer { rotationZ = 180f },
+                modifier = Modifier.size(Rahal.icon.sm),
             )
         }
 
+        // **والتفعيلُ بعددين لا بكلمة** — كم أنجز من الطلبات التي تُصرف بعدها عمولتُه.
         val needed = m.activationNeeded.toInt()
         if (needed > 1 && m.activationDone < needed) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             Text(
                 text = stringResource(R.string.cl_activation, m.activationDone.toString(), needed.toString()),
                 color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
+                style = Rahal.type.caption,
             )
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(Rahal.space.xs))
             Bar(ratio = m.activationDone.toFloat() / needed.toFloat(), color = Rahal.colors.accent)
         }
 
-        Spacer(Modifier.height(10.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            MiniStat(
-                label = stringResource(R.string.cl_s_orders),
-                value = m.deliveredOrders.toString(),
-                color = Rahal.colors.ink,
-                modifier = Modifier.weight(1f),
-            )
-            MiniStat(
-                label = stringResource(R.string.cl_s_commission),
-                value = money(m.myCommission),
-                color = Rahal.colors.brand,
-                modifier = Modifier.weight(1.4f),
-            )
-        }
-
-        // **شارةٌ بما ينقصه** — العددُ هنا والتفصيلُ في بطاقته (يُفتح فيُرى بنداً بنداً).
-        val missing = missingFor(m)
-        val noItems = m.itemsCount == 0
-        if (missing.isNotEmpty() || noItems) {
-            Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                if (missing.isNotEmpty()) {
-                    Chip(stringResource(R.string.cl_missing_badge, missing.size.toString()), Rahal.colors.accent)
-                } else if (m.goalState == "counted") {
-                    Chip(stringResource(R.string.cl_goal_counted), Rahal.colors.success)
-                }
-                if (noItems) Chip(stringResource(R.string.cl_f_no_items), Rahal.colors.accent)
+        // **ورقمان في سطرٍ واحدٍ تحت فاصل** — لا مربّعان كبيران (البطاقةُ مضغوطة).
+        Spacer(Modifier.height(Rahal.space.md))
+        RahalDivider()
+        Spacer(Modifier.height(Rahal.space.sm))
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Rahal.space.lg),
+        ) {
+            MiniStat(stringResource(R.string.cl_s_orders), m.deliveredOrders.toString(), Rahal.colors.ink)
+            MiniStat(stringResource(R.string.cl_s_commission), money(m.myCommission), Rahal.colors.brand)
+            Spacer(Modifier.weight(1f))
+            val missing = missingFor(m)
+            when {
+                missing.isNotEmpty() ->
+                    StatusChip(stringResource(R.string.cl_missing_badge, missing.size.toString()), StatusTone.Warning)
+                m.goalState == "counted" ->
+                    StatusChip(stringResource(R.string.cl_goal_counted), StatusTone.Success)
             }
-        } else if (m.goalState == "counted") {
-            Spacer(Modifier.height(8.dp))
-            Chip(stringResource(R.string.cl_goal_counted), Rahal.colors.success)
+        }
+        if (m.itemsCount == 0) {
+            Spacer(Modifier.height(Rahal.space.sm))
+            StatusChip(stringResource(R.string.cl_f_no_items), StatusTone.Warning, icon = com.rahalgo.ui.R.drawable.ic_warning)
         }
     }
 }
 
-/** **ثلاثةُ ألوانٍ هادئةٍ تتناوب** — بطاقتان متجاورتان لا تتشابهان. */
+/** **رقمٌ صغيرٌ بكلمته** — الكلمةُ فوق والرقمُ تحتها، بلا أرضٍ ولا إطار. */
 @Composable
-private fun cardTones() = listOf(Rahal.colors.brand, Rahal.colors.accent, Rahal.colors.success)
+private fun MiniStat(label: String, value: String, color: androidx.compose.ui.graphics.Color) {
+    Column {
+        Text(label, color = Rahal.colors.inkMuted, style = Rahal.type.meta, maxLines = 1)
+        Text(value, color = color, style = Rahal.type.bodyStrong, maxLines = 1)
+    }
+}
