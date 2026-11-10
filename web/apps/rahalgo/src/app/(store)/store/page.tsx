@@ -628,7 +628,7 @@ function HomeBody({ store }: { store: MerchantStore }) {
           Link={Link}
         />
         <IRow icon={IconCheck} tone="violet" title={HM.rowAmeen} value={store.uses_ameen ? HM.ameenYesShort : HM.ameenNoShort} href="/store/settings/ameen" Link={Link} />
-        <IRow icon={IconTrendUp} tone="gray" title={HM.rowRate} value={store.exchange_rate ? usdText(store.exchange_rate) : notSet} href="/store/settings/rate" Link={Link} />
+        <IRow icon={IconTrendUp} tone="gray" title={HM.rowRate} value={store.exchange_rate ? fill(HM.rateValue, { rate: usdText(store.exchange_rate) }) : notSet} href="/store/settings/rate" Link={Link} />
         <IRow icon={IconHourglass} tone="attention" title={HM.rowPrep} value={`${fmtNum(store.default_prep_minutes)} ${T.prepUnit}`} href="/store/settings/prep" Link={Link} />
       </IGroup>
     </>

@@ -27,7 +27,7 @@ data class OfferStore(val id: String, val name: String)
 /** قسمٌ بأصنافه كما ردّه المحرّك. */
 data class OfferSection(val id: String, val name: String, val items: List<OfferItem>)
 
-data class OfferItem(val id: String, val name: String, val price: Long)
+data class OfferItem(val id: String, val name: String, val price: Long, val priceUsd: Double? = null)
 
 /**
  * ══════════════════════════════════════════════════════════════════════

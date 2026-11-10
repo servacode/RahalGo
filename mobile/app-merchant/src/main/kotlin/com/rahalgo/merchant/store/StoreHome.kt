@@ -306,7 +306,7 @@ fun StoreScreen(
                     SettingsRow(
                         icon = com.rahalgo.ui.R.drawable.ic_chart,
                         label = stringResource(R.string.home_row_rate_short),
-                        value = store.exchangeRate?.let { com.rahalgo.ui.menu.usdText(it) } ?: notSet,
+                        value = store.exchangeRate?.let { stringResource(R.string.home_val_rate, com.rahalgo.ui.menu.usdText(it)) } ?: notSet,
                     ) { vm.page = StorePage.Rate }
                     SettingsRow(
                         icon = com.rahalgo.ui.R.drawable.ic_work,
