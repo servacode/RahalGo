@@ -110,7 +110,7 @@ fun longDate(iso: String): String {
  * إلى الطرف الآخر (٢٠٢٦-١٠-٢٨). والفارغُ يبقى فارغاً.
  */
 fun ltrPhone(phone: String): String =
-    if (phone.isEmpty()) phone else Char(0x2066) + phone + Char(0x2069)
+    com.rahalgo.ui.phoneText(phone)
 
 /**
  * **«+963912345678» ⇒ «0912345678»** — الشكلُ الذي يطلبه حقلُ الرقم (`09xxxxxxxx`).

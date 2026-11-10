@@ -1,0 +1,98 @@
+package com.rahalgo.ui
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.isSpecified
+import androidx.compose.ui.unit.sp
+import com.rahalgo.design.Rahal
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **السعرُ بالعملتين — قطعةٌ واحدةٌ في كلّ مكانٍ يظهر فيه الدولارُ والليرةُ معاً**
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (ملاحظاتُ المالك ٢٠٢٦-١١-١١، ٣ و٤ و٥: «$0.13 · 15 ل.س» تُقرأ رقماً واحداً — «لازم الزبون يعرف مين
+ * الدولار ومين الليرة»، وقاعدتُه: **كلُّ مكانٍ فيه العملتان يُعرضان بوضوحٍ وبطريقةٍ واحدة.**)
+ *
+ * **الدولارُ عريضٌ بلون العلامة — هو السعرُ المعروض. والليرةُ أصغرُ باهتةٌ بعد «≈» — هي التقريبُ المدفوع.**
+ * **و«$» لا ينقلب** (كلُّ جزءٍ معزولٌ يساراً)، **ولا «·» يتيم**: لا فاصلَ أصلاً، والليرةُ وحدةٌ واحدةٌ
+ * تنزل كلَّها تحت الدولار إن ضاق السطر (`FlowRow`)، أو دائماً بـ`stacked`.
+ *
+ * **وبلا دولارٍ** (متجرٌ بالليرة) تُعرض الليرةُ وحدَها بحجم الدولار.
+ *
+ * **والويبُ مرآتُه** (`Price` في `web/apps/rahalgo/src/lib/store/usd.ts`) — ومن غيّر شكلاً غيّره في الآخر.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun DualPrice(
+    usd: Double?,
+    syp: Long,
+    modifier: Modifier = Modifier,
+    /** **سطران دائماً** — لخانةٍ ضيّقةٍ كبطاقة المنتج. وإلّا سطرٌ واحدٌ ينزل وحدَه إن ضاق. */
+    stacked: Boolean = false,
+    /** **نمطُ الدولار** — والليرةُ تُشتقّ منه أصغرَ. */
+    style: TextStyle = MaterialTheme.typography.bodyMedium,
+    usdColor: Color = Rahal.colors.brand,
+    sypColor: Color = Rahal.colors.inkMuted,
+    horizontalAlignment: Alignment.Horizontal = Alignment.Start,
+) {
+    val main = style.copy(fontWeight = FontWeight.Bold, color = usdColor)
+    if (usd == null) {
+        Text(
+            money(syp),
+            style = main,
+            modifier = modifier,
+            maxLines = 1,
+        )
+        return
+    }
+    val small = style.copy(
+        fontWeight = FontWeight.Normal,
+        color = sypColor,
+        fontSize = (if (style.fontSize.isSpecified) style.fontSize.value - 2f else 11f).coerceAtLeast(10f).sp,
+    )
+    val usdPart = dualUsdPart(usd)
+    val sypPart = dualSypPart(syp)
+    if (stacked) {
+        Column(modifier, horizontalAlignment = horizontalAlignment) {
+            Text(usdPart, style = main, maxLines = 1)
+            Text(sypPart, style = small, maxLines = 1)
+        }
+    } else {
+        FlowRow(
+            modifier,
+            horizontalArrangement = Arrangement.spacedBy(Rahal.space.xs),
+            verticalArrangement = Arrangement.Top,
+        ) {
+            Text(usdPart, style = main, maxLines = 1, softWrap = false)
+            Text(sypPart, style = small, maxLines = 1, softWrap = false)
+        }
+    }
+}
+
+private const val LRI = "⁦"
+private const val PDI = "⁩"
+
+/** **الدولار معزولٌ يساراً** — فلا ينقلب «$» إلى آخر الرقم في سطرٍ عربيّ. */
+fun dualUsdPart(usd: Double): String = LRI + dollars(usd) + PDI
+
+/** **الليرةُ بعد «≈»** — معزولةٌ كذلك. */
+fun dualSypPart(syp: Long): String = "≈ " + LRI + grouped(syp) + PDI + " ل.س"
+
+/**
+ * **السعرُ نصّاً واحداً** — لما لا يرسم قطعةً (إشعارٌ، قائمةُ نصوص، زرٌّ يقبل نصّاً وحدَه): الدولارُ ثمّ
+ * «≈» والليرة، كلٌّ معزول. **وما أمكن فالقطعةُ `DualPrice` أوضح.**
+ */
+fun dualPriceText(usd: Double?, syp: Long): String =
+    if (usd == null) money(syp) else dualUsdPart(usd) + " " + dualSypPart(syp)

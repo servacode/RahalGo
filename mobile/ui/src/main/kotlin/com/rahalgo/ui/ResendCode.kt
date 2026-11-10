@@ -86,7 +86,7 @@ fun ResendCodeRow(
                 style = MaterialTheme.typography.bodySmall,
             )
         } else {
-            RahalTextButton(onClick = onResend, enabled = !busy) {
+            RahalSmallButton(onClick = onResend, enabled = !busy) {
                 Icon(
                     painter = painterResource(R.drawable.ic_history),
                     contentDescription = null,

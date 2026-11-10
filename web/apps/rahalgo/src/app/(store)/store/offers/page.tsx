@@ -27,6 +27,7 @@ import {
   Badge,
   Button,
   Confirm,
+  DualPrice,
   FormActions,
   IconAdd,
   IconCheck,
@@ -45,7 +46,7 @@ import { useStore } from "@/lib/store/context";
 import type { MenuItem, StoreOffer } from "@/lib/store/types";
 import { attemptKey, clearAttempt, isDecided } from "@/lib/customer/storage";
 import { fill } from "@/lib/customer/texts";
-import { priceLine } from "@/lib/store/usd";
+import { itemUsd } from "@/lib/store/usd";
 import { useShopToast } from "@/components/customer/toast";
 import { CheckBadge, StickyBar, ToolHeader } from "@/components/store/ToolParts";
 
@@ -288,7 +289,7 @@ function NewOffer({
         {item ? (
           <div className="flex items-center gap-2" data-testid="offer-item-picked">
             <span className="min-w-0 flex-1 truncate font-bold">{fill(O.pickedLine, { name: item.name })}</span>
-            <span className="shrink-0 text-sm text-ink-muted">{priceLine(item)}</span>
+            <DualPrice usd={itemUsd(item)} syp={item.price} stacked className="shrink-0 text-sm" />
             <Button variant="secondary" className="shrink-0" onClick={() => setPicked("")} data-testid="offer-item-change">
               {O.change}
             </Button>
@@ -322,7 +323,7 @@ function NewOffer({
                     testId="offer-item"
                   >
                     <span className="line-clamp-2 pe-5 text-sm font-bold text-ink">{i.name}</span>
-                    <span className="text-xs text-ink-muted">{priceLine(i)}</span>
+                    <DualPrice usd={itemUsd(i)} syp={i.price} className="text-xs" />
                     {note && (
                       <span className="mt-1 w-fit rounded-control bg-warning-tint px-1.5 py-0.5 text-2xs text-warning">
                         {note === "scheduled" ? O.itemScheduled : O.itemTaken}

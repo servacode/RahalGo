@@ -46,6 +46,7 @@ export function FormActions({
   tone,
   saveIcon,
   cancelIcon,
+  equal = false,
 }: {
   onSave?: () => void;
   onCancel?: () => void;
@@ -57,15 +58,20 @@ export function FormActions({
   /** **أيقونةٌ قبل النصّ** — لشريط أدواتٍ كلُّه أيقونات (نافذةُ قصّ الصورة). */
   saveIcon?: React.ReactNode;
   cancelIcon?: React.ReactNode;
+  /** **عرضان متساويان على كامل العرض** — لنافذةٍ (ملاحظةُ المالك ٢٠٢٦-١١-١١: الزرّان ملتصقان ومكوّمان في جهة). */
+  equal?: boolean;
 }) {
+  /* **وعرضٌ متساوٍ وفاصلٌ ١٢px في كلّ موضع** — على الجوّال يملآن العرضَ، وعلى الشاشة الواسعة بحدٍّ أدنى واحد؛
+     و`equal` يُبقيهما متساويَين على كامل العرض دائماً. */
+  const w = equal ? "flex-1" : "flex-1 sm:min-w-28 sm:flex-none";
   return (
-    <div className="flex justify-end gap-2">
+    <div className="flex justify-end gap-3">
       <Button
         type={submit ? "submit" : "button"}
         disabled={busy}
         onClick={submit ? undefined : onSave}
         variant={tone === "danger" ? "danger" : undefined}
-        className={saveIcon ? "inline-flex flex-1 items-center justify-center gap-1.5" : undefined}
+        className={saveIcon ? `inline-flex ${w} items-center justify-center gap-1.5` : w}
       >
         {saveIcon}
         {saveLabel ?? m.common.save}
@@ -74,7 +80,7 @@ export function FormActions({
         type="button"
         variant="secondary"
         onClick={onCancel}
-        className={cancelIcon ? "inline-flex flex-1 items-center justify-center gap-1.5" : undefined}
+        className={cancelIcon ? `inline-flex ${w} items-center justify-center gap-1.5` : w}
       >
         {cancelIcon}
         {cancelLabel ?? m.common.cancel}

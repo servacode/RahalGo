@@ -580,7 +580,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
     // **كان يُعاد إلى «الطلبات» بلا كلمة** حين يُلغى طلبُه أو يُعاد إلى الطابور
     // — فيظنّ عطباً في هاتفه. **والسببُ من سجلّ الطلب** (`Departures`).
     orders.lostTrip?.let { lost ->
-        androidx.compose.material3.AlertDialog(
+        com.rahalgo.ui.RahalDialog(
             onDismissRequest = orders::dismissLost,
             title = { Text(stringResource(R.string.lost_title, lost.number.toInt())) },
             text = {
@@ -693,8 +693,9 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
             // والأيقونة، **وأطولُ الأسماء نحوُ مئةٍ وعشرين** — فيقع
             // بالكاد. **والحشوةُ ضُيّقت إلى أربعةَ عشرَ** ليبقى فرجٌ:
             // اسمٌ يلامس الحافّة يُقرأ مقصوصاً وإن لم يُقصّ.
-            ModalDrawerSheet(Modifier.width(200.dp)) {
+            com.rahalgo.ui.AppDrawerSheet {
                 MenuDrawer(
+                    profile = com.rahalgo.ui.drawerProfile(accountVm, com.rahalgo.ui.R.string.drawer_role_driver),
                     onPick = { key ->
                         overlay.show(Overlay.Menu(key))
                         scope.launch { drawer.close() }

@@ -10,7 +10,7 @@ import { isValidElement, type ComponentType, type ReactNode } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtDate, fmtTime } from "@rahalgo/i18n";
 import { Button, ButtonLink, CountBadge } from "./components";
 import { SkeletonList, SkeletonStats } from "./feedback";
-import { IconStar } from "./icons";
+import { IconStar, IconWarning } from "./icons";
 import { BrandMark } from "./platform";
 
 const m = getMessages(defaultLocale);
@@ -189,11 +189,14 @@ function IconAs({ as: Icon }: { as: IconType }) {
 export function EmptyState({
   icon: Icon,
   title,
+  line,
   tone = "muted",
   action,
 }: {
   icon?: IconType | ReactNode;
   title: string;
+  /** **سطرٌ ثانٍ يقول ما يفعله المرء الآن** (D11) — مرآةُ `StateMessage` في التطبيق. */
+  line?: string;
   tone?: "muted" | "success";
   action?: ReactNode;
 }) {
@@ -225,7 +228,8 @@ export function EmptyState({
         ) : (
           <IconAs as={Icon as IconType} />
         ))}
-      <p className={`text-sm ${tone === "success" ? "text-success" : "text-ink-muted"}`}>{title}</p>
+      <p className={`text-sm ${tone === "success" ? "text-success font-bold" : "text-ink font-bold"}`}>{title}</p>
+      {line && <p className="mt-1 text-xs text-ink-muted">{line}</p>}
       {action && <div className="mt-3 flex justify-center">{action}</div>}
     </div>
   );
@@ -302,7 +306,10 @@ export function ReloadState({ onRetry, label }: { onRetry?: () => void; label?: 
       aria-live="polite"
       data-ui="error"
     >
-      <p className="text-sm text-ink-muted">{label ?? m.errors.offline}</p>
+      <span className="text-danger">
+        <IconWarning size={28} />
+      </span>
+      <p className="text-sm font-bold text-danger">{label ?? m.errors.offline}</p>
       {expired && <ButtonLink href={loginHref()}>{m.common.signIn}</ButtonLink>}
       {onRetry && (
         <Button variant={expired ? "ghost" : "secondary"} onClick={onRetry}>

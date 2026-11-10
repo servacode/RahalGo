@@ -9,6 +9,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -156,15 +157,17 @@ private fun pulse(from: Float, to: Float, still: Float, millis: Int): State<Floa
  */
 @Composable
 fun GuideBubble(text: String, onSkip: () -> Unit, modifier: Modifier = Modifier) {
-    val fill = toneFill(Tone.AccentSolid)
-    val on = toneOn(Tone.AccentSolid)
+    // **ولا تُشبه زرَّ «إنشاء حساب»** (D15): أرضٌ فاتحةٌ بحدٍّ برتقاليٍّ وحبرٌ عاديّ — لا برتقاليٌّ مملوء.
+    val fill = Rahal.colors.accentInk
+    val on = Rahal.colors.ink
     val bob by pulse(from = 0f, to = 6f, still = 0f, millis = 700)
     Column(modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(Rahal.shape.md)
-                .background(fill)
+                .background(Rahal.colors.warnTint)
+                .border(androidx.compose.foundation.BorderStroke(Rahal.stroke.hair, fill), Rahal.shape.md)
                 .padding(start = Rahal.space.md, end = Rahal.space.xs),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -177,8 +180,8 @@ fun GuideBubble(text: String, onSkip: () -> Unit, modifier: Modifier = Modifier)
                     .weight(1f)
                     .padding(vertical = Rahal.space.sm),
             )
-            RahalTextButton(onClick = onSkip) {
-                Text(stringResource(R.string.guide_skip), color = on, style = MaterialTheme.typography.labelMedium)
+            RahalSmallButton(onClick = onSkip, ink = fill) {
+                Text(stringResource(R.string.guide_skip), style = MaterialTheme.typography.labelMedium)
             }
         }
         Icon(

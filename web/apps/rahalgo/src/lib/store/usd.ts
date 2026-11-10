@@ -43,6 +43,11 @@ export function usdInput(v: string, max = 10): string {
  */
 export function priceLine(it: { price: number; price_currency?: string | null; merchant_price_usd?: number | null }): string {
   return it.price_currency === "USD" && it.merchant_price_usd != null
-    ? `${dollars(it.merchant_price_usd)} · ${fmtMoney(it.price)}`
+    ? `\u2066${dollars(it.merchant_price_usd)}\u2069 ≈ ${fmtMoney(it.price)}`
     : fmtMoney(it.price);
+}
+
+/** **أدولاريٌّ هذا الصنف؟** — يعيد دولارَه أو `null` (الليرةُ وحدَها). */
+export function itemUsd(it: { price_currency?: string | null; merchant_price_usd?: number | null }): number | null {
+  return it.price_currency === "USD" && it.merchant_price_usd != null ? it.merchant_price_usd : null;
 }

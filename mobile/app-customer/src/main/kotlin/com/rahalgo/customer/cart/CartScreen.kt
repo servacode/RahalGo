@@ -227,9 +227,9 @@ fun CartScreen(
                         // **وصنفٌ بالدولار يُقال دولارُه تحت اسمه** (طلبُ المالك ٢٠٢٦-١١-٠٧) —
                         // والليرةُ في عمود السعر، وهي ما يُدفع.
                         line.unitPriceUsd?.let { u ->
-                            Text(
-                                com.rahalgo.ui.dollars(u * line.qty),
-                                color = Rahal.colors.inkMuted,
+                            com.rahalgo.ui.DualPrice(
+                                u * line.qty,
+                                line.unitPrice * line.qty,
                                 style = MaterialTheme.typography.bodySmall,
                             )
                         }

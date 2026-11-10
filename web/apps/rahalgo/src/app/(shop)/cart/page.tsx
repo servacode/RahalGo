@@ -23,6 +23,7 @@ import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, errorText, fmtMoney, fmtNum } from "@rahalgo/i18n";
 import {
   Alert,
+  DualPrice,
   Button,
   ButtonLink,
   Confirm,
@@ -349,10 +350,8 @@ export default function CartPage() {
                     )}
                     {/* **وصنفٌ بالدولار يُقال دولارُه تحت اسمه** (٢٠٢٦-١١-٠٧) — والليرةُ في عمود السعر، وهي ما يُدفع. */}
                     {unitPriceUsd(l) != null && (
-                      <p className="text-xs text-ink-muted">
-                        <span dir="ltr" className="tabular-nums">
-                          {dollars((unitPriceUsd(l) ?? 0) * l.qty)}
-                        </span>
+                      <p className="text-xs">
+                        <DualPrice usd={(unitPriceUsd(l) ?? 0) * l.qty} syp={unitPrice(l) * l.qty} muted />
                       </p>
                     )}
                     {l.item.merchant_name && (

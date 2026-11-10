@@ -695,4 +695,4 @@ private fun TimeChip(value: String, enabled: Boolean, onChange: (String) -> Unit
 }
 
 /** **رقمٌ داخل نصٍّ عربيّ** — معزولٌ يساراً فلا تقفز «+» إلى الطرف الآخر. */
-private fun ltr(s: String): String = "⁦$s⁩"
+private fun ltr(s: String): String = com.rahalgo.ui.phoneText(s)

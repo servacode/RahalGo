@@ -7,6 +7,7 @@
  * ويريد أن يعرف ما فاته. هنا الأرشيف كاملاً بترشيح بالنوع وتجميع بالتاريخ.
  */
 
+import { fixArrows } from "./money";
 import { useCallback, useMemo, useState } from "react";
 import type { ComponentType, ReactNode } from "react";
 import { getMessages, defaultLocale, fmtNum, fmtDateTime, fmtLongDate } from "@rahalgo/i18n";
@@ -362,13 +363,13 @@ export function NotificationsPage({
                               className="h-2 w-2 shrink-0 rounded-badge bg-accent"
                             />
                           )}
-                          <span className="min-w-0 break-words" title={n.title}>{n.title}</span>
+                          <span className="min-w-0 break-words" title={n.title}>{fixArrows(n.title)}</span>
                         </p>
                         {/* **الجسدُ سطران لا سطرٌ مقتطع**: «تعويض عن طلبٍ فشل —
                             المطعم مغلق» يُقصّ عند «طلبٍ» فيبقى السؤال. */}
                         {n.body && (
                           <p className="mt-0.5 text-sm leading-relaxed text-ink-muted">
-                            {n.body}
+                            {fixArrows(n.body)}
                           </p>
                         )}
                         {/* **والوقتُ تحت المتن لا في طرف السطر.**

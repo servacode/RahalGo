@@ -106,10 +106,10 @@ class MoneyTest {
         assertTrue("المسافتان أعطتا النصَّ نفسَه: $near", near != far)
     }
 
-    /** FMT-DUAL **صنفٌ بالدولار يُقرأ بالعملتين على سطرٍ واحد** (طلبُ المالك ٢٠٢٦-١١-٠٧)، والليريُّ بالليرة وحدَها. */
+    /** FMT-DUAL **صنفٌ بالدولار يُقرأ بالعملتين بـ«≈»** (طلبُ المالك ٢٠٢٦-١١-١١)، والليريُّ بالليرة وحدَها. */
     @Test
     fun dualPriceShowsDollarThenPound() {
-        assertEquals("$2.5 · 300 ل.س", dualPrice(2.5, 300))
+        assertEquals("⁦$2.5⁩ ≈ ⁦300⁩ ل.س", dualPrice(2.5, 300))
         assertEquals("300 ل.س", dualPrice(null, 300))
     }
 }

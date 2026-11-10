@@ -214,6 +214,7 @@
     <!-- خياراتُ الصنف — الحجمُ والإضافات -->
     <string name="options_required">مطلوب</string>
     <string name="options_add">أضف — %1$s</string>
+    <string name="options_add_short">أضف</string>
     <string name="options_failed">تعذّر جلبُ الخيارات — تحقّق من الاتصال</string>
     <string name="options_unavailable">غير متوفر</string>
     <string name="options_all_out">كل خيارات %1$s غير متوفرة حالياً</string>

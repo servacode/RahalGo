@@ -352,8 +352,9 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
         gesturesEnabled = DrawerGestures.enabledFor(drawer),
         drawerContent = {
             // **والدرجُ رفيعٌ لا عريض** — عرضُه الافتراضيُّ نصفُ الشاشة.
-            ModalDrawerSheet(Modifier.width(200.dp)) {
+            com.rahalgo.ui.AppDrawerSheet {
                 Drawer(
+                    profile = com.rahalgo.ui.drawerProfile(accountVm, com.rahalgo.ui.R.string.drawer_role_rep),
                     items = REP_ITEMS + PlatformPages.items,
                     onPick = { item ->
                         overlay.show(Overlay.Menu(item.key))

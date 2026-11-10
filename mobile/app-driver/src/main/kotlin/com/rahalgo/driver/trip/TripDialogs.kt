@@ -150,7 +150,7 @@ internal fun AgreeDialog(
         )
     }
 
-    AlertDialog(
+    com.rahalgo.ui.RahalDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
@@ -287,7 +287,7 @@ internal fun FetchAmountDialog(
     val send: (Double) -> Unit = { onConfirm(it, if (whatsApp) shownCurrency else null) }
     // **وطلبُ الواتساب يقبل الصفر** (قرارُ المالك ٢٠٢٦-١١-٠٨): صفرٌ = أمانةٌ بلا ثمن بضاعة.
     val value = if (whatsApp) amount.toDoubleOrNull()?.takeIf { it >= 0 } else amountValue(amount)
-    AlertDialog(
+    com.rahalgo.ui.RahalDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
@@ -449,7 +449,7 @@ internal fun EmergencyDialog(
     onRetry: () -> Unit = onConfirm,
 ) {
     val failed = error.isNotEmpty()
-    AlertDialog(
+    com.rahalgo.ui.RahalDialog(
         // **ولا يُغلَق بلمسةٍ خارجه وهو يُرسِل** — إغلاقٌ يُقرأ إلغاءً كاذبا.
         onDismissRequest = { if (!busy) onDismiss() },
         title = { Text(stringResource(R.string.emg_title)) },
@@ -539,7 +539,7 @@ internal fun FailDialog(
     val confirm = pending
     if (confirm != null) {
         val beforePickup = status == "assigned" || status == "at_pickup"
-        AlertDialog(
+        com.rahalgo.ui.RahalDialog(
             onDismissRequest = { pending = null },
             title = { Text(stringResource(R.string.confirm_title)) },
             text = {
@@ -579,7 +579,7 @@ internal fun FailDialog(
         )
         return
     }
-    AlertDialog(
+    com.rahalgo.ui.RahalDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.problem_title)) },
         text = {
@@ -777,7 +777,7 @@ internal fun PriceEditDialog(
     val amount = if (usd) amountValue(goods) else goods.toLongOrNull()?.toDouble()
     val same = amount != null &&
         (if (usd) Math.round(amount * 100) == currentGoodsUsd else amount.toLong() == currentGoods)
-    AlertDialog(
+    com.rahalgo.ui.RahalDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.price_edit_title), fontWeight = FontWeight.Bold) },
         text = {

@@ -132,7 +132,7 @@ fun RatingScreen(vm: RatingViewModel) {
         Text(stringResource(R.string.rate_reviews), style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(10.dp))
         if (rep.reviews.isEmpty()) {
-            Text(stringResource(R.string.rate_no_reviews), color = Rahal.colors.inkMuted)
+            com.rahalgo.ui.Empty(stringResource(R.string.rate_no_reviews), icon = com.rahalgo.ui.R.drawable.ic_star_outline)
         }
         rep.reviews.forEach { ReviewRow(it) }
 
@@ -156,7 +156,7 @@ private fun Summary(rep: Reputation) {
     // **ومن لا يُقيَّم دورُه لا تُعرض له بطاقةٌ صفريّة** — «٠٫٠ من ٥»
     // يُقرأ حكماً عليه، ولم يفعل شيئا.
     if (!rep.rated || rep.rating.count == 0) {
-        Text(stringResource(R.string.rate_none_yet), color = Rahal.colors.inkMuted)
+        com.rahalgo.ui.Empty(stringResource(R.string.rate_none_yet), icon = com.rahalgo.ui.R.drawable.ic_star_outline)
         return
     }
 
@@ -230,12 +230,7 @@ private fun ReviewRow(r: Review) {
             // **والنجومُ تُرسم لا تُكتب** — «٣ من ٥» تُقرأ، **وثلاثُ
             // نجومٍ تُرى.**
             repeat(5) { i ->
-                Icon(
-                    painter = painterResource(R.drawable.ic_star),
-                    contentDescription = null,
-                    tint = if (i < r.stars) Rahal.colors.accent else Rahal.colors.inkMuted.copy(alpha = 0.30f),
-                    modifier = Modifier.size(15.dp),
-                )
+                com.rahalgo.ui.RatingStar(filled = i < r.stars, size = 16.dp)
             }
             Spacer(Modifier.size(8.dp))
             Text(

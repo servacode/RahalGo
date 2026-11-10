@@ -12,6 +12,26 @@ object BidiText {
     private const val PDI = "\u2069"
     private val token = Regex("[+\\-−]?#?\\d[\\d.,:/]*(?:\\s?ل\\.س)?")
 
+    private val arrow = Regex("(" + token.pattern + ")\\s*←\\s*(" + token.pattern + ")")
+
+    /**
+     * **سهمُ «جديد ← قديم» مقلوبٌ في السطر العربيّ** (D12: «1x ← 2x») — الخادمُ يكتب الجديدَ أوّلاً فيقع
+     * على اليمين، والسهمُ يشير إلى القديم. **فيُبدَّل الطرفان للعرض** ليقرأ العينُ من القديم (يميناً) إلى
+     * الجديد (يساراً)، وكلُّ رقمٍ معزول. والنصُّ المخزَّن لا يتغيّر.
+     */
+    fun fixArrows(text: String): String =
+        if (!text.contains('←')) text else arrow.replace(text) { FSI + it.groupValues[2] + PDI + " ← " + FSI + it.groupValues[1] + PDI }
+
     fun isolateNumbers(text: String): String =
         if (text.isEmpty()) text else token.replace(text) { FSI + it.value + PDI }
+}
+
+/**
+ * **رقمُ هاتفٍ للعرض داخل أيّ نصٍّ عربيّ** (D4: «963900555001+») — معزولٌ يساراً (`LRI … PDI`) فلا تقفز
+ * «+» إلى الطرف الآخر ولا ينقلب الرقمُ. **والنصُّ المخزَّن لا يتغيّر**، والفارغُ يبقى فارغاً.
+ * **موضعٌ واحدٌ** — ومن كتب `"⁦$phone⁩"` بيده أعاد المشكلةَ في موضعٍ آخر.
+ */
+fun phoneText(phone: String?): String {
+    val p = phone?.trim().orEmpty()
+    return if (p.isEmpty()) "" else "⁦" + p + "⁩"
 }

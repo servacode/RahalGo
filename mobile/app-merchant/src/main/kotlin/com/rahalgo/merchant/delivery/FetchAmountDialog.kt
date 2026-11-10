@@ -42,7 +42,7 @@ fun FetchAmountApproveDialog(
     onApprove: () -> Unit,
     onReject: () -> Unit,
 ) {
-    AlertDialog(
+    com.rahalgo.ui.RahalDialog(
         onDismissRequest = {},
         properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
         title = {

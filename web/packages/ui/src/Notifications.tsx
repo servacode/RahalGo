@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useRef, useState, type ComponentType, type ReactNode } from "react";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { CountBadge } from "./components";
+import { fixArrows } from "./money";
 import { IconBell, IconClose, IconSound, IconSoundOff } from "./icons";
 import { useChime, installAudioUnlock, playChime } from "./chime";
 import { isStreamEvent } from "./liveStream";
@@ -489,9 +490,9 @@ export function NotificationToast({
       <div className="flex items-start gap-2">
         <IconBell size={18} className="mt-0.5 shrink-0 text-primary" />
         <div className="min-w-0 flex-1">
-          <p className="line-clamp-2 font-bold">{notification.title}</p>
+          <p className="line-clamp-2 font-bold">{fixArrows(notification.title)}</p>
           {notification.body && (
-            <p className="mt-0.5 line-clamp-2 text-sm text-ink-muted">{notification.body}</p>
+            <p className="mt-0.5 line-clamp-2 text-sm text-ink-muted">{fixArrows(notification.body)}</p>
           )}
         </div>
         <button onClick={onDismiss} className="text-ink-muted hover:text-ink" aria-label={m.common.cancel}>

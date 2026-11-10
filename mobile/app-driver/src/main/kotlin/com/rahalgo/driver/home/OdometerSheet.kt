@@ -89,7 +89,7 @@ fun OdometerSheet(ask: OdometerAsk, actions: OdometerActions) {
     }
 
     ask.confirm?.let { question ->
-        AlertDialog(
+        com.rahalgo.ui.RahalDialog(
             onDismissRequest = actions.fix,
             title = { Text(stringResource(R.string.odo_check_title)) },
             text = { Text(question) },
@@ -105,7 +105,7 @@ fun OdometerSheet(ask: OdometerAsk, actions: OdometerActions) {
     }
 
     if (ask.bikeAsk) {
-        AlertDialog(
+        com.rahalgo.ui.RahalDialog(
             onDismissRequest = actions.bikeCancel,
             title = { Text(stringResource(R.string.odo_bike_title)) },
             text = { Text(stringResource(R.string.odo_bike_question)) },
@@ -118,7 +118,7 @@ fun OdometerSheet(ask: OdometerAsk, actions: OdometerActions) {
         )
     }
 
-    AlertDialog(
+    com.rahalgo.ui.RahalDialog(
         onDismissRequest = { if (!ask.busy) actions.dismiss() },
         properties = DialogProperties(dismissOnClickOutside = false),
         title = {

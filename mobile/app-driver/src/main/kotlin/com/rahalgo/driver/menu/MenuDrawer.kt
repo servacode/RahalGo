@@ -57,8 +57,10 @@ fun MenuDrawer(
     /** **ومبدّلُ السمة يمرّ إلى القائمة** — (قرارُ المالك ٢٠٢٦-٠٨-١٥). */
     dark: Boolean,
     onTheme: () -> Unit,
+    profile: com.rahalgo.ui.DrawerProfile? = null,
 ) {
     Drawer(
+        profile = profile,
         items = MenuItem.entries.map(MenuItem::asDrawerItem) + PlatformPages.items,
         onPick = { onPick(it.key) },
         onLogout = onLogout,

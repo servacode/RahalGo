@@ -27,6 +27,8 @@ import com.rahalgo.ui.R
  */
 object CustomerItems {
     const val HISTORY = "History"
+    /** **عناويني** — يفتح ورقةَ العناوين نفسَها (`DeliveryAddress.open()`) لا شاشةً ثانية. */
+    const val ADDRESSES = "Addresses"
     const val CHATS = "Chats"
     const val FAVORITES = "Favorites"
     const val OFFERS = "Offers"
@@ -64,7 +66,8 @@ val TUTORIAL_ITEM = DrawerItem(
  * **أو فتح «طلباتي» وهو فارغٌ فظنّ أنّ طلبَه ضاع.**
  */
 val CUSTOMER_ITEMS: List<DrawerItem> = listOf(
-    DrawerItem(CustomerItems.HISTORY, R.string.menu_mine, R.string.menu_history, R.drawable.ic_history),
+    // **«سجلّ الطلبات» أُزيل من القائمة** (D14، ٢٠٢٦-١١-١١): يكرّر تبويب «طلباتي»، وأُفسح مكانُه لـ«عناويني».
+    DrawerItem(CustomerItems.ADDRESSES, R.string.menu_mine, R.string.menu_addresses, R.drawable.ic_pin),
     DrawerItem(CustomerItems.FAVORITES, R.string.menu_mine, R.string.menu_favorites, R.drawable.ic_heart),
     DrawerItem(CustomerItems.OFFERS, R.string.menu_mine, R.string.menu_offers, R.drawable.ic_offer),
     DrawerItem(CustomerItems.CHATS, R.string.menu_mine, R.string.menu_chats, R.drawable.ic_chat),

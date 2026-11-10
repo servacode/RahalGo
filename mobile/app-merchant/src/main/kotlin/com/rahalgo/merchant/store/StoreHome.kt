@@ -878,7 +878,7 @@ private fun RateCard(vm: StoreViewModel, store: Store, suspended: Boolean) {
         }
     }
     vm.rateJump?.let { j ->
-        AlertDialog(
+        com.rahalgo.ui.RahalDialog(
             onDismissRequest = { vm.dismissRateJump() },
             title = { Text(stringResource(R.string.store_rate_jump_title)) },
             text = {

@@ -364,6 +364,7 @@ export function Confirm({
             onSave={onConfirm}
             onCancel={onCancel}
             busy={busy}
+            equal
             tone={tone === "danger" ? "danger" : undefined}
             saveLabel={busy ? m.common.loading : confirmLabel}
           />

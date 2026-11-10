@@ -41,6 +41,7 @@ import {
   IconWarning,
   IconRoute,
   IconUser,
+  phoneText,
 } from "@rahalgo/ui";
 import { PageHero } from "@/components/admin/PageHero";
 import { Tile } from "@/components/admin/DashParts";
@@ -698,7 +699,7 @@ function DriverCard({ r, now, onOpen }: { r: Row; now: number; onOpen: () => voi
         </span>
         <span className="ms-auto flex shrink-0 items-center gap-1.5">
           <span dir="ltr" className="text-xs text-ink-muted">
-            {r.phone}
+            {phoneText(r.phone)}
           </span>
           <ContactLinks phone={r.phone} callLabel={L.call} />
         </span>

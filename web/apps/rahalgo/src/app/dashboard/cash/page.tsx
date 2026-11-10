@@ -42,6 +42,7 @@ import {
   IconUser,
   IconWallet,
   IconWarning,
+  phoneText,
 } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -470,7 +471,7 @@ function DriversCash({ filter, setFilter }: { filter: Filter; setFilter: (f: Fil
                         <span className="sr-only">{h.on_shift ? C.onShift : C.offShift}</span>
                       </span>
                       <span className="min-w-0 flex-1">
-                        <span className={`block truncate ${on ? "font-bold" : "font-medium"}`}>{h.name || h.phone}</span>
+                        <span className={`block truncate ${on ? "font-bold" : "font-medium"}`}>{h.name || phoneText(h.phone)}</span>
                         <span className="block text-2xs text-ink-muted" dir="ltr">{h.phone}</span>
                         {hot && (
                           <span className="mt-0.5 block">
@@ -604,7 +605,7 @@ function DriverPanel({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <OpenLink allowed={canUser} href={`/dashboard/users/${h.driver_id}`} className="hover:underline">
-            <h2 className="heading-section truncate">{h.name || h.phone}</h2>
+            <h2 className="heading-section truncate">{h.name || phoneText(h.phone)}</h2>
           </OpenLink>
           <p className="text-sm text-ink-muted" dir="ltr">{h.phone}</p>
         </div>

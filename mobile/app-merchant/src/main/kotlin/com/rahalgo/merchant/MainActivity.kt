@@ -414,8 +414,9 @@ private fun SignedIn(theme: ThemeState, dark: Boolean, onLogout: () -> Unit) {
         gesturesEnabled = !wizardOn && DrawerGestures.enabledFor(drawer),
         drawerContent = {
             // **عرضُ ٢٨٠** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) — ٢٠٠ كانت تقصّ «رقم الطلبات حسب الدوام».
-            ModalDrawerSheet(Modifier.width(280.dp)) {
+            com.rahalgo.ui.AppDrawerSheet {
                 Drawer(
+                    profile = com.rahalgo.ui.drawerProfile(accountVm, com.rahalgo.ui.R.string.drawer_role_merchant),
                     // **والموظّفُ لا يرى بابَ الموظّفين** — المحرّكُ يردّه (`notStaff`).
                     items = MERCHANT_ITEMS.filter {
                         !(it.key == MerchantItems.STAFF && com.rahalgo.merchant.store.TeamAccess.isStaff)

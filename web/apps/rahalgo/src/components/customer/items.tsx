@@ -26,6 +26,7 @@ import {
   Checkbox,
   Confirm,
   LoadingState,
+  DualPrice,
   Money,
   Radio,
   Sheet,
@@ -83,19 +84,7 @@ export function Price({
   muted?: boolean;
   className?: string;
 }) {
-  const strong = muted ? "" : "font-bold text-accent-text";
-  if (usd == null) return <Money value={syp} small={muted} className={`${strong} ${className}`} />;
-  return (
-    <span className={`inline-flex flex-wrap items-baseline gap-x-1 ${className}`}>
-      <span dir="ltr" className={`tabular-nums ${strong}`}>
-        {dollars(usd)}
-      </span>
-      <span className={muted ? "" : "text-xs text-ink-muted"}>
-        {"· "}
-        <Money value={syp} small />
-      </span>
-    </span>
-  );
+  return <DualPrice usd={usd} syp={syp} muted={muted} className={className} />;
 }
 
 function closedLabel(item: Item): string {
@@ -183,19 +172,7 @@ export function ItemCard({
         <div className="shop-item-foot">
           {/* **الدولارُ ثمّ الليرةُ** («$2.5 · 300 ل.س») — والليرةُ تنزل تحته إن ضاق ولا تُقصّ. */}
           <span className="flex min-w-0 flex-wrap items-baseline gap-x-1">
-            {item.price_usd != null ? (
-              <>
-                <span dir="ltr" className="font-bold tabular-nums">
-                  {dollars(item.price_usd)}
-                </span>
-                <span className="whitespace-nowrap text-xs text-ink-muted">
-                  {"· "}
-                  <Money value={item.price} small />
-                </span>
-              </>
-            ) : (
-              <Money value={item.price} className="font-bold" />
-            )}
+            <DualPrice usd={item.price_usd} syp={item.price} stacked />
             {item.price_before != null && (
               <span className="text-xs text-ink-muted line-through">
                 {item.price_before_usd != null ? dollars(item.price_before_usd) : <Money value={item.price_before} small />}
@@ -472,15 +449,7 @@ export function ItemSheet({
                   <span className="whitespace-nowrap">{I.add}</span>
                   {/* **والدولارُ يتبع العدد كالليرة** — كان سعرَ الواحد مهما زاد العدد. */}
                   {totalUsd != null ? (
-                    <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap text-sm">
-                      <span dir="ltr" className="tabular-nums">
-                        {dollars(totalUsd)}
-                      </span>
-                      <span className="text-xs opacity-90 [&_span]:text-current!">
-                        {"· "}
-                        <Money value={total} small />
-                      </span>
-                    </span>
+                    <DualPrice usd={totalUsd} syp={total} inherit />
                   ) : (
                     <Money value={total} className="[&_span]:text-current!" />
                   )}

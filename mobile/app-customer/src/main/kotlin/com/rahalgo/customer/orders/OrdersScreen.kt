@@ -420,7 +420,7 @@ private fun ConfirmCancel(
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    AlertDialog(
+    com.rahalgo.ui.RahalDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.ord_cancel_title)) },
         text = {
@@ -487,7 +487,7 @@ internal fun RateDialog(
     var stars by rememberSaveable { mutableIntStateOf(0) }
     var driverStars by rememberSaveable { mutableIntStateOf(0) }
     val ready = stars > 0 && (!hasDriver || driverStars > 0)
-    AlertDialog(
+    com.rahalgo.ui.RahalDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.ord_rate_title)) },
         text = {
@@ -541,12 +541,7 @@ private fun StarRow(value: Int, onPick: (Int) -> Unit) {
                     .clickable(onClickLabel = label) { onPick(n) },
                 contentAlignment = androidx.compose.ui.Alignment.Center,
             ) {
-                androidx.compose.material3.Icon(
-                    painter = androidx.compose.ui.res.painterResource(com.rahalgo.ui.R.drawable.ic_star),
-                    contentDescription = label,
-                    tint = if (n <= value) Rahal.colors.accent else Rahal.colors.line,
-                    modifier = Modifier.size(40.dp),
-                )
+                com.rahalgo.ui.RatingStar(filled = n <= value, size = 40.dp)
             }
         }
     }
@@ -600,7 +595,7 @@ private fun ComplainDialog(
     var pick by rememberSaveable { mutableStateOf("") }
     var note by rememberSaveable { mutableStateOf("") }
     val needNote = pick == "other" && note.isBlank()
-    AlertDialog(
+    com.rahalgo.ui.RahalDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.ord_complain_title)) },
         text = {

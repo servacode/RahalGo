@@ -166,6 +166,8 @@
     <string name="err_whatsapp_required">وثق حسابك أولا</string>
     <string name="hist_already_open">لك بلاغ مفتوح على هذا الطلب — تتابعه العمليات</string>
     <string name="hist_already_rated">قيمت هذا المتجر عن هذا الطلب</string>
+    <string name="state_offline_title">لا يوجد اتصال بالإنترنت</string>
+    <string name="state_offline_line">تأكد من الشبكة ثم أعد المحاولة</string>
     <string name="inbox_empty">لا إشعارات بعد</string>
     <string name="inbox_mark_all">تعليم الكل كمقروء</string>
     <string name="inbox_title">الإشعارات</string>
@@ -301,6 +303,11 @@
     <string name="menu_invite">ادعُ صديقاً</string>
     <string name="menu_tickets">الشكاوى والبلاغات</string>
     <string name="menu_history">سجل الطلبات</string>
+    <string name="menu_addresses">عناويني</string>
+    <string name="drawer_role_customer">زبون</string>
+    <string name="drawer_role_driver">سائق</string>
+    <string name="drawer_role_merchant">متجر</string>
+    <string name="drawer_role_rep">مندوب</string>
     <string name="menu_chats">دردشاتي</string>
     <string name="acc_delete_cancel">تراجع</string>
     <string name="sheet_closing">الرصيد الختامي</string>

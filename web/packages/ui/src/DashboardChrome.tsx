@@ -11,7 +11,7 @@ import { createPortal } from "react-dom";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
 import { LiveNotifications, useLiveRefresh } from "./Notifications";
 import { BrandMark, usePlatform } from "./platform";
-import { Money } from "./money";
+import { Money, phoneText } from "./money";
 import { isStagingEnv } from "./runtimeconfig";
 import { CountBadge } from "./components";
 import {
@@ -368,6 +368,21 @@ export function DashboardChrome({
 
           **ونبرةٌ ثانيةٌ لا نبرةُ القسم**: الأخضرُ للخروج إلى السوق،
           **والأزرقُ لموضعك في اللوحة** — فلا يلتبسان ولو تجاورا. */}
+      {/* **ترويسةُ الحساب — بلغة درج التطبيقات نفسِها** (قرارُ المالك ٢٠٢٦-١١-١١): حرفُ الاسم، الاسم، الرقم معزولاً،
+          ودورُ البوّابة. */}
+      {(summary?.full_name || phone) && (
+        <div className="mx-2 mt-1 flex items-center gap-2.5 rounded-control border border-line-soft px-2.5 py-2" data-testid="chrome-profile">
+          <span className="avatar">
+            {(summary?.full_name || phone || "•").trim().slice(0, 1)}
+          </span>
+          <span className="min-w-0 text-xs leading-tight">
+            {summary?.full_name && <span className="block truncate text-sm font-bold">{summary.full_name}</span>}
+            {phone && <span className="block truncate text-ink-muted">{phoneText(phone)}</span>}
+            <span className="block text-2xs font-bold text-accent-text">{brand}</span>
+          </span>
+        </div>
+      )}
+
       {shopUrl && (
         <div className="p-2 pb-0">
           <button
