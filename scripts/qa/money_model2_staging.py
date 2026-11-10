@@ -57,6 +57,13 @@ ITEM_COST = 10000          # كلفةُ صنف متجر QA (حقُّ المتج�
 STORE_SHARE = 9000         # ما يدفعه الكابتنُ للمتجر عن قطعةٍ واحدة (الكلفة ناقصَ ١٠٪)
 COMMISSION = 1000          # عمولةُ المنصّة على قطعةٍ واحدة
 
+TERMINAL = {"delivered", "rejected", "cancelled", "failed", "refunded"}
+PRE_PICKUP = {"pending", "accepted", "preparing", "dispatching", "assigned", "at_pickup"}
+# **سقفُ نقد الزبون يُفكّ مؤقّتاً** (بذرةُ `cod_limit` القائمة، تُرجع السابقَ فيُستعاد في الخاتمة):
+# على التجهيز بالليرة الجديدة سقفٌ صغيرٌ يردّ طلبَ الصنف ١١٠٠٠ بـ`cod_limit_exceeded`. **وصفرٌ = بلا
+# سقف** (`orders/service.go`: `limit <= 0`) — والفهرسُ لا يقبل فوق ١٠٠٠٠٠٠ أصلاً.
+COD_LIMIT_FOR_RUN = 0
+
 SCENARIOS = ["standard_cash", "standard_wallet", "failure_after_pickup", "refund_after_delivery",
              "custom", "whatsapp", "usd", "edit_after_pickup"]
 
@@ -156,14 +163,74 @@ class Run:
             "payment_method": "cash", "expected_total": o["quote_total"],
             "expected_quote_version": o["quote_version"]}, token=self.cust)
 
-    def abandon(self, oid):
-        """**طلبٌ سقط سيناريوه في منتصفه** — يُلغى إن أمكن، وإلّا يُطبع ليُحلّ باليد."""
+    def close_order(self, oid, why):
+        """**يُغلق طلبَ QA مفتوحاً عبر الأبواب الحقيقيّة** — ويردّ `True` إن أُغلق.
+
+        قبل الاستلام: إلغاءُ المكتب (ومن «عند المتجر» يُعاد للطابور أوّلاً ثمّ يُلغى).
+        بعد الاستلام بالنموذج ٢: يُساق إلى «سُلّم» (`order_advance`) — **لا إلغاءَ بعد الاستلام.**
+        وغيرُ ذلك (نموذج ١ بعد الاستلام، أو بيد سائقٍ آخر): **لا يُفرض شيء** — يُطبع ليُحلّ باليد.
+        """
         if not oid:
-            return
-        code, _ = self.api.call("POST", "/qa/orders/%s/transition" % oid,
-                                {"to": "cancelled", "note": "QA model2 abandon"}, ok=None)
+            return True
+        code, m = self.api.call("GET", "/qa/money?order_id=" + oid, ok=None)
         if code >= 400:
-            print("    WARN order %s left open (status unchanged) - resolve from the staging dashboard" % oid)
+            print("    WARN order %s: read-back %s - left as is" % (oid, code))
+            return False
+        status, model = m["order"]["status"], m["order"]["money_model"]
+        if status in TERMINAL:
+            return True
+        if status in PRE_PICKUP:
+            if status == "at_pickup":
+                self.api.call("POST", "/qa/orders/%s/transition" % oid,
+                              {"to": "dispatching", "note": "QA model2 %s" % why}, ok=None)
+            code, _ = self.api.call("POST", "/qa/orders/%s/transition" % oid,
+                                    {"to": "cancelled", "note": "QA model2 %s" % why}, ok=None)
+            if code < 300:
+                return True
+        elif model == 2:
+            code, _ = self.api.call("POST", "/qa/seed", {"kind": "order_advance", "order_id": oid,
+                                                         "target": "delivered"}, ok=None)
+            if code < 300:
+                return True
+        print("    WARN order #%s (%s, model %s, %s) left open - resolve it from the staging dashboard"
+              % (m["order"]["number"], oid, model, status))
+        return False
+
+    def abandon(self, oid):
+        """**طلبٌ سقط سيناريوه في منتصفه.**"""
+        self.close_order(oid, "abandon")
+
+    def preflight_cleanup(self):
+        """**طلباتُ زبون QA المفتوحة من تشغيلٍ سابق تُغلق أوّلاً** — من قائمته الحقيقيّة (`/my/orders`).
+
+        **وإلّا**: سقفُ النقد عند الاستلام يعدّها، و`custom-agree` يرفض «أكثرَ من طلبٍ مفتوح».
+        يردّ عددَ ما بقي مفتوحاً.
+        """
+        out = self.api.get("/my/orders?open_only=true&per_page=100", token=self.cust)
+        ids = [o.get("id") for o in out.get("orders", []) if o.get("id")]
+        left = sum(0 if self.close_order(i, "preflight cleanup") else 1 for i in ids)
+        print("preflight: QA customer open orders %d, closed %d, left %d" % (len(ids), len(ids) - left, left))
+        return left
+
+    def whatsapp_order(self):
+        """**طلبُ واتساب بأجرةٍ ضمنَ مدى التجهيز** — يُجرَّب ٣٠٠، وإن ردّ `wa_fee_out_of_range`
+        فمنتصفُ المدى الذي أعاده الخادم (لا رقمٌ مفترَض)."""
+        body = {"store_id": self.store, "recipient_phone": QA_RECIPIENT, "recipient_name": "QA",
+                "address_text": "QA model2", "lat": QA_LAT, "lng": QA_LNG, "fee": 300}
+        code, out = self.api.call("POST", "/qa/whatsapp-orders", body, key=True, ok=None)
+        err = (out or {}).get("error") or {}
+        if code == 422 and err.get("code") == "wa_fee_out_of_range":
+            d = err.get("details") or {}
+            lo, hi = int(d.get("min", 0)), int(d.get("max", 0))
+            body["fee"] = (lo + hi) // 2 // 5 * 5 or lo
+            print("    whatsapp fee range on target %s-%s, using %s" % (lo, hi, body["fee"]))
+            code, out = self.api.call("POST", "/qa/whatsapp-orders", body, key=True, ok=None)
+        if code >= 300:
+            raise Step("POST /qa/whatsapp-orders -> %d %s" % (code, json.dumps(out, ensure_ascii=False)[:300]))
+        oid = out.get("id") or (out.get("order") or {}).get("id")
+        if not oid:
+            raise Step("whatsapp create returned no id: %s" % out)
+        return oid
 
 
 def common(c, m, name):
@@ -310,12 +377,7 @@ def sc_usd(run, c):
 
 def sc_whatsapp(run, c):
     name = "whatsapp"
-    out = run.api.post("/qa/whatsapp-orders", {
-        "store_id": run.store, "recipient_phone": QA_RECIPIENT, "recipient_name": "QA",
-        "address_text": "QA model2", "lat": QA_LAT, "lng": QA_LNG, "fee": 600}, key=True)
-    oid = out.get("id") or (out.get("order") or {}).get("id")
-    if not oid:
-        raise Step("whatsapp create returned no id: %s" % out)
+    oid = run.whatsapp_order()
     run.oid = oid
     run.advance(oid, "at_pickup")
     run.api.post("/driver/orders/%s/fetch-amount" % oid, {"amount": 2400}, token=run.drv)
@@ -324,7 +386,8 @@ def sc_whatsapp(run, c):
     o, led = m["order"], m["ledger"]
     box = m["driver_box"]["collection"]
     c(o["platform_commission"] == 240, "%s: commission %s, want 240" % (name, o["platform_commission"]))
-    c(box == 600 + 240, "%s: driver box %s, want fee 600 + commission 240" % (name, box))
+    fee = o["fee_paid"]
+    c(box == fee + 240, "%s: driver box %s, want fee %s + commission 240" % (name, box, fee))
     c(led["by_party"].get("merchant", 0) == 0 and not m["obligations"],
       "%s: store wallet moved %s / debt %s" % (name, led["by_party"].get("merchant"), m["obligations"]))
     common(c, m, name)
@@ -400,6 +463,7 @@ def main():
     previous = None
     shift = None
     fee_policy = None
+    cod = None
     try:
         sw = api.post("/qa/setting", {"key": MODEL2_KEY, "value": True})
         previous = bool(sw.get("previous"))
@@ -410,10 +474,17 @@ def main():
         run.item, run.store, run.driver_id = st["item_id"], st["merchant_id"], st["driver_id"]
         print("QA model-2 store %s item %s (open 24h, commission 10%%)" % (run.store, run.item))
         shift = run.seed("driver_shift", value_bool=True)
+        cod = run.seed("cod_limit", value_int=COD_LIMIT_FOR_RUN)
+        print("customers.cod_limit: previous=%s -> %s (restored at the end)" % (cod.get("previous"), COD_LIMIT_FOR_RUN))
+        leftover = run.preflight_cleanup()
         if any(s in chosen for s in ("custom", "usd")):
             pol = api.post("/qa/custom-fee-policy", {"source": "driver_defined", "fee": 0, "driver_may_change": False})
             fee_policy = pol.get("previous")
-
+    except Step as e:
+        print("FAIL  setup: %s" % e)
+        cleanup(api, run, args, previous, shift, fee_policy, cod)
+        sys.exit(1)
+    try:
         for name in chosen:
             fails = []
             run.oid = None
@@ -422,6 +493,9 @@ def main():
                 if not cond:
                     fails.append(msg)
             try:
+                if name in ("custom", "usd") and leftover:
+                    raise Step("%d QA customer order(s) still open from before - custom-agree needs exactly one; "
+                               "close them from the staging dashboard and re-run" % leftover)
                 RUNNERS[name](run, c)
             except Step as e:
                 fails.append("step refused: %s" % e)
@@ -434,7 +508,7 @@ def main():
             for f in fails:
                 print("        - " + f)
     finally:
-        cleanup(api, run, args, previous, shift, fee_policy)
+        cleanup(api, run, args, previous, shift, fee_policy, cod)
 
     failed = [n for n, f in results if f]
     print("")
@@ -442,7 +516,7 @@ def main():
     sys.exit(1 if failed or len(results) != len(chosen) else 0)
 
 
-def cleanup(api, run, args, previous, shift, fee_policy):
+def cleanup(api, run, args, previous, shift, fee_policy, cod=None):
     """**الخاتمةُ دائماً** — وكلُّ خطوةٍ وحدَها، فسقوطُ واحدةٍ لا يترك الباقيات."""
     def soft(label, fn):
         try:
@@ -455,6 +529,8 @@ def cleanup(api, run, args, previous, shift, fee_policy):
             "/qa/drivers/%s/settle" % run.driver_id,
             {"amount": run.held, "note": "QA model2 witness - box handed to office"}, key=True))
     soft("drain QA wallet", lambda: run.seed("wallet_drain"))
+    if cod is not None:
+        soft("restore customers.cod_limit", lambda: run.seed("cod_limit", value_int=int(cod.get("previous") or 0)))
     if fee_policy:
         soft("restore custom fee policy", lambda: api.post("/qa/custom-fee-policy", {
             "source": fee_policy.get("source") or "driver_defined", "fee": fee_policy.get("fee") or 0,
