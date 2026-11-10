@@ -854,7 +854,7 @@ private fun NeedSections(
     Column(
         Modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(Rahal.space.xl),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -864,7 +864,7 @@ private fun NeedSections(
             style = MaterialTheme.typography.titleMedium,
             textAlign = TextAlign.Center,
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         Text(
             body,
             color = Rahal.colors.inkMuted,

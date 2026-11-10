@@ -60,8 +60,8 @@ fun ClientSections(vm: ClientsViewModel) {
         )
         Spacer(Modifier.height(Rahal.space.md))
         FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
+            verticalArrangement = Arrangement.spacedBy(Rahal.space.sm),
         ) {
             vm.allSections.forEach { sec ->
                 val on = sec.id in picked

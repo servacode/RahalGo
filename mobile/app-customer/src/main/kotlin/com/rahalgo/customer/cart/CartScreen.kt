@@ -250,7 +250,7 @@ fun CartScreen(
                             )
                         }
                     }
-                    Spacer(Modifier.size(8.dp))
+                    Spacer(Modifier.size(Rahal.space.sm))
                     // **والعدُّ يُبدَّل هنا** — ومن أراد صنفين لا يعود إلى السوق ليضغط مرّتين.
                     // **والسعرُ والعدّادُ والحذفُ في مكانٍ واحدٍ آخرَ السطر** (قرارُ المالك ٢٠٢٦-١٠-٣٠)
                     // — كلُّ سطرٍ بالترتيب نفسِه، صنفاً كان أو مشروباً.
@@ -270,7 +270,7 @@ fun CartScreen(
             // سطرٍ يحمله، وسلّةُ الحذف ترفعه من كلّ الأصناف.** ويبقى محفوظاً في سطر صنفه.
             Cart.drinkRows().forEach { d ->
                 Row(
-                    Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    Modifier.fillMaxWidth().padding(vertical = Rahal.space.xs),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     // **بعرض صورة الصنف** — فتصطفّ الأسماءُ تحت بعضها.
@@ -287,7 +287,7 @@ fun CartScreen(
                         )
                         LinePrice(money(d.total))
                     }
-                    Spacer(Modifier.size(8.dp))
+                    Spacer(Modifier.size(Rahal.space.sm))
                     LineControls(
                         qty = d.qty,
                         onLess = { if (d.qty <= 1) Cart.removeDrink(d.name) else Cart.lessDrink(d.name) },
@@ -307,7 +307,7 @@ fun CartScreen(
         // **«إفراغ السلة» فعلٌ هادئ (تدقيق D13)**: كان زرّاً أحمر مؤطَّراً يلفت العينَ أكثر من
         // «اطلب». **نصٌّ رماديٌّ بأيقونة، ولا يظهر مع سطرٍ واحدٍ** (سلّةُ سطره تكفي — فلا حذفَ مكرَّر).
         if (Cart.lines.size + Cart.drinkRows().size > 1) {
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(Rahal.space.xs))
             com.rahalgo.ui.RahalTextButton(onClick = { askClear = true }) {
                 Icon(
                     painter = painterResource(com.rahalgo.ui.R.drawable.ic_trash),
@@ -329,7 +329,7 @@ fun CartScreen(
         //
         // (طلبُ المالك ٢٠٢٦-٠٨-١٨.) **والبابُ هو بابُ الشريط نفسُه** —
         // **ولوحتان تفترقان يومَ تُزاد فيهما ميزة.**
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(Rahal.space.md))
         AddressCard(address) { DeliveryAddress.open() }
 
         // ══════════════════════════════════════════════════════════════
@@ -343,7 +343,7 @@ fun CartScreen(
         // ومن كتب كوداً منتهياً دفع ثمناً ظنّه أقلّ.
         Spacer(Modifier.height(10.dp))
         Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             OutlinedTextField(
@@ -422,7 +422,7 @@ fun CartScreen(
                 vm.walletScope = "none"
             }
         }
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(Rahal.space.md))
         // **سطرُ الدفع بطاقةٌ (تدقيق D13)** — كان سطراً عارياً يضيع بين الحقول.
         Card {
         if (walletBlocked) {
@@ -433,7 +433,7 @@ fun CartScreen(
                 style = MaterialTheme.typography.bodyMedium,
             )
         } else {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
                 PayChoice(
                     text = stringResource(R.string.cart_cash),
                     on = vm.walletScope == "none",
@@ -577,7 +577,7 @@ fun CartScreen(
         // **وموضعٌ واحدٌ لكلّ الشاشات.**
         val av = vm.priced?.availability
         if (av != null && !av.available) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             Note(
                 com.rahalgo.ui.ServiceReason.text(
                     LocalContext.current,
@@ -590,7 +590,7 @@ fun CartScreen(
             )
         } else if (vm.priced?.outOfZone == true) {
             // **وعميلٌ يكلّم محرّكاً لا يرسل الحالَ يبقى كما كان.**
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             Note(stringResource(R.string.cart_out_of_zone), Rahal.colors.danger)
         }
 
@@ -602,7 +602,7 @@ fun CartScreen(
         // **`ctaKind` تردّ فراغاً فلا يُرسَم شيء.**
         val ctaReason = av?.takeIf { !it.available }?.reason.orEmpty()
         if (com.rahalgo.ui.ServiceReason.ctaKind(ctaReason).isNotEmpty() && address != null) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             if (vm.demandDone) {
                 Note(
                     com.rahalgo.ui.ServiceReason.ctaDoneText(LocalContext.current, ctaReason),
@@ -632,7 +632,7 @@ fun CartScreen(
         // **ووقتُ المنطقة صار أحدَ أسباب السياسة أعلاه** (`AV`) —
         // **ويبقى هذا لعميلٍ يكلّم محرّكاً لا يرسل الحال.**
         if (vm.priced?.availability == null && vm.priced?.zoneClosed == true) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             com.rahalgo.ui.ServiceClosedBanner(zoneClosedText(LocalContext.current, vm.priced))
         }
 
@@ -646,12 +646,12 @@ fun CartScreen(
         // **ولا يُخترَع موعدٌ**: **خادمٌ لا يعرف متى يعود لا يُنطَق
         // عنه** — **و«نعود قريباً» أصدقُ من ساعةٍ لا نفي بها.**
         if (!Serving.available) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             com.rahalgo.ui.ServiceClosedBanner(servingText(LocalContext.current))
         } else if (!Serving.ordersOpen) {
             // **ومفتاحُ «طلبات الزبون» من اللوحة** (`launch.customer_orders`، تدقيقُ ٢٠٢٦-١٠-٢٧)
             // — كان التطبيقُ لا يقرؤه فيُرَدّ الطلبُ بعد ملء السلّة. **ونصُّ المالك يغلب.**
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             com.rahalgo.ui.ServiceClosedBanner(
                 Serving.launchNotice.trim().ifEmpty { stringResource(R.string.cart_orders_closed) },
             )
@@ -664,7 +664,7 @@ fun CartScreen(
         // **وتقع من شاشة العروض** أو من سلّةٍ قديمة — والسوقُ وحدَه يحرسها لحظةَ
         // الإضافة (`SourceNotice`). **فكان المحرّكُ يردّها برسالةٍ عامّة.**
         if (vm.priced?.tooManySources == true) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             Note(tooManySourcesText(vm.priced?.maxSources ?: 1), Rahal.colors.danger)
         }
 
@@ -683,7 +683,7 @@ fun CartScreen(
         // **وخطأٌ لا يُرى كأنّه لم يقع** — والمستخدمُ يعيد الضغطَ ثمّ
         // يخرج.
         if (vm.error.isNotEmpty()) {
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Rahal.space.md))
             Note(vm.error, Rahal.colors.danger)
             // ══════════════════════════════════════════════════════════════
             // **وسقفُ الدفع نقداً يُتبَع ببابِ خروجٍ لا برسالةٍ صمّاء** (`COD`)
@@ -698,7 +698,7 @@ fun CartScreen(
                 if (wa.isNotEmpty()) {
                     val ctx = LocalContext.current
                     val prefill = stringResource(R.string.cod_whatsapp_prefill)
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(Rahal.space.sm))
                     RahalTextButton(onClick = {
                         val url = "https://wa.me/" + wa + "?text=" + android.net.Uri.encode(prefill)
                         runCatching {
@@ -727,7 +727,7 @@ fun CartScreen(
         // **فيُقال له صراحةً «لا ندري» ويُوجَّه إلى «طلباتي» قبل إعادة
         // الإرسال** — فلا يُنشئ ثانياً ما قد نجح أوّلاً.
         if (vm.uncertain) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             Note(stringResource(R.string.cart_uncertain), Rahal.colors.danger)
             // **والخروجُ بإقرارٍ صريحٍ لا بتعديلٍ صامت** (`CAF-02`): **من
             // تحقّق من «طلباتي» ولم يجد طلبَه يبدأ محاولةً جديدةً عن قصد** —
@@ -748,7 +748,7 @@ fun CartScreen(
         // **والنصُّ من `CartChanges`** — **موضعٌ واحدٌ تقرؤه السلّةُ
         // والدفع.**
         if (vm.changes.isNotEmpty()) {
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Rahal.space.md))
             Note(stringResource(R.string.cc_review_title), Rahal.colors.danger)
             vm.changes.forEach { c ->
                 Spacer(Modifier.height(6.dp))
@@ -959,7 +959,7 @@ private fun LineControls(
         Text(
             qty.toString(),
             fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(horizontal = 4.dp),
+            modifier = Modifier.padding(horizontal = Rahal.space.xs),
         )
         QtyButton(
             com.rahalgo.ui.R.drawable.ic_plus,
@@ -1424,7 +1424,7 @@ private fun PayChoice(
                 if (on && enabled) Rahal.colors.brand.copy(alpha = 0.06f) else Color.Transparent,
             )
             .then(if (enabled) Modifier.clickable(onClick = onPick) else Modifier)
-            .padding(horizontal = 12.dp, vertical = 12.dp),
+            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         RadioButton(selected = on && enabled, onClick = onPick, enabled = enabled)

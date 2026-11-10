@@ -6,7 +6,6 @@ import android.app.Application
 import com.rahalgo.design.Rahal
 import android.util.Log
 import androidx.compose.foundation.clickable
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.RadioButton
 import androidx.compose.runtime.remember
@@ -336,9 +335,9 @@ fun HistoryScreen(vm: HistoryViewModel) {
     // **والملغى ليس تعذّراً** — طلبٌ أُلغي قبل وصوله لا يُحسب على السائق.
     val failed = s.orders.count { it.status != "delivered" && it.status != "cancelled" }
 
-    LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+    LazyColumn(Modifier.fillMaxSize().padding(horizontal = Rahal.space.lg)) {
         item {
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Rahal.space.md))
             // ══════════════════════════════════════════════════════════
             // **وللسجلّ عنوانٌ كسائر الأقسام**
             // ══════════════════════════════════════════════════════════
@@ -389,7 +388,7 @@ fun HistoryScreen(vm: HistoryViewModel) {
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Rahal.space.md))
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
@@ -397,12 +396,12 @@ fun HistoryScreen(vm: HistoryViewModel) {
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
         }
 
         if (shown.isEmpty()) {
             item {
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(Rahal.space.xl))
                 Text(
                     stringResource(
                         if (s.orders.isEmpty()) R.string.hist_empty else R.string.hist_no_match,
@@ -425,7 +424,7 @@ fun HistoryScreen(vm: HistoryViewModel) {
         // **والأقدمُ بزرّ** — كان السجلُّ يقف عند آخر عشرين بلا كلمة.
         if (s.total > s.orders.size && query.isBlank()) {
             item {
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(Rahal.space.md))
                 RahalOutlineButton(
                     onClick = vm::loadMore,
                     enabled = !s.loadingMore,
@@ -439,7 +438,7 @@ fun HistoryScreen(vm: HistoryViewModel) {
                 }
             }
         }
-        item { Spacer(Modifier.height(24.dp)) }
+        item { Spacer(Modifier.height(Rahal.space.xl)) }
     }
 }
 
@@ -559,7 +558,7 @@ private fun Row(
         // **ولم تُسجَّل إعادتُه بعد.** وزرٌّ يُعرض حيث لا يصحّ يُضغط
         // فيُردّ، **ورفضٌ بعد ضغطةٍ يُقرأ عطباً لا قاعدة.**
         if (!delivered && o.acceptsReturns && o.returnedAt == null) {
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(Rahal.space.xs))
             RahalOutlineButton(onClick = onReturn, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.hist_return))
             }
@@ -629,7 +628,7 @@ private fun ReportDialog(
                 Spacer(Modifier.height(10.dp))
                 // **والأسبابُ في الطريق تُقال** — لا نافذةٌ فارغة.
                 if (s.reasonsLoading) {
-                    Box(Modifier.fillMaxWidth().padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
+                    Box(Modifier.fillMaxWidth().padding(vertical = Rahal.space.md), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
                     }
                 }
@@ -642,11 +641,11 @@ private fun ReportDialog(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         RadioButton(selected = reason == r.code, onClick = { reason = r.code })
-                        Spacer(Modifier.height(0.dp))
+                        Spacer(Modifier.height(Rahal.space.none))
                         Text(reasonLabel(r.code))
                     }
                 }
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(Rahal.space.sm))
                 OutlinedTextField(
                     value = note,
                     onValueChange = { note = it },
@@ -695,7 +694,7 @@ private fun RateDialog(
                     text = o.merchantName.ifBlank { stringResource(R.string.nav_custom_order) },
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(Rahal.space.md))
                 StarPick(stringResource(R.string.hist_rate_speed), speed) { speed = it }
                 Spacer(Modifier.height(10.dp))
                 StarPick(stringResource(R.string.hist_rate_conduct), conduct) { conduct = it }
@@ -732,7 +731,7 @@ private fun RateDialog(
 @Composable
 private fun StarPick(label: String, value: Int, onPick: (Int) -> Unit) {
     Text(label, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
-    Spacer(Modifier.height(4.dp))
+    Spacer(Modifier.height(Rahal.space.xs))
     // **كلُّ نجمةٍ ٤٠dp وبينها فراغ** — كانت ٢٤ متلاصقة فيُضغط غيرُ المقصود.
     androidx.compose.foundation.layout.Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         repeat(5) { i ->

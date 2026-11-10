@@ -164,10 +164,10 @@ fun CountdownButton(
                 text = label,
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.body,
             )
             if (running) {
-                Spacer(Modifier.size(8.dp))
+                Spacer(Modifier.size(Rahal.space.sm))
                 // **والرقمُ في حبّةٍ داكنةٍ داخل الزرّ** — ليُقرأ فوق
                 // الأرض الممتلئة والفارغة معا: **نصٌّ أبيضُ يمرّ على
                 // الحدّ بينهما فيختفي نصفُه.**
@@ -175,13 +175,13 @@ fun CountdownButton(
                     Modifier
                         .clip(Rahal.shape.sm)
                         .background(Color.Black.copy(alpha = 0.22f))
-                        .padding(horizontal = 8.dp, vertical = 2.dp),
+                        .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.xxs),
                 ) {
                     Text(
                         text = "%d:%02d".format(seconds / 60, seconds % 60),
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = Rahal.type.body,
                     )
                 }
             }
@@ -201,7 +201,7 @@ fun OfferExpired(modifier: Modifier = Modifier) {
         Text(
             text = stringResource(R.string.offer_expired),
             color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodyMedium,
+            style = Rahal.type.body,
         )
     }
 }

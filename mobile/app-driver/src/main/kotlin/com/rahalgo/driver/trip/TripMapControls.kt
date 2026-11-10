@@ -32,7 +32,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -115,7 +114,7 @@ internal fun MapButtons(
             // **«مشكلة» انتقل إلى صفّ أزرار اللوح السفليّ** (قرارُ المالك ٢٠٢٦-١١-١٠) — كان قرصاً أحمرَ
             // في رأس هذا العمود فيطلع على خطوات الرحلة حين يطول اللوح. (`TripActionBar`)
             MapButton(R.drawable.ic_my_location, R.string.map_recenter, onRecenter)
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             // ══════════════════════════════════════════════════════════
             // **وحديثُ الزبون قرصٌ عائمٌ لا سطرٌ في البطاقة**
             // ══════════════════════════════════════════════════════════
@@ -133,7 +132,7 @@ internal fun MapButtons(
                     on = chatting,
                     badge = chatUnread,
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(Rahal.space.sm))
             }
             // ══════════════════════════════════════════════════════════
             // **وزرُّ الصوت — واحدٌ يقول حالَه بشكله**
@@ -151,7 +150,7 @@ internal fun MapButtons(
                 onClick = onVoice,
                 on = !voiceMuted,
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             // **ولا زرَّ لخرائط غوغل** — (قرارُ المالك ٢٠٢٦-٠٩-٠١:
             // «زرُّ خرائط غوغل لا عملَ له، لأنّ خريطتَنا أفضلُ من غوغل
             // بسوريا»).
@@ -267,7 +266,7 @@ internal fun ReplayButton(
         contentColor = Rahal.colors.canvas,
         shape = Rahal.shape.sm,
         modifier = Modifier
-            .padding(12.dp)
+            .padding(Rahal.space.md)
             .clickable { if (running) onStop() else onStart() },
     ) {
         Text(

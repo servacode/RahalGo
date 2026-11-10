@@ -16,7 +16,6 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -74,7 +73,7 @@ internal fun EditRequestDialog(
                 Modifier.fillMaxWidth().heightIn(max = 520.dp).verticalScroll(rememberScrollState()),
             ) {
                 Text(stringResource(R.string.edit_req_hint), color = Rahal.colors.inkMuted)
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(Rahal.space.sm))
                 for (it in lines) {
                     val d = draft.lines[it.id]
                     Text("${it.name} ×${it.qty}", fontWeight = FontWeight.Bold, color = Rahal.colors.ink)
@@ -102,7 +101,7 @@ internal fun EditRequestDialog(
                     if (d != null && it.qty > 1) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(stringResource(R.string.edit_req_how_many), color = Rahal.colors.inkMuted)
-                            Spacer(Modifier.width(8.dp))
+                            Spacer(Modifier.width(Rahal.space.sm))
                             RahalTextButton(onClick = {
                                 draft = draft.copy(lines = draft.lines + (it.id to d.copy(remove = (d.remove - 1).coerceAtLeast(1))))
                             }) { Text("−", fontWeight = FontWeight.Bold) }
@@ -114,7 +113,7 @@ internal fun EditRequestDialog(
                     }
                     HorizontalDivider(Modifier.fillMaxWidth())
                 }
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(Rahal.space.sm))
                 for ((i, a) in draft.adds.withIndex()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
@@ -155,7 +154,7 @@ internal fun EditRequestDialog(
                 // **الكمّيةُ بزرَّي − و+** — لا كتابةَ لرقمٍ صغير (المالك ٢٠٢٦-١١-١٠).
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(stringResource(R.string.edit_req_add_qty), color = Rahal.colors.inkMuted)
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(Rahal.space.sm))
                     RahalTextButton(onClick = { addQty = (q - 1).coerceAtLeast(1).toString() }) {
                         Text("−", fontWeight = FontWeight.Bold)
                     }
@@ -193,14 +192,14 @@ internal fun EditRequestDialog(
                     },
                     enabled = addName.isNotBlank() && q in 1..50 && p > 0,
                 ) { Text(stringResource(R.string.edit_req_add_button)) }
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(Rahal.space.sm))
                 Text(
                     stringResource(R.string.edit_req_total, money(order.total), money(editDraftTotal(order, effective))),
                     fontWeight = FontWeight.Bold,
                     color = Rahal.colors.ink,
                 )
                 if (error.isNotEmpty()) {
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(Rahal.space.sm))
                     Text(error, color = Rahal.colors.danger, style = MaterialTheme.typography.bodySmall)
                 }
             }

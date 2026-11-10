@@ -42,7 +42,7 @@ fun DualPrice(
     /** **سطران دائماً** — لخانةٍ ضيّقةٍ كبطاقة المنتج. وإلّا سطرٌ واحدٌ ينزل وحدَه إن ضاق. */
     stacked: Boolean = false,
     /** **نمطُ الدولار** — والليرةُ تُشتقّ منه أصغرَ. */
-    style: TextStyle = MaterialTheme.typography.bodyMedium,
+    style: TextStyle = Rahal.type.price,
     usdColor: Color = Rahal.colors.brand,
     sypColor: Color = Rahal.colors.inkMuted,
     horizontalAlignment: Alignment.Horizontal = Alignment.Start,
@@ -60,7 +60,8 @@ fun DualPrice(
     val small = style.copy(
         fontWeight = FontWeight.Normal,
         color = sypColor,
-        fontSize = (if (style.fontSize.isSpecified) style.fontSize.value - 2f else 11f).coerceAtLeast(10f).sp,
+        fontSize = (if (style.fontSize.isSpecified) style.fontSize.value - 2f else 13f)
+            .coerceAtLeast(Rahal.type.meta.fontSize.value).sp,
     )
     val usdPart = dualUsdPart(usd)
     val sypPart = dualSypPart(syp)
@@ -96,3 +97,34 @@ fun dualSypPart(syp: Long): String = "≈ " + LRI + grouped(syp) + PDI + " ل.س
  */
 fun dualPriceText(usd: Double?, syp: Long): String =
     if (usd == null) money(syp) else dualUsdPart(usd) + " " + dualSypPart(syp)
+
+/**
+ * **مبلغٌ بالليرة بشكلٍ واحد** — `15,000 ل.س` بدور السعر. **وما فيه دولارٌ يمرّ بـ[DualPrice]**،
+ * وما عملتُه متغيّرةٌ (`لدي توصيلة`) بـ`currency`.
+ *
+ * ```
+ * MoneyText(15000)                                    // سعر
+ * MoneyText(total, large = true)                      // إجماليّ
+ * MoneyText(units, currency = "USD")                  // بالسنتات
+ * MoneyText(debt, color = Rahal.colors.danger)        // دَين
+ * ```
+ */
+@Composable
+fun MoneyText(
+    amount: Long,
+    modifier: Modifier = Modifier,
+    /** **العملة** — `"USD"` بالسنتات، وغيرُها ليرة (`amountText`). */
+    currency: String? = null,
+    large: Boolean = false,
+    color: Color = Rahal.colors.ink,
+    style: TextStyle = if (large) Rahal.type.priceLarge else Rahal.type.price,
+) {
+    Text(
+        // **والنصُّ من `amountText` نفسِه** — الموضعُ الواحدُ الذي يعرف الليرةَ والسنتات.
+        amountText(amount, currency),
+        style = style,
+        color = color,
+        modifier = modifier,
+        maxLines = 1,
+    )
+}

@@ -79,14 +79,14 @@ fun CashScreen(vm: SectionsViewModel) {
 
         Card(tone = Rahal.colors.accent) {
             Text(stringResource(R.string.cash_held), color = Rahal.colors.inkMuted)
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(Rahal.space.xs))
             Text(
                 text = money(held),
                 color = Rahal.colors.accent,
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Rahal.space.md))
             // **ولونُ الشريط يقول قربَه من الحافّة** قبل أن يُقرأ رقم.
             Bar(ratio = ratio, color = cashBarColor(ratio))
             Spacer(Modifier.height(6.dp))
@@ -143,7 +143,7 @@ fun CashScreen(vm: SectionsViewModel) {
         // **وناقصٌ يقول إنّه ناقص** — كشفٌ قُصَّ عند الصفحة ولا يقول
         // **يُقرأ كاملا**، فيُجمع فلا يساوي ما في يده.
         if (page.total > page.entries.size) {
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Rahal.space.md))
             Text(
                 text = stringResource(
                     R.string.cash_more,
@@ -153,7 +153,7 @@ fun CashScreen(vm: SectionsViewModel) {
                 color = Rahal.colors.inkMuted,
                 style = MaterialTheme.typography.bodySmall,
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             RahalOutlineButton(
                 onClick = vm::loadMoreCash,
                 enabled = !vm.cashMoreBusy,

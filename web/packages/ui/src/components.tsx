@@ -638,7 +638,7 @@ export function Badge({
   );
 }
 
-// ---------- IconTile ----------
+// ---------- IconBox ----------
 
 /* **وقرصُ الأيقونة شكلٌ ثالثٌ لا شارةٌ ولا فقّاعة**: مربّعٌ ملوّنٌ يجلس فيه
    رمزٌ وحدَه — رأسُ بطاقةِ متجر، وقفلُ شاشةٍ مقفلة، ورمزُ نوعِ تقرير.
@@ -659,7 +659,8 @@ const tileTones = {
 
 const tileSizes = { sm: "h-9 w-9", md: "h-11 w-11", lg: "h-14 w-14" } as const;
 
-export function IconTile({
+/** **أيقونةٌ في مربّعٍ ملوّن** — مرآةُ `IconBox` في `mobile/ui` (كان اسمُها `IconTile` قبل نظام التصميم ٢٠٢٦-١١-١١). */
+export function IconBox({
   tone = "primary",
   size = "md",
   children,

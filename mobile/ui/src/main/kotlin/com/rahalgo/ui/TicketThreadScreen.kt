@@ -93,7 +93,7 @@ fun TicketThreadScreen(
         ) {
             Text(
                 subject,
-                style = MaterialTheme.typography.titleLarge,
+                style = Rahal.type.screenTitle,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.widthIn(max = 260.dp),
             )
@@ -101,11 +101,11 @@ fun TicketThreadScreen(
         }
         val created = whenText(createdAt)
         if (created.isNotBlank()) {
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(Rahal.space.xs))
             Text(
                 stringResource(R.string.tik_created, created),
                 color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
+                style = Rahal.type.caption,
             )
         }
         Spacer(Modifier.height(14.dp))
@@ -116,7 +116,7 @@ fun TicketThreadScreen(
         } else {
             messages.forEach { m ->
                 TicketBubble(m)
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(Rahal.space.sm))
             }
         }
 
@@ -174,7 +174,7 @@ private fun TicketBubble(m: TicketMessage) {
             Text(
                 text = stringResource(if (m.mine) R.string.tik_you else R.string.tik_support),
                 color = if (m.mine) Rahal.colors.onBrand.copy(alpha = 0.85f) else Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.labelSmall,
+                style = Rahal.type.badge,
                 fontWeight = FontWeight.Bold,
             )
             Spacer(Modifier.height(3.dp))
@@ -188,7 +188,7 @@ private fun TicketBubble(m: TicketMessage) {
                 Text(
                     text = at,
                     color = if (m.mine) Rahal.colors.onBrand.copy(alpha = 0.75f) else Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = Rahal.type.badge,
                 )
             }
         }

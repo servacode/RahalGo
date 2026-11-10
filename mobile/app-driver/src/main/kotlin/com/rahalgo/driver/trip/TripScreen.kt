@@ -42,7 +42,6 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -796,9 +795,9 @@ fun TripScreen(
                     style = MaterialTheme.typography.labelMedium,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(bottom = 8.dp)
+                        .padding(bottom = Rahal.space.sm)
                         .background(Rahal.colors.ink.copy(alpha = 0.85f), Rahal.shape.sm)
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                        .padding(horizontal = Rahal.space.md, vertical = 6.dp),
                 )
             }
         }
@@ -1030,7 +1029,7 @@ fun TripScreen(
                                 locating.reset()
                             }
                         }
-                        .padding(12.dp),
+                        .padding(Rahal.space.md),
                 )
             }
             // **«رحلة تجريبيّة» فوق زرّ تحديد الموقع** (طلبُ المالك ٢٠٢٦-١٠-٠٢: «مشان
@@ -1214,7 +1213,7 @@ private fun OnRouteBanner(
     Column(
         modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm)
             .clip(Rahal.shape.md)
             .background(Rahal.colors.brand)
             .padding(14.dp),
@@ -1244,7 +1243,7 @@ private fun OnRouteBanner(
                 Countdown(it, onExpired = onDismiss, onColor = Color.White)
             }
         }
-        Spacer(Modifier.height(2.dp))
+        Spacer(Modifier.height(Rahal.space.xxs))
         Text(
             // **واسمُ المصدر أو «طلب خاصّ»** — لا سطرٌ يبدأ بنقطة.
             // **وأجرتُه هو لا نقدُ الزبون** (٢٠٢٦-١٠-٠٢) — كان يُعرض `cash_due`
@@ -1308,7 +1307,7 @@ private fun OnRouteBanner(
         // **والخبرُ كان يُكتب في اللوح السفليّ وهو مطويّ** — فلا يُقرأ
         // إلّا بسحبه. **وجوابٌ يحتاج بحثاً عنه ليس جوابا.**
         if (error.isNotEmpty()) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             Text(
                 text = error,
                 color = Color.White,
@@ -1331,8 +1330,8 @@ private fun StopsRow(stops: List<Stop>, current: String, onPick: (String) -> Uni
             .fillMaxWidth()
             .background(Rahal.colors.canvas.copy(alpha = 0.94f))
             .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
+        horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
     ) {
         for (stop in stops) {
             val now = stop.id == current
@@ -1342,7 +1341,7 @@ private fun StopsRow(stops: List<Stop>, current: String, onPick: (String) -> Uni
                     .background(if (now) Rahal.colors.brand else Rahal.colors.field)
                     .clickable { onPick(stop.id) }
                     .heightIn(min = 44.dp)
-                    .padding(horizontal = 16.dp),
+                    .padding(horizontal = Rahal.space.lg),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
@@ -1398,7 +1397,7 @@ private fun QuickAction(
             .background(if (danger) Rahal.colors.danger.copy(alpha = 0.12f) else Rahal.colors.field)
             .clickable(onClick = onClick)
             .heightIn(min = 56.dp)
-            .padding(horizontal = 4.dp, vertical = 6.dp),
+            .padding(horizontal = Rahal.space.xs, vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
@@ -1432,8 +1431,8 @@ private fun TripActionBar(order: DriverOrder, state: TripState, actions: TripAct
     val showProblem = !isReturnTrip(order)
     val showLive = state.step >= TripStep.PICKED_UP && (state.customerLive == null || state.liveStale)
     Row(
-        Modifier.fillMaxWidth().padding(bottom = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        Modifier.fillMaxWidth().padding(bottom = Rahal.space.sm),
+        horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
     ) {
         if (showProblem) {
             QuickAction(
@@ -1524,7 +1523,7 @@ private fun RoadClosureAction(onReport: (String) -> Unit, modifier: Modifier) {
             onDismissRequest = { open = false },
             title = { Text(stringResource(R.string.closure_title), fontWeight = FontWeight.Bold) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
                     reasons.forEach { (key, label) ->
                         Text(
                             text = stringResource(label),
@@ -1537,7 +1536,7 @@ private fun RoadClosureAction(onReport: (String) -> Unit, modifier: Modifier) {
                                     open = false
                                     onReport(key)
                                 }
-                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                                .padding(horizontal = 14.dp, vertical = Rahal.space.md),
                         )
                     }
                 }
@@ -1584,10 +1583,10 @@ private fun LiveCustomerNotice(state: TripState) {
             style = MaterialTheme.typography.labelMedium,
             fontWeight = FontWeight.Bold,
             modifier = Modifier
-                .padding(vertical = 4.dp)
+                .padding(vertical = Rahal.space.xs)
                 .clip(Rahal.shape.sm)
                 .background(Rahal.colors.success)
-                .padding(horizontal = 12.dp, vertical = 6.dp),
+                .padding(horizontal = Rahal.space.md, vertical = 6.dp),
         )
     }
 }
@@ -1603,7 +1602,7 @@ internal fun TopNotice(text: String, ground: Color) {
         style = MaterialTheme.typography.bodyMedium,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 4.dp)
+            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.xs)
             .clip(Rahal.shape.md)
             .background(ground)
             .padding(horizontal = 14.dp, vertical = 10.dp),
@@ -1712,7 +1711,7 @@ private fun TripCard(
                     if (dy < -6f) TripCollapse.bottom = true
                 }
             }
-            .padding(horizontal = 20.dp, vertical = 12.dp),
+            .padding(horizontal = 20.dp, vertical = Rahal.space.md),
     ) {
         // **ومقبضٌ يُرى** — شريطٌ رماديٌّ يقول «هذه تُسحب»، **وبطاقةٌ
         // تُسحب ولا تقول** لا يعرف أحدٌ أنّها تُسحب.
@@ -1974,7 +1973,7 @@ private fun TripCard(
                 AnimatedVisibility(visible = expanded) {
                     Column(
                         Modifier.fillMaxWidth().padding(top = 10.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(Rahal.space.sm),
                     ) {
                         val pickedUp = state.step >= TripStep.PICKED_UP
                         val cashFrom = cashFrom(order, pickedUp)
@@ -2201,14 +2200,14 @@ private fun TripCard(
                                     .fillMaxWidth()
                                     .clip(Rahal.shape.sm)
                                     .background(Rahal.colors.warnTint)
-                                    .padding(12.dp),
+                                    .padding(Rahal.space.md),
                             ) {
                                 Text(
                                     text = stringResource(R.string.card_custom_what),
                                     color = Rahal.colors.inkMuted,
                                     style = MaterialTheme.typography.bodySmall,
                                 )
-                                Spacer(Modifier.height(2.dp))
+                                Spacer(Modifier.height(Rahal.space.xxs))
                                 Text(
                                     text = order.customRequest,
                                     style = MaterialTheme.typography.bodyLarge,
@@ -2444,7 +2443,7 @@ private fun TripCard(
                                 fontWeight = FontWeight.Bold,
                                 style = MaterialTheme.typography.bodyMedium,
                             )
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
                                 ContactButton(
                                     icon = com.rahalgo.ui.R.drawable.ic_phone,
                                     label = R.string.contact_call_holder,
@@ -2458,7 +2457,7 @@ private fun TripCard(
                             }
                         }
                         if (storePhone != null || recipient != null) {
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
                                 // **قبل الاستلام: المتجرُ اتّصالاً وواتساب** (قرارُ المالك ٢٠٢٦-١٠-٠٦) — والرأسُ
                                 // يقول اسمَه، فيكفي الزرَّ «اتّصل» و«واتساب».
                                 if (storePhone != null) {
@@ -2499,13 +2498,13 @@ private fun TripCard(
 
         // **الثابتُ أسفلَ اللوح**: صفُّ الأزرار فوق زرّ الخطوة مباشرةً، **وخطأُ الخطوة بينهما حتّى يُرى
         // ولا يتوارى في القائمة المتمرّرة.**
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         TripActionBar(order, state, actions)
         if (state.error.isNotEmpty()) {
             Text(
                 state.error,
                 color = Rahal.colors.danger,
-                modifier = Modifier.padding(bottom = 8.dp),
+                modifier = Modifier.padding(bottom = Rahal.space.sm),
             )
         }
         primary?.invoke()
@@ -2534,7 +2533,7 @@ private fun TripPrimary(label: Int, onClick: () -> Unit, enabled: Boolean, busy:
                 contentDescription = null,
                 modifier = Modifier.size(20.dp),
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(Rahal.space.sm))
             Text(text ?: stringResource(label), fontWeight = FontWeight.Bold)
         }
     }
@@ -2552,7 +2551,7 @@ private fun InfoBox(icon: Int, text: String, tint: Color, bold: Boolean = false)
             .fillMaxWidth()
             .clip(Rahal.shape.md)
             .background(tint.copy(alpha = 0.10f))
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(horizontal = Rahal.space.md, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(painter = painterResource(icon), contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
@@ -2579,7 +2578,7 @@ private fun InvoiceBox(order: DriverOrder) {
             .fillMaxWidth()
             .clip(Rahal.shape.md)
             .background(tint.copy(alpha = 0.10f))
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(horizontal = Rahal.space.md, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -2626,7 +2625,7 @@ private fun MoneyBox(label: String, amount: String, tint: Color) {
             .fillMaxWidth()
             .clip(Rahal.shape.md)
             .background(tint.copy(alpha = 0.12f))
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(horizontal = Rahal.space.md, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(painter = painterResource(R.drawable.ic_cash), contentDescription = null, tint = tint, modifier = Modifier.size(22.dp))
@@ -2637,7 +2636,7 @@ private fun MoneyBox(label: String, amount: String, tint: Color) {
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier.weight(1f),
         )
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(Rahal.space.sm))
         Text(amount, color = tint, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge)
     }
 }
@@ -2670,7 +2669,7 @@ private fun dial(ctx: android.content.Context, phone: String) {
 @Composable
 private fun NoTrip(onOrders: () -> Unit, delivered: DeliveredSummary? = null) {
     Column(
-        Modifier.fillMaxSize().padding(32.dp),
+        Modifier.fillMaxSize().padding(Rahal.space.xxl),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
@@ -2760,11 +2759,11 @@ private fun ReturnCard(
             Text("#${order.number}", color = Rahal.colors.inkMuted)
         }
         if (order.addressText.isNotBlank()) {
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(Rahal.space.xs))
             Text(text = cleanAddress(order.addressText), color = Rahal.colors.inkMuted)
         }
         if (!order.dropoffKnown) {
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(Rahal.space.xs))
             Text(text = stringResource(R.string.trip_return_no_point), color = Rahal.colors.inkMuted)
         }
         if (state.error.isNotEmpty()) {
@@ -2878,7 +2877,7 @@ private fun DeliverConfirmDialog(
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
                     )
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(Rahal.space.sm))
                     androidx.compose.material3.OutlinedTextField(
                         value = code,
                         onValueChange = { v -> code = v.filter { it.isDigit() }.take(4) },

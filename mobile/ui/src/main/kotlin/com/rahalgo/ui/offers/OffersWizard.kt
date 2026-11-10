@@ -363,7 +363,7 @@ fun OffersWizard(
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                 )
-                                com.rahalgo.ui.DualPrice(picked.priceUsd, picked.price, style = MaterialTheme.typography.bodySmall)
+                                com.rahalgo.ui.DualPrice(picked.priceUsd, picked.price, style = Rahal.type.caption)
                             }
                             RahalTextButton(onClick = { changeItem = true }) {
                                 Text(stringResource(R.string.ow_item_change), fontWeight = FontWeight.Bold)
@@ -479,7 +479,7 @@ fun OffersWizard(
                         },
                         singleLine = true,
                         shape = Rahal.shape.md,
-                        textStyle = MaterialTheme.typography.titleMedium,
+                        textStyle = Rahal.type.sectionTitle,
                         isError = percent.isNotEmpty() && !valueOK,
                         supportingText = badValue,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Done),
@@ -529,7 +529,7 @@ fun OffersWizard(
                                 modifier = Modifier.size(ButtonIcon),
                             )
                             Spacer(Modifier.width(Rahal.space.xs))
-                            Text(it, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodyMedium)
+                            Text(it, color = Rahal.colors.inkMuted, style = Rahal.type.body)
                         }
                     }
                 }
@@ -557,7 +557,7 @@ fun OffersWizard(
                         Text(
                             stringResource(R.string.ow_preview_for, OfferDuration.label(ctx, hours)),
                             color = Rahal.colors.inkMuted,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = Rahal.type.caption,
                         )
                     }
                 }
@@ -603,7 +603,7 @@ private fun FormCard(title: String, body: @Composable ColumnScope.() -> Unit) {
         Text(
             title,
             fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.titleSmall,
+            style = Rahal.type.cardTitle,
             color = Rahal.colors.ink,
         )
         Spacer(Modifier.height(Rahal.space.sm))
@@ -639,7 +639,7 @@ private fun EmptyOffers(enabled: Boolean, onCreate: () -> Unit) {
         Text(
             stringResource(R.string.ow_empty_title),
             fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.titleMedium,
+            style = Rahal.type.sectionTitle,
             color = Rahal.colors.ink,
             textAlign = TextAlign.Center,
         )
@@ -681,7 +681,7 @@ private fun TypeTile(
                     .background(tint.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(glyph, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = tint)
+                Text(glyph, fontWeight = FontWeight.Bold, style = Rahal.type.sectionTitle, color = tint)
             }
             Spacer(Modifier.height(Rahal.space.xs))
             Text(
@@ -719,26 +719,26 @@ private fun ItemTile(
             .selectable(selected = chosen, role = Role.RadioButton, onClick = onClick)
             .padding(Rahal.space.sm),
     ) {
-        Column(Modifier.fillMaxWidth().padding(end = if (chosen) Rahal.space.lg else 0.dp)) {
+        Column(Modifier.fillMaxWidth().padding(end = if (chosen) Rahal.space.lg else Rahal.space.none)) {
             Text(
                 name,
                 fontWeight = FontWeight.Bold,
                 color = if (chosen) Rahal.colors.brand else Rahal.colors.ink,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.body,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            com.rahalgo.ui.DualPrice(priceUsd, priceSyp, stacked = true, style = MaterialTheme.typography.bodySmall)
+            com.rahalgo.ui.DualPrice(priceUsd, priceSyp, stacked = true, style = Rahal.type.caption)
             if (note != null) {
                 Spacer(Modifier.height(Rahal.space.xs))
                 Text(
                     note,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = Rahal.type.badge,
                     color = Rahal.colors.accentInk,
                     modifier = Modifier
                         .clip(Rahal.shape.sm)
                         .background(Rahal.colors.accent.copy(alpha = 0.12f))
-                        .padding(horizontal = Rahal.space.xs, vertical = 2.dp),
+                        .padding(horizontal = Rahal.space.xs, vertical = Rahal.space.xxs),
                 )
             }
         }
@@ -762,7 +762,7 @@ private fun DurationTile(text: String, chosen: Boolean, onClick: () -> Unit, mod
         Text(
             text,
             fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.bodyMedium,
+            style = Rahal.type.body,
             color = if (chosen) Rahal.colors.onBrand else Rahal.colors.ink,
             textAlign = TextAlign.Center,
         )
@@ -808,7 +808,7 @@ private fun Pill(text: String, on: Boolean, onClick: () -> Unit) {
         text,
         color = if (on) Rahal.colors.onBrand else Rahal.colors.ink,
         fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
-        style = MaterialTheme.typography.bodyMedium,
+        style = Rahal.type.body,
         maxLines = 1,
         modifier = Modifier
             .clip(Rahal.shape.pill)
@@ -857,7 +857,7 @@ private fun Muted(text: String) {
     Text(
         text,
         color = Rahal.colors.inkMuted,
-        style = MaterialTheme.typography.bodyMedium,
+        style = Rahal.type.body,
         modifier = Modifier.padding(vertical = Rahal.space.xs),
     )
 }

@@ -58,10 +58,10 @@ fun StoreSwitcher(
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .padding(horizontal = Rahal.space.lg, vertical = 6.dp)
             .background(Rahal.colors.field, Rahal.shape.sm)
             .clickable { expanded = true }
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(horizontal = Rahal.space.md, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -75,7 +75,7 @@ fun StoreSwitcher(
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.bodyMedium,
             modifier = Modifier
-                .padding(start = 8.dp)
+                .padding(start = Rahal.space.sm)
                 .weight(1f),
         )
         Text(

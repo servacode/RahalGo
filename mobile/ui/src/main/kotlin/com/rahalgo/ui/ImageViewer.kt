@@ -165,7 +165,7 @@ fun FullPhoto(
             contentAlignment = Alignment.Center,
         ) {
             if (url.isNullOrEmpty() || failed) {
-                Text(name.trim().take(1), color = Rahal.colors.brand, style = MaterialTheme.typography.titleMedium)
+                Text(name.trim().take(1), color = Rahal.colors.brand, style = Rahal.type.sectionTitle)
             } else {
                 AsyncImage(
                     model = url,

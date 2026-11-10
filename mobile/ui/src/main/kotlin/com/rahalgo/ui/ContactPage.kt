@@ -128,13 +128,13 @@ fun ContactSection(p: Platform) {
 
     val address = formatAddress(p.address)
     if (address.isNotEmpty()) {
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(Rahal.space.md))
         AddressCard(address)
     }
 
     val point = parseLatLng(p.location)
     if (point != null) {
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(Rahal.space.md))
         MapPreview { openMap(context, point, p.name) }
     }
 }
@@ -193,19 +193,19 @@ private fun AddressCard(address: String) {
                     modifier = Modifier.size(20.dp),
                 )
             }
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(Rahal.space.md))
             Column(Modifier.weight(1f)) {
                 Text(
                     text = stringResource(R.string.contact_address),
                     color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = Rahal.type.caption,
                 )
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(Rahal.space.xxs))
                 Text(
                     text = address,
                     color = Rahal.colors.ink,
                     fontWeight = FontWeight.Medium,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = Rahal.type.bodyLarge,
                 )
             }
         }
@@ -269,7 +269,7 @@ private fun MapPreview(onClick: () -> Unit) {
             }
         }
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = Rahal.space.md),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Icon(
@@ -278,18 +278,18 @@ private fun MapPreview(onClick: () -> Unit) {
                 tint = Rahal.colors.brand,
                 modifier = Modifier.size(18.dp),
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(Rahal.space.sm))
             Text(
                 text = stringResource(R.string.contact_map),
                 color = Rahal.colors.ink,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.body,
                 modifier = Modifier.weight(1f),
             )
             Text(
                 text = open,
                 color = Rahal.colors.brand,
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.body,
             )
         }
     }

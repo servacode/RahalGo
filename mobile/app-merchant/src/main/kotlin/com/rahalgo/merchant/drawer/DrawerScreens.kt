@@ -128,7 +128,7 @@ fun WarningsScreen(vm: WarningsViewModel) {
             vm.items.forEach { w ->
                 Card(tone = Rahal.colors.accent) {
                   Row(verticalAlignment = Alignment.CenterVertically) {
-                    com.rahalgo.ui.IconTile(
+                    com.rahalgo.ui.IconBox(
                         icon = com.rahalgo.ui.R.drawable.ic_warning,
                         tint = Rahal.colors.accent,
                     )
@@ -152,7 +152,7 @@ fun WarningsScreen(vm: WarningsViewModel) {
                 }
                 Spacer(Modifier.height(Rahal.space.md))
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(Rahal.space.xl))
         }
     }
 }
@@ -414,7 +414,7 @@ fun SalesScreen(vm: SalesViewModel) {
 
             Row(
                 Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
             ) {
                 listOf(
                     com.rahalgo.merchant.R.string.act_today,
@@ -446,7 +446,7 @@ fun SalesScreen(vm: SalesViewModel) {
             // **والمدى المختارُ مكتوباً بالأيّام** (تدقيقُ ٢٠٢٦-١٠-٢٧) — من اختار «مدة محددة»
             // يرى ما اختار، **لا تقويمين ثمّ أرقاماً بلا تاريخ.**
             if (vm.range == 3 && vm.fromShown.isNotEmpty()) {
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(Rahal.space.sm))
                 Text(
                     stringResource(
                         com.rahalgo.merchant.R.string.sales_range,
@@ -457,7 +457,7 @@ fun SalesScreen(vm: SalesViewModel) {
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Rahal.space.md))
 
             if (vm.loading || vm.error.isNotEmpty()) {
                 LoadState(vm.loading, vm.error) { vm.load() }
@@ -488,7 +488,7 @@ fun SalesScreen(vm: SalesViewModel) {
                         modifier = Modifier.weight(1f),
                     )
                 }
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(Rahal.space.sm))
                 // ══════════════════════════════════════════════════════
                 // **ومبيعاتُه بسعره هو لا بما دفعه الزبون**
                 // ══════════════════════════════════════════════════════
@@ -525,7 +525,7 @@ fun SalesScreen(vm: SalesViewModel) {
             //
             // **ونافذةُ الطباعة في أندرويد فيها «حفظ بصيغة PDF»** —
             // فمن لا طابعةَ عنده يحفظ ويرسل، **وهو ما يفعله أكثرُهم.**
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Rahal.space.md))
             val lblOrders = stringResource(com.rahalgo.merchant.R.string.nav_orders_all)
             val lblDone = stringResource(com.rahalgo.merchant.R.string.reports_delivered)
             val lblCancel = stringResource(com.rahalgo.merchant.R.string.reports_cancelled)
@@ -554,7 +554,7 @@ fun SalesScreen(vm: SalesViewModel) {
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(stringResource(com.rahalgo.merchant.R.string.sales_print)) }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(Rahal.space.xl))
         }
     }
 }

@@ -56,7 +56,7 @@ fun ResetScreen(state: ResetState, actions: ResetActions) {
         AuthHeader(logoSize = 100.dp, topSpace = 24.dp, bottomSpace = 10.dp)
         Text(
             text = stringResource(R.string.reset_title),
-            style = MaterialTheme.typography.headlineSmall,
+            style = Rahal.type.headline,
         )
         Spacer(Modifier.height(10.dp))
         Text(
@@ -70,7 +70,7 @@ fun ResetScreen(state: ResetState, actions: ResetActions) {
             color = Rahal.colors.inkMuted,
             textAlign = TextAlign.Center,
         )
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(Rahal.space.xl))
 
         AuthCard {
         when (state.step) {
@@ -122,7 +122,7 @@ fun ResetScreen(state: ResetState, actions: ResetActions) {
             )
         }
 
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(Rahal.space.xl))
         RahalButton(
             onClick = {
                 when (state.step) {

@@ -70,7 +70,7 @@ fun StateMessage(
             )
             if (line.isNotBlank()) {
                 Spacer(Modifier.height(Rahal.space.xs))
-                Text(line, color = Rahal.colors.inkMuted, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodySmall)
+                Text(line, color = Rahal.colors.inkMuted, textAlign = TextAlign.Center, style = Rahal.type.caption)
             }
             if (actionLabel.isNotBlank() && onAction != null) {
                 Spacer(Modifier.height(Rahal.space.md))
@@ -123,4 +123,60 @@ fun SkeletonList(count: Int = 4, modifier: Modifier = Modifier) {
             }
         }
     }
+}
+
+/**
+ * **حالةُ الفراغ** — «لا طلبات بعد» وسطرٌ يقول ما يفعله الآن وزرٌّ اختياريّ. اسمُ النظام الموحَّد لـ[StateMessage].
+ *
+ * ```
+ * EmptyState("لا طلبات بعد", line = "اطلب من أيّ متجر وستظهر هنا", icon = R.drawable.ic_orders)
+ * ```
+ */
+@Composable
+fun EmptyState(
+    title: String,
+    modifier: Modifier = Modifier,
+    line: String = "",
+    @androidx.annotation.DrawableRes icon: Int = R.drawable.ic_info,
+    actionLabel: String = "",
+    onAction: (() -> Unit)? = null,
+) = StateMessage(title = title, modifier = modifier, icon = icon, line = line, actionLabel = actionLabel, onAction = onAction)
+
+/**
+ * **حالةُ الخطأ** — «تعذّر التحميل» بأحمرَ وزرُّ «إعادة المحاولة». **وفشلُ القراءة ليس فراغاً** — لا يُعرض
+ * «لا شيءَ عندك» على خطأ.
+ */
+@Composable
+fun ErrorState(
+    title: String,
+    modifier: Modifier = Modifier,
+    line: String = "",
+    onRetry: (() -> Unit)? = null,
+) = StateMessage(
+    title = title,
+    modifier = modifier,
+    icon = R.drawable.ic_warning,
+    line = line,
+    actionLabel = if (onRetry != null) stringResource(R.string.act_retry) else "",
+    onAction = onRetry,
+    danger = true,
+)
+
+/**
+ * **قطعةُ هيكلٍ واحدة** — مستطيلٌ رماديٌّ ينبض مكانَ نصٍّ أو صورةٍ لم تصل. للقائمة كلِّها [SkeletonList].
+ *
+ * ```
+ * Skeleton(Modifier.fillMaxWidth(0.6f).height(Rahal.space.lg))
+ * ```
+ */
+@Composable
+fun Skeleton(modifier: Modifier = Modifier) {
+    val t = rememberInfiniteTransition(label = "skeletonBlock")
+    val a by t.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 0.8f,
+        animationSpec = infiniteRepeatable(tween(900), RepeatMode.Reverse),
+        label = "pulse",
+    )
+    Box(modifier.clip(Rahal.shape.sm).background(Rahal.colors.inkMuted.copy(alpha = 0.18f * a)))
 }

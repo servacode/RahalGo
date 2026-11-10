@@ -78,16 +78,16 @@ fun SetupWizard(
             .background(Rahal.colors.surface)
             .statusBarsPadding()
             .verticalScroll(rememberScrollState())
-            .padding(24.dp),
+            .padding(Rahal.space.xl),
     ) {
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(Rahal.space.xl))
         Text(
             text = stringResource(R.string.setup_title),
             style = androidx.compose.material3.MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             color = Rahal.colors.brand,
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         Text(stringResource(R.string.setup_why), color = Rahal.colors.inkMuted)
         Spacer(Modifier.height(20.dp))
 
@@ -157,7 +157,7 @@ fun SetupWizard(
         // **ولا يحجبها**: استرشاديٌّ (لا يدخل `canWork`)، فيُعرض زرُّه ما لم
         // يُمنَح، ويختفي حين يُمنَح — **بلا «لاحقاً» دائمةٍ على الرئيسيّة.**
         if (canWork && !batteryExempt) {
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(Rahal.space.lg))
             RahalButton(onClick = onGrantBattery, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.setup_grant_battery))
             }
@@ -165,7 +165,7 @@ fun SetupWizard(
 
         // ── المتابعةُ حين يصير الموقعُ منتِجاً — والباقي تحرسه الجاهزيّة ──
         if (canWork) {
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(Rahal.space.lg))
             RahalButton(onClick = onDone, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.setup_continue))
             }
@@ -180,7 +180,7 @@ private fun StepRow(number: Int, done: Boolean, current: Boolean, label: String)
             .fillMaxWidth()
             .clip(Rahal.shape.sm)
             .background(if (current) Rahal.colors.brand.copy(alpha = 0.08f) else androidx.compose.ui.graphics.Color.Transparent)
-            .padding(horizontal = 8.dp, vertical = 8.dp),
+            .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(

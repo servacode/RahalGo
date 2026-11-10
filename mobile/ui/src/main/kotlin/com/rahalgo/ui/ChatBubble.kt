@@ -44,7 +44,7 @@ import com.rahalgo.shared.model.ChatMessage
 fun ChatBubble(message: ChatMessage) {
     val mine = message.mine
     Box(
-        Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        Modifier.fillMaxWidth().padding(vertical = Rahal.space.xs),
         contentAlignment = if (mine) Alignment.CenterEnd else Alignment.CenterStart,
     ) {
         Column(
@@ -60,12 +60,12 @@ fun ChatBubble(message: ChatMessage) {
                 text = message.body,
                 color = if (mine) Rahal.colors.onBrand else Rahal.colors.ink,
             )
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(Rahal.space.xxs))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = chatTime(message.createdAt),
                     color = if (mine) Rahal.colors.onBrand.copy(alpha = 0.75f) else Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = Rahal.type.badge,
                 )
                 if (mine) {
                     Spacer(Modifier.size(5.dp))
@@ -74,7 +74,7 @@ fun ChatBubble(message: ChatMessage) {
                         color = Rahal.colors.onBrand.copy(
                             alpha = if (message.readAt != null) 1f else 0.55f,
                         ),
-                        style = MaterialTheme.typography.labelSmall,
+                        style = Rahal.type.badge,
                     )
                 }
             }
@@ -85,11 +85,11 @@ fun ChatBubble(message: ChatMessage) {
 /** **سطرُ اليوم** — يفصل ما كُتب أمس عمّا كُتب اليوم. */
 @Composable
 fun ChatDayChip(day: String) {
-    Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxWidth().padding(vertical = Rahal.space.sm), contentAlignment = Alignment.Center) {
         Text(
             text = day,
             color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.labelSmall,
+            style = Rahal.type.badge,
             modifier = Modifier
                 .clip(Rahal.shape.sm)
                 .background(Rahal.colors.bubble)

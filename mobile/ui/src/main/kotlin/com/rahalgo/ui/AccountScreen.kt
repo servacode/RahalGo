@@ -179,7 +179,7 @@ fun AccountScreen(
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp)
+            .padding(Rahal.space.lg)
             .padding(bottom = LocalChatFabInset.current),
     ) {
 
@@ -215,7 +215,7 @@ fun AccountScreen(
         // يُشكّ في جهاز.
         // **والخطرُ آخرا** — بأمر المالك.
         Card(tone = Rahal.colors.danger) { DangerSection(vm, s) }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(Rahal.space.xl))
         // ══════════════════════════════════════════════════════════════
         // **وذكرُ مصدر الخرائط — يُؤدَّى هنا لا فوق الطريق**
         // ══════════════════════════════════════════════════════════════
@@ -229,7 +229,7 @@ fun AccountScreen(
         //
         // **ومن حذفه من الموضعين خالف رخصةً** — وهذا موضعُه.
         MapCredit()
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(Rahal.space.xxl))
     }
 }
 
@@ -261,7 +261,7 @@ private fun Identity(vm: AccountViewModel, s: AccountState, worker: Boolean, wha
     // **وصورتُه واسمُه يقولان ما هما** — وعنوانٌ فوقهما يسمّي المعروف.
     if (!polished) Row(verticalAlignment = Alignment.CenterVertically) {
         Avatar(url = AppCore.get().media(me.avatarThumbUrl), name = me.fullName, size = 64)
-        Spacer(Modifier.size(12.dp))
+        Spacer(Modifier.size(Rahal.space.md))
         Column {
             RahalTextButton(
                 onClick = picker,
@@ -275,7 +275,7 @@ private fun Identity(vm: AccountViewModel, s: AccountState, worker: Boolean, wha
         }
     }
 
-    Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(Rahal.space.md))
     OutlinedTextField(
         value = draft,
         onValueChange = { draft = it },
@@ -283,7 +283,7 @@ private fun Identity(vm: AccountViewModel, s: AccountState, worker: Boolean, wha
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
     )
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(Rahal.space.sm))
     SaveButton(
         onClick = { vm.setName(draft) },
         enabled = !s.busy && draft.trim().isNotEmpty() && draft.trim() != me.fullName,
@@ -318,10 +318,10 @@ private fun Identity(vm: AccountViewModel, s: AccountState, worker: Boolean, wha
         label = R.string.acc_phone_current,
         readOnly = true,
     )
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(Rahal.space.sm))
     PhoneChange(vm, s)
     if (whatsapp) {
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(Rahal.space.md))
         WhatsAppVerify(vm, s, me.whatsappVerified, worker)
     }
 }
@@ -360,7 +360,7 @@ private fun WhatsAppVerify(
             if (verified) R.string.acc_wa_verified else R.string.acc_wa_unverified,
         ),
         color = if (verified) Rahal.colors.success else Rahal.colors.danger,
-        style = MaterialTheme.typography.bodySmall,
+        style = Rahal.type.caption,
     )
     // **والموثَّقُ لا يُدعى إلى فعلٍ تمّ** — زرٌّ باقٍ بعد نجاحه يُقرأ
     // «لم ينجح».
@@ -401,8 +401,8 @@ private fun WhatsAppVerify(
             vm.askWhatsApp()
         },
     )
-    Spacer(Modifier.height(4.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Spacer(Modifier.height(Rahal.space.xs))
+    Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
         RahalButton(
             onClick = { vm.confirmWhatsApp(code); code = "" },
             enabled = !s.busy && code.isNotBlank(),
@@ -458,8 +458,8 @@ private fun PhoneChange(vm: AccountViewModel, s: AccountState) {
             enabled = !s.busy,
             label = R.string.acc_phone_new,
         )
-        Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Spacer(Modifier.height(Rahal.space.sm))
+        Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
             RahalButton(
                 onClick = { vm.askPhone(phone) },
                 enabled = !s.busy && phone.isNotBlank(),
@@ -483,8 +483,8 @@ private fun PhoneChange(vm: AccountViewModel, s: AccountState) {
         ),
         modifier = Modifier.fillMaxWidth(),
     )
-    Spacer(Modifier.height(8.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Spacer(Modifier.height(Rahal.space.sm))
+    Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
         RahalButton(
             onClick = { vm.confirmPhone(code); code = ""; open = false; phone = "" },
             enabled = !s.busy && code.isNotBlank(),
@@ -515,9 +515,9 @@ private fun PasswordSection(vm: AccountViewModel, s: AccountState) {
         if (s.pwDone > 0) { current = ""; next = ""; confirm = "" }
     }
     PasswordField(current, { current = it; vm.clearPwError() }, !s.busy, R.string.acc_pw_current)
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(Rahal.space.sm))
     PasswordField(next, { next = it; vm.clearPwError() }, !s.busy, R.string.acc_pw_new)
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(Rahal.space.sm))
     PasswordField(confirm, { confirm = it; vm.clearPwError() }, !s.busy, R.string.acc_pw_confirm)
 
     // **والتطابقُ يُقال قبل الإرسال لا بعده** — نداءٌ يذهب ليعود بخطأٍ
@@ -526,7 +526,7 @@ private fun PasswordSection(vm: AccountViewModel, s: AccountState) {
         Spacer(Modifier.height(6.dp))
         Text(stringResource(R.string.acc_pw_mismatch), color = Rahal.colors.danger)
     }
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(Rahal.space.sm))
     RahalButton(
         onClick = { vm.setPassword(current, next) },
         enabled = !s.busy && current.isNotEmpty() && next.isNotEmpty() && !mismatch,
@@ -598,7 +598,7 @@ private fun AddressesSection(
         }
     }
 
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(Rahal.space.sm))
     RahalOutlineButton(
         onClick = { if (onEditAddress != null) onEditAddress(null) else mode = "add" },
         enabled = !s.busy,
@@ -639,15 +639,15 @@ private fun AddressRow(
             Text(
                 text = stringResource(addressKindLabel(a.kind)),
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.body,
             )
             if (a.isDefault) {
-                Spacer(Modifier.size(8.dp))
+                Spacer(Modifier.size(Rahal.space.sm))
                 Chip(stringResource(R.string.acc_addr_default), Rahal.colors.success)
             }
         }
-        Spacer(Modifier.height(4.dp))
-        Text(a.text, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
+        Spacer(Modifier.height(Rahal.space.xs))
+        Text(a.text, color = Rahal.colors.inkMuted, style = Rahal.type.caption)
 
         // ══════════════════════════════════════════════════════════════
         // **وأزرارٌ ثلاثةٌ في صفٍّ تقصّ نصوصَها**
@@ -668,7 +668,7 @@ private fun AddressRow(
         //
         // **ولا يظهر للافتراضيّ أصلا** — فمن كان افتراضيّاً فصفّان
         // يصيران واحدا.
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(Rahal.space.md))
         if (!a.isDefault) {
             RahalOutlineButton(
                 onClick = { vm.makeDefault(a.id) },
@@ -676,9 +676,9 @@ private fun AddressRow(
                 tone = Tone.Success,
                 modifier = Modifier.fillMaxWidth(),
             ) { Text(stringResource(R.string.acc_addr_make_default), maxLines = 1) }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
             RahalOutlineButton(
                 onClick = onEdit,
                 enabled = !s.busy,
@@ -715,7 +715,7 @@ private fun DangerSection(vm: AccountViewModel, s: AccountState) {
     Text(
         stringResource(R.string.acc_delete_hint),
         color = Rahal.colors.inkMuted,
-        style = MaterialTheme.typography.bodySmall,
+        style = Rahal.type.caption,
     )
     Spacer(Modifier.height(10.dp))
 
@@ -745,8 +745,8 @@ private fun DangerSection(vm: AccountViewModel, s: AccountState) {
         ),
         modifier = Modifier.fillMaxWidth(),
     )
-    Spacer(Modifier.height(8.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Spacer(Modifier.height(Rahal.space.sm))
+    Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
         RahalButton(
             onClick = { vm.confirmDelete(code) },
             enabled = !s.busy && code.isNotBlank(),
@@ -771,7 +771,7 @@ private fun DangerSection(vm: AccountViewModel, s: AccountState) {
 private fun MapCredit() {
     Text(
         text = "الخرائط © مساهمو OpenStreetMap · OpenMapTiles · MapLibre",
-        style = MaterialTheme.typography.bodySmall,
+        style = Rahal.type.caption,
         color = Rahal.colors.inkMuted,
         textAlign = TextAlign.Center,
         modifier = Modifier.fillMaxWidth(),
@@ -780,7 +780,7 @@ private fun MapCredit() {
 
 @Composable
 private fun SectionTitle(text: String, color: androidx.compose.ui.graphics.Color = Rahal.colors.accentInk) {
-    Text(text, style = MaterialTheme.typography.titleMedium, color = color)
+    Text(text, style = Rahal.type.sectionTitle, color = color)
     Spacer(Modifier.height(10.dp))
 }
 
@@ -795,7 +795,7 @@ private fun Notice(text: String, color: androidx.compose.ui.graphics.Color) {
         text = text,
         color = color,
         textAlign = TextAlign.Center,
-        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+        modifier = Modifier.fillMaxWidth().padding(bottom = Rahal.space.md),
     )
 }
 
@@ -842,14 +842,14 @@ fun ClearStateButton(
             .clip(Rahal.shape.md)
             .background(Rahal.colors.field)
             .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = Rahal.space.lg, vertical = 10.dp),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         androidx.compose.runtime.CompositionLocalProvider(
             androidx.compose.material3.LocalContentColor provides Rahal.colors.inkMuted,
         ) {
-            androidx.compose.material3.ProvideTextStyle(MaterialTheme.typography.labelLarge) { content() }
+            androidx.compose.material3.ProvideTextStyle(Rahal.type.button) { content() }
         }
     }
 }
@@ -868,7 +868,7 @@ private fun ProfileHeader(vm: AccountViewModel, s: AccountState) {
         Column(Modifier.weight(1f)) {
             Text(
                 text = me.fullName,
-                style = MaterialTheme.typography.titleLarge,
+                style = Rahal.type.screenTitle,
                 fontWeight = FontWeight.Bold,
                 color = Rahal.colors.ink,
                 maxLines = 1,
@@ -876,7 +876,7 @@ private fun ProfileHeader(vm: AccountViewModel, s: AccountState) {
             )
             Text(
                 text = me.phone,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.body,
                 color = Rahal.colors.inkMuted,
                 maxLines = 1,
             )
@@ -910,7 +910,7 @@ private fun CollapsedPassword(vm: AccountViewModel, s: AccountState) {
     ) {
         Text(
             text = stringResource(R.string.acc_pw_change),
-            style = MaterialTheme.typography.titleMedium,
+            style = Rahal.type.sectionTitle,
             color = Rahal.colors.accentInk,
             modifier = Modifier.weight(1f),
         )

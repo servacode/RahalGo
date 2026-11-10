@@ -70,7 +70,7 @@ fun InboxSheet(
         ) {
             Text(
                 text = stringResource(R.string.inbox_title),
-                style = MaterialTheme.typography.titleLarge,
+                style = Rahal.type.screenTitle,
                 fontWeight = FontWeight.Bold,
             )
             // ══════════════════════════════════════════════════════════
@@ -90,7 +90,7 @@ fun InboxSheet(
                 Text(
                     stringResource(R.string.inbox_mark_all),
                     color = Rahal.colors.brand,
-                    style = MaterialTheme.typography.labelMedium,
+                    style = Rahal.type.label,
                     modifier = Modifier
                         .clip(Rahal.shape.sm)
                         .clickable(onClick = onMarkAll)
@@ -135,7 +135,7 @@ fun InboxSheet(
                         .padding(Rahal.space.md),
                     verticalAlignment = Alignment.Top,
                 ) {
-                    IconTile(
+                    IconBox(
                         icon = noticeIcon(notice.kind),
                         tint = if (notice.read) Rahal.colors.inkMuted else noticeTint(notice.kind),
                         size = 40.dp,
@@ -165,7 +165,7 @@ fun InboxSheet(
                             Text(
                                 BidiText.isolateNumbers(BidiText.fixArrows(notice.body)),
                                 color = Rahal.colors.inkMuted,
-                                style = MaterialTheme.typography.bodyMedium,
+                                style = Rahal.type.body,
                             )
                         }
                     }

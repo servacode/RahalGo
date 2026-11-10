@@ -164,7 +164,7 @@ fun Stages(
     //
     // **وإن لم يسع مجموعُ الأسماء العرضَ صغُر الخطُّ قليلاً** (`StageScales`) —
     // من توكن `labelSmall` نفسِه لا رقمٍ جديد. **والقياسُ بالخطّ الذي يُرسم.**
-    val baseStyle = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+    val baseStyle = Rahal.type.label.copy(fontWeight = FontWeight.Bold)
     val measurer = rememberTextMeasurer()
     val dens = LocalDensity.current
 

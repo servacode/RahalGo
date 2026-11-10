@@ -604,6 +604,86 @@
 }
 
 /* ══════════════════════════════════════════════════════════════════════
+   **نظامُ التصميم الموحَّد — مرآةُ `mobile/design`** (٢٠٢٦-١١-١١)
+   ══════════════════════════════════════════════════════════════════════
+
+   (مبدأُ المالك: «التصميم لازم يكون موحّد بكلّ التطبيقات، مشان إذا قرّرت يوماً طوّر التصميم
+    يتطوّر معي بسهولة».)
+
+   **الأدوارُ نفسُها بالأسماء نفسِها والأرقامِ نفسِها** كما في التطبيقات (`Type.kt` و`Tokens.kt`):
+   `text-body` هنا = `Rahal.type.body` هناك. **ومن غيّر رقماً في واحدٍ غيّره في الآخر.**
+
+   **وتُضاف ولا تُبدِّل**: الأسماءُ القديمة (`text-sm` · `rounded-card` · `p-4`) باقيةٌ لصفحاتها، **والجديدُ
+   يُكتب بهذه.** وأسماءُ المسافات والزوايا بسابقة `rg-` لأنّ `sm`/`md`/`lg` أسماءُ تيلويند نفسِه
+   (`rounded-md` · `max-w-sm`) — **وتبديلُها يمسّ كلَّ صفحةٍ بلا صوت.**
+
+   **والقاعدتان**: المعلومةُ المهمّة لا تنزل تحت ١٣ (`text-caption`)، و١٢ للثانويّ وحدَه (`text-meta`). */
+@theme static {
+  /* ── أدوارُ الخطّ: حجمٌ · ارتفاعُ سطرٍ عربيّ (≈١٫٥) · وزن ── */
+  --text-display: 1.75rem;            /* 28 */
+  --text-display--line-height: 2.5rem;
+  --text-display--font-weight: 700;
+  --text-headline: 1.5rem;            /* 24 */
+  --text-headline--line-height: 2.125rem;
+  --text-headline--font-weight: 700;
+  --text-screen-title: 1.375rem;      /* 22 */
+  --text-screen-title--line-height: 2rem;
+  --text-screen-title--font-weight: 700;
+  --text-section-title: 1.0625rem;    /* 17 */
+  --text-section-title--line-height: 1.625rem;
+  --text-section-title--font-weight: 700;
+  --text-card-title: 0.9375rem;       /* 15 */
+  --text-card-title--line-height: 1.375rem;
+  --text-card-title--font-weight: 700;
+  --text-body-lg: 1rem;               /* 16 */
+  --text-body-lg--line-height: 1.625rem;
+  --text-body: 0.9375rem;             /* 15 */
+  --text-body--line-height: 1.5rem;
+  --text-body-strong: 0.9375rem;      /* 15 */
+  --text-body-strong--line-height: 1.5rem;
+  --text-body-strong--font-weight: 700;
+  --text-caption: 0.8125rem;          /* 13 — أصغرُ معلومةٍ مهمّة */
+  --text-caption--line-height: 1.25rem;
+  --text-meta: 0.75rem;               /* 12 — ثانويٌّ وحدَه */
+  --text-meta--line-height: 1.125rem;
+  --text-label: 0.8125rem;            /* 13 */
+  --text-label--line-height: 1.125rem;
+  --text-label--font-weight: 500;
+  --text-price: 1rem;                 /* 16 */
+  --text-price--line-height: 1.5rem;
+  --text-price--font-weight: 700;
+  --text-price-lg: 1.375rem;          /* 22 */
+  --text-price-lg--line-height: 1.875rem;
+  --text-price-lg--font-weight: 700;
+  --text-badge: 0.75rem;              /* 12 */
+  --text-badge--line-height: 1rem;
+  --text-badge--font-weight: 700;
+  --text-button: 0.9375rem;           /* 15 */
+  --text-button--line-height: 1.375rem;
+  --text-button--font-weight: 700;
+
+  /* ── المسافات: Rahal.space ── */
+  --spacing-rg-xxs: 2px;
+  --spacing-rg-xs: 4px;
+  --spacing-rg-sm: 8px;
+  --spacing-rg-md: 12px;
+  --spacing-rg-lg: 16px;
+  --spacing-rg-xl: 24px;
+  --spacing-rg-xxl: 32px;
+  --spacing-rg-gutter: 16px;
+
+  /* ── الزوايا: Rahal.shape ── */
+  --radius-rg-sm: 10px;   /* رقاقة · وسم */
+  --radius-rg-md: 14px;   /* زرّ · حقل · مربّع */
+  --radius-rg-lg: 20px;   /* بطاقة · لوح */
+
+  /* ── المقاسات: Rahal.size ── */
+  --spacing-rg-touch: 48px;
+  --spacing-rg-icon-box: 40px;
+  --spacing-rg-tile-min: 88px;
+}
+
+/* ══════════════════════════════════════════════════════════════════════
    ٨ · حلقةُ التركيز — **مركزيّةٌ تُورَث لا تُكتب في كلّ زرّ**
    ══════════════════════════════════════════════════════════════════════
 

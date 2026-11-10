@@ -83,12 +83,20 @@ data class RahalShapes(
  * الدفعة، **ولا يقع إلّا وعينُ المالك عليه.**
  */
 data class RahalSpace(
+    /** **لا مسافة** — لبطاقةِ صورةٍ تملأ حوافَّها. */
+    val none: Dp = 0.dp,
+    /** **شعرةٌ بين سطرين متلاصقين** — اسمٌ وتحته سطرُه. */
+    val xxs: Dp = 2.dp,
     val xs: Dp = 4.dp,
     val sm: Dp = 8.dp,
     val md: Dp = 12.dp,
     val lg: Dp = 16.dp,
     val xl: Dp = 24.dp,
     val xxl: Dp = 32.dp,
+    /** **حشوةُ الشاشة من الجانبين** — رقمٌ واحدٌ لكلّ الشاشات (`ScreenPad`). */
+    val gutter: Dp = 16.dp,
+    /** **الفراغُ تحت آخر سطرٍ في الشاشة** — لا تنتهي القائمةُ عند حافّة الشريط. */
+    val tail: Dp = 32.dp,
 )
 
 /**
@@ -101,7 +109,68 @@ data class RahalStroke(
     val focus: Dp = 2.dp,
 )
 
+/**
+ * **الارتفاعُ (الظلّ)** — خمسُ درجاتٍ لا أكثر (نظامُ التصميم ٢٠٢٦-١١-١١).
+ *
+ * **والظلُّ يقول «هذا يُضغط أو يطفو»** — فبطاقةُ معلومةٍ لا ظلَّ لها (`tinted`/`outlined`)،
+ * **وبطاقةٌ بظلٍّ تُقرأ زرّاً** (D9: بطاقةُ الرسوم بظلٍّ بدت زرّاً).
+ */
+data class RahalElevation(
+    val none: Dp = 0.dp,
+    /** **رقاقةٌ مرفوعةٌ شعرة.** */
+    val low: Dp = 1.dp,
+    /** **البطاقةُ المرفوعة** (`RahalCard` الافتراضيّة). */
+    val card: Dp = 3.dp,
+    /** **ما يطفو فوق المحتوى** — الشريطُ السفليُّ الثابت، الزرُّ العائم. */
+    val raised: Dp = 6.dp,
+    /** **النوافذُ والألواح.** */
+    val overlay: Dp = 8.dp,
+)
+
+/** **مقاساتُ الأيقونات** — خمسةٌ (نظامُ التصميم ٢٠٢٦-١١-١١). */
+data class RahalIconSize(
+    /** **داخل شارةٍ أو بجانب نصٍّ صغير.** */
+    val xs: Dp = 16.dp,
+    /** **بجانب سطرٍ عاديّ** — أيقونةُ زرٍّ أو `ListRow`. */
+    val sm: Dp = 20.dp,
+    /** **الافتراضيّة** — شريطُ الرأس، `IconTile`، `IconAction`. */
+    val md: Dp = 24.dp,
+    /** **أيقونةُ حالةٍ فارغة.** */
+    val lg: Dp = 32.dp,
+    /** **أيقونةٌ بطلة** — شاشةُ نجاح. */
+    val xl: Dp = 48.dp,
+)
+
+/** **مقاساتُ القطع** — ما يتكرّر من الأحجام الثابتة (نظامُ التصميم ٢٠٢٦-١١-١١). */
+data class RahalSize(
+    /** **أصغرُ مساحةِ لمس** — ٤٨ (إرشادُ أندرويد)؛ لا زرَّ أصغرَ منها لمساً. */
+    val touch: Dp = 48.dp,
+    /** **زرُّ أيقونةٍ مدوَّر** (`IconAction`) — الاتّصال والواتساب والكاميرا. */
+    val action: Dp = 48.dp,
+    /** **مربّعُ أيقونةٍ ملوّن** (`IconBox`) بجانب سطر. */
+    val iconBox: Dp = 40.dp,
+    /** **صورةٌ شخصيّةٌ صغيرة** — في سطر. */
+    val avatarSm: Dp = 40.dp,
+    /** **صورةٌ متوسّطة** — رأسُ القائمة الجانبيّة، بطاقةُ متجر. */
+    val avatarMd: Dp = 56.dp,
+    /** **صورةٌ كبيرة** — رأسُ صفحة المتجر وصاحبه (`AvatarWithEdit`). */
+    val avatarLg: Dp = 72.dp,
+    /** **أقلُّ ارتفاعٍ لمربّع وظيفة** (`IconTile`) — فتتساوى المربّعاتُ في صفّها. */
+    val tileMin: Dp = 88.dp,
+    /** **نقطةُ الحال** (`StatusDot`). */
+    val dot: Dp = 8.dp,
+    /** **دائرةُ العدد** (`CountBadge`). */
+    val count: Dp = 18.dp,
+    /** **دائرةُ أيقونة الحالة الفارغة** (`StateMessage`). */
+    val stateCircle: Dp = 72.dp,
+    /** **الصورةُ المصغّرة في سطر** — صنفٌ في سلّة، طلبٌ في قائمة. */
+    val thumb: Dp = 56.dp,
+)
+
 /** **ثوابتُ الشكل** — لا تتبدّل بالسمة، فلا تحتاج `CompositionLocal`. */
 val RahalShapeTokens = RahalShapes()
+val RahalElevationTokens = RahalElevation()
+val RahalIconSizeTokens = RahalIconSize()
+val RahalSizeTokens = RahalSize()
 val RahalSpaceTokens = RahalSpace()
 val RahalStrokeTokens = RahalStroke()

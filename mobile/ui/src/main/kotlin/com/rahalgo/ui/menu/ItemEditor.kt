@@ -308,7 +308,7 @@ fun ItemEditor(
                         else -> stringResource(R.string.item_usd_equals, usdToSyp(usd, exchangeRate!!), usdText(exchangeRate))
                     },
                     color = if (noRate) Rahal.colors.danger else Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = Rahal.type.caption,
                     modifier = Modifier.padding(top = Rahal.space.xs),
                 )
             }
@@ -324,7 +324,7 @@ fun ItemEditor(
             Text(
                 stringResource(sectionLabel),
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.labelLarge,
+                style = Rahal.type.button,
                 color = if (missing) Rahal.colors.accentInk else Rahal.colors.ink,
             )
             Spacer(Modifier.height(Rahal.space.sm))
@@ -400,7 +400,7 @@ fun ItemEditor(
                 Text(
                     stringResource(R.string.mod_usd_no_rate),
                     color = Rahal.colors.danger,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = Rahal.type.caption,
                 )
             }
 
@@ -430,7 +430,7 @@ fun ItemEditor(
                     Text(
                         stringResource(R.string.item_duplicate_save_first),
                         color = Rahal.colors.inkMuted,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = Rahal.type.caption,
                     )
                 }
             }
@@ -526,7 +526,7 @@ private fun ItemPhoto(
             Text(
                 stringResource(if (has) R.string.item_photo_change else R.string.item_pick_image),
                 color = Rahal.colors.onPanel,
-                style = MaterialTheme.typography.labelMedium,
+                style = Rahal.type.label,
             )
         }
         if (has) {
@@ -580,7 +580,7 @@ private fun CurrencyCircles(selected: String, enabled: Boolean, onSelect: (Strin
                     stringResource(label),
                     color = if (on) Rahal.colors.onBrand else Rahal.colors.ink,
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = Rahal.type.cardTitle,
                 )
             }
         }
@@ -644,7 +644,7 @@ private fun SectionTile(
         Spacer(Modifier.height(Rahal.space.xs))
         Text(
             sec.name,
-            style = MaterialTheme.typography.labelMedium,
+            style = Rahal.type.label,
             fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
             color = if (on) Rahal.colors.brand else Rahal.colors.ink,
             textAlign = TextAlign.Center,
@@ -684,7 +684,7 @@ private fun ModifiersEditor(
     Text(
         stringResource(R.string.mod_title),
         fontWeight = FontWeight.Bold,
-        style = MaterialTheme.typography.titleMedium,
+        style = Rahal.type.sectionTitle,
     )
     // **ولا سطرَ شرح** (ملاحظةُ المالك ٢٠٢٦-١٠-٢٩: «ما في داعي للشرح»).
     Spacer(Modifier.height(Rahal.space.sm))
@@ -708,7 +708,7 @@ private fun ModifiersEditor(
             Text(
                 stringResource(R.string.mod_drinks_switch),
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodyLarge,
+                style = Rahal.type.bodyLarge,
             )
         }
         Switch(
@@ -791,7 +791,7 @@ private fun GroupCard(
                 Text(
                     g.name.ifBlank { stringResource(R.string.mod_custom_untitled) },
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleSmall,
+                    style = Rahal.type.cardTitle,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -835,7 +835,7 @@ private fun GroupCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     stringResource(R.string.mod_rule_switch),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = Rahal.type.caption,
                     modifier = Modifier.weight(1f),
                 )
                 Switch(
@@ -961,10 +961,10 @@ private fun AvailSwitch(available: Boolean, busy: Boolean, onAvailable: (Boolean
         Text(
             stringResource(if (available) R.string.mn_available else R.string.mn_unavailable),
             color = if (available) Rahal.colors.success else Rahal.colors.danger,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+            style = Rahal.type.badge.copy(fontSize = 10.sp),
             maxLines = 1,
         )
-        Spacer(Modifier.width(2.dp))
+        Spacer(Modifier.width(Rahal.space.xxs))
         Switch(
             checked = available,
             enabled = !busy,
@@ -994,7 +994,7 @@ private fun WeightOptions(
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
             stringResource(R.string.mod_weight_base_label),
-            style = MaterialTheme.typography.bodyMedium,
+            style = Rahal.type.body,
             modifier = Modifier.weight(1f),
         )
         RowField(
@@ -1038,7 +1038,7 @@ private fun WeightOptions(
                     Text(
                         weightName(gr),
                         fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = Rahal.type.body,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -1061,7 +1061,7 @@ private fun WeightOptions(
         Text(
             stringResource(R.string.mod_weight_quick),
             color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodySmall,
+            style = Rahal.type.caption,
             modifier = Modifier.align(Alignment.CenterVertically),
         )
         com.rahalgo.shared.merchant.quickGrams(g.baseGrams).forEach { q ->
@@ -1093,7 +1093,7 @@ internal fun RowField(
         singleLine = true,
         enabled = enabled,
         keyboardOptions = KeyboardOptions(keyboardType = keyboard),
-        textStyle = MaterialTheme.typography.bodyMedium.copy(color = Rahal.colors.ink),
+        textStyle = Rahal.type.body.copy(color = Rahal.colors.ink),
         cursorBrush = SolidColor(Rahal.colors.brand),
         modifier = modifier,
         decorationBox = { inner ->
@@ -1112,7 +1112,7 @@ internal fun RowField(
                         Text(
                             placeholder,
                             color = Rahal.colors.inkMuted,
-                            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+                            style = Rahal.type.badge.copy(fontSize = 11.sp),
                             maxLines = 1,
                             softWrap = false,
                         )
@@ -1121,7 +1121,7 @@ internal fun RowField(
                 }
                 if (suffix.isNotEmpty()) {
                     Spacer(Modifier.width(Rahal.space.xs))
-                    Text(suffix, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
+                    Text(suffix, color = Rahal.colors.inkMuted, style = Rahal.type.caption)
                 }
             }
         },
@@ -1134,7 +1134,7 @@ internal fun ColumnLabel(text: String, modifier: Modifier) {
     Text(
         text,
         color = Rahal.colors.inkMuted,
-        style = MaterialTheme.typography.labelSmall,
+        style = Rahal.type.badge,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier = modifier,
@@ -1147,13 +1147,13 @@ internal fun TagChip(text: String, color: Color) {
     Text(
         text,
         color = color,
-        style = MaterialTheme.typography.labelSmall,
+        style = Rahal.type.badge,
         fontWeight = FontWeight.Bold,
         maxLines = 1,
         modifier = Modifier
             .clip(Rahal.shape.pill)
             .background(color.copy(alpha = 0.10f))
-            .padding(horizontal = Rahal.space.sm, vertical = 2.dp),
+            .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.xxs),
     )
 }
 
@@ -1198,7 +1198,7 @@ private fun PresetBox(name: String, values: String, on: Boolean, enabled: Boolea
                 name,
                 color = Rahal.colors.ink,
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodyLarge,
+                style = Rahal.type.bodyLarge,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -1206,7 +1206,7 @@ private fun PresetBox(name: String, values: String, on: Boolean, enabled: Boolea
                 Text(
                     values,
                     color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = Rahal.type.caption,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -1239,7 +1239,7 @@ private fun PresetChip(text: String, on: Boolean, enabled: Boolean, onClick: () 
             text,
             color = if (on) Rahal.colors.brand else Rahal.colors.ink,
             fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
-            style = MaterialTheme.typography.bodyMedium,
+            style = Rahal.type.body,
         )
     }
 }
@@ -1304,7 +1304,7 @@ fun CurrencySwitch(selected: String, enabled: Boolean, onSelect: (String) -> Uni
                     .clip(Rahal.shape.md)
                     .background(if (on) Rahal.colors.brand else Rahal.colors.canvas)
                     .clickable(enabled = enabled) { onSelect(code) }
-                    .padding(horizontal = 18.dp, vertical = 8.dp),
+                    .padding(horizontal = 18.dp, vertical = Rahal.space.sm),
             ) {
                 Text(
                     stringResource(label),

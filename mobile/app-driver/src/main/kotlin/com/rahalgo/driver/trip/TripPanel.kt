@@ -33,7 +33,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -124,7 +123,7 @@ internal fun TripPanel(state: TripState, arrived: Boolean = false) {
 
     Column(
         Modifier
-            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm)
             .clip(Rahal.shape.lg)
             .background(Rahal.colors.panel)
             .pointerInput(Unit) {
@@ -233,7 +232,7 @@ internal fun TripPanel(state: TripState, arrived: Boolean = false) {
             val customBefore = state.order?.kind == "custom" && !amanahPoint &&
                 state.order?.status in setOf("assigned", "dispatching")
             if (amanahPoint && state.step < TripStep.PICKED_UP && !arrived) {
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(Rahal.space.xs))
                 Text(
                     stringResource(R.string.amanah_place),
                     color = Rahal.colors.brand,
@@ -252,12 +251,12 @@ internal fun TripPanel(state: TripState, arrived: Boolean = false) {
                     ),
                 )
             } else if (!routeReady) {
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(Rahal.space.xs))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     PanelChip(R.drawable.ic_navigation, stringResource(R.string.trip_route_loading))
                 }
             } else {
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(Rahal.space.xs))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     // **والمدّة من المحرّك إن وُجدت** — محسوبةً بسرعات
                     // الشوارع نفسِها لا بسرعةٍ واحدةٍ في الإعدادات.
@@ -328,7 +327,7 @@ internal fun TripPanel(state: TripState, arrived: Boolean = false) {
         // **ومقبضٌ يُرى** — شريطٌ فاتحٌ يقول «هذا يُسحب»، **ولوحٌ يُسحب
         // ولا يقول** لا يعرف أحدٌ أنّه يُسحب. **ومن أخفاه لا يجد ما
         // يعيده به.**
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         Box(
             Modifier
                 .clip(Rahal.shape.pill)
@@ -483,7 +482,7 @@ internal fun LegDot(
                 modifier = Modifier.size(15.dp),
             )
         }
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(Rahal.space.xs))
         if (showLabel) Text(
             text = stringResource(label),
             color = when {
@@ -660,6 +659,6 @@ private fun NoLocationBox(text: String) {
             .fillMaxWidth()
             .clip(Rahal.shape.sm)
             .background(Rahal.colors.onPanel)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
     )
 }

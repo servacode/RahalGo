@@ -208,7 +208,7 @@ fun BannerSlider(
         // **ولا تظهر للواحدة** — نقطةٌ وحيدةٌ تقول «لا شيءَ غيرها»
         // فتُقرأ زخرفة.
         if (items.size > 1) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Center,

@@ -1,5 +1,7 @@
 package com.rahalgo.ui
 
+import com.rahalgo.design.Rahal
+
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
@@ -116,7 +118,7 @@ fun PlatformPage(
                 if (b.head.isNotEmpty()) {
                     Text(
                         text = b.head,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = Rahal.type.sectionTitle,
                         fontWeight = FontWeight.Bold,
                     )
                     Spacer(Modifier.height(6.dp))
@@ -124,7 +126,7 @@ fun PlatformPage(
                 // **وسطرٌ لكلّ معنًى** — فقرةٌ من عشرة أسطرٍ لا تُقرأ.
                 b.body.forEachIndexed { i, p ->
                     if (i > 0) Spacer(Modifier.height(6.dp))
-                    Text(p, style = MaterialTheme.typography.bodyMedium)
+                    Text(p, style = Rahal.type.body)
                 }
             }
         }

@@ -119,7 +119,7 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
         AuthHeader(logoSize = 100.dp, topSpace = 24.dp, bottomSpace = 10.dp)
         Text(
             text = stringResource(R.string.signup_title),
-            style = MaterialTheme.typography.headlineSmall,
+            style = Rahal.type.headline,
         )
         Spacer(Modifier.height(10.dp))
         Text(
@@ -133,7 +133,7 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
             color = Rahal.colors.inkMuted,
             textAlign = TextAlign.Center,
         )
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(Rahal.space.xl))
 
         AuthCard {
         when (state.step) {
@@ -216,7 +216,7 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
                     Text(
                         text = stringResource(R.string.signup_password_mismatch),
                         color = Rahal.colors.danger,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = Rahal.type.caption,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }
@@ -273,15 +273,15 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
             )
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(Rahal.space.lg))
             RahalButton(onClick = actions.toLogin, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.signup_recover_login))
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             RahalTextButton(onClick = actions.toOtp) {
                 Text(stringResource(R.string.signup_recover_otp))
             }
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(Rahal.space.xs))
             RahalTextButton(onClick = actions.toReset) {
                 Text(stringResource(R.string.signup_recover_reset))
             }
@@ -296,7 +296,7 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
                 )
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(Rahal.space.xl))
             RahalButton(
                 onClick = {
                     when (state.step) {

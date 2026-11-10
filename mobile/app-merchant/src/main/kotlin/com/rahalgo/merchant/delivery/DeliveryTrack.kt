@@ -140,7 +140,7 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
             stringResource(R.string.md_track_hint),
         )
         if (vm.error.isNotEmpty()) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             Note(vm.error, Rahal.colors.danger)
         }
         if (d == null) {
@@ -153,10 +153,10 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
         // **«إحضار»: كودُ الاستلام لك** (قرارُ المالك ٢٠٢٦-١٠-١٦) — تعطيه للسائق لما يوصلك الغرض.
         // ══════════════════════════════════════════════════════════════
         d.deliveryCode?.takeIf { it.isNotBlank() && d.deliveryMode == "fetch" }?.let { code ->
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Rahal.space.md))
             Card(tone = Rahal.colors.success) {
                 Text(stringResource(R.string.md_code_title), fontWeight = FontWeight.Bold)
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(Rahal.space.xs))
                 Text(
                     code,
                     color = Rahal.colors.success,
@@ -168,7 +168,7 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
         }
 
         val at = stepOf(d.status)
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(Rahal.space.md))
         if (at < 0) {
             // **انتهت بلا تسليم** — تُقال بحالها وسببها، لا خطواتٌ ناقصة.
             Note(
@@ -186,7 +186,7 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
             // **والانتظارُ يُرى يجري** — دوائرُ تنبض حول الموتور (طلبُ المالك).
             if (d.status == "dispatching") {
                 SearchingBanner()
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(Rahal.space.md))
             }
             Card {
                 // **وفي «إحضار» إلى مكان الاستلام ثمّ إليك** (قرارُ المالك ٢٠٢٦-١٠-١٦) — لا «إلى المستلم».
@@ -234,7 +234,7 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
         }
 
         // ── تفاصيلُها ─────────────────────────────────────────────────
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(Rahal.space.md))
         Card {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -289,7 +289,7 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
             Spacer(Modifier.height(14.dp))
             CancelDeliveryButton(busy = vm.busy) { vm.cancel(id) }
         }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(Rahal.space.xl))
     }
 }
 

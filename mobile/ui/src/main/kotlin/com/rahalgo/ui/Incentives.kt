@@ -121,7 +121,7 @@ fun IncentivesScreen(
                                 (lv.target - st.done).toString(),
                             ),
                             color = Rahal.colors.inkMuted,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = Rahal.type.caption,
                         )
                     }
                 }
@@ -136,7 +136,7 @@ fun IncentivesScreen(
                 Text(
                     text = st.done.toString() + " / " + lv.target.toString(),
                     color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = Rahal.type.caption,
                 )
 
                 // **والجائزةُ تُقال قبل أن تُنال** — (شكوى المالك
@@ -208,16 +208,16 @@ private fun EntryRow(e: IncentiveEntry) {
             Text(
                 text = (if (reward) "+" else "−") + money(kotlin.math.abs(e.amount)),
                 color = color,
-                style = MaterialTheme.typography.titleSmall,
+                style = Rahal.type.cardTitle,
                 fontWeight = FontWeight.Bold,
             )
         }
         // **والسببُ إلزاميٌّ في المحرّك** — فلا سطرَ هنا بلا كلمة.
         if (e.reason.isNotEmpty()) {
-            Spacer(Modifier.height(4.dp))
-            Text(e.reason, style = MaterialTheme.typography.bodyMedium)
+            Spacer(Modifier.height(Rahal.space.xs))
+            Text(e.reason, style = Rahal.type.body)
         }
-        Text(whenText(e.createdAt), color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
+        Text(whenText(e.createdAt), color = Rahal.colors.inkMuted, style = Rahal.type.caption)
         Spacer(Modifier.height(6.dp))
         HorizontalDivider()
     }

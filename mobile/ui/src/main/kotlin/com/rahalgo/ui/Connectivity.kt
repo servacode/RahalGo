@@ -184,7 +184,7 @@ fun NetBanner(modifier: Modifier = Modifier) {
             Modifier
                 .fillMaxWidth()
                 .background(Rahal.colors.danger)
-                .padding(horizontal = 14.dp, vertical = 8.dp),
+                .padding(horizontal = 14.dp, vertical = Rahal.space.sm),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center,
         ) {
@@ -194,14 +194,14 @@ fun NetBanner(modifier: Modifier = Modifier) {
                 tint = Color.White,
                 modifier = Modifier.size(16.dp),
             )
-            Spacer(Modifier.size(8.dp))
+            Spacer(Modifier.size(Rahal.space.sm))
             Text(
                 text = stringResource(
                     if (!Net.online) R.string.net_offline_banner else R.string.net_unreachable_banner,
                 ),
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.labelLarge,
+                style = Rahal.type.button,
             )
         }
     }
@@ -239,14 +239,14 @@ fun OfflineScreen(onRetry: (() -> Unit)? = null, modifier: Modifier = Modifier) 
         Text(
             text = stringResource(R.string.net_offline_title),
             fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.titleMedium,
+            style = Rahal.type.sectionTitle,
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         Text(
             text = stringResource(R.string.net_offline_body),
             color = Rahal.colors.inkMuted,
             textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.bodyMedium,
+            style = Rahal.type.body,
             modifier = Modifier.fillMaxWidth(),
         )
         if (onRetry != null) {
@@ -298,14 +298,14 @@ fun AccountStateScreen(
         Text(
             text = stringResource(R.string.account_state_title),
             fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.titleMedium,
+            style = Rahal.type.sectionTitle,
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         Text(
             text = stringResource(R.string.account_state_body),
             color = Rahal.colors.inkMuted,
             textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.bodyMedium,
+            style = Rahal.type.body,
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(20.dp))
@@ -313,7 +313,7 @@ fun AccountStateScreen(
             Text(stringResource(R.string.login_logout))
         }
         if (onRetry != null) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             RahalOutlineButton(onClick = onRetry) {
                 Text(stringResource(R.string.act_retry))
             }

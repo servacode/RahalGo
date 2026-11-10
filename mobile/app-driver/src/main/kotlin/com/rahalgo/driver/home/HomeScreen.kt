@@ -202,7 +202,7 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
                     .fillMaxWidth()
                     .clip(Rahal.shape.md)
                     .background(Rahal.colors.danger.copy(alpha = 0.10f))
-                    .padding(16.dp),
+                    .padding(Rahal.space.lg),
             )
             Spacer(Modifier.height(14.dp))
         }
@@ -219,7 +219,7 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
                     .clip(Rahal.shape.md)
                     .background(Rahal.colors.brand.copy(alpha = 0.10f))
                     .clickable(onClick = actions.openTerms)
-                    .padding(16.dp),
+                    .padding(Rahal.space.lg),
             )
             Spacer(Modifier.height(14.dp))
         }
@@ -334,7 +334,7 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
         // دائمةً بـ«لاحقاً» على لوحة العمل. **والرئيسيّةُ للعمل لا للتهيئة.**
 
         if (state.error.isNotEmpty()) {
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Rahal.space.md))
             Text(state.error, color = Rahal.colors.danger, modifier = Modifier.fillMaxWidth())
         }
 
@@ -352,7 +352,7 @@ fun HomeScreen(state: HomeState, actions: HomeActions) {
                 color = Rahal.colors.inkMuted,
                 style = MaterialTheme.typography.bodyMedium,
             )
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(Rahal.space.xs))
             Text(
                 text = money(me.todayEarned),
                 color = Rahal.colors.success,
@@ -614,7 +614,7 @@ private fun ShiftCard(me: DriverMe, busy: Boolean, onToggle: (Boolean) -> Unit) 
 @Composable
 private fun MoneyRow(label: String, value: String, warn: Boolean = false) {
     Row(
-        Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        Modifier.fillMaxWidth().padding(vertical = Rahal.space.sm),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(label, color = Rahal.colors.inkMuted)
@@ -701,7 +701,7 @@ private fun FixesCard(fixes: List<Fix>, online: Boolean) {
             .fillMaxWidth()
             .clip(Rahal.shape.md)
             .background(Rahal.colors.warnTint)
-            .padding(16.dp),
+            .padding(Rahal.space.lg),
     ) {
         Text(
             // **وهو يعمل الآن؟ «حتى تستمر بالعمل»** لا «قبل أن تبدأ» (المالك ٢٠٢٦-١١-١٠).
@@ -717,15 +717,15 @@ private fun FixesCard(fixes: List<Fix>, online: Boolean) {
                     painter = painterResource(R.drawable.ic_warning),
                     contentDescription = null,
                     tint = Rahal.colors.accent,
-                    modifier = Modifier.padding(top = 2.dp).size(20.dp),
+                    modifier = Modifier.padding(top = Rahal.space.xxs).size(20.dp),
                 )
                 Spacer(Modifier.size(10.dp))
                 Column(Modifier.weight(1f)) {
                     Text(f.title, fontWeight = FontWeight.Bold, color = Rahal.colors.ink)
-                    Spacer(Modifier.height(2.dp))
+                    Spacer(Modifier.height(Rahal.space.xxs))
                     Text(f.text, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodyMedium)
                     if (f.button.isNotEmpty()) {
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(Rahal.space.sm))
                         RahalButton(onClick = f.onClick, compact = true) { Text(f.button) }
                     }
                     if (f.link.isNotEmpty()) {
@@ -778,7 +778,7 @@ private fun CashBar(held: Long, limit: Long) {
         },
         style = MaterialTheme.typography.titleMedium,
     )
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(Rahal.space.sm))
     Bar(ratio = ratio, color = com.rahalgo.driver.menu.cashBarColor(ratio))
     Spacer(Modifier.height(6.dp))
     Text(
@@ -816,7 +816,7 @@ private fun GoalBar(done: Int, target: Int, reached: Boolean, reward: Long) {
             color = if (reached) Rahal.colors.success else Rahal.colors.brand,
         )
     }
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(Rahal.space.sm))
     Bar(
         ratio = done.toFloat() / target,
         color = if (reached) Rahal.colors.success else Rahal.colors.brand,

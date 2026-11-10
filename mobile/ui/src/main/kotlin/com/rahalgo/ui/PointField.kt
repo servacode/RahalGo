@@ -82,7 +82,7 @@ fun PointField(
             tint = Rahal.colors.brand,
             modifier = Modifier.size(18.dp),
         )
-        Spacer(Modifier.size(8.dp))
+        Spacer(Modifier.size(Rahal.space.sm))
         Text(
             stringResource(
                 if (p == null) R.string.point_pick else R.string.point_change,

@@ -79,7 +79,7 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
     Column(
         modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp)
+            .padding(horizontal = Rahal.space.md)
             // **وارتفاعٌ محدود** — النصف الأعلى يبقى خريطةً: **من فتح
             // الحديث لم يقف عن السير**، وهو يقرأ سطرا ويرفع عينه.
             .heightIn(max = 340.dp)
@@ -89,7 +89,7 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
             .imePadding(),
     ) {
         Row(
-            Modifier.fillMaxWidth().padding(start = 8.dp, end = 14.dp, top = 6.dp),
+            Modifier.fillMaxWidth().padding(start = Rahal.space.sm, end = 14.dp, top = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
@@ -117,11 +117,11 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
                 text = stringResource(R.string.chat_empty_driver),
                 color = Rahal.colors.inkMuted,
                 style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = Rahal.space.md),
             )
         }
         LazyColumn(
-            Modifier.weight(1f, fill = false).fillMaxWidth().padding(horizontal = 12.dp),
+            Modifier.weight(1f, fill = false).fillMaxWidth().padding(horizontal = Rahal.space.md),
             // **والأحدث في الأسفل** — كما في كلّ حديث، **ويُقلب الترتيب
             // ليبقى آخرُه أمام العين.**
             reverseLayout = true,
@@ -203,7 +203,7 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
                     .fillMaxWidth()
                     .horizontalScroll(rememberScrollState())
                     .padding(start = 10.dp, end = 10.dp, top = 6.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
             ) {
                 quick.forEach { q ->
                     Box(
@@ -243,7 +243,7 @@ fun ChatSheet(state: ChatState, actions: ChatActions, modifier: Modifier = Modif
             Text(
                 text = stringResource(R.string.chat_closed),
                 color = Rahal.colors.inkMuted,
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                modifier = Modifier.fillMaxWidth().padding(Rahal.space.lg),
             )
         }
     }

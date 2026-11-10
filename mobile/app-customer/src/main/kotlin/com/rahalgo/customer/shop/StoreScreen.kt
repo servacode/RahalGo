@@ -382,7 +382,7 @@ internal fun StoreScreen(
                     singleLine = true,
                     // **بنمط حقل الرئيسيّة نفسِه (تدقيق D16)**: دائريٌّ بحدٍّ عاديّ — لا مستطيلٌ رماديٌّ آخر.
                     shape = Rahal.shape.pill,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = Rahal.space.sm),
                 )
                 if (list.query.isBlank()) {
                     Spacer(Modifier.height(Rahal.space.sm))
@@ -396,8 +396,8 @@ internal fun StoreScreen(
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(ShopCols),
                     contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 16.dp + com.rahalgo.ui.LocalChatFabInset.current),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
+                    verticalArrangement = Arrangement.spacedBy(Rahal.space.md),
                 ) {
                     items(list.items, key = { it.id }) { item ->
                         ItemCard(
@@ -415,7 +415,7 @@ internal fun StoreScreen(
                     val full: androidx.compose.foundation.lazy.grid.LazyGridItemSpanScope.() -> GridItemSpan = { GridItemSpan(maxLineSpan) }
                     when {
                         list.items.isEmpty() && list.loading -> item(span = full) {
-                            Box(Modifier.fillMaxWidth().padding(vertical = 24.dp), contentAlignment = Alignment.Center) { RahalLoader(size = 48.dp) }
+                            Box(Modifier.fillMaxWidth().padding(vertical = Rahal.space.xl), contentAlignment = Alignment.Center) { RahalLoader(size = 48.dp) }
                         }
                         list.items.isEmpty() && list.error.isNotEmpty() -> item(span = full) {
                             LoadState(loading = false, error = list.error, onRetry = list::reload)
@@ -426,12 +426,12 @@ internal fun StoreScreen(
                                 color = Rahal.colors.inkMuted,
                                 style = MaterialTheme.typography.bodyMedium,
                                 textAlign = TextAlign.Center,
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
+                                modifier = Modifier.fillMaxWidth().padding(vertical = Rahal.space.xl),
                             )
                         }
                         list.hasMore -> item(span = full, key = "more") {
                             androidx.compose.runtime.LaunchedEffect(list.items.size) { list.loadMore() }
-                            Box(Modifier.fillMaxWidth().padding(vertical = 12.dp), contentAlignment = Alignment.Center) { RahalLoader(size = 48.dp) }
+                            Box(Modifier.fillMaxWidth().padding(vertical = Rahal.space.md), contentAlignment = Alignment.Center) { RahalLoader(size = 48.dp) }
                         }
                     }
                 }

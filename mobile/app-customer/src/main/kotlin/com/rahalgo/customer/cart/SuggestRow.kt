@@ -68,7 +68,7 @@ fun SuggestRow(items: List<Item>, media: (String?) -> String?, onAdd: (Item) -> 
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.titleMedium,
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         LazyRow(
             contentPadding = PaddingValues(vertical = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),

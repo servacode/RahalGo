@@ -57,7 +57,7 @@ fun ExchangeRateCard(rate: Double?, busy: Boolean, editable: Boolean = true, onS
                 (rate?.let { stringResource(R.string.fx_rate_value, usdText(it)) } ?: stringResource(R.string.fx_rate_none)),
             fontWeight = FontWeight.Bold,
         )
-        Text(stringResource(R.string.fx_rate_hint), style = MaterialTheme.typography.bodySmall, color = Rahal.colors.inkMuted)
+        Text(stringResource(R.string.fx_rate_hint), style = Rahal.type.caption, color = Rahal.colors.inkMuted)
         Spacer(Modifier.height(6.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
@@ -68,7 +68,7 @@ fun ExchangeRateCard(rate: Double?, busy: Boolean, editable: Boolean = true, onS
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.weight(1f),
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(Rahal.space.sm))
             RahalButton(onClick = { onSave(text) }, enabled = !busy && text.isNotBlank()) {
                 Text(stringResource(R.string.fx_rate_save))
             }
@@ -86,7 +86,7 @@ fun RateJumpDialog(oldRate: String, newRate: String, samples: String, onConfirm:
             Column {
                 Text(stringResource(R.string.fx_rate_jump_body, oldRate, newRate))
                 if (samples.isNotBlank()) {
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(Rahal.space.sm))
                     Text(stringResource(R.string.fx_rate_jump_samples), fontWeight = FontWeight.Bold)
                     Text(samples)
                 }

@@ -175,13 +175,13 @@ fun GuideBubble(text: String, onSkip: () -> Unit, modifier: Modifier = Modifier)
                 text = text,
                 color = on,
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.body,
                 modifier = Modifier
                     .weight(1f)
                     .padding(vertical = Rahal.space.sm),
             )
             RahalSmallButton(onClick = onSkip, ink = fill) {
-                Text(stringResource(R.string.guide_skip), style = MaterialTheme.typography.labelMedium)
+                Text(stringResource(R.string.guide_skip), style = Rahal.type.label)
             }
         }
         Icon(

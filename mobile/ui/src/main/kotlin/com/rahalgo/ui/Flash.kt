@@ -124,16 +124,16 @@ fun FlashHost() {
                 text = m.text,
                 color = Rahal.colors.onBrand,
                 textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.body,
                 modifier = Modifier
                     // **ولا تُرسم تحت شريط الحالة** (D17: «تمت إضافة الصنف») — تنزل تحتَه.
                     .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.md)
                     .fillMaxWidth()
                     .clip(Rahal.shape.md)
                     .background(if (m.ok) Rahal.colors.success else Rahal.colors.danger)
                     .clickable { Flash.clear() }
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                    .padding(horizontal = Rahal.space.lg, vertical = 14.dp),
             )
         }
     }

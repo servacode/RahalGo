@@ -226,7 +226,7 @@ fun TopBar(
                     if (!tight) Text(
                         text = stringResource(R.string.top_deliver_to),
                         color = Rahal.colors.brand,
-                        style = MaterialTheme.typography.labelSmall,
+                        style = Rahal.type.badge,
                         // **ولا تنكسر الكلمةُ نصفين** (صورةُ المالك ٢٠٢٦-١٠-١٩: «التوصي / ل إلى»
                         // على جوالٍ خطُّه مكبَّر) — سطرٌ واحدٌ ولو قُصّ آخرُه.
                         maxLines = 1,
@@ -240,7 +240,7 @@ fun TopBar(
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = Rahal.type.body,
                     )
                 }
                 // **والسهمُ آخرَ الزرّ** — **وأيقونتان في طرفٍ واحدٍ
@@ -301,7 +301,7 @@ fun TopBar(
                         text = "%.1f".format(java.util.Locale.US, rating),
                         color = Rahal.colors.accentInk,
                         fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = Rahal.type.body,
                     )
                     // **ولا عددَ بجانبه** — (قرارُ المالك ٢٠٢٦-٠٨-١٣:
                     // «احذف عدد التقييمات من الأعلى، اترك التقييم
@@ -314,7 +314,7 @@ fun TopBar(
                 Text(
                     text = stringResource(R.string.top_rating_none),
                     color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = Rahal.type.caption,
                 )
             }
 
@@ -344,7 +344,7 @@ fun TopBar(
                         text = money(balance),
                         color = Rahal.colors.brand,
                         fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = Rahal.type.body,
                     )
                 }
                 Spacer(Modifier.size(Rahal.space.xs))

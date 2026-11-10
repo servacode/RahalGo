@@ -154,3 +154,60 @@ fun CodeField(
         modifier = modifier.fillMaxWidth(),
     )
 }
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
+ * **الحقلُ الموسوم — كلُّ حقلٍ له اسمٌ يبقى ظاهراً** (نظامُ التصميم ٢٠٢٦-١١-١١، D9)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * **حقلٌ بمثالٍ داخله وحدَه يفقد اسمَه حين يُكتب فيه** — فلا يُعرف بعد سطرين ما كان يُطلب. **فالوسمُ
+ * إجباريٌّ** (`label`)، والمثالُ اختياريٌّ (`placeholder`)، وسطرُ الشرح أو الخطأ تحته (`supporting`/`error`).
+ *
+ * ```
+ * LabeledField("اسم المتجر", name, { name = it })
+ * LabeledField("المبلغ", amount, { amount = it }, keyboardType = KeyboardType.Number, error = amountError)
+ * LabeledField("ملاحظة", note, { note = it }, singleLine = false, minLines = 3, supporting = "اختياري")
+ * ```
+ *
+ * @param error نصُّ الخطأ تحت الحقل — وغيرُ الفارغ يلوّن الحقلَ أحمر.
+ * @param leadingIcon أيقونةٌ في بداية الحقل (مورد).
+ */
+@Composable
+fun LabeledField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    placeholder: String = "",
+    supporting: String = "",
+    error: String = "",
+    enabled: Boolean = true,
+    readOnly: Boolean = false,
+    singleLine: Boolean = true,
+    minLines: Int = 1,
+    keyboardType: KeyboardType = KeyboardType.Text,
+    @androidx.annotation.DrawableRes leadingIcon: Int? = null,
+    trailing: (@Composable () -> Unit)? = null,
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(label) },
+        placeholder = if (placeholder.isNotEmpty()) ({ Text(placeholder) }) else null,
+        supportingText = when {
+            error.isNotEmpty() -> ({ Text(error) })
+            supporting.isNotEmpty() -> ({ Text(supporting) })
+            else -> null
+        },
+        isError = error.isNotEmpty(),
+        leadingIcon = if (leadingIcon != null) ({ Icon(painterResource(leadingIcon), contentDescription = null) }) else null,
+        trailingIcon = trailing,
+        singleLine = singleLine,
+        minLines = if (singleLine) 1 else minLines,
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
+        enabled = enabled,
+        readOnly = readOnly,
+        textStyle = com.rahalgo.design.Rahal.type.body,
+        modifier = modifier.fillMaxWidth(),
+    )
+}

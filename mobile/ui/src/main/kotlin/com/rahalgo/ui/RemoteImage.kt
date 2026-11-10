@@ -83,7 +83,7 @@ private fun Fallback(name: String, icon: Int? = null) {
     Text(
         text = name.trim().take(1),
         color = Rahal.colors.brand,
-        style = MaterialTheme.typography.titleMedium,
+        style = Rahal.type.sectionTitle,
     )
 }
 

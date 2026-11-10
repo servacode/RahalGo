@@ -59,7 +59,7 @@ internal fun OrderSectionsBlock(sections: List<OrderSection>?) {
     val n = sectionsCount(sections) ?: return
     Spacer(Modifier.height(10.dp))
     HorizontalDivider()
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(Rahal.space.sm))
     Text(
         text = stringResource(R.string.sec_title, n.toString()),
         color = Rahal.colors.ink,
@@ -67,7 +67,7 @@ internal fun OrderSectionsBlock(sections: List<OrderSection>?) {
         style = MaterialTheme.typography.titleSmall,
     )
     sections.orEmpty().sortedBy { it.seq }.forEach { s ->
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         val gone = sectionUnavailable(s)
         Row(
             Modifier.fillMaxWidth(),
@@ -90,7 +90,7 @@ internal fun OrderSectionsBlock(sections: List<OrderSection>?) {
                 },
             )
         }
-        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Rahal.space.xxs)) {
             s.items.forEach { it ->
                 Text(
                     text = it.name + " × " + it.qty,

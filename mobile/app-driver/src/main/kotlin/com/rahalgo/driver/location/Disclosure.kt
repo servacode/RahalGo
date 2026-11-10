@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -99,7 +98,7 @@ fun LocationNotice(modifier: Modifier = Modifier) {
     Column(
         modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
+            .padding(vertical = Rahal.space.sm),
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
@@ -108,7 +107,7 @@ fun LocationNotice(modifier: Modifier = Modifier) {
                 fontWeight = FontWeight.Bold,
             )
         }
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(Rahal.space.xs))
         Text(
             text = stringResource(R.string.disc_what) + " " +
                 stringResource(R.string.disc_background) + " " +

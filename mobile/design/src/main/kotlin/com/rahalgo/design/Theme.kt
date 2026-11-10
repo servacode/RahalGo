@@ -154,25 +154,29 @@ val Tajawal = FontFamily(
     Font(R.font.tajawal_bold, FontWeight.Bold),
 )
 
-private val RahalGoTypography = Typography().run {
-    // **والعائلةُ تُحقن في كل نمط** — ونمطٌ يُنسى يعود إلى خطّ النظام،
-    // **فتظهر شاشةٌ بخطّين** ولا يُعرف السبب.
-    copy(
-        displayLarge = displayLarge.copy(fontFamily = Tajawal),
-        displayMedium = displayMedium.copy(fontFamily = Tajawal),
-        displaySmall = displaySmall.copy(fontFamily = Tajawal),
-        headlineLarge = headlineLarge.copy(fontFamily = Tajawal),
-        headlineMedium = headlineMedium.copy(fontFamily = Tajawal),
-        headlineSmall = headlineSmall.copy(fontFamily = Tajawal),
-        titleLarge = titleLarge.copy(fontFamily = Tajawal),
-        titleMedium = titleMedium.copy(fontFamily = Tajawal),
-        titleSmall = titleSmall.copy(fontFamily = Tajawal),
-        bodyLarge = bodyLarge.copy(fontFamily = Tajawal),
-        bodyMedium = bodyMedium.copy(fontFamily = Tajawal),
-        bodySmall = bodySmall.copy(fontFamily = Tajawal),
-        labelLarge = labelLarge.copy(fontFamily = Tajawal),
-        labelMedium = labelMedium.copy(fontFamily = Tajawal),
-        labelSmall = labelSmall.copy(fontFamily = Tajawal),
+/**
+ * **أدوارُ Material تشير إلى أدوارنا** (`Type.kt`) — فـ`MaterialTheme.typography.bodyMedium` هو
+ * `Rahal.type.body` نفسُه، **وما يرسمه Material بلا نمطٍ صريح** (حقلٌ، قائمةٌ، زرّ) يأخذ خطَّنا وسلّمَنا.
+ *
+ * **والخريطةُ واحدةٌ هنا**: من غيّر دوراً في `Type.kt` تغيّر معه كلُّ ما يقرأ دورَ Material المقابل.
+ */
+private val RahalGoTypography = RahalTypeTokens.let { t ->
+    Typography(
+        displayLarge = t.display,
+        displayMedium = t.display,
+        displaySmall = t.display,
+        headlineLarge = t.display,
+        headlineMedium = t.display,
+        headlineSmall = t.headline,
+        titleLarge = t.screenTitle,
+        titleMedium = t.sectionTitle,
+        titleSmall = t.cardTitle,
+        bodyLarge = t.bodyLarge,
+        bodyMedium = t.body,
+        bodySmall = t.caption,
+        labelLarge = t.button,
+        labelMedium = t.label,
+        labelSmall = t.badge,
     )
 }
 

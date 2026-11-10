@@ -1671,7 +1671,7 @@ private fun NeedAccount(onAskLogin: () -> Unit) {
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
         )
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(Rahal.space.lg))
         RahalButton(onClick = onAskLogin) {
             Text(stringResource(R.string.guest_enter))
         }

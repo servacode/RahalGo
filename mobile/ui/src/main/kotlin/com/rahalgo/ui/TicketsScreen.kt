@@ -124,7 +124,7 @@ fun TicketsScreen(
                     shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
                 ) { Text(stringResource(R.string.tik_mine)) }
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Rahal.space.md))
         }
 
         val list = if (againstMe != null && showAgainst) againstMe else mine
@@ -154,26 +154,26 @@ private fun TicketLine(row: TicketRow, onOpen: ((TicketRow) -> Unit)?) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(row.key, style = MaterialTheme.typography.labelMedium, color = Rahal.colors.inkMuted)
+            Text(row.key, style = Rahal.type.label, color = Rahal.colors.inkMuted)
             Chip(ticketStatusText(row.status), ticketStatusColor(row.status))
         }
-        Spacer(Modifier.height(4.dp))
-        Text(row.title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium)
+        Spacer(Modifier.height(Rahal.space.xs))
+        Text(row.title, fontWeight = FontWeight.Bold, style = Rahal.type.body)
         if (row.orderNumber.isNotBlank()) {
             Text(
                 stringResource(R.string.tik_on_order, row.orderNumber),
-                style = MaterialTheme.typography.bodySmall,
+                style = Rahal.type.caption,
                 color = Rahal.colors.inkMuted,
             )
         }
         // **والحلُّ يُقرأ** — ومن أبلغ ولم يُقَل له ما وقع يظنّ بلاغَه أُهمل.
         if (row.resolution.isNotBlank()) {
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(Rahal.space.xs))
             Note(row.resolution, Rahal.colors.inkMuted)
         }
         if (row.date.isNotBlank()) {
-            Text(row.date, style = MaterialTheme.typography.labelSmall, color = Rahal.colors.inkMuted)
+            Text(row.date, style = Rahal.type.badge, color = Rahal.colors.inkMuted)
         }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
     }
 }

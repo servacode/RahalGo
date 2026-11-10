@@ -4,7 +4,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.ui.text.style.TextOverflow
 import com.rahalgo.ui.ConfirmDialog
 import com.rahalgo.ui.RahalTextButton
@@ -123,7 +122,7 @@ fun OrderCard(
             Modifier
                 .fillMaxWidth()
                 .then(if (finished) Modifier.clickable { expanded = !expanded } else Modifier),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
@@ -156,12 +155,12 @@ fun OrderCard(
                 )
             }
         }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         Row(
             Modifier
                 .fillMaxWidth()
                 .then(if (finished) Modifier.clickable { expanded = !expanded } else Modifier),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             val tone = statusColor(order.status)
@@ -173,7 +172,7 @@ fun OrderCard(
                 modifier = Modifier
                     .clip(Rahal.shape.pill)
                     .background(tone.copy(alpha = 0.12f))
-                    .padding(horizontal = 12.dp, vertical = 5.dp),
+                    .padding(horizontal = Rahal.space.md, vertical = 5.dp),
             )
             if (onCancel != null && cancelHint != null) {
                 Text(
@@ -190,7 +189,7 @@ fun OrderCard(
         if (collapsed) {
             val ctx0 = LocalContext.current
             val now0 by com.rahalgo.ui.rememberNow()
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -242,7 +241,7 @@ fun OrderCard(
         // **و`stage_at = -1` تعني انتهى قبل أن يصل** — وشريطٌ يقف في
         // منتصفه يُقرأ «عالق» لا «انتهى».
         if (!finished && order.stageAt >= 0 && order.stages.isNotEmpty()) {
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Rahal.space.md))
             // **ودرّاجتُه تمشي ما دام جاريا** — والمنتهي لا شريطَ له.
             Stages(order.stages.map { stageLabel(it, order.customMode == "amanah") }, order.stageAt, live = true)
         }
@@ -272,7 +271,7 @@ fun OrderCard(
                 else -> ""
             }
             if (etaText.isNotEmpty()) {
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(Rahal.space.sm))
                 Text(
                     text = etaText,
                     color = Rahal.colors.brand,
@@ -337,12 +336,12 @@ fun OrderCard(
             // بنودُها ومجاميعُها في الأعمدة نفسِها.
             Spacer(Modifier.height(10.dp))
             HorizontalDivider()
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             InvoiceTable(order)
         } else if (order.itemsPreview.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
             HorizontalDivider()
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             KeyValue(
                 pluralStringResource(R.plurals.ord_items_n, order.itemsCount, order.itemsCount),
                 order.itemsPreview,
@@ -350,9 +349,9 @@ fun OrderCard(
         }
 
         if (!invoice) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             HorizontalDivider()
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
         }
         // ══════════════════════════════════════════════════════════════
         // **والطلبُ الخاصُّ عقدُ عرضٍ يُؤكَّد** (Batch 2c) — لا فاتورةٌ ثابتة
@@ -369,9 +368,9 @@ fun OrderCard(
                 KeyValue(stringResource(R.string.ord_discount), "-" + money(order.discount))
             }
             // **والإجماليُّ برقمٍ كبيرٍ تحت خطّ** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧) — كان سطراً عاديّاً.
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(Rahal.space.xs))
             HorizontalDivider()
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(Rahal.space.xs))
             com.rahalgo.ui.SumLine(
                 stringResource(R.string.ord_total),
                 money(order.total),
@@ -389,9 +388,9 @@ fun OrderCard(
         // شكا لم يعرف متى طلب ولا أين يُوصَّل ولا بمَ يدفع. **والبياناتُ في
         // النموذج أصلاً** (`createdAt`/`paymentMethod`/`addressText`) —
         // كانت تُجلَب ولا تُعرَض.
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         HorizontalDivider()
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         val ctx = LocalContext.current
         // **والعمرُ يمشي والشاشةُ مفتوحة** — انظر `rememberNow`.
         val now by com.rahalgo.ui.rememberNow()
@@ -419,7 +418,7 @@ fun OrderCard(
         // كلّ نهايةٍ غير التسليم). **ومن أُلغي طلبُه بلا سببٍ يظنّ العطبَ
         // في المنصّة.**
         if (order.cancelReason.isNotEmpty()) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             Text(
                 text = order.cancelReason,
                 color = Rahal.colors.danger,
@@ -430,8 +429,8 @@ fun OrderCard(
         val actions = listOfNotNull(onCancel, onComplain, onRate, onChat)
         if (actions.isEmpty()) return@Card
 
-        Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Spacer(Modifier.height(Rahal.space.md))
+        Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
             // **والإلغاءُ أحمرُ لأنّه لا يُتراجع عنه.**
             onCancel?.let {
                 RahalButton(
@@ -496,7 +495,7 @@ private fun CustomQuoteSection(
         // **وعرضُ التوصيل المجاني يُذكَر بصيغةٍ صادقة** (تدقيقُ ٢٠٢٦-١٠-٢٧) — شاشةُ الإنشاء
         // قالت «مجانية»، **والعرضُ يُحجز عند تحديد السعر لا قبله.**
         if (com.rahalgo.customer.FreeOffer.state.customOn(order.customMode)) {
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(Rahal.space.xs))
             Text(
                 stringResource(R.string.free_custom_pending),
                 color = Rahal.colors.success,
@@ -616,9 +615,9 @@ private fun QuoteAmounts(order: MyOrder) {
         order.customFee ?: 0L,
         order.freeWaived,
     )
-    Spacer(Modifier.height(4.dp))
+    Spacer(Modifier.height(Rahal.space.xs))
     HorizontalDivider()
-    Spacer(Modifier.height(4.dp))
+    Spacer(Modifier.height(Rahal.space.xs))
     // **وبضاعةُ الدولار خارجَ المجموع** (٢٠٢٦-١١-٠٩): `total` هو التوصيلُ وحدَه بالليرة، والدولارُ كاشٌ للكابتن.
     val usdGoods = order.customGoodsUsd != null && !order.customGoodsPending
     com.rahalgo.ui.SumLine(
@@ -628,7 +627,7 @@ private fun QuoteAmounts(order: MyOrder) {
         color = Rahal.colors.brand,
     )
     if (usdGoods) {
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(Rahal.space.xs))
         Text(
             stringResource(R.string.ord_goods_usd_cash_note),
             color = Rahal.colors.inkMuted,
@@ -663,7 +662,7 @@ private fun QuoteConfirmPanel(
         )
         // **«كان X» فوق المجموع الجديد** (قرارُ المالك ٢٠٢٦-١١-٠٦: الزبون يشوف القديم والجديد).
         quoteWasTotal(order)?.let { was ->
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(Rahal.space.xs))
             Text(
                 stringResource(R.string.ord_quote_was, money(was), money(total)),
                 color = Rahal.colors.ink,
@@ -688,7 +687,7 @@ private fun QuoteConfirmPanel(
 
     Spacer(Modifier.height(10.dp))
     HorizontalDivider()
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(Rahal.space.sm))
     Text(
         stringResource(if (walletOk) R.string.ord_confirm_prompt else R.string.ord_confirm_amount),
         color = Rahal.colors.ink,
@@ -759,7 +758,7 @@ private fun QuoteConfirmPanel(
     // **فضغطةٌ عابرةٌ عليه لا تُرَدّ.** فصار زرّاً أحمرَ بعرض البطاقة **وسؤالاً قبله.**
     if (onRejectQuote != null) {
         var askReject by rememberSaveable(order.id, order.quoteVersion) { mutableStateOf(false) }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         RahalButton(
             onClick = { askReject = true },
             enabled = !confirming,
@@ -826,7 +825,7 @@ fun QuoteConfirmDialog(
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(Rahal.space.sm))
                 }
                 QuoteAmounts(order)
                 QuoteConfirmPanel(order, walletBalance, onConfirmQuote, confirming, onRejectQuote)
@@ -888,10 +887,10 @@ private fun stageLabel(key: String, amanah: Boolean = false): String = when (key
 @Composable
 internal fun InvoiceTable(order: MyOrder) {
     com.rahalgo.ui.InvoiceLines(order.items.orEmpty().map { it.toInvoiceLine() })
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(Rahal.space.sm))
     HorizontalDivider()
     Spacer(Modifier.height(6.dp))
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Rahal.space.xs)) {
         if (order.subtotal > 0) {
             com.rahalgo.ui.InvoiceRow(stringResource(R.string.ord_subtotal), money(order.subtotal))
         }
@@ -928,7 +927,7 @@ internal fun InvoiceTable(order: MyOrder) {
                 amountColor = Rahal.colors.success,
             )
         }
-        Spacer(Modifier.height(2.dp))
+        Spacer(Modifier.height(Rahal.space.xxs))
         com.rahalgo.ui.InvoiceRow(stringResource(R.string.ord_total), money(order.total), strong = true)
     }
 }

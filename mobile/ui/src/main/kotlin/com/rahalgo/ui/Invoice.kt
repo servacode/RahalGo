@@ -153,14 +153,14 @@ fun InvoiceLines(lines: List<InvoiceLine>, modifier: Modifier = Modifier) {
                         stringResource(R.string.inv_returned),
                         color = Rahal.colors.danger,
                         fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = Rahal.type.caption,
                     )
                 }
                 if (l.note.isNotBlank()) {
                     Text(
                         l.note,
                         color = Rahal.colors.inkMuted,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = Rahal.type.caption,
                     )
                 }
             }
@@ -188,16 +188,16 @@ fun InvoiceRow(
             color = if (strong || bold) Rahal.colors.ink else Rahal.colors.inkMuted,
             fontWeight = if (strong || bold) FontWeight.Bold else FontWeight.Normal,
             textDecoration = if (strikethrough) TextDecoration.LineThrough else null,
-            style = if (strong) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.bodySmall,
+            style = if (strong) Rahal.type.bodyLarge else Rahal.type.caption,
             modifier = Modifier.weight(1f),
         )
         if (amount != null) {
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(Rahal.space.md))
             Text(
                 amount,
                 color = if (amountColor != Color.Unspecified) amountColor else if (strong) Rahal.colors.brand else Rahal.colors.ink,
                 fontWeight = if (strong) FontWeight.Bold else FontWeight.Normal,
-                style = (if (strong) MaterialTheme.typography.bodyLarge else MaterialTheme.typography.bodySmall)
+                style = (if (strong) Rahal.type.bodyLarge else Rahal.type.caption)
                     .copy(fontFeatureSettings = "tnum"),
             )
         }

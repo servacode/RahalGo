@@ -120,14 +120,14 @@ fun RatingScreen(vm: RatingViewModel) {
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+            .padding(Rahal.space.lg),
     ) {
         // **وبعنوان شاشات القائمة نفسِه** (`ScreenTitle`) — كالسجلّ وصندوقي.
         com.rahalgo.ui.ScreenTitle(stringResource(R.string.rate_title))
         Summary(rep)
         Spacer(Modifier.height(20.dp))
         HorizontalDivider()
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(Rahal.space.lg))
 
         Text(stringResource(R.string.rate_reviews), style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(10.dp))
@@ -139,7 +139,7 @@ fun RatingScreen(vm: RatingViewModel) {
         if (rep.complaints.isNotEmpty()) {
             Spacer(Modifier.height(20.dp))
             HorizontalDivider()
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(Rahal.space.lg))
             Text(
                 stringResource(R.string.rate_complaints),
                 style = MaterialTheme.typography.titleMedium,
@@ -147,7 +147,7 @@ fun RatingScreen(vm: RatingViewModel) {
             Spacer(Modifier.height(10.dp))
             rep.complaints.forEach { ComplaintRow(it) }
         }
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(Rahal.space.xxl))
     }
 }
 
@@ -225,14 +225,14 @@ private fun Summary(rep: Reputation) {
 
 @Composable
 private fun ReviewRow(r: Review) {
-    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+    Column(Modifier.fillMaxWidth().padding(vertical = Rahal.space.sm)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             // **والنجومُ تُرسم لا تُكتب** — «٣ من ٥» تُقرأ، **وثلاثُ
             // نجومٍ تُرى.**
             repeat(5) { i ->
                 com.rahalgo.ui.RatingStar(filled = i < r.stars, size = 16.dp)
             }
-            Spacer(Modifier.size(8.dp))
+            Spacer(Modifier.size(Rahal.space.sm))
             Text(
                 text = "#" + r.orderNumber,
                 color = Rahal.colors.inkMuted,
@@ -252,7 +252,7 @@ private fun ReviewRow(r: Review) {
         //
         // **والتعليقُ يبقى في المحرّك** لمن يحقّق في شكوى — إنّما لا
         // يُعرض هنا.
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(Rahal.space.xs))
         // ══════════════════════════════════════════════════════════════
         // **ومن أعطاها — بلا اسم المتجر**
         // ══════════════════════════════════════════════════════════════
@@ -269,7 +269,7 @@ private fun ReviewRow(r: Review) {
             color = Rahal.colors.inkMuted,
             style = MaterialTheme.typography.bodySmall,
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         HorizontalDivider()
     }
 }

@@ -105,18 +105,18 @@ fun Drawer(
             .fillMaxSize()
             // **وصمّامُ أمانٍ لا أكثر**: القائمةُ مصمَّمةٌ لتسع بلا تمرير (انظر الأسفل)، وهذا لشاشةٍ قصيرةٍ جدّاً.
             .verticalScroll(rememberScrollState())
-            .padding(vertical = 4.dp),
+            .padding(vertical = Rahal.space.xs),
     ) {
         if (profile != null) {
             ProfileHeader(profile)
             HorizontalDivider()
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(Rahal.space.xxs))
         }
         if (header != null) {
             header()
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(Rahal.space.xxs))
             HorizontalDivider()
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(Rahal.space.xxs))
         }
 
         // **بنودُ التطبيق أوّلاً، ثمّ صفحاتُ المنصّة** — بالترتيب نفسِه في كلّ تطبيق.
@@ -127,9 +127,9 @@ fun Drawer(
             // **والمجموعةُ تُعرف بحدّها** — **والاسمُ فوقها كان يشرح ما لا يحتاج شرحا.**
             if (item.group != lastGroup) {
                 if (lastGroup != null) {
-                    Spacer(Modifier.height(2.dp))
+                    Spacer(Modifier.height(Rahal.space.xxs))
                     HorizontalDivider()
-                    Spacer(Modifier.height(2.dp))
+                    Spacer(Modifier.height(Rahal.space.xxs))
                 }
                 lastGroup = item.group
             }
@@ -139,9 +139,9 @@ fun Drawer(
         // **وصفحاتُ المنصّة والقانونيّةُ في عمودين** — خمسةُ بنودٍ في ثلاثة أسطر، فيبقى الدرجُ بلا تمرير
         // مع الترويسة. (والتمريرُ ممنوعٌ بقرار المالك.)
         if (platform.isNotEmpty()) {
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(Rahal.space.xxs))
             HorizontalDivider()
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(Rahal.space.xxs))
             platform.chunked(2).forEach { pair ->
                 Row(Modifier.fillMaxWidth()) {
                     pair.forEach { item ->
@@ -161,9 +161,9 @@ fun Drawer(
 
         // **والسمةُ ثمّ الخروج — في سطرٍ واحدٍ بعمودين في القاع** (بعيداً عن طريق الإبهام).
         // **والأيقونةُ تُظهر الوجهةَ لا الحال** — هلالٌ يقول «انتقل إلى الغامقة»، وشمسٌ «عُد إلى الفاتحة».
-        Spacer(Modifier.height(2.dp))
+        Spacer(Modifier.height(Rahal.space.xxs))
         HorizontalDivider()
-        Spacer(Modifier.height(2.dp))
+        Spacer(Modifier.height(Rahal.space.xxs))
         Row(Modifier.fillMaxWidth()) {
             if (dark != null) {
                 DrawerRow(
@@ -185,7 +185,7 @@ fun Drawer(
                 compact = true,
             )
         }
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(Rahal.space.xs))
     }
 }
 
@@ -222,14 +222,14 @@ private fun ProfileHeader(p: DrawerProfile) {
                 Text(
                     phoneText(p.phone),
                     color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = Rahal.type.caption,
                     maxLines = 1,
                 )
             }
             Text(
                 stringResource(p.role),
                 color = Rahal.colors.brand,
-                style = MaterialTheme.typography.labelSmall,
+                style = Rahal.type.badge,
                 maxLines = 1,
             )
         }
@@ -271,10 +271,10 @@ private fun DrawerRow(
             .padding(horizontal = Rahal.space.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconTile(icon = icon, tint = tint, size = if (compact) 24.dp else 30.dp)
+        IconBox(icon = icon, tint = tint, size = if (compact) 24.dp else 30.dp)
         Spacer(Modifier.size(if (compact) Rahal.space.sm else Rahal.space.md))
         if (compact) {
-            val style = MaterialTheme.typography.bodyMedium.copy(color = labelColor)
+            val style = Rahal.type.body.copy(color = labelColor)
             androidx.compose.foundation.text.BasicText(
                 text = label,
                 style = style,
@@ -288,7 +288,7 @@ private fun DrawerRow(
             Text(
                 text = label,
                 color = labelColor,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.body,
                 maxLines = 1,
             )
         }
