@@ -848,3 +848,147 @@ export function SheetHeader({ printedAt = new Date() }: { printedAt?: Date | str
     </>
   );
 }
+
+// ══════════════════════════════════════════════════════════════════════
+// **نظامُ التصميم الموحَّد — مفرداتُ التطبيقات نفسُها** (٢٠٢٦-١١-١١)
+// ══════════════════════════════════════════════════════════════════════
+//
+// (مبدأُ المالك: «التصميم لازم يكون موحّد بكلّ التطبيقات… يتطوّر معي بسهولة».)
+//
+// **الأسماءُ هي أسماءُ `mobile/ui`** — `ScreenTitle` · `SectionHeader` · `IconTile` · `StatTile` ·
+// `StatusChip` — **وبأدوار الخطّ نفسِها** (`text-section-title` = `Rahal.type.sectionTitle`). والبطاقةُ
+// (`Card`) والسطرُ (`ListRow`) والفراغُ (`EmptyState`) أعلاه، والسعرُ بالعملتين `DualPrice` في `money.tsx`.
+
+/** **نبرةُ الحال** — مرآةُ `StatusTone` في `mobile/ui/Chips.kt`. */
+export type StatusTone = "success" | "warning" | "danger" | "info" | "neutral";
+
+const statusToneCls: Record<StatusTone, string> = {
+  success: "bg-success-tint text-success",
+  warning: "bg-warning-tint text-warning",
+  danger: "bg-danger-tint text-danger",
+  info: "bg-info-tint text-info",
+  neutral: "bg-ink-faint text-ink-muted",
+};
+
+/** **عنوانُ الشاشة** — وسهمُ رجوعٍ وسطرُ شرحٍ اختياريّان (مرآةُ `ScreenTitle`). */
+export function ScreenTitle({
+  title,
+  subtitle,
+  back,
+  actions,
+}: {
+  title: string;
+  subtitle?: string;
+  /** **سهمُ الرجوع** — عنصرٌ جاهز (رابطٌ أو زرّ) يُرسم قبل العنوان. */
+  back?: ReactNode;
+  actions?: ReactNode;
+}) {
+  return (
+    <div className="mb-rg-md flex items-start justify-between gap-rg-md">
+      <div className="flex min-w-0 items-center gap-rg-xs">
+        {back}
+        <div className="min-w-0">
+          <h1 className="text-screen-title text-ink">{title}</h1>
+          {subtitle && <p className="mt-rg-xs text-body text-ink-muted">{subtitle}</p>}
+        </div>
+      </div>
+      {actions && <div className="flex shrink-0 flex-wrap items-center gap-rg-sm">{actions}</div>}
+    </div>
+  );
+}
+
+/** **عنوانُ مجموعةٍ داخل الشاشة** — وفعلٌ صغيرٌ في طرفه (مرآةُ `SectionHeader`). */
+export function SectionHeader({
+  title,
+  subtitle,
+  action,
+}: {
+  title: string;
+  subtitle?: string;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="pt-rg-lg pb-rg-sm">
+      <div className="flex items-center justify-between gap-rg-sm">
+        <h2 className="text-section-title text-ink">{title}</h2>
+        {action}
+      </div>
+      {subtitle && <p className="mt-rg-xxs text-caption text-ink-muted">{subtitle}</p>}
+    </div>
+  );
+}
+
+/**
+ * **مربّعُ وظيفة** — أيقونةٌ واسمٌ وقيمةٌ ويُضغط: الدوام، العمولة، الأقسام (مرآةُ `IconTile`).
+ * وفي شبكة: `grid grid-cols-3 gap-rg-sm`.
+ */
+export function IconTile({
+  icon: Icon,
+  label,
+  value,
+  danger = false,
+  onClick,
+}: {
+  icon: IconType;
+  label: string;
+  value?: string;
+  /** **القيمةُ بالأحمر** — لِما لم يُضبط بعد. */
+  danger?: boolean;
+  onClick?: () => void;
+}) {
+  const Tag = onClick ? "button" : "div";
+  return (
+    <Tag
+      type={onClick ? "button" : undefined}
+      onClick={onClick}
+      className={`flex h-full min-h-rg-tile-min w-full flex-col items-center justify-center gap-rg-xs rounded-rg-md bg-primary-tint px-rg-sm py-rg-md text-center ${
+        onClick ? "transition-colors hover:bg-primary-fill" : ""
+      }`}
+    >
+      <Icon size={24} className="text-primary" />
+      <span className="text-label font-bold text-ink">{label}</span>
+      {value && <span className={`text-caption ${danger ? "text-danger" : "text-ink-muted"}`}>{value}</span>}
+    </Tag>
+  );
+}
+
+/** **مربّعُ رقم** — الاسمُ فوق والرقمُ تحت (مرآةُ `StatTile`). وللوحات الكبيرة `StatCard`. */
+export function StatTile({
+  label,
+  value,
+  tone = "default",
+}: {
+  label: string;
+  value: string | number;
+  tone?: "default" | "success" | "danger";
+}) {
+  const valueCls = { default: "text-ink", success: "text-success", danger: "text-danger" }[tone];
+  return (
+    <div className="flex h-full flex-col items-center justify-center rounded-rg-md bg-primary-tint px-rg-sm py-rg-md text-center">
+      <span className="line-clamp-2 min-h-10 text-caption text-ink-muted">{label}</span>
+      <span className={`mt-rg-xs text-section-title tabular-nums ${valueCls}`}>
+        {typeof value === "number" ? fmtNum(value) : value}
+      </span>
+    </div>
+  );
+}
+
+/** **رقاقةُ الحال** — كلمةٌ قصيرةٌ في أرضٍ من لونها (مرآةُ `StatusChip`). */
+export function StatusChip({
+  tone,
+  children,
+  className = "",
+}: {
+  tone: StatusTone;
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <span
+      data-ui="status-chip"
+      className={`inline-flex items-center gap-rg-xs rounded-rg-sm px-rg-sm py-rg-xxs text-badge ${statusToneCls[tone]} ${className}`}
+    >
+      {children}
+    </span>
+  );
+}

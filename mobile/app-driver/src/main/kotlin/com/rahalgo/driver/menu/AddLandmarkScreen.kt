@@ -64,8 +64,8 @@ fun AddLandmarkScreen(
     Column(
         Modifier
             .fillMaxWidth()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(Rahal.space.lg),
+        verticalArrangement = Arrangement.spacedBy(Rahal.space.md),
     ) {
         // **والعنوانُ رأسٌ بسهمٍ فوق الصفحة** — ويبقى سطرُ التعليمة لأنّه طريقةُ الاستعمال.
         ScreenTitle("", stringResource(R.string.landmark_hint))
@@ -84,7 +84,7 @@ fun AddLandmarkScreen(
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm), verticalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
             LandmarkKinds.forEach { (key, label) ->
                 val on = kind == key
                 Box(

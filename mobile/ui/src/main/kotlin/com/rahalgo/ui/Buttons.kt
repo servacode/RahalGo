@@ -362,7 +362,7 @@ fun DialogDismissButton(
  */
 @Composable
 fun FitButtonText(text: String) {
-    val style = androidx.compose.material3.MaterialTheme.typography.labelLarge.copy(color = androidx.compose.material3.LocalContentColor.current)
+    val style = Rahal.type.button.copy(color = androidx.compose.material3.LocalContentColor.current)
     androidx.compose.foundation.text.BasicText(
         text = text,
         style = style,

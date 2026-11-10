@@ -231,7 +231,7 @@ fun DrinksButton(state: DrinksState) {
             contentDescription = null,
             modifier = Modifier.size(18.dp),
         )
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(Rahal.space.sm))
         Text(stringResource(R.string.drinks_button), fontWeight = FontWeight.Bold)
     }
 }
@@ -296,7 +296,7 @@ fun DrinksEditor(
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 2.dp),
+                    .padding(vertical = Rahal.space.xxs),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (state.canPickImage) {

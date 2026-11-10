@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -63,7 +62,7 @@ fun FetchAmountApproveDialog(
                     style = MaterialTheme.typography.headlineMedium,
                 )
                 d.collectAmount?.takeIf { it > 0 }?.let {
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(Rahal.space.xs))
                     Text(stringResource(R.string.md_amount_estimate, DeliveryTexts.amount(d, it)), color = Rahal.colors.inkMuted)
                 }
                 Spacer(Modifier.height(10.dp))
@@ -74,7 +73,7 @@ fun FetchAmountApproveDialog(
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 if (error.isNotEmpty()) {
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(Rahal.space.sm))
                     Text(error, color = Rahal.colors.danger, textAlign = TextAlign.Center)
                 }
                 Spacer(Modifier.height(14.dp))
@@ -90,7 +89,7 @@ fun FetchAmountApproveDialog(
                         Text(stringResource(R.string.md_amount_approve), fontWeight = FontWeight.Bold)
                     }
                 }
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(Rahal.space.sm))
                 RahalButton(
                     onClick = onReject,
                     enabled = !busy,

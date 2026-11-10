@@ -57,7 +57,7 @@ fun PageHeader(
         Text(
             title,
             fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.titleLarge,
+            style = Rahal.type.screenTitle,
             color = Rahal.colors.ink,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,

@@ -151,7 +151,7 @@ fun BoardScreen(
         }
         val top = steps.lastOrNull()?.target ?: 0L
         val allDone = top > 0 && done >= top
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(Rahal.space.md))
         if (steps.isEmpty()) {
             Card {
                 Row(
@@ -194,7 +194,7 @@ fun BoardScreen(
             // ما بينها وبين سابقتها، **فيُرى أين هو من الثلاث معاً.**
             Row(
                 Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(Rahal.space.xs),
             ) {
                 var from = 0L
                 steps.forEach { l ->
@@ -243,7 +243,7 @@ fun BoardScreen(
             // **وما ينتظر شروطَه يُقال** (قرارُ المالك ٢٠٢٦-١٠-١٣) — وإلّا ظنّ أنّ
             // متجراً سجّله ضاع من عدّاده. وتفصيلُ كلِّ متجرٍ في «عملائي».
             if (me.goalPending > 0) {
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(Rahal.space.sm))
                 Text(
                     goalPendingText(me.goalPending.toInt()),
                     color = Rahal.colors.accent,
@@ -396,7 +396,7 @@ fun BoardScreen(
                 color = Rahal.colors.inkMuted,
                 style = MaterialTheme.typography.bodyMedium,
             )
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(Rahal.space.xs))
             if (me.whatsappVerified && !me.inviteCode.isNullOrEmpty()) {
                 // **والرمزُ يُنسخ بضغطة** (٢٠٢٦-١٠-٢٧) — يُرسله لمكتبٍ أو لصاحب متجر.
                 val code = me.inviteCode.orEmpty()
@@ -425,7 +425,7 @@ fun BoardScreen(
                     color = Rahal.colors.accent,
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(Rahal.space.sm))
                 RahalButton(onClick = onOpenAccount, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.bd_verify))
                 }

@@ -235,7 +235,7 @@ private fun RouteCard(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(Rahal.space.xxs)) {
             Text(
                 text = title,
                 color = color,

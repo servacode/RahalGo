@@ -107,7 +107,7 @@ fun AuthScreen(
         Text(
             text = title,
             // **وثقلٌ واحدٌ لعناوين الشاشات** (D15: كان خفيفاً) — كـ`PageHeader`.
-            style = MaterialTheme.typography.titleLarge,
+            style = Rahal.type.screenTitle,
             fontWeight = FontWeight.Bold,
         )
         Spacer(Modifier.height(20.dp))
@@ -124,7 +124,7 @@ fun AuthScreen(
                     .background(Rahal.colors.warnTint)
                     .padding(14.dp),
             )
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(Rahal.space.lg))
         }
 
         AuthCard {
@@ -188,7 +188,7 @@ fun AuthScreen(
         }
 
         if (state.error.isNotEmpty()) {
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Rahal.space.md))
             Text(
                 text = state.error,
                 color = Rahal.colors.danger,
@@ -246,7 +246,7 @@ fun AuthScreen(
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
                 )
-                Spacer(Modifier.size(8.dp))
+                Spacer(Modifier.size(Rahal.space.sm))
                 Text(
                     stringResource(
                         when {
@@ -269,13 +269,13 @@ fun AuthScreen(
         // سطرُ «ليس لديك حساب؟» وتحته زرٌّ محدَّدٌ بعرض الشاشة، لا رابطٌ نصّيٌّ صغير.
         if (signup) {
             // **وخطٌّ يفصل الدخولَ عن الحساب الجديد** (طلبُ المالك ٢٠٢٦-١١-٠٦).
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(Rahal.space.xl))
             Text(
                 stringResource(R.string.signup_question),
                 color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.body,
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             // **وأوّلَ مرّةٍ على هذا الجهاز: سهمٌ وإضاءةٌ على الزرّ** (قرارُ المالك
             // ٢٠٢٦-١١-٠٧، `SignupGuide.kt`) — **والزبونُ وحدَه يقرؤه**: هنا داخل `signup`.
             val guide = SignupGuide.shared

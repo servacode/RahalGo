@@ -366,7 +366,7 @@ fun OrderChatSheet(
                 .fillMaxWidth(0.92f)
                 .fillMaxHeight(0.72f),
         ) {
-            Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
+            Column(Modifier.padding(horizontal = Rahal.space.lg, vertical = 14.dp)) {
                 Row(
                     Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -390,7 +390,7 @@ fun OrderChatSheet(
                                 stringResource(R.string.ord_chat)
                             },
                             fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.titleMedium,
+                            style = Rahal.type.sectionTitle,
                         )
                         // **والطرفُ الآخرُ وحالُ القناة تحته** — **ولا
                         // رقمَ هاتفٍ أبداً** (عقدُ الخصوصيّة القائم).
@@ -402,7 +402,7 @@ fun OrderChatSheet(
                             Text(
                                 text = line,
                                 color = Rahal.colors.inkMuted,
-                                style = MaterialTheme.typography.bodySmall,
+                                style = Rahal.type.caption,
                             )
                         }
                     }
@@ -413,7 +413,7 @@ fun OrderChatSheet(
                         RahalTextButton(onClick = onOpenOrder) {
                             Text(
                                 text = stringResource(R.string.chat_open_order),
-                                style = MaterialTheme.typography.labelMedium,
+                                style = Rahal.type.label,
                             )
                         }
                     }
@@ -430,7 +430,7 @@ fun OrderChatSheet(
                     Spacer(Modifier.height(6.dp))
                     Row(
                         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
                     ) {
                         tabs.forEach { (id, number) ->
                             val on = id == orderId
@@ -516,7 +516,7 @@ fun OrderChatSheet(
                 // ولا يُرسل يُقرأ عطباً** — فسطرٌ واحدٌ يقول إنّها انتهت.
                 if (chatCanWrite(vm.head)) {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         OutlinedTextField(
@@ -541,7 +541,7 @@ fun OrderChatSheet(
                     Text(
                         text = stringResource(R.string.chat_ended),
                         color = Rahal.colors.inkMuted,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = Rahal.type.body,
                         modifier = Modifier.fillMaxWidth(),
                     )
                 }

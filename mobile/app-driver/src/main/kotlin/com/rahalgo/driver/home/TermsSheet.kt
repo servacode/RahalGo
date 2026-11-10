@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -57,7 +56,7 @@ fun TermsSheet(
             ) {
                 Text(stringResource(R.string.terms_body), style = MaterialTheme.typography.bodyMedium)
                 if (terms.clause.isNotBlank()) {
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(Rahal.space.md))
                     Column(
                         Modifier
                             .fillMaxWidth()
@@ -71,22 +70,22 @@ fun TermsSheet(
                             fontWeight = FontWeight.Bold,
                             style = MaterialTheme.typography.labelLarge,
                         )
-                        Spacer(Modifier.height(4.dp))
+                        Spacer(Modifier.height(Rahal.space.xs))
                         Text(terms.clause, fontWeight = FontWeight.Bold)
                     }
                 }
                 blocks.forEach { b ->
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(Rahal.space.md))
                     if (b.head.isNotEmpty()) {
                         Text(b.head, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(4.dp))
+                        Spacer(Modifier.height(Rahal.space.xs))
                     }
                     b.body.forEach { p ->
                         Text(p, style = MaterialTheme.typography.bodyMedium)
                     }
                 }
                 if (error.isNotEmpty()) {
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(Rahal.space.md))
                     Text(error, color = Rahal.colors.danger)
                 }
             }

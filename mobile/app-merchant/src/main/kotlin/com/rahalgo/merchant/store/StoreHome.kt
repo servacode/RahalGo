@@ -31,7 +31,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -544,7 +543,7 @@ private fun QuickAction(
                     .offset(x = Rahal.space.xs * -1, y = Rahal.space.xs)
                     .clip(Rahal.shape.pill)
                     .background(Rahal.colors.danger)
-                    .padding(horizontal = Rahal.space.sm, vertical = 2.dp),
+                    .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.xxs),
             )
         }
     }

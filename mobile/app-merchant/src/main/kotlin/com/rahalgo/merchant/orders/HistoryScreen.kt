@@ -247,7 +247,7 @@ fun HistoryScreen(vm: HistoryViewModel) {
                     com.rahalgo.ui.DayHead(day)
                     lastDay = day
                 } else {
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(Rahal.space.sm))
                 }
                 HistoryCard(
                     o = o,
@@ -259,14 +259,14 @@ fun HistoryScreen(vm: HistoryViewModel) {
                 )
             }
             if (vm.more) {
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(Rahal.space.md))
                 com.rahalgo.ui.RahalOutlineButton(
                     onClick = { vm.loadMore() },
                     enabled = !vm.loadingMore,
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text(stringResource(com.rahalgo.merchant.R.string.md_more)) }
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(Rahal.space.xl))
         }
     }
 
@@ -294,7 +294,7 @@ private fun HistoryCard(o: MerchantOrder, reportable: Boolean, onReport: () -> U
             )
             val at = com.rahalgo.ui.timeText(o.createdAt)
             if (at.isNotBlank() && at != o.createdAt) {
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(Rahal.space.sm))
                 Text(at, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
             }
             Spacer(Modifier.weight(1f))
@@ -308,7 +308,7 @@ private fun HistoryCard(o: MerchantOrder, reportable: Boolean, onReport: () -> U
             )
         }
         if (o.items.isNotEmpty()) {
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(Rahal.space.xs))
             // **الفاتورةُ بشكلها الواحد** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — «بندورة × 1 كيلو ...... 600 ل.س»،
             // **وبما اختاره الزبون** (تجربةُ المالك ٢٠٢٦-١٠-٢٩) — «بندورة» بلا «كيلو» لا تُجهَّز.
             com.rahalgo.ui.InvoiceLines(o.items.map { it.toInvoiceLine() })
@@ -333,7 +333,7 @@ private fun HistoryCard(o: MerchantOrder, reportable: Boolean, onReport: () -> U
                 label = stringResource(com.rahalgo.merchant.R.string.ord_cut_lbl, o.commissionLabel),
                 value = "− " + money(o.platformCommission),
             )
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(Rahal.space.xs))
             HorizontalDivider()
             SumLine(
                 label = stringResource(com.rahalgo.merchant.R.string.ord_due_lbl),
@@ -344,7 +344,7 @@ private fun HistoryCard(o: MerchantOrder, reportable: Boolean, onReport: () -> U
         }
         // **وزرُّ البلاغ لمن يملكه وحدَه** — وزرٌّ يُعرض ثمّ يردّ خطأً أسوأُ من غيابه.
         if (reportable) {
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(Rahal.space.xs))
             RahalTextButton(onClick = onReport) {
                 Icon(
                     painter = painterResource(com.rahalgo.ui.R.drawable.ic_warning),
@@ -352,7 +352,7 @@ private fun HistoryCard(o: MerchantOrder, reportable: Boolean, onReport: () -> U
                     tint = Rahal.colors.danger,
                     modifier = Modifier.size(16.dp),
                 )
-                Spacer(Modifier.width(4.dp))
+                Spacer(Modifier.width(Rahal.space.xs))
                 Text(
                     stringResource(com.rahalgo.merchant.R.string.report_driver),
                     color = Rahal.colors.danger,
@@ -381,13 +381,13 @@ private fun ReportSheet(vm: HistoryViewModel, order: MerchantOrder, onClose: () 
         onDismissRequest = onClose,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     ) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = Rahal.space.lg)) {
         Text(
             stringResource(com.rahalgo.merchant.R.string.report_title, order.number),
             fontWeight = FontWeight.Bold,
             style = MaterialTheme.typography.titleMedium,
         )
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(Rahal.space.xs))
         Text(
             stringResource(com.rahalgo.merchant.R.string.report_hint),
             color = Rahal.colors.inkMuted,
@@ -408,7 +408,7 @@ private fun ReportSheet(vm: HistoryViewModel, order: MerchantOrder, onClose: () 
             }
         }
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         OutlinedTextField(
             value = note,
             onValueChange = { note = it },
@@ -416,15 +416,15 @@ private fun ReportSheet(vm: HistoryViewModel, order: MerchantOrder, onClose: () 
             modifier = Modifier.fillMaxWidth(),
             minLines = 2,
         )
-        Spacer(Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Spacer(Modifier.height(Rahal.space.md))
+        Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
             RahalButton(
                 onClick = { vm.report(order.id, reason, note) { onClose() } },
                 enabled = !vm.sending && reason.isNotEmpty(),
             ) { Text(stringResource(com.rahalgo.merchant.R.string.act_send_report)) }
             RahalTextButton(onClick = onClose) { Text(stringResource(com.rahalgo.merchant.R.string.act_cancel)) }
         }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(Rahal.space.xl))
         }
     }
 }

@@ -34,7 +34,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -214,7 +213,7 @@ internal fun AgreeDialog(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 )
                 if (feeLocked) {
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(Rahal.space.xs))
                     Text(
                         stringResource(R.string.agree_fee_fixed),
                         color = Rahal.colors.inkMuted,
@@ -222,7 +221,7 @@ internal fun AgreeDialog(
                     )
                 }
                 if (error.isNotEmpty()) {
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(Rahal.space.sm))
                     Text(error, color = Rahal.colors.danger, style = MaterialTheme.typography.bodySmall)
                 }
             }
@@ -334,7 +333,7 @@ internal fun FetchAmountDialog(
                 )
                 // **«أمانة — بلا ثمن»** (قرارُ المالك ٢٠٢٦-١١-٠٨) — ضغطةٌ وحدةٌ بدل كتابة صفر.
                 if (whatsApp) {
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(Rahal.space.sm))
                     // **«أمانة» زرٌّ حقيقيٌّ بإطار** لا كلمةٌ عائمة (المالك ٢٠٢٦-١١-١٠).
                     com.rahalgo.ui.RahalOutlineButton(
                         onClick = { send(0.0) },
@@ -408,7 +407,7 @@ internal fun SmallAction(
             tint = Rahal.colors.onPanel,
             modifier = Modifier.size(16.dp),
         )
-        Spacer(Modifier.size(4.dp))
+        Spacer(Modifier.size(Rahal.space.xs))
         Text(
             text = stringResource(label),
             // **وحجمٌ واحدٌ للثلاثة** — (طلب المالك ٢٠٢٦-٠٨-١٢: «لازم
@@ -695,7 +694,7 @@ private fun ProblemOption(
             .background(Rahal.colors.canvas)
             .border(1.dp, Rahal.colors.line, Rahal.shape.sm)
             .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = Rahal.space.md, vertical = Rahal.space.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -705,7 +704,7 @@ private fun ProblemOption(
             modifier = Modifier.weight(1f),
         )
         if (wait.isNotEmpty()) {
-            Spacer(Modifier.size(8.dp))
+            Spacer(Modifier.size(Rahal.space.sm))
             Text(
                 text = wait,
                 color = Rahal.colors.inkMuted,
@@ -713,7 +712,7 @@ private fun ProblemOption(
                 modifier = Modifier
                     .clip(Rahal.shape.pill)
                     .background(Rahal.colors.field)
-                    .padding(horizontal = 8.dp, vertical = 3.dp),
+                    .padding(horizontal = Rahal.space.sm, vertical = 3.dp),
             )
         }
     }
@@ -731,7 +730,7 @@ private fun Section(title: Int) {
         text = stringResource(title),
         color = Rahal.colors.inkMuted,
         style = MaterialTheme.typography.labelMedium,
-        modifier = Modifier.padding(bottom = 2.dp),
+        modifier = Modifier.padding(bottom = Rahal.space.xxs),
     )
 }
 
@@ -787,7 +786,7 @@ internal fun PriceEditDialog(
                     color = Rahal.colors.ink,
                     fontWeight = FontWeight.Bold,
                 )
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(Rahal.space.xs))
                 Text(stringResource(R.string.price_edit_hint), color = Rahal.colors.inkMuted)
                 Spacer(Modifier.height(10.dp))
                 OutlinedTextField(
@@ -817,7 +816,7 @@ internal fun PriceEditDialog(
                     minLines = 2,
                 )
                 if (error.isNotEmpty()) {
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(Rahal.space.sm))
                     Text(error, color = Rahal.colors.danger, style = MaterialTheme.typography.bodySmall)
                 }
             }
@@ -883,7 +882,7 @@ internal fun ShamcashChoice(
     Spacer(Modifier.height(14.dp))
     Text(stringResource(R.string.shamcash_how), fontWeight = FontWeight.Bold)
     Spacer(Modifier.height(6.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm), verticalAlignment = Alignment.CenterVertically) {
         androidx.compose.material3.FilterChip(
             selected = !sham,
             onClick = { onSham(false) },
@@ -896,7 +895,7 @@ internal fun ShamcashChoice(
         )
     }
     if (!sham) return
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(Rahal.space.sm))
     GoodsCurrencyToggle(usd = usd, onChange = onUsd)
     Spacer(Modifier.height(6.dp))
     OutlinedTextField(
@@ -917,7 +916,7 @@ internal fun ShamcashChoice(
         modifier = Modifier.fillMaxWidth(),
         keyboardOptions = KeyboardOptions(keyboardType = if (usd) KeyboardType.Decimal else KeyboardType.Number),
     )
-    Spacer(Modifier.height(4.dp))
+    Spacer(Modifier.height(Rahal.space.xs))
     Text(
         stringResource(R.string.shamcash_hint),
         color = Rahal.colors.inkMuted,
@@ -932,7 +931,7 @@ internal fun ShamcashChoice(
  */
 @Composable
 internal fun GoodsCurrencyToggle(usd: Boolean, onChange: (Boolean) -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm), verticalAlignment = Alignment.CenterVertically) {
         androidx.compose.material3.FilterChip(
             selected = !usd,
             onClick = { onChange(false) },

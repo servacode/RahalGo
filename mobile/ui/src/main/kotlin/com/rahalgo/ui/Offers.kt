@@ -195,7 +195,7 @@ fun OfferCard(
             ) {
                 Text(
                     stringResource(if (amount != null && percent == null) R.string.ow_unit_syp else R.string.ow_unit_percent),
-                    style = MaterialTheme.typography.titleMedium,
+                    style = Rahal.type.sectionTitle,
                     fontWeight = FontWeight.Bold,
                     color = tint,
                 )
@@ -206,7 +206,7 @@ fun OfferCard(
                 Text(
                     text = itemName,
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = Rahal.type.sectionTitle,
                     color = Rahal.colors.ink,
                     maxLines = 2,
                     overflow = TextOverflow.Visible,
@@ -217,7 +217,7 @@ fun OfferCard(
                     else -> ""
                 }
                 if (disc.isNotEmpty()) {
-                    Text(disc, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = tint)
+                    Text(disc, style = Rahal.type.body, fontWeight = FontWeight.Bold, color = tint)
                 }
             }
             Spacer(Modifier.width(Rahal.space.sm))
@@ -225,7 +225,7 @@ fun OfferCard(
             val tone = statusColor(status)
             Text(
                 text = OfferStatus.text(ctx, status),
-                style = MaterialTheme.typography.labelMedium,
+                style = Rahal.type.label,
                 fontWeight = FontWeight.Bold,
                 color = tone,
                 maxLines = 1,
@@ -241,14 +241,14 @@ fun OfferCard(
             // **والسعرُ الجديدُ هو الرقم** — والقديمُ صغيرٌ مشطوب.
             Text(
                 text = money(priceAfter),
-                style = MaterialTheme.typography.titleLarge,
+                style = Rahal.type.screenTitle,
                 fontWeight = FontWeight.Bold,
                 color = if (live) Rahal.colors.success else Rahal.colors.ink,
             )
             Spacer(Modifier.width(Rahal.space.sm))
             Text(
                 text = money(priceBefore),
-                style = MaterialTheme.typography.bodySmall,
+                style = Rahal.type.caption,
                 color = Rahal.colors.inkMuted,
                 textDecoration = TextDecoration.LineThrough,
                 modifier = Modifier.weight(1f),
@@ -257,7 +257,7 @@ fun OfferCard(
             if (saved > 0 && (live || status == OfferStatus.SCHEDULED)) {
                 Text(
                     text = stringResource(R.string.offer_saves, money(saved)),
-                    style = MaterialTheme.typography.labelMedium,
+                    style = Rahal.type.label,
                     fontWeight = FontWeight.Bold,
                     color = if (live) Rahal.colors.success else Rahal.colors.inkMuted,
                 )
@@ -282,7 +282,7 @@ fun OfferCard(
                     modifier = Modifier.size(OfferIconSize),
                 )
                 Spacer(Modifier.width(Rahal.space.xs))
-                Text(period, style = MaterialTheme.typography.bodySmall, color = Rahal.colors.inkMuted)
+                Text(period, style = Rahal.type.caption, color = Rahal.colors.inkMuted)
             }
         }
 

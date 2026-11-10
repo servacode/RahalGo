@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -82,9 +81,9 @@ fun OrdersScreen(
         walletBalance = if (showHistory) 0 else walletBalance,
         onBrowse = if (showHistory) null else onBrowse,
         tabs = {
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(Rahal.space.xs))
             androidx.compose.foundation.layout.Row(
-                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(Rahal.space.sm),
             ) {
                 TabPill(
                     text = stringResource(R.string.ord_tab_open, vm.open.size.toString()),
@@ -98,7 +97,7 @@ fun OrdersScreen(
                     on = showHistory,
                 ) { showHistory = true }
             }
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(Rahal.space.xs))
         },
     )
 }
@@ -118,7 +117,7 @@ private fun TabPill(text: String, on: Boolean, onClick: () -> Unit) {
                 else Modifier.border(1.dp, Rahal.colors.line, Rahal.shape.pill),
             )
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = Rahal.space.lg, vertical = 10.dp),
     )
 }
 
@@ -240,7 +239,7 @@ private fun OrdersList(
 
             // **وخطأُ الفعل يبقى ظاهراً** — لا تمحوه إعادةُ القراءة.
             if (vm.actionError.isNotEmpty()) {
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(Rahal.space.sm))
                 Note(vm.actionError, Rahal.colors.danger)
             }
             // **ولا «لا طلبات» قبل أوّل جواب** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كانت تومض لحظةً
@@ -338,7 +337,7 @@ private fun OrdersList(
         // **ولا يظهر إلّا في السجلّ وحين يبقى ما يُجلب.**
         if (history && vm.historyHasMore) {
             item {
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(Rahal.space.md))
                 RahalButton(
                     onClick = { vm.loadMore() },
                     enabled = !vm.loadingMore,
@@ -352,7 +351,7 @@ private fun OrdersList(
                 }
             }
         }
-        item { Spacer(Modifier.height(32.dp)) }
+        item { Spacer(Modifier.height(Rahal.space.xxl)) }
     }
 
     // ══════════════════════════════════════════════════════════════════
@@ -444,7 +443,7 @@ private fun ConfirmCancel(
 @Composable
 private fun DialogError(error: String) {
     if (error.isEmpty()) return
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(Rahal.space.sm))
     Text(error, color = Rahal.colors.danger, style = MaterialTheme.typography.bodySmall)
 }
 
@@ -500,7 +499,7 @@ internal fun RateDialog(
                 )
                 StarRow(stars) { stars = it }
                 if (hasDriver) {
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(Rahal.space.sm))
                     Text(
                         text = stringResource(R.string.ord_rate_driver),
                         color = Rahal.colors.ink,
@@ -626,7 +625,7 @@ private fun ComplainDialog(
                                 onClick = { pick = r.code },
                                 role = androidx.compose.ui.semantics.Role.RadioButton,
                             )
-                            .padding(vertical = 2.dp),
+                            .padding(vertical = Rahal.space.xxs),
                     ) {
                         androidx.compose.material3.RadioButton(selected = on, onClick = null)
                         Text(

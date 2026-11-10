@@ -55,13 +55,13 @@ fun ForcedPasswordScreen(
         Text(
             text = stringResource(R.string.pw_forced_title),
             fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.titleMedium,
+            style = Rahal.type.sectionTitle,
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         Text(
             text = stringResource(R.string.pw_forced_body),
             color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodyMedium,
+            style = Rahal.type.body,
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(20.dp))
@@ -70,9 +70,9 @@ fun ForcedPasswordScreen(
             current = it
             onErrorConsumed()
         }, !state.busy, R.string.acc_pw_current)
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         PasswordField(next, { next = it }, !state.busy, R.string.acc_pw_new)
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         PasswordField(confirm, { confirm = it }, !state.busy, R.string.acc_pw_confirm)
 
         if (mismatch) {
@@ -84,7 +84,7 @@ fun ForcedPasswordScreen(
             Text(state.error, color = Rahal.colors.danger)
         }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(Rahal.space.lg))
         RahalButton(
             onClick = { onSubmit(current, next) },
             enabled = !state.busy && current.isNotEmpty() && next.isNotEmpty() &&
@@ -92,7 +92,7 @@ fun ForcedPasswordScreen(
             modifier = Modifier.fillMaxWidth(),
         ) { Text(stringResource(R.string.acc_pw_change)) }
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         RahalOutlineButton(
             onClick = onLogout,
             modifier = Modifier.fillMaxWidth(),

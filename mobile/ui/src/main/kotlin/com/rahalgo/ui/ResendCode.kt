@@ -83,7 +83,7 @@ fun ResendCodeRow(
             Text(
                 text = stringResource(R.string.resend_wait, resendClock(left)),
                 color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
+                style = Rahal.type.caption,
             )
         } else {
             RahalSmallButton(onClick = onResend, enabled = !busy) {

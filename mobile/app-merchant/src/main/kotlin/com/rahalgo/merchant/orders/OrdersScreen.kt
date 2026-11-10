@@ -146,7 +146,7 @@ fun OrdersScreen(
                 }
             }
             HistoryLink(onHistory)
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(Rahal.space.xl))
         }
     }
 }
@@ -154,7 +154,7 @@ fun OrdersScreen(
 /** **عنوانُ مجموعةٍ بعددها** — «جديدة — بتستناك (2)». */
 @Composable
 private fun GroupHead(g: OrderGroup, count: Int) {
-    Spacer(Modifier.height(16.dp))
+    Spacer(Modifier.height(Rahal.space.lg))
     Text(
         stringResource(
             when (g) {
@@ -175,7 +175,7 @@ private fun GroupHead(g: OrderGroup, count: Int) {
 @Composable
 private fun HistoryLink(onHistory: (() -> Unit)?) {
     if (onHistory == null) return
-    Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(Rahal.space.md))
     RahalTextButton(onClick = onHistory, modifier = Modifier.fillMaxWidth()) {
         Text(stringResource(R.string.orders_history_link))
     }
@@ -222,7 +222,7 @@ private fun OrderCard(
             // بطاقته يُقاس بها.
             val age = Since.text(LocalContext.current, order.createdAt)
             if (age.isNotEmpty()) {
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(Rahal.space.sm))
                 Text(
                     age,
                     style = MaterialTheme.typography.bodySmall,
@@ -272,7 +272,7 @@ private fun OrderCard(
                 style = MaterialTheme.typography.labelMedium,
             )
         }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         Text(
             stringResource(R.string.mn_items),
             color = Rahal.colors.inkMuted,
@@ -286,13 +286,13 @@ private fun OrderCard(
         // **وفي صندوقٍ ملوّنٍ بأيقونة تنبيه** (تدقيقُ ٢٠٢٦-١٠-٢٧) — كانت سطراً عادياً بين
         // الأصناف، **و«حساسية» تُقرأ بنظرةٍ أو لا تُقرأ.**
         if (order.notes.isNotBlank()) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             Row(
                 Modifier
                     .fillMaxWidth()
                     .clip(Rahal.shape.sm)
                     .background(Rahal.colors.warnTint)
-                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                    .padding(horizontal = 10.dp, vertical = Rahal.space.sm),
                 verticalAlignment = Alignment.Top,
             ) {
                 Icon(
@@ -301,7 +301,7 @@ private fun OrderCard(
                     tint = Rahal.colors.accent,
                     modifier = Modifier.size(18.dp),
                 )
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(Rahal.space.sm))
                 Column(Modifier.weight(1f)) {
                     Text(
                         stringResource(R.string.order_note),
@@ -332,7 +332,7 @@ private fun OrderCard(
         // **والخصمُ بإشارة ناقص** — فيُرى الطرحُ ولا يُستنتج.
         Spacer(Modifier.height(10.dp))
         HorizontalDivider()
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         // **وطلبٌ انتهى بلا بيعٍ لا حسبةَ فيه** (تدقيقُ ٢٠٢٦-١٠-٢٧) — انظر `noPayout`.
         if (noPayout(order.status)) {
             Text(
@@ -351,7 +351,7 @@ private fun OrderCard(
             )
             Spacer(Modifier.height(6.dp))
             HorizontalDivider()
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(Rahal.space.xxs))
             // **والمحصّلةُ خلف الخطّ وبلون العلامة** — هو الرقمُ الذي يعنيه.
             SumLine(
                 label = stringResource(R.string.ord_due_lbl),
@@ -369,7 +369,7 @@ private fun OrderCard(
         // **والاعتذارُ نصٌّ جانبيٌّ لا زرٌّ مساوٍ** — انظر أعلاه.
         if (order.status == "pending") {
             var showReject by rememberSaveable(order.id) { mutableStateOf(false) }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             // **وزرٌّ أحمرُ واضحٌ بعرض البطاقة** (طلبُ المالك ٢٠٢٦-١٠-٠١: «اعتذر عن
             // الطلب خلّيه زرّاً أحمرَ واضحاً لأنّه رفض») — **ويسأل عن السبب قبل أن يرفض.**
             // **ويبقى محدَّداً تحت زرّ القبول المملوء** — أحمرُ واضحٌ كما أراد المالك،

@@ -147,7 +147,7 @@ private fun ColumnScope.Capture(state: QuickPhotoState, item: NoPhotoItem, shoot
             }
         } else {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                com.rahalgo.ui.IconTile(
+                com.rahalgo.ui.IconBox(
                     icon = com.rahalgo.ui.R.drawable.ic_photo,
                     tint = Rahal.colors.brand,
                     size = 72.dp,
@@ -183,7 +183,7 @@ private fun ColumnScope.Capture(state: QuickPhotoState, item: NoPhotoItem, shoot
 @Composable
 private fun Done(state: QuickPhotoState, total: Int) {
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-        com.rahalgo.ui.IconTile(
+        com.rahalgo.ui.IconBox(
             icon = com.rahalgo.ui.R.drawable.ic_check,
             tint = Rahal.colors.success,
             size = 72.dp,

@@ -171,7 +171,7 @@ fun ItemOptionsSheet(
                     minHeight = 120.dp,
                     maxHeight = 180.dp,
                 )
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(Rahal.space.md))
             }
             Text(
                 item.name,
@@ -180,7 +180,7 @@ fun ItemOptionsSheet(
             )
             // **واسمُ المتجر تحت اسم الصنف** — ملوَّنٌ حين يفتح صفحتَه، رماديٌّ حين لا.
             item.merchantName?.takeIf { it.isNotBlank() }?.let { name ->
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(Rahal.space.xs))
                 Text(
                     text = name,
                     color = if (onStore != null) Rahal.colors.brand else Rahal.colors.inkMuted,
@@ -192,7 +192,7 @@ fun ItemOptionsSheet(
                                 onClickLabel = stringResource(R.string.store_open_page),
                                 onClick = onStore,
                             )
-                            .padding(vertical = 2.dp)
+                            .padding(vertical = Rahal.space.xxs)
                     } else {
                         Modifier
                     },
@@ -206,7 +206,7 @@ fun ItemOptionsSheet(
                 syp = item.price + picked.sumOf { it.priceDelta },
                 style = MaterialTheme.typography.titleMedium,
             )
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(Rahal.space.lg))
 
             when {
                 !item.hasOptions && (failed || groups.isNullOrEmpty()) -> Unit
@@ -287,7 +287,7 @@ fun ItemOptionsSheet(
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(Rahal.space.sm))
             }
             allOut?.let { g ->
                 Text(
@@ -295,10 +295,10 @@ fun ItemOptionsSheet(
                     color = Rahal.colors.danger,
                     style = MaterialTheme.typography.bodyMedium,
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(Rahal.space.sm))
             }
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             // **والإجماليُّ بالعملتين فوق الزرّ لا داخلَه** (ملاحظةُ المالك ٢٠٢٦-١١-١١): نصُّ الزرّ «أضف»
             // وحدَه فلا يُقصّ عند ٣٦٠dp. **والدولارُ جمعُ دولار الصنف وإضافاته** (٢٠٢٦-١٠-١٢)،
             // **والإجماليُّ جمعُ السطور** — كلُّ خيارٍ بعدده (`OptionSplit.total`).
@@ -310,7 +310,7 @@ fun ItemOptionsSheet(
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.fillMaxWidth(),
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             Row(verticalAlignment = Alignment.CenterVertically) {
             // **أداةُ الكمّيّة جنب الزرّ** — والسعرُ على الزرّ يتبعها. ولا تُرسم مع العدّادات.
             if (split == null) Row(
@@ -320,10 +320,10 @@ fun ItemOptionsSheet(
                     .border(1.dp, Rahal.colors.line, Rahal.shape.pill),
             ) {
                 SheetQty(R.drawable.ic_minus, stringResource(R.string.cart_qty_less), enabled = qty > 1) { qty -= 1 }
-                Text(qty.toString(), fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp))
+                Text(qty.toString(), fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = Rahal.space.xs))
                 SheetQty(com.rahalgo.ui.R.drawable.ic_plus, stringResource(R.string.cart_qty_more), enabled = qty < 99) { qty += 1 }
             }
-            if (split == null) Spacer(Modifier.size(12.dp))
+            if (split == null) Spacer(Modifier.size(Rahal.space.md))
             RahalButton(
                 onClick = { onAdd(picks) },
                 modifier = Modifier.weight(1f),
@@ -332,7 +332,7 @@ fun ItemOptionsSheet(
                 Text(stringResource(R.string.options_add_short), maxLines = 1)
             }
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(Rahal.space.xl))
         }
     }
 }
@@ -379,7 +379,7 @@ private fun CounterBlock(
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleMedium,
             )
-            Spacer(Modifier.size(8.dp))
+            Spacer(Modifier.size(Rahal.space.sm))
             // **«مطلوب» شارةٌ مقروءة** (تدقيق D5) — كانت ١١ نقطةً برتقاليّةً على أرضٍ فاتحة.
             com.rahalgo.ui.Chip(
                 stringResource(
@@ -388,13 +388,13 @@ private fun CounterBlock(
                 if (group.minSelect > 0) Rahal.colors.accentInk else Rahal.colors.inkMuted,
             )
         }
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(Rahal.space.xs))
         // **كلُّ المشروبات ظاهرةٌ دائماً، والنافذةُ تتمرّر** (قرارُ المالك ٢٠٢٦-١١-٠٧: «سكرول مو
         // إخفاء وإظهار») — و«أضف» والعددُ ثابتان تحتها (`weight` في `ItemOptionsSheet`).
         group.options.forEach { o ->
             val n = counts[o.id] ?: 0
             Row(
-                Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                Modifier.fillMaxWidth().padding(vertical = Rahal.space.xs),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (thumb != null) {
@@ -420,7 +420,7 @@ private fun CounterBlock(
                     )
                 }
                 // **العدّادُ بجانب اسمه لا في آخر السطر** (تدقيق D5) — كان بينهما عرضُ الشاشة.
-                Spacer(Modifier.size(12.dp))
+                Spacer(Modifier.size(Rahal.space.md))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
@@ -434,7 +434,7 @@ private fun CounterBlock(
                         n.toString(),
                         fontWeight = FontWeight.Bold,
                         color = if (n > 0) Rahal.colors.brand else Rahal.colors.inkMuted,
-                        modifier = Modifier.padding(horizontal = 2.dp),
+                        modifier = Modifier.padding(horizontal = Rahal.space.xxs),
                     )
                     SheetQty(
                         com.rahalgo.ui.R.drawable.ic_plus,
@@ -463,7 +463,7 @@ private fun GroupBlock(
                 fontWeight = FontWeight.Bold,
                 style = MaterialTheme.typography.titleMedium,
             )
-            Spacer(Modifier.size(8.dp))
+            Spacer(Modifier.size(Rahal.space.sm))
             // **«مطلوب» تُقال قبل أن يُضغط الزرُّ المطفأ** — **ومن رأى
             // زرّاً لا يعمل بلا سببٍ ظنّ التطبيقَ عطبان.**
             // **«مطلوب» شارةٌ مقروءة** (تدقيق D5) — كانت ١١ نقطةً برتقاليّةً على أرضٍ فاتحة.
@@ -475,14 +475,14 @@ private fun GroupBlock(
             )
         }
         if (group.minSelect > 0 && group.options.none { it.available }) {
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(Rahal.space.xs))
             Text(
                 stringResource(R.string.options_all_out, group.name),
                 color = Rahal.colors.danger,
                 style = MaterialTheme.typography.bodySmall,
             )
         }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         group.options.forEach { o ->
             OptionRow(
                 option = o,
@@ -519,7 +519,7 @@ private fun OptionRow(
                 .clip(CircleShape)
                 .background(if (selected) Rahal.colors.brand else Rahal.colors.line),
         )
-        Spacer(Modifier.size(12.dp))
+        Spacer(Modifier.size(Rahal.space.md))
         // **والنافدُ مشطوبٌ وبجنبه «غير متوفر»** — مرآةُ الويب (تدقيقُ ٢٠٢٦-١٠-٢٨)؛
         // كان رماديّاً وحدَه فيُظنّ معطّلاً بلا سبب.
         Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
@@ -530,7 +530,7 @@ private fun OptionRow(
                 textDecoration = if (option.available) null else androidx.compose.ui.text.style.TextDecoration.LineThrough,
             )
             if (!option.available) {
-                Spacer(Modifier.size(8.dp))
+                Spacer(Modifier.size(Rahal.space.sm))
                 Text(
                     stringResource(R.string.options_unavailable),
                     color = Rahal.colors.danger,

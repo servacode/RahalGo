@@ -87,7 +87,7 @@ fun Countdown(
             text = stringResource(R.string.offer_left, "%d:%02d".format(seconds / 60, seconds % 60)),
             color = tint,
             fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.bodySmall,
+            style = Rahal.type.caption,
         )
     }
 }

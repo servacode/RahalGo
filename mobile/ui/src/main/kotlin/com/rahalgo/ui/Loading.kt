@@ -131,12 +131,12 @@ fun LoadingScreen(text: String = "", modifier: Modifier = Modifier) {
     ) {
         RahalLoader()
         if (text.isNotEmpty()) {
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(Rahal.space.lg))
             Text(
                 text = text,
                 color = Rahal.colors.inkMuted,
                 textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.body,
                 modifier = Modifier.fillMaxWidth(),
             )
         }

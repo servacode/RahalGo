@@ -186,8 +186,8 @@ private fun Favorites(
         LazyVerticalGrid(
             columns = GridCells.Fixed(ShopCols),
             contentPadding = PaddingValues(bottom = com.rahalgo.ui.LocalChatFabInset.current),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
+            verticalArrangement = Arrangement.spacedBy(Rahal.space.md),
         ) {
             items(list, key = { it.id }) { item ->
                 // ══════════════════════════════════════════════════════
@@ -289,7 +289,7 @@ private fun Offers(
         if (vm.focusGone) {
             // **وذهب قبل أن يُفتَح** — **فيُقال، ولا يُعرَض سعرٌ مضى
             // على أنّه سارٍ** (`DLINK-04`).
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             Text(
                 text = stringResource(R.string.off_gone),
                 color = Rahal.colors.inkMuted,
@@ -320,7 +320,7 @@ private fun Offers(
                     stringResource(R.string.free_kind_purchase).takeIf { free.purchase },
                     stringResource(R.string.free_kind_amanah).takeIf { free.amanah },
                 ).joinToString("، ")
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(Rahal.space.xs))
                 Text(
                     text = com.rahalgo.customer.freeOfferText(
                         free,
@@ -390,7 +390,7 @@ private fun Offers(
                                 overflow = TextOverflow.Ellipsis,
                             )
                         }
-                        Spacer(Modifier.height(4.dp))
+                        Spacer(Modifier.height(Rahal.space.xs))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (o.priceAfter > 0) {
                                 Text(
@@ -431,7 +431,7 @@ private fun Offers(
                         // **بعضُ العروض إعلانٌ عامّ** (`menuItemId`
                         // فارغ) — **وزرٌّ يُضيف لا شيءَ يُقرأ عطبا.**
                         o.menuItemId?.takeIf { it.isNotEmpty() }?.let { itemId ->
-                            Spacer(Modifier.height(8.dp))
+                            Spacer(Modifier.height(Rahal.space.sm))
                             RahalButton(
                                 onClick = {
                                     // **والسعرُ سعرُ العرض** — وهو ما
@@ -475,7 +475,7 @@ private fun Offers(
                 }
             }
         }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(Rahal.space.xl))
     }
 }
 
@@ -499,7 +499,7 @@ private fun Invite(vm: MineViewModel) {
     val context = LocalContext.current
     Screen {
         // **والعنوانُ في رأس الصفحة بسهم رجوع، ولا سطرَ شرح** (٢٠٢٦-١٠-٣٠).
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(Rahal.space.xs))
         Card {
             Text(
                 text = stringResource(R.string.inv_earn, money(r.nextReward)),
@@ -569,7 +569,7 @@ private fun Invite(vm: MineViewModel) {
             )
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(Rahal.space.md))
         // **والمشاركةُ جملةٌ فيها الرمزُ والرابط** — رابطٌ وحدَه على واتساب لا يُعرف ما هو.
         val shareText = stringResource(R.string.inv_share_text, r.code, r.link)
         RahalButton(
@@ -591,7 +591,7 @@ private fun Invite(vm: MineViewModel) {
             },
             modifier = Modifier.fillMaxWidth(),
         ) { Text(stringResource(R.string.act_share_link)) }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(Rahal.space.xl))
     }
 }
 

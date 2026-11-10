@@ -190,7 +190,7 @@ fun ChatsScreen(
             OrderChatSheet(vm = chatVm, orderId = writing, onOpened = onOpened, onLoaded = onLoaded) { writing = "" }
         }
         list.forEach { row ->
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             ThreadCard(
                 row = row,
                 open = vm.openId == row.orderId,
@@ -200,7 +200,7 @@ fun ChatsScreen(
                 },
             )
         }
-        Spacer(Modifier.height(24.dp))
+        Spacer(Modifier.height(Rahal.space.xl))
     }
 }
 
@@ -222,7 +222,7 @@ private fun ThreadCard(
                     Text(
                         text = "#" + row.number + (if (row.peer.isNotEmpty()) " · " + row.peer else ""),
                         fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = Rahal.type.body,
                     )
                     // **وما ينتظره في هذا الحديث وحدَه** — **ولا مجموعٌ
                     // لا يقول أيَّ طلبٍ ينتظر** (`CU-CHAT-04`).
@@ -232,7 +232,7 @@ private fun ThreadCard(
                             text = stringResource(R.string.chat_unread_badge, row.unread),
                             color = Rahal.colors.accent,
                             fontWeight = FontWeight.Bold,
-                            style = MaterialTheme.typography.labelSmall,
+                            style = Rahal.type.badge,
                         )
                     }
                 }
@@ -241,15 +241,15 @@ private fun ThreadCard(
                     Text(
                         text = stringResource(R.string.chat_read_only),
                         color = Rahal.colors.inkMuted,
-                        style = MaterialTheme.typography.labelSmall,
+                        style = Rahal.type.badge,
                     )
                 }
                 if (row.lastBody.isNotEmpty()) {
-                    Spacer(Modifier.height(2.dp))
+                    Spacer(Modifier.height(Rahal.space.xxs))
                     Text(
                         text = row.lastBody,
                         color = Rahal.colors.inkMuted,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = Rahal.type.caption,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -261,7 +261,7 @@ private fun ThreadCard(
                     // (`2026-10-03T16:52:00Z`). (فحصُ القبول ٢٠٢٦-١٠-٠٣.)
                     text = whenText(it),
                     color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = Rahal.type.badge,
                 )
             }
         }
@@ -269,19 +269,19 @@ private fun ThreadCard(
         // **ورسائلُ الحديث تحته حين يُفتح** — بالفقاعة نفسِها التي في
         // الرحلة: **فقاعتان تفترقان تجعلان الحديثَ الواحدَ حديثين.**
         if (!open) return@Card
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         val msgs = thread?.messages.orEmpty()
         if (msgs.isEmpty()) {
             Text(
                 stringResource(R.string.chats_empty_thread),
                 color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
+                style = Rahal.type.caption,
             )
             return@Card
         }
         msgs.forEach { m ->
             ChatBubble(m)
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(Rahal.space.xs))
         }
     }
 }

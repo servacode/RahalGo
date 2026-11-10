@@ -120,7 +120,7 @@ internal fun ImageCropDialog(
             Text(
                 stringResource(R.string.crop_title),
                 color = Color.White,
-                style = MaterialTheme.typography.titleMedium,
+                style = Rahal.type.sectionTitle,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center,
             )
@@ -249,8 +249,8 @@ private fun CropTool(
         verticalArrangement = Arrangement.Center,
     ) {
         Icon(painterResource(icon), contentDescription = null, tint = tint, modifier = Modifier.size(24.dp))
-        Spacer(Modifier.height(2.dp))
-        Text(stringResource(label), color = tint, style = MaterialTheme.typography.labelSmall)
+        Spacer(Modifier.height(Rahal.space.xxs))
+        Text(stringResource(label), color = tint, style = Rahal.type.badge)
     }
 }
 
@@ -277,7 +277,7 @@ private fun RowScope.CropAction(
                 .clip(Rahal.shape.md)
                 .border(Rahal.stroke.hair, Color.White.copy(alpha = 0.6f), Rahal.shape.md)
                 .clickable(role = Role.Button, onClick = onClick)
-                .padding(horizontal = 20.dp, vertical = 12.dp),
+                .padding(horizontal = 20.dp, vertical = Rahal.space.md),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {

@@ -103,7 +103,7 @@ fun UpdateGate(
 
     Surface(Modifier.fillMaxSize(), color = Rahal.colors.canvas) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp),
+            modifier = Modifier.fillMaxSize().padding(horizontal = Rahal.space.xxl),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
@@ -115,18 +115,18 @@ fun UpdateGate(
                     .size(140.dp)
                     .graphicsLayer { scaleX = logoScale; scaleY = logoScale },
             )
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(Rahal.space.xl))
             Text(
                 text = stringResource(R.string.update_title),
                 color = Rahal.colors.ink,
-                style = MaterialTheme.typography.headlineSmall,
+                style = Rahal.type.headline,
                 textAlign = TextAlign.Center,
             )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Rahal.space.md))
             Text(
                 text = body ?: stringResource(R.string.update_body),
                 color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.body,
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(28.dp))
@@ -159,11 +159,11 @@ fun UpdateGate(
                                 ),
                             )
                         }
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(Rahal.space.sm))
                         Text(
                             stringResource(R.string.update_install_hint),
                             color = Rahal.colors.inkMuted,
-                            style = MaterialTheme.typography.bodySmall,
+                            style = Rahal.type.caption,
                             textAlign = TextAlign.Center,
                         )
                     }
@@ -172,11 +172,11 @@ fun UpdateGate(
                             progress = { p },
                             modifier = Modifier.fillMaxWidth(),
                         )
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(Rahal.space.sm))
                         Text(
                             stringResource(R.string.update_downloading, (p * 100).toInt()),
                             color = Rahal.colors.inkMuted,
-                            style = MaterialTheme.typography.bodyMedium,
+                            style = Rahal.type.body,
                         )
                     }
                     else -> {
@@ -200,17 +200,17 @@ fun UpdateGate(
                             modifier = Modifier.fillMaxWidth(),
                         ) { Text(stringResource(R.string.update_action)) }
                         if (failed) {
-                            Spacer(Modifier.height(8.dp))
+                            Spacer(Modifier.height(Rahal.space.sm))
                             Text(
                                 stringResource(R.string.update_failed),
                                 color = Rahal.colors.danger,
-                                style = MaterialTheme.typography.bodySmall,
+                                style = Rahal.type.caption,
                                 textAlign = TextAlign.Center,
                             )
                         }
                     }
                 }
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(Rahal.space.md))
                 RahalTextButton(onClick = openDirect) { Text(stringResource(R.string.update_direct)) }
             } else if (showPlay) {
                 // ── بلاي: التحديثُ داخل التطبيق، والمتجرُ احتياط ──
@@ -246,7 +246,7 @@ fun UpdateGate(
                     },
                     modifier = Modifier.fillMaxWidth(),
                 ) { Text(stringResource(R.string.update_action)) }
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(Rahal.space.md))
                 RahalOutlineButton(onClick = openDirect, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.update_direct))
                 }

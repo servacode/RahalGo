@@ -58,7 +58,7 @@ fun DeliveryFeeRow(label: String, fee: Long, waived: Long) {
         return
     }
     Row(
-        Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        Modifier.fillMaxWidth().padding(vertical = Rahal.space.xs),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -70,7 +70,7 @@ fun DeliveryFeeRow(label: String, fee: Long, waived: Long) {
                 style = MaterialTheme.typography.bodySmall,
                 textDecoration = TextDecoration.LineThrough,
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(Rahal.space.sm))
             if (fee > 0) {
                 Text(money(fee), style = MaterialTheme.typography.bodyMedium)
             } else {
@@ -97,7 +97,7 @@ fun DeliveryFeeRow(label: String, fee: Long, waived: Long) {
 fun FreeDeliveryBanner() {
     val st = FreeOffer.state
     if (!st.standard || !Serving.available || !Serving.ordersOpen) return
-    androidx.compose.foundation.layout.Column(Modifier.padding(horizontal = 12.dp)) {
+    androidx.compose.foundation.layout.Column(Modifier.padding(horizontal = Rahal.space.md)) {
         com.rahalgo.ui.Note(freeOfferText(st, stringResource(R.string.free_banner)), Rahal.colors.success)
     }
 }

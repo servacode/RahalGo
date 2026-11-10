@@ -190,4 +190,16 @@ object Rahal {
 
     /** **سماكاتُ الحدود** — `Rahal.stroke.hair`. */
     val stroke: RahalStroke get() = RahalStrokeTokens
+
+    /** **أدوارُ الخطّ** — `Rahal.type.body` · `Rahal.type.price` (`Type.kt`). */
+    val type: RahalType get() = RahalTypeTokens
+
+    /** **الظلال** — `Rahal.elevation.card`. */
+    val elevation: RahalElevation get() = RahalElevationTokens
+
+    /** **مقاساتُ الأيقونات** — `Rahal.icon.md`. */
+    val icon: RahalIconSize get() = RahalIconSizeTokens
+
+    /** **مقاساتُ القطع** — `Rahal.size.touch` · `Rahal.size.avatarLg`. */
+    val size: RahalSize get() = RahalSizeTokens
 }

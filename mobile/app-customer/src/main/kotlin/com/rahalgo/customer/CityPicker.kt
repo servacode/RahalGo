@@ -67,7 +67,7 @@ fun CityRow(name: String, onClick: () -> Unit) {
         Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .padding(horizontal = 14.dp, vertical = Rahal.space.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -76,7 +76,7 @@ fun CityRow(name: String, onClick: () -> Unit) {
             tint = Rahal.colors.brand,
             modifier = Modifier.size(20.dp),
         )
-        Spacer(Modifier.size(12.dp))
+        Spacer(Modifier.size(Rahal.space.md))
         Column(Modifier.weight(1f)) {
             Text(
                 stringResource(R.string.city_shopping_in),
@@ -137,7 +137,7 @@ fun CitySheet(
                         modifier = Modifier.size(24.dp),
                     )
                 }
-                Spacer(Modifier.size(12.dp))
+                Spacer(Modifier.size(Rahal.space.md))
                 Column(Modifier.weight(1f)) {
                     // **سؤالٌ لا عنوانُ قسم** — كورقة العنوان.
                     Text(
@@ -173,7 +173,7 @@ fun CitySheet(
                 )
             }
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(Rahal.space.xl))
         }
     }
 }
@@ -190,7 +190,7 @@ private fun Choice(title: String, subtitle: String, selected: Boolean, onClick: 
         Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(vertical = 12.dp),
+            .padding(vertical = Rahal.space.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -199,7 +199,7 @@ private fun Choice(title: String, subtitle: String, selected: Boolean, onClick: 
             tint = if (selected) Rahal.colors.accent else Rahal.colors.inkMuted,
             modifier = Modifier.size(22.dp),
         )
-        Spacer(Modifier.size(12.dp))
+        Spacer(Modifier.size(Rahal.space.md))
         Column(Modifier.weight(1f)) {
             Text(
                 title,

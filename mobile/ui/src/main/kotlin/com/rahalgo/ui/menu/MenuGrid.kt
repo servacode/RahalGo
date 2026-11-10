@@ -294,7 +294,7 @@ fun MenuItemsGrid(
                 Text(
                     stringResource(if (onlyOff && q.isEmpty()) R.string.grid_off_none else R.string.grid_search_none),
                     color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = Rahal.type.body,
                     modifier = Modifier.padding(vertical = Rahal.space.md),
                 )
             }
@@ -341,7 +341,7 @@ private fun RowScope.ToolChip(icon: Int, label: String, onClick: () -> Unit) {
         Spacer(Modifier.height(Rahal.space.xs))
         Text(
             label,
-            style = MaterialTheme.typography.labelMedium,
+            style = Rahal.type.label,
             color = Rahal.colors.ink,
             maxLines = 2,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
@@ -369,7 +369,7 @@ private fun SectionChip(text: String, count: Int, selected: Boolean, onClick: ()
             text,
             color = if (selected) Rahal.colors.onBrand else Rahal.colors.ink,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-            style = MaterialTheme.typography.bodyMedium,
+            style = Rahal.type.body,
             maxLines = 1,
         )
         Spacer(Modifier.width(Rahal.space.sm))
@@ -377,7 +377,7 @@ private fun SectionChip(text: String, count: Int, selected: Boolean, onClick: ()
             count.toString(),
             color = if (selected) Rahal.colors.brand else Rahal.colors.inkMuted,
             fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.labelSmall,
+            style = Rahal.type.badge,
             modifier = Modifier
                 .clip(Rahal.shape.pill)
                 .background(if (selected) Rahal.colors.onBrand else Rahal.colors.field)
@@ -428,7 +428,7 @@ private fun ItemCard(
                     badge,
                     // **حبرٌ يُقرأ على أرضه**: غامقٌ على البرتقاليّ، و`onBrand` على الأحمر.
                     color = if (item.rejected) Rahal.colors.onBrand else Rahal.colors.onLight,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = Rahal.type.badge,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     modifier = Modifier
@@ -449,7 +449,7 @@ private fun ItemCard(
                     overflow = TextOverflow.Ellipsis,
                     fontWeight = FontWeight.Bold,
                     color = Rahal.colors.ink,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = Rahal.type.body,
                 )
                 Text(
                     item.description,
@@ -457,7 +457,7 @@ private fun ItemCard(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = Rahal.type.caption,
                 )
                 Spacer(Modifier.height(Rahal.space.xs))
                 if (item.priceUsd != null) {
@@ -467,7 +467,7 @@ private fun ItemCard(
                         item.price,
                         color = Rahal.colors.brand,
                         fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = Rahal.type.body,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -476,7 +476,7 @@ private fun ItemCard(
                     Text(
                         "← " + item.customerPrice,
                         color = Rahal.colors.success,
-                        style = MaterialTheme.typography.labelSmall,
+                        style = Rahal.type.badge,
                         maxLines = 1,
                     )
                 }
@@ -484,7 +484,7 @@ private fun ItemCard(
                     Text(
                         item.reviewNote,
                         color = Rahal.colors.danger,
-                        style = MaterialTheme.typography.bodySmall,
+                        style = Rahal.type.caption,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -497,7 +497,7 @@ private fun ItemCard(
                     stringResource(if (item.available) R.string.mn_available else R.string.mn_unavailable),
                     color = if (item.available) Rahal.colors.success else Rahal.colors.inkMuted,
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.labelMedium,
+                    style = Rahal.type.label,
                     maxLines = 1,
                     modifier = Modifier.weight(1f),
                 )

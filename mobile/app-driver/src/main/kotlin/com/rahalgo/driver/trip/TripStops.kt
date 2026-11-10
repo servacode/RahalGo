@@ -45,7 +45,7 @@ internal fun StopsBlock(
     onStep: (to: String, stop: String) -> Unit,
 ) {
     val stops = order.stops ?: return
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
         Text(
             stringResource(R.string.stops_title),
             color = Rahal.colors.inkMuted,
@@ -87,7 +87,7 @@ private fun StopCard(
             .fillMaxWidth()
             .clip(Rahal.shape.md)
             .background(tint.copy(alpha = 0.10f))
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(horizontal = Rahal.space.md, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Row(

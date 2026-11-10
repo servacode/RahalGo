@@ -126,9 +126,9 @@ fun ChoiceCard(
         )
         Spacer(Modifier.width(Rahal.space.md))
         Column(Modifier.weight(1f)) {
-            Text(title, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium, color = Rahal.colors.ink)
+            Text(title, fontWeight = FontWeight.Bold, style = Rahal.type.sectionTitle, color = Rahal.colors.ink)
             if (sub.isNotBlank()) {
-                Text(sub, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
+                Text(sub, color = Rahal.colors.inkMuted, style = Rahal.type.caption)
             }
         }
     }
@@ -197,7 +197,7 @@ private fun IconChoiceCard(c: IconChoice, enabled: Boolean, modifier: Modifier) 
                 c.title,
                 color = Rahal.colors.ink,
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.titleMedium,
+                style = Rahal.type.sectionTitle,
                 textAlign = TextAlign.Center,
             )
             if (c.sub.isNotBlank()) {
@@ -205,7 +205,7 @@ private fun IconChoiceCard(c: IconChoice, enabled: Boolean, modifier: Modifier) 
                 Text(
                     c.sub,
                     color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = Rahal.type.caption,
                     textAlign = TextAlign.Center,
                 )
             }
@@ -477,7 +477,7 @@ fun HoursPlanner(plan: HoursPlan, enabled: Boolean = true) {
         Text(
             stringResource(R.string.hours_friday_q),
             fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.titleMedium,
+            style = Rahal.type.sectionTitle,
         )
         Spacer(Modifier.height(Rahal.space.sm))
         IconChoicePair(
@@ -558,7 +558,7 @@ private fun DayRow(
             dayName(d.dayOfWeek),
             color = if (open) Rahal.colors.ink else Rahal.colors.inkMuted,
             fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.bodyMedium,
+            style = Rahal.type.body,
             maxLines = 1,
             modifier = Modifier.weight(1f),
         )
@@ -576,7 +576,7 @@ private fun DayRow(
                 rangeText(d),
                 color = Rahal.colors.brand,
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.body,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
                 modifier = Modifier
@@ -591,7 +591,7 @@ private fun DayRow(
             Text(
                 stringResource(R.string.hours_off),
                 color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.body,
                 textAlign = TextAlign.Center,
                 modifier = Modifier
                     .widthIn(min = 140.dp)
@@ -710,13 +710,13 @@ fun TimeField(value: String, onChange: (String) -> Unit) {
             .width(96.dp)
             .border(1.dp, Rahal.colors.line, Rahal.shape.sm)
             .clickable { picker() }
-            .padding(vertical = 8.dp),
+            .padding(vertical = Rahal.space.sm),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = clock12(shown),
             color = Rahal.colors.ink,
-            style = MaterialTheme.typography.bodyMedium,
+            style = Rahal.type.body,
             textAlign = TextAlign.Center,
         )
     }

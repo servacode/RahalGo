@@ -22,7 +22,6 @@ import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
@@ -74,7 +73,7 @@ internal const val MIN_RATE = 10.0
 @Composable
 internal fun BigChoice(question: String, options: List<Pair<String, Boolean>>, enabled: Boolean, onPick: (Int) -> Unit) {
     Text(question, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(Rahal.space.sm))
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         options.forEachIndexed { i, (label, on) ->
             if (on) {
@@ -89,7 +88,7 @@ internal fun BigChoice(question: String, options: List<Pair<String, Boolean>>, e
         }
     }
     if (options.none { it.second }) {
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(Rahal.space.xs))
         Text(stringResource(R.string.choose_one), color = Rahal.colors.danger, style = MaterialTheme.typography.bodySmall)
     }
 }

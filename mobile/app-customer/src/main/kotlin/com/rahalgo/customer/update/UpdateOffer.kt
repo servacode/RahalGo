@@ -141,7 +141,7 @@ fun UpdateStrip() {
             .fillMaxWidth()
             .background(Rahal.colors.brand)
             .clickable { UpdateOffer.update(context) }
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .padding(horizontal = 14.dp, vertical = Rahal.space.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
@@ -151,7 +151,7 @@ fun UpdateStrip() {
             fontWeight = FontWeight.Bold,
             modifier = Modifier.weight(1f),
         )
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(Rahal.space.sm))
         Text(
             text = "✕",
             color = Rahal.colors.onBrand,

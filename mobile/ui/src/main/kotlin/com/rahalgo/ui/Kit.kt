@@ -50,6 +50,62 @@ import androidx.compose.ui.unit.Dp
 
 /**
  * ══════════════════════════════════════════════════════════════════════
+ * **نظامُ التصميم الموحَّد — ورقةُ الاستعمال** (٢٠٢٦-١١-١١)
+ * ══════════════════════════════════════════════════════════════════════
+ *
+ * (مبدأُ المالك: «التصميم لازم يكون موحّد بكلّ التطبيقات، مشان إذا قرّرت يوماً طوّر التصميم
+ *  يتطوّر معي بسهولة».)
+ *
+ * **كلُّ شاشةٍ تُبنى من هذه القطع وحدَها، وكلُّ قيمةٍ من `Rahal.*`.** ومن غيّر الشكلَ غيّره في
+ * ملفٍّ واحد: الألوانُ `design/Palette.kt` · الخطُّ `design/Type.kt` · المسافاتُ والزوايا والظلالُ
+ * والمقاساتُ `design/Tokens.kt` · شكلُ القطعة في ملفّها هنا.
+ *
+ * # التوكنز (`com.rahalgo.design.Rahal`)
+ * ```
+ * Rahal.colors.ink / inkMuted / brand / accent / accentInk / success / danger / canvas / surface / line
+ * Rahal.type.display · headline · screenTitle · sectionTitle · cardTitle
+ *           bodyLarge · body · bodyStrong · caption(13) · meta(12) · label · badge · button
+ *           price · priceLarge
+ * Rahal.space.none · xxs(2) · xs(4) · sm(8) · md(12) · lg(16) · xl(24) · xxl(32) · gutter(16) · tail(32)
+ * Rahal.shape.sm(10) · md(14) · lg(20) · pill · sheet
+ * Rahal.elevation.none · low · card · raised · overlay
+ * Rahal.icon.xs(16) · sm(20) · md(24) · lg(32) · xl(48)
+ * Rahal.size.touch(48) · action · iconBox · avatarSm/Md/Lg · thumb · tileMin · dot · count
+ * ```
+ *
+ * # القطع
+ * ```
+ * Screen { … }                                   // جسدُ الشاشة: تمريرٌ وحشوةٌ وذيل        (Kit.kt)
+ * ScreenTitle("طلباتي", "سطرُ شرح", onBack = …)   // عنوانُ الشاشة بسهمٍ وسطرٍ اختياريّين (Kit.kt)
+ * PageHeader("الإشعارات", onBack = …)            // رأسُ صفحةٍ منبثقةٍ بلا شرح             (PageHeader.kt)
+ * SectionHeader("الأقسام", action = "الكل") {…}   // عنوانُ مجموعة                            (Rows.kt)
+ * RahalCard(variant = CardVariant.Tinted, tone = StatusTone.Warning) { … }            (Cards.kt)
+ * ListRow("عناويني", icon = …, chevron = true) { … }                                    (Rows.kt)
+ * IconTile(icon, "الدوام", "٩ص–١١م") { … }       // مربّعُ وظيفة                             (Tiles.kt)
+ * StatTile("طلبات اليوم", "12")                   // مربّعُ رقم — في StatRow                   (Tiles.kt)
+ * ActionRow { IconAction(…){}; IconAction(…){} } // صفٌّ بخاناتٍ متساوية                      (Tiles.kt)
+ * IconAction(R.drawable.ic_phone, "اتّصال") { … } // زرُّ أيقونةٍ مدوَّر                       (Tiles.kt)
+ * AvatarWithEdit(url, name, "تغيير الشعار") { … } // شعارٌ وعليه كاميرا                        (Tiles.kt)
+ * IconBox(icon, tint)                            // أيقونةٌ في مربّعٍ ملوّن                   (Tiles.kt)
+ * StatusChip("مُسلَّم", StatusTone.Success) · Badge("جديد") · StatusDot("يعمل", StatusTone.Success) (Chips.kt)
+ * LabeledField("الاسم", value, onChange)         // حقلٌ بوسمٍ دائماً                          (Fields.kt)
+ * MoneyText(15000) · DualPrice(usd, syp)         // المالُ بشكلٍ واحد                         (DualPrice.kt)
+ * BottomActionBar { RahalButton(…) { … } }       // الفعلُ الأساسيُّ الثابتُ أسفلَ الشاشة     (Rows.kt)
+ * SheetHeader("اختر العنوان", onClose = …)       // رأسُ اللوح الصاعد                          (Rows.kt)
+ * RahalDivider()                                 // الفاصلُ الواحد                             (Rows.kt)
+ * EmptyState(…) · ErrorState(…) · Skeleton/SkeletonList · LoadState(…)                (State.kt · Kit.kt)
+ * RahalButton · RahalOutlineButton · RahalTextButton · RahalSmallButton · RahalDialog   (Buttons.kt)
+ * KeyValue · SumLine · Note · Bar · CountBadge                                         (Kit.kt)
+ * ```
+ *
+ * # الممنوع في التطبيقات (حارسُ `DesignSystemGuardTest`)
+ * - **`Card`/`AlertDialog`/`Button`/`TextButton`/`OutlinedButton` من Material** — القطعُ أعلاه بدلُها.
+ * - **`fontSize = 14.sp`** — دورٌ من `Rahal.type`.
+ * - **`Color(0xFF…)`** — لونٌ من `Rahal.colors`.
+ */
+
+/**
+ * ══════════════════════════════════════════════════════════════════════
  * **عُدّةُ الشاشات — قطعٌ تُكتب مرّةً وتُستعمل في كلّ قسم**
  * ══════════════════════════════════════════════════════════════════════
  *
@@ -73,10 +129,10 @@ import androidx.compose.ui.unit.Dp
  */
 
 /** حشوةُ الشاشة — **رقمٌ واحدٌ لا يُخمَّن في كلّ ملفّ.** */
-val ScreenPad = 16.dp
+val ScreenPad: Dp = Rahal.space.gutter
 
 /** **دائرةُ أيقونة الفراغ** في `Empty`. */
-internal val EmptyIconCircle = 72.dp
+internal val EmptyIconCircle: Dp = Rahal.size.stateCircle
 
 /**
  * **جسدُ القسم** — عمودٌ يملأ الشاشةَ ويمرّر ما زاد.
@@ -93,37 +149,51 @@ fun Screen(modifier: Modifier = Modifier, content: @Composable ColumnScope.() ->
             .padding(ScreenPad),
     ) {
         content()
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(Rahal.space.tail))
     }
 }
 
 /**
- * **عنوانُ القسم وسطرُ شرحه.**
+ * **عنوانُ الشاشة — وسهمُ رجوعٍ وسطرُ شرحٍ اختياريّان.**
  *
- * **والشرحُ يقول ما هذه الشاشة بالنسبة إليه** — لا ما اسمُها: الاسمُ
- * فوقه في القائمة التي فتحها منها.
+ * ```
+ * ScreenTitle("طلباتي")
+ * ScreenTitle("المحفظة", "رصيدُك وحركاتُك")
+ * ScreenTitle("تفاصيل المتجر", onBack = { nav.pop() })
+ * ```
+ *
+ * **والشرحُ يقول ما هذه الشاشة بالنسبة إليه** — لا ما اسمُها: الاسمُ فوقه في القائمة التي فتحها منها.
+ * **وتحته مسافةٌ ثابتة** — فلا يضعها النداء.
+ *
+ * @param hint سطرُ الشرح تحت العنوان (subtitle) — وفارغٌ لا سطر.
+ * @param onBack سهمُ الرجوع — و`null` لا سهم.
+ * @param trailing ما يقف في طرف العنوان — زرٌّ صغير.
  */
 @Composable
-fun ScreenTitle(title: String, hint: String = "") {
+fun ScreenTitle(
+    title: String,
+    hint: String = "",
+    modifier: Modifier = Modifier,
+    onBack: (() -> Unit)? = null,
+    trailing: (@Composable RowScope.() -> Unit)? = null,
+) {
     // **وعنوانٌ فارغٌ لا يُرسم** — ولا يترك سطراً فارغاً فوق الصفحة (رأسُها `PageHeader`).
-    if (title.isBlank() && hint.isEmpty()) return
-    if (title.isNotBlank()) {
-        Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+    if (title.isBlank() && hint.isEmpty() && onBack == null) return
+    Column(modifier.fillMaxWidth()) {
+        if (title.isNotBlank() || onBack != null) {
+            PageHeader(title = title, onBack = onBack, trailing = trailing)
+        }
+        if (hint.isNotEmpty()) {
+            Spacer(Modifier.height(Rahal.space.xs))
+            Text(hint, color = Rahal.colors.inkMuted, style = Rahal.type.body)
+        }
+        Spacer(Modifier.height(Rahal.space.md))
     }
-    if (hint.isNotEmpty()) {
-        Spacer(Modifier.height(4.dp))
-        Text(hint, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodyMedium)
-    }
-    Spacer(Modifier.height(14.dp))
 }
 
-/** **عنوانُ مجموعةٍ داخل القسم.** */
+/** **عنوانُ مجموعةٍ داخل القسم** — اسمٌ قديمٌ لـ[SectionHeader]، والجديدُ يُكتب بها. */
 @Composable
-fun SectionTitle(text: String) {
-    Spacer(Modifier.height(18.dp))
-    Text(text, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-    Spacer(Modifier.height(8.dp))
-}
+fun SectionTitle(text: String) = SectionHeader(text)
 
 /**
  * ══════════════════════════════════════════════════════════════════════
@@ -152,7 +222,7 @@ fun CountBadge(
     count: Int,
     color: Color,
     /** **قطرُها** — والجرسُ أصغرُ من السلّة لأنّ أيقونتَه أصغر. */
-    size: Dp = 18.dp,
+    size: Dp = Rahal.size.count,
     modifier: Modifier = Modifier,
 ) {
     if (count <= 0) return
@@ -175,12 +245,8 @@ fun CountBadge(
 }
 
 /**
- * **بطاقةٌ** — أرضٌ بيضاءُ بحدٍّ رفيع، كبطاقات «متجري» والعروض والإعدادات.
- *
- * (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩: كانت أرضاً زرقاءَ خفيفةً بلا حدّ، وبطاقاتُ
- *  الرئيسية بيضاءَ بحدّ — **لغتا بطاقاتٍ في تطبيقٍ واحد.**) فصارت لغةً واحدة.
- *
- * **و`tone` لمعنى حال** (تمامٌ أو تنبيه): أرضٌ خفيفةٌ من لونه وحدٌّ منه.
+ * **بطاقةٌ** — اسمٌ قديمٌ لـ[RahalCard] (`Cards.kt`): مرفوعةٌ بلا `tone`، **وملوّنةٌ بلا ظلٍّ بـ`tone`**
+ * (بطاقةُ معلومةٍ بظلٍّ تُقرأ زرّاً — D9). والجديدُ يُكتب بـ`RahalCard`.
  */
 @Composable
 fun Card(
@@ -188,11 +254,12 @@ fun Card(
     tone: Color? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(
-        modifier
-            .fillMaxWidth()
-            .cardSurface(tone = tone)
-            .padding(Rahal.space.md),
+    RahalCardSurface(
+        modifier = modifier,
+        variant = if (tone == null) CardVariant.Elevated else CardVariant.Tinted,
+        toneColor = tone,
+        onClick = null,
+        padding = Rahal.space.md,
         content = content,
     )
 }
@@ -204,42 +271,19 @@ fun Card(
  * **وموضعٌ واحدٌ لا نسخ**: كانت كلُّ شاشةٍ ترسم بطاقتَها بقصٍّ وخلفيّةٍ وحدٍّ من عندها،
  * فاختلف الظلُّ والزاويةُ بين شاشةٍ وشاشة. **والظلُّ يسبق القصَّ** وإلّا قُصَّ معه.
  * **و`tone` لمعنى حال** (تمامٌ أو تنبيه): أرضٌ خفيفةٌ من لونه وحدٌّ منه.
+ * (وللأشكال الأخرى `Modifier.cardVariant` في `Cards.kt`.)
  */
 @Composable
 fun Modifier.cardSurface(
     shape: androidx.compose.ui.graphics.Shape = Rahal.shape.lg,
     tone: Color? = null,
-    elevation: Dp = 3.dp,
+    elevation: Dp = Rahal.elevation.card,
 ): Modifier = this
     .shadow(elevation, shape, clip = false)
     .clip(shape)
     .background(Rahal.colors.canvas)
     .then(if (tone != null) Modifier.background(tone.copy(alpha = 0.06f)) else Modifier)
     .border(Rahal.stroke.hair, tone?.copy(alpha = 0.30f) ?: Rahal.colors.line, shape)
-
-/** **أيقونةٌ في مربّعٍ مدوَّرٍ بلونها** — لغةُ الأيقونات في «متجري» والقائمة والإشعارات. */
-@Composable
-fun IconTile(
-    icon: Int,
-    tint: Color,
-    modifier: Modifier = Modifier,
-    size: Dp = 40.dp,
-) {
-    Box(
-        modifier
-            .size(size)
-            .clip(Rahal.shape.md)
-            .background(tint.copy(alpha = 0.12f)),
-        contentAlignment = Alignment.Center,
-    ) {
-        androidx.compose.material3.Icon(
-            painter = androidx.compose.ui.res.painterResource(icon),
-            contentDescription = null,
-            tint = tint,
-            modifier = Modifier.size(size * 0.55f),
-        )
-    }
-}
 
 /**
  * **سطرٌ فيه اسمٌ وقيمة** — الاسمُ باهتٌ والقيمةُ ظاهرة.
@@ -249,12 +293,12 @@ fun IconTile(
 @Composable
 fun KeyValue(label: String, value: String, valueColor: Color = Color.Unspecified) {
     Row(
-        Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        Modifier.fillMaxWidth().padding(vertical = Rahal.space.xs),
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(label, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodyMedium)
+        Text(label, color = Rahal.colors.inkMuted, style = Rahal.type.body)
         // **والقيمةُ أثقلُ من وسمها** (تدقيق D3) — كانا بوزنٍ واحد فيُقرأ الوسمُ قبل القيمة.
-        Text(value, color = valueColor, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+        Text(value, color = valueColor, style = Rahal.type.body, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -400,7 +444,7 @@ fun LoadState(loading: Boolean, error: String, onRetry: (() -> Unit)? = null) {
                 textAlign = TextAlign.Center,
             )
             if (onRetry != null) {
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(Rahal.space.md))
                 RahalOutlineButton(onClick = onRetry) {
                     Text(stringResource(R.string.act_retry))
                 }
@@ -458,19 +502,14 @@ fun Bar(ratio: Float, color: Color) {
     }
 }
 
-/** **رقاقةُ حال** — كلمةٌ في أرضٍ من لونها. */
+/**
+ * **رقاقةُ حال بلون** — اسمٌ قديمٌ؛ والجديدُ [StatusChip] بنبرة (`Chips.kt`). **والبرتقاليُّ نصّاً بحبره
+ * الغامق** — البرتقاليُّ نفسُه على الأبيض لا يُقرأ.
+ */
 @Composable
 fun Chip(text: String, color: Color) {
-    Text(
-        text = text,
-        color = color,
-        style = MaterialTheme.typography.labelMedium,
-        fontWeight = FontWeight.Bold,
-        modifier = Modifier
-            .clip(Rahal.shape.sm)
-            .background(color.copy(alpha = 0.12f))
-            .padding(horizontal = 8.dp, vertical = 3.dp),
-    )
+    val ink = if (color == Rahal.colors.accent) Rahal.colors.accentInk else color
+    ChipBody(text = text, ink = ink, fill = color)
 }
 
 /** **عنوانُ يومٍ فوق حركاته** — «اليوم» أوضحُ من تاريخٍ كامل. */
@@ -480,10 +519,10 @@ fun DayHead(text: String) {
     Text(
         text = text,
         color = Rahal.colors.inkMuted,
-        style = MaterialTheme.typography.labelLarge,
+        style = Rahal.type.button,
         fontWeight = FontWeight.Bold,
     )
-    Spacer(Modifier.height(4.dp))
+    Spacer(Modifier.height(Rahal.space.xs))
 }
 
 /**
@@ -514,42 +553,7 @@ fun StatBox(
     value: String,
     modifier: Modifier = Modifier,
     color: Color = Rahal.colors.ink,
-) {
-    Column(
-        modifier
-            .fillMaxHeight()
-            // **مربّعٌ بصبغة العلامة** لا بطاقةٌ بظلّ — فيصلح داخل بطاقةٍ وعلى الأرض الرماديّة معاً.
-            .clip(Rahal.shape.md)
-            .background(Rahal.colors.brand.copy(alpha = 0.07f))
-            .padding(horizontal = 8.dp, vertical = 12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        // **والاسمُ سطران دائماً** — (بلاغُ المالك ٢٠٢٦-٠٨-٣١: «مربّعٌ
-        // أصغرُ من مربّع، ليسا بنفس الحجم والترتيب»).
-        //
-        // **واسمٌ يلتفّ سطرين وآخرُ سطراً يجعل مربّعَه أطول** — فيُقرأ
-        // الفرقُ معنًى وليس فيه معنى. **فيُحجَز سطران للجميع.**
-        Text(
-            text = label,
-            color = Rahal.colors.inkMuted,
-            style = MaterialTheme.typography.bodySmall,
-            textAlign = TextAlign.Center,
-            minLines = 2,
-            maxLines = 2,
-        )
-        Spacer(Modifier.height(6.dp))
-        // **والرقمُ بحجمٍ واحدٍ مهما طال** — **وخطّان مختلفان في صفٍّ
-        // واحدٍ يقولان إنّ أحدَ الرقمين أهمّ**، وليس كذلك.
-        Text(
-            text = value,
-            color = color,
-            style = MaterialTheme.typography.titleMedium,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-        )
-    }
-}
+) = StatTile(label = label, value = value, modifier = modifier, valueColor = color)
 
 /**
  * **صفُّ مربّعاتٍ متساويةٍ حجماً وترتيبا.**
@@ -566,7 +570,7 @@ fun StatBox(
 fun StatRow(modifier: Modifier = Modifier, content: @Composable RowScope.() -> Unit) {
     Row(
         modifier.fillMaxWidth().height(IntrinsicSize.Min),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
         content = content,
     )
 }
@@ -601,7 +605,7 @@ fun SumLine(
     color: Color = Color.Unspecified,
 ) {
     Row(
-        Modifier.fillMaxWidth().padding(vertical = if (strong) 4.dp else 2.dp),
+        Modifier.fillMaxWidth().padding(vertical = if (strong) Rahal.space.xs else Rahal.space.xxs),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -610,9 +614,9 @@ fun SumLine(
             color = if (strong) Rahal.colors.ink else Rahal.colors.inkMuted,
             fontWeight = if (strong) FontWeight.Bold else FontWeight.Normal,
             style = if (strong) {
-                MaterialTheme.typography.bodyLarge
+                Rahal.type.bodyLarge
             } else {
-                MaterialTheme.typography.bodyMedium
+                Rahal.type.body
             },
         )
         Text(
@@ -620,9 +624,9 @@ fun SumLine(
             color = if (color != Color.Unspecified) color else Rahal.colors.ink,
             fontWeight = if (strong) FontWeight.Bold else FontWeight.Medium,
             style = if (strong) {
-                MaterialTheme.typography.titleMedium
+                Rahal.type.sectionTitle
             } else {
-                MaterialTheme.typography.bodyMedium
+                Rahal.type.body
             },
         )
     }

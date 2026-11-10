@@ -373,7 +373,7 @@ internal fun ToolHeader(title: String, onBack: () -> Unit) {
         Text(
             title,
             fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.titleLarge,
+            style = Rahal.type.screenTitle,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -405,14 +405,14 @@ internal fun ToolActions(
 internal fun ToolError(text: String) {
     if (text.isEmpty()) return
     Spacer(Modifier.height(Rahal.space.sm))
-    Text(text, color = Rahal.colors.danger, style = MaterialTheme.typography.bodySmall)
+    Text(text, color = Rahal.colors.danger, style = Rahal.type.caption)
 }
 
 /** **زرّا الأدوات** تحت زرّ المشروبات (المندوب). */
 @Composable
 fun MenuToolsButtons(presets: OptionPresetsState, bulk: BulkPriceState) {
     Spacer(Modifier.height(6.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+    Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm), modifier = Modifier.fillMaxWidth()) {
         RahalOutlineButton(onClick = { presets.show() }, modifier = Modifier.weight(1f)) {
             Text(stringResource(R.string.presets_title), maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
@@ -435,7 +435,7 @@ fun OptionPresetsEditor(state: OptionPresetsState) {
     Screen {
         ToolHeader(stringResource(R.string.presets_title)) { state.close() }
         if (state.loading && !state.loaded) {
-            Text(stringResource(R.string.presets_loading), color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
+            Text(stringResource(R.string.presets_loading), color = Rahal.colors.inkMuted, style = Rahal.type.caption)
         }
         Column(verticalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
             state.all.forEach { p ->
@@ -484,7 +484,7 @@ private fun PresetCard(p: OptionPreset, on: Boolean, enabled: Boolean, onToggle:
                 Text(
                     p.name,
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = Rahal.type.bodyLarge,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false),
@@ -498,11 +498,11 @@ private fun PresetCard(p: OptionPreset, on: Boolean, enabled: Boolean, onToggle:
             }
             val opts = p.options.joinToString(" · ") { it.name }
             if (opts.isNotBlank()) {
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(Rahal.space.xxs))
                 Text(
                     opts,
                     color = Rahal.colors.inkMuted,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = Rahal.type.caption,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -588,7 +588,7 @@ fun BulkPriceEditor(state: BulkPriceState, sections: List<PlatformSectionRef>) {
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(Rahal.space.md))
-        Text(stringResource(R.string.bulk_scope), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+        Text(stringResource(R.string.bulk_scope), fontWeight = FontWeight.Bold, style = Rahal.type.button)
         RadioRow(state.sectionId.isEmpty(), free, stringResource(R.string.bulk_all)) {
             state.sectionId = ""; state.changed()
         }
@@ -614,7 +614,7 @@ fun BulkPriceEditor(state: BulkPriceState, sections: List<PlatformSectionRef>) {
             text = {
                 Text(
                     stringResource(R.string.bulk_ask_count, state.askCount.toString()),
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = Rahal.type.bodyLarge,
                 )
             },
             confirmButton = {
@@ -670,7 +670,7 @@ private fun ChoiceBox(
         Text(
             label,
             fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.titleMedium,
+            style = Rahal.type.sectionTitle,
             color = if (on) Rahal.colors.brand else Rahal.colors.ink,
         )
     }

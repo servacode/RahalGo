@@ -90,7 +90,7 @@ fun Avatar(url: String?, name: String, size: Int = 28) {
                 text = name.trim().take(1),
                 color = Rahal.colors.brand,
                 fontWeight = FontWeight.Bold,
-                style = MaterialTheme.typography.labelLarge,
+                style = Rahal.type.button,
             )
         }
     }

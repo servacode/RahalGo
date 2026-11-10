@@ -255,17 +255,17 @@ fun AddressSheet(
                         modifier = Modifier.size(24.dp),
                     )
                 }
-                Spacer(Modifier.size(12.dp))
+                Spacer(Modifier.size(Rahal.space.md))
                 Column(Modifier.weight(1f)) {
                     Text(
                         stringResource(R.string.addr_sheet_title),
                         fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleLarge,
+                        style = Rahal.type.screenTitle,
                     )
                     Text(
                         stringResource(R.string.addr_sheet_hint),
                         color = Rahal.colors.inkMuted,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = Rahal.type.body,
                     )
                 }
             }
@@ -287,7 +287,7 @@ fun AddressSheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable(onClick = onRetry)
-                            .padding(vertical = 24.dp),
+                            .padding(vertical = Rahal.space.xl),
                     )
                 } else if (addresses.isEmpty()) {
                     EmptyAddresses()
@@ -315,7 +315,7 @@ fun AddressSheet(
 
             // **وحشوةُ شريط التنقّل** — **وزرٌّ تحت شريط النظام يُلمس
             // فيُفتح شيءٌ آخر.**
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(Rahal.space.xl))
         }
     }
 }
@@ -329,7 +329,7 @@ fun AddressSheet(
 @Composable
 private fun EmptyAddresses() {
     Column(
-        Modifier.fillMaxWidth().padding(vertical = 16.dp),
+        Modifier.fillMaxWidth().padding(vertical = Rahal.space.lg),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
@@ -346,18 +346,18 @@ private fun EmptyAddresses() {
                 modifier = Modifier.size(44.dp),
             )
         }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(Rahal.space.lg))
         Text(
             stringResource(R.string.addr_sheet_empty),
             fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.titleMedium,
+            style = Rahal.type.sectionTitle,
         )
         Spacer(Modifier.height(6.dp))
         Text(
             stringResource(R.string.addr_sheet_empty_hint),
             color = Rahal.colors.inkMuted,
             textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.bodyMedium,
+            style = Rahal.type.body,
         )
     }
 }
@@ -369,7 +369,7 @@ private fun AddressChoice(a: Address, busy: Boolean, onPick: (Address) -> Unit) 
         Modifier
             .fillMaxWidth()
             .clickable(enabled = !busy) { onPick(a) }
-            .padding(vertical = 12.dp),
+            .padding(vertical = Rahal.space.md),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
@@ -378,24 +378,24 @@ private fun AddressChoice(a: Address, busy: Boolean, onPick: (Address) -> Unit) 
             tint = if (a.isDefault) Rahal.colors.accent else Rahal.colors.inkMuted,
             modifier = Modifier.size(22.dp),
         )
-        Spacer(Modifier.size(12.dp))
+        Spacer(Modifier.size(Rahal.space.md))
         Column(Modifier.weight(1f)) {
             Text(
                 text = stringResource(addressKindLabel(a.kind)),
                 fontWeight = FontWeight.Medium,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.body,
             )
             Text(
                 text = a.text,
                 color = Rahal.colors.inkMuted,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.bodySmall,
+                style = Rahal.type.caption,
             )
         }
         // **علامةُ صحٍّ واضحة على المختار (تدقيق D18)** — اللونُ وحدَه لا يُقرأ لمن لا يميّز الألوان.
         if (a.isDefault) {
-            Spacer(Modifier.size(8.dp))
+            Spacer(Modifier.size(Rahal.space.sm))
             Icon(
                 painter = painterResource(R.drawable.ic_check_mark),
                 contentDescription = stringResource(R.string.addr_selected),
@@ -488,12 +488,12 @@ fun AddressCard(
             tint = Rahal.colors.accent,
             modifier = Modifier.size(22.dp),
         )
-        Spacer(Modifier.size(12.dp))
+        Spacer(Modifier.size(Rahal.space.md))
         Column(Modifier.weight(1f)) {
             Text(
                 stringResource(R.string.top_deliver_to),
                 color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.labelSmall,
+                style = Rahal.type.badge,
             )
             // **واسمُ العنوان لا سطرُه** — (طلبُ المالك ٢٠٢٦-٠٨-١٨):
             // **وسطرٌ فيه منطقةٌ وشارعٌ وطابقٌ يُقرأ نصفُه**، والاسمُ
@@ -504,7 +504,7 @@ fun AddressCard(
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.bodyMedium,
+                style = Rahal.type.body,
             )
         }
     }
@@ -609,7 +609,7 @@ internal fun AddressEditor(
                         // أعلى من كلّ زرٍّ آخرَ في التطبيق** بلا سبب.
                         modifier = Modifier.fillMaxWidth(),
                     ) { Text(stringResource(R.string.addr_save)) }
-                    Spacer(Modifier.height(24.dp))
+                    Spacer(Modifier.height(Rahal.space.xl))
                 }
             }
         }
@@ -641,14 +641,14 @@ internal fun AddressEditor(
 
     // **وتغييرُ الموضع بابٌ ظاهرٌ في التعديل.**
     if (picker != null) {
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         RahalTextButton(onClick = { onMap = true }) {
             Text(stringResource(R.string.addr_change_point))
         }
     }
 
-    Spacer(Modifier.height(12.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Spacer(Modifier.height(Rahal.space.md))
+    Row(horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm)) {
         RahalButton(onClick = save, enabled = canSave, modifier = Modifier.weight(1f)) {
             Text(stringResource(R.string.addr_save))
         }
@@ -678,15 +678,15 @@ private fun AddressFields(
     Text(
         stringResource(R.string.addr_confirm_title),
         fontWeight = FontWeight.Bold,
-        style = MaterialTheme.typography.titleLarge,
+        style = Rahal.type.screenTitle,
     )
     Text(
         stringResource(R.string.addr_confirm_hint),
         color = Rahal.colors.inkMuted,
-        style = MaterialTheme.typography.bodyMedium,
+        style = Rahal.type.body,
     )
 
-    Spacer(Modifier.height(16.dp))
+    Spacer(Modifier.height(Rahal.space.lg))
     FieldLabel(R.string.addr_area, required = true)
     OutlinedTextField(
         value = area,
@@ -697,7 +697,7 @@ private fun AddressFields(
         modifier = Modifier.fillMaxWidth(),
     )
 
-    Spacer(Modifier.height(12.dp))
+    Spacer(Modifier.height(Rahal.space.md))
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Column(Modifier.weight(2f)) {
             FieldLabel(R.string.addr_street, required = true)
@@ -734,13 +734,13 @@ private fun AddressFields(
     //
     // **وحقلٌ حرٌّ يجعل لكلّ زبونٍ تسميتَه** — «البيت» و«بيتي» و«المنزل»
     // ثلاثةُ أسماءٍ لشيءٍ واحد، **ولا يُفرز ولا يُعرض بأيقونة.**
-    Spacer(Modifier.height(16.dp))
+    Spacer(Modifier.height(Rahal.space.lg))
     Text(
         stringResource(R.string.addr_kind),
         fontWeight = FontWeight.Bold,
-        style = MaterialTheme.typography.bodyLarge,
+        style = Rahal.type.bodyLarge,
     )
-    Spacer(Modifier.height(8.dp))
+    Spacer(Modifier.height(Rahal.space.sm))
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         KindCard("home", R.drawable.ic_home, kind == "home", Modifier.weight(1f)) { onKind("home") }
         KindCard("work", R.drawable.ic_work, kind == "work", Modifier.weight(1f)) { onKind("work") }
@@ -755,13 +755,13 @@ private fun FieldLabel(text: Int, required: Boolean) {
         Text(
             stringResource(text),
             fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.bodyLarge,
+            style = Rahal.type.bodyLarge,
         )
         if (required) {
             Text(
                 " " + stringResource(R.string.addr_required),
                 color = Rahal.colors.accent,
-                style = MaterialTheme.typography.bodyLarge,
+                style = Rahal.type.bodyLarge,
             )
         }
     }
@@ -806,7 +806,7 @@ private fun KindCard(
             stringResource(addressKindLabel(kind)),
             color = if (on) Rahal.colors.accent else Rahal.colors.inkMuted,
             fontWeight = FontWeight.Medium,
-            style = MaterialTheme.typography.bodyMedium,
+            style = Rahal.type.body,
         )
     }
 }

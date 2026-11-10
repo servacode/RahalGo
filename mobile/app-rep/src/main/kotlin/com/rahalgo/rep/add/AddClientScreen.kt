@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -124,7 +123,7 @@ private fun PickerBlock(
             .fillMaxWidth()
             // **بطاقةٌ بظلّ كبقيّة الشاشات** — الناقصُ بصبغة التنبيه، والتامُّ بيضاءُ بلون العلامة (مراجعةُ التصميم ٢٠٢٦-١١-٠٩).
             .cardSurface(Rahal.shape.md, tone = if (done) null else edge, elevation = 2.dp)
-            .padding(12.dp),
+            .padding(Rahal.space.md),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -132,7 +131,7 @@ private fun PickerBlock(
                 color = Rahal.colors.ink,
                 style = MaterialTheme.typography.titleSmall,
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(Rahal.space.sm))
             if (done) {
                 // **وعلامةُ الصحّ نصٌّ لا أيقونة** — **ولا تُجَرّ حزمةُ
                 // `material-icons` كلُّها (آلافُ المتّجهات) لأجل رمزٍ
@@ -150,14 +149,14 @@ private fun PickerBlock(
                     modifier = Modifier
                         .clip(Rahal.shape.sm)
                         .background(Rahal.colors.accent.copy(alpha = 0.14f))
-                        .padding(horizontal = 8.dp, vertical = 2.dp),
+                        .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.xxs),
                 )
             }
         }
         // **والتلميحُ يبقى ما دام ناقصاً ويذهب حين يتمّ** — **وشرحٌ
         // يبقى بعد الفعل يزحم الشاشةَ ولا يُقرأ.**
         if (!done && hint.isNotEmpty()) {
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(Rahal.space.xs))
             Text(
                 hint,
                 color = Rahal.colors.inkMuted,
@@ -187,12 +186,12 @@ private fun PickerBlock(
                 }
             }
         }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         // **والرقائقُ تنزل سطراً جديداً** (٢٠٢٦-١٠-٢٧) — **وكانت صفّاً يمرّ
         // بالعرض** فيبقى ما بعد الرابعة خارجَ الشاشة بلا إشارةٍ أنّ غيرها موجود.
         FlowRow(
             Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
         ) { chips() }
     }
 }
@@ -255,14 +254,14 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
                         .clip(Rahal.shape.md)
                         .background(Rahal.colors.warnTint)
                         .border(Rahal.stroke.hair, Rahal.colors.danger.copy(alpha = 0.55f), Rahal.shape.md)
-                        .padding(12.dp),
+                        .padding(Rahal.space.md),
                 ) {
                     Text(
                         stringResource(R.string.ac_edit_note_title),
                         color = Rahal.colors.danger,
                         style = MaterialTheme.typography.titleSmall,
                     )
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(Rahal.space.xs))
                     Text(vm.editNote, color = Rahal.colors.ink, style = MaterialTheme.typography.bodyMedium)
                 }
             }
@@ -300,7 +299,7 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
         // **ورقائقُ لا قائمةٌ منسدلة** — كالتصنيف حرفاً: **المندوبُ واقفٌ
         // في السوق بيدٍ واحدة**، والرقاقةُ تُضغط بالإبهام والمنسدلةُ
         // تحتاج ضغطتين ونافذةً تُغطّي النموذج.
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(Rahal.space.md))
         PickerBlock(
             label = stringResource(R.string.ac_governorate),
             chosen = vm.governorates.firstOrNull { it.id == vm.pickedGovernorate }?.name,
@@ -341,7 +340,7 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
         //
         // **ونصٌّ حرٌّ يجعل «مطاعم» و«مطعم» و«مطاعم ووجبات» ثلاثةَ
         // تصنيفات** — فلا يُعثر على المتجر في بابه.
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(Rahal.space.md))
         PickerBlock(
             label = stringResource(R.string.ac_category),
             chosen = vm.categories.firstOrNull { it.id == vm.pickedCategory }?.name,
@@ -357,7 +356,7 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
             }
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(Rahal.space.md))
         OutlinedTextField(
             value = vm.store,
             onValueChange = { vm.store = it },
@@ -365,7 +364,7 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         OutlinedTextField(
             value = vm.owner,
             onValueChange = { vm.owner = it },
@@ -373,12 +372,12 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         // **ورقمُ الهاتف بالحقل المركزيّ** — **وتحقّقُ الشكل في موضعٍ
         // واحدٍ لا في كلّ نموذج.**
         PhoneField(value = vm.phone, onChange = { vm.phone = it }, enabled = !vm.busy)
 
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(Rahal.space.sm))
         OutlinedTextField(
             value = vm.area,
             onValueChange = { vm.area = it },
@@ -398,7 +397,7 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
         // **الخريطةُ الصغيرةُ نفسُها التي في معالج المتجر** (طلبُ المالك ٢٠٢٦-١٠-٢٩) —
         // الدبّوسُ في الوسط والخريطةُ تتحرّك تحته، و«حدّد موقعي بدقة» فيها؛ **ولا ملتقطَ
         // بشاشةٍ كاملة.**
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(Rahal.space.md))
         Text(
             stringResource(R.string.ac_point),
             color = Rahal.colors.ink,
@@ -443,7 +442,7 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
         // والمندوبُ في أسفلها عند الزرّ — **فضغط ولم يرَ شيئاً.** وهو عطبُ
         // التأكيد نفسُه الذي رآه المالكُ ٢٠٢٦-٠٩-٣٠: **الرسالةُ حيث تُضغط.**
         if (vm.error.isNotEmpty()) {
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(Rahal.space.md))
             Note(vm.error, Rahal.colors.danger)
         }
 
@@ -460,7 +459,7 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
             if (vm.point == null) add(stringResource(R.string.ac_point))
         }
 
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(Rahal.space.lg))
         RahalButton(
             onClick = { vm.send() },
             // ══════════════════════════════════════════════════════════
@@ -487,7 +486,7 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
         }
 
         if (missing.isNotEmpty()) {
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(Rahal.space.sm))
             Text(
                 stringResource(R.string.ac_missing, missing.joinToString("، ")),
                 color = Rahal.colors.inkMuted,

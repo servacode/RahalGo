@@ -282,7 +282,7 @@ fun ShopScreen(
         if (previewing) {
             // **لافتةُ الاستعراض الدائمة** (Batch 3c) — **أنت تتصفح سوق الرقة**،
             // والتوصيلُ إلى مدينتك غير متاح؛ وخروجٌ صريحٌ يعيدك إلى مدينتك.
-            Column(Modifier.padding(horizontal = 12.dp)) {
+            Column(Modifier.padding(horizontal = Rahal.space.md)) {
                 com.rahalgo.ui.Note(
                     stringResource(
                         com.rahalgo.ui.R.string.preview_banner_named,
@@ -290,7 +290,7 @@ fun ShopScreen(
                     ),
                     Rahal.colors.brand,
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(Rahal.space.sm))
                 com.rahalgo.ui.RahalOutlineButton(
                     onClick = { com.rahalgo.customer.CityScope.exitPreview(context); vm.load() },
                     modifier = Modifier.fillMaxWidth(),
@@ -299,7 +299,7 @@ fun ShopScreen(
             }
         } else {
             availability?.takeIf { !it.available }?.let { av ->
-                Column(Modifier.padding(horizontal = 12.dp)) {
+                Column(Modifier.padding(horizontal = Rahal.space.md)) {
                     com.rahalgo.customer.ServiceBlockNotice(
                         av,
                         address,
@@ -397,8 +397,8 @@ fun ShopScreen(
             start = 12.dp, end = 12.dp,
             bottom = 16.dp + com.rahalgo.ui.LocalChatFabInset.current,
         ),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(Rahal.space.sm),
+        verticalArrangement = Arrangement.spacedBy(Rahal.space.md),
     ) {
     // ══════════════════════════════════════════════════════════════════
     // **الرأسُ يمشي مع الشبكة** (قرارُ المالك ٢٠٢٦-١١-١١، تدقيق D1)
@@ -478,7 +478,7 @@ fun ShopScreen(
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                            .padding(horizontal = 14.dp, vertical = Rahal.space.sm),
                     )
             }
         }
@@ -564,7 +564,7 @@ fun ShopScreen(
                 // وهو عقدُ `CUST-07-030` القائم).
                 val blocked0 = availability?.takeIf { !it.available }
                 if (blocked0 != null) {
-                    Column(Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 24.dp)) {
+                    Column(Modifier.fillMaxSize().padding(horizontal = Rahal.space.md, vertical = Rahal.space.xl)) {
                         com.rahalgo.customer.ServiceBlockNotice(
                             blocked0,
                             address,
@@ -691,7 +691,7 @@ internal fun SectionRail(
 ) {
     LazyRow(
         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(Rahal.space.md),
     ) {
         items(sections, key = { it.id }) { s ->
             val on = s.id == pick
@@ -756,11 +756,11 @@ internal fun SectionRail(
                             .border(ring, Rahal.colors.brand, CircleShape)
                             // **وفراغٌ بين الحلقة والصورة** — **وحلقةٌ
                             // ملاصقةٌ تُقرأ حافّةً للصورة لا اختيارا.**
-                            .padding(ring + if (on) 1.5.dp else 0.dp)
+                            .padding(ring + if (on) 1.5.dp else Rahal.space.none)
                             .clip(CircleShape),
                     )
                 }
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(Rahal.space.xs))
                 // ══════════════════════════════════════════════════════
                 // **واسمُ القسم يُكتب كاملاً — سطرين إن لزم**
                 // ══════════════════════════════════════════════════════
@@ -934,7 +934,7 @@ internal fun ItemCard(
                             .padding(Rahal.space.xs)
                             .clip(Rahal.shape.sm)
                             .background(Rahal.colors.ink.copy(alpha = 0.88f))
-                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                            .padding(horizontal = Rahal.space.sm, vertical = 3.dp),
                     )
                 }
 
