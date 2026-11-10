@@ -206,7 +206,7 @@ fun rememberImagePicker(
     ) { ok -> if (ok) deliver(shot) }
 
     if (asking) {
-        AlertDialog(
+        com.rahalgo.ui.RahalDialog(
             onDismissRequest = { asking = false },
             title = { Text(stringResource(R.string.photo_source)) },
             confirmButton = {

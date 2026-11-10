@@ -46,7 +46,7 @@ fun TermsSheet(
     onClose: () -> Unit,
 ) {
     val blocks = parseBlocks(text = terms.text, name = terms.name, phone = terms.phone)
-    AlertDialog(
+    com.rahalgo.ui.RahalDialog(
         onDismissRequest = { if (!busy) onClose() },
         title = { Text(stringResource(R.string.terms_title), fontWeight = FontWeight.Bold) },
         text = {

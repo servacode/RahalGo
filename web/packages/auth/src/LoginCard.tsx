@@ -353,7 +353,7 @@ export function LoginCard({
          كان `text-primary` — **وتباينُه على البطاقة ٣٫٠٩** والحدُّ ٤٫٥ لنصٍّ
          بأربعةَ عشرَ بكسلاً. **و`accent-text` صُنع لهذا بعينه** (٤٫٥٨):
          التعبئةُ تبقى بالنبرة، **والنصُّ العاري يحتاج درجةً أفتح.** */
-      className="inline-flex items-center gap-1 rounded-control text-sm font-medium text-accent-text transition-colors hover:text-primary-dark hover:underline"
+      className="inline-flex items-center gap-1 rounded-control border border-accent-text bg-field px-3 py-1.5 text-sm font-medium text-accent-text transition-colors hover:bg-row-hover"
     >
       {icon}
       {label}
@@ -393,7 +393,7 @@ export function LoginCard({
           {phoneField}
           {passwordField("password", A.password, "current-password")}
           {/* يلتفّان سطرين على الشاشات الضيّقة بدل أن يتكسّر النصّان معاً */}
-          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-3 py-1">
             {rememberBox("remember")}
             {linkBtn(A.forgotPassword, () => go("reset"))}
           </div>

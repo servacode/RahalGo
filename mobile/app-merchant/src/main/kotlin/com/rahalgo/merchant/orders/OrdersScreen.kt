@@ -426,7 +426,7 @@ private fun RejectReasonDialog(
     var custom by remember { mutableStateOf(false) }
     var customText by rememberSaveable { mutableStateOf("") }
 
-    androidx.compose.material3.AlertDialog(
+    com.rahalgo.ui.RahalDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.order_reject_title)) },
         text = {

@@ -31,7 +31,7 @@ fun LiveShareDialog(
     onShare: () -> Unit,
     onDecline: () -> Unit,
 ) {
-    AlertDialog(
+    com.rahalgo.ui.RahalDialog(
         onDismissRequest = onDecline,
         title = {
             Text(stringResource(R.string.live_ask_title), fontWeight = FontWeight.Bold)

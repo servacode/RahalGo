@@ -218,7 +218,7 @@ fun AddClientScreen(vm: AddClientViewModel, pick: () -> Unit, onDone: () -> Unit
     // ينقله إلى «عملائي»**: يرى مكانَ العميل الذي سجّله، **فيفهم أين
     // سيظهر حين يُقبَل.** (طلبُ المالك ٢٠٢٦-٠٩-٣٠ نصّاً.)
     if (vm.done) {
-        AlertDialog(
+        com.rahalgo.ui.RahalDialog(
             onDismissRequest = { vm.dismissDone(); onDone() },
             title = {
                 Text(

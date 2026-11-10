@@ -608,7 +608,7 @@ fun BulkPriceEditor(state: BulkPriceState, sections: List<PlatformSectionRef>) {
         )
     }
     if (state.asking != null) {
-        AlertDialog(
+        com.rahalgo.ui.RahalDialog(
             onDismissRequest = { state.dismiss() },
             title = { Text(stringResource(R.string.bulk_title), fontWeight = FontWeight.Bold) },
             text = {

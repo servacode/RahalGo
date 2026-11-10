@@ -55,7 +55,7 @@ import com.rahalgo.ui.RahalTextButton
  */
 @Composable
 fun LocationDisclosure(onAgree: () -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
+    com.rahalgo.ui.RahalDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(

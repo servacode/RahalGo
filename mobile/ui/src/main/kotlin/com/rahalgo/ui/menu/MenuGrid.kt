@@ -58,6 +58,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
+import com.rahalgo.ui.DualPrice
 
 /**
  * **صنفٌ كما تعرضه شبكةُ الأصناف** — يحوّله كلُّ تطبيقٍ من نوعه (المتجر والمندوب).
@@ -68,6 +69,9 @@ data class GridItem(
     val description: String,
     val imageUrl: String?,
     val price: String,
+    /** **الدولاريُّ يُرسم بـ`DualPrice`** (ملاحظةُ المالك ٢٠٢٦-١١-١١) — و`null` يعني ليرةً وحدَها فيُعرض `price` نصّاً. */
+    val priceUsd: Double? = null,
+    val priceSyp: Long = 0,
     /** **سعرُ الزبون إن زاد على سعر المتجر** — يُعرض أخضرَ بجانبه (المندوب). */
     val customerPrice: String? = null,
     val available: Boolean,
@@ -456,14 +460,18 @@ private fun ItemCard(
                     style = MaterialTheme.typography.bodySmall,
                 )
                 Spacer(Modifier.height(Rahal.space.xs))
-                Text(
-                    item.price,
-                    color = Rahal.colors.brand,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                if (item.priceUsd != null) {
+                    DualPrice(item.priceUsd, item.priceSyp, stacked = true)
+                } else {
+                    Text(
+                        item.price,
+                        color = Rahal.colors.brand,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
                 if (item.customerPrice != null) {
                     Text(
                         "← " + item.customerPrice,

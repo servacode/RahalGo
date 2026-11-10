@@ -21,7 +21,7 @@ fun ConfirmDialog(
     onDismiss: () -> Unit,
     danger: Boolean = true,
 ) {
-    AlertDialog(
+    com.rahalgo.ui.RahalDialog(
         onDismissRequest = onDismiss,
         title = { Text(title, fontWeight = FontWeight.Bold) },
         text = { Text(body) },

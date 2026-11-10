@@ -363,7 +363,7 @@ fun OffersWizard(
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                 )
-                                Text(com.rahalgo.ui.menu.priceLine(picked.price, picked.priceUsd), color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
+                                com.rahalgo.ui.DualPrice(picked.priceUsd, picked.price, style = MaterialTheme.typography.bodySmall)
                             }
                             RahalTextButton(onClick = { changeItem = true }) {
                                 Text(stringResource(R.string.ow_item_change), fontWeight = FontWeight.Bold)
@@ -407,7 +407,8 @@ fun OffersWizard(
                         TileGrid(shown, columns = 2) { i, mod ->
                             ItemTile(
                                 name = i.name,
-                                price = com.rahalgo.ui.menu.priceLine(i.price, i.priceUsd),
+                                priceUsd = i.priceUsd,
+                                priceSyp = i.price,
                                 chosen = vm.pickedItem == i.id,
                                 note = when (taken[i.id]) {
                                     null -> null
@@ -698,7 +699,8 @@ private fun TypeTile(
 @Composable
 private fun ItemTile(
     name: String,
-    price: String,
+    priceUsd: Double?,
+    priceSyp: Long,
     chosen: Boolean,
     note: String?,
     onClick: () -> Unit,
@@ -726,7 +728,7 @@ private fun ItemTile(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            Text(price, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
+            com.rahalgo.ui.DualPrice(priceUsd, priceSyp, stacked = true, style = MaterialTheme.typography.bodySmall)
             if (note != null) {
                 Spacer(Modifier.height(Rahal.space.xs))
                 Text(

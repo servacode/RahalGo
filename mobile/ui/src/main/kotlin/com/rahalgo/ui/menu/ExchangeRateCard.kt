@@ -79,7 +79,7 @@ fun ExchangeRateCard(rate: Double?, busy: Boolean, editable: Boolean = true, onS
 /** **قفزةٌ في سعر الصرف** — يُسأل قبل الحفظ بمثالٍ من الأصناف. */
 @Composable
 fun RateJumpDialog(oldRate: String, newRate: String, samples: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
+    com.rahalgo.ui.RahalDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.fx_rate_jump_title)) },
         text = {
@@ -98,5 +98,4 @@ fun RateJumpDialog(oldRate: String, newRate: String, samples: String, onConfirm:
 }
 
 /** **سطرُ السعر في القائمة** — «$1.5 · 175 ل.س» للدولاريّ، والليرةُ وحدَها لغيره. */
-fun priceLine(syp: Long, usd: Double?): String =
-    if (usd != null) "$" + usdText(usd) + " · " + com.rahalgo.ui.money(syp) else com.rahalgo.ui.money(syp)
+fun priceLine(syp: Long, usd: Double?): String = com.rahalgo.ui.dualPriceText(usd, syp)

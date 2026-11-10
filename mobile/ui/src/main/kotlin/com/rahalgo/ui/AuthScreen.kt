@@ -3,6 +3,7 @@ package com.rahalgo.ui
 import com.rahalgo.design.Rahal
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -105,7 +106,9 @@ fun AuthScreen(
         AuthHeader()
         Text(
             text = title,
+            // **وثقلٌ واحدٌ لعناوين الشاشات** (D15: كان خفيفاً) — كـ`PageHeader`.
             style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
         )
         Spacer(Modifier.height(20.dp))
 
@@ -197,20 +200,21 @@ fun AuthScreen(
         // **ونسيانُ الكلمة تحت حقلها بالزاوية، فوق زرّ الدخول** (طلبُ المالك ٢٠٢٦-١١-٠٦) — بابُه هنا
         // لا في اتّصالٍ بالمكتب، **ولا يُعرض مع الرمز**: من دخل برمزٍ لا يحتاج كلمة.
         if (state.mode == LoginMode.PASSWORD || state.codeSent) {
-            androidx.compose.foundation.layout.Box(
-                Modifier.fillMaxWidth(),
-                contentAlignment = androidx.compose.ui.Alignment.CenterEnd,
-            ) {
+            // **زرٌّ صغيرٌ بنبرةٍ واحدة، محاذٍ للبداية، وفراغٌ فوقه وتحته** (ملاحظة المالك ٢٠٢٦-١١-١١: ملتصقٌ
+            // بالحقل وبزرّ الدخول، ونصٌّ برتقاليٌّ على أرضٍ زرقاء).
+            Spacer(Modifier.height(Rahal.space.md))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Start) {
                 if (state.mode == LoginMode.PASSWORD) {
-                    RahalTextButton(onClick = actions.forgot, enabled = !state.busy) {
-                        Text(stringResource(R.string.login_forgot), color = Rahal.colors.accentInk)
+                    RahalSmallButton(onClick = actions.forgot, enabled = !state.busy) {
+                        Text(stringResource(R.string.login_forgot))
                     }
                 } else {
-                    RahalTextButton(onClick = actions.resetCode, enabled = !state.busy) {
-                        Text(stringResource(R.string.login_change_number), color = Rahal.colors.inkMuted)
+                    RahalSmallButton(onClick = actions.resetCode, enabled = !state.busy, ink = Rahal.colors.inkMuted) {
+                        Text(stringResource(R.string.login_change_number))
                     }
                 }
             }
+            Spacer(Modifier.height(Rahal.space.md))
         } else {
             Spacer(Modifier.height(20.dp))
         }

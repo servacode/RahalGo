@@ -70,9 +70,9 @@ function Stars({ value, onPick, label }: { value: number; onPick: (n: number) =>
             aria-checked={value === n}
             aria-label={fill(R.star, { n: fmtNum(n) })}
             onClick={() => onPick(n)}
-            className="taparea flex h-10 w-10 items-center justify-center rounded-control hover:bg-row-hover"
+            className="taparea flex h-11 w-11 items-center justify-center rounded-control hover:bg-row-hover"
           >
-            <IconStar size={26} className={n <= value ? "fill-current text-accent" : "text-ink-dim"} />
+            <IconStar size={32} className={n <= value ? "fill-current text-accent" : "text-ink-muted"} />
           </button>
         ))}
       </div>
@@ -137,11 +137,11 @@ export function RateDialog({
         <Stars value={stars} onPick={setStars} label={R.service} />
         {driver && <Stars value={driverStars} onPick={setDriverStars} label={R.driver} />}
         {error && <Alert>{error}</Alert>}
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           <Button className="flex-1" onClick={send} disabled={busy || !ready}>
             {busy ? m.common.loading : R.send}
           </Button>
-          <Button variant="secondary" onClick={onClose} disabled={busy}>
+          <Button className="flex-1" variant="secondary" onClick={onClose} disabled={busy}>
             {R.back}
           </Button>
         </div>

@@ -77,7 +77,7 @@ object SourceNotice {
 @Composable
 fun SourceNoticeDialog() {
     val n = SourceNotice.pending ?: return
-    AlertDialog(
+    com.rahalgo.ui.RahalDialog(
         onDismissRequest = { SourceNotice.dismiss() },
         title = {
             Text(stringResource(if (n.tooMany) R.string.src_too_many_title else R.string.src_other_title))

@@ -86,9 +86,16 @@ fun InboxSheet(
             // **ولا يظهر إلّا إن كان فيه ما لم يُقرأ** — وزرٌّ يُضغط فلا
             // يتغيّر شيءٌ يُقرأ عطبا. (وهو عينُ ما تفعله صفحةُ الويب.)
             if (items.any { !it.read }) {
-                RahalTextButton(onClick = onMarkAll) {
-                    Text(stringResource(R.string.inbox_mark_all))
-                }
+                // **فعلٌ نصّيٌّ صغير** (D12: كان ثقيلاً) — لا زرٌّ بأرضٍ وحدّ.
+                Text(
+                    stringResource(R.string.inbox_mark_all),
+                    color = Rahal.colors.brand,
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier
+                        .clip(Rahal.shape.sm)
+                        .clickable(onClick = onMarkAll)
+                        .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.sm),
+                )
             }
         }
 
@@ -135,28 +142,32 @@ fun InboxSheet(
                     )
                     Spacer(Modifier.size(Rahal.space.md))
                     Column(Modifier.weight(1f)) {
-                        Text(
-                            BidiText.isolateNumbers(notice.title),
-                            fontWeight = if (notice.read) FontWeight.Normal else FontWeight.Bold,
-                            color = Rahal.colors.ink,
-                        )
+                        // **ونقطةُ غير المقروء جنب العنوان** لا في الطرف البعيد (D12).
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            if (!notice.read) {
+                                Box(
+                                    Modifier
+                                        .size(Dot)
+                                        .clip(CircleShape)
+                                        .background(Rahal.colors.brand),
+                                )
+                                Spacer(Modifier.size(Rahal.space.sm))
+                            }
+                            Text(
+                                BidiText.isolateNumbers(BidiText.fixArrows(notice.title)),
+                                fontWeight = if (notice.read) FontWeight.Normal else FontWeight.Bold,
+                                color = Rahal.colors.ink,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
                         if (notice.body.isNotBlank()) {
                             Spacer(Modifier.height(Rahal.space.xs))
                             Text(
-                                BidiText.isolateNumbers(notice.body),
+                                BidiText.isolateNumbers(BidiText.fixArrows(notice.body)),
                                 color = Rahal.colors.inkMuted,
                                 style = MaterialTheme.typography.bodyMedium,
                             )
                         }
-                    }
-                    if (!notice.read) {
-                        Box(
-                            Modifier
-                                .padding(top = Rahal.space.xs)
-                                .size(Dot)
-                                .clip(CircleShape)
-                                .background(Rahal.colors.brand),
-                        )
                     }
                 }
             }
@@ -182,6 +193,7 @@ internal fun noticeIcon(kind: String): Int = when (kind) {
     "rating" -> R.drawable.ic_star
     "account" -> R.drawable.ic_warning
     "ticket" -> R.drawable.ic_info
+    "lead" -> R.drawable.ic_user
     else -> R.drawable.ic_bell
 }
 

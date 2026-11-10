@@ -689,9 +689,9 @@ private fun SignedIn(
             // الافتراضيُّ ٣٦٠، وهو نصفُ الشاشة.
             // **وصار ٢٨٠ أو ٨٠٪ من العرض — الأصغرُ بينهما** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧):
             // ٢٠٠ كانت تقصّ «الشكاوى والبلاغات» و«شرح التطبيق بالفيديو» وسطرَ المدينة.
-            val drawerWidth = minOf(280, (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp * 0.8f).toInt())
-            ModalDrawerSheet(Modifier.width(drawerWidth.dp)) {
+            com.rahalgo.ui.AppDrawerSheet {
                 Drawer(
+                    profile = if (guest) null else com.rahalgo.ui.drawerProfile(accountVm, com.rahalgo.ui.R.string.drawer_role_customer),
                     // **والضيفُ يرى المنصّةَ والقانونيّةَ وحدَهما** —
                     // **وبنودٌ تُعرض لتقول «تحتاج حساباً» تُطيل القائمةَ
                     // ولا تُفيد.**
@@ -707,6 +707,8 @@ private fun SignedIn(
                                         .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK),
                                 )
                             }
+                        } else if (item.key == CustomerItems.ADDRESSES) {
+                            DeliveryAddress.open()
                         } else {
                             overlay.show(Overlay.Menu(item.key))
                         }

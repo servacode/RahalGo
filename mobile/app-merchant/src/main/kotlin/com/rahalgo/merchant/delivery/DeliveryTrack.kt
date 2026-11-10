@@ -250,7 +250,7 @@ fun DeliveryTrackScreen(vm: DeliveryTrackViewModel, id: String, onClose: () -> U
                 InfoLine(com.rahalgo.ui.R.drawable.ic_moto, stringResource(R.string.md_row_fetch), strong = true)
             }
             InfoLine(com.rahalgo.ui.R.drawable.ic_user, d.recipientName, strong = true)
-            InfoLine(com.rahalgo.ui.R.drawable.ic_phone, d.recipientPhone)
+            InfoLine(com.rahalgo.ui.R.drawable.ic_phone, com.rahalgo.ui.phoneText(d.recipientPhone))
             InfoLine(com.rahalgo.ui.R.drawable.ic_home, d.addressText)
             if (!d.dropoffKnown) {
                 InfoLine(com.rahalgo.ui.R.drawable.ic_pin, stringResource(R.string.md_row_no_point), muted = true)

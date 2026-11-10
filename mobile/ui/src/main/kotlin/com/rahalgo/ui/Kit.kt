@@ -76,7 +76,7 @@ import androidx.compose.ui.unit.Dp
 val ScreenPad = 16.dp
 
 /** **دائرةُ أيقونة الفراغ** في `Empty`. */
-private val EmptyIconCircle = 72.dp
+internal val EmptyIconCircle = 72.dp
 
 /**
  * **جسدُ القسم** — عمودٌ يملأ الشاشةَ ويمرّر ما زاد.
@@ -343,49 +343,7 @@ fun Empty(
     /** **أيقونةٌ فوق النصّ** في دائرةٍ خفيفة — و`null` لا أيقونة. */
     @androidx.annotation.DrawableRes icon: Int? = null,
 ) {
-    Box(
-        Modifier.fillMaxWidth().padding(vertical = 40.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(horizontal = 24.dp),
-        ) {
-            if (icon != null) {
-                Box(
-                    Modifier
-                        .size(EmptyIconCircle)
-                        .clip(Rahal.shape.pill)
-                        .background(Rahal.colors.brand.copy(alpha = 0.08f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    androidx.compose.material3.Icon(
-                        androidx.compose.ui.res.painterResource(icon),
-                        contentDescription = null,
-                        tint = Rahal.colors.brand,
-                        modifier = Modifier.size(Rahal.space.xxl),
-                    )
-                }
-                Spacer(Modifier.height(Rahal.space.md))
-            }
-            Text(text, color = Rahal.colors.inkMuted, textAlign = TextAlign.Center)
-            if (hint.isNotBlank()) {
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    hint,
-                    color = Rahal.colors.inkMuted,
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-            if (actionLabel.isNotBlank() && onAction != null) {
-                Spacer(Modifier.height(14.dp))
-                // **وزرٌّ ثانويٌّ لا أساسيّ** — **الفراغُ ليس دعوةً ملحّة**،
-                // وزرٌّ بلون العلامة وسط شاشةٍ فارغةٍ يُضغط سهواً.
-                RahalOutlineButton(onClick = onAction) { Text(actionLabel) }
-            }
-        }
-    }
+    StateMessage(title = text, line = hint, icon = icon ?: R.drawable.ic_info, actionLabel = actionLabel, onAction = onAction)
 }
 
 /**
@@ -455,13 +413,13 @@ fun LoadState(loading: Boolean, error: String, onRetry: (() -> Unit)? = null) {
         verticalArrangement = Arrangement.Center,
     ) {
         if (error.isNotEmpty()) {
-            Text(error, color = Rahal.colors.danger, textAlign = TextAlign.Center)
-            if (onRetry != null) {
-                Spacer(Modifier.height(12.dp))
-                RahalOutlineButton(onClick = onRetry) {
-                    Text(stringResource(R.string.act_retry))
-                }
-            }
+            StateMessage(
+                title = error,
+                icon = R.drawable.ic_warning,
+                danger = true,
+                actionLabel = if (onRetry != null) stringResource(R.string.act_retry) else "",
+                onAction = onRetry,
+            )
         } else {
             // **ولا فراغَ بين الفتحة وبدء النداء** — كان يُشترط `loading`،
             // **والرايةُ لا تُرفع إلّا بعد إطارٍ أو إطارين** فيرى فتّاحُ

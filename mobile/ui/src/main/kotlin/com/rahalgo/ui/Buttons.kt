@@ -1,7 +1,18 @@
 package com.rahalgo.ui
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
+import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.text.font.FontWeight
@@ -101,11 +112,13 @@ private fun Tone.color(): Color = when (this) {
     Tone.Success -> Rahal.colors.success
     Tone.Danger -> Rahal.colors.danger
     Tone.OnDark -> Color.White
-    Tone.AccentSolid -> androidx.compose.ui.graphics.lerp(
-        Rahal.colors.accent,
-        if (Rahal.colors.dark) Rahal.colors.panel else Rahal.colors.accentInk,
-        if (Rahal.colors.dark) 0.25f else 0.45f,
-    )
+    // **الأبيضُ على البرتقاليّ ≥ ٤٫٥:١** (D15: كان ٣٫٢) — الفاتحةُ بحبر البرتقاليّ الغامق نفسِه
+    // (`accentInk` ≈ ٥:١ مع الأبيض)، والغامقةُ تمزج نصفَها إلى اللوح (≈ ٥٫٦:١).
+    Tone.AccentSolid -> if (Rahal.colors.dark) {
+        androidx.compose.ui.graphics.lerp(Rahal.colors.accent, Rahal.colors.panel, 0.55f)
+    } else {
+        Rahal.colors.accentInk
+    }
 }
 
 /**
@@ -164,7 +177,7 @@ fun RahalButton(
 ) {
     Button(
         onClick = onClick,
-        modifier = modifier,
+        modifier = modifier.dialogFill(),
         enabled = enabled,
         shape = Rahal.shape.md,
         contentPadding = if (compact) PadTight else Pad,
@@ -211,7 +224,7 @@ fun RahalOutlineButton(
     val c = tone.inkColor()
     OutlinedButton(
         onClick = onClick,
-        modifier = modifier,
+        modifier = modifier.dialogFill(),
         enabled = enabled,
         shape = Rahal.shape.md,
         contentPadding = if (compact) PadTight else Pad,
@@ -237,24 +250,85 @@ fun RahalTextButton(
     tone: Tone = Tone.Brand,
     content: @Composable RowScope.() -> Unit,
 ) {
-    val ink = tone.inkColor()
+    TintedTextButton(
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled,
+        ink = tone.inkColor(),
+        minHeight = 48.dp,
+        padding = Pad,
+        borderAlpha = 0.55f,
+        fillAlpha = 0.10f,
+        textStyle = null,
+        content = content,
+    )
+}
+
+/**
+ * **الزرُّ الصغيرُ الثانويّ** — لنسيان كلمة المرور وتعديل الرقم وإعادة الإرسال: **نبرةٌ واحدةٌ**
+ * (النصُّ والأرضُ الخفيفةُ والحدُّ من اللون نفسِه)، مدمجٌ، ويُوضع بمحاذاة البداية. **ولا يلتصق
+ * بما حوله**: المنادي يضع `Rahal.space.md` فوقه وتحته.
+ */
+@Composable
+fun RahalSmallButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    tone: Tone = Tone.Brand,
+    /** **حبرٌ مخصّص** (رماديّ للثانويّ جدّاً) — وبلا قيمةٍ يؤخذ حبرُ النبرة. */
+    ink: Color? = null,
+    content: @Composable RowScope.() -> Unit,
+) {
+    TintedTextButton(
+        onClick = onClick,
+        modifier = modifier,
+        enabled = enabled,
+        ink = ink ?: tone.inkColor(),
+        minHeight = 40.dp,
+        padding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+        borderAlpha = 0.45f,
+        fillAlpha = 0.08f,
+        textStyle = 13.sp,
+        content = content,
+    )
+}
+
+/**
+ * **الزرُّ النصّيُّ المحدَّد الوحيد** — أرضٌ وحدٌّ ونصٌّ من اللون نفسِه. **موضعٌ واحدٌ** يبني `TextButton`
+ * فلا يتكاثر الشكلُ الخامّ (حارسُ `check-design-tokens`).
+ */
+@Composable
+private fun TintedTextButton(
+    onClick: () -> Unit,
+    modifier: Modifier,
+    enabled: Boolean,
+    ink: Color,
+    minHeight: androidx.compose.ui.unit.Dp,
+    padding: PaddingValues,
+    borderAlpha: Float,
+    fillAlpha: Float,
+    textStyle: androidx.compose.ui.unit.TextUnit?,
+    content: @Composable RowScope.() -> Unit,
+) {
     TextButton(
         onClick = onClick,
-        modifier = modifier.heightIn(min = 48.dp),
+        modifier = modifier.dialogFill().heightIn(min = minHeight),
         enabled = enabled,
         shape = Rahal.shape.md,
-        contentPadding = Pad,
-        border = BorderStroke(Rahal.stroke.hair, ink.copy(alpha = if (enabled) 0.55f else 0.25f)),
+        contentPadding = padding,
+        border = BorderStroke(Rahal.stroke.hair, ink.copy(alpha = if (enabled) borderAlpha else borderAlpha / 2f)),
         colors = ButtonDefaults.textButtonColors(
-            containerColor = ink.copy(alpha = 0.10f),
+            containerColor = ink.copy(alpha = fillAlpha),
             contentColor = ink,
-            disabledContainerColor = ink.copy(alpha = 0.05f),
+            disabledContainerColor = ink.copy(alpha = fillAlpha / 2f),
             disabledContentColor = ink.copy(alpha = 0.45f),
         ),
     ) {
+        val base = androidx.compose.material3.LocalTextStyle.current
         androidx.compose.runtime.CompositionLocalProvider(
             androidx.compose.material3.LocalTextStyle provides
-                androidx.compose.material3.LocalTextStyle.current.copy(fontWeight = FontWeight.Medium),
+                (if (textStyle != null) base.copy(fontWeight = FontWeight.Medium, fontSize = textStyle, color = ink)
+                else base.copy(fontWeight = FontWeight.Medium)),
         ) { content() }
     }
 }
@@ -294,5 +368,71 @@ fun FitButtonText(text: String) {
         style = style,
         maxLines = 1,
         autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 10.sp, maxFontSize = style.fontSize),
+    )
+}
+
+
+// ══════════════════════════════════════════════════════════════════════
+// **أزرارُ النافذة — عرضان متساويان وفاصلٌ بينهما** (ملاحظتا المالك ٢٠٢٦-١١-١١: «رجوع» و«إرسال»
+// ملتصقان ومكوّمان في جهة، و«تراجع» و«نعم، اعتمده» كذلك)
+// ══════════════════════════════════════════════════════════════════════
+
+/** **هل الزرُّ داخل صفِّ نافذةٍ بزرّين؟** — فيملأ عرضَ خانته. */
+private val LocalDialogFill = compositionLocalOf { false }
+
+@Composable
+private fun Modifier.dialogFill(): Modifier =
+    if (LocalDialogFill.current) this.fillMaxWidth() else this
+
+/** **الفاصلُ بين زرّي النافذة** — بين ٨ و١٢. */
+private val DialogButtonGap = 10.dp
+
+/**
+ * **صفُّ زرّي النافذة** — `dismiss` و`confirm` بعرضين متساويين على كامل العرض وفاصلٍ بينهما.
+ * **يُستعمل داخل `RahalDialog`**، ومن بنى نافذةً بيده ناداه في خانة `confirmButton` وحدَها.
+ */
+@Composable
+fun DialogButtons(
+    confirm: @Composable () -> Unit,
+    dismiss: @Composable (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
+) {
+    if (dismiss == null) {
+        Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) { confirm() }
+        return
+    }
+    CompositionLocalProvider(LocalDialogFill provides true) {
+        Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(DialogButtonGap)) {
+            Box(Modifier.weight(1f)) { confirm() }
+            Box(Modifier.weight(1f)) { dismiss() }
+        }
+    }
+}
+
+/**
+ * **نافذةُ الحوار الموحَّدة** — بديلُ `AlertDialog` في التطبيقات كلِّها: الزرّان بعرضين متساويين
+ * وفاصل (`DialogButtons`). **ومن نادى `AlertDialog` خاماً رجع الالتصاقُ.**
+ */
+@Composable
+fun RahalDialog(
+    onDismissRequest: () -> Unit,
+    confirmButton: @Composable () -> Unit,
+    modifier: Modifier = Modifier,
+    dismissButton: @Composable (() -> Unit)? = null,
+    icon: @Composable (() -> Unit)? = null,
+    title: @Composable (() -> Unit)? = null,
+    text: @Composable (() -> Unit)? = null,
+    shape: Shape = androidx.compose.material3.AlertDialogDefaults.shape,
+    properties: DialogProperties = DialogProperties(),
+) {
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        confirmButton = { DialogButtons(confirm = confirmButton, dismiss = dismissButton) },
+        modifier = modifier,
+        icon = icon,
+        title = title,
+        text = text,
+        shape = shape,
+        properties = properties,
     )
 }

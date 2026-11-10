@@ -198,13 +198,9 @@ fun ItemOptionsSheet(
             // **والسعرُ تحت الاسم** — «$2.5 · 300 ل.س» لصنفٍ بالدولار، والليرةُ وحدَها لغيره
             // (طلبُ المالك ٢٠٢٦-١١-٠٧)، **ويتبع ما اختاره** كما في الويب (`Price`).
             Spacer(Modifier.height(6.dp))
-            Text(
-                com.rahalgo.ui.dualPrice(
-                    item.priceUsd?.let { u -> u + picked.sumOf { it.priceDeltaUsd ?: 0.0 } },
-                    item.price + picked.sumOf { it.priceDelta },
-                ),
-                color = Rahal.colors.brand,
-                fontWeight = FontWeight.Bold,
+            com.rahalgo.ui.DualPrice(
+                usd = item.priceUsd?.let { u -> u + picked.sumOf { it.priceDeltaUsd ?: 0.0 } },
+                syp = item.price + picked.sumOf { it.priceDelta },
                 style = MaterialTheme.typography.titleMedium,
             )
             Spacer(Modifier.height(16.dp))
@@ -300,6 +296,18 @@ fun ItemOptionsSheet(
             }
             }
             Spacer(Modifier.height(8.dp))
+            // **والإجماليُّ بالعملتين فوق الزرّ لا داخلَه** (ملاحظةُ المالك ٢٠٢٦-١١-١١): نصُّ الزرّ «أضف»
+            // وحدَه فلا يُقصّ عند ٣٦٠dp. **والدولارُ جمعُ دولار الصنف وإضافاته** (٢٠٢٦-١٠-١٢)،
+            // **والإجماليُّ جمعُ السطور** — كلُّ خيارٍ بعدده (`OptionSplit.total`).
+            val total = com.rahalgo.customer.cart.OptionSplit.total(item.price, picks)
+            val usdTotal = item.priceUsd?.let { com.rahalgo.customer.cart.OptionSplit.totalUsd(it, picks) }
+            com.rahalgo.ui.DualPrice(
+                usd = usdTotal,
+                syp = total,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
             // **أداةُ الكمّيّة جنب الزرّ** — والسعرُ على الزرّ يتبعها. ولا تُرسم مع العدّادات.
             if (split == null) Row(
@@ -318,19 +326,7 @@ fun ItemOptionsSheet(
                 modifier = Modifier.weight(1f),
                 enabled = ready && blockedReason == null && picks.any { it.qty > 0 },
             ) {
-                // **وبالدولار لمتجرٍ اختاره، والليرةُ بجانبه** — هي ما يُدفع (٢٠٢٦-١٠-١٢).
-                // **والدولارُ جمعُ دولار الصنف وإضافاته** — لا الليرةُ مقسومة، فيطابق
-                // ما رآه على البطاقة والخيارات (ملاحظةُ المالك ٢٠٢٦-١٠-١٢).
-                // **والإجماليُّ جمعُ السطور** — كلُّ خيارٍ بعدده (`OptionSplit.total`).
-                val total = com.rahalgo.customer.cart.OptionSplit.total(item.price, picks)
-                val usdTotal = item.priceUsd?.let { com.rahalgo.customer.cart.OptionSplit.totalUsd(it, picks) }
-                Text(
-                    stringResource(
-                        R.string.options_add,
-                        com.rahalgo.ui.dualPrice(usdTotal, total),
-                    ),
-                    maxLines = 2,
-                )
+                Text(stringResource(R.string.options_add_short), maxLines = 1)
             }
             }
             Spacer(Modifier.height(24.dp))

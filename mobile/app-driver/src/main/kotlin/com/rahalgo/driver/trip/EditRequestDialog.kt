@@ -66,7 +66,7 @@ internal fun EditRequestDialog(
     val addStoreRow = stores.firstOrNull { it.merchantId == addStore }
     // **والمكتوبُ في الخانات يُحسب ويُرسَل ولو لم يُضغط «+ ضيف الصنف».**
     val effective = draft.withPendingAdd(addName, q, p, addStoreRow?.merchantId, addStoreRow?.name.orEmpty())
-    AlertDialog(
+    com.rahalgo.ui.RahalDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.edit_req_title), fontWeight = FontWeight.Bold) },
         text = {

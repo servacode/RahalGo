@@ -616,7 +616,7 @@ private fun ReportDialog(
     var reason by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
 
-    AlertDialog(
+    com.rahalgo.ui.RahalDialog(
         onDismissRequest = onClose,
         title = { Text(stringResource(R.string.hist_report_title) + " #" + o.number) },
         text = {
@@ -686,7 +686,7 @@ private fun RateDialog(
     var speed by remember { mutableStateOf(0) }
     var conduct by remember { mutableStateOf(0) }
 
-    AlertDialog(
+    com.rahalgo.ui.RahalDialog(
         onDismissRequest = onClose,
         title = { Text(stringResource(R.string.hist_rate_title)) },
         text = {
@@ -743,12 +743,7 @@ private fun StarPick(label: String, value: Int, onPick: (Int) -> Unit) {
                     .clickable { onPick(i + 1) },
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(
-                    painter = painterResource(R.drawable.ic_star),
-                    contentDescription = null,
-                    tint = if (i < value) Rahal.colors.accent else Rahal.colors.inkMuted.copy(alpha = 0.30f),
-                    modifier = Modifier.size(30.dp),
-                )
+                com.rahalgo.ui.RatingStar(filled = i < value, size = 36.dp)
             }
         }
     }

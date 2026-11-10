@@ -11,7 +11,7 @@
 
 import Link from "next/link";
 import { getMessages, defaultLocale } from "@rahalgo/i18n";
-import { BrandMark, usePlatform } from "@rahalgo/ui";
+import { BrandMark, phoneText, usePlatform } from "@rahalgo/ui";
 import { useAuth } from "@/lib/auth";
 import { useStore } from "@/lib/store/context";
 import { AmeenSideCard } from "./AmeenStatus";
@@ -84,6 +84,7 @@ export default function StoreSidebar({ path, onMenu }: { path: string; onMenu: (
           <span className="avatar">{initials(name)}</span>
           <span className="min-w-0 text-xs leading-tight">
             <span className="block truncate">{name}</span>
+            {user?.phone && <span className="block truncate text-2xs text-ink-muted">{phoneText(user.phone)}</span>}
             <span className="block text-2xs text-ink-dim">{role === "staff" ? SH.roleStaff : SH.roleOwner}</span>
           </span>
         </button>

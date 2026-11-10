@@ -232,6 +232,8 @@ private fun ItemsList(
                     fullImageUrl = media(item.imageUrl?.takeIf { it.isNotBlank() } ?: item.imageThumbUrl),
                     // **والدولاريُّ بدولاره وليرته** (٢٠٢٦-١٠-١٢).
                     price = com.rahalgo.ui.menu.priceLine(item.price, item.merchantPriceUsd),
+                    priceUsd = item.merchantPriceUsd,
+                    priceSyp = item.price,
                     available = item.available,
                     approved = item.approved,
                     reviewNote = if (item.approved) "" else item.reviewNote,

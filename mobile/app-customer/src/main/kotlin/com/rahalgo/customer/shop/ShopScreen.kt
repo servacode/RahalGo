@@ -853,23 +853,13 @@ internal fun ItemCard(
                 verticalArrangement = Arrangement.Center,
                 itemVerticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    // **وبالدولار لمتجرٍ اختاره** (الخيار ١، ٢٠٢٦-١٠-١٢).
-                    text = item.priceUsd?.let { com.rahalgo.ui.dollars(it) } ?: money(item.price),
-                    color = Rahal.colors.brand,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
+                // **قطعةُ السعر المشتركة** (ملاحظةُ المالك ٢٠٢٦-١١-١١): الدولارُ عريضٌ والليرةُ بعد «≈» تحته.
+                com.rahalgo.ui.DualPrice(
+                    usd = item.priceUsd,
+                    syp = item.price,
+                    stacked = true,
                     style = MaterialTheme.typography.labelMedium,
                 )
-                if (item.priceUsd != null) {
-                    Text(
-                        // **«·» لا «≈»** — الليرةُ ما يُدفع (طلبُ المالك ٢٠٢٦-١١-٠٧).
-                        text = com.rahalgo.ui.DUAL_SEP.trimStart() + money(item.price),
-                        color = Rahal.colors.inkMuted,
-                        style = MaterialTheme.typography.labelSmall,
-                        maxLines = 1,
-                    )
-                }
             }
 
             // **لا وصفَ للصنف عند الزبون** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — فلا قلبَ للصورة؛

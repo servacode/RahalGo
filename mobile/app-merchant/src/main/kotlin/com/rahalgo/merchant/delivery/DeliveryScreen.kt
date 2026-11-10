@@ -1318,7 +1318,7 @@ private fun RecipientSuggestions(vm: DeliveryViewModel) {
                         overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                     )
                     Text(
-                        stringResource(R.string.md_saved_line, RecipientSuggest.localPhone(r.phone), r.addressText),
+                        stringResource(R.string.md_saved_line, com.rahalgo.ui.phoneText(RecipientSuggest.localPhone(r.phone)), r.addressText),
                         color = Rahal.colors.inkMuted,
                         style = MaterialTheme.typography.bodySmall,
                         maxLines = 1,
@@ -1451,7 +1451,7 @@ fun DeliveryRow(d: Delivery, cancelling: Boolean, onOpen: () -> Unit = {}, onCan
             if (d.deliveryMode == "fetch") {
                 InfoLine(com.rahalgo.ui.R.drawable.ic_moto, stringResource(R.string.md_row_fetch), strong = true)
             }
-            InfoLine(com.rahalgo.ui.R.drawable.ic_phone, d.recipientPhone)
+            InfoLine(com.rahalgo.ui.R.drawable.ic_phone, com.rahalgo.ui.phoneText(d.recipientPhone))
             InfoLine(com.rahalgo.ui.R.drawable.ic_home, d.addressText)
             if (!d.dropoffKnown) {
                 InfoLine(com.rahalgo.ui.R.drawable.ic_pin, stringResource(R.string.md_row_no_point), muted = true)

@@ -724,7 +724,7 @@ fun QuoteConfirmDialog(
 ) {
     // **ولا «لاحقاً» ولا إغلاقَ بلمسةٍ خارجها** (قرارُ المالك ٢٠٢٦-١٠-١٦: «لازم يرفض أو
     // يقبل مباشر») — **فالسائقُ ينتظر ثمنَ بضاعةٍ اشتراها.**
-    AlertDialog(
+    com.rahalgo.ui.RahalDialog(
         onDismissRequest = {},
         properties = androidx.compose.ui.window.DialogProperties(
             dismissOnBackPress = false,

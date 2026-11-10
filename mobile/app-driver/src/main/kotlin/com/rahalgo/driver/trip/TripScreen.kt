@@ -1520,7 +1520,7 @@ private fun RoadClosureAction(onReport: (String) -> Unit, modifier: Modifier) {
             "traffic" to R.string.closure_traffic,
             "other" to R.string.closure_other,
         )
-        androidx.compose.material3.AlertDialog(
+        com.rahalgo.ui.RahalDialog(
             onDismissRequest = { open = false },
             title = { Text(stringResource(R.string.closure_title), fontWeight = FontWeight.Bold) },
             text = {
@@ -2834,7 +2834,7 @@ private fun DeliverConfirmDialog(
     // **مبلغ شام كاش أكبر من المطلوب** (قرار المالك ٢٠٢٦-١١-١٠) — تحذير ويكمّل إذا أكّد؛ والخادم بيقبله ويعلّمه.
     var overAsk by remember { mutableStateOf(false) }
     val ready = (!needCode || code.length == 4) && shamcashReady(sham && due, shamUsd, shamText)
-    AlertDialog(
+    com.rahalgo.ui.RahalDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(

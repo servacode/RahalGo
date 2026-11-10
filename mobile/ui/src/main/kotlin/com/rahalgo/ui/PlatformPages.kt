@@ -37,10 +37,10 @@ object PlatformPages {
      * **وما يُفتح كثيراً يسبق ما يُفتح مرّة.**
      */
     val items: List<DrawerItem> = listOf(
-        DrawerItem(HELP, R.string.menu_platform, R.string.menu_help, R.drawable.ic_info),
-        DrawerItem(ABOUT, R.string.menu_platform, R.string.menu_about, R.drawable.ic_info),
+        DrawerItem(HELP, R.string.menu_platform, R.string.menu_help, R.drawable.ic_help),
+        DrawerItem(ABOUT, R.string.menu_platform, R.string.menu_about, R.drawable.ic_about),
         DrawerItem(CONTACT, R.string.menu_platform, R.string.menu_contact, R.drawable.ic_phone),
-        DrawerItem(TERMS, R.string.menu_legal, R.string.menu_terms, R.drawable.ic_info),
+        DrawerItem(TERMS, R.string.menu_legal, R.string.menu_terms, R.drawable.ic_terms),
         DrawerItem(PRIVACY, R.string.menu_legal, R.string.menu_privacy, R.drawable.ic_lock),
     )
 

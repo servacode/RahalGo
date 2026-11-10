@@ -214,6 +214,8 @@ fun MenuScreen(vm: MenuViewModel, onOffers: () -> Unit = {}) {
                         imageUrl = media(item.imageThumbUrl),
                         // **والدولاريُّ بدولاره وليرته** (٢٠٢٦-١٠-١٢).
                         price = com.rahalgo.ui.menu.priceLine(merchant, item.merchantPriceUsd),
+                        priceUsd = item.merchantPriceUsd,
+                        priceSyp = merchant,
                         // **والسعرُ الثاني لا يُعرض إلّا إن كان أعلى** — كما في الويب.
                         customerPrice = if (item.merchantPrice > 0 && item.price > item.merchantPrice) money(item.price) else null,
                         available = item.available,

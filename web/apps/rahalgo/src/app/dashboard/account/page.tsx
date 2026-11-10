@@ -5,7 +5,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getMessages, defaultLocale, fmtDateTime } from "@rahalgo/i18n";
-import { AccountSettings, FormSection, PageContainer, PageHeader, Pagination, IconUser, IconStatus } from "@rahalgo/ui";
+import { AccountSettings, FormSection, PageContainer, PageHeader, Pagination, IconUser, IconStatus, phoneText,
+} from "@rahalgo/ui";
 import { api, mediaUrl } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import RoleBadge from "@/components/admin/RoleBadge";
@@ -57,7 +58,7 @@ export default function MyAccountPage() {
         <div className="min-w-0 flex-1">
           <p className="font-bold">{user?.full_name || "—"}</p>
           <p className="text-xs text-ink-muted" dir="ltr">
-            {user?.phone}
+            {phoneText(user?.phone)}
           </p>
           <div className="mt-1 flex flex-wrap gap-1">
             {user?.roles.map((r) => (
@@ -70,7 +71,7 @@ export default function MyAccountPage() {
       <AccountSettings
         api={api}
         mediaUrl={mediaUrl}
-        phone={user?.phone}
+        phone={phoneText(user?.phone)}
         onDeleted={() => {
           logout();
           router.replace("/adminrahalgo");

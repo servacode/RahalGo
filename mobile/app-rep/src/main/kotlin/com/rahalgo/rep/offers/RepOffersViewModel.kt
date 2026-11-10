@@ -30,7 +30,7 @@ class RepOffersViewModel(app: Application) : OffersWizardViewModel(app) {
             OfferSection(
                 s.id,
                 s.name,
-                s.items.filter { it.available }.map { OfferItem(it.id, it.name, it.price) },
+                s.items.filter { it.available }.map { OfferItem(it.id, it.name, it.price, it.merchantPriceUsd) },
             )
         }.filter { it.items.isNotEmpty() }
 }

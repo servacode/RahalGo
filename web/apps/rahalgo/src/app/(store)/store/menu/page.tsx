@@ -70,6 +70,7 @@ import {
   Sheet,
   SwipeRow,
   SwitchTrack,
+  DualPrice,
   LineTabs,
   Thumb,
   useIsDesktop,
@@ -83,7 +84,7 @@ import { MENU_SEARCH_EVENT } from "@/lib/store/menuSearch";
 import { useDrinksAllowed } from "@/lib/store/drinks";
 import type { MenuItem, MenuItemsPage, MenuSummary } from "@/lib/store/types";
 import { dollars, fill } from "@/lib/customer/texts";
-import { priceLine } from "@/lib/store/usd";
+import { itemUsd, priceLine } from "@/lib/store/usd";
 import { useShopToast } from "@/components/customer/toast";
 
 const m = getMessages(defaultLocale);
@@ -153,7 +154,7 @@ function ItemCard({ item, disabled, onToggle }: { item: MenuItem; disabled: bool
             </span>
           )}
           <span className="line-clamp-2 min-h-8 text-xs leading-4 text-ink-dim">{desc}</span>
-          <span className="mt-1 line-clamp-2 text-base font-bold tabular-nums text-accent-text">{priceLine(item)}</span>
+          <DualPrice usd={itemUsd(item)} syp={item.price} stacked className="mt-1 text-base" />
           {item.approved === false && item.review_note && <span className="line-clamp-2 text-xs text-danger">{item.review_note}</span>}
         </span>
       </Link>
@@ -794,8 +795,7 @@ export default function MenuPage() {
                       <td className="whitespace-nowrap">
                         {i.price_currency === "USD" && i.merchant_price_usd != null ? (
                           <>
-                            <b>{dollars(i.merchant_price_usd)}</b>
-                            <span className="ms-1.5 text-xs text-ink-dim">· {fmtMoney(i.price)}</span>
+                            <DualPrice usd={i.merchant_price_usd} syp={i.price} />
                           </>
                         ) : (
                           <b>{fmtMoney(i.price)}</b>

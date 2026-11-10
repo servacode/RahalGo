@@ -522,7 +522,7 @@ export default function ItemEditor({
   const previewImg = mediaUrl(item?.image_url || item?.image_thumb_url);
   const previewPrice = usd
     ? usdValue != null
-      ? `${dollars(usdValue)}${itemSyp != null ? ` · ${fmtMoney(itemSyp)}` : ""}`
+      ? `${dollars(usdValue)}${itemSyp != null ? ` ≈ ${fmtMoney(itemSyp)}` : ""}`
       : "—"
     : itemSyp != null
       ? fmtMoney(itemSyp)

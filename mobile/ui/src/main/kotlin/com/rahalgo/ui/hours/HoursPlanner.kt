@@ -400,7 +400,7 @@ fun opensAtNight(d: DayHours): Boolean {
 @Composable
 fun NightHoursDialog(days: List<DayHours>, onDismiss: () -> Unit, onConfirm: () -> Unit) {
     val first = days.first { opensAtNight(it) }
-    AlertDialog(
+    com.rahalgo.ui.RahalDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.hours_night_title)) },
         text = { Text(stringResource(R.string.hours_night_text, clock12(first.openTime), clock12(first.closeTime))) },
@@ -615,7 +615,7 @@ private fun DayTimeDialog(
     var all24 by remember { mutableStateOf(start.isOpen24h) }
     var from by remember { mutableStateOf(if (start.isOpen24h) "09:00" else start.openTime.take(5).ifBlank { "09:00" }) }
     var to by remember { mutableStateOf(if (start.isOpen24h) "23:00" else start.closeTime.take(5).ifBlank { "23:00" }) }
-    AlertDialog(
+    com.rahalgo.ui.RahalDialog(
         onDismissRequest = onDismiss,
         title = { Text(title, fontWeight = FontWeight.Bold) },
         text = {
