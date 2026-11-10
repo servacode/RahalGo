@@ -410,11 +410,15 @@ func run(logger *slog.Logger) error {
 					return srv.HandleWALocation(c, from, l.Lat, l.Lng, l.AccuracyM)
 				})
 				// **«صورة + اسم وسعر»** (٢٠٢٦-١١-٠٩): صاحبُ المتجر أو موظّفه يضيف صنفاً من الواتساب.
-				waItems := srv.NewWAItems(waBot.SendText)
-				waBot.SetInboundImage(func(c context.Context, from string, img notify.InboundImage) string {
-					return waItems.HandleImage(c, from, img)
-				})
-				waBot.SetInboundReply(waItems.HandleText)
+				// **موقوفةٌ افتراضاً** (طلبُ المالك ٢٠٢٦-١١-١٠: كانت تردّ على كلّ صورةٍ من المتاجر) —
+				// تُشغَّل بـ WA_ITEMS_ENABLED=1 حتى يصل مفتاحُ الإعدادات.
+				if os.Getenv("WA_ITEMS_ENABLED") == "1" {
+					waItems := srv.NewWAItems(waBot.SendText)
+					waBot.SetInboundImage(func(c context.Context, from string, img notify.InboundImage) string {
+						return waItems.HandleImage(c, from, img)
+					})
+					waBot.SetInboundReply(waItems.HandleText)
+				}
 				waBot.SetInbound(func(c context.Context, from, text string) string {
 					if r := srv.ReportForPhone(c, from, text); r != "" {
 						return r
