@@ -1276,7 +1276,7 @@ func (s *Server) handleDriverAccept(w http.ResponseWriter, r *http.Request) {
 
 	// **والحارسان تحت قفلٍ واحدٍ لصاحبهما** — `D7` و`D24`.
 	if err := s.orders.AdmitDriverTx(r.Context(), tx, uid, orders.Admission{
-		CashDue: cashDue, CashLimit: cashLimit, ActiveMax: activeMax,
+		CashDue: cashDue, CashLimit: cashLimit, ActiveMax: activeMax, OrderID: orderID,
 	}); err != nil {
 		// **ورسالةُ السائق رسالتُه** — «النقد الذي بذمتك بلغ السقف»
 		// **لا رسالةَ المكتب عنه**، والعقدُ قائمٌ لا يُبدَّل هنا.

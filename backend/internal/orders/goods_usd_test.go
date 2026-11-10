@@ -105,11 +105,12 @@ func TestGoodsUSD_PartnerCash_StoreRateBeatsReference(t *testing.T) {
 		o.PayMerchants[0].Amount != 1125 {
 		t.Fatalf("**ادفع للمتجر**: %d / %+v — المنتظَر 1125 سنتاً بالدولار", o.PayMerchant, o.PayMerchants)
 	}
-	// **وتعرّضُ السائق يحسب المعادل** (القرار ٥).
+	// **وتعرّضُ السائق مالُ المنصّة وحدَه** (قرارُ المالك ٢٠٢٦-١١-١٠، القرار ٧) — الأجرةُ ١٠٠؛
+	// وثمنُ البضاعة بالدولار لا يُعدّ (كان: المحصَّل + 100 + 1250).
 	cb := cashbox.NewService(testdb.Pool(t), settings.NewStore(testdb.Pool(t)))
 	heldBefore := cqHeld(t, driver)
-	if exp, err := cb.Exposure(ctx, testdb.Pool(t), driver); err != nil || exp != heldBefore+100+1250 {
-		t.Fatalf("**التعرّض** %d (%v) — المنتظَر المحصَّل + 100 + 1250", exp, err)
+	if exp, err := cb.Exposure(ctx, testdb.Pool(t), driver); err != nil || exp != heldBefore+100 {
+		t.Fatalf("**التعرّض** %d (%v) — المنتظَر المحصَّل + 100", exp, err)
 	}
 	// **وتبديلُ المرجعيّ بعد التأكيد لا يمسّ الطلب.**
 	usdSetRef(t, "500")

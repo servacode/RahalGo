@@ -34,7 +34,7 @@
     "behaviour_settings": 238,
     "order_fields": 146,
     "test_files": 821,
-    "test_funcs": 3163
+    "test_funcs": 3164
   },
   "flows": [
     {
@@ -21416,6 +21416,12 @@
     },
     {
       "name": "TestModel2_CashOrderGoodsOffLedger",
+      "file": "internal/qa/money_model2_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestModel2_DriverCashLimitIgnoresGoods",
       "file": "internal/qa/money_model2_test.go",
       "package": "qa",
       "orphan": true

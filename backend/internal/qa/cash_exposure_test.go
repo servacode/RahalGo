@@ -54,6 +54,12 @@ func newCashFixture(t *testing.T, h *Harness, limit int64) cashFixture {
 func cashOrder(t *testing.T, h *Harness, cust *User, unit int64, qty int) (string, int64) {
 	t.Helper()
 	item := h.NewItem(unit)
+	// **والسقفُ يعدّ مالَ المنصّة وحدَه** (قرارُ المالك ٢٠٢٦-١١-١٠، القرار ٧) — ثمنُ البضاعة لا يُعدّ.
+	// **فعمولةُ ١٠٠٪ تجعل نقدَ الطلب كلَّه مالَ المنصّة** — ويبقى الفحصُ يقيس السقفَ بالأرقام نفسِها.
+	if _, err := h.Pool.Exec(ctxBG(), `UPDATE merchants SET commission_percent = 100 WHERE id = $1::uuid`,
+		item.MerchantID); err != nil {
+		t.Fatalf("عمولةُ المتجر: %v", err)
+	}
 	made := h.POSTKey("/api/v1/orders", cust.Token, uniq("k"), orderBody(item, qty))
 	if made.Code >= 400 {
 		t.Fatalf("تجهيزُ طلبٍ نقديّ: %s", made)

@@ -40,6 +40,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/servacode/rahalgo/backend/internal/cashbox"
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/settings"
@@ -465,9 +466,9 @@ func (s *Service) legacyRotationCandidate(ctx context.Context, orderID string, s
 		                WHERE b.driver_id = u.id), 0)
 		      -- **والمُسنَدُ الذي لم يُسلَّم يُحسب** — صيغةُ cashbox.Exposure (فحصُ المتجر
 		      --  ٢٠٢٦-١٠-٠١: سائقٌ أُسنِد إليه ثلاثةٌ في ثلاث ثوانٍ فبلغ ٥٦١٬٤٠٠ والسقفُ ٥٠٠٬٠٠٠).
-		      + COALESCE((SELECT sum(oi.cash_due + oi.goods_usd_syp) FROM orders oi
-		                  WHERE oi.driver_id = u.id AND oi.closed_at IS NULL), 0)
-		      + COALESCE((SELECT o.cash_due FROM orders o WHERE o.id = $4), 0)
+		      + `+cashbox.InflightSQL("u.id")+`
+		      -- **ومالُ المنصّة وحدَه من نقد هذا الطلب** (القرار ٧) — لا ثمنُ البضاعة.
+		      + COALESCE((SELECT `+cashbox.PlatformCashSQL("o")+` FROM orders o WHERE o.id = $4), 0)
 		      -- **وسقفٌ خاصٌّ بالسائق يغلب العامّ إن ضُبط** (قرارُ المالك ٢٠٢٦-١٠-٠٤).
 		      <= COALESCE(u.cash_limit_override, $2)
 		  -- **ومن تأخّر بتسليم نقده والإيقافُ مُشعَل لا يُعرض عليه طلبٌ نقديّ**
@@ -507,16 +508,15 @@ const zoneGateClause = `
 // **جسمُ الأهليّة المشترك** — دوامٌ وحالةٌ وتخطٍّ ونقدٌ وعددُ طلباتٍ وعرضٌ حيٌّ
 // واحد، **وحداثةُ الموقعِ شرطٌ لا يسقط** (`last_location` حديثٌ). يُبنى فوقه
 // استعلامان: داخلَ الحلقة، وحديثٌ بلا حلقة.
-const proximityEligibleWhere = `
+var proximityEligibleWhere = `
 		WHERE u.on_shift AND u.status = 'active'
 		  AND NOT (u.id = ANY(COALESCE($1::uuid[], '{}')))
 		  AND COALESCE((SELECT b.held FROM driver_cash_boxes b
 		                WHERE b.driver_id = u.id), 0)
 		      -- **والمُسنَدُ الذي لم يُسلَّم يُحسب** — صيغةُ cashbox.Exposure (فحصُ المتجر
 		      --  ٢٠٢٦-١٠-٠١: سائقٌ أُسنِد إليه ثلاثةٌ في ثلاث ثوانٍ فبلغ ٥٦١٬٤٠٠ والسقفُ ٥٠٠٬٠٠٠).
-		      + COALESCE((SELECT sum(oi.cash_due + oi.goods_usd_syp) FROM orders oi
-		                  WHERE oi.driver_id = u.id AND oi.closed_at IS NULL), 0)
-		      + ord.cash_due <= COALESCE(u.cash_limit_override, $2)
+		      + ` + cashbox.InflightSQL("u.id") + `
+		      + ord.platform_cash <= COALESCE(u.cash_limit_override, $2)
 		  -- **والمتأخّرُ بتسليم نقده لا يُعرض عليه نقديّ إن أُشعل الإيقاف** (٢٠٢٦-١٠-٠٤).
 		  AND (ord.cash_due = 0 OR NOT driver_cash_overdue_stopped(u.id))
 		  AND (SELECT count(*) FROM orders o2
@@ -531,13 +531,14 @@ const proximityEligibleWhere = `
 		  AND u.last_location IS NOT NULL
 		  AND u.last_location_at > now() - make_interval(secs => $5)`
 
-const proximityCTE = `
+var proximityCTE = `
 		SELECT u.id
 		FROM users u
 		JOIN user_roles ur ON ur.user_id = u.id AND ur.role_code = 'driver'
 		CROSS JOIN (
 		    SELECT ` + DispatchAnchorSQL + ` AS pickup,
 		           COALESCE(o.cash_due, 0) AS cash_due,
+		           ` + cashbox.PlatformCashSQL("o") + ` AS platform_cash,
 		           o.customer_id AS customer_id
 		    FROM orders o LEFT JOIN merchants m ON m.id = o.merchant_id
 		    WHERE o.id = $4
@@ -632,7 +633,7 @@ func (s *Service) assignDirectly(ctx context.Context, orderID, driverID, note st
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 	if err := s.AdmitDriverTx(ctx, tx, driverID, Admission{
-		CashDue: cashDue, CashLimit: limit, ActiveMax: -1,
+		CashDue: cashDue, CashLimit: limit, ActiveMax: -1, OrderID: orderID,
 	}); err != nil {
 		// **لا يُسنَد، ولا يُعلَّق عليه** — يبقى في الطابور لمن يحتمله.
 		s.logger.Info("الترتيب: الإسنادُ التلقائيُّ ردّه الحارس",

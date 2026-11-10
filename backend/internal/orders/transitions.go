@@ -2049,7 +2049,7 @@ func (s *Service) AssignDriver(ctx context.Context, actorID string, actorRoles [
 	// **ثلاثةُ طلباتٍ والسقفُ واحدٌ وكلُّها مرّت.** **والحكمان صارا
 	// تحت قفلٍ واحدٍ لصاحبهما.**
 	if err := s.AdmitDriverTx(ctx, tx, driverID, Admission{
-		CashDue: cashDue, CashLimit: cashLimit, ActiveMax: activeMax,
+		CashDue: cashDue, CashLimit: cashLimit, ActiveMax: activeMax, OrderID: orderID,
 	}); err != nil {
 		return nil, err
 	}

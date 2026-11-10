@@ -329,3 +329,36 @@ func TestModel2_EditAfterPickupDriverAndStore(t *testing.T) {
 	}
 	assertNewViolations(t, h, base, m2Checks...)
 }
+
+// ── B9 · سقفُ نقد الكابتن يعدّ مالَ المنصّة وحدَه (لكلّ الطلبات — القديمُ معها) ──
+func TestModel2_DriverCashLimitIgnoresGoods(t *testing.T) {
+	h := New(t)
+	fx := newCapFixture(t, h, 10)
+	h.Setting("delivery.fee", "300")
+	h.Setting("delivery.by_distance", "false")
+	// **طلبٌ من النموذج ١** (المفتاحُ مطفأ): كلفةُ ١٠٠٠٠ وعمولةُ اللقطة ١٠٪ ⇒ مالُ المنصّة الأجرةُ ٣٠٠ +
+	// العمولةُ ١٠٠٠ = ١٣٠٠. والسقفُ ٣٠٠٠: يتّسع لطلبين لا لثلاثة — **وحقُّ المتجر (٩٠٠٠) لا يُعدّ.**
+	h.Setting("drivers.cash_limit", "3000")
+	codes := []int{}
+	for i := 0; i < 3; i++ {
+		oid := queuedOrder(t, h, fx.Cust, 10_000)
+		res := h.POST("/api/v1/admin/orders/"+oid+"/assign", fx.Admin.Token,
+			map[string]any{"driver_id": fx.Driver.ID})
+		codes = append(codes, res.Code)
+		t.Logf("الإسناد %d: %s", i, res)
+	}
+	if codes[0] >= 400 || codes[1] >= 400 {
+		t.Errorf("**الإسنادُ رُدّ ومالُ المنصّة ١٣٠٠ تحت سقف ٣٠٠٠**: %v — ثمنُ البضاعة يُعدّ في السقف", codes)
+	}
+	if codes[2] < 400 {
+		t.Errorf("**الطلبُ الثالث مرّ** (٣٩٠٠ فوق ٣٠٠٠): %v — السقفُ لا يعمل", codes)
+	}
+	var exp int64
+	if err := h.Pool.QueryRow(ctxBG(), `SELECT COALESCE(sum(cash_due), 0) FROM orders
+		WHERE driver_id = $1::uuid AND closed_at IS NULL`, fx.Driver.ID).Scan(&exp); err != nil {
+		t.Fatal(err)
+	}
+	if exp < 20_000 {
+		t.Errorf("نقدُ الطلبين %d — يُنتظر أن يحمل البضاعة (٢٠٦٠٠)", exp)
+	}
+}

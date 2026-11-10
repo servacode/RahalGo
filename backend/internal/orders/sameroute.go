@@ -31,6 +31,7 @@ import (
 	"context"
 	"strconv"
 
+	"github.com/servacode/rahalgo/backend/internal/cashbox"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 )
 
@@ -93,7 +94,7 @@ func (s *Service) SameRouteDriver(ctx context.Context, orderID string) *SameRout
 	err := s.db.QueryRow(ctx, `
 		WITH nw AS (
 			SELECT o.id, COALESCE(o.pickup_override, m.location) AS pick, o.dropoff,
-			       o.cash_due, o.customer_id
+			       o.cash_due, o.customer_id, `+cashbox.PlatformCashSQL("o")+` AS platform_cash
 			FROM orders o JOIN merchants m ON m.id = o.merchant_id
 			-- **والطلبُ من عدّة متاجر لا يُضاف إلى طريقٍ ولا يُضاف إليه** (قرارُ المالك ٧أ).
 			WHERE o.id = $1 AND o.stops = 1
@@ -133,10 +134,9 @@ func (s *Service) SameRouteDriver(ctx context.Context, orderID string) *SameRout
 		                WHERE b.driver_id = u.id), 0)
 		      -- **والمُسنَدُ الذي لم يُسلَّم يُحسب** — صيغةُ cashbox.Exposure (فحصُ المتجر
 		      --  ٢٠٢٦-١٠-٠١: سائقٌ أُسنِد إليه ثلاثةٌ في ثلاث ثوانٍ فبلغ ٥٦١٬٤٠٠ والسقفُ ٥٠٠٬٠٠٠).
-		      + COALESCE((SELECT sum(oi.cash_due + oi.goods_usd_syp) FROM orders oi
-		                  WHERE oi.driver_id = u.id AND oi.closed_at IS NULL), 0)
+		      + `+cashbox.InflightSQL("u.id")+`
 		      -- **وسقفُه الخاصُّ يغلب العامّ إن ضُبط** — كحارس الإسناد cashbox.GuardTx.
-		      + nw.cash_due <= COALESCE(u.cash_limit_override, $4)
+		      + nw.platform_cash <= COALESCE(u.cash_limit_override, $4)
 		  -- **والمتأخّرُ بتسليم نقده لا يُعرض عليه نقديّ إن أُشعل الإيقاف** (٢٠٢٦-١٠-٠٤).
 		  AND (nw.cash_due = 0 OR NOT driver_cash_overdue_stopped(u.id))
 		  AND (SELECT count(*) FROM orders o2
