@@ -34,7 +34,7 @@
     "behaviour_settings": 238,
     "order_fields": 145,
     "test_files": 820,
-    "test_funcs": 3158
+    "test_funcs": 3159
   },
   "flows": [
     {
@@ -21410,6 +21410,12 @@
     },
     {
       "name": "TestModel2_FailedAfterPickupNoLoss",
+      "file": "internal/qa/money_model2_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestModel2_RefundAfterDeliveryFeeOnly",
       "file": "internal/qa/money_model2_test.go",
       "package": "qa",
       "orphan": true

@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
+	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/obligations"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
@@ -291,4 +292,37 @@ func (s *Service) DecideStuckGoodsTx(ctx context.Context, q wallet.Querier, orde
 		       stuck_goods_decided_by = NULLIF($3, '')::uuid
 		 WHERE id = $1`, orderID, decision, actorID)
 	return res, err
+}
+
+// refundDeliveredFeeOnly **استرجاعُ طلبٍ عاديٍّ مُسلَّمٍ في النموذج ٢** (القرار ٦، الدفعة B6).
+//
+//	محفظةُ الزبون  ← ما دفعه للتوصيل فعلاً: `delivery_fee` (بعد كود الخصم والتوصيل المجانيّ)،
+//	                 مقصوراً على ما دفعه أصلاً — **وصفرٌ لا يُقيَّد**
+//	ثمنُ البضاعة   ← لا يُردّ من التطبيق — بين الزبون والمتجر نقداً برّا الحسابات
+//	المتجر         ← لا دينَ عليه (`reverseCashSettlements` لا يُنادى) — صفوفُه سجلّ
+//	المندوب        ← عمولتُه تبقى (`reverseCommissions` كما في كلّ استرجاع — لا تمسّ إلّا ما قُيّد)
+//	الكابتن        ← أجرُه وصندوقُه كما هما
+//	الخزينة        ← تتحمّل المردود (`creditTreasury`)
+func (s *Service) refundDeliveredFeeOnly(ctx context.Context, q wallet.Querier, in settlement, out *settled) error {
+	var fee int64
+	var already bool
+	if err := q.QueryRow(ctx, `
+		SELECT LEAST(GREATEST(delivery_fee, 0), wallet_paid + cash_due),
+		       EXISTS(SELECT 1 FROM wallet_transactions
+		               WHERE ref = orders.id::text AND kind = 'refund'
+		                 AND created_at >= COALESCE(orders.delivered_at, orders.created_at))
+		FROM orders WHERE id = $1 FOR UPDATE`, in.orderID).Scan(&fee, &already); err != nil {
+		return err
+	}
+	if fee > 0 && !already {
+		if _, err := s.wallet.ApplyTx(ctx, q, in.customerID, fee, "refund",
+			in.orderID, "استرجاع أجرة توصيل طلب مُسلَّم", &in.actorID); err != nil {
+			return err
+		}
+		out.credit(in.customerID, fee, t.refunded2, notifications.AppCustomer)
+	}
+	if err := s.reverseCommissions(ctx, q, in.orderID, in.actorID); err != nil {
+		return err
+	}
+	return s.creditTreasury(ctx, q, in.orderID, in.actorID)
 }

@@ -1222,6 +1222,12 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 	}
 
 	// (6) استرجاع بعد التسليم — عكس كل ما سبق
+	//
+	// **النموذج ٢: أجرةُ التوصيل المدفوعةُ وحدَها** (القرار ٦) — والبضاعةُ بين الزبون والمتجر
+	// برّا الحسابات، **والكابتنُ يبقى بأجره** (أدّى المشوار). انظر `refundDeliveredFeeOnly`.
+	if refundOnEnter(in.to) && in.from == StDelivered && in.moneyModel == MoneyModelGoodsOutside {
+		return s.refundDeliveredFeeOnly(ctx, q, in, out)
+	}
 	if refundOnEnter(in.to) && in.from == StDelivered {
 		if total := in.walletPaid + in.cashDue; total > 0 {
 			if _, err := s.wallet.ApplyTx(ctx, q, in.customerID, total, "refund",

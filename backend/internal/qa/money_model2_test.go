@@ -205,3 +205,43 @@ func TestModel2_FailedAfterPickupNoLoss(t *testing.T) {
 	}
 	assertNewViolations(t, h, base, m2Checks...)
 }
+
+// ── B6 · استرجاعٌ بعد التسليم: الأجرةُ المدفوعةُ وحدَها، والكابتنُ بأجره، ولا دينَ على المتجر ──
+func TestModel2_RefundAfterDeliveryFeeOnly(t *testing.T) {
+	h := New(t)
+	item, _ := m2Prep(t, h)
+	base := financialBaseline(t, h, m2Checks...)
+	admin := h.NewUser("admin")
+
+	for _, c := range []struct{ name, method, scope string }{
+		{"cash", "cash", ""},
+		{"fee-from-wallet", "", "delivery"},
+	} {
+		cust := h.Customer()
+		oid := wsMake(t, h, cust, wsBody(item, 1, c.method, c.scope), 5_000)
+		drv := h.driverOf(oid)
+		wsDrive(t, h, oid, drv, "at_pickup", "picked_up", "on_the_way", "at_dropoff", "delivered")
+		walletBefore := walletOf(t, h, cust.ID)
+		drvBefore := walletOf(t, h, drv.ID)
+		if r := h.POST("/api/v1/admin/orders/"+oid+"/transition", admin.Token,
+			map[string]any{"to": "refunded", "note": "B6"}); r.Code >= 400 {
+			t.Fatalf("%s: الاسترجاع: %s", c.name, r)
+		}
+		if got := walletOf(t, h, cust.ID) - walletBefore; got != 300 {
+			t.Errorf("%s: رجع للزبون %d — يُنتظر أجرةُ التوصيل 300 وحدَها", c.name, got)
+		}
+		if got := walletOf(t, h, drv.ID) - drvBefore; got != 0 {
+			t.Errorf("%s: محفظةُ الكابتن تحرّكت %d — يبقى بأجره", c.name, got)
+		}
+		var debts int
+		_ = h.Pool.QueryRow(ctxBG(), `SELECT count(*) FROM financial_obligations WHERE order_id = $1::uuid`, oid).Scan(&debts)
+		if debts != 0 {
+			t.Errorf("%s: دينٌ نشأ على المتجر بالاسترجاع: %d", c.name, debts)
+		}
+		f := m2Read(t, h, oid)
+		if want := f.walletPaid + f.box - f.driverFee - 300; f.profit != want || f.goodsRows != 0 {
+			t.Errorf("%s: ربحُ المنصّة %d — يُنتظر %d (المحفظة + الصندوق − الكابتن − المردود)", c.name, f.profit, want)
+		}
+	}
+	assertNewViolations(t, h, base, m2Checks...)
+}
