@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 688,
+    "routes": 700,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -33,8 +33,8 @@
     "setting_defs": 283,
     "behaviour_settings": 238,
     "order_fields": 146,
-    "test_files": 821,
-    "test_funcs": 3164
+    "test_files": 823,
+    "test_funcs": 3176
   },
   "flows": [
     {
@@ -21415,6 +21415,54 @@
       "orphan": true
     },
     {
+      "name": "TestM2Bridge_CustomAndUSD",
+      "file": "internal/qa/money_model2_staging_bridge_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestM2Bridge_DriverEditRequestApproved",
+      "file": "internal/qa/money_model2_staging_bridge_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestM2Bridge_FailureAfterPickupReturnsToStore",
+      "file": "internal/qa/money_model2_staging_bridge_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestM2Bridge_NotRegisteredOutsideStaging",
+      "file": "internal/qa/money_model2_staging_bridge_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestM2Bridge_RefundAfterDeliveryFeeOnly",
+      "file": "internal/qa/money_model2_staging_bridge_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestM2Bridge_RefusesNonQAOrder",
+      "file": "internal/qa/money_model2_staging_bridge_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestM2Bridge_StandardCashAndWalletLadder",
+      "file": "internal/qa/money_model2_staging_bridge_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestM2Bridge_WhatsAppOrder",
+      "file": "internal/qa/money_model2_staging_bridge_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestModel2_CashOrderGoodsOffLedger",
       "file": "internal/qa/money_model2_test.go",
       "package": "qa",
@@ -33017,6 +33065,30 @@
     {
       "name": "TestQAFixedUserIdempotent",
       "file": "internal/server/qa_fixed_user_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestM2Bridge_FailClosedOutsideStaging",
+      "file": "internal/server/qa_money_model2_guard_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestM2Bridge_RoutesInsideStagingGateBehindActor",
+      "file": "internal/server/qa_money_model2_guard_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestM2Bridge_SettingAllowlistOneMoneyKey",
+      "file": "internal/server/qa_money_model2_guard_test.go",
+      "package": "server",
+      "orphan": true
+    },
+    {
+      "name": "TestM2Bridge_StdLadder",
+      "file": "internal/server/qa_money_model2_guard_test.go",
       "package": "server",
       "orphan": true
     },

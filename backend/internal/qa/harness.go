@@ -183,7 +183,20 @@ func NewWith(t *testing.T, opts ...server.Option) *Harness {
 	return build(t, testdb.Pool(t), opts...)
 }
 
+// NewStaging **مِسنَدٌ بهويّة التجهيز** — `APP_ENV=staging` و`RAHALGO_STAGING=1` معاً، **فتُسجَّل
+// جسورُ QA** (`/api/v1/qa/*`) كما على صندوق التجهيز. **ولا غيرُ ذلك يتبدّل.** (شهادةُ جسر النموذج ٢.)
+func NewStaging(t *testing.T) *Harness {
+	t.Helper()
+	t.Setenv("RAHALGO_STAGING", "1")
+	return buildEnv(t, testdb.Pool(t), "staging")
+}
+
 func build(t *testing.T, pool *pgxpool.Pool, opts ...server.Option) *Harness {
+	t.Helper()
+	return buildEnv(t, pool, "test", opts...)
+}
+
+func buildEnv(t *testing.T, pool *pgxpool.Pool, env string, opts ...server.Option) *Harness {
 	t.Helper()
 
 	// ══════════════════════════════════════════════════════════════
@@ -256,7 +269,7 @@ func build(t *testing.T, pool *pgxpool.Pool, opts ...server.Option) *Harness {
 		t.Fatalf("qa: تعذّر تركيبُ خدمة الوسائط: %v", err)
 	}
 
-	cfg := &config.Config{Env: "test", JWTSecret: jwtSecret}
+	cfg := &config.Config{Env: env, JWTSecret: jwtSecret}
 	s := server.New(cfg, quiet, pool, rdb, tokens, identitySvc, catalogSvc,
 		settingsStore, walletSvc, ordersSvc, cashboxSvc, supportSvc, mediaSvc, hub,
 		func() map[string]any { return map[string]any{"provider": "test"} },
