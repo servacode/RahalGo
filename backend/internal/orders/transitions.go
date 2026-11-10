@@ -1085,6 +1085,18 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 			if in.cashDue > 0 {
 				return s.settleCustomCash(ctx, q, in, out)
 			}
+			// **النموذج ٢: ثمنٌ بالدولار نقدٌ ولو صفُر المستحقُّ بالليرة** (جردُ المال، العطب ٣) —
+			// كان يذهب لمسار المحفظة فيخرج بلا عمولة المتجر التابع.
+			if in.moneyModel == MoneyModelGoodsOutside {
+				var usd int64
+				if err := q.QueryRow(ctx, `SELECT goods_usd_syp FROM orders WHERE id = $1`,
+					in.orderID).Scan(&usd); err != nil {
+					return err
+				}
+				if usd > 0 {
+					return s.settleCustomCash(ctx, q, in, out)
+				}
+			}
 			return s.settleCustomWallet(ctx, q, in, out)
 		}
 		// **واسترجاعٌ بعد التسليم يردّ الأجرةَ المدفوعةَ وحدَها** (قرارُ المالك ٢٠٢٦-١١-١٠، القرار ٦) —

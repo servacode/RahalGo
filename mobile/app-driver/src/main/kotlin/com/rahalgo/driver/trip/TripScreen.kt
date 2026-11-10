@@ -1972,6 +1972,17 @@ private fun TripCard(
                             )
                         }
                     }
+                    // **وطلبُ الواتساب من متجرنا** (النموذج ٢، قرارُ المالك ٢٠٢٦-١١-١٠): يدفع للمتجر الثمنَ
+                    // ناقصَ العمولة، **والعمولةُ في صندوقه** — والخادمُ يقول كم (`pay_merchants`).
+                    if (order.kind == "merchant_delivery") {
+                        order.payMerchants.forEach { p ->
+                            MoneyBox(
+                                label = stringResource(R.string.trip_pay_merchant_named, p.merchantName),
+                                amount = storePayText(p),
+                                tint = Rahal.colors.brand,
+                            )
+                        }
+                    }
                     }
                     // **وكم يقبض عند الباب** — يعرفه قبل أن يمشي.
                     if (order.kind == "standard") {

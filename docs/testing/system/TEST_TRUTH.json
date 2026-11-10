@@ -33,8 +33,8 @@
     "setting_defs": 283,
     "behaviour_settings": 238,
     "order_fields": 145,
-    "test_files": 820,
-    "test_funcs": 3159
+    "test_files": 821,
+    "test_funcs": 3162
   },
   "flows": [
     {
@@ -11988,6 +11988,18 @@
       "orphan": true
     },
     {
+      "name": "TestModel2Custom_LostUSDGoodsNoLoss",
+      "file": "internal/orders/money_model2_custom_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestModel2Custom_USDCommissionWhenCashDueZero",
+      "file": "internal/orders/money_model2_custom_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
       "name": "TestEveryOrderInsertStampsMoneyModel",
       "file": "internal/orders/money_model_guard_test.go",
       "package": "orders",
@@ -21416,6 +21428,12 @@
     },
     {
       "name": "TestModel2_RefundAfterDeliveryFeeOnly",
+      "file": "internal/qa/money_model2_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestModel2_WhatsAppCommissionViaBox",
       "file": "internal/qa/money_model2_test.go",
       "package": "qa",
       "orphan": true

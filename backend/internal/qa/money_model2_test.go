@@ -245,3 +245,45 @@ func TestModel2_RefundAfterDeliveryFeeOnly(t *testing.T) {
 	}
 	assertNewViolations(t, h, base, m2Checks...)
 }
+
+// ── B7 · طلبُ الواتساب في النموذج ٢: العمولةُ عبر الصندوق، لا خصمَ ولا دين، والاسترجاعُ لا شيء ──
+func TestModel2_WhatsAppCommissionViaBox(t *testing.T) {
+	h := New(t)
+	c := newWAComm(t, h, "منطقةُ النموذج ٢ واتساب", 1000)
+	h.Setting("finance.goods_outside", "true")
+	base := financialBaseline(t, h, m2Checks...)
+	id := c.ourStore(t, h, nil)
+	if m := moneyModelOf(t, h, id); m != 2 {
+		t.Fatalf("نموذجُ طلب الواتساب %d", m)
+	}
+	waDeliver(t, h, id, 2400)
+
+	if got := waBalance(t, h, c.ownerID); got != 1000 {
+		t.Errorf("محفظةُ المتجر %d — النموذج ٢ لا يخصم منها (يُنتظر 1000)", got)
+	}
+	if a, _ := waCommDebt(t, h, id); a != -1 {
+		t.Errorf("دينُ عمولةٍ على المتجر %d — النموذج ٢ بلا دين", a)
+	}
+	if pc := waPlatformCommission(t, h, id); pc != 240 {
+		t.Errorf("platform_commission %d — يُنتظر 240", pc)
+	}
+	var box int64
+	_ = h.Pool.QueryRow(ctxBG(), `SELECT COALESCE(sum(amount), 0) FROM driver_cash_entries
+		WHERE ref = $1 AND kind = 'order_collection'`, id).Scan(&box)
+	if box != 600+240 {
+		t.Errorf("صندوقُ الكابتن %d — يُنتظر الأجرة 600 + العمولة 240", box)
+	}
+	led := waLedgerOf(t, h, id)
+	if led["order_payment"] != 0 || led["platform_profit"] != 300 {
+		t.Errorf("الدفتر %v — يُنتظر بلا خصمٍ من المتجر وحصّةُ المنصّة 60 + 240", led)
+	}
+	// والاسترجاعُ بعد التسليم: لا شيءَ في التطبيق (جوابُ المالك).
+	waRefund(t, h, c.w.md.admin, id)
+	if got := waBalance(t, h, c.ownerID); got != 1000 {
+		t.Errorf("الاسترجاعُ حرّك محفظةَ المتجر: %d", got)
+	}
+	if led2 := waLedgerOf(t, h, id); led2["refund"] != 0 || led2["platform_profit"] != 300 {
+		t.Errorf("الاسترجاعُ حرّك الدفتر: %v", led2)
+	}
+	assertNewViolations(t, h, base, m2Checks...)
+}

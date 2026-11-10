@@ -24,9 +24,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/obligations"
+	"github.com/servacode/rahalgo/backend/internal/pricing"
 	"github.com/servacode/rahalgo/backend/internal/wallet"
 )
 
@@ -325,4 +327,103 @@ func (s *Service) refundDeliveredFeeOnly(ctx context.Context, q wallet.Querier, 
 		return err
 	}
 	return s.creditTreasury(ctx, q, in.orderID, in.actorID)
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **طلبُ الواتساب في النموذج ٢: العمولةُ عبر الصندوق** (القرار ٢، الدفعة B7)
+// ══════════════════════════════════════════════════════════════════════
+//
+// **لا خصمَ من محفظة متجرنا ولا دينَ عليه**: الكابتنُ يدفع للمتجر الثمنَ ناقصَ العمولة عند
+// الاستلام (`payWhatsAppStoreFor` يقول له كم)، ويقبض من المستلِم الثمنَ والأجرة، **فصندوقُه يقبض
+// الأجرةَ والعمولةَ** عند التسليم. وثمنٌ بالدولار: يدفع للمتجر دولاراً ناقصَ عمولته بالسنتات،
+// **والعمولةُ بالليرة في الصندوق من معادله** بالسعر الملقوط.
+
+// whatsAppCut **ثمنُ طلب الواتساب وعمولةُ متجرنا عليه** — بلا أثر (حسابٌ وحدَه).
+type whatsAppCut struct {
+	merchantID, merchantName, currency string
+	goods                              int64 // بعملته: ليرةٌ أو سنتات
+	commission                         int64 // بالليرة
+	pct                                *pricing.Percent2
+}
+
+func (s *Service) whatsAppCutFor(ctx context.Context, q wallet.Querier, orderID string) (*whatsAppCut, error) {
+	var c whatsAppCut
+	var goods *int64
+	var override *pricing.Percent2
+	var rate *float64
+	err := q.QueryRow(ctx, `
+		SELECT COALESCE(o.pickup_merchant_id::text, ''), COALESCE(m.name, ''), o.collect_amount,
+		       o.amount_currency, m.commission_percent, COALESCE(o.goods_fx_rate, m.exchange_rate)::float8
+		  FROM orders o LEFT JOIN merchants m ON m.id = o.pickup_merchant_id
+		 WHERE o.id = $1 AND o.origin = 'whatsapp'`, orderID).
+		Scan(&c.merchantID, &c.merchantName, &goods, &c.currency, &override, &rate)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if c.merchantID == "" || goods == nil || *goods <= 0 {
+		return nil, nil
+	}
+	c.goods = *goods
+	if c.currency == CurrencyUSD && (rate == nil || *rate <= 0) {
+		if ref := s.usdReferenceRate(ctx, q); ref > 0 {
+			rate = &ref
+		}
+	}
+	base, ok := whatsAppGoodsSYP(c.goods, c.currency, rate)
+	if !ok {
+		return nil, nil
+	}
+	snap, err := s.snapshotOf(ctx, q, orderID)
+	if err != nil {
+		return nil, err
+	}
+	c.pct = orderPct(override, snap)
+	c.commission = pricing.MerchantCommission(ctx, nil, c.pct).Of(base)
+	return &c, nil
+}
+
+// collectWhatsAppGoodsOutside **تسليمُ طلب واتساب في النموذج ٢** — الأجرةُ والعمولةُ في قيدِ
+// تحصيلٍ واحد (`order_collection` مرّةً للطلب)، و`platform_commission` = العمولة.
+func (s *Service) collectWhatsAppGoodsOutside(ctx context.Context, q wallet.Querier, in settlement) error {
+	cut, err := s.whatsAppCutFor(ctx, q, in.orderID)
+	if err != nil {
+		return err
+	}
+	if cut != nil && cut.commission > 0 {
+		if _, err := q.Exec(ctx, `UPDATE orders SET platform_commission = $2 WHERE id = $1`,
+			in.orderID, cut.commission); err != nil {
+			return err
+		}
+		in.cashDue += cut.commission
+	}
+	return s.collectMerchantDeliveryCash(ctx, q, in)
+}
+
+// payWhatsAppStoreFor **ما يدفعه الكابتنُ لمتجرنا في طلب واتساب من النموذج ٢** — الثمنُ ناقصَ العمولة.
+func (s *Service) payWhatsAppStoreFor(ctx context.Context, q dbtx.Querier, orderID string) ([]StorePay, error) {
+	var model int16
+	var origin string
+	if err := q.QueryRow(ctx, `SELECT money_model, origin FROM orders WHERE id = $1`, orderID).
+		Scan(&model, &origin); err != nil {
+		return nil, err
+	}
+	if model != MoneyModelGoodsOutside || origin != "whatsapp" {
+		return nil, nil
+	}
+	cut, err := s.whatsAppCutFor(ctx, q, orderID)
+	if err != nil || cut == nil {
+		return nil, err
+	}
+	p := StorePay{MerchantID: cut.merchantID, MerchantName: cut.merchantName, Amount: cut.goods - cut.commission}
+	if cut.currency == CurrencyUSD {
+		p.Currency = CurrencyUSD
+		p.Amount = cut.goods - pricing.MerchantCommission(ctx, nil, cut.pct).Of(cut.goods)
+	}
+	if p.Amount <= 0 {
+		return nil, nil
+	}
+	return []StorePay{p}, nil
 }

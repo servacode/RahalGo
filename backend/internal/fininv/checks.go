@@ -761,7 +761,12 @@ var All = []Check{
 			SELECT o.number, 'platform_commission', o.platform_commission
 			FROM orders o
 			WHERE o.origin = 'whatsapp'
-			  AND o.platform_commission <> CASE WHEN o.status = 'delivered' THEN
+			  -- **والنموذج ٢: العمولةُ عبر الصندوق** (القرار ٢) — ما قبضه فوق نقد الأجرة، لا خصمٌ ولا دين،
+			  -- **ويبقى بعد الاسترجاع** (لا شيءَ يُردّ في التطبيق — جوابُ المالك).
+			  AND o.platform_commission <> CASE WHEN o.status IN ('delivered', 'refunded') AND o.money_model = 2 THEN
+			        COALESCE((SELECT sum(e.amount) FROM driver_cash_entries e
+			                   WHERE e.ref = o.id::text AND e.kind = 'order_collection'), 0) - o.cash_due
+			      WHEN o.status = 'delivered' THEN
 			        COALESCE((SELECT -sum(t.amount) FROM wallet_transactions t
 			                   WHERE t.ref = o.id::text AND t.kind = 'order_payment'), 0)
 			      + COALESCE((SELECT sum(f.amount) FROM financial_obligations f
@@ -1830,7 +1835,9 @@ var All = []Check{
 			                    JOIN merchant_settlements ms ON ms.id = a.settlement_id
 			                    WHERE a.order_id = o.id AND ms.off_ledger AND a.paid_via = 'driver'
 			                      AND a.paid_by = e.driver_id), 0)
-			       - COALESCE(o.custom_store_paid, 0), 0)`,
+			       - COALESCE(o.custom_store_paid, 0)
+			       -- **وعمولةُ متجرنا في طلب الواتساب تُقبض عبر الصندوق** (القرار ٢).
+			       + CASE WHEN o.origin = 'whatsapp' THEN o.platform_commission ELSE 0 END, 0)`,
 	},
 	{
 		ID: "FI-17.e", Family: FI17, Status: ProvableNow, Ops: true,
@@ -1851,14 +1858,15 @@ var All = []Check{
 			LEFT JOIN LATERAL (
 				SELECT sum(e.amount) AS cash FROM driver_cash_entries e
 				WHERE e.ref = o.id::text
-				  AND e.kind IN ('order_collection', 'commission_waived', 'collection_reversed')
+				  AND e.kind IN ('order_collection', 'commission_waived', 'collection_reversed',
+				                 'recipient_cash_returned')
 			) c ON true
 			-- **وما ردّه الدرجُ من تحصيلٍ لم يقع** (تصحيحُ تسليمٍ خاطئ) نقدٌ خرج من المنصّة.
 			LEFT JOIN LATERAL (
 				SELECT sum(oc.amount) AS back FROM office_cash_entries oc
 				WHERE oc.ref = o.id::text AND oc.source = 'undelivered_return'
 			) a ON true
-			WHERE o.money_model = 2 AND o.kind <> 'merchant_delivery'
+			WHERE o.money_model = 2
 			  AND EXISTS (SELECT 1 FROM wallets WHERE is_treasury)
 			  AND EXISTS (SELECT 1 FROM wallet_transactions p
 			              WHERE p.ref = o.id::text AND p.kind = 'platform_profit')

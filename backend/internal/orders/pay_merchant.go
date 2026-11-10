@@ -58,6 +58,10 @@ func (s *Service) payMerchantsFor(ctx context.Context, q dbtx.Querier, orderID s
 	if kind == KindCustom {
 		return s.payPartnerFor(ctx, q, orderID)
 	}
+	// **وطلبُ الواتساب في النموذج ٢: الثمنُ ناقصَ عمولة متجرنا** (`payWhatsAppStoreFor`).
+	if kind == KindMerchantDelivery {
+		return s.payWhatsAppStoreFor(ctx, q, orderID)
+	}
 	if kind != "standard" {
 		return nil, nil
 	}
@@ -171,7 +175,7 @@ func (s *Service) payPartnerFor(ctx context.Context, q dbtx.Querier, orderID str
 
 // fillPayMerchant **يملأ ما يدفعه السائقُ في الطلب** — للعاديّ، وللمشتريات من متجرٍ تابع.
 func (s *Service) fillPayMerchant(ctx context.Context, q dbtx.Querier, o *Order) error {
-	if o.Kind != "standard" && o.Kind != KindCustom {
+	if o.Kind != "standard" && o.Kind != KindCustom && o.Kind != KindMerchantDelivery {
 		return nil
 	}
 	list, err := s.payMerchantsFor(ctx, q, o.ID)

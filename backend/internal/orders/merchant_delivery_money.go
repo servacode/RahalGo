@@ -231,6 +231,20 @@ func (s *Service) settleMerchantDelivery(ctx context.Context, q wallet.Querier,
 		}
 		return s.collectMerchantDeliveryCash(ctx, q, in)
 
+	case in.to == StDelivered && in.moneyModel == MoneyModelGoodsOutside:
+		// **النموذج ٢: عمولةُ متجرنا عبر الصندوق** (`collectWhatsAppGoodsOutside`) — لا خصمَ من
+		// محفظته ولا دين. وغيرُ الواتساب لا عمولةَ فيه فيقبض الأجرةَ كما كان.
+		if err := s.collectWhatsAppGoodsOutside(ctx, q, in); err != nil {
+			return err
+		}
+		if err := s.payDriver(ctx, q, in, out); err != nil {
+			return err
+		}
+		if err := s.settleWhatsAppRep(ctx, q, in.orderID, in.actorID, out); err != nil {
+			return err
+		}
+		return s.creditTreasury(ctx, q, in.orderID, in.actorID)
+
 	case in.to == StDelivered:
 		// **نقدُ المستلِم عند التسليم** — **وما قُبض عند الاستلام لا يُقبض ثانيةً.**
 		if err := s.collectMerchantDeliveryCash(ctx, q, in); err != nil {
@@ -250,7 +264,12 @@ func (s *Service) settleMerchantDelivery(ctx context.Context, q wallet.Querier,
 		return s.creditTreasury(ctx, q, in.orderID, in.actorID)
 
 	// **استرجاعٌ بعد التسليم: عمولةُ طلب الواتساب تعود للمتجر** — وما سواها كما كان (لا شيء).
+	//
+	// **والنموذج ٢: لا شيءَ في التطبيق** (جوابُ المالك) — العمولةُ قُبضت نقداً، والثمنُ برّا الحسابات.
 	case refundOnEnter(in.to) && in.from == StDelivered:
+		if in.moneyModel == MoneyModelGoodsOutside {
+			return nil
+		}
 		return s.returnWhatsAppCommission(ctx, q, in.orderID, in.actorID)
 
 	case refundOnEnter(in.to) && in.from != StDelivered:
