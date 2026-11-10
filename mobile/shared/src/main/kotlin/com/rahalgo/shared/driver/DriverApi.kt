@@ -670,6 +670,21 @@ class DriverApi(private val api: ApiClient) {
             "/api/v1/driver/orders/" + orderId + "/edit-request",
         ).request
 
+    /**
+     * **الكابتن يسحب طلب التعديل المعلّق** (قرار المالك ٢٠٢٦-١١-١٠) — فيقدر يسلّم أو يبعت غيره.
+     * وإعادة النداء بعد ضياع الردّ نجاح.
+     */
+    suspend fun withdrawEditRequest(orderId: String, requestId: String) {
+        api.call<Ack>(
+            "/api/v1/driver/orders/" + orderId + "/edit-request/withdraw",
+            HttpMethod.Post,
+            WithdrawEditBody(requestId),
+        )
+    }
+
+    @kotlinx.serialization.Serializable
+    private data class WithdrawEditBody(@kotlinx.serialization.SerialName("request_id") val requestId: String)
+
     /** **جسم طلب التعديل** — `qty` بالسطر كم قطعة بتنشال (صفر = السطر كلّه)، و`price` سعر الوحدة بالليرة. */
     @kotlinx.serialization.Serializable
     data class EditRequestBody(
@@ -686,7 +701,13 @@ class DriverApi(private val api: ApiClient) {
     )
 
     @kotlinx.serialization.Serializable
-    data class EditAddBody(val name: String, val qty: Int, val price: Long)
+    data class EditAddBody(
+        val name: String,
+        val qty: Int,
+        val price: Long,
+        /** **المتجر اللي جاب منه الصنف** — لطلب بأكثر من متجر وحده؛ وفاضي: متجر الطلب الرئيسي. */
+        @kotlinx.serialization.SerialName("merchant_id") val merchantId: String? = null,
+    )
 
     /** `currency` لطلب الواتساب وحده (٢٠٢٦-١١-٠٩) — وغيرُه يتجاهله الخادمُ ويُبقي عملةَ المتجر. */
     @kotlinx.serialization.Serializable

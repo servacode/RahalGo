@@ -77,6 +77,9 @@ interface Movement {
   void_reason: string;
   created_by_name: string | null;
   before_opening: boolean;
+  /** السائق كتب مبلغاً أكبر من المطلوب من الزبون (قبله الخادم وعلّمه). */
+  exceeds_due: boolean;
+  due_at_entry: number | null;
 }
 
 interface Balance {
@@ -341,7 +344,7 @@ export default function ShamcashPage() {
                 cell: (r) => (
                   <span
                     dir="ltr"
-                    className={`font-bold ${r.voided_at || r.status === "not_arrived" ? "text-ink-muted line-through" : r.kind === "withdrawal" ? "text-danger" : "text-accent-text"}`}
+                    className={`font-bold ${r.voided_at || r.status === "not_arrived" ? "text-ink-muted line-through" : r.exceeds_due ? "rounded-control bg-danger-tint px-1.5 text-danger" : r.kind === "withdrawal" ? "text-danger" : "text-accent-text"}`}
                   >
                     {r.kind === "withdrawal" ? MINUS : ""}
                     {fmtAmount(r.amount, r.currency)}
@@ -387,11 +390,14 @@ export default function ShamcashPage() {
               {
                 id: "note",
                 header: S.colNote,
-                hide: (r) => !r.note && !r.voided_at && !r.compensated_at,
+                hide: (r) => !r.note && !r.voided_at && !r.compensated_at && !r.exceeds_due,
                 cell: (r) => (
                   <span className="text-xs text-ink-muted">
                     {[
                       r.note,
+                      r.exceeds_due && r.due_at_entry != null
+                        ? S.exceedsNote.replace("{due}", fmtAmount(r.due_at_entry, r.currency))
+                        : "",
                       r.compensated_at
                         ? S.compensatedBy
                             .replace("{name}", r.compensated_by_name ?? "")
@@ -462,6 +468,7 @@ function KindBadges({ r }: { r: Movement }) {
         <Badge variant="warning">{S.badgeOwed}</Badge>
       )}
       {r.before_opening && !r.voided_at && <Badge variant="neutral">{S.badgeBeforeOpening}</Badge>}
+      {r.exceeds_due && !r.voided_at && <Badge variant="danger">{S.badgeExceeds}</Badge>}
     </span>
   );
 }

@@ -115,6 +115,10 @@ type EditCustom struct {
 	Qty        int    `json:"qty"`
 	Price      int64  `json:"price"`
 	MerchantID string `json:"merchant_id,omitempty"`
+	// PlatformMargin **هامشُ المنصّة على الصنف كأيّ صنف يُطلب** — داخليٌّ لا يُرسَل. السعرُ المكتوب
+	// يصير سعرَ المتجر (`merchant_price`) وسعرُ الزبون = `pricing.SalePrice` بالقاعدة نفسِها. **يُفعَّل
+	// لطلب تعديل الكابتن وحدَه** (قرارُ المالك ٢٠٢٦-١١-١٠)؛ وتعديلُ المكتب اليدويّ يبقى كما هو.
+	PlatformMargin bool `json:"-"`
 }
 
 // EditRequest **طلبُ التعديل كاملاً** — والسببُ إجباريّ.
@@ -132,6 +136,9 @@ type EditRequest struct {
 	// guard **شرطٌ بعد قفل الطلب في المعاملة نفسِها** — طلب تعديل الكابتن بيتأكّد إنّ الطلب
 	// ما تغيّر من وقت ما انبعت (`order_edit_request.go`). داخليّ لا يُرسَل.
 	guard func(context.Context, pgx.Tx) error
+	// byDriverRequest **التعديلُ موافقةٌ على طلب الكابتن** — فإشعارُه «المكتب وافق على التعديل» بدل
+	// إشعار التعديل العامّ (إشعارٌ واحدٌ للكابتن لا اثنان). داخليّ لا يُرسَل.
+	byDriverRequest bool
 }
 
 // EditChange **سطرٌ تغيّر** — يُقرأ في الحدث والإشعار والتدقيق.
@@ -465,16 +472,22 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 			orderID, mid, o.merchantID).Scan(&method); err != nil {
 			return nil, res, err
 		}
+		// **سعرُ الزبون**: الصنفُ الذي كتبه الكابتن يأخذ هامشَ المنصّة كأيّ صنف يُطلب (نفسُ
+		// `pricing.SalePrice`)، وغيرُه سعرُ الزبون فيه = سعرُ المتجر.
+		sale := c.Price
+		if c.PlatformMargin {
+			sale = pricing.RuleFrom(ctx, s.settings.On(tx)).SalePrice(c.Price, nil, nil)
+		}
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO order_items (order_id, menu_item_id, name, unit_price,
 			                         merchant_price, merchant_id, qty, note, options,
 			                         merchant_settlement_method, offer_cut)
-			VALUES ($1, NULL, $2, $3, $3, $4::uuid, $5, '', '[]'::jsonb, $6, 0)`,
-			orderID, c.Name, c.Price, mid, c.Qty, method); err != nil {
+			VALUES ($1, NULL, $2, $3, $7, $4::uuid, $5, '', '[]'::jsonb, $6, 0)`,
+			orderID, c.Name, sale, mid, c.Qty, method, c.Price); err != nil {
 			return nil, res, err
 		}
 		touched[mid] = true
-		res.Changes = append(res.Changes, EditChange{Name: c.Name, OldQty: 0, NewQty: c.Qty, NewPrice: c.Price,
+		res.Changes = append(res.Changes, EditChange{Name: c.Name, OldQty: 0, NewQty: c.Qty, NewPrice: sale,
 			merchantID: mid})
 	}
 	if len(res.Changes) == 0 {
@@ -640,7 +653,7 @@ func (s *Service) EditOrder(ctx context.Context, actorID, orderID string, req Ed
 
 	// ── ٨ · الأثر: حدثٌ وإشعاراتٌ وتدقيق — في المعاملة نفسِها ─────────────
 	if err := s.editTrailTx(ctx, tx, actorID, orderID, o.status, o.number, o.customerID,
-		o.driverID, touched, res); err != nil {
+		o.driverID, touched, res, req.byDriverRequest); err != nil {
 		return nil, res, err
 	}
 	if hook != nil {
@@ -731,7 +744,8 @@ func editChangesText(ch []EditChange) string {
 // editTrailTx **سطرٌ في سجلّ الطلب وإشعاراتُ الأطراف** — الزبونُ بمجموعه الجديد وسببه،
 // والسائقُ بما يقبضه، والمتجرُ بما تغيّر في طلبه.
 func (s *Service) editTrailTx(ctx context.Context, q dbtx.Querier, actorID, orderID, status string,
-	number int64, customerID string, driverID *string, stores map[string]bool, res EditResult) error {
+	number int64, customerID string, driverID *string, stores map[string]bool, res EditResult,
+	byDriverRequest bool) error {
 	changes := editChangesText(res.Changes)
 	note := fmt.Sprintf("تعديل الطلب: %s — السبب: %s — المجموع %s ← %s ل.س",
 		changes, res.Reason, groupDigits(res.OldTotal), groupDigits(res.NewTotal))
@@ -762,6 +776,10 @@ func (s *Service) editTrailTx(ctx context.Context, q dbtx.Querier, actorID, orde
 		}
 	}
 	if driverID != nil && *driverID != "" {
+		title := t.orderEditedDriver
+		if byDriverRequest {
+			title = t.editRequestApprovedDriver
+		}
 		body := fmt.Sprintf("طلب #%d: %s. المبلغ المطلوب من الزبون صار %s ل.س",
 			number, changes, groupDigits(res.CashDue))
 		for _, st := range res.Stores {
@@ -773,7 +791,7 @@ func (s *Service) editTrailTx(ctx context.Context, q dbtx.Querier, actorID, orde
 		}
 		if err := notifications.NotifyUserTx(ctx, q, notifications.Input{
 			UserID: *driverID, Kind: notifications.KindOrder,
-			Title: t.orderEditedDriver, Body: body,
+			Title: title, Body: body,
 			Entity: "order", EntityID: orderID, Href: "/portal",
 			Apps: []string{notifications.AppDriver},
 		}); err != nil {

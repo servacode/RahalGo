@@ -11,6 +11,7 @@ package orders_test
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/servacode/rahalgo/backend/internal/httpx"
@@ -337,5 +338,87 @@ func TestEditRequest_ClosedWhenOrderEnds(t *testing.T) {
 	f.svc.SweepPriceRequestsOnce(context.Background())
 	if got := f.requestStatus(t, req.ID); got != "closed" {
 		t.Fatalf("الحالة %q لا closed", got)
+	}
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// **دفعة ٢٠٢٦-١١-١٠ الصغيرة** — هامش المنصّة على الصنف المضاف، ومتجر الصنف، وسحب الطلب،
+// وإشعار الكابتن بالموافقة.
+// ══════════════════════════════════════════════════════════════════════
+
+// setMargin **هامش المنصّة الثابت** لهالاختبار (والتنظيف بعده).
+func (f *cashFixture) setMargin(t *testing.T, v int64) {
+	t.Helper()
+	ctx := context.Background()
+	if _, err := f.pool.Exec(ctx, `
+		INSERT INTO app_settings (key, value) VALUES ('pricing.margin_fixed', to_jsonb($1::bigint))
+		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, v); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_, _ = f.pool.Exec(context.Background(), `DELETE FROM app_settings WHERE key = 'pricing.margin_fixed'`)
+	})
+}
+
+// ── الصنف المضاف بطلب الكابتن يأخذ هامش المنصّة كأيّ صنف مطلوب ─────────────
+func TestEditRequest_AddedItemGetsPlatformMargin(t *testing.T) {
+	f := newCashFixture(t)
+	ctx := context.Background()
+	f.setMargin(t, 500)
+	m, _ := f.merchant(t, "cash", 10)
+	oid := f.order(t, m, 50_000, 10_000, "cash") // المجموع ٦٠٬٠٠٠
+
+	req := f.askEdit(t, oid, orders.DriverEditInput{
+		Adds: []orders.EditRequestAdd{{Name: "خبز", Qty: 2, Price: 1_000}},
+	})
+	// **المعاينة نفسها بالسعر مع الهامش**: (١٠٠٠ + ٥٠٠) × ٢ = ٣٠٠٠ فوق ٦٠٠٠٠.
+	if req.NewTotal != 63_000 {
+		t.Fatalf("المجموع المتوقّع %d — يُنتظر 63000 (بهامش ٥٠٠ على الوحدة)", req.NewTotal)
+	}
+	if _, _, err := f.svc.ApproveEditRequest(ctx, f.treasury, oid, req.ID, false, nil); err != nil {
+		t.Fatalf("الموافقة: %v", err)
+	}
+	var unit, cost int64
+	if err := f.pool.QueryRow(ctx, `SELECT unit_price, merchant_price FROM order_items
+		WHERE order_id = $1 AND name = 'خبز'`, oid).Scan(&unit, &cost); err != nil {
+		t.Fatal(err)
+	}
+	if unit != 1_500 || cost != 1_000 {
+		t.Fatalf("سعر الزبون %d وسعر المتجر %d — يُنتظر 1500 و1000", unit, cost)
+	}
+	if total, cash, _ := f.orderRow(t, oid); total != 63_000 || cash != 63_000 {
+		t.Fatalf("المجموع %d والنقد %d — يُنتظر 63000", total, cash)
+	}
+}
+
+// ── الموافقة: إشعار واحد للكابتن «المكتب وافق على التعديل» بالمبلغ، ولا إشعار تعديل عام ─────
+func TestEditRequest_ApprovalNotifiesDriverOnce(t *testing.T) {
+	f := newCashFixture(t)
+	ctx := context.Background()
+	m, _ := f.merchant(t, "cash", 10)
+	oid := f.order(t, m, 50_000, 10_000, "cash")
+	req := f.askEdit(t, oid, orders.DriverEditInput{
+		Adds: []orders.EditRequestAdd{{Name: "ماء", Qty: 2, Price: 500}},
+	})
+	if _, _, err := f.svc.ApproveEditRequest(ctx, f.treasury, oid, req.ID, false, nil); err != nil {
+		t.Fatalf("الموافقة: %v", err)
+	}
+	count := func(title string) int {
+		var n int
+		_ = f.pool.QueryRow(ctx, `SELECT count(*) FROM notifications WHERE user_id = $1 AND entity_id = $2
+			AND title = $3`, f.driver, oid, title).Scan(&n)
+		return n
+	}
+	if n := count("المكتب وافق على التعديل"); n != 1 {
+		t.Fatalf("إشعار الموافقة للكابتن: %d — يُنتظر 1", n)
+	}
+	if n := count("تعدّل الطلب الذي معك"); n != 0 {
+		t.Fatalf("إشعار التعديل العام وصل الكابتن كمان: %d", n)
+	}
+	var body string
+	_ = f.pool.QueryRow(ctx, `SELECT body FROM notifications WHERE user_id = $1 AND entity_id = $2
+		AND title = 'المكتب وافق على التعديل'`, f.driver, oid).Scan(&body)
+	if !strings.Contains(body, "61,000") {
+		t.Fatalf("الإشعار بلا المبلغ الجديد (61,000): %q", body)
 	}
 }

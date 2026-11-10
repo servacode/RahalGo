@@ -664,7 +664,7 @@ data class CorrelationVerdict(
  * **طلب تعديل من الكابتن** (قرار المالك ٢٠٢٦-١١-١٠) — بالطلب العادي: سطر «ناقص» أو «الزبون لغاه»
  * أو «انزاد صنف»، **والمكتب يوافق أو يرفض.** (`orders.EditRequestView` بالمحرّك — نفس الأسماء.)
  *
- * `status`: `pending` · `approved` · `rejected` · `superseded` · `stale` (الطلب تغيّر) · `closed`.
+ * `status`: `pending` · `approved` · `rejected` · `superseded` · `stale` (الطلب تغيّر) · `closed` · `withdrawn` (الكابتن سحبه).
  */
 @Serializable
 data class DriverEditRequest(
@@ -694,6 +694,8 @@ data class DriverEditRequestAdd(
     val name: String = "",
     val qty: Int = 1,
     val price: Long = 0,
+    @SerialName("merchant_id") val merchantId: String = "",
+    @SerialName("merchant_name") val merchantName: String = "",
 )
 
 /** **ردّ «آخر طلب تعديل»** — و`null`: ما في. */

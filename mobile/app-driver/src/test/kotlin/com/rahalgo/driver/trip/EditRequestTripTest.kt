@@ -3,6 +3,7 @@ package com.rahalgo.driver.trip
 import com.rahalgo.shared.model.DriverEditRequest
 import com.rahalgo.shared.model.DriverItem
 import com.rahalgo.shared.model.DriverOrder
+import com.rahalgo.shared.model.PickupStop
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -97,5 +98,38 @@ class EditRequestTripTest {
         assertTrue(whatsAppAmountEditable(wa("at_dropoff")))
         assertFalse(whatsAppAmountEditable(wa("delivered")))
         assertFalse(whatsAppAmountEditable(DriverOrder(status = "picked_up", kind = "merchant_delivery")))
+    }
+
+    @Test
+    fun `pending request blocks delivery and withdrawing frees it`() {
+        val o = order("at_dropoff")
+        assertTrue(editRequestBlocksDelivery(o, DriverEditRequest(status = "pending")))
+        assertFalse(editRequestBlocksDelivery(o, null))
+        assertFalse(editRequestBlocksDelivery(o, DriverEditRequest(status = "withdrawn")))
+        assertFalse(editRequestBlocksDelivery(o, DriverEditRequest(status = "rejected")))
+        assertFalse(editRequestBlocksDelivery(o, DriverEditRequest(status = "approved")))
+    }
+
+    @Test
+    fun `store picker shows only when the order has more than one store`() {
+        assertTrue(editStoreChoices(order()).isEmpty())
+        val one = order().copy(stops = listOf(PickupStop(merchantId = "m1", name = "أ")))
+        assertTrue(editStoreChoices(one).isEmpty())
+        val two = order().copy(
+            stops = listOf(
+                PickupStop(merchantId = "m1", name = "أ"),
+                PickupStop(merchantId = "m2", name = "ب"),
+                PickupStop(merchantId = "m3", name = "ج", status = "removed"),
+            ),
+        )
+        assertEquals(listOf("m1", "m2"), editStoreChoices(two).map { it.merchantId })
+    }
+
+    @Test
+    fun `chosen store goes into the request body`() {
+        val d = EditDraft(adds = listOf(EditAddDraft("ماء", 1, 500, "m2", "ب"), EditAddDraft("خبز", 1, 700)))
+        val body = d.toBody()
+        assertEquals("m2", body.adds[0].merchantId)
+        assertEquals(null, body.adds[1].merchantId)
     }
 }

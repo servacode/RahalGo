@@ -1061,6 +1061,7 @@ func (s *Server) Router() http.Handler {
 			// (قرارُ المالك ٢٠٢٦-١١-١٠). انظر `order_edit_request.go`.
 			r.Post("/orders/{id}/edit-request", s.idempotent(s.handleDriverEditRequest))
 			r.Get("/orders/{id}/edit-request", s.handleDriverGetEditRequest)
+			r.Post("/orders/{id}/edit-request/withdraw", s.handleDriverWithdrawEditRequest)
 			r.Get("/orders", s.handleDriverOrders)
 			// **مسارُ الطرف الحاليّ** — خطُّ الشوارع ومسافتُه ومدّتُه.
 			// **ونداءٌ وحدَه لا حقلٌ في القائمة**: القائمةُ خمسةُ طلبات

@@ -1468,6 +1468,15 @@ func (s *Server) handleDriverTransition(w http.ResponseWriter, r *http.Request) 
 			s.respondErr(w, errDoorReportPending)
 			return
 		}
+		// **ولا تسليمَ وطلبُ تعديلٍ بانتظار المكتب** (قرارُ المالك ٢٠٢٦-١١-١٠) — الزبون يدفع السعر
+		// الحقيقي الأخير: المكتب يقرّر، أو الكابتن يسحب طلبه.
+		if pending, err := s.orders.HasPendingEditRequest(r.Context(), orderID); err != nil {
+			s.respondErr(w, err)
+			return
+		} else if pending {
+			s.respondErr(w, orders.ErrEditRequestPendingDeliver)
+			return
+		}
 		if err := s.requireProofBeforeDelivery(r, orderID); err != nil {
 			s.respondErr(w, err)
 			return

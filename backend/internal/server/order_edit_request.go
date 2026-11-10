@@ -68,6 +68,28 @@ func (s *Server) handleDriverGetEditRequest(w http.ResponseWriter, r *http.Reque
 	httpx.JSON(w, http.StatusOK, map[string]any{"request": v})
 }
 
+// handleDriverWithdrawEditRequest **الكابتن يسحب طلبه المعلّق** — `POST /driver/orders/{id}/edit-request/withdraw`.
+func (s *Server) handleDriverWithdrawEditRequest(w http.ResponseWriter, r *http.Request) {
+	req, err := decode[struct {
+		RequestID string `json:"request_id"`
+	}](r)
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	orderID := chi.URLParam(r, "id")
+	if err := s.orders.WithdrawEditRequest(r.Context(), userIDFrom(r), orderID, req.RequestID,
+		func(ctx context.Context, q dbtx.Querier) error {
+			return s.auditTx(ctx, q, r, "driver.order_edit_request_withdrawn", "order", orderID,
+				map[string]any{"request_id": req.RequestID})
+		}); err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	s.touch("order", "ops")
+	httpx.JSON(w, http.StatusOK, map[string]any{"withdrawn": true})
+}
+
 // handleAdminGetEditRequest **الطلب المعلّق بمعاينة المحرّك** — ومين بيقدر يوافق.
 func (s *Server) handleAdminGetEditRequest(w http.ResponseWriter, r *http.Request) {
 	v, err := s.orders.PendingEditRequest(r.Context(), chi.URLParam(r, "id"), userIDFrom(r))

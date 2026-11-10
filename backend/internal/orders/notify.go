@@ -48,11 +48,13 @@ var t = struct {
 	orderEdited, orderEditedDriver, orderEditedMerchant string
 	// **طلب تعديل من الكابتن** (قرارُ المالك ٢٠٢٦-١١-١٠) — يوصل المكتب، وقرارُه يوصل الكابتن.
 	editRequestOps, editRequestRejectedDriver string
-	rejected, cancelled, failed, refunded     string
-	merchantDelivered, commission             string
-	targetReached                             string
-	violationsWarn, violationsBanned          string
-	endedOps, warningIssued                   string
+	// المكتب وافق على طلب تعديل الكابتن — يحلّ محل إشعار «تعدّل الطلب» للكابتن.
+	editRequestApprovedDriver             string
+	rejected, cancelled, failed, refunded string
+	merchantDelivered, commission         string
+	targetReached                         string
+	violationsWarn, violationsBanned      string
+	endedOps, warningIssued               string
 	// **عناوينُ حركات المحفظة** — (قرارُ المالك ٢٠٢٦-٠٨-١١: «الرصيد
 	// يتغيّر وما حدا بيعرف ليش»).
 	driverEarned, merchantEarned, refunded2, compensated string
@@ -102,6 +104,7 @@ var t = struct {
 	orderEdited:                "تعدّل طلبك",
 	editRequestOps:             "طلب تعديل من الكابتن — وافق أو ارفض",
 	editRequestRejectedDriver:  "المكتب رفض طلب التعديل",
+	editRequestApprovedDriver:  "المكتب وافق على التعديل",
 	orderEditedDriver:          "تعدّل الطلب الذي معك",
 	orderEditedMerchant:        "تعدّل طلب من متجرك",
 	driverAssignedToCustomer:   "أُسند سائقٌ لطلبك",

@@ -1709,6 +1709,9 @@ private fun TripCard(
         val fetchBlocked = next?.status == "picked_up" && fetchBlocksPickup(order)
         // **ولا «تم التسليم» والسعر الجديد بانتظار الزبون** (قرار المالك ٢٠٢٦-١١-٠٦) — المحرّك يمنعه أصلاً.
         val priceBlocked = next?.status == "delivered" && priceEditBlocksDelivery(order)
+        // **ولا «تم التسليم» وطلب التعديل بانتظار المكتب** (قرار المالك ٢٠٢٦-١١-١٠) — الزرّ معطّل بنصّه، والمحرّك يمنعه أصلاً.
+        val editBlocked = next?.status == "delivered" && editRequestBlocksDelivery(order, state.editRequest)
+        val editBlockedText = stringResource(R.string.edit_req_deliver_blocked)
         var fetchOpen by remember(order.id) { mutableStateOf(false) }
         if (fetchOpen && roomyWindow()) {
             FetchAmountDialog(
@@ -1768,6 +1771,7 @@ private fun TripCard(
             DeliverConfirmDialog(
                 due = due,
                 amount = money(order.cashDue),
+                dueAmount = order.cashDue,
                 who = order.customerName.ifBlank { stringResource(R.string.detail_customer) },
                 needCode = order.deliveryCodeRequired,
                 codeAsk = deliverCodeAskRes(order),
@@ -1793,7 +1797,13 @@ private fun TripCard(
                     busy = state.busy,
                 )
             } else if (next != null && !buyBlocked && !arriveLater && !fetchBlocked && !priceBlocked) {
-                TripPrimary(label = nextLabel, onClick = onNext, enabled = !state.busy, busy = state.busy, text = nextLabelText)
+                TripPrimary(
+                    label = nextLabel,
+                    onClick = onNext,
+                    enabled = !state.busy && !editBlocked,
+                    busy = state.busy,
+                    text = if (editBlocked) editBlockedText else nextLabelText,
+                )
             }
             return@Column
         }
@@ -2169,12 +2179,20 @@ private fun TripCard(
 
                 // ── **طلب تعديل بالطلب العادي** (قرار المالك ٢٠٢٦-١١-١٠) ──
                 when (editRequestBadge(order, state.editRequest)) {
-                    EditRequestBadge.PENDING -> InfoBox(
-                        icon = com.rahalgo.ui.R.drawable.ic_time,
-                        text = stringResource(R.string.edit_req_pending, money(state.editRequest?.newTotal ?: order.total)),
-                        tint = Rahal.colors.brand,
-                        bold = true,
-                    )
+                    EditRequestBadge.PENDING -> {
+                        InfoBox(
+                            icon = com.rahalgo.ui.R.drawable.ic_time,
+                            text = stringResource(R.string.edit_req_pending, money(state.editRequest?.newTotal ?: order.total)),
+                            tint = Rahal.colors.brand,
+                            bold = true,
+                        )
+                        // **والكابتن بيسحب طلبه بنفسه** (قرار المالك ٢٠٢٦-١١-١٠) — بيرجع يقدر يسلّم.
+                        com.rahalgo.ui.RahalTextButton(
+                            onClick = actions.withdrawEditRequest,
+                            enabled = !state.busy,
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { Text(stringResource(R.string.edit_req_withdraw), fontWeight = FontWeight.Bold) }
+                    }
                     EditRequestBadge.REJECTED -> InfoBox(
                         icon = R.drawable.ic_warning,
                         text = stringResource(R.string.edit_req_rejected, state.editRequest?.rejectReason.orEmpty()),
@@ -2261,8 +2279,9 @@ private fun TripCard(
                     TripPrimary(
                         label = nextLabel,
                         onClick = onNext,
-                        enabled = !state.busy && !arriveLater,
+                        enabled = !state.busy && !arriveLater && !editBlocked,
                         busy = state.busy,
+                        text = if (editBlocked) editBlockedText else null,
                     )
                 }
 
@@ -2671,6 +2690,8 @@ internal fun returnTitle(order: DriverOrder): String =
 private fun DeliverConfirmDialog(
     due: Boolean,
     amount: String,
+    /** **المطلوب من الزبون بالليرة** — شام كاش بأكبر منه بيسأل «متأكد؟». */
+    dueAmount: Long,
     who: String,
     needCode: Boolean,
     /** **من يُملي الكود** — الزبونُ، أو المتجرُ في «إحضار» (٢٠٢٦-١٠-١٦). */
@@ -2685,6 +2706,8 @@ private fun DeliverConfirmDialog(
     var shamUsd by remember { mutableStateOf(false) }
     var shamText by remember { mutableStateOf("") }
     val payment = shamcashPayload(sham && due, shamUsd, shamText)
+    // **مبلغ شام كاش أكبر من المطلوب** (قرار المالك ٢٠٢٦-١١-١٠) — تحذير ويكمّل إذا أكّد؛ والخادم بيقبله ويعلّمه.
+    var overAsk by remember { mutableStateOf(false) }
     val ready = (!needCode || code.length == 4) && shamcashReady(sham && due, shamUsd, shamText)
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -2748,7 +2771,11 @@ private fun DeliverConfirmDialog(
             }
         },
         confirmButton = {
-            RahalButton(onClick = { onConfirm(code, payment) }, enabled = ready, modifier = Modifier.fillMaxWidth()) {
+            RahalButton(
+                onClick = { if (shamcashExceedsDue(payment, dueAmount)) overAsk = true else onConfirm(code, payment) },
+                enabled = ready,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
                 Text(
                     stringResource(if (due) R.string.deliver_confirm_due_yes else R.string.deliver_confirm_paid_yes),
                     fontWeight = FontWeight.Bold,
@@ -2761,4 +2788,17 @@ private fun DeliverConfirmDialog(
             }
         },
     )
+    if (overAsk) {
+        com.rahalgo.ui.ConfirmDialog(
+            title = stringResource(R.string.shamcash_over_title),
+            body = stringResource(R.string.shamcash_over_body),
+            confirm = stringResource(R.string.shamcash_over_yes),
+            onConfirm = {
+                overAsk = false
+                onConfirm(code, payment)
+            },
+            onDismiss = { overAsk = false },
+            danger = false,
+        )
+    }
 }

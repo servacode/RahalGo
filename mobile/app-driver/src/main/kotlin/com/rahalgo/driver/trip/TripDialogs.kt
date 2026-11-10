@@ -855,6 +855,13 @@ internal fun shamcashPayload(sham: Boolean, usd: Boolean, text: String): com.rah
     return if (v > 0) com.rahalgo.shared.driver.ShamcashPay("SYP", v.toDouble()) else null
 }
 
+/**
+ * **مبلغ شام كاش أكبر من المطلوب من الزبون؟** (قرار المالك ٢٠٢٦-١١-١٠) — بالليرة وحدها (الدولار ما
+ * له مطلوب يُقارَن فيه). المساوي أو الأقل ما بيسأل.
+ */
+internal fun shamcashExceedsDue(pay: com.rahalgo.shared.driver.ShamcashPay?, dueSyp: Long): Boolean =
+    pay != null && pay.currency == "SYP" && pay.amount > dueSyp.toDouble()
+
 /** **التأكيدُ مفتوح** للنقد دائماً، ولشام كاش حين يصحّ المبلغ. */
 internal fun shamcashReady(sham: Boolean, usd: Boolean, text: String): Boolean =
     !sham || shamcashPayload(sham, usd, text) != null
