@@ -34,7 +34,7 @@
     "behaviour_settings": 236,
     "order_fields": 144,
     "test_files": 801,
-    "test_funcs": 3076
+    "test_funcs": 3077
   },
   "flows": [
     {
@@ -17525,7 +17525,7 @@
       "orphan": false
     },
     {
-      "name": "TestDCODE_WhatsAppCarriesSafetyNotice",
+      "name": "TestDCODE_WhatsAppHasNoSafetyNotice",
       "file": "internal/qa/delivery_code_safety_test.go",
       "package": "qa",
       "orphan": true
@@ -23060,6 +23060,12 @@
     },
     {
       "name": "TestOrderFeedback_SweepSkips",
+      "file": "internal/qa/order_feedback_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestOrderFeedback_WhatsAppOrderAsksRecipient",
       "file": "internal/qa/order_feedback_test.go",
       "package": "qa",
       "orphan": true

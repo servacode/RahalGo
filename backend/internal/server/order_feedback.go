@@ -19,7 +19,7 @@ package server
 // # ومن لا يُسأل
 //
 //	· طلبٌ غيرُ مُسلَّم (ملغى · فشل · مُسترَدّ · ما بينهما).
-//	· `merchant_delivery` — المستلِمُ ليس زبوننا.
+//	· `merchant_delivery` — المستلِمُ ليس زبوننا. **إلّا طلبَ الواتساب** (٢٠٢٦-١١-١٠): المستلمُ زبوننا.
 //	· من قيَّم في التطبيق (صفٌّ في `order_ratings`).
 //	· من سُئل مرّةً (`order_feedback_requests` مفتاحُها الطلب).
 //	· ما مضى على تسليمه أكثرُ من يوم — **كي لا يُغرَق زبائنُ الأمس عند أوّل نشر.**
@@ -71,12 +71,10 @@ var errFeedbackClosed = httpx.NewError(http.StatusGone,
 // feedbackText **رسالةُ الواتساب** — **بلا أيّ رابط** (قرارُ المالك ٢٠٢٦-١١-٠٤: «الناس تخاف الروابط»):
 // الزبونُ يردّ عليها بكلامه في الواتساب نفسِه ويقرؤه المالك.
 //
-// **وسطرُ الحماية قبل التوقيع** (قرارُ المالك ٢٠٢٦-١١-٠٥، البند ٦): بعد التسليم يعرف
-// السائقُ البابَ — **فيُذكَّر الزبونُ ألّا يتعامل معه برّا التطبيق.**
+// **ونصُّها بألفاظ المالك** (٢٠٢٦-١١-١٠) — وشِيل منها سطرُ الحماية: «مزعجة وتخوف الزبائن».
 func feedbackText(number int64) string {
-	return "وصلك طلبك رقم " + strconv.FormatInt(number, 10) + "؟\n" +
-		"كيف كانت الخدمة؟ رأيك بيفرق معنا 🌷\n" +
-		orders.SafetyNotice + "\n" +
+	return "طلبك رقم " + strconv.FormatInt(number, 10) + "\n" +
+		"كيف كانت الخدمة؟ رأيك يهمنا 🌷\n" +
 		"مع تحيات إدارة تطبيق رحّال غو"
 }
 
@@ -101,11 +99,14 @@ func (s *Server) SweepOrderFeedback(ctx context.Context) int {
 		number         int64
 	}
 	rows, err := s.pg.Query(ctx, `
-		SELECT o.id::text, o.number, COALESCE(NULLIF(u.whatsapp_phone, ''), u.phone::text)
+		SELECT o.id::text, o.number,
+		       COALESCE(NULLIF(u.whatsapp_phone, ''), u.phone::text, NULLIF(o.recipient_phone, ''))
 		  FROM orders o
-		  JOIN users u ON u.id = o.customer_id
+		  LEFT JOIN users u ON u.id = o.customer_id
 		 WHERE o.status = 'delivered'
-		   AND o.kind <> 'merchant_delivery'
+		   -- **وطلبُ الواتساب يُسأل كباقي الطلبات** (قرارُ المالك ٢٠٢٦-١١-١٠) — على رقم المستلم.
+		   AND (o.kind <> 'merchant_delivery' OR o.origin = 'whatsapp')
+		   AND COALESCE(NULLIF(u.whatsapp_phone, ''), u.phone::text, NULLIF(o.recipient_phone, '')) IS NOT NULL
 		   AND o.delivered_at <= now() - make_interval(secs => $1)
 		   AND o.delivered_at >  now() - make_interval(secs => $2)
 		   AND NOT EXISTS (SELECT 1 FROM order_ratings r WHERE r.order_id = o.id)

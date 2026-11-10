@@ -1,8 +1,7 @@
 package qa
 
-// **واتسابُ كود الاستلام يحمل سطرَ الحماية — وإشعارُ التطبيق بلاه** (قرارُ المالك
-// ٢٠٢٦-١١-٠٥، البند ٦): الكودُ يصل لحظةَ يستلم السائقُ الطلبَ وهو في طريقه إلى الزبون،
-// **فيُذكَّر الزبونُ ألّا يتعامل معه برّا التطبيق.**
+// **واتسابُ كود الاستلام بلا سطر «لحمايتك»** (قرارُ المالك ٢٠٢٦-١١-١٠: «مزعجة وتخوف
+// الزبائن») — كان يُلحق به منذ ٢٠٢٦-١١-٠٥، **وشِيل من كلّ مكان.**
 
 import (
 	"context"
@@ -14,6 +13,18 @@ import (
 
 	"github.com/servacode/rahalgo/backend/internal/orders"
 )
+
+// safetyWord **أوّلُ كلمةٍ من السطر المشيل** — لا يعود في أيّ رسالة.
+const safetyWord = "لحمايتك"
+
+func dcodeNumber(t *testing.T, h *Harness, oid string) int64 {
+	t.Helper()
+	var n int64
+	if err := h.Pool.QueryRow(ctxBG(), `SELECT number FROM orders WHERE id = $1::uuid`, oid).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	return n
+}
 
 // dcodeTextBot **بوتٌ يحفظ ما أُرسل** — ليُقرأ النصُّ نفسُه.
 type dcodeTextBot struct {
@@ -42,7 +53,7 @@ func (b *dcodeTextBot) find(sub string) string {
 	return ""
 }
 
-func TestDCODE_WhatsAppCarriesSafetyNotice(t *testing.T) {
+func TestDCODE_WhatsAppHasNoSafetyNotice(t *testing.T) {
 	h := New(t)
 	h.Setting("delivery.code_required", "true")
 	h.Setting("delivery.code_channel", `"both"`)
@@ -63,8 +74,11 @@ func TestDCODE_WhatsAppCarriesSafetyNotice(t *testing.T) {
 		wa = bot.find(*code)
 		time.Sleep(20 * time.Millisecond)
 	}
-	if !strings.Contains(wa, orders.SafetyNotice) {
-		t.Fatalf("**واتسابُ الكود بلا سطر الحماية**: %q", wa)
+	if strings.Contains(wa, safetyWord) {
+		t.Fatalf("**واتسابُ الكود ما زال يحمل سطرَ الحماية**: %q", wa)
+	}
+	if wa != orders.DeliveryCodeText(dcodeNumber(t, h, oid), *code) {
+		t.Fatalf("**واتسابُ الكود غيرُ نصّ الإشعار**: %q", wa)
 	}
 
 	var body string
@@ -74,7 +88,7 @@ func TestDCODE_WhatsAppCarriesSafetyNotice(t *testing.T) {
 		ORDER BY created_at DESC LIMIT 1`, cust.ID, oid, *code).Scan(&body); err != nil {
 		t.Fatalf("إشعارُ الكود في التطبيق: %v", err)
 	}
-	if strings.Contains(body, orders.SafetyNotice) {
+	if strings.Contains(body, safetyWord) {
 		t.Fatalf("**إشعارُ التطبيق يحمل سطرَ الحماية** — قصيرٌ يُقرأ على شاشةٍ مقفلة: %q", body)
 	}
 }
