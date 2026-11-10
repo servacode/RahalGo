@@ -253,6 +253,12 @@ type BoardInfo struct {
 	Cases         int  `json:"cases"`
 	Transferred   bool `json:"transferred"`
 	Late          bool `json:"late"`
+	// Shamcash* **«انقبض شام كاش: X»** (قرارُ المالك ٢٠٢٦-١١-١٠) — ما قال السائقُ إنّ الزبونَ حوّله على
+	// شام كاش المالك عند التسليم، بعملته (الدولارُ بالسنتات) وحالِه (`claimed`/`not_arrived`).
+	// **سجلٌّ جانبيٌّ** (`internal/shamcash`) — وغيابُه: كلُّه نقد.
+	ShamcashCurrency *string `json:"shamcash_currency,omitempty"`
+	ShamcashAmount   *int64  `json:"shamcash_amount,omitempty"`
+	ShamcashStatus   *string `json:"shamcash_status,omitempty"`
 	// Money و EndedByName **لكرت السجلّ وحدَه** (`FillHistory`) — وغائبان عن لوحة العمل.
 	Money       *HistoryMoney `json:"money,omitempty"`
 	EndedByName string        `json:"ended_by_name,omitempty"`
@@ -282,8 +288,10 @@ func (s *Service) BoardInfoOf(ctx context.Context, ids []string) (map[string]*Bo
 		       to_char(o.office_seen_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS"Z"'),
 		       (o.status IN ('delivered', 'refunded') AND o.delivery_code IS NOT NULL),
 		       rt.platform_stars, rt.driver_stars,
-		       `+CasesSQL+`, `+TransferredSQL+`, `+LateDeliverySQL(l)+`
+		       `+CasesSQL+`, `+TransferredSQL+`, `+LateDeliverySQL(l)+`,
+		       sc.currency, sc.amount, sc.status
 		FROM orders o LEFT JOIN order_ratings rt ON rt.order_id = o.id
+		LEFT JOIN shamcash_movements sc ON sc.order_id = o.id AND sc.kind = 'driver_transfer'
 		WHERE o.id = ANY($1::uuid[])`, ids)
 	if err != nil {
 		return nil, err
@@ -296,7 +304,8 @@ func (s *Service) BoardInfoOf(ctx context.Context, ids []string) (map[string]*Bo
 		if err := rows.Scan(&id, &b.AlertReason, &since, &b.EmergencyOpen,
 			&b.OfferExpiresAt, &b.OfferPassed, &b.GoodsCost, &b.StoreCompensated, &b.SeenAt,
 			&b.DeliveredByCode, &b.PlatformStars, &b.DriverStars,
-			&b.Cases, &b.Transferred, &b.Late); err != nil {
+			&b.Cases, &b.Transferred, &b.Late,
+			&b.ShamcashCurrency, &b.ShamcashAmount, &b.ShamcashStatus); err != nil {
 			return nil, err
 		}
 		if b.AlertReason != "" {

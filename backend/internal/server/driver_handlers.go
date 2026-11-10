@@ -18,6 +18,7 @@ import (
 	"github.com/servacode/rahalgo/backend/internal/media"
 	"github.com/servacode/rahalgo/backend/internal/notifications"
 	"github.com/servacode/rahalgo/backend/internal/orders"
+	"github.com/servacode/rahalgo/backend/internal/shamcash"
 	"github.com/servacode/rahalgo/backend/internal/shifts"
 	"github.com/servacode/rahalgo/backend/internal/textguard"
 )
@@ -1374,10 +1375,21 @@ func (s *Server) handleDriverTransition(w http.ResponseWriter, r *http.Request) 
 		DeliveryCode string `json:"delivery_code"`
 		// Stop **محطّةُ الخطوة** (معرّفُ المتجر) — «وصلت»/«استلمت» في طلبٍ بعدّة محطّات.
 		Stop string `json:"stop"`
+		// Shamcash **ما حوّله الزبون على شام كاش المالك** مع «سُلّم» (قرارُ المالك ٢٠٢٦-١١-١٠) —
+		// `{currency: SYP|USD, amount}`، **وقد يكون جزءاً والباقي نقد.** وغيابُه: كلُّه نقد (والتطبيقُ
+		// القديم لا يرسله). **سجلٌّ جانبيٌّ لا يمسّ الدفترَ ولا صندوقَ السائق** (`internal/shamcash`).
+		Shamcash *shamcashClaim `json:"shamcash"`
 	}](r)
 	if err != nil {
 		s.respondErr(w, err)
 		return
+	}
+	var sham *shamcashUnits
+	if req.To == orders.StDelivered && req.Shamcash != nil {
+		if sham, err = req.Shamcash.units(); err != nil {
+			s.respondErr(w, err)
+			return
+		}
 	}
 	if !s.driverOwnsOrder(r, orderID) {
 		// **وإعادةُ «تعذّر» عند المتجر بعد ضياع ردّها** — الطلبُ عاد إلى المكتب
@@ -1467,8 +1479,17 @@ func (s *Server) handleDriverTransition(w http.ResponseWriter, r *http.Request) 
 		}
 	}
 
-	o, err := s.orders.TransitionWithReason(r.Context(), userIDFrom(r), []string{"driver"},
-		orderID, req.To, clip(note, 300), req.Reason)
+	// **وشام كاش في معاملة التسليم نفسِها** — يثبت معه أو يسقط معه، **وإعادةُ النداء لا تكرّره**
+	// (صفٌّ واحدٌ لكلّ طلب). **ولا يُمسّ المال**: السائقُ يسلّم المكتبَ المبلغَ كاملاً كالعادة.
+	var hook func(context.Context, dbtx.Querier) error
+	if sham != nil {
+		driverID := userIDFrom(r)
+		hook = func(ctx context.Context, q dbtx.Querier) error {
+			return shamcash.RecordTransfer(ctx, q, orderID, driverID, sham.Currency, sham.Amount)
+		}
+	}
+	o, err := s.orders.TransitionWithReasonHook(r.Context(), userIDFrom(r), []string{"driver"},
+		orderID, req.To, clip(note, 300), req.Reason, hook)
 	if err != nil {
 		if errors.Is(err, orders.ErrBadTransition) && s.replayOwnTransition(w, r, orderID, req.To) {
 			return

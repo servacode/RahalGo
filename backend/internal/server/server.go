@@ -1899,6 +1899,17 @@ func (s *Server) Router() http.Handler {
 			r.Post("/cashbox/opening", s.handleCashOpening)
 			r.Post("/cashbox/deposits", s.idempotent(s.handleCashDeposit))
 			r.Get("/cashbox/report", s.handleCashboxReport)
+			// **سجلّ شام كاش اليدويّ** (قرارُ المالك ٢٠٢٦-١١-١٠، `shamcash_handlers.go`) — جانبيٌّ لا يمسّ
+			// الدفترَ ولا صندوقَ السائق ولا الدرج.
+			r.Get("/shamcash", s.handleShamcashList)
+			r.Get("/shamcash/summary", s.handleShamcashSummary)
+			r.Put("/shamcash/opening", s.handleShamcashOpening)
+			r.Post("/shamcash/movements", s.handleShamcashAdd)
+			r.Post("/shamcash/{id}/compensate", s.handleShamcashCompensate)
+			r.Post("/shamcash/{id}/uncompensate", s.handleShamcashUncompensate)
+			r.Post("/shamcash/{id}/not-arrived", s.handleShamcashNotArrived)
+			r.Post("/shamcash/{id}/arrived", s.handleShamcashArrived)
+			r.Post("/shamcash/{id}/void", s.handleShamcashVoid)
 			r.Get("/approvals", s.handleApprovals)
 			// ══════════════════════════════════════════════════════════
 			// **ومصروفاتُ التشغيل** — (قرارُ المالك ٢٠٢٦-٠٨-١٦)

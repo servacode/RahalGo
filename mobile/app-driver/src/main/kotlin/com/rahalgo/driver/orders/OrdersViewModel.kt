@@ -1337,6 +1337,12 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
      */
     var deliveryCode: String = ""
 
+    /**
+     * **ما قبضه بشام كاش** (قرار المالك 2026-11-10) — من نافذة التأكيد، `null` = نقد. يُرسَل مع `delivered`
+     * وحدَه في المسارين. **و«سلّمت» لا تُحفظ في الطابور** فلا يُحفظ معها؛ والإعادة بنفس المفتاح تحمله.
+     */
+    var shamcash: com.rahalgo.shared.driver.ShamcashPay? = null
+
     /** يحرّك الطلب خطوة — **ثمّ يعيد قراءة كلّ شيء.** */
     fun step(to: String) = stepStop(to, null)
 
@@ -1357,6 +1363,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         }
         detail = detail.copy(busy = true, error = "")
         val code = if (to == "delivered") deliveryCode else ""
+        val sham = if (to == "delivered") shamcash else null
         viewModelScope.launch {
             // ══════════════════════════════════════════════════════════
             // **بلا إنترنت: الخطوةُ تُحفظ والشاشةُ تتقدّم** (قرارُ المالك ٢٠٢٦-١٠-٣٠)
@@ -1387,7 +1394,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 // **بمفتاحٍ يُعاد بعينه إن ضاع الردّ** — انظر `StepRetry`.
                 StepRetry.send(stepKey) { key ->
-                    replied = backend.driver.transition(id, to, idempotencyKey = key, deliveryCode = code, stop = stop)
+                    replied = backend.driver.transition(id, to, idempotencyKey = key, deliveryCode = code, stop = stop, shamcash = sham)
                 }
             } catch (e: kotlinx.coroutines.CancellationException) {
                 throw e
@@ -2078,7 +2085,7 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
                     accuracyM = point?.accuracyM,
                 )
                 StepRetry.send(StepRetry.newKey()) { key ->
-                    backend.driver.transition(id, "delivered", idempotencyKey = key, deliveryCode = deliveryCode)
+                    backend.driver.transition(id, "delivered", idempotencyKey = key, deliveryCode = deliveryCode, shamcash = shamcash)
                 }
                 openId = null
             } catch (e: kotlinx.coroutines.CancellationException) {
