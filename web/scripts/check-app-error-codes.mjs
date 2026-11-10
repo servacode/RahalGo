@@ -204,6 +204,7 @@ const SERVER_ADMIN = new Set([
   "qa_seed_kind_not_allowed", "qa_no_option",
   "qa_not_rep_only", "qa_money_key_not_allowed", "qa_release_key_not_allowed",
   "qa_no_open_order", "qa_multiple_open_orders",
+  "qa_not_qa_driver", "qa_whatsapp_not_qa", "qa_driver_off_shift", "qa_multi_stop_unsupported",
   "qa_coverage_zone_exists",
   "qa_no_closed_order",
   "qa_boundary_near_midnight", "qa_no_default_address", "qa_no_zone_for_address",
