@@ -76,13 +76,14 @@ class CustomPaymentTest {
         )
     }
 
-    /** **وبطاقةُ الطلب لا تعرض المحفظةَ إلّا إن غطّى رصيدُها المبلغ.** */
+    /** **وبطاقةُ الطلب لا تعرض المحفظةَ إلّا إن غطّى رصيدُها أجرةَ التوصيل.** */
     @Test
     fun orderCardGatesWalletOnBalance() {
         val s = read("app-customer/src/main/kotlin/com/rahalgo/customer/orders/OrderCard.kt")
         // **وحجزُ الطلب نفسِه يُحسب له** (٢٠٢٦-١٠-١٥: إعادةُ التأكيد بعد زيادة السعر تفكّ
         // الحجزَ القديم وتحجز الجديد) — فالرصيدُ المتاحُ له = رصيدُه + ما حُجز لهذا الطلب.
-        assertTrue("**لا بوّابةَ رصيدٍ للمحفظة**", s.contains("walletBalance + ownReserved >= total"))
+        // **والمحفظةُ تدفع التوصيلَ وحدَه** (B3، ٢٠٢٦-١١-١٠) — فالبوّابةُ على أجرة التوصيل لا على الإجماليّ.
+        assertTrue("**لا بوّابةَ رصيدٍ للمحفظة**", s.contains("walletBalance + ownReserved >= deliveryPart"))
         // **والزرُّ باسم الخطوة** (قرارُ المالك ٢٠٢٦-١٠-٠٣): «قبول أجرة التوصيل» ثمّ «قبول ثمن البضاعة».
         assertTrue("**لا زرَّ تأكيدٍ للعرض**",
             s.contains("R.string.ord_confirm_fee") && s.contains("R.string.ord_confirm_goods"))
