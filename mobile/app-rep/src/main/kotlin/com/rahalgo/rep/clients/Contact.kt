@@ -128,3 +128,7 @@ fun localPhone(phone: String): String {
         else -> phone.trim()
     }
 }
+
+internal fun dialNumber(context: Context, phone: String) = dial(context, phone)
+
+internal fun openWhatsapp(context: Context, digits: String) = whatsapp(context, digits)

@@ -100,26 +100,39 @@ fun ClientDetail(
         // **ترويسةُ العميل — من هو وحالُه ورقمُ صاحبه**
         // ══════════════════════════════════════════════════════════════
         //
-        // **ورقمُ صاحب المتجر يُعرض** — **والمندوبُ يلاحقه ليُفعّله**،
-        // ومن لا يجد رقمَه يبحث عنه في هاتفه أو يتّصل بالمكتب.
+        // **وأيقونتا تواصلٍ** بدل زرَّين مؤطَّرين كبيرين (٢٠٢٦-١١-١١) — **والرقمُ لا يُعرض** (طلبُ المالك)،
+        // **ويبقى خلف الأيقونتين للاتّصال والواتساب.**
+        val ownerPhone = head.ownerPhone?.takeIf { it.isNotBlank() }
+        val wa = com.rahalgo.ui.waMeDigits(ownerPhone.orEmpty())
         Card {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // **والشعارُ يُضغط فيُبدَّل** (طلبُ المالك ٢٠٢٦-١٠-١٩) — كما عند صاحب المتجر.
-                RemoteImage(
+                // **والشعارُ عليه كاميرا صغيرة** تفتح «كاميرا أم معرض» ثمّ القصّ (`rememberImagePicker`) — بدل زرّ «أضف شعار».
+                LogoWithCamera(
                     url = Backend.of(context).media(head.logoThumbUrl),
                     name = head.name,
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(Rahal.shape.sm)
-                        .clickable(enabled = !vm.busy) { pickLogo() },
+                    enabled = !vm.busy,
+                    description = stringResource(R.string.cd_logo_camera),
+                    onPick = { pickLogo() },
                 )
-                Spacer(Modifier.size(10.dp))
-                Column {
+                Spacer(Modifier.size(12.dp))
+                Column(Modifier.weight(1f)) {
                     Text(
                         text = head.name,
                         fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.titleMedium,
+                        maxLines = 2,
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                     )
+                    // **اسمُ صاحب المتجر** — الاسمُ هو المطلوب لا رقمُه.
+                    head.ownerName?.takeIf { it.isNotBlank() }?.let {
+                        Text(
+                            text = stringResource(R.string.cd_owner_name, it),
+                            color = Rahal.colors.ink,
+                            style = MaterialTheme.typography.bodyMedium,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                        )
+                    }
                     if (head.categoryName.isNotEmpty()) {
                         Text(
                             text = head.categoryName,
@@ -129,91 +142,93 @@ fun ClientDetail(
                     }
                 }
             }
-            com.rahalgo.ui.RahalTextButton(onClick = { pickLogo() }, enabled = !vm.busy) {
-                Text(
-                    stringResource(
-                        if (head.logoThumbUrl.isNullOrBlank()) com.rahalgo.ui.R.string.store_logo_add
-                        else com.rahalgo.ui.R.string.store_logo_change,
-                    ),
-                    color = Rahal.colors.brand,
+            // **وما هو بيانٌ وصفيّ صغيرٌ تحت الاسم** — الحالُ وتاريخُ الانضمام.
+            Spacer(Modifier.height(10.dp))
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                StatusDot(
+                    stringResource(if (head.status == "active") R.string.cl_working else R.string.cl_stopped),
+                    if (head.status == "active") Rahal.colors.success else Rahal.colors.inkMuted,
                 )
+                if (head.joinedAt.isNotEmpty()) {
+                    Text(
+                        stringResource(R.string.cd_joined_short, longDate(head.joinedAt)),
+                        color = Rahal.colors.inkMuted,
+                        style = MaterialTheme.typography.labelMedium,
+                    )
+                }
+                if (ownerPhone != null) {
+                    Spacer(Modifier.weight(1f))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (wa.isNotEmpty()) {
+                            RoundIconAction(
+                                icon = com.rahalgo.ui.R.drawable.ic_whatsapp,
+                                description = stringResource(com.rahalgo.ui.R.string.contact_whatsapp),
+                                tint = Rahal.colors.success,
+                            ) { openWhatsapp(context, wa) }
+                        }
+                        RoundIconAction(
+                            icon = com.rahalgo.ui.R.drawable.ic_phone,
+                            description = stringResource(com.rahalgo.ui.R.string.contact_call),
+                            tint = Rahal.colors.brand,
+                        ) { dialNumber(context, ownerPhone) }
+                    }
+                }
             }
-            Spacer(Modifier.height(8.dp))
-            Chip(
-                stringResource(
-                    if (head.status == "active") R.string.cl_working else R.string.cl_stopped,
-                ),
-                if (head.status == "active") Rahal.colors.success else Rahal.colors.inkMuted,
-            )
-            head.ownerPhone?.takeIf { it.isNotEmpty() }?.let {
-                Spacer(Modifier.height(8.dp))
-                KeyValue(stringResource(R.string.cd_owner_phone), ltrPhone(it))
-                // **والرقمُ يُضغط** (٢٠٢٦-١٠-٢٧) — اتّصالٌ أو واتساب، **وكان نصّاً
-                // يُنسخ باليد.**
-                Spacer(Modifier.height(6.dp))
-                ContactButtons(it)
-                Spacer(Modifier.height(6.dp))
-            }
-            if (head.joinedAt.isNotEmpty()) {
-                // **وتاريخٌ يقرؤه الناس** — «27 تشرين الأول 2026» لا صيغةَ آلة.
-                KeyValue(stringResource(R.string.cd_joined), longDate(head.joinedAt))
-            }
-            // **وما ينقصه ليُحسب — كما في بطاقته** (٢٠٢٦-١٠-٢٧).
-            // **ونقصُ الدوام يُضغط فيفتح صفحتَه** (٢٠٢٦-١٠-٣٠).
+            // **وما ينقصه ليُحسب — شريطٌ بنبرةٍ واضحة** (٢٠٢٦-١٠-٢٧)، ونقصُ الدوام يُضغط فيفتح صفحتَه (٢٠٢٦-١٠-٣٠).
             row?.let { MissingStrip(missingFor(it), onClick = if (!it.hasHours) ({ vm.openHours() }) else null) }
 
-            // **وساعاتُ دوامه — يضبطها هو** (قرارُ المالك ٢٠٢٦-١٠-٣٠) بالمخطّط نفسِه
-            // الذي في تطبيق المتجر (`ClientHours`).
-            Spacer(Modifier.height(8.dp))
-            HoursRow(vm)
-            // **ونسبةُ عمولة متجره — يضبطها هو بين حدَّين** (قرارُ المالك ٢٠٢٦-١١-٠٤).
-            // **والحفظُ في الـvm لا في السطر** — فيصل ردُّه التفصيلَ ولو فتح «ساعات الدوام» أو «الأقسام»
-            // أو «الأصناف» قبل أن يصل، وتبقى النسبةُ إن رجع.
+            // ══════════════════════════════════════════════════════════
+            // **ثلاثةُ مربّعاتِ وظائف** — دوامٌ · عمولةٌ · أقسام، لكلٍّ أيقونتُه وقيمتُه وضغطتُه.
+            // ══════════════════════════════════════════════════════════
+            Spacer(Modifier.height(12.dp))
             val storeId = vm.openId
-            StoreCommissionRow(
-                merchantId = storeId,
-                head = head,
-                saving = vm.commissionSaving,
-                onSave = { percent, done -> vm.saveStoreCommission(storeId, percent, done) },
-            )
-            // **وأقسامُ السوق التي يظهر فيها متجرُه** (قرارُ المالك ٢٠٢٦-١١-٠٤).
-            SectionsRow(vm)
+            Row(
+                Modifier.fillMaxWidth().height(androidx.compose.foundation.layout.IntrinsicSize.Min),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                HoursTile(vm, Modifier.weight(1f))
+                // **والحفظُ في الـvm لا في المربّع** — فيصل ردُّه التفصيلَ ولو فتح «ساعات الدوام» أو «الأقسام»
+                // أو «الأصناف» قبل أن يصل، وتبقى النسبةُ إن رجع. (قرارُ المالك ٢٠٢٦-١١-٠٤)
+                StoreCommissionRow(
+                    merchantId = storeId,
+                    head = head,
+                    saving = vm.commissionSaving,
+                    onSave = { percent, done -> vm.saveStoreCommission(storeId, percent, done) },
+                    modifier = Modifier.weight(1f),
+                )
+                InfoTile(
+                    icon = R.drawable.ic_grid,
+                    label = stringResource(R.string.cd_sections_tile),
+                    value = "",
+                    modifier = Modifier.weight(1f),
+                    onClick = { vm.openSections() },
+                )
+            }
 
             // ══════════════════════════════════════════════════════════
-            // **وبابُ أصنافه — يبنيها نيابةً عنه**
+            // **وصفُّ الإجراءات** — «إضافة صنف» هو الأساسيّ (أعرضُ وأقوى)، وبجانبه «الأصناف» و«إنشاء عرض».
             // ══════════════════════════════════════════════════════════
-            //
-            // (طلبُ المالك ٢٠٢٦-٠٨-١٨: «لا يوجد بالتطبيق زرُّ إضافة
-            //  منتجات العميل كما اتّفقنا سابقا».)
-            //
-            // **ومتجرٌ ينضمّ ولا يفتح لوحتَه** — صاحبُه في متجره لا في
-            // حاسوب، **وسوقٌ فيه متاجرُ بلا أصنافٍ سوقٌ فارغ.**
-            //
-            // **وهنا لا في القائمة**: المندوبُ يفتح العميلَ ليعمل عليه،
-            // **وزرٌّ في سطر القائمة يُضغط سهواً وهو يمرّر.**
-            //
-            // **والزرّان نفسُهما في بطاقته** (٢٠٢٦-١٠-٢٧) — «إضافة صنف» و«إنشاء
-            // عرض»؛ **وكان هنا «الأصناف» وحدَه، فالشاشتان لا تتطابقان.**
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 RahalOutlineButton(
                     onClick = { onOpenItems(vm.openId, head.name) },
                     modifier = Modifier.weight(1f).height(48.dp),
-                compact = true,
-                ) { com.rahalgo.ui.FitButtonText(stringResource(R.string.mn_items)) }
+                    compact = true,
+                ) { ActionLabel(com.rahalgo.ui.R.drawable.ic_cart, stringResource(R.string.mn_items)) }
                 RahalButton(
                     onClick = { onOpenMenu(vm.openId, head.name) },
-                    modifier = Modifier.weight(1f).height(48.dp),
-                compact = true,
-                ) { com.rahalgo.ui.FitButtonText(stringResource(R.string.mn_add_item)) }
+                    modifier = Modifier.weight(1.25f).height(48.dp),
+                    compact = true,
+                ) { ActionLabel(com.rahalgo.ui.R.drawable.ic_plus, stringResource(R.string.mn_add_item)) }
                 RahalOutlineButton(
                     onClick = { onOpenOffers(vm.openId, head.name) },
                     modifier = Modifier.weight(1f).height(48.dp),
-                compact = true,
-                ) { com.rahalgo.ui.FitButtonText(stringResource(R.string.mn_make_offer)) }
+                    compact = true,
+                ) { ActionLabel(com.rahalgo.ui.R.drawable.ic_offer, stringResource(R.string.mn_make_offer)) }
             }
         }
 
@@ -291,75 +306,35 @@ fun ClientDetail(
 }
 
 /**
- * **سطرُ «ساعات الدوام»** — قيمتُه الحاليّة («مفتوح 24 ساعة» · «9:00 ص – 11:00 م» ·
+ * **مربّعُ «ساعات الدوام»** — قيمتُه الحاليّة («مفتوح 24 ساعة» · «9:00 ص – 11:00 م» ·
  * «لم يُضبط بعد» بالأحمر)، ويُضغط فيفتح صفحتَها.
  */
 @Composable
-private fun HoursRow(vm: ClientsViewModel) {
+private fun HoursTile(vm: ClientsViewModel, modifier: Modifier) {
     val set = vm.hoursSet
     val value = com.rahalgo.ui.hours.hoursSummary(set, vm.hours)
         ?: if (set) "" else stringResource(com.rahalgo.ui.R.string.home_val_not_set)
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clip(Rahal.shape.sm)
-            .clickable { vm.openHours() }
-            .padding(vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            stringResource(com.rahalgo.ui.R.string.home_row_hours),
-            color = Rahal.colors.ink,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.bodyMedium,
-        )
-        Spacer(Modifier.size(8.dp))
-        Text(
-            value,
-            color = if (set) Rahal.colors.inkMuted else Rahal.colors.danger,
-            style = MaterialTheme.typography.bodySmall,
-            maxLines = 1,
-            textAlign = androidx.compose.ui.text.style.TextAlign.End,
-            modifier = Modifier.weight(1f),
-        )
-        Spacer(Modifier.size(6.dp))
-        androidx.compose.material3.Icon(
-            androidx.compose.ui.res.painterResource(com.rahalgo.ui.R.drawable.ic_arrow_back),
-            contentDescription = null,
-            tint = Rahal.colors.inkMuted,
-            modifier = Modifier
-                .size(18.dp)
-                .graphicsLayer { rotationZ = 180f },
-        )
-    }
+    InfoTile(
+        icon = com.rahalgo.ui.R.drawable.ic_time,
+        label = stringResource(com.rahalgo.ui.R.string.home_row_hours),
+        value = value,
+        valueColor = if (set) Rahal.colors.inkMuted else Rahal.colors.danger,
+        modifier = modifier,
+        onClick = { vm.openHours() },
+    )
 }
 
-/** **سطرُ «أقسام المتجر بالسوق»** — يفتح صفحةَ الاختيار. */
+/** **أيقونةٌ ونصٌّ داخل زرّ إجراء** — أيقونةٌ ١٨dp قبل النصّ. */
 @Composable
-private fun SectionsRow(vm: ClientsViewModel) {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clip(Rahal.shape.sm)
-            .clickable { vm.openSections() }
-            .padding(vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            stringResource(R.string.cd_sections),
-            color = Rahal.colors.ink,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f),
-        )
+private fun ActionLabel(icon: Int, text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
         androidx.compose.material3.Icon(
-            androidx.compose.ui.res.painterResource(com.rahalgo.ui.R.drawable.ic_arrow_back),
+            androidx.compose.ui.res.painterResource(icon),
             contentDescription = null,
-            tint = Rahal.colors.inkMuted,
-            modifier = Modifier
-                .size(18.dp)
-                .graphicsLayer { rotationZ = 180f },
+            modifier = Modifier.size(18.dp),
         )
+        Spacer(Modifier.size(4.dp))
+        com.rahalgo.ui.FitButtonText(text)
     }
 }
 

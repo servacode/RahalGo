@@ -401,6 +401,8 @@ data class RepMerchant(
     val status: String = "",
     @SerialName("joined_at") val joinedAt: String = "",
     @SerialName("owner_phone") val ownerPhone: String? = null,
+    /** **اسمُ صاحب المتجر** (قراءةٌ فقط) — يُعرض بدل رقمه (٢٠٢٦-١١-١١). */
+    @SerialName("owner_name") val ownerName: String? = null,
     @SerialName("delivered_orders") val deliveredOrders: Int = 0,
     @SerialName("cancelled_orders") val cancelledOrders: Int = 0,
     @SerialName("my_commission") val myCommission: Long = 0,
@@ -451,6 +453,8 @@ data class RepMerchantHead(
     @SerialName("store_commission_max") val storeCommissionMax: Double = 10.0,
     @SerialName("joined_at") val joinedAt: String = "",
     @SerialName("owner_phone") val ownerPhone: String? = null,
+    /** **اسمُ صاحب المتجر** (قراءةٌ فقط) — يُعرض بدل رقمه (٢٠٢٦-١١-١١). */
+    @SerialName("owner_name") val ownerName: String? = null,
 )
 
 /**

@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -211,16 +212,11 @@ fun ClientsScreen(
                 if (shown.isEmpty()) {
                     Empty(stringResource(R.string.cl_no_match))
                 }
-                shown.forEachIndexed { i, m ->
+                shown.forEach { m ->
                     MerchantCard(
                         m = m,
-                        // **وكلُّ متجرٍ بلونٍ خفيفٍ يميّزه عن جاره** (قرارُ المالك ٢٠٢٦-١٠-٣٠: «فايتين ببعض»).
-                        tone = cardTones()[i % 3],
                         media = { path -> Backend.of(context).media(path) },
                         onOpen = { vm.openDetail(m.id) },
-                        onAddItem = { onOpenMenu(m.id, m.name) },
-                        onItems = { onOpenItems(m.id, m.name) },
-                        onMakeOffer = { onOpenOffers(m.id, m.name) },
                     )
                 }
             }
@@ -332,7 +328,7 @@ private fun MiniStat(label: String, value: String, color: Color, modifier: Modif
         modifier
             .clip(Rahal.shape.sm)
             .background(Rahal.colors.inkMuted.copy(alpha = 0.07f))
-            .padding(horizontal = 4.dp, vertical = 8.dp),
+            .padding(horizontal = 6.dp, vertical = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
@@ -349,8 +345,8 @@ private fun MiniStat(label: String, value: String, color: Color, modifier: Modif
             color = Rahal.colors.inkMuted,
             style = MaterialTheme.typography.labelSmall,
             // **سطران لا قصّ** (مراجعةُ المالك ٢٠٢٦-١٠-٣٠: «طلبات سلمت» كانت تنقطع).
-            minLines = 2,
-            maxLines = 2,
+            minLines = 1,
+            maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center,
         )
@@ -388,182 +384,116 @@ internal fun MissingStrip(missing: List<String>, onClick: (() -> Unit)? = null) 
 }
 
 /**
- * **عميلٌ مقبولٌ يعمل** — بعمولته وحال تفعيله.
+ * **بطاقةُ عميلٍ في القائمة — مضغوطة** (طلبُ المالك ٢٠٢٦-١١-١١).
  *
- * # وأخفُّ ممّا كان (٢٠٢٦-١٠-٢٧)
- *
- * **كانت البطاقةُ صورةً واسماً وشارتين وسطرَ نقصٍ وفاصلاً وصفّين من
- * أربعة مربّعاتٍ وزرّين وشريطاً** — **وأهمُّ ما فيها (ما ينقص المتجرَ
- * ليُحسب) ضائعٌ في وسطها.** **فصارت**: الاسمُ وشاراته، ثمّ شريطُ التفعيل
- * إن كان، **ثمّ صفٌّ واحدٌ بأربعة أرقام**، **ثمّ ما ينقص بشريطٍ برتقاليّ
- * فوق الزرّين.** والأرقامُ والزرّان كما هي.
+ * شعارٌ واسمٌ وصاحبُه وحالُه، وبعدها رقمان هما ما يسأل عنه المندوب (سُلّم كم · عمولتي كم)، وشارةٌ
+ * بما ينقصه إن نقص. **والتواصلُ والإجراءاتُ وساعاتُ الدوام في تفصيله** — **وزرٌّ في سطر القائمة يُضغط سهواً وهو يمرّر.**
  */
 @Composable
 private fun MerchantCard(
     m: RepMerchant,
     media: (String?) -> String?,
     onOpen: () -> Unit,
-    onAddItem: () -> Unit,
-    onMakeOffer: () -> Unit,
-    /** **«الأصناف» — قائمةُ المتجر بأدواتها** (٢٠٢٦-١٠-٣٠): «إضافة صنف» صار يفتح صنفاً جديداً مباشرة. */
-    onItems: () -> Unit,
-    tone: androidx.compose.ui.graphics.Color? = null,
 ) {
     Spacer(Modifier.height(Rahal.space.md))
-    // **وضغطُ البطاقة يفتح تفصيلَه** — (طلبُ المالك
-    // ٢٠٢٦-٠٨-١٤: «إذا ضغطتُ على اسم العميل يجب أن أعرف كلَّ
-    // التفاصيل التي تخصّني كمندوب»).
-    Card(modifier = Modifier.clickable(onClick = onOpen), tone = tone) {
+    Card(modifier = Modifier.clickable(onClick = onOpen)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             RemoteImage(
                 url = media(m.logoThumbUrl),
                 name = m.name,
                 modifier = Modifier
-                    .size(46.dp)
-                    .clip(Rahal.shape.sm),
+                    .size(52.dp)
+                    .clip(Rahal.shape.md),
             )
-            Spacer(Modifier.size(10.dp))
+            Spacer(Modifier.size(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(
                     text = m.name,
                     fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                if (m.categoryName.isNotEmpty()) {
+                m.ownerName?.takeIf { it.isNotBlank() }?.let {
                     Text(
-                        text = m.categoryName,
-                        color = Rahal.colors.inkMuted,
+                        text = it,
+                        color = Rahal.colors.ink,
                         style = MaterialTheme.typography.bodySmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
+                Spacer(Modifier.height(3.dp))
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    StatusDot(
+                        stringResource(if (m.status == "active") R.string.cl_working else R.string.cl_stopped),
+                        if (m.status == "active") Rahal.colors.success else Rahal.colors.inkMuted,
+                    )
+                    if (m.categoryName.isNotEmpty()) {
+                        Text(
+                            text = m.categoryName,
+                            color = Rahal.colors.inkMuted,
+                            style = MaterialTheme.typography.labelMedium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
             }
-        }
-
-        Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Chip(
-                stringResource(
-                    if (m.status == "active") R.string.cl_working else R.string.cl_stopped,
-                ),
-                if (m.status == "active") Rahal.colors.success else Rahal.colors.inkMuted,
+            Icon(
+                painterResource(com.rahalgo.ui.R.drawable.ic_arrow_back),
+                contentDescription = null,
+                tint = Rahal.colors.inkMuted,
+                modifier = Modifier
+                    .size(18.dp)
+                    .graphicsLayer { rotationZ = 180f },
             )
-            // **أمحسوبٌ في هدفه أم ينتظر** (قرارُ المالك ٢٠٢٦-١٠-١٣) — **والهدفُ يتبع
-            // المندوبَ الحاليّ** (قرارُ المالك ٢٠٢٦-١٠-٢٠): المتجرُ المنقولُ إليه يُحسب له،
-            // والمنقولُ عنه لا يُحسب لمن فتحه.
-            when (m.goalState) {
-                "counted" -> Chip(stringResource(R.string.cl_goal_counted), Rahal.colors.success)
-                "pending" -> Chip(stringResource(R.string.cl_goal_pending), Rahal.colors.accent)
-            }
         }
 
-        // ══════════════════════════════════════════════════════════════
-        // **وشريطُ التفعيل حين لا يزال دونه — تحت الشارات**
-        // ══════════════════════════════════════════════════════════════
-        //
-        // **ولا يُعرض لمن فعّل** — شريطٌ ممتلئٌ دائماً يُقرأ زينةً لا خبرا.
         val needed = m.activationNeeded.toInt()
         if (needed > 1 && m.activationDone < needed) {
             Spacer(Modifier.height(8.dp))
             Text(
-                text = stringResource(
-                    R.string.cl_activation,
-                    m.activationDone.toString(),
-                    needed.toString(),
-                ),
+                text = stringResource(R.string.cl_activation, m.activationDone.toString(), needed.toString()),
                 color = Rahal.colors.inkMuted,
                 style = MaterialTheme.typography.bodySmall,
             )
             Spacer(Modifier.height(4.dp))
-            Bar(
-                ratio = m.activationDone.toFloat() / needed.toFloat(),
-                color = Rahal.colors.accent,
-            )
+            Bar(ratio = m.activationDone.toFloat() / needed.toFloat(), color = Rahal.colors.accent)
         }
 
-        // ══════════════════════════════════════════════════════════════
-        // **وأربعةُ أرقامٍ في صفٍّ واحد**
-        // ══════════════════════════════════════════════════════════════
-        //
-        // (طلبُ المالك ٢٠٢٦-٠٩-٣٠: «نضيف مربّعاً لعدد العناصر المعروضة
-        //  بكلّ متجر… لنعرف كلّ متجر كم صنف عارض بدون ما نفوت عليه».)
-        //
-        // **والصفرُ في الأصناف يُصبَغ تنبيهاً لا رماديّاً**: **متجرٌ بلا
-        // صنفٍ معروضٍ لا يظهر للزبون أصلاً** — فهو عملٌ ناقصٌ لا رقمٌ
-        // يُقرأ، **ومن رآه رماديّاً مرّ عليه.**
         Spacer(Modifier.height(10.dp))
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             MiniStat(
                 label = stringResource(R.string.cl_s_orders),
                 value = m.deliveredOrders.toString(),
                 color = Rahal.colors.ink,
                 modifier = Modifier.weight(1f),
             )
-            // **والمالُ أعرضُ من العدد** — فلا يُقصّ «125,000 ل.س».
             MiniStat(
                 label = stringResource(R.string.cl_s_commission),
                 value = money(m.myCommission),
                 color = Rahal.colors.brand,
-                modifier = Modifier.weight(1.6f),
-            )
-            MiniStat(
-                label = stringResource(R.string.cl_s_items),
-                value = m.itemsCount.toString(),
-                color = if (m.itemsCount == 0) Rahal.colors.accent else Rahal.colors.ink,
-                modifier = Modifier.weight(1f),
-            )
-            MiniStat(
-                label = stringResource(R.string.cl_s_offers),
-                value = m.offersCount.toString(),
-                color = if (m.offersCount > 0) Rahal.colors.success else Rahal.colors.inkMuted,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1.4f),
             )
         }
 
-        // **وما ينقصه بنداً بنداً — فوق الزرّين** — فيعرف المندوبُ ما يُكمله
-        // وهو واقفٌ في المتجر.
-        MissingStrip(missingFor(m))
-
-        // **واتّصالٌ وواتساب من البطاقة** — بلا فتح العميل (مراجعةُ المالك ٢٠٢٦-١٠-٣٠).
-        m.ownerPhone?.takeIf { it.isNotBlank() }?.let {
+        // **شارةٌ بما ينقصه** — العددُ هنا والتفصيلُ في بطاقته (يُفتح فيُرى بنداً بنداً).
+        val missing = missingFor(m)
+        val noItems = m.itemsCount == 0
+        if (missing.isNotEmpty() || noItems) {
             Spacer(Modifier.height(8.dp))
-            ContactButtons(it)
-        }
-
-        // ══════════════════════════════════════════════════════════════
-        // **وفعلاه من بطاقته — لا من داخله**
-        // ══════════════════════════════════════════════════════════════
-        //
-        // (طلبُ المالك ٢٠٢٦-٠٩-٣٠: «نضيف نفس الزرّ إضافة صنف أو أنشئ
-        //  عرض بنفس البطاقة، هيك نسهّل عالمندوب».)
-        //
-        // **وهما الزرّان نفسُهما في صفحة الأصناف** — نصّاً وترتيباً،
-        // **فلا يتعلّم المندوبُ بابين لفعلٍ واحد.**
-        Spacer(Modifier.height(8.dp))
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            RahalOutlineButton(
-                onClick = onItems,
-                modifier = Modifier.weight(1f).height(48.dp),
-                compact = true,
-            ) { com.rahalgo.ui.FitButtonText(stringResource(R.string.mn_items)) }
-            RahalButton(
-                onClick = onAddItem,
-                modifier = Modifier.weight(1f).height(48.dp),
-                compact = true,
-            ) { com.rahalgo.ui.FitButtonText(stringResource(R.string.mn_add_item)) }
-
-            RahalOutlineButton(
-                onClick = onMakeOffer,
-                modifier = Modifier.weight(1f).height(48.dp),
-                compact = true,
-            ) { com.rahalgo.ui.FitButtonText(stringResource(R.string.mn_make_offer)) }
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (missing.isNotEmpty()) {
+                    Chip(stringResource(R.string.cl_missing_badge, missing.size.toString()), Rahal.colors.accent)
+                } else if (m.goalState == "counted") {
+                    Chip(stringResource(R.string.cl_goal_counted), Rahal.colors.success)
+                }
+                if (noItems) Chip(stringResource(R.string.cl_f_no_items), Rahal.colors.accent)
+            }
+        } else if (m.goalState == "counted") {
+            Spacer(Modifier.height(8.dp))
+            Chip(stringResource(R.string.cl_goal_counted), Rahal.colors.success)
         }
     }
 }
