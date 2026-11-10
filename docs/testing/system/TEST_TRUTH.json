@@ -33,8 +33,8 @@
     "setting_defs": 283,
     "behaviour_settings": 238,
     "order_fields": 144,
-    "test_files": 812,
-    "test_funcs": 3132
+    "test_files": 813,
+    "test_funcs": 3134
   },
   "flows": [
     {
@@ -26837,6 +26837,18 @@
     {
       "name": "TestSettlementPercentBackfill",
       "file": "internal/qa/settlement_percent_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSWR01_WalletRejectedAtBothDoors",
+      "file": "internal/qa/settlement_wallet_removed_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestSWR02_MigrationFlipsWalletStoresBalanceStaysAndNewOrderIsCash",
+      "file": "internal/qa/settlement_wallet_removed_test.go",
       "package": "qa",
       "orphan": true
     },

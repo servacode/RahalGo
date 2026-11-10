@@ -285,11 +285,7 @@ fun StoreScreen(
                     SettingsRow(
                         icon = com.rahalgo.ui.R.drawable.ic_wallet,
                         label = stringResource(R.string.home_row_settlement),
-                        value = when {
-                            !store.settlementConfirmed -> notSet
-                            store.settlementMethod == "wallet" -> stringResource(R.string.home_val_wallet)
-                            else -> stringResource(R.string.home_val_cash)
-                        },
+                        value = if (!store.settlementConfirmed) notSet else stringResource(R.string.home_val_cash),
                         warn = !store.settlementConfirmed,
                     ) { vm.page = StorePage.Settlement }
                     SettingsRow(
@@ -747,46 +743,25 @@ private fun StorePageScreen(
             }
             StorePage.Address -> AddressEditor(vm)
             StorePage.Settlement -> Card {
-                // **ويبدّلها بنفسه** (قرارُ المالك ٢٠٢٦-١٠-٠١) — **ويُسأل قبل التبديل**:
-                // للطلبات الجديدة وحدَها، والمستحقُّ النقديُّ القائمُ يبقى حتّى يُصرف.
-                var askMethod by rememberSaveable { mutableStateOf<String?>(null) }
-                val pickMethod: (String) -> Unit = { m ->
-                    if (!store.settlementConfirmed || store.settlementMethod != m) askMethod = m
-                }
-                // **البطاقتان نفساهما اللتان في المعالج** (ملاحظةُ المالك ٥).
+                // **نقدٌ لا غير** (قرارُ المالك ٢٠٢٦-١١-١٠، القرار ٩: شيلت «المحفظة») — بطاقةٌ ثابتة،
+                // **ومتجرٌ لم يؤكّدها بعد يؤكّد «نقدي» بزرّ.** ورصيدُ المحفظة القديمُ يبقى ويُسحب.
                 Text(stringResource(R.string.q_settlement), fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
                 Spacer(Modifier.height(Rahal.space.sm))
-                IconChoicePair(
-                    first = IconChoice(
-                        icon = R.drawable.ic_banknotes,
-                        title = stringResource(R.string.wz_pay_cash),
-                        sub = "",
-                        selected = store.settlementConfirmed && store.settlementMethod == "cash",
-                    ) { pickMethod("cash") },
-                    second = IconChoice(
-                        icon = com.rahalgo.ui.R.drawable.ic_wallet,
-                        title = stringResource(R.string.wz_pay_wallet),
-                        sub = "",
-                        selected = store.settlementConfirmed && store.settlementMethod == "wallet",
-                    ) { pickMethod("wallet") },
-                    enabled = !vm.saving && !suspended,
-                )
-                if (store.settlementMethod == "cash" && store.unpaidCashDue > 0) {
+                CashOnlyCard()
+                if (!store.settlementConfirmed && !suspended) {
+                    Spacer(Modifier.height(Rahal.space.sm))
+                    RahalButton(
+                        onClick = { vm.setSettlementMethod("cash") },
+                        enabled = !vm.saving,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text(stringResource(R.string.settlement_confirm_cash)) }
+                }
+                if (store.unpaidCashDue > 0) {
                     Spacer(Modifier.height(Rahal.space.sm))
                     KeyValue(
                         label = stringResource(R.string.store_unpaid_cash),
                         value = money(store.unpaidCashDue),
                         valueColor = Rahal.colors.brand,
-                    )
-                }
-                askMethod?.let { m ->
-                    com.rahalgo.ui.ConfirmDialog(
-                        title = stringResource(R.string.settlement_q),
-                        body = stringResource(R.string.settlement_body),
-                        confirm = stringResource(R.string.settlement_yes),
-                        onConfirm = { vm.setSettlementMethod(m); askMethod = null },
-                        onDismiss = { askMethod = null },
-                        danger = false,
                     )
                 }
             }

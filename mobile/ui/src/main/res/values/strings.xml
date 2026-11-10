@@ -737,6 +737,7 @@
     <string name="err_invalid_amount">المبلغ غير صالح</string>
     <string name="err_invalid_category">التصنيف غير صالح</string>
     <string name="err_settlement_method_invalid">طريقة التسوية يجب أن تكون نقدا أو محفظة</string>
+    <string name="err_settlement_wallet_removed">ما عاد في استلام عالمحفظة. كل المتاجر صارت نقداً: السائق بيدفعلك عند الاستلام، ورصيد محفظتك القديم بيضل وبتقدر تسحبه.</string>
     <string name="err_settlement_not_found">لا تسوية بهذا المعرّف</string>
     <string name="err_settlement_not_cash">هذه التسوية ليست نقدية</string>
     <string name="err_settlement_not_payable">لا مستحق نقدي قائم لهذه التسوية</string>

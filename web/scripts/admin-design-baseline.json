@@ -150,8 +150,7 @@
     "rawButton": 1
   },
   "apps/rahalgo/src/components/admin/MerchantSettlement.tsx": {
-    "tinyText": 1,
-    "rawButton": 1
+    "tinyText": 1
   },
   "apps/rahalgo/src/components/admin/PageHero.tsx": {
     "rawButton": 1

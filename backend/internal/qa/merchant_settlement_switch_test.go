@@ -1,7 +1,10 @@
 package qa
 
-// **صاحبُ المتجر يبدّل طريقةَ مستحقّاته بنفسه** — قرارُ المالك ٢٠٢٦-١٠-٠١
-// («تكون بإعدادات المتجر ويقدر يبدّلها»). وللطلبات الجديدة وحدَها.
+// **صاحبُ المتجر يؤكّد طريقةَ مستحقّاته بنفسه** — قرارُ المالك ٢٠٢٦-١٠-٠١.
+//
+// **ومنذ ٢٠٢٦-١١-١٠ (القرار ٩) لا طريقةَ إلّا «نقد»**: «محفظة» تُردّ برمزها
+// (`settlement_wallet_removed_test.go`)، **فيبقى البابُ لتأكيد «نقد»** — والتدقيقُ
+// وحدودُ المِلكيّة والإيقاف كما كانت.
 
 import (
 	"net/http"
@@ -17,13 +20,17 @@ func TestMSS01_OwnerSwitchesSettlementMethod(t *testing.T) {
 	tok := h.TokenFor(m.Owner.ID, "merchant")
 	path := "/api/v1/merchant/stores/" + m.ID + "/settlement-method"
 
-	r := h.Call("PATCH", path, tok, map[string]any{"method": "wallet"}, nil)
-	if r.Code != http.StatusOK || r.JSON()["settlement_method"] != "wallet" {
-		t.Fatalf("التبديلُ إلى المحفظة: %d / %s", r.Code, r.Err())
+	// **مِسنَدُ المتاجر يصنعها «محفظة»** (طلباتٌ قديمة) — **وتأكيدُ صاحبه يجعلها «نقد».**
+	r := h.Call("PATCH", path, tok, map[string]any{"method": "cash"}, nil)
+	if r.Code != http.StatusOK || r.JSON()["settlement_method"] != "cash" {
+		t.Fatalf("التأكيدُ «نقد»: %d / %s", r.Code, r.Err())
 	}
 	var method string
-	if err := h.Pool.QueryRow(ctxBG(), `SELECT settlement_method FROM merchants WHERE id = $1`, m.ID).Scan(&method); err != nil || method != "wallet" {
+	if err := h.Pool.QueryRow(ctxBG(), `SELECT settlement_method FROM merchants WHERE id = $1`, m.ID).Scan(&method); err != nil || method != "cash" {
 		t.Fatalf("لم يُكتب: %q %v", method, err)
+	}
+	if r := h.Call("PATCH", path, tok, map[string]any{"method": "wallet"}, nil); r.Code != http.StatusBadRequest {
+		t.Fatalf("**«محفظة» مرّت بعد إلغائها**: %d", r.Code)
 	}
 	var audited int
 	_ = h.Pool.QueryRow(ctxBG(), `SELECT count(*) FROM audit_log WHERE action = 'merchant.settlement_update' AND entity_id = $1`, m.ID).Scan(&audited)

@@ -446,27 +446,12 @@ private fun HoursStep(vm: StoreViewModel, advance: () -> Unit): StepNext {
 
 @Composable
 private fun SettlementStep(vm: StoreViewModel, advance: () -> Unit): StepNext {
-    val store = vm.store ?: return StepNext(false) {}
-    var m by rememberSaveable { mutableStateOf(if (store.settlementConfirmed) store.settlementMethod else "") }
-    // **والمتجرُ يبدّلها بنفسه** (قرارُ المالك ٢٠٢٦-١٠-٠١) — **فيُختار هنا اختياراً لا عرضاً.**
-    val chosen = m
-    StepTitle(R.string.wz_settlement_q, R.string.wz_settlement_hint)
+    vm.store ?: return StepNext(false) {}
+    // **نقدٌ لا غير** (قرارُ المالك ٢٠٢٦-١١-١٠، القرار ٩) — الخطوةُ تُعلم وتؤكّد «نقدي» بـ«التالي».
+    StepTitle(R.string.wz_settlement_q)
     Spacer(Modifier.height(Rahal.space.sm))
-    IconChoicePair(
-        first = IconChoice(
-            icon = R.drawable.ic_banknotes,
-            title = stringResource(R.string.wz_pay_cash),
-            sub = "",
-            selected = m == "cash",
-        ) { m = "cash" },
-        second = IconChoice(
-            icon = com.rahalgo.ui.R.drawable.ic_wallet,
-            title = stringResource(R.string.wz_pay_wallet),
-            sub = "",
-            selected = m == "wallet",
-        ) { m = "wallet" },
-    )
-    return StepNext(chosen.isNotEmpty()) { vm.setSettlementMethod(chosen) { advance() } }
+    CashOnlyCard()
+    return StepNext(true) { vm.setSettlementMethod("cash") { advance() } }
 }
 
 // ── ٦ · ترجيعُ الغرض — بالبطاقتين نفسيهما ──

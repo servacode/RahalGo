@@ -1,0 +1,72 @@
+package com.rahalgo.merchant.store
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.rahalgo.design.Rahal
+import com.rahalgo.merchant.R
+
+/**
+ * **طريقةُ استلام الأموال — نقدٌ لا غير** (قرارُ المالك ٢٠٢٦-١١-١٠، القرار ٩: شيلت «المحفظة»).
+ *
+ * بطاقةٌ ثابتةٌ لا اختيار: السائقُ يدفع للمتجر حقَّ البضاعة نقداً عند الاستلام ناقصَ العمولة.
+ * **ونفسُ الكلام على الموقع** (`store.wizard.cashOnly`). ورصيدُ المحفظة القديمُ يبقى ويُسحب كما كان.
+ */
+@Composable
+internal fun CashOnlyCard() {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(Rahal.shape.lg)
+            .background(Rahal.colors.brand.copy(alpha = 0.08f))
+            .border(Rahal.stroke.hair, Rahal.colors.brand, Rahal.shape.lg)
+            .padding(Rahal.space.md),
+        horizontalArrangement = Arrangement.spacedBy(Rahal.space.md),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier
+                .size(48.dp)
+                .clip(Rahal.shape.pill)
+                .background(Rahal.colors.brand),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painterResource(R.drawable.ic_banknotes),
+                contentDescription = null,
+                tint = Rahal.colors.onBrand,
+                modifier = Modifier.size(24.dp),
+            )
+        }
+        Column(Modifier.weight(1f)) {
+            Text(
+                stringResource(R.string.wz_pay_cash),
+                color = Rahal.colors.ink,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                stringResource(R.string.settlement_cash_only),
+                color = Rahal.colors.inkMuted,
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
+    }
+}
