@@ -51,14 +51,7 @@ fun ChatBubble(message: ChatMessage) {
             Modifier
                 // **ذيلُ الفقاعة عند صاحبها** (مراجعةُ التصميم ٢٠٢٦-١١-٠٩) وعرضٌ أقصى فلا تمتدّ الرسالةُ الطويلة حدَّ الحافّة.
                 .widthIn(max = 300.dp)
-                .clip(
-                    androidx.compose.foundation.shape.RoundedCornerShape(
-                        topStart = 18.dp,
-                        topEnd = 18.dp,
-                        bottomStart = if (mine) 18.dp else 4.dp,
-                        bottomEnd = if (mine) 4.dp else 18.dp,
-                    ),
-                )
+                .clip(if (mine) Rahal.shape.bubbleMine else Rahal.shape.bubbleTheirs)
                 .background(if (mine) Rahal.colors.brand else Rahal.colors.bubble)
                 .padding(horizontal = 14.dp, vertical = 10.dp),
             horizontalAlignment = Alignment.End,

@@ -64,6 +64,12 @@ data class RahalShapes(
      * تصميما.
      */
     val sheet: RoundedCornerShape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+    /** **فقاعةُ رسالتي** — ذيلُها في زاويتي السفلى (مراجعةُ التصميم ٢٠٢٦-١١-٠٩). */
+    val bubbleMine: RoundedCornerShape =
+        RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp, bottomStart = 18.dp, bottomEnd = 4.dp),
+    /** **فقاعةُ الطرف الآخر** — ذيلُها في الزاوية المقابلة. */
+    val bubbleTheirs: RoundedCornerShape =
+        RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp, bottomStart = 4.dp, bottomEnd = 18.dp),
 )
 
 /**
