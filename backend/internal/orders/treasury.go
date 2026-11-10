@@ -120,6 +120,17 @@ func (s *Service) creditTreasury(ctx context.Context, q wallet.Querier, orderID,
 	if tid == "" {
 		return nil
 	}
+	// **النموذج ٢: من الوقائع بلا حدٍّ للبضاعة** (`creditTreasuryGoodsOutside`) — والتوصيلةُ
+	// على مسارها (لا بضاعةَ فيها أصلاً، ونقدُها يُقبض عند الاستلام).
+	var model int16
+	var mkind string
+	if err := q.QueryRow(ctx, `SELECT money_model, kind FROM orders WHERE id = $1`, orderID).
+		Scan(&model, &mkind); err != nil {
+		return err
+	}
+	if model == MoneyModelGoodsOutside && mkind != KindMerchantDelivery {
+		return s.creditTreasuryGoodsOutside(ctx, q, tid, orderID, actorID)
+	}
 	var walletPaid, cashDue, goods, collected, lost, usdSYP int64
 	var status, kind string
 	if err := q.QueryRow(ctx,

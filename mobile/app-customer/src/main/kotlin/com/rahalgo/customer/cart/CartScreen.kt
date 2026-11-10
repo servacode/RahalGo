@@ -405,11 +405,19 @@ fun CartScreen(
         }
         // **والمحفظةُ لا تُعرض أصلاً حتّى يغطّي رصيدُها الإجماليَّ** (قرارُ المالك ٢٠٢٦-١٠-٣٠) —
         // ولا إجماليَّ بعد ⇒ لا محفظة. وإن صار الرصيدُ كافياً ظهرت.
-        val walletBlocked = payableTotal == null || walletBalance < payableTotal
+        //
+        // **والمحفظةُ تدفع التوصيلَ وحدَه** (قرارُ المالك ٢٠٢٦-١١-١٠): «الكل من المحفظة» انشال،
+        // والبضاعةُ كاش للكابتن. ويظهر الخيارُ حين يغطّي الرصيدُ الأجرة. مرآةُ موقع الزبون.
+        val fee0 = q0?.let { cut0?.deliveryFee ?: it.deliveryFee } ?: 0L
+        val deliveryPart = payableTotal?.let { minOf(fee0, it) } ?: 0L
+        val deliveryOk = payableTotal != null && deliveryPart > 0 && walletBalance >= deliveryPart
+        val walletBlocked = !deliveryOk
         // **وخيارٌ معطّلٌ لا يبقى مختاراً** — من اختار المحفظةَ ثمّ ارتفع
         // الإجماليُّ فوق رصيده يُعاد إلى النقد، فلا يُرسَل بما لا يُقبَل.
-        LaunchedEffect(walletBlocked) {
-            if (walletBlocked && vm.wallet) vm.wallet = false
+        LaunchedEffect(deliveryOk) {
+            if (vm.walletScope != "none" && !deliveryOk) {
+                vm.walletScope = "none"
+            }
         }
         Spacer(Modifier.height(12.dp))
         if (walletBlocked) {
@@ -420,17 +428,29 @@ fun CartScreen(
                 style = MaterialTheme.typography.bodyMedium,
             )
         } else {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 PayChoice(
                     text = stringResource(R.string.cart_cash),
-                    on = !vm.wallet,
-                    modifier = Modifier.weight(1f),
-                ) { vm.wallet = false }
-                PayChoice(
-                    text = stringResource(R.string.cart_wallet),
-                    on = vm.wallet,
-                    modifier = Modifier.weight(1f),
-                ) { vm.wallet = true }
+                    on = vm.walletScope == "none",
+                    modifier = Modifier.fillMaxWidth(),
+                ) { vm.walletScope = "none" }
+                if (deliveryOk && payableTotal != null) {
+                    PayChoice(
+                        text = stringResource(R.string.cart_wallet_delivery),
+                        on = vm.walletScope == "delivery",
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { vm.walletScope = "delivery" }
+                    if (vm.walletScope == "delivery") {
+                        Text(
+                            stringResource(
+                                R.string.cart_wallet_delivery_hint,
+                                money(deliveryPart), money(payableTotal - deliveryPart),
+                            ),
+                            color = Rahal.colors.inkMuted,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
             }
         }
         // ══════════════════════════════════════════════════════════════
@@ -831,7 +851,7 @@ fun CartScreen(
                 address?.let {
                     vm.send(
                         it.text, it.lat, it.lng,
-                        if (vm.wallet) "wallet" else "cash", vm.promo.trim(), onDone,
+                        if (vm.walletScope == "none") "cash" else "wallet", vm.promo.trim(), onDone,
                     )
                 }
             },
@@ -1058,7 +1078,8 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
             promoBusy = false
         }
     }
-    var wallet by mutableStateOf(false)
+    /** **شو بيندفع من المحفظة** (قرارُ المالك ٢٠٢٦-١١-١٠): `none` كاش · `delivery` التوصيل. («الكل» انشال.) */
+    var walletScope by mutableStateOf("none")
 
     var priced by mutableStateOf<Quote?>(null)
         private set
@@ -1304,6 +1325,7 @@ class CartViewModel(app: Application) : AndroidViewModel(app) {
                         lat = lat,
                         lng = lng,
                         paymentMethod = payment,
+                        walletScope = walletScope,
                         promoCode = code,
                     ),
                     attemptKey = key,

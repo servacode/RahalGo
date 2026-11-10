@@ -14,6 +14,7 @@ export type PayerKey =
   | "cashCustomer"
   | "walletCustomer"
   | "mixedCustomer"
+  | "deliveryWallet"
   | "merchantWallet"
   | "merchantCash"
   | "recipientCash"
@@ -23,6 +24,8 @@ export interface PayerInput {
   kind?: string;
   fee_payer?: string;
   payment_method?: string;
+  /** **«التوصيل من المحفظة والباقي كاش»** (قرارُ المالك ٢٠٢٦-١١-٠٩). */
+  wallet_scope?: string;
   wallet_paid?: number;
   cash_due?: number;
   free_waived?: number;
@@ -38,6 +41,8 @@ export function payerOf(o: PayerInput): PayerKey {
     if (o.fee_payer === "merchant_cash") return "merchantCash";
     return "merchantWallet";
   }
+  // **والخاصُّ قبل التسليم محفوظُه حجزٌ لا مدفوع** — فالنطاقُ يُقال باسمه لا بالأرقام وحدَها.
+  if (o.wallet_scope === "delivery") return "deliveryWallet";
   if (w > 0 && c > 0) return "mixedCustomer";
   if (c > 0) return "cashCustomer";
   if (w > 0) return "walletCustomer";
@@ -57,6 +62,9 @@ export function payerGroup(k: PayerKey): PayerGroup {
 
 export function payerLabel(o: PayerInput): string {
   const k = payerOf(o);
+  if (k === "deliveryWallet") {
+    return P.deliveryWallet.replace("{c}", fmtMoney(o.cash_due ?? 0));
+  }
   if (k === "mixedCustomer") {
     return P.mixedCustomer.replace("{w}", fmtMoney(o.wallet_paid ?? 0)).replace("{c}", fmtMoney(o.cash_due ?? 0));
   }

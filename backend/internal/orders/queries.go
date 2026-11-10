@@ -52,7 +52,7 @@ const orderSelect = `
 	       o.status, o.address_text,
 	       ST_Y(o.dropoff::geometry), ST_X(o.dropoff::geometry),
 	       o.zone_id, z.name,
-	       o.payment_method, o.subtotal, o.delivery_fee, o.promo_delivery_waived, o.discount, o.total,
+	       o.payment_method, o.wallet_scope, o.subtotal, o.delivery_fee, o.promo_delivery_waived, o.discount, o.total,
 	       o.wallet_paid, o.cash_due, o.promo_code, o.notes, o.cancel_reason, o.created_at,
 	       o.sent_to_merchant_at, o.dispatched_at,
 	       -- **ومن عُرض عليه ولم يقبل بعد** — يُعرض ما دام العرضُ حيّاً.
@@ -207,7 +207,7 @@ func scanOrder(row pgx.Row) (*Order, error) {
 		&o.ExtStoreMerchantName, &o.ExtStoreAt, &o.ExtStoreReason,
 		&o.DriverID, &o.DriverPhone, &o.DriverName,
 		&o.Status, &o.AddressText, &o.Lat, &o.Lng, &o.ZoneID, &o.ZoneName,
-		&o.PaymentMethod, &o.Subtotal, &o.DeliveryFee, &o.FreeWaived, &o.Discount, &o.Total,
+		&o.PaymentMethod, &o.WalletScope, &o.Subtotal, &o.DeliveryFee, &o.FreeWaived, &o.Discount, &o.Total,
 		&o.WalletPaid, &o.CashDue, &o.PromoCode, &o.Notes, &o.CancelReason, &o.CreatedAt,
 		&o.SentToMerchantAt, &o.DispatchedAt, &o.OfferedDriverName,
 		&o.ProofURL, &o.ProofTakenAt, &o.ProofMeters, &o.ProofSkipReason, &o.ProofMocked,

@@ -66,10 +66,12 @@ func (s *Service) correctSettlementsTx(ctx context.Context, tx pgx.Tx, orderID, 
 	type row struct {
 		id, merchantID, ownerID, method, state, name string
 		amount, adjusted, reversed, waived           int64
+		offLedger                                    bool
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT ms.id::text, ms.merchant_id::text, ms.owner_user_id::text, ms.method, ms.state,
-		       m.name, ms.amount, ms.adjusted_amount, ms.reversed_amount, ms.commission_waived
+		       m.name, ms.amount, ms.adjusted_amount, ms.reversed_amount, ms.commission_waived,
+		       ms.off_ledger
 		FROM merchant_settlements ms
 		JOIN merchants m ON m.id = ms.merchant_id
 		WHERE ms.order_id = $1
@@ -82,7 +84,7 @@ func (s *Service) correctSettlementsTx(ctx context.Context, tx pgx.Tx, orderID, 
 	for rows.Next() {
 		var r row
 		if err := rows.Scan(&r.id, &r.merchantID, &r.ownerID, &r.method, &r.state, &r.name,
-			&r.amount, &r.adjusted, &r.reversed, &r.waived); err != nil {
+			&r.amount, &r.adjusted, &r.reversed, &r.waived, &r.offLedger); err != nil {
 			rows.Close()
 			return nil, err
 		}
@@ -114,8 +116,28 @@ func (s *Service) correctSettlementsTx(ctx context.Context, tx pgx.Tx, orderID, 
 		d := EditStoreDelta{MerchantID: r.merchantID, Name: r.name, Method: r.method,
 			OldDue: cur, NewDue: cur + delta}
 
-		switch r.method {
-		case "wallet":
+		switch {
+		// **النموذج ٢: الفرقُ بين الكابتن والمتجر** (خطّةُ المال ٢٠٢٦-١١-١٠، الدفعة B8) — سطرُ تصحيحٍ
+		// سجلٌّ بلا قيد ولا درج: زاد حقُّ المتجر ⇒ الكابتنُ يدفع له الفرق؛ نقص ⇒ **يأخذه من المتجر**
+		// («خد من المتجر X»، جوابُ المالك) لا من درج المكتب. وصندوقُه عند التسليم يقبض نقدَ الطلب
+		// ناقصَ ما دفعه للمتجر بعد التصحيح (`driverPaidFor`).
+		case r.offLedger:
+			if r.state != "cash_paid" {
+				return nil, ErrOrderEditSettlement
+			}
+			if driverID == nil || *driverID == "" {
+				return nil, ErrOrderEditNoDriver
+			}
+			if delta < 0 && -delta > cur-r.reversed {
+				return nil, ErrOrderEditSettlement
+			}
+			if _, err := tx.Exec(ctx, `
+				UPDATE merchant_settlement_adjustments SET paid_by = $2, paid_via = $3 WHERE id = $1`,
+				adjID, *driverID, paidViaDriver); err != nil {
+				return nil, err
+			}
+			d.DriverPays = delta
+		case r.method == "wallet":
 			if r.state != "wallet_credited" {
 				return nil, ErrOrderEditSettlement
 			}
@@ -156,7 +178,7 @@ func (s *Service) correctSettlementsTx(ctx context.Context, tx pgx.Tx, orderID, 
 					return nil, err
 				}
 			}
-		case "cash":
+		case r.method == "cash":
 			// **النقدُ يُدفع بيد السائق عند الاستلام** (قرارُ المالك ٢٠٢٦-١٠-١٥) — فالفرقُ كذلك.
 			if r.state != "cash_paid" {
 				return nil, ErrOrderEditSettlement

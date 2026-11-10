@@ -145,6 +145,10 @@ type lockedOrder struct {
 	origin string
 	// stops **عددُ متاجر الطلب** — وفوق الواحد فرعُ المحطّات.
 	stops int
+	// walletScope **شو بيندفع من المحفظة** — none | full | delivery (هجرة ٠٥٢٦).
+	walletScope string
+	// moneyModel **نموذجُ المال** (هجرة ٠٥٣٢) — ٢: البضاعةُ خارجَ كلّ حساب (`money_model2.go`).
+	moneyModel int16
 }
 
 // lockOrderTx **يقفل صفَّ الطلب ويقرؤه** — أوّلُ ما في كلّ انتقالٍ وكلّ فعلِ قسم.
@@ -159,10 +163,12 @@ func lockOrderTx(ctx context.Context, tx pgx.Tx, orderID string) (*lockedOrder, 
 		       -- **والتوصيلةُ بلا زبون** («لدي توصيلة») — NULL في نصٍّ يُسقط
 		       -- كلَّ انتقالٍ لها: قبولَ السائق واستلامَه وتسليمَه.
 		       COALESCE(customer_id::text, ''),
-		       COALESCE(promo_code,''), kind, custom_reserved_amount, origin, stops
+		       COALESCE(promo_code,''), kind, custom_reserved_amount, origin, stops, wallet_scope,
+		       money_model
 		FROM orders WHERE id = $1 FOR UPDATE`, orderID).
 		Scan(&lo.from, &lo.driverID, &lo.walletPaid, &lo.cashDue, &lo.deliveryFee, &lo.customerID,
-			&lo.promoCode, &lo.kind, &lo.customReserved, &lo.origin, &lo.stops)
+			&lo.promoCode, &lo.kind, &lo.customReserved, &lo.origin, &lo.stops, &lo.walletScope,
+			&lo.moneyModel)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound
 	}
@@ -604,7 +610,9 @@ func (s *Service) applyTransitionTx(ctx context.Context, tx pgx.Tx, lo *lockedOr
 		customerID: customerID, driverID: driverID,
 		walletPaid: walletPaid, cashDue: cashDue, deliveryFee: deliveryFee,
 		custom: kind == KindCustom, customReserved: customReserved,
+		walletScope:      lo.walletScope,
 		merchantDelivery: kind == KindMerchantDelivery,
+		moneyModel:       lo.moneyModel,
 	}, &done); err != nil {
 		return nil, err
 	}
@@ -1017,8 +1025,12 @@ type settlement struct {
 	// **يُمرَّر ليقرّر `settle` بلا قراءةٍ ثانية**: نهايةٌ إلى غير التسليم تفكّ
 	// الحجزَ **إن وُجد وحدَه** — **فطلبٌ نقديٌّ (لا حجزَ له) لا يمسّ شيئاً.**
 	customReserved int64
+	// walletScope **شو انحجز من المحفظة** — none | full | delivery (هجرة ٠٥٢٦).
+	walletScope string
 	// merchantDelivery **«لدي توصيلة» — لا بضاعةَ ولا زبونَ ولا عمولةَ مبيعات.**
 	merchantDelivery bool
+	// moneyModel **نموذجُ المال** — ٢: البضاعةُ خارجَ كلّ حساب (`money_model2.go`).
+	moneyModel int16
 }
 
 // settle ينفّذ كل الأثر المالي لانتقال الحالة داخل معاملة المستدعي.
@@ -1062,8 +1074,28 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 			// **ويُميَّز بالمستحقِّ النقديِّ نفسِه لا بحقلٍ جديد**: المحفظةُ
 			// تُصفّره عند التأكيد، **والنقدُ يكتبه.** ولقطةٌ واحدةٌ تُقرأ
 			// أصدقُ من اثنتين تفترقان.
+			//
+			// **إلّا «التوصيل من المحفظة والباقي كاش»** (قرارُ المالك ٢٠٢٦-١١-٠٩): نقدٌ
+			// وحجزٌ معاً — **مسارُ المحفظة يسوّي الحجزَ ويقبض النقدَ معاً**، ومسارُ النقد
+			// وحدَه كان يقصر السائقَ على المقبوض فيخسر أجرتَه ويبقى الحجزُ مجمَّداً
+			// (FI-11.l). **وحجزٌ صفرٌ** (أجرةٌ معفاةٌ كلُّها) نقدٌ محض.
+			if in.walletScope == ScopeDelivery && in.customReserved > 0 {
+				return s.settleCustomWallet(ctx, q, in, out)
+			}
 			if in.cashDue > 0 {
 				return s.settleCustomCash(ctx, q, in, out)
+			}
+			// **النموذج ٢: ثمنٌ بالدولار نقدٌ ولو صفُر المستحقُّ بالليرة** (جردُ المال، العطب ٣) —
+			// كان يذهب لمسار المحفظة فيخرج بلا عمولة المتجر التابع.
+			if in.moneyModel == MoneyModelGoodsOutside {
+				var usd int64
+				if err := q.QueryRow(ctx, `SELECT goods_usd_syp FROM orders WHERE id = $1`,
+					in.orderID).Scan(&usd); err != nil {
+					return err
+				}
+				if usd > 0 {
+					return s.settleCustomCash(ctx, q, in, out)
+				}
 			}
 			return s.settleCustomWallet(ctx, q, in, out)
 		}
@@ -1119,6 +1151,11 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 	if in.to == StPickedUp {
 		if err := s.settleMerchant(ctx, q, in.orderID, in.actorID, in.driverID, out); err != nil {
 			return err
+		}
+		// **النموذج ٢: لا مالَ تحرّك في حساب** — الكابتنُ دفع للمتجر من جيبه، والصفُّ سجلّ.
+		// فلا خزينةَ تُحسب هنا، **ولا تهبط تحت الصفر بثمن البضاعة.**
+		if in.moneyModel == MoneyModelGoodsOutside {
+			return nil
 		}
 		return s.creditTreasury(ctx, q, in.orderID, in.actorID)
 	}
@@ -1197,6 +1234,12 @@ func (s *Service) settle(ctx context.Context, q wallet.Querier, in settlement, o
 	}
 
 	// (6) استرجاع بعد التسليم — عكس كل ما سبق
+	//
+	// **النموذج ٢: أجرةُ التوصيل المدفوعةُ وحدَها** (القرار ٦) — والبضاعةُ بين الزبون والمتجر
+	// برّا الحسابات، **والكابتنُ يبقى بأجره** (أدّى المشوار). انظر `refundDeliveredFeeOnly`.
+	if refundOnEnter(in.to) && in.from == StDelivered && in.moneyModel == MoneyModelGoodsOutside {
+		return s.refundDeliveredFeeOnly(ctx, q, in, out)
+	}
 	if refundOnEnter(in.to) && in.from == StDelivered {
 		if total := in.walletPaid + in.cashDue; total > 0 {
 			if _, err := s.wallet.ApplyTx(ctx, q, in.customerID, total, "refund",
@@ -1307,6 +1350,11 @@ func (s *Service) settleMerchantFor(ctx context.Context, q wallet.Querier, order
 	if err != nil {
 		return err
 	}
+	// **النموذج ٢: صفُّ سجلٍّ بلا دفتر لكلّ متجر** (`settleMerchantRecord`) — نقداً دائماً.
+	outside, err := goodsOutside(ctx, q, orderID)
+	if err != nil {
+		return err
+	}
 
 	if _, err := q.Exec(ctx,
 		`UPDATE orders SET platform_commission = $2 WHERE id = $1`,
@@ -1325,6 +1373,12 @@ func (s *Service) settleMerchantFor(ctx context.Context, q wallet.Querier, order
 			continue
 		}
 		if only != "" && !strings.EqualFold(sh.merchantID, only) {
+			continue
+		}
+		if outside {
+			if err := s.settleMerchantRecord(ctx, q, orderID, sh, driverID, actorID); err != nil {
+				return err
+			}
 			continue
 		}
 		// **بوّابةُ الهُويّة لكلّ (طلب، متجر)** — «مرّةً واحدة» للطريقتين، وXOR بنيويّ.
@@ -1995,7 +2049,7 @@ func (s *Service) AssignDriver(ctx context.Context, actorID string, actorRoles [
 	// **ثلاثةُ طلباتٍ والسقفُ واحدٌ وكلُّها مرّت.** **والحكمان صارا
 	// تحت قفلٍ واحدٍ لصاحبهما.**
 	if err := s.AdmitDriverTx(ctx, tx, driverID, Admission{
-		CashDue: cashDue, CashLimit: cashLimit, ActiveMax: activeMax,
+		CashDue: cashDue, CashLimit: cashLimit, ActiveMax: activeMax, OrderID: orderID,
 	}); err != nil {
 		return nil, err
 	}

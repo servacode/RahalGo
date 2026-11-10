@@ -42,6 +42,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/servacode/rahalgo/backend/internal/cashbox"
 	"github.com/servacode/rahalgo/backend/internal/dbtx"
 	"github.com/servacode/rahalgo/backend/internal/httpx"
 )
@@ -61,6 +62,9 @@ var ErrTooManyActive = httpx.NewError(http.StatusConflict,
 type Admission struct {
 	// CashDue نقدُ الطلب الداخل — صفرٌ لما لا نقدَ فيه.
 	CashDue int64
+	// OrderID **الطلبُ الداخل** — إن أُعطي حُسب نقدُه مالَ المنصّة وحدَه (`cashbox.PlatformCashOf`،
+	// القرار ٧) مكانَ `CashDue`: **ثمنُ البضاعة لا يُعدّ في السقف.**
+	OrderID string
 	// CashLimit سقفُ التعرّض النقديّ.
 	CashLimit int64
 	// ActiveMax سقفُ الطلبات النشطة — **وسالبٌ يعني «لا سقفَ هنا».**
@@ -115,6 +119,13 @@ func (s *Service) AdmitDriverTx(ctx context.Context, q dbtx.Querier,
 	// **تحت القفل نفسِه** — **ولا قفلَ ثانٍ ولا ترتيبَ يُحفَظ.**
 	if s.cashbox == nil {
 		return nil
+	}
+	if in.OrderID != "" {
+		v, err := cashbox.PlatformCashOf(ctx, q, in.OrderID)
+		if err != nil {
+			return err
+		}
+		in.CashDue = v
 	}
 	return s.cashbox.GuardTx(ctx, q, driverID, in.CashDue, in.CashLimit)
 }

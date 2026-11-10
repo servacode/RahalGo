@@ -126,7 +126,7 @@ var goodsBalanceQueries = []struct{ key, sql string }{
 		FROM merchant_settlements ms
 		JOIN orders o ON o.id = ms.order_id
 		JOIN users u ON u.id = ms.paid_by
-		WHERE ms.paid_via = 'driver' AND ms.state = 'cash_paid'
+		WHERE ms.paid_via = 'driver' AND ms.state = 'cash_paid' AND NOT ms.off_ledger
 		  AND ms.amount > ms.reversed_amount AND ` + goodsOpenOrderSQL + `
 		GROUP BY u.id, u.full_name, u.phone
 		ORDER BY 4 DESC`},
@@ -143,7 +143,49 @@ func (s *Server) handleGoodsBalances(w http.ResponseWriter, r *http.Request) {
 		}
 		out[q.key] = sec
 	}
+	stuck, err := s.stuckDriverMoney(r.Context())
+	if err != nil {
+		s.respondErr(w, err)
+		return
+	}
+	out["stuck_driver_money"] = stuck
 	httpx.JSON(w, http.StatusOK, out)
+}
+
+// stuckRow **«مصاري الكابتن عالقة»** — طلبٌ من النموذج ٢ رفض متجرُه يرجّع ثمنَ بضاعته (القرار ٤).
+type stuckRow struct {
+	OrderID  string  `json:"order_id"`
+	Number   int64   `json:"number"`
+	Driver   string  `json:"driver"`
+	Phone    string  `json:"phone"`
+	Amount   int64   `json:"amount"`
+	Decision *string `json:"decision"`
+}
+
+// stuckDriverMoney **ما بانتظار قرار المكتب أوّلاً، ثمّ ما قُرّر «دين على الزبون»** (سجلٌّ مفتوح).
+func (s *Server) stuckDriverMoney(ctx context.Context) ([]stuckRow, error) {
+	rows, err := s.pg.Query(ctx, `
+		SELECT o.id::text, o.number, COALESCE(u.full_name, ''), COALESCE(u.phone, ''),
+		       o.stuck_goods_amount, o.stuck_goods_decision
+		FROM orders o
+		LEFT JOIN users u ON u.id = o.driver_id
+		WHERE o.stuck_goods_amount > 0
+		  AND (o.stuck_goods_decision IS NULL OR o.stuck_goods_decision = 'customer')
+		ORDER BY o.stuck_goods_decision NULLS FIRST, o.updated_at DESC
+		LIMIT 200`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []stuckRow{}
+	for rows.Next() {
+		var x stuckRow
+		if err := rows.Scan(&x.OrderID, &x.Number, &x.Driver, &x.Phone, &x.Amount, &x.Decision); err != nil {
+			return nil, err
+		}
+		out = append(out, x)
+	}
+	return out, rows.Err()
 }
 
 func (s *Server) goodsBalanceSection(ctx context.Context, sql string) (*goodsBalanceSection, error) {

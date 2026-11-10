@@ -723,11 +723,11 @@ func (s *Service) agreeCustomStep(ctx context.Context, orderID, driverID, step s
 // الأجرة في الحديث وإشعارٌ يطلب الموافقة، كما كان. **والمشترياتُ يبقى فيها ثمنُ
 // البضاعة** — لا يعرفه أحدٌ قبل الشراء.
 func (s *Service) autoAgreeFixedFee(ctx context.Context, orderID, customerID, driverID string) {
-	var source, mode, pay string
+	var source, mode, pay, scope string
 	var mayChange bool
 	if err := s.db.QueryRow(ctx, `
-		SELECT custom_fee_source, custom_driver_may_change_fee, custom_mode, payment_method
-		FROM orders WHERE id = $1`, orderID).Scan(&source, &mayChange, &mode, &pay); err != nil {
+		SELECT custom_fee_source, custom_driver_may_change_fee, custom_mode, payment_method, wallet_scope
+		FROM orders WHERE id = $1`, orderID).Scan(&source, &mayChange, &mode, &pay, &scope); err != nil {
 		s.logger.Error("أجرة المنصّة: تعذّرت قراءةُ الطلب", "order", orderID, "error", err)
 		return
 	}
@@ -743,9 +743,9 @@ func (s *Service) autoAgreeFixedFee(ctx context.Context, orderID, customerID, dr
 		return
 	}
 	if pay != "wallet" {
-		pay = "cash"
+		pay, scope = "cash", ""
 	}
-	if _, err := s.confirmQuote(ctx, orderID, customerID, pay, o.Total, o.QuoteVersion, true); err != nil {
+	if _, err := s.confirmQuote(ctx, orderID, customerID, pay, scope, o.Total, o.QuoteVersion, true); err != nil {
 		s.logger.Warn("أجرة المنصّة: التأكيدُ التلقائيُّ رُدّ — يؤكّدها الزبون بيده", "order", orderID, "error", err)
 		fee := int64(0)
 		if o.CustomFee != nil {
@@ -844,10 +844,14 @@ func (s *Service) settleCustomWallet(ctx context.Context, q wallet.Querier,
 	// **ولا يُعطى أكثرَ من المحجوز** — **لقطةٌ شاخت أو تعديلُ أدمنٍ قد يجعل
 	// المجموعَ غيرَ المحجوز، وقيدٌ يتجاوزه يخلق مالاً من عدم.** **وما أعفته المنصّةُ
 	// بعرض التوصيل المجانيّ يُضاف** — تدفعه هي (٢٠٢٦-١٠-٢٣).
-	if driverGets > reserved+waived {
+	//
+	// **و«التوصيل من المحفظة والباقي كاش»** (قرارُ المالك ٢٠٢٦-١١-٠٩): المحجوزُ الأجرةُ وحدَها،
+	// **والبضاعةُ نقدٌ قبضه السائقُ من الزبون** (`cash_due`) — فيُضاف للسقف، **وإلّا قُصر
+	// السائقُ على المحجوز فخسر أجرتَه.** وفي «الكلّ من المحفظة» النقدُ صفرٌ فلا يتبدّل شيء.
+	if limit := reserved + waived + in.cashDue; driverGets > limit {
 		s.logger.Warn("الطلب الخاصّ: نصيبُ السائق يتجاوز المحجوز — يُقصَر عليه",
-			"order", in.orderID, "driver", driverGets, "reserved", reserved)
-		driverGets = reserved + waived
+			"order", in.orderID, "driver", driverGets, "reserved", reserved, "cash", in.cashDue)
+		driverGets = limit
 	}
 
 	// **يُفكّ الحجزُ ويُخصَم معاً** — فعلٌ واحدٌ لا يفترق (`SettleReservedTx`).
@@ -873,6 +877,8 @@ func (s *Service) settleCustomWallet(ctx context.Context, q wallet.Querier,
 	}
 	// **وما دفعه السائقُ للمتجر سلفةٌ يردّها المكتبُ من الدرج** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
 	// لم يقبض من الزبون نقداً، **وعمولةُ المتجر التابع ونصيبُ مندوبه معها.**
+	// **وفي «التوصيل من المحفظة»** قبض ثمنَ البضاعة (`cash_due`): **صندوقُه يقبض المقبوضَ
+	// ناقصَ ما دفعه للمتجر، والدرجُ يردّ ما زاد** — الحسبةُ نفسُها في `settleCustomStore`.
 	if err := s.settleCustomStore(ctx, q, in, out); err != nil {
 		return err
 	}

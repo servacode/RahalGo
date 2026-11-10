@@ -81,8 +81,10 @@ type fpNormalOrder struct {
 	Lat           float64  `json:"lat"`
 	Lng           float64  `json:"lng"`
 	PaymentMethod string   `json:"payment_method"`
-	PromoCode     string   `json:"promo_code"`
-	Notes         string   `json:"notes"`
+	// WalletScope **شو بيندفع من المحفظة** (٢٠٢٦-١١-٠٩) — `omitempty` فبصمةُ العميل القديم كما كانت.
+	WalletScope string `json:"wallet_scope,omitempty"`
+	PromoCode   string `json:"promo_code"`
+	Notes       string `json:"notes"`
 }
 
 func fingerprintNormalOrder(body []byte) []byte {

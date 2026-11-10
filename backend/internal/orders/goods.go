@@ -160,6 +160,23 @@ func (s *Service) SettleGoods(ctx context.Context, orderID, to, actorID string, 
 			return ErrReturnStoreRefused
 		}
 	}
+	// **النموذج ٢: البضاعةُ بين الكابتن والمتجر** (القرار ٤) — لا استرجاعَ من المتجر ولا تعويضَ له
+	// ولا خزينة. الحسمُ يكتب أين ذهبت وحدَه (`settleGoodsOutside`).
+	if outside, err := goodsOutside(ctx, tx, orderID); err != nil {
+		return err
+	} else if outside {
+		if compensation > 0 {
+			return ErrGoodsBadCompensation
+		}
+		if err := s.settleGoodsOutside(ctx, tx, orderID, to); err != nil {
+			return err
+		}
+		if err := tx.Commit(ctx); err != nil {
+			return err
+		}
+		s.pub.Publish("ops", map[string]any{"type": "order"})
+		return nil
+	}
 	if compensation > 0 {
 		cost, err := goodsCost(ctx, tx, orderID)
 		if err != nil {
@@ -570,6 +587,12 @@ func GoodsCompensableTx(ctx context.Context, tx wallet.Querier, orderID string, 
 		return err
 	}
 	if settled == nil || *settled != GoodsToMerchant {
+		return ErrGoodsBadCompensation
+	}
+	// **النموذج ٢: لا تعويضَ للمتجر عن بضاعةٍ رجعت إليه** (القرار ٤) — لم تشترِها المنصّة.
+	if outside, err := goodsOutside(ctx, tx, orderID); err != nil {
+		return err
+	} else if outside {
 		return ErrGoodsBadCompensation
 	}
 	// **وبعد «ما في تعويض» لا تعويض** (٢٠٢٦-١٠-٢٧) — القرارُ نهائيّ.

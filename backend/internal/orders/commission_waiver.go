@@ -83,6 +83,7 @@ type waiverShare struct {
 	settleID   string
 	merchantID string
 	commission int64
+	offLedger  bool
 }
 
 // WaiveCommissionTx **يمحو عمولةَ المنصّة عن طلبٍ مسلَّم** — في معاملة المستدعي
@@ -144,7 +145,7 @@ func (s *Service) WaiveCommissionTx(ctx context.Context, q wallet.Querier,
 	// = كلفتُه − مستحقُّه المقيَّد (صيغةُ `FI-06.b`)، **من الدفتر لا من إعداد اليوم.**
 	rows, err := q.Query(ctx, `
 		SELECT ms.id::text, ms.merchant_id::text, ms.method, ms.state,
-		       COALESCE(ms.paid_via, ''), ms.amount,
+		       COALESCE(ms.paid_via, ''), ms.amount, ms.off_ledger,
 		       COALESCE((SELECT sum(oi.merchant_price * oi.qty) FROM order_items oi
 		                  JOIN orders o ON o.id = oi.order_id
 		                 WHERE oi.order_id = ms.order_id
@@ -163,7 +164,7 @@ func (s *Service) WaiveCommissionTx(ctx context.Context, q wallet.Querier,
 		var sh waiverShare
 		var method, state, via string
 		var amount, cost int64
-		if err := rows.Scan(&sh.settleID, &sh.merchantID, &method, &state, &via, &amount, &cost); err != nil {
+		if err := rows.Scan(&sh.settleID, &sh.merchantID, &method, &state, &via, &amount, &sh.offLedger, &cost); err != nil {
 			rows.Close()
 			return res, err
 		}
@@ -221,6 +222,15 @@ func (s *Service) WaiveCommissionTx(ctx context.Context, q wallet.Querier,
 	}
 	for _, sh := range shares {
 		if sh.commission <= 0 {
+			continue
+		}
+		// **النموذج ٢: صفُّ سجلٍّ بلا دفتر** — يُكتب المحوُ عليه وحدَه، وسطرُ الصندوق أعلاه هو الأثر.
+		if sh.offLedger {
+			if _, err := q.Exec(ctx, `
+				UPDATE merchant_settlements SET commission_waived = $2 WHERE id = $1`,
+				sh.settleID, sh.commission); err != nil {
+				return res, err
+			}
 			continue
 		}
 		_, accTx, err := s.wallet.ApplyTxID(ctx, q, hid, sh.commission, "merchant_cash_accrued",

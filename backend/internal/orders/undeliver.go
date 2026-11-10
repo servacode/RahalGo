@@ -272,6 +272,13 @@ func (s *Service) undeliverTx(ctx context.Context, q wallet.Querier,
 		if err != nil {
 			return res, err
 		}
+		// **النموذج ٢: ما دفعه الكابتنُ للمتجر ليس سلفةَ درج** — يستردّه من المتجر (القرار ٤).
+		// والدرجُ يردّ ما سلّمه الكابتنُ للمكتب من تحصيلٍ لم يقع وحدَه.
+		if outside, err := goodsOutside(ctx, q, orderID); err != nil {
+			return res, err
+		} else if outside {
+			all = 0
+		}
 		var returned int64
 		if err := q.QueryRow(ctx, `
 			SELECT COALESCE(sum(amount), 0)::bigint FROM office_cash_entries

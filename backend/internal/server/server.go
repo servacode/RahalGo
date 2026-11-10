@@ -802,6 +802,9 @@ func (s *Server) Router() http.Handler {
 			// **الزبونُ يؤكّد عرضَ الطلب المخصَّص ويختار الدفع** — Batch 2a:
 			// **يُقفَل السعرُ قبل أن يبدأ السائقُ الشراء.**
 			r.Post("/orders/{id}/confirm-quote", s.handleConfirmQuote)
+			// **«التوصيل من المحفظة والباقي كاش» أو «الكل» أو كاش** (قرارُ المالك ٢٠٢٦-١١-٠٩) —
+			// يتبدّل حتّى يوصل الكابتن للباب. **ومحميٌّ من الإعادة** كأبواب المال.
+			r.Post("/orders/{id}/wallet-scope", s.idempotent(s.handleChangeWalletScope))
 			// **«موقعك الصح هون؟»** — بعد أن حفظ السائقُ بابَ بنايته (٢٠٢٦-١٠-٢١).
 			r.Post("/orders/{id}/accept-dropoff-fix", s.handleAcceptDropoffSuggestion)
 			r.Delete("/orders/{id}/accept-dropoff-fix", s.handleDismissDropoffSuggestion)
@@ -1817,6 +1820,8 @@ func (s *Server) Router() http.Handler {
 			r.Get("/cash/merchant-dues", s.handleMerchantCashDues)
 			// **مَن يحمل مالاً أصلُه بضاعة** (قرارُ المالك ٢٠٢٦-١١-١٠) — قراءةٌ فقط (`goods_balances.go`).
 			r.Get("/finance/goods-balances", s.handleGoodsBalances)
+			// **«مصاري الكابتن عالقة»** — قرارُ المكتب (النموذج ٢، القرار ٤).
+			r.Post("/orders/{id}/stuck-goods", s.handleStuckGoodsDecision)
 			// **نزاعاتُ المنصة مع الأربعة** — المتجرِ والسائقِ والمندوبِ
 			// والزبون. **ونزاعٌ لا يُرى مجموعاً لا يُتابَع**، وثلاثةٌ منها لم
 			// يكن لها مكانٌ إطلاقاً قبل هجرة `0063`.

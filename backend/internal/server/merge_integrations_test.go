@@ -75,7 +75,8 @@ func TestMERGE_PromoCostsAreTheirOwnProfitLines(t *testing.T) {
 
 	r := readPlatformProfits(t, f.srv, "2001-05-11")
 	want := map[string]int64{
-		"margin": 1500, "commission": 900, "delivery_share": 200, "discount": -500,
+		// **الهامشُ داخلَ العمولة** (القرار ٣، ٢٠٢٦-١١-١٠): ١٥٠٠ + ٩٠٠ — ولا سطرَ هامشٍ منفصل.
+		"margin": 0, "commission": 2400, "delivery_share": 200, "discount": -500,
 		"free_delivery": -2000, "item_discounts": -500, "settle_diff": 0,
 	}
 	for k, v := range want {

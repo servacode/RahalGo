@@ -433,9 +433,10 @@ func (p platformProfitSum) Losses() int64 { return p.LossTotal() }
 
 // Lines سطور الكشف بترتيبها، بأثرها على الربح.
 func (p platformProfitSum) Lines() []profitLine {
+	// **الهامشُ داخلَ العمولة** (قرارُ المالك ٢٠٢٦-١١-١٠، القرار ٣): المنصّةُ تأخذ الأجرةَ والعمولةَ
+	// وحدَهما، **وهامشُ الأصناف إيرادُ عمولة** — سطرٌ واحد. والحقلُ `Margin` باقٍ في الحساب لمن يقرؤه.
 	lines := []profitLine{
-		{"margin", p.Margin},
-		{"commission", p.Commission},
+		{"commission", p.Commission + p.Margin},
 		{"delivery_share", p.DeliveryShare},
 		{"discount", -p.Discount},
 		{"free_delivery", -p.FreeDelivery},
@@ -714,7 +715,7 @@ func (s *Server) profitsMerchants(w http.ResponseWriter, r *http.Request, from, 
 	}
 	rows, err := s.pg.Query(r.Context(), ctes+`
 		SELECT m.id::text, m.name, COALESCE(u.phone::text, ''),
-		       ARRAY[COALESCE(k.margin, 0), COALESCE(k.commission, 0), COALESCE(k.gross, 0),
+		       ARRAY[COALESCE(k.commission, 0) + COALESCE(k.margin, 0), COALESCE(k.gross, 0),
 		             COALESCE(e.got, 0), COALESCE(e.comp, 0)]::bigint[]`+body+`
 		ORDER BY COALESCE(k.gross, 0) DESC, COALESCE(e.got, 0) DESC, m.name
 		LIMIT $3 OFFSET $4`, from, to, pg.PerPage, pg.Offset)
@@ -737,7 +738,8 @@ func (s *Server) profitsMerchants(w http.ResponseWriter, r *http.Request, from, 
 		return
 	}
 	res := paged("rows", out, count, pg)
-	res["columns"] = []string{"our_margin", "our_commission", "gross", "store_earned", "compensation"}
+	// **وعمولتُنا مع هامش أصناف المتجر** (القرار ٣) — عمودٌ واحد.
+	res["columns"] = []string{"our_commission", "gross", "store_earned", "compensation"}
 	// **الرقمُ الكبيرُ مبيعاتُه** — وهو نفسُه ما يُرتَّب عليه.
 	res["primary"] = "gross"
 	res["today"] = s.accountToday(r.Context()).Format("2006-01-02")

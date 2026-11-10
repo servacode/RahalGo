@@ -71,9 +71,7 @@ func (s *Service) Exposure(ctx context.Context, q Querier, driverID string) (int
 	err := q.QueryRow(ctx, `
 		SELECT COALESCE((SELECT b.held FROM driver_cash_boxes b
 		                  WHERE b.driver_id = $1::uuid), 0),
-		       COALESCE((SELECT sum(o.cash_due + o.goods_usd_syp) FROM orders o
-		                  WHERE o.driver_id = $1::uuid
-		                    AND o.closed_at IS NULL), 0)`,
+		       `+InflightSQL("$1::uuid")+``,
 		driverID).Scan(&held, &inflight)
 	if err != nil {
 		return 0, err

@@ -1,7 +1,7 @@
 {
   "baseline": "",
   "derived": {
-    "routes": 686,
+    "routes": 688,
     "transitions": 55,
     "ledger_kinds": [
       "adjustment",
@@ -21,8 +21,8 @@
       "reward",
       "topup"
     ],
-    "notify_sites": 134,
-    "notify_targeted": 67,
+    "notify_sites": 136,
+    "notify_targeted": 69,
     "publish_rooms": [
       "customer",
       "driver",
@@ -32,9 +32,9 @@
     ],
     "setting_defs": 283,
     "behaviour_settings": 238,
-    "order_fields": 144,
-    "test_files": 816,
-    "test_funcs": 3140
+    "order_fields": 146,
+    "test_files": 821,
+    "test_funcs": 3164
   },
   "flows": [
     {
@@ -11988,6 +11988,18 @@
       "orphan": true
     },
     {
+      "name": "TestModel2Custom_LostUSDGoodsNoLoss",
+      "file": "internal/orders/money_model2_custom_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestModel2Custom_USDCommissionWhenCashDueZero",
+      "file": "internal/orders/money_model2_custom_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
       "name": "TestEveryOrderInsertStampsMoneyModel",
       "file": "internal/orders/money_model_guard_test.go",
       "package": "orders",
@@ -12889,6 +12901,42 @@
     {
       "name": "TestDelivery_TellsMerchantAboutEarning",
       "file": "internal/orders/wallet_notice_wiring_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestWScopeCustom_AmanahDeliveryEqualsFull",
+      "file": "internal/orders/wallet_scope_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestWScopeCustom_ChangeAfterPickup",
+      "file": "internal/orders/wallet_scope_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestWScopeCustom_ConfirmDeliveryThenDeliver",
+      "file": "internal/orders/wallet_scope_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestWScopeCustom_IncreaseInvalidatesDecreaseKeeps",
+      "file": "internal/orders/wallet_scope_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestWScopeRegular_EditAndRemovalUnderDelivery",
+      "file": "internal/orders/wallet_scope_test.go",
+      "package": "orders_test",
+      "orphan": true
+    },
+    {
+      "name": "TestWalletPortion",
+      "file": "internal/orders/wallet_scope_test.go",
       "package": "orders_test",
       "orphan": true
     },
@@ -21367,6 +21415,48 @@
       "orphan": true
     },
     {
+      "name": "TestModel2_CashOrderGoodsOffLedger",
+      "file": "internal/qa/money_model2_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestModel2_DriverCashLimitIgnoresGoods",
+      "file": "internal/qa/money_model2_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestModel2_EditAfterPickupDriverAndStore",
+      "file": "internal/qa/money_model2_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestModel2_FailedAfterPickupNoLoss",
+      "file": "internal/qa/money_model2_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestModel2_RefundAfterDeliveryFeeOnly",
+      "file": "internal/qa/money_model2_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestModel2_WhatsAppCommissionViaBox",
+      "file": "internal/qa/money_model2_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestModel2_WalletPaysDeliveryOnly",
+      "file": "internal/qa/money_model2_wallet_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
       "name": "TestMoneyModel_StampedAtCreation",
       "file": "internal/qa/money_model_test.go",
       "package": "qa",
@@ -28657,6 +28747,60 @@
         "RELEASE"
       ],
       "orphan": false
+    },
+    {
+      "name": "TestWScope_CancelAndRefund",
+      "file": "internal/qa/wallet_scope_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWScope_ChangeAfterPickupThenLockedAtDropoff",
+      "file": "internal/qa/wallet_scope_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWScope_ChangeBeforePickup",
+      "file": "internal/qa/wallet_scope_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWScope_ChangeGuards",
+      "file": "internal/qa/wallet_scope_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWScope_ConcurrentChangeVsDropoff",
+      "file": "internal/qa/wallet_scope_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWScope_DebtNotSettledFirst",
+      "file": "internal/qa/wallet_scope_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWScope_RegularDelivery_CreateAndDeliver",
+      "file": "internal/qa/wallet_scope_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWScope_RegularFullCashAndOldApp",
+      "file": "internal/qa/wallet_scope_test.go",
+      "package": "qa",
+      "orphan": true
+    },
+    {
+      "name": "TestWScope_UndeliverReturnsWalletPart",
+      "file": "internal/qa/wallet_scope_test.go",
+      "package": "qa",
+      "orphan": true
     },
     {
       "name": "TestCAF19_WarningReachesCustomerAndIsIsolated",

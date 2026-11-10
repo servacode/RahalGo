@@ -146,7 +146,8 @@ func TestTREASURY_OrderBreakdownSumsToRow(t *testing.T) {
 	if jnum(res["total"]) != 1700 || sum != 1700 {
 		t.Fatalf("مجموعُ التفصيل %d ومبلغُ السطر %d — يُنتظر 1700 كلاهما: %s", sum, jnum(res["total"]), w.Body)
 	}
-	if diff != 100 || keys["margin"] != 1000 || keys["commission"] != 900 ||
+	// **الهامشُ داخلَ العمولة** (القرار ٣، ٢٠٢٦-١١-١٠): ١٠٠٠ + ٩٠٠.
+	if diff != 100 || keys["margin"] != 0 || keys["commission"] != 1900 ||
 		keys["delivery_fee"] != 2000 || keys["driver_fee"] != -1800 || keys["discount"] != -500 {
 		t.Fatalf("سطورُ التفصيل: %v", keys)
 	}

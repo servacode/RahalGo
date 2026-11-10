@@ -53,20 +53,24 @@ var Kinds = map[string]KindContract{
 	"order_payment": {
 		Kind: "order_payment", Sign: "-", RefRequired: true, RefTarget: "orders",
 		Creators: []string{"internal/orders/service.go:521", "internal/orders/custom.go:278",
-			"internal/orders/whatsapp_commission.go"},
+			"internal/orders/whatsapp_commission.go", "internal/orders/order_edit.go",
+			"internal/orders/wallet_scope.go"},
 		Path: "POST /api/v1/orders",
 		Semantics: "خصمُ ثمنِ الطلب من محفظة الزبون لحظةَ الإنشاء — **وعمولةُ متجرنا على طلب الواتساب " +
-			"من محفظة صاحبه عند التسليم** (٢٠٢٦-١١-٠٨).",
-		Invariants: []string{"FI-01.d", "FI-04.b", "FI-06.a", "FI-06.e"},
+			"من محفظة صاحبه عند التسليم** (٢٠٢٦-١١-٠٨). **والحصّةُ ما اختاره الزبون: الكلُّ أو الأجرةُ " +
+			"وحدَها، وفرقُ تبديلها قبل الباب** (٢٠٢٦-١١-٠٩).",
+		Invariants: []string{"FI-01.d", "FI-03.e", "FI-04.b", "FI-06.a", "FI-06.e"},
 		Reachable:  true,
 	},
 	"refund": {
 		Kind: "refund", Sign: "+", RefRequired: true, RefTarget: "orders",
 		Creators: []string{"internal/orders/transitions.go:659", "internal/orders/transitions.go:739", "internal/orders/undeliver.go",
-			"internal/orders/whatsapp_commission.go"},
+			"internal/orders/whatsapp_commission.go", "internal/orders/order_edit.go",
+			"internal/orders/removal_recompute.go", "internal/orders/wallet_scope.go"},
 		Path: "انتقالُ حالةٍ إلى نهايةٍ غيرِ التسليم",
 		Semantics: "ردُّ ما دفعه الزبون — **من المحفظة قبل التسليم، وكاملُ المبلغ بعده.** " +
-			"**وعمولةُ طلب واتسابٍ مسترجَعٍ تعود لمحفظة المتجر** (٢٠٢٦-١١-٠٨).",
+			"**وعمولةُ طلب واتسابٍ مسترجَعٍ تعود لمحفظة المتجر** (٢٠٢٦-١١-٠٨). " +
+			"**وفرقُ تبديل الدفع من «الكل» إلى «التوصيل من المحفظة» يُردّ فوراً** (٢٠٢٦-١١-٠٩).",
 		Invariants: []string{"FI-01.d", "FI-05.g", "FI-06.a", "FI-06.e"},
 		Reachable:  true,
 	},

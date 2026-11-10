@@ -501,9 +501,9 @@ func (s *Server) orderProfitBreakdown(ctx context.Context, orderID, from, to str
 	}
 	parts := []orderProfitPart{}
 	if status == "delivered" {
+		// **الهامشُ داخلَ العمولة** (القرار ٣) — سطرٌ واحد.
 		for _, p := range []orderProfitPart{
-			{"margin", margin},
-			{"commission", commission},
+			{"commission", commission + margin},
 			{"delivery_fee", deliveryFee},
 			{"driver_fee", -driverFee},
 			{"discount", -discount},

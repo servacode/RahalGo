@@ -47,11 +47,14 @@ type customQuoteRow struct {
 	kind               string
 	status             string
 	paymentMethod      string
-	goods              int64 // custom_goods_amount الحاليّة (0 إن لم يُتَّفق بعد)
-	fee                int64 // custom_fee الحاليّة
-	waived             int64 // promo_delivery_waived — التوصيلُ المجانيّ (٢٠٢٦-١٠-٢٣)
-	hasGoods           bool  // أاتُّفق مرّةً على الأقلّ؟
-	hasFee             bool  // أوُثّقت الأجرةُ عموداً؟ — شرطُ خطوة الثمن
+	scope              string // wallet_scope — none | full | delivery (هجرة ٠٥٢٦)
+	cashDue            int64  // cash_due الحاليّ
+	moneyModel         int16  // orders.money_model (هجرة ٠٥٣٢)
+	goods              int64  // custom_goods_amount الحاليّة (0 إن لم يُتَّفق بعد)
+	fee                int64  // custom_fee الحاليّة
+	waived             int64  // promo_delivery_waived — التوصيلُ المجانيّ (٢٠٢٦-١٠-٢٣)
+	hasGoods           bool   // أاتُّفق مرّةً على الأقلّ؟
+	hasFee             bool   // أوُثّقت الأجرةُ عموداً؟ — شرطُ خطوة الثمن
 	quoteVersion       int64
 	confirmedAt        *time.Time
 	confirmedTotal     *int64
@@ -75,13 +78,15 @@ func (s *Service) lockCustomRow(ctx context.Context, q wallet.Querier, orderID s
 		       custom_goods_amount, custom_fee, quote_version,
 		       quote_confirmed_at, quote_confirmed_total, quote_confirmed_version,
 		       custom_reserved_amount, custom_fee_source, custom_fee_snapshot,
-		       custom_driver_may_change_fee, picked_up_at, promo_delivery_waived, custom_goods_usd
+		       custom_driver_may_change_fee, picked_up_at, promo_delivery_waived, custom_goods_usd,
+		       wallet_scope, cash_due, money_model
 		FROM orders WHERE id = $1 FOR UPDATE`, orderID).
 		Scan(&r.customerID, &r.driverID, &r.kind, &r.status, &r.paymentMethod,
 			&goods, &fee, &r.quoteVersion,
 			&r.confirmedAt, &r.confirmedTotal, &r.confirmedVersion,
 			&r.reserved, &r.feeSource, &r.feeSnapshot,
-			&r.driverMayChangeFee, &r.pickedUpAt, &r.waived, &r.goodsUSD)
+			&r.driverMayChangeFee, &r.pickedUpAt, &r.waived, &r.goodsUSD,
+			&r.scope, &r.cashDue, &r.moneyModel)
 	if err != nil {
 		return customQuoteRow{}, err
 	}
@@ -203,7 +208,16 @@ func (s *Service) applyCustomQuoteTx(ctx context.Context, q wallet.Querier, row 
 			invalidate = true // زيادة → يُعاد التأكيد
 		case newTotal < confirmedTotal:
 			// نقص → يبقى التأكيد ويُخفَّض الحجزُ بالفرق (نقدٌ لا حجزَ له: لا شيء).
-			if err := s.releaseCustomReservationTx(ctx, q, row.customerID, row.id, row.reserved-newTotal); err != nil {
+			//
+			// **والحجزُ حصّةُ المحفظة لا المجموع** (هجرة ٠٥٢٦): «التوصيل من المحفظة» حجزُه
+			// الأجرةُ وحدَها (`WalletPortion`). **وإن صارت الأجرةُ أكبرَ من المحجوز** (نزل
+			// ثمنُ البضاعة وطلعت الأجرة) يُعاد التأكيد — ولا حجزَ جديدٌ بلا موافقة الزبون.
+			newPortion := WalletPortion(row.scope, newTotal, newFee-waive)
+			if newPortion > row.reserved {
+				invalidate = true
+				break
+			}
+			if err := s.releaseCustomReservationTx(ctx, q, row.customerID, row.id, row.reserved-newPortion); err != nil {
 				return false, err
 			}
 		default:
@@ -287,9 +301,9 @@ func (s *Service) applyCustomQuoteTx(ctx context.Context, q wallet.Querier, row 
 	case row.confirmedAt != nil: // نقصٌ مع تأكيدٍ باقٍ: يُحدَّث المبلغُ والنسخة
 		// **والمستحقُّ النقديُّ يتبع المبلغ** — كان يبقى على المؤكَّد القديم فيقبض
 		// السائقُ ما لم يعُد مستحقّاً. (والمحفظةُ صفرٌ فيها، فلا يُمَسّ.)
-		set += `, quote_confirmed_total = $10, quote_confirmed_version = $4,
-		        cash_due = CASE WHEN payment_method = 'cash' THEN $10 ELSE cash_due END`
-		args = append(args, newTotal)
+		// **والنقدُ = المجموعُ ناقصَ حصّة المحفظة** — كاشٌ كلُّه، أو صفرٌ، أو ثمنُ البضاعة.
+		set += `, quote_confirmed_total = $10, quote_confirmed_version = $4, cash_due = $11`
+		args = append(args, newTotal, newTotal-WalletPortion(row.scope, newTotal, newFee-waive))
 	}
 	// **ولقطةُ السعر تسقط مع التأكيد** — يُلقط سعرُ التأكيد الجديد. **وثمنٌ صار ليرةً لا تبقى له
 	// لقطةُ دولار** (القيدُ يمنعها في الجملة نفسِها).
@@ -331,16 +345,25 @@ func sameUSD(a, b *int64) bool {
 // **ومتكرّرٌ بالنسخة والطريقة نفسِها لا شيء** (idempotent).
 func (s *Service) ConfirmQuote(ctx context.Context, orderID, customerID, paymentMethod string,
 	expectedTotal, expectedVersion int64) (*Order, error) {
-	return s.confirmQuote(ctx, orderID, customerID, paymentMethod, expectedTotal, expectedVersion, false)
+	return s.confirmQuote(ctx, orderID, customerID, paymentMethod, "", expectedTotal, expectedVersion, false)
 }
 
-// confirmQuote **والصامتُ منه** لأجرة المنصّة (`autoAgreeFixedFee`) — لا سطرَ «وافقتُ»
-// ولا إشعارَ للسائق: **هو من أخذ الطلبَ للتوّ.**
-func (s *Service) confirmQuote(ctx context.Context, orderID, customerID, paymentMethod string,
+// ConfirmQuoteScope **كـ`ConfirmQuote` ومعه شو بيندفع من المحفظة** (قرارُ المالك ٢٠٢٦-١١-٠٩):
+// `full` الكلّ، أو `delivery` الأجرةُ وحدَها والبضاعةُ كاش للكابتن. **والفارغُ مع
+// `wallet` يعني `full`** — فالتطبيقُ القديمُ يبقى كما كان.
+func (s *Service) ConfirmQuoteScope(ctx context.Context, orderID, customerID, paymentMethod, scope string,
+	expectedTotal, expectedVersion int64) (*Order, error) {
+	return s.confirmQuote(ctx, orderID, customerID, paymentMethod, scope, expectedTotal, expectedVersion, false)
+}
+
+func (s *Service) confirmQuote(ctx context.Context, orderID, customerID, paymentMethod, scope string,
 	expectedTotal, expectedVersion int64, quiet bool) (*Order, error) {
-	if paymentMethod != "cash" && paymentMethod != "wallet" {
+	legacyWallet := paymentMethod == "wallet" && scope == ""
+	paymentMethod, scope, err := normalizePayment(paymentMethod, scope)
+	if err != nil {
 		return nil, httpx.NewError(http.StatusBadRequest, "validation", "errors.validation")
 	}
+	walletMapped := false
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
 		return nil, err
@@ -360,6 +383,13 @@ func (s *Service) confirmQuote(ctx context.Context, orderID, customerID, payment
 	if row.customerID != customerID {
 		return nil, httpx.NewError(http.StatusForbidden, "not_your_order", "errors.not_your_order")
 	}
+	// **النموذج ٢: المحفظةُ تدفع التوصيلَ وحدَه** (B3) — كما في الإنشاء (`CreateTx`).
+	if row.moneyModel == MoneyModelGoodsOutside && scope == ScopeFull {
+		if !legacyWallet {
+			return nil, ErrWalletFullRemoved
+		}
+		scope, walletMapped = ScopeDelivery, true
+	}
 	// **لا تأكيدَ قبل اتفاقٍ، ولا بعد نهاية.**
 	if !row.hasGoods {
 		return nil, ErrCustomNotAgreed
@@ -376,7 +406,8 @@ func (s *Service) confirmQuote(ctx context.Context, orderID, customerID, payment
 	// **تأكيدٌ متكرّرٌ بالنسخة والطريقة نفسِها — لا شيء** (idempotent). **ومحفظةً
 	// كان فالحجزُ قائمٌ أصلاً** — يُعاد الطلبُ كما هو (التراجعُ يُطلق القفل).
 	if row.confirmedAt != nil && row.confirmedVersion != nil &&
-		*row.confirmedVersion == row.quoteVersion && row.paymentMethod == paymentMethod {
+		*row.confirmedVersion == row.quoteVersion && row.paymentMethod == paymentMethod &&
+		row.scope == scope {
 		return s.GetByID(ctx, orderID)
 	}
 	// ══════════════════════════════════════════════════════════════════
@@ -402,107 +433,32 @@ func (s *Service) confirmQuote(ctx context.Context, orderID, customerID, payment
 			return nil, err
 		}
 	}
-	cashy := paymentMethod == "cash" || row.goodsUSD != nil
 
-	// **وأيُّ حجزٍ سابقٍ يُفكّ قبل التأكيد الجديد** — تبديلُ الطريقة أو إعادةُ
-	// التأكيد لا يُبقي حجزاً قديماً معلَّقاً.
-	if row.reserved > 0 {
-		if err := s.releaseCustomReservationTx(ctx, tx, row.customerID, row.id, row.reserved); err != nil {
-			return nil, err
-		}
-	}
-
-	// **وإعادةُ التأكيد نقداً على طلبٍ نقديٍّ في الطريق لا تُسأل عن قفل النقد وسقفه**:
-	// **الطلبُ قائمٌ نقداً والبضاعةُ اشتُريت** — ومن رُدّ هنا بقيت بضاعتُه بيد السائق
-	// لا تُسلَّم ولا تُردّ. والسقفان حارسا طلبٍ جديدٍ لا تعديلِ طلبٍ في الطريق.
-	if cashy && !(reconfirm && (row.paymentMethod == "cash" || row.goodsUSD != nil)) {
-		// **ومن قُفل عليه النقدُ لا يؤكّد نقداً** — الحدُّ نفسُه لبابٍ آخر.
-		blocked, err := s.on(tx).cashBlocked(ctx, tx, customerID)
-		if err != nil {
-			return nil, err
-		}
-		if blocked {
-			return nil, ErrCashBlocked
-		}
-		// **وسقفُ النقد غيرِ المسدَّدِ بذمّة الزبون** (`COD`) — عند التأكيد
-		// لا عند الإنشاء: **السعرُ لا يُعرف قبل عرض السائق**، وهنا صار
-		// `current` هو المتّفَقَ عليه. **ويُعقد قفلُ `customer-admit:` نفسُه**
-		// الذي يعقده إنشاءُ الطلب العاديّ، فلا يسابق تأكيدٌ خاصٌّ إنشاءً
-		// عاديّاً على المتّسع (`COD-07`)؛ والصفُّ مقفولٌ (`FOR UPDATE`) فلا
-		// تأكيدان لطلبٍ واحد. **والطلبُ القائمُ يُستثنى من المجموع** بمعرّفه
-		// فلا يُحسب مرّتين، **وقبل كتابة أعمدة التأكيد** فالردُّ لا يخلّف أثراً.
-		if _, err := tx.Exec(ctx,
-			`SELECT pg_advisory_xact_lock(hashtext($1))`,
-			"customer-admit:"+customerID); err != nil {
-			return nil, err
-		}
-		incoming := usdEquiv
-		if paymentMethod == "cash" {
-			incoming += current
-		}
-		if err := s.on(tx).checkCODLimit(ctx, tx, customerID, orderID, incoming); err != nil {
-			return nil, err
-		}
-	}
-	if paymentMethod == "wallet" {
-		avail, err := s.wallet.AvailableTx(ctx, tx, customerID)
-		if err != nil {
-			return nil, err
-		}
-		if avail < current {
-			return nil, wallet.ErrInsufficient
-		}
-	}
-
-	// **تُكتب أعمدةُ التأكيد أوّلاً** (الطريقة، اللحظة، المبلغ، النسخة) —
-	// **قبل أن يصير الحجزُ موجباً**، فالقيدُ يشترط محفظةً مؤكَّدةً لأيّ حجز.
-	// ══════════════════════════════════════════════════════════════════
-	// **والنقدُ يُكتب مستحقّاً على الطلب** — وإلّا بقي فراغاً ماليّاً
-	// ══════════════════════════════════════════════════════════════════
-	//
-	// **كان `cash_due` يبقى صفراً للخاصِّ النقديِّ أبداً** — والمبلغُ لا
-	// يُعرف إلّا بعد الاتّفاق، **ولم يُكتب حين عُرف.**
-	//
-	// **فكان الخاصُّ النقديُّ فراغاً ماليّاً كاملاً** (قُيس ٢٠٢٦-٠٩-٢٩):
-	// لا صندوقَ نقدٍ للسائق، ولا قيدَ في الدفتر، ولا نصيبَ للمنصّة —
-	// **والسائقُ يقبض المبلغَ ولا أثرَ له في المنصّة إطلاقاً.**
-	//
-	// **و`cash_due` هو ما تقرؤه المنصّةُ كلُّها**: سقفُ نقدِ السائق في
-	// الأهليّة، وصندوقُه عند التسليم، و`creditTreasury` في الدفتر.
-	// **فبصفرِه لا يُحرَس سقفٌ ولا يُقيَّد قبض.**
-	//
-	// **ويُصفَّر إن كان الدفعُ بالمحفظة** — تبديلُ الطريقة يقع
-	// (`payment_method = $2`)، **ومستحقٌّ نقديٌّ باقٍ على طلبٍ صار
-	// محفظيّاً يجعل السائقَ يقبض مرّةً والمحفظةَ تُخصم مرّةً.**
-	cashDue := int64(0)
-	if paymentMethod == "cash" {
-		cashDue = current
-	}
+	// **تُكتب أعمدةُ التأكيد أوّلاً** (اللحظة، المبلغ، النسخة) — ثمّ الدفعُ والحجز
+	// (`customPaymentTx`): **حجزٌ موجبٌ يشترط محفظةً مؤكَّدةً** (القيد).
 	if _, err := tx.Exec(ctx, `
-		UPDATE orders SET payment_method = $2,
-		       quote_confirmed_at = now(), quote_confirmed_total = $3,
-		       quote_confirmed_version = $4, cash_due = $5, updated_at = now(),
-		       quote_rejected_at = NULL
-		WHERE id = $1`, orderID, paymentMethod, current, row.quoteVersion, cashDue); err != nil {
+		UPDATE orders SET quote_confirmed_at = now(), quote_confirmed_total = $2,
+		       quote_confirmed_version = $3, updated_at = now(), quote_rejected_at = NULL
+		WHERE id = $1`, orderID, current, row.quoteVersion); err != nil {
 		return nil, err
 	}
 	// **وطلبُ الكابتن المعلّق صار موافَقاً** (قرارُ المالك ٢٠٢٦-١١-٠٦) — `driver_price_request.go`.
 	if err := closePriceRequestsTx(ctx, tx, orderID, "approved"); err != nil {
 		return nil, err
 	}
-	// **ثمّ يُحجَز كاملُ المبلغ فوراً** — فشلٌ مغلق (`reserved <= balance`).
-	if paymentMethod == "wallet" {
-		if err := s.reserveCustomTx(ctx, tx, customerID, orderID, current); err != nil {
-			if errors.Is(err, wallet.ErrReservedTooMuch) {
-				return nil, wallet.ErrInsufficient
-			}
-			return nil, err
-		}
+	// **وإعادةُ التأكيد على طلبٍ في الطريق بالطريقة نفسِها لا تُسأل عن قفل النقد وسقفه**:
+	// **الطلبُ قائمٌ والبضاعةُ اشتُريت** — ومن رُدّ هنا بقيت بضاعتُه بيد السائق
+	// لا تُسلَّم ولا تُردّ. والسقفان حارسا طلبٍ جديدٍ لا تعديلِ طلبٍ في الطريق.
+	// **وثمنُ الدولار في الطريق كذلك** — نقدٌ قائمٌ أصلاً.
+	cashGuards := !(reconfirm && ((row.paymentMethod == paymentMethod && row.scope == scope) || row.goodsUSD != nil))
+	if _, err := s.customPaymentTx(ctx, tx, row, paymentMethod, scope, current, usdEquiv, cashGuards); err != nil {
+		return nil, err
 	}
 
 	if err := s.auditQuoteTx(ctx, tx, &customerID, "order.custom_quote_confirmed", orderID, map[string]any{
 		"total": current, "quote_version": row.quoteVersion,
-		"payment_method": paymentMethod, "actor_role": "customer", "source": "customer_confirm",
+		"payment_method": paymentMethod, "wallet_scope": scope,
+		"actor_role": "customer", "source": "customer_confirm",
 		"after_pickup": reconfirm, "goods_usd": row.goodsUSD, "goods_usd_syp": usdEquiv,
 	}); err != nil {
 		return nil, err
@@ -514,6 +470,9 @@ func (s *Service) confirmQuote(ctx context.Context, orderID, customerID, payment
 	if err == nil {
 		s.publishOrder(o)
 		s.publishWalletsOf(ctx, orderID)
+		if walletMapped {
+			s.notifyWalletMapped(ctx, o)
+		}
 		// ══════════════════════════════════════════════════════════════
 		// **والدورُ صار على السائق — فيُخبَر أنّ الدورَ عليه**
 		// ══════════════════════════════════════════════════════════════

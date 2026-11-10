@@ -247,7 +247,7 @@ type merchantCashDue struct {
 //
 // **فالمصدرُ الصفوف** — منها يُعرف لمن ومنذ متى، **ورصيدُ الاحتباس يُحرَس بها لا
 // يحلّ محلَّها.** (`ms` اسمُ الجدول في الاستعلامين.)
-const merchantCashDueWhere = `ms.method = 'cash' AND ms.state = 'cash_due'
+const merchantCashDueWhere = `ms.method = 'cash' AND ms.state = 'cash_due' AND NOT ms.off_ledger
 		  AND ms.amount > ms.reversed_amount`
 
 // merchantCashDueTotalSQL **مجموعُه** — يقرؤه نظرُ الخزينة، **بشرط التبويب نفسِه.**

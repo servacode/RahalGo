@@ -1898,7 +1898,10 @@ private fun TripCard(
                                 ) + "\n" +
                                     // **والأجرةُ المُعفاة لا تُطالَب** — المربّعُ الكبير يقول
                                     // `cashDue` (البضاعة وحدها)، فالتفصيلُ يطابقه.
-                                    if (order.freeWaived > 0) {
+                                    if (feePaidFromWallet(order)) {
+                                        // **الأجرةُ من محفظة الزبون** (٢٠٢٦-١١-٠٩) — لا تُقبض.
+                                        stringResource(R.string.trip_fee_line_wallet)
+                                    } else if (order.freeWaived > 0) {
                                         stringResource(R.string.trip_fee_line_free)
                                     } else {
                                         stringResource(R.string.trip_fee_line, money(order.customFee ?: 0))
@@ -1916,6 +1919,15 @@ private fun TripCard(
                     }
                     if (order.addressText.isNotBlank()) {
                         InfoBox(icon = R.drawable.ic_pin, text = order.addressText, tint = Rahal.colors.brand)
+                    }
+                    // **«خد من المتجر X»** — المكتبُ عدّل الطلبَ بعد الاستلام فنقص حقُّ المتجر، والفرقُ
+                    // يسترجعه الكابتنُ من المتجر نفسِه (خطّةُ المال ٢٠٢٦-١١-١٠).
+                    order.takeFromStores.forEach { p ->
+                        MoneyBox(
+                            label = stringResource(R.string.trip_take_from_store, p.merchantName),
+                            amount = storePayText(p),
+                            tint = Rahal.colors.brand,
+                        )
                     }
                     // **والفاتورةُ عند الباب كذلك** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — لمن يسأله «شو بالطلب؟ وقديش؟».
                     if (order.kind == "standard" && order.items.isNotEmpty()) InvoiceBox(order)
@@ -1965,6 +1977,17 @@ private fun TripCard(
                             MoneyBox(
                                 label = stringResource(R.string.trip_pay_merchant),
                                 amount = money(order.payMerchant),
+                                tint = Rahal.colors.brand,
+                            )
+                        }
+                    }
+                    // **وطلبُ الواتساب من متجرنا** (النموذج ٢، قرارُ المالك ٢٠٢٦-١١-١٠): يدفع للمتجر الثمنَ
+                    // ناقصَ العمولة، **والعمولةُ في صندوقه** — والخادمُ يقول كم (`pay_merchants`).
+                    if (order.kind == "merchant_delivery") {
+                        order.payMerchants.forEach { p ->
+                            MoneyBox(
+                                label = stringResource(R.string.trip_pay_merchant_named, p.merchantName),
+                                amount = storePayText(p),
                                 tint = Rahal.colors.brand,
                             )
                         }

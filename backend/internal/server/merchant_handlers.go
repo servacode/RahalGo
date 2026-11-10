@@ -150,7 +150,7 @@ func (s *Server) handleMerchantStores(w http.ResponseWriter, r *http.Request) {
 		       `+orders.NextOpenSQL+`,
 		       m.settlement_method,
 		       COALESCE((SELECT sum(amount - reversed_amount) FROM merchant_settlements ms
-		                 WHERE ms.merchant_id = m.id AND ms.state = 'cash_due'), 0),
+		                 WHERE ms.merchant_id = m.id AND ms.state = 'cash_due' AND NOT ms.off_ledger), 0),
 		       m.settlement_confirmed_at IS NOT NULL, m.accepts_returns,
 		       m.returns_confirmed_at IS NOT NULL,
 		       EXISTS (SELECT 1 FROM merchant_hours h WHERE h.merchant_id = m.id),

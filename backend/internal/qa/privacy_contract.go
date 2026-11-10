@@ -159,8 +159,9 @@ var OrderPrivacy = map[string]FieldRule{
 	"merchant_accepts_returns": {Ref: "سياسةُ متجرٍ عامّة", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisForbidden, VisAllowed)},
 	// **ما يدفعه السائقُ لكلّ متجرٍ عند الاستلام** (قرارُ المالك ٢٠٢٦-١٠-١٥) — للسائق
 	// الذي يدفع وللإدارة. **ولا يخصّ زبوناً ولا مندوباً، والمتجرُ يرى صافيه في `merchant_net`.**
-	"pay_merchant":  {Ref: "ما يدفعه السائقُ للمتجر عند الاستلام (٢٠٢٦-١٠-١٥)", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
-	"pay_merchants": {Ref: "ما يدفعه السائقُ لكلّ متجرٍ عند الاستلام (٢٠٢٦-١٠-١٥)", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"pay_merchant":     {Ref: "ما يدفعه السائقُ للمتجر عند الاستلام (٢٠٢٦-١٠-١٥)", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"pay_merchants":    {Ref: "ما يدفعه السائقُ لكلّ متجرٍ عند الاستلام (٢٠٢٦-١٠-١٥)", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	"take_from_stores": {Ref: "«خد من المتجر X» — فرقُ تعديلٍ بعد الاستلام يسترجعه الكابتن من المتجر (النموذج ٢، ٢٠٢٦-١١-١٠)", Vis: v(VisForbidden, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	// **المتجرُ التابعُ في المشتريات** (قرارُ المالك ٢٠٢٦-١٠-١٥) — السائقُ يعرف اسمَه ليشتري منه،
 	// **ونسبتُه وما دُفع له وما بينهما للمكتب وحدَه.**
 	"partner_merchant_id":        {Ref: "المتجرُ التابعُ في المشتريات (٢٠٢٦-١٠-١٥)", Vis: v(VisForbidden, VisForbidden, VisForbidden, VisForbidden, VisAllowed)},
@@ -221,6 +222,8 @@ var OrderPrivacy = map[string]FieldRule{
 	// ممنوعةً كما كانت** (`RQ-7`)، **ولا يُوسَّع العقدُ ليخضرَّ
 	// فحص.**
 	"payment_method": {Ref: "merchant_privacy.go:51", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
+	// **شو بيندفع من المحفظة** (قرارُ المالك ٢٠٢٦-١١-٠٩) — كطريقة الدفع: للزبون والكابتن والمكتب.
+	"wallet_scope": {Ref: "wallet_scope.go · كطريقة الدفع", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisForbidden, VisAllowed)},
 	// **شفافيّةُ تسوية المتجر** — قرارُ المالك ٢٠٢٦-٠٨-٢٦ و٢٠٢٦-٠٩-٠٩.
 	"subtotal":     {Ref: "شفافيّةُ تسوية المتجر (قرارُ المالك ٢٠٢٦-٠٩-٠٩) — ما بِيع من عنده · وRQ-7 يجيزه للمندوب", Vis: v(VisAllowed, VisAllowed, VisAllowed, VisAllowed, VisAllowed)},
 	"delivery_fee": {Ref: "merchant_privacy.go:49 · وأجرُ السائق", Vis: v(VisAllowed, VisForbidden, VisAllowed, VisAllowed, VisAllowed)},

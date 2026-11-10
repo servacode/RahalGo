@@ -289,11 +289,30 @@ class CustomerApi(private val api: ApiClient) {
         expectedTotal: Long,
         expectedQuoteVersion: Long,
         attemptKey: String,
+        walletScope: String = "",
     ): MyOrder =
         api.call(
             "/api/v1/orders/$orderId/confirm-quote",
             HttpMethod.Post,
-            ConfirmQuoteInput(paymentMethod, expectedTotal, expectedQuoteVersion),
+            ConfirmQuoteInput(paymentMethod, expectedTotal, expectedQuoteVersion, walletScope),
+            idempotencyKey = attemptKey,
+        )
+
+    /**
+     * **تبديلُ شو بيندفع من المحفظة** (قرارُ المالك ٢٠٢٦-١١-٠٩) — `none` · `full` · `delivery`،
+     * **لحد ما يوصل الكابتن للباب** (بعده `wallet_scope_locked`). **ويُرسَل المجموعُ الذي رآه** —
+     * فإن تغيّر ردّ الخادمُ `order_changed`. **ومفتاحُ المحاولة يحمله** كأبواب المال.
+     */
+    suspend fun changeWalletScope(
+        orderId: String,
+        walletScope: String,
+        expectedTotal: Long,
+        attemptKey: String,
+    ): MyOrder =
+        api.call(
+            "/api/v1/orders/$orderId/wallet-scope",
+            HttpMethod.Post,
+            WalletScopeInput(walletScope, expectedTotal),
             idempotencyKey = attemptKey,
         )
 
@@ -517,8 +536,13 @@ data class NewOrder(
     @SerialName("address_text") val addressText: String,
     val lat: Double,
     val lng: Double,
-    /** `cash` أو `wallet` — **ولا خليط.** */
+    /** `cash` أو `wallet`. */
     @SerialName("payment_method") val paymentMethod: String = "cash",
+    /**
+     * **شو بيندفع من المحفظة** (قرارُ المالك ٢٠٢٦-١١-٠٩): `full` الكل · `delivery` التوصيل والباقي
+     * كاش · `none` كاش. **والفارغُ مع `wallet` = «الكل»** (كما كان).
+     */
+    @SerialName("wallet_scope") val walletScope: String = "",
     @SerialName("promo_code") val promoCode: String = "",
     val notes: String = "",
 )
@@ -567,6 +591,15 @@ private data class ConfirmQuoteInput(
     @SerialName("payment_method") val paymentMethod: String,
     @SerialName("expected_total") val expectedTotal: Long,
     @SerialName("expected_quote_version") val expectedQuoteVersion: Long,
+    /** **«الكل» أو «التوصيل والباقي كاش»** (٢٠٢٦-١١-٠٩) — والفارغُ مع `wallet` = «الكل». */
+    @SerialName("wallet_scope") val walletScope: String = "",
+)
+
+/** **تبديلُ الدفع من المحفظة** — النطاقُ والمجموعُ الذي رآه الزبون. */
+@Serializable
+private data class WalletScopeInput(
+    @SerialName("wallet_scope") val walletScope: String,
+    @SerialName("expected_total") val expectedTotal: Long,
 )
 
 @Serializable
@@ -739,6 +772,11 @@ data class MyOrder(
     val discount: Long = 0,
     val total: Long = 0,
     @SerialName("payment_method") val paymentMethod: String = "",
+    /**
+     * **شو بيندفع من المحفظة** (قرارُ المالك ٢٠٢٦-١١-٠٩) — `none` · `full` · `delivery`. **وفارغٌ من
+     * خادمٍ قديم** فيُقرأ من `paymentMethod` (`effectiveWalletScope`).
+     */
+    @SerialName("wallet_scope") val walletScope: String = "",
     @SerialName("address_text") val addressText: String = "",
     val notes: String = "",
     @SerialName("custom_request") val customRequest: String = "",
@@ -835,6 +873,13 @@ data class MyOrder(
     /** **أقسامُ طلبٍ من محلّين فأكثر** — غائبةٌ في الطلب العاديّ، ولا اسمَ متجرٍ فيها. */
     val sections: List<OrderSection>? = null,
 )
+
+/**
+ * **النطاقُ الفعليّ للدفع من المحفظة** — `wallet_scope` إن أرسله الخادم، وإلّا من الطريقة
+ * (خادمٌ قديم): `wallet` = «الكل»، وغيرُه كاش.
+ */
+val MyOrder.effectiveWalletScope: String
+    get() = walletScope.ifEmpty { if (paymentMethod == "wallet") "full" else "none" }
 
 /** **قسمٌ من طلبٍ متعدّد المحلّات** — رقمٌ وحالةٌ وبنود، بلا اسم متجر. */
 @Serializable

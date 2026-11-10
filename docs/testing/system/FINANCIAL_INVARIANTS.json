@@ -26,6 +26,7 @@
         "FI-03.a",
         "FI-03.b",
         "FI-03.c",
+        "FI-03.e",
         "FI-03.d"
       ]
     },
@@ -160,6 +161,18 @@
         "FI-15.g",
         "FI-15.i",
         "FI-15.h"
+      ]
+    },
+    {
+      "id": "FI-17",
+      "checks": [
+        "FI-17.a",
+        "FI-17.b",
+        "FI-17.c",
+        "FI-17.d",
+        "FI-17.e",
+        "FI-17.f",
+        "FI-17.g"
       ]
     }
   ],
@@ -322,6 +335,20 @@
       ],
       "registers": [
         "D2"
+      ]
+    },
+    {
+      "id": "FI-03.e",
+      "family": "FI-03",
+      "name": "«التوصيل من المحفظة» لا يدفع البضاعة من المحفظة",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-01",
+        "F-14"
+      ],
+      "kinds": [
+        "order_payment"
       ]
     },
     {
@@ -1241,6 +1268,93 @@
       "kinds": [
         "advance"
       ]
+    },
+    {
+      "id": "FI-17.a",
+      "family": "FI-17",
+      "name": "لا قيدَ بضاعةٍ على طلبٍ من النموذج ٢",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-12",
+        "F-14"
+      ],
+      "kinds": [
+        "merchant_earning",
+        "merchant_cash_accrued",
+        "merchant_cash_paid",
+        "custom_goods_return"
+      ]
+    },
+    {
+      "id": "FI-17.b",
+      "family": "FI-17",
+      "name": "لا سلفةَ درجٍ لطلبٍ من النموذج ٢",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-14"
+      ]
+    },
+    {
+      "id": "FI-17.c",
+      "family": "FI-17",
+      "name": "المحفظةُ تدفع التوصيلَ وحدَه في النموذج ٢",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-01"
+      ],
+      "kinds": [
+        "order_payment"
+      ]
+    },
+    {
+      "id": "FI-17.d",
+      "family": "FI-17",
+      "name": "صندوقُ الكابتن يقبض نقدَ الطلب ناقصَ ما دفعه للمتجر — من صفوف السجلّ",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-14",
+        "F-27"
+      ]
+    },
+    {
+      "id": "FI-17.e",
+      "family": "FI-17",
+      "name": "صافي دفترِ طلبٍ من النموذج ٢ = نقدُ الكابتن منه",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-01",
+        "F-14",
+        "F-15"
+      ],
+      "kinds": [
+        "platform_profit"
+      ]
+    },
+    {
+      "id": "FI-17.f",
+      "family": "FI-17",
+      "name": "لا دينَ بضاعةٍ على متجرٍ أو كابتنٍ بسبب طلبٍ من النموذج ٢",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-15",
+        "F-17"
+      ]
+    },
+    {
+      "id": "FI-17.g",
+      "family": "FI-17",
+      "name": "صفُّ تسويةِ طلبٍ من النموذج ٢ نقدٌ وسجلٌّ بلا دفتر",
+      "status": "PROVABLE_NOW",
+      "ops": true,
+      "flows": [
+        "F-12"
+      ]
     }
   ],
   "kinds": [
@@ -1446,7 +1560,7 @@
     },
     {
       "kind": "order_payment",
-      "semantics": "خصمُ ثمنِ الطلب من محفظة الزبون لحظةَ الإنشاء — **وعمولةُ متجرنا على طلب الواتساب من محفظة صاحبه عند التسليم** (٢٠٢٦-١١-٠٨).",
+      "semantics": "خصمُ ثمنِ الطلب من محفظة الزبون لحظةَ الإنشاء — **وعمولةُ متجرنا على طلب الواتساب من محفظة صاحبه عند التسليم** (٢٠٢٦-١١-٠٨). **والحصّةُ ما اختاره الزبون: الكلُّ أو الأجرةُ وحدَها، وفرقُ تبديلها قبل الباب** (٢٠٢٦-١١-٠٩).",
       "sign": "-",
       "ref_required": true,
       "ref_target": "orders",
@@ -1454,10 +1568,13 @@
       "creators": [
         "internal/orders/service.go:521",
         "internal/orders/custom.go:278",
-        "internal/orders/whatsapp_commission.go"
+        "internal/orders/whatsapp_commission.go",
+        "internal/orders/order_edit.go",
+        "internal/orders/wallet_scope.go"
       ],
       "invariants": [
         "FI-01.d",
+        "FI-03.e",
         "FI-04.b",
         "FI-06.a",
         "FI-06.e"
@@ -1555,7 +1672,7 @@
     },
     {
       "kind": "refund",
-      "semantics": "ردُّ ما دفعه الزبون — **من المحفظة قبل التسليم، وكاملُ المبلغ بعده.** **وعمولةُ طلب واتسابٍ مسترجَعٍ تعود لمحفظة المتجر** (٢٠٢٦-١١-٠٨).",
+      "semantics": "ردُّ ما دفعه الزبون — **من المحفظة قبل التسليم، وكاملُ المبلغ بعده.** **وعمولةُ طلب واتسابٍ مسترجَعٍ تعود لمحفظة المتجر** (٢٠٢٦-١١-٠٨). **وفرقُ تبديل الدفع من «الكل» إلى «التوصيل من المحفظة» يُردّ فوراً** (٢٠٢٦-١١-٠٩).",
       "sign": "+",
       "ref_required": true,
       "ref_target": "orders",
@@ -1564,7 +1681,10 @@
         "internal/orders/transitions.go:659",
         "internal/orders/transitions.go:739",
         "internal/orders/undeliver.go",
-        "internal/orders/whatsapp_commission.go"
+        "internal/orders/whatsapp_commission.go",
+        "internal/orders/order_edit.go",
+        "internal/orders/removal_recompute.go",
+        "internal/orders/wallet_scope.go"
       ],
       "invariants": [
         "FI-01.d",
@@ -1628,9 +1748,9 @@
     }
   ],
   "counts": {
-    "families": 15,
-    "checks": 87,
-    "provable_now": 81,
+    "families": 16,
+    "checks": 95,
+    "provable_now": 89,
     "not_implemented": 3,
     "deferred_p5": 1,
     "deferred_p6": 2,

@@ -1,0 +1,364 @@
+package qa
+
+// ══════════════════════════════════════════════════════════════════════
+// **النموذج ٢: البضاعةُ خارجَ كلّ حساب** (خطّةُ المال ٢٠٢٦-١١-١٠، الدفعات B4…B9)
+// ══════════════════════════════════════════════════════════════════════
+//
+// المفتاحُ `finance.goods_outside` مشغَّلٌ هنا وحدَه (مطفأٌ افتراضاً في كلّ مكان). وكلُّ سيناريو
+// يُختم بثوابت المال كلِّها (النموذج ١ والنموذج ٢ معاً) بلا خرقٍ جديد.
+
+import (
+	"strings"
+	"testing"
+)
+
+// m2Checks **العائلاتُ التي يُختم بها كلُّ سيناريو** — القديمةُ (التي تستثني النموذج ٢ حيث يلزم)
+// والجديدةُ FI-17.
+var m2Checks = []string{"FI-03", "FI-04", "FI-05", "FI-06", "FI-09", "FI-10", "FI-13", "FI-14", "FI-15", "FI-17"}
+
+// m2Prep **منصّةٌ بخزينةٍ والنموذج ٢ مشغَّل** — ومتجرٌ بعمولة ١٠٪ وصنفٌ بهامش ١٠٠٠.
+func m2Prep(t *testing.T, h *Harness) (item *Item, tid string) {
+	t.Helper()
+	wsPrep(t, h)
+	tid = treasury(t, h)
+	h.Setting("finance.goods_outside", "true")
+	m := h.Factory().Merchant(Commission(10))
+	return h.NewItemPriced(m, 10_000, 11_000), tid
+}
+
+type m2Facts struct {
+	goodsRows, advance, profitRows int64
+	profit, box, rowAmount         int64
+	rowState, rowVia               string
+	offLedger                      bool
+	cashDue, walletPaid, driverFee int64
+	commission                     int64
+}
+
+func m2Read(t *testing.T, h *Harness, oid string) m2Facts {
+	t.Helper()
+	var f m2Facts
+	if err := h.Pool.QueryRow(ctxBG(), `
+		SELECT
+		  (SELECT count(*) FROM wallet_transactions WHERE ref = $1
+		     AND kind IN ('merchant_earning','merchant_cash_accrued','merchant_cash_paid','custom_goods_return')),
+		  (SELECT count(*) FROM office_cash_entries WHERE ref = $1
+		     AND source IN ('advance_return','undelivered_return')),
+		  (SELECT count(*) FROM wallet_transactions WHERE ref = $1 AND kind = 'platform_profit'),
+		  COALESCE((SELECT sum(amount) FROM wallet_transactions WHERE ref = $1 AND kind = 'platform_profit'), 0),
+		  COALESCE((SELECT sum(amount) FROM driver_cash_entries WHERE ref = $1 AND kind = 'order_collection'), 0),
+		  COALESCE((SELECT sum(amount - reversed_amount) FROM merchant_settlements WHERE order_id = $1::uuid), 0),
+		  COALESCE((SELECT max(state) FROM merchant_settlements WHERE order_id = $1::uuid), ''),
+		  COALESCE((SELECT max(paid_via) FROM merchant_settlements WHERE order_id = $1::uuid), ''),
+		  -- **بـ to_jsonb لا بالعمود** — فيُقرأ على قاعدةٍ قبل الهجرة ٠٥٣٥ ويسقط الاختبارُ بسببه الحقيقيّ.
+		  COALESCE((SELECT bool_and(COALESCE((to_jsonb(ms)->>'off_ledger')::bool, false))
+		              FROM merchant_settlements ms WHERE ms.order_id = $1::uuid), false),
+		  o.cash_due, o.wallet_paid, o.driver_fee, o.platform_commission
+		FROM orders o WHERE o.id = $1::uuid`, oid).
+		Scan(&f.goodsRows, &f.advance, &f.profitRows, &f.profit, &f.box, &f.rowAmount,
+			&f.rowState, &f.rowVia, &f.offLedger, &f.cashDue, &f.walletPaid, &f.driverFee, &f.commission); err != nil {
+		t.Fatalf("قراءةُ وقائع الطلب: %v", err)
+	}
+	return f
+}
+
+// ── B4 · طلبٌ عاديٌّ نقداً وبأجرةٍ من المحفظة: البضاعةُ لا تدخل حساباً ──────────
+func TestModel2_CashOrderGoodsOffLedger(t *testing.T) {
+	h := New(t)
+	item, tid := m2Prep(t, h)
+	base := financialBaseline(t, h, m2Checks...)
+
+	for _, c := range []struct{ name, method, scope string }{
+		{"cash", "cash", ""},
+		{"fee-from-wallet", "", "delivery"},
+	} {
+		cust := h.Customer()
+		oid := wsMake(t, h, cust, wsBody(item, 2, c.method, c.scope), 5_000)
+		if m := moneyModelOf(t, h, oid); m != 2 {
+			t.Fatalf("%s: نموذجُ الطلب %d — يُنتظر ٢", c.name, m)
+		}
+		drv := h.driverOf(oid)
+		before := treasuryBalance(t, h, tid)
+		wsDrive(t, h, oid, drv, "at_pickup", "picked_up")
+
+		// ── بعد الاستلام: صفُّ سجلٍّ دفعه الكابتن، ولا قيدَ ولا خزينة ──
+		f := m2Read(t, h, oid)
+		if !f.offLedger || f.rowState != "cash_paid" || f.rowVia != "driver" || f.rowAmount != 18_000 {
+			t.Errorf("%s بعد الاستلام: الصفّ %+v — يُنتظر سجلٌّ بلا دفتر، دفعه الكابتن 18000 (كلفةُ 20000 ناقصَ ١٠٪)", c.name, f)
+		}
+		if f.goodsRows != 0 || f.profitRows != 0 {
+			t.Errorf("%s بعد الاستلام: قيودُ بضاعة %d وقيودُ ربح %d — يُنتظر صفر", c.name, f.goodsRows, f.profitRows)
+		}
+		if after := treasuryBalance(t, h, tid); after != before {
+			t.Errorf("%s: الخزينةُ تحرّكت عند الاستلام %d ← %d — البضاعةُ ليست عليها", c.name, before, after)
+		}
+
+		wsDrive(t, h, oid, drv, "on_the_way", "at_dropoff", "delivered")
+		f = m2Read(t, h, oid)
+		// الصندوقُ: نقدُ الطلب ناقصَ ما دفعه للمتجر = الأجرة (إن كاش) + العمولة ٢٠٠٠ + الهامش ٢٠٠٠.
+		if f.box != f.cashDue-18_000 || f.advance != 0 || f.goodsRows != 0 {
+			t.Errorf("%s بعد التسليم: صندوق %d (نقد %d) · سلفة %d · قيودُ بضاعة %d — يُنتظر صندوق = النقد − 18000 بلا سلفةٍ ولا قيد",
+				c.name, f.box, f.cashDue, f.advance, f.goodsRows)
+		}
+		if want := f.walletPaid + f.box - f.driverFee; f.profit != want {
+			t.Errorf("%s: ربحُ المنصّة %d — يُنتظر المحفظة %d + الصندوق %d − أجرُ الكابتن %d = %d",
+				c.name, f.profit, f.walletPaid, f.box, f.driverFee, want)
+		}
+		if f.commission != 2_000 {
+			t.Errorf("%s: عمولةُ الطلب %d — يُنتظر 2000", c.name, f.commission)
+		}
+	}
+	assertNewViolations(t, h, base, m2Checks...)
+}
+
+// m2FailAtDoor **طلبٌ من النموذج ٢ يصل الباب ويفشل بذنب الزبون** — والبضاعةُ في طريق الرجوع.
+func m2FailAtDoor(t *testing.T, h *Harness, item *Item, cust *User) (oid string, drv *User) {
+	t.Helper()
+	oid = wsMake(t, h, cust, wsBody(item, 1, "cash", ""), 0)
+	drv = h.driverOf(oid)
+	wsDrive(t, h, oid, drv, "at_pickup", "picked_up", "on_the_way", "at_dropoff")
+	if r := h.POST("/api/v1/driver/orders/"+oid+"/report", drv.Token,
+		map[string]any{"code": firstDoorReport(t, h, drv), "note": "ما حدا فتح"}); r.Code >= 400 {
+		t.Fatalf("البلاغ: %s", r)
+	}
+	ops := h.NewUser("admin")
+	if r := h.POST("/api/v1/admin/orders/"+oid+"/door-resolution", ops.Token,
+		map[string]any{"action": "return_to_office", "fault": "customer", "note": "ما ردّ"}); r.Code >= 400 {
+		t.Fatalf("قرارُ المكتب: %s", r)
+	}
+	return oid, drv
+}
+
+// ── B5 · فشلٌ بعد الاستلام: لا خسارةَ على المنصّة ولا سلفةَ ولا دين، والبضاعةُ ترجع ──
+func TestModel2_FailedAfterPickupNoLoss(t *testing.T) {
+	h := New(t)
+	item, tid := m2Prep(t, h)
+	base := financialBaseline(t, h, m2Checks...)
+	admin := h.NewUser("admin")
+
+	// ── ١ · رجعت للمتجر: سجلٌّ وحدَه ──
+	oid, drv := m2FailAtDoor(t, h, item, h.Customer())
+	before := treasuryBalance(t, h, tid)
+	if _, err := h.Pool.Exec(ctxBG(), `UPDATE orders SET return_to = 'store' WHERE id = $1::uuid`, oid); err != nil {
+		t.Fatal(err)
+	}
+	if r := h.POST("/api/v1/driver/orders/"+oid+"/goods-handed", drv.Token, map[string]any{}); r.Code >= 400 {
+		t.Fatalf("سلّمت البضاعة: %s", r)
+	}
+	if r := h.POST("/api/v1/admin/orders/"+oid+"/goods", admin.Token, map[string]any{"to": "merchant"}); r.Code >= 400 {
+		t.Fatalf("حسمُ البضاعة للمتجر: %s", r)
+	}
+	f := m2Read(t, h, oid)
+	if f.rowState != "goods_returned" || f.advance != 0 || f.goodsRows != 0 || f.profit < 0 {
+		t.Errorf("رجعت للمتجر: %+v — يُنتظر صفٌّ goods_returned بلا سلفةٍ ولا قيدٍ ولا خسارة", f)
+	}
+	if after := treasuryBalance(t, h, tid); after != before {
+		t.Errorf("الخزينةُ تحرّكت بحسم البضاعة %d ← %d", before, after)
+	}
+	var debts int
+	_ = h.Pool.QueryRow(ctxBG(), `SELECT count(*) FROM financial_obligations WHERE order_id = $1::uuid`, oid).Scan(&debts)
+	if debts != 0 {
+		t.Errorf("دينٌ نشأ عن بضاعةٍ رجعت: %d", debts)
+	}
+
+	// ── ٢ · المتجرُ رفض: «مصاري الكابتن عالقة» والمكتبُ يقرّر ──
+	for _, decision := range []string{"platform", "customer"} {
+		oid, drv := m2FailAtDoor(t, h, item, h.Customer())
+		if r := h.POST("/api/v1/driver/orders/"+oid+"/goods-handed", drv.Token, map[string]any{}); r.Code >= 400 {
+			t.Fatalf("سلّمت البضاعة: %s", r)
+		}
+		if r := h.POST("/api/v1/admin/orders/"+oid+"/goods", admin.Token, map[string]any{"to": "platform"}); r.Code >= 400 {
+			t.Fatalf("حسمُ البضاعة للمكتب: %s", r)
+		}
+		var stuck int64
+		var state string
+		_ = h.Pool.QueryRow(ctxBG(), `SELECT o.stuck_goods_amount, ms.state FROM orders o
+			JOIN merchant_settlements ms ON ms.order_id = o.id WHERE o.id = $1::uuid`, oid).Scan(&stuck, &state)
+		if stuck != 9_000 || state != "held_by_driver" {
+			t.Errorf("%s: عالقٌ %d حال %s — يُنتظر 9000 held_by_driver", decision, stuck, state)
+		}
+		rep := h.GET("/api/v1/admin/finance/goods-balances", admin.Token)
+		if rep.Code >= 400 || !strings.Contains(rep.String(), oid) {
+			t.Errorf("%s: التقريرُ لا يعرض المصاري العالقة: %s", decision, rep)
+		}
+		drvBefore := walletOf(t, h, drv.ID)
+		tBefore := treasuryBalance(t, h, tid)
+		if r := h.POST("/api/v1/admin/orders/"+oid+"/stuck-goods", admin.Token,
+			map[string]any{"decision": decision}); r.Code >= 400 {
+			t.Fatalf("%s: القرار: %s", decision, r)
+		}
+		if r := h.POST("/api/v1/admin/orders/"+oid+"/stuck-goods", admin.Token,
+			map[string]any{"decision": decision}); r.Code != 409 {
+			t.Errorf("%s: قرارٌ ثانٍ مرّ: %s", decision, r)
+		}
+		gotDrv, gotT := walletOf(t, h, drv.ID)-drvBefore, treasuryBalance(t, h, tid)-tBefore
+		want := int64(0)
+		if decision == "platform" {
+			want = 9_000
+		}
+		if gotDrv != want || gotT != -want {
+			t.Errorf("%s: الكابتن +%d والخزينة %d — يُنتظر +%d و−%d", decision, gotDrv, gotT, want, want)
+		}
+		if f := m2Read(t, h, oid); f.advance != 0 || f.goodsRows != 0 || f.profit < 0 {
+			t.Errorf("%s: %+v — لا سلفةَ ولا قيدَ ولا خسارةَ على الطلب", decision, f)
+		}
+	}
+	assertNewViolations(t, h, base, m2Checks...)
+}
+
+// ── B6 · استرجاعٌ بعد التسليم: الأجرةُ المدفوعةُ وحدَها، والكابتنُ بأجره، ولا دينَ على المتجر ──
+func TestModel2_RefundAfterDeliveryFeeOnly(t *testing.T) {
+	h := New(t)
+	item, _ := m2Prep(t, h)
+	base := financialBaseline(t, h, m2Checks...)
+	admin := h.NewUser("admin")
+
+	for _, c := range []struct{ name, method, scope string }{
+		{"cash", "cash", ""},
+		{"fee-from-wallet", "", "delivery"},
+	} {
+		cust := h.Customer()
+		oid := wsMake(t, h, cust, wsBody(item, 1, c.method, c.scope), 5_000)
+		drv := h.driverOf(oid)
+		wsDrive(t, h, oid, drv, "at_pickup", "picked_up", "on_the_way", "at_dropoff", "delivered")
+		walletBefore := walletOf(t, h, cust.ID)
+		drvBefore := walletOf(t, h, drv.ID)
+		if r := h.POST("/api/v1/admin/orders/"+oid+"/transition", admin.Token,
+			map[string]any{"to": "refunded", "note": "B6"}); r.Code >= 400 {
+			t.Fatalf("%s: الاسترجاع: %s", c.name, r)
+		}
+		if got := walletOf(t, h, cust.ID) - walletBefore; got != 300 {
+			t.Errorf("%s: رجع للزبون %d — يُنتظر أجرةُ التوصيل 300 وحدَها", c.name, got)
+		}
+		if got := walletOf(t, h, drv.ID) - drvBefore; got != 0 {
+			t.Errorf("%s: محفظةُ الكابتن تحرّكت %d — يبقى بأجره", c.name, got)
+		}
+		var debts int
+		_ = h.Pool.QueryRow(ctxBG(), `SELECT count(*) FROM financial_obligations WHERE order_id = $1::uuid`, oid).Scan(&debts)
+		if debts != 0 {
+			t.Errorf("%s: دينٌ نشأ على المتجر بالاسترجاع: %d", c.name, debts)
+		}
+		f := m2Read(t, h, oid)
+		if want := f.walletPaid + f.box - f.driverFee - 300; f.profit != want || f.goodsRows != 0 {
+			t.Errorf("%s: ربحُ المنصّة %d — يُنتظر %d (المحفظة + الصندوق − الكابتن − المردود)", c.name, f.profit, want)
+		}
+	}
+	assertNewViolations(t, h, base, m2Checks...)
+}
+
+// ── B7 · طلبُ الواتساب في النموذج ٢: العمولةُ عبر الصندوق، لا خصمَ ولا دين، والاسترجاعُ لا شيء ──
+func TestModel2_WhatsAppCommissionViaBox(t *testing.T) {
+	h := New(t)
+	c := newWAComm(t, h, "منطقةُ النموذج ٢ واتساب", 1000)
+	h.Setting("finance.goods_outside", "true")
+	base := financialBaseline(t, h, m2Checks...)
+	id := c.ourStore(t, h, nil)
+	if m := moneyModelOf(t, h, id); m != 2 {
+		t.Fatalf("نموذجُ طلب الواتساب %d", m)
+	}
+	waDeliver(t, h, id, 2400)
+
+	if got := waBalance(t, h, c.ownerID); got != 1000 {
+		t.Errorf("محفظةُ المتجر %d — النموذج ٢ لا يخصم منها (يُنتظر 1000)", got)
+	}
+	if a, _ := waCommDebt(t, h, id); a != -1 {
+		t.Errorf("دينُ عمولةٍ على المتجر %d — النموذج ٢ بلا دين", a)
+	}
+	if pc := waPlatformCommission(t, h, id); pc != 240 {
+		t.Errorf("platform_commission %d — يُنتظر 240", pc)
+	}
+	var box int64
+	_ = h.Pool.QueryRow(ctxBG(), `SELECT COALESCE(sum(amount), 0) FROM driver_cash_entries
+		WHERE ref = $1 AND kind = 'order_collection'`, id).Scan(&box)
+	if box != 600+240 {
+		t.Errorf("صندوقُ الكابتن %d — يُنتظر الأجرة 600 + العمولة 240", box)
+	}
+	led := waLedgerOf(t, h, id)
+	if led["order_payment"] != 0 || led["platform_profit"] != 300 {
+		t.Errorf("الدفتر %v — يُنتظر بلا خصمٍ من المتجر وحصّةُ المنصّة 60 + 240", led)
+	}
+	// والاسترجاعُ بعد التسليم: لا شيءَ في التطبيق (جوابُ المالك).
+	waRefund(t, h, c.w.md.admin, id)
+	if got := waBalance(t, h, c.ownerID); got != 1000 {
+		t.Errorf("الاسترجاعُ حرّك محفظةَ المتجر: %d", got)
+	}
+	if led2 := waLedgerOf(t, h, id); led2["refund"] != 0 || led2["platform_profit"] != 300 {
+		t.Errorf("الاسترجاعُ حرّك الدفتر: %v", led2)
+	}
+	assertNewViolations(t, h, base, m2Checks...)
+}
+
+// ── B8 · تعديلُ الطلب بعد الاستلام: الفرقُ بين الكابتن والمتجر، لا قيدَ ولا درج ──
+func TestModel2_EditAfterPickupDriverAndStore(t *testing.T) {
+	h := New(t)
+	item, _ := m2Prep(t, h)
+	base := financialBaseline(t, h, m2Checks...)
+	admin := h.NewUser("admin")
+	cust := h.Customer()
+	oid := wsMake(t, h, cust, wsBody(item, 2, "cash", ""), 0)
+	drv := h.driverOf(oid)
+	wsDrive(t, h, oid, drv, "at_pickup", "picked_up")
+
+	var line string
+	if err := h.Pool.QueryRow(ctxBG(), `SELECT id::text FROM order_items WHERE order_id = $1::uuid`, oid).Scan(&line); err != nil {
+		t.Fatal(err)
+	}
+	if r := h.POST("/api/v1/admin/orders/"+oid+"/edit", admin.Token, map[string]any{
+		"reason": "الزبون بدّو وحدة", "store_refunded": true,
+		"lines": []map[string]any{{"item_id": line, "qty": 1}},
+	}); r.Code != 200 {
+		t.Fatalf("التعديل: %s", r)
+	}
+	var ledgerAdj, withTx int
+	_ = h.Pool.QueryRow(ctxBG(), `SELECT count(*), count(*) FILTER (WHERE accrued_tx_id IS NOT NULL OR paid_tx_id IS NOT NULL
+	        OR earning_tx_id IS NOT NULL) FROM merchant_settlement_adjustments WHERE order_id = $1::uuid`, oid).Scan(&ledgerAdj, &withTx)
+	if ledgerAdj != 1 || withTx != 0 {
+		t.Errorf("سطرُ التصحيح %d (بقيود %d) — يُنتظر سطرٌ واحدٌ بلا قيد", ledgerAdj, withTx)
+	}
+	// **«خد من المتجر X»** في عرض الكابتن.
+	view := h.GET("/api/v1/driver/orders", drv.Token)
+	if !strings.Contains(view.String(), `"take_from_stores"`) || !strings.Contains(view.String(), `"amount":9000`) {
+		t.Errorf("عرضُ الكابتن لا يقول «خد من المتجر 9000»: %s", view)
+	}
+	wsDrive(t, h, oid, drv, "on_the_way", "at_dropoff", "delivered")
+	f := m2Read(t, h, oid)
+	// الكابتنُ دفع ١٨٠٠٠ واسترجع ٩٠٠٠ ⇒ صندوقُه نقدُ الطلب بعد التعديل ناقصَ ٩٠٠٠.
+	if f.box != f.cashDue-9_000 || f.advance != 0 || f.goodsRows != 0 {
+		t.Errorf("بعد التسليم: صندوق %d (نقد %d) سلفة %d قيودُ بضاعة %d — يُنتظر النقد − 9000 بلا سلفةٍ ولا قيد",
+			f.box, f.cashDue, f.advance, f.goodsRows)
+	}
+	assertNewViolations(t, h, base, m2Checks...)
+}
+
+// ── B9 · سقفُ نقد الكابتن يعدّ مالَ المنصّة وحدَه (لكلّ الطلبات — القديمُ معها) ──
+func TestModel2_DriverCashLimitIgnoresGoods(t *testing.T) {
+	h := New(t)
+	fx := newCapFixture(t, h, 10)
+	h.Setting("delivery.fee", "300")
+	h.Setting("delivery.by_distance", "false")
+	// **طلبٌ من النموذج ١** (المفتاحُ مطفأ): كلفةُ ١٠٠٠٠ وعمولةُ اللقطة ١٠٪ ⇒ مالُ المنصّة الأجرةُ ٣٠٠ +
+	// العمولةُ ١٠٠٠ = ١٣٠٠. والسقفُ ٣٠٠٠: يتّسع لطلبين لا لثلاثة — **وحقُّ المتجر (٩٠٠٠) لا يُعدّ.**
+	h.Setting("drivers.cash_limit", "3000")
+	codes := []int{}
+	for i := 0; i < 3; i++ {
+		oid := queuedOrder(t, h, fx.Cust, 10_000)
+		res := h.POST("/api/v1/admin/orders/"+oid+"/assign", fx.Admin.Token,
+			map[string]any{"driver_id": fx.Driver.ID})
+		codes = append(codes, res.Code)
+		t.Logf("الإسناد %d: %s", i, res)
+	}
+	if codes[0] >= 400 || codes[1] >= 400 {
+		t.Errorf("**الإسنادُ رُدّ ومالُ المنصّة ١٣٠٠ تحت سقف ٣٠٠٠**: %v — ثمنُ البضاعة يُعدّ في السقف", codes)
+	}
+	if codes[2] < 400 {
+		t.Errorf("**الطلبُ الثالث مرّ** (٣٩٠٠ فوق ٣٠٠٠): %v — السقفُ لا يعمل", codes)
+	}
+	var exp int64
+	if err := h.Pool.QueryRow(ctxBG(), `SELECT COALESCE(sum(cash_due), 0) FROM orders
+		WHERE driver_id = $1::uuid AND closed_at IS NULL`, fx.Driver.ID).Scan(&exp); err != nil {
+		t.Fatal(err)
+	}
+	if exp < 20_000 {
+		t.Errorf("نقدُ الطلبين %d — يُنتظر أن يحمل البضاعة (٢٠٦٠٠)", exp)
+	}
+}
