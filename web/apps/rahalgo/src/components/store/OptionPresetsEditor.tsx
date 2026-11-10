@@ -96,17 +96,17 @@ export default function OptionPresetsEditor() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-xl flex-col gap-4 md:mx-0 md:max-w-none" data-testid="store-option-presets">
+    <div className="mx-auto flex w-full max-w-xl flex-col gap-rg-lg md:mx-0 md:max-w-none" data-testid="store-option-presets">
       <ToolHeader title={O.title} href={BACK} />
       {failed ? (
         <ReloadState onRetry={() => void load()} />
       ) : data == null ? (
         <LoadingState variant="list" rows={4} label={O.loading} />
       ) : presets.length === 0 ? (
-        <p className="text-sm text-ink-muted">{O.empty}</p>
+        <p className="text-body text-ink-muted">{O.empty}</p>
       ) : (
         <>
-          <ul className="flex flex-col gap-2">
+          <ul className="flex flex-col gap-rg-sm">
             {presets.map((p) => {
               const on = picked.has(p.id);
               const values = p.options.map((o) => o.name).join(" · ");
@@ -126,16 +126,16 @@ export default function OptionPresetsEditor() {
                         return next;
                       })
                     }
-                    className={`flex h-[4.75rem] w-full items-center gap-3 rounded-control border px-3 text-start transition-colors disabled:opacity-60 ${
+                    className={`flex h-[4.75rem] w-full items-center gap-rg-md rounded-control border px-rg-md text-start transition-colors disabled:opacity-60 ${
                       on ? "border-2 border-accent bg-accent-tint" : "border-line bg-surface hover:bg-row-hover"
                     }`}
                   >
-                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <span className="flex min-w-0 items-center gap-2">
+                    <span className="flex min-w-0 flex-1 flex-col gap-rg-xxs">
+                      <span className="flex min-w-0 items-center gap-rg-sm">
                         <span className="truncate font-bold text-ink">{p.name}</span>
                         <ModeChip p={p} />
                       </span>
-                      {values && <span className="break-words text-xs text-ink-muted">{values}</span>}
+                      {values && <span className="break-words text-caption text-ink-muted">{values}</span>}
                     </span>
                     <span
                       className={`flex h-6 w-6 shrink-0 items-center justify-center rounded border-2 ${
@@ -163,7 +163,7 @@ export default function OptionPresetsEditor() {
           {data.custom && !suspended && (
             <Button
               variant="ghost"
-              className="inline-flex w-full items-center justify-center gap-1.5"
+              className="inline-flex w-full items-center justify-center gap-rg-sm"
               disabled={busy}
               onClick={() => void send({ reset: true }, O.resetDone, false)}
             >

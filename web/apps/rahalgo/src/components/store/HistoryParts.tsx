@@ -32,18 +32,18 @@ export function reasonText(code: string): string {
 /** **المجموعُ وخصمُ المنصّة والمستحقّ** — مرآةُ `SumLine` الثلاثة. */
 export function MoneyLines({ o }: { o: MerchantOrder }) {
   // **وطلبٌ انتهى بلا بيعٍ لا حسبةَ فيه** — انظر `noPayout`.
-  if (noPayout(o.status)) return <p className="text-sm text-ink-muted">{S.orders.noPayout}</p>;
+  if (noPayout(o.status)) return <p className="text-body text-ink-muted">{S.orders.noPayout}</p>;
   return (
-    <dl className="flex flex-col gap-0.5 text-sm">
-      <div className="flex justify-between gap-2">
+    <dl className="flex flex-col gap-rg-xxs text-body">
+      <div className="flex justify-between gap-rg-sm">
         <dt className="text-ink-muted">{S.orders.sum}</dt>
         <dd>{fmtMoney(o.subtotal)}</dd>
       </div>
-      <div className="flex justify-between gap-2">
+      <div className="flex justify-between gap-rg-sm">
         <dt className="text-ink-muted">{fill(S.orders.cut, { n: fmtNum(o.commission_percent_exact ?? o.commission_percent) })}</dt>
         <dd>{`− ${fmtMoney(o.platform_commission)}`}</dd>
       </div>
-      <div className="flex justify-between gap-2 border-t border-line-soft pt-1 font-bold text-accent-text">
+      <div className="flex justify-between gap-rg-sm border-t border-line-soft pt-rg-xs font-bold text-accent-text">
         <dt>{S.orders.due}</dt>
         <dd>{fmtMoney(o.merchant_net)}</dd>
       </div>
@@ -92,9 +92,9 @@ export function ReportDriver({
 
   return (
     <Modal open onClose={onClose} title={fill(H.reportTitle, { n: order.number })}>
-      <div className="flex flex-col gap-3">
-        <p className="text-xs text-ink-muted">{H.reportHint}</p>
-        <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-rg-md">
+        <p className="text-caption text-ink-muted">{H.reportHint}</p>
+        <div className="flex flex-col gap-rg-sm">
           {reasons.map((r) => (
             <Radio key={r} id={`rep-${r}`} name="report-reason" checked={reason === r} onChange={() => setReason(r)} label={reasonText(r)} />
           ))}

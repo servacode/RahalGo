@@ -37,10 +37,10 @@ export default function AlertsPage() {
       ) : (
         <ul className="panel flex flex-col divide-y divide-line-soft overflow-hidden">
           {rows.map((w) => (
-            <li key={w.id} className="flex min-h-14 flex-col gap-0.5 px-4 py-3" data-testid="store-warning">
+            <li key={w.id} className="flex min-h-14 flex-col gap-rg-xxs px-rg-lg py-rg-md" data-testid="store-warning">
               <span className="font-bold">{REASONS[w.reason] ?? w.reason}</span>
-              {w.note && <span className="text-sm text-ink-muted">{w.note}</span>}
-              <span className="flex gap-3 text-2xs text-ink-muted">
+              {w.note && <span className="text-body text-ink-muted">{w.note}</span>}
+              <span className="flex gap-rg-md text-meta text-ink-muted">
                 <span>{fmtRelDay(w.created_at)}</span>
                 {w.order_number != null && <span>{fill(W.onOrder, { n: `#${w.order_number}` })}</span>}
               </span>

@@ -54,8 +54,8 @@ function SettingsNav({ current }: { current: Page }) {
     returns: !store.returns_confirmed,
   };
   return (
-    <nav className="panel hidden flex-col p-2 lg:flex" aria-label={K.settingsNav}>
-      <h2 className="console-h2 px-3 py-2">{K.settingsNav}</h2>
+    <nav className="panel hidden flex-col p-rg-sm lg:flex" aria-label={K.settingsNav}>
+      <h2 className="console-h2 px-rg-md py-rg-sm">{K.settingsNav}</h2>
       {(Object.keys(TITLES) as Page[])
         .filter((k) => k !== "ameen" || store.uses_ameen === true || current === "ameen")
         .map((k) => (
@@ -63,7 +63,7 @@ function SettingsNav({ current }: { current: Page }) {
             key={k}
             href={`/store/settings/${k}`}
             aria-current={k === current ? "page" : undefined}
-            className={`flex min-h-11 items-center justify-between gap-2 rounded-control px-3 text-sm transition-colors ${
+            className={`flex min-h-11 items-center justify-between gap-rg-sm rounded-control px-rg-md text-body transition-colors ${
               k === current ? "bg-row-hover font-bold text-ink" : "text-ink-muted hover:bg-row-hover hover:text-ink"
             }`}
           >
@@ -84,8 +84,8 @@ export default function StoreSettingsPage() {
   return (
     <div className="console-page" data-testid="store-settings">
       <PageHeader title={TITLES[page]} />
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_16rem] md:items-start md:gap-5">
-        <div className="flex min-w-0 flex-col gap-4">
+      <div className="grid grid-cols-1 gap-rg-lg md:grid-cols-[minmax(0,1fr)_16rem] md:items-start md:gap-5">
+        <div className="flex min-w-0 flex-col gap-rg-lg">
           {page === "hours" && <HoursEditor />}
           {page === "sections" && <Sections />}
           {page === "address" && <AddressEditor />}

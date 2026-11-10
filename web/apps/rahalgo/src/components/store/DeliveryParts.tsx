@@ -47,7 +47,7 @@ export function statusText(status: string): string {
 export function StatusPill({ status }: { status: string }) {
   const tone = toneOf(status);
   return (
-    <Badge variant={BADGE[tone]} className="gap-1.5 font-bold">
+    <Badge variant={BADGE[tone]} className="gap-rg-sm font-bold">
       <span className={`h-2 w-2 rounded-badge bg-current ${tone === "waiting" ? "motion-safe:animate-pulse" : ""}`} aria-hidden />
       {statusText(status)}
     </Badge>
@@ -56,11 +56,11 @@ export function StatusPill({ status }: { status: string }) {
 
 export function SearchingBanner() {
   return (
-    <div className="flex items-center gap-3 rounded-control border border-warning-edge bg-warning-tint p-3">
+    <div className="flex items-center gap-rg-md rounded-control border border-warning-edge bg-warning-tint p-rg-md">
       <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-badge bg-warning text-on-bright motion-safe:animate-pulse">
         <IconMoto size={18} />
       </span>
-      <span className="min-w-0 text-sm font-bold text-warning">{D.searching}</span>
+      <span className="min-w-0 text-body font-bold text-warning">{D.searching}</span>
     </div>
   );
 }
@@ -75,7 +75,7 @@ function feeRow(d: Delivery): string {
 
 function Line({ icon: Icon, children, strong, muted }: { icon: typeof IconUser; children: React.ReactNode; strong?: boolean; muted?: boolean }) {
   return (
-    <p className={`flex items-center gap-2 text-sm ${strong ? "font-bold" : ""} ${muted ? "text-ink-muted" : ""}`}>
+    <p className={`flex items-center gap-rg-sm text-body ${strong ? "font-bold" : ""} ${muted ? "text-ink-muted" : ""}`}>
       <Icon size={16} className="shrink-0 text-ink-muted" />
       <span className="min-w-0 break-words">{children}</span>
     </p>
@@ -86,7 +86,7 @@ function Line({ icon: Icon, children, strong, muted }: { icon: typeof IconUser; 
 export function DeliveryLines({ d }: { d: Delivery }) {
   const fetch = d.delivery_mode === "fetch";
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-rg-xs">
       {fetch && (
         <Line icon={IconMoto} strong>
           {D.rowFetch}
@@ -119,7 +119,7 @@ export function CancelDeliveryButton({ busy, onConfirm, compact = false }: { bus
     <>
       <Button
         variant={compact ? "ghost" : "secondary"}
-        className={compact ? "flex min-h-9 items-center gap-1 text-danger" : "flex min-h-11 w-full items-center justify-center gap-2 py-3 text-danger"}
+        className={compact ? "flex min-h-9 items-center gap-rg-xs text-danger" : "flex min-h-11 w-full items-center justify-center gap-rg-sm py-rg-md text-danger"}
         disabled={busy}
         onClick={() => setAsking(true)}
       >
@@ -151,26 +151,26 @@ export function DeliveryRow({ d, cancelling, onCancel }: { d: Delivery; cancelli
   const tone = toneOf(d.status);
   const [open, setOpen] = useState(false);
   return (
-    <article className={`surface flex flex-col gap-2 rounded-card border p-3 ${EDGE[tone]}`} data-testid="store-delivery">
+    <article className={`surface flex flex-col gap-rg-sm rounded-card border p-rg-md ${EDGE[tone]}`} data-testid="store-delivery">
       <button
         type="button"
         aria-expanded={open}
         aria-label={`${fill(D.trackTitle, { n: d.number })} · ${D.trackDetails}`}
         onClick={() => setOpen((v) => !v)}
-        className="flex flex-col gap-1 text-start"
+        className="flex flex-col gap-rg-xs text-start"
         data-testid="store-delivery-toggle"
       >
-        <span className="flex w-full items-center justify-between gap-2">
-          <span className="flex min-w-0 items-baseline gap-2">
+        <span className="flex w-full items-center justify-between gap-rg-sm">
+          <span className="flex min-w-0 items-baseline gap-rg-sm">
             <span className="font-bold">{fill(D.trackTitle, { n: d.number })}</span>
             {/* **ويومُها وساعتُها** (مرآةُ `Dates.stamp`، تدقيقُ ٢٠٢٦-١٠-٢٧). */}
-            {d.created_at && <span className="truncate text-xs text-ink-muted">{fmtRelStamp(d.created_at)}</span>}
+            {d.created_at && <span className="truncate text-caption text-ink-muted">{fmtRelStamp(d.created_at)}</span>}
           </span>
           <StatusPill status={d.status} />
         </span>
-        <span className="flex w-full items-center justify-between gap-2 text-sm">
+        <span className="flex w-full items-center justify-between gap-rg-sm text-body">
           <span className="min-w-0 truncate">{d.customer_name}</span>
-          <span className="flex shrink-0 items-center gap-1 text-ink-muted">
+          <span className="flex shrink-0 items-center gap-rg-xs text-ink-muted">
             <span className="tabular-nums">{fmtMoney(d.delivery_fee)}</span>
             <IconChevronDown size={16} className={`transition-transform ${open ? "rotate-180" : ""}`} />
           </span>
@@ -180,7 +180,7 @@ export function DeliveryRow({ d, cancelling, onCancel }: { d: Delivery; cancelli
         <>
           {d.status === "dispatching" && <SearchingBanner />}
           <DeliveryLines d={d} />
-          <Link href={`/store/delivery/${d.id}`} className="text-sm font-bold text-primary hover:underline">
+          <Link href={`/store/delivery/${d.id}`} className="text-body font-bold text-primary hover:underline">
             {tone === "waiting" || tone === "moving" ? D.follow : D.trackDetails}
           </Link>
           {CANCELLABLE.has(d.status) && <CancelDeliveryButton busy={cancelling} onConfirm={onCancel} />}

@@ -78,7 +78,7 @@ const LIVE = new Set(["active", "scheduled"]);
 /** **بطاقةُ قسمٍ من النموذج** — بحدٍّ رفيعٍ وعنوانٍ عريض. */
 function FormCard({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="panel flex flex-col gap-2 p-3 lg:p-4">
+    <section className="panel flex flex-col gap-rg-sm p-rg-md lg:p-rg-lg">
       <h2 className="console-h2">{title}</h2>
       {children}
     </section>
@@ -106,7 +106,7 @@ function Tile({
       aria-checked={on}
       onClick={onClick}
       data-testid={testId}
-      className={`relative flex min-h-14 w-full flex-col justify-center rounded-control border p-2 text-start transition-colors ${
+      className={`relative flex min-h-14 w-full flex-col justify-center rounded-control border p-rg-sm text-start transition-colors ${
         on ? "border-2 border-accent bg-accent-tint" : "border-line bg-surface hover:bg-row-hover"
       } ${className}`}
     >
@@ -128,15 +128,15 @@ function OfferCard({ o, stopping, onStop }: { o: StoreOffer; stopping: boolean; 
   const status = (O.status as Record<string, string>)[o.status] ?? O.status.unknown;
   return (
     <article
-      className={`surface flex flex-col gap-2 rounded-card border p-3 ${live ? "border-success-edge" : "border-line"}`}
+      className={`surface flex flex-col gap-rg-sm rounded-card border p-rg-md ${live ? "border-success-edge" : "border-line"}`}
       data-testid="store-offer"
       data-offer-id={o.id}
       data-status={o.status}
     >
-      <header className="flex items-center gap-2">
+      <header className="flex items-center gap-rg-sm">
         {badge && (
           <span
-            className={`flex h-12 min-w-12 shrink-0 items-center justify-center rounded-control px-2 text-sm font-bold ${
+            className={`flex h-12 min-w-12 shrink-0 items-center justify-center rounded-control px-rg-sm text-body font-bold ${
               live ? "bg-accent text-on-bright" : "bg-field text-ink-muted"
             }`}
           >
@@ -145,15 +145,15 @@ function OfferCard({ o, stopping, onStop }: { o: StoreOffer; stopping: boolean; 
         )}
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="truncate font-bold">{o.item_name}</span>
-          <span className="flex items-baseline gap-2">
+          <span className="flex items-baseline gap-rg-sm">
             <span className={`font-bold ${live ? "text-success" : "text-ink"}`}>{fmtMoney(o.price_after)}</span>
-            <span className="text-xs text-ink-muted line-through">{fmtMoney(o.price_before)}</span>
+            <span className="text-caption text-ink-muted line-through">{fmtMoney(o.price_before)}</span>
           </span>
         </span>
         <Badge variant={o.status === "active" ? "success" : o.status === "scheduled" ? "accent" : "neutral"} className="shrink-0">{status}</Badge>
       </header>
       {(saved > 0 && LIVE.has(o.status)) || (live && o.ends_at) ? (
-        <p className="flex flex-wrap gap-x-3 text-xs text-ink-muted">
+        <p className="flex flex-wrap gap-x-rg-md text-caption text-ink-muted">
           {saved > 0 && LIVE.has(o.status) && <span className={live ? "text-success" : ""}>{fill(O.saves, { amount: fmtMoney(saved) })}</span>}
           {live && o.ends_at && <span>{fill(O.endsAt, { when: fmtDateTime(o.ends_at) })}</span>}
         </p>
@@ -161,7 +161,7 @@ function OfferCard({ o, stopping, onStop }: { o: StoreOffer; stopping: boolean; 
       {LIVE.has(o.status) && (
         <Button
           variant="secondary"
-          className="inline-flex min-h-11 w-fit items-center gap-1.5 border-danger-edge text-danger"
+          className="inline-flex min-h-11 w-fit items-center gap-rg-sm border-danger-edge text-danger"
           disabled={stopping}
           onClick={onStop}
           data-testid="offer-stop"
@@ -280,16 +280,16 @@ function NewOffer({
     <div className="console-page" data-testid="offer-form">
       <ToolHeader title={O.newTitle} onBack={onCancel} />
       {/* ── عمودان على الحاسوب: النموذج | المعاينة اللاصقة. جوّالاً متتابعان ── */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1fr)_22rem] md:items-start md:gap-5">
-      <div className="flex min-w-0 flex-col gap-3">
+      <div className="grid grid-cols-1 gap-rg-lg md:grid-cols-[minmax(0,1fr)_22rem] md:items-start md:gap-5">
+      <div className="flex min-w-0 flex-col gap-rg-md">
 
       {/* **الصنفُ أوّلاً والبحثُ أوّلُه** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) — تُعرض نتائجُ البحث
           أو أوّلُ ثمانيةٍ لا أصنافُ المتجر كلُّها، **وبعد الاختيار ينطوي سطراً واحداً.** */}
       <FormCard title={O.item}>
         {item ? (
-          <div className="flex items-center gap-2" data-testid="offer-item-picked">
+          <div className="flex items-center gap-rg-sm" data-testid="offer-item-picked">
             <span className="min-w-0 flex-1 truncate font-bold">{fill(O.pickedLine, { name: item.name })}</span>
-            <DualPrice usd={itemUsd(item)} syp={item.price} stacked className="shrink-0 text-sm" />
+            <DualPrice usd={itemUsd(item)} syp={item.price} stacked className="shrink-0 text-body" />
             <Button variant="secondary" className="shrink-0" onClick={() => setPicked("")} data-testid="offer-item-change">
               {O.change}
             </Button>
@@ -307,9 +307,9 @@ function NewOffer({
             {found === null ? (
               <LoadingState variant="inline" />
             ) : (
-              shown.length === 0 && <p className="text-sm text-ink-muted">{query.trim() ? O.noMatch : O.noItems}</p>
+              shown.length === 0 && <p className="text-body text-ink-muted">{query.trim() ? O.noMatch : O.noItems}</p>
             )}
-            <div role="radiogroup" aria-label={O.item} className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <div role="radiogroup" aria-label={O.item} className="grid grid-cols-2 gap-rg-sm sm:grid-cols-3">
               {shown.map((i) => {
                 const note = taken.get(i.id);
                 return (
@@ -322,10 +322,10 @@ function NewOffer({
                     }}
                     testId="offer-item"
                   >
-                    <span className="line-clamp-2 pe-5 text-sm font-bold text-ink">{i.name}</span>
-                    <DualPrice usd={itemUsd(i)} syp={i.price} className="text-xs" />
+                    <span className="line-clamp-2 pe-5 text-body font-bold text-ink">{i.name}</span>
+                    <DualPrice usd={itemUsd(i)} syp={i.price} className="text-caption" />
                     {note && (
-                      <span className="mt-1 w-fit rounded-control bg-warning-tint px-1.5 py-0.5 text-2xs text-warning">
+                      <span className="mt-rg-xs w-fit rounded-control bg-warning-tint px-rg-sm py-rg-xxs text-meta text-warning">
                         {note === "scheduled" ? O.itemScheduled : O.itemTaken}
                       </span>
                     )}
@@ -336,14 +336,14 @@ function NewOffer({
           </>
         )}
         {item && taken.get(item.id) && (
-          <p className="w-fit rounded-control bg-warning-tint px-1.5 py-0.5 text-2xs text-warning">
+          <p className="w-fit rounded-control bg-warning-tint px-rg-sm py-rg-xxs text-meta text-warning">
             {taken.get(item.id) === "scheduled" ? O.itemScheduled : O.itemTaken}
           </p>
         )}
       </FormCard>
 
       <FormCard title={O.fType}>
-        <div role="radiogroup" aria-label={O.fType} className="grid grid-cols-2 gap-2">
+        <div role="radiogroup" aria-label={O.fType} className="grid grid-cols-2 gap-rg-sm">
           {(
             [
               [true, O.unitPct, O.modePercent],
@@ -364,14 +364,14 @@ function NewOffer({
                 }}
               >
                 <span
-                  className={`flex h-12 w-12 items-center justify-center self-center rounded-full text-lg font-medium ${
+                  className={`flex h-12 w-12 items-center justify-center self-center rounded-full text-section-title font-medium ${
                     on ? "bg-accent text-on-bright" : "bg-field text-ink-muted"
                   }`}
                   aria-hidden
                 >
                   {glyph}
                 </span>
-                <span className={`mt-1 self-center font-bold ${on ? "text-accent-text" : "text-ink"}`}>{label}</span>
+                <span className={`mt-rg-xs self-center font-bold ${on ? "text-accent-text" : "text-ink"}`}>{label}</span>
               </Tile>
             );
           })}
@@ -379,10 +379,10 @@ function NewOffer({
       </FormCard>
 
       <FormCard title={O.fValue}>
-        <label className="flex flex-col gap-1">
-          <span className="text-sm font-medium">{percentMode ? O.percent : O.amount}</span>
+        <label className="flex flex-col gap-rg-xs">
+          <span className="text-body font-medium">{percentMode ? O.percent : O.amount}</span>
           <span
-            className={`flex h-12 items-center gap-2 rounded-control border bg-field px-3 focus-within:border-accent ${
+            className={`flex h-12 items-center gap-rg-sm rounded-control border bg-field px-rg-md focus-within:border-accent ${
               value && !valueOK ? "border-danger" : "border-line"
             }`}
           >
@@ -392,23 +392,23 @@ function NewOffer({
               onChange={(e) => setValue(e.target.value.replace(/\D/g, "").slice(0, percentMode ? 2 : 9))}
               inputMode="numeric"
               dir="ltr"
-              className="min-w-0 flex-1 bg-transparent text-lg font-medium text-ink outline-none"
+              className="min-w-0 flex-1 bg-transparent text-section-title font-medium text-ink outline-none"
             />
             <span className="shrink-0 font-bold text-ink-muted">{percentMode ? O.unitPct : O.unitSyp}</span>
           </span>
         </label>
         {value && !valueOK && (
-          <p className="text-xs text-danger">{percentMode ? O.badPercent : fill(O.badAmount, { price: fmtNum(price) })}</p>
+          <p className="text-caption text-danger">{percentMode ? O.badPercent : fill(O.badAmount, { price: fmtNum(price) })}</p>
         )}
         {percentMode && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-rg-sm">
             {QUICK_PERCENTS.map((p) => (
               <button
                 key={p}
                 type="button"
                 aria-pressed={n === p}
                 onClick={() => setValue(String(p))}
-                className={`min-h-10 rounded-full border px-4 text-sm ${
+                className={`min-h-10 rounded-full border px-rg-lg text-body ${
                   n === p ? "border-accent bg-accent font-bold text-on-bright" : "border-line bg-surface text-ink hover:bg-row-hover"
                 }`}
               >
@@ -420,7 +420,7 @@ function NewOffer({
       </FormCard>
 
       <FormCard title={O.fPeriod}>
-        <div role="radiogroup" aria-label={O.fPeriod} className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <div role="radiogroup" aria-label={O.fPeriod} className="grid grid-cols-2 gap-rg-sm sm:grid-cols-4">
           {PRESET_HOURS.map((h) => (
             <button
               key={h}
@@ -428,7 +428,7 @@ function NewOffer({
               role="radio"
               aria-checked={h === hours}
               onClick={() => setHours(h)}
-              className={`min-h-14 rounded-control border px-1 text-center text-sm font-bold ${
+              className={`min-h-14 rounded-control border px-rg-xs text-center text-body font-bold ${
                 h === hours ? "border-accent bg-accent text-on-bright" : "border-line bg-surface text-ink hover:bg-row-hover"
               }`}
             >
@@ -443,16 +443,16 @@ function NewOffer({
       {item ? (
         <FormCard title={O.previewTitle}>
           <p className="font-bold">{item.name}</p>
-          <p className="text-sm">{fill(O.previewPrice, { price: fmtMoney(price) })}</p>
+          <p className="text-body">{fill(O.previewPrice, { price: fmtMoney(price) })}</p>
           {valueOK && (
             <p className="font-bold text-success">
               {fill(O.previewDiscount, { value: percentMode ? fill(O.pct, { n: fmtNum(n) }) : fmtMoney(n) })}
             </p>
           )}
-          <p className="text-xs text-ink-muted">{fill(O.previewFor, { d: durationLabel(hours) })}</p>
+          <p className="text-caption text-ink-muted">{fill(O.previewFor, { d: durationLabel(hours) })}</p>
         </FormCard>
       ) : (
-        <p className="panel hidden p-4 text-sm text-ink-muted lg:block">{K.offerPreviewHint}</p>
+        <p className="panel hidden p-rg-lg text-body text-ink-muted lg:block">{K.offerPreviewHint}</p>
       )}
       </div>
       </div>
@@ -533,7 +533,7 @@ export default function OffersPage() {
   const scheduledN = rows.filter((o) => o.status === "scheduled").length;
   const endedN = rows.length - activeN - scheduledN;
   const addBtn = (
-    <Button className="inline-flex min-h-11 items-center justify-center gap-1.5 font-bold" data-testid="offer-new" onClick={start}>
+    <Button className="inline-flex min-h-11 items-center justify-center gap-rg-sm font-bold" data-testid="offer-new" onClick={start}>
       <IconAdd size={18} />
       {O.add}
     </Button>
@@ -544,7 +544,7 @@ export default function OffersPage() {
       <ToolHeader title={O.title} href="/store/menu" topLevel end={rows.length > 0 ? addBtn : undefined} />
       {created && <Alert tone="success">{O.createdTop}</Alert>}
       {rows.length === 0 ? (
-        <section className="panel mx-auto flex w-full max-w-xl flex-col items-center gap-3 px-4 py-10 text-center lg:max-w-none lg:py-16">
+        <section className="panel mx-auto flex w-full max-w-xl flex-col items-center gap-rg-md px-rg-lg py-10 text-center lg:max-w-none lg:py-16">
           <span className="flex h-22 w-22 items-center justify-center rounded-full bg-accent-tint text-accent-text" aria-hidden>
             <IconPromos size={40} />
           </span>
@@ -558,7 +558,7 @@ export default function OffersPage() {
             <Kpi label={K.offersScheduled} value={scheduledN} tone={scheduledN > 0 ? "accent" : undefined} />
             <Kpi label={K.offersEnded} value={endedN} className="col-span-2 lg:col-span-1" />
           </KpiGrid>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-rg-md md:grid-cols-2 xl:grid-cols-3">
             {rows.map((o) => (
               <OfferCard key={o.id} o={o} stopping={stopping === o.id} onStop={() => setAskStop(o)} />
             ))}

@@ -199,17 +199,17 @@ export function PriceSyncSections({ storeId, refreshKey }: { storeId: string; re
   const allPicked = items.length > 0 && items.every((it) => picked.has(it.id));
 
   return (
-    <section className="panel flex min-w-0 flex-col gap-4 p-4 lg:p-5" data-testid="sync-sections" aria-label={P.sortTitle}>
+    <section className="panel flex min-w-0 flex-col gap-rg-lg p-rg-lg lg:p-5" data-testid="sync-sections" aria-label={P.sortTitle}>
       <h2 className="console-h2">{P.sortTitle}</h2>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-rg-md">
         <Kpi label={K.secPending} value={pending} tone={pending > 0 ? "attention" : "good"} sub={pending > 0 ? undefined : P.sortNone} />
         <Kpi label={K.secGroups} value={groups.length} />
       </div>
       {pending > 0 && (
         <>
-          <p className="text-sm font-bold">{fill(P.sortWaiting, { n: fmtNum(pending) })}</p>
+          <p className="text-body font-bold">{fill(P.sortWaiting, { n: fmtNum(pending) })}</p>
           <p className="console-meta">{P.sortAutoHint}</p>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-rg-sm">
             <Button className="min-h-11 flex-1" onClick={() => void autoSort()} disabled={busy}>
               {P.sortAuto}
             </Button>
@@ -220,9 +220,9 @@ export function PriceSyncSections({ storeId, refreshKey }: { storeId: string; re
             )}
           </div>
           {askRest && (
-            <div className="flex flex-col gap-2 rounded-control border border-line-soft bg-field p-3" role="group">
-              <p className="text-sm">{fill(P.moveRestAsk, { n: fmtNum(pending) })}</p>
-              <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col gap-rg-sm rounded-control border border-line-soft bg-field p-rg-md" role="group">
+              <p className="text-body">{fill(P.moveRestAsk, { n: fmtNum(pending) })}</p>
+              <div className="flex flex-wrap gap-rg-sm">
                 <Button className="min-h-11" onClick={() => void moveRest()} disabled={busy}>
                   {P.moveRestYes}
                 </Button>
@@ -238,7 +238,7 @@ export function PriceSyncSections({ storeId, refreshKey }: { storeId: string; re
         {note && <Alert tone="success">{note}</Alert>}
 
         {(pending > 0 || q) && (
-          <div className="flex flex-col gap-3 border-t border-line-soft pt-4">
+          <div className="flex flex-col gap-rg-md border-t border-line-soft pt-rg-lg">
             <h3 className="console-h2">{P.reviewTitle}</h3>
             <Input
               id="sync-pending-search"
@@ -248,7 +248,7 @@ export function PriceSyncSections({ storeId, refreshKey }: { storeId: string; re
               value={q}
               onChange={(e) => setQ(e.target.value)}
             />
-            <div className="flex flex-wrap items-end gap-2 rounded-control border border-line-soft bg-field p-3">
+            <div className="flex flex-wrap items-end gap-rg-sm rounded-control border border-line-soft bg-field p-rg-md">
               <Checkbox
                 id="sync-pick-all"
                 checked={allPicked}
@@ -277,11 +277,11 @@ export function PriceSyncSections({ storeId, refreshKey }: { storeId: string; re
               </Button>
             </div>
             {items.length === 0 ? (
-              <p className="text-sm text-ink-muted">{P.reviewEmpty}</p>
+              <p className="text-body text-ink-muted">{P.reviewEmpty}</p>
             ) : (
               <ul className="flex flex-col divide-y divide-line-soft lg:max-h-[28rem] lg:overflow-y-auto">
                 {items.map((it) => (
-                  <li key={it.id} className="flex min-h-11 flex-wrap items-center gap-2 py-2">
+                  <li key={it.id} className="flex min-h-11 flex-wrap items-center gap-rg-sm py-rg-sm">
                     <Checkbox
                       id={`sync-pick-${it.id}`}
                       checked={picked.has(it.id)}
@@ -296,13 +296,13 @@ export function PriceSyncSections({ storeId, refreshKey }: { storeId: string; re
                       label={
                         <span className="flex flex-col">
                           <span>{it.name}</span>
-                          <span className="text-xs text-ink-muted">
+                          <span className="text-caption text-ink-muted">
                             {[it.external_code, it.external_group].filter(Boolean).join(" · ")}
                           </span>
                         </span>
                       }
                     />
-                    <div className="flex w-full items-end gap-2 sm:ms-auto sm:w-auto">
+                    <div className="flex w-full items-end gap-rg-sm sm:ms-auto sm:w-auto">
                       <Select
                         id={`sync-sec-${it.id}`}
                         aria-label={P.itemSection}
@@ -332,15 +332,15 @@ export function PriceSyncSections({ storeId, refreshKey }: { storeId: string; re
         )}
 
         {groups.length > 0 && (
-          <div className="flex flex-col gap-3 border-t border-line-soft pt-4">
+          <div className="flex flex-col gap-rg-md border-t border-line-soft pt-rg-lg">
             <h3 className="console-h2">{P.groupsTitle}</h3>
             <p className="console-meta">{P.groupsHint}</p>
             <ul className="flex flex-col divide-y divide-line-soft">
               {groups.map((g) => (
-                <li key={g.group_key} className="flex flex-wrap items-center gap-2 py-2">
+                <li key={g.group_key} className="flex flex-wrap items-center gap-rg-sm py-rg-sm">
                   <span className="flex flex-col">
                     <span className="font-bold">{g.group_name}</span>
-                    <span className="text-xs text-ink-muted">
+                    <span className="text-caption text-ink-muted">
                       {P.groupCount}: {fmtNum(g.items)}
                     </span>
                   </span>

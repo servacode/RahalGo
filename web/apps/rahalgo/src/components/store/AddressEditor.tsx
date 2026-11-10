@@ -63,7 +63,7 @@ export default function AddressEditor() {
   }
 
   return (
-    <section className="flex flex-col gap-3" aria-label={A.title} data-testid="store-address">
+    <section className="flex flex-col gap-rg-md" aria-label={A.title} data-testid="store-address">
       <Textarea
         id="store-address-text"
         label={A.title}

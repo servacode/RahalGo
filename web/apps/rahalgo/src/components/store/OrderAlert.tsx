@@ -38,7 +38,7 @@ export default function OrderAlert() {
       {!soundEnabled && (
         <Link
           href="/store/account"
-          className="flex items-center gap-2 rounded-card border border-warning-edge bg-warning-tint p-3 text-sm text-warning"
+          className="flex items-center gap-rg-sm rounded-card border border-warning-edge bg-warning-tint p-rg-md text-body text-warning"
         >
           <IconBellOff size={18} className="shrink-0" />
           {A.muted}
@@ -49,13 +49,13 @@ export default function OrderAlert() {
           type="button"
           onClick={unlockSound}
           data-testid="enable-order-sound"
-          className="flex w-full items-center gap-3 rounded-card border border-primary-edge bg-primary-soft px-4 py-3 text-start text-ink transition-colors hover:bg-primary-tint"
+          className="flex w-full items-center gap-rg-md rounded-card border border-primary-edge bg-primary-soft px-rg-lg py-rg-md text-start text-ink transition-colors hover:bg-primary-tint"
         >
           <span className="icon-chip" aria-hidden>
             <IconBell size={18} />
           </span>
           <span className="flex min-w-0 flex-col items-start text-start">
-            <span className="text-sm font-bold">{A.enable}</span>
+            <span className="text-body font-bold">{A.enable}</span>
             <span className="console-meta">{A.enableHint}</span>
           </span>
         </button>
@@ -63,19 +63,19 @@ export default function OrderAlert() {
       {pending.length > 0 && !onOrders && (
         <Link
           href="/store/orders"
-          className="flex items-center gap-3 rounded-card border border-danger-edge bg-danger-tint p-3 text-danger motion-safe:animate-pulse"
+          className="flex items-center gap-rg-md rounded-card border border-danger-edge bg-danger-tint p-rg-md text-danger motion-safe:animate-pulse"
         >
           <IconBell size={22} className="shrink-0" />
           <span className="min-w-0 flex-1">
             <span className="block font-bold">{A.newOrder}</span>
-            <span className="block text-xs">{fill(A.newOrderBody, { n: pending.length })}</span>
+            <span className="block text-caption">{fill(A.newOrderBody, { n: pending.length })}</span>
           </span>
-          <span className="shrink-0 rounded-control bg-danger-solid px-3 py-2 text-xs font-bold text-on-solid">
+          <span className="shrink-0 rounded-control bg-danger-solid px-rg-md py-rg-sm text-caption font-bold text-on-solid">
             {A.open}
           </span>
         </Link>
       )}
-      <p className="flex items-center gap-2 text-xs text-ink-muted">
+      <p className="flex items-center gap-rg-sm text-caption text-ink-muted">
         <IconSmartphone size={14} className="shrink-0" />
         {A.keepOpen}
       </p>

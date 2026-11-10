@@ -124,7 +124,7 @@ export default function DeliveriesHistoryPage() {
                   >
                     {fill(D.trackTitle, { n: d.number })}
                   </Link>
-                  {d.created_at && <span className="text-xs text-ink-muted">{fmtRelStamp(d.created_at)}</span>}
+                  {d.created_at && <span className="text-caption text-ink-muted">{fmtRelStamp(d.created_at)}</span>}
                 </span>
               ),
             },
@@ -135,7 +135,7 @@ export default function DeliveriesHistoryPage() {
               cell: (d) => (
                 <span className="flex flex-col">
                   <span className="line-clamp-1 font-bold">{d.customer_name}</span>
-                  <span className="text-xs text-ink-muted" dir="ltr">
+                  <span className="text-caption text-ink-muted" dir="ltr">
                     {d.customer_phone}
                   </span>
                 </span>
@@ -160,7 +160,7 @@ export default function DeliveriesHistoryPage() {
 
       {/* ── الجوّال: بطاقةٌ تنطوي وتنفتح ── */}
       {rows != null && rows.length > 0 && narrow && (
-        <div className="flex flex-col gap-2 md:grid md:grid-cols-2 md:items-start">
+        <div className="flex flex-col gap-rg-sm md:grid md:grid-cols-2 md:items-start">
           {rows.map((d) => (
             <DeliveryRow key={d.id} d={d} cancelling={cancelling === d.id} onCancel={() => void cancel(d.id)} />
           ))}

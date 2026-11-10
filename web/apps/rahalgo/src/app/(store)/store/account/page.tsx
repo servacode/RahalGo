@@ -67,7 +67,7 @@ export default function StoreAccountPage() {
         title={A.title}
         actions={
           role && (
-            <Badge variant={role === "owner" ? "primary" : "neutral"} className="px-3 py-1 text-sm font-bold">
+            <Badge variant={role === "owner" ? "primary" : "neutral"} className="px-rg-md py-rg-xs text-body font-bold">
               <span data-testid="account-role">{role === "owner" ? A.roleOwner : A.roleStaff}</span>
             </Badge>
           )
@@ -76,7 +76,7 @@ export default function StoreAccountPage() {
 
       {/* ── **جوّالاً «حسابي» مركزُ الأبواب** — ما ليس في شريط التبويب (المحفظة · التقارير · السجلّ · العروض · التوصيلات…)
           كقائمة إعدادات آيفون. وعلى الحاسوب السايدبارُ يغني. ── */}
-      <div className="flex flex-col gap-1 md:max-lg:block md:max-lg:columns-2 md:max-lg:gap-4 md:max-lg:[&>*]:mb-4 md:max-lg:[&>*]:break-inside-avoid lg:hidden" data-testid="store-account-hub">
+      <div className="flex flex-col gap-rg-xs md:max-lg:block md:max-lg:columns-2 md:max-lg:gap-rg-lg md:max-lg:[&>*]:mb-rg-lg md:max-lg:[&>*]:break-inside-avoid lg:hidden" data-testid="store-account-hub">
         {nav.groups.map((g) => {
           const items = g.items.filter((it) => !["/store", "/store/orders", "/store/menu", "/store/account"].includes(it.href));
           const extra = g.key === "account" ? [{ href: "/store/order-phones", label: N.orderPhones, icon: IconPhone }, { href: "/store/alerts", label: N.alerts, icon: IconWarning }] : [];
@@ -93,8 +93,8 @@ export default function StoreAccountPage() {
       </div>
 
       {/* ── الحاسوب: صفُّ تفضيلات (صوت · داكن · إشعارات) ثمّ بطاقاتُ الحساب بعرض الصفحة كاملاً، وتحتها الخروج. ── */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:items-stretch md:gap-5">
-        <section className="panel p-4" aria-label={A.sound} data-testid="store-sound">
+      <div className="grid grid-cols-1 gap-rg-lg md:grid-cols-3 md:items-stretch md:gap-5">
+        <section className="panel p-rg-lg" aria-label={A.sound} data-testid="store-sound">
           <Toggle
             id="store-sound"
             checked={soundEnabled}
@@ -104,7 +104,7 @@ export default function StoreAccountPage() {
           />
         </section>
 
-        <section className="panel p-4" aria-label={SH.darkMode}>
+        <section className="panel p-rg-lg" aria-label={SH.darkMode}>
           <Toggle id="store-dark" checked={theme === "dark"} onChange={() => toggle()} label={SH.darkMode} hint={SH.darkModeHint} />
         </section>
 
@@ -115,14 +115,14 @@ export default function StoreAccountPage() {
 
       <AccountSettings api={api} mediaUrl={mediaUrl} phone={user?.phone} onDeleted={out} whatsapp={false} />
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+      <div className="flex flex-col gap-rg-md sm:flex-row sm:justify-end">
         {user && hasRole(user, "customer") && (
-          <ButtonLink Link={Link} href="/shop" variant="secondary" className="flex min-h-11 items-center justify-center gap-2 px-5 py-3">
+          <ButtonLink Link={Link} href="/shop" variant="secondary" className="flex min-h-11 items-center justify-center gap-rg-sm px-5 py-rg-md">
             <IconBag size={16} />
             {A.shop}
           </ButtonLink>
         )}
-        <Button variant="danger" className="flex min-h-11 items-center justify-center gap-2 px-5 py-3" onClick={out} data-testid="account-logout">
+        <Button variant="danger" className="flex min-h-11 items-center justify-center gap-rg-sm px-5 py-rg-md" onClick={out} data-testid="account-logout">
           <IconLogout size={16} />
           {A.logout}
         </Button>

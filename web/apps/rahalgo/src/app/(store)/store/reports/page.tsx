@@ -76,7 +76,7 @@ export default function ReportsPage() {
           subtitle={fill(R.range, { from: fmtCalendarDay(span.from), to: fmtCalendarDay(span.to) })}
           actions={
             s && (
-              <Button variant="secondary" className="flex min-h-11 items-center justify-center gap-2" onClick={() => window.print()}>
+              <Button variant="secondary" className="flex min-h-11 items-center justify-center gap-rg-sm" onClick={() => window.print()}>
                 <IconPrint size={16} />
                 {R.print}
               </Button>
@@ -85,8 +85,8 @@ export default function ReportsPage() {
         />
       </div>
       {/* ── المدى: رقائق + تاريخان لمدّةٍ محدّدة ── */}
-      <div className="flex flex-col gap-3 print:hidden">
-        <div className="rail-x -mx-3 px-3 lg:mx-0 lg:px-0" aria-label={R.title}>
+      <div className="flex flex-col gap-rg-md print:hidden">
+        <div className="rail-x -mx-rg-md px-rg-md lg:mx-0 lg:px-0" aria-label={R.title}>
           {periods.map((x) => (
             <Chip key={x.id} selected={range === x.id} onClick={() => setRange(x.id)} testId={`reports-range-${x.id}`}>
               {x.label}
@@ -94,7 +94,7 @@ export default function ReportsPage() {
           ))}
         </div>
         {range === "custom" && (
-          <div className="panel grid grid-cols-1 gap-3 p-3 sm:grid-cols-2">
+          <div className="panel grid grid-cols-1 gap-rg-md p-rg-md sm:grid-cols-2">
             <Input id="sales-from" type="date" label={R.from} dir="ltr" max={today} value={from} onChange={(e) => e.target.value && setFrom(e.target.value)} wrapperClassName="min-w-0" />
             <Input id="sales-to" type="date" label={R.to} dir="ltr" max={today} value={to} onChange={(e) => e.target.value && setTo(e.target.value)} wrapperClassName="min-w-0" />
           </div>

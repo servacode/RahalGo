@@ -39,15 +39,15 @@ export default function StoreSidebar({ path, onMenu }: { path: string; onMenu: (
 
   return (
     <aside className="console-side" data-testid="store-sidebar">
-      <Link href="/store" aria-label={N.panel} className="flex h-13 shrink-0 items-center gap-2.5 px-2">
+      <Link href="/store" aria-label={N.panel} className="flex h-13 shrink-0 items-center gap-rg-md px-rg-sm">
         <BrandMark size={26} rounded="control" />
-        <b className="text-base font-bold">{platform.name || m.common.appName}</b>
-        <span className="ms-auto rounded-control border border-line-soft px-1.5 text-2xs text-ink-dim">{SH.brandTag}</span>
+        <b className="text-body-lg font-bold">{platform.name || m.common.appName}</b>
+        <span className="ms-auto rounded-control border border-line-soft px-rg-sm text-meta text-ink-muted">{SH.brandTag}</span>
       </Link>
 
-      <nav aria-label={N.sidebar} className="mt-1.5 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto">
+      <nav aria-label={N.sidebar} className="mt-rg-sm flex min-h-0 flex-1 flex-col gap-rg-xxs overflow-y-auto">
         {groups.map((g, gi) => (
-          <div key={g.key} className="flex flex-col gap-0.5">
+          <div key={g.key} className="flex flex-col gap-rg-xxs">
             <p className="nav-group" style={gi === 0 ? { paddingTop: "0.25rem" } : undefined}>
               {g.title}
             </p>
@@ -72,20 +72,20 @@ export default function StoreSidebar({ path, onMenu }: { path: string; onMenu: (
         ))}
       </nav>
 
-      <div className="flex flex-col gap-2 border-t border-line-soft pt-2.5">
+      <div className="flex flex-col gap-rg-sm border-t border-line-soft pt-rg-md">
         <AmeenSideCard />
         <button
           type="button"
           onClick={onMenu}
           data-testid="store-menu-open"
           aria-label={N.more}
-          className="flex items-center gap-2.5 rounded-control px-1.5 py-1 text-start transition-colors hover:bg-row-hover"
+          className="flex items-center gap-rg-md rounded-control px-rg-sm py-rg-xs text-start transition-colors hover:bg-row-hover"
         >
           <span className="avatar">{initials(name)}</span>
-          <span className="min-w-0 text-xs leading-tight">
+          <span className="min-w-0 text-caption leading-tight">
             <span className="block truncate">{name}</span>
-            {user?.phone && <span className="block truncate text-2xs text-ink-muted">{phoneText(user.phone)}</span>}
-            <span className="block text-2xs text-ink-dim">{role === "staff" ? SH.roleStaff : SH.roleOwner}</span>
+            {user?.phone && <span className="block truncate text-meta text-ink-muted">{phoneText(user.phone)}</span>}
+            <span className="block text-meta text-ink-muted">{role === "staff" ? SH.roleStaff : SH.roleOwner}</span>
           </span>
         </button>
       </div>

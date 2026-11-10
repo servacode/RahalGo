@@ -111,31 +111,31 @@ export default function DeliveryTrack() {
       ) : (
         <>
           {fetchMode && d.delivery_code?.trim() && (
-            <section className="rounded-card border border-success-edge bg-success-tint p-4 text-center">
+            <section className="rounded-card border border-success-edge bg-success-tint p-rg-lg text-center">
               <p className="font-bold">{D.codeTitle}</p>
-              <p className="my-2 text-4xl font-bold tracking-widest text-success" dir="ltr">
+              <p className="my-rg-sm text-4xl font-bold tracking-widest text-success" dir="ltr">
                 {d.delivery_code}
               </p>
-              <p className="text-xs text-ink-muted">{D.codeHint}</p>
+              <p className="text-caption text-ink-muted">{D.codeHint}</p>
             </section>
           )}
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:items-start md:gap-5">
+          <div className="grid grid-cols-1 gap-rg-lg md:grid-cols-2 md:items-start md:gap-5">
           {at < 0 ? (
             /* **المنتهيةُ رماديّة** (مراجعةُ التصميم ٢٠٢٦-١٠-٢٩) — الإلغاءُ ليس خطأً. */
-            <p className="panel p-3 text-sm text-ink-muted">
+            <p className="panel p-rg-md text-body text-ink-muted">
               {(d.status === "failed" ? ST.failed : d.status === "rejected" ? ST.rejected : ST.cancelled) +
                 (d.cancel_reason?.trim() ? ` — ${d.cancel_reason}` : "")}
             </p>
           ) : (
-            <div className="flex min-w-0 flex-col gap-3">
+            <div className="flex min-w-0 flex-col gap-rg-md">
               {d.status === "dispatching" && <SearchingBanner />}
-              <ol className="panel flex flex-col gap-1 p-4">
+              <ol className="panel flex flex-col gap-rg-xs p-rg-lg">
                 {steps.map((label, i) => {
                   const done = i < at || (i === at && at === LAST);
                   const now = i === at && at < LAST;
                   const time = i === 0 ? d.created_at : i === 4 ? d.picked_up_at : i === LAST ? d.delivered_at : null;
                   return (
-                    <li key={label} className="flex items-center gap-3 py-1.5">
+                    <li key={label} className="flex items-center gap-rg-md py-rg-sm">
                       <span
                         className={`h-3.5 w-3.5 shrink-0 rounded-badge ${
                           now
@@ -145,17 +145,17 @@ export default function DeliveryTrack() {
                               : "bg-ink-faint"
                         }`}
                       />
-                      <span className={`flex-1 text-sm ${now ? "font-bold" : done ? "" : "text-ink-muted"}`}>{label}</span>
-                      {(done || now) && time && <span className="text-xs text-ink-muted">{fmtClockTime(time)}</span>}
+                      <span className={`flex-1 text-body ${now ? "font-bold" : done ? "" : "text-ink-muted"}`}>{label}</span>
+                      {(done || now) && time && <span className="text-caption text-ink-muted">{fmtClockTime(time)}</span>}
                     </li>
                   );
                 })}
               </ol>
             </div>
           )}
-          <div className="flex min-w-0 flex-col gap-4">
-          <section className="panel flex flex-col gap-2 p-4">
-            <header className="flex items-center justify-between gap-2">
+          <div className="flex min-w-0 flex-col gap-rg-lg">
+          <section className="panel flex flex-col gap-rg-sm p-rg-lg">
+            <header className="flex items-center justify-between gap-rg-sm">
               <h2 className="console-h2">{D.trackDetails}</h2>
               <StatusPill status={d.status} />
             </header>

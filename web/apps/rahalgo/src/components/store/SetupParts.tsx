@@ -74,7 +74,7 @@ export function PageHeader({
     <PageHead
       leading={<BackArrow href={href} topLevel={topLevel} />}
       navStart={
-        <Link href={href} className="flex min-h-11 items-center gap-0.5 pe-3 text-base font-medium" data-testid="phone-back">
+        <Link href={href} className="flex min-h-11 items-center gap-rg-xxs pe-rg-md text-body-lg font-medium" data-testid="phone-back">
           <IconPrev size={22} />
           {HM.back}
         </Link>
@@ -117,7 +117,7 @@ export function SectionGrid({
   const q = query.trim().toLowerCase();
   const shown = q ? all.filter((s) => s.name.toLowerCase().includes(q)) : all;
   return (
-    <div className="flex flex-col gap-3" data-testid="section-grid">
+    <div className="flex flex-col gap-rg-md" data-testid="section-grid">
       <Input
         id="section-search"
         aria-label={W.sectionsSearch}
@@ -127,13 +127,13 @@ export function SectionGrid({
         onChange={(e) => setQuery(e.target.value)}
         icon={<IconSearch size={18} />}
       />
-      <p className={`text-sm font-bold ${picked.size > 0 ? "text-primary" : "text-ink-muted"}`}>
+      <p className={`text-body font-bold ${picked.size > 0 ? "text-primary" : "text-ink-muted"}`}>
         {fill(W.sectionsPicked, { n: picked.size })}
       </p>
       {shown.length === 0 ? (
-        <p className="py-3 text-sm text-ink-muted">{W.sectionsNoMatch}</p>
+        <p className="py-rg-md text-body text-ink-muted">{W.sectionsNoMatch}</p>
       ) : (
-        <ul className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+        <ul className="grid grid-cols-3 gap-rg-md sm:grid-cols-4 lg:grid-cols-6">
           {shown.map((s) => {
             const on = picked.has(s.id);
             const img = mediaUrl(s.image_thumb_url || s.image_url || null);
@@ -145,7 +145,7 @@ export function SectionGrid({
                   aria-checked={on}
                   disabled={disabled}
                   onClick={() => onToggle(s.id)}
-                  className="flex w-full flex-col items-center gap-1 rounded-control p-1 text-center disabled:opacity-60"
+                  className="flex w-full flex-col items-center gap-rg-xs rounded-control p-rg-xs text-center disabled:opacity-60"
                 >
                   <span
                     className={`relative block aspect-square w-full overflow-hidden rounded-control bg-field ${
@@ -161,7 +161,7 @@ export function SectionGrid({
                     )}
                     {on && <CheckBadge className="absolute end-1 top-1" />}
                   </span>
-                  <span className={`text-xs leading-snug sm:text-sm ${on ? "font-bold text-primary" : ""}`}>{s.name}</span>
+                  <span className={`text-caption leading-snug sm:text-body ${on ? "font-bold text-primary" : ""}`}>{s.name}</span>
                 </button>
               </li>
             );
@@ -195,11 +195,11 @@ export function StorePointMap({
 }) {
   const set = lat != null && lng != null;
   return (
-    <div className={`flex flex-col gap-2 ${disabled ? "pointer-events-none opacity-60" : ""}`} data-testid="store-point-map">
+    <div className={`flex flex-col gap-rg-sm ${disabled ? "pointer-events-none opacity-60" : ""}`} data-testid="store-point-map">
       <Suspense fallback={<div className="h-64 w-full animate-pulse rounded-card bg-field" />}>
         <PickMap lat={lat} lng={lng} height="h-64" api={api} onPick={onPick} onLocated={onPick} />
       </Suspense>
-      <p className={`text-sm font-bold ${set ? "text-success" : "text-danger"}`}>{set ? W.pointSet : W.pointNone}</p>
+      <p className={`text-body font-bold ${set ? "text-success" : "text-danger"}`}>{set ? W.pointSet : W.pointNone}</p>
     </div>
   );
 }
@@ -218,7 +218,7 @@ export interface IconChoice {
 /** **بطاقتان كبيرتان متجاورتان** — أيقونةٌ في دائرةٍ وعنوان، والمختارةُ بحدّ العلامة وعلامةِ صحّ. */
 export function IconChoicePair({ items, disabled }: { items: readonly [IconChoice, IconChoice]; disabled?: boolean }) {
   return (
-    <div className="grid grid-cols-2 gap-3" role="radiogroup">
+    <div className="grid grid-cols-2 gap-rg-md" role="radiogroup">
       {items.map((c) => {
         const Icon = c.icon;
         return (
@@ -229,7 +229,7 @@ export function IconChoicePair({ items, disabled }: { items: readonly [IconChoic
             aria-checked={c.selected}
             disabled={disabled}
             onClick={c.onClick}
-            className={`relative flex min-h-36 flex-col items-center justify-center gap-3 rounded-card px-3 py-4 text-center transition-colors disabled:opacity-60 ${
+            className={`relative flex min-h-36 flex-col items-center justify-center gap-rg-md rounded-card px-rg-md py-rg-lg text-center transition-colors disabled:opacity-60 ${
               c.selected ? "border-2 border-primary-solid bg-primary-tint" : "border border-line bg-surface hover:bg-row-hover"
             }`}
           >
@@ -240,7 +240,7 @@ export function IconChoicePair({ items, disabled }: { items: readonly [IconChoic
             >
               <Icon size={28} />
             </span>
-            <span className="text-base font-bold">{c.title}</span>
+            <span className="text-body-lg font-bold">{c.title}</span>
             {c.selected && <CheckBadge className="absolute end-2 top-2" />}
           </button>
         );
@@ -268,7 +268,7 @@ export function ChoiceCard({
       aria-checked={selected}
       disabled={disabled}
       onClick={onClick}
-      className={`flex min-h-14 w-full items-center gap-3 rounded-control px-4 py-3 text-start transition-colors disabled:opacity-60 ${
+      className={`flex min-h-14 w-full items-center gap-rg-md rounded-control px-rg-lg py-rg-md text-start transition-colors disabled:opacity-60 ${
         selected ? "border-2 border-primary-solid bg-primary-tint" : "border border-line bg-surface hover:bg-row-hover"
       }`}
     >
@@ -280,7 +280,7 @@ export function ChoiceCard({
       >
         {selected && <span className="h-2.5 w-2.5 rounded-badge bg-primary-solid" />}
       </span>
-      <span className="min-w-0 flex-1 text-base font-bold">{title}</span>
+      <span className="min-w-0 flex-1 text-body-lg font-bold">{title}</span>
     </button>
   );
 }
@@ -489,10 +489,10 @@ function DayRow({
   const name = H.days[d.day_of_week] ?? "";
   return (
     <div
-      className={`flex min-h-14 items-center gap-3 px-3 py-2 ${open ? "" : "bg-field"}`}
+      className={`flex min-h-14 items-center gap-rg-md px-rg-md py-rg-sm ${open ? "" : "bg-field"}`}
       data-testid="hours-day"
     >
-      <span className={`min-w-0 flex-1 text-sm font-bold ${open ? "" : "text-ink-muted"}`}>{name}</span>
+      <span className={`min-w-0 flex-1 text-body font-bold ${open ? "" : "text-ink-muted"}`}>{name}</span>
       {onToggle && (
         <div className="shrink-0" aria-label={name}>
           <Toggle checked={open} disabled={disabled} onChange={onToggle} label="" />
@@ -503,12 +503,12 @@ function DayRow({
           type="button"
           disabled={disabled}
           onClick={onTime}
-          className="min-w-36 shrink-0 rounded-control border border-primary-edge bg-primary-tint px-3 py-2 text-center text-sm font-bold text-primary disabled:opacity-60"
+          className="min-w-36 shrink-0 rounded-control border border-primary-edge bg-primary-tint px-rg-md py-rg-sm text-center text-body font-bold text-primary disabled:opacity-60"
         >
           {rangeText(d)}
         </button>
       ) : (
-        <span className="min-w-36 shrink-0 px-3 py-2 text-center text-sm text-ink-muted">{H.off}</span>
+        <span className="min-w-36 shrink-0 px-rg-md py-rg-sm text-center text-body text-ink-muted">{H.off}</span>
       )}
     </div>
   );
@@ -531,12 +531,12 @@ function DayTimeDialog({
   const [to, setTo] = useState(is24h(start) ? DEFAULT_CLOSE : hhmm(start.close_time) || DEFAULT_CLOSE);
   return (
     <Modal open onClose={onClose} title={title}>
-      <div className="flex flex-col gap-3" role="radiogroup">
+      <div className="flex flex-col gap-rg-md" role="radiogroup">
         <ChoiceCard title={H.day24} selected={all24} onClick={() => setAll24(true)} />
         <ChoiceCard title={H.daySpecific} selected={!all24} onClick={() => setAll24(false)} />
         {!all24 && (
-          <div className="flex flex-wrap items-center gap-2 pt-1">
-            <span className="text-sm text-ink-muted">{H.from}</span>
+          <div className="flex flex-wrap items-center gap-rg-sm pt-rg-xs">
+            <span className="text-body text-ink-muted">{H.from}</span>
             <Input
               id="day-from"
               type="time"
@@ -547,7 +547,7 @@ function DayTimeDialog({
               onChange={(e) => e.target.value && setFrom(e.target.value)}
               wrapperClassName="w-32"
             />
-            <span className="text-sm text-ink-muted">{H.to}</span>
+            <span className="text-body text-ink-muted">{H.to}</span>
             <Input
               id="day-to"
               type="time"
@@ -590,8 +590,8 @@ export function HoursPlanner({ plan, disabled }: { plan: HoursPlan; disabled?: b
   const sample = plan.draft.find((d) => d.day_of_week !== FRIDAY && !d.closed) ?? plan.draft[0];
 
   return (
-    <div className="flex flex-col gap-3" data-testid="hours-planner">
-      <div className="flex flex-col gap-2" role="radiogroup">
+    <div className="flex flex-col gap-rg-md" data-testid="hours-planner">
+      <div className="flex flex-col gap-rg-sm" role="radiogroup">
         <ChoiceCard title={H.mode24} selected={plan.mode === "24"} disabled={disabled} onClick={() => plan.chooseMode("24")} />
         <ChoiceCard
           title={H.modeCustom}
@@ -603,7 +603,7 @@ export function HoursPlanner({ plan, disabled }: { plan: HoursPlan; disabled?: b
 
       {/* **والأيّامُ تحت «ساعات محددة» مباشرةً وساعاتُها ظاهرة** (تجربةُ المالك ٢٠٢٦-١٠-٢٩) — وضغطُ يومٍ يختارها. */}
       {plan.mode !== "24" && (
-        <div className="-mt-2 flex flex-col gap-2">
+        <div className="-mt-rg-sm flex flex-col gap-rg-sm">
           <div className="surface flex flex-col divide-y divide-line overflow-hidden rounded-card p-0">
             {week.map((d) => (
               <DayRow
@@ -637,7 +637,7 @@ export function HoursPlanner({ plan, disabled }: { plan: HoursPlan; disabled?: b
 
       {plan.mode !== "" && (
         <>
-          <h3 className="heading-card pt-2">{H.fridayQ}</h3>
+          <h3 className="heading-card pt-rg-sm">{H.fridayQ}</h3>
           <IconChoicePair
             disabled={disabled}
             items={[

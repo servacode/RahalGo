@@ -44,8 +44,8 @@ export function PhoneNavBar({
       <span className="nav-bar-title" aria-hidden>
         {title}
       </span>
-      <span ref={setStartEl} className="flex items-center gap-4 text-base" />
-      <span className="flex items-center gap-3">
+      <span ref={setStartEl} className="flex items-center gap-rg-lg text-body-lg" />
+      <span className="flex items-center gap-rg-md">
         <span ref={setEndEl} className="contents" />
         {/* التبديلُ للتسوّق كزبون بلمسة (طلبُ المالك ٢٠٢٦-١١-٠٩) */}
         <IconButton icon={IconCart} label={S.nav.shopAsCustomer} href="/shop" Link={Link} size={24} testId="phone-shop" />
@@ -100,7 +100,7 @@ export function PhoneTabBar({ path }: { path: string }) {
           >
             {!!t.badge && (
               <span
-                className="absolute top-0.5 grid h-4.5 min-w-4.5 place-items-center rounded-full bg-danger-solid px-1 text-2xs font-bold text-on-solid"
+                className="absolute top-0.5 grid h-4.5 min-w-4.5 place-items-center rounded-full bg-danger-solid px-rg-xs text-meta font-bold text-on-solid"
                 style={{ insetInlineStart: "calc(50% + 6px)" }}
               >
                 {t.badge > 9 ? "9+" : t.badge}

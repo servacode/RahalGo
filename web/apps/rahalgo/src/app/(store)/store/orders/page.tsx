@@ -39,9 +39,10 @@ import {
   LoadingState,
   Modal,
   PageHead,
-  Pill,
+  SectionHeader,
   ReloadState,
   Segmented,
+  StatusChip,
   Textarea,
   useIsDesktop,
 } from "@rahalgo/ui";
@@ -96,20 +97,20 @@ function RejectDialog({ order, onClose, onPick }: { order: MerchantOrder; onClos
   return (
     <Modal open onClose={onClose} title={`${O.rejectTitle} · #${order.number}`}>
       {!custom ? (
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-rg-sm">
           {canned.map((r) => (
-            <Button key={r} variant="secondary" className="w-full py-3 text-start" onClick={() => onPick(r)}>
+            <Button key={r} variant="secondary" className="w-full py-rg-md text-start" onClick={() => onPick(r)}>
               {r}
             </Button>
           ))}
-          <Button variant="ghost" className="w-full py-3 text-start" onClick={() => setCustom(true)}>
+          <Button variant="ghost" className="w-full py-rg-md text-start" onClick={() => setCustom(true)}>
             {O.other}
           </Button>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-rg-md">
           <Textarea id="order-reject-reason" label={O.customHint} value={text} onChange={(e) => setText(e.target.value)} rows={3} />
-          <Button variant="danger" className="w-full py-3" disabled={!text.trim()} onClick={() => onPick(text.trim())}>
+          <Button variant="danger" className="w-full py-rg-md" disabled={!text.trim()} onClick={() => onPick(text.trim())}>
             {O.send}
           </Button>
         </div>
@@ -150,53 +151,49 @@ function OrderCard({
 
   return (
     <article className={`order-card ${ended ? "opacity-80" : ""}`} data-state={state} data-testid="store-order">
-      <header className="flex items-center gap-2">
-        <b className="text-sm" dir="ltr">
+      <header className="flex items-center gap-rg-sm">
+        <b className="text-section-title" dir="ltr">
           #{order.number}
         </b>
-        {late && (
-          <Pill tone="danger" dot={false}>
-            {SH.late}
-          </Pill>
-        )}
-        <span className={`ms-auto text-xs ${late ? "font-bold text-danger" : "text-ink-dim"}`}>{age}</span>
+        {late && <StatusChip tone="danger">{SH.late}</StatusChip>}
+        <span className={`ms-auto text-caption ${late ? "font-bold text-danger" : "text-ink-muted"}`}>{age}</span>
       </header>
 
       {/* **طلبٌ مشترك**: قسمُك فقط، بلا اسم أيّ محلٍّ آخر (٢٠٢٦-١١-٠٦). */}
       {(order.shared_stops ?? 0) >= 2 && (
-        <p className="text-xs font-bold text-accent-text" data-testid="store-order-shared">
+        <p className="text-caption font-bold text-accent-text" data-testid="store-order-shared">
           {fill(O.sharedStops, { n: fmtNum(order.shared_stops ?? 0) })}
         </p>
       )}
 
-      <p className="line-clamp-2 text-sm leading-relaxed text-ink-muted">{itemsLine(order)}</p>
+      <p className="line-clamp-2 text-body leading-relaxed text-ink-muted">{itemsLine(order)}</p>
 
       {/* **وملاحظةُ الزبون في صندوقٍ بأيقونة تنبيهٍ وخطٍّ عريض** (تدقيقُ ٢٠٢٦-١٠-٢٧) —
           «حساسية» تُقرأ بنظرةٍ أو لا تُقرأ. */}
       {order.notes.trim() && (
-        <div className="flex items-start gap-2 rounded-control bg-warning-tint px-2.5 py-2">
-          <IconWarning size={16} className="mt-0.5 shrink-0 text-warning" aria-hidden />
+        <div className="flex items-start gap-rg-sm rounded-rg-md bg-warning-tint p-rg-md">
+          <IconWarning size={20} className="mt-rg-xxs shrink-0 text-warning" aria-hidden />
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-bold text-warning">{O.note}</p>
-            <p className="text-sm font-bold">{order.notes}</p>
+            <p className="text-caption font-bold text-warning">{O.note}</p>
+            <p className="text-body font-bold">{order.notes}</p>
           </div>
         </div>
       )}
 
       {open && (
-        <div className="flex flex-col gap-2 border-t border-line-soft pt-2">
+        <div className="flex flex-col gap-rg-sm border-t border-line-soft pt-rg-sm">
           {/* **سطرٌ لكلّ عنصر** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — «شاورما دبل × 3 ...... 90 ل.س»، كتطبيق المتجر. */}
           <InvoiceLines items={order.items} />
           {/* **وطلبٌ انتهى بلا بيعٍ لا حسبةَ فيه** — انظر `noPayout`. */}
           {noPayout(order.status) ? (
-            <p className="text-sm text-ink-dim">{O.noPayout}</p>
+            <p className="text-body text-ink-muted">{O.noPayout}</p>
           ) : (
-            <dl className="flex flex-col gap-1 text-sm">
-              <div className="flex justify-between text-ink-dim">
+            <dl className="flex flex-col gap-rg-xs text-body">
+              <div className="flex justify-between text-ink-muted">
                 <dt>{O.sum}</dt>
                 <dd className="tabular-nums">{fmtMoney(order.subtotal)}</dd>
               </div>
-              <div className="flex justify-between text-ink-dim">
+              <div className="flex justify-between text-ink-muted">
                 <dt>{fill(O.cut, { n: fmtNum(order.commission_percent_exact ?? order.commission_percent) })}</dt>
                 <dd className="tabular-nums">− {fmtMoney(order.platform_commission)}</dd>
               </div>
@@ -209,54 +206,57 @@ function OrderCard({
         </div>
       )}
 
-      <footer className="flex flex-wrap items-center gap-2 border-t border-line-soft pt-2.5">
-        <b className="text-sm tabular-nums">{fmtMoney(order.subtotal)}</b>
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          aria-expanded={open}
-          className="flex items-center gap-0.5 text-xs font-bold text-ink-dim hover:text-ink"
-        >
-          {open ? SH.hideDetails : SH.details}
-          <IconChevronDown size={13} className={open ? "rotate-180" : ""} />
-        </button>
-        <span className="ms-auto flex flex-wrap items-center gap-2">
-          {selfManage && order.status === "pending" && (
-            <>
-              <Button size="sm" variant="ghost" className="text-danger" disabled={busy} onClick={() => setRejecting(true)}>
-                {O.reject}
-              </Button>
-              <Button size="sm" disabled={busy} onClick={() => onAct(order, "accept")} data-testid="store-order-accept">
-                {O.accept}
-              </Button>
-            </>
-          )}
-          {selfManage && order.status === "accepted" && (
-            <Button size="sm" disabled={busy} onClick={() => onAct(order, "start")}>
-              {O.start}
-            </Button>
-          )}
-          {/* **و«جاهز» من القبول حتّى وقوف السائق** — لا في «يُحضَّر» وحدَها: في وضع
-              المتاجر يقفز القبولُ إلى «البحث عن سائق» فلا يظهر الزرُّ أبداً. */}
-          {selfManage && canMarkReady(order) && (
-            <Button
-              size="sm"
-              variant={order.status === "accepted" ? "secondary" : "primary"}
-              disabled={busy}
-              onClick={() => onAct(order, "ready")}
-              data-testid="store-order-ready"
-            >
-              {O.ready}
-            </Button>
-          )}
+      <footer className="flex flex-col gap-rg-md border-t border-line-soft pt-rg-md">
+        <div className="flex flex-wrap items-center gap-rg-sm">
+          <b className="text-price tabular-nums">{fmtMoney(order.subtotal)}</b>
+          <button
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            className="flex min-h-rg-touch items-center gap-rg-xxs px-rg-xs text-caption font-bold text-ink-muted hover:text-ink"
+          >
+            {open ? SH.hideDetails : SH.details}
+            <IconChevronDown size={14} className={open ? "rotate-180" : ""} />
+          </button>
           {!ended && !hasAction && STATUS[order.status] && (
-            <Pill tone={order.ready_at ? "good" : "info"} dot={false}>
-              {STATUS[order.status]}
-            </Pill>
+            <span className="ms-auto">
+              <StatusChip tone={order.ready_at ? "success" : "info"}>{STATUS[order.status]}</StatusChip>
+            </span>
           )}
-        </span>
+        </div>
+        {/* **أزرارُ القرار كبيرةٌ بعرض البطاقة** — صاحبُ المتجر مشغولٌ وإبهامُه واحد:
+            «اقبل» أعرضُ من «اعتذر»، و«جاهز للاستلام» زرُّ البطاقة الأكبر حين يحين. */}
+        {selfManage && order.status === "pending" && (
+          <div className="flex items-stretch gap-rg-sm">
+            <Button size="lg" variant="danger-outline" className="min-h-rg-touch flex-1" disabled={busy} onClick={() => setRejecting(true)}>
+              {O.reject}
+            </Button>
+            <Button size="lg" className="min-h-rg-touch flex-[2]" disabled={busy} onClick={() => onAct(order, "accept")} data-testid="store-order-accept">
+              {O.accept}
+            </Button>
+          </div>
+        )}
+        {selfManage && order.status === "accepted" && (
+          <Button size="lg" className="min-h-rg-touch w-full" disabled={busy} onClick={() => onAct(order, "start")}>
+            {O.start}
+          </Button>
+        )}
+        {/* **و«جاهز» من القبول حتّى وقوف السائق** — لا في «يُحضَّر» وحدَها: في وضع
+            المتاجر يقفز القبولُ إلى «البحث عن سائق» فلا يظهر الزرُّ أبداً. */}
+        {selfManage && canMarkReady(order) && (
+          <Button
+            size="lg"
+            variant={order.status === "accepted" ? "secondary" : "primary"}
+            className="min-h-rg-touch w-full"
+            disabled={busy}
+            onClick={() => onAct(order, "ready")}
+            data-testid="store-order-ready"
+          >
+            {O.ready}
+          </Button>
+        )}
       </footer>
-      {selfManage && !!order.ready_at && !ended && <p className="text-center text-xs font-bold text-success">{SH.readyNote}</p>}
+      {selfManage && !!order.ready_at && !ended && <p className="text-center text-caption font-bold text-success">{SH.readyNote}</p>}
       {rejecting && (
         <RejectDialog
           order={order}
@@ -322,10 +322,10 @@ export default function OrdersPage() {
 
   const card = (o: MerchantOrder) => <OrderCard key={o.id} order={o} selfManage={selfManage} busy={busy.has(o.id)} now={now} onAct={act} />;
   const head = (c: Col, n: number) => (
-    <h3 className="flex items-center gap-2 px-1.5 pb-0.5 pt-1.5 text-sm font-bold">
+    <h3 className="flex items-center gap-rg-sm px-rg-xs pb-rg-xxs pt-rg-xs text-card-title">
       <span className="dot" data-tone={DOT[c]} aria-hidden />
       {TITLE[c]}
-      <span className="ms-auto text-xs font-medium text-ink-dim tabular-nums">{fmtNum(n)}</span>
+      <span className="ms-auto text-caption font-medium text-ink-muted tabular-nums">{fmtNum(n)}</span>
     </h3>
   );
 
@@ -336,7 +336,7 @@ export default function OrdersPage() {
         subtitle={fill(SH.ordersSub, { n: fmtNum(liveCount) })}
         actions={
           <>
-            <Link href="/store/history" className="text-sm font-bold text-primary hover:underline">
+            <Link href="/store/history" className="flex min-h-rg-touch items-center text-body font-bold text-primary hover:underline">
               {O.historyLink}
             </Link>
             {desk && (
@@ -361,8 +361,8 @@ export default function OrdersPage() {
           icon={IconOrder}
           title={O.empty}
           action={
-            <div className="flex flex-col items-center gap-3">
-              <p className="text-xs text-ink-dim">{O.emptyHint}</p>
+            <div className="flex flex-col items-center gap-rg-md">
+              <p className="text-caption text-ink-muted">{O.emptyHint}</p>
               <Button variant="secondary" onClick={() => router.push("/store")}>
                 {O.goStore}
               </Button>
@@ -375,28 +375,26 @@ export default function OrdersPage() {
             {live.map(({ c, list }) => (
               <section key={c} className="board-col" aria-label={TITLE[c]} data-col={c}>
                 {head(c, list.length)}
-                {list.length === 0 && <p className="py-6 text-center text-sm text-ink-dim">{O.colEmpty}</p>}
+                {list.length === 0 && <p className="py-rg-xl text-center text-body text-ink-muted">{O.colEmpty}</p>}
                 {list.map(card)}
               </section>
             ))}
           </div>
           {closed.length > 0 && (
-            <section className="flex flex-col gap-2">
+            <section className="flex flex-col gap-rg-sm">
               {head("closed", closed.length)}
-              <div className="grid grid-cols-3 gap-3 2xl:grid-cols-4">{closed.map(card)}</div>
+              <div className="grid grid-cols-3 gap-rg-md 2xl:grid-cols-4">{closed.map(card)}</div>
             </section>
           )}
         </>
       ) : (
-        <div className="flex flex-col gap-1" data-testid="store-orders-board">
+        <div className="flex flex-col gap-rg-xs" data-testid="store-orders-board">
           {all
             .filter((x) => x.list.length > 0)
             .map(({ c, list }) => (
-              <section key={c} className="flex flex-col gap-2 lg:pb-3" aria-label={TITLE[c]}>
-                <h3 className="sec-head !px-1 !pb-0 !pt-3 lg:!pt-1">
-                  {TITLE[c]} · {fmtNum(list.length)}
-                </h3>
-                <div className="flex flex-col gap-2 md:grid md:grid-cols-2 xl:grid-cols-3">{list.map(card)}</div>
+              <section key={c} className="flex flex-col gap-rg-sm lg:pb-rg-md" aria-label={TITLE[c]}>
+                <SectionHeader title={`${TITLE[c]} · ${fmtNum(list.length)}`} />
+                <div className="flex flex-col gap-rg-sm md:grid md:grid-cols-2 xl:grid-cols-3">{list.map(card)}</div>
               </section>
             ))}
         </div>

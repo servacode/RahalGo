@@ -47,9 +47,9 @@ const K = m.store.console;
 /** **بطاقةٌ بيضاءُ مدوّرةٌ بحدٍّ رفيع** — وعنوانٌ باهتٌ فوقها إن وُجد. */
 function WhiteCard({ title, children }: { title?: string; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-2">
-      {title && <h2 className="console-h2 px-1">{title}</h2>}
-      <div className="panel flex flex-col gap-3 p-4">{children}</div>
+    <section className="flex flex-col gap-rg-sm">
+      {title && <h2 className="console-h2 px-rg-xs">{title}</h2>}
+      <div className="panel flex flex-col gap-rg-md p-rg-lg">{children}</div>
     </section>
   );
 }
@@ -88,7 +88,7 @@ function IconChoiceCard({
       aria-checked={selected}
       disabled={disabled}
       onClick={onClick}
-      className={`relative flex min-h-[10.5rem] flex-1 flex-col items-center justify-center gap-3 rounded-card p-4 text-center transition-colors disabled:cursor-default ${
+      className={`relative flex min-h-[10.5rem] flex-1 flex-col items-center justify-center gap-rg-md rounded-card p-rg-lg text-center transition-colors disabled:cursor-default ${
         selected ? "border-2 border-accent bg-accent-tint" : "border border-line bg-surface hover:bg-row-hover"
       }`}
     >
@@ -104,7 +104,7 @@ function IconChoiceCard({
       >
         {icon}
       </span>
-      <span className="text-base font-bold text-ink [text-wrap:balance]">{title}</span>
+      <span className="text-body-lg font-bold text-ink [text-wrap:balance]">{title}</span>
     </button>
   );
 }
@@ -191,12 +191,12 @@ export function StaffPage() {
     body = loadError ? <ReloadState label={loadError} onRetry={load} /> : <LoadingState variant="list" rows={3} />;
   else
     body = (
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] md:items-start md:gap-5">
+      <div className="grid grid-cols-1 gap-rg-lg md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] md:items-start md:gap-5">
         <div className="min-w-0">
         {list.length === 0 ? (
-          <section className="flex flex-col gap-2">
-            <h2 className="console-h2 px-1">{T.listTitle}</h2>
-            <div className="panel flex flex-col items-center gap-3 px-4 py-10">
+          <section className="flex flex-col gap-rg-sm">
+            <h2 className="console-h2 px-rg-xs">{T.listTitle}</h2>
+            <div className="panel flex flex-col items-center gap-rg-md px-rg-lg py-10">
               <span className="flex h-14 w-14 items-center justify-center rounded-full bg-accent-tint text-accent-text">
                 <IconUser size={28} />
               </span>
@@ -204,24 +204,24 @@ export function StaffPage() {
             </div>
           </section>
         ) : (
-          <section className="flex flex-col gap-2">
-            <h2 className="console-h2 px-1">{T.listTitle}</h2>
+          <section className="flex flex-col gap-rg-sm">
+            <h2 className="console-h2 px-rg-xs">{T.listTitle}</h2>
             <ul className="panel divide-y divide-line-soft">
               {list.map((row) => {
                 const initial = row.name.trim().charAt(0) || row.phone.replace(/\D/g, "").slice(-1) || "?";
                 return (
-                  <li key={row.id} className="flex min-h-[4.5rem] items-center gap-3 px-3 py-2">
-                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-tint text-base font-bold text-accent-text">
+                  <li key={row.id} className="flex min-h-[4.5rem] items-center gap-rg-md px-rg-md py-rg-sm">
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent-tint text-body-lg font-bold text-accent-text">
                       {initial}
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-bold">{row.name || <bdi dir="ltr">{row.phone}</bdi>}</p>
                       {row.name && (
-                        <p className="text-sm text-ink-muted">
+                        <p className="text-body text-ink-muted">
                           <bdi dir="ltr">{row.phone}</bdi>
                         </p>
                       )}
-                      <p className="text-xs text-ink-muted">
+                      <p className="text-caption text-ink-muted">
                         {row.last_login_at ? fill(T.lastLogin, { at: fmtDateTime(row.last_login_at) }) : T.neverLogin}
                       </p>
                     </div>
@@ -245,7 +245,7 @@ export function StaffPage() {
         )}
         </div>
 
-        <div className="flex min-w-0 flex-col gap-4">
+        <div className="flex min-w-0 flex-col gap-rg-lg">
         {canManage && (
           <WhiteCard title={T.newTitle}>
             <Input
@@ -270,7 +270,7 @@ export function StaffPage() {
               disabled={busy}
               onChange={(e) => setName(e.target.value.slice(0, 60))}
             />
-            <Button size="lg" className="flex w-full items-center justify-center gap-2" disabled={busy} onClick={() => void add()}>
+            <Button size="lg" className="flex w-full items-center justify-center gap-rg-sm" disabled={busy} onClick={() => void add()}>
               <IconAdd size={20} />
               {T.add}
             </Button>
@@ -369,8 +369,8 @@ export function OrderPhonesPage() {
       {p == null ? (
         loadError ? <ReloadState label={loadError} onRetry={load} /> : <LoadingState variant="list" rows={2} />
       ) : (
-        <div className="flex w-full min-w-0 flex-col gap-4">
-          <div className="flex gap-3" role="radiogroup" aria-label={T.phonesTitle}>
+        <div className="flex w-full min-w-0 flex-col gap-rg-lg">
+          <div className="flex gap-rg-md" role="radiogroup" aria-label={T.phonesTitle}>
             <IconChoiceCard
               icon={<IconPhone size={28} />}
               title={T.full}
@@ -390,7 +390,7 @@ export function OrderPhonesPage() {
             />
           </div>
 
-          {p.mode === "full" && <p className="panel p-4 text-sm text-ink-muted">{K.phonesFullHint}</p>}
+          {p.mode === "full" && <p className="panel p-rg-lg text-body text-ink-muted">{K.phonesFullHint}</p>}
           {p.mode === "split" && (
             <WhiteCard title={T.numbersTitle}>
               <Input
@@ -417,9 +417,9 @@ export function OrderPhonesPage() {
                 error={phoneError(p.evening_phone, tried)}
                 onChange={(e) => edit({ ...p, evening_phone: e.target.value.replace(/[^\d+]/g, "").slice(0, 16) })}
               />
-              <div className="flex items-center gap-2 border-t border-line-soft pt-3">
+              <div className="flex items-center gap-rg-sm border-t border-line-soft pt-rg-md">
                 <IconHourglass size={20} className="shrink-0 text-accent-text" />
-                <label htmlFor="op-from" className="min-w-0 flex-1 text-sm">
+                <label htmlFor="op-from" className="min-w-0 flex-1 text-body">
                   {T.eveningFrom}
                 </label>
                 {/* **رقاقةُ الساعة** — بلون العلامة كرقاقات مخطّط الدوام، والقيمةُ `HH:MM`. */}
@@ -430,13 +430,13 @@ export function OrderPhonesPage() {
                   value={(p.evening_from || "16:00").slice(0, 5)}
                   disabled={!editable}
                   onChange={(e) => edit({ ...p, evening_from: e.target.value })}
-                  className="rounded-full border border-accent-edge bg-accent-tint px-4 py-2 font-bold text-accent-text disabled:text-ink-muted"
+                  className="rounded-full border border-accent-edge bg-accent-tint px-rg-lg py-rg-sm font-bold text-accent-text disabled:text-ink-muted"
                 />
               </div>
             </WhiteCard>
           )}
           {canManage && (
-            <Button size="lg" className="flex min-h-11 w-full items-center lg:w-auto lg:self-start lg:px-8 justify-center gap-2" disabled={busy} onClick={() => void save()}>
+            <Button size="lg" className="flex min-h-11 w-full items-center lg:w-auto lg:self-start lg:px-rg-xxl justify-center gap-rg-sm" disabled={busy} onClick={() => void save()}>
               <IconCheck size={20} />
               {T.save}
             </Button>
