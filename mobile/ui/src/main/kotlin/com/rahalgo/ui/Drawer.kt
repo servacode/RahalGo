@@ -1,6 +1,8 @@
 package com.rahalgo.ui
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -18,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -101,6 +104,8 @@ fun Drawer(
             Spacer(Modifier.height(6.dp))
             HorizontalDivider()
             Spacer(Modifier.height(6.dp))
+        } else {
+            DrawerBrand()
         }
 
         var lastGroup: Int? = null
@@ -131,29 +136,12 @@ fun Drawer(
         if (dark != null) {
             Spacer(Modifier.height(10.dp))
             HorizontalDivider()
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onTheme)
-                    .padding(horizontal = 14.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    painter = painterResource(
-                        if (dark) R.drawable.ic_theme_light else R.drawable.ic_theme,
-                    ),
-                    contentDescription = null,
-                    tint = Rahal.colors.inkMuted,
-                    modifier = Modifier.size(20.dp),
-                )
-                Spacer(Modifier.size(12.dp))
-                Text(
-                    stringResource(
-                        if (dark) R.string.top_theme_light else R.string.top_theme,
-                    ),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            }
+            DrawerRow(
+                icon = if (dark) R.drawable.ic_theme_light else R.drawable.ic_theme,
+                label = stringResource(if (dark) R.string.top_theme_light else R.string.top_theme),
+                tint = Rahal.colors.inkMuted,
+                onClick = onTheme,
+            )
         }
 
         // ══════════════════════════════════════════════════════════════
@@ -179,63 +167,81 @@ fun Drawer(
         // **وأحمرُ بحدٍّ فوقه** — لا يُخلط بما قبله من أسماء أقسام.
         Spacer(Modifier.height(10.dp))
         HorizontalDivider()
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onLogout)
-                .padding(horizontal = 14.dp, vertical = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                painter = painterResource(
-                    if (logoutLabel == null) R.drawable.ic_logout else R.drawable.ic_login,
-                ),
-                contentDescription = null,
-                tint = if (logoutLabel == null) Rahal.colors.danger else Rahal.colors.brand,
-                modifier = Modifier.size(20.dp),
-            )
-            Spacer(Modifier.size(12.dp))
-            Text(
-                stringResource(logoutLabel ?: R.string.login_logout),
-                color = if (logoutLabel == null) Rahal.colors.danger else Rahal.colors.brand,
-                style = MaterialTheme.typography.bodyLarge,
-            )
-        }
+        DrawerRow(
+            icon = if (logoutLabel == null) R.drawable.ic_logout else R.drawable.ic_login,
+            label = stringResource(logoutLabel ?: R.string.login_logout),
+            tint = if (logoutLabel == null) Rahal.colors.danger else Rahal.colors.brand,
+            labelColor = if (logoutLabel == null) Rahal.colors.danger else Rahal.colors.brand,
+            onClick = onLogout,
+        )
         Spacer(Modifier.height(16.dp))
     }
 }
 
 @Composable
 private fun Line(item: DrawerItem, onPick: (DrawerItem) -> Unit) {
+    DrawerRow(
+        icon = item.icon,
+        label = stringResource(item.label),
+        tint = Rahal.colors.brand,
+        onClick = { onPick(item) },
+    )
+}
+
+/** **شارةُ الهويّة أعلى القائمة** حين لا يضع التطبيقُ رأسَه — الشعارُ على أرضٍ بلون العلامة الخفيف. */
+@Composable
+private fun DrawerBrand() {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Rahal.space.sm)
+            .clip(Rahal.shape.lg)
+            .background(Rahal.colors.brand.copy(alpha = 0.08f))
+            .padding(vertical = Rahal.space.md),
+        contentAlignment = Alignment.Center,
+    ) {
+        androidx.compose.foundation.Image(
+            painter = painterResource(com.rahalgo.design.R.drawable.intro_logo),
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+        )
+    }
+    Spacer(Modifier.height(Rahal.space.sm))
+}
+
+/**
+ * **سطرُ القائمة الواحد** — أيقونةٌ في مربّعٍ ملوّنٍ واسمٌ، بزاويةٍ مدوّرةٍ عند اللمس.
+ * (مراجعةُ التصميم ٢٠٢٦-١١-٠٩: كانت أيقوناتٌ رماديّةٌ عارية.) **والسطرُ نفسُه للأقسام
+ * وللسمة وللخروج** فلا تختلف الأحجام.
+ */
+@Composable
+private fun DrawerRow(
+    icon: Int,
+    label: String,
+    tint: androidx.compose.ui.graphics.Color,
+    onClick: () -> Unit,
+    labelColor: androidx.compose.ui.graphics.Color = Rahal.colors.ink,
+) {
     Row(
         Modifier
             .fillMaxWidth()
-            .clickable { onPick(item) }
-            .padding(horizontal = 14.dp, vertical = 14.dp),
+            .padding(horizontal = Rahal.space.sm, vertical = 2.dp)
+            .clip(Rahal.shape.md)
+            .clickable(onClick = onClick)
+            .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(
-            painter = painterResource(item.icon),
-            contentDescription = null,
-            tint = Rahal.colors.inkMuted,
-            modifier = Modifier.size(20.dp),
-        )
-        Spacer(Modifier.size(10.dp))
+        IconTile(icon = icon, tint = tint, size = 36.dp)
+        Spacer(Modifier.size(Rahal.space.md))
         Text(
-            text = stringResource(item.label),
+            text = label,
+            color = labelColor,
             style = MaterialTheme.typography.bodyMedium,
             maxLines = 1,
         )
     }
 }
 
-/**
- * **بندٌ في القائمة** — التطبيقُ يصفه والقائمةُ ترسمه.
- *
- * **و`key` نصٌّ لا تعداد**: أقسامُ كلّ تطبيقٍ غيرُ أقسام الآخر، **ولو
- * حملت الوحدةُ تعدادَ السائق لَحملها الزبونُ معه** — فيرى «صندوقي» في
- * شيفرته وهو لا يملك صندوقاً. **وهو نفسُه مفتاحُ `Overlay.Menu`.**
- */
 data class DrawerItem(
     val key: String,
     /** **اسمُ المجموعة** — والبنودُ تُرتَّب بها لا بترتيب كتابتها. */

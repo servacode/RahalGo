@@ -113,17 +113,7 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
         if (it.isFocused) focused = at else if (focused == at) focused = null
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            // **والكيبوردُ لا يغطّي الزرّ** (رُئي على جوال المالك ٢٠٢٦-١٠-٠٩) — العمودُ
-            // يقصر فوقه، فيبقى «تسجيل الدخول» ظاهراً تحت الحقل.
-            .imePadding()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 28.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
+    AuthPage {
         // **شعارُ الهويّة المشترك** (Batch 5) — مُصغَّرٌ ومسافةٌ أقلُّ فوقَه
         // فلا يزحم حقولَ الإنشاء الكثيرة.
         AuthHeader(logoSize = 100.dp, topSpace = 24.dp, bottomSpace = 10.dp)
@@ -145,6 +135,7 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
         )
         Spacer(Modifier.height(24.dp))
 
+        AuthCard {
         when (state.step) {
             // **والرقمُ يُكتب مرّةً واحدة** — ثمّ يُحمل في الحالة إلى
             // الخطوتين التاليتين. **ومن أعاد كتابتَه في كلّ خطوةٍ أخطأ في
@@ -344,6 +335,7 @@ fun SignupScreen(state: SignupState, actions: SignupActions) {
                 }
             }
         }
+        } // AuthCard
 
         Spacer(Modifier.height(6.dp))
         RahalTextButton(onClick = actions.cancel, enabled = !state.busy) {

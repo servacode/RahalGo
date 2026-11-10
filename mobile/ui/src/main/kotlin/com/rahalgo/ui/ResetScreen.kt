@@ -51,17 +51,7 @@ fun ResetScreen(state: ResetState, actions: ResetActions) {
     var code by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            // **والكيبوردُ لا يغطّي الزرّ** (رُئي على جوال المالك ٢٠٢٦-١٠-٠٩) — العمودُ
-            // يقصر فوقه، فيبقى «تسجيل الدخول» ظاهراً تحت الحقل.
-            .imePadding()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 28.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
+    AuthPage {
         // **شعارُ الهويّة المشترك** (Batch 5) — مُصغَّرٌ فلا يزحم حقولَ الاستعادة.
         AuthHeader(logoSize = 100.dp, topSpace = 24.dp, bottomSpace = 10.dp)
         Text(
@@ -82,6 +72,7 @@ fun ResetScreen(state: ResetState, actions: ResetActions) {
         )
         Spacer(Modifier.height(24.dp))
 
+        AuthCard {
         when (state.step) {
             // **والرقم يُكتب مرّة واحدة** — ثمّ يُحمل في الحالة إلى
             // الخطوتين التاليتين. **ومن أعاد كتابته في كل خطوة أخطأ في
@@ -161,6 +152,7 @@ fun ResetScreen(state: ResetState, actions: ResetActions) {
                 )
             }
         }
+        } // AuthCard
 
         Spacer(Modifier.height(6.dp))
         RahalTextButton(onClick = actions.cancel, enabled = !state.busy) {

@@ -57,7 +57,7 @@ fun InboxSheet(
     Column(
         Modifier
             .fillMaxSize()
-            .background(Rahal.colors.canvas)
+            .background(Rahal.colors.surface)
             .then(if (statusBarInset) Modifier.statusBarsPadding() else Modifier),
     ) {
         Row(
@@ -115,20 +115,24 @@ fun InboxSheet(
                     Column(Modifier.padding(horizontal = Rahal.space.lg)) { DayHead(d) }
                 }
                 // **والضغطُ على الخبر يعلّمه مقروءاً** (تجربةُ المالك ٢٠٢٦-١٠-٢٩: ضغط فلم يتغيّر شيء).
+                // **كلُّ إشعارٍ بطاقةٌ** بأيقونةٍ في مربّعٍ ملوّن — غيرُ المقروء بلون العلامة وحدٍّ منها.
                 Row(
                     Modifier
                         .fillMaxWidth()
-                        .background(if (notice.read) Color.Transparent else Rahal.colors.brand.copy(alpha = UnreadTint))
+                        .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.xs)
+                        .cardSurface(
+                            Rahal.shape.md,
+                            tone = if (notice.read) null else Rahal.colors.brand,
+                            elevation = if (notice.read) 1.dp else 3.dp,
+                        )
                         .clickable { onOpen(notice) }
-                        .padding(horizontal = Rahal.space.lg, vertical = Rahal.space.md),
+                        .padding(Rahal.space.md),
+                    verticalAlignment = Alignment.Top,
                 ) {
-                    // **ونقطة لغير المقروء** — مع العنوان العريض.
-                    Box(
-                        Modifier
-                            .padding(top = Rahal.space.sm)
-                            .size(Dot)
-                            .clip(CircleShape)
-                            .background(if (notice.read) Color.Transparent else Rahal.colors.brand),
+                    IconTile(
+                        icon = if (notice.kind == "order") R.drawable.ic_orders else R.drawable.ic_bell,
+                        tint = if (notice.read) Rahal.colors.inkMuted else Rahal.colors.brand,
+                        size = 40.dp,
                     )
                     Spacer(Modifier.size(Rahal.space.md))
                     Column(Modifier.weight(1f)) {
@@ -139,8 +143,21 @@ fun InboxSheet(
                         )
                         if (notice.body.isNotBlank()) {
                             Spacer(Modifier.height(Rahal.space.xs))
-                            Text(notice.body, color = Rahal.colors.inkMuted)
+                            Text(
+                                notice.body,
+                                color = Rahal.colors.inkMuted,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
                         }
+                    }
+                    if (!notice.read) {
+                        Box(
+                            Modifier
+                                .padding(top = Rahal.space.xs)
+                                .size(Dot)
+                                .clip(CircleShape)
+                                .background(Rahal.colors.brand),
+                        )
                     }
                 }
             }
@@ -148,14 +165,10 @@ fun InboxSheet(
     }
 }
 
-/** **ارتفاعُ رأس الصندوق** — يتّسع لزرّ «تعليم الكل» بلمسته الكاملة. */
 private val HeadHeight = 56.dp
 
 /** **نقطةُ غير المقروء.** */
 private val Dot = 8.dp
-
-/** **أرضُ غير المقروء** — خفيفةٌ تُرى ولا تصبغ الشاشة. */
-private const val UnreadTint = 0.06f
 
 @Composable
 private fun Box(modifier: Modifier, content: @Composable () -> Unit = {}) {

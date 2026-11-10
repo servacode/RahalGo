@@ -182,9 +182,7 @@ fun OfferCard(
     Column(
         Modifier
             .fillMaxWidth()
-            .clip(Rahal.shape.md)
-            .background(Rahal.colors.canvas)
-            .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
+            .cardSurface(Rahal.shape.md, elevation = 2.dp)
             .padding(Rahal.space.md),
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

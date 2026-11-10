@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.rahalgo.design.Rahal
+import com.rahalgo.ui.cardSurface
 import com.rahalgo.merchant.Dates
 import com.rahalgo.merchant.R
 import com.rahalgo.shared.merchant.MerchantApi
@@ -143,9 +144,7 @@ private fun WhiteCard(
     Column(
         Modifier
             .fillMaxWidth()
-            .clip(Rahal.shape.lg)
-            .background(Rahal.colors.canvas)
-            .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.lg)
+            .cardSurface(Rahal.shape.lg)
             .padding(Rahal.space.lg),
         content = content,
     )
@@ -288,9 +287,7 @@ fun StaffScreen(vm: StaffViewModel, canManage: Boolean, onBack: (() -> Unit)? = 
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .clip(Rahal.shape.lg)
-                    .background(Rahal.colors.canvas)
-                    .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.lg),
+                    .cardSurface(Rahal.shape.lg),
             ) {
                 vm.items.forEachIndexed { i, row ->
                     if (i > 0) HorizontalDivider(color = Rahal.colors.line, thickness = Rahal.stroke.hair)
@@ -380,9 +377,7 @@ private fun StaffEmpty() {
     Column(
         Modifier
             .fillMaxWidth()
-            .clip(Rahal.shape.lg)
-            .background(Rahal.colors.canvas)
-            .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.lg)
+            .cardSurface(Rahal.shape.lg)
             .padding(vertical = Rahal.space.xl, horizontal = Rahal.space.lg),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {

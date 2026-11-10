@@ -27,7 +27,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -280,17 +282,20 @@ fun WalletScreen(
         Column(
             Modifier
                 .fillMaxWidth()
-                .clip(Rahal.shape.md)
-                .background(Rahal.colors.brand.copy(alpha = 0.08f))
+                // **بطاقةُ الرصيد بلون العلامة** (مراجعةُ التصميم ٢٠٢٦-١١-٠٩) — أوّلُ ما تقع عليه العين.
+                .shadow(6.dp, Rahal.shape.lg)
+                .clip(Rahal.shape.lg)
+                .background(Rahal.colors.brand)
                 .padding(vertical = Rahal.space.xl),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(stringResource(R.string.wal_balance), color = Rahal.colors.inkMuted)
+            Text(stringResource(R.string.wal_balance), color = Rahal.colors.onBrand.copy(alpha = 0.8f))
             Spacer(Modifier.height(Rahal.space.sm))
             Text(
                 text = money(st.balance),
-                color = Rahal.colors.brand,
+                color = Rahal.colors.onBrand,
                 style = MaterialTheme.typography.headlineLarge,
+                fontWeight = FontWeight.Bold,
             )
         }
 
@@ -352,9 +357,7 @@ fun WalletScreen(
         }
 
         if (payouts && s.payouts.isNotEmpty()) {
-            Spacer(Modifier.height(Rahal.space.lg))
-            HorizontalDivider()
-            Spacer(Modifier.height(Rahal.space.md))
+            Spacer(Modifier.height(Rahal.space.xl))
             Text(
                 stringResource(R.string.wal_payouts),
                 style = MaterialTheme.typography.titleMedium,
@@ -363,9 +366,7 @@ fun WalletScreen(
             s.payouts.forEach { PayoutRow(it) }
         }
 
-        Spacer(Modifier.height(Rahal.space.lg))
-        HorizontalDivider()
-        Spacer(Modifier.height(Rahal.space.md))
+        Spacer(Modifier.height(Rahal.space.xl))
         Text(stringResource(R.string.wal_txs), style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(Rahal.space.sm))
         if (st.transactions.isEmpty()) {
@@ -446,7 +447,7 @@ private fun PayoutRow(p: Payout) {
         WalletLabels.payoutFailed(p.status) -> Rahal.colors.danger
         else -> Rahal.colors.inkMuted
     }
-    Column(Modifier.fillMaxWidth().padding(vertical = Rahal.space.sm)) {
+    Column(WalletRowModifier) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(money(p.amount), style = MaterialTheme.typography.titleSmall)
             Text(payoutStatus(p.status), color = color)
@@ -457,10 +458,16 @@ private fun PayoutRow(p: Payout) {
         if (why.isNotEmpty()) {
             Text(why, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodySmall)
         }
-        Spacer(Modifier.height(Rahal.space.sm))
-        HorizontalDivider()
     }
 }
+
+/** **سطرُ الحركة بطاقةٌ صغيرةٌ** لا شريحةٌ بفاصل — ومسافةٌ بين البطاقات. */
+private val WalletRowModifier: Modifier
+    @Composable get() = Modifier
+        .fillMaxWidth()
+        .padding(vertical = Rahal.space.xs)
+        .cardSurface(Rahal.shape.md, elevation = 2.dp)
+        .padding(Rahal.space.md)
 
 @Composable
 private fun payoutStatus(status: String): String =
@@ -469,7 +476,7 @@ private fun payoutStatus(status: String): String =
 @Composable
 private fun TxRow(t: WalletTx) {
     val positive = t.amount >= 0
-    Column(Modifier.fillMaxWidth().padding(vertical = Rahal.space.sm)) {
+    Column(WalletRowModifier) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             // **والإشارةُ قبل الرقم** — «‎+٣٠٠» تُقرأ ربحاً بنظرة.
             Text(
@@ -504,8 +511,6 @@ private fun TxRow(t: WalletTx) {
             color = Rahal.colors.inkMuted,
             style = MaterialTheme.typography.bodySmall,
         )
-        Spacer(Modifier.height(Rahal.space.sm))
-        HorizontalDivider()
     }
 }
 
