@@ -1,5 +1,7 @@
 package com.rahalgo.customer.orders
 
+import com.rahalgo.ui.DialogDismissButton
+import com.rahalgo.ui.DialogConfirmButton
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.fillMaxSize
@@ -428,12 +430,12 @@ private fun ConfirmCancel(
             }
         },
         confirmButton = {
-            RahalTextButton(onClick = onConfirm, enabled = !sending) {
+            DialogConfirmButton(onClick = onConfirm, enabled = !sending) {
                 Text(stringResource(R.string.ord_cancel_yes), color = Rahal.colors.danger)
             }
         },
         dismissButton = {
-            RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.act_back)) }
+            DialogDismissButton(onClick = onDismiss) { Text(stringResource(R.string.act_back)) }
         },
     )
 }
@@ -511,7 +513,7 @@ internal fun RateDialog(
             }
         },
         confirmButton = {
-            RahalTextButton(
+            DialogConfirmButton(
                 onClick = {
                     onConfirm(stars, driverStars.takeIf { hasDriver })
                 },
@@ -519,7 +521,7 @@ internal fun RateDialog(
             ) { Text(stringResource(R.string.ord_send)) }
         },
         dismissButton = {
-            RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.act_back)) }
+            DialogDismissButton(onClick = onDismiss) { Text(stringResource(R.string.act_back)) }
         },
     )
 }
@@ -664,13 +666,13 @@ private fun ComplainDialog(
             }
         },
         confirmButton = {
-            RahalTextButton(
+            DialogConfirmButton(
                 onClick = { onConfirm(pick, note.trim()) },
                 enabled = pick.isNotBlank() && !needNote && !sending,
             ) { Text(stringResource(R.string.ord_send)) }
         },
         dismissButton = {
-            RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.act_back)) }
+            DialogDismissButton(onClick = onDismiss) { Text(stringResource(R.string.act_back)) }
         },
     )
 }

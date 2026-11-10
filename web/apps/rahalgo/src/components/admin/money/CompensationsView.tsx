@@ -249,7 +249,7 @@ export function CompensationsView({ embedded = false }: { embedded?: boolean }) 
       {error && (
         <Alert>
           <span>{C.loadFailed}</span>{" "}
-          <button type="button" onClick={() => reload()} className="font-bold underline">
+          <button type="button" onClick={() => reload()} className="inline-action">
             {m.common.retry}
           </button>
         </Alert>
@@ -296,7 +296,7 @@ export function CompensationsView({ embedded = false }: { embedded?: boolean }) 
       {filters.overdue === "1" && (
         <Alert tone="warning">
           <span>{C.overdueOnly}</span>{" "}
-          <button type="button" onClick={() => set("overdue", "")} className="font-bold underline">
+          <button type="button" onClick={() => set("overdue", "")} className="inline-action">
             {C.overdueClear}
           </button>
         </Alert>

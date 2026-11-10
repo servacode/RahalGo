@@ -1,5 +1,6 @@
 package com.rahalgo.driver
 
+import com.rahalgo.ui.DialogConfirmButton
 import androidx.lifecycle.viewmodel.compose.viewModel as vmOf
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
@@ -589,7 +590,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                 )
             },
             confirmButton = {
-                com.rahalgo.ui.RahalTextButton(onClick = orders::dismissLost) {
+                DialogConfirmButton(onClick = orders::dismissLost) {
                     Text(stringResource(R.string.lost_ok))
                 }
             },

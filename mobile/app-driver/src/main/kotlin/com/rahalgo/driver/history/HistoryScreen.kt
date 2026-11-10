@@ -1,5 +1,7 @@
 package com.rahalgo.driver.history
 
+import com.rahalgo.ui.DialogDismissButton
+import com.rahalgo.ui.DialogConfirmButton
 import android.app.Application
 import com.rahalgo.design.Rahal
 import android.util.Log
@@ -654,13 +656,13 @@ private fun ReportDialog(
             }
         },
         confirmButton = {
-            RahalTextButton(
+            DialogConfirmButton(
                 onClick = { vm.report(o.id, reason, note); onClose() },
                 enabled = !s.busy && reason.isNotEmpty(),
             ) { Text(stringResource(R.string.act_send_report)) }
         },
         dismissButton = {
-            RahalTextButton(onClick = onClose) { Text(stringResource(R.string.hist_cancel)) }
+            DialogDismissButton(onClick = onClose) { Text(stringResource(R.string.hist_cancel)) }
         },
     )
 }
@@ -700,7 +702,7 @@ private fun RateDialog(
             }
         },
         confirmButton = {
-            RahalTextButton(
+            DialogConfirmButton(
                 // ══════════════════════════════════════════════════════
                 // **ولا تعليقَ مع التقييم — نجومٌ وفقط**
                 // ══════════════════════════════════════════════════════
@@ -721,7 +723,7 @@ private fun RateDialog(
             ) { Text(stringResource(R.string.hist_rate_send)) }
         },
         dismissButton = {
-            RahalTextButton(onClick = onClose) { Text(stringResource(R.string.hist_cancel)) }
+            DialogDismissButton(onClick = onClose) { Text(stringResource(R.string.hist_cancel)) }
         },
     )
 }

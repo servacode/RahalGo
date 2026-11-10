@@ -1,5 +1,7 @@
 package com.rahalgo.driver.home
 
+import com.rahalgo.ui.DialogDismissButton
+import com.rahalgo.ui.DialogConfirmButton
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -90,16 +92,15 @@ fun TermsSheet(
             }
         },
         confirmButton = {
-            RahalTextButton(onClick = onAccept, enabled = !busy) {
+            DialogConfirmButton(onClick = onAccept, enabled = !busy) {
                 Text(
                     stringResource(R.string.terms_accept),
-                    color = Rahal.colors.brand,
                     fontWeight = FontWeight.Bold,
                 )
             }
         },
         dismissButton = {
-            RahalTextButton(onClick = onClose, enabled = !busy) {
+            DialogDismissButton(onClick = onClose, enabled = !busy) {
                 Text(stringResource(R.string.terms_close))
             }
         },

@@ -1,5 +1,6 @@
 package com.rahalgo.ui.hours
 
+import com.rahalgo.ui.DialogDismissButton
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -656,7 +657,7 @@ private fun DayTimeDialog(
             ) { Text(stringResource(R.string.hours_done)) }
         },
         dismissButton = {
-            RahalTextButton(onClick = onDismiss) { Text(stringResource(R.string.act_cancel)) }
+            DialogDismissButton(onClick = onDismiss) { Text(stringResource(R.string.act_cancel)) }
         },
     )
 }

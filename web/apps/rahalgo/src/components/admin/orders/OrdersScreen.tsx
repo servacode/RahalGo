@@ -2364,7 +2364,7 @@ export default function OrdersScreen({ mode }: { mode: "live" | "history" }) {
               }}
             />
             {historyFiltered && (
-              <button type="button" className="text-xs font-medium text-accent-text underline" onClick={clearHistory}>
+              <button type="button" className="inline-action" onClick={clearHistory}>
                 {H.clearFilters}
               </button>
             )}

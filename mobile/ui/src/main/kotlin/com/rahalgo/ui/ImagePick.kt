@@ -210,7 +210,7 @@ fun rememberImagePicker(
             onDismissRequest = { asking = false },
             title = { Text(stringResource(R.string.photo_source)) },
             confirmButton = {
-                RahalTextButton(onClick = {
+                DialogConfirmButton(onClick = {
                     asking = false
                     runCatching { newPhotoUri(context) }.getOrNull()?.let {
                         shot = it
@@ -219,7 +219,7 @@ fun rememberImagePicker(
                 }) { Text(stringResource(R.string.photo_camera)) }
             },
             dismissButton = {
-                RahalTextButton(onClick = {
+                DialogDismissButton(onClick = {
                     asking = false
                     gallery.launch(
                         PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),

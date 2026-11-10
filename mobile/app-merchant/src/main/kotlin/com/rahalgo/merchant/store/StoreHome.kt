@@ -1,5 +1,7 @@
 package com.rahalgo.merchant.store
 
+import com.rahalgo.ui.DialogDismissButton
+import com.rahalgo.ui.DialogConfirmButton
 import com.rahalgo.ui.hours.ChoiceCard
 import com.rahalgo.ui.hours.IconChoice
 import com.rahalgo.ui.hours.IconChoicePair
@@ -890,12 +892,12 @@ private fun RateCard(vm: StoreViewModel, store: Store, suspended: Boolean) {
                 }
             },
             confirmButton = {
-                RahalTextButton(onClick = { vm.setExchangeRate(j.newRate, confirm = true) }) {
+                DialogConfirmButton(onClick = { vm.setExchangeRate(j.newRate, confirm = true) }) {
                     Text(stringResource(R.string.store_rate_jump_yes))
                 }
             },
             dismissButton = {
-                RahalTextButton(onClick = { vm.dismissRateJump() }) {
+                DialogDismissButton(onClick = { vm.dismissRateJump() }) {
                     Text(stringResource(R.string.store_rate_jump_no))
                 }
             },

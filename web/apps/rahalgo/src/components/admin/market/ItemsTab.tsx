@@ -299,7 +299,7 @@ export default function ItemsTab({ initialMerchant = "" }: { initialMerchant?: s
           <p className="text-xs text-ink-muted">
             {data && I.newHint.replace("{h}", fmtNum(data.new_hours))}
             {filtered && (
-              <button type="button" onClick={clearFilters} className="ms-2 font-bold text-accent hover:underline">
+              <button type="button" onClick={clearFilters} className="ms-2 inline-action">
                 {U.clearFilters}
               </button>
             )}

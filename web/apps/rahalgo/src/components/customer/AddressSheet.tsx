@@ -222,7 +222,7 @@ export function AddressSheet({ open, onClose }: { open: boolean; onClose: () => 
             ) : addressesError ? (
               <Alert>
                 {errorText(addressesError)}
-                <button type="button" onClick={() => void reloadAddresses()} className="ms-2 underline">
+                <button type="button" onClick={() => void reloadAddresses()} className="ms-2 inline-action">
                   {m.common.retry}
                 </button>
               </Alert>

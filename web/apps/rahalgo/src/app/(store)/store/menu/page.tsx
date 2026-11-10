@@ -910,7 +910,7 @@ export default function MenuPage() {
       <div className="flex items-center justify-between px-5 text-xs text-ink-dim">
         <span>{fill(M.count, { n: fmtNum(shown) })}</span>
         {section !== "" && (
-          <button type="button" className="font-medium text-primary" onClick={() => setSection("")}>
+          <button type="button" className="inline-action" onClick={() => setSection("")}>
             {sections.find((s) => s.id === section)?.name}
           </button>
         )}

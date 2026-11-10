@@ -3,6 +3,8 @@ package com.rahalgo.ui
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
@@ -220,10 +222,12 @@ fun RahalOutlineButton(
 }
 
 /**
- * **الزرُّ النصّيّ** — ما يُقرأ رابطاً لا زرّا.
+ * **الزرُّ الثانويّ الخفيف** — يُقرأ زرّا لا رابطا (قرارُ المالك ٢٠٢٦-١١-١٠: «كلّ زرٍّ لازم
+ * يبين إنو زر»).
  *
- * **ولا يحمل الفعلَ الخطر**: نصٌّ بلا إطارٍ يُضغط بالخطأ، **وحذفٌ
- * خلفَه لا يُستردّ.**
+ * **أرضٌ بلون النبرة بشفافيّةٍ خفيفة + حدٌّ شعريٌّ بلونها + `Rahal.shape.md` + ارتفاعٌ
+ * لا يقلّ عن ٤٨dp + خطٌّ متوسّط.** نصٌّ بلا أرضٍ ولا حدٍّ لا يعرف الهاتفُ أنّه يُضغط
+ * (لا تحويمَ على اللمس).
  */
 @Composable
 fun RahalTextButton(
@@ -233,15 +237,50 @@ fun RahalTextButton(
     tone: Tone = Tone.Brand,
     content: @Composable RowScope.() -> Unit,
 ) {
+    val ink = tone.inkColor()
     TextButton(
         onClick = onClick,
-        modifier = modifier,
+        modifier = modifier.heightIn(min = 48.dp),
         enabled = enabled,
         shape = Rahal.shape.md,
-        colors = ButtonDefaults.textButtonColors(contentColor = tone.inkColor()),
-        content = content,
-    )
+        contentPadding = Pad,
+        border = BorderStroke(Rahal.stroke.hair, ink.copy(alpha = if (enabled) 0.55f else 0.25f)),
+        colors = ButtonDefaults.textButtonColors(
+            containerColor = ink.copy(alpha = 0.10f),
+            contentColor = ink,
+            disabledContainerColor = ink.copy(alpha = 0.05f),
+            disabledContentColor = ink.copy(alpha = 0.45f),
+        ),
+    ) {
+        androidx.compose.runtime.CompositionLocalProvider(
+            androidx.compose.material3.LocalTextStyle provides
+                androidx.compose.material3.LocalTextStyle.current.copy(fontWeight = FontWeight.Medium),
+        ) { content() }
+    }
 }
+
+/**
+ * **زرُّ «أكّد» في نافذة الحوار** — مملوءٌ دائماً (`confirmButton`)، والخطِرُ بـ`Tone.Danger`.
+ * **موضعٌ واحدٌ لكلّ النوافذ**، فلا تفترق نافذتان.
+ */
+@Composable
+fun DialogConfirmButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    tone: Tone = Tone.Brand,
+    content: @Composable RowScope.() -> Unit,
+) = RahalButton(onClick = onClick, modifier = modifier, enabled = enabled, tone = tone, content = content)
+
+/** **زرُّ «تراجع» في نافذة الحوار** — محدَّدٌ دائماً (`dismissButton`). */
+@Composable
+fun DialogDismissButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    tone: Tone = Tone.Brand,
+    content: @Composable RowScope.() -> Unit,
+) = RahalOutlineButton(onClick = onClick, modifier = modifier, enabled = enabled, tone = tone, content = content)
 
 /**
  * **نصُّ زرٍّ يصغر حتّى يسع ولا يُقصّ** (بلاغُ المالك ٢٠٢٦-١٠-٣٠: «افة صنف» و«شاء عرض») —

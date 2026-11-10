@@ -77,7 +77,7 @@ export default function AddItemModal({
             <span className="text-ink-muted">{U.addForStore} </span>
             <b>{storeLabel(store.name, store.number)}</b>
           </span>
-          <button type="button" className="text-xs font-bold text-accent hover:underline" onClick={() => setStore(null)}>
+          <button type="button" className="inline-action" onClick={() => setStore(null)}>
             {U.changeStore}
           </button>
         </span>

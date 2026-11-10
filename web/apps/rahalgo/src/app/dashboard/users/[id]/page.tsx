@@ -1541,7 +1541,7 @@ function ActivityRow({ a, selfID, onOpen }: { a: Activity; selfID: string; onOpe
       <div className="flex flex-wrap items-start justify-between gap-2">
         <span className="min-w-0">
           {to ? (
-            <button type="button" onClick={() => onOpen(to)} className="font-bold text-primary hover:underline">
+            <button type="button" onClick={() => onOpen(to)} className="inline-action">
               {label}
             </button>
           ) : (

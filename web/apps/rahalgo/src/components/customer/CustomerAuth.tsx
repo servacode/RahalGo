@@ -218,7 +218,7 @@ function OtpLogin() {
       <Button type="submit" disabled={busy || !code.trim()} className="w-full py-3">
         {busy ? T.busy : T.verify}
       </Button>
-      <button type="button" onClick={() => setSent(false)} className="w-full text-sm text-accent-text">
+      <button type="button" onClick={() => setSent(false)} className="w-full inline-action">
         {T.changeNumber}
       </button>
     </form>
@@ -444,7 +444,7 @@ function Signup() {
           <Button type="submit" disabled={busy} className="w-full py-3">
             {T.verify}
           </Button>
-          <button type="button" onClick={() => setStep("phone")} className="w-full text-sm text-accent-text">
+          <button type="button" onClick={() => setStep("phone")} className="w-full inline-action">
             {T.changeNumber}
           </button>
         </form>
@@ -605,7 +605,7 @@ function Forgot() {
           <Button type="submit" disabled={busy} className="w-full py-3">
             {T.verify}
           </Button>
-          <button type="button" onClick={() => setStep("phone")} className="w-full text-sm text-accent-text">
+          <button type="button" onClick={() => setStep("phone")} className="w-full inline-action">
             {T.changeNumber}
           </button>
         </form>

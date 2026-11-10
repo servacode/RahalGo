@@ -610,7 +610,7 @@ export default function CartPage() {
                 ))}
               </ul>
               {!canSubmit && (
-                <button type="button" onClick={() => setAcked(fp)} className="mt-2 font-bold underline">
+                <button type="button" onClick={() => setAcked(fp)} className="mt-2 inline-action">
                   {C.reviewCta}
                 </button>
               )}

@@ -1,5 +1,6 @@
 package com.rahalgo.merchant.orders
 
+import com.rahalgo.ui.DialogDismissButton
 import com.rahalgo.ui.Since
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -475,7 +476,7 @@ private fun RejectReasonDialog(
             }
         },
         dismissButton = {
-            RahalTextButton(onClick = onDismiss) {
+            DialogDismissButton(onClick = onDismiss) {
                 Text(stringResource(com.rahalgo.ui.R.string.act_cancel))
             }
         },

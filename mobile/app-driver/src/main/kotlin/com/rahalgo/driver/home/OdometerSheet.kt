@@ -1,5 +1,7 @@
 package com.rahalgo.driver.home
 
+import com.rahalgo.ui.DialogDismissButton
+import com.rahalgo.ui.DialogConfirmButton
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -92,12 +94,12 @@ fun OdometerSheet(ask: OdometerAsk, actions: OdometerActions) {
             title = { Text(stringResource(R.string.odo_check_title)) },
             text = { Text(question) },
             confirmButton = {
-                RahalTextButton(onClick = { actions.submit(photo, km, true) }) {
+                DialogConfirmButton(onClick = { actions.submit(photo, km, true) }) {
                     Text(stringResource(R.string.odo_check_yes))
                 }
             },
             dismissButton = {
-                RahalTextButton(onClick = actions.fix) { Text(stringResource(R.string.odo_check_fix)) }
+                DialogDismissButton(onClick = actions.fix) { Text(stringResource(R.string.odo_check_fix)) }
             },
         )
     }
@@ -108,10 +110,10 @@ fun OdometerSheet(ask: OdometerAsk, actions: OdometerActions) {
             title = { Text(stringResource(R.string.odo_bike_title)) },
             text = { Text(stringResource(R.string.odo_bike_question)) },
             confirmButton = {
-                RahalTextButton(onClick = actions.bikeConfirm) { Text(stringResource(R.string.odo_bike_yes)) }
+                DialogConfirmButton(onClick = actions.bikeConfirm) { Text(stringResource(R.string.odo_bike_yes)) }
             },
             dismissButton = {
-                RahalTextButton(onClick = actions.bikeCancel) { Text(stringResource(R.string.odo_cancel)) }
+                DialogDismissButton(onClick = actions.bikeCancel) { Text(stringResource(R.string.odo_cancel)) }
             },
         )
     }
@@ -176,7 +178,7 @@ fun OdometerSheet(ask: OdometerAsk, actions: OdometerActions) {
             }
         },
         dismissButton = {
-            RahalTextButton(onClick = actions.dismiss, enabled = !ask.busy) {
+            DialogDismissButton(onClick = actions.dismiss, enabled = !ask.busy) {
                 Text(stringResource(R.string.odo_cancel))
             }
         },

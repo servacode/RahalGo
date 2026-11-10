@@ -2,7 +2,7 @@ package com.rahalgo.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -97,15 +97,15 @@ fun Drawer(
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(vertical = 8.dp),
+            .padding(vertical = 4.dp),
     ) {
         if (header != null) {
             header()
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(2.dp))
             HorizontalDivider()
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(2.dp))
         } else {
-            DrawerBrand()
+            // بلا شعار: القائمةُ لا تُمرَّر (قرار المالك ٢٠٢٦-١١-١٠)، والسطرُ أغلى من الشعار.
         }
 
         var lastGroup: Int? = null
@@ -114,9 +114,9 @@ fun Drawer(
             // لا يحتاج شرحا.**
             if (item.group != lastGroup) {
                 if (lastGroup != null) {
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(2.dp))
                     HorizontalDivider()
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(2.dp))
                 }
                 lastGroup = item.group
             }
@@ -134,7 +134,7 @@ fun Drawer(
         // **ولا يُخلط بالأقسام** — بحدٍّ فوقه: **هو إعدادٌ لا موضعٌ
         // يُنتقل إليه.**
         if (dark != null) {
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(2.dp))
             HorizontalDivider()
             DrawerRow(
                 icon = if (dark) R.drawable.ic_theme_light else R.drawable.ic_theme,
@@ -165,7 +165,7 @@ fun Drawer(
         // منها**: فعلٌ في مكانين يُنسى أحدُهما فيبقى قديماً حين يتبدّل.
         //
         // **وأحمرُ بحدٍّ فوقه** — لا يُخلط بما قبله من أسماء أقسام.
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(2.dp))
         HorizontalDivider()
         DrawerRow(
             icon = if (logoutLabel == null) R.drawable.ic_logout else R.drawable.ic_login,
@@ -174,7 +174,7 @@ fun Drawer(
             labelColor = if (logoutLabel == null) Rahal.colors.danger else Rahal.colors.brand,
             onClick = onLogout,
         )
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(4.dp))
     }
 }
 
@@ -186,27 +186,6 @@ private fun Line(item: DrawerItem, onPick: (DrawerItem) -> Unit) {
         tint = Rahal.colors.brand,
         onClick = { onPick(item) },
     )
-}
-
-/** **شارةُ الهويّة أعلى القائمة** حين لا يضع التطبيقُ رأسَه — الشعارُ على أرضٍ بلون العلامة الخفيف. */
-@Composable
-private fun DrawerBrand() {
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .padding(horizontal = Rahal.space.sm)
-            .clip(Rahal.shape.lg)
-            .background(Rahal.colors.brand.copy(alpha = 0.08f))
-            .padding(vertical = Rahal.space.md),
-        contentAlignment = Alignment.Center,
-    ) {
-        androidx.compose.foundation.Image(
-            painter = painterResource(com.rahalgo.design.R.drawable.intro_logo),
-            contentDescription = null,
-            modifier = Modifier.size(64.dp),
-        )
-    }
-    Spacer(Modifier.height(Rahal.space.sm))
 }
 
 /**
@@ -225,13 +204,14 @@ private fun DrawerRow(
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = Rahal.space.sm, vertical = 2.dp)
+            .padding(horizontal = Rahal.space.sm)
             .clip(Rahal.shape.md)
             .clickable(onClick = onClick)
-            .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.sm),
+            .heightIn(min = 44.dp)
+            .padding(horizontal = Rahal.space.sm),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconTile(icon = icon, tint = tint, size = 36.dp)
+        IconTile(icon = icon, tint = tint, size = 30.dp)
         Spacer(Modifier.size(Rahal.space.md))
         Text(
             text = label,
