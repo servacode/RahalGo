@@ -164,7 +164,7 @@ export {
   IconTile,
   StatTile,
   StatusChip,
-  type StatusTone as ChipTone,
+  type StatusTone as KitTone,
   type TabItem,
   type EntityStat,
 } from "./layout";
