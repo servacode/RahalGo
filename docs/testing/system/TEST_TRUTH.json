@@ -33,8 +33,8 @@
     "setting_defs": 281,
     "behaviour_settings": 236,
     "order_fields": 144,
-    "test_files": 801,
-    "test_funcs": 3077
+    "test_files": 804,
+    "test_funcs": 3106
   },
   "flows": [
     {
@@ -33825,6 +33825,180 @@
       "name": "TestTruthDocIsCurrent",
       "file": "internal/truthdoc/truthdoc_test.go",
       "package": "truthdoc_test",
+      "orphan": true
+    },
+    {
+      "name": "TestAnswerWords",
+      "file": "internal/waitems/parse_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestParseCaption",
+      "file": "internal/waitems/parse_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestToASCIIDigits",
+      "file": "internal/waitems/parse_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestPickSection",
+      "file": "internal/waitems/section_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestSectionAbandonedExpiresAndCancels",
+      "file": "internal/waitems/section_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestSectionAmbiguousNameReasks",
+      "file": "internal/waitems/section_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestSectionBatchSummaryShowsListOnce",
+      "file": "internal/waitems/section_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestSectionByNameAndAsciiDigit",
+      "file": "internal/waitems/section_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestSectionDuplicateUpdateSkipsQuestion",
+      "file": "internal/waitems/section_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestSectionIsAskedAndNumberCreatesItem",
+      "file": "internal/waitems/section_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestSectionManyIsCappedButNameStillWorks",
+      "file": "internal/waitems/section_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestSectionNoActiveSectionsFallsBackToPending",
+      "file": "internal/waitems/section_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestSectionSingleOptionNoQuestion",
+      "file": "internal/waitems/section_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestSectionStaffAnswersForStore",
+      "file": "internal/waitems/section_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestBatchSummary",
+      "file": "internal/waitems/service_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestDuplicateName",
+      "file": "internal/waitems/service_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestMissingName",
+      "file": "internal/waitems/service_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestMissingPriceThenReply",
+      "file": "internal/waitems/service_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStoreAsksOnceAndRemembers",
+      "file": "internal/waitems/service_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestMultiStoreBatchWaits",
+      "file": "internal/waitems/service_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestNotImage",
+      "file": "internal/waitems/service_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestOwnerCreatesItem",
+      "file": "internal/waitems/service_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestQuotedReplyMatchesPhoto",
+      "file": "internal/waitems/service_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestRateLimit",
+      "file": "internal/waitems/service_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestRedeliveredMessageIgnored",
+      "file": "internal/waitems/service_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestSanityConfirm",
+      "file": "internal/waitems/service_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestStaffCreatesItem",
+      "file": "internal/waitems/service_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestStrangerIgnored",
+      "file": "internal/waitems/service_test.go",
+      "package": "waitems",
+      "orphan": true
+    },
+    {
+      "name": "TestUSDStore",
+      "file": "internal/waitems/service_test.go",
+      "package": "waitems",
       "orphan": true
     },
     {
