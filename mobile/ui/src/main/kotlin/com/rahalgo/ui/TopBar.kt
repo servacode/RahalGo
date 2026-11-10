@@ -29,6 +29,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 
 /** **أدنى هدف لمس** — ومكانُ زرّ القائمة إن غاب بمقاسه. */
@@ -215,8 +217,13 @@ fun TopBar(
                     modifier = Modifier.size(20.dp),
                 )
                 Spacer(Modifier.size(Rahal.space.sm))
+                // **ضيقٌ؟ الاسمُ وحدَه (تدقيق D2، ٢٠٢٦-١١-١١)**: على ٣٦٠ نقطةً وخطٍّ مكبَّر كانت
+                // «التوصيل إلى» تأكل الزرَّ فتصير «التو…». **فإذا ضاق الشريطُ سقط السطرُ
+                // الصغيرُ وبقي الاسمُ على سطرٍ واحد** — والدبّوسُ يقول إنّه عنوانُ توصيل.
+                val tight = LocalConfiguration.current.screenWidthDp < 400 ||
+                    LocalDensity.current.fontScale > 1.15f
                 Column(Modifier.weight(1f)) {
-                    Text(
+                    if (!tight) Text(
                         text = stringResource(R.string.top_deliver_to),
                         color = Rahal.colors.brand,
                         style = MaterialTheme.typography.labelSmall,

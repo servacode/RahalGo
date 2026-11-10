@@ -286,6 +286,8 @@ export interface OrderSection {
 }
 
 export interface MyOrder {
+  /** **اسمُ المتجر** — لا يرسله المحرّكُ للزبون اليوم (خارجَ مسموحاته)؛ جاهزٌ إن سُمح به (٢٠٢٦-١١-١١). */
+  merchant_name?: string | null;
   /** أقسامُ الطلب المشترك — غائبٌ في طلب المحلّ الواحد فلا يتغيّر شيء. */
   sections?: OrderSection[] | null;
   /** **إعفاءُ عرض التوصيل المجانيّ** — و`delivery_fee` بعده (٢٠٢٦-١٠-٢٦). */

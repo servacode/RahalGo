@@ -287,6 +287,7 @@
     <string name="addr_sheet_failed">تعذّر جلب عناوينك — اضغط هنا لإعادة المحاولة</string>
     <string name="addr_sheet_empty_hint">ابدأ بإضافة عنوانك الأول لتتمكن من الطلب بسرعة وسهولة</string>
     <string name="addr_sheet_add">+  إضافة عنوان جديد</string>
+    <string name="addr_selected">العنوان المختار</string>
     <string name="addr_card_none">اضغط لاختيار عنوان أو إضافة عنوان جديد</string>
     <string name="top_rating">تقييمك</string>
     <string name="top_rating_none">لا تقييم بعد</string>

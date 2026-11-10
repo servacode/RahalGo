@@ -164,14 +164,14 @@ fun Stages(
     //
     // **وإن لم يسع مجموعُ الأسماء العرضَ صغُر الخطُّ قليلاً** (`StageScales`) —
     // من توكن `labelSmall` نفسِه لا رقمٍ جديد. **والقياسُ بالخطّ الذي يُرسم.**
-    val baseStyle = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
+    val baseStyle = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
     val measurer = rememberTextMeasurer()
     val dens = LocalDensity.current
 
     BoxWithConstraints(modifier.fillMaxWidth().heightIn(min = RowH)) {
         val inset = NodeH.value / 2
         val fit = remember(labels, maxWidth, baseStyle) {
-            fitStageLabels(StageScales, maxWidth.value) { scale ->
+            fitStageLabels(StageScales.filter { baseStyle.fontSize.value * it >= 12f }.ifEmpty { listOf(1f) }, maxWidth.value) { scale ->
                 val style = baseStyle.copy(fontSize = baseStyle.fontSize * scale)
                 labels.map { label ->
                     with(dens) {

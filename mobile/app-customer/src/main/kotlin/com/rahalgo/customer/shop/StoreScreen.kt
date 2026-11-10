@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -223,7 +224,9 @@ internal fun StoreScreen(
         // **كان زرّاً بإطارٍ فوق الشعار** فيُقرأ زرّاً في نصّ الصفحة. **والسهمُ
         // مع كلمة «رجوع للتسوق» باقٍ** (ملاحظةُ المالك ٢٠٢٦-١٠-١٨: «زر واضح مع
         // ايقونة مناسبة») — **ومساحةُ لمسه ٤٨ لا أقلّ.**
-        Row(
+        // **رأسٌ واحدٌ لا اثنان (تدقيق D16، ٢٠٢٦-١١-١١)**: سهمُ الرجوع صار داخلَ بطاقة المتجر؛ وهذا
+        // الشريطُ المنفصلُ يبقى فقط أثناءَ التحميل أو الخطأ حيث لا بطاقةَ بعد.
+        if (page == null || vm.storeError.isNotEmpty()) Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .fillMaxWidth()
@@ -272,6 +275,21 @@ internal fun StoreScreen(
                         .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
                         .padding(Rahal.space.md),
                 ) {
+                    Box(
+                        Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .clickable(onClickLabel = stringResource(R.string.store_back), onClick = onBack),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            painter = painterResource(com.rahalgo.ui.R.drawable.ic_arrow_back),
+                            contentDescription = stringResource(R.string.store_back),
+                            tint = Rahal.colors.brand,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+                    Spacer(Modifier.width(Rahal.space.xs))
                     RemoteImage(
                         url = media(h.logoThumbUrl ?: h.logoUrl),
                         name = h.name,
@@ -303,6 +321,15 @@ internal fun StoreScreen(
                             fontWeight = if (h.emergencyClosed) FontWeight.Bold else FontWeight.Normal,
                             style = MaterialTheme.typography.labelMedium,
                         )
+                        // **زمنُ التحضير إن أرسله المحرّك (تدقيق D16)** — لا تقييمَ ولا غلافَ في ردّ المتجر
+                        // اليوم، ولا يُختلَق حقل.
+                        if (h.prepMinutes > 0 && !h.emergencyClosed) {
+                            Text(
+                                text = stringResource(R.string.store_prep, com.rahalgo.ui.minutes(h.prepMinutes.toLong())),
+                                color = Rahal.colors.inkMuted,
+                                style = MaterialTheme.typography.labelMedium,
+                            )
+                        }
                     }
                 }
                 if (!h.openNow) {
@@ -353,13 +380,9 @@ internal fun StoreScreen(
                         null
                     },
                     singleLine = true,
-                    shape = Rahal.shape.md,
-                    colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
-                        unfocusedContainerColor = Rahal.colors.field,
-                        focusedContainerColor = Rahal.colors.field,
-                        unfocusedBorderColor = androidx.compose.ui.graphics.Color.Transparent,
-                    ),
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = Rahal.space.md),
+                    // **بنمط حقل الرئيسيّة نفسِه (تدقيق D16)**: دائريٌّ بحدٍّ عاديّ — لا مستطيلٌ رماديٌّ آخر.
+                    shape = Rahal.shape.pill,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp),
                 )
                 if (list.query.isBlank()) {
                     Spacer(Modifier.height(Rahal.space.sm))

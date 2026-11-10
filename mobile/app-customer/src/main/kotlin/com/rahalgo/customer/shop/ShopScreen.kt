@@ -27,6 +27,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.ui.layout.layout
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
@@ -346,7 +348,6 @@ fun ShopScreen(
     // طريقتُه الوحيدةُ ليرى الجديد.**
     Refreshable(refreshing = vm.refreshing, onRefresh = vm::refresh) {
     Box(Modifier.fillMaxSize()) {
-    Column(Modifier.fillMaxSize()) {
         // **والبحثُ فوق الأقسام** — لمن يعرف ما يريد، **ولا ينزل تحتها
         // فيُبحث عنه.**
         // ══════════════════════════════════════════════════════════════
@@ -387,6 +388,28 @@ fun ShopScreen(
             }
         }
 
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(ShopCols),
+        modifier = Modifier.fillMaxSize(),
+        // **ذيلٌ يفسح لقرص الحديث** — والقرصُ يطفو فوق المحتوى فلا يزيحه، **وبطاقةٌ
+        // نصفُها تحت زرٍّ تُقرأ عطباً.**
+        contentPadding = PaddingValues(
+            start = 12.dp, end = 12.dp,
+            bottom = 16.dp + com.rahalgo.ui.LocalChatFabInset.current,
+        ),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+    // ══════════════════════════════════════════════════════════════════
+    // **الرأسُ يمشي مع الشبكة** (قرارُ المالك ٢٠٢٦-١١-١١، تدقيق D1)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **كان ثابتاً فوق الشبكة يأكل نحو نصف الشاشة** (وسبعين بالمئة على ٣٦٠ بخطٍّ
+    // ١٫٣) فلا يبقى للأصناف إلّا شريطٌ. **والآن عنصرٌ بعرض الشبكة كلِّها في
+    // أعلاها** يمرّ مع التمرير. (ولم يُثبَّت البحثُ والأقسام: لا `stickyHeader`
+    // في شبكة Compose.) **وحشوةُ الشبكة الجانبيّةُ تُلغى عنه** كي لا يضيق.
+    item(key = "home-head", span = { GridItemSpan(maxLineSpan) }) {
+    Column(Modifier.bleed(12.dp)) {
         // ══════════════════════════════════════════════════════════════
         // **سلايدرٌ ثمّ «متاجر مميّزة» ثمّ البحث** (قرارُ المالك ٢٠٢٦-١٠-١٨)
         // ══════════════════════════════════════════════════════════════
@@ -479,15 +502,23 @@ fun ShopScreen(
 
             SectionRail(vm.visibleSections, vm.pick, media, vm::openSection)
         }
+    }
+    }
 
         when {
             vm.busy && vm.items.isEmpty() ->
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    RahalLoader()
+                item(key = "home-state", span = { GridItemSpan(maxLineSpan) }) {
+                    Box(Modifier.fillMaxWidth().heightIn(min = 280.dp), contentAlignment = Alignment.Center) {
+                        RahalLoader()
+                    }
                 }
 
             vm.error.isNotEmpty() && vm.items.isEmpty() ->
-                LoadState(loading = false, error = vm.error, onRetry = vm::load)
+                item(key = "home-state", span = { GridItemSpan(maxLineSpan) }) {
+                    Box(Modifier.fillMaxWidth().heightIn(min = 280.dp)) {
+                        LoadState(loading = false, error = vm.error, onRetry = vm::load)
+                    }
+                }
 
             // ══════════════════════════════════════════════════════
             // **وسوقٌ فارغةٌ غيرُ قسمٍ فارغ** (٢٠٢٦-٠٩-١٣)
@@ -515,7 +546,7 @@ fun ShopScreen(
             // **وإعادةُ نداءٍ ناجحٍ تردّ جوابَه عينَه.** **وزرٌّ لا
             // يغيّر شيئاً يُضغط ثمّ يُفقَد الرجاءُ بالتطبيق.**
             // **والسوقُ الفارغةُ تُعرَض أقساماً** (٢٠٢٦-١٠-٠٦) — ولا تُطوى إلى رسالةٍ إلّا خارجَ التغطية.
-            (vm.sections.isEmpty() || (vm.marketEmpty && availability?.available == false)) && !vm.searching -> {
+            (vm.sections.isEmpty() || (vm.marketEmpty && availability?.available == false)) && !vm.searching -> item(key = "home-state", span = { GridItemSpan(maxLineSpan) }) { Box(Modifier.fillMaxWidth().heightIn(min = 280.dp)) {
                 // ══════════════════════════════════════════════════════
                 // **وسوقٌ فارغةٌ خارجَ التغطيةِ ليست «قريباً»** (`CUST-07-034`)
                 // ══════════════════════════════════════════════════════
@@ -553,63 +584,51 @@ fun ShopScreen(
                         onAction = null,
                     )
                 }
-            }
+            } }
 
-            vm.items.isEmpty() -> Empty(
-                text = stringResource(
-                    if (vm.searching) R.string.shop_no_results else R.string.shop_section_empty,
-                ),
-                hint = stringResource(
-                    if (vm.searching) R.string.shop_no_results_hint else R.string.shop_section_empty_hint,
-                ),
-                // **ولا زرَّ إعادةٍ على نجاحٍ بصفر** — **والخطأُ له
-                // حالُه فوق، وفيها الإعادةُ تنفع.**
-                actionLabel = "",
-                onAction = null,
-            )
-
-            else -> LazyVerticalGrid(
-                columns = GridCells.Fixed(ShopCols),
-                // ══════════════════════════════════════════════════════
-                // **وذيلٌ يفسح لقرص الحديث**
-                // ══════════════════════════════════════════════════════
-                //
-                // (رُئي في لقطة المتجر ٢٠٢٦-٠٨-٢٠: القرصُ الطافي يغطّي
-                //  آخرَ بطاقةٍ في الشبكة.)
-                //
-                // **والقرصُ يطفو فوق المحتوى فلا يزيحه** — **وبطاقةٌ
-                // نصفُها تحت زرٍّ تُقرأ عطباً**، ومن أرادها لم يبلغ
-                // زرَّ إضافتها.
-                //
-                // **والذيلُ في الحشوة لا في عنصرٍ فارغٍ آخرَ القائمة** —
-                // فيبقى التمريرُ ينتهي حيث ينتهي المحتوى.
-                contentPadding = PaddingValues(
-                    start = 12.dp, end = 12.dp, top = 12.dp,
-                    bottom = 16.dp + com.rahalgo.ui.LocalChatFabInset.current,
-                ),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                items(vm.items, key = { it.id }) { item ->
-                    ItemCard(
-                        item = item,
-                        media = media,
-                        liked = item.id in liked,
-                        onAdd = { addItem(item) },
-                        onOpen = { openItem(item) },
-                        onLike = { onLike(item) },
-                        // **واسمُ المتجر يفتح صفحتَه** (٢٠٢٦-١٠-١٨).
-                        onStore = StoreLink.target(item, vm.storeId)?.let { id -> { vm.openStore(id) } },
+            vm.items.isEmpty() -> item(key = "home-state", span = { GridItemSpan(maxLineSpan) }) {
+                Box(Modifier.fillMaxWidth().heightIn(min = 280.dp)) {
+                    Empty(
+                        text = stringResource(
+                            if (vm.searching) R.string.shop_no_results else R.string.shop_section_empty,
+                        ),
+                        hint = stringResource(
+                            if (vm.searching) R.string.shop_no_results_hint else R.string.shop_section_empty_hint,
+                        ),
+                        // **ولا زرَّ إعادةٍ على نجاحٍ بصفر** — **والخطأُ له
+                        // حالُه فوق، وفيها الإعادةُ تنفع.**
+                        actionLabel = "",
+                        onAction = null,
                     )
                 }
             }
+
+            else -> items(vm.items, key = { it.id }) { item ->
+                ItemCard(
+                    item = item,
+                    media = media,
+                    liked = item.id in liked,
+                    onAdd = { addItem(item) },
+                    onOpen = { openItem(item) },
+                    onLike = { onLike(item) },
+                    // **واسمُ المتجر يفتح صفحتَه** (٢٠٢٦-١٠-١٨).
+                    onStore = StoreLink.target(item, vm.storeId)?.let { id -> { vm.openStore(id) } },
+                )
+            }
         }
-
-    }
-
-
     }
     }
+    }
+}
+
+/**
+ * **يلغي الحشوةَ الجانبيّةَ لحاوية الشبكة عن عنصرٍ بعرضها كاملاً** (الرأسُ يمشي مع
+ * الشبكة، D1). **متناظرٌ فلا يتأثّر بالاتّجاه.**
+ */
+internal fun Modifier.bleed(side: androidx.compose.ui.unit.Dp): Modifier = this.layout { m, c ->
+    val extra = (side * 2).roundToPx()
+    val p = m.measure(c.copy(minWidth = c.maxWidth + extra, maxWidth = c.maxWidth + extra))
+    layout(c.maxWidth, p.height) { p.place(-side.roundToPx(), 0) }
 }
 
 /**
@@ -903,25 +922,30 @@ internal fun ItemCard(
                 //  بالمنتصف».) **والتعتيمُ وحدَه يُقرأ ظلَّ تصميم، والنصُّ وحدَه
                 // يضيع في الألوان — فاجتماعُهما هو ما يُرى من مترين.** **والخلصانُ
                 // كالمغلق** (قرارُ المالك ٢٠٢٦-١٠-٠٥).
+                // **وتعديل ٢٠٢٦-١١-١١ (تدقيق D6)**: كان التعتيمُ أسودَ بستّين بالمئة على الصورة
+                // كلِّها فتضيع. **والآن غشاءٌ فاتحٌ من لون السطح (يبقى الطعامُ مفهوماً في
+                // الثيمين) وشارةٌ صغيرةٌ في الزاوية تقول السبب** — والمفضّلةُ تمرّ من هنا.
                 if (closed) {
                     Box(
                         Modifier
                             .matchParentSize()
-                            // **وستّون بالمئة تُبقي الصورةَ مفهومةً وتُخمدها.**
-                            .background(Color.Black.copy(alpha = 0.6f)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = stringResource(
-                                if (item.sourceClosed) R.string.shop_closed_now else R.string.mn_unavailable,
-                            ),
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            textAlign = TextAlign.Center,
-                            style = MaterialTheme.typography.labelLarge,
-                            modifier = Modifier.padding(horizontal = Rahal.space.sm),
-                        )
-                    }
+                            .background(Rahal.colors.surface.copy(alpha = 0.55f)),
+                    )
+                    Text(
+                        text = stringResource(
+                            if (item.sourceClosed) R.string.shop_closed_badge else R.string.mn_unavailable,
+                        ),
+                        color = Rahal.colors.canvas,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1,
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(Rahal.space.xs)
+                            .clip(Rahal.shape.sm)
+                            .background(Rahal.colors.ink.copy(alpha = 0.88f))
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                    )
                 }
 
                 // **ونسبةُ الحسم فوق الصورة** — تُقرأ بلمحةٍ قبل أن يُقارَن الرقمان.
@@ -935,8 +959,32 @@ internal fun ItemCard(
             zoom?.let { com.rahalgo.ui.ImageViewer(url = it, onClose = { zoom = null }) }
 
             // ══════════════════════════════════════════════════════════
-            // **سطرٌ لاسم المتجر، وسطرٌ لزرّين مكتوبين** (قرارُ المالك ٢٠٢٦-١٠-٣٠)
+            // **واسمُ الصنف داخل البطاقة تحت الصورة، ١٤ ثخين** (قرارُ المالك ٢٠٢٦-١١-١١، D7)
             // ══════════════════════════════════════════════════════════
+            //
+            // **كان خارج الإطار بخطٍّ ١٢ فلا يُقرأ أنّه ابنُ البطاقة.** وصار سطران
+            // يصغر خطُّهما حتّى يسعا (لا قصَّ لحرف)، **واسمُ المتجر سطرٌ رماديٌّ ثانٍ.**
+            run {
+                val itemStyle = MaterialTheme.typography.bodyMedium.copy(
+                    color = Rahal.colors.ink,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                )
+                BasicText(
+                    text = item.name,
+                    style = itemStyle,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    autoSize = TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = 14.sp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 36.dp)
+                        .padding(horizontal = Rahal.space.sm, vertical = Rahal.space.xs)
+                        .then(if (onOpen != null) Modifier.clickable(onClick = onOpen) else Modifier),
+                )
+            }
+            // ══════════════════════════════════════════════════════════
+            // **سطرٌ رماديٌّ لاسم المتجر، وسطرٌ لزرّين مكتوبين** (قرارُ المالك ٢٠٢٦-١٠-٣٠)
             //
             // **كانت عدسةُ التكبير على الصورة تشوّهها، و«+» لا يفهمها الكلّ** —
             // فصار الزرّان كلمتين: «تكبير» (إطار) و«اطلب» (معبّى). **ولا «اطلب»
@@ -951,8 +999,8 @@ internal fun ItemCard(
                 val toStore = onStore?.takeIf { !item.merchantName.isNullOrBlank() && item.merchantId.isNotBlank() }
                 // **سطرٌ واحدٌ يصغر خطُّه حتّى يسع** (طلبُ المالك ٢٠٢٦-١٠-١٩) — لا «امبراطور الشاو…».
                 val nameStyle = MaterialTheme.typography.labelSmall.copy(
-                    // **والاسمُ الذي يُفتح يُلوَّن** — وإلّا لم يُعرف أنّه باب.
-                    color = if (toStore != null) Rahal.colors.brand else Rahal.colors.inkMuted,
+                    // **رماديٌّ دائماً (D7)** — وإن فُتحت به صفحةُ المتجر.
+                    color = Rahal.colors.inkMuted,
                 )
                 BasicText(
                     text = item.merchantName.orEmpty(),
@@ -1016,25 +1064,6 @@ internal fun ItemCard(
             }
         }
         Spacer(Modifier.height(5.dp))
-        // ══════════════════════════════════════════════════════════════
-        // **والاسمُ بالوسط تحت الإطار — ولا يُقصّ منه حرف** (ملاحظةُ المالك ٢٠٢٦-١٠-١٤)
-        // ══════════════════════════════════════════════════════════════
-        //
-        // **الاختصارُ بثلاث نقاط يقصّ النصَّ على حدوده**، وتجوال ينزل تحت السطر
-        // ويميل عن حافّته — فتختفي نقاطُ ما تحت السطر. **فلا قصّ**: سطران بالوسط.
-        Text(
-            text = item.name,
-            color = Rahal.colors.ink,
-            style = MaterialTheme.typography.bodySmall,
-            fontWeight = FontWeight.Medium,
-            maxLines = 2,
-            overflow = TextOverflow.Visible,
-            textAlign = TextAlign.Center,
-            modifier = Modifier
-                .fillMaxWidth()
-                .then(if (onOpen != null) Modifier.clickable(onClick = onOpen) else Modifier),
-        )
-
         // **والمشطوبُ وحدَه ينزل سطرا** — ولا يقع إلّا في المحسوم.
         item.priceBefore?.let {
             Text(

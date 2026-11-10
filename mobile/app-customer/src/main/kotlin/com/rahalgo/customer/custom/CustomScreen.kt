@@ -2,6 +2,10 @@ package com.rahalgo.customer.custom
 
 import android.app.Application
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
@@ -151,7 +155,12 @@ fun CustomScreen(
     Screen {
         // **«اطلب أي شيء…» هي العنوان، ولا «طلب خاص» فوقها** (قرارُ المالك ٢٠٢٦-١٠-٣٠) —
         // واسمُ التبويب تحت يبقى «طلب خاص».
-        ScreenTitle(stringResource(R.string.cst_heading))
+        // **عنوانٌ عاديّ بسطرٍ ثانويّ أصغر** (تدقيق D8، ٢٠٢٦-١١-١١): «طلب خاص» أو «أمانة» حسب الوضع،
+        // والجملةُ الطويلةُ تحته شرحاً — كعنوان السلّة والطلبات.
+        ScreenTitle(
+            stringResource(if (mode == "amanah") R.string.cst_title_amanah else com.rahalgo.ui.R.string.nav_custom_order),
+            stringResource(if (mode == "amanah") R.string.cst_heading_amanah else R.string.cst_heading),
+        )
 
         // ══════════════════════════════════════════════════════════════
         // **والإغلاقُ يُقال قبل أن يكتب لا بعد أن يُرسل** (تدقيقُ ٢٠٢٦-١٠-٢٧)
@@ -194,16 +203,21 @@ fun CustomScreen(
         // ونصف كيلو خبز» في سطرٍ واحدٍ لا يرى ما كتب.
         // **والمثالُ نصٌّ رماديٌّ داخلَ الحقل يزول بالكتابة** (قرارُ المالك ٢٠٢٦-١٠-٣٠) —
         // **والعنوانُ فوق الحقل لا داخلَه**: عنوانٌ داخلَه يُخفي المثالَ حتّى يُلمس.
-        Text(
-            stringResource(R.string.cst_what),
-            style = MaterialTheme.typography.labelLarge,
-        )
-        Spacer(Modifier.height(4.dp))
+        // **حقلٌ بعنوانٍ حقيقيّ (`label`) والمثالُ سطرٌ مساعدٌ تحته** (تدقيق D9، ٢٠٢٦-١١-١١) — لا
+        // مثالٌ وحيدٌ يزول بالكتابة؛ وللأمانة مثالُها لا مطعمٌ.
         OutlinedTextField(
             value = request,
             // **وبحدّ المحرّك** — انظر `TextLimits`.
             onValueChange = { request = TextLimits.fit(it, TextLimits.CUSTOM_REQUEST) },
-            placeholder = { Text(stringResource(R.string.cst_what_hint), color = Rahal.colors.inkMuted) },
+            label = { Text(stringResource(R.string.cst_what)) },
+            supportingText = {
+                Text(
+                    stringResource(if (mode == "amanah") R.string.cst_what_hint_amanah else R.string.cst_what_hint),
+                    color = Rahal.colors.inkMuted,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
+            },
             minLines = 3,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -278,7 +292,15 @@ fun CustomScreen(
         // المشتريات.** **وطريقةُ الدفع تُختار عند تأكيد العرض لا الآن.**
         // **والأجرةُ بطاقةٌ برقمٍ واضح** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧) — لا ثلاثةُ أسطرٍ رماديّة.
         Spacer(Modifier.height(12.dp))
-        com.rahalgo.ui.Card {
+        // **بلا ظلٍّ (تدقيق D9)**: بطاقةُ الأجرة خبرٌ لا زرّ — أرضٌ هادئةٌ وحدٌّ رفيع.
+        androidx.compose.foundation.layout.Column(
+            Modifier
+                .fillMaxWidth()
+                .clip(Rahal.shape.md)
+                .background(Rahal.colors.field)
+                .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
+                .padding(Rahal.space.md),
+        ) {
         if (Serving.customFeeAdminDefined) {
             val fee = Serving.customFeeFor(mode)
             // **وعرضُ التوصيل المجاني يُسقطها** (٢٠٢٦-١٠-٢٦) — مشطوبةً وسطرُ العرض تحتها.

@@ -42,6 +42,9 @@
     <string name="ord_goods">قيمة المشتريات</string>
     <string name="ord_delivery">التوصيل</string>
     <string name="ord_discount">الحسم</string>
+    <string name="ord_title_custom">طلب خاص</string>
+    <string name="ord_title_amanah">أمانة</string>
+    <string name="ord_title_fallback">طلبك</string>
     <string name="ord_total">الإجمالي</string>
     <string name="ord_total_syp">المجموع بالليرة</string>
     <string name="ord_goods_usd_cash_note">ثمن البضاعة بالدولار كاش للكابتن عند التسليم.</string>
@@ -97,6 +100,8 @@
 
     <!-- **عنوانُ شاشة الطلب الخاص** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — بدل «طلب خاص» فوقها. -->
     <string name="cst_heading">اطلب أي شيء من داخل المدينة ونحن نوصله إليك</string>
+    <string name="cst_heading_amanah">استلم أمانة من شخص ونوصلها إلى بابك</string>
+    <string name="cst_title_amanah">أمانة</string>
     <string name="cst_mode_purchase">مشتريات</string>
     <string name="cst_mode_amanah">أمانة</string>
     <string name="ord_goods_after_purchase">بعد الشراء</string>
@@ -116,7 +121,8 @@
       **المثالُ يُري ما يُطلب وما لا يُطلب** — ولا تعريفَ يُغني عنه.
       (قرارُ المالك ٢٠٢٦-٠٨-١٥.)
     -->
-    <string name="cst_what_hint">مثال: طلب من مطعم أو متجر معيّن · أمانة من شخص · أو أي شيء آخر</string>
+    <string name="cst_what_hint">مثال: وجبة من مطعم معيّن، أو أدوية من صيدلية، أو أي غرض آخر</string>
+    <string name="cst_what_hint_amanah">مثال: مفتاح أو ظرف أو كيس أغراض عند صاحب الأمانة</string>
     <string name="cst_notes">ملاحظات للسائق</string>
     <!-- **مفتاح الطلب الخاص من اللوحة** — إذا سكّرته الإدارة منقول قبل ما يكتب. -->
     <string name="cst_closed">الطلب الخاص متوقف حالياً — حاول لاحقاً</string>
@@ -307,6 +313,7 @@
     <string name="city_auto">تلقائيّاً حسب موقعي</string>
     <string name="city_auto_hint">من عنوانك المحفوظ أو موقع جهازك</string>
     <string name="shop_closed_now">المتجر مغلق حالياً</string>
+    <string name="shop_closed_badge">مغلق</string>
     <!-- **ما قبل الافتتاح** — حالٌ مقصودةٌ لا خطأ (PL، ٢٠٢٦-٠٩-١٦).
          **والعنوانُ في الحزمة والنصُّ من اللوحة**: العنوانُ ثابتُ
          حالٍ، والنصُّ يبدّله المالكُ بلا نشر. -->
@@ -330,6 +337,8 @@
     <string name="addrp_detail">العنوان التفصيلي</string>
     <string name="addrp_detail_hint">حي الثكنة، بناية الأمل، الطابق 2، جنب صيدلية الشفاء</string>
     <string name="addrp_live">شارك موقعي المباشر مع السائق أثناء الطلب</string>
+    <string name="addrp_live_on">مفعّل</string>
+    <string name="addrp_live_off">متوقف</string>
     <!-- **«ادعُ صديقاً» أوضح** (٢٠٢٦-١٠-٣٠). -->
     <string name="inv_drawer">ادعُ صديقاً — اربح %1$s</string>
     <string name="inv_home">ادعُ صديقك واربح %1$s</string>
@@ -351,6 +360,7 @@
     <!-- **متاجر مميّزة وصفحة المتجر** (قرارُ المالك ٢٠٢٦-١٠-١٨) — ألفاظُ الويب نفسُها. -->
     <string name="shop_featured_stores">متاجر مميّزة</string>
     <string name="store_back">رجوع للتسوق</string>
+    <string name="store_prep">التحضير نحو %1$s</string>
     <string name="store_open_24h">مفتوح 24 ساعة</string>
     <!-- **حرفا الصبح والمسا بالدوام** — كانوا مكتوبين جوّا الكود. -->
     <string name="clock_am">ص</string>

@@ -392,14 +392,17 @@ export default function CartPage() {
           </ul>
           </div>
           {/* **زرٌّ واضحٌ بأيقونة سلّة المهملات تحت الأصناف مباشرةً** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — لا رابطٌ نصّيّ. */}
-          <button
-            type="button"
-            onClick={() => setAskClear(true)}
-            className="flex w-fit items-center gap-2 rounded-control border border-danger px-4 py-2 text-sm font-bold text-danger transition-colors hover:bg-danger-tint"
-          >
-            <IconDelete size={16} />
-            {C.clear}
-          </button>
+          {/* **«إفراغ السلة» فعلٌ هادئ** (تدقيق D13): نصٌّ رماديٌّ لا زرٌّ أحمرُ مؤطَّر، ولا يظهر مع سطرٍ واحد (سلّةُ سطره تكفي). */}
+          {cart.lines.length + drinks.length > 1 && (
+            <button
+              type="button"
+              onClick={() => setAskClear(true)}
+              className="flex w-fit items-center gap-1.5 rounded-control px-2 py-1.5 text-sm text-ink-muted transition-colors hover:bg-row-hover hover:text-danger"
+            >
+              <IconDelete size={14} />
+              {C.clear}
+            </button>
+          )}
           {/* **وإفراغُ السلّة يُسأل قبله** — ضغطةٌ غلطٌ تطيّر سلّةً كاملة. */}
           <Confirm
             open={askClear}
@@ -707,43 +710,46 @@ function CartRow({
   onRemove: () => void;
   moreDisabled?: boolean;
 }) {
+  /* **سطرٌ واحدٌ: الاسمُ والخيارُ والسعرُ الأكبرُ في عمود، والعدّادُ بجانبه** (تدقيق D13، ٢٠٢٦-١١-١١) —
+     **ولا سلّةَ حذفٍ ثانية**: «−» نفسُه يصير سلّةً حمراءَ حين يبقى واحد. مرآةُ `LineControls` في التطبيق. */
   return (
     <div className="flex items-center gap-3">
       {media}
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
-        <div className="min-w-0 flex-1">{children}</div>
-        <div className="flex shrink-0 items-center gap-1">
-          <div className="flex items-center gap-0.5 rounded-control bg-field p-0.5">
-            <button
-              type="button"
-              aria-label={m.shop.item.minus}
-              onClick={onLess}
-              className="taparea flex h-8 w-8 items-center justify-center rounded-control hover:bg-row-hover"
-            >
-              <IconMinus size={14} />
-            </button>
-            <span className="min-w-6 text-center text-sm font-bold tabular-nums">{fmtNum(qty)}</span>
-            <button
-              type="button"
-              aria-label={m.shop.item.plus}
-              onClick={onMore}
-              disabled={moreDisabled}
-              className="taparea flex h-8 w-8 items-center justify-center rounded-control hover:bg-row-hover disabled:opacity-40"
-            >
-              <IconAdd size={14} />
-            </button>
-          </div>
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <div className="min-w-0">{children}</div>
+        <Money value={price} className="block whitespace-nowrap text-base font-bold tabular-nums text-accent-text" />
+      </div>
+      <div className="flex shrink-0 items-center gap-0.5 rounded-control bg-field p-0.5">
+        {qty <= 1 ? (
           <button
             type="button"
             aria-label={C.remove}
             onClick={onRemove}
-            className="taparea flex h-8 w-8 shrink-0 items-center justify-center rounded-control text-danger hover:bg-row-hover"
+            className="taparea flex h-8 w-8 items-center justify-center rounded-control text-danger hover:bg-row-hover"
           >
-            <IconDelete size={16} />
+            <IconDelete size={14} />
           </button>
-        </div>
+        ) : (
+          <button
+            type="button"
+            aria-label={m.shop.item.minus}
+            onClick={onLess}
+            className="taparea flex h-8 w-8 items-center justify-center rounded-control hover:bg-row-hover"
+          >
+            <IconMinus size={14} />
+          </button>
+        )}
+        <span className="min-w-6 text-center text-sm font-bold tabular-nums">{fmtNum(qty)}</span>
+        <button
+          type="button"
+          aria-label={m.shop.item.plus}
+          onClick={onMore}
+          disabled={moreDisabled}
+          className="taparea flex h-8 w-8 items-center justify-center rounded-control hover:bg-row-hover disabled:opacity-40"
+        >
+          <IconAdd size={14} />
+        </button>
       </div>
-      <Money value={price} className="block w-24 shrink-0 whitespace-nowrap text-end text-sm font-bold tabular-nums text-accent-text" />
     </div>
   );
 }
