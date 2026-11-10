@@ -2837,6 +2837,30 @@ class OrdersViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /**
+     * **الكابتن يسحب طلب التعديل المعلّق** (قرار المالك ٢٠٢٦-١١-١٠) — بيفك منع التسليم. وبعدها
+     * بيرجع يقرا الحالة (`withdrawn` ما بيبيّن شي).
+     */
+    fun withdrawEditRequest() {
+        val id = currentId() ?: return
+        val req = editRequest?.takeIf { editRequestOrder == id && it.status == "pending" } ?: return
+        if (detail.busy) return
+        detail = detail.copy(busy = true, error = "")
+        viewModelScope.launch {
+            try {
+                backend.driver.withdrawEditRequest(id, req.id)
+                editRequest = null
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                detail = detail.copy(busy = false, error = describe(e))
+                return@launch
+            }
+            detail = detail.copy(busy = false)
+            reload()
+        }
+    }
+
     /** **يقرأ آخر طلب تعديل للطلب المفتوح** — بالطلب العادي بين القبول والتسليم بس. */
     private suspend fun loadEditRequest() {
         val id = currentId() ?: return

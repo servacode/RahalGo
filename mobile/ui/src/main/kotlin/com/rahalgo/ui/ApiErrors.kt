@@ -567,6 +567,7 @@ private val CODES: Map<String, Int> = mapOf(
     "order_edit_closed" to R.string.err_order_edit_closed,
     "order_edit_after_pickup" to R.string.err_order_edit_after_pickup,
     "edit_request_stage" to R.string.err_edit_request_stage,
+    "edit_request_pending_deliver" to R.string.err_edit_request_pending_deliver,
     "edit_request_empty" to R.string.err_edit_request_empty,
     "edit_request_stale" to R.string.err_edit_request_stale,
     "edit_request_not_pending" to R.string.err_edit_request_not_pending,

@@ -329,6 +329,7 @@ data class TripActions(
     val askEditRequest: () -> Unit = {},
     val sendEditRequest: (EditDraft) -> Unit = {},
     val dismissEditRequest: () -> Unit = {},
+    val withdrawEditRequest: () -> Unit = {},
     /** **«إحضار»: ما دفعه بمكان الاستلام** — يصل المتجرَ ليوافق (قرارُ المالك ٢٠٢٦-١٠-١٦). */
     // **بعملة الطلب وبالوحدة الكبرى** (١٣٫٢٥ للدولار) — قرارُ المالك ٢٠٢٦-١٠-٢٠.
     // **والعملةُ لطلب الواتساب وحدَه** (٢٠٢٦-١١-٠٩) — وفارغةٌ تعني عملةَ الطلب كما هي.

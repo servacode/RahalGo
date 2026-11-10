@@ -8701,6 +8701,30 @@
     },
     {
       "method": "POST",
+      "path": "/api/v1/driver/orders/{id}/edit-request/withdraw",
+      "handler": "handleDriverWithdrawEditRequest",
+      "auth": true,
+      "roles": [
+        "driver"
+      ],
+      "request": [
+        {
+          "name": "request_id",
+          "type": "string"
+        }
+      ],
+      "response": [
+        {
+          "name": "withdrawn",
+          "type": "bool"
+        }
+      ],
+      "statuses": [
+        "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
       "path": "/api/v1/driver/orders/{id}/emergency",
       "handler": "handleDriverEmergency",
       "auth": true,

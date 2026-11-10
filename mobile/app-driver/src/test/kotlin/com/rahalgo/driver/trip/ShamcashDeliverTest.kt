@@ -44,4 +44,14 @@ class ShamcashDeliverTest {
             assertFalse("«$t» SYP", shamcashReady(true, false, t))
         }
     }
+
+    @Test
+    fun `syp above the amount due asks to confirm, equal or less does not`() {
+        assertTrue(shamcashExceedsDue(ShamcashPay("SYP", 30000.0), 25000))
+        assertFalse(shamcashExceedsDue(ShamcashPay("SYP", 25000.0), 25000))
+        assertFalse(shamcashExceedsDue(ShamcashPay("SYP", 10000.0), 25000))
+        // الدولار ما له مطلوب يُقارَن فيه، والنقد ما فيه مبلغ.
+        assertFalse(shamcashExceedsDue(ShamcashPay("USD", 999.0), 25000))
+        assertFalse(shamcashExceedsDue(null, 25000))
+    }
 }

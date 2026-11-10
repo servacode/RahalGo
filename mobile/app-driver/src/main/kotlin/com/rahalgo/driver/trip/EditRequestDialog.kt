@@ -52,6 +52,9 @@ internal fun EditRequestDialog(
     var addQty by remember { mutableStateOf("1") }
     var addPrice by remember { mutableStateOf("") }
     val lines = editableLines(order)
+    // **طلب بأكثر من متجر ⇒ الكابتن يختار متجر الصنف** (الافتراضي: الأول)، وغيره ما بيظهر اختيار.
+    val stores = editStoreChoices(order)
+    var addStore by remember(order.id) { mutableStateOf(stores.firstOrNull()?.merchantId) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.edit_req_title), fontWeight = FontWeight.Bold) },
@@ -104,7 +107,11 @@ internal fun EditRequestDialog(
                 for ((i, a) in draft.adds.withIndex()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            stringResource(R.string.edit_req_added_line, a.name, a.qty, money(a.price)),
+                            if (a.merchantName.isBlank()) {
+                                stringResource(R.string.edit_req_added_line, a.name, a.qty, money(a.price))
+                            } else {
+                                stringResource(R.string.edit_req_added_line_store, a.name, a.qty, money(a.price), a.merchantName)
+                            },
                             modifier = Modifier.weight(1f),
                         )
                         RahalTextButton(onClick = {
@@ -120,6 +127,18 @@ internal fun EditRequestDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
+                if (stores.isNotEmpty()) {
+                    Text(stringResource(R.string.edit_req_add_store), color = Rahal.colors.inkMuted)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        for (st in stores) {
+                            FilterChip(
+                                selected = addStore == st.merchantId,
+                                onClick = { addStore = st.merchantId },
+                                label = { Text(st.name) },
+                            )
+                        }
+                    }
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     OutlinedTextField(
                         value = addQty,
@@ -142,7 +161,10 @@ internal fun EditRequestDialog(
                 val p = addPrice.toLongOrNull() ?: 0L
                 RahalTextButton(
                     onClick = {
-                        draft = draft.copy(adds = draft.adds + EditAddDraft(addName.trim(), q, p))
+                        val st = stores.firstOrNull { it.merchantId == addStore }
+                        draft = draft.copy(
+                            adds = draft.adds + EditAddDraft(addName.trim(), q, p, st?.merchantId, st?.name.orEmpty()),
+                        )
                         addName = ""
                         addQty = "1"
                         addPrice = ""

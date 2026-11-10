@@ -61,28 +61,32 @@ func ValidCurrency(c string) bool { return c == CurrencySYP || c == CurrencyUSD 
 
 // Movement **حركة بالسجلّ** كما بتنعرض.
 type Movement struct {
-	ID              string     `json:"id"`
-	Kind            string     `json:"kind"`
-	OrderID         *string    `json:"order_id"`
-	OrderNumber     *int64     `json:"order_number"`
-	DriverID        *string    `json:"driver_id"`
-	DriverName      *string    `json:"driver_name"`
-	Currency        string     `json:"currency"`
-	Amount          int64      `json:"amount"`
-	OccurredAt      time.Time  `json:"occurred_at"`
-	Note            string     `json:"note"`
-	Status          string     `json:"status"`
-	NotArrivedAt    *time.Time `json:"not_arrived_at"`
-	NotArrivedBy    *string    `json:"not_arrived_by_name"`
-	CompensatedAt   *time.Time `json:"compensated_at"`
-	CompensatedBy   *string    `json:"compensated_by_name"`
-	VoidedAt        *time.Time `json:"voided_at"`
-	VoidedBy        *string    `json:"voided_by_name"`
-	VoidReason      string     `json:"void_reason"`
-	CreatedByName   *string    `json:"created_by_name"`
-	CreatedAt       time.Time  `json:"created_at"`
-	BeforeOpening   bool       `json:"before_opening"`
-	CountsInBalance bool       `json:"counts_in_balance"`
+	ID            string     `json:"id"`
+	Kind          string     `json:"kind"`
+	OrderID       *string    `json:"order_id"`
+	OrderNumber   *int64     `json:"order_number"`
+	DriverID      *string    `json:"driver_id"`
+	DriverName    *string    `json:"driver_name"`
+	Currency      string     `json:"currency"`
+	Amount        int64      `json:"amount"`
+	OccurredAt    time.Time  `json:"occurred_at"`
+	Note          string     `json:"note"`
+	Status        string     `json:"status"`
+	NotArrivedAt  *time.Time `json:"not_arrived_at"`
+	NotArrivedBy  *string    `json:"not_arrived_by_name"`
+	CompensatedAt *time.Time `json:"compensated_at"`
+	CompensatedBy *string    `json:"compensated_by_name"`
+	VoidedAt      *time.Time `json:"voided_at"`
+	VoidedBy      *string    `json:"voided_by_name"`
+	VoidReason    string     `json:"void_reason"`
+	CreatedByName *string    `json:"created_by_name"`
+	CreatedAt     time.Time  `json:"created_at"`
+	// ExceedsDue **السائق كتب مبلغاً أكبر من المطلوب من الزبون** (قرار المالك ٢٠٢٦-١١-١٠) — مقبولة ومعلَّمة
+	// واللوحة بتظلّلها. `DueAtEntry` المطلوب من الزبون وقتها (ليرة) للعرض.
+	ExceedsDue      bool   `json:"exceeds_due"`
+	DueAtEntry      *int64 `json:"due_at_entry"`
+	BeforeOpening   bool   `json:"before_opening"`
+	CountsInBalance bool   `json:"counts_in_balance"`
 }
 
 // RecordTransfer **السائق قال «انقبض شام كاش» عند التسليم** — جوّا معاملة الانتقال نفسها.
@@ -92,9 +96,14 @@ func RecordTransfer(ctx context.Context, q dbtx.Querier, orderID, driverID, curr
 	if !ValidCurrency(currency) || amount <= 0 {
 		return errors.New("shamcash: bad transfer")
 	}
+	// **مبلغ أكبر من المطلوب من الزبون ⇒ مقبول ومعلَّم** (بالليرة وحدها: الدولار ما إله مطلوب يُقارَن فيه).
 	_, err := q.Exec(ctx, `
-		INSERT INTO shamcash_movements (kind, order_id, driver_id, currency, amount, created_by)
-		VALUES ('driver_transfer', $1, $2, $3, $4, $2)
+		INSERT INTO shamcash_movements (kind, order_id, driver_id, currency, amount, created_by,
+		                                exceeds_due, due_at_entry)
+		SELECT 'driver_transfer', o.id, $2::uuid, $3::text, $4::bigint, $2::uuid,
+		       ($3::text = 'SYP' AND $4::bigint > o.cash_due),
+		       CASE WHEN $3::text = 'SYP' THEN o.cash_due END
+		  FROM orders o WHERE o.id = $1::uuid
 		ON CONFLICT (order_id) WHERE kind = 'driver_transfer' DO NOTHING`,
 		orderID, driverID, currency, amount)
 	return err
@@ -149,7 +158,7 @@ const movementCols = `
 	m.currency, m.amount, m.occurred_at, m.note, m.status,
 	m.not_arrived_at, na.full_name, m.compensated_at, cp.full_name, m.voided_at, vd.full_name, m.void_reason,
 	cb.full_name, m.created_at,
-	(op.as_of IS NOT NULL AND m.occurred_at < op.as_of)`
+	(op.as_of IS NOT NULL AND m.occurred_at < op.as_of), m.exceeds_due, m.due_at_entry`
 
 const movementFrom = `
 	FROM shamcash_movements m
@@ -166,7 +175,7 @@ func scanMovement(row pgx.Row) (Movement, error) {
 	err := row.Scan(&m.ID, &m.Kind, &m.OrderID, &m.OrderNumber, &m.DriverID, &m.DriverName,
 		&m.Currency, &m.Amount, &m.OccurredAt, &m.Note, &m.Status,
 		&m.NotArrivedAt, &m.NotArrivedBy, &m.CompensatedAt, &m.CompensatedBy, &m.VoidedAt, &m.VoidedBy,
-		&m.VoidReason, &m.CreatedByName, &m.CreatedAt, &m.BeforeOpening)
+		&m.VoidReason, &m.CreatedByName, &m.CreatedAt, &m.BeforeOpening, &m.ExceedsDue, &m.DueAtEntry)
 	m.CountsInBalance = m.VoidedAt == nil && m.Status == StatusClaimed && !m.BeforeOpening
 	return m, err
 }

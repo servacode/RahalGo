@@ -20,7 +20,14 @@ enum class EditLineAction(val wire: String) { MISSING("missing"), CANCELLED("can
 
 data class EditLineDraft(val action: EditLineAction, val remove: Int)
 
-data class EditAddDraft(val name: String, val qty: Int, val price: Long)
+/** `merchantId`/`merchantName`: المتجر اللي جاب منه الصنف — لطلب بأكثر من متجر وحده، وفاضي: الرئيسي. */
+data class EditAddDraft(
+    val name: String,
+    val qty: Int,
+    val price: Long,
+    val merchantId: String? = null,
+    val merchantName: String = "",
+)
 
 data class EditDraft(
     /** معرّف السطر ← فعله وكم قطعة بتنشال. */
@@ -72,9 +79,24 @@ fun editDraftValid(order: DriverOrder, draft: EditDraft): Boolean {
 /** **الجسم للمحرّك.** */
 fun EditDraft.toBody(): DriverApi.EditRequestBody = DriverApi.EditRequestBody(
     lines = lines.map { (id, d) -> DriverApi.EditLineBody(itemId = id, action = d.action.wire, qty = d.remove) },
-    adds = adds.map { DriverApi.EditAddBody(name = it.name.trim(), qty = it.qty, price = it.price) },
+    adds = adds.map {
+        DriverApi.EditAddBody(name = it.name.trim(), qty = it.qty, price = it.price, merchantId = it.merchantId)
+    },
     note = note.trim(),
 )
+
+/**
+ * **متاجر الطلب اللي بيقدر الكابتن يختار منها** — **بس لطلب بأكثر من متجر** (غير هيك فاضية ولا بيظهر اختيار).
+ * المحطات المشالة (`removed`) ما بتنعدّ.
+ */
+fun editStoreChoices(order: DriverOrder): List<com.rahalgo.shared.model.PickupStop> {
+    val live = order.stops.orEmpty().filter { it.status != "removed" && it.merchantId.isNotBlank() }
+    return if (live.size > 1) live else emptyList()
+}
+
+/** **طلب تعديل معلّق ⇒ ما في تسليم** (قرار المالك ٢٠٢٦-١١-١٠) — المحرّك بيمنعه أصلاً. */
+fun editRequestBlocksDelivery(order: DriverOrder, req: DriverEditRequest?): Boolean =
+    editRequestBadge(order, req) == EditRequestBadge.PENDING
 
 /** **حالة الطلب بالبطاقة** — معلّق، أو رفضه المكتب، أو صار قديم؛ وغيره ما بيبيّن. */
 enum class EditRequestBadge { NONE, PENDING, REJECTED, STALE }

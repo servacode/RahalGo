@@ -1141,6 +1141,7 @@ private fun SignedIn(theme: ThemeState, onLogout: () -> Unit) {
                         askEditRequest = orders::askEditRequest,
                         sendEditRequest = orders::sendEditRequest,
                         dismissEditRequest = orders::dismissEditRequest,
+                        withdrawEditRequest = orders::withdrawEditRequest,
                         fetchAmount = orders::fetchAmount,
                         dismissAgree = orders::dismissAgree,
                         pickStop = orders::open,

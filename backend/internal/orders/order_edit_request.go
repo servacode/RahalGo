@@ -52,6 +52,8 @@ const (
 	EditRequestSuperseded = "superseded"
 	EditRequestStale      = "stale"
 	EditRequestClosed     = "closed"
+	// EditRequestWithdrawn **الكابتن سحب طلبه بنفسه.**
+	EditRequestWithdrawn = "withdrawn"
 )
 
 var (
@@ -70,6 +72,10 @@ var (
 	// ErrEditRequestRejectReason **سبب الرفض إجباري** — الكابتن لازم يعرف ليش.
 	ErrEditRequestRejectReason = httpx.NewError(http.StatusBadRequest,
 		"edit_request_reject_reason", "errors.edit_request_reject_reason")
+	// ErrEditRequestPendingDeliver **ما بيتسلّم الطلب وطلب تعديل الكابتن بانتظار المكتب** (قرار المالك
+	// ٢٠٢٦-١١-١٠) — الزبون لازم يدفع السعر الحقيقي الأخير، فالمكتب يقرّر أو الكابتن يسحب طلبه.
+	ErrEditRequestPendingDeliver = httpx.NewError(http.StatusConflict,
+		"edit_request_pending_deliver", "errors.edit_request_pending_deliver")
 )
 
 // editRequestStages **من قبول الكابتن لحد التسليم.**
@@ -85,10 +91,15 @@ type EditRequestLine struct {
 }
 
 // EditRequestAdd **صنف انزاد** — اسمه وكمّيته وسعر الوحدة بالليرة.
+//
+// `Price` **سعرُ المتجر** (اللي دفعه الكابتن) — وسعرُ الزبون = سعرُه + هامشُ المنصّة كأيّ صنف يُطلب.
+// `MerchantID` **المتجر اللي جاب منه الصنف** — وفاضي: متجر الطلب الرئيسي. (طلب بأكثر من متجر: الكابتن بيختار.)
 type EditRequestAdd struct {
-	Name  string `json:"name"`
-	Qty   int    `json:"qty"`
-	Price int64  `json:"price"`
+	Name         string `json:"name"`
+	Qty          int    `json:"qty"`
+	Price        int64  `json:"price"`
+	MerchantID   string `json:"merchant_id,omitempty"`
+	MerchantName string `json:"merchant_name,omitempty"`
 }
 
 // DriverEditInput **ما يبعته الكابتن.**
@@ -184,8 +195,10 @@ func editRequestToEdit(lines []editRequestLineRow, adds []EditRequestAdd, note s
 		req.Lines = append(req.Lines, EditLine{ItemID: l.ItemID, Qty: l.OldQty - l.Remove, StoreRefunded: &refunded})
 	}
 	for _, a := range adds {
-		req.Custom = append(req.Custom, EditCustom{Name: a.Name, Qty: a.Qty, Price: a.Price})
+		req.Custom = append(req.Custom, EditCustom{Name: a.Name, Qty: a.Qty, Price: a.Price,
+			MerchantID: a.MerchantID, PlatformMargin: true})
 	}
+	req.byDriverRequest = true
 	return req
 }
 
@@ -248,10 +261,11 @@ func (s *Service) PrepareOrderEdit(ctx context.Context, orderID, driverID string
 	if len(in.Lines) > 50 || len(in.Adds) > 20 {
 		return nil, badEditInput()
 	}
-	var kind, status string
+	var kind, status, mainMerchant string
 	var driver *string
-	err := s.db.QueryRow(ctx, `SELECT kind, status, driver_id::text FROM orders WHERE id = $1`, orderID).
-		Scan(&kind, &status, &driver)
+	err := s.db.QueryRow(ctx, `SELECT kind, status, driver_id::text, COALESCE(merchant_id::text, '')
+		FROM orders WHERE id = $1`, orderID).
+		Scan(&kind, &status, &driver, &mainMerchant)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.ErrNotFound
 	}
@@ -300,11 +314,31 @@ func (s *Service) PrepareOrderEdit(ctx context.Context, orderID, driverID string
 		lines = append(lines, row)
 	}
 	adds := make([]EditRequestAdd, 0, len(in.Adds))
+	var stores map[string]bool
 	for _, a := range in.Adds {
 		a.Name = strings.TrimSpace(a.Name)
+		a.MerchantName = ""
 		if a.Name == "" || utf8.RuneCountInString(a.Name) > 120 || a.Qty < 1 || a.Qty > 50 ||
 			a.Price < 1 || a.Price > 1_000_000_000 {
 			return nil, badEditInput()
+		}
+		// **المتجر اللي جاب منه الصنف**: من متاجر الطلب بس، واسمه بيتحفظ للعرض. وفاضي ⇒ الرئيسي.
+		if a.MerchantID != "" {
+			if _, err := uuid.Parse(a.MerchantID); err != nil {
+				return nil, badEditInput()
+			}
+			if stores == nil {
+				if stores, err = orderStoreSet(ctx, s.db, orderID, mainMerchant); err != nil {
+					return nil, err
+				}
+			}
+			if !stores[a.MerchantID] {
+				return nil, ErrOrderEditStore
+			}
+			if err := s.db.QueryRow(ctx, `SELECT name FROM merchants WHERE id = $1::uuid`, a.MerchantID).
+				Scan(&a.MerchantName); err != nil {
+				return nil, err
+			}
 		}
 		adds = append(adds, a)
 	}
@@ -392,7 +426,11 @@ func editRequestSummary(lines []editRequestLineRow, adds []EditRequestAdd) strin
 		parts = append(parts, fmt.Sprintf("%s: %s ×%d", word, l.Name, l.Remove))
 	}
 	for _, a := range adds {
-		parts = append(parts, fmt.Sprintf("انزاد: %s ×%d بسعر %s", a.Name, a.Qty, groupDigits(a.Price)))
+		part := fmt.Sprintf("انزاد: %s ×%d بسعر %s", a.Name, a.Qty, groupDigits(a.Price))
+		if a.MerchantName != "" {
+			part += " من " + a.MerchantName
+		}
+		parts = append(parts, part)
 	}
 	return strings.Join(parts, "، ")
 }
@@ -635,6 +673,76 @@ func (s *Service) RejectEditRequest(ctx context.Context, actorID, orderID, reque
 		return err
 	}
 	s.notifyEditRequestDecision(ctx, orderID, driverID, "السبب: "+reason)
+	if o, err := s.GetByID(ctx, orderID); err == nil {
+		s.publishOrder(o)
+	}
+	return nil
+}
+
+// HasPendingEditRequest **في طلب تعديل من الكابتن بانتظار المكتب؟** — بيمنع التسليم (`ErrEditRequestPendingDeliver`).
+func (s *Service) HasPendingEditRequest(ctx context.Context, orderID string) (bool, error) {
+	if _, err := uuid.Parse(orderID); err != nil {
+		return false, nil
+	}
+	var pending bool
+	err := s.db.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM order_edit_requests
+		WHERE order_id = $1 AND status = 'pending')`, orderID).Scan(&pending)
+	return pending, err
+}
+
+// WithdrawEditRequest **الكابتن يسحب طلبه المعلّق بنفسه** — بيرجع يقدر يسلّم أو يبعت غيره. والطلب
+// ما بيتغيّر. `hook` أثره بالمعاملة نفسها (التدقيق).
+func (s *Service) WithdrawEditRequest(ctx context.Context, driverID, orderID, requestID string,
+	hook func(context.Context, dbtx.Querier) error) error {
+	if _, err := uuid.Parse(requestID); err != nil {
+		return httpx.ErrNotFound
+	}
+	if _, err := uuid.Parse(orderID); err != nil {
+		return httpx.ErrNotFound
+	}
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	var status string
+	err = tx.QueryRow(ctx, `
+		UPDATE order_edit_requests r SET status = 'withdrawn', decided_at = now()
+		  FROM orders o
+		 WHERE r.id = $1 AND r.order_id = $2 AND r.driver_id = $3 AND r.status = 'pending' AND o.id = r.order_id
+		RETURNING o.status`, requestID, orderID, driverID).Scan(&status)
+	if errors.Is(err, pgx.ErrNoRows) {
+		var cur string
+		err := tx.QueryRow(ctx, `SELECT status FROM order_edit_requests
+			WHERE id = $1 AND order_id = $2 AND driver_id = $3`, requestID, orderID, driverID).Scan(&cur)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return httpx.ErrNotFound
+		}
+		if err != nil {
+			return err
+		}
+		// **وإعادة نداء ضاع ردّه** — سُحب أصلاً فهو نجاح.
+		if cur == EditRequestWithdrawn {
+			return nil
+		}
+		return ErrEditRequestNotPending
+	}
+	if err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO order_events (order_id, from_status, to_status, actor_id, note, driver_id)
+		VALUES ($1, $2, $2, $3, $4, $3)`, orderID, status, driverID, "الكابتن سحب طلب التعديل"); err != nil {
+		return err
+	}
+	if hook != nil {
+		if err := hook(ctx, tx); err != nil {
+			return err
+		}
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return err
+	}
 	if o, err := s.GetByID(ctx, orderID); err == nil {
 		s.publishOrder(o)
 	}

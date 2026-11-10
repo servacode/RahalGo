@@ -31,6 +31,8 @@ interface ReqAdd {
   name: string;
   qty: number;
   price: number;
+  /** المتجر اللي جاب منه الكابتن الصنف — لطلب بأكثر من متجر وحده. */
+  merchant_name?: string;
 }
 interface EditRequestView {
   id: string;
@@ -113,7 +115,9 @@ export function EditRequestBox({ orderId, onChanged }: { orderId: string; onChan
           <li key={`add-${i}`}>
             <span className="font-medium">{R.added}</span>
             {" — "}
-            {fill(R.addLine, { name: a.name, qty: a.qty, price: fmtMoney(a.price) })}
+            {a.merchant_name
+              ? fill(R.addLineStore, { name: a.name, qty: a.qty, price: fmtMoney(a.price), store: a.merchant_name })
+              : fill(R.addLine, { name: a.name, qty: a.qty, price: fmtMoney(a.price) })}
           </li>
         ))}
       </ul>
