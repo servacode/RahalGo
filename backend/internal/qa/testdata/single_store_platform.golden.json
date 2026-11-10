@@ -277,6 +277,7 @@
       "to_store_eta_sec": null,
       "total": 2400,
       "wallet_paid": 0,
+      "wallet_scope": "none",
       "zone_id": "\u003cuuid\u003e",
       "zone_name": "\u003cvolatile\u003e"
     },
@@ -448,6 +449,7 @@
       "to_store_eta_sec": null,
       "total": 2400,
       "wallet_paid": 0,
+      "wallet_scope": "none",
       "zone_id": "\u003cuuid\u003e",
       "zone_name": "\u003cvolatile\u003e"
     },
@@ -552,6 +554,7 @@
       "to_door_eta_sec": null,
       "to_store_eta_sec": null,
       "total": 2400,
+      "wallet_scope": "none",
       "zone_id": "\u003cuuid\u003e",
       "zone_name": "\u003cvolatile\u003e"
     },
@@ -651,6 +654,7 @@
       "to_door_eta_sec": null,
       "to_store_eta_sec": null,
       "total": 2400,
+      "wallet_scope": "none",
       "zone_id": "\u003cuuid\u003e",
       "zone_name": "\u003cvolatile\u003e"
     },
@@ -750,6 +754,7 @@
       "to_door_eta_sec": null,
       "to_store_eta_sec": null,
       "total": 2400,
+      "wallet_scope": "none",
       "zone_id": "\u003cuuid\u003e",
       "zone_name": "\u003cvolatile\u003e"
     },
@@ -849,6 +854,7 @@
       "to_door_eta_sec": null,
       "to_store_eta_sec": null,
       "total": 2400,
+      "wallet_scope": "none",
       "zone_id": "\u003cuuid\u003e",
       "zone_name": "\u003cvolatile\u003e"
     },
@@ -948,6 +954,7 @@
       "to_door_eta_sec": null,
       "to_store_eta_sec": null,
       "total": 2400,
+      "wallet_scope": "none",
       "zone_id": "\u003cuuid\u003e",
       "zone_name": "\u003cvolatile\u003e"
     },
@@ -1047,6 +1054,7 @@
       "to_door_eta_sec": null,
       "to_store_eta_sec": null,
       "total": 2400,
+      "wallet_scope": "none",
       "zone_id": "\u003cuuid\u003e",
       "zone_name": "\u003cvolatile\u003e"
     },
@@ -1157,6 +1165,7 @@
       "to_store_eta_sec": null,
       "total": 2400,
       "wallet_paid": 0,
+      "wallet_scope": "none",
       "zone_id": "\u003cuuid\u003e",
       "zone_name": "\u003cvolatile\u003e"
     },
@@ -1522,6 +1531,7 @@
       "to_store_eta_sec": null,
       "total": 2400,
       "wallet_paid": 0,
+      "wallet_scope": "none",
       "zone_id": "\u003cuuid\u003e",
       "zone_name": "\u003cvolatile\u003e"
     }

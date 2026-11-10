@@ -389,12 +389,28 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 	// أُلغي «المختلط» بقرار المالك: كان يدفع ما في المحفظة ويترك الباقي نقداً،
 	// فيصير للطلب الواحد مصدرا دفعٍ ومسارا تسويةٍ ومسارا استرجاع — تعقيدٌ في
 	// أخطر جزء من النظام مقابل راحةٍ لا يطلبها أحد.
-	switch in.PaymentMethod {
-	case "", "cash":
-		in.PaymentMethod = "cash"
-	case "wallet":
-	default:
-		return nil, nil, ErrBadPayment
+	//
+	// **وصار للمحفظة نطاقان** (قرارُ المالك ٢٠٢٦-١١-٠٩): «الكلّ» أو «التوصيل والباقي كاش» —
+	// `wallet_scope`. **وما زال للطلب مصدرُ دفعٍ واحدٌ ومسارُ تسويةٍ واحد**: الحصّةُ تُخصم
+	// عند الإنشاء، والباقي `cash_due` يقبضه الكابتن — **كطلبٍ عدّله المكتبُ تماماً.**
+	// **وفي النموذج ٢ المحفظةُ تدفع التوصيلَ وحدَه** (قرارُ المالك ٢٠٢٦-١١-١٠، الدفعة B3):
+	// `full` صريحاً يُردّ، **والتطبيقُ القديمُ الذي يرسل `wallet` بلا نطاق** يصير `delivery`
+	// ويُخبَر الزبونُ بإشعار — الأجرةُ من المحفظة والبضاعةُ كاش للكابتن.
+	moneyModel := s.newOrderMoneyModel(ctx, tx)
+	walletMapped := false
+	{
+		legacyWallet := in.PaymentMethod == "wallet" && in.WalletScope == ""
+		method, scope, err := normalizePayment(in.PaymentMethod, in.WalletScope)
+		if err != nil {
+			return nil, nil, err
+		}
+		if moneyModel == MoneyModelGoodsOutside && scope == ScopeFull {
+			if !legacyWallet {
+				return nil, nil, ErrWalletFullRemoved
+			}
+			scope, walletMapped = ScopeDelivery, true
+		}
+		in.PaymentMethod, in.WalletScope = method, scope
 	}
 
 	// الزبون: معرف مباشر أو رقم هاتف (طلب هاتفي — يُنشأ الحساب إن لزم)
@@ -426,7 +442,7 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 	//
 	// **ويُفحص هنا لا في الشاشة**: كلُّ من يعرف النقطةَ يتجاوز حارسَ
 	// الشاشة، **وحارسٌ في واجهةٍ واحدةٍ يُلتفّ عليه من الأخرى.**
-	if in.PaymentMethod == "cash" {
+	if in.PaymentMethod == "cash" || in.WalletScope == ScopeDelivery {
 		blocked, err := unit.cashBlocked(ctx, tx, customerID)
 		if err != nil {
 			return nil, nil, err
@@ -701,11 +717,8 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 	}
 
 	// توزيع الدفع
-	var walletPaid int64
-	switch in.PaymentMethod {
-	case "wallet":
-		walletPaid = total
-	}
+	// **والحصّةُ من الدالّة الواحدة** (`WalletPortion`) — الكلّ أو أجرةُ التوصيل المدفوعة.
+	walletPaid := WalletPortion(in.WalletScope, total, deliveryFee)
 	cashDue := total - walletPaid
 
 	// ══════════════════════════════════════════════════════════════
@@ -716,7 +729,7 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 	// متزامنان لا يقرآن المتّسعَ نفسَه فيعبرانه معاً. **والطلبُ لم يُدرَج
 	// بعد** فلا شيءَ يُستثنى من المجموع، **وقبل أيِّ كتابةٍ** فالردُّ لا
 	// يخلّف طلباً ولا قيداً.
-	if in.PaymentMethod == "cash" {
+	if cashDue > 0 {
 		if err := unit.checkCODLimit(ctx, tx, customerID, "", cashDue); err != nil {
 			return nil, nil, err
 		}
@@ -745,10 +758,10 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 			snap_merchant_commission_percent, snap_rep_commission_percent,
 			snap_commission_source, snap_activation_orders, driver_fee,
 			promo_delivery_waived, snap_platform_delivery_percent, snap_platform_delivery_fixed,
-			sources_fee, stops, money_model)
+			sources_fee, stops, money_model, wallet_scope)
 		VALUES ($1, $2, $3, ST_SetSRID(ST_MakePoint($5,$4),4326)::geography, $6,
 			$7, $8, $9, $10, $11, $12, $13, NULLIF($14,''), $15, $16,
-			$17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)
+			$17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)
 		RETURNING id`,
 		customerID, in.MerchantID, in.AddressText, in.Lat, in.Lng, zoneID,
 		in.PaymentMethod, subtotal, deliveryFee, discount, total, walletPaid, cashDue,
@@ -756,7 +769,7 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 		snap.MerchantCommission, snap.RepCommissionPercent,
 		snap.CommissionSource, snap.ActivationOrders, driverFee,
 		deliveryWaived, platformPct, platformFixed, sourcesFee, stops,
-		s.newOrderMoneyModel(ctx, tx)).Scan(&orderID)
+		moneyModel, in.WalletScope).Scan(&orderID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -929,6 +942,9 @@ func (s *Service) CreateTx(ctx context.Context, tx dbtx.Querier, actorID string,
 	return created, func() {
 		s.publishOrder(created)
 		s.notifyCreated(ctx, created)
+		if walletMapped {
+			s.notifyWalletMapped(ctx, created)
+		}
 	}, nil
 }
 
@@ -1577,7 +1593,7 @@ func (s *Service) checkOpenLimit(ctx context.Context, q dbtx.Querier, customerID
 //
 // **العاديُّ يحمل نقدَه في `cash_due`، والخاصُّ في `total`** (نقدُ الخاصّ
 // لا يُكتب في `cash_due` بل يبقى صفراً) — **فالمجموعُ يفرّق بينهما بـ`kind`.**
-// والمحفظيُّ نقدُه صفرٌ فلا يدخل أصلاً (`payment_method='cash'`).
+// والمحفظيُّ كلُّه نقدُه صفرٌ فلا يدخل أصلاً — **والمقسومُ يدخل بنقده** (`cash_due`).
 //
 // # وعلى المفتوح لا على ما مضى
 //
@@ -1608,12 +1624,13 @@ func (s *Service) checkCODLimit(ctx context.Context, q dbtx.Querier, customerID,
 	// دفع الأجرة: المحفظةُ ليرةٌ وحدَها، فالدولارُ يُدفع نقداً للسائق.
 	var current int64
 	if err := q.QueryRow(ctx, `
-		SELECT COALESCE(SUM(CASE WHEN payment_method = 'cash'
-		                         THEN CASE WHEN kind = 'custom' THEN total ELSE cash_due END
-		                         ELSE 0 END + goods_usd_syp), 0)
+		SELECT COALESCE(SUM(CASE WHEN kind = 'custom' AND payment_method = 'cash'
+		                         THEN total ELSE cash_due END + goods_usd_syp), 0)
 		FROM orders
 		WHERE customer_id = $1::uuid
-		  AND (payment_method = 'cash' OR goods_usd_syp > 0)
+		  -- **والنقدُ بذمّته من cash_due لا من الطريقة** (قرارُ المالك ٢٠٢٦-١١-٠٩): «التوصيل
+		  -- من المحفظة والباقي كاش» طريقتُه wallet ونقدُه ثمنُ البضاعة. **والدولارُ بمعادله.**
+		  AND (payment_method = 'cash' OR cash_due > 0 OR goods_usd_syp > 0)
 		  AND closed_at IS NULL
 		  AND id <> $2::uuid`,
 		customerID, exclude).Scan(&current); err != nil {

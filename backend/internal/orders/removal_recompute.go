@@ -34,7 +34,7 @@ func (s *Service) recomputeAfterRemovalTx(ctx context.Context, tx pgx.Tx, orderI
 	actorID, refundNote string) (removalMoney, error) {
 	var res removalMoney
 	var o struct {
-		customerID, promoCode, merchantID              string
+		customerID, promoCode, merchantID, scope       string
 		deliveryFee, discount, total, walletPaid       int64
 		waived, sourcesFee, driverFee, sharePct, share int64
 	}
@@ -42,10 +42,10 @@ func (s *Service) recomputeAfterRemovalTx(ctx context.Context, tx pgx.Tx, orderI
 		SELECT COALESCE(customer_id::text, ''), COALESCE(promo_code, ''), COALESCE(merchant_id::text, ''),
 		       delivery_fee, discount, total, wallet_paid,
 		       promo_delivery_waived, sources_fee, driver_fee,
-		       snap_platform_delivery_percent, snap_platform_delivery_fixed
+		       snap_platform_delivery_percent, snap_platform_delivery_fixed, wallet_scope
 		FROM orders WHERE id = $1 FOR UPDATE`, orderID).
 		Scan(&o.customerID, &o.promoCode, &o.merchantID, &o.deliveryFee, &o.discount, &o.total,
-			&o.walletPaid, &o.waived, &o.sourcesFee, &o.driverFee, &o.sharePct, &o.share); err != nil {
+			&o.walletPaid, &o.waived, &o.sourcesFee, &o.driverFee, &o.sharePct, &o.share, &o.scope); err != nil {
 		return res, err
 	}
 
@@ -157,7 +157,9 @@ func (s *Service) recomputeAfterRemovalTx(ctx context.Context, tx pgx.Tx, orderI
 	// **وكان طلبُ المحفظة يُكتب كلُّه من المحفظة** (`wallet_paid = total`، `cash_due = 0`) — فطلبٌ
 	// زِيد عليه بتعديلٍ لم يكفِه رصيدُ الزبون (فبقي عليه نقد) **يضيع باقيه النقديّ بحذف صنف**: لا
 	// يقبضه السائق، **والطلبُ يقول دُفع من المحفظة ما لم يُدفع منها.** (خلل PD-2، ٢٠٢٦-١١-٠٥.)
-	walletPaid := min64(o.walletPaid, total)
+	// **والحصّةُ من الدالّة الواحدة** (`WalletPortion`، قرارُ المالك ٢٠٢٦-١١-٠٩) — في «التوصيل من
+	// المحفظة» لا تتجاوز الأجرةَ الجديدة. **والإزالةُ لا تُخصم شيئاً** — المجموعُ لا يزيد هنا.
+	walletPaid := min64(o.walletPaid, WalletPortion(o.scope, total, deliveryFee))
 	if diff := o.walletPaid - walletPaid; diff > 0 {
 		if _, err := s.wallet.ApplyTx(ctx, tx, o.customerID, diff, "refund",
 			orderID, refundNote, &actorID); err != nil {

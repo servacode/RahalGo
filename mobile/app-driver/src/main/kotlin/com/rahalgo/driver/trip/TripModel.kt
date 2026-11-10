@@ -824,6 +824,12 @@ fun driverInvoiceTotals(order: DriverOrder): DriverInvoiceTotals? {
     )
 }
 
+/**
+ * **أجرةُ التوصيل مدفوعةٌ من محفظة الزبون** (قرارُ المالك ٢٠٢٦-١١-٠٩) — «التوصيل من المحفظة والباقي
+ * كاش»: السائقُ يقبض البضاعةَ وحدَها (`cashDue`)، **والأجرةُ لا تُطالَب** فالتفصيلُ يقولها مدفوعة.
+ */
+fun feePaidFromWallet(order: DriverOrder): Boolean = order.walletScope == "delivery"
+
 fun cashFrom(order: DriverOrder, pickedUp: Boolean): CashFrom {
     if (order.cashDue <= 0) return CashFrom.NONE
     // **ومن يقف عند نقطة الاستلام يدفع عندها** (قرارُ المالك ٢٠٢٦-١٠-١٥) — المتجرُ في «توصيل»،

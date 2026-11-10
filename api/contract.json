@@ -11475,6 +11475,10 @@
           "type": "string"
         },
         {
+          "name": "wallet_scope",
+          "type": "string"
+        },
+        {
           "name": "expected_total",
           "type": "int64"
         },
@@ -11631,6 +11635,23 @@
       ],
       "statuses": [
         "StatusOK"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/orders/{id}/wallet-scope",
+      "handler": "handleChangeWalletScope",
+      "auth": true,
+      "idempotent": true,
+      "request": [
+        {
+          "name": "wallet_scope",
+          "type": "string"
+        },
+        {
+          "name": "expected_total",
+          "type": "int64"
+        }
       ]
     },
     {

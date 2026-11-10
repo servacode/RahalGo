@@ -49,7 +49,11 @@ var t = struct {
 	// **طلب تعديل من الكابتن** (قرارُ المالك ٢٠٢٦-١١-١٠) — يوصل المكتب، وقرارُه يوصل الكابتن.
 	editRequestOps, editRequestRejectedDriver string
 	// المكتب وافق على طلب تعديل الكابتن — يحلّ محل إشعار «تعدّل الطلب» للكابتن.
-	editRequestApprovedDriver             string
+	editRequestApprovedDriver string
+	// walletScopeDriver **الزبونُ بدّل الدفعَ من المحفظة** (قرارُ المالك ٢٠٢٦-١١-٠٩) — ما يقبضه الكابتن تبدّل.
+	walletScopeDriver string
+	// walletMappedCustomer **التطبيقُ القديمُ طلب «الكل من المحفظة»** (قرارُ المالك ٢٠٢٦-١١-١٠).
+	walletMappedCustomer                  string
 	rejected, cancelled, failed, refunded string
 	merchantDelivered, commission         string
 	targetReached                         string
@@ -107,6 +111,8 @@ var t = struct {
 	editRequestApprovedDriver:  "المكتب وافق على التعديل",
 	orderEditedDriver:          "تعدّل الطلب الذي معك",
 	orderEditedMerchant:        "تعدّل طلب من متجرك",
+	walletScopeDriver:          "الزبون غيّر طريقة الدفع — شوف المبلغ الجديد",
+	walletMappedCustomer:       "المحفظة بتدفع التوصيل بس",
 	driverAssignedToCustomer:   "أُسند سائقٌ لطلبك",
 	rejected:                   "اعتذر المتجر عن طلبك",
 	cancelled:                  "أُلغي طلبك",
