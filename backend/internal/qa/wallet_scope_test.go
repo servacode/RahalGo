@@ -14,6 +14,8 @@ import (
 	"net/http"
 	"sync"
 	"testing"
+
+	"github.com/servacode/rahalgo/backend/internal/cashbox"
 )
 
 var wsChecks = []string{"FI-03", "FI-04", "FI-05", "FI-06", "FI-10", "FI-11"}
@@ -423,7 +425,13 @@ func TestWScope_ChangeGuards(t *testing.T) {
 
 	// سقفُ نقد الكابتن: كابتنٌ يحمل ما يملأ سقفَه لا يزيد نقدُه بتبديل الزبون.
 	drv := h.driverOf(oid)
-	h.Setting("drivers.cash_limit", fmt.Sprint(o.cashDue))
+	// **والسقفُ يعدّ مالَ المنصّة وحدَه** (قرارُ المالك ٢٠٢٦-١١-١٠، القرار ٧) — لا ثمنَ البضاعة.
+	// فسقفٌ بقدر ما بيده الآن يمتلئ، **والتبديلُ إلى كاشٍ يزيده بالأجرة.**
+	held, err := cashbox.PlatformCashOf(ctxBG(), h.Pool, oid)
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.Setting("drivers.cash_limit", fmt.Sprint(held))
 	if r := wsChange(h, cust, oid, "none", o.total); r.Code != http.StatusConflict || r.Err() != "cash_limit_exceeded" {
 		t.Fatalf("سقفُ نقد الكابتن: %s — يُنتظر 409 cash_limit_exceeded", r)
 	}
