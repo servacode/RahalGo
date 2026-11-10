@@ -200,9 +200,13 @@ export default function CustomOrderPage() {
 
   return (
     <div className="mx-auto flex w-full flex-col gap-4 max-w-none lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
-      {/* **«اطلب أي شيء…» هي العنوان، ولا «طلب خاص» فوقها** (قرارُ المالك ٢٠٢٦-١٠-٣٠). */}
+      {/* **عنوانٌ عاديّ وسطرٌ ثانويّ أصغر** (تدقيق D8، ٢٠٢٦-١١-١١): «طلب خاص» أو «أمانة» حسب الوضع، والجملةُ
+          الطويلةُ تحته شرحاً — كعنوان السلّة والطلبات. مرآةُ `CustomScreen.kt`. */}
+      <div className="flex flex-col gap-1 lg:col-span-2">
+        <h1 className="heading-page">{mode === "amanah" ? K.titleAmanah : K.titlePurchase}</h1>
+        <p className="text-sm text-ink-muted">{mode === "amanah" ? K.subtitleAmanah : K.subtitle}</p>
+      </div>
       <div className="flex flex-col gap-4 lg:col-span-2">
-        <h1 className="heading-page">{K.subtitle}</h1>
         {closed && <Alert tone="warning">{closedText}</Alert>}
       </div>
 
@@ -227,7 +231,7 @@ export default function CustomOrderPage() {
         <Textarea
           id="custom-request"
           label={K.what}
-          placeholder={K.whatHint}
+          placeholder={mode === "amanah" ? K.whatHintAmanah : K.whatHint}
           value={request}
           onChange={(e) => setRequest(e.target.value.slice(0, MAX_REQUEST))}
           rows={4}

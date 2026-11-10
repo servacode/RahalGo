@@ -60,7 +60,7 @@ export function OrderStages({ order }: { order: MyOrder }) {
               }`}
             />
             <span
-              className={`w-full truncate text-center text-2xs ${
+              className={`w-full truncate text-center text-xs ${
                 now ? "font-bold text-accent-text" : done ? "text-ink" : "text-ink-dim"
               }`}
             >

@@ -393,6 +393,16 @@ private fun AddressChoice(a: Address, busy: Boolean, onPick: (Address) -> Unit) 
                 style = MaterialTheme.typography.bodySmall,
             )
         }
+        // **علامةُ صحٍّ واضحة على المختار (تدقيق D18)** — اللونُ وحدَه لا يُقرأ لمن لا يميّز الألوان.
+        if (a.isDefault) {
+            Spacer(Modifier.size(8.dp))
+            Icon(
+                painter = painterResource(R.drawable.ic_check_mark),
+                contentDescription = stringResource(R.string.addr_selected),
+                tint = Rahal.colors.success,
+                modifier = Modifier.size(24.dp),
+            )
+        }
     }
     HorizontalDivider()
 }

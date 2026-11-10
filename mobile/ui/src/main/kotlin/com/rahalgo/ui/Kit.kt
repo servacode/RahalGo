@@ -253,7 +253,8 @@ fun KeyValue(label: String, value: String, valueColor: Color = Color.Unspecified
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Text(label, color = Rahal.colors.inkMuted, style = MaterialTheme.typography.bodyMedium)
-        Text(value, color = valueColor, style = MaterialTheme.typography.bodyMedium)
+        // **والقيمةُ أثقلُ من وسمها** (تدقيق D3) — كانا بوزنٍ واحد فيُقرأ الوسمُ قبل القيمة.
+        Text(value, color = valueColor, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
     }
 }
 

@@ -18,7 +18,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { getMessages, defaultLocale, errorText, fmtNum } from "@rahalgo/i18n";
-import { Alert, EmptyState, LoadingState, ReloadState, IconClose, IconPrev, IconSearch, IconStore } from "@rahalgo/ui";
+import { Alert, EmptyState, Input, LoadingState, ReloadState, IconClose, IconPrev, IconSearch, IconStore } from "@rahalgo/ui";
 import { api } from "@/lib/api";
 import { useBrowseQuery } from "@/lib/customer/context";
 import type { Item, StoreItemsPage, StoreSummary } from "@/lib/customer/types";
@@ -234,18 +234,17 @@ export default function StorePageView() {
             <div className="shop-store-cols">
               <div className="flex min-w-0 flex-col gap-4">
                 {/* ── search inside the store (2026-11-07) ── */}
+                {/* **حقلُ البحث هو حقلُ الرئيسيّة نفسُه** (تدقيق D16، ٢٠٢٦-١١-١١): مكوّنُ `Input` المشترك بعدسته، لا حقلٌ ثانٍ بحدٍّ آخر. */}
                 <div className="relative">
-                  <span className="pointer-events-none absolute inset-y-0 start-3 z-10 flex items-center text-ink-muted" aria-hidden>
-                    <IconSearch size={18} />
-                  </span>
-                  <input
+                  <Input
+                    id="store-page-search"
                     type="search"
+                    icon={<IconSearch />}
                     value={q}
                     onChange={(e) => setQ(e.target.value.slice(0, 60))}
                     placeholder={ST.search}
                     aria-label={ST.search}
                     data-testid="store-page-search"
-                    className="h-12 w-full rounded-tile border border-line bg-surface pe-11 ps-10 text-sm text-ink outline-none placeholder:text-ink-muted focus:border-accent"
                   />
                   {q && (
                     <button

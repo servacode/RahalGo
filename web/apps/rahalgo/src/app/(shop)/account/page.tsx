@@ -156,6 +156,25 @@ export default function AccountPage() {
     <div className="mx-auto flex w-full flex-col gap-4 max-w-none">
       <h1 className="heading-page">{A.title}</h1>
 
+      {/* **رأسُ الحساب: حرفٌ واسمٌ ورقم** (تدقيق D4، ٢٠٢٦-١١-١١) — مرآةُ `ProfileHeader` في التطبيق؛ كان الحسابُ نموذجاً بلا «من أنا».
+          والرقمُ في مقطعٍ يسارٍ-يمين مستقلٍّ فلا ينقلب علامةُ «+». */}
+      <section className="surface flex items-center gap-4 p-4" aria-label={A.profile}>
+        <span
+          aria-hidden
+          className="heading-card flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-field text-accent-text"
+        >
+          {(user.full_name ?? "").trim().charAt(0)}
+        </span>
+        <div className="min-w-0">
+          <p className="heading-card truncate">{user.full_name}</p>
+          <p className="text-sm text-ink-muted">
+            <span dir="ltr" className="inline-block tabular-nums">
+              {user.phone}
+            </span>
+          </p>
+        </div>
+      </section>
+
       {/* **عمودان على الحاسوب**: بياناتي وإعداداتي، وبجانبها ما يخصّني والروابط. */}
       <div className="flex flex-col gap-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
         <div className="flex min-w-0 flex-col gap-4">
@@ -202,7 +221,8 @@ export default function AccountPage() {
                 disabled={
                   busy || !name.trim() || name.trim() === user.full_name
                 }
-                className="w-fit"
+                /* **المعطَّلُ يُرى معطَّلاً** (تدقيق D4): أرضٌ رماديّةٌ وحدٌّ لا برتقاليٌّ باهت. */
+                className="w-fit disabled:border! disabled:border-line! disabled:bg-field! disabled:text-ink-muted! disabled:opacity-100!"
               >
                 {A.saveName}
               </Button>

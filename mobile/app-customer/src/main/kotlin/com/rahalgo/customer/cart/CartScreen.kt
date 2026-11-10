@@ -213,7 +213,7 @@ fun CartScreen(
                     )
                     Spacer(Modifier.size(10.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(line.item.name, style = MaterialTheme.typography.bodyMedium)
+                        Text(line.item.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
                         // **وما اختاره يُقال تحت اسمه** — **وسطران
                         // متطابقان في السلّة بلا فرقٍ مكتوبٍ يُقرآن
                         // تكراراً**، فيُحذف أحدُهما وهو المقصود.
@@ -226,6 +226,8 @@ fun CartScreen(
                         }
                         // **وصنفٌ بالدولار يُقال دولارُه تحت اسمه** (طلبُ المالك ٢٠٢٦-١١-٠٧) —
                         // والليرةُ في عمود السعر، وهي ما يُدفع.
+                        // **والسعرُ أكبرُ وفي العمود نفسِه مع الاسم والخيار** (تدقيق D13).
+                        LinePrice(money(line.unitPrice * line.qty))
                         line.unitPriceUsd?.let { u ->
                             com.rahalgo.ui.DualPrice(
                                 u * line.qty,
@@ -248,16 +250,14 @@ fun CartScreen(
                             )
                         }
                     }
+                    Spacer(Modifier.size(8.dp))
                     // **والعدُّ يُبدَّل هنا** — ومن أراد صنفين لا يعود إلى السوق ليضغط مرّتين.
                     // **والسعرُ والعدّادُ والحذفُ في مكانٍ واحدٍ آخرَ السطر** (قرارُ المالك ٢٠٢٦-١٠-٣٠)
                     // — كلُّ سطرٍ بالترتيب نفسِه، صنفاً كان أو مشروباً.
                     LineControls(
-                        price = money(line.unitPrice * line.qty),
                         qty = line.qty,
                         onLess = { Cart.setQty(line.key, line.qty - 1) },
                         onMore = { Cart.setQty(line.key, line.qty + 1) },
-                        // **والسلّةُ تحذف السطرَ بمشروباته** (طلبُ المالك ٢٠٢٦-٠٨-١٨).
-                        onRemove = { Cart.setQty(line.key, 0) },
                     )
                 }
                 HorizontalDivider()
@@ -278,19 +278,21 @@ fun CartScreen(
                         com.rahalgo.ui.DrinkThumb(media(d.thumb))
                     }
                     Spacer(Modifier.size(10.dp))
-                    Text(
-                        d.name,
-                        color = Rahal.colors.ink,
-                        style = MaterialTheme.typography.bodyMedium,
-                        modifier = Modifier.weight(1f),
-                    )
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            d.name,
+                            color = Rahal.colors.ink,
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Medium,
+                        )
+                        LinePrice(money(d.total))
+                    }
+                    Spacer(Modifier.size(8.dp))
                     LineControls(
-                        price = money(d.total),
                         qty = d.qty,
-                        onLess = { Cart.lessDrink(d.name) },
+                        onLess = { if (d.qty <= 1) Cart.removeDrink(d.name) else Cart.lessDrink(d.name) },
                         onMore = { Cart.moreDrink(d.name) },
                         moreEnabled = Cart.canMoreDrink(d),
-                        onRemove = { Cart.removeDrink(d.name) },
                     )
                 }
                 HorizontalDivider()
@@ -302,18 +304,19 @@ fun CartScreen(
         //
         // **ونصٌّ لا زرٌّ مملوء**: فعلٌ يُندَم عليه لا يُوضع في زرٍّ
         // يلمع، **ومن أفرغها بالخطأ يعيد بناءها صنفاً صنفا.**
-        if (Cart.lines.isNotEmpty()) {
-            Spacer(Modifier.height(8.dp))
-            // **زرٌّ واضحٌ بأيقونة سلّة المهملات** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — لا رابطٌ نصّيّ،
-            // **ويبقى السؤالُ قبله** (`askClear`).
-            com.rahalgo.ui.RahalOutlineButton(onClick = { askClear = true }, tone = Tone.Danger) {
+        // **«إفراغ السلة» فعلٌ هادئ (تدقيق D13)**: كان زرّاً أحمر مؤطَّراً يلفت العينَ أكثر من
+        // «اطلب». **نصٌّ رماديٌّ بأيقونة، ولا يظهر مع سطرٍ واحدٍ** (سلّةُ سطره تكفي — فلا حذفَ مكرَّر).
+        if (Cart.lines.size + Cart.drinkRows().size > 1) {
+            Spacer(Modifier.height(4.dp))
+            com.rahalgo.ui.RahalTextButton(onClick = { askClear = true }) {
                 Icon(
                     painter = painterResource(com.rahalgo.ui.R.drawable.ic_trash),
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp),
+                    tint = Rahal.colors.inkMuted,
+                    modifier = Modifier.size(16.dp),
                 )
-                Spacer(Modifier.size(8.dp))
-                Text(stringResource(R.string.cart_clear))
+                Spacer(Modifier.size(6.dp))
+                Text(stringResource(R.string.cart_clear), color = Rahal.colors.inkMuted)
             }
         }
 
@@ -420,6 +423,8 @@ fun CartScreen(
             }
         }
         Spacer(Modifier.height(12.dp))
+        // **سطرُ الدفع بطاقةٌ (تدقيق D13)** — كان سطراً عارياً يضيع بين الحقول.
+        Card {
         if (walletBlocked) {
             // **سطرٌ واحدٌ لا خيارٌ مطفأٌ ولا «رصيدك لا يكفي»** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
             Text(
@@ -452,6 +457,7 @@ fun CartScreen(
                     }
                 }
             }
+        }
         }
         // ══════════════════════════════════════════════════════════════
         // **جملةٌ واحدةٌ موجزةٌ بالرصيد** (تصحيحُ المالك ٢٠٢٦-٠٩-٢١)
@@ -765,7 +771,8 @@ fun CartScreen(
             }
         }
 
-        Spacer(Modifier.height(14.dp))
+        // **ذيلٌ يفسح للأرقام الأخيرة (تدقيق D13)**: على ٣٦٠ بخطٍّ ١٫٣ كان الإجماليُّ يُقصّ خلف شريط الإرسال.
+        Spacer(Modifier.height(56.dp))
     }
 
     // ══════════════════════════════════════════════════════════════════
@@ -918,48 +925,25 @@ private fun QtyButton(icon: Int, label: String, enabled: Boolean = true, onClick
  */
 @Composable
 private fun LineControls(
-    price: String,
     qty: Int,
     onLess: () -> Unit,
     onMore: () -> Unit,
-    onRemove: () -> Unit,
     moreEnabled: Boolean = true,
 ) {
-    Column(Modifier.width(LineControlsWidth), horizontalAlignment = Alignment.End) {
-        Text(
-            price,
-            color = Rahal.colors.brand,
-            fontWeight = FontWeight.Bold,
-            style = MaterialTheme.typography.bodyMedium.copy(fontFeatureSettings = "tnum"),
-            textAlign = androidx.compose.ui.text.style.TextAlign.End,
-            maxLines = 1,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .clip(Rahal.shape.pill)
-                    .border(1.dp, Rahal.colors.line, Rahal.shape.pill),
-            ) {
-                QtyButton(R.drawable.ic_minus, stringResource(R.string.cart_qty_less), onClick = onLess)
-                Text(
-                    qty.toString(),
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 4.dp),
-                )
-                QtyButton(
-                    com.rahalgo.ui.R.drawable.ic_plus,
-                    stringResource(R.string.cart_qty_more),
-                    enabled = moreEnabled,
-                    onClick = onMore,
-                )
-            }
+    // **عدّادٌ وحيدٌ بلا سلّةٍ ثانية** (تدقيق D13، ٢٠٢٦-١١-١١) — كانت سلّةُ الحذف تكرّر «−» عند
+    // الواحد. **فصار «−» نفسُه سلّةً حمراءَ حين يبقى واحد**، والسعرُ انتقل مع الاسم.
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .clip(Rahal.shape.pill)
+            .border(1.dp, Rahal.colors.line, Rahal.shape.pill),
+    ) {
+        if (qty <= 1) {
             Box(
                 Modifier
-                    .size(40.dp)
+                    .size(36.dp)
                     .clip(CircleShape)
-                    .clickable(onClick = onRemove),
+                    .clickable(onClickLabel = stringResource(R.string.cart_remove), onClick = onLess),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
@@ -969,12 +953,34 @@ private fun LineControls(
                     modifier = Modifier.size(18.dp),
                 )
             }
+        } else {
+            QtyButton(R.drawable.ic_minus, stringResource(R.string.cart_qty_less), onClick = onLess)
         }
+        Text(
+            qty.toString(),
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(horizontal = 4.dp),
+        )
+        QtyButton(
+            com.rahalgo.ui.R.drawable.ic_plus,
+            stringResource(R.string.cart_qty_more),
+            enabled = moreEnabled,
+            onClick = onMore,
+        )
     }
 }
 
-/** **عرضُ عمود السعر والعدّاد والحذف** — العدّادُ (٣٦+عدد+٣٦) وسلّةُ الحذف ٤٠. */
-private val LineControlsWidth = 140.dp
+/** **سعرُ السطر بأرقامٍ متساوية العرض** — أكبرُ من اسمه (تدقيق D13). */
+@Composable
+private fun LinePrice(price: String) {
+    Text(
+        price,
+        color = Rahal.colors.brand,
+        fontWeight = FontWeight.Bold,
+        style = MaterialTheme.typography.titleSmall.copy(fontFeatureSettings = "tnum"),
+        maxLines = 1,
+    )
+}
 
 /** **سقفُ المتاجر نصّاً** — «متجر واحد بس» حين السقفُ واحد. */
 @Composable

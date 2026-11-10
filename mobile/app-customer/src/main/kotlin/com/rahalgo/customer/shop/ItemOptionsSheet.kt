@@ -167,6 +167,9 @@ fun ItemOptionsSheet(
                     name = item.name,
                     // **وعدسةٌ صغيرةٌ تقول «تُكبَّر»** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
                     zoomHint = true,
+                    // **صورةٌ لا تأكل النافذة** (تدقيق D5): نسبتُها ١٦:١٠ فأقلّ — سقفُها ١٨٠.
+                    minHeight = 120.dp,
+                    maxHeight = 180.dp,
                 )
                 Spacer(Modifier.height(12.dp))
             }
@@ -377,12 +380,12 @@ private fun CounterBlock(
                 style = MaterialTheme.typography.titleMedium,
             )
             Spacer(Modifier.size(8.dp))
-            Text(
+            // **«مطلوب» شارةٌ مقروءة** (تدقيق D5) — كانت ١١ نقطةً برتقاليّةً على أرضٍ فاتحة.
+            com.rahalgo.ui.Chip(
                 stringResource(
                     if (group.minSelect > 0) R.string.options_required else R.string.act_optional,
                 ),
-                color = if (group.minSelect > 0) Rahal.colors.accent else Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.labelSmall,
+                if (group.minSelect > 0) Rahal.colors.accentInk else Rahal.colors.inkMuted,
             )
         }
         Spacer(Modifier.height(4.dp))
@@ -398,7 +401,7 @@ private fun CounterBlock(
                     com.rahalgo.ui.DrinkThumb(thumb(o))
                     Spacer(Modifier.size(10.dp))
                 }
-                Column(Modifier.weight(1f)) {
+                Column(Modifier.weight(1f, fill = false)) {
                     Text(
                         o.name,
                         color = if (o.available) Rahal.colors.ink else Rahal.colors.inkMuted,
@@ -416,6 +419,8 @@ private fun CounterBlock(
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
+                // **العدّادُ بجانب اسمه لا في آخر السطر** (تدقيق D5) — كان بينهما عرضُ الشاشة.
+                Spacer(Modifier.size(12.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
@@ -461,12 +466,12 @@ private fun GroupBlock(
             Spacer(Modifier.size(8.dp))
             // **«مطلوب» تُقال قبل أن يُضغط الزرُّ المطفأ** — **ومن رأى
             // زرّاً لا يعمل بلا سببٍ ظنّ التطبيقَ عطبان.**
-            Text(
+            // **«مطلوب» شارةٌ مقروءة** (تدقيق D5) — كانت ١١ نقطةً برتقاليّةً على أرضٍ فاتحة.
+            com.rahalgo.ui.Chip(
                 stringResource(
                     if (group.minSelect > 0) R.string.options_required else R.string.act_optional,
                 ),
-                color = if (group.minSelect > 0) Rahal.colors.accent else Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.labelSmall,
+                if (group.minSelect > 0) Rahal.colors.accentInk else Rahal.colors.inkMuted,
             )
         }
         if (group.minSelect > 0 && group.options.none { it.available }) {

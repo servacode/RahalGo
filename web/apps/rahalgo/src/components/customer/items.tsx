@@ -134,10 +134,15 @@ export function ItemCard({
           aria-label={full ? `${item.name} — ${I.zoomBtn}` : item.name}
           className="transition-transform active:scale-[0.98]"
         />
+        {/* **غشاءٌ فاتحٌ وشارةٌ في الزاوية** (تدقيق D6، ٢٠٢٦-١١-١١) — كان حجاباً داكناً على الصورة كلِّها.
+            **الصورةُ تبقى مفهومةً في الثيمين، والشارةُ تقول السبب**؛ ونصُّ «يفتح الساعة…» لنافذة الصنف. */}
         {closed && (
-          <div className="scrim pointer-events-none absolute inset-0 flex items-center justify-center p-1.5 text-center text-xs font-bold leading-snug text-on-solid">
-            {closedLabel(item)}
-          </div>
+          <>
+            <div aria-hidden className="shop-item-veil" />
+            <span title={closedLabel(item)} className="shop-item-badge">
+              {item.source_closed ? I.closedBadge : I.unavailable}
+            </span>
+          </>
         )}
         {item.discount_percent != null && item.discount_percent > 0 && (
           <span className="pointer-events-none absolute start-2 top-2">
@@ -468,7 +473,8 @@ export function ItemSheet({
               aria-label={`${view.name} — ${m.common.media.zoomHint}`}
               className="relative flex w-full items-center justify-center overflow-hidden rounded-card bg-field"
             >
-              <img src={img} alt="" className="max-h-80 w-auto max-w-full object-contain" />
+              {/* **صورةٌ لا تأكل النافذة** (تدقيق D5): سقفُها نحو ١٦:١٠ — كانت ٣٢٠ بكسلاً. */}
+              <img src={img} alt="" className="max-h-44 w-auto max-w-full object-contain" />
               {/* **عدسةٌ في دائرةٍ بيضاء تقول «تُكبَّر»** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — مرآةُ `ZoomBadge` في التطبيق. */}
               <span
                 aria-hidden
@@ -541,9 +547,14 @@ export function ItemSheet({
             <fieldset key={g.id} className="surface-inset space-y-2 p-3">
               <legend className="float-start mb-2 flex w-full items-center justify-between gap-2 text-sm font-bold">
                 <span>{g.name}</span>
-                <span className="text-xs font-normal text-ink-muted">
-                  {g.min_select > 0 ? I.required : g.max_select === 1 ? I.pickOne : fill(I.pickUpTo, { n: fmtNum(g.max_select) })}
-                </span>
+                {/* **«إلزامي» شارةٌ مقروءة** (تدقيق D5) — كانت نصّاً رمادياً صغيراً. */}
+                {g.min_select > 0 ? (
+                  <Badge variant="accent">{I.required}</Badge>
+                ) : (
+                  <span className="text-xs font-normal text-ink-muted">
+                    {g.max_select === 1 ? I.pickOne : fill(I.pickUpTo, { n: fmtNum(g.max_select) })}
+                  </span>
+                )}
               </legend>
               {g.min_select > 0 && !g.options.some((o) => o.available) && (
                 <p className="text-xs text-danger">{fill(I.allOptionsOut, { group: g.name })}</p>
@@ -650,12 +661,17 @@ function CounterBlock({
       <legend className="sr-only">{group.name}</legend>
       <div className="flex w-full items-center justify-between gap-2 pb-1 text-sm font-bold" aria-hidden>
         <span>{group.name}</span>
-        <span className="text-xs font-normal text-ink-muted">{group.min_select > 0 ? I.required : I.optional}</span>
+        {group.min_select > 0 ? (
+          <Badge variant="accent">{I.required}</Badge>
+        ) : (
+          <span className="text-xs font-normal text-ink-muted">{I.optional}</span>
+        )}
       </div>
       {group.options.map((o) => {
         const n = counts[o.id] ?? 0;
         return (
-          <div key={o.id} className="flex items-center justify-between gap-3">
+          /* **العدّادُ بجانب اسمه لا في طرف السطر** (تدقيق D5). */
+          <div key={o.id} className="flex items-center gap-3">
             <span className="flex min-w-0 items-center gap-2">
             {thumbs && <DrinkThumb url={o.image_thumb_url} />}
             <span className="flex min-w-0 flex-col">

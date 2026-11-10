@@ -1,5 +1,7 @@
 package com.rahalgo.customer.orders
 
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
@@ -103,12 +105,63 @@ fun OrderCard(
      */
     onChangeWalletScope: ((String) -> Unit)? = null,
 ) {
+    // ══════════════════════════════════════════════════════════════════
+    // **المنتهي بطاقةٌ مطويّةٌ تُفتح بلمسة** (قرارُ المالك ٢٠٢٦-١١-١١، تدقيق D3)
+    // ══════════════════════════════════════════════════════════════════
+    //
+    // **كانت كلُّ بطاقةٍ طويلةً حتّى بعد التسليم، وشريطُ المراحل السداسيُّ يظهر على
+    // طلبٍ انتهى** — فتضيع الطلباتُ الجارية بين القديمة. **فالمنتهي (مُسلَّمٌ أو
+    // ملغى…) سطرٌ واحدٌ: المتجرُ والحالُ والإجماليُّ والتاريخ**، ويُفتح بلمسةٍ ليُري
+    // الفاتورةَ كاملةً. **ولا شريطَ مراحلَ له أبداً.** والجاري مفتوحٌ كما كان.
+    val finished = ended(order.status)
+    var expanded by rememberSaveable(order.id) { mutableStateOf(!finished) }
+    val collapsed = finished && !expanded
     Card {
-        // **الحالُ أبرزُ ما في الرأس ورقمُ الطلب صغيرٌ جنبها** (تدقيقُ التصميم ٢٠٢٦-١٠-٢٧)
-        // — كان الرقمُ أبرزَ شيءٍ في البطاقة، **والزبونُ يسأل «وين صار طلبي» لا «شو رقمه».**
+        // **اسمُ المتجر عنوانُ البطاقة ورقمُ الطلب بجانبه مقروءاً** (تدقيق D3) — كان الرقمُ
+        // رماديّاً صغيراً وكان العنوانُ غائباً، **والزبونُ يعرف «من أين» قبل «كم رقمُه».**
         Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            Modifier
+                .fillMaxWidth()
+                .then(if (finished) Modifier.clickable { expanded = !expanded } else Modifier),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = orderTitle(order),
+                color = Rahal.colors.ink,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            Text(
+                // **ورقمُه كما يعرفه الجميع** — لا ستّةُ أحرفٍ من
+                // معرّفه: **رقمٌ لا يعرفه صاحبُه ولا المكتبُ لا يُستعمل
+                // في شكوى.**
+                text = "#" + order.number,
+                color = Rahal.colors.ink,
+                fontWeight = FontWeight.Medium,
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+            )
+            if (finished) {
+                androidx.compose.material3.Icon(
+                    painter = androidx.compose.ui.res.painterResource(com.rahalgo.ui.R.drawable.ic_chevron_down),
+                    contentDescription = null,
+                    tint = Rahal.colors.inkMuted,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .rotate(if (expanded) 180f else 0f),
+                )
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .then(if (finished) Modifier.clickable { expanded = !expanded } else Modifier),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             val tone = statusColor(order.status)
@@ -126,20 +179,46 @@ fun OrderCard(
                 Text(
                     text = cancelHint,
                     color = Rahal.colors.danger,
-                    style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(horizontal = 8.dp),
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.weight(1f),
                 )
             }
-            Text(
-                // **ورقمُه كما يعرفه الجميع** — لا ستّةُ أحرفٍ من
-                // معرّفه: **رقمٌ لا يعرفه صاحبُه ولا المكتبُ لا يُستعمل
-                // في شكوى.**
-                text = "#" + order.number,
-                color = Rahal.colors.inkMuted,
-                style = MaterialTheme.typography.bodySmall,
-            )
+        }
+
+        // **المطويُّ: الإجماليُّ والتاريخُ سطرٌ ثمّ تنتهي البطاقة** — والتقييمُ يبقى بزرّه
+        // (زرٌّ واحدٌ لا يُطوِّل البطاقة) كي لا يُدفن وراء لمسة.
+        if (collapsed) {
+            val ctx0 = LocalContext.current
+            val now0 by com.rahalgo.ui.rememberNow()
+            Spacer(Modifier.height(8.dp))
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = true },
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = money(order.total),
+                    color = Rahal.colors.brand,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Since.text(ctx0, order.createdAt, now0).takeIf { it.isNotEmpty() }?.let {
+                    Text(
+                        text = it,
+                        color = Rahal.colors.inkMuted,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            }
+            onRate?.let {
+                Spacer(Modifier.height(10.dp))
+                RahalButton(onClick = it, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.ord_rate))
+                }
+            }
+            return@Card
         }
 
         // **وما ليس في المنصّة يُقال بلفظ صاحبه** — لا «طلب #12».
@@ -162,7 +241,7 @@ fun OrderCard(
         //
         // **و`stage_at = -1` تعني انتهى قبل أن يصل** — وشريطٌ يقف في
         // منتصفه يُقرأ «عالق» لا «انتهى».
-        if (order.stageAt >= 0 && order.stages.isNotEmpty()) {
+        if (!finished && order.stageAt >= 0 && order.stages.isNotEmpty()) {
             Spacer(Modifier.height(12.dp))
             // **ودرّاجتُه تمشي ما دام جاريا** — والمنتهي لا شريطَ له.
             Stages(order.stages.map { stageLabel(it, order.customMode == "amanah") }, order.stageAt, live = true)
@@ -924,4 +1003,25 @@ private fun PayScopeRow(order: MyOrder, walletBalance: Long, busy: Boolean, onCh
             )
         }
     }
+}
+
+/**
+ * **عنوانُ البطاقة** (تدقيق D3) — اسمُ المتجر إن وصل، **وللخاصّ لفظُه** (لا متجرَ له).
+ *
+ * **ومحرّكُنا اليوم لا يرسل اسمَ المتجر في طلب الزبون** (`merchant_name` خارجَ مسموحات
+ * `AudienceCustomer`) — وقرارُ المالك القديم حجبُه. **فلا يُختلَق ولا يُغيَّر العقدُ هنا:**
+ * العنوانُ البديلُ أوّلُ صنفٍ في الطلب و«+ كذا» إن تعدّدت الأصناف، وإلّا «طلبك». **وحين يُسمح
+ * بالاسم من المحرّك يظهر هنا بلا تعديلٍ ثانٍ** (حقلُ `merchantName` جاهزٌ في النموذج).
+ */
+@Composable
+private fun orderTitle(order: MyOrder): String {
+    if (order.kind == "custom") {
+        return stringResource(if (order.customMode == "amanah") R.string.ord_title_amanah else R.string.ord_title_custom)
+    }
+    if (order.merchantName.isNotBlank()) return order.merchantName
+    val first = order.items.orEmpty().firstOrNull()?.name?.takeIf { it.isNotBlank() }
+        ?: order.itemsPreview.substringBefore('،').substringBefore(',').trim()
+    if (first.isEmpty()) return stringResource(R.string.ord_title_fallback)
+    val more = order.itemsCount - 1
+    return if (more > 0) "$first +$more" else first
 }

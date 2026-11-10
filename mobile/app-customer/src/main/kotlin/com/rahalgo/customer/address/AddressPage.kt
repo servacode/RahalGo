@@ -158,6 +158,13 @@ fun AddressPage(
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.weight(1f),
             )
+            // **حالُ المفتاح بالكلمة (تدقيق D18)** — المفتاحُ وحدَه لا يقول «شغّال» أم «واقف» لكلّ العيون.
+            Text(
+                stringResource(if (LiveAuto.on) R.string.addrp_live_on else R.string.addrp_live_off),
+                color = if (LiveAuto.on) Rahal.colors.success else Rahal.colors.inkMuted,
+                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.labelMedium,
+            )
             Spacer(Modifier.size(Rahal.space.sm))
             Switch(
                 checked = LiveAuto.on,
@@ -167,7 +174,7 @@ fun AddressPage(
 
         // ── ٦ · الحفظ ──
         Spacer(Modifier.height(Rahal.space.lg))
-        RahalButton(
+        com.rahalgo.ui.ClearStateButton(
             onClick = save,
             enabled = canSave,
             tone = Tone.Accent,

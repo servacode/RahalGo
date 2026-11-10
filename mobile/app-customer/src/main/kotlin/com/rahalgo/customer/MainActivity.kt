@@ -138,6 +138,12 @@ class MainActivity : ComponentActivity() {
         super.attachBaseContext(com.rahalgo.ui.WesternDigits.wrap(newBase))
     }
 
+    /** **فتحةٌ جديدةٌ للتطبيق = نافذةٌ منبثقةٌ جديدة** — انظر `LaunchPopups`. */
+    override fun onStart() {
+        super.onStart()
+        LaunchPopups.reset()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // **ومراقبُ الشبكة يُسجَّل مرّةً** — انظر `Net`: **مراقبٌ لكلّ
@@ -908,7 +914,7 @@ private fun SignedIn(
                                 )
                             }
                         },
-                        label = { Text(stringResource(R.string.cart_title)) },
+                        label = { Text(stringResource(R.string.cart_title), maxLines = 1, softWrap = false) },
                     )
 
                     // **وطلباتي بينهما** — يُفتح كثيراً بعد الطلب
@@ -988,7 +994,7 @@ private fun SignedIn(
                                 contentDescription = null,
                             )
                         },
-                        label = { Text(stringResource(R.string.nav_profile)) },
+                        label = { Text(stringResource(R.string.nav_profile), maxLines = 1, softWrap = false) },
                     )
                 }
             },
@@ -1225,6 +1231,7 @@ private fun SignedIn(
                         // عطبا.**
                         push = false,
                         picker = mapPicker,
+                        profileHeader = true,
                         // **وزرُّ «حسابي» يفتح الصفحةَ نفسَها** — (طلبُ
                         // المالك ٢٠٢٦-٠٨-١٨: «يفتح نفس الموقع بنفس
                         // الطريقة، والتعديل أيضا»).
@@ -1307,7 +1314,12 @@ private fun SignedIn(
                 }
                 val pendingLive = if (!guest && pendingQuote == null) ordersVm.pendingLiveShare else null
                 // **«موقعك الصح هون؟»** (قرارُ المالك ٢٠٢٦-١٠-٢١) — بعد السعر والمشاركة، لا فوقهما.
-                val pendingFix = if (!guest && pendingQuote == null && pendingLive == null) ordersVm.pendingDropoffFix else null
+                // **ونافذةٌ واحدةٌ لا اثنتان في الفتحة** (البند ١٣) — انظر `LaunchPopups`.
+                val pendingFix = if (!guest && pendingQuote == null && pendingLive == null) {
+                    ordersVm.pendingDropoffFix?.takeIf { LaunchPopups.claim("fix") }
+                } else {
+                    null
+                }
                 pendingFix?.let { o ->
                     com.rahalgo.ui.ConfirmDialog(
                         title = stringResource(R.string.dropoff_fix_title),
@@ -1355,7 +1367,7 @@ private fun SignedIn(
                     // **السؤالُ التلقائيُّ مرّةً واحدة** — يُثبَّت فلا يعود عند
                     // الإقلاعِ/العودةِ/النبضةِ/إعادةِ الوصل. **واليدويُّ في بطاقة
                     // الطلب** (`OrdersScreen.onRate`) لمن أراد بعد الإغلاق.
-                    ordersVm.askRate?.let { o ->
+                    ordersVm.askRate?.takeIf { LaunchPopups.claim("rate") }?.let { o ->
                         // **وصله طلبٌ** — فتعود بطاقةُ «عجبتك الخدمة؟ ادعُ صديقاً» مرّةً (٢٠٢٦-١٠-٣٠).
                         LaunchedEffect(Unit) { InviteNudge.markDelivered(context) }
                         RateDialog(
@@ -1539,7 +1551,8 @@ private fun RowScope.Tab(selected: Boolean, onClick: () -> Unit, icon: Int, labe
         selected = selected,
         onClick = onClick,
         icon = { Icon(painterResource(icon), contentDescription = null) },
-        label = { Text(stringResource(label)) },
+        // **سطرٌ واحدٌ دائماً (تدقيق D2)**: «طلب خاص» كانت تنكسر سطرين على ٣٦٠ بخطٍّ مكبَّر.
+        label = { Text(stringResource(label), maxLines = 1, softWrap = false, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
     )
 }
 

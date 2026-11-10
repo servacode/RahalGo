@@ -27,6 +27,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.res.painterResource
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -153,6 +155,11 @@ fun AccountScreen(
      * عنوانٍ لهما، **ولا يُغيَّر ما يعمل عندهما لطلبٍ يخصّ الزبون.**
      */
     onEditAddress: ((Address?) -> Unit)? = null,
+    /**
+     * **رأسُ حسابٍ بصورةٍ واسمٍ ورقم، وكلمةُ المرور مطويّةٌ خلف صفّ** (تدقيق D4، ٢٠٢٦-١١-١١) — للزبون
+     * وحدَه الآن؛ **والتطبيقاتُ المجمَّدةُ لا يتبدّل شكلُها.**
+     */
+    profileHeader: Boolean = false,
 ) {
     val s = vm.state
 
@@ -177,9 +184,13 @@ fun AccountScreen(
     ) {
 
         // **كلُّ قسمٍ بطاقة** (مراجعةُ التصميم ٢٠٢٦-١١-٠٩) — بدل فواصلَ خطّيّةٍ بين كتلٍ عارية.
-        Card { Identity(vm, s, worker, whatsapp) }
+        if (profileHeader) {
+            Card { ProfileHeader(vm, s) }
+            Gap()
+        }
+        Card { Identity(vm, s, worker, whatsapp, polished = profileHeader) }
         Gap()
-        Card { PasswordSection(vm, s) }
+        Card { if (profileHeader) CollapsedPassword(vm, s) else PasswordSection(vm, s) }
         Gap()
         // **ولا عناوينَ في حساب السائق** — انظر `showAddresses`.
         if (showAddresses) {
@@ -226,7 +237,7 @@ fun AccountScreen(
 // ــ الهويّة ــ
 
 @Composable
-private fun Identity(vm: AccountViewModel, s: AccountState, worker: Boolean, whatsapp: Boolean) {
+private fun Identity(vm: AccountViewModel, s: AccountState, worker: Boolean, whatsapp: Boolean, polished: Boolean = false) {
     val me = s.me ?: return
     var draft by rememberSaveable(me.fullName) { mutableStateOf(me.fullName) }
 
@@ -248,7 +259,7 @@ private fun Identity(vm: AccountViewModel, s: AccountState, worker: Boolean, wha
     // من فوق، ألغِها ما يلزم»).
     //
     // **وصورتُه واسمُه يقولان ما هما** — وعنوانٌ فوقهما يسمّي المعروف.
-    Row(verticalAlignment = Alignment.CenterVertically) {
+    if (!polished) Row(verticalAlignment = Alignment.CenterVertically) {
         Avatar(url = AppCore.get().media(me.avatarThumbUrl), name = me.fullName, size = 64)
         Spacer(Modifier.size(12.dp))
         Column {
@@ -273,11 +284,11 @@ private fun Identity(vm: AccountViewModel, s: AccountState, worker: Boolean, wha
         modifier = Modifier.fillMaxWidth(),
     )
     Spacer(Modifier.height(8.dp))
-    RahalButton(
+    SaveButton(
         onClick = { vm.setName(draft) },
         enabled = !s.busy && draft.trim().isNotEmpty() && draft.trim() != me.fullName,
-        modifier = Modifier.fillMaxWidth(),
-    ) { Text(stringResource(R.string.acc_save)) }
+        polished = polished,
+    )
 
     Spacer(Modifier.height(14.dp))
     // ══════════════════════════════════════════════════════════════════
@@ -789,3 +800,131 @@ private fun Notice(text: String, color: androidx.compose.ui.graphics.Color) {
 }
 
 
+
+/**
+ * **زرُّ «حفظ» يُرى معطَّلاً أو مفعَّلاً بلمحة** (تدقيق D4) — المعطَّلُ كان البرتقاليَّ نفسَه
+ * بشفافيّةٍ فيُظنّ مفعَّلاً باهتاً. **فالمعطَّلُ هنا أرضٌ رماديّةٌ وحدٌّ ونصٌّ خافت**، والمفعَّلُ
+ * معبّى بلون العلامة. (`polished` للزبون؛ وغيره يبقى كما كان.)
+ */
+@Composable
+private fun SaveButton(onClick: () -> Unit, enabled: Boolean, polished: Boolean) {
+    if (!polished) {
+        RahalButton(
+            onClick = onClick,
+            enabled = enabled,
+            modifier = Modifier.fillMaxWidth(),
+        ) { Text(stringResource(R.string.acc_save)) }
+        return
+    }
+    ClearStateButton(onClick = onClick, enabled = enabled) { Text(stringResource(R.string.acc_save)) }
+}
+
+/**
+ * **زرٌّ يُرى مفعَّلاً أو معطَّلاً بلمحة** (تدقيق D4/D18، ٢٠٢٦-١١-١١) — المعطَّلُ في `RahalButton`
+ * هو لونُه نفسُه بشفافيّة ٣٠٪ فيُظنّ مفعَّلاً باهتاً أو يضيع نصُّه. **فالمعطَّلُ هنا أرضٌ رماديّةٌ وحدٌّ
+ * ونصٌّ بتباينٍ كافٍ لا يُلمَس**، والمفعَّلُ معبّى بلون نبرته كالمعتاد. (يتبنّاه الزبونُ وحدَه الآن.)
+ */
+@Composable
+fun ClearStateButton(
+    onClick: () -> Unit,
+    enabled: Boolean,
+    modifier: Modifier = Modifier.fillMaxWidth(),
+    tone: Tone = Tone.Brand,
+    content: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit,
+) {
+    if (enabled) {
+        RahalButton(onClick = onClick, modifier = modifier, tone = tone, content = content)
+        return
+    }
+    Row(
+        modifier
+            .heightIn(min = 48.dp)
+            .clip(Rahal.shape.md)
+            .background(Rahal.colors.field)
+            .border(Rahal.stroke.hair, Rahal.colors.line, Rahal.shape.md)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        androidx.compose.runtime.CompositionLocalProvider(
+            androidx.compose.material3.LocalContentColor provides Rahal.colors.inkMuted,
+        ) {
+            androidx.compose.material3.ProvideTextStyle(MaterialTheme.typography.labelLarge) { content() }
+        }
+    }
+}
+
+/**
+ * **رأسُ الحساب: صورةٌ واسمٌ ورقم** (تدقيق D4) — كان الحسابُ نموذجاً طويلاً مفتوحاً بلا
+ * «من أنا». **والرقمُ نصٌّ عاديّ؛ ترتيبُ اتّجاهه (bidi) من مساعدٍ آخر.**
+ */
+@Composable
+private fun ProfileHeader(vm: AccountViewModel, s: AccountState) {
+    val me = s.me ?: return
+    val picker = rememberImagePicker { bytes -> vm.setAvatarBytes(bytes) }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Avatar(url = AppCore.get().media(me.avatarThumbUrl), name = me.fullName, size = 72)
+        Spacer(Modifier.size(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = me.fullName,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = Rahal.colors.ink,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            )
+            Text(
+                text = me.phone,
+                style = MaterialTheme.typography.bodyMedium,
+                color = Rahal.colors.inkMuted,
+                maxLines = 1,
+            )
+            Row {
+                RahalTextButton(onClick = picker, enabled = !s.busy) {
+                    Text(stringResource(R.string.acc_photo_pick))
+                }
+                if (!me.avatarThumbUrl.isNullOrEmpty()) {
+                    RahalTextButton(onClick = vm::removeAvatar, enabled = !s.busy) {
+                        Text(stringResource(R.string.acc_photo_remove), color = Rahal.colors.inkMuted)
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * **كلمةُ المرور خلف صفٍّ واحد** (تدقيق D4) — ثلاثةُ حقولٍ مفتوحةٍ دائماً تُطيل الصفحةَ
+ * لفعلٍ يقع مرّةً في الشهر. **وتنطوي حين يتمّ التغيير.**
+ */
+@Composable
+private fun CollapsedPassword(vm: AccountViewModel, s: AccountState) {
+    var open by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(s.pwDone) { if (s.pwDone > 0) open = false }
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clickable { open = !open },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = stringResource(R.string.acc_pw_change),
+            style = MaterialTheme.typography.titleMedium,
+            color = Rahal.colors.accentInk,
+            modifier = Modifier.weight(1f),
+        )
+        Icon(
+            painter = painterResource(R.drawable.ic_chevron_down),
+            contentDescription = null,
+            tint = Rahal.colors.inkMuted,
+            modifier = Modifier
+                .size(22.dp)
+                .rotate(if (open) 180f else 0f),
+        )
+    }
+    if (open) {
+        Spacer(Modifier.height(10.dp))
+        PasswordSection(vm, s)
+    }
+}
