@@ -37,6 +37,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.width
@@ -800,8 +802,15 @@ fun TripScreen(
                 )
             }
         }
+        // **ارتفاعُ العمود العلويّ يُقاس** — فيُحجز له مكانٌ فوق العمود السفليّ (الأزرار واللوح)،
+        // **ولا يتداخلان على أيّ شاشة** (ملاحظةُ المالك ٢٠٢٦-١١-١٠: زرٌّ فوق خطوات الرحلة،
+        // ولافتةٌ مقصوصةٌ خلف الأزرار). **ويُقاس قبل `statusBarsPadding` فيشمل الحشوة.**
+        var topColumnPx by remember { mutableIntStateOf(0) }
         if (!inPip) Column(
-            Modifier.align(Alignment.TopCenter).statusBarsPadding(),
+            Modifier
+                .align(Alignment.TopCenter)
+                .onSizeChanged { topColumnPx = it.height }
+                .statusBarsPadding(),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // ══════════════════════════════════════════════════════════
@@ -903,14 +912,9 @@ fun TripScreen(
             //
             // **تحوّل الطريقُ إليه؟ يُقال لماذا** — ومن تبع خطّاً لا يذهب إلى الدبّوس بلا
             // سببٍ يظنّ الملاحةَ معطوبة. **وشاخ موقعُه فعاد إلى الدبّوس؟ يُقال كذلك.**
-            if (state.step >= TripStep.PICKED_UP) LiveCustomerNotice(state, actions.requestLive)
-            // **«الطريق مسكّر؟»** (قرارُ المالك ٢٠٢٦-١٠-٢١) — من موقعه، فيتجنّبه التوجيهُ لكلّ السائقين.
-            if (state.order != null) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    RoadClosureButton(actions.reportClosure)
-                    OpenMapsButton(actions.openMaps)
-                }
-            }
+            if (state.step >= TripStep.PICKED_UP) LiveCustomerNotice(state)
+            // **«الطريق مغلق؟» و«خرائط غوغل» و«موقع الزبون»** انتقلت إلى صفّ الأزرار في اللوح السفليّ
+            // (`TripActionBar`) — لا شيءَ في وسط الخريطة.
             // ══════════════════════════════════════════════════════════
             // **وخطأُ الخطوة يُرى ولو طُويت البطاقة** (٢٠٢٦-١٠-٠٢)
             // ══════════════════════════════════════════════════════════
@@ -940,7 +944,13 @@ fun TripScreen(
         // **ولافتةٌ لا شاشة**: يقرؤها بطرف عينه وهو يقود، **ويأخذها أو
         // يتركها — وهو حرّ.**
         // **وأزرارُ الرحلة تُطوى في النافذة الطافية** — انظر أعلاه.
-        if (!inPip) Column(Modifier.align(Alignment.BottomCenter)) {
+        // **والعمود السفليّ يبدأ تحت العمود العلويّ** — فإن ضاقت الشاشة انكمش اللوحُ (يتمرّر)
+        // **ولا يطلع على خطوات الرحلة.**
+        if (!inPip) Column(
+            Modifier
+                .align(Alignment.BottomCenter)
+                .padding(top = with(androidx.compose.ui.platform.LocalDensity.current) { topColumnPx.toDp() }),
+        ) {
             // ══════════════════════════════════════════════════════════
             // **لوحةُ اختيار المسار** — فوق عناصر التحكّم (البند ٦)
             // ══════════════════════════════════════════════════════════
@@ -1072,7 +1082,6 @@ fun TripScreen(
                 chatUnread = chatUnread,
                 voiceMuted = voiceMuted,
                 onVoice = { actions.toggleVoice() },
-                onProblem = state.order?.takeIf { !isReturnTrip(it) }?.let { { actions.askFail() } },
             )
 
             // ══════════════════════════════════════════════════════════
@@ -1100,7 +1109,7 @@ fun TripScreen(
             if (chat != null) {
                 ChatSheet(state = chat, actions = chatActions)
             } else {
-                TripCard(order = order, state = state, actions = actions)
+                TripCard(order = order, state = state, actions = actions, modifier = Modifier.weight(1f, fill = false))
             }
         }
     }
@@ -1357,23 +1366,94 @@ data class Stop(val id: String, val number: Long)
  * **وخرائطُ غوغل المحفوظةُ في الجهاز تعمل بلا إنترنت.**
  */
 @Composable
-private fun OpenMapsButton(onOpen: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .padding(top = 10.dp, bottom = 4.dp)
+private fun OpenMapsAction(onOpen: () -> Unit, modifier: Modifier) {
+    QuickAction(
+        icon = R.drawable.ic_navigation,
+        label = R.string.open_google_maps_short,
+        description = R.string.open_google_maps,
+        modifier = modifier,
+        onClick = onOpen,
+    )
+}
+
+/**
+ * **زرٌّ صغيرٌ في صفّ الأزرار** — أيقونةٌ فوق كلمتين على الأكثر، **ولمسةٌ بارتفاع ٥٦ لا أقل.**
+ *
+ * (ملاحظةُ المالك ٢٠٢٦-١١-١٠: أزرارُ الخريطة تُوضع في اللوح فوق زرّ الخطوة لا في وسط الخريطة.)
+ * **والألوانُ من التوكنز.** و`danger` للمشكلة وحدها.
+ */
+@Composable
+private fun QuickAction(
+    icon: Int,
+    label: Int,
+    modifier: Modifier,
+    danger: Boolean = false,
+    description: Int = label,
+    onClick: () -> Unit,
+) {
+    val tint = if (danger) Rahal.colors.danger else Rahal.colors.ink
+    Column(
+        modifier = modifier
             .clip(Rahal.shape.sm)
-            .background(Rahal.colors.warnTint)
-            .clickable(onClick = onOpen)
-            .heightIn(min = 44.dp)
-            .padding(horizontal = 14.dp),
-        contentAlignment = Alignment.Center,
+            .background(if (danger) Rahal.colors.danger.copy(alpha = 0.12f) else Rahal.colors.field)
+            .clickable(onClick = onClick)
+            .heightIn(min = 56.dp)
+            .padding(horizontal = 4.dp, vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
     ) {
-        Text(
-            text = stringResource(R.string.open_google_maps),
-            color = Rahal.colors.ink,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
+        Icon(
+            painter = painterResource(icon),
+            contentDescription = stringResource(description),
+            tint = tint,
+            modifier = Modifier.size(22.dp),
         )
+        Text(
+            text = stringResource(label),
+            color = tint,
+            style = MaterialTheme.typography.labelSmall,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/**
+ * **صفُّ أزرار الرحلة** — «مشكلة» و«الطريق مغلق؟» و«خرائط غوغل» و«موقع الزبون».
+ *
+ * **يقع في اللوح السفليّ فوق زرّ الخطوة مباشرةً، ولا يتمرّر.** (كانت تطفو وسط الخريطة
+ * وتُقصّ خلف اللوح، و«مشكلة» دائرةً حمراءَ فوق خطوات الرحلة.) **وشروطُ كلٍّ منها كما كانت:**
+ * المشكلةُ إلا في مشوار الإرجاع، وموقعُ الزبون بعد الاستلام وحين لا موقعَ حيّ أو شاخ.
+ */
+@Composable
+private fun TripActionBar(order: DriverOrder, state: TripState, actions: TripActions) {
+    val showProblem = !isReturnTrip(order)
+    val showLive = state.step >= TripStep.PICKED_UP && (state.customerLive == null || state.liveStale)
+    Row(
+        Modifier.fillMaxWidth().padding(bottom = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (showProblem) {
+            QuickAction(
+                icon = R.drawable.ic_warning,
+                label = R.string.map_problem_caption,
+                description = R.string.trip_problem,
+                modifier = Modifier.weight(1f),
+                danger = true,
+            ) { actions.askFail() }
+        }
+        RoadClosureAction(actions.reportClosure, Modifier.weight(1f))
+        OpenMapsAction(actions.openMaps, Modifier.weight(1f))
+        if (showLive) {
+            QuickAction(
+                icon = R.drawable.ic_pin,
+                label = R.string.trip_live_request_short,
+                description = R.string.trip_live_request,
+                modifier = Modifier.weight(1f),
+            ) { actions.requestLive() }
+        }
     }
 }
 
@@ -1424,27 +1504,14 @@ internal fun compassIndex(fromLat: Double, fromLng: Double, toLat: Double, toLng
 }
 
 @Composable
-private fun RoadClosureButton(onReport: (String) -> Unit) {
+private fun RoadClosureAction(onReport: (String) -> Unit, modifier: Modifier) {
     var open by remember { mutableStateOf(false) }
-    // **ومسافةٌ فوقه** — كان لاصقاً بزرّ «اطلب موقع الزبون» (شُهد على الجهاز ٢٠٢٦-١٠-٢١).
-    // **وارتفاعٌ يُضغط وهو يقود** — ٤٤dp لا ٣٠.
-    Box(
-        modifier = Modifier
-            .padding(top = 10.dp, bottom = 4.dp)
-            .clip(Rahal.shape.sm)
-            .background(Rahal.colors.warnTint)
-            .clickable { open = true }
-            .heightIn(min = 44.dp)
-            .padding(horizontal = 14.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text(
-            text = stringResource(R.string.closure_button),
-            color = Rahal.colors.ink,
-            style = MaterialTheme.typography.labelMedium,
-            fontWeight = FontWeight.Bold,
-        )
-    }
+    QuickAction(
+        icon = com.rahalgo.ui.R.drawable.ic_block,
+        label = R.string.closure_button,
+        modifier = modifier,
+        onClick = { open = true },
+    )
     if (open && roomyWindow()) {
         val reasons = listOf(
             "works" to R.string.closure_works,
@@ -1490,17 +1557,9 @@ private fun RoadClosureButton(onReport: (String) -> Unit) {
  * **لافتةُ موقع الزبون المباشر** — تحوّلٌ إليه أو عودةٌ إلى الدبّوس، **وكم عمرُ نقطته.**
  */
 @Composable
-private fun LiveCustomerNotice(state: TripState, onRequest: () -> Unit) {
+private fun LiveCustomerNotice(state: TripState) {
     // **«اطلب موقع الزبون المباشر»** (قرارُ المالك ٢٠٢٦-١٠-٢١) — حين لا موقعَ حيٌّ منه:
     // يُسأل الزبونُ ثانيةً وإن رفض أوّلَ مرّة. **والخادمُ يحدّه** (ثلاثٌ ودقيقتان).
-    if (state.customerLive == null || state.liveStale) {
-        MapPill(
-            text = stringResource(R.string.trip_live_request),
-            ground = Rahal.colors.brand,
-            modifier = Modifier.padding(vertical = 4.dp),
-            onClick = onRequest,
-        )
-    }
     when {
         state.liveSwitched -> TopNotice(stringResource(R.string.trip_live_switched), Rahal.colors.success)
         state.liveStale -> TopNotice(stringResource(R.string.trip_live_stale), Rahal.colors.ink)
@@ -1772,7 +1831,7 @@ private fun TripCard(
                 due = due,
                 amount = money(order.cashDue),
                 dueAmount = order.cashDue,
-                who = order.customerName.ifBlank { stringResource(R.string.detail_customer) },
+                who = customerShownName(order.customerName) ?: stringResource(R.string.detail_customer),
                 needCode = order.deliveryCodeRequired,
                 codeAsk = deliverCodeAskRes(order),
                 onConfirm = { code, sham ->
@@ -1785,646 +1844,669 @@ private fun TripCard(
             )
         }
 
-        // **وما تحت المقبض يُطوى معه** — والمقبضُ وحدَه يبقى، **فلا
-        // يُحبَس صاحبُه عن إعادتها.** **إلّا الزرَّ الأساسيّ** (٢٠٢٦-١٠-٠٣): من طوى ليرى
-        // الطريقَ لا يُحبَس عن «وصلت» أو «تم التسليم».
-        if (!TripCollapse.bottom) {
-            if (fetchBlocked && fetchStep != FetchAmountStep.WAITING) {
-                TripPrimary(
-                    label = if (isWhatsApp(order)) R.string.wa_goods_button else R.string.fetch_amount_button,
-                    onClick = { fetchOpen = true },
-                    enabled = !state.busy,
-                    busy = state.busy,
-                )
-            } else if (next != null && !buyBlocked && !arriveLater && !fetchBlocked && !priceBlocked) {
-                TripPrimary(
-                    label = nextLabel,
-                    onClick = onNext,
-                    enabled = !state.busy && !editBlocked,
-                    busy = state.busy,
-                    text = if (editBlocked) editBlockedText else nextLabelText,
-                )
+        // **زرُّ الخطوة يُثبَّت أسفل اللوح ولا يتمرّر** (قرارُ المالك ٢٠٢٦-١١-١٠: «لازم يضل ظاهر
+        // دائماً»). **وكان وسطَ قائمةٍ طويلةٍ فيُقصّ خلف شريط التنقّل.** وأفعالُ المرحلة كلُّها هنا:
+        // استلام/وصول/تسليم، وتوثيق الثمن، وكتابة المبلغ — **وواحدٌ منها فقط يظهر في كلّ حال.**
+        // **وما يبقى في القائمة المتمرّرة ثانويٌّ** (سحب الطلب، التعديل، الاتصال).
+        val awaitingConfirm = customOpen && feeDone && !quoteOk
+        val rejected = awaitingConfirm && order.quoteRejectedAt != null
+        val primary: (@Composable () -> Unit)? = when {
+            fetchBlocked -> if (fetchStep != FetchAmountStep.WAITING) {
+                {
+                    TripPrimary(
+                        label = if (isWhatsApp(order)) R.string.wa_goods_button else R.string.fetch_amount_button,
+                        onClick = { fetchOpen = true },
+                        enabled = !state.busy,
+                        busy = state.busy,
+                    )
+                }
+            } else {
+                null
             }
-            return@Column
-        }
-
-        Row(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // **وأيقونةٌ بجانب الاسم** — (قرار المالك ٢٠٢٦-٠٨-١٢).
-            //
-            // **وهي تقول أيَّ طورٍ أنت فيه بلا قراءة**: متجرٌ فأنت
-            // ذاهبٌ إليه، **ودبّوسٌ فالبضاعةُ معك وأنت إلى الزبون.**
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                val toCustomer = state.step >= TripStep.PICKED_UP
-                Icon(
-                    painter = painterResource(
-                        if (toCustomer) R.drawable.ic_pin else R.drawable.ic_store,
-                    ),
-                    contentDescription = null,
-                    tint = if (toCustomer) Rahal.colors.brand else Rahal.colors.accent,
-                    modifier = Modifier.size(22.dp),
-                )
-                Spacer(Modifier.size(6.dp))
-                Text(
-                    // **والعنوان يقول الوجهة الحاليّة** — لا اسم الطلب:
-                    // **من قرأ «طيف» وهو في طريقه للزبون** قرأ ما مضى.
-                    text = if (toCustomer) {
-                        order.customerName.ifBlank { stringResource(R.string.detail_customer) }
-                    } else {
-                        // **ولا اسمَ متجرٍ في الخاصّ** — فيُقال ما هو: أمانةٌ أم مشتريات.
-                        order.merchantName.ifBlank { stringResource(kindLabel(order)) }
-                    },
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-            // **ونوعُه بجانب رقمه** (٢٠٢٦-١٠-١٢).
-            Column(horizontalAlignment = Alignment.End) {
-                Text("#${order.number}", color = Rahal.colors.inkMuted)
-                Text(
-                    stringResource(kindLabel(order)),
-                    color = Rahal.colors.accent,
-                    fontWeight = FontWeight.Bold,
-                    style = MaterialTheme.typography.bodySmall,
-                )
-            }
-        }
-
-        // ══════════════════════════════════════════════════════════════
-        // **البطاقةُ مربّعاتٌ لا أسطرٌ متلاصقة** (قرارُ المالك ٢٠٢٦-١٠-٠٦: «لازم في مربّعات
-        // واضحة شقد يستلم وشقد المبلغ وكلشي… كلّو فايت ببعضه»)
-        // ══════════════════════════════════════════════════════════════
-        //
-        // **قالبٌ واحدٌ لكلّ الأطوار**: رأسٌ (الوجهة + الرقم) · مربّعاتُ خبرٍ بأيقونة ·
-        // **زرُّ المرحلة بعرض البطاقة** · صفُّ تواصلٍ بأزرارٍ متساوية.
-        // **و«لدي مشكلة» قرصٌ أحمرُ عائمٌ فوق الخريطة** (`MapButtons`) — لا هنا.
-        // **ورقمُ الزبون لا يصل السائقَ أبداً** — حديثُه قرصٌ عائمٌ كذلك.
-        AnimatedVisibility(visible = expanded) {
-            Column(
-                Modifier.fillMaxWidth().padding(top = 10.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                val pickedUp = state.step >= TripStep.PICKED_UP
-                val cashFrom = cashFrom(order, pickedUp)
-
-                // **مربّعُ المال أوّلاً بعد الاستلام** — «كم آخذ ومن مَن» بالرقم الكبير.
-                if (pickedUp) {
-                    // **وبضاعةُ الدولار تُقبض كاشاً حتّى لو دفعت المحفظةُ الأجرة** (٢٠٢٦-١١-٠٩).
-                    val usdCollect = usdCollectText(order)
-                    if (cashFrom == CashFrom.RECIPIENT || usdCollect != null) {
-                        MoneyBox(
-                            label = stringResource(
-                                R.string.trip_collect_from,
-                                order.customerName.ifBlank { stringResource(R.string.detail_customer) },
-                            ),
-                            amount = usdCollect ?: money(order.cashDue),
-                            // **ولونُ «تقبض» واحدٌ في كلّ الشاشات** — أحمرُ كبطاقة الطلب (قرارُ المالك
-                            // ٢٠٢٦-٠٨-١٢: «أحمر يعني اقبض»)، لا برتقاليٌّ هنا وأحمرُ هناك.
-                            tint = CollectTint(),
-                        )
-                        // **والمشترياتُ مفصّلة** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢: «مشتريات بقيمة 350 اجرة
-                        // توصيل 150 مجموع 500»).
-                        if (order.kind == "custom" && order.customMode != "amanah" &&
-                            ((order.customGoods ?: 0) > 0 || order.customGoodsUsd != null)
-                        ) {
-                            InfoBox(
-                                icon = R.drawable.ic_cash,
-                                text = stringResource(
-                                    R.string.trip_goods_line,
-                                    order.customGoodsUsd?.let { amountText(it, "USD") } ?: money(order.customGoods ?: 0),
-                                ) + "\n" +
-                                    // **والأجرةُ المُعفاة لا تُطالَب** — المربّعُ الكبير يقول
-                                    // `cashDue` (البضاعة وحدها)، فالتفصيلُ يطابقه.
-                                    if (feePaidFromWallet(order)) {
-                                        // **الأجرةُ من محفظة الزبون** (٢٠٢٦-١١-٠٩) — لا تُقبض.
-                                        stringResource(R.string.trip_fee_line_wallet)
-                                    } else if (order.freeWaived > 0) {
-                                        stringResource(R.string.trip_fee_line_free)
-                                    } else {
-                                        stringResource(R.string.trip_fee_line, money(order.customFee ?: 0))
-                                    },
-                                tint = Rahal.colors.accent,
-                            )
-                        }
-                    } else {
-                        InfoBox(
-                            icon = R.drawable.ic_check_circle,
-                            text = stringResource(R.string.trip_prepaid_note),
-                            tint = Rahal.colors.success,
-                            bold = true,
-                        )
-                    }
-                    if (order.addressText.isNotBlank()) {
-                        InfoBox(icon = R.drawable.ic_pin, text = order.addressText, tint = Rahal.colors.brand)
-                    }
-                    // **«خد من المتجر X»** — المكتبُ عدّل الطلبَ بعد الاستلام فنقص حقُّ المتجر، والفرقُ
-                    // يسترجعه الكابتنُ من المتجر نفسِه (خطّةُ المال ٢٠٢٦-١١-١٠).
-                    order.takeFromStores.forEach { p ->
-                        MoneyBox(
-                            label = stringResource(R.string.trip_take_from_store, p.merchantName),
-                            amount = storePayText(p),
-                            tint = Rahal.colors.brand,
-                        )
-                    }
-                    // **والفاتورةُ عند الباب كذلك** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — لمن يسأله «شو بالطلب؟ وقديش؟».
-                    if (order.kind == "standard" && order.items.isNotEmpty()) InvoiceBox(order)
-                } else if (order.kind != "custom") {
-                    // **وقبل الاستلام: متى يجهز** — بأيقونة ساعة. **ولا «جاهز في المتجر» في
-                    // «إحضار»** — يستلم من مكانٍ لا من المتجر (ملاحظةُ المالك ٢٠٢٦-١٠-١٦).
-                    // **طلبٌ من عدّة متاجر: كتلةُ المحطّات بدل الجاهزيّة والفاتورة ودفع المتجر** — لكلّ محطّةٍ
-                    // حالُها وما تدفعه وأصنافُها وأزرارُها.
-                    if (isMultiStop(order)) {
-                        StopsBlock(order, activeStop?.merchantId, state.busy) { to, stop -> actions.stopStep(to, stop) }
-                    } else {
-                    when (val p = if (isFetch(order)) PrepState.Unknown else prepState(order)) {
-                        PrepState.Ready -> InfoBox(
-                            icon = com.rahalgo.ui.R.drawable.ic_time,
-                            text = stringResource(R.string.trip_store_ready),
-                            tint = Rahal.colors.success,
-                            bold = true,
-                        )
-                        is PrepState.Around -> InfoBox(
-                            icon = com.rahalgo.ui.R.drawable.ic_time,
-                            text = stringResource(R.string.trip_store_ready_at, p.hhmm),
-                            tint = Rahal.colors.brand,
-                        )
-                        PrepState.Unknown -> Unit
-                    }
-                    // **وما يستلمه باسمه** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢: «السائق اصلا مايعرف شو الطلب»).
-                    // **والفاتورةُ كاملةً بشكلها الواحد** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
-                    if (order.items.isNotEmpty()) InvoiceBox(order)
-                    // **وكم يدفع للمتجر عند الاستلام** (قرارُ المالك ٢٠٢٦-١٠-١٥) — من سلفة
-                    // المكتب، **ولكلّ متجرٍ سطرُه** إن كان الطلبُ من مصدرين.
-                    if (order.kind == "standard" && (order.payMerchant > 0 || order.payMerchants.any { isUsd(it.currency) })) {
-                        if (order.payMerchants.size > 1) {
-                            order.payMerchants.forEach { p ->
-                                MoneyBox(
-                                    label = stringResource(R.string.trip_pay_merchant_named, p.merchantName),
-                                    amount = storePayText(p),
-                                    tint = Rahal.colors.brand,
-                                )
-                            }
-                        } else if (order.payMerchants.size == 1 && isUsd(order.payMerchants[0].currency)) {
-                            MoneyBox(
-                                label = stringResource(R.string.trip_pay_merchant),
-                                amount = storePayText(order.payMerchants[0]),
-                                tint = Rahal.colors.brand,
-                            )
-                        } else {
-                            MoneyBox(
-                                label = stringResource(R.string.trip_pay_merchant),
-                                amount = money(order.payMerchant),
-                                tint = Rahal.colors.brand,
-                            )
-                        }
-                    }
-                    // **وطلبُ الواتساب من متجرنا** (النموذج ٢، قرارُ المالك ٢٠٢٦-١١-١٠): يدفع للمتجر الثمنَ
-                    // ناقصَ العمولة، **والعمولةُ في صندوقه** — والخادمُ يقول كم (`pay_merchants`).
-                    if (order.kind == "merchant_delivery") {
-                        order.payMerchants.forEach { p ->
-                            MoneyBox(
-                                label = stringResource(R.string.trip_pay_merchant_named, p.merchantName),
-                                amount = storePayText(p),
-                                tint = Rahal.colors.brand,
-                            )
-                        }
-                    }
-                    }
-                    // **وكم يقبض عند الباب** — يعرفه قبل أن يمشي.
-                    if (order.kind == "standard") {
-                        if (order.cashDue > 0) {
-                            MoneyBox(
-                                label = stringResource(R.string.trip_collect_later),
-                                amount = money(order.cashDue),
-                                tint = CollectTint(),
-                            )
-                        } else {
-                            InfoBox(
-                                icon = R.drawable.ic_check_circle,
-                                text = stringResource(R.string.trip_prepaid_note),
-                                tint = Rahal.colors.success,
-                                bold = true,
-                            )
-                        }
-                    }
-                }
-                // **و«أنا نقداً» يُقبض من المتجر قبل أن يمضي** — وفي «إحضار» من الشخص عند
-                // مكان الاستلام (٢٠٢٦-١٠-١٥؛ والخادمُ كتب اسمَه في موضع المتجر).
-                if (cashFrom == CashFrom.STORE) {
-                    MoneyBox(
-                        label = if (isFetch(order)) {
-                            stringResource(R.string.trip_collect_from, order.merchantName)
-                        } else {
-                            stringResource(R.string.detail_fee_from_store)
-                        },
-                        amount = money(order.cashDue),
-                        tint = CollectTint(),
-                    )
-                }
-                // **«ادفع للمتجر X من جيبك، واقبض من المستلم X»** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
-                // خارجَ حساب المنصّة: لا يدخل صندوقَه ولا محفظتَه. **وفي «إحضار» بالعكس** (٢٠٢٦-١٠-١٦).
-                collectForStore(order)?.let { amt ->
-                    InfoBox(
-                        icon = R.drawable.ic_cash,
-                        text = stringResource(collectTextRes(order), orderAmount(order, amt)),
-                        tint = Rahal.colors.accent,
-                        bold = true,
-                    )
-                }
-                // **و«يحمل» قبل الاستلام وحدَه** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢) — بعده هو بيده.
-                if (order.parcelNote.isNotEmpty() && !pickedUp) {
-                    InfoBox(
-                        icon = com.rahalgo.ui.R.drawable.ic_cart,
-                        text = stringResource(parcelLabel(order)) + ": " + order.parcelNote,
-                        tint = Rahal.colors.brand,
-                    )
-                }
-                if (order.driverNote.isNotBlank()) {
-                    InfoBox(
-                        icon = com.rahalgo.ui.R.drawable.ic_info,
-                        text = stringResource(R.string.detail_driver_note) + ": " + order.driverNote,
-                        tint = Rahal.colors.brand,
-                        bold = true,
-                    )
-                }
-                if (!order.dropoffKnown) {
-                    InfoBox(
-                        icon = R.drawable.ic_warning,
-                        text = stringResource(R.string.detail_no_point),
-                        tint = Rahal.colors.danger,
-                        bold = true,
-                    )
-                }
-                // **وأمرُ الإدارة عند الباب** (٢٠٢٦-١٠-٠٢).
-                if (order.doorInstruction == "deliver_now") {
-                    InfoBox(
-                        icon = R.drawable.ic_warning,
-                        text = stringResource(
-                            when (order.status) {
-                                "at_dropoff" -> R.string.door_deliver_now
-                                "at_pickup" -> R.string.door_collect
-                                "assigned" -> R.string.door_keep
-                                else -> R.string.door_continue
-                            },
-                        ) + if (order.doorNote.isNotBlank()) " — " + order.doorNote else "",
-                        // **وأمرُ الإدارة برتقاليٌّ بأيقونته** — يتميّز عن مربّعات الخبر الزرقاء.
-                        tint = Rahal.colors.accent,
-                        bold = true,
-                    )
-                }
-                if (state.notice.isNotEmpty()) {
-                    InfoBox(icon = R.drawable.ic_check_circle, text = state.notice, tint = Rahal.colors.brand, bold = true)
-                }
-
-                // ── الطلبُ الخاصّ: **ما المطلوب** — قبل كلّ شيء (ملاحظةُ المالك ٢٠٢٦-١٠-١٢:
-                // «السائق لا يعرف ماهو الطلب الذي يجب ان يوثق سعره»). كانت البطاقةُ تقول
-                // «اشترِ المطلوب» ولا تقول ما هو — **وهو في قائمة الطلبات وحدَها.**
-                // **وبعد الاستلام يختفي** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢): «بعدما نستلم الأمانة خلص
-                // يختفي المطلوب… يظل شقد بدنا نقبض وعنوانه».
-                if (order.kind == "custom" && order.customRequest.isNotEmpty() && !pickedUp) {
-                    Column(
-                        Modifier
-                            .fillMaxWidth()
-                            .clip(Rahal.shape.sm)
-                            .background(Rahal.colors.warnTint)
-                            .padding(12.dp),
-                    ) {
-                        Text(
-                            text = stringResource(R.string.card_custom_what),
-                            color = Rahal.colors.inkMuted,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            text = order.customRequest,
-                            style = MaterialTheme.typography.bodyLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = Rahal.colors.ink,
-                        )
-                    }
-                }
-
-                // ── الطلبُ الخاصّ: ما وُثّق وما يُنتظر ──────────────────────
-                if (customOpen && feeDone) {
-                    val done = buildString {
-                        append(stringResource(R.string.agree_fee_done, money(order.customFee ?: 0)))
-                        if (order.customMode != "amanah" && !order.customGoodsPending) {
-                            append("\n")
-                            append(
-                                stringResource(
-                                    R.string.agree_goods_done,
-                                    order.customGoodsUsd?.let { amountText(it, "USD") } ?: money(order.customGoods ?: 0),
-                                ),
-                            )
-                        }
-                    }
-                    InfoBox(icon = R.drawable.ic_check_circle, text = done, tint = Rahal.colors.success)
-                }
-                // **والمشترياتُ من متجرٍ تابع** (قرارُ المالك ٢٠٢٦-١٠-١٥) — يعرف من أين يشتري،
-                // **وبعد توثيق الثمن كم يدفع له: الثمنُ ناقصَ العمولة** (من الخادم لا من هنا).
-                if (customOpen && order.partnerMerchantName.isNotBlank()) {
-                    val usdPay = order.payMerchants.firstOrNull { isUsd(it.currency) }
-                    if (usdPay != null) {
-                        MoneyBox(
-                            label = stringResource(R.string.trip_pay_merchant_named, order.partnerMerchantName),
-                            amount = storePayText(usdPay),
-                            tint = Rahal.colors.brand,
-                        )
-                    } else if (order.payMerchant > 0) {
-                        MoneyBox(
-                            label = stringResource(R.string.trip_pay_merchant_named, order.partnerMerchantName),
-                            amount = money(order.payMerchant),
-                            tint = Rahal.colors.brand,
-                        )
-                    } else {
-                        InfoBox(
-                            icon = com.rahalgo.ui.R.drawable.ic_cart,
-                            text = stringResource(R.string.trip_partner_store, order.partnerMerchantName),
-                            tint = Rahal.colors.brand,
-                        )
-                    }
-                }
-                val awaitingConfirm = customOpen && feeDone && !quoteOk
-                // **رفض الزبونُ السعر** (قرارُ المالك ٢٠٢٦-١٠-٢١) — يُقال له بالأحمر، **وزرُّ
-                // «تعديل السعر» مكانَ الانتظار**: يتّفق معه بالدردشة ثمّ يرسله ثانيةً.
-                val rejected = awaitingConfirm && order.quoteRejectedAt != null
-                if (rejected) {
-                    InfoBox(
-                        icon = R.drawable.ic_warning,
-                        text = stringResource(R.string.drv_quote_rejected),
-                        tint = Rahal.colors.danger,
-                        bold = true,
-                    )
-                }
-                val customHint = when {
-                    rejected -> ""
-                    customOpen && quoteOk && !needGoods -> stringResource(
-                        if (order.customMode == "amanah") R.string.drv_customer_confirmed_amanah
-                        else R.string.drv_customer_confirmed,
-                    )
-                    needGoods && quoteOk -> stringResource(R.string.drv_buy_then_document)
-                    awaitingConfirm -> stringResource(
-                        if (order.customGoodsPending || order.customMode == "amanah") R.string.drv_awaiting_fee
-                        else R.string.drv_awaiting_goods,
-                    )
-                    else -> ""
-                }
-                if (customHint.isNotEmpty()) {
-                    Text(
-                        customHint,
-                        color = if (awaitingConfirm) Rahal.colors.inkMuted else Rahal.colors.success,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-
-                // ── **تعديل ثمن البضاعة بعد الاستلام** (قرار المالك ٢٠٢٦-١١-٠٦) ──
-                val priceStep = priceEditStep(order)
-                when (priceStep) {
-                    PriceEditStep.WAITING -> InfoBox(
-                        icon = com.rahalgo.ui.R.drawable.ic_time,
-                        text = stringResource(R.string.price_edit_waiting, money(order.total)),
-                        tint = Rahal.colors.brand,
-                        bold = true,
-                    )
-                    PriceEditStep.REVERTED -> InfoBox(
-                        icon = R.drawable.ic_warning,
-                        text = stringResource(R.string.price_edit_reverted),
-                        tint = Rahal.colors.danger,
-                        bold = true,
-                    )
-                    else -> Unit
-                }
-
-                // ── **طلب تعديل بالطلب العادي** (قرار المالك ٢٠٢٦-١١-١٠) ──
-                when (editRequestBadge(order, state.editRequest)) {
-                    EditRequestBadge.PENDING -> {
-                        InfoBox(
-                            icon = com.rahalgo.ui.R.drawable.ic_time,
-                            text = stringResource(R.string.edit_req_pending, money(state.editRequest?.newTotal ?: order.total)),
-                            tint = Rahal.colors.brand,
-                            bold = true,
-                        )
-                        // **والكابتن بيسحب طلبه بنفسه** (قرار المالك ٢٠٢٦-١١-١٠) — بيرجع يقدر يسلّم.
-                        com.rahalgo.ui.RahalTextButton(
-                            onClick = actions.withdrawEditRequest,
-                            enabled = !state.busy,
-                            modifier = Modifier.fillMaxWidth(),
-                        ) { Text(stringResource(R.string.edit_req_withdraw), fontWeight = FontWeight.Bold) }
-                    }
-                    EditRequestBadge.REJECTED -> InfoBox(
-                        icon = R.drawable.ic_warning,
-                        text = stringResource(R.string.edit_req_rejected, state.editRequest?.rejectReason.orEmpty()),
-                        tint = Rahal.colors.danger,
-                        bold = true,
-                    )
-                    EditRequestBadge.STALE -> InfoBox(
-                        icon = R.drawable.ic_warning,
-                        text = stringResource(R.string.edit_req_stale),
-                        tint = Rahal.colors.danger,
-                        bold = true,
-                    )
-                    EditRequestBadge.NONE -> Unit
-                }
-
-                // ── «إحضار»: المبلغُ الحقيقيُّ وموافقةُ المتجر (قرارُ المالك ٢٠٢٦-١٠-١٦) ──
-                // **بعملة الطلب** (٢٠٢٦-١٠-٢٠) — والدولارُ بالسنتات.
-                val shownAmount = orderAmount(order, order.fetchAmount ?: 0)
-                when (fetchStep) {
-                    FetchAmountStep.ENTER -> InfoBox(
-                        icon = R.drawable.ic_cash,
-                        text = stringResource(if (isWhatsApp(order)) R.string.wa_goods_enter else R.string.fetch_amount_enter),
-                        tint = Rahal.colors.accent,
-                        bold = true,
-                    )
-                    FetchAmountStep.REJECTED -> InfoBox(
-                        icon = R.drawable.ic_warning,
-                        text = stringResource(R.string.fetch_amount_rejected, shownAmount),
-                        tint = Rahal.colors.danger,
-                        bold = true,
-                    )
-                    FetchAmountStep.WAITING -> InfoBox(
-                        icon = com.rahalgo.ui.R.drawable.ic_time,
-                        text = stringResource(R.string.fetch_amount_waiting, shownAmount),
-                        tint = Rahal.colors.brand,
-                        bold = true,
-                    )
-                    FetchAmountStep.APPROVED -> InfoBox(
-                        icon = R.drawable.ic_check_circle,
-                        // **وصفرٌ في طلب الواتساب أمانةٌ بلا ثمن** (قرارُ المالك ٢٠٢٦-١١-٠٨).
-                        text = if (isWhatsApp(order) && (order.fetchAmount ?: 0) <= 0) {
-                            stringResource(R.string.wa_goods_amanah_done)
-                        } else {
-                            stringResource(
-                                if (isWhatsApp(order)) R.string.wa_goods_done else R.string.fetch_amount_approved,
-                                shownAmount,
-                            )
-                        },
-                        tint = Rahal.colors.success,
-                        bold = true,
-                    )
-                    FetchAmountStep.NONE -> Unit
-                }
-
-                // ── زرُّ المرحلة: واحدٌ بعرض البطاقة ────────────────────────
-                if (fetchBlocked) {
-                    // **والكتابةُ هي الفعلُ الوحيد** — وفي الانتظار لا زرّ: المتجرُ يقرّر.
-                    if (fetchStep != FetchAmountStep.WAITING) {
-                        TripPrimary(
-                            label = if (isWhatsApp(order)) R.string.wa_goods_button else R.string.fetch_amount_button,
-                            onClick = { fetchOpen = true },
-                            enabled = !state.busy,
-                            busy = state.busy,
-                        )
-                    }
-                } else if (customOpen && (!feeDone || (needGoods && quoteOk))) {
-                    // **التوثيقُ هو الفعلُ الوحيدُ الذي يُقدّم الطلبَ الآن.**
+            customOpen && (!feeDone || (needGoods && quoteOk)) -> {
+                {
                     TripPrimary(
                         label = if (!feeDone) R.string.agree_fee_button else R.string.agree_goods_button,
                         onClick = actions.askAgree,
                         enabled = !state.busy,
                         busy = false,
                     )
-                } else if (rejected) {
+                }
+            }
+            rejected -> {
+                {
                     TripPrimary(
                         label = R.string.agree_edit_button,
                         onClick = actions.askAgree,
                         enabled = !state.busy,
                         busy = false,
                     )
-                } else if (next != null && !awaitingConfirm && !priceBlocked) {
-                    // **وقبل الوصول يُرى الزرُّ باهتاً لا غائباً** — فلا تبقى البطاقةُ بلا فعل.
-                    // **ولا عبارةَ تحته** (المالك ٢٠٢٦-١٠-٠٦: «ما تلزم أصلاً»).
+                }
+            }
+            next != null && !awaitingConfirm && !priceBlocked -> {
+                {
+                    // **وقبل الوصول يُرى الزرُّ باهتاً لا غائباً.** **وقيد موافقة المكتب يُقال سببُه فيه.**
                     TripPrimary(
                         label = nextLabel,
                         onClick = onNext,
                         enabled = !state.busy && !arriveLater && !editBlocked,
                         busy = state.busy,
-                        text = if (editBlocked) editBlockedText else null,
+                        text = if (editBlocked) editBlockedText else nextLabelText,
                     )
                 }
+            }
+            else -> null
+        }
 
-                // **«تعديل السعر» بطلبه** (المالك ٢٠٢٦-١٠-٢٢) — بعد التوثيق وقبل الاستلام، زرٌّ ثانويٌّ
-                // تحت فعل المرحلة؛ **وبعد رفض الزبون هو الزرُّ الأساسيُّ فوق** فلا يتكرّر.
-                // **وما لا يُعدَّل لا زرَّ له** (المالك ٢٠٢٦-١٠-٢٢: «بالأمانة مافي سعر بضاعة،
-                // وسعر التوصيلة محدد من المنصة مايقدر يبدله السائق») — الأجرةُ تُعدَّل إن لم
-                // تفرضها المنصّة، والثمنُ في المشتريات بعد توثيقه.
-                val feeEditable = !(order.customFeeSource == "admin_defined" && !order.customDriverMayChangeFee)
-                val goodsEditable = order.customMode != "amanah" && !order.customGoodsPending
-                if (customOpen && feeDone && !rejected && (feeEditable || goodsEditable)) {
-                    // **أخضرُ ممتلئٌ واضح** (المالك ٢٠٢٦-١٠-٢٢).
-                    com.rahalgo.ui.RahalButton(
-                        onClick = actions.askEdit,
-                        enabled = !state.busy,
-                        tone = com.rahalgo.ui.PriceConfirm.Accept,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) { Text(stringResource(R.string.agree_edit_button), fontWeight = FontWeight.Bold) }
-                }
+        // **سقفُ القائمة المتمرّرة** — حتّى يبقى للخريطة نصيب، **وتحته يتمرّر.**
+        val scrollCap = (androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * 0.4f).dp
+        // **وما تحت المقبض يُطوى معه** — والمقبضُ وحدَه يبقى، **فلا
+        // يُحبَس صاحبُه عن إعادتها.** **إلّا صفَّ الأزرار وزرَّ الخطوة** (٢٠٢٦-١٠-٠٣): من طوى ليرى
+        // الطريقَ لا يُحبَس عن «وصلت» أو «تم التسليم».
+        Column(
+            Modifier
+                .weight(1f, fill = false)
+                .heightIn(max = scrollCap)
+                .verticalScroll(rememberScrollState()),
+        ) {
+            if (expanded) {
 
-                // **«عدّل سعر البضاعة» بعد الاستلام** — زرّ ثانوي تحت فعل المرحلة، والزبون يوافق.
-                if (priceStep == PriceEditStep.CAN_REQUEST || priceStep == PriceEditStep.REVERTED) {
-                    com.rahalgo.ui.RahalButton(
-                        onClick = actions.askPriceEdit,
-                        enabled = !state.busy,
-                        tone = com.rahalgo.ui.PriceConfirm.Accept,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) { Text(stringResource(R.string.price_edit_button), fontWeight = FontWeight.Bold) }
-                }
-
-                // **«طلب تعديل»** — زرّ ثانوي من القبول لحد التسليم، وطلب جديد بيحلّ محل المعلّق.
-                if (canRequestEdit(order)) {
-                    com.rahalgo.ui.RahalButton(
-                        onClick = actions.askEditRequest,
-                        enabled = !state.busy,
-                        tone = com.rahalgo.ui.PriceConfirm.Accept,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) { Text(stringResource(R.string.edit_req_button), fontWeight = FontWeight.Bold) }
-                }
-                // **وطلب الواتساب: تصحيح الثمن بعد الاستلام لحد الباب** — نفس نافذة الثمن.
-                if (whatsAppAmountEditable(order)) {
-                    com.rahalgo.ui.RahalButton(
-                        onClick = { fetchOpen = true },
-                        enabled = !state.busy,
-                        tone = com.rahalgo.ui.PriceConfirm.Accept,
-                        modifier = Modifier.fillMaxWidth(),
-                    ) { Text(stringResource(R.string.wa_goods_edit_button), fontWeight = FontWeight.Bold) }
-                }
-
-                // ── صفُّ التواصل: أزرارٌ متساوية ────────────────────────────
-                val ctx = LocalContext.current
-                val storePhone = order.merchantPhone?.takeIf { it.isNotBlank() && !pickedUp && order.kind != "custom" }
-                // **ورقمُ المستلم بعد الاستلام وحدَه** (قرارُ المالك ٢٠٢٦-١٠-٠٦: «الاتصال ما لازم يطلع… إلا بعد ما
-                // نستلم الطلب من المتجر») — **ولا رقمَ في طلب الواتساب أبداً** (٢٠٢٦-١١-٠٥، البند ٧).
-                val recipient = recipientContactPhone(order, pickedUp)
-                // **وصاحبُ الأمانة قبل الاستلام** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — الزبونُ كتب اسمَه ورقمَه،
-                // **فيتّصل به السائقُ أو يراسله** ليعرف أين الأمانة إن لم يشارك موقعَه.
-                val holder = order.holderPhone.takeIf {
-                    order.kind == "custom" && order.customMode == "amanah" && it.isNotBlank() && !pickedUp
-                }
-                if (holder != null) {
-                    Text(
-                        stringResource(R.string.amanah_holder_line, order.holderName.ifBlank { "—" }, holder),
-                        color = Rahal.colors.ink,
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        ContactButton(
-                            icon = com.rahalgo.ui.R.drawable.ic_phone,
-                            label = R.string.recipient_call,
-                            modifier = Modifier.weight(1f),
-                        ) { dial(ctx, holder) }
-                        ContactButton(
-                            icon = com.rahalgo.ui.R.drawable.ic_whatsapp,
-                            label = R.string.recipient_whatsapp,
-                            modifier = Modifier.weight(1f),
-                        ) { openWhatsApp(ctx, holder, "") }
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // **وأيقونةٌ بجانب الاسم** — (قرار المالك ٢٠٢٦-٠٨-١٢).
+                    //
+                    // **وهي تقول أيَّ طورٍ أنت فيه بلا قراءة**: متجرٌ فأنت
+                    // ذاهبٌ إليه، **ودبّوسٌ فالبضاعةُ معك وأنت إلى الزبون.**
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        val toCustomer = state.step >= TripStep.PICKED_UP
+                        Icon(
+                            painter = painterResource(
+                                if (toCustomer) R.drawable.ic_pin else R.drawable.ic_store,
+                            ),
+                            contentDescription = null,
+                            tint = if (toCustomer) Rahal.colors.brand else Rahal.colors.accent,
+                            modifier = Modifier.size(22.dp),
+                        )
+                        Spacer(Modifier.size(6.dp))
+                        Text(
+                            // **والعنوان يقول الوجهة الحاليّة** — لا اسم الطلب:
+                            // **من قرأ «طيف» وهو في طريقه للزبون** قرأ ما مضى.
+                            // **ولا عنوانٌ عاريٌ «زبون»** (المالك ٢٠٢٦-١١-١٠): «التسليم للزبون» مع اسمه إن وُجد،
+                            // و«الاستلام من <المتجر>» في ساق المتجر.
+                            text = if (toCustomer) {
+                                customerShownName(order.customerName)
+                                    ?.let { stringResource(R.string.trip_head_deliver_named, it) }
+                                    ?: stringResource(R.string.trip_head_deliver)
+                            } else {
+                                // **ولا اسمَ متجرٍ في الخاصّ** — فيُقال ما هو: أمانةٌ أم مشتريات.
+                                order.merchantName.takeIf { it.isNotBlank() }
+                                    ?.let { stringResource(R.string.trip_head_pickup, it) }
+                                    ?: stringResource(kindLabel(order))
+                            },
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                        )
                     }
-                }
-                if (storePhone != null || recipient != null) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        // **قبل الاستلام: المتجرُ اتّصالاً وواتساب** (قرارُ المالك ٢٠٢٦-١٠-٠٦) — والرأسُ
-                        // يقول اسمَه، فيكفي الزرَّ «اتّصل» و«واتساب».
-                        if (storePhone != null) {
-                            ContactButton(
-                                icon = com.rahalgo.ui.R.drawable.ic_phone,
-                                label = R.string.recipient_call,
-                                modifier = Modifier.weight(1f),
-                            ) { dial(ctx, storePhone) }
-                            ContactButton(
-                                icon = com.rahalgo.ui.R.drawable.ic_whatsapp,
-                                label = R.string.recipient_whatsapp,
-                                modifier = Modifier.weight(1f),
-                            ) { openWhatsApp(ctx, storePhone, "") }
-                        }
-                        // **«لدي توصيلة»: المستلمُ ليس على التطبيق** (قرارُ المالك ٢٠٢٦-١٠-٠٣) —
-                        // اتّصالٌ وواتساب برسالةٍ جاهزة.
-                        if (recipient != null) {
-                            // **وفي «إحضار» الوجهةُ المتجرُ نفسُه** — فلا رسالةَ «متجرٌ أرسل لك طلبيّة».
-                            val hello = if (isFetch(order)) "" else stringResource(R.string.recipient_wa_message, order.merchantName)
-                            ContactButton(
-                                icon = com.rahalgo.ui.R.drawable.ic_phone,
-                                label = R.string.recipient_call,
-                                modifier = Modifier.weight(1f),
-                            ) { dial(ctx, recipient) }
-                            ContactButton(
-                                icon = com.rahalgo.ui.R.drawable.ic_whatsapp,
-                                label = R.string.recipient_whatsapp,
-                                modifier = Modifier.weight(1f),
-                            ) { openWhatsApp(ctx, recipient, hello) }
-                        }
+                    // **ونوعُه بجانب رقمه** (٢٠٢٦-١٠-١٢).
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text("#${order.number}", color = Rahal.colors.inkMuted)
+                        Text(
+                            stringResource(kindLabel(order)),
+                            color = Rahal.colors.accent,
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
                     }
                 }
 
-                if (state.error.isNotEmpty()) {
-                    Text(state.error, color = Rahal.colors.danger)
+                // ══════════════════════════════════════════════════════════════
+                // **البطاقةُ مربّعاتٌ لا أسطرٌ متلاصقة** (قرارُ المالك ٢٠٢٦-١٠-٠٦: «لازم في مربّعات
+                // واضحة شقد يستلم وشقد المبلغ وكلشي… كلّو فايت ببعضه»)
+                // ══════════════════════════════════════════════════════════════
+                //
+                // **قالبٌ واحدٌ لكلّ الأطوار**: رأسٌ (الوجهة + الرقم) · مربّعاتُ خبرٍ بأيقونة ·
+                // **زرُّ المرحلة بعرض البطاقة** · صفُّ تواصلٍ بأزرارٍ متساوية.
+                // **و«لدي مشكلة» قرصٌ أحمرُ عائمٌ فوق الخريطة** (`MapButtons`) — لا هنا.
+                // **ورقمُ الزبون لا يصل السائقَ أبداً** — حديثُه قرصٌ عائمٌ كذلك.
+                AnimatedVisibility(visible = expanded) {
+                    Column(
+                        Modifier.fillMaxWidth().padding(top = 10.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        val pickedUp = state.step >= TripStep.PICKED_UP
+                        val cashFrom = cashFrom(order, pickedUp)
+
+                        // **مربّعُ المال أوّلاً بعد الاستلام** — «كم آخذ ومن مَن» بالرقم الكبير.
+                        if (pickedUp) {
+                            // **وبضاعةُ الدولار تُقبض كاشاً حتّى لو دفعت المحفظةُ الأجرة** (٢٠٢٦-١١-٠٩).
+                            val usdCollect = usdCollectText(order)
+                            if (cashFrom == CashFrom.RECIPIENT || usdCollect != null) {
+                                MoneyBox(
+                                    // **«اقبض من الزبون»** — لا «من زبون» (المالك ٢٠٢٦-١١-١٠).
+                                    label = stringResource(
+                                        R.string.trip_collect_from,
+                                        customerShownName(order.customerName) ?: stringResource(R.string.detail_customer),
+                                    ),
+                                    amount = usdCollect ?: money(order.cashDue),
+                                    // **ولونُ «تقبض» واحدٌ في كلّ الشاشات** — أحمرُ كبطاقة الطلب (قرارُ المالك
+                                    // ٢٠٢٦-٠٨-١٢: «أحمر يعني اقبض»)، لا برتقاليٌّ هنا وأحمرُ هناك.
+                                    tint = CollectTint(),
+                                )
+                                // **والمشترياتُ مفصّلة** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢: «مشتريات بقيمة 350 اجرة
+                                // توصيل 150 مجموع 500»).
+                                if (order.kind == "custom" && order.customMode != "amanah" &&
+                                    ((order.customGoods ?: 0) > 0 || order.customGoodsUsd != null)
+                                ) {
+                                    InfoBox(
+                                        icon = R.drawable.ic_cash,
+                                        text = stringResource(
+                                            R.string.trip_goods_line,
+                                            order.customGoodsUsd?.let { amountText(it, "USD") } ?: money(order.customGoods ?: 0),
+                                        ) + "\n" +
+                                            // **والأجرةُ المُعفاة لا تُطالَب** — المربّعُ الكبير يقول
+                                            // `cashDue` (البضاعة وحدها)، فالتفصيلُ يطابقه.
+                                            if (feePaidFromWallet(order)) {
+                                                // **الأجرةُ من محفظة الزبون** (٢٠٢٦-١١-٠٩) — لا تُقبض.
+                                                stringResource(R.string.trip_fee_line_wallet)
+                                            } else if (order.freeWaived > 0) {
+                                                stringResource(R.string.trip_fee_line_free)
+                                            } else {
+                                                stringResource(R.string.trip_fee_line, money(order.customFee ?: 0))
+                                            },
+                                        tint = Rahal.colors.accent,
+                                    )
+                                }
+                            } else {
+                                InfoBox(
+                                    icon = R.drawable.ic_check_circle,
+                                    text = stringResource(R.string.trip_prepaid_note),
+                                    tint = Rahal.colors.success,
+                                    bold = true,
+                                )
+                            }
+                            if (order.addressText.isNotBlank()) {
+                                InfoBox(icon = R.drawable.ic_pin, text = order.addressText, tint = Rahal.colors.brand)
+                            }
+                            // **«خد من المتجر X»** — المكتبُ عدّل الطلبَ بعد الاستلام فنقص حقُّ المتجر، والفرقُ
+                            // يسترجعه الكابتنُ من المتجر نفسِه (خطّةُ المال ٢٠٢٦-١١-١٠).
+                            order.takeFromStores.forEach { p ->
+                                MoneyBox(
+                                    label = stringResource(R.string.trip_take_from_store, p.merchantName),
+                                    amount = storePayText(p),
+                                    tint = Rahal.colors.brand,
+                                )
+                            }
+                            // **والفاتورةُ عند الباب كذلك** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — لمن يسأله «شو بالطلب؟ وقديش؟».
+                            if (order.kind == "standard" && order.items.isNotEmpty()) InvoiceBox(order)
+                        } else if (order.kind != "custom") {
+                            // **وقبل الاستلام: متى يجهز** — بأيقونة ساعة. **ولا «جاهز في المتجر» في
+                            // «إحضار»** — يستلم من مكانٍ لا من المتجر (ملاحظةُ المالك ٢٠٢٦-١٠-١٦).
+                            // **طلبٌ من عدّة متاجر: كتلةُ المحطّات بدل الجاهزيّة والفاتورة ودفع المتجر** — لكلّ محطّةٍ
+                            // حالُها وما تدفعه وأصنافُها وأزرارُها.
+                            if (isMultiStop(order)) {
+                                StopsBlock(order, activeStop?.merchantId, state.busy) { to, stop -> actions.stopStep(to, stop) }
+                            } else {
+                            when (val p = if (isFetch(order)) PrepState.Unknown else prepState(order)) {
+                                PrepState.Ready -> InfoBox(
+                                    icon = com.rahalgo.ui.R.drawable.ic_time,
+                                    text = stringResource(R.string.trip_store_ready),
+                                    tint = Rahal.colors.success,
+                                    bold = true,
+                                )
+                                is PrepState.Around -> InfoBox(
+                                    icon = com.rahalgo.ui.R.drawable.ic_time,
+                                    text = stringResource(R.string.trip_store_ready_at, p.hhmm),
+                                    tint = Rahal.colors.brand,
+                                )
+                                PrepState.Unknown -> Unit
+                            }
+                            // **وما يستلمه باسمه** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢: «السائق اصلا مايعرف شو الطلب»).
+                            // **والفاتورةُ كاملةً بشكلها الواحد** (قرارُ المالك ٢٠٢٦-١٠-٣٠).
+                            if (order.items.isNotEmpty()) InvoiceBox(order)
+                            // **وكم يدفع للمتجر عند الاستلام** (قرارُ المالك ٢٠٢٦-١٠-١٥) — من سلفة
+                            // المكتب، **ولكلّ متجرٍ سطرُه** إن كان الطلبُ من مصدرين.
+                            if (order.kind == "standard" && (order.payMerchant > 0 || order.payMerchants.any { isUsd(it.currency) })) {
+                                if (order.payMerchants.size > 1) {
+                                    order.payMerchants.forEach { p ->
+                                        MoneyBox(
+                                            label = stringResource(R.string.trip_pay_merchant_named, p.merchantName),
+                                            amount = storePayText(p),
+                                            tint = Rahal.colors.brand,
+                                        )
+                                    }
+                                } else if (order.payMerchants.size == 1 && isUsd(order.payMerchants[0].currency)) {
+                                    MoneyBox(
+                                        label = stringResource(R.string.trip_pay_merchant),
+                                        amount = storePayText(order.payMerchants[0]),
+                                        tint = Rahal.colors.brand,
+                                    )
+                                } else {
+                                    MoneyBox(
+                                        label = stringResource(R.string.trip_pay_merchant),
+                                        amount = money(order.payMerchant),
+                                        tint = Rahal.colors.brand,
+                                    )
+                                }
+                            }
+                            // **وطلبُ الواتساب من متجرنا** (النموذج ٢، قرارُ المالك ٢٠٢٦-١١-١٠): يدفع للمتجر الثمنَ
+                            // ناقصَ العمولة، **والعمولةُ في صندوقه** — والخادمُ يقول كم (`pay_merchants`).
+                            if (order.kind == "merchant_delivery") {
+                                order.payMerchants.forEach { p ->
+                                    MoneyBox(
+                                        label = stringResource(R.string.trip_pay_merchant_named, p.merchantName),
+                                        amount = storePayText(p),
+                                        tint = Rahal.colors.brand,
+                                    )
+                                }
+                            }
+                            }
+                            // **وكم يقبض عند الباب** — يعرفه قبل أن يمشي.
+                            if (order.kind == "standard") {
+                                if (order.cashDue > 0) {
+                                    MoneyBox(
+                                        label = stringResource(R.string.trip_collect_later),
+                                        amount = money(order.cashDue),
+                                        tint = CollectTint(),
+                                    )
+                                } else {
+                                    InfoBox(
+                                        icon = R.drawable.ic_check_circle,
+                                        text = stringResource(R.string.trip_prepaid_note),
+                                        tint = Rahal.colors.success,
+                                        bold = true,
+                                    )
+                                }
+                            }
+                        }
+                        // **و«أنا نقداً» يُقبض من المتجر قبل أن يمضي** — وفي «إحضار» من الشخص عند
+                        // مكان الاستلام (٢٠٢٦-١٠-١٥؛ والخادمُ كتب اسمَه في موضع المتجر).
+                        if (cashFrom == CashFrom.STORE) {
+                            MoneyBox(
+                                label = if (isFetch(order)) {
+                                    stringResource(R.string.trip_collect_from, order.merchantName)
+                                } else {
+                                    stringResource(R.string.detail_fee_from_store)
+                                },
+                                amount = money(order.cashDue),
+                                tint = CollectTint(),
+                            )
+                        }
+                        // **«ادفع للمتجر X من جيبك، واقبض من المستلم X»** (قرارُ المالك ٢٠٢٦-١٠-١٥) —
+                        // خارجَ حساب المنصّة: لا يدخل صندوقَه ولا محفظتَه. **وفي «إحضار» بالعكس** (٢٠٢٦-١٠-١٦).
+                        collectForStore(order)?.let { amt ->
+                            InfoBox(
+                                icon = R.drawable.ic_cash,
+                                text = stringResource(collectTextRes(order), orderAmount(order, amt)),
+                                tint = Rahal.colors.accent,
+                                bold = true,
+                            )
+                        }
+                        // **و«يحمل» قبل الاستلام وحدَه** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢) — بعده هو بيده.
+                        if (order.parcelNote.isNotEmpty() && !pickedUp) {
+                            InfoBox(
+                                icon = com.rahalgo.ui.R.drawable.ic_cart,
+                                text = stringResource(parcelLabel(order)) + ": " + order.parcelNote,
+                                tint = Rahal.colors.brand,
+                            )
+                        }
+                        if (order.driverNote.isNotBlank()) {
+                            InfoBox(
+                                icon = com.rahalgo.ui.R.drawable.ic_info,
+                                text = stringResource(R.string.detail_driver_note) + ": " + order.driverNote,
+                                tint = Rahal.colors.brand,
+                                bold = true,
+                            )
+                        }
+                        if (!order.dropoffKnown) {
+                            InfoBox(
+                                icon = R.drawable.ic_warning,
+                                text = stringResource(R.string.detail_no_point),
+                                tint = Rahal.colors.danger,
+                                bold = true,
+                            )
+                        }
+                        // **وأمرُ الإدارة عند الباب** (٢٠٢٦-١٠-٠٢).
+                        if (order.doorInstruction == "deliver_now") {
+                            InfoBox(
+                                icon = R.drawable.ic_warning,
+                                text = stringResource(
+                                    when (order.status) {
+                                        "at_dropoff" -> R.string.door_deliver_now
+                                        "at_pickup" -> R.string.door_collect
+                                        "assigned" -> R.string.door_keep
+                                        else -> R.string.door_continue
+                                    },
+                                ) + if (order.doorNote.isNotBlank()) " — " + order.doorNote else "",
+                                // **وأمرُ الإدارة برتقاليٌّ بأيقونته** — يتميّز عن مربّعات الخبر الزرقاء.
+                                tint = Rahal.colors.accent,
+                                bold = true,
+                            )
+                        }
+                        if (state.notice.isNotEmpty()) {
+                            InfoBox(icon = R.drawable.ic_check_circle, text = state.notice, tint = Rahal.colors.brand, bold = true)
+                        }
+
+                        // ── الطلبُ الخاصّ: **ما المطلوب** — قبل كلّ شيء (ملاحظةُ المالك ٢٠٢٦-١٠-١٢:
+                        // «السائق لا يعرف ماهو الطلب الذي يجب ان يوثق سعره»). كانت البطاقةُ تقول
+                        // «اشترِ المطلوب» ولا تقول ما هو — **وهو في قائمة الطلبات وحدَها.**
+                        // **وبعد الاستلام يختفي** (ملاحظةُ المالك ٢٠٢٦-١٠-١٢): «بعدما نستلم الأمانة خلص
+                        // يختفي المطلوب… يظل شقد بدنا نقبض وعنوانه».
+                        if (order.kind == "custom" && order.customRequest.isNotEmpty() && !pickedUp) {
+                            Column(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clip(Rahal.shape.sm)
+                                    .background(Rahal.colors.warnTint)
+                                    .padding(12.dp),
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.card_custom_what),
+                                    color = Rahal.colors.inkMuted,
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    text = order.customRequest,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Rahal.colors.ink,
+                                )
+                            }
+                        }
+
+                        // ── الطلبُ الخاصّ: ما وُثّق وما يُنتظر ──────────────────────
+                        if (customOpen && feeDone) {
+                            val done = buildString {
+                                append(stringResource(R.string.agree_fee_done, money(order.customFee ?: 0)))
+                                if (order.customMode != "amanah" && !order.customGoodsPending) {
+                                    append("\n")
+                                    append(
+                                        stringResource(
+                                            R.string.agree_goods_done,
+                                            order.customGoodsUsd?.let { amountText(it, "USD") } ?: money(order.customGoods ?: 0),
+                                        ),
+                                    )
+                                }
+                            }
+                            InfoBox(icon = R.drawable.ic_check_circle, text = done, tint = Rahal.colors.success)
+                        }
+                        // **والمشترياتُ من متجرٍ تابع** (قرارُ المالك ٢٠٢٦-١٠-١٥) — يعرف من أين يشتري،
+                        // **وبعد توثيق الثمن كم يدفع له: الثمنُ ناقصَ العمولة** (من الخادم لا من هنا).
+                        if (customOpen && order.partnerMerchantName.isNotBlank()) {
+                            val usdPay = order.payMerchants.firstOrNull { isUsd(it.currency) }
+                            if (usdPay != null) {
+                                MoneyBox(
+                                    label = stringResource(R.string.trip_pay_merchant_named, order.partnerMerchantName),
+                                    amount = storePayText(usdPay),
+                                    tint = Rahal.colors.brand,
+                                )
+                            } else if (order.payMerchant > 0) {
+                                MoneyBox(
+                                    label = stringResource(R.string.trip_pay_merchant_named, order.partnerMerchantName),
+                                    amount = money(order.payMerchant),
+                                    tint = Rahal.colors.brand,
+                                )
+                            } else {
+                                InfoBox(
+                                    icon = com.rahalgo.ui.R.drawable.ic_cart,
+                                    text = stringResource(R.string.trip_partner_store, order.partnerMerchantName),
+                                    tint = Rahal.colors.brand,
+                                )
+                            }
+                        }
+                        // **رفض الزبونُ السعر** (قرارُ المالك ٢٠٢٦-١٠-٢١) — يُقال له بالأحمر، **وزرُّ
+                        // «تعديل السعر» مكانَ الانتظار**: يتّفق معه بالدردشة ثمّ يرسله ثانيةً.
+                        if (rejected) {
+                            InfoBox(
+                                icon = R.drawable.ic_warning,
+                                text = stringResource(R.string.drv_quote_rejected),
+                                tint = Rahal.colors.danger,
+                                bold = true,
+                            )
+                        }
+                        val customHint = when {
+                            rejected -> ""
+                            customOpen && quoteOk && !needGoods -> stringResource(
+                                if (order.customMode == "amanah") R.string.drv_customer_confirmed_amanah
+                                else R.string.drv_customer_confirmed,
+                            )
+                            needGoods && quoteOk -> stringResource(R.string.drv_buy_then_document)
+                            awaitingConfirm -> stringResource(
+                                if (order.customGoodsPending || order.customMode == "amanah") R.string.drv_awaiting_fee
+                                else R.string.drv_awaiting_goods,
+                            )
+                            else -> ""
+                        }
+                        if (customHint.isNotEmpty()) {
+                            Text(
+                                customHint,
+                                color = if (awaitingConfirm) Rahal.colors.inkMuted else Rahal.colors.success,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+
+                        // ── **تعديل ثمن البضاعة بعد الاستلام** (قرار المالك ٢٠٢٦-١١-٠٦) ──
+                        val priceStep = priceEditStep(order)
+                        when (priceStep) {
+                            PriceEditStep.WAITING -> InfoBox(
+                                icon = com.rahalgo.ui.R.drawable.ic_time,
+                                text = stringResource(R.string.price_edit_waiting, money(order.total)),
+                                tint = Rahal.colors.brand,
+                                bold = true,
+                            )
+                            PriceEditStep.REVERTED -> InfoBox(
+                                icon = R.drawable.ic_warning,
+                                text = stringResource(R.string.price_edit_reverted),
+                                tint = Rahal.colors.danger,
+                                bold = true,
+                            )
+                            else -> Unit
+                        }
+
+                        // ── **طلب تعديل بالطلب العادي** (قرار المالك ٢٠٢٦-١١-١٠) ──
+                        when (editRequestBadge(order, state.editRequest)) {
+                            EditRequestBadge.PENDING -> {
+                                InfoBox(
+                                    icon = com.rahalgo.ui.R.drawable.ic_time,
+                                    text = stringResource(R.string.edit_req_pending, money(state.editRequest?.newTotal ?: order.total)),
+                                    tint = Rahal.colors.brand,
+                                    bold = true,
+                                )
+                                // **والكابتن بيسحب طلبه بنفسه** (قرار المالك ٢٠٢٦-١١-١٠) — بيرجع يقدر يسلّم.
+                                com.rahalgo.ui.RahalTextButton(
+                                    onClick = actions.withdrawEditRequest,
+                                    enabled = !state.busy,
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) { Text(stringResource(R.string.edit_req_withdraw), fontWeight = FontWeight.Bold) }
+                            }
+                            EditRequestBadge.REJECTED -> InfoBox(
+                                icon = R.drawable.ic_warning,
+                                text = stringResource(R.string.edit_req_rejected, state.editRequest?.rejectReason.orEmpty()),
+                                tint = Rahal.colors.danger,
+                                bold = true,
+                            )
+                            EditRequestBadge.STALE -> InfoBox(
+                                icon = R.drawable.ic_warning,
+                                text = stringResource(R.string.edit_req_stale),
+                                tint = Rahal.colors.danger,
+                                bold = true,
+                            )
+                            EditRequestBadge.NONE -> Unit
+                        }
+
+                        // ── «إحضار»: المبلغُ الحقيقيُّ وموافقةُ المتجر (قرارُ المالك ٢٠٢٦-١٠-١٦) ──
+                        // **بعملة الطلب** (٢٠٢٦-١٠-٢٠) — والدولارُ بالسنتات.
+                        val shownAmount = orderAmount(order, order.fetchAmount ?: 0)
+                        when (fetchStep) {
+                            FetchAmountStep.ENTER -> InfoBox(
+                                icon = R.drawable.ic_cash,
+                                text = stringResource(if (isWhatsApp(order)) R.string.wa_goods_enter else R.string.fetch_amount_enter),
+                                tint = Rahal.colors.accent,
+                                bold = true,
+                            )
+                            FetchAmountStep.REJECTED -> InfoBox(
+                                icon = R.drawable.ic_warning,
+                                text = stringResource(R.string.fetch_amount_rejected, shownAmount),
+                                tint = Rahal.colors.danger,
+                                bold = true,
+                            )
+                            FetchAmountStep.WAITING -> InfoBox(
+                                icon = com.rahalgo.ui.R.drawable.ic_time,
+                                text = stringResource(R.string.fetch_amount_waiting, shownAmount),
+                                tint = Rahal.colors.brand,
+                                bold = true,
+                            )
+                            FetchAmountStep.APPROVED -> InfoBox(
+                                icon = R.drawable.ic_check_circle,
+                                // **وصفرٌ في طلب الواتساب أمانةٌ بلا ثمن** (قرارُ المالك ٢٠٢٦-١١-٠٨).
+                                text = if (isWhatsApp(order) && (order.fetchAmount ?: 0) <= 0) {
+                                    stringResource(R.string.wa_goods_amanah_done)
+                                } else {
+                                    stringResource(
+                                        if (isWhatsApp(order)) R.string.wa_goods_done else R.string.fetch_amount_approved,
+                                        shownAmount,
+                                    )
+                                },
+                                tint = Rahal.colors.success,
+                                bold = true,
+                            )
+                            FetchAmountStep.NONE -> Unit
+                        }
+
+                        // **«تعديل السعر» بطلبه** (المالك ٢٠٢٦-١٠-٢٢) — بعد التوثيق وقبل الاستلام، زرٌّ ثانويٌّ
+                        // تحت فعل المرحلة؛ **وبعد رفض الزبون هو الزرُّ الأساسيُّ فوق** فلا يتكرّر.
+                        // **وما لا يُعدَّل لا زرَّ له** (المالك ٢٠٢٦-١٠-٢٢: «بالأمانة مافي سعر بضاعة،
+                        // وسعر التوصيلة محدد من المنصة مايقدر يبدله السائق») — الأجرةُ تُعدَّل إن لم
+                        // تفرضها المنصّة، والثمنُ في المشتريات بعد توثيقه.
+                        val feeEditable = !(order.customFeeSource == "admin_defined" && !order.customDriverMayChangeFee)
+                        val goodsEditable = order.customMode != "amanah" && !order.customGoodsPending
+                        if (customOpen && feeDone && !rejected && (feeEditable || goodsEditable)) {
+                            // **أخضرُ ممتلئٌ واضح** (المالك ٢٠٢٦-١٠-٢٢).
+                            com.rahalgo.ui.RahalButton(
+                                onClick = actions.askEdit,
+                                enabled = !state.busy,
+                                tone = com.rahalgo.ui.PriceConfirm.Accept,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) { Text(stringResource(R.string.agree_edit_button), fontWeight = FontWeight.Bold) }
+                        }
+
+                        // **«عدّل سعر البضاعة» بعد الاستلام** — زرّ ثانوي تحت فعل المرحلة، والزبون يوافق.
+                        if (priceStep == PriceEditStep.CAN_REQUEST || priceStep == PriceEditStep.REVERTED) {
+                            com.rahalgo.ui.RahalButton(
+                                onClick = actions.askPriceEdit,
+                                enabled = !state.busy,
+                                tone = com.rahalgo.ui.PriceConfirm.Accept,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) { Text(stringResource(R.string.price_edit_button), fontWeight = FontWeight.Bold) }
+                        }
+
+                        // **«طلب تعديل»** — زرّ ثانوي من القبول لحد التسليم، وطلب جديد بيحلّ محل المعلّق.
+                        if (canRequestEdit(order)) {
+                            com.rahalgo.ui.RahalButton(
+                                onClick = actions.askEditRequest,
+                                enabled = !state.busy,
+                                tone = com.rahalgo.ui.PriceConfirm.Accept,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) { Text(stringResource(R.string.edit_req_button), fontWeight = FontWeight.Bold) }
+                        }
+                        // **وطلب الواتساب: تصحيح الثمن بعد الاستلام لحد الباب** — نفس نافذة الثمن.
+                        if (whatsAppAmountEditable(order)) {
+                            com.rahalgo.ui.RahalButton(
+                                onClick = { fetchOpen = true },
+                                enabled = !state.busy,
+                                tone = com.rahalgo.ui.PriceConfirm.Accept,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) { Text(stringResource(R.string.wa_goods_edit_button), fontWeight = FontWeight.Bold) }
+                        }
+
+                        // ── صفُّ التواصل: أزرارٌ متساوية ────────────────────────────
+                        val ctx = LocalContext.current
+                        val storePhone = order.merchantPhone?.takeIf { it.isNotBlank() && !pickedUp && order.kind != "custom" }
+                        // **ورقمُ المستلم بعد الاستلام وحدَه** (قرارُ المالك ٢٠٢٦-١٠-٠٦: «الاتصال ما لازم يطلع… إلا بعد ما
+                        // نستلم الطلب من المتجر») — **ولا رقمَ في طلب الواتساب أبداً** (٢٠٢٦-١١-٠٥، البند ٧).
+                        val recipient = recipientContactPhone(order, pickedUp)
+                        // **وصاحبُ الأمانة قبل الاستلام** (قرارُ المالك ٢٠٢٦-١٠-٣٠) — الزبونُ كتب اسمَه ورقمَه،
+                        // **فيتّصل به السائقُ أو يراسله** ليعرف أين الأمانة إن لم يشارك موقعَه.
+                        val holder = order.holderPhone.takeIf {
+                            order.kind == "custom" && order.customMode == "amanah" && it.isNotBlank() && !pickedUp
+                        }
+                        if (holder != null) {
+                            Text(
+                                stringResource(R.string.amanah_holder_line, order.holderName.ifBlank { "—" }, holder),
+                                color = Rahal.colors.ink,
+                                fontWeight = FontWeight.Bold,
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                ContactButton(
+                                    icon = com.rahalgo.ui.R.drawable.ic_phone,
+                                    label = R.string.recipient_call,
+                                    modifier = Modifier.weight(1f),
+                                ) { dial(ctx, holder) }
+                                ContactButton(
+                                    icon = com.rahalgo.ui.R.drawable.ic_whatsapp,
+                                    label = R.string.recipient_whatsapp,
+                                    modifier = Modifier.weight(1f),
+                                ) { openWhatsApp(ctx, holder, "") }
+                            }
+                        }
+                        if (storePhone != null || recipient != null) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                // **قبل الاستلام: المتجرُ اتّصالاً وواتساب** (قرارُ المالك ٢٠٢٦-١٠-٠٦) — والرأسُ
+                                // يقول اسمَه، فيكفي الزرَّ «اتّصل» و«واتساب».
+                                if (storePhone != null) {
+                                    ContactButton(
+                                        icon = com.rahalgo.ui.R.drawable.ic_phone,
+                                        label = R.string.recipient_call,
+                                        modifier = Modifier.weight(1f),
+                                    ) { dial(ctx, storePhone) }
+                                    ContactButton(
+                                        icon = com.rahalgo.ui.R.drawable.ic_whatsapp,
+                                        label = R.string.recipient_whatsapp,
+                                        modifier = Modifier.weight(1f),
+                                    ) { openWhatsApp(ctx, storePhone, "") }
+                                }
+                                // **«لدي توصيلة»: المستلمُ ليس على التطبيق** (قرارُ المالك ٢٠٢٦-١٠-٠٣) —
+                                // اتّصالٌ وواتساب برسالةٍ جاهزة.
+                                if (recipient != null) {
+                                    // **وفي «إحضار» الوجهةُ المتجرُ نفسُه** — فلا رسالةَ «متجرٌ أرسل لك طلبيّة».
+                                    val hello = if (isFetch(order)) "" else stringResource(R.string.recipient_wa_message, order.merchantName)
+                                    ContactButton(
+                                        icon = com.rahalgo.ui.R.drawable.ic_phone,
+                                        label = R.string.recipient_call,
+                                        modifier = Modifier.weight(1f),
+                                    ) { dial(ctx, recipient) }
+                                    ContactButton(
+                                        icon = com.rahalgo.ui.R.drawable.ic_whatsapp,
+                                        label = R.string.recipient_whatsapp,
+                                        modifier = Modifier.weight(1f),
+                                    ) { openWhatsApp(ctx, recipient, hello) }
+                                }
+                            }
+                        }
+
+                    }
                 }
             }
         }
+
+        // **الثابتُ أسفلَ اللوح**: صفُّ الأزرار فوق زرّ الخطوة مباشرةً، **وخطأُ الخطوة بينهما حتّى يُرى
+        // ولا يتوارى في القائمة المتمرّرة.**
+        Spacer(Modifier.height(8.dp))
+        TripActionBar(order, state, actions)
+        if (state.error.isNotEmpty()) {
+            Text(
+                state.error,
+                color = Rahal.colors.danger,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+        }
+        primary?.invoke()
     }
 }
 
@@ -2673,8 +2755,9 @@ private fun ReturnCard(
         // **ولا «سلّمت البضاعة»** (قرارُ المالك ٢٠٢٦-١٠-٠٦: «ما في تمّ التسليم، خلص يُعتبر الطلب
         // منتهي») — المشوارُ يُغلق وحدَه عند الوصول إلى المكتب (`watchArrival`). **والزرُّ يبقى
         // للمكتب غير المدبَّس وحدَه** — وإلّا بقي السائقُ معلّقاً بمشوارٍ لا نهايةَ له.
+        Spacer(Modifier.height(10.dp))
+        TripActionBar(order, state, actions)
         if (!order.dropoffKnown) {
-            Spacer(Modifier.height(10.dp))
             TripPrimary(
                 label = R.string.step_goods_handed,
                 onClick = actions.handGoods,

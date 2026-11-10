@@ -527,7 +527,7 @@ private fun OrderCard(
                 else order.merchantName.ifBlank { stringResource(R.string.nav_custom_order) },
             ),
             value = if (amanahPoint) "" else order.pickupAddress,
-            far = if (order.toPickupM >= 0) distance(order.toPickupM) else "",
+            far = legDistanceText(order.toPickupM),
             // **والزمن بجانب المسافة** — (قرار المالك ٢٠٢٦-٠٨-١٢).
             //
             // **والمسافة وحدها لا تقرّر**: «٣ كم» تعني ربع ساعة في زحمة
@@ -545,7 +545,7 @@ private fun OrderCard(
                 order.customerName.ifBlank { stringResource(R.string.card_customer) },
             ),
             value = order.addressText,
-            far = if (order.legM >= 0) distance(order.legM) else "",
+            far = legDistanceText(order.legM),
             mins = legEta(order.legM, avgSpeedKmh),
             tint = Rahal.colors.accent,
         )
@@ -959,6 +959,15 @@ private fun eta(toPickupM: Double, legM: Double, avgSpeedKmh: Long): Long {
  * **والسائق يقدّر بالكيلومتر فوق الألف** — ورقم بأربع خانات يُقرأ مرّتين.
  */
 private fun distance(meters: Double): String = dist(meters)
+
+/**
+ * **مسافةُ ساقٍ في البطاقة، أو فارغٌ إن لم تُعرف أو كانت صفراً.**
+ *
+ * (ملاحظةُ المالك ٢٠٢٦-١١-١٠: «(٠ م)» بلا معنى.) **`leg_m` من الخادم: سالبٌ لا يُعرف،
+ * وصفرٌ حين يتطابق موضعُ المتجر والزبون (نقطتان واحدة، أو بيانات تجربة)، ولا مشوارَ طوله
+ * أقلّ من متر.** فلا يُكتب «(0 م)» — يُحذف القوسان معه.
+ */
+internal fun legDistanceText(meters: Double): String = if (meters >= 1.0) dist(meters) else ""
 
 /**
  * **حال الطلب بالعربيّة.**

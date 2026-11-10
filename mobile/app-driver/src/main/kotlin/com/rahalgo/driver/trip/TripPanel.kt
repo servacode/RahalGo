@@ -147,7 +147,7 @@ internal fun TripPanel(state: TripState, arrived: Boolean = false) {
             // **و«الطريق إلى الزبون» لا تقول لمن يحمل ثلاثة طلبات
             // أيَّها هذا** — و«ابوطيف» تقول.
             val name = if (state.step >= TripStep.PICKED_UP) {
-                order.customerName.ifBlank { stringResource(R.string.detail_customer) }
+                customerShownName(order.customerName) ?: stringResource(R.string.detail_customer)
             } else {
                 order.merchantName.ifBlank { stringResource(R.string.nav_custom_order) }
             }
@@ -593,6 +593,17 @@ private fun phaseLabelPlain(step: TripStep): Int = when (step) {
     TripStep.AT_CUSTOMER -> R.string.trip_p_at_customer
     TripStep.DELIVERED -> R.string.trip_p_delivered
     else -> R.string.trip_p_to_store
+}
+
+/**
+ * **اسمُ الزبون إن كان اسماً حقّاً** — وفارغٌ/«زبون» وحدها يعني «لا اسم».
+ *
+ * (ملاحظةُ المالك ٢٠٢٦-١١-١٠: «اقبض من زبون» و«الطريق إلى زبون» — الكلمةُ العامّةُ
+ * تُكتب اسماً فتُقرأ ناقصةً بلا «ال». **فمن لا اسمَ له يُقال له «الزبون».**)
+ */
+internal fun customerShownName(name: String): String? {
+    val n = name.trim()
+    return if (n.isEmpty() || n == "زبون" || n == "الزبون") null else n
 }
 
 /** المسافة بالمتر أو بالكيلومتر — **لا «1400 م».** */

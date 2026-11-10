@@ -171,13 +171,6 @@ internal fun EditRequestDialog(
                     },
                     enabled = addName.isNotBlank() && q in 1..50 && p > 0,
                 ) { Text(stringResource(R.string.edit_req_add_button)) }
-                OutlinedTextField(
-                    value = draft.note,
-                    onValueChange = { draft = draft.copy(note = it.take(300)) },
-                    label = { Text(stringResource(R.string.edit_req_note)) },
-                    modifier = Modifier.fillMaxWidth(),
-                    minLines = 2,
-                )
                 Spacer(Modifier.height(8.dp))
                 Text(
                     stringResource(R.string.edit_req_total, money(order.total), money(editDraftTotal(order, draft))),

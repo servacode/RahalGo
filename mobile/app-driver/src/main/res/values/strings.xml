@@ -348,7 +348,6 @@
     <string name="edit_req_add_button">+ ضيف الصنف</string>
     <string name="edit_req_added_line">%1$s ×%2$d بسعر %3$s</string>
     <string name="edit_req_remove">شيل</string>
-    <string name="edit_req_note">ملاحظة للمكتب (اختياري)</string>
     <string name="edit_req_total">المجموع: %1$s ← تقريباً %2$s</string>
     <string name="edit_req_send">ابعت للمكتب</string>
     <string name="edit_req_pending">طلب التعديل بانتظار المكتب (المجموع الجديد %1$s)</string>
@@ -762,6 +761,11 @@
     <string name="step_queued">سيُرسَل عند عودة الإنترنت</string>
     <string name="step_queued_rejected">لم تُقبل خطوة محفوظة: %1$s</string>
     <string name="deliver_needs_net">التسليم يحتاج إنترنت — تابع وسلّم حين يعود الاتصال</string>
+    <string name="trip_head_deliver">التسليم للزبون</string>
+    <string name="trip_head_deliver_named">التسليم للزبون: %1$s</string>
+    <string name="trip_head_pickup">الاستلام من %1$s</string>
+    <string name="open_google_maps_short">خرائط غوغل</string>
+    <string name="trip_live_request_short">موقع الزبون</string>
     <string name="open_google_maps">افتح في خرائط غوغل</string>
     <string name="offline_follow_customer">لا إنترنت — اتبع الخط إلى الزبون</string>
     <string name="offline_follow_store">لا إنترنت — اتبع الخط إلى المتجر</string>
